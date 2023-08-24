@@ -1,0 +1,105 @@
+body{
+	margin: 0 0 60px;
+	background-image:url(../imagens/marcadagua.png);
+	background-repeat:no-repeat;
+	background-position: 70% 50%;
+	background-size: 60%;
+	font-family:arial;
+}
+header{
+	position:relative;
+	margin:0;
+	padding:2.5% 0 0 0;
+	width:100%;
+	float:left;
+	text-align:center;	
+	font-size:16pt;
+}
+header figure{
+	float: left;
+}
+header h4{
+	position:relative;
+	margin:0;
+	padding:0 0 0 1% 0;
+	width:100%;
+	float:left;
+	text-align:center;
+	border-bottom:3px solid #1E186A
+}
+header h6{
+	position:relative;
+	margin:0;
+	padding:0.5% 0 0 0;
+	width:100%;
+	float:left;
+	text-align:center;
+}
+.container section{
+	position:relative;
+	margin:0;
+	padding:3% 0 3% 3%;
+	width:97%;
+	float:left;
+	text-align:left;
+	font-family:arial;
+	padding-bottom:60px;
+}
+.container section p{
+	padding: 0 5%;
+	text-align: justify;
+	line-height: 40px;
+}
+.container section p.pdata{	
+	text-align: right;
+	font-weight: bold;
+}
+h2{	
+	float: left;
+	width: 100%;
+	text-align: center;
+}
+footer{
+	position:absolute;
+	bottom:0;
+	height:60px;
+	margin:0;
+	padding:0;
+	width:100%;
+	float:left;
+	text-align:center;
+	font-family:arial;
+	background-image: linear-gradient(#D3ECDD, #277883);
+}
+footer h6{
+	position:relative;
+	margin:0;
+	padding:1% 0 0 0;
+	width:100%;
+	float:left;
+	text-align:center;
+}
+@media print{
+	body{		
+		background-position: 100% 50%;
+		background-size: 100%;		
+	}
+	h2{
+		font-size:12pt;
+	}
+	.container section .corpo_documento{
+		position: relative;
+		margin-top: 20%;				
+	}
+	.container section p{
+		font-size: 10pt;
+		line-height: 35px;		
+	}	
+	header figure{
+		width: 30%;
+		float: left;
+	}
+	header figure img{
+		width: 100%;
+	}
+}

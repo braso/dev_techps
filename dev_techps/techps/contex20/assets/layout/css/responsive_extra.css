@@ -1,0 +1,51 @@
+/* Page Index Sistema */
+.box_img_cliente{
+  position: relative;
+  margin: 0;
+  padding: 5% 0;
+  width: 100%;
+  float: left;
+  text-align: center;
+}
+.img_cliente_index{
+  width: 50%;
+  height: 150px;
+  top: -75px;
+  left: -50%;
+}
+@media (max-width: 1920px){
+  .box_img_cliente{
+    padding: 20% 0;
+  }
+}
+@media (max-width: 1680px){
+  .box_img_cliente{
+    padding: 15% 0;
+  }
+}
+@media (max-width: 1600px){
+  .box_img_cliente{
+    padding: 10% 0;
+  }
+}
+@media (max-width: 1366px){
+  .box_img_cliente{
+    padding: 10% 0 0 0;
+  }
+}
+@media (max-width: 1024px){
+  .box_img_cliente{
+    padding: 5% 0 0 0;
+  }
+}
+@media (width: 375px){
+  .box_img_cliente{
+    padding: 25% 0;
+  }
+  .img_cliente_index{
+    width: 75%;
+    height: 80px;
+    top: -40px;
+    left: -75%;
+  }
+}
