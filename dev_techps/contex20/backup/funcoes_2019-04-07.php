@@ -227,7 +227,7 @@ function modal_alert(){
 function inserir($tabela,$campos,$valores){
 
 	if(count($campos) != count($valores)){
-		echo"ERRO Número de campos não confere com número de linhas na função de inserir!";
+		echo"ERRO: Número de campos não confere com número de linhas na função de inserir!";
 		exit;
 	}
 
@@ -235,10 +235,6 @@ function inserir($tabela,$campos,$valores){
 	$valores= "'".implode("','",$valores)."'";
 
 	$campos=implode(',',$campos);
-
-
-	query("INSERT INTO $tabela ($campos) VALUES($valores);") or die(mysql_error());
-	$sql = query("SELECT LAST_INSERT_ID();") or die(mysql_error());
 
 
 	set_status("Registro inserido com sucesso!");
@@ -262,11 +258,7 @@ function atualizar($tabela,$campos,$valores,$id){
 
 	for($i=1;$i<count($campos);$i++){
 		$inserir.=", $campos[$i] = '$valores[$i]' ";
-
 	}
-
-
-
 
 	query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id='$id'") or die(mysql_error());
 	set_status("Registro atualizado com sucesso!");
@@ -407,12 +399,12 @@ function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 	if($mascara=="MASCARA_DATA") {
 		$data_input = "<script>$(\"#$variavel\").inputmask(\"date\", { \"clearIncomplete\": true, placeholder: 'dd/mm/aaaa' });</script>";
 	}
-	elseif($mascara=="MASCARA_VALOR")
+	elseif($mascara=="MASCARA_VALOR"){
 		// $data_input2 = "data-inputmask='true'";
 		// $data_input2 = "data-inputmask-maskMoney=\"allowNegative: true, thousands:'.', decimal:',', affixesStay: false\"";
 		// $data_input = "<script>$(\"#$variavel\").maskMoney({ allowNegative: true, thousands:'.', decimal:',', affixesStay: false});</script>";
 		$data_input = "<script>$('[name=\"$variavel\"]').maskMoney({ allowNegative: true, thousands:'.', decimal:',', affixesStay: false});</script>";
-	elseif($mascara=="MASCARA_FONE")
+	}elseif($mascara=="MASCARA_FONE")
 		$data_input="<script>$('[name=\"$variavel\"]').inputmask({mask: ['(99) 9999-9999', '(99) 99999-9999'], placeholder: \" \" });</script>";
 	elseif($mascara=="MASCARA_NUMERO")
 		$data_input="<script>$('[name=\"$variavel\"]').inputmask(\"numeric\", {rightAlign: false});</script>";
@@ -428,7 +420,7 @@ function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 
 			// <input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' data-placeholder="____" data-inputmask="'.$data_input.'">
 
-$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
+	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 			<label><b>'.$nome.'</b></label>
 			<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' '.$data_input2.'>
 		</div>';
