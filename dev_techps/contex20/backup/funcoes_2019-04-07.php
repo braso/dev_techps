@@ -396,39 +396,24 @@ function campo_data($nome,$variavel,$modificador,$tamanho,$extra=''){
 function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 	// $variavel_limpa = str_replace(array("[","]"),array("\\[","\\]"),$variavel);	
 
-	if($mascara=="MASCARA_DATA") {
-		$data_input = "<script>$(\"#$variavel\").inputmask(\"date\", { \"clearIncomplete\": true, placeholder: 'dd/mm/aaaa' });</script>";
-	}
-	elseif($mascara=="MASCARA_VALOR"){
-		// $data_input2 = "data-inputmask='true'";
-		// $data_input2 = "data-inputmask-maskMoney=\"allowNegative: true, thousands:'.', decimal:',', affixesStay: false\"";
-		// $data_input = "<script>$(\"#$variavel\").maskMoney({ allowNegative: true, thousands:'.', decimal:',', affixesStay: false});</script>";
-		$data_input = "<script>$('[name=\"$variavel\"]').maskMoney({ allowNegative: true, thousands:'.', decimal:',', affixesStay: false});</script>";
-	}elseif($mascara=="MASCARA_FONE")
-		$data_input="<script>$('[name=\"$variavel\"]').inputmask({mask: ['(99) 9999-9999', '(99) 99999-9999'], placeholder: \" \" });</script>";
-	elseif($mascara=="MASCARA_NUMERO")
-		$data_input="<script>$('[name=\"$variavel\"]').inputmask(\"numeric\", {rightAlign: false});</script>";
-	elseif($mascara=="MASCARA_CEL")
-		$data_input="<script>$('[name=\"$variavel\"]').inputmask({mask: ['(99) 9999-9999', '(99) 99999-9999'], placeholder: \" \" });</script>";
-	elseif($mascara=="MASCARA_CEP")
-		$data_input="<script>$('[name=\"$variavel\"]').inputmask('99999-999', { clearIncomplete: true, placeholder: \" \" });</script>";
-	elseif($mascara=="MASCARA_CPF")
-		// $data_input="<script>$('[name=\"$variavel\"]').inputmask('999.999.999-99', { clearIncomplete: true, placeholder: \" \" });</script>";
-		$data_input="<script>$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99', '99.999.999/9999-99'], clearIncomplete: true, placeholder: \" \" });</script>";
-	elseif($mascara=="MASCARA_CNPJ")
-		$data_input="<script>$('[name=\"$variavel\"]').inputmask('99.999.999/9999-99', { clearIncomplete: true, placeholder: \" \" });</script>";
+	$data_inputs = [
+		''				 => "",
+		'MASCARA_DATA' 	 => "<script>$('[name=\"$variavel\"]').inputmask('date', { 'clearIncomplete': true, placeholder: 'dd/mm/aaaa' });</script>",
+		'MASCARA_VALOR'  => "<script>$('[name=\"$variavel\"]').inputmask({mask: 'R$0.000,00'});</script>",
+		'MASCARA_FONE' 	 => "<script>$('[name=\"$variavel\"]').inputmask({mask: ['(99) 9999-9999', '(99) 99999-9999'], placeholder: \" \" });</script>",
+		'MASCARA_CEL' 	 => "<script>$('[name=\"$variavel\"]').inputmask({mask: ['(99) 9999-9999', '(99) 99999-9999'], placeholder: \" \" });</script>",
+		'MASCARA_NUMERO' => "<script>$('[name=\"$variavel\"]').inputmask(\"numeric\", {rightAlign: false});</script>",
+		'MASCARA_CEP' 	 => "<script>$('[name=\"$variavel\"]').inputmask('99999-999', { clearIncomplete: true, placeholder: \" \" });</script>",
+		'MASCARA_CPF' 	 => "<script>$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99', '99.999.999/9999-99'], clearIncomplete: true, placeholder: \" \" });</script>",
+		'MASCARA_CNPJ' 	 => "<script>$('[name=\"$variavel\"]').inputmask('99.999.999/9999-99', { clearIncomplete: true, placeholder: \" \" });</script>"
+	];
 
-			// <input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' data-placeholder="____" data-inputmask="'.$data_input.'">
+	$campo=	'<div class="col-sm-'.$tamanho.' margin-bottom-5">'.
+				'<label><b>'.$nome.'</b></label>'.
+				'<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.'>'.
+			'</div>';
 
-	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
-			<label><b>'.$nome.'</b></label>
-			<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' '.$data_input2.'>
-		</div>';
-
-	
-
-	return $campo.$data_input;
-
+	return $campo.$data_inputs[$mascara];
 }
 
 function datepick($nome,$variavel,$modificador,$tamanho,$extra=''){
