@@ -71,7 +71,9 @@ function layout_ponto(){
 function layout_ftp(){
 	// error_reporting(E_ALL);
     
-    //$user_empr_cnpj = query('SELECT user_tx_emprCnpj FROM user WHERE user_nb_id = 131')->fetch_row()[0];
+    $infos = query('SELECT empr_tx_ftpServer, empr_tx_ftpUsername, empr_tx_ftpUserpass FROM empresa join user on empresa.empr_tx_cnpj = user.user_tx_emprCnpj WHERE user_nb_id = '.$_SESSION['user_nb_id'])->fetch_row();
+	print_r($_SESSION);
+	exit;
 
 	$arquivo = 'apontamento' . date('dmY') . '*.txt';
 	$path = 'arquivos/pontos/';
