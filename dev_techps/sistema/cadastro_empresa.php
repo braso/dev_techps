@@ -86,7 +86,6 @@ function cadastra_empresa(){
 	// 	die();
 
 	if($_POST['id']>-1){
-		echo "<script>alert('teste atualiza')</script>";return;
 		$campos = array_merge($campos,array('empr_nb_userAtualiza','empr_tx_dataAtualiza'));
 		$valores = array_merge($valores,array($_SESSION['user_nb_id'], date("Y-m-d H:i:s")));
 		atualizar('empresa',$campos,$valores,$_POST['id']);
@@ -94,7 +93,6 @@ function cadastra_empresa(){
 	}else{
 		$campos = array_merge($campos,array('empr_nb_userCadastro','empr_tx_dataCadastro'));
 		$valores = array_merge($valores,array($_SESSION['user_nb_id'], date("Y-m-d H:i:s")));
-		echo "<script>alert('teste inserir')</script>";return;
 		$id_empresa = inserir('empresa',$campos,$valores);
 	}
 
@@ -135,7 +133,6 @@ function busca_cep($cep){
 function carrega_endereco(){
 	
 	$arr = busca_cep($_GET['cep']);
-	// print_r($arr);
 	
 	?>
 	<script src="/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
@@ -163,7 +160,7 @@ function checa_cnpj(){
 		$sql = query("SELECT * FROM empresa WHERE empr_tx_cnpj = '$cnpj' AND empr_nb_id != $id AND empr_tx_status = 'ativo' LIMIT 1");
 		$a = carrega_array($sql);
 		
-		if($a['empr_nb_id'] > 0){
+		if($a['empr_nb_id'] > 0 && $_SESSION['user_tx_nivel'] == 'Administrador' && $a['empr_tx_cnpj'] == $_SESSION['user_tx_emprCnpj']){
 			?>
 			<script type="text/javascript">
 				if(confirm("CPF/CNPJ já cadastrado, deseja atualizar o registro?")){
@@ -294,8 +291,8 @@ function layout_empresa(){
 		campo('Complemento','complemento',$input_values['complemento'],3),
 		campo('Referência','referencia',$input_values['referencia'],2),
 		combo_net('Cidade/UF','cidade',$input_values['cidade'],3,'cidade','','','cida_tx_uf'),
-		campo('Telefone 1','fone1',$input_values['fone1'],2,'MASCARA_CEL'),
-		campo('Telefone 2','fone2',$input_values['fone2'],2,'MASCARA_CEL'),
+		campo('Telefone 1','fone1',$input_values['fone1'],2,'MASCARA_FONE'),
+		campo('Telefone 2','fone2',$input_values['fone2'],2,'MASCARA_FONE'),
 		campo('Contato','contato',$input_values['contato'],3),
 		campo('E-mail','email',$input_values['email'],3),
 		campo('Inscrição Estadual','inscricaoEstadual',$input_values['inscricaoEstadual'],3),
