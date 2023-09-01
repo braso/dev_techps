@@ -37,13 +37,23 @@ function modifica_usuario(){
 
 function cadastra_usuario(){
 	if($_POST['senha'] != $_POST['senha2']){
-		set_status("ERRO: Senhas não conferem!");
+		set_status("ERRO: Senhas não conferem.");
 		modifica_usuario();
 		exit;
 	}
 
 	$campos = ['user_tx_nome','user_tx_login','user_tx_nivel','user_tx_status','user_tx_emprCnpj'];
 	if($_SESSION['user_tx_nivel'] === 'Super Administrador'){
+		if($_POST['empresa']){
+			$empresa = query('SELECT empr_tx_cnpj FROM empresa where empr_tx_cnpj ='. $_POST['empresa']);
+			if(empty($empresa)){
+				set_status("ERRO: CNPJ não cadastrado.");
+				exit;
+			}
+		}else{
+			set_status("ERRO: CNPJ não informado.");
+			exit;
+		}
 	    $valores = [$_POST['nome'],$_POST['login'],$_POST['nivel'],'ativo', 	$_POST['empresa']];
 	}else{
 	    $valores = [$_POST['nome'],$_POST['login'],$_POST['nivel'],'ativo', 	$_SESSION['user_tx_emprCnpj']];
@@ -52,12 +62,12 @@ function cadastra_usuario(){
 	if(!$_POST['id']){
 		$sql = query("SELECT * FROM user WHERE user_tx_login = '".$_POST['login']."' AND user_tx_nivel = '".$_POST['nivel']."'");
 		if(num_linhas($sql)>0){
-			set_status("ERRO: Login já cadastrado!");
+			set_status("ERRO: Login já cadastrado.");
 			layout_usuario();
 			exit;
 		}
-		if(!$_POST['senha'] || !$_POST['senha2']){
-			set_status("ERRO: Preecha o campo senha e confirme-a!");
+		if(!($_POST['senha'] && $_POST['senha2'])){
+			set_status("ERRO: Preecha o campo senha e confirme-a.");
 			layout_usuario();
 			exit;
 		}
@@ -113,7 +123,7 @@ function layout_usuario(){
 function index(){
 	if($_GET['id']){
 		if($_GET['id'] != $_SESSION['user_nb_id']){
-			echo"ERRO: Usuário não autorizado!";
+			echo"ERRO: Usuário não autorizado.";
 			exit;
 		}
 		$_POST['id']=$_GET['id'];
