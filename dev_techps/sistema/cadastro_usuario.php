@@ -146,7 +146,7 @@ function index(){
 
 	$b[]=botao('Buscar','index');
 	
-	if($_SESSION['user_tx_nivel'] == 'Administrador'){
+	if($_SESSION['user_tx_nivel'] == 'Administrador' || $_SESSION['user_tx_nivel'] == 'Super Administrador'){
 		$b[]=botao('Inserir','layout_usuario');
 	}
 
