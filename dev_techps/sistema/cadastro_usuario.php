@@ -145,7 +145,7 @@
 
 		$b[]=botao('Buscar','index');
 		
-		if(is_int($_SESSION['user_tx_nivel'], 'Administrador')){
+		if(is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))){
 			$b[]=botao('Inserir','layout_usuario');
 		}
 
