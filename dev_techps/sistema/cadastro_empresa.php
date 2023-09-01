@@ -273,9 +273,9 @@ function layout_empresa(){
         	'dataRegistroCNPJ' => $a_mod['empr_tx_dataRegistroCNPJ'],
         	'logo' => $a_mod['empr_tx_logo'],
         	'domain' => $a_mod['empr_tx_domain'],
-        	'ftpServer' => $a_mod['empr_tx_ftpServer'],
-        	'ftpUsername' => $a_mod['empr_tx_ftpUsername'],
-        	'ftpUserpass' => $a_mod['empr_tx_ftpUserpass']
+        	'ftpServer' => $a_mod['empr_tx_ftpServer'] == 'ftp-jornadas.positronrt.com.br'? '': $a_mod['empr_tx_ftpServer'],
+        	'ftpUsername' => $a_mod['empr_tx_ftpUsername'] == '08995631000108'? '': $a_mod['empr_tx_ftpUsername'],
+        	'ftpUserpass' => $a_mod['empr_tx_ftpUserpass'] == '0899'? '': $a_mod['empr_tx_ftpUserpass']
         ];
     }
     
