@@ -18,9 +18,6 @@ function modifica_empresa(){
 
 }
 
-
-
-
 function cadastra_empresa(){
 	
 	$campos=array(
@@ -39,9 +36,6 @@ function cadastra_empresa(){
 		$_POST[inscricaoMunicipal], $_POST[regimeTributario], 'ativo',
 		$_POST[situacao], $parametro, $_POST[contato], $RegistroCNPJ, "https://braso.mobi/techps/$_POST[nomeDominio]"
 	);
-	
-// 	var_dump($valores);
-// 	die();
 
 	if($_POST[id]>0){
 		$campos = array_merge($campos,array(empr_nb_userAtualiza,empr_tx_dataAtualiza));
@@ -136,6 +130,7 @@ function checa_cnpj(){
 	exit;
 }
 
+
 function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 
 	if($mascara=="domain") {
@@ -180,28 +175,37 @@ function layout_empresa(){
 
 	$regimes = ['Simples Nacional', 'Lucro Presumido', 'Lucro Real'];
 
-	$c[] = campo('CPF/CNPJ','cnpj',$a_mod[empr_tx_cnpj],2,'MASCARA_CPF','onkeyup="checa_cnpj(this.value);"');
-	$c[] = campo('Nome','nome',$a_mod[empr_tx_nome],4);
-	$c[] = campo('Nome Fantasia','fantasia',$a_mod[empr_tx_fantasia],4);
-	$c[] = combo('Situação','situacao',$a_mod[empr_tx_situacao],2,array('Ativo','Inativo'));
-	$c[] = campo('CEP','cep',$a_mod[empr_tx_cep],2,'MASCARA_CEP','onkeyup="carrega_cep(this.value);"');
-	$c[] = campo('Endereço','endereco',$a_mod[empr_tx_endereco],5);
-	$c[] = campo('Número','numero',$a_mod[empr_tx_numero],2);
-	$c[] = campo('Bairro','bairro',$a_mod[empr_tx_bairro],3);
-	$c[] = campo('Complemento','complemento',$a_mod[empr_tx_complemento],3);
-	$c[] = campo('Referência','referencia',$a_mod[empr_tx_referencia],2);
-	$c[] = combo_net('Cidade/UF','cidade',$a_mod[empr_nb_cidade],3,'cidade','','','cida_tx_uf');
-	$c[] = campo('Telefone 1','fone1',$a_mod[empr_tx_fone1],2,'MASCARA_CEL'); 
-	$c[] = campo('Telefone 2','fone2',$a_mod[empr_tx_fone2],2,'MASCARA_CEL');
-	$c[] = campo('Contato','contato',$a_mod[empr_tx_contato],3);
-	$c[] = campo('E-mail','email',$a_mod[empr_tx_email],3);
-	$c[] = campo('Inscrição Estadual','inscricaoEstadual',$a_mod[empr_tx_inscricaoEstadual],3);
-	$c[] = campo('Inscrição Municipal','inscricaoMunicipal',$a_mod[empr_tx_inscricaoMunicipal],3);
-	$c[] = combo('Regime Tributário','regimeTributario',$a_mod[empr_tx_regimeTributario],3,$regimes);
-	$c[] = campo_data('Data Reg. CNPJ','dataRegistroCNPJ',$a_mod[empr_tx_dataRegistroCNPJ],3);
-	$c[] = arquivo('Logo (.png, .jpg)','logo',$a_mod[empr_tx_logo],4);
-	$c[] = campo_domain('Nome do Domínio','nomeDominio',$a_mod['empr_tx_domain'],2,'domain');
-	
+// 	if ($_SESSION['user_tx_nivel'] != 'Master') {
+// 		$extra .= "disabled";
+// 	} else
+// 		$extra .= '';
+    $matriz = substr($a_mod[empr_tx_cnpj],-7,4);
+    if($matriz === '0001'){
+		$extra .= "disabled";
+	} else
+		$extra .= '';
+
+	$c[] = campo('CPF/CNPJ','cnpj',$a_mod[empr_tx_cnpj],2,'MASCARA_CPF','onkeyup="checa_cnpj(this.value); "'.$extra);
+	$c[] = campo('Nome','nome',$a_mod[empr_tx_nome],4,'',$extra);
+	$c[] = campo('Nome Fantasia','fantasia',$a_mod[empr_tx_fantasia],4,'',$extra);
+	$c[] = combo('Situação','situacao',$a_mod[empr_tx_situacao],2,array('Ativo','Inativo'), $extra );
+	$c[] = campo('CEP','cep',$a_mod[empr_tx_cep],2,'MASCARA_CEP','onkeyup="carrega_cep(this.value); "'.$extra );
+	$c[] = campo('Endereço','endereco',$a_mod[empr_tx_endereco],5,'',$extra );
+	$c[] = campo('Número','numero',$a_mod[empr_tx_numero],2,'',$extra );
+	$c[] = campo('Bairro','bairro',$a_mod[empr_tx_bairro],3,'',$extra );
+	$c[] = campo('Complemento','complemento',$a_mod[empr_tx_complemento],3,'',$extra );
+	$c[] = campo('Referência','referencia',$a_mod[empr_tx_referencia],2,'',$extra );
+	$c[] = combo_net('Cidade/UF','cidade',$a_mod[empr_nb_cidade],3,'cidade',$extra,'','cida_tx_uf');
+	$c[] = campo('Telefone 1','fone1',$a_mod[empr_tx_fone1],2,'MASCARA_CEL',$extra ); 
+	$c[] = campo('Telefone 2','fone2',$a_mod[empr_tx_fone2],2,'MASCARA_CEL',$extra );
+	$c[] = campo('Contato','contato',$a_mod[empr_tx_contato],3,'',$extra );
+	$c[] = campo('E-mail','email',$a_mod[empr_tx_email],3,'',$extra );
+	$c[] = campo('Inscrição Estadual','inscricaoEstadual',$a_mod[empr_tx_inscricaoEstadual],3,'',$extra );
+	$c[] = campo('Inscrição Municipal','inscricaoMunicipal',$a_mod[empr_tx_inscricaoMunicipal],3,'',$extra );
+	$c[] = combo('Regime Tributário','regimeTributario',$a_mod[empr_tx_regimeTributario],3,$regimes,$extra );
+	$c[] = campo_data('Data Reg. CNPJ','dataRegistroCNPJ',$a_mod[empr_tx_dataRegistroCNPJ],3,$extra );
+	$c[] = arquivo('Logo (.png, .jpg)','logo',$a_mod[empr_tx_logo],4,$extra );
+	$c[] = campo_domain('Nome do Domínio','nomeDominio',$a_mod['empr_tx_domain'],2,'domain',$extra );
 	$cJornada[]=combo_bd('!Parâmetros da Jornada','parametro',$a_mod[empr_nb_parametro],6,'parametro','onchange="carrega_parametro(this.value)"');
 	// $cJornada[]=campo('Jornada Semanal (Horas)','jornadaSemanal',$a_mod[enti_tx_jornadaSemanal],3,MASCARA_NUMERO,'disabled=disabled');
 	// $cJornada[]=campo('Jornada Sábado (Horas)','jornadaSabado',$a_mod[enti_tx_jornadaSabado],3,MASCARA_NUMERO,'disabled=disabled');
@@ -260,7 +264,23 @@ function layout_empresa(){
 		function carrega_cep(cep){
 			var num = cep.replace(/[^0-9]/g,'');
 			if(num.length == '8'){
-				document.getElementById('frame_cep').src='<?=$path_parts['basename']?>?acao=carrega_endereco&cep='+num;
+				$.ajax({
+            url: '<?=$path_parts['basename']?>', // Substitua pelo URL correto
+            method: 'GET', // Ou 'POST' se for o caso
+            data: {
+                acao: 'carrega_endereco',
+                cep: num
+            },
+            dataType: 'json',
+            success: function(response) {
+                // Certifique-se de que a resposta contém os campos corretos
+                $('#endereco').val(response.endereco);
+                // Preencha outros campos aqui
+            },
+            error: function(error) {
+                console.error('Erro na consulta:', error);
+            }
+        });
 			}
 		}
 		
@@ -269,6 +289,41 @@ function layout_empresa(){
 				document.getElementById('frame_cep').src='<?=$path_parts['basename']?>?acao=checa_cnpj&cnpj='+cnpj+'&id=<?=$a_mod[empr_nb_id]?>'
 			}
 		}
+		
+		$(document).ready(function() {
+			$('#cnpj').on('blur', function(){
+				var cnpj = $(this).val();
+
+				$.ajax({
+					url: 'conecta_techps.php',
+					method: 'POST',
+					data: { cnpj: cnpj },
+					dataType: 'json',
+					success: function(response) {
+					    console.log(response);
+						$('#nome').val(response[0].empr_tx_nome);
+						$('#fantasia').val(response[0].empr_tx_fantasia);
+						$('#situação').val(response[0].empr_tx_fantasia);
+						$('#cep').val(response[0].empr_tx_cep);
+						$('#numero').val(response[0].empr_tx_email);
+						$('#complemento').val(response[0].empr_tx_complemento);
+						$('#referencia').val(response[0].empr_tx_referencia);
+						$('#fone1').val(response[0].empr_tx_fone1);
+						$('#fone2').val(response[0].empr_tx_fone2);
+						$('#contato').val(response[0].empr_tx_contato);
+						$('#email').val(response[0].empr_tx_email);
+						$('#inscricaoEstadual').val(response[0].empr_tx_inscricaoEstadual);
+						$('#inscricaoMunicipal').val(response[0].empr_tx_inscricaoMunicipal);
+						$('#regimeTributario').val(response[0].empr_tx_regimeTributario);
+						$('#dataRegistroCNPJ').val(response[0].empr_tx_dataRegistroCNPJ);
+						$('#nomeDominio').val(response[0].empr_tx_domain);
+					},
+					error: function(error) {
+						console.error('Erro na consulta:', error);
+					}
+				});
+			});
+		});
 	</script>
 	<?php
 

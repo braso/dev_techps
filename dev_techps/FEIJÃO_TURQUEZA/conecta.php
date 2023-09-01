@@ -12,7 +12,7 @@ date_default_timezone_set('America/Fortaleza');
 
 
 
-$CONTEX['path'] = "/techps/techps";
+$CONTEX['path'] = "/techps/FEIJÃO_TURQUEZA";
 
 
 
@@ -20,11 +20,11 @@ $CONTEX['path'] = "/techps/techps";
 
 $servername = "localhost";
 
-$username = "brasomo_techps";
+$username = "brasomo_techps_feijao_turqueza";
 
 $password = "techps!sistema";
 
-$dbname = "brasomo_techps";
+$dbname = "brasomo_techps_feijao_turqueza";
 
 // $servername = "localhost";
 

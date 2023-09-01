@@ -54,7 +54,7 @@
 									<!-- </li> -->
 
 
-									<? if($_SESSION["user_tx_nivel"] == 'Administrador' || $_SESSION["user_tx_nivel"] == 'Super Administrador' ){ ?>
+									<? if($_SESSION["user_tx_nivel"] == 'Administrador' || $_SESSION["user_tx_nivel"] == 'Master' ){ ?>
 										<li class=" "><a href="<?=$CONTEX["path"]?>/cadastro_empresa" class="nav-link ">Empresa/Filial</a></li>
 									<? } ?>		
 									<li class=" "><a href="<?=$CONTEX["path"]?>/cadastro_motorista" class="nav-link ">Motorista</a></li>

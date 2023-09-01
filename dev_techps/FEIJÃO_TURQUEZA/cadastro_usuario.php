@@ -164,7 +164,7 @@ function layout_usuario(){
 	cabecalho("Cadastro de Usuário");
 	
 
-	if($_SESSION[user_tx_nivel] != 'Administrador' && $_SESSION['user_tx_nivel'] != 'Super Administrador')
+	if($_SESSION[user_tx_nivel] != 'Administrador' && $_SESSION['user_tx_nivel'] === 'Master')
 
 		$extra .= "disabled";
 
@@ -174,9 +174,9 @@ function layout_usuario(){
 		
 	
 	
-	if ($_SESSION['user_tx_nivel'] === 'Super Administrador') {
+	if ($_SESSION['user_tx_nivel'] === 'Master') {
 
-		$combo = array('Administrador','Motorista', 'Funcionário','Super Administrador');
+		$combo = array('Administrador','Motorista', 'Funcionário','Master');
 		
 		$sql = query("SELECT empr_tx_nome, empr_tx_cnpj  FROM empresa");
 		$result = mysqli_fetch_all($sql, MYSQLI_ASSOC);
@@ -189,6 +189,8 @@ function layout_usuario(){
 	}
 	else
 		$combo = array('Administrador','Motorista', 'Funcionário');
+		
+	
 
 
 
@@ -196,11 +198,11 @@ function layout_usuario(){
 
 	$c[]=combo('Nível','nivel',$a_mod[user_tx_nivel],4,$combo,$extra);
 
-	$c[]=campo('Login','login',$a_mod[user_tx_login],4);
+	$c[]=campo('Login','login',$a_mod[user_tx_login],4,'',$extra);
 
-	$c[]=campo_senha('Senha','senha',"",2);
+	$c[]=campo_senha('Senha','senha',"",2,$extra);
 
-	$c[]=campo_senha('Confirmar Senha','senha2',"",2);
+	$c[]=campo_senha('Confirmar Senha','senha2',"",2,$extra);
 	if ($_SESSION['user_tx_nivel'] === 'Super Administrador'){
 	    $c[]=combo_empresa('Empresa','empresa',$a_mod['user_tx_emprCnpj'],4,$empresas_cnpj,$empresas_name,$extra);
 	}
@@ -300,8 +302,11 @@ function index(){
 	fecha_form($b);
 
 
+	if ($_SESSION[user_tx_nivel] == 'Administrador' && $_SESSION[user_tx_nivel] == 'Funcionário')
+		$sql = "SELECT * FROM user WHERE user_tx_status != 'inativo' AND user_nb_id > 1 $extra";
+	else
+		$sql = "SELECT * FROM user WHERE user_tx_status != 'inativo' AND user_tx_nivel != 'Master' AND user_nb_id > 1 $extra";
 
-	$sql = "SELECT * FROM user WHERE user_tx_status != 'inativo' AND user_nb_id > 1 $extra";
 
 	$cab = array('CÓDIGO','NOME','LOGIN','NÍVEL','','');
 
