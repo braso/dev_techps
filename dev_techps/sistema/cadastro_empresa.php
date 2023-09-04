@@ -76,8 +76,18 @@ function cadastra_empresa(){
 		$_POST['ftpUserpass']
 	];
 	
-	if(empty($_POST['cnpj']) || empty($_POST['nome']) || empty($_POST['cep']) || empty($_POST['numero']) || empty($_POST['email']) || empty($_POST['ftpServer']) || empty($_POST['ftpUsername']) || empty($_POST['ftpUserpass'])){
+	if(empty($_POST['cnpj']) || empty($_POST['nome']) || empty($_POST['cep']) || empty($_POST['numero']) || empty($_POST['email'])){
 		echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
+		layout_empresa();
+		exit;
+	}
+
+	if(empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) == 3){
+		$_POST['ftpServer']   = 'ftp-jornadas.positronrt.com.br';
+		$_POST['ftpUsername'] = '08995631000108';
+		$_POST['ftpUserpass'] = '0899';
+	}elseif(empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) < 3){
+		echo '<script>alert("Preencha os 3 campos de FTP.")</script>';
 		layout_empresa();
 		exit;
 	}
@@ -219,7 +229,7 @@ function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara='',$extra='
 function layout_empresa(){
 	global $a_mod;
 
-	cabecalho("Cadastro Empresa/Filial");
+	cabecalho('Cadastro Empresa/Filial'.(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? ' (Dev)': ''));
 
 	$regimes = ['', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real'];
 	
@@ -394,7 +404,7 @@ function concat($id){
 
 function index(){
 
-	cabecalho("Cadastro Empresa/Filial");
+	cabecalho('Cadastro Empresa/Filial'.(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? ' (Dev)': ''));
 	$extra = '';
 
 	if($_POST['busca_situacao'] == '')		$_POST['busca_situacao'] = 'Ativo';
