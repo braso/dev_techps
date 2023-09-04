@@ -12,7 +12,7 @@ date_default_timezone_set('America/Fortaleza');
 
 
 
-$CONTEX['path'] = "/dev_techps/sistema";
+$CONTEX['path'] = "/techps/techps";
 
 
 
