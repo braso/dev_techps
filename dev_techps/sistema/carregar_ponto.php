@@ -70,10 +70,6 @@ function layout_ponto(){
 
 function layout_ftp(){
 	// error_reporting(E_ALL);
-    
-    $infos = query('SELECT empr_tx_ftpServer, empr_tx_ftpUsername, empr_tx_ftpUserpass FROM empresa join user on empresa.empr_tx_cnpj = user.user_tx_emprCnpj WHERE user_nb_id = '.$_SESSION['user_nb_id'])->fetch_row();
-	print_r($_SESSION);
-	exit;
 
 	$arquivo = 'apontamento' . date('dmY') . '*.txt';
 	$path = 'arquivos/pontos/';
@@ -83,11 +79,11 @@ function layout_ftp(){
 
 	// connect and login to FTP server
 
-	$ftp_server = "ftp-jornadas.positronrt.com.br";
-	$ftp_username = '08995631000108';
-	$ftp_userpass = '0899';
-	// $ftp_username = 'techps';
-	// $ftp_userpass = '123456';
+	$infos = query('SELECT empr_tx_ftpServer, empr_tx_ftpUsername, empr_tx_ftpUserpass FROM empresa join user on empresa.empr_tx_cnpj = user.user_tx_emprCnpj WHERE user_nb_id = '.$_SESSION['user_nb_id'])->fetch_row();
+	
+	$ftp_server = $infos[0];
+	$ftp_username = $infos[1];
+	$ftp_userpass = $infos[2];
 
 	// $ftp_server = "ftp.modulusistemas.com.br";
 	// $ftp_username = 'techps@modulusistemas.com.br';
@@ -147,7 +143,7 @@ function layout_ftp(){
 
 			}
 		} else {
-			echo "There was a problem writing the file\n";
+			echo "Houve um problema ao salvar o arquivo.\n";
 			exit;
 		}
 	}
