@@ -579,7 +579,7 @@ function diaDetalhePonto($matricula, $data){
 	
 	$aRetorno['data'] = data($data);
 	$aRetorno['diaSemana'] = mb_strtoupper(date('%a',strtotime($data)));
-	$campos = ['inicioJornada', 'inicioRefeicao', 'fimRefeicao', 'fimJornada', 'diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada', 'jornadaPrevista', 'diffJornadaEfetiva', 'maximoDirecaoContinua', 'intersticio', 'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'diffSaldo'];
+	$campos = ['inicioJornada', 'inicioRefeicao', 'fimRefeicao', 'fimJornada', 'diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada', 'jornadaPrevista', 'diffJornadaEfetiva', 'maximoDirecaoContinua', 'intersticio', 'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'diffSaldo', 'temPendencias'];
 	foreach($campos as $campo){
 		$aRetorno[$campo] = '';
 	}
@@ -735,9 +735,9 @@ function diaDetalhePonto($matricula, $data){
 	$repousoOrdenado = ordena_horarios_pares($aDataHorainicioRepouso, $aDataHorafimRepouso);
 
 	$aRetorno['diffRefeicao'] = $refeicaoOrdenada['icone'].$refeicaoOrdenada['totalIntervalo'];
-	$aRetorno['diffEspera'] = $esperaOrdenada['icone'].$esperaOrdenada['totalIntervalo'];
+	$aRetorno['diffEspera']   = $esperaOrdenada['icone'].$esperaOrdenada['totalIntervalo'];
 	$aRetorno['diffDescanso'] = $descansoOrdenado['icone'].$descansoOrdenado['totalIntervalo'];
-	$aRetorno['diffRepouso'] = $repousoOrdenado['icone'].$repousoOrdenado['totalIntervalo'];
+	$aRetorno['diffRepouso']  = $repousoOrdenado['icone'].$repousoOrdenado['totalIntervalo'];
 
 	// echo "$data <br>";
 	
@@ -762,6 +762,7 @@ function diaDetalhePonto($matricula, $data){
 				   "Registro efetuado por $aAbono[user_tx_login] em ".data($aAbono['abon_tx_dataCadastro'],1);
 
 		$iconeAbono =  "<a><i style='color:orange;' title='$tooltip' class='fa fa-warning'></i></a>";
+		$aRetorno['temPendencias'] = True;
 	}else{
 		$tooltip = $iconeAbono = '';
 	}
@@ -838,10 +839,11 @@ function diaDetalhePonto($matricula, $data){
 		
 		if($tsInterTotal < (11*3600)){
 			$iconeInter .= "<a><i style='color:red;' title='Interstício Total de 11:00 não respeitado' class='fa fa-warning'></i></a>";
+			$aRetorno['temPendencias'] = True;
 		}
-		
 		if($hInter < (8*3600)){
 			$iconeInter .= "<a><i style='color:red;' title='O mínimo de 08:00h ininterruptas no primeiro período, não respeitado.' class='fa fa-warning'></i></a>";
+			$aRetorno['temPendencias'] = True;
 		}
 
 
@@ -889,9 +891,9 @@ function diaDetalhePonto($matricula, $data){
 	$jornadaNoturno = $jornadaOrdenado['totalIntervaloAdicionalNot'];
 	
 	$refeicaoNoturno = $refeicaoOrdenada['totalIntervaloAdicionalNot'];
-	$esperaNoturno = $esperaOrdenada['totalIntervaloAdicionalNot'];
+	$esperaNoturno   = $esperaOrdenada['totalIntervaloAdicionalNot'];
 	$descansoNoturno = $descansoOrdenado['totalIntervaloAdicionalNot'];
-	$repousoNoturno = $repousoOrdenado['totalIntervaloAdicionalNot'];
+	$repousoNoturno  = $repousoOrdenado['totalIntervaloAdicionalNot'];
 
 	$intervalosNoturnos = somarHorarios([$refeicaoNoturno, $esperaNoturno, $descansoNoturno, $repousoNoturno]);
 
@@ -938,11 +940,10 @@ function diaDetalhePonto($matricula, $data){
 	$dtJornada = new DateTime($data.' '.$diffJornadaEfetiva->format("%H:%I"));
 	$dtJornadaMinima = new DateTime($data.' '.'06:00');
 	
-	if(($dtJornada > $dtJornadaMinima && $diffJornadaEfetiva->format("%H:%I") != '00:00' || ($aRetorno['jornadaPrevista'] != '00:00' && $diffJornadaEfetiva->format("%H:%I") == '00:00'))){
-		$verificaJornadaMinima = 1;
-	}else{
-		$verificaJornadaMinima = 0;
-	}
+	$verificaJornadaMinima = (
+		($dtJornada > $dtJornadaMinima) && ($diffJornadaEfetiva->format("%H:%I") != '00:00') || 
+		($aRetorno['jornadaPrevista'] != '00:00') && ($diffJornadaEfetiva->format("%H:%I") == '00:00')
+	)+0;
 	//FIM VERIFICA JORNADA MINIMA
 
 	//VERIFICA SE HOUVE 01:00 DE REFEICAO
@@ -955,11 +956,11 @@ function diaDetalhePonto($matricula, $data){
 		}
 	}
 
-	if($aRetorno['diffRefeicao'] == '00:00')
-	$menor1h = 1;
+	if($aRetorno['diffRefeicao'] == '00:00') $menor1h = 1;
 
 	if($menor1h && $dtJornada > $dtJornadaMinima){
 		$aRetorno['diffRefeicao'] = "<a><i style='color:red;' title='Refeição com tempo ininterrupto mínimo de 01:00h, não respeitado.' class='fa fa-warning'></i></a>" . $aRetorno['diffRefeicao'];
+		$aRetorno['temPendencias'] = True;
 	}else{
 		$iconeRefeicaoMinima = '';
 	}
@@ -972,22 +973,14 @@ function diaDetalhePonto($matricula, $data){
 	// 	echo '<pre>'.($aRetorno['jornadaPrevista'] != '00:00').'</pre>';
 	// }
 
-	if($arrayInicioJornada[0] == '' && $verificaJornadaMinima == 1){
-		$aRetorno['inicioJornada'] = "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
-	}
-	// if($aRetorno['fimJornada'] == '' && $cargaHoraria != 0){
-	if($arrayFimJornada[0] == '' && $verificaJornadaMinima == 1){
-		$aRetorno['fimJornada'] = "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning'></i></a>";
-	}
-	// if($aRetorno['inicioRefeicao'] == '' && $cargaHoraria != 0){
-	if($aRetorno['inicioRefeicao'] == '' && $verificaJornadaMinima == 1){
-		$aRetorno['inicioRefeicao'] = "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>".$iconeRefeicaoMinima;
-	}
-	// if($aRetorno['fimRefeicao'] == '' && $cargaHoraria != 0){
-	if($aRetorno['fimRefeicao'] == '' && $verificaJornadaMinima == 1){
-		$aRetorno['fimRefeicao'] = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>".$iconeRefeicaoMinima;
-	}
+	if($verificaJornadaMinima == 1){
+		if($arrayInicioJornada[0] == '') 		$aRetorno['inicioJornada']  = "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
+		if($arrayFimJornada[0] == '') 			$aRetorno['fimJornada']     = "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning'></i></a>";
+		if($aRetorno['inicioRefeicao'] == '') 	$aRetorno['inicioRefeicao'] = "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>".$iconeRefeicaoMinima;
+		if($aRetorno['fimRefeicao'] == '') 		$aRetorno['fimRefeicao']    = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>".$iconeRefeicaoMinima;
 
+		if($arrayInicioJornada[0] == '' || $arrayFimJornada[0] == '' || $aRetorno['inicioRefeicao'] == '' || $aRetorno['fimRefeicao'] == '') $aRetorno['temPendencias'] = True;
+	}
 	if($iconeAbono != ''){
 		$aRetorno['jornadaPrevista'] = $iconeAbono."&nbsp;".$aRetorno['jornadaPrevista'];
 	}
