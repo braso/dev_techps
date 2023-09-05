@@ -59,6 +59,10 @@
 			for($date = $startDate; $date <= $endDate; $date->modify('+1 day')){
 				$dataVez = $date->format('Y-m-d');
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
+				if($aDetalhado['temPendencias'] == True){
+					# Retirar caso o filtro de pendências estiver ativado
+				}
+
 				$aDia[] = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDadosMotorista, $aDetalhado));
 			}
 
