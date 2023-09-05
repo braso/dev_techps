@@ -4,21 +4,21 @@ include "conecta.php";
 
 function cadastra_abono(){
 
-	$aData = explode(" - ", $_POST[daterange]);
+	$aData = explode(" - ", $_POST['daterange']);
 
 	$begin = new DateTime(data($aData[0]));
 	$end = new DateTime(data($aData[1]));
 
-	$a=carregar('entidade',$_POST[motorista]);
+	$a=carregar('entidade',$_POST['motorista']);
 	
 	for($i = $begin; $i <= $end; $i->modify('+1 day')){
-		$campos = array(abon_tx_data, abon_tx_matricula, abon_tx_abono, abon_nb_motivo, abon_tx_descricao, abon_nb_userCadastro, abon_tx_dataCadastro, abon_tx_status);
-		$valores = array($i->format("Y-m-d"), $a[enti_tx_matricula], $_POST[abono], $_POST[motivo], $_POST[descricao], $_SESSION[user_nb_id], date("Y-m-d H:i:s"), 'ativo');
+		$campos = array('abon_tx_data', 'abon_tx_matricula', 'abon_tx_abono', 'abon_nb_motivo', 'abon_tx_descricao', 'abon_nb_userCadastro', 'abon_tx_dataCadastro', 'abon_tx_status');
+		$valores = array($i->format("Y-m-d"), $a['enti_tx_matricula'], $_POST['abono'], $_POST['motivo'], $_POST['descricao'], $_SESSION['user_nb_id'], date("Y-m-d H:i:s"), 'ativo');
 
 		inserir('abono', $campos, $valores);
 	}
 
-	$_POST[busca_motorista] = $_POST[motorista];
+	$_POST['busca_motorista'] = $_POST['motorista'];
 
 	index();
 	exit;
@@ -29,10 +29,10 @@ function layout_abono(){
 
 	cabecalho('Espelho de Ponto');
 
-	$c[] = combo_net('Motorista:','motorista',$_POST[busca_motorista],4,'entidade','',' AND enti_tx_tipo = "Motorista"','enti_tx_matricula');
-	$c[] = campo('Data(s):','daterange',$_POST[daterange],3);
+	$c[] = combo_net('Motorista:','motorista',$_POST['busca_motorista'],4,'entidade','',' AND enti_tx_tipo = "Motorista"','enti_tx_matricula');
+	$c[] = campo('Data(s):','daterange',$_POST['daterange'],3);
 	$c[] = campo_hora('Abono: (hh:mm)','abono','',3);
-	$c2[] = combo_bd('Motivo:','motivo',$_POST[motivo],4,'motivo','',' AND moti_tx_tipo = "Abono"');
+	$c2[] = combo_bd('Motivo:','motivo',$_POST['motivo'],4,'motivo','',' AND moti_tx_tipo = "Abono"');
 	$c2[] = textarea('Justificativa:','descricao','',12);
 	
 	//BOTOES
@@ -99,19 +99,19 @@ function layout_abono(){
 
 function cadastra_ajuste(){
 
-	if($_POST[hora] == ''){
+	if($_POST['hora'] == ''){
 		set_status("ERRO: Dados insuficientes!");
 		layout_ajuste();
 		exit;
 	}
 
-	$aMotorista = carregar('entidade',$_POST[id]);
+	$aMotorista = carregar('entidade',$_POST['id']);
 
-	$queryMacroPonto = query("SELECT macr_tx_codigoInterno, macr_tx_codigoExterno FROM macroponto WHERE macr_nb_id = '".$_POST[idMacro]."'");
+	$queryMacroPonto = query("SELECT macr_tx_codigoInterno, macr_tx_codigoExterno FROM macroponto WHERE macr_nb_id = '".$_POST['idMacro']."'");
 	$aTipo = carrega_array($queryMacroPonto);
 
-	$campos = array(pont_nb_user, pont_tx_matricula, pont_tx_data, pont_tx_tipo, pont_tx_tipoOriginal, pont_tx_status, pont_tx_dataCadastro, pont_nb_motivo, pont_tx_descricao);
-	$valores = array($_SESSION[user_nb_id], $aMotorista['enti_tx_matricula'], "$_POST[data] $_POST[hora]", $aTipo[0], $aTipo[1], 'ativo', date("Y-m-d H:i:s"),$_POST[motivo],$_POST[descricao]);
+	$campos = array('pont_nb_user', 'pont_tx_matricula', 'pont_tx_data', 'pont_tx_tipo', 'pont_tx_tipoOriginal', 'pont_tx_status', 'pont_tx_dataCadastro', 'pont_nb_motivo', 'pont_tx_descricao');
+	$valores = array($_SESSION['user_nb_id'], $aMotorista['enti_tx_matricula'], "$_POST[data] $_POST[hora]", $aTipo[0], $aTipo[1], 'ativo', date("Y-m-d H:i:s"),$_POST['motivo'],$_POST['descricao']);
 	inserir('ponto',$campos,$valores);
 		
 	
@@ -120,12 +120,12 @@ function cadastra_ajuste(){
 }
 
 function excluir_ponto(){
-	$a=carregar('ponto', (int)$_POST[id]);
-	remover('ponto', (int)$_POST[id]);
+	$a=carregar('ponto', (int)$_POST['id']);
+	remover('ponto', (int)$_POST['id']);
 	
-	$_POST[id] = $_POST[idEntidade];
-	$_POST[data] = substr($a[pont_tx_data],0, -9);
-	$_POST[busca_data] = $a[pont_tx_data];
+	$_POST['id'] = $_POST['idEntidade'];
+	$_POST['data'] = substr($a['pont_tx_data'],0, -9);
+	$_POST['busca_data'] = $a['pont_tx_data'];
 
 
 	layout_ajuste();
@@ -137,36 +137,36 @@ function layout_ajuste(){
 
 	cabecalho('Espelho de Ponto');
 
-	if($_POST[busca_data1] == '' && $_POST[busca_data])
-		$_POST[busca_data1] = $_POST[busca_data];
-	if($_POST[busca_data2] == '' && $_POST[busca_data])
-		$_POST[busca_data2] = $_POST[busca_data];
+	if($_POST['busca_data1'] == '' && $_POST['busca_data'])
+		$_POST['busca_data1'] = $_POST['busca_data'];
+	if($_POST['busca_data2'] == '' && $_POST['busca_data'])
+		$_POST['busca_data2'] = $_POST['busca_data'];
 	
-	$aMotorista = carregar('entidade',$_POST[id]);
+	$aMotorista = carregar('entidade',$_POST['id']);
 
-	$sqlCheck = query("SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user WHERE endo_tx_mes = '".substr($_POST[data], 0,7).'-01'."' AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'
+	$sqlCheck = query("SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user WHERE endo_tx_mes = '".substr($_POST['data'], 0,7).'-01'."' AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'
 			AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."' AND endo_tx_status = 'ativo' AND endo_nb_userCadastro = user_nb_id LIMIT 1");
 	$aEndosso = carrega_array($sqlCheck);
 		
-	$extra = " AND pont_tx_data LIKE '".$_POST[data]." %' AND pont_tx_matricula = '$aMotorista[enti_tx_matricula]'";
+	$extra = " AND pont_tx_data LIKE '".$_POST['data']." %' AND pont_tx_matricula = '$aMotorista[enti_tx_matricula]'";
 
-	$c[] = texto('Matrícula',$aMotorista[enti_tx_matricula],2);
-	$c[] = texto('Motorista',$aMotorista[enti_tx_nome],5);
-	$c[] = texto('CPF',$aMotorista[enti_tx_cpf],3);
+	$c[] = texto('Matrícula',$aMotorista['enti_tx_matricula'],2);
+	$c[] = texto('Motorista',$aMotorista['enti_tx_nome'],5);
+	$c[] = texto('CPF',$aMotorista['enti_tx_cpf'],3);
 
-	$c2[] = campo('Data','data',data($_POST[data]),2,'','readonly=readonly');
-	$c2[] = campo_hora('Hora','hora',$a_mod[macr_tx_codigoExterno],2);
+	$c2[] = campo('Data','data',data($_POST['data']),2,'','readonly=readonly');
+	$c2[] = campo_hora('Hora','hora',$a_mod['macr_tx_codigoExterno'],2);
 	$c2[] = combo_bd('Código Macro','idMacro','',4,'macroponto','','ORDER BY macr_nb_id ASC');
 	$c2[] = combo_bd('Motivo:','motivo','',4,'motivo','',' AND moti_tx_tipo = "Ajuste"');
 
 	$c3[] = textarea('Justificativa:','descricao','',12);
 
 	if(count($aEndosso) == 0){
-		$botao[] = botao('Gravar','cadastra_ajuste','id,busca_motorista,busca_data1,busca_data2,data,busca_data',"$_POST[id],$_POST[id],$_POST[busca_data1],$_POST[busca_data2],$_POST[data],".substr($_POST[data],0, -3));
+		$botao[] = botao('Gravar','cadastra_ajuste','id,busca_motorista,busca_data1,busca_data2,data,busca_data',"$_POST[id],$_POST[id],$_POST[busca_data1],$_POST[busca_data2],$_POST[data],".substr($_POST['data'],0, -3));
 	}else{
 		$c2[] = texto('Endosso:',"Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1),6);
 	}
-	$botao[] = botao('Voltar','index','busca_data1,busca_data2,id,busca_empresa,busca_motorista,data,busca_data',"$_POST[busca_data1],$_POST[busca_data2],$_POST[id],$aMotorista[enti_nb_empresa],$_POST[id],$_POST[data],".substr($_POST[data],0, -3));
+	$botao[] = botao('Voltar','index','busca_data1,busca_data2,id,busca_empresa,busca_motorista,data,busca_data',"$_POST[busca_data1],$_POST[busca_data2],$_POST[id],$aMotorista[enti_nb_empresa],$_POST[id],$_POST[data],".substr($_POST['data'],0, -3));
 	
 	abre_form('Dados do Ajuste de Ponto');
 	linha_form($c);
@@ -186,7 +186,7 @@ function layout_ajuste(){
 	$cab = array('CÓD','DATA','HORA','TIPO','MOTIVO','JUSTIFICATIVA','USUÁRIO','DATA CADASTRO','');
 
 	// $ver2 = "icone_modificar(arqu_nb_id,layout_confirma)";
-	$val = array('pont_nb_id','data(pont_tx_data)','data(pont_tx_data,3)','macr_tx_nome','moti_tx_nome','pont_tx_descricao','user_tx_login','data(pont_tx_dataCadastro,1)','icone_excluir(pont_nb_id,excluir_ponto,idEntidade,'.$_POST[id].')');
+	$val = array('pont_nb_id','data(pont_tx_data)','data(pont_tx_data,3)','macr_tx_nome','moti_tx_nome','pont_tx_descricao','user_tx_login','data(pont_tx_dataCadastro,1)','icone_excluir(pont_nb_id,excluir_ponto,idEntidade,'.$_POST['id'].')');
 	grid($sql,$cab,$val,'','',2,'ASC',-1);
 
 	rodape();
@@ -623,8 +623,8 @@ function diaDetalhePonto($matricula, $data){
 	$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_status != 'inativo' AND enti_tx_matricula = '$matricula' LIMIT 1");
 	$aMotorista = carrega_array($sqlMotorista);
 
-	$aParametro = carregar('parametro', $aMotorista[enti_nb_parametro]);
-	if($aParametro[para_tx_acordo] == 'Sim'){
+	$aParametro = carregar('parametro', $aMotorista['enti_nb_parametro']);
+	if($aParametro['para_tx_acordo'] == 'Sim'){
 		$horaAlertaJornadaEfetiva = '12:00';
 	}else{
 		$horaAlertaJornadaEfetiva = '10:00';
@@ -640,13 +640,13 @@ function diaDetalhePonto($matricula, $data){
 	if(strftime('%w',strtotime($data)) == '6'){ //SABADOS
 		// $horas_sabado = $aMotorista[enti_tx_jornadaSabado];
 		// $cargaHoraria = sprintf("%02d:%02d", floor($horas_sabado), ($horas_sabado - floor($horas_sabado)) * 60);
-		$cargaHoraria = $aMotorista[enti_tx_jornadaSabado];
+		$cargaHoraria = $aMotorista['enti_tx_jornadaSabado'];
 	}elseif(strftime('%w',strtotime($data)) == '0'){ //DOMINGOS
 		$cargaHoraria = '00:00';
 	}else{
 		// $horas_diarias = $aMotorista[enti_tx_jornadaSemanal]/5;
 		// $cargaHoraria = sprintf("%02d:%02d", floor($horas_diarias), ($horas_diarias - floor($horas_diarias)) * 60);
-		$cargaHoraria = $aMotorista[enti_tx_jornadaSemanal];
+		$cargaHoraria = $aMotorista['enti_tx_jornadaSemanal'];
 	}
 
 	if($stringFeriado != ''){
@@ -665,69 +665,69 @@ function diaDetalhePonto($matricula, $data){
 		// $queryMacroPonto = query("SELECT macr_tx_nome,macr_tx_codigoInterno FROM macroponto WHERE macr_tx_codigoExterno = '".$aDia[pont_tx_tipo]."'");
 		// $aTipo = carrega_array($queryMacroPonto);
 
-		$arrayMDC[] = [date("H:i",strtotime($aDia[pont_tx_data])), $aDia[pont_tx_tipo]];
+		$arrayMDC[] = [date("H:i",strtotime($aDia['pont_tx_data'])), $aDia['pont_tx_tipo']];
 
-		if($aDia[pont_tx_tipo] == '1'){
-			$arrayInicioJornada[] = date("H:i",strtotime($aDia[pont_tx_data]));
-			$arrayInicioJornada2[] = $aDia[pont_tx_data];
+		if($aDia['pont_tx_tipo'] == '1'){
+			$arrayInicioJornada[] = date("H:i",strtotime($aDia['pont_tx_data']));
+			$arrayInicioJornada2[] = $aDia['pont_tx_data'];
 			// $aRetorno['inicioJornada'] = date("H:i",strtotime($aDia[pont_tx_data]));
-			$inicioDataAdicional = $aDia[pont_tx_data];
+			$inicioDataAdicional = $aDia['pont_tx_data'];
 		}
 
-		if($aDia[pont_tx_tipo] == '2'){
-			$arrayFimJornada[] = date("H:i",strtotime($aDia[pont_tx_data]));
-			$arrayFimJornada2[] = $aDia[pont_tx_data];
+		if($aDia['pont_tx_tipo'] == '2'){
+			$arrayFimJornada[] = date("H:i",strtotime($aDia['pont_tx_data']));
+			$arrayFimJornada2[] = $aDia['pont_tx_data'];
 			// $aRetorno['fimJornada'] = date("H:i",strtotime($aDia[pont_tx_data]));
-			$fimDataAdicional = $aDia[pont_tx_data];
+			$fimDataAdicional = $aDia['pont_tx_data'];
 		}
 
-		if($aDia[pont_tx_tipo] == '3'){
-			$arrayInicioRefeicaoFormatado[] = date("H:i",strtotime($aDia[pont_tx_data]));
-			$arrayInicioRefeicao[] = $aDia[pont_tx_data];
+		if($aDia['pont_tx_tipo'] == '3'){
+			$arrayInicioRefeicaoFormatado[] = date("H:i",strtotime($aDia['pont_tx_data']));
+			$arrayInicioRefeicao[] = $aDia['pont_tx_data'];
 		}
 
-		if($aDia[pont_tx_tipo] == '4'){
-			$arrayFimRefeicaoFormatado[] = date("H:i",strtotime($aDia[pont_tx_data]));
-			$arrayFimRefeicao[] = $aDia[pont_tx_data];
+		if($aDia['pont_tx_tipo'] == '4'){
+			$arrayFimRefeicaoFormatado[] = date("H:i",strtotime($aDia['pont_tx_data']));
+			$arrayFimRefeicao[] = $aDia['pont_tx_data'];
 		}
 
-		if($aDia[pont_tx_tipo] == '5'){
-			$aDataHorainicioEspera[] = $aDia[pont_tx_data];
+		if($aDia['pont_tx_tipo'] == '5'){
+			$aDataHorainicioEspera[] = $aDia['pont_tx_data'];
 		}
 
-		if($aDia[pont_tx_tipo] == '6'){
-			$aDataHorafimEspera[] = $aDia[pont_tx_data];
+		if($aDia['pont_tx_tipo'] == '6'){
+			$aDataHorafimEspera[] = $aDia['pont_tx_data'];
 		}
 
-		if($aDia[pont_tx_tipo] == '7'){
-			$aDataHorainicioDescanso[] = $aDia[pont_tx_data];
+		if($aDia['pont_tx_tipo'] == '7'){
+			$aDataHorainicioDescanso[] = $aDia['pont_tx_data'];
 		}
 
-		if($aDia[pont_tx_tipo] == '8'){
-			$aDataHorafimDescanso[] = $aDia[pont_tx_data];
+		if($aDia['pont_tx_tipo'] == '8'){
+			$aDataHorafimDescanso[] = $aDia['pont_tx_data'];
 		}
 
-		if($aDia[pont_tx_tipo] == '9'){
-			$aDataHorainicioRepouso[] =$aDia[pont_tx_data];
+		if($aDia['pont_tx_tipo'] == '9'){
+			$aDataHorainicioRepouso[] =$aDia['pont_tx_data'];
 		}
 
-		if($aDia[pont_tx_tipo] == '10'){
-			$aDataHorafimRepouso[] =$aDia[pont_tx_data];
+		if($aDia['pont_tx_tipo'] == '10'){
+			$aDataHorafimRepouso[] =$aDia['pont_tx_data'];
 		}
 
-		if($aDia[pont_tx_tipo] == '11'){
-			// $dataHoraRepousoEmbarcado = date("H:i",strtotime($aDia[pont_tx_data]));
-			$aDataHorainicioRepouso[] =$aDia[pont_tx_data]; // ADICIONADO AO REPOUSO
+		if($aDia['pont_tx_tipo'] == '11'){
+			// $dataHoraRepousoEmbarcado = date("H:i",strtotime($aDia['pont_tx_data']));
+			$aDataHorainicioRepouso[] =$aDia['pont_tx_data']; // ADICIONADO AO REPOUSO
 		}
 
-		if($aDia[pont_tx_tipo] == '12'){
-			// $dataHorafimRepousoEmbarcado = date("H:i",strtotime($aDia[pont_tx_data]));
-			$aDataHorafimRepouso[] =$aDia[pont_tx_data]; // ADICIONADO AO REPOUSO
+		if($aDia['pont_tx_tipo'] == '12'){
+			// $dataHorafimRepousoEmbarcado = date("H:i",strtotime($aDia['pont_tx_data']));
+			$aDataHorafimRepouso[] =$aDia['pont_tx_data']; // ADICIONADO AO REPOUSO
 		}
 		
 		// echo "<hr>";
 		// echo "$aTipo[macr_tx_nome] - $aTipo[macr_tx_codigoInterno] -> ";
-		// echo date("Y-m-d",strtotime($aDia['pont_tx_data']));
+		// echo date("Y-m-d",strtotime($aDia[''pont_tx_data'']));
 		// echo " - ";
 		// // print_r($aTipo);
 		// echo "<hr>";
@@ -799,7 +799,7 @@ function diaDetalhePonto($matricula, $data){
 		$tooltip .= "Abono: $aAbono[abon_tx_abono]\n";
 		$tooltip .= "Motivo: $aAbono[moti_tx_nome]\n";
 		$tooltip .= "Justificativa: $aAbono[abon_tx_descricao]\n\n";
-		$tooltip .= "Registro efetuado por $aAbono[user_tx_login] em ".data($aAbono[abon_tx_dataCadastro],1);
+		$tooltip .= "Registro efetuado por $aAbono[user_tx_login] em ".data($aAbono['abon_tx_dataCadastro'],1);
 
 		$iconeAbono =  "<a><i style='color:orange;' title='$tooltip' class='fa fa-warning'></i></a>";
 	}else{
