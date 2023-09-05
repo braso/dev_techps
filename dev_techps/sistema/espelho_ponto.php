@@ -2,7 +2,7 @@
 	include "funcoes_ponto.php"; // NAO ALTERAR ORDEM
 	include "conecta.php";
 
-	function index() {
+	function index(){
 
 		global $totalResumo;
 
@@ -10,17 +10,19 @@
 
 		if($_POST['busca_motorista']){
 			$aMotorista = carregar('entidade',$_POST['busca_motorista']);
-			$aDadosMotorista = array($aMotorista['enti_tx_matricula']);
+			$aDadosMotorista = [$aMotorista['enti_tx_matricula']];
 		}
 
-		$_POST['busca_data1'] = ($_POST['busca_data1'] == '')? date("Y-m-01"): '';
-		$_POST['busca_data2'] = ($_POST['busca_data2'] == '')? date("Y-m-d"): '';
+		if($_POST['busca_data1'] == '') $_POST['busca_data1'] = date("Y-m-01");
+	
+		if($_POST['busca_data2'] == '') $_POST['busca_data2'] = date("Y-m-d");
 
 		//CONSULTA
 		$c[] = combo_net('Motorista:','busca_motorista',$_POST['busca_motorista'],6,'entidade','',' AND enti_tx_tipo = "Motorista"','enti_tx_matricula');
 		// $c[] = campo_mes('Data:','busca_data',$_POST[busca_data],2);
 		$c[] = campo_data('Data Início:','busca_data1',$_POST['busca_data1'],2);
 		$c[] = campo_data('Data Fim:','busca_data2',$_POST['busca_data2'],2);
+		
 		
 		//BOTOES
 		$b[] = botao("Buscar",'index');
@@ -30,9 +32,9 @@
 		linha_form($c);
 		fecha_form($b);
 		
-		// $cab = array("MATRÍCULA", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA", "REFEIÇÃO", "ESPERA", "ATRASO", "EFETIVA", "PERÍODO TOTAL", "INTERSTÍCIO DIÁRIO", "INT. SEMANAL", "ABONOS", "FALTAS", "FOLGAS", "H.E.", "H.E. 100%", "ADICIONAL NOTURNO", "ESPERA INDENIZADA", "OBSERVAÇÕES");
-		$cab = array("", "MAT.", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA", "REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", 
-			"JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA","MDC","INTERSTÍCIO","HE 50%", "HE 100%", "ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO");
+		// $cab = ["MATRÍCULA", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA", "REFEIÇÃO", "ESPERA", "ATRASO", "EFETIVA", "PERÍODO TOTAL", "INTERSTÍCIO DIÁRIO", "INT. SEMANAL", "ABONOS", "FALTAS", "FOLGAS", "H.E.", "H.E. 100%", "ADICIONAL NOTURNO", "ESPERA INDENIZADA", "OBSERVAÇÕES"];
+		$cab = ["", "MAT.", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA", "REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", 
+			"JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA","MDC","INTERSTÍCIO","HE 50%", "HE 100%", "ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO"];
 
 		// Converte as datas para objetos DateTime
 		$startDate = new DateTime($_POST['busca_data1']);
@@ -51,16 +53,16 @@
 			// for ($i = 1; $i <= $daysInMonth; $i++) {
 				// 	$dataVez = $_POST[busca_data]."-".str_pad($i,2,0,STR_PAD_LEFT);
 				// 	$aDetalhado = diaDetalhePonto($aMotorista[enti_tx_matricula], $dataVez);
-				// 	$aDia[] = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDadosMotorista, $aDetalhado));
+				// 	$aDia[] = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDadosMotorista, $aDetalhado));
 			// }
 
-			for ($date = $startDate; $date <= $endDate; $date->modify('+1 day')) {
+			for($date = $startDate; $date <= $endDate; $date->modify('+1 day')){
 				$dataVez = $date->format('Y-m-d');
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
-				$aDia[] = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDadosMotorista, $aDetalhado));
+				$aDia[] = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDadosMotorista, $aDetalhado));
 			}
 
-			if($aMotorista['enti_nb_parametro'] > 0 ){
+			if($aMotorista['enti_nb_parametro'] > 0){
 				$aParametro = carregar('parametro', $aMotorista['enti_nb_parametro']);
 				if(	$aParametro['para_tx_jornadaSemanal']		!= $aMotorista['enti_tx_jornadaSemanal'] ||
 					$aParametro['para_tx_jornadaSabado']		!= $aMotorista['enti_tx_jornadaSabado'] ||
