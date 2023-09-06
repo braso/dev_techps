@@ -19,61 +19,17 @@ function modifica_empresa(){
 function cadastra_empresa(){
     
 	$campos=[
-		'empr_tx_nome',
-		'empr_tx_fantasia',
-		'empr_tx_cnpj',
-		'empr_tx_cep',
-		'empr_nb_cidade',
-		'empr_tx_endereco',
-		'empr_tx_bairro',
-		'empr_tx_numero',
-		'empr_tx_complemento',
-		'empr_tx_referencia',
-		'empr_tx_fone1',
-		'empr_tx_fone2',
-		'empr_tx_email',
-		'empr_tx_inscricaoEstadual',
-		'empr_tx_inscricaoMunicipal',
-		'empr_tx_regimeTributario',
-		'empr_tx_status',
-		'empr_tx_situacao',
-		'empr_nb_parametro',
-		'empr_tx_contato',
-		'empr_tx_dataRegistroCNPJ',
-		'empr_tx_domain',
-		'empr_tx_ftpServer',
-		'empr_tx_ftpUsername',
-		'empr_tx_ftpUserpass'
+		'empr_tx_nome', 'empr_tx_fantasia', 'empr_tx_cnpj', 'empr_tx_cep', 'empr_nb_cidade', 'empr_tx_endereco', 'empr_tx_bairro', 'empr_tx_numero', 'empr_tx_complemento', 'empr_tx_referencia',
+		'empr_tx_fone1', 'empr_tx_fone2', 'empr_tx_email', 'empr_tx_inscricaoEstadual', 'empr_tx_inscricaoMunicipal', 'empr_tx_regimeTributario', 'empr_tx_status', 'empr_tx_situacao', 'empr_nb_parametro', 'empr_tx_contato',
+		'empr_tx_dataRegistroCNPJ', 'empr_tx_domain', 'empr_tx_ftpServer', 'empr_tx_ftpUsername', 'empr_tx_ftpUserpass'
 	];
 	$parametro = ($_POST['parametro'] == '') ? 0 : $_POST['parametro'];
 	$RegistroCNPJ = ($_POST['dataRegistroCNPJ'] == '') ? '0000-00-00' : $_POST['dataRegistroCNPJ'];
 	
 	$valores=[
-		$_POST['nome'],
-		$_POST['fantasia'],
-		$_POST['cnpj'],
-		$_POST['cep'],
-		$_POST['cidade'],
-		$_POST['endereco'],
-		$_POST['bairro'],
-		$_POST['numero'],
-		$_POST['complemento'],
-		$_POST['referencia'],
-		$_POST['fone1'],
-		$_POST['fone2'],
-		$_POST['email'],
-		$_POST['inscricaoEstadual'],
-		$_POST['inscricaoMunicipal'],
-		$_POST['regimeTributario'],
-		'ativo',
-		$_POST['situacao'],
-		$parametro,
-		$_POST['contato'],
-		$RegistroCNPJ,
-		"https://braso.mobi/techps/".$_POST['nomeDominio'],
-		$_POST['ftpServer'],
-		$_POST['ftpUsername'],
-		$_POST['ftpUserpass']
+		$_POST['nome'], $_POST['fantasia'], $_POST['cnpj'], $_POST['cep'], $_POST['cidade'], $_POST['endereco'], $_POST['bairro'], $_POST['numero'], $_POST['complemento'], $_POST['referencia'],
+		$_POST['fone1'], $_POST['fone2'], $_POST['email'], $_POST['inscricaoEstadual'], $_POST['inscricaoMunicipal'], $_POST['regimeTributario'], 'ativo', $_POST['situacao'], $parametro, $_POST['contato'],
+		$RegistroCNPJ, "https://braso.mobi/techps/".$_POST['nomeDominio'], $_POST['ftpServer'], $_POST['ftpUsername'], $_POST['ftpUserpass']
 	];
 	
 	if(empty($_POST['cnpj']) || empty($_POST['nome']) || empty($_POST['cep']) || empty($_POST['numero']) || empty($_POST['email'])){
@@ -82,11 +38,13 @@ function cadastra_empresa(){
 		exit;
 	}
 
-	if(empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) == 3){
+	$ftpInputs = empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) + 0;
+
+	if($ftpInputs == 3){
 		$_POST['ftpServer']   = 'ftp-jornadas.positronrt.com.br';
 		$_POST['ftpUsername'] = '08995631000108';
 		$_POST['ftpUserpass'] = '0899';
-	}elseif(empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) < 3){
+	}elseif($ftpInputs > 0){
 		echo '<script>alert("Preencha os 3 campos de FTP.")</script>';
 		layout_empresa();
 		exit;
@@ -95,7 +53,7 @@ function cadastra_empresa(){
 	// 	var_dump($valores);
 	// 	die();
 
-	if($_POST['id']>-1){
+	if(isset($_POST['id']) && $_POST['id'] != ''){
 		$campos = array_merge($campos,array('empr_nb_userAtualiza','empr_tx_dataAtualiza'));
 		$valores = array_merge($valores,array($_SESSION['user_nb_id'], date("Y-m-d H:i:s")));
 		atualizar('empresa',$campos,$valores,$_POST['id']);
