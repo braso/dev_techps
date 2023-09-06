@@ -27,6 +27,11 @@ $conn->set_charset("utf8");
 
 /* FIM CONEXAO BASE DE DADOS */
 
-include_once (getcwd().'../')."contex20/funcoes_grid.php";
-include_once (getcwd().'../')."contex20/funcoes_form.php";
-include_once (getcwd().'../')."contex20/funcoes.php";
+// Alterado em 06/09/2023, caso não haja um erro maior em um mês, esse comentário pode ser deletado
+// include_once $_SERVER['DOCUMENT_ROOT']."/techps/contex20/funcoes_grid.php";
+// include_once $_SERVER['DOCUMENT_ROOT']."/techps/contex20/funcoes_form.php";
+// include_once $_SERVER['DOCUMENT_ROOT']."/techps/contex20/funcoes.php";
+
+include_once (getcwd()."/../")."contex20/funcoes_grid.php";
+include_once (getcwd()."/../")."contex20/funcoes_form.php";
+include_once (getcwd()."/../")."contex20/funcoes.php";
