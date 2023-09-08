@@ -13,16 +13,16 @@
 			$aDadosMotorista = [$aMotorista['enti_tx_matricula']];
 		}
 
-		if($_POST['busca_data1'] == '') $_POST['busca_data1'] = date("Y-m-01");
+		if($_POST['busca_data_de'] == '') $_POST['busca_data_de'] = date("Y-m-01");
 	
-		if($_POST['busca_data2'] == '') $_POST['busca_data2'] = date("Y-m-d");
+		if($_POST['busca_data_ate'] == '') $_POST['busca_data_ate'] = date("Y-m-d");
 
 		//CONSULTA
 		$c[] = combo_net('Motorista:','busca_motorista',$_POST['busca_motorista'],5,'entidade','',' AND enti_tx_tipo = "Motorista"','enti_tx_matricula');
 		// $c[] = campo_mes('Data:','busca_data',$_POST[busca_data],2);
-		$c[] = campo_data('Data Início:','busca_data1',$_POST['busca_data1'],2);
-		$c[] = campo_data('Data Fim:','busca_data2',$_POST['busca_data2'],2);
-		$c[] = combo('Status', 'busca_status', $_POST['busca_status'], 3, ['', 'Com alerta(s)', 'Com alerta de refeição', 'Sem saldo cadastrado', 'Com saldo negativo', 'Com saldo positivo']);
+		$c[] = campo_data('Data Início:','busca_data_de',$_POST['busca_data_de'],2);
+		$c[] = campo_data('Data Fim:','busca_data_ate',$_POST['busca_data_ate'],2);
+		$c[] = combo('Status', 'busca_status', $_POST['busca_status'], 3, ['', 'Com alerta(s)', 'Com alerta de refeição', /*'Sem saldo cadastrado',*/ 'Com saldo negativo', 'Com saldo positivo']);
 		
 		
 		//BOTOES
@@ -38,13 +38,13 @@
 			"JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA","MDC","INTERSTÍCIO","HE 50%", "HE 100%", "ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO"];
 
 		// Converte as datas para objetos DateTime
-		$startDate = new DateTime($_POST['busca_data1']);
-		$endDate = new DateTime($_POST['busca_data2']);
+		$startDate = new DateTime($_POST['busca_data_de']);
+		$endDate = new DateTime($_POST['busca_data_ate']);
 
 		// Loop for para percorrer as datas
 		
 
-		if($_POST['busca_data1'] && $_POST['busca_data2'] && ($_POST['busca_motorista'] != '' || $_POST['busca_status'] != '')){
+		if($_POST['busca_data_de'] && $_POST['busca_data_ate'] && ($_POST['busca_motorista'] != '' || $_POST['busca_status'] != '')){
 			// $date = new DateTime($_POST[busca_data]);
 			// $month = $date->format('m');
 			// $year = $date->format('Y');
@@ -57,48 +57,18 @@
 				// 	$aDia[] = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDadosMotorista, $aDetalhado));
 			// }
 
-			$found_register = False;
+			$foundRegister = False;
 
 			for($date = $startDate; $date <= $endDate; $date->modify('+1 day')){
 				$dataVez = $date->format('Y-m-d');
-				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
-				if($aDetalhado['temPendencias'] == True){
-					if($_POST['busca_status'] == 'Com alerta(s)'){
-						if(	is_bool(strpos(strval($aDetalhado['inicioJornada']),  'fa fa-warning')) && 
-							is_bool(strpos(strval($aDetalhado['inicioRefeicao']), 'fa fa-warning')) &&
-							is_bool(strpos(strval($aDetalhado['fimRefeicao']),    'fa fa-warning')) &&
-							is_bool(strpos(strval($aDetalhado['fimJornada']),     'fa fa-warning'))
-						){
-							# Não tem pendências
-							continue;
-						}
-					}elseif($_POST['busca_status'] == 'Com alerta de refeição'){
-						if( is_bool(strpos(strval($aDetalhado['inicioRefeicao']), 'fa fa-warning')) &&
-							is_bool(strpos(strval($aDetalhado['fimRefeicao']),    'fa fa-warning'))
-						){
-							# Não tem pendências
-							continue;
-						}
-					}elseif($_POST['busca_status'] == 'Sem saldo cadastrado'){
-
-					}elseif($_POST['busca_status'] == 'Com saldo negativo'){
-						if($aDetalhado['diffSaldo'][0] != '-' || $aDetalhado['diffSaldo'] == ''){
-							# Saldo positivo
-							continue;
-						}
-					}elseif($_POST['busca_status'] == 'Com saldo positivo'){
-						if($aDetalhado['diffSaldo'][0] == '-' || $aDetalhado['diffSaldo'] == ''){
-							# Saldo negativo
-							continue;
-						}
-					}
-				}
+				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez, (isset($_POST['busca_status'])? $_POST['busca_status']: ''));
 
 				if(!empty($aMotorista['enti_nb_id'])){
-					$found_register = True;
+					$foundRegister = True;
 				}
-
-				$aDia[] = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDadosMotorista, $aDetalhado));
+				if($aDetalhado != -1){
+					$aDia[] = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDadosMotorista, $aDetalhado));
+				}
 			}
 
 			if($aMotorista['enti_nb_parametro'] > 0){
@@ -114,7 +84,7 @@
 				}
 			}
 
-			if($found_register){
+			if($foundRegister){
 				abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] $convencaoPadrao");
 			}
 
@@ -131,7 +101,6 @@
 			</style>
 <?
 	
-			print_r("Tudo?");
 			$aDia[] = array_values(array_merge(array('','','','','','','','<b>TOTAL</b>'), $totalResumo));
 
 			grid2($cab,$aDia,"Jornada Semanal (Horas): $aMotorista[enti_tx_jornadaSemanal]");
