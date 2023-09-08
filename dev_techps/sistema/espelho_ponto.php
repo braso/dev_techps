@@ -1,6 +1,5 @@
 <?php
-	include "funcoes_ponto.php"; // NAO ALTERAR ORDEM
-	include "conecta.php";
+	include "funcoes_ponto.php"; //  //Conecta incluso dentro de funcoes_ponto
 
 	function index(){
 
