@@ -229,17 +229,13 @@
 		}
 		
 
-		$countEndosso = 0;
-		$countNaoConformidade = 0;
-		$countVerificados = 0;
-		$countEndossados = 0;
-		$countNaoEndossados = 0;
+		$countEndosso = $countNaoConformidade = $countVerificados = $countEndossados = $countNaoEndossados = 0;
 
 		//CONSULTA
 		$c[] = combo_net('Empresa:','busca_empresa',$_POST['busca_empresa'],4,'empresa');
 		$c[] = campo_mes('Data:','busca_data',$_POST['busca_data'],2);
 		$c[] = combo_net('Motorista:','busca_motorista',$_POST['busca_motorista'],4,'entidade','',' AND enti_tx_tipo = "Motorista"','enti_tx_matricula');
-		$c[] = combo('Situação:','busca_situacao',$_POST['busca_situacao'],2,['Todos','Verificado','Não conformidade']);
+		$c[] = combo('Situação:','busca_situacao',$_POST['busca_situacao'],2,['Todos', 'Verificado', 'Não conformidade', 'Endossado', 'Endossado parcialmente']);
 		
 		//BOTOES
 		$b[] = botao("Buscar",'index');
@@ -277,7 +273,7 @@
 				for ($i = 1; $i <= $daysInMonth; $i++) {
 					$dataVez = $_POST['busca_data']."-".str_pad($i,2,0,STR_PAD_LEFT);
 					
-					$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
+					$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez, (isset($_POST['busca_situacao'])? $_POST['busca_situacao']: ''));
 
 					$aDia[] = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));
 					$aDiaOriginal[] = $aDetalhado;
@@ -294,23 +290,15 @@
 				for ($i=0; $i < count($aDiaOriginal); $i++) { 
 					$diaVez = $aDiaOriginal[$i];
 
-					if (
-						(strpos($diaVez['diffRefeicao'], 'color:red;') !== false) ||
-						(strpos($diaVez['diffEspera'], 'color:red;') !== false) ||
-						(strpos($diaVez['diffDescanso'], 'color:red;') !== false) ||
-						(strpos($diaVez['diffRepouso'], 'color:red;') !== false) ||
-						(strpos($diaVez['diffJornada'], 'color:red;') !== false) ||
-						(strpos($diaVez['jornadaPrevista'], 'color:red;') !== false) ||
-						(strpos($diaVez['diffJornadaEfetiva'], 'color:red;') !== false) ||
-						(strpos($diaVez['maximoDirecaoContinua'], 'color:red;') !== false) ||
-						(strpos($diaVez['intersticio'], 'color:red;') !== false) ||
-						(strpos($diaVez['he50'], 'color:red;') !== false) ||
-						(strpos($diaVez['he100'], 'color:red;') !== false) ||
-						(strpos($diaVez['adicionalNoturno'], 'color:red;') !== false) ||
-						(strpos($diaVez['esperaIndenizada'], 'color:red;') !== false) ||
-						(strpos($diaVez['diffSaldo'], 'color:red;') !== false)
-						
-					) {
+					$temRed = false;
+					foreach(['diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada', 'jornadaPrevista', 'diffJornadaEfetiva', 'maximoDirecaoContinua', 'intersticio', 
+						'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'diffSaldo'] as $campo){
+						if(is_int(strpos($diaVez[$campo], 'color:red;'))){
+							$temRed = true;
+							break;
+						}
+					}
+					if($temRed){
 						//SE HOUVER RED E BUSCA POR NAO CONFORMIDADE EXIBE. LOGICA CONTRARIA CASO VERIFICADOS
 						if($_POST['busca_situacao'] == 'Não conformidade' || $_POST['busca_situacao'] == 'Todos'){
 							$countNaoConformidade++;
@@ -318,7 +306,11 @@
 							break;
 						}elseif($_POST['busca_situacao'] == 'Verificado' ){
 							$exibir = 0;
-							$totalResumo = ['diffRefeicao' => '00:00','diffEspera' => '00:00','diffDescanso' => '00:00','diffRepouso' => '00:00','diffJornada' => '00:00','jornadaPrevista' => '00:00','diffJornadaEfetiva' => '00:00','maximoDirecaoContinua' => '','intersticio' => '00:00','he50' => '00:00','he100' => '00:00','adicionalNoturno' => '00:00','esperaIndenizada' => '00:00','diffSaldo' => '00:00'];
+							$totalResumo = [
+								'diffRefeicao' => '00:00','diffEspera' => '00:00','diffDescanso' => '00:00','diffRepouso' => '00:00','diffJornada' => '00:00',
+								'jornadaPrevista' => '00:00','diffJornadaEfetiva' => '00:00','maximoDirecaoContinua' => '','intersticio' => '00:00','he50' => '00:00',
+								'he100' => '00:00','adicionalNoturno' => '00:00','esperaIndenizada' => '00:00','diffSaldo' => '00:00'
+							];
 							break;
 						}
 					}else{
