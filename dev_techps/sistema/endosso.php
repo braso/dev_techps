@@ -7,10 +7,8 @@
 		if($_POST['busca_data'] && $_POST['busca_empresa']){
 			
 			$date = new DateTime($_POST['busca_data']);
-			$month = $date->format('m');
-			$year = $date->format('Y');
 			
-			$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+			$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $date->format('m'), $date->format('Y'));
 
 			$aEmpresa = carregar('empresa',$_POST['busca_empresa']);
 			$aCidadeEmpresa = carregar('cidade',$aEmpresa['empr_nb_cidade']);
@@ -180,10 +178,8 @@
 <?
 				$totalResumo = ['diffRefeicao' => '00:00','diffEspera' => '00:00','diffDescanso' => '00:00','diffRepouso' => '00:00','diffJornada' => '00:00','jornadaPrevista' => '00:00','diffJornadaEfetiva' => '00:00','maximoDirecaoContinua' => '','intersticio' => '00:00','he50' => '00:00','he100' => '00:00','adicionalNoturno' => '00:00','esperaIndenizada' => '00:00','diffSaldo' => '00:00'];
 				unset($aDia);
-
 			}
 		}
-		
 		exit;
 	}
 
@@ -220,10 +216,6 @@
 			$extra = " AND enti_nb_id = ".$_POST['busca_motorista'];
 		}
 
-		if($_POST['busca_data'] && $_POST['busca_empresa']){
-			$carregando = "Carregando...";
-		}
-
 		if($_POST['busca_data'] == ''){
 			$_POST['busca_data'] = date("Y-m");
 		}
@@ -247,7 +239,7 @@
 		}
 		$b[] = '<button name="acao" id="botaoContexCadastrar Endosso" value="layout_endosso" '.$disabled.' type="button" class="btn default">Cadastrar Endosso</button>';
 		$b[] = '<button name="acao" id="botaoContexCadastrar ImprimirEndosso" value="impressao_endosso" '.$disabled2.' type="button" class="btn default">Imprimir Endossados</button>';
-		$b[] = '<span id=dadosResumo><b>'.$carregando.'</b></span>';
+		$b[] = '<span id=dadosResumo><b>'.($_POST['busca_data'] && $_POST['busca_empresa'])? 'Carregando...': ''.'</b></span>';
 		
 		
 		abre_form('Filtro de Busca');
@@ -262,10 +254,8 @@
 		if($_POST['busca_data'] && $_POST['busca_empresa']){
 			
 			$date = new DateTime($_POST['busca_data']);
-			$month = $date->format('m');
-			$year = $date->format('Y');
 			
-			$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+			$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $date->format('m'), $date->format('Y'));
 			
 			$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_tipo = 'Motorista' AND enti_nb_empresa = ".$_POST['busca_empresa']." $extra ORDER BY enti_tx_nome");
 			while($aMotorista = carrega_array($sqlMotorista)){
@@ -320,8 +310,6 @@
 							$exibir = 1;
 						}
 					}
-					
-
 				}
 
 				if($exibir == 0){
@@ -363,7 +351,6 @@
 							$aParametro['para_tx_jornadaSabado'] != $aMotorista['enti_tx_jornadaSabado'] ||
 							$aParametro['para_tx_percentualHE'] != $aMotorista['enti_tx_percentualHE'] ||
 							$aParametro['para_tx_percentualSabadoHE'] != $aMotorista['enti_tx_percentualSabadoHE']){
-				
 							$ehPadrão = 'Não';
 						}else{
 							$ehPadrão = 'Sim';
@@ -395,15 +382,13 @@
 			$countVerificados = $countEndosso - $countNaoConformidade;
 		}
 
-		?>
-		<div class="printable">
-
-		</div>
-		<?
+?>
+		<div class="printable"></div>
+<?
 
 		rodape();
 
-		?>
+?>
 
 		<style>
 			table thead tr th:nth-child(4),
@@ -414,9 +399,6 @@
 			table td:nth-child(12) {
 				border-right: 3px solid #d8e4ef !important;
 			}
-
-
-
 
 		</style>
 
@@ -471,10 +453,7 @@
 				}
 				
 			};
-			
-
 		</script>
-		<?
-
+<?
 	}
 ?>
