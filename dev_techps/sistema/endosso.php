@@ -49,7 +49,7 @@
 								<h1>Espelho de Ponto</h1>
 								<div class="right-logo">
 									<p><?=date("d/m/Y H:i:s")?></p>
-									<img src="/techps/sistema/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
+									<img src=<?=getcwd()."/imagens/logo_topo_cliente.png"?> alt="Logo Empresa Direita">
 								</div>
 							</div>
 							<div class="info">
@@ -214,7 +214,7 @@
 	function index() {
 		global $totalResumo;
 
-		cabecalho('Endosso');
+		cabecalho('Endosso'.(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? ' (Dev)': ''));
 
 		if($_POST['busca_motorista']){
 			$extra = " AND enti_nb_id = ".$_POST['busca_motorista'];
@@ -331,8 +331,16 @@
 
 				if(count($aDia) > 0){
 
-					$sqlCheck = query("SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user WHERE endo_tx_mes = '".substr($_POST['busca_data'], 0,7).'-01'."' AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'
-					AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."' AND endo_tx_status = 'ativo' AND endo_nb_userCadastro = user_nb_id LIMIT 1");
+					$sqlCheck = query(
+						"SELECT user_tx_login, endo_tx_dataCadastro 
+							FROM endosso, user 
+							WHERE endo_tx_mes = '".substr($_POST['busca_data'], 0,7).'-01'.
+								"' AND endo_nb_entidade = '".$aMotorista['enti_nb_id'].
+								"' AND = '".$aMotorista['enti_tx_matricula'].
+								"' AND endo_tx_status = 'ativo'".
+								"' AND endo_nb_userCadastro = user_nb_id".
+							"LIMIT 1"
+					);
 					$aEndosso = carrega_array($sqlCheck);
 					if(count($aEndosso) > 0){
 						$infoEndosso = " - Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1);
