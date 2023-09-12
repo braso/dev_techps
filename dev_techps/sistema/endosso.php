@@ -7,8 +7,10 @@
 		if($_POST['busca_data'] && $_POST['busca_empresa']){
 			
 			$date = new DateTime($_POST['busca_data']);
+			$month = $date->format('m');
+			$year = $date->format('Y');
 			
-			$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $date->format('m'), $date->format('Y'));
+			$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
 
 			$aEmpresa = carregar('empresa',$_POST['busca_empresa']);
 			$aCidadeEmpresa = carregar('cidade',$aEmpresa['empr_nb_cidade']);
@@ -21,7 +23,7 @@
 				$aEmpresa['empr_tx_referencia']])
 			);
 			
-			$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_tipo = 'Motorista' AND enti_nb_id IN (".$_POST['idMotoristaEndossado'].") AND enti_nb_empresa = ".$_POST['busca_empresa']." ORDER BY enti_tx_nome");
+			$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_tipo = 'Motorista' AND enti_nb_id IN (".$_POST[idMotoristaEndossado].") AND enti_nb_empresa = ".$_POST['busca_empresa']." ORDER BY enti_tx_nome");
 			while($aMotorista = carrega_array($sqlMotorista)){
 
 				for ($i = 1; $i <= $daysInMonth; $i++) {
@@ -47,7 +49,7 @@
 								<h1>Espelho de Ponto</h1>
 								<div class="right-logo">
 									<p><?=date("d/m/Y H:i:s")?></p>
-									<img src=<?=getcwd()."/imagens/logo_topo_cliente.png"?> alt="Logo Empresa Direita">
+									<img src="/techps/sistema/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 								</div>
 							</div>
 							<div class="info">
@@ -216,6 +218,10 @@
 			$extra = " AND enti_nb_id = ".$_POST['busca_motorista'];
 		}
 
+		if($_POST['busca_data'] && $_POST['busca_empresa']){
+			$carregando = "Carregando...";
+		}
+
 		if($_POST['busca_data'] == ''){
 			$_POST['busca_data'] = date("Y-m");
 		}
@@ -239,7 +245,7 @@
 		}
 		$b[] = '<button name="acao" id="botaoContexCadastrar Endosso" value="layout_endosso" '.$disabled.' type="button" class="btn default">Cadastrar Endosso</button>';
 		$b[] = '<button name="acao" id="botaoContexCadastrar ImprimirEndosso" value="impressao_endosso" '.$disabled2.' type="button" class="btn default">Imprimir Endossados</button>';
-		$b[] = '<span id=dadosResumo><b>'.($_POST['busca_data'] && $_POST['busca_empresa'])? 'Carregando...': ''.'</b></span>';
+		$b[] = '<span id=dadosResumo><b>'.$carregando.'</b></span>';
 		
 		
 		abre_form('Filtro de Busca');
@@ -254,8 +260,10 @@
 		if($_POST['busca_data'] && $_POST['busca_empresa']){
 			
 			$date = new DateTime($_POST['busca_data']);
+			$month = $date->format('m');
+			$year = $date->format('Y');
 			
-			$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $date->format('m'), $date->format('Y'));
+			$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
 			
 			$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_tipo = 'Motorista' AND enti_nb_empresa = ".$_POST['busca_empresa']." $extra ORDER BY enti_tx_nome");
 			while($aMotorista = carrega_array($sqlMotorista)){
@@ -280,15 +288,15 @@
 				for ($i=0; $i < count($aDiaOriginal); $i++) { 
 					$diaVez = $aDiaOriginal[$i];
 
-					$temRed = false;
+					$red = false;
 					foreach(['diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada', 'jornadaPrevista', 'diffJornadaEfetiva', 'maximoDirecaoContinua', 'intersticio', 
 						'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'diffSaldo'] as $campo){
 						if(is_int(strpos($diaVez[$campo], 'color:red;'))){
-							$temRed = true;
+							$red = true;
 							break;
 						}
 					}
-					if($temRed){
+					if($red){
 						//SE HOUVER RED E BUSCA POR NAO CONFORMIDADE EXIBE. LOGICA CONTRARIA CASO VERIFICADOS
 						if($_POST['busca_situacao'] == 'Não conformidade' || $_POST['busca_situacao'] == 'Todos'){
 							$countNaoConformidade++;
@@ -319,16 +327,7 @@
 
 				if(count($aDia) > 0){
 
-					$sqlCheck = query(
-						"SELECT user_tx_login, endo_tx_dataCadastro 
-							FROM endosso, user 
-							WHERE endo_tx_mes = '".substr($_POST['busca_data'], 0,7).'-01'.
-								"' AND endo_nb_entidade = '".$aMotorista['enti_nb_id'].
-								"' AND = '".$aMotorista['enti_tx_matricula'].
-								"' AND endo_tx_status = 'ativo'".
-								"' AND endo_nb_userCadastro = user_nb_id".
-							"LIMIT 1"
-					);
+					$sqlCheck = query("SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user WHERE endo_tx_mes = '".substr($_POST['busca_data'], 0,7).'-01'."' AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."' AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."' AND endo_tx_status = 'ativo' AND endo_nb_userCadastro = user_nb_id LIMIT 1");
 					$aEndosso = carrega_array($sqlCheck);
 					if(count($aEndosso) > 0){
 						$infoEndosso = " - Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1);
