@@ -3,7 +3,7 @@
 
 	function cadastrar(){
 		$url = substr($_SERVER['REQUEST_URI'], 0, strrpos($_SERVER['REQUEST_URI'], '/'));
-		header('Location: '.$url);
+		header('Location: '.'https://braso.mobi'.$url.'/cadastro_endosso');
 		exit();
 	}
 
