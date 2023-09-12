@@ -1,6 +1,12 @@
 <?php
 	include "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
 
+	function cadastrar(){
+		$url = substr($_SERVER['REQUEST_URI'], 0, strrpos($_SERVER['REQUEST_URI'], '/'));
+		header('Location: '.$url);
+		exit();
+	}
+
 	function imprimir_endosso(){
 		global $totalResumo;
 
@@ -242,7 +248,7 @@
 		if($_POST['busca_situacao'] != 'Verificado'){
 			$disabled = 'disabled=disabled title="Filtre apenas por Verificado para efetuar a impressão endosso."';
 		}
-		$b[] = '<button name="acao" id="botaoContexCadastrar Endosso" value="layout_endosso" type="button" class="btn default">Cadastrar Endosso</button>';
+		$b[] = botao('Cadastrar Endosso', 'cadastrar');
 		$b[] = '<button name="acao" id="botaoContexCadastrar ImprimirEndosso" value="impressao_endosso" '.$disabled.' type="button" class="btn default">Imprimir Endossados</button>';
 		$b[] = '<span id=dadosResumo><b>'.$carregando.'</b></span>';
 		
@@ -435,13 +441,6 @@
 			
 			window.onload = function() {
 				document.getElementById('dadosResumo').innerHTML = '<b>Total: <?=$countEndosso?> | Verificados: <?=$countVerificados?> | Não Conformidade: <?=$countNaoConformidade?> | Endossados: <?=$countEndossados?> | Não Endossados: <?=$countNaoEndossados?></b>';
-
-				document.getElementById('botaoContexCadastrar Endosso').onclick = function(){
-<?
-					$url = substr($_SERVER['REQUEST_URI'], 0, strrpos($_SERVER['REQUEST_URI'], '/'));
-?>
-					window.location.href = 'https://braso.mobi<?=$url?>/cadastro_endosso_oacdc';
-				}
 
 				document.getElementById('botaoContexCadastrar ImprimirEndosso').onclick = function(){
 					document.form_imprimir_endosso.submit()
