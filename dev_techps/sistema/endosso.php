@@ -23,7 +23,7 @@
 				$aEmpresa['empr_tx_referencia']])
 			);
 			
-			$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_tipo = 'Motorista' AND enti_nb_id IN (".$_POST[idMotoristaEndossado].") AND enti_nb_empresa = ".$_POST['busca_empresa']." ORDER BY enti_tx_nome");
+			$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_tipo = 'Motorista' AND enti_nb_id IN (".$_POST['idMotoristaEndossado'].") AND enti_nb_empresa = ".$_POST['busca_empresa']." ORDER BY enti_tx_nome");
 			while($aMotorista = carrega_array($sqlMotorista)){
 
 				for ($i = 1; $i <= $daysInMonth; $i++) {
