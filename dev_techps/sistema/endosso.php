@@ -240,11 +240,10 @@
 		$b[] = botao("Cadastrar Abono",'layout_abono');
 		// $b[] = botao("Cadastrar Endosso",'cadastra_endosso');
 		if($_POST['busca_situacao'] != 'Verificado'){
-			$disabled = 'disabled=disabled title="Filtre apenas por Verificado para efetuar o endosso."';
-			$disabled2 = 'disabled=disabled title="Filtre apenas por Verificado para efetuar a impressão endosso."';
+			$disabled = 'disabled=disabled title="Filtre apenas por Verificado para efetuar a impressão endosso."';
 		}
-		$b[] = '<button name="acao" id="botaoContexCadastrar Endosso" value="layout_endosso" '.$disabled.' type="button" class="btn default">Cadastrar Endosso</button>';
-		$b[] = '<button name="acao" id="botaoContexCadastrar ImprimirEndosso" value="impressao_endosso" '.$disabled2.' type="button" class="btn default">Imprimir Endossados</button>';
+		$b[] = '<button name="acao" id="botaoContexCadastrar Endosso" value="layout_endosso" type="button" class="btn default">Cadastrar Endosso</button>';
+		$b[] = '<button name="acao" id="botaoContexCadastrar ImprimirEndosso" value="impressao_endosso" '.$disabled.' type="button" class="btn default">Imprimir Endossados</button>';
 		$b[] = '<span id=dadosResumo><b>'.$carregando.'</b></span>';
 		
 		
@@ -438,13 +437,10 @@
 				document.getElementById('dadosResumo').innerHTML = '<b>Total: <?=$countEndosso?> | Verificados: <?=$countVerificados?> | Não Conformidade: <?=$countNaoConformidade?> | Endossados: <?=$countEndossados?> | Não Endossados: <?=$countNaoEndossados?></b>';
 
 				document.getElementById('botaoContexCadastrar Endosso').onclick = function(){
-					if(confirm('Deseja confirma o endosso de <?=$countEndosso?> motorista(s)?\nVerificados: <?=$countVerificados?> motorista(s).\nNão Conformidade: <?=$countNaoConformidade?> motorista(s).')){
-						if(<?=count($aIdMotorista)?>){
-							document.form_layout_endosso.submit()
-						}else{
-							alert('Não há motoristas para endossar!')
-						}
-					}
+<?
+					$url = substr($_SERVER['REQUEST_URI'], 0, strrpos($_SERVER['REQUEST_URI'], '/'));
+?>
+					window.location.href = 'https://braso.mobi<?=$url?>/cadastro_endosso_oacdc';
 				}
 
 				document.getElementById('botaoContexCadastrar ImprimirEndosso').onclick = function(){
