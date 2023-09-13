@@ -1,14 +1,27 @@
 <?php
-include "conecta.php";
+function combo_empresa($nome,$variavel,$modificador,$tamanho,$opcao, $opcao2,$extra=''){
+		$t_opcao=count($opcao);
+		for($i=0;$i<$t_opcao;$i++){
+			$selected = ($opcao[$i] == $modificador)? 'selected': '';
+			$c_opcao .= '<option value="'.$opcao[$i].'" '.$selected.'>'.$opcao2[$i].'</option>';
+		}
+
+		$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
+					<label><b>'.$nome.'</b></label>
+					<select name="'.$variavel.'" class="form-control input-sm" '.$extra.'>
+						'.$c_opcao.'
+					</select>
+				</div>';
+
+		return $campo;
+	}
 
 
-function exclui_usuario() {
-	remover('user', $_POST[id]);
-
-	index();
-	exit;
-}
-
+	function exclui_usuario(){
+		remover('user',$_POST['id']);
+		index();
+		exit;
+	}
 function modifica_usuario() {
 	global $a_mod;
 
