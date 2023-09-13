@@ -34,7 +34,10 @@ function cadastra_parametro(){
 	if($_POST[id]>0){
 		//CARREGA O PARAMETRO ANTES DE ATUALIZAR
 		$aParametro = carregar('parametro', $_POST[id]);
+
 		
+		$campos = array_merge($campos,array(para_nb_userAtualiza,para_tx_dataAtualiza));
+		$valores = array_merge($valores,array($_SESSION[user_nb_id], date("Y-m-d H:i:s")));
 		atualizar('parametro',$campos,$valores,$_POST[id]);
 		
 		$sql = query("SELECT * FROM entidade WHERE enti_tx_status != 'inativo'
@@ -55,6 +58,8 @@ function cadastra_parametro(){
 		}
 
 	} else {
+		$campos = array_merge($campos,array(para_nb_userAtualiza,para_tx_dataAtualiza));
+		$valores = array_merge($valores,array($_SESSION[user_nb_id], date("Y-m-d H:i:s")));
 		inserir('parametro',$campos,$valores);
 	}
 
@@ -91,6 +96,21 @@ function layout_parametro(){
 	
 	abre_form('Dados da de Parâmetros');
 	linha_form($c);
+
+	if($a_mod[para_nb_userCadastro] > 0){
+		$a_userCadastro = carregar('user',$a_mod[para_nb_userCadastro]);
+		$txtCadastro = "Registro inserido por $a_userCadastro[user_tx_login] às ".data($a_mod[para_tx_dataCadastro],1).".";
+		$cAtualiza[] = texto("Data de Cadastro","$txtCadastro",5);
+		if($a_mod[para_nb_userAtualiza] > 0){
+			$a_userAtualiza = carregar('user',$a_mod[para_nb_userAtualiza]);
+			$txtAtualiza = "Registro atualizado por $a_userAtualiza[user_tx_login] às ".data($a_mod[para_tx_dataAtualiza],1).".";
+			$cAtualiza[] = texto("Última Atualização","$txtAtualiza",5);
+		}
+		echo "<br>";
+		linha_form($cAtualiza);
+	}
+
+	
 	fecha_form($botao);
 
 	rodape();

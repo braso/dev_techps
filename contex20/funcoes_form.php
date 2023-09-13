@@ -109,7 +109,7 @@ global $CONTEX;
 							<!-- INICIO USER LOGIN DROPDOWN -->
 							<li class="dropdown dropdown-user dropdown-dark">
 								<a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
-									<img alt="" class="img-circle" src="/contex20/img/user.png">
+									<img alt="" class="img-circle" src="<?=$_SESSION['user_tx_foto'] ? $_SESSION['user_tx_foto'] : '/contex20/img/user.png'?>">
 									<span class="username username-hide-mobile"><?=$_SESSION['user_tx_login']?></span>
 								</a>
 								<ul class="dropdown-menu dropdown-menu-default">
