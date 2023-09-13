@@ -21,12 +21,14 @@ function modifica_parametro(){
 function cadastra_parametro(){
 	
 	$campos=array(
-		para_tx_nome, para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percentualHE, para_tx_percentualSabadoHE,
-		para_tx_acordo, para_tx_inicioAcordo, para_tx_fimAcordo, para_nb_userCadastro, para_tx_dataCadastro, para_tx_status
+		para_tx_nome, para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percentualHE, para_tx_percentualSabadoHE, para_tx_HorasEXExcedente, 
+		para_tx_tolerancia, para_tx_acordo, para_tx_inicioAcordo, para_tx_fimAcordo, para_nb_userCadastro, para_tx_dataCadastro, para_tx_diariasCafe, 
+		para_tx_diariasAlmoco, para_tx_diariasJanta, para_tx_status
 	);
 	$valores=array(
-		$_POST[nome], $_POST[jornadaSemanal], $_POST[jornadaSabado], $_POST[percentualHE], $_POST[percentualSabadoHE],
-		$_POST[acordo], $_POST[inicioAcordo], $_POST[fimAcordo], $_SESSION[user_nb_id], date("Y-m-d"), 'ativo'
+		$_POST[nome], $_POST[jornadaSemanal], $_POST[jornadaSabado], $_POST[percentualHE], $_POST[percentualSabadoHE], $_POST[HorasEXExcedente], 
+		$_POST[tolerancia],$_POST[acordo], $_POST[inicioAcordo], $_POST[fimAcordo], $_SESSION[user_nb_id],date("Y-m-d"),
+		$_POST[diariasCafe], $_POST[diariasAlmoco], $_POST[diariasJanta], 'ativo'
 	);
 
 	if($_POST[id]>0){
@@ -73,8 +75,13 @@ function layout_parametro(){
 	// $c[] = campo('Jornada Sábado (Horas)','jornadaSabado',$a_mod[para_tx_jornadaSabado],3,'MASCARA_NUMERO');
 	$c[] = campo_hora('Jornada Semanal (Horas/Dia)','jornadaSemanal',$a_mod[para_tx_jornadaSemanal],3);
 	$c[] = campo_hora('Jornada Sábado (Horas/Dia)','jornadaSabado',$a_mod[para_tx_jornadaSabado],3);
+	$c[] = campo_hora('Tolerência de jornada efetiva (Horas/Minutos)','tolerancia',$a_mod[para_tx_tolerancia],3);
 	$c[] = campo('Percentual da Hora Extra(%)','percentualHE',$a_mod[para_tx_percentualHE],3,'MASCARA_NUMERO');
 	$c[] = campo('Percentual da Hora Extra Sábado(%)','percentualSabadoHE',$a_mod[para_tx_percentualSabadoHE],3,'MASCARA_NUMERO');
+	$c[] = campo_hora('Quando Exceder o limite de Horas Extras, O Percentual de Hora Extra passar para 100% (Horas/Minutos)','HorasEXExcedente',$a_mod[para_tx_HorasEXExcedente],3);
+	$c[] = campo('Diária Café da Manhã(R$)','diariasCafe',$a_mod[para_tx_diariasCafe],3,'MASCARA_DINHERO');
+	$c[] = campo('Diária Almoço(R$)','diariasAlmoco',$a_mod[para_tx_diariasAlmoco],3,'MASCARA_DINHERO');
+	$c[] = campo('Diária Jantar(R$)','diariasJanta',$a_mod[para_tx_diariasJanta],3,'MASCARA_DINHERO');
 	$c[] = combo('Acordo Sindical','acordo',$a_mod[para_tx_acordo],3,array('Sim','Não'));
 	$c[] = campo_data('Início do Acordo','inicioAcordo',$a_mod[para_tx_inicioAcordo],3);
 	$c[] = campo_data('Fim do Acordo','fimAcordo',$a_mod[para_tx_fimAcordo],3);

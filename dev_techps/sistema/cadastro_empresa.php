@@ -24,13 +24,17 @@ function cadastra_empresa(){
 		empr_tx_nome, empr_tx_fantasia, empr_tx_cnpj, empr_tx_cep, empr_nb_cidade, empr_tx_endereco, empr_tx_bairro,
 		empr_tx_numero, empr_tx_complemento, empr_tx_referencia, empr_tx_fone1, empr_tx_fone2, empr_tx_email, empr_tx_inscricaoEstadual,
 		empr_tx_inscricaoMunicipal, empr_tx_regimeTributario, empr_tx_status,
-		empr_tx_situacao, empr_nb_parametro, empr_tx_contato, empr_tx_dataRegistroCNPJ
+		empr_tx_situacao, empr_nb_parametro, empr_tx_contato, empr_tx_dataRegistroCNPJ, empr_tx_domain
 	);
+
+	$parametro = ($_POST['parametro'] == '') ? 0 : $_POST['parametro'];
+	$RegistroCNPJ = ($_POST['dataRegistroCNPJ'] == '') ? '0000-00-00' : $_POST['dataRegistroCNPJ'];
+
 	$valores=array(
 		$_POST[nome], $_POST[fantasia], $_POST[cnpj], $_POST[cep], $_POST[cidade], $_POST[endereco], $_POST[bairro],
 		$_POST[numero], $_POST[complemento], $_POST[referencia], $_POST[fone1], $_POST[fone2], $_POST[email], $_POST[inscricaoEstadual],
 		$_POST[inscricaoMunicipal], $_POST[regimeTributario], 'ativo',
-		$_POST[situacao], $_POST[parametro], $_POST[contato], $_POST[dataRegistroCNPJ]
+		$_POST[situacao], $parametro, $_POST[contato], $RegistroCNPJ, "https://braso.mobi/techps/$_POST[nomeDominio]"
 	);
 
 	if($_POST[id]>0){
@@ -126,6 +130,38 @@ function checa_cnpj(){
 	exit;
 }
 
+function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
+
+	if($mascara=="domain") {
+		$data_input="<script>
+		$(document).ready(function() {
+			var inputField = $('#nomeDominio');
+			var domainPrefix = 'https://braso.mobi/techps/';
+			function updateDisplayedText() {
+				var inputValue = inputField.val();
+				if (inputValue.startsWith(domainPrefix)) {
+					var displayedText = inputValue.substring(domainPrefix.length);
+					inputField.val(displayedText);
+				}
+			}
+			// Executar a função de atualização quando o campo for modificado
+			inputField.on('input', updateDisplayedText);
+			// Inicializar o campo com o valor correto
+			updateDisplayedText();
+		});
+		</script>";
+	}
+	
+	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
+			<label><b>'.$nome.'</b></label>
+			<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.'>
+		</div>';
+
+
+
+	return $campo.$data_input;
+
+}
 
 function layout_empresa(){
 	global $a_mod;
@@ -154,6 +190,7 @@ function layout_empresa(){
 	$c[] = combo('Regime Tributário','regimeTributario',$a_mod[empr_tx_regimeTributario],3,$regimes);
 	$c[] = campo_data('Data Reg. CNPJ','dataRegistroCNPJ',$a_mod[empr_tx_dataRegistroCNPJ],3);
 	$c[] = arquivo('Logo (.png, .jpg)','logo',$a_mod[empr_tx_logo],4);
+	$c[] = campo_domain('Nome do Domínio','nomeDominio',$a_mod['empr_tx_domain'],2,'domain');
 	$cJornada[]=combo_bd('!Parâmetros da Jornada','parametro',$a_mod[empr_nb_parametro],6,'parametro','onchange="carrega_parametro(this.value)"');
 	// $cJornada[]=campo('Jornada Semanal (Horas)','jornadaSemanal',$a_mod[enti_tx_jornadaSemanal],3,MASCARA_NUMERO,'disabled=disabled');
 	// $cJornada[]=campo('Jornada Sábado (Horas)','jornadaSabado',$a_mod[enti_tx_jornadaSabado],3,MASCARA_NUMERO,'disabled=disabled');

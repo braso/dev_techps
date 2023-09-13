@@ -47,15 +47,39 @@ function cadastra_motorista(){
 		enti_tx_cnhRegistro, enti_tx_cnhValidade, enti_tx_cnhPrimeiraHabilitacao, enti_tx_cnhCategoria, enti_tx_cnhPermissao,
 		enti_tx_cnhObs, enti_nb_cnhCidade, enti_tx_cnhEmissao, enti_tx_cnhPontuacao, enti_tx_cnhAtividadeRemunerada
 	);
-	$valores = array($_POST[nome],$_POST[nascimento],$_POST[cpf],$_POST[rg],$_POST[civil],$_POST[sexo],$_POST[endereco],$_POST[numero],$_POST[complemento],
-		$_POST[bairro],$_POST[cidade],$_POST[cep],$_POST[fone1],$_POST[fone2],$_POST[email],$_POST[ocupacao],valor($_POST[salario]),$_POST[obs],
+
+
+	$nascimento = ($_POST['nascimento'] == '') ? '0000-00-00' : $_POST['nascimento'];
+
+	$salario = ($_POST['salario'] == '') ? 0.0 : valor($_POST['salario']);
+
+	$parametro = ($_POST['parametro'] === '') ? 0 : $_POST['parametro'];
+
+	$rgDataEmissao = ($_POST[rgDataEmissao] === '') ? '0000-00-00' : $_POST[rgDataEmissao];
+
+    $admissao = ($_POST[admissao] === '') ? '0000-00-00' :
+        $_POST[admissao];
+
+    $desligamento = ($_POST[desligamento] === '') ? '0000-00-00' : $_POST[desligamento];
+
+    $cnhValidade= ($_POST[cnhValidade] === '') ? '0000-00-00' : $_POST[cnhValidade];
+
+    $cnhPrimeiraHabilitacao = ($_POST[cnhPrimeiraHabilitacao] === '') ? '0000-00-00' : $_POST[cnhPrimeiraHabilitacao];
+
+    $cnhCidade = ($_POST[cnhCidade] == '') ? 00 : $_POST[cnhCidade];
+
+    $cnhEmissao = ($_POST[cnhEmissao] === '') ? '0000-00-00' : $_POST[cnhEmissao];
+
+	   //valor($_POST[salario])
+	$valores = array($_POST[nome],$nascimento,$_POST[cpf],$_POST[rg],$_POST[civil],$_POST[sexo],$_POST[endereco],$_POST[numero],$_POST[complemento],
+		$_POST[bairro],$_POST[cidade],$_POST[cep],$_POST[fone1],$_POST[fone2],$_POST[email],$_POST[ocupacao],$salario,$_POST[obs],
 		'Motorista','ativo',$_POST[matricula],$_POST[empresa],
-		$_POST[parametro],$_POST[jornadaSemanal],$_POST[jornadaSabado],$_POST[percentualHE],$_POST[percentualSabadoHE],
-		$_POST[rgOrgao], $_POST[rgDataEmissao], $_POST[rgUf],
+		$parametro,$_POST[jornadaSemanal],$_POST[jornadaSabado],$_POST[percentualHE],$_POST[percentualSabadoHE],
+		$_POST[rgOrgao], $rgDataEmissao, $_POST[rgUf],
 		$_POST[pai], $_POST[mae], $_POST[conjugue], $_POST[tipoOperacao],
-		$_POST[subcontratado], $_POST[admissao], $_POST[desligamento],
-		$_POST[cnhRegistro], $_POST[cnhValidade], $_POST[cnhPrimeiraHabilitacao], $_POST[cnhCategoria], $_POST[cnhPermissao],
-		$_POST[cnhObs], $_POST[cnhCidade], $_POST[cnhEmissao], $_POST[cnhPontuacao], $_POST[cnhAtividadeRemunerada]
+		$_POST[subcontratado], $admissao, $desligamento,
+		$_POST[cnhRegistro], $cnhValidade, $cnhPrimeiraHabilitacao, $_POST[cnhCategoria], $_POST[cnhPermissao],
+		$_POST[cnhObs], $cnhCidade, $cnhEmissao, $_POST[cnhPontuacao], $_POST[cnhAtividadeRemunerada]
 	);
 
 	if(!$_POST[id]){
