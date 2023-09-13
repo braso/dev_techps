@@ -183,8 +183,8 @@ License: You must have a valid license purchased only from themeforest(the above
 			<div class="form-group">
 				<select class="form-control" name="domain">
 					<option value="" selected>Domínio</option>
-					<option value="https://braso.mobi/dev_techps/techps/index.php">techps</option>
-					<option value="https://braso.mobi/dev_techps/sistema/index.php">Armazem Paraiba</option>
+					<!--<option value="https://braso.mobi/techps/techps/index.php">techps</option>-->
+					<option value="https://braso.mobi/techps/sistema/index.php">Armazem Paraiba</option>
 					<option value="">Leroy Merlin</option>
 				</select>
 			</div>
@@ -217,9 +217,10 @@ License: You must have a valid license purchased only from themeforest(the above
 
 			</div>
 
-			<p style="font-size: small;">Versão:
+			<p>Versão:
 				<?php echo $version; ?>
-				Data de lançamento:
+			</p>
+			<p>Data de lançamento:
 				<?php echo $release_date; ?>
 			</p>
 

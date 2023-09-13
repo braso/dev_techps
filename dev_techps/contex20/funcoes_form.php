@@ -1,189 +1,192 @@
 <?php
 global $CONTEX,$conn;
 function cabecalho($nome_pagina,$foco=0,$relatorio=0){
-	global $CONTEX, $conn;
-	if(!$_SESSION['user_nb_id']){
+global $CONTEX,$conn;
+if(!$_SESSION['user_nb_id']){
+
+	?>
+		<meta http-equiv="refresh" content="0; url=<?=$CONTEX['path']?>/index.php" />
+	<?
+	exit;
+}
+
+global $CONTEX;
+?>
+	<!DOCTYPE html>
+<!--[if IE 8]> <html lang="pt-br" class="ie8 no-js"> <![endif]-->
+<!--[if IE 9]> <html lang="pt-br" class="ie9 no-js"> <![endif]-->
+<!--[if !IE]><!-->
+<html lang="pt-br">
+	<!--<![endif]-->
+	<!-- INICIO HEAD -->
+
+	<head>
+		<meta charset="utf-8" />
+		<title>TechPS</title>
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta content="width=device-width, initial-scale=1" name="viewport" />
+		<meta content="" name="description" />
+		<meta content="" name="author" />
+		<!-- INICIO GLOBAL MANDATORY STYLES -->
+		<script src="/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/css/select2.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/js/select2.min.js"></script>
+		<script src="/contex20/assets/global/plugins/select2/js/i18n/pt-BR.js" type="text/javascript"></script>
+
+		<script src="/contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js" type="text/javascript"></script>
+		<script src="/contex20/assets/global/plugins/jquery-inputmask/maskMoney.js" type="text/javascript"></script>
+		<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css" />
+		<link href="/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+		<link href="/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet" type="text/css" />
+		<link href="/contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+		<link href="/contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
+		<link href="/contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet" type="text/css" />
+		<!-- FIM GLOBAL MANDATORY STYLES -->
+
+		<link href="/contex20/assets/global/plugins/datatables/datatables.min.css" rel="stylesheet" type="text/css" />
+		<link href="/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css" rel="stylesheet" type="text/css" />
+
+		<link href="/contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
+		<link href="/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet" type="text/css" />
+
+		<!-- INICIO TEMA GLOBAL STYLES -->
+		<link href="/contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components" type="text/css" />
+		<link href="/contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
+		<!-- FIM TEMA GLOBAL STYLES -->
+		<!-- INICIO TEMA LAYOUT STYLES -->
+		<link href="/contex20/assets/layout/css/layout.min.css" rel="stylesheet" type="text/css" />
+		<link href="/contex20/assets/layout/css/themes/default.min.css" rel="stylesheet" type="text/css" id="style_color" />
+		<link href="/contex20/assets/layout/css/custom.min.css" rel="stylesheet" type="text/css" />
+		<!-- FIM TEMA LAYOUT STYLES -->
+		<link rel="apple-touch-icon" sizes="180x180" href="/contex20/img/favicon/apple-touch-icon.png">
+		<link rel="icon" type="image/png" sizes="32x32" href="/contex20/img/favicon/favicon-32x32.png">
+		<link rel="icon" type="image/png" sizes="16x16" href="/contex20/img/favicon/favicon-16x16.png">
+		<link rel="shortcut icon" type="image/x-icon" href="/contex20/img/favicon/favicon-32x32.png?v=2">
+		<link rel="manifest" href="/contex20/img/favicon/site.webmanifest">
+		<script type="text/javascript">
+
+			function contex_foco(elemento){
+				var campoFoco=document.forms[0].elements[<?=$foco?>];
+				if(campoFoco != null)
+					campoFoco.focus();
+
+			}
+
+		</script>
+	</head>
+	<!-- FIM HEAD -->
+
+	<!-- <body style="zoom:100%;" class="page-container-bg-solid page-boxed"> -->
+	<body onload="contex_foco()" style="zoom:100%;" class="page-container-bg-solid page-boxed">
+	<?
+	if($relatorio==0){
+
+
+	?>
+		<!-- INICIO HEADER -->
+		<div class="page-header">
+			<!-- INICIO HEADER TOP -->
+			<div class="page-header-top">
+				<div class="container-fluid">
+					<!-- INICIO LOGO -->
+					<div class="page-logo">
+						<a href="<?=$CONTEX['path']?>/index.php">
+							<!-- <img src="/contex20/img/logo.png" alt="logo" class="logo-default"> -->
+							<img src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="logo" class="logo-default">
+						</a>
+					</div>
+					<!-- FIM LOGO -->
+					<!-- INICIO RESPONSIVE MENU TOGGLER -->
+					<a href="javascript:;" class="menu-toggler"></a>
+					<!-- FIM RESPONSIVE MENU TOGGLER -->
+					<!-- INICIO TOP NAVIGATION MENU -->
+					<div class="top-menu">
+						<ul class="nav navbar-nav pull-right">
+							<li class="droddown dropdown-separator">
+								<span class="separator"></span>
+							</li>
+							<!-- INICIO USER LOGIN DROPDOWN -->
+							<li class="dropdown dropdown-user dropdown-dark">
+								<a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
+									<img alt="" class="img-circle" src="<?=$_SESSION['user_tx_foto'] ? $_SESSION['user_tx_foto'] : '/contex20/img/user.png'?>">
+									<span class="username username-hide-mobile"><?=$_SESSION['user_tx_login']?></span>
+								</a>
+								<ul class="dropdown-menu dropdown-menu-default">
+									<li>
+										<a href="<?=$CONTEX['path']?>/cadastro_usuario.php?id=<?=$_SESSION['user_nb_id']?>">
+											<i class="icon-user"></i> Perfil </a>
+									</li>
+									<li class="divider"> </li>
+									<li>
+										<a href="<?=$CONTEX['path']?>/logout.php">
+											<i class="icon-key"></i> Sair </a>
+									</li>
+								</ul>
+							</li>
+							<!-- FIM USER LOGIN DROPDOWN -->
+							<!-- INICIO QUICK SIDEBAR TOGGLER -->
+							<!-- <li class="dropdown dropdown-extended quick-sidebar-toggler">
+								<i class="icon-logout"></i>
+							</li> -->
+							<!-- FIM QUICK SIDEBAR TOGGLER -->
+						</ul>
+					</div>
+					<!-- FIM TOP NAVIGATION MENU -->
+				</div>
+			</div>
+			<!-- FIM HEADER TOP -->
+
+
+		<?
+
+		include($_SERVER['DOCUMENT_ROOT'].$CONTEX['path'].'/menu.php');
 
 		?>
-			<meta http-equiv="refresh" content="0; url=<?=$CONTEX['path']?>/index.php" />
-		<?
-		exit;
+		
+	
+		</div>
+		<!-- FIM HEADER -->
+	<?
 	}
 
-	global $CONTEX;
+	if($relatorio=='1'){
+		echo '
+		<style>
+		@media print {
+			body {zoom:70%;margin: 0;padding:0;}
+			table {zoom: 70%;}
+		}
+		</style>
+		';
+	}
 	?>
-		<!DOCTYPE html>
-	<!--[if IE 8]> <html lang="pt-br" class="ie8 no-js"> <![endif]-->
-	<!--[if IE 9]> <html lang="pt-br" class="ie9 no-js"> <![endif]-->
-	<!--[if !IE]><!-->
-	<html lang="pt-br">
-		<!--<![endif]-->
-		<!-- INICIO HEAD -->
 
-		<head>
-			<meta charset="utf-8" />
-			<title>TechPS</title>
-			<meta http-equiv="X-UA-Compatible" content="IE=edge">
-			<meta content="width=device-width, initial-scale=1" name="viewport" />
-			<meta content="" name="description" />
-			<meta content="" name="author" />
-			<!-- INICIO GLOBAL MANDATORY STYLES -->
-			<script src="/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
-
-			<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/css/select2.min.css" rel="stylesheet" />
-			<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/js/select2.min.js"></script>
-			<script src="/contex20/assets/global/plugins/select2/js/i18n/pt-BR.js" type="text/javascript"></script>
-
-			<script src="/contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js" type="text/javascript"></script>
-			<script src="/contex20/assets/global/plugins/jquery-inputmask/maskMoney.js" type="text/javascript"></script>
-			<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css" />
-			<link href="/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
-			<link href="/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet" type="text/css" />
-			<link href="/contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
-			<link href="/contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
-			<link href="/contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet" type="text/css" />
-			<!-- FIM GLOBAL MANDATORY STYLES -->
-
-			<link href="/contex20/assets/global/plugins/datatables/datatables.min.css" rel="stylesheet" type="text/css" />
-			<link href="/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css" rel="stylesheet" type="text/css" />
-
-			<link href="/contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
-			<link href="/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet" type="text/css" />
-
-			<!-- INICIO TEMA GLOBAL STYLES -->
-			<link href="/contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components" type="text/css" />
-			<link href="/contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
-			<!-- FIM TEMA GLOBAL STYLES -->
-			<!-- INICIO TEMA LAYOUT STYLES -->
-			<link href="/contex20/assets/layout/css/layout.min.css" rel="stylesheet" type="text/css" />
-			<link href="/contex20/assets/layout/css/themes/default.min.css" rel="stylesheet" type="text/css" id="style_color" />
-			<link href="/contex20/assets/layout/css/custom.min.css" rel="stylesheet" type="text/css" />
-			<!-- FIM TEMA LAYOUT STYLES -->
-			<link rel="apple-touch-icon" sizes="180x180" href="/contex20/img/favicon/apple-touch-icon.png">
-			<link rel="icon" type="image/png" sizes="32x32" href="/contex20/img/favicon/favicon-32x32.png">
-			<link rel="icon" type="image/png" sizes="16x16" href="/contex20/img/favicon/favicon-16x16.png">
-			<link rel="shortcut icon" type="image/x-icon" href="/contex20/img/favicon/favicon-32x32.png?v=2">
-			<link rel="manifest" href="/contex20/img/favicon/site.webmanifest">
-			<script type="text/javascript">
-
-				function contex_foco(elemento){
-					var campoFoco=document.forms[0].elements[<?=$foco?>];
-					if(campoFoco != null)
-						campoFoco.focus();
-				}
-
-			</script>
-		</head>
-		<!-- FIM HEAD -->
-
-		<!-- <body style="zoom:100%;" class="page-container-bg-solid page-boxed"> -->
-		<body onload="contex_foco()" style="zoom:100%;" class="page-container-bg-solid page-boxed">
-		<?
-		if($relatorio==0){
-		?>
-			<!-- INICIO HEADER -->
-			<div class="page-header">
-				<!-- INICIO HEADER TOP -->
-				<div class="page-header-top">
+		<!-- INICIO CONTAINER -->
+		<div class="page-container">
+			<!-- INICIO CONTENT -->
+			<div class="page-content-wrapper">
+				<!-- INICIO CONTENT BODY -->
+				<!-- INICIO PAGE HEAD-->
+				<div class="page-head">
 					<div class="container-fluid">
-						<!-- INICIO LOGO -->
-						<div class="page-logo">
-							<a href="<?=$CONTEX['path']?>/index.php">
-								<!-- <img src="/contex20/img/logo.png" alt="logo" class="logo-default"> -->
-								<img src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="logo" class="logo-default">
-							</a>
+						<!-- INICIO PAGE TITLE -->
+						<div class="page-title">
+							<h1><?=$nome_pagina?> </h1>
 						</div>
-						<!-- FIM LOGO -->
-						<!-- INICIO RESPONSIVE MENU TOGGLER -->
-						<a href="javascript:;" class="menu-toggler"></a>
-						<!-- FIM RESPONSIVE MENU TOGGLER -->
-						<!-- INICIO TOP NAVIGATION MENU -->
-						<div class="top-menu">
-							<ul class="nav navbar-nav pull-right">
-								<li class="droddown dropdown-separator">
-									<span class="separator"></span>
-								</li>
-								<!-- INICIO USER LOGIN DROPDOWN -->
-								<li class="dropdown dropdown-user dropdown-dark">
-									<a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
-										<img alt="" class="img-circle" src="/contex20/img/user.png">
-										<span class="username username-hide-mobile"><?=$_SESSION['user_tx_login']?></span>
-									</a>
-									<ul class="dropdown-menu dropdown-menu-default">
-										<li>
-											<a href="<?=$CONTEX['path']?>/cadastro_usuario.php?id=<?=$_SESSION['user_nb_id']?>">
-												<i class="icon-user"></i> Perfil </a>
-										</li>
-										<li class="divider"> </li>
-										<li>
-											<a href="<?=$CONTEX['path']?>/logout.php">
-												<i class="icon-key"></i> Sair </a>
-										</li>
-									</ul>
-								</li>
-								<!-- FIM USER LOGIN DROPDOWN -->
-								<!-- INICIO QUICK SIDEBAR TOGGLER -->
-								<!-- <li class="dropdown dropdown-extended quick-sidebar-toggler">
-									<i class="icon-logout"></i>
-								</li> -->
-								<!-- FIM QUICK SIDEBAR TOGGLER -->
-							</ul>
-						</div>
-						<!-- FIM TOP NAVIGATION MENU -->
+						<!-- FIM PAGE TITLE -->
 					</div>
 				</div>
-				<!-- FIM HEADER TOP -->
+				<!-- FIM PAGE HEAD-->
 
-
-			<?
-
-			include($_SERVER['DOCUMENT_ROOT'].$CONTEX['path'].'/menu.php');
-
-			?>
-			
-		
-			</div>
-			<!-- FIM HEADER -->
-		<?
-		}
-
-		if($relatorio=='1'){
-			echo '
-			<style>
-			@media print {
-				body {zoom:70%;margin: 0;padding:0;}
-				table {zoom: 70%;}
-			}
-			</style>
-			';
-		}
-		?>
-
-			<!-- INICIO CONTAINER -->
-			<div class="page-container">
-				<!-- INICIO CONTENT -->
-				<div class="page-content-wrapper">
-					<!-- INICIO CONTENT BODY -->
-					<!-- INICIO PAGE HEAD-->
-					<div class="page-head">
-						<div class="container-fluid">
-							<!-- INICIO PAGE TITLE -->
-							<div class="page-title">
-								<h1><?=$nome_pagina?> </h1>
-							</div>
-							<!-- FIM PAGE TITLE -->
-						</div>
-					</div>
-					<!-- FIM PAGE HEAD-->
-
-					<!-- INICIO PAGE CONTENT BODY -->
-					<div class="page-content">
-						<div class="container-fluid">
-							<!-- INICIO PAGE CONTENT INNER -->
-							<div class="page-content-inner">
-								<div class="row ">
-									<div class="col-md-12">
-	<?
+				<!-- INICIO PAGE CONTENT BODY -->
+				<div class="page-content">
+					<div class="container-fluid">
+						<!-- INICIO PAGE CONTENT INNER -->
+						<div class="page-content-inner">
+							<div class="row ">
+								<div class="col-md-12">
+<?
 }
 
 function cabecaRelatorio($nome_pagina,$foco=0){
