@@ -37,44 +37,26 @@ function modifica_motorista(){
 function cadastra_motorista(){
 	global $a_mod;
 
-	$campos = array(enti_tx_nome,enti_tx_nascimento,enti_tx_cpf,enti_tx_rg,enti_tx_civil,enti_tx_sexo,enti_tx_endereco,enti_tx_numero,enti_tx_complemento,enti_tx_bairro,enti_nb_cidade,enti_tx_cep,enti_tx_fone1,enti_tx_fone2,enti_tx_email,enti_tx_ocupacao,enti_tx_salario,enti_tx_obs,enti_tx_tipo,enti_tx_status,enti_tx_matricula,enti_nb_empresa, enti_nb_parametro,enti_tx_jornadaSemanal,enti_tx_jornadaSabado,enti_tx_percentualHE,enti_tx_percentualSabadoHE, enti_tx_rgOrgao, enti_tx_rgDataEmissao, enti_tx_rgUf, enti_tx_pai, enti_tx_mae, enti_tx_conjugue, enti_tx_tipoOperacao, enti_tx_subcontratado, enti_tx_admissao, enti_tx_desligamento, enti_tx_cnhRegistro, enti_tx_cnhValidade, enti_tx_cnhPrimeiraHabilitacao, enti_tx_cnhCategoria, enti_tx_cnhPermissao, enti_tx_cnhObs, enti_nb_cnhCidade, enti_tx_cnhEmissao, enti_tx_cnhPontuacao, enti_tx_cnhAtividadeRemunerada
+	$campos = array(enti_tx_nome,enti_tx_nascimento,enti_tx_cpf,enti_tx_rg,enti_tx_civil,enti_tx_sexo,enti_tx_endereco,enti_tx_numero,enti_tx_complemento,
+		enti_tx_bairro,enti_nb_cidade,enti_tx_cep,enti_tx_fone1,enti_tx_fone2,enti_tx_email,enti_tx_ocupacao,enti_tx_salario,enti_tx_obs,
+		enti_tx_tipo,enti_tx_status,enti_tx_matricula,enti_nb_empresa,
+		enti_nb_parametro,enti_tx_jornadaSemanal,enti_tx_jornadaSabado,enti_tx_percentualHE,enti_tx_percentualSabadoHE,
+		enti_tx_rgOrgao, enti_tx_rgDataEmissao, enti_tx_rgUf,
+		enti_tx_pai, enti_tx_mae, enti_tx_conjugue, enti_tx_tipoOperacao,
+		enti_tx_subcontratado, enti_tx_admissao, enti_tx_desligamento,
+		enti_tx_cnhRegistro, enti_tx_cnhValidade, enti_tx_cnhPrimeiraHabilitacao, enti_tx_cnhCategoria, enti_tx_cnhPermissao,
+		enti_tx_cnhObs, enti_nb_cnhCidade, enti_tx_cnhEmissao, enti_tx_cnhPontuacao, enti_tx_cnhAtividadeRemunerada
 	);
-	
-	$nascimento = ($_POST['nascimento'] == '') ? '0000-00-00' : $_POST['nascimento'];
-	
-	$salario = ($_POST['salario'] == '') ? 0.0 : valor($_POST['salario']);
-	
-	$parametro = ($_POST['parametro'] === '') ? 0 : $_POST['parametro'];
-	
-	$rgDataEmissao = ($_POST[rgDataEmissao] === '') ? '0000-00-00' : $_POST[rgDataEmissao];
-	
-    $admissao = ($_POST[admissao] === '') ? '0000-00-00' :
-        $_POST[admissao];
-        
-    $desligamento = ($_POST[desligamento] === '') ? '0000-00-00' : $_POST[desligamento];
-    
-    $cnhValidade= ($_POST[cnhValidade] === '') ? '0000-00-00' : $_POST[cnhValidade];
-    
-    $cnhPrimeiraHabilitacao = ($_POST[cnhPrimeiraHabilitacao] === '') ? '0000-00-00' : $_POST[cnhPrimeiraHabilitacao];
-    
-    $cnhCidade = ($_POST[cnhCidade] == '') ? 00 : $_POST[cnhCidade];
-    
-    $cnhEmissao = ($_POST[cnhEmissao] === '') ? '0000-00-00' : $_POST[cnhEmissao];
-	   
-	   //valor($_POST[salario])
-	$valores = array($_POST[nome],$nascimento,$_POST[cpf],$_POST[rg],$_POST[civil],$_POST[sexo],$_POST[endereco],$_POST[numero],$_POST[complemento],
-		$_POST[bairro],$_POST[cidade],$_POST[cep],$_POST[fone1],$_POST[fone2],$_POST[email],$_POST[ocupacao],$salario,$_POST[obs],
+	$valores = array($_POST[nome],$_POST[nascimento],$_POST[cpf],$_POST[rg],$_POST[civil],$_POST[sexo],$_POST[endereco],$_POST[numero],$_POST[complemento],
+		$_POST[bairro],$_POST[cidade],$_POST[cep],$_POST[fone1],$_POST[fone2],$_POST[email],$_POST[ocupacao],valor($_POST[salario]),$_POST[obs],
 		'Motorista','ativo',$_POST[matricula],$_POST[empresa],
-		$parametro,$_POST[jornadaSemanal],$_POST[jornadaSabado],$_POST[percentualHE],$_POST[percentualSabadoHE],
-		$_POST[rgOrgao], $rgDataEmissao, $_POST[rgUf],
+		$_POST[parametro],$_POST[jornadaSemanal],$_POST[jornadaSabado],$_POST[percentualHE],$_POST[percentualSabadoHE],
+		$_POST[rgOrgao], $_POST[rgDataEmissao], $_POST[rgUf],
 		$_POST[pai], $_POST[mae], $_POST[conjugue], $_POST[tipoOperacao],
-		$_POST[subcontratado], $admissao, $desligamento,
-		$_POST[cnhRegistro], $cnhValidade, $cnhPrimeiraHabilitacao, $_POST[cnhCategoria], $_POST[cnhPermissao],
-		$_POST[cnhObs], $cnhCidade, $cnhEmissao, $_POST[cnhPontuacao], $_POST[cnhAtividadeRemunerada]
+		$_POST[subcontratado], $_POST[admissao], $_POST[desligamento],
+		$_POST[cnhRegistro], $_POST[cnhValidade], $_POST[cnhPrimeiraHabilitacao], $_POST[cnhCategoria], $_POST[cnhPermissao],
+		$_POST[cnhObs], $_POST[cnhCidade], $_POST[cnhEmissao], $_POST[cnhPontuacao], $_POST[cnhAtividadeRemunerada]
 	);
-	
-// 	var_dump($valores);
-// 	die();
 
 	if(!$_POST[id]){
 		$campos = array_merge($campos,array(enti_nb_userCadastro,enti_tx_dataCadastro));
