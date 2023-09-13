@@ -1,8 +1,9 @@
 <?php
 include "conecta.php";
 
-function exclui_empresa(){
-	remover('empresa',$_POST['id']);
+function exclui_empresa() {
+
+	remover('empresa', $_POST[id]);
 	index();
 	exit;
 }
@@ -15,136 +16,109 @@ function modifica_empresa(){
 	exit;
 }
 
+function cadastra_empresa() {
 
-function cadastra_empresa(){
+	$campos = array(
+		empr_tx_nome, empr_tx_fantasia, empr_tx_cnpj, empr_tx_cep, empr_nb_cidade, empr_tx_endereco, empr_tx_bairro,
+		empr_tx_numero, empr_tx_complemento, empr_tx_referencia, empr_tx_fone1, empr_tx_fone2, empr_tx_email, empr_tx_inscricaoEstadual,
+		empr_tx_inscricaoMunicipal, empr_tx_regimeTributario, empr_tx_status,
+		empr_tx_situacao, empr_nb_parametro, empr_tx_contato, empr_tx_dataRegistroCNPJ,  empr_tx_domain
+	);
+	$valores = array(
+		$_POST[nome], $_POST[fantasia], $_POST[cnpj], $_POST[cep], $_POST[cidade], $_POST[endereco], $_POST[bairro],
+		$_POST[numero], $_POST[complemento], $_POST[referencia], $_POST[fone1], $_POST[fone2], $_POST[email], $_POST[inscricaoEstadual],
+		$_POST[inscricaoMunicipal], $_POST[regimeTributario], 'ativo',
+		$_POST[situacao], $_POST[parametro], $_POST[contato], $_POST[dataRegistroCNPJ], "https://braso.mobi/techps/$_POST[nomeDominio]"
+	);
 
-	$campos=[
-		'empr_tx_nome', 'empr_tx_fantasia', 'empr_tx_cnpj', 'empr_tx_cep', 'empr_nb_cidade', 'empr_tx_endereco', 'empr_tx_bairro', 'empr_tx_numero', 'empr_tx_complemento', 'empr_tx_referencia',
-		'empr_tx_fone1', 'empr_tx_fone2', 'empr_tx_email', 'empr_tx_inscricaoEstadual', 'empr_tx_inscricaoMunicipal', 'empr_tx_regimeTributario', 'empr_tx_status', 'empr_tx_situacao', 'empr_nb_parametro', 'empr_tx_contato',
-		'empr_tx_dataRegistroCNPJ', 'empr_tx_domain', 'empr_tx_ftpServer', 'empr_tx_ftpUsername', 'empr_tx_ftpUserpass'
-	];
-	$parametro = ($_POST['parametro'] == '') ? 0 : $_POST['parametro'];
-	$RegistroCNPJ = ($_POST['dataRegistroCNPJ'] == '') ? '0000-00-00' : $_POST['dataRegistroCNPJ'];
-	
-	$valores=[
-		$_POST['nome'], $_POST['fantasia'], $_POST['cnpj'], $_POST['cep'], $_POST['cidade'], $_POST['endereco'], $_POST['bairro'], $_POST['numero'], $_POST['complemento'], $_POST['referencia'],
-		$_POST['fone1'], $_POST['fone2'], $_POST['email'], $_POST['inscricaoEstadual'], $_POST['inscricaoMunicipal'], $_POST['regimeTributario'], 'ativo', $_POST['situacao'], $parametro, $_POST['contato'],
-		$RegistroCNPJ, "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio'], $_POST['ftpServer'], $_POST['ftpUsername'], $_POST['ftpUserpass']
-	];
-	
-	if(empty($_POST['cnpj']) || empty($_POST['nome']) || empty($_POST['cep']) || empty($_POST['numero']) || empty($_POST['email'])){
-		echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
-		layout_empresa();
-		exit;
-	}
-
-	$ftpInputs = empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) + 0;
-
-	if($ftpInputs == 3){
-		$_POST['ftpServer']   = 'ftp-jornadas.positronrt.com.br';
-		$_POST['ftpUsername'] = '08995631000108';
-		$_POST['ftpUserpass'] = '0899';
-	}elseif($ftpInputs > 0){
-		echo '<script>alert("Preencha os 3 campos de FTP.")</script>';
-		layout_empresa();
-		exit;
-	}
-	
-	// 	var_dump($valores);
-	// 	die();
-
-	if(isset($_POST['id']) && $_POST['id'] != ''){
-		$campos = array_merge($campos,array('empr_nb_userAtualiza','empr_tx_dataAtualiza'));
-		$valores = array_merge($valores,array($_SESSION['user_nb_id'], date("Y-m-d H:i:s")));
-		atualizar('empresa',$campos,$valores,$_POST['id']);
-		$id_empresa = $_POST['id'];
-	}else{
-		$campos = array_merge($campos,array('empr_nb_userCadastro','empr_tx_dataCadastro'));
-		$valores = array_merge($valores,array($_SESSION['user_nb_id'], date("Y-m-d H:i:s")));
-		$id_empresa = inserir('empresa',$campos,$valores);
+	if ($_POST[id] > 0) {
+		$campos = array_merge($campos, array(empr_nb_userAtualiza, empr_tx_dataAtualiza));
+		$valores = array_merge($valores, array($_SESSION[user_nb_id], date("Y-m-d H:i:s")));
+		atualizar('empresa', $campos, $valores, $_POST[id]);
+		$id_empresa = $_POST[id];
+	} else {
+		$campos = array_merge($campos, array(empr_nb_userCadastro, empr_tx_dataCadastro));
+		$valores = array_merge($valores, array($_SESSION[user_nb_id], date("Y-m-d H:i:s")));
+		$id_empresa = inserir('empresa', $campos, $valores);
 	}
 
 
 	$file_type = $_FILES['logo']['type']; //returns the mimetype
 
-	$allowed = array("image/jpeg", "image/gif", "image/png");
-	if(in_array($file_type, $allowed) && $_FILES['logo']['name']!='') {
+$allowed = array("image/jpeg", "image/gif", "image/png");
+	if (in_array($file_type, $allowed) && $_FILES[logo][name] != '') {
 
-		if(!is_dir("arquivos/empresa/$id_empresa")){
+		if (!is_dir("arquivos/empresa/$id_empresa")) {
 			mkdir("arquivos/empresa/$id_empresa");
 		}
 
-		$arq=enviar('logo',"arquivos/empresa/$id_empresa/",$id_empresa);
-		if($arq){
-			atualizar('empresa',array('empr_tx_logo'),array($arq),$id_empresa);
+		$arq = enviar(logo, "arquivos/empresa/$id_empresa/", $id_empresa);
+		if ($arq) {
+			atualizar('empresa', array('empr_tx_logo'), array($arq), $id_empresa);
 		}
-	
 	}
 	// else{
 	// 	set_status("Logo não atualizada. Formato incorreto!");
 	// }
 
-	
+
 
 	index();
 	exit;
 }
 
 
-function busca_cep($cep){	
-    $resultado = @file_get_contents('https://viacep.com.br/ws/'.urlencode($cep).'/json/');
-    $arr = json_decode($resultado, true);
-    return $arr;  
+function busca_cep($cep) {
+	$resultado = @file_get_contents('https://viacep.com.br/ws/' . urlencode($cep) . '/json/');
+	$arr = json_decode($resultado, true);
+	return $arr;
 }
 
+function carrega_endereco() {
 
-function carrega_endereco(){
-	
-	$arr = busca_cep($_GET['cep']);
-	
-	?>
+	$arr = busca_cep($_GET[cep]);
+	// print_r($arr);
+
+?>
 	<script src="/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
 	<script type="text/javascript">
-		parent.document.contex_form.endereco.value='<?=$arr['logradouro']?>';
-		parent.document.contex_form.bairro.value='<?=$arr['bairro']?>';
+		parent.document.contex_form.endereco.value = '<?= $arr[logradouro] ?>';
+		parent.document.contex_form.bairro.value = '<?= $arr[bairro] ?>';
 
-		var selecionado = $('.cidade',parent.document);
+		var selecionado = $('.cidade', parent.document);
 		selecionado.empty();
-		selecionado.append('<option value=<?=$arr['ibge']?>><?="[$arr[uf]] ".$arr['localidade']?></option>');
-		selecionado.val("<?=$arr['ibge']?>").trigger("change");
-
+		selecionado.append('<option value=<?= $arr[ibge] ?>><?= "[$arr[uf]] " . $arr[localidade] ?></option>');
+		selecionado.val("<?= $arr[ibge] ?>").trigger("change");
 	</script>
 	<?
 
 	exit;
 }
 
-
-function checa_cnpj(){
-	if(strlen($_GET['cnpj']) == 18 || strlen($_GET['cnpj']) == 14){
-		$id = (int)$_GET['id'];
-		$cnpj = substr($_GET['cnpj'],0,18);
+function checa_cnpj() {
+	if (strlen($_GET[cnpj]) == 18 || strlen($_GET[cnpj]) == 14) {
+		$id = (int)$_GET[id];
+		$cnpj = substr($_GET[cnpj], 0, 18);
 
 		$sql = query("SELECT * FROM empresa WHERE empr_tx_cnpj = '$cnpj' AND empr_nb_id != $id AND empr_tx_status = 'ativo' LIMIT 1");
 		$a = carrega_array($sql);
-		
-		if($a['empr_nb_id'] > 0 && $_SESSION['user_tx_nivel'] == 'Administrador' && $a['empr_tx_cnpj'] == $_SESSION['user_tx_emprCnpj']){
-			?>
+
+		if ($a[empr_nb_id] > 0) {
+	?>
 			<script type="text/javascript">
-				if(confirm("CPF/CNPJ já cadastrado, deseja atualizar o registro?")){
-					parent.document.form_modifica.id.value='<?=$a['empr_nb_id']?>';
+				if (confirm("CPF/CNPJ já cadastrado, deseja atualizar o registro?")) {
+					parent.document.form_modifica.id.value = '<?= $a[empr_nb_id] ?>';
 					parent.document.form_modifica.submit();
-				}else{
-					parent.document.contex_form.cnpj.value='';
+				} else {
+					parent.document.contex_form.cnpj.value = '';
 				}
 			</script>
-			<?
+	<?
 		}
 	}
 
 	exit;
 }
-
 
 function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 
@@ -183,15 +157,7 @@ function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara='',$extra='
 
 }
 
-
-function layout_empresa(){
-	global $a_mod;
-
-	cabecalho('Cadastro Empresa/Filial'.(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? ' (Dev)': ''));
-
-	$regimes = ['', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real'];
-	
-    if(empty($a_mod)){  //Não tem os dados de atualização, então significa que pode estar criando e deu um erro
+if(empty($a_mod)){  //Não tem os dados de atualização, então significa que pode estar criando e deu um erro
         $input_values = [
         	'situacao' => $_POST['situacao'],
         	'cep' => $_POST['cep'],
@@ -353,46 +319,60 @@ function layout_empresa(){
 
 }
 
-
 function concat($id){
 	$a = carregar('cidade', $id);
 	return "[$a[cida_tx_uf]]$a[cida_tx_nome]";
 }
 
 
-function index(){
+function index() {
 
 	cabecalho('Cadastro Empresa/Filial'.(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? ' (Dev)': ''));
 	$extra = '';
 
-	if($_POST['busca_situacao'] == '')		$_POST['busca_situacao'] = 'Ativo';
-	if($_POST['busca_codigo'])				$extra .= " AND empr_nb_id = '$_POST[busca_codigo]'";
-	if($_POST['busca_nome'])				$extra .= " AND empr_tx_nome LIKE '%$_POST[busca_nome]%'";
-	if($_POST['busca_fantasia'])			$extra .= " AND empr_tx_fantasia LIKE '%$_POST[busca_fantasia]%'";
-	if($_POST['busca_cnpj'])				$extra .= " AND empr_tx_cnpj = '$_POST[busca_cnpj]'";
-	if($_POST['busca_situacao'] && $_POST['busca_situacao'] != 'Todos')	$extra .= " AND empr_tx_situacao = '$_POST[busca_situacao]'";
-	if($_POST['busca_uf'])					$extra .= " AND cida_tx_uf = '$_POST[busca_uf]'";
-	
-	$uf = array('', 'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO');
-	
-	$c[] = campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO');
-	$c[] = campo('Nome','busca_nome',$_POST['busca_nome'],3);
-	$c[] = campo('Nome Fantasia','busca_fantasia',$_POST['busca_fantasia'],2);
-	$c[] = campo('CPF/CNPJ','busca_cnpj',$_POST['busca_cnpj'],2,'MASCARA_CPF');
-	$c[] = combo('UF','busca_uf',$_POST['busca_uf'],1,$uf);
-	$c[] = combo('Situação','busca_situacao',$_POST['busca_situacao'],2,array('Todos','Ativo','Inativo'));
+if ($_SESSION[user_nb_empresa] > 0 && $_SESSION[user_tx_nivel] != 'Administrador') {
+		$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
+	}
 
-	$botao[] = botao('Buscar','index');
-	$botao[] = botao('Inserir','layout_empresa');
-	
+	if ($_POST[busca_situacao] == '')
+		$_POST[busca_situacao] = 'Ativo';
+
+	if ($_POST[busca_codigo])
+		$extra .= " AND empr_nb_id = '$_POST[busca_codigo]'";
+	if ($_POST[busca_nome])
+		$extra .= " AND empr_tx_nome LIKE '%$_POST[busca_nome]%'";
+	if ($_POST[busca_fantasia])
+		$extra .= " AND empr_tx_fantasia LIKE '%$_POST[busca_fantasia]%'";
+	if ($_POST[busca_cnpj])
+		$extra .= " AND empr_tx_cnpj = '$_POST[busca_cnpj]'";
+	if ($_POST[busca_situacao] && $_POST[busca_situacao] != 'Todos')
+		$extra .= " AND empr_tx_situacao = '$_POST[busca_situacao]'";
+	if ($_POST[busca_uf])
+		$extra .= " AND cida_tx_uf = '$_POST[busca_uf]'";
+
+
+	$uf = array('', 'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO');
+
+
+	$c[] = campo('Código', 'busca_codigo', $_POST[busca_codigo], 2, 'MASCARA_NUMERO');
+	$c[] = campo('Nome', 'busca_nome', $_POST[busca_nome], 3);
+	$c[] = campo('Nome Fantasia', 'busca_fantasia', $_POST[busca_fantasia], 2);
+	$c[] = campo('CPF/CNPJ', 'busca_cnpj', $_POST[busca_cnpj], 2, 'MASCARA_CPF');
+	$c[] = combo('UF', 'busca_uf', $_POST[busca_uf], 1, $uf);
+	$c[] = combo('Situação', 'busca_situacao', $_POST[busca_situacao], 2, array('Todos', 'Ativo', 'Inativo'));
+
+	$botao[] = botao('Buscar', 'index');
+	$botao[] = botao('Inserir', 'layout_empresa');
+
 	abre_form('Filtro de Busca');
 	linha_form($c);
 	fecha_form($botao);
 
-	$sql = "SELECT * FROM empresa, cidade WHERE empr_tx_status != 'inativo' AND empr_nb_cidade = cida_nb_id $extra";
-	$cab = array('CÓDIGO','NOME','FANTASIA','CPF/CNPJ','CIDADE/UF','SITUAÇÃO','','');
-	$val = array('empr_nb_id','empr_tx_nome','empr_tx_fantasia','empr_tx_cnpj','concat(cida_nb_id)','empr_tx_situacao','icone_modificar(empr_nb_id,modifica_empresa)','icone_excluir(empr_nb_id,exclui_empresa)');
+	$sql = "SELECT * FROM empresa, cidade WHERE empr_tx_status != 'inativo' AND empr_nb_cidade = cida_nb_id $extra $extraEmpresa";
+	$cab = array('CÓDIGO', 'NOME', 'FANTASIA', 'CPF/CNPJ', 'CIDADE/UF', 'SITUAÇÃO', '', '');
+	$val = array('empr_nb_id', 'empr_tx_nome', 'empr_tx_fantasia', 'empr_tx_cnpj', 'concat(cida_nb_id)', 'empr_tx_situacao', 'icone_modificar(empr_nb_id,modifica_empresa)', 'icone_excluir(empr_nb_id,exclui_empresa)');
 
-	grid($sql,$cab,$val);
+	grid($sql, $cab, $val);
+
 	rodape();
 }
