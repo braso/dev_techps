@@ -37,7 +37,7 @@ function modifica_motorista(){
 function cadastra_motorista(){
 	global $a_mod;
 
-	$campos = array(enti_tx_nome,enti_tx_nascimento,enti_tx_cpf,enti_tx_rg,enti_tx_civil,enti_tx_sexo,enti_tx_endereco,enti_tx_numero,enti_tx_complemento,enti_tx_bairro,enti_nb_cidade,enti_tx_cep,enti_tx_fone1,enti_tx_fone2,enti_tx_email,enti_tx_ocupacao,enti_tx_salario,enti_tx_obs,enti_tx_tipo,enti_tx_status,enti_tx_matricula,enti_nb_empresa, enti_nb_parametro,enti_tx_jornadaSemanal,enti_tx_jornadaSabado,enti_tx_percentualHE,enti_tx_percentualSabadoHE, enti_tx_rgOrgao, enti_tx_rgDataEmissao, enti_tx_rgUf, enti_tx_pai, enti_tx_mae, enti_tx_conjugue, enti_tx_tipoOperacao, enti_tx_subcontratado, enti_tx_admissao, enti_tx_desligamento, enti_tx_cnhRegistro, enti_tx_cnhValidade, enti_tx_cnhPrimeiraHabilitacao, enti_tx_cnhCategoria, enti_tx_cnhPermissao, enti_tx_cnhObs, enti_nb_cnhCidade, enti_tx_cnhEmissao, enti_tx_cnhPontuacao, enti_tx_cnhAtividadeRemunerada
+	$campos = array(enti_tx_nome,enti_tx_nascimento,enti_tx_cpf,enti_tx_rg,enti_tx_civil,enti_tx_sexo,enti_tx_endereco,enti_tx_numero,enti_tx_complemento,enti_tx_bairro,enti_nb_cidade,enti_tx_cep,enti_tx_fone1,enti_tx_fone2,enti_tx_email,enti_tx_ocupacao,enti_tx_salario,enti_tx_obs,enti_tx_tipo,enti_tx_status,enti_tx_matricula,enti_tx_empresaCnpj, enti_nb_parametro,enti_tx_jornadaSemanal,enti_tx_jornadaSabado,enti_tx_percentualHE,enti_tx_percentualSabadoHE, enti_tx_rgOrgao, enti_tx_rgDataEmissao, enti_tx_rgUf, enti_tx_pai, enti_tx_mae, enti_tx_conjugue, enti_tx_tipoOperacao, enti_tx_subcontratado, enti_tx_admissao, enti_tx_desligamento, enti_tx_cnhRegistro, enti_tx_cnhValidade, enti_tx_cnhPrimeiraHabilitacao, enti_tx_cnhCategoria, enti_tx_cnhPermissao, enti_tx_cnhObs, enti_nb_cnhCidade, enti_tx_cnhEmissao, enti_tx_cnhPontuacao, enti_tx_cnhAtividadeRemunerada
 	);
 	
 	$nascimento = ($_POST['nascimento'] == '') ? '0000-00-00' : $_POST['nascimento'];
@@ -274,7 +274,7 @@ function layout_motorista(){
 	$c[]=arquivo('Foto (.png, .jpg)','foto',$a_mod[enti_tx_foto],4);
 	$c[]=ckeditor('Observações:','obs',$a_mod[enti_tx_obs],12);
 	
-	$cContratual[]=combo_bd('Empresa','empresa',$a_mod[enti_nb_empresa],3,'empresa','onchange="carrega_empresa(this.value)"');
+	$cContratual[]=combo_bd('Empresa','empresa',$a_mod[enti_tx_empresaCnpj],3,'empresa','onchange="carrega_empresa(this.value)"');
 	$cContratual[]=combo('Ocupação','ocupacao',$a_mod[enti_tx_ocupacao],2,array("Motorista")); //TODO PRECISO SABER OS TIPOS DE MOTORISTA
 	$cContratual[]=campo('Salário','salario',valor($a_mod[enti_tx_salario]),1,MASCARA_VALOR);
 	$cContratual[]=combo('Subcontratado','subcontratado',$a_mod[enti_tx_subcontratado],2,array('','Sim','Não'));
@@ -486,7 +486,7 @@ function index(){
 	if($_POST[busca_matricula])
 		$extra .=" AND enti_tx_matricula = '$_POST[busca_matricula]'";
 	if($_POST[busca_empresa])
-		$extra .=" AND enti_nb_empresa = '$_POST[busca_empresa]'";
+		$extra .=" AND enti_tx_empresaCnpj = '$_POST[busca_empresa]'";
 	if($_POST[busca_nome])
 		$extra .=" AND enti_tx_nome LIKE '%$_POST[busca_nome]%'";
 	if($_POST[busca_ocupacao])
@@ -514,7 +514,7 @@ function index(){
 	linha_form($c);
 	fecha_form($b);
 
-	$sql = "SELECT * FROM entidade, empresa WHERE enti_tx_status != 'inativo' AND enti_nb_empresa = empr_nb_id AND enti_tx_tipo = 'Motorista' $extra";
+	$sql = "SELECT * FROM entidade, empresa WHERE enti_tx_status != 'inativo' AND enti_tx_empresaCnpj = empr_nb_id AND enti_tx_tipo = 'Motorista' $extra";
 	$cab = array('CÓDIGO','NOME','MATRÍCULA','CPF','EMPRESA','FONE 1','FONE 2','OCUPAÇÃO','SITUAÇÃO','','');
 	$val = array('enti_nb_id','enti_tx_nome','enti_tx_matricula','enti_tx_cpf','empr_tx_nome','enti_tx_fone1','enti_tx_fone2','enti_tx_ocupacao','enti_tx_situacao','icone_modificar(enti_nb_id,modifica_motorista)',
 		'icone_excluir(enti_nb_id,exclui_motorista)');

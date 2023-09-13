@@ -48,7 +48,7 @@ function index() {
 		
 		// $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
 		
-		$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_tipo = 'Motorista' AND enti_nb_empresa = ".$_POST[busca_empresa]." $extra ORDER BY enti_tx_nome");
+		$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_tipo = 'Motorista' AND enti_tx_empresaCnpj = ".$_POST[busca_empresa]." $extra ORDER BY enti_tx_nome");
 		while($aMotorista = carrega_array($sqlMotorista)){
 			
 			$startDate = new DateTime($_POST[busca_data1]);

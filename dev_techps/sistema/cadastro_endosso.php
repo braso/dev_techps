@@ -11,7 +11,7 @@
 
 		$extra_bd_motorista = ' AND enti_tx_tipo = "Motorista"';
 		if($_SESSION['user_tx_nivel'] != 'Super Administrador'){
-			$extra_bd_motorista .= 'AND enti_nb_empresa = '.$_SESSION['user_tx_emprCnpj'];
+			$extra_bd_motorista .= 'AND enti_tx_empresaCnpj = '.$_SESSION['user_tx_emprCnpj'];
 		}
 
 		$c = [
