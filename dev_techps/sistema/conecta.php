@@ -7,14 +7,16 @@ session_start();
 
 date_default_timezone_set('America/Fortaleza');
 
-$CONTEX['path'] = "/dev_techps/sistema";
+$CONTEX['path'] = "/techps/sistema";
 
 /* INICIO CONEXAO BASE DE DADOS */
 
 $servername = "localhost";
+
 $username = "brasomo_dev_techps_sistema";
 $password = "techps!sistema";
 $dbname = "brasomo_dev_techps_sistema";
+
 
 // $servername = "localhost";
 // $username = "techps_sistema";

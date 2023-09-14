@@ -142,10 +142,11 @@ function layout_ajuste(){
 
 	if(count($aEndosso) == 0){
 		$botao[] = botao('Gravar','cadastra_ajuste','id,busca_motorista,busca_data1,busca_data2,data,busca_data',"$_POST[id],$_POST[id],$_POST[busca_data1],$_POST[busca_data2],$_POST[data],".substr($_POST['data'],0, -3));
+		$iconeExcluir = 'icone_excluir(pont_nb_id,excluir_ponto,idEntidade,' . $_POST['id'] . ')';
 	}else{
 		$c2[] = texto('Endosso:',"Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1),6);
 	}
-	$botao[] = botao('Voltar','index','busca_data1,busca_data2,id,busca_empresa,busca_motorista,data,busca_data',"$_POST[busca_data1],$_POST[busca_data2],$_POST[id],$aMotorista[enti_tx_empresaCnpj],$_POST[id],$_POST[data],".substr($_POST['data'],0, -3));
+	$botao[] = botao('Voltar', 'index', 'busca_data1, busca_data2, id, busca_empresa, busca_motorista, data, busca_data', "$_POST[busca_data1], $_POST[busca_data2], $_POST[id], $aMotorista[enti_nb_empresa], $_POST[id], $_POST[data], ".substr($_POST['data'], 0, -3));
 	
 	abre_form('Dados do Ajuste de Ponto');
 	linha_form($c);
