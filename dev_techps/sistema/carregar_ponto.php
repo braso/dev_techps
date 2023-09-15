@@ -165,6 +165,12 @@ function layout_ftp(){
 function index(){
 	global $CACTUX_CONF;
 	if ($_SERVER['HTTP_ENV'] == 'carrega_cron') {
+		// Aplicar após criar o usuário REP-P
+		// $rep_p_user = query('SELECT user_nb_id, user_tx_nivel, user_tx_login FROM user WHERE user_tx_login LIKE "%REP-P%" LIMIT 1');
+		// $_SESSION['user_nb_id'] = $rep_p_user['user_nb_id'];
+		// $_SESSION['user_tx_nivel'] = $rep_p_user['user_tx_nivel'];
+		// $_SESSION['user_tx_login'] = $rep_p_user['user_tx_login'];
+
 		$_SESSION['user_nb_id'] = 1;
 		$_SESSION['user_tx_nivel'] = 'Administrador';
 		$_SESSION['user_tx_login'] = 'Adm';
