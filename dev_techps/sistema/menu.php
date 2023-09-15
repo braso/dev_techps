@@ -1,4 +1,4 @@
-			<? if ($_SESSION["user_tx_nivel"] == 'Administrador') { ?>
+			<? if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) { ?>
 
 				<!-- INICIO HEADER MENU -->
 				<div class="page-header-menu">

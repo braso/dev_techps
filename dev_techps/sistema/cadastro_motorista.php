@@ -299,7 +299,7 @@ function layout_motorista() {
 	$c[] = arquivo('Foto (.png, .jpg)', 'foto', $a_mod['enti_tx_foto'], 4);
 	$c[] = ckeditor('Observações:', 'obs', $a_mod['enti_tx_obs'], 12);
 
-	if ($_SESSION['user_nb_empresa'] > 0 && $_SESSION['user_tx_nivel'] != 'Administrador') {
+	if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 		$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
 	}
 
@@ -518,7 +518,7 @@ function icone_excluir2($id, $acao, $campos = '', $valores = '', $target = '', $
 function index() {
 	cabecalho("Cadastro de Motorista");
 
-	if ($_SESSION['user_nb_empresa'] > 0 && $_SESSION['user_tx_nivel'] != 'Administrador') {
+	if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 		$extraEmpresa = " AND empr_nb_id = '".$_SESSION['user_nb_empresa']."'";
 	}
 

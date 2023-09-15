@@ -19,7 +19,7 @@ function index() {
 	}
 
 	$extraEmpresa = '';
-	if ($_SESSION[user_nb_empresa] > 0 && $_SESSION[user_tx_nivel] != 'Administrador') {
+	if ($_SESSION[user_nb_empresa] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 		$extraEmpresa = " AND enti_nb_empresa = '$_SESSION[user_nb_empresa]'";
 	}
 
