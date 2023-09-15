@@ -1,4 +1,7 @@
 <?php
+
+include "conecta.php";
+
 function combo_empresa($nome,$variavel,$modificador,$tamanho,$opcao, $opcao2,$extra=''){
 		$t_opcao=count($opcao);
 		for($i=0;$i<$t_opcao;$i++){
