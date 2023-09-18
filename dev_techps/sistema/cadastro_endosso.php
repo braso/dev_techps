@@ -1,6 +1,41 @@
 <?php
 	include "conecta.php";
 
+	echo "
+	<script>
+		function selecionaMotorista(idEmpresa) {
+			let buscaExtra = '';
+			if (idEmpresa > 0)
+				buscaExtra = encodeURI('AND enti_tx_tipo = \"Motorista\" AND enti_nb_empresa = \"' + idEmpresa + '\"');
+			else
+				buscaExtra = encodeURI('AND enti_tx_tipo = \"Motorista\"');
+
+			// Verifique se o elemento está usando Select2 antes de destruí-lo
+			if ($('.busca_motorista').data('select2')) {
+				$('.busca_motorista').select2('destroy');
+			}
+
+			$.fn.select2.defaults.set(\"theme\", \"bootstrap\");
+			$('.busca_motorista').select2({
+				language: 'pt-BR',
+				placeholder: 'Selecione um item',
+				allowClear: true,
+				ajax: {
+					url: '/contex20/select2.php?path=".(getcwd()."/../")."sistema&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=' . buscaExtra . '&extra_busca=enti_tx_matricula',
+					dataType: 'json',
+					delay: 250,
+					processResults: function(data) {
+						return {
+							results: data
+						};
+					},
+					cache: true
+				}
+			});
+		}
+	</script>
+	"
+
 	function cadastrar(){
 		//print_r($_POST);
 		//Array ( [empresa] => 3 [data_de] => 2023-09-01 [data_ate] => 2023-09-30 [motorista] => 99 [acao] => cadastrar )
@@ -51,10 +86,10 @@
 		$c = [
 			campo_data('De:','data_de',$_POST['data_de'],2),
 			campo_data('Ate:','data_ate',$_POST['data_ate'],2),
-			combo_net('Motorista:','motorista',$_POST['motorista'],4,'entidade','',$extra_bd_motorista,'enti_tx_matricula')
+			combo_net('Motorista:','busca_motorista',$_POST['motorista'],4,'entidade','',$extra_bd_motorista,'enti_tx_matricula')
 		];
 		if($_SESSION['user_tx_nivel'] == 'Super Administrador'){
-			array_unshift($c, combo_net('Empresa:','empresa',$_POST['empresa'],4,'empresa'));
+			array_unshift($c, combo_net('Empresa:','empresa',$_POST['empresa'],4,'empresa', 'onchange=selecionaMotorista(this.value)'));
 		}
 		$b = [
 			botao('Cadastrar Endosso', 'cadastrar')
