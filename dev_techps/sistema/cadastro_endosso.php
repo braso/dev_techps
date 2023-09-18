@@ -34,7 +34,7 @@
 			});
 		}
 	</script>
-	"
+	";
 
 	function cadastrar(){
 		//print_r($_POST);
@@ -71,6 +71,8 @@
 			index();
 			return;
 		}
+		
+		
 
 		index();
 	}
