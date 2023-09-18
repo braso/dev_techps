@@ -82,7 +82,7 @@
 									<h1>Espelho de Ponto</h1>
 									<div class="right-logo">
 										<p><?=date("d/m/Y H:i:s")?></p>
-										<img src="/techps/sistema/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
+										<img src=<?=(getcwd()."/../")."sistema/imagens/logo_topo_cliente.png"?> alt="Logo Empresa Direita">
 									</div>
 								</div>
 								<div class="info">
@@ -518,7 +518,7 @@
 					placeholder: 'Selecione um item',
 					allowClear: true,
 					ajax: {
-						url: '/contex20/select2.php?path=/techps/sistema&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=' + buscaExtra + '&extra_busca=enti_tx_matricula',
+						url: "/contex20/select2.php?path="+<?=(getcwd()."/../")?>+"armazem_paraiba&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=" + buscaExtra + "&extra_busca=enti_tx_matricula",
 						dataType: 'json',
 						delay: 250,
 						processResults: function(data) {
