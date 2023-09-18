@@ -1,41 +1,6 @@
 <?php
 	include "conecta.php";
 
-	echo "
-	<script>
-		function selecionaMotorista(idEmpresa) {
-			let buscaExtra = '';
-			if (idEmpresa > 0)
-				buscaExtra = encodeURI('AND enti_tx_tipo = \"Motorista\" AND enti_nb_empresa = \"' + idEmpresa + '\"');
-			else
-				buscaExtra = encodeURI('AND enti_tx_tipo = \"Motorista\"');
-
-			// Verifique se o elemento está usando Select2 antes de destruí-lo
-			if ($('.busca_motorista').data('select2')) {
-				$('.busca_motorista').select2('destroy');
-			}
-
-			$.fn.select2.defaults.set(\"theme\", \"bootstrap\");
-			$('.busca_motorista').select2({
-				language: 'pt-BR',
-				placeholder: 'Selecione um item',
-				allowClear: true,
-				ajax: {
-					url: '/contex20/select2.php?path=".(getcwd()."/../")."sistema&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=' . buscaExtra . '&extra_busca=enti_tx_matricula',
-					dataType: 'json',
-					delay: 250,
-					processResults: function(data) {
-						return {
-							results: data
-						};
-					},
-					cache: true
-				}
-			});
-		}
-	</script>
-	";
-
 	function cadastrar(){
 		//print_r($_POST);
 		//Array ( [empresa] => 3 [data_de] => 2023-09-01 [data_ate] => 2023-09-30 [motorista] => 99 [acao] => cadastrar )
@@ -72,12 +37,61 @@
 			return;
 		}
 		
-		
+		$endosso = query("SELECT endo_tx_matricula FROM endosso WHERE endo_nb_entidade = ".$_POST['motorista']." LIMIT 1;");
+		print_r($endosso);
+		$endosso = carrega_array($endosso);
+		echo ('<br><br>');
+
+		$novo_endosso = [
+			'endo_nb_entidade' => $_POST['motorista']
+		];
 
 		index();
 	}
 
+	function js_functions(){
+		?><script>
+
+			function selecionaMotorista(idEmpresa) {
+				let buscaExtra = '';
+				if (idEmpresa > 0)
+					buscaExtra = encodeURI('AND enti_tx_tipo = "Motorista" AND enti_nb_empresa = "' + idEmpresa + '"');
+				else
+					buscaExtra = encodeURI('AND enti_tx_tipo = "Motorista"');
+
+				// Verifique se o elemento está usando Select2 antes de destruí-lo
+				if ($('.busca_motorista').data('select2')) {
+					$('.busca_motorista').select2('destroy');
+				}
+
+				$.fn.select2.defaults.set("theme", "bootstrap");
+				$('.busca_motorista').select2({
+					language: 'pt-BR',
+					placeholder: 'Selecione um item',
+					allowClear: true,
+					ajax: {
+						url: "/contex20/select2.php?path=/dev_techps/armazem_paraiba&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=" + buscaExtra + "&extra_busca=enti_tx_matricula",
+						dataType: 'json',
+						delay: 250,
+						processResults: function(data) {
+							return {
+								results: data
+							};
+						},
+						cache: true
+					}
+				});
+			}
+		</script><?php
+
+	}
+
 	function index(){
+		// $url = explode('/', $_SERVER['SCRIPT_URL']);
+		// $url = implode('/', [$url[0], $url[1], $url[2]]);
+
+		// print_r($url);
+
 		cabecalho('Cadastro Endosso'.(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? ' (Dev)': ''));
 
 		$extra_bd_motorista = ' AND enti_tx_tipo = "Motorista"';
@@ -102,5 +116,7 @@
 		fecha_form($b);
 		
 		rodape();
+
+		js_functions();
 	}
 ?>
