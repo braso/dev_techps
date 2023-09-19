@@ -1,11 +1,11 @@
 <?php
-	include "funcoes_ponto.php"; // NAO ALTERAR ORDEM
+	include "funcoes_ponto.php"; // Conecta importado dentro de funcoes_ponto
 
-		function cadastrar(){
-			$url = substr($_SERVER['REQUEST_URI'], 0, strrpos($_SERVER['REQUEST_URI'], '/'));
-			header('Location: '.'https://braso.mobi'.$url.'/cadastro_endosso');
-			exit();
-		}
+	function cadastrar(){
+		$url = substr($_SERVER['REQUEST_URI'], 0, strrpos($_SERVER['REQUEST_URI'], '/'));
+		header('Location: '.'https://braso.mobi'.$url.'/cadastro_endosso');
+		exit();
+	}
 
 	function imprimir_endosso() {
 		global $totalResumo, $contagemEspera;
@@ -245,7 +245,7 @@
 
 
 	function index() {
-		global $totalResumo;
+		global $totalResumo, $CONTEX;
 
 		cabecalho('Endosso'.(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? ' (Dev)': ''));
 
@@ -518,7 +518,7 @@
 					placeholder: 'Selecione um item',
 					allowClear: true,
 					ajax: {
-						url: "/contex20/select2.php?path=/techps/sistema&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=" + buscaExtra + "&extra_busca=enti_tx_matricula",
+						url: "../contex20/select2.php?path="+<?=$CONTEX['path']?>+"&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=" + buscaExtra + "&extra_busca=enti_tx_matricula",
 						dataType: 'json',
 						delay: 250,
 						processResults: function(data) {
