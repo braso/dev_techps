@@ -7,7 +7,7 @@ session_start();
 
 date_default_timezone_set('America/Fortaleza');
 
-$CONTEX['path'] = "/techps/sistema";
+$CONTEX['path'] = "/".((is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? "dev_techps": "techps")."/armazem_paraiba";
 
 /* INICIO CONEXAO BASE DE DADOS */
 
