@@ -1,12 +1,17 @@
 <?php
 	include "conecta.php";
 
+	function voltar(){
+		header('Location: '.$_SERVER['REQUEST_URI'].'/../endosso');
+	}
+
 	function cadastrar(){
+		$teste = true;
 		//print_r($_POST);
 		//Array ( [empresa] => 3 [data_de] => 2023-09-01 [data_ate] => 2023-09-30 [motorista] => 99 [acao] => cadastrar )
 		/*
 			endo_nb_id: 			automático
-			endo_nb_entidade:		$_POST['motorista']
+			endo_nb_entidade:		$_POST['busca_motorista']
 			endo_tx_matricula:		fazer query
 			endo_tx_mes:			mês de $_POST['data_de']
 			endo_tx_saldo:			Nulo 							(temporário)
@@ -24,27 +29,34 @@
 				$_POST['empresa'] = $_SESSION['user_tx_emprCnpj'];
 			}
 		}
-		if(!isset($_POST['motorista'])){
+		if(!isset($_POST['busca_motorista'])){
 			$error_msg .= 'Motorista, ';
 		}
 		if($_POST['data_de'] == '' || $_POST['data_ate'] == ''){
 			$error_msg .= 'Data, ';
 		}
 
-		if(strlen($error_msg) > 43){
+		if(strlen($error_msg) > 43 and !$teste){
 			echo "<script>alert('".substr($error_msg, 0, strlen($error_msg)-2)."')</script>";
 			index();
 			return;
 		}
 		
-		$endosso = query("SELECT endo_tx_matricula FROM endosso WHERE endo_nb_entidade = ".$_POST['motorista']." LIMIT 1;");
-		print_r($endosso);
-		$endosso = carrega_array($endosso);
-		echo ('<br><br>');
+		$matricula = query("SELECT endo_tx_matricula FROM endosso WHERE endo_nb_entidade = '".$_POST['busca_motorista']."' LIMIT 1;");
+		$matricula = carrega_array($matricula);
 
 		$novo_endosso = [
-			'endo_nb_entidade' => $_POST['motorista']
+			'endo_nb_entidade' => $_POST['busca_motorista'],
+			'endo_tx_matricula' => $matricula['endo_tx_matricula'],
+			'endo_tx_mes' => substr($_POST['data_de'], 0, 8).'01',
+			'endo_tx_de' => $_POST['data_de'],
+			'endo_tx_ate' => $_POST['data_ate'],
+			'endo_tx_dataCadastro' => date('Y-m-d h:i:s'),
+			'endo_nb_userCadastro' => $_SESSION['user_nb_id'],
+			'endo_tx_status' => 'ativo'
 		];
+
+		inserir('endosso', array_keys($novo_endosso), array_values($novo_endosso));
 
 		index();
 	}
@@ -54,13 +66,13 @@
 
 			function selecionaMotorista(idEmpresa) {
 				let buscaExtra = '';
-				if (idEmpresa > 0)
+				if (idEmpresa > 0){
 					buscaExtra = encodeURI('AND enti_tx_tipo = "Motorista" AND enti_nb_empresa = "' + idEmpresa + '"');
-				else
+				}else{
 					buscaExtra = encodeURI('AND enti_tx_tipo = "Motorista"');
+				}
 
-				// Verifique se o elemento está usando Select2 antes de destruí-lo
-				if ($('.busca_motorista').data('select2')) {
+				if ($('.busca_motorista').data('select2')) {// Verifica se o elemento está usando Select2 antes de destruí-lo
 					$('.busca_motorista').select2('destroy');
 				}
 
@@ -102,12 +114,13 @@
 		$c = [
 			campo_data('De:','data_de',$_POST['data_de'],2),
 			campo_data('Ate:','data_ate',$_POST['data_ate'],2),
-			combo_net('Motorista:','busca_motorista',$_POST['motorista'],4,'entidade','',$extra_bd_motorista,'enti_tx_matricula')
+			combo_net('Motorista:','busca_motorista',$_POST['busca_motorista'],4,'entidade','',$extra_bd_motorista,'enti_tx_matricula')
 		];
 		if($_SESSION['user_tx_nivel'] == 'Super Administrador'){
 			array_unshift($c, combo_net('Empresa:','empresa',$_POST['empresa'],4,'empresa', 'onchange=selecionaMotorista(this.value)'));
 		}
 		$b = [
+			botao('Voltar', 'voltar'),
 			botao('Cadastrar Endosso', 'cadastrar')
 		];
 
