@@ -6,7 +6,7 @@
 	}
 
 	function cadastrar(){
-		$teste = true;
+		$teste = false;
 		//print_r($_POST);
 		//Array ( [empresa] => 3 [data_de] => 2023-09-01 [data_ate] => 2023-09-30 [motorista] => 99 [acao] => cadastrar )
 		/*
