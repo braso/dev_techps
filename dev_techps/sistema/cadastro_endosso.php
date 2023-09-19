@@ -59,6 +59,7 @@
 		inserir('endosso', array_keys($novo_endosso), array_values($novo_endosso));
 
 		index();
+		return;
 	}
 
 	function js_functions(){
