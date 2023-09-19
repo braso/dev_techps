@@ -452,11 +452,7 @@
 			$countVerificados = $countEndosso - $countNaoConformidade;
 		}
 
-		?>
-		<div class="printable">
-
-		</div>
-		<?
+		echo '<div class="printable"></div>';
 
 		rodape();
 
