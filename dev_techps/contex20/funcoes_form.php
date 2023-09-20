@@ -163,7 +163,7 @@
 								<div class="container-fluid">
 									<!-- INICIO PAGE TITLE -->
 									<div class="page-title">
-										<h1><?=$nome_pagina?> </h1>
+										<h1><?=$nome_pagina.(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? ' (Dev)': '')?> </h1>
 									</div>
 									<!-- FIM PAGE TITLE -->
 								</div>
