@@ -1045,7 +1045,11 @@ function diaDetalhePonto($matricula, $data, $status = ''){
 			# Saldo negativo
 			return -1;
 		}
-	// }elseif($status == 'Com saldo previsto'){
+	}elseif($status == 'Com saldo previsto'){
+		if(is_bool(strpos(strval($aRetorno['jornadaPrevista']),  '00:00'))){
+			//Não tem a jornada prevista zerada
+			return -1;
+		}
 	}
 
 	// TOTALIZADOR 

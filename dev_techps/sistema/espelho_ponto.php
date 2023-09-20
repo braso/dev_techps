@@ -21,7 +21,7 @@
 		// $c[] = campo_mes('Data:','busca_data',$_POST[busca_data],2);
 		$c[] = campo_data('Data Início:','busca_data_de',$_POST['busca_data_de'],2);
 		$c[] = campo_data('Data Fim:','busca_data_ate',$_POST['busca_data_ate'],2);
-		$c[] = combo('Status', 'busca_status', $_POST['busca_status'], 3, ['Todos', 'Com alerta(s)', 'Com alerta de refeição', 'Com alerta na jornada efetiva', 'Sem pendências'/*, 'Sem inconsistências'*/, 'Com saldo negativo', 'Com saldo positivo'/*, 'Com saldo previsto'*/]);
+		$c[] = combo('Status', 'busca_status', $_POST['busca_status'], 3, ['Todos', 'Com alerta(s)', 'Com alerta de refeição', 'Com alerta na jornada efetiva', 'Sem pendências'/*, 'Sem inconsistências'*/, 'Com saldo negativo', 'Com saldo positivo', 'Com saldo previsto (em desenvolvimento)']);
 		
 		
 		//BOTOES
