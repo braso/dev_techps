@@ -274,9 +274,10 @@
 		if ($_POST['busca_endossado'] && $_POST['busca_empresa']) {
 			if ($_POST['busca_endossado'] == 'Endossado') {
 				$extra .= " AND enti_nb_id IN (
-					SELECT endo_nb_entidade FROM endosso, entidade WHERE endo_tx_mes = '" . substr($_POST['busca_data'], 0, 7) . '-01' . "' AND enti_nb_empresa = '".$_POST['busca_empresa']."' 
-					AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
-					)";
+					SELECT endo_nb_entidade FROM endosso, entidade WHERE endo_tx_mes = '" . substr($_POST['busca_data'], 0, 7) . '-01'.
+					"' AND enti_nb_empresa = '".$_POST['busca_empresa'].
+					"' AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
+				)";
 			}
 
 			if ($_POST['busca_endossado'] == 'Não endossado') {
@@ -320,6 +321,7 @@
 			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO"
 		];
 
+		//function buscar_endosso(){
 		if ($_POST['busca_data'] && $_POST['busca_empresa']) {
 
 			$date = new DateTime($_POST['busca_data']);
@@ -447,10 +449,11 @@
 				unset($aDiaOriginal);
 			}
 		}
-
+		
 		if ($_POST['busca_situacao'] == 'Todos' || $_POST['busca_situacao'] == 'Verificado') {
 			$countVerificados = $countEndosso - $countNaoConformidade;
 		}
+		//}
 
 		echo '<div class="printable"></div>';
 
@@ -476,7 +479,7 @@
 		<form name="form_imprimir_endosso" method="post" target="_blank">
 			<input type="hidden" name="acao" value="imprimir_endosso">
 			<input type="hidden" name="idMotoristaEndossado" value="<?= implode(",", $aIdMotoristaEndossado) ?>">
-			<input type="hidden" name="matriculaMotoristaEndossado" value="<?= implode(",", $aMatriculaMotoristaEndossado) ?>">
+			<input type="hidden" name="matriculaMotoristaEndossado" value="<?= (implode(",", $aMatriculaMotoristaEndossado)) ?>">
 			<input type="hidden" name="busca_empresa" value="<?= $_POST['busca_empresa'] ?>">
 			<input type="hidden" name="busca_data" value="<?= $_POST['busca_data'] ?>">
 			<input type="hidden" name="busca_motorista" value="<?= $_POST['busca_motorista'] ?>">
@@ -498,11 +501,11 @@
 
 			function selecionaMotorista(idEmpresa) {
 				let buscaExtra = '';
-				if (idEmpresa > 0)
+				if (idEmpresa > 0){
 					buscaExtra = encodeURI('AND enti_tx_tipo = "Motorista" AND enti_nb_empresa = "' + idEmpresa + '"');
-				else
+				}else{
 					buscaExtra = encodeURI('AND enti_tx_tipo = "Motorista"');
-
+				}
 				// Verifique se o elemento está usando Select2 antes de destruí-lo
 				if ($('.busca_motorista').data('select2')) {
 					$('.busca_motorista').select2('destroy');
@@ -514,7 +517,7 @@
 					placeholder: 'Selecione um item',
 					allowClear: true,
 					ajax: {
-						url: "../contex20/select2.php?path="+<?=$CONTEX['path']?>+"&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=" + buscaExtra + "&extra_busca=enti_tx_matricula",
+						url: "/contex20/select2.php?path="+"<?=$CONTEX['path']?>"+"&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=" + buscaExtra + "&extra_busca=enti_tx_matricula",
 						dataType: 'json',
 						delay: 250,
 						processResults: function(data) {
