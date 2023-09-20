@@ -999,10 +999,11 @@ function diaDetalhePonto($matricula, $data, $status = ''){
 		$aRetorno['diffRepouso'] = $repousoOrdenado['icone'].$repousoOrdenado['totalIntervalo'];
 	}
 
+	//switch case não utilizado pois há um break dentro de uma das condições, que buga quando há um switch case por fora.
 	if($status == 'Com alerta(s)'){
 		$temPendencias = False;
 		foreach($aRetorno as $dado){
-			if(is_int(strpos(strval($dado),  'fa-warning'))){
+			if(is_int(strpos(strval($dado),  'fa-warning')) && is_int(strpos(strval($dado),  'color:red'))){
 				$temPendencias = True;
 				break;
 			}
@@ -1017,8 +1018,23 @@ function diaDetalhePonto($matricula, $data, $status = ''){
 			# Não tem alerta de refeição
 			return -1;
 		}
-	}elseif($status == 'Sem saldo cadastrado'){
-		// ?????
+	}elseif($status == 'Com alerta na jornada efetiva'){
+		if(is_bool(strpos(strval($aRetorno['diffJornadaEfetiva']), 'fa-warning'))){
+			# Não tem alerta na jornada efetiva
+			return -1;
+		}
+	}elseif($status == 'Sem pendências'){ //Contrário do "Com alerta(s)"
+		$temPendencias = False;
+		foreach($aRetorno as $dado){
+			if(is_int(strpos(strval($dado),  'fa-warning')) && is_int(strpos(strval($dado),  'color:red'))){
+				$temPendencias = True;
+				break;
+			}
+		}
+		if($temPendencias){
+			return -1;
+		}
+	// }elseif($status == 'Sem inconsistências'){
 	}elseif($status == 'Com saldo negativo'){
 		if($aRetorno['diffSaldo'][0] != '-' || $aRetorno['diffSaldo'] == ''){
 			# Saldo positivo
@@ -1029,6 +1045,7 @@ function diaDetalhePonto($matricula, $data, $status = ''){
 			# Saldo negativo
 			return -1;
 		}
+	// }elseif($status == 'Com saldo previsto'){
 	}
 
 	// TOTALIZADOR 
