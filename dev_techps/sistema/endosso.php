@@ -82,7 +82,7 @@
 									<h1>Espelho de Ponto</h1>
 									<div class="right-logo">
 										<p><?=date("d/m/Y H:i:s")?></p>
-										<img src=<?=(getcwd()."/../")."sistema/imagens/logo_topo_cliente.png"?> alt="Logo Empresa Direita">
+										<img src=<?=(getcwd()."/../")."armazem_paraiba/imagens/logo_topo_cliente.png"?> alt="Logo Empresa Direita">
 									</div>
 								</div>
 								<div class="info">
