@@ -1,5 +1,7 @@
 <?php
-	global $CONTEX,$conn;
+	include "./../version.php";
+
+	global $CONTEX, $conn, $version;
 	function cabecalho($nome_pagina,$foco=0,$relatorio=0){
 		global $CONTEX,$conn;
 		if(!$_SESSION['user_nb_id']){
@@ -297,7 +299,7 @@
 	}
 
 	function rodape(){
-
+		global $version;
 		?>
 
 										</div>
@@ -319,7 +321,8 @@
 				<!-- INICIO FOOTER -->
 				<!-- INICIO INNER FOOTER -->
 				<div class="page-footer">
-					<div class="container-fluid"> <?=date("Y")?> &copy; <a href='https://www.techps.com.br' target="_blank">TechPS</a>
+					<div class="container-fluid"> 
+						<?=date("Y")?> &copy; <a href="https://www.techps.com.br" target="_blank" style="margin-right: 30px">TechPS</a> Versão: <?=$version?>
 					</div>
 				</div>
 				<div class="scroll-to-top">
