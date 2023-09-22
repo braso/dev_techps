@@ -4,7 +4,7 @@ include "conecta.php";
 
 
 function index() {
-	global $totalResumo;
+	global $CONTEX, $totalResumo;
 
 	cabecalho('Não Conformidade');
 
@@ -221,7 +221,7 @@ function index() {
 				placeholder: 'Selecione um item',
 				allowClear: true,
 				ajax: {
-					url: '/contex20/select2.php?path=/techps/sistema&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=' + buscaExtra + '&extra_busca=enti_tx_matricula',
+					url: '/contex20/select2.php?path=<?=$CONTEX['path']?>&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=' + buscaExtra + '&extra_busca=enti_tx_matricula',
 					dataType: 'json',
 					delay: 250,
 					processResults: function(data) {
