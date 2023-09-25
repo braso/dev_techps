@@ -250,7 +250,6 @@ function inserir($tabela,$campos,$valores){
 
 
 	query("INSERT INTO $tabela ($campos) VALUES($valores);") or die(mysql_error());
-	echo '<script>console.log('.query("INSERT INTO $tabela ($campos) VALUES($valores);") .') </script>';
 	$sql = query("SELECT LAST_INSERT_ID();") or die(mysql_error());
 
 
