@@ -39,6 +39,11 @@ function cadastra_usuario() {
 		modifica_usuario();
 		exit;
 	}
+	if (!isset($_POST['empresa']) || $_POST['empresa'] == ''){
+		set_status("ERRO: Insira uma empresa!");
+		modifica_usuario();
+		exit;
+	}
 
 	$campos = array(user_tx_nome, user_tx_login, user_tx_nivel, user_tx_status, user_tx_nascimento, user_tx_cpf, user_tx_rg, user_nb_cidade, user_tx_email, user_nb_empresa, user_tx_expiracao);
 	$valores = array($_POST[nome], $_POST[login], $_POST[nivel], 'ativo', $_POST[nascimento], $_POST[cpf], $_POST[rg], $_POST[cidade], $_POST[email], $_POST[empresa], $_POST[expiracao]);

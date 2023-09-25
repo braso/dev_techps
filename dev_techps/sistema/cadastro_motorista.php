@@ -533,8 +533,12 @@ function index() {
 		$extra .= " AND enti_nb_empresa = '$_POST[busca_empresa]'";
 	if ($_POST[busca_nome])
 		$extra .= " AND enti_tx_nome LIKE '%$_POST[busca_nome]%'";
-	if ($_POST[busca_ocupacao])
+	if ($_POST[busca_ocupacao]){
+		if($_POST[busca_ocupacao] = 'Todos'){
+			$extra .= " AND enti_tx_ocupacao = 0";
+		}
 		$extra .= " AND enti_tx_ocupacao = '$_POST[busca_ocupacao]'";
+	}
 	if ($_POST[busca_cpf])
 		$extra .= " AND enti_tx_cpf = '$_POST[busca_cpf]'";
 	if ($_POST[busca_parametro])
@@ -551,7 +555,7 @@ function index() {
 	$c[] = campo('Nome', 'busca_nome', $_POST[busca_nome], 2);
 	$c[] = campo('Matrícula', 'busca_matricula', $_POST[busca_matricula], 1);
 	$c[] = campo('CPF', 'busca_cpf', $_POST[busca_cpf], 2, 'MASCARA_CPF');
-	$c[] = combo_bd('!Empresa', 'busca_empresa', $_POST[busca_empresa], 2, 'empresa', '', $extraEmpresa);
+	$c[] = combo_bd('Empresa', 'busca_empresa', $_POST[busca_empresa], 2, 'empresa', '', $extraEmpresa);
 	$c[] = combo('Ocupação', 'busca_ocupacao', $_POST[busca_ocupacao], 2, array("", "Motorista")); //TODO PRECISO SABER QUAIS AS OCUPACOES
 	$c[] = combo('Padrão', 'busca_padrao', $_POST[busca_padrao], 2, array('', 'Sim', 'Não'));
 	$c[] = combo_bd('!Parâmetros da Jornada', 'busca_parametro', $_POST[busca_parametro], 6, 'parametro');
@@ -565,16 +569,38 @@ function index() {
 	fecha_form($b);
 
 	$sql = "SELECT *, 
-			CASE
-				WHEN (para_tx_jornadaSemanal != enti_tx_jornadaSemanal OR
-					para_tx_jornadaSabado != enti_tx_jornadaSabado OR
-					para_tx_percentualHE != enti_tx_percentualHE OR
-					para_tx_percentualSabadoHE != enti_tx_percentualSabadoHE OR
-					empr_nb_parametro != enti_nb_parametro)
-				THEN 'Não'
-				ELSE 'Sim'
-			END AS enti_tx_ehPadrao
- 			FROM entidade, empresa, parametro WHERE enti_tx_status != 'inativo' AND enti_nb_parametro = para_nb_id AND enti_nb_empresa = empr_nb_id AND enti_tx_tipo = 'Motorista' $extraEmpresa $extra $having";
+    CASE
+        WHEN (para_tx_jornadaSemanal != enti_tx_jornadaSemanal OR
+            para_tx_jornadaSabado != enti_tx_jornadaSabado OR
+            para_tx_percentualHE != enti_tx_percentualHE OR
+            para_tx_percentualSabadoHE != enti_tx_percentualSabadoHE OR
+            empr_nb_parametro != enti_nb_parametro)
+        THEN 'Não'
+        ELSE 'Sim'
+    END AS enti_tx_ehPadrao
+FROM entidade
+INNER JOIN empresa ON enti_nb_empresa = empr_nb_id
+LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
+WHERE enti_tx_status != 'inativo' AND enti_tx_tipo = 'Motorista'
+AND enti_nb_parametro IS NULL
+
+UNION
+
+SELECT *, 
+    CASE
+        WHEN (para_tx_jornadaSemanal != enti_tx_jornadaSemanal OR
+            para_tx_jornadaSabado != enti_tx_jornadaSabado OR
+            para_tx_percentualHE != enti_tx_percentualHE OR
+            para_tx_percentualSabadoHE != enti_tx_percentualSabadoHE OR
+            empr_nb_parametro != enti_nb_parametro)
+        THEN 'Não'
+        ELSE 'Sim'
+    END AS enti_tx_ehPadrao
+FROM entidade
+INNER JOIN empresa ON enti_nb_empresa = empr_nb_id
+INNER JOIN parametro ON enti_nb_parametro = para_nb_id
+WHERE enti_tx_status != 'inativo' AND enti_tx_tipo = 'Motorista'
+AND enti_nb_parametro IS NOT NULL; $extraEmpresa $extra $having";
 
 	$cab = array('CÓDIGO', 'NOME', 'MATRÍCULA', 'CPF', 'EMPRESA', 'FONE 1', 'FONE 2', 'OCUPAÇÃO', 'PARÂMETRO DA JORNADA', 'PADRÃO', 'SITUAÇÃO', '', '');
 	$val = array(

@@ -148,7 +148,7 @@ function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara='',$extra='
 
 	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 			<label><b>'.$nome.'</b></label>
-			<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' '.$data_input2.'>
+			<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.'>
 		</div>';
 
 	
@@ -317,7 +317,6 @@ if(empty($a_mod)){  //Não tem os dados de atualização, então significa que p
 
 	
 
-}
 
 function concat($id){
 	$a = carregar('cidade', $id);
