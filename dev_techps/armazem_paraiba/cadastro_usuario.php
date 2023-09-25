@@ -1,7 +1,4 @@
 <?php
-
-include "conecta.php";
-
 function combo_empresa($nome,$variavel,$modificador,$tamanho,$opcao, $opcao2,$extra=''){
 		$t_opcao=count($opcao);
 		for($i=0;$i<$t_opcao;$i++){
@@ -39,12 +36,6 @@ function cadastra_usuario() {
 
 	if ($_POST[senha] != $_POST[senha2]) {
 		set_status("ERRO: Senhas não conferem!");
-		modifica_usuario();
-		exit;
-	}
-
-	if (!isset($_POST['empresa']) || $_POST['empresa'] == ''){
-		set_status("ERRO: Insira uma empresa!");
 		modifica_usuario();
 		exit;
 	}
@@ -96,7 +87,7 @@ function layout_usuario() {
 
 	$extra = '';
 
-	if (is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
+	if ($_SESSION[user_tx_nivel] != 'Administrador') {
 		$extra .= "readonly";
 		$arrayNivel = array($_SESSION[user_tx_nivel]);
 		$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
@@ -160,7 +151,7 @@ function index() {
 		modifica_usuario();
 	}
 
-	if ($_SESSION[user_nb_empresa] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
+	if ($_SESSION[user_nb_empresa] > 0 && $_SESSION[user_tx_nivel] != 'Administrador') {
 		$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
 	}
 
@@ -198,7 +189,7 @@ function index() {
 
 	$b[] = botao('Buscar', 'index');
 
-	if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')));
+	if ($_SESSION[user_tx_nivel] == 'Administrador');
 	$b[] = botao('Inserir', 'layout_usuario');
 
 	abre_form('Filtro de Busca');
