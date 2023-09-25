@@ -4,11 +4,11 @@ include "conecta.php";
 
 
 function index() {
-	global $totalResumo;
+	global $CONTEX, $totalResumo;
 
 	cabecalho('Não Conformidade');
 
-	if ($_SESSION[user_nb_empresa] > 0 && $_SESSION[user_tx_nivel] != 'Administrador') {
+	if ($_SESSION[user_nb_empresa] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 		$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
 		$extraEmpresaMotorista = " AND enti_nb_empresa = '$_SESSION[user_nb_empresa]'";
 	}
@@ -221,7 +221,7 @@ function index() {
 				placeholder: 'Selecione um item',
 				allowClear: true,
 				ajax: {
-					url: '/contex20/select2.php?path=/techps/sistema&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=' + buscaExtra + '&extra_busca=enti_tx_matricula',
+					url: '/contex20/select2.php?path=<?=$CONTEX['path']?>&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=' + buscaExtra + '&extra_busca=enti_tx_matricula',
 					dataType: 'json',
 					delay: 250,
 					processResults: function(data) {

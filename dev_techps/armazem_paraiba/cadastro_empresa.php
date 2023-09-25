@@ -329,7 +329,7 @@ function index() {
 	cabecalho('Cadastro Empresa/Filial'.(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? ' (Dev)': ''));
 	$extra = '';
 
-if ($_SESSION[user_nb_empresa] > 0 && $_SESSION[user_tx_nivel] != 'Administrador') {
+if ($_SESSION[user_nb_empresa] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 		$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
 	}
 

@@ -1,6 +1,6 @@
 <?php
 include_once("version.php");
-include $_SERVER['DOCUMENT_ROOT'] . "/sistema/conecta.php";
+include $_SERVER['DOCUMENT_ROOT'] . "/armazem_paraiba/conecta.php";
 
 // $sql = query('SELECT * FROM domain');
 // $result = mysqli_fetch_all($sql, MYSQLI_ASSOC);
@@ -103,7 +103,7 @@ License: You must have a valid license purchased only from themeforest(the above
 
 	<!-- COMECO GLOBAL MANDATORY STYLES -->
 
-	<link href="http://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet"
+	<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet"
 		type="text/css" />
 
 	<link href="/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet"
@@ -183,8 +183,9 @@ License: You must have a valid license purchased only from themeforest(the above
 			<div class="form-group">
 				<select class="form-control" name="domain">
 					<option value="" selected>Domínio</option>
-					<!--<option value="https://braso.mobi/techps/techps/index.php">techps</option>-->
-					<option value="https://braso.mobi/techps/sistema/index.php">Armazem Paraiba</option>
+					<option value="https://braso.mobi/dev_techps/techps/index.php">techps</option>
+					<option value="https://braso.mobi/dev_techps/feijao_turqueza/index.php">Feijão turqueza</option>
+					<option value="https://braso.mobi/dev_techps/armazem_paraiba/index.php">Armazem Paraiba</option>
 					<option value="">Leroy Merlin</option>
 				</select>
 			</div>
@@ -217,10 +218,9 @@ License: You must have a valid license purchased only from themeforest(the above
 
 			</div>
 
-			<p>Versão:
+			<p style="font-size: small;">Versão:
 				<?php echo $version; ?>
-			</p>
-			<p>Data de lançamento:
+				Data de lançamento:
 				<?php echo $release_date; ?>
 			</p>
 
