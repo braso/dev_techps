@@ -2,6 +2,24 @@
 include "conecta.php";
 
 
+function calcularAbono($horario1, $horario2) {
+	// Converter os horários em minutos
+	$horario1 = str_replace("-", "", $horario1);
+	$horario2 = str_replace("-", "", $horario2);
+	$saldoPositivo = $horario1;
+
+	$minutos1 = intval(substr($horario1, 0, 2)) * 60 + intval(substr($horario1, 3, 2));
+	$minutos2 = intval(substr($horario2, 0, 2)) * 60 + intval(substr($horario2, 3, 2));
+
+	$diferencaMinutos = $minutos2 - $minutos1;
+
+	if ($diferencaMinutos > 0) {
+		return $saldoPositivo;
+	} else {
+		return $horario2;
+	}
+}
+
 function cadastra_abono(){
 
 	$aData = explode(" - ", $_POST['daterange']);
@@ -11,9 +29,20 @@ function cadastra_abono(){
 
 	$a=carregar('entidade',$_POST['motorista']);
 	
-	for($i = $begin; $i <= $end; $i->modify('+1 day')){
+	for ($i = $begin; $i <= $end; $i->modify('+1 day')) {
+
+		$sqlRemover = query("SELECT * FROM abono WHERE abon_tx_data = '" . $i->format("Y-m-d") . "' AND abon_tx_matricula = '$a[enti_tx_matricula]' AND abon_tx_status = 'ativo'");
+		while ($aRemover = carrega_array($sqlRemover)) {
+			remover('abono', $aRemover['abon_nb_id']);
+		}
+
+		$aDetalhado = diaDetalhePonto($a['enti_tx_matricula'], $i->format("Y-m-d"));
+
+		$abono = calcularAbono($aDetalhado['diffSaldo'], $_POST['abono']);
+
+
 		$campos = ['abon_tx_data', 'abon_tx_matricula', 'abon_tx_abono', 'abon_nb_motivo', 'abon_tx_descricao', 'abon_nb_userCadastro', 'abon_tx_dataCadastro', 'abon_tx_status'];
-		$valores = [$i->format("Y-m-d"), $a['enti_tx_matricula'], $_POST['abono'], $_POST['motivo'], $_POST['descricao'], $_SESSION['user_nb_id'], date("Y-m-d H:i:s"), 'ativo'];
+		$valores = [$i->format("Y-m-d"), $a['enti_tx_matricula'], $abono, $_POST['motivo'], $_POST['descricao'], $_SESSION['user_nb_id'], date("Y-m-d H:i:s"), 'ativo'];
 
 		inserir('abono', $campos, $valores);
 	}
@@ -154,7 +183,7 @@ function layout_ajuste(){
 	linha_form($c3);
 	fecha_form($botao);
 
-	$sql="SELECT * FROM ponto
+	$sql = "SELECT * FROM ponto
 		JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
 		JOIN user ON ponto.pont_nb_user = user.user_nb_id
 		LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
@@ -241,7 +270,7 @@ function somarHorarios($horarios): string {
     }
 }
 
-function verificaTempoMdc($tempo1='00:00', $tempoDescanso = '00:00') {
+function verificaTempoMdc($tempo1 = '00:00', $tempoDescanso = '00:00') {
 	// Verifica se os parâmetros são strings e possuem o formato correto
     if (!is_string($tempo1) || !is_string($tempoDescanso) || !preg_match('/^\d{2}:\d{2}$/', $tempo1) || !preg_match('/^\d{2}:\d{2}$/', $tempoDescanso)) {
        	return '';
@@ -272,7 +301,7 @@ function verificaTempoMdc($tempo1='00:00', $tempoDescanso = '00:00') {
 	}
 }
 
-function verificaTempo($tempo1='00:00', $tempo2) {
+function verificaTempo($tempo1 = '00:00', $tempo2) {
 	// Verifica se os parâmetros são strings e possuem o formato correto
     if (!is_string($tempo1) || !is_string($tempo2) || !preg_match('/^\d{2}:\d{2}$/', $tempo1) || !preg_match('/^\d{2}:\d{2}$/', $tempo2)) {
        	return '';
@@ -316,7 +345,12 @@ function verificaTolerancia($saldoDiario, $data, $motorista) {
 
     // echo "$data: $saldoDiario - $tolerancia -> $cor <br>";
 
-    return '<center><a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto(\''.$data.'\', \''.$motorista.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a></center>';
+    if ($_SESSION['user_tx_nivel'] == 'Motorista') {
+		$retorno = '<center><span><i style="color:' . $cor . ';" class="fa fa-circle"></i></span></center>';
+	} else {
+		$retorno = '<center><a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto(\'' . $data . '\', \'' . $motorista . '\')"><i style="color:' . $cor . ';" class="fa fa-circle"></i></a></center>';
+	}
+	return $retorno;
 }
 
 
@@ -383,9 +417,8 @@ function ordena_horarios($inicio, $fim) {
     array_multisort($horarios, SORT_ASC, $origem);
 
     // Cria um array associativo para cada horário com sua origem correspondente
-    $horarios_com_origem = [];
 	$alertaTooltip ='';
-
+    // $horarios_com_origem = [];
     for ($i = 0; $i < count($horarios); $i++) {
         // $horarios_com_origem[] = array(
         //     "horario" => $horarios[$i],
@@ -575,7 +608,7 @@ function ordena_horarios_pares($inicio, $fim, $ehEspera = 0) {
 }
 
 function diaDetalhePonto($matricula, $data, $status = ''){
-	global $totalResumo;
+	global $totalResumo, $contagemEspera;
 	setlocale(LC_ALL, 'pt_BR.utf8');
 	
 	$aRetorno['data'] = data($data);
@@ -588,10 +621,16 @@ function diaDetalhePonto($matricula, $data, $status = ''){
 	$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_status != 'inativo' AND enti_tx_matricula = '$matricula' LIMIT 1");
 	$aMotorista = carrega_array($sqlMotorista);
 
+	$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
+	$aEmpCidade = carregar('cidade', $aEmpresa['empr_nb_cidade']);
+	if ($aMotorista['enti_nb_empresa'] && $aEmpresa['empr_nb_cidade'] && $aEmpCidade['cida_nb_id'] && $aEmpCidade['cida_tx_uf']) {
+		$extraFeriado = " AND (feri_nb_cidade = '".$aEmpCidade['cida_nb_id']."' OR feri_tx_uf = '".$aEmpCidade['cida_tx_uf']."')";
+	}
+
 	$aParametro = carregar('parametro', $aMotorista['enti_nb_parametro']);
 	$horaAlertaJornadaEfetiva = ($aParametro['para_tx_acordo'] == 'Sim')? '12:00': '10:00';
 
-	$sqlFeriado = "SELECT feri_tx_nome FROM feriado WHERE feri_tx_data LIKE '____-".substr($data, 5, 5)."%' AND feri_tx_status != 'inativo'";
+	$sqlFeriado = "SELECT feri_tx_nome FROM feriado WHERE feri_tx_data LIKE '____-" . substr($data, 5, 5) . "%' AND feri_tx_status != 'inativo' $extraFeriado";
 	$queryFeriado = query($sqlFeriado);
 	$stringFeriado = '';
 	while($row = carrega_array($queryFeriado)){
@@ -679,7 +718,7 @@ function diaDetalhePonto($matricula, $data, $status = ''){
 		
 		// echo "<hr>";
 		// echo "$aTipo[macr_tx_nome] - $aTipo[macr_tx_codigoInterno] -> ";
-		// echo date("Y-m-d",strtotime($aDia[''pont_tx_data'']));
+		// echo date("Y-m-d",strtotime($aDia['pont_tx_data']));
 		// echo " - ";
 		// // print_r($aTipo);
 		// echo "<hr>";
@@ -732,6 +771,7 @@ function diaDetalhePonto($matricula, $data, $status = ''){
 	$aRetorno['diffRepouso']  = $repousoOrdenado['icone'].$repousoOrdenado['totalIntervalo'];
 
 	// echo "$data <br>";
+	$contagemEspera += count($esperaOrdenada['pares']);
 	
 	// echo "<pre>";
 	// print_r($jornadaOrdenado);
@@ -966,10 +1006,18 @@ function diaDetalhePonto($matricula, $data, $status = ''){
 	// }
 
 	if($verificaJornadaMinima == 1){
-		if($arrayInicioJornada[0] == '') 		$aRetorno['inicioJornada']  = "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
-		if($arrayFimJornada[0] == '') 			$aRetorno['fimJornada']     = "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning'></i></a>";
-		if($aRetorno['inicioRefeicao'] == '') 	$aRetorno['inicioRefeicao'] = "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>".$iconeRefeicaoMinima;
-		if($aRetorno['fimRefeicao'] == '') 		$aRetorno['fimRefeicao']    = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>".$iconeRefeicaoMinima;
+		if($arrayInicioJornada[0] == ''){
+			$aRetorno['inicioJornada']  = "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
+		}
+		if($arrayFimJornada[0] == ''){
+			$aRetorno['fimJornada']     = "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning'></i></a>";
+		}
+		if($aRetorno['inicioRefeicao'] == ''){
+			$aRetorno['inicioRefeicao'] = "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>".$iconeRefeicaoMinima;
+		}
+		if($aRetorno['fimRefeicao'] == ''){
+			$aRetorno['fimRefeicao']    = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>".$iconeRefeicaoMinima;
+		}
 
 		if($arrayInicioJornada[0] == '' || $arrayFimJornada[0] == '' || $aRetorno['inicioRefeicao'] == '' || $aRetorno['fimRefeicao'] == '') $aRetorno['temPendencias'] = True;
 	}
@@ -989,14 +1037,14 @@ function diaDetalhePonto($matricula, $data, $status = ''){
 		}
 	}
 
-	if(count($aDataHorainicioEspera)>0 && count($aDataHorafimEspera)>0){
+	if(count($aDataHorainicioEspera) > 0 && count($aDataHorafimEspera) > 0){
 		$aRetorno['diffEspera'] = $esperaOrdenada['icone'].$esperaOrdenada['totalIntervalo'];
 	}
-	if(count($aDataHorainicioDescanso)>0 && count($aDataHorafimDescanso)>0){
-		$aRetorno['diffDescanso'] =  $descansoOrdenado['icone'].verificaTempo($descansoOrdenado['totalIntervalo'], "05:30");
+	if (count($aDataHorainicioDescanso) > 0 && count($aDataHorafimDescanso) > 0) {
+		$aRetorno['diffDescanso'] =  $descansoOrdenado['icone'] . verificaTempo($descansoOrdenado['totalIntervalo'], "05:30");
 	}
-	if(count($aDataHorainicioRepouso)>0 && count($aDataHorafimRepouso)>0){
-		$aRetorno['diffRepouso'] = $repousoOrdenado['icone'].$repousoOrdenado['totalIntervalo'];
+	if (count($aDataHorainicioRepouso) > 0 && count($aDataHorafimRepouso) > 0) {
+		$aRetorno['diffRepouso'] = $repousoOrdenado['icone'] . $repousoOrdenado['totalIntervalo'];
 	}
 
 	//switch case não utilizado pois há um break dentro de uma das condições, que buga quando há um switch case por fora.
