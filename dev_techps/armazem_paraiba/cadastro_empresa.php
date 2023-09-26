@@ -32,7 +32,7 @@ function cadastra_empresa(){
 		$_POST['dataRegistroCNPJ'], "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio'], $_POST['ftpServer'], $_POST['ftpUsername'], $_POST['ftpUserpass']
 	];
 	
-	if(empty($_POST['cnpj']) || empty($_POST['nome']) || empty($_POST['cep']) || empty($_POST['numero']) || empty($_POST['email'])){
+	if(empty($_POST['cnpj']) || empty($_POST['nome']) || empty($_POST['cep']) || empty($_POST['numero']) || empty($_POST['email']) || empty($_POST['parametro'])){
 		echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
 		layout_empresa();
 		exit;
@@ -49,9 +49,6 @@ function cadastra_empresa(){
 		layout_empresa();
 		exit;
 	}
-	
-	// 	var_dump($valores);
-	// 	die();
 
 	if(isset($_POST['id']) && $_POST['id'] != ''){
 		$campos = array_merge($campos,array('empr_nb_userAtualiza','empr_tx_dataAtualiza'));
@@ -275,7 +272,7 @@ function layout_empresa(){
 	];
 
 	
-	$cJornada[]=combo_bd('!Parâmetros da Jornada','parametro',$a_mod['empr_nb_parametro'],6,'parametro','onchange="carrega_parametro(this.value)"');
+	$cJornada[]=combo_bd('Parâmetros da Jornada*','parametro',$a_mod['empr_nb_parametro'],6,'parametro','onchange="carrega_parametro(this.value)"');
 	// $cJornada[]=campo('Jornada Semanal (Horas)','jornadaSemanal',$a_mod['enti_tx_jornadaSemanal'],3,MASCARA_NUMERO,'disabled=disabled');
 	// $cJornada[]=campo('Jornada Sábado (Horas)','jornadaSabado',$a_mod['enti_tx_jornadaSabado'],3,MASCARA_NUMERO,'disabled=disabled');
 	// $cJornada[]=campo('Percentual da HE(%)','percentualHE',$a_mod['enti_tx_percentualHE'],3,MASCARA_NUMERO,'disabled=disabled');
@@ -287,8 +284,6 @@ function layout_empresa(){
 	$botao[] = botao('Cadastrar','cadastra_empresa','id',$_POST['id']);
 	$botao[] = botao('Voltar','index');
 	
-	// 	var_dump($c);
-	// 	die();
 	abre_form("Dados da Empresa/Filial");
 	linha_form($c);
 	echo "<br>";
@@ -314,7 +309,6 @@ function layout_empresa(){
 	?>
 	<iframe id=frame_parametro style="display: none;"></iframe>
 	<script>
-		
 		function carrega_parametro(id){
 			document.getElementById('frame_parametro').src='cadastro_motorista.php?acao=carrega_parametro&parametro='+id;
 		}
