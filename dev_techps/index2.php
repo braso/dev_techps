@@ -4,8 +4,6 @@ include_once("version.php");
 $server_base_link = substr($_SERVER['SCRIPT_URI'], 0, strrpos($_SERVER['SCRIPT_URI'], '/'));
 include $server_base_link."/armazem_paraiba/conecta.php";
 
-print_r($_SERVER['DOCUMENT_ROOT']);
-
 // $sql = query('SELECT * FROM domain');
 // $result = mysqli_fetch_all($sql, MYSQLI_ASSOC);
 
