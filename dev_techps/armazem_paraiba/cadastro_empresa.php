@@ -183,7 +183,7 @@ function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara='',$extra='
 function layout_empresa(){
 	global $a_mod;
 
-	cabecalho('Cadastro Empresa/Filial'.(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? ' (Dev)': ''));
+	cabecalho('Cadastro Empresa/Filial');
 
 	$regimes = ['', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real'];
 	
@@ -400,7 +400,7 @@ function concat($id){
 
 function index(){
 
-	cabecalho("Cadastro Empresa/Filial".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? ' (Dev)': ''));
+	cabecalho("Cadastro Empresa/Filial");
 	$extra = '';
 
 	if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
