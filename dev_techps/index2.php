@@ -1,6 +1,10 @@
 <?php
 include_once("version.php");
-include $_SERVER['DOCUMENT_ROOT'] . "/armazem_paraiba/conecta.php";
+
+$server_base_link = substr($_SERVER['SCRIPT_URI'], 0, strrpos($_SERVER['SCRIPT_URI'], '/'));
+include $server_base_link."/armazem_paraiba/conecta.php";
+
+print_r($_SERVER['DOCUMENT_ROOT']);
 
 // $sql = query('SELECT * FROM domain');
 // $result = mysqli_fetch_all($sql, MYSQLI_ASSOC);
@@ -183,9 +187,9 @@ License: You must have a valid license purchased only from themeforest(the above
 			<div class="form-group">
 				<select class="form-control" name="domain">
 					<option value="" selected>Domínio</option>
-					<option value="https://braso.mobi/dev_techps/techps/index.php">techps</option>
-					<option value="https://braso.mobi/dev_techps/feijao_turqueza/index.php">Feijão turqueza</option>
-					<option value="https://braso.mobi/dev_techps/armazem_paraiba/index.php">Armazem Paraiba</option>
+					<option value=<?=$server_base_link."/index.php"?>>techps</option>
+					<option value=<?=$server_base_link."/feijao_turqueza/index.php"?>>Feijão turqueza</option>
+					<option value=<?=$server_base_link."/armazem_paraiba/index.php"?>>Armazem Paraiba</option>
 					<option value="">Leroy Merlin</option>
 				</select>
 			</div>
