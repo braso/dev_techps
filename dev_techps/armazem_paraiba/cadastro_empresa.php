@@ -22,14 +22,14 @@ function cadastra_empresa(){
 
 	$campos=[
 		'empr_tx_nome', 'empr_tx_fantasia', 'empr_tx_cnpj', 'empr_tx_cep', 'empr_nb_cidade', 'empr_tx_endereco', 'empr_tx_bairro', 'empr_tx_numero', 'empr_tx_complemento', 'empr_tx_referencia',
-		'empr_tx_fone1', 'empr_tx_fone2', 'empr_tx_email', 'empr_tx_inscricaoEstadual', 'empr_tx_inscricaoMunicipal', 'empr_tx_regimeTributario', 'empr_tx_status', 'empr_tx_situacao', 'empr_nb_parametro', 'empr_tx_contato', 'empr_tx_dataRegistroCNPJ', 'empr_tx_domain', 
-		'empr_tx_ftpServer', 'empr_tx_ftpUsername', 'empr_tx_ftpUserpass'
+		'empr_tx_fone1', 'empr_tx_fone2', 'empr_tx_email', 'empr_tx_inscricaoEstadual', 'empr_tx_inscricaoMunicipal', 'empr_tx_regimeTributario', 'empr_tx_status', 'empr_tx_situacao', 'empr_nb_parametro', 'empr_tx_contato',
+		'empr_tx_dataRegistroCNPJ', 'empr_tx_domain', 'empr_tx_ftpServer', 'empr_tx_ftpUsername', 'empr_tx_ftpUserpass'
 	];
 	
 	$valores=[
 		$_POST['nome'], $_POST['fantasia'], $_POST['cnpj'], $_POST['cep'], $_POST['cidade'], $_POST['endereco'], $_POST['bairro'], $_POST['numero'], $_POST['complemento'], $_POST['referencia'],
-		$_POST['fone1'], $_POST['fone2'], $_POST['email'], $_POST['inscricaoEstadual'], $_POST['inscricaoMunicipal'], $_POST['regimeTributario'], 'ativo', $_POST['situacao'], $parametro, $_POST['contato'],
-		$RegistroCNPJ, "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio'], $_POST['ftpServer'], $_POST['ftpUsername'], $_POST['ftpUserpass']
+		$_POST['fone1'], $_POST['fone2'], $_POST['email'], $_POST['inscricaoEstadual'], $_POST['inscricaoMunicipal'], $_POST['regimeTributario'], 'ativo', $_POST['situacao'], $_POST['parametro'], $_POST['contato'],
+		$_POST['dataRegistroCNPJ'], "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio'], $_POST['ftpServer'], $_POST['ftpUsername'], $_POST['ftpUserpass']
 	];
 	
 	if(empty($_POST['cnpj']) || empty($_POST['nome']) || empty($_POST['cep']) || empty($_POST['numero']) || empty($_POST['email'])){
@@ -416,7 +416,7 @@ function index(){
 		$_POST['busca_situacao'] = 'Ativo';
 
 	if($_POST['busca_codigo'])
-		$extra .= " AND empr_nb_id = '$_POST['busca_codigo']'";
+		$extra .= " AND empr_nb_id = '".$_POST['busca_codigo']."'";
 	if($_POST['busca_nome'])
 		$extra .= " AND empr_tx_nome LIKE '%".$_POST['busca_nome']."%'";
 	if($_POST['busca_fantasia'])
