@@ -237,7 +237,6 @@ function modal_alert(){
 }
 
 function inserir($tabela,$campos,$valores){
-
 	if(count($campos) != count($valores)){
 		echo"ERRO Número de campos não confere com número de linhas na função de inserir!";
 		exit;
@@ -248,15 +247,12 @@ function inserir($tabela,$campos,$valores){
 
 	$campos=implode(',',$campos);
 
-// 	print_r("INSERT INTO $tabela ($campos) VALUES($valores);");
-// 	echo "<script>alert('')</script>";
 	try{
 		query("INSERT INTO $tabela ($campos) VALUES($valores);") or die(mysql_error());
 		$sql = query("SELECT LAST_INSERT_ID();") or die(mysql_error());
 	}catch (Exception $e){
 		return;
 	}
-
 
 	set_status("Registro inserido com sucesso!");
 
