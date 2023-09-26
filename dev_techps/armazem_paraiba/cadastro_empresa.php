@@ -32,7 +32,7 @@ function cadastra_empresa(){
 		$_POST['dataRegistroCNPJ'], "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio'], $_POST['ftpServer'], $_POST['ftpUsername'], $_POST['ftpUserpass']
 	];
 	
-	if(empty($_POST['cnpj']) || empty($_POST['nome']) || empty($_POST['cep']) || empty($_POST['numero']) || empty($_POST['email']) || empty($_POST['parametro'])){
+	if(empty($_POST['cnpj']) || empty($_POST['nome']) || empty($_POST['cep']) || empty($_POST['numero']) || empty($_POST['email']) || empty($_POST['parametro']) || empty($_POST['cidade'])){
 		echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
 		layout_empresa();
 		exit;
@@ -98,7 +98,6 @@ function busca_cep($cep){
 function carrega_endereco(){
 	
 	$arr = busca_cep($_GET[cep]);
-	// print_r($arr);
 	
 	?>
 	<script src="/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
@@ -186,7 +185,6 @@ function layout_empresa(){
 	cabecalho('Cadastro Empresa/Filial');
 
 	$regimes = ['', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real'];
-	
     if(empty($a_mod)){  //Não tem os dados de atualização, então significa que pode estar criando e deu um erro
         $input_values = [
         	'situacao' => $_POST['situacao'],
@@ -207,7 +205,7 @@ function layout_empresa(){
         	'inscricaoEstadual' => $_POST['inscricaoEstadual'],
         	'inscricaoMunicipal' => $_POST['inscricaoMunicipal'],
         	'regimeTributario' => $_POST['regimeTributario'],
-        	'dataRegistroCNPJ' => $_POST['dataRegistroCNPJ'],
+        	'dataRegistroCNPJ' => empty($_POST['dataRegistroCNPJ'])? date('Y-m-d', 0): $_POST['dataRegistroCNPJ'],
         	'logo' => $_POST['logo'],
         	'domain' => $_POST['domain'],
         	'ftpServer' => $_POST['ftpServer'],
@@ -234,7 +232,7 @@ function layout_empresa(){
         	'inscricaoEstadual' => $a_mod['empr_tx_inscricaoEstadual'],
         	'inscricaoMunicipal' => $a_mod['empr_tx_inscricaoMunicipal'],
         	'regimeTributario' => $a_mod['empr_tx_regimeTributario'],
-        	'dataRegistroCNPJ' => $a_mod['empr_tx_dataRegistroCNPJ'],
+        	'dataRegistroCNPJ' => empty($a_mod['empr_tx_dataRegistroCNPJ'])? date('Y-m-d', 0): $a_mod['empr_tx_dataRegistroCNPJ'],
         	'logo' => $a_mod['empr_tx_logo'],
         	'domain' => $a_mod['empr_tx_domain'],
         	'ftpServer' => $a_mod['empr_tx_ftpServer'] == 'ftp-jornadas.positronrt.com.br'? '': $a_mod['empr_tx_ftpServer'],
@@ -254,7 +252,7 @@ function layout_empresa(){
 		campo('Bairro','bairro',$input_values['bairro'],3),
 		campo('Complemento','complemento',$input_values['complemento'],3),
 		campo('Referência','referencia',$input_values['referencia'],2),
-		combo_net('Cidade/UF','cidade',$input_values['cidade'],3,'cidade','','','cida_tx_uf'),
+		combo_net('Cidade/UF*','cidade',$input_values['cidade'],3,'cidade','','','cida_tx_uf'),
 		campo('Telefone 1','fone1',$input_values['fone1'],2,'MASCARA_FONE'),
 		campo('Telefone 2','fone2',$input_values['fone2'],2,'MASCARA_FONE'),
 		campo('Contato','contato',$input_values['contato'],3),
