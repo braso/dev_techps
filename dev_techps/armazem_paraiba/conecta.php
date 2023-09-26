@@ -7,7 +7,7 @@ session_start();
 
 date_default_timezone_set('America/Fortaleza');
 
-$CONTEX['path'] = "/".((is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? "dev_techps": "techps");
+$CONTEX['path'] = "/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? "dev_techps": "techps");
 // $dominios = ['armazem_paraiba', 'feijao_turqueza', 'techps'];
 $CONTEX['path'] .= "/armazem_paraiba";
 
