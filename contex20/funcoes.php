@@ -248,10 +248,16 @@ function inserir($tabela,$campos,$valores){
 
 	$campos=implode(',',$campos);
 
-
-	query("INSERT INTO $tabela ($campos) VALUES($valores);") or die(mysql_error());
-	echo '<script>console.log('.query("INSERT INTO $tabela ($campos) VALUES($valores);") .') </script>';
-	$sql = query("SELECT LAST_INSERT_ID();") or die(mysql_error());
+// 	print_r("INSERT INTO $tabela ($campos) VALUES($valores);");
+// 	echo "<script>alert('')</script>";
+	try{
+		query("INSERT INTO $tabela ($campos) VALUES($valores);") or die(mysql_error());
+		$sql = query("SELECT LAST_INSERT_ID();") or die(mysql_error());
+	}catch (Exception $e){
+		return;
+	}
+	
+	
 
 
 	set_status("Registro inserido com sucesso!");
@@ -446,6 +452,27 @@ function campo_mes($nome,$variavel,$modificador,$tamanho,$extra=''){
 
 }
 
+function campo_jornada($nome,$variavel,$modificador,$tamanho){	
+	// $data_input = "<script>
+	// let jornada = document.getElementById(".$variavel."]);
+	// let today = new Date();
+	// let date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+	// let time = today.getHours() + ':' + today.getMinutes() + ':' + today.getSeconds();
+	// let dateTime = date+' '+time;
+	// jornada.value = dateTime;
+	// </script>";
+	
+	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
+			<label><b>'.$nome.'</b></label>
+			<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' '.$data_input2.'>
+		</div>';
+
+	
+
+	return $campo;
+
+}
+
 function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 	// $variavel_limpa = str_replace(array("[","]"),array("\\[","\\]"),$variavel);	
 
@@ -470,6 +497,16 @@ function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 		$data_input="<script>$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99', '99.999.999/9999-99'], clearIncomplete: true, placeholder: \" \" });</script>";
 	elseif($mascara=="MASCARA_CNPJ")
 		$data_input="<script>$('[name=\"$variavel\"]').inputmask('99.999.999/9999-99', { clearIncomplete: true, placeholder: \" \" });</script>";
+	elseif($mascara=="MASCARA_DINHERO")
+		$data_input="<script>
+		$(function(){
+			$('[name=\"$variavel\"]').maskMoney({
+			   allowNegative: true,
+			   thousands: '.',
+			   decimal: ','
+			});
+		 });
+		</script>";
 
 			// <input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' data-placeholder="____" data-inputmask="'.$data_input.'">
 
