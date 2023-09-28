@@ -525,27 +525,20 @@ function index() {
 	$extra = '';
 	$having = '';
 
-	if ($_POST['busca_codigo'])
-		$extra .= " AND enti_nb_id = '".$_POST['busca_codigo']."'";
-	if ($_POST['busca_matricula'])
-		$extra .= " AND enti_tx_matricula = '".$_POST['busca_matricula']."'";
-	if ($_POST['busca_empresa'])
-		$extra .= " AND enti_nb_empresa = '".$_POST['busca_empresa']."'";
-	if ($_POST['busca_nome'])
-		$extra .= " AND enti_tx_nome LIKE '%".$_POST['busca_nome']."%'";
-	if ($_POST['busca_ocupacao'])
-		$extra .= " AND enti_tx_ocupacao = '".$_POST['busca_ocupacao']."'";
-	if ($_POST['busca_cpf'])
-		$extra .= " AND enti_tx_cpf = '".$_POST['busca_cpf']."'";
-	if ($_POST['busca_parametro'])
-		$extra .= " AND enti_nb_parametro = '".$_POST['busca_parametro']."'";
-	if ($_POST['busca_padrao'])
-		$having .= " HAVING enti_tx_ehPadrao = '".$_POST['busca_padrao']."'";
+	$extra .=
+		(($_POST['busca_codigo'])? 		" AND enti_nb_id = '".$_POST['busca_codigo']."'": '').
+		(($_POST['busca_matricula'])? 	" AND enti_tx_matricula = '".$_POST['busca_matricula']."'": '').
+		(($_POST['busca_empresa'])? 	" AND enti_nb_empresa = '".$_POST['busca_empresa']."'": '').
+		(($_POST['busca_nome'])? 		" AND enti_tx_nome = '".$_POST['busca_nome']."'": '').
+		(($_POST['busca_cpf'])? 		" AND enti_tx_cpf = '".$_POST['busca_cpf']."'": '').
+		(($_POST['busca_ocupacao'])? 	" AND enti_tx_ocupacao = '".$_POST['busca_ocupacao']."'": '').
+		(($_POST['busca_parametro'])? 	" AND enti_nb_parametro = '".$_POST['busca_parametro']."'": '').
+		(($_POST['busca_padrao'])? 		" HAVING enti_tx_ehPadrao = '".$_POST['busca_padrao']."'": '').
+		(($_POST['busca_situacao'])? 	"Ativo": '');
 
-	if ($_POST['busca_situacao'] == '')
-		$_POST['busca_situacao'] = 'Ativo';
-	if ($_POST['busca_situacao'] && $_POST['busca_situacao'] != 'Todos')
+	if ($_POST['busca_situacao'] && $_POST['busca_situacao'] != 'Todos'){
 		$extra .= " AND empr_tx_situacao = '".$_POST['busca_situacao']."'";
+	}
 
 	$c[] = campo('Código', 'busca_codigo', $_POST['busca_codigo'], 1);
 	$c[] = campo('Nome', 'busca_nome', $_POST['busca_nome'], 2);
