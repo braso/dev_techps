@@ -79,7 +79,7 @@ function layout_ftp(){
 
 	// connect and login to FTP server
 
-	$infos = query('SELECT empr_tx_ftpServer, empr_tx_ftpUsername, empr_tx_ftpUserpass FROM empresa join user on empresa.empr_tx_cnpj = user.user_tx_emprCnpj WHERE user_nb_id = '.$_SESSION['user_nb_id'])->fetch_row();
+	$infos = query('SELECT empr_tx_ftpServer, empr_tx_ftpUsername, empr_tx_ftpUserpass FROM empresa join user on empresa.empr_nb_id = user.user_nb_empresa WHERE user_nb_id = '.$_SESSION['user_nb_id'])->fetch_row();
 	
 	$ftp_server = $infos[0];
 	$ftp_username = $infos[1];

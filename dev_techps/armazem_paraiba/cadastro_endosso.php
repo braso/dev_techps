@@ -61,7 +61,7 @@
 			")
 		);
 
-		print_r(count($endossos));
+		// print_r(count($endossos));
 
 		if(count($endossos) > 0){
 			$show_error = True;
@@ -97,7 +97,6 @@
 	function js_functions(){
 		global $CONTEX;
 		?><script>
-
 			function selecionaMotorista(idEmpresa) {
 				let buscaExtra = encodeURI('AND enti_tx_tipo = "Motorista"'+
 					(idEmpresa > 0? ' AND enti_nb_empresa = "'+idEmpresa+'"': '')
