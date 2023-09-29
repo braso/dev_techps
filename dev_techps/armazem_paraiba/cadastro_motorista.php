@@ -60,15 +60,6 @@ function cadastra_motorista() {
 		$_POST['cnhObs'], $_POST['cnhCidade'], $_POST['cnhEmissao'], $_POST['cnhPontuacao'], $_POST['cnhAtividadeRemunerada']
 	];
 
-	if(empty($_POST['nascimento']) || empty($_POST['parametro']) || empty($_POST['rgDataEmissao']) || empty($_POST['admissao']) 
-	|| empty($_POST['desligamento']) || empty($_POST['cnhValidade']) || empty($_POST['cnhPrimeiraHabilitacao']) || empty($_POST['cnhCidade']) || empty($_POST['cnhEmissao'])
-	|| empty($_POST['jornadaSemanal']) || empty($_POST['jornadaSabado']) || empty($_POST['percentualHE']) || empty($_POST['percentualSabadoHE']) || empty($_POST['parametro']) 
-	|| empty($_POST['salario']) || $_POST['cidade']){
-		echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
-		layout_motorista();
-		exit;
-	}
-
 	$cpfLimpo = str_replace(array('.', '-', '/'), "", $_POST['cpf']);
 
 	if (!$_POST['id']) {
@@ -273,7 +264,7 @@ function layout_motorista() {
 	}
 	$c[] = campo('Matrícula', 'matricula', $a_mod['enti_tx_matricula'], 1, '');
 	$c[] = campo('Nome', 'nome', $a_mod['enti_tx_nome'], 3);
-	$c[] = campo_data('Dt. Nascimento *', 'nascimento', $a_mod['enti_tx_nascimento'], 2);
+	$c[] = campo_data('Dt. Nascimento', 'nascimento', $a_mod['enti_tx_nascimento'], 2);
 	$c[] = combo('Situação', 'situacao', $a_mod['enti_tx_situacao'], 2, array('Ativo', 'Inativo'));
 	// $c[]=texto('Idade',$idade,4);
 
@@ -284,7 +275,7 @@ function layout_motorista() {
 	$c[] = campo('CPF', 'cpf', $a_mod['enti_tx_cpf'], 2, 'MASCARA_CPF');
 	$c[] = campo('RG', 'rg', $a_mod['enti_tx_rg'], 2);
 	$c[] = campo('Emissor RG', 'rgOrgao', $a_mod['enti_tx_rgOrgao'], 2);
-	$c[] = campo_data('Data Emissão RG *', 'rgDataEmissao', $a_mod['enti_tx_rgDataEmissao'], 2);
+	$c[] = campo_data('Data Emissão RG', 'rgDataEmissao', $a_mod['enti_tx_rgDataEmissao'], 2);
 	$c[] = combo('UF RG', 'rgUf', $a_mod['enti_tx_rgUf'], 2, $uf);
 	$c[] = combo('Estado Civil', 'civil', $a_mod['enti_tx_civil'], 2, array('', 'Casado(a)', 'Solteiro(a)', 'Divorciado(a)', 'Viúvo(a)'));
 
@@ -296,7 +287,7 @@ function layout_motorista() {
 
 	$c[] = campo('Complemento', 'complemento', $a_mod['enti_tx_complemento'], 2);
 	$c[] = campo('Ponto de Referência', 'referencia', $a_mod['enti_tx_referencia'], 3);
-	$c[] = combo_net('Cidade/UF *', 'cidade', $a_mod['enti_nb_cidade'], 3, 'cidade', '', '', 'cida_tx_uf');
+	$c[] = combo_net('Cidade/UF', 'cidade', $a_mod['enti_nb_cidade'], 3, 'cidade', '', '', 'cida_tx_uf');
 	$c[] = campo('Telefone 1', 'fone1', $a_mod['enti_tx_fone1'], 2, 'MASCARA_CEL');
 	$c[] = campo('Telefone 2', 'fone2', $a_mod['enti_tx_fone2'], 2, 'MASCARA_CEL');
 	$c[] = campo('E-mail', 'email', $a_mod['enti_tx_email'], 3);
@@ -314,22 +305,22 @@ function layout_motorista() {
 
 	$cContratual[] = combo_bd('Empresa', 'empresa', $a_mod['enti_nb_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)"', $extraEmpresa);
 	$cContratual[] = combo('Ocupação', 'ocupacao', $a_mod['enti_tx_ocupacao'], 2, array("Motorista")); //TODO PRECISO SABER OS TIPOS DE MOTORISTA
-	$cContratual[] = campo('Salário *', 'salario', valor($a_mod['enti_tx_salario']), 1, 'MASCARA_VALOR');
+	$cContratual[] = campo('Salário', 'salario', valor($a_mod['enti_tx_salario']), 1, 'MASCARA_VALOR');
 	$cContratual[] = combo('Subcontratado', 'subcontratado', $a_mod['enti_tx_subcontratado'], 2, array('', 'Sim', 'Não'));
-	$cContratual[] = campo_data('Dt Admissão *', 'admissao', $a_mod['enti_tx_admissao'], 2);
-	$cContratual[] = campo_data('Dt Desligamento *', 'desligamento', $a_mod['enti_tx_desligamento'], 2);
+	$cContratual[] = campo_data('Dt Admissão', 'admissao', $a_mod['enti_tx_admissao'], 2);
+	$cContratual[] = campo_data('Dt Desligamento', 'desligamento', $a_mod['enti_tx_desligamento'], 2);
 
 	if ($a_mod['enti_nb_empresa']) {
 		$icone_padronizar = icone_padronizar();
 	}
 
-	$cJornada[] = combo_bd('Parâmetros da Jornada *' . $icone_padronizar, 'parametro', $a_mod['enti_nb_parametro'], 6, 'parametro', 'onchange="carrega_parametro()"');
-	$cJornada[] = campo_hora('Jornada Semanal (Horas/Dia) *', 'jornadaSemanal', $a_mod['enti_tx_jornadaSemanal'], 3);
-	$cJornada[] = campo_hora('Jornada Sábado (Horas/Dia) *', 'jornadaSabado', $a_mod['enti_tx_jornadaSabado'], 3);
+	$cJornada[] = combo_bd('Parâmetros da Jornada ' . $icone_padronizar, 'parametro', $a_mod['enti_nb_parametro'], 6, 'parametro', 'onchange="carrega_parametro()"');
+	$cJornada[] = campo_hora('Jornada Semanal (Horas/Dia)', 'jornadaSemanal', $a_mod['enti_tx_jornadaSemanal'], 3);
+	$cJornada[] = campo_hora('Jornada Sábado (Horas/Dia)', 'jornadaSabado', $a_mod['enti_tx_jornadaSabado'], 3);
 	// $cJornada[]=campo('Jornada Semanal (Horas)','jornadaSemanal',$a_mod['enti_tx_jornadaSemanal'],3,MASCARA_NUMERO);
 	// $cJornada[]=campo('Jornada Sábado (Horas)','jornadaSabado',$a_mod['enti_tx_jornadaSabado'],3,MASCARA_NUMERO);
-	$cJornada[] = campo('Percentual da HE(%) *', 'percentualHE', $a_mod['enti_tx_percentualHE'], 3, 'MASCARA_NUMERO');
-	$cJornada[] = campo('Percentual da HE Sábado(%) *', 'percentualSabadoHE', $a_mod['enti_tx_percentualSabadoHE'], 3, 'MASCARA_NUMERO');
+	$cJornada[] = campo('Percentual da HE(%)', 'percentualHE', $a_mod['enti_tx_percentualHE'], 3, 'MASCARA_NUMERO');
+	$cJornada[] = campo('Percentual da HE Sábado(%)', 'percentualSabadoHE', $a_mod['enti_tx_percentualSabadoHE'], 3, 'MASCARA_NUMERO');
 
 	$aEmpresa = carregar('empresa', $a_mod['enti_nb_empresa']);
 	if ($aEmpresa['empr_nb_parametro'] > 0) {
@@ -356,12 +347,12 @@ function layout_motorista() {
 
 	// exit;
 	$cCNH[] = campo('N° Registro', 'cnhRegistro', $a_mod['enti_tx_cnhRegistro'], 3);
-	$cCNH[] = campo_data('Validade *', 'cnhValidade', $a_mod['enti_tx_cnhValidade'], 3);
-	$cCNH[] = campo_data('1º Habilitação *', 'cnhPrimeiraHabilitacao', $a_mod['enti_tx_cnhPrimeiraHabilitacao'], 3);
+	$cCNH[] = campo_data('Validade', 'cnhValidade', $a_mod['enti_tx_cnhValidade'], 3);
+	$cCNH[] = campo_data('1º Habilitação', 'cnhPrimeiraHabilitacao', $a_mod['enti_tx_cnhPrimeiraHabilitacao'], 3);
 	$cCNH[] = campo('Categoria HAB', 'cnhCategoria', $a_mod['enti_tx_cnhCategoria'], 3);
 	$cCNH[] = campo('Permissão', 'cnhPermissao', $a_mod['enti_tx_cnhPermissao'], 3);
-	$cCNH[] = combo_net('Cidade/UF Emissão *', 'cnhCidade', $a_mod['enti_nb_cnhCidade'], 3, 'cidade', '', '', 'cida_tx_uf');
-	$cCNH[] = campo_data('Data Emissão *', 'cnhEmissao', $a_mod['enti_tx_cnhEmissao'], 3);
+	$cCNH[] = combo_net('Cidade/UF Emissão', 'cnhCidade', $a_mod['enti_nb_cnhCidade'], 3, 'cidade', '', '', 'cida_tx_uf');
+	$cCNH[] = campo_data('Data Emissão', 'cnhEmissao', $a_mod['enti_tx_cnhEmissao'], 3);
 	$cCNH[] = campo('Pontuação', 'cnhPontuacao', $a_mod['enti_tx_cnhPontuacao'], 3);
 	$cCNH[] = combo('Atividade Remunerada', 'cnhAtividadeRemunerada', $a_mod['enti_tx_cnhAtividadeRemunerada'], 3, array('', 'Sim', 'Não'));
 	$cCNH[] = arquivo('CNH (.png, .jpg, .pdf)' . $iconeExcluirCnh, 'cnhAnexo', $a_mod['enti_tx_cnhAnexo'], 4);
@@ -567,16 +558,16 @@ function index() {
 	fecha_form($b);
 
 	$sql = "SELECT *, 
-	CASE
-		WHEN (para_tx_jornadaSemanal != enti_tx_jornadaSemanal OR
-			para_tx_jornadaSabado != enti_tx_jornadaSabado OR
-			para_tx_percentualHE != enti_tx_percentualHE OR
-			para_tx_percentualSabadoHE != enti_tx_percentualSabadoHE OR
-			empr_nb_parametro != enti_nb_parametro)
-		THEN 'Não'
-		ELSE 'Sim'
-	END AS enti_tx_ehPadrao
-	 FROM entidade, empresa, parametro WHERE enti_tx_status != 'inativo' AND enti_nb_parametro = para_nb_id AND enti_nb_empresa = empr_nb_id AND enti_tx_tipo = 'Motorista' $extraEmpresa $extra $having";
+			CASE
+				WHEN (para_tx_jornadaSemanal != enti_tx_jornadaSemanal OR
+					para_tx_jornadaSabado != enti_tx_jornadaSabado OR
+					para_tx_percentualHE != enti_tx_percentualHE OR
+					para_tx_percentualSabadoHE != enti_tx_percentualSabadoHE OR
+					empr_nb_parametro != enti_nb_parametro)
+				THEN 'Não'
+				ELSE 'Sim'
+			END AS enti_tx_ehPadrao
+ 			FROM entidade, empresa, parametro WHERE enti_tx_status != 'inativo' AND enti_nb_parametro = para_nb_id AND enti_nb_empresa = empr_nb_id AND enti_tx_tipo = 'Motorista' $extraEmpresa $extra $having";
 
 	$cab = array('CÓDIGO', 'NOME', 'MATRÍCULA', 'CPF', 'EMPRESA', 'FONE 1', 'FONE 2', 'OCUPAÇÃO', 'PARÂMETRO DA JORNADA', 'PADRÃO', 'SITUAÇÃO', '', '');
 	$val = array(
