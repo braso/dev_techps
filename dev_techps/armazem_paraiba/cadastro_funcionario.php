@@ -32,7 +32,7 @@ function cadastra_funcionario(){
 
 	$campos = array(enti_tx_nome,enti_tx_nascimento,enti_tx_cpf,enti_tx_rg,enti_tx_civil,enti_tx_sexo,enti_tx_endereco,enti_tx_numero,enti_tx_complemento,
 		enti_tx_bairro,enti_nb_cidade,enti_tx_cep,enti_tx_fone1,enti_tx_fone2,enti_tx_email,enti_tx_ocupacao,enti_tx_salario,enti_tx_cargahoraria,enti_tx_obs,
-		enti_tx_tipo,enti_nb_userCadastro,enti_tx_dataCadastro,enti_tx_status,enti_tx_matricula,enti_tx_empresaCnpj);
+		enti_tx_tipo,enti_nb_userCadastro,enti_tx_dataCadastro,enti_tx_status,enti_tx_matricula,enti_nb_empresa);
 	$valores = array($_POST[nome],$_POST[nascimento],$_POST[cpf],$_POST[rg],$_POST[civil],$_POST[sexo],$_POST[endereco],$_POST[numero],$_POST[complemento],
 		$_POST[bairro],$_POST[cidade],$_POST[cep],$_POST[fone1],$_POST[fone2],$_POST[email],$_POST[ocupacao],valor($_POST[salario]),$_POST[cargahoraria],$_POST[obs],
 		'Funcionário',$_SESSION[user_nb_id],date("Y-m-d"),'ativo',$_POST[matricula],$_POST[empresa]);
@@ -96,7 +96,7 @@ function layout_funcionario(){
 	$c[]=campo('E-mail','email',$a_mod[enti_tx_email],3);
 	$c[]=ckeditor('Observação:','obs',$a_mod[enti_tx_obs],12);
 	
-	$cContratual[]=combo_bd('Empresa','empresa',$a_mod[enti_tx_empresaCnpj],3,'empresa');
+	$cContratual[]=combo_bd('Empresa','empresa',$a_mod[enti_nb_empresa],3,'empresa');
 	$cContratual[]=combo('Ocupação','ocupacao',$a_mod[enti_tx_ocupacao],2,array("","Administrador","Funcionário"));
 	$cContratual[]=campo('Salário','salario',valor($a_mod[enti_tx_salario]),2,MASCARA_VALOR);
 	$cContratual[]=campo('Carga Horária(hs)','cargahoraria',$a_mod[enti_tx_cargahoraria],2,MASCARA_NUMERO);
@@ -175,7 +175,7 @@ function index(){
 	if($_POST[busca_matricula])
 		$extra .=" AND enti_tx_matricula = '$_POST[busca_matricula]'";
 	if($_POST[busca_empresa])
-		$extra .=" AND enti_tx_empresaCnpj = '$_POST[busca_empresa]'";
+		$extra .=" AND enti_nb_empresa = '$_POST[busca_empresa]'";
 	if($_POST[busca_nome])
 		$extra .=" AND enti_tx_nome LIKE '%$_POST[busca_nome]%'";
 	if($_POST[busca_ocupacao])
@@ -194,7 +194,7 @@ function index(){
 	linha_form($c);
 	fecha_form($b);
 
-	$sql = "SELECT * FROM entidade, empresa WHERE enti_tx_status != 'inativo' AND enti_tx_empresaCnpj = empr_nb_id AND enti_tx_tipo = 'Funcionário' $extra";
+	$sql = "SELECT * FROM entidade, empresa WHERE enti_tx_status != 'inativo' AND enti_nb_empresa = empr_nb_id AND enti_tx_tipo = 'Funcionário' $extra";
 	$cab = array('CÓDIGO','NOME','MATRÍCULA','EMPRESA','FONE 1','FONE 2','OCUPAÇÃO','','');
 	$val = array('enti_nb_id','enti_tx_nome','enti_tx_matricula','empr_tx_nome','enti_tx_fone1','enti_tx_fone2','enti_tx_ocupacao','icone_modificar(enti_nb_id,modifica_funcionario)',
 		'icone_excluir(enti_nb_id,exclui_funcionario)');
