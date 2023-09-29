@@ -192,7 +192,7 @@ function layout_ftp()
 
 	// );
 
-	// // print_r($fileList);exit;
+	print_r($fileList);exit;
 
 	for ($i = 0; $i < count($fileList); $i++) {
 
