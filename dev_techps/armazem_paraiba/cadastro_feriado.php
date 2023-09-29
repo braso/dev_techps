@@ -21,7 +21,11 @@ function modifica_feriado(){
 function cadastra_feriado(){
 	
 	$campos=array(feri_tx_nome,feri_tx_data,feri_tx_uf,feri_nb_cidade,feri_tx_status);
-	$valores=array($_POST[nome],$_POST[data],$_POST[uf],$_POST[cidade],'ativo');
+	
+	$data = ($_POST['data'] == '') ? '0000-00-00' : $_POST['data'];
+	$cidade = ($_POST['cidade'] == '') ? 00 : $_POST['cidade'];
+	
+	$valores=array($_POST[nome],$data,$_POST[uf],$cidade,'ativo');
 
 	if($_POST[id]>0) {
 		atualizar('feriado',$campos,$valores,$_POST[id]);

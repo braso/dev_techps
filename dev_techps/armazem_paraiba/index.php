@@ -1,6 +1,6 @@
 <?
 
-include "conecta.php";
+include"conecta.php";
 
 if($_GET['user'] != '' && $_GET['password'] != '' ){
     
@@ -9,16 +9,26 @@ if($_GET['user'] != '' && $_GET['password'] != '' ){
 
 		if(mysqli_num_rows($sql)>0){
 
-			$a=mysqli_fetch_array($sql);
+			$a = mysqli_fetch_array($sql);
+			$dataHoje = strtotime(date("Y-m-d")); // Transforma a data de hoje em timestamp
+			$dataVerificarObj = strtotime($a['user_tx_expiracao']);
+			if ($dataVerificarObj >= $dataHoje && !empty($a['user_tx_expiracao']) && $a['user_tx_expiracao'] != '0000-00-00') {
+				$msg = "<div class='alert alert-danger display-block'>
+					<span> Usuário expirado. </span>
+				</div>";
+			} else {
 
-			$_SESSION[user_nb_id]=$a[user_nb_id];
-
-			$_SESSION[user_tx_nivel]=$a[user_tx_nivel];
-
-			$_SESSION[user_tx_login]=$a[user_tx_login];
-
-			$_SESSION['user_tx_emprCnpj']=$a['user_tx_emprCnpj'];
-			
+				$_SESSION[user_nb_id] = $a[user_nb_id];
+				$_SESSION[user_tx_nivel] = $a[user_tx_nivel];
+				$_SESSION[user_tx_login] = $a[user_tx_login];
+				$_SESSION[user_nb_entidade] = $a[user_nb_entidade];
+				$_SESSION[user_nb_empresa] = $a[user_nb_empresa];
+				if ($a[user_tx_foto]) {
+					$_SESSION[user_tx_foto] = $a[user_tx_foto];
+				} else {
+					$_SESSION[user_tx_foto] = '/contex20/img/user.png';
+				}
+			}
 			
 
 
