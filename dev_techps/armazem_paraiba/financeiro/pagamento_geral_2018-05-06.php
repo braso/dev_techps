@@ -962,7 +962,7 @@ function index(){
 
 
 
-	if( is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador')) )
+	if( $_SESSION[user_tx_nivel] != 'Administrador' )
 
 		grid($sql,$cab2,$val2,'','','0','desc');
 

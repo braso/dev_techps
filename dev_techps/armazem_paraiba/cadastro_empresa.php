@@ -58,7 +58,11 @@ function cadastra_empresa(){
 	}else{
 		$campos = array_merge($campos,array('empr_nb_userCadastro','empr_tx_dataCadastro'));
 		$valores = array_merge($valores,array($_SESSION['user_nb_id'], date("Y-m-d H:i:s")));
-		$id_empresa = inserir('empresa',$campos,$valores);
+		try{
+			$id_empresa = inserir('empresa',$campos,$valores);
+		}catch(Exception $e){
+			print_r($e);
+		}
 	}
 
 

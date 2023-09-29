@@ -9,9 +9,9 @@ use PHPMailer\PHPMailer\Exception;
 //This should be done in your php.ini, but this is how to do it if you don't have access to that
 date_default_timezone_set('America/Fortaleza');
 
-require getcwd().'PHPMailer/src/Exception.php';
-require getcwd().'PHPMailer/src/PHPMailer.php';
-require getcwd().'PHPMailer/src/SMTP.php';
+require getcwd().'/PHPMailer/src/Exception.php';
+require getcwd().'/PHPMailer/src/PHPMailer.php';
+require getcwd().'/PHPMailer/src/SMTP.php';
 
 //Create a new PHPMailer instance
 $mail = new PHPMailer();
