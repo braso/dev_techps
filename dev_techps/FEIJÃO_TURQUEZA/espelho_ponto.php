@@ -6,6 +6,8 @@ function index() {
 	global $CACTUX_CONF, $totalResumo;
 
 	cabecalho('Espelho de Ponto');
+	print_r($_SESSION[user_tx_nivel]);
+	die();
 
 	if ($_SESSION[user_tx_nivel] == 'Motorista') {
 		$_POST[busca_motorista] = $_SESSION[user_nb_entidade];

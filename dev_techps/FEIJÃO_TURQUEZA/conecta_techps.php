@@ -1,6 +1,6 @@
 <?
 include '';
-global $CONTEX,$conn;
+global $CONTEX, $conn;
 
 // session_start();
 
@@ -39,8 +39,8 @@ $cnpj = $_POST['cnpj'];
 
 $query = "SELECT * FROM `empresa` WHERE empr_tx_cnpj = '$cnpj'";
 
-$sql = mysqli_query($conn,$query) or die(mysqli_error($conn));
-if($debug=='1'){
+$sql = mysqli_query($conn, $query) or die(mysqli_error($conn));
+if ($debug == '1') {
     echo $query;
 }
 
@@ -48,4 +48,3 @@ $result = mysqli_fetch_all($sql, MYSQLI_ASSOC);
 
 
 echo json_encode($result);
-

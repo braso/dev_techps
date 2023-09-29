@@ -1,410 +1,147 @@
 <?php
-
-session_start();
-
-
+include "funcoes_ponto.php"; // NAO ALTERAR ORDEM
 include "conecta.php";
 
+function index() {
+	global $CACTUX_CONF, $totalResumo;
 
+	cabecalho('Espelho de Ponto');
 
-function carrega_ponto()
-{
-
-	$arquivo = 'apontamento' . date('dmY') . '*.txt';
-	$path = 'arquivos/pontos/';
-	$local_file = $path . $arquivo;
-	$arquivo = $_FILES[arquivo];
-	
-	if ($arquivo[error] === 0) {
-
-		$sqlCheck = "SELECT * FROM arquivoponto WHERE arqu_tx_nome = '$arquivo[name]' AND arqu_tx_status = 'ativo' LIMIT 1";
-
-		query($sqlCheck);
-
-		$local_file = $path . $arquivo[name];
-		
-		move_uploaded_file($arquivo[tmp_name],$path.$arquivo[name]);
-		$campos = array(arqu_tx_nome, arqu_tx_data, arqu_nb_user, arqu_tx_status);
-
-		$valores = array($arquivo[name], date("Y-m-d H:i:s"), $_SESSION['user_nb_id'], 'ativo');
-
-		$idArquivo = inserir('arquivoponto', $campos, $valores);
-
-
-		foreach (file($local_file) as $line) {
-
-			$line = trim($line);
-
-			$loginMotorista = substr($line, 0, 10) + 0;
-
-			$data = substr($line, 10, 8);
-
-			$data = substr($data, 4, 4) . "-" . substr($data, 2, 2) . "-" . substr($data, 0, 2);
-
-			$hora = substr($line, 18, 4);
-
-			$hora = substr($hora, 0, 2) . ":" . substr($hora, 2, 2) . ":00";
-
-			$codigoExterno = substr($line, -2, 2) + 0;
-
-			// echo $line."->";
-
-			// echo "$loginMotorista|$data|$hora|$codigoExterno<hr>";
-
-			$queryMacroPonto = query("SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_codigoExterno = '" . $codigoExterno . "'");
-
-			$aTipo = carrega_array($queryMacroPonto);
-
-			$campos = array(pont_nb_user, pont_nb_arquivoponto, pont_tx_matricula, pont_tx_data, pont_tx_tipo, pont_tx_tipoOriginal, pont_tx_status, pont_tx_dataCadastro);
-
-			$valores = array($_SESSION[user_nb_id], $idArquivo, $loginMotorista, "$data $hora", $aTipo[0], $codigoExterno, 'ativo', date("Y-m-d H:i:s"));
-			
-			$check = query('SELECT * FROM ponto WHERE pont_tx_matricula = '.$loginMotorista.' AND pont_tx_data = "'."$data $hora".'" AND pont_tx_tipo = '.$aTipo[0].' AND pont_tx_tipoOriginal = '.$codigoExterno.';');
-			
-			if(num_linhas($check) === 0){
-				inserir('ponto', $campos, $valores);
-			}
-			else {
-				set_status("Alguns pontos, Já existe no banco");
-			}
-
-		}
-
-	} else {
-
-		set_status("Ocorreu um problema ao gravar o arquivo\n");
-
-		index();
-		exit;
+	if ($_SESSION[user_tx_nivel] == 'Motorista') {
+		$_POST[busca_motorista] = $_SESSION[user_nb_entidade];
+		$extraBuscaMotorista = " AND enti_nb_id = '$_SESSION[user_nb_entidade]'";
 	}
 
-	index();
-	exit;
-}
-
-
-
-
-
-function layout_ponto()
-{
-
-
-
-	cabecalho('Carregar Ponto');
-
-
-
-
-
-	//$c[] = campo('Data do Arquivo:','data',date("d/m/Y"),2,MASCARA_DATA);
-
-	$c[] = arquivo('Arquivo Ponto (.txt):', 'arquivo', '', 5);
-
-
-
-	$b[] = botao("Enviar", 'carrega_ponto');
-
-	$b[] = botao("Voltar", 'index');
-
-
-
-	abre_form('Arquivo de Ponto');
-
-	linha_form($c);
-
-	fecha_form($b);
-
-
-
-	rodape();
-
-}
-
-
-
-
-
-function layout_ftp()
-{
-
-	// error_reporting(E_ALL);
-
-
-
-	$arquivo = 'apontamento' . date('dmY') . '*.txt';
-
-	$path = 'arquivos/pontos/';
-
-
-
-	$local_file = $path . $arquivo;
-
-	$server_file = './' . $arquivo;
-
-
-
-	// connect and login to FTP server
-
-	$ftp_server = "ftp-jornadas.positronrt.com.br";
-
-	$ftp_username = '08995631000108';
-
-	$ftp_userpass = '0899';
-
-	// $ftp_username = 'techps';
-
-	// $ftp_userpass = '123456';
-
-
-
-	// $ftp_server = "ftp.modulusistemas.com.br";
-
-	// $ftp_username = 'techps@modulusistemas.com.br';
-
-	// $ftp_userpass = 'A1c2r31234!techps';
-
-
-
-
-
-	$ftp_conn = ftp_connect($ftp_server) or die("Could not connect to $ftp_server");
-
-	$login = ftp_login($ftp_conn, $ftp_username, $ftp_userpass);
-
-
-
-	//BUSCA O ARQUIVO
-
-	$fileList = ftp_nlist($ftp_conn, $arquivo);
-
-	// $fileList = array(
-
-	// 	'apontamento27032023010000.txt',
-
-	// 	'apontamento28032023010000.txt',
-
-	// 	'apontamento29032023010000.txt',
-
-	// 	'apontamento30032023010000.txt',
-
-	// 	'apontamento31032023010000.txt'
-
-	// );
-
-	print_r($fileList);exit;
-
-	for ($i = 0; $i < count($fileList); $i++) {
-
-
-
-		$sqlCheck = "SELECT * FROM arquivoponto WHERE arqu_tx_nome = '$fileList[$i]' AND arqu_tx_status = 'ativo' LIMIT 1";
-
-		$queryCheck = query($sqlCheck);
-
-		if (num_linhas($queryCheck) > 0) {
-
-			continue;
-
-		}
-
-
-
-		$local_file = $path . $fileList[$i];
-
-
-
-		if (ftp_get($ftp_conn, $local_file, $fileList[$i], FTP_BINARY)) {
-
-			// echo "Successfully written to $path$fileList[$i]<br>";
-
-
-
-			$campos = array(arqu_tx_nome, arqu_tx_data, arqu_nb_user, arqu_tx_status);
-
-			$valores = array($fileList[$i], date("Y-m-d H:i:s"), $_SESSION['user_nb_id'], 'ativo');
-
-			$idArquivo = inserir('arquivoponto', $campos, $valores);
-
-
-
-
-
-			foreach (file($local_file) as $line) {
-
-				$line = trim($line);
-
-				$loginMotorista = substr($line, 0, 10) + 0;
-
-
-
-				$data = substr($line, 10, 8);
-
-				$data = substr($data, 4, 4) . "-" . substr($data, 2, 2) . "-" . substr($data, 0, 2);
-
-
-
-				$hora = substr($line, 18, 4);
-
-				$hora = substr($hora, 0, 2) . ":" . substr($hora, 2, 2) . ":00";
-
-
-
-				$codigoExterno = substr($line, -2, 2) + 0;
-
-				// echo $line."->";
-
-				// echo "$loginMotorista|$data|$hora|$codigoExterno<hr>";
-
-
-
-				$queryMacroPonto = query("SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_codigoExterno = '" . $codigoExterno . "'");
-
-				$aTipo = carrega_array($queryMacroPonto);
-
-
-
-				$campos = array(pont_nb_user, pont_nb_arquivoponto, pont_tx_matricula, pont_tx_data, pont_tx_tipo, pont_tx_tipoOriginal, pont_tx_status, pont_tx_dataCadastro);
-
-				$valores = array($_SESSION[user_nb_id], $idArquivo, $loginMotorista, "$data $hora", $aTipo[0], $codigoExterno, 'ativo', date("Y-m-d H:i:s"));
-
-				inserir('ponto', $campos, $valores);
-
-
-
-			}
-
-		} else {
-
-			echo "There was a problem writing the file\n";
-
-			exit;
-
-		}
-
+	if ($_POST[busca_motorista]) {
+		$aMotorista = carregar('entidade', $_POST[busca_motorista]);
+		$aDadosMotorista = array($aMotorista[enti_tx_matricula]);
+		$aEmpresa = carregar('empresa', $aMotorista[enti_nb_empresa]);
 	}
 
-
-
-
-
-	// var_dump($ftp_conn)
-
-	// // then do something...
-
-	// close connection
-
-	ftp_close($ftp_conn);
-
-	if ($_SERVER['HTTP_ENV'] == 'carrega_cron') {
-
-		exit;
-
+	$extraEmpresa = '';
+	if ($_SESSION[user_nb_empresa] > 0 && $_SESSION[user_tx_nivel] != 'Administrador') {
+		$extraEmpresa = " AND enti_nb_empresa = '$_SESSION[user_nb_empresa]'";
 	}
 
-	index();
-
-	exit;
-
-
-
-}
-
-
-
-function index()
-{
-
-	global $CACTUX_CONF;
-
-	if ($_SERVER['HTTP_ENV'] == 'carrega_cron') {
-
-		$_SESSION['user_nb_id'] = 1;
-
-		$_SESSION['user_tx_nivel'] = 'Administrador';
-
-		$_SESSION['user_tx_login'] = 'Adm';
-
-		layout_ftp();
-
-		exit;
-
+	if ($_POST[busca_data1] == '') {
+		$_POST[busca_data1] = date("Y-m-01");
 	}
 
-
-
-	cabecalho('Carregar Ponto', 1);
-
-
-
-	$extra = '';
-
-	if ($_POST[busca_inicio])
-
-		$extra .= " AND reto_tx_dataArquivo >= '" . data($_POST[busca_inicio], 1) . "'";
-
-	if ($_POST[busca_fim])
-
-		$extra .= " AND reto_tx_dataArquivo <= '" . data($_POST[busca_fim], 1) . "'";
-
-
-
-
-
-
+	if ($_POST[busca_data2] == '') {
+		$_POST[busca_data2] = date("Y-m-d");
+	}
 
 	//CONSULTA
-
-	$c[] = campo('Código:', 'busca_codigo', $_POST[busca_codigo], 2);
-
-	$c[] = campo('Data Início:', 'busca_inicio', $_POST[busca_inicio], 2, MASCARA_DATA);
-
-	$c[] = campo('Data Fim:', 'busca_fim', $_POST[busca_fim], 2, MASCARA_DATA);
-
-
-
-
+	$c[] = combo_net('* Motorista:', 'busca_motorista', $_POST[busca_motorista], 6, 'entidade', '', " AND enti_tx_tipo = \"Motorista\" $extraEmpresa $extraBuscaMotorista", 'enti_tx_matricula');
+	// $c[] = campo_mes('Data:','busca_data',$_POST[busca_data],2);
+	$c[] = campo_data('Data Início:', 'busca_data1', $_POST[busca_data1], 2);
+	$c[] = campo_data('Data Fim:', 'busca_data2', $_POST[busca_data2], 2);
 
 	//BOTOES
-
 	$b[] = botao("Buscar", 'index');
-
-	$b[] = botao("Inserir", 'layout_ponto');
-
-	$b[] = botao("FTP", 'layout_ftp');
-
-
-
-
+	if ($_SESSION[user_tx_nivel] != 'Motorista') {
+		$b[] = botao("Cadastrar Abono", 'layout_abono');
+	}
 
 	abre_form('Filtro de Busca');
-
 	linha_form($c);
-
 	fecha_form($b);
 
+	// $cab = array("MATRÍCULA", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA", "REFEIÇÃO", "ESPERA", "ATRASO", "EFETIVA", "PERÍODO TOTAL", "INTERSTÍCIO DIÁRIO", "INT. SEMANAL", "ABONOS", "FALTAS", "FOLGAS", "H.E.", "H.E. 100%", "ADICIONAL NOTURNO", "ESPERA INDENIZADA", "OBSERVAÇÕES");
+	$cab = array(
+		"", "MAT.", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
+		"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "HE 50%", "HE&nbsp;100%",
+		"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO"
+	);
+
+	// Converte as datas para objetos DateTime
+	$startDate = new DateTime($_POST[busca_data1]);
+	$endDate = new DateTime($_POST[busca_data2]);
+
+	// Loop for para percorrer as datas
 
 
+	if ($_POST[busca_data1] && $_POST[busca_data2] && $_POST[busca_motorista]) {
+		// $date = new DateTime($_POST[busca_data]);
+		// $month = $date->format('m');
+		// $year = $date->format('Y');
 
+		// $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
 
-	$sql = "SELECT *	FROM arquivoponto,user WHERE  arqu_nb_user = user_nb_id AND  arqu_tx_status != 'inativo' $extra ";
+		// for ($i = 1; $i <= $daysInMonth; $i++) {
+		// 	$dataVez = $_POST[busca_data]."-".str_pad($i,2,0,STR_PAD_LEFT);
 
-	$cab = array('CÓD', 'ARQUIVO', 'USUÁRIO', 'DATA', 'SITUAÇÃO');
+		// 	$aDetalhado = diaDetalhePonto($aMotorista[enti_tx_matricula], $dataVez);
 
+		// 	$aDia[] = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDadosMotorista, $aDetalhado));
 
+		// }
 
-	// $ver2 = "icone_modificar(arqu_nb_id,layout_confirma)";
+		for ($date = $startDate; $date <= $endDate; $date->modify('+1 day')) {
+			$dataVez = $date->format('Y-m-d');
+			$aDetalhado = diaDetalhePonto($aMotorista[enti_tx_matricula], $dataVez);
+			$aDia[] = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDadosMotorista, $aDetalhado));
+		}
 
-	$val = array('arqu_nb_id', 'arqu_tx_nome', 'user_tx_nome', 'data(arqu_tx_data,1)', 'ucfirst(arqu_tx_status)');
+		if ($aEmpresa[empr_nb_parametro] > 0) {
+			$aParametro = carregar('parametro', $aEmpresa[empr_nb_parametro]);
+			if (
+				$aParametro[para_tx_jornadaSemanal] != $aMotorista[enti_tx_jornadaSemanal] ||
+				$aParametro[para_tx_jornadaSabado] != $aMotorista[enti_tx_jornadaSabado] ||
+				$aParametro[para_tx_percentualHE] != $aMotorista[enti_tx_percentualHE] ||
+				$aParametro[para_tx_percentualSabadoHE] != $aMotorista[enti_tx_percentualSabadoHE] ||
+				$aParametro[para_nb_id] != $aMotorista[enti_nb_parametro]
+			) {
 
-	grid($sql, $cab, $val, '', '', 0, 'desc');
+				$ehPadrao = 'Não';
+			} else {
+				$ehPadrao = 'Sim';
+			}
 
+			$convencaoPadrao = '| Convenção Padrão? ' . $ehPadrao;
+		}
 
+		abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] | $aEmpresa[empr_tx_nome] $convencaoPadrao");
 
+?>
 
+		<style>
+			table thead tr th:nth-child(4),
+			table thead tr th:nth-child(8),
+			table thead tr th:nth-child(12),
+			table td:nth-child(4),
+			table td:nth-child(8),
+			table td:nth-child(12) {
+				border-right: 3px solid #d8e4ef !important;
+			}
+		</style>
+	<?
+	
+	    
+		$aDia[] = array_values(array_merge(array('', '', '', '', '', '', '', '<b>TOTAL</b>'), $totalResumo));
+		
+
+		grid2($cab, $aDia, "Jornada Semanal (Horas): $aMotorista[enti_tx_jornadaSemanal]");
+		fecha_form();
+	}
 
 	rodape();
 
+	?>
 
+	<form name="form_ajuste_ponto" method="post">
+		<input type="hidden" name="acao" value="layout_ajuste">
+		<input type="hidden" name="id" value="<?= $aMotorista['enti_nb_id'] ?>">
+		<input type="hidden" name="data">
+	</form>
+
+	<script>
+		function ajusta_ponto(data, motorista) {
+			document.form_ajuste_ponto.data.value = data;
+			document.form_ajuste_ponto.id.value = motorista;
+			document.form_ajuste_ponto.submit();
+		}
+	</script>
+<?
 
 }

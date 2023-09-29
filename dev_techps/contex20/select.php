@@ -20,8 +20,7 @@ while($row = $result->fetch_assoc()){
 	if($extra_busca != ''){
 		$extra_exibe = "[$row[$extra_busca]] ";
 	}
-   	$json[] = array('id'=>
-	$row[$col_tab.'_nb_id'], 'text'=>$extra_exibe.$row[$col_tab.'_tx_nome']);
+   	$json[] = array('id'=>$row[$col_tab.'_nb_id'], 'text'=>$extra_exibe.$row[$col_tab.'_tx_nome']);
 
 }
 
