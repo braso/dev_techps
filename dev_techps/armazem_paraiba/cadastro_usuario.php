@@ -36,19 +36,20 @@ function modifica_usuario() {
 
 function cadastra_usuario() {
 
-	$error_msg = "ERRO: Insira os campos ";
-	$campos_a_conferir = [
+	$error_msg_base = "ERRO: Insira os campos ";
+	$error_msg = $error_msg_base;
+	$check_fields = [
 	  //['nome', 'msg_erro']
 		['nome', 'Nome, '],
 		['login', 'Login, '],
 		['senha', 'Senha, '],
-		['empresa', 'Empresa, '],
 		['nascimento', 'Data de nascimento, '],
 		['email', 'Email, '],
+		['empresa', 'Empresa, ']
 	];
-	foreach($campos_a_conferir as $campo){
-		if(!isset($_POST[$campo[0]]) || $_POST[$campo[0]] == ''){
-			$error_msg .= $campo[1];
+	foreach($check_fields as $field){
+		if(!isset($_POST[$field[0]]) || $_POST[$field[0]] == ''){
+			$error_msg .= $field[1];
 		}
 	}
 
@@ -57,9 +58,9 @@ function cadastra_usuario() {
 		$error_msg .= 'Nível, ';
 	}
 	if($_POST['senha'] != $_POST['senha2']){
-		$error_msg .= "Senhas não conferem, ";	
+		$error_msg .= "Confirmação de senha correta, ";
 	}
-	if($error_msg != "ERRO: Insira os campos "){
+	if($error_msg != $error_msg_base){
 		set_status(substr($error_msg, 0, strlen($error_msg)-2).".");
 		modifica_usuario();
 		exit;
