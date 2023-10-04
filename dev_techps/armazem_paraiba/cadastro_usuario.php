@@ -36,30 +36,34 @@ function modifica_usuario() {
 
 function cadastra_usuario() {
 
-	$error_msg = "ERRO: Insira os campos ";
-	$campos_a_conferir = [
+	$error_msg_base = "ERRO: Insira os campos ";
+	$error_msg = $error_msg_base;
+	$check_fields = [
 	  //['nome', 'msg_erro']
 		['nome', 'Nome, '],
 		['login', 'Login, '],
 		['senha', 'Senha, '],
-		['empresa', 'Empresa, '],
 		['nascimento', 'Data de nascimento, '],
 		['email', 'Email, '],
+		['empresa', 'Empresa, ']
 	];
-	foreach($campos_a_conferir as $campo){
-		if(!isset($_POST[$campo[0]]) || $_POST[$campo[0]] == ''){
-			$error_msg .= $campo[1];
+	// if (is_bool(strpos($_SESSION['user_tx_nivel'], "Administrador"))) {
+		foreach($check_fields as $field){
+		if(!isset($_POST[$field[0]]) || $_POST[$field[0]] == ''){
+			$error_msg .= $field[1];
 		}
 	}
+	// }
+	
 
 	//Se o usuário é um administrador e não definiu o nível do usuário a ser cadastrado
 	if(is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) && (!isset($_POST['nivel']) || $_POST['nivel'] == '')){
 		$error_msg .= 'Nível, ';
 	}
 	if($_POST['senha'] != $_POST['senha2']){
-		$error_msg .= "Senhas não conferem, ";	
+		$error_msg .= "Confirmação de senha correta, ";
 	}
-	if($error_msg != "ERRO: Insira os campos "){
+	if($error_msg != $error_msg_base){
 		set_status(substr($error_msg, 0, strlen($error_msg)-2).".");
 		modifica_usuario();
 		exit;
@@ -115,15 +119,27 @@ function cadastra_usuario() {
 		$_POST['id'] = ultimo_reg('user');
 
 	}else{//Atualizando usuário existente
+		// if (is_bool(strpos($_SESSION['user_tx_nivel'], "Administrador"))){
+		// 	$bd_campos = ['user_tx_senha'];
+		// 	$bd_campos = array_merge($bd_campos, ['user_nb_userAtualiza', 'user_tx_dataAtualiza']);
+		// 	$valores = [$_POST['senha']];
+		// 	$valores = array_merge($valores, [$_SESSION['user_nb_id'], date("Y-m-d H:i:s")]);
 
-		$bd_campos = array_merge($bd_campos, ['user_nb_userAtualiza', 'user_tx_dataAtualiza']);
-		$valores = array_merge($valores, [$_SESSION['user_nb_id'], date("Y-m-d H:i:s")]);
+		// 	atualizar('user', $bd_campos, $valores, $_POST['id']);
 
-		atualizar('user', $bd_campos, $valores, $_POST['id']);
+		// 	if ($_POST['senha'] != '' && $_POST['senha2'] != '') {
+		// 		atualizar('user', ['user_tx_senha'], [md5($_POST['senha'])], $_POST['id']);
+		// 	}
+		// }
+		// else
+			$bd_campos = array_merge($bd_campos, ['user_nb_userAtualiza', 'user_tx_dataAtualiza']);
+			$valores = array_merge($valores, [$_SESSION['user_nb_id'], date("Y-m-d H:i:s")]);
 
-		if ($_POST['senha'] != '' && $_POST['senha2'] != '') {
-			atualizar('user', ['user_tx_senha'], [md5($_POST['senha'])], $_POST['id']);
-		}
+			atualizar('user', $bd_campos, $valores, $_POST['id']);
+
+			if ($_POST['senha'] != '' && $_POST['senha2'] != '') {
+				atualizar('user', ['user_tx_senha'], [md5($_POST['senha'])], $_POST['id']);
+			}
 	}
 
 	index();
@@ -139,6 +155,27 @@ function layout_usuario() {
 	if (is_bool(strpos($_SESSION['user_tx_nivel'], "Administrador"))){
 		$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
 		$campo_nivel = texto('Nível*', $_SESSION['user_tx_nivel'], 2, "style='margin-bottom:-10px;'");
+		
+		
+		$campo_nome = texto('Nome*', $a_mod['user_tx_nome'], 3, "style='margin-bottom:-10px;'");
+		$campo_login = texto('Login*', $a_mod['user_tx_login'], 2, "style='margin-bottom:-10px;'");
+		$data_nascimento = ($a_mod['user_tx_nascimento'] != '0000-00-00') ? date("d/m/Y", strtotime($a_mod['user_tx_nascimento'])) : '00/00/0000' ;
+		$campo_nascimento = texto('Dt. Nascimento*', $data_nascimento, 3, "style='margin-bottom:-10px;'");
+		$campo_cpf = texto('CPF', $a_mod['user_tx_cpf'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
+		$campo_rg = texto('RG', $a_mod['user_tx_rg'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
+		
+		$cidade_query = query("SELECT * FROM `cidade` WHERE cida_tx_status != 'inativo' AND cida_nb_id = $a_mod[user_nb_cidade]");
+		$cidade = mysqli_fetch_array($cidade_query);
+	
+		$campo_cidade = texto('Cidade/UF', $cidade['cida_tx_nome'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
+		$campo_email = texto('E-mail*', $a_mod['user_tx_email'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
+		
+		$empresa_query = query("SELECT * FROM `empresa` WHERE empr_tx_status != 'inativo' AND empr_nb_id = $a_mod[user_nb_empresa]");
+		$empresa = mysqli_fetch_array($empresa_query);
+		
+		$campo_empresa = texto('Empresa*', $empresa['empr_tx_nome'], 3, "style='margin-bottom:-10px; margin-top: 10px;'");
+		$data_expiracao  = ($a_mod['user_tx_expiracao'] != '0000-00-00') ? date("d/m/Y", strtotime($a_mod['user_tx_expiracao'])) : '00/00/0000' ;
+		$campo_expiracao = texto('Dt. Expiraçao', $data_expiracao, 2, "style='margin-bottom:-10px; margin-top: 10px;'");
 	} else {
 		$niveis = ["Motorista"];
 		switch($_SESSION['user_tx_nivel']){
@@ -152,21 +189,30 @@ function layout_usuario() {
 			break;
 		}
 		$campo_nivel = combo('Nível*', 'nivel', $a_mod['user_tx_nivel'], 2, $niveis, '');
+		$campo_nome = campo('Nome*', 'nome', $a_mod['user_tx_nome'], 4, '');
+		$campo_login = campo('Login*', 'login', $a_mod['user_tx_login'], 2);
+		$campo_nascimento = campo_data('Dt. Nascimento*', 'nascimento', $a_mod['user_tx_nascimento'], 2);
+		$campo_cpf = campo('CPF', 'cpf', $a_mod['user_tx_cpf'], 2, 'MASCARA_CPF');
+		$campo_rg = campo('RG', 'rg', $a_mod['user_tx_rg'], 2);
+		$campo_cidade = combo_net('Cidade/UF', 'cidade', $a_mod['user_nb_cidade'], 3, 'cidade', '', '', 'cida_tx_uf');
+		$campo_email = campo('E-mail*', 'email', $a_mod['user_tx_email'], 3);
+		$campo_empresa = combo_bd('!Empresa*', 'empresa', $a_mod['user_nb_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)"', $extraEmpresa);
+		$campo_expiracao = campo_data('Dt. Expiraçao', 'expiracao', $a_mod['user_tx_expiracao'], 2);
 	}
 
-	$c[] = campo('Nome*', 'nome', $a_mod['user_tx_nome'], 4, '');
+	$c[] = $campo_nome;
 	$c[] = $campo_nivel;
-	$c[] = campo('Login*', 'login', $a_mod['user_tx_login'], 2);
+	$c[] = $campo_login;
 	$c[] = campo_senha('Senha*', 'senha', "", 2);
 	$c[] = campo_senha('Confirmar Senha*', 'senha2', "", 2);
 
-	$c[] = campo_data('Dt. Nascimento*', 'nascimento', $a_mod['user_tx_nascimento'], 2);
-	$c[] = campo('CPF', 'cpf', $a_mod['user_tx_cpf'], 2, 'MASCARA_CPF');
-	$c[] = campo('RG', 'rg', $a_mod['user_tx_rg'], 2);
-	$c[] = combo_net('Cidade/UF', 'cidade', $a_mod['user_nb_cidade'], 3, 'cidade', '', '', 'cida_tx_uf');
-	$c[] = campo('E-mail*', 'email', $a_mod['user_tx_email'], 3);
-	$c[] = combo_bd('!Empresa*', 'empresa', $a_mod['user_nb_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)"', $extraEmpresa);
-	$c[] = campo_data('Dt. Expiracao', 'expiracao', $a_mod['user_tx_expiracao'], 2);
+	$c[] = $campo_nascimento;
+	$c[] = $campo_cpf;
+	$c[] = $campo_rg;
+	$c[] = $campo_cidade;
+	$c[] = $campo_email;
+	$c[] = $campo_empresa;
+	$c[] = $campo_expiracao;
 
 	$b[] = botao('Gravar', 'cadastra_usuario', 'id', $_POST['id']);
 	$b[] = botao('Voltar', 'index');

@@ -272,19 +272,21 @@
 		}
 
 		if ($_POST['busca_endossado'] && $_POST['busca_empresa']) {
-			if ($_POST['busca_endossado'] == 'Endossado') {
-				$extra .= " AND enti_nb_id IN (
-					SELECT endo_nb_entidade FROM endosso, entidade WHERE endo_tx_mes = '" . substr($_POST['busca_data'], 0, 7) . '-01'.
-					"' AND enti_nb_empresa = '".$_POST['busca_empresa'].
-					"' AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
-				)";
-			}
-
-			if ($_POST['busca_endossado'] == 'Não endossado') {
-				$extra .= " AND enti_nb_id NOT IN (
-					SELECT endo_nb_entidade FROM endosso, entidade WHERE endo_tx_mes = '" . substr($_POST['busca_data'], 0, 7) . '-01' . "' AND enti_nb_empresa = '".$_POST['busca_empresa']."' 
-					AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
+			if ($_POST['busca_endossado'] != 'Todos') {
+				if ($_POST['busca_endossado'] == 'Endossado') {
+					$extra .= " AND enti_nb_id IN (
+						SELECT endo_nb_entidade FROM endosso, entidade WHERE endo_tx_mes = '" . substr($_POST['busca_data'], 0, 7) . '-01'.
+						"' AND enti_nb_empresa = '".$_POST['busca_empresa'].
+						"' AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
 					)";
+				}
+	
+				if ($_POST['busca_endossado'] == 'Não endossado') {
+					$extra .= " AND enti_nb_id NOT IN (
+						SELECT endo_nb_entidade FROM endosso, entidade WHERE endo_tx_mes = '" . substr($_POST['busca_data'], 0, 7) . '-01' . "' AND enti_nb_empresa = '".$_POST['busca_empresa']."' 
+						AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
+						)";
+				}
 			}
 		}
 
@@ -296,7 +298,7 @@
 		$c[] = campo_mes('* Data:', 'busca_data', $_POST['busca_data'], 2);
 		$c[] = combo_net('Motorista:', 'busca_motorista', $_POST['busca_motorista'], 3, 'entidade', '', ' AND enti_tx_tipo = "Motorista"' . $extraMotorista . $extraEmpresaMotorista, 'enti_tx_matricula');
 		$c[] = combo('Situação:', 'busca_situacao', $_POST['busca_situacao'], 2, ['Todos', 'Verificado', 'Não conformidade']);
-		$c[] = combo('Endosso:', 'busca_endossado', $_POST['busca_endossado'], 2, ['', 'Endossado', 'Endossado parcialmente', 'Não endossado']);
+		$c[] = combo('Endosso:', 'busca_endossado', $_POST['busca_endossado'], 2, ['Todos', 'Endossado', 'Endossado parcialmente', 'Não endossado']);
 
 		//BOTOES
 		$b[] = botao("Buscar", 'index', '', '', '', 1);

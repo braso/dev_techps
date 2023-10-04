@@ -237,7 +237,6 @@ function modal_alert(){
 }
 
 function inserir($tabela,$campos,$valores){
-
 	if(count($campos) != count($valores)){
 		echo"ERRO Número de campos não confere com número de linhas na função de inserir!";
 		exit;
@@ -248,17 +247,12 @@ function inserir($tabela,$campos,$valores){
 
 	$campos=implode(',',$campos);
 
-	//print_r("INSERT INTO $tabela ($campos) VALUES($valores);");
-	//echo "<script>alert('')</script>";
 	try{
 		query("INSERT INTO $tabela ($campos) VALUES($valores);") or die(mysql_error());
 		$sql = query("SELECT LAST_INSERT_ID();") or die(mysql_error());
 	}catch (Exception $e){
 		return;
 	}
-	
-	
-
 
 	set_status("Registro inserido com sucesso!");
 
@@ -325,12 +319,13 @@ function ultimo_reg($tabela){
 }
 
 
+
 function carregar($tabela,$id='',$campo='',$valor='',$extra='',$exibe=0){
 
-	$tab=substr($tabela,0,4);
+	$tab = substr($tabela,0,4);
+	$ext = '';
 
-	if($id!='')
-		 $extra_id = " AND ".$tab."_nb_id='$id'";
+	$extra_id = ($id!='')? " AND ".$tab."_nb_id= $id": '';
 
 	if($campo[0]!='') {
 		$a_campo = explode(',', $campo);
@@ -343,10 +338,18 @@ function carregar($tabela,$id='',$campo='',$valor='',$extra='',$exibe=0){
 		}
 	}
 
-	if($exibe == 1)
-		echo "SELECT * FROM $tabela WHERE 1 $extra_id $ext $extra LIMIT 1<br>";
+	$query = "SELECT * FROM $tabela WHERE 1 $extra_id $ext $extra LIMIT 1";
 
-	return mysqli_fetch_array(query("SELECT * FROM $tabela WHERE 1  $extra_id $ext $extra LIMIT 1"));
+	if($exibe == 1){
+		echo $query;
+	}
+	
+	if($extra_id == '' && $ext == '' && $extra == ''){
+		return [];
+	}else{
+		return mysqli_fetch_array(query($query));
+	}
+
 
 }
 
