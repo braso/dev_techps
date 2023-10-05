@@ -768,13 +768,13 @@ function combo_bd($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra
 
 function arquivo($nome,$variavel,$modificador,$tamanho,$extra=''){
 	global $CONTEX;
-	if($modificador){
+	if(file_exists($modificador)){
 		$ver = "<a href=$CONTEX[path]/$modificador target=_blank>(Ver)</a>";
 	}
 
 	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 				<label><b>'.$nome.$ver.'</b></label>
-				<input name="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
+				<input name="'.$variavel.'"id = "'.$variavel.'" value="'.$CONTEX[path]."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
 			</div>';
 
 		return $campo;

@@ -52,7 +52,7 @@ function cadastra_usuario() {
 		if(!isset($_POST[$field[0]]) || $_POST[$field[0]] == ''){
 			$error_msg .= $field[1];
 		}
-	}
+	// }
 	// }
 	
 
@@ -131,7 +131,7 @@ function cadastra_usuario() {
 		// 		atualizar('user', ['user_tx_senha'], [md5($_POST['senha'])], $_POST['id']);
 		// 	}
 		// }
-		// else
+		// else {
 			$bd_campos = array_merge($bd_campos, ['user_nb_userAtualiza', 'user_tx_dataAtualiza']);
 			$valores = array_merge($valores, [$_SESSION['user_nb_id'], date("Y-m-d H:i:s")]);
 
@@ -140,6 +140,7 @@ function cadastra_usuario() {
 			if ($_POST['senha'] != '' && $_POST['senha2'] != '') {
 				atualizar('user', ['user_tx_senha'], [md5($_POST['senha'])], $_POST['id']);
 			}
+		// }
 	}
 
 	index();
