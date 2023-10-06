@@ -105,7 +105,7 @@ function cadastra_usuario() {
 			set_status("ERRO: Login já cadastrado.");
 			modifica_usuario();
 			exit;
-		}	
+		}
 
 		$bd_campos[] = 'user_tx_status';
 		$valores[] = 'ativo';
