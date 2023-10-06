@@ -63,7 +63,7 @@ function cadastra_motorista() {
 	if(empty($_POST['nascimento']) || empty($_POST['parametro']) || empty($_POST['rgDataEmissao']) || empty($_POST['admissao']) 
 	|| empty($_POST['desligamento']) || empty($_POST['cnhValidade']) || empty($_POST['cnhPrimeiraHabilitacao']) || empty($_POST['cnhCidade']) || empty($_POST['cnhEmissao'])
 	|| empty($_POST['jornadaSemanal']) || empty($_POST['jornadaSabado']) || empty($_POST['percentualHE']) || empty($_POST['percentualSabadoHE']) || empty($_POST['parametro']) 
-	|| empty($_POST['salario']) || empty($_POST['cidade'])){
+	|| empty($_POST['empresa']) || empty($_POST['ocupacao']) || empty($_POST['salario']) || empty($_POST['cidade'])){
 		echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
 		layout_motorista();
 		exit;
@@ -275,7 +275,7 @@ function layout_motorista() {
 	$c[] = campo('Matrícula', 'matricula', $a_mod['enti_tx_matricula'], 1, '');
 	$c[] = campo('Nome', 'nome', $a_mod['enti_tx_nome'], 3);
 	$c[] = campo_data('Dt. Nascimento *', 'nascimento', $a_mod['enti_tx_nascimento'], 2);
-	$c[] = combo('Situação', 'situacao', $a_mod['enti_tx_situacao'], 2, array('Ativo', 'Inativo'));
+	$c[] = combo('status', 'status', $a_mod['enti_tx_status'], 2, array('Ativo', 'Inativo'));
 	// $c[]=texto('Idade',$idade,4);
 
 
@@ -313,8 +313,8 @@ function layout_motorista() {
 		$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
 	}
 
-	$cContratual[] = combo_bd('Empresa', 'empresa', $a_mod['enti_nb_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)"', $extraEmpresa);
-	$cContratual[] = combo('Ocupação', 'ocupacao', $a_mod['enti_tx_ocupacao'], 2, array("Motorista")); //TODO PRECISO SABER OS TIPOS DE MOTORISTA
+	$cContratual[] = combo_bd('Empresa*', 'empresa', $a_mod['enti_nb_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)"', $extraEmpresa);
+	$cContratual[] = combo('Ocupação*', 'ocupacao', $a_mod['enti_tx_ocupacao'], 2, array("Motorista")); //TODO PRECISO SABER OS TIPOS DE MOTORISTA
 	$cContratual[] = campo('Salário *', 'salario', valor($a_mod['enti_tx_salario']), 1, 'MASCARA_VALOR');
 	$cContratual[] = combo('Subcontratado', 'subcontratado', $a_mod['enti_tx_subcontratado'], 2, array('', 'Sim', 'Não'));
 	$cContratual[] = campo_data('Dt Admissão *', 'admissao', $a_mod['enti_tx_admissao'], 2);
@@ -536,18 +536,18 @@ function index() {
 	$having = '';
 
 	$extra .=
-		(($_POST['busca_codigo'])? 		" AND enti_nb_id = '".$_POST['busca_codigo']."'": '').
-		(($_POST['busca_matricula'])? 	" AND enti_tx_matricula = '".$_POST['busca_matricula']."'": '').
-		(($_POST['busca_empresa'])? 	" AND enti_nb_empresa = '".$_POST['busca_empresa']."'": '').
-		(($_POST['busca_nome'])? 		" AND enti_tx_nome = '".$_POST['busca_nome']."'": '').
-		(($_POST['busca_cpf'])? 		" AND enti_tx_cpf = '".$_POST['busca_cpf']."'": '').
-		(($_POST['busca_ocupacao'])? 	" AND enti_tx_ocupacao = '".$_POST['busca_ocupacao']."'": '').
-		(($_POST['busca_parametro'])? 	" AND enti_nb_parametro = '".$_POST['busca_parametro']."'": '').
-		(($_POST['busca_padrao'])? 		" HAVING enti_tx_ehPadrao = '".$_POST['busca_padrao']."'": '').
-		(($_POST['busca_situacao'])? 	"Ativo": '');
+		((!empty($_POST['busca_codigo']))? 		" AND enti_nb_id = '".$_POST['busca_codigo']."'": '').
+		((!empty($_POST['busca_matricula']))? 	" AND enti_tx_matricula = '".$_POST['busca_matricula']."'": '').
+		((!empty($_POST['busca_empresa']))? 	" AND enti_nb_empresa = '".$_POST['busca_empresa']."'": '').
+		((!empty($_POST['busca_nome']))? 		" AND enti_tx_nome = '".$_POST['busca_nome']."'": '').
+		((!empty($_POST['busca_cpf']))? 		" AND enti_tx_cpf = '".$_POST['busca_cpf']."'": '').
+		((!empty($_POST['busca_ocupacao']))? 	" AND enti_tx_ocupacao = '".$_POST['busca_ocupacao']."'": '').
+		((!empty($_POST['busca_parametro']))? 	" AND enti_nb_parametro = '".$_POST['busca_parametro']."'": '').
+		((!empty($_POST['busca_status']))? 		" AND enti_tx_status = 'Ativo'": '').
+		((!empty($_POST['busca_padrao']))? 		" HAVING enti_tx_ehPadrao = '".$_POST['busca_padrao']."'": '');
 
-	if ($_POST['busca_situacao'] && $_POST['busca_situacao'] != 'Todos'){
-		$extra .= " AND empr_tx_situacao = '".$_POST['busca_situacao']."'";
+	if ($_POST['busca_status'] && $_POST['busca_status'] != 'Todos'){
+		$extra .= " AND empr_tx_status = '".$_POST['busca_status']."'";
 	}
 
 	$c[] = campo('Código', 'busca_codigo', $_POST['busca_codigo'], 1);
@@ -558,7 +558,7 @@ function index() {
 	$c[] = combo('Ocupação', 'busca_ocupacao', $_POST['busca_ocupacao'], 2, array("", "Motorista")); //TODO PRECISO SABER QUAIS AS OCUPACOES
 	$c[] = combo('Padrão', 'busca_padrao', $_POST['busca_padrao'], 2, array('', 'Sim', 'Não'));
 	$c[] = combo_bd('!Parâmetros da Jornada', 'busca_parametro', $_POST['busca_parametro'], 6, 'parametro');
-	$c[] = combo('Situação', 'busca_situacao', $_POST['busca_situacao'], 2, array('Todos', 'Ativo', 'Inativo'));
+	$c[] = combo('Status', 'busca_status', $_POST['busca_status'], 2, array('Todos', 'Ativo', 'Inativo'));
 
 	$b[] = botao('Buscar', 'index');
 	$b[] = botao('Inserir', 'layout_motorista');
@@ -567,21 +567,35 @@ function index() {
 	linha_form($c);
 	fecha_form($b);
 
-	$sql = "SELECT *, 
-			CASE
-				WHEN (para_tx_jornadaSemanal != enti_tx_jornadaSemanal OR
-					para_tx_jornadaSabado != enti_tx_jornadaSabado OR
-					para_tx_percentualHE != enti_tx_percentualHE OR
-					para_tx_percentualSabadoHE != enti_tx_percentualSabadoHE OR
-					empr_nb_parametro != enti_nb_parametro)
+	
+	$temp_sql = '';
+	/*
+	if(	(isset($_POST('enti_tx_jornadaSemanal')) 		&& !empty($_POST('enti_tx_jornadaSemanal')))
+	 || (isset($_POST('enti_tx_jornadaSabado')) 		&& !empty($_POST('enti_tx_jornadaSabado')))
+	 || (isset($_POST('enti_tx_percentualHE')) 			&& !empty($_POST('enti_tx_percentualHE')))
+	 || (isset($_POST('enti_tx_percentualSabadoHE')) 	&& !empty($_POST('enti_tx_percentualSabadoHE')))
+	 || (isset($_POST('enti_nb_parametro')) 			&& !empty($_POST('enti_nb_parametro')))){
+		$temp_sql = 
+			", CASE
+				WHEN (".(!empty($_POST('enti_tx_jornadaSemanal'))? "para_tx_jornadaSemanal != '".$_POST('enti_tx_jornadaSemanal')."' OR": '')."
+					".(!empty($_POST('enti_tx_jornadaSabado'))? "para_tx_jornadaSabado != '".$_POST('enti_tx_jornadaSabado')."' OR": '')."
+					".(!empty($_POST('enti_tx_percentualHE'))? "para_tx_percentualHE != '".$_POST('enti_tx_percentualHE')."' OR": '')."
+					".(!empty($_POST('enti_tx_percentualSabadoHE'))? "para_tx_percentualSabadoHE != '".$_POST('enti_tx_percentualSabadoHE')."' OR": '')."
+					".(!empty($_POST('enti_nb_parametro'))? "empr_nb_parametro != '".$_POST('enti_nb_parametro')."'": '').")
 				THEN 'Não'
 				ELSE 'Sim'
-			END AS enti_tx_ehPadrao
- 			FROM entidade, empresa, parametro WHERE enti_tx_status != 'inativo' AND enti_nb_parametro = para_nb_id AND enti_nb_empresa = empr_nb_id AND enti_tx_tipo = 'Motorista' $extraEmpresa $extra $having";
+			END AS enti_tx_ehPadrao"
+		;
+	}
+	*/
 
-	$cab = array('CÓDIGO', 'NOME', 'MATRÍCULA', 'CPF', 'EMPRESA', 'FONE 1', 'FONE 2', 'OCUPAÇÃO', 'PARÂMETRO DA JORNADA', 'PADRÃO', 'SITUAÇÃO', '', '');
+	$sql = "SELECT * $temp_sql FROM entidade, empresa, parametro 
+			WHERE enti_tx_status != 'inativo' AND enti_nb_parametro = para_nb_id AND enti_nb_empresa = empr_nb_id AND enti_tx_tipo = 'Motorista' 
+			$extraEmpresa $extra $having";
+
+	$cab = array('CÓDIGO', 'NOME', 'MATRÍCULA', 'CPF', 'EMPRESA', 'FONE 1', 'FONE 2', 'OCUPAÇÃO', 'PARÂMETRO DA JORNADA', 'PADRÃO', 'STATUS', '', '');
 	$val = array(
-		'enti_nb_id', 'enti_tx_nome', 'enti_tx_matricula', 'enti_tx_cpf', 'empr_tx_nome', 'enti_tx_fone1', 'enti_tx_fone2', 'enti_tx_ocupacao', 'para_tx_nome', 'enti_tx_ehPadrao', 'enti_tx_situacao', 'icone_modificar(enti_nb_id,modifica_motorista)',
+		'enti_nb_id', 'enti_tx_nome', 'enti_tx_matricula', 'enti_tx_cpf', 'empr_tx_nome', 'enti_tx_fone1', 'enti_tx_fone2', 'enti_tx_ocupacao', 'para_tx_nome', 'enti_tx_ehPadrao', 'enti_tx_status', 'icone_modificar(enti_nb_id,modifica_motorista)',
 		'icone_excluir(enti_nb_id,exclui_motorista)'
 	);
 

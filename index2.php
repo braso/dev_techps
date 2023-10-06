@@ -1,19 +1,11 @@
 <?php
 include_once("version.php");
-
-if(isset($_SERVER['SCRIPT_URI'])){
-	$server_base_link = substr($_SERVER['SCRIPT_URI'], 0, strrpos($_SERVER['SCRIPT_URI'], '/'));
-}else{
-	$server_base_link = substr($_SERVER['SCRIPT_FILENAME'], 0, strrpos($_SERVER['SCRIPT_FILENAME'], '/'));
-}
-include $server_base_link."/armazem_paraiba/conecta.php";
+include $_SERVER['DOCUMENT_ROOT'] . "/sistema/conecta.php";
 
 // $sql = query('SELECT * FROM domain');
 // $result = mysqli_fetch_all($sql, MYSQLI_ASSOC);
 
-$msg = '';
-
-if (isset($_GET['erro']) && $_GET['erro'] != '') {
+if ($_GET['erro'] != '') {
 	$msg = "<div class='alert alert-danger display-block'>
 
 					<span> Login e/ou senha incorreto. </span>
@@ -21,7 +13,7 @@ if (isset($_GET['erro']) && $_GET['erro'] != '') {
 				</div>";
 }
 
-if (isset($_POST['botao']) && $_POST['botao'] == 'Entrar') {
+if ($_POST['botao'] == 'Entrar') {
 	if ($_POST['domain'] != '' && $_POST['login'] != '' && $_POST['senha'] != '') {
 		$domain = $_POST['domain'];
 		header("Location: " . $domain . '?user=' . $_POST['login'] . '&password=' . md5($_POST['senha']));
@@ -33,7 +25,7 @@ if (isset($_POST['botao']) && $_POST['botao'] == 'Entrar') {
 
 				</div>";
 	}
-}elseif(isset($_GET['erro']) && $_GET['erro'] != '') {
+} else if ($_GET['erro'] != '') {
 	$msg = "<div class='alert alert-danger display-block'>
 
 					<span> Login e/ou senha incorreto. </span>
@@ -111,7 +103,7 @@ License: You must have a valid license purchased only from themeforest(the above
 
 	<!-- COMECO GLOBAL MANDATORY STYLES -->
 
-	<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet"
+	<link href="http://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet"
 		type="text/css" />
 
 	<link href="/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet"
@@ -191,9 +183,8 @@ License: You must have a valid license purchased only from themeforest(the above
 			<div class="form-group">
 				<select class="form-control" name="domain">
 					<option value="" selected>Domínio</option>
-					<option value=<?=$server_base_link."/index.php"?>>techps</option>
-					<option value=<?=$server_base_link."/feijao_turqueza/index.php"?>>Feijão turqueza</option>
-					<option value=<?=$server_base_link."/armazem_paraiba/index.php"?>>Armazem Paraiba</option>
+					<!--<option value="https://braso.mobi/techps/techps/index.php">techps</option>-->
+					<option value="https://braso.mobi/techps/sistema/index.php">Armazem Paraiba</option>
 					<option value="">Leroy Merlin</option>
 				</select>
 			</div>
@@ -226,9 +217,10 @@ License: You must have a valid license purchased only from themeforest(the above
 
 			</div>
 
-			<p style="font-size: small;">Versão:
+			<p>Versão:
 				<?php echo $version; ?>
-				Data de lançamento:
+			</p>
+			<p>Data de lançamento:
 				<?php echo $release_date; ?>
 			</p>
 
