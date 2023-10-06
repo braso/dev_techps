@@ -1,13 +1,19 @@
 <?php
 include_once("version.php");
 
-$server_base_link = substr($_SERVER['SCRIPT_URI'], 0, strrpos($_SERVER['SCRIPT_URI'], '/'));
+if(isset($_SERVER['SCRIPT_URI'])){
+	$server_base_link = substr($_SERVER['SCRIPT_URI'], 0, strrpos($_SERVER['SCRIPT_URI'], '/'));
+}else{
+	$server_base_link = substr($_SERVER['SCRIPT_FILENAME'], 0, strrpos($_SERVER['SCRIPT_FILENAME'], '/'));
+}
 include $server_base_link."/armazem_paraiba/conecta.php";
 
 // $sql = query('SELECT * FROM domain');
 // $result = mysqli_fetch_all($sql, MYSQLI_ASSOC);
 
-if ($_GET['erro'] != '') {
+$msg = '';
+
+if (isset($_GET['erro']) && $_GET['erro'] != '') {
 	$msg = "<div class='alert alert-danger display-block'>
 
 					<span> Login e/ou senha incorreto. </span>
@@ -15,7 +21,7 @@ if ($_GET['erro'] != '') {
 				</div>";
 }
 
-if ($_POST['botao'] == 'Entrar') {
+if (isset($_POST['botao']) && $_POST['botao'] == 'Entrar') {
 	if ($_POST['domain'] != '' && $_POST['login'] != '' && $_POST['senha'] != '') {
 		$domain = $_POST['domain'];
 		header("Location: " . $domain . '?user=' . $_POST['login'] . '&password=' . md5($_POST['senha']));
@@ -27,7 +33,7 @@ if ($_POST['botao'] == 'Entrar') {
 
 				</div>";
 	}
-} else if ($_GET['erro'] != '') {
+}elseif(isset($_GET['erro']) && $_GET['erro'] != '') {
 	$msg = "<div class='alert alert-danger display-block'>
 
 					<span> Login e/ou senha incorreto. </span>
