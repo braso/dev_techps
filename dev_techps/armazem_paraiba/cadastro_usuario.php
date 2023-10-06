@@ -47,8 +47,10 @@ function cadastra_usuario() {
 		['email', 'Email, '],
 		['empresa', 'Empresa, ']
 	];
+
 	// if (is_bool(strpos($_SESSION['user_tx_nivel'], "Administrador"))) {
 		foreach($check_fields as $field){
+
 		if(!isset($_POST[$field[0]]) || $_POST[$field[0]] == ''){
 			$error_msg .= $field[1];
 		}
@@ -108,7 +110,7 @@ function cadastra_usuario() {
 			set_status("ERRO: Login já cadastrado.");
 			modifica_usuario();
 			exit;
-		}	
+		}
 
 		$bd_campos[] = 'user_tx_status';
 		$valores[] = 'ativo';
@@ -119,6 +121,7 @@ function cadastra_usuario() {
 		$_POST['id'] = ultimo_reg('user');
 
 	}else{//Atualizando usuário existente
+
 		// if (is_bool(strpos($_SESSION['user_tx_nivel'], "Administrador"))){
 		// 	$bd_campos = ['user_tx_senha'];
 		// 	$bd_campos = array_merge($bd_campos, ['user_nb_userAtualiza', 'user_tx_dataAtualiza']);
@@ -141,6 +144,7 @@ function cadastra_usuario() {
 				atualizar('user', ['user_tx_senha'], [md5($_POST['senha'])], $_POST['id']);
 			}
 		// }
+
 	}
 
 	index();
@@ -154,7 +158,6 @@ function layout_usuario() {
 	cabecalho("Cadastro de Usuário");
 
 	if (is_bool(strpos($_SESSION['user_tx_nivel'], "Administrador"))){
-		$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
 		$campo_nivel = texto('Nível*', $_SESSION['user_tx_nivel'], 2, "style='margin-bottom:-10px;'");
 		
 		
@@ -166,12 +169,15 @@ function layout_usuario() {
 		$campo_rg = texto('RG', $a_mod['user_tx_rg'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
 		
 		$cidade_query = query("SELECT * FROM `cidade` WHERE cida_tx_status != 'inativo' AND cida_nb_id = $a_mod[user_nb_cidade]");
+
 		$cidade = mysqli_fetch_array($cidade_query);
 	
 		$campo_cidade = texto('Cidade/UF', $cidade['cida_tx_nome'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
 		$campo_email = texto('E-mail*', $a_mod['user_tx_email'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
 		
+
 		$empresa_query = query("SELECT * FROM `empresa` WHERE empr_tx_status != 'inativo' AND empr_nb_id = $a_mod[user_nb_empresa]");
+
 		$empresa = mysqli_fetch_array($empresa_query);
 		
 		$campo_empresa = texto('Empresa*', $empresa['empr_tx_nome'], 3, "style='margin-bottom:-10px; margin-top: 10px;'");
@@ -190,6 +196,7 @@ function layout_usuario() {
 			break;
 		}
 		$campo_nivel = combo('Nível*', 'nivel', $a_mod['user_tx_nivel'], 2, $niveis, '');
+
 		$campo_nome = campo('Nome*', 'nome', $a_mod['user_tx_nome'], 4, '');
 		$campo_login = campo('Login*', 'login', $a_mod['user_tx_login'], 2);
 		$campo_nascimento = campo_data('Dt. Nascimento*', 'nascimento', $a_mod['user_tx_nascimento'], 2);
@@ -197,6 +204,7 @@ function layout_usuario() {
 		$campo_rg = campo('RG', 'rg', $a_mod['user_tx_rg'], 2);
 		$campo_cidade = combo_net('Cidade/UF', 'cidade', $a_mod['user_nb_cidade'], 3, 'cidade', '', '', 'cida_tx_uf');
 		$campo_email = campo('E-mail*', 'email', $a_mod['user_tx_email'], 3);
+
 		$campo_empresa = combo_bd('!Empresa*', 'empresa', $a_mod['user_nb_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)"', $extraEmpresa);
 		$campo_expiracao = campo_data('Dt. Expiraçao', 'expiracao', $a_mod['user_tx_expiracao'], 2);
 	}
@@ -273,7 +281,7 @@ function index() {
 	if ($_POST['busca_login']){
 		$extra .= " AND user_tx_login LIKE '%".$_POST['busca_login']."%'";
 	}
-	if ($_POST['busca_nivel']){
+	if (!isset($_POST['busca_nivel']) || strtolower($_POST['busca_nivel']) != "todos"){
 		$extra .= " AND user_tx_nivel = '".$_POST['busca_nivel']."'";
 	}
 	if ($_POST['busca_cpf']){
@@ -282,22 +290,35 @@ function index() {
 	if ($_POST['busca_empresa']){
 		$extra .= " AND user_nb_empresa = '".$_POST['busca_empresa']."'";
 	}
-	if ($_POST['busca_situacao'] == ''){
-		$_POST['busca_situacao'] = 'Ativo';
+	if (!isset($_POST['busca_status']) || strtolower($_POST['busca_status']) == 'todos'){
+		$_POST['busca_status'] = 'ativo';
+	}else{
+		$_POST['busca_status'] = strtolower($_POST['busca_status']);
 	}
-	if ($_POST['busca_situacao'] && $_POST['busca_situacao'] != 'Todos'){
-		$extra .= " AND user_tx_status = '".$_POST['busca_situacao']."'";
+	if ($_POST['busca_status'] && $_POST['busca_status'] != 'todos'){
+		$extra .= " AND user_tx_status = '".$_POST['busca_status']."'";
 	}
 
 
+	$niveis = ["Todos", "Motorista"];
+	switch($_SESSION['user_tx_nivel']){
+		case "Funcionário":
+			$niveis[] = "Funcionário";
+		break;
+		case "Administrador":
+		case "Super Administrador":
+			$niveis[] = "Funcionário";
+			$niveis[] = "Administrador";
+		break;
+	}
 
 	$c = [
 		campo('Código', 'busca_codigo', $_POST['busca_codigo'], 1),
 		campo('Nome', 'busca_nome', $_POST['busca_nome'], 3),
 		campo('CPF', 'busca_cpf', $_POST['busca_cpf'], 2, 'MASCARA_CPF'),
 		campo('Login', 'busca_login', $_POST['busca_login'], 3),
-		combo('Nível', 'busca_nivel', $_POST['busca_nivel'], 2, ["", "Administrador", "Funcionário", "Motorista"]),
-		combo('Situação', 'busca_situacao', $_POST['busca_situacao'], 2, ['Todos', 'Ativo', 'Inativo']),
+		combo('Nível', 'busca_nivel', $_POST['busca_nivel'], 2, $niveis),
+		combo('Status', 'busca_status', $_POST['busca_status'], 2, ['Todos', 'Ativo', 'Inativo']),
 		combo_bd('!Empresa', 'busca_empresa', $_POST['busca_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)"', $extraEmpresa)
 	];
 

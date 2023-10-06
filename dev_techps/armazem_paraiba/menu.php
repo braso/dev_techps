@@ -1,4 +1,4 @@
-			<? if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) { ?>
+			<? if ($_SESSION["user_tx_nivel"] == 'Administrador') { ?>
 
 				<!-- INICIO HEADER MENU -->
 				<div class="page-header-menu">
@@ -50,7 +50,6 @@
 										<li class=" "><a href="<?= $CONTEX["path"] ?>/carregar_ponto" class="nav-link ">Carregar Ponto</a></li>
 										<li class=" "><a href="<?= $CONTEX["path"] ?>/espelho_ponto" class="nav-link ">Espelho de Ponto</a></li>
 										<li class=" "><a href="<?= $CONTEX["path"] ?>/nao_conformidade" class="nav-link ">Não Conformidade</a></li>
-										<li class=" "><a href="<?=$CONTEX["path"]?>/nao_cadastrados" class="nav-link ">Matriculas Não Cadastradas</a></li>
 										<li class=" "><a href="<?= $CONTEX["path"] ?>/endosso" class="nav-link ">Endosso</a></li>
 									</ul>
 								</li>
