@@ -1,6 +1,6 @@
 <?
 
-include"conecta.php";
+include "conecta.php";
 
 if($_GET['user'] != '' && $_GET['password'] != '' ){
     
