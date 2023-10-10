@@ -319,12 +319,13 @@ function ultimo_reg($tabela){
 }
 
 
+
 function carregar($tabela,$id='',$campo='',$valor='',$extra='',$exibe=0){
 
-	$tab=substr($tabela,0,4);
+	$tab = substr($tabela,0,4);
+	$ext = '';
 
-	if($id!='')
-		 $extra_id = " AND ".$tab."_nb_id='$id'";
+	$extra_id = ($id!='')? " AND ".$tab."_nb_id= $id": '';
 
 	if($campo[0]!='') {
 		$a_campo = explode(',', $campo);
@@ -337,10 +338,18 @@ function carregar($tabela,$id='',$campo='',$valor='',$extra='',$exibe=0){
 		}
 	}
 
-	if($exibe == 1)
-		echo "SELECT * FROM $tabela WHERE 1 $extra_id $ext $extra LIMIT 1<br>";
+	$query = "SELECT * FROM $tabela WHERE 1 $extra_id $ext $extra LIMIT 1";
 
-	return mysqli_fetch_array(query("SELECT * FROM $tabela WHERE 1  $extra_id $ext $extra LIMIT 1"));
+	if($exibe == 1){
+		echo $query;
+	}
+	
+	if($extra_id == '' && $ext == '' && $extra == ''){
+		return [];
+	}else{
+		return mysqli_fetch_array(query($query));
+	}
+
 
 }
 
@@ -765,7 +774,7 @@ function arquivo($nome,$variavel,$modificador,$tamanho,$extra=''){
 
 	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 				<label><b>'.$nome.$ver.'</b></label>
-				<input name="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
+				<input name="'.$variavel.'" value="'.$CONTEX[path]."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
 			</div>';
 
 		return $campo;
@@ -780,10 +789,9 @@ function enviar($arquivo,$diretorio,$nome='') {
 	// if('.php', '.php3', '.php4', '.phtml', '.pl', '.py', '.jsp', '.asp', '.htm', '.shtml', '.sh', '.cgi')
 
 	if($nome!='') {
-		$target_path = $target_path . "$nome.$extensao[extension]";
-
+		$target_path .= "$nome.$extensao[extension]";
 	}else {
-		$target_path = $target_path . basename($_FILES[$arquivo]['name']);
+		$target_path .= basename($_FILES[$arquivo]['name']);
 	}
 
 
