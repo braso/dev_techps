@@ -19,6 +19,14 @@ function modifica_empresa(){
 }
 
 function cadastra_empresa(){
+	$campos = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade'];
+	foreach($campos as $campo){
+		if(!isset($_POST[$campo]) || empty($_POST[$campo])){
+			echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
+			layout_empresa();
+			exit;
+		}
+	}
 
 	$campos=[
 		'empr_tx_nome', 'empr_tx_fantasia', 'empr_tx_cnpj', 'empr_tx_cep', 'empr_nb_cidade', 'empr_tx_endereco', 'empr_tx_bairro', 'empr_tx_numero', 'empr_tx_complemento', 'empr_tx_referencia',
@@ -26,35 +34,46 @@ function cadastra_empresa(){
 		'empr_tx_dataRegistroCNPJ', 'empr_tx_domain', 'empr_tx_ftpServer', 'empr_tx_ftpUsername', 'empr_tx_ftpUserpass'
 	];
 	
-	$valores=[
+	$valores = [
 		$_POST['nome'], $_POST['fantasia'], $_POST['cnpj'], $_POST['cep'], $_POST['cidade'], $_POST['endereco'], $_POST['bairro'], $_POST['numero'], $_POST['complemento'], $_POST['referencia'],
 		$_POST['fone1'], $_POST['fone2'], $_POST['email'], $_POST['inscricaoEstadual'], $_POST['inscricaoMunicipal'], $_POST['regimeTributario'], 'ativo', $_POST['situacao'], $_POST['parametro'], $_POST['contato'],
 		$_POST['dataRegistroCNPJ'], "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio'], $_POST['ftpServer'], $_POST['ftpUsername'], $_POST['ftpUserpass']
 	];
+
 	
-	if(empty($_POST['cnpj']) || empty($_POST['nome']) || empty($_POST['cep']) || empty($_POST['numero']) || empty($_POST['email']) || empty($_POST['parametro']) || empty($_POST['cidade'])){
-		echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
-		layout_empresa();
-		exit;
-	}
+	$empty_ftp_inputs = empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) + 0;
 
-	$ftpInputs = empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) + 0;
-
-	if($ftpInputs == 3){
+	if($empty_ftp_inputs == 3){
 		$_POST['ftpServer']   = 'ftp-jornadas.positronrt.com.br';
 		$_POST['ftpUsername'] = '08995631000108';
 		$_POST['ftpUserpass'] = '0899';
-	}elseif($ftpInputs > 0){
+	}elseif($empty_ftp_inputs > 0){
 		echo '<script>alert("Preencha os 3 campos de FTP.")</script>';
 		layout_empresa();
 		exit;
 	}
 
 	if(isset($_POST['id']) && $_POST['id'] != ''){
+
+		$file_type = $_FILES['logo']['type']; //returns the mimetype
+
+		$allowed = array("image/jpeg", "image/gif", "image/png", "image/jpg");
+		$id_empresa = $_POST['id'];
+
+		if(in_array($file_type, $allowed) && $_FILES['logo']['name']!='') {
+			if(!is_dir("arquivos/empresa/$id_empresa")){
+				mkdir("arquivos/empresa/$id_empresa");
+			}
+			$arq=enviar('logo',"arquivos/empresa/$id_empresa/",$id_empresa);
+			if($arq){
+				$campos[] = 'empr_tx_logo';
+				$valores[] = $arq;
+			}
+		}
+
 		$campos = array_merge($campos,array('empr_nb_userAtualiza','empr_tx_dataAtualiza'));
 		$valores = array_merge($valores,array($_SESSION['user_nb_id'], date("Y-m-d H:i:s")));
 		atualizar('empresa',$campos,$valores,$_POST['id']);
-		$id_empresa = $_POST['id'];
 	}else{
 		$campos = array_merge($campos,array('empr_nb_userCadastro','empr_tx_dataCadastro'));
 		$valores = array_merge($valores,array($_SESSION['user_nb_id'], date("Y-m-d H:i:s")));
@@ -64,26 +83,6 @@ function cadastra_empresa(){
 			print_r($e);
 		}
 	}
-
-
-	$file_type = $_FILES['logo']['type']; //returns the mimetype
-
-	$allowed = array("image/jpeg", "image/gif", "image/png");
-	if(in_array($file_type, $allowed) && $_FILES['logo']['name']!='') {
-
-		if(!is_dir("arquivos/empresa/$id_empresa")){
-			mkdir("arquivos/empresa/$id_empresa");
-		}
-
-		$arq=enviar('logo',"arquivos/empresa/$id_empresa/",$id_empresa);
-		if($arq){
-			atualizar('empresa',array('empr_tx_logo'),array($arq),$id_empresa);
-		}
-	
-	}
-	// else{
-	// 	set_status("Logo não atualizada. Formato incorreto!");
-	// }
 
 	
 
@@ -216,6 +215,7 @@ function layout_empresa(){
         	'ftpUsername' => $_POST['ftpUsername'],
         	'ftpUserpass' => $_POST['ftpUserpass']
         ];
+		$btn_txt = 'Cadastrar';
     }else{ //Tem os dados de atualização, então apenas mantém os valores.
         $input_values = [
         	'situacao' => $a_mod['empr_tx_situacao'],
@@ -243,6 +243,7 @@ function layout_empresa(){
         	'ftpUsername' => $a_mod['empr_tx_ftpUsername'] == '08995631000108'? '': $a_mod['empr_tx_ftpUsername'],
         	'ftpUserpass' => $a_mod['empr_tx_ftpUserpass'] == '0899'? '': $a_mod['empr_tx_ftpUserpass']
         ];
+		$btn_txt = 'Atualizar';
     }
     
 	$c = [
@@ -283,7 +284,7 @@ function layout_empresa(){
 	$file = basename(__FILE__);
 	$file = explode('.', $file);
 
-	$botao[] = botao('Cadastrar','cadastra_empresa','id',$_POST['id']);
+	$botao[] = botao($btn_txt,'cadastra_empresa','id',$_POST['id']);
 	$botao[] = botao('Voltar','index');
 	
 	abre_form("Dados da Empresa/Filial");
