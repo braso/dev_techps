@@ -38,18 +38,20 @@ function cadastra_usuario() {
 
 	$error_msg_base = "ERRO: Insira os campos ";
 	$error_msg = $error_msg_base;
-	$check_fields = [
-	  //['nome', 'msg_erro']
-		['nome', 'Nome, '],
-		['login', 'Login, '],
-		['senha', 'Senha, '],
-		['nascimento', 'Data de nascimento, '],
-		['email', 'Email, '],
-		['empresa', 'Empresa, ']
-	];
-	foreach($check_fields as $field){
-		if(!isset($_POST[$field[0]]) || $_POST[$field[0]] == ''){
-			$error_msg .= $field[1];
+	if (!$_POST['id']) {
+		$check_fields = [
+			//['nome', 'msg_erro']
+			['nome', 'Nome, '],
+			['login', 'Login, '],
+			['senha', 'Senha, '],
+			['nascimento', 'Data de nascimento, '],
+			['email', 'Email, '],
+			['empresa', 'Empresa, ']
+		];
+		foreach ($check_fields as $field) {
+			if (!isset($_POST[$field[0]]) || $_POST[$field[0]] == '') {
+				$error_msg .= $field[1];
+			}
 		}
 	}
 
