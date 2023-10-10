@@ -191,7 +191,7 @@ License: You must have a valid license purchased only from themeforest(the above
 			<div class="form-group">
 				<select class="form-control" name="domain">
 					<option value="" selected>Domínio</option>
-					<option value=<?=$server_base_link."/index.php"?>>techps</option>
+					<option value=<?=$server_base_link."/techps/index.php"?>>techps</option>
 					<option value=<?=$server_base_link."/feijao_turqueza/index.php"?>>Feijão turqueza</option>
 					<option value=<?=$server_base_link."/armazem_paraiba/index.php"?>>Armazem Paraiba</option>
 					<option value="">Leroy Merlin</option>
