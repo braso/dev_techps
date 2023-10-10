@@ -544,7 +544,7 @@ function index() {
 		((!empty($_POST['busca_ocupacao']))? 	" AND enti_tx_ocupacao = '".$_POST['busca_ocupacao']."'": '').
 		((!empty($_POST['busca_parametro']))? 	" AND enti_nb_parametro = '".$_POST['busca_parametro']."'": '').
 		((!empty($_POST['busca_status']))? 		" AND enti_tx_status = 'Ativo'": '').
-		((!empty($_POST['busca_padrao']))? 		" HAVING enti_tx_ehPadrao = '".$_POST['busca_padrao']."'": '');
+		((!empty($_POST['busca_padrao']) && $_POST['busca_padrao'] != "Todos")?   " HAVING enti_tx_ehPadrao = '".$_POST['busca_padrao']."'": '');
 
 	if ($_POST['busca_status'] && $_POST['busca_status'] != 'Todos'){
 		$extra .= " AND empr_tx_status = '".$_POST['busca_status']."'";
@@ -556,7 +556,7 @@ function index() {
 	$c[] = campo('CPF', 'busca_cpf', $_POST['busca_cpf'], 2, 'MASCARA_CPF');
 	$c[] = combo_bd('!Empresa', 'busca_empresa', $_POST['busca_empresa'], 2, 'empresa', '', $extraEmpresa);
 	$c[] = combo('Ocupação', 'busca_ocupacao', $_POST['busca_ocupacao'], 2, array("", "Motorista")); //TODO PRECISO SABER QUAIS AS OCUPACOES
-	$c[] = combo('Padrão', 'busca_padrao', $_POST['busca_padrao'], 2, array('', 'Sim', 'Não'));
+	$c[] = combo('Padrão', 'busca_padrao', $_POST['busca_padrao'], 2, array('Todos', 'Sim', 'Não'));
 	$c[] = combo_bd('!Parâmetros da Jornada', 'busca_parametro', $_POST['busca_parametro'], 6, 'parametro');
 	$c[] = combo('Status', 'busca_status', $_POST['busca_status'], 2, array('Todos', 'Ativo', 'Inativo'));
 
