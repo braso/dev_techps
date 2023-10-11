@@ -414,8 +414,12 @@ function fieldset($nome=''){
 
 function set_status($msg='') {
 
-	if( $msg == '' )
+	if($msg == '')
 		global $msg;
+	
+	if(strrpos($msg, 'ERRO:') !== false){
+		$msg = '<b style="color: red">'.$msg.'</b>';
+	}
 
 	$_POST['msg_status'] = $msg;
 
