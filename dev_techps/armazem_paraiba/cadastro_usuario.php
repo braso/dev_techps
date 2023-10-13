@@ -178,6 +178,7 @@ function layout_usuario() {
 		$campo_expiracao = texto('Dt. Expiraçao', $data_expiracao, 2, "style='margin-bottom:-10px; margin-top: 10px;'");
 	} else {
 		$niveis = [];
+
 		switch($_SESSION['user_tx_nivel']){
 			case "Funcionário":
 				$niveis[] = "Funcionário";
@@ -188,7 +189,11 @@ function layout_usuario() {
 				$niveis[] = "Administrador";
 			break;
 		}
-		$campo_nivel = combo('Nível*', 'nivel', $a_mod['user_tx_nivel'], 2, $niveis, '');
+		if(isset($a_mod['user_nb_id']) && $a_mod['user_tx_nivel'] == 'Motorista'){//Se estiver editando um registro e o registro for de nível motorista
+			$campo_nivel = texto('Nível*', 'Motorista', 2, '');
+		}else{
+			$campo_nivel = combo('Nível*', 'nivel', $a_mod['user_tx_nivel'], 2, $niveis, '');
+		}
 		
 		$campo_nome = campo('Nome*', 'nome', $a_mod['user_tx_nome'], 4, '');
 		$campo_login = campo('Login*', 'login', $a_mod['user_tx_login'], 2);
