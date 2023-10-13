@@ -1,6 +1,18 @@
 <?php
 include "conecta.php";
 
+function checkbox($tamanho) {
+	echo '<div class="col-sm-'.$tamanho.' margin-bottom-5">
+	<label>Utiliza regime de banco de horas?</label>
+	<div>
+      <input type="radio" id="sim" name="regime_banco" value="sim" />
+      <label for="regime_banco">Sim</label>
+      <input type="radio" id="nao" name="regime_banco" value="nao" />
+      <label for="regime_banco">Não</label>
+    </div> 
+	</div>';
+}
+
 function exclui_parametro(){
 
 	remover('parametro',$_POST[id]);
@@ -90,6 +102,7 @@ function layout_parametro(){
 	$c[] = combo('Acordo Sindical','acordo',$a_mod[para_tx_acordo],3,array('Sim','Não'));
 	$c[] = campo_data('Início do Acordo','inicioAcordo',$a_mod[para_tx_inicioAcordo],3);
 	$c[] = campo_data('Fim do Acordo','fimAcordo',$a_mod[para_tx_fimAcordo],3);
+	$c[] = checkbox(2);
 	
 	$botao[] = botao('Gravar','cadastra_parametro','id',$_POST[id]);
 	$botao[] = botao('Voltar','index');
