@@ -74,8 +74,8 @@ function imprimir_endosso() {
 				
 				
 			}
-			
-// 			print_r($totalResumo);
+// 			$t = $totalResumo['jornadaPrevista'] - $totalResumo['diffJornadaEfetiva'];
+// 			var_dump($totalResumo['jornadaPrevista'] );
 // 			die();
 			
 			$sqlEndosso = query("SELECT endo_tx_dataCadastro FROM endosso WHERE endo_tx_matricula = '$aMotorista[enti_tx_matricula]'");
@@ -220,13 +220,13 @@ function imprimir_endosso() {
 						<td rowspan="2">
 							<table class="table-info">
 								<tr>
-									<td>Jornada mensal Prevista:</td>
+									<td>Carga Horaria Prevista:</td>
 									<td>
 										<center><?= $totalResumo['jornadaPrevista'] ?></center>
 									</td>
 								</tr>
 								<tr>
-									<td>Jornada mensal Efetiva:</td>
+									<td>Carga Horaria Efetiva Realizada:</td>
 									<td>
 										<center><?= $totalResumo['diffJornadaEfetiva'] ?></center>
 									</td>
@@ -247,13 +247,13 @@ function imprimir_endosso() {
 
 							<table class="table-info2">
 							    <tr>
-									<td>Horas Extras (50%):</td>
+									<td>Horas Extras (50%) - a pagar:</td>
 									<td>
 										<center><?= $totalResumo['he50'] ?></center>
 									</td>
 								</tr>
 								<tr>
-									<td>Horas Extras (100%):</td>
+									<td>Horas Extras (100%) - a pagar:</td>
 									<td>
 										<center><?= $totalResumo['he100'] ?></center>
 									</td>

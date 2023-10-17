@@ -608,29 +608,6 @@ function ordena_horarios_pares($inicio, $fim, $ehEspera = 0) {
 }
 
 function subtrairHorarios($inicioJornada,$jornadaPrevista, $JornadaEfetiva, $data) {
-    $h1 = explode(':', $jornadaPrevista);
-    $segundos1 = ((abs((int) $h1[0]) * 3600) + (abs((int) $h1[1]) * 60));
-    
-    $h2 = explode(':', $JornadaEfetiva);
-    $segundos2 = ((abs((int) $h2[0]) * 3600) + (abs((int) $h2[1]) * 60));
-
-    $sub = $segundos2 - $segundos1;
-    
-    $horas = floor(abs($sub) / 3600); // 3600 segundos em uma hora
-    $sub %= 3600;
-    $minutos = floor(abs($sub) / 60); // 60 segundos em um minuto
-    $sub %= 60;
-    
-    print_r();
-
-    // if ($segundos2 < $segundos1) {
-    //     return abs($horas) . ':' . sprintf('%02d', $minutos);
-    // } else {
-    //     return $horas . ':' . sprintf('%02d', $minutos);
-    // }
-}
-
-function subtrairHorarios($inicioJornada,$jornadaPrevista, $JornadaEfetiva, $data) {
     if($inicioJornada == '' && $data == '%6'){
         return '00:00';
     }elseif($inicioJornada != '' && $data == '%0'){
