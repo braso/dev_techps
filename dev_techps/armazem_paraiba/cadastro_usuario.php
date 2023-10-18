@@ -102,7 +102,9 @@ function cadastra_usuario() {
 		exit;
 	}
 
-	if(count(carregar('user', '', 'user_tx_login', $_POST['login'])) > 0){
+	$usuario = carregar('user', '', 'user_nb_id', $_POST['id']);
+
+	if(count($usuario) > 0 && $usuario['user_tx_login'] != $_SESSION['user_tx_login']){
 		set_status("ERRO: Login já cadastrado.");
 		modifica_usuario();
 		exit;
