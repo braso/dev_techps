@@ -1,5 +1,4 @@
 <?php
-include "funcoes_ponto_wallase.php";
 include "funcoes_ponto.php"; // NAO ALTERAR ORDEM
 
 
