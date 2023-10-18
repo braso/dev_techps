@@ -414,8 +414,12 @@ function fieldset($nome=''){
 
 function set_status($msg='') {
 
-	if( $msg == '' )
+	if($msg == '')
 		global $msg;
+	
+	if(strrpos($msg, 'ERRO:') !== false){
+		$msg = '<b style="color: red">'.$msg.'</b>';
+	}
 
 	$_POST['msg_status'] = $msg;
 
@@ -476,6 +480,46 @@ function campo_jornada($nome,$variavel,$modificador,$tamanho){
 
 }
 
+function checkbox($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
+    $data_input='<script>
+    const radioSim = document.getElementById("sim");
+    const radioNao = document.getElementById("nao");
+    const campo = document.getElementById("campo");
+    
+    // Adicionando um ouvinte de eventos aos elementos de rádio
+    radioSim.addEventListener("change", function() {
+        if (radioSim.checked) {
+            campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
+        }
+    });
+    
+    radioNao.addEventListener("change", function() {
+    if (radioNao.checked) {
+        campo.style.display = "none"; // Oculta o campo quando "Não Mostrar Campo" é selecionado
+    }
+    });
+    </script>';
+    //  Utiliza regime de banco de horas?
+    $campo='
+    <div class="col-sm-'.$tamanho.' margin-bottom-5">
+        <label><b>'.$nome.'</b></label><br>
+        <label class="radio-inline">
+            <input type="radio" id="sim" value="Sim"> sim
+        </label>
+        <label class="radio-inline">
+            <input type="radio" id="nao" value="Não"> não
+        </label>
+    </div>
+    <div id="'.$variavel.'" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
+            <label><b>Campo Exibido:</b></label>
+            <input type="text" id="outroCampo" value="'.$modificador.'" autocomplete="off">
+    </div>
+    ';
+  
+  return $campo.$data_input;
+    
+}
+
 function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 	// $variavel_limpa = str_replace(array("[","]"),array("\\[","\\]"),$variavel);	
 
@@ -510,12 +554,35 @@ function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 			});
 		 });
 		</script>";
+	elseif($mascara == "MASCARA_HORA")
+		 $data_input="<script>
+		 const inputHora = document.getElementById(\"$variavel\");
+		 const mensagemDiv = document.getElementById('mensagem');
+
+        inputHora.addEventListener('input', function () {
+            let inputValue = this.value;
+            let formattedValue = formatarHora(inputValue);
+            this.value = formattedValue;
+        });
+
+        function formatarHora(value) {
+            let sanitizedValue = value.replace(/[^\d:-]/g, ''); // Remove caracteres não permitidos
+            if (sanitizedValue.length > 5) {
+                let hours = sanitizedValue.substring(0, 2);
+                let minutes = sanitizedValue.substring(3, 5);
+                return hours + ':' + minutes;
+            }
+            return sanitizedValue;
+        }
+		</script>";
+
 
 			// <input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' data-placeholder="____" data-inputmask="'.$data_input.'">
 
 $campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 			<label><b>'.$nome.'</b></label>
 			<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' '.$data_input2.'>
+			<div id="feedback"></div>
 		</div>';
 
 	
@@ -768,13 +835,13 @@ function combo_bd($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra
 
 function arquivo($nome,$variavel,$modificador,$tamanho,$extra=''){
 	global $CONTEX;
-	if(file_exists($modificador)){
+	if($modificador){
 		$ver = "<a href=$CONTEX[path]/$modificador target=_blank>(Ver)</a>";
 	}
 
 	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 				<label><b>'.$nome.$ver.'</b></label>
-				<input name="'.$variavel.'"id = "'.$variavel.'" value="'.$CONTEX[path]."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
+				<input name="'.$variavel.'" value="'.$CONTEX[path]."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
 			</div>';
 
 		return $campo;
@@ -789,10 +856,9 @@ function enviar($arquivo,$diretorio,$nome='') {
 	// if('.php', '.php3', '.php4', '.phtml', '.pl', '.py', '.jsp', '.asp', '.htm', '.shtml', '.sh', '.cgi')
 
 	if($nome!='') {
-		$target_path = $target_path . "$nome.$extensao[extension]";
-
+		$target_path .= "$nome.$extensao[extension]";
 	}else {
-		$target_path = $target_path . basename($_FILES[$arquivo]['name']);
+		$target_path .= basename($_FILES[$arquivo]['name']);
 	}
 
 
