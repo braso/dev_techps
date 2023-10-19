@@ -1,6 +1,7 @@
 <?php
 	include "funcoes_ponto.php"; // Conecta importado dentro de funcoes_ponto
 
+
 	function cadastrar(){
 		$url = substr($_SERVER['REQUEST_URI'], 0, strrpos($_SERVER['REQUEST_URI'], '/'));
 		header('Location: '.'https://braso.mobi'.$url.'/cadastro_endosso');
@@ -36,181 +37,246 @@
 			);
 
 			$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_tipo = 'Motorista' AND enti_nb_id IN (" . $_POST['idMotoristaEndossado'] . ") AND enti_nb_empresa = " . $_POST['busca_empresa'] . " ORDER BY enti_tx_nome");
+
 			while ($aMotorista = carrega_array($sqlMotorista)) {
-
-				$sqlAbono = query("SELECT * FROM abono, motivo, user 
-					WHERE abon_tx_status != 'inativo' AND abon_nb_userCadastro = user_nb_id 
-					AND abon_tx_matricula = '".$aMotorista['enti_tx_matricula']."' AND abon_tx_data LIKE '".$_POST['busca_data']."-%' AND abon_nb_motivo = moti_nb_id
-					ORDER BY abon_nb_id DESC LIMIT 1");
-
-				$qtdeAbono = num_linhas($sqlAbono);
-
-				$sqlFolga = query("SELECT * FROM abono, motivo, user 
-						WHERE abon_tx_status != 'inativo' AND abon_nb_userCadastro = user_nb_id AND moti_nb_id = 29
-						AND abon_tx_matricula = '$aMotorista[enti_tx_matricula]' AND abon_tx_data LIKE '$_POST[busca_data]-%' AND abon_nb_motivo = moti_nb_id
-						ORDER BY abon_nb_id DESC LIMIT 1");
-
-				$qtdeFolga = num_linhas($sqlFolga);
-
-				$sqlFalta = query("SELECT * FROM abono, motivo, user 
-							WHERE abon_tx_status != 'inativo' AND abon_nb_userCadastro = user_nb_id AND moti_nb_id = 32
-							AND abon_tx_matricula = '$aMotorista[enti_tx_matricula]' AND abon_tx_data LIKE '$_POST[busca_data]-%' AND abon_nb_motivo = moti_nb_id
-							ORDER BY abon_nb_id DESC LIMIT 1");
-
-				$qtdeFalta = num_linhas($sqlFalta);
-
 				for ($i = 1; $i <= $daysInMonth; $i++) {
 					$dataVez = $_POST['busca_data'] . "-" . str_pad($i, 2, 0, STR_PAD_LEFT);
 
-					$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
+					$aDetalhado = diaDetalheEndosso($aMotorista['enti_tx_matricula'], $dataVez);
+					$aDetalhadoCampos = [
+						$aDetalhado['data'],$aDetalhado['diaSemana'],$aDetalhado['inicioJornada'],$aDetalhado['inicioRefeicao'],
+						$aDetalhado['fimRefeicao'], $aDetalhado['fimJornada'], $aDetalhado['diffRefeicao'],$aDetalhado['diffEspera'], $aDetalhado['diffDescanso'], $aDetalhado['diffRepouso'], 
+						$aDetalhado['diffJornada'], $aDetalhado['diffJornadaEfetiva'], $aDetalhado['jornadaPrevista'], $aDetalhado['intersticio'], $aDetalhado['he50'], $aDetalhado['he100'],
+						$aDetalhado['adicionalNoturno'], $aDetalhado['esperaIndenizada']
+					];
+					
+				$aDia[] = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDetalhadoCampos));
+				
+			}
+			unset($aMotorista);
+			
+			$sqlEndosso = query("SELECT endo_tx_dataCadastro FROM endosso WHERE endo_tx_matricula = '$aMotorista[enti_tx_matricula]'");
+			$aEndosso = carrega_array($sqlEndosso);
 
-					$aDia[] = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));
+			$lastMonthDate = date('Y-m', strtotime('-1 month', strtotime($year.'-'.$month.'-01')));
+			$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month-1, $year);
+			$saldoAnterior = '00:00';
+
+			while ($aMotorista = carrega_array($sqlMotorista)) {
+				for ($i = 1; $i <= $daysInMonth; $i++) {
+					$lastMonthDay = $lastMonthDate.'-'.str_pad($i, 2, 0, STR_PAD_LEFT);
+					$aDetalhado = diaDetalheEndosso($aMotorista['enti_tx_matricula'], $lastMonthDay);
+					$saldoAnterior = somarHorarios([$saldoAnterior, $aDetalhado['diffSaldo']]);
 				}
+			}
+			
+			?>
+			<!DOCTYPE html>
+				<html lang="en">
 
-	?>
-	<!DOCTYPE html>
-						<html lang="en">
-							<head>
-								<meta charset="UTF-8">
-								<meta name="viewport" content="width=device-width, initial-scale=1.0">
-								<title>Espelho de Ponto</title>
-								<link rel="stylesheet" href="./css/endosso.css">
-							</head>
-							<body>
-								<div class="header">
-									<img src="<?=$aEmpresa['empr_tx_logo']?>" alt="Logo Empresa Esquerda">
-									<h1>Espelho de Ponto</h1>
-									<div class="right-logo">
-										<p><?=date("d/m/Y H:i:s")?></p>
-										<img src=<?=(getcwd()."/../")."armazem_paraiba/imagens/logo_topo_cliente.png"?> alt="Logo Empresa Direita">
-									</div>
-								</div>
-								<div class="info">
-									<div class="employee-info">
-										<p>Motorista: <?=$aMotorista['enti_tx_nome']?></p>
-										<p>Função: <?=$aMotorista['enti_tx_ocupacao']?></p>
-										<p>CPF: <?=$aMotorista['enti_tx_cpf']?></p>
-										<p>Matrícula: <?=$aMotorista['enti_tx_matricula']?></p>
-										<p>Admissão: <?=data($aMotorista['enti_tx_admissao'])?></p>
-									</div>
+				<head>
+					<meta charset="UTF-8">
+					<meta name="viewport" content="width=device-width, initial-scale=1.0">
+					<title>Espelho de Ponto</title>
+					<link rel="stylesheet" href="css/endosso.css">
+				</head>
 
-									<div class="company-info">
-										<p>Empresa: <?=$aEmpresa['empr_tx_nome']?></p>
-										<p>CNPJ: <?=$aEmpresa['empr_tx_cnpj']?></p>
-										<p><?=$enderecoEmpresa?></p>
-										<p><?="$aCidadeEmpresa[cida_tx_nome]/$aCidadeEmpresa[cida_tx_uf]"?></p>
-										<p>CEP: <?=$aEmpresa['empr_tx_cep']?></p>
-									</div>
-								</div>
-								<table class="table" border="1">
-									<thead>
-										<tr>
-											<th>MAT.</th>
-											<th>DATA</th>
-											<th>DIA</th>
-											<th>INÍCIO JORNADA</th>
-											<th>INÍCIO REFEIÇÃO</th>
-											<th>FIM REFEIÇÃO</th>
-											<th>FIM JORNADA</th>
-											<th>REFEIÇÃO</th>
-											<th>ESPERA</th>
-											<th>DESCANSO</th>
-											<th>REPOUSO</th>
-											<th>JORNADA</th>
-											<th>JORNADA PREVISTA</th>
-											<th>JORNADA EFETIVA</th>
-											<th>MDC</th>
-											<th>INTERSTÍCIO</th>
-											<th>HE 50%</th>
-											<th>HE&nbsp;100%</th>
-											<th>ADICIONAL NOT.</th>
-											<th>ESPERA INDENIZADA</th>
-											<th>SALDO DIÁRIO</th>
-										</tr>
-									</thead>
-									<tbody>
-	<?
-					// $aDia[] = array_values(array_merge(['','','','','','','','<b>TOTAL</b>'], $totalResumo));
-					for ($i=0; $i < count($aDia); $i++) { 
-						$j=1;
-						$aDiaVez = $aDia[$i];
-	?>
-										<tr>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-											<td><?=$aDiaVez[$j++]?></td>
-										</tr>			
-	<?
-					}
-	?>		
-									</tbody>
+				<body>
+					<div class="header">
+						<img src="<?= $aEmpresa[empr_tx_logo] ?>" alt="Logo Empresa Esquerda">
+						<h1>Espelho de Ponto</h1>
+						<div class="right-logo">
+							<p></p>
+							<img src="/techps/sistema/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
+						</div>
+					</div>
+					<div class="info">
+						<table class="table-header">
+							<tr class="company-info">
+								<td style="text-align: left;"><b>Empresa:</b> <?= $aEmpresa[empr_tx_nome] ?></td>
+								<td style="text-align: left;"><b>CNPJ:</b> <?= $aEmpresa[empr_tx_cnpj] ?></td>
+								<td colspan="2" style="text-align: left;"><b>End.</b> <?= "$enderecoEmpresa, $aCidadeEmpresa[cida_tx_nome]/$aCidadeEmpresa[cida_tx_uf], $aEmpresa[empr_tx_cep]" ?></td>
+								<td style="text-align: left;"><b>Período:</b> <?= "$primeiroDia à $ultimoDia" ?></td>
+								<td style="text-align: left;"><b>Emissão Doc.:</b> <?=$aEndosso['endo_tx_dataCadastro'] . " (UTC-3)" ?></td>
+								<td style="text-align: left;"><b>Inpressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . "(UTC-3)" ?></td>
+							</tr>
+							
+							<tr class="employee-info">
+								<td style="text-align: left;"><b>Motorista:</b> <?= $aMotorista[enti_tx_nome] ?></td>
+								<td style="text-align: left;"><b>Função:</b> <?= $aMotorista[enti_tx_ocupacao] ?></td>
+								<td style="text-align: left;"><b>CPF:</b> <?= $aMotorista[enti_tx_cpf] ?></td>
+								<td style="text-align: left;"><b>Turno:</b> D.SEM/H: <?= $aMotorista[enti_tx_jornadaSemanal] ?> FDS/H: <?= $aMotorista[enti_tx_jornadaSabado] ?> </td>
+								<td style="text-align: left;"><b>Matrícula:</b> <?= $aMotorista[enti_tx_matricula] ?></td>
+								<td style="text-align: left;"><b>Admissão:</b> <?= data($aMotorista[enti_tx_admissao]) ?></td>
+							</tr>
+						</table>
+					</div>
+					<table class="table" border="1">
+						<thead>
+							<tr>
+								<th colspan="2">PERIODO</th>
+								<th colspan="4">JORNADA DE TRABALHO</th>
+								<th colspan="4">INTERVALOS</th>
+								<th colspan="3">JORNADA EFETIVA</th>
+								<th colspan="5">APURAÇÃO DO CONTROLE DA JORNADA</th>
+								<th>TRATAMENTO</th>
+							</tr>
+							<tr>
+								<th>DATA</th>
+								<th>DIA</th>
+								<th>INÍCIO JORNADA</th>
+								<th>INÍCIO REFEIÇÃO</th>
+								<th>FIM REFEIÇÃO</th>
+								<th>FIM JORNADA</th>
+								<th>REFEIÇÃO</th>
+								<th>ESPERA</th>
+								<th>DESCANSO</th>
+								<th>REPOUSO</th>
+								<th>Periodo Total</th>
+								<th>EFETIVA</th>
+								<th>ATRASOS REALIZADOS</th>
+								<th>INTERSTÍCIO DIÁRIO/SEMANAL</th>
+								<th>HE 50%</th>
+								<th>HE&nbsp;100%</th>
+								<th>ADICIONAL NOT.</th>
+								<th>ESPERA INDENIZADA</th>
+								<th>MOTIVO</th>
+							</tr>
+						</thead>
+						<tbody>
+							<?
+							for ($i = 0; $i < count($aDia); $i++) {
+								$j = 1;
+								$aDiaVez = $aDia[$i];
+							?>
+								<tr>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+									<td><?= $aDiaVez[$j++] ?></td>
+								</tr>
+
+							<?
+							}
+							?>
+
+						</tbody>
+					</table>
+
+					<div><b>TOTAL: <?= $daysInMonth ?> dias</b></div>
+
+
+					<table class="table-bottom">
+						<tr>
+							<td rowspan="2">
+								<table class="table-info">
+									<tr>
+										<td>Carga Horaria Prevista:</td>
+										<td>
+											<center><?= $totalResumo['jornadaPrevista'] ?></center>
+										</td>
+									</tr>
+									<tr>
+										<td>Carga Horaria Efetiva Realizada:</td>
+										<td>
+											<center><?= $totalResumo['diffJornadaEfetiva'] ?></center>
+										</td>
+									</tr>
+									<tr>
+										<td>Adicional Noturno:</td>
+										<td>
+											<center><?= $totalResumo['adicionalNoturno'] ?></center>
+										</td>
+									</tr>
+									<tr>
+										<td>Espera Indenizada:</td>
+										<td>
+											<center><?= $totalResumo['esperaIndenizada'] ?></center>
+										</td>
+									</tr>
 								</table>
-								<div class="signatures">
-									<div class="signature-block">
-										<table class="table-info">
-											<tr>
-												<td>Carga horaria Mensal</td>
-												<td><center><?=$totalResumo['jornadaPrevista']?></center></td>
-											</tr>
-											<tr>
-												<td>Horas Efetivas realizadas:</td>
-												<td><center><?=$totalResumo['diffJornadaEfetiva']?></center></td>
-											</tr>
-											<tr>
-												<td>Adicional Noturno:</td>
-												<td><center><?=$totalResumo['adicionalNoturno']?></center></td>
-											</tr>
-											<tr>
-												<td>Horas Extras:</td>
-												<td><center><?=$totalResumo['he50']?></center></td>
-											</tr>
-											<tr>
-												<td>Horas Extras (100%):</td>
-												<td><center><?=$totalResumo['he100']?></center></td>
-											</tr>
-											<tr>
-												<td>Espera Indenizada:</td>
-												<td><center><?=$totalResumo['esperaIndenizada']?></center></td>
-											</tr>
-											<tr>
-												<td>Saldo Período:</td>
-												<td><center><?=$totalResumo['diffSaldo']?></center></td>
-											</tr>
-										</table>
-									</div>
-									<div class="signature-block" style="align-self: flex-end;">
-										<center><p>_________________________________________________________</p></center>
-										<center><p>Responsável</p></center>
-										<center><p>Cargo:</p></center>
-									</div>
-									<div class="signature-block" style="align-self: flex-end;">
-										<center><p>_________________________________________________________</p></center>
-										<center><p><?=$aMotorista['enti_tx_nome']?></p></center>
-										<center><p>Motorista</p></center>
-									</div>
+
+								<table class="table-info2">
+									<tr>
+										<td>Horas Extras (50%) - a pagar:</td>
+										<td>
+											<center><?= $totalResumo['he50'] ?></center>
+										</td>
+									</tr>
+									<tr>
+										<td>Horas Extras (100%) - a pagar:</td>
+										<td>
+											<center><?= $totalResumo['he100'] ?></center>
+										</td>
+									</tr>
+								</table>
+							</td>
+
+
+							<td>
+								<table class="table-resumo">
+									<tr>
+										<td>Saldo Anterior</td>
+										<td><?=$saldoAnterior?></td>
+										<td class="empty"></td>
+										<td>Saldo Período</td>
+										<td><?= $totalResumo['diffSaldo'] ?></td>
+										<td class="empty"></td>
+										<td>Saldo Atual</td>
+										<td>33:33</td>
+									</tr>
+								</table>
+							</td>
+
+						</tr>
+						<tr>
+							<td>
+								<div class="signature-block" style="display: inline-block; width: 45%;">
+									<center>
+										<p>___________________________________________________________</p>
+									</center>
+									<center>
+										<p>Responsável</p>
+									</center>
+									<center>
+										<p>Cargo:</p>
+									</center>
 								</div>
-							</body>
-						</html>
-						<div style="page-break-after: always;"></div>
-	<?
+								<div class="signature-block" style="display: inline-block; width: 45%;">
+									<center>
+										<p>___________________________________________________________</p>
+									</center>
+									<center>
+										<p><?= $aMotorista[enti_tx_nome] ?></p>
+									</center>
+									<center>
+										<p>Motorista</p>
+									</center>
+								</div>
+							</td>
+						</tr>
+					</table>
+				</body>
+
+				</html>
+				<div style="page-break-after: always;"></div>
+
+			<?
 					$totalResumo = ['diffRefeicao' => '00:00','diffEspera' => '00:00','diffDescanso' => '00:00','diffRepouso' => '00:00','diffJornada' => '00:00','jornadaPrevista' => '00:00','diffJornadaEfetiva' => '00:00','maximoDirecaoContinua' => '','intersticio' => '00:00','he50' => '00:00','he100' => '00:00','adicionalNoturno' => '00:00','esperaIndenizada' => '00:00','diffSaldo' => '00:00'];
 					unset($aDia);
 				}
@@ -247,7 +313,7 @@
 	function index() {
 		global $totalResumo, $CONTEX;
 
-		cabecalho('Endosso'.(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? ' (Dev)': ''));
+		cabecalho('Endosso');
 
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa = " AND empr_nb_id = '".$_SESSION['user_nb_empresa']."'";
