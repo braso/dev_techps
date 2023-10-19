@@ -480,11 +480,23 @@ function campo_jornada($nome,$variavel,$modificador,$tamanho){
 
 }
 
-function checkbox($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
+function checkbox($nome,$variavel,$modificadorRadio,$modificador,$tamanho){
     $data_input='<script>
-    const radioSim = document.getElementById("sim");
-    const radioNao = document.getElementById("nao");
-    const campo = document.getElementById("campo");
+    marcarBotao("'.$modificadorRadio.'");
+    function marcarBotao(botaoId) {
+        if (botaoId) {
+            document.getElementById(botaoId).checked = true;
+            
+        }
+        
+    }
+    
+    const radioSim = document.getElementById("1");
+    const radioNao = document.getElementById("0");
+    const campo = document.getElementById("'.$variavel.'");
+    if (radioSim.checked) {
+            campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
+    }
     
     // Adicionando um ouvinte de eventos aos elementos de rádio
     radioSim.addEventListener("change", function() {
@@ -503,16 +515,16 @@ function checkbox($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
     $campo='
     <div class="col-sm-'.$tamanho.' margin-bottom-5">
         <label><b>'.$nome.'</b></label><br>
-        <label class="radio-inline">
-            <input type="radio" id="sim" value="Sim"> sim
+         <label class="radio-inline">
+            <input type="radio" id="1" name="regime_banco" value="1"> Sim
         </label>
         <label class="radio-inline">
-            <input type="radio" id="nao" value="Não"> não
+            <input type="radio" id="0" name="regime_banco" value="0"> Não
         </label>
     </div>
     <div id="'.$variavel.'" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
-            <label><b>Campo Exibido:</b></label>
-            <input type="text" id="outroCampo" value="'.$modificador.'" autocomplete="off">
+            <label><b>SET de mês inicio:</b></label>
+            <input type="month" id="outroCampo" name="'.$variavel.'" value="'.$modificador.'" autocomplete="off">
     </div>
     ';
   
@@ -556,24 +568,13 @@ function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 		</script>";
 	elseif($mascara == "MASCARA_HORA")
 		 $data_input="<script>
-		 const inputHora = document.getElementById(\"$variavel\");
-		 const mensagemDiv = document.getElementById('mensagem');
+		 const inputElement = document.getElementById(\"$variavel\");
 
-        inputHora.addEventListener('input', function () {
+        inputElement.addEventListener('input', function () {
             let inputValue = this.value;
-            let formattedValue = formatarHora(inputValue);
-            this.value = formattedValue;
+            let sanitizedValue = inputValue.replace(/[^0-9:.-]/g, ''); // Remove letras e outros caracteres não permitidos
+            this.value = sanitizedValue;
         });
-
-        function formatarHora(value) {
-            let sanitizedValue = value.replace(/[^\d:-]/g, ''); // Remove caracteres não permitidos
-            if (sanitizedValue.length > 5) {
-                let hours = sanitizedValue.substring(0, 2);
-                let minutes = sanitizedValue.substring(3, 5);
-                return hours + ':' + minutes;
-            }
-            return sanitizedValue;
-        }
 		</script>";
 
 
