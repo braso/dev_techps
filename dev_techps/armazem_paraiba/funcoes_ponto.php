@@ -1,7 +1,7 @@
 <?php
 include "conecta.php";
 
-function calcularAbono($horario1, $horario2) {
+function calcularAbono($horario1, $horario2){
 	// Converter os horários em minutos
 	$horario1 = str_replace("-", "", $horario1);
 	$horario2 = str_replace("-", "", $horario2);
@@ -317,7 +317,18 @@ function verificaTempo($tempo1 = '00:00', $tempo2) {
 
 function verificaTolerancia($saldoDiario, $data, $motorista) {
     date_default_timezone_set('America/Sao_Paulo');
-    $tolerancia = '00:10';
+    $sqlTolerancia = query("SELECT en.enti_nb_parametro, par.para_tx_tolerancia
+	FROM `entidade` en
+	INNER JOIN parametro par ON en.enti_nb_parametro = par.para_nb_id
+	WHERE en.enti_nb_id = '" . $motorista . "'");
+
+	$toleranciaArray = carrega_array($sqlTolerancia);
+
+	if (empty($toleranciaArray['para_tx_tolerancia'])) {
+		$tolerancia = '00:00';
+	} else
+		$tolerancia = $toleranciaArray['para_tx_tolerancia'];
+	// 	$tolerancia = '00:10';
 
     $datetimeSaldo = new DateTime('2000-01-01 ' . $saldoDiario);
     $datetimeTolerancia = new DateTime('2000-01-01 ' . $tolerancia);
@@ -417,15 +428,8 @@ function ordena_horarios($inicio, $fim) {
 
     // Cria um array associativo para cada horário com sua origem correspondente
 	$alertaTooltip ='';
-    // $horarios_com_origem = [];
     for ($i = 0; $i < count($horarios); $i++) {
-        // $horarios_com_origem[] = array(
-        //     "horario" => $horarios[$i],
-        //     "origem" => $origem[$i]
-        // );
-
 		$alertaTooltip .= "$origem[$i] ".data($horarios[$i],1)."\n";
-
     }
 
 	if(count($inicio) != count($fim)){
@@ -623,7 +627,10 @@ function diaDetalhePonto($matricula, $data, $status = ''){
 	$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
 	$aEmpCidade = carregar('cidade', $aEmpresa['empr_nb_cidade']);
 	if ($aMotorista['enti_nb_empresa'] && $aEmpresa['empr_nb_cidade'] && $aEmpCidade['cida_nb_id'] && $aEmpCidade['cida_tx_uf']) {
-		$extraFeriado = " AND (feri_nb_cidade = '".$aEmpCidade['cida_nb_id']."' OR feri_tx_uf = '".$aEmpCidade['cida_tx_uf']."')";
+		$extraFeriado = " AND (
+			(feri_nb_cidade = '$aEmpCidade[cida_nb_id]' AND feri_tx_uf = '$aEmpCidade[cida_tx_uf]')
+			OR (feri_nb_cidade IS NULL AND feri_tx_uf IS NULL)
+			OR (feri_nb_cidade = 0 AND feri_tx_uf = ''))";
 	}
 
 	$aParametro = carregar('parametro', $aMotorista['enti_nb_parametro']);
@@ -987,7 +994,9 @@ function diaDetalhePonto($matricula, $data, $status = ''){
 		}
 	}
 
-	if($aRetorno['diffRefeicao'] == '00:00') $menor1h = 1;
+	if($aRetorno['diffRefeicao'] == '00:00'){
+		$menor1h = 1
+	};
 
 	if($menor1h && $dtJornada > $dtJornadaMinima){
 		$aRetorno['diffRefeicao'] = "<a><i style='color:red;' title='Refeição com tempo ininterrupto mínimo de 01:00h, não respeitado.' class='fa fa-warning'></i></a>" . $aRetorno['diffRefeicao'];
@@ -1018,7 +1027,9 @@ function diaDetalhePonto($matricula, $data, $status = ''){
 			$aRetorno['fimRefeicao']    = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>".$iconeRefeicaoMinima;
 		}
 
-		if($arrayInicioJornada[0] == '' || $arrayFimJornada[0] == '' || $aRetorno['inicioRefeicao'] == '' || $aRetorno['fimRefeicao'] == '') $aRetorno['temPendencias'] = True;
+		if($arrayInicioJornada[0] == '' || $arrayFimJornada[0] == '' || $aRetorno['inicioRefeicao'] == '' || $aRetorno['fimRefeicao'] == ''){
+			$aRetorno['temPendencias'] = True;
+		}
 	}
 	if($iconeAbono != ''){
 		$aRetorno['jornadaPrevista'] = $iconeAbono."&nbsp;".$aRetorno['jornadaPrevista'];
