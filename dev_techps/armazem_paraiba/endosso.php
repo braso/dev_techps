@@ -11,7 +11,7 @@
 	function imprimir_endosso() {
 		global $totalResumo, $contagemEspera;
 
-		if ($_POST['busca_data'] && $_POST['busca_empresa']) {
+		if ($_POST['busca_data'] && $_POST['busca_empresa'] && $_POST['idMotoristaEndossado']) {
 
 			$date = new DateTime($_POST['busca_data']);
 			$month = $date->format('m');
@@ -227,7 +227,6 @@
 								</table>
 							</td>
 
-
 							<td>
 								<table class="table-resumo">
 									<tr>
@@ -238,7 +237,7 @@
 										<td><?= $totalResumo['diffSaldo'] ?></td>
 										<td class="empty"></td>
 										<td>Saldo Atual</td>
-										<td>33:33</td>
+										<td>--:--</td>
 									</tr>
 								</table>
 							</td>
@@ -409,12 +408,6 @@
 					$aDiaOriginal[] = $aDetalhado;
 				}
 
-				// if($aMotorista['enti_tx_matricula']=='6952'){
-				// 	echo "<pre>";
-				// 	print_r($aDiaOriginal);
-				// 	echo "</pre>";
-				// }
-
 				$exibir = 1;
 
 				for ($i = 0; $i < count($aDiaOriginal); $i++) {
@@ -483,20 +476,16 @@
 
 					if ($aEmpresa['empr_nb_parametro'] > 0) {
 						$aParametro = carregar('parametro', $aEmpresa['empr_nb_parametro']);
-						if (
-							$aParametro['para_tx_jornadaSemanal'] != $aMotorista['enti_tx_jornadaSemanal'] ||
-							$aParametro['para_tx_jornadaSabado'] != $aMotorista['enti_tx_jornadaSabado'] ||
-							$aParametro['para_tx_percentualHE'] != $aMotorista['enti_tx_percentualHE'] ||
-							$aParametro['para_tx_percentualSabadoHE'] != $aMotorista['enti_tx_percentualSabadoHE'] ||
-							$aParametro['para_nb_id'] != $aMotorista['enti_nb_parametro']
-						) {
-
-							$ehPadrao = 'Não';
-						} else {
-							$ehPadrao = 'Sim';
+						$convencaoPadrao = '| Convenção Padrão? Sim';
+						foreach(['tx_jornadaSemanal', 'tx_jornadaSabado', 'tx_percentualHE', 'tx_percentualSabadoHE'] as $campo){
+							if($aParametro['para_'.$campo] != $aMotorista['enti_'.$campo]){
+								$convencaoPadrao = '| Convenção Padrão? Não';
+								break;
+							}
 						}
-
-						$convencaoPadrao = '| Convenção Padrão? ' . $ehPadrao;
+						if($aParametro['para_nb_id'] != $aMotorista['enti_nb_parametro']){
+							$convencaoPadrao = '| Convenção Padrão? Não';
+						}
 					}
 
 					abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] | $aEmpresa[empr_tx_nome] $infoEndosso $convencaoPadrao");
