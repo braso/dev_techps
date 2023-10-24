@@ -3,7 +3,7 @@ include "conecta.php";
 
 function exclui_empresa(){
 
-	remover('empresa',$_POST[id]);
+	remover('empresa',$_POST['id']);
 	index();
 	exit;
 
@@ -11,7 +11,7 @@ function exclui_empresa(){
 function modifica_empresa(){
 	global $a_mod;
 
-	$a_mod=carregar('empresa',$_POST[id]);
+	$a_mod=carregar('empresa',$_POST['id']);
 
 	layout_empresa();
 	exit;
@@ -19,7 +19,7 @@ function modifica_empresa(){
 }
 
 function cadastra_empresa(){
-	$campos = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade'];
+	$campos = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade','endereco','bairro'];
 	foreach($campos as $campo){
 		if(!isset($_POST[$campo]) || empty($_POST[$campo])){
 			echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
@@ -100,7 +100,7 @@ function busca_cep($cep){
 
 function carrega_endereco(){
 	
-	$arr = busca_cep($_GET[cep]);
+	$arr = busca_cep($_GET['cep']);
 	
 	?>
 	<script src="/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
@@ -120,8 +120,8 @@ function carrega_endereco(){
 }
 
 function checa_cnpj(){
-	if(strlen($_GET['cnpj']) == 18 || strlen($_GET[cnpj]) == 14){
-		$id = (int)$_GET[id];
+	if(strlen($_GET['cnpj']) == 18 || strlen($_GET['cnpj']) == 14){
+		$id = (int)$_GET['id'];
 		$cnpj = substr($_GET['cnpj'], 0, 18);
 
 		$sql = query("SELECT * FROM empresa WHERE empr_tx_cnpj = '$cnpj' AND empr_nb_id != $id AND empr_tx_status = 'ativo' LIMIT 1");
@@ -248,13 +248,13 @@ function layout_empresa(){
     
 	$c = [
 		campo('CPF/CNPJ*','cnpj',$input_values['cnpj'],2,'MASCARA_CPF','onkeyup="checa_cnpj(this.value);"'),
-		campo('Nome*','nome',$input_values['nome'],4),
-		campo('Nome Fantasia','fantasia',$input_values['fantasia'],4),
+		campo('Nome*','nome',$input_values['nome'],4,'','maxlength="65"'),
+		campo('Nome Fantasia','fantasia',$input_values['fantasia'],4,'','maxlength="65"'),
 		combo('Situação','situacao',$input_values['situacao'],2,array('Ativo','Inativo')),
 		campo('CEP*','cep',$input_values['cep'],2,'MASCARA_CEP','onkeyup="carrega_cep(this.value);"'),
-		campo('Endereço','endereco',$input_values['endereco'],5),
+		campo('Endereço*','endereco',$input_values['endereco'],5,'','maxlength="100"'),
 		campo('Número*','numero',$input_values['numero'],2),
-		campo('Bairro','bairro',$input_values['bairro'],3),
+		campo('Bairro*','bairro',$input_values['bairro'],3,'','maxlength="30"'),
 		campo('Complemento','complemento',$input_values['complemento'],3),
 		campo('Referência','referencia',$input_values['referencia'],2),
 		combo_net('Cidade/UF*','cidade',$input_values['cidade'],3,'cidade','','','cida_tx_uf'),
@@ -355,7 +355,7 @@ function layout_empresa(){
 		
 		function checa_cnpj(cnpj){
 			if(cnpj.length == '18' || cnpj.length == '14'){
-				document.getElementById('frame_cep').src='<?=$path_parts['basename']?>?acao=checa_cnpj&cnpj='+cnpj+'&id=<?=$a_mod[empr_nb_id]?>'
+				document.getElementById('frame_cep').src='<?=$path_parts['basename']?>?acao=checa_cnpj&cnpj='+cnpj+'&id=<?=$a_mod['empr_nb_id']?>'
 			}
 		}
 		$(document).ready(function() {
@@ -429,9 +429,9 @@ function index(){
 	$uf = array('', 'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO');
 	
 
-	$c[] = campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO');
-	$c[] = campo('Nome','busca_nome',$_POST['busca_nome'],3);
-	$c[] = campo('Nome Fantasia','busca_fantasia',$_POST['busca_fantasia'],2);
+	$c[] = campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO','maxlength="6"');
+	$c[] = campo('Nome','busca_nome',$_POST['busca_nome'],3,'','maxlength="65"');
+	$c[] = campo('Nome Fantasia','busca_fantasia',$_POST['busca_fantasia'],2,'','maxlength="65"');
 	$c[] = campo('CPF/CNPJ','busca_cnpj',$_POST['busca_cnpj'],2,'MASCARA_CPF');
 	$c[] = combo('UF','busca_uf',$_POST['busca_uf'],1,$uf);
 	$c[] = combo('Situação','busca_situacao',$_POST['busca_situacao'],2,['Todos','Ativo','Inativo']);
