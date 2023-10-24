@@ -38,14 +38,14 @@ function cadastra_motorista() {
 	global $a_mod;
 
 	$campos = ['enti_tx_nome','enti_tx_nascimento','enti_tx_cpf','enti_tx_rg','enti_tx_civil','enti_tx_sexo','enti_tx_endereco','enti_tx_numero','enti_tx_complemento',
-		'enti_tx_bairro','enti_nb_cidade','enti_tx_cep','enti_tx_fone1','enti_tx_fone2','enti_tx_email','enti_tx_ocupacao','enti_nb_salario','enti_tx_obs',
-		'enti_tx_tipo','enti_tx_status','enti_tx_matricula','enti_nb_empresa',
-		'enti_nb_parametro','enti_tx_jornadaSemanal','enti_tx_jornadaSabado','enti_tx_percentualHE','enti_tx_percentualSabadoHE',
-		'enti_tx_rgOrgao', 'enti_tx_rgDataEmissao', 'enti_tx_rgUf',
-		'enti_tx_pai', 'enti_tx_mae', 'enti_tx_conjugue', 'enti_tx_tipoOperacao',
-		'enti_tx_subcontratado', 'enti_tx_admissao', 'enti_tx_desligamento',
-		'enti_tx_cnhRegistro', 'enti_tx_cnhValidade', 'enti_tx_cnhPrimeiraHabilitacao', 'enti_tx_cnhCategoria', 'enti_tx_cnhPermissao',
-		'enti_tx_cnhObs', 'enti_nb_cnhCidade', 'enti_tx_cnhEmissao', 'enti_tx_cnhPontuacao', 'enti_tx_cnhAtividadeRemunerada'
+	'enti_tx_bairro','enti_nb_cidade','enti_tx_cep','enti_tx_fone1','enti_tx_fone2','enti_tx_email','enti_tx_ocupacao','enti_tx_salario','enti_tx_obs',
+	'enti_tx_tipo','enti_tx_status','enti_tx_matricula','enti_nb_empresa',
+	'enti_nb_parametro','enti_tx_jornadaSemanal','enti_tx_jornadaSabado','enti_tx_percentualHE','enti_tx_percentualSabadoHE',
+	'enti_tx_rgOrgao', 'enti_tx_rgDataEmissao', 'enti_tx_rgUf',
+	'enti_tx_pai', 'enti_tx_mae', 'enti_tx_conjugue', 'enti_tx_tipoOperacao',
+	'enti_tx_subcontratado', 'enti_tx_admissao', 'enti_tx_desligamento',
+	'enti_tx_cnhRegistro', 'enti_tx_cnhValidade', 'enti_tx_cnhPrimeiraHabilitacao', 'enti_tx_cnhCategoria', 'enti_tx_cnhPermissao',
+	'enti_tx_cnhObs', 'enti_nb_cnhCidade', 'enti_tx_cnhEmissao', 'enti_tx_cnhPontuacao', 'enti_tx_cnhAtividadeRemunerada','enti_tx_banco'
 	];
 
 	foreach($campos as $campo){
@@ -96,7 +96,7 @@ function cadastra_motorista() {
 		'pai', 'mae', 'conjugue', 'tipoOperacao',
 		'subcontratado', 'admissao', 'desligamento',
 		'cnhRegistro', 'cnhValidade', 'cnhPrimeiraHabilitacao', 'cnhCategoria', 'cnhPermissao',
-		'cnhObs', 'cnhCidade', 'cnhEmissao', 'cnhPontuacao', 'cnhAtividadeRemunerada'
+		'cnhObs', 'cnhCidade', 'cnhEmissao', 'cnhPontuacao', 'cnhAtividadeRemunerada', 'setBanco'
 	];
 	foreach($post_values as $post_value){
 		if(isset($_POST[$post_value]) && empty($_POST[$post_value])){
@@ -106,14 +106,14 @@ function cadastra_motorista() {
 
 	$valores = [
 		$_POST['nome'], $_POST['nascimento'], $_POST['cpf'], $_POST['rg'], $_POST['civil'], $_POST['sexo'], $_POST['endereco'], $_POST['numero'], $_POST['complemento'],
-		$_POST['bairro'], $_POST['cidade'], $_POST['cep'], $_POST['fone1'], $_POST['fone2'], $_POST['email'], $_POST['ocupacao'], (float)$_POST['salario'], $_POST['obs'],
+		$_POST['bairro'], $_POST['cidade'], $_POST['cep'], $_POST['fone1'], $_POST['fone2'], $_POST['email'], $_POST['ocupacao'], valor($_POST['salario']), $_POST['obs'],
 		'Motorista', 'ativo', $_POST['matricula'], $_POST['empresa'],
 		$_POST['parametro'], $_POST['jornadaSemanal'], $_POST['jornadaSabado'], $_POST['percentualHE'], $_POST['percentualSabadoHE'],
 		$_POST['rgOrgao'], $_POST['rgDataEmissao'], $_POST['rgUf'],
 		$_POST['pai'], $_POST['mae'], $_POST['conjugue'], $_POST['tipoOperacao'],
 		$_POST['subcontratado'], $_POST['admissao'], $_POST['desligamento'],
 		$_POST['cnhRegistro'], $_POST['cnhValidade'], $_POST['cnhPrimeiraHabilitacao'], $_POST['cnhCategoria'], $_POST['cnhPermissao'],
-		$_POST['cnhObs'], $_POST['cnhCidade'], $_POST['cnhEmissao'], $_POST['cnhPontuacao'], $_POST['cnhAtividadeRemunerada']
+		$_POST['cnhObs'], $_POST['cnhCidade'], $_POST['cnhEmissao'], $_POST['cnhPontuacao'], $_POST['cnhAtividadeRemunerada'], $_POST['setBanco']
 	];
 
 
@@ -342,40 +342,45 @@ function layout_motorista() {
 	if ($a_mod['enti_tx_foto'] != '') {
 		$c[] = texto(icone_excluir2($a_mod['enti_nb_id'], 'excluir_foto'), '<img style="width: 100%;" src="' . $a_mod['enti_tx_foto'] . '" />', 2);
 	}
-	$c[] = campo('Matrícula*', 'matricula', $a_mod['enti_tx_matricula'], 1, '');
-	$c[] = campo('Nome*', 'nome', $a_mod['enti_tx_nome'], 3);
-	$c[] = campo_data('Dt. Nascimento*', 'nascimento', $a_mod['enti_tx_nascimento'], 2);
-	$c[] = combo('status', 'status', $a_mod['enti_tx_status'], 2, array('Ativo', 'Inativo'));
-	// $c[]=texto('Idade',$idade,4);
 
 	$uf = ['', 'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 
-	$c[] = campo('CPF*', 					'cpf', $a_mod['enti_tx_cpf'], 2, 'MASCARA_CPF');
-	$c[] = campo('RG', 						'rg', $a_mod['enti_tx_rg'], 2);
-	$c[] = campo('Emissor RG', 				'rgOrgao', $a_mod['enti_tx_rgOrgao'], 2);
-	$c[] = campo_data('Data Emissão RG', 	'rgDataEmissao', $a_mod['enti_tx_rgDataEmissao'], 2);
-	$c[] = combo('UF RG', 					'rgUf', $a_mod['enti_tx_rgUf'], 2, $uf);
-	$c[] = combo('Estado Civil', 			'civil', $a_mod['enti_tx_civil'], 2, ['', 'Casado(a)', 'Solteiro(a)', 'Divorciado(a)', 'Viúvo(a)']);
+	$c = [
+		campo('Matrícula*', 'matricula', $a_mod['enti_tx_matricula'], 1, ''),
+		campo('Nome*', 'nome', $a_mod['enti_tx_nome'], 3),
+		campo_data('Dt. Nascimento*', 'nascimento', $a_mod['enti_tx_nascimento'], 2),
+		combo('status', 'status', $a_mod['enti_tx_status'], 2, array('Ativo', 'Inativo')),
+		// $c[]=texto('Idade',$idade,4),
 
-	$c[] = combo('Sexo', 'sexo', $a_mod['enti_tx_sexo'], 2, array('', 'Feminino', 'Masculino'));
-	$c[] = campo('CEP', 'cep', $a_mod['enti_tx_cep'], 2, 'MASCARA_CEP', 'onkeyup="carrega_cep(this.value);"');
-	$c[] = campo('Endereço', 'endereco', $a_mod['enti_tx_endereco'], 4);
-	$c[] = campo('Número', 'numero', $a_mod['enti_tx_numero'], 2, 'MASCARA_NUMERO');
-	$c[] = campo('Bairro', 'bairro', $a_mod['enti_tx_bairro'], 2);
+		campo('CPF*', 'cpf', $a_mod['enti_tx_cpf'], 2, 'MASCARA_CPF'),
+		campo('RG', 'rg', $a_mod['enti_tx_rg'], 2),
+		campo('Emissor RG', 'rgOrgao', $a_mod['enti_tx_rgOrgao'], 2),
+		campo_data('Data Emissão RG*', 'rgDataEmissao', $a_mod['enti_tx_rgDataEmissao'], 2),
+		combo('UF RG', 'rgUf', $a_mod['enti_tx_rgUf'], 2, $uf),
+		combo('Estado Civil', 'civil', $a_mod['enti_tx_civil'], 2, ['', 'Casado(a)', 'Solteiro(a)', 'Divorciado(a)', 'Viúvo(a)']),
 
-	$c[] = campo('Complemento', 'complemento', $a_mod['enti_tx_complemento'], 2);
-	$c[] = campo('Ponto de Referência', 'referencia', $a_mod['enti_tx_referencia'], 3);
-	$c[] = combo_net('Cidade/UF*', 'cidade', $a_mod['enti_nb_cidade'], 3, 'cidade', '', '', 'cida_tx_uf');
-	$c[] = campo('Telefone 1*', 'fone1', $a_mod['enti_tx_fone1'], 2, 'MASCARA_CEL');
-	$c[] = campo('Telefone 2', 'fone2', $a_mod['enti_tx_fone2'], 2, 'MASCARA_CEL');
-	$c[] = campo('E-mail*', 'email', $a_mod['enti_tx_email'], 3);
+		combo('Sexo', 'sexo', $a_mod['enti_tx_sexo'], 2, array('', 'Feminino', 'Masculino')),
+		campo('CEP', 'cep', $a_mod['enti_tx_cep'], 2, 'MASCARA_CEP', 'onkeyup="carrega_cep(this.value),"'),
+		campo('Endereço', 'endereco', $a_mod['enti_tx_endereco'], 4),
+		campo('Número', 'numero', $a_mod['enti_tx_numero'], 2, 'MASCARA_NUMERO'),
+		campo('Bairro', 'bairro', $a_mod['enti_tx_bairro'], 2),
 
-	$c[] = campo('Filiação Pai', 'pai', $a_mod['enti_tx_pai'], 3);
-	$c[] = campo('Filiação Mãe', 'mae', $a_mod['enti_tx_mae'], 3);
-	$c[] = campo('Nome do Cônjugue', 'conjugue', $a_mod['enti_tx_conjugue'], 3);
-	$c[] = campo('Tipo de Operação', 'tipoOperacao', $a_mod['enti_tx_tipoOperacao'], 3);
-	$c[] = arquivo('Foto (.png, .jpg)', 'foto', $a_mod['enti_tx_foto'], 4);
-	$c[] = ckeditor('Observações:', 'obs', $a_mod['enti_tx_obs'], 12);
+		campo('Complemento', 'complemento', $a_mod['enti_tx_complemento'], 2),
+		campo('Ponto de Referência', 'referencia', $a_mod['enti_tx_referencia'], 3),
+		combo_net('Cidade/UF*', 'cidade', $a_mod['enti_nb_cidade'], 3, 'cidade', '', '', 'cida_tx_uf'),
+		campo('Telefone 1*', 'fone1', $a_mod['enti_tx_fone1'], 2, 'MASCARA_CEL'),
+		campo('Telefone 2', 'fone2', $a_mod['enti_tx_fone2'], 2, 'MASCARA_CEL'),
+		campo('E-mail*', 'email', $a_mod['enti_tx_email'], 3),
+
+		campo('Filiação Pai', 'pai', $a_mod['enti_tx_pai'], 3),
+		campo('Filiação Mãe', 'mae', $a_mod['enti_tx_mae'], 3),
+		campo('Nome do Cônjugue', 'conjugue', $a_mod['enti_tx_conjugue'], 3),
+		campo('Tipo de Operação', 'tipoOperacao', $a_mod['enti_tx_tipoOperacao'], 3),
+		arquivo('Foto (.png, .jpg)', 'foto', $a_mod['enti_tx_foto'], 4),
+		campo('SET de Banco de Horas (HH:MM)', 'setBanco', $a_mod['enti_tx_banco'], 3, 'MASCARA_HORA', 'maxlength="8" placeholder="hh:mm"'),
+		ckeditor('Observações:', 'obs', $a_mod['enti_tx_obs'], 12)
+	];
+	// $c[]=texto('Idade',$idade,4);
 
 	if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 		$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
