@@ -28,8 +28,9 @@ function cadastra_parametro(){
 	$valores=array(
 		$_POST[nome], $_POST[jornadaSemanal], $_POST[jornadaSabado], $_POST[percentualHE], $_POST[percentualSabadoHE], $_POST[HorasEXExcedente], 
 		$_POST[tolerancia],$_POST[acordo], $_POST[inicioAcordo], $_POST[fimAcordo], $_SESSION[user_nb_id],date("Y-m-d"),
-		$_POST[diariasCafe], $_POST[diariasAlmoco], $_POST[diariasJanta], 'ativo'
+		$_POST[diariasCafe], $_POST[diariasAlmoco], $_POST[diariasJanta], 'ativo', $_POST[regime_banco], $_POST[setCampo]
 	);
+
 
 	if($_POST[id]>0){
 		//CARREGA O PARAMETRO ANTES DE ATUALIZAR
@@ -90,6 +91,7 @@ function layout_parametro(){
 	$c[] = combo('Acordo Sindical','acordo',$a_mod[para_tx_acordo],3,array('Sim','Não'));
 	$c[] = campo_data('Início do Acordo','inicioAcordo',$a_mod[para_tx_inicioAcordo],3);
 	$c[] = campo_data('Fim do Acordo','fimAcordo',$a_mod[para_tx_fimAcordo],3);
+	$c[] = checkbox('Utiliza regime de banco de horas?','setCampo',"1","",3);
 	
 	$botao[] = botao('Gravar','cadastra_parametro','id',$_POST[id]);
 	$botao[] = botao('Voltar','index');

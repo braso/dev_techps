@@ -21,7 +21,7 @@
 				<!-- INICIO HEAD -->
 
 				<head>
-					<meta charset="utf-8" />
+					<meta charset="UTF-8" />
 					<title>TechPS</title>
 					<meta http-equiv="X-UA-Compatible" content="IE=edge">
 					<meta content="width=device-width, initial-scale=1" name="viewport" />

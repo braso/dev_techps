@@ -40,7 +40,7 @@ function cadastra_empresa(){
 		$_POST['dataRegistroCNPJ'], "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio'], $_POST['ftpServer'], $_POST['ftpUsername'], $_POST['ftpUserpass']
 	];
 
-	
+
 	$empty_ftp_inputs = empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) + 0;
 
 	if($empty_ftp_inputs == 3){

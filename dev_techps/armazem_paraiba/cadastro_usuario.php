@@ -262,8 +262,7 @@ function index() {
 		$_POST['id'] = $_SESSION['user_nb_id'];
 		modifica_usuario();
 	}
-	
-	$extraEmpresa = " AND empr_tx_situacao != 'inativo' ORDER BY empr_tx_nome";
+  $extraEmpresa = " AND empr_tx_situacao != 'inativo' ORDER BY empr_tx_nome";
 
 	if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 		$extraEmpresa .= " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
@@ -282,7 +281,7 @@ function index() {
 	if ($_POST['busca_login']){
 		$extra .= " AND user_tx_login LIKE '%".$_POST['busca_login']."%'";
 	}
-	if (isset($_POST['busca_nivel']) && strtolower($_POST['busca_nivel']) != "todos"){
+  if (isset($_POST['busca_nivel']) && strtolower($_POST['busca_nivel']) != "todos"){
 		$extra .= " AND user_tx_nivel = '".$_POST['busca_nivel']."'";
 	}
 	if ($_POST['busca_cpf']){

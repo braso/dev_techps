@@ -237,7 +237,6 @@ function modal_alert(){
 }
 
 function inserir($tabela,$campos,$valores){
-
 	if(count($campos) != count($valores)){
 		echo"ERRO Número de campos não confere com número de linhas na função de inserir!";
 		exit;
@@ -248,17 +247,12 @@ function inserir($tabela,$campos,$valores){
 
 	$campos=implode(',',$campos);
 
-	//print_r("INSERT INTO $tabela ($campos) VALUES($valores);");
-	//echo "<script>alert('')</script>";
 	try{
 		query("INSERT INTO $tabela ($campos) VALUES($valores);") or die(mysql_error());
 		$sql = query("SELECT LAST_INSERT_ID();") or die(mysql_error());
 	}catch (Exception $e){
 		return;
 	}
-	
-	
-
 
 	set_status("Registro inserido com sucesso!");
 
@@ -325,12 +319,13 @@ function ultimo_reg($tabela){
 }
 
 
+
 function carregar($tabela,$id='',$campo='',$valor='',$extra='',$exibe=0){
 
-	$tab=substr($tabela,0,4);
+	$tab = substr($tabela,0,4);
+	$ext = '';
 
-	if($id!='')
-		 $extra_id = " AND ".$tab."_nb_id='$id'";
+	$extra_id = ($id!='')? " AND ".$tab."_nb_id= $id": '';
 
 	if($campo[0]!='') {
 		$a_campo = explode(',', $campo);
@@ -343,10 +338,18 @@ function carregar($tabela,$id='',$campo='',$valor='',$extra='',$exibe=0){
 		}
 	}
 
-	if($exibe == 1)
-		echo "SELECT * FROM $tabela WHERE 1 $extra_id $ext $extra LIMIT 1<br>";
+	$query = "SELECT * FROM $tabela WHERE 1 $extra_id $ext $extra LIMIT 1";
 
-	return mysqli_fetch_array(query("SELECT * FROM $tabela WHERE 1  $extra_id $ext $extra LIMIT 1"));
+	if($exibe == 1){
+		echo $query;
+	}
+	
+	if($extra_id == '' && $ext == '' && $extra == ''){
+		return [];
+	}else{
+		return mysqli_fetch_array(query($query));
+	}
+
 
 }
 
@@ -411,8 +414,12 @@ function fieldset($nome=''){
 
 function set_status($msg='') {
 
-	if( $msg == '' )
+	if($msg == '')
 		global $msg;
+	
+	if(strrpos($msg, 'ERRO:') !== false){
+		$msg = '<b style="color: red">'.$msg.'</b>';
+	}
 
 	$_POST['msg_status'] = $msg;
 
@@ -473,6 +480,58 @@ function campo_jornada($nome,$variavel,$modificador,$tamanho){
 
 }
 
+function checkbox($nome,$variavel,$modificadorRadio,$modificador,$tamanho){
+    $data_input='<script>
+    marcarBotao("'.$modificadorRadio.'");
+    function marcarBotao(botaoId) {
+        if (botaoId) {
+            document.getElementById(botaoId).checked = true;
+            
+        }
+        
+    }
+    
+    const radioSim = document.getElementById("1");
+    const radioNao = document.getElementById("0");
+    const campo = document.getElementById("'.$variavel.'");
+    if (radioSim.checked) {
+            campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
+    }
+    
+    // Adicionando um ouvinte de eventos aos elementos de rádio
+    radioSim.addEventListener("change", function() {
+        if (radioSim.checked) {
+            campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
+        }
+    });
+    
+    radioNao.addEventListener("change", function() {
+    if (radioNao.checked) {
+        campo.style.display = "none"; // Oculta o campo quando "Não Mostrar Campo" é selecionado
+    }
+    });
+    </script>';
+    //  Utiliza regime de banco de horas?
+    $campo='
+    <div class="col-sm-'.$tamanho.' margin-bottom-5">
+        <label><b>'.$nome.'</b></label><br>
+         <label class="radio-inline">
+            <input type="radio" id="1" name="regime_banco" value="1"> Sim
+        </label>
+        <label class="radio-inline">
+            <input type="radio" id="0" name="regime_banco" value="0"> Não
+        </label>
+    </div>
+    <div id="'.$variavel.'" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
+            <label><b>SET de mês inicio:</b></label>
+            <input type="month" id="outroCampo" name="'.$variavel.'" value="'.$modificador.'" autocomplete="off">
+    </div>
+    ';
+  
+  return $campo.$data_input;
+    
+}
+
 function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 	// $variavel_limpa = str_replace(array("[","]"),array("\\[","\\]"),$variavel);	
 
@@ -507,12 +566,24 @@ function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 			});
 		 });
 		</script>";
+	elseif($mascara == "MASCARA_HORA")
+		 $data_input="<script>
+		 const inputElement = document.getElementById(\"$variavel\");
+
+        inputElement.addEventListener('input', function () {
+            let inputValue = this.value;
+            let sanitizedValue = inputValue.replace(/[^0-9:.-]/g, ''); // Remove letras e outros caracteres não permitidos
+            this.value = sanitizedValue;
+        });
+		</script>";
+
 
 			// <input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' data-placeholder="____" data-inputmask="'.$data_input.'">
 
 $campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 			<label><b>'.$nome.'</b></label>
 			<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' '.$data_input2.'>
+			<div id="feedback"></div>
 		</div>';
 
 	
@@ -771,7 +842,7 @@ function arquivo($nome,$variavel,$modificador,$tamanho,$extra=''){
 
 	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 				<label><b>'.$nome.$ver.'</b></label>
-				<input name="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
+				<input name="'.$variavel.'" value="'.$CONTEX[path]."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
 			</div>';
 
 		return $campo;
@@ -786,10 +857,9 @@ function enviar($arquivo,$diretorio,$nome='') {
 	// if('.php', '.php3', '.php4', '.phtml', '.pl', '.py', '.jsp', '.asp', '.htm', '.shtml', '.sh', '.cgi')
 
 	if($nome!='') {
-		$target_path = $target_path . "$nome.$extensao[extension]";
-
+		$target_path .= "$nome.$extensao[extension]";
 	}else {
-		$target_path = $target_path . basename($_FILES[$arquivo]['name']);
+		$target_path .= basename($_FILES[$arquivo]['name']);
 	}
 
 
