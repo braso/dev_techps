@@ -324,36 +324,26 @@ function verificaTolerancia($saldoDiario, $data, $motorista) {
 
 	$toleranciaArray = carrega_array($sqlTolerancia);
 
-	if (empty($toleranciaArray['para_tx_tolerancia'])) {
-		$tolerancia = '00:00';
-	} else
-		$tolerancia = $toleranciaArray['para_tx_tolerancia'];
-	// 	$tolerancia = '00:10';
+	$tolerancia = (empty($toleranciaArray['para_tx_tolerancia']))? '00:00': $toleranciaArray['para_tx_tolerancia'];
 
-    $datetimeSaldo = new DateTime('2000-01-01 ' . $saldoDiario);
-    $datetimeTolerancia = new DateTime('2000-01-01 ' . $tolerancia);
-    $interval = $datetimeSaldo->diff($datetimeTolerancia);
-    $horas = $interval->format('%H');
-    $minutos = $interval->format('%I');
-    $totalMinutos = $horas * 60 + $minutos;
     $toleranciaMinutos = intval(substr($tolerancia, 0, 2)) * 60 + intval(substr($tolerancia, 3, 2));
 
-    if ($saldoDiario[0] == '-') {
-        $saldoEmMinutos = intval(substr($saldoDiario, 1, 2)) * 60 + intval(substr($saldoDiario, 4, 2));
-        if ($totalMinutos <= $toleranciaMinutos || abs($saldoEmMinutos) <= $toleranciaMinutos) {
-            $cor = 'blue';
-        } else {
-            $cor = 'red';
-        }
-    } else {
-        if ($saldoDiario == '00:00') {
-            $cor = 'blue';
-        } else {
-            $cor = 'green';
-        }
-    }
+	$saldoEmMinutos = intval(explode(':', $saldoDiario)[0]) * 60;
+	if($saldoDiario[0] == '-'){
+		$saldoEmMinutos -= intval(explode(':', $saldoDiario)[1]);
+	}else{
+		$saldoEmMinutos += intval(explode(':', $saldoDiario)[1]);
+	}
 
-    // echo "$data: $saldoDiario - $tolerancia -> $cor <br>";
+	
+
+	if($saldoEmMinutos < -($toleranciaMinutos)){
+		$cor = 'red';
+	}elseif($saldoEmMinutos > $toleranciaMinutos){
+		$cor = 'green';
+	}else{
+		$cor = 'blue';
+	}
 
     if ($_SESSION['user_tx_nivel'] == 'Motorista') {
 		$retorno = '<center><span><i style="color:' . $cor . ';" class="fa fa-circle"></i></span></center>';
@@ -362,10 +352,6 @@ function verificaTolerancia($saldoDiario, $data, $motorista) {
 	}
 	return $retorno;
 }
-
-
-
-
 
 
 function calcular_maximo_direcao($inicio_jornada, $fim_jornada, $pausas) {
@@ -1160,7 +1146,7 @@ function diaDetalheEndosso($matricula, $data, $status = ''){
 	setlocale(LC_ALL, 'pt_BR.utf8');
 	
 	$aRetorno['data'] = data($data);
-	$aRetorno['diaSemana'] = strftime('%a', strtotime($data));
+	$aRetorno['diaSemana'] = strtoupper(mb_strtolower(strftime('%a', strtotime($data))));
 	$campos = ['inicioJornada', 'inicioRefeicao', 'fimRefeicao', 'fimJornada', 'diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada', 'jornadaPrevista', 'diffJornadaEfetiva', 'maximoDirecaoContinua', 'intersticio', 'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'diffSaldo', 'temPendencias'];
 	foreach($campos as $campo){
 		$aRetorno[$campo] = '';
