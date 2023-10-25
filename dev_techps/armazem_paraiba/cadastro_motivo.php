@@ -25,15 +25,6 @@ function cadastra_motivo(){
 		'Outras fontes de marcação' => 'T',
 		'Descanso Semanal Remunerado e Abono' => 'DSR'
 	];
-	//Testes
-		print_r('post legenda: '.$_POST['legenda'].'<br>'.
-			'legendas: '.var_dump($legendas).'<br>'.
-			'legendas[incluida manualmente]: '.$legendas['Incluída Manualmente'].'<br>'.
-			'res: '.$legendas[$_POST['legenda']].'<br>'
-		);
-		index();
-		exit;
-	//
 
 	$campos[] = 'moti_tx_legenda';
 	$valores[] = $legendas[$_POST['legenda']];
@@ -93,8 +84,8 @@ function index(){
 	fecha_form($botao);
 
 	$sql = "SELECT * FROM motivo WHERE moti_tx_status != 'inativo' $extra";
-	$cab = ['CÓDIGO','NOME','TIPO','',''];
-	$val = ['moti_nb_id','moti_tx_nome','moti_tx_tipo','icone_modificar(moti_nb_id,modifica_motivo)','icone_excluir(moti_nb_id,exclui_motivo)'];
+	$cab = ['CÓDIGO','NOME','TIPO','LEGENDA', '', ''];
+	$val = ['moti_nb_id','moti_tx_nome','moti_tx_tipo', 'moti_tx_legenda', 'icone_modificar(moti_nb_id,modifica_motivo)','icone_excluir(moti_nb_id,exclui_motivo)'];
 	grid($sql,$cab,$val);
 
 	rodape();
