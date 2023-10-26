@@ -121,7 +121,13 @@ function index() {
 					continue;
 				}
 
-				$aDia[] = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), array($aMotorista[enti_tx_matricula]), $aDetalhado));
+				$row = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), array($aMotorista['enti_tx_matricula']), $aDetalhado));
+				for($f = 0; $f < sizeof($row)-1; $f++){
+					if($row[$f] == "00:00"){
+						$row[$f] = "";
+					}
+				}
+				$aDia[] = $row;
 			}
 
 			if (count($aDia) > 0) {
