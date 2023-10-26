@@ -79,7 +79,14 @@
 			for ($date = $startDate; $date <= $endDate; $date->modify('+1 day')) {
 				$dataVez = $date->format('Y-m-d');
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
-				$aDia[] = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDadosMotorista, $aDetalhado));
+
+				$row = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDadosMotorista, $aDetalhado));
+				for($f = 0; $f < sizeof($row); $f++){
+					if($row[$f] == "00:00"){
+						$row[$f] = "";
+					}
+				}
+				$aDia[] = $row;
 			}
 	
 			if ($aEmpresa['empr_nb_parametro'] > 0) {
