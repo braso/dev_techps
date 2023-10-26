@@ -91,7 +91,7 @@ function layout_parametro(){
 	$c[] = combo('Acordo Sindical','acordo',$a_mod['para_tx_acordo'],3,array('Sim','Não'));
 	$c[] = campo_data('Início do Acordo','inicioAcordo',$a_mod['para_tx_inicioAcordo'],3);
 	$c[] = campo_data('Fim do Acordo','fimAcordo',$a_mod['para_tx_fimAcordo'],3);
-	$c[] = checkbox('Utiliza regime de banco de horas?','setCampo',"1","",3);
+	$c[] = checkbox('Utiliza regime de banco de horas?','setCampo',$a_mod['para_nb_check'],$a_mod['para_tx_setData'],$a_mod['para_nb_qDias'],3);
 	
 	$botao[] = botao('Gravar','cadastra_parametro','id',$_POST['id']);
 	$botao[] = botao('Voltar','index');
