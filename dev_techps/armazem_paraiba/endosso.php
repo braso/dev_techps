@@ -11,12 +11,17 @@
 	function imprimir_endosso() {
 		global $totalResumo, $contagemEspera;
 
-		if ($_POST['busca_data'] && $_POST['busca_empresa'] && $_POST['idMotoristaEndossado']) {
+		if(!$_POST['idMotoristaEndossado']){
+			$motorista = carregar('entidade', $_POST['busca_motorista']);
+			$_POST['idMotoristaEndossado'] = $motorista['enti_nb_id'];
+		}
 
+		if ($_POST['busca_data'] && $_POST['busca_empresa'] && $_POST['idMotoristaEndossado']) {
+			
 			$date = new DateTime($_POST['busca_data']);
 			$month = $date->format('m');
 			$year = $date->format('Y');
-
+			
 			$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
 
 			$primeiroDia = '01/' . $month . '/' . $year;
@@ -24,7 +29,7 @@
 
 			$aEmpresa = carregar('empresa', $_POST['busca_empresa']);
 			$aCidadeEmpresa = carregar('cidade', $aEmpresa['empr_nb_cidade']);
-
+			
 			$enderecoEmpresa = implode(
 				", ",
 				array_filter([
@@ -37,8 +42,8 @@
 			);
 
 			$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_tipo = 'Motorista' AND enti_nb_id IN (" . $_POST['idMotoristaEndossado'] . ") AND enti_nb_empresa = " . $_POST['busca_empresa'] . " ORDER BY enti_tx_nome");
-
-			while ($aMotorista = carrega_array($sqlMotorista)) {
+			
+			while($aMotorista = carrega_array($sqlMotorista)){
 				for ($i = 1; $i <= $daysInMonth; $i++) {
 					$dataVez = $_POST['busca_data'] . "-" . str_pad($i, 2, 0, STR_PAD_LEFT);
 
@@ -50,11 +55,17 @@
 						$aDetalhado['adicionalNoturno'], $aDetalhado['esperaIndenizada']
 					];
 					
-				$aDia[] = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDetalhadoCampos));
+				$row = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDetalhadoCampos));
+				for($f = 0; $f < sizeof($row); $f++){
+					if($row[$f] == "00:00"){
+						$row[$f] = "";
+					}
+				}
+				$aDia[] = $row;
 				
 			}
 			unset($aMotorista);
-			
+
 			$sqlEndosso = query("SELECT endo_tx_dataCadastro FROM endosso WHERE endo_tx_matricula = '$aMotorista[enti_tx_matricula]'");
 			$aEndosso = carrega_array($sqlEndosso);
 
@@ -69,7 +80,6 @@
 					$saldoAnterior = somarHorarios([$saldoAnterior, $aDetalhado['diffSaldo']]);
 				}
 			}
-			
 			?>
 			<!DOCTYPE html>
 				<html lang="en">
@@ -279,6 +289,8 @@
 					$totalResumo = ['diffRefeicao' => '00:00','diffEspera' => '00:00','diffDescanso' => '00:00','diffRepouso' => '00:00','diffJornada' => '00:00','jornadaPrevista' => '00:00','diffJornadaEfetiva' => '00:00','maximoDirecaoContinua' => '','intersticio' => '00:00','he50' => '00:00','he100' => '00:00','adicionalNoturno' => '00:00','esperaIndenizada' => '00:00','diffSaldo' => '00:00'];
 					unset($aDia);
 				}
+			}else{
+				print_r("Há informações faltando.<br>");
 			}
 			exit;
 		}
@@ -404,7 +416,13 @@
 
 					$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 
-					$aDia[] = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));
+					$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));;
+					for($f = 0; $f < sizeof($row); $f++){
+						if($row[$f] == "00:00"){
+							$row[$f] = "";
+						}
+					}
+					$aDia[] = $row;
 					$aDiaOriginal[] = $aDetalhado;
 				}
 
