@@ -1088,6 +1088,11 @@ function diaDetalhePonto($matricula, $data) {
 	if (count($aDataHorainicioRepouso) > 0 && count($aDataHorafimRepouso) > 0) {
 		$aRetorno['diffRepouso'] = $repousoOrdenado['icone'] . $repousoOrdenado['totalIntervalo'];
 	}
+	$saldo = (intval(explode(':', $aRetorno['diffSaldo'])[0])*60)+
+		(($aRetorno['diffSaldo'][0] == '-')?-1:1)*(intval(explode(':', $aRetorno['diffSaldo'])[1]));
+	if($saldo > 0){
+		$aRetorno['diffSaldo'] = "<b>".$aRetorno['diffSaldo']."</b>";
+	}
 
 	// TOTALIZADOR 
 	$totalResumo['diffRefeicao'] = somarHorarios(array($totalResumo['diffRefeicao'], strip_tags(str_replace("&nbsp;", "", $aRetorno['diffRefeicao']))));
