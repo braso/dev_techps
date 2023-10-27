@@ -20,16 +20,16 @@ function modifica_parametro(){
 
 function cadastra_parametro(){
 	
-	$campos=array(
+	$campos=[
 		'para_tx_nome', 'para_tx_jornadaSemanal', 'para_tx_jornadaSabado', 'para_tx_percentualHE', 'para_tx_percentualSabadoHE', 'para_tx_HorasEXExcedente', 
 		'para_tx_tolerancia', 'para_tx_acordo', 'para_tx_inicioAcordo', 'para_tx_fimAcordo', 'para_nb_userCadastro', 'para_tx_dataCadastro', 'para_tx_diariasCafe', 
 		'para_tx_diariasAlmoco', 'para_tx_diariasJanta', 'para_tx_status'
-	);
-	$valores=array(
+	];
+	$valores=[
 		$_POST['nome'], $_POST['jornadaSemanal'], $_POST['jornadaSabado'], $_POST['percentualHE'], $_POST['percentualSabadoHE'], $_POST['HorasEXExcedente'], 
 		$_POST['tolerancia'],$_POST['acordo'], $_POST['inicioAcordo'], $_POST['fimAcordo'], $_SESSION['user_nb_id'],date("Y-m-d"),
 		$_POST['diariasCafe'], $_POST['diariasAlmoco'], $_POST['diariasJanta'], 'ativo', $_POST['regime_banco'], $_POST['setCampo']
-	);
+	];
 
 
 	if($_POST['id']>0){
@@ -37,8 +37,8 @@ function cadastra_parametro(){
 		$aParametro = carregar('parametro', $_POST['id']);
 
 		
-		$campos = array_merge($campos,array('para_nb_userAtualiza','para_tx_dataAtualiza'));
-		$valores = array_merge($valores,array($_SESSION['user_nb_id'], date("Y-m-d H:i:s")));
+		$campos = array_merge($campos,['para_nb_userAtualiza','para_tx_dataAtualiza']);
+		$valores = array_merge($valores,[$_SESSION['user_nb_id'], date("Y-m-d H:i:s")]);
 		atualizar('parametro',$campos,$valores,$_POST['id']);
 		
 		$sql = query("SELECT * FROM entidade WHERE enti_tx_status != 'inativo'
@@ -49,8 +49,8 @@ function cadastra_parametro(){
 				$aParametro['para_tx_percentualHE'] == $a['enti_tx_percentualHE'] && $aParametro['para_tx_percentualSabadoHE'] == $a['enti_tx_percentualSabadoHE']){
 	
 				atualizar('entidade',
-					array('enti_tx_jornadaSemanal', 'enti_tx_jornadaSabado', 'enti_tx_percentualHE', 'enti_tx_percentualSabadoHE'),
-					array($_POST['jornadaSemanal'], $_POST['jornadaSabado'], $_POST['percentualHE'], $_POST['percentualSabadoHE']),
+					['enti_tx_jornadaSemanal', 'enti_tx_jornadaSabado', 'enti_tx_percentualHE', 'enti_tx_percentualSabadoHE'],
+					[$_POST['jornadaSemanal'], $_POST['jornadaSabado'], $_POST['percentualHE'], $_POST['percentualSabadoHE']],
 					$a['enti_nb_id']
 				);
 
@@ -59,8 +59,8 @@ function cadastra_parametro(){
 		}
 
 	} else {
-		$campos = array_merge($campos,array('para_nb_userAtualiza','para_tx_dataAtualiza'));
-		$valores = array_merge($valores,array($_SESSION['user_nb_id'], date("Y-m-d H:i:s")));
+		$campos = array_merge($campos,['para_nb_userAtualiza','para_tx_dataAtualiza']);
+		$valores = array_merge($valores,[$_SESSION['user_nb_id'], date("Y-m-d H:i:s")]);
 		inserir('parametro',$campos,$valores);
 	}
 
@@ -88,10 +88,10 @@ function layout_parametro(){
 	$c[] = campo('Diária Café da Manhã(R$)','diariasCafe',$a_mod['para_tx_diariasCafe'],3,'MASCARA_DINHERO');
 	$c[] = campo('Diária Almoço(R$)','diariasAlmoco',$a_mod['para_tx_diariasAlmoco'],3,'MASCARA_DINHERO');
 	$c[] = campo('Diária Jantar(R$)','diariasJanta',$a_mod['para_tx_diariasJanta'],3,'MASCARA_DINHERO');
-	$c[] = combo('Acordo Sindical','acordo',$a_mod['para_tx_acordo'],3,array('Sim','Não'));
+	$c[] = combo('Acordo Sindical','acordo',$a_mod['para_tx_acordo'],3,['Sim','Não']);
 	$c[] = campo_data('Início do Acordo','inicioAcordo',$a_mod['para_tx_inicioAcordo'],3);
 	$c[] = campo_data('Fim do Acordo','fimAcordo',$a_mod['para_tx_fimAcordo'],3);
-	$c[] = checkbox('Utiliza regime de banco de horas?','setCampo',"1","",3);
+	$c[] = checkbox('Utiliza regime de banco de horas?','setCampo',$a_mod['para_nb_check'],$a_mod['para_tx_setData'],$a_mod['para_nb_qDias'],3);
 	
 	$botao[] = botao('Gravar','cadastra_parametro','id',$_POST['id']);
 	$botao[] = botao('Voltar','index');
@@ -141,8 +141,8 @@ function index(){
 	fecha_form($botao);
 
 	$sql = "SELECT * FROM parametro WHERE para_tx_status != 'inativo' $extra";
-	$cab = array('CÓDIGO','NOME','JORNADA SEMANAL/DIA','JORNADA SÁBADO','HR(%)','HR SÁBADO(%)','ACORDO','INÍCIO','FIM','','');
-	$val = array('para_nb_id','para_tx_nome','para_tx_jornadaSemanal','para_tx_jornadaSabado','para_tx_percentualHE','para_tx_percentualSabadoHE','para_tx_acordo','data(para_tx_inicioAcordo)','data(para_tx_fimAcordo)','icone_modificar(para_nb_id,modifica_parametro)','icone_excluir(para_nb_id,exclui_parametro)');
+	$cab = ['CÓDIGO','NOME','JORNADA SEMANAL/DIA','JORNADA SÁBADO','HE(%)','HE SÁBADO(%)','ACORDO','INÍCIO','FIM','',''];
+	$val = ['para_nb_id','para_tx_nome','para_tx_jornadaSemanal','para_tx_jornadaSabado','para_tx_percentualHE','para_tx_percentualSabadoHE','para_tx_acordo','data(para_tx_inicioAcordo)','data(para_tx_fimAcordo)','icone_modificar(para_nb_id,modifica_parametro)','icone_excluir(para_nb_id,exclui_parametro)'];
 
 	grid($sql,$cab,$val);
 
