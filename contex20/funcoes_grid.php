@@ -106,7 +106,7 @@ function grid3($cabecalho,$valores,$reg='10'){
 		echo "<thead><tr>";
 
 		for($i=0;$i<count($cabecalho);$i++){
-			echo "<th>$cabecalho[$i]</th>";
+			echo "<th class='th-align'>$cabecalho[$i]</th>";
 		}
 
 		echo "</thead></tr>";

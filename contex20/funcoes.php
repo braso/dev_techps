@@ -483,6 +483,7 @@ function campo_jornada($nome,$variavel,$modificador,$tamanho){
 function checkbox($nome, $variavel, $modificadorRadio, $modificadorSet, $modificadorDias, $tamanho) {
 	$data_input = '<script>
     marcarBotao("' . $modificadorRadio . '");
+	console.log("' . $modificadorRadio . '");
     function marcarBotao(botaoId) {
         if (botaoId) {
             document.getElementById(botaoId).checked = true;
@@ -491,8 +492,8 @@ function checkbox($nome, $variavel, $modificadorRadio, $modificadorSet, $modific
         
     }
     
-    const radioSim = document.getElementById("1");
-    const radioNao = document.getElementById("0");
+    const radioSim = document.getElementById("sim");
+    const radioNao = document.getElementById("nao");
     const campo = document.getElementById("' . $variavel . '");
 	const campo2 = document.getElementById("dias");
     if (radioSim.checked) {
@@ -520,10 +521,10 @@ function checkbox($nome, $variavel, $modificadorRadio, $modificadorSet, $modific
     <div class="col-sm-' . $tamanho . ' margin-bottom-5">
         <label><b>' . $nome . '</b></label><br>
          <label class="radio-inline">
-            <input type="radio" id="1" name="regime_banco" value="1"> Sim
+            <input type="radio" id="sim" name="regime_banco" value="sim"> Sim
         </label>
         <label class="radio-inline">
-            <input type="radio" id="0" name="regime_banco" value="0"> Não
+            <input type="radio" id="nao" name="regime_banco" value="nao"> Não
         </label>
     </div>
     <div id="' . $variavel . '" class="col-sm-' . $tamanho . ' margin-bottom-5" style="display: none;">
@@ -532,7 +533,7 @@ function checkbox($nome, $variavel, $modificadorRadio, $modificadorSet, $modific
     </div>
 	<div id="dias" class="col-sm-' . $tamanho . ' margin-bottom-5" style="display: none;">
             <label><b>Quandidade de dias:</b></label>
-            <input class="form-control input-sm" type="number" id="outroCampo" name="' . $variavel . '" value="' . $modificadorDias . '" autocomplete="off">
+            <input class="form-control input-sm" type="number" id="outroCampo" name="quandDias" value="' . $modificadorDias . '" autocomplete="off">
     </div>
     ';
 
