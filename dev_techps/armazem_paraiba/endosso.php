@@ -56,7 +56,7 @@
 					];
 					
 				$row = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDetalhadoCampos));
-				for($f = 0; $f < sizeof($row); $f++){
+				for($f = 0; $f < sizeof($row)-1; $f++){
 					if($row[$f] == "00:00"){
 						$row[$f] = "";
 					}
@@ -417,7 +417,7 @@
 					$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 
 					$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));;
-					for($f = 0; $f < sizeof($row); $f++){
+					for($f = 0; $f < sizeof($row)-1; $f++){
 						if($row[$f] == "00:00"){
 							$row[$f] = "";
 						}
