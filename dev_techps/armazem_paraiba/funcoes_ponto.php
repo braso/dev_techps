@@ -1019,16 +1019,24 @@ function diaDetalhePonto($matricula, $data) {
 
 	//VERIFICA SE HOUVE 01:00 DE REFEICAO
 	$dtRefeicaoMinima = new DateTime($data . ' ' . '01:00');
+	$dtRefeicaoMaximo = new DateTime($data . ' ' . '02:00');
+	$maior2h = 0;
 	$menor1h = 0;
 	for ($i = 0; $i < count($refeicaoOrdenada['pares']); $i++) {
 		$dtIntervaloRefeicao = new DateTime($data . ' ' . $refeicaoOrdenada['pares'][$i]['intervalo']);
 		if ($dtIntervaloRefeicao < $dtRefeicaoMinima) {
 			$menor1h = 1;
 		}
+		else if($dtIntervaloRefeicao > $dtRefeicaoMaximo) {
+			$maior2h = 1;
+		}
 	}
 
 	if ($aRetorno['diffRefeicao'] == '00:00')
 		$menor1h = 1;
+
+	if($maior2h)
+		$aRetorno['diffRefeicao'] = "<a><i style='color:red;' title='Refeição com tempo ininterrupto máximo de 02:00h, não respeitado.' class='fa fa-warning'></i></a>" . $aRetorno['diffRefeicao'];
 
 	if ($menor1h && $dtJornada > $dtJornadaMinima) {
 		$aRetorno['diffRefeicao'] = "<a><i style='color:red;' title='Refeição com tempo ininterrupto mínimo de 01:00h, não respeitado.' class='fa fa-warning'></i></a>" . $aRetorno['diffRefeicao'];
