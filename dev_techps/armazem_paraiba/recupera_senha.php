@@ -1,52 +1,47 @@
 <?php
-// include 'conecta.php';
+
+include_once (getcwd()."/../")."/PHPMailer/src/Exception.php";
+include_once (getcwd()."/../")."/PHPMailer/src/PHPMailer.php";
+include_once (getcwd()."/../")."/PHPMailer/src/SMTP.php";
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
-//SMTP needs accurate times, and the PHP time zone MUST be set
-//This should be done in your php.ini, but this is how to do it if you don't have access to that
-date_default_timezone_set('America/Fortaleza');
+function sendEmail($destinatario) {
+    
+    $mail = new PHPMailer(true);
 
-require getcwd().'/PHPMailer/src/Exception.php';
-require getcwd().'/PHPMailer/src/PHPMailer.php';
-require getcwd().'/PHPMailer/src/SMTP.php';
+    try {
+        $mail->isSMTP();
 
-//Create a new PHPMailer instance
-$mail = new PHPMailer();
-//Tell PHPMailer to use SMTP
-$mail->isSMTP();
-//Enable SMTP debugging
-//SMTP::DEBUG_OFF = off (for production use)
-//SMTP::DEBUG_CLIENT = client messages
-//SMTP::DEBUG_SERVER = client and server messages
-$mail->SMTPDebug = SMTP::DEBUG_SERVER;
-//Set the hostname of the mail server
-$mail->Host = 'mail.braso.mobi'; 
-//Set the SMTP port number - likely to be 25, 465 or 587
-$mail->Port = 465;
-//Whether to use SMTP authentication
-$mail->SMTPAuth = true;
-//Username to use for SMTP authentication
-$mail->Username = 'suporte_techps@braso.mobi';
-//Password to use for SMTP authentication
-$mail->Password = 'm&ic=p{tg15#';
-//Set who the message is to be sent from
-$mail->setFrom('suporte_techps@braso.mobi', 'Teste');
-//Set an alternative reply-to address
-$mail->addAddress('wallacealanmorais@gmail.com');
-//Set who the message is to be sent to
-$mail->addReplyTo('suporte_techps@braso.mobi', 'Information');
+        // Configurações do servidor
+        $mail->Host = 'mail.braso.mobi';
+        $mail->SMTPAuth = true;
+        $mail->Username = 'suporte_techps@braso.mobi';
+        $mail->Password = 'm&ic=p{tg15#';
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        $mail->Port = 465;
 
-$mail->isHTML(true);                                  //Set email format to HTML
-$mail->Subject = 'Here is the subject';
-$mail->Body    = 'This is the HTML message body <b>in bold!</b>';
-$mail->AltBody = 'This is the body in plain text for non-HTML mail clients';
+        // Remetente e Destinatários
+        $mail->setFrom('suporte_techps@braso.mobi', 'Nome do Remetente');
+        $mail->addAddress($destinatario, 'Primeiro Destinatário');
+        $mail->addReplyTo('suporte_techps@braso.mobi', 'Nome de para quem responder');
+        // $mail->addCC('wallacealanmorais@gmail.com');
+        // $mail->addBCC('wallacealanmorais@gmail.com');
 
-//send the message, check for errors
-if (!$mail->send()) {
-    echo 'Mailer Error: ' . $mail->ErrorInfo;
-} else {
-    echo 'Message sent!';
+        // Conteúdo
+        $mail->isHTML(true);
+        $mail->Subject = 'Assunto aqui';
+        $mail->Body = 'Esse é o corpo da mensagem em HTML <b>em negrito!</b>';
+        $mail->AltBody = 'Esse é o corpo da mensagem em "texto puro" para clientes que não suportam HTML';
+
+        if($mail->send()){
+            echo "E-mail enviado";
+        }
+    } catch (Exception $exception) {
+        echo "Erro ao enviar e-mail: {$mail->ErrorInfo}";
+    }
 }
+
+sendEmail('wallacealanmorais@gmail.com');

@@ -69,8 +69,8 @@ function cadastra_usuario() {
 		exit;
 	}
 
-	$bd_campos = ['user_tx_nome', 'user_tx_login', 'user_tx_senha', 'user_tx_nascimento', 'user_tx_email', 'user_nb_empresa'];
-	$valores = [$_POST['nome'], $_POST['login'], $_POST['senha'], $_POST['nascimento'], $_POST['email'], $_POST['empresa']];
+	$bd_campos = ['user_tx_nome', 'user_tx_login', 'user_tx_senha', 'user_tx_nascimento', 'user_tx_email', 'user_tx_fone', 'user_nb_empresa'];
+	$valores = [$_POST['nome'], $_POST['login'], $_POST['senha'], $_POST['nascimento'], $_POST['email'], $_POST['telefone'],$_POST['empresa']];
 
 	$campos_variaveis = [
 		['user_tx_cpf', 'cpf'],
@@ -171,6 +171,7 @@ function layout_usuario() {
 	
 		$campo_cidade = texto('Cidade/UF', $cidade['cida_tx_nome'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
 		$campo_email = texto('E-mail*', $a_mod['user_tx_email'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
+		$campo_telefone = texto('Telefone', $a_mod['user_tx_fone'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
 		
 		$empresa_query = query("SELECT * FROM `empresa` WHERE empr_tx_status = 'ativo' AND empr_nb_id = $a_mod[user_nb_empresa]");
 		$empresa = mysqli_fetch_array($empresa_query);
@@ -204,6 +205,7 @@ function layout_usuario() {
 		$campo_rg = campo('RG', 'rg', $a_mod['user_tx_rg'], 2);
 		$campo_cidade = combo_net('Cidade/UF', 'cidade', $a_mod['user_nb_cidade'], 3, 'cidade', '', '', 'cida_tx_uf');
 		$campo_email = campo('E-mail*', 'email', $a_mod['user_tx_email'], 3);
+		$campo_telefone = campo('Telefone', 'telefone', $a_mod['user_tx_fone'], 3,'MASCARA_FONE');
 		$campo_empresa = combo_bd('!Empresa*', 'empresa', $a_mod['user_nb_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)"');
 		$campo_expiracao = campo_data('Dt. Expiraçao', 'expiracao', $a_mod['user_tx_expiracao'], 2);
 	}
@@ -219,6 +221,7 @@ function layout_usuario() {
 	$c[] = $campo_rg;
 	$c[] = $campo_cidade;
 	$c[] = $campo_email;
+	$c[] = $campo_telefone;
 	$c[] = $campo_empresa;
 	$c[] = $campo_expiracao;
 
@@ -227,6 +230,7 @@ function layout_usuario() {
 
 	abre_form('Dados do Usuário');
 	linha_form($c);
+	
 
 	if ($a_mod['user_nb_userCadastro'] > 0) {
 		$a_userCadastro = carregar('user', $a_mod['user_nb_userCadastro']);
@@ -331,9 +335,9 @@ function index() {
 
 	$sql = "SELECT * FROM user LEFT JOIN empresa ON empresa.empr_nb_id = user.user_nb_empresa WHERE user_nb_id > 1  AND user_tx_nivel != 'Super Administrador' $extra";
 	
-	$cab = ['CÓDIGO', 'NOME', 'CPF', 'LOGIN', 'NÍVEL', 'EMPRESA', 'STATUS', '', ''];
+	$cab = ['CÓDIGO', 'NOME', 'CPF', 'LOGIN', 'NÍVEL', 'E-MAIL', 'TELEFONE', 'EMPRESA', 'STATUS', '', ''];
 	$val = [
-		'user_nb_id', 'user_tx_nome', 'user_tx_cpf', 'user_tx_login', 'user_tx_nivel', 'empr_tx_nome', 'user_tx_status', 'icone_modificar(user_nb_id,modifica_usuario)',
+		'user_nb_id', 'user_tx_nome', 'user_tx_cpf', 'user_tx_login', 'user_tx_nivel', 'user_tx_email', 'user_tx_fone', 'empr_tx_nome', 'user_tx_status', 'icone_modificar(user_nb_id,modifica_usuario)',
 		'icone_excluir(user_nb_id,exclui_usuario)'
 	];
 
