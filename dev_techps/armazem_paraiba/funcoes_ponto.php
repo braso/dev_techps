@@ -1096,6 +1096,22 @@ function diaDetalhePonto($matricula, $data) {
 	if (count($aDataHorainicioRepouso) > 0 && count($aDataHorafimRepouso) > 0) {
 		$aRetorno['diffRepouso'] = $repousoOrdenado['icone'] . $repousoOrdenado['totalIntervalo'];
 	}
+
+	$toleranciaStr = carrega_array(query('SELECT parametro.para_tx_tolerancia FROM entidade JOIN parametro ON enti_nb_parametro = para_nb_id WHERE enti_nb_parametro ='.$aMotorista['enti_nb_parametro'].';'))[0];
+	$toleranciaStr = explode(':', $toleranciaStr);
+
+	$tolerancia = intval($toleranciaStr[0])*60;
+	$tolerancia = $tolerancia + ($toleranciaStr[0] == '-'? -1: 1)*intval($toleranciaStr[1]);
+	
+	$saldoStr = explode(':', $aRetorno['diffSaldo']);
+	$saldo = intval($saldoStr[0])*60;
+
+	$saldo = $saldo + ($saldoStr[0] == '-'? -1: 1)*intval($saldoStr[1]);
+	
+	if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
+		$aRetorno['diffSaldo'] = '00:00';
+	}
+
 	$saldo = (intval(explode(':', $aRetorno['diffSaldo'])[0])*60)+
 		(($aRetorno['diffSaldo'][0] == '-')?-1:1)*(intval(explode(':', $aRetorno['diffSaldo'])[1]));
 	if($saldo > 0){
