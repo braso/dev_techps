@@ -52,8 +52,8 @@ function index() {
 	// $cab = array("MATRÍCULA", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA", "REFEIÇÃO", "ESPERA", "ATRASO", "EFETIVA", "PERÍODO TOTAL", "INTERSTÍCIO DIÁRIO", "INT. SEMANAL", "ABONOS", "FALTAS", "FOLGAS", "H.E.", "H.E. 100%", "ADICIONAL NOTURNO", "ESPERA INDENIZADA", "OBSERVAÇÕES");
 	$cab = array(
 		"", "MAT.", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
-		"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "HE 50%", "HE&nbsp;100%",
-		"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO"
+		"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "HE 50%", "HE&nbsp;100%",
+		"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(*)"
 	);
 
 	if ($_POST[busca_data1] && $_POST[busca_data2] && $_POST[busca_empresa]) {
@@ -156,6 +156,32 @@ function index() {
 
 				$aDia[] = array_values(array_merge(array('', '', '', '', '', '', '', '<b>TOTAL</b>'), $totalResumo));
 
+				$toleranciaStr = carrega_array(query('SELECT parametro.para_tx_tolerancia FROM entidade JOIN parametro ON enti_nb_parametro = para_nb_id WHERE enti_nb_parametro ='.$aMotorista['enti_nb_parametro'].';'))[0];
+				$toleranciaStr = explode(':', $toleranciaStr);
+
+				$tolerancia = intval($toleranciaStr[0])*60;
+
+				if($toleranciaStr[0] == '-'){
+					$tolerancia -= intval($toleranciaStr[1]);
+				}else{
+					$tolerancia += intval($toleranciaStr[1]);
+				}
+
+				$saldoFiltrado = '00:00';
+				
+				for($f = 0; $f < count($aDia); $f++){
+					$saldoStr = explode(':', $aDia[$f][count($aDia[$f])-1]);
+					$saldo = intval($saldoStr[0])*60;
+					if($saldoStr[0] == '-'){
+						$saldo -= intval($saldoStr[1]);
+					}else{
+						$saldo += intval($saldoStr[1]);
+					}
+					if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
+						$aDia[$f][count($aDia[$f])-1] = '00:00';
+					}
+				}
+
 				grid2($cab, $aDia, "Jornada Semanal (Horas): $aMotorista[enti_tx_jornadaSemanal]");
 				fecha_form();
 			}
@@ -193,6 +219,11 @@ function index() {
 		table td:nth-child(8),
 		table td:nth-child(12) {
 			border-right: 3px solid #d8e4ef !important;
+		}
+		.th-align {
+		    text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
+		    vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
+		    
 		}
 	</style>
 
