@@ -15,11 +15,12 @@ function modifica_motivo(){
 	exit;
 }
 
-function cadastra_motivo(){	
+function cadastra_motivo(){
 	$campos = ['moti_tx_nome', 'moti_tx_tipo', 'moti_tx_status'];
 	$valores = [$_POST['nome'], $_POST['tipo'], 'ativo'];
 
 	$legendas = [
+		'' => '',
 		'Incluída Manualmente' => 'I',
 		'Pré-Assinalada' => 'P',
 		'Outras fontes de marcação' => 'T',
@@ -44,10 +45,18 @@ function layout_motivo(){
 	global $a_mod;
 	cabecalho("Cadastro de Motivo");
 
+	$legendas = [
+		'' => '',
+		'Incluída Manualmente' => 'I',
+		'Pré-Assinalada' => 'P',
+		'Outras fontes de marcação' => 'T',
+		'Descanso Semanal Remunerado e Abono' => 'DSR'
+	];
+
 	$c = [
 		campo('Nome','nome',$a_mod['moti_tx_nome'],6),
 		combo('Tipo','tipo',$a_mod['moti_tx_tipo'],2,['Ajuste','Abono']),
-		combo('Legenda de Marcação','legenda',$a_mod['moti_nb_legenda'],4,mb_convert_encoding(['Incluída Manualmente', 'Pré-assinalada', 'Outras fontes de marcação', 'Descanso Semanal Remunerado e Abono'], 'UTF-8'))
+		combo('Legenda de Marcação','legenda',array_search($a_mod['moti_tx_legenda'], $legendas),4,array_keys($legendas))
 	];
 	$botao = [
 		botao('Gravar','cadastra_motivo','id',$_POST['id']),
