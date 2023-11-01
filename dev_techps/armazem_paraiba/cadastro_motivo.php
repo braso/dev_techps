@@ -73,15 +73,25 @@ function layout_motivo(){
 function index(){
 	cabecalho("Cadastro de Motivo");
 
+	$legendas = [
+		'' => '',
+		'Incluída Manualmente' => 'I',
+		'Pré-Assinalada' => 'P',
+		'Outras fontes de marcação' => 'T',
+		'Descanso Semanal Remunerado e Abono' => 'DSR'
+	];
+
 	$extra = 
-		(isset($_POST['busca_codigo'])? " AND moti_nb_id = '".$_POST['busca_codigo']."'": '').
-		(isset($_POST['busca_nome'])? " AND moti_tx_nome LIKE '%".$_POST['busca_nome']."%'": '').
-		(isset($_POST['busca_tipo'])? " AND moti_tx_tipo LIKE '%".$_POST['busca_tipo']."%'": '');
+		(isset($_POST['busca_codigo']) 	&& !empty($_POST['busca_codigo'])? 	" AND moti_nb_id = '".$_POST['busca_codigo']."'": '').
+		(isset($_POST['busca_nome']) 	&& !empty($_POST['busca_nome'])? 	" AND moti_tx_nome LIKE '%".$_POST['busca_nome']."%'": '').
+		(isset($_POST['busca_tipo']) 	&& !empty($_POST['busca_tipo'])? 	" AND moti_tx_tipo LIKE '%".$_POST['busca_tipo']."%'": '').
+		(isset($_POST['busca_legenda']) && !empty($_POST['busca_legenda'])? " AND moti_tx_legenda LIKE '%".$legendas[$_POST['busca_legenda']]."%'": '');
 
 	$c = [
 		campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO'),
-		campo('Nome','busca_nome',$_POST['busca_nome'],6),
-		combo('Tipo','busca_tipo',$_POST['busca_tipo'],4,array('','Ajuste','Abono'))
+		campo('Nome','busca_nome',$_POST['busca_nome'],5),
+		combo('Tipo','busca_tipo',$_POST['busca_tipo'],2,['','Ajuste','Abono']),
+		combo('Legenda','busca_legenda',$_POST['busca_legenda'],3,['','Incluída Manualmente', 'Pré-Assinalada', 'Outras fontes de marcação', 'Descanso Semanal Remunerado e Abono'])
 	];
 	$botao = [
 		botao('Buscar','index'),
