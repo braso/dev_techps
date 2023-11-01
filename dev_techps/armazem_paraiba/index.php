@@ -80,7 +80,7 @@ if($_GET['user'] != '' && $_GET['password'] != '' ){
 
 
 
-			cabecalho("Bem-Vindo ao sistema TechPS, $a[user_tx_login]. Período da $turno iniciado às $horaEntrada");
+			cabecalho("Bem-Vindo ao sistema TechPS, $a[user_tx_nome]. Período da $turno iniciado às ".($horaEntrada? $horaEntrada: '--:--'));
 			
 			
 // 			cabecalho("Bem-Vindo ao sistema TechPS, $a[user_tx_login]");
