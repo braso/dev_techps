@@ -64,8 +64,7 @@
 				$aDia[] = $row;
 				
 			}
-			
-// 			unset($aMotorista);
+			unset($aMotorista);
 
 			$sqlEndosso = query("SELECT endo_tx_dataCadastro FROM endosso WHERE endo_tx_matricula = '$aMotorista[enti_tx_matricula]'");
 			$aEndosso = carrega_array($sqlEndosso);
@@ -73,7 +72,7 @@
 			$lastMonthDate = date('Y-m', strtotime('-1 month', strtotime($year.'-'.$month.'-01')));
 			$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month-1, $year);
 			$saldoAnterior = '00:00';
-			
+
 			while ($aMotorista = carrega_array($sqlMotorista)) {
 				for ($i = 1; $i <= $daysInMonth; $i++) {
 					$lastMonthDay = $lastMonthDate.'-'.str_pad($i, 2, 0, STR_PAD_LEFT);
@@ -81,11 +80,6 @@
 					$saldoAnterior = somarHorarios([$saldoAnterior, $aDetalhado['diffSaldo']]);
 				}
 			}
-			
-			$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_tipo = 'Motorista' AND enti_nb_id IN (" . $_POST['idMotoristaEndossado'] . ") AND enti_nb_empresa = " . $_POST['busca_empresa'] . " ORDER BY enti_tx_nome");
-			$dadosMotorista = carrega_array($sqlMotorista);
-// 			$dadosMotorista = mysqli_fetch_all($sqlMotorista, MYSQLI_ASSOC);
-// 			var_dump($dadosMotorista);
 			?>
 			<!DOCTYPE html>
 				<html lang="en">
@@ -114,15 +108,16 @@
 								<td colspan="2" style="text-align: left;"><b>End.</b> <?= "$enderecoEmpresa, $aCidadeEmpresa[cida_tx_nome]/$aCidadeEmpresa[cida_tx_uf], $aEmpresa[empr_tx_cep]" ?></td>
 								<td style="text-align: left;"><b>Período:</b> <?= "$primeiroDia à $ultimoDia" ?></td>
 								<td style="text-align: left;"><b>Emissão Doc.:</b> <?=$aEndosso['endo_tx_dataCadastro'] . " (UTC-3)" ?></td>
+								<td style="text-align: left;"><b>Inpressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . "(UTC-3)" ?></td>
 							</tr>
 							
 							<tr class="employee-info">
-								<td style="text-align: left;"><b>Motorista:</b> <?= $dadosMotorista[enti_tx_nome] ?></td>
-								<td style="text-align: left;"><b>Função:</b> <?= $dadosMotorista[enti_tx_ocupacao] ?></td>
-								<td style="text-align: left;"><b>CPF:</b> <?= $dadosMotorista[enti_tx_cpf] ?></td>
-								<td style="text-align: left;"><b>Turno:</b> D.SEM/H: <?= $dadosMotorista[enti_tx_jornadaSemanal] ?> FDS/H: <?= $aMotorista[enti_tx_jornadaSabado] ?> </td>
-								<td style="text-align: left;"><b>Matrícula:</b> <?= $dadosMotorista[enti_tx_matricula] ?></td>
-								<td style="text-align: left;"><b>Admissão:</b> <?= data($dadosMotorista[enti_tx_admissao]) ?></td>
+								<td style="text-align: left;"><b>Motorista:</b> <?= $aMotorista[enti_tx_nome] ?></td>
+								<td style="text-align: left;"><b>Função:</b> <?= $aMotorista[enti_tx_ocupacao] ?></td>
+								<td style="text-align: left;"><b>CPF:</b> <?= $aMotorista[enti_tx_cpf] ?></td>
+								<td style="text-align: left;"><b>Turno:</b> D.SEM/H: <?= $aMotorista[enti_tx_jornadaSemanal] ?> FDS/H: <?= $aMotorista[enti_tx_jornadaSabado] ?> </td>
+								<td style="text-align: left;"><b>Matrícula:</b> <?= $aMotorista[enti_tx_matricula] ?></td>
+								<td style="text-align: left;"><b>Admissão:</b> <?= data($aMotorista[enti_tx_admissao]) ?></td>
 							</tr>
 						</table>
 					</div>
@@ -256,7 +251,7 @@
 									</tr>
 								</table>
 							</td>
-							
+
 						</tr>
 						<tr>
 							<td>
@@ -276,16 +271,13 @@
 										<p>___________________________________________________________</p>
 									</center>
 									<center>
-										<p><?= $dadosMotorista[enti_tx_nome] ?></p>
+										<p><?= $aMotorista[enti_tx_nome] ?></p>
 									</center>
 									<center>
 										<p>Motorista</p>
 									</center>
 								</div>
 							</td>
-						</tr>
-						<tr>
-						    <td style="position: absolute; left: 73rem;"><b>Inpressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . "(UTC-3)" ?></td>
 						</tr>
 					</table>
 				</body>
@@ -403,7 +395,7 @@
 		$cab = [
 			"", "MAT.", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "HE 50%", "HE&nbsp;100%",
-			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(*)"
+			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO"
 		];
 
 		//function buscar_endosso(){
@@ -514,7 +506,7 @@
 						}
 					}
 
-					abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] | $aEmpresa[empr_tx_nome] $infoEndosso $convencaoPadrao | Saldo Anterior: --:-- Saldo do Período: --:-- Saldo Final: --:--");
+					abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] | $aEmpresa[empr_tx_nome] $infoEndosso $convencaoPadrao");
 
 					$aDia[] = array_values(array_merge(['', '', '', '', '', '', '', '<b>TOTAL</b>'], $totalResumo));
 
@@ -643,7 +635,7 @@
 				document.getElementById('dadosResumo').innerHTML = '<b>Total: <?= $countEndosso ?> | Verificados: <?= $countVerificados ?> | Não Conformidade: <?= $countNaoConformidade ?> | Endossados: <?= $countEndossados ?> | Não Endossados: <?= $countNaoEndossados ?></b>';
 
 				document.getElementById('botaoContexCadastrar CadastrarEndosso').onclick = function() {
-					window.location.href = '<?="https://braso.mobi".$_SERVER['REQUEST_URI']."/../cadastro_endosso"?>';
+					window.location.href = '<?="https://braso.mobi".$CONTEX['path'] ."/cadastro_endosso"?>';
 				}
 
 				document.getElementById('botaoContexCadastrar ImprimirEndosso').onclick = function() {

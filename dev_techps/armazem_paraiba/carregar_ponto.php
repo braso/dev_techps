@@ -79,19 +79,18 @@ function layout_ftp(){
 
 	// connect and login to FTP server
 
-	$infos = query('SELECT empr_tx_ftpServer, empr_tx_ftpUsername, empr_tx_ftpUserpass FROM empresa join user on empresa.empr_nb_id = user.user_nb_empresa WHERE user_nb_id = '.$_SESSION['user_nb_id'])->fetch_row();
+	$infos = query('SELECT empr_tx_ftpServer, empr_tx_ftpUsername, empr_tx_ftpUserpass FROM empresa join user on empresa.empr_nb_id = user.user_nb_empresa WHERE user_nb_id = '.$_SESSION['user_nb_id'])->fetch_assoc();
 	
-	$ftp_server = $infos[0];
-	$ftp_username = $infos[1];
-	$ftp_userpass = $infos[2];
+	
+// 	$ftp_server = "ftp-jornadas.positronrt.com.br";
 
-	// $ftp_server = "ftp.modulusistemas.com.br";
-	// $ftp_username = 'techps@modulusistemas.com.br';
-	// $ftp_userpass = 'A1c2r31234!techps';
+// 	$ftp_username = '08995631000108';
+
+// 	$ftp_userpass = '0899';
 
 
-	$ftp_conn = ftp_connect($ftp_server) or die("Could not connect to $ftp_server");
-	$login = ftp_login($ftp_conn, $ftp_username, $ftp_userpass);
+	$ftp_conn = ftp_connect($infos['empr_tx_ftpServer']) or die("Could not connect to $ftp_server");
+	$login = ftp_login($ftp_conn, $infos['empr_tx_ftpUsername'], $infos['empr_tx_ftpUserpass']);
 
 	//BUSCA O ARQUIVO
 
@@ -103,7 +102,8 @@ function layout_ftp(){
 	// 	'apontamento30032023010000.txt',
 	// 	'apontamento31032023010000.txt'
 	// );
-	// // print_r($fileList);exit;
+// 	print_r($fileList);
+// 	die();
 	for ($i = 0; $i < count($fileList); $i++) {
 
 		$sqlCheck = "SELECT * FROM arquivoponto WHERE arqu_tx_nome = '$fileList[$i]' AND arqu_tx_status = 'ativo' LIMIT 1";

@@ -85,7 +85,7 @@ function cadastra_usuario() {
 		}
 	}
 
-	if(is_int(strpos($_SESSION['user_tx_nivel'], "Administrador"))){
+	if(is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) && !empty($_POST['nivel'])){
 		$bd_campos[] = 'user_tx_nivel';
 		$valores[] = $_POST['nivel'];
 	}

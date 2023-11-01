@@ -93,7 +93,7 @@ function layout_parametro(){
 		combo('Acordo Sindical', 'acordo', $a_mod['para_tx_acordo'], 3, ['Sim', 'Não']),
 		campo_data('Início do Acordo', 'inicioAcordo', $a_mod['para_tx_inicioAcordo'], 3),
 		campo_data('Fim do Acordo', 'fimAcordo', $a_mod['para_tx_fimAcordo'], 3),
-		checkbox('Utiliza regime de banco de horas?', 'setCampo', $a_mod['para_tx_banco'], $a_mod['para_tx_setData'], $a_mod['para_nb_qDias'], 3),
+		// checkbox('Utiliza regime de banco de horas?', 'setCampo', $a_mod['para_tx_banco'], $a_mod['para_tx_setData'], $a_mod['para_nb_qDias'], 3),
 		ckeditor('Descrição:', 'paramObs', $a_mod['para_tx_paramObs'], 12,'maxlength="100"')
 	];
 	

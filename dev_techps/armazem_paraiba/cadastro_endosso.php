@@ -85,7 +85,9 @@
 			'endo_tx_ate' => $_POST['data_ate'],
 			'endo_tx_dataCadastro' => date('Y-m-d h:i:s'),
 			'endo_nb_userCadastro' => $_SESSION['user_nb_id'],
-			'endo_tx_status' => 'ativo'
+			'endo_tx_status' => 'ativo',
+			'endo_tx_pagarHoras' => $_POST['pagar_horas'],
+			'endo_tx_horasApagar' => $_POST['quandHoras']
 		];
 
 		inserir('endosso', array_keys($novo_endosso), array_values($novo_endosso));
@@ -140,12 +142,13 @@
 		}
 
 		$c = [
-			campo_data('De:','data_de',$_POST['data_de'],2),
-			campo_data('Ate:','data_ate',$_POST['data_ate'],2),
-			combo_net('Motorista:','busca_motorista',$_POST['busca_motorista'],4,'entidade','',$extra_bd_motorista,'enti_tx_matricula')
+			campo_data('De*:','data_de',$_POST['data_de'],2),
+			campo_data('Ate*:','data_ate',$_POST['data_ate'],2),
+			combo_net('Motorista*:','busca_motorista',$_POST['busca_motorista'],4,'entidade','',$extra_bd_motorista,'enti_tx_matricula'),
+			checkbox('Pagar Horas Extras',"horasApagar",2)
 		];
 		if($_SESSION['user_tx_nivel'] == 'Super Administrador'){
-			array_unshift($c, combo_net('Empresa:','empresa',$_POST['empresa'],4,'empresa', 'onchange=selecionaMotorista(this.value)'));
+			array_unshift($c, combo_net('Empresa*:','empresa',$_POST['empresa'],4,'empresa', 'onchange=selecionaMotorista(this.value)'));
 		}
 		$b = [
 			botao('Voltar', 'voltar'),
