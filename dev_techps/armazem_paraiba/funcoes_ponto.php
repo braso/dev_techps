@@ -1351,6 +1351,7 @@ function diaDetalheEndosso($matricula, $data, $status = ''){
 		WHERE abon_tx_status != 'inativo' AND abon_nb_userCadastro = user_nb_id 
 		AND abon_tx_matricula = '$matricula' AND abon_tx_data = '$data' AND abon_nb_motivo = moti_nb_id
 		ORDER BY abon_nb_id DESC LIMIT 1");
+	
 	$aAbono = carrega_array($sqlAbono);
 	if($aAbono[0] > 0){
 		$tooltip = "Jornada Original: ".str_pad($cargaHoraria, 2, '0', STR_PAD_LEFT).":00:00"."\n".
@@ -1663,6 +1664,17 @@ function diaDetalheEndosso($matricula, $data, $status = ''){
 	$totalResumo['maximoDirecaoContinua'] = '';
 	
 	$aRetorno['jornadaPrevista'] = subtrairHorarios($aRetorno['inicioJornada'] ,$aRetorno['jornadaPrevista'], $aRetorno['diffJornadaEfetiva'], date('%w',strtotime($data)));
+
+	$legendas = [
+		null => '',
+		'' => '',
+		'I' => 'Incluída Manualmente',
+		'P' => 'Pré-Assinalada',
+		'T' => 'Outras fontes de marcação',
+		'DSR' => 'Descanso Semanal Remunerado e Abono'
+	];
+
+	$aRetorno['moti_tx_motivo'] = $legendas[$aAbono['moti_tx_legenda']];
 
 	
 	return $aRetorno;
