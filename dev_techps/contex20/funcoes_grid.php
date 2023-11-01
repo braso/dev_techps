@@ -44,7 +44,7 @@ function grid2($cabecalho,$valores){
 	}
 
 	echo "</table>";
-	echo "(*): Caso esteja utilizando “Tolerância de jornada Saldo diário (Minutos).";
+	echo "(*): 00:00 Caso esteja dentro da tolerância";
 	echo '</div>';
 
 	
