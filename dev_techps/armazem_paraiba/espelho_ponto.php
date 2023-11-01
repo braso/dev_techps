@@ -120,6 +120,11 @@
 				table td:nth-child(12) {
 					border-right: 3px solid #d8e4ef !important;
 				}
+				.th-align {
+				    text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
+				    vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
+				    
+				}
 			</style>
 		<?
 		
