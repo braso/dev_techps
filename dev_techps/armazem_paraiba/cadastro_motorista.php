@@ -441,7 +441,7 @@ function layout_motorista() {
 		campo('N° Registro*', 'cnhRegistro', $a_mod['enti_tx_cnhRegistro'], 3,'','maxlength="11"'),
 		campo_data('Validade*', 'cnhValidade', $a_mod['enti_tx_cnhValidade'], 3),
 		campo_data('1º Habilitação', 'cnhPrimeiraHabilitacao', $a_mod['enti_tx_cnhPrimeiraHabilitacao'], 3),
-		campo('Categoria', 'cnhCategoria', $a_mod['enti_tx_cnhCategoria'], 3),
+		campo('Categoria*', 'cnhCategoria', $a_mod['enti_tx_cnhCategoria'], 3),
 		campo('Permissão', 'cnhPermissao', $a_mod['enti_tx_cnhPermissao'], 3,'','maxlength="65"'),
 		combo_net('Cidade/UF Emissão*', 'cnhCidade', $a_mod['enti_nb_cnhCidade'], 3, 'cidade', '', '', 'cida_tx_uf'),
 		campo_data('Data Emissão*', 'cnhEmissao', $a_mod['enti_tx_cnhEmissao'], 3),
