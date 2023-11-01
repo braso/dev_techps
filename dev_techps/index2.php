@@ -114,42 +114,42 @@ License: You must have a valid license purchased only from themeforest(the above
 	<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet"
 		type="text/css" />
 
-	<link href="/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet"
+	<link href="./contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet"
 		type="text/css" />
 
-	<link href="/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet"
+	<link href="./contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet"
 		type="text/css" />
 
-	<link href="/contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="./contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
 
-	<link href="/contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
+	<link href="./contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
 
-	<link href="/contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet"
+	<link href="./contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet"
 		type="text/css" />
 
 	<!-- FIM GLOBAL MANDATORY STYLES -->
 
 	<!-- COMECO PLUGINS DE PAGINA -->
 
-	<link href="/contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
+	<link href="./contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
 
-	<link href="/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet"
+	<link href="./contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet"
 		type="text/css" />
 
 	<!-- FIM PLUGINS DE PAGINA -->
 
 	<!-- COMECO THEME GLOBAL STYLES -->
 
-	<link href="/contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components"
+	<link href="./contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components"
 		type="text/css" />
 
-	<link href="/contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
+	<link href="./contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
 
 	<!-- FIM THEME GLOBAL STYLES -->
 
 	<!-- COMECO PAGE LEVEL STYLES -->
 
-	<link href="/contex20/assets/pages/css/login.min.css" rel="stylesheet" type="text/css" />
+	<link href="./contex20/assets/pages/css/login.min.css" rel="stylesheet" type="text/css" />
 
 	<!-- FIM PAGE LEVEL STYLES -->
 
@@ -172,7 +172,7 @@ License: You must have a valid license purchased only from themeforest(the above
 
 		<a href="index.php">
 
-			<img src="../contex20/img/logo.png" alt="" /> </a>
+			<img src="./contex20/img/logo.png" alt="" /> </a>
 
 	</div>
 
@@ -222,7 +222,7 @@ License: You must have a valid license purchased only from themeforest(the above
 
 				<input type="submit" class="btn green uppercase" name="botao" value="Entrar"></input>
 
-				<a href="javascript:;" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
+				<a href="<?=$server_base_link."/armazem_paraiba/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
 
 			</div>
 
@@ -247,53 +247,53 @@ License: You must have a valid license purchased only from themeforest(the above
 
 	<!--[if lt IE 9]>
 
-<script src="/contex20/assets/global/plugins/respond.min.js"></script>
+<script src="./contex20/assets/global/plugins/respond.min.js"></script>
 
-<script src="/contex20/assets/global/plugins/excanvas.min.js"></script> 
+<script src="./contex20/assets/global/plugins/excanvas.min.js"></script> 
 
 <![endif]-->
 
 	<!-- COMECO PLUGINS PRINCIPAL -->
 
-	<script src="/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
+	<script src="./contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
 
-	<script src="/contex20/assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
+	<script src="./contex20/assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
 
-	<script src="/contex20/assets/global/plugins/js.cookie.min.js" type="text/javascript"></script>
+	<script src="./contex20/assets/global/plugins/js.cookie.min.js" type="text/javascript"></script>
 
-	<script src="/contex20/assets/global/plugins/bootstrap-hover-dropdown/bootstrap-hover-dropdown.min.js"
+	<script src="./contex20/assets/global/plugins/bootstrap-hover-dropdown/bootstrap-hover-dropdown.min.js"
 		type="text/javascript"></script>
 
-	<script src="/contex20/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js"
+	<script src="./contex20/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js"
 		type="text/javascript"></script>
 
-	<script src="/contex20/assets/global/plugins/jquery.blockui.min.js" type="text/javascript"></script>
+	<script src="./contex20/assets/global/plugins/jquery.blockui.min.js" type="text/javascript"></script>
 
-	<script src="/contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
+	<script src="./contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
 
-	<!-- <script src="/contex20/assets/global/plugins/bootstrap-switch/js/bootstrap-switch.min.js" type="text/javascript"></script> -->
+	<!-- <script src="./contex20/assets/global/plugins/bootstrap-switch/js/bootstrap-switch.min.js" type="text/javascript"></script> -->
 
 	<!-- FIM PLUGINS PRINCIPAL -->
 
 	<!-- COMECO PLUGINS DE PAGINA -->
 
-	<!-- <script src="/contex20/assets/global/plugins/jquery-validation/js/jquery.validate.min.js" type="text/javascript"></script> -->
+	<!-- <script src="./contex20/assets/global/plugins/jquery-validation/js/jquery.validate.min.js" type="text/javascript"></script> -->
 
-	<!-- <script src="/contex20/assets/global/plugins/jquery-validation/js/additional-methods.min.js" type="text/javascript"></script> -->
+	<!-- <script src="./contex20/assets/global/plugins/jquery-validation/js/additional-methods.min.js" type="text/javascript"></script> -->
 
-	<!-- <script src="/contex20/assets/global/plugins/select2/js/select2.full.min.js" type="text/javascript"></script> -->
+	<!-- <script src="./contex20/assets/global/plugins/select2/js/select2.full.min.js" type="text/javascript"></script> -->
 
 	<!-- FIM PLUGINS DE PAGINA -->
 
 	<!-- COMECO SCRIPTS GLOBAL -->
 
-	<!-- <script src="/contex20/assets/global/scripts/app.min.js" type="text/javascript"></script> -->
+	<!-- <script src="./contex20/assets/global/scripts/app.min.js" type="text/javascript"></script> -->
 
 	<!-- FIM SCRIPTS GLOBAL -->
 
 	<!-- COMECO PAGE LEVEL SCRIPTS -->
 
-	<!-- <script src="/contex20/assets/pages/scripts/login.min.js" type="text/javascript"></script> -->
+	<!-- <script src="./contex20/assets/pages/scripts/login.min.js" type="text/javascript"></script> -->
 
 	<!-- FIM PAGE LEVEL SCRIPTS -->
 
