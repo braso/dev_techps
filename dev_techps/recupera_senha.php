@@ -1,43 +1,75 @@
 <?php
-include "conecta.php";
+// include "conecta.php";
 global $CONTEX;
 
-include_once (getcwd() . "/../") . "/PHPMailer/src/Exception.php";
-include_once (getcwd() . "/../") . "/PHPMailer/src/PHPMailer.php";
-include_once (getcwd() . "/../") . "/PHPMailer/src/SMTP.php";
+include_once "./PHPMailer/src/Exception.php";
+include_once "./PHPMailer/src/PHPMailer.php";
+include_once "./PHPMailer/src/SMTP.php";
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
 
-if (!empty($_POST['senha']) && !empty($_POST['senha'])) {
-    if ($_POST['senha'] === $_POST['senha2']) {
-        $userSql = query("SELECT user_nb_id FROM `user` WHERE user_tx_token = '$_GET[token]'");
-        $userId = mysqli_fetch_assoc($userSql);
-        var_dump(md5($_POST['senha']));
-        atualizar('user', ['user_tx_senha', 'user_tx_token'], [md5($_POST['senha']), '-'], $userId['user_nb_id']);
+if ($_POST['botao'] == 'ENVIAR') {
+    $dominio = $_POST['domain'];
+    $login = $_POST['login'];
+    $email = $_POST['email'];
+    if(!empty($dominio)){
+        include $dominio."/conecta.php";
+        global $CONTEX;
+        if (!empty($email) && !empty($login))
+            $msg = tokenGenerate($email, $login);
+        else 
+            $msg = '
+            <div id="erro" style="background-color: red; padding: 1px; text-align: center;">
+                <h4 style = "color: #fff !important;">Campo E-mail ou Login não foi preenchido </h4>
+            </div>';
+    } else
+        $msg = '
+        <div id="erro" style="background-color: red; padding: 1px; text-align: center;">
+            <h4 style = "color: #fff !important;">Selecione um dominio</h4>
+        </div>';
+
+}
+
+if ($_POST['botao'] == 'Redefinir senha') {
+    if (!empty($_POST['senha']) && !empty($_POST['senha2']) && $_POST['senha'] == $_POST['senha2']) {
+            $userSql = query("SELECT user_nb_id FROM `user` WHERE user_tx_token = '$_GET[token]'");
+            $userId = mysqli_fetch_assoc($userSql);
+            atualizar('user', ['user_tx_senha', 'user_tx_token'], [md5($_POST['senha']), '-'], $userId['user_nb_id']);
+            $msg = "
+            <div id='erro' style='background-color: #0af731; padding: 1px; text-align: center;'>
+                <h4 style = 'color: #fff !important;'>Senha Redefinida. <a href='index2.php>Retorna para o login</a></h4>
+            </div>";
+    } else {
+        $msg = '
+        <div id="erro" style="background-color: red; padding: 1px; text-align: center;">
+            <h4 style = "color: #fff !important;">Confirmação de senha incorreta</h4>
+        </div>';
     }
 }
 
-if ($_POST['botao'] == 'ENVIAR') {
-    $email = $_POST['email'];
 
-    if (!empty($email))
-        tokenGenerate($email);
-}
-
-function tokenGenerate($email) {
+function tokenGenerate($email, $login) {
     $token = bin2hex(random_bytes(16));
-    $userSql = query("SELECT user_nb_id FROM `user` WHERE user_tx_email = '$email'");
+    $userSql = query("SELECT user_nb_id, user_tx_nome FROM `user` WHERE user_tx_login LIKE '%$login%' AND user_tx_email = '$email'");
     $userId = mysqli_fetch_assoc($userSql);
-    atualizar('user', ['user_tx_token'], [$token], $userId['user_nb_id']);
-    sendEmail($email, $token);
+    if(!empty($userId)){
+        atualizar('user', ['user_tx_token'], [$token], $userId['user_nb_id']);
+        return sendEmail($email, $token, $userId['user_tx_nome']);
+    } else
+        return '
+        <div id="erro" style="background-color: red; padding: 1px; text-align: center;">
+            <h4 style = "color: #fff !important;"> As informações não estão corretas  </h4>
+        </div>';
 }
 
 
-function sendEmail($destinatario, $token) {
+function sendEmail($destinatario, $token, $nomeDestinatario) {
     global $CONTEX;
+    
+    $caminho = getcwd();
 
     $mail = new PHPMailer(true);
 
@@ -45,6 +77,7 @@ function sendEmail($destinatario, $token) {
         $mail->isSMTP();
 
         // Configurações do servidor
+        $mail->CharSet = 'UTF-8';
         $mail->Host = 'mail.braso.mobi';
         $mail->SMTPAuth = true;
         $mail->Username = 'suporte_techps@braso.mobi';
@@ -53,9 +86,9 @@ function sendEmail($destinatario, $token) {
         $mail->Port = 465;
 
         // Remetente e Destinatários
-        $mail->setFrom('suporte_techps@braso.mobi', 'Nome do Remetente');
-        $mail->addAddress($destinatario, 'Primeiro Destinatário');
-        $mail->addReplyTo('suporte_techps@braso.mobi', 'Nome de para quem responder');
+        $mail->setFrom('suporte_techps@braso.mobi', 'Tech PS');
+        $mail->addAddress($destinatario, $nomeDestinatario);
+        $mail->addReplyTo('suporte_techps@braso.mobi', 'Tech PS Suporte');
         // $mail->addCC('wallacealanmorais@gmail.com');
         // $mail->addBCC('wallacealanmorais@gmail.com');
 
@@ -63,15 +96,22 @@ function sendEmail($destinatario, $token) {
         $mail->isHTML(true);
         $mail->Subject = 'Redefinição de Senha';
         $mail->Body = '<b>Redefinição de Senha</b><br>
-        Por favor,<a href="https://braso.mobi' . $CONTEX['path'] . '/recupera_senha.php?token=' . $token . '">clique aqui</a> para resetar sua senha.<br>
-        Caso você não tenha solicitado este e-mail de redefinição de senha, por favor, <a href="mailto:suporte_techps@braso.mobi">entre em contato</a para que possamos resolver o problema.';
-        $mail->AltBody = "Link para recupera senha: braso.mobi" . $CONTEX['path'] . "/recupera_senha.php?token=" . $token;
+        Por favor, <a href="https://braso.mobi/' . basename($caminho)  . '/recupera_senha.php?token=' . $token . '">clique aqui</a> para resetar sua senha.<br>
+        Caso você não tenha solicitado este e-mail de redefinição de senha, por favor, <a href="mailto:suporte_techps@braso.mobi">entre em contato</a> para que possamos resolver o problema.';
+        $mail->Encoding = 'base64';
+        $mail->AltBody = "Link para recupera senha: braso.mobi" . basename($caminho)  . "/recupera_senha.php?token=" . $token;
 
         if ($mail->send()) {
-            echo "E-mail enviado";
+            return '
+            <div id="erro" style="background-color: #0af731; padding: 1px; text-align: center;">
+                <h4 style = "color: #fff !important;">E-mail enviado</h4>
+            </div>';
         }
     } catch (Exception $exception) {
-        echo "Erro ao enviar e-mail: {$mail->ErrorInfo}";
+        return '
+        <div id="erro" style="background-color: red; padding: 1px; text-align: center;">
+            <h4 style = "color: #fff !important;">Erro ao enviar e-mail: {$mail->ErrorInfo}</h4>
+        </div>';
     }
 }
 
@@ -155,7 +195,7 @@ function sendEmail($destinatario, $token) {
 
     <div class="logo">
 
-        <a href="index.php">
+        <a href="index2.php">
 
             <img src="../contex20/img/logo.png" alt="" /> </a>
 
@@ -176,11 +216,23 @@ function sendEmail($destinatario, $token) {
                     <h3 class="form-title font-green">Redefinir Senha</h3>
                     <p style="text-align:justify">Um link de redefinição de senha será enviado para o seu endereço de e-mail.</p>
                     <div class="form-group">
+                        <select class="form-control" name="domain">
+					        <option value="" selected>Domínio</option>
+					        <option value="techps">techps</option>
+					        <option value="feijao_turqueza">Feijão turqueza</option>
+					        <option value="armazem_paraiba">Armazem Paraiba</option>
+				        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label visible-ie8 visible-ie9">Login</label>
+                        <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="text" autocomplete="off" placeholder="Login" name="login" />
+                    </div>
+                    <div class="form-group">
                         <label class="control-label visible-ie8 visible-ie9">E-mail</label>
                         <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="email" autocomplete="off" placeholder="E-mail" name="email" />
                     </div>
                     <?= $msg ?>
-                    <div class="form-actions" style="padding: 26px 128px !important">
+                    <div class="form-actions" style="padding: 26px 140px !important">
                         <input type="submit" class="btn green uppercase" name="botao" value="ENVIAR"></input>
                     </div>
                     <?
@@ -196,9 +248,8 @@ function sendEmail($destinatario, $token) {
                         <label class="control-label visible-ie8 visible-ie9">Confirmar Senha</label>
                         <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="password" autocomplete="off" placeholder="Confirmar Senha" name="senha2" />
                     </div>
-
                     <?= $msg ?>
-                    <div class="form-actions" style="padding: 26px 128px !important">
+                    <div class="form-actions" style="padding: 26px 140px !important">
                         <input type="submit" class="btn green uppercase" name="botao" value="Redefinir senha"></input>
                     </div>
                 <?
@@ -228,7 +279,15 @@ function sendEmail($destinatario, $token) {
 
     <script src="/contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
 
+    <script>
+        function esconderErro() {
+            var erroDiv = document.getElementById("erro");
+            erroDiv.style.display = "none";
+        }
 
+        // Chama a função esconderErro após 5 segundos (5000 milissegundos)
+        setTimeout(esconderErro, 5000);
+    </script>
 </body>
 
 

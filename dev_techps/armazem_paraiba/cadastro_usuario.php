@@ -61,7 +61,7 @@ function cadastra_usuario() {
 		$error_msg .= 'Nível, ';
 	}
 	if($_POST['senha'] != $_POST['senha2']){
-		$error_msg .= "Confirmação de senha correta, ";
+		$error_msg .= "Confirmação de senha incorreta";
 	}
 	if($error_msg != $error_msg_base){
 		set_status(substr($error_msg, 0, strlen($error_msg)-2).".");
