@@ -190,10 +190,10 @@ function layout_ajuste(){
 		$extra";
 
 	
-	$cab = ['CÓD','DATA','HORA','TIPO','MOTIVO','JUSTIFICATIVA','USUÁRIO','DATA CADASTRO',''];
+	$cab = ['CÓD','DATA','HORA','TIPO','MOTIVO', 'LEGENDA','JUSTIFICATIVA','USUÁRIO','DATA CADASTRO',''];
 
 	// $ver2 = "icone_modificar(arqu_nb_id,layout_confirma)";
-	$val = ['pont_nb_id','data(pont_tx_data)','data(pont_tx_data,3)','macr_tx_nome','moti_tx_nome','pont_tx_descricao','user_tx_login','data(pont_tx_dataCadastro,1)','icone_excluir(pont_nb_id,excluir_ponto,idEntidade,'.$_POST['id'].')'];
+	$val = ['pont_nb_id','data(pont_tx_data)','data(pont_tx_data,3)','macr_tx_nome','moti_tx_nome','moti_tx_legenda','pont_tx_descricao','user_tx_login','data(pont_tx_dataCadastro,1)','icone_excluir(pont_nb_id,excluir_ponto,idEntidade,'.$_POST['id'].')'];
 	grid($sql,$cab,$val,'','',2,'ASC',-1);
 
 	rodape();
@@ -1050,7 +1050,7 @@ function diaDetalhePonto($matricula, $data) {
 		$menor1h = 1;
 
 	if($maior2h)
-		$aRetorno['diffRefeicao'] = "<a><i style='color:red;' title='Refeição com tempo ininterrupto máximo de 02:00h, não respeitado.' class='fa fa-warning'></i></a>" . $aRetorno['diffRefeicao'];
+		$aRetorno['diffRefeicao'] = "<a><i style='color:orange;' title='Refeição com tempo ininterrupto máximo de 02:00h, não respeitado.' class='fa fa-info-circle'></i></a>" . $aRetorno['diffRefeicao'];
 
 	if ($menor1h && $dtJornada > $dtJornadaMinima) {
 		$aRetorno['diffRefeicao'] = "<a><i style='color:red;' title='Refeição com tempo ininterrupto mínimo de 01:00h, não respeitado.' class='fa fa-warning'></i></a>" . $aRetorno['diffRefeicao'];

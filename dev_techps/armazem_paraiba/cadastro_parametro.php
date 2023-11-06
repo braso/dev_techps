@@ -19,8 +19,7 @@ function modifica_parametro(){
 }
 
 function cadastra_parametro(){
-
-	$quandDias = ($_POST['quandDias'] == '') ? NULL : $_POST['quandDias'];
+	$quandDias = ($_POST['quandDias'] == '') ? 0 : $_POST['quandDias'];
 	
 	$campos=[
 		'para_tx_nome', 'para_tx_jornadaSemanal', 'para_tx_jornadaSabado', 'para_tx_percentualHE', 'para_tx_percentualSabadoHE', 'para_tx_HorasEXExcedente', 
@@ -93,7 +92,7 @@ function layout_parametro(){
 		combo('Acordo Sindical', 'acordo', $a_mod['para_tx_acordo'], 3, ['Sim', 'Não']),
 		campo_data('Início do Acordo', 'inicioAcordo', $a_mod['para_tx_inicioAcordo'], 3),
 		campo_data('Fim do Acordo', 'fimAcordo', $a_mod['para_tx_fimAcordo'], 3),
-		// checkbox('Utiliza regime de banco de horas?', 'setCampo', $a_mod['para_tx_banco'], $a_mod['para_tx_setData'], $a_mod['para_nb_qDias'], 3),
+// 		checkbox('Utiliza regime de banco de horas?', 'setCampo', $a_mod['para_tx_banco'], $a_mod['para_tx_setData'], $a_mod['para_nb_qDias'], 3),
 		ckeditor('Descrição:', 'paramObs', $a_mod['para_tx_paramObs'], 12,'maxlength="100"')
 	];
 	
@@ -133,18 +132,6 @@ function index(){
 	$extra .= ($_POST['busca_acordo'] &&  $_POST['busca_acordo'] != 'Todos') ? " AND para_tx_acordo = '".$_POST['busca_acordo']."'" : '';
 	$extra .= ($_POST['busca_banco'] &&  $_POST['busca_banco'] != 'Todos') ? " AND para_tx_banco = '".$_POST['busca_banco']."'" : '';
 
-	if ($_POST['busca_vencidos'] === 'Sim') {
-		$sql = "SELECT *, DATEDIFF('$diaAtual' ,para_tx_setData) AS diferenca_em_dias
-		FROM `parametro` WHERE DATEDIFF('$diaAtual',para_tx_setData) < para_nb_qDias OR DATEDIFF('$diaAtual',para_tx_setData) IS NULL $extra";
-	}
-	else if($_POST['busca_vencidos'] === 'Não'){
-		$sql = "SELECT *, DATEDIFF('$diaAtual' ,para_tx_setData) AS diferenca_em_dias
-		FROM `parametro` WHERE DATEDIFF('$diaAtual',para_tx_setData) > para_nb_qDias OR DATEDIFF('$diaAtual',para_tx_setData) IS NULL $extra";
-	} else
-	    $sql = "SELECT * FROM parametro WHERE para_tx_status != 'inativo' $extra";
-	
-	
-
 	$c = [
 		campo('Código', 'busca_codigo', $_POST['busca_codigo'], 2, 'MASCARA_NUMERO'),
 		campo('Nome', 'busca_nome', $_POST['busca_nome'], 4),
@@ -161,9 +148,17 @@ function index(){
 	abre_form('Filtro de Busca');
 	linha_form($c);
 	fecha_form($botao);
+	
+	if ($_POST['busca_vencidos'] === 'Sim') {
+		$sql = "SELECT *, DATEDIFF('$diaAtual' ,para_tx_setData) AS diferenca_em_dias
+		FROM `parametro` WHERE DATEDIFF('$diaAtual',para_tx_setData) < para_nb_qDias OR DATEDIFF('$diaAtual',para_tx_setData) IS NULL $extra";
+	}
+	else if($_POST['busca_vencidos'] === 'Não'){
+		$sql = "SELECT *, DATEDIFF('$diaAtual' ,para_tx_setData) AS diferenca_em_dias
+		FROM `parametro` WHERE DATEDIFF('$diaAtual',para_tx_setData) > para_nb_qDias OR DATEDIFF('$diaAtual',para_tx_setData) IS NULL $extra";
+	} else
+	    $sql = "SELECT * FROM parametro WHERE para_tx_status != 'inativo' $extra";
 
-    var_dump($sql);
-    die();
 	$cab = array('CÓDIGO','NOME','JORNADA SEMANAL/DIA','JORNADA SÁBADO','HR(%)','HR SÁBADO(%)','ACORDO','INÍCIO','FIM','','');
 	$val = array('para_nb_id','para_tx_nome','para_tx_jornadaSemanal','para_tx_jornadaSabado','para_tx_percentualHE','para_tx_percentualSabadoHE','para_tx_acordo','data(para_tx_inicioAcordo)','data(para_tx_fimAcordo)','icone_modificar(para_nb_id,modifica_parametro)','icone_excluir(para_nb_id,exclui_parametro)');
 

@@ -52,7 +52,7 @@
 						$aDetalhado['data'],$aDetalhado['diaSemana'],$aDetalhado['inicioJornada'],$aDetalhado['inicioRefeicao'],
 						$aDetalhado['fimRefeicao'], $aDetalhado['fimJornada'], $aDetalhado['diffRefeicao'],$aDetalhado['diffEspera'], $aDetalhado['diffDescanso'], $aDetalhado['diffRepouso'], 
 						$aDetalhado['diffJornada'], $aDetalhado['diffJornadaEfetiva'], $aDetalhado['jornadaPrevista'], $aDetalhado['intersticio'], $aDetalhado['he50'], $aDetalhado['he100'],
-						$aDetalhado['adicionalNoturno'], $aDetalhado['esperaIndenizada']
+						$aDetalhado['adicionalNoturno'], $aDetalhado['esperaIndenizada'], $aDetalhado['moti_tx_motivo']
 					];
 					
 				$row = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDetalhadoCampos));
@@ -64,15 +64,16 @@
 				$aDia[] = $row;
 				
 			}
-			unset($aMotorista);
+			
+// 			unset($aMotorista);
 
-			$sqlEndosso = query("SELECT endo_tx_dataCadastro FROM endosso WHERE endo_tx_matricula = '$aMotorista[enti_tx_matricula]'");
+			$sqlEndosso = query("SELECT endo_tx_dataCadastro, endo_tx_pagarHoras, endo_tx_horasApagar FROM endosso WHERE endo_tx_matricula = '$aMotorista[enti_tx_matricula]'");
 			$aEndosso = carrega_array($sqlEndosso);
 
 			$lastMonthDate = date('Y-m', strtotime('-1 month', strtotime($year.'-'.$month.'-01')));
 			$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month-1, $year);
 			$saldoAnterior = '00:00';
-
+			
 			while ($aMotorista = carrega_array($sqlMotorista)) {
 				for ($i = 1; $i <= $daysInMonth; $i++) {
 					$lastMonthDay = $lastMonthDate.'-'.str_pad($i, 2, 0, STR_PAD_LEFT);
@@ -80,6 +81,61 @@
 					$saldoAnterior = somarHorarios([$saldoAnterior, $aDetalhado['diffSaldo']]);
 				}
 			}
+			
+			$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_tipo = 'Motorista' AND enti_nb_id IN (" . $_POST['idMotoristaEndossado'] . ") AND enti_nb_empresa = " . $_POST['busca_empresa'] . " ORDER BY enti_tx_nome");
+			$dadosMotorista = carrega_array($sqlMotorista);
+// 			$dadosMotorista = mysqli_fetch_all($sqlMotorista, MYSQLI_ASSOC);
+// 			var_dump($dadosMotorista);
+
+
+			if(True){ //Deve ser feito somente quando for obrigado a pagar a hora extra?
+
+				//Contexto do HE100
+				$he100 = explode(':', $aDetalhado['he100']);
+				$he100 = intval($he100[0])*60+($he100[0][0] == '-'? -1:1)*intval($he100[1]);
+				
+				$he50_pagar = explode(':', $totalResumo['he50']);
+				$he50_pagar = intval($he50_pagar[0])*60+($he50_pagar[0][0] == '-'? -1:1)*intval($he50_pagar[1]);
+				
+				$he100_pagar = explode(':', $totalResumo['he100']);
+				$he100_pagar = intval($he100_pagar[0])*60+($he100_pagar[0][0] == '-'? -1:1)*intval($he100_pagar[1]);
+
+				$saldoPeriodo = explode(':', $totalResumo['diffSaldo']);
+				$saldoPeriodo = intval($saldoPeriodo[0])*60+($saldoPeriodo[0][0] == '-'? -1:1)*intval($saldoPeriodo[1]);
+				
+				if($saldoPeriodo <= 0){
+					# Não faz nada
+				}else{
+					if($he100_pagar > 0){
+						$transferir = $saldoPeriodo - (($saldoPeriodo > $he100)? $he100: 0);
+
+						$saldoPeriodo -= $transferir;
+						$he100_pagar += $transferir;
+						$totalResumo['he100'] = intval($he100_pagar/60).':'.($he100_pagar-intval($he100_pagar/60)*60);
+					}
+				}
+
+				//Contexto do HE50
+				if($aEndosso['endo_tx_pagarHoras'] == 'sim'){
+					if($saldoPeriodo > $aEndosso['endo_tx_horasApagar']){
+						$transferir = $aEndosso['endo_tx_horasApagar'];
+						$saldoPeriodo -= $transferir;
+					}else{
+						$transferir = $saldoPeriodo;
+						$saldoPeriodo = 0;
+					}
+
+					$he50_pagar += $transferir;
+					$totalResumo['he50'] = intval($he50_pagar/60).':'.($he50_pagar-intval($he50_pagar/60)*60);
+				}
+
+				$totalResumo['diffSaldo'] = intval($saldoPeriodo/60).':'.($saldoPeriodo-intval($saldoPeriodo/60)*60);
+			}
+
+
+
+			$saldoAtual = somarHorarios([$saldoAnterior, $totalResumo['diffSaldo']]);			
+
 			?>
 			<!DOCTYPE html>
 				<html lang="en">
@@ -93,7 +149,7 @@
 
 				<body>
 					<div class="header">
-						<img src="<?= $aEmpresa[empr_tx_logo] ?>" alt="Logo Empresa Esquerda">
+						<img src="<?= $aEmpresa['empr_tx_logo'] ?>" alt="Logo Empresa Esquerda">
 						<h1>Espelho de Ponto</h1>
 						<div class="right-logo">
 							<p></p>
@@ -103,21 +159,20 @@
 					<div class="info">
 						<table class="table-header">
 							<tr class="company-info">
-								<td style="text-align: left;"><b>Empresa:</b> <?= $aEmpresa[empr_tx_nome] ?></td>
-								<td style="text-align: left;"><b>CNPJ:</b> <?= $aEmpresa[empr_tx_cnpj] ?></td>
+								<td style="text-align: left;"><b>Empresa:</b> <?= $aEmpresa['empr_tx_nome'] ?></td>
+								<td style="text-align: left;"><b>CNPJ:</b> <?= $aEmpresa['empr_tx_cnpj'] ?></td>
 								<td colspan="2" style="text-align: left;"><b>End.</b> <?= "$enderecoEmpresa, $aCidadeEmpresa[cida_tx_nome]/$aCidadeEmpresa[cida_tx_uf], $aEmpresa[empr_tx_cep]" ?></td>
 								<td style="text-align: left;"><b>Período:</b> <?= "$primeiroDia à $ultimoDia" ?></td>
 								<td style="text-align: left;"><b>Emissão Doc.:</b> <?=$aEndosso['endo_tx_dataCadastro'] . " (UTC-3)" ?></td>
-								<td style="text-align: left;"><b>Inpressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . "(UTC-3)" ?></td>
 							</tr>
 							
 							<tr class="employee-info">
-								<td style="text-align: left;"><b>Motorista:</b> <?= $aMotorista[enti_tx_nome] ?></td>
-								<td style="text-align: left;"><b>Função:</b> <?= $aMotorista[enti_tx_ocupacao] ?></td>
-								<td style="text-align: left;"><b>CPF:</b> <?= $aMotorista[enti_tx_cpf] ?></td>
-								<td style="text-align: left;"><b>Turno:</b> D.SEM/H: <?= $aMotorista[enti_tx_jornadaSemanal] ?> FDS/H: <?= $aMotorista[enti_tx_jornadaSabado] ?> </td>
-								<td style="text-align: left;"><b>Matrícula:</b> <?= $aMotorista[enti_tx_matricula] ?></td>
-								<td style="text-align: left;"><b>Admissão:</b> <?= data($aMotorista[enti_tx_admissao]) ?></td>
+								<td style="text-align: left;"><b>Motorista:</b> <?= $dadosMotorista['enti_tx_nome'] ?></td>
+								<td style="text-align: left;"><b>Função:</b> <?= $dadosMotorista['enti_tx_ocupacao'] ?></td>
+								<td style="text-align: left;"><b>CPF:</b> <?= $dadosMotorista['enti_tx_cpf'] ?></td>
+								<td style="text-align: left;"><b>Turno:</b> D.SEM/H: <?= $dadosMotorista['enti_tx_jornadaSemanal'] ?> FDS/H: <?= $aMotorista['enti_tx_jornadaSabado'] ?> </td>
+								<td style="text-align: left;"><b>Matrícula:</b> <?= $dadosMotorista['enti_tx_matricula'] ?></td>
+								<td style="text-align: left;"><b>Admissão:</b> <?= data($dadosMotorista['enti_tx_admissao']) ?></td>
 							</tr>
 						</table>
 					</div>
@@ -247,11 +302,11 @@
 										<td><?= $totalResumo['diffSaldo'] ?></td>
 										<td class="empty"></td>
 										<td>Saldo Atual</td>
-										<td>--:--</td>
+										<td><?= $saldoAtual ?></td>
 									</tr>
 								</table>
 							</td>
-
+							
 						</tr>
 						<tr>
 							<td>
@@ -271,13 +326,16 @@
 										<p>___________________________________________________________</p>
 									</center>
 									<center>
-										<p><?= $aMotorista[enti_tx_nome] ?></p>
+										<p><?= $dadosMotorista['enti_tx_nome'] ?></p>
 									</center>
 									<center>
 										<p>Motorista</p>
 									</center>
 								</div>
 							</td>
+						</tr>
+						<tr>
+						    <td style="position: absolute; left: 73rem;"><b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . "(UTC-3)" ?></td>
 						</tr>
 					</table>
 				</body>
@@ -395,7 +453,7 @@
 		$cab = [
 			"", "MAT.", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "HE 50%", "HE&nbsp;100%",
-			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO"
+			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(*)"
 		];
 
 		//function buscar_endosso(){
@@ -506,7 +564,24 @@
 						}
 					}
 
-					abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] | $aEmpresa[empr_tx_nome] $infoEndosso $convencaoPadrao");
+					$saldosMotorista = ' <div class="table-responsive">
+					<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact" id="saldo">
+					  <thead><tr>
+						<th>Saldo Anterior:</th>
+						<th>Saldo do Período:</th>
+						<th>Saldo Final:</th>
+					  </thead></tr>
+					  <tbody>
+						<tr>
+						  <td>--:--</td>
+						  <td>--:--</td>
+						  <td>--:--</td>
+						</tr>
+					  </tbody>
+					</table>
+				  </div>';
+
+					abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] | $aEmpresa[empr_tx_nome] $infoEndosso $convencaoPadrao $saldosMotorista");
 
 					$aDia[] = array_values(array_merge(['', '', '', '', '', '', '', '<b>TOTAL</b>'], $totalResumo));
 
@@ -562,6 +637,12 @@
 		.th-align {
 			text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
 			vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
+		}
+		
+		#saldo {
+			width: 50% !important;
+			margin-top: 9px !important;
+			text-align: center;
 		}
 
 		</style>

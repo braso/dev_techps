@@ -12,14 +12,14 @@ use PHPMailer\PHPMailer\Exception;
 
 
 if ($_POST['botao'] == 'ENVIAR') {
-    $dominio = $_POST['domain'];
+    $dominio = $_POST['dominio'];
     $login = $_POST['login'];
-    $email = $_POST['email'];
+    // $email = $_POST['email'];
     if(!empty($dominio)){
         include $dominio."/conecta.php";
         global $CONTEX;
-        if (!empty($email) && !empty($login))
-            $msg = tokenGenerate($email, $login);
+        if (!empty($login))
+            $msg = tokenGenerate($login, $dominio);
         else 
             $msg = '
             <div id="erro" style="background-color: red; padding: 1px; text-align: center;">
@@ -34,6 +34,9 @@ if ($_POST['botao'] == 'ENVIAR') {
 }
 
 if ($_POST['botao'] == 'Redefinir senha') {
+    $dominio = $_GET['domain'];
+    include $dominio."/conecta.php";
+    
     if (!empty($_POST['senha']) && !empty($_POST['senha2']) && $_POST['senha'] == $_POST['senha2']) {
             $userSql = query("SELECT user_nb_id FROM `user` WHERE user_tx_token = '$_GET[token]'");
             $userId = mysqli_fetch_assoc($userSql);
@@ -51,13 +54,13 @@ if ($_POST['botao'] == 'Redefinir senha') {
 }
 
 
-function tokenGenerate($email, $login) {
+function tokenGenerate($login, $domain) {
     $token = bin2hex(random_bytes(16));
-    $userSql = query("SELECT user_nb_id, user_tx_nome FROM `user` WHERE user_tx_login LIKE '%$login%' AND user_tx_email = '$email'");
+    $userSql = query("SELECT user_nb_id, user_tx_nome, user_tx_email FROM `user` WHERE user_tx_login = '$login' AND user_tx_status != 'inativo'");
     $userId = mysqli_fetch_assoc($userSql);
     if(!empty($userId)){
         atualizar('user', ['user_tx_token'], [$token], $userId['user_nb_id']);
-        return sendEmail($email, $token, $userId['user_tx_nome']);
+        return sendEmail($userId['user_tx_email'], $token, $userId['user_tx_nome'], $domain);
     } else
         return '
         <div id="erro" style="background-color: red; padding: 1px; text-align: center;">
@@ -66,7 +69,7 @@ function tokenGenerate($email, $login) {
 }
 
 
-function sendEmail($destinatario, $token, $nomeDestinatario) {
+function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
     global $CONTEX;
     
     $caminho = getcwd();
@@ -96,16 +99,16 @@ function sendEmail($destinatario, $token, $nomeDestinatario) {
         $mail->isHTML(true);
         $mail->Subject = 'Redefinição de Senha';
         $mail->Body = '<b>Redefinição de Senha</b><br>
-        Por favor, <a href="https://braso.mobi/' . basename($caminho)  . '/recupera_senha.php?token=' . $token . '">clique aqui</a> para resetar sua senha.<br>
+        Por favor, <a href="https://braso.mobi/' . basename($caminho)  . '/recupera_senha.php?dominio='.$domain.'&token=' . $token .'">clique aqui</a> para resetar sua senha.<br>
         Caso você não tenha solicitado este e-mail de redefinição de senha, por favor, <a href="mailto:suporte_techps@braso.mobi">entre em contato</a> para que possamos resolver o problema.';
         $mail->Encoding = 'base64';
         $mail->AltBody = "Link para recupera senha: braso.mobi" . basename($caminho)  . "/recupera_senha.php?token=" . $token;
 
         if ($mail->send()) {
-            return '
-            <div id="erro" style="background-color: #0af731; padding: 1px; text-align: center;">
-                <h4 style = "color: #fff !important;">E-mail enviado</h4>
-            </div>';
+            return "
+            <div id='erro' style='background-color: #0af731; padding: 1px; text-align: center;'>
+                <h4 style = 'color: #fff !important;'>E-mail enviado para $destinatario</h4>
+            </div>";
         }
     } catch (Exception $exception) {
         return '
@@ -216,7 +219,7 @@ function sendEmail($destinatario, $token, $nomeDestinatario) {
                     <h3 class="form-title font-green">Redefinir Senha</h3>
                     <p style="text-align:justify">Um link de redefinição de senha será enviado para o seu endereço de e-mail.</p>
                     <div class="form-group">
-                        <select class="form-control" name="domain">
+                        <select class="form-control" name="dominio">
 					        <option value="" selected>Domínio</option>
 					        <option value="techps">techps</option>
 					        <option value="feijao_turqueza">Feijão turqueza</option>
@@ -227,18 +230,20 @@ function sendEmail($destinatario, $token, $nomeDestinatario) {
                         <label class="control-label visible-ie8 visible-ie9">Login</label>
                         <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="text" autocomplete="off" placeholder="Login" name="login" />
                     </div>
-                    <div class="form-group">
-                        <label class="control-label visible-ie8 visible-ie9">E-mail</label>
-                        <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="email" autocomplete="off" placeholder="E-mail" name="email" />
-                    </div>
                     <?= $msg ?>
                     <div class="form-actions" style="padding: 26px 140px !important">
                         <input type="submit" class="btn green uppercase" name="botao" value="ENVIAR"></input>
                     </div>
                     <?
                 } else {
+                    $arrayDominio = array(
+                        "techps" => "Tech PS",
+                        "feijao_turqueza" => "Feijão Turqueza",
+                        "armazem_paraiba" => "Armazém Paraiba"
+                    );
+
                 ?>
-                <h3 class="form-title font-green">Redifinição de Senha</h3>
+                <h3 class="form-title font-green">Redifinição de Senha - <?= $arrayDominio[$_GET['dominio']]; ?></h3>
                     <div class="form-group">
                         <label class="control-label visible-ie8 visible-ie9">Senha</label>
                         <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="password" autocomplete="off" placeholder="Senha" name="senha" />
@@ -249,7 +254,7 @@ function sendEmail($destinatario, $token, $nomeDestinatario) {
                         <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="password" autocomplete="off" placeholder="Confirmar Senha" name="senha2" />
                     </div>
                     <?= $msg ?>
-                    <div class="form-actions" style="padding: 26px 140px !important">
+                    <div class="form-actions" style="padding: 26px 110px !important">
                         <input type="submit" class="btn green uppercase" name="botao" value="Redefinir senha"></input>
                     </div>
                 <?

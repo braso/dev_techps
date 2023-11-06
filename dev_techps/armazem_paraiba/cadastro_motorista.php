@@ -344,8 +344,8 @@ function layout_motorista() {
 
 	$uf = ['', 'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 	
-	if($a_mod[enti_tx_foto]!=''){
-		$img =texto(icone_excluir2($a_mod[enti_nb_id], 'excluir_foto'), '<img style="width: 100%;" src="'.$a_mod[enti_tx_foto].'" />', 2);
+	if($a_mod['enti_tx_foto']!=''){
+		$img =texto(icone_excluir2($a_mod['enti_nb_id'], 'excluir_foto'), '<img style="width: 100%;" src="'.$a_mod['enti_tx_foto'].'" />', 2);
 	}
 	
 	$c = [
@@ -396,7 +396,7 @@ function layout_motorista() {
 		combo('Subcontratado', 'subcontratado', $a_mod['enti_tx_subcontratado'], 2, array('', 'Sim', 'Não')),
 		campo_data('Dt Admissão*', 'admissao', $a_mod['enti_tx_admissao'], 2),
 		campo_data('Dt Desligamento', 'desligamento', $a_mod['enti_tx_desligamento'], 2),
-		campo('SET de Banco de Horas (HH:MM)', 'setBanco', $a_mod['enti_tx_banco'], 3, 'MASCARA_HORA', 'maxlength="8" placeholder="hh:mm"')
+		campo('Saldo de Horas', 'setBanco', $a_mod['enti_tx_banco'], 3, 'MASCARA_HORA', 'maxlength="8" placeholder="hh:mm"')
 	];
 
 	if ($a_mod['enti_nb_empresa']) {
@@ -441,7 +441,7 @@ function layout_motorista() {
 		campo('N° Registro*', 'cnhRegistro', $a_mod['enti_tx_cnhRegistro'], 3,'','maxlength="11"'),
 		campo_data('Validade*', 'cnhValidade', $a_mod['enti_tx_cnhValidade'], 3),
 		campo_data('1º Habilitação', 'cnhPrimeiraHabilitacao', $a_mod['enti_tx_cnhPrimeiraHabilitacao'], 3),
-		campo('Categoria HAB*', 'cnhCategoria', $a_mod['enti_tx_cnhCategoria'], 3),
+		campo('Categoria*', 'cnhCategoria', $a_mod['enti_tx_cnhCategoria'], 3),
 		campo('Permissão', 'cnhPermissao', $a_mod['enti_tx_cnhPermissao'], 3,'','maxlength="65"'),
 		combo_net('Cidade/UF Emissão*', 'cnhCidade', $a_mod['enti_nb_cnhCidade'], 3, 'cidade', '', '', 'cida_tx_uf'),
 		campo_data('Data Emissão*', 'cnhEmissao', $a_mod['enti_tx_cnhEmissao'], 3),
@@ -461,7 +461,7 @@ function layout_motorista() {
 	fieldset('Dados Contratuais');
 	linha_form($cContratual);
 	echo "<br>";
-	fieldset('CONVEÇÃO SINDICAL - JORNADA DO MOTOTRISTA PADRÃO');
+	fieldset('CONVEÇÃO SINDICAL - JORNADA DO MOTORISTA PADRÃO');
 	linha_form($cJornada);
 	echo "<br>";
 	fieldset('CARTEIRA NACIONAL DE HABILITAÇÃO');
@@ -651,8 +651,8 @@ function index() {
 	fecha_form($b);
 
 	
-	$temp_sql = '';
 	/*
+	$temp_sql = '';
 	if(	(isset($_POST('enti_tx_jornadaSemanal')) 		&& !empty($_POST('enti_tx_jornadaSemanal')))
 	 || (isset($_POST('enti_tx_jornadaSabado')) 		&& !empty($_POST('enti_tx_jornadaSabado')))
 	 || (isset($_POST('enti_tx_percentualHE')) 			&& !empty($_POST('enti_tx_percentualHE')))
