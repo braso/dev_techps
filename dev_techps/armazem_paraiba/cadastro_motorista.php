@@ -128,12 +128,12 @@ function cadastra_motorista() {
 		$campos2 = array(
 			'user_tx_nome', 'user_tx_login', 'user_tx_nivel', 'user_tx_senha', 'user_tx_status', 'user_nb_entidade',
 			'user_tx_nascimento', 'user_tx_cpf', 'user_tx_rg', 'user_nb_cidade', 'user_tx_email', 'user_nb_empresa',
-			'user_nb_userCadastro', 'user_tx_dataCadastro'
+			'user_nb_userCadastro', 'user_tx_dataCadastro', 'user_tx_matricula'
 		);
 		$valores2 = array(
 			$_POST['nome'], $cpfLimpo, 'Motorista', md5($cpfLimpo), 'ativo', $id,
 			$_POST['nascimento'], $_POST['cpf'], $_POST['rg'], $_POST['cidade'], $_POST['email'], $_POST['empresa'],
-			$_SESSION['user_nb_id'], date("Y-m-d H:i:s")
+			$_SESSION['user_nb_id'], date("Y-m-d H:i:s"), $_POST['matricula']
 		);
 		$idUser = inserir('user', $campos2, $valores2);
 	} else {//Se está editando um motorista existente
@@ -146,12 +146,12 @@ function cadastra_motorista() {
 			$campos2 = array(
 				'user_tx_nome', 'user_tx_login', 'user_tx_nivel', 'user_tx_senha', 'user_tx_status', 'user_nb_entidade',
 				'user_tx_nascimento', 'user_tx_cpf', 'user_tx_rg', 'user_nb_cidade', 'user_tx_email', 'user_nb_empresa',
-				'user_nb_userAtualiza', 'user_tx_dataAtualiza'
+				'user_nb_userAtualiza', 'user_tx_dataAtualiza', 'user_tx_matricula'
 			);
 			$valores2 = array(
 				$_POST['nome'], $cpfLimpo, 'Motorista', md5($cpfLimpo), 'ativo', $_POST['id'],
 				$_POST['nascimento'], $_POST['cpf'], $_POST['rg'], $_POST['cidade'], $_POST['email'], $_POST['empresa'],
-				$_SESSION['user_nb_id'], date("Y-m-d H:i:s")
+				$_SESSION['user_nb_id'], date("Y-m-d H:i:s"), $_POST['matricula']
 			);
 			atualizar('user', $campos2, $valores2, $a_user['user_nb_id']);
 		}

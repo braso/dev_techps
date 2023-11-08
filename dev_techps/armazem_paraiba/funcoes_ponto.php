@@ -1111,6 +1111,31 @@ function diaDetalhePonto($matricula, $data) {
 		$aRetorno['diffRepouso'] = $repousoOrdenado['icone'] . $repousoOrdenado['totalIntervalo'];
 	}
 
+	$infoAjustes = query("SELECT pont_tx_data,macr_tx_nome FROM ponto
+	JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
+	JOIN user ON ponto.pont_nb_user = user.user_nb_id
+	LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
+	WHERE ponto.pont_tx_status = 'inativo' AND pont_tx_data LIKE '%$data%' AND pont_tx_matricula = '$matricula'");
+	
+	$ajuste = mysqli_fetch_all($infoAjustes, MYSQLI_ASSOC);
+
+	foreach ($ajuste  as $valor) {
+		if ($data == substr($valor["pont_tx_data"],0,10) && $valor["macr_tx_nome"] == 'Inicio de Jornada') {
+			$aRetorno['inicioJornada'] .= ' <a><i style="color:#0a0a0a;" title="Registros lançados excluídos manualmente." class="fa fa-asterisk" aria-hidden="true"></i></a>';
+		}
+		if ($data == substr($valor["pont_tx_data"],0,10) && $valor["macr_tx_nome"] == 'Fim de Jornada') {
+			$aRetorno['fimJornada'] .= ' <a><i style="color:#0a0a0a;" title="Registros lançados excluídos manualmente." class="fa fa-asterisk" aria-hidden="true"></i></a>';
+		}
+		if ($data == substr($valor["pont_tx_data"],0,10) && $valor["macr_tx_nome"] == 'Inicio de Refeição') {
+			$aRetorno['inicioRefeicao'] .= ' <a><i style="color:#0a0a0a;" title="Registros lançados excluídos manualmente." class="fa fa-asterisk" aria-hidden="true"></i></a>';
+		}
+		if ($data == substr($valor["pont_tx_data"],0,10) && $valor["macr_tx_nome"] == 'Fim de Refeição') {
+			$aRetorno['fimRefeicao'] .= ' <a><i style="color:#0a0a0a;" title="Registros lançados excluídos manualmente." class="fa fa-asterisk" aria-hidden="true"></i></a>';
+		}
+	}
+	
+
+
 	// TOTALIZADOR 
 	$totalResumo['diffRefeicao'] = somarHorarios(array($totalResumo['diffRefeicao'], strip_tags(str_replace("&nbsp;", "", $aRetorno['diffRefeicao']))));
 	$totalResumo['diffEspera'] = somarHorarios(array($totalResumo['diffEspera'], strip_tags(str_replace("&nbsp;", "", $aRetorno['diffEspera']))));

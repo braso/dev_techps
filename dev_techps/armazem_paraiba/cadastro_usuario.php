@@ -177,6 +177,34 @@
 			$campo_expiracao = texto('Dt. Expiraçao', $data_expiracao, 2, "style='margin-bottom:-10px; margin-top: 10px;'");
 			$campo_senha = campo_senha('Senha', 'senha', "", 2);
 			$campo_confirma = campo_senha('Confirmar Senha', 'senha2', "", 2);
+			$campo_matricula = texto('Matricula', $a_mod['user_tx_matricula'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
+
+		} else if ($a_mod['user_tx_nivel'] == "Motorista"){
+			$campo_nivel = texto('Nível*', $a_mod['user_tx_nivel'], 2, "style='margin-bottom:-10px;'");
+			
+			
+			$campo_nome = texto('Nome*', $a_mod['user_tx_nome'], 3, "style='margin-bottom:-10px'; for='nome'");
+			$campo_login = texto('Login*', $a_mod['user_tx_login'], 2, "style='margin-bottom:-10px;'");
+			$data_nascimento = ($a_mod['user_tx_nascimento'] != '0000-00-00') ? date("d/m/Y", strtotime($a_mod['user_tx_nascimento'])) : '00/00/0000' ;
+			$campo_nascimento = texto('Dt. Nascimento*', $data_nascimento, 3, "style='margin-bottom:-10px;'");
+			$campo_cpf = texto('CPF', $a_mod['user_tx_cpf'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
+			$campo_rg = texto('RG', $a_mod['user_tx_rg'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
+			
+			$cidade_query = query("SELECT * FROM `cidade` WHERE cida_tx_status = 'ativo' AND cida_nb_id = $a_mod[user_nb_cidade]");
+			$cidade = mysqli_fetch_array($cidade_query);
+		
+			$campo_cidade = texto('Cidade/UF', $cidade['cida_tx_nome'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
+			$campo_email = texto('E-mail*', $a_mod['user_tx_email'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
+			$campo_telefone = texto('Telefone', $a_mod['user_tx_fone'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
+			
+			$empresa_query = query("SELECT * FROM `empresa` WHERE empr_tx_status = 'ativo' AND empr_nb_id = $a_mod[user_nb_empresa]");
+			$empresa = mysqli_fetch_array($empresa_query);
+			
+			$campo_empresa = texto('Empresa*', $empresa['empr_tx_nome'], 3, "style='margin-bottom:-10px; margin-top: 10px;'");
+			$data_expiracao  = ($a_mod['user_tx_expiracao'] != '0000-00-00') ? date("d/m/Y", strtotime($a_mod['user_tx_expiracao'])) : '00/00/0000' ;
+			$campo_expiracao = texto('Dt. Expiraçao', $data_expiracao, 2, "style='margin-bottom:-10px; margin-top: 10px;'");
+			$campo_matricula = texto('Matricula', $a_mod['user_tx_matricula'], 2, "style='margin-bottom:-10px;'");
+
 		} else {
 			$niveis = [];
 
@@ -210,22 +238,39 @@
 			$campo_confirma = campo_senha('Confirmar Senha*', 'senha2', "", 2);
 		}
 
-		$c[] = $campo_nome;
-		$c[] = $campo_nivel;
-		$c[] = $campo_login;
-		$c[] = $campo_senha;
-		$c[] = $campo_confirma;
+		if ($a_mod['user_tx_nivel'] == "Motorista") {
+			$c[] = $campo_nome;
+			$c[] = $campo_nivel;
+			$c[] = $campo_login;
+			$c[] = $campo_matricula;
 
-		$c[] = $campo_nascimento;
-		$c[] = $campo_cpf;
-		$c[] = $campo_rg;
-		$c[] = $campo_cidade;
-		$c[] = $campo_email;
-		$c[] = $campo_telefone;
-		$c[] = $campo_empresa;
-		$c[] = $campo_expiracao;
+			$c[] = $campo_nascimento;
+			$c[] = $campo_cpf;
+			$c[] = $campo_rg;
+			$c[] = $campo_cidade;
+			$c[] = $campo_email;
+			$c[] = $campo_telefone;
+			$c[] = $campo_empresa;
+			$c[] = $campo_expiracao;
+		}else {
+			$c[] = $campo_nome;
+			$c[] = $campo_nivel;
+			$c[] = $campo_login;
+			$c[] = $campo_senha;
+			$c[] = $campo_confirma;
 
-		$b[] = botao('Gravar', 'cadastra_usuario', 'id', $_POST['id']);
+			$c[] = $campo_nascimento;
+			$c[] = $campo_cpf;
+			$c[] = $campo_rg;
+			$c[] = $campo_cidade;
+			$c[] = $campo_email;
+			$c[] = $campo_telefone;
+			$c[] = $campo_empresa;
+			$c[] = $campo_expiracao;
+			
+			$b[] = botao('Gravar', 'cadastra_usuario', 'id', $_POST['id']);
+		}
+
 		$b[] = botao('Voltar', 'index');
 
 		abre_form('Dados do Usuário');

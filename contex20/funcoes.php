@@ -286,6 +286,14 @@ function atualizar($tabela,$campos,$valores,$id){
 
 }
 
+function remover_ponto($tabela,$id,$justificativa){
+
+	$tab=substr($tabela,0,4);
+
+	query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '$id' LIMIT 1");
+
+}
+
 function remover($tabela,$id){
 
 	$tab=substr($tabela,0,4);
