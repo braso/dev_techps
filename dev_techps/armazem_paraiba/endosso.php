@@ -67,7 +67,7 @@
 			
 // 			unset($aMotorista);
 
-			$sqlEndosso = query("SELECT endo_tx_dataCadastro FROM endosso WHERE endo_tx_matricula = '$aMotorista[enti_tx_matricula]'");
+			$sqlEndosso = query("SELECT endo_tx_dataCadastro, endo_tx_pagarHoras, endo_tx_horasApagar FROM endosso WHERE endo_tx_matricula = '$aMotorista[enti_tx_matricula]'");
 			$aEndosso = carrega_array($sqlEndosso);
 
 			$lastMonthDate = date('Y-m', strtotime('-1 month', strtotime($year.'-'.$month.'-01')));
@@ -87,14 +87,52 @@
 // 			$dadosMotorista = mysqli_fetch_all($sqlMotorista, MYSQLI_ASSOC);
 // 			var_dump($dadosMotorista);
 
-			$he100mins = explode(':', $aDetalhadoCampos['he100']);
-			$he100mins = intval($he100mins[0])*60+($he100mins[0][0] == '-'? -1:1)*intval($he100mins[1]);
 
-			$saldoPeriodo = explode(':', $totalResumo['diffSaldo']);
-			$saldoPeriodo = intval($he100mins[0])*60+($he100mins[0][0] == '-'? -1:1)*intval($he100mins[1]);
+			if(True){ //Deve ser feito somente quando for obrigado a pagar a hora extra?
 
+				//Contexto do HE100
+				$he100 = explode(':', $aDetalhado['he100']);
+				$he100 = intval($he100[0])*60+($he100[0][0] == '-'? -1:1)*intval($he100[1]);
+				
+				$he50_pagar = explode(':', $totalResumo['he50']);
+				$he50_pagar = intval($he50_pagar[0])*60+($he50_pagar[0][0] == '-'? -1:1)*intval($he50_pagar[1]);
+				
+				$he100_pagar = explode(':', $totalResumo['he100']);
+				$he100_pagar = intval($he100_pagar[0])*60+($he100_pagar[0][0] == '-'? -1:1)*intval($he100_pagar[1]);
 
-			$saldoAtual = somarHorarios([$saldoAnterior, $totalResumo['diffSaldo']]);			
+				$saldoPeriodo = explode(':', $totalResumo['diffSaldo']);
+				$saldoPeriodo = intval($saldoPeriodo[0])*60+($saldoPeriodo[0][0] == '-'? -1:1)*intval($saldoPeriodo[1]);
+				
+				if($saldoPeriodo <= 0){
+					# Não faz nada
+				}else{
+					if($he100_pagar > 0){
+						$transferir = $saldoPeriodo - (($saldoPeriodo > $he100)? $he100: 0);
+
+						$saldoPeriodo -= $transferir;
+						$he100_pagar += $transferir;
+						$totalResumo['he100'] = intval($he100_pagar/60).':'.($he100_pagar-intval($he100_pagar/60)*60);
+					}
+				}
+
+				//Contexto do HE50
+				if($aEndosso['endo_tx_pagarHoras'] == 'sim'){
+					if($saldoPeriodo > $aEndosso['endo_tx_horasApagar']){
+						$transferir = $aEndosso['endo_tx_horasApagar'];
+						$saldoPeriodo -= $transferir;
+					}else{
+						$transferir = $saldoPeriodo;
+						$saldoPeriodo = 0;
+					}
+
+					$he50_pagar += $transferir;
+					$totalResumo['he50'] = intval($he50_pagar/60).':'.($he50_pagar-intval($he50_pagar/60)*60);
+				}
+
+				$totalResumo['diffSaldo'] = intval($saldoPeriodo/60).':'.($saldoPeriodo-intval($saldoPeriodo/60)*60);
+			}
+
+			$saldoAtual = somarHorarios([$saldoAnterior, $totalResumo['diffSaldo']]);
 
 			?>
 			<!DOCTYPE html>
@@ -417,158 +455,178 @@
 		];
 
 		//function buscar_endosso(){
-		if ($_POST['busca_data'] && $_POST['busca_empresa']) {
+			if ($_POST['busca_data'] && $_POST['busca_empresa']) {
 
-			$date = new DateTime($_POST['busca_data']);
-			$month = $date->format('m');
-			$year = $date->format('Y');
-
-			$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
-
-			$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_tipo = 'Motorista' AND enti_nb_empresa = " . $_POST['busca_empresa'] . " $extra ORDER BY enti_tx_nome");
-			while ($aMotorista = carrega_array($sqlMotorista)) {
-				$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
-
-				for ($i = 1; $i <= $daysInMonth; $i++) {
-					$dataVez = $_POST['busca_data'] . "-" . str_pad($i, 2, 0, STR_PAD_LEFT);
-
-					$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
-
-					$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));;
-					for($f = 0; $f < sizeof($row)-1; $f++){
-						if($row[$f] == "00:00"){
-							$row[$f] = "";
+				$date = new DateTime($_POST['busca_data']);
+				$month = $date->format('m');
+				$year = $date->format('Y');
+	
+				$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+	
+				$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_tipo = 'Motorista' AND enti_nb_empresa = " . $_POST['busca_empresa'] . " $extra ORDER BY enti_tx_nome");
+				while ($aMotorista = carrega_array($sqlMotorista)) {
+					if($aMotorista['enti_tx_nome'] == '' || $aMotorista['enti_tx_matricula'] == ''){
+						continue;
+					}
+					$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
+	
+					for ($i = 1; $i <= $daysInMonth; $i++) {
+						$dataVez = $_POST['busca_data'] . "-" . str_pad($i, 2, 0, STR_PAD_LEFT);
+	
+						$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
+	
+						$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));;
+						for($f = 0; $f < sizeof($row)-1; $f++){
+							if($row[$f] == "00:00"){
+								$row[$f] = "";
+							}
+						}
+						$aDia[] = $row;
+						$aDiaOriginal[] = $aDetalhado;
+					}
+	
+					$exibir = 1;
+	
+					for ($i = 0; $i < count($aDiaOriginal); $i++) {
+						$diaVez = $aDiaOriginal[$i];
+	
+						if (
+							(strpos($diaVez['diffRefeicao'], 'color:red;') !== false) ||
+							(strpos($diaVez['diffEspera'], 'color:red;') !== false) ||
+							(strpos($diaVez['diffDescanso'], 'color:red;') !== false) ||
+							(strpos($diaVez['diffRepouso'], 'color:red;') !== false) ||
+							(strpos($diaVez['diffJornada'], 'color:red;') !== false) ||
+							(strpos($diaVez['jornadaPrevista'], 'color:red;') !== false) ||
+							(strpos($diaVez['diffJornadaEfetiva'], 'color:red;') !== false) ||
+							(strpos($diaVez['maximoDirecaoContinua'], 'color:red;') !== false) ||
+							(strpos($diaVez['intersticio'], 'color:red;') !== false) ||
+							(strpos($diaVez['he50'], 'color:red;') !== false) ||
+							(strpos($diaVez['he100'], 'color:red;') !== false) ||
+							(strpos($diaVez['adicionalNoturno'], 'color:red;') !== false) ||
+							(strpos($diaVez['esperaIndenizada'], 'color:red;') !== false) ||
+							(strpos($diaVez['diffSaldo'], 'color:red;') !== false)
+	
+						) {
+							//SE HOUVER RED E BUSCA POR NAO CONFORMIDADE EXIBE. LOGICA CONTRARIA CASO VERIFICADOS
+							if ($_POST['busca_situacao'] == 'Não conformidade' || $_POST['busca_situacao'] == 'Todos') {
+								$countNaoConformidade++;
+								$exibir = 1;
+								break;
+							} elseif ($_POST['busca_situacao'] == 'Verificado') {
+								$exibir = 0;
+								$totalResumo = ['diffRefeicao' => '00:00', 'diffEspera' => '00:00', 'diffDescanso' => '00:00', 'diffRepouso' => '00:00', 'diffJornada' => '00:00', 'jornadaPrevista' => '00:00', 'diffJornadaEfetiva' => '00:00', 'maximoDirecaoContinua' => '', 'intersticio' => '00:00', 'he50' => '00:00', 'he100' => '00:00', 'adicionalNoturno' => '00:00', 'esperaIndenizada' => '00:00', 'diffSaldo' => '00:00'];
+								break;
+							}
+						} else {
+							if ($_POST['busca_situacao'] == 'Não conformidade') {
+								$exibir = 0;
+							} elseif ($_POST['busca_situacao'] == 'Verificado') {
+								$exibir = 1;
+							}
 						}
 					}
-					$aDia[] = $row;
-					$aDiaOriginal[] = $aDetalhado;
-				}
 
-				$exibir = 1;
-
-				for ($i = 0; $i < count($aDiaOriginal); $i++) {
-					$diaVez = $aDiaOriginal[$i];
-
-					if (
-						(strpos($diaVez['diffRefeicao'], 'color:red;') !== false) ||
-						(strpos($diaVez['diffEspera'], 'color:red;') !== false) ||
-						(strpos($diaVez['diffDescanso'], 'color:red;') !== false) ||
-						(strpos($diaVez['diffRepouso'], 'color:red;') !== false) ||
-						(strpos($diaVez['diffJornada'], 'color:red;') !== false) ||
-						(strpos($diaVez['jornadaPrevista'], 'color:red;') !== false) ||
-						(strpos($diaVez['diffJornadaEfetiva'], 'color:red;') !== false) ||
-						(strpos($diaVez['maximoDirecaoContinua'], 'color:red;') !== false) ||
-						(strpos($diaVez['intersticio'], 'color:red;') !== false) ||
-						(strpos($diaVez['he50'], 'color:red;') !== false) ||
-						(strpos($diaVez['he100'], 'color:red;') !== false) ||
-						(strpos($diaVez['adicionalNoturno'], 'color:red;') !== false) ||
-						(strpos($diaVez['esperaIndenizada'], 'color:red;') !== false) ||
-						(strpos($diaVez['diffSaldo'], 'color:red;') !== false)
-
-					) {
-						//SE HOUVER RED E BUSCA POR NAO CONFORMIDADE EXIBE. LOGICA CONTRARIA CASO VERIFICADOS
-						if ($_POST['busca_situacao'] == 'Não conformidade' || $_POST['busca_situacao'] == 'Todos') {
-							$countNaoConformidade++;
-							$exibir = 1;
-							break;
-						} elseif ($_POST['busca_situacao'] == 'Verificado') {
-							$exibir = 0;
-							$totalResumo = ['diffRefeicao' => '00:00', 'diffEspera' => '00:00', 'diffDescanso' => '00:00', 'diffRepouso' => '00:00', 'diffJornada' => '00:00', 'jornadaPrevista' => '00:00', 'diffJornadaEfetiva' => '00:00', 'maximoDirecaoContinua' => '', 'intersticio' => '00:00', 'he50' => '00:00', 'he100' => '00:00', 'adicionalNoturno' => '00:00', 'esperaIndenizada' => '00:00', 'diffSaldo' => '00:00'];
-							break;
-						}
-					} else {
-						if ($_POST['busca_situacao'] == 'Não conformidade') {
-							$exibir = 0;
-						} elseif ($_POST['busca_situacao'] == 'Verificado') {
-							$exibir = 1;
-						}
+					if ($exibir == 0) {
+						unset($aDia);
+						unset($aDiaOriginal);
 					}
-				}
-
-				if ($exibir == 0) {
+	
+					if (count($aDia) > 0) {
+	
+						$sqlCheck = query("SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user WHERE endo_tx_mes = '" . substr($_POST['busca_data'], 0, 7) . '-01' . "' AND endo_nb_entidade = '" . $aMotorista['enti_nb_id'] . "'
+						AND endo_tx_matricula = '" . $aMotorista['enti_tx_matricula'] . "' AND endo_tx_status = 'ativo' AND endo_nb_userCadastro = user_nb_id LIMIT 1");
+						$aEndosso = carrega_array($sqlCheck);
+						if (count($aEndosso) > 0) {
+							$infoEndosso = " - Endossado por " . $aEndosso['user_tx_login'] . " em " . data($aEndosso['endo_tx_dataCadastro'], 1);
+							$countEndossados++;
+							$aIdMotoristaEndossado[] = $aMotorista['enti_nb_id'];
+							$aMatriculaMotoristaEndossado[] = $aMotorista['enti_tx_matricula'];
+						} else {
+							$infoEndosso = '';
+							$countNaoEndossados++;
+						}
+	
+						$aIdMotorista[] = $aMotorista['enti_nb_id'];
+						$aMatriculaMotorista[] = $aMotorista['enti_tx_matricula'];
+	
+						$countEndosso++;
+	
+						if ($aEmpresa['empr_nb_parametro'] > 0) {
+							$aParametro = carregar('parametro', $aEmpresa['empr_nb_parametro']);
+							$convencaoPadrao = '| Convenção Padrão? Sim';
+							foreach(['tx_jornadaSemanal', 'tx_jornadaSabado', 'tx_percentualHE', 'tx_percentualSabadoHE'] as $campo){
+								if($aParametro['para_'.$campo] != $aMotorista['enti_'.$campo]){
+									$convencaoPadrao = '| Convenção Padrão? Não';
+									break;
+								}
+							}
+							if($aParametro['para_nb_id'] != $aMotorista['enti_nb_parametro']){
+								$convencaoPadrao = '| Convenção Padrão? Não';
+							}
+						}
+	
+						$saldosMotorista = 
+							'<div class="table-responsive">
+								<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact" id="saldo">
+									<thead><tr>
+										<th>Saldo Anterior:</th>
+										<th>Saldo do Período:</th>
+										<th>Saldo Final:</th>
+									</thead></tr>
+									<tbody>
+										<tr>
+										<td>--:--</td>
+										<td>--:--</td>
+										<td>--:--</td>
+										</tr>
+									</tbody>
+									</table>
+							</div>';
+	
+						abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] | $aEmpresa[empr_tx_nome] $infoEndosso $convencaoPadrao $saldosMotorista");
+	
+						$aDia[] = array_values(array_merge(['', '', '', '', '', '', '', '<b>TOTAL</b>'], $totalResumo));
+	
+						$toleranciaStr = carrega_array(query('SELECT parametro.para_tx_tolerancia FROM entidade JOIN parametro ON enti_nb_parametro = para_nb_id WHERE enti_nb_parametro ='.$aMotorista['enti_nb_parametro'].';'))[0];
+						$toleranciaStr = explode(':', $toleranciaStr);
+	
+						$tolerancia = intval($toleranciaStr[0])*60;
+	
+						if($toleranciaStr[0] == '-'){
+							$tolerancia -= intval($toleranciaStr[1]);
+						}else{
+							$tolerancia += intval($toleranciaStr[1]);
+						}
+						
+						for($f = 0; $f < count($aDia); $f++){
+							$saldoStr = explode(':', $aDia[$f][count($aDia[$f])-1]);
+							$saldo = intval($saldoStr[0])*60;
+							if($saldoStr[0] == '-'){
+								$saldo -= intval($saldoStr[1]);
+							}else{
+								$saldo += intval($saldoStr[1]);
+							}
+							if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
+								$aDia[$f][count($aDia[$f])-1] = '00:00';
+							}
+						}
+	
+						grid2($cab, $aDia, "Jornada Semanal (Horas): $aMotorista[enti_tx_jornadaSemanal]");
+						fecha_form();
+	
+						$aSaldo[$aMotorista['enti_tx_matricula']] = $totalResumo['diffSaldo'];
+					}
+	
+					$totalResumo = ['diffRefeicao' => '00:00', 'diffEspera' => '00:00', 'diffDescanso' => '00:00', 'diffRepouso' => '00:00', 'diffJornada' => '00:00', 'jornadaPrevista' => '00:00', 'diffJornadaEfetiva' => '00:00', 'maximoDirecaoContinua' => '', 'intersticio' => '00:00', 'he50' => '00:00', 'he100' => '00:00', 'adicionalNoturno' => '00:00', 'esperaIndenizada' => '00:00', 'diffSaldo' => '00:00'];
+	
 					unset($aDia);
 					unset($aDiaOriginal);
 				}
-
-				if (count($aDia) > 0) {
-
-					$sqlCheck = query("SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user WHERE endo_tx_mes = '" . substr($_POST['busca_data'], 0, 7) . '-01' . "' AND endo_nb_entidade = '" . $aMotorista['enti_nb_id'] . "'
-					AND endo_tx_matricula = '" . $aMotorista['enti_tx_matricula'] . "' AND endo_tx_status = 'ativo' AND endo_nb_userCadastro = user_nb_id LIMIT 1");
-					$aEndosso = carrega_array($sqlCheck);
-					if (count($aEndosso) > 0) {
-						$infoEndosso = " - Endossado por " . $aEndosso['user_tx_login'] . " em " . data($aEndosso['endo_tx_dataCadastro'], 1);
-						$countEndossados++;
-						$aIdMotoristaEndossado[] = $aMotorista['enti_nb_id'];
-						$aMatriculaMotoristaEndossado[] = $aMotorista['enti_tx_matricula'];
-					} else {
-						$infoEndosso = '';
-						$countNaoEndossados++;
-					}
-
-					$aIdMotorista[] = $aMotorista['enti_nb_id'];
-					$aMatriculaMotorista[] = $aMotorista['enti_tx_matricula'];
-
-					$countEndosso++;
-
-					if ($aEmpresa['empr_nb_parametro'] > 0) {
-						$aParametro = carregar('parametro', $aEmpresa['empr_nb_parametro']);
-						$convencaoPadrao = '| Convenção Padrão? Sim';
-						foreach(['tx_jornadaSemanal', 'tx_jornadaSabado', 'tx_percentualHE', 'tx_percentualSabadoHE'] as $campo){
-							if($aParametro['para_'.$campo] != $aMotorista['enti_'.$campo]){
-								$convencaoPadrao = '| Convenção Padrão? Não';
-								break;
-							}
-						}
-						if($aParametro['para_nb_id'] != $aMotorista['enti_nb_parametro']){
-							$convencaoPadrao = '| Convenção Padrão? Não';
-						}
-					}
-
-					abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] | $aEmpresa[empr_tx_nome] $infoEndosso $convencaoPadrao 
-					| Saldo Anterior: --:-- Saldo do Período: --:-- Saldo Final: --:--");
-
-					$aDia[] = array_values(array_merge(['', '', '', '', '', '', '', '<b>TOTAL</b>'], $totalResumo));
-
-					$toleranciaStr = carrega_array(query('SELECT parametro.para_tx_tolerancia FROM entidade JOIN parametro ON enti_nb_parametro = para_nb_id WHERE enti_nb_parametro ='.$aMotorista['enti_nb_parametro'].';'))[0];
-					$toleranciaStr = explode(':', $toleranciaStr);
-
-					$tolerancia = intval($toleranciaStr[0])*60;
-
-					if($toleranciaStr[0] == '-'){
-						$tolerancia -= intval($toleranciaStr[1]);
-					}else{
-						$tolerancia += intval($toleranciaStr[1]);
-					}
-					
-					for($f = 0; $f < count($aDia); $f++){
-						$saldoStr = explode(':', $aDia[$f][count($aDia[$f])-1]);
-						$saldo = intval($saldoStr[0])*60;
-						if($saldoStr[0] == '-'){
-							$saldo -= intval($saldoStr[1]);
-						}else{
-							$saldo += intval($saldoStr[1]);
-						}
-						if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
-							$aDia[$f][count($aDia[$f])-1] = '00:00';
-						}
-					}
-
-					grid2($cab, $aDia, "Jornada Semanal (Horas): $aMotorista[enti_tx_jornadaSemanal]");
-					fecha_form();
-
-					$aSaldo[$aMotorista['enti_tx_matricula']] = $totalResumo['diffSaldo'];
-				}
-
-				$totalResumo = ['diffRefeicao' => '00:00', 'diffEspera' => '00:00', 'diffDescanso' => '00:00', 'diffRepouso' => '00:00', 'diffJornada' => '00:00', 'jornadaPrevista' => '00:00', 'diffJornadaEfetiva' => '00:00', 'maximoDirecaoContinua' => '', 'intersticio' => '00:00', 'he50' => '00:00', 'he100' => '00:00', 'adicionalNoturno' => '00:00', 'esperaIndenizada' => '00:00', 'diffSaldo' => '00:00'];
-
-				unset($aDia);
-				unset($aDiaOriginal);
 			}
-		}
-		
-		if ($_POST['busca_situacao'] == 'Todos' || $_POST['busca_situacao'] == 'Verificado') {
-			$countVerificados = $countEndosso - $countNaoConformidade;
-		}
+			
+			if ($_POST['busca_situacao'] == 'Todos' || $_POST['busca_situacao'] == 'Verificado') {
+				$countVerificados = $countEndosso - $countNaoConformidade;
+			}
 		//}
 
 		echo '<div class="printable"></div>';
@@ -581,6 +639,12 @@
 		.th-align {
 			text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
 			vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
+		}
+		
+		#saldo {
+			width: 50% !important;
+			margin-top: 9px !important;
+			text-align: center;
 		}
 
 		</style>
