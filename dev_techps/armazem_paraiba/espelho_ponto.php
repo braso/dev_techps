@@ -13,10 +13,10 @@
 	
 		if ($_POST['busca_motorista']) {
 			$aMotorista = carregar('entidade', $_POST['busca_motorista']);
-			$aDadosMotorista = array($aMotorista['enti_tx_matricula']);
+			$aDadosMotorista = [$aMotorista['enti_tx_matricula']];
 			$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
 		}
-	
+
 		$extraEmpresa = '';
 		if ($_SESSION['user_nb_empresa'] > 0 && $_SESSION['user_tx_nivel'] != 'Administrador' && $_SESSION['user_tx_nivel'] != 'Super Administrador') {
 			$extraEmpresa = " AND enti_nb_empresa = '$_SESSION[user_nb_empresa]'";
@@ -30,14 +30,18 @@
 			$_POST['busca_data2'] = date("Y-m-d");
 		}
 	
-		//CONSULTA
-		$c[] = combo_net('* Motorista:', 'busca_motorista', $_POST['busca_motorista'], 6, 'entidade', '', " AND enti_tx_tipo = \"Motorista\" $extraEmpresa $extraBuscaMotorista", 'enti_tx_matricula');
-		// $c[] = campo_mes('Data:','busca_data',$_POST[busca_data],2);
-		$c[] = campo_data('Data Início:', 'busca_data1', $_POST['busca_data1'], 2);
-		$c[] = campo_data('Data Fim:', 'busca_data2', $_POST['busca_data2'], 2);
+		//CAMPOS DE CONSULTA
+		$c = [
+			combo_net('Motorista*:', 'busca_motorista', $_POST['busca_motorista'], 4, 'entidade', '', " AND enti_tx_tipo = \"Motorista\" $extraEmpresa $extraBuscaMotorista", 'enti_tx_matricula')
+			//, campo_mes('Data:','busca_data',$_POST[busca_data],2)
+			,campo_data('Data Início:', 'busca_data1', $_POST['busca_data1'], 2)
+			,campo_data('Data Fim:', 'busca_data2', $_POST['busca_data2'], 2)
+			// ,combo('Sem Inconsistência: ', 'busca_inconsistencia', $_POST['busca_inconsistencia'], 2, ['Não', 'Sim']),
+			// combo('Com saldo previsto: ', 'busca_saldo_previsto', $_POST['busca_saldo_previsto'], 2, ['Sim', 'Não'])
+		];
 	
 		//BOTOES
-		$b[] = botao("Buscar", 'index');
+		$b = [botao("Buscar", 'index')];
 		if ($_SESSION['user_tx_nivel'] != 'Motorista') {
 			$b[] = botao("Cadastrar Abono", 'layout_abono');
 		}
@@ -58,36 +62,55 @@
 		$endDate = new DateTime($_POST['busca_data2']);
 	
 		// Loop for para percorrer as datas
-	
-	
+
+
 		if ($_POST['busca_data1'] && $_POST['busca_data2'] && $_POST['busca_motorista']) {
-			// $date = new DateTime($_POST[busca_data]);
-			// $month = $date->format('m');
-			// $year = $date->format('Y');
-	
-			// $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
-	
-			// for ($i = 1; $i <= $daysInMonth; $i++) {
-			// 	$dataVez = $_POST[busca_data]."-".str_pad($i,2,0,STR_PAD_LEFT);
-	
-			// 	$aDetalhado = diaDetalhePonto($aMotorista[enti_tx_matricula], $dataVez);
-	
-			// 	$aDia[] = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDadosMotorista, $aDetalhado));
-	
-			// }
 	
 			for ($date = $startDate; $date <= $endDate; $date->modify('+1 day')) {
 				$dataVez = $date->format('Y-m-d');
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 
 				$row = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDadosMotorista, $aDetalhado));
+				$exibir = True;
 				for($f = 0; $f < sizeof($row); $f++){
+					if(strpos($row[$f], 'fa-warning') !== false && $_POST['busca_inconsistencia'] == 'Sim'){
+						$exibir = False;
+						// $f2 = 8;
+						// foreach($totalResumo as $key => $value){
+
+						// 	// $horaSaida = '23:00';
+						// 	// $horaEntrada = '20:00';
+						// 	// $diffHoras = (strtotime($horaSaida) - strtotime($horaEntrada));
+						// 	// echo date('H:i', $diffHoras);
+
+						// 	$totalResumo[$key] = (strtotime($totalResumo[$key]) + (substr($row[$f2], -6)));
+
+						// 	$date = new DateTime('2000-01-20');
+						// 	$date->sub(new DateInterval('P10D'));
+						// 	echo $date->format('Y-m-d') . "\n";
+						// 	$totalResumo[$key] = explode(':', $totalResumo[$key]);
+						// 	$totalResumo[$key] = intval($totalResumo[$key][0])*60+($totalResumo[$key][0][0] == '-'? -1:1)*intval($totalResumo[$key][1]);
+
+						// 	$row[$f2] = explode(':', substr($row[$f2], -5));
+						// 	$row[$f2] = intval($row[$f2][0])*60 + ($row[$f2][0][0] == '-'? -1:1)*intval($row[$f2][1]);
+							
+						// 	$totalResumo[$key] = $totalResumo[$key] + (($totalResumo[$key]<0?1:-1)*$row[$f2]);
+						// 	$totalResumo[$key] = sprintf('00',(intval($totalResumo[$key]/60))).":".sprintf('00', ($totalResumo[$key]-intval($totalResumo[$key]/60)*60));
+						// 	$f2++;
+						// }
+						break;
+					}
 					if($row[$f] == "00:00"){
 						$row[$f] = "";
 					}
 				}
-				$aDia[] = $row;
+				if($exibir){
+					$aDia[] = $row;
+				}
 			}
+
+			var_dump($totalResumo);
+			print('<br>');
 	
 			if ($aEmpresa['empr_nb_parametro'] > 0) {
 				$aParametro = carregar('parametro', $aEmpresa['empr_nb_parametro']);
@@ -98,12 +121,11 @@
 					$aParametro['para_tx_percentualSabadoHE'] != $aMotorista['enti_tx_percentualSabadoHE'] ||
 					$aParametro['para_nb_id'] != $aMotorista['enti_nb_parametro']
 				) {
-	
 					$ehPadrao = 'Não';
 				} else {
 					$ehPadrao = 'Sim';
 				}
-	
+
 				$convencaoPadrao = '| Convenção Padrão? ' . $ehPadrao;
 			}
 	
