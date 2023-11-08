@@ -70,7 +70,7 @@
 		}
 
 		$bd_campos = ['user_tx_nome', 'user_tx_login', 'user_tx_senha', 'user_tx_nascimento', 'user_tx_email', 'user_tx_fone', 'user_nb_empresa'];
-		$valores = [$_POST['nome'], $_POST['login'], $_POST['senha'], $_POST['nascimento'], $_POST['email'], $_POST['telefone'],$_POST['empresa']];
+		$valores = [$_POST['nome'], $_POST['login'], $_POST['senha'], $_POST['nascimento'], $_POST['email'], $_POST['telefone'], $_POST['empresa']];
 
 		$campos_variaveis = [
 			['user_tx_cpf', 'cpf'],
@@ -96,7 +96,7 @@
 			exit;
 		}
 
-		if (empty($_POST['senha']) || empty($_POST['senha2'])) {
+		if((empty($_POST['senha']) || empty($_POST['senha2'])) && is_bool(strpos($_SESSION['user_tx_nivel'], "Administrador"))){
 			set_status("ERRO: Preencha o campo senha e confirme-a.");
 			modifica_usuario();
 			exit;
@@ -112,7 +112,7 @@
 				$a_mod = $_POST;
 				modifica_usuario();
 				exit;
-			}	
+			}
 
 			$bd_campos[] = 'user_tx_status';
 			$valores[] = 'ativo';
@@ -163,8 +163,8 @@
 			$campo_telefone = campo('Telefone', 'telefone', $a_mod['user_tx_fone'], 3,'MASCARA_FONE');
 			$campo_empresa = combo_bd('!Empresa*', 'empresa', $a_mod['user_nb_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)"');
 			$campo_expiracao = campo_data('Dt. Expiraçao', 'expiracao', $a_mod['user_tx_expiracao'], 2);
-			$campo_senha = campo_senha('Senha*', 'senha', "", 2);
-			$campo_confirma = campo_senha('Confirmar Senha*', 'senha2', "", 2);
+			$campo_senha = campo_senha('Senha', 'senha', "", 2);
+			$campo_confirma = campo_senha('Confirmar Senha', 'senha2', "", 2);
 
 		}else{
 
@@ -246,9 +246,11 @@
 
 
 	function index() {
+		global $CONTEX;
 		if ($_GET['id']) {
 			if ($_GET['id'] != $_SESSION['user_nb_id']) {
 				echo "ERRO: Usuário não autorizado!";
+				echo "<script>window.location.replace('".$CONTEX['path']."/index.php');</script>";
 				exit;
 			}
 			$_POST['id'] = $_GET['id'];
