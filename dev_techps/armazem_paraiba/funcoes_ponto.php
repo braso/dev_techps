@@ -1111,6 +1111,7 @@ function diaDetalhePonto($matricula, $data) {
 		$aRetorno['diffRepouso'] = $repousoOrdenado['icone'] . $repousoOrdenado['totalIntervalo'];
 	}
 
+	# Adiconar * para informa registros exluidos
 	$infoAjustes = query("SELECT pont_tx_data,macr_tx_nome FROM ponto
 	JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
 	JOIN user ON ponto.pont_nb_user = user.user_nb_id
@@ -1118,21 +1119,23 @@ function diaDetalhePonto($matricula, $data) {
 	WHERE ponto.pont_tx_status = 'inativo' AND pont_tx_data LIKE '%$data%' AND pont_tx_matricula = '$matricula'");
 	
 	$ajuste = mysqli_fetch_all($infoAjustes, MYSQLI_ASSOC);
+	
+	$quantidade_inicioJ = 0;
+	$quantidade_fimJ = 0;
+	$quantidade_inicioR = 0;
+	$quantidade_fimR = 0;
 
 	foreach ($ajuste  as $valor) {
-		if ($data == substr($valor["pont_tx_data"],0,10) && $valor["macr_tx_nome"] == 'Inicio de Jornada') {
-			$aRetorno['inicioJornada'] .= ' <a><i style="color:#0a0a0a;" title="Registros lançados excluídos manualmente." class="fa fa-asterisk" aria-hidden="true"></i></a>';
-		}
-		if ($data == substr($valor["pont_tx_data"],0,10) && $valor["macr_tx_nome"] == 'Fim de Jornada') {
-			$aRetorno['fimJornada'] .= ' <a><i style="color:#0a0a0a;" title="Registros lançados excluídos manualmente." class="fa fa-asterisk" aria-hidden="true"></i></a>';
-		}
-		if ($data == substr($valor["pont_tx_data"],0,10) && $valor["macr_tx_nome"] == 'Inicio de Refeição') {
-			$aRetorno['inicioRefeicao'] .= ' <a><i style="color:#0a0a0a;" title="Registros lançados excluídos manualmente." class="fa fa-asterisk" aria-hidden="true"></i></a>';
-		}
-		if ($data == substr($valor["pont_tx_data"],0,10) && $valor["macr_tx_nome"] == 'Fim de Refeição') {
-			$aRetorno['fimRefeicao'] .= ' <a><i style="color:#0a0a0a;" title="Registros lançados excluídos manualmente." class="fa fa-asterisk" aria-hidden="true"></i></a>';
-		}
+		$quantidade_inicioJ += ($data == substr($valor["pont_tx_data"], 0, 10) && $valor["macr_tx_nome"] == 'Inicio de Jornada') ? 1 : 0;
+		$quantidade_fimJ += ($data == substr($valor["pont_tx_data"], 0, 10) && $valor["macr_tx_nome"] == 'Fim de Jornada') ? 1 : 0;
+		$quantidade_inicioR += ($data == substr($valor["pont_tx_data"], 0, 10) && $valor["macr_tx_nome"] == 'Inicio de Refeição') ? 1 : 0;
+		$quantidade_fimR += ($data == substr($valor["pont_tx_data"], 0, 10) && $valor["macr_tx_nome"] == 'Fim de Refeição') ? 1 : 0;
 	}
+
+	$aRetorno['inicioJornada'] .= ($quantidade_inicioJ > 0) ? "*" : "";
+    $aRetorno['fimJornada'] .= ($quantidade_fimJ > 0) ? "*" : "";
+    $aRetorno['inicioRefeicao'] .= ($quantidade_inicioR > 0) ? "*" : "";
+    $aRetorno['fimRefeicao'] .= ($quantidade_fimR > 0) ? "*" : "";
 	
 
 

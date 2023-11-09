@@ -1,6 +1,6 @@
 <?php
 include "funcoes_ponto.php"; // NAO ALTERAR ORDEM
-include "conecta.php";
+// include "conecta.php";
 
 
 function index() {
@@ -53,7 +53,7 @@ function index() {
 	$cab = array(
 		"", "MAT.", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 		"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "HE 50%", "HE&nbsp;100%",
-		"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO"
+		"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(*)"
 	);
 
 	if ($_POST['busca_data1'] && $_POST['busca_data2'] && $_POST['busca_empresa']) {
@@ -121,7 +121,13 @@ function index() {
 					continue;
 				}
 
-				$aDia[] = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), array($aMotorista['enti_tx_matricula']), $aDetalhado));
+				$row = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), array($aMotorista['enti_tx_matricula']), $aDetalhado));
+				for($f = 0; $f < sizeof($row)-1; $f++){
+					if($row[$f] == "00:00"){
+						$row[$f] = "";
+					}
+				}
+				$aDia[] = $row;
 			}
 
 			if (count($aDia) > 0) {
@@ -146,9 +152,52 @@ function index() {
 
 				$countNaoConformidade++;
 
-				abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] | $aEmpresa[empr_tx_nome] $convencaoPadrao");
+				$saldosMotorista = ' <div class="table-responsive">
+					<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact" id="saldo">
+					  <thead><tr>
+						<th>Saldo Anterior:</th>
+						<th>Saldo do Período:</th>
+						<th>Saldo Final:</th>
+					  </thead></tr>
+					  <tbody>
+						<tr>
+						  <td>--:--</td>
+						  <td>--:--</td>
+						  <td>--:--</td>
+						</tr>
+					  </tbody>
+					</table>
+				  </div>';
+
+				abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] | $aEmpresa[empr_tx_nome] $convencaoPadrao $saldosMotorista");
 
 				$aDia[] = array_values(array_merge(array('', '', '', '', '', '', '', '<b>TOTAL</b>'), $totalResumo));
+
+				$toleranciaStr = carrega_array(query('SELECT parametro.para_tx_tolerancia FROM entidade JOIN parametro ON enti_nb_parametro = para_nb_id WHERE enti_nb_parametro ='.$aMotorista['enti_nb_parametro'].';'))[0];
+				$toleranciaStr = explode(':', $toleranciaStr);
+
+				$tolerancia = intval($toleranciaStr[0])*60;
+
+				if($toleranciaStr[0] == '-'){
+					$tolerancia -= intval($toleranciaStr[1]);
+				}else{
+					$tolerancia += intval($toleranciaStr[1]);
+				}
+
+				$saldoFiltrado = '00:00';
+				
+				for($f = 0; $f < count($aDia); $f++){
+					$saldoStr = explode(':', $aDia[$f][count($aDia[$f])-1]);
+					$saldo = intval($saldoStr[0])*60;
+					if($saldoStr[0] == '-'){
+						$saldo -= intval($saldoStr[1]);
+					}else{
+						$saldo += intval($saldoStr[1]);
+					}
+					if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
+						$aDia[$f][count($aDia[$f])-1] = '00:00';
+					}
+				}
 
 				grid2($cab, $aDia, "Jornada Semanal (Horas): $aMotorista[enti_tx_jornadaSemanal]");
 				fecha_form();
@@ -189,10 +238,15 @@ function index() {
 			border-right: 3px solid #d8e4ef !important;
 		}
 		.th-align {
-				    text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
-				    vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
-				    
-				}
+		    text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
+		    vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
+		    
+		}
+		#saldo {
+			width: 50% !important;
+			margin-top: 9px !important;
+			text-align: center;
+		}
 	</style>
 
 	<form name="form_ajuste_ponto" method="post" target="_blank">

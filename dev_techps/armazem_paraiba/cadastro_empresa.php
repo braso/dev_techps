@@ -10,8 +10,8 @@ function exclui_empresa(){
 }
 
 function excluir_logo(){
-	atualizar('empresa',array('empr_tx_logo'),array(''),$_POST[idEntidade]);
-	$_POST[id]=$_POST[idEntidade];
+	atualizar('empresa',array('empr_tx_logo'),array(''),$_POST['idEntidade']);
+	$_POST['id']=$_POST['idEntidade'];
 	modifica_empresa();
 	exit;
 }
@@ -356,26 +356,10 @@ function layout_empresa(){
 		}
 
 		
-		function carrega_cep(cep){
-			var num = cep.replace(/[^0-9]/g,'');
-			if(num.length == '8'){
-				$.ajax({
-					url: '<?=$path_parts['basename']?>', // Substitua pelo URL correto
-					method: 'GET', // Ou 'POST' se for o caso
-					data: {
-						acao: 'carrega_endereco',
-						cep: num
-					},
-					dataType: 'json',
-					success: function(response) {
-						// Certifique-se de que a resposta contém os campos corretos
-						$('#endereco').val(response.endereco);
-						// Preencha outros campos aqui
-					},
-					error: function(error) {
-						console.error('Erro na consulta:', error);
-					}
-				});
+		function carrega_cep(cep) {
+			var num = cep.replace(/[^0-9]/g, '');
+			if (num.length == '8') {
+				document.getElementById('frame_cep').src = '<?= $path_parts['basename'] ?>?acao=carrega_endereco&cep=' + num;
 			}
 		}
 		

@@ -34,7 +34,7 @@ if ($_POST['botao'] == 'ENVIAR') {
 }
 
 if ($_POST['botao'] == 'Redefinir senha') {
-    $dominio = $_GET['domain'];
+    $dominio = $_GET['dominio'];
     include $dominio."/conecta.php";
     
     if (!empty($_POST['senha']) && !empty($_POST['senha2']) && $_POST['senha'] == $_POST['senha2']) {
@@ -42,8 +42,8 @@ if ($_POST['botao'] == 'Redefinir senha') {
             $userId = mysqli_fetch_assoc($userSql);
             atualizar('user', ['user_tx_senha', 'user_tx_token'], [md5($_POST['senha']), '-'], $userId['user_nb_id']);
             $msg = "
-            <div id='erro' style='background-color: #0af731; padding: 1px; text-align: center;'>
-                <h4 style = 'color: #fff !important;'>Senha Redefinida. <a href='index2.php>Retorna para o login</a></h4>
+            <div id='redefinido' style='background-color: #0af731; padding: 1px; text-align: center;'>
+                <h4 style = 'color: #fff !important;'>Senha Redefinida.</h4>
             </div>";
     } else {
         $msg = '
@@ -106,7 +106,7 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
 
         if ($mail->send()) {
             return "
-            <div id='erro' style='background-color: #0af731; padding: 1px; text-align: center;'>
+            <div id='enviado' style='background-color: #0af731; padding: 1px; text-align: center;'>
                 <h4 style = 'color: #fff !important;'>E-mail enviado para $destinatario</h4>
             </div>";
         }
@@ -283,15 +283,26 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
     <script src="/contex20/assets/global/plugins/jquery.blockui.min.js" type="text/javascript"></script>
 
     <script src="/contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
-
+    
     <script>
+        function redirectIndex() {
+            <?php
+    $dominio = $_GET['dominio'];
+    include $dominio."/conecta.php";
+    global $CONTEX;?>
+            window.location.href = "https://braso.mobi<?=$CONTEX['path']?>/index.php";
+        }
+            
         function esconderErro() {
             var erroDiv = document.getElementById("erro");
             erroDiv.style.display = "none";
         }
 
-        // Chama a função esconderErro após 5 segundos (5000 milissegundos)
-        setTimeout(esconderErro, 5000);
+        // Chama a função esconderErro após 10 segundos (10000 milissegundos)
+        setTimeout(esconderErro, 10000);
+        if(document.getElementById("redefinido")){
+            setTimeout(redirectIndex, 5000);
+        }
     </script>
 </body>
 

@@ -51,8 +51,9 @@ if ($_SESSION["user_tx_nivel"] == 'Administrador' || $_SESSION["user_tx_nivel"] 
 						<ul class="dropdown-menu pull-left">
 							<li class=" "><a href="<?= $CONTEX["path"] ?>/carregar_ponto" class="nav-link ">Carregar Ponto</a></li>
 							<li class=" "><a href="<?= $CONTEX["path"] ?>/espelho_ponto" class="nav-link ">Espelho de Ponto</a></li>
-							<li class=" "><a href="<?= $CONTEX["path"] ?>/nao_conformidade" class="nav-link ">Não Conformidade</a></li>
 							<li class=" "><a href="<?= $CONTEX["path"] ?>/endosso" class="nav-link ">Endosso</a></li>
+							<li class=" "><a href="<?= $CONTEX["path"] ?>/nao_conformidade" class="nav-link ">Não Conformidade</a></li>
+							<li class=" "><a href="<?= $CONTEX["path"] ?>/nao_cadastrados" class="nav-link">Não cadastrados</a></li> 
 						</ul>
 					</li>
 
