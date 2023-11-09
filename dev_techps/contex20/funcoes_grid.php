@@ -23,7 +23,7 @@ function grid2($cabecalho,$valores){
 		echo "<thead><tr>";
 
 		for($i=0;$i<count($cabecalho);$i++){
-			echo "<th>$cabecalho[$i]</th>";
+			echo "<th class='th-align'>$cabecalho[$i]</th>";
 		}
 
 		echo "</thead></tr>";
@@ -44,6 +44,7 @@ function grid2($cabecalho,$valores){
 	}
 
 	echo "</table>";
+	echo "(*): 00:00 Caso esteja dentro da tolerância";
 	echo '</div>';
 
 	

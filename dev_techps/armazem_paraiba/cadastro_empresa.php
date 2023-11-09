@@ -8,6 +8,14 @@ function exclui_empresa(){
 	exit;
 
 }
+
+function excluir_logo(){
+	atualizar('empresa',array('empr_tx_logo'),array(''),$_POST['idEntidade']);
+	$_POST['id']=$_POST['idEntidade'];
+	modifica_empresa();
+	exit;
+}
+
 function modifica_empresa(){
 	global $a_mod;
 
@@ -245,6 +253,10 @@ function layout_empresa(){
         ];
 		$btn_txt = 'Atualizar';
     }
+
+	if($input_values['logo'] != ''){
+		$iconeExcluirLogo = icone_excluirLogo($a_mod['empr_nb_id'], 'excluir_logo');
+	}
     
 	$c = [
 		campo('CPF/CNPJ*','cnpj',$input_values['cnpj'],2,'MASCARA_CPF','onkeyup="checa_cnpj(this.value);"'),
@@ -266,7 +278,7 @@ function layout_empresa(){
 		campo('Inscrição Municipal','inscricaoMunicipal',$input_values['inscricaoMunicipal'],3),
 		combo('Regime Tributário','regimeTributario',$input_values['regimeTributario'],3,$regimes),
 		campo_data('Data Reg. CNPJ','dataRegistroCNPJ',$input_values['dataRegistroCNPJ'],3),
-		arquivo('Logo (.png, .jpg)','logo',$input_values['logo'],4),
+		arquivo('Logo (.png, .jpg)'.$iconeExcluirLogo,'logo',$input_values['logo'],4),
 		campo_domain('Nome do Domínio','nomeDominio',$input_values['domain'],2,'domain'),
 		
 		campo('Servidor FTP','ftpServer',$input_values['ftpServer'],3),
@@ -328,28 +340,26 @@ function layout_empresa(){
 		<input type="hidden" name="id" value="">
 		<input type="hidden" name="acao" value="modifica_empresa">
 	</form>
+	<form name="form_excluir_arquivo" method="post" action="cadastro_empresa.php">
+		<input type="hidden" name="idEntidade" value="">
+		<input type="hidden" name="nome_arquivo" value="">
+		<input type="hidden" name="acao" value="">
+	</form>
 	<script>
+		function remover_foto(id,acao,arquivo){
+			if(confirm('Deseja realmente excluir a logo '+arquivo+'?')){
+				document.form_excluir_arquivo.idEntidade.value=id;
+				document.form_excluir_arquivo.nome_arquivo.value=arquivo;
+				document.form_excluir_arquivo.acao.value=acao;
+				document.form_excluir_arquivo.submit();
+			}
+		}
+
 		
-		function carrega_cep(cep){
-			var num = cep.replace(/[^0-9]/g,'');
-			if(num.length == '8'){
-				$.ajax({
-					url: '<?=$path_parts['basename']?>', // Substitua pelo URL correto
-					method: 'GET', // Ou 'POST' se for o caso
-					data: {
-						acao: 'carrega_endereco',
-						cep: num
-					},
-					dataType: 'json',
-					success: function(response) {
-						// Certifique-se de que a resposta contém os campos corretos
-						$('#endereco').val(response.endereco);
-						// Preencha outros campos aqui
-					},
-					error: function(error) {
-						console.error('Erro na consulta:', error);
-					}
-				});
+		function carrega_cep(cep) {
+			var num = cep.replace(/[^0-9]/g, '');
+			if (num.length == '8') {
+				document.getElementById('frame_cep').src = '<?= $path_parts['basename'] ?>?acao=carrega_endereco&cep=' + num;
 			}
 		}
 		
@@ -399,6 +409,15 @@ function layout_empresa(){
 function concat($id){
 	$a = carregar('cidade', $id);
 	return "[$a[cida_tx_uf]]$a[cida_tx_nome]";
+}
+
+function icone_excluirLogo($id,$acao,$campos='',$valores='',$target='',$icone='glyphicon glyphicon-remove',$msg='Deseja excluir a CNH?'){
+	$icone='class="'.$icone.'"';
+	if($id > 0)
+		return "<a style='text-shadow: none; color: #337ab7;' onclick='javascript:remover_foto(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\");' > (Excluir) </a>";
+	else
+		return '';
+	
 }
 
 function index(){

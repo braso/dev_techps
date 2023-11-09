@@ -286,6 +286,14 @@ function atualizar($tabela,$campos,$valores,$id){
 
 }
 
+function remover_ponto($tabela,$id,$justificativa){
+
+	$tab=substr($tabela,0,4);
+
+	query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '$id' LIMIT 1");
+
+}
+
 function remover($tabela,$id){
 
 	$tab=substr($tabela,0,4);
@@ -480,20 +488,12 @@ function campo_jornada($nome,$variavel,$modificador,$tamanho){
 
 }
 
-function checkbox($nome,$variavel,$modificadorRadio,$modificador,$tamanho){
-    $data_input='<script>
-    marcarBotao("'.$modificadorRadio.'");
-    function marcarBotao(botaoId) {
-        if (botaoId) {
-            document.getElementById(botaoId).checked = true;
-            
-        }
-        
-    }
+function checkbox($nome, $variavel, $tamanho) {
+	$data_input = '<script>
     
-    const radioSim = document.getElementById("1");
-    const radioNao = document.getElementById("0");
-    const campo = document.getElementById("'.$variavel.'");
+    const radioSim = document.getElementById("sim");
+    const radioNao = document.getElementById("nao");
+    const campo = document.getElementById("' . $variavel . '");
     if (radioSim.checked) {
             campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
     }
@@ -511,25 +511,25 @@ function checkbox($nome,$variavel,$modificadorRadio,$modificador,$tamanho){
     }
     });
     </script>';
-    //  Utiliza regime de banco de horas?
-    $campo='
-    <div class="col-sm-'.$tamanho.' margin-bottom-5">
-        <label><b>'.$nome.'</b></label><br>
+	//  Utiliza regime de banco de horas?
+	$campo = '
+    <div class="col-sm-' . $tamanho . ' margin-bottom-5">
+        <label><b>' . $nome . '</b></label><br>
          <label class="radio-inline">
-            <input type="radio" id="1" name="regime_banco" value="1"> Sim
+            <input type="radio" id="sim" name="pagar_horas" value="sim"> Sim
         </label>
         <label class="radio-inline">
-            <input type="radio" id="0" name="regime_banco" value="0"> Não
+            <input type="radio" id="nao" name="pagar_horas" value="nao"> Não
         </label>
     </div>
-    <div id="'.$variavel.'" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
-            <label><b>SET de mês inicio:</b></label>
-            <input type="month" id="outroCampo" name="'.$variavel.'" value="'.$modificador.'" autocomplete="off">
+
+	<div id="' . $variavel . '" class="col-sm-' . $tamanho . ' margin-bottom-5" style="display: none;">
+            <label><b>Quandidade de Horas:</b></label>
+            <input class="form-control input-sm" type="time" id="outroCampo" name="quandHoras" autocomplete="off">
     </div>
     ';
-  
-  return $campo.$data_input;
-    
+
+	return $campo . $data_input;
 }
 
 function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
@@ -628,21 +628,6 @@ function textarea($nome,$variavel,$modificador,$tamanho,$extra=''){
 		</div>';
 
 		return $campo;
-
-}
-
-function historico_paciente($id_paciente){
-
-
-	$sql = query("SELECT hist_tx_descricao,hist_tx_data,user_tx_nome FROM historico,user WHERE user_nb_id = hist_nb_user AND hist_nb_entidade = '$id_paciente' ORDER BY hist_nb_id DESC");
-	while($a=carrega_array($sql)){
-
-		$historico .= "=================== <b>DATA: ".data($a[hist_tx_data])." - PROFISSIONAL: $a[user_tx_nome]</b> ===================<br>";
-		$historico .= $a[hist_tx_descricao];
-		$historico .= "<br><br>";
-	}
-
-	return $historico;
 
 }
 
@@ -833,19 +818,61 @@ function combo_bd($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra
 
 }
 
+// Para usar essa função, você pode fazer algo assim:
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Certifique-se de que você está chamando a função apropriada a partir do JavaScript
+    if (isset($_POST['arquivo'])) {
+        $resultado = excluirArquivo($_POST['arquivo']);
+        echo $resultado;
+    }
+}
 
-function arquivo($nome,$variavel,$modificador,$tamanho,$extra=''){
+function excluirArquivo($arquivo) {
 	global $CONTEX;
+
+    $caminho = "$CONTEX[path]/" . $arquivo; // Substitua pelo caminho real do seu diretório
+    if (file_exists($caminho)) {
+        unlink($caminho);
+        return 'File deleted';
+    } else {
+        return 'File not found';
+    }
+}
+
+function arquivo($nome,$variavel,$modificador,$tamanho,$extra='',$mascara=''){
+	global $CONTEX;
+
 	if($modificador){
 		$ver = "<a href=$CONTEX[path]/$modificador target=_blank>(Ver)</a>";
+		$excluirLink = "<a onclick='excluirArquivo(\"$modificador\");'>Excluir</a>";
+		$data_input = "<script> 
+		function excluirArquivo(variavel) {
+			if (confirm('Tem certeza de que deseja excluir este arquivo?')) {
+				var arquivo = document.getElementsByName('.$variavel.')[0].value;
+				console.log();
+			// 	var resultado = excluirArquivo(arquivo);
+				
+			// 	if (resultado === 'File deleted') {
+			// 		alert('Arquivo excluído com sucesso.');
+			// 		// Limpando o valor do input de arquivo após a exclusão
+			// 		document.getElementsByName(variavel)[0].value = '';
+			// 	} else if (resultado === 'File not found') {
+			// 		alert('Arquivo não encontrado.');
+			// 	} else {
+			// 		alert('Falha ao excluir o arquivo.');
+			// 	}
+			// }
+		}} 
+		</script>";
 	}
 
+
 	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
-				<label><b>'.$nome.$ver.'</b></label>
-				<input name="'.$variavel.'" value="'.$CONTEX[path]."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
+				<label><b>'.$nome.$ver.$excluirLink.'</b></label>
+				<input name="'.$variavel.'" value="'.$CONTEX['path']."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
 			</div>';
 
-		return $campo;
+		return $campo.$data_input;
 
 }
 

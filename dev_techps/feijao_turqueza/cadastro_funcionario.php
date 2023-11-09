@@ -31,7 +31,7 @@ function cadastra_funcionario(){
 	global $a_mod;
 
 	$campos = array(enti_tx_nome,enti_tx_nascimento,enti_tx_cpf,enti_tx_rg,enti_tx_civil,enti_tx_sexo,enti_tx_endereco,enti_tx_numero,enti_tx_complemento,
-		enti_tx_bairro,enti_nb_cidade,enti_tx_cep,enti_tx_fone1,enti_tx_fone2,enti_tx_email,enti_tx_ocupacao,enti_tx_salario,enti_tx_cargahoraria,enti_tx_obs,
+		enti_tx_bairro,enti_nb_cidade,enti_tx_cep,enti_tx_fone1,enti_tx_fone2,enti_tx_email,enti_tx_ocupacao,enti_nb_salario,enti_tx_cargahoraria,enti_tx_obs,
 		enti_tx_tipo,enti_nb_userCadastro,enti_tx_dataCadastro,enti_tx_status,enti_tx_matricula,enti_nb_empresa);
 	$valores = array($_POST[nome],$_POST[nascimento],$_POST[cpf],$_POST[rg],$_POST[civil],$_POST[sexo],$_POST[endereco],$_POST[numero],$_POST[complemento],
 		$_POST[bairro],$_POST[cidade],$_POST[cep],$_POST[fone1],$_POST[fone2],$_POST[email],$_POST[ocupacao],valor($_POST[salario]),$_POST[cargahoraria],$_POST[obs],
@@ -98,7 +98,7 @@ function layout_funcionario(){
 	
 	$cContratual[]=combo_bd('Empresa','empresa',$a_mod[enti_nb_empresa],3,'empresa');
 	$cContratual[]=combo('Ocupação','ocupacao',$a_mod[enti_tx_ocupacao],2,array("","Administrador","Funcionário"));
-	$cContratual[]=campo('Salário','salario',valor($a_mod[enti_tx_salario]),2,MASCARA_VALOR);
+	$cContratual[]=campo('Salário','salario',valor($a_mod[enti_nb_salario]),2,MASCARA_VALOR);
 	$cContratual[]=campo('Carga Horária(hs)','cargahoraria',$a_mod[enti_tx_cargahoraria],2,MASCARA_NUMERO);
 	$cContratual[]=campo('Matrícula','matricula',$a_mod[enti_tx_matricula],2);
 

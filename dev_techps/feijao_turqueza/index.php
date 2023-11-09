@@ -1,18 +1,20 @@
 <?
 
-include"conecta.php";
+include "conecta.php";
+
 
 if($_GET['user'] != '' && $_GET['password'] != '' ){
     
 
-		$sql = query("SELECT * FROM user WHERE user_tx_status != 'inativo' AND user_tx_login = '$_GET[user]' AND user_tx_senha = '". $_GET[password]."'");
-
+		$sql = query("SELECT * FROM user WHERE user_tx_status != 'inativo' AND user_tx_login = '$_GET[user]' AND user_tx_senha = '$_GET[password]'");
+		
 		if(mysqli_num_rows($sql)>0){
+		    
 
 			$a = mysqli_fetch_array($sql);
 			$dataHoje = strtotime(date("Y-m-d")); // Transforma a data de hoje em timestamp
 			$dataVerificarObj = strtotime($a['user_tx_expiracao']);
-			if ($dataVerificarObj >= $dataHoje && !empty($a['user_tx_expiracao']) && $a['user_tx_expiracao'] != '0000-00-00') {
+			if ($dataVerificarObj >= $dataHoje && !empty($a['user_tx_expiracao']) && $a['user_tx_expiracao'] == '0000-00-00') {
 				$msg = "<div class='alert alert-danger display-block'>
 					<span> Usuário expirado. </span>
 				</div>";
@@ -29,6 +31,7 @@ if($_GET['user'] != '' && $_GET['password'] != '' ){
 					$_SESSION[user_tx_foto] = '/contex20/img/user.png';
 				}
 			}
+			
 			
 
 
@@ -77,20 +80,19 @@ if($_GET['user'] != '' && $_GET['password'] != '' ){
 
 
 
-			// cabecalho("Bem-Vindo ao sistema TechPS, $a[user_tx_login]. Período da $turno inciado às $horaEntrada");
-
-			cabecalho("Bem-Vindo ao sistema TechPS, $a[user_tx_login]");
+			cabecalho("Bem-Vindo ao sistema TechPS, $a[user_tx_nome]. Período da $turno iniciado às ".($horaEntrada? $horaEntrada: '--:--'));
+			
+			
+// 			cabecalho("Bem-Vindo ao sistema TechPS, $a[user_tx_login]");
 			
 // 			$sql = query("SELECT `empr_tx_cnpj` FROM `empresa` WHERE empr_tx_status != 'inativo'");
 // 			$a =  mysqli_fetch_all($sql, MYSQLI_ASSOC);
 // // 			carrega_array($sql);
-// 			var_dump($a);
-// 			die();
+            
 
 			
 
 			rodape();
-
 			exit;
 
 

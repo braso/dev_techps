@@ -15,25 +15,17 @@ function modifica_motivo(){
 	exit;
 }
 
-function cadastra_motivo(){	
+function cadastra_motivo(){
 	$campos = ['moti_tx_nome', 'moti_tx_tipo', 'moti_tx_status'];
 	$valores = [$_POST['nome'], $_POST['tipo'], 'ativo'];
 
 	$legendas = [
+		'' => '',
 		'Incluída Manualmente' => 'I',
 		'Pré-Assinalada' => 'P',
 		'Outras fontes de marcação' => 'T',
 		'Descanso Semanal Remunerado e Abono' => 'DSR'
 	];
-	//Testes
-		print_r('post legenda: '.$_POST['legenda'].'<br>'.
-			'legendas: '.var_dump($legendas).'<br>'.
-			'legendas[incluida manualmente]: '.$legendas['Incluída Manualmente'].'<br>'.
-			'res: '.$legendas[$_POST['legenda']].'<br>'
-		);
-		index();
-		exit;
-	//
 
 	$campos[] = 'moti_tx_legenda';
 	$valores[] = $legendas[$_POST['legenda']];
@@ -53,10 +45,18 @@ function layout_motivo(){
 	global $a_mod;
 	cabecalho("Cadastro de Motivo");
 
+	$legendas = [
+		'' => '',
+		'Incluída Manualmente' => 'I',
+		'Pré-Assinalada' => 'P',
+		'Outras fontes de marcação' => 'T',
+		'Descanso Semanal Remunerado e Abono' => 'DSR'
+	];
+
 	$c = [
 		campo('Nome','nome',$a_mod['moti_tx_nome'],6),
 		combo('Tipo','tipo',$a_mod['moti_tx_tipo'],2,['Ajuste','Abono']),
-		combo('Legenda de Marcação','legenda',$a_mod['moti_nb_legenda'],4,mb_convert_encoding(['Incluída Manualmente', 'Pré-assinalada', 'Outras fontes de marcação', 'Descanso Semanal Remunerado e Abono'], 'UTF-8'))
+		combo('Legenda de Marcação','legenda',array_search($a_mod['moti_tx_legenda'], $legendas),4,array_keys($legendas))
 	];
 	$botao = [
 		botao('Gravar','cadastra_motivo','id',$_POST['id']),
@@ -73,15 +73,25 @@ function layout_motivo(){
 function index(){
 	cabecalho("Cadastro de Motivo");
 
+	$legendas = [
+		'' => '',
+		'Incluída Manualmente' => 'I',
+		'Pré-Assinalada' => 'P',
+		'Outras fontes de marcação' => 'T',
+		'Descanso Semanal Remunerado e Abono' => 'DSR'
+	];
+
 	$extra = 
-		(isset($_POST['busca_codigo'])? " AND moti_nb_id = '".$_POST['busca_codigo']."'": '').
-		(isset($_POST['busca_nome'])? " AND moti_tx_nome LIKE '%".$_POST['busca_nome']."%'": '').
-		(isset($_POST['busca_tipo'])? " AND moti_tx_tipo LIKE '%".$_POST['busca_tipo']."%'": '');
+		(isset($_POST['busca_codigo']) 	&& !empty($_POST['busca_codigo'])? 	" AND moti_nb_id = '".$_POST['busca_codigo']."'": '').
+		(isset($_POST['busca_nome']) 	&& !empty($_POST['busca_nome'])? 	" AND moti_tx_nome LIKE '%".$_POST['busca_nome']."%'": '').
+		(isset($_POST['busca_tipo']) 	&& !empty($_POST['busca_tipo'])? 	" AND moti_tx_tipo LIKE '%".$_POST['busca_tipo']."%'": '').
+		(isset($_POST['busca_legenda']) && !empty($_POST['busca_legenda'])? " AND moti_tx_legenda LIKE '%".$legendas[$_POST['busca_legenda']]."%'": '');
 
 	$c = [
 		campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO'),
-		campo('Nome','busca_nome',$_POST['busca_nome'],6),
-		combo('Tipo','busca_tipo',$_POST['busca_tipo'],4,array('','Ajuste','Abono'))
+		campo('Nome','busca_nome',$_POST['busca_nome'],5),
+		combo('Tipo','busca_tipo',$_POST['busca_tipo'],2,['','Ajuste','Abono']),
+		combo('Legenda','busca_legenda',$_POST['busca_legenda'],3,['','Incluída Manualmente', 'Pré-Assinalada', 'Outras fontes de marcação', 'Descanso Semanal Remunerado e Abono'])
 	];
 	$botao = [
 		botao('Buscar','index'),
@@ -93,8 +103,8 @@ function index(){
 	fecha_form($botao);
 
 	$sql = "SELECT * FROM motivo WHERE moti_tx_status != 'inativo' $extra";
-	$cab = ['CÓDIGO','NOME','TIPO','',''];
-	$val = ['moti_nb_id','moti_tx_nome','moti_tx_tipo','icone_modificar(moti_nb_id,modifica_motivo)','icone_excluir(moti_nb_id,exclui_motivo)'];
+	$cab = ['CÓDIGO','NOME','TIPO','LEGENDA', '', ''];
+	$val = ['moti_nb_id','moti_tx_nome','moti_tx_tipo', 'moti_tx_legenda', 'icone_modificar(moti_nb_id,modifica_motivo)','icone_excluir(moti_nb_id,exclui_motivo)'];
 	grid($sql,$cab,$val);
 
 	rodape();
