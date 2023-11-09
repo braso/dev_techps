@@ -37,27 +37,28 @@ function modifica_motorista() {
 function cadastra_motorista() {
 	global $a_mod;
 
-	$enti_campos = ['matricula', 'nome','nascimento','cpf','rg','civil','sexo','endereco','numero','complemento',
-	'bairro','cidade','cep','fone1','fone2','email','ocupacao','salario','obs',
-	'tipo','status','empresa',
-	'parametro','jornadaSemanal','jornadaSabado','percentualHE','percentualSabadoHE',
-	'rgOrgao', 'rgDataEmissao', 'rgUf',
-	'pai', 'mae', 'conjugue', 'tipoOperacao',
-	'subcontratado', 'admissao', 'desligamento',
-	'cnhRegistro', 'cnhValidade', 'cnhPrimeiraHabilitacao', 'cnhCategoria', 'cnhPermissao',
-	'cnhObs', 'cnhCidade', 'cnhEmissao', 'cnhPontuacao', 'cnhAtividadeRemunerada','banco'
+	$enti_campos = [
+		'matricula', 'nome', 'nascimento','cpf','rg','civil','sexo','endereco','numero','complemento',
+		'bairro','cidade','cep','fone1','fone2','email','ocupacao','salario','obs',
+		'tipo','status','empresa',
+		'parametro','jornadaSemanal','jornadaSabado','percentualHE','percentualSabadoHE',
+		'rgOrgao', 'rgDataEmissao', 'rgUf',
+		'pai', 'mae', 'conjugue', 'tipoOperacao',
+		'subcontratado', 'admissao', 'desligamento',
+		'cnhRegistro', 'cnhValidade', 'cnhPrimeiraHabilitacao', 'cnhCategoria', 'cnhPermissao',
+		'cnhObs', 'cnhCidade', 'cnhEmissao', 'cnhPontuacao', 'cnhAtividadeRemunerada','banco'
 	];
 
 	for($f = 0; $f < sizeof($enti_campos); $f++){
-		if(isset($_POST[$enti_campos[$f]]) && !empty($_POST[$enti_campos[$f]])){
-			if(in_array($enti_campos[$f], ['cidade', 'empresa', 'parametro', 'cnhCidade'])){
-				$a_mod['enti_nb_'.$enti_campos[$f]] = $_POST[$enti_campos[$f]];
-				$enti_campos[$f] = 'enti_nb_'.$enti_campos[$f];
-			}else{
-				$a_mod['enti_tx_'.$enti_campos[$f]] = $_POST[$enti_campos[$f]];
-				$enti_campos[$f] = 'enti_tx_'.$enti_campos[$f];
-			}
+		if(in_array($enti_campos[$f], ['cidade', 'empresa', 'parametro', 'cnhCidade'])){
+			$bd_campo = 'enti_nb_'.$enti_campos[$f];
+		}else{
+			$bd_campo = 'enti_tx_'.$enti_campos[$f];
 		}
+		if(isset($_POST[$enti_campos[$f]]) && !empty($_POST[$enti_campos[$f]])){
+			$a_mod[$bd_campo] = $_POST[$enti_campos[$f]];
+		}
+		$enti_campos[$f] = $bd_campo;
 	}
 
 	$campos_obrigatorios = [
@@ -89,10 +90,12 @@ function cadastra_motorista() {
 	}
 	
 
+	$_POST['nivel'] = 'Motorista';
+
 	$post_values = [
-		'nome', 'nascimento', 'cpf', 'rg', 'civil', 'sexo', 'endereco', 'numero', 'complemento',
+		'matricula', 'nome', 'nascimento', 'cpf', 'rg', 'civil', 'sexo', 'endereco', 'numero', 'complemento',
 		'bairro', 'cidade', 'cep', 'fone1', 'fone2', 'email', 'ocupacao', 'salario', 'obs',
-		'status', 'matricula', 'empresa',
+		'nivel', 'status', 'empresa',
 		'parametro', 'jornadaSemanal', 'jornadaSabado', 'percentualHE', 'percentualSabadoHE',
 		'rgOrgao', 'rgDataEmissao', 'rgUf',
 		'pai', 'mae', 'conjugue', 'tipoOperacao',
@@ -100,26 +103,36 @@ function cadastra_motorista() {
 		'cnhRegistro', 'cnhValidade', 'cnhPrimeiraHabilitacao', 'cnhCategoria', 'cnhPermissao',
 		'cnhObs', 'cnhCidade', 'cnhEmissao', 'cnhPontuacao', 'cnhAtividadeRemunerada', 'setBanco'
 	];
-	foreach($post_values as $post_value){
-		if(isset($_POST[$post_value]) && empty($_POST[$post_value])){
-			unset($_POST[$post_value]);
-		}
+
+	$enti_valores = [];
+	for($f = 0; $f < sizeof($post_values); $f++){
+		$enti_valores[] = $_POST[$post_values[$f]];
 	}
 
-	$enti_valores = [
-		$_POST['nome'], $_POST['nascimento'], $_POST['cpf'], $_POST['rg'], $_POST['civil'], $_POST['sexo'], $_POST['endereco'], $_POST['numero'], $_POST['complemento'],
-		$_POST['bairro'], $_POST['cidade'], $_POST['cep'], $_POST['fone1'], $_POST['fone2'], $_POST['email'], $_POST['ocupacao'], valor($_POST['salario']), $_POST['obs'],
-		'Motorista', $_POST['status'], $_POST['matricula'], $_POST['empresa'],
-		$_POST['parametro'], $_POST['jornadaSemanal'], $_POST['jornadaSabado'], $_POST['percentualHE'], $_POST['percentualSabadoHE'],
-		$_POST['rgOrgao'], $_POST['rgDataEmissao'], $_POST['rgUf'],
-		$_POST['pai'], $_POST['mae'], $_POST['conjugue'], $_POST['tipoOperacao'],
-		$_POST['subcontratado'], $_POST['admissao'], $_POST['desligamento'],
-		$_POST['cnhRegistro'], $_POST['cnhValidade'], $_POST['cnhPrimeiraHabilitacao'], $_POST['cnhCategoria'], $_POST['cnhPermissao'],
-		$_POST['cnhObs'], $_POST['cnhCidade'], $_POST['cnhEmissao'], $_POST['cnhPontuacao'], $_POST['cnhAtividadeRemunerada'], $_POST['setBanco']
-	];
-
-
 	$cpfLimpo = str_replace(array('.', '-', '/'), "", $_POST['cpf']);
+
+	$user_infos = [
+		'user_tx_matricula' 	=> $_POST['matricula'], 
+		'user_tx_nome' 			=> $_POST['nome'], 
+		'user_tx_login' 		=> (!empty($_POST['login'])? $_POST['login']: $_POST['matricula']), 
+		'user_tx_nivel' 		=> $_POST['motorista'], 
+		'user_tx_senha' 		=> md5($cpfLimpo), 
+		'user_tx_status' 		=> $_POST['status'], 
+		'user_nb_entidade' 		=> $_POST['id'],
+		'user_tx_nascimento' 	=> $_POST['nascimento'], 
+		'user_tx_cpf' 			=> $_POST['cpf'], 
+		'user_tx_rg' 			=> $_POST['rg'], 
+		'user_nb_cidade' 		=> $_POST['cidade'], 
+		'user_tx_email' 		=> $_POST['email'], 
+		'user_nb_empresa' 		=> $_POST['empresa'],
+		'user_nb_userAtualiza' 	=> $_SESSION['user_nb_id'], 
+		'user_tx_dataAtualiza' 	=> date("Y-m-d H:i:s")
+	];
+	foreach($user_infos as $key => $value){
+		if(empty($value)){
+			unset($user_infos[$key]);
+		}
+	}
 
 	if (!$_POST['id']) {//Se está criando um motorista novo
 		$enti_campos = array_merge($enti_campos, ['enti_nb_userCadastro', 'enti_tx_dataCadastro']);
@@ -127,35 +140,19 @@ function cadastra_motorista() {
 		$id = inserir('entidade', $enti_campos, $enti_valores);
 
 		// ADICIONA O USUARIO AO INSERIR NOVO motorista (USUARIO E SENHA = CPF) - PREENCHER A VARIAVEL USER_NB_ENTIDADE
-		$user_campos = [
-			'user_tx_matricula', 'user_tx_nome', 'user_tx_login', 'user_tx_nivel', 'user_tx_senha', 'user_tx_status', 'user_nb_entidade',
-			'user_tx_nascimento', 'user_tx_cpf', 'user_tx_rg', 'user_nb_cidade', 'user_tx_email', 'user_nb_empresa',
-			'user_nb_userAtualiza', 'user_tx_dataAtualiza'
-		];
-		$user_valores = array(
-			$_POST['matricula'], $_POST['nome'], $_POST['matricula'], 'Motorista', md5($cpfLimpo), 'ativo', $_POST['id'],
-			$_POST['nascimento'], $_POST['cpf'], $_POST['rg'], $_POST['cidade'], $_POST['email'], $_POST['empresa'],
-			$_SESSION['user_nb_id'], date("Y-m-d H:i:s")
-		);
-		$idUser = inserir('user', $user_campos, $user_valores);
-	} else {//Se está editando um motorista existente
+		$idUser = inserir('user', array_keys($user_infos), array_values($user_infos));
+	}else{ // Se está editando um motorista existente
 
 		$sql = query("SELECT * FROM user WHERE user_nb_entidade = '$_POST[id]' AND user_tx_nivel = 'Motorista'");
 		$a_user = carrega_array($sql);
 
-		if ($a_user['user_nb_id'] > 0) {
+		if($a_user['user_nb_id'] > 0){
+			if(empty($_POST['login'])){
+				unset($user_infos['user_tx_login']);
+			}
 
-			$user_campos = [
-				'user_tx_matricula', 'user_tx_nome', 'user_tx_login', 'user_tx_nivel', 'user_tx_senha', 'user_tx_status', 'user_nb_entidade',
-				'user_tx_nascimento', 'user_tx_cpf', 'user_tx_rg', 'user_nb_cidade', 'user_tx_email', 'user_nb_empresa',
-				'user_nb_userAtualiza', 'user_tx_dataAtualiza'
-			];
-			$user_valores = [
-				$_POST['matricula'], $_POST['nome'], $cpfLimpo, 'Motorista', md5($cpfLimpo), 'ativo', $_POST['id'],
-				$_POST['nascimento'], $_POST['cpf'], $_POST['rg'], $_POST['cidade'], $_POST['email'], $_POST['empresa'],
-				$_SESSION['user_nb_id'], date("Y-m-d H:i:s")
-			];
-			atualizar('user', $user_campos, $user_valores, $a_user['user_nb_id']);
+			atualizar('user', array_keys($user_infos), array_values($user_infos), $a_user['user_nb_id']);
+
 		}
 
 		$enti_campos = array_merge($enti_campos, array('enti_nb_userAtualiza', 'enti_tx_dataAtualiza'));
@@ -333,6 +330,11 @@ function layout_motorista() {
 		}
 	}
 	cabecalho("Cadastro de Motorista");
+
+	
+	if(isset($a_mod['enti_nb_id'])){
+		$a_mod = array_merge($a_mod, carrega_array(query("SELECT * FROM user WHERE user_nb_entidade = ".$a_mod['enti_nb_id']." LIMIT 1;")));
+	}
 
 	$data1 = new DateTime($a_mod['enti_tx_nascimento']);
 	$data2 = new DateTime(date("Y-m-d"));
