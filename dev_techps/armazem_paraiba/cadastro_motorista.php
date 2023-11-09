@@ -78,6 +78,14 @@ function cadastra_motorista() {
 		layout_motorista();
 		exit;
 	}
+
+	$sql = query("SELECT * FROM user WHERE user_tx_login = '".$_POST['login']."' LIMIT 1");
+	if (num_linhas($sql) > 0){
+		set_status("ERRO: Login já cadastrado.");
+		$a_mod = $_POST;
+		modifica_motorista();
+		exit;
+	}
 	
 	if(!isset($_POST['salario']) || empty($_POST['salario'])){
 		$_POST['salario'] = (float)0.0;
