@@ -105,14 +105,14 @@
 		$usuario = carregar('user', '', 'user_nb_id', $_POST['id']);
 
 
+		$sql = query("SELECT * FROM user WHERE user_tx_login = '".$_POST['login']."' LIMIT 1");
+		if (num_linhas($sql) > 0){
+			set_status("ERRO: Login já cadastrado.");
+			$a_mod = $_POST;
+			modifica_usuario();
+			exit;
+		}
 		if(!$_POST['id']){//Criando novo usuário
-			$sql = query("SELECT * FROM user WHERE user_tx_login = '".$_POST['login']."' LIMIT 1");
-			if (num_linhas($sql) > 0){
-				set_status("ERRO: Login já cadastrado.");
-				$a_mod = $_POST;
-				modifica_usuario();
-				exit;
-			}
 
 			$bd_campos[] = 'user_tx_status';
 			$valores[] = 'ativo';
@@ -160,10 +160,27 @@
 		global $a_mod;
 		cabecalho("Cadastro de Usuário");
 
-		$campo_nivel = texto('Nível*', $a_mod['user_tx_nivel'], 2, "style='margin-bottom:-10px;'");
 		if($_GET['id'] || (is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) && $a_mod['user_tx_nivel'] != 'Motorista')){
+			//(Se está editando e o usuário é o que já está logado) ou (usuário logado administrador e usuário a editar não é motorista).
 
 			$campo_nome = campo('Nome*', 'nome', $a_mod['user_tx_nome'], 4, '');
+			if(!$_GET['id']){
+				//Criando
+				
+				$niveis = [''];
+				switch($_SESSION['user_tx_nivel']){
+					case "Super Administrador":
+						$niveis[] = "Super Administrador";
+					case "Administrador":
+						$niveis[] = "Administrador";
+					case "Funcionário":
+						$niveis[] = "Funcionário";
+				}
+				$campo_nivel = combo('Nível*', 'nivel', $a_mod['user_tx_nivel'], 2, $niveis, "style='margin-bottom:-10px;'");
+			}else{
+				//Editando
+				$campo_nivel = texto('Nível*', $a_mod['user_tx_nivel'], 2, "style='margin-bottom:-10px;'");
+			}
 			$campo_login = campo('Login*', 'login', $a_mod['user_tx_login'], 2);
 			$campo_nascimento = campo_data('Dt. Nascimento*', 'nascimento', $a_mod['user_tx_nascimento'], 2);
 			$campo_cpf = campo('CPF', 'cpf', $a_mod['user_tx_cpf'], 2, 'MASCARA_CPF');

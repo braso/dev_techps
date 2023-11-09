@@ -22,6 +22,7 @@ function cadastra_parametro(){
 	$quandDias = ($_POST['quandDias'] == '') ? 0 : $_POST['quandDias'];
 	
 	$campos=[
+	$campos=[
 		'para_tx_nome', 'para_tx_jornadaSemanal', 'para_tx_jornadaSabado', 'para_tx_percentualHE', 'para_tx_percentualSabadoHE', 'para_tx_HorasEXExcedente', 
 		'para_tx_tolerancia', 'para_tx_acordo', 'para_tx_inicioAcordo', 'para_tx_fimAcordo', 'para_nb_userCadastro', 'para_tx_dataCadastro', 'para_tx_diariasCafe', 
 		'para_tx_diariasAlmoco', 'para_tx_diariasJanta', 'para_tx_status', 'para_tx_banco', 'para_tx_setData', 'para_nb_qDias', 'para_tx_paramObs'
@@ -159,8 +160,8 @@ function index(){
 	} else
 	    $sql = "SELECT * FROM parametro WHERE para_tx_status != 'inativo' $extra";
 
-	$cab = array('CÓDIGO','NOME','JORNADA SEMANAL/DIA','JORNADA SÁBADO','HR(%)','HR SÁBADO(%)','ACORDO','INÍCIO','FIM','','');
-	$val = array('para_nb_id','para_tx_nome','para_tx_jornadaSemanal','para_tx_jornadaSabado','para_tx_percentualHE','para_tx_percentualSabadoHE','para_tx_acordo','data(para_tx_inicioAcordo)','data(para_tx_fimAcordo)','icone_modificar(para_nb_id,modifica_parametro)','icone_excluir(para_nb_id,exclui_parametro)');
+	$cab = ['CÓDIGO','NOME','JORNADA SEMANAL/DIA','JORNADA SÁBADO','HE(%)','HE SÁBADO(%)','ACORDO','INÍCIO','FIM','',''];
+	$val = ['para_nb_id','para_tx_nome','para_tx_jornadaSemanal','para_tx_jornadaSabado','para_tx_percentualHE','para_tx_percentualSabadoHE','para_tx_acordo','data(para_tx_inicioAcordo)','data(para_tx_fimAcordo)','icone_modificar(para_nb_id,modifica_parametro)','icone_excluir(para_nb_id,exclui_parametro)'];
 
 	grid($sql,$cab,$val);
 

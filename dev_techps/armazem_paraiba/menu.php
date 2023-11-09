@@ -1,5 +1,4 @@
 <? 
-
 if ($_SESSION["user_tx_nivel"] == 'Administrador' || $_SESSION["user_tx_nivel"] == 'Super Administrador') { ?>
 
 	<!-- INICIO HEADER MENU -->
