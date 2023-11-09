@@ -105,14 +105,14 @@
 		$usuario = carregar('user', '', 'user_nb_id', $_POST['id']);
 
 
+		$sql = query("SELECT * FROM user WHERE user_tx_login = '".$_POST['login']."' LIMIT 1");
+		if (num_linhas($sql) > 0){
+			set_status("ERRO: Login já cadastrado.");
+			$a_mod = $_POST;
+			modifica_usuario();
+			exit;
+		}
 		if(!$_POST['id']){//Criando novo usuário
-			$sql = query("SELECT * FROM user WHERE user_tx_login = '".$_POST['login']."' LIMIT 1");
-			if (num_linhas($sql) > 0){
-				set_status("ERRO: Login já cadastrado.");
-				$a_mod = $_POST;
-				modifica_usuario();
-				exit;
-			}
 
 			$bd_campos[] = 'user_tx_status';
 			$valores[] = 'ativo';
@@ -129,6 +129,16 @@
 				}
 				
 			}else{
+			    $sqlCheckNivel = query("SELECT user_tx_nivel FROM user WHERE user_nb_id = '$_POST[id]'")->fetch_assoc();
+				if ($sqlCheckNivel['user_tx_nivel'] == 'Motorista') {
+					if (!empty($_POST['senha']) && !empty($_POST['senha2'])) {
+						$bd_campos3 = ['user_tx_senha'];
+						$valores3 = [md5($_POST['senha'])];
+					}
+					atualizar('user', $bd_campos3, $valores3, $_POST['id']);
+					index();
+					exit;
+				}
 				$bd_campos = array_merge($bd_campos, ['user_nb_userAtualiza', 'user_tx_dataAtualiza']);
 				$valores = array_merge($valores, [$_SESSION['user_nb_id'], date("Y-m-d H:i:s")]);
 
@@ -150,10 +160,27 @@
 		global $a_mod;
 		cabecalho("Cadastro de Usuário");
 
-		$campo_nivel = texto('Nível*', $a_mod['user_tx_nivel'], 2, "style='margin-bottom:-10px;'");
 		if($_GET['id'] || (is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) && $a_mod['user_tx_nivel'] != 'Motorista')){
+			//(Se está editando e o usuário é o que já está logado) ou (usuário logado administrador e usuário a editar não é motorista).
 
 			$campo_nome = campo('Nome*', 'nome', $a_mod['user_tx_nome'], 4, '');
+			if(!$_GET['id']){
+				//Criando
+				
+				$niveis = [''];
+				switch($_SESSION['user_tx_nivel']){
+					case "Super Administrador":
+						$niveis[] = "Super Administrador";
+					case "Administrador":
+						$niveis[] = "Administrador";
+					case "Funcionário":
+						$niveis[] = "Funcionário";
+				}
+				$campo_nivel = combo('Nível*', 'nivel', $a_mod['user_tx_nivel'], 2, $niveis, "style='margin-bottom:-10px;'");
+			}else{
+				//Editando
+				$campo_nivel = texto('Nível*', $a_mod['user_tx_nivel'], 2, "style='margin-bottom:-10px;'");
+			}
 			$campo_login = campo('Login*', 'login', $a_mod['user_tx_login'], 2);
 			$campo_nascimento = campo_data('Dt. Nascimento*', 'nascimento', $a_mod['user_tx_nascimento'], 2);
 			$campo_cpf = campo('CPF', 'cpf', $a_mod['user_tx_cpf'], 2, 'MASCARA_CPF');
@@ -323,8 +350,8 @@
 
 		$sql = "SELECT * FROM user LEFT JOIN empresa ON empresa.empr_nb_id = user.user_nb_empresa WHERE user_nb_id > 1 $extra";
 		
-		$cab = ['CÓDIGO', 'NOME', 'CPF', 'LOGIN', 'NÍVEL', 'E-MAIL', 'TELEFONE', 'EMPRESA', 'STATUS', '', ''];
-		$val = ['user_nb_id', 'user_tx_nome', 'user_tx_cpf', 'user_tx_login', 'user_tx_nivel', 'user_tx_email', 'user_tx_fone', 'empr_tx_nome', 'user_tx_status', 
+		$cab = ['CÓDIGO', 'NOME','MATRICULA', 'CPF', 'LOGIN', 'NÍVEL', 'E-MAIL', 'TELEFONE', 'EMPRESA', 'STATUS', '', ''];
+		$val = ['user_nb_id', 'user_tx_nome', 'user_tx_matricula', 'user_tx_cpf', 'user_tx_login', 'user_tx_nivel', 'user_tx_email', 'user_tx_fone', 'empr_tx_nome', 'user_tx_status', 
 			'icone_modificar(user_nb_id,modifica_usuario)', 'icone_excluir(user_nb_id,exclui_usuario)'
 		];
 
