@@ -54,7 +54,7 @@
 		$cab = array(
 			"", "MAT.", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "HE 50%", "HE&nbsp;100%",
-			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(*)"
+			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 		);
 	
 		// Converte as datas para objetos DateTime
@@ -69,7 +69,7 @@
 			for ($date = $startDate; $date <= $endDate; $date->modify('+1 day')) {
 				$dataVez = $date->format('Y-m-d');
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
-
+				
 				$row = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDadosMotorista, $aDetalhado));
 				$exibir = True;
 				for($f = 0; $f < sizeof($row); $f++){
@@ -78,24 +78,32 @@
 						// $f2 = 8;
 						// foreach($totalResumo as $key => $value){
 
-						// 	// $horaSaida = '23:00';
-						// 	// $horaEntrada = '20:00';
-						// 	// $diffHoras = (strtotime($horaSaida) - strtotime($horaEntrada));
-						// 	// echo date('H:i', $diffHoras);
-
-						// 	$totalResumo[$key] = (strtotime($totalResumo[$key]) + (substr($row[$f2], -6)));
-
-						// 	$date = new DateTime('2000-01-20');
-						// 	$date->sub(new DateInterval('P10D'));
-						// 	echo $date->format('Y-m-d') . "\n";
+						// 	print_r($totalResumo[$key]);
 						// 	$totalResumo[$key] = explode(':', $totalResumo[$key]);
+						// 	print_r(' => ');
+						// 	print_r($totalResumo[$key]);
 						// 	$totalResumo[$key] = intval($totalResumo[$key][0])*60+($totalResumo[$key][0][0] == '-'? -1:1)*intval($totalResumo[$key][1]);
+						// 	print_r(' => ');
+						// 	print_r($totalResumo[$key]);
+						// 	print_r('<br>');
 
+						// 	print_r($row[$f2]);
 						// 	$row[$f2] = explode(':', substr($row[$f2], -5));
+						// 	print_r(' => ');
+						// 	print_r($row[$f2]);
 						// 	$row[$f2] = intval($row[$f2][0])*60 + ($row[$f2][0][0] == '-'? -1:1)*intval($row[$f2][1]);
+						// 	print_r(' => ');
+						// 	print_r($row[$f2]);
+						// 	print_r('<br>');
 							
+						// 	print_r($totalResumo[$key]);
 						// 	$totalResumo[$key] = $totalResumo[$key] + (($totalResumo[$key]<0?1:-1)*$row[$f2]);
+						// 	print_r(' => ');
+						// 	print_r($totalResumo[$key]);
 						// 	$totalResumo[$key] = sprintf('00',(intval($totalResumo[$key]/60))).":".sprintf('00', ($totalResumo[$key]-intval($totalResumo[$key]/60)*60));
+						// 	print_r(' => ');
+						// 	print_r($totalResumo[$key]);
+						// 	print_r('<br><br>');
 						// 	$f2++;
 						// }
 						break;
@@ -152,7 +160,7 @@
 		
 		
 			$aDia[] = array_values(array_merge(array('', '', '', '', '', '', '', '<b>TOTAL</b>'), $totalResumo));
-
+			
 			$toleranciaStr = carrega_array(query('SELECT parametro.para_tx_tolerancia FROM entidade JOIN parametro ON enti_nb_parametro = para_nb_id WHERE enti_nb_parametro ='.$aMotorista['enti_nb_parametro'].';'))[0];
 			$toleranciaStr = explode(':', $toleranciaStr);
 
