@@ -53,7 +53,7 @@ function index() {
 	$cab = array(
 		"", "MAT.", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 		"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "HE 50%", "HE&nbsp;100%",
-		"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(*)"
+		"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 	);
 
 	if ($_POST['busca_data1'] && $_POST['busca_data2'] && $_POST['busca_empresa']) {
@@ -162,7 +162,7 @@ function index() {
 					  <tbody>
 						<tr>
 						  <td>--:--</td>
-						  <td>--:--</td>
+						  <td>'.$totalResumo['diffSaldo'].'</td>
 						  <td>--:--</td>
 						</tr>
 					  </tbody>

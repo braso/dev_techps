@@ -14,6 +14,9 @@ use PHPMailer\PHPMailer\Exception;
 if ($_POST['botao'] == 'ENVIAR') {
     $dominio = $_POST['dominio'];
     $login = $_POST['login'];
+    // var_dump($dominio);
+    // var_dump($login);
+    // die();
     // $email = $_POST['email'];
     if(!empty($dominio)){
         include $dominio."/conecta.php";
@@ -223,7 +226,8 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
 					        <option value="" selected>Domínio</option>
 					        <option value="techps">techps</option>
 					        <option value="feijao_turqueza">Feijão turqueza</option>
-					        <option value="armazem_paraiba">Armazem Paraiba</option>
+					        <option value="sistema">Armazem Paraiba</option>
+					        <option value="qualy_transportes">qualy transportes</option>
 				        </select>
                     </div>
                     <div class="form-group">
@@ -244,18 +248,18 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
 
                 ?>
                 <h3 class="form-title font-green">Redifinição de Senha - <?= $arrayDominio[$_GET['dominio']]; ?></h3>
-                    <div class="form-group">
+                    <div id='senha' class="form-group">
                         <label class="control-label visible-ie8 visible-ie9">Senha</label>
                         <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="password" autocomplete="off" placeholder="Senha" name="senha" />
                     </div>
 
-                    <div class="form-group">
+                    <div id='senha2' class="form-group">
                         <label class="control-label visible-ie8 visible-ie9">Confirmar Senha</label>
                         <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="password" autocomplete="off" placeholder="Confirmar Senha" name="senha2" />
                     </div>
                     <?= $msg ?>
-                    <div class="form-actions" style="padding: 26px 110px !important">
-                        <input type="submit" class="btn green uppercase" name="botao" value="Redefinir senha"></input>
+                    <div id="enviar" class="form-actions" style="padding: 26px 110px !important">
+                        <input type="submit" id="enviar" class="btn green uppercase" name="botao" value="Redefinir senha"></input>
                     </div>
                 <?
                 }
@@ -297,11 +301,21 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
             var erroDiv = document.getElementById("erro");
             erroDiv.style.display = "none";
         }
+        
+        function esconderCampos() {
+            var senhaDiv = document.getElementById("senha");
+            var senha2Div = document.getElementById("senha2");
+            var enviarDiv = document.getElementById("enviar");
+            senhaDiv.style.display = "none";
+            senha2Div.style.display = "none";
+            enviarDiv.style.display = "none";
+        }
 
         // Chama a função esconderErro após 10 segundos (10000 milissegundos)
         setTimeout(esconderErro, 10000);
         if(document.getElementById("redefinido")){
             setTimeout(redirectIndex, 5000);
+            setTimeout(esconderCampos, 1);
         }
     </script>
 </body>

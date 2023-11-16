@@ -82,7 +82,7 @@ function layout_parametro(){
 		// $c[] = campo('Jornada Sábado (Horas)','jornadaSabado',$a_mod[para_tx_jornadaSabado],3,'MASCARA_NUMERO');
 		campo_hora('Jornada Semanal (Horas/Dia)', 'jornadaSemanal', $a_mod['para_tx_jornadaSemanal'], 3),
 		campo_hora('Jornada Sábado (Horas/Dia)', 'jornadaSabado', $a_mod['para_tx_jornadaSabado'], 3),
-		campo('Tolerância de jornada Saldo diário (Minutos)', 'tolerancia', $a_mod['para_tx_tolerancia'], 3),
+		campo('Tolerância de jornada Saldo diário (Minutos)', 'tolerancia', $a_mod['para_tx_tolerancia'], 3,'MASCARA_NUMERO', 'maxlength="3"'),
 		campo('Percentual da Hora Extra(%)', 'percentualHE', $a_mod['para_tx_percentualHE'], 3, 'MASCARA_NUMERO'),
 		campo('Percentual da Hora Extra 100% (domingos e feriados)', 'percentualSabadoHE', $a_mod['para_tx_percentualSabadoHE'], 3, 'MASCARA_NUMERO'),
 		campo_hora('Quando Exceder o limite de Horas Extras %, o excedente será Hora Extra 100% (Horas/Minutos)', 'HorasEXExcedente', $a_mod['para_tx_HorasEXExcedente'], 3),
@@ -136,7 +136,7 @@ function index(){
 		campo('Código', 'busca_codigo', $_POST['busca_codigo'], 2, 'MASCARA_NUMERO'),
 		campo('Nome', 'busca_nome', $_POST['busca_nome'], 4),
 		combo('Acordo', 'busca_acordo', $_POST['busca_acordo'], 2, array('Todos', 'Sim', 'Não')),
-		combo('Banco de Horas', 'busca_banco', $_POST['busca_banco'], 2, array('Todos', 'Sim', 'Não')),
+		// combo('Banco de Horas', 'busca_banco', $_POST['busca_banco'], 2, array('Todos', 'Sim', 'Não')),
 		combo('Vencidos', 'busca_vencidos', $_POST['busca_vencidos'], 2, array('Todos', 'Sim', 'Não'))
 	];
 

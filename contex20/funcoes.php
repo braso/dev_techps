@@ -281,7 +281,7 @@ function atualizar($tabela,$campos,$valores,$id){
 
 
 
-	query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id='$id'") or die(mysql_error());
+	query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id='$id' ") or die(mysql_error());
 	set_status("Registro atualizado com sucesso!");
 
 }

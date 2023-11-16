@@ -1122,7 +1122,54 @@ function diaDetalhePonto($matricula, $data) {
     $aRetorno['fimJornada'] .= ($quantidade_fimJ > 0) ? "*" : "";
     $aRetorno['inicioRefeicao'] .= ($quantidade_inicioR > 0) ? "*" : "";
     $aRetorno['fimRefeicao'] .= ($quantidade_fimR > 0) ? "*" : "";
+
+	# Adiconar legendas
+	$infoLegendas = query("SELECT pont_tx_data, macr_tx_nome, moti_tx_legenda FROM ponto
+	JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
+	JOIN user ON ponto.pont_nb_user = user.user_nb_id
+	LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
+    WHERE ponto.pont_nb_motivo IS NOT NULL AND pont_tx_data LIKE '%$data%' AND pont_tx_matricula = '$matricula'");
 	
+	$legenda = mysqli_fetch_all($infoLegendas, MYSQLI_ASSOC);
+
+	$contagens = array(
+    'inicioJornada' => array('I' => 0, 'P' => 0, 'T' => 0, 'DSR' => 0),
+    'fimJornada' => array('I' => 0, 'P' => 0, 'T' => 0, 'DSR' => 0),
+    'inicioRefeicao' => array('I' => 0, 'P' => 0, 'T' => 0, 'DSR' => 0),
+    'fimRefeicao' => array('I' => 0, 'P' => 0, 'T' => 0, 'DSR' => 0),
+	);
+
+	foreach ($legenda as $value) {
+		$tipo = $value['moti_tx_legenda'];
+		$acao = '';
+
+		switch ($value['macr_tx_nome']) {
+			case 'Inicio de Jornada':
+				$acao = 'inicioJornada';
+				break;
+			case 'Fim de Jornada':
+				$acao = 'fimJornada';
+				break;
+			case 'Inicio de Refeição':
+				$acao = 'inicioRefeicao';
+				break;
+			case 'Fim de Refeição':
+				$acao = 'fimRefeicao';
+				break;
+		}
+
+		if (!empty($tipo) && array_key_exists($tipo, $contagens[$acao])) {
+			$contagens[$acao][$tipo]++;
+		}
+	}
+
+	foreach ($contagens as $acao => $tipos) {
+		foreach ($tipos as $tipo => $quantidade) {
+			$aRetorno[$acao] .= ($quantidade > 0) ? " $tipo" : "";
+		}
+	}
+
+
 
 
 	$toleranciaStr = carrega_array(query('SELECT parametro.para_tx_tolerancia FROM entidade JOIN parametro ON enti_nb_parametro = para_nb_id WHERE enti_nb_parametro ='.$aMotorista['enti_nb_parametro'].';'))[0];
