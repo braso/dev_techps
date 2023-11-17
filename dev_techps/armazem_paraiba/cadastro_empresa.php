@@ -27,9 +27,10 @@ function modifica_empresa(){
 }
 
 function cadastra_empresa(){
+    $sqlCheckNivel = query("SELECT empr_tx_Ehmatriz FROM empresa WHERE empr_nb_id = '$_POST[id]'")->fetch_assoc();
 	$campos = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade','endereco','bairro'];
 	foreach($campos as $campo){
-		if(!isset($_POST[$campo]) || empty($_POST[$campo])){
+		if(!isset($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'Sim' || empty($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'Sim'){
 			echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
 			layout_empresa();
 			exit;
@@ -39,13 +40,14 @@ function cadastra_empresa(){
 	$campos=[
 		'empr_tx_nome', 'empr_tx_fantasia', 'empr_tx_cnpj', 'empr_tx_cep', 'empr_nb_cidade', 'empr_tx_endereco', 'empr_tx_bairro', 'empr_tx_numero', 'empr_tx_complemento', 'empr_tx_referencia',
 		'empr_tx_fone1', 'empr_tx_fone2', 'empr_tx_email', 'empr_tx_inscricaoEstadual', 'empr_tx_inscricaoMunicipal', 'empr_tx_regimeTributario', 'empr_tx_status', 'empr_tx_situacao', 'empr_nb_parametro', 'empr_tx_contato',
-		'empr_tx_dataRegistroCNPJ', 'empr_tx_domain', 'empr_tx_ftpServer', 'empr_tx_ftpUsername', 'empr_tx_ftpUserpass'
+		'empr_tx_dataRegistroCNPJ', 'empr_tx_domain', 'empr_tx_ftpServer', 'empr_tx_ftpUsername', 'empr_tx_ftpUserpass', 'empr_tx_Ehmatriz'
 	];
 	
 	$valores = [
 		$_POST['nome'], $_POST['fantasia'], $_POST['cnpj'], $_POST['cep'], $_POST['cidade'], $_POST['endereco'], $_POST['bairro'], $_POST['numero'], $_POST['complemento'], $_POST['referencia'],
 		$_POST['fone1'], $_POST['fone2'], $_POST['email'], $_POST['inscricaoEstadual'], $_POST['inscricaoMunicipal'], $_POST['regimeTributario'], 'ativo', $_POST['situacao'], $_POST['parametro'], $_POST['contato'],
-		$_POST['dataRegistroCNPJ'], "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio'], $_POST['ftpServer'], $_POST['ftpUsername'], $_POST['ftpUserpass']
+		$_POST['dataRegistroCNPJ'], "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio'], $_POST['ftpServer'], $_POST['ftpUsername'], $_POST['ftpUserpass'],
+		$_POST['matriz']
 	];
 
 
@@ -77,6 +79,25 @@ function cadastra_empresa(){
 				$campos[] = 'empr_tx_logo';
 				$valores[] = $arq;
 			}
+		}
+// 		$sqlCheckNivel["empr_tx_Ehmatriz"]
+        if(empty($sqlCheckNivel["empr_tx_Ehmatriz"]) || $sqlCheckNivel["empr_tx_Ehmatriz"] != 'Sim'){
+			$campos=[
+				'empr_tx_nome', 'empr_tx_fantasia', 'empr_tx_cnpj', 'empr_tx_cep', 'empr_nb_cidade', 'empr_tx_endereco', 'empr_tx_bairro', 'empr_tx_numero', 'empr_tx_complemento', 'empr_tx_referencia',
+				'empr_tx_fone1', 'empr_tx_fone2', 'empr_tx_email', 'empr_tx_inscricaoEstadual', 'empr_tx_inscricaoMunicipal', 'empr_tx_regimeTributario', 'empr_tx_status', 'empr_tx_situacao', 'empr_nb_parametro', 'empr_tx_contato',
+				'empr_tx_dataRegistroCNPJ', 'empr_tx_domain', 'empr_tx_ftpServer', 'empr_tx_ftpUsername', 'empr_tx_ftpUserpass', 'empr_tx_Ehmatriz'
+			];
+			
+			$valores = [
+				$_POST['nome'], $_POST['fantasia'], $_POST['cnpj'], $_POST['cep'], $_POST['cidade'], $_POST['endereco'], $_POST['bairro'], $_POST['numero'], $_POST['complemento'], $_POST['referencia'],
+				$_POST['fone1'], $_POST['fone2'], $_POST['email'], $_POST['inscricaoEstadual'], $_POST['inscricaoMunicipal'], $_POST['regimeTributario'], 'ativo', $_POST['situacao'], $_POST['parametro'], $_POST['contato'],
+				$_POST['dataRegistroCNPJ'], "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio'], $_POST['ftpServer'], $_POST['ftpUsername'], $_POST['ftpUserpass'],
+				$_POST['matriz']
+			];
+		}else {
+		    $campos = ['empr_nb_parametro'];
+			
+			$valores = [$_POST['parametro']];
 		}
 
 		$campos = array_merge($campos,array('empr_nb_userAtualiza','empr_tx_dataAtualiza'));
@@ -249,7 +270,8 @@ function layout_empresa(){
         	'domain' => $a_mod['empr_tx_domain'],
         	'ftpServer' => $a_mod['empr_tx_ftpServer'] == 'ftp-jornadas.positronrt.com.br'? '': $a_mod['empr_tx_ftpServer'],
         	'ftpUsername' => $a_mod['empr_tx_ftpUsername'] == '08995631000108'? '': $a_mod['empr_tx_ftpUsername'],
-        	'ftpUserpass' => $a_mod['empr_tx_ftpUserpass'] == '0899'? '': $a_mod['empr_tx_ftpUserpass']
+        	'ftpUserpass' => $a_mod['empr_tx_ftpUserpass'] == '0899'? '': $a_mod['empr_tx_ftpUserpass'],
+			'matriz' => $a_mod['empr_tx_Ehmatriz']
         ];
 		$btn_txt = 'Atualizar';
     }
@@ -257,34 +279,82 @@ function layout_empresa(){
 	if($input_values['logo'] != ''){
 		$iconeExcluirLogo = icone_excluirLogo($a_mod['empr_nb_id'], 'excluir_logo');
 	}
+
+	if(is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador"))){
+		$campo_dominio = campo_domain('Nome do Domínio','nomeDominio',$input_values['domain'],2,'domain');
+		$campo_EhMatriz = combo('É matriz?','matriz',$input_values['empr_tx_Ehmatriz'],2,['Sim','Não']);
+	}else{
+		$campo_dominio = texto('Nome do Domínio',$input_values['domain'],2);
+		$campo_EhMatriz = texto('É matriz?',$input_values['empr_tx_Ehmatriz'],2);
+	}
+
+	if(isset($input_values['cidade'])){
+		$cidade_query = query("SELECT * FROM `cidade` WHERE cida_tx_status = 'ativo' AND cida_nb_id = $input_values[cidade]");
+		$cidade = mysqli_fetch_array($cidade_query);
+	}else{
+		$cidade = ['cida_tx_nome' => ''];
+	}
+	$campo_cidade = texto('Cidade/UF', $cidade['cida_tx_nome'], 2);
+
+	if (strpos($_SESSION['user_tx_nivel'], "Super Administrador") !== TRUE && $input_values['matriz'] == 'Sim') {
+		$c = [
+			texto('CPF/CNPJ*',$input_values['cnpj'],2),
+			texto('Nome*',$input_values['nome'],4),
+			texto('Nome Fantasia',$input_values['fantasia'],3),
+			texto('Situação',$input_values['situacao'],2),
+			texto('CEP*',$input_values['cep'],2),
+			texto('Endereço*',$input_values['endereco'],4),
+			texto('Número*',$input_values['numero'],2),
+			texto('Bairro*',$input_values['bairro'],3),
+			texto('Complemento',$input_values['complemento'],2),
+			texto('Referência',$input_values['referencia'],4),
+			$campo_cidade,
+			texto('Telefone 1',$input_values['fone1'],2),
+			texto('Telefone 2',$input_values['fone2'],2),
+			texto('Contato',$input_values['contato'],3),
+			texto('E-mail*',$input_values['email'],3),
+			texto('Inscrição Estadual',$input_values['inscricaoEstadual'],3),
+			texto('Inscrição Municipal',$input_values['inscricaoMunicipal'],3),
+			texto('Regime Tributário',$input_values['regimeTributario'],3,$regimes),
+			texto('Data Reg. CNPJ',$input_values['dataRegistroCNPJ'],3),
+			$campo_dominio,
+			$campo_EhMatriz,
+			
+			texto('Servidor FTP',$input_values['ftpServer'],3),
+			texto('Usuário FTP',$input_values['ftpUsername'],3)
+		];
+	
+	}else{
+		$c = [
+			campo('CPF/CNPJ*','cnpj',$input_values['cnpj'],2,'MASCARA_CPF','onkeyup="checa_cnpj(this.value);"'),
+			campo('Nome*','nome',$input_values['nome'],4,'','maxlength="65"'),
+			campo('Nome Fantasia','fantasia',$input_values['fantasia'],4,'','maxlength="65"'),
+			combo('Situação','situacao',$input_values['situacao'],2,array('Ativo','Inativo')),
+			campo('CEP*','cep',$input_values['cep'],2,'MASCARA_CEP','onkeyup="carrega_cep(this.value);"'),
+			campo('Endereço*','endereco',$input_values['endereco'],5,'','maxlength="100"'),
+			campo('Número*','numero',$input_values['numero'],2),
+			campo('Bairro*','bairro',$input_values['bairro'],3,'','maxlength="30"'),
+			campo('Complemento','complemento',$input_values['complemento'],3),
+			campo('Referência','referencia',$input_values['referencia'],2),
+			combo_net('Cidade/UF*','cidade',$input_values['cidade'],3,'cidade','','','cida_tx_uf'),
+			campo('Telefone 1','fone1',$input_values['fone1'],2,'MASCARA_FONE'),
+			campo('Telefone 2','fone2',$input_values['fone2'],2,'MASCARA_FONE'),
+			campo('Contato','contato',$input_values['contato'],3),
+			campo('E-mail*','email',$input_values['email'],3),
+			campo('Inscrição Estadual','inscricaoEstadual',$input_values['inscricaoEstadual'],3),
+			campo('Inscrição Municipal','inscricaoMunicipal',$input_values['inscricaoMunicipal'],3),
+			combo('Regime Tributário','regimeTributario',$input_values['regimeTributario'],3,$regimes),
+			campo_data('Data Reg. CNPJ','dataRegistroCNPJ',$input_values['dataRegistroCNPJ'],3),
+			arquivo('Logo (.png, .jpg)'.$iconeExcluirLogo,'logo',$input_values['logo'],4),
+			$campo_dominio,
+			$campo_EhMatriz,
+			
+			campo('Servidor FTP','ftpServer',$input_values['ftpServer'],3),
+			campo('Usuário FTP','ftpUsername',$input_values['ftpUsername'],3),
+			campo_senha('Senha FTP','ftpUserpass',$input_values['ftpUserpass'],3)
+		];
+	}
     
-	$c = [
-		campo('CPF/CNPJ*','cnpj',$input_values['cnpj'],2,'MASCARA_CPF','onkeyup="checa_cnpj(this.value);"'),
-		campo('Nome*','nome',$input_values['nome'],4,'','maxlength="65"'),
-		campo('Nome Fantasia','fantasia',$input_values['fantasia'],4,'','maxlength="65"'),
-		combo('Situação','situacao',$input_values['situacao'],2,array('Ativo','Inativo')),
-		campo('CEP*','cep',$input_values['cep'],2,'MASCARA_CEP','onkeyup="carrega_cep(this.value);"'),
-		campo('Endereço*','endereco',$input_values['endereco'],5,'','maxlength="100"'),
-		campo('Número*','numero',$input_values['numero'],2),
-		campo('Bairro*','bairro',$input_values['bairro'],3,'','maxlength="30"'),
-		campo('Complemento','complemento',$input_values['complemento'],3),
-		campo('Referência','referencia',$input_values['referencia'],2),
-		combo_net('Cidade/UF*','cidade',$input_values['cidade'],3,'cidade','','','cida_tx_uf'),
-		campo('Telefone 1','fone1',$input_values['fone1'],2,'MASCARA_FONE'),
-		campo('Telefone 2','fone2',$input_values['fone2'],2,'MASCARA_FONE'),
-		campo('Contato','contato',$input_values['contato'],3),
-		campo('E-mail*','email',$input_values['email'],3),
-		campo('Inscrição Estadual','inscricaoEstadual',$input_values['inscricaoEstadual'],3),
-		campo('Inscrição Municipal','inscricaoMunicipal',$input_values['inscricaoMunicipal'],3),
-		combo('Regime Tributário','regimeTributario',$input_values['regimeTributario'],3,$regimes),
-		campo_data('Data Reg. CNPJ','dataRegistroCNPJ',$input_values['dataRegistroCNPJ'],3),
-		arquivo('Logo (.png, .jpg)'.$iconeExcluirLogo,'logo',$input_values['logo'],4),
-		campo_domain('Nome do Domínio','nomeDominio',$input_values['domain'],2,'domain'),
-		
-		campo('Servidor FTP','ftpServer',$input_values['ftpServer'],3),
-		campo('Usuário FTP','ftpUsername',$input_values['ftpUsername'],3),
-		campo_senha('Senha FTP','ftpUserpass',$input_values['ftpUserpass'],3)
-	];
 
 	
 	$cJornada[]=combo_bd('Parâmetros da Jornada*','parametro',$a_mod['empr_nb_parametro'],6,'parametro','onchange="carrega_parametro(this.value)"');

@@ -365,7 +365,7 @@ function layout_motorista() {
 		campo('Matrícula*', 'matricula', $a_mod['enti_tx_matricula'], 1, ''),
 		campo('Nome*', 'nome', $a_mod['enti_tx_nome'], 3,'','maxlength="65"'),
 		campo_data('Dt. Nascimento*', 'nascimento', $a_mod['enti_tx_nascimento'], 2),
-		combo('status', 'status', $a_mod['enti_tx_status'], 2, array('Ativo', 'Inativo')),
+		combo('status', 'status', $a_mod['enti_tx_status'], 2, array('ativo', 'inativo')),
 		campo('Login','login', $a_mod['user_tx_login'],2),
 		texto('Idade',$idade,2),
 

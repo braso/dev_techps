@@ -165,7 +165,7 @@
 		if($_GET['id'] && $a_mod['user_tx_nivel'] != 'Motorista' ||  (is_int(strpos($_SESSION['user_tx_nivel'], "Administrador"))) && $a_mod['user_tx_nivel'] != 'Motorista'){
 			//(Se está editando e o usuário é o que já está logado) ou (usuário logado administrador e usuário a editar não é motorista).
 
-			$campo_nome = campo('Nome*', 'nome', $a_mod['user_tx_nome'], 4, '');
+			$campo_nome = campo('Nome*', 'nome', $a_mod['user_tx_nome'], 4, '','maxlength="65"');
 			if(!$_GET['id']){
 				//Criando
 				
@@ -183,17 +183,17 @@
 				//Editando
 				$campo_nivel = texto('Nível*', $a_mod['user_tx_nivel'], 2, "style='margin-bottom:-10px;'");
 			}
-			$campo_login = campo('Login*', 'login', $a_mod['user_tx_login'], 2);
+			$campo_login = campo('Login*', 'login', $a_mod['user_tx_login'], 2,'','maxlength="30"');
 			$campo_nascimento = campo_data('Dt. Nascimento*', 'nascimento', $a_mod['user_tx_nascimento'], 2);
 			$campo_cpf = campo('CPF', 'cpf', $a_mod['user_tx_cpf'], 2, 'MASCARA_CPF');
-			$campo_rg = campo('RG', 'rg', $a_mod['user_tx_rg'], 2);
+			$campo_rg = campo('RG', 'rg', $a_mod['user_tx_rg'], 2,'','maxlength="15"');
 			$campo_cidade = combo_net('Cidade/UF', 'cidade', $a_mod['user_nb_cidade'], 3, 'cidade', '', '', 'cida_tx_uf');
 			$campo_email = campo('E-mail*', 'email', $a_mod['user_tx_email'], 3);
 			$campo_telefone = campo('Telefone', 'telefone', $a_mod['user_tx_fone'], 3,'MASCARA_FONE');
 			$campo_empresa = combo_bd('!Empresa*', 'empresa', $a_mod['user_nb_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)"');
 			$campo_expiracao = campo_data('Dt. Expiraçao', 'expiracao', $a_mod['user_tx_expiracao'], 2);
-			$campo_senha = campo_senha('Senha', 'senha', "", 2);
-			$campo_confirma = campo_senha('Confirmar Senha', 'senha2', "", 2);
+			$campo_senha = campo_senha('Senha', 'senha', "", 2,'maxlength="12"');
+			$campo_confirma = campo_senha('Confirmar Senha', 'senha2', "", 2,'maxlength="12"');
 
 		}else{
 
@@ -335,7 +335,7 @@
 
 		$c = [
 			campo('Código', 'busca_codigo', $_POST['busca_codigo'], 1,'','maxlength="6"'),
-			campo('Nome', 'busca_nome', $_POST['busca_nome'], 3),
+			campo('Nome', 'busca_nome', $_POST['busca_nome'], 3,'','maxlength="65"'),
 			campo('CPF', 'busca_cpf', $_POST['busca_cpf'], 2, 'MASCARA_CPF'),
 			campo('Login', 'busca_login', $_POST['busca_login'], 3),
 			combo('Nível', 'busca_nivel', $_POST['busca_nivel'], 2, $niveis),

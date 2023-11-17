@@ -277,20 +277,10 @@ function atualizar($tabela,$campos,$valores,$id){
 		$inserir.=", $campos[$i] = '$valores[$i]' ";
 
 	}
-
-
-
+	
 
 	query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id='$id'") or die(mysql_error());
 	set_status("Registro atualizado com sucesso!");
-
-}
-
-function remover_ponto($tabela,$id,$justificativa){
-
-	$tab=substr($tabela,0,4);
-
-	query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '$id' LIMIT 1");
 
 }
 
@@ -488,31 +478,55 @@ function campo_jornada($nome,$variavel,$modificador,$tamanho){
 
 }
 
-function checkbox_banco($nome, $variavel, $tamanho) {
+function checkbox_banco($nome, $variavel, $modificadoRadio,$modificadoCampo ,$tamanho) {
 	$data_input = '<script>
-    
-    const radioSim = document.getElementById("sim");
-    const radioNao = document.getElementById("nao");
-    if ('.$variavel.') {
-		radioSim.checked 
-    }
+	const radioSim = document.getElementById("sim");
+	const radioNao = document.getElementById("nao");
+	const campo = document.getElementById("' . $variavel . '");
+	if("'.$modificadoRadio.'" === "sim"){
+		radioSim.checked = true;
+	}
+	else {
+		radioNao.checked = true;
+	}
+
+	if (radioSim.checked) {
+			campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
+	}
+
+	// Adicionando um ouvinte de eventos aos elementos de rádio
+	radioSim.addEventListener("change", function() {
+		if (radioSim.checked) {
+			campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
+		}
+	});
+
+	radioNao.addEventListener("change", function() {
+	if (radioNao.checked) {
+		campo.style.display = "none"; // Oculta o campo quando "Não Mostrar Campo" é selecionado
+	}
+	});
 	</script>';
 	//  Utiliza regime de banco de horas?
 	$campo = '
-    <div class="col-sm-' . $tamanho . ' margin-bottom-5">
-        <label><b>' . $nome . '</b></label><br>
-         <label class="radio-inline">
-            <input type="radio" id="sim" name="banco" value="sim"> Sim
-        </label>
-        <label class="radio-inline">
-            <input type="radio" id="nao" name="banco" value="nao"> Não
-        </label>
-    </div>
-    ';
+	<div class="col-sm-' . $tamanho . ' margin-bottom-5">
+		<label><b>' . $nome . '</b></label><br>
+		<label class="radio-inline">
+			<input type="radio" id="sim" name="banco" value="sim"> Sim
+		</label>
+		<label class="radio-inline">
+			<input type="radio" id="nao" name="banco" value="nao"> Não
+		</label>
+	</div>
 
-	return $campo.$data_input;
+	<div id="' . $variavel . '" class="col-sm-' . $tamanho . ' margin-bottom-5" style="display: none;">
+			<label><b>Quandidade de Dias:</b></label>
+			<input class="form-control input-sm" type="number" value="'.$modificadoCampo.'" id="outroCampo" name="quandDias" autocomplete="off">
+	</div>
+	';
+
+	return $campo . $data_input;
 }
-
 function checkbox($nome, $variavel, $tamanho) {
 	$data_input = '<script>
     
