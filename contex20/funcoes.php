@@ -281,7 +281,7 @@ function atualizar($tabela,$campos,$valores,$id){
 
 
 
-	query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id='$id' ") or die(mysql_error());
+	query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id='$id'") or die(mysql_error());
 	set_status("Registro atualizado com sucesso!");
 
 }
@@ -486,6 +486,31 @@ function campo_jornada($nome,$variavel,$modificador,$tamanho){
 
 	return $campo;
 
+}
+
+function checkbox_banco($nome, $variavel, $tamanho) {
+	$data_input = '<script>
+    
+    const radioSim = document.getElementById("sim");
+    const radioNao = document.getElementById("nao");
+    if ('.$variavel.') {
+		radioSim.checked 
+    }
+	</script>';
+	//  Utiliza regime de banco de horas?
+	$campo = '
+    <div class="col-sm-' . $tamanho . ' margin-bottom-5">
+        <label><b>' . $nome . '</b></label><br>
+         <label class="radio-inline">
+            <input type="radio" id="sim" name="banco" value="sim"> Sim
+        </label>
+        <label class="radio-inline">
+            <input type="radio" id="nao" name="banco" value="nao"> Não
+        </label>
+    </div>
+    ';
+
+	return $campo.$data_input;
 }
 
 function checkbox($nome, $variavel, $tamanho) {

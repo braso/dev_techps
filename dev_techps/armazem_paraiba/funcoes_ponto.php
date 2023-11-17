@@ -188,6 +188,8 @@ function layout_ajuste(){
 		LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
 		WHERE ponto.pont_tx_status != 'inativo' 
 		$extra";
+		
+	var_dump($sql);
 
 	
 	$cab = ['CÓD','DATA','HORA','TIPO','MOTIVO', 'LEGENDA','JUSTIFICATIVA','USUÁRIO','DATA CADASTRO',''];
@@ -324,26 +326,36 @@ function verificaTolerancia($saldoDiario, $data, $motorista) {
 
 	$toleranciaArray = carrega_array($sqlTolerancia);
 
-	$tolerancia = (empty($toleranciaArray['para_tx_tolerancia']))? '00:00': $toleranciaArray['para_tx_tolerancia'];
+	if (empty($toleranciaArray['para_tx_tolerancia'])) {
+		$tolerancia = '00:00';
+	} else
+		$tolerancia = $toleranciaArray['para_tx_tolerancia'];
+	// 	$tolerancia = '00:10';
 
+    $datetimeSaldo = new DateTime('2000-01-01 ' . $saldoDiario);
+    $datetimeTolerancia = new DateTime('2000-01-01 ' . $tolerancia);
+    $interval = $datetimeSaldo->diff($datetimeTolerancia);
+    $horas = $interval->format('%H');
+    $minutos = $interval->format('%I');
+    $totalMinutos = $horas * 60 + $minutos;
     $toleranciaMinutos = intval(substr($tolerancia, 0, 2)) * 60 + intval(substr($tolerancia, 3, 2));
 
-	$saldoEmMinutos = intval(explode(':', $saldoDiario)[0]) * 60;
-	if($saldoDiario[0] == '-'){
-		$saldoEmMinutos -= intval(explode(':', $saldoDiario)[1]);
-	}else{
-		$saldoEmMinutos += intval(explode(':', $saldoDiario)[1]);
-	}
+    if ($saldoDiario[0] == '-') {
+        $saldoEmMinutos = intval(substr($saldoDiario, 1, 2)) * 60 + intval(substr($saldoDiario, 4, 2));
+        if ($totalMinutos <= $toleranciaMinutos || abs($saldoEmMinutos) <= $toleranciaMinutos) {
+            $cor = 'blue';
+        } else {
+            $cor = 'red';
+        }
+    } else {
+        if ($saldoDiario == '00:00') {
+            $cor = 'blue';
+        } else {
+            $cor = 'green';
+        }
+    }
 
-	
-
-	if($saldoEmMinutos < -($toleranciaMinutos)){
-		$cor = 'red';
-	}elseif($saldoEmMinutos > $toleranciaMinutos){
-		$cor = 'green';
-	}else{
-		$cor = 'blue';
-	}
+    // echo "$data: $saldoDiario - $tolerancia -> $cor <br>";
 
     if ($_SESSION['user_tx_nivel'] == 'Motorista') {
 		$retorno = '<center><span><i style="color:' . $cor . ';" class="fa fa-circle"></i></span></center>';
@@ -352,6 +364,10 @@ function verificaTolerancia($saldoDiario, $data, $motorista) {
 	}
 	return $retorno;
 }
+
+
+
+
 
 
 function calcular_maximo_direcao($inicio_jornada, $fim_jornada, $pausas) {
@@ -763,12 +779,14 @@ function diaDetalhePonto($matricula, $data) {
 		// }
 
 	}
+	
+
 
 	$jornadaOrdenado = ordena_horarios_pares($arrayInicioJornada2, $arrayFimJornada2);
 	$refeicaoOrdenada = ordena_horarios_pares($arrayInicioRefeicao, $arrayFimRefeicao);
 	$esperaOrdenada = ordena_horarios_pares($aDataHorainicioEspera, $aDataHorafimEspera, 1);
 	$descansoOrdenado = ordena_horarios_pares($aDataHorainicioDescanso, $aDataHorafimDescanso);
-
+	
 	if ($esperaOrdenada['paresParaRepouso']) {
 		for ($i = 0; $i < count($esperaOrdenada['paresParaRepouso']); $i++) {
 			$aDataHorainicioRepouso[] = $data . ' ' . $esperaOrdenada['paresParaRepouso'][$i]['inicio'];
@@ -812,7 +830,7 @@ function diaDetalhePonto($matricula, $data) {
 		$tooltip = '';
 		$iconeAbono = '';
 	}
-
+	
 
 	// INICIO CALCULO JORNADA TRABALHO (DESCONSIDEREANDO PAUSAS)
 	for ($i = 0; $i < count($arrayInicioJornada); $i++) {
@@ -1096,8 +1114,8 @@ function diaDetalhePonto($matricula, $data) {
 	if (count($aDataHorainicioRepouso) > 0 && count($aDataHorafimRepouso) > 0) {
 		$aRetorno['diffRepouso'] = $repousoOrdenado['icone'] . $repousoOrdenado['totalIntervalo'];
 	}
-
-	# Adiconar * para informa registros exluidos
+// 	var_dump($aRetorno);
+// 	print_r('<br>');
 	$infoAjustes = query("SELECT pont_tx_data,macr_tx_nome FROM ponto
 	JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
 	JOIN user ON ponto.pont_nb_user = user.user_nb_id
@@ -1117,14 +1135,13 @@ function diaDetalhePonto($matricula, $data) {
 		$quantidade_inicioR += ($data == substr($valor["pont_tx_data"], 0, 10) && $valor["macr_tx_nome"] == 'Inicio de Refeição') ? 1 : 0;
 		$quantidade_fimR += ($data == substr($valor["pont_tx_data"], 0, 10) && $valor["macr_tx_nome"] == 'Fim de Refeição') ? 1 : 0;
 	}
-
+	
 	$aRetorno['inicioJornada'] .= ($quantidade_inicioJ > 0) ? "*" : "";
     $aRetorno['fimJornada'] .= ($quantidade_fimJ > 0) ? "*" : "";
     $aRetorno['inicioRefeicao'] .= ($quantidade_inicioR > 0) ? "*" : "";
     $aRetorno['fimRefeicao'] .= ($quantidade_fimR > 0) ? "*" : "";
-
-	# Adiconar legendas
-	$infoLegendas = query("SELECT pont_tx_data, macr_tx_nome, moti_tx_legenda FROM ponto
+	
+	$infoLegendas = query("SELECT pont_tx_data,macr_tx_nome, moti_tx_legenda FROM ponto
 	JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
 	JOIN user ON ponto.pont_nb_user = user.user_nb_id
 	LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
@@ -1132,66 +1149,46 @@ function diaDetalhePonto($matricula, $data) {
 	
 	$legenda = mysqli_fetch_all($infoLegendas, MYSQLI_ASSOC);
 
+	
 	$contagens = array(
     'inicioJornada' => array('I' => 0, 'P' => 0, 'T' => 0, 'DSR' => 0),
     'fimJornada' => array('I' => 0, 'P' => 0, 'T' => 0, 'DSR' => 0),
     'inicioRefeicao' => array('I' => 0, 'P' => 0, 'T' => 0, 'DSR' => 0),
     'fimRefeicao' => array('I' => 0, 'P' => 0, 'T' => 0, 'DSR' => 0),
-	);
-
-	foreach ($legenda as $value) {
-		$tipo = $value['moti_tx_legenda'];
-		$acao = '';
-
-		switch ($value['macr_tx_nome']) {
-			case 'Inicio de Jornada':
-				$acao = 'inicioJornada';
-				break;
-			case 'Fim de Jornada':
-				$acao = 'fimJornada';
-				break;
-			case 'Inicio de Refeição':
-				$acao = 'inicioRefeicao';
-				break;
-			case 'Fim de Refeição':
-				$acao = 'fimRefeicao';
-				break;
-		}
-
-		if (!empty($tipo) && array_key_exists($tipo, $contagens[$acao])) {
-			$contagens[$acao][$tipo]++;
-		}
-	}
-
-	foreach ($contagens as $acao => $tipos) {
-		foreach ($tipos as $tipo => $quantidade) {
-			$aRetorno[$acao] .= ($quantidade > 0) ? " $tipo" : "";
-		}
-	}
-
-
+    );
+    
+    foreach ($legenda as $value) {
+        $tipo = $value['moti_tx_legenda'];
+        $acao = '';
+    
+        switch ($value['macr_tx_nome']) {
+            case 'Inicio de Jornada':
+                $acao = 'inicioJornada';
+                break;
+            case 'Fim de Jornada':
+                $acao = 'fimJornada';
+                break;
+            case 'Inicio de Refeição':
+                $acao = 'inicioRefeicao';
+                break;
+            case 'Fim de Refeição':
+                $acao = 'fimRefeicao';
+                break;
+        }
+    
+        if (!empty($tipo) && array_key_exists($tipo, $contagens[$acao])) {
+            $contagens[$acao][$tipo]++;
+        }
+    }
+    
+    foreach ($contagens as $acao => $tipos) {
+        foreach ($tipos as $tipo => $quantidade) {
+            $aRetorno[$acao] .= ($quantidade > 0) ? " <strong>$tipo</strong>" : "";
+        }
+    }
 
 
-	$toleranciaStr = carrega_array(query('SELECT parametro.para_tx_tolerancia FROM entidade JOIN parametro ON enti_nb_parametro = para_nb_id WHERE enti_nb_parametro ='.$aMotorista['enti_nb_parametro'].';'))[0];
-	$toleranciaStr = explode(':', $toleranciaStr);
 
-	$tolerancia = intval($toleranciaStr[0])*60;
-	$tolerancia = $tolerancia + ($toleranciaStr[0] == '-'? -1: 1)*intval($toleranciaStr[1]);
-	
-	$saldoStr = explode(':', $aRetorno['diffSaldo']);
-	$saldo = intval($saldoStr[0])*60;
-
-	$saldo = $saldo + ($saldoStr[0] == '-'? -1: 1)*intval($saldoStr[1]);
-	
-	if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
-		$aRetorno['diffSaldo'] = '00:00';
-	}
-
-	$saldo = (intval(explode(':', $aRetorno['diffSaldo'])[0])*60)+
-		(($aRetorno['diffSaldo'][0] == '-')?-1:1)*(intval(explode(':', $aRetorno['diffSaldo'])[1]));
-	if($saldo > 0){
-		$aRetorno['diffSaldo'] = "<b>".$aRetorno['diffSaldo']."</b>";
-	}
 
 	// TOTALIZADOR 
 	$totalResumo['diffRefeicao'] = somarHorarios(array($totalResumo['diffRefeicao'], strip_tags(str_replace("&nbsp;", "", $aRetorno['diffRefeicao']))));
@@ -1250,7 +1247,7 @@ function diaDetalheEndosso($matricula, $data, $status = ''){
 	setlocale(LC_ALL, 'pt_BR.utf8');
 	
 	$aRetorno['data'] = data($data);
-	$aRetorno['diaSemana'] = strtoupper(mb_strtolower(strftime('%a', strtotime($data))));
+	$aRetorno['diaSemana'] = strftime('%a', strtotime($data));
 	$campos = ['inicioJornada', 'inicioRefeicao', 'fimRefeicao', 'fimJornada', 'diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada', 'jornadaPrevista', 'diffJornadaEfetiva', 'maximoDirecaoContinua', 'intersticio', 'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'diffSaldo', 'temPendencias'];
 	foreach($campos as $campo){
 		$aRetorno[$campo] = '';
@@ -1426,7 +1423,6 @@ function diaDetalheEndosso($matricula, $data, $status = ''){
 		WHERE abon_tx_status != 'inativo' AND abon_nb_userCadastro = user_nb_id 
 		AND abon_tx_matricula = '$matricula' AND abon_tx_data = '$data' AND abon_nb_motivo = moti_nb_id
 		ORDER BY abon_nb_id DESC LIMIT 1");
-	
 	$aAbono = carrega_array($sqlAbono);
 	if($aAbono[0] > 0){
 		$tooltip = "Jornada Original: ".str_pad($cargaHoraria, 2, '0', STR_PAD_LEFT).":00:00"."\n".
@@ -1739,17 +1735,6 @@ function diaDetalheEndosso($matricula, $data, $status = ''){
 	$totalResumo['maximoDirecaoContinua'] = '';
 	
 	$aRetorno['jornadaPrevista'] = subtrairHorarios($aRetorno['inicioJornada'] ,$aRetorno['jornadaPrevista'], $aRetorno['diffJornadaEfetiva'], date('%w',strtotime($data)));
-
-	$legendas = [
-		null => '',
-		'' => '',
-		'I' => 'Incluída Manualmente',
-		'P' => 'Pré-Assinalada',
-		'T' => 'Outras fontes de marcação',
-		'DSR' => 'Descanso Semanal Remunerado e Abono'
-	];
-
-	$aRetorno['moti_tx_motivo'] = $legendas[$aAbono['moti_tx_legenda']];
 
 	
 	return $aRetorno;

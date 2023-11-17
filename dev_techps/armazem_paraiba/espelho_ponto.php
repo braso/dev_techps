@@ -147,7 +147,7 @@
 					  <tbody>
 						<tr>
 						  <td>--:--</td>
-						  <td>'.$totalResumo['diffSaldo'].'</td>
+						  <td>--:--</td>
 						  <td>--:--</td>
 						</tr>
 					  </tbody>

@@ -223,10 +223,8 @@ License: You must have a valid license purchased only from themeforest(the above
 				<input type="submit" class="btn green uppercase" name="botao" value="Entrar"></input>
 
 				<a href="<?=$server_base_link."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
-				<br>
-				<a href="Temos_de_uso.html" id="forget-password" class="forget-password">Termo de uso</a>
+
 			</div>
-			
 
 			<p style="font-size: small;">Versão:
 				<?php echo $version; ?>

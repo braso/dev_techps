@@ -104,17 +104,14 @@
 
 		$usuario = carregar('user', '', 'user_nb_id', $_POST['id']);
 
-		$sqlLogin = query("SELECT user_tx_login FROM user WHERE user_nb_id = '" . $_POST['id'] . "' LIMIT 1")->fetch_assoc();
-		if ($_POST['login'] != $sqlLogin['user_tx_login']) {
-			$sql = query("SELECT user_nb_id FROM user WHERE user_nb_id = '" . $_POST['id'] . "' LIMIT 1");
-			if (num_linhas($sql) > 0) {
-				set_status("ERRO: Login já cadastrado.");
-				modifica_usuario();
-				exit;
-			}
+
+		$sql = query("SELECT * FROM user WHERE user_tx_login = '".$_POST['login']."' LIMIT 1");
+		if (num_linhas($sql) > 0){
+			set_status("ERRO: Login já cadastrado.");
+			$a_mod = $_POST;
+			modifica_usuario();
+			exit;
 		}
-
-
 		if(!$_POST['id']){//Criando novo usuário
 
 			$bd_campos[] = 'user_tx_status';
@@ -163,7 +160,7 @@
 		global $a_mod;
 		cabecalho("Cadastro de Usuário");
 
-		if($_GET['id'] && $a_mod['user_tx_nivel'] != 'Motorista' ||  (is_int(strpos($_SESSION['user_tx_nivel'], "Administrador"))) && $a_mod['user_tx_nivel'] != 'Motorista'){
+		if($_GET['id'] || (is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) && $a_mod['user_tx_nivel'] != 'Motorista')){
 			//(Se está editando e o usuário é o que já está logado) ou (usuário logado administrador e usuário a editar não é motorista).
 
 			$campo_nome = campo('Nome*', 'nome', $a_mod['user_tx_nome'], 4, '');
@@ -200,7 +197,6 @@
 
 			$campo_nome = texto('Nome*', $a_mod['user_tx_nome'], 3, "style='margin-bottom:-10px'; for='nome'");
 			$campo_login = texto('Login*', $a_mod['user_tx_login'], 3, "style='margin-bottom:-10px;'");
-			$campo_nivel = texto('Nível*', $a_mod['user_tx_nivel'], 2, "style='margin-bottom:-10px;'");
 			$data_nascimento = ($a_mod['user_tx_nascimento'] != '0000-00-00') ? date("d/m/Y", strtotime($a_mod['user_tx_nascimento'])) : '00/00/0000' ;
 			$campo_nascimento = texto('Dt. Nascimento*', $data_nascimento, 2, "style='margin-bottom:-10px;'");
 			$campo_cpf = texto('CPF', $a_mod['user_tx_cpf'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
@@ -250,16 +246,14 @@
 		$c[] = $campo_empresa;
 		$c[] = $campo_expiracao;
 
-		if($_GET['id'] && is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) || is_int(strpos($_SESSION['user_tx_nivel'], "Administrador"))){
-			$b[] = botao('Gravar', 'cadastra_usuario', 'id', $_POST['id']);
-			$b[] = botao('Voltar', 'index');
-		} 
-		
+		$b[] = botao('Gravar', 'cadastra_usuario', 'id', $_POST['id']);
+		$b[] = botao('Voltar', 'index');
+
 		abre_form('Dados do Usuário');
 		linha_form($c);
 		
 
-		if ($a_mod['user_nb_userCadastro'] > 0 || $a_mod['user_nb_userAtualiza'] > 0) {
+		if ($a_mod['user_nb_userCadastro'] > 0) {
 			$a_userCadastro = carregar('user', $a_mod['user_nb_userCadastro']);
 			$txtCadastro = "Registro inserido por $a_userCadastro[user_tx_login] às " . data($a_mod['user_tx_dataCadastro'], 1) . ".";
 			$cAtualiza[] = texto("Data de Cadastro", "$txtCadastro", 5);

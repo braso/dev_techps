@@ -103,7 +103,7 @@
 		}
 
 		$usuario = carregar('user', '', 'user_nb_id', $_POST['id']);
-
+		
 		$sqlLogin = query("SELECT user_tx_login FROM user WHERE user_nb_id = '" . $_POST['id'] . "' LIMIT 1")->fetch_assoc();
 		if ($_POST['login'] != $sqlLogin['user_tx_login']) {
 			$sql = query("SELECT user_nb_id FROM user WHERE user_nb_id = '" . $_POST['id'] . "' LIMIT 1");
@@ -113,8 +113,7 @@
 				exit;
 			}
 		}
-
-
+		
 		if(!$_POST['id']){//Criando novo usuário
 
 			$bd_campos[] = 'user_tx_status';
@@ -335,7 +334,7 @@
 		}
 
 		$c = [
-			campo('Código', 'busca_codigo', $_POST['busca_codigo'], 1),
+			campo('Código', 'busca_codigo', $_POST['busca_codigo'], 1,'','maxlength="6"'),
 			campo('Nome', 'busca_nome', $_POST['busca_nome'], 3),
 			campo('CPF', 'busca_cpf', $_POST['busca_cpf'], 2, 'MASCARA_CPF'),
 			campo('Login', 'busca_login', $_POST['busca_login'], 3),

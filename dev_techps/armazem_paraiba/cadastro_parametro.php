@@ -19,17 +19,17 @@ function modifica_parametro(){
 }
 
 function cadastra_parametro(){
-	$quandDias = ($_POST['quandDias'] == '') ? 0 : $_POST['quandDias'];
+	// $quandDias = ($_POST['quandDias'] == '') ? 0 : $_POST['quandDias'];
 	
 	$campos=[
 		'para_tx_nome', 'para_tx_jornadaSemanal', 'para_tx_jornadaSabado', 'para_tx_percentualHE', 'para_tx_percentualSabadoHE', 'para_tx_HorasEXExcedente', 
 		'para_tx_tolerancia', 'para_tx_acordo', 'para_tx_inicioAcordo', 'para_tx_fimAcordo', 'para_nb_userCadastro', 'para_tx_dataCadastro', 'para_tx_diariasCafe', 
-		'para_tx_diariasAlmoco', 'para_tx_diariasJanta', 'para_tx_status', 'para_tx_banco', 'para_tx_setData', 'para_nb_qDias', 'para_tx_paramObs'
+		'para_tx_diariasAlmoco', 'para_tx_diariasJanta', 'para_tx_status', 'para_tx_banco', 'para_tx_paramObs'
 	];
 	$valores=[
 		$_POST['nome'], $_POST['jornadaSemanal'], $_POST['jornadaSabado'], $_POST['percentualHE'], $_POST['percentualSabadoHE'], $_POST['HorasEXExcedente'], 
 		$_POST['tolerancia'],$_POST['acordo'], $_POST['inicioAcordo'], $_POST['fimAcordo'], $_SESSION['user_nb_id'],date("Y-m-d"),
-		$_POST['diariasCafe'], $_POST['diariasAlmoco'], $_POST['diariasJanta'], 'ativo', $_POST['regime_banco'], $_POST['setCampo'], $quandDias, $_POST['paramObs']
+		$_POST['diariasCafe'], $_POST['diariasAlmoco'], $_POST['diariasJanta'], 'ativo', $_POST['banco'], $_POST['paramObs'],
 	];
 
 	if($_POST['id']>0){
@@ -82,7 +82,7 @@ function layout_parametro(){
 		// $c[] = campo('Jornada Sábado (Horas)','jornadaSabado',$a_mod[para_tx_jornadaSabado],3,'MASCARA_NUMERO');
 		campo_hora('Jornada Semanal (Horas/Dia)', 'jornadaSemanal', $a_mod['para_tx_jornadaSemanal'], 3),
 		campo_hora('Jornada Sábado (Horas/Dia)', 'jornadaSabado', $a_mod['para_tx_jornadaSabado'], 3),
-		campo('Tolerância de jornada Saldo diário (Minutos)', 'tolerancia', $a_mod['para_tx_tolerancia'], 3,'MASCARA_NUMERO', 'maxlength="3"'),
+		campo('Tolerância de jornada Saldo diário (Minutos)', 'tolerancia', $a_mod['para_tx_tolerancia'], 3),
 		campo('Percentual da Hora Extra(%)', 'percentualHE', $a_mod['para_tx_percentualHE'], 3, 'MASCARA_NUMERO'),
 		campo('Percentual da Hora Extra 100% (domingos e feriados)', 'percentualSabadoHE', $a_mod['para_tx_percentualSabadoHE'], 3, 'MASCARA_NUMERO'),
 		campo_hora('Quando Exceder o limite de Horas Extras %, o excedente será Hora Extra 100% (Horas/Minutos)', 'HorasEXExcedente', $a_mod['para_tx_HorasEXExcedente'], 3),
@@ -92,7 +92,7 @@ function layout_parametro(){
 		combo('Acordo Sindical', 'acordo', $a_mod['para_tx_acordo'], 3, ['Sim', 'Não']),
 		campo_data('Início do Acordo', 'inicioAcordo', $a_mod['para_tx_inicioAcordo'], 3),
 		campo_data('Fim do Acordo', 'fimAcordo', $a_mod['para_tx_fimAcordo'], 3),
-// 		checkbox('Utiliza regime de banco de horas?', 'setCampo', $a_mod['para_tx_banco'], $a_mod['para_tx_setData'], $a_mod['para_nb_qDias'], 3),
+		checkbox_banco('Utiliza regime de banco de horas?',$a_mod['para_tx_banco'], 3),
 		ckeditor('Descrição:', 'paramObs', $a_mod['para_tx_paramObs'], 12,'maxlength="100"')
 	];
 	
@@ -136,7 +136,7 @@ function index(){
 		campo('Código', 'busca_codigo', $_POST['busca_codigo'], 2, 'MASCARA_NUMERO'),
 		campo('Nome', 'busca_nome', $_POST['busca_nome'], 4),
 		combo('Acordo', 'busca_acordo', $_POST['busca_acordo'], 2, array('Todos', 'Sim', 'Não')),
-		// combo('Banco de Horas', 'busca_banco', $_POST['busca_banco'], 2, array('Todos', 'Sim', 'Não')),
+		combo('Banco de Horas', 'busca_banco', $_POST['busca_banco'], 2, array('Todos', 'Sim', 'Não')),
 		combo('Vencidos', 'busca_vencidos', $_POST['busca_vencidos'], 2, array('Todos', 'Sim', 'Não'))
 	];
 
