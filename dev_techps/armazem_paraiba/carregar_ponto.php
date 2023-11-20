@@ -21,7 +21,7 @@ function carrega_ponto(){
 
 		foreach (file($local_file) as $line) {
 			$line = trim($line);
-			$loginMotorista = substr($line, 0, 10)+0;
+			$loginMotorista = sprintf('%04d', substr($line, 0, 10));
 			$data = substr($line, 10, 8);
 			$data = substr($data, 4, 4)."-".substr($data, 2, 2)."-".substr($data, 0, 2);
 			$hora = substr($line, 18, 4);
@@ -122,7 +122,7 @@ function layout_ftp(){
 
 			foreach (file($local_file) as $line) {
 				$line = trim($line);
-				$loginMotorista = substr($line, 0, 10) + 0;
+				$loginMotorista = sprintf('%04d', substr($line, 0, 10));
 
 				$data = substr($line, 10, 8);
 				$data = substr($data, 4, 4) . "-" . substr($data, 2, 2) . "-" . substr($data, 0, 2);
@@ -173,7 +173,8 @@ function index(){
 
 		$_SESSION['user_nb_id'] = 1;
 		$_SESSION['user_tx_nivel'] = 'Administrador';
-		$_SESSION['user_tx_login'] = 'Adm';
+		$_SESSION['user_tx_login'] = 'adm';
+		// $_SESSION['user_tx_login'] = 'Techps.admin';
 		layout_ftp();
 		exit;
 	}

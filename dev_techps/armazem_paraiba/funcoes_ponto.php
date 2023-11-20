@@ -333,7 +333,7 @@ function verificaTolerancia($saldoDiario, $data, $motorista) {
 	// 	$tolerancia = '00:10';
 
     $datetimeSaldo = new DateTime('2000-01-01 ' . $saldoDiario);
-    $datetimeTolerancia = new DateTime('2000-01-01 ' . $tolerancia);
+    $datetimeTolerancia = new DateTime('2000-01-01 00:'.$tolerancia);
     $interval = $datetimeSaldo->diff($datetimeTolerancia);
     $horas = $interval->format('%H');
     $minutos = $interval->format('%I');
