@@ -105,12 +105,14 @@
 		$usuario = carregar('user', '', 'user_nb_id', $_POST['id']);
 
 
-		$sql = query("SELECT * FROM user WHERE user_tx_login = '".$_POST['login']."' LIMIT 1");
-		if (num_linhas($sql) > 0){
-			set_status("ERRO: Login já cadastrado.");
-			$a_mod = $_POST;
-			modifica_usuario();
-			exit;
+		if($_POST['login']){
+			$sql = query("SELECT * FROM user WHERE user_tx_login = '".$_POST['login']."' LIMIT 1");
+			if (num_linhas($sql) > 0){
+				set_status("ERRO: Login já cadastrado.");
+				$a_mod = $_POST;
+				modifica_usuario();
+				exit;
+			}
 		}
 		if(!$_POST['id']){//Criando novo usuário
 
@@ -160,10 +162,10 @@
 		global $a_mod;
 		cabecalho("Cadastro de Usuário");
 
-		if($_GET['id'] || (is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) && $a_mod['user_tx_nivel'] != 'Motorista')){
+		if($_GET['id'] && $a_mod['user_tx_nivel'] != 'Motorista' ||  (is_int(strpos($_SESSION['user_tx_nivel'], "Administrador"))) && $a_mod['user_tx_nivel'] != 'Motorista'){
 			//(Se está editando e o usuário é o que já está logado) ou (usuário logado administrador e usuário a editar não é motorista).
 
-			$campo_nome = campo('Nome*', 'nome', $a_mod['user_tx_nome'], 4, '');
+			$campo_nome = campo('Nome*', 'nome', $a_mod['user_tx_nome'], 4, '','maxlength="65"');
 			if(!$_GET['id']){
 				//Criando
 				
@@ -181,10 +183,10 @@
 				//Editando
 				$campo_nivel = texto('Nível*', $a_mod['user_tx_nivel'], 2, "style='margin-bottom:-10px;'");
 			}
-			$campo_login = campo('Login*', 'login', $a_mod['user_tx_login'], 2);
+			$campo_login = campo('Login*', 'login', $a_mod['user_tx_login'], 2,'','maxlength="30"');
 			$campo_nascimento = campo_data('Dt. Nascimento*', 'nascimento', $a_mod['user_tx_nascimento'], 2);
 			$campo_cpf = campo('CPF', 'cpf', $a_mod['user_tx_cpf'], 2, 'MASCARA_CPF');
-			$campo_rg = campo('RG', 'rg', $a_mod['user_tx_rg'], 2);
+			$campo_rg = campo('RG', 'rg', $a_mod['user_tx_rg'], 2,'','maxlength="15"');
 			$campo_cidade = combo_net('Cidade/UF', 'cidade', $a_mod['user_nb_cidade'], 3, 'cidade', '', '', 'cida_tx_uf');
 			$campo_email = campo('E-mail*', 'email', $a_mod['user_tx_email'], 3);
 			$campo_telefone = campo('Telefone', 'telefone', $a_mod['user_tx_fone'], 3,'MASCARA_FONE');
@@ -197,6 +199,7 @@
 
 			$campo_nome = texto('Nome*', $a_mod['user_tx_nome'], 3, "style='margin-bottom:-10px'; for='nome'");
 			$campo_login = texto('Login*', $a_mod['user_tx_login'], 3, "style='margin-bottom:-10px;'");
+			$campo_nivel = texto('Nível*', $a_mod['user_tx_nivel'], 2, "style='margin-bottom:-10px;'");
 			$data_nascimento = ($a_mod['user_tx_nascimento'] != '0000-00-00') ? date("d/m/Y", strtotime($a_mod['user_tx_nascimento'])) : '00/00/0000' ;
 			$campo_nascimento = texto('Dt. Nascimento*', $data_nascimento, 2, "style='margin-bottom:-10px;'");
 			$campo_cpf = texto('CPF', $a_mod['user_tx_cpf'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
@@ -230,30 +233,36 @@
 
 		}
 
-		$c[] = $campo_nome;
-		$c[] = $campo_nivel;
-		$c[] = $campo_login;
-		$c[] = $campo_senha;
-		$c[] = $campo_confirma;
-		$c[] = $campo_matricula;
-		$c[] = $campo_nascimento;
+		$c = [
+			$campo_nome,
+			$campo_nivel,
+			$campo_login,
+			$campo_senha,
+			$campo_confirma,
+			$campo_matricula,
+			$campo_nascimento,
 
-		$c[] = $campo_cpf;
-		$c[] = $campo_rg;
-		$c[] = $campo_cidade;
-		$c[] = $campo_email;
-		$c[] = $campo_telefone;
-		$c[] = $campo_empresa;
-		$c[] = $campo_expiracao;
+			$campo_cpf,
+			$campo_rg,
+			$campo_cidade,
+			$campo_email,
+			$campo_telefone,
+			$campo_empresa,
+			$campo_expiracao
+		];
 
-		$b[] = botao('Gravar', 'cadastra_usuario', 'id', $_POST['id']);
-		$b[] = botao('Voltar', 'index');
+		if($_GET['id'] && is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) || is_int(strpos($_SESSION['user_tx_nivel'], "Administrador"))){
+			$b = [
+				botao('Gravar', 'cadastra_usuario', 'id', $_POST['id']),
+				botao('Voltar', 'index')
+			];
+		}
 
 		abre_form('Dados do Usuário');
 		linha_form($c);
 		
 
-		if ($a_mod['user_nb_userCadastro'] > 0) {
+		if ($a_mod['user_nb_userCadastro'] > 0 || $a_mod['user_nb_userAtualiza'] > 0) {
 			$a_userCadastro = carregar('user', $a_mod['user_nb_userCadastro']);
 			$txtCadastro = "Registro inserido por $a_userCadastro[user_tx_login] às " . data($a_mod['user_tx_dataCadastro'], 1) . ".";
 			$cAtualiza[] = texto("Data de Cadastro", "$txtCadastro", 5);
@@ -329,10 +338,10 @@
 		}
 
 		$c = [
-			campo('Código', 'busca_codigo', $_POST['busca_codigo'], 1),
-			campo('Nome', 'busca_nome', $_POST['busca_nome'], 3),
+			campo('Código', 'busca_codigo', $_POST['busca_codigo'], 1,'','maxlength="6"'),
+			campo('Nome', 'busca_nome', $_POST['busca_nome'], 3,'','maxlength="65"'),
 			campo('CPF', 'busca_cpf', $_POST['busca_cpf'], 2, 'MASCARA_CPF'),
-			campo('Login', 'busca_login', $_POST['busca_login'], 3),
+			campo('Login', 'busca_login', $_POST['busca_login'], 3,'','maxlength="30"'),
 			combo('Nível', 'busca_nivel', $_POST['busca_nivel'], 2, $niveis),
 			combo('Status', 'busca_status', $_POST['busca_status'], 2, ['Todos', 'Ativo', 'Inativo']),
 			combo_bd('!Empresa', 'busca_empresa', $_POST['busca_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)"', $extraEmpresa)
