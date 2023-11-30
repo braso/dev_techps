@@ -300,7 +300,7 @@ function carrega_parametro() {
 function carrega_padrao() {
 	$aEmpresa = carregar('empresa', (int)$_GET['idEmpresa']);
 	$aParam = carregar('parametro', (int)$aEmpresa['empr_nb_parametro']);
-?>
+	?>
 	<script type="text/javascript">
 		parent.document.contex_form.parametro.value = '<?= $aParam['para_nb_id'] ?>';
 		parent.document.contex_form.jornadaSemanal.value = '<?= $aParam['para_tx_jornadaSemanal'] ?>';
@@ -358,7 +358,7 @@ function carrega_endereco() {
 		selecionado.append('<option value=<?= $arr['ibge'] ?>><?= "[$arr[uf]] " . $arr['localidade'] ?></option>');
 		selecionado.val("<?= $arr['ibge'] ?>").trigger("change");
 	</script>
-<?
+	<?
 
 	exit;
 }
@@ -392,9 +392,9 @@ function layout_motorista() {
 	cabecalho("Cadastro de Motorista");
 
 	
-// 	if(isset($a_mod['enti_nb_id'])){
-// 		$a_mod = array_merge($a_mod, carrega_array(query("SELECT * FROM user WHERE user_nb_entidade = ".$a_mod['enti_nb_id']." LIMIT 1;")));
-// 	}
+	// if(isset($a_mod['enti_nb_id'])){
+	// 	$a_mod = array_merge($a_mod, carrega_array(query("SELECT * FROM user WHERE user_nb_entidade = ".$a_mod['enti_nb_id']." LIMIT 1;")));
+	// }
 
 	$data1 = new DateTime($a_mod['enti_tx_nascimento']);
 	$data2 = new DateTime(date("Y-m-d"));
@@ -541,7 +541,7 @@ function layout_motorista() {
 	}
 
 	$path_parts = pathinfo(__FILE__);
-?>
+	?>
 	<iframe id=frame_parametro style="display: none;"></iframe>
 	<script>
 		function carrega_cep(cep) {
@@ -647,7 +647,7 @@ function layout_motorista() {
 	</script>
 
 
-<?
+	<?
 
 }
 
