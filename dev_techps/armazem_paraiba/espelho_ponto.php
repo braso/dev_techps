@@ -29,6 +29,7 @@
 		if ($_POST['busca_data2'] == '') {
 			$_POST['busca_data2'] = date("Y-m-d");
 		}
+		
 	
 		//CAMPOS DE CONSULTA
 		$c = [
@@ -69,8 +70,10 @@
 			for ($date = $startDate; $date <= $endDate; $date->modify('+1 day')) {
 				$dataVez = $date->format('Y-m-d');
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
+				// var_dump($aDetalhado);
 				
 				$row = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDadosMotorista, $aDetalhado));
+				var_dump($row);
 				$exibir = True;
 				for($f = 0; $f < sizeof($row); $f++){
 					if(strpos($row[$f], 'fa-warning') !== false && $_POST['busca_inconsistencia'] == 'Sim'){
@@ -108,17 +111,18 @@
 						// }
 						break;
 					}
-					if($row[$f] == "00:00"){
-						$row[$f] = "";
-					}
+				// 	if($row[$f] == "00:00"){
+				// 		$row[$f] = "";
+				// 	}
 				}
 				if($exibir){
 					$aDia[] = $row;
 				}
 			}
 
-			var_dump($totalResumo);
-			print('<br>');
+// 			var_dump($totalResumo);
+// 			print('<br>');
+
 	
 			if ($aEmpresa['empr_nb_parametro'] > 0) {
 				$aParametro = carregar('parametro', $aEmpresa['empr_nb_parametro']);
@@ -147,7 +151,7 @@
 					  <tbody>
 						<tr>
 						  <td>--:--</td>
-						  <td>--:--</td>
+						  <td>'.$totalResumo['diffSaldo'].'</td>
 						  <td>--:--</td>
 						</tr>
 					  </tbody>
@@ -177,30 +181,6 @@
 		
 		
 			$aDia[] = array_values(array_merge(array('', '', '', '', '', '', '', '<b>TOTAL</b>'), $totalResumo));
-			
-			$toleranciaStr = carrega_array(query('SELECT parametro.para_tx_tolerancia FROM entidade JOIN parametro ON enti_nb_parametro = para_nb_id WHERE enti_nb_parametro ='.$aMotorista['enti_nb_parametro'].';'))[0];
-			$toleranciaStr = explode(':', $toleranciaStr);
-
-			$tolerancia = intval($toleranciaStr[0])*60;
-
-			if($toleranciaStr[0] == '-'){
-				$tolerancia -= intval($toleranciaStr[1]);
-			}else{
-				$tolerancia += intval($toleranciaStr[1]);
-			}
-			
-			for($f = 0; $f < count($aDia); $f++){
-				$saldoStr = explode(':', $aDia[$f][count($aDia[$f])-1]);
-				$saldo = intval($saldoStr[0])*60;
-				if($saldoStr[0] == '-'){
-					$saldo -= intval($saldoStr[1]);
-				}else{
-					$saldo += intval($saldoStr[1]);
-				}
-				if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
-					$aDia[$f][count($aDia[$f])-1] = '00:00';
-				}
-			}
 			
 	
 			grid2($cab, $aDia, "Jornada Semanal (Horas): $aMotorista[enti_tx_jornadaSemanal]");
