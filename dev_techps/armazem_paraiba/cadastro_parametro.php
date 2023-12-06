@@ -19,6 +19,15 @@ function modifica_parametro(){
 }
 
 function cadastra_parametro(){
+	$camposObrigatorios = ['aInserir'];
+	foreach($camposObrigatorios as $campo){
+		if(!isset($_POST[$campo]) || empty($_POST[$campo])){
+			echo '<script>alert("Preencha todos os campos obrigatórios.")</script>';
+			layout_parametro();
+			exit;
+		}
+	}
+
 	$quandDias = ($_POST['quandDias'] == '') ? 0 : $_POST['quandDias'];
 	
 	$campos=[
@@ -74,12 +83,35 @@ function cadastra_parametro(){
 function layout_parametro(){
 	global $a_mod;
 
+	if(isset($_POST['nome'])){
+		$campos = [
+			'nome',
+			'jornadaSemanal',
+			'jornadaSabado',
+			'tolerancia',
+			'percentualHE',
+			'percentualSabadoHE',
+			'HorasEXExcedente',
+			'diariasCafe',
+			'diariasAlmoco',
+			'diariasJanta',
+			'acordo',
+			'inicioAcordo',
+			'fimAcordo',
+			'banco',
+			'paramObs'
+		];
+		foreach($campos as $campo){
+			$a_mod['para_tx_'.$campo] = $_POST[$campo];
+
+		}
+		unset($campos);
+	}
+
 	cabecalho("Cadastro de Parâmetros");
 
 	$c = [
 		campo('Nome', 'nome', $a_mod['para_tx_nome'], 6),
-		// $c[] = campo('Jornada Semanal (Horas)','jornadaSemanal',$a_mod[para_tx_jornadaSemanal],3,'MASCARA_NUMERO');
-		// $c[] = campo('Jornada Sábado (Horas)','jornadaSabado',$a_mod[para_tx_jornadaSabado],3,'MASCARA_NUMERO');
 		campo_hora('Jornada Semanal (Horas/Dia)', 'jornadaSemanal', $a_mod['para_tx_jornadaSemanal'], 3),
 		campo_hora('Jornada Sábado (Horas/Dia)', 'jornadaSabado', $a_mod['para_tx_jornadaSabado'], 3),
 		campo_hora('Tolerância de jornada Saldo diário (Minutos)', 'tolerancia', $a_mod['para_tx_tolerancia'], 3),
@@ -100,7 +132,7 @@ function layout_parametro(){
 	$botao[] = botao('Gravar','cadastra_parametro','id',$_POST['id']);
 	$botao[] = botao('Voltar','index');
 	
-	abre_form('Dados da de Parâmetros');
+	abre_form('Dados da Parâmetros');
 	linha_form($c);
 
 	if($a_mod['para_nb_userCadastro'] > 0){
