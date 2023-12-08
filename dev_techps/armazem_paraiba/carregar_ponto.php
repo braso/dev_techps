@@ -11,7 +11,7 @@ function carrega_ponto(){
 	$arquivo = $_FILES['arquivo'];
 	
 	if($arquivo['error'] === 0){
-		query("SELECT * FROM arquivoponto WHERE arqu_tx_nome = '$arquivo[name]' AND arqu_tx_status = 'ativo' LIMIT 1");
+		// query("SELECT * FROM arquivoponto WHERE arqu_tx_nome = '$arquivo[name]' AND arqu_tx_status = 'ativo' LIMIT 1");
 		$local_file = $path . $arquivo['name'];
 		
 		move_uploaded_file($arquivo['tmp_name'],$path.$arquivo['name']);
@@ -20,6 +20,7 @@ function carrega_ponto(){
 		$idArquivo = inserir('arquivoponto', $campos, $valores);
 
 		foreach (file($local_file) as $line) {
+			//matricula dmYhi 999 macroponto.codigoExterno
 			$line = trim($line);
 			$loginMotorista = substr($line, 0, 10)+0;
 			$data = substr($line, 10, 8);
@@ -102,9 +103,11 @@ function layout_ftp(){
 	// 	'apontamento30032023010000.txt',
 	// 	'apontamento31032023010000.txt'
 	// );
-// 	print_r($fileList);
-// 	die();
+	// 	print_r($fileList);
+	// 	die();
 	for ($i = 0; $i < count($fileList); $i++) {
+	   // 	print_r($fileList);
+	   // 	die();
 
 		$sqlCheck = "SELECT * FROM arquivoponto WHERE arqu_tx_nome = '$fileList[$i]' AND arqu_tx_status = 'ativo' LIMIT 1";
 		$queryCheck = query($sqlCheck);
