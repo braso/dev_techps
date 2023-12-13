@@ -299,7 +299,7 @@
 	
 						$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 	
-						$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));;
+						$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));
 						for($f = 0; $f < sizeof($row)-1; $f++){
 							if($row[$f] == "00:00"){
 								$row[$f] = "";
@@ -409,22 +409,22 @@
 						
 						$aDia[] = array_values(array_merge(['', '', '', '', '', '', '', '<b>TOTAL</b>'], $totalResumo));
 	
-						$toleranciaStr = explode(':', $dadosParametro['para_tx_tolerancia']);
+						// $toleranciaStr = explode(':', $dadosParametro['para_tx_tolerancia']);
 	
-						$tolerancia = intval($toleranciaStr[0])*60;
+						// $tolerancia = intval($toleranciaStr[0])*60;
 
-						$tolerancia += ($toleranciaStr[0] == '-'? -1: 1)*intval($toleranciaStr[1]);
+						// $tolerancia += ($toleranciaStr[0] == '-'? -1: 1)*intval($toleranciaStr[1]);
 						
 						
-						for($f = 0; $f < count($aDia); $f++){
-							$saldoStr = explode(':', $aDia[$f][count($aDia[$f])-1]);
-							$saldo = intval($saldoStr[0])*60;
-							$saldo += ($saldoStr[0] == '-'? -1: 1)*intval($saldoStr[1]);
+						// for($f = 0; $f < count($aDia); $f++){
+						// 	$saldoStr = explode(':', $aDia[$f][count($aDia[$f])-1]);
+						// 	$saldo = intval($saldoStr[0])*60;
+						// 	$saldo += ($saldoStr[0] == '-'? -1: 1)*intval($saldoStr[1]);
 
-							if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
-								$aDia[$f][count($aDia[$f])-1] = '00:00';
-							}
-						}
+						// 	if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
+						// 		$aDia[$f][count($aDia[$f])-1] = '00:00';
+						// 	}
+						// }
 	
 						grid2($cab, $aDia);
 						fecha_form();

@@ -8,6 +8,52 @@ function exclui_parametro(){
 	exit;
 
 }
+
+function enviar_documento() {
+	$idParametro = $_POST['idParametro'];
+	$arquivos =  $_FILES['file'];
+	$novo_nome = $_POST['file-name'];
+	$descricao = $_POST['description-text'];
+
+	$allowed = array('image/jpeg', 'image/png', 'application/msword', 'application/pdf');
+
+	foreach ($arquivos['name'] as $indice => $nome) {
+		$tipo_arquivo = $arquivos['type'][$indice];
+		if (in_array($tipo_arquivo, $allowed) && $nome != '') {
+			$pasta_parametro = "arquivos/parametro/$idParametro/";
+	
+			if (!is_dir($pasta_parametro)) {
+				mkdir($pasta_parametro, 0777, true);
+			}
+	
+			$arquivo_temporario = $arquivos['tmp_name'][$indice];
+			$extensao = pathinfo($nome, PATHINFO_EXTENSION); 
+			$novo_nome_com_extensao = $novo_nome . '.' . $extensao;
+            $caminho_destino = $pasta_parametro . $novo_nome_com_extensao;
+
+			print_r([$idParametro,$novo_nome_com_extensao,$descricao,$caminho_destino,date("Y-m-d H:i:s")]);
+	
+			// if (move_uploaded_file($arquivo_temporario, $caminho_destino)) {
+			// 	inserir('	documento_parametro	', ['para_nb_id','doc_tx_nome','doc_tx_descricao','doc_tx_caminho','doc_tx_dataCadastro'],[$idParametro,$novo_nome_com_extensao,$descricao,$caminho_destino,date("Y-m-d H:i:s")]);
+			// } 
+		}
+	}
+}
+
+function excluir_documento() {
+	$pasta_backaup = "arquivos/backaup/parametro/$_POST[idParametro]/";
+	if(!is_dir($pasta_backaup)){
+		mkdir($pasta_backaup, 0777, true);
+	}
+    // var_dump($pasta_backaup.$_POST['nome_arquivo']);
+
+	rename($_POST['caminho'].$_POST['nome_arquivo'], $pasta_backaup.$_POST['nome_arquivo']);
+	
+	$_POST['id'] = $_POST['idParametro'];
+	modifica_parametro();
+	exit;
+}
+
 function modifica_parametro(){
 	global $a_mod;
 
@@ -19,17 +65,27 @@ function modifica_parametro(){
 }
 
 function cadastra_parametro(){
-	// $quandDias = ($_POST['quandDias'] == '') ? 0 : $_POST['quandDias'];
+// 	$camposObrigatorios = ['aInserir'];
+// 	foreach($camposObrigatorios as $campo){
+// 		if(!isset($_POST[$campo]) || empty($_POST[$campo])){
+// 			echo '<script>alert("Preencha todos os campos obrigatórios.")</script>';
+// 			layout_parametro();
+// 			exit;
+// 		}
+// 	}
+
+
+	$quandDias = ($_POST['quandDias'] == '') ? 0 : $_POST['quandDias'];
 	
 	$campos=[
 		'para_tx_nome', 'para_tx_jornadaSemanal', 'para_tx_jornadaSabado', 'para_tx_percentualHE', 'para_tx_percentualSabadoHE', 'para_tx_HorasEXExcedente', 
 		'para_tx_tolerancia', 'para_tx_acordo', 'para_tx_inicioAcordo', 'para_tx_fimAcordo', 'para_nb_userCadastro', 'para_tx_dataCadastro', 'para_tx_diariasCafe', 
-		'para_tx_diariasAlmoco', 'para_tx_diariasJanta', 'para_tx_status', 'para_tx_banco', 'para_tx_paramObs', 'para_nb_qDias'
+		'para_tx_diariasAlmoco', 'para_tx_diariasJanta', 'para_tx_status', 'para_tx_banco', 'para_tx_setData', 'para_nb_qDias', 'para_tx_paramObs'
 	];
 	$valores=[
 		$_POST['nome'], $_POST['jornadaSemanal'], $_POST['jornadaSabado'], $_POST['percentualHE'], $_POST['percentualSabadoHE'], $_POST['HorasEXExcedente'], 
 		$_POST['tolerancia'],$_POST['acordo'], $_POST['inicioAcordo'], $_POST['fimAcordo'], $_SESSION['user_nb_id'],date("Y-m-d"),
-		$_POST['diariasCafe'], $_POST['diariasAlmoco'], $_POST['diariasJanta'], 'ativo', $_POST['banco'], $_POST['paramObs'], $_POST['quandDias']
+		$_POST['diariasCafe'], $_POST['diariasAlmoco'], $_POST['diariasJanta'], 'ativo', $_POST['banco'], $_POST['setCampo'], $quandDias, $_POST['paramObs'],
 	];
 
 	if($_POST['id']>0){
@@ -57,13 +113,14 @@ function cadastra_parametro(){
 			}
 			
 		}
+		
+		$idParametro = $_POST['id'];
 
 	} else {
 		$campos = array_merge($campos,['para_nb_userAtualiza','para_tx_dataAtualiza']);
 		$valores = array_merge($valores,[$_SESSION['user_nb_id'], date("Y-m-d H:i:s")]);
-		inserir('parametro',$campos,$valores);
+		$idParametro =  inserir('parametro',$campos,$valores);
 	}
-
 
 	index();
 	exit;
@@ -74,15 +131,38 @@ function cadastra_parametro(){
 function layout_parametro(){
 	global $a_mod;
 
+	if(isset($_POST['nome'])){
+		$campos = [
+			'nome',
+			'jornadaSemanal',
+			'jornadaSabado',
+			'tolerancia',
+			'percentualHE',
+			'percentualSabadoHE',
+			'HorasEXExcedente',
+			'diariasCafe',
+			'diariasAlmoco',
+			'diariasJanta',
+			'acordo',
+			'inicioAcordo',
+			'fimAcordo',
+			'banco',
+			'paramObs'
+		];
+		foreach($campos as $campo){
+			$a_mod['para_tx_'.$campo] = $_POST[$campo];
+
+		}
+		unset($campos);
+	}
+
 	cabecalho("Cadastro de Parâmetros");
 
 	$c = [
 		campo('Nome', 'nome', $a_mod['para_tx_nome'], 6),
-		// $c[] = campo('Jornada Semanal (Horas)','jornadaSemanal',$a_mod[para_tx_jornadaSemanal],3,'MASCARA_NUMERO');
-		// $c[] = campo('Jornada Sábado (Horas)','jornadaSabado',$a_mod[para_tx_jornadaSabado],3,'MASCARA_NUMERO');
 		campo_hora('Jornada Semanal (Horas/Dia)', 'jornadaSemanal', $a_mod['para_tx_jornadaSemanal'], 3),
 		campo_hora('Jornada Sábado (Horas/Dia)', 'jornadaSabado', $a_mod['para_tx_jornadaSabado'], 3),
-		campo('Tolerância de jornada Saldo diário (Minutos)', 'tolerancia', $a_mod['para_tx_tolerancia'], 3,'MASCARA_NUMERO'),
+		campo('Tolerância de jornada Saldo diário (Minutos)', 'tolerancia', $a_mod['para_tx_tolerancia'], 3,'MASCARA_NUMERO','maxlength="3"'),
 		campo('Percentual da Hora Extra(%)', 'percentualHE', $a_mod['para_tx_percentualHE'], 3, 'MASCARA_NUMERO'),
 		campo('Percentual da Hora Extra 100% (domingos e feriados)', 'percentualSabadoHE', $a_mod['para_tx_percentualSabadoHE'], 3, 'MASCARA_NUMERO'),
 		campo_hora('Quando Exceder o limite de Horas Extras %, o excedente será Hora Extra 100% (Horas/Minutos)', 'HorasEXExcedente', $a_mod['para_tx_HorasEXExcedente'], 3),
@@ -93,13 +173,13 @@ function layout_parametro(){
 		campo_data('Início do Acordo', 'inicioAcordo', $a_mod['para_tx_inicioAcordo'], 3),
 		campo_data('Fim do Acordo', 'fimAcordo', $a_mod['para_tx_fimAcordo'], 3),
 		checkbox_banco('Utiliza regime de banco de horas?','paramBanco',$a_mod['para_tx_banco'],$a_mod['para_nb_qDias'], 3),
-		ckeditor('Descrição:', 'paramObs', $a_mod['para_tx_paramObs'], 12,'maxlength="100"')
+		ckeditor('Descrição:', 'paramObs', $a_mod['para_tx_paramObs'], 12,'maxlength="100"'),
 	];
 	
 	$botao[] = botao('Gravar','cadastra_parametro','id',$_POST['id']);
 	$botao[] = botao('Voltar','index');
 	
-	abre_form('Dados da de Parâmetros');
+	abre_form('Dados dos Parâmetros');
 	linha_form($c);
 
 	if($a_mod['para_nb_userCadastro'] > 0){
@@ -117,8 +197,34 @@ function layout_parametro(){
 
 	
 	fecha_form($botao);
+	
+	if (!empty($a_mod['para_nb_id'])) {
+		echo "<br>";
+		fieldset('Documentos');
+		echo multiArquivos("Documentos","arquivos",$a_mod['para_nb_id'],$a_mod['para_tx_documento'],$arquivos,3);
+	}
 
 	rodape();
+	?>
+    <form name="form_excluir_arquivo" method="post" action="cadastro_parametro.php">
+		<input type="hidden" name="idParametro" value="">
+		<input type="hidden" name="caminho" value="">
+		<input type="hidden" name="nome_arquivo" value="">
+		<input type="hidden" name="acao" value="">
+	</form>
+	
+	<script type="text/javascript">
+		function remover_arquivo(id, caminho, arquivo, acao ) {
+			if (confirm('Deseja realmente excluir o arquivo ' + arquivo + '?')) {
+				document.form_excluir_arquivo.idParametro.value = id;
+				document.form_excluir_arquivo.caminho.value = caminho;
+				document.form_excluir_arquivo.nome_arquivo.value = arquivo;
+				document.form_excluir_arquivo.acao.value = acao;
+				document.form_excluir_arquivo.submit();
+			}
+		}
+	 </script>
+	<?
 }
 
 function index(){

@@ -479,54 +479,56 @@ function campo_jornada($nome,$variavel,$modificador,$tamanho){
 }
 
 function checkbox_banco($nome, $variavel, $modificadoRadio,$modificadoCampo ,$tamanho) {
-	$data_input = '<script>
-	const radioSim = document.getElementById("sim");
-	const radioNao = document.getElementById("nao");
-	const campo = document.getElementById("' . $variavel . '");
-	if("'.$modificadoRadio.'" === "sim"){
-		radioSim.checked = true;
-	}
-	else {
-		radioNao.checked = true;
-	}
-
-	if (radioSim.checked) {
-			campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
-	}
-
-	// Adicionando um ouvinte de eventos aos elementos de rádio
-	radioSim.addEventListener("change", function() {
-		if (radioSim.checked) {
-			campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
-		}
-	});
-
-	radioNao.addEventListener("change", function() {
-	if (radioNao.checked) {
-		campo.style.display = "none"; // Oculta o campo quando "Não Mostrar Campo" é selecionado
-	}
-	});
-	</script>';
+		$data_input = '<script>
+    
+    const radioSim = document.getElementById("sim");
+    const radioNao = document.getElementById("nao");
+    const campo = document.getElementById("' . $variavel . '");
+    if("'.$modificadoRadio.'" == "sim"){
+        radioSim.checked = true;
+    }
+    else{
+        radioNao.checked = true;
+    }
+    
+    if (radioSim.checked) {
+            campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
+    }
+    
+    // Adicionando um ouvinte de eventos aos elementos de rádio
+    radioSim.addEventListener("change", function() {
+        if (radioSim.checked) {
+            campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
+        }
+    });
+    
+    radioNao.addEventListener("change", function() {
+    if (radioNao.checked) {
+        campo.style.display = "none"; // Oculta o campo quando "Não Mostrar Campo" é selecionado
+    }
+    });
+    </script>';
 	//  Utiliza regime de banco de horas?
 	$campo = '
-	<div class="col-sm-' . $tamanho . ' margin-bottom-5">
-		<label><b>' . $nome . '</b></label><br>
-		<label class="radio-inline">
-			<input type="radio" id="sim" name="banco" value="sim"> Sim
-		</label>
-		<label class="radio-inline">
-			<input type="radio" id="nao" name="banco" value="nao"> Não
-		</label>
-	</div>
+    <div class="col-sm-' . $tamanho . ' margin-bottom-5">
+        <label><b>' . $nome . '</b></label><br>
+         <label class="radio-inline">
+            <input type="radio" id="sim" name="banco" value="sim"> Sim
+        </label>
+        <label class="radio-inline">
+            <input type="radio" id="nao" name="banco" value="nao"> Não
+        </label>
+    </div>
 
 	<div id="' . $variavel . '" class="col-sm-' . $tamanho . ' margin-bottom-5" style="display: none;">
-			<label><b>Quandidade de Dias:</b></label>
-			<input class="form-control input-sm" type="number" value="'.$modificadoCampo.'" id="outroCampo" name="quandDias" autocomplete="off">
-	</div>
-	';
+            <label><b>Quandidade de Dias:</b></label>
+            <input class="form-control input-sm" type="number" value="'.$modificadoCampo.'" id="outroCampo" name="quandDias" autocomplete="off">
+    </div>
+    ';
 
 	return $campo . $data_input;
 }
+
 function checkbox($nome, $variavel, $tamanho) {
 	$data_input = '<script>
     
@@ -707,6 +709,7 @@ $campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 
 }
 
+
 function texto($nome,$modificador,$tamanho='',$extra=''){
 
 
@@ -763,7 +766,6 @@ if($modificador>0){
 	if($extra_busca != '')
 		$extra_campo = ",$extra_busca";
 		
-
 	$sql=query("SELECT ".$tab."_tx_nome $extra_campo FROM $tabela WHERE  ".$tab."_nb_id = '$modificador' AND ".$tab."_tx_status = 'ativo'");
 	$a=carrega_array($sql);
 	if($extra_busca != '')
@@ -876,6 +878,122 @@ function excluirArquivo($arquivo) {
     } else {
         return 'File not found';
     }
+}
+
+function multiArquivos($nome,$variavel,$id,$caminho,$modificador,$tamanho){	
+    global $CONTEX;
+
+	// <td>$descricao</td>
+	// <td>$dataCadastro</td>
+	$arquivo_list = '';
+	if (!empty($modificador)) {
+		foreach($modificador as $arquivo){
+			$arquivo_list .= "
+			<tr role='row' class='odd'>
+			<td>$arquivo</td>
+			<td>
+                <a style='color: gray' onclick=\"javascript:remover_arquivo($id,'$caminho' ,'$arquivo','excluir_documento');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
+              </td>
+			<td>
+                <a style='color: gray' onclick=\"javascript:remover_arquivo($id,'$caminho' ,'$arquivo','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
+              </td>
+			";
+		}
+	}
+
+
+	$tabela='
+		<div class="portlet light ">
+		<div class="portlet-title">
+		<div class="caption">
+			<span class="caption-subject font-dark bold uppercase">Documentos</span>
+		</div>
+		</div>
+			<div class="portlet-body">
+				<table id="contex-grid" class="table compact table-striped table-bordered table-hover dt-responsive"
+					width="100%" id="sample_2">
+					<thead>
+						<tr role="row">
+							<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
+								aria-label="NOME: activate to sort column ascending" style="width: 40px;">NOME</th>
+							<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
+								aria-label="DESCRIÇÃO: activate to sort column ascending" style="width: 40px;">
+								DESCRIÇÃO</th>
+							<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
+								aria-label="DATA CADASTRO: activate to sort column ascending" style="width: 40px;">
+								DATA CADASTRO</th>
+							<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
+								aria-label="DOWNLOAD: activate to sort column ascending" style="width: 40px;"><i
+									class="glyphicon glyphicon-cloud-download"></i></th>
+							<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
+								aria-label="DOWNLOAD: activate to sort column ascending" style="width: 40px;"><i
+									class="glyphicon glyphicon-trash"></i></th>
+						</tr>
+					</thead>
+					<thbody>
+					'.$arquivo_list.'
+					<tr role="row" class="even">
+					<td>
+					<a href="#" data-toggle="modal" data-target="#myModal">
+					<i class="glyphicon glyphicon-plus-sign"></i>
+					</a>
+					</td>
+					</thbody>
+                    </table>
+                </div>
+            </div>
+    ';
+    
+    $modal = "
+    <div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
+        <div class='modal-dialog' role='document'>
+            <div class='modal-content'>
+                <div class='modal-header'>
+                <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>
+                <h4 class='modal-title' id='myModalLabel'>Modal title</h4>
+                </div>
+                <div class='modal-body'>
+                <form name='form_enviar_arquivo' method='post' action='cadastro_parametro.php' enctype='multipart/form-data'>
+
+                    <div class='form-group'>
+                        <label for='file-name' class='control-label'>Nome do arquivo:</label>
+                        <input type='text' class='form-control' name='file-name'>
+                    </div>
+                    <div class='form-group'>
+                        <label for='description-text' class='control-label'>Descrição:</label>
+                        <textarea class='form-control' name='description-text'></textarea>
+                    </div>
+					<div class='form-group'>
+                        <label for='file' class='control-label'>Arquivo:</label>
+                        <input type='file' class='form-control' name='file'>
+                    </div>
+                    
+                    <input type='hidden' name='acao' value='enviar_documento'>
+                    
+                    <input type='hidden' name='idParametro' value='$id'>
+
+                </form>
+                </div>
+                <div class='modal-footer'>
+                    <button type='button' class='btn btn-default' data-dismiss='modal'>Close</button>
+                    <button type='button' class='btn btn-primary' data-dismiss='modal' 
+					onclick=\"javascript:enviar_arquivo();\">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+	<script type='text/javascript'>
+	function enviar_arquivo() {
+
+				document.form_enviar_arquivo.submit();
+		}
+	</script>
+    ";
+
+		return $tabela.$modal;
+
 }
 
 function arquivo($nome,$variavel,$modificador,$tamanho,$extra='',$mascara=''){

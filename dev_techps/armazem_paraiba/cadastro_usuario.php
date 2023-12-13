@@ -70,7 +70,7 @@
 		}
 
 		$bd_campos = ['user_tx_nome', 'user_tx_login', 'user_tx_senha', 'user_tx_nascimento', 'user_tx_email', 'user_tx_fone', 'user_nb_empresa'];
-		$valores = [$_POST['nome'], $_POST['login'], $_POST['senha'], $_POST['nascimento'], $_POST['email'], $_POST['telefone'], $_POST['empresa']];
+		$valores = [$_POST['nome'], $_POST['login'], md5($_POST['senha']), $_POST['nascimento'], $_POST['email'], $_POST['telefone'], $_POST['empresa']];
 
 		$campos_variaveis = [
 			['user_tx_cpf', 'cpf'],
