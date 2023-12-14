@@ -880,23 +880,26 @@ function excluirArquivo($arquivo) {
     }
 }
 
-function multiArquivos($nome,$variavel,$id,$caminho,$modificador,$tamanho){	
+function multiArquivos($nome,$idParametro,$arquivos){	
     global $CONTEX;
 
-	// <td>$descricao</td>
-	// <td>$dataCadastro</td>
 	$arquivo_list = '';
-	if (!empty($modificador)) {
-		foreach($modificador as $arquivo){
+	if (!empty($arquivos)) {
+		foreach($arquivos as $arquivo){
+		    $dataHoraOriginal = $arquivo['doc_tx_dataCadastro'];
+		    $dataHora = new DateTime($dataHoraOriginal);
+		    $dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
 			$arquivo_list .= "
 			<tr role='row' class='odd'>
-			<td>$arquivo</td>
+			<td>$arquivo[doc_tx_nome]</td>
+			<td>$arquivo[doc_tx_descricao]</td>
+			<td>$dataHoraFormatada</td>
 			<td>
-                <a style='color: gray' onclick=\"javascript:remover_arquivo($id,'$caminho' ,'$arquivo','excluir_documento');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
-              </td>
+                <a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idParametro,'$arquivo[doc_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
+            </td>
 			<td>
-                <a style='color: gray' onclick=\"javascript:remover_arquivo($id,'$caminho' ,'$arquivo','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
-              </td>
+                <a style='color: red;' onclick=\"javascript:remover_arquivo($idParametro,'$arquivo[doc_nb_id]','$arquivo[doc_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
+             </td>
 			";
 		}
 	}
@@ -904,11 +907,11 @@ function multiArquivos($nome,$variavel,$id,$caminho,$modificador,$tamanho){
 
 	$tabela='
 		<div class="portlet light ">
-		<div class="portlet-title">
-		<div class="caption">
-			<span class="caption-subject font-dark bold uppercase">Documentos</span>
-		</div>
-		</div>
+			<div class="portlet-title">
+			<div class="caption">
+		        <span class="caption-subject font-dark bold uppercase">'.$nome.'</span>
+        	</div>
+        	</div>
 			<div class="portlet-body">
 				<table id="contex-grid" class="table compact table-striped table-bordered table-hover dt-responsive"
 					width="100%" id="sample_2">
@@ -970,7 +973,7 @@ function multiArquivos($nome,$variavel,$id,$caminho,$modificador,$tamanho){
                     
                     <input type='hidden' name='acao' value='enviar_documento'>
                     
-                    <input type='hidden' name='idParametro' value='$id'>
+                    <input type='hidden' name='idParametro' value='$idParametro'>
 
                 </form>
                 </div>
@@ -986,9 +989,9 @@ function multiArquivos($nome,$variavel,$id,$caminho,$modificador,$tamanho){
 
 	<script type='text/javascript'>
 	function enviar_arquivo() {
-
-				document.form_enviar_arquivo.submit();
-		}
+	    document.form_enviar_arquivo.submit();
+	}
+	
 	</script>
     ";
 

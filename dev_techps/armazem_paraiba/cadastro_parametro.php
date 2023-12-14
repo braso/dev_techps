@@ -9,6 +9,29 @@ function exclui_parametro(){
 
 }
 
+function downloadArquivo() {
+    // Verificar se o arquivo existe
+    if (file_exists($_POST['caminho'])) {
+        // Configurar cabeçalhos para forçar o download
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename=' . basename($_POST['caminho']));
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($_POST['caminho']));
+
+        // Lê o arquivo e o envia para o navegador
+        readfile($_POST['caminho']);
+        exit;
+    } else {
+        echo 'O arquivo não foi encontrado.';
+    }
+	$_POST['id'] = $_POST['idParametro'];
+	modifica_parametro();
+	exit;
+}
+
 function enviar_documento() {
 	$idParametro = $_POST['idParametro'];
 	$arquivos =  $_FILES['file'];
@@ -17,37 +40,33 @@ function enviar_documento() {
 
 	$allowed = array('image/jpeg', 'image/png', 'application/msword', 'application/pdf');
 
-	foreach ($arquivos['name'] as $indice => $nome) {
-		$tipo_arquivo = $arquivos['type'][$indice];
-		if (in_array($tipo_arquivo, $allowed) && $nome != '') {
+	if (in_array($arquivos['type'], $allowed) && $arquivos['name'] != '') {
 			$pasta_parametro = "arquivos/parametro/$idParametro/";
 	
 			if (!is_dir($pasta_parametro)) {
 				mkdir($pasta_parametro, 0777, true);
 			}
 	
-			$arquivo_temporario = $arquivos['tmp_name'][$indice];
-			$extensao = pathinfo($nome, PATHINFO_EXTENSION); 
+			$arquivo_temporario = $arquivos['tmp_name'];
+			$extensao = pathinfo($arquivos['name'], PATHINFO_EXTENSION); 
 			$novo_nome_com_extensao = $novo_nome . '.' . $extensao;
             $caminho_destino = $pasta_parametro . $novo_nome_com_extensao;
 
 			print_r([$idParametro,$novo_nome_com_extensao,$descricao,$caminho_destino,date("Y-m-d H:i:s")]);
 	
-			// if (move_uploaded_file($arquivo_temporario, $caminho_destino)) {
-			// 	inserir('	documento_parametro	', ['para_nb_id','doc_tx_nome','doc_tx_descricao','doc_tx_caminho','doc_tx_dataCadastro'],[$idParametro,$novo_nome_com_extensao,$descricao,$caminho_destino,date("Y-m-d H:i:s")]);
-			// } 
-		}
+			if (move_uploaded_file($arquivo_temporario, $caminho_destino)) {
+				inserir('documento_parametro', ['para_nb_id','doc_tx_nome','doc_tx_descricao','doc_tx_caminho','doc_tx_dataCadastro'],[$idParametro,$novo_nome_com_extensao,$descricao,$caminho_destino,date("Y-m-d H:i:s")]);
+			}
 	}
+
+	$_POST['id'] = $idParametro;
+	modifica_parametro();
+	exit;
 }
 
 function excluir_documento() {
-	$pasta_backaup = "arquivos/backaup/parametro/$_POST[idParametro]/";
-	if(!is_dir($pasta_backaup)){
-		mkdir($pasta_backaup, 0777, true);
-	}
-    // var_dump($pasta_backaup.$_POST['nome_arquivo']);
 
-	rename($_POST['caminho'].$_POST['nome_arquivo'], $pasta_backaup.$_POST['nome_arquivo']);
+	query("DELETE FROM `documento_parametro` WHERE doc_nb_id = $_POST[idArq]");
 	
 	$_POST['id'] = $_POST['idParametro'];
 	modifica_parametro();
@@ -199,30 +218,41 @@ function layout_parametro(){
 	fecha_form($botao);
 	
 	if (!empty($a_mod['para_nb_id'])) {
-		echo "<br>";
-		fieldset('Documentos');
-		echo multiArquivos("Documentos","arquivos",$a_mod['para_nb_id'],$a_mod['para_tx_documento'],$arquivos,3);
+	    $sqlArquivos= query("SELECT * FROM `documento_parametro` WHERE para_nb_id = $a_mod[para_nb_id]");
+	    $arquivos = mysqli_fetch_all($sqlArquivos, MYSQLI_ASSOC);
+		echo multiArquivos("Documentos", $a_mod['para_nb_id'], $arquivos);
 	}
 
 	rodape();
 	?>
     <form name="form_excluir_arquivo" method="post" action="cadastro_parametro.php">
 		<input type="hidden" name="idParametro" value="">
+		<input type="hidden" name="idArq" value="">
+		<input type="hidden" name="acao" value="">
+	</form>
+
+	<form name="form_download_arquivo" method="post" action="cadastro_parametro.php">
+		<input type="hidden" name="idParametro" value="">
 		<input type="hidden" name="caminho" value="">
-		<input type="hidden" name="nome_arquivo" value="">
 		<input type="hidden" name="acao" value="">
 	</form>
 	
 	<script type="text/javascript">
-		function remover_arquivo(id, caminho, arquivo, acao ) {
+		function remover_arquivo(id, idArq, arquivo, acao ) {
 			if (confirm('Deseja realmente excluir o arquivo ' + arquivo + '?')) {
 				document.form_excluir_arquivo.idParametro.value = id;
-				document.form_excluir_arquivo.caminho.value = caminho;
-				document.form_excluir_arquivo.nome_arquivo.value = arquivo;
+				document.form_excluir_arquivo.idArq.value = idArq;
 				document.form_excluir_arquivo.acao.value = acao;
 				document.form_excluir_arquivo.submit();
 			}
 		}
+
+		function downloadArquivo(id, caminho, acao) {
+			document.form_download_arquivo.idParametro.value = id;
+			document.form_download_arquivo.caminho.value = caminho;
+			document.form_download_arquivo.acao.value = acao;
+			document.form_download_arquivo.submit();
+        }
 	 </script>
 	<?
 }
