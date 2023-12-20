@@ -94,6 +94,8 @@ function layout_ftp(){
 
 	$fileList = ftp_nlist($ftp_conn, $arquivo);
 	for ($i = 0; $i < count($fileList); $i++) {
+	   // 	print_r($fileList);
+	   // 	die();
 
 		$sqlCheck = "SELECT * FROM arquivoponto WHERE arqu_tx_nome = '$fileList[$i]' AND arqu_tx_status = 'ativo' LIMIT 1";
 		$queryCheck = query($sqlCheck);

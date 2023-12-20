@@ -19,6 +19,15 @@ function modifica_parametro(){
 }
 
 function cadastra_parametro(){
+	$camposObrigatorios = ['aInserir'];
+	foreach($camposObrigatorios as $campo){
+		if(!isset($_POST[$campo]) || empty($_POST[$campo])){
+			echo '<script>alert("Preencha todos os campos obrigatórios.")</script>';
+			layout_parametro();
+			exit;
+		}
+	}
+
 	$quandDias = ($_POST['quandDias'] == '') ? 0 : $_POST['quandDias'];
 	
 	$campos=[
@@ -74,15 +83,38 @@ function cadastra_parametro(){
 function layout_parametro(){
 	global $a_mod;
 
+	if(isset($_POST['nome'])){
+		$campos = [
+			'nome',
+			'jornadaSemanal',
+			'jornadaSabado',
+			'tolerancia',
+			'percentualHE',
+			'percentualSabadoHE',
+			'HorasEXExcedente',
+			'diariasCafe',
+			'diariasAlmoco',
+			'diariasJanta',
+			'acordo',
+			'inicioAcordo',
+			'fimAcordo',
+			'banco',
+			'paramObs'
+		];
+		foreach($campos as $campo){
+			$a_mod['para_tx_'.$campo] = $_POST[$campo];
+
+		}
+		unset($campos);
+	}
+
 	cabecalho("Cadastro de Parâmetros");
 
 	$c = [
 		campo('Nome', 'nome', $a_mod['para_tx_nome'], 6),
-		// $c[] = campo('Jornada Semanal (Horas)','jornadaSemanal',$a_mod[para_tx_jornadaSemanal],3,'MASCARA_NUMERO');
-		// $c[] = campo('Jornada Sábado (Horas)','jornadaSabado',$a_mod[para_tx_jornadaSabado],3,'MASCARA_NUMERO');
 		campo_hora('Jornada Semanal (Horas/Dia)', 'jornadaSemanal', $a_mod['para_tx_jornadaSemanal'], 3),
 		campo_hora('Jornada Sábado (Horas/Dia)', 'jornadaSabado', $a_mod['para_tx_jornadaSabado'], 3),
-		campo('Tolerância de jornada Saldo diário (Minutos)', 'tolerancia', $a_mod['para_tx_tolerancia'], 3,'MASCARA_NUMERO','maxlength="3"'),
+		campo_hora('Tolerância de jornada Saldo diário (Minutos)', 'tolerancia', $a_mod['para_tx_tolerancia'], 3),
 		campo('Percentual da Hora Extra(%)', 'percentualHE', $a_mod['para_tx_percentualHE'], 3, 'MASCARA_NUMERO'),
 		campo('Percentual da Hora Extra 100% (domingos e feriados)', 'percentualSabadoHE', $a_mod['para_tx_percentualSabadoHE'], 3, 'MASCARA_NUMERO'),
 		campo_hora('Quando Exceder o limite de Horas Extras %, o excedente será Hora Extra 100% (Horas/Minutos)', 'HorasEXExcedente', $a_mod['para_tx_HorasEXExcedente'], 3),
@@ -92,14 +124,15 @@ function layout_parametro(){
 		combo('Acordo Sindical', 'acordo', $a_mod['para_tx_acordo'], 3, ['Sim', 'Não']),
 		campo_data('Início do Acordo', 'inicioAcordo', $a_mod['para_tx_inicioAcordo'], 3),
 		campo_data('Fim do Acordo', 'fimAcordo', $a_mod['para_tx_fimAcordo'], 3),
-		checkbox_banco('Utiliza regime de banco de horas?',$a_mod['para_tx_banco'], 3),
-		ckeditor('Descrição:', 'paramObs', $a_mod['para_tx_paramObs'], 12,'maxlength="100"')
+		checkbox_banco('Utiliza regime de banco de horas?','paramBanco',$a_mod['para_tx_banco'],$a_mod['para_nb_qDias'], 3),
+		ckeditor('Descrição:', 'paramObs', $a_mod['para_tx_paramObs'], 12,'maxlength="100"'),
+		multiArquivos("Documentos","arquivos",'',3)
 	];
 	
 	$botao[] = botao('Gravar','cadastra_parametro','id',$_POST['id']);
 	$botao[] = botao('Voltar','index');
 	
-	abre_form('Dados da de Parâmetros');
+	abre_form('Dados da Parâmetros');
 	linha_form($c);
 
 	if($a_mod['para_nb_userCadastro'] > 0){
