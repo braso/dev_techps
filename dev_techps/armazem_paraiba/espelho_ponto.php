@@ -12,7 +12,7 @@
 			$extraBuscaMotorista = " AND enti_nb_id = '$_SESSION[user_nb_entidade]'";
 		}
 	
-		if ($_POST['busca_motorista']) {
+		if (!empty($_POST['busca_motorista'])) {
 			$aMotorista = carregar('entidade', $_POST['busca_motorista']);
 			$aDadosMotorista = [$aMotorista['enti_tx_matricula']];
 			$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
@@ -23,19 +23,19 @@
 			$extraEmpresa = " AND enti_nb_empresa = '$_SESSION[user_nb_empresa]'";
 		}
 	
-		if ($_POST['busca_data1'] == '') {
+		if (!isset($_POST['busca_data1']) || $_POST['busca_data1'] == '') {
 			$_POST['busca_data1'] = date("Y-m-01");
 		}
 	
-		if ($_POST['busca_data2'] == '') {
+		if (!isset($_POST['busca_data2']) || $_POST['busca_data2'] == '') {
 			$_POST['busca_data2'] = date("Y-m-d");
 		}
 	
 		//CAMPOS DE CONSULTA
 		$c = [
-			combo_net('Motorista*:', 'busca_motorista', $_POST['busca_motorista'], 4, 'entidade', '', " AND enti_tx_tipo = \"Motorista\" $extraEmpresa $extraBuscaMotorista", 'enti_tx_matricula')
-			,campo_data('Data Início:', 'busca_data1', $_POST['busca_data1'], 2)
-			,campo_data('Data Fim:', 'busca_data2', $_POST['busca_data2'], 2)
+			combo_net('Motorista*:', 'busca_motorista', $_POST['busca_motorista']?? '', 4, 'entidade', '', " AND enti_tx_tipo = \"Motorista\" $extraEmpresa $extraBuscaMotorista", 'enti_tx_matricula')
+			,campo_data('Data Início:', 'busca_data1', $_POST['busca_data1']?? '', 2)
+			,campo_data('Data Fim:', 'busca_data2', $_POST['busca_data2']?? '', 2)
 		];
 	
 		//BOTOES
@@ -56,13 +56,13 @@
 		);
 	
 		// Converte as datas para objetos DateTime
-		$startDate = new DateTime($_POST['busca_data1']);
-		$endDate = new DateTime($_POST['busca_data2']);
+		$startDate = !empty($_POST['busca_data1'])? new DateTime($_POST['busca_data1']): '';
+		$endDate   = !empty($_POST['busca_data2'])? new DateTime($_POST['busca_data2']): '';
 	
 		// Loop for para percorrer as datas
 
 
-		if ($_POST['busca_data1'] && $_POST['busca_data2'] && $_POST['busca_motorista']) {
+		if (!empty($_POST['busca_data1']) && !empty($_POST['busca_data2']) && !empty($_POST['busca_motorista'])){
 			$aDia = [];
 			for ($date = $startDate; $date <= $endDate; $date->modify('+1 day')) {
 				$dataVez = $date->format('Y-m-d');
@@ -92,7 +92,7 @@
 					}
 				//</Converter array em string>
 				
-				$row = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDadosMotorista, $aDetalhado));
+				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDadosMotorista, $aDetalhado));
 				for($f = 0; $f < sizeof($row); $f++){
 					if($row[$f] == "00:00"){
 						$row[$f] = "";
@@ -124,6 +124,7 @@
 					"SELECT endo_tx_saldo FROM `endosso`
 						WHERE endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
 							AND endo_tx_ate < '".$_POST['busca_data1']."'
+							AND endo_tx_status = 'ativo'
 						ORDER BY endo_tx_ate DESC
 						LIMIT 1;"
 				)
@@ -178,20 +179,6 @@
 			</style>
 		<?
 			$aDia[] = array_values(array_merge(array('', '', '', '', '', '', '', '<b>TOTAL</b>'), $totalResumo));
-			
-			$toleranciaStr = carrega_array(query('SELECT parametro.para_tx_tolerancia FROM entidade JOIN parametro ON enti_nb_parametro = para_nb_id WHERE enti_nb_parametro = '.$aMotorista['enti_nb_parametro'].';'))[0];
-
-			$toleranciaStr = explode(':', $toleranciaStr);
-			$tolerancia = intval($toleranciaStr[0])*60+(($toleranciaStr[0][0] == '-'? -1: 1)*intval($toleranciaStr[1]));
-			
-			for($f = 0; $f < count($aDia); $f++){
-				$saldoStr = explode(':', $aDia[$f][count($aDia[$f])-1]);
-				$saldo = intval($saldoStr[0])*60+(($saldoStr[0][0] == '-'? -1: 1)*intval($saldoStr[1]));
-				
-				if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
-					$aDia[$f][count($aDia[$f])-1] = '00:00';
-				}
-			}
 			
 			grid2($cab, $aDia, "Jornada Semanal (Horas): $aMotorista[enti_tx_jornadaSemanal]");
 			fecha_form();
