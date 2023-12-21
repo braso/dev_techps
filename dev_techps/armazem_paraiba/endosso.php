@@ -21,13 +21,17 @@ function cadastrar()
 			$_POST['idMotoristaEndossado'] = $motorista['enti_nb_id'];
 		}
 
-		if ($_POST['busca_data'] && $_POST['busca_empresa'] && $_POST['idMotoristaEndossado']) {
-			
-			$date = new DateTime($_POST['busca_data']);
-			$month = $date->format('m');
-			$year = $date->format('Y');
-			
-			$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+		if (empty($_POST['busca_data']) || empty($_POST['busca_empresa']) || empty($_POST['idMotoristaEndossado']))){
+			print_r("Há informações faltando.<br>");
+			index();
+			exit;
+		}
+
+		$date = new DateTime($_POST['busca_data']);
+		$month = $date->format('m');
+		$year = $date->format('Y');
+		
+		$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
 
 		$primeiroDia = '01/' . $month . '/' . $year;
 		$ultimoDia = $daysInMonth . '/' . $month . '/' . $year;
@@ -139,9 +143,6 @@ function cadastrar()
 			$saldoAtual = somarHorarios([$saldoAnterior, $totalResumo['diffSaldo']]);
 			// $totalResumo = ['diffRefeicao' => '00:00','diffEspera' => '00:00','diffDescanso' => '00:00','diffRepouso' => '00:00','diffJornada' => '00:00','jornadaPrevista' => '00:00','diffJornadaEfetiva' => '00:00','maximoDirecaoContinua' => '','intersticio' => '00:00','he50' => '00:00','he100' => '00:00','adicionalNoturno' => '00:00','esperaIndenizada' => '00:00','diffSaldo' => '00:00'];
 			// unset($aDia);
-			}
-		}else{
-			print_r("Há informações faltando.<br>");
 		}
 
 		include "./relatorio_espelho.php";
