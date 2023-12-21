@@ -340,28 +340,28 @@
 			"SELECT en.enti_nb_parametro, par.para_tx_tolerancia
 				FROM `entidade` en
 				INNER JOIN parametro par ON en.enti_nb_parametro = par.para_nb_id
-				WHERE en.enti_nb_id = '" . $idMotorista . "'");
+				WHERE en.enti_nb_id = '".$idMotorista."'");
 		
 		$toleranciaArray = carrega_array($sqlTolerancia);
 
-		$tolerancia = (empty($toleranciaArray['para_tx_tolerancia']))? '00:00': $toleranciaArray['para_tx_tolerancia'];
+		$tolerancia = (empty($toleranciaArray['para_tx_tolerancia']))? 0: $toleranciaArray['para_tx_tolerancia'];
+		$tolerancia = intval($tolerancia);
 
-		$toleranciaMinutos = intval(substr($tolerancia, 0, 2)) * 60 + intval(substr($tolerancia, 3, 2));
 		$saldoDiario = explode(':', $saldoDiario);
-		$saldoEmMinutos = intval($saldoDiario[0])*60 + ($saldoDiario[0] == '-'? -1: 1)*intval($saldoDiario[1]);
+		$saldoEmMinutos = intval($saldoDiario[0])*60+($saldoDiario[0] == '-'? -1: 1)*intval($saldoDiario[1]);
 
-		if($saldoEmMinutos < -($toleranciaMinutos)){
+		if($saldoEmMinutos < -($tolerancia)){
 			$cor = 'red';
-		}elseif($saldoEmMinutos > $toleranciaMinutos){
+		}elseif($saldoEmMinutos > $tolerancia){
 			$cor = 'green';
 		}else{
 			$cor = 'blue';
 		}
 
 		if ($_SESSION['user_tx_nivel'] == 'Motorista') {
-			$retorno = '<center><span><i style="color:' . $cor . ';" class="fa fa-circle"></i></span></center>';
+			$retorno = '<center><span><i style="color:'.$cor.';" class="fa fa-circle"></i></span></center>';
 		} else {
-			$retorno = '<center><a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto(\'' . $data . '\', \'' . $idMotorista . '\')"><i style="color:' . $cor . ';" class="fa fa-circle"></i></a></center>';
+			$retorno = '<center><a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto(\''.$data.'\', \''.$idMotorista.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a></center>';
 		}
 		return $retorno;
 	}
