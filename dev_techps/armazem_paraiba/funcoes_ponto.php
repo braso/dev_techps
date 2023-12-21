@@ -536,6 +536,40 @@
 		return $pares_horarios;
 	}
 
+	function dateTimeToSecs(DateTime $dateTime): int{
+    	$res = date_diff(DateTime::createFromFormat('H:i', '00:00'), $dateTime);
+        $res = 
+        	($res->invert? 1:-1)*
+			(
+				$res->d*24*60*60+
+				$res->h*60*60+
+				$res->i*60+
+				$res->s
+			);
+        return $res;
+    }
+
+	function calcJorPre($data, $jornadas, $abono = null){
+		if (date('w', strtotime($data)) == '6') { //SABADOS
+			$jornadaPrevista = $jornadas['sabado'];
+		} elseif (date('w', strtotime($data)) == '0' || isset($jornadas['feriado'])) { //DOMINGOS OU FERIADOS
+			$jornadaPrevista = '00:00';
+		} else {
+			$jornadaPrevista = $jornadas['semanal'];
+		}
+
+		$jornadaPrevistaOriginal = $jornadaPrevista;
+		if($abono !== null){
+			$jornadaPrevista = (new DateTime($data." ".$abono))
+				->diff(new DateTime($data." ".$jornadaPrevista));
+		}else{
+			$jornadaPrevista = (new DateTime($data." ".$jornadaPrevista));
+		}
+		$jornadaPrevista = $jornadaPrevista->format("H:i");
+
+		return [$jornadaPrevistaOriginal, $jornadaPrevista];
+	}
+
 	function diaDetalhePonto($matricula, $data): array{
 		global $totalResumo, $contagemEspera;
 		setlocale(LC_ALL, 'pt_BR.utf8');
