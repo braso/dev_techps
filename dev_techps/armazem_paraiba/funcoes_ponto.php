@@ -815,27 +815,25 @@
 		//}
 
 		//CALCULO ESPERA INDENIZADA{
-			$jornadaPrevHoras = DateTime::createFromFormat('H:i', $aRetorno['jornadaPrevista']);
-			$jornadaEfetiva   = DateTime::createFromFormat('H:i', $jornadaEfetiva->format('%H:%I'));
-			$totalIntervalo   = DateTime::createFromFormat('H:i', somarHorarios([$registros['esperaCompleto']['totalIntervalo'], $esperaRepouso['totalIntervalo']]));
+			$intervaloEsp = somarHorarios([$registros['esperaCompleto']['totalIntervalo'], $registros['repousoPorEspera']['repousoCompleto']['totalIntervalo']]);
+			$indenizarEspera = ($intervaloEsp >= '02:00');
 
-			$esperaIndenizada = $jornadaEfetiva;
-			
-			$esperaIndenizada->add(new DateInterval('PT'.$totalIntervalo->format('H') . 'H' . $totalIntervalo->format('i') . 'M'));
-
-			$jorEfetivaStr = $jornadaEfetiva->format("H:i");
-			
-			$jornadaPrevista = new DateTime($aRetorno['jornadaPrevista']); //$dateCargaHoraria
-			
-			if ($esperaIndenizada > $jornadaPrevHoras && $jorEfetivaStr < $jornadaPrevHoras){ // SE jornadaEfetiva < jornadaPrevista, não gera saldo
-				$esperaIndenizada = $jornadaPrevHoras->diff($esperaIndenizada)->format('%H:%I');
-				$jorEfetivaStr = $aRetorno['jornadaPrevista'];
-			} else {
-				if ($totalIntervalo->format('H:i') == '00:00'){
-					$esperaIndenizada = '';
+			if ($saldoDiario[0] == '-'){
+				if($intervaloEsp > substr($saldoDiario, 1)){
+					$transferir = substr($saldoDiario, 1);
 				}else{
-					$esperaIndenizada = $totalIntervalo->format('H:i');
+					$transferir = $intervaloEsp;
 				}
+				
+				$saldoDiario = operarHorarios([$saldoDiario, $transferir], '-');
+				$aRetorno['diffSaldo'] = $saldoDiario;
+				$intervaloEsp = operarHorarios([$intervaloEsp, $transferir], '-');
+			}
+
+			if($indenizarEspera){
+				$esperaIndenizada = $intervaloEsp;
+			}else{
+				$esperaIndenizada = '00:00';
 			}
 
 			$aRetorno['esperaIndenizada'] = $esperaIndenizada;
