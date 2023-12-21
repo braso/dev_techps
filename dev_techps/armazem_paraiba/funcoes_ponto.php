@@ -366,42 +366,6 @@
 		return $retorno;
 	}
 
-	function calcular_maximo_direcao($inicio_jornada, $fim_jornada, $pausas) {
-		if($inicio_jornada == '' && $fim_jornada == ''){
-			return '';
-		}
-		
-		if($inicio_jornada == ''){
-			$inicio_jornada = '00:00';
-		}
-
-		if($fim_jornada == ''){
-			$fim_jornada = '00:00';
-		}
-		
-		$maximo_direcao = 0;
-		$ultimo_fim = DateTime::createFromFormat("H:i", $inicio_jornada);
-
-		foreach ($pausas as $pausa) {
-			$inicio_pausa = DateTime::createFromFormat("H:i", $pausa["inicio"]);
-			$fim_pausa = DateTime::createFromFormat("H:i", $pausa["fim"]);
-
-			$duracao_intervalo = $ultimo_fim->diff($inicio_pausa)->format("%H:%I");
-			if ($duracao_intervalo > $maximo_direcao) {
-				$maximo_direcao = $duracao_intervalo;
-			}
-
-			$ultimo_fim = $fim_pausa;
-		}
-
-		$duracao_jornada = $ultimo_fim->diff(DateTime::createFromFormat("H:i", $fim_jornada))->format("%H:%I");
-		if ($duracao_jornada > $maximo_direcao) {
-			$maximo_direcao = $duracao_jornada;
-		}
-
-		return $maximo_direcao;
-	}
-
 	function ordenar_horarios($inicio, $fim, $ehEspera = false) {
 		if(empty($inicio) && empty($fim)){
 			return [
@@ -529,7 +493,7 @@
 			$iconeAlerta = "<a><i style='color:green;' title='$tooltip' class='fa fa-info-circle'></i></a>";
 		}
 		
-		
+
 		$pares_horarios = [
 			'horariosOrdenados' => $horarios_com_origem,
 			'pares' => $pares,
@@ -1090,34 +1054,6 @@
 		return $aRetorno;
 	}
 
-	function subtrairHorarios($inicioJornada,$jornadaPrevista, $JornadaEfetiva, $data) {
-		if(($inicioJornada == '' && $data == '%6') || ($inicioJornada != '' && $data == '%0')){
-			return '00:00';
-		}else{
-			$h1 = explode(':', $jornadaPrevista);
-			$segundos1 = ((abs((int) $h1[0]) * 3600) + (abs((int) $h1[1]) * 60));
-		
-			$h2 = explode(':', $JornadaEfetiva);
-			$segundos2 = ((abs((int) $h2[0]) * 3600) + (abs((int) $h2[1]) * 60));
-
-			if( $segundos2 < 26400){
-				$sub = $segundos2 - $segundos1;
-		
-				$horas = floor(abs($sub) / 3600); // 3600 segundos em uma hora
-				$sub %= 3600;
-				$minutos = floor(abs($sub) / 60); // 60 segundos em um minuto
-				$sub %= 60;
-
-				if ($segundos2 < $segundos1) {
-					return abs($horas) . ':' . sprintf('%02d', $minutos);
-				} else {
-					return $horas . ':' . sprintf('%02d', $minutos);
-				}
-			}
-			return '00:00';
-		}
-	}
-
 	function pegarDiaDaSemana($date){
 		$week = [
 			'Sunday' => 'Domingo', 
@@ -1566,7 +1502,11 @@
 		}
 		$totalResumo['maximoDirecaoContinua'] = '';
 		
-		$aRetorno['jornadaPrevista'] = subtrairHorarios($aRetorno['inicioJornada'] ,$aRetorno['jornadaPrevista'], $aRetorno['diffJornadaEfetiva'], date('%w',strtotime($data)));
+		if(($aRetorno['inicioJornada'] == '' && date('%w',strtotime($data)) == '%6') || ($aRetorno['inicioJornada'] != '' && date('%w',strtotime($data)) == '%0')){
+			$aRetorno['jornadaPrevista'] = '00:00';
+		}else{
+			$aRetorno['jornadaPrevista'] = operarHorarios([$aRetorno['jornadaPrevista'], $aRetorno['diffJornadaEfetiva']], '-');
+		}
 
 		$legendas = [
 			null => '',
@@ -1993,7 +1933,11 @@
 		}
 		$totalResumo['maximoDirecaoContinua'] = '';
 		
-		$aRetorno['jornadaPrevista'] = subtrairHorarios($aRetorno['inicioJornada'] ,$aRetorno['jornadaPrevista'], $aRetorno['diffJornadaEfetiva'], date('%w',strtotime($data)));
+		if(($aRetorno['inicioJornada'] == '' && date('%w',strtotime($data)) == '%6') || ($aRetorno['inicioJornada'] != '' && date('%w',strtotime($data)) == '%0')){
+			$aRetorno['jornadaPrevista'] = '00:00';
+		}else{
+			$aRetorno['jornadaPrevista'] = operarHorarios([$aRetorno['jornadaPrevista'],  $aRetorno['diffJornadaEfetiva']], '-');
+		}
 
 		$legendas = [
 			null => '',
@@ -2007,39 +1951,5 @@
 		$aRetorno['moti_tx_motivo'] = $legendas[$aAbono['moti_tx_legenda']];
 		
 		return $aRetorno;
-	}
-
-	function calcJorPre($data, $jornadas, $abono = null){
-		if (date('w', strtotime($data)) == '6') { //SABADOS
-			$jornadaPrevista = $jornadas['sabado'];
-		} elseif (date('w', strtotime($data)) == '0' || isset($jornadas['feriado'])) { //DOMINGOS OU FERIADOS
-			$jornadaPrevista = '00:00';
-		} else {
-			$jornadaPrevista = $jornadas['semanal'];
-		}
-
-		$jornadaPrevistaOriginal = $jornadaPrevista;
-		if($abono !== null){
-			$jornadaPrevista = (new DateTime($data." ".$abono))
-				->diff(new DateTime($data." ".$jornadaPrevista));
-		}else{
-			$jornadaPrevista = (new DateTime($data." ".$jornadaPrevista));
-		}
-		$jornadaPrevista = $jornadaPrevista->format("H:i");
-
-		return [$jornadaPrevistaOriginal, $jornadaPrevista];
-	}
-
-	function dateTimeToSecs(DateTime $dateTime){
-    	$res = date_diff(DateTime::createFromFormat('H:i', '00:00'), $dateTime);
-        $res = 
-        	($res->invert? -1:1)*
-			(
-				$res->d*24*60*60+
-				$res->h*60*60+
-				$res->i*60+
-				$res->s
-			);
-        return $res;
-    }
+	}	
 ?>
