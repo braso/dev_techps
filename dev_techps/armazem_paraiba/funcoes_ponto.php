@@ -246,41 +246,46 @@
 		return $mdc > 0 ? gmdate('H:i', $mdc) : '0';
 	}
 
-	function somarHorarios($horarios): string {
-		$totalSegundos = 0;
+	function operarHorarios(array $horarios, string $operacao): string{
+		//Horários com formato de rH:i. Ex.: 00:04, 05:13, -01:12.
+		//$Operação
+		if(count($horarios) == 0 || !in_array($operacao, ['+', '-', '*', '/'])){
+			return 0;
+		}
 
-		foreach ($horarios as $horario) {
-			if(empty($horario) || $horario == '00:00'){
-				continue;
-			}
+		$negative = ($horarios[0][0] == '-');
+		$result = explode(':', $horarios[0]);
+		$result = intval($result[0]*60)+($negative?-1:1)*intval($result[1]);
 
-			[$horas, $minutos] = explode(':', $horario);
-			if(substr_count($horario, ':') > 2){
-				$segundos = explode(':', $horario)[2];
-			}else{
-				$segundos = 0;
-			}
-
-			if (substr($horas, 0, 1) == '-') {
-				$horas = abs((int) $horas); // Converte as horas para valor absoluto
-				$minutos = abs((int) $minutos); // Converte os minutos para valor absoluto
-				$segundos = abs((int) $segundos); // Converte os segundos para valor absoluto
-				$totalSegundos -= ($horas * 3600 + $minutos * 60 + $segundos);
-			} else {
-				$totalSegundos += ($horas * 3600 + $minutos * 60 + $segundos);
+		for($f = 1; $f < count($horarios); $f++){
+			$negative = ($horarios[$f][0] == '-');
+			$horarios[$f] = explode(':', $horarios[$f]);
+			$horarios[$f] = intval($horarios[$f][0]*60)+($negative?-1:1)*intval($horarios[$f][1]);
+			switch($operacao){
+				case '+':
+					$result += $horarios[$f];
+				break;
+				case '-':
+					$result -= $horarios[$f];
+				break;
+				case '*':
+					$result *= $horarios[$f];
+				break;
+				case '/':
+					$result /= $horarios[$f];
+				break;
 			}
 		}
 
-		$horas = floor(abs($totalSegundos) / 3600);
-		$minutos = floor((abs($totalSegundos) % 3600) / 60);
-		$segundos = abs($totalSegundos) % 60;
+		$result = 
+			(($result < 0)?'-':'').
+			sprintf('%02d:%02d', abs(intval($result/60)), abs(intval($result%60)));
 
-		// Verifica se o resultado é negativo e formata o retorno de acordo
-		if ($totalSegundos < 0) {
-			return sprintf('-%02d:%02d', $horas, $minutos);
-		} else {
-			return sprintf('%02d:%02d', $horas, $minutos);
-		}
+		return $result;
+	}
+
+	function somarHorarios(array $horarios): string{
+		return operarHorarios($horarios, '+');	
 	}
 
 	function verificaTempoMdc($tempo1 = '00:00', $tempoDescanso = '00:00') {
@@ -618,15 +623,15 @@
 
 		$tiposRegistrados = [];
 		$tipos = [
-			'1' => 'inicioJornada',
-			'2' => 'fimJornada',
-			'3' => 'inicioRefeicao',
-			'4' => 'fimRefeicao',
-			'5' => 'inicioEspera',
-			'6' => 'fimEspera',
-			'7' => 'inicioDescanso',
-			'8' => 'fimDescanso',
-			'9' => 'inicioRepouso',
+			'1'  => 'inicioJornada',
+			'2'  => 'fimJornada',
+			'3'  => 'inicioRefeicao',
+			'4'  => 'fimRefeicao',
+			'5'  => 'inicioEspera',
+			'6'  => 'fimEspera',
+			'7'  => 'inicioDescanso',
+			'8'  => 'fimDescanso',
+			'9'  => 'inicioRepouso',
 			'10' => 'fimRepouso',
 			'11' => 'inicioRepousoEmb',
 			'12' => 'fimRepousoEmb'
