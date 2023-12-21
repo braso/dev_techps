@@ -809,6 +809,11 @@
 			}
 		//}
 
+		//CALCULO SALDO{
+			$saldoDiario = (date_diff(DateTime::createFromFormat('H:i', $jornadaPrevista), $jornadaEfetiva))->format("%r%H:%I");
+			$aRetorno['diffSaldo'] = $saldoDiario;
+		//}
+
 		//CALCULO ESPERA INDENIZADA{
 			$jornadaPrevHoras = DateTime::createFromFormat('H:i', $aRetorno['jornadaPrevista']);
 			$jornadaEfetiva   = DateTime::createFromFormat('H:i', $jornadaEfetiva->format('%H:%I'));
@@ -853,10 +858,6 @@
 			$adicionalNoturno = gmdate('H:i', (strtotime($data.' '.$registros['jornadaCompleto']['totalIntervaloAdicionalNot']))-(strtotime($data.' '.$intervalosNoturnos)));
 			$aRetorno['adicionalNoturno'] = ($adicionalNoturno == '00:00')? '' : $adicionalNoturno;
 		//FIM ADICIONAL NOTURNO
-
-		//CALCULO SALDO
-			$aRetorno['diffSaldo'] = ($jornadaPrevista->diff(new DateTime($jorEfetivaStr)))->format("%r%H:%I");
-		//FIM CALCULO SALDO
 
 		//HORAS EXTRAS{
 			if ($stringFeriado != '') {						//Se for feriado
