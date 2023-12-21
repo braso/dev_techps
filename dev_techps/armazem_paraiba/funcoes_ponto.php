@@ -1053,18 +1053,16 @@
 			}
 		}
 
-		$toleranciaStr = carrega_array(query(
+		$tolerancia = carrega_array(query(
 			"SELECT parametro.para_tx_tolerancia FROM entidade 
 				JOIN parametro ON enti_nb_parametro = para_nb_id 
 				WHERE enti_nb_parametro = ".$aMotorista['enti_nb_parametro']."
 				LIMIT 1;"
 		))[0];
-		$toleranciaStr = explode(':', $toleranciaStr);
-
-		$tolerancia = intval($toleranciaStr[0])*60 + ($toleranciaStr[0][0] == '-'? -1: 1)*intval($toleranciaStr[1]);
+		$tolerancia = intval($tolerancia);
 		
-		$saldoStr = explode(':', $aRetorno['diffSaldo']);
-		$saldo = intval($saldoStr[0])*60 + ($saldoStr[0][0] == '-'? -1: 1)*intval($saldoStr[1]);
+		$saldo = explode(':', $aRetorno['diffSaldo']);
+		$saldo = intval($saldo[0])*60 + ($saldo[0][0] == '-'? -1: 1)*intval($saldo[1]);
 		
 		if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
 			$aRetorno['diffSaldo'] = '00:00';
