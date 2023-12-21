@@ -868,6 +868,11 @@
 			}elseif($aRetorno['diffSaldo'][0] != '-'){		//Se o saldo estiver positivo
 				$aRetorno['he50'] = $aRetorno['diffSaldo'];
 			}
+
+			if($aRetorno['diffSaldo'] >= $aParametro['para_tx_HorasEXExcedente']){
+				$aRetorno['he100'] = operarHorarios([$aRetorno['he100'], $aParametro['para_tx_HorasEXExcedente']], '+');
+				$aRetorno['diffSaldo'] = operarHorarios([$aRetorno['diffSaldo'], $aParametro['para_tx_HorasEXExcedente']], '-');
+			}
 		//}
 
 		//MÁXIMA DIREÇÃO CONTÍNUA
