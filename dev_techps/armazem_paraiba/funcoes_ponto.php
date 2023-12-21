@@ -739,16 +739,16 @@
 		
 		$aRetorno['diffJornada'] = $registros['jornadaCompleto']['icone'].$registros['jornadaCompleto']['totalIntervalo'];
 
-		// INICIO JORNADA ESPERADA
+		//JORNADA PREVISTA{
 			$jornadas = [
 				'sabado' => $aMotorista['enti_tx_jornadaSabado'],
 				'semanal'=> $aMotorista['enti_tx_jornadaSemanal'],
 				'feriado'=> ($stringFeriado != ''? True: null)
 			];
 			[$jornadaPrevistaOriginal, $aRetorno['jornadaPrevista']] = calcJorPre($data, $jornadas, $aAbono['abon_tx_abono']);
-		// FIM JORNADA ESPERADA
+		//}
 
-		// INICIO JORNADA EFETIVA
+		//JORNADA EFETIVA{
 			$jornadaIntervalo = new DateTime($registros['jornadaCompleto']['totalIntervalo']);
 
 			//SOMATORIO DE TODAS AS ESPERAS
@@ -763,9 +763,9 @@
 
 			$jornadaEfetiva = $jornadaIntervalo->diff($totalIntervalos); //$diffJornadaEfetiva
 			$aRetorno['diffJornadaEfetiva'] = verificaTempo($jornadaEfetiva->format("%H:%I"), $alertaJorEfetiva);
-		// FIM JORNADA EFETIVA
+		//}
 
-		// INICIO CALCULO INTERSTICIO
+		// INICIO CALCULO INTERSTICIO{
 			if (isset($registros['inicioJornada']) && count($registros['inicioJornada']) > 0){
 
 				$ultimoDiaJornada = carrega_array(query(
@@ -805,9 +805,9 @@
 
 				$aRetorno['intersticio'] = $icone.$totalIntersticio;
 			}
-		// FIM CALCULO INTERSTICIO
+		//}
 
-		//CALCULO ESPERA INDENIZADA
+		//CALCULO ESPERA INDENIZADA{
 			$jornadaPrevHoras = DateTime::createFromFormat('H:i', $aRetorno['jornadaPrevista']);
 			$jornadaEfetiva   = DateTime::createFromFormat('H:i', $jornadaEfetiva->format('%H:%I'));
 			$totalIntervalo   = DateTime::createFromFormat('H:i', somarHorarios([$registros['esperaCompleto']['totalIntervalo'], $esperaRepouso['totalIntervalo']]));
@@ -832,7 +832,7 @@
 			}
 
 			$aRetorno['esperaIndenizada'] = $esperaIndenizada;
-		//FIM CALCULO ESPERA INDENIZADA
+		//}
 
 		//INICIO ADICIONAL NOTURNO
 			// $jornadaNoturno = $registros['jornadaCompleto']['totalIntervaloAdicionalNot'];
@@ -856,7 +856,7 @@
 			$aRetorno['diffSaldo'] = ($jornadaPrevista->diff(new DateTime($jorEfetivaStr)))->format("%r%H:%I");
 		//FIM CALCULO SALDO
 
-		//CÁLCULO DE HORAS EXTRAS
+		//HORAS EXTRAS{
 			if ($stringFeriado != '') {						//Se for feriado
 				$iconeFeriado =  "<a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
 				$aRetorno['he100'] = $iconeFeriado.$aRetorno['diffSaldo'];
@@ -865,7 +865,7 @@
 			}elseif($aRetorno['diffSaldo'][0] != '-'){		//Se o saldo estiver positivo
 				$aRetorno['he50'] = $aRetorno['diffSaldo'];
 			}
-		//FIM CÁLCULO DE HORAS EXTRAS
+		//}
 
 		//MÁXIMA DIREÇÃO CONTÍNUA
 			$aRetorno['maximoDirecaoContinua'] = verificaTempoMdc(
