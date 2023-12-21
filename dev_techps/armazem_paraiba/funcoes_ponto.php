@@ -745,14 +745,15 @@
 				'semanal'=> $aMotorista['enti_tx_jornadaSemanal'],
 				'feriado'=> ($stringFeriado != ''? True: null)
 			];
-			[$jornadaPrevistaOriginal, $aRetorno['jornadaPrevista']] = calcJorPre($data, $jornadas, $aAbono['abon_tx_abono']);
+			[$jornadaPrevistaOriginal, $jornadaPrevista] = calcJorPre($data, $jornadas, $aAbono['abon_tx_abono']);
+			$aRetorno['jornadaPrevista'] = $jornadaPrevista;
 		//}
 
 		//JORNADA EFETIVA{
 			$jornadaIntervalo = new DateTime($registros['jornadaCompleto']['totalIntervalo']);
 
 			//SOMATORIO DE TODAS AS ESPERAS
-			$totalIntervalos = new DateTime(
+			$totalNaoJornada = new DateTime(
 				somarHorarios([
 						$registros['refeicaoCompleto']['totalIntervalo'],
 						$registros['esperaCompleto']['totalIntervalo'],
@@ -761,8 +762,9 @@
 				])
 			);
 
-			$jornadaEfetiva = $jornadaIntervalo->diff($totalIntervalos); //$diffJornadaEfetiva
-			$aRetorno['diffJornadaEfetiva'] = verificaTempo($jornadaEfetiva->format("%H:%I"), $alertaJorEfetiva);
+			$jornadaEfetiva = $jornadaIntervalo->diff($totalNaoJornada); //$diffJornadaEfetiva
+			$jornadaEfetiva = DateTime::createFromFormat('H:i', $jornadaEfetiva->format("%H:%I"));
+			$aRetorno['diffJornadaEfetiva'] = verificaTempo($jornadaEfetiva->format('H:i'), $alertaJorEfetiva);
 		//}
 
 		// INICIO CALCULO INTERSTICIO{
@@ -787,7 +789,7 @@
 
 				$intersticio = sprintf("%02d:%02d", floor($totalMinJornada / 60), $totalMinJornada % 60); // Formatar a string no formato HH:MM
 				$totalIntersticio = somarHorarios(
-					[$intersticio, $totalIntervalos->format("H:i"), $interJornadas->format('%H:%I')]
+					[$intersticio, $totalNaoJornada->format("H:i"), $interJornadas->format('%H:%I')]
 				);
 
 				list($hours, $minutes) = explode(':', $totalIntersticio);
