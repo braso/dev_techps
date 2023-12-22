@@ -444,6 +444,27 @@
 								$dataCicloProx += intval($dadosParametro['para_nb_qDias'])*60*60*24;
 							}
 						}
+
+						$saldoAnterior = mysqli_fetch_assoc(
+							query(
+								"SELECT endo_tx_saldo FROM `endosso`
+									WHERE endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
+										AND endo_tx_ate < '".$_POST['busca_data']."-01'
+										AND endo_tx_status = 'ativo'
+									ORDER BY endo_tx_ate DESC
+									LIMIT 1;"
+							)
+						);
+						if(isset($saldoAnterior['endo_tx_saldo'])){
+							$saldoAnterior = $saldoAnterior['endo_tx_saldo'];
+						}else{
+							$saldoAnterior = '--:--';
+						}
+
+						$saldoFinal = '--:--';
+						if($saldoAnterior != '--:--'){
+							$saldoFinal = somarHorarios([$saldoAnterior, $totalResumo['diffSaldo']]);
+						}
 	
 						$saldosMotorista = 
 							'<div class="table-responsive">
@@ -455,9 +476,9 @@
 									</thead></tr>
 									<tbody>
 										<tr>
-										<td>--:--</td>
+										<td>'.$saldoAnterior.'</td>
 										<td>'.$totalResumo['diffSaldo'].'</td>
-										<td>--:--</td>
+										<td>'.$saldoFinal.'</td>
 										</tr>
 									</tbody>
 									</table>
