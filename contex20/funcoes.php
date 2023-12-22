@@ -853,7 +853,7 @@ function multiArquivos($nome,$idParametro,$arquivos){
 		    $dataHoraOriginal = $arquivo['doc_tx_dataCadastro'];
 		    $dataHora = new DateTime($dataHoraOriginal);
 		    $dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
-		    var_dump($arquivo[doc_nb_id]);
+			
 			$arquivo_list .= "
 			<tr role='row' class='odd'>
 			<td>$arquivo[doc_tx_nome]</td>

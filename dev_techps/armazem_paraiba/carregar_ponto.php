@@ -89,7 +89,7 @@ function layout_ftp(){
 // 	$ftp_userpass = '0899';
 
 
-	$ftp_conn = ftp_connect($infos['empr_tx_ftpServer']) or die("Could not connect to $ftp_server");
+	$ftp_conn = ftp_connect($infos['empr_tx_ftpServer']) or die("Could not connect to $infos['empr_tx_ftpServer']");
 	$login = ftp_login($ftp_conn, $infos['empr_tx_ftpUsername'], $infos['empr_tx_ftpUserpass']);
 
 	//BUSCA O ARQUIVO
