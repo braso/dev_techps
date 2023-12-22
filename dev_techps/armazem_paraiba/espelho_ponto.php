@@ -5,13 +5,14 @@
 		global $CACTUX_CONF, $totalResumo;
 	
 		cabecalho('Espelho de Ponto');
-	
+		
+		$extraBuscaMotorista = '';
 		if ($_SESSION['user_tx_nivel'] == 'Motorista') {
 			$_POST['busca_motorista'] = $_SESSION['user_nb_entidade'];
 			$extraBuscaMotorista = " AND enti_nb_id = '$_SESSION[user_nb_entidade]'";
 		}
 	
-		if ($_POST['busca_motorista']) {
+		if (!empty($_POST['busca_motorista'])) {
 			$aMotorista = carregar('entidade', $_POST['busca_motorista']);
 			$aDadosMotorista = [$aMotorista['enti_tx_matricula']];
 			$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
@@ -22,22 +23,19 @@
 			$extraEmpresa = " AND enti_nb_empresa = '$_SESSION[user_nb_empresa]'";
 		}
 	
-		if ($_POST['busca_data1'] == '') {
+		if (!isset($_POST['busca_data1']) || $_POST['busca_data1'] == '') {
 			$_POST['busca_data1'] = date("Y-m-01");
 		}
 	
-		if ($_POST['busca_data2'] == '') {
+		if (!isset($_POST['busca_data2']) || $_POST['busca_data2'] == '') {
 			$_POST['busca_data2'] = date("Y-m-d");
 		}
 	
 		//CAMPOS DE CONSULTA
 		$c = [
-			combo_net('Motorista*:', 'busca_motorista', $_POST['busca_motorista'], 4, 'entidade', '', " AND enti_tx_tipo = \"Motorista\" $extraEmpresa $extraBuscaMotorista", 'enti_tx_matricula')
-			//, campo_mes('Data:','busca_data',$_POST[busca_data],2)
-			,campo_data('Data Início:', 'busca_data1', $_POST['busca_data1'], 2)
-			,campo_data('Data Fim:', 'busca_data2', $_POST['busca_data2'], 2)
-			// ,combo('Sem Inconsistência: ', 'busca_inconsistencia', $_POST['busca_inconsistencia'], 2, ['Não', 'Sim']),
-			// combo('Com saldo previsto: ', 'busca_saldo_previsto', $_POST['busca_saldo_previsto'], 2, ['Sim', 'Não'])
+			combo_net('Motorista*:', 'busca_motorista', $_POST['busca_motorista']?? '', 4, 'entidade', '', " AND enti_tx_tipo = \"Motorista\" $extraEmpresa $extraBuscaMotorista", 'enti_tx_matricula')
+			,campo_data('Data Início:', 'busca_data1', $_POST['busca_data1']?? '', 2)
+			,campo_data('Data Fim:', 'busca_data2', $_POST['busca_data2']?? '', 2)
 		];
 	
 		//BOTOES
@@ -58,67 +56,51 @@
 		);
 	
 		// Converte as datas para objetos DateTime
-		$startDate = new DateTime($_POST['busca_data1']);
-		$endDate = new DateTime($_POST['busca_data2']);
+		$startDate = !empty($_POST['busca_data1'])? new DateTime($_POST['busca_data1']): '';
+		$endDate   = !empty($_POST['busca_data2'])? new DateTime($_POST['busca_data2']): '';
 	
 		// Loop for para percorrer as datas
 
 
-		if ($_POST['busca_data1'] && $_POST['busca_data2'] && $_POST['busca_motorista']) {
-	
+		if (!empty($_POST['busca_data1']) && !empty($_POST['busca_data2']) && !empty($_POST['busca_motorista'])){
+			$aDia = [];
 			for ($date = $startDate; $date <= $endDate; $date->modify('+1 day')) {
 				$dataVez = $date->format('Y-m-d');
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
-				
-				$row = array_values(array_merge(array(verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])), $aDadosMotorista, $aDetalhado));
-				$exibir = True;
-				for($f = 0; $f < sizeof($row); $f++){
-					if(strpos($row[$f], 'fa-warning') !== false && $_POST['busca_inconsistencia'] == 'Sim'){
-						$exibir = False;
-						// $f2 = 8;
-						// foreach($totalResumo as $key => $value){
-
-						// 	print_r($totalResumo[$key]);
-						// 	$totalResumo[$key] = explode(':', $totalResumo[$key]);
-						// 	print_r(' => ');
-						// 	print_r($totalResumo[$key]);
-						// 	$totalResumo[$key] = intval($totalResumo[$key][0])*60+($totalResumo[$key][0][0] == '-'? -1:1)*intval($totalResumo[$key][1]);
-						// 	print_r(' => ');
-						// 	print_r($totalResumo[$key]);
-						// 	print_r('<br>');
-
-						// 	print_r($row[$f2]);
-						// 	$row[$f2] = explode(':', substr($row[$f2], -5));
-						// 	print_r(' => ');
-						// 	print_r($row[$f2]);
-						// 	$row[$f2] = intval($row[$f2][0])*60 + ($row[$f2][0][0] == '-'? -1:1)*intval($row[$f2][1]);
-						// 	print_r(' => ');
-						// 	print_r($row[$f2]);
-						// 	print_r('<br>');
-							
-						// 	print_r($totalResumo[$key]);
-						// 	$totalResumo[$key] = $totalResumo[$key] + (($totalResumo[$key]<0?1:-1)*$row[$f2]);
-						// 	print_r(' => ');
-						// 	print_r($totalResumo[$key]);
-						// 	$totalResumo[$key] = sprintf('00',(intval($totalResumo[$key]/60))).":".sprintf('00', ($totalResumo[$key]-intval($totalResumo[$key]/60)*60));
-						// 	print_r(' => ');
-						// 	print_r($totalResumo[$key]);
-						// 	print_r('<br><br>');
-						// 	$f2++;
-						// }
-						break;
+				if(isset($aDetalhado['fimJornada'][0]) && (strpos($aDetalhado['fimJornada'][0], ':00') !== false) && date('Y-m-d', strtotime($aDetalhado['fimJornada'][0])) != $dataVez){
+					array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
+				}
+								
+				//<Converter array em string>
+					foreach(['inicioJornada', 'fimJornada', 'inicioRefeicao', 'fimRefeicao'] as $tipo){
+						if (count($aDetalhado[$tipo]) > 0){
+							for($f = 0; $f < count($aDetalhado[$tipo]); $f++){
+								//Formatar datas para hora e minutos sem perder o D+1, caso tiver
+								if(strpos($aDetalhado[$tipo][$f], ':00', strlen($aDetalhado[$tipo][$f])-3) !== false){
+									if(strpos($aDetalhado[$tipo][$f], 'D+1') !== false){
+										$aDetalhado[$tipo][$f] = explode(' ', $aDetalhado[$tipo][$f]);
+										$aDetalhado[$tipo][$f] = substr($aDetalhado[$tipo][$f][1], 0, strlen($aDetalhado[$tipo][$f][1])-3)+$aDetalhado[$tipo][$f][2];
+									}else{
+										$aDetalhado[$tipo][$f] = date('H:i', strtotime($aDetalhado[$tipo][$f]));
+									}
+								}
+							}
+							$aDetalhado[$tipo] = implode("<br>", $aDetalhado[$tipo]);
+						}else{
+							$aDetalhado[$tipo] = '';
+						}
 					}
+				//</Converter array em string>
+				
+				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDadosMotorista, $aDetalhado));
+				for($f = 0; $f < sizeof($row); $f++){
 					if($row[$f] == "00:00"){
 						$row[$f] = "";
 					}
 				}
-				if($exibir){
-					$aDia[] = $row;
-				}
-			}
 
-			var_dump($totalResumo);
-			print('<br>');
+				$aDia[] = $row;
+			}
 	
 			if ($aEmpresa['empr_nb_parametro'] > 0) {
 				$aParametro = carregar('parametro', $aEmpresa['empr_nb_parametro']);
@@ -137,6 +119,28 @@
 				$convencaoPadrao = '| Convenção Padrão? ' . $ehPadrao;
 			}
 
+			$saldoAnterior = mysqli_fetch_assoc(
+				query(
+					"SELECT endo_tx_saldo FROM `endosso`
+						WHERE endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
+							AND endo_tx_ate < '".$_POST['busca_data1']."'
+							AND endo_tx_status = 'ativo'
+						ORDER BY endo_tx_ate DESC
+						LIMIT 1;"
+				)
+			);
+			if(isset($saldoAnterior['endo_tx_saldo'])){
+				$saldoAnterior = $saldoAnterior['endo_tx_saldo'];
+			}else{
+				$saldoAnterior = '--:--';
+			}
+
+			$saldoFinal = '--:--';
+			if($saldoAnterior != '--:--'){
+				$saldoFinal = somarHorarios([$saldoAnterior, $totalResumo['diffSaldo']]);
+			}
+
+
 			$saldosMotorista = ' <div class="table-responsive">
 					<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact" id="saldo">
 					  <thead><tr>
@@ -146,9 +150,9 @@
 					  </thead></tr>
 					  <tbody>
 						<tr>
-						  <td>--:--</td>
-						  <td>--:--</td>
-						  <td>--:--</td>
+						  <td>'.$saldoAnterior.'</td>
+						  <td>'.$totalResumo['diffSaldo'].'</td>
+						  <td>'.$saldoFinal.'</td>
 						</tr>
 					  </tbody>
 					</table>
@@ -174,35 +178,8 @@
 				}
 			</style>
 		<?
-		
-		
 			$aDia[] = array_values(array_merge(array('', '', '', '', '', '', '', '<b>TOTAL</b>'), $totalResumo));
 			
-			$toleranciaStr = carrega_array(query('SELECT parametro.para_tx_tolerancia FROM entidade JOIN parametro ON enti_nb_parametro = para_nb_id WHERE enti_nb_parametro ='.$aMotorista['enti_nb_parametro'].';'))[0];
-			$toleranciaStr = explode(':', $toleranciaStr);
-
-			$tolerancia = intval($toleranciaStr[0])*60;
-
-			if($toleranciaStr[0] == '-'){
-				$tolerancia -= intval($toleranciaStr[1]);
-			}else{
-				$tolerancia += intval($toleranciaStr[1]);
-			}
-			
-			for($f = 0; $f < count($aDia); $f++){
-				$saldoStr = explode(':', $aDia[$f][count($aDia[$f])-1]);
-				$saldo = intval($saldoStr[0])*60;
-				if($saldoStr[0] == '-'){
-					$saldo -= intval($saldoStr[1]);
-				}else{
-					$saldo += intval($saldoStr[1]);
-				}
-				if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
-					$aDia[$f][count($aDia[$f])-1] = '00:00';
-				}
-			}
-			
-	
 			grid2($cab, $aDia, "Jornada Semanal (Horas): $aMotorista[enti_tx_jornadaSemanal]");
 			fecha_form();
 		}
@@ -235,3 +212,4 @@
 	<?
 	
 	}
+?>

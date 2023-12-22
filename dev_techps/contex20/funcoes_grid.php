@@ -44,7 +44,8 @@ function grid2($cabecalho,$valores){
 	}
 
 	echo "</table>";
-	echo "(*): 00:00 Caso esteja dentro da tolerância";
+	echo "(*): Registros excluídos manualmente.<br>";
+	echo "(**): 00:00 Caso esteja dentro da tolerância";
 	echo '</div>';
 
 	

@@ -20,15 +20,15 @@ if($_GET['user'] != '' && $_GET['password'] != '' ){
 				</div>";
 			} else {
 
-				$_SESSION[user_nb_id] = $a[user_nb_id];
-				$_SESSION[user_tx_nivel] = $a[user_tx_nivel];
-				$_SESSION[user_tx_login] = $a[user_tx_login];
-				$_SESSION[user_nb_entidade] = $a[user_nb_entidade];
-				$_SESSION[user_nb_empresa] = $a[user_nb_empresa];
-				if ($a[user_tx_foto]) {
-					$_SESSION[user_tx_foto] = $a[user_tx_foto];
+				$_SESSION['user_nb_id'] = $a['user_nb_id'];
+				$_SESSION['user_tx_nivel'] = $a['user_tx_nivel'];
+				$_SESSION['user_tx_login'] = $a['user_tx_login'];
+				$_SESSION['user_nb_entidade'] = $a['user_nb_entidade'];
+				$_SESSION['user_nb_empresa'] = $a['user_nb_empresa'];
+				if ($a['user_tx_foto']) {
+					$_SESSION['user_tx_foto'] = $a['user_tx_foto'];
 				} else {
-					$_SESSION[user_tx_foto] = '/contex20/img/user.png';
+					$_SESSION['user_tx_foto'] = '/contex20/img/user.png';
 				}
 			}
 			

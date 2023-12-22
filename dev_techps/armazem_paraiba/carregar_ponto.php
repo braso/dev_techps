@@ -11,7 +11,6 @@ function carrega_ponto(){
 	$arquivo = $_FILES['arquivo'];
 	
 	if($arquivo['error'] === 0){
-		query("SELECT * FROM arquivoponto WHERE arqu_tx_nome = '$arquivo[name]' AND arqu_tx_status = 'ativo' LIMIT 1");
 		$local_file = $path . $arquivo['name'];
 		
 		move_uploaded_file($arquivo['tmp_name'],$path.$arquivo['name']);
@@ -20,21 +19,20 @@ function carrega_ponto(){
 		$idArquivo = inserir('arquivoponto', $campos, $valores);
 
 		foreach (file($local_file) as $line) {
+			//matricula dmYhi 999 macroponto.codigoExterno
 			$line = trim($line);
-			$loginMotorista = substr($line, 0, 10)+0;
+			$matricula = substr($line, 0, 10)+0;
 			$data = substr($line, 10, 8);
 			$data = substr($data, 4, 4)."-".substr($data, 2, 2)."-".substr($data, 0, 2);
 			$hora = substr($line, 18, 4);
 			$hora = substr($hora, 0, 2).":".substr($hora, 2, 2).":00";
 			$codigoExterno = substr($line, -2, 2)+0;
-			// echo $line."->";
-			// echo "$loginMotorista|$data|$hora|$codigoExterno<hr>";
 			$queryMacroPonto = query("SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_codigoExterno = '" . $codigoExterno . "'");
 			$aTipo = carrega_array($queryMacroPonto);
 			$campos = array('pont_nb_user', 'pont_nb_arquivoponto', 'pont_tx_matricula', 'pont_tx_data', 'pont_tx_tipo', 'pont_tx_tipoOriginal', 'pont_tx_status', 'pont_tx_dataCadastro');
-			$valores = array($_SESSION['user_nb_id'], $idArquivo, $loginMotorista, "$data $hora", $aTipo[0], $codigoExterno, 'ativo', date("Y-m-d H:i:s"));
+			$valores = array($_SESSION['user_nb_id'], $idArquivo, $matricula, "$data $hora", $aTipo[0], $codigoExterno, 'ativo', date("Y-m-d H:i:s"));
 			
-			$check = query('SELECT * FROM ponto WHERE pont_tx_matricula = '.$loginMotorista.' AND pont_tx_data = "'."$data $hora".'" AND pont_tx_tipo = '.$aTipo[0].' AND pont_tx_tipoOriginal = '.$codigoExterno.';');
+			$check = query('SELECT * FROM ponto WHERE pont_tx_matricula = '.$matricula.' AND pont_tx_data = "'."$data $hora".'" AND pont_tx_tipo = '.$aTipo[0].' AND pont_tx_tipoOriginal = '.$codigoExterno.';');
 			
 			if(num_linhas($check) === 0){
 				inserir('ponto', $campos, $valores);
@@ -89,22 +87,15 @@ function layout_ftp(){
 // 	$ftp_userpass = '0899';
 
 
-	$ftp_conn = ftp_connect($infos['empr_tx_ftpServer']) or die("Could not connect to $ftp_server");
+	$ftp_conn = ftp_connect($infos['empr_tx_ftpServer']) or die("Could not connect to $infos['empr_tx_ftpServer']");
 	$login = ftp_login($ftp_conn, $infos['empr_tx_ftpUsername'], $infos['empr_tx_ftpUserpass']);
 
 	//BUSCA O ARQUIVO
 
 	$fileList = ftp_nlist($ftp_conn, $arquivo);
-	// $fileList = array(
-	// 	'apontamento27032023010000.txt',
-	// 	'apontamento28032023010000.txt',
-	// 	'apontamento29032023010000.txt',
-	// 	'apontamento30032023010000.txt',
-	// 	'apontamento31032023010000.txt'
-	// );
-// 	print_r($fileList);
-// 	die();
 	for ($i = 0; $i < count($fileList); $i++) {
+	   // 	print_r($fileList);
+	   // 	die();
 
 		$sqlCheck = "SELECT * FROM arquivoponto WHERE arqu_tx_nome = '$fileList[$i]' AND arqu_tx_status = 'ativo' LIMIT 1";
 		$queryCheck = query($sqlCheck);
@@ -122,7 +113,7 @@ function layout_ftp(){
 
 			foreach (file($local_file) as $line) {
 				$line = trim($line);
-				$loginMotorista = substr($line, 0, 10) + 0;
+				$matricula = substr($line, 0, 10) + 0;
 
 				$data = substr($line, 10, 8);
 				$data = substr($data, 4, 4) . "-" . substr($data, 2, 2) . "-" . substr($data, 0, 2);
@@ -131,14 +122,12 @@ function layout_ftp(){
 				$hora = substr($hora, 0, 2) . ":" . substr($hora, 2, 2) . ":00";
 
 				$codigoExterno = substr($line, -2, 2) + 0;
-				// echo $line."->";
-				// echo "$loginMotorista|$data|$hora|$codigoExterno<hr>";
 
 				$queryMacroPonto = query("SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_codigoExterno = '" . $codigoExterno . "'");
 				$aTipo = carrega_array($queryMacroPonto);
 
 				$campos = array('pont_nb_user', 'pont_nb_arquivoponto', 'pont_tx_matricula', 'pont_tx_data', 'pont_tx_tipo', 'pont_tx_tipoOriginal', 'pont_tx_status', 'pont_tx_dataCadastro');
-				$valores = array($_SESSION['user_nb_id'], $idArquivo, $loginMotorista, "$data $hora", $aTipo[0], $codigoExterno, 'ativo', date("Y-m-d H:i:s"));
+				$valores = array($_SESSION['user_nb_id'], $idArquivo, $matricula, "$data $hora", $aTipo[0], $codigoExterno, 'ativo', date("Y-m-d H:i:s"));
 				inserir('ponto', $campos, $valores);
 
 			}
@@ -148,9 +137,6 @@ function layout_ftp(){
 		}
 	}
 
-	// var_dump($ftp_conn)
-	// // then do something...
-	// close connection
 
 	ftp_close($ftp_conn);
 	if ($_SERVER['HTTP_ENV'] == 'carrega_cron') {
@@ -158,9 +144,7 @@ function layout_ftp(){
 	}
 	index();
 	exit;
-
 }
-
 
 function index(){
 	global $CACTUX_CONF;
@@ -173,7 +157,8 @@ function index(){
 
 		$_SESSION['user_nb_id'] = 1;
 		$_SESSION['user_tx_nivel'] = 'Administrador';
-		$_SESSION['user_tx_login'] = 'Adm';
+		$_SESSION['user_tx_login'] = 'adm';
+		// $_SESSION['user_tx_login'] = 'Techps.admin';
 		layout_ftp();
 		exit;
 	}

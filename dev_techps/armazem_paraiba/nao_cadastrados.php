@@ -4,7 +4,12 @@ include "conecta.php";
 
 function motorista_nao_cadastrado()
 {
-    $sqlPonto = query("SELECT DISTINCT p.pont_tx_matricula FROM ponto p LEFT JOIN entidade e ON p.pont_tx_matricula = e.enti_tx_matricula WHERE e.enti_tx_nome IS NULL;");
+    $sqlPonto = query("SELECT p.pont_tx_matricula, MAX(p.pont_tx_data) AS ultima_data
+    FROM ponto p
+    LEFT JOIN entidade e ON p.pont_tx_matricula = e.enti_tx_matricula
+    WHERE e.enti_tx_nome IS NULL
+    GROUP BY p.pont_tx_matricula
+    ORDER BY ultima_data DESC");
 
     $pontos = mysqli_fetch_all($sqlPonto, MYSQLI_ASSOC);
     
@@ -39,10 +44,10 @@ function index()
 {
     global $CACTUX_CONF;
 
-    cabecalho('Matriculas Não Cadastrados');
+    cabecalho('Matrículas Não Cadastrados');
 
     ?>
-    <div class="col-md-3 col-sm-3" style="left: 500px;">
+    <div class="col-md-5 col-sm-5" style="left: 410px;">
         <div class="portlet light ">
             <div class="portlet-body form">
 
@@ -65,7 +70,8 @@ function index()
                             <tr>
                                 <th>MATRÍCULAS</th>
                                 <?
-                                 echo "<th>Total = ".sizeof(motorista_nao_cadastrado())."</th>"
+                                 echo "<th>Ultima Data do Cadastro do Ponto</th>";
+                                 echo "<th>Total de Matrículas = ".sizeof(motorista_nao_cadastrado())."</th>";
                                 ?>
                         </thead>
                         </tr>
@@ -76,8 +82,11 @@ function index()
                         <tbody>
                             <?
                             foreach ($matriculas as $valor) {
+                                // $ultimaDataHora = $valor['ultima_data'];
+                                // $ultimaData = date("Y-m-d", strtotime($ultimaDataHora));
                                 echo '<tr>';
                                 echo '<td>' . $valor['pont_tx_matricula']. '</td>';
+                                echo '<td>' . date("d-m-Y", strtotime($valor['ultima_data'])). '</td>';
                                 echo '</tr>';
                             }
                             ?>

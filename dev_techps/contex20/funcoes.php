@@ -300,9 +300,9 @@ function num_linhas($sql){
 }
 
 
-function carrega_array($sql){
+function carrega_array($sql, $mode = MYSQLI_BOTH){
 
-	return mysqli_fetch_array($sql);
+	return mysqli_fetch_array($sql, $mode);
 
 }
 
