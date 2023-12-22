@@ -58,12 +58,17 @@
 				$dataVez = $_POST['busca_data'] . "-" . str_pad($i, 2, 0, STR_PAD_LEFT);
 
 				$aDetalhado = diaDetalheEndosso2($aMotorista['enti_tx_matricula'], $dataVez);
-				$aDetalhadoCampos = [
-					$aDetalhado['data'], $aDetalhado['diaSemana'], $aDetalhado['inicioJornada'], $aDetalhado['inicioRefeicao'],
-					$aDetalhado['fimRefeicao'], $aDetalhado['fimJornada'], $aDetalhado['diffRefeicao'], $aDetalhado['diffEspera'], $aDetalhado['diffDescanso'], $aDetalhado['diffRepouso'],
-					$aDetalhado['diffJornada'], $aDetalhado['diffJornadaEfetiva'], $aDetalhado['jornadaPrevista'], $aDetalhado['intersticio'], $aDetalhado['he50'], $aDetalhado['he100'],
-					$aDetalhado['adicionalNoturno'], $aDetalhado['esperaIndenizada'], $aDetalhado['moti_tx_motivo']
+				$campos = [
+					'data', 'diaSemana', 'inicioJornada', 'inicioRefeicao', 'fimRefeicao', 'fimJornada',
+					'diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada',
+					'jornadaPrevista', 'diffJornadaEfetiva', 'intersticio', 'he50', 'he100', 'adicionalNoturno', 
+					'esperaIndenizada', 'moti_tx_motivo'
 				];
+				$aDetalhadoCampos = [];
+				foreach($campos as $campo){
+					$aDetalhadoCampos[] = $aDetalhado[$campo];
+				}
+				unset($campos);
 
 				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDetalhadoCampos));
 				for ($f = 0; $f < sizeof($row) - 1; $f++) {
@@ -251,9 +256,6 @@
 			}
 		}
 
-
-		$countEndosso = $countNaoConformidade = $countVerificados = $countEndossados = $countNaoEndossados = 0;
-
 		//CAMPOS DE CONSULTA{
 			$c = [
 				combo_net('* Empresa:', 'busca_empresa',   (!empty($_POST['busca_empresa'])?   $_POST['busca_empresa']  : ''), 3, 'empresa', 'onchange=selecionaMotorista(this.value)', $extraEmpresa),
@@ -293,6 +295,12 @@
 		];
 
 		//function buscar_endosso(){
+			$counts = [
+				'total' => 0,								//$countEndosso
+				'naoConformidade' => 0,						//$countNaoConformidade
+				'verificados' => 0,							//countVerificados
+				'endossados' => ['sim' => 0, 'nao' => 0],	//countEndossados e $countNaoEndossados
+			];
 			if(!empty($_POST['busca_data']) && !empty($_POST['busca_empresa'])){
 
 				$date = new DateTime($_POST['busca_data']);
@@ -433,20 +441,18 @@
 						
 						$aDia[] = array_values(array_merge(['', '', '', '', '', '', '', '<b>TOTAL</b>'], $totalResumo));
 	
-						$toleranciaStr = explode(':', $dadosParametro['para_tx_tolerancia']);
-	
-						$tolerancia = intval($toleranciaStr[0])*60;
-
-						$tolerancia += ($toleranciaStr[0] == '-'? -1: 1)*intval($toleranciaStr[1]);
-						
+						$tolerancia = intval($dadosParametro['para_tx_tolerancia']);
 						
 						for($f = 0; $f < count($aDia); $f++){
+							if(empty($aDia[$f][count($aDia[$f])-1])){
+								$aDia[$f][count($aDia[$f])-1] = '00:00';	
+							}
 							$saldoStr = explode(':', $aDia[$f][count($aDia[$f])-1]);
 							$saldo = intval($saldoStr[0])*60;
 							$saldo += ($saldoStr[0] == '-'? -1: 1)*intval($saldoStr[1]);
 
 							if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
-								// $aDia[$f][count($aDia[$f])-1] = '00:00';
+								$aDia[$f][count($aDia[$f])-1] = '00:00';
 							}
 						}
 	
@@ -464,7 +470,7 @@
 			}
 
 			if (in_array($_POST['busca_situacao'], ['Todos', 'Verificado'])){
-				$countVerificados = $countEndosso - $countNaoConformidade;
+				// $countVerificados = $countEndosso - $countNaoConformidade; //Utilizado em endosso_html.php
 			}
 		//}
 
