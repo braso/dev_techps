@@ -55,41 +55,43 @@
 	function cadastrar(){
 		global $totalResumo;
 		
-		//Conferir se os campos obrigatórios estão preenchidos
-		$show_error = False;
-		$error_msg = 'Há campos obrigatórios não preenchidos: ';
-		if(!isset($_POST['empresa'])){
-			if($_SESSION['user_tx_nivel'] == 'Super Administrador'){
-				$show_error = True;
-				$error_msg .= 'Empresa, ';
-			}else{
-				$_POST['empresa'] = $_SESSION['user_tx_emprCnpj'];
+		//Conferir se os campos obrigatórios estão preenchidos{
+			$show_error = False;
+			$error_msg = 'Há campos obrigatórios não preenchidos: ';
+			if(!isset($_POST['empresa'])){
+				if($_SESSION['user_tx_nivel'] == 'Super Administrador'){
+					$show_error = True;
+					$error_msg .= 'Empresa, ';
+				}else{
+					$_POST['empresa'] = $_SESSION['user_tx_emprCnpj'];
+				}
 			}
-		}
-		if(!isset($_POST['busca_motorista'])){
-			$show_error = True;
-			$error_msg .= 'Motorista, ';
-		}
-		if(empty($_POST['data_de']) || empty($_POST['data_ate'])){
-			$show_error = True;
-			$error_msg .= 'Data, ';
-		}
-		if(!$show_error){
-			$error_msg = '';
-		}
-		if($show_error){
-			echo "<script>alert('".substr($error_msg, 0, strlen($error_msg)-2)."')</script>";
-			index();
-			return;
-		}
+			if(!isset($_POST['busca_motorista'])){
+				$show_error = True;
+				$error_msg .= 'Motorista, ';
+			}
+			if(empty($_POST['data_de']) || empty($_POST['data_ate'])){
+				$show_error = True;
+				$error_msg .= 'Data, ';
+			}
+			if(!$show_error){
+				$error_msg = '';
+			}
+			if($show_error){
+				echo "<script>alert('".substr($error_msg, 0, strlen($error_msg)-2)."')</script>";
+				index();
+				return;
+			}
+		//}
 
-		//Conferir se o endosso tem mais de um mês
-		$difference = strtotime($_POST['data_ate']) - strtotime($_POST['data_de']);
-		$qttDays = floor($difference / (60 * 60 * 24));
-		if($qttDays > 31){
-			$show_error = True;
-			$error_msg = 'Não é possível cadastrar um endosso com mais de um mês.';
-		}
+		//Conferir se o endosso tem mais de um mês{
+			$difference = strtotime($_POST['data_ate']) - strtotime($_POST['data_de']);
+			$qttDays = floor($difference / (60 * 60 * 24));
+			if($qttDays > 31){
+				$show_error = True;
+				$error_msg = 'Não é possível cadastrar um endosso com mais de um mês.';
+			}
+		//}
 		//Conferir se não está entrelaçada com outro endosso
 		$endossos = mysqli_fetch_array(
 			query("
