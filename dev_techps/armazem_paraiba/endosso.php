@@ -302,6 +302,7 @@
 				'endossados' => ['sim' => 0, 'nao' => 0],	//countEndossados e $countNaoEndossados
 			];
 			if(!empty($_POST['busca_data']) && !empty($_POST['busca_empresa'])){
+				$counts['total']++;
 
 				$date = new DateTime($_POST['busca_data']);
 
@@ -333,6 +334,7 @@
 							$aDia[] = $row;
 							$aDiaOriginal[] = $aDetalhado;
 						}
+					//}
 	
 					$exibir = True;
 
@@ -355,7 +357,7 @@
 									$totalResumo[$key] = '00:00';
 								}
 							}elseif(in_array($_POST['busca_situacao'], ['Todos', 'Não Conformidade'])){
-								$countNaoConformidade++;
+								$counts['naoConformidade']++;
 							}
 						} else {
 							$exibir = True;
@@ -378,20 +380,18 @@
 								LIMIT 1"
 						);
 						$aEndosso = carrega_array($sqlCheck);
-						if (count($aEndosso) > 0) {
+						if (!empty($aEndosso) && count($aEndosso) > 0) {
+							$counts['endossados']++;
 							$infoEndosso = " - Endossado por " . $aEndosso['user_tx_login'] . " em " . data($aEndosso['endo_tx_dataCadastro'], 1);
-							$countEndossados++;
 							$aIdMotoristaEndossado[] = $aMotorista['enti_nb_id'];
 							$aMatriculaMotoristaEndossado[] = $aMotorista['enti_tx_matricula'];
 						} else {
 							$infoEndosso = '';
-							$countNaoEndossados++;
+							$counts['endossados']['nao']++;
 						}
 
 						$aIdMotorista[] 		= $aMotorista['enti_nb_id'];
-						$aMatriculaMotorista[] 	= $aMotorista['enti_tx_matricula'];
-
-						$countEndosso++;
+						$aMatriculaMotorista[] 	= $aMotorista['enti_tx_matricula'];						
 
 						$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
 
