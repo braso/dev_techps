@@ -596,7 +596,7 @@ function ordena_horarios_pares($inicio, $fim, $ehEspera = 0) {
     return $pares_horarios;
 }
 
-function diaDetalhePonto($matricula, $data) {
+function diaDetalhePonto($matricula, $data): array{
 	global $totalResumo, $contagemEspera;
 	setlocale(LC_ALL, 'pt_BR.utf8');
 
