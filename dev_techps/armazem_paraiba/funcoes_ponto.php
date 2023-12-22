@@ -109,8 +109,7 @@
 	}
 
 	function cadastra_ajuste(){
-
-		if($_POST['hora'] == ''){
+		if(empty($_POST['hora']) || empty($_POST['idMacro']) || empty($_POST['motivo'])){
 			set_status("ERRO: Dados insuficientes!");
 			layout_ajuste();
 			exit;
@@ -118,13 +117,14 @@
 
 		$aMotorista = carregar('entidade',$_POST['id']);
 
-		$queryMacroPonto = query("SELECT macr_tx_codigoInterno, macr_tx_codigoExterno FROM macroponto WHERE macr_nb_id = '".$_POST['idMacro']."'");
-		$aTipo = carrega_array($queryMacroPonto);
+		$aTipo = carrega_array(query(
+			"SELECT macr_tx_codigoInterno, macr_tx_codigoExterno FROM macroponto 
+				WHERE macr_nb_id = '".$_POST['idMacro']."'"
+		));
 
 		$campos = ['pont_nb_user', 'pont_tx_matricula', 'pont_tx_data', 'pont_tx_tipo', 'pont_tx_tipoOriginal', 'pont_tx_status', 'pont_tx_dataCadastro', 'pont_nb_motivo', 'pont_tx_descricao'];
 		$valores = [$_SESSION['user_nb_id'], $aMotorista['enti_tx_matricula'], "$_POST[data] $_POST[hora]", $aTipo[0], $aTipo[1], 'ativo', date("Y-m-d H:i:s"),$_POST['motivo'],$_POST['descricao']];
 		inserir('ponto',$campos,$valores);
-			
 		
 		layout_ajuste();
 		exit;
@@ -148,20 +148,24 @@
 
 		cabecalho('Espelho de Ponto');
 
-		if($_POST['busca_data1'] == '' && $_POST['busca_data'])
+		if(empty($_POST['busca_data1']) && !empty($_POST['busca_data']))
 			$_POST['busca_data1'] = $_POST['busca_data'];
-		if($_POST['busca_data2'] == '' && $_POST['busca_data'])
+		if(empty($_POST['busca_data2']) && !empty($_POST['busca_data']))
 			$_POST['busca_data2'] = $_POST['busca_data'];
 		
 		$aMotorista = carregar('entidade',$_POST['id']);
 
-		$sqlCheck = query("SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user WHERE endo_tx_mes = '".substr($_POST['data'], 0,7).'-01'."' AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'
-				AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."' AND endo_tx_status = 'ativo' AND endo_nb_userCadastro = user_nb_id LIMIT 1");
+		$sqlCheck = query("SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user 
+			WHERE endo_tx_mes = '".substr($_POST['data'], 0,7).'-01'."' 
+				AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'
+				AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."' 
+				AND endo_tx_status = 'ativo' 
+				AND endo_nb_userCadastro = user_nb_id 
+			LIMIT 1"
+		);
 		$aEndosso = carrega_array($sqlCheck);
-			
-		$extra = " AND pont_tx_data LIKE '".$_POST['data']." %' AND pont_tx_matricula = '$aMotorista[enti_tx_matricula]'";
 
-		$botao_imprimi = 
+		$botao_imprimir = 
 			'<button  href="#" onclick="imprimir()">Imprimir (Ctrl + P)</button >
 				<script>
 					function imprimir() {
@@ -187,8 +191,13 @@
 		}else{
 			$c2[] = texto('Endosso:',"Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1),6);
 		}
-		$botao[] = $botao_imprimi;
-		$botao[] = botao('Voltar', 'index', 'busca_data1, busca_data2, id, busca_empresa, busca_motorista, data, busca_data', "$_POST[busca_data1], $_POST[busca_data2], $_POST[id], $aMotorista[enti_nb_empresa], $_POST[id], $_POST[data], ".substr($_POST['data'], 0, -3));
+		$botao[] = $botao_imprimir;
+		$botao[] = botao(
+			'Voltar', 
+			'index', 
+			'busca_data1, busca_data2, id, busca_empresa, busca_motorista, data, busca_data', 
+			$_POST['busca_data1'].", ".$_POST['busca_data2'].", ".$_POST['id'].", ".$aMotorista['enti_nb_empresa'].", ".$_POST['id'].", ".$_POST['data'].", ".substr($_POST['data'], 0, -3)
+		);
 		
 		abre_form('Dados do Ajuste de Ponto');
 		linha_form($c);
@@ -196,17 +205,18 @@
 		linha_form($c3);
 		fecha_form($botao);
 
-		$sql = "SELECT * FROM ponto
-			JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
-			JOIN user ON ponto.pont_nb_user = user.user_nb_id
-			LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
-			WHERE ponto.pont_tx_status != 'inativo' 
-			$extra";
+		$sql = 
+			"SELECT * FROM ponto
+				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
+				JOIN user ON ponto.pont_nb_user = user.user_nb_id
+				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
+				WHERE ponto.pont_tx_status != 'inativo' 
+					AND pont_tx_data LIKE '".$_POST['data']."%' 
+					AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'";
 
 		
 		$cab = ['CÓD','DATA','HORA','TIPO','MOTIVO', 'LEGENDA','JUSTIFICATIVA','USUÁRIO','DATA CADASTRO',''];
 
-		// $ver2 = "icone_modificar(arqu_nb_id,layout_confirma)";
 		$val = ['pont_nb_id','data(pont_tx_data)','data(pont_tx_data,3)','macr_tx_nome','moti_tx_nome','moti_tx_legenda','pont_tx_descricao','user_tx_login','data(pont_tx_dataCadastro,1)','icone_excluir(pont_nb_id,excluir_ponto,idEntidade,'.$_POST['id'].')'];
 		grid($sql,$cab,$val,'','',2,'ASC',-1);
 
@@ -608,10 +618,12 @@
 
 		if ($aMotorista['enti_nb_empresa'] && $aMotorista['empr_nb_cidade'] && $aMotorista['cida_nb_id'] && $aMotorista['cida_tx_uf']) {
 			$extraFeriado = " AND ((feri_nb_cidade = '$aMotorista[cida_nb_id]' OR feri_tx_uf = '$aMotorista[cida_tx_uf]') OR ((feri_nb_cidade = '' OR feri_nb_cidade IS NULL) AND (feri_tx_uf = '' OR feri_tx_uf IS NULL)))";
+		}else{
+			$extraFeriado = "";
 		}
 
 		$aParametro = carregar('parametro', $aMotorista['enti_nb_parametro']);
-		$alertaJorEfetiva = (($aParametro['para_tx_acordo'] == 'Sim')? '12:00': '10:00');
+		$alertaJorEfetiva = ((isset($aParametro['para_tx_acordo']) && $aParametro['para_tx_acordo'] == 'Sim')? '12:00': '10:00');
 
 		$queryFeriado = query("SELECT feri_tx_nome FROM feriado WHERE feri_tx_data LIKE '____-" . substr($data, 5, 5) . "%' AND feri_tx_status != 'inativo' $extraFeriado");
 		$stringFeriado = '';
@@ -680,7 +692,6 @@
 					}
 				}
 			}
-
 			if($pontosDia[0]['pont_tx_tipo'] != '1'){ //Se o 1° registro != início de jornada => É uma jornada que veio do dia anterior
 				while(count($pontosDia) > 0){
 					if($pontosDia[0]['pont_tx_tipo'] != '1'){
@@ -691,7 +702,6 @@
 				}
 			}
 		}
-
 
 		foreach($pontosDia as $ponto){
 			$tiposRegistrados[] = [date("H:i", strtotime($ponto['pont_tx_data'])), $ponto['pont_tx_tipo']]; //$arrayMDC
@@ -705,7 +715,7 @@
 		$registros['refeicaoCompleto'] = ordenar_horarios($registros['inicioRefeicao'], $registros['fimRefeicao']);		/* $refeicaoOrdenada */
 		$registros['esperaCompleto']   = ordenar_horarios($registros['inicioEspera'],   $registros['fimEspera'], true);	/* $esperaOrdenada */
 		$registros['descansoCompleto'] = ordenar_horarios($registros['inicioDescanso'], $registros['fimDescanso']);		/* $descansoOrdenado */
-		$registros['repousoCompleto'] = ordenar_horarios($registros['inicioRepouso'], $registros['fimRepouso']);		/* $repousoOrdenado */;
+		$registros['repousoCompleto']  = ordenar_horarios($registros['inicioRepouso'], $registros['fimRepouso']);		/* $repousoOrdenado */;
 
 		if (isset($registros['esperaCompleto']['paresParaRepouso']) && !empty($registros['esperaCompleto']['paresParaRepouso'])){
 			$paresParaRepouso = $registros['esperaCompleto']['paresParaRepouso'];
@@ -854,7 +864,7 @@
 			]);
 
 			$adicionalNoturno = gmdate('H:i', (strtotime($data.' '.$registros['jornadaCompleto']['totalIntervaloAdicionalNot']))-(strtotime($data.' '.$intervalosNoturnos)));
-			$aRetorno['adicionalNoturno'] = ($adicionalNoturno == '00:00')? '' : $adicionalNoturno;
+			// $aRetorno['adicionalNoturno'] = ($adicionalNoturno == '00:00')? '' : $adicionalNoturno;
 		//FIM ADICIONAL NOTURNO
 
 		//HORAS EXTRAS{
@@ -867,7 +877,7 @@
 				$aRetorno['he50'] = $aRetorno['diffSaldo'];
 			}
 
-			if($aRetorno['diffSaldo'] >= $aParametro['para_tx_HorasEXExcedente']){
+			if(!empty($aParametro) && $aRetorno['diffSaldo'] >= $aParametro['para_tx_HorasEXExcedente']){
 				$aRetorno['he100'] = operarHorarios([$aRetorno['he100'], $aParametro['para_tx_HorasEXExcedente']], '+');
 				$aRetorno['diffSaldo'] = operarHorarios([$aRetorno['diffSaldo'], $aParametro['para_tx_HorasEXExcedente']], '-');
 			}
@@ -1104,7 +1114,9 @@
 		return $response;
 	}
 
-	function diaDetalheEndosso($matricula, $data, $status = ''){
+	function diaDetalheEndosso($matricula, $data, $status = ''): array{
+		return diaDetalhePonto($matricula, $data);
+
 		global $totalResumo, $contagemEspera;
 		setlocale(LC_ALL, 'pt_BR.utf8');
 
@@ -1148,7 +1160,6 @@
 			// $cargaHoraria = sprintf("%02d:%02d", floor($horas_diarias), ($horas_diarias - floor($horas_diarias)) * 60);
 			$cargaHoraria = $aMotorista['enti_tx_jornadaSemanal'];
 		}
-
 		if($stringFeriado != ''){
 			$cargaHoraria = '00:00';
 		}
