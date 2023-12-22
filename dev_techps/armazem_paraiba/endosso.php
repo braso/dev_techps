@@ -371,18 +371,15 @@
 	
 					for ($i = 0; $i < count($aDiaOriginal); $i++) {
 						$diaVez = $aDiaOriginal[$i];
-						if (strpos($diaVez['diffRefeicao'].$diaVez['diffEspera'].$diaVez['diffDescanso'].$diaVez['diffRepouso'].$diaVez['diffJornada'].$diaVez['jornadaPrevista'].$diaVez['diffJornadaEfetiva'].$diaVez['maximoDirecaoContinua'].$diaVez['intersticio'].$diaVez['he50'].$diaVez['he100'].$diaVez['adicionalNoturno'].$diaVez['esperaIndenizada'].$diaVez['diffSaldo'], 'color:red;') !== false){
-							//SE HOUVER NAO CONFORMIDADE, EXIBE.
-							$exibir = ($_POST['busca_situacao'] == 'Não conformidade');
+						$checkString = '';
+						foreach($keys as $key){
+							$checkString .= $diaVez[$key];
+						}
+						if (strpos($checkString, 'color:red;') !== false){// Se houver pelo menos uma inconformidade nos campos listados
+
+							$exibir = in_array($_POST['busca_situacao'], ['Todos', 'Não Conformidade']);
+							$counts['naoConformidade']++;
 							
-							if ($_POST['busca_situacao'] == 'Verificado') {
-								$totalResumo = [];
-								foreach($keys as $key){
-									$totalResumo[$key] = '00:00';
-								}
-							}elseif(in_array($_POST['busca_situacao'], ['Todos', 'Não Conformidade'])){
-								$counts['naoConformidade']++;
-							}
 						} else {
 							$exibir = True;
 						}
