@@ -173,31 +173,31 @@ function index() {
 
 				$aDia[] = array_values(array_merge(array('', '', '', '', '', '', '', '<b>TOTAL</b>'), $totalResumo));
 
-				$toleranciaStr = carrega_array(query('SELECT parametro.para_tx_tolerancia FROM entidade JOIN parametro ON enti_nb_parametro = para_nb_id WHERE enti_nb_parametro ='.$aMotorista['enti_nb_parametro'].';'))[0];
-				$toleranciaStr = explode(':', $toleranciaStr);
+				// $toleranciaStr = carrega_array(query('SELECT parametro.para_tx_tolerancia FROM entidade JOIN parametro ON enti_nb_parametro = para_nb_id WHERE enti_nb_parametro ='.$aMotorista['enti_nb_parametro'].';'))[0];
+				// $toleranciaStr = explode(':', $toleranciaStr);
 
-				$tolerancia = intval($toleranciaStr[0])*60;
+				// $tolerancia = intval($toleranciaStr[0])*60;
 
-				if($toleranciaStr[0] == '-'){
-					$tolerancia -= intval($toleranciaStr[1]);
-				}else{
-					$tolerancia += intval($toleranciaStr[1]);
-				}
+				// if($toleranciaStr[0] == '-'){
+				// 	$tolerancia -= intval($toleranciaStr[1]);
+				// }else{
+				// 	$tolerancia += intval($toleranciaStr[1]);
+				// }
 
-				$saldoFiltrado = '00:00';
+				// $saldoFiltrado = '00:00';
 				
-				for($f = 0; $f < count($aDia); $f++){
-					$saldoStr = explode(':', $aDia[$f][count($aDia[$f])-1]);
-					$saldo = intval($saldoStr[0])*60;
-					if($saldoStr[0] == '-'){
-						$saldo -= intval($saldoStr[1]);
-					}else{
-						$saldo += intval($saldoStr[1]);
-					}
-					if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
-						$aDia[$f][count($aDia[$f])-1] = '00:00';
-					}
-				}
+				// for($f = 0; $f < count($aDia); $f++){
+				// 	$saldoStr = explode(':', $aDia[$f][count($aDia[$f])-1]);
+				// 	$saldo = intval($saldoStr[0])*60;
+				// 	if($saldoStr[0] == '-'){
+				// 		$saldo -= intval($saldoStr[1]);
+				// 	}else{
+				// 		$saldo += intval($saldoStr[1]);
+				// 	}
+				// 	if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
+				// 		$aDia[$f][count($aDia[$f])-1] = '00:00';
+				// 	}
+				// }
 
 				grid2($cab, $aDia, "Jornada Semanal (Horas): $aMotorista[enti_tx_jornadaSemanal]");
 				fecha_form();

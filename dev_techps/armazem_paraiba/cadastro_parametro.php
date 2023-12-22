@@ -8,6 +8,71 @@ function exclui_parametro(){
 	exit;
 
 }
+
+function downloadArquivo() {
+    // Verificar se o arquivo existe
+    if (file_exists($_POST['caminho'])) {
+        // Configurar cabeçalhos para forçar o download
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename=' . basename($_POST['caminho']));
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($_POST['caminho']));
+
+        // Lê o arquivo e o envia para o navegador
+        readfile($_POST['caminho']);
+        exit;
+    } else {
+        echo 'O arquivo não foi encontrado.';
+    }
+	$_POST['id'] = $_POST['idParametro'];
+	modifica_parametro();
+	exit;
+}
+
+function enviar_documento() {
+	$idParametro = $_POST['idParametro'];
+	$arquivos =  $_FILES['file'];
+	$novo_nome = $_POST['file-name'];
+	$descricao = $_POST['description-text'];
+
+	$allowed = array('image/jpeg', 'image/png', 'application/msword', 'application/pdf');
+
+	if (in_array($arquivos['type'], $allowed) && $arquivos['name'] != '') {
+			$pasta_parametro = "arquivos/parametro/$idParametro/";
+	
+			if (!is_dir($pasta_parametro)) {
+				mkdir($pasta_parametro, 0777, true);
+			}
+	
+			$arquivo_temporario = $arquivos['tmp_name'];
+			$extensao = pathinfo($arquivos['name'], PATHINFO_EXTENSION); 
+			$novo_nome_com_extensao = $novo_nome . '.' . $extensao;
+            $caminho_destino = $pasta_parametro . $novo_nome_com_extensao;
+
+			print_r([$idParametro,$novo_nome_com_extensao,$descricao,$caminho_destino,date("Y-m-d H:i:s")]);
+	
+			if (move_uploaded_file($arquivo_temporario, $caminho_destino)) {
+				inserir('documento_parametro', ['para_nb_id','doc_tx_nome','doc_tx_descricao','doc_tx_caminho','doc_tx_dataCadastro'],[$idParametro,$novo_nome_com_extensao,$descricao,$caminho_destino,date("Y-m-d H:i:s")]);
+			}
+	}
+
+	$_POST['id'] = $idParametro;
+	modifica_parametro();
+	exit;
+}
+
+function excluir_documento() {
+
+	query("DELETE FROM `documento_parametro` WHERE doc_nb_id = $_POST[idArq]");
+	
+	$_POST['id'] = $_POST['idParametro'];
+	modifica_parametro();
+	exit;
+}
+
 function modifica_parametro(){
 	global $a_mod;
 
@@ -19,14 +84,15 @@ function modifica_parametro(){
 }
 
 function cadastra_parametro(){
-	$camposObrigatorios = ['aInserir'];
-	foreach($camposObrigatorios as $campo){
-		if(!isset($_POST[$campo]) || empty($_POST[$campo])){
-			echo '<script>alert("Preencha todos os campos obrigatórios.")</script>';
-			layout_parametro();
-			exit;
-		}
-	}
+// 	$camposObrigatorios = ['aInserir'];
+// 	foreach($camposObrigatorios as $campo){
+// 		if(!isset($_POST[$campo]) || empty($_POST[$campo])){
+// 			echo '<script>alert("Preencha todos os campos obrigatórios.")</script>';
+// 			layout_parametro();
+// 			exit;
+// 		}
+// 	}
+
 
 	$quandDias = ($_POST['quandDias'] == '') ? 0 : $_POST['quandDias'];
 	
@@ -66,13 +132,14 @@ function cadastra_parametro(){
 			}
 			
 		}
+		
+		$idParametro = $_POST['id'];
 
 	} else {
 		$campos = array_merge($campos,['para_nb_userAtualiza','para_tx_dataAtualiza']);
 		$valores = array_merge($valores,[$_SESSION['user_nb_id'], date("Y-m-d H:i:s")]);
-		inserir('parametro',$campos,$valores);
+		$idParametro =  inserir('parametro',$campos,$valores);
 	}
-
 
 	index();
 	exit;
@@ -114,7 +181,7 @@ function layout_parametro(){
 		campo('Nome', 'nome', $a_mod['para_tx_nome'], 6),
 		campo_hora('Jornada Semanal (Horas/Dia)', 'jornadaSemanal', $a_mod['para_tx_jornadaSemanal'], 3),
 		campo_hora('Jornada Sábado (Horas/Dia)', 'jornadaSabado', $a_mod['para_tx_jornadaSabado'], 3),
-		campo_hora('Tolerância de jornada Saldo diário (Minutos)', 'tolerancia', $a_mod['para_tx_tolerancia'], 3),
+		campo('Tolerância de jornada Saldo diário (Minutos)', 'tolerancia', $a_mod['para_tx_tolerancia'], 3,'MASCARA_NUMERO','maxlength="3"'),
 		campo('Percentual da Hora Extra(%)', 'percentualHE', $a_mod['para_tx_percentualHE'], 3, 'MASCARA_NUMERO'),
 		campo('Percentual da Hora Extra 100% (domingos e feriados)', 'percentualSabadoHE', $a_mod['para_tx_percentualSabadoHE'], 3, 'MASCARA_NUMERO'),
 		campo_hora('Quando Exceder o limite de Horas Extras %, o excedente será Hora Extra 100% (Horas/Minutos)', 'HorasEXExcedente', $a_mod['para_tx_HorasEXExcedente'], 3),
@@ -132,7 +199,7 @@ function layout_parametro(){
 	$botao[] = botao('Gravar','cadastra_parametro','id',$_POST['id']);
 	$botao[] = botao('Voltar','index');
 	
-	abre_form('Dados da Parâmetros');
+	abre_form('Dados dos Parâmetros');
 	linha_form($c);
 
 	if($a_mod['para_nb_userCadastro'] > 0){
@@ -150,8 +217,45 @@ function layout_parametro(){
 
 	
 	fecha_form($botao);
+	
+	if (!empty($a_mod['para_nb_id'])) {
+	    $sqlArquivos= query("SELECT * FROM `documento_parametro` WHERE para_nb_id = $a_mod[para_nb_id]");
+	    $arquivos = mysqli_fetch_all($sqlArquivos, MYSQLI_ASSOC);
+		echo multiArquivos("Documentos", $a_mod['para_nb_id'], $arquivos);
+	}
 
 	rodape();
+	?>
+    <form name="form_excluir_arquivo" method="post" action="cadastro_parametro.php">
+		<input type="hidden" name="idParametro" value="">
+		<input type="hidden" name="idArq" value="">
+		<input type="hidden" name="acao" value="">
+	</form>
+
+	<form name="form_download_arquivo" method="post" action="cadastro_parametro.php">
+		<input type="hidden" name="idParametro" value="">
+		<input type="hidden" name="caminho" value="">
+		<input type="hidden" name="acao" value="">
+	</form>
+	
+	<script type="text/javascript">
+		function remover_arquivo(id, idArq, arquivo, acao ) {
+			if (confirm('Deseja realmente excluir o arquivo ' + arquivo + '?')) {
+				document.form_excluir_arquivo.idParametro.value = id;
+				document.form_excluir_arquivo.idArq.value = idArq;
+				document.form_excluir_arquivo.acao.value = acao;
+				document.form_excluir_arquivo.submit();
+			}
+		}
+
+		function downloadArquivo(id, caminho, acao) {
+			document.form_download_arquivo.idParametro.value = id;
+			document.form_download_arquivo.caminho.value = caminho;
+			document.form_download_arquivo.acao.value = acao;
+			document.form_download_arquivo.submit();
+        }
+	 </script>
+	<?
 }
 
 function index(){

@@ -130,7 +130,7 @@
 
 		$c2[] = campo('Data', 'data', data($_POST['data']), 2, '', 'readonly=readonly');
 		// $c2[] = combo_bd('Tipo', 'idMacro', '', 4, 'macroponto', '', "$extraMacro ORDER BY macr_nb_id ASC");
-		$c2[] = combo_bd('Motivo:', 'motivo', '', 4, 'motivo', '', ' AND moti_nb_id = "31" AND moti_tx_tipo = "Ajuste"'); //VERIFICAR JS
+		$c2[] = combo_bd('Motivo:', 'motivo', '', 4, 'motivo', '', ' AND moti_nb_id = "32" AND moti_tx_tipo = "Ajuste"'); //VERIFICAR JS
 
 		// $c3[] = textarea('Justificativa:','descricao','',12);
 
@@ -302,7 +302,7 @@
 					document.form_submit.id.value = <?= $_POST['id'] ?>;
 					document.form_submit.data.value = '<?= $_POST['data'] ?>';
 					document.form_submit.idMacro.value = idMacro;
-					document.form_submit.motivo.value = 31;
+					document.form_submit.motivo.value = 32;
 					document.form_submit.submit();
 				});
 

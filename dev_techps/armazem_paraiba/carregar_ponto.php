@@ -87,7 +87,7 @@ function layout_ftp(){
 // 	$ftp_userpass = '0899';
 
 
-	$ftp_conn = ftp_connect($infos['empr_tx_ftpServer']) or die("Could not connect to $ftp_server");
+	$ftp_conn = ftp_connect($infos['empr_tx_ftpServer']) or die("Could not connect to $infos['empr_tx_ftpServer']");
 	$login = ftp_login($ftp_conn, $infos['empr_tx_ftpUsername'], $infos['empr_tx_ftpUserpass']);
 
 	//BUSCA O ARQUIVO
@@ -157,7 +157,8 @@ function index(){
 
 		$_SESSION['user_nb_id'] = 1;
 		$_SESSION['user_tx_nivel'] = 'Administrador';
-		$_SESSION['user_tx_login'] = 'Adm';
+		$_SESSION['user_tx_login'] = 'adm';
+		// $_SESSION['user_tx_login'] = 'Techps.admin';
 		layout_ftp();
 		exit;
 	}

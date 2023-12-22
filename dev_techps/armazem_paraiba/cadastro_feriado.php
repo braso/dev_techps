@@ -92,7 +92,7 @@ function index(){
 	$uf = array ('','AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MS', 'MT', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO');
 	
 	
-	$c[] = campo('C贸digo','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO');
+	$c[] = campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO');
 	$c[] = campo('Nome','busca_nome',$_POST['busca_nome'],4);
 	$c[] = combo('Estadual','busca_uf',$_POST['busca_uf'],2,$uf);
 	$c[] = combo_net('Municipal','busca_cidade',$_POST['busca_cidade'],4,'cidade','','','cida_tx_uf');
@@ -105,7 +105,7 @@ function index(){
 	fecha_form($botao);
 
 	$sql = "SELECT * FROM feriado LEFT JOIN cidade ON cida_nb_id = feri_nb_cidade WHERE feri_tx_status != 'inativo' $extra";
-	$cab = array('C脫DIGO','NOME','DATA','ESTADUAL','MUNICIPAL','','');
+	$cab = array('CÓDIGO','NOME','DATA','ESTADUAL','MUNICIPAL','','');
 	$val = array('feri_nb_id','feri_tx_nome','data(feri_tx_data)','feri_tx_uf','cida_tx_nome','icone_modificar(feri_nb_id,modifica_feriado)','icone_excluir(feri_nb_id,exclui_feriado)');
 
 	grid($sql,$cab,$val);

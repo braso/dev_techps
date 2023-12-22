@@ -132,7 +132,7 @@
 
 	function excluir_ponto(){
 		$a=carregar('ponto', (int)$_POST['id']);
-		remover('ponto', (int)$_POST['id']);
+		remover_ponto('ponto', (int)$_POST['id'],$_POST['just']);
 		
 		$_POST['id'] = $_POST['idEntidade'];
 		$_POST['data'] = substr($a['pont_tx_data'],0, -9);
@@ -166,7 +166,7 @@
 		$aEndosso = carrega_array($sqlCheck);
 
 		$botao_imprimir = 
-			'<button  href="#" onclick="imprimir()">Imprimir (Ctrl + P)</button >
+			'<button  href="#" class="btn default" onclick="imprimir()">Imprimir</button >
 				<script>
 					function imprimir() {
 						// Abrir a caixa de diálogo de impressão
@@ -864,7 +864,6 @@
 			]);
 
 			$adicionalNoturno = gmdate('H:i', (strtotime($data.' '.$registros['jornadaCompleto']['totalIntervaloAdicionalNot']))-(strtotime($data.' '.$intervalosNoturnos)));
-			// $aRetorno['adicionalNoturno'] = ($adicionalNoturno == '00:00')? '' : $adicionalNoturno;
 		//FIM ADICIONAL NOTURNO
 
 		//HORAS EXTRAS{
@@ -1621,7 +1620,13 @@
 			'fimRepouso' => ''			//fimRepouso
 		];
 
-		$sql = query("SELECT * FROM ponto WHERE pont_tx_status != 'inativo' AND pont_tx_matricula = '$matricula'  AND pont_tx_data LIKE '$data%' ORDER BY pont_tx_data ASC");
+		$sql = query(
+			"SELECT * FROM ponto 
+				WHERE pont_tx_status != 'inativo' 
+					AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."' 
+					AND pont_tx_data LIKE '".$data."%' 
+				ORDER BY pont_tx_data ASC"
+		);
 		$pontosTipo = [
 			'1' => 'inicioJornada',
 			'2' => 'fimJornada',
@@ -1645,7 +1650,7 @@
 		$aAbono = carrega_array(query(
 			"SELECT * FROM abono, motivo, user
 				WHERE abon_tx_status != 'inativo' AND abon_nb_userCadastro = user_nb_id
-				AND abon_tx_matricula = '$matricula' AND abon_tx_data = '$data' AND abon_nb_motivo = moti_nb_id
+				AND abon_tx_matricula = '".$aMotorista['enti_tx_matricula']."' AND abon_tx_data = '".$data."' AND abon_nb_motivo = moti_nb_id
 				ORDER BY abon_nb_id DESC LIMIT 1"
 		));
 
@@ -1654,7 +1659,7 @@
 			$aDiaAnterior = carrega_array(query(
 				"SELECT pont_tx_data FROM ponto 
 					WHERE pont_tx_status != 'inativo' AND 
-						pont_tx_matricula = '$matricula' AND 
+						pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."' AND 
 						pont_tx_data < '$data' 
 					ORDER BY pont_tx_data DESC 
 					LIMIT 1"

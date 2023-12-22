@@ -286,11 +286,11 @@ function atualizar($tabela,$campos,$valores,$id){
 
 }
 
-function remover_ponto($tabela,$id,$justificativa){
+function remover_ponto($tabela,$id,$just){
 
 	$tab=substr($tabela,0,4);
 
-	query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '$id' LIMIT 1");
+	query("UPDATE $tabela SET ".$tab."_tx_status='inativo', ".$tab."_tx_justificativa='$just' WHERE ".$tab."_nb_id='$id' LIMIT 1");
 
 }
 
@@ -488,12 +488,20 @@ function campo_jornada($nome,$variavel,$modificador,$tamanho){
 
 }
 
-function checkbox($nome, $variavel, $tamanho) {
-	$data_input = '<script>
+function checkbox($nome,$variavel,$modificadorRadio,$modificador,$tamanho){
+    $data_input='<script>
+    marcarBotao("'.$modificadorRadio.'");
+    function marcarBotao(botaoId) {
+        if (botaoId) {
+            document.getElementById(botaoId).checked = true;
+            
+        }
+        
+    }
     
-    const radioSim = document.getElementById("sim");
-    const radioNao = document.getElementById("nao");
-    const campo = document.getElementById("' . $variavel . '");
+    const radioSim = document.getElementById("1");
+    const radioNao = document.getElementById("0");
+    const campo = document.getElementById("'.$variavel.'");
     if (radioSim.checked) {
             campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
     }
@@ -511,25 +519,25 @@ function checkbox($nome, $variavel, $tamanho) {
     }
     });
     </script>';
-	//  Utiliza regime de banco de horas?
-	$campo = '
-    <div class="col-sm-' . $tamanho . ' margin-bottom-5">
-        <label><b>' . $nome . '</b></label><br>
+    //  Utiliza regime de banco de horas?
+    $campo='
+    <div class="col-sm-'.$tamanho.' margin-bottom-5">
+        <label><b>'.$nome.'</b></label><br>
          <label class="radio-inline">
-            <input type="radio" id="sim" name="pagar_horas" value="sim"> Sim
+            <input type="radio" id="1" name="regime_banco" value="1"> Sim
         </label>
         <label class="radio-inline">
-            <input type="radio" id="nao" name="pagar_horas" value="nao"> Não
+            <input type="radio" id="0" name="regime_banco" value="0"> Não
         </label>
     </div>
-
-	<div id="' . $variavel . '" class="col-sm-' . $tamanho . ' margin-bottom-5" style="display: none;">
-            <label><b>Quandidade de Horas:</b></label>
-            <input class="form-control input-sm" type="time" id="outroCampo" name="quandHoras" autocomplete="off">
+    <div id="'.$variavel.'" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
+            <label><b>SET de mês inicio:</b></label>
+            <input type="month" id="outroCampo" name="'.$variavel.'" value="'.$modificador.'" autocomplete="off">
     </div>
     ';
-
-	return $campo . $data_input;
+  
+  return $campo.$data_input;
+    
 }
 
 function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
@@ -628,6 +636,21 @@ function textarea($nome,$variavel,$modificador,$tamanho,$extra=''){
 		</div>';
 
 		return $campo;
+
+}
+
+function historico_paciente($id_paciente){
+
+
+	$sql = query("SELECT hist_tx_descricao,hist_tx_data,user_tx_nome FROM historico,user WHERE user_nb_id = hist_nb_user AND hist_nb_entidade = '$id_paciente' ORDER BY hist_nb_id DESC");
+	while($a=carrega_array($sql)){
+
+		$historico .= "=================== <b>DATA: ".data($a[hist_tx_data])." - PROFISSIONAL: $a[user_tx_nome]</b> ===================<br>";
+		$historico .= $a[hist_tx_descricao];
+		$historico .= "<br><br>";
+	}
+
+	return $historico;
 
 }
 
@@ -818,61 +841,139 @@ function combo_bd($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra
 
 }
 
-// Para usar essa função, você pode fazer algo assim:
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Certifique-se de que você está chamando a função apropriada a partir do JavaScript
-    if (isset($_POST['arquivo'])) {
-        $resultado = excluirArquivo($_POST['arquivo']);
-        echo $resultado;
-    }
-}
 
-function excluirArquivo($arquivo) {
-	global $CONTEX;
+function multiArquivos($nome,$idParametro,$arquivos){	
+    global $CONTEX;
 
-    $caminho = "$CONTEX[path]/" . $arquivo; // Substitua pelo caminho real do seu diretório
-    if (file_exists($caminho)) {
-        unlink($caminho);
-        return 'File deleted';
-    } else {
-        return 'File not found';
-    }
-}
-
-function arquivo($nome,$variavel,$modificador,$tamanho,$extra='',$mascara=''){
-	global $CONTEX;
-
-	if($modificador){
-		$ver = "<a href=$CONTEX[path]/$modificador target=_blank>(Ver)</a>";
-		$excluirLink = "<a onclick='excluirArquivo(\"$modificador\");'>Excluir</a>";
-		$data_input = "<script> 
-		function excluirArquivo(variavel) {
-			if (confirm('Tem certeza de que deseja excluir este arquivo?')) {
-				var arquivo = document.getElementsByName('.$variavel.')[0].value;
-				console.log();
-			// 	var resultado = excluirArquivo(arquivo);
-				
-			// 	if (resultado === 'File deleted') {
-			// 		alert('Arquivo excluído com sucesso.');
-			// 		// Limpando o valor do input de arquivo após a exclusão
-			// 		document.getElementsByName(variavel)[0].value = '';
-			// 	} else if (resultado === 'File not found') {
-			// 		alert('Arquivo não encontrado.');
-			// 	} else {
-			// 		alert('Falha ao excluir o arquivo.');
-			// 	}
-			// }
-		}} 
-		</script>";
+	$arquivo_list = '';
+	if (!empty($arquivos)) {
+		foreach($arquivos as $arquivo){
+		    $dataHoraOriginal = $arquivo['doc_tx_dataCadastro'];
+		    $dataHora = new DateTime($dataHoraOriginal);
+		    $dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
+			
+			$arquivo_list .= "
+			<tr role='row' class='odd'>
+			<td>$arquivo[doc_tx_nome]</td>
+			<td>$arquivo[doc_tx_descricao]</td>
+			<td>$dataHoraFormatada</td>
+			<td>
+                <a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idParametro,'$arquivo[doc_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
+            </td>
+			<td>
+                <a style='color: red;' onclick=\"javascript:remover_arquivo($idParametro,$arquivo[doc_nb_id],'$arquivo[doc_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
+             </td>
+			";
+		}
 	}
 
 
+	$tabela='
+		<div class="portlet light ">
+			<div class="portlet-title">
+			<div class="caption">
+		        <span class="caption-subject font-dark bold uppercase">'.$nome.'</span>
+        	</div>
+        	</div>
+			<div class="portlet-body">
+				<table id="contex-grid" class="table compact table-striped table-bordered table-hover dt-responsive"
+					width="100%" id="sample_2">
+					<thead>
+						<tr role="row">
+							<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
+								aria-label="NOME: activate to sort column ascending" style="width: 40px;">NOME</th>
+							<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
+								aria-label="DESCRIÇÃO: activate to sort column ascending" style="width: 40px;">
+								DESCRIÇÃO</th>
+							<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
+								aria-label="DATA CADASTRO: activate to sort column ascending" style="width: 40px;">
+								DATA CADASTRO</th>
+							<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
+								aria-label="DOWNLOAD: activate to sort column ascending" style="width: 40px;"><i
+									class="glyphicon glyphicon-cloud-download"></i></th>
+							<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
+								aria-label="DOWNLOAD: activate to sort column ascending" style="width: 40px;"><i
+									class="glyphicon glyphicon-trash"></i></th>
+						</tr>
+					</thead>
+					<thbody>
+					'.$arquivo_list.'
+					<tr role="row" class="even">
+					<td>
+					<a href="#" data-toggle="modal" data-target="#myModal">
+					<i class="glyphicon glyphicon-plus-sign"></i>
+					</a>
+					</td>
+					</thbody>
+                    </table>
+                </div>
+            </div>
+    ';
+    
+    $modal = "
+    <div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
+        <div class='modal-dialog' role='document'>
+            <div class='modal-content'>
+                <div class='modal-header'>
+                <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>
+                <h4 class='modal-title' id='myModalLabel'>Upload Arquivo</h4>
+                </div>
+                <div class='modal-body'>
+                <form name='form_enviar_arquivo' method='post' action='cadastro_parametro.php' enctype='multipart/form-data'>
+
+                    <div class='form-group'>
+                        <label for='file-name' class='control-label'>Nome do arquivo:</label>
+                        <input type='text' class='form-control' name='file-name'>
+                    </div>
+                    <div class='form-group'>
+                        <label for='description-text' class='control-label'>Descrição:</label>
+                        <textarea class='form-control' name='description-text'></textarea>
+                    </div>
+					<div class='form-group'>
+                        <label for='file' class='control-label'>Arquivo:</label>
+                        <input type='file' class='form-control' name='file'>
+                    </div>
+                    
+                    <input type='hidden' name='acao' value='enviar_documento'>
+                    
+                    <input type='hidden' name='idParametro' value='$idParametro'>
+
+                </form>
+                </div>
+                <div class='modal-footer'>
+                    <button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
+                    <button type='button' class='btn btn-primary' data-dismiss='modal' 
+					onclick=\"javascript:enviar_arquivo();\">Salvar arquivo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+	<script type='text/javascript'>
+	function enviar_arquivo() {
+	    document.form_enviar_arquivo.submit();
+	}
+	
+	</script>
+    ";
+
+		return $tabela.$modal;
+
+}
+
+function arquivo($nome,$variavel,$modificador,$tamanho,$extra=''){
+	global $CONTEX;
+	if($modificador){
+		$ver = "<a href=$CONTEX[path]/$modificador target=_blank>(Ver)</a>";
+	}
+
 	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
-				<label><b>'.$nome.$ver.$excluirLink.'</b></label>
-				<input name="'.$variavel.'" value="'.$CONTEX['path']."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
+				<label><b>'.$nome.$ver.'</b></label>
+				<input name="'.$variavel.'" value="'.$CONTEX[path]."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
 			</div>';
 
-		return $campo.$data_input;
+		return $campo;
 
 }
 
@@ -990,6 +1091,48 @@ function icone_modificar($id,$acao,$campos='',$valores='',$target='',$icone='gly
 	$icone='class="'.$icone.'"';
 	
 	return "<center><a title=\"$title\" style='color:gray' onclick='javascript:contex_icone(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\",\"$action\");' ><spam $icone></spam></a></center>";
+	
+}
+
+function icone_excluir2($id,$acao,$campos='',$valores='',$target='',$icone='',$msg='Deseja excluir o registro?',$title=''){
+	if($icone==''){
+		$icone = 'glyphicon glyphicon-remove';
+	}
+	
+	if($icone == 'glyphicon glyphicon-remove' && $title == '')
+		$title = 'Excluir';
+
+	$icone='class="'.$icone.'"';
+
+	$botao = "<center><a title=\"$title\" style='color:gray' data-toggle='modal' data-target='#myModal'><spam $icone></spam></a></center>";
+
+	$modal = "
+    <div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
+        <div class='modal-dialog' role='document'>
+            <div class='modal-content'>
+                <div class='modal-header'>
+                <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>
+                <h4 class='modal-title' id='myModalLabel'>Justifica Exclusão de Registro</h4>
+                </div>
+                <div class='modal-body'>
+
+                    <div class='form-group'>
+                        <b><label for='justificar' class='control-label' style='font-size: 15px;'>Justificar:</label></b>
+                        <textarea class='form-control' id='justificar'></textarea>
+                    </div>
+
+                </div>
+                <div class='modal-footer'>
+                    <button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
+                    <button type='button' class='btn btn-primary' data-dismiss='modal' 
+					onclick='javascript:contex_icone(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\",\"$action\", document.getElementById(\"justificar\").value);'>Gravar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    ";
+	
+	return $botao.$modal;
 	
 }
 

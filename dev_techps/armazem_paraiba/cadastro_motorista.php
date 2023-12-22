@@ -407,7 +407,7 @@ function layout_motorista() {
 	$uf = ['', 'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 	
 	if($a_mod['enti_tx_foto']!=''){
-		$img =texto(icone_excluir2($a_mod['enti_nb_id'], 'excluir_foto'), '<img style="width: 100%;" src="'.$a_mod['enti_tx_foto'].'" />', 2);
+		$img =texto(icone_excluir_foto($a_mod['enti_nb_id'], 'excluir_foto'), '<img style="width: 100%;" src="'.$a_mod['enti_tx_foto'].'" />', 2);
 	}
 	
 	
@@ -662,7 +662,7 @@ function icone_excluirCnh($id, $acao, $campos = '', $valores = '', $target = '',
 	return "<a style='text-shadow: none; color: #337ab7;' onclick='javascript:remover_cnh(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\");' > (Excluir) </a>";
 }
 
-function icone_excluir2($id, $acao, $campos = '', $valores = '', $target = '', $icone = 'glyphicon glyphicon-remove', $msg = 'Deseja excluir o registro?') {
+function icone_excluir_foto($id, $acao, $campos = '', $valores = '', $target = '', $icone = 'glyphicon glyphicon-remove', $msg = 'Deseja excluir o registro?') {
 	$icone = 'class="' . $icone . '"';
 
 	return "<a style='color:gray' onclick='javascript:remover_foto(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\");' ><spam $icone></spam>Excluir</a>";
