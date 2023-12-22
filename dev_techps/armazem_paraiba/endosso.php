@@ -1,10 +1,11 @@
 <?php
 	/* Modo debug
 		ini_set('display_errors', 1);
-		error_reporting(E_WARNING);
+		error_reporting(E_ALL);
 	//*/
 
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto	
+	// include "funcoes_ponto_oacdc.php"; // conecta.php importado dentro de funcoes_ponto	
 
 	function cadastrar(){
 		$url = substr($_SERVER['REQUEST_URI'], 0, strrpos($_SERVER['REQUEST_URI'], '/'));
@@ -20,7 +21,7 @@
 			$_POST['idMotoristaEndossado'] = $motorista['enti_nb_id'];
 		}
 
-		if (empty($_POST['busca_data']) || empty($_POST['busca_empresa']) || empty($_POST['idMotoristaEndossado']))){
+		if (empty($_POST['busca_data']) || empty($_POST['busca_empresa']) || empty($_POST['idMotoristaEndossado'])){
 			print_r("Há informações faltando.<br>");
 			index();
 			exit;
@@ -75,8 +76,10 @@
 
 			//unset($aMotorista);
 
-			$sqlEndosso = query("SELECT endo_tx_dataCadastro, endo_tx_ate, endo_tx_horasApagar, endo_tx_pagarHoras FROM endosso WHERE endo_tx_matricula = '$aMotorista[enti_tx_matricula]'");
-			$aEndosso = carrega_array($sqlEndosso);
+			$aEndosso = carrega_array(query(
+				"SELECT endo_tx_dataCadastro, endo_tx_ate, endo_tx_horasApagar, endo_tx_pagarHoras FROM endosso 
+					WHERE endo_tx_matricula = '$aMotorista[enti_tx_matricula]'"
+			));
 
 			$lastMonthDate = date('Y-m', strtotime('-1 month', strtotime($year.'-'.$month.'-01')));
 			$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month-1, $year);
@@ -94,12 +97,6 @@
 					" AND enti_nb_empresa = " . $_POST['busca_empresa'] .
 					" ORDER BY enti_tx_nome");
 			$dadosMotorista = carrega_array($sqlMotorista);
-
-			/*
-			$teste = strtotime("2023-10-28 11:54:34");
-			$teste = date('Y-m-d h:i:s', $teste+10); //Soma 10 segundos
-			echo $teste;
-			*/
 
 			$dataCicloProx = strtotime($dadosMotorista['para_tx_inicioAcordo']);
 			while($dataCicloProx < strtotime($aEndosso['endo_tx_ate'])){
@@ -194,8 +191,13 @@
 
 
 		for ($i = 0; $i < count($aID); $i++) {
-			$sqlCheck = query("SELECT endo_nb_id FROM endosso WHERE endo_tx_mes = '" . $_POST['busca_data'] . '-01' . "' 
-					AND endo_nb_entidade = '" . $aID[$i] . "' AND endo_tx_matricula = '" . $aMatricula[$i] . "' AND endo_tx_status = 'ativo'");
+			$sqlCheck = query(
+				"SELECT endo_nb_id FROM endosso 
+					WHERE endo_tx_mes = '" . $_POST['busca_data'] . '-01' . "' 
+						AND endo_nb_entidade = '" . $aID[$i] . "' 
+						AND endo_tx_matricula = '" . $aMatricula[$i] . "' 
+						AND endo_tx_status = 'ativo'"
+			);
 			if (num_linhas($sqlCheck) == 0) {
 
 				$campos = ['endo_nb_entidade', 'endo_tx_matricula', 'endo_tx_mes', 'endo_tx_dataCadastro', 'endo_nb_userCadastro', 'endo_tx_status', 'endo_tx_saldo'];
@@ -217,6 +219,9 @@
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa = " AND empr_nb_id = '" . $_SESSION['user_nb_empresa'] . "'";
 			$extraEmpresaMotorista = " AND enti_nb_empresa = '" . $_SESSION['user_nb_empresa'] . "'";
+		}else{
+			$extraEmpresa = '';
+			$extraEmpresaMotorista = '';
 		}
 
 		$extra = '';
@@ -233,7 +238,7 @@
 			$_POST['busca_empresa'] = (int)$_POST['busca_empresa'];
 			$extraMotorista = " AND enti_nb_empresa = '" . $_POST['busca_empresa'] . "'";
 		}
-		if ($_POST['busca_endossado'] && $_POST['busca_empresa']) {
+		if (!empty($_POST['busca_endossado']) && !empty($_POST['busca_empresa'])) {
 			if(is_int(strpos($_POST['busca_endossado'], 'Endossado'))){
 				$extra .= " AND enti_nb_id";
 				if(is_int(strpos($_POST['busca_endossado'], 'Não '))){
@@ -249,32 +254,38 @@
 
 		$countEndosso = $countNaoConformidade = $countVerificados = $countEndossados = $countNaoEndossados = 0;
 
-		//CONSULTA
-		$c = [
-			combo_net('* Empresa:', 'busca_empresa', $_POST['busca_empresa'], 3, 'empresa', 'onchange=selecionaMotorista(this.value)', $extraEmpresa),
-			campo_mes('* Data:', 'busca_data', $_POST['busca_data'], 2),
-			combo_net('Motorista:', 'busca_motorista', $_POST['busca_motorista'], 3, 'entidade', '', ' AND enti_tx_tipo = "Motorista"' . $extraMotorista . $extraEmpresaMotorista, 'enti_tx_matricula'),
-			combo('Situação:', 'busca_situacao', $_POST['busca_situacao'], 2, ['Todos', 'Verificado', 'Não conformidade']),
-			combo('Endosso:', 'busca_endossado', $_POST['busca_endossado'], 2, ['', 'Endossado', 'Endossado parcialmente', 'Não endossado'])
-		];
+		//CAMPOS DE CONSULTA{
+			$c = [
+				combo_net('* Empresa:', 'busca_empresa',   (!empty($_POST['busca_empresa'])?   $_POST['busca_empresa']  : ''), 3, 'empresa', 'onchange=selecionaMotorista(this.value)', $extraEmpresa),
+				campo_mes('* Data:',    'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2),
+				combo_net('Motorista:', 'busca_motorista', (!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ''), 3, 'entidade', '', ' AND enti_tx_tipo = "Motorista"' . $extraMotorista . $extraEmpresaMotorista, 'enti_tx_matricula'),
+				combo(    'Situação:',  'busca_situacao',  (!empty($_POST['busca_situacao'])?  $_POST['busca_situacao'] : ''), 2, ['Todos', 'Verificado', 'Não conformidade']),
+				combo(    'Endosso:',   'busca_endossado', (!empty($_POST['busca_endossado'])? $_POST['busca_endossado']: ''), 2, ['', 'Endossado', 'Endossado parcialmente', 'Não endossado'])
+			];
+		//}
 
-		//BOTOES
-		if ($_POST['busca_situacao'] != 'Verificado') {
-			$disabled = 'disabled=disabled title="Filtre apenas por Verificado para efetuar a impressão do endosso."';
-		}
-		$b = [
-			botao("Buscar", 'index', '', '', '', 1),
-			botao("Cadastrar Abono", 'layout_abono', '', '', '', 1),
-			'<button name="acao" id="botaoContexCadastrar CadastrarEndosso" value="cadastrar_endosso" type="button" class="btn default">Cadastrar Endosso</button>',
-			'<button name="acao" id="botaoContexCadastrar ImprimirEndosso" value="impressao_endosso" ' . $disabled . ' type="button" class="btn default">Imprimir Endossados</button>',
-			'<span id=dadosResumo><b>' . $carregando . '</b></span>'
-		];
+		//BOTOES{
+			if ($_POST['busca_situacao'] != 'Verificado') {
+				$disabled = 'disabled=disabled title="Filtre apenas por Verificado para efetuar a impressão do endosso."';
+			}
+			$b = [
+				botao("Buscar", 'index', '', '', '', 1),
+				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1),
+				'<button name="acao" id="botaoContexCadastrar CadastrarEndosso" value="cadastrar_endosso" type="button" class="btn default">Cadastrar Endosso</button>',
+				'<button name="acao" id="botaoContexCadastrar ImprimirEndosso" value="impressao_endosso" ' . $disabled . ' type="button" class="btn default">Imprimir Endossados</button>',
+				'<span id=dadosResumo><b>' . $carregando . '</b></span>'
+			];
+		//}
 
 		abre_form('Filtro de Busca');
 		linha_form($c);
 		fecha_form($b);
 
-		// $cab = ["MATRÍCULA", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA", "REFEIÇÃO", "ESPERA", "ATRASO", "EFETIVA", "PERÍODO TOTAL", "INTERSTÍCIO DIÁRIO", "INT. SEMANAL", "ABONOS", "FALTAS", "FOLGAS", "H.E.", "H.E. 100%", "ADICIONAL NOTURNO", "ESPERA INDENIZADA", "OBSERVAÇÕES"];
+		/*$cab = [
+			"MATRÍCULA", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA", 
+			"REFEIÇÃO", "ESPERA", "ATRASO", "EFETIVA", "PERÍODO TOTAL", "INTERSTÍCIO DIÁRIO", "INT. SEMANAL", "ABONOS", "FALTAS", "FOLGAS", "H.E.", "H.E. 100%", 
+			"ADICIONAL NOTURNO", "ESPERA INDENIZADA", "OBSERVAÇÕES"
+		];*/
 		$cab = [
 			"", "MAT.", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "HE 50%", "HE&nbsp;100%",
@@ -282,37 +293,38 @@
 		];
 
 		//function buscar_endosso(){
-			if($_POST['busca_data'] && $_POST['busca_empresa']){
+			if(!empty($_POST['busca_data']) && !empty($_POST['busca_empresa'])){
 
 				$date = new DateTime($_POST['busca_data']);
 
 				$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $date->format('m'), $date->format('Y'));
 	
 				$sqlMotorista = query(
-					"SELECT * FROM entidade".
-					" WHERE enti_tx_tipo = 'Motorista'".
-					" AND enti_nb_empresa = " . $_POST['busca_empresa'] . " $extra".
-					" ORDER BY enti_tx_nome"
+					"SELECT * FROM entidade
+						WHERE enti_tx_tipo = 'Motorista'
+							AND enti_nb_empresa = ".$_POST['busca_empresa']." ".$extra."
+						ORDER BY enti_tx_nome"
 				);
 				while ($aMotorista = carrega_array($sqlMotorista)) {
-					if($aMotorista['enti_tx_nome'] == '' || $aMotorista['enti_tx_matricula'] == ''){
+					if(empty($aMotorista['enti_tx_nome']) || empty($aMotorista['enti_tx_matricula'])){
 						continue;
 					}
 	
-					for ($i = 1; $i <= $daysInMonth; $i++) {
-						$dataVez = $_POST['busca_data'] . "-" . str_pad($i, 2, 0, STR_PAD_LEFT);
-	
-						$aDetalhado = diaDetalheEndosso($aMotorista['enti_tx_matricula'], $dataVez);
-	
-						$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));
-						for($f = 0; $f < sizeof($row)-1; $f++){
-							if($row[$f] == "00:00"){
-								$row[$f] = "";
+					//Pegando e formatando registros dos dias{
+						for ($i = 1; $i <= $daysInMonth; $i++) {
+							$dataVez = $_POST['busca_data']."-".str_pad($i, 2, 0, STR_PAD_LEFT);
+							
+							$aDetalhado = diaDetalheEndosso($aMotorista['enti_tx_matricula'], $dataVez);
+		
+							$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));
+							for($f = 0; $f < sizeof($row)-1; $f++){
+								if($row[$f] == "00:00"){
+									$row[$f] = "";
+								}
 							}
+							$aDia[] = $row;
+							$aDiaOriginal[] = $aDetalhado;
 						}
-						$aDia[] = $row;
-						$aDiaOriginal[] = $aDetalhado;
-					}
 	
 					$exibir = True;
 
@@ -388,7 +400,6 @@
 								$convencaoPadrao = '| Convenção Padrão? Não';
 							}
 						}
-
 						$dadosParametro = carrega_array(query('SELECT para_tx_tolerancia, para_tx_dataCadastro, para_nb_qDias FROM parametro JOIN entidade ON para_nb_id = enti_nb_parametro WHERE enti_nb_parametro = '.$aMotorista['enti_nb_parametro'].' LIMIT 1;'));
 						$dataCicloProx = strtotime($dadosParametro['para_tx_dataCadastro']);
 						if($dataCicloProx !== false){
