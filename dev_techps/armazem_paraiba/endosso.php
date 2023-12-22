@@ -92,7 +92,7 @@
 			
 			$lastMonthDay = $lastMonthDate.'-'.$daysInMonth;
 			$saldoPassado = diaDetalheEndosso($aMotorista['enti_tx_matricula'], $lastMonthDay)['diffSaldo'];
-			$saldoAnterior = somarHorarios([$saldoAnterior, $saldoPassado]);
+			$saldoAnterior = operarHorarios([$saldoAnterior, $saldoPassado], '+');
 			
 			$sqlMotorista = query(
 				"SELECT * FROM entidade".
@@ -173,7 +173,7 @@
 				$totalResumo['diffSaldo'] = intval($saldoPeriodo / 60) . ':' . ($saldoPeriodo - intval($saldoPeriodo / 60) * 60);
 			}
 
-			$saldoAtual = somarHorarios([$saldoAnterior, $totalResumo['diffSaldo']]); //Usado dentro de relatorio_espelho.php
+			$saldoAtual = operarHorarios([$saldoAnterior, $totalResumo['diffSaldo']], '+'); //Usado dentro de relatorio_espelho.php
 
 			// $totalResumo = ['diffRefeicao' => '00:00','diffEspera' => '00:00','diffDescanso' => '00:00','diffRepouso' => '00:00','diffJornada' => '00:00','jornadaPrevista' => '00:00','diffJornadaEfetiva' => '00:00','maximoDirecaoContinua' => '','intersticio' => '00:00','he50' => '00:00','he100' => '00:00','adicionalNoturno' => '00:00','esperaIndenizada' => '00:00','diffSaldo' => '00:00'];
 			// unset($aDia);
@@ -408,7 +408,12 @@
 								$convencaoPadrao = '| Convenção Padrão? Não';
 							}
 						}
-						$dadosParametro = carrega_array(query('SELECT para_tx_tolerancia, para_tx_dataCadastro, para_nb_qDias FROM parametro JOIN entidade ON para_nb_id = enti_nb_parametro WHERE enti_nb_parametro = '.$aMotorista['enti_nb_parametro'].' LIMIT 1;'));
+						$dadosParametro = carrega_array(query(
+							'SELECT para_tx_tolerancia, para_tx_dataCadastro, para_nb_qDias FROM parametro 
+								JOIN entidade ON para_nb_id = enti_nb_parametro 
+								WHERE enti_nb_parametro = '.$aMotorista['enti_nb_parametro'].' 
+								LIMIT 1;'
+						));
 						$dataCicloProx = strtotime($dadosParametro['para_tx_dataCadastro']);
 						if($dataCicloProx !== false){
 							while($dataCicloProx < strtotime($aEndosso['endo_tx_ate'])){
