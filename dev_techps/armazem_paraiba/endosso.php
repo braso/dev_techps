@@ -324,6 +324,30 @@
 							$dataVez = $_POST['busca_data']."-".str_pad($i, 2, 0, STR_PAD_LEFT);
 							
 							$aDetalhado = diaDetalheEndosso($aMotorista['enti_tx_matricula'], $dataVez);
+							if(isset($aDetalhado['fimJornada'][0]) && (strpos($aDetalhado['fimJornada'][0], ':00') !== false) && date('Y-m-d', strtotime($aDetalhado['fimJornada'][0])) != $dataVez){
+								array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
+							}
+	
+							//Converter array em string{
+								foreach(['inicioJornada', 'fimJornada', 'inicioRefeicao', 'fimRefeicao'] as $tipo){
+									if (is_array($aDetalhado[$tipo]) && count($aDetalhado[$tipo]) > 0){
+										for($f = 0; $f < count($aDetalhado[$tipo]); $f++){
+											//Formatar datas para hora e minutos sem perder o D+1, caso tiver
+											if(strpos($aDetalhado[$tipo][$f], ':00', strlen($aDetalhado[$tipo][$f])-3) !== false){
+												if(strpos($aDetalhado[$tipo][$f], 'D+1') !== false){
+													$aDetalhado[$tipo][$f] = explode(' ', $aDetalhado[$tipo][$f]);
+													$aDetalhado[$tipo][$f] = substr($aDetalhado[$tipo][$f][1], 0, strlen($aDetalhado[$tipo][$f][1])-3)+$aDetalhado[$tipo][$f][2];
+												}else{
+													$aDetalhado[$tipo][$f] = date('H:i', strtotime($aDetalhado[$tipo][$f]));
+												}
+											}
+										}
+										$aDetalhado[$tipo] = implode("<br>", $aDetalhado[$tipo]);
+									}else{
+										$aDetalhado[$tipo] = '';
+									}
+								}
+							//}
 		
 							$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));
 							for($f = 0; $f < sizeof($row)-1; $f++){
