@@ -77,7 +77,7 @@
 	}
 
 	window.onload = function() {
-		document.getElementById('dadosResumo').innerHTML = '<br><br><b>Total: <?= $countEndosso ?> | Verificados: <?= $countVerificados ?> | Não Conformidade: <?= $countNaoConformidade ?> | Endossados: <?= $countEndossados ?> | Não Endossados: <?= $countNaoEndossados ?></b>';
+		document.getElementById('dadosResumo').innerHTML = '<br><br><b>Total: <?= $counts['total'] ?> | Verificados: <?= $counts['verificados'] ?> | Não Conformidades: <?= $counts['naoConformidade'] ?> | Endossados: <?= $counts['endossados']['sim'] ?> | Não Endossados: <?= $counts['endossados']['nao'] ?></b>';
 
 		document.getElementById('botaoContexCadastrar CadastrarEndosso').onclick = function() {
 			window.location.href = '<?= "https://braso.mobi" . $CONTEX['path'] . "/cadastro_endosso" ?>';
@@ -86,6 +86,5 @@
 		document.getElementById('botaoContexCadastrar ImprimirEndosso').onclick = function() {
 			document.form_imprimir_endosso.submit();
 		}
-
 	};
 </script>
