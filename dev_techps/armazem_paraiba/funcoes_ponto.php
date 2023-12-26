@@ -919,23 +919,20 @@
 			}
 		//FIM 01:00 DE REFEICAO
 
-		//ALERTAS
+		//ALERTAS{
+			if((!isset($registros['inicioJornada'][0]) || $registros['inicioJornada'][0] == '') &&
+				date('w',strtotime($data)) != '0'){
+				$aRetorno['inicioJornada'][] 	= "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
+			}
 			if($fezJorMinima){
-				if(!isset($registros['inicioJornada'][0]) || $registros['inicioJornada'][0] == ''){
-					$aRetorno['inicioJornada'][] 	= "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
-				}
 				if(!isset($registros['fimJornada'][0]) || $registros['fimJornada'][0] == ''){
-					$aRetorno['fimJornada'][] 		= "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning'></i></a>";
+					$aRetorno['fimJornada'][] 	  = "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning'></i></a>";
 				}
 				if(!isset($registros['inicioRefeicao'][0]) || $aRetorno['inicioRefeicao'][0] == ''){
-					$aRetorno['inicioRefeicao'][] 	= "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>".$avisoRefeicaoMinima;
+					$aRetorno['inicioRefeicao'][] = "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>".$avisoRefeicaoMinima;
 				}
 				if(!isset($registros['fimRefeicao'][0]) || $aRetorno['fimRefeicao'][0] == ''){
-					$aRetorno['fimRefeicao'][] 		= "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>".$avisoRefeicaoMinima;
-				}
-			}else{
-				if(!isset($registros['inicioJornada'][0]) || $registros['inicioJornada'][0] == ''){
-					$aRetorno['inicioJornada'][] 	= "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
+					$aRetorno['fimRefeicao'][] 	  = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>".$avisoRefeicaoMinima;
 				}
 			}
 			if (is_array($aAbono) && count($aAbono) > 0) {
@@ -953,7 +950,7 @@
 	
 				$aRetorno['jornadaPrevista'] = $warning.$aRetorno['jornadaPrevista'];
 			}
-		//FIM ALERTAS
+		//}
 
 		foreach(['inicioJornada', 'fimJornada', 'inicioRefeicao', 'fimRefeicao'] as $campo){
 			if(count($registros[$campo]) > 0 && !empty($registros[$campo][0])){
@@ -1085,7 +1082,6 @@
 		}elseif($saldo > 0){
 			$aRetorno['diffSaldo'] = "<b>".$aRetorno['diffSaldo']."</b>";
 		}
-
 
 		// TOTALIZADOR 
 		$campos = ['diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada', 'jornadaPrevista', 'diffJornadaEfetiva', 'maximoDirecaoContinua', 'intersticio', 'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'diffSaldo'];
