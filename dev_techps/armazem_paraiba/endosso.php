@@ -354,6 +354,9 @@
 		
 							$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));
 							for($f = 0; $f < sizeof($row)-1; $f++){
+								if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
+									continue;
+								}
 								if($row[$f] == "00:00"){
 									$row[$f] = "";
 								}
@@ -503,7 +506,6 @@
 							$saldo += ($saldoStr[0] == '-'? -1: 1)*intval($saldoStr[1]);
 
 							if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
-								echo "($saldo >= -($tolerancia) && $saldo <= $tolerancia)<br>";
 								$aDia[$f][count($aDia[$f])-1] = '00:00';
 							}
 						}
