@@ -403,7 +403,7 @@
 								LIMIT 1"
 						);
 						$aEndosso = carrega_array($sqlCheck);
-						if (!empty($aEndosso) && count($aEndosso) > 0) {
+						if (is_array($aEndosso) && count($aEndosso) > 0) {
 							$counts['endossados']++;
 							$infoEndosso = " - Endossado por " . $aEndosso['user_tx_login'] . " em " . data($aEndosso['endo_tx_dataCadastro'], 1);
 							$aIdMotoristaEndossado[] = $aMotorista['enti_nb_id'];
