@@ -326,6 +326,7 @@
 							$dataVez = $_POST['busca_data']."-".str_pad($i, 2, 0, STR_PAD_LEFT);
 							
 							$aDetalhado = diaDetalheEndosso($aMotorista['enti_tx_matricula'], $dataVez);
+
 							if(isset($aDetalhado['fimJornada'][0]) && (strpos($aDetalhado['fimJornada'][0], ':00') !== false) && date('Y-m-d', strtotime($aDetalhado['fimJornada'][0])) != $dataVez){
 								array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
 							}
@@ -371,8 +372,7 @@
 						'esperaIndenizada','diffSaldo'
 					];
 	
-					for ($i = 0; $i < count($aDiaOriginal); $i++) {
-						$diaVez = $aDiaOriginal[$i];
+					foreach($aDiaOriginal as $diaVez){
 						$checkString = '';
 						foreach($keys as $key){
 							$checkString .= $diaVez[$key];
@@ -496,15 +496,17 @@
 							if(empty($aDia[$f][count($aDia[$f])-1])){
 								$aDia[$f][count($aDia[$f])-1] = '00:00';	
 							}
-							$saldoStr = explode(':', $aDia[$f][count($aDia[$f])-1]);
+
+							$saldoStr = str_replace('<b>', '', $aDia[$f][count($aDia[$f])-1]);
+							$saldoStr = explode(':', $saldoStr);
 							$saldo = intval($saldoStr[0])*60;
 							$saldo += ($saldoStr[0] == '-'? -1: 1)*intval($saldoStr[1]);
 
 							if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
+								echo "($saldo >= -($tolerancia) && $saldo <= $tolerancia)<br>";
 								$aDia[$f][count($aDia[$f])-1] = '00:00';
 							}
 						}
-	
 						grid2($cab, $aDia);
 						fecha_form();
 	
