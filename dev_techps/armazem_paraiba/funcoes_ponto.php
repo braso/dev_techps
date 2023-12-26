@@ -998,18 +998,18 @@
 			}
 		}
 
-		if($possuiAjustes['jornada']['inicio']){
-			$aRetorno['inicioJornada'][] = "*";
-		}
-		if($possuiAjustes['jornada']['fim']){
-			$aRetorno['fimJornada'][] = "*";
-		}
-		if($possuiAjustes['refeicao']['inicio']){
-			$aRetorno['inicioRefeicao'][] = "*";
-		}
-		if($possuiAjustes['refeicao']['fim']){
-			$aRetorno['fimRefeicao'][] = "*";
-		}
+		// if($possuiAjustes['jornada']['inicio']){
+		// 	$aRetorno['inicioJornada'][] = "*";
+		// }
+		// if($possuiAjustes['jornada']['fim']){
+		// 	$aRetorno['fimJornada'][] = "*";
+		// }
+		// if($possuiAjustes['refeicao']['inicio']){
+		// 	$aRetorno['inicioRefeicao'][] = "*";
+		// }
+		// if($possuiAjustes['refeicao']['fim']){
+		// 	$aRetorno['fimRefeicao'][] = "*";
+		// }
 		
 		$legendas = mysqli_fetch_all(
 			query(
