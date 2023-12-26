@@ -1148,11 +1148,11 @@
 			$stringFeriado .= $row[0]."\n";
 		}
 
-		if(date('%w',strtotime($data)) == '6'){ //SABADOS
+		if(date('w',strtotime($data)) == '6'){ //SABADOS
 			// $horas_sabado = $aMotorista[enti_tx_jornadaSabado];
 			// $cargaHoraria = sprintf("%02d:%02d", floor($horas_sabado), ($horas_sabado - floor($horas_sabado)) * 60);
 			$cargaHoraria = $aMotorista['enti_tx_jornadaSabado'];
-		}elseif(date('%w',strtotime($data)) == '0'){ //DOMINGOS
+		}elseif(date('w',strtotime($data)) == '0'){ //DOMINGOS
 			$cargaHoraria = '00:00';
 		}else{
 			// $horas_diarias = $aMotorista[enti_tx_jornadaSemanal]/5;
@@ -1416,7 +1416,7 @@
 		if($stringFeriado != ''){
 			$iconeFeriado =  "<a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
 			$aRetorno['he100'] = $iconeFeriado.$aRetorno['diffSaldo'];
-		}elseif(date('%w',strtotime($data)) == '0'){
+		}elseif(date('w',strtotime($data)) == '0'){
 			$aRetorno['he100'] = $aRetorno['diffSaldo'];
 		}elseif($aRetorno['diffSaldo'][0] != '-'){
 			$aRetorno['he50'] = $aRetorno['diffSaldo'];
@@ -1548,7 +1548,7 @@
 		}
 		$totalResumo['maximoDirecaoContinua'] = '';
 		
-		if(($aRetorno['inicioJornada'] == '' && date('%w',strtotime($data)) == '%6') || ($aRetorno['inicioJornada'] != '' && date('%w',strtotime($data)) == '%0')){
+		if(($aRetorno['inicioJornada'] == '' && date('w',strtotime($data)) == '6') || ($aRetorno['inicioJornada'] != '' && date('w',strtotime($data)) == '0')){
 			$aRetorno['jornadaPrevista'] = '00:00';
 		}else{
 			$aRetorno['jornadaPrevista'] = operarHorarios([$aRetorno['jornadaPrevista'], $aRetorno['diffJornadaEfetiva']], '-');
@@ -1691,9 +1691,9 @@
 
 		$contagemEspera += count($clock_info['espera']['pares']);
 
-		if(date('%w',strtotime($data)) == '6'){ //SABADOS
+		if(date('w',strtotime($data)) == '6'){ //SABADOS
 			$cargaHoraria = $aMotorista['enti_tx_jornadaSabado'];
-		}elseif(date('%w',strtotime($data)) == '0' || $stringFeriado != ''){ //DOMINGOS OU FERIADOS
+		}elseif(date('w',strtotime($data)) == '0' || $stringFeriado != ''){ //DOMINGOS OU FERIADOS
 			//Alterar para uma variável do parâmetro caso exista a possibilidade de carga horária no domingo.
 			$cargaHoraria = '00:00';
 		}else{
@@ -1845,7 +1845,7 @@
 		if($stringFeriado != ''){
 			$iconeFeriado =  "<a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
 			$aRetorno['he100'] = $iconeFeriado.$aRetorno['diffSaldo'];
-		}elseif(date('%w',strtotime($data)) == '0'){
+		}elseif(date('w',strtotime($data)) == '0'){
 			$aRetorno['he100'] = $aRetorno['diffSaldo'];
 		}elseif($aRetorno['diffSaldo'][0] != '-'){
 			$aRetorno['he50'] = $aRetorno['diffSaldo'];
@@ -1985,7 +1985,7 @@
 		}
 		$totalResumo['maximoDirecaoContinua'] = '';
 		
-		if(($aRetorno['inicioJornada'] == '' && date('%w',strtotime($data)) == '%6') || ($aRetorno['inicioJornada'] != '' && date('%w',strtotime($data)) == '%0')){
+		if(($aRetorno['inicioJornada'] == '' && date('w',strtotime($data)) == '6') || ($aRetorno['inicioJornada'] != '' && date('w',strtotime($data)) == '0')){
 			$aRetorno['jornadaPrevista'] = '00:00';
 		}else{
 			$aRetorno['jornadaPrevista'] = operarHorarios([$aRetorno['jornadaPrevista'],  $aRetorno['diffJornadaEfetiva']], '-');
