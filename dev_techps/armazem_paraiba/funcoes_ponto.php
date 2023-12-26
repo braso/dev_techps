@@ -875,7 +875,7 @@
 			}elseif($aRetorno['diffSaldo'][0] != '-'){		//Se o saldo estiver positivo
 				$aRetorno['he50'] = $aRetorno['diffSaldo'];
 			}
-
+			
 			if(!empty($aParametro) && $aRetorno['diffSaldo'] >= $aParametro['para_tx_HorasEXExcedente']){
 				$aRetorno['he100'] = operarHorarios([$aRetorno['he100'], $aParametro['para_tx_HorasEXExcedente']], '+');
 				$aRetorno['diffSaldo'] = operarHorarios([$aRetorno['diffSaldo'], $aParametro['para_tx_HorasEXExcedente']], '-');
@@ -914,7 +914,9 @@
 				$avisoRefeicaoMinima = "<a><i style='color:red;' title='Refeição com tempo mínimo de 01:00h não respeitado.' class='fa fa-warning'></i></a>";
 			}
 
-			$aRetorno['diffRefeicao'] = $avisoRefeicaoMinima.' '.$aRetorno['diffRefeicao'];
+			if(!empty($avisoRefeicaoMinima)){
+				$aRetorno['diffRefeicao'] = $avisoRefeicaoMinima.' '.$aRetorno['diffRefeicao'];
+			}
 		//FIM 01:00 DE REFEICAO
 
 		//ALERTAS
