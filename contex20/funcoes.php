@@ -480,11 +480,12 @@ function campo_jornada($nome,$variavel,$modificador,$tamanho){
 
 }
 
-function checkbox_banco($nome, $variavel, $modificadoRadio,$modificadoCampo ,$tamanho) {
+function checkbox_banco($nome, $variavel, $modificadoRadio,$modificadoCampo, $modificadoCampo2, $tamanho) {
 	$data_input = '<script>
 	const radioSim = document.getElementById("sim");
 	const radioNao = document.getElementById("nao");
 	const campo = document.getElementById("' . $variavel . '");
+	const campo2 = document.getElementById("limiteHoras");
 	if("'.$modificadoRadio.'" === "sim"){
 		radioSim.checked = true;
 	}
@@ -493,16 +494,19 @@ function checkbox_banco($nome, $variavel, $modificadoRadio,$modificadoCampo ,$ta
 	}
 	if (radioSim.checked) {
 			campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
+			campo2.style.display = ""; 
 	}
 	// Adicionando um ouvinte de eventos aos elementos de rádio
 	radioSim.addEventListener("change", function() {
 		if (radioSim.checked) {
 			campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
+			campo2.style.display = ""; 
 		}
 	});
 	radioNao.addEventListener("change", function() {
 	if (radioNao.checked) {
 		campo.style.display = "none"; // Oculta o campo quando "Não Mostrar Campo" é selecionado
+		campo2.style.display = "none"; 
 	}
 	});
 	</script>';
@@ -520,6 +524,10 @@ function checkbox_banco($nome, $variavel, $modificadoRadio,$modificadoCampo ,$ta
 	<div id="' . $variavel . '" class="col-sm-' . $tamanho . ' margin-bottom-5" style="display: none;">
 			<label><b>Quandidade de Dias:</b></label>
 			<input class="form-control input-sm" type="number" value="'.$modificadoCampo.'" id="outroCampo" name="quandDias" autocomplete="off">
+	</div>
+	<div id="limiteHoras" class="col-sm-' . $tamanho . ' margin-bottom-5" style="display: none;">
+		<label><b>Quandidade de Horas Limite:</b></label>
+		<input class="form-control input-sm" type="number" value="'.$modificadoCampo2.'" id="outroCampo" name="quandHoras" autocomplete="off">
 	</div>
 	';
 
