@@ -286,14 +286,6 @@ function atualizar($tabela,$campos,$valores,$id){
 
 }
 
-function remover_ponto($tabela,$id,$just){
-
-	$tab=substr($tabela,0,4);
-
-	query("UPDATE $tabela SET ".$tab."_tx_status='inativo', ".$tab."_tx_justificativa='$just' WHERE ".$tab."_nb_id='$id' LIMIT 1");
-
-}
-
 function remover($tabela,$id){
 
 	$tab=substr($tabela,0,4);
@@ -308,9 +300,9 @@ function num_linhas($sql){
 }
 
 
-function carrega_array($sql){
+function carrega_array($sql, $mode = MYSQLI_BOTH){
 
-	return mysqli_fetch_array($sql);
+	return mysqli_fetch_array($sql, $mode);
 
 }
 
@@ -488,56 +480,50 @@ function campo_jornada($nome,$variavel,$modificador,$tamanho){
 
 }
 
-function checkbox($nome,$variavel,$modificadorRadio,$modificador,$tamanho){
-    $data_input='<script>
-    marcarBotao("'.$modificadorRadio.'");
-    function marcarBotao(botaoId) {
-        if (botaoId) {
-            document.getElementById(botaoId).checked = true;
-            
-        }
-        
-    }
-    
-    const radioSim = document.getElementById("1");
-    const radioNao = document.getElementById("0");
-    const campo = document.getElementById("'.$variavel.'");
-    if (radioSim.checked) {
-            campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
-    }
-    
-    // Adicionando um ouvinte de eventos aos elementos de rádio
-    radioSim.addEventListener("change", function() {
-        if (radioSim.checked) {
-            campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
-        }
-    });
-    
-    radioNao.addEventListener("change", function() {
-    if (radioNao.checked) {
-        campo.style.display = "none"; // Oculta o campo quando "Não Mostrar Campo" é selecionado
-    }
-    });
-    </script>';
-    //  Utiliza regime de banco de horas?
-    $campo='
-    <div class="col-sm-'.$tamanho.' margin-bottom-5">
-        <label><b>'.$nome.'</b></label><br>
-         <label class="radio-inline">
-            <input type="radio" id="1" name="regime_banco" value="1"> Sim
-        </label>
-        <label class="radio-inline">
-            <input type="radio" id="0" name="regime_banco" value="0"> Não
-        </label>
-    </div>
-    <div id="'.$variavel.'" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
-            <label><b>SET de mês inicio:</b></label>
-            <input type="month" id="outroCampo" name="'.$variavel.'" value="'.$modificador.'" autocomplete="off">
-    </div>
-    ';
-  
-  return $campo.$data_input;
-    
+function checkbox_banco($nome, $variavel, $modificadoRadio,$modificadoCampo ,$tamanho) {
+	$data_input = '<script>
+	const radioSim = document.getElementById("sim");
+	const radioNao = document.getElementById("nao");
+	const campo = document.getElementById("' . $variavel . '");
+	if("'.$modificadoRadio.'" === "sim"){
+		radioSim.checked = true;
+	}
+	else {
+		radioNao.checked = true;
+	}
+	if (radioSim.checked) {
+			campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
+	}
+	// Adicionando um ouvinte de eventos aos elementos de rádio
+	radioSim.addEventListener("change", function() {
+		if (radioSim.checked) {
+			campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
+		}
+	});
+	radioNao.addEventListener("change", function() {
+	if (radioNao.checked) {
+		campo.style.display = "none"; // Oculta o campo quando "Não Mostrar Campo" é selecionado
+	}
+	});
+	</script>';
+	//  Utiliza regime de banco de horas?
+	$campo = '
+	<div class="col-sm-' . $tamanho . ' margin-bottom-5">
+		<label><b>' . $nome . '</b></label><br>
+		<label class="radio-inline">
+			<input type="radio" id="sim" name="banco" value="sim"> Sim
+		</label>
+		<label class="radio-inline">
+			<input type="radio" id="nao" name="banco" value="nao"> Não
+		</label>
+	</div>
+	<div id="' . $variavel . '" class="col-sm-' . $tamanho . ' margin-bottom-5" style="display: none;">
+			<label><b>Quandidade de Dias:</b></label>
+			<input class="form-control input-sm" type="number" value="'.$modificadoCampo.'" id="outroCampo" name="quandDias" autocomplete="off">
+	</div>
+	';
+
+	return $campo . $data_input;
 }
 
 function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
@@ -574,21 +560,10 @@ function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 			});
 		 });
 		</script>";
-	elseif($mascara == "MASCARA_HORA")
-		 $data_input="<script>
-		 const inputElement = document.getElementById(\"$variavel\");
-
-        inputElement.addEventListener('input', function () {
-            let inputValue = this.value;
-            let sanitizedValue = inputValue.replace(/[^0-9:.-]/g, ''); // Remove letras e outros caracteres não permitidos
-            this.value = sanitizedValue;
-        });
-		</script>";
-
 
 			// <input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' data-placeholder="____" data-inputmask="'.$data_input.'">
 
-$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
+		$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 			<label><b>'.$nome.'</b></label>
 			<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' '.$data_input2.'>
 			<div id="feedback"></div>
@@ -842,7 +817,7 @@ function combo_bd($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra
 }
 
 
-function multiArquivos($nome,$idParametro,$arquivos){	
+function arquivosParametro($nome,$idParametro,$arquivos){	
     global $CONTEX;
 
 	$arquivo_list = '';
@@ -851,7 +826,7 @@ function multiArquivos($nome,$idParametro,$arquivos){
 		    $dataHoraOriginal = $arquivo['doc_tx_dataCadastro'];
 		    $dataHora = new DateTime($dataHoraOriginal);
 		    $dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
-			
+		    // var_dump($arquivo['doc_nb_id']);
 			$arquivo_list .= "
 			<tr role='row' class='odd'>
 			<td>$arquivo[doc_tx_nome]</td>
@@ -909,7 +884,7 @@ function multiArquivos($nome,$idParametro,$arquivos){
                 </div>
             </div>
     ';
-    
+
     $modal = "
     <div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
         <div class='modal-dialog' role='document'>
@@ -920,7 +895,6 @@ function multiArquivos($nome,$idParametro,$arquivos){
                 </div>
                 <div class='modal-body'>
                 <form name='form_enviar_arquivo' method='post' action='cadastro_parametro.php' enctype='multipart/form-data'>
-
                     <div class='form-group'>
                         <label for='file-name' class='control-label'>Nome do arquivo:</label>
                         <input type='text' class='form-control' name='file-name'>
@@ -937,7 +911,6 @@ function multiArquivos($nome,$idParametro,$arquivos){
                     <input type='hidden' name='acao' value='enviar_documento'>
                     
                     <input type='hidden' name='idParametro' value='$idParametro'>
-
                 </form>
                 </div>
                 <div class='modal-footer'>
@@ -949,7 +922,6 @@ function multiArquivos($nome,$idParametro,$arquivos){
         </div>
     </div>
     
-
 	<script type='text/javascript'>
 	function enviar_arquivo() {
 	    document.form_enviar_arquivo.submit();
@@ -961,6 +933,8 @@ function multiArquivos($nome,$idParametro,$arquivos){
 		return $tabela.$modal;
 
 }
+
+
 
 function arquivo($nome,$variavel,$modificador,$tamanho,$extra=''){
 	global $CONTEX;
@@ -1091,48 +1065,6 @@ function icone_modificar($id,$acao,$campos='',$valores='',$target='',$icone='gly
 	$icone='class="'.$icone.'"';
 	
 	return "<center><a title=\"$title\" style='color:gray' onclick='javascript:contex_icone(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\",\"$action\");' ><spam $icone></spam></a></center>";
-	
-}
-
-function icone_excluir2($id,$acao,$campos='',$valores='',$target='',$icone='',$msg='Deseja excluir o registro?',$title=''){
-	if($icone==''){
-		$icone = 'glyphicon glyphicon-remove';
-	}
-	
-	if($icone == 'glyphicon glyphicon-remove' && $title == '')
-		$title = 'Excluir';
-
-	$icone='class="'.$icone.'"';
-
-	$botao = "<center><a title=\"$title\" style='color:gray' data-toggle='modal' data-target='#myModal'><spam $icone></spam></a></center>";
-
-	$modal = "
-    <div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
-        <div class='modal-dialog' role='document'>
-            <div class='modal-content'>
-                <div class='modal-header'>
-                <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>
-                <h4 class='modal-title' id='myModalLabel'>Justifica Exclusão de Registro</h4>
-                </div>
-                <div class='modal-body'>
-
-                    <div class='form-group'>
-                        <b><label for='justificar' class='control-label' style='font-size: 15px;'>Justificar:</label></b>
-                        <textarea class='form-control' id='justificar'></textarea>
-                    </div>
-
-                </div>
-                <div class='modal-footer'>
-                    <button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
-                    <button type='button' class='btn btn-primary' data-dismiss='modal' 
-					onclick='javascript:contex_icone(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\",\"$action\", document.getElementById(\"justificar\").value);'>Gravar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    ";
-	
-	return $botao.$modal;
 	
 }
 

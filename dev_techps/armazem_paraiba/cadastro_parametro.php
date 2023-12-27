@@ -176,6 +176,10 @@ function layout_parametro(){
 	}
 
 	cabecalho("Cadastro de Parâmetros");
+	
+	if(empty($a_mod['id'])){
+	  $c[] .= arquivosParametro("Documentos","arquivos",'',3);
+	}
 
 	$c = [
 		campo('Nome', 'nome', $a_mod['para_tx_nome'], 6),
@@ -191,9 +195,7 @@ function layout_parametro(){
 		combo('Acordo Sindical', 'acordo', $a_mod['para_tx_acordo'], 3, ['Sim', 'Não']),
 		campo_data('Início do Acordo', 'inicioAcordo', $a_mod['para_tx_inicioAcordo'], 3),
 		campo_data('Fim do Acordo', 'fimAcordo', $a_mod['para_tx_fimAcordo'], 3),
-		checkbox_banco('Utiliza regime de banco de horas?','paramBanco',$a_mod['para_tx_banco'],$a_mod['para_nb_qDias'], 3),
 		ckeditor('Descrição:', 'paramObs', $a_mod['para_tx_paramObs'], 12,'maxlength="100"'),
-		multiArquivos("Documentos","arquivos",'',3)
 	];
 	
 	$botao[] = botao('Gravar','cadastra_parametro','id',$_POST['id']);
@@ -221,7 +223,7 @@ function layout_parametro(){
 	if (!empty($a_mod['para_nb_id'])) {
 	    $sqlArquivos= query("SELECT * FROM `documento_parametro` WHERE para_nb_id = $a_mod[para_nb_id]");
 	    $arquivos = mysqli_fetch_all($sqlArquivos, MYSQLI_ASSOC);
-		echo multiArquivos("Documentos", $a_mod['para_nb_id'], $arquivos);
+		echo arquivosParametro("Documentos", $a_mod['para_nb_id'], $arquivos);
 	}
 
 	rodape();
