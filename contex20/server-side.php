@@ -34,10 +34,12 @@ if($match2[2]){
 $query=mysqli_query($conn, $sql) or die(mysqli_error($conn));
 $totalFiltered = mysqli_num_rows($query); // when there is a search parameter then we have to modify total number filtered rows as per search result. 
 
-if($requestData['length'] != '-1')
-	$limit =  " LIMIT ".$requestData['start']." ,".$requestData['length'];
-
-$sql.=" ORDER BY ". $order2."   ".$requestData['order'][0]['dir']." $limit";
+if(!empty($requestData['order'][0]['dir'])){
+    $sql.=" ORDER BY ". $order2."   ".$requestData['order'][0]['dir']." $limit";
+}
+else{
+    $sql.=$limit;
+}
 /* $requestData['order'][0]['column'] contains colmun index, $requestData['order'][0]['dir'] contains order such as asc/desc  */	
 $query=mysqli_query($conn, $sql) or die(mysqli_error($conn));
 
@@ -57,8 +59,10 @@ while( $row=mysqli_fetch_array($query) ) {  // preparing an array
 	for($i=0;$i<$t_valores;$i++){
 		$text = $columns[$i];
 		preg_match('/(.*)\((.*?)\)(.*)/', $text, $match);
-		if(empty($match[2]))
+		if(empty($match[2])){
 			$nestedData[] = $row[$columns[$i]];
+			print_r($nestedData);
+		}
 		else{
 			$parametros = explode(',',$match[2]);
 			$parametros[0] = $row[$parametros[0]];
