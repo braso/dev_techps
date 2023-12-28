@@ -71,7 +71,13 @@
 					array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
 				}
 								
-				//<Converter array em string>
+				//Converter array em string{
+					$legendas = mysqli_fetch_all(query(
+						"SELECT UNIQUE moti_tx_legenda FROM motivo 
+							WHERE moti_tx_legenda IS NOT NULL;"
+						), 
+						MYSQLI_ASSOC
+					);
 					foreach(['inicioJornada', 'fimJornada', 'inicioRefeicao', 'fimRefeicao'] as $tipo){
 						if (count($aDetalhado[$tipo]) > 0){
 							for($f = 0; $f < count($aDetalhado[$tipo]); $f++){
@@ -86,14 +92,20 @@
 								}
 							}
 							$aDetalhado[$tipo] = implode("<br>", $aDetalhado[$tipo]);
+							foreach($legendas as $legenda){
+								$aDetalhado[$tipo] = str_replace('<br><strong>'.$legenda['moti_tx_legenda'].'</strong>', ' <strong>'.$legenda['moti_tx_legenda'].'</strong>', $aDetalhado[$tipo]);
+							}
 						}else{
 							$aDetalhado[$tipo] = '';
 						}
 					}
-				//</Converter array em string>
+				//}
 				
 				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDadosMotorista, $aDetalhado));
-				for($f = 0; $f < sizeof($row); $f++){
+				for($f = 0; $f < sizeof($row)-1; $f++){
+					if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
+						continue;
+					}
 					if($row[$f] == "00:00"){
 						$row[$f] = "";
 					}
