@@ -1411,13 +1411,17 @@
 
 
 		
-		if($stringFeriado != ''){
+		//HORAS EXTRAS{
+		if ($stringFeriado != '') {						//Se for feriado
 			$iconeFeriado =  "<a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
 			$aRetorno['he100'] = $iconeFeriado.$aRetorno['diffSaldo'];
-		}elseif(date('w',strtotime($data)) == '0'){
+		}elseif(date('w', strtotime($data)) == '0'){	//Se for domingo
+
 			$aRetorno['he100'] = $aRetorno['diffSaldo'];
-		}elseif($aRetorno['diffSaldo'][0] != '-'){
+		}elseif($aRetorno['diffSaldo'][0] != '-' && $aRetorno['diffSaldo']<$aParametro["para_tx_HorasEXExcedente"]){ //Se o saldo estiver positivo e for menor que o limite de horas extras
 			$aRetorno['he50'] = $aRetorno['diffSaldo'];
+		}elseif($aRetorno['diffSaldo'][0] != '-' &&  $aRetorno['diffSaldo']>$aParametro["para_tx_HorasEXExcedente"]){//Se o saldo estiver positivo e for maior que o limite de horas extras
+			$aRetorno['he100'] = $aRetorno['diffSaldo'];
 		}
 
 		
