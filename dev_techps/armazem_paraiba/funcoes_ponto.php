@@ -233,7 +233,14 @@
 			$atual = $dados[$i];
 			$proximo = $dados[$i + 1];
 
-			// Ignora as subtrações dos tipos 3-4, 5-6, 7-8, 9-10, 11-12 e 2-1
+			/* Ignora os intervalos entre:
+				- Início de Refeição(3) e Fim de Refeição(4);
+				- Início de Espera(5) e Fim de Espera(6);
+				- Início de Descanso(7) e Fim de Descanso(8); 
+				- Início de Repouso(9) e Fim de Repouso(10); 
+				- Início de Repouso Embarcado(11) e Fim de Repouso Embarcado(12); 
+				- Fim de Jornada(2) e Início de Jornada(1)
+			*/
 			if(in_array([$atual[1], $proximo[1]], [[3,4], [5,6], [7,8], [9,10], [11,12], [2,1]])){
 				continue;
 			}
@@ -268,7 +275,11 @@
 		$result = intval($result[0]*60)+($negative?-1:1)*intval($result[1]);
 
 		for($f = 1; $f < count($horarios); $f++){
+			if(empty($horarios[$f])){
+				continue;
+			}
 			$negative = ($horarios[$f][0] == '-');
+			$horarios[$f] = str_replace(['<b>', '</b>'], ['', ''], $horarios[$f]);
 			$horarios[$f] = explode(':', $horarios[$f]);
 			$horarios[$f] = intval($horarios[$f][0]*60)+($negative?-1:1)*intval($horarios[$f][1]);
 			switch($operacao){
@@ -303,44 +314,42 @@
 		if (!is_string($tempo1) || !is_string($tempoDescanso) || !preg_match('/^\d{2}:\d{2}$/', $tempo1) || !preg_match('/^\d{2}:\d{2}$/', $tempoDescanso)) {
 			return '';
 		}
-		$datetime1 = new DateTime('2000-01-01 ' . $tempo1);
-		$datetime2 = new DateTime('2000-01-01 ' . '05:30');
-		$datetime3 = new DateTime('2000-01-01 ' . '03:00');
-		$datetimeDescanso = new DateTime('2000-01-01 ' . $tempoDescanso);
-		$datetimeDescanso1 = new DateTime('2000-01-01 ' . '00:30');
-		$datetimeDescanso2 = new DateTime('2000-01-01 ' . '00:15');
+		// $datetime1 = new DateTime('2000-01-01 '.$tempo1);
+		// $datetimeDescanso = new DateTime('2000-01-01 '.$tempoDescanso);
+		$datetime2 = '05:30';
+		$datetime3 = '03:00';
+		$datetimeDescanso1 = '00:30';
+		$datetimeDescanso2 = '00:15';
 
 		$alertaDescanso = '';
 
-		if($datetime1 > $datetime2){
-			if($datetimeDescanso < $datetimeDescanso1){
+		if($tempo1 > $datetime2){
+			if($tempoDescanso < $datetimeDescanso1){
 				$alertaDescanso = "<i style='color:orange;' title='Descanso de 00:30 não respeitado' class='fa fa-warning'></i>";
 			}
 			return "<a style='white-space: nowrap;'>$alertaDescanso<i style='color:orange;' title='Tempo excedido de 05:30' class='fa fa-warning'></i></a>&nbsp;".$tempo1;
-			// return "<a style='white-space: nowrap;'>$alertaDescanso</a>&nbsp;".$tempo1;
-		}elseif($datetime1 > $datetime3){
-			if($datetimeDescanso < $datetimeDescanso2){
+		}elseif($tempo1 > $datetime3){
+			if($tempoDescanso < $datetimeDescanso2){
 				$alertaDescanso = "<i style='color:orange;' title='Descanso de 00:15 não respeitado' class='fa fa-warning'></i>";
 			}
-			// return "<a style='white-space: nowrap;'>$alertaDescanso<i style='color:orange;' title='Tempo excedido de 03:00' class='fa fa-warning'></i></a>&nbsp;".$tempo1;
 			return "<a style='white-space: nowrap;'>$alertaDescanso</a>&nbsp;".$tempo1;
 		}else{
 			return $tempo1;
 		}
 	}
 
-	function verificaTempo($tempo1 = '00:00', $tempo2) {
+	function verificaLimiteTempo(string $tempoEfetuado, string $limite) {
 		// Verifica se os parâmetros são strings e possuem o formato correto
-		if (!is_string($tempo1) || !is_string($tempo2) || !preg_match('/^\d{2}:\d{2}$/', $tempo1) || !preg_match('/^\d{2}:\d{2}$/', $tempo2)) {
+		if (!preg_match('/^\d{2}:\d{2}$/', $tempoEfetuado) || !preg_match('/^\d{2}:\d{2}$/', $limite)) {
 			return '';
 		}
-		$datetime1 = new DateTime('2000-01-01 ' . $tempo1);
-		$datetime2 = new DateTime('2000-01-01 ' . $tempo2);
+		$datetime1 = new DateTime('2000-01-01 ' . $tempoEfetuado);
+		$datetime2 = new DateTime('2000-01-01 ' . $limite);
 
 		if($datetime1 > $datetime2){
-			return "<a style='white-space: nowrap;'><i style='color:orange;' title='Tempo excedido de $tempo2' class='fa fa-warning'></i></a>&nbsp;".$tempo1;
+			return "<a style='white-space: nowrap;'><i style='color:orange;' title='Tempo excedido de $limite' class='fa fa-warning'></i></a>&nbsp;".$tempoEfetuado;
 		}else{
-			return $tempo1;
+			return $tempoEfetuado;
 		}
 	}
 
@@ -369,9 +378,9 @@
 		}
 
 		if ($_SESSION['user_tx_nivel'] == 'Motorista') {
-			$retorno = '<center><span><i style="color:'.$cor.';" class="fa fa-circle"></i></span></center>';
+			$retorno = '<span><i style="color:'.$cor.';" class="fa fa-circle"></i></span>';
 		} else {
-			$retorno = '<center><a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto(\''.$data.'\', \''.$idMotorista.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a></center>';
+			$retorno = '<a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto(\''.$data.'\', \''.$idMotorista.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
 		}
 		return $retorno;
 	}
@@ -546,8 +555,11 @@
 		return $pares_horarios;
 	}
 
-	function dateTimeToSecs(DateTime $dateTime): int{
-    	$res = date_diff(DateTime::createFromFormat('H:i', '00:00'), $dateTime);
+	function dateTimeToSecs(DateTime $dateTime, $baseDate = ''): int{
+		if(empty($baseDate)){
+			$baseDate = DateTime::createFromFormat('Y-m-d H:i:s', '1970-01-01 00:00:00');
+		}
+    	$res = date_diff($baseDate, $dateTime);
         $res = 
         	($res->invert? 1:-1)*
 			(
@@ -606,7 +618,6 @@
 			'esperaIndenizada' => '',
 			'diffSaldo' => ''
 		];
-
 		$aMotorista = carrega_array(query(
 			"SELECT * FROM entidade
 				LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
@@ -615,6 +626,10 @@
 					AND enti_tx_matricula = '$matricula' 
 				LIMIT 1"
 		));
+
+		if(!isset($aMotorista['enti_nb_parametro']) || empty($aMotorista['enti_nb_parametro'])){
+			$aMotorista['enti_nb_parametro'] = $aMotorista['empr_nb_parametro'];
+		}
 
 		if ($aMotorista['enti_nb_empresa'] && $aMotorista['empr_nb_cidade'] && $aMotorista['cida_nb_id'] && $aMotorista['cida_tx_uf']) {
 			$extraFeriado = " AND ((feri_nb_cidade = '$aMotorista[cida_nb_id]' OR feri_tx_uf = '$aMotorista[cida_tx_uf]') OR ((feri_nb_cidade = '' OR feri_nb_cidade IS NULL) AND (feri_tx_uf = '' OR feri_tx_uf IS NULL)))";
@@ -625,7 +640,11 @@
 		$aParametro = carregar('parametro', $aMotorista['enti_nb_parametro']);
 		$alertaJorEfetiva = ((isset($aParametro['para_tx_acordo']) && $aParametro['para_tx_acordo'] == 'Sim')? '12:00': '10:00');
 
-		$queryFeriado = query("SELECT feri_tx_nome FROM feriado WHERE feri_tx_data LIKE '____-" . substr($data, 5, 5) . "%' AND feri_tx_status != 'inativo' $extraFeriado");
+		$queryFeriado = query(
+			"SELECT feri_tx_nome FROM feriado 
+				WHERE feri_tx_data LIKE '____-" . substr($data, 5, 5) . "%' 
+					AND feri_tx_status != 'inativo' ".$extraFeriado
+		);
 		$stringFeriado = '';
 		while ($row = carrega_array($queryFeriado)) {
 			$stringFeriado .= $row[0] . "\n";
@@ -692,6 +711,7 @@
 					}
 				}
 			}
+			
 			if($pontosDia[0]['pont_tx_tipo'] != '1'){ //Se o 1° registro != início de jornada => É uma jornada que veio do dia anterior
 				while(count($pontosDia) > 0){
 					if($pontosDia[0]['pont_tx_tipo'] != '1'){
@@ -702,7 +722,6 @@
 				}
 			}
 		}
-
 		foreach($pontosDia as $ponto){
 			$tiposRegistrados[] = [date("H:i", strtotime($ponto['pont_tx_data'])), $ponto['pont_tx_tipo']]; //$arrayMDC
 			if(!isset($registros[$tipos[$ponto['pont_tx_tipo']]])){
@@ -774,7 +793,7 @@
 
 			$jornadaEfetiva = $jornadaIntervalo->diff($totalNaoJornada); //$diffJornadaEfetiva
 			$jornadaEfetiva = DateTime::createFromFormat('H:i', $jornadaEfetiva->format("%H:%I"));
-			$aRetorno['diffJornadaEfetiva'] = verificaTempo($jornadaEfetiva->format('H:i'), $alertaJorEfetiva);
+			$aRetorno['diffJornadaEfetiva'] = verificaLimiteTempo($jornadaEfetiva->format('H:i'), $alertaJorEfetiva);
 		//}
 
 		// INICIO CALCULO INTERSTICIO{
@@ -782,11 +801,11 @@
 
 				$ultimoDiaJornada = carrega_array(query(
 					"SELECT pont_tx_data FROM ponto
-					WHERE pont_tx_status != 'inativo'
-						AND pont_tx_matricula = '$matricula'
-						AND pont_tx_data < '$data'
-					ORDER BY pont_tx_data DESC
-					LIMIT 1"
+						WHERE pont_tx_status != 'inativo'
+							AND pont_tx_matricula = '$matricula'
+							AND pont_tx_data < '$data'
+						ORDER BY pont_tx_data DESC
+						LIMIT 1"
 				))[0];
 				$ultimoDiaJornada = new DateTime($ultimoDiaJornada);
 
@@ -863,31 +882,29 @@
 				$registros['repousoCompleto']['totalIntervaloAdicionalNot']
 			]);
 
-			$adicionalNoturno = gmdate('H:i', (strtotime($data.' '.$registros['jornadaCompleto']['totalIntervaloAdicionalNot']))-(strtotime($data.' '.$intervalosNoturnos)));
+			$aRetorno['adicionalNoturno'] = operarHorarios([$registros['jornadaCompleto']['totalIntervaloAdicionalNot'], $intervalosNoturnos], '-');
 		//FIM ADICIONAL NOTURNO
 
 		//HORAS EXTRAS{
 			if ($stringFeriado != '') {						//Se for feriado
-				$iconeFeriado =  "<a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
-				$aRetorno['he100'] = $iconeFeriado.$aRetorno['diffSaldo'];
-			}elseif(date('w', strtotime($data)) == '0'){	//Se for domingo
-				$aRetorno['he100'] = $aRetorno['diffSaldo'];
-			}elseif($aRetorno['diffSaldo'][0] != '-'){		//Se o saldo estiver positivo
-				$aRetorno['he50'] = $aRetorno['diffSaldo'];
-			}
-			
-			if(!empty($aParametro) && $aRetorno['diffSaldo'] >= $aParametro['para_tx_HorasEXExcedente']){
-				$aRetorno['he100'] = operarHorarios([$aRetorno['he100'], $aParametro['para_tx_HorasEXExcedente']], '+');
-				$aRetorno['diffSaldo'] = operarHorarios([$aRetorno['diffSaldo'], $aParametro['para_tx_HorasEXExcedente']], '-');
-			}
+			    $iconeFeriado =  "<a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
+			    $aRetorno['he100'] = $iconeFeriado.$aRetorno['diffSaldo'];
+		    }elseif(
+				  $aRetorno['jornadaPrevista'] == '00:00' || 
+				  ($aRetorno['diffSaldo'][0] != '-' && $aRetorno['diffSaldo'] >= $aParametro["para_tx_HorasEXExcedente"])
+			  ){	//Se a jornada prevista = 0 (domingos e feriados) ou saldo >= limite de horas extras
+			    $aRetorno['he100'] = $aRetorno['diffSaldo'];
+		    }elseif($aRetorno['diffSaldo'][0] != '-' && $aRetorno['diffSaldo']<$aParametro["para_tx_HorasEXExcedente"]){ //Se saldo < limite de horas extras
+			    $aRetorno['he50'] = $aRetorno['diffSaldo'];
+		    }
 		//}
 
-		//MÁXIMA DIREÇÃO CONTÍNUA
+		//MÁXIMA DIREÇÃO CONTÍNUA{
 			$aRetorno['maximoDirecaoContinua'] = verificaTempoMdc(
 				maxDirecaoContinua($tiposRegistrados),
 				$registros['descansoCompleto']['totalIntervalo']
 			);
-		//FIM MÁXIMA DIREÇÃO CONTÍNUA
+		//}
 
 		//JORNADA MÍNIMA
 			$dtJornada = new DateTime($data.' '.$jornadaEfetiva->format("H:i"));
@@ -900,39 +917,41 @@
 		//FIM JORNADA MÍNIMA
 
 		//01:00 DE REFEICAO
+			$maiorRefeicao = '00:00';
 			if(count($registros['refeicaoCompleto']['pares']) > 0){
 				for ($i = 0; $i < count($registros['refeicaoCompleto']['pares']); $i++) {
-					$dtIntervaloRefeicao = new DateTime($data.' '.$registros['refeicaoCompleto']['pares'][$i]['intervalo']);
+					if($maiorRefeicao < $registros['refeicaoCompleto']['pares'][$i]['intervalo']){
+						$maiorRefeicao = $registros['refeicaoCompleto']['pares'][$i]['intervalo'];
+					}
 				}
-			}else{
-				$dtIntervaloRefeicao = new DateTime($data.' 00:00');
-			}
-			$avisoRefeicaoMinima = '';
-			if($dtIntervaloRefeicao > (new DateTime($data.' 02:00'))){
-				$avisoRefeicaoMinima = "<a><i style='color:orange;' title='Refeição com tempo máximo de 02:00h não respeitado.' class='fa fa-info-circle'></i></a>";
-			}elseif ($dtJornada > $dtJornadaMinima && ($dtIntervaloRefeicao < (new DateTime($data.' 01:00')) || $aRetorno['diffRefeicao'] == '00:00')) {
-				$avisoRefeicaoMinima = "<a><i style='color:red;' title='Refeição com tempo mínimo de 01:00h não respeitado.' class='fa fa-warning'></i></a>";
 			}
 
-			if(!empty($avisoRefeicaoMinima)){
-				$aRetorno['diffRefeicao'] = $avisoRefeicaoMinima.' '.$aRetorno['diffRefeicao'];
+			$avisoRefeicao = '';
+			if($maiorRefeicao > '02:00'){
+				$avisoRefeicao = "<a><i style='color:orange;' title='Refeição com tempo máximo de 02:00h não respeitado.' class='fa fa-info-circle'></i></a>";
+			}elseif ($dtJornada > $dtJornadaMinima && $maiorRefeicao < '01:00') {
+				$avisoRefeicao = "<a><i style='color:red;' title='Refeição com tempo mínimo de 01:00h não respeitado.' class='fa fa-warning'></i></a>";
+			}
+
+			if(!empty($avisoRefeicao)){
+				$aRetorno['diffRefeicao'] = $avisoRefeicao.' '.$aRetorno['diffRefeicao'];
 			}
 		//FIM 01:00 DE REFEICAO
 
 		//ALERTAS{
 			if((!isset($registros['inicioJornada'][0]) || $registros['inicioJornada'][0] == '') &&
-				date('w',strtotime($data)) != '0'){
+				$aRetorno['jornadaPrevista'] != '00:00'){
 				$aRetorno['inicioJornada'][] 	= "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
 			}
 			if($fezJorMinima){
 				if(!isset($registros['fimJornada'][0]) || $registros['fimJornada'][0] == ''){
 					$aRetorno['fimJornada'][] 	  = "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning'></i></a>";
 				}
-				if(!isset($registros['inicioRefeicao'][0]) || $aRetorno['inicioRefeicao'][0] == ''){
-					$aRetorno['inicioRefeicao'][] = "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>".$avisoRefeicaoMinima;
+				if(!isset($registros['inicioRefeicao'][0]) || empty($aRetorno['inicioRefeicao'][0])){
+					$aRetorno['inicioRefeicao'][] = "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>".$avisoRefeicao;
 				}
-				if(!isset($registros['fimRefeicao'][0]) || $aRetorno['fimRefeicao'][0] == ''){
-					$aRetorno['fimRefeicao'][] 	  = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>".$avisoRefeicaoMinima;
+				if(!isset($registros['fimRefeicao'][0]) || empty($aRetorno['fimRefeicao'][0])){
+					$aRetorno['fimRefeicao'][] 	  = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>".$avisoRefeicao;
 				}
 			}
 			if (is_array($aAbono) && count($aAbono) > 0) {
@@ -959,13 +978,13 @@
 		}
 
 		if (count($registros['inicioEspera']) > 0 && count($registros['fimEspera']) > 0){
-			$aRetorno['diffEspera'] = $registros['esperaCompleto']['icone'].$registros['esperaCompleto']['totalIntervalo'];
+			$aRetorno['diffEspera']   = $registros['esperaCompleto']['icone'].$registros['esperaCompleto']['totalIntervalo'];
 		}
 		if (count($registros['inicioDescanso']) > 0 && count($registros['fimDescanso']) > 0){
-			$aRetorno['diffDescanso'] = $registros['descansoCompleto']['icone'].verificaTempo($registros['descansoCompleto']['totalIntervalo'], "05:30");
+			$aRetorno['diffDescanso'] = $registros['descansoCompleto']['icone'].$registros['descansoCompleto']['totalIntervalo'];
 		}
 		if (count($registros['inicioRepouso']) > 0 && count($registros['fimRepouso']) > 0){
-			$aRetorno['diffRepouso'] = $registros['repousoCompleto']['icone'].$registros['repousoCompleto']['totalIntervalo'];
+			$aRetorno['diffRepouso']  = $registros['repousoCompleto']['icone'].$registros['repousoCompleto']['totalIntervalo'];
 		}
 		
 		$ajuste = mysqli_fetch_all(
@@ -1008,91 +1027,103 @@
 		// 	$aRetorno['fimRefeicao'][] = "*";
 		// }
 		
-		$legendas = mysqli_fetch_all(
-			query(
-				"SELECT pont_tx_data,macr_tx_nome, moti_tx_legenda FROM ponto
-				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
-				JOIN user ON ponto.pont_nb_user = user.user_nb_id
-				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
-				WHERE ponto.pont_nb_motivo IS NOT NULL 
-					AND pont_tx_data LIKE '%$data%' 
-					AND pont_tx_matricula = '$matricula'"
-			),
-			MYSQLI_ASSOC
-		);
-
-		$tipos = [
-			'I' => 0, 
-			'P' => 0, 
-			'T' => 0, 
-			'DSR' => 0
-		];
-		$contagens = [
-			'inicioJornada' => $tipos,
-			'fimJornada' => $tipos,
-			'inicioRefeicao' => $tipos,
-			'fimRefeicao' => $tipos,
-		];
-		
-		foreach ($legendas as $value) {
-			$legenda = $value['moti_tx_legenda'];
-		
-			switch ($value['macr_tx_nome']) {
-				case 'Inicio de Jornada':
-					$acao = 'inicioJornada';
-					break;
-				case 'Fim de Jornada':
-					$acao = 'fimJornada';
-					break;
-				case 'Inicio de Refeição':
-					$acao = 'inicioRefeicao';
-					break;
-				case 'Fim de Refeição':
-					$acao = 'fimRefeicao';
-					break;
-				default:
-					$acao = '';
-			}
-			if (!empty($legenda) && array_key_exists($legenda, $contagens[$acao])) {
-				$contagens[$acao][$legenda]++;
-			}
-		}
-		foreach ($contagens as $acao => $tipos) {
-			foreach ($tipos as $tipo => $quantidade) {
-				if($quantidade > 0){
-					$aRetorno[$acao][] = "<strong>$tipo</strong>";
+		//LEGENDAS{
+			$legendas = mysqli_fetch_all(
+				query(
+					"SELECT pont_tx_data,macr_tx_nome, moti_tx_legenda FROM ponto
+						JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
+						JOIN user ON ponto.pont_nb_user = user.user_nb_id
+						LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
+						WHERE ponto.pont_nb_motivo IS NOT NULL 
+							AND pont_tx_data LIKE '%$data%' 
+							AND pont_tx_matricula = '$matricula'"
+				),
+				MYSQLI_ASSOC
+			);
+	
+			$tipos = [
+				'I' => 0, 
+				'P' => 0, 
+				'T' => 0, 
+				'DSR' => 0
+			];
+			$contagens = [
+				'inicioJornada' => $tipos,
+				'fimJornada' => $tipos,
+				'inicioRefeicao' => $tipos,
+				'fimRefeicao' => $tipos,
+			];
+			
+			foreach ($legendas as $value) {
+				$legenda = $value['moti_tx_legenda'];
+			
+				switch ($value['macr_tx_nome']) {
+					case 'Inicio de Jornada':
+						$acao = 'inicioJornada';
+						break;
+					case 'Fim de Jornada':
+						$acao = 'fimJornada';
+						break;
+					case 'Inicio de Refeição':
+						$acao = 'inicioRefeicao';
+						break;
+					case 'Fim de Refeição':
+						$acao = 'fimRefeicao';
+						break;
+					default:
+						$acao = '';
+				}
+				if ($acao != '' && !empty($legenda) && array_key_exists($legenda, $contagens[$acao])) {
+					$contagens[$acao][$legenda]++;
 				}
 			}
-		}
-
-		$tolerancia = carrega_array(query(
-			"SELECT parametro.para_tx_tolerancia FROM entidade 
-				JOIN parametro ON enti_nb_parametro = para_nb_id 
-				WHERE enti_nb_parametro = ".$aMotorista['enti_nb_parametro']."
-				LIMIT 1;"
-		))[0];
-		$tolerancia = intval($tolerancia);
-		
-		$saldo = explode(':', $aRetorno['diffSaldo']);
-		$saldo = intval($saldo[0])*60 + ($saldo[0][0] == '-'? -1: 1)*intval($saldo[1]);
-		
-		if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
-			$aRetorno['diffSaldo'] = '00:00';
-			$saldo = 0;
-		}elseif($saldo > 0){
-			$aRetorno['diffSaldo'] = "<b>".$aRetorno['diffSaldo']."</b>";
-		}
-
-		// TOTALIZADOR 
-		$campos = ['diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada', 'jornadaPrevista', 'diffJornadaEfetiva', 'maximoDirecaoContinua', 'intersticio', 'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'diffSaldo'];
-		foreach($campos as $campo){
-			if(empty($totalResumo[$campo])){
-				$totalResumo[$campo] = '00:00';
-			}else{
-				$totalResumo[$campo] = somarHorarios([$totalResumo[$campo], strip_tags(str_replace("&nbsp;", "", $aRetorno[$campo]))]);
+			foreach ($contagens as $acao => $tipos) {
+				foreach ($tipos as $tipo => $quantidade) {
+					if($quantidade > 0){
+						$aRetorno[$acao][] = "<strong>$tipo</strong>";
+					}
+				}
 			}
-		}
-		unset($campos);
+		//}
+
+		//TOLERÂNCIA{
+			$tolerancia = carrega_array(query(
+				"SELECT parametro.para_tx_tolerancia FROM entidade 
+					JOIN parametro ON enti_nb_parametro = para_nb_id 
+					WHERE enti_nb_parametro = ".$aMotorista['enti_nb_parametro']."
+					LIMIT 1;"
+			))[0];
+			$tolerancia = intval($tolerancia);
+			
+			$saldo = explode(':', $aRetorno['diffSaldo']);
+			$saldo = intval($saldo[0])*60 + ($saldo[0][0] == '-'? -1: 1)*intval($saldo[1]);
+			
+			if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
+				$aRetorno['diffSaldo'] = '00:00';
+				$saldo = 0;
+			}elseif($saldo > 0){
+				$aRetorno['diffSaldo'] = "<b>".$aRetorno['diffSaldo']."</b>";
+			}
+		//}
+
+		//SOMANDO TOTAIS{
+			$campos = [
+				'diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada', 
+				'jornadaPrevista', 'diffJornadaEfetiva', 'maximoDirecaoContinua', 'intersticio', 
+				'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'diffSaldo'
+			];
+			foreach($campos as $campo){
+				if(empty($totalResumo[$campo])){
+					$totalResumo[$campo] = '00:00';
+				}else{
+					$totalResumo[$campo] = operarHorarios(
+						[$totalResumo[$campo], strip_tags(str_replace("&nbsp;", "", $aRetorno[$campo]))], 
+						'+'
+					);
+				}
+			}
+			unset($campos);
+		//}
 		
 		return $aRetorno;
 	}
@@ -1109,901 +1140,3 @@
 		];
 		$response = iconv('UTF-8', 'ASCII//TRANSLIT', $week[date('l', strtotime($date))]);
 		return $response;
-	}
-
-	function diaDetalheEndosso($matricula, $data, $status = ''): array{
-		return diaDetalhePonto($matricula, $data);
-
-		global $totalResumo, $contagemEspera;
-		setlocale(LC_ALL, 'pt_BR.utf8');
-
-		$aRetorno['data'] = data($data);
-		$aRetorno['diaSemana'] = substr(pegarDiaDaSemana(strtotime($data)), 0, 3);
-		$campos = ['inicioJornada', 'inicioRefeicao', 'fimRefeicao', 'fimJornada', 'diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada', 'jornadaPrevista', 'diffJornadaEfetiva', 'maximoDirecaoContinua', 'intersticio', 'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'diffSaldo', 'temPendencias'];
-		foreach($campos as $campo){
-			$aRetorno[$campo] = '';
-		}
-
-		$sqlMotorista = query("SELECT * FROM entidade WHERE enti_tx_status != 'inativo' AND enti_tx_matricula = '$matricula' LIMIT 1");
-		$aMotorista = carrega_array($sqlMotorista);
-
-		$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
-		$aEmpCidade = carregar('cidade', $aEmpresa['empr_nb_cidade']);
-		if ($aMotorista['enti_nb_empresa'] && $aEmpresa['empr_nb_cidade'] && $aEmpCidade['cida_nb_id'] && $aEmpCidade['cida_tx_uf']) {
-			$extraFeriado = " AND (
-				(feri_nb_cidade = '$aEmpCidade[cida_nb_id]' AND feri_tx_uf = '$aEmpCidade[cida_tx_uf]')
-				OR (feri_nb_cidade IS NULL AND feri_tx_uf IS NULL)
-				OR (feri_nb_cidade = 0 AND feri_tx_uf = ''))";
-		}
-
-		$aParametro = carregar('parametro', $aMotorista['enti_nb_parametro']);
-		$horaAlertaJornadaEfetiva = ($aParametro['para_tx_acordo'] == 'Sim')? '12:00': '10:00';
-
-		$sqlFeriado = "SELECT feri_tx_nome FROM feriado WHERE feri_tx_data LIKE '____-" . substr($data, 5, 5) . "%' AND feri_tx_status != 'inativo' $extraFeriado";
-		$queryFeriado = query($sqlFeriado);
-		$stringFeriado = '';
-		while($row = carrega_array($queryFeriado)){
-			$stringFeriado .= $row[0]."\n";
-		}
-
-		if(date('w',strtotime($data)) == '6'){ //SABADOS
-			// $horas_sabado = $aMotorista[enti_tx_jornadaSabado];
-			// $cargaHoraria = sprintf("%02d:%02d", floor($horas_sabado), ($horas_sabado - floor($horas_sabado)) * 60);
-			$cargaHoraria = $aMotorista['enti_tx_jornadaSabado'];
-		}elseif(date('w',strtotime($data)) == '0'){ //DOMINGOS
-			$cargaHoraria = '00:00';
-		}else{
-			// $horas_diarias = $aMotorista[enti_tx_jornadaSemanal]/5;
-			// $cargaHoraria = sprintf("%02d:%02d", floor($horas_diarias), ($horas_diarias - floor($horas_diarias)) * 60);
-			$cargaHoraria = $aMotorista['enti_tx_jornadaSemanal'];
-		}
-		if($stringFeriado != ''){
-			$cargaHoraria = '00:00';
-		}
-		
-
-		// if($cargaHoraria == 0){
-		// 	return $aRetorno;
-		// 	exit;
-		// }
-
-		$sql = query("SELECT * FROM ponto WHERE pont_tx_status != 'inativo' AND pont_tx_matricula = '$matricula'  AND pont_tx_data LIKE '$data%' ORDER BY pont_tx_data ASC");
-		while($aDia = carrega_array($sql)){
-			
-			// $queryMacroPonto = query("SELECT macr_tx_nome,macr_tx_codigoInterno FROM macroponto WHERE macr_tx_codigoExterno = '".$aDia[pont_tx_tipo]."'");
-			// $aTipo = carrega_array($queryMacroPonto);
-
-			$arrayMDC[] = [date("H:i",strtotime($aDia['pont_tx_data'])), $aDia['pont_tx_tipo']];
-
-			switch($aDia['pont_tx_tipo']){
-				case '1':
-					$arrayInicioJornada[] = date("H:i",strtotime($aDia['pont_tx_data']));
-					$arrayInicioJornada2[] = $aDia['pont_tx_data'];
-					// $aRetorno['inicioJornada'] = date("H:i",strtotime($aDia[pont_tx_data]));
-					$inicioDataAdicional = $aDia['pont_tx_data'];
-				break;
-				case '2':
-					$arrayFimJornada[] = date("H:i",strtotime($aDia['pont_tx_data']));
-					$arrayFimJornada2[] = $aDia['pont_tx_data'];
-					// $aRetorno['fimJornada'] = date("H:i",strtotime($aDia[pont_tx_data]));
-					$fimDataAdicional = $aDia['pont_tx_data'];
-				break;
-				case '3':
-					$arrayInicioRefeicaoFormatado[] = date("H:i",strtotime($aDia['pont_tx_data']));
-					$arrayInicioRefeicao[] = $aDia['pont_tx_data'];
-				break;
-				case '4':
-					$arrayFimRefeicaoFormatado[] = date("H:i",strtotime($aDia['pont_tx_data']));
-					$arrayFimRefeicao[] = $aDia['pont_tx_data'];
-				break;
-				case '5':
-					$aDataHorainicioEspera[] = $aDia['pont_tx_data'];
-				break;
-				case '6':
-					$aDataHorafimEspera[] = $aDia['pont_tx_data'];
-				break;
-				case '7':
-					$aDataHorainicioDescanso[] = $aDia['pont_tx_data'];
-				break;
-				case '8':
-					$aDataHorafimDescanso[] = $aDia['pont_tx_data'];
-				break;
-				case '9':
-					$aDataHorainicioRepouso[] = $aDia['pont_tx_data'];
-				break;
-				case '10':
-					$aDataHorafimRepouso[] = $aDia['pont_tx_data'];
-				break;
-				case '11':
-					$aDataHorainicioRepouso[] = $aDia['pont_tx_data']; // ADICIONADO AO REPOUSO
-				break;
-				case '12':
-					$aDataHorafimRepouso[] = $aDia['pont_tx_data']; // ADICIONADO AO REPOUSO
-				break;
-			}
-		}
-		
-		$jornadaOrdenado = ordenar_horarios($arrayInicioJornada2, $arrayFimJornada2);
-		$refeicaoOrdenada = ordenar_horarios($arrayInicioRefeicao, $arrayFimRefeicao);
-		$esperaOrdenada = ordenar_horarios($aDataHorainicioEspera, $aDataHorafimEspera, true);
-		$descansoOrdenado = ordenar_horarios($aDataHorainicioDescanso, $aDataHorafimDescanso);
-		
-		if($esperaOrdenada['paresParaRepouso']){
-			for ($i=0; $i < count($esperaOrdenada['paresParaRepouso']); $i++) { 
-				$aDataHorainicioRepouso[] = $data.' '.$esperaOrdenada['paresParaRepouso'][$i]['inicio'];
-				$aDataHorafimRepouso[] = $data.' '.$esperaOrdenada['paresParaRepouso'][$i]['fim'];
-				$aDataHorainicioEsperaParaRepouso[] = $data.' '.$esperaOrdenada['paresParaRepouso'][$i]['inicio'];
-				$aDataHorafimEsperaParaRepouso[] = $data.' '.$esperaOrdenada['paresParaRepouso'][$i]['fim'];
-
-			}
-			$esperaParaRepousoOrdenado = ordenar_horarios($aDataHorainicioEsperaParaRepouso, $aDataHorafimEsperaParaRepouso);
-		}
-		$repousoOrdenado = ordenar_horarios($aDataHorainicioRepouso, $aDataHorafimRepouso);
-
-		$aRetorno['diffRefeicao'] = $refeicaoOrdenada['icone'].$refeicaoOrdenada['totalIntervalo'];
-		$aRetorno['diffEspera']   = $esperaOrdenada['icone'].$esperaOrdenada['totalIntervalo'];
-		$aRetorno['diffDescanso'] = $descansoOrdenado['icone'].$descansoOrdenado['totalIntervalo'];
-		$aRetorno['diffRepouso']  = $repousoOrdenado['icone'].$repousoOrdenado['totalIntervalo'];
-
-		$contagemEspera += count($esperaOrdenada['pares']);
-
-		$sqlAbono = query("SELECT * FROM abono, motivo, user 
-			WHERE abon_tx_status != 'inativo' AND abon_nb_userCadastro = user_nb_id 
-			AND abon_tx_matricula = '$matricula' AND abon_tx_data = '$data' AND abon_nb_motivo = moti_nb_id
-			ORDER BY abon_nb_id DESC LIMIT 1");
-		
-		$aAbono = carrega_array($sqlAbono);
-		if($aAbono[0] > 0){
-			$tooltip = "Jornada Original: ".str_pad($cargaHoraria, 2, '0', STR_PAD_LEFT).":00:00"."\n".
-					"Abono: $aAbono[abon_tx_abono]\n".
-					"Motivo: $aAbono[moti_tx_nome]\n".
-					"Justificativa: $aAbono[abon_tx_descricao]\n\n".
-					"Registro efetuado por $aAbono[user_tx_login] em ".data($aAbono['abon_tx_dataCadastro'],1);
-
-			$iconeAbono =  "<a><i style='color:orange;' title='$tooltip' class='fa fa-warning'></i></a>";
-			$aRetorno['temPendencias'] = True;
-		}else{
-			$tooltip = $iconeAbono = '';
-		}
-
-		
-		// INICIO CALCULO JORNADA TRABALHO (DESCONSIDEREANDO PAUSAS)
-		for ($i=0; $i < count($arrayInicioJornada); $i++) { 
-			$dataHoraInicioJornada = new DateTime($data." ".$arrayInicioJornada[$i]);
-			$dataHoraFimJornada = new DateTime($data." ".$arrayFimJornada[$i]);
-
-			$diffJornada = $dataHoraInicioJornada->diff($dataHoraFimJornada);
-			$arrayDiffJornada[] = $diffJornada->format("%H:%I");
-		}
-
-		
-		$aRetorno['diffJornada'] = $jornadaOrdenado['icone'].$jornadaOrdenado['totalIntervalo'];
-		// FIM CALCULO CALCULO JORNADA TRABALHO
-		
-		
-		// INICIO JORNADA ESPERADA
-		$dataJornadaPrevista = DateTime::createFromFormat('Y-m-d H:i', $data." ".$cargaHoraria);
-		$dataAbono = new DateTime($data." ".$aAbono['abon_tx_abono']);
-		$diffJornadaPrevista = $dataAbono->diff($dataJornadaPrevista);
-
-		$aRetorno['jornadaPrevista'] = $diffJornadaPrevista->format("%H:%I");
-		// FIM JORNADA ESPERADA
-
-		// INICIO CALCULO JORNADA EFETIVAMENTE DO DIA
-		$horaTotal = new DateTime($jornadaOrdenado['totalIntervalo']);
-
-		//SOMATORIO DE TODAS AS ESPERAS
-		$horaTotalIntervalos = new DateTime(somarHorarios([$refeicaoOrdenada['totalIntervalo'], $esperaOrdenada['totalIntervalo'], $descansoOrdenado['totalIntervalo'], $repousoOrdenado['totalIntervalo']]));
-
-		$diffJornadaEfetiva = $horaTotal->diff($horaTotalIntervalos);
-		$aRetorno['diffJornadaEfetiva'] = verificaTempo($diffJornadaEfetiva->format("%H:%I"), $horaAlertaJornadaEfetiva);
-		// FIM CALCULO JORNADA EFETIVAMENTE DO DIA
-
-		// INICIO CALCULO INTERSTICIO
-		if($inicioDataAdicional != ''){
-
-			$sqlDiaAnterior = query("SELECT pont_tx_data FROM ponto WHERE pont_tx_status != 'inativo' AND pont_tx_matricula = '$matricula'  AND pont_tx_data < '$data' ORDER BY pont_tx_data DESC LIMIT 1");
-			$aDiaAnterior = carrega_array($sqlDiaAnterior);
-
-			$dateInicioJornada = new DateTime($arrayInicioJornada2[0]);
-			$dateDiaAnterior = new DateTime($aDiaAnterior[0]);
-			
-
-			$diffJornada = $dateInicioJornada->diff($dateDiaAnterior);
-			// $diffIntersticio = $diffJornada->format("%H:%I");
-
-			// Obter a diferença total em minutos
-			$diffMinutos = ($diffJornada->days * 24 * 60) + ($diffJornada->h * 60) + $diffJornada->i;
-
-			// Calcular as horas e minutos
-			$horas = floor($diffMinutos / 60);
-			$minutos = $diffMinutos % 60;
-
-			// Formatar a string no formato HH:MM
-			$hInter = sprintf("%02d:%02d", $horas, $minutos);
-			
-			$diffIntersticio = somarHorarios([$hInter, $horaTotalIntervalos->format("H:i"), $jornadaOrdenado['interjornada']]);
-
-
-			list($hours, $minutes) = explode(':', $diffIntersticio);
-			$tsInterTotal = $hours*3600 + $minutes*60;
-
-			list($hours, $minutes) = explode(':', $hInter);
-			$hInter = $hours*3600 + $minutes*60;
-
-			$iconeInter = '';
-			
-			if($tsInterTotal < (11*3600)){
-				$iconeInter .= "<a><i style='color:red;' title='Interstício Total de 11:00 não respeitado' class='fa fa-warning'></i></a>";
-				$aRetorno['temPendencias'] = True;
-			}
-			if($hInter < (8*3600)){
-				$iconeInter .= "<a><i style='color:red;' title='O mínimo de 08:00h ininterruptas no primeiro período, não respeitado.' class='fa fa-warning'></i></a>";
-				$aRetorno['temPendencias'] = True;
-			}
-
-
-			$aRetorno['intersticio'] = $iconeInter.$diffIntersticio;
-		}
-
-		// FIM CALCULO INTERSTICIO
-
-
-
-
-
-		//CALCULO ESPERA INDENIZADA
-		$horaJornadaEsperada = DateTime::createFromFormat('H:i', $aRetorno['jornadaPrevista']);
-		$horario1 = DateTime::createFromFormat('H:i', ($diffJornadaEfetiva->format("%H:%I")));
-		$horario2 = DateTime::createFromFormat('H:i', somarHorarios([$esperaOrdenada['totalIntervalo'], $esperaParaRepousoOrdenado['totalIntervalo']]));
-
-		$esperaIndenizada = clone $horario1;
-		$esperaIndenizada->add(new DateInterval('PT' . $horario2->format('H') . 'H' . $horario2->format('i') . 'M'));
-
-		// $jornadaEfetiva = $esperaIndenizada->format('H:i');
-		$jornadaEfetiva = $diffJornadaEfetiva->format("%H:%I");
-		
-		$dateCargaHoraria = new DateTime($aRetorno['jornadaPrevista']);
-		$dateJornadaEfetiva = new DateTime($jornadaEfetiva);
-		$saldoPositivo = $dateCargaHoraria->diff($dateJornadaEfetiva)->format("%r");
-
-		if ($esperaIndenizada > $horaJornadaEsperada && $horario1 < $horaJornadaEsperada ) {
-
-			$esperaIndenizada = $horaJornadaEsperada->diff($esperaIndenizada)->format('%H:%I');
-			// SE JORNADA EFETIVA FOR MENOR QUE A JORNADA ESPERADA, NAO GERA SALDO
-			
-			$jornadaEfetiva = $aRetorno['jornadaPrevista'];
-			
-		} else {
-			$esperaIndenizada = ($saldoPositivo == '-' || $horario2->format('H:i') == '00:00')? '': $horario2->format('H:i');
-		}
-
-		$aRetorno['esperaIndenizada'] = $esperaIndenizada;
-		
-		//FIM CALCULO ESPERA INDENIZADA
-
-
-		//INICIO ADICIONAL NOTURNO
-		$jornadaNoturno = $jornadaOrdenado['totalIntervaloAdicionalNot'];
-		
-		$refeicaoNoturno = $refeicaoOrdenada['totalIntervaloAdicionalNot'];
-		$esperaNoturno   = $esperaOrdenada['totalIntervaloAdicionalNot'];
-		$descansoNoturno = $descansoOrdenado['totalIntervaloAdicionalNot'];
-		$repousoNoturno  = $repousoOrdenado['totalIntervaloAdicionalNot'];
-
-		$intervalosNoturnos = somarHorarios([$refeicaoNoturno, $esperaNoturno, $descansoNoturno, $repousoNoturno]);
-
-		$adicionalNoturno = gmdate('H:i' , (strtotime($data.' '.$jornadaNoturno)) - (strtotime($data.' '.$intervalosNoturnos)));
-		$aRetorno['adicionalNoturno'] = $adicionalNoturno == '00:00' ? '' : $adicionalNoturno;
-
-		//FIM ADICIONAL NOTURNO
-
-		//CALCULO SALDO
-		$dateCargaHoraria = new DateTime($aRetorno['jornadaPrevista']);
-		$dateJornadaEfetiva = new DateTime($jornadaEfetiva);
-
-		$diffSaldo = $dateCargaHoraria->diff($dateJornadaEfetiva);
-		
-		$aRetorno['diffSaldo'] = $diffSaldo->format("%r%H:%I");
-		
-		//FIM CALCULO SALDO
-
-
-
-		
-		//HORAS EXTRAS{
-		if ($stringFeriado != '') {						//Se for feriado
-			$iconeFeriado =  "<a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
-			$aRetorno['he100'] = $iconeFeriado.$aRetorno['diffSaldo'];
-		}elseif(date('w', strtotime($data)) == '0'){	//Se for domingo
-
-			$aRetorno['he100'] = $aRetorno['diffSaldo'];
-		}elseif($aRetorno['diffSaldo'][0] != '-' && $aRetorno['diffSaldo']<$aParametro["para_tx_HorasEXExcedente"]){ //Se o saldo estiver positivo e for menor que o limite de horas extras
-			$aRetorno['he50'] = $aRetorno['diffSaldo'];
-		}elseif($aRetorno['diffSaldo'][0] != '-' &&  $aRetorno['diffSaldo']>$aParametro["para_tx_HorasEXExcedente"]){//Se o saldo estiver positivo e for maior que o limite de horas extras
-			$aRetorno['he100'] = $aRetorno['diffSaldo'];
-		}
-
-		
-		$mdc = maxDirecaoContinua($arrayMDC);
-
-		$aRetorno['maximoDirecaoContinua'] = verificaTempoMdc($mdc, $descansoOrdenado['totalIntervalo']);
-
-
-		// VERIFICA SE A JORNADA É MAIOR QUE 06:00
-		$dtJornada = new DateTime($data.' '.$diffJornadaEfetiva->format("%H:%I"));
-		$dtJornadaMinima = new DateTime($data.' '.'06:00');
-		
-		$verificaJornadaMinima = (
-			($dtJornada > $dtJornadaMinima) && ($diffJornadaEfetiva->format("%H:%I") != '00:00') || 
-			($aRetorno['jornadaPrevista'] != '00:00') && ($diffJornadaEfetiva->format("%H:%I") == '00:00')
-		)+0;
-		//FIM VERIFICA JORNADA MINIMA
-
-		//VERIFICA SE HOUVE 01:00 DE REFEICAO
-		$dtRefeicaoMinima = new DateTime($data.' '.'01:00');
-		$menor1h = 0;	
-		for ($i=0; $i < count($refeicaoOrdenada['pares']); $i++) { 
-			$dtIntervaloRefeicao = new DateTime($data.' '.$refeicaoOrdenada['pares'][$i]['intervalo']);
-			if($dtIntervaloRefeicao < $dtRefeicaoMinima){
-				$menor1h = 1;
-			}
-		}
-
-		if($aRetorno['diffRefeicao'] == '00:00') $menor1h = 1;
-
-		if($menor1h && $dtJornada > $dtJornadaMinima){
-			$aRetorno['diffRefeicao'] = "<a><i style='color:red;' title='Refeição com tempo ininterrupto mínimo de 01:00h, não respeitado.' class='fa fa-warning'></i></a>" . $aRetorno['diffRefeicao'];
-			$aRetorno['temPendencias'] = True;
-		}else{
-			$iconeRefeicaoMinima = '';
-		}
-
-		if($verificaJornadaMinima == 1){
-			if($arrayInicioJornada[0] == ''){
-				$aRetorno['inicioJornada']  = "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
-			}
-			if($arrayFimJornada[0] == ''){
-				$aRetorno['fimJornada']     = "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning'></i></a>";
-			}
-			if($aRetorno['inicioRefeicao'] == ''){
-				$aRetorno['inicioRefeicao'] = "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>".$iconeRefeicaoMinima;
-			}
-			if($aRetorno['fimRefeicao'] == ''){
-				$aRetorno['fimRefeicao']    = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>".$iconeRefeicaoMinima;
-			}
-
-			if($arrayInicioJornada[0] == '' || $arrayFimJornada[0] == '' || $aRetorno['inicioRefeicao'] == '' || $aRetorno['fimRefeicao'] == '') $aRetorno['temPendencias'] = True;
-		}
-		if($iconeAbono != ''){
-			$aRetorno['jornadaPrevista'] = $iconeAbono."&nbsp;".$aRetorno['jornadaPrevista'];
-		}
-
-		$arrays = [
-			['inicioJornada', 	$arrayInicioJornada],
-			['fimJornada', 		$arrayFimJornada],
-			['inicioRefeicao', 	$arrayInicioRefeicaoFormatado],
-			['fimRefeicao', 	$arrayFimRefeicaoFormatado]
-		];
-		foreach($arrays as $array){
-			if(count($array[1]) > 0){
-				$aRetorno[$array[0]] = implode("<br>", $array[1]);
-			}
-		}
-
-		if(count($aDataHorainicioEspera) > 0 && count($aDataHorafimEspera) > 0){
-			$aRetorno['diffEspera'] = $esperaOrdenada['icone'].$esperaOrdenada['totalIntervalo'];
-		}
-		if (count($aDataHorainicioDescanso) > 0 && count($aDataHorafimDescanso) > 0) {
-			$aRetorno['diffDescanso'] =  $descansoOrdenado['icone'] . verificaTempo($descansoOrdenado['totalIntervalo'], "05:30");
-		}
-		if (count($aDataHorainicioRepouso) > 0 && count($aDataHorafimRepouso) > 0) {
-			$aRetorno['diffRepouso'] = $repousoOrdenado['icone'] . $repousoOrdenado['totalIntervalo'];
-		}
-
-		//switch case não utilizado pois há um break dentro de uma das condições, que buga quando há um switch case por fora.
-		if($status == 'Com alerta(s)'){
-			$temPendencias = False;
-			foreach($aRetorno as $dado){
-				if(is_int(strpos(strval($dado),  'fa-warning')) && is_int(strpos(strval($dado),  'color:red'))){
-					$temPendencias = True;
-					break;
-				}
-			}
-			if(!$temPendencias){
-				return -1;
-			}
-		}elseif($status == 'Com alerta de refeição'){
-			if( is_bool(strpos(strval($aRetorno['inicioRefeicao']), 'fa-warning')) &&
-				is_bool(strpos(strval($aRetorno['fimRefeicao']),    'fa-warning'))
-			){
-				# Não tem alerta de refeição
-				return -1;
-			}
-		}elseif($status == 'Com alerta na jornada efetiva'){
-			if(is_bool(strpos(strval($aRetorno['diffJornadaEfetiva']), 'fa-warning'))){
-				# Não tem alerta na jornada efetiva
-				return -1;
-			}
-		}elseif($status == 'Sem pendências'){ //Contrário do "Com alerta(s)"
-			$temPendencias = False;
-			foreach($aRetorno as $dado){
-				if(is_int(strpos(strval($dado),  'fa-warning')) && is_int(strpos(strval($dado),  'color:red'))){
-					$temPendencias = True;
-					break;
-				}
-			}
-			if($temPendencias){
-				return -1;
-			}
-		}elseif($status == 'Com saldo negativo' || $status == 'Com saldo positivo' && ($aRetorno['diffSaldo'][0] != '-' || $aRetorno['diffSaldo'] == '')){
-			# Saldo negativo ou positivo
-			return -1;
-		}elseif($status == 'Com saldo previsto' && is_bool(strpos(strval($aRetorno['jornadaPrevista']),  '00:00'))){
-			//Não tem a jornada prevista zerada
-			return -1;
-		}
-
-		// TOTALIZADOR 
-		foreach(['diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada', 'jornadaPrevista', 'diffJornadaEfetiva', 'intersticio', 'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'diffSaldo'] as $campo){
-			$totalResumo[$campo] = somarHorarios([$totalResumo[$campo], strip_tags($aRetorno[$campo])]);
-		}
-		$totalResumo['maximoDirecaoContinua'] = '';
-		
-		if(($aRetorno['inicioJornada'] == '' && date('w',strtotime($data)) == '6') || ($aRetorno['inicioJornada'] != '' && date('w',strtotime($data)) == '0')){
-			$aRetorno['jornadaPrevista'] = '00:00';
-		}else{
-			$aRetorno['jornadaPrevista'] = operarHorarios([$aRetorno['jornadaPrevista'], $aRetorno['diffJornadaEfetiva']], '-');
-		}
-
-		$legendas = [
-			null => '',
-			'' => '',
-			'I' => 'Incluída Manualmente',
-			'P' => 'Pré-Assinalada',
-			'T' => 'Outras fontes de marcação',
-			'DSR' => 'Descanso Semanal Remunerado e Abono'
-		];
-
-		$aRetorno['moti_tx_motivo'] = $legendas[$aAbono['moti_tx_legenda']];
-
-		return $aRetorno;
-	}
-
-	function diaDetalheEndosso2($aMotorista, $data, $status = ''){
-		global $totalResumo, $contagemEspera;
-		setlocale(LC_ALL, 'pt_BR.utf8');
-
-		$aRetorno['data'] = data($data);
-		// $aRetorno['diaSemana'] = pegarDiaDaSemana(strtotime($data));
-		$aRetorno['diaSemana'] = substr(iconv('UTF-8', 'ASCII//TRANSLIT', pegarDiaDaSemana(strtotime($data))), 0, 3);
-		$campos = [
-			'inicioJornada', 'inicioRefeicao', 'fimRefeicao', 'fimJornada', 
-			'diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada', 
-			'jornadaPrevista', 'diffJornadaEfetiva', 'maximoDirecaoContinua', 'intersticio', 
-			'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'diffSaldo', 'temPendencias'
-		];
-		foreach($campos as $campo){
-			$aRetorno[$campo] = '';
-		}
-		unset($campos);
-
-		// <CONSULTAS NO BD>
-
-		if (isset($aMotorista['enti_nb_empresa']) && isset($aMotorista['empr_nb_cidade']) && isset($aMotorista['cida_nb_id']) && isset($aMotorista['cida_tx_uf'])) {
-			$extraFeriado = " AND (
-				(feri_nb_cidade = '".$aMotorista["cida_nb_id"]."' AND feri_tx_uf = '".$aMotorista["cida_tx_uf"]."')
-				OR (feri_nb_cidade IS NULL AND feri_tx_uf IS NULL)
-				OR (feri_nb_cidade = 0 AND feri_tx_uf = ''))";
-		}else{
-			$extraFeriado = '';
-		}
-
-		$sql = query(
-			"SELECT feri_tx_nome FROM feriado
-				WHERE feri_tx_data LIKE '%-".substr($data, 5, 5)."%'
-				AND feri_tx_status != 'inativo' $extraFeriado"
-		);
-		$stringFeriado = '';
-		while($row = carrega_array($sql)){
-			$stringFeriado .= $row[0]."\n";
-		}
-		
-		$clock_info = [
-			'inicioJornada' => '',		//inicioJornada
-			'fimJornada' => '',			//fimJornada
-			'inicioRefeicao' => '',		//inicioRefeicao
-			'fimRefeicao' => '',		//fimRefeicao
-			'inicioEspera' => '',		//inicioEspera
-			'fimEspera' => '',			//fimEspera
-			'inicioDescanso' => '',		//inicioDescanso
-			'fimDescanso' => '',		//fimDescanso
-			'inicioRepouso' => '',		//inicioRepouso
-			'fimRepouso' => ''			//fimRepouso
-		];
-
-		$sql = query(
-			"SELECT * FROM ponto 
-				WHERE pont_tx_status != 'inativo' 
-					AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."' 
-					AND pont_tx_data LIKE '".$data."%' 
-				ORDER BY pont_tx_data ASC"
-		);
-		$pontosTipo = [
-			'1' => 'inicioJornada',
-			'2' => 'fimJornada',
-			'3' => 'inicioRefeicao',
-			'4' => 'fimRefeicao',
-			'5' => 'inicioEspera',
-			'6' => 'fimEspera',
-			'7' => 'inicioDescanso',
-			'8' => 'fimDescanso',
-			'9' => 'inicioRepouso',
-			'10' => 'fimRepouso',
-			'11' => 'inicioRepouso',
-			'12' => 'fimRepouso'
-		];
-		while($aDia = carrega_array($sql)){
-			$arrayMDC[] = [$aDia['pont_tx_data']/*Alterado*/, $aDia['pont_tx_tipo']];
-			$clock_info[$pontosTipo[$aDia['pont_tx_tipo']]] = $aDia['pont_tx_data'];
-		}
-		unset($pontosTipo);
-
-		$aAbono = carrega_array(query(
-			"SELECT * FROM abono, motivo, user
-				WHERE abon_tx_status != 'inativo' AND abon_nb_userCadastro = user_nb_id
-				AND abon_tx_matricula = '".$aMotorista['enti_tx_matricula']."' AND abon_tx_data = '".$data."' AND abon_nb_motivo = moti_nb_id
-				ORDER BY abon_nb_id DESC LIMIT 1"
-		));
-
-		$calculate_interstice = !empty($clock_info['inicioJornada']);
-		if($calculate_interstice){
-			$aDiaAnterior = carrega_array(query(
-				"SELECT pont_tx_data FROM ponto 
-					WHERE pont_tx_status != 'inativo' AND 
-						pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."' AND 
-						pont_tx_data < '$data' 
-					ORDER BY pont_tx_data DESC 
-					LIMIT 1"
-			));
-		}
-
-		// </CONSULTAS NO BD>
-		
-		$clock_info['jornada'] 	= ordenar_horarios($clock_info['inicioJornada'], $clock_info['fimJornada']);
-		$clock_info['refeicao'] = ordenar_horarios($clock_info['inicioRefeicao'], $clock_info['fimRefeicao']);
-		$clock_info['espera'] 	= ordenar_horarios($clock_info['inicioEspera'], $clock_info['fimEspera'], true);
-		$clock_info['descanso'] = ordenar_horarios($clock_info['inicioDescanso'], $clock_info['fimDescanso']);
-		
-		if(isset($esperaOrdenada['paresParaRepouso'])){
-			foreach($esperaOrdenada['paresParaRepouso'] as $parRepouso){
-				$clock_info['inicioRepouso'][] 		 = $data.' '.$parRepouso['inicio'];
-				$clock_info['inicioEsperaRepouso'][] = $data.' '.$parRepouso['inicio'];
-				$clock_info['fimRepouso'][] 		 = $data.' '.$parRepouso['fim'];
-				$clock_info['fimEsperaRepouso'][] 	 = $data.' '.$parRepouso['fim'];
-			}
-			$esperaParaRepousoOrdenado = ordenar_horarios($clock_info['inicioEsperaRepouso'], $clock_info['fimEsperaRepouso']);
-		}
-		$repousoOrdenado = ordenar_horarios($clock_info['inicioRepouso'], $clock_info['fimRepouso']);
-
-		$aRetorno['diffRefeicao'] = $clock_info['refeicao']['icone'] .$clock_info['refeicao']['totalIntervalo'];
-		$aRetorno['diffEspera']   = $clock_info['espera']['icone']	 .$clock_info['espera']['totalIntervalo'];
-		$aRetorno['diffDescanso'] = $clock_info['descanso']['icone'] .$clock_info['descanso']['totalIntervalo'];
-		$aRetorno['diffRepouso']  = $clock_info['repouso']['icone']	 .$clock_info['repouso']['totalIntervalo'];
-
-		$contagemEspera += count($clock_info['espera']['pares']);
-
-		if(date('w',strtotime($data)) == '6'){ //SABADOS
-			$cargaHoraria = $aMotorista['enti_tx_jornadaSabado'];
-		}elseif(date('w',strtotime($data)) == '0' || $stringFeriado != ''){ //DOMINGOS OU FERIADOS
-			//Alterar para uma variável do parâmetro caso exista a possibilidade de carga horária no domingo.
-			$cargaHoraria = '00:00';
-		}else{
-			$cargaHoraria = $aMotorista['enti_tx_jornadaSemanal'];
-		}
-
-		if($aAbono[0] > 0){
-			$tooltip = "Jornada Original: ".str_pad($cargaHoraria, 2, '0', STR_PAD_LEFT).":00:00\n".
-					"Abono: ".$aAbono['abon_tx_abono']."\n".
-					"Motivo: ".$aAbono['moti_tx_nome']."\n".
-					"Justificativa: ".$aAbono['abon_tx_descricao']."\n\n".
-					"Registro efetuado por ".$aAbono['user_tx_login']." em ".data($aAbono['abon_tx_dataCadastro'],1);
-
-			$iconeAbono =  "<a><i style='color:orange;' title='$tooltip' class='fa fa-warning'></i></a>";
-			$aRetorno['temPendencias'] = True;
-		}else{
-			$tooltip = $iconeAbono = '';
-		}
-
-		// <JORNADA TRABALHO> (DESCONSIDEREANDO PAUSAS)
-			for ($i=0; $i < count($clock_info['inicioJornada']); $i++) {
-				$dataHoraInicioJornada = new DateTime($data." ".date('H:i', strtotime($clock_info['inicioJornada'][$i])));
-				$dataHoraFimJornada = new DateTime($data." ".date('H:i', strtotime($clock_info['fimJornada'][$i])));
-				
-				$diffJornada = $dataHoraInicioJornada->diff($dataHoraFimJornada);
-				$arrayDiffJornada[] = $diffJornada->format("%H:%I");
-			}
-			
-			
-			$aRetorno['diffJornada'] = $clock_info['jornada']['icone'].$clock_info['jornada']['totalIntervalo'];
-		// </JORNADA TRABALHO> (DESCONSIDEREANDO PAUSAS)
-		
-		// <JORNADA PREVISTA>
-			$dataJornadaPrevista = new DateTime($data." ".$cargaHoraria);
-			$dataAbono = new DateTime($data." ".$aAbono['abon_tx_abono']);
-			$diffJornadaPrevista = $dataAbono->diff($dataJornadaPrevista);
-			
-			$aRetorno['jornadaPrevista'] = $diffJornadaPrevista->format("%H:%I");
-		// </JORNADA PREVISTA>
-		
-		// <JORNADA EFETIVA>
-			$horaTotal = new DateTime($clock_info['jornada']['totalIntervalo']);
-			$horaAlertaJornadaEfetiva = ($aMotorista['para_tx_acordo'] == 'Sim')? '12:00': '10:00';
-
-			//SOMATORIO DE TODAS AS ESPERAS
-			$horaTotalIntervalos = new DateTime(somarHorarios([$clock_info['refeicao']['totalIntervalo'], $clock_info['espera']['totalIntervalo'], $clock_info['descanso']['totalIntervalo'], $repousoOrdenado['totalIntervalo']]));
-
-			$diffJornadaEfetiva = $horaTotal->diff($horaTotalIntervalos);
-			$aRetorno['diffJornadaEfetiva'] = verificaTempo($diffJornadaEfetiva->format("%H:%I"), $horaAlertaJornadaEfetiva);
-		// </JORNADA EFETIVA>
-
-		// <INTERSTICIO>
-			if($calculate_interstice){
-				$dateInicioJornada = new DateTime($clock_info['inicioJornada']);
-				$dateDiaAnterior = new DateTime($aDiaAnterior['pont_tx_data']);
-				$diffJornada = $dateInicioJornada->diff($dateDiaAnterior);
-
-				// Obter a diferença total em minutos
-				$diffMinutos = ($diffJornada->days*24*60)+($diffJornada->h*60)+$diffJornada->i;
-
-				// Calcular as horas e minutos
-				$horas = floor($diffMinutos / 60);
-				$minutos = $diffMinutos % 60;
-
-				// Formatar a string no formato HH:MM
-				$hInter = sprintf("%02d:%02d", $horas, $minutos);
-				
-				$diffIntersticio = somarHorarios([$hInter, $horaTotalIntervalos->format("H:i"), $clock_info['jornada']['interjornada']]);
-
-
-				$tsInterTotal = explode(':', $diffIntersticio);
-				$tsInterTotal = $tsInterTotal[0]*3600 + $tsInterTotal[1]*60;
-
-				$hInter = explode(':', $hInter);
-				$hInter = $hInter[0]*3600 + $hInter[1]*60;
-
-				$iconeInter = '';
-				
-				if($tsInterTotal < (11*3600)){
-					$iconeInter .= "<a><i style='color:red;' title='Interstício Total de 11:00 não respeitado' class='fa fa-warning'></i></a>";
-					$aRetorno['temPendencias'] = True;
-				}
-				if($hInter < (8*3600)){
-					$iconeInter .= "<a><i style='color:red;' title='O mínimo de 08:00h ininterruptas no primeiro período, não respeitado.' class='fa fa-warning'></i></a>";
-					$aRetorno['temPendencias'] = True;
-				}
-
-
-				$aRetorno['intersticio'] = $iconeInter.$diffIntersticio;
-			}
-		// </INTERSTICIO>
-
-		//CALCULO ESPERA INDENIZADA
-		$horaJornadaEsperada = DateTime::createFromFormat('H:i', $aRetorno['jornadaPrevista']);
-		$horario1 = DateTime::createFromFormat('H:i', ($diffJornadaEfetiva->format("%H:%I")));
-		$horario2 = DateTime::createFromFormat('H:i', somarHorarios([$clock_info['espera']['totalIntervalo'], $esperaParaRepousoOrdenado['totalIntervalo']]));
-
-		$esperaIndenizada = $horario1;
-		$esperaIndenizada->add(new DateInterval('PT' . $horario2->format('H') . 'H' . $horario2->format('i') . 'M'));
-
-		// $jornadaEfetiva = $esperaIndenizada->format('H:i');
-		$jornadaEfetiva = $diffJornadaEfetiva->format("%H:%I");
-		
-		$dateCargaHoraria = new DateTime($aRetorno['jornadaPrevista']);
-		$dateJornadaEfetiva = new DateTime($jornadaEfetiva);
-		$saldoPositivo = $dateCargaHoraria->diff($dateJornadaEfetiva)->format("%r");
-
-		if ($esperaIndenizada > $horaJornadaEsperada && $horario1 < $horaJornadaEsperada ) {
-
-			$esperaIndenizada = $horaJornadaEsperada->diff($esperaIndenizada)->format('%H:%I');
-			// SE JORNADA EFETIVA FOR MENOR QUE A JORNADA ESPERADA, NAO GERA SALDO
-			
-			$jornadaEfetiva = $aRetorno['jornadaPrevista'];
-			
-		} else {
-			$esperaIndenizada = ($saldoPositivo == '-' || $horario2->format('H:i') == '00:00')? '': $horario2->format('H:i');
-		}
-
-		$aRetorno['esperaIndenizada'] = $esperaIndenizada;
-		
-		//FIM CALCULO ESPERA INDENIZADA
-
-
-		//INICIO ADICIONAL NOTURNO
-		$jornadaNoturno  = $clock_info['jornada']['totalIntervaloAdicionalNot'];
-		$refeicaoNoturno = $clock_info['refeicao']['totalIntervaloAdicionalNot'];
-		$esperaNoturno   = $clock_info['espera']['totalIntervaloAdicionalNot'];
-		$descansoNoturno = $clock_info['descanso']['totalIntervaloAdicionalNot'];
-		$repousoNoturno  = $repousoOrdenado['totalIntervaloAdicionalNot'];
-
-		$intervalosNoturnos = somarHorarios([$refeicaoNoturno, $esperaNoturno, $descansoNoturno, $repousoNoturno]);
-
-		$adicionalNoturno = gmdate('H:i' , (strtotime($data.' '.$jornadaNoturno)) - (strtotime($data.' '.$intervalosNoturnos)));
-		$aRetorno['adicionalNoturno'] = $adicionalNoturno == '00:00' ? '' : $adicionalNoturno;
-
-		//FIM ADICIONAL NOTURNO
-
-		//CALCULO SALDO
-		$dateCargaHoraria = new DateTime($aRetorno['jornadaPrevista']);
-		$dateJornadaEfetiva = new DateTime($jornadaEfetiva);
-
-		$diffSaldo = $dateCargaHoraria->diff($dateJornadaEfetiva);
-		
-		$aRetorno['diffSaldo'] = $diffSaldo->format("%r%H:%I");
-		
-		//FIM CALCULO SALDO
-
-
-		if($stringFeriado != ''){
-			$iconeFeriado =  "<a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
-			$aRetorno['he100'] = $iconeFeriado.$aRetorno['diffSaldo'];
-		}elseif(date('w',strtotime($data)) == '0'){
-			$aRetorno['he100'] = $aRetorno['diffSaldo'];
-		}elseif($aRetorno['diffSaldo'][0] != '-'){
-			$aRetorno['he50'] = $aRetorno['diffSaldo'];
-		}
-
-		
-		$mdc = maxDirecaoContinua($arrayMDC);
-
-		$aRetorno['maximoDirecaoContinua'] = verificaTempoMdc($mdc, $clock_info['descanso']['totalIntervalo']);
-
-
-		// VERIFICA SE A JORNADA É MAIOR QUE 06:00
-		$dtJornada = new DateTime($data.' '.$diffJornadaEfetiva->format("%H:%I"));
-		$dtJornadaMinima = new DateTime($data.' '.'06:00');
-		
-		$jornadaMinimaVerificada = (
-			($dtJornada > $dtJornadaMinima)
-			&& ($diffJornadaEfetiva->format("%H:%I") != '00:00')
-			|| ($aRetorno['jornadaPrevista'] != '00:00')
-			&& ($diffJornadaEfetiva->format("%H:%I") == '00:00')
-		);
-		//FIM VERIFICA JORNADA MINIMA
-
-		//VERIFICA SE HOUVE 01:00 DE REFEICAO
-		$dtRefeicaoMinima = new DateTime($data.' '.'01:00');
-		$menor1h = 0;	
-		for ($i=0; $i < count($clock_info['refeicao']['pares']); $i++) { 
-			$dtIntervaloRefeicao = new DateTime($data.' '.$clock_info['refeicao']['pares'][$i]['intervalo']);
-			if($dtIntervaloRefeicao < $dtRefeicaoMinima){
-				$menor1h = 1;
-			}
-		}
-
-		if($aRetorno['diffRefeicao'] == '00:00') $menor1h = 1;
-
-		if($menor1h && $dtJornada > $dtJornadaMinima){
-			$aRetorno['diffRefeicao'] = "<a><i style='color:red;' title='Refeição com tempo ininterrupto mínimo de 01:00h, não respeitado.' class='fa fa-warning'></i></a>" . $aRetorno['diffRefeicao'];
-			$aRetorno['temPendencias'] = True;
-		}else{
-			$iconeRefeicaoMinima = '';
-		}
-
-		if($jornadaMinimaVerificada){
-			$warning = ["<a><i style='color:red;' title='Batida", " não registrada!' class='fa fa-warning'></i></a>"];
-			
-			if($clock_info['inicioJornada'][0] == ''){
-				$aRetorno['inicioJornada'] = $warning[0]." início de jornada".$warning[1];
-				$aRetorno['temPendencias'] = True;
-			}
-			if($clock_info['fimJornada'][0] == ''){
-				$aRetorno['fimJornada'] = $warning[0]." fim de jornada".$warning[1];
-				$aRetorno['temPendencias'] = True;
-			}
-			if($aRetorno['inicioRefeicao'] == ''){
-				$aRetorno['inicioRefeicao'] = $warning[0]." início de refeição".$warning[1].$iconeRefeicaoMinima;
-				$aRetorno['temPendencias'] = True;
-			}
-			if($aRetorno['fimRefeicao'] == ''){
-				$aRetorno['fimRefeicao'] = $warning[0]." fim de refeição".$warning[1].$iconeRefeicaoMinima;
-				$aRetorno['temPendencias'] = True;
-			}
-
-			unset($warning);
-		}
-		if($iconeAbono != ''){
-			$aRetorno['jornadaPrevista'] = $iconeAbono."&nbsp;".$aRetorno['jornadaPrevista'];
-		}
-
-		$time_arrays = [
-			['inicioJornada', 	$clock_info['inicioJornada']],
-			['fimJornada', 		$clock_info['fimJornada']],
-			['inicioRefeicao', 	$clock_info['inicioRefeicao']],
-			['fimRefeicao', 	$clock_info['fimRefeicao']]
-		];
-		foreach($time_arrays as $time_array){
-			if(count($time_array[1]) > 0){
-				$aRetorno[$time_array[0]] = implode("<br>", $time_array[1]);
-			}
-		}
-
-		if(count($clock_info['inicioEspera']) > 0 && count($clock_info['fimEspera']) > 0){
-			$aRetorno['diffEspera'] = $clock_info['espera']['icone'].$clock_info['espera']['totalIntervalo'];
-		}
-		if (count($clock_info['inicioDescanso']) > 0 && count($clock_info['fimDescanso']) > 0) {
-			$aRetorno['diffDescanso'] =  $clock_info['descanso']['icone'] . verificaTempo($clock_info['descanso']['totalIntervalo'], "05:30");
-		}
-		if (count($clock_info['inicioRepouso']) > 0 && count($clock_info['fimRepouso']) > 0) {
-			$aRetorno['diffRepouso'] = $repousoOrdenado['icone'] . $repousoOrdenado['totalIntervalo'];
-		}
-
-		//switch case não utilizado pois há um break dentro de uma das condições, que buga quando há um switch case por fora.
-		if($status == 'Com alerta(s)'){
-			$temPendencias = False;
-			foreach($aRetorno as $dado){
-				if(is_int(strpos(strval($dado),  'fa-warning')) && is_int(strpos(strval($dado),  'color:red'))){
-					$temPendencias = True;
-					break;
-				}
-			}
-			if(!$temPendencias){
-				return -1;
-			}
-		}elseif($status == 'Com alerta de refeição'){
-			if( is_bool(strpos(strval($aRetorno['inicioRefeicao']), 'fa-warning')) &&
-				is_bool(strpos(strval($aRetorno['fimRefeicao']),    'fa-warning'))
-			){
-				# Não tem alerta de refeição
-				return -1;
-			}
-		}elseif($status == 'Com alerta na jornada efetiva'){
-			if(is_bool(strpos(strval($aRetorno['diffJornadaEfetiva']), 'fa-warning'))){
-				# Não tem alerta na jornada efetiva
-				return -1;
-			}
-		}elseif($status == 'Sem pendências'){ //Contrário do "Com alerta(s)"
-			$temPendencias = False;
-			foreach($aRetorno as $dado){
-				if(is_int(strpos(strval($dado),  'fa-warning')) && is_int(strpos(strval($dado),  'color:red'))){
-					$temPendencias = True;
-					break;
-				}
-			}
-			if($temPendencias){
-				return -1;
-			}
-		}elseif($status == 'Com saldo negativo' || $status == 'Com saldo positivo' && ($aRetorno['diffSaldo'][0] != '-' || $aRetorno['diffSaldo'] == '')){
-			# Saldo negativo ou positivo
-			return -1;
-		}elseif($status == 'Com saldo previsto' && is_bool(strpos(strval($aRetorno['jornadaPrevista']),  '00:00'))){
-			//Não tem a jornada prevista zerada
-			return -1;
-		}
-
-		// TOTALIZADOR 
-		foreach(['diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada', 'jornadaPrevista', 'diffJornadaEfetiva', 'intersticio', 'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'diffSaldo'] as $campo){
-			$totalResumo[$campo] = somarHorarios([$totalResumo[$campo], strip_tags($aRetorno[$campo])]);
-		}
-		$totalResumo['maximoDirecaoContinua'] = '';
-		
-		if(($aRetorno['inicioJornada'] == '' && date('w',strtotime($data)) == '6') || ($aRetorno['inicioJornada'] != '' && date('w',strtotime($data)) == '0')){
-			$aRetorno['jornadaPrevista'] = '00:00';
-		}else{
-			$aRetorno['jornadaPrevista'] = operarHorarios([$aRetorno['jornadaPrevista'],  $aRetorno['diffJornadaEfetiva']], '-');
-		}
-
-		$legendas = [
-			null => '',
-			'' => '',
-			'I' => 'Incluída Manualmente',
-			'P' => 'Pré-Assinalada',
-			'T' => 'Outras fontes de marcação',
-			'DSR' => 'Descanso Semanal Remunerado e Abono'
-		];
-
-		$aRetorno['moti_tx_motivo'] = $legendas[$aAbono['moti_tx_legenda']];
-		
-		return $aRetorno;
-	}	
-?>

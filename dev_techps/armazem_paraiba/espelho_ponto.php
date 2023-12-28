@@ -103,7 +103,7 @@
 				
 				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDadosMotorista, $aDetalhado));
 				for($f = 0; $f < sizeof($row)-1; $f++){
-					if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
+          if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
 						continue;
 					}
 					if($row[$f] == "00:00"){
