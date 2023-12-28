@@ -20,7 +20,7 @@
 		
 			<div id="' . $variavel . '" class="col-sm-' . $tamanho . ' margin-bottom-5" style="display: none;">
 				<label><b>Quantidade de Horas:</b></label>
-				<input class="form-control input-sm" type="time" id="outroCampo" name="quandHoras" autocomplete="off" '.(!empty($_POST['quandHoras'])? 'value = "'.$_POST['quandHoras'].'"':'').'>
+				<input class="form-control input-sm" type="time" id="outroCampo" name="quantHoras" autocomplete="off" value = "'.(!empty($_POST['quantHoras'])? $_POST['quantHoras']:'00:00').'">
 			</div>
 			<script>
 				const radioSim = document.getElementById("sim");
@@ -92,15 +92,19 @@
 				$error_msg = 'Não é possível cadastrar um endosso com mais de um mês.';
 			}
 		//}
-		//Conferir se não está entrelaçada com outro endosso
-			$endossos = mysqli_fetch_array(
+
+		//Conferir se está entrelaçada com outro endosso{
+			$endossos = mysqli_fetch_all(
 				query("
 					SELECT endo_tx_de, endo_tx_ate from endosso
 						WHERE endo_nb_entidade = ".$_POST['busca_motorista']."
 							AND NOT(
 								(endo_tx_ate < '".$_POST['data_de']."') OR ('".$_POST['data_ate']."' < endo_tx_de)
-							) LIMIT 1;
-				")
+							) 
+							AND endo_tx_status != 'inativo'
+						LIMIT 1;
+				"),
+				MYSQLI_ASSOC
 			);
 			if(count($endossos) > 0){
 				$showError = True;
@@ -124,25 +128,13 @@
 
 		//<Pegar dados do ponto>
 			$date = new DateTime($_POST['data_de']);
-			$month = $date->format('m');
-			$year = $date->format('Y');
 			$aDia = [];
-			$campos = [
-				'data', 'diaSemana', 'inicioJornada', 'inicioRefeicao', 
-				'fimRefeicao', 'fimJornada', 'diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 
-				'diffJornada', 'diffJornadaEfetiva', 'jornadaPrevista', 'intersticio', 'he50', 'he100', 
-				'adicionalNoturno', 'esperaIndenizada', 'moti_tx_motivo'
-			];
 			for ($i = 0; $i <= $qttDays; $i++) {
 				$dataVez = strtotime($_POST['data_de']);
 				$dataVez = date('Y-m-d', $dataVez+($i*60*60*24));
 				$aDetalhado = diaDetalheEndosso2($motorista, $dataVez);
-				$aDetalhadoCampos = [];
-				foreach($campos as $campo){
-					$aDetalhadoCampos[] = $aDetalhado[$campo];
-				}
 
-				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $motorista['enti_nb_id'])], $aDetalhadoCampos));
+				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $motorista['enti_nb_id'])], $aDetalhado));
 				for ($f = 0; $f < sizeof($row) - 1; $f++) {
 					if ($row[$f] == "00:00") {
 						$row[$f] = "";
@@ -154,13 +146,7 @@
 			$sqlEndosso = query("SELECT endo_tx_dataCadastro, endo_tx_ate, endo_tx_horasApagar, endo_tx_pagarHoras FROM endosso WHERE endo_tx_matricula = '$motorista[enti_tx_matricula]'");
 			$aEndosso = carrega_array($sqlEndosso);
 
-			$lastMonthDate = date('Y-m', strtotime('-1 month', strtotime($year.'-'.$month.'-01')));
-			$qttDays = cal_days_in_month(CAL_GREGORIAN, $month-1, $year);
-			$saldoAnterior = '00:00';
-			
-			$lastMonthDay  = $lastMonthDate.'-'.str_pad($i, 2, 0, STR_PAD_LEFT);
-			$saldoPassado  = diaDetalheEndosso($motorista['enti_tx_matricula'], $lastMonthDay)['diffSaldo'];
-			$saldoAnterior = somarHorarios([$saldoAnterior, $saldoPassado]);
+			$saldoAnterior = $ultimoEndosso['endo_tx_saldo'];
 			
 			$sqlMotorista = query(
 				"SELECT * FROM entidade".
@@ -171,12 +157,6 @@
 					" ORDER BY enti_tx_nome"
 			);
 			$dadosMotorista = carrega_array($sqlMotorista);
-
-			/*
-			$teste = strtotime("2023-10-28 11:54:34");
-			$teste = date('Y-m-d h:i:s', $teste+10); //Soma 10 segundos
-			echo $teste;
-			*/
 
 			$dataCicloProx = strtotime($dadosMotorista['para_tx_inicioAcordo']);
 			while($dataCicloProx < strtotime($aEndosso['endo_tx_ate'])){
@@ -229,7 +209,7 @@
 						
 						$saldoPeriodo -= $transferir;
 						$he100_pagar += $transferir;
-						$totalResumo['he100'] = intval($he100_pagar / 60) . ':' . ($he100_pagar - intval($he100_pagar / 60) * 60);
+						$totalResumo['he100'] = intval($he100_pagar / 60) . ':' . abs(($he100_pagar - intval($he100_pagar / 60) * 60));
 					}
 				}
 				
@@ -243,10 +223,10 @@
 					$saldoPeriodo -= $transferir;
 					
 					$he50_pagar += $transferir;
-					$totalResumo['he50'] = intval($he50_pagar / 60) . ':' . ($he50_pagar - intval($he50_pagar / 60) * 60);
+					$totalResumo['he50'] = intval($he50_pagar / 60) . ':' . abs(($he50_pagar - intval($he50_pagar / 60) * 60));
 				}
-				$saldoPeriodo = strtotime($saldoPeriodo);
-				$totalResumo['diffSaldo'] = date('Y-m-d: h:i:s', $saldoPeriodo);
+				
+				$totalResumo['diffSaldo'] = intval($saldoPeriodo / 60) . ':' . abs(($saldoPeriodo - intval($saldoPeriodo / 60) * 60));
 			}
 
 			// unset($aDia);
