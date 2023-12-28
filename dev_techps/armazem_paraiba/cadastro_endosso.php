@@ -120,6 +120,28 @@
 				WHERE enti_tx_status != 'inativo' AND enti_nb_id = '".$_POST['busca_motorista']."' LIMIT 1"
 		);
 		$motorista = carrega_array($sql);
+
+		//Conferir se tem espaço entre o último endosso e o endosso atual{
+			$ultimoEndosso = mysqli_fetch_all(
+				query(
+					"SELECT * FROM `endosso`
+						WHERE endo_tx_matricula = '".$motorista['enti_tx_matricula']."'
+							AND endo_tx_ate < '".$_POST['data_de']."'
+							AND endo_tx_status = 'ativo'
+						ORDER BY endo_tx_ate DESC
+						LIMIT 1;"
+				),
+				MYSQLI_ASSOC
+			)[0];
+			$ultimoEndosso['endo_tx_ate'] = DateTime::createFromFormat('Y-m-d', $ultimoEndosso['endo_tx_ate']);
+			$dataDe = DateTime::createFromFormat('Y-m-d', $_POST['data_de']);
+			$qtdDias = date_diff($ultimoEndosso['endo_tx_ate'], $dataDe);
+			if($qtdDias->d > 1){
+				$showError = True;
+				$error_msg = 'Há um tempo não endossado entre '.$ultimoEndosso['endo_tx_ate']->format('d/m/Y').' e '.$dataDe->format('d/m/Y').'.  ';
+			}
+		//}
+
 		if($showError){
 			echo "<script>alert('".substr($error_msg, 0, strlen($error_msg)-2)."')</script>";
 			index();
