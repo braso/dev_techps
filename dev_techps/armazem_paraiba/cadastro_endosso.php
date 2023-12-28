@@ -3,8 +3,8 @@
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
-	include "funcoes_ponto.php";
-	
+
+	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto	
 
 	function checkbox2($nome, $variavel, $modificador, $tamanho){
 		$campo = 
@@ -56,28 +56,28 @@
 		global $totalResumo;
 		
 		//Conferir se os campos obrigatórios estão preenchidos{
-			$show_error = False;
+			$showError = False;
 			$error_msg = 'Há campos obrigatórios não preenchidos: ';
 			if(!isset($_POST['empresa'])){
 				if($_SESSION['user_tx_nivel'] == 'Super Administrador'){
-					$show_error = True;
+					$showError = True;
 					$error_msg .= 'Empresa, ';
 				}else{
 					$_POST['empresa'] = $_SESSION['user_tx_emprCnpj'];
 				}
 			}
 			if(!isset($_POST['busca_motorista'])){
-				$show_error = True;
+				$showError = True;
 				$error_msg .= 'Motorista, ';
 			}
 			if(empty($_POST['data_de']) || empty($_POST['data_ate'])){
-				$show_error = True;
+				$showError = True;
 				$error_msg .= 'Data, ';
 			}
-			if(!$show_error){
+			if(!$showError){
 				$error_msg = '';
 			}
-			if($show_error){
+			if($showError){
 				echo "<script>alert('".substr($error_msg, 0, strlen($error_msg)-2)."')</script>";
 				index();
 				return;
@@ -88,31 +88,25 @@
 			$difference = strtotime($_POST['data_ate']) - strtotime($_POST['data_de']);
 			$qttDays = floor($difference / (60 * 60 * 24));
 			if($qttDays > 31){
-				$show_error = True;
+				$showError = True;
 				$error_msg = 'Não é possível cadastrar um endosso com mais de um mês.';
 			}
 		//}
 		//Conferir se não está entrelaçada com outro endosso
-		$endossos = mysqli_fetch_array(
-			query("
-				SELECT endo_tx_de, endo_tx_ate from endosso
-					WHERE endo_nb_entidade = ".$_POST['busca_motorista']."
-						AND NOT(
-							(endo_tx_ate < '".$_POST['data_de']."') OR ('".$_POST['data_ate']."' < endo_tx_de)
-						) LIMIT 1;
-			")
-		);
-		// print_r(count($endossos));
-		if(count($endossos) > 0){
-			$show_error = True;
-			$error_msg = 'Já há um endosso para este motorista nesta faixa de tempo.  ';
-		}
-
-		if($show_error){
-			echo "<script>alert('".substr($error_msg, 0, strlen($error_msg)-2)."')</script>";
-			index();
-			return;
-		}
+			$endossos = mysqli_fetch_array(
+				query("
+					SELECT endo_tx_de, endo_tx_ate from endosso
+						WHERE endo_nb_entidade = ".$_POST['busca_motorista']."
+							AND NOT(
+								(endo_tx_ate < '".$_POST['data_de']."') OR ('".$_POST['data_ate']."' < endo_tx_de)
+							) LIMIT 1;
+				")
+			);
+			if(count($endossos) > 0){
+				$showError = True;
+				$error_msg = 'Já há um endosso para este motorista nesta faixa de tempo.  ';
+			}
+		//}
 
 		$sql = query(
 			"SELECT entidade.*, empresa.empr_nb_cidade, cidade.cida_nb_id, cidade.cida_tx_uf, parametro.para_tx_acordo FROM entidade
@@ -122,6 +116,11 @@
 				WHERE enti_tx_status != 'inativo' AND enti_nb_id = '".$_POST['busca_motorista']."' LIMIT 1"
 		);
 		$motorista = carrega_array($sql);
+		if($showError){
+			echo "<script>alert('".substr($error_msg, 0, strlen($error_msg)-2)."')</script>";
+			index();
+			return;
+		}
 
 		//<Pegar dados do ponto>
 			$date = new DateTime($_POST['data_de']);
@@ -138,7 +137,6 @@
 				$dataVez = strtotime($_POST['data_de']);
 				$dataVez = date('Y-m-d', $dataVez+($i*60*60*24));
 				$aDetalhado = diaDetalheEndosso2($motorista, $dataVez);
-
 				$aDetalhadoCampos = [];
 				foreach($campos as $campo){
 					$aDetalhadoCampos[] = $aDetalhado[$campo];
@@ -151,10 +149,7 @@
 					}
 				}
 				$aDia[] = $row;
-				print_r($row);
-				print_r('<br><br>');
 			}
-			unset($campos);
 
 			$sqlEndosso = query("SELECT endo_tx_dataCadastro, endo_tx_ate, endo_tx_horasApagar, endo_tx_pagarHoras FROM endosso WHERE endo_tx_matricula = '$motorista[enti_tx_matricula]'");
 			$aEndosso = carrega_array($sqlEndosso);
@@ -214,29 +209,30 @@
 				//Contexto do HE100
 				// $he100 = strtotime($aDetalhado['he100']);
 				$he100 = explode(':', $aDetalhado['he100']);
-				$he100 = intval($he100[0]) * 60 + ($he100[0][0] == '-' ? -1 : 1) * intval($he100[1]);
+				$he100 = intval($he100[0])*60 + ($he100[0][0] == '-' ? -1 : 1)*intval($he100[1]);
 				
 				$he50_pagar = explode(':', $totalResumo['he50']);
-				$he50_pagar = intval($he50_pagar[0]) * 60 + ($he50_pagar[0][0] == '-' ? -1 : 1) * intval($he50_pagar[1]);
+				$he50_pagar = intval($he50_pagar[0])*60 + ($he50_pagar[0][0] == '-' ? -1 : 1)*intval($he50_pagar[1]);
 				
 				$he100_pagar = explode(':', $totalResumo['he100']);
-				$he100_pagar = intval($he100_pagar[0]) * 60 + ($he100_pagar[0][0] == '-' ? -1 : 1) * intval($he100_pagar[1]);
+				$he100_pagar = intval($he100_pagar[0])*60 + ($he100_pagar[0][0] == '-' ? -1 : 1)*intval($he100_pagar[1]);
 
 				$saldoPeriodo = explode(':', $totalResumo['diffSaldo']);
-				$saldoPeriodo = intval($saldoPeriodo[0]) * 60 + ($saldoPeriodo[0][0] == '-' ? -1 : 1) * intval($saldoPeriodo[1]);
+				$saldoPeriodo = intval($saldoPeriodo[0])*60 + ($saldoPeriodo[0][0] == '-' ? -1 : 1)*intval($saldoPeriodo[1]);
+
 				
 				if ($saldoPeriodo <= 0) {
 					# Não faz nada
 				} else {
 					if ($he100_pagar > 0) {
 						$transferir = $saldoPeriodo - (($saldoPeriodo > $he100) ? $he100 : 0);
-
+						
 						$saldoPeriodo -= $transferir;
 						$he100_pagar += $transferir;
 						$totalResumo['he100'] = intval($he100_pagar / 60) . ':' . ($he100_pagar - intval($he100_pagar / 60) * 60);
 					}
 				}
-
+				
 				//Contexto do HE50
 				if($aEndosso['endo_tx_pagarHoras'] == 'sim'){
 					if($saldoPeriodo > $aEndosso['endo_tx_horasApagar']){
@@ -245,16 +241,13 @@
 						$transferir = $saldoPeriodo;
 					}
 					$saldoPeriodo -= $transferir;
-
+					
 					$he50_pagar += $transferir;
 					$totalResumo['he50'] = intval($he50_pagar / 60) . ':' . ($he50_pagar - intval($he50_pagar / 60) * 60);
 				}
-
 				$saldoPeriodo = strtotime($saldoPeriodo);
 				$totalResumo['diffSaldo'] = date('Y-m-d: h:i:s', $saldoPeriodo);
 			}
-
-			$saldoAtual = somarHorarios([$saldoAnterior, $totalResumo['diffSaldo']]);
 
 			// unset($aDia);
 		//</Pegar dados do ponto>
@@ -273,8 +266,6 @@
 			'endo_tx_pontos'		=> $aDia,
 			'totalResumo'			=> $totalResumo
 		];
-		
-		// print_r($novo_endosso);
 		// inserir('endosso', array_keys($novo_endosso), array_values($novo_endosso));
 
 		index();
