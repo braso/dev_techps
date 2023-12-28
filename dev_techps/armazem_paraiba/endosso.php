@@ -507,6 +507,7 @@
 							}
 
 							$saldoStr = str_replace('<b>', '', $aDia[$f][$saldoColIndex]);
+
 							$saldoStr = explode(':', $saldoStr);
 							$saldo = intval($saldoStr[0])*60;
 							$saldo += ($saldoStr[0] == '-'? -1: 1)*intval($saldoStr[1]);
@@ -523,7 +524,6 @@
 								$f++;
 							}
 						}
-						
 						grid2($cab, $aDia);
 						fecha_form();
 	

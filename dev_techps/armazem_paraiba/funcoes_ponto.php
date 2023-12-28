@@ -890,14 +890,13 @@
 			    $iconeFeriado =  "<a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
 			    $aRetorno['he100'] = $iconeFeriado.$aRetorno['diffSaldo'];
 		    }elseif(
-				$aRetorno['jornadaPrevista'] == '00:00' || 
-				($aRetorno['diffSaldo'][0] != '-' && $aRetorno['diffSaldo'] >= $aParametro["para_tx_HorasEXExcedente"])
-			){	//Se a jornada prevista = 0 (domingos e feriados) ou saldo >= limite de horas extras
+				  $aRetorno['jornadaPrevista'] == '00:00' || 
+				  ($aRetorno['diffSaldo'][0] != '-' && $aRetorno['diffSaldo'] >= $aParametro["para_tx_HorasEXExcedente"])
+			  ){	//Se a jornada prevista = 0 (domingos e feriados) ou saldo >= limite de horas extras
 			    $aRetorno['he100'] = $aRetorno['diffSaldo'];
 		    }elseif($aRetorno['diffSaldo'][0] != '-' && $aRetorno['diffSaldo']<$aParametro["para_tx_HorasEXExcedente"]){ //Se saldo < limite de horas extras
 			    $aRetorno['he50'] = $aRetorno['diffSaldo'];
 		    }
-			
 		//}
 
 		//MÁXIMA DIREÇÃO CONTÍNUA{
@@ -1107,7 +1106,6 @@
 			}
 		//}
 
-
 		//SOMANDO TOTAIS{
 			$campos = [
 				'diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada', 
@@ -1142,5 +1140,3 @@
 		];
 		$response = iconv('UTF-8', 'ASCII//TRANSLIT', $week[date('l', strtotime($date))]);
 		return $response;
-	}	
-?>
