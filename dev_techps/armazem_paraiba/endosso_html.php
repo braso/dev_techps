@@ -77,7 +77,7 @@
 	}
 
 	window.onload = function() {
-		document.getElementById('dadosResumo').innerHTML = '<br><br><b>Total: <?= $counts['total'] ?> | Verificados: <?= $counts['verificados'] ?> | Não Conformidades: <?= $counts['naoConformidade'] ?> | Endossados: <?= $counts['endossados']['sim'] ?> | Não Endossados: <?= $counts['endossados']['nao'] ?></b>';
+		document.getElementById('dadosResumo').innerHTML = '<?=$counts['message']?>';
 
 		document.getElementById('botaoContexCadastrar CadastrarEndosso').onclick = function() {
 			window.location.href = '<?= "https://braso.mobi" . $CONTEX['path'] . "/cadastro_endosso" ?>';
