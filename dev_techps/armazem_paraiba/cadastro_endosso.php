@@ -263,17 +263,43 @@
 			'endo_nb_entidade' 		=> $motorista['enti_nb_id'],
 			'endo_tx_matricula' 	=> $motorista['enti_tx_matricula'],
 			'endo_tx_mes' 			=> substr($_POST['data_de'], 0, 8).'01',
+			'endo_tx_saldo' 		=> $totalResumo['diffSaldo'],
 			'endo_tx_de' 			=> $_POST['data_de'],
 			'endo_tx_ate' 			=> $_POST['data_ate'],
 			'endo_tx_dataCadastro' 	=> date('Y-m-d h:i:s'),
 			'endo_nb_userCadastro' 	=> $_SESSION['user_nb_id'],
 			'endo_tx_status' 		=> 'ativo',
-			'endo_tx_pagarHoras' 	=> $_POST['pagar_horas'],
-			'endo_tx_horasApagar' 	=> $_POST['quandHoras'],
+			'endo_tx_pagarHoras' 	=> $_POST['pagar_horas']?? '00:00',
+			'endo_tx_horasApagar' 	=> $_POST['quantHoras']?? '00:00',
 			'endo_tx_pontos'		=> $aDia,
 			'totalResumo'			=> $totalResumo
 		];
-		// inserir('endosso', array_keys($novo_endosso), array_values($novo_endosso));
+
+		$novo_endosso['endo_tx_pontos'] = json_encode($novo_endosso['endo_tx_pontos']);
+		$novo_endosso['totalResumo'] = json_encode($novo_endosso['totalResumo']);
+
+		$filename = md5($novo_endosso['endo_tx_matricula'].$novo_endosso['endo_tx_mes']);
+		$path = './arquivos/endosso/';
+
+		if(file_exists($path.$filename.'.csv')){
+			$version = 2;
+			while(file_exists($path.$filename.'_'.strval($version).'.csv')){
+				$version++;
+			}
+			$filename = $filename.'_'.strval($version);
+		}
+
+		$file = fopen($path.$filename.'.csv', 'w');
+		fputcsv($file, array_keys($novo_endosso));
+		fputcsv($file, array_values($novo_endosso));
+		fclose($file);
+
+		unset($novo_endosso['endo_tx_pontos']);
+		unset($novo_endosso['totalResumo']);
+
+		$novo_endosso['endo_tx_filename'] = $filename;
+		
+		inserir('endosso', array_keys($novo_endosso), array_values($novo_endosso));
 
 		index();
 		return;
