@@ -154,7 +154,7 @@
 			for ($i = 0; $i <= $qttDays; $i++) {
 				$dataVez = strtotime($_POST['data_de']);
 				$dataVez = date('Y-m-d', $dataVez+($i*60*60*24));
-				$aDetalhado = diaDetalheEndosso2($motorista, $dataVez);
+				$aDetalhado = diaDetalhePonto($motorista['enti_tx_matricula'], $dataVez);
 
 				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $motorista['enti_nb_id'])], $aDetalhado));
 				for ($f = 0; $f < sizeof($row) - 1; $f++) {
@@ -250,6 +250,11 @@
 				
 				$totalResumo['diffSaldo'] = intval($saldoPeriodo / 60) . ':' . abs(($saldoPeriodo - intval($saldoPeriodo / 60) * 60));
 			}
+
+			$saldoAtual = operarHorarios([$saldoAnterior, $totalResumo['diffSaldo']], '+');
+
+			$totalResumo['saldoAnterior'] = $saldoAnterior;
+			$totalResumo['saldoAtual'] = $saldoAtual;
 
 			// unset($aDia);
 		//</Pegar dados do ponto>
