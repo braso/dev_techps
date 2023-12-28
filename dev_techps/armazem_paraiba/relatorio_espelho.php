@@ -76,35 +76,35 @@
 		</thead>
 		<tbody>
 			<?
-			for ($i = 0; $i < count($aDia); $i++) {
-				$j = 1;
-				$aDiaVez = $aDia[$i];
+				foreach ($aDia as $aDiaVez) {
+					echo '<tr>';
+					for ($j = 1; $j < 20; $j++){
+						if($j > 2 && $j < 7){
+							if (count($aDiaVez[$j]) > 0){
+								for($k = 0; $k < count($aDiaVez[$j]); $k++){
+									//Formatar datas para hora e minutos sem perder o D+1, caso tiver
+									if(strpos($aDiaVez[$j][$k], ':00', strlen($aDiaVez[$j][$k])-3) !== false){
+										if(strpos($aDiaVez[$j][$k], 'D+1') !== false){
+											$aDiaVez[$j][$k] = explode(' ', $aDiaVez[$j][$k]);
+											$aDiaVez[$j][$k] = substr($aDiaVez[$j][$k][1], 0, strlen($aDiaVez[$j][$k][1])-3)+$aDiaVez[$j][$k][2];
+										}else{
+											$aDiaVez[$j][$k] = date('H:i', strtotime($aDiaVez[$j][$k]));
+										}
+									}
+								}
+								$aDiaVez[$j] = implode("<br>", $aDiaVez[$j]);
+								foreach($legendas as $legenda){
+									$aDiaVez[$j] = str_replace('<br><strong>'.$legenda['moti_tx_legenda'].'</strong>', ' <strong>'.$legenda['moti_tx_legenda'].'</strong>', $aDiaVez[$j]);
+								}
+							}else{
+								$aDiaVez[$j] = '';
+							}
+						}
+						echo '<td>'.$aDiaVez[$j].'</td>';
+					}
+					echo '</tr>';
+				}
 			?>
-				<tr>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-					<td><?= $aDiaVez[$j++] ?></td>
-				</tr>
-
-		<?
-		}
-		?>
 
 	</tbody>
 </table>
