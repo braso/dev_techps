@@ -326,6 +326,7 @@
 							$dataVez = $_POST['busca_data']."-".str_pad($i, 2, 0, STR_PAD_LEFT);
 							
 							$aDetalhado = diaDetalheEndosso($aMotorista['enti_tx_matricula'], $dataVez);
+
 							if(isset($aDetalhado['fimJornada'][0]) && (strpos($aDetalhado['fimJornada'][0], ':00') !== false) && date('Y-m-d', strtotime($aDetalhado['fimJornada'][0])) != $dataVez){
 								array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
 							}
@@ -353,6 +354,9 @@
 		
 							$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));
 							for($f = 0; $f < sizeof($row)-1; $f++){
+								if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
+									continue;
+								}
 								if($row[$f] == "00:00"){
 									$row[$f] = "";
 								}
@@ -371,8 +375,7 @@
 						'esperaIndenizada','diffSaldo'
 					];
 	
-					for ($i = 0; $i < count($aDiaOriginal); $i++) {
-						$diaVez = $aDiaOriginal[$i];
+					foreach($aDiaOriginal as $diaVez){
 						$checkString = '';
 						foreach($keys as $key){
 							$checkString .= $diaVez[$key];
@@ -403,7 +406,7 @@
 								LIMIT 1"
 						);
 						$aEndosso = carrega_array($sqlCheck);
-						if (!empty($aEndosso) && count($aEndosso) > 0) {
+						if (is_array($aEndosso) && count($aEndosso) > 0) {
 							$counts['endossados']++;
 							$infoEndosso = " - Endossado por " . $aEndosso['user_tx_login'] . " em " . data($aEndosso['endo_tx_dataCadastro'], 1);
 							$aIdMotoristaEndossado[] = $aMotorista['enti_nb_id'];
@@ -496,7 +499,9 @@
 							if(empty($aDia[$f][count($aDia[$f])-1])){
 								$aDia[$f][count($aDia[$f])-1] = '00:00';	
 							}
-							$saldoStr = explode(':', $aDia[$f][count($aDia[$f])-1]);
+
+							$saldoStr = str_replace('<b>', '', $aDia[$f][count($aDia[$f])-1]);
+							$saldoStr = explode(':', $saldoStr);
 							$saldo = intval($saldoStr[0])*60;
 							$saldo += ($saldoStr[0] == '-'? -1: 1)*intval($saldoStr[1]);
 
@@ -504,7 +509,6 @@
 								$aDia[$f][count($aDia[$f])-1] = '00:00';
 							}
 						}
-	
 						grid2($cab, $aDia);
 						fecha_form();
 	

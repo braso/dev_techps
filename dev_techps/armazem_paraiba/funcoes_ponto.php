@@ -875,7 +875,7 @@
 			}elseif($aRetorno['diffSaldo'][0] != '-'){		//Se o saldo estiver positivo
 				$aRetorno['he50'] = $aRetorno['diffSaldo'];
 			}
-
+			
 			if(!empty($aParametro) && $aRetorno['diffSaldo'] >= $aParametro['para_tx_HorasEXExcedente']){
 				$aRetorno['he100'] = operarHorarios([$aRetorno['he100'], $aParametro['para_tx_HorasEXExcedente']], '+');
 				$aRetorno['diffSaldo'] = operarHorarios([$aRetorno['diffSaldo'], $aParametro['para_tx_HorasEXExcedente']], '-');
@@ -914,26 +914,25 @@
 				$avisoRefeicaoMinima = "<a><i style='color:red;' title='Refeição com tempo mínimo de 01:00h não respeitado.' class='fa fa-warning'></i></a>";
 			}
 
-			$aRetorno['diffRefeicao'] = $avisoRefeicaoMinima.' '.$aRetorno['diffRefeicao'];
+			if(!empty($avisoRefeicaoMinima)){
+				$aRetorno['diffRefeicao'] = $avisoRefeicaoMinima.' '.$aRetorno['diffRefeicao'];
+			}
 		//FIM 01:00 DE REFEICAO
 
-		//ALERTAS
+		//ALERTAS{
+			if((!isset($registros['inicioJornada'][0]) || $registros['inicioJornada'][0] == '') &&
+				date('w',strtotime($data)) != '0'){
+				$aRetorno['inicioJornada'][] 	= "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
+			}
 			if($fezJorMinima){
-				if(!isset($registros['inicioJornada'][0]) || $registros['inicioJornada'][0] == ''){
-					$aRetorno['inicioJornada'][] 	= "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
-				}
 				if(!isset($registros['fimJornada'][0]) || $registros['fimJornada'][0] == ''){
-					$aRetorno['fimJornada'][] 		= "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning'></i></a>";
+					$aRetorno['fimJornada'][] 	  = "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning'></i></a>";
 				}
 				if(!isset($registros['inicioRefeicao'][0]) || $aRetorno['inicioRefeicao'][0] == ''){
-					$aRetorno['inicioRefeicao'][] 	= "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>".$avisoRefeicaoMinima;
+					$aRetorno['inicioRefeicao'][] = "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>".$avisoRefeicaoMinima;
 				}
 				if(!isset($registros['fimRefeicao'][0]) || $aRetorno['fimRefeicao'][0] == ''){
-					$aRetorno['fimRefeicao'][] 		= "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>".$avisoRefeicaoMinima;
-				}
-			}else{
-				if(!isset($registros['inicioJornada'][0]) || $registros['inicioJornada'][0] == ''){
-					$aRetorno['inicioJornada'][] 	= "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
+					$aRetorno['fimRefeicao'][] 	  = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>".$avisoRefeicaoMinima;
 				}
 			}
 			if (is_array($aAbono) && count($aAbono) > 0) {
@@ -951,7 +950,7 @@
 	
 				$aRetorno['jornadaPrevista'] = $warning.$aRetorno['jornadaPrevista'];
 			}
-		//FIM ALERTAS
+		//}
 
 		foreach(['inicioJornada', 'fimJornada', 'inicioRefeicao', 'fimRefeicao'] as $campo){
 			if(count($registros[$campo]) > 0 && !empty($registros[$campo][0])){
@@ -996,18 +995,18 @@
 			}
 		}
 
-		if($possuiAjustes['jornada']['inicio']){
-			$aRetorno['inicioJornada'][] = "*";
-		}
-		if($possuiAjustes['jornada']['fim']){
-			$aRetorno['fimJornada'][] = "*";
-		}
-		if($possuiAjustes['refeicao']['inicio']){
-			$aRetorno['inicioRefeicao'][] = "*";
-		}
-		if($possuiAjustes['refeicao']['fim']){
-			$aRetorno['fimRefeicao'][] = "*";
-		}
+		// if($possuiAjustes['jornada']['inicio']){
+		// 	$aRetorno['inicioJornada'][] = "*";
+		// }
+		// if($possuiAjustes['jornada']['fim']){
+		// 	$aRetorno['fimJornada'][] = "*";
+		// }
+		// if($possuiAjustes['refeicao']['inicio']){
+		// 	$aRetorno['inicioRefeicao'][] = "*";
+		// }
+		// if($possuiAjustes['refeicao']['fim']){
+		// 	$aRetorno['fimRefeicao'][] = "*";
+		// }
 		
 		$legendas = mysqli_fetch_all(
 			query(
@@ -1084,7 +1083,6 @@
 			$aRetorno['diffSaldo'] = "<b>".$aRetorno['diffSaldo']."</b>";
 		}
 
-
 		// TOTALIZADOR 
 		$campos = ['diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada', 'jornadaPrevista', 'diffJornadaEfetiva', 'maximoDirecaoContinua', 'intersticio', 'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'diffSaldo'];
 		foreach($campos as $campo){
@@ -1148,11 +1146,11 @@
 			$stringFeriado .= $row[0]."\n";
 		}
 
-		if(date('%w',strtotime($data)) == '6'){ //SABADOS
+		if(date('w',strtotime($data)) == '6'){ //SABADOS
 			// $horas_sabado = $aMotorista[enti_tx_jornadaSabado];
 			// $cargaHoraria = sprintf("%02d:%02d", floor($horas_sabado), ($horas_sabado - floor($horas_sabado)) * 60);
 			$cargaHoraria = $aMotorista['enti_tx_jornadaSabado'];
-		}elseif(date('%w',strtotime($data)) == '0'){ //DOMINGOS
+		}elseif(date('w',strtotime($data)) == '0'){ //DOMINGOS
 			$cargaHoraria = '00:00';
 		}else{
 			// $horas_diarias = $aMotorista[enti_tx_jornadaSemanal]/5;
@@ -1416,7 +1414,7 @@
 		if($stringFeriado != ''){
 			$iconeFeriado =  "<a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
 			$aRetorno['he100'] = $iconeFeriado.$aRetorno['diffSaldo'];
-		}elseif(date('%w',strtotime($data)) == '0'){
+		}elseif(date('w',strtotime($data)) == '0'){
 			$aRetorno['he100'] = $aRetorno['diffSaldo'];
 		}elseif($aRetorno['diffSaldo'][0] != '-'){
 			$aRetorno['he50'] = $aRetorno['diffSaldo'];
@@ -1548,7 +1546,7 @@
 		}
 		$totalResumo['maximoDirecaoContinua'] = '';
 		
-		if(($aRetorno['inicioJornada'] == '' && date('%w',strtotime($data)) == '%6') || ($aRetorno['inicioJornada'] != '' && date('%w',strtotime($data)) == '%0')){
+		if(($aRetorno['inicioJornada'] == '' && date('w',strtotime($data)) == '6') || ($aRetorno['inicioJornada'] != '' && date('w',strtotime($data)) == '0')){
 			$aRetorno['jornadaPrevista'] = '00:00';
 		}else{
 			$aRetorno['jornadaPrevista'] = operarHorarios([$aRetorno['jornadaPrevista'], $aRetorno['diffJornadaEfetiva']], '-');
@@ -1691,9 +1689,9 @@
 
 		$contagemEspera += count($clock_info['espera']['pares']);
 
-		if(date('%w',strtotime($data)) == '6'){ //SABADOS
+		if(date('w',strtotime($data)) == '6'){ //SABADOS
 			$cargaHoraria = $aMotorista['enti_tx_jornadaSabado'];
-		}elseif(date('%w',strtotime($data)) == '0' || $stringFeriado != ''){ //DOMINGOS OU FERIADOS
+		}elseif(date('w',strtotime($data)) == '0' || $stringFeriado != ''){ //DOMINGOS OU FERIADOS
 			//Alterar para uma variável do parâmetro caso exista a possibilidade de carga horária no domingo.
 			$cargaHoraria = '00:00';
 		}else{
@@ -1845,7 +1843,7 @@
 		if($stringFeriado != ''){
 			$iconeFeriado =  "<a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
 			$aRetorno['he100'] = $iconeFeriado.$aRetorno['diffSaldo'];
-		}elseif(date('%w',strtotime($data)) == '0'){
+		}elseif(date('w',strtotime($data)) == '0'){
 			$aRetorno['he100'] = $aRetorno['diffSaldo'];
 		}elseif($aRetorno['diffSaldo'][0] != '-'){
 			$aRetorno['he50'] = $aRetorno['diffSaldo'];
@@ -1985,7 +1983,7 @@
 		}
 		$totalResumo['maximoDirecaoContinua'] = '';
 		
-		if(($aRetorno['inicioJornada'] == '' && date('%w',strtotime($data)) == '%6') || ($aRetorno['inicioJornada'] != '' && date('%w',strtotime($data)) == '%0')){
+		if(($aRetorno['inicioJornada'] == '' && date('w',strtotime($data)) == '6') || ($aRetorno['inicioJornada'] != '' && date('w',strtotime($data)) == '0')){
 			$aRetorno['jornadaPrevista'] = '00:00';
 		}else{
 			$aRetorno['jornadaPrevista'] = operarHorarios([$aRetorno['jornadaPrevista'],  $aRetorno['diffJornadaEfetiva']], '-');
