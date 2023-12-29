@@ -22,8 +22,8 @@
 	<input type="hidden" name="aSaldo" value="<?= htmlspecialchars(json_encode($aSaldo)) ?>">
 </form>
 
-<form name="form_imprimir_endosso" method="post" target="_blank">
-	<input type="hidden" name="acao" value="imprimir_endosso">
+<form name="form_imprimir_relatorio" method="post" target="_blank">
+	<input type="hidden" name="acao" value="imprimir_relatorio">
 	<input type="hidden" name="idMotoristaEndossado" value="<?= implode(",", $aIdMotoristaEndossado) ?>">
 	<input type="hidden" name="matriculaMotoristaEndossado" value="<?= (implode(",", $aMatriculaMotoristaEndossado)) ?>">
 	<input type="hidden" name="busca_empresa" value="<?= $_POST['busca_empresa'] ?>">
@@ -83,8 +83,8 @@
 			window.location.href = '<?= "https://braso.mobi" . $CONTEX['path'] . "/cadastro_endosso" ?>';
 		}
 
-		document.getElementById('botaoContexCadastrar ImprimirEndosso').onclick = function() {
-			document.form_imprimir_endosso.submit();
+		document.getElementById('botaoContexCadastrar ImprimirRelatorio').onclick = function() {
+			document.form_imprimir_relatorio.submit();
 		}
 	};
 </script>
