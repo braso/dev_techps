@@ -67,23 +67,16 @@ while( $row=mysqli_fetch_array($query) ) {  // preparing an array
 		preg_match('/(.*)\((.*?)\)(.*)/', $text, $match);
 		if(empty($match[2])){
 			$nestedData[] = $row[$columns[$i]];
-			// $nome_sql = 'N CLAUDINO & CIA LTDA -  JACOBINA';
 			$nome_sql = 'SELECT empr_tx_nome FROM `empresa` WHERE empr_tx_Ehmatriz = "sim" LIMIT 1';
 			$query_empresa=mysqli_query($conn, $nome_sql ) or die(mysqli_error($conn));
 			$nome_empresa = mysqli_fetch_all($query_empresa, MYSQLI_ASSOC);
-			var_dump($nome_empresa);
-// 			$novoNome = "$nome_empresa[empr_tx_nome] <i class='fa fa-industry' aria-hidden='true'></i>";
-// 			if (in_array($nome_empresa['empr_tx_nome'], $nestedData)) {
-// 			    var_dump('ok');
-// 				// Obtém o índice do nome no array
-// 				$indice = array_search($nome_empresa['empr_tx_nome'], $nestedData);
+			$novoNome =  $nome_empresa[0]['empr_tx_nome'].'  <i class="fa fa-star" aria-hidden="true"></i>';
+			if (in_array($nome_empresa[0]['empr_tx_nome'], $nestedData)) {
+				$indice = array_search($nome_empresa[0]['empr_tx_nome'], $nestedData);
 			
-// 				// Substitui o valor no array
-// 				$nestedData[$indice] = $novoNome;
-			
-// 				// Exibe o array atualizado
-// 				// print_r($nestedData);
-// 			}
+				$nestedData[$indice] = $novoNome;
+
+			}
 		}
 		else{
 			$parametros = explode(',',$match[2]);

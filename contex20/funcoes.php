@@ -236,6 +236,7 @@ function modal_alert(){
 	<?
 }
 
+
 function inserir($tabela,$campos,$valores){
 	if(count($campos) != count($valores)){
 		echo"ERRO Número de campos não confere com número de linhas na função de inserir!";
@@ -539,6 +540,61 @@ function checkbox($nome,$variavel,$modificadorRadio,$modificador,$tamanho){
   return $campo.$data_input;
     
 }
+
+function checkbox_banco($nome, $variavel, $modificadoRadio,$modificadoCampo, $modificadoCampo2, $tamanho) {
+	$data_input = '<script>
+	const radioSim = document.getElementById("sim");
+	const radioNao = document.getElementById("nao");
+	const campo = document.getElementById("' . $variavel . '");
+	const campo2 = document.getElementById("limiteHoras");
+	if("'.$modificadoRadio.'" === "sim"){
+		radioSim.checked = true;
+	}
+	else {
+		radioNao.checked = true;
+	}
+	if (radioSim.checked) {
+			campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
+			campo2.style.display = ""; 
+	}
+	// Adicionando um ouvinte de eventos aos elementos de rádio
+	radioSim.addEventListener("change", function() {
+		if (radioSim.checked) {
+			campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
+			campo2.style.display = ""; 
+		}
+	});
+	radioNao.addEventListener("change", function() {
+	if (radioNao.checked) {
+		campo.style.display = "none"; // Oculta o campo quando "Não Mostrar Campo" é selecionado
+		campo2.style.display = "none"; 
+	}
+	});
+	</script>';
+	//  Utiliza regime de banco de horas?
+	$campo = '
+	<div class="col-sm-' . $tamanho . ' margin-bottom-5">
+		<label><b>' . $nome . '</b></label><br>
+		<label class="radio-inline">
+			<input type="radio" id="sim" name="banco" value="sim"> Sim
+		</label>
+		<label class="radio-inline">
+			<input type="radio" id="nao" name="banco" value="nao"> Não
+		</label>
+	</div>
+	<div id="' . $variavel . '" class="col-sm-' . $tamanho . ' margin-bottom-5" style="display: none;">
+			<label><b>Quandidade de Dias:</b></label>
+			<input class="form-control input-sm" type="number" value="'.$modificadoCampo.'" id="outroCampo" name="quandDias" autocomplete="off">
+	</div>
+	<div id="limiteHoras" class="col-sm-' . $tamanho . ' margin-bottom-5" style="display: none;">
+		<label><b>Quandidade de Horas Limite:</b></label>
+		<input class="form-control input-sm" type="number" value="'.$modificadoCampo2.'" id="outroCampo" name="quandHoras" autocomplete="off">
+	</div>
+	';
+
+	return $campo . $data_input;
+}
+
 
 function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 	// $variavel_limpa = str_replace(array("[","]"),array("\\[","\\]"),$variavel);	
