@@ -294,6 +294,43 @@ function remover($tabela,$id){
 
 }
 
+function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
+
+	if($mascara=="domain") {
+		$data_input="<script>
+			$(document).ready(function() {
+				var inputField = $('#nomeDominio');
+				var domainPrefix = 'https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/')."';
+
+				function updateDisplayedText() {
+					var inputValue = inputField.val();
+
+					if (inputValue.startsWith(domainPrefix)) {
+						var displayedText = inputValue.substring(domainPrefix.length);
+						inputField.val(displayedText);
+					}
+				}
+
+				// Executar a função de atualização quando o campo for modificado
+				inputField.on('input', updateDisplayedText);
+
+				// Inicializar o campo com o valor correto
+				updateDisplayedText();
+			});
+			</script>";
+	}
+
+	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
+			<label><b>'.$nome.'</b></label>
+			<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.'>
+		</div>';
+
+	
+
+	return $campo.$data_input;
+
+}
+
 function num_linhas($sql){
 
 	return mysqli_num_rows($sql);
@@ -971,8 +1008,7 @@ function enviar($arquivo,$diretorio,$nome='') {
 	}else {
 		$target_path .= basename($_FILES[$arquivo]['name']);
 	}
-
-
+	
 	if(move_uploaded_file($_FILES[$arquivo]['tmp_name'], $target_path)) {
 		set_status("O arquivo ".  basename( $_FILES[$arquivo]['name']). " foi enviado");
 		return $target_path;
