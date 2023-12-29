@@ -4,7 +4,14 @@
 		error_reporting(E_ALL);
 	//*/
 
-	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto	
+	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
+
+	function intToTime(int $time): string{
+		//Obs.: Variável $time deve estar em minutos.
+		$res = str_pad(intval($time/60), 2, 0, STR_PAD_LEFT).':'.str_pad(abs($time%60), 2, 0, STR_PAD_LEFT);
+
+		return $res;
+	}
 
 	function cadastrar(){
 		$url = substr($_SERVER['REQUEST_URI'], 0, strrpos($_SERVER['REQUEST_URI'], '/'));
@@ -12,8 +19,8 @@
 		exit();
 	}
 
-	function imprimir_endosso(){
-		global $totalResumo;
+	function imprimir_relatorio(){
+		global $totalResumo, $CONTEX; //Utilizado em relatorio_espelho.php
 
 		if (!$_POST['idMotoristaEndossado']) {
 			$motorista = carregar('entidade', $_POST['busca_motorista']);
@@ -21,7 +28,7 @@
 		}
 
 		if (empty($_POST['busca_data']) || empty($_POST['busca_empresa']) || empty($_POST['idMotoristaEndossado'])){
-			print_r("Há informações faltando.<br>");
+			echo '<script>alert("Insira data e motorista para gerar relatório.");</script>';
 			index();
 			exit;
 		}
@@ -32,8 +39,8 @@
 		
 		$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
 
-		$primeiroDia = '01/' . $month . '/' . $year;
-		$ultimoDia = $daysInMonth . '/' . $month . '/' . $year;
+		$primeiroDia = '01/'.$month.'/'.$year;				//Utilizado em relatorio_espelho.php
+		$ultimoDia = $daysInMonth.'/'.$month.'/'.$year;		//Utilizado em relatorio_espelho.php
 
 		$aEmpresa = carrega_array(
 			query(
@@ -60,30 +67,63 @@
 		);
 		
 		while ($aMotorista = carrega_array($sqlMotorista)) {
-			for ($i = 1; $i <= $daysInMonth; $i++) {
-				$dataVez = $_POST['busca_data'] . "-" . str_pad($i, 2, 0, STR_PAD_LEFT);
+			//Pegando e formatando registros dos dias{
+				for ($i = 1; $i <= $daysInMonth; $i++) {
+					$dataVez = $_POST['busca_data']."-".str_pad($i, 2, 0, STR_PAD_LEFT);
+					$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 
-				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
-				$campos = [
-					'data', 'diaSemana', 'inicioJornada', 'inicioRefeicao', 'fimRefeicao', 'fimJornada',
-					'diffRefeicao', 'diffEspera', 'diffDescanso', 'diffRepouso', 'diffJornada',
-					'jornadaPrevista', 'diffJornadaEfetiva', 'intersticio', 'he50', 'he100', 'adicionalNoturno', 
-					'esperaIndenizada', 'moti_tx_motivo'
-				];
-				$aDetalhadoCampos = [];
-				foreach($campos as $campo){
-					$aDetalhadoCampos[] = $aDetalhado[$campo];
-				}
-				unset($campos);
-
-				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDetalhadoCampos));
-				for ($f = 0; $f < sizeof($row) - 1; $f++) {
-					if ($row[$f] == "00:00") {
-						$row[$f] = "";
+					if(isset($aDetalhado['fimJornada'][0]) && (strpos($aDetalhado['fimJornada'][0], ':00') !== false) && date('Y-m-d', strtotime($aDetalhado['fimJornada'][0])) != $dataVez){
+						array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
 					}
+
+					//Converter array em string{
+						$legendas = mysqli_fetch_all(query(
+							"SELECT UNIQUE moti_tx_legenda FROM motivo 
+								WHERE moti_tx_legenda IS NOT NULL;"
+							), 
+							MYSQLI_ASSOC
+						);
+						foreach(['inicioJornada', 'fimJornada', 'inicioRefeicao', 'fimRefeicao'] as $tipo){
+							if (count($aDetalhado[$tipo]) > 0){
+								for($f = 0; $f < count($aDetalhado[$tipo]); $f++){
+									//Formatar datas para hora e minutos sem perder o D+1, caso tiver
+									if(strpos($aDetalhado[$tipo][$f], ':00', strlen($aDetalhado[$tipo][$f])-3) !== false){
+										if(strpos($aDetalhado[$tipo][$f], 'D+1') !== false){
+											$aDetalhado[$tipo][$f] = explode(' ', $aDetalhado[$tipo][$f]);
+											$aDetalhado[$tipo][$f] = substr($aDetalhado[$tipo][$f][1], 0, strlen($aDetalhado[$tipo][$f][1])-3)+$aDetalhado[$tipo][$f][2];
+										}else{
+											$aDetalhado[$tipo][$f] = date('H:i', strtotime($aDetalhado[$tipo][$f]));
+										}
+									}
+								}
+								$aDetalhado[$tipo] = implode("<br>", $aDetalhado[$tipo]);
+								foreach($legendas as $legenda){
+									$aDetalhado[$tipo] = str_replace('<br><strong>'.$legenda['moti_tx_legenda'].'</strong>', ' <strong>'.$legenda['moti_tx_legenda'].'</strong>', $aDetalhado[$tipo]);
+								}
+								$aDetalhado[$tipo] = str_replace('<br>D+1', ' D+1', $aDetalhado[$tipo]);
+							}else{
+								$aDetalhado[$tipo] = '';
+							}
+						}
+					//}
+
+					$totalResumo['adicionalNoturno'] = operarHorarios([$totalResumo['adicionalNoturno'], $aDetalhado['adicionalNoturno']], '+');
+
+					$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));
+					for($f = 0; $f < sizeof($row)-1; $f++){
+						if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
+							continue;
+						}
+						if($row[$f] == "00:00"){
+							$row[$f] = "";
+						}
+					}
+
+					array_shift($row);
+					array_splice($row, 11, 1);
+					$aDia[] = $row;
 				}
-				$aDia[] = $row;
-			}
+			//}
 
 			//unset($aMotorista);
 
@@ -92,13 +132,23 @@
 					WHERE endo_tx_matricula = '$aMotorista[enti_tx_matricula]'"
 			));
 
-			$lastMonthDate = date('Y-m', strtotime('-1 month', strtotime($year.'-'.$month.'-01')));
 			$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month-1, $year);
-			$saldoAnterior = '00:00';
-			
-			$lastMonthDay = $lastMonthDate.'-'.$daysInMonth;
-			$saldoPassado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $lastMonthDay)['diffSaldo'];
-			$saldoAnterior = operarHorarios([$saldoAnterior, $saldoPassado], '+');
+			$saldoAnterior = mysqli_fetch_all(
+				query(
+					"SELECT endo_tx_saldo FROM `endosso`
+						WHERE endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
+							AND endo_tx_ate < '".$_POST['busca_data']."-01'
+							AND endo_tx_status = 'ativo'
+						ORDER BY endo_tx_ate DESC
+						LIMIT 1;"
+				),
+				MYSQLI_ASSOC
+			)[0];
+			if(isset($saldoAnterior['endo_tx_saldo'])){
+				$saldoAnterior = $saldoAnterior['endo_tx_saldo'];
+			}else{
+				$saldoAnterior = '--:--';
+			}
 			
 			$sqlMotorista = query(
 				"SELECT * FROM entidade".
@@ -159,7 +209,7 @@
 
 						$saldoPeriodo -= $transferir;
 						$he100_pagar += $transferir;
-						$totalResumo['he100'] = intval($he100_pagar / 60) . ':' . ($he100_pagar - intval($he100_pagar / 60) * 60);
+						$totalResumo['he100'] = intToTime($he100_pagar);
 					}
 				}
 
@@ -173,17 +223,21 @@
 					$saldoPeriodo -= $transferir;
 
 					$he50_pagar += $transferir;
-					$totalResumo['he50'] = intval($he50_pagar / 60) . ':' . ($he50_pagar - intval($he50_pagar / 60) * 60);
+					$totalResumo['he50'] = intToTime($he50_pagar);
 				}
 
-				$totalResumo['diffSaldo'] = intval($saldoPeriodo / 60) . ':' . ($saldoPeriodo - intval($saldoPeriodo / 60) * 60);
+				$totalResumo['diffSaldo'] = intToTime($saldoPeriodo);
 			}
 
-			$saldoAtual = operarHorarios([$saldoAnterior, $totalResumo['diffSaldo']], '+'); //Usado dentro de relatorio_espelho.php
-
-			// $totalResumo = ['diffRefeicao' => '00:00','diffEspera' => '00:00','diffDescanso' => '00:00','diffRepouso' => '00:00','diffJornada' => '00:00','jornadaPrevista' => '00:00','diffJornadaEfetiva' => '00:00','maximoDirecaoContinua' => '','intersticio' => '00:00','he50' => '00:00','he100' => '00:00','adicionalNoturno' => '00:00','esperaIndenizada' => '00:00','diffSaldo' => '00:00'];
-			// unset($aDia);
+			$saldoAtual = operarHorarios([$saldoAnterior, $totalResumo['diffSaldo']], '+'); //Utilizado em relatorio_espelho.php
 		}
+
+		$legendas = mysqli_fetch_all(query(
+			"SELECT UNIQUE moti_tx_legenda FROM motivo 
+				WHERE moti_tx_legenda IS NOT NULL;"
+			), 
+			MYSQLI_ASSOC
+		); //Utilizado em relatorio_espelho.php
 
 		include "./relatorio_espelho.php";
 		exit;
@@ -219,7 +273,7 @@
 	}
 
 	function index(){
-		global $totalResumo, $CONTEX;
+		global $totalResumo;
 
 		cabecalho('Endosso');
 
@@ -249,8 +303,10 @@
 		}
 		if(!empty($_POST['busca_empresa'])){
 			$_POST['busca_empresa'] = (int)$_POST['busca_empresa'];
-			$extraMotorista = " AND enti_nb_empresa = '" . $_POST['busca_empresa'] . "'";
+		}else{
+			$_POST['busca_empresa'] = $_SESSION['user_nb_empresa'];
 		}
+		$extraMotorista = " AND enti_nb_empresa = " . $_POST['busca_empresa'];
 		if(!empty($_POST['busca_endossado']) && !empty($_POST['busca_empresa'])){
 			if(is_int(strpos($_POST['busca_endossado'], 'Endossado'))){
 				$extra .= " AND enti_nb_id";
@@ -266,12 +322,15 @@
 
 		//CAMPOS DE CONSULTA{
 			$c = [
-				combo_net('* Empresa:', 'busca_empresa',   (!empty($_POST['busca_empresa'])?   $_POST['busca_empresa']  : ''), 3, 'empresa', 'onchange=selecionaMotorista(this.value)', $extraEmpresa),
 				campo_mes('* Data:',    'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2),
 				combo_net('Motorista:', 'busca_motorista', (!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ''), 3, 'entidade', '', ' AND enti_tx_tipo = "Motorista"' . $extraMotorista . $extraEmpresaMotorista, 'enti_tx_matricula'),
 				combo(    'Situação:',  'busca_situacao',  (!empty($_POST['busca_situacao'])?  $_POST['busca_situacao'] : ''), 2, ['Todos', 'Verificado', 'Não conformidade']),
 				combo(    'Endosso:',   'busca_endossado', (!empty($_POST['busca_endossado'])? $_POST['busca_endossado']: ''), 2, ['', 'Endossado', 'Endossado parcialmente', 'Não endossado'])
 			];
+
+			if(is_int(strpos($_SESSION['user_tx_nivel'], 'Super Administrador'))){
+				array_unshift($c, combo_net('* Empresa:', 'busca_empresa',   (!empty($_POST['busca_empresa'])?   $_POST['busca_empresa']  : ''), 3, 'empresa', 'onchange=selecionaMotorista(this.value)', $extraEmpresa));
+			}
 		//}
 
 		//BOTOES{
@@ -282,7 +341,7 @@
 				botao("Buscar", 'index', '', '', '', 1),
 				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1),
 				'<button name="acao" id="botaoContexCadastrar CadastrarEndosso" value="cadastrar_endosso" type="button" class="btn default">Cadastrar Endosso</button>',
-				'<button name="acao" id="botaoContexCadastrar ImprimirEndosso" value="impressao_endosso" ' . $disabled . ' type="button" class="btn default">Imprimir Endossados</button>',
+				'<button name="acao" id="botaoContexCadastrar ImprimirRelatorio" value="impressao_relatorio" ' . $disabled . ' type="button" class="btn default">Imprimir Relatório</button>',
 				'<span id=dadosResumo><b>' . $carregando . '</b></span>'
 			];
 		//}
@@ -291,11 +350,6 @@
 		linha_form($c);
 		fecha_form($b);
 
-		/*$cab = [
-			"MATRÍCULA", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA", 
-			"REFEIÇÃO", "ESPERA", "ATRASO", "EFETIVA", "PERÍODO TOTAL", "INTERSTÍCIO DIÁRIO", "INT. SEMANAL", "ABONOS", "FALTAS", "FOLGAS", "H.E.", "H.E. 100%", 
-			"ADICIONAL NOTURNO", "ESPERA INDENIZADA", "OBSERVAÇÕES"
-		];*/
 		$cab = [
 			"", "MAT.", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "HE 50%", "HE&nbsp;100%",
@@ -309,7 +363,7 @@
 				'verificados' => 0,							//countVerificados
 				'endossados' => ['sim' => 0, 'nao' => 0],	//countEndossados e $countNaoEndossados
 			];
-			if(!empty($_POST['busca_data']) && !empty($_POST['busca_empresa'])){
+			if(!empty($_POST['busca_data']) && !empty($_POST['busca_empresa']) && !empty($_GET['acao'])){
 
 				$date = new DateTime($_POST['busca_data']);
 
@@ -361,6 +415,7 @@
 										foreach($legendas as $legenda){
 											$aDetalhado[$tipo] = str_replace('<br><strong>'.$legenda['moti_tx_legenda'].'</strong>', ' <strong>'.$legenda['moti_tx_legenda'].'</strong>', $aDetalhado[$tipo]);
 										}
+										$aDetalhado[$tipo] = str_replace('<br>D+1', ' D+1', $aDetalhado[$tipo]);
 									}else{
 										$aDetalhado[$tipo] = '';
 									}
