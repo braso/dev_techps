@@ -1140,3 +1140,5 @@
 		];
 		$response = iconv('UTF-8', 'ASCII//TRANSLIT', $week[date('l', strtotime($date))]);
 		return $response;
+	}
+?>
