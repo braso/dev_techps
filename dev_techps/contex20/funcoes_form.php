@@ -427,7 +427,7 @@
 	}
 
 	function linha_form($c){
-
+		$campo = '';
 		for($i=0;$i<count($c);$i++){
 			$campo.="$c[$i]";
 		}
@@ -441,13 +441,14 @@
 	}
 
 
-	function fecha_form($botao=''){
-		if($botao!='' || $_POST[msg_status]){
+	function fecha_form(array $botao = []){
+		$botoes = '';
+		if($botao !='' || $_POST['msg_status']){
 			for($i=0;$i<count($botao);$i++){
 				$botoes.=$botao[$i]."&nbsp;&nbsp;";
 			}
 
-			$botoes .= "&nbsp;&nbsp;<b>$_POST[msg_status]</b>";
+			$botoes .= "&nbsp;&nbsp;<b>".($_POST['msg_status']?? '')."</b>";
 
 	?>
 														<div class="form-actions">
