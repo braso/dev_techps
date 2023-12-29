@@ -210,6 +210,8 @@ if($col < 1)
 	$t_cabecalho = count($cabecalho);
 	$t_valores = count($valores);
 
+	$CAB = '';
+
 	for($i=0;$i < $t_cabecalho; $i++){
 		$CAB.="<th>$cabecalho[$i]</th>";
 	}
