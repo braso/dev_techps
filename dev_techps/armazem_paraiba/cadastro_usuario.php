@@ -1,4 +1,8 @@
 <?php
+	/* Modo debug
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
+	//*/
 	include "conecta.php";
 
 	function combo_empresa($nome,$variavel,$modificador,$tamanho,$opcao, $opcao2,$extra=''){
@@ -53,6 +57,10 @@
 					$error_msg .= $field[1];
 				}
 			}
+		}else{
+			if(empty($_POST['senha']) || empty($_POST['senha2'])){
+				$error_msg .= 'Senha e Confirmação, ';
+			}
 		}
 
 		//Se o usuário é um administrador e não definiu o nível do usuário a ser cadastrado
@@ -69,8 +77,8 @@
 			exit;
 		}
 
-		$bd_campos = ['user_tx_nome', 'user_tx_login', 'user_tx_senha', 'user_tx_nascimento', 'user_tx_email', 'user_tx_fone', 'user_nb_empresa'];
-		$valores = [$_POST['nome'], $_POST['login'], md5($_POST['senha']), $_POST['nascimento'], $_POST['email'], $_POST['telefone'], $_POST['empresa']];
+		$bd_campos = ['user_tx_senha'];
+		$valores = [md5($_POST['senha'])];
 
 		$campos_variaveis = [
 			['user_tx_cpf', 'cpf'],
