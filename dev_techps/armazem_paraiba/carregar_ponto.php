@@ -6,6 +6,7 @@ include "conecta.php";
 function carrega_ponto(){
 
 	$arquivo = 'apontamento' . date('dmY') . '*.txt';
+	// $arquivo = '*.txt';
 	$path = 'arquivos/pontos/';
 	$local_file = $path . $arquivo;
 	$arquivo = $_FILES['arquivo'];
