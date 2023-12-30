@@ -82,14 +82,14 @@ function index(){
 	];
 
 	$extra = 
-		(isset($_POST['busca_codigo']) 	&& !empty($_POST['busca_codigo'])? 	" AND moti_nb_id = '".$_POST['busca_codigo']."'": '').
+		(isset($_POST['busca_codigo']) 	&& !empty($_POST['busca_codigo'])? 	" AND moti_nb_id LIKE '%".$_POST['busca_codigo']."%'": '').
 		(isset($_POST['busca_nome']) 	&& !empty($_POST['busca_nome'])? 	" AND moti_tx_nome LIKE '%".$_POST['busca_nome']."%'": '').
 		(isset($_POST['busca_tipo']) 	&& !empty($_POST['busca_tipo'])? 	" AND moti_tx_tipo LIKE '%".$_POST['busca_tipo']."%'": '').
 		(isset($_POST['busca_legenda']) && !empty($_POST['busca_legenda'])? " AND moti_tx_legenda LIKE '%".$legendas[$_POST['busca_legenda']]."%'": '');
 
 	$c = [
 		campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO'),
-		campo('Nome','busca_nome',$_POST['busca_nome'],5),
+		campo('Nome','busca_nome',$_POST['busca_nome'],5, '', 'maxlength="65"'),
 		combo('Tipo','busca_tipo',$_POST['busca_tipo'],2,['','Ajuste','Abono']),
 		combo('Legenda','busca_legenda',$_POST['busca_legenda'],3,['','Incluída Manualmente', 'Pré-Assinalada', 'Outras fontes de marcação', 'Descanso Semanal Remunerado e Abono'])
 	];
