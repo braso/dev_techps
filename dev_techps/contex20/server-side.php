@@ -36,8 +36,16 @@ $totalFiltered = mysqli_num_rows($query); // when there is a search parameter th
 
 if($requestData['length'] != '-1')
 	$limit =  " LIMIT ".$requestData['start']." ,".$requestData['length'];
+	
+if(!empty($requestData['order'][0]['dir'])){
+    $sql.=" ORDER BY ". $order2."   ".$requestData['order'][0]['dir']." $limit";
+}
+else{
+    $sql.=$limit;
+}
 
-$sql.=" ORDER BY ". $order2."   ".$requestData['order'][0]['dir']." $limit";
+
+
 /* $requestData['order'][0]['column'] contains colmun index, $requestData['order'][0]['dir'] contains order such as asc/desc  */	
 $query=mysqli_query($conn, $sql) or die(mysqli_error($conn));
 
@@ -51,14 +59,25 @@ $data = array();
 
 
 while( $row=mysqli_fetch_array($query) ) {  // preparing an array
-	$nestedData=array(); 
+	$nestedData=[];
 
 
 	for($i=0;$i<$t_valores;$i++){
 		$text = $columns[$i];
 		preg_match('/(.*)\((.*?)\)(.*)/', $text, $match);
-		if(empty($match[2]))
+		if(empty($match[2])){
 			$nestedData[] = $row[$columns[$i]];
+			$nome_sql = 'SELECT empr_tx_nome FROM `empresa` WHERE empr_tx_Ehmatriz = "sim" LIMIT 1';
+			$query_empresa=mysqli_query($conn, $nome_sql ) or die(mysqli_error($conn));
+			$nome_empresa = mysqli_fetch_all($query_empresa, MYSQLI_ASSOC);
+			$novoNome =  $nome_empresa[0]['empr_tx_nome'].'  <i class="fa fa-star" aria-hidden="true"></i>';
+			if (in_array($nome_empresa[0]['empr_tx_nome'], $nestedData)) {
+				$indice = array_search($nome_empresa[0]['empr_tx_nome'], $nestedData);
+			
+				$nestedData[$indice] = $novoNome;
+
+			}
+		}
 		else{
 			$parametros = explode(',',$match[2]);
 			$parametros[0] = $row[$parametros[0]];
@@ -69,7 +88,10 @@ while( $row=mysqli_fetch_array($query) ) {  // preparing an array
 		}
 	}
 	
-	
+// 	if($nestedData[0][1]){
+// 	    $nestedData[1][1] = "$nestedData[1][1] <i class='fa fa-star' aria-hidden='true'></i>";
+// 	}
+
 	$data[] = $nestedData;
 }
 
