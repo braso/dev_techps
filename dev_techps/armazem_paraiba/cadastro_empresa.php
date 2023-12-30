@@ -65,21 +65,6 @@ function cadastra_empresa(){
 
 	if(isset($_POST['id']) && $_POST['id'] != ''){
 
-		$file_type = $_FILES['logo']['type']; //returns the mimetype
-
-		$allowed = array("image/jpeg", "image/gif", "image/png", "image/jpg");
-		$id_empresa = $_POST['id'];
-
-		if(in_array($file_type, $allowed) && $_FILES['logo']['name']!='') {
-			if(!is_dir("arquivos/empresa/$id_empresa")){
-				mkdir("arquivos/empresa/$id_empresa");
-			}
-			$arq=enviar('logo',"arquivos/empresa/$id_empresa/",$id_empresa);
-			if($arq){
-				$campos[] = 'empr_tx_logo';
-				$valores[] = $arq;
-			}
-		}
 // 		$sqlCheckNivel["empr_tx_Ehmatriz"]
         // if(empty($sqlCheckNivel["empr_tx_Ehmatriz"]) || $sqlCheckNivel["empr_tx_Ehmatriz"] != 'Sim'){
 		// 	$campos=[
@@ -102,7 +87,8 @@ function cadastra_empresa(){
 
 		$campos = array_merge($campos,array('empr_nb_userAtualiza','empr_tx_dataAtualiza'));
 		$valores = array_merge($valores,array($_SESSION['user_nb_id'], date("Y-m-d H:i:s")));
-		atualizar('empresa',$campos,$valores,$_POST['id']);
+		$id_empresa = atualizar('empresa',$campos,$valores,$_POST['id']);
+		$id_empresa = $_POST['id'];
 	}else{
 		$campos = array_merge($campos,array('empr_nb_userCadastro','empr_tx_dataCadastro'));
 		$valores = array_merge($valores,array($_SESSION['user_nb_id'], date("Y-m-d H:i:s")));
@@ -112,8 +98,23 @@ function cadastra_empresa(){
 			print_r($e);
 		}
 	}
-
 	
+	$file_type = $_FILES['logo']['type']; //returns the mimetype
+
+	$allowed = array("image/jpeg", "image/gif", "image/png");
+	if(in_array($file_type, $allowed) && $_FILES['logo']['name']!='') {
+
+		if(!is_dir("arquivos/empresa/$id_empresa")){
+			mkdir("arquivos/empresa/$id_empresa");
+		}
+
+		$arq=enviar('logo',"arquivos/empresa/$id_empresa/",$id_empresa);
+		if($arq){
+			atualizar('empresa',['empr_tx_logo'],[$arq],$id_empresa);
+		}
+	
+	}
+
 
 	index();
 	exit;
@@ -172,8 +173,6 @@ function checa_cnpj(){
 
 	exit;
 }
-
-
 
 function layout_empresa(){
 	global $a_mod;
@@ -260,7 +259,7 @@ function layout_empresa(){
 	}
 	$campo_cidade = texto('Cidade/UF', $cidade['cida_tx_nome'], 2);
 
-	if (strpos($_SESSION['user_tx_nivel'], "Super Administrador") !== TRUE && $input_values['matriz'] == 'Sim') {
+	if (is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) != TRUE && $input_values['matriz'] == 'Sim') {
 		$c = [
 			texto('CPF/CNPJ*',$input_values['cnpj'],2),
 			texto('Nome*',$input_values['nome'],4),
