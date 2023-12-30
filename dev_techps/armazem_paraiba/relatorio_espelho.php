@@ -50,7 +50,7 @@
 				<th colspan="4">INTERVALOS</th>
 				<th colspan="3">JORNADA EFETIVA</th>
 				<th colspan="5">APURAÇÃO DO CONTROLE DA JORNADA</th>
-				<th>TRATAMENTO</th>
+				<!-- <th>TRATAMENTO</th> -->
 			</tr>
 			<tr>
 				<th>DATA</th>
@@ -63,15 +63,15 @@
 				<th>ESPERA</th>
 				<th>DESCANSO</th>
 				<th>REPOUSO</th>
-				<th>Periodo Total</th>
+				<th>PREVISTA</th>
 				<th>EFETIVA</th>
-				<th>ATRASOS REALIZADOS</th>
+				<th>MDC</th>
 				<th>INTERSTÍCIO DIÁRIO/SEMANAL</th>
 				<th>HE 50%</th>
 				<th>HE&nbsp;100%</th>
 				<th>ADICIONAL NOT.</th>
 				<th>ESPERA INDENIZADA</th>
-				<th>MOTIVO</th>
+				<th>SALDO</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -80,24 +80,8 @@
 					echo '<tr>';
 					for ($j = 1; $j < 20; $j++){
 						if($j > 2 && $j < 7){
-							if (count($aDiaVez[$j]) > 0){
-								for($k = 0; $k < count($aDiaVez[$j]); $k++){
-									//Formatar datas para hora e minutos sem perder o D+1, caso tiver
-									if(strpos($aDiaVez[$j][$k], ':00', strlen($aDiaVez[$j][$k])-3) !== false){
-										if(strpos($aDiaVez[$j][$k], 'D+1') !== false){
-											$aDiaVez[$j][$k] = explode(' ', $aDiaVez[$j][$k]);
-											$aDiaVez[$j][$k] = substr($aDiaVez[$j][$k][1], 0, strlen($aDiaVez[$j][$k][1])-3)+$aDiaVez[$j][$k][2];
-										}else{
-											$aDiaVez[$j][$k] = date('H:i', strtotime($aDiaVez[$j][$k]));
-										}
-									}
-								}
-								$aDiaVez[$j] = implode("<br>", $aDiaVez[$j]);
-								foreach($legendas as $legenda){
-									$aDiaVez[$j] = str_replace('<br><strong>'.$legenda['moti_tx_legenda'].'</strong>', ' <strong>'.$legenda['moti_tx_legenda'].'</strong>', $aDiaVez[$j]);
-								}
-							}else{
-								$aDiaVez[$j] = '';
+							foreach($legendas as $legenda){
+								$aDiaVez[$j] = str_replace('<br><strong>'.$legenda['moti_tx_legenda'].'</strong>', ' <strong>'.$legenda['moti_tx_legenda'].'</strong>', $aDiaVez[$j]);
 							}
 						}
 						echo '<td>'.$aDiaVez[$j].'</td>';
@@ -184,7 +168,7 @@
 						<p>Responsável</p>
 					</center>
 					<center>
-						<p>Cargo:</p>
+						<p>Cargo</p>
 					</center>
 				</div>
 				<div class="signature-block" style="display: inline-block; width: 45%;">
