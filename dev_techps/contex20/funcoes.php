@@ -64,11 +64,11 @@
 
 	function dias_internacao($id){
 		$a = carregar('evolucao',$id);
-		if($a[evol_tx_dataAlta]=='')
-			$a[evol_tx_dataAlta] = date("Y-m-d");
+		if($a['evol_tx_dataAlta']=='')
+			$a['evol_tx_dataAlta'] = date("Y-m-d");
 
-		$data1 = new DateTime ($a[evol_tx_data]);
-		$data2 = new DateTime ($a[evol_tx_dataAlta]);
+		$data1 = new DateTime ($a['evol_tx_data']);
+		$data2 = new DateTime ($a['evol_tx_dataAlta']);
 		$intervalo = $data1 -> diff($data2);
 		return $intervalo -> days + 1;
 		exit;
@@ -106,15 +106,13 @@
 			$r .= $r ? " ".($valorExtenso > 1 ? $plural[$t] : $singular[$t]) : "";
 			if ($valorExtenso == "000")$z++; elseif ($z > 0) $z--;
 			if (($t==1) && ($z>0) && ($inteiro[0] > 0)) $r .= (($z>1) ? " de " : "").$plural[$t]; 
-			if ($r) $rt = $rt . ((($i > 0) && ($i <= $fim) && ($inteiro[0] > 0) && ($z < 1)) ? ( ($i < $fim) ? ", " : " e ") : " ") . $r;
+			if ($r) $rt = ((($i > 0) && ($i <= $fim) && ($inteiro[0] > 0) && ($z < 1)) ? ( ($i < $fim) ? ", " : " e ") : " ") . $r;
 		}
 	
 		return($rt ? $rt : "zero");
 	}
 
 	function valorPorExtenso2($valorExtenso=0) {
-		// $singular = array("centavo", "real", "mil", "milhão", "bilhão", "trilhão", "quatrilhão");
-		// $plural = array("centavos", "reais", "mil", "milhões", "bilhões", "trilhões","quatrilhões");
 	
 		$c = array("", "cem", "duzentos", "trezentos", "quatrocentos","quinhentos", "seiscentos", "setecentos", "oitocentos", "novecentos");
 		$d = array("", "dez", "vinte", "trinta", "quarenta", "cinquenta","sessenta", "setenta", "oitenta", "noventa");
@@ -139,10 +137,10 @@
 		
 			$r = $rc.(($rc && ($rd || $ru)) ? " e " : "").$rd.(($rd && $ru) ? " e " : "").$ru;
 			$t = count($inteiro)-1-$i;
-			// $r .= $r ? " ".($valorExtenso > 1 ? $plural[$t] : $singular[$t]) : "";
+			
 			if ($valorExtenso == "000")$z++; elseif ($z > 0) $z--;
-			if (($t==1) && ($z>0) && ($inteiro[0] > 0)) $r .= (($z>1) ? " de " : "").$plural[$t]; 
-			if ($r) $rt = $rt . ((($i > 0) && ($i <= $fim) && ($inteiro[0] > 0) && ($z < 1)) ? ( ($i < $fim) ? ", " : " e ") : " ") . $r;
+			if (($t==1) && ($z>0) && ($inteiro[0] > 0)) $r .= (($z>1) ? " de " : ""); 
+			if ($r) $rt = ((($i > 0) && ($i <= $fim) && ($inteiro[0] > 0) && ($z < 1)) ? ( ($i < $fim) ? ", " : " e ") : " ") . $r;
 		}
 	
 		return($rt ? $rt : "zero");
@@ -252,8 +250,8 @@
 		$campos=implode(',',$campos);
 
 		try{
-			query("INSERT INTO $tabela ($campos) VALUES($valores);") or die(mysql_error());
-			$sql = query("SELECT LAST_INSERT_ID();") or die(mysql_error());
+			query("INSERT INTO $tabela ($campos) VALUES($valores);") or die();
+			$sql = query("SELECT LAST_INSERT_ID();") or die();
 		}catch (Exception $e){
 			return;
 		}
@@ -285,7 +283,7 @@
 
 
 
-		query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id='$id'") or die(mysql_error());
+		query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id='$id'") or die();
 		set_status("Registro atualizado com sucesso!");
 
 	}
@@ -307,7 +305,7 @@
 	}
 
 	function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
-	    
+
 		if($mascara=="domain") {
 			$data_input="<script>
 				$(document).ready(function() {
@@ -520,7 +518,7 @@
 		
 		$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 				<label><b>'.$nome.'</b></label>
-				<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' '.$data_input2.'>
+				<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" >
 			</div>';
 
 		
@@ -591,9 +589,6 @@
 			$data_input = "<script>$(\"#$variavel\").inputmask(\"date\", { \"clearIncomplete\": true, placeholder: 'dd/mm/aaaa' });</script>";
 		}
 		elseif($mascara=="MASCARA_VALOR")
-			// $data_input2 = "data-inputmask='true'";
-			// $data_input2 = "data-inputmask-maskMoney=\"allowNegative: true, thousands:'.', decimal:',', affixesStay: false\"";
-			// $data_input = "<script>$(\"#$variavel\").maskMoney({ allowNegative: true, thousands:'.', decimal:',', affixesStay: false});</script>";
 			$data_input = "<script>$('[name=\"$variavel\"]').maskMoney({ allowNegative: true, thousands:'.', decimal:',', affixesStay: false});</script>";
 		elseif($mascara=="MASCARA_FONE")
 			$data_input="<script>$('[name=\"$variavel\"]').inputmask({mask: ['(99) 9999-9999', '(99) 99999-9999'], placeholder: \" \" });</script>";
@@ -621,12 +616,15 @@
 				});
 			});
 			</script>";
+		else{
+			$data_input = '';
+		}
 
 				// <input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' data-placeholder="____" data-inputmask="'.$data_input.'">
 
 			$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 				<label><b>'.$nome.'</b></label>
-				<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' '.$data_input2.'>
+				<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.'>
 				<div id="feedback"></div>
 			</div>';
 
@@ -679,10 +677,11 @@
 
 
 		$sql = query("SELECT hist_tx_descricao,hist_tx_data,user_tx_nome FROM historico,user WHERE user_nb_id = hist_nb_user AND hist_nb_entidade = '$id_paciente' ORDER BY hist_nb_id DESC");
+		$historico = '';
 		while($a=carrega_array($sql)){
 
-			$historico .= "=================== <b>DATA: ".data($a[hist_tx_data])." - PROFISSIONAL: $a[user_tx_nome]</b> ===================<br>";
-			$historico .= $a[hist_tx_descricao];
+			$historico .= "=================== <b>DATA: ".data($a['hist_tx_data'])." - PROFISSIONAL: $a[user_tx_nome]</b> ===================<br>";
+			$historico .= $a['hist_tx_descricao'];
 			$historico .= "<br><br>";
 		}
 
@@ -753,6 +752,7 @@
 
 	function combo($nome,$variavel,$modificador,$tamanho,$opcao,$extra=''){
 		$t_opcao=count($opcao);
+		$c_opcao = '';
 		for($i=0;$i<$t_opcao;$i++){
 			if($opcao[$i] != $modificador)
 				$selected='';
@@ -813,7 +813,7 @@
 			placeholder: 'Selecione um item',
 			allowClear: true,
 			ajax: {
-				url: '/contex20/select2.php?path=<?=$CONTEX[path]?>&tabela=<?=$tabela?>&extra_ordem=<?=$extra_ordem?>&extra_limite=<?=$extra_limite?>&extra_bd=<?=urlencode($extra_bd)?>&extra_busca=<?=urlencode($extra_busca)?>',
+				url: '/contex20/select2.php?path=<?=$CONTEX['path']?>&tabela=<?=$tabela?>&extra_ordem=<?=$extra_ordem?>&extra_limite=<?=$extra_limite?>&extra_bd=<?=urlencode($extra_bd)?>&extra_busca=<?=urlencode($extra_busca)?>',
 				dataType: 'json',
 				delay: 250,
 				processResults: function (data) {
@@ -838,7 +838,7 @@
 	function combo_bd($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra_bd=''){
 
 		$tab=substr($tabela,0,4);
-		
+		$c_opcao = '';
 		if($nome[0] == "!"){
 			$c_opcao.="<option value=''></option>";
 			$nome=substr($nome, 1);
@@ -886,7 +886,7 @@
 
 		$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 					<label><b>'.$nome.$ver.'</b></label>
-					<input name="'.$variavel.'" value="'.$CONTEX[path]."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
+					<input name="'.$variavel.'" value="'.$CONTEX['path']."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
 				</div>';
 
 			return $campo;
@@ -920,7 +920,8 @@
 
 
 	function botao($nome,$acao,$campos='',$valores='',$extra='',$salvar=''){
-	global $idsBotaoContex;	
+		global $idsBotaoContex;	
+		$hidden = '';
 		if($campos[0]!=''){
 
 			$a_campos=explode(',',$campos);
@@ -1020,13 +1021,13 @@
 
 		$icone='class="'.$icone.'"';
 		
-		return "<center><a title=\"$title\" style='color:gray' onclick='javascript:contex_icone(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\",\"$action\");' ><spam $icone></spam></a></center>";
+		return "<center><a title=\"$title\" style='color:gray' onclick='javascript:contex_icone(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\");' ><spam $icone></spam></a></center>";
 		
 	}
 
 	function abre_menu_aba($nome,$id,$contexAbaAtiva=''){
 		global $CONTEX;
-		$CONTEX[abaAtiva] = $contexAbaAtiva;
+		$CONTEX['abaAtiva'] = $contexAbaAtiva;
 		$a_nome = explode(",",$nome);
 		$a_id = explode(",",$id);
 
@@ -1037,14 +1038,14 @@
 		$aba = "<div class='portlet-body'>";
 		$aba .= "<ul class='nav nav-tabs'>";
 		for($i=0;$i<count($a_nome);$i++){
-			if($CONTEX[abaAtiva]==''){
-				$CONTEX[abaAtiva]=$a_id[$i];
+			if($CONTEX['abaAtiva']==''){
+				$CONTEX['abaAtiva']=$a_id[$i];
 				$active = 'class="active"';
 			}else{
 
 
-				if($a_id[$i]==$CONTEX[abaAtiva]){
-					$CONTEX[abaAtiva]=$a_id[$i];
+				if($a_id[$i]==$CONTEX['abaAtiva']){
+					$CONTEX['abaAtiva']=$a_id[$i];
 					$active = 'class="active"';
 				}else{
 					$active = '';
@@ -1072,7 +1073,7 @@
 
 	function abre_aba($id){
 		global $CONTEX;
-		if($CONTEX[abaAtiva] == $id){
+		if($CONTEX['abaAtiva'] == $id){
 			$active = 'active in';
 		}else{
 			$active = '';
