@@ -1,12 +1,15 @@
 <?php
+/* Modo debug
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
+	//*/
+
 include "conecta.php";
 
 function exclui_empresa(){
-
 	remover('empresa',$_POST['id']);
 	index();
 	exit;
-
 }
 
 function excluir_logo(){
@@ -45,7 +48,8 @@ function cadastra_empresa(){
 	
 	$valores = [
 		$_POST['nome'], $_POST['fantasia'], $_POST['cnpj'], $_POST['cep'], $_POST['cidade'], $_POST['endereco'], $_POST['bairro'], $_POST['numero'], $_POST['complemento'], $_POST['referencia'],
-		$_POST['fone1'], $_POST['fone2'], $_POST['email'], $_POST['inscricaoEstadual'], $_POST['inscricaoMunicipal'], $_POST['regimeTributario'], 'ativo', $_POST['situacao'], $_POST['parametro'], $_POST['contato'],
+		$_POST['fone1'], $_POST['fone2'], $_POST['email'], $_POST['inscricaoEstadual'], $_POST['inscricaoMunicipal'], $_POST['regimeTributario'], 'ativo', $_POST['situacao'], $_POST['parametro'], 
+			$_POST['contato'],
 		$_POST['dataRegistroCNPJ'], "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio'], $_POST['ftpServer'], $_POST['ftpUsername'], $_POST['ftpUserpass'],
 		$_POST['matriz']
 	];
@@ -64,34 +68,13 @@ function cadastra_empresa(){
 	}
 
 	if(isset($_POST['id']) && $_POST['id'] != ''){
-
-// 		$sqlCheckNivel["empr_tx_Ehmatriz"]
-        // if(empty($sqlCheckNivel["empr_tx_Ehmatriz"]) || $sqlCheckNivel["empr_tx_Ehmatriz"] != 'Sim'){
-		// 	$campos=[
-		// 		'empr_tx_nome', 'empr_tx_fantasia', 'empr_tx_cnpj', 'empr_tx_cep', 'empr_nb_cidade', 'empr_tx_endereco', 'empr_tx_bairro', 'empr_tx_numero', 'empr_tx_complemento', 'empr_tx_referencia',
-		// 		'empr_tx_fone1', 'empr_tx_fone2', 'empr_tx_email', 'empr_tx_inscricaoEstadual', 'empr_tx_inscricaoMunicipal', 'empr_tx_regimeTributario', 'empr_tx_status', 'empr_tx_situacao', 'empr_nb_parametro', 'empr_tx_contato',
-		// 		'empr_tx_dataRegistroCNPJ', 'empr_tx_domain', 'empr_tx_ftpServer', 'empr_tx_ftpUsername', 'empr_tx_ftpUserpass', 'empr_tx_Ehmatriz'
-		// 	];
-			
-		// 	$valores = [
-		// 		$_POST['nome'], $_POST['fantasia'], $_POST['cnpj'], $_POST['cep'], $_POST['cidade'], $_POST['endereco'], $_POST['bairro'], $_POST['numero'], $_POST['complemento'], $_POST['referencia'],
-		// 		$_POST['fone1'], $_POST['fone2'], $_POST['email'], $_POST['inscricaoEstadual'], $_POST['inscricaoMunicipal'], $_POST['regimeTributario'], 'ativo', $_POST['situacao'], $_POST['parametro'], $_POST['contato'],
-		// 		$_POST['dataRegistroCNPJ'], "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio'], $_POST['ftpServer'], $_POST['ftpUsername'], $_POST['ftpUserpass'],
-		// 		$_POST['matriz']
-		// 	];
-		// }else {
-		//     $campos = ['empr_nb_parametro'];
-			
-		// 	$valores = [$_POST['parametro']];
-		// }
-
-		$campos = array_merge($campos,array('empr_nb_userAtualiza','empr_tx_dataAtualiza'));
-		$valores = array_merge($valores,array($_SESSION['user_nb_id'], date("Y-m-d H:i:s")));
-		$id_empresa = atualizar('empresa',$campos,$valores,$_POST['id']);
+		$campos = array_merge($campos,['empr_nb_userAtualiza','empr_tx_dataAtualiza']);
+		$valores = array_merge($valores,[$_SESSION['user_nb_id'], date("Y-m-d H:i:s")]);
+		atualizar('empresa',$campos,$valores,$_POST['id']);
 		$id_empresa = $_POST['id'];
 	}else{
-		$campos = array_merge($campos,array('empr_nb_userCadastro','empr_tx_dataCadastro'));
-		$valores = array_merge($valores,array($_SESSION['user_nb_id'], date("Y-m-d H:i:s")));
+		$campos = array_merge($campos,['empr_nb_userCadastro','empr_tx_dataCadastro']);
+		$valores = array_merge($valores,[$_SESSION['user_nb_id'], date("Y-m-d H:i:s")]);
 		try{
 			$id_empresa = inserir('empresa',$campos,$valores);
 		}catch(Exception $e){
@@ -112,8 +95,7 @@ function cadastra_empresa(){
 		if($arq){
 			atualizar('empresa',['empr_tx_logo'],[$arq],$id_empresa);
 		}
-	
-	}
+		}
 
 
 	index();
@@ -504,3 +486,4 @@ function index(){
 	rodape();
 
 }
+?>
