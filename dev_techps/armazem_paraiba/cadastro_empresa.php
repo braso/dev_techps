@@ -31,9 +31,9 @@ function modifica_empresa(){
 
 function cadastra_empresa(){
     $sqlCheckNivel = query("SELECT empr_tx_Ehmatriz FROM empresa WHERE empr_nb_id = '$_POST[id]'")->fetch_assoc();
-	$campos = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade','endereco','bairro'];
+	$campos = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade', 'endereco', 'bairro', 'dataRegistroCNPJ'];
 	foreach($campos as $campo){
-		if(!isset($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'Sim' || empty($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'Sim'){
+		if(!isset($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'Sim' || empty($_POST[$campo])){
 			echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
 			layout_empresa();
 			exit;
@@ -182,7 +182,7 @@ function layout_empresa(){
         	'inscricaoEstadual' => $_POST['inscricaoEstadual'],
         	'inscricaoMunicipal' => $_POST['inscricaoMunicipal'],
         	'regimeTributario' => $_POST['regimeTributario'],
-        	'dataRegistroCNPJ' => empty($_POST['dataRegistroCNPJ'])? date('Y-m-d', 0): $_POST['dataRegistroCNPJ'],
+        	'dataRegistroCNPJ' => empty($_POST['dataRegistroCNPJ'])? null: $_POST['dataRegistroCNPJ'],
         	'logo' => $_POST['logo'],
         	'domain' => $_POST['domain'],
         	'ftpServer' => $_POST['ftpServer'],
@@ -210,7 +210,7 @@ function layout_empresa(){
         	'inscricaoEstadual' => $a_mod['empr_tx_inscricaoEstadual'],
         	'inscricaoMunicipal' => $a_mod['empr_tx_inscricaoMunicipal'],
         	'regimeTributario' => $a_mod['empr_tx_regimeTributario'],
-        	'dataRegistroCNPJ' => empty($a_mod['empr_tx_dataRegistroCNPJ'])? date('Y-m-d', 0): $a_mod['empr_tx_dataRegistroCNPJ'],
+        	'dataRegistroCNPJ' => empty($a_mod['empr_tx_dataRegistroCNPJ'])? null: $a_mod['empr_tx_dataRegistroCNPJ'],
         	'logo' => $a_mod['empr_tx_logo'],
         	'domain' => $a_mod['empr_tx_domain'],
         	'ftpServer' => $a_mod['empr_tx_ftpServer'] == 'ftp-jornadas.positronrt.com.br'? '': $a_mod['empr_tx_ftpServer'],
@@ -261,7 +261,7 @@ function layout_empresa(){
 			texto('Inscrição Estadual',$input_values['inscricaoEstadual'],3),
 			texto('Inscrição Municipal',$input_values['inscricaoMunicipal'],3),
 			texto('Regime Tributário',$input_values['regimeTributario'],3,$regimes),
-			texto('Data Reg. CNPJ',$input_values['dataRegistroCNPJ'],3),
+			texto('Data Reg. CNPJ*',$input_values['dataRegistroCNPJ'],3),
 			$campo_dominio,
 			$campo_EhMatriz,
 			
@@ -289,7 +289,7 @@ function layout_empresa(){
 			campo('Inscrição Estadual','inscricaoEstadual',$input_values['inscricaoEstadual'],3),
 			campo('Inscrição Municipal','inscricaoMunicipal',$input_values['inscricaoMunicipal'],3),
 			combo('Regime Tributário','regimeTributario',$input_values['regimeTributario'],3,$regimes),
-			campo_data('Data Reg. CNPJ','dataRegistroCNPJ',$input_values['dataRegistroCNPJ'],3),
+			campo_data('Data Reg. CNPJ*','dataRegistroCNPJ',$input_values['dataRegistroCNPJ'],3),
 			arquivo('Logo (.png, .jpg)'.$iconeExcluirLogo,'logo',$input_values['logo'],4),
 			$campo_dominio,
 			$campo_EhMatriz,
