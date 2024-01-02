@@ -1,8 +1,8 @@
 <?php
 	/* Modo debug
-			ini_set('display_errors', 1);
-			error_reporting(E_ALL);
-		//*/
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
+	//*/
 
 	include "conecta.php";
 
@@ -49,7 +49,7 @@
 		$valores = [
 			$_POST['nome'], $_POST['fantasia'], $_POST['cnpj'], $_POST['cep'], $_POST['cidade'], $_POST['endereco'], $_POST['bairro'], $_POST['numero'], $_POST['complemento'], $_POST['referencia'],
 			$_POST['fone1'], $_POST['fone2'], $_POST['email'], $_POST['inscricaoEstadual'], $_POST['inscricaoMunicipal'], $_POST['regimeTributario'], 'ativo', $_POST['situacao'], $_POST['parametro'], 
-				$_POST['contato'],
+			$_POST['contato'],
 			$_POST['dataRegistroCNPJ'], "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio'], $_POST['ftpServer'], $_POST['ftpUsername'], $_POST['ftpUserpass'],
 			$_POST['matriz']
 		];
@@ -95,7 +95,7 @@
 			if($arq){
 				atualizar('empresa',['empr_tx_logo'],[$arq],$id_empresa);
 			}
-			}
+		}
 
 
 		index();
@@ -502,7 +502,7 @@
 		fecha_form($botao);
 
 		// $sql = "SELECT * FROM empresa, cidade WHERE empr_tx_status != 'inativo' AND empr_nb_cidade = cida_nb_id $extra";
-		$sql = "SELECT * FROM empresa, cidade WHERE empr_tx_status != 'inativo' AND empr_nb_cidade = cida_nb_id $extra ORDER BY empr_tx_EhMatriz DESC, empr_nb_id";
+		$sql = "SELECT * FROM empresa, cidade WHERE empr_tx_status != 'inativo' AND empr_nb_cidade = cida_nb_id $extra";
 		$cab = ['CÓDIGO','NOME','FANTASIA','CPF/CNPJ','CIDADE/UF','SITUAÇÃO','',''];
 		$val = ['empr_nb_id','empr_tx_nome','empr_tx_fantasia','empr_tx_cnpj','concat(cida_nb_id)','empr_tx_situacao','icone_modificar(empr_nb_id,modifica_empresa)','icone_excluir(empr_nb_id,exclui_empresa)'];
 		grid($sql,$cab,$val,'','',1,'',10);
