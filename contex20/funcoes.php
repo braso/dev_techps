@@ -581,60 +581,6 @@ function checkbox_banco($nome, $variavel, $modificadoRadio,$modificadoCampo, $mo
 	return $campo . $data_input;
 }
 
-function checkbox_banco($nome, $variavel, $modificadoRadio,$modificadoCampo, $modificadoCampo2, $tamanho) {
-	$data_input = '<script>
-	const radioSim = document.getElementById("sim");
-	const radioNao = document.getElementById("nao");
-	const campo = document.getElementById("' . $variavel . '");
-	const campo2 = document.getElementById("limiteHoras");
-	if("'.$modificadoRadio.'" === "sim"){
-		radioSim.checked = true;
-	}
-	else {
-		radioNao.checked = true;
-	}
-	if (radioSim.checked) {
-			campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
-			campo2.style.display = ""; 
-	}
-	// Adicionando um ouvinte de eventos aos elementos de rádio
-	radioSim.addEventListener("change", function() {
-		if (radioSim.checked) {
-			campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
-			campo2.style.display = ""; 
-		}
-	});
-	radioNao.addEventListener("change", function() {
-	if (radioNao.checked) {
-		campo.style.display = "none"; // Oculta o campo quando "Não Mostrar Campo" é selecionado
-		campo2.style.display = "none"; 
-	}
-	});
-	</script>';
-	//  Utiliza regime de banco de horas?
-	$campo = '
-	<div class="col-sm-' . $tamanho . ' margin-bottom-5">
-		<label><b>' . $nome . '</b></label><br>
-		<label class="radio-inline">
-			<input type="radio" id="sim" name="banco" value="sim"> Sim
-		</label>
-		<label class="radio-inline">
-			<input type="radio" id="nao" name="banco" value="nao"> Não
-		</label>
-	</div>
-	<div id="' . $variavel . '" class="col-sm-' . $tamanho . ' margin-bottom-5" style="display: none;">
-			<label><b>Quandidade de Dias:</b></label>
-			<input class="form-control input-sm" type="number" value="'.$modificadoCampo.'" id="outroCampo" name="quandDias" autocomplete="off">
-	</div>
-	<div id="limiteHoras" class="col-sm-' . $tamanho . ' margin-bottom-5" style="display: none;">
-		<label><b>Quandidade de Horas Limite:</b></label>
-		<input class="form-control input-sm" type="number" value="'.$modificadoCampo2.'" id="outroCampo" name="quandHoras" autocomplete="off">
-	</div>
-	';
-
-	return $campo . $data_input;
-}
-
 
 function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 	// $variavel_limpa = str_replace(array("[","]"),array("\\[","\\]"),$variavel);	
@@ -925,27 +871,25 @@ function combo_bd($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra
 
 }
 
-function arquivosParametro($nome,$idParametro,$arquivos){	
-    global $CONTEX;
+function arquivosParametro($nome,$idParametro,$arquivos){
 
 	$arquivo_list = '';
 	if (!empty($arquivos)) {
 		foreach($arquivos as $arquivo){
-		    $dataHoraOriginal = $arquivo['doc_tx_dataCadastro'];
-		    $dataHora = new DateTime($dataHoraOriginal);
-		    $dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
+			$dataHoraOriginal = $arquivo['doc_tx_dataCadastro'];
+			$dataHora = new DateTime($dataHoraOriginal);
+			$dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
 			$arquivo_list .= "
 			<tr role='row' class='odd'>
 			<td>$arquivo[doc_tx_nome]</td>
 			<td>$arquivo[doc_tx_descricao]</td>
 			<td>$dataHoraFormatada</td>
 			<td>
-                <a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idParametro,'$arquivo[doc_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
-            </td>
+				<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idParametro,'$arquivo[doc_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
+			</td>
 			<td>
-                <a style='color: red;' onclick=\"javascript:remover_arquivo($idParametro,$arquivo[doc_nb_id],'$arquivo[doc_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
-             </td>
-			";
+				<a style='color: red;' onclick=\"javascript:remover_arquivo($idParametro,$arquivo[doc_nb_id],'$arquivo[doc_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
+			</td>";
 		}
 	}
 
@@ -954,9 +898,9 @@ function arquivosParametro($nome,$idParametro,$arquivos){
 		<div class="portlet light ">
 			<div class="portlet-title">
 			<div class="caption">
-		        <span class="caption-subject font-dark bold uppercase">'.$nome.'</span>
-        	</div>
-        	</div>
+				<span class="caption-subject font-dark bold uppercase">'.$nome.'</span>
+			</div>
+			</div>
 			<div class="portlet-body">
 				<table id="contex-grid" class="table compact table-striped table-bordered table-hover dt-responsive"
 					width="100%" id="sample_2">
@@ -987,55 +931,53 @@ function arquivosParametro($nome,$idParametro,$arquivos){
 					</a>
 					</td>
 					</thbody>
-                    </table>
-                </div>
-            </div>
-    ';
+					</table>
+	';
 
-    $modal = "
-    <div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
-        <div class='modal-dialog' role='document'>
-            <div class='modal-content'>
-                <div class='modal-header'>
-                <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>
-                <h4 class='modal-title' id='myModalLabel'>Upload Arquivo</h4>
-                </div>
-                <div class='modal-body'>
-                <form name='form_enviar_arquivo' method='post' action='cadastro_parametro.php' enctype='multipart/form-data'>
-                    <div class='form-group'>
-                        <label for='file-name' class='control-label'>Nome do arquivo:</label>
-                        <input type='text' class='form-control' name='file-name'>
-                    </div>
-                    <div class='form-group'>
-                        <label for='description-text' class='control-label'>Descrição:</label>
-                        <textarea class='form-control' name='description-text'></textarea>
-                    </div>
+	$modal = "
+	<div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
+		<div class='modal-dialog' role='document'>
+			<div class='modal-content'>
+				<div class='modal-header'>
+				<button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>
+				<h4 class='modal-title' id='myModalLabel'>Upload Arquivo</h4>
+				</div>
+				<div class='modal-body'>
+				<form name='form_enviar_arquivo' method='post' action='cadastro_parametro.php' enctype='multipart/form-data'>
 					<div class='form-group'>
-                        <label for='file' class='control-label'>Arquivo:</label>
-                        <input type='file' class='form-control' name='file'>
-                    </div>
-                    
-                    <input type='hidden' name='acao' value='enviar_documento'>
-                    
-                    <input type='hidden' name='idParametro' value='$idParametro'>
-                </form>
-                </div>
-                <div class='modal-footer'>
-                    <button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
-                    <button type='button' class='btn btn-primary' data-dismiss='modal' 
+						<label for='file-name' class='control-label'>Nome do arquivo:</label>
+						<input type='text' class='form-control' name='file-name'>
+					</div>
+					<div class='form-group'>
+						<label for='description-text' class='control-label'>Descrição:</label>
+						<textarea class='form-control' name='description-text'></textarea>
+					</div>
+					<div class='form-group'>
+						<label for='file' class='control-label'>Arquivo:</label>
+						<input type='file' class='form-control' name='file'>
+					</div>
+					
+					<input type='hidden' name='acao' value='enviar_documento'>
+					
+					<input type='hidden' name='idParametro' value='$idParametro'>
+				</form>
+				</div>
+				<div class='modal-footer'>
+					<button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
+					<button type='button' class='btn btn-primary' data-dismiss='modal' 
 					onclick=\"javascript:enviar_arquivo();\">Salvar arquivo</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
+				</div>
+			</div>
+		</div>
+	</div>
+	
 	<script type='text/javascript'>
 	function enviar_arquivo() {
-	    document.form_enviar_arquivo.submit();
+		document.form_enviar_arquivo.submit();
 	}
 	
 	</script>
-    ";
+	";
 
 		return $tabela.$modal;
 

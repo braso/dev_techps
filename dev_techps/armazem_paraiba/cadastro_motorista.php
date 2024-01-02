@@ -258,17 +258,6 @@
 			}
 		}
 
-		// if($_FILES[arquivo][name]!=''){
-		// 	if(!is_dir("arquivos/funcionário/$id")){
-		// 		mkdir("arquivos/funcionário/$id");
-		// 	}
-
-		// 	$arq=enviar('arquivo',"arquivos/funcionário/$id/");
-		// 	if($arq){
-		// 		atualizar('entidade',array(enti_tx_arquivo),array($arq),$id);
-		// 	}
-		// }
-
 		$_POST['id'] = $id;
 		index();
 		exit;
@@ -595,29 +584,6 @@
 		<?php
 
 
-		// if($a_mod[enti_nb_id] > 0 && $a_mod[enti_tx_arquivo] != ''){
-		// 	echo "<br>";
-		// 	echo "<div class=portlet-title>";
-		// 	echo"<span class='caption-subject font-dark bold uppercase' style='font-size:16px'> ARQUIVOS</span>";
-		// 	echo"<hr>";
-		// 	echo"</div>";
-		// 	if ($handle = opendir("arquivos/funcionário/$a_mod[enti_nb_id]")) {
-
-		// 		while (false !== ($arquivo = readdir($handle))) {
-
-		// 			if ($arquivo != "." && $arquivo != "..") {
-
-		// 				$c2[] = texto("Arquivo ".++$contador,"<a href='arquivos/funcionário/$a_mod[enti_nb_id]/$arquivo' target=_blank>".$arquivo."</a> <a class='glyphicon glyphicon-remove' onclick='javascript:remover_arquivo(\"$a_mod[enti_nb_id]\",\"excluir_arquivo_paciente\",\"$arquivo\")'></a>",6);
-		// 			}
-		// 		}
-
-		// 		closedir($handle);
-		// 		linha_form($c2);
-
-		// 	}
-
-		// }
-
 		fecha_form($b);
 
 		rodape();
@@ -710,7 +676,7 @@
 		$c[] = combo('Ocupação', 'busca_ocupacao', $_POST['busca_ocupacao'], 2, array("", "Motorista")); //TODO PRECISO SABER QUAIS AS OCUPACOES
 		$c[] = combo('Convenção Padrão', 'busca_padrao', $_POST['busca_padrao'], 2, array('Todos', 'Sim', 'Não'));
 		$c[] = combo_bd('!Parâmetros da Jornada', 'busca_parametro', $_POST['busca_parametro'], 6, 'parametro');
-		$c[] = combo('Status', 'busca_status', $_POST['busca_status'], 2, array('Todos', 'Ativo', 'Inativo'));
+		$c[] = combo('Status', 'busca_status', $_POST['busca_status'], 2, ['Todos', 'Ativo', 'Inativo']);
 
 		$b[] = botao('Buscar', 'index');
 		$b[] = botao('Inserir', 'layout_motorista');
@@ -718,28 +684,6 @@
 		abre_form('Filtro de Busca');
 		linha_form($c);
 		fecha_form($b);
-
-		
-		/*
-		$temp_sql = '';
-		if(	(isset($_POST('enti_tx_jornadaSemanal')) 		&& !empty($_POST('enti_tx_jornadaSemanal')))
-		|| (isset($_POST('enti_tx_jornadaSabado')) 		&& !empty($_POST('enti_tx_jornadaSabado')))
-		|| (isset($_POST('enti_tx_percentualHE')) 			&& !empty($_POST('enti_tx_percentualHE')))
-		|| (isset($_POST('enti_tx_percentualSabadoHE')) 	&& !empty($_POST('enti_tx_percentualSabadoHE')))
-		|| (isset($_POST('enti_nb_parametro')) 			&& !empty($_POST('enti_nb_parametro')))){
-			$temp_sql = 
-				", CASE
-					WHEN (".(!empty($_POST('enti_tx_jornadaSemanal'))? "para_tx_jornadaSemanal != '".$_POST('enti_tx_jornadaSemanal')."' OR": '')."
-						".(!empty($_POST('enti_tx_jornadaSabado'))? "para_tx_jornadaSabado != '".$_POST('enti_tx_jornadaSabado')."' OR": '')."
-						".(!empty($_POST('enti_tx_percentualHE'))? "para_tx_percentualHE != '".$_POST('enti_tx_percentualHE')."' OR": '')."
-						".(!empty($_POST('enti_tx_percentualSabadoHE'))? "para_tx_percentualSabadoHE != '".$_POST('enti_tx_percentualSabadoHE')."' OR": '')."
-						".(!empty($_POST('enti_nb_parametro'))? "empr_nb_parametro != '".$_POST('enti_nb_parametro')."'": '').")
-					THEN 'Não'
-					ELSE 'Sim'
-				END AS enti_tx_ehPadrao"
-			;
-		}
-		*/
 
 		$sql = (
 			"SELECT * FROM entidade 
