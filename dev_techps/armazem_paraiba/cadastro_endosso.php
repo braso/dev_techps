@@ -122,6 +122,11 @@
 		$motorista = carrega_array($sql);
 
 		//Conferir se tem espaço entre o último endosso e o endosso atual{
+			//Conferir se é o primeiro endosso que está sendo registrado{
+				$temEndosso = mysqli_fetch_all(query("SELECT * FROM endosso WHERE endo_tx_matricula = '".$motorista['enti_tx_matricula']."';"), MYSQLI_ASSOC);
+				$temEndosso = (count($temEndosso) > 0);
+			//}
+
 			$ultimoEndosso = mysqli_fetch_all(
 				query(
 					"SELECT * FROM `endosso`
@@ -133,12 +138,16 @@
 				),
 				MYSQLI_ASSOC
 			)[0];
-			$ultimoEndosso['endo_tx_ate'] = DateTime::createFromFormat('Y-m-d', $ultimoEndosso['endo_tx_ate']);
-			$dataDe = DateTime::createFromFormat('Y-m-d', $_POST['data_de']);
-			$qtdDias = date_diff($ultimoEndosso['endo_tx_ate'], $dataDe);
-			if($qtdDias->d > 1){
-				$showError = True;
-				$error_msg = 'Há um tempo não endossado entre '.$ultimoEndosso['endo_tx_ate']->format('d/m/Y').' e '.$dataDe->format('d/m/Y').'.  ';
+			if(count($ultimoEndosso) > 0 && $temEndosso){ //Se possui um último Endosso
+				$ultimoEndosso['endo_tx_ate'] = DateTime::createFromFormat('Y-m-d', $ultimoEndosso['endo_tx_ate']);
+				$dataDe = DateTime::createFromFormat('Y-m-d', $_POST['data_de']);
+				$qtdDias = date_diff($ultimoEndosso['endo_tx_ate'], $dataDe);
+				if($qtdDias->d > 1){
+					$showError = True;
+					$error_msg = 'Há um tempo não endossado entre '.$ultimoEndosso['endo_tx_ate']->format('d/m/Y').' e '.$dataDe->format('d/m/Y').'.  ';
+				}
+			}else{ //Se é o primeiro endosso sendo feito para este motorista
+				$ultimoEndosso['endo_tx_saldo'] = '00:00';
 			}
 		//}
 
