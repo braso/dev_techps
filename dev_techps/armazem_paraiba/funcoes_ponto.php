@@ -572,11 +572,13 @@
     }
 
 	function calcJorPre($data, $jornadas, $abono = null){
-		if (date('w', strtotime($data)) == '6') { //SABADOS
-			$jornadaPrevista = $jornadas['sabado'];
-		} elseif (date('w', strtotime($data)) == '0' || isset($jornadas['feriado'])) { //DOMINGOS OU FERIADOS
+		//$jornadas = ['sabado' => string, 'semanal' => string, 'feriado' => bool]
+
+		if (date('w', strtotime($data)) == '0' || $jornadas['feriado']) { 	//DOMINGOS OU FERIADOS
 			$jornadaPrevista = '00:00';
-		} else {
+		}elseif (date('w', strtotime($data)) == '6') { 						//SABADOS
+			$jornadaPrevista = $jornadas['sabado'];
+		} else {															//DIAS DE SEMANA
 			$jornadaPrevista = $jornadas['semanal'];
 		}
 
