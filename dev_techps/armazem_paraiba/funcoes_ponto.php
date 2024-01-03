@@ -777,6 +777,7 @@
 				'feriado'=> ($stringFeriado != ''? True: null)
 			];
 			[$jornadaPrevistaOriginal, $jornadaPrevista] = calcJorPre($data, $jornadas, $aAbono['abon_tx_abono']);
+
 			$aRetorno['jornadaPrevista'] = $jornadaPrevista;
 		//}
 
@@ -888,17 +889,21 @@
 		//FIM ADICIONAL NOTURNO
 
 		//HORAS EXTRAS{
-			if ($stringFeriado != '') {						//Se for feriado
-			    $iconeFeriado =  "<a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
-			    $aRetorno['he100'] = $iconeFeriado.$aRetorno['diffSaldo'];
-		    }elseif(
-				  $aRetorno['jornadaPrevista'] == '00:00' || 
-				  ($aRetorno['diffSaldo'][0] != '-' && $aRetorno['diffSaldo'] >= $aParametro["para_tx_HorasEXExcedente"])
-			  ){	//Se a jornada prevista = 0 (domingos e feriados) ou saldo >= limite de horas extras
-			    $aRetorno['he100'] = $aRetorno['diffSaldo'];
-		    }elseif($aRetorno['diffSaldo'][0] != '-' && $aRetorno['diffSaldo']<$aParametro["para_tx_HorasEXExcedente"]){ //Se saldo < limite de horas extras
-			    $aRetorno['he50'] = $aRetorno['diffSaldo'];
-		    }
+			$aRetorno['he100'] = '';
+			if($aRetorno['diffSaldo'][0] != '-'){ 	//Se o saldo for positivo
+				if(	$aRetorno['jornadaPrevista'] == '00:00' || $aRetorno['diffSaldo'] >= $aParametro["para_tx_HorasEXExcedente"]){	//Se a jornada prevista = 0 (domingos e feriados) ou saldo >= limite de horas extras
+					if ($stringFeriado != '') {		//Se for feriado
+						$iconeFeriado =  "<a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
+						$aRetorno['he100'] .= $iconeFeriado;
+					}
+					$aRetorno['he100'] .= $aRetorno['diffSaldo'];
+				
+				}elseif($aRetorno['diffSaldo']<$aParametro["para_tx_HorasEXExcedente"]){ //Se saldo < limite de horas extras
+				
+					$aRetorno['he50'] .= $aRetorno['diffSaldo'];
+				
+				}
+			}
 		//}
 
 		//MÁXIMA DIREÇÃO CONTÍNUA{
