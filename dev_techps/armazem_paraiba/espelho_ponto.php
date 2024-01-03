@@ -3,7 +3,7 @@
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 		if(!isset($_GET['debug'])){
-			echo '<div style="text-align:center; vertical-align: center; height: 100%; padding-top: 20%">Está página está em desenvolvimento.</div>';
+			echo '<div style="text-align:center; vertical-align: center; height: 100%; padding-top: 20%">Esta página está em desenvolvimento.</div>';
 			exit;
 		}
 	//*/
