@@ -3,86 +3,85 @@
 
 	global $CONTEX, $conn, $version;
 	function cabecalho($nome_pagina,$foco=0,$relatorio=0){
-		global $CONTEX,$conn;
-		if(!$_SESSION['user_nb_id']){
+	global $CONTEX,$conn;
 
-			echo "<meta http-equiv='refresh' content='0; url=".$CONTEX['path']."/index.php' />";
-			exit;
-		}
+	if(!$_SESSION['user_nb_id']){
 
-		global $CONTEX;
-		?>
-			<!DOCTYPE html>
-			<!--[if IE 8]> <html lang="pt-br" class="ie8 no-js"> <![endif]-->
-			<!--[if IE 9]> <html lang="pt-br" class="ie9 no-js"> <![endif]-->
-			<!--[if !IE]><!-->
-			<html lang="pt-br">
-				<!--<![endif]-->
-				<!-- INICIO HEAD -->
+		echo "<meta http-equiv='refresh' content='0; url=".$CONTEX['path']."/index.php' />";
+		exit;
+	}
 
-				<head>
-					<meta charset="UTF-8" />
-					<title>TechPS</title>
-					<meta http-equiv="X-UA-Compatible" content="IE=edge">
-					<meta content="width=device-width, initial-scale=1" name="viewport" />
-					<meta content="" name="description" />
-					<meta content="" name="author" />
-					<!-- INICIO GLOBAL MANDATORY STYLES -->
-					<script src="/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
+	global $CONTEX;
+	?>
+		<!DOCTYPE html>
+		<!--[if IE 8]> <html lang="pt-br" class="ie8 no-js"> <![endif]-->
+		<!--[if IE 9]> <html lang="pt-br" class="ie9 no-js"> <![endif]-->
+		<!--[if !IE]><!-->
+		<html lang="pt-br">
+			<!--<![endif]-->
+			<!-- INICIO HEAD -->
 
-					<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/css/select2.min.css" rel="stylesheet" />
-					<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/js/select2.min.js"></script>
-					<script src="/contex20/assets/global/plugins/select2/js/i18n/pt-BR.js" type="text/javascript"></script>
+			<head>
+				<meta charset="UTF-8" />
+				<title>TechPS</title>
+				<meta http-equiv="X-UA-Compatible" content="IE=edge">
+				<meta content="width=device-width, initial-scale=1" name="viewport" />
+				<meta content="" name="description" />
+				<meta content="" name="author" />
+				<!-- INICIO GLOBAL MANDATORY STYLES -->
+				<script src="/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
 
-					<script src="/contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js" type="text/javascript"></script>
-					<script src="/contex20/assets/global/plugins/jquery-inputmask/maskMoney.js" type="text/javascript"></script>
-					<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css" />
-					<link href="/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
-					<link href="/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet" type="text/css" />
-					<link href="/contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
-					<link href="/contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
-					<link href="/contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet" type="text/css" />
-					<!-- FIM GLOBAL MANDATORY STYLES -->
+				<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/css/select2.min.css" rel="stylesheet" />
+				<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/js/select2.min.js"></script>
+				<script src="/contex20/assets/global/plugins/select2/js/i18n/pt-BR.js" type="text/javascript"></script>
 
-					<link href="/contex20/assets/global/plugins/datatables/datatables.min.css" rel="stylesheet" type="text/css" />
-					<link href="/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css" rel="stylesheet" type="text/css" />
+				<script src="/contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js" type="text/javascript"></script>
+				<script src="/contex20/assets/global/plugins/jquery-inputmask/maskMoney.js" type="text/javascript"></script>
+				<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css" />
+				<link href="/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+				<link href="/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet" type="text/css" />
+				<link href="/contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+				<link href="/contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
+				<link href="/contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet" type="text/css" />
+				<!-- FIM GLOBAL MANDATORY STYLES -->
 
-					<link href="/contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
-					<link href="/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet" type="text/css" />
+				<link href="/contex20/assets/global/plugins/datatables/datatables.min.css" rel="stylesheet" type="text/css" />
+				<link href="/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css" rel="stylesheet" type="text/css" />
 
-					<!-- INICIO TEMA GLOBAL STYLES -->
-					<link href="/contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components" type="text/css" />
-					<link href="/contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
-					<!-- FIM TEMA GLOBAL STYLES -->
-					<!-- INICIO TEMA LAYOUT STYLES -->
-					<link href="/contex20/assets/layout/css/layout.min.css" rel="stylesheet" type="text/css" />
-					<link href="/contex20/assets/layout/css/themes/default.min.css" rel="stylesheet" type="text/css" id="style_color" />
-					<link href="/contex20/assets/layout/css/custom.min.css" rel="stylesheet" type="text/css" />
-					<!-- FIM TEMA LAYOUT STYLES -->
-					<link rel="apple-touch-icon" sizes="180x180" href="/contex20/img/favicon/apple-touch-icon.png">
-					<link rel="icon" type="image/png" sizes="32x32" href="/contex20/img/favicon/favicon-32x32.png">
-					<link rel="icon" type="image/png" sizes="16x16" href="/contex20/img/favicon/favicon-16x16.png">
-					<link rel="shortcut icon" type="image/x-icon" href="/contex20/img/favicon/favicon-32x32.png?v=2">
-					<link rel="manifest" href="/contex20/img/favicon/site.webmanifest">
-					<script type="text/javascript">
+				<link href="/contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
+				<link href="/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet" type="text/css" />
 
-						function contex_foco(elemento){
-							var campoFoco=document.forms[0].elements[<?=$foco?>];
-							if(campoFoco != null)
-								campoFoco.focus();
+				<!-- INICIO TEMA GLOBAL STYLES -->
+				<link href="/contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components" type="text/css" />
+				<link href="/contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
+				<!-- FIM TEMA GLOBAL STYLES -->
+				<!-- INICIO TEMA LAYOUT STYLES -->
+				<link href="/contex20/assets/layout/css/layout.min.css" rel="stylesheet" type="text/css" />
+				<link href="/contex20/assets/layout/css/themes/default.min.css" rel="stylesheet" type="text/css" id="style_color" />
+				<link href="/contex20/assets/layout/css/custom.min.css" rel="stylesheet" type="text/css" />
+				<!-- FIM TEMA LAYOUT STYLES -->
+				<link rel="apple-touch-icon" sizes="180x180" href="/contex20/img/favicon/apple-touch-icon.png">
+				<link rel="icon" type="image/png" sizes="32x32" href="/contex20/img/favicon/favicon-32x32.png">
+				<link rel="icon" type="image/png" sizes="16x16" href="/contex20/img/favicon/favicon-16x16.png">
+				<link rel="shortcut icon" type="image/x-icon" href="/contex20/img/favicon/favicon-32x32.png?v=2">
+				<link rel="manifest" href="/contex20/img/favicon/site.webmanifest">
+				<script type="text/javascript">
 
-						}
+					function contex_foco(elemento){
+						var campoFoco=document.forms[0].elements[<?=$foco?>];
+						if(campoFoco != null)
+							campoFoco.focus();
 
-					</script>
-				</head>
-				<!-- FIM HEAD -->
+					}
 
-				<!-- <body style="zoom:100%;" class="page-container-bg-solid page-boxed"> -->
-				<body onload="contex_foco()" style="zoom:100%;" class="page-container-bg-solid page-boxed">
+				</script>
+			</head>
+			<!-- FIM HEAD -->
+
+			<!-- <body style="zoom:100%;" class="page-container-bg-solid page-boxed"> -->
+			<body onload="contex_foco()" style="zoom:100%;" class="page-container-bg-solid page-boxed">
 		<?
 		if($relatorio==0){
-
-
 			?>
 					<!-- INICIO HEADER -->
 					<div class="page-header">
