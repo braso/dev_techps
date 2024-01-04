@@ -565,9 +565,12 @@
 			$baseDate = DateTime::createFromFormat('Y-m-d H:i:s', '1970-01-01 00:00:00');
 		}
     	$res = date_diff($baseDate, $dateTime);
+		$monthDays = [31, 28+($res->y%4 == 0? 1: 0), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
         $res = 
         	($res->invert? 1:-1)*
 			(
+				$res->y*24*60*60*30*365+
+				$res->m*24*60*60*$monthDays[$res->m]+
 				$res->d*24*60*60+
 				$res->h*60*60+
 				$res->i*60+
