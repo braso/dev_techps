@@ -1,5 +1,8 @@
 <?php
-
+	/* Modo debug
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
+	//*/	
 	global $CONTEX,$conn;
 
 	session_start();
@@ -14,7 +17,7 @@
 	/* INICIO CONEXAO BASE DE DADOS */
 
 	$servername = "localhost";
-	if(is_int(strpos($_SERVER["REQUEST_URI"], 'localhost'))){
+	if($_SERVER["SERVER_NAME"] == "localhost"){
 		//Desenvolvedor, insira suas informações de BD local aqui
 		$username = "root";
 		$password = null;
