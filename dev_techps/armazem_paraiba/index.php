@@ -1,7 +1,17 @@
 <?
-
+	// Modo debug
+		//	ini_set('display_errors', 1);
+		//error_reporting(E_ALL);
+	
 include "conecta.php";
 
+if(date('H')>=6 && date("H")<=12){
+	$turno='Manhã';
+}elseif(date('H')>=13 && date("H")<=18){
+	$turno='Tarde';
+}else{
+	$turno='Noite';
+}
 
 if($_GET['user'] != '' && $_GET['password'] != '' ){
     
@@ -31,117 +41,31 @@ if($_GET['user'] != '' && $_GET['password'] != '' ){
 					$_SESSION['user_tx_foto'] = '/contex20/img/user.png';
 				}
 			}
+
+			if(!isset($_SESSION['horaEntrada'])){
+				$_SESSION['horaEntrada'] = date('H:i');
+			}
+
+			cabecalho("Bem-Vindo ao sistema TechPS, $a[user_tx_nome]. Período da $turno iniciado às ".$_SESSION['horaEntrada']);
 			
-			
-
-
-
-			// if(date('H')>=6 && date("H")<=12)
-
-			// 	$turno='Manhã';
-
-			// elseif(date('H')>=13 && date("H")<=18)
-
-			// 	$turno='Tarde';
-
-			// else
-
-			// 	$turno='Noite';
-
-
-
-			// $sql2=query("SELECT pont_tx_entrada,pont_tx_turno FROM ponto WHERE pont_tx_status != 'inativo' AND pont_tx_data = '".date("Y-m-d")."' 
-
-			// 	AND pont_tx_turno = '$turno' AND pont_nb_user = '$_SESSION[user_nb_id]' LIMIT 1");
-
-			// if(num_linhas($sql2)==0){
-
-			// 	$dataEntrada=date("Y-m-d H:i:s");
-
-			// 	$horaEntrada=date("H:i:s");
-
-			// 	inserir('ponto',
-
-			// 		array(pont_nb_user,pont_tx_turno,pont_tx_data,pont_tx_entrada,pont_tx_status),
-
-			// 		array($_SESSION[user_nb_id],$turno,$dataEntrada,$dataEntrada,ativo)
-
-			// 	);
-
-			// }else{
-
-			// 	$a_ponto=carrega_array($sql2);
-
-			// 	$horaEntrada=substr($a_ponto[pont_tx_entrada],-8);
-
-			// 	$turno = $a_ponto[pont_tx_turno];
-
-			// }
-
-
-
-			cabecalho("Bem-Vindo ao sistema TechPS, $a[user_tx_nome]. Período da $turno iniciado às ".($horaEntrada? $horaEntrada: '--:--'));
-			
-			
-// 			cabecalho("Bem-Vindo ao sistema TechPS, $a[user_tx_login]");
-			
-// 			$sql = query("SELECT `empr_tx_cnpj` FROM `empresa` WHERE empr_tx_status != 'inativo'");
-// 			$a =  mysqli_fetch_all($sql, MYSQLI_ASSOC);
-// // 			carrega_array($sql);
-            
-
-			
-
 			rodape();
 			exit;
 
-
-
 		}else{
-
 			header("Location: https://braso.mobi/dev_techps/index2.php?erro=1");
 			exit;
-
 		}
 
-}elseif($_SESSION[user_nb_id]>0){
-
-
-
-	if(date('H')>=6 && date("H")<=12)
-
-		$turno='Manhã';
-
-	elseif(date('H')>=13 && date("H")<=18)
-
-		$turno='Tarde';
-
-	else
-
-		$turno='Noite';
-
-
+}elseif($_SESSION['user_nb_id']>0){
 
 	// $sql2=query("SELECT pont_tx_entrada,pont_tx_turno FROM ponto WHERE pont_tx_status != 'inativo' AND pont_tx_data = '".date("Y-m-d")."' 
-
 	// 			AND pont_tx_turno = '$turno' AND pont_nb_user = '$_SESSION[user_nb_id]' LIMIT 1");
 
-
-
 	// $a_ponto=carrega_array($sql2);
-
 	// $horaEntrada=substr($a_ponto[pont_tx_entrada],-8);
-
 	// $turno = $a_ponto[pont_tx_turno];
 
-
-
 	cabecalho("Bem-Vindo ao sistema TechPS");
-	
-
-
-
-
 
 	rodape();
 

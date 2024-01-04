@@ -159,6 +159,7 @@ if($col < 1)
 <form id='contex_icone_form' method="post" target="" action="">
 	<input type="hidden" name="id" value="0">
 	<input type="hidden" name="acao" value="sem_acao">
+	<input type="hidden" name="just" value="">
 	<input type="hidden" id="hidden">
 </form>
 <style type="text/css">
@@ -166,7 +167,7 @@ if($col < 1)
 	td { font-size: 10px !important; }
 </style>
 <script type="text/javascript">
-	function contex_icone(id,acao,campos='',valores='',target='',msg='',action=''){
+	function contex_icone(id,acao,campos='',valores='',target='',msg='',action='',just){
 		console.log(target);
 		if(msg){
 			if(confirm(msg)){
@@ -175,6 +176,7 @@ if($col < 1)
 				form.action=action;
 				form.id.value=id;
 				form.acao.value=acao;
+				form.just.value=just;
 				if(campos){
 					form.hidden.value=valores;
 					form.hidden.name=campos;

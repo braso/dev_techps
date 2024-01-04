@@ -368,6 +368,7 @@
 
 		$saldoDiario = explode(':', $saldoDiario);
 		$saldoEmMinutos = intval($saldoDiario[0])*60+($saldoDiario[0][0] == '-'? -1: 1)*intval($saldoDiario[1]);
+
 		if($saldoEmMinutos < -($tolerancia)){
 			$cor = 'red';
 		}elseif($saldoEmMinutos > $tolerancia){
@@ -379,7 +380,12 @@
 		if ($_SESSION['user_tx_nivel'] == 'Motorista') {
 			$retorno = '<span><i style="color:'.$cor.';" class="fa fa-circle"></i></span>';
 		} else {
-			$retorno = '<a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto(\''.$data.'\', \''.$idMotorista.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
+			$endossado = mysqli_fetch_all(query('SELECT * FROM endosso where \''.$data.'\' BETWEEN endo_tx_de AND endo_tx_ate'), MYSQLI_ASSOC);
+			if(count($endossado) > 0){
+				$retorno = '<a title="Ajuste de Ponto (endossado)" href="#" onclick=""><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
+			}else{
+				$retorno = '<a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto(\''.$data.'\', \''.$idMotorista.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
+			}
 		}
 		return $retorno;
 	}
@@ -559,9 +565,12 @@
 			$baseDate = DateTime::createFromFormat('Y-m-d H:i:s', '1970-01-01 00:00:00');
 		}
     	$res = date_diff($baseDate, $dateTime);
+		$monthDays = [31, 28+($res->y%4 == 0? 1: 0), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
         $res = 
         	($res->invert? 1:-1)*
 			(
+				$res->y*24*60*60*30*365+
+				$res->m*24*60*60*$monthDays[$res->m]+
 				$res->d*24*60*60+
 				$res->h*60*60+
 				$res->i*60+
@@ -571,11 +580,13 @@
     }
 
 	function calcJorPre($data, $jornadas, $abono = null){
-		if (date('w', strtotime($data)) == '6') { //SABADOS
-			$jornadaPrevista = $jornadas['sabado'];
-		} elseif (date('w', strtotime($data)) == '0' || isset($jornadas['feriado'])) { //DOMINGOS OU FERIADOS
+		//$jornadas = ['sabado' => string, 'semanal' => string, 'feriado' => bool]
+
+		if (date('w', strtotime($data)) == '0' || $jornadas['feriado']) { 	//DOMINGOS OU FERIADOS
 			$jornadaPrevista = '00:00';
-		} else {
+		}elseif (date('w', strtotime($data)) == '6') { 						//SABADOS
+			$jornadaPrevista = $jornadas['sabado'];
+		} else {															//DIAS DE SEMANA
 			$jornadaPrevista = $jornadas['semanal'];
 		}
 
@@ -774,6 +785,7 @@
 				'feriado'=> ($stringFeriado != ''? True: null)
 			];
 			[$jornadaPrevistaOriginal, $jornadaPrevista] = calcJorPre($data, $jornadas, $aAbono['abon_tx_abono']);
+
 			$aRetorno['jornadaPrevista'] = $jornadaPrevista;
 		//}
 
@@ -885,17 +897,21 @@
 		//FIM ADICIONAL NOTURNO
 
 		//HORAS EXTRAS{
-			if ($stringFeriado != '') {						//Se for feriado
-			    $iconeFeriado =  "<a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
-			    $aRetorno['he100'] = $iconeFeriado.$aRetorno['diffSaldo'];
-		    }elseif(
-				  $aRetorno['jornadaPrevista'] == '00:00' || 
-				  ($aRetorno['diffSaldo'][0] != '-' && $aRetorno['diffSaldo'] >= $aParametro["para_tx_HorasEXExcedente"])
-			  ){	//Se a jornada prevista = 0 (domingos e feriados) ou saldo >= limite de horas extras
-			    $aRetorno['he100'] = $aRetorno['diffSaldo'];
-		    }elseif($aRetorno['diffSaldo'][0] != '-' && $aRetorno['diffSaldo']<$aParametro["para_tx_HorasEXExcedente"]){ //Se saldo < limite de horas extras
-			    $aRetorno['he50'] = $aRetorno['diffSaldo'];
-		    }
+			$aRetorno['he100'] = '';
+			if($aRetorno['diffSaldo'][0] != '-'){ 	//Se o saldo for positivo
+				if(	$aRetorno['jornadaPrevista'] == '00:00' || $aRetorno['diffSaldo'] >= $aParametro["para_tx_HorasEXExcedente"]){	//Se a jornada prevista = 0 (domingos e feriados) ou saldo >= limite de horas extras
+					if ($stringFeriado != '') {		//Se for feriado
+						$iconeFeriado =  "<a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
+						$aRetorno['he100'] .= $iconeFeriado;
+					}
+					$aRetorno['he100'] .= $aRetorno['diffSaldo'];
+				
+				}elseif($aRetorno['diffSaldo']<$aParametro["para_tx_HorasEXExcedente"]){ //Se saldo < limite de horas extras
+				
+					$aRetorno['he50'] .= $aRetorno['diffSaldo'];
+				
+				}
+			}
 		//}
 
 		//MÁXIMA DIREÇÃO CONTÍNUA{
