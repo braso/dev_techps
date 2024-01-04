@@ -28,7 +28,7 @@
 				<td style="text-align: left;"><b>Empresa:</b> <?= $aEmpresa['empr_tx_nome'] ?></td>
 				<td style="text-align: left;"><b>CNPJ:</b> <?= $aEmpresa['empr_tx_cnpj'] ?></td>
 				<td colspan="2" style="text-align: left;"><b>End.</b> <?= "$enderecoEmpresa, $aEmpresa[cida_tx_nome]/$aEmpresa[cida_tx_uf], $aEmpresa[empr_tx_cep]" ?></td>
-				<td style="text-align: left;"><b>Período:</b> <?= "$primeiroDia à $ultimoDia" ?></td>
+				<td style="text-align: left;"><b>Período:</b> <?= sprintf("%02d/%04d", $month, $year) ?></td>
 				<td style="text-align: left;"><b>Emissão Doc.:</b> <?= $aEndosso['endo_tx_dataCadastro'] . " (UTC-3)" ?></td>
 			</tr>
 			
@@ -46,19 +46,19 @@
 		<thead>
 			<tr>
 				<th colspan="2">PERÍODO</th>
-				<th colspan="4">JORNADA DE TRABALHO</th>
+				<th colspan="4">REGISTROS DE JORNADA</th>
 				<th colspan="4">INTERVALOS</th>
-				<th colspan="3">JORNADA EFETIVA</th>
+				<th colspan="3">JORNADA</th>
 				<th colspan="5">APURAÇÃO DO CONTROLE DA JORNADA</th>
 				<!-- <th>TRATAMENTO</th> -->
 			</tr>
 			<tr>
 				<th>DATA</th>
 				<th>DIA</th>
-				<th>INÍCIO JORNADA</th>
-				<th>INÍCIO REFEIÇÃO</th>
-				<th>FIM REFEIÇÃO</th>
-				<th>FIM JORNADA</th>
+				<th>INÍCIO</th>
+				<th>INÍCIO REF.</th>
+				<th>FIM REF.</th>
+				<th>FIM</th>
 				<th>REFEIÇÃO</th>
 				<th>ESPERA</th>
 				<th>DESCANSO</th>
@@ -66,11 +66,12 @@
 				<th>PREVISTA</th>
 				<th>EFETIVA</th>
 				<th>MDC</th>
-				<th>INTERSTÍCIO DIÁRIO/SEMANAL</th>
+				<th>INTERSTÍCIO</th>
 				<th>HE 50%</th>
 				<th>HE&nbsp;100%</th>
 				<th>ADICIONAL NOT.</th>
-				<th>ESPERA INDENIZADA</th>
+				<th>ESPERA IND.</th>
+				<th>MOTIVO</th>
 				<th>SALDO</th>
 			</tr>
 		</thead>
@@ -78,7 +79,7 @@
 			<?
 				foreach ($aDia as $aDiaVez) {
 					echo '<tr>';
-					for ($j = 1; $j < 20; $j++){
+					for ($j = 1; $j < 21; $j++){
 						if($j > 2 && $j < 7){
 							foreach($legendas as $legenda){
 								$aDiaVez[$j] = str_replace('<br><strong>'.$legenda['moti_tx_legenda'].'</strong>', ' <strong>'.$legenda['moti_tx_legenda'].'</strong>', $aDiaVez[$j]);
