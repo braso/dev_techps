@@ -22,7 +22,7 @@
 			}
 		}
 
-		cabecalho('Endosso');
+		cabecalho('Não Conformidade');
 
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa = " AND empr_nb_id = '" . $_SESSION['user_nb_empresa'] . "'";
@@ -68,9 +68,6 @@
 		//}
 
 		//BOTOES{
-			if ($_POST['busca_situacao'] != 'Verificado') {
-				$disabled = 'disabled=disabled title="Filtre apenas por Verificado para efetuar a impressão do endosso."';
-			}
 			$b = [
 				botao("Buscar", 'index', '', '', '', 1),
 				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1)
@@ -84,7 +81,7 @@
 		$cab = [
 			"", "MAT.", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "HE 50%", "HE&nbsp;100%",
-			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(*)"
+			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 		];
 
 		//function buscar_endosso(){

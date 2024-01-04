@@ -13,121 +13,6 @@
 
 	}
 
-	function arquivosParametro($nome,$idParametro,$arquivos){
-
-		$arquivo_list = '';
-		if (!empty($arquivos)) {
-			foreach($arquivos as $arquivo){
-				$dataHoraOriginal = $arquivo['doc_tx_dataCadastro'];
-				$dataHora = new DateTime($dataHoraOriginal);
-				$dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
-				$arquivo_list .= "
-				<tr role='row' class='odd'>
-				<td>$arquivo[doc_tx_nome]</td>
-				<td>$arquivo[doc_tx_descricao]</td>
-				<td>$dataHoraFormatada</td>
-				<td>
-					<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idParametro,'$arquivo[doc_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
-				</td>
-				<td>
-					<a style='color: red;' onclick=\"javascript:remover_arquivo($idParametro,$arquivo[doc_nb_id],'$arquivo[doc_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
-				</td>
-				";
-			}
-		}
-
-
-		$tabela='
-			<div class="portlet light ">
-				<div class="portlet-title">
-				<div class="caption">
-					<span class="caption-subject font-dark bold uppercase">'.$nome.'</span>
-				</div>
-				</div>
-				<div class="portlet-body">
-					<table id="contex-grid" class="table compact table-striped table-bordered table-hover dt-responsive"
-						width="100%" id="sample_2">
-						<thead>
-							<tr role="row">
-								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
-									aria-label="NOME: activate to sort column ascending" style="width: 40px;">NOME</th>
-								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
-									aria-label="DESCRIÇÃO: activate to sort column ascending" style="width: 40px;">
-									DESCRIÇÃO</th>
-								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
-									aria-label="DATA CADASTRO: activate to sort column ascending" style="width: 40px;">
-									DATA CADASTRO</th>
-								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
-									aria-label="DOWNLOAD: activate to sort column ascending" style="width: 40px;"><i
-										class="glyphicon glyphicon-cloud-download"></i></th>
-								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
-									aria-label="DOWNLOAD: activate to sort column ascending" style="width: 40px;"><i
-										class="glyphicon glyphicon-trash"></i></th>
-							</tr>
-						</thead>
-						<thbody>
-						'.$arquivo_list.'
-						<tr role="row" class="even">
-						<td>
-						<a href="#" data-toggle="modal" data-target="#myModal">
-						<i class="glyphicon glyphicon-plus-sign"></i>
-						</a>
-						</td>
-						</thbody>
-						</table>
-					</div>
-				</div>
-		';
-
-		$modal = "
-		<div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
-			<div class='modal-dialog' role='document'>
-				<div class='modal-content'>
-					<div class='modal-header'>
-					<button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>
-					<h4 class='modal-title' id='myModalLabel'>Upload Arquivo</h4>
-					</div>
-					<div class='modal-body'>
-					<form name='form_enviar_arquivo' method='post' action='cadastro_parametro.php' enctype='multipart/form-data'>
-						<div class='form-group'>
-							<label for='file-name' class='control-label'>Nome do arquivo:</label>
-							<input type='text' class='form-control' name='file-name'>
-						</div>
-						<div class='form-group'>
-							<label for='description-text' class='control-label'>Descrição:</label>
-							<textarea class='form-control' name='description-text'></textarea>
-						</div>
-						<div class='form-group'>
-							<label for='file' class='control-label'>Arquivo:</label>
-							<input type='file' class='form-control' name='file'>
-						</div>
-						
-						<input type='hidden' name='acao' value='enviar_documento'>
-						
-						<input type='hidden' name='idParametro' value='$idParametro'>
-					</form>
-					</div>
-					<div class='modal-footer'>
-						<button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
-						<button type='button' class='btn btn-primary' data-dismiss='modal' 
-						onclick=\"javascript:enviar_arquivo();\">Salvar arquivo</button>
-					</div>
-				</div>
-			</div>
-		</div>
-		
-		<script type='text/javascript'>
-		function enviar_arquivo() {
-			document.form_enviar_arquivo.submit();
-		}
-		
-		</script>
-		";
-
-			return $tabela.$modal;
-
-	}
-
 	function downloadArquivo() {
 		// Verificar se o arquivo existe
 		if (file_exists($_POST['caminho'])) {
@@ -295,7 +180,8 @@
 	function layout_parametro(){
 		global $a_mod;
 
-		if(isset($_POST['id'])){
+		if(empty($a_mod)){
+			$a_mod = carregar('parametro', $_POST['id']);
 			$campos = [
 				'nome',
 				'jornadaSemanal',
@@ -340,8 +226,11 @@
 			checkbox_banco('Utiliza regime de banco de horas?','banco',$a_mod['para_tx_banco'],$a_mod['para_nb_qDias'], $a_mod['para_tx_horasLimite'],3),
 			ckeditor('Descrição:', 'paramObs', $a_mod['para_tx_paramObs'], 12,'maxlength="100"'),
 		];
-		if(!isset($a_mod['id']) || empty($a_mod['id'])){
-			$c[] = arquivosParametro("Documentos","arquivos",'',3);
+
+		if (!empty($a_mod['para_nb_id'])) {
+			$sqlArquivos= query("SELECT * FROM `documento_parametro` WHERE para_nb_id = $a_mod[para_nb_id]");
+			$arquivos = mysqli_fetch_all($sqlArquivos, MYSQLI_ASSOC);
+			$c[] = arquivosParametro("Documentos", $a_mod['para_nb_id'], $arquivos);
 		}
 		
 		
@@ -366,12 +255,6 @@
 
 		
 		fecha_form($botao);
-		
-		if (!empty($a_mod['para_nb_id'])) {
-			$sqlArquivos= query("SELECT * FROM `documento_parametro` WHERE para_nb_id = $a_mod[para_nb_id]");
-			$arquivos = mysqli_fetch_all($sqlArquivos, MYSQLI_ASSOC);
-			echo arquivosParametro("Documentos", $a_mod['para_nb_id'], $arquivos);
-		}
 
 		rodape();
 		?>
