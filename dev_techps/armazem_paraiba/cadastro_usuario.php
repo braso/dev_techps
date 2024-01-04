@@ -113,14 +113,10 @@
 		$usuario = carregar('user', '', 'user_nb_id', $_POST['id']);
 
 
-		if($_POST['login']){
-			$sql = query("SELECT * FROM user WHERE user_tx_login = '".$_POST['login']."' LIMIT 1");
-			if (num_linhas($sql) > 0){
-				set_status("ERRO: Login já cadastrado.");
-				$a_mod = $_POST;
-				modifica_usuario();
-				exit;
-			}
+		if(count($usuario) > 0 && $usuario['user_tx_login'] != $_SESSION['user_tx_login']){
+			set_status("ERRO: Login já cadastrado.");
+			modifica_usuario();
+			exit;
 		}
 		
 		if(!$_POST['id']){//Criando novo usuário
