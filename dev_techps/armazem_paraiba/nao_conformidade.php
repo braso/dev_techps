@@ -22,7 +22,7 @@
 			}
 		}
 
-		cabecalho('Endosso');
+		cabecalho('Não Conformidade');
 
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa = " AND empr_nb_id = '" . $_SESSION['user_nb_empresa'] . "'";
@@ -68,9 +68,6 @@
 		//}
 
 		//BOTOES{
-			if ($_POST['busca_situacao'] != 'Verificado') {
-				$disabled = 'disabled=disabled title="Filtre apenas por Verificado para efetuar a impressão do endosso."';
-			}
 			$b = [
 				botao("Buscar", 'index', '', '', '', 1),
 				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1)
