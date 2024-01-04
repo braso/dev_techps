@@ -367,7 +367,7 @@
 		$tolerancia = intval($tolerancia);
 
 		$saldoDiario = explode(':', $saldoDiario);
-		$saldoEmMinutos = intval($saldoDiario[0])*60+($saldoDiario[0] == '-'? -1: 1)*intval($saldoDiario[1]);
+		$saldoEmMinutos = intval($saldoDiario[0])*60+($saldoDiario[0][0] == '-'? -1: 1)*intval($saldoDiario[1]);
 
 		if($saldoEmMinutos < -($tolerancia)){
 			$cor = 'red';
@@ -380,7 +380,12 @@
 		if ($_SESSION['user_tx_nivel'] == 'Motorista') {
 			$retorno = '<span><i style="color:'.$cor.';" class="fa fa-circle"></i></span>';
 		} else {
-			$retorno = '<a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto(\''.$data.'\', \''.$idMotorista.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
+			$endossado = mysqli_fetch_all(query('SELECT * FROM endosso where \''.$data.'\' BETWEEN endo_tx_de AND endo_tx_ate'), MYSQLI_ASSOC);
+			if(count($endossado) > 0){
+				$retorno = '<a title="Ajuste de Ponto (endossado)" href="#" onclick=""><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
+			}else{
+				$retorno = '<a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto(\''.$data.'\', \''.$idMotorista.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
+			}
 		}
 		return $retorno;
 	}
