@@ -367,8 +367,7 @@
 		$tolerancia = intval($tolerancia);
 
 		$saldoDiario = explode(':', $saldoDiario);
-		$saldoEmMinutos = intval($saldoDiario[0])*60+($saldoDiario[0] == '-'? -1: 1)*intval($saldoDiario[1]);
-
+		$saldoEmMinutos = intval($saldoDiario[0])*60+($saldoDiario[0][0] == '-'? -1: 1)*intval($saldoDiario[1]);
 		if($saldoEmMinutos < -($tolerancia)){
 			$cor = 'red';
 		}elseif($saldoEmMinutos > $tolerancia){

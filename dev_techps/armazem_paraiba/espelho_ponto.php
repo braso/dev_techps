@@ -1,4 +1,13 @@
 <?php
+	/* Modo debug
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
+		if(!isset($_GET['debug'])){
+			echo '<div style="text-align:center; vertical-align: center; height: 100%; padding-top: 20%">Esta página está em desenvolvimento.</div>';
+			exit;
+		}
+	//*/
+
 	include "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
 
 	function index() {
@@ -67,6 +76,7 @@
 			for ($date = $startDate; $date <= $endDate; $date->modify('+1 day')) {
 				$dataVez = $date->format('Y-m-d');
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
+
 				if(isset($aDetalhado['fimJornada'][0]) && (strpos($aDetalhado['fimJornada'][0], ':00') !== false) && date('Y-m-d', strtotime($aDetalhado['fimJornada'][0])) != $dataVez){
 					array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
 				}
