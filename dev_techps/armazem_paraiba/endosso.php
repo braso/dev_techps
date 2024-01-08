@@ -67,11 +67,12 @@
 				ORDER BY enti_tx_nome"
 		);
 		
+		$diasEndossados = 0;
+
 		while ($aMotorista = carrega_array($sqlMotorista)) {
 			//Pegando e formatando registros dos dias{
 				for ($i = 1; $i <= $daysInMonth; $i++) {
 					$dataVez = $_POST['busca_data']."-".str_pad($i, 2, 0, STR_PAD_LEFT);
-					
 					$sqlEndosso = mysqli_fetch_all(
 						query(
 							"SELECT * FROM endosso 
@@ -80,9 +81,12 @@
 						),
 						MYSQLI_ASSOC
 					);
+					
 					if(count($sqlEndosso) == 0){ //Se não estiver endossado nesse dia, passa para o próximo.
 						continue;
 					}
+
+					$diasEndossados++;
 
 					$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 
