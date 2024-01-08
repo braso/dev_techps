@@ -76,8 +76,9 @@
 					$sqlEndosso = mysqli_fetch_all(
 						query(
 							"SELECT * FROM endosso 
-								WHERE endo_tx_matricula = '".$aMotorista['enti_tx_matricula'].
-									"' AND '".$dataVez."' BETWEEN endo_tx_de AND endo_tx_ate"
+								WHERE endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
+									AND ('".$dataVez."' BETWEEN endo_tx_de AND endo_tx_ate)
+									AND endo_tx_status != 'inativo'"
 						),
 						MYSQLI_ASSOC
 					);
@@ -175,7 +176,7 @@
 			));
 			$saldoAnterior = mysqli_fetch_all(
 				query(
-					"SELECT endo_tx_filename FROM `endosso`
+					"SELECT endo_tx_filename FROM endosso
 						WHERE endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
 							AND endo_tx_ate < '".$_POST['busca_data']."-01'
 							AND endo_tx_status = 'ativo'
@@ -445,7 +446,7 @@
 							AND enti_tx_status != 'inativo'
 						ORDER BY enti_tx_nome"
 				);
-				while ($aMotorista = carrega_array($sqlMotorista)) {
+				while ($aMotorista = carrega_array($sqlMotorista)){
 					$counts['total']++;
 					if(empty($aMotorista['enti_tx_nome']) || empty($aMotorista['enti_tx_matricula'])){
 						continue;
@@ -577,7 +578,7 @@
 						
 						$saldoAnterior = mysqli_fetch_all(
 							query(
-								"SELECT endo_tx_filename FROM `endosso`
+								"SELECT endo_tx_filename FROM endosso
 									WHERE endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
 										AND endo_tx_ate < '".$_POST['busca_data']."-01'
 										AND endo_tx_status = 'ativo'
