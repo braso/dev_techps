@@ -94,7 +94,7 @@
 	</tbody>
 </table>
 
-<div><b>TOTAL: <?= $daysInMonth ?> dias</b></div>
+<div><b>TOTAL: <?= $diasEndossados ?> dias</b></div>
 
 
 <table class="table-bottom">
