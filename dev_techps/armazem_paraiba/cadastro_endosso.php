@@ -91,12 +91,13 @@
 				$showError = True;
 				$error_msg = 'Não é possível cadastrar um endosso com mais de um mês.';
 			}
+			unset($difference);
 		//}
 
 		//Conferir se está entrelaçada com outro endosso{
 			$endossos = mysqli_fetch_all(
 				query("
-					SELECT endo_tx_de, endo_tx_ate from endosso
+					SELECT endo_tx_de, endo_tx_ate FROM endosso
 						WHERE endo_nb_entidade = ".$_POST['busca_motorista']."
 							AND NOT(
 								(endo_tx_ate < '".$_POST['data_de']."') OR ('".$_POST['data_ate']."' < endo_tx_de)
@@ -108,7 +109,11 @@
 			);
 			if(count($endossos) > 0){
 				$showError = True;
-				$error_msg = 'Já há um endosso para este motorista nesta faixa de tempo.  ';
+				$endossos[0]['endo_tx_de'] = explode('-', $endossos[0]['endo_tx_de']);
+				$endossos[0]['endo_tx_de'] = sprintf('%02d/%02d/%04d', $endossos[0]['endo_tx_de'][2], $endossos[0]['endo_tx_de'][1], $endossos[0]['endo_tx_de'][0]);
+				$endossos[0]['endo_tx_ate'] = explode('-', $endossos[0]['endo_tx_ate']);
+				$endossos[0]['endo_tx_ate'] = sprintf('%02d/%02d/%04d', $endossos[0]['endo_tx_ate'][2], $endossos[0]['endo_tx_ate'][1], $endossos[0]['endo_tx_ate'][0]);
+				$error_msg = 'Já há um endosso para este motorista de '.$endossos[0]['endo_tx_de'].' até '.$endossos[0]['endo_tx_ate'].'.  ';
 			}
 		//}
 
