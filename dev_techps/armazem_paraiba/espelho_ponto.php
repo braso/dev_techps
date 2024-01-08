@@ -77,7 +77,6 @@
 				$dataVez = $date->format('Y-m-d');
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 
-				echo '('.isset($aDetalhado['fimJornada'][0]).' && '.(count($aDetalhado['fimJornada'][0]) > 0).' && '.(substr($aDetalhado['fimJornada'][0], 11).' < '.substr($aDetalhado['inicioJornada'][0], 11)).')<br><br>';
 				if(isset($aDetalhado['fimJornada'][0]) && count($aDetalhado['fimJornada'][0]) > 0 && substr($aDetalhado['fimJornada'][0], 11) < substr($aDetalhado['inicioJornada'][0], 11)){
 					array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
 				}
