@@ -240,7 +240,7 @@
 			*/
 
 
-			if (isset($dadosMotorista['para_nb_qDias']) && $dadosMotorista['para_nb_qDias'] != null) { //Deve ser feito somente quando for obrigado a pagar a hora extra?
+			if (isset($dadosMotorista['para_nb_qDias']) && !empty($dadosMotorista['para_nb_qDias']) && date('Y-m-d') >= $dataCiclo['ate']){ //Deve ser feito somente quando for obrigado a pagar a hora extra?
 
 				//Contexto do HE100
 				// $he100 = strtotime($aDetalhado['he100']);
@@ -299,10 +299,12 @@
 				$totalResumo['he100'] = intToTime($he100_pagar);
 
 				$totalResumo['diffSaldo'] = intToTime($saldoPeriodo);
+			}else{
+				$totalResumo['he50'] = '00:00';
+				$totalResumo['he100'] = '00:00';
 			}
-
-			$saldoAtual = operarHorarios([$saldoAnterior, $totalResumo['diffSaldo']], '+'); //Utilizado em relatorio_espelho.php
 		}
+		$saldoAtual = operarHorarios([$saldoAnterior, $totalResumo['diffSaldo']], '+'); //Utilizado em relatorio_espelho.php
 
 		$legendas = mysqli_fetch_all(query(
 			"SELECT UNIQUE moti_tx_legenda FROM motivo 
