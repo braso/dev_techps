@@ -115,6 +115,7 @@
 				$endossos[0]['endo_tx_ate'] = sprintf('%02d/%02d/%04d', $endossos[0]['endo_tx_ate'][2], $endossos[0]['endo_tx_ate'][1], $endossos[0]['endo_tx_ate'][0]);
 				$error_msg = 'Já há um endosso para este motorista de '.$endossos[0]['endo_tx_de'].' até '.$endossos[0]['endo_tx_ate'].'.  ';
 			}
+			unset($endossos);
 		//}
 
 		$sql = query(
@@ -126,11 +127,31 @@
 		);
 		$motorista = carrega_array($sql);
 
+		//Conferir se é o primeiro endosso que está sendo registrado{
+			$primEndosso = mysqli_fetch_all(
+				query(
+					"SELECT * FROM endosso 
+						WHERE endo_tx_matricula = '".$motorista['enti_tx_matricula']."'
+							AND endo_tx_status != 'inativo'
+						ORDER BY endo_tx_de DESC
+						LIMIT 1"
+				), 
+				MYSQLI_ASSOC
+			);
+			if(count($primEndosso) == 0){
+				$primEndosso = true;
+			}else{
+				//Conferir se o endosso que está sendo feito vem antes do primeiro{
+					if($_POST['data_ate'] < $primEndosso[0]['endo_tx_de']){
+						$error_msg = 'Não é possível endossar antes do primeiro endosso.  ';
+						$showError = true;
+					}
+					$primEndosso = false;
+				//}
+			}
+		//}
+
 		//Conferir se tem espaço entre o último endosso e o endosso atual{
-			//Conferir se é o primeiro endosso que está sendo registrado{
-				$temEndosso = mysqli_fetch_all(query("SELECT * FROM endosso WHERE endo_tx_matricula = '".$motorista['enti_tx_matricula']."';"), MYSQLI_ASSOC);
-				$temEndosso = (count($temEndosso) > 0);
-			//}
 
 			$ultimoEndosso = mysqli_fetch_all(
 				query(
@@ -143,7 +164,7 @@
 				),
 				MYSQLI_ASSOC
 			)[0];
-			if(count($ultimoEndosso) > 0 && $temEndosso){ //Se possui um último Endosso
+			if(count($ultimoEndosso) > 0 && !$primEndosso){ //Se possui um último Endosso
 				$ultimoEndosso['endo_tx_ate'] = DateTime::createFromFormat('Y-m-d', $ultimoEndosso['endo_tx_ate']);
 				$dataDe = DateTime::createFromFormat('Y-m-d', $_POST['data_de']);
 				$qtdDias = date_diff($ultimoEndosso['endo_tx_ate'], $dataDe);
