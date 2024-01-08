@@ -77,9 +77,12 @@
 				$dataVez = $date->format('Y-m-d');
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 
-				if(isset($aDetalhado['fimJornada'][0]) && (strpos($aDetalhado['fimJornada'][0], ':00') !== false) && date('Y-m-d', strtotime($aDetalhado['fimJornada'][0])) != $dataVez){
+				if(isset($aDetalhado['fimJornada'][0]) && count($aDetalhado['fimJornada'][0]) > 0 && $aDetalhado['fimJornada'][0] < $aDetalhado['inicioJornada'][0]){
 					array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
 				}
+				// if(isset($aDetalhado['fimJornada'][0]) && (strpos($aDetalhado['fimJornada'][0], ':00') !== false) && date('Y-m-d', strtotime($aDetalhado['fimJornada'][0])) != $dataVez){
+				// 	array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
+				// }
 								
 				//Converter array em string{
 					$legendas = mysqli_fetch_all(query(
