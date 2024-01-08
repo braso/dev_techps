@@ -34,16 +34,12 @@ if($match2[2]){
 $query=mysqli_query($conn, $sql) or die(mysqli_error($conn));
 $totalFiltered = mysqli_num_rows($query); // when there is a search parameter then we have to modify total number filtered rows as per search result. 
 
-if($requestData['length'] != '-1')
+if($requestData['length'] != '-1'){
 	$limit =  " LIMIT ".$requestData['start']." ,".$requestData['length'];
-	
-if(!empty($requestData['order'][0]['dir'])){
-    $sql.=" ORDER BY ". $order2."   ".$requestData['order'][0]['dir']." $limit";
+}else{
+	$limit = " LIMIT 10";
 }
-else{
-    $sql.=$limit;
-}
-
+$sql.=" ORDER BY ". $order2."   ".(!empty($requestData['order'][0]['dir'])? $requestData['order'][0]['dir']: '')." $limit";
 
 
 /* $requestData['order'][0]['column'] contains colmun index, $requestData['order'][0]['dir'] contains order such as asc/desc  */	
