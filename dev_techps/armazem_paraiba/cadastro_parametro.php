@@ -230,7 +230,6 @@
 		if (!empty($a_mod['para_nb_id'])) {
 			$sqlArquivos= query("SELECT * FROM `documento_parametro` WHERE para_nb_id = $a_mod[para_nb_id]");
 			$arquivos = mysqli_fetch_all($sqlArquivos, MYSQLI_ASSOC);
-			$c[] = arquivosParametro("Documentos", $a_mod['para_nb_id'], $arquivos);
 		}
 		
 		
@@ -255,6 +254,10 @@
 
 		
 		fecha_form($botao);
+
+		if (!empty($a_mod['para_nb_id'])) {
+			echo arquivosParametro("Documentos", $a_mod['para_nb_id'], $arquivos);
+		}
 
 		rodape();
 		?>
