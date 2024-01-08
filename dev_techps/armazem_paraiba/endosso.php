@@ -188,6 +188,7 @@
 			if($saldoAnterior == null || count($saldoAnterior) == 0){
 				$saldoAnterior = '00:00';
 			}else{
+				$saldoAnterior = $saldoAnterior[0];
 				//Puxando Saldo do último Endosso{
 					$csvFile = fopen('./arquivos/endosso/'.$saldoAnterior['endo_tx_filename'].'.csv', "r");
 					$csvKeys = fgetcsv($csvFile);
@@ -211,18 +212,19 @@
 					" ORDER BY enti_tx_nome");
 			$dadosMotorista = carrega_array($sqlMotorista);
 
-			$dataCicloProx = strtotime($dadosMotorista['para_tx_inicioAcordo'].' 00:00:00');
+			$dataCiclo = ['de' => strtotime($dadosMotorista['enti_tx_admissao'].' 00:00:00'), 'ate' => strtotime($dadosMotorista['enti_tx_admissao'].' 00:00:00')];
 			$endoTimestamp = strtotime($aEndosso['endo_tx_ate'].' 00:00:00');
-			while($dataCicloProx < $endoTimestamp){
-				$dataCicloProx += $dadosMotorista['para_nb_qDias']*24*60*60;
+			while($dataCiclo['ate'] < $endoTimestamp){
+				$dataCiclo['ate'] += ($dadosMotorista['para_nb_qDias'])*24*60*60;
 			}
-			$dataCicloAnt = $dataCicloProx - $dadosMotorista['para_nb_qDias']*24*60*60;
+			$dataCiclo['de'] = $dataCiclo['ate']-($dadosMotorista['para_nb_qDias'])*24*60*60;
+			$dataCiclo['ate'] = $dataCiclo['ate']-1*24*60*60;
 
-			$dataCicloProx = date('Y-m-d', $dataCicloProx);
-			$dataCicloAnt  = date('Y-m-d', $dataCicloAnt);
+			$dataCiclo['de']  = date('Y-m-d', $dataCiclo['de']);
+			$dataCiclo['ate'] = date('Y-m-d', $dataCiclo['ate']);
 
 
-			if($aEndosso['endo_tx_dataCadastro'] > $dataCicloProx){
+			if($aEndosso['endo_tx_dataCadastro'] > $dataCiclo['ate']){
 				//Obrigar a pagar horas extras
 				
 				// $horasObrigatorias = $aEndosso['endo_tx_saldo'] + 
@@ -608,7 +610,7 @@
 						$saldoFinal = '00:00';
 						$saldoFinal = somarHorarios([$saldoAnterior, $totalResumo['diffSaldo']]);
 						$dataCicloProx = explode('-', $dataCicloProx);
-						$dataCicloProx = sprintf('%02d/%02d/%02d', $dataCicloProx[0], $dataCicloProx[1], $dataCicloProx[2]);
+						$dataCicloProx = sprintf('%02d/%02d/%04d', $dataCicloProx[2], $dataCicloProx[1], $dataCicloProx[0]);
 	
 						$saldosMotorista = 
 							'<div class="table-responsive">
