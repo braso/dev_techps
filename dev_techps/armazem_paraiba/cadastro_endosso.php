@@ -173,7 +173,11 @@
 					$error_msg = 'Há um tempo não endossado entre '.$ultimoEndosso['endo_tx_ate']->format('d/m/Y').' e '.$dataDe->format('d/m/Y').'.  ';
 				}
 			}else{ //Se é o primeiro endosso sendo feito para este motorista
-				$ultimoEndosso['endo_tx_saldo'] = '00:00';
+				if(isset($motorista['enti_tx_banco'])){
+					$ultimoEndosso['endo_tx_saldo'] = $motorista['enti_tx_banco'];
+				}else{
+					$ultimoEndosso['endo_tx_saldo'] = '00:00';
+				}
 			}
 		//}
 
