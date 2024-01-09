@@ -138,8 +138,13 @@ function layout_ftp(){
 		}
 	}
 
+	// if(count($fileList) === 0){
+	//     var_dump();
+	//     die();
+	// }
 
 	ftp_close($ftp_conn);
+	
 	if ($_SERVER['HTTP_ENV'] == 'carrega_cron') {
 		exit;
 	}
