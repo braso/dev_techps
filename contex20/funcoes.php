@@ -1024,7 +1024,7 @@ function enviar($arquivo,$diretorio,$nome='') {
 }
 
 
-function botao($nome,$acao,$campos='',$valores='',$extra='',$salvar=''){
+function botao($nome,$acao,$campos='',$valores='',$extra='',$salvar='',$botaoCor='btn btn-secondary'){
 global $idsBotaoContex;	
 	if($campos[0]!=''){
 
@@ -1085,7 +1085,7 @@ global $idsBotaoContex;
 		$funcaoOnClick = 'onclick="'.$funcaoOnClick.'"';
 	}
 
-	return $funcaoJs.'<button '.$funcaoOnClick.' name="acao" id="botaoContex'.$nome.'" value="'.$acao.'"  type="submit" '.$extra.'  class="btn default">'.$nome.'</button>';
+	return $funcaoJs.'<button '.$funcaoOnClick.' name="acao" id="botaoContex'.$nome.'" value="'.$acao.'"  type="submit" '.$extra.'  class="'.$botaoCor.'">'.$nome.'</button>';
 
 }
 

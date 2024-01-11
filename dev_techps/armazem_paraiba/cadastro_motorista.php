@@ -510,7 +510,7 @@
 		];
 
 
-		$b[] = botao('Gravar', 'cadastra_motorista', 'id', $_POST['id'], 'tabindex=53');
+		$b[] = botao('Gravar', 'cadastra_motorista', 'id', $_POST['id'], 'tabindex=53','','btn btn-success');
 		$b[] = botao('Voltar', 'index', '', '', 'tabindex=54');
 
 		abre_form('Dados Cadastrais');
@@ -679,7 +679,7 @@
 		$c[] = combo('Status', 'busca_status', $_POST['busca_status'], 2, ['Todos', 'Ativo', 'Inativo']);
 
 		$b[] = botao('Buscar', 'index');
-		$b[] = botao('Inserir', 'layout_motorista');
+		$b[] = botao('Inserir', 'layout_motorista','','','','','btn btn-success');
 
 		abre_form('Filtro de Busca');
 		linha_form($c);

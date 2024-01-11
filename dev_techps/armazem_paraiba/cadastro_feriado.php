@@ -55,7 +55,7 @@ function layout_feriado(){
 	$c[] = combo('Estadual','uf',$a_mod['feri_tx_uf'],2,$uf);
 	$c[] = combo_net('Municipal','cidade',$a_mod['feri_nb_cidade'],4,'cidade','','','cida_tx_uf');
 
-	$botao[] = botao('Gravar','cadastra_feriado','id',$_POST['id']);
+	$botao[] = botao('Gravar','cadastra_feriado','id',$_POST['id'],'','','btn btn-success');
 	$botao[] = botao('Voltar','index');
 	
 	abre_form('Dados do Feriado');
@@ -96,7 +96,7 @@ function index(){
 	$c[] = combo_net('Municipal','busca_cidade',$_POST['busca_cidade'],4,'cidade','','','cida_tx_uf');
 
 	$botao[] = botao('Buscar','index');
-	$botao[] = botao('Inserir','layout_feriado');
+	$botao[] = botao('Inserir','layout_feriado','','','','','btn btn-success');
 	
 	abre_form('Filtro de Busca');
 	linha_form($c);

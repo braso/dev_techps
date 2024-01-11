@@ -59,7 +59,7 @@ function layout_motivo(){
 		combo('Legenda de Marcação','legenda',array_search($a_mod['moti_tx_legenda'], $legendas),4,array_keys($legendas))
 	];
 	$botao = [
-		botao('Gravar','cadastra_motivo','id',$_POST['id']),
+		botao('Gravar','cadastra_motivo','id',$_POST['id'],'','','btn btn-success'),
 		botao('Voltar','index')
 	];
 
@@ -95,7 +95,7 @@ function index(){
 	];
 	$botao = [
 		botao('Buscar','index'),
-		botao('Inserir','layout_motivo')
+		botao('Inserir','layout_motivo','','','','','btn btn-success')
 	];
 
 	abre_form('Filtro de Busca');

@@ -413,9 +413,9 @@
 			}
 			$b = [
 				botao("Buscar", 'index', '', '', '', 1),
-				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1),
-				'<button name="acao" id="botaoContexCadastrar CadastrarEndosso" value="cadastrar_endosso" type="button" class="btn default">Cadastrar Endosso</button>',
-				'<button name="acao" id="botaoContexCadastrar ImprimirRelatorio" value="impressao_relatorio" ' . $disabled . ' type="button" class="btn default">Imprimir Relatório</button>',
+				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1,'btn btn-warning'),
+				'<button name="acao" id="botaoContexCadastrar CadastrarEndosso" value="cadastrar_endosso" type="button" class="btn btn-success">Cadastrar Endosso</button>',
+				'<button name="acao" id="botaoContexCadastrar ImprimirRelatorio" value="impressao_relatorio" ' . $disabled . ' type="button" class="btn btn-default">Imprimir Relatório</button>',
 				'<span id=dadosResumo><b>' . $carregando . '</b></span>'
 			];
 		//}
