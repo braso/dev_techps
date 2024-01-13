@@ -167,7 +167,8 @@
 						$aEndosso = carrega_array(query(
 							"SELECT user_tx_login, endo_tx_dataCadastro, endo_tx_ate 
 								FROM endosso JOIN user ON endo_nb_userCadastro = user_nb_id 
-								WHERE endo_tx_mes = '" . substr($_POST['busca_data'], 0, 7) . '-01' . "' AND endo_nb_entidade = '" . $aMotorista['enti_nb_id'] . "'
+								WHERE '".$_POST['busca_data']."' BETWEEN endo_tx_de AND endo_tx_ate 
+									AND endo_nb_entidade = '" . $aMotorista['enti_nb_id'] . "'
 									AND endo_tx_matricula = '" . $aMotorista['enti_tx_matricula'] . "' 
 									AND endo_tx_status = 'ativo' 
 								LIMIT 1"
