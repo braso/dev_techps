@@ -112,53 +112,6 @@
 		';
 	}
 
-function grid3($cabecalho,$valores,$reg='10'){
-	$rand = md5($sql);
-
-	echo "<div class='col-md-12 col-sm-12'>";
-	echo "<div class='portlet light'>";
-	echo "<table class='table table-bordered table-striped table-condensed flip-content table-hover' id=$rand>";
-	
-	if(count($cabecalho)>0){
-
-		echo "<thead><tr>";
-
-		for($i=0;$i<count($cabecalho);$i++){
-			echo "<th>$cabecalho[$i]</th>";
-		}
-
-		echo "</thead></tr>";
-	}
-
-	if(count($valores)>0){
-		echo "<tbody>";
-		
-		for($i=0;$i<count($valores);$i++){
-			echo "<tr>";
-			for($j=0;$j<count($valores[$i]);$j++){
-				echo "<td>".$valores[$i][$j]."</td>";
-			}
-			echo "</tr>";
-		}
-
-		echo "</tbody>";
-	}
-
-	echo "</table>";
-	echo "<nav aria-label='Page navigation example'>
-  <ul class='pagination'>
-    <li class='page-item'><a class='page-link' href='#'>Previous</a></li>
-    <li class='page-item'><a class='page-link' href='#'>1</a></li>
-    <li class='page-item'><a class='page-link' href='#'>2</a></li>
-    <li class='page-item'><a class='page-link' href='#'>3</a></li>
-    <li class='page-item'><a class='page-link' href='#'>Next</a></li>
-  </ul>
-</nav>";
-
-echo '</div>';
-echo '</div>';
-}
-
 
 	function grid($sql,$cabecalho,$valores,$label='',$col='12',$ordenar_coluna=1,$ordenar_sentido='asc',$paginar='10'){		
 		global $CONTEX;
