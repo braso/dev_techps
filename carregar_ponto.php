@@ -66,69 +66,6 @@ function layout_ponto(){
 	rodape();
 }
 
-function cadastra_notificacao(){
-	
-    $campos = ['conf_tx_emailFun','conf_tx_emailAdm'];
-	$valores = [$_POST['emailFuncionario'],$_POST['emailFuncionario']];
-
-	if(!empty($_POST['id'])) {
-		$campos = array_merge($campos,['conf_tx_dataAtualiza']);
-		$valores = array_merge($valores,[date("Y-m-d H:i:s")]);
-		atualizar('configuracao_alerta',$campos,$valores,$_POST['id']);
-	}else {
-		$campos = array_merge($campos,['conf_tx_dataCadastro']);
-		$valores = array_merge($valores,[date("Y-m-d H:i:s")]);
-		inserir('configuracao_alerta',$campos,$valores);
-	}
-
-	index();
-	exit;
-}
-
-function layout_notificacao(){
-	$sqlCheck = query("SELECT * FROM `configuracao_alerta` LIMIT 1");
-	$emails = mysqli_fetch_assoc($sqlCheck);
-
-	if (!empty($emails)) {
-		$emailFun = $emails['conf_tx_emailFun'];
-		$emailAdm = $emails['conf_tx_emailAdm'];
-		$atualizacao = $emails['conf_tx_dataAtualiza'];
-		$cadastro = $emails['conf_tx_datadataCadastro'];
-	}
-
-	if (!empty($cadastro)) {
-		$txtCadastro = "Registro inserido às " . data($cadastro, 1) . ".";
-		$cAtualiza[] = texto("Data de Cadastro", "$txtCadastro", 5);
-	}
-
-	if (!empty($atualizacao)) {
-		$txtAtualiza = "Registro atualizado às " . data($atualizacao, 1) . ".";
-		$cAtualiza[] = texto("Última Atualização", "$txtAtualiza", 5);
-	}
-
-	cabecalho('Configura Notificação');
-
-	//$c[] = campo('Data do Arquivo:','data',date("d/m/Y"),2,MASCARA_DATA);
-	$c = [
-		campo('E-mail do Funcionario', 'emailFuncionario', $emailFun, 2),
-		campo('E-mail do Administrado', 'emailAdministrado', $emailAdm, 2)
-	];
-
-	$b= [ 
-	    botao("Gravar", 'cadastra_notificacao', 'id', $_POST['id']),
-	    botao("Voltar", 'index')
-	 ];
-
-	abre_form('Arquivo de Ponto');
-	linha_form($c);
-	if (!empty($cAtualiza)) {
-		linha_form($cAtualiza);
-	}
-	fecha_form($b);
-
-	rodape();
-}
-
 
 function layout_ftp(){
 	// error_reporting(E_ALL);
@@ -201,14 +138,8 @@ function layout_ftp(){
 		}
 	}
 
-	if(count($fileList) === 0){
-	    diffData(date('dmY'));
-	    index();
-	    exit;
-	}
 
 	ftp_close($ftp_conn);
-	
 	if ($_SERVER['HTTP_ENV'] == 'carrega_cron') {
 		exit;
 	}
@@ -244,19 +175,15 @@ function index(){
 
 
 	//CONSULTA
-	$c = [ 
-	    campo('Código:', 'busca_codigo', $_POST['busca_codigo'], 2),
-	    campo('Data Início:', 'busca_inicio', $_POST['busca_inicio'], 2, 'MASCARA_DATA'),
-	    campo('Data Fim:', 'busca_fim', $_POST['busca_fim'], 2, 'MASCARA_DATA')
-	];
+	$c[] = campo('Código:', 'busca_codigo', $_POST['busca_codigo'], 2);
+	$c[] = campo('Data Início:', 'busca_inicio', $_POST['busca_inicio'], 2, 'MASCARA_DATA');
+	$c[] = campo('Data Fim:', 'busca_fim', $_POST['busca_fim'], 2, 'MASCARA_DATA');
 
 
 	//BOTOES
-	$b = [
-		botao("Buscar", 'index'),
-		botao("Inserir", 'layout_ponto'),
-		botao("Atualizar", 'layout_ftp')
-	];
+	$b[] = botao("Buscar", 'index');
+	$b[] = botao("Inserir", 'layout_ponto');
+	$b[] = botao("Atualizar", 'layout_ftp');
 
 	abre_form('Filtro de Busca');
 	linha_form($c);
