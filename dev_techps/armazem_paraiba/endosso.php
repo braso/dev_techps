@@ -498,7 +498,7 @@
 						$aEndosso = carrega_array(query(
 							"SELECT user_tx_login, endo_tx_dataCadastro, endo_tx_ate 
 								FROM endosso JOIN user ON endo_nb_userCadastro = user_nb_id 
-								WHERE endo_tx_mes LIKE '".$_POST['busca_data']."' 
+								WHERE endo_tx_mes LIKE '".$_POST['busca_data']."%' 
 									AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'
 									AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."' 
 									AND endo_tx_status = 'ativo' 
