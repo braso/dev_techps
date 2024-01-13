@@ -39,12 +39,6 @@
 </form>
 
 <script>
-	function ajusta_ponto(data, motorista) {
-		document.form_ajuste_ponto.data.value = data;
-		document.form_ajuste_ponto.id.value = motorista;
-		document.form_ajuste_ponto.submit();
-	}
-
 	function selecionaMotorista(idEmpresa) {
 		let buscaExtra = '';
 		if (idEmpresa > 0) {
