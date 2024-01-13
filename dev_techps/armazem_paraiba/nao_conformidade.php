@@ -70,7 +70,7 @@
 		//BOTOES{
 			$b = [
 				botao("Buscar", 'index', '', '', '', 1),
-				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1)
+				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1,'btn btn-success')
 			];
 		//}
 

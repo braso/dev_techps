@@ -56,7 +56,7 @@ function layout_ponto(){
 	//$c[] = campo('Data do Arquivo:','data',date("d/m/Y"),2,MASCARA_DATA);
 	$c[] = arquivo('Arquivo Ponto (.txt):', 'arquivo', '', 5);
 
-	$b[] = botao("Enviar", 'carrega_ponto');
+	$b[] = botao("Enviar", 'carrega_ponto','','','','','btn btn-success');
 	$b[] = botao("Voltar", 'index');
 
 	abre_form('Arquivo de Ponto');
@@ -254,8 +254,9 @@ function index(){
 	//BOTOES
 	$b = [
 		botao("Buscar", 'index'),
-		botao("Inserir", 'layout_ponto'),
-		botao("Atualizar", 'layout_ftp')
+		botao("Inserir", 'layout_ponto','','','','','btn btn-success'),
+		botao("Atualizar", 'layout_ftp','','','','','btn btn-primary'),
+		botao("Configuração", 'layout_notificacao','','','','','btn btn-warning')
 	];
 
 	abre_form('Filtro de Busca');

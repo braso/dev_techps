@@ -59,7 +59,7 @@
 
 	function layout_abono(){
 
-		cabecalho('Espelho de Ponto');
+		cabecalho('Cadastro Abono');
 
 		$c[] = combo_net('Motorista:','motorista',$_POST['busca_motorista'],4,'entidade','',' AND enti_tx_tipo = "Motorista"','enti_tx_matricula');
 		$c[] = campo('Data(s):','daterange',$_POST['daterange'],3);
@@ -69,7 +69,7 @@
 		
 		//BOTOES
 		$b[] = botao("Voltar",'index');
-		$b[] = botao("Gravar",'cadastra_abono');
+		$b[] = botao("Gravar",'cadastra_abono','','','','','btn btn-success');
 		
 		abre_form('Filtro de Busca');
 		linha_form($c);
@@ -186,7 +186,7 @@
 		$c3[] = textarea('Justificativa:','descricao','',12);
 
 		if(count($aEndosso) == 0){
-			$botao[] = botao('Gravar','cadastra_ajuste','id,busca_motorista,busca_data1,busca_data2,data,busca_data',"$_POST[id],$_POST[id],$_POST[busca_data1],$_POST[busca_data2],$_POST[data],".substr($_POST['data'],0, -3));
+			$botao[] = botao('Gravar','cadastra_ajuste','id,busca_motorista,busca_data1,busca_data2,data,busca_data',"$_POST[id],$_POST[id],$_POST[busca_data1],$_POST[busca_data2],$_POST[data],".substr($_POST['data'],0, -3),'','','btn btn-success');
 			$iconeExcluir = 'icone_excluir(pont_nb_id,excluir_ponto,idEntidade,' . $_POST['id'] . ')';
 		}else{
 			$c2[] = texto('Endosso:',"Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1),6);

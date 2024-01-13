@@ -258,10 +258,11 @@
 
 		if($_GET['id'] && is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) || is_int(strpos($_SESSION['user_tx_nivel'], "Administrador"))){
 			$b = [
-				botao('Gravar', 'cadastra_usuario', 'id', $_POST['id']),
+				botao('Gravar', 'cadastra_usuario', 'id', $_POST['id'],'','','btn btn-success'),
 				botao('Voltar', 'index')
 			];
-		}
+		} else
+			$b = [];
 
 		abre_form('Dados do Usuário');
 		linha_form($c);
@@ -279,7 +280,7 @@
 			echo "<br>";
 			linha_form($cAtualiza);
 		}
-
+		
 		fecha_form($b);
 
 		rodape();
@@ -355,7 +356,7 @@
 		$b[] = botao('Buscar', 'index');
 
 		if(is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))){
-			$b[] = botao('Inserir', 'layout_usuario');
+			$b[] = botao('Inserir', 'layout_usuario','','','','','btn btn-success');
 		}
 
 		abre_form('Filtro de Busca');

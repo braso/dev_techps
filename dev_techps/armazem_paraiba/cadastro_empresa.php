@@ -311,7 +311,7 @@
 		$file = basename(__FILE__);
 		$file = explode('.', $file);
 
-		$botao[] = botao($btn_txt,'cadastra_empresa','id',$_POST['id']);
+		$botao[] = botao($btn_txt,'cadastra_empresa','id',$_POST['id'],'','','btn btn-success');
 		$botao[] = botao('Voltar','index');
 		
 		abre_form("Dados da Empresa/Filial");
@@ -495,7 +495,7 @@
 		$c[] = combo('Situação','busca_situacao',$_POST['busca_situacao'],2,['Todos','Ativo','Inativo']);
 
 		$botao[] = botao('Buscar','index');
-		$botao[] = botao('Inserir','layout_empresa');
+		$botao[] = botao('Inserir','layout_empresa','','','','','btn btn-success');
 		
 		abre_form('Filtro de Busca');
 		linha_form($c);

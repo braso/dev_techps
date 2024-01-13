@@ -233,7 +233,7 @@
 		}
 		
 		
-		$botao[] = botao('Gravar','cadastra_parametro','id',$_POST['id']);
+		$botao[] = botao('Gravar','cadastra_parametro','id',$_POST['id'],'','','btn btn-success');
 		$botao[] = botao('Voltar','index');
 		
 		abre_form('Dados dos Parâmetros');
@@ -314,7 +314,7 @@
 
 		$botao = [
 			botao('Buscar', 'index'),
-			botao('Inserir', 'layout_parametro'),
+			botao('Inserir', 'layout_parametro','','','','','btn btn-success'),
 		];
 		
 		abre_form('Filtro de Busca');
