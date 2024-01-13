@@ -37,8 +37,13 @@
 		exit;
 	}
 
-
 	function cadastra_usuario() {
+
+		if(isset($_POST['editPermission'])){
+			$_POST['editPermission'] = (intval($_POST['editPermission']) == 1);
+		}else{
+			$_POST['editPermission'] = false;
+		}
 
 		$error_msg_base = "ERRO: Insira os campos ";
 		$error_msg = $error_msg_base;
@@ -113,7 +118,7 @@
 		$usuario = carregar('user', '', 'user_nb_id', $_POST['id']);
 
 
-		if(count($usuario) > 0 && $usuario['user_tx_login'] != $_SESSION['user_tx_login']){
+		if(count($usuario) > 0 && $usuario['user_tx_login'] != $_SESSION['user_tx_login'] && $_POST['editPermission']){
 			set_status("ERRO: Login já cadastrado.");
 			modifica_usuario();
 			exit;
@@ -161,13 +166,12 @@
 		exit;
 	}
 
-
-
 	function layout_usuario() {
 		global $a_mod;
 		cabecalho("Cadastro de Usuário");
 
-		if($_GET['id'] && $a_mod['user_tx_nivel'] != 'Motorista' ||  (is_int(strpos($_SESSION['user_tx_nivel'], "Administrador"))) && $a_mod['user_tx_nivel'] != 'Motorista'){
+		if($_GET['id'] && $a_mod['user_tx_nivel'] != 'Motorista' || (is_int(strpos($_SESSION['user_tx_nivel'], "Administrador"))) && $a_mod['user_tx_nivel'] != 'Motorista'){
+			$editPermission = true;
 			//(Se está editando e o usuário é o que já está logado) ou (usuário logado administrador e usuário a editar não é motorista).
 
 			$campo_nome = campo('Nome*', 'nome', $a_mod['user_tx_nome'], 4, '','maxlength="65"');
@@ -201,7 +205,7 @@
 			$campo_confirma = campo_senha('Confirmar Senha', 'senha2', "", 2,'maxlength="12"');
 
 		}else{
-
+			$editPermission = false;
 			$campo_nome = texto('Nome*', $a_mod['user_tx_nome'], 3, "style='margin-bottom:-10px'; for='nome'");
 			$campo_login = texto('Login*', $a_mod['user_tx_login'], 3, "style='margin-bottom:-10px;'");
 			$campo_nivel = texto('Nível*', $a_mod['user_tx_nivel'], 2, "style='margin-bottom:-10px;'");
@@ -258,7 +262,7 @@
 
 		if($_GET['id'] && is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) || is_int(strpos($_SESSION['user_tx_nivel'], "Administrador"))){
 			$b = [
-				botao('Gravar', 'cadastra_usuario', 'id', $_POST['id']),
+				botao('Gravar', 'cadastra_usuario', 'id,editPermission', $_POST['id'].','.strval($editPermission)),
 				botao('Voltar', 'index')
 			];
 		}

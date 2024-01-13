@@ -73,7 +73,7 @@
 				$dataVez = $date->format('Y-m-d');
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 
-				if(isset($aDetalhado['fimJornada'][0]) && is_array($aDetalhado['fimJornada'][0]) && count($aDetalhado['fimJornada'][0]) > 0 && substr($aDetalhado['fimJornada'][0], 11) < substr($aDetalhado['inicioJornada'][0], 11)){
+				if(isset($aDetalhado['fimJornada'][0]) && ((is_array($aDetalhado['fimJornada'][0]) && count($aDetalhado['fimJornada'][0]) > 0) || strlen($aDetalhado['fimJornada'][0]) > 0) && substr($aDetalhado['fimJornada'][0], 0, 11) > substr($aDetalhado['inicioJornada'][0], 0, 11)){
 					array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
 				}
 				// if(isset($aDetalhado['fimJornada'][0]) && (strpos($aDetalhado['fimJornada'][0], ':00') !== false) && date('Y-m-d', strtotime($aDetalhado['fimJornada'][0])) != $dataVez){
@@ -104,6 +104,7 @@
 							foreach($legendas as $legenda){
 								$aDetalhado[$tipo] = str_replace('<br><strong>'.$legenda['moti_tx_legenda'].'</strong>', ' <strong>'.$legenda['moti_tx_legenda'].'</strong>', $aDetalhado[$tipo]);
 							}
+							$aDetalhado[$tipo] = str_replace('<br>D+1', ' D+1', $aDetalhado[$tipo]);
 						}else{
 							$aDetalhado[$tipo] = '';
 						}

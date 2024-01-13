@@ -639,13 +639,19 @@
 						-- )
 					ORDER BY pont_tx_data ASC;"
 				);
+				$pontosDiaSeguinte = [];
 				while($ponto = carrega_array($sql)){
 					$ponto['diaSeguinte'] = True;
-					$pontosDia[] = $ponto;
+					$pontosDiaSeguinte[] = $ponto;
 					if($ponto['pont_tx_tipo'] == '2'){
 						break;
 					}
+					if($ponto['pont_tx_tipo'] == '1'){
+						$pontosDiaSeguinte = [];
+						break;
+					}
 				}
+				$pontosDia = array_merge($pontosDia, $pontosDiaSeguinte);
 			}
 			
 			if($pontosDia[0]['pont_tx_tipo'] != '1'){ //Se o 1° registro != início de jornada => É uma jornada que veio do dia anterior
@@ -904,11 +910,10 @@
 		//FIM 01:00 DE REFEICAO
 
 		//ALERTAS{
-			if((!isset($registros['inicioJornada'][0]) || $registros['inicioJornada'][0] == '') &&
-				$aRetorno['jornadaPrevista'] != '00:00'){
+			if((!isset($registros['inicioJornada'][0]) || $registros['inicioJornada'][0] == '') && $aRetorno['jornadaPrevista'] != '00:00'){
 				$aRetorno['inicioJornada'][] 	= "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
 			}
-			if($fezJorMinima){
+			if($fezJorMinima || count($registros['inicioJornada']) > 0){
 				if(!isset($registros['fimJornada'][0]) || $registros['fimJornada'][0] == ''){
 					$aRetorno['fimJornada'][] 	  = "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning'></i></a>";
 				}

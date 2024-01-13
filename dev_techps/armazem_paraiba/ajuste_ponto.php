@@ -58,7 +58,7 @@
 										AND pont_tx_status != 'inativo'
 										AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
 										AND pont_tx_data >= '".$_POST['data'].' '.$_POST['hora']."'
-									ORDER BY pont_tx_data DESC
+									ORDER BY pont_tx_data ASC
 									LIMIT 1"
 							),
 							MYSQLI_ASSOC
@@ -66,7 +66,7 @@
 						$jornadaFechada = ($jornadaFechada['pont_tx_tipo'] == $codigosJornada['fim']);
 						if($jornadaFechada){
 							$error = true;
-							$errorMsg .= 'Esta jornada já foi fechada posteriormente.';
+							$errorMsg .= 'Esta jornada já foi fechada neste horário ou após ele.';
 						}
 					}else{
 						$matchedTypes = [
@@ -197,12 +197,12 @@
 			$iconeExcluir = 'icone_excluir(pont_nb_id,excluir_ponto,idEntidade, '.$_POST['id'].')'; //Utilizado em grid()
 		}
 		$botao[] = $botao_imprimir;
-		$botao[] = botao(
-			'Voltar', 
-			'index', 
-			'busca_data1, busca_data2, id, busca_empresa, busca_motorista, data, busca_data', 
-			($_POST['busca_data1']??'').", ".($_POST['busca_data2']??'').", ".$_POST['id'].", ".$aMotorista['enti_nb_empresa'].", ".$_POST['id'].", ".$_POST['data'].", ".substr($_POST['data'], 0, -3)
-		);
+		// $botao[] = botao(
+		// 	'Voltar', 
+		// 	'index', 
+		// 	'busca_data1, busca_data2, id, busca_empresa, busca_motorista, data, busca_data', 
+		// 	($_POST['busca_data1']??'').", ".($_POST['busca_data2']??'').", ".$_POST['id'].", ".$aMotorista['enti_nb_empresa'].", ".$_POST['id'].", ".$_POST['data'].", ".substr($_POST['data'], 0, -3)
+		// );
 		
 		abre_form('Dados do Ajuste de Ponto');
 		linha_form($c);
