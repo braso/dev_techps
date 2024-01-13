@@ -57,9 +57,17 @@
 		<input type="hidden" name="acao" value="sem_acao">
 		<input type="hidden" id="hidden">
 	</form>
+	-->
+	<?
+	// js_contex_icone();
 
+	}
+
+	function js_contex_icone(){
+		echo '
 			<script type="text/javascript">
-				function contex_icone(id,acao,campos='',valores='',target='',msg='',action=''){
+				function contex_icone(id,acao,campos=\'\',valores=\'\',target=\'\',msg=\'\',action=\'\',just){
+					console.log(target);
 					if(msg){
 						if(confirm(msg)){
 							var form = document.getElementById("contex_icone_form"); 
@@ -67,11 +75,16 @@
 							form.action=action;
 							form.id.value=id;
 							form.acao.value=acao;
+							form.just.value=just;
 							if(campos){
 								form.hidden.value=valores;
 								form.hidden.name=campos;
 							}
-								// form.append('<input type="hidden" name="'+campos+'" value="'+valores+'" /> ');
+							campos = campos.split(\',\');
+							valores = valores.split(\',\');
+							for(f = 0; f < campos.length; f++){
+								form.append(\'<input type="hidden" name="\'+campos[f]+\'" value="\'+valores[f]+\'" /> \');
+							}
 							form.submit();
 						}
 					}else{
@@ -84,17 +97,19 @@
 							form.hidden.value=valores;
 							form.hidden.name=campos;
 						}
-							// form.append('<input type="hidden" name="'+campos+'" value="'+valores+'" /> ');
+						campos = campos.split(\',\');
+						valores = valores.split(\',\');
+						for(f = 0; f < campos.length; f++){
+							form.append(\'<input type="hidden" name="\'+campos[f]+\'" value="\'+valores[f]+\'" /> \');
+						}
+						form.submit();
 						form.submit();
 					}
 
 				}
 
 			</script>
-		-->
-
-		<?
-
+		';
 	}
 
 function grid3($cabecalho,$valores,$reg='10'){
@@ -163,46 +178,8 @@ echo '</div>';
 			th { font-size: 10px !important; }
 			td { font-size: 10px !important; }
 		</style>
-		<script type="text/javascript">
-			function contex_icone(id,acao,campos='',valores='',target='',msg='',action='',just){
-				console.log(target);
-				if(msg){
-					if(confirm(msg)){
-						var form = document.getElementById("contex_icone_form"); 
-						form.target=target;
-						form.action=action;
-						form.id.value=id;
-						form.acao.value=acao;
-						form.just.value=just;
-						if(campos){
-							form.hidden.value=valores;
-							form.hidden.name=campos;
-						}
-							// form.append('<input type="hidden" name="'+campos+'" value="'+valores+'" /> ');
-						form.submit();
-					}
-				}else{
-					var form = document.getElementById("contex_icone_form"); 
-					form.target=target;
-					form.action=action;
-					form.id.value=id;
-					form.acao.value=acao;
-					if(campos){
-						form.hidden.value=valores;
-						form.hidden.name=campos;
-					}
-						// form.append('<input type="hidden" name="'+campos+'" value="'+valores+'" /> ');
-					form.submit();
-				}
-
-			}
-
-		</script>
-
-
 		<?
-
-
+			js_contex_icone();
 
 			$rand = md5($sql);
 
