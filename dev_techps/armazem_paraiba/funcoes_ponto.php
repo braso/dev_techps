@@ -518,12 +518,12 @@
 
 		$jornadaPrevistaOriginal = $jornadaPrevista;
 		if($abono !== null){
-			$jornadaPrevista = (new DateTime($data." ".$abono))
-				->diff(new DateTime($data." ".$jornadaPrevista));
+			$jornadaPrevista = (new DateTime($data." ".$abono))->diff(new DateTime($data." ".$jornadaPrevista));
+			$jornadaPrevista = $jornadaPrevista->format("%H:%i");
 		}else{
 			$jornadaPrevista = (new DateTime($data." ".$jornadaPrevista));
+			$jornadaPrevista = $jornadaPrevista->format("H:i");
 		}
-		$jornadaPrevista = $jornadaPrevista->format("H:i");
 
 		return [$jornadaPrevistaOriginal, $jornadaPrevista];
 	}
