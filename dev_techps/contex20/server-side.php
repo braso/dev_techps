@@ -22,8 +22,7 @@ $totalData = mysqli_num_rows($query);
 $totalFiltered = $totalData;  // when there is no search parameter then total number rows = total number filtered rows.
 
 preg_match('/(.*)\((.*?)\)(.*)/',$columns[$requestData['order'][0]['column']], $match2);
-if($match2[2]){
-	
+if(isset($match2[2])){
 	$parametros = explode(',',$match2[2]);
 	$order2 = $parametros[0];
 }else{
