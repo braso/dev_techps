@@ -37,20 +37,33 @@
 		exit;
 	}
 
-
 	function cadastra_motorista() {
 		global $a_mod;
 
 		$enti_campos = [
-			'matricula', 'nome', 'nascimento','cpf','rg','civil','sexo','endereco','numero','complemento',
-			'bairro','cidade','cep','fone1','fone2','email','ocupacao','salario','obs',
-			'tipo','status','empresa',
+			'matricula', 'nome', 'nascimento', 'status', 
+			'cpf','rg','civil','sexo','endereco','numero','complemento',
+			'bairro','cidade','cep','fone1','fone2','email','ocupacao','salario','obs', 'empresa',
 			'parametro','jornadaSemanal','jornadaSabado','percentualHE','percentualSabadoHE',
 			'rgOrgao', 'rgDataEmissao', 'rgUf',
 			'pai', 'mae', 'conjugue', 'tipoOperacao',
 			'subcontratado', 'admissao', 'desligamento',
 			'cnhRegistro', 'cnhValidade', 'cnhPrimeiraHabilitacao', 'cnhCategoria', 'cnhPermissao',
-			'cnhObs', 'cnhCidade', 'cnhEmissao', 'cnhPontuacao', 'cnhAtividadeRemunerada','banco'
+			'cnhObs', 'cnhCidade', 'cnhEmissao', 'cnhPontuacao', 'cnhAtividadeRemunerada',
+			'banco', 'tipo'
+		];
+		
+		$post_values = [
+			'matricula', 'nome', 'nascimento', 'status',
+			'cpf', 'rg', 'civil', 'sexo', 'endereco', 'numero', 'complemento',
+			'bairro', 'cidade', 'cep', 'fone1', 'fone2', 'email', 'ocupacao', 'salario', 'obs', 'empresa',
+			'parametro', 'jornadaSemanal', 'jornadaSabado', 'percentualHE', 'percentualSabadoHE',
+			'rgOrgao', 'rgDataEmissao', 'rgUf',
+			'pai', 'mae', 'conjugue', 'tipoOperacao',
+			'subcontratado', 'admissao', 'desligamento',
+			'cnhRegistro', 'cnhValidade', 'cnhPrimeiraHabilitacao', 'cnhCategoria', 'cnhPermissao',
+			'cnhObs', 'cnhCidade', 'cnhEmissao', 'cnhPontuacao', 'cnhAtividadeRemunerada', 
+			'setBanco', 'nivel',
 		];
 
 		for($f = 0; $f < sizeof($enti_campos); $f++){
@@ -65,17 +78,31 @@
 			$enti_campos[$f] = $bd_campo;
 		}
 
-		$campos_obrigatorios = [
-			'matricula', 'nome', 'nascimento', 'parametro', 'admissao', 'cnhValidade', 'cnhCategoria', 'cnhCidade', 'cnhEmissao', 'jornadaSemanal', 'jornadaSabado',
-			'percentualHE', 'percentualSabadoHE', 'parametro', 'empresa', 'ocupacao', 'cidade', 'rg', 'endereco', 'cep', 'bairro', 'email', 'cnhRegistro'
-		];
-		foreach($campos_obrigatorios as $campo){
-			if(!isset($_POST[$campo]) || empty($_POST[$campo])){
-				echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
+		//Conferir campos obrigatórios{
+			$campos_obrigatorios = [
+				'matricula' => 'Matrícula', 'nome' => 'Nome', 'nascimento' => 'Dt. Nascimento', 'parametro' => 'Parâmetros da Jornada', 'admissao' => 'Dt Admissão', 'cnhValidade' => 'Validade do CNH', 'cnhCategoria' => 'Categoria do CNH', 
+				'cnhCidade' => 'Cidade do CNH', 'cnhEmissao' => 'Data de Emissão do CNH', 'jornadaSemanal' => 'Jornada Semanal', 'jornadaSabado' => 'Jornada Sábado', 'percentualHE' => 'Percentual da HE', 'percentualSabadoHE' => 'Percentual da HE Sábado', 
+				'empresa' => 'Empresa', 'ocupacao' => 'Ocupação', 'cidade' => 'Cidade/UF', 'rg' => 'RG', 'endereco' => 'Endereço', 'cep' => 'CEP', 'bairro' => 'Bairro', 
+				'email' => 'E-mail', 'cnhRegistro' => 'N° Registro da CNH'
+			];
+			$error = false;
+			$emptyFields = '';
+			foreach(array_keys($campos_obrigatorios) as $campo){
+				if(!isset($_POST[$campo]) || empty($_POST[$campo])){
+					$error = true;
+					$emptyFields .= $campos_obrigatorios[$campo].', ';
+				}
+			}
+			$emptyFields = substr($emptyFields, 0, strlen($emptyFields)-2);
+			
+			if($error){
+				echo '<script>alert("Informações obrigatórias faltando: '.$emptyFields.'.")</script>';
 				layout_motorista();
 				exit;
 			}
-		}
+
+			unset($campos_obrigatorios);
+		//}
 
 		if(count(carregar('entidade', '', 'enti_tx_matricula', $_POST['matricula'])) > 0 && !isset($_POST['id'])){
 			echo '<script>alert("Matrícula já cadastrada.")</script>';
@@ -83,8 +110,8 @@
 			exit;
 		}
 		if(!empty($_POST['login'])){
-			$otherUser = mysqli_fetch_all(query("SELECT * FROM user WHERE user_tx_login = '".$_POST['login']."' LIMIT 1"), MYSQLI_ASSOC)[0];
-			if ($otherUser != null && $otherUser['user_tx_matricula'] != $_POST['matricula']){
+			$otherUser = mysqli_fetch_all(query("SELECT * FROM user WHERE user_tx_matricula = '".($_POST['login']?? $_POST['matricula'])."' LIMIT 1"), MYSQLI_ASSOC)[0];
+			if (!empty($otherUser) && strval($otherUser['user_tx_matricula']) != strval($_POST['matricula']) && $otherUser['user_tx_login'] == $_POST['login']){
 				set_status("ERRO: Login já cadastrado.");
 				$a_mod = $_POST;
 				modifica_motorista();
@@ -103,18 +130,6 @@
 		}
 		
 		$_POST['nivel'] = 'Motorista';
-		
-		$post_values = [
-			'matricula', 'nome', 'nascimento', 'cpf', 'rg', 'civil', 'sexo', 'endereco', 'numero', 'complemento',
-			'bairro', 'cidade', 'cep', 'fone1', 'fone2', 'email', 'ocupacao', 'salario', 'obs',
-			'nivel', 'status', 'empresa',
-			'parametro', 'jornadaSemanal', 'jornadaSabado', 'percentualHE', 'percentualSabadoHE',
-			'rgOrgao', 'rgDataEmissao', 'rgUf',
-			'pai', 'mae', 'conjugue', 'tipoOperacao',
-			'subcontratado', 'admissao', 'desligamento',
-			'cnhRegistro', 'cnhValidade', 'cnhPrimeiraHabilitacao', 'cnhCategoria', 'cnhPermissao',
-			'cnhObs', 'cnhCidade', 'cnhEmissao', 'cnhPontuacao', 'cnhAtividadeRemunerada', 'setBanco'
-		];
 
 		$enti_valores = [];
 		for($f = 0; $f < sizeof($post_values); $f++){
@@ -180,7 +195,6 @@
 
 			if($a_user['user_nb_id'] > 0){
 				$user_infos = [
-					'user_tx_matricula' 	=> $_POST['matricula'], 
 					'user_tx_nome' 			=> $_POST['nome'], 
 					'user_tx_login' 		=> (!empty($_POST['login'])? $_POST['login']: $_POST['matricula']), 
 					'user_tx_nivel' 		=> $_POST['nivel'], 
@@ -214,7 +228,6 @@
 					$aParametro['para_tx_percentualSabadoHE'] != $a_mod['enti_tx_percentualSabadoHE'] ||
 					$aParametro['para_nb_id'] != $a_mod['enti_nb_parametro']
 				) {
-
 					$ehPadrao = 'Não';
 				} else {
 					$ehPadrao = 'Sim';
@@ -262,7 +275,6 @@
 		index();
 		exit;
 	}
-
 
 	function carrega_empresa() {
 		$aEmpresa = carregar('empresa', (int)$_GET['emp']);
@@ -364,6 +376,7 @@
 		
 		if(empty($a_mod)){
 			$a_mod = carregar('entidade', $_POST['id']);
+			
 			$campos = ['nome','nascimento','cpf','rg','civil','sexo','endereco','numero','complemento',
 				'bairro','cidade','cep','fone1','fone2','email','ocupacao','salario','obs',
 				'tipo','status','matricula','empresa',
@@ -414,7 +427,6 @@
 
 		$c = [
 			$img,
-			campo('Matrícula*', 'matricula', $a_mod['enti_tx_matricula'], 1, '', 'tabindex=01'),
 			campo('Nome*', 'nome', $a_mod['enti_tx_nome'], 3,'','maxlength="65" tabindex=02'),
 			campo_data('Dt. Nascimento*', 'nascimento', $a_mod['enti_tx_nascimento'], 2, 'tabindex=03'),
 			combo('status', 'status', $a_mod['enti_tx_status'], 2, array('ativo', 'inativo'), 'tabindex=04'),
@@ -448,6 +460,12 @@
 			arquivo('Foto (.png, .jpg)', 'foto', $a_mod['enti_tx_foto'], 4, 'tabindex=28'),
 			ckeditor('Observações:', 'obs', $a_mod['enti_tx_obs'], 12, 'tabindex=29')
 		];
+
+		if(!empty($a_mod['enti_tx_matricula'])){
+			array_splice($c, 1, 0, texto('Matrícula*', $a_mod['enti_tx_matricula'], 1, 'tabindex=01'));
+		}else{
+			array_splice($c, 1, 0, campo('Matrícula*', 'matricula', $a_mod['enti_tx_matricula'], 1, '', 'tabindex=01'),);
+		}
 
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
@@ -489,8 +507,7 @@
 			
 			
 		}
-		// $cJornada[]=texto('Convenção Padrão?', $ehPadrao, 2);
-		// echo icone_excluirCnh($a_mod['enti_nb_id'], 'excluir_cnh');
+
 		if ($a_mod['enti_tx_cnhAnexo'])
 			$iconeExcluirCnh = icone_excluirCnh($a_mod['enti_nb_id'], 'excluir_cnh');
 
@@ -510,7 +527,8 @@
 		];
 
 
-		$b[] = botao('Gravar', 'cadastra_motorista', 'id', $_POST['id'], 'tabindex=53','','btn btn-success');
+		$b[] = botao('Gravar', 'cadastra_motorista', 'id, matricula', $_POST['id'].','.$a_mod['enti_tx_matricula'], 'tabindex=53');
+
 		$b[] = botao('Voltar', 'index', '', '', 'tabindex=54');
 
 		abre_form('Dados Cadastrais');

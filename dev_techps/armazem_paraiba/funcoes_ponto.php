@@ -4,7 +4,7 @@
 		error_reporting(E_ALL);
 	//*/
 
-	include "conecta.php";
+	include_once "conecta.php";
 
 	function calcularAbono($horario1, $horario2){
 		// Converter os horários em minutos
@@ -108,26 +108,10 @@
 		<?
 	}
 
-	function cadastra_ajuste(){
-		if(empty($_POST['hora']) || empty($_POST['idMacro']) || empty($_POST['motivo'])){
-			set_status("ERRO: Dados insuficientes!");
-			layout_ajuste();
-			exit;
-		}
-
-		$aMotorista = carregar('entidade',$_POST['id']);
-
-		$aTipo = carrega_array(query(
-			"SELECT macr_tx_codigoInterno, macr_tx_codigoExterno FROM macroponto 
-				WHERE macr_nb_id = '".$_POST['idMacro']."'"
-		));
-
-		$campos = ['pont_nb_user', 'pont_tx_matricula', 'pont_tx_data', 'pont_tx_tipo', 'pont_tx_tipoOriginal', 'pont_tx_status', 'pont_tx_dataCadastro', 'pont_nb_motivo', 'pont_tx_descricao'];
-		$valores = [$_SESSION['user_nb_id'], $aMotorista['enti_tx_matricula'], "$_POST[data] $_POST[hora]", $aTipo[0], $aTipo[1], 'ativo', date("Y-m-d H:i:s"),$_POST['motivo'],$_POST['descricao']];
-		inserir('ponto',$campos,$valores);
-		
-		layout_ajuste();
-		exit;
+	function layout_ajuste(){
+		global $CONTEX;
+		header('Location: https://braso.mobi'.$CONTEX['path'].'/ajuste_ponto?id='.$_POST['id'].'&data='.$_POST['data']);
+		// exit;
 	}
 
 	function excluir_ponto(){
@@ -141,87 +125,6 @@
 
 		layout_ajuste();
 		exit;
-	}
-
-	function layout_ajuste(){
-		global $a_mod;
-
-		cabecalho('Espelho de Ponto');
-
-		if(empty($_POST['busca_data1']) && !empty($_POST['busca_data']))
-			$_POST['busca_data1'] = $_POST['busca_data'];
-		if(empty($_POST['busca_data2']) && !empty($_POST['busca_data']))
-			$_POST['busca_data2'] = $_POST['busca_data'];
-		
-		$aMotorista = carregar('entidade',$_POST['id']);
-
-		$sqlCheck = query("SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user 
-			WHERE endo_tx_mes = '".substr($_POST['data'], 0,7).'-01'."' 
-				AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'
-				AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."' 
-				AND endo_tx_status = 'ativo' 
-				AND endo_nb_userCadastro = user_nb_id 
-			LIMIT 1"
-		);
-		$aEndosso = carrega_array($sqlCheck);
-
-		$botao_imprimir = 
-			'<button  href="#" class="btn default" onclick="imprimir()">Imprimir</button >
-				<script>
-					function imprimir() {
-						// Abrir a caixa de diálogo de impressão
-						window.print();
-					}
-				</script>';
-
-		$c[] = texto('Matrícula',$aMotorista['enti_tx_matricula'],2);
-		$c[] = texto('Motorista',$aMotorista['enti_tx_nome'],5);
-		$c[] = texto('CPF',$aMotorista['enti_tx_cpf'],3);
-
-		$c2[] = campo('Data','data',data($_POST['data']),2,'','readonly=readonly');
-		$c2[] = campo_hora('Hora','hora',$a_mod['macr_tx_codigoExterno'],2);
-		$c2[] = combo_bd('Código Macro','idMacro','',4,'macroponto','','ORDER BY macr_nb_id ASC');
-		$c2[] = combo_bd('Motivo:','motivo','',4,'motivo','',' AND moti_tx_tipo = "Ajuste"');
-
-		$c3[] = textarea('Justificativa:','descricao','',12);
-
-		if(count($aEndosso) == 0){
-			$botao[] = botao('Gravar','cadastra_ajuste','id,busca_motorista,busca_data1,busca_data2,data,busca_data',"$_POST[id],$_POST[id],$_POST[busca_data1],$_POST[busca_data2],$_POST[data],".substr($_POST['data'],0, -3),'','','btn btn-success');
-			$iconeExcluir = 'icone_excluir(pont_nb_id,excluir_ponto,idEntidade,' . $_POST['id'] . ')';
-		}else{
-			$c2[] = texto('Endosso:',"Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1),6);
-		}
-		$botao[] = $botao_imprimir;
-		$botao[] = botao(
-			'Voltar', 
-			'index', 
-			'busca_data1, busca_data2, id, busca_empresa, busca_motorista, data, busca_data', 
-			$_POST['busca_data1'].", ".$_POST['busca_data2'].", ".$_POST['id'].", ".$aMotorista['enti_nb_empresa'].", ".$_POST['id'].", ".$_POST['data'].", ".substr($_POST['data'], 0, -3)
-		);
-		
-		abre_form('Dados do Ajuste de Ponto');
-		linha_form($c);
-		linha_form($c2);
-		linha_form($c3);
-		fecha_form($botao);
-
-		$sql = 
-			"SELECT * FROM ponto
-				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
-				JOIN user ON ponto.pont_nb_user = user.user_nb_id
-				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
-				WHERE ponto.pont_tx_status != 'inativo' 
-					AND pont_tx_data LIKE '".$_POST['data']."%' 
-					AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'";
-
-		
-		$cab = ['CÓD','DATA','HORA','TIPO','MOTIVO', 'LEGENDA','JUSTIFICATIVA','USUÁRIO','DATA CADASTRO',''];
-
-		$val = ['pont_nb_id','data(pont_tx_data)','data(pont_tx_data,3)','macr_tx_nome','moti_tx_nome','moti_tx_legenda','pont_tx_descricao','user_tx_login','data(pont_tx_dataCadastro,1)','icone_excluir(pont_nb_id,excluir_ponto,idEntidade,'.$_POST['id'].')'];
-		grid($sql,$cab,$val,'','',2,'ASC',-1);
-
-		rodape();
-
 	}
 
 	function maxDirecaoContinua($dados) {
@@ -393,9 +296,20 @@
 			if(count($endossado) > 0){
 				$retorno = '<a title="Ajuste de Ponto (endossado)" href="#" onclick=""><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
 			}else{
-				$retorno = '<a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto(\''.$data.'\', \''.$idMotorista.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
+				$retorno = '<a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto(\''.$data.'\','.$idMotorista.')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
 			}
 		}
+
+		echo 
+			'<script>
+				function ajusta_ponto(data, motorista) {
+					document.form_ajuste_ponto.data.value = data;
+					document.form_ajuste_ponto.id.value = motorista;
+					document.form_ajuste_ponto.submit();
+				}
+			</script>'
+		;
+
 		return $retorno;
 	}
 
@@ -604,12 +518,12 @@
 
 		$jornadaPrevistaOriginal = $jornadaPrevista;
 		if($abono !== null){
-			$jornadaPrevista = (new DateTime($data." ".$abono))
-				->diff(new DateTime($data." ".$jornadaPrevista));
+			$jornadaPrevista = (new DateTime($data." ".$abono))->diff(new DateTime($data." ".$jornadaPrevista));
+			$jornadaPrevista = $jornadaPrevista->format("%H:%i");
 		}else{
 			$jornadaPrevista = (new DateTime($data." ".$jornadaPrevista));
+			$jornadaPrevista = $jornadaPrevista->format("H:i");
 		}
-		$jornadaPrevista = $jornadaPrevista->format("H:i");
 
 		return [$jornadaPrevistaOriginal, $jornadaPrevista];
 	}
@@ -725,13 +639,19 @@
 						-- )
 					ORDER BY pont_tx_data ASC;"
 				);
+				$pontosDiaSeguinte = [];
 				while($ponto = carrega_array($sql)){
 					$ponto['diaSeguinte'] = True;
-					$pontosDia[] = $ponto;
+					$pontosDiaSeguinte[] = $ponto;
 					if($ponto['pont_tx_tipo'] == '2'){
 						break;
 					}
+					if($ponto['pont_tx_tipo'] == '1'){
+						$pontosDiaSeguinte = [];
+						break;
+					}
 				}
+				$pontosDia = array_merge($pontosDia, $pontosDiaSeguinte);
 			}
 			
 			if($pontosDia[0]['pont_tx_tipo'] != '1'){ //Se o 1° registro != início de jornada => É uma jornada que veio do dia anterior
@@ -774,7 +694,7 @@
 		$registros['repousoCompleto']['icone'] .= $registros['repousoPorEspera']['repousoCompleto']['icone'];
 
 		if(isset($registros['esperaCompleto']['paresParaRepouso']) && count($registros['esperaCompleto']['paresParaRepouso']) > 0){
-			// var_dump($registros['esperaCompleto']); echo '<br><br>';
+
 		}
 		
 		$aRetorno['diffRefeicao'] = $registros['refeicaoCompleto']['icone'] . $registros['refeicaoCompleto']['totalIntervalo'];
@@ -990,11 +910,10 @@
 		//FIM 01:00 DE REFEICAO
 
 		//ALERTAS{
-			if((!isset($registros['inicioJornada'][0]) || $registros['inicioJornada'][0] == '') &&
-				$aRetorno['jornadaPrevista'] != '00:00'){
+			if((!isset($registros['inicioJornada'][0]) || $registros['inicioJornada'][0] == '') && $aRetorno['jornadaPrevista'] != '00:00'){
 				$aRetorno['inicioJornada'][] 	= "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
 			}
-			if($fezJorMinima){
+			if($fezJorMinima || count($registros['inicioJornada']) > 0){
 				if(!isset($registros['fimJornada'][0]) || $registros['fimJornada'][0] == ''){
 					$aRetorno['fimJornada'][] 	  = "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning'></i></a>";
 				}
@@ -1176,4 +1095,5 @@
 		$response = iconv('UTF-8', 'ASCII//TRANSLIT', $week[date('l', strtotime($date))]);
 		return $response;
 	}
+	
 ?>

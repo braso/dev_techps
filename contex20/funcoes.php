@@ -1115,7 +1115,7 @@ function icone_modificar($id,$acao,$campos='',$valores='',$target='',$icone='gly
 	
 }
 
-function icone_excluir($id,$acao,$campos='',$valores='',$target='',$icone='',$msg='Deseja excluir o registro?',$title=''){
+function icone_excluir($id,$acao,$campos='',$valores='',$target='',$icone='', $action='', $msg='Deseja excluir o registro?',$title=''){
 	if($icone==''){
 		$icone = 'glyphicon glyphicon-remove';
 	}

@@ -85,7 +85,7 @@
 
 					$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 
-					if(isset($aDetalhado['fimJornada'][0]) && (strpos($aDetalhado['fimJornada'][0], ':00') !== false) && date('Y-m-d', strtotime($aDetalhado['fimJornada'][0])) != $dataVez){
+					if(isset($aDetalhado['fimJornada'][0]) && ((is_array($aDetalhado['fimJornada'][0]) && count($aDetalhado['fimJornada'][0]) > 0) || strlen($aDetalhado['fimJornada'][0]) > 0) && substr($aDetalhado['fimJornada'][0], 0, 11) > substr($aDetalhado['inicioJornada'][0], 0, 11)){
 						array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
 					}
 
@@ -368,7 +368,7 @@
 				combo(    'Endosso:',   'busca_endossado', (!empty($_POST['busca_endossado'])? $_POST['busca_endossado']: ''), 2, ['', 'Endossado', 'Endossado parcialmente', 'Não endossado'])
 			];
 
-			if(is_int(strpos($_SESSION['user_tx_nivel'], 'Super Administrador'))){
+			if(is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))){
 				array_unshift($c, combo_net('* Empresa:', 'busca_empresa',   (!empty($_POST['busca_empresa'])?   $_POST['busca_empresa']  : ''), 3, 'empresa', 'onchange=selecionaMotorista(this.value)', $extraEmpresa));
 			}
 		//}
@@ -379,7 +379,7 @@
 			}
 			$b = [
 				botao("Buscar", 'index', '', '', '', 1),
-				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1,'btn btn-warning'),
+				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1,'btn btn-info'),
 				'<button name="acao" id="botaoContexCadastrar CadastrarEndosso" value="cadastrar_endosso" type="button" class="btn btn-success">Cadastrar Endosso</button>',
 				'<button name="acao" id="botaoContexCadastrar ImprimirRelatorio" value="impressao_relatorio" ' . $disabled . ' type="button" class="btn btn-default">Imprimir Relatório</button>',
 				'<span id=dadosResumo><b>' . $carregando . '</b></span>'
@@ -489,10 +489,6 @@
 						}
 					//}
 
-					if(count($aDia) == 0){
-						echo '<script>alert("Período ainda não endossado.")</script>';
-					}
-
 					if (count($aDia) > 0) {
 
 						$aEndosso = carrega_array(query(
@@ -505,8 +501,9 @@
 								LIMIT 1"
 						));
 						if (is_array($aEndosso) && count($aEndosso) > 0) {
-							$counts['endossados']++;
-							$infoEndosso = " - Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'], 1);
+							$counts['endossados']['sim']++;
+							$infoEndosso = " - Endossado por " . $aEndosso['user_tx_login'] . " em " . data($aEndosso['endo_tx_dataCadastro'], 1);
+
 							$aIdMotoristaEndossado[] = $aMotorista['enti_nb_id'];
 							$aMatriculaMotoristaEndossado[] = $aMotorista['enti_tx_matricula'];
 						} else {
@@ -661,6 +658,9 @@
 
 					unset($aDia);
 				}
+			}
+			if($counts['endossados']['sim'] == 0 && !empty($_POST['acao'])){
+				echo '<script>alert("Período ainda não endossado.")</script>';
 			}
 		//}
 		echo '<div class="printable"></div>';
