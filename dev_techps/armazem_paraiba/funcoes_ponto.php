@@ -59,7 +59,7 @@
 
 	function layout_abono(){
 
-		cabecalho('Espelho de Ponto');
+		cabecalho('Cadastro Abono');
 
 		$c[] = combo_net('Motorista:','motorista',$_POST['busca_motorista'],4,'entidade','',' AND enti_tx_tipo = "Motorista"','enti_tx_matricula');
 		$c[] = campo('Data(s):','daterange',$_POST['daterange'],3);
@@ -69,7 +69,7 @@
 		
 		//BOTOES
 		$b[] = botao("Voltar",'index');
-		$b[] = botao("Gravar",'cadastra_abono');
+		$b[] = botao("Gravar",'cadastra_abono','','','','','btn btn-success');
 		
 		abre_form('Filtro de Busca');
 		linha_form($c);

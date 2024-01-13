@@ -311,7 +311,7 @@
 		$file = basename(__FILE__);
 		$file = explode('.', $file);
 
-		$botao[] = botao($btn_txt,'cadastra_empresa','id',$_POST['id']);
+		$botao[] = botao($btn_txt,'cadastra_empresa','id',$_POST['id'],'','','btn btn-success');
 		$botao[] = botao('Voltar','index');
 		
 		abre_form("Dados da Empresa/Filial");
@@ -495,14 +495,17 @@
 		$c[] = combo('Situação','busca_situacao',$_POST['busca_situacao'],2,['Todos','Ativo','Inativo']);
 
 		$botao[] = botao('Buscar','index');
-		$botao[] = botao('Inserir','layout_empresa');
+		$botao[] = botao('Inserir','layout_empresa','','','','','btn btn-success');
 		
 		abre_form('Filtro de Busca');
 		linha_form($c);
 		fecha_form($botao);
 
 		// $sql = "SELECT * FROM empresa, cidade WHERE empr_tx_status != 'inativo' AND empr_nb_cidade = cida_nb_id $extra";
-		$sql = "SELECT * FROM empresa, cidade WHERE empr_tx_status != 'inativo' AND empr_nb_cidade = cida_nb_id $extra";
+		$sql = "SELECT *
+		FROM empresa, cidade
+		WHERE empr_tx_status != 'inativo' AND empr_nb_cidade = cida_nb_id $extra
+		ORDER BY empr_tx_EhMatriz DESC, empr_nb_id";
 		$cab = ['CÓDIGO','NOME','FANTASIA','CPF/CNPJ','CIDADE/UF','SITUAÇÃO','',''];
 		$val = ['empr_nb_id','empr_tx_nome','empr_tx_fantasia','empr_tx_cnpj','concat(cida_nb_id)','empr_tx_situacao','icone_modificar(empr_nb_id,modifica_empresa)','icone_excluir(empr_nb_id,exclui_empresa)'];
 		grid($sql,$cab,$val,'','',1,'',10);
