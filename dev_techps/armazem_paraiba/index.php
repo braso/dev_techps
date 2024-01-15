@@ -52,7 +52,8 @@ if($_GET['user'] != '' && $_GET['password'] != '' ){
 			exit;
 
 		}else{
-			header("Location: https://braso.mobi/dev_techps/index2.php?erro=1");
+			
+			header("Location: https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? "dev_techps": "techps")."/index2.php?erro=1");
 			exit;
 		}
 
@@ -72,7 +73,7 @@ if($_GET['user'] != '' && $_GET['password'] != '' ){
 	exit;
 
 } else {
-	header("Location: https://braso.mobi/dev_techps/index2.php");
+	header("Location: https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? "dev_techps": "techps")."/index2.php");
 	exit;
 }
 

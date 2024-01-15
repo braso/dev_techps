@@ -17,12 +17,6 @@
 		return $res;
 	}
 
-	function cadastrar(){
-		$url = substr($_SERVER['REQUEST_URI'], 0, strrpos($_SERVER['REQUEST_URI'], '/'));
-		// header('Location: ' . 'https://braso.mobi' . $url . '/cadastro_endosso');
-		exit();
-	}
-
 	function imprimir_relatorio(){
 		global $totalResumo, $CONTEX; //Utilizado em relatorio_espelho.php
 
@@ -91,7 +85,7 @@
 
 					$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 
-					if(isset($aDetalhado['fimJornada'][0]) && (strpos($aDetalhado['fimJornada'][0], ':00') !== false) && date('Y-m-d', strtotime($aDetalhado['fimJornada'][0])) != $dataVez){
+					if(isset($aDetalhado['fimJornada'][0]) && ((is_array($aDetalhado['fimJornada'][0]) && count($aDetalhado['fimJornada'][0]) > 0) || strlen($aDetalhado['fimJornada'][0]) > 0) && substr($aDetalhado['fimJornada'][0], 0, 11) > substr($aDetalhado['inicioJornada'][0], 0, 11)){
 						array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
 					}
 
@@ -317,35 +311,6 @@
 		exit;
 	}
 
-	function cadastrar_endosso(){
-
-		$aSaldo = json_decode($_POST['aSaldo'], true);
-
-		$aID = explode(',', $_POST['idMotorista']);
-		$aMatricula = explode(',', $_POST['matriculaMotorista']);
-
-
-		for ($i = 0; $i < count($aID); $i++) {
-			$sqlCheck = query(
-				"SELECT endo_nb_id FROM endosso 
-					WHERE endo_tx_mes = '" . $_POST['busca_data'] . '-01' . "' 
-						AND endo_nb_entidade = '" . $aID[$i] . "' 
-						AND endo_tx_matricula = '" . $aMatricula[$i] . "' 
-						AND endo_tx_status = 'ativo'"
-			);
-			if (num_linhas($sqlCheck) == 0) {
-
-				$campos = ['endo_nb_entidade', 'endo_tx_matricula', 'endo_tx_mes', 'endo_tx_dataCadastro', 'endo_nb_userCadastro', 'endo_tx_status', 'endo_tx_saldo'];
-				$valores = [$aID[$i], $aMatricula[$i], $_POST['busca_data'] . '-01', date("Y-m-d H:i:s"), $_SESSION['user_nb_id'], 'ativo', $aSaldo[$aMatricula[$i]]];
-
-				inserir('endosso', $campos, $valores);
-			}
-		}
-
-		index();
-		exit;
-	}
-
 	function index(){
 		global $totalResumo, $CONTEX;
 
@@ -387,9 +352,10 @@
 				if(is_int(strpos($_POST['busca_endossado'], 'Não '))){
 					$extra .= " NOT";
 				}
-				$extra .= " IN (SELECT endo_nb_entidade FROM endosso, entidade WHERE endo_tx_mes = '" . substr($_POST['busca_data'], 0, 7) . '-01' .
-					"' AND enti_nb_empresa = '" . $_POST['busca_empresa'] .
-					"' AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
+				$extra .= " IN (SELECT endo_nb_entidade FROM endosso, entidade 
+					WHERE '".$_POST['busca_data']."' BETWEEN endo_tx_de AND endo_tx_ate".
+						" AND enti_nb_empresa = '" . $_POST['busca_empresa'] .
+						"' AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
 				)";
 			}
 		}
@@ -402,7 +368,7 @@
 				combo(    'Endosso:',   'busca_endossado', (!empty($_POST['busca_endossado'])? $_POST['busca_endossado']: ''), 2, ['', 'Endossado', 'Endossado parcialmente', 'Não endossado'])
 			];
 
-			if(is_int(strpos($_SESSION['user_tx_nivel'], 'Super Administrador'))){
+			if(is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))){
 				array_unshift($c, combo_net('* Empresa:', 'busca_empresa',   (!empty($_POST['busca_empresa'])?   $_POST['busca_empresa']  : ''), 3, 'empresa', 'onchange=selecionaMotorista(this.value)', $extraEmpresa));
 			}
 		//}
@@ -413,9 +379,9 @@
 			}
 			$b = [
 				botao("Buscar", 'index', '', '', '', 1),
-				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1),
-				'<button name="acao" id="botaoContexCadastrar CadastrarEndosso" value="cadastrar_endosso" type="button" class="btn default">Cadastrar Endosso</button>',
-				'<button name="acao" id="botaoContexCadastrar ImprimirRelatorio" value="impressao_relatorio" ' . $disabled . ' type="button" class="btn default">Imprimir Relatório</button>',
+				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1,'btn btn-info'),
+				'<button name="acao" id="botaoContexCadastrar CadastrarEndosso" value="cadastrar_endosso" type="button" class="btn btn-success">Cadastrar Endosso</button>',
+				'<button name="acao" id="botaoContexCadastrar ImprimirRelatorio" value="impressao_relatorio" ' . $disabled . ' type="button" class="btn btn-default">Imprimir Relatório</button>',
 				'<span id=dadosResumo><b>' . $carregando . '</b></span>'
 			];
 		//}
@@ -523,23 +489,21 @@
 						}
 					//}
 
-					if(count($aDia) == 0){
-						echo '<script>alert("Período ainda não endossado.")</script>';
-					}
-
 					if (count($aDia) > 0) {
 
 						$aEndosso = carrega_array(query(
 							"SELECT user_tx_login, endo_tx_dataCadastro, endo_tx_ate 
 								FROM endosso JOIN user ON endo_nb_userCadastro = user_nb_id 
-								WHERE endo_tx_mes = '" . substr($_POST['busca_data'], 0, 7) . '-01' . "' AND endo_nb_entidade = '" . $aMotorista['enti_nb_id'] . "'
-									AND endo_tx_matricula = '" . $aMotorista['enti_tx_matricula'] . "' 
+								WHERE endo_tx_mes LIKE '".$_POST['busca_data']."%' 
+									AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'
+									AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."' 
 									AND endo_tx_status = 'ativo' 
 								LIMIT 1"
 						));
 						if (is_array($aEndosso) && count($aEndosso) > 0) {
-							$counts['endossados']++;
+							$counts['endossados']['sim']++;
 							$infoEndosso = " - Endossado por " . $aEndosso['user_tx_login'] . " em " . data($aEndosso['endo_tx_dataCadastro'], 1);
+
 							$aIdMotoristaEndossado[] = $aMotorista['enti_nb_id'];
 							$aMatriculaMotoristaEndossado[] = $aMotorista['enti_tx_matricula'];
 						} else {
@@ -694,6 +658,9 @@
 
 					unset($aDia);
 				}
+			}
+			if($counts['endossados']['sim'] == 0 && !empty($_POST['acao'])){
+				echo '<script>alert("Período ainda não endossado.")</script>';
 			}
 		//}
 		echo '<div class="printable"></div>';

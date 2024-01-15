@@ -39,7 +39,12 @@ if($requestData['length'] != '-1'){
 }else{
 	$limit = " LIMIT 10";
 }
-$sql.=" ORDER BY ". $order2."   ".(!empty($requestData['order'][0]['dir'])? $requestData['order'][0]['dir']: '')." $limit";
+
+if (!empty($requestData['order'][0]['dir'])) {
+	$sql.=" ORDER BY ". $order2."   ".(!empty($requestData['order'][0]['dir'])? $requestData['order'][0]['dir']: '')." $limit";
+}else{
+    $sql.=(!empty($requestData['order'][0]['dir'])? $requestData['order'][0]['dir']: '')." $limit";
+}
 
 
 /* $requestData['order'][0]['column'] contains colmun index, $requestData['order'][0]['dir'] contains order such as asc/desc  */	

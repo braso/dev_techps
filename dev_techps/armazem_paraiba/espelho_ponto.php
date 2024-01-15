@@ -2,16 +2,12 @@
 	/* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
-		if(!isset($_GET['debug'])){
-			echo '<div style="text-align:center; vertical-align: center; height: 100%; padding-top: 20%">Esta página está em desenvolvimento.</div>';
-			exit;
-		}
 	//*/
 
-	include "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
+	include_once "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
 
 	function index() {
-		global $CACTUX_CONF, $totalResumo;
+		global $CONTEX, $totalResumo;
 	
 		cabecalho('Espelho de Ponto');
 		
@@ -50,7 +46,7 @@
 		//BOTOES
 		$b = [botao("Buscar", 'index')];
 		if ($_SESSION['user_tx_nivel'] != 'Motorista') {
-			$b[] = botao("Cadastrar Abono", 'layout_abono');
+			$b[] = botao("Cadastrar Abono", 'layout_abono','','','','','btn btn-success');
 		}
 	
 		abre_form('Filtro de Busca');
@@ -77,7 +73,7 @@
 				$dataVez = $date->format('Y-m-d');
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 
-				if(isset($aDetalhado['fimJornada'][0]) && count($aDetalhado['fimJornada'][0]) > 0 && substr($aDetalhado['fimJornada'][0], 11) < substr($aDetalhado['inicioJornada'][0], 11)){
+				if(isset($aDetalhado['fimJornada'][0]) && ((is_array($aDetalhado['fimJornada'][0]) && count($aDetalhado['fimJornada'][0]) > 0) || strlen($aDetalhado['fimJornada'][0]) > 0) && substr($aDetalhado['fimJornada'][0], 0, 11) > substr($aDetalhado['inicioJornada'][0], 0, 11)){
 					array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
 				}
 				// if(isset($aDetalhado['fimJornada'][0]) && (strpos($aDetalhado['fimJornada'][0], ':00') !== false) && date('Y-m-d', strtotime($aDetalhado['fimJornada'][0])) != $dataVez){
@@ -108,6 +104,7 @@
 							foreach($legendas as $legenda){
 								$aDetalhado[$tipo] = str_replace('<br><strong>'.$legenda['moti_tx_legenda'].'</strong>', ' <strong>'.$legenda['moti_tx_legenda'].'</strong>', $aDetalhado[$tipo]);
 							}
+							$aDetalhado[$tipo] = str_replace('<br>D+1', ' D+1', $aDetalhado[$tipo]);
 						}else{
 							$aDetalhado[$tipo] = '';
 						}
@@ -213,28 +210,17 @@
 	
 		?>
 		<style>
-
-		#saldo {
-			width: 50% !important;
-			margin-top: 9px !important;
-			text-align: center;
-		}
+			#saldo {
+				width: 50% !important;
+				margin-top: 9px !important;
+				text-align: center;
+			}
 		</style>
 	
-		<form name="form_ajuste_ponto" method="post">
-			<input type="hidden" name="acao" value="layout_ajuste">
+		<form action="https://braso.mobi<?=$CONTEX['path']?>/ajuste_ponto" name="form_ajuste_ponto" method="post">
 			<input type="hidden" name="id" value="<?= $aMotorista['enti_nb_id'] ?>">
 			<input type="hidden" name="data">
 		</form>
-	
-		<script>
-			function ajusta_ponto(data, motorista) {
-				document.form_ajuste_ponto.data.value = data;
-				document.form_ajuste_ponto.id.value = motorista;
-				document.form_ajuste_ponto.submit();
-			}
-		</script>
 	<?
-	
 	}
 ?>

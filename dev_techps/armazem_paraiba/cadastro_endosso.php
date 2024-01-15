@@ -173,7 +173,11 @@
 					$error_msg = 'Há um tempo não endossado entre '.$ultimoEndosso['endo_tx_ate']->format('d/m/Y').' e '.$dataDe->format('d/m/Y').'.  ';
 				}
 			}else{ //Se é o primeiro endosso sendo feito para este motorista
-				$ultimoEndosso['endo_tx_saldo'] = '00:00';
+				if(isset($motorista['enti_tx_banco'])){
+					$ultimoEndosso['endo_tx_saldo'] = $motorista['enti_tx_banco'];
+				}else{
+					$ultimoEndosso['endo_tx_saldo'] = '00:00';
+				}
 			}
 		//}
 
@@ -298,7 +302,7 @@
 			'endo_nb_entidade' 		=> $motorista['enti_nb_id'],
 			'endo_tx_matricula' 	=> $motorista['enti_tx_matricula'],
 			'endo_tx_mes' 			=> substr($_POST['data_de'], 0, 8).'01',
-			'endo_tx_saldo' 		=> $totalResumo['diffSaldo'],
+			'endo_tx_saldo' 		=> operarHorarios([$totalResumo['saldoAnterior'], $totalResumo['diffSaldo']], '+'),
 			'endo_tx_de' 			=> $_POST['data_de'],
 			'endo_tx_ate' 			=> $_POST['data_ate'],
 			'endo_tx_dataCadastro' 	=> date('Y-m-d h:i:s'),
