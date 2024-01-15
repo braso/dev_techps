@@ -88,7 +88,7 @@ function index(){
 		(isset($_POST['busca_legenda']) && !empty($_POST['busca_legenda'])? " AND moti_tx_legenda LIKE '%".$legendas[$_POST['busca_legenda']]."%'": '');
 
 	$c = [
-		campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO'),
+		campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO','maxlength="6"'),
 		campo('Nome','busca_nome',$_POST['busca_nome'],5, '', 'maxlength="65"'),
 		combo('Tipo','busca_tipo',$_POST['busca_tipo'],2,['','Ajuste','Abono']),
 		combo('Legenda','busca_legenda',$_POST['busca_legenda'],3,['','Incluída Manualmente', 'Pré-Assinalada', 'Outras fontes de marcação', 'Descanso Semanal Remunerado e Abono'])

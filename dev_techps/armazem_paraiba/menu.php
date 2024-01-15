@@ -1,5 +1,5 @@
 <? 
-if ($_SESSION["user_tx_nivel"] == 'Administrador' || $_SESSION["user_tx_nivel"] == 'Super Administrador') { ?>
+if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos($_SESSION['user_tx_nivel'], 'Super Administrador'))) { ?>
 
 	<!-- INICIO HEADER MENU -->
 	<div class="page-header-menu">
@@ -65,7 +65,7 @@ if ($_SESSION["user_tx_nivel"] == 'Administrador' || $_SESSION["user_tx_nivel"] 
 
 <? } ?>
 
-<? if ($_SESSION["user_tx_nivel"] == 'Funcionário') { ?>
+<? if (is_int(strpos($_SESSION['user_tx_nivel'], 'Funcionário'))) { ?>
 
 	<!-- INICIO HEADER MENU -->
 	<div class="page-header-menu">
@@ -117,7 +117,7 @@ if ($_SESSION["user_tx_nivel"] == 'Administrador' || $_SESSION["user_tx_nivel"] 
 <? } ?>
 
 
-<? if ($_SESSION["user_tx_nivel"] == 'Motorista') {?>
+<? if (is_int(strpos($_SESSION['user_tx_nivel'], 'Motorista'))) {?>
 
 	<!-- INICIO HEADER MENU -->
 	<div class="page-header-menu">

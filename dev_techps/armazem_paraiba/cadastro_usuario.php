@@ -67,7 +67,6 @@
 				$error_msg .= 'Senha e Confirmação, ';
 			}
 		}
-
 		//Se o usuário é um administrador e não definiu o nível do usuário a ser cadastrado
 
 		if(is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) && isset($_POST['nivel']) && empty($_POST['nivel'])){
@@ -81,11 +80,15 @@
 			modifica_usuario();
 			exit;
 		}
-
 		$bd_campos = ['user_tx_senha'];
 		$valores = [md5($_POST['senha'])];
 
 		$campos_variaveis = [
+			['user_tx_login','login'],
+			['user_tx_nome','nome'],
+			['user_nb_empresa','empresa'],
+			['user_tx_email','email'],
+			['user_tx_fone','telefone'],
 			['user_tx_cpf', 'cpf'],
 			['user_tx_rg', 'rg'],
 			['user_nb_cidade', 'cidade'],
@@ -125,8 +128,7 @@
 		}
 		
 		if(!$_POST['id']){//Criando novo usuário
-
-			$bd_campos[] = 'user_tx_status';
+			$bd_campos[] .= 'user_tx_status';
 			$valores[] = 'ativo';
 
 			$bd_campos = array_merge($bd_campos, ['user_nb_userCadastro', 'user_tx_dataCadastro']);

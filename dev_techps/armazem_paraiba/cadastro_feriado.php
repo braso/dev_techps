@@ -90,7 +90,9 @@ function index(){
 	$uf = array ('','AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MS', 'MT', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO');
 	
 	
-	$c[] = campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO');
+
+	$c[] = campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO','maxlength="6"');
+
 	$c[] = campo('Nome','busca_nome',$_POST['busca_nome'],4, '', 'maxlength="65"');
 	$c[] = combo('Estadual','busca_uf',$_POST['busca_uf'],2,$uf);
 	$c[] = combo_net('Municipal','busca_cidade',$_POST['busca_cidade'],4,'cidade','','','cida_tx_uf');

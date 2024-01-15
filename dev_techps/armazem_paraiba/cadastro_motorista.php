@@ -1,8 +1,8 @@
 <?php
-	/* Modo debug
-		ini_set('display_errors', 1);
-		error_reporting(E_ALL);
-	//*/
+	// Modo debug
+		// ini_set('display_errors', 1);
+		// error_reporting(E_ALL);
+	
 	include "conecta.php";
 
 
@@ -494,18 +494,18 @@
 		];
 		$ehPadrao = '';
 		if($a_mod['enti_nb_parametro'] > 0){
+			$aEmpresa = carregar('empresa', (int)$a_mod['enti_nb_empresa']);
+			$aParam = carregar('parametro', (int)$aEmpresa['empr_nb_parametro']);
 			$aParametro = carregar('parametro', $a_mod['enti_nb_parametro']);
-			if( $aParametro['para_tx_jornadaSemanal']     != $a_mod['enti_tx_jornadaSemanal'] ||
-				$aParametro['para_tx_jornadaSabado']      != $a_mod['enti_tx_jornadaSabado'] ||
-				$aParametro['para_tx_percentualHE']       != $a_mod['enti_tx_percentualHE'] ||
-				$aParametro['para_tx_percentualSabadoHE'] != $a_mod['enti_tx_percentualSabadoHE']){
+			
+			if($aParam['para_nb_id'] != $aParametro ['para_nb_id']){
 
 				$ehPadrao = 'Não';
 			}else{
 				$ehPadrao = 'Sim';
 			}
 			
-			
+			$cJornada[]=texto('Convenção Padrão?', $ehPadrao, 2);
 		}
 
 		if ($a_mod['enti_tx_cnhAnexo'])
