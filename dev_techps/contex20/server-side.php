@@ -35,8 +35,6 @@ $totalFiltered = mysqli_num_rows($query); // when there is a search parameter th
 
 if($requestData['length'] != '-1'){
 	$limit =  " LIMIT ".$requestData['start']." ,".$requestData['length'];
-}else{
-	$limit = " LIMIT 10";
 }
 
 if (!empty($requestData['order'][0]['dir'])) {
