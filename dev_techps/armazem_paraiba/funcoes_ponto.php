@@ -919,10 +919,10 @@
 				}
 				// $jornadaEfetiva->format("H:i") > "05:59"
 				if(!isset($registros['inicioRefeicao'][0]) && ($jornadaEfetiva->format("H:i") >= "06:00") || empty($aRetorno['inicioRefeicao'][0]) && ($jornadaEfetiva->format("H:i") > "06:00")){
-					$aRetorno['inicioRefeicao'][] = "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>".$avisoRefeicao;
+					$aRetorno['inicioRefeicao'][] = "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>";
 				}
 				if(!isset($registros['fimRefeicao'][0]) && ($jornadaEfetiva->format("H:i") > "06:00") || empty($aRetorno['fimRefeicao'][0]) && ($jornadaEfetiva->format("H:i") > "06:00")){
-					$aRetorno['fimRefeicao'][] 	  = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>".$avisoRefeicao;
+					$aRetorno['fimRefeicao'][] 	  = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>";
 				}
 			}
 			if (is_array($aAbono) && count($aAbono) > 0) {
