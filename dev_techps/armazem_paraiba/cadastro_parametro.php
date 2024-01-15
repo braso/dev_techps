@@ -37,6 +37,35 @@
 	}
 
 	function enviar_documento() {
+		global $a_mod;
+
+		if(empty($a_mod)){
+			$a_mod = carregar('parametro', $_POST['id']);
+			$campos = [
+				'nome',
+				'jornadaSemanal',
+				'jornadaSabado',
+				'tolerancia',
+				'percentualHE',
+				'percentualSabadoHE',
+				'HorasEXExcedente',
+				'diariasCafe',
+				'diariasAlmoco',
+				'diariasJanta',
+				'acordo',
+				'inicioAcordo',
+				'fimAcordo',
+				'banco',
+				'paramObs'
+			];
+			foreach($campos as $campo){
+				$a_mod['para_tx_'.$campo] = $_POST[$campo];
+			}
+			$a_mod['para_nb_qDias'] = $_POST['para_nb_Qdias'];
+			$a_mod['para_tx_horasLimite'] = $_POST['para_tx_horasLimite'];
+			unset($campos);
+		}
+
 		$idParametro = $_POST['idParametro'];
 		$arquivos =  $_FILES['file'];
 		$novo_nome = $_POST['file-name'];
@@ -94,8 +123,8 @@
 			$camposObrigatorios[] = 'fimAcordo';
 		}
 		if(!empty($_POST['banco']) && $_POST['banco'] == 'sim'){
-			$camposObrigatorios[] = 'quantDias';
-			$camposObrigatorios[] = 'quantHoras';
+			$camposObrigatorios[] = 'quandDias';
+			$camposObrigatorios[] = 'quandHoras';
 		}
 		foreach($camposObrigatorios as $campo){
 			if(!isset($_POST[$campo]) || empty($_POST[$campo])){
@@ -104,9 +133,6 @@
 				exit;
 			}
 		}
-
-
-		$quandDias = ($_POST['quandDias'] == '') ? 0 : $_POST['quandDias'];
 		
 		$parametro = [
 			'para_tx_nome' => $_POST['nome'], 
@@ -127,7 +153,7 @@
 			'para_tx_status' => 'ativo', 
 			'para_tx_banco' => $_POST['banco'], 
 			'para_tx_setData' => $_POST['setCampo'], 
-			'para_nb_qDias' => $quandDias,
+			'para_nb_qDias' => $_POST['quandDias'],
 			'para_tx_horasLimite' => $_POST['quandHoras'],
 			'para_tx_paramObs' => $_POST['paramObs'],
 		];
@@ -202,8 +228,8 @@
 			foreach($campos as $campo){
 				$a_mod['para_tx_'.$campo] = $_POST[$campo];
 			}
-			$a_mod['para_nb_qDias'] = $_POST['para_nb_Qdias'];
-			$a_mod['para_tx_horasLimite'] = $_POST['para_tx_horasLimite'];
+			$a_mod['para_nb_qDias'] = $_POST['quandDias'];
+			$a_mod['para_tx_horasLimite'] = $_POST['quandHoras'];
 			unset($campos);
 		}
 
