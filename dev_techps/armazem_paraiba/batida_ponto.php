@@ -7,15 +7,11 @@
 
 
 	function cadastra_ajuste() {
-		$_POST['hora'] = date('H:i');
-		$_POST['data'] = date('Y-m-d');
-		
-		var_dump($_POST);
-		die();
+		$dataHora = date('Y-m-d')." ".date('H:i');
 
 		$aMotorista = carregar('entidade', $_POST['id']);
 
-		$extra = " AND pont_tx_data LIKE '" . $_POST['data'] . " %' AND pont_tx_matricula = '$aMotorista[enti_tx_matricula]'";
+		$extra = " AND pont_tx_data LIKE '" . date('Y-m-d') . " %' AND pont_tx_matricula = '$aMotorista[enti_tx_matricula]'";
 		$ultimoPonto = "SELECT pont_tx_tipo
 			FROM ponto
 			JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
@@ -38,7 +34,7 @@
 		}
 
 		$campos = array('pont_nb_user', 'pont_tx_matricula', 'pont_tx_data', 'pont_tx_tipo', 'pont_tx_tipoOriginal', 'pont_tx_status', 'pont_tx_dataCadastro', 'pont_nb_motivo', 'pont_tx_descricao');
-		$valores = array($_SESSION['user_nb_id'], $aMotorista['enti_tx_matricula'], "$_POST[data] $_POST[hora]", $aTipo[0], $aTipo[1], 'ativo', date("Y-m-d H:i:s"), $_POST['motivo'], $_POST['descricao']);
+		$valores = array($_SESSION['user_nb_id'], $aMotorista['enti_tx_matricula'], "$dataHora", $aTipo[0], $aTipo[1], 'ativo', date("Y-m-d H:i:s"), $_POST['motivo'], $_POST['descricao']);
 		inserir('ponto', $campos, $valores);
 
 

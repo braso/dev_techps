@@ -10,12 +10,12 @@
 include "..$_GET[path]/conecta.php";
 GLOBAL $conn;
 
-$tabela = $_GET[tabela];
-$tab = substr($_GET[tabela],0,4);
-$extra_bd = urldecode($_GET[extra_bd]);
-$extra_busca = urldecode($_GET[extra_busca]);
-$extra_ordem = urldecode($_GET[extra_ordem]);
-$extra_limite = urldecode($_GET[extra_limite]);
+$tabela = $_GET['tabela'];
+$tab = substr($_GET['tabela'],0,4);
+$extra_bd = urldecode($_GET['extra_bd']);
+$extra_busca = urldecode($_GET['extra_busca']);
+$extra_ordem = urldecode($_GET['extra_ordem']);
+$extra_limite = urldecode($_GET['extra_limite']);
 
 if($extra_busca != ''){
 	$extra_campo = ",$extra_busca";
@@ -33,7 +33,7 @@ if($extra_ordem == ''){
 
 
 
-if($tabela == 'servico' && $_GET[path] == '/imagem'){
+if($tabela == 'servico' && $_GET['path'] == '/imagem'){
 	$sql = "SELECT ".$tab."_nb_id,CONCAT(".$tab."_tx_nome,' | ',".$tab."_tx_tipo) AS ".$tab."_tx_nome FROM ".$tabela." 
 			WHERE ".$tab."_tx_nome LIKE '%".$_GET['q']."%' AND ".$tab."_tx_status != 'inativo' $extra_bd
 			$extra_ordem $extra_limite"; 
