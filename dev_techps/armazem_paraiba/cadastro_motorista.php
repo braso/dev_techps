@@ -470,11 +470,14 @@
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
 		}
+		if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
+			$campoSalario = campo('Salário', 'salario', valor($a_mod['enti_tx_salario']), 1, 'MASCARA_VALOR', 'tabindex=32');
+		}
 
 		$cContratual = [
 			combo_bd('Empresa*', 'empresa', $a_mod['enti_nb_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)" tabindex=30', $extraEmpresa),
 			combo('Ocupação*', 'ocupacao', $a_mod['enti_tx_ocupacao'], 2, ["Motorista"], 'tabindex=31'), //TODO PRECISO SABER OS TIPOS DE MOTORISTA
-			campo('Salário', 'salario', valor($a_mod['enti_tx_salario']), 1, 'MASCARA_VALOR', 'tabindex=32'),
+			$campoSalario,
 			combo('Subcontratado', 'subcontratado', $a_mod['enti_tx_subcontratado'], 2, ['', 'Sim', 'Não'], 'tabindex=33'),
 			campo_data('Dt Admissão*', 'admissao', $a_mod['enti_tx_admissao'], 2, 'tabindex=34'),
 			campo_data('Dt Desligamento', 'desligamento', $a_mod['enti_tx_desligamento'], 2, 'tabindex=35'),

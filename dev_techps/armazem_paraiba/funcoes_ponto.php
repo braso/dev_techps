@@ -900,7 +900,7 @@
 			$avisoRefeicao = '';
 			if($maiorRefeicao > '02:00'){
 				$avisoRefeicao = "<a><i style='color:orange;' title='Refeição com tempo máximo de 02:00h não respeitado.' class='fa fa-info-circle'></i></a>";
-			}elseif ($dtJornada > $dtJornadaMinima && $maiorRefeicao < '01:00') {
+			}elseif ($dtJornada > $dtJornadaMinima && $maiorRefeicao == '01:00') {
 				$avisoRefeicao = "<a><i style='color:red;' title='Refeição com tempo mínimo de 01:00h não respeitado.' class='fa fa-warning'></i></a>";
 			}
 
