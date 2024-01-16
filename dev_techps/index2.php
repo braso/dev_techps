@@ -170,7 +170,7 @@ License: You must have a valid license purchased only from themeforest(the above
 
 	<div class="logo">
 
-		<a href="index.php">
+		<a href="https://techps.com.br/">
 
 			<img src="./contex20/img/logo.png" alt="" /> </a>
 

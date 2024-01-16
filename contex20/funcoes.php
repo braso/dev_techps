@@ -871,6 +871,53 @@ function combo_bd($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra
 
 }
 
+function combo_bd_texto($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra_bd=''){
+
+	$tab=substr($tabela,0,4);
+	
+	if($nome[0] == "!"){
+		$c_opcao.="<option value=''></option>";
+		$nome=substr($nome, 1);
+	}
+	
+	// if(stripos($extra_bd,"order by") === false){
+	// 	$extra_bd=" ORDER BY ".$tab."_tx_nome ASC";
+	// }
+
+	if($extra_bd == ''){
+		$extra_bd = " ORDER BY ".$tab."_tx_nome ASC";
+	}
+
+	
+	$sql=query("SELECT ".$tab."_nb_id, ".$tab."_tx_nome FROM $tabela WHERE ".$tab."_tx_status != 'inativo' $extra_bd");
+	while($a=mysqli_fetch_array($sql)){
+
+		if($a[0] == $modificador || $a[1] == $modificador)
+			$selected="selected";
+		else
+			$selected='';
+
+		$c_opcao .= '<option value="'.$a[0].'" '.$selected.'>'.$a[1].'</option>';
+
+	}
+
+	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5" '.$extra.'>
+			<label><b>'.$nome.'</b></label><br>
+			<p class="text-left">'.$c_opcao.'&nbsp;</p>
+		</div>';
+
+	// $campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
+	// 			<label><b>'.$nome.'</b></label>
+	// 			<select name="'.$variavel.'" id="'.$variavel.'" class="form-control input-sm" '.$extra.'>
+	// 				'.$c_opcao.'
+	// 			</select>
+	// 		</div>';
+
+
+	return $campo;
+
+}
+
 function arquivosParametro($nome,$idParametro,$arquivos){
 
 	$arquivo_list = '';
