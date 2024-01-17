@@ -25,6 +25,24 @@
 	}
 
 	function cadastra_abono(){
+	
+		// Conferir se os campos obrigatórios estão preenchidos{
+			$campos_obrigatorios = ['motorista' => 'Motorista', 'daterange' => 'Data', 'abono' => 'Horas', 'motivo' => 'Motivo'];
+			$error = false;
+			$errorMsg = '';
+			foreach(array_keys($campos_obrigatorios) as $campo){
+				if(!isset($_POST[$campo]) || empty($_POST[$campo])){
+					$error = true;
+					$errorMsg .= $campos_obrigatorios[$campo].', ';
+				}
+			}
+
+			if($error){
+				set_status('ERRO: Campos obrigatórios não preenchidos: '. substr($errorMsg, 0, strlen($errorMsg)-2).'.');
+				layout_abono();
+				exit;
+			}
+		// }
 
 		$aData = explode(" - ", $_POST['daterange']);
 
@@ -110,8 +128,18 @@
 
 	function layout_ajuste(){
 		global $CONTEX;
-		header('Location: https://braso.mobi'.$CONTEX['path'].'/ajuste_ponto?id='.$_POST['id'].'&data='.$_POST['data']);
-		// exit;
+		echo 
+			'<form action="https://braso.mobi'.$CONTEX['path'].'/ajuste_ponto" name="form_ajuste_ponto" method="post">
+				<input type="hidden" name="id" value="'.$_POST['id'].'">
+				<input type="hidden" name="data" value="'.$_POST['data'].'">
+				<input type="hidden" name="data_de" value="'.$_POST['data_de'].'">
+				<input type="hidden" name="data_ate" value="'.$_POST['data_ate'].'">
+			</form>
+			<script>
+				document.form_ajuste_ponto.submit();
+			</script>'
+		;
+		exit;
 	}
 
 	function excluir_ponto(){
@@ -257,6 +285,7 @@
 	}
 
 	function verificaTolerancia($saldoDiario, $data, $idMotorista) {
+		$saldoDiario = str_replace(['<b>', '</b>'], ['', ''], $saldoDiario);
 		date_default_timezone_set('America/Recife');
 		$sqlTolerancia = query(
 			"SELECT en.enti_nb_parametro, par.para_tx_tolerancia
@@ -296,15 +325,16 @@
 			if(count($endossado) > 0){
 				$retorno = '<a title="Ajuste de Ponto (endossado)" href="#" onclick=""><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
 			}else{
-				$retorno = '<a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto(\''.$data.'\','.$idMotorista.')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
+				$retorno = '<a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto('.$idMotorista.',\''.$data.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
 			}
 		}
 
+		
 		echo 
 			'<script>
-				function ajusta_ponto(data, motorista) {
-					document.form_ajuste_ponto.data.value = data;
+				function ajusta_ponto(motorista, data) {
 					document.form_ajuste_ponto.id.value = motorista;
+					document.form_ajuste_ponto.data.value = data;
 					document.form_ajuste_ponto.submit();
 				}
 			</script>'
@@ -374,14 +404,10 @@
 				if($ehEspera && (($interval->h*60) + $interval->i > 120)){
 					$paresParaRepouso[] = ["inicio" => date("H:i", strtotime($inicio_atual)), "fim" => date("H:i", strtotime($item["horario"]))];
 				}else{
-
 					$totalIntervalo->add($interval);
-
 					$interval = $interval->format("%H:%I");
-					
-					$pares[] = ["inicio" => date("H:i", strtotime($inicio_atual)), "fim" => date("H:i", strtotime($item["horario"])), "intervalo" => $interval];
-
 				}
+				$pares[] = ["inicio" => date("H:i", strtotime($inicio_atual)), "fim" => date("H:i", strtotime($item["horario"])), "intervalo" => $interval];
 
 				// VERIFICA HORA SE HÁ HORA EXTRA ACIMA DAS 22:00
 				if($hFim > $dtFimAdicionalNot){
@@ -434,10 +460,9 @@
 			$tooltip .= 'Início: '." ".$pares[$f]['inicio']."\n";
 			$tooltip .= 'Fim: '." ".$pares[$f]['fim']."\n\n";
 		}
-
 		if((count($inicio) == 0 && count($fim) == 0) || $tooltip == ''){
 			$iconeAlerta = '';
-		}elseif(count($inicio) != count($fim) || count($horarios_com_origem)/2 != (count($pares) + count($paresParaRepouso))){ 
+		}elseif(count($inicio) != count($fim) || count($horarios_com_origem)/2 != (count($pares))){ 
 			$iconeAlerta = "<a><i style='color:red;' title='$tooltip' class='fa fa-info-circle'></i></a>";
 		}else{
 			$iconeAlerta = "<a><i style='color:green;' title='$tooltip' class='fa fa-info-circle'></i></a>";
@@ -749,38 +774,41 @@
 		// INICIO CALCULO INTERSTICIO{
 			if (isset($registros['inicioJornada']) && count($registros['inicioJornada']) > 0){
 
-				$ultimoDiaJornada = carrega_array(query(
+				$ultimoFimJornada = carrega_array(query(
 					"SELECT pont_tx_data FROM ponto
 						WHERE pont_tx_status != 'inativo'
+							AND pont_tx_tipo = 2
 							AND pont_tx_matricula = '$matricula'
 							AND pont_tx_data < '$data'
 						ORDER BY pont_tx_data DESC
 						LIMIT 1"
 				))[0];
-				$ultimoDiaJornada = new DateTime($ultimoDiaJornada);
-
-				$interJornadas = (new DateTime($registros['inicioJornada'][0]))->diff($ultimoDiaJornada);
-
+				$ultimoFimJornada = DateTime::createFromFormat('Y-m-d H:i:s', $ultimoFimJornada);
+				
+				$intersticioDiario = (new DateTime($registros['inicioJornada'][0]))->diff($ultimoFimJornada);
+				
 				// Obter a diferença total em minutos
-				$totalMinJornada = ($interJornadas->days*24*60)+($interJornadas->h*60)+$interJornadas->i;
+				$minInterDiario = (
+					$intersticioDiario->y*60*24*30*365+
+					$intersticioDiario->m*60*24*30+
+					$intersticioDiario->d*60*24+
+					$intersticioDiario->h*60+
+					$intersticioDiario->i
+				);
 
 				// Calcular as horas e minutos
 
-				$intersticio = sprintf("%02d:%02d", floor($totalMinJornada / 60), $totalMinJornada % 60); // Formatar a string no formato HH:MM
+				$intersticio = sprintf("%02d:%02d", floor($minInterDiario / 60), $minInterDiario % 60); // Formatar a string no formato H:I
+
 				$totalIntersticio = somarHorarios(
-					[$intersticio, $totalNaoJornada->format("H:i"), $interJornadas->format('%H:%I')]
+					[$intersticio, $totalNaoJornada->format("H:i")]
 				);
 
-				list($hours, $minutes) = explode(':', $totalIntersticio);
-				$totalInterSeg = $hours * 3600 + $minutes * 60;
-
-				$totalSegJor = $totalMinJornada * 60;
-
 				$icone = '';
-				if ($totalInterSeg < (11*3600)){ // < 11 horas
+				if ($totalIntersticio < sprintf("%0".(strlen($totalIntersticio)-3)."d:%02d", "11","00")){ // < 11 horas
 					$icone .= "<a><i style='color:red;' title='Interstício Total de 11:00 não respeitado' class='fa fa-warning'></i></a>";
 				}
-				if ($totalSegJor < (8*3600)){ // < 8 horas
+				if ($minInterDiario < (8*60)){ // < 8 horas
 					$icone .= "<a><i style='color:red;' title='O mínimo de 08:00h ininterruptas no primeiro período, não respeitado.' class='fa fa-warning'></i></a>";
 				}
 
@@ -858,18 +886,16 @@
 		//HORAS EXTRAS{
 			$aRetorno['he100'] = '';
 			if($aRetorno['diffSaldo'][0] != '-'){ 	//Se o saldo for positivo
-
+				$aParametro["para_tx_HorasEXExcedente"] = (!isset($aParametro["para_tx_HorasEXExcedente"]) || empty($aParametro["para_tx_HorasEXExcedente"]))? '00:00': $aParametro["para_tx_HorasEXExcedente"];
 				if($aRetorno['diffSaldo'] > $aParametro["para_tx_HorasEXExcedente"]){// saldo diário >= limite de horas extras 100%
+					$aRetorno['he100'] = operarHorarios([$aRetorno['diffSaldo'], $aParametro["para_tx_HorasEXExcedente"]], '-');
+					
 					if ($stringFeriado != '') {		//Se for feriado
-						$iconeFeriado =  "<a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
+						$iconeFeriado =  " <a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
 						$aRetorno['he100'] .= $iconeFeriado;
 					}
-
-					$aRetorno['he100'] = $aParametro["para_tx_HorasEXExcedente"];
-					$aRetorno['diffSaldo'] = operarHorarios([$aRetorno['diffSaldo'], $aRetorno['he100']], '-');
-					
 				}
-				$aRetorno['he50'] = $aRetorno['diffSaldo'];
+				$aRetorno['he50'] = operarHorarios([$aRetorno['diffSaldo'], $aRetorno['he100']], '-');
 			}
 		//}
 
@@ -887,28 +913,6 @@
 			$fezJorMinima = ($dtJornada >= $dtJornadaMinima);
 		//FIM JORNADA MÍNIMA
 
-		//01:00 DE REFEICAO
-			$maiorRefeicao = '00:00';
-			if(count($registros['refeicaoCompleto']['pares']) > 0){
-				for ($i = 0; $i < count($registros['refeicaoCompleto']['pares']); $i++) {
-					if($maiorRefeicao < $registros['refeicaoCompleto']['pares'][$i]['intervalo']){
-						$maiorRefeicao = $registros['refeicaoCompleto']['pares'][$i]['intervalo'];
-					}
-				}
-			}
-
-			$avisoRefeicao = '';
-			if($maiorRefeicao > '02:00'){
-				$avisoRefeicao = "<a><i style='color:orange;' title='Refeição com tempo máximo de 02:00h não respeitado.' class='fa fa-info-circle'></i></a>";
-			}elseif ($dtJornada > $dtJornadaMinima && $maiorRefeicao == '01:00') {
-				$avisoRefeicao = "<a><i style='color:red;' title='Refeição com tempo mínimo de 01:00h não respeitado.' class='fa fa-warning'></i></a>";
-			}
-
-			if(!empty($avisoRefeicao)){
-				$aRetorno['diffRefeicao'] = $avisoRefeicao.' '.$aRetorno['diffRefeicao'];
-			}
-		//FIM 01:00 DE REFEICAO
-
 		//ALERTAS{
 			if((!isset($registros['inicioJornada'][0]) || $registros['inicioJornada'][0] == '') && $aRetorno['jornadaPrevista'] != '00:00'){
 				$aRetorno['inicioJornada'][] 	= "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
@@ -917,11 +921,38 @@
 				if(!isset($registros['fimJornada'][0]) || $registros['fimJornada'][0] == ''){
 					$aRetorno['fimJornada'][] 	  = "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning'></i></a>";
 				}
-				if(!isset($registros['inicioRefeicao'][0]) || empty($aRetorno['inicioRefeicao'][0])){
-					$aRetorno['inicioRefeicao'][] = "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>".$avisoRefeicao;
+
+				//01:00 DE REFEICAO{
+					$maiorRefeicao = '00:00';
+					if(count($registros['refeicaoCompleto']['pares']) > 0){
+						for ($i = 0; $i < count($registros['refeicaoCompleto']['pares']); $i++) {
+							if($maiorRefeicao < $registros['refeicaoCompleto']['pares'][$i]['intervalo']){
+								$maiorRefeicao = $registros['refeicaoCompleto']['pares'][$i]['intervalo'];
+							}
+						}
+					}
+
+					$avisoRefeicao = '';
+					if($maiorRefeicao > '02:00'){
+						$avisoRefeicao = "<a><i style='color:orange;' title='Refeição com tempo máximo de 02:00h não respeitado.' class='fa fa-info-circle'></i></a>";
+					}elseif ($dtJornada > $dtJornadaMinima && $maiorRefeicao < '01:00') {
+						$avisoRefeicao = "<a><i style='color:red;' title='Refeição ininterrupta maior do que 01:00h não respeitado.' class='fa fa-warning'></i></a>";
+					}
+				//}
+
+				if((!isset($registros['inicioRefeicao'][0]) || empty($aRetorno['inicioRefeicao'][0])) && $jornadaEfetiva->format("H:i") > "06:00"){
+					$aRetorno['inicioRefeicao'][] = "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>";
+				}else{
+					$aRetorno['inicioRefeicao'][] = $avisoRefeicao;
 				}
-				if(!isset($registros['fimRefeicao'][0]) || empty($aRetorno['fimRefeicao'][0])){
-					$aRetorno['fimRefeicao'][] 	  = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>".$avisoRefeicao;
+
+				if((!isset($registros['fimRefeicao'][0]) || empty($aRetorno['fimRefeicao'][0])) && ($jornadaEfetiva->format("H:i") > "06:00")){
+					$aRetorno['fimRefeicao'][] 	  = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>";
+				}else{
+					$aRetorno['fimRefeicao'][] = $avisoRefeicao;
+				}
+				if(!empty($avisoRefeicao)){
+					$aRetorno['diffRefeicao'] = $avisoRefeicao.' '.$aRetorno['diffRefeicao'];
 				}
 			}
 			if (is_array($aAbono) && count($aAbono) > 0) {
@@ -934,9 +965,9 @@
 							."Motivo: ".$aAbono['moti_tx_nome']."\n"
 							."Justificativa: ".$aAbono['abon_tx_descricao']."\n\n"
 							."Registro efetuado por ".$aAbono['user_tx_login']." em " . data($aAbono['abon_tx_dataCadastro'], 1)."' "
-						."class='fa fa-warning'/>"
-					."</a>&nbsp;";
-	
+						."class='fa fa-warning'></i>"
+					."</a>&nbsp;"
+				;
 				$aRetorno['jornadaPrevista'] = $warning.$aRetorno['jornadaPrevista'];
 			}
 		//}
@@ -957,46 +988,6 @@
 			$aRetorno['diffRepouso']  = $registros['repousoCompleto']['icone'].$registros['repousoCompleto']['totalIntervalo'];
 		}
 		
-		$ajuste = mysqli_fetch_all(
-			query(
-				"SELECT pont_tx_data,macr_tx_nome FROM ponto
-					JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
-					JOIN user ON ponto.pont_nb_user = user.user_nb_id
-					LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
-					WHERE ponto.pont_tx_status != 'inativo' 
-						AND pont_tx_data LIKE '%$data%' 
-						AND pont_tx_matricula = '$matricula'"
-			),
-			MYSQLI_ASSOC
-		);
-
-		$possuiAjustes = [
-			'jornada'  => ['inicio' => False, 'fim' => False], 	//$quantidade_inicioJ e $quantidade_fimJ
-			'refeicao' => ['inicio' => False, 'fim' => False],	//$quantidade_inicioR e $quantidade_fimR
-		];
-
-		foreach ($ajuste as $valor) {
-			if($data == substr($valor["pont_tx_data"], 0, 10)){
-				$possuiAjustes['jornada']['inicio']  = $possuiAjustes['jornada']['inicio'] 	|| $valor["macr_tx_nome"] == 'Inicio de Jornada';
-				$possuiAjustes['jornada']['fim'] 	 = $possuiAjustes['jornada']['fim'] 	|| $valor["macr_tx_nome"] == 'Fim de Jornada';
-				$possuiAjustes['refeicao']['inicio'] = $possuiAjustes['refeicao']['inicio'] || $valor["macr_tx_nome"] == 'Inicio de Refeição';
-				$possuiAjustes['refeicao']['fim'] 	 = $possuiAjustes['refeicao']['fim']	|| $valor["macr_tx_nome"] == 'Fim de Refeição';
-			}
-		}
-
-		// if($possuiAjustes['jornada']['inicio']){
-		// 	$aRetorno['inicioJornada'][] = "*";
-		// }
-		// if($possuiAjustes['jornada']['fim']){
-		// 	$aRetorno['fimJornada'][] = "*";
-		// }
-		// if($possuiAjustes['refeicao']['inicio']){
-		// 	$aRetorno['inicioRefeicao'][] = "*";
-		// }
-		// if($possuiAjustes['refeicao']['fim']){
-		// 	$aRetorno['fimRefeicao'][] = "*";
-		// }
-		
 		//LEGENDAS{
 			$legendas = mysqli_fetch_all(
 				query(
@@ -1005,6 +996,7 @@
 						JOIN user ON ponto.pont_nb_user = user.user_nb_id
 						LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
 						WHERE ponto.pont_nb_motivo IS NOT NULL 
+							AND pont_tx_status != 'inativo'
 							AND pont_tx_data LIKE '%$data%' 
 							AND pont_tx_matricula = '$matricula'"
 				),
@@ -1053,6 +1045,48 @@
 						$aRetorno[$acao][] = "<strong>$tipo</strong>";
 					}
 				}
+			}
+		//}
+
+		//Aviso de registro inativado{
+			$ajuste = mysqli_fetch_all(
+				query(
+					"SELECT pont_tx_data, macr_tx_nome, pont_tx_status FROM ponto
+						JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
+						JOIN user ON ponto.pont_nb_user = user.user_nb_id
+						LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
+						WHERE pont_tx_data LIKE '%$data%' 
+							AND pont_tx_matricula = '$matricula'"
+				),
+				MYSQLI_ASSOC
+			);
+	
+			$possuiAjustes = [
+				'jornada'  => ['inicio' => False, 'fim' => False], 	//$quantidade_inicioJ e $quantidade_fimJ
+				'refeicao' => ['inicio' => False, 'fim' => False],	//$quantidade_inicioR e $quantidade_fimR
+			];
+	
+			foreach ($ajuste as $valor) {
+				if($data == substr($valor["pont_tx_data"], 0, 10)){
+					if($valor['pont_tx_status'] == 'inativo'){
+						$possuiAjustes['jornada']['inicio']  = $possuiAjustes['jornada']['inicio'] 	|| $valor["macr_tx_nome"] == 'Inicio de Jornada';
+						$possuiAjustes['jornada']['fim'] 	 = $possuiAjustes['jornada']['fim'] 	|| $valor["macr_tx_nome"] == 'Fim de Jornada';
+						$possuiAjustes['refeicao']['inicio'] = $possuiAjustes['refeicao']['inicio'] || $valor["macr_tx_nome"] == 'Inicio de Refeição';
+						$possuiAjustes['refeicao']['fim'] 	 = $possuiAjustes['refeicao']['fim']	|| $valor["macr_tx_nome"] == 'Fim de Refeição';
+					}
+				}
+			}
+			if($possuiAjustes['jornada']['inicio']){
+				$aRetorno['inicioJornada'][] = "*";
+			}
+			if($possuiAjustes['jornada']['fim']){
+				$aRetorno['fimJornada'][] = "*";
+			}
+			if($possuiAjustes['refeicao']['inicio']){
+				$aRetorno['inicioRefeicao'][] = "*";
+			}
+			if($possuiAjustes['refeicao']['fim']){
+				$aRetorno['fimRefeicao'][] = "*";
 			}
 		//}
 
