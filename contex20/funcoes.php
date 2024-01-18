@@ -60,11 +60,11 @@ function entre($string_inicio,$string_fim,$string_completa){
 
 function dias_internacao($id){
 	$a = carregar('evolucao',$id);
-	if($a[evol_tx_dataAlta]=='')
-		$a[evol_tx_dataAlta] = date("Y-m-d");
+	if($a['evol_tx_dataAlta']=='')
+		$a['evol_tx_dataAlta'] = date("Y-m-d");
 
-	$data1 = new DateTime ($a[evol_tx_data]);
-	$data2 = new DateTime ($a[evol_tx_dataAlta]);
+	$data1 = new DateTime ($a['evol_tx_data']);
+	$data2 = new DateTime ($a['evol_tx_dataAlta']);
 	$intervalo = $data1 -> diff($data2);
 	return $intervalo -> days + 1;
 	exit;
@@ -476,7 +476,7 @@ function campo_data($nome,$variavel,$modificador,$tamanho,$extra=''){
 	
 	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 		<label><b>'.$nome.'</b></label>
-		<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="date" class="form-control input-sm" '.$extra.'>
+		<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="date" class="form-control input-sm" '.$extra.' max="9999-12-31">
 	</div>';
 
 	return $campo;
@@ -528,6 +528,14 @@ function campo_jornada($nome,$variavel,$modificador,$tamanho){
 }
 
 function checkbox_banco($nome, $variavel, $modificadoRadio,$modificadoCampo, $modificadoCampo2, $tamanho) {
+	if(empty($modificadoCampo)){
+		$modificadoCampo = 0;
+	}
+
+	if(empty($modificadoCampo2)){
+		$modificadoCampo2 = 0;
+	}
+
 	$data_input = '<script>
 	const radioSim = document.getElementById("sim");
 	const radioNao = document.getElementById("nao");
@@ -615,6 +623,10 @@ function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 			});
 		 });
 		</script>";
+	elseif($mascara=="MASCARA_HORAS")
+		 $data_input="<script>
+		 $('[name=\"$variavel\"]').mask('999:99', { maxlength: true });
+		</script>";
 
 			// <input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' data-placeholder="____" data-inputmask="'.$data_input.'">
 
@@ -675,8 +687,8 @@ function historico_paciente($id_paciente){
 	$sql = query("SELECT hist_tx_descricao,hist_tx_data,user_tx_nome FROM historico,user WHERE user_nb_id = hist_nb_user AND hist_nb_entidade = '$id_paciente' ORDER BY hist_nb_id DESC");
 	while($a=carrega_array($sql)){
 
-		$historico .= "=================== <b>DATA: ".data($a[hist_tx_data])." - PROFISSIONAL: $a[user_tx_nome]</b> ===================<br>";
-		$historico .= $a[hist_tx_descricao];
+		$historico .= "=================== <b>DATA: ".data($a['hist_tx_data'])." - PROFISSIONAL: $a[user_tx_nome]</b> ===================<br>";
+		$historico .= $a['hist_tx_descricao'];
 		$historico .= "<br><br>";
 	}
 
@@ -807,7 +819,7 @@ $(window).bind("load", function() {
 		placeholder: 'Selecione um item',
 		allowClear: true,
 		ajax: {
-			url: '/contex20/select2.php?path=<?=$CONTEX[path]?>&tabela=<?=$tabela?>&extra_ordem=<?=$extra_ordem?>&extra_limite=<?=$extra_limite?>&extra_bd=<?=urlencode($extra_bd)?>&extra_busca=<?=urlencode($extra_busca)?>',
+			url: '/contex20/select2.php?path=<?=$CONTEX['path']?>&tabela=<?=$tabela?>&extra_ordem=<?=$extra_ordem?>&extra_limite=<?=$extra_limite?>&extra_bd=<?=urlencode($extra_bd)?>&extra_busca=<?=urlencode($extra_busca)?>',
 			dataType: 'json',
 			delay: 250,
 			processResults: function (data) {
@@ -1039,7 +1051,7 @@ function arquivo($nome,$variavel,$modificador,$tamanho,$extra=''){
 
 	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 				<label><b>'.$nome.$ver.'</b></label>
-				<input name="'.$variavel.'" value="'.$CONTEX[path]."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
+				<input name="'.$variavel.'" value="'.$CONTEX['path']."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
 			</div>';
 
 		return $campo;
@@ -1172,13 +1184,13 @@ function icone_excluir($id,$acao,$campos='',$valores='',$target='',$icone='', $a
 
 	$icone='class="'.$icone.'"';
 	
-	return "<center><a title=\"$title\" style='color:gray' onclick='javascript:contex_icone(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\",\"$action\");' ><spam $icone></spam></a></center>";
+	return "<center><a title=\"$title\" style='color:gray' onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\");' ><spam $icone></spam></a></center>";
 	
 }
 
 function abre_menu_aba($nome,$id,$contexAbaAtiva=''){
 	global $CONTEX;
-	$CONTEX[abaAtiva] = $contexAbaAtiva;
+	$CONTEX['abaAtiva'] = $contexAbaAtiva;
 	$a_nome = explode(",",$nome);
 	$a_id = explode(",",$id);
 
@@ -1189,14 +1201,14 @@ function abre_menu_aba($nome,$id,$contexAbaAtiva=''){
 	$aba = "<div class='portlet-body'>";
 	$aba .= "<ul class='nav nav-tabs'>";
 	for($i=0;$i<count($a_nome);$i++){
-		if($CONTEX[abaAtiva]==''){
-			$CONTEX[abaAtiva]=$a_id[$i];
+		if($CONTEX['abaAtiva']==''){
+			$CONTEX['abaAtiva']=$a_id[$i];
 			$active = 'class="active"';
 		}else{
 
 
-			if($a_id[$i]==$CONTEX[abaAtiva]){
-				$CONTEX[abaAtiva]=$a_id[$i];
+			if($a_id[$i]==$CONTEX['abaAtiva']){
+				$CONTEX['abaAtiva']=$a_id[$i];
 				$active = 'class="active"';
 			}else{
 				$active = '';
@@ -1224,7 +1236,7 @@ function fecha_menu_aba(){
 
 function abre_aba($id){
 	global $CONTEX;
-	if($CONTEX[abaAtiva] == $id){
+	if($CONTEX['abaAtiva'] == $id){
 		$active = 'active in';
 	}else{
 		$active = '';
@@ -1234,6 +1246,5 @@ function abre_aba($id){
 }
 
 function fecha_aba(){
-
 	echo '</div>';
 }

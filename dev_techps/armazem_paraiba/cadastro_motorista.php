@@ -481,7 +481,7 @@
 			combo('Subcontratado', 'subcontratado', $a_mod['enti_tx_subcontratado'], 2, ['', 'Sim', 'Não'], 'tabindex=33'),
 			campo_data('Dt Admissão*', 'admissao', $a_mod['enti_tx_admissao'], 2, 'tabindex=34'),
 			campo_data('Dt Desligamento', 'desligamento', $a_mod['enti_tx_desligamento'], 2, 'tabindex=35'),
-			campo('Saldo de Horas', 'setBanco', $a_mod['enti_tx_banco'], 3, 'MASCARA_HORA', 'maxlength="8" placeholder="hh:mm" tabindex=36')
+			campo('Saldo de Horas', 'setBanco', $a_mod['enti_tx_banco'], 3, 'MASCARA_HORAS', 'placeholder="HHH:mm" tabindex=36')
 		];
 
 		if ($a_mod['enti_nb_empresa']) {
