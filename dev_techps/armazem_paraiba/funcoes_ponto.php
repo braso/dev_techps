@@ -343,7 +343,7 @@
 		return $retorno;
 	}
 
-	function ordenar_horarios($inicio, $fim, $ehEspera = false) {
+	function ordenar_horarios($inicio, $fim, $ehEspera = false, $ehEsperaRepouso = false) {
 		if(empty($inicio) && empty($fim)){
 			return [
 				"horariosOrdenados" => [],
@@ -464,6 +464,8 @@
 			$iconeAlerta = '';
 		}elseif(count($inicio) != count($fim) || count($horarios_com_origem)/2 != (count($pares))){ 
 			$iconeAlerta = "<a><i style='color:red;' title='$tooltip' class='fa fa-info-circle'></i></a>";
+		}elseif($ehEsperaRepouso){
+			$iconeAlerta = "<a><i style='color:#99ff99;' title='$tooltip' class='fa fa-info-circle'></i></a>";
 		}else{
 			$iconeAlerta = "<a><i style='color:green;' title='$tooltip' class='fa fa-info-circle'></i></a>";
 		}
@@ -699,7 +701,7 @@
 
 		$registros['jornadaCompleto']  = ordenar_horarios($registros['inicioJornada'],  $registros['fimJornada']);		/* $jornadaOrdenado */
 		$registros['refeicaoCompleto'] = ordenar_horarios($registros['inicioRefeicao'], $registros['fimRefeicao']);		/* $refeicaoOrdenada */
-		$registros['esperaCompleto']   = ordenar_horarios($registros['inicioEspera'],   $registros['fimEspera'], true);	/* $esperaOrdenada */
+		$registros['esperaCompleto']   = ordenar_horarios($registros['inicioEspera'],   $registros['fimEspera'], True);	/* $esperaOrdenada */
 		$registros['descansoCompleto'] = ordenar_horarios($registros['inicioDescanso'], $registros['fimDescanso']);		/* $descansoOrdenado */
 		$registros['repousoCompleto']  = ordenar_horarios($registros['inicioRepouso'], $registros['fimRepouso']);		/* $repousoOrdenado */;
 
@@ -711,7 +713,7 @@
 				$registros['repousoPorEspera']['inicioRepouso'][] 	= $data.' '.$paresParaRepouso[$i]['inicio'].':00';	/*$aDataHorainicioRepouso*/
 				$registros['repousoPorEspera']['fimRepouso'][] 		= $data.' '.$paresParaRepouso[$i]['fim'].':00';		/*$aDataHorafimRepouso*/
 			}
-			$registros['repousoPorEspera']['repousoCompleto'] = ordenar_horarios($registros['repousoPorEspera']['inicioRepouso'], $registros['repousoPorEspera']['fimRepouso']);
+			$registros['repousoPorEspera']['repousoCompleto'] = ordenar_horarios($registros['repousoPorEspera']['inicioRepouso'], $registros['repousoPorEspera']['fimRepouso'],false,true);
 		}else{
 			$registros['repousoPorEspera']['repousoCompleto'] = ordenar_horarios([], []);
 		}
