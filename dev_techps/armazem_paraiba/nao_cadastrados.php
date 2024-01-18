@@ -14,7 +14,7 @@ function motorista_nao_cadastrado()
     $pontos = mysqli_fetch_all($sqlPonto, MYSQLI_ASSOC);
     
     return $pontos;
-
+    
 }
 
 
@@ -61,8 +61,8 @@ function index()
                             <?
                             foreach ($matriculas as $valor) {
                                 echo '<tr>';
-                                echo '<td>' . $valor['pont_tx_matricula']. '</td>';
-                                echo '<td>' . date("d-m-Y", strtotime($valor['ultima_data'])). '</td>';
+                                echo '<td style="text-align: center;">' . $valor['pont_tx_matricula']. '</td>';
+                                echo '<td style="text-align: center;">' . date("d/m/Y", strtotime($valor['ultima_data'])). '</td>';
                                 echo '</tr>';
                             }
                             ?>
@@ -73,7 +73,7 @@ function index()
             </div>
         </div>
     </div>
-    <?
+    <?php
     rodape();
 
     

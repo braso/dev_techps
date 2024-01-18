@@ -1,4 +1,4 @@
-<? 
+<?php
 if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos($_SESSION['user_tx_nivel'], 'Super Administrador'))) { ?>
 
 	<!-- INICIO HEADER MENU -->
@@ -40,7 +40,18 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 							<li class=" "><a href="<?= $CONTEX["path"] ?>/nao_cadastrados" class="nav-link">Não cadastrados</a></li> 
 						</ul>
 					</li>
-
+					<?php if(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))){ ?>
+					<li class="menu-dropdown classic-menu-dropdown ">
+						<a href="javascript:;"> Suporte<span class="arrow"></span></a>
+						<ul class="dropdown-menu pull-left">
+							
+							<li class=" "><a href="<?= $CONTEX["path"] ?>/doc.php" class="nav-link ">Ver Documentação</a></li>
+							<li class=" "><a href="<?= $CONTEX["path"] ?>/#" class="nav-link ">Perguntas Frequentes</a></li>
+						</ul>
+					</li>
+					<?php
+					}
+					?>
 				</ul>
 			</div>
 			<!-- FIM MEGA MENU -->
