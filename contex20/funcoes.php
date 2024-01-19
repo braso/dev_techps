@@ -551,6 +551,8 @@ function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 		$data_input="<script>$('[name=\"$variavel\"]').inputmask('99999-999', { clearIncomplete: true, placeholder: \" \" });</script>";
 	elseif($mascara=="MASCARA_CPF")
 		$data_input="<script>$('[name=\"$variavel\"]').inputmask({mask: '999.999.999-99', clearIncomplete: true, placeholder: \" \" });</script>";
+	elseif($mascara=="MASCARA_RG")
+		$data_input="<script>$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999'], clearIncomplete: true, placeholder: \" \" });</script>";
 	elseif($mascara=="MASCARA_CNPJ")
 		$data_input="<script>$('[name=\"$variavel\"]').inputmask('99.999.999/9999-99', { clearIncomplete: true, placeholder: \" \" });</script>";
 	elseif($mascara=="MASCARA_DINHERO")
@@ -563,6 +565,11 @@ function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 			});
 		 });
 		</script>";
+	elseif($mascara=="MASCARA_HORAS")
+		$data_input=
+			"<script>
+				$('[name=\"$variavel\"]').inputmask({mask: ['99:99', '999:99']});
+			</script>";
 
 			// <input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' data-placeholder="____" data-inputmask="'.$data_input.'">
 
