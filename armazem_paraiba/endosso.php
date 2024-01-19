@@ -132,7 +132,6 @@
 					array_splice($aDetalhado, 10, 1); //Retira a coluna de "Jornada" que está entre "Repouso" e "Jornada Prevista"
 					$aDia[] = $aDetalhado;
 				}
-				$diasEndossados--;
 			//}
 
 			//Inserir coluna de motivos{

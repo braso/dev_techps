@@ -247,8 +247,8 @@
 			campo('Diária Almoço(R$)', 'diariasAlmoco', $a_mod['para_tx_diariasAlmoco'], 3, 'MASCARA_DINHERO'),
 			campo('Diária Jantar(R$)', 'diariasJanta', $a_mod['para_tx_diariasJanta'], 3, 'MASCARA_DINHERO'),
 			combo('Acordo Sindical', 'acordo', $a_mod['para_tx_acordo'], 3, ['Sim', 'Não']),
-			campo_data('Início do Acordo', 'inicioAcordo', $a_mod['para_tx_inicioAcordo'], 3),
-			campo_data('Fim do Acordo', 'fimAcordo', $a_mod['para_tx_fimAcordo'], 3),
+			campo_data('Início do Acordo*', 'inicioAcordo', $a_mod['para_tx_inicioAcordo'], 3),
+			campo_data('Fim do Acordo*', 'fimAcordo', $a_mod['para_tx_fimAcordo'], 3),
 			checkbox_banco('Utiliza regime de banco de horas?','banco',$a_mod['para_tx_banco'],$a_mod['para_nb_qDias'], $a_mod['para_tx_horasLimite'],3),
 			ckeditor('Descrição:', 'paramObs', $a_mod['para_tx_paramObs'], 12,'maxlength="100"'),
 		];
