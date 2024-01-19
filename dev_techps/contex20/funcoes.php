@@ -1133,7 +1133,7 @@ function icone_excluir($id,$acao,$campos='',$valores='',$target='',$icone='',$ms
 
 	$icone='class="'.$icone.'"';
 	
-	return "<center><a title=\"$title\" style='color:gray' onclick='javascript:contex_icone(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\",\"$action\");' ><spam $icone></spam></a></center>";
+	return "<center><a title=\"$title\" style='color:gray' onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\");' ><spam $icone></spam></a></center>";
 	
 }
 
@@ -1178,7 +1178,6 @@ function abre_menu_aba($nome,$id,$contexAbaAtiva=''){
 }
 
 function fecha_menu_aba(){
-
 	echo '</div>';
 	echo '</div>';
 }
@@ -1195,6 +1194,5 @@ function abre_aba($id){
 }
 
 function fecha_aba(){
-
 	echo '</div>';
 }

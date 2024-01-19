@@ -19,7 +19,6 @@
 	
 		if (!empty($_POST['busca_motorista'])) {
 			$aMotorista = carregar('entidade', $_POST['busca_motorista']);
-			$aDadosMotorista = [$aMotorista['enti_tx_matricula']];
 			$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
 		}
 
@@ -28,11 +27,11 @@
 			$extraEmpresa = " AND enti_nb_empresa = '$_SESSION[user_nb_empresa]'";
 		}
 	
-		if (!isset($_POST['busca_data1']) || $_POST['busca_data1'] == '') {
+		if (!isset($_POST['busca_data1']) || empty($_POST['busca_data1'])) {
 			$_POST['busca_data1'] = date("Y-m-01");
 		}
 	
-		if (!isset($_POST['busca_data2']) || $_POST['busca_data2'] == '') {
+		if (!isset($_POST['busca_data2']) || empty($_POST['busca_data2'])) {
 			$_POST['busca_data2'] = date("Y-m-d");
 		}
 	
@@ -55,7 +54,7 @@
 	
 		// $cab = array("MATRÍCULA", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA", "REFEIÇÃO", "ESPERA", "ATRASO", "EFETIVA", "PERÍODO TOTAL", "INTERSTÍCIO DIÁRIO", "INT. SEMANAL", "ABONOS", "FALTAS", "FOLGAS", "H.E.", "H.E. 100%", "ADICIONAL NOTURNO", "ESPERA INDENIZADA", "OBSERVAÇÕES");
 		$cab = array(
-			"", "MAT.", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
+			"", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "HE 50%", "HE&nbsp;100%",
 			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 		);
@@ -72,55 +71,16 @@
 			for ($date = $startDate; $date <= $endDate; $date->modify('+1 day')) {
 				$dataVez = $date->format('Y-m-d');
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
-
-				if(isset($aDetalhado['fimJornada'][0]) && ((is_array($aDetalhado['fimJornada'][0]) && count($aDetalhado['fimJornada'][0]) > 0) || strlen($aDetalhado['fimJornada'][0]) > 0) && substr($aDetalhado['fimJornada'][0], 0, 11) > substr($aDetalhado['inicioJornada'][0], 0, 11)){
-					array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
-				}
-				// if(isset($aDetalhado['fimJornada'][0]) && (strpos($aDetalhado['fimJornada'][0], ':00') !== false) && date('Y-m-d', strtotime($aDetalhado['fimJornada'][0])) != $dataVez){
-				// 	array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
-				// }
-								
-				//Converter array em string{
-					$legendas = mysqli_fetch_all(query(
-						"SELECT UNIQUE moti_tx_legenda FROM motivo 
-							WHERE moti_tx_legenda IS NOT NULL;"
-						), 
-						MYSQLI_ASSOC
-					);
-					foreach(['inicioJornada', 'fimJornada', 'inicioRefeicao', 'fimRefeicao'] as $tipo){
-						if (count($aDetalhado[$tipo]) > 0){
-							for($f = 0; $f < count($aDetalhado[$tipo]); $f++){
-								//Formatar datas para hora e minutos sem perder o D+1, caso tiver
-								if(strpos($aDetalhado[$tipo][$f], ':00', strlen($aDetalhado[$tipo][$f])-3) !== false){
-									if(strpos($aDetalhado[$tipo][$f], 'D+1') !== false){
-										$aDetalhado[$tipo][$f] = explode(' ', $aDetalhado[$tipo][$f]);
-										$aDetalhado[$tipo][$f] = substr($aDetalhado[$tipo][$f][1], 0, strlen($aDetalhado[$tipo][$f][1])-3)+$aDetalhado[$tipo][$f][2];
-									}else{
-										$aDetalhado[$tipo][$f] = date('H:i', strtotime($aDetalhado[$tipo][$f]));
-									}
-								}
-							}
-							$aDetalhado[$tipo] = implode("<br>", $aDetalhado[$tipo]);
-							foreach($legendas as $legenda){
-								$aDetalhado[$tipo] = str_replace('<br><strong>'.$legenda['moti_tx_legenda'].'</strong>', ' <strong>'.$legenda['moti_tx_legenda'].'</strong>', $aDetalhado[$tipo]);
-							}
-							$aDetalhado[$tipo] = str_replace('<br>D+1', ' D+1', $aDetalhado[$tipo]);
-						}else{
-							$aDetalhado[$tipo] = '';
-						}
-					}
-				//}
 				
-				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDadosMotorista, $aDetalhado));
+				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDetalhado));
 				for($f = 0; $f < sizeof($row)-1; $f++){
-          if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
+          			if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
 						continue;
 					}
 					if($row[$f] == "00:00"){
 						$row[$f] = "";
 					}
 				}
-
 				$aDia[] = $row;
 			}
 	
@@ -153,6 +113,9 @@
 			);
 			if(isset($saldoAnterior['endo_tx_saldo'])){
 				$saldoAnterior = $saldoAnterior['endo_tx_saldo'];
+			}elseif(!empty($aMotorista['enti_tx_banco'])){
+				$saldoAnterior = $aMotorista['enti_tx_banco'];
+				$saldoAnterior = $saldoAnterior[0] == '0' && strlen($saldoAnterior) > 5? substr($saldoAnterior, 1): $saldoAnterior;
 			}else{
 				$saldoAnterior = '--:--';
 			}
@@ -180,7 +143,10 @@
 					</table>
 				  </div>';
 	
-			abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] | $aEmpresa[empr_tx_nome] $convencaoPadrao $saldosMotorista");
+			$periodoPesquisa = 'PERÍODO DA BUSCA : '.date("d/m/Y", strtotime($_POST['busca_data1'])).' ATÉ '.date("d/m/Y", strtotime($_POST['busca_data2']));
+				 
+	
+			abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] | $aEmpresa[empr_tx_nome] $convencaoPadrao | $periodoPesquisa $saldosMotorista");
 	
 	?>
 	
@@ -200,7 +166,7 @@
 				}
 			</style>
 		<?
-			$aDia[] = array_values(array_merge(array('', '', '', '', '', '', '', '<b>TOTAL</b>'), $totalResumo));
+			$aDia[] = array_values(array_merge(array('', '', '', '', '', '', '<b>TOTAL</b>'), $totalResumo));
 			
 			grid2($cab, $aDia, "Jornada Semanal (Horas): $aMotorista[enti_tx_jornadaSemanal]");
 			fecha_form();
@@ -217,9 +183,12 @@
 			}
 		</style>
 	
-		<form action="https://braso.mobi<?=$CONTEX['path']?>/ajuste_ponto" name="form_ajuste_ponto" method="post">
+		<form name="form_ajuste_ponto" method="post">
+			<input type="hidden" name="acao" value="layout_ajuste">
 			<input type="hidden" name="id" value="<?= $aMotorista['enti_nb_id'] ?>">
 			<input type="hidden" name="data">
+			<input type="hidden" name="data_de" value="<?=$_POST['busca_data1']?>">
+			<input type="hidden" name="data_ate" value="<?=$_POST['busca_data2']?>">
 		</form>
 	<?
 	}
