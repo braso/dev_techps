@@ -11,8 +11,8 @@ Thumbs.db
 .well-known
 
 .brasomo_dev_techps_sistema.sql
+.contex20/backup
 
-
-dev_techps/armazem_paraiba/conecta.php
-dev_techps/armazem_paraiba/arquivos/*
+armazem_paraiba/conecta.php
+armazem_paraiba/arquivos/*
 .vscode
