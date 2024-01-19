@@ -40,7 +40,7 @@
 	function cadastra_motorista() {
 		global $a_mod;
 
-		if(isset($_POST['matricula'])){
+		if(!empty($_POST['matricula'])){
 			$_POST['postMatricula'] = $_POST['matricula'];
 		}
 
@@ -155,7 +155,6 @@
 					$aParametro['para_tx_percentualSabadoHE'] != $a_mod['enti_tx_percentualSabadoHE'] ||
 					$aParametro['para_nb_id'] != $a_mod['enti_nb_parametro']
 				) {
-
 					$ehPadrao = 'Não';
 				} else {
 					$ehPadrao = 'Sim.';
@@ -440,7 +439,7 @@
 			texto('Idade',$idade,2, 'tabindex=06'),
 
 			campo('CPF*', 'cpf', $a_mod['enti_tx_cpf'], 2, 'MASCARA_CPF', 'tabindex=07'),
-			campo('RG*', 'rg', $a_mod['enti_tx_rg'], 2, 'MASCARA_RG', 'tabindex=08'),
+			campo('RG*', 'rg', $a_mod['enti_tx_rg'], 2, 'MASCARA_RG', 'tabindex=08, maxlength=11'),
 			campo('Emissor RG', 'rgOrgao', $a_mod['enti_tx_rgOrgao'], 2,'','maxlength="6" tabindex=09'),
 			campo_data('Data Emissão RG', 'rgDataEmissao', $a_mod['enti_tx_rgDataEmissao'], 2, 'tabindex=10'),
 			combo('UF RG', 'rgUf', $a_mod['enti_tx_rgUf'], 2, $uf, 'tabindex=11'),
@@ -491,7 +490,7 @@
 			combo('Subcontratado', 'subcontratado', $a_mod['enti_tx_subcontratado'], 2, ['', 'Sim', 'Não'], 'tabindex=33'),
 			campo_data('Dt Admissão*', 'admissao', $a_mod['enti_tx_admissao'], 2, 'tabindex=34'),
 			campo_data('Dt Desligamento', 'desligamento', $a_mod['enti_tx_desligamento'], 2, 'tabindex=35'),
-			campo('Saldo de Horas', 'setBanco', $a_mod['enti_tx_banco'], 3, 'MASCARA_HORAS', 'placeholder="HHH:mm" tabindex=36')
+			campo('Saldo de Horas', 'setBanco', $a_mod['enti_tx_banco']?? '00:00', 3, 'MASCARA_HORAS', 'placeholder="HH:mm" tabindex=36')
 		];
 
 		if ($a_mod['enti_nb_empresa']) {
