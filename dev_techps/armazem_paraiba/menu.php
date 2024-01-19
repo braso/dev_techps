@@ -1,4 +1,4 @@
-<? 
+<?php
 if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos($_SESSION['user_tx_nivel'], 'Super Administrador'))) { ?>
 
 	<!-- INICIO HEADER MENU -->
@@ -13,20 +13,6 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 						<a href="javascript:;"> Cadastros<span class="arrow"></span></a>
 						<ul class="dropdown-menu pull-left">
 
-							<!-- <li class="dropdown-submenu "> -->
-							<!-- <a href="javascript:;" class="nav-link nav-toggle ">Geral<span class="arrow"></span></a> -->
-							<!-- <ul class="dropdown-menu"> -->
-							<!-- <li class=" "><a href="<?= $CONTEX["path"] ?>/cadastro_cliente" class="nav-link ">Cliente</a></li> -->
-							<!-- <li class=" "><a href="<?= $CONTEX["path"] ?>/cadastro_conjunto" class="nav-link ">Conjunto</a></li> -->
-							<!-- <li class=" "><a href="<?= $CONTEX["path"] ?>/cadastro_finalidade" class="nav-link ">Finalidade</a></li> -->
-							<!-- <li class=" "><a href="<?= $CONTEX["path"] ?>/cadastro_tipo_imovel" class="nav-link ">Tipo Imóvel</a></li>
-								<li class=" "><a href="<?= $CONTEX["path"] ?>/cadastro_imovel" class="nav-link ">Imóvel</a></li> -->
-							<!-- <li class=" "><a href="<?= $CONTEX["path"] ?>/cadastro_construtor" class="nav-link ">Construtor</a></li>
-								<li class=" "><a href="<?= $CONTEX["path"] ?>/cadastro_corretor" class="nav-link ">Corretor</a></li>
-								<li class=" "><a href="<?= $CONTEX["path"] ?>/cadastro_banco" class="nav-link ">Banco</a></li> -->
-							<!-- </ul> -->
-							<!-- </li> -->
-
 							<li class=" "><a href="<?= $CONTEX["path"] ?>/cadastro_empresa" class="nav-link ">Empresa/Filial</a></li>
 							<li class=" "><a href="<?= $CONTEX["path"] ?>/cadastro_motorista" class="nav-link ">Motorista</a></li>
 							<li class=" "><a href="<?= $CONTEX["path"] ?>/cadastro_parametro" class="nav-link ">Parâmetro</a></li>
@@ -40,7 +26,6 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 									<li class=" "><a href="<?= $CONTEX["path"] ?>/cadastro_macro" class="nav-link ">Macro</a></li>
 								</ul>
 							</li>
-							<!-- <li class=" "><a href="<?= $CONTEX["path"] ?>/ponto" class="nav-link ">Ponto</a></li> -->
 						</ul>
 					</li>
 
@@ -55,7 +40,18 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 							<li class=" "><a href="<?= $CONTEX["path"] ?>/nao_cadastrados" class="nav-link">Não cadastrados</a></li> 
 						</ul>
 					</li>
-
+					<?php if(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))){ ?>
+					<li class="menu-dropdown classic-menu-dropdown ">
+						<a href="javascript:;"> Suporte<span class="arrow"></span></a>
+						<ul class="dropdown-menu pull-left">
+							
+							<li class=" "><a href="<?= $CONTEX["path"] ?>/doc.php" class="nav-link ">Ver Documentação</a></li>
+							<li class=" "><a href="<?= $CONTEX["path"] ?>/#" class="nav-link ">Perguntas Frequentes</a></li>
+						</ul>
+					</li>
+					<?php
+					}
+					?>
 				</ul>
 			</div>
 			<!-- FIM MEGA MENU -->
@@ -92,7 +88,6 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 									<li class=" "><a href="<?= $CONTEX["path"] ?>/cadastro_macro" class="nav-link ">Macro</a></li>
 								</ul>
 							</li>
-							<!-- <li class=" "><a href="<?= $CONTEX["path"] ?>/ponto" class="nav-link ">Ponto</a></li> -->
 						</ul>
 					</li>
 

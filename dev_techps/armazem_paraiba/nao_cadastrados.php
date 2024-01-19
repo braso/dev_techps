@@ -13,30 +13,8 @@ function motorista_nao_cadastrado()
 
     $pontos = mysqli_fetch_all($sqlPonto, MYSQLI_ASSOC);
     
-    // var_dump($pontos);
-    // die();
-    
     return $pontos;
     
-
-    // $motoristas = [];
-
-
-    // foreach ($pontos as $valor) {
-
-    //     $sqlMotorista = query("SELECT enti_tx_matricula FROM entidade WHERE enti_tx_matricula = " . $valor['pont_tx_matricula']);
-    //     $aMotorista = carrega_array($sqlMotorista);
-
-    //     if ($aMotorista == null) {
-
-    //         $motoristas[] = $valor['pont_tx_matricula'];
-
-    //     }
-    // }
-
-
-    // return array_unique($motoristas);
-
 }
 
 
@@ -82,11 +60,9 @@ function index()
                         <tbody>
                             <?
                             foreach ($matriculas as $valor) {
-                                // $ultimaDataHora = $valor['ultima_data'];
-                                // $ultimaData = date("Y-m-d", strtotime($ultimaDataHora));
                                 echo '<tr>';
-                                echo '<td>' . $valor['pont_tx_matricula']. '</td>';
-                                echo '<td>' . date("d-m-Y", strtotime($valor['ultima_data'])). '</td>';
+                                echo '<td style="text-align: center;">' . $valor['pont_tx_matricula']. '</td>';
+                                echo '<td style="text-align: center;">' . date("d/m/Y", strtotime($valor['ultima_data'])). '</td>';
                                 echo '</tr>';
                             }
                             ?>
@@ -97,7 +73,7 @@ function index()
             </div>
         </div>
     </div>
-    <?
+    <?php
     rodape();
 
     

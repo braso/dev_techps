@@ -25,25 +25,6 @@
 	}
 
 	function cadastra_abono(){
-	
-		// Conferir se os campos obrigatórios estão preenchidos{
-			$campos_obrigatorios = ['motorista' => 'Motorista', 'daterange' => 'Data', 'abono' => 'Horas', 'motivo' => 'Motivo'];
-			$error = false;
-			$errorMsg = '';
-			foreach(array_keys($campos_obrigatorios) as $campo){
-				if(!isset($_POST[$campo]) || empty($_POST[$campo])){
-					$error = true;
-					$errorMsg .= $campos_obrigatorios[$campo].', ';
-				}
-			}
-
-			if($error){
-				set_status('ERRO: Campos obrigatórios não preenchidos: '. substr($errorMsg, 0, strlen($errorMsg)-2).'.');
-				layout_abono();
-				exit;
-			}
-		// }
-
 		// Conferir se os campos obrigatórios estão preenchidos{
 			$campos_obrigatorios = ['motorista' => 'Motorista', 'daterange' => 'Data', 'abono' => 'Horas', 'motivo' => 'Motivo'];
 			$error = false;
@@ -361,7 +342,7 @@
 		return $retorno;
 	}
 
-	function ordenar_horarios($inicio, $fim, $ehEspera = false) {
+	function ordenar_horarios($inicio, $fim, $ehEspera = false, $ehEsperaRepouso = false) {
 		if(empty($inicio) && empty($fim)){
 			return [
 				"horariosOrdenados" => [],
@@ -482,6 +463,8 @@
 			$iconeAlerta = '';
 		}elseif(count($inicio) != count($fim) || count($horarios_com_origem)/2 != (count($pares))){ 
 			$iconeAlerta = "<a><i style='color:red;' title='$tooltip' class='fa fa-info-circle'></i></a>";
+		}elseif($ehEsperaRepouso){
+			$iconeAlerta = "<a><i style='color:#99ff99;' title='$tooltip' class='fa fa-info-circle'></i></a>";
 		}else{
 			$iconeAlerta = "<a><i style='color:green;' title='$tooltip' class='fa fa-info-circle'></i></a>";
 		}
@@ -717,7 +700,7 @@
 
 		$registros['jornadaCompleto']  = ordenar_horarios($registros['inicioJornada'],  $registros['fimJornada']);		/* $jornadaOrdenado */
 		$registros['refeicaoCompleto'] = ordenar_horarios($registros['inicioRefeicao'], $registros['fimRefeicao']);		/* $refeicaoOrdenada */
-		$registros['esperaCompleto']   = ordenar_horarios($registros['inicioEspera'],   $registros['fimEspera'], true);	/* $esperaOrdenada */
+		$registros['esperaCompleto']   = ordenar_horarios($registros['inicioEspera'],   $registros['fimEspera'], True);	/* $esperaOrdenada */
 		$registros['descansoCompleto'] = ordenar_horarios($registros['inicioDescanso'], $registros['fimDescanso']);		/* $descansoOrdenado */
 		$registros['repousoCompleto']  = ordenar_horarios($registros['inicioRepouso'], $registros['fimRepouso']);		/* $repousoOrdenado */;
 
@@ -729,7 +712,7 @@
 				$registros['repousoPorEspera']['inicioRepouso'][] 	= $data.' '.$paresParaRepouso[$i]['inicio'].':00';	/*$aDataHorainicioRepouso*/
 				$registros['repousoPorEspera']['fimRepouso'][] 		= $data.' '.$paresParaRepouso[$i]['fim'].':00';		/*$aDataHorafimRepouso*/
 			}
-			$registros['repousoPorEspera']['repousoCompleto'] = ordenar_horarios($registros['repousoPorEspera']['inicioRepouso'], $registros['repousoPorEspera']['fimRepouso']);
+			$registros['repousoPorEspera']['repousoCompleto'] = ordenar_horarios($registros['repousoPorEspera']['inicioRepouso'], $registros['repousoPorEspera']['fimRepouso'],false,true);
 		}else{
 			$registros['repousoPorEspera']['repousoCompleto'] = ordenar_horarios([], []);
 		}
@@ -906,16 +889,14 @@
 			if($aRetorno['diffSaldo'][0] != '-'){ 	//Se o saldo for positivo
 				if(	(isset($aParametro["para_tx_HorasEXExcedente"]) && !empty($aParametro["para_tx_HorasEXExcedente"])) &&
 					$aParametro["para_tx_HorasEXExcedente"] != '00:00' && 
-					$aRetorno['diffSaldo'] > $aParametro["para_tx_HorasEXExcedente"]
+					$aRetorno['diffSaldo'] >= $aParametro["para_tx_HorasEXExcedente"]
 				){// saldo diário >= limite de horas extras 100%
-
 					$aRetorno['he100'] = operarHorarios([$aRetorno['diffSaldo'], $aParametro["para_tx_HorasEXExcedente"]], '-');
 					
 					if ($stringFeriado != '') {		//Se for feriado
 						$iconeFeriado =  " <a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
 						$aRetorno['he100'] .= $iconeFeriado;
 					}
-
 				}else{
 					$aRetorno['he100'] = '00:00';
 				}
@@ -945,6 +926,7 @@
 				if(!isset($registros['fimJornada'][0]) || $registros['fimJornada'][0] == ''){
 					$aRetorno['fimJornada'][] 	  = "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning'></i></a>";
 				}
+
 				//01:00 DE REFEICAO{
 					$maiorRefeicao = '00:00';
 					if(count($registros['refeicaoCompleto']['pares']) > 0){
@@ -1070,6 +1052,47 @@
 						}
 					}
 				}
+			}
+		//}
+
+		//Aviso de registro inativado{
+			$ajuste = mysqli_fetch_all(
+				query(
+					"SELECT pont_tx_data, macr_tx_nome, pont_tx_status FROM ponto
+						JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
+						JOIN user ON ponto.pont_nb_user = user.user_nb_id
+						LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
+						WHERE pont_tx_status == 'inativo'
+							AND pont_tx_data LIKE '%$data%'
+							AND pont_tx_matricula = '$matricula'"
+				),
+				MYSQLI_ASSOC
+			);
+	
+			$possuiAjustes = [
+				'jornada'  => ['inicio' => False, 'fim' => False], 	//$quantidade_inicioJ e $quantidade_fimJ
+				'refeicao' => ['inicio' => False, 'fim' => False],	//$quantidade_inicioR e $quantidade_fimR
+			];
+	
+			foreach ($ajuste as $valor) {
+				if($data == substr($valor["pont_tx_data"], 0, 10)){
+          $possuiAjustes['jornada']['inicio']  = $possuiAjustes['jornada']['inicio'] 	|| $valor["macr_tx_nome"] == 'Inicio de Jornada';
+          $possuiAjustes['jornada']['fim'] 	 = $possuiAjustes['jornada']['fim'] 	|| $valor["macr_tx_nome"] == 'Fim de Jornada';
+          $possuiAjustes['refeicao']['inicio'] = $possuiAjustes['refeicao']['inicio'] || $valor["macr_tx_nome"] == 'Inicio de Refeição';
+          $possuiAjustes['refeicao']['fim'] 	 = $possuiAjustes['refeicao']['fim']	|| $valor["macr_tx_nome"] == 'Fim de Refeição';
+				}
+			}
+			if($possuiAjustes['jornada']['inicio']){
+				$aRetorno['inicioJornada'][] = "*";
+			}
+			if($possuiAjustes['jornada']['fim']){
+				$aRetorno['fimJornada'][] = "*";
+			}
+			if($possuiAjustes['refeicao']['inicio']){
+				$aRetorno['inicioRefeicao'][] = "*";
+			}
+			if($possuiAjustes['refeicao']['fim']){
+				$aRetorno['fimRefeicao'][] = "*";
 			}
 		//}
 

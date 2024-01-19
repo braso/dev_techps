@@ -142,10 +142,9 @@
 					  </tbody>
 					</table>
 				  </div>';
-	
-			$periodoPesquisa = 'PERÍODO DA BUSCA : '.date("d/m/Y", strtotime($_POST['busca_data1'])).' ATÉ '.date("d/m/Y", strtotime($_POST['busca_data2']));
 				 
-	
+      $periodoPesquisa = 'PERÍODO DA BUSCA : '.date("d/m/Y", strtotime($_POST['busca_data1'])).' ATÉ '.date("d/m/Y", strtotime($_POST['busca_data2']));
+      
 			abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] | $aEmpresa[empr_tx_nome] $convencaoPadrao | $periodoPesquisa $saldosMotorista");
 	
 	?>

@@ -1,14 +1,17 @@
 <?php
+    
+    //Modo debug
+// 		ini_set('display_errors', 1);
+// 		error_reporting(E_ALL);
 	include "conecta.php";
 
 
 	function cadastra_ajuste() {
-		$_POST['hora'] = date('H:i');
-		$_POST['data'] = date('Y-m-d');
+		$dataHora = date('Y-m-d')." ".date('H:i');
 
 		$aMotorista = carregar('entidade', $_POST['id']);
 
-		$extra = " AND pont_tx_data LIKE '" . $_POST['data'] . " %' AND pont_tx_matricula = '$aMotorista[enti_tx_matricula]'";
+		$extra = " AND pont_tx_data LIKE '" . date('Y-m-d') . " %' AND pont_tx_matricula = '$aMotorista[enti_tx_matricula]'";
 		$ultimoPonto = "SELECT pont_tx_tipo
 			FROM ponto
 			JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
@@ -31,7 +34,7 @@
 		}
 
 		$campos = array('pont_nb_user', 'pont_tx_matricula', 'pont_tx_data', 'pont_tx_tipo', 'pont_tx_tipoOriginal', 'pont_tx_status', 'pont_tx_dataCadastro', 'pont_nb_motivo', 'pont_tx_descricao');
-		$valores = array($_SESSION['user_nb_id'], $aMotorista['enti_tx_matricula'], "$_POST[data] $_POST[hora]", $aTipo[0], $aTipo[1], 'ativo', date("Y-m-d H:i:s"), $_POST['motivo'], $_POST['descricao']);
+		$valores = array($_SESSION['user_nb_id'], $aMotorista['enti_tx_matricula'], "$dataHora", $aTipo[0], $aTipo[1], 'ativo', date("Y-m-d H:i:s"), $_POST['motivo'], $_POST['descricao']);
 		inserir('ponto', $campos, $valores);
 
 
@@ -46,19 +49,22 @@
 		
 		cabecalho('Registrar Ponto');
 		
+		$sqlMotivo = query('SELECT moti_nb_id FROM `motivo` WHERE moti_tx_status != "inativo" AND moti_tx_nome = "Registro de ponto mobile" AND moti_tx_tipo = "Ajuste"');
+		$motivo = mysqli_fetch_assoc($sqlMotivo);
+		
 		if (!isset($_SESSION['user_nb_entidade']) || empty($_SESSION['user_nb_entidade'])){
 			echo "Motorista não localizado. Tente fazer o login novamente.";
 			exit;
 		}
-		$_POST['id'] = $_SESSION['user_nb_entidade'];
-		$_POST['data'] = date('Y-m-d');
+// 		$_POST['id'] = $_SESSION['user_nb_entidade'];
+		// $_POST['data'] = date('Y-m-d');
 
-		$aMotorista = carregar('entidade', $_POST['id']);
+		$aMotorista = carregar('entidade', $_SESSION['user_nb_entidade']);
 
 		$sqlCheck = query(
 			"SELECT user_tx_login, endo_tx_dataCadastro".
 				" FROM endosso, user".
-				" WHERE '".$_POST['data']."' BETWEEN endo_tx_de AND endo_tx_ate".
+				" WHERE '".date('Y-m-d')."' BETWEEN endo_tx_de AND endo_tx_ate".
 				" AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'".
 				" AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'".
 				" AND endo_tx_status = 'ativo'".
@@ -67,7 +73,7 @@
 		);
 		$aEndosso = carrega_array($sqlCheck);
 
-		$extra = " AND pont_tx_data LIKE '" . $_POST['data'] . " %' AND pont_tx_matricula = '$aMotorista[enti_tx_matricula]'";
+		$extra = " AND pont_tx_data LIKE '" . date('Y-m-d') . " %' AND pont_tx_matricula = '$aMotorista[enti_tx_matricula]'";
 
 
 		
@@ -128,9 +134,9 @@
 		$c[] = texto('Motorista', $aMotorista['enti_tx_nome'], 5);
 		$c[] = texto('CPF', $aMotorista['enti_tx_cpf'], 3);
 
-		$c2[] = campo('Data', 'data', data($_POST['data']), 2, '', 'readonly=readonly');
+		$c2[] = campo('Data', 'data', data(date('Y-m-d')), 2, '', 'readonly=readonly');
 		// $c2[] = combo_bd('Tipo', 'idMacro', '', 4, 'macroponto', '', "$extraMacro ORDER BY macr_nb_id ASC");
-		$c2[] = combo_bd('Motivo:', 'motivo', '', 4, 'motivo', '', ' AND moti_nb_id = "32" AND moti_tx_tipo = "Ajuste"'); //VERIFICAR JS
+		$c2[] = combo_bd_texto('Motivo:', 'motivo', '', 4, 'motivo', '', ' AND moti_tx_nome = "Registro de ponto mobile" AND moti_tx_tipo = "Ajuste"'); //VERIFICAR JS
 
 		// $c3[] = textarea('Justificativa:','descricao','',12);
 
@@ -226,27 +232,6 @@
 				return formattedTime;
 			}
 
-
-			// function carregar_submit(idMacro, msg) {
-			// 	if (['2'].includes(idMacro)) {
-			// 		let duracao = (calculateElapsedTime('<?= $aPrimeiroPonto['pont_tx_data'] ?>'))
-			// 		msg += "\nTotal da jornada: " + duracao;
-
-			// 	}
-			// 	if (['4', '6', '8', '10', '12'].includes(idMacro)) {
-			// 		let duracao = (calculateElapsedTime('<?= $aUltimoPonto['pont_tx_data'] ?>'))
-			// 		msg += "\nDuração: " + duracao;
-			// 	}
-			// 	if (confirm(msg), 'CONFIRMAR') {
-			// 		document.form_submit.acao.value = 'cadastra_ajuste';
-			// 		document.form_submit.id.value = <?= $_POST['id'] ?>;
-			// 		document.form_submit.data.value = '<?= $_POST['data'] ?>';
-			// 		document.form_submit.idMacro.value = idMacro;
-			// 		document.form_submit.motivo.value = 31;
-			// 		document.form_submit.submit();
-			// 	}
-			// }
-
 			function openModal(content) {
 				const modal = document.getElementById('myModal');
 				const modalContent = document.getElementById('modalContent');
@@ -299,10 +284,10 @@
 				$('#modal-confirm').on('click', function() {
 					$('#myModal').modal('hide');
 					document.form_submit.acao.value = 'cadastra_ajuste';
-					document.form_submit.id.value = <?= $_POST['id'] ?>;
-					document.form_submit.data.value = '<?= $_POST['data'] ?>';
+					document.form_submit.id.value = <?= $_SESSION['user_nb_entidade'] ?>;
+					document.form_submit.data.value = '<?= date('Y-m-d') ?>';
 					document.form_submit.idMacro.value = idMacro;
-					document.form_submit.motivo.value = 32;
+					document.form_submit.motivo.value = <?= $motivo['moti_nb_id']; ?>;
 					document.form_submit.submit();
 				});
 

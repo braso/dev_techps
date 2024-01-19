@@ -14,4 +14,6 @@ Thumbs.db
 .contex20/backup
 .contex20
 
+# arquivos removidos #
 dev_techps/armazem_paraiba/conecta.php
+dev_techps/armazem_paraiba/arquivos/*

@@ -476,6 +476,9 @@
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
 		}
+		if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
+			$campoSalario = campo('Salário', 'salario', valor($a_mod['enti_tx_salario']), 1, 'MASCARA_VALOR', 'tabindex=32');
+		}
 
 		if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$campoSalario = campo('Salário', 'salario', valor($a_mod['enti_tx_salario']), 1, 'MASCARA_VALOR', 'tabindex=32');
@@ -488,7 +491,7 @@
 			combo('Subcontratado', 'subcontratado', $a_mod['enti_tx_subcontratado'], 2, ['', 'Sim', 'Não'], 'tabindex=33'),
 			campo_data('Dt Admissão*', 'admissao', $a_mod['enti_tx_admissao'], 2, 'tabindex=34'),
 			campo_data('Dt Desligamento', 'desligamento', $a_mod['enti_tx_desligamento'], 2, 'tabindex=35'),
-			campo('Saldo de Horas', 'setBanco', $a_mod['enti_tx_banco'], 3, 'MASCARA_HORA', 'maxlength="8" placeholder="hh:mm" tabindex=36')
+			campo('Saldo de Horas', 'setBanco', $a_mod['enti_tx_banco'], 3, 'MASCARA_HORAS', 'placeholder="HHH:mm" tabindex=36')
 		];
 
 		if ($a_mod['enti_nb_empresa']) {
@@ -722,10 +725,15 @@
 					$extra"
 		);
 
+		if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
+			$icone_excluir = 'icone_excluir(enti_nb_id,exclui_motorista)';
+		}else
+			$icone_excluir = '';
+
 		$cab = ['CÓDIGO', 'NOME', 'MATRÍCULA', 'CPF', 'EMPRESA', 'FONE 1', 'FONE 2', 'OCUPAÇÃO', 'PARÂMETRO DA JORNADA', 'CONVENÇÃO PADRÃO', 'STATUS', '', ''];
 		$val = [
 			'enti_nb_id', 'enti_tx_nome', 'enti_tx_matricula', 'enti_tx_cpf', 'empr_tx_nome', 'enti_tx_fone1', 'enti_tx_fone2', 'enti_tx_ocupacao', 'para_tx_nome', 'enti_tx_ehPadrao', 'enti_tx_status', 'icone_modificar(enti_nb_id,modifica_motorista)',
-			'icone_excluir(enti_nb_id,exclui_motorista)'
+			$icone_excluir
 		];
 
 		grid($sql, $cab, $val);
