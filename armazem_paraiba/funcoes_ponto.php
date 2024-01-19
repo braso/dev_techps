@@ -1062,47 +1062,6 @@
 						JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
 						JOIN user ON ponto.pont_nb_user = user.user_nb_id
 						LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
-						WHERE pont_tx_status = 'inativo'
-							AND pont_tx_data LIKE '%$data%'
-							AND pont_tx_matricula = '$matricula'"
-				),
-				MYSQLI_ASSOC
-			);
-	
-			$possuiAjustes = [
-				'jornada'  => ['inicio' => False, 'fim' => False], 	//$quantidade_inicioJ e $quantidade_fimJ
-				'refeicao' => ['inicio' => False, 'fim' => False],	//$quantidade_inicioR e $quantidade_fimR
-			];
-	
-			foreach ($ajuste as $valor) {
-				if($data == substr($valor["pont_tx_data"], 0, 10)){
-          $possuiAjustes['jornada']['inicio']  = $possuiAjustes['jornada']['inicio'] 	|| $valor["macr_tx_nome"] == 'Inicio de Jornada';
-          $possuiAjustes['jornada']['fim'] 	 = $possuiAjustes['jornada']['fim'] 	|| $valor["macr_tx_nome"] == 'Fim de Jornada';
-          $possuiAjustes['refeicao']['inicio'] = $possuiAjustes['refeicao']['inicio'] || $valor["macr_tx_nome"] == 'Inicio de Refeição';
-          $possuiAjustes['refeicao']['fim'] 	 = $possuiAjustes['refeicao']['fim']	|| $valor["macr_tx_nome"] == 'Fim de Refeição';
-				}
-			}
-			if($possuiAjustes['jornada']['inicio']){
-				$aRetorno['inicioJornada'][] = "*";
-			}
-			if($possuiAjustes['jornada']['fim']){
-				$aRetorno['fimJornada'][] = "*";
-			}
-			if($possuiAjustes['refeicao']['inicio']){
-				$aRetorno['inicioRefeicao'][] = "*";
-			}
-			if($possuiAjustes['refeicao']['fim']){
-				$aRetorno['fimRefeicao'][] = "*";
-			}
-		//}
-
-		//Aviso de registro inativado{
-			$ajuste = mysqli_fetch_all(
-				query(
-					"SELECT pont_tx_data, macr_tx_nome, pont_tx_status FROM ponto
-						JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
-						JOIN user ON ponto.pont_nb_user = user.user_nb_id
-						LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
 						WHERE pont_tx_data LIKE '%$data%' 
 							AND pont_tx_matricula = '$matricula'"
 				),
