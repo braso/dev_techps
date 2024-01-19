@@ -360,7 +360,6 @@
 
 					if (count($aDia) > 0) {
 						$counts['endossados']['sim']++;
-
 						$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
 
 						if ($aEmpresa['empr_nb_parametro'] > 0) {
