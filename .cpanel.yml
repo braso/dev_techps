@@ -1,5 +1,5 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/brasomo/public_html/
-    - /bin/cp * $DEPLOYPATH
+    - export DEPLOYPATH=/home/brasomo/public_html
+    - /bin/cp -r * "$DEPLOYPATH"
