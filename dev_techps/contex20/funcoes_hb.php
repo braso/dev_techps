@@ -467,7 +467,7 @@ function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 
 			// <input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' data-placeholder="____" data-inputmask="'.$data_input.'">
 
-$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
+	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 			<label><b>'.$nome.'</b></label>
 			<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' '.$data_input2.'>
 		</div>';

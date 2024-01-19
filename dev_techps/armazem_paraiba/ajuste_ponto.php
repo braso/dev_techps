@@ -138,10 +138,36 @@
 		exit;
 	}
 
+	function voltar(){
+		global $CONTEX;
+		echo 
+			'<form action="https://braso.mobi'.$CONTEX['path'].'/espelho_ponto" name="form_voltar" method="post">
+				<input type="hidden" name="busca_motorista" value="'.$_POST['id'].'">
+				<input type="hidden" name="busca_data1" value="'.$_POST['data_de'].'">
+				<input type="hidden" name="busca_data2" value="'.$_POST['data_ate'].'">
+			</form>
+			<script>
+				document.form_voltar.submit();
+			</script>'
+		;
+		exit;
+	}
+
 	function index(){
 		global $CONTEX;
+
 		if(empty($_POST['id']) || empty($_POST['data'])){
-			echo 'ERRO: Deve ser selecionado um motorista e uma data para ajustar.';
+			echo '<script>alert("ERRO: Deve ser selecionado um motorista e uma data para ajustar.")</script>';
+
+			echo 
+				'<form action="https://braso.mobi'.$CONTEX['path'].'/espelho_ponto" name="form_voltar" method="post">
+					<input type="hidden" name="data_de" value="'.$_POST['data_de'].'">
+					<input type="hidden" name="data_ate" value="'.$_POST['data_ate'].'">
+				</form>
+				<script>
+					document.form_voltar.submit();
+				</script>'
+			;
 			exit;
 		}else{
 			$a_mod['data'] = $_POST['data'];
@@ -150,11 +176,11 @@
 		
 		cabecalho('Ajuste de Ponto');
 
-		if(empty($_POST['busca_data1']) && !empty($_POST['data'])){
-			$_POST['busca_data1'] = $_POST['data'];
+		if(empty($_POST['data_de']) && !empty($_POST['data'])){
+			$_POST['data_de'] = $_POST['data'];
 		}
-		if(empty($_POST['busca_data2']) && !empty($_POST['data'])){
-			$_POST['busca_data2'] = $_POST['data'];
+		if(empty($_POST['data_ate']) && !empty($_POST['data'])){
+			$_POST['data_ate'] = $_POST['data'];
 		}
 
 		$aMotorista = carregar('entidade',$_POST['id']);
@@ -193,23 +219,22 @@
 		if(!empty($aEndosso) && count($aEndosso) > 0){
 			$c2[] = texto('Endosso:',"Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1),6);
 		}else{
-			$botao[] = botao('Gravar','cadastra_ajuste','id,busca_motorista,busca_data1,busca_data2,data,busca_data',"$_POST[id],$_POST[id],$_POST[busca_data1],$_POST[busca_data2],$_POST[data],".substr($_POST['data'],0, -3));
-			$iconeExcluir = 'icone_excluir(pont_nb_id,excluir_ponto,idEntidade, '.$_POST['id'].')'; //Utilizado em grid()
+			$botao[] = botao('Gravar','cadastra_ajuste','id,busca_motorista,data_de,data_ate,data,busca_data',"$_POST[id],$_POST[id],$_POST[data_de],$_POST[data_ate],$_POST[data],".substr($_POST['data'],0, -3));
+			$iconeExcluir = "icone_excluir(pont_nb_id,excluir_ponto,idEntidade,".strval($_POST['id']).")"; //Utilizado em grid()
 		}
 		$botao[] = $botao_imprimir;
-		// $botao[] = botao(
-		// 	'Voltar', 
-		// 	'index', 
-		// 	'busca_data1, busca_data2, id, busca_empresa, busca_motorista, data, busca_data', 
-		// 	($_POST['busca_data1']??'').", ".($_POST['busca_data2']??'').", ".$_POST['id'].", ".$aMotorista['enti_nb_empresa'].", ".$_POST['id'].", ".$_POST['data'].", ".substr($_POST['data'], 0, -3)
-		// );
+		$botao[] = botao(
+			'Voltar', 
+			'voltar', 
+			'data_de,data_ate,id,busca_empresa,busca_motorista,data,busca_data', 
+			($_POST['data_de']??'').",".($_POST['data_ate']??'').",".$_POST['id'].",".$aMotorista['enti_nb_empresa'].",".$_POST['id'].",".$_POST['data'].",".substr($_POST['data'], 0, -3)
+		);
 		
 		abre_form('Dados do Ajuste de Ponto');
 		linha_form($c);
 		linha_form($c2);
 		linha_form($c3);
 		fecha_form($botao);
-
 
 		$sql = 
 			"SELECT * FROM ponto".
