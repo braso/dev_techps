@@ -40,6 +40,11 @@
 	function cadastra_motorista() {
 		global $a_mod;
 
+		if(isset($_POST['matricula'])){
+			$_POST['postMatricula'] = $_POST['matricula'];
+		}
+
+
 		$enti_campos = [
 			'matricula', 'nome', 'nascimento', 'status', 
 			'cpf','rg','civil','sexo','endereco','numero','complemento',
@@ -54,7 +59,7 @@
 		];
 		
 		$post_values = [
-			'matricula', 'nome', 'nascimento', 'status',
+			'postMatricula', 'nome', 'nascimento', 'status',
 			'cpf', 'rg', 'civil', 'sexo', 'endereco', 'numero', 'complemento',
 			'bairro', 'cidade', 'cep', 'fone1', 'fone2', 'email', 'ocupacao', 'salario', 'obs', 'empresa',
 			'parametro', 'jornadaSemanal', 'jornadaSabado', 'percentualHE', 'percentualSabadoHE',
@@ -68,7 +73,7 @@
 
 		for($f = 0; $f < sizeof($enti_campos); $f++){
 			if(in_array($enti_campos[$f], ['cidade', 'empresa', 'parametro', 'cnhCidade'])){
-				$bd_campo = 'enti_nb_'.$enti_campos[$f];
+				$bd_campo = 'enti_nb_'.$enti_campos[$f];	
 			}else{
 				$bd_campo = 'enti_tx_'.$enti_campos[$f];
 			}
@@ -80,7 +85,7 @@
 
 		//Conferir campos obrigatórios{
 			$campos_obrigatorios = [
-				'matricula' => 'Matrícula', 'nome' => 'Nome', 'nascimento' => 'Dt. Nascimento', 'parametro' => 'Parâmetros da Jornada', 'admissao' => 'Dt Admissão', 'cnhValidade' => 'Validade do CNH', 'cnhCategoria' => 'Categoria do CNH', 
+				'postMatricula' => 'Matrícula', 'nome' => 'Nome', 'nascimento' => 'Dt. Nascimento', 'parametro' => 'Parâmetros da Jornada', 'admissao' => 'Dt Admissão', 'cnhValidade' => 'Validade do CNH', 'cnhCategoria' => 'Categoria do CNH', 
 				'cnhCidade' => 'Cidade do CNH', 'cnhEmissao' => 'Data de Emissão do CNH', 'jornadaSemanal' => 'Jornada Semanal', 'jornadaSabado' => 'Jornada Sábado', 'percentualHE' => 'Percentual da HE', 'percentualSabadoHE' => 'Percentual da HE Sábado', 
 				'empresa' => 'Empresa', 'ocupacao' => 'Ocupação', 'cidade' => 'Cidade/UF', 'rg' => 'RG', 'endereco' => 'Endereço', 'cep' => 'CEP', 'bairro' => 'Bairro', 
 				'email' => 'E-mail', 'cnhRegistro' => 'N° Registro da CNH'
@@ -104,14 +109,14 @@
 			unset($campos_obrigatorios);
 		//}
 
-		if(count(carregar('entidade', '', 'enti_tx_matricula', $_POST['matricula'])) > 0 && !isset($_POST['id'])){
+		if(count(carregar('entidade', '', 'enti_tx_matricula', $_POST['postMatricula'])) > 0 && !isset($_POST['id'])){
 			echo '<script>alert("Matrícula já cadastrada.")</script>';
 			layout_motorista();
 			exit;
 		}
 		if(!empty($_POST['login'])){
-			$otherUser = mysqli_fetch_all(query("SELECT * FROM user WHERE user_tx_matricula = '".($_POST['login']?? $_POST['matricula'])."' LIMIT 1"), MYSQLI_ASSOC)[0];
-			if (!empty($otherUser) && strval($otherUser['user_tx_matricula']) != strval($_POST['matricula']) && $otherUser['user_tx_login'] == $_POST['login']){
+			$otherUser = mysqli_fetch_all(query("SELECT * FROM user WHERE user_tx_matricula = '".($_POST['login']?? $_POST['postMatricula'])."' LIMIT 1"), MYSQLI_ASSOC)[0];
+			if (!empty($otherUser) && strval($otherUser['user_tx_matricula']) != strval($_POST['postMatricula']) && $otherUser['user_tx_login'] == $_POST['login']){
 				set_status("ERRO: Login já cadastrado.");
 				$a_mod = $_POST;
 				modifica_motorista();
@@ -161,9 +166,9 @@
 			$id = inserir('entidade', $enti_campos, $enti_valores);
 
 			$user_infos = [
-				'user_tx_matricula' 	=> $_POST['matricula'], 
+				'user_tx_matricula' 	=> $_POST['postMatricula'], 
 				'user_tx_nome' 			=> $_POST['nome'], 
-				'user_tx_login' 		=> (!empty($_POST['login'])? $_POST['login']: $_POST['matricula']), 
+				'user_tx_login' 		=> (!empty($_POST['login'])? $_POST['login']: $_POST['postMatricula']), 
 				'user_tx_nivel' 		=> $_POST['nivel'], 
 				'user_tx_senha' 		=> md5($cpfLimpo), 
 				'user_tx_status' 		=> $_POST['status'], 
@@ -196,7 +201,7 @@
 			if($a_user['user_nb_id'] > 0){
 				$user_infos = [
 					'user_tx_nome' 			=> $_POST['nome'], 
-					'user_tx_login' 		=> (!empty($_POST['login'])? $_POST['login']: $_POST['matricula']), 
+					'user_tx_login' 		=> (!empty($_POST['login'])? $_POST['login']: $_POST['postMatricula']), 
 					'user_tx_nivel' 		=> $_POST['nivel'], 
 					'user_tx_senha' 		=> md5($cpfLimpo), 
 					'user_tx_status' 		=> $_POST['status'], 
@@ -248,7 +253,7 @@
 				mkdir("arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]", 0777, true);
 			}
 
-			$arq = enviar('cnhAnexo', "arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]/", 'CNH_' . $id . '_' . $_POST['matricula']);
+			$arq = enviar('cnhAnexo', "arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]/", 'CNH_' . $id . '_' . $_POST['postMatricula']);
 			if ($arq) {
 				atualizar('entidade', array('enti_tx_cnhAnexo'), array($arq), $id);
 			}
@@ -264,7 +269,7 @@
 				mkdir("arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]", 0777, true);
 			}
 
-			$arq = enviar('foto', "arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]/", 'FOTO_' . $id . '_' . $_POST['matricula']);
+			$arq = enviar('foto', "arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]/", 'FOTO_' . $id . '_' . $_POST['postMatricula']);
 			if ($arq) {
 				atualizar('entidade', array('enti_tx_foto'), array($arq), $id);
 				atualizar('user', array('user_tx_foto'), array($arq), $idUserFoto['user_nb_id']);
@@ -322,6 +327,7 @@
 	}
 
 	function carrega_matricula() {
+		echo '<script>alert("carrega_matricula")</script>';
 
 		$matricula = (int)$_GET['matricula'];
 		$id = (int)$_GET['id'];
@@ -377,7 +383,7 @@
 		if(empty($a_mod)){
 			$a_mod = carregar('entidade', $_POST['id']);
 			
-			$campos = ['nome','nascimento','cpf','rg','civil','sexo','endereco','numero','complemento',
+			$campos = ['matricula', 'nome','nascimento','cpf','rg','civil','sexo','endereco','numero','complemento',
 				'bairro','cidade','cep','fone1','fone2','email','ocupacao','salario','obs',
 				'tipo','status','matricula','empresa',
 				'parametro','jornadaSemanal','jornadaSabado','percentualHE','percentualSabadoHE',
@@ -464,17 +470,21 @@
 		if(!empty($a_mod['enti_tx_matricula'])){
 			array_splice($c, 1, 0, texto('Matrícula*', $a_mod['enti_tx_matricula'], 1, 'tabindex=01'));
 		}else{
-			array_splice($c, 1, 0, campo('Matrícula*', 'matricula', $a_mod['enti_tx_matricula'], 1, '', 'tabindex=01'),);
+			array_splice($c, 1, 0, campo('Matrícula*', 'postMatricula', '', 1, '', 'tabindex=01'));
 		}
 
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
 		}
 
+		if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
+			$campoSalario = campo('Salário', 'salario', valor($a_mod['enti_tx_salario']), 1, 'MASCARA_VALOR', 'tabindex=32');
+		}
+
 		$cContratual = [
 			combo_bd('Empresa*', 'empresa', $a_mod['enti_nb_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)" tabindex=30', $extraEmpresa),
 			combo('Ocupação*', 'ocupacao', $a_mod['enti_tx_ocupacao'], 2, ["Motorista"], 'tabindex=31'), //TODO PRECISO SABER OS TIPOS DE MOTORISTA
-			campo('Salário', 'salario', valor($a_mod['enti_tx_salario']), 1, 'MASCARA_VALOR', 'tabindex=32'),
+			$campoSalario,
 			combo('Subcontratado', 'subcontratado', $a_mod['enti_tx_subcontratado'], 2, ['', 'Sim', 'Não'], 'tabindex=33'),
 			campo_data('Dt Admissão*', 'admissao', $a_mod['enti_tx_admissao'], 2, 'tabindex=34'),
 			campo_data('Dt Desligamento', 'desligamento', $a_mod['enti_tx_desligamento'], 2, 'tabindex=35'),
@@ -580,24 +590,24 @@
 				document.getElementById('frame_parametro').src = 'cadastro_motorista.php?acao=carrega_padrao&idEmpresa=<?= $a_mod['enti_nb_empresa'] ?>';
 			}
 
-			//setup before functions
-			let typingTimer; //timer identifier
-			let doneTypingInterval = 1000; //time in ms (1 seconds)
-			let myInput = document.getElementById('matricula');
+			// //setup before functions
+			// let typingTimer; //timer identifier
+			// let doneTypingInterval = 1000; //time in ms (1 seconds)
+			// let myInput = document.getElementById('matricula');
 
-			//on keyup, start the countdown
-			myInput.addEventListener('keyup', () => {
-				clearTimeout(typingTimer);
-				if (myInput.value) {
-					typingTimer = setTimeout(doneTyping, doneTypingInterval);
-				}
-			});
+			// //on keyup, start the countdown
+			// myInput.addEventListener('keyup', () => {
+			// 	clearTimeout(typingTimer);
+			// 	if (myInput.value) {
+			// 		typingTimer = setTimeout(doneTyping, doneTypingInterval);
+			// 	}
+			// });
 
-			//user is "finished typing," do something
-			function doneTyping() {
-				let matricula = myInput.value;
-				document.getElementById('frame_parametro').src = 'cadastro_motorista.php?acao=carrega_matricula&matricula=' + matricula + '&id=<?= $a_mod['enti_nb_id'] ?>';
-			}
+			// //user is "finished typing," do something
+			// function doneTyping() {
+			// 	let matricula = myInput.value;
+			// 	document.getElementById('frame_parametro').src = 'cadastro_motorista.php?acao=carrega_matricula&matricula=' + matricula + '&id=<?/*$a_mod['enti_nb_id'] */?>';
+			// }
 		</script>
 		<?php
 

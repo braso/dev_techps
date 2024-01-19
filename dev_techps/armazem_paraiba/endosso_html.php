@@ -36,6 +36,8 @@
 	<input type="hidden" name="acao" value="layout_ajuste">
 	<input type="hidden" name="id" value="<?= $aMotorista['enti_nb_id'] ?>">
 	<input type="hidden" name="data">
+	<input type="hidden" name="data_de">
+	<input type="hidden" name="data_ate">
 </form>
 
 <script>

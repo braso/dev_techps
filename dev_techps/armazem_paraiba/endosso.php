@@ -55,8 +55,8 @@
 		$sqlMotorista = query(
 			"SELECT * FROM entidade 
 				WHERE enti_tx_tipo = 'Motorista' 
-					AND enti_nb_id IN (" . $_POST['idMotoristaEndossado'] . ") 
-					AND enti_nb_empresa = " . $_POST['busca_empresa'] . " 
+					AND enti_nb_id IN (".$_POST['idMotoristaEndossado'].") 
+					AND enti_nb_empresa = ".$_POST['busca_empresa']." 
 					AND enti_tx_status != 'inativo'
 				ORDER BY enti_tx_nome"
 		);
@@ -65,77 +65,74 @@
 
 		while ($aMotorista = carrega_array($sqlMotorista)) {
 			//Pegando e formatando registros dos dias{
-				for ($i = 1; $i <= $daysInMonth; $i++) {
-					$dataVez = $_POST['busca_data']."-".str_pad($i, 2, 0, STR_PAD_LEFT);
-					$sqlEndosso = mysqli_fetch_all(
+				
+				//Montar endosso completo{
+					$sqlEndossos = mysqli_fetch_all(
 						query(
-							"SELECT * FROM endosso 
-								WHERE endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-									AND ('".$dataVez."' BETWEEN endo_tx_de AND endo_tx_ate)
-									AND endo_tx_status != 'inativo'"
+							'SELECT * FROM endosso 
+								WHERE endo_tx_matricula = \''.$aMotorista['enti_tx_matricula'].'\'
+									AND endo_tx_status != \'inativo\'
+									AND endo_tx_de >= \''.sprintf('%04d-%02d-%02d', $year, $month, '01').'\'
+									AND endo_tx_ate <= \''.sprintf('%04d-%02d-%02d', $year, $month, $daysInMonth).'\'
+								ORDER BY endo_tx_de ASC'
 						),
 						MYSQLI_ASSOC
 					);
-					
-					if(count($sqlEndosso) == 0){ //Se não estiver endossado nesse dia, passa para o próximo.
-						continue;
+				
+					$endossos = [];
+					foreach($sqlEndossos as $endosso){
+						$aDetalhado = fopen($_SERVER['DOCUMENT_ROOT'].$CONTEX['path'].'/arquivos/endosso/'.$endosso['endo_tx_filename'].'.csv', 'r');
+						$keys = fgetcsv($aDetalhado);
+						$values = fgetcsv($aDetalhado);
+						$aDetalhado = [];
+						for($j = 0; $j < count($keys); $j++){
+							$aDetalhado[$keys[$j]] = $values[$j];
+						}
+						$aDetalhado['endo_tx_pontos'] 	= (array)json_decode($aDetalhado['endo_tx_pontos']);
+						$aDetalhado['totalResumo'] 		= (array)json_decode($aDetalhado['totalResumo']);
+						$endossos[] = $aDetalhado;
 					}
 
+					$endossoCompleto = $endossos[0];
+					for($f = 1; $f < count($endossos); $f++){
+						$endossoCompleto['endo_tx_ate'] = $endossos[$f]['endo_tx_ate'];
+						$endossoCompleto['endo_tx_pontos'] = array_merge($endossoCompleto['endo_tx_pontos'], $endossos[$f]['endo_tx_pontos']);
+						$endossoCompleto['endo_tx_pagarHoras'] = $endossos[$f]['endo_tx_pagarHoras'] == 'sim'? 'sim': $endossoCompleto['endo_tx_pagarHoras'];
+						if($endossoCompleto['endo_tx_pagarHoras'] == 'sim'){
+							$endossoCompleto['endo_tx_horasApagar'] = operarHorarios([$endossoCompleto['endo_tx_horasApagar'], $endossos[$f]['endo_tx_horasApagar']], '+');	
+						}
+						foreach($endossos[$f]['totalResumo'] as $key => $value){
+							$endossoCompleto['totalResumo'][$key] = operarHorarios([$endossoCompleto['totalResumo'][$key], $endossos[$f]['totalResumo'][$key]], '+');
+						}
+					}
+					$totalResumo = $endossoCompleto['totalResumo'];
+				//}
+
+				//Ajustar valores de horas extras a pagar, não deve pagar caso o saldo final esteja negativo{
+					if($totalResumo['saldoAtual'] < "00:00" && $totalResumo['he100'] > "00:00"){
+
+						$transferir = ($totalResumo['saldoAtual'] > '-'.$totalResumo['he100'])? $totalResumo['he100']: $totalResumo['saldoAtual'];
+
+						$totalResumo['he100'] = operarHorarios([$totalResumo['he100'], $transferir], '-');
+						$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '+');
+					}
+					if($totalResumo['saldoAtual'] < "00:00" && $totalResumo['he50'] > "00:00"){
+						
+						$transferir = ($totalResumo['saldoAtual'] > '-'.$totalResumo['he50'])? $totalResumo['he50']: $totalResumo['saldoAtual'];
+						
+						$totalResumo['he50'] = operarHorarios([$totalResumo['he50'], $transferir], '-');
+						$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '+');
+					}
+				//}
+
+				for ($i = 0; $i < count($endossoCompleto['endo_tx_pontos']); $i++) {
 					$diasEndossados++;
-
-					$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
-
-					if(isset($aDetalhado['fimJornada'][0]) && ((is_array($aDetalhado['fimJornada'][0]) && count($aDetalhado['fimJornada'][0]) > 0) || strlen($aDetalhado['fimJornada'][0]) > 0) && substr($aDetalhado['fimJornada'][0], 0, 11) > substr($aDetalhado['inicioJornada'][0], 0, 11)){
-						array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
-					}
-
-					//Converter array em string{
-						$legendas = mysqli_fetch_all(query(
-							"SELECT UNIQUE moti_tx_legenda FROM motivo 
-								WHERE moti_tx_legenda IS NOT NULL;"
-							), 
-							MYSQLI_ASSOC
-						);
-						foreach(['inicioJornada', 'fimJornada', 'inicioRefeicao', 'fimRefeicao'] as $tipo){
-							if (count($aDetalhado[$tipo]) > 0){
-								for($f = 0; $f < count($aDetalhado[$tipo]); $f++){
-									//Formatar datas para hora e minutos sem perder o D+1, caso tiver
-									if(strpos($aDetalhado[$tipo][$f], ':00', strlen($aDetalhado[$tipo][$f])-3) !== false){
-										if(strpos($aDetalhado[$tipo][$f], 'D+1') !== false){
-											$aDetalhado[$tipo][$f] = explode(' ', $aDetalhado[$tipo][$f]);
-											$aDetalhado[$tipo][$f] = substr($aDetalhado[$tipo][$f][1], 0, strlen($aDetalhado[$tipo][$f][1])-3)+$aDetalhado[$tipo][$f][2];
-										}else{
-											$aDetalhado[$tipo][$f] = date('H:i', strtotime($aDetalhado[$tipo][$f]));
-										}
-									}
-								}
-								$aDetalhado[$tipo] = implode("<br>", $aDetalhado[$tipo]);
-								foreach($legendas as $legenda){
-									$aDetalhado[$tipo] = str_replace('<br><strong>'.$legenda['moti_tx_legenda'].'</strong>', ' <strong>'.$legenda['moti_tx_legenda'].'</strong>', $aDetalhado[$tipo]);
-								}
-								$aDetalhado[$tipo] = str_replace('<br>D+1', ' D+1', $aDetalhado[$tipo]);
-							}else{
-								$aDetalhado[$tipo] = '';
-							}
-						}
-					//}
-
-					$totalResumo['adicionalNoturno'] = operarHorarios([$totalResumo['adicionalNoturno'], $aDetalhado['adicionalNoturno']], '+');
-
-					$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));
-					for($f = 0; $f < sizeof($row)-1; $f++){
-						if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
-							continue;
-						}
-						if($row[$f] == "00:00"){
-							$row[$f] = "";
-						}
-					}
-
-					array_shift($row);
-					array_splice($row, 11, 1); //Retira a coluna de "Jornada" que está entre "Repouso" e "Jornada Prevista"
-					$aDia[] = $row;
+					$aDetalhado = $endossoCompleto['endo_tx_pontos'][$i];
+					array_shift($aDetalhado);
+					array_splice($aDetalhado, 10, 1); //Retira a coluna de "Jornada" que está entre "Repouso" e "Jornada Prevista"
+					$aDia[] = $aDetalhado;
 				}
+				$diasEndossados--;
 			//}
 
 			//Inserir coluna de motivos{
@@ -158,154 +155,13 @@
 						$motivos .= $bdMotivos[$f2]['moti_tx_nome'].'<br>';
 					}
 
-					array_splice($aDia[$f], 19, 0, $motivos); // 19 pois a coluna de motivo, no momento da implementação, estava na coluna 19
+					array_splice($aDia[$f], 18, 0, ''); // inserir a coluna de motivo, no momento da implementação, estava na coluna 19
 				}
 			//}
-
-			//unset($aMotorista);
-
-			$aEndosso = carrega_array(query(
-				"SELECT endo_tx_dataCadastro, endo_tx_ate, endo_tx_horasApagar, endo_tx_pagarHoras FROM endosso 
-					WHERE endo_tx_matricula = '$aMotorista[enti_tx_matricula]'"
-			));
-			$saldoAnterior = mysqli_fetch_all(
-				query(
-					"SELECT endo_tx_filename FROM endosso
-						WHERE endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-							AND endo_tx_ate < '".$_POST['busca_data']."-01'
-							AND endo_tx_status = 'ativo'
-						ORDER BY endo_tx_ate DESC
-						LIMIT 1;"
-				),
-				MYSQLI_ASSOC
-			);
-			if($saldoAnterior == null || count($saldoAnterior) == 0){
-				$saldoAnterior = '00:00';
-			}else{
-				$saldoAnterior = $saldoAnterior[0];
-				//Puxando Saldo do último Endosso{
-					$csvFile = fopen('./arquivos/endosso/'.$saldoAnterior['endo_tx_filename'].'.csv', "r");
-					$csvKeys = fgetcsv($csvFile);
-					$csvValues = fgetcsv($csvFile);
-					
-					$csvEndosso = $csvValues[array_search('totalResumo', $csvKeys)];
-					$saldoAnterior = json_decode($csvEndosso)->saldoAtual;
-
-					unset($csvFile);
-					unset($csvKeys);
-					unset($csvValues);
-				//}
-			}
-			
-			$sqlMotorista = query(
-				"SELECT * FROM entidade".
-					" LEFT JOIN parametro ON enti_nb_parametro = para_nb_id".
-					" WHERE enti_tx_tipo = 'Motorista'".
-					" AND enti_nb_id IN (" . $_POST['idMotoristaEndossado'].")".
-					" AND enti_nb_empresa = " . $_POST['busca_empresa'] .
-					" ORDER BY enti_tx_nome");
-			$dadosMotorista = carrega_array($sqlMotorista);
-
-			$dataCiclo = ['de' => strtotime($dadosMotorista['enti_tx_admissao'].' 00:00:00'), 'ate' => strtotime($dadosMotorista['enti_tx_admissao'].' 00:00:00')];
-			$endoTimestamp = strtotime($aEndosso['endo_tx_ate'].' 00:00:00');
-			while($dataCiclo['ate'] < $endoTimestamp){
-				$dataCiclo['ate'] += ($dadosMotorista['para_nb_qDias'])*24*60*60;
-			}
-			$dataCiclo['de'] = $dataCiclo['ate']-($dadosMotorista['para_nb_qDias'])*24*60*60;
-			$dataCiclo['ate'] = $dataCiclo['ate']-1*24*60*60;
-
-			$dataCiclo['de']  = date('Y-m-d', $dataCiclo['de']);
-			$dataCiclo['ate'] = date('Y-m-d', $dataCiclo['ate']);
-
-
-			if($aEndosso['endo_tx_dataCadastro'] > $dataCiclo['ate']){
-				//Obrigar a pagar horas extras
-				
-				// $horasObrigatorias = $aEndosso['endo_tx_saldo'] + 
-			}
-			/*
-				Fazer as contas pra relacionar o dia do cadastro do endosso com o dia do cadastro do parâmetro e conferir
-			se o endosso está dentro da faixa de tempo em que deve ser obrigado pagar hora extra ou não
-			Se(endossoCadastroData > ultimoCicloData){
-				Obrigar pagar horas extras entre $dataCicloAnt e $dataCicloProx
-				(horas que devem ser obrigadas a pagar: endo_tx_saldo + somaSaldos(endo_tx_ate, $dataCicloProx))
-				$horasObrigatorias = endo_tx_saldo + somaSaldos(endo_tx_ate, $dataCicloProx)
-			}
-			*/
-
-
-			if (isset($dadosMotorista['para_nb_qDias']) && !empty($dadosMotorista['para_nb_qDias']) && date('Y-m-d') >= $dataCiclo['ate']){ //Deve ser feito somente quando for obrigado a pagar a hora extra?
-
-				//Contexto do HE100
-				// $he100 = strtotime($aDetalhado['he100']);
-				if(!empty($aDetalhado['he100'])){
-					$he100 = explode(':', $aDetalhado['he100']);
-					$he100 = intval($he100[0]) * 60 + ($he100[0][0] == '-' ? -1 : 1) * intval($he100[1]);
-				}else{
-					$he100 = 0;
-				}
-				
-				$he50_pagar = explode(':', $totalResumo['he50']);
-				$he50_pagar = intval($he50_pagar[0]) * 60 + ($he50_pagar[0][0] == '-' ? -1 : 1) * intval($he50_pagar[1]);
-				
-				$he100_pagar = explode(':', $totalResumo['he100']);
-				$he100_pagar = intval($he100_pagar[0]) * 60 + ($he100_pagar[0][0] == '-' ? -1 : 1) * intval($he100_pagar[1]);
-
-				$saldoPeriodo = explode(':', $totalResumo['diffSaldo']);
-				$saldoPeriodo = intval($saldoPeriodo[0]) * 60 + ($saldoPeriodo[0][0] == '-' ? -1 : 1) * intval($saldoPeriodo[1]);
-				
-				if ($saldoPeriodo <= 0) {
-					if($he50_pagar > 0){
-						if($he50_pagar > -($saldoPeriodo)){
-							$he50_pagar += $saldoPeriodo;
-							$saldoPeriodo = 0;
-						}else{
-							$saldoPeriodo += $he50_pagar;
-							$he50_pagar = 0;
-						}
-					}
-				} else {
-					if ($he100_pagar > 0) {
-						$transferir = $saldoPeriodo - (($saldoPeriodo > $he100) ? $he100 : 0);
-
-						$saldoPeriodo -= $transferir;
-						$he100_pagar += $transferir;
-					}else{
-						$he100_pagar = 0;
-					}
-				}
-				
-				//Contexto do HE50
-				
-				if($aEndosso['endo_tx_pagarHoras'] == 'sim'){
-					if($saldoPeriodo > $aEndosso['endo_tx_horasApagar']){
-						$transferir = $aEndosso['endo_tx_horasApagar'];
-					}else{
-						$transferir = $saldoPeriodo;
-					}
-					$saldoPeriodo -= $transferir;
-					
-					$he50_pagar += $transferir;
-				}else{
-					$he50_pagar = 0;	
-				}
-				$totalResumo['he50'] = intToTime($he50_pagar);
-				$totalResumo['he100'] = intToTime($he100_pagar);
-
-				$totalResumo['diffSaldo'] = intToTime($saldoPeriodo);
-			}else{
-				$totalResumo['he50'] = '00:00';
-				$totalResumo['he100'] = '00:00';
-			}
+			break;
 		}
-		$saldoAtual = operarHorarios([$saldoAnterior, $totalResumo['diffSaldo']], '+'); //Utilizado em relatorio_espelho.php
 
-		$legendas = mysqli_fetch_all(query(
-			"SELECT UNIQUE moti_tx_legenda FROM motivo 
-				WHERE moti_tx_legenda IS NOT NULL;"
-			), 
-			MYSQLI_ASSOC
-		); //Utilizado em relatorio_espelho.php
+		//unset($aMotorista);
 		
 		include "./relatorio_espelho.php";
 		exit;
@@ -331,40 +187,42 @@
 			}
 		}
 
-		if(!empty($_POST['busca_motorista'])){
-			$extra = " AND enti_nb_id = " . $_POST['busca_motorista'];
-		}
-		if(!empty($_POST['busca_data']) && !empty($_POST['busca_empresa'])){
-			$carregando = "Carregando...";
-		}
-		if(empty($_POST['busca_data'])){
-			$_POST['busca_data'] = date("Y-m");
-		}
-		if(!empty($_POST['busca_empresa'])){
-			$_POST['busca_empresa'] = (int)$_POST['busca_empresa'];
-		}else{
-			$_POST['busca_empresa'] = $_SESSION['user_nb_empresa'];
-		}
-		$extraMotorista = " AND enti_nb_empresa = " . $_POST['busca_empresa'];
-		if(!empty($_POST['busca_endossado']) && !empty($_POST['busca_empresa'])){
-			if(is_int(strpos($_POST['busca_endossado'], 'Endossado'))){
-				$extra .= " AND enti_nb_id";
-				if(is_int(strpos($_POST['busca_endossado'], 'Não '))){
-					$extra .= " NOT";
-				}
-				$extra .= " IN (SELECT endo_nb_entidade FROM endosso, entidade 
-					WHERE '".$_POST['busca_data']."' BETWEEN endo_tx_de AND endo_tx_ate".
-						" AND enti_nb_empresa = '" . $_POST['busca_empresa'] .
-						"' AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
-				)";
+		//Conferir se os campos do $_POST estão preenchidos{
+			if(!empty($_POST['busca_motorista'])){
+				$extra = " AND enti_nb_id = " . $_POST['busca_motorista'];
 			}
-		}
+			if(!empty($_POST['busca_data']) && !empty($_POST['busca_empresa'])){
+				$carregando = "Carregando...";
+			}
+			if(empty($_POST['busca_data'])){
+				$_POST['busca_data'] = date("Y-m");
+			}
+			if(!empty($_POST['busca_empresa'])){
+				$_POST['busca_empresa'] = (int)$_POST['busca_empresa'];
+			}else{
+				$_POST['busca_empresa'] = $_SESSION['user_nb_empresa'];
+			}
+			$extraMotorista = " AND enti_nb_empresa = " . $_POST['busca_empresa'];
+			if(!empty($_POST['busca_endossado']) && !empty($_POST['busca_empresa'])){
+				if(is_int(strpos($_POST['busca_endossado'], 'Endossado'))){
+					$extra .= " AND enti_nb_id";
+					if(is_int(strpos($_POST['busca_endossado'], 'Não '))){
+						$extra .= " NOT";
+					}
+					$extra .= " IN (SELECT endo_nb_entidade FROM endosso, entidade 
+						WHERE '".$_POST['busca_data']."' BETWEEN endo_tx_de AND endo_tx_ate".
+							" AND enti_nb_empresa = '" . $_POST['busca_empresa'] .
+							"' AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
+					)";
+				}
+			}
+		//}
 
 		//CAMPOS DE CONSULTA{
 			$c = [
 				campo_mes('* Data:',    'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2),
 				combo_net('Motorista:', 'busca_motorista', (!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ''), 3, 'entidade', '', ' AND enti_tx_tipo = "Motorista"' . $extraMotorista . $extraEmpresaMotorista, 'enti_tx_matricula'),
-				combo(    'Situação:',  'busca_situacao',  (!empty($_POST['busca_situacao'])?  $_POST['busca_situacao'] : ''), 2, ['Todos', 'Verificado', 'Não conformidade']),
+				combo(    'Situação:',  'busca_situacao',  (!empty($_POST['busca_situacao'])?  $_POST['busca_situacao'] : ''), 2, ['Todos', 'Não conformidade']),
 				combo(    'Endosso:',   'busca_endossado', (!empty($_POST['busca_endossado'])? $_POST['busca_endossado']: ''), 2, ['', 'Endossado', 'Endossado parcialmente', 'Não endossado'])
 			];
 
@@ -374,15 +232,15 @@
 		//}
 
 		//BOTOES{
-			if ($_POST['busca_situacao'] != 'Verificado') {
-				$disabled = 'disabled=disabled title="Filtre apenas por Verificado para efetuar a impressão do endosso."';
+			if(!isset($_POST['busca_situacao']) || empty($_POST['busca_situacao'])){
+				$disabled = 'disabled=disabled title="Pesquise um período endossado efetuar a impressão do endosso."';
 			}
 			$b = [
 				botao("Buscar", 'index', '', '', '', 1),
 				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1,'btn btn-info'),
 				'<button name="acao" id="botaoContexCadastrar CadastrarEndosso" value="cadastrar_endosso" type="button" class="btn btn-success">Cadastrar Endosso</button>',
-				'<button name="acao" id="botaoContexCadastrar ImprimirRelatorio" value="impressao_relatorio" ' . $disabled . ' type="button" class="btn btn-default">Imprimir Relatório</button>',
-				'<span id=dadosResumo><b>' . $carregando . '</b></span>'
+				'<button name="acao" id="botaoContexCadastrar ImprimirRelatorio" value="impressao_relatorio" '.$disabled.' type="button" class="btn btn-default">Imprimir Relatório</button>',
+				'<span id=dadosResumo><b>'.$carregando.'</b></span>'
 			];
 		//}
 
@@ -391,7 +249,7 @@
 		fecha_form($b);
 
 		$cab = [
-			"", "MAT.", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
+			"", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "HE 50%", "HE&nbsp;100%",
 			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 		];
@@ -423,96 +281,85 @@
 					}
 	
 					//Pegando e formatando registros dos dias{
-						for ($i = 1; $i <= $daysInMonth; $i++) {
-							$dataVez = $_POST['busca_data']."-".str_pad($i, 2, 0, STR_PAD_LEFT);
-							
-							$sqlEndosso = mysqli_fetch_all(
+						$date = new DateTime($_POST['busca_data']);
+						$month = intval($date->format('m'));
+						$year = intval($date->format('Y'));
+						$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+				
+						//Montar endosso completo{
+							$sqlEndossos = mysqli_fetch_all(
 								query(
-									"SELECT * FROM endosso 
-										WHERE endo_tx_matricula = '".$aMotorista['enti_tx_matricula'].
-											"' AND '".$dataVez."' BETWEEN endo_tx_de AND endo_tx_ate".
-											" AND endo_tx_status != 'inativo'"
+									'SELECT * FROM endosso 
+										WHERE endo_tx_matricula = \''.$aMotorista['enti_tx_matricula'].'\'
+											AND endo_tx_status != \'inativo\'
+											AND endo_tx_de >= \''.sprintf('%04d-%02d-%02d', $year, $month, '01').'\'
+											AND endo_tx_ate <= \''.sprintf('%04d-%02d-%02d', $year, $month, $daysInMonth).'\'
+										ORDER BY endo_tx_de ASC'
 								),
 								MYSQLI_ASSOC
 							);
-							if(count($sqlEndosso) == 0){ //Se não estiver endossado nesse dia, passa para o próximo.
-								continue;
+						
+							$endossos = [];
+							foreach($sqlEndossos as $endosso){
+								$aDetalhado = fopen($_SERVER['DOCUMENT_ROOT'].$CONTEX['path'].'/arquivos/endosso/'.$endosso['endo_tx_filename'].'.csv', 'r');
+								$keys = fgetcsv($aDetalhado);
+								$values = fgetcsv($aDetalhado);
+								$aDetalhado = [];
+								for($j = 0; $j < count($keys); $j++){
+									$aDetalhado[$keys[$j]] = $values[$j];
+								}
+								$aDetalhado['endo_tx_pontos'] 	= (array)json_decode($aDetalhado['endo_tx_pontos']);
+								$aDetalhado['totalResumo'] 		= (array)json_decode($aDetalhado['totalResumo']);
+								$endossos[] = $aDetalhado;
 							}
 
-							$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
+							$endossoCompleto = $endossos[0];
+							for($f = 1; $f < count($endossos); $f++){
+								$endossoCompleto['endo_tx_ate'] = $endossos[$f]['endo_tx_ate'];
+								$endossoCompleto['endo_tx_pontos'] = array_merge($endossoCompleto['endo_tx_pontos'], $endossos[$f]['endo_tx_pontos']);
+								$endossoCompleto['endo_tx_pagarHoras'] = $endossos[$f]['endo_tx_pagarHoras'] == 'sim'? 'sim': $endossoCompleto['endo_tx_pagarHoras'];
+								if($endossoCompleto['endo_tx_pagarHoras'] == 'sim'){
+									$endossoCompleto['endo_tx_horasApagar'] = operarHorarios([$endossoCompleto['endo_tx_horasApagar'], $endossos[$f]['endo_tx_horasApagar']], '+');	
+								}
+								foreach($endossos[$f]['totalResumo'] as $key => $value){
+									$endossoCompleto['totalResumo'][$key] = operarHorarios([$endossoCompleto['totalResumo'][$key], $endossos[$f]['totalResumo'][$key]], '+');
+								}
+							}
+							$totalResumo = $endossoCompleto['totalResumo'];
+						//}
 
-							if(isset($aDetalhado['fimJornada'][0]) && (strpos($aDetalhado['fimJornada'][0], ':00') !== false) && date('Y-m-d', strtotime($aDetalhado['fimJornada'][0])) != $dataVez){
-								array_splice($aDetalhado['fimJornada'], 1, 0, 'D+1');
+						//Ajustar valores de horas extras a pagar, não deve pagar caso o saldo final esteja negativo{
+							if($totalResumo['saldoAtual'] < "00:00" && $totalResumo['he100'] > "00:00"){
+
+								$transferir = ($totalResumo['saldoAtual'] > '-'.$totalResumo['he100'])? $totalResumo['he100']: $totalResumo['saldoAtual'];
+
+								$totalResumo['he100'] = operarHorarios([$totalResumo['he100'], $transferir], '-');
+								$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '+');
 							}
-	
-							//Converter array em string{
-								$legendas = mysqli_fetch_all(query(
-									"SELECT UNIQUE moti_tx_legenda FROM motivo 
-										WHERE moti_tx_legenda IS NOT NULL;"
-									), 
-									MYSQLI_ASSOC
-								);
-								foreach(['inicioJornada', 'fimJornada', 'inicioRefeicao', 'fimRefeicao'] as $tipo){
-									if (count($aDetalhado[$tipo]) > 0){
-										for($f = 0; $f < count($aDetalhado[$tipo]); $f++){
-											//Formatar datas para hora e minutos sem perder o D+1, caso tiver
-											if(strpos($aDetalhado[$tipo][$f], ':00', strlen($aDetalhado[$tipo][$f])-3) !== false){
-												if(strpos($aDetalhado[$tipo][$f], 'D+1') !== false){
-													$aDetalhado[$tipo][$f] = explode(' ', $aDetalhado[$tipo][$f]);
-													$aDetalhado[$tipo][$f] = substr($aDetalhado[$tipo][$f][1], 0, strlen($aDetalhado[$tipo][$f][1])-3)+$aDetalhado[$tipo][$f][2];
-												}else{
-													$aDetalhado[$tipo][$f] = date('H:i', strtotime($aDetalhado[$tipo][$f]));
-												}
-											}
-										}
-										$aDetalhado[$tipo] = implode("<br>", $aDetalhado[$tipo]);
-										foreach($legendas as $legenda){
-											$aDetalhado[$tipo] = str_replace('<br><strong>'.$legenda['moti_tx_legenda'].'</strong>', ' <strong>'.$legenda['moti_tx_legenda'].'</strong>', $aDetalhado[$tipo]);
-										}
-										$aDetalhado[$tipo] = str_replace('<br>D+1', ' D+1', $aDetalhado[$tipo]);
-									}else{
-										$aDetalhado[$tipo] = '';
-									}
-								}
-							//}
-		
-							$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));
-							for($f = 0; $f < sizeof($row)-1; $f++){
-								if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
-									continue;
-								}
-								if($row[$f] == "00:00"){
-									$row[$f] = "";
-								}
+							if($totalResumo['saldoAtual'] < "00:00" && $totalResumo['he50'] > "00:00"){
+								
+								$transferir = ($totalResumo['saldoAtual'] > '-'.$totalResumo['he50'])? $totalResumo['he50']: $totalResumo['saldoAtual'];
+								
+								$totalResumo['he50'] = operarHorarios([$totalResumo['he50'], $transferir], '-');
+								$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '+');
 							}
-							$aDia[] = $row;
+						//}
+
+						for ($i = 0; $i < count($endossoCompleto['endo_tx_pontos']); $i++) {
+							$aDetalhado = $endossoCompleto['endo_tx_pontos'][$i];
+							$aDia[] = $aDetalhado;
 						}
+						$totalResumoGrid = $totalResumo;
+						unset($totalResumoGrid['saldoAtual']);
+						unset($totalResumoGrid['saldoAnterior']);
+						if(count($aDia) > 0){
+							$aDia[] = array_values(array_merge(['', '', '', '', '', '', '<b>TOTAL</b>'], $totalResumoGrid));
+						}
+						unset($totalResumoGrid);
 					//}
 
 					if (count($aDia) > 0) {
-
-						$aEndosso = carrega_array(query(
-							"SELECT user_tx_login, endo_tx_dataCadastro, endo_tx_ate 
-								FROM endosso JOIN user ON endo_nb_userCadastro = user_nb_id 
-								WHERE endo_tx_mes LIKE '".$_POST['busca_data']."%' 
-									AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'
-									AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."' 
-									AND endo_tx_status = 'ativo' 
-								LIMIT 1"
-						));
-						if (is_array($aEndosso) && count($aEndosso) > 0) {
-							$counts['endossados']['sim']++;
-							$infoEndosso = " - Endossado por " . $aEndosso['user_tx_login'] . " em " . data($aEndosso['endo_tx_dataCadastro'], 1);
-
-							$aIdMotoristaEndossado[] = $aMotorista['enti_nb_id'];
-							$aMatriculaMotoristaEndossado[] = $aMotorista['enti_tx_matricula'];
-						} else {
-							$infoEndosso = '';
-							$counts['endossados']['nao']++;
-						}
-
-						$aIdMotorista[] 		= $aMotorista['enti_nb_id'];
-						$aMatriculaMotorista[] 	= $aMotorista['enti_tx_matricula'];						
+						$counts['endossados']['sim']++;
 
 						$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
 
@@ -538,45 +385,32 @@
 						));
 
 						$dataCicloProx = strtotime($dadosParametro['para_tx_inicioAcordo'].' 00:00:00');
-						$endoTimestamp = strtotime($aEndosso['endo_tx_ate'].' 00:00:00');
+						$endoTimestamp = strtotime($endossoCompleto['endo_tx_ate'].' 00:00:00');
 						while($dataCicloProx < $endoTimestamp && !empty($dadosParametro['para_nb_qDias'])){
 							$dataCicloProx += $dadosParametro['para_nb_qDias']*24*60*60;
 						}
 						$dataCicloProx = date('Y-m-d', $dataCicloProx);
-						
-						$saldoAnterior = mysqli_fetch_all(
-							query(
-								"SELECT endo_tx_filename FROM endosso
-									WHERE endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-										AND endo_tx_ate < '".$_POST['busca_data']."-01'
-										AND endo_tx_status = 'ativo'
-									ORDER BY endo_tx_ate DESC
-									LIMIT 1;"
-							),
-							MYSQLI_ASSOC
-						)[0];
-
-						if(empty($saldoAnterior)){
-							$saldoAnterior = '00:00';
-						}else{
-							//Puxando Saldo do último Endosso{
-								$csvFile = fopen('./arquivos/endosso/'.$saldoAnterior['endo_tx_filename'].'.csv', "r");
-								$csvKeys = fgetcsv($csvFile);
-								$csvValues = fgetcsv($csvFile);
-								
-								$csvEndosso = $csvValues[array_search('totalResumo', $csvKeys)];
-								$saldoAnterior = json_decode($csvEndosso)->saldoAtual;
-	
-								unset($csvFile);
-								unset($csvKeys);
-								unset($csvValues);
-							//}
-						}
-
-						$saldoFinal = '00:00';
-						$saldoFinal = somarHorarios([$saldoAnterior, $totalResumo['diffSaldo']]);
 						$dataCicloProx = explode('-', $dataCicloProx);
 						$dataCicloProx = sprintf('%02d/%02d/%04d', $dataCicloProx[2], $dataCicloProx[1], $dataCicloProx[0]);
+
+						$userCadastro = carregar('user', $endossoCompleto['endo_nb_userCadastro']);
+						$infoEndosso = " - Endossado por " . $$userCadastro['user_tx_login'] . " em " . data($endossoCompleto['endo_tx_dataCadastro'], 1);
+
+						$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
+
+						if ($aEmpresa['empr_nb_parametro'] > 0) {
+							$aParametro = carregar('parametro', $aEmpresa['empr_nb_parametro']);
+							$convencaoPadrao = '| Convenção Padrão? Sim';
+							foreach(['tx_jornadaSemanal', 'tx_jornadaSabado', 'tx_percentualHE', 'tx_percentualSabadoHE'] as $campo){
+								if($aParametro['para_'.$campo] != $aMotorista['enti_'.$campo]){
+									$convencaoPadrao = '| Convenção Padrão? Não';
+									break;
+								}
+							}
+							if($aParametro['para_nb_id'] != $aMotorista['enti_nb_parametro']){
+								$convencaoPadrao = '| Convenção Padrão? Não';
+							}
+						}
 	
 						$saldosMotorista = 
 							'<div class="table-responsive">
@@ -588,70 +422,26 @@
 									</thead></tr>
 									<tbody>
 										<tr>
-										<td>'.$saldoAnterior.'</td>
+										<td>'.$totalResumo['saldoAnterior'].'</td>
 										<td>'.$totalResumo['diffSaldo'].'</td>
-										<td>'.$saldoFinal.'</td>
+										<td>'.$totalResumo['saldoAtual'].'</td>
 										</tr>
 									</tbody>
 									</table>
 							</div>
-							Fim do ciclo: '.$dataCicloProx;
+							Fim do ciclo: '.$dataCicloProx
+						;
 						
+						$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
 
 						abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] | $aEmpresa[empr_tx_nome] $infoEndosso $convencaoPadrao $saldosMotorista");
-
 						
-						$aDia[] = array_values(array_merge(['', '', '', '', '', '', '', '<b>TOTAL</b>'], $totalResumo));
-	
-						$tolerancia = intval($dadosParametro['para_tx_tolerancia']);
-
-						$exibir = True;
-						$saldoColIndex = 21;
-						
-						for($f = 0; $f < count($aDia); $f++){
-							
-							$keys = array_keys($aDia[$f]);
-							$hasUnconformities = false;
-							foreach($keys as $key){
-								if(strpos($aDia[$f][$key], 'fa-warning') !== false){
-									$hasUnconformities = true;
-									$counts['naoConformidade']++;
-									break;
-								}
-							}
-							if($_POST['busca_situacao'] == 'Não conformidade' && !$hasUnconformities){ //Se for pra aparecer apenas inconformidades e a linha não tiver inconformidades
-								$exibir = False;
-							}else{
-								$exibir = True;
-							}
-							$aDia[$f]['exibir'] = $exibir;
-
-							if(empty($aDia[$f][$saldoColIndex])){
-								$aDia[$f][$saldoColIndex] = '00:00';	
-							}
-
-							$saldoStr = str_replace('<b>', '', $aDia[$f][$saldoColIndex]);
-
-							$saldoStr = explode(':', $saldoStr);
-							$saldo = intval($saldoStr[0])*60;
-							$saldo += ($saldoStr[0] == '-'? -1: 1)*intval($saldoStr[1]);
-
-							if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
-								$aDia[$f][$saldoColIndex] = '00:00';
-							}
-						}
-						$qtt = count($aDia);
-						for($f = 0; $f < $qtt;){
-							if(isset($aDia[$f]['exibir']) && !$aDia[$f]['exibir']){
-								unset($aDia[$f]);
-							}else{
-								$f++;
-							}
-						}
 						grid2($cab, $aDia);
 						fecha_form();
 	
 						$aSaldo[$aMotorista['enti_tx_matricula']] = $totalResumo['diffSaldo'];
+					}else{
+						$counts['endossados']['nao']++;
 					}
 	
 					$totalResumo = ['diffRefeicao' => '00:00', 'diffEspera' => '00:00', 'diffDescanso' => '00:00', 'diffRepouso' => '00:00', 'diffJornada' => '00:00', 'jornadaPrevista' => '00:00', 'diffJornadaEfetiva' => '00:00', 'maximoDirecaoContinua' => '', 'intersticio' => '00:00', 'he50' => '00:00', 'he100' => '00:00', 'adicionalNoturno' => '00:00', 'esperaIndenizada' => '00:00', 'diffSaldo' => '00:00'];
@@ -660,14 +450,19 @@
 				}
 			}
 			if($counts['endossados']['sim'] == 0 && !empty($_POST['acao'])){
-				echo '<script>alert("Período ainda não endossado.")</script>';
+				echo 
+					'<script>
+						alert("Período ainda não endossado.");
+						document.getElementById("botaoContexCadastrar ImprimirRelatorio").disabled = true;
+					</script>'
+				;
 			}
 		//}
 		echo '<div class="printable"></div>';
 
 		rodape();
 
-		$counts['message'] = '<br><br><b>Total: '.$counts['total'].' | Verificados: '.$counts['verificados'].' | Não Conformidades: '.$counts['naoConformidade'].' | Endossados: '.$counts['endossados']['sim'].' | Não Endossados: '.$counts['endossados']['nao'].'</b>';
+		$counts['message'] = '<br><br><b>Motoristas: '.$counts['total'].' | Verificados: '.$counts['verificados'].' | Não Conformidades: '.$counts['naoConformidade'].' | Endossados: '.$counts['endossados']['sim'].' | Não Endossados: '.$counts['endossados']['nao'].'</b>';
 		include 'endosso_html.php';
 	}
 ?>
