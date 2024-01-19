@@ -63,7 +63,7 @@
 					$showError = True;
 					$error_msg .= 'Empresa, ';
 				}else{
-					$_POST['empresa'] = $_SESSION['user_tx_emprCnpj'];
+					$_POST['empresa'] = $_SESSION['user_nb_empresa'];
 				}
 			}
 			if(!isset($_POST['busca_motorista'])){
@@ -78,7 +78,7 @@
 				$error_msg = '';
 			}
 			if($showError){
-				echo "<script>alert('".substr($error_msg, 0, strlen($error_msg)-2)."')</script>";
+				set_status('ERRO: '.substr($error_msg, 0, strlen($error_msg)-2));
 				index();
 				return;
 			}
@@ -92,6 +92,19 @@
 				$error_msg = 'Não é possível cadastrar um endosso com mais de um mês.';
 			}
 			unset($difference);
+		//}
+
+		//Conferir se o motorista foi selecionado para montar um array de motoristas{
+			// if(!isset($_POST['busca_motorista']) || empty($_POST['busca_motorista'])){
+			// 	$motoristas = mysqli_fetch_all(
+			// 		query(
+			// 			"SELECT * FROM entidade 
+			// 				WHERE enti_tx_status != 'inativo'
+			// 					AND enti_nb_empresa = ".$_POST['empresa'].";"
+			// 		),
+			// 		MYSQLI_ASSOC
+			// 	);
+			// }
 		//}
 
 		//Conferir se está entrelaçada com outro endosso{
@@ -182,7 +195,7 @@
 		//}
 
 		if($showError){
-			echo "<script>alert('".substr($error_msg, 0, strlen($error_msg)-2)."')</script>";
+			set_status('ERRO: '.substr($error_msg, 0, strlen($error_msg)-2));
 			index();
 			return;
 		}
@@ -401,8 +414,10 @@
 			combo_net('Motorista*:','busca_motorista',$_POST['busca_motorista']?? '',4,'entidade','',$extra_bd_motorista,'enti_tx_matricula'),
 			checkbox2('Pagar Horas Extras', 'horasApagar', $_POST['pagar_horas']?? '', 2)
 		];
-		if($_SESSION['user_tx_nivel'] == 'Super Administrador'){
-			array_unshift($c, combo_net('Empresa*:','empresa',$_POST['empresa']?? '',4,'empresa', 'onchange=selecionaMotorista(this.value)'));
+		if(is_int(strpos($_SESSION['user_tx_nivel'], "Administrador"))){
+			array_unshift($c, combo_net('Empresa*:','empresa', $_POST['empresa']?? '',4,'empresa', 'onchange=selecionaMotorista(this.value)'));
+		}else{
+			array_unshift($c, campo_hidden('empresa', $_SESSION['user_nb_empresa']));
 		}
 		$b = [
 			botao('Voltar', 'voltar'),
