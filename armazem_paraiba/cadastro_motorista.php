@@ -539,7 +539,7 @@
 		];
 
 
-		$b[] = botao('Gravar', 'cadastra_motorista', 'id, matricula', $_POST['id'].','.$a_mod['enti_tx_matricula'], 'tabindex=53');
+		$b[] = botao('Gravar', 'cadastra_motorista', 'id, matricula', $_POST['id'].','.$a_mod['enti_tx_matricula'], 'tabindex=53','','btn btn-success');
 
 		$b[] = botao('Voltar', 'index', '', '', 'tabindex=54');
 

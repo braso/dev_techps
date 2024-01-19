@@ -264,7 +264,7 @@
 
 		if($_GET['id'] && is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) || is_int(strpos($_SESSION['user_tx_nivel'], "Funcionário"))){
 			$b = [
-				botao('Gravar', 'cadastra_usuario', 'id,editPermission', $_POST['id'].','.strval($editPermission)),
+				botao('Gravar', 'cadastra_usuario', 'id,editPermission', $_POST['id'].','.strval($editPermission),'','','btn btn-success'),
 				botao('Voltar', 'index')
 			];
 		} else
