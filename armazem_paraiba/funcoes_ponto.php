@@ -1062,7 +1062,7 @@
 						JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
 						JOIN user ON ponto.pont_nb_user = user.user_nb_id
 						LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
-						WHERE pont_tx_status == 'inativo'
+						WHERE pont_tx_status = 'inativo'
 							AND pont_tx_data LIKE '%$data%'
 							AND pont_tx_matricula = '$matricula'"
 				),
