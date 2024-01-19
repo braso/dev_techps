@@ -35,11 +35,13 @@ $totalFiltered = mysqli_num_rows($query); // when there is a search parameter th
 
 if($requestData['length'] != '-1'){
 	$limit =  " LIMIT ".$requestData['start']." ,".$requestData['length'];
-}else{
-	$limit = " LIMIT 10";
 }
-$sql.=" ORDER BY ". $order2."   ".(!empty($requestData['order'][0]['dir'])? $requestData['order'][0]['dir']: '')." $limit";
 
+if (!empty($requestData['order'][0]['dir'])) {
+	$sql.=" ORDER BY ". $order2."   ".(!empty($requestData['order'][0]['dir'])? $requestData['order'][0]['dir']: '')." $limit";
+}else{
+    $sql.=(!empty($requestData['order'][0]['dir'])? $requestData['order'][0]['dir']: '')." $limit";
+}
 
 /* $requestData['order'][0]['column'] contains colmun index, $requestData['order'][0]['dir'] contains order such as asc/desc  */	
 $query=mysqli_query($conn, $sql) or die(mysqli_error($conn));
