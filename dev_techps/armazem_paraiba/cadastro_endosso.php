@@ -95,16 +95,16 @@
 		//}
 
 		//Conferir se o motorista foi selecionado para montar um array de motoristas{
-			if(!isset($_POST['busca_motorista']) || empty($_POST['busca_motorista'])){
-				$motoristas = mysqli_fetch_all(
-					query(
-						"SELECT * FROM entidade 
-							WHERE enti_tx_status != 'inativo'
-								AND enti_nb_empresa = ".$_POST['empresa'].";"
-					),
-					MYSQLI_ASSOC
-				);
-			}
+			// if(!isset($_POST['busca_motorista']) || empty($_POST['busca_motorista'])){
+			// 	$motoristas = mysqli_fetch_all(
+			// 		query(
+			// 			"SELECT * FROM entidade 
+			// 				WHERE enti_tx_status != 'inativo'
+			// 					AND enti_nb_empresa = ".$_POST['empresa'].";"
+			// 		),
+			// 		MYSQLI_ASSOC
+			// 	);
+			// }
 		//}
 
 		//Conferir se está entrelaçada com outro endosso{
