@@ -341,6 +341,9 @@
 		// $novo_endosso['totalResumo'] = str_replace('<\/', '</', $novo_endosso['totalResumo']);
 
 		$filename = md5($novo_endosso['endo_tx_matricula'].$novo_endosso['endo_tx_mes']);
+		if(!is_dir("./arquivos/endosso")){
+			mkdir("./arquivos/endosso");
+		}
 		$path = './arquivos/endosso/';
 		if(file_exists($path.$filename.'.csv')){
 			$version = 2;
