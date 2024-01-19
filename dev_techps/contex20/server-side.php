@@ -36,11 +36,11 @@ $totalFiltered = mysqli_num_rows($query); // when there is a search parameter th
 if($requestData['length'] != '-1'){
 	$limit =  " LIMIT ".$requestData['start']." ,".$requestData['length'];
 }
+
 if (!empty($requestData['order'][0]['dir'])) {
 	$sql.=" ORDER BY ". $order2." ".$requestData['order'][0]['dir'];
 }
 $sql.=" $limit";
-
 
 /* $requestData['order'][0]['column'] contains colmun index, $requestData['order'][0]['dir'] contains order such as asc/desc  */	
 $query=mysqli_query($conn, $sql) or die(mysqli_error($conn));
