@@ -84,8 +84,6 @@
 				$extensao = pathinfo($arquivos['name'], PATHINFO_EXTENSION); 
 				$novo_nome_com_extensao = $novo_nome . '.' . $extensao;
 				$caminho_destino = $pasta_parametro . $novo_nome_com_extensao;
-
-				print_r([$idParametro,$novo_nome_com_extensao,$descricao,$caminho_destino,date("Y-m-d H:i:s")]);
 		
 				if (move_uploaded_file($arquivo_temporario, $caminho_destino)) {
 					inserir('documento_parametro', ['para_nb_id','doc_tx_nome','doc_tx_descricao','doc_tx_caminho','doc_tx_dataCadastro'],[$idParametro,$novo_nome_com_extensao,$descricao,$caminho_destino,date("Y-m-d H:i:s")]);
