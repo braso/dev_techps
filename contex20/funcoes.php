@@ -424,7 +424,7 @@ function campo_data($nome,$variavel,$modificador,$tamanho,$extra=''){
 	
 	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
 		<label><b>'.$nome.'</b></label>
-		<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="date" class="form-control input-sm" '.$extra.'>
+		<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="date" class="form-control input-sm" '.$extra.' max="9999-12-31">
 	</div>';
 
 	return $campo;
