@@ -25,7 +25,6 @@
 	}
 
 	function cadastra_abono(){
-	
 		// Conferir se os campos obrigatórios estão preenchidos{
 			$campos_obrigatorios = ['motorista' => 'Motorista', 'daterange' => 'Data', 'abono' => 'Horas', 'motivo' => 'Motivo'];
 			$error = false;
@@ -79,10 +78,10 @@
 
 		cabecalho('Cadastro Abono');
 
-		$c[] = combo_net('Motorista:','motorista',$_POST['busca_motorista'],4,'entidade','',' AND enti_tx_tipo = "Motorista"','enti_tx_matricula');
-		$c[] = campo('Data(s):','daterange',$_POST['daterange'],3);
-		$c[] = campo_hora('Abono: (hh:mm)','abono','',3);
-		$c2[] = combo_bd('Motivo:','motivo',$_POST['motivo'],4,'motivo','',' AND moti_tx_tipo = "Abono"');
+		$c[] = combo_net('Motorista*:','motorista',$_POST['busca_motorista'],4,'entidade','',' AND enti_tx_tipo = "Motorista"','enti_tx_matricula');
+		$c[] = campo('Data(s)*:','daterange',$_POST['daterange'],3);
+		$c[] = campo_hora('Abono*: (hh:mm)','abono','',3);
+		$c2[] = combo_bd('Motivo*:','motivo',$_POST['motivo'],4,'motivo','',' AND moti_tx_tipo = "Abono"');
 		$c2[] = textarea('Justificativa:','descricao','',12);
 		
 		//BOTOES
@@ -605,7 +604,7 @@
 
 		$queryFeriado = query(
 			"SELECT feri_tx_nome FROM feriado 
-				WHERE feri_tx_data LIKE '____-" . substr($data, 5, 5) . "%' 
+				WHERE feri_tx_data LIKE '".$data."%' 
 					AND feri_tx_status != 'inativo' ".$extraFeriado
 		);
 		$stringFeriado = '';
@@ -719,10 +718,6 @@
 		}
 		$registros['repousoCompleto']['totalIntervalo'] = operarHorarios([$registros['repousoCompleto']['totalIntervalo'], $registros['repousoPorEspera']['repousoCompleto']['totalIntervalo']], '+');
 		$registros['repousoCompleto']['icone'] .= $registros['repousoPorEspera']['repousoCompleto']['icone'];
-
-		if(isset($registros['esperaCompleto']['paresParaRepouso']) && count($registros['esperaCompleto']['paresParaRepouso']) > 0){
-
-		}
 		
 		$aRetorno['diffRefeicao'] = $registros['refeicaoCompleto']['icone'] . $registros['refeicaoCompleto']['totalIntervalo'];
 		$aRetorno['diffEspera']   = $registros['esperaCompleto']['icone'] . $registros['esperaCompleto']['totalIntervalo'];
@@ -731,16 +726,18 @@
 
 		$contagemEspera += count($registros['esperaCompleto']['pares']);
 
-		$aAbono = carrega_array(query(
-			"SELECT * FROM abono, motivo, user 
-				WHERE abon_tx_status != 'inativo' 
-					AND abon_nb_userCadastro = user_nb_id 
-					AND abon_tx_matricula = '$matricula' 
-					AND abon_tx_data = '$data' 
-					AND abon_nb_motivo = moti_nb_id
-				ORDER BY abon_nb_id DESC 
-				LIMIT 1"
-		));
+		$aAbono = carrega_array(
+			query(
+				"SELECT * FROM abono, motivo, user 
+					WHERE abon_tx_status != 'inativo' 
+						AND abon_nb_userCadastro = user_nb_id 
+						AND abon_tx_matricula = '$matricula' 
+						AND abon_tx_data = '$data' 
+						AND abon_nb_motivo = moti_nb_id
+					ORDER BY abon_nb_id DESC 
+					LIMIT 1"
+			)
+		);
 		
 		$aRetorno['diffJornada'] = $registros['jornadaCompleto']['icone'].$registros['jornadaCompleto']['totalIntervalo'];
 
@@ -764,9 +761,10 @@
 						$registros['refeicaoCompleto']['totalIntervalo'],
 						$registros['esperaCompleto']['totalIntervalo'],
 						$registros['descansoCompleto']['totalIntervalo'],
-						$registros['repousoCompleto']['totalIntervalo']
+						$registros['repousoCompleto']['totalIntervalo'],
+						'-'.$registros['repousoPorEspera']['repousoCompleto']['totalIntervalo']
 				])
-			);
+				);
 
 			$jornadaEfetiva = $jornadaIntervalo->diff($totalNaoJornada); //$diffJornadaEfetiva
 			$jornadaEfetiva = DateTime::createFromFormat('H:i', $jornadaEfetiva->format("%H:%I"));
@@ -824,7 +822,7 @@
 		//}
 
 		//CALCULO ESPERA INDENIZADA{
-			if(false){
+			if(true){
 				$intervaloEsp = somarHorarios([$registros['esperaCompleto']['totalIntervalo'], $registros['repousoPorEspera']['repousoCompleto']['totalIntervalo']]);
 				$indenizarEspera = ($intervaloEsp >= '02:00');
 
@@ -833,11 +831,12 @@
 						$transferir = substr($saldoDiario, 1);
 					}else{
 						$transferir = $intervaloEsp;
-					}
-					
-					$saldoDiario = operarHorarios([$saldoDiario, $transferir], '-');
+					}	
+					$saldoDiario = operarHorarios([$saldoDiario, $transferir], '+');
 					$aRetorno['diffSaldo'] = $saldoDiario;
 					$intervaloEsp = operarHorarios([$intervaloEsp, $transferir], '-');
+				}else{
+					$intervaloEsp = $registros['repousoPorEspera']['repousoCompleto']['totalIntervalo'];
 				}
 
 				if($indenizarEspera){
@@ -888,14 +887,18 @@
 		//HORAS EXTRAS{
 			$aRetorno['he100'] = '';
 			if($aRetorno['diffSaldo'][0] != '-'){ 	//Se o saldo for positivo
-				$aParametro["para_tx_HorasEXExcedente"] = (!isset($aParametro["para_tx_HorasEXExcedente"]) || empty($aParametro["para_tx_HorasEXExcedente"]))? '00:00': $aParametro["para_tx_HorasEXExcedente"];
-				if($aRetorno['diffSaldo'] > $aParametro["para_tx_HorasEXExcedente"]){// saldo diário >= limite de horas extras 100%
+				if(	(isset($aParametro["para_tx_HorasEXExcedente"]) && !empty($aParametro["para_tx_HorasEXExcedente"])) &&
+					$aParametro["para_tx_HorasEXExcedente"] != '00:00' && 
+					$aRetorno['diffSaldo'] >= $aParametro["para_tx_HorasEXExcedente"]
+				){// saldo diário >= limite de horas extras 100%
 					$aRetorno['he100'] = operarHorarios([$aRetorno['diffSaldo'], $aParametro["para_tx_HorasEXExcedente"]], '-');
 					
 					if ($stringFeriado != '') {		//Se for feriado
 						$iconeFeriado =  " <a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
 						$aRetorno['he100'] .= $iconeFeriado;
 					}
+				}else{
+					$aRetorno['he100'] = '00:00';
 				}
 				$aRetorno['he50'] = operarHorarios([$aRetorno['diffSaldo'], $aRetorno['he100']], '-');
 			}
@@ -991,62 +994,105 @@
 		}
 		
 		//LEGENDAS{
-			$legendas = mysqli_fetch_all(
+			if(!empty($registros['inicioJornada'])){
+				$legendas = mysqli_fetch_all(
+					query(
+						"SELECT * FROM ponto
+							JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
+							JOIN user ON ponto.pont_nb_user = user.user_nb_id
+							LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
+							WHERE ponto.pont_nb_motivo IS NOT NULL 
+								AND pont_tx_status != 'inativo'
+								AND pont_tx_data LIKE '%$data%' 
+								AND pont_tx_matricula = '$matricula'"
+					),
+					MYSQLI_ASSOC
+				);
+		
+				$tipos = [
+					'I' => 0, 
+					'P' => 0, 
+					'T' => 0, 
+					'DSR' => 0
+				];
+				$contagens = [
+					'inicioJornada' => $tipos,
+					'fimJornada' => $tipos,
+					'inicioRefeicao' => $tipos,
+					'fimRefeicao' => $tipos,
+				];
+				
+				foreach ($legendas as $value) {
+					$legenda = $value['moti_tx_legenda'];
+				
+					switch ($value['macr_tx_nome']) {
+						case 'Inicio de Jornada':
+							$acao = 'inicioJornada';
+							break;
+						case 'Fim de Jornada':
+							$acao = 'fimJornada';
+							break;
+						case 'Inicio de Refeição':
+							$acao = 'inicioRefeicao';
+							break;
+						case 'Fim de Refeição':
+							$acao = 'fimRefeicao';
+							break;
+						default:
+							$acao = '';
+					}
+					if ($acao != '' && !empty($legenda) && array_key_exists($legenda, $contagens[$acao])) {
+						$contagens[$acao][$legenda]++;
+					}
+				}
+				foreach ($contagens as $acao => $tipos) {
+					foreach ($tipos as $tipo => $quantidade) {
+						if($quantidade > 0){
+							$aRetorno[$acao][] = "<strong>$tipo</strong>";
+						}
+					}
+				}
+			}
+		//}
+
+		//Aviso de registro inativado{
+			$ajuste = mysqli_fetch_all(
 				query(
-					"SELECT pont_tx_data,macr_tx_nome, moti_tx_legenda FROM ponto
+					"SELECT pont_tx_data, macr_tx_nome, pont_tx_status FROM ponto
 						JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
 						JOIN user ON ponto.pont_nb_user = user.user_nb_id
 						LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
-						WHERE ponto.pont_nb_motivo IS NOT NULL 
-							AND pont_tx_status != 'inativo'
-							AND pont_tx_data LIKE '%$data%' 
+						WHERE pont_tx_status == 'inativo'
+							AND pont_tx_data LIKE '%$data%'
 							AND pont_tx_matricula = '$matricula'"
 				),
 				MYSQLI_ASSOC
 			);
 	
-			$tipos = [
-				'I' => 0, 
-				'P' => 0, 
-				'T' => 0, 
-				'DSR' => 0
+			$possuiAjustes = [
+				'jornada'  => ['inicio' => False, 'fim' => False], 	//$quantidade_inicioJ e $quantidade_fimJ
+				'refeicao' => ['inicio' => False, 'fim' => False],	//$quantidade_inicioR e $quantidade_fimR
 			];
-			$contagens = [
-				'inicioJornada' => $tipos,
-				'fimJornada' => $tipos,
-				'inicioRefeicao' => $tipos,
-				'fimRefeicao' => $tipos,
-			];
-			
-			foreach ($legendas as $value) {
-				$legenda = $value['moti_tx_legenda'];
-			
-				switch ($value['macr_tx_nome']) {
-					case 'Inicio de Jornada':
-						$acao = 'inicioJornada';
-						break;
-					case 'Fim de Jornada':
-						$acao = 'fimJornada';
-						break;
-					case 'Inicio de Refeição':
-						$acao = 'inicioRefeicao';
-						break;
-					case 'Fim de Refeição':
-						$acao = 'fimRefeicao';
-						break;
-					default:
-						$acao = '';
-				}
-				if ($acao != '' && !empty($legenda) && array_key_exists($legenda, $contagens[$acao])) {
-					$contagens[$acao][$legenda]++;
+	
+			foreach ($ajuste as $valor) {
+				if($data == substr($valor["pont_tx_data"], 0, 10)){
+          $possuiAjustes['jornada']['inicio']  = $possuiAjustes['jornada']['inicio'] 	|| $valor["macr_tx_nome"] == 'Inicio de Jornada';
+          $possuiAjustes['jornada']['fim'] 	 = $possuiAjustes['jornada']['fim'] 	|| $valor["macr_tx_nome"] == 'Fim de Jornada';
+          $possuiAjustes['refeicao']['inicio'] = $possuiAjustes['refeicao']['inicio'] || $valor["macr_tx_nome"] == 'Inicio de Refeição';
+          $possuiAjustes['refeicao']['fim'] 	 = $possuiAjustes['refeicao']['fim']	|| $valor["macr_tx_nome"] == 'Fim de Refeição';
 				}
 			}
-			foreach ($contagens as $acao => $tipos) {
-				foreach ($tipos as $tipo => $quantidade) {
-					if($quantidade > 0){
-						$aRetorno[$acao][] = "<strong>$tipo</strong>";
-					}
-				}
+			if($possuiAjustes['jornada']['inicio']){
+				$aRetorno['inicioJornada'][] = "*";
+			}
+			if($possuiAjustes['jornada']['fim']){
+				$aRetorno['fimJornada'][] = "*";
+			}
+			if($possuiAjustes['refeicao']['inicio']){
+				$aRetorno['inicioRefeicao'][] = "*";
+			}
+			if($possuiAjustes['refeicao']['fim']){
+				$aRetorno['fimRefeicao'][] = "*";
 			}
 		//}
 
@@ -1114,6 +1160,47 @@
 		if($saldo > 0){
 			$aRetorno['diffSaldo'] = "<b>".$aRetorno['diffSaldo']."</b>";
 		}
+
+		if(
+			isset($aRetorno['fimJornada'][0]) && 
+			substr($aRetorno['fimJornada'][0], 0, 11) > substr($aRetorno['inicioJornada'][0], 0, 11)
+		){
+			array_splice($aRetorno['fimJornada'], 1, 0, 'D+1');
+		}
+
+		//Converter array em string{
+			$legendas = mysqli_fetch_all(query(
+				"SELECT UNIQUE moti_tx_legenda FROM motivo 
+					WHERE moti_tx_legenda IS NOT NULL;"
+				), 
+				MYSQLI_ASSOC
+			);
+			foreach(['inicioJornada', 'fimJornada', 'inicioRefeicao', 'fimRefeicao'] as $tipo){
+				if (count($aRetorno[$tipo]) > 0){
+					for($f = 0; $f < count($aRetorno[$tipo]); $f++){
+						//Formatar datas para hora e minutos sem perder o D+1, caso tiver
+						if(strpos($aRetorno[$tipo][$f], ':00', strlen($aRetorno[$tipo][$f])-3) !== false){
+							if(strpos($aRetorno[$tipo][$f], 'D+1') !== false){
+								$aRetorno[$tipo][$f] = explode(' ', $aRetorno[$tipo][$f]);
+								$aRetorno[$tipo][$f] = substr($aRetorno[$tipo][$f][1], 0, strlen($aRetorno[$tipo][$f][1])-3)+$aRetorno[$tipo][$f][2];
+							}else{
+								$aRetorno[$tipo][$f] = date('H:i', strtotime($aRetorno[$tipo][$f]));
+							}
+						}
+					}
+					$aRetorno[$tipo] = implode("<br>", $aRetorno[$tipo]);
+					foreach($legendas as $legenda){
+						$aRetorno[$tipo] = str_replace('<br><strong>'.$legenda['moti_tx_legenda'].'</strong>', ' <strong>'.$legenda['moti_tx_legenda'].'</strong>', $aRetorno[$tipo]);
+					}
+					$aRetorno[$tipo] = str_replace('<br>D+1', ' D+1', $aRetorno[$tipo]);
+					$aRetorno[$tipo] = str_replace('<br>*', ' *', $aRetorno[$tipo]);
+				}else{
+					$aRetorno[$tipo] = '';
+				}
+			}
+		//}
+
+		$totalResumo['adicionalNoturno'] = operarHorarios([$totalResumo['adicionalNoturno'], $aRetorno['adicionalNoturno']], '+');
 		
 		return $aRetorno;
 	}
@@ -1131,5 +1218,4 @@
 		$response = iconv('UTF-8', 'ASCII//TRANSLIT', $week[date('l', strtotime($date))]);
 		return $response;
 	}
-	
 ?>

@@ -1,5 +1,9 @@
+<?
+	include_once $_SERVER['DOCUMENT_ROOT'].($CONTEX['path']."/../")."contex20/funcoes_form.php";
+?>
 <!DOCTYPE html>
 <html lang="en">
+
 
 <head>
 	<meta charset="UTF-8">
@@ -79,12 +83,7 @@
 			<?
 				foreach ($aDia as $aDiaVez) {
 					echo '<tr>';
-					for ($j = 1; $j < 21; $j++){
-						if($j > 2 && $j < 7){
-							foreach($legendas as $legenda){
-								$aDiaVez[$j] = str_replace('<br><strong>'.$legenda['moti_tx_legenda'].'</strong>', ' <strong>'.$legenda['moti_tx_legenda'].'</strong>', $aDiaVez[$j]);
-							}
-						}
+					for ($j = 0; $j < 20; $j++){
 						echo '<td>'.$aDiaVez[$j].'</td>';
 					}
 					echo '</tr>';
@@ -147,13 +146,13 @@
 				<table class="table-resumo">
 					<tr>
 						<td>Saldo Anterior</td>
-						<td><?=$saldoAnterior?></td>
+						<td><?=$totalResumo['saldoAnterior']?></td>
 						<td class="empty"></td>
 						<td>Saldo Período</td>
 						<td><?= $totalResumo['diffSaldo'] ?></td>
 						<td class="empty"></td>
 						<td>Saldo Atual</td>
-						<td><?= $saldoAtual ?></td>
+						<td><?= $totalResumo['saldoAtual'] ?></td>
 					</tr>
 				</table>
 			</td>
