@@ -715,10 +715,15 @@
 					$extra"
 		);
 
+		if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
+			$icone_excluir = 'icone_excluir(enti_nb_id,exclui_motorista)';
+		}else
+			$icone_excluir = '';
+
 		$cab = ['CÓDIGO', 'NOME', 'MATRÍCULA', 'CPF', 'EMPRESA', 'FONE 1', 'FONE 2', 'OCUPAÇÃO', 'PARÂMETRO DA JORNADA', 'CONVENÇÃO PADRÃO', 'STATUS', '', ''];
 		$val = [
 			'enti_nb_id', 'enti_tx_nome', 'enti_tx_matricula', 'enti_tx_cpf', 'empr_tx_nome', 'enti_tx_fone1', 'enti_tx_fone2', 'enti_tx_ocupacao', 'para_tx_nome', 'enti_tx_ehPadrao', 'enti_tx_status', 'icone_modificar(enti_nb_id,modifica_motorista)',
-			'icone_excluir(enti_nb_id,exclui_motorista)'
+			$icone_excluir
 		];
 
 		grid($sql, $cab, $val);
