@@ -26,6 +26,24 @@
 
 	function cadastra_abono(){
 
+		// Conferir se os campos obrigatórios estão preenchidos{
+			$campos_obrigatorios = ['motorista' => 'Motorista', 'daterange' => 'Data', 'abono' => 'Horas', 'motivo' => 'Motivo'];
+			$error = false;
+			$errorMsg = '';
+			foreach(array_keys($campos_obrigatorios) as $campo){
+				if(!isset($_POST[$campo]) || empty($_POST[$campo])){
+					$error = true;
+					$errorMsg .= $campos_obrigatorios[$campo].', ';
+				}
+			}
+
+			if($error){
+				set_status('ERRO: Campos obrigatórios não preenchidos: '. substr($errorMsg, 0, strlen($errorMsg)-2).'.');
+				layout_abono();
+				exit;
+			}
+		// }
+
 		$aData = explode(" - ", $_POST['daterange']);
 
 		$begin = new DateTime(data($aData[0]));
@@ -61,10 +79,10 @@
 
 		cabecalho('Cadastro Abono');
 
-		$c[] = combo_net('Motorista:','motorista',$_POST['busca_motorista'],4,'entidade','',' AND enti_tx_tipo = "Motorista"','enti_tx_matricula');
-		$c[] = campo('Data(s):','daterange',$_POST['daterange'],3);
-		$c[] = campo_hora('Abono: (hh:mm)','abono','',3);
-		$c2[] = combo_bd('Motivo:','motivo',$_POST['motivo'],4,'motivo','',' AND moti_tx_tipo = "Abono"');
+		$c[] = combo_net('Motorista*:','motorista',$_POST['busca_motorista'],4,'entidade','',' AND enti_tx_tipo = "Motorista"','enti_tx_matricula');
+		$c[] = campo('Data(s)*:','daterange',$_POST['daterange'],3);
+		$c[] = campo_hora('Abono*: (hh:mm)','abono','',3);
+		$c2[] = combo_bd('Motivo*:','motivo',$_POST['motivo'],4,'motivo','',' AND moti_tx_tipo = "Abono"');
 		$c2[] = textarea('Justificativa:','descricao','',12);
 		
 		//BOTOES
