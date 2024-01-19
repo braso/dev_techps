@@ -262,7 +262,7 @@
 			$campo_expiracao
 		];
 
-		ifif( is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) || $_GET['id'] && is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) || is_int(strpos($_SESSION['user_tx_nivel'], "Funcionário"))){
+		if( is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) || $_GET['id'] && is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) || is_int(strpos($_SESSION['user_tx_nivel'], "Funcionário"))){
 			$b = [
 				botao('Gravar', 'cadastra_usuario', 'id,editPermission', $_POST['id'].','.strval($editPermission)),
 				botao('Voltar', 'index')
