@@ -21,7 +21,7 @@ cabecalho('');
             width: 1250px;
             height: 1400px;
             border: none;
-        }
+        } 
     </style>
 </head>
 <body>
