@@ -845,20 +845,21 @@ function combo_bd_texto($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',
 
 	
 	$sql=query("SELECT ".$tab."_nb_id, ".$tab."_tx_nome FROM $tabela WHERE ".$tab."_tx_status != 'inativo' $extra_bd");
-	while($a=mysqli_fetch_array($sql)){
+	$a=mysqli_fetch_array($sql);
+	//while()){
 
-		if($a[0] == $modificador || $a[1] == $modificador)
-			$selected="selected";
-		else
-			$selected='';
+	//	if($a[0] == $modificador || $a[1] == $modificador)
+	//		$selected="selected";
+	//	else
+	//		$selected='';
 
-		$c_opcao .= '<option value="'.$a[0].'" '.$selected.'>'.$a[1].'</option>';
+	//	$c_opcao .= '<option value="'.$a[0].'" '.$selected.'>'.$a[1].'</option>';
 
-	}
+//	}
 
 	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5" '.$extra.'>
 			<label><b>'.$nome.'</b></label><br>
-			<p class="text-left">'.$variavel.'&nbsp;</p>
+			<p class="text-left">'.$a[1].'&nbsp;</p>
 		</div>';
 
 	// $campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
