@@ -150,12 +150,12 @@
 	?>
 	
 			<style>
-				table thead tr th:nth-child(4),
-				table thead tr th:nth-child(8),
-				table thead tr th:nth-child(12),
-				table td:nth-child(4),
-				table td:nth-child(8),
-				table td:nth-child(12) {
+				table thead tr th:nth-child(3),
+				table thead tr th:nth-child(7),
+				table thead tr th:nth-child(11),
+				table td:nth-child(3),
+				table td:nth-child(7),
+				table td:nth-child(11) {
 					border-right: 3px solid #d8e4ef !important;
 				}
 				.th-align {
