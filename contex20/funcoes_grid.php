@@ -129,10 +129,6 @@
 			<input type="hidden" name="data_ate" value="">
 			<input type="hidden" id="hidden">
 		</form>
-		<style type="text/css">
-			th { font-size: 10px !important; }
-			td { font-size: 10px !important; }
-		</style>
 		<?
 			js_contex_icone();
 
@@ -145,6 +141,22 @@
 
 			$valores = "'".implode("','", $valores)."'";
 		?>
+		<style type="text/css">
+			th { font-size: 10px !important; }
+			td { font-size: 10px !important; }
+
+			@media print{
+					body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(1) > div {
+						display: none;
+					}
+					
+					contex-grid-<?=$rand?>,
+					contex-grid-<?=$rand?> * {
+						display: block;
+					}
+					@page { size: landscape; }
+				}
+		</style>
 
 
 											<!-- BEGIN EXAMPLE TABLE PORTLET-->

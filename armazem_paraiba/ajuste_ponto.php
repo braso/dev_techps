@@ -199,7 +199,7 @@
 		$aEndosso = carrega_array($sqlCheck);
 
 		$botao_imprimir = 
-			'<button  href="#" class="btn default" onclick="imprimir()">Imprimir</button >
+			'<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
 				<script>
 					function imprimir() {
 						// Abrir a caixa de diálogo de impressão
