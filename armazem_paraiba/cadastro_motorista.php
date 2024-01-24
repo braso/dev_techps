@@ -698,18 +698,22 @@
 			$extra .= " AND enti_tx_ehPadrao = '".$_POST['busca_padrao']."'";
 		}
 
-		$c[] = campo('Código', 'busca_codigo', $_POST['busca_codigo'], 1,'','maxlength="6"');
-		$c[] = campo('Nome', 'busca_nome', $_POST['busca_nome'], 2,'','maxlength="65"');
-		$c[] = campo('Matrícula', 'busca_matricula', $_POST['busca_matricula'], 1,'','maxlength="6"');
-		$c[] = campo('CPF', 'busca_cpf', $_POST['busca_cpf'], 2, 'MASCARA_CPF');
-		$c[] = combo_bd('!Empresa', 'busca_empresa', $_POST['busca_empresa'], 2, 'empresa', '', $extraEmpresa);
-		$c[] = combo('Ocupação', 'busca_ocupacao', $_POST['busca_ocupacao'], 2, array("", "Motorista")); //TODO PRECISO SABER QUAIS AS OCUPACOES
-		$c[] = combo('Convenção Padrão', 'busca_padrao', $_POST['busca_padrao'], 2, array('Todos', 'Sim', 'Não'));
-		$c[] = combo_bd('!Parâmetros da Jornada', 'busca_parametro', $_POST['busca_parametro'], 6, 'parametro');
-		$c[] = combo('Status', 'busca_status', $_POST['busca_status'], 2, ['Todos', 'Ativo', 'Inativo']);
+		$c = [ 
+			campo('Código', 'busca_codigo', $_POST['busca_codigo'], 1,'','maxlength="6"'),
+			campo('Nome', 'busca_nome', $_POST['busca_nome'], 2,'','maxlength="65"'),
+			campo('Matrícula', 'busca_matricula', $_POST['busca_matricula'], 1,'','maxlength="6"'),
+			campo('CPF', 'busca_cpf', $_POST['busca_cpf'], 2, 'MASCARA_CPF'),
+			combo_bd('!Empresa', 'busca_empresa', $_POST['busca_empresa'], 2, 'empresa', '', $extraEmpresa),
+			combo('Ocupação', 'busca_ocupacao', $_POST['busca_ocupacao'], 2, array("", "Motorista")), //TODO PRECISO SABER QUAIS AS OCUPACOES
+			combo('Convenção Padrão', 'busca_padrao', $_POST['busca_padrao'], 2, array('Todos', 'Sim', 'Não')),
+			combo_bd('!Parâmetros da Jornada', 'busca_parametro', $_POST['busca_parametro'], 6, 'parametro'),
+			combo('Status', 'busca_status', $_POST['busca_status'], 2, ['Todos', 'Ativo', 'Inativo'])
+		];
 
-		$b[] = botao('Buscar', 'index');
-		$b[] = botao('Inserir', 'layout_motorista','','','','','btn btn-success');
+		$b = [
+			botao('Buscar', 'index'),
+			botao('Inserir', 'layout_motorista','','','','','btn btn-success')
+		];
 
 		abre_form('Filtro de Busca');
 		linha_form($c);

@@ -41,12 +41,16 @@ function layout_macro(){
 
 	cabecalho("Cadastro Macro");
 
-	$c[] = campo('Nome','nome',$a_mod['macr_tx_nome'],6,'','readonly=readonly');
-	$c[] = campo('Código Interno','codigoInterno',$a_mod['macr_tx_codigoInterno'],3,'','readonly=readonly');
-	$c[] = campo('Código Externo','codigoExterno',$a_mod['macr_tx_codigoExterno'],3);
+	$c = [
+		campo('Nome','nome',$a_mod['macr_tx_nome'],6,'','readonly=readonly'),
+		campo('Código Interno','codigoInterno',$a_mod['macr_tx_codigoInterno'],3,'','readonly=readonly'),
+		campo('Código Externo','codigoExterno',$a_mod['macr_tx_codigoExterno'],3)
+	];
 
-	$botao[] = botao('Gravar','cadastra_macro','id',$_POST['id'],'','','btn btn-success');
-	$botao[] = botao('Voltar','index');
+	$botao = [
+		botao('Gravar','cadastra_macro','id',$_POST['id'],'','','btn btn-success'),
+		botao('Voltar','index')
+	];
 	
 	abre_form('Dados do Macro');
 	linha_form($c);
@@ -59,6 +63,8 @@ function layout_macro(){
 function index(){
 
 	cabecalho("Cadastro Macro");
+	
+	$extra = '';
 
 	if($_POST['busca_codigo'])
 		$extra .= " AND macr_nb_id = '$_POST[busca_codigo]'";
@@ -66,8 +72,10 @@ function index(){
 	if($_POST['busca_nome'])
 		$extra .= " AND macr_tx_nome LIKE '%$_POST[busca_nome]%'";
 
-	$c[] = campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO');
-	$c[] = campo('Nome','busca_nome',$_POST['busca_nome'],10);
+	$c = [
+		campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO'),
+		campo('Nome','busca_nome',$_POST['busca_nome'],10)
+	];
 
 	$botao[] = botao('Buscar','index');
 	// $botao[] = botao('Inserir','layout_macro');

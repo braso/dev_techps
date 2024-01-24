@@ -311,8 +311,10 @@
 		$file = basename(__FILE__);
 		$file = explode('.', $file);
 
-		$botao[] = botao($btn_txt,'cadastra_empresa','id',$_POST['id'],'','','btn btn-success');
-		$botao[] = botao('Voltar','index');
+		$botao = [  
+			botao($btn_txt,'cadastra_empresa','id',$_POST['id'],'','','btn btn-success'),
+			botao('Voltar','index')
+		];
 		
 		abre_form("Dados da Empresa/Filial");
 		linha_form($c);
@@ -487,15 +489,19 @@
 		$uf = array('', 'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO');
 		
 
-		$c[] = campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO','maxlength="6"');
-		$c[] = campo('Nome','busca_nome',$_POST['busca_nome'],3,'','maxlength="65"');
-		$c[] = campo('Nome Fantasia','busca_fantasia',$_POST['busca_fantasia'],2,'','maxlength="65"');
-		$c[] = campo('CPF/CNPJ','busca_cnpj',$_POST['busca_cnpj'],2,'MASCARA_CPF');
-		$c[] = combo('UF','busca_uf',$_POST['busca_uf'],1,$uf);
-		$c[] = combo('Situação','busca_situacao',$_POST['busca_situacao'],2,['Todos','Ativo','Inativo']);
+		$c = [ 
+			campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO','maxlength="6"'),
+			campo('Nome','busca_nome',$_POST['busca_nome'],3,'','maxlength="65"'),
+			campo('Nome Fantasia','busca_fantasia',$_POST['busca_fantasia'],2,'','maxlength="65"'),
+			campo('CPF/CNPJ','busca_cnpj',$_POST['busca_cnpj'],2,'MASCARA_CPF'),
+			combo('UF','busca_uf',$_POST['busca_uf'],1,$uf),
+			combo('Situação','busca_situacao',$_POST['busca_situacao'],2,['Todos','Ativo','Inativo'])
+		];
 
-		$botao[] = botao('Buscar','index');
-		$botao[] = botao('Inserir','layout_empresa','','','','','btn btn-success');
+		$botao = [ 
+			botao('Buscar','index'),
+			botao('Inserir','layout_empresa','','','','','btn btn-success')
+		];
 		
 		abre_form('Filtro de Busca');
 		linha_form($c);

@@ -57,11 +57,12 @@
 	function layout_ponto(){
 		cabecalho('Carregar Ponto');
 
-		//$c[] = campo('Data do Arquivo:','data',date("d/m/Y"),2,MASCARA_DATA);
 		$c[] = arquivo('Arquivo Ponto (.txt):', 'arquivo', '', 5);
 
-		$b[] = botao("Enviar", 'carrega_ponto','','','','','btn btn-success');
-		$b[] = botao("Voltar", 'index');
+		$b= [ 
+			botao("Enviar", 'carrega_ponto','','','','','btn btn-success'),
+			botao("Voltar", 'index')
+		];
 
 		abre_form('Arquivo de Ponto');
 		linha_form($c);
@@ -114,7 +115,6 @@
 
 		cabecalho('Configura Notificação');
 
-		//$c[] = campo('Data do Arquivo:','data',date("d/m/Y"),2,MASCARA_DATA);
 		$c = [
 			campo('E-mail do Funcionario', 'emailFuncionario', $emailFun, 2),
 			campo('E-mail do Administrado', 'emailAdministrado', $emailAdm, 2)
@@ -148,16 +148,8 @@
 
 		$infos = query('SELECT empr_tx_ftpServer, empr_tx_ftpUsername, empr_tx_ftpUserpass FROM empresa join user on empresa.empr_nb_id = user.user_nb_empresa WHERE user_nb_id = '.$_SESSION['user_nb_id'])->fetch_assoc();
 		
-		
-	// 	$ftp_server = "ftp-jornadas.positronrt.com.br";
-
-	// 	$ftp_username = '08995631000108';
-
-	// 	$ftp_userpass = '0899';
-
-
 		$ftp_conn = ftp_connect($infos['empr_tx_ftpServer']) or die("Could not connect to $infos[empr_tx_ftpServer]");
-		$login = ftp_login($ftp_conn, $infos['empr_tx_ftpUsername'], $infos['empr_tx_ftpUserpass']);
+		ftp_login($ftp_conn, $infos['empr_tx_ftpUsername'], $infos['empr_tx_ftpUserpass']);
 
 		//BUSCA O ARQUIVO
 
@@ -171,7 +163,6 @@
 			$local_file = $path . $fileList[$i];
 
 			if (ftp_get($ftp_conn, $local_file, $fileList[$i], FTP_BINARY)) {
-				// echo "Successfully written to $path$fileList[$i]<br>";
 
 				$campos = ['arqu_tx_nome', 'arqu_tx_data', 'arqu_nb_user', 'arqu_tx_status'];
 				$valores = [$fileList[$i], date("Y-m-d H:i:s"), $_SESSION['user_nb_id'], 'ativo'];
@@ -222,14 +213,14 @@
 		global $CACTUX_CONF;
 		if ($_SERVER['HTTP_ENV'] == 'carrega_cron') {
 			// Aplicar após criar o usuário REP-P
-			// $rep_p_user = query('SELECT user_nb_id, user_tx_nivel, user_tx_login FROM user WHERE user_tx_login LIKE "%REP-P%" LIMIT 1');
-			// $_SESSION['user_nb_id'] = $rep_p_user['user_nb_id'];
-			// $_SESSION['user_tx_nivel'] = $rep_p_user['user_tx_nivel'];
-			// $_SESSION['user_tx_login'] = $rep_p_user['user_tx_login'];
+			$rep_p_user = query('SELECT user_nb_id, user_tx_nivel, user_tx_login FROM user WHERE user_tx_login LIKE "%Techps.admin%" LIMIT 1');
+			$_SESSION['user_nb_id'] = $rep_p_user['user_nb_id'];
+			$_SESSION['user_tx_nivel'] = $rep_p_user['user_tx_nivel'];
+			$_SESSION['user_tx_login'] = $rep_p_user['user_tx_login'];
 
-			$_SESSION['user_nb_id'] = 1;
-			$_SESSION['user_tx_nivel'] = 'Administrador';
-			$_SESSION['user_tx_login'] = 'adm';
+			// $_SESSION['user_nb_id'] = 1;
+			// $_SESSION['user_tx_nivel'] = 'Administrador';
+			// $_SESSION['user_tx_login'] = 'adm';
 			// $_SESSION['user_tx_login'] = 'Techps.admin';
 			layout_ftp();
 			exit;
@@ -268,7 +259,6 @@
 		$sql = "SELECT * FROM arquivoponto,user WHERE arqu_nb_user = user_nb_id AND arqu_tx_status != 'inativo' $extra";
 		$cab = ['CÓD', 'ARQUIVO', 'USUÁRIO', 'DATA', 'SITUAÇÃO'];
 
-		// $ver2 = "icone_modificar(arqu_nb_id,layout_confirma)";
 		$val = ['arqu_nb_id', 'arqu_tx_nome', 'user_tx_nome', 'data(arqu_tx_data,1)', 'ucfirst(arqu_tx_status)'];
 		grid($sql, $cab, $val, '', '', 0, 'desc');
 
