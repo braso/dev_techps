@@ -66,7 +66,7 @@
 	function js_contex_icone(){
 		echo '
 			<script type="text/javascript">
-				function contex_icone(id,acao,campos=\'\',valores=\'\',target=\'\',msg=\'\',action=\'\',data_de=\'\',data_ate=\'\'){
+				function contex_icone(id,acao,campos=\'\',valores=\'\',target=\'\',msg=\'\',action=\'\',data_de=\'\',data_ate=\'\',just=\'\'){
 					console.log(campos);
 					if(msg){
 						if(confirm(msg)){
@@ -94,6 +94,9 @@
 						form.action=action;
 						form.id.value=id;
 						form.acao.value=acao;
+						form.data_de.value=data_de;
+						form.data_ate.value=data_ate;
+						form.just.value=just;
 						if(campos){
 							form.hidden.value=valores;
 							form.hidden.name=campos;
@@ -127,6 +130,7 @@
 			<input type="hidden" name="acao" value="sem_acao">
 			<input type="hidden" name="data_de" value="">
 			<input type="hidden" name="data_ate" value="">
+			<input type="hidden" name="just" value="">
 			<input type="hidden" id="hidden">
 		</form>
 		<?

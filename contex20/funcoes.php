@@ -68,15 +68,10 @@
 		include 'modal_alert.php';
 	}
 
-	function inserir(string $tabela, array $campos, array $valores): string{
+	function inserir(string $tabela, array $campos, array $valores): array{
 		return insertInto($tabela, $campos, $valores);
 	}
-	function insertInto(string $tabela, array $campos, array $valores): string{
-	   // var_dump($campos);
-	   // print_r('<br>');
-	   // print_r('<br>');
-	   // var_dump($valores);
-	   // die();
+	function insertInto(string $tabela, array $campos, array $valores): array{
 		if(count($campos) != count($valores)){
 			echo "ERRO Número de campos não confere com número de linhas na função de inserir!";
 			return [];
@@ -95,7 +90,11 @@
 		}
 
 		$a = carrega_array($sql);
-		return $a[0];
+		if(is_array(($a))){
+			return $a;
+		}else{
+			return [];
+		}
 	}
 
 	function atualizar(string $tabela, array $campos, array $valores, string $id): void{
@@ -103,7 +102,12 @@
 	}
 	function updateById(string $tabela, array $campos, array $valores, string $id): void{
 		if(count($campos) != count($valores)){
-			echo"ERRO Número de campos não confere com número de linhas na função de atualizar!";
+			echo "ERRO: Número de campos não confere com número de linhas na função de atualizar!";
+			exit;
+		}
+
+		if(count($campos) == 0){
+			echo "ERRO: Campos para atualização não informados.";
 			exit;
 		}
 
@@ -112,9 +116,12 @@
 		for($i=0;$i<count($campos);$i++){
 			$inserir .= ", $campos[$i] = '$valores[$i]'";
 		}
+		if(strlen($inserir) > 2){
+			$inserir = substr($inserir, 2);
+		}
 
 		try{
-			query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id='$id'") or die();
+			query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id=$id") or die();
 			set_status("Registro atualizado com sucesso!");
 		}catch(Exception $e){
 			set_status("Falha ao atualizar.");
@@ -328,7 +335,7 @@
 		$data_input = "<script>";
 		switch($mascara){
 			case "MASCARA_DATA":
-				$data_input .= "$(\"#$variavel\").inputmask(\"date\", { \"clearIncomplete\": true, placeholder: 'dd/mm/aaaa' });";
+				$data_input .= "$(\"#$variavel\").inputmask(\"date\", { \"clearIncomplete\": false, \"placeholder\": \"dd/mm/aaaa\")};";
 				$type = "date";
 			break;
 			case "MASCARA_MES":
@@ -552,28 +559,28 @@
 				</div>';
 
 		?>
-			<script type="text/javascript">
-				$.fn.select2.defaults.set("theme", "bootstrap");
-				$(window).bind("load", function() {
-					$('.<?=$variavel?>').select2({
-						language: 'pt-BR',
-						placeholder: 'Selecione um item',
-						allowClear: true,
-						ajax: {
-							url: '/contex20/select2.php?path=<?=$CONTEX['path']?>&tabela=<?=$tabela?>&extra_ordem=<?=$extra_ordem?>&extra_limite=<?=$extra_limite?>&extra_bd=<?=urlencode($extra_bd)?>&extra_busca=<?=urlencode($extra_busca)?>',
-							dataType: 'json',
-							delay: 250,
-							processResults: function (data) {
-							return {
-								results: data
-							};
-							},
-							cache: true
-						}
-					});
-				});
-			</script>
-		<?
+<script type="text/javascript">
+$.fn.select2.defaults.set("theme", "bootstrap");
+$(window).bind("load", function() {
+    $('.<?=$variavel?>').select2({
+        language: 'pt-BR',
+        placeholder: 'Selecione um item',
+        allowClear: true,
+        ajax: {
+            url: '/contex20/select2.php?path=<?=$CONTEX['path']?>&tabela=<?=$tabela?>&extra_ordem=<?=$extra_ordem?>&extra_limite=<?=$extra_limite?>&extra_bd=<?=urlencode($extra_bd)?>&extra_busca=<?=urlencode($extra_busca)?>',
+            dataType: 'json',
+            delay: 250,
+            processResults: function(data) {
+                return {
+                    results: data
+                };
+            },
+            cache: true
+        }
+    });
+});
+</script>
+<?
 		return $campo;
 	}
 
@@ -773,6 +780,7 @@
 	function botao($nome,$acao,$campos='',$valores='',$extra='',$salvar='',$botaoCor='btn btn-secondary'){
 		global $idsBotaoContex;	
 		$hidden = '';
+		$funcaoOnClick = '';
 		if(!empty($campos[0])){
 
 			$a_campos=explode(',',$campos);
@@ -792,25 +800,25 @@
 
 		if($salvar == 1){
 			?>
-				<script type="text/javascript">
-				function criarGET() {
-					var form = document.forms[0];
-					var elements = form.elements;
-					var values = [];
-					var primeiraAcao = '';
+<script type="text/javascript">
+function criarGET() {
+    var form = document.forms[0];
+    var elements = form.elements;
+    var values = [];
+    var primeiraAcao = '';
 
-					for (var i = 0; i < elements.length; i++){
-						if(elements[i].name == 'acao' && elements[i].value  != 'index'){
-							continue;
-						}
+    for (var i = 0; i < elements.length; i++) {
+        if (elements[i].name == 'acao' && elements[i].value != 'index') {
+            continue;
+        }
 
-						values.push(encodeURIComponent(elements[i].name) + '=' + encodeURIComponent(elements[i].value));
+        values.push(encodeURIComponent(elements[i].name) + '=' + encodeURIComponent(elements[i].value));
 
-					}
-					form.action = '?' + values.join('&');
-				}
-				</script>
-			<?
+    }
+    form.action = '?' + values.join('&');
+}
+</script>
+<?
 			$funcaoOnClick = 'criarGET();';
 		}
 
@@ -877,7 +885,7 @@
 		
 	}
 
-	function icone_excluir_ajuste($id,$acao,$campos='',$data_de='',$data_ate='',$valores='',$target='',$icone='',$msg='Deseja excluir o registro?', $action='', $title=''){
+	function icone_excluir_ajuste($id,$acao,$campos='',$data_de='',$data_ate='',$valores='',$target='',$icone='',$msg='', $action='', $title=''){
 		if($icone==''){
 			$icone = 'glyphicon glyphicon-remove';
 		}
@@ -886,9 +894,32 @@
 			$title = 'Excluir';
 
 		$icone='class="'.$icone.'"';
-		
-		return "<center><a title=\"$title\" style='color:gray' onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\",\"$data_de\",\"$data_ate\");' ><spam $icone></spam></a></center>";
-		
+
+		$modal = "
+    	<div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
+        <div class='modal-dialog' role='document'>
+            <div class='modal-content'>
+                <div class='modal-header'>
+                <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>
+                <h4 class='modal-title' id='myModalLabel'>Justifica Exclusão de Registro</h4>
+                </div>
+                <div class='modal-body'>
+                    <div class='form-group'>
+                        <b><label for='justificar' class='control-label' style='font-size: 15px;'>Justificar:</label></b>
+                        <textarea class='form-control' id='justificar'></textarea>
+                    </div>
+                </div>
+                <div class='modal-footer'>
+                    <button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
+                    <button type='button' class='btn btn-primary' data-dismiss='modal' 
+					onclick='javascript:contex_icone(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\",\"$action\",\"$data_de\", \"$data_ate\", document.getElementById(\"justificar\").value);'>Gravar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    ";
+		// onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\",\"$data_de\",\"$data_ate\");
+		return "<center><a title=\"$title\" style='color:gray' data-toggle='modal' data-target='#myModal' ><spam $icone></spam></a></center>".$modal;
 	}
 
 
