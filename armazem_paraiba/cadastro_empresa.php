@@ -33,7 +33,7 @@
 		$sqlCheckNivel = query("SELECT empr_tx_Ehmatriz FROM empresa WHERE empr_nb_id = '$_POST[id]'")->fetch_assoc();
 		$campos = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade', 'endereco', 'bairro', 'dataRegistroCNPJ'];
 		foreach($campos as $campo){
-			if(!isset($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'Sim' || empty($_POST[$campo])){
+			if(!isset($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'sim' || empty($_POST[$campo])){
 				echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
 				layout_empresa();
 				exit;
@@ -227,7 +227,7 @@
 
 		if(is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador"))){
 			$campo_dominio = campo_domain('Nome do Domínio','nomeDominio',$input_values['domain'],2,'domain');
-			$campo_EhMatriz = combo('É matriz?','matriz',$input_values['empr_tx_Ehmatriz'],2,['Sim','Não']);
+			$campo_EhMatriz = combo('É matriz?','matriz',$input_values['empr_tx_Ehmatriz'],2,['sim' => 'Sim', 'nao' => 'Não']);
 		}else{
 			$campo_dominio = texto('Nome do Domínio',$input_values['domain'],2);
 			$campo_EhMatriz = texto('É matriz?',$input_values['empr_tx_Ehmatriz'],2);
@@ -241,7 +241,7 @@
 		}
 		$campo_cidade = texto('Cidade/UF', $cidade['cida_tx_nome'], 2);
 
-		if (is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) != TRUE && $input_values['matriz'] == 'Sim') {
+		if (is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) != TRUE && $input_values['matriz'] == 'sim') {
 			$c = [
 				texto('CPF/CNPJ*',$input_values['cnpj'],2),
 				texto('Nome*',$input_values['nome'],4),
