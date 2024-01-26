@@ -3,7 +3,7 @@
 		//	ini_set('display_errors', 1);
 		//error_reporting(E_ALL);
 	
-include "conecta.php";
+include_once "conecta.php";
 
 if(date('H')>=6 && date("H")<=12){
 	$turno='Manhã';
@@ -13,7 +13,7 @@ if(date('H')>=6 && date("H")<=12){
 	$turno='Noite';
 }
 
-if($_GET['user'] != '' && $_GET['password'] != '' ){
+if(!empty($_GET['user']) && !empty($_GET['password'])){
     
 
 		$sql = query("SELECT * FROM user WHERE user_tx_status != 'inativo' AND user_tx_login = '$_GET[user]' AND user_tx_senha = '$_GET[password]'");
@@ -57,7 +57,7 @@ if($_GET['user'] != '' && $_GET['password'] != '' ){
 			exit;
 		}
 
-}elseif($_SESSION['user_nb_id']>0){
+}elseif(isset($_SESSION['user_nb_id']) && $_SESSION['user_nb_id']>0){
 
 	// $sql2=query("SELECT pont_tx_entrada,pont_tx_turno FROM ponto WHERE pont_tx_status != 'inativo' AND pont_tx_data = '".date("Y-m-d")."' 
 	// 			AND pont_tx_turno = '$turno' AND pont_nb_user = '$_SESSION[user_nb_id]' LIMIT 1");
