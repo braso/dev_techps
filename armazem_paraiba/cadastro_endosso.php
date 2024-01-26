@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -8,13 +8,13 @@
 
 	function checkbox2($nome, $variavel, $modificador, $tamanho){
 		$campo = 
-			'<div class="col-sm-' . $tamanho . ' margin-bottom-5">
+			'<div class="col-sm-' . $tamanho . ' margin-bottom-5" style="min-width:200px;">
 				<label><b>' . $nome . '</b></label><br>
 				<label class="radio-inline">
 					<input type="radio" id="sim" name="pagar_horas" value="sim" '.($modificador == 'sim'? 'checked': '').'> Sim
 				</label>
 				<label class="radio-inline">
-					<input type="radio" id="nao" name="pagar_horas" value="nao"'.($modificador == 'nao'? 'checked': '').'> Não
+					<input type="radio" id="nao" name="pagar_horas" value="nao" '.($modificador == 'nao'? 'checked': '').'> Não
 				</label>
 			</div>
 		
@@ -138,7 +138,7 @@
 				JOIN parametro ON enti_nb_parametro = para_nb_id
 				WHERE enti_tx_status != 'inativo' AND enti_nb_id = '".$_POST['busca_motorista']."' LIMIT 1"
 		);
-		$motorista = carrega_array($sql);
+		$motorista = carrega_array($sql, MYSQLI_ASSOC);
 
 		//Conferir se é o primeiro endosso que está sendo registrado{
 			if(!$showError){
@@ -213,8 +213,13 @@
 
 				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $motorista['enti_nb_id'])], $aDetalhado));
 				for ($f = 0; $f < sizeof($row) - 1; $f++) {
-					if(is_int(strpos($row[$f], 'Ajuste de ponto'))){
-						$row[$f] = str_replace('Ajuste de ponto', 'Ajuste de ponto(endossado)', $row[$f]);
+					if(is_int(strpos($row[$f], 'ajusta_ponto('))){
+						$begin = strpos($row[$f], 'ajusta_ponto(');
+						$end = strpos($row[$f], ')', $begin);
+						$row[$f] = substr($row[$f], 0, $begin).'avisar_ponto_endossado()'.substr($row[$f], $end+1);
+					}
+					if(is_int(strpos($row[$f], "Ajuste de Ponto"))){
+						$row[$f] = str_replace("Ajuste de Ponto", "Ajuste de Ponto(endossado)", $row[$f]);
 					}
 					if ($row[$f] == "00:00") {
 						$row[$f] = "";
@@ -264,50 +269,38 @@
 			*/
 
 
-			if (isset($dadosMotorista['para_nb_qDias']) && $dadosMotorista['para_nb_qDias'] != null) { //Deve ser feito somente quando for obrigado a pagar a hora extra?
-
-				//Contexto do HE100
-				// $he100 = strtotime($aDetalhado['he100']);
-				$he100 = explode(':', $aDetalhado['he100']);
-				$he100 = intval($he100[0])*60 + ($he100[0][0] == '-' ? -1 : 1)*intval($he100[1]);
+			// if (isset($dadosMotorista['para_nb_qDias']) && $dadosMotorista['para_nb_qDias'] != null) { //Deve ser feito somente quando for obrigado a pagar a hora extra?
 				
-				$he50_pagar = explode(':', $totalResumo['he50']);
-				$he50_pagar = intval($he50_pagar[0])*60 + ($he50_pagar[0][0] == '-' ? -1 : 1)*intval($he50_pagar[1]);
+			// 	if(!empty($totalResumo['he50'])){
+			// 		$he50 = explode(':', $totalResumo['he50']);
+			// 		$he50 = intval($he50[0])*60 + ($he50[0][0] == '-' ? -1 : 1)*intval($he50[1]);
+			// 	}else{
+			// 		$he50 = 0;
+			// 	}
 				
-				$he100_pagar = explode(':', $totalResumo['he100']);
-				$he100_pagar = intval($he100_pagar[0])*60 + ($he100_pagar[0][0] == '-' ? -1 : 1)*intval($he100_pagar[1]);
+			// 	if(!empty($totalResumo['he100'])){
+			// 		$he100 = explode(':', $totalResumo['he100']);
+			// 		$he100 = intval($he100[0])*60 + ($he100[0][0] == '-' ? -1 : 1)*intval($he100[1]);
+			// 	}else{
+			// 		$he100 = 0;
+			// 	}
 
-				$saldoPeriodo = explode(':', $totalResumo['diffSaldo']);
-				$saldoPeriodo = intval($saldoPeriodo[0])*60 + ($saldoPeriodo[0][0] == '-' ? -1 : 1)*intval($saldoPeriodo[1]);
+			// 	$saldoPeriodo = explode(':', $totalResumo['diffSaldo']);
+			// 	$saldoPeriodo = intval($saldoPeriodo[0])*60 + ($saldoPeriodo[0][0] == '-' ? -1 : 1)*intval($saldoPeriodo[1]);
 
-				if ($saldoPeriodo <= 0) {
-					# Não faz nada
-				} else {
-					if ($he100_pagar > 0) {
-						$transferir = $saldoPeriodo - (($saldoPeriodo > $he100) ? $he100 : 0);
-						
-						// $saldoPeriodo -= $transferir;
-						$he100_pagar += $transferir;
-						$totalResumo['he100'] = sprintf("%02d:%02d", intval($he100_pagar / 60), abs(($he100_pagar - intval($he100_pagar / 60) * 60)));
-					}
-				}
-				
-				//Contexto do HE50
-				if($aEndosso['endo_tx_pagarHoras'] == 'sim'){
-					if($saldoPeriodo > $aEndosso['endo_tx_horasApagar']){
-						$transferir = $aEndosso['endo_tx_horasApagar'];
-					}else{
-						$transferir = $saldoPeriodo;
-					}
-					$saldoPeriodo -= $transferir;
-					
-					$he50_pagar += $transferir;
-					$totalResumo['he50'] = sprintf("%02d:%02d", intval($he50_pagar / 60), abs(($he50_pagar - intval($he50_pagar / 60) * 60)));
-				}
+			// 	if($saldoPeriodo > 0){
+			// 		//Tirar a parte do saldoPeriodo que corresponde ao HE100
+			// 		if($saldoPeriodo > $he100){
+			// 		  	$transferir = $he100;
+			// 		}else{
+			// 		  	$transferir = $saldoPeriodo;
+			// 		}
+			// 		$saldoPeriodo = $saldoPeriodo - $transferir;
+			// 	}
 
 				
-				$totalResumo['diffSaldo'] = sprintf("%02d:%02d", intval($saldoPeriodo / 60), abs(($saldoPeriodo - intval($saldoPeriodo / 60) * 60)));
-			}
+			// 	$totalResumo['diffSaldo'] = sprintf("%02d:%02d", intval($saldoPeriodo / 60), abs(($saldoPeriodo - intval($saldoPeriodo / 60) * 60)));
+			// }
 
 			$saldoAtual = operarHorarios([$saldoAnterior, $totalResumo['diffSaldo']], '+');
 			$saldoAtual = operarHorarios([$saldoAtual, $totalResumo['he50'], $totalResumo['he100']], '-');
@@ -335,10 +328,10 @@
 		];
 
 		$novo_endosso['endo_tx_pontos'] = json_encode($novo_endosso['endo_tx_pontos']);
-		// $novo_endosso['endo_tx_pontos'] = str_replace('<\/', '</', $novo_endosso['endo_tx_pontos']);
-
 		$novo_endosso['totalResumo'] = json_encode($novo_endosso['totalResumo']);
-		// $novo_endosso['totalResumo'] = str_replace('<\/', '</', $novo_endosso['totalResumo']);
+		
+		$novo_endosso['endo_tx_pontos'] = str_replace('<\/', '</', $novo_endosso['endo_tx_pontos']);
+		$novo_endosso['totalResumo'] = str_replace('<\/', '</', $novo_endosso['totalResumo']);
 
 		$filename = md5($novo_endosso['endo_tx_matricula'].$novo_endosso['endo_tx_mes']);
 		if(!is_dir("./arquivos/endosso")){
@@ -352,21 +345,23 @@
 			}
 			$filename = $filename.'_'.strval($version);
 		}
-
-		$file = fopen($path.$filename.'.csv', 'w');
-		fputcsv($file, array_keys($novo_endosso));
-		fputcsv($file, array_values($novo_endosso));
-		fclose($file);
-
-		unset($novo_endosso['endo_tx_pontos']);
-		unset($novo_endosso['totalResumo']);
-
-		$novo_endosso['endo_tx_filename'] = $filename;
 		
-		inserir('endosso', array_keys($novo_endosso), array_values($novo_endosso));
+		$novo_endosso['endo_tx_filename'] = $filename;
+
+		//*Salvar informações{
+			$file = fopen($path.$filename.'.csv', 'w');
+			fputcsv($file, array_keys($novo_endosso));
+			fputcsv($file, array_values($novo_endosso));
+			fclose($file);
+			
+			unset($novo_endosso['endo_tx_pontos']);
+			unset($novo_endosso['totalResumo']);	
+			
+			inserir('endosso', array_keys($novo_endosso), array_values($novo_endosso));
+		//}*/
 
 		index();
-		return;
+		exit;
 	}
 
 	function load_js_functions(){
@@ -424,7 +419,7 @@
 			campo_data('De*:','data_de',$_POST['data_de']?? '',2),
 			campo_data('Ate*:','data_ate',$_POST['data_ate']?? '',2),
 			combo_net('Motorista*:','busca_motorista',$_POST['busca_motorista']?? '',4,'entidade','',$extra_bd_motorista,'enti_tx_matricula'),
-			checkbox2('Pagar Horas Extras', 'horasApagar', $_POST['pagar_horas']?? '', 2)
+			checkbox2('Pagar Horas Extras', 'horasApagar', $_POST['pagar_horas']?? '', 3)
 		];
 		if(is_int(strpos($_SESSION['user_tx_nivel'], "Administrador"))){
 			array_unshift($c, combo_net('Empresa*:','empresa', $_POST['empresa']?? '',4,'empresa', 'onchange=selecionaMotorista(this.value)'));
