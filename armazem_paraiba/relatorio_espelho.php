@@ -37,12 +37,12 @@
 			</tr>
 			
 			<tr class="employee-info">
-				<td style="text-align: left;"><b>Motorista:</b> <?= $dadosMotorista['enti_tx_nome'] ?></td>
-				<td style="text-align: left;"><b>Função:</b> <?= $dadosMotorista['enti_tx_ocupacao'] ?></td>
-				<td style="text-align: left;"><b>CPF:</b> <?= $dadosMotorista['enti_tx_cpf'] ?></td>
-				<td style="text-align: left;"><b>Turno:</b> D.SEM/H: <?= $dadosMotorista['enti_tx_jornadaSemanal'] ?> FDS/H: <?= $aMotorista['enti_tx_jornadaSabado'] ?> </td>
-				<td style="text-align: left;"><b>Matrícula:</b> <?= $dadosMotorista['enti_tx_matricula'] ?></td>
-				<td style="text-align: left;"><b>Admissão:</b> <?= data($dadosMotorista['enti_tx_admissao']) ?></td>
+				<td style="text-align: left;"><b>Motorista:</b> <?= $aMotorista['enti_tx_nome'] ?></td>
+				<td style="text-align: left;"><b>Função:</b> <?= $aMotorista['enti_tx_ocupacao'] ?></td>
+				<td style="text-align: left;"><b>CPF:</b> <?= $aMotorista['enti_tx_cpf'] ?></td>
+				<td style="text-align: left;"><b>Turno:</b> D.SEM/H: <?= $aMotorista['enti_tx_jornadaSemanal'] ?> FDS/H: <?= $aMotorista['enti_tx_jornadaSabado'] ?> </td>
+				<td style="text-align: left;"><b>Matrícula:</b> <?= $aMotorista['enti_tx_matricula'] ?></td>
+				<td style="text-align: left;"><b>Admissão:</b> <?= data($aMotorista['enti_tx_admissao']) ?></td>
 			</tr>
 		</table>
 	</div>
@@ -176,7 +176,7 @@
 						<p>___________________________________________________________</p>
 					</center>
 					<center>
-						<p><?= $dadosMotorista['enti_tx_nome'] ?></p>
+						<p><?= $aMotorista['enti_tx_nome'] ?></p>
 					</center>
 					<center>
 						<p>Motorista</p>

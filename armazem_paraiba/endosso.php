@@ -2,10 +2,10 @@
 	/* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
-		if(!isset($_GET['debug'])){
-			echo '<div style="text-align:center; vertical-align: center; height: 100%; padding-top: 20%">Esta página está em desenvolvimento.</div>';
-			exit;
-		}
+		// if(!isset($_GET['debug'])){
+		// 	echo '<div style="text-align:center; vertical-align: center; height: 100%; padding-top: 20%">Esta página está em desenvolvimento.</div>';
+		// 	exit;
+		// }
 	//*/
 
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
@@ -102,26 +102,42 @@
 							$endossoCompleto['endo_tx_horasApagar'] = operarHorarios([$endossoCompleto['endo_tx_horasApagar'], $endossos[$f]['endo_tx_horasApagar']], '+');	
 						}
 						foreach($endossos[$f]['totalResumo'] as $key => $value){
-							$endossoCompleto['totalResumo'][$key] = operarHorarios([$endossoCompleto['totalResumo'][$key], $endossos[$f]['totalResumo'][$key]], '+');
+							$endossoCompleto['totalResumo'][$key] = operarHorarios([$endossoCompleto['totalResumo'][$key], $value], '+');
 						}
 					}
 					$totalResumo = $endossoCompleto['totalResumo'];
 				//}
 
-				//Ajustar valores de horas extras a pagar, não deve pagar caso o saldo final esteja negativo{
-					if($totalResumo['saldoAtual'] < "00:00" && $totalResumo['he100'] > "00:00"){
+				$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAnterior'], $totalResumo['diffSaldo']], '+');
 
-						$transferir = ($totalResumo['saldoAtual'] > '-'.$totalResumo['he100'])? $totalResumo['he100']: $totalResumo['saldoAtual'];
-
-						$totalResumo['he100'] = operarHorarios([$totalResumo['he100'], $transferir], '-');
-						$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '+');
+				if($totalResumo['diffSaldo'] > "00:00"){
+					 //Tirar a parte do saldoPeriodo que corresponde ao HE100
+					if($totalResumo['diffSaldo'] > $totalResumo['he100']){
+						$transferir = $totalResumo['he100'];
+					}else{
+						$transferir = $totalResumo['diffSaldo'];
 					}
-					if($totalResumo['saldoAtual'] < "00:00" && $totalResumo['he50'] > "00:00"){
-						
-						$transferir = ($totalResumo['saldoAtual'] > '-'.$totalResumo['he50'])? $totalResumo['he50']: $totalResumo['saldoAtual'];
-						
-						$totalResumo['he50'] = operarHorarios([$totalResumo['he50'], $transferir], '-');
-						$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '+');
+
+					$totalResumo['diffSaldo'] = operarHorarios([$totalResumo['diffSaldo'], $transferir], '-');
+					$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '-');
+					$totalResumo['he100'] = $transferir;
+				}
+
+				//Limitar a quantidade de HE50 à quantidade informada em endo_tx_horasAPagar{
+					if(	!empty($endossoCompleto['endo_tx_pagarHoras']) && $endossoCompleto['endo_tx_pagarHoras'] == 'sim' && 
+						!empty($endossoCompleto['endo_tx_horasApagar'])
+					){
+						if($totalResumo['diffSaldo'] > $endossoCompleto['endo_tx_horasApagar']){
+							$transferir = $endossoCompleto['endo_tx_horasApagar'];
+						}else{
+							$transferir = $totalResumo['diffSaldo'];
+						}
+	
+						$totalResumo['diffSaldo'] = operarHorarios([$totalResumo['diffSaldo'], $transferir], '-');
+						$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '-');
+						$totalResumo['he50'] = $transferir;
+					}else{
+						$totalResumo['he50'] = '00:00';
 					}
 				//}
 
@@ -136,13 +152,13 @@
 
 			//Inserir coluna de motivos{
 				for($f = 0; $f < count($aDia); $f++){
-					$data = explode('/', $aDia[$f][1]);
+					$data = explode('/', $aDia[$f][0]);
 					$data = $data[2].'-'.$data[1].'-'.$data[0];
 					$bdMotivos = mysqli_fetch_all(
 						query(
 							"SELECT * FROM ponto 
 								JOIN motivo ON pont_nb_motivo = moti_nb_id
-								WHERE pont_tx_matricula = '".$aDia[$f][0]."' 
+								WHERE pont_tx_matricula = '".$endossoCompleto['endo_tx_matricula']."' 
 									AND pont_tx_data LIKE '".$data."%'
 									AND pont_tx_tipo IN (1,2,3,4)
 									AND pont_tx_status = 'ativo'"
@@ -154,13 +170,11 @@
 						$motivos .= $bdMotivos[$f2]['moti_tx_nome'].'<br>';
 					}
 
-					array_splice($aDia[$f], 18, 0, ''); // inserir a coluna de motivo, no momento da implementação, estava na coluna 19
+					array_splice($aDia[$f], 18, 0, $motivos); // inserir a coluna de motivo, no momento da implementação, estava na coluna 19
 				}
 			//}
-			break;
+			break; //Adaptar posteriormente para conseguir imprimir mais de um motorista??
 		}
-
-		//unset($aMotorista);
 		
 		include "./relatorio_espelho.php";
 		exit;
@@ -192,6 +206,8 @@
 			}
 			if(!empty($_POST['busca_data']) && !empty($_POST['busca_empresa'])){
 				$carregando = "Carregando...";
+			}else{
+				$carregando = '';
 			}
 			if(empty($_POST['busca_data'])){
 				$_POST['busca_data'] = date("Y-m");
@@ -231,7 +247,7 @@
 		//}
 
 		//BOTOES{
-			if(!isset($_POST['busca_situacao']) || empty($_POST['busca_situacao'])){
+			if(!isset($_POST['busca_situacao']) || empty($_POST['busca_situacao']) || empty($_POST['busca_motorista'])){
 				$disabled = 'disabled=disabled title="Pesquise um período endossado efetuar a impressão do endosso."';
 			}
 			$b = [
@@ -327,22 +343,7 @@
 							$totalResumo = $endossoCompleto['totalResumo'];
 						//}
 
-						//Ajustar valores de horas extras a pagar, não deve pagar caso o saldo final esteja negativo{
-							if($totalResumo['saldoAtual'] < "00:00" && $totalResumo['he100'] > "00:00"){
-
-								$transferir = ($totalResumo['saldoAtual'] > '-'.$totalResumo['he100'])? $totalResumo['he100']: $totalResumo['saldoAtual'];
-
-								$totalResumo['he100'] = operarHorarios([$totalResumo['he100'], $transferir], '-');
-								$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '+');
-							}
-							if($totalResumo['saldoAtual'] < "00:00" && $totalResumo['he50'] > "00:00"){
-								
-								$transferir = ($totalResumo['saldoAtual'] > '-'.$totalResumo['he50'])? $totalResumo['he50']: $totalResumo['saldoAtual'];
-								
-								$totalResumo['he50'] = operarHorarios([$totalResumo['he50'], $transferir], '-');
-								$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '+');
-							}
-						//}
+						$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAnterior'], $totalResumo['diffSaldo']], '+');
 
 						for ($i = 0; $i < count($endossoCompleto['endo_tx_pontos']); $i++) {
 							$aDetalhado = $endossoCompleto['endo_tx_pontos'][$i];
