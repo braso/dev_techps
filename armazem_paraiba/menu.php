@@ -1,4 +1,27 @@
+<style>
+    .menu-dropdown.active > a {
+        background-color: #647082 !important;
+        /*color: #fff !important;*/
+    }
+</style>
+
 <?php
+function verificarAtividade($paginasAtivas) {
+    foreach ($paginasAtivas as $pagina) {
+        if (strpos($_SERVER["REQUEST_URI"], $pagina) !== false) {
+            return 'active';
+        }
+    }
+    return '';
+}
+
+$paginasPonto = ['/carregar_ponto', '/espelho_ponto', '/endosso', '/nao_conformidade', '/nao_cadastrados'];
+
+$paginasCadastro = ['/cadastro_empresa', '/cadastro_motorista', '/cadastro_parametro', '/cadastro_motivo', '/cadastro_feriado','/cadastro_usuario','/cadastro_macro'];
+
+
+
+
 if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos($_SESSION['user_tx_nivel'], 'Super Administrador'))) { ?>
 
 	<!-- INICIO HEADER MENU -->
@@ -9,7 +32,7 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 			<!-- DOC: Remove data-hover="dropdown" and data-close-others="true" attributes below to disable the dropdown opening on mouse hover -->
 			<div class="hor-menu  ">
 				<ul class="nav navbar-nav">
-					<li class="menu-dropdown classic-menu-dropdown ">
+					<li class="menu-dropdown classic-menu-dropdown <?= verificarAtividade($paginasCadastro)?>">
 						<a href="javascript:;"> Cadastros<span class="arrow"></span></a>
 						<ul class="dropdown-menu pull-left">
 
@@ -30,7 +53,7 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 					</li>
 
 
-					<li class="menu-dropdown classic-menu-dropdown ">
+					<li class="menu-dropdown classic-menu-dropdown <?= verificarAtividade($paginasPonto)?>">
 						<a href="javascript:;"> Ponto<span class="arrow"></span></a>
 						<ul class="dropdown-menu pull-left">
 							<li class=" "><a href="<?= $CONTEX["path"] ?>/carregar_ponto" class="nav-link ">Carregar Ponto</a></li>
