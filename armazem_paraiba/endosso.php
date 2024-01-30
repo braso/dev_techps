@@ -167,7 +167,22 @@
 					);
 					$motivos = '';
 					for($f2 = 0; $f2 < count($bdMotivos); $f2++){
-						$motivos .= $bdMotivos[$f2]['moti_tx_nome'].'<br>';
+						$legendas = [
+							'' => '',
+							'I' => '( I - Incluída Manualmente )',
+							'P' => '( P - Pré-Assinalada )',
+							'T' => '( T - Outras fontes de marcação )',
+							'DSR' => '( DSR - Descanso Semanal Remunerado e Abono )'
+						];
+						$seContemAsterisco = '';
+						foreach ($aDia[$f] as $valor) {
+							if (strpos($valor, '*') !== false) {
+								$seContemAsterisco = '- <br>( * - Registros excluídos manualmente ).';
+								break;
+							}
+						}
+						$legenda = isset($legendas[$bdMotivos[$f2]['moti_tx_legenda']]) ? $legendas[$bdMotivos[$f2]['moti_tx_legenda']] : '';
+						$motivos .= $bdMotivos[$f2]['moti_tx_nome'].' - <br>'.$legenda.''.$seContemAsterisco.'<br>';
 					}
 
 					array_splice($aDia[$f], 18, 0, $motivos); // inserir a coluna de motivo, no momento da implementação, estava na coluna 19

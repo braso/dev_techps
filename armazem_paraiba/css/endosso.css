@@ -68,9 +68,9 @@ body {
 .table th,
 .table td {
     padding-top: 0px;
-    padding-right: 3px;
+    padding-right: 11.5px;
     padding-bottom: 0px;
-    padding-left: 3px;
+    padding-left: 11.5px;
     text-align: center;
     border: 0.01px solid black;
     page-break-inside: avoid;

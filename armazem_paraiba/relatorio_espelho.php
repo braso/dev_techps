@@ -15,6 +15,12 @@
 			text-align: left;
 		}
 	</style>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/contex20/img/favicon/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/contex20/img/favicon/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/contex20/img/favicon/favicon-16x16.png">
+	<link rel="shortcut icon" type="image/x-icon" href="/contex20/img/favicon/favicon-32x32.png?v=2">
+	<link rel="manifest" href="/contex20/img/favicon/site.webmanifest">
 </head>
 
 <body>
@@ -29,7 +35,7 @@
 	<div class="info">
 		<table class="table-header">
 			<tr class="company-info">
-				<td style="text-align: left;"><b>Empresa:</b> <?= $aEmpresa['empr_tx_nome'] ?></td>
+				<td style="padding-left: 12px; text-align: left;"><b>Empresa:</b> <?= $aEmpresa['empr_tx_nome'] ?></td>
 				<td style="text-align: left;"><b>CNPJ:</b> <?= $aEmpresa['empr_tx_cnpj'] ?></td>
 				<td colspan="2" style="text-align: left;"><b>End.</b> <?= "$enderecoEmpresa, $aEmpresa[cida_tx_nome]/$aEmpresa[cida_tx_uf], $aEmpresa[empr_tx_cep]" ?></td>
 				<td style="text-align: left;"><b>Período:</b> <?= sprintf("%02d/%04d", $month, $year) ?></td>
@@ -37,7 +43,7 @@
 			</tr>
 			
 			<tr class="employee-info">
-				<td style="text-align: left;"><b>Motorista:</b> <?= $aMotorista['enti_tx_nome'] ?></td>
+				<td style="padding-left: 12px; text-align: left;"><b>Motorista:</b> <?= $aMotorista['enti_tx_nome'] ?></td>
 				<td style="text-align: left;"><b>Função:</b> <?= $aMotorista['enti_tx_ocupacao'] ?></td>
 				<td style="text-align: left;"><b>CPF:</b> <?= $aMotorista['enti_tx_cpf'] ?></td>
 				<td style="text-align: left;"><b>Turno:</b> D.SEM/H: <?= $aMotorista['enti_tx_jornadaSemanal'] ?> FDS/H: <?= $aMotorista['enti_tx_jornadaSabado'] ?> </td>
