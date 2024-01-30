@@ -909,6 +909,7 @@ function criarGET() {
 							form.acao.value=acao;
 							form.data_de.value=data_de;
 							form.data_ate.value=data_ate;
+							form.just.value=just;
 							if(campos){
 								form.hidden.value=valores;
 								form.hidden.name=campos;
