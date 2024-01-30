@@ -107,7 +107,6 @@
 							form.append(\'<input type="hidden" name="\'+campos[f]+\'" value="\'+valores[f]+\'" /> \');
 						}
 						form.submit();
-						form.submit();
 					}
 
 				}

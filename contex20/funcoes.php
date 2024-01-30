@@ -885,41 +885,47 @@ function criarGET() {
 		
 	}
 
-	function icone_excluir_ajuste($id,$acao,$campos='',$data_de='',$data_ate='',$valores='',$target='',$icone='',$msg='', $action='', $title=''){
-		if($icone==''){
+	function icone_excluir_ajuste($id, $acao, $campos = '', $data_de = '', $data_ate = '', $valores = '', $target = '', $icone = '', $msg = 'Deseja excluir o registro?', $action = '', $title = '') {
+		// 		return icone_excluir($id, $acao, $campos, $valores, $target, $icone, $msg, $action, $title);
+		if ($icone == '') {
 			$icone = 'glyphicon glyphicon-remove';
 		}
-		
-		if($icone == 'glyphicon glyphicon-remove' && $title == '')
+
+		if ($icone == 'glyphicon glyphicon-remove' && $title == '')
 			$title = 'Excluir';
 
-		$icone='class="'.$icone.'"';
+		$icone = 'class="' . $icone . '"';
 
 		$modal = "
-    	<div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
-        <div class='modal-dialog' role='document'>
-            <div class='modal-content'>
-                <div class='modal-header'>
-                <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>
-                <h4 class='modal-title' id='myModalLabel'>Justifica Exclusão de Registro</h4>
-                </div>
-                <div class='modal-body'>
-                    <div class='form-group'>
-                        <b><label for='justificar' class='control-label' style='font-size: 15px;'>Justificar:</label></b>
-                        <textarea class='form-control' id='justificar'></textarea>
-                    </div>
-                </div>
-                <div class='modal-footer'>
-                    <button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
-                    <button type='button' class='btn btn-primary' data-dismiss='modal' 
-					onclick='javascript:contex_icone(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\",\"$action\",\"$data_de\", \"$data_ate\", document.getElementById(\"justificar\").value);'>Gravar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    ";
+					<script>
+					function solicitarDados(id,acao,data_de,data_ate,campos,valores) {
+						// Solicitar ao usuário que insira os dados
+						var just = prompt('Insira a Justificativa:');
+						if(just !== null && just !== ''){
+							console.log('id ', id);
+							
+							var form = document.getElementById('contex_icone_form');
+							form.id.value=id;
+							form.acao.value=acao;
+							form.data_de.value=data_de;
+							form.data_ate.value=data_ate;
+							if(campos){
+								form.hidden.value=valores;
+								form.hidden.name=campos;
+							}
+							campos = campos.split(',');
+							valores = valores.split(',');
+							for(f = 0; f < campos.length; f++){
+								form.append('<input type=\'hidden\' name=\'campos[f]\' value=\'valores[f]\' />');
+							}
+							form.submit();
+							
+						}
+					}
+					</script>
+				";
 		// onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\",\"$data_de\",\"$data_ate\");
-		return "<center><a title=\"$title\" style='color:gray' data-toggle='modal' data-target='#myModal' ><spam $icone></spam></a></center>".$modal;
+		return "<center><a title=\"$title\" style='color:gray' data-toggle='modal' data-target='#myModal'onclick='solicitarDados(\"$id\",\"$acao\",\"$data_de\",\"$data_ate\",\"$campos\",\"$valores\")' ><spam $icone></spam></a></center>" . $modal;
 	}
 
 
