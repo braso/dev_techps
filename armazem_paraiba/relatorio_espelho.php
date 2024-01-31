@@ -38,8 +38,8 @@
 				<td style="padding-left: 12px; text-align: left;"><b>Empresa:</b> <?= $aEmpresa['empr_tx_nome'] ?></td>
 				<td style="text-align: left;"><b>CNPJ:</b> <?= $aEmpresa['empr_tx_cnpj'] ?></td>
 				<td colspan="2" style="text-align: left;"><b>End.</b> <?= "$enderecoEmpresa, $aEmpresa[cida_tx_nome]/$aEmpresa[cida_tx_uf], $aEmpresa[empr_tx_cep]" ?></td>
-				<td style="text-align: left;"><b>Período:</b> <?= sprintf("%02d/%04d", $month, $year) ?></td>
-				<td style="text-align: left;"><b>Emissão Doc.:</b> <?= $aEndosso['endo_tx_dataCadastro'] . " (UTC-3)" ?></td>
+				<td style="text-align: left;"><b>Período:</b> <?= date("d/m/Y", strtotime($endossoCompleto['endo_tx_de']))  ?> - <?= date("d/m/Y", strtotime($endossoCompleto['endo_tx_ate'])) ?></td>
+				<td style="text-align: left;"><b>Emissão Doc.:</b> <?= date("d/m/Y H:i:s", strtotime($endossoCompleto['endo_tx_dataCadastro'])) . " (UTC-3)" ?> </td>
 			</tr>
 			
 			<tr class="employee-info">
@@ -104,7 +104,7 @@
 
 <table class="table-bottom">
 	<tr>
-		<td rowspan="2">
+		<td rowspan="2"  style="width: 200px;">
 			<table class="table-info">
 				<tr>
 					<td>Carga Horaria Prevista:</td>
@@ -146,6 +146,46 @@
 					</td>
 				</tr>
 			</table>
+			
+			<td rowspan="2">
+			<table class="table-legenda">
+			    <tr>
+			         <th colspan="2" style="text-align: center;">
+			            <b>Legendas</b>
+			        </th>
+			    </tr>
+				<tr>
+					<td><center><b>I</b></center></td>
+					<td>
+						<center>Incluída Manualmente ?></center>
+					</td>
+				</tr>
+				<tr>
+					<td><center><b>P</b></center></td>
+					<td>
+						<center>Pré-Assinalada</center>
+					</td>
+				</tr>
+				<tr>
+					<td><center><b>T</b></center></td>
+					<td>
+						<center>Outras fontes de marcação</center>
+					</td>
+				</tr>
+				<tr>
+					<td><center><b>DSR</b></center></td>
+					<td>
+						<center>Descanso Semanal Remunerado e Abono </center>
+					</td>
+				</tr>
+				<tr>
+					<td><center><b>*</b></center></td>
+					<td>
+						<center>Registros excluídos manualmente  </center>
+					</td>
+				</tr>
+			</table>
+			</td>
 		</td>
 
 			<td>

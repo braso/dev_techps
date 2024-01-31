@@ -110,6 +110,21 @@
 
 				$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAnterior'], $totalResumo['diffSaldo']], '+');
 
+				//Limitar a quantidade de HE50 à quantidade informada em endo_tx_horasAPagar{
+					if(	!empty($endossoCompleto['endo_tx_pagarHoras']) && $endossoCompleto['endo_tx_pagarHoras'] == 'sim' && !empty($endossoCompleto['endo_tx_horasApagar'])){
+						if($totalResumo['diffSaldo'] > $endossoCompleto['endo_tx_horasApagar']){
+							$transferir = $endossoCompleto['endo_tx_horasApagar'];
+						}else{
+							$transferir = $totalResumo['diffSaldo'];
+						}
+						$totalResumo['diffSaldo'] = operarHorarios([$totalResumo['diffSaldo'], $transferir], '-');
+						$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '-');
+						$totalResumo['he50'] = $transferir;
+					}else{
+						$totalResumo['he50'] = '00:00';
+					}
+				//}
+
 				if($totalResumo['diffSaldo'] > "00:00"){
 					 //Tirar a parte do saldoPeriodo que corresponde ao HE100
 					if($totalResumo['diffSaldo'] > $totalResumo['he100']){
@@ -122,24 +137,6 @@
 					$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '-');
 					$totalResumo['he100'] = $transferir;
 				}
-
-				//Limitar a quantidade de HE50 à quantidade informada em endo_tx_horasAPagar{
-					if(	!empty($endossoCompleto['endo_tx_pagarHoras']) && $endossoCompleto['endo_tx_pagarHoras'] == 'sim' && 
-						!empty($endossoCompleto['endo_tx_horasApagar'])
-					){
-						if($totalResumo['diffSaldo'] > $endossoCompleto['endo_tx_horasApagar']){
-							$transferir = $endossoCompleto['endo_tx_horasApagar'];
-						}else{
-							$transferir = $totalResumo['diffSaldo'];
-						}
-	
-						$totalResumo['diffSaldo'] = operarHorarios([$totalResumo['diffSaldo'], $transferir], '-');
-						$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '-');
-						$totalResumo['he50'] = $transferir;
-					}else{
-						$totalResumo['he50'] = '00:00';
-					}
-				//}
 
 				for ($i = 0; $i < count($endossoCompleto['endo_tx_pontos']); $i++) {
 					$diasEndossados++;
@@ -167,24 +164,9 @@
 					);
 					$motivos = '';
 					for($f2 = 0; $f2 < count($bdMotivos); $f2++){
-						$legendas = [
-							'' => '',
-							'I' => '( I - Incluída Manualmente )',
-							'P' => '( P - Pré-Assinalada )',
-							'T' => '( T - Outras fontes de marcação )',
-							'DSR' => '( DSR - Descanso Semanal Remunerado e Abono )'
-						];
-						$seContemAsterisco = '';
-						foreach ($aDia[$f] as $valor) {
-							if (strpos($valor, '*') !== false) {
-								$seContemAsterisco = '- <br>( * - Registros excluídos manualmente ).';
-								break;
-							}
-						}
-						$legenda = isset($legendas[$bdMotivos[$f2]['moti_tx_legenda']]) ? $legendas[$bdMotivos[$f2]['moti_tx_legenda']] : '';
-						$motivos .= $bdMotivos[$f2]['moti_tx_nome'].' - <br>'.$legenda.''.$seContemAsterisco.'<br>';
+						$motivos .= $bdMotivos[$f2]['moti_tx_nome'].'<br>';
 					}
-
+					
 					array_splice($aDia[$f], 18, 0, $motivos); // inserir a coluna de motivo, no momento da implementação, estava na coluna 19
 				}
 			//}
@@ -209,7 +191,7 @@
 		}
 
 		$extra = '';
-		foreach(['busca_empresa', 'busca_data', 'busca_motorista', 'busca_situacao', 'busca_endossado'] as $campo){
+		foreach(['busca_empresa', 'busca_data', 'busca_motorista', 'busca_endossado'] as $campo){
 			if(isset($_GET[$campo]) && !empty($_GET[$campo])){
 				$_POST[$campo] = $_GET[$campo];
 			}
@@ -234,13 +216,15 @@
 			}
 			$extraMotorista = " AND enti_nb_empresa = " . $_POST['busca_empresa'];
 			if(!empty($_POST['busca_endossado']) && !empty($_POST['busca_empresa'])){
-				if(is_int(strpos($_POST['busca_endossado'], 'Endossado'))){
-					$extra .= " AND enti_nb_id";
-					if(is_int(strpos($_POST['busca_endossado'], 'Não '))){
-						$extra .= " NOT";
-					}
-					$extra .= " IN (SELECT endo_nb_entidade FROM endosso, entidade 
-						WHERE '".$_POST['busca_data']."' BETWEEN endo_tx_de AND endo_tx_ate".
+				if($_POST['busca_endossado'] == 'endossado'){
+					$extra .= " AND enti_nb_id IN (SELECT endo_nb_entidade FROM endosso, entidade 
+						WHERE '".$_POST['busca_data']."-01' BETWEEN endo_tx_de AND endo_tx_ate".
+							" AND enti_nb_empresa = '" . $_POST['busca_empresa'] .
+							"' AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
+					)";
+				}elseif($_POST['busca_endossado'] == 'naoEndossado'){
+					$extra .= " AND enti_nb_id NOT IN (SELECT endo_nb_entidade FROM endosso, entidade 
+						WHERE '".$_POST['busca_data']."-01' BETWEEN endo_tx_de AND endo_tx_ate".
 							" AND enti_nb_empresa = '" . $_POST['busca_empresa'] .
 							"' AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
 					)";
@@ -252,8 +236,8 @@
 			$c = [
 				campo_mes('Data*:',    'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2),
 				combo_net('Motorista:', 'busca_motorista', (!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ''), 3, 'entidade', '', ' AND enti_tx_tipo = "Motorista"' . $extraMotorista . $extraEmpresaMotorista, 'enti_tx_matricula'),
-				combo(    'Situação:',  'busca_situacao',  (!empty($_POST['busca_situacao'])?  $_POST['busca_situacao'] : ''), 2, ['Todos', 'Não conformidade']),
-				combo(    'Endosso:',   'busca_endossado', (!empty($_POST['busca_endossado'])? $_POST['busca_endossado']: ''), 2, ['', 'Endossado', 'Endossado parcialmente', 'Não endossado'])
+				// combo(    'Situação:',  'busca_situacao',  (!empty($_POST['busca_situacao'])?  $_POST['busca_situacao'] : ''), 2, ['Todos', 'Não conformidade']),
+				combo(    'Endosso:',   'busca_endossado', (!empty($_POST['busca_endossado'])? $_POST['busca_endossado']: ''), 2, ['' => '', 'endossado' => 'Endossado', 'naoEndossado' => 'Não endossado'])
 			];
 
 			if(is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))){
@@ -262,8 +246,8 @@
 		//}
 
 		//BOTOES{
-			if(!isset($_POST['busca_situacao']) || empty($_POST['busca_situacao']) || empty($_POST['busca_motorista'])){
-				$disabled = 'disabled=disabled title="Pesquise um período endossado efetuar a impressão do endosso."';
+			if(!isset($_POST['busca_motorista']) || empty($_POST['busca_motorista'])){
+				$disabled = 'disabled=disabled title="Pesquise um motorista para efetuar a impressão do endosso."';
 			}
 			$b = [
 				botao("Buscar", 'index', '', '', '', 1),
@@ -279,7 +263,7 @@
 		fecha_form($b);
 
 		$cab = [
-			"", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
+			"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "HE 50%", "HE&nbsp;100%",
 			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 		];
@@ -304,18 +288,21 @@
 							AND enti_tx_status != 'inativo'
 						ORDER BY enti_tx_nome"
 				);
-				while ($aMotorista = carrega_array($sqlMotorista)){
+
+				$motNaoEndossados = 'MOTORISTAS NÃO ENDOSSADOS: <br><br>';
+
+				while ($aMotorista = carrega_array($sqlMotorista, MYSQLI_ASSOC)){
 					$counts['total']++;
 					if(empty($aMotorista['enti_tx_nome']) || empty($aMotorista['enti_tx_matricula'])){
 						continue;
 					}
-	
+
 					//Pegando e formatando registros dos dias{
 						$date = new DateTime($_POST['busca_data']);
 						$month = intval($date->format('m'));
 						$year = intval($date->format('Y'));
 						$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
-				
+
 						//Montar endosso completo{
 							$sqlEndossos = mysqli_fetch_all(
 								query(
@@ -336,6 +323,9 @@
 								$values = fgetcsv($aDetalhado);
 								$aDetalhado = [];
 								for($j = 0; $j < count($keys); $j++){
+									if(substr_count($values[$j], 'fa-warning')>0){
+										$counts['naoConformidade'] += substr_count($values[$j], 'fa-warning');
+									}
 									$aDetalhado[$keys[$j]] = $values[$j];
 								}
 								$aDetalhado['endo_tx_pontos'] 	= (array)json_decode($aDetalhado['endo_tx_pontos']);
@@ -456,6 +446,7 @@
 						$aSaldo[$aMotorista['enti_tx_matricula']] = $totalResumo['diffSaldo'];
 					}else{
 						$counts['endossados']['nao']++;
+						$motNaoEndossados .= "- [".$aMotorista['enti_tx_matricula']."] ".$aMotorista['enti_tx_nome'].'<br>';
 					}
 	
 					$totalResumo = ['diffRefeicao' => '00:00', 'diffEspera' => '00:00', 'diffDescanso' => '00:00', 'diffRepouso' => '00:00', 'diffJornada' => '00:00', 'jornadaPrevista' => '00:00', 'diffJornadaEfetiva' => '00:00', 'maximoDirecaoContinua' => '', 'intersticio' => '00:00', 'he50' => '00:00', 'he100' => '00:00', 'adicionalNoturno' => '00:00', 'esperaIndenizada' => '00:00', 'diffSaldo' => '00:00'];
@@ -463,13 +454,18 @@
 					unset($aDia);
 				}
 			}
-			if($counts['endossados']['sim'] == 0 && !empty($_POST['acao'])){
+			if($counts['endossados']['sim'] == 0 && !empty($_POST['acao']) && $_POST['busca_endossado'] != 'naoEndossado'){
 				echo 
 					'<script>
 						alert("Período ainda não endossado.");
 						document.getElementById("botaoContexCadastrar ImprimirRelatorio").disabled = true;
 					</script>'
 				;
+			}
+
+			if($counts['endossados']['nao'] > 0){
+				abre_form($motNaoEndossados);
+				fecha_form();
 			}
 		//}
 		echo '<div class="printable"></div>';

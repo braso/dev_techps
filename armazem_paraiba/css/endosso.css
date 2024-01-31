@@ -68,9 +68,9 @@ body {
 .table th,
 .table td {
     padding-top: 0px;
-    padding-right: 11.5px;
+    padding-right: 13px;
     padding-bottom: 0px;
-    padding-left: 11.5px;
+    padding-left: 13px;
     text-align: center;
     border: 0.01px solid black;
     page-break-inside: avoid;
@@ -114,6 +114,7 @@ body {
     border-collapse: collapse;
     margin-top: 5px;
     page-break-inside: avoid;
+    width: 280px;
 }
 
 .table-info2 {
@@ -126,8 +127,18 @@ body {
 .table-info2 td {
     border: 0.01px solid black;
     border-collapse: collapse;
+    page-break-inside: avoid;
+    width: 280px;
+}
+
+.table-legenda,
+.table-legenda tr,
+.table-legenda td {
+    border: 0.01px solid black;
+    border-collapse: collapse;
     margin-top: 5px;
     page-break-inside: avoid;
+    margin-bottom: 5px;
 }
 
 .table-resumo {
