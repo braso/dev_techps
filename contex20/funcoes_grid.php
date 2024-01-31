@@ -149,16 +149,20 @@
 			td { font-size: 10px !important; }
 
 			@media print{
-					body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(1) > div {
-						display: none;
-					}
-					
-					contex-grid-<?=$rand?>,
-					contex-grid-<?=$rand?> * {
-						display: block;
-					}
-					@page { size: landscape; }
+				form > div:nth-child(2) > div:nth-child(1),
+				form > div:nth-child(2) > div:nth-child(3),
+				form > div:nth-child(2) > div:nth-child(5),
+				form > div:nth-child(2) > div:nth-child(6),
+				form > div:nth-child(3) > div,
+				form > div.form-actions,
+				#contex-grid-<?=$rand?>_length,
+				#contex-grid-<?=$rand?>_info,
+				body > div.scroll-to-top > i
+				{
+					display: none;
 				}
+				@page { size: landscape; }	
+			}
 		</style>
 
 
