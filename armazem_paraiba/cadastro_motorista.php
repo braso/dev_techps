@@ -162,7 +162,7 @@
 			}
 			$enti_campos = array_merge($enti_campos, ['enti_nb_userCadastro', 'enti_tx_dataCadastro', 'enti_tx_ehPadrao']);
 			$enti_valores = array_merge($enti_valores, [$_SESSION['user_nb_id'], date("Y-m-d H:i:s"), $ehPadrao]);
-			$id = inserir('entidade', $enti_campos, $enti_valores);
+			$id = inserir('entidade', $enti_campos, $enti_valores)[0];
 
 			$user_infos = [
 				'user_tx_matricula' 	=> $_POST['postMatricula'], 
@@ -680,13 +680,17 @@
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa = " AND empr_nb_id = '".$_SESSION['user_nb_empresa']."'";
 		}
+		
+		while(in_array($_POST['busca_cpf'][strlen($_POST['busca_cpf'])-1], ['.', '-', ' '])){
+			$_POST['busca_cpf'] = substr($_POST['busca_cpf'], 0, strlen($_POST['busca_cpf'])-1);
+		}
 
 		$extra =
 			((!empty($_POST['busca_codigo']))? 		" AND enti_nb_id LIKE '%".$_POST['busca_codigo']."%'": '').
 			((!empty($_POST['busca_matricula']))? 	" AND enti_tx_matricula LIKE '%".$_POST['busca_matricula']."%'": '').
 			((!empty($_POST['busca_empresa']))? 	" AND enti_nb_empresa = '".$_POST['busca_empresa']."'": '').
 			((!empty($_POST['busca_nome']))? 		" AND enti_tx_nome LIKE '%".$_POST['busca_nome']."%'": '').
-			((!empty($_POST['busca_cpf']))? 		" AND enti_tx_cpf = '".$_POST['busca_cpf']."'": '').
+			((!empty($_POST['busca_cpf']))? 		" AND enti_tx_cpf LIKE '%".$_POST['busca_cpf']."%'": '').
 			((!empty($_POST['busca_ocupacao']))? 	" AND enti_tx_ocupacao = '".$_POST['busca_ocupacao']."'": '').
 			((!empty($_POST['busca_parametro']))? 	" AND enti_nb_parametro = '".$_POST['busca_parametro']."'": '');
 

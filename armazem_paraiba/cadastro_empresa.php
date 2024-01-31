@@ -33,7 +33,7 @@
 		$sqlCheckNivel = query("SELECT empr_tx_Ehmatriz FROM empresa WHERE empr_nb_id = '$_POST[id]'")->fetch_assoc();
 		$campos = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade', 'endereco', 'bairro', 'dataRegistroCNPJ'];
 		foreach($campos as $campo){
-			if(!isset($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'Sim' || empty($_POST[$campo])){
+			if(!isset($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'sim' || empty($_POST[$campo])){
 				echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
 				layout_empresa();
 				exit;
@@ -76,7 +76,7 @@
 			$campos = array_merge($campos,['empr_nb_userCadastro','empr_tx_dataCadastro']);
 			$valores = array_merge($valores,[$_SESSION['user_nb_id'], date("Y-m-d H:i:s")]);
 			try{
-				$id_empresa = inserir('empresa',$campos,$valores);
+				$id_empresa = inserir('empresa',$campos,$valores)[0];
 			}catch(Exception $e){
 				print_r($e);
 			}
@@ -227,7 +227,7 @@
 
 		if(is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador"))){
 			$campo_dominio = campo_domain('Nome do Domínio','nomeDominio',$input_values['domain'],2,'domain');
-			$campo_EhMatriz = combo('É matriz?','matriz',$input_values['empr_tx_Ehmatriz'],2,['Sim','Não']);
+			$campo_EhMatriz = combo('É matriz?','matriz',$input_values['empr_tx_Ehmatriz'],2,['sim' => 'Sim', 'nao' => 'Não']);
 		}else{
 			$campo_dominio = texto('Nome do Domínio',$input_values['domain'],2);
 			$campo_EhMatriz = texto('É matriz?',$input_values['empr_tx_Ehmatriz'],2);
@@ -241,7 +241,7 @@
 		}
 		$campo_cidade = texto('Cidade/UF', $cidade['cida_tx_nome'], 2);
 
-		if (is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) != TRUE && $input_values['matriz'] == 'Sim') {
+		if (is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) != TRUE && $input_values['matriz'] == 'sim') {
 			$c = [
 				texto('CPF/CNPJ*',$input_values['cnpj'],2),
 				texto('Nome*',$input_values['nome'],4),
@@ -311,10 +311,8 @@
 		$file = basename(__FILE__);
 		$file = explode('.', $file);
 
-		$botao = [  
-			botao($btn_txt,'cadastra_empresa','id',$_POST['id'],'','','btn btn-success'),
-			botao('Voltar','index')
-		];
+		$botao[] = botao($btn_txt,'cadastra_empresa','id',$_POST['id'],'','','btn btn-success');
+		$botao[] = botao('Voltar','index');
 		
 		abre_form("Dados da Empresa/Filial");
 		linha_form($c);
@@ -489,19 +487,15 @@
 		$uf = array('', 'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO');
 		
 
-		$c = [ 
-			campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO','maxlength="6"'),
-			campo('Nome','busca_nome',$_POST['busca_nome'],3,'','maxlength="65"'),
-			campo('Nome Fantasia','busca_fantasia',$_POST['busca_fantasia'],2,'','maxlength="65"'),
-			campo('CPF/CNPJ','busca_cnpj',$_POST['busca_cnpj'],2,'MASCARA_CPF'),
-			combo('UF','busca_uf',$_POST['busca_uf'],1,$uf),
-			combo('Situação','busca_situacao',$_POST['busca_situacao'],2,['Todos','Ativo','Inativo'])
-		];
+		$c[] = campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO','maxlength="6"');
+		$c[] = campo('Nome','busca_nome',$_POST['busca_nome'],3,'','maxlength="65"');
+		$c[] = campo('Nome Fantasia','busca_fantasia',$_POST['busca_fantasia'],2,'','maxlength="65"');
+		$c[] = campo('CPF/CNPJ','busca_cnpj',$_POST['busca_cnpj'],2,'MASCARA_CPF');
+		$c[] = combo('UF','busca_uf',$_POST['busca_uf'],1,$uf);
+		$c[] = combo('Situação','busca_situacao',$_POST['busca_situacao'],2,['Todos','Ativo','Inativo']);
 
-		$botao = [ 
-			botao('Buscar','index'),
-			botao('Inserir','layout_empresa','','','','','btn btn-success')
-		];
+		$botao[] = botao('Buscar','index');
+		$botao[] = botao('Inserir','layout_empresa','','','','','btn btn-success');
 		
 		abre_form('Filtro de Busca');
 		linha_form($c);
