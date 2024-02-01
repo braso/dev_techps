@@ -1,14 +1,27 @@
-@page {
-    size: A4 landscape;
-}
-
-* {
-    border: none;
-}
-
 @media print {
     body {
-        width: 1343px;
+        width: 297mm;
+        margin: 1cm;
+        margin-left: 20cm;
+    }
+    @page {
+        size: A4 landscape;
+        margin: 0mm;
+    }
+    td.impressao {
+        position: static; 
+        text-align: center;
+        left:58.8rem !important;
+    }
+    .table th, .table td {
+        padding-top: 0px !important;
+        padding-right: 11.2px !important;
+        padding-bottom: 0px !important;
+        padding-left: 11.2px !important;
+        text-align: center !important;
+        border: 0.01px solid black !important;
+        page-break-inside: avoid !important;
+        
     }
 }
 
@@ -119,7 +132,7 @@ body {
     border-collapse: collapse;
     margin-top: 5px;
     page-break-inside: avoid;
-    width: 280px;
+    /* width: 280px; */
 }
 
 .table-info2 {
@@ -133,7 +146,7 @@ body {
     border: 0.01px solid black;
     border-collapse: collapse;
     page-break-inside: avoid;
-    width: 280px;
+    /* width: 280px; */
     margin-top: 5px;
 }
 

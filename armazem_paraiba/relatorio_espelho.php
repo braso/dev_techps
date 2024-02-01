@@ -147,7 +147,7 @@
 				</tr>
 			</table>
 			
-			<td rowspan="2">
+			<td rowspan="2" style="width: 174px;">
 			<table class="table-legenda">
 			    <tr>
 			         <th colspan="2" style="text-align: center;">
