@@ -6,6 +6,11 @@
     border: none;
 }
 
+@media print {
+    body {
+        width: 1343px;
+    }
+}
 
 /* table thead tr th:nth-child(3),
 table thead tr th:nth-child(7),
@@ -48,7 +53,7 @@ body {
 }
 
 .right-logo img {
-    max-height: 50px;
+    max-height: 20px;
     margin-right: 10px;
 }
 
@@ -129,6 +134,7 @@ body {
     border-collapse: collapse;
     page-break-inside: avoid;
     width: 280px;
+    margin-top: 5px;
 }
 
 .table-legenda,

@@ -157,7 +157,7 @@
 				<tr>
 					<td><center><b>I</b></center></td>
 					<td>
-						<center>Incluída Manualmente ?></center>
+						<center>Incluída Manualmente</center>
 					</td>
 				</tr>
 				<tr>
