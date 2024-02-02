@@ -106,7 +106,6 @@
 							form.append(\'<input type="hidden" name="\'+campos[f]+\'" value="\'+valores[f]+\'" /> \');
 						}
 						form.submit();
-						form.submit();
 					}
 
 				}
@@ -160,7 +159,8 @@
 				body > div.scroll-to-top > i
 				{
 					display: none;
-				}	
+				}
+				@page { size: landscape; }	
 			}
 		</style>
 

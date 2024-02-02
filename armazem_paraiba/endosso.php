@@ -110,6 +110,19 @@
 
 				$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAnterior'], $totalResumo['diffSaldo']], '+');
 
+				if($totalResumo['diffSaldo'] > "00:00"){
+					//Tirar a parte do saldoPeriodo que corresponde ao HE100
+				   if($totalResumo['diffSaldo'] > $totalResumo['he100']){
+					   $transferir = $totalResumo['he100'];
+				   }else{
+					   $transferir = $totalResumo['diffSaldo'];
+				   }
+
+				   $totalResumo['diffSaldo'] = operarHorarios([$totalResumo['diffSaldo'], $transferir], '-');
+				   $totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '-');
+				   $totalResumo['he100'] = $transferir;
+			   }
+
 				//Limitar a quantidade de HE50 à quantidade informada em endo_tx_horasAPagar{
 					if(	!empty($endossoCompleto['endo_tx_pagarHoras']) && $endossoCompleto['endo_tx_pagarHoras'] == 'sim' && !empty($endossoCompleto['endo_tx_horasApagar'])){
 						if($totalResumo['diffSaldo'] > $endossoCompleto['endo_tx_horasApagar']){
@@ -124,19 +137,6 @@
 						$totalResumo['he50'] = '00:00';
 					}
 				//}
-
-				if($totalResumo['diffSaldo'] > "00:00"){
-					 //Tirar a parte do saldoPeriodo que corresponde ao HE100
-					if($totalResumo['diffSaldo'] > $totalResumo['he100']){
-						$transferir = $totalResumo['he100'];
-					}else{
-						$transferir = $totalResumo['diffSaldo'];
-					}
-
-					$totalResumo['diffSaldo'] = operarHorarios([$totalResumo['diffSaldo'], $transferir], '-');
-					$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '-');
-					$totalResumo['he100'] = $transferir;
-				}
 
 				for ($i = 0; $i < count($endossoCompleto['endo_tx_pontos']); $i++) {
 					$diasEndossados++;

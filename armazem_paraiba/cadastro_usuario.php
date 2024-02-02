@@ -48,7 +48,7 @@
 
 		$error_msg_base = "ERRO: Insira os campos ";
 		$error_msg = $error_msg_base;
-		if (!empty($_POST['id']) && $_POST['editPermission'] == true) {
+    if (!empty($_POST['id']) && $_POST['editPermission'] == true) {
 			$check_fields = [
 				//['nome', 'msg_erro']
 				['nome', 'Nome, '],
@@ -77,6 +77,7 @@
 			$error_msg .= "Confirmação de senha correta, ";
 		}
 		if($error_msg != $error_msg_base){
+			var_dump($_POST); echo '<br><br>';
 			set_status(substr($error_msg, 0, strlen($error_msg)-2).".");
 			modifica_usuario();
 			exit;

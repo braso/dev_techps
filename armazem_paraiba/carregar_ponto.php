@@ -7,6 +7,11 @@
 	include "conecta.php";
 	include "alerta_carrega_ponto.php";
 
+//     $url = 'https://braso.mobi/dev_techps/armazem_paraiba/carregar_ponto';
+// 	function isActive($url) {
+// 	    return strpos($_SERVER["REQUEST_URI"], $url) !== false;
+// 	}
+
 	function carrega_ponto(){
 
 		$arquivo = 'apontamento' . date('dmY') . '*.txt';
@@ -177,7 +182,7 @@
 
 				$campos = ['arqu_tx_nome', 'arqu_tx_data', 'arqu_nb_user', 'arqu_tx_status'];
 				$valores = [$fileList[$i], date("Y-m-d H:i:s"), $_SESSION['user_nb_id'], 'ativo'];
-				$idArquivo = inserir('arquivoponto', $campos, $valores);
+				$idArquivo = inserir('arquivoponto', $campos, $valores)[0];
 
 
 				foreach (file($local_file) as $line) {

@@ -7,7 +7,6 @@
 	include_once $_SERVER['DOCUMENT_ROOT'].$_POST['path']."/conecta.php";
 	include_once $_POST['arquivo'];
 
-
 	/* Database connection end */
 	$columns = $_POST['valores'];
 	$t_valores = count($columns);
@@ -103,5 +102,6 @@
 				);
 
 	echo json_encode($json_data);  // send data as json format
+
 
 ?>

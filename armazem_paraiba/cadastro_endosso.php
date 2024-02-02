@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -14,7 +14,7 @@
 					<input type="radio" id="sim" name="pagar_horas" value="sim" '.($modificador == 'sim'? 'checked': '').'> Sim
 				</label>
 				<label class="radio-inline">
-					<input type="radio" id="nao" name="pagar_horas" value="nao"'.(($modificador == 'nao' || empty($modificador))? 'checked': '').'> Não
+          <input type="radio" id="nao" name="pagar_horas" value="nao"'.(($modificador == 'nao' || empty($modificador))? 'checked': '').'> Não
 				</label>
 			</div>
 		
@@ -255,56 +255,6 @@
 
 				$dataCicloProx = date('Y-m-d', $dataCicloProx);
 				$dataCicloAnt  = date('Y-m-d', $dataCicloAnt);
-
-
-				if($aEndosso['endo_tx_dataCadastro'] > $dataCicloProx){
-					//Obrigar a pagar horas extras
-					
-					// $horasObrigatorias = ???
-				}
-				/*
-					Fazer as contas pra relacionar o dia do cadastro do endosso com o dia do cadastro do parâmetro e conferir
-				se o endosso está dentro da faixa de tempo em que deve ser obrigado pagar hora extra ou não
-				Se(endossoCadastroData > ultimoCicloData){
-					Obrigar pagar horas extras entre $dataCicloAnt e $dataCicloProx
-					(horas que devem ser obrigadas a pagar: endo_tx_saldo + somaSaldos(endo_tx_ate, $dataCicloProx))
-					$horasObrigatorias = endo_tx_saldo + somaSaldos(endo_tx_ate, $dataCicloProx)
-				}
-				*/
-
-
-				// if (isset($dadosMotorista['para_nb_qDias']) && $dadosMotorista['para_nb_qDias'] != null) { //Deve ser feito somente quando for obrigado a pagar a hora extra?
-					
-				// 	if(!empty($totalResumo['he50'])){
-				// 		$he50 = explode(':', $totalResumo['he50']);
-				// 		$he50 = intval($he50[0])*60 + ($he50[0][0] == '-' ? -1 : 1)*intval($he50[1]);
-				// 	}else{
-				// 		$he50 = 0;
-				// 	}
-					
-				// 	if(!empty($totalResumo['he100'])){
-				// 		$he100 = explode(':', $totalResumo['he100']);
-				// 		$he100 = intval($he100[0])*60 + ($he100[0][0] == '-' ? -1 : 1)*intval($he100[1]);
-				// 	}else{
-				// 		$he100 = 0;
-				// 	}
-
-				// 	$saldoPeriodo = explode(':', $totalResumo['diffSaldo']);
-				// 	$saldoPeriodo = intval($saldoPeriodo[0])*60 + ($saldoPeriodo[0][0] == '-' ? -1 : 1)*intval($saldoPeriodo[1]);
-
-				// 	if($saldoPeriodo > 0){
-				// 		//Tirar a parte do saldoPeriodo que corresponde ao HE100
-				// 		if($saldoPeriodo > $he100){
-				// 		  	$transferir = $he100;
-				// 		}else{
-				// 		  	$transferir = $saldoPeriodo;
-				// 		}
-				// 		$saldoPeriodo = $saldoPeriodo - $transferir;
-				// 	}
-
-					
-				// 	$totalResumo['diffSaldo'] = sprintf("%02d:%02d", intval($saldoPeriodo / 60), abs(($saldoPeriodo - intval($saldoPeriodo / 60) * 60)));
-				// }
 
 				$saldoAtual = operarHorarios([$saldoAnterior, $totalResumo['diffSaldo']], '+');
 				$saldoAtual = operarHorarios([$saldoAtual, $totalResumo['he50'], $totalResumo['he100']], '-');

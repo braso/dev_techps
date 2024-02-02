@@ -747,8 +747,7 @@
 					<input name="'.$variavel.'" value="'.$CONTEX['path']."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
 				</div>';
 
-			return $campo;
-
+		return $campo;
 	}
 
 	function enviar($arquivo,$diretorio,$nome='') {
@@ -889,8 +888,8 @@
 	}
 
 	function icone_excluir_ajuste($id, $acao, $campos='', $data_de='', $data_ate='', $valores='', $target='', $icone='', $msg='Deseja excluir o registro?', $action='', $title=''){
-// 		return icone_excluir($id, $acao, $campos, $valores, $target, $icone, $msg, $action, $title);
-        global $CONTEX;
+		// 		return icone_excluir($id, $acao, $campos, $valores, $target, $icone, $msg, $action, $title);
+		global $CONTEX;
 		if($icone==''){
 			$icone = 'glyphicon glyphicon-remove';
 		}
@@ -901,38 +900,37 @@
 		$icone='class="'.$icone.'"';
 
 		$modal = "
-		<script>
-        function solicitarDados(id,acao,data_de,data_ate,campos,valores) {
-            // Solicitar ao usuário que insira os dados
-            var just = prompt('Insira a Justificativa:');
-    		if(just !== null && just !== ''){
-    		    console.log('id ', id);
-    		    
-    		    var form = document.getElementById('contex_icone_form');
-				form.id.value=id;
-				form.acao.value=acao;
-				form.data_de.value=data_de;
-				form.data_ate.value=data_ate;
-				form.just.value=just;
-				if(campos){
-					form.hidden.value=valores;
-					form.hidden.name=campos;
+			<script>
+			function solicitarDados(id,acao,data_de,data_ate,campos,valores) {
+				// Solicitar ao usuário que insira os dados
+				var just = prompt('Insira a Justificativa:');
+				if(just !== null && just !== ''){
+					console.log('id ', id);
+					
+					var form = document.getElementById('contex_icone_form');
+					form.id.value=id;
+					form.acao.value=acao;
+					form.data_de.value=data_de;
+					form.data_ate.value=data_ate;
+					form.just.value=just;
+					if(campos){
+						form.hidden.value=valores;
+						form.hidden.name=campos;
+					}
+					campos = campos.split(',');
+					valores = valores.split(',');
+					for(f = 0; f < campos.length; f++){
+						form.append('<input type=\'hidden\' name=\'campos[f]\' value=\'valores[f]\' />');
+					}
+					form.submit();
+					
 				}
-				campos = campos.split(',');
-				valores = valores.split(',');
-				for(f = 0; f < campos.length; f++){
-					form.append('<input type=\'hidden\' name=\'campos[f]\' value=\'valores[f]\' />');
-				}
-				form.submit();
-    		    
-    		}
-        }
-    	</script>
-	";
+			}
+			</script>
+		";
 		// onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\",\"$data_de\",\"$data_ate\");
 		return "<center><a title=\"$title\" style='color:gray' data-toggle='modal' data-target='#myModal'onclick='solicitarDados(\"$id\",\"$acao\",\"$data_de\",\"$data_ate\",\"$campos\",\"$valores\")' ><spam $icone></spam></a></center>".$modal;
 	}
-
 	/*
 		function data_extenso($data){
 			setlocale(LC_TIME, 'portuguese');

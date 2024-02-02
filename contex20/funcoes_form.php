@@ -29,8 +29,6 @@
 					<meta content="" name="description" />
 					<meta content="" name="author" />
 					<!-- INICIO GLOBAL MANDATORY STYLES -->
-					<script src="https://cdn.ckeditor.com/ckeditor5/41.0.0/classic/ckeditor.js"></script>
-					
 					<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
 
 					<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/css/select2.min.css" rel="stylesheet" />

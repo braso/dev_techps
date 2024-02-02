@@ -33,7 +33,7 @@
 		$sqlCheckNivel = query("SELECT empr_tx_Ehmatriz FROM empresa WHERE empr_nb_id = '$_POST[id]'")->fetch_assoc();
 		$campos = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade', 'endereco', 'bairro', 'dataRegistroCNPJ'];
 		foreach($campos as $campo){
-			if(!isset($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'Sim' || empty($_POST[$campo])){
+			if(!isset($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'sim' || empty($_POST[$campo])){
 				echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
 				layout_empresa();
 				exit;
@@ -76,7 +76,7 @@
 			$campos = array_merge($campos,['empr_nb_userCadastro','empr_tx_dataCadastro']);
 			$valores = array_merge($valores,[$_SESSION['user_nb_id'], date("Y-m-d H:i:s")]);
 			try{
-				$id_empresa = inserir('empresa',$campos,$valores);
+				$id_empresa = inserir('empresa',$campos,$valores)[0];
 			}catch(Exception $e){
 				print_r($e);
 			}
@@ -241,7 +241,7 @@
 		}
 		$campo_cidade = texto('Cidade/UF', $cidade['cida_tx_nome'], 2);
 
-		if (is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) != TRUE && $input_values['matriz'] == 'Sim') {
+		if (is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) != TRUE && $input_values['matriz'] == 'sim') {
 			$c = [
 				texto('CPF/CNPJ*',$input_values['cnpj'],2),
 				texto('Nome*',$input_values['nome'],4),

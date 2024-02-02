@@ -258,8 +258,10 @@
 		}
 		
 		
-		$botao[] = botao('Gravar','cadastra_parametro','id',$_POST['id'],'','','btn btn-success');
-		$botao[] = botao('Voltar','index');
+		$botao = [
+			botao('Gravar','cadastra_parametro','id',$_POST['id'],'','','btn btn-success'),
+			botao('Voltar','index')
+		];
 		
 		abre_form('Dados dos Parâmetros');
 		linha_form($c);
@@ -332,7 +334,7 @@
 		$c = [
 			campo('Código', 'busca_codigo', $_POST['busca_codigo']?? '', 2, 'MASCARA_NUMERO', 'maxlength="6"'),
 			campo('Nome', 'busca_nome', $_POST['busca_nome']?? '', 4, '', 'maxlength="65"'),
-			combo('Acordo', 'busca_acordo', $_POST['busca_acordo']?? '', 2, ['' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não']),
+      combo('Acordo', 'busca_acordo', $_POST['busca_acordo']?? '', 2, ['' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não']),
 			combo('Banco de Horas', 'busca_banco', $_POST['busca_banco']?? '', 2, ['' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não']),
 			combo('Vencidos', 'busca_vencidos', $_POST['busca_vencidos']?? '', 2, ['' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não'])
 		];

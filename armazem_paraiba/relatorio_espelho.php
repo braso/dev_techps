@@ -15,6 +15,12 @@
 			text-align: left;
 		}
 	</style>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/contex20/img/favicon/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/contex20/img/favicon/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/contex20/img/favicon/favicon-16x16.png">
+	<link rel="shortcut icon" type="image/x-icon" href="/contex20/img/favicon/favicon-32x32.png?v=2">
+	<link rel="manifest" href="/contex20/img/favicon/site.webmanifest">
 </head>
 
 <body>
@@ -29,20 +35,20 @@
 	<div class="info">
 		<table class="table-header">
 			<tr class="company-info">
-				<td style="text-align: left;"><b>Empresa:</b> <?= $aEmpresa['empr_tx_nome'] ?></td>
+				<td style="padding-left: 12px; text-align: left;"><b>Empresa:</b> <?= $aEmpresa['empr_tx_nome'] ?></td>
 				<td style="text-align: left;"><b>CNPJ:</b> <?= $aEmpresa['empr_tx_cnpj'] ?></td>
 				<td colspan="2" style="text-align: left;"><b>End.</b> <?= "$enderecoEmpresa, $aEmpresa[cida_tx_nome]/$aEmpresa[cida_tx_uf], $aEmpresa[empr_tx_cep]" ?></td>
-				<td style="text-align: left;"><b>Período:</b> <?= sprintf("%02d/%04d", $month, $year) ?></td>
-				<td style="text-align: left;"><b>Emissão Doc.:</b> <?= $aEndosso['endo_tx_dataCadastro'] . " (UTC-3)" ?></td>
+				<td style="text-align: left;"><b>Período:</b> <?= date("d/m/Y", strtotime($endossoCompleto['endo_tx_de']))  ?> - <?= date("d/m/Y", strtotime($endossoCompleto['endo_tx_ate'])) ?></td>
+				<td style="text-align: left;"><b>Emissão Doc.:</b> <?= date("d/m/Y H:i:s", strtotime($endossoCompleto['endo_tx_dataCadastro'])) . " (UTC-3)" ?> </td>
 			</tr>
 			
 			<tr class="employee-info">
-				<td style="text-align: left;"><b>Motorista:</b> <?= $dadosMotorista['enti_tx_nome'] ?></td>
-				<td style="text-align: left;"><b>Função:</b> <?= $dadosMotorista['enti_tx_ocupacao'] ?></td>
-				<td style="text-align: left;"><b>CPF:</b> <?= $dadosMotorista['enti_tx_cpf'] ?></td>
-				<td style="text-align: left;"><b>Turno:</b> D.SEM/H: <?= $dadosMotorista['enti_tx_jornadaSemanal'] ?> FDS/H: <?= $aMotorista['enti_tx_jornadaSabado'] ?> </td>
-				<td style="text-align: left;"><b>Matrícula:</b> <?= $dadosMotorista['enti_tx_matricula'] ?></td>
-				<td style="text-align: left;"><b>Admissão:</b> <?= data($dadosMotorista['enti_tx_admissao']) ?></td>
+        <td style="padding-left: 12px; text-align: left;"><b>Motorista:</b> <?= $aMotorista['enti_tx_nome'] ?></td>
+        <td style="text-align: left;"><b>Função:</b> <?= $aMotorista['enti_tx_ocupacao'] ?></td>
+				<td style="text-align: left;"><b>CPF:</b> <?= $aMotorista['enti_tx_cpf'] ?></td>
+				<td style="text-align: left;"><b>Turno:</b> D.SEM/H: <?= $aMotorista['enti_tx_jornadaSemanal'] ?> FDS/H: <?= $aMotorista['enti_tx_jornadaSabado'] ?> </td>
+				<td style="text-align: left;"><b>Matrícula:</b> <?= $aMotorista['enti_tx_matricula'] ?></td>
+				<td style="text-align: left;"><b>Admissão:</b> <?= data($aMotorista['enti_tx_admissao']) ?></td>
 			</tr>
 		</table>
 	</div>
@@ -98,7 +104,7 @@
 
 <table class="table-bottom">
 	<tr>
-		<td rowspan="2">
+		<td rowspan="2"  style="width: 200px;">
 			<table class="table-info">
 				<tr>
 					<td>Carga Horaria Prevista:</td>
@@ -140,6 +146,46 @@
 					</td>
 				</tr>
 			</table>
+			
+			<td rowspan="2" style="width: 174px;">
+			<table class="table-legenda">
+			    <tr>
+			         <th colspan="2" style="text-align: center;">
+			            <b>Legendas</b>
+			        </th>
+			    </tr>
+				<tr>
+					<td><center><b>I</b></center></td>
+					<td>
+						<center>Incluída Manualmente</center>
+					</td>
+				</tr>
+				<tr>
+					<td><center><b>P</b></center></td>
+					<td>
+						<center>Pré-Assinalada</center>
+					</td>
+				</tr>
+				<tr>
+					<td><center><b>T</b></center></td>
+					<td>
+						<center>Outras fontes de marcação</center>
+					</td>
+				</tr>
+				<tr>
+					<td><center><b>DSR</b></center></td>
+					<td>
+						<center>Descanso Semanal Remunerado e Abono </center>
+					</td>
+				</tr>
+				<tr>
+					<td><center><b>*</b></center></td>
+					<td>
+						<center>Registros excluídos manualmente  </center>
+					</td>
+				</tr>
+			</table>
+			</td>
 		</td>
 
 			<td>
@@ -176,7 +222,7 @@
 						<p>___________________________________________________________</p>
 					</center>
 					<center>
-						<p><?= $dadosMotorista['enti_tx_nome'] ?></p>
+						<p><?= $aMotorista['enti_tx_nome'] ?></p>
 					</center>
 					<center>
 						<p>Motorista</p>
