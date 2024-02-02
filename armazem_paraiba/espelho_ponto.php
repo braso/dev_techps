@@ -70,11 +70,12 @@
 			$aDia = [];
 			for ($date = $startDate; $date <= $endDate; $date->modify('+1 day')) {
 				$dataVez = $date->format('Y-m-d');
+
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 				
 				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDetalhado));
 				for($f = 0; $f < sizeof($row)-1; $f++){
-          			if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
+          			if($f == 12){//Se for da coluna "Jornada Prevista", não apaga
 						continue;
 					}
 					if($row[$f] == "00:00"){
@@ -109,7 +110,8 @@
 							AND endo_tx_status = 'ativo'
 						ORDER BY endo_tx_ate DESC
 						LIMIT 1;"
-				)
+				),
+				MYSQLI_ASSOC
 			);
 			if(isset($saldoAnterior['endo_tx_saldo'])){
 				$saldoAnterior = $saldoAnterior['endo_tx_saldo'];

@@ -28,7 +28,6 @@
 			$valores = [$arquivo['name'], date("Y-m-d H:i:s"), $_SESSION['user_nb_id'], 'ativo'];
 			$idArquivo = inserir('arquivoponto', $campos, $valores)[0];
 
-
 			foreach (file($local_file) as $line) {
 				//matricula dmYhi 999 macroponto.codigoExterno
 				//Obs.: A matrícula deve ter 10 dígitos, então se tiver menos, adicione zeros à esquerda.

@@ -125,7 +125,7 @@
 			$camposObrigatorios[] = 'quandHoras';
 		}
 		foreach($camposObrigatorios as $campo){
-			if(!isset($_POST[$campo]) || empty($_POST[$campo])){
+			if(!isset($_POST[$campo]) || (empty($_POST[$campo]) && !in_array($_POST[$campo], ['0', 0]))){
 				echo '<script>alert("Preencha todos os campos obrigatórios.")</script>';
 				layout_parametro();
 				exit;
@@ -334,9 +334,9 @@
 		$c = [
 			campo('Código', 'busca_codigo', $_POST['busca_codigo']?? '', 2, 'MASCARA_NUMERO', 'maxlength="6"'),
 			campo('Nome', 'busca_nome', $_POST['busca_nome']?? '', 4, '', 'maxlength="65"'),
-			combo('Acordo', 'busca_acordo', $_POST['busca_acordo']?? '', 2, ['todos' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não']),
-			combo('Banco de Horas', 'busca_banco', $_POST['busca_banco']?? '', 2, ['todos' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não']),
-			combo('Vencidos', 'busca_vencidos', $_POST['busca_vencidos']?? '', 2, ['todos' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não'])
+      combo('Acordo', 'busca_acordo', $_POST['busca_acordo']?? '', 2, ['' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não']),
+			combo('Banco de Horas', 'busca_banco', $_POST['busca_banco']?? '', 2, ['' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não']),
+			combo('Vencidos', 'busca_vencidos', $_POST['busca_vencidos']?? '', 2, ['' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não'])
 		];
 
 		$botao = [

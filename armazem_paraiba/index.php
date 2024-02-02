@@ -20,7 +20,6 @@ if(!empty($_GET['user']) && !empty($_GET['password'])){
 		
 		if(mysqli_num_rows($sql)>0){
 		    
-
 			$a = mysqli_fetch_array($sql);
 			$dataHoje = strtotime(date("Y-m-d")); // Transforma a data de hoje em timestamp
 			$dataVerificarObj = strtotime($a['user_tx_expiracao']);
@@ -44,6 +43,7 @@ if(!empty($_GET['user']) && !empty($_GET['password'])){
 
 			if(!isset($_SESSION['horaEntrada'])){
 				$_SESSION['horaEntrada'] = date('H:i');
+				$_SESSION['user_tx_nome'] = $a['user_tx_nome'];
 			}
 
 			cabecalho("Bem-Vindo ao sistema TechPS, $a[user_tx_nome]. Período da $turno iniciado às ".$_SESSION['horaEntrada']);
@@ -65,8 +65,7 @@ if(!empty($_GET['user']) && !empty($_GET['password'])){
 	// $a_ponto=carrega_array($sql2);
 	// $horaEntrada=substr($a_ponto[pont_tx_entrada],-8);
 	// $turno = $a_ponto[pont_tx_turno];
-
-	cabecalho("Bem-Vindo ao sistema TechPS");
+	cabecalho("Bem-Vindo ao sistema TechPS, ".$_SESSION['user_tx_nome']." Período da $turno iniciado às ".$_SESSION['horaEntrada']);
 
 	rodape();
 

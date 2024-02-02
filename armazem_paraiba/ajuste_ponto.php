@@ -173,7 +173,6 @@
 			$a_mod['data'] = $_POST['data'];
 			$a_mod['id'] = $_POST['id'];
 		}
-		
 		cabecalho('Ajuste de Ponto');
 
 		if(empty($_POST['data_de']) && !empty($_POST['data'])){

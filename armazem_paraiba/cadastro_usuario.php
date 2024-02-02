@@ -38,6 +38,7 @@
 	}
 
 	function cadastra_usuario() {
+		global $a_mod;
 
 		if(isset($_POST['editPermission'])){
 			$_POST['editPermission'] = (intval($_POST['editPermission']) == 1);
@@ -47,7 +48,7 @@
 
 		$error_msg_base = "ERRO: Insira os campos ";
 		$error_msg = $error_msg_base;
-		if (!empty($_POST['id'])) {
+    if (!empty($_POST['id']) && $_POST['editPermission'] == true) {
 			$check_fields = [
 				//['nome', 'msg_erro']
 				['nome', 'Nome, '],
@@ -266,7 +267,7 @@
 			$campo_expiracao
 		];
 
-		if( is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) || $_GET['id'] && is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) || is_int(strpos($_SESSION['user_tx_nivel'], "Funcionário"))){
+		if( is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) || !empty($_GET['id']) && is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) || is_int(strpos($_SESSION['user_tx_nivel'], "Funcionário"))){
 			$b = [
 				botao('Gravar', 'cadastra_usuario', 'id,editPermission', ($_POST['id']?? '').','.strval($editPermission),'','','btn btn-success'),
 				botao('Voltar', 'index')

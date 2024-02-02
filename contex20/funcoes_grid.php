@@ -67,7 +67,6 @@
 		echo '
 			<script type="text/javascript">
 				function contex_icone(id,acao,campos=\'\',valores=\'\',target=\'\',msg=\'\',action=\'\',data_de=\'\',data_ate=\'\',just=\'\'){
-					console.log(campos);
 					if(msg){
 						if(confirm(msg)){
 							var form = document.getElementById("contex_icone_form"); 

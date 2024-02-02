@@ -189,119 +189,6 @@
 		}else{
 			return mysqli_fetch_array(query($query));
 		}
-
-		$valores= "'".implode("','",$valores)."'";
-		$campos=implode(',',$campos);
-
-		try{
-			query("INSERT INTO $tabela ($campos) VALUES($valores);");
-			$sql = query("SELECT LAST_INSERT_ID();");
-			set_status("Registro inserido com sucesso!");
-		}catch (Exception $e){
-			set_status("Falha ao registrar.");
-			return [];
-		}
-
-		$a = carrega_array($sql);
-		if(is_array(($a))){
-			return $a;
-		}else{
-			return [];
-		}
-	}
-
-	function atualizar(string $tabela, array $campos, array $valores, string $id): void{
-		updateById($tabela, $campos, $valores, $id);
-	}
-	function updateById(string $tabela, array $campos, array $valores, string $id): void{
-		if(count($campos) != count($valores)){
-			echo "ERRO: Número de campos não confere com número de linhas na função de atualizar!";
-			exit;
-		}
-
-		if(count($campos) == 0){
-			echo "ERRO: Campos para atualização não informados.";
-			exit;
-		}
-
-		$tab = substr($tabela,0,4);
-		$inserir = '';
-		for($i=0;$i<count($campos);$i++){
-			$inserir .= ", $campos[$i] = '$valores[$i]'";
-		}
-		if(strlen($inserir) > 2){
-			$inserir = substr($inserir, 2);
-		}
-
-		try{
-			query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id=$id") or die();
-			set_status("Registro atualizado com sucesso!");
-		}catch(Exception $e){
-			set_status("Falha ao atualizar.");
-		}
-	}
-
-	function remover(string $tabela, string $id){
-		inactivateById($tabela,$id);
-	}
-	function inactivateById(string $tabela, string $id){
-		$tab=substr($tabela,0,4);
-		query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '$id' LIMIT 1");
-	}
-
-	function remover_ponto($tabela,$id,$just){
-		$tab=substr($tabela,0,4);
-		$campos = [$tab."_tx_status", $tab."_tx_justificativa"];
-		$valores = ['inativo', $just];
-
-		updateById($tabela, $campos, $valores, $id);
-	}
-
-	function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
-		return campo($nome,$variavel,$modificador,$tamanho,"MASCARA_DOMAIN",$extra);
-	}
-
-	function num_linhas($sql){
-		return mysqli_num_rows($sql);
-	}
-
-	function carrega_array($sql, $mode = MYSQLI_BOTH){
-		return mysqli_fetch_array($sql, $mode);
-	}
-
-	function ultimo_reg($tabela){
-		$campo = substr($tabela,0,4)."_nb_id";
-
-		$sql=query("SELECT $campo FROM $tabela ORDER BY $campo DESC LIMIT 1");
-		return carrega_array($sql)[0];
-	}
-
-	function carregar($tabela,$id='',$campo='',$valor='',$extra='',$exibe=0){
-		$campoId = substr($tabela,0,4)."_nb_id";
-		$ext = '';
-
-		$extra_id = (!empty($id))? " AND ".$campoId." = $id": '';
-
-		if(!empty($campo[0])) {
-			$a_campo = explode(',', $campo);
-			$a_valor = explode(',', $valor);
-
-			for ($i = 0; $i < count($a_campo); $i++) {
-				$ext .= " AND " . str_replace(',', '', $a_campo[$i]) . " = '" . str_replace(',', '', $a_valor[$i]) . "' ";
-			}
-		}
-
-		$query = "SELECT * FROM $tabela WHERE 1 $extra_id $ext $extra LIMIT 1";
-
-		if($exibe == 1){
-			echo $query;
-		}
-		
-		if(empty($extra_id) && empty($ext) && empty($extra)){
-			return [];
-		}else{
-			return mysqli_fetch_array(query($query));
-		}
 	}
 
 	function valor($valor,$mostrar=0){
@@ -369,8 +256,8 @@
 		if(empty($msg)){
 			global $msg;
 		}
-		if(is_int(strrpos($msg, 'ERRO:'))){
-			$msg = '<b style="color: red">'.$msg.'</b>';
+		if(is_int(strrpos($msg, 'ERRO'))){
+			$msg = substr($msg, 0, strpos($msg, 'ERRO')).'<b style="color: red">'.substr($msg, strpos($msg, 'ERRO')).'</b><br>';
 		}
 		$_POST['msg_status'] = $msg;
 	}
@@ -455,28 +342,28 @@
 				$type = "month";
 			break;
 			case "MASCARA_VALOR":
-				$data_input .= "$('[name=\"$variavel\"]').maskMoney({ allowNegative: true, thousands:'.', decimal:',', affixesStay: false});";
+				$data_input .= "$('[name=\"$variavel\"]').maskMoney({prefix: 'R$', allowNegative: true, thousands:'.', decimal:',', affixesStay: false});";
 			break;
 			case "MASCARA_FONE":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['(99) 9999-9999', '(99) 99999-9999'], placeholder: \" \" });";
+				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['(99) 9999-9999', '(99) 99999-9999'], placeholder: \"\" });";
 			break;
 			case "MASCARA_NUMERO":
 				$data_input .= "$('[name=\"$variavel\"]').inputmask(\"numeric\", {rightAlign: false});";
 			break;
 			case "MASCARA_CEL":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['(99) 9999-9999', '(99) 99999-9999'], placeholder: \" \" });";
+				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['(99) 9999-9999', '(99) 99999-9999'], placeholder: \"\" });";
 			break;
 			case "MASCARA_CEP":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask('99999-999', { clearIncomplete: true, placeholder: \" \" });";
+				$data_input .= "$('[name=\"$variavel\"]').inputmask('99999-999', { clearIncomplete: true, placeholder: \"\" });";
 			break;
 			case "MASCARA_CPF":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: '999.999.999-99', clearIncomplete: true, placeholder: \" \" });";
+				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99'], placeholder: \"\" });";
 			break;
 			case "MASCARA_RG":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999'], clearIncomplete: true, placeholder: \" \" });";
+				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999'], placeholder: \"\" });";
 			break;
 			case "MASCARA_CNPJ":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask('99.999.999/9999-99', { clearIncomplete: true, placeholder: \" \" });";
+				$data_input .= "$('[name=\"$variavel\"]').inputmask('99.999.999/9999-99', {placeholder: \"\" });";
 			break;
 			case "MASCARA_DINHERO":
 				$data_input .= 
@@ -860,8 +747,7 @@
 					<input name="'.$variavel.'" value="'.$CONTEX['path']."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
 				</div>';
 
-			return $campo;
-
+		return $campo;
 	}
 
 	function enviar($arquivo,$diretorio,$nome='') {
@@ -1002,6 +888,8 @@
 	}
 
 	function icone_excluir_ajuste($id, $acao, $campos='', $data_de='', $data_ate='', $valores='', $target='', $icone='', $msg='Deseja excluir o registro?', $action='', $title=''){
+		// 		return icone_excluir($id, $acao, $campos, $valores, $target, $icone, $msg, $action, $title);
+		global $CONTEX;
 		if($icone==''){
 			$icone = 'glyphicon glyphicon-remove';
 		}
@@ -1012,39 +900,37 @@
 		$icone='class="'.$icone.'"';
 
 		$modal = "
-    	<div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
-        <div class='modal-dialog' role='document'>
-            <div class='modal-content'>
-                <div class='modal-header'>
-                <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>
-                <h4 class='modal-title' id='myModalLabel'>Justifica Exclusão de Registro</h4>
-                </div>
-                <div class='modal-body'>
-                    <div class='form-group'>
-                        <b><label for='justificar' class='control-label' style='font-size: 15px;'>Justificar:</label></b>
-                        <textarea class='form-control' id='justificar'></textarea>
-                    </div>
-                </div>
-                <div class='modal-footer'>
-                    <button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
-                    <button type='button' class='btn btn-primary' data-dismiss='modal' 
-					onclick='javascript:contex_icone(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\",\"$action\",\"$data_de\", \"$data_ate\", document.getElementById(\"justificar\").value);'>Gravar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    ";
+			<script>
+			function solicitarDados(id,acao,data_de,data_ate,campos,valores) {
+				// Solicitar ao usuário que insira os dados
+				var just = prompt('Insira a Justificativa:');
+				if(just !== null && just !== ''){
+					console.log('id ', id);
+					
+					var form = document.getElementById('contex_icone_form');
+					form.id.value=id;
+					form.acao.value=acao;
+					form.data_de.value=data_de;
+					form.data_ate.value=data_ate;
+					form.just.value=just;
+					if(campos){
+						form.hidden.value=valores;
+						form.hidden.name=campos;
+					}
+					campos = campos.split(',');
+					valores = valores.split(',');
+					for(f = 0; f < campos.length; f++){
+						form.append('<input type=\'hidden\' name=\'campos[f]\' value=\'valores[f]\' />');
+					}
+					form.submit();
+					
+				}
+			}
+			</script>
+		";
 		// onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\",\"$data_de\",\"$data_ate\");
-		return "<center><a title=\"$title\" style='color:gray' data-toggle='modal' data-target='#myModal' ><spam $icone></spam></a></center>".$modal;
+		return "<center><a title=\"$title\" style='color:gray' data-toggle='modal' data-target='#myModal'onclick='solicitarDados(\"$id\",\"$acao\",\"$data_de\",\"$data_ate\",\"$campos\",\"$valores\")' ><spam $icone></spam></a></center>".$modal;
 	}
-
-
-
-
-
-
-
-
 	/*
 		function data_extenso($data){
 			setlocale(LC_TIME, 'portuguese');

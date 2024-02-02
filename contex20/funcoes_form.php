@@ -5,11 +5,11 @@
 	function cabecalho($nome_pagina,$foco=0,$relatorio=0){
 		global $CONTEX,$conn;
 
-		// if(!$_SESSION['user_nb_id']){
+		if(!$_SESSION['user_nb_id']){
 
-		// 	echo "<meta http-equiv='refresh' content='0; url=".$CONTEX['path']."/index.php' />";
-		// 	exit;
-		// }
+			echo "<meta http-equiv='refresh' content='0; url=".$CONTEX['path']."/index.php' />";
+			exit;
+		}
 
 		global $CONTEX;
 		?>
