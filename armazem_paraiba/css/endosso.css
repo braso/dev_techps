@@ -1,11 +1,29 @@
-@page {
-    size: A4 landscape;
+@media print {
+    body {
+        width: 297mm;
+        margin: 1cm;
+        margin-left: 20cm;
+    }
+    @page {
+        size: A4 landscape;
+        margin: 0mm;
+    }
+    td.impressao {
+        position: static; 
+        text-align: center;
+        left:58.8rem !important;
+    }
+    .table th, .table td {
+        padding-top: 0px !important;
+        padding-right: 11.2px !important;
+        padding-bottom: 0px !important;
+        padding-left: 11.2px !important;
+        text-align: center !important;
+        border: 0.01px solid black !important;
+        page-break-inside: avoid !important;
+        
+    }
 }
-
-* {
-    border: none;
-}
-
 
 /* table thead tr th:nth-child(3),
 table thead tr th:nth-child(7),
@@ -48,7 +66,7 @@ body {
 }
 
 .right-logo img {
-    max-height: 50px;
+    max-height: 20px;
     margin-right: 10px;
 }
 
@@ -68,9 +86,9 @@ body {
 .table th,
 .table td {
     padding-top: 0px;
-    padding-right: 3px;
+    padding-right: 13px;
     padding-bottom: 0px;
-    padding-left: 3px;
+    padding-left: 13px;
     text-align: center;
     border: 0.01px solid black;
     page-break-inside: avoid;
@@ -114,6 +132,7 @@ body {
     border-collapse: collapse;
     margin-top: 5px;
     page-break-inside: avoid;
+    /* width: 280px; */
 }
 
 .table-info2 {
@@ -126,8 +145,19 @@ body {
 .table-info2 td {
     border: 0.01px solid black;
     border-collapse: collapse;
+    page-break-inside: avoid;
+    /* width: 280px; */
+    margin-top: 5px;
+}
+
+.table-legenda,
+.table-legenda tr,
+.table-legenda td {
+    border: 0.01px solid black;
+    border-collapse: collapse;
     margin-top: 5px;
     page-break-inside: avoid;
+    margin-bottom: 5px;
 }
 
 .table-resumo {

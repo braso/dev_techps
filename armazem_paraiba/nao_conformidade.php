@@ -17,8 +17,8 @@
 
 		if(!empty($_GET['acao']) && $_GET['acao'] == 'index'){//Se estiver pesquisando
 			//Conferir se os campos foram inseridos.
-			if(empty($_GET['busca_data']) || empty($_GET['busca_motorista'])){
-				echo '<script>alert("Insira data e motorista para pesquisar.");</script>';
+			if(empty($_GET['busca_data'])){
+				echo '<script>alert("Insira data para pesquisar.");</script>';
 			}
 		}
 
@@ -91,7 +91,7 @@
 				'verificados' => 0,							//countVerificados
 				'endossados' => ['sim' => 0, 'nao' => 0],	//countEndossados e $countNaoEndossados
 			];
-			if(!empty($_POST['busca_data']) && !empty($_POST['busca_empresa']) && !empty($_POST['busca_motorista'])){
+			if(!empty($_POST['busca_data']) && !empty($_POST['busca_empresa'])){
 
 				$date = new DateTime($_POST['busca_data']);
 

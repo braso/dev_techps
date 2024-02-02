@@ -157,7 +157,11 @@ License: You must have a valid license purchased only from themeforest(the above
 
 	<!-- FIM THEME LAYOUT STYLES -->
 
-	<link rel="shortcut icon" href="favicon.ico" />
+	<link rel="apple-touch-icon" sizes="180x180" href="/contex20/img/favicon/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/contex20/img/favicon/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/contex20/img/favicon/favicon-16x16.png">
+	<link rel="shortcut icon" type="image/x-icon" href="/contex20/img/favicon/favicon-32x32.png?v=2">
+	<link rel="manifest" href="/contex20/img/favicon/site.webmanifest">
 </head>
 
 <!-- FIM HEAD -->
