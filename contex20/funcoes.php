@@ -189,6 +189,119 @@
 		}else{
 			return mysqli_fetch_array(query($query));
 		}
+
+		$valores= "'".implode("','",$valores)."'";
+		$campos=implode(',',$campos);
+
+		try{
+			query("INSERT INTO $tabela ($campos) VALUES($valores);");
+			$sql = query("SELECT LAST_INSERT_ID();");
+			set_status("Registro inserido com sucesso!");
+		}catch (Exception $e){
+			set_status("Falha ao registrar.");
+			return [];
+		}
+
+		$a = carrega_array($sql);
+		if(is_array(($a))){
+			return $a;
+		}else{
+			return [];
+		}
+	}
+
+	function atualizar(string $tabela, array $campos, array $valores, string $id): void{
+		updateById($tabela, $campos, $valores, $id);
+	}
+	function updateById(string $tabela, array $campos, array $valores, string $id): void{
+		if(count($campos) != count($valores)){
+			echo "ERRO: Número de campos não confere com número de linhas na função de atualizar!";
+			exit;
+		}
+
+		if(count($campos) == 0){
+			echo "ERRO: Campos para atualização não informados.";
+			exit;
+		}
+
+		$tab = substr($tabela,0,4);
+		$inserir = '';
+		for($i=0;$i<count($campos);$i++){
+			$inserir .= ", $campos[$i] = '$valores[$i]'";
+		}
+		if(strlen($inserir) > 2){
+			$inserir = substr($inserir, 2);
+		}
+
+		try{
+			query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id=$id") or die();
+			set_status("Registro atualizado com sucesso!");
+		}catch(Exception $e){
+			set_status("Falha ao atualizar.");
+		}
+	}
+
+	function remover(string $tabela, string $id){
+		inactivateById($tabela,$id);
+	}
+	function inactivateById(string $tabela, string $id){
+		$tab=substr($tabela,0,4);
+		query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '$id' LIMIT 1");
+	}
+
+	function remover_ponto($tabela,$id,$just){
+		$tab=substr($tabela,0,4);
+		$campos = [$tab."_tx_status", $tab."_tx_justificativa"];
+		$valores = ['inativo', $just];
+
+		updateById($tabela, $campos, $valores, $id);
+	}
+
+	function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
+		return campo($nome,$variavel,$modificador,$tamanho,"MASCARA_DOMAIN",$extra);
+	}
+
+	function num_linhas($sql){
+		return mysqli_num_rows($sql);
+	}
+
+	function carrega_array($sql, $mode = MYSQLI_BOTH){
+		return mysqli_fetch_array($sql, $mode);
+	}
+
+	function ultimo_reg($tabela){
+		$campo = substr($tabela,0,4)."_nb_id";
+
+		$sql=query("SELECT $campo FROM $tabela ORDER BY $campo DESC LIMIT 1");
+		return carrega_array($sql)[0];
+	}
+
+	function carregar($tabela,$id='',$campo='',$valor='',$extra='',$exibe=0){
+		$campoId = substr($tabela,0,4)."_nb_id";
+		$ext = '';
+
+		$extra_id = (!empty($id))? " AND ".$campoId." = $id": '';
+
+		if(!empty($campo[0])) {
+			$a_campo = explode(',', $campo);
+			$a_valor = explode(',', $valor);
+
+			for ($i = 0; $i < count($a_campo); $i++) {
+				$ext .= " AND " . str_replace(',', '', $a_campo[$i]) . " = '" . str_replace(',', '', $a_valor[$i]) . "' ";
+			}
+		}
+
+		$query = "SELECT * FROM $tabela WHERE 1 $extra_id $ext $extra LIMIT 1";
+
+		if($exibe == 1){
+			echo $query;
+		}
+		
+		if(empty($extra_id) && empty($ext) && empty($extra)){
+			return [];
+		}else{
+			return mysqli_fetch_array(query($query));
+		}
 	}
 
 	function valor($valor,$mostrar=0){
@@ -286,11 +399,11 @@
 				</label>
 			</div>
 			<div id="'.$variavel.'" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
-					<label><b>Quandidade de Dias:</b></label>
+					<label><b>Quantidade de Dias:</b></label>
 					<input class="form-control input-sm" type="number" value="'.$modificadoCampo.'" id="outroCampo" name="quandDias" autocomplete="off">
 			</div>
 			<div id="limiteHoras" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
-				<label><b>Quandidade de Horas Limite:</b></label>
+				<label><b>Quantidade de Horas Limite:</b></label>
 				<input class="form-control input-sm" type="number" value="'.$modificadoCampo2.'" id="outroCampo" name="quandHoras" autocomplete="off">
 			</div>'
 		;
@@ -505,26 +618,24 @@
 		return $campo;
 	}
 
-	function combo($nome,$variavel,$modificador,$tamanho,$opcao,$extra=''){
-		$t_opcao=count($opcao);
-		$c_opcao = '';
-		for($i=0;$i<$t_opcao;$i++){
-			if($opcao[$i] != $modificador)
-				$selected='';
-			else
-				$selected="selected";
+	function combo($nome, $variavel, $modificador, $tamanho, array $opcoes, $extra = ''){
+		$res = '';
+		foreach($opcoes as $key => $value){
+			
+			//Correção da chave para os casos em que a variável $campos é um array comum, e não um dicionário. Retirar quando for necessário utilizar um dicionário com chaves numerais
+			$key = is_int($key)? $value: $key;
 
-			$c_opcao .= '<option value="'.$opcao[$i].'" '.$selected.'>'.$opcao[$i].'</option>';
+			$selected = ($key != $modificador)? '': 'selected';
+			$res .= '<option value="'.$key.'" '.$selected.'>'.$value.'</option>';
 		}
 
-
-		$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
-					<label><b>'.$nome.'</b></label>
-					<select name="'.$variavel.'" class="form-control input-sm" '.$extra.'>
-						'.$c_opcao.'
-					</select>
-				</div>';
-
+		$campo=
+			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
+				<label><b>'.$nome.'</b></label>
+				<select name="'.$variavel.'" class="form-control input-sm" '.$extra.'>
+					'.$res.'
+				</select>
+			</div>';
 
 		return $campo;
 
@@ -559,28 +670,28 @@
 				</div>';
 
 		?>
-<script type="text/javascript">
-$.fn.select2.defaults.set("theme", "bootstrap");
-$(window).bind("load", function() {
-    $('.<?=$variavel?>').select2({
-        language: 'pt-BR',
-        placeholder: 'Selecione um item',
-        allowClear: true,
-        ajax: {
-            url: '/contex20/select2.php?path=<?=$CONTEX['path']?>&tabela=<?=$tabela?>&extra_ordem=<?=$extra_ordem?>&extra_limite=<?=$extra_limite?>&extra_bd=<?=urlencode($extra_bd)?>&extra_busca=<?=urlencode($extra_busca)?>',
-            dataType: 'json',
-            delay: 250,
-            processResults: function(data) {
-                return {
-                    results: data
-                };
-            },
-            cache: true
-        }
-    });
-});
-</script>
-<?
+			<script type="text/javascript">
+				$.fn.select2.defaults.set("theme", "bootstrap");
+				$(window).bind("load", function() {
+					$('.<?=$variavel?>').select2({
+						language: 'pt-BR',
+						placeholder: 'Selecione um item',
+						allowClear: true,
+						ajax: {
+							url: '/contex20/select2.php?path=<?=$CONTEX['path']?>&tabela=<?=$tabela?>&extra_ordem=<?=$extra_ordem?>&extra_limite=<?=$extra_limite?>&extra_bd=<?=urlencode($extra_bd)?>&extra_busca=<?=urlencode($extra_busca)?>',
+							dataType: 'json',
+							delay: 250,
+							processResults: function (data) {
+							return {
+								results: data
+							};
+							},
+							cache: true
+						}
+					});
+				});
+			</script>
+		<?
 		return $campo;
 	}
 
@@ -800,25 +911,25 @@ $(window).bind("load", function() {
 
 		if($salvar == 1){
 			?>
-<script type="text/javascript">
-function criarGET() {
-    var form = document.forms[0];
-    var elements = form.elements;
-    var values = [];
-    var primeiraAcao = '';
+				<script type="text/javascript">
+				function criarGET() {
+					var form = document.forms[0];
+					var elements = form.elements;
+					var values = [];
+					var primeiraAcao = '';
 
-    for (var i = 0; i < elements.length; i++) {
-        if (elements[i].name == 'acao' && elements[i].value != 'index') {
-            continue;
-        }
+					for (var i = 0; i < elements.length; i++){
+						if(elements[i].name == 'acao' && elements[i].value  != 'index'){
+							continue;
+						}
 
-        values.push(encodeURIComponent(elements[i].name) + '=' + encodeURIComponent(elements[i].value));
+						values.push(encodeURIComponent(elements[i].name) + '=' + encodeURIComponent(elements[i].value));
 
-    }
-    form.action = '?' + values.join('&');
-}
-</script>
-<?
+					}
+					form.action = '?' + values.join('&');
+				}
+				</script>
+			<?
 			$funcaoOnClick = 'criarGET();';
 		}
 
@@ -885,48 +996,46 @@ function criarGET() {
 		
 	}
 
-	function icone_excluir_ajuste($id, $acao, $campos = '', $data_de = '', $data_ate = '', $valores = '', $target = '', $icone = '', $msg = 'Deseja excluir o registro?', $action = '', $title = '') {
-		// 		return icone_excluir($id, $acao, $campos, $valores, $target, $icone, $msg, $action, $title);
-		if ($icone == '') {
+	function modal_just($id,$acao,$campos='',$data_de='',$data_ate='',$valores='',$target='',$icone='',$msg='', $action='', $title=''){
+	    global $CONTEX;
+	    include "modal_justificativa.php";
+	}
+
+	function icone_excluir_ajuste($id, $acao, $campos='', $data_de='', $data_ate='', $valores='', $target='', $icone='', $msg='Deseja excluir o registro?', $action='', $title=''){
+		if($icone==''){
 			$icone = 'glyphicon glyphicon-remove';
 		}
-
-		if ($icone == 'glyphicon glyphicon-remove' && $title == '')
+		
+		if($icone == 'glyphicon glyphicon-remove' && $title == '')
 			$title = 'Excluir';
 
-		$icone = 'class="' . $icone . '"';
+		$icone='class="'.$icone.'"';
 
 		$modal = "
-					<script>
-					function solicitarDados(id,acao,data_de,data_ate,campos,valores) {
-						// Solicitar ao usuário que insira os dados
-						var just = prompt('Insira a Justificativa:');
-						if(just !== null && just !== ''){
-							console.log('id ', id);
-							
-							var form = document.getElementById('contex_icone_form');
-							form.id.value=id;
-							form.acao.value=acao;
-							form.data_de.value=data_de;
-							form.data_ate.value=data_ate;
-							form.just.value=just;
-							if(campos){
-								form.hidden.value=valores;
-								form.hidden.name=campos;
-							}
-							campos = campos.split(',');
-							valores = valores.split(',');
-							for(f = 0; f < campos.length; f++){
-								form.append('<input type=\'hidden\' name=\'campos[f]\' value=\'valores[f]\' />');
-							}
-							form.submit();
-							
-						}
-					}
-					</script>
-				";
+    	<div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
+        <div class='modal-dialog' role='document'>
+            <div class='modal-content'>
+                <div class='modal-header'>
+                <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>
+                <h4 class='modal-title' id='myModalLabel'>Justifica Exclusão de Registro</h4>
+                </div>
+                <div class='modal-body'>
+                    <div class='form-group'>
+                        <b><label for='justificar' class='control-label' style='font-size: 15px;'>Justificar:</label></b>
+                        <textarea class='form-control' id='justificar'></textarea>
+                    </div>
+                </div>
+                <div class='modal-footer'>
+                    <button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
+                    <button type='button' class='btn btn-primary' data-dismiss='modal' 
+					onclick='javascript:contex_icone(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\",\"$action\",\"$data_de\", \"$data_ate\", document.getElementById(\"justificar\").value);'>Gravar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    ";
 		// onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\",\"$data_de\",\"$data_ate\");
-		return "<center><a title=\"$title\" style='color:gray' data-toggle='modal' data-target='#myModal'onclick='solicitarDados(\"$id\",\"$acao\",\"$data_de\",\"$data_ate\",\"$campos\",\"$valores\")' ><spam $icone></spam></a></center>" . $modal;
+		return "<center><a title=\"$title\" style='color:gray' data-toggle='modal' data-target='#myModal' ><spam $icone></spam></a></center>".$modal;
 	}
 
 

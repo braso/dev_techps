@@ -116,7 +116,7 @@
 
 	function cadastra_parametro(){
 		$camposObrigatorios = ['nome', 'jornadaSemanal', 'jornadaSabado', 'tolerancia', 'percentualHE', 'percentualSabadoHE', 'HorasEXExcedente'];
-		if(!empty($_POST['acordo']) && $_POST['acordo'] == 'Sim'){
+		if(!empty($_POST['acordo']) && $_POST['acordo'] == 'sim'){
 			$camposObrigatorios[] = 'inicioAcordo';
 			$camposObrigatorios[] = 'fimAcordo';
 		}
@@ -132,48 +132,49 @@
 			}
 		}
 		
-		$parametro = [
-			'para_tx_nome' => $_POST['nome'], 
-			'para_tx_jornadaSemanal' => $_POST['jornadaSemanal'], 
-			'para_tx_jornadaSabado' => $_POST['jornadaSabado'], 
-			'para_tx_percentualHE' => $_POST['percentualHE'], 
-			'para_tx_percentualSabadoHE' => $_POST['percentualSabadoHE'], 
-			'para_tx_HorasEXExcedente' => $_POST['HorasEXExcedente'], 
-			'para_tx_tolerancia' => $_POST['tolerancia'], 
-			'para_tx_acordo' => $_POST['acordo'], 
-			'para_tx_inicioAcordo' => $_POST['inicioAcordo'], 
-			'para_tx_fimAcordo' => $_POST['fimAcordo'], 
-			'para_nb_userCadastro' => $_SESSION['user_nb_id'], 
-			'para_tx_dataCadastro' => date("Y-m-d"), 
-			'para_tx_diariasCafe' => $_POST['diariasCafe'], 
-			'para_tx_diariasAlmoco' => $_POST['diariasAlmoco'], 
-			'para_tx_diariasJanta' => $_POST['diariasJanta'], 
-			'para_tx_status' => 'ativo', 
-			'para_tx_banco' => $_POST['banco'], 
-			'para_tx_setData' => $_POST['setCampo'], 
-			'para_nb_qDias' => $_POST['quandDias'],
-			'para_tx_horasLimite' => $_POST['quandHoras'],
-			'para_tx_paramObs' => $_POST['paramObs'],
+		$novoParametro = [
+			'para_tx_nome' 					=> $_POST['nome'], 
+			'para_tx_jornadaSemanal' 		=> $_POST['jornadaSemanal'], 
+			'para_tx_jornadaSabado' 		=> $_POST['jornadaSabado'], 
+			'para_tx_percentualHE' 			=> $_POST['percentualHE'], 
+			'para_tx_percentualSabadoHE' 	=> $_POST['percentualSabadoHE'], 
+			'para_tx_HorasEXExcedente' 		=> $_POST['HorasEXExcedente'], 
+			'para_tx_tolerancia' 			=> $_POST['tolerancia'], 
+			'para_tx_acordo' 				=> $_POST['acordo'], 
+			'para_tx_inicioAcordo' 			=> $_POST['inicioAcordo'], 
+			'para_tx_fimAcordo' 			=> $_POST['fimAcordo'], 
+			'para_nb_userCadastro' 			=> intval($_SESSION['user_nb_id']),
+			'para_tx_dataCadastro' 			=> date("Y-m-d"), 
+			'para_tx_diariasCafe' 			=> $_POST['diariasCafe'], 
+			'para_tx_diariasAlmoco' 		=> $_POST['diariasAlmoco'], 
+			'para_tx_diariasJanta' 			=> $_POST['diariasJanta'], 
+			'para_tx_status' 				=> 'ativo', 
+			'para_tx_banco' 				=> $_POST['banco'], 
+			'para_tx_setData' 				=> $_POST['setCampo'], 
+			'para_nb_qDias' 				=> $_POST['quandDias'],
+			'para_tx_horasLimite' 			=> $_POST['quandHoras'],
+			'para_tx_paramObs' 				=> $_POST['paramObs'],
 		];
 
 		if(!empty($_POST['banco']) && $_POST['banco'] == 'nao'){
-			unset($parametro['para_nb_qDias']);
-			unset($parametro['para_tx_horasLimite']);
+			unset($novoParametro['para_nb_qDias']);
+			unset($novoParametro['para_tx_horasLimite']);
 		}
-		if(!empty($_POST['acordo']) && $_POST['acordo'] == 'Não'){
-			unset($parametro['para_tx_inicioAcordo']);
-			unset($parametro['para_tx_fimAcordo']);
+
+		if(!empty($_POST['acordo']) && $_POST['acordo'] == 'nao'){
+			unset($novoParametro['para_tx_inicioAcordo']);
+			unset($novoParametro['para_tx_fimAcordo']);
 		}
 		
 
-		$parametro['para_nb_userAtualiza'] = $_SESSION['user_nb_id'];
-		$parametro['para_tx_dataAtualiza'] = date("Y-m-d H:i:s");
+		$novoParametro['para_nb_userAtualiza'] = $_SESSION['user_nb_id'];
+		$novoParametro['para_tx_dataAtualiza'] = date("Y-m-d H:i:s");
 		
-		if($_POST['id']>0){
-			//CARREGA O PARAMETRO ANTES DE ATUALIZAR
+		if($_POST['id']>0){ //Se está editando
+
 			$aParametro = carregar('parametro', $_POST['id']);
 
-			atualizar('parametro',array_keys($parametro),array_values($parametro),$_POST['id']);
+			atualizar('parametro',array_keys($novoParametro),array_values($novoParametro),$_POST['id']);
 			
 			$sql = query("SELECT * FROM entidade WHERE enti_tx_status != 'inativo'
 				AND enti_nb_parametro = '".(int)$_POST['id']."'");
@@ -192,7 +193,7 @@
 				
 			}
 		} else {
-			inserir('parametro',array_keys($parametro),array_values($parametro));
+			inserir('parametro',array_keys($novoParametro),array_values($novoParametro));
 		}
 
 		index();
@@ -244,7 +245,7 @@
 			campo('Diária Café da Manhã(R$)', 'diariasCafe', $a_mod['para_tx_diariasCafe'], 3, 'MASCARA_DINHERO'),
 			campo('Diária Almoço(R$)', 'diariasAlmoco', $a_mod['para_tx_diariasAlmoco'], 3, 'MASCARA_DINHERO'),
 			campo('Diária Jantar(R$)', 'diariasJanta', $a_mod['para_tx_diariasJanta'], 3, 'MASCARA_DINHERO'),
-			combo('Acordo Sindical', 'acordo', $a_mod['para_tx_acordo'], 3, ['Sim', 'Não']),
+			combo('Acordo Sindical', 'acordo', $a_mod['para_tx_acordo'], 3, ['sim' => "Sim", 'nao' => "Não"]),
 			campo_data('Início do Acordo*', 'inicioAcordo', $a_mod['para_tx_inicioAcordo'], 3),
 			campo_data('Fim do Acordo*', 'fimAcordo', $a_mod['para_tx_fimAcordo'], 3),
 			checkbox_banco('Utiliza regime de banco de horas?','banco',$a_mod['para_tx_banco'],$a_mod['para_nb_qDias'], $a_mod['para_tx_horasLimite'],3),
@@ -333,9 +334,9 @@
 		$c = [
 			campo('Código', 'busca_codigo', $_POST['busca_codigo']?? '', 2, 'MASCARA_NUMERO', 'maxlength="6"'),
 			campo('Nome', 'busca_nome', $_POST['busca_nome']?? '', 4, '', 'maxlength="65"'),
-			combo('Acordo', 'busca_acordo', $_POST['busca_acordo']?? '', 2, array('Todos', 'Sim', 'Não')),
-			combo('Banco de Horas', 'busca_banco', $_POST['busca_banco']?? '', 2, array('Todos', 'Sim', 'Não')),
-			combo('Vencidos', 'busca_vencidos', $_POST['busca_vencidos']?? '', 2, array('Todos', 'Sim', 'Não'))
+			combo('Acordo', 'busca_acordo', $_POST['busca_acordo']?? '', 2, ['todos' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não']),
+			combo('Banco de Horas', 'busca_banco', $_POST['busca_banco']?? '', 2, ['todos' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não']),
+			combo('Vencidos', 'busca_vencidos', $_POST['busca_vencidos']?? '', 2, ['todos' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não'])
 		];
 
 		$botao = [
@@ -346,11 +347,11 @@
 		abre_form('Filtro de Busca');
 		linha_form($c);
 		fecha_form($botao);
-		if (isset($_POST['busca_vencidos']) && $_POST['busca_vencidos'] === 'Sim') {
+		if (isset($_POST['busca_vencidos']) && $_POST['busca_vencidos'] === 'sim') {
 			$sql = "SELECT *, DATEDIFF('".date('Y-m-d')."' ,para_tx_setData) AS diferenca_em_dias
 			FROM `parametro` WHERE DATEDIFF('".date('Y-m-d')."',para_tx_setData) < para_nb_qDias OR DATEDIFF('".date('Y-m-d')."',para_tx_setData) IS NULL $extra";
 		}
-		else if(isset($_POST['busca_vencidos']) && $_POST['busca_vencidos'] === 'Não'){
+		else if(isset($_POST['busca_vencidos']) && $_POST['busca_vencidos'] === 'nao'){
 			$sql = "SELECT *, DATEDIFF('".date('Y-m-d')."' ,para_tx_setData) AS diferenca_em_dias
 			FROM `parametro` WHERE DATEDIFF('".date('Y-m-d')."',para_tx_setData) > para_nb_qDias OR DATEDIFF('".date('Y-m-d')."',para_tx_setData) IS NULL $extra";
 		} else{
