@@ -110,6 +110,19 @@
 
 				$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAnterior'], $totalResumo['diffSaldo']], '+');
 
+        if($totalResumo['diffSaldo'] > "00:00"){
+					 //Tirar a parte do saldoPeriodo que corresponde ao HE100
+					if($totalResumo['diffSaldo'] > $totalResumo['he100']){
+						$transferir = $totalResumo['he100'];
+					}else{
+						$transferir = $totalResumo['diffSaldo'];
+					}
+
+					$totalResumo['diffSaldo'] = operarHorarios([$totalResumo['diffSaldo'], $transferir], '-');
+					$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '-');
+					$totalResumo['he100'] = $transferir;
+				}
+
 				//Limitar a quantidade de HE50 à quantidade informada em endo_tx_horasAPagar{
 					if(	!empty($endossoCompleto['endo_tx_pagarHoras']) && $endossoCompleto['endo_tx_pagarHoras'] == 'sim' && !empty($endossoCompleto['endo_tx_horasApagar'])){
 						if($totalResumo['diffSaldo'] > $endossoCompleto['endo_tx_horasApagar']){
@@ -166,7 +179,6 @@
 					for($f2 = 0; $f2 < count($bdMotivos); $f2++){
 						$motivos .= $bdMotivos[$f2]['moti_tx_nome'].'<br>';
 					}
-					
 					array_splice($aDia[$f], 18, 0, $motivos); // inserir a coluna de motivo, no momento da implementação, estava na coluna 19
 				}
 			//}

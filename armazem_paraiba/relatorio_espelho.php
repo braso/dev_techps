@@ -43,8 +43,8 @@
 			</tr>
 			
 			<tr class="employee-info">
-				<td style="padding-left: 12px; text-align: left;"><b>Motorista:</b> <?= $aMotorista['enti_tx_nome'] ?></td>
-				<td style="text-align: left;"><b>Função:</b> <?= $aMotorista['enti_tx_ocupacao'] ?></td>
+        <td style="padding-left: 12px; text-align: left;"><b>Motorista:</b> <?= $aMotorista['enti_tx_nome'] ?></td>
+        <td style="text-align: left;"><b>Função:</b> <?= $aMotorista['enti_tx_ocupacao'] ?></td>
 				<td style="text-align: left;"><b>CPF:</b> <?= $aMotorista['enti_tx_cpf'] ?></td>
 				<td style="text-align: left;"><b>Turno:</b> D.SEM/H: <?= $aMotorista['enti_tx_jornadaSemanal'] ?> FDS/H: <?= $aMotorista['enti_tx_jornadaSabado'] ?> </td>
 				<td style="text-align: left;"><b>Matrícula:</b> <?= $aMotorista['enti_tx_matricula'] ?></td>
