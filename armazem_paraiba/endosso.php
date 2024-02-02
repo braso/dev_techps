@@ -304,7 +304,7 @@
 						ORDER BY enti_tx_nome"
 				);
 
-				$motNaoEndossados = 'MOTORISTAS NÃO ENDOSSADOS: <br><br>';
+				$motNaoEndossados = 'MOTORISTA(S) NÃO ENDOSSADO(S): <br><br>';
 
 				while ($aMotorista = carrega_array($sqlMotorista, MYSQLI_ASSOC)){
 					$counts['total']++;
@@ -468,14 +468,6 @@
 
 					unset($aDia);
 				}
-			}
-			if($counts['endossados']['sim'] == 0 && !empty($_POST['acao']) && $_POST['busca_endossado'] != 'naoEndossado'){
-				echo 
-					'<script>
-						alert("Período ainda não endossado.");
-						document.getElementById("botaoContexCadastrar ImprimirRelatorio").disabled = true;
-					</script>'
-				;
 			}
 
 			if($counts['endossados']['nao'] > 0){
