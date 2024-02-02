@@ -322,7 +322,7 @@
 				MYSQLI_ASSOC
 			);
 			if(count($endossado) > 0){
-				$retorno = '<a title="Ajuste de Ponto (endossado)" onclick="avisar_ponto_endossado()"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
+				$retorno = '<a title="Ajuste de Ponto (endossado)" onclick="avisar_ponto_endossado()"><i style="color:'.$cor.';" class="fa fa-circle">(E)</i></a>';
 			}else{
 				$retorno = '<a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto('.$idMotorista.',\''.$data.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
 			}
@@ -395,6 +395,9 @@
 
 		foreach ($horarios_com_origem as $item) {
 			if ($item["origem"] == "inicio") {
+				if($inicio_atual !== null){
+					$pares[] = ["inicio" => date("H:i", strtotime($inicio_atual)), "fim" => ''];
+				}
 				$inicio_atual = $item["horario"];
 			} elseif ($item["origem"] == "fim" && $inicio_atual != null) {
 				$hInicio = new DateTime($inicio_atual);
@@ -455,6 +458,9 @@
 				// Se encontrarmos um fim sem um início correspondente, armazenamos o horário sem par
 				$sem_fim[] = $item["horario"];
 			}
+		}
+		if($item["origem"] == 'inicio'){
+			$pares[] = ["inicio" => date("H:i", strtotime($item['horario'])), "fim" => ''];
 		}
 
 		$tooltip = '';
@@ -769,10 +775,9 @@
 						$registros['refeicaoCompleto']['totalIntervalo'],
 						$registros['esperaCompleto']['totalIntervalo'],
 						$registros['descansoCompleto']['totalIntervalo'],
-						$registros['repousoCompleto']['totalIntervalo'],
-						'-'.$registros['repousoPorEspera']['repousoCompleto']['totalIntervalo']
+						$registros['repousoCompleto']['totalIntervalo']
 				])
-				);
+			);
 
 			$jornadaEfetiva = $jornadaIntervalo->diff($totalNaoJornada); //$diffJornadaEfetiva
 			$jornadaEfetiva = DateTime::createFromFormat('H:i', $jornadaEfetiva->format("%H:%I"));
@@ -787,7 +792,7 @@
 						WHERE pont_tx_status != 'inativo'
 							AND pont_tx_tipo = 2
 							AND pont_tx_matricula = '$matricula'
-							AND pont_tx_data < '$data'
+							AND pont_tx_data < '".$registros['inicioJornada'][0]."'
 						ORDER BY pont_tx_data DESC
 						LIMIT 1"
 				))[0];
@@ -847,8 +852,6 @@
 				$saldoDiario = operarHorarios([$saldoDiario, $transferir], '+');
 				$aRetorno['diffSaldo'] = $saldoDiario;
 				$intervaloEsp = operarHorarios([$intervaloEsp, $transferir], '-');
-			}else{
-				$intervaloEsp = $registros['repousoPorEspera']['repousoCompleto']['totalIntervalo'];
 			}
 
 			if($indenizarEspera){
@@ -915,6 +918,7 @@
 				}
 			}
 		//}
+		
 
 		//MÁXIMA DIREÇÃO CONTÍNUA{
 			$aRetorno['maximoDirecaoContinua'] = verificaTempoMdc(
@@ -1118,12 +1122,11 @@
 			foreach($campos as $campo){
 				if(empty($totalResumo[$campo])){
 					$totalResumo[$campo] = '00:00';
-				}else{
-					$totalResumo[$campo] = operarHorarios(
-						[$totalResumo[$campo], strip_tags(str_replace("&nbsp;", "", $aRetorno[$campo]))], 
-						'+'
-					);
 				}
+				$totalResumo[$campo] = operarHorarios(
+					[$totalResumo[$campo], strip_tags(str_replace("&nbsp;", "", $aRetorno[$campo]))], 
+					'+'
+				);
 			}
 			unset($campos);
 		//}
