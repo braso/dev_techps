@@ -181,9 +181,6 @@
 		if(empty($_POST['data_ate']) && !empty($_POST['data'])){
 			$_POST['data_ate'] = $_POST['data'];
 		}
-		var_dump($_POST['data_de']);
-		print_r('<br>');
-		var_dump($_POST['data_ate']);
 
 		$aMotorista = carregar('entidade',$_POST['id']);
 

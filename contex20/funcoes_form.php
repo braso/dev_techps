@@ -159,8 +159,6 @@
 						<div class="page-content-wrapper">
 							<!-- INICIO CONTENT BODY -->
 							<!-- INICIO PAGE HEAD-->
-							<?php if(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))) { 
-								?>
 							<div class="page-head">
 								<div class="container-fluid">
 									<!-- INICIO PAGE TITLE -->
@@ -170,9 +168,6 @@
 									<!-- FIM PAGE TITLE -->
 								</div>
 							</div>
-							<?php 
-							}
-							?>
 							<!-- FIM PAGE HEAD-->
 
 							<!-- INICIO PAGE CONTENT BODY -->

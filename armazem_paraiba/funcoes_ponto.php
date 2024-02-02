@@ -45,6 +45,7 @@
 
 		$_POST['busca_motorista'] = $_POST['motorista'];
 
+		
 		$aData = explode(" - ", $_POST['daterange']);
 		$aData[0] = explode('/', $aData[0]);
 		$aData[0] = $aData[0][2].'-'.$aData[0][1].'-'.$aData[0][0];
@@ -63,9 +64,10 @@
 						LIMIT 1"
 				),
 				MYSQLI_ASSOC
-			)[0];
+			);
 
 			if(!empty($endosso)){
+				$endosso = $endosso[0];
 				$endosso['endo_tx_de'] = explode('-', $endosso['endo_tx_de']);
 				$endosso['endo_tx_de'] = $endosso['endo_tx_de'][2].'/'.$endosso['endo_tx_de'][1].'/'.$endosso['endo_tx_de'][0];
 
@@ -76,13 +78,10 @@
 				layout_abono();
 				exit;
 			}
-			exit;
 		//}
 
-		var_dump($aData); echo '<br><br>';
-
-		$begin = new DateTime(data($aData[0]));
-		$end = new DateTime(data($aData[1]));
+		$begin = new DateTime($aData[0]);
+		$end = new DateTime($aData[1]);
 
 		$a=carregar('entidade',$_POST['motorista']);
 		
@@ -101,7 +100,7 @@
 			$campos = ['abon_tx_data', 'abon_tx_matricula', 'abon_tx_abono', 'abon_nb_motivo', 'abon_tx_descricao', 'abon_nb_userCadastro', 'abon_tx_dataCadastro', 'abon_tx_status'];
 			$valores = [$i->format("Y-m-d"), $a['enti_tx_matricula'], $abono, $_POST['motivo'], $_POST['descricao'], $_SESSION['user_nb_id'], date("Y-m-d H:i:s"), 'ativo'];
 
-			// inserir('abono', $campos, $valores);
+			inserir('abono', $campos, $valores);
 		}
 
 		$_POST['busca_motorista'] = $_POST['motorista'];
@@ -114,7 +113,7 @@
 
 		cabecalho('Cadastro Abono');
 
-		$c[] = combo_net('Motorista*:','motorista',$_POST['busca_motorista'],4,'entidade','',' AND enti_tx_tipo = "Motorista"','enti_tx_matricula');
+		$c[] = combo_net('Motorista*:','motorista',$_POST['busca_motorista']?? '',4,'entidade','',' AND enti_tx_tipo = "Motorista"','enti_tx_matricula');
 		$c[] = campo('Data(s)*:','daterange', ($_POST['daterange']?? ''),3);
 		$c[] = campo_hora('Abono*: (hh:mm)','abono', ($_POST['abono']?? ''),3);
 		$c2[] = combo_bd('Motivo*:','motivo', ($_POST['motivo']?? ''),4,'motivo','',' AND moti_tx_tipo = "Abono"');
@@ -430,10 +429,13 @@
 		$pares = [];
 		$paresParaRepouso = [];
 
+		$temErroJornada = False;
+
 		foreach ($horarios_com_origem as $item) {
 			if ($item["origem"] == "inicio") {
 				if($inicio_atual !== null){
 					$pares[] = ["inicio" => date("H:i", strtotime($inicio_atual)), "fim" => ''];
+					$temErroJornada = True;
 				}
 				$inicio_atual = $item["horario"];
 			} elseif ($item["origem"] == "fim" && $inicio_atual != null) {
@@ -507,7 +509,7 @@
 		}
 		if((count($inicio) == 0 && count($fim) == 0) || $tooltip == ''){
 			$iconeAlerta = '';
-		}elseif(count($inicio) != count($fim) || count($horarios_com_origem)/2 != (count($pares))){ 
+		}elseif(count($inicio) != count($fim) || count($horarios_com_origem)/2 != (count($pares)) || $temErroJornada){ 
 			$iconeAlerta = "<a><i style='color:red;' title='$tooltip' class='fa fa-info-circle'></i></a>";
 		}elseif($ehEsperaRepouso){
 			$iconeAlerta = "<a><i style='color:#99ff99;' title='$tooltip' class='fa fa-info-circle'></i></a>";

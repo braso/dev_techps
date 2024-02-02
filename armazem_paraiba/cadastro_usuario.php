@@ -3,6 +3,7 @@
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
+
 	include "conecta.php";
 
 	function combo_empresa($nome,$variavel,$modificador,$tamanho,$opcao, $opcao2,$extra=''){
@@ -77,7 +78,6 @@
 			$error_msg .= "Confirmação de senha correta, ";
 		}
 		if($error_msg != $error_msg_base){
-			var_dump($_POST); echo '<br><br>';
 			set_status(substr($error_msg, 0, strlen($error_msg)-2).".");
 			modifica_usuario();
 			exit;
@@ -144,8 +144,12 @@
 					atualizar('user', ['user_tx_senha'], [md5($_POST['senha'])], $_POST['id']);
 				}
 			}else{
-			    $sqlCheckNivel = query("SELECT user_tx_nivel FROM user WHERE user_nb_id = '$_POST[id]'")->fetch_assoc();
-				if ($sqlCheckNivel['user_tx_nivel'] == 'Motorista') {
+				if(!empty($_POST['id'])){
+					$sqlCheckNivel = query("SELECT user_tx_nivel FROM user WHERE user_nb_id = '".$_POST['id']."'")->fetch_assoc();
+				}else{
+					$sqlCheckNivel = null;
+				}
+				if (isset($sqlCheckNivel['user_tx_nivel']) && $sqlCheckNivel['user_tx_nivel'] == 'Motorista') {
 					if (!empty($_POST['senha']) && !empty($_POST['senha2'])) {
 						$nova_senha = ['user_tx_senha' => md5($_POST['senha'])];
 					}
@@ -222,8 +226,8 @@
 			$campo_cpf = texto('CPF', $a_mod['user_tx_cpf'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
 			$campo_rg = texto('RG', $a_mod['user_tx_rg'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
 			
-			if(isset($a_mod['user_nb_cidade'])){
-				$cidade_query = query("SELECT * FROM `cidade` WHERE cida_tx_status = 'ativo' AND cida_nb_id = $a_mod[user_nb_cidade]");
+			if(!empty($a_mod['user_nb_cidade'])){
+				$cidade_query = query("SELECT * FROM `cidade` WHERE cida_tx_status = 'ativo' AND cida_nb_id = ".$a_mod['user_nb_cidade']."");
 				$cidade = mysqli_fetch_array($cidade_query);
 			}else{
 				$cidade = ['cida_tx_nome' => ''];
@@ -233,7 +237,7 @@
 			$campo_email = texto('E-mail*', $a_mod['user_tx_email'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
 			$campo_telefone = texto('Telefone', $a_mod['user_tx_fone'], 2, "style='margin-bottom:-10px; margin-top: 10px;'");
 			
-			$empresa_query = query("SELECT * FROM `empresa` WHERE empr_tx_status = 'ativo' AND empr_nb_id = $a_mod[user_nb_empresa]");
+			$empresa_query = query("SELECT * FROM `empresa` WHERE empr_tx_status = 'ativo' AND empr_nb_id = ".$a_mod['user_nb_empresa']."");
 			$empresa = mysqli_fetch_array($empresa_query);
 			
 			$campo_empresa = texto('Empresa*', $empresa['empr_tx_nome'], 3, "style='margin-bottom:-10px; margin-top: 10px;'");

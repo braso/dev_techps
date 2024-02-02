@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -177,8 +177,9 @@
 								LIMIT 1;"
 						),
 						MYSQLI_ASSOC
-					)[0];
-					if(count($ultimoEndosso) > 0 && !$primEndosso){ //Se possui um último Endosso
+					);
+					if(is_array($ultimoEndosso) && count($ultimoEndosso) > 0 && !$primEndosso){ //Se possui um último Endosso
+						$ultimoEndosso = $ultimoEndosso[0];
 						$ultimoEndosso['endo_tx_ate'] = DateTime::createFromFormat('Y-m-d', $ultimoEndosso['endo_tx_ate']);
 						$dataDe = DateTime::createFromFormat('Y-m-d', $_POST['data_de']);
 						$qtdDias = date_diff($ultimoEndosso['endo_tx_ate'], $dataDe);

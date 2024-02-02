@@ -67,15 +67,17 @@
 				$nome_sql = 'SELECT empr_tx_nome FROM `empresa` WHERE empr_tx_Ehmatriz = "sim" LIMIT 1';
 				$query_empresa=mysqli_query($conn, $nome_sql ) or die(mysqli_error($conn));
 				$nome_empresa = mysqli_fetch_all($query_empresa, MYSQLI_ASSOC);
-				$novoNome =  $nome_empresa[0]['empr_tx_nome'].'  <i class="fa fa-star" aria-hidden="true"></i>';
-				if (in_array($nome_empresa[0]['empr_tx_nome'], $nestedData)) {
-					$indice = array_search($nome_empresa[0]['empr_tx_nome'], $nestedData);
-				
-					$nestedData[$indice] = $novoNome;
 
+				if(!empty($nome_empresa[0]['empr_tx_nome'])){
+					if($text == 'empr_tx_nome'){
+						$novoNome = $nome_empresa[0]['empr_tx_nome'].'  <i class="fa fa-star" aria-hidden="true"></i>';
+					}
+					if (in_array($nome_empresa[0]['empr_tx_nome'], $nestedData)) {
+						$indice = array_search($nome_empresa[0]['empr_tx_nome'], $nestedData);
+						$nestedData[$indice] = $novoNome;
+					}
 				}
-			}
-			else{
+			}else{
 				$parametros = explode(',',$match[2]);
 				$parametros[0] = $row[$parametros[0]];
 				$result = call_user_func_array($match[1],$parametros);

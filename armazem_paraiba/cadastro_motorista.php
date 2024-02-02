@@ -702,9 +702,9 @@
 			campo('CPF', 'busca_cpf', $_POST['busca_cpf'], 2, 'MASCARA_CPF'),
 			combo_bd('!Empresa', 'busca_empresa', $_POST['busca_empresa'], 2, 'empresa', '', $extraEmpresa),
 			combo('Ocupação', 'busca_ocupacao', $_POST['busca_ocupacao'], 2, array("", "Motorista")), //TODO PRECISO SABER QUAIS AS OCUPACOES
-			combo('Convenção Padrão', 'busca_padrao', $_POST['busca_padrao'], 2, array('Todos', 'Sim', 'Não')),
+			combo('Convenção Padrão', 'busca_padrao', $_POST['busca_padrao'], 2, ['' => 'todos', 'sim' => 'Sim', 'nao' => 'Não']),
 			combo_bd('!Parâmetros da Jornada', 'busca_parametro', $_POST['busca_parametro'], 6, 'parametro'),
-			combo('Status', 'busca_status', $_POST['busca_status'], 2, ['Todos', 'Ativo', 'Inativo'])
+			combo('Status', 'busca_status', $_POST['busca_status'], 2, ['' => 'todos', 'ativo' => 'Ativo', 'inativo' => 'Inativo'])
 		];
 
 		$b = [
