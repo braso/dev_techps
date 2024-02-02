@@ -45,10 +45,6 @@
 
 		$_POST['busca_motorista'] = $_POST['motorista'];
 
-		var_dump($_POST); echo '<br><br>';
-
-
-
 		$aData = explode(" - ", $_POST['daterange']);
 		$aData[0] = explode('/', $aData[0]);
 		$aData[0] = $aData[0][2].'-'.$aData[0][1].'-'.$aData[0][0];
