@@ -155,9 +155,9 @@
 					$aParametro['para_tx_percentualSabadoHE'] != $a_mod['enti_tx_percentualSabadoHE'] ||
 					$aParametro['para_nb_id'] != $a_mod['enti_nb_parametro']
 				) {
-					$ehPadrao = 'Não';
+					$ehPadrao = 'nao';
 				} else {
-					$ehPadrao = 'Sim.';
+					$ehPadrao = 'sim';
 				}
 			}
 			$enti_campos = array_merge($enti_campos, ['enti_nb_userCadastro', 'enti_tx_dataCadastro', 'enti_tx_ehPadrao']);
@@ -232,9 +232,9 @@
 					$aParametro['para_tx_percentualSabadoHE'] != $a_mod['enti_tx_percentualSabadoHE'] ||
 					$aParametro['para_nb_id'] != $a_mod['enti_nb_parametro']
 				) {
-					$ehPadrao = 'Não';
+					$ehPadrao = 'nao';
 				} else {
-					$ehPadrao = 'Sim';
+					$ehPadrao = 'sim';
 				}
 			}
 			$enti_campos = array_merge($enti_campos, ['enti_nb_userAtualiza', 'enti_tx_dataAtualiza', 'enti_tx_ehPadrao']);
@@ -268,8 +268,8 @@
 				mkdir("arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]", 0777, true);
 			}
 
-			$arq = enviar('foto', "arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]/", 'FOTO_' . $id . '_' . $_POST['postMatricula']);
-			if ($arq) {
+			$arq = enviar('foto', "arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]/", 'FOTO_'.$id.'_'.$_POST['postMatricula']);
+			if($arq){
 				atualizar('entidade', array('enti_tx_foto'), array($arq), $id);
 				atualizar('user', array('user_tx_foto'), array($arq), $idUserFoto['user_nb_id']);
 			}
@@ -424,7 +424,7 @@
 		$idade = "{$intervalo->y} anos, {$intervalo->m} meses e {$intervalo->d} dias";
 		
 
-		$uf = ['', 'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
+		$UFs = ['', 'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 		
 		if($a_mod['enti_tx_foto']!=''){
 			$img =texto(icone_excluir_foto($a_mod['enti_nb_id'], 'excluir_foto'), '<img style="width: 100%;" src="'.$a_mod['enti_tx_foto'].'" />', 2);
@@ -434,7 +434,7 @@
 			$img,
 			campo('Nome*', 'nome', $a_mod['enti_tx_nome'], 3,'','maxlength="65" tabindex=02'),
 			campo_data('Dt. Nascimento*', 'nascimento', $a_mod['enti_tx_nascimento'], 2, 'tabindex=03'),
-			combo('status', 'status', $a_mod['enti_tx_status'], 2, array('ativo', 'inativo'), 'tabindex=04'),
+			combo('status', 'status', $a_mod['enti_tx_status'], 2, ['ativo' => 'Ativo', 'inativo' => 'Inativo'], 'tabindex=04'),
 			campo('Login','login', $a_mod['user_tx_login'],2, '', 'tabindex=05'),
 			texto('Idade',$idade,2, 'tabindex=06'),
 
@@ -442,7 +442,7 @@
 			campo('RG*', 'rg', $a_mod['enti_tx_rg'], 2, 'MASCARA_RG', 'tabindex=08, maxlength=11'),
 			campo('Emissor RG', 'rgOrgao', $a_mod['enti_tx_rgOrgao'], 2,'','maxlength="6" tabindex=09'),
 			campo_data('Data Emissão RG', 'rgDataEmissao', $a_mod['enti_tx_rgDataEmissao'], 2, 'tabindex=10'),
-			combo('UF RG', 'rgUf', $a_mod['enti_tx_rgUf'], 2, $uf, 'tabindex=11'),
+			combo('UF RG', 'rgUf', $a_mod['enti_tx_rgUf'], 2, $UFs, 'tabindex=11'),
 			combo('Estado Civil', 'civil', $a_mod['enti_tx_civil'], 2, ['', 'Casado(a)', 'Solteiro(a)', 'Divorciado(a)', 'Viúvo(a)'], 'tabindex=12'),
 
 			combo('Sexo', 'sexo', $a_mod['enti_tx_sexo'], 2, ['', 'Feminino', 'Masculino'], 'tabindex=13'),
@@ -485,9 +485,9 @@
 
 		$cContratual = [
 			combo_bd('Empresa*', 'empresa', $a_mod['enti_nb_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)" tabindex=30', $extraEmpresa),
-			combo('Ocupação*', 'ocupacao', $a_mod['enti_tx_ocupacao'], 2, ["Motorista"], 'tabindex=31'), //TODO PRECISO SABER OS TIPOS DE MOTORISTA
+			combo('Ocupação*', 'ocupacao', $a_mod['enti_tx_ocupacao'], 2, ['Motorista'], 'tabindex=31'),
 			$campoSalario,
-			combo('Subcontratado', 'subcontratado', $a_mod['enti_tx_subcontratado'], 2, ['', 'Sim', 'Não'], 'tabindex=33'),
+			combo('Subcontratado', 'subcontratado', $a_mod['enti_tx_subcontratado'], 2, ['' => '', 'sim' => 'Sim', 'nao' => 'Não'], 'tabindex=33'),
 			campo_data('Dt Admissão*', 'admissao', $a_mod['enti_tx_admissao'], 2, 'tabindex=34'),
 			campo_data('Dt Desligamento', 'desligamento', $a_mod['enti_tx_desligamento'], 2, 'tabindex=35'),
 			campo('Saldo de Horas', 'setBanco', $a_mod['enti_tx_banco']?? '00:00', 3, 'MASCARA_HORAS', 'placeholder="HH:mm" tabindex=36')
@@ -511,10 +511,9 @@
 			$aParametro = carregar('parametro', $a_mod['enti_nb_parametro']);
 			
 			if($aParam['para_nb_id'] != $aParametro ['para_nb_id']){
-
-				$ehPadrao = 'Não';
+				$ehPadrao = 'nao';
 			}else{
-				$ehPadrao = 'Sim';
+				$ehPadrao = 'sim';
 			}
 			
 			$cJornada[]=texto('Convenção Padrão?', $ehPadrao, 2);
@@ -533,7 +532,7 @@
 			combo_net('Cidade/UF Emissão*', 'cnhCidade', $a_mod['enti_nb_cnhCidade'], 3, 'cidade', 'tabindex=47', '', 'cida_tx_uf'),
 			campo_data('Data Emissão*', 'cnhEmissao', $a_mod['enti_tx_cnhEmissao'], 3, 'tabindex=48'),
 			campo('Pontuação', 'cnhPontuacao', $a_mod['enti_tx_cnhPontuacao'], 3,'','maxlength="3" tabindex=49'),
-			combo('Atividade Remunerada', 'cnhAtividadeRemunerada', $a_mod['enti_tx_cnhAtividadeRemunerada'], 3, ['', 'Sim', 'Não'], 'tabindex=50'),
+			combo('Atividade Remunerada', 'cnhAtividadeRemunerada', $a_mod['enti_tx_cnhAtividadeRemunerada'], 3, ['' => '', 'sim' => 'Sim', 'nao' => 'Não'], 'tabindex=50'),
 			arquivo('CNH (.png, .jpg, .pdf)' . $iconeExcluirCnh, 'cnhAnexo', $a_mod['enti_tx_cnhAnexo'], 4, 'tabindex=51'),
 			campo('Observações', 'cnhObs', $a_mod['enti_tx_cnhObs'], 3,'','maxlength="500" tabindex=52')
 		];
@@ -688,25 +687,19 @@
 			((!empty($_POST['busca_nome']))? 		" AND enti_tx_nome LIKE '%".$_POST['busca_nome']."%'": '').
 			((!empty($_POST['busca_cpf']))? 		" AND enti_tx_cpf = '".$_POST['busca_cpf']."'": '').
 			((!empty($_POST['busca_ocupacao']))? 	" AND enti_tx_ocupacao = '".$_POST['busca_ocupacao']."'": '').
-			((!empty($_POST['busca_parametro']))? 	" AND enti_nb_parametro = '".$_POST['busca_parametro']."'": '');
-
-		if ($_POST['busca_status'] && $_POST['busca_status'] != 'Todos'){
-			$extra .= " AND enti_tx_status = '".strtolower($_POST['busca_status'])."'";
-		}
-		
-		if(!empty($_POST['busca_padrao']) && $_POST['busca_padrao'] != "Todos"){
-			$extra .= " AND enti_tx_ehPadrao = '".$_POST['busca_padrao']."'";
-		}
+			((!empty($_POST['busca_parametro']))? 	" AND enti_nb_parametro = '".$_POST['busca_parametro']."'": '').
+			(!empty($_POST['busca_status'])?		" AND enti_tx_status = '".strtolower($_POST['busca_status'])."'": '').
+			(!empty($_POST['busca_padrao'])?		" AND enti_tx_ehPadrao = '".$_POST['busca_padrao']."'": '');
 
 		$c[] = campo('Código', 'busca_codigo', $_POST['busca_codigo'], 1,'','maxlength="6"');
 		$c[] = campo('Nome', 'busca_nome', $_POST['busca_nome'], 2,'','maxlength="65"');
 		$c[] = campo('Matrícula', 'busca_matricula', $_POST['busca_matricula'], 1,'','maxlength="6"');
 		$c[] = campo('CPF', 'busca_cpf', $_POST['busca_cpf'], 2, 'MASCARA_CPF');
 		$c[] = combo_bd('!Empresa', 'busca_empresa', $_POST['busca_empresa'], 2, 'empresa', '', $extraEmpresa);
-		$c[] = combo('Ocupação', 'busca_ocupacao', $_POST['busca_ocupacao'], 2, array("", "Motorista")); //TODO PRECISO SABER QUAIS AS OCUPACOES
-		$c[] = combo('Convenção Padrão', 'busca_padrao', $_POST['busca_padrao'], 2, array('Todos', 'Sim', 'Não'));
+		$c[] = combo('Ocupação', 'busca_ocupacao', $_POST['busca_ocupacao'], 2, ["Motorista"]);
+		$c[] = combo('Convenção Padrão', 'busca_padrao', $_POST['busca_padrao'], 2, ['' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não']);
 		$c[] = combo_bd('!Parâmetros da Jornada', 'busca_parametro', $_POST['busca_parametro'], 6, 'parametro');
-		$c[] = combo('Status', 'busca_status', $_POST['busca_status'], 2, ['Todos', 'Ativo', 'Inativo']);
+		$c[] = combo('Status', 'busca_status', $_POST['busca_status'], 2, ['' => 'Todos', 'ativo' => 'Ativo', 'inativo' => 'Inativo']);
 
 		$b[] = botao('Buscar', 'index');
 		$b[] = botao('Inserir', 'layout_motorista','','','','','btn btn-success');
@@ -715,28 +708,33 @@
 		linha_form($c);
 		fecha_form($b);
 
-		$sql = (
+		$sql = ( 
 			"SELECT * FROM entidade 
 				JOIN empresa ON enti_nb_empresa = empr_nb_id 
-				JOIN parametro ON enti_nb_parametro = para_nb_id
+				JOIN parametro ON enti_nb_parametro = para_nb_id 
 				WHERE enti_tx_tipo = 'Motorista' 
 					$extraEmpresa 
 					$extra"
 		);
 
+		$icone_modificar = 'icone_modificar(enti_nb_id,modifica_motorista)';
+
 		if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$icone_excluir = 'icone_excluir(enti_nb_id,exclui_motorista)';
-		}else
+		}else{
 			$icone_excluir = '';
+		}
 
-		$cab = ['CÓDIGO', 'NOME', 'MATRÍCULA', 'CPF', 'EMPRESA', 'FONE 1', 'FONE 2', 'OCUPAÇÃO', 'PARÂMETRO DA JORNADA', 'CONVENÇÃO PADRÃO', 'STATUS', '', ''];
+		$cab = [
+			'CÓDIGO', 'NOME', 'MATRÍCULA', 'CPF', 'EMPRESA', 'FONE 1', 'FONE 2', 'OCUPAÇÃO', 
+			'PARÂMETRO DA JORNADA', 'CONVENÇÃO PADRÃO', 'STATUS', '', ''
+		];
 		$val = [
-			'enti_nb_id', 'enti_tx_nome', 'enti_tx_matricula', 'enti_tx_cpf', 'empr_tx_nome', 'enti_tx_fone1', 'enti_tx_fone2', 'enti_tx_ocupacao', 'para_tx_nome', 'enti_tx_ehPadrao', 'enti_tx_status', 'icone_modificar(enti_nb_id,modifica_motorista)',
-			$icone_excluir
+			'enti_nb_id', 'enti_tx_nome', 'enti_tx_matricula', 'enti_tx_cpf', 'empr_tx_nome', 'enti_tx_fone1', 'enti_tx_fone2', 'enti_tx_ocupacao', 
+			'para_tx_nome', 'enti_tx_ehPadrao', 'enti_tx_status', $icone_modificar, $icone_excluir
 		];
 
 		grid($sql, $cab, $val);
-
 		rodape();
 	}
 ?>
