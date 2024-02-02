@@ -76,7 +76,7 @@
 			$campos = array_merge($campos,['empr_nb_userCadastro','empr_tx_dataCadastro']);
 			$valores = array_merge($valores,[$_SESSION['user_nb_id'], date("Y-m-d H:i:s")]);
 			try{
-				$id_empresa = inserir('empresa',$campos,$valores);
+				$id_empresa = inserir('empresa',$campos,$valores)[0];
 			}catch(Exception $e){
 				print_r($e);
 			}

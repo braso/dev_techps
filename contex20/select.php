@@ -1,12 +1,4 @@
 <?php
-// $servername = "localhost";
-// $username = "conta402_contex2";
-// $password = "contex000contex";
-// $dbname = "conta402_contex20";
-
-// $conn = mysqli_connect($servername, $username, $password, $dbname) or die("Connection failed: " . mysqli_connect_error());
-// $conn->set_charset("utf8");
-// GLOBAL $CONTEX;
 include "..".$_GET['path']."/conecta.php";
 GLOBAL $conn;
 

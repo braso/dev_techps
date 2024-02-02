@@ -50,13 +50,17 @@ function layout_feriado(){
 
 	$uf = array ('','AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MS', 'MT', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO');
 	
-	$c[] = campo('Nome','nome',$a_mod['feri_tx_nome'],4);
-	$c[] = campo_data('Data','data',$a_mod['feri_tx_data'],2);
-	$c[] = combo('Estadual','uf',$a_mod['feri_tx_uf'],2,$uf);
-	$c[] = combo_net('Municipal','cidade',$a_mod['feri_nb_cidade'],4,'cidade','','','cida_tx_uf');
+	$c = [ 
+		campo('Nome','nome',$a_mod['feri_tx_nome'],4),
+		campo_data('Data','data',$a_mod['feri_tx_data'],2),
+		combo('Estadual','uf',$a_mod['feri_tx_uf'],2,$uf),
+		combo_net('Municipal','cidade',$a_mod['feri_nb_cidade'],4,'cidade','','','cida_tx_uf')
+	];
 
-	$botao[] = botao('Gravar','cadastra_feriado','id',$_POST['id'],'','','btn btn-success');
-	$botao[] = botao('Voltar','index');
+	$botao = [
+		botao('Gravar','cadastra_feriado','id',$_POST['id'],'','','btn btn-success'),
+		botao('Voltar','index')
+	];
 	
 	abre_form('Dados do Feriado');
 	linha_form($c);
@@ -91,14 +95,17 @@ function index(){
 	
 	
 
-	$c[] = campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO','maxlength="6"');
+	$c = [ 
+		campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO','maxlength="6"'),
+		campo('Nome','busca_nome',$_POST['busca_nome'],4, '', 'maxlength="65"'),
+		combo('Estadual','busca_uf',$_POST['busca_uf'],2,$uf),
+		combo_net('Municipal','busca_cidade',$_POST['busca_cidade'],4,'cidade','','','cida_tx_uf')
+	];
 
-	$c[] = campo('Nome','busca_nome',$_POST['busca_nome'],4, '', 'maxlength="65"');
-	$c[] = combo('Estadual','busca_uf',$_POST['busca_uf'],2,$uf);
-	$c[] = combo_net('Municipal','busca_cidade',$_POST['busca_cidade'],4,'cidade','','','cida_tx_uf');
-
-	$botao[] = botao('Buscar','index');
-	$botao[] = botao('Inserir','layout_feriado','','','','','btn btn-success');
+	$botao = [ 
+		botao('Buscar','index'),
+		botao('Inserir','layout_feriado','','','','','btn btn-success')
+	];
 	
 	abre_form('Filtro de Busca');
 	linha_form($c);

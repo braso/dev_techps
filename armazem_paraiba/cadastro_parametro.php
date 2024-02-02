@@ -258,8 +258,10 @@
 		}
 		
 		
-		$botao[] = botao('Gravar','cadastra_parametro','id',$_POST['id'],'','','btn btn-success');
-		$botao[] = botao('Voltar','index');
+		$botao = [
+			botao('Gravar','cadastra_parametro','id',$_POST['id'],'','','btn btn-success'),
+			botao('Voltar','index')
+		];
 		
 		abre_form('Dados dos Parâmetros');
 		linha_form($c);

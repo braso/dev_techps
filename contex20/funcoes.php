@@ -189,6 +189,119 @@
 		}else{
 			return mysqli_fetch_array(query($query));
 		}
+
+		$valores= "'".implode("','",$valores)."'";
+		$campos=implode(',',$campos);
+
+		try{
+			query("INSERT INTO $tabela ($campos) VALUES($valores);");
+			$sql = query("SELECT LAST_INSERT_ID();");
+			set_status("Registro inserido com sucesso!");
+		}catch (Exception $e){
+			set_status("Falha ao registrar.");
+			return [];
+		}
+
+		$a = carrega_array($sql);
+		if(is_array(($a))){
+			return $a;
+		}else{
+			return [];
+		}
+	}
+
+	function atualizar(string $tabela, array $campos, array $valores, string $id): void{
+		updateById($tabela, $campos, $valores, $id);
+	}
+	function updateById(string $tabela, array $campos, array $valores, string $id): void{
+		if(count($campos) != count($valores)){
+			echo "ERRO: Número de campos não confere com número de linhas na função de atualizar!";
+			exit;
+		}
+
+		if(count($campos) == 0){
+			echo "ERRO: Campos para atualização não informados.";
+			exit;
+		}
+
+		$tab = substr($tabela,0,4);
+		$inserir = '';
+		for($i=0;$i<count($campos);$i++){
+			$inserir .= ", $campos[$i] = '$valores[$i]'";
+		}
+		if(strlen($inserir) > 2){
+			$inserir = substr($inserir, 2);
+		}
+
+		try{
+			query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id=$id") or die();
+			set_status("Registro atualizado com sucesso!");
+		}catch(Exception $e){
+			set_status("Falha ao atualizar.");
+		}
+	}
+
+	function remover(string $tabela, string $id){
+		inactivateById($tabela,$id);
+	}
+	function inactivateById(string $tabela, string $id){
+		$tab=substr($tabela,0,4);
+		query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '$id' LIMIT 1");
+	}
+
+	function remover_ponto($tabela,$id,$just){
+		$tab=substr($tabela,0,4);
+		$campos = [$tab."_tx_status", $tab."_tx_justificativa"];
+		$valores = ['inativo', $just];
+
+		updateById($tabela, $campos, $valores, $id);
+	}
+
+	function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
+		return campo($nome,$variavel,$modificador,$tamanho,"MASCARA_DOMAIN",$extra);
+	}
+
+	function num_linhas($sql){
+		return mysqli_num_rows($sql);
+	}
+
+	function carrega_array($sql, $mode = MYSQLI_BOTH){
+		return mysqli_fetch_array($sql, $mode);
+	}
+
+	function ultimo_reg($tabela){
+		$campo = substr($tabela,0,4)."_nb_id";
+
+		$sql=query("SELECT $campo FROM $tabela ORDER BY $campo DESC LIMIT 1");
+		return carrega_array($sql)[0];
+	}
+
+	function carregar($tabela,$id='',$campo='',$valor='',$extra='',$exibe=0){
+		$campoId = substr($tabela,0,4)."_nb_id";
+		$ext = '';
+
+		$extra_id = (!empty($id))? " AND ".$campoId." = $id": '';
+
+		if(!empty($campo[0])) {
+			$a_campo = explode(',', $campo);
+			$a_valor = explode(',', $valor);
+
+			for ($i = 0; $i < count($a_campo); $i++) {
+				$ext .= " AND " . str_replace(',', '', $a_campo[$i]) . " = '" . str_replace(',', '', $a_valor[$i]) . "' ";
+			}
+		}
+
+		$query = "SELECT * FROM $tabela WHERE 1 $extra_id $ext $extra LIMIT 1";
+
+		if($exibe == 1){
+			echo $query;
+		}
+		
+		if(empty($extra_id) && empty($ext) && empty($extra)){
+			return [];
+		}else{
+			return mysqli_fetch_array(query($query));
+		}
 	}
 
 	function valor($valor,$mostrar=0){
