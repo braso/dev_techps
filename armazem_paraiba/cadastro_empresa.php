@@ -227,7 +227,7 @@
 
 		if(is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador"))){
 			$campo_dominio = campo_domain('Nome do Domínio','nomeDominio',$input_values['domain'],2,'domain');
-			$campo_EhMatriz = combo('É matriz?','matriz',$input_values['empr_tx_Ehmatriz'],2,['Sim','Não']);
+			$campo_EhMatriz = combo('É matriz?','matriz',$input_values['empr_tx_Ehmatriz'],2,['sim' => 'Sim', 'nao' => 'Não']);
 		}else{
 			$campo_dominio = texto('Nome do Domínio',$input_values['domain'],2);
 			$campo_EhMatriz = texto('É matriz?',$input_values['empr_tx_Ehmatriz'],2);

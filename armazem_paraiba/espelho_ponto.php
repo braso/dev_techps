@@ -54,7 +54,7 @@
 	
 		// $cab = array("MATRÍCULA", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA", "REFEIÇÃO", "ESPERA", "ATRASO", "EFETIVA", "PERÍODO TOTAL", "INTERSTÍCIO DIÁRIO", "INT. SEMANAL", "ABONOS", "FALTAS", "FOLGAS", "H.E.", "H.E. 100%", "ADICIONAL NOTURNO", "ESPERA INDENIZADA", "OBSERVAÇÕES");
 		$cab = array(
-			"", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
+			"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "HE 50%", "HE&nbsp;100%",
 			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 		);
@@ -70,11 +70,12 @@
 			$aDia = [];
 			for ($date = $startDate; $date <= $endDate; $date->modify('+1 day')) {
 				$dataVez = $date->format('Y-m-d');
+
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 				
 				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDetalhado));
 				for($f = 0; $f < sizeof($row)-1; $f++){
-          			if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
+          			if($f == 12){//Se for da coluna "Jornada Prevista", não apaga
 						continue;
 					}
 					if($row[$f] == "00:00"){
@@ -109,7 +110,8 @@
 							AND endo_tx_status = 'ativo'
 						ORDER BY endo_tx_ate DESC
 						LIMIT 1;"
-				)
+				),
+				MYSQLI_ASSOC
 			);
 			if(isset($saldoAnterior['endo_tx_saldo'])){
 				$saldoAnterior = $saldoAnterior['endo_tx_saldo'];
@@ -123,8 +125,10 @@
 			$saldoFinal = '--:--';
 			if($saldoAnterior != '--:--'){
 				$saldoFinal = somarHorarios([$saldoAnterior, $totalResumo['diffSaldo']]);
+			}else{
+				$saldoFinal = somarHorarios(['00:00', $totalResumo['diffSaldo']]);
 			}
-
+			
 
 			$saldosMotorista = ' <div class="table-responsive">
 					<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact" id="saldo">

@@ -173,7 +173,6 @@
 			$a_mod['data'] = $_POST['data'];
 			$a_mod['id'] = $_POST['id'];
 		}
-		
 		cabecalho('Ajuste de Ponto');
 
 		if(empty($_POST['data_de']) && !empty($_POST['data'])){
@@ -196,7 +195,7 @@
 		$aEndosso = carrega_array($sqlCheck);
 
 		$botao_imprimir = 
-			'<button  href="#" class="btn default" onclick="imprimir()">Imprimir</button >
+			'<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
 				<script>
 					function imprimir() {
 						// Abrir a caixa de diálogo de impressão
@@ -220,7 +219,7 @@
 			$c2[] = texto('Endosso:',"Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1),6);
 		}else{
 			$botao[] = botao('Gravar','cadastra_ajuste','id,busca_motorista,data_de,data_ate,data,busca_data',"$_POST[id],$_POST[id],$_POST[data_de],$_POST[data_ate],$_POST[data],".substr($_POST['data'],0, -3));
-			$iconeExcluir = "icone_excluir(pont_nb_id,excluir_ponto,idEntidade,".strval($_POST['id']).")"; //Utilizado em grid()
+			$iconeExcluir = "icone_excluir_ajuste(pont_nb_id,excluir_ponto,idEntidade,".$_POST['data_de'].",".$_POST['data_ate'].",".strval($_POST['id']).")"; //Utilizado em grid()
 		}
 		$botao[] = $botao_imprimir;
 		$botao[] = botao(

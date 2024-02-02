@@ -17,8 +17,8 @@
 
 		if(!empty($_GET['acao']) && $_GET['acao'] == 'index'){//Se estiver pesquisando
 			//Conferir se os campos foram inseridos.
-			if(empty($_GET['busca_data']) || empty($_GET['busca_motorista'])){
-				echo '<script>alert("Insira data e motorista para pesquisar.");</script>';
+			if(empty($_GET['busca_data'])){
+				echo '<script>alert("Insira data para pesquisar.");</script>';
 			}
 		}
 
@@ -51,8 +51,6 @@
 		}
 		if(!empty($_POST['busca_empresa'])){
 			$_POST['busca_empresa'] = (int)$_POST['busca_empresa'];
-		}else{
-			$_POST['busca_empresa'] = $_SESSION['user_nb_empresa'];
 		}
 		$extraMotorista = " AND enti_nb_empresa = " . $_POST['busca_empresa'];
 
@@ -91,7 +89,7 @@
 				'verificados' => 0,							//countVerificados
 				'endossados' => ['sim' => 0, 'nao' => 0],	//countEndossados e $countNaoEndossados
 			];
-			if(!empty($_POST['busca_data']) && !empty($_POST['busca_empresa']) && !empty($_POST['busca_motorista'])){
+			if(!empty($_POST['busca_data']) && !empty($_POST['busca_empresa'])){
 
 				$date = new DateTime($_POST['busca_data']);
 
@@ -181,23 +179,26 @@
 							}
 						}
 						
-						$saldoAnterior = mysqli_fetch_all(
+						$saldoAnterior = mysqli_fetch_assoc(
 							query(
 								"SELECT endo_tx_saldo FROM `endosso`
 									WHERE endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-										AND endo_tx_ate < '".$_POST['busca_data']."-01'
+										AND endo_tx_ate < '".$_POST['busca_data1']."'
 										AND endo_tx_status = 'ativo'
 									ORDER BY endo_tx_ate DESC
 									LIMIT 1;"
 							),
 							MYSQLI_ASSOC
-						)[0];
+						);
 						if(isset($saldoAnterior['endo_tx_saldo'])){
 							$saldoAnterior = $saldoAnterior['endo_tx_saldo'];
+						}elseif(!empty($aMotorista['enti_tx_banco'])){
+							$saldoAnterior = $aMotorista['enti_tx_banco'];
+							$saldoAnterior = $saldoAnterior[0] == '0' && strlen($saldoAnterior) > 5? substr($saldoAnterior, 1): $saldoAnterior;
 						}else{
 							$saldoAnterior = '--:--';
 						}
-
+			
 						$saldoFinal = '--:--';
 						if($saldoAnterior != '--:--'){
 							$saldoFinal = somarHorarios([$saldoAnterior, $totalResumo['diffSaldo']]);
@@ -280,7 +281,6 @@
 					}
 	
 					$totalResumo = ['diffRefeicao' => '00:00', 'diffEspera' => '00:00', 'diffDescanso' => '00:00', 'diffRepouso' => '00:00', 'diffJornada' => '00:00', 'jornadaPrevista' => '00:00', 'diffJornadaEfetiva' => '00:00', 'maximoDirecaoContinua' => '', 'intersticio' => '00:00', 'he50' => '00:00', 'he100' => '00:00', 'adicionalNoturno' => '00:00', 'esperaIndenizada' => '00:00', 'diffSaldo' => '00:00'];
-
 					unset($aDia);
 				}
 			}

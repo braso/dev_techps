@@ -5,7 +5,10 @@
 	//*/	
 	global $CONTEX,$conn;
 
-	session_start();
+	if(session_id() === ""){
+		session_start();
+	}
+
 	// error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
 
 	date_default_timezone_set('America/Fortaleza');

@@ -66,8 +66,7 @@
 	function js_contex_icone(){
 		echo '
 			<script type="text/javascript">
-				function contex_icone(id,acao,campos=\'\',valores=\'\',target=\'\',msg=\'\',action=\'\',just){
-					console.log(campos);
+				function contex_icone(id,acao,campos=\'\',valores=\'\',target=\'\',msg=\'\',action=\'\',data_de=\'\',data_ate=\'\',just=\'\'){
 					if(msg){
 						if(confirm(msg)){
 							var form = document.getElementById("contex_icone_form"); 
@@ -75,7 +74,8 @@
 							form.action=action;
 							form.id.value=id;
 							form.acao.value=acao;
-							form.just.value=just;
+							form.data_de.value=data_de;
+							form.data_ate.value=data_ate;
 							if(campos){
 								form.hidden.value=valores;
 								form.hidden.name=campos;
@@ -93,6 +93,9 @@
 						form.action=action;
 						form.id.value=id;
 						form.acao.value=acao;
+						form.data_de.value=data_de;
+						form.data_ate.value=data_ate;
+						form.just.value=just;
 						if(campos){
 							form.hidden.value=valores;
 							form.hidden.name=campos;
@@ -124,13 +127,11 @@
 		<form id='contex_icone_form' method="post" target="" action="">
 			<input type="hidden" name="id" value="0">
 			<input type="hidden" name="acao" value="sem_acao">
+			<input type="hidden" name="data_de" value="">
+			<input type="hidden" name="data_ate" value="">
 			<input type="hidden" name="just" value="">
 			<input type="hidden" id="hidden">
 		</form>
-		<style type="text/css">
-			th { font-size: 10px !important; }
-			td { font-size: 10px !important; }
-		</style>
 		<?
 			js_contex_icone();
 
@@ -143,6 +144,25 @@
 
 			$valores = "'".implode("','", $valores)."'";
 		?>
+		<style type="text/css">
+			th { font-size: 10px !important; }
+			td { font-size: 10px !important; }
+
+			@media print{
+				form > div:nth-child(2) > div:nth-child(1),
+				form > div:nth-child(2) > div:nth-child(3),
+				form > div:nth-child(2) > div:nth-child(5),
+				form > div:nth-child(2) > div:nth-child(6),
+				form > div:nth-child(3) > div,
+				form > div.form-actions,
+				#contex-grid-<?=$rand?>_length,
+				#contex-grid-<?=$rand?>_info,
+				body > div.scroll-to-top > i
+				{
+					display: none;
+				}	
+			}
+		</style>
 
 
 											<!-- BEGIN EXAMPLE TABLE PORTLET-->

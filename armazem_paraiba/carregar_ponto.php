@@ -21,10 +21,12 @@
 			move_uploaded_file($arquivo['tmp_name'],$path.$arquivo['name']);
 			$campos = ['arqu_tx_nome', 'arqu_tx_data', 'arqu_nb_user', 'arqu_tx_status'];
 			$valores = [$arquivo['name'], date("Y-m-d H:i:s"), $_SESSION['user_nb_id'], 'ativo'];
-			$idArquivo = inserir('arquivoponto', $campos, $valores);
+			$idArquivo = inserir('arquivoponto', $campos, $valores)[0];
 
 			foreach (file($local_file) as $line) {
 				//matricula dmYhi 999 macroponto.codigoExterno
+				//Obs.: A matrícula deve ter 10 dígitos, então se tiver menos, adicione zeros à esquerda.
+				//Ex.: 000000591322012024091999911
 				$line = trim($line);
 				$matricula = substr($line, 0, 10)+0;
 				$data = substr($line, 10, 8);
@@ -42,7 +44,7 @@
 				if(num_linhas($check) === 0){
 					inserir('ponto', $campos, $valores);
 				}else{
-					set_status("Alguns pontos, Já existe no banco");
+					set_status("Alguns pontos, já existem no banco");
 				}
 			}
 
@@ -227,9 +229,9 @@
 			// $_SESSION['user_tx_nivel'] = $rep_p_user['user_tx_nivel'];
 			// $_SESSION['user_tx_login'] = $rep_p_user['user_tx_login'];
 
-			$_SESSION['user_nb_id'] = 1;
-			$_SESSION['user_tx_nivel'] = 'Administrador';
-			$_SESSION['user_tx_login'] = 'adm';
+			$_SESSION['user_nb_id'] = 138;
+			$_SESSION['user_tx_nivel'] = 'Super Administrador';
+			$_SESSION['user_tx_login'] = 'Techps.admin';
 			// $_SESSION['user_tx_login'] = 'Techps.admin';
 			layout_ftp();
 			exit;

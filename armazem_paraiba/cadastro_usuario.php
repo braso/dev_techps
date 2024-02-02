@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -38,6 +38,7 @@
 	}
 
 	function cadastra_usuario() {
+		global $a_mod;
 
 		if(isset($_POST['editPermission'])){
 			$_POST['editPermission'] = (intval($_POST['editPermission']) == 1);
@@ -47,7 +48,7 @@
 
 		$error_msg_base = "ERRO: Insira os campos ";
 		$error_msg = $error_msg_base;
-		if (!$_POST['id']) {
+		if (!empty($_POST['id']) && $_POST['editPermission'] == true) {
 			$check_fields = [
 				//['nome', 'msg_erro']
 				['nome', 'Nome, '],
@@ -118,10 +119,10 @@
 			exit;
 		}
 
-		$usuario = carregar('user', '', 'user_nb_id', $_POST['id']);
+		$usuario = carregar('user', $_POST['id']);
 
 
-		if(count($usuario) > 0 && $usuario['user_tx_login'] != $_SESSION['user_tx_login'] && $_POST['editPermission']){
+		if(count($usuario) > 0 && $usuario['user_nb_id'] != $_POST['id'] && $usuario['user_tx_login'] != $_SESSION['user_tx_login'] && $_POST['editPermission']){
 			set_status("ERRO: Login já cadastrado.");
 			modifica_usuario();
 			exit;
@@ -141,15 +142,13 @@
 				if (!empty($_POST['senha']) && !empty($_POST['senha2'])) {
 					atualizar('user', ['user_tx_senha'], [md5($_POST['senha'])], $_POST['id']);
 				}
-				
 			}else{
 			    $sqlCheckNivel = query("SELECT user_tx_nivel FROM user WHERE user_nb_id = '$_POST[id]'")->fetch_assoc();
 				if ($sqlCheckNivel['user_tx_nivel'] == 'Motorista') {
 					if (!empty($_POST['senha']) && !empty($_POST['senha2'])) {
-						$bd_campos3 = ['user_tx_senha'];
-						$valores3 = [md5($_POST['senha'])];
+						$nova_senha = ['user_tx_senha' => md5($_POST['senha'])];
 					}
-					atualizar('user', $bd_campos3, $valores3, $_POST['id']);
+					atualizar('user', array_keys($nova_senha), array_values($nova_senha), $_POST['id']);
 					index();
 					exit;
 				}
@@ -170,14 +169,19 @@
 
 	function layout_usuario() {
 		global $a_mod;
-		cabecalho("Cadastro de Usuário");
-
-		if($_GET['id'] && $a_mod['user_tx_nivel'] != 'Motorista' || (is_int(strpos($_SESSION['user_tx_nivel'], "Administrador"))) && $a_mod['user_tx_nivel'] != 'Motorista'){
+		cabecalho("Cadastro de Usuário");	
+	
+		if(	!empty($_POST['id']) &&												//Se está editando um usuário existente e
+			$a_mod['user_tx_nivel'] != 'Motorista' && 							//Esse usuário não é motorista e
+			(
+				is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) ||	//O usuário logado é administrador ou
+				$_SESSION['user_nb_id'] == $_POST['id']							//Editando o próprio usuário
+			)
+		){
 			$editPermission = true;
-			//(Se está editando e o usuário é o que já está logado) ou (usuário logado administrador e usuário a editar não é motorista).
 
-			$campo_nome = campo('Nome*', 'nome', $a_mod['user_tx_nome'], 4, '','maxlength="65"');
-			if(!$_GET['id']){
+			$campo_nome = campo('Nome*', 'nome', ($a_mod['user_tx_nome']?? ''), 4, '','maxlength="65"');
+			if(!empty($_POST['id'])){
 				//Criando
 				
 				$niveis = [''];
@@ -195,9 +199,9 @@
 				$campo_nivel = texto('Nível*', $a_mod['user_tx_nivel'], 2, "style='margin-bottom:-10px;'");
 			}
 			$campo_login = campo('Login*', 'login', $a_mod['user_tx_login'], 2,'','maxlength="30"');
-			$campo_nascimento = campo_data('Dt. Nascimento*', 'nascimento', $a_mod['user_tx_nascimento'], 2);
+			$campo_nascimento = campo_data('Dt. Nascimento*', 'nascimento', ($a_mod['user_tx_nascimento']?? ($_POST['nascimento']?? '')), 2);
 			$campo_cpf = campo('CPF', 'cpf', $a_mod['user_tx_cpf'], 2, 'MASCARA_CPF');
-			$campo_rg = campo('RG', 'rg', $a_mod['user_tx_rg'], 2,'','maxlength="15"');
+			$campo_rg = campo('RG', 'rg', $a_mod['user_tx_rg'], 2, 'MASCARA_RG', 'maxlength="15"');
 			$campo_cidade = combo_net('Cidade/UF', 'cidade', $a_mod['user_nb_cidade'], 3, 'cidade', '', '', 'cida_tx_uf');
 			$campo_email = campo('E-mail*', 'email', $a_mod['user_tx_email'], 3);
 			$campo_telefone = campo('Telefone', 'telefone', $a_mod['user_tx_fone'], 3,'MASCARA_FONE');
@@ -205,6 +209,7 @@
 			$campo_expiracao = campo_data('Dt. Expiraçao', 'expiracao', $a_mod['user_tx_expiracao'], 2);
 			$campo_senha = campo_senha('Senha', 'senha', "", 2,'maxlength="12"');
 			$campo_confirma = campo_senha('Confirmar Senha', 'senha2', "", 2,'maxlength="12"');
+			$campo_matricula = '';
 
 		}else{
 			$editPermission = false;
@@ -241,7 +246,6 @@
 				$campo_confirma = '';
 			}
 			$campo_matricula = texto('Matricula', $a_mod['user_tx_matricula'], 2, "style='margin-bottom:-10px;'");
-
 		}
 
 		$c = [
@@ -262,9 +266,9 @@
 			$campo_expiracao
 		];
 
-		if( is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) || $_GET['id'] && is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) || is_int(strpos($_SESSION['user_tx_nivel'], "Funcionário"))){
+		if( is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) || !empty($_GET['id']) && is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) || is_int(strpos($_SESSION['user_tx_nivel'], "Funcionário"))){
 			$b = [
-				botao('Gravar', 'cadastra_usuario', 'id,editPermission', $_POST['id'].','.strval($editPermission),'','','btn btn-success'),
+				botao('Gravar', 'cadastra_usuario', 'id,editPermission', ($_POST['id']?? '').','.strval($editPermission),'','','btn btn-success'),
 				botao('Voltar', 'index')
 			];
 		} else
@@ -276,7 +280,7 @@
 
 		if ($a_mod['user_nb_userCadastro'] > 0 || $a_mod['user_nb_userAtualiza'] > 0) {
 			$a_userCadastro = carregar('user', $a_mod['user_nb_userCadastro']);
-			$txtCadastro = "Registro inserido por $a_userCadastro[user_tx_login] às " . data($a_mod['user_tx_dataCadastro'], 1) . ".";
+			$txtCadastro = "Registro inserido por ".($a_userCadastro['user_tx_login']?? 'admin').(!empty($a_mod['user_tx_dataCadastro'])?" às ".data($a_mod['user_tx_dataCadastro'], 1): '').".";
 			$cAtualiza[] = texto("Data de Cadastro", "$txtCadastro", 5);
 			if ($a_mod['user_nb_userAtualiza'] > 0) {
 				$a_userAtualiza = carregar('user', $a_mod['user_nb_userAtualiza']);
@@ -295,7 +299,7 @@
 
 	function index() {
 		global $CONTEX;
-		if ($_GET['id']) {
+		if (!empty($_GET['id'])){
 			if ($_GET['id'] != $_SESSION['user_nb_id']) {
 				echo "ERRO: Usuário não autorizado!";
 				echo "<script>window.location.replace('".$CONTEX['path']."/index.php');</script>";
@@ -325,12 +329,12 @@
 		}
 
 		$extra = 
-			(($_POST['busca_codigo'])? " AND user_nb_id = '".$_POST['busca_codigo']."'": "").
-			(($_POST['busca_nome'])? " AND user_tx_nome LIKE '%".$_POST['busca_nome']."%'": "").
-			(($_POST['busca_login'])? " AND user_tx_login LIKE '%".$_POST['busca_login']."%'": "").
+			(!empty($_POST['busca_codigo'])? " AND user_nb_id = '".$_POST['busca_codigo']."'": "").
+			(!empty($_POST['busca_nome'])? " AND user_tx_nome LIKE '%".$_POST['busca_nome']."%'": "").
+			(!empty($_POST['busca_login'])? " AND user_tx_login LIKE '%".$_POST['busca_login']."%'": "").
 			((isset($_POST['busca_nivel']) && strtolower($_POST['busca_nivel']) != "todos")? " AND user_tx_nivel = '".$_POST['busca_nivel']."'": "").
-			(($_POST['busca_cpf'])? " AND user_tx_cpf = '".$_POST['busca_cpf']."'": "").
-			(($_POST['busca_empresa'])? " AND user_nb_empresa = '".$_POST['busca_empresa']."'": "").
+			(!empty($_POST['busca_cpf'])? " AND user_tx_cpf = '".$_POST['busca_cpf']."'": "").
+			(!empty($_POST['busca_empresa'])? " AND user_nb_empresa = '".$_POST['busca_empresa']."'": "").
 			((strtolower($_POST['busca_status']) != 'todos')? " AND user_tx_status = '".strtolower($_POST['busca_status'])."'": "").
 			(is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))? " AND user_tx_nivel NOT LIKE '%Administrador%'": '')
 		;
@@ -350,13 +354,13 @@
 		}
 
 		$c = [
-			campo('Código', 'busca_codigo', $_POST['busca_codigo'], 1,'','maxlength="6"'),
-			campo('Nome', 'busca_nome', $_POST['busca_nome'], 3,'','maxlength="65"'),
-			campo('CPF', 'busca_cpf', $_POST['busca_cpf'], 2, 'MASCARA_CPF'),
-			campo('Login', 'busca_login', $_POST['busca_login'], 3,'','maxlength="30"'),
-			combo('Nível', 'busca_nivel', $_POST['busca_nivel'], 2, $niveis),
-			combo('Status', 'busca_status', $_POST['busca_status'], 2, ['Todos', 'Ativo', 'Inativo']),
-			combo_bd('!Empresa', 'busca_empresa', $_POST['busca_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)"', $extraEmpresa)
+			campo('Código', 		'busca_codigo', 	($_POST['busca_codigo']?? ''), 	1, '', 'maxlength="6"'),
+			campo('Nome', 			'busca_nome', 		($_POST['busca_nome']?? ''), 	3, '', 'maxlength="65"'),
+			campo('CPF', 			'busca_cpf', 		($_POST['busca_cpf']?? ''), 	2, 'MASCARA_CPF'),
+			campo('Login', 			'busca_login', 		($_POST['busca_login']?? ''), 	3, '', 'maxlength="30"'),
+			combo('Nível', 			'busca_nivel', 		($_POST['busca_nivel']?? ''), 	2, $niveis),
+			combo('Status', 		'busca_status', 	($_POST['busca_status']?? ''), 	2, ['Todos', 'Ativo', 'Inativo']),
+			combo_bd('!Empresa', 	'busca_empresa', 	($_POST['busca_empresa']?? ''), 3, 'empresa', 'onchange="carrega_empresa(this.value)"', $extraEmpresa)
 		];
 
 		$b[] = botao('Buscar', 'index');
