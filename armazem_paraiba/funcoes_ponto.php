@@ -43,7 +43,47 @@
 			}
 		// }
 
+		$_POST['busca_motorista'] = $_POST['motorista'];
+
+		var_dump($_POST); echo '<br><br>';
+
+
+
 		$aData = explode(" - ", $_POST['daterange']);
+		$aData[0] = explode('/', $aData[0]);
+		$aData[0] = $aData[0][2].'-'.$aData[0][1].'-'.$aData[0][0];
+		$aData[1] = explode('/', $aData[1]);
+		$aData[1] = $aData[1][2].'-'.$aData[1][1].'-'.$aData[1][0];
+		//Conferir se há um período entrelaçado com essa data{
+			$endosso = mysqli_fetch_all(
+				query(
+					"SELECT * FROM endosso
+						WHERE endo_tx_status = 'ativo'
+							AND endo_nb_entidade = ".$_POST['motorista']."
+							AND (
+								'".$aData[0]."' BETWEEN endo_tx_de AND endo_tx_ate
+								OR '".$aData[1]."' BETWEEN endo_tx_de AND endo_tx_ate
+							)
+						LIMIT 1"
+				),
+				MYSQLI_ASSOC
+			)[0];
+
+			if(!empty($endosso)){
+				$endosso['endo_tx_de'] = explode('-', $endosso['endo_tx_de']);
+				$endosso['endo_tx_de'] = $endosso['endo_tx_de'][2].'/'.$endosso['endo_tx_de'][1].'/'.$endosso['endo_tx_de'][0];
+
+				$endosso['endo_tx_ate'] = explode('-', $endosso['endo_tx_ate']);
+				$endosso['endo_tx_ate'] = $endosso['endo_tx_ate'][2].'/'.$endosso['endo_tx_ate'][1].'/'.$endosso['endo_tx_ate'][0];
+
+				set_status('ERRO: Possui um endosso de '.$endosso['endo_tx_de'].' até '.$endosso['endo_tx_ate'].'.');
+				layout_abono();
+				exit;
+			}
+			exit;
+		//}
+
+		var_dump($aData); echo '<br><br>';
 
 		$begin = new DateTime(data($aData[0]));
 		$end = new DateTime(data($aData[1]));
@@ -65,7 +105,7 @@
 			$campos = ['abon_tx_data', 'abon_tx_matricula', 'abon_tx_abono', 'abon_nb_motivo', 'abon_tx_descricao', 'abon_nb_userCadastro', 'abon_tx_dataCadastro', 'abon_tx_status'];
 			$valores = [$i->format("Y-m-d"), $a['enti_tx_matricula'], $abono, $_POST['motivo'], $_POST['descricao'], $_SESSION['user_nb_id'], date("Y-m-d H:i:s"), 'ativo'];
 
-			inserir('abono', $campos, $valores);
+			// inserir('abono', $campos, $valores);
 		}
 
 		$_POST['busca_motorista'] = $_POST['motorista'];
@@ -79,10 +119,10 @@
 		cabecalho('Cadastro Abono');
 
 		$c[] = combo_net('Motorista*:','motorista',$_POST['busca_motorista'],4,'entidade','',' AND enti_tx_tipo = "Motorista"','enti_tx_matricula');
-		$c[] = campo('Data(s)*:','daterange',$_POST['daterange'],3);
-		$c[] = campo_hora('Abono*: (hh:mm)','abono','',3);
-		$c2[] = combo_bd('Motivo*:','motivo',$_POST['motivo'],4,'motivo','',' AND moti_tx_tipo = "Abono"');
-		$c2[] = textarea('Justificativa:','descricao','',12);
+		$c[] = campo('Data(s)*:','daterange', ($_POST['daterange']?? ''),3);
+		$c[] = campo_hora('Abono*: (hh:mm)','abono', ($_POST['abono']?? ''),3);
+		$c2[] = combo_bd('Motivo*:','motivo', ($_POST['motivo']?? ''),4,'motivo','',' AND moti_tx_tipo = "Abono"');
+		$c2[] = textarea('Justificativa:','descricao', ($_POST['descricao']?? ''),12);
 		
 		//BOTOES
 		$b[] = botao("Voltar",'index');
