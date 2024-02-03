@@ -110,8 +110,7 @@
 							AND endo_tx_status = 'ativo'
 						ORDER BY endo_tx_ate DESC
 						LIMIT 1;"
-				),
-				MYSQLI_ASSOC
+				)
 			);
 			if(isset($saldoAnterior['endo_tx_saldo'])){
 				$saldoAnterior = $saldoAnterior['endo_tx_saldo'];

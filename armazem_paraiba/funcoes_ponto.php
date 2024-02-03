@@ -739,7 +739,7 @@
 			}
 		}
 		foreach($pontosDia as $ponto){
-			$tiposRegistrados[] = [date("H:i", strtotime($ponto['pont_tx_data'])), $ponto['pont_tx_tipo']]; //$arrayMDC
+			$tiposRegistrados[] = [date("H:i", strtotime($ponto['pont_tx_data'])), $ponto['pont_tx_tipo']];
 			if(!isset($registros[$tipos[$ponto['pont_tx_tipo']]])){
 				$registros[$tipos[$ponto['pont_tx_tipo']]] = [];
 			}
@@ -750,7 +750,7 @@
 		$registros['refeicaoCompleto'] = ordenar_horarios($registros['inicioRefeicao'], $registros['fimRefeicao']);		/* $refeicaoOrdenada */
 		$registros['esperaCompleto']   = ordenar_horarios($registros['inicioEspera'],   $registros['fimEspera'], True);	/* $esperaOrdenada */
 		$registros['descansoCompleto'] = ordenar_horarios($registros['inicioDescanso'], $registros['fimDescanso']);		/* $descansoOrdenado */
-		$registros['repousoCompleto']  = ordenar_horarios($registros['inicioRepouso'], $registros['fimRepouso']);		/* $repousoOrdenado */;
+		$registros['repousoCompleto']  = ordenar_horarios($registros['inicioRepouso'], $registros['fimRepouso']);		/* $repousoOrdenado */
 
 		
 		if (isset($registros['esperaCompleto']['paresParaRepouso']) && !empty($registros['esperaCompleto']['paresParaRepouso'])){
@@ -1193,7 +1193,7 @@
 				if (count($aRetorno[$tipo]) > 0){
 					for($f = 0; $f < count($aRetorno[$tipo]); $f++){
 						//Formatar datas para hora e minutos sem perder o D+1, caso tiver
-						if(strpos($aRetorno[$tipo][$f], ':00', strlen($aRetorno[$tipo][$f])-3) !== false){
+						if(strlen($aRetorno[$tipo][$f]) > 3 && strpos($aRetorno[$tipo][$f], ':00', strlen($aRetorno[$tipo][$f])-3) !== false){
 							if(strpos($aRetorno[$tipo][$f], 'D+1') !== false){
 								$aRetorno[$tipo][$f] = explode(' ', $aRetorno[$tipo][$f]);
 								$aRetorno[$tipo][$f] = substr($aRetorno[$tipo][$f][1], 0, strlen($aRetorno[$tipo][$f][1])-3)+$aRetorno[$tipo][$f][2];

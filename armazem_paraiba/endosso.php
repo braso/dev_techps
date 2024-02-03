@@ -121,6 +121,8 @@
 				   $totalResumo['diffSaldo'] = operarHorarios([$totalResumo['diffSaldo'], $transferir], '-');
 				   $totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '-');
 				   $totalResumo['he100'] = $transferir;
+			   }else{
+					$totalResumo['he100'] = '00:00';
 			   }
 
 				//Limitar a quantidade de HE50 à quantidade informada em endo_tx_horasAPagar{
@@ -151,6 +153,7 @@
 				for($f = 0; $f < count($aDia); $f++){
 					$data = explode('/', $aDia[$f][0]);
 					$data = $data[2].'-'.$data[1].'-'.$data[0];
+					
 					$bdMotivos = mysqli_fetch_all(
 						query(
 							"SELECT * FROM ponto 
@@ -162,24 +165,24 @@
 						), 
 						MYSQLI_ASSOC
 					);
+
 					$motivos = '';
 					for($f2 = 0; $f2 < count($bdMotivos); $f2++){
 						$legendas = [
 							'' => '',
-							'I' => '( I - Incluída Manualmente)',
-							'P' => '( P - Pré-Assinalada )',
-							'T' => '( T - Outras fontes de marcação )',
-							'DSR' => '( DSR - Descanso Semanal Remunerado e Abono )'
+							'I' => 'Incluída Manualmente',
+							'P' => 'Pré-Assinalada',
+							'T' => 'Outras fontes de marcação',
+							'DSR' => 'Descanso Semanal Remunerado e Abono'
 						];
 						$seContemAsterisco = '';
 						foreach ($aDia[$f] as $valor) {
 							if (strpos($valor, '*') !== false) {
-								$seContemAsterisco = '- <br>( * - Registros excluídos manualmente ).';
+								$seContemAsterisco = '<br>Registros excluídos manualmente.';
 								break;
 							}
 						}
-						$legenda = isset($legendas[$bdMotivos[$f2]['moti_tx_legenda']]) ? $legendas[$bdMotivos[$f2]['moti_tx_legenda']] : '';
-						$motivos .= $bdMotivos[$f2]['moti_tx_nome'].' - <br>'.$legenda.''.$seContemAsterisco.'<br>';
+						$motivos .= $bdMotivos[$f2]['moti_tx_nome'].'<br>';
 					}
 					
 					array_splice($aDia[$f], 18, 0, $motivos); // inserir a coluna de motivo, no momento da implementação, estava na coluna 19
