@@ -1176,10 +1176,10 @@
 
 		if(
 			isset($aRetorno['fimJornada'][0]) && 
-			is_bool(strpos($aRetorno['fimJornada'][0], 'não registrada')) &&
-			substr($aRetorno['fimJornada'][0], 0, 11) > substr($aRetorno['inicioJornada'][0], 0, 11)
+			is_bool(strpos($aRetorno['fimJornada'][count($aRetorno['fimJornada'])-1], 'não registrada')) &&
+			substr($aRetorno['fimJornada'][count($aRetorno['fimJornada'])-1], 0, 11) > substr($aRetorno['inicioJornada'][count($aRetorno['fimJornada'])-1], 0, 11)
 		){
-			array_splice($aRetorno['fimJornada'], 1, 0, 'D+1');
+			array_splice($aRetorno['fimJornada'], count($aRetorno['fimJornada']), 0, 'D+1');
 		}
 
 		//Converter array em string{
