@@ -43,9 +43,9 @@
 		];
 	
 		//BOTOES
-		$b = [botao("Buscar", 'index')];
+		$b = [botao("Buscar", 'index','','','','','btn btn-success')];
 		if ($_SESSION['user_tx_nivel'] != 'Motorista') {
-			$b[] = botao("Cadastrar Abono", 'layout_abono','','','','','btn btn-success');
+			$b[] = botao("Cadastrar Abono", 'layout_abono');
 		}
 	
 		abre_form('Filtro de Busca');
