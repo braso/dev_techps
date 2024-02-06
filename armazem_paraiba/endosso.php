@@ -168,20 +168,6 @@
 
 					$motivos = '';
 					for($f2 = 0; $f2 < count($bdMotivos); $f2++){
-						$legendas = [
-							'' => '',
-							'I' => 'Incluída Manualmente',
-							'P' => 'Pré-Assinalada',
-							'T' => 'Outras fontes de marcação',
-							'DSR' => 'Descanso Semanal Remunerado e Abono'
-						];
-						$seContemAsterisco = '';
-						foreach ($aDia[$f] as $valor) {
-							if (strpos($valor, '*') !== false) {
-								$seContemAsterisco = '<br>Registros excluídos manualmente.';
-								break;
-							}
-						}
 						$motivos .= $bdMotivos[$f2]['moti_tx_nome'].'<br>';
 					}
 					

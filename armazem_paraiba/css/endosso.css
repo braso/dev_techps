@@ -1,28 +1,73 @@
 @media print {
     body {
-        width: 297mm;
         margin: 1cm;
-        margin-left: 20cm;
+        margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
+        transform: scale(1.0);
+        transform-origin: top left;
     }
+
     @page {
         size: A4 landscape;
-        margin: 0mm;
+        margin: 1cm;
     }
-    td.impressao {
-        position: static; 
-        text-align: center;
-        left:58.8rem !important;
+
+    .table-resumo {
+        width: 89% !important;
+        page-break-inside: avoid !important;
+        border-collapse: collapse !important;
+        border: 0 !important;
     }
+    
     .table th, .table td {
         padding-top: 0px !important;
-        padding-right: 11.2px !important;
+        padding-right: 3.2px !important;
         padding-bottom: 0px !important;
-        padding-left: 11.2px !important;
+        padding-left: 3.2px !important;
         text-align: center !important;
         border: 0.01px solid black !important;
         page-break-inside: avoid !important;
-        
     }
+    
+    #impressao {
+        left: 53rem !important;
+    }
+
+    #btnImprimir,
+    #btnImprimir:hover{
+        display: none;
+    }
+}
+
+.company-info>td{
+    text-align: left;
+}
+
+#btnImprimir{
+    position: relative;
+	left: 37rem;
+    font-family: Roboto, sans-serif;
+    font-weight: 0;
+    font-size: 14px;
+    color: #fff;
+    background-color: #26a4b0;
+    padding: 11px 30px;
+    border: none;
+    box-shadow: none;
+    transition : 0ms;
+    transform: translateY(0);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    cursor: pointer;
+}
+#btnImprimir:hover{
+    transition : 0ms;
+    padding: 10px 50px;
+    transform : translateY(-0px);
+    background-color: #fff;
+    color: #0066cc;
+    border: none;
+    
 }
 
 /* table thead tr th:nth-child(3),
@@ -48,7 +93,7 @@ body {
     align-items: center;
     justify-content: space-between;
     background-color: #f2f2f2;
-    padding: 10px;
+    padding: 3px;
 }
 
 .header img {
@@ -113,7 +158,8 @@ body {
 }
 
 .signature-block {
-    width: 30%;
+    display: inline-block;
+    width: 45%;
 }
 
 .signature-block p {
@@ -130,7 +176,7 @@ body {
 .table-info td {
     border: 0.01px solid black;
     border-collapse: collapse;
-    margin-top: 5px;
+    margin-top: -18px;
     page-break-inside: avoid;
     /* width: 280px; */
 }
@@ -147,7 +193,7 @@ body {
     border-collapse: collapse;
     page-break-inside: avoid;
     /* width: 280px; */
-    margin-top: 5px;
+    margin-top: 12px;
 }
 
 .table-legenda,
@@ -182,4 +228,9 @@ body {
 td .empty {
     border: 0.01px solid transparent;
     border-right: 0.01px solid black;
+}
+
+#impressao {
+    position: absolute; 
+    left: 73rem;
 }

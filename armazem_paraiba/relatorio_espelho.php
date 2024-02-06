@@ -10,20 +10,25 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Espelho de Ponto</title>
 	<link rel="stylesheet" href="css/endosso.css">
-	<style>
-		.company-info>td{
-			text-align: left;
-		}
-	</style>
 
 	<link rel="apple-touch-icon" sizes="180x180" href="/contex20/img/favicon/apple-touch-icon.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/contex20/img/favicon/favicon-32x32.png">
 	<link rel="icon" type="image/png" sizes="16x16" href="/contex20/img/favicon/favicon-16x16.png">
 	<link rel="shortcut icon" type="image/x-icon" href="/contex20/img/favicon/favicon-32x32.png?v=2">
 	<link rel="manifest" href="/contex20/img/favicon/site.webmanifest">
+	
+	<script>
+	function imprimir() {
+	    // Abrir a caixa de diálogo de impressão
+	    window.print();
+	}
+	</script>
 </head>
 
 <body>
+    <button id="btnImprimir" class="btn default" type="button" onclick="imprimir()">Imprimir</button >
+    <br>
+    
 	<div class="header">
 		<img src="<?= $aEmpresa['empr_tx_logo'] ?>" alt="Logo Empresa Esquerda">
 		<h1>Espelho de Ponto</h1>
@@ -104,7 +109,7 @@
 
 <table class="table-bottom">
 	<tr>
-		<td rowspan="2"  style="width: 200px;">
+		<td rowspan="2"  style="width: 150px;">
 			<table class="table-info">
 				<tr>
 					<td>Carga Horaria Prevista:</td>
@@ -147,7 +152,7 @@
 				</tr>
 			</table>
 			
-			<td rowspan="2" style="width: 174px;">
+			<td rowspan="2" style="width: 150px;">
 			<table class="table-legenda">
 			    <tr>
 			         <th colspan="2" style="text-align: center;">
@@ -184,6 +189,12 @@
 						<center>Registros excluídos manualmente  </center>
 					</td>
 				</tr>
+				<tr>
+					<td><center><b>D+1</b></center></td>
+					<td>
+						<center>Jornada terminada nos dias seguintes</center>
+					</td>
+				</tr>
 			</table>
 			</td>
 		</td>
@@ -206,7 +217,7 @@
 		</tr>
 		<tr>
 			<td>
-				<div class="signature-block" style="display: inline-block; width: 45%;">
+				<div class="signature-block">
 					<center>
 						<p>___________________________________________________________</p>
 					</center>
@@ -217,7 +228,7 @@
 						<p>Cargo</p>
 					</center>
 				</div>
-				<div class="signature-block" style="display: inline-block; width: 45%;">
+				<div class="signature-block">
 					<center>
 						<p>___________________________________________________________</p>
 					</center>
@@ -231,7 +242,7 @@
 			</td>
 		</tr>
 		<tr>
-			<td style="position: absolute; left: 73rem;"><b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . "(UTC-3)" ?></td>
+			<td id="impressao"><b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . "(UTC-3)" ?></td>
 		</tr>
 	</table>
 </body>
