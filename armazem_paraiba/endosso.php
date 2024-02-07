@@ -178,6 +178,7 @@
 		}
 		
 		include "./relatorio_espelho.php";
+		include "./csv_relatorio_espelho.php";
 		exit;
 	}
 

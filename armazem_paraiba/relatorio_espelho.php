@@ -1,5 +1,6 @@
 <?
 	include_once $_SERVER['DOCUMENT_ROOT'].($CONTEX['path']."/../")."contex20/funcoes_form.php";
+	include $_SERVER['DOCUMENT_ROOT'].($CONTEX['path'])."/csv_relatorio_espelho.php";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -27,6 +28,31 @@
 
 <body>
     <button id="btnImprimir" class="btn default" type="button" onclick="imprimir()">Imprimir</button >
+    <button onclick="downloadCSV()">Baixar CSV</button>
+	<script>
+		function downloadCSV() {
+		// Caminho para o arquivo CSV no servidor
+		var caminhoDoArquivo = <? $_SERVER['DOCUMENT_ROOT'].($CONTEX['path']).'/arquivos/endosso_csv/espelho-de-ponto.csv' ?>;
+
+		// Cria um link temporário
+		var link = document.createElement('a');
+
+		// Define o caminho do arquivo como o href do link
+		link.href = caminhoDoArquivo;
+
+		// Define o atributo de download com o nome do arquivo
+		link.download = 'exemplo.csv';
+
+		// Adiciona o link ao corpo do documento
+		document.body.appendChild(link);
+
+		// Dispara um clique no link para iniciar o download
+		link.click();
+
+		// Remove o link temporário do corpo do documento
+		document.body.removeChild(link);
+		}
+	</script>
     <br>
     
 	<div class="header">
