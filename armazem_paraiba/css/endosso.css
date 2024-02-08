@@ -32,8 +32,7 @@
         left: 53rem !important;
     }
 
-    #btnImprimir,
-    #btnImprimir:hover{
+    #exporta{
         display: none;
     }
 }
@@ -42,33 +41,45 @@
     text-align: left;
 }
 
-#btnImprimir{
+#exporta{
     position: relative;
 	left: 37rem;
-    font-family: Roboto, sans-serif;
-    font-weight: 0;
-    font-size: 14px;
-    color: #fff;
-    background-color: #26a4b0;
-    padding: 11px 30px;
-    border: none;
-    box-shadow: none;
-    transition : 0ms;
-    transform: translateY(0);
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    cursor: pointer;
 }
-#btnImprimir:hover{
-    transition : 0ms;
-    padding: 10px 50px;
-    transform : translateY(-0px);
-    background-color: #fff;
-    color: #0066cc;
-    border: none;
-    
+
+#exporta > #btnImprimir{
+  padding: 10px 15px; 
+  font-size: 16px;
+  background-color: #36c6d3; 
+  color: white; 
+  border: none; 
+  border-radius: 5px; 
+  cursor: pointer;
 }
+
+#exporta > #btnCsv{
+  padding: 10px 15px; 
+  font-size: 16px;
+  background-color: #4CAF50; 
+  color: white; 
+  border: none; 
+  border-radius: 5px; 
+  cursor: pointer;
+}
+
+#exporta > #btnCsv:hover{
+    background-color: #45a049; 
+}
+
+#exporta > #btnImprimir:hover{
+    background-color: #259ca7; 
+}
+
+#btnImprimir,
+#btnCsv{
+    display: inline-block;
+    margin-right: 10px; /* Espaço entre os botões, opcional */
+}
+
 
 /* table thead tr th:nth-child(3),
 table thead tr th:nth-child(7),
