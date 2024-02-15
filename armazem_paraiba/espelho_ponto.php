@@ -15,7 +15,7 @@
 		if ($_SESSION['user_tx_nivel'] == 'Motorista') {
 			$_POST['busca_motorista'] = $_SESSION['user_nb_entidade'];
 			$extraBuscaMotorista = " AND enti_nb_id = '$_SESSION[user_nb_entidade]'";
-			$extraCampoData= 'readonly';
+			$extraCampoData= 'disabled';
 
 			if (isset($_POST['busca_dataInicio']) || !empty($_POST['busca_dataInicio'])){
 				$_POST['busca_dataInicio'] = date("Y-m-01");
