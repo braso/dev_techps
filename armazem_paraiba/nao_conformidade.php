@@ -69,6 +69,7 @@
 			$b = [
 				botao("Buscar", 'index', '', '', '', 1,'btn btn-success'),
 				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1),
+				'<span id=dadosResumo><b>'.$carregando.'</b></span>'
 			];
 		//}
 
@@ -77,7 +78,7 @@
 		fecha_form($b);
 
 		$cab = [
-			"", "MAT.", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
+			"", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "HE 50%", "HE&nbsp;100%",
 			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 		];
@@ -113,7 +114,7 @@
 							$dataVez = $_POST['busca_data']."-".str_pad($i, 2, 0, STR_PAD_LEFT);
 							$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 		
-							$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], [$aMotorista['enti_tx_matricula']], $aDetalhado));
+							$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDetalhado));
 							for($f = 0; $f < sizeof($row)-1; $f++){
 								if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
 									continue;
@@ -146,9 +147,6 @@
 							$infoEndosso = '';
 							$counts['endossados']['nao']++;
 						}
-
-						$aIdMotorista[] 		= $aMotorista['enti_nb_id'];
-						$aMatriculaMotorista[] 	= $aMotorista['enti_tx_matricula'];						
 
 						$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
 
@@ -225,24 +223,19 @@
 						
 
 						abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] | $aEmpresa[empr_tx_nome] $infoEndosso $convencaoPadrao $saldosMotorista");
-
-						
-						$aDia[] = array_values(array_merge(['', '', '', '', '', '', '', '<b>TOTAL</b>'], $totalResumo));
 	
 						$tolerancia = intval($dadosParametro['para_tx_tolerancia']);
 
 						$exibir = True;
-						$saldoColIndex = 21;
+						$saldoColIndex = 20;
 						
 						for($f = 0; $f < count($aDia); $f++){
-							
 							$keys = array_keys($aDia[$f]);
 							$hasUnconformities = false;
 							foreach($keys as $key){
 								if(strpos($aDia[$f][$key], 'fa-warning') !== false){
 									$hasUnconformities = true;
-									$counts['naoConformidade']++;
-									break;
+									$counts['naoConformidade'] += substr_count($aDia[$f][$key], 'fa-warning');
 								}
 							}
 							if($_POST['busca_situacao'] == 'Não conformidade' && !$hasUnconformities){ //Se for pra aparecer apenas inconformidades e a linha não tiver inconformidades
@@ -265,15 +258,23 @@
 								$aDia[$f][$saldoColIndex] = '00:00';
 							}
 						}
+
+						$aDia[] = array_values(array_merge(['', '', '', '', '', '', '<b>TOTAL</b>'], $totalResumo));
+						$aDia[count($aDia)-1]['exibir'] = True;
+
 						$qtt = count($aDia);
 						for($f = 0; $f < $qtt;){
 							if(isset($aDia[$f]['exibir']) && !$aDia[$f]['exibir']){
-								unset($aDia[$f]);
+								$aDia = array_merge(array_slice($aDia, 0, $f), array_slice($aDia, $f+1));
 							}else{
 								$f++;
 							}
 						}
-						
+
+						for($f = 0; $f < count($aDia); $f++){
+							unset($aDia[$f]['exibir']);
+						}
+
 						grid2($cab, $aDia);
 						fecha_form();
 	
