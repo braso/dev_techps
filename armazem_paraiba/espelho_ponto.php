@@ -102,8 +102,8 @@
 		];
 	
 		//BOTOES
-		$b = [
-			botao("Buscar", 'index','','','','','btn btn-success')
+    $b = [
+			botao("Buscar", 'index', '', '', '', '', 'btn btn-success')
 		];
 		if ($_SESSION['user_tx_nivel'] != 'Motorista') {
 			$b[] = botao("Cadastrar Abono", 'layout_abono');
