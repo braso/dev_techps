@@ -163,8 +163,9 @@
 			}
 			$enti_campos = array_merge($enti_campos, ['enti_nb_userCadastro', 'enti_tx_dataCadastro', 'enti_tx_ehPadrao']);
 			$enti_valores = array_merge($enti_valores, [$_SESSION['user_nb_id'], date("Y-m-d H:i:s"), $ehPadrao]);
-			$id = inserir('entidade', $enti_campos, $enti_valores)[0];
-
+			$id = 'em teste';
+			// $id = inserir('entidade', $enti_campos, $enti_valores)[0];
+			
 			$user_infos = [
 				'user_tx_matricula' 	=> $_POST['postMatricula'], 
 				'user_tx_nome' 			=> $_POST['nome'], 
@@ -189,7 +190,7 @@
 			}
 
 			// ADICIONA O USUARIO AO INSERIR NOVO motorista (USUARIO E SENHA = CPF) - PREENCHER A VARIAVEL USER_NB_ENTIDADE
-			inserir('user', array_keys($user_infos), array_values($user_infos));
+			// inserir('user', array_keys($user_infos), array_values($user_infos));
 		}else{ // Se está editando um motorista existente
 
 			$a_user = carrega_array(query(
@@ -508,16 +509,16 @@
 		$ehPadrao = '';
 		if($a_mod['enti_nb_parametro'] > 0){
 			$aEmpresa = carregar('empresa', (int)$a_mod['enti_nb_empresa']);
-			$aParam = carregar('parametro', (int)$aEmpresa['empr_nb_parametro']);
 			$aParametro = carregar('parametro', $a_mod['enti_nb_parametro']);
+
+			$padronizado = (
+				$a_mod['enti_tx_jornadaSemanal'] 		== $aParametro['para_tx_jornadaSemanal'] &&
+				$a_mod['enti_tx_jornadaSabado'] 		== $aParametro['para_tx_jornadaSabado'] &&
+				$a_mod['enti_tx_percentualHE'] 			== $aParametro['para_tx_percentualHE'] &&
+				$a_mod['enti_tx_percentualSabadoHE'] 	== $aParametro['para_tx_percentualSabadoHE']
+			);
 			
-			if($aParam['para_nb_id'] != $aParametro ['para_nb_id']){
-				$ehPadrao = 'nao';
-			}else{
-				$ehPadrao = 'sim';
-			}
-			
-			$cJornada[]=texto('Convenção Padrão?', $ehPadrao, 2);
+			$cJornada[]=texto('Convenção Padrão?', ($padronizado? 'Sim': 'Não'), 2);
 		}
 
 		if ($a_mod['enti_tx_cnhAnexo'])
