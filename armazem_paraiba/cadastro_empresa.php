@@ -57,9 +57,9 @@
 		$empty_ftp_inputs = empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) + 0;
 
 		if($empty_ftp_inputs == 3){
-			$_POST['ftpServer']   = 'ftp-jornadas.positronrt.com.br';
-			$_POST['ftpUsername'] = '08995631000108';
-			$_POST['ftpUserpass'] = '0899';
+			$_POST['ftpServer']   = 'ftp:ftp-jornadas.positronrt.com.br';
+			$_POST['ftpUsername'] = 'u:08995631000108';
+			$_POST['ftpUserpass'] = 'p:0899';
 		}elseif($empty_ftp_inputs > 0){
 			echo '<script>alert("Preencha os 3 campos de FTP.")</script>';
 			layout_empresa();
@@ -212,9 +212,9 @@
 				'dataRegistroCNPJ' => empty($a_mod['empr_tx_dataRegistroCNPJ'])? null: $a_mod['empr_tx_dataRegistroCNPJ'],
 				'logo' => $a_mod['empr_tx_logo'],
 				'domain' => $a_mod['empr_tx_domain'],
-				'ftpServer' => $a_mod['empr_tx_ftpServer'] == 'ftp-jornadas.positronrt.com.br'? '': $a_mod['empr_tx_ftpServer'],
-				'ftpUsername' => $a_mod['empr_tx_ftpUsername'] == '08995631000108'? '': $a_mod['empr_tx_ftpUsername'],
-				'ftpUserpass' => $a_mod['empr_tx_ftpUserpass'] == '0899'? '': $a_mod['empr_tx_ftpUserpass'],
+				'ftpServer' => $a_mod['empr_tx_ftpServer'] == 'ftp:ftp-jornadas.positronrt.com.br'? '': $a_mod['empr_tx_ftpServer'],
+				'ftpUsername' => $a_mod['empr_tx_ftpUsername'] == 'u:08995631000108'? '': $a_mod['empr_tx_ftpUsername'],
+				'ftpUserpass' => $a_mod['empr_tx_ftpUserpass'] == 'p:0899'? '': $a_mod['empr_tx_ftpUserpass'],
 				'matriz' => $a_mod['empr_tx_Ehmatriz']
 			];
 			$btn_txt = 'Atualizar';
@@ -310,8 +310,10 @@
 		$file = basename(__FILE__);
 		$file = explode('.', $file);
 
-		$botao[] = botao($btn_txt,'cadastra_empresa','id',$_POST['id'],'','','btn btn-success');
-		$botao[] = botao('Voltar','index');
+		$botao = [
+			botao($btn_txt,'cadastra_empresa','id',$_POST['id'],'','','btn btn-success'),
+			botao('Voltar','index')
+		];
 		
 		abre_form("Dados da Empresa/Filial");
 		linha_form($c);
@@ -471,15 +473,19 @@
 		$uf = ['', 'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 		
 
-		$c[] = campo('Código',			'busca_codigo',		($_POST['busca_codigo']?? ''),		2, 'MASCARA_NUMERO','maxlength="6"');
-		$c[] = campo('Nome',			'busca_nome',		($_POST['busca_nome']?? ''),		3, '','maxlength="65"');
-		$c[] = campo('Nome Fantasia',	'busca_fantasia',	($_POST['busca_fantasia']?? ''),	2, '','maxlength="65"');
-		$c[] = campo('CPF/CNPJ',		'busca_cnpj',		($_POST['busca_cnpj']?? ''),		2, 'MASCARA_CPF');
-		$c[] = combo('UF',				'busca_uf',			($_POST['busca_uf']?? ''),			1, $uf);
-		$c[] = combo('Situação',		'busca_situacao',	($_POST['busca_situacao']?? ''),	2, ['' => 'Todos', 'ativo' => 'Ativo', 'inativo' => 'Inativo']);
+		$c = [
+			campo('Código',			'busca_codigo',		($_POST['busca_codigo']?? ''),		2,'MASCARA_NUMERO',	'maxlength="6"'),
+			campo('Nome',			'busca_nome',		($_POST['busca_nome']?? ''),		3,'',				'maxlength="65"'),
+			campo('Nome Fantasia',	'busca_fantasia',	($_POST['busca_fantasia']?? ''),	2,'',				'maxlength="65"'),
+			campo('CPF/CNPJ',		'busca_cnpj',		($_POST['busca_cnpj']?? ''),		2,'MASCARA_CPF'),
+			combo('UF',				'busca_uf',			($_POST['busca_uf']?? ''),			1,$uf),
+			combo('Situação',		'busca_situacao',	($_POST['busca_situacao']?? ''),	2,['' => 'Todos', 'ativo' => 'Ativo', 'inativo' => 'Inativo'])
+		];
 
-		$botao[] = botao('Buscar','index');
-		$botao[] = botao('Inserir','layout_empresa','','','','','btn btn-success');
+		$botao = [
+			botao('Buscar','index'),
+			botao('Inserir','layout_empresa','','','','','btn btn-success')
+		];
 		
 		abre_form('Filtro de Busca');
 		linha_form($c);

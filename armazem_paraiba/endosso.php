@@ -168,20 +168,6 @@
 
 					$motivos = '';
 					for($f2 = 0; $f2 < count($bdMotivos); $f2++){
-						$legendas = [
-							'' => '',
-							'I' => 'Incluída Manualmente',
-							'P' => 'Pré-Assinalada',
-							'T' => 'Outras fontes de marcação',
-							'DSR' => 'Descanso Semanal Remunerado e Abono'
-						];
-						$seContemAsterisco = '';
-						foreach ($aDia[$f] as $valor) {
-							if (strpos($valor, '*') !== false) {
-								$seContemAsterisco = '<br>Registros excluídos manualmente.';
-								break;
-							}
-						}
 						$motivos .= $bdMotivos[$f2]['moti_tx_nome'].'<br>';
 					}
 					
@@ -192,6 +178,7 @@
 		}
 		
 		include "./relatorio_espelho.php";
+		include "./csv_relatorio_espelho.php";
 		exit;
 	}
 
@@ -268,8 +255,8 @@
 				$disabled = 'disabled=disabled title="Pesquise um motorista para efetuar a impressão do endosso."';
 			}
 			$b = [
-				botao("Buscar", 'index', '', '', '', 1),
-				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1,'btn btn-info'),
+				botao("Buscar", 'index', '', '', '', 1,'btn btn-info'),
+				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1),
 				'<button name="acao" id="botaoContexCadastrar CadastrarEndosso" value="cadastrar_endosso" type="button" class="btn btn-success">Cadastrar Endosso</button>',
 				'<button name="acao" id="botaoContexCadastrar ImprimirRelatorio" value="impressao_relatorio" '.$disabled.' type="button" class="btn btn-default">Imprimir Relatório</button>',
 				'<span id=dadosResumo><b>'.$carregando.'</b></span>'
