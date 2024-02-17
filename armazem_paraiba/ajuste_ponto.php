@@ -132,8 +132,9 @@
 
 		$campos = ['pont_nb_user', 'pont_tx_matricula', 'pont_tx_data', 'pont_tx_tipo', 'pont_tx_tipoOriginal', 'pont_tx_status', 'pont_tx_dataCadastro', 'pont_nb_motivo', 'pont_tx_descricao'];
 		$valores = [$_SESSION['user_nb_id'], $aMotorista['enti_tx_matricula'], "$_POST[data] $_POST[hora]", $aTipo['macr_tx_codigoInterno'], $aTipo['macr_tx_codigoExterno'], 'ativo', date("Y-m-d H:i:s"),$_POST['motivo'],$_POST['descricao']];
-		inserir('ponto',$campos,$valores);
 		
+		
+		inserir('ponto',$campos,$valores);
 		index();
 		exit;
 	}
@@ -244,12 +245,21 @@
 					" AND pont_tx_data LIKE '".$_POST['data']."%' ".
 					" AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'"
 		;
-		
-		$cab = ['CÓD','DATA','HORA','TIPO','MOTIVO', 'LEGENDA','JUSTIFICATIVA','USUÁRIO','DATA CADASTRO',''];
-		
-		
-		$val = ['pont_nb_id','data(pont_tx_data)','data(pont_tx_data,3)','macr_tx_nome','moti_tx_nome','moti_tx_legenda','pont_tx_descricao','user_tx_login','data(pont_tx_dataCadastro,1)',$iconeExcluir];
-		grid($sql,$cab,$val,'','',2, 'ASC', -1);
+
+		$gridFields = [
+			'CÓD'												=> 'pont_nb_id',
+			'DATA'												=> 'data(pont_tx_data)',
+			'HORA'												=> 'data(pont_tx_data,3)',
+			'TIPO'												=> 'macr_tx_nome',
+			'MOTIVO'											=> 'moti_tx_nome',
+			'LEGENDA'											=> 'moti_tx_legenda',
+			'JUSTIFICATIVA'										=> 'pont_tx_descricao',
+			'USUÁRIO'											=> 'user_tx_login',
+			'DATA CADASTRO'										=> 'data(pont_tx_dataCadastro,1)',
+			'<spam class="glyphicon glyphicon-remove"></spam>'	=> $iconeExcluir
+		];
+
+		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 2, 'ASC', -1);
 		rodape();
 	}
 ?>

@@ -1,6 +1,6 @@
 <style>
     .menu-dropdown.active > a {
-        background-color: #647082 !important;
+        background-color: #8c98a6 !important;
         /*color: #fff !important;*/
     }
 </style>
