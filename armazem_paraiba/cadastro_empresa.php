@@ -26,13 +26,12 @@
 
 		layout_empresa();
 		exit;
-
 	}
 
 	function cadastra_empresa(){
 		$sqlCheckNivel = query("SELECT empr_tx_Ehmatriz FROM empresa WHERE empr_nb_id = '$_POST[id]'")->fetch_assoc();
-		$campos = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade', 'endereco', 'bairro', 'dataRegistroCNPJ'];
-		foreach($campos as $campo){
+		$camposObrigatorios = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade', 'endereco', 'bairro'];
+		foreach($camposObrigatorios as $campo){
 			if(!isset($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'sim' || empty($_POST[$campo])){
 				echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
 				layout_empresa();
@@ -261,7 +260,7 @@
 				texto('Inscrição Estadual',$input_values['inscricaoEstadual'],3),
 				texto('Inscrição Municipal',$input_values['inscricaoMunicipal'],3),
 				texto('Regime Tributário',$input_values['regimeTributario'],3,$regimes),
-				texto('Data Reg. CNPJ*',$input_values['dataRegistroCNPJ'],3),
+				texto('Data Reg. CNPJ',$input_values['dataRegistroCNPJ'],3),
 				$campo_dominio,
 				$campo_EhMatriz,
 				
@@ -271,10 +270,10 @@
 		
 		}else{
 			$c = [
-				campo('CPF/CNPJ*','cnpj',$input_values['cnpj'],2,'MASCARA_CPF','onkeyup="checa_cnpj(this.value);"'),
+				campo('CPF/CNPJ*','cnpj',$input_values['cnpj'],2,'MASCARA_CPF/CNPJ','onkeyup="checa_cnpj(this.value);"'),
 				campo('Nome*','nome',$input_values['nome'],4,'','maxlength="65"'),
 				campo('Nome Fantasia','fantasia',$input_values['fantasia'],4,'','maxlength="65"'),
-				combo('Situação','situacao',$input_values['situacao'],2,array('Ativo','Inativo')),
+				combo('Situação','situacao',$input_values['situacao'],2,['ativo' => 'Ativo', 'inativo' => 'Inativo']),
 				campo('CEP*','cep',$input_values['cep'],2,'MASCARA_CEP','onkeyup="carrega_cep(this.value);"'),
 				campo('Endereço*','endereco',$input_values['endereco'],5,'','maxlength="100"'),
 				campo('Número*','numero',$input_values['numero'],2),
@@ -289,7 +288,7 @@
 				campo('Inscrição Estadual','inscricaoEstadual',$input_values['inscricaoEstadual'],3),
 				campo('Inscrição Municipal','inscricaoMunicipal',$input_values['inscricaoMunicipal'],3),
 				combo('Regime Tributário','regimeTributario',$input_values['regimeTributario'],3,$regimes),
-				campo_data('Data Reg. CNPJ*','dataRegistroCNPJ',$input_values['dataRegistroCNPJ'],3),
+				campo_data('Data Reg. CNPJ','dataRegistroCNPJ',$input_values['dataRegistroCNPJ'],3),
 				arquivo('Logo (.png, .jpg)'.$iconeExcluirLogo,'logo',$input_values['logo'],4),
 				$campo_dominio,
 				$campo_EhMatriz,
@@ -445,57 +444,42 @@
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
 		}
-		if(empty($_POST['busca_situacao'])){
-			$_POST['busca_situacao'] = 'Ativo';
-		}
 
 		if(!empty($_POST['busca_codigo'])){
 			$extra .= " AND empr_nb_id = '".$_POST['busca_codigo']."'";
-		}else{
-			$_POST['busca_codigo'] = '';
 		}
 
 		if(!empty($_POST['busca_nome'])){
 			$extra .= " AND empr_tx_nome LIKE '%".$_POST['busca_nome']."%'";
-		}else{
-			$_POST['busca_nome'] = '';
 		}
 
 		if(!empty($_POST['busca_fantasia'])){
 			$extra .= " AND empr_tx_fantasia LIKE '%".$_POST['busca_fantasia']."%'";
-		}else{
-			$_POST['busca_fantasia'] = '';
 		}
 
 		if(!empty($_POST['busca_cnpj'])){
 			$extra .= " AND empr_tx_cnpj = '".$_POST['busca_cnpj']."'";
-		}else{
-			$_POST['busca_cnpj'] = '';
 		}
 
 		if(!empty($_POST['busca_situacao']) && $_POST['busca_situacao'] != 'Todos'){
 			$extra .= " AND empr_tx_situacao = '".$_POST['busca_situacao']."'";
-		}else{
-			$_POST['busca_situacao'] = '';
 		}
 
 		if(!empty($_POST['busca_uf'])){
 			$extra .= " AND cida_tx_uf = '".$_POST['busca_uf']."'";
-		}else{
-			$_POST['busca_uf'] = '';
 		}
 		
 
-		$uf = array('', 'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO');
+		$uf = ['', 'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 		
 
 		$c = [
-			campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO','maxlength="6"'),
-			campo('Nome','busca_nome',$_POST['busca_nome'],3,'','maxlength="65"'),
-			campo('Nome Fantasia','busca_fantasia',$_POST['busca_fantasia'],2,'','maxlength="65"'),
-			campo('CPF/CNPJ','busca_cnpj',$_POST['busca_cnpj'],2,'MASCARA_CPF'),
-			combo('UF','busca_uf',$_POST['busca_uf'],1,$uf),
-			combo('Situação','busca_situacao',$_POST['busca_situacao'],2,['Todos','Ativo','Inativo'])
+			campo('Código',			'busca_codigo',		($_POST['busca_codigo']?? ''),		2,'MASCARA_NUMERO',	'maxlength="6"'),
+			campo('Nome',			'busca_nome',		($_POST['busca_nome']?? ''),		3,'',				'maxlength="65"'),
+			campo('Nome Fantasia',	'busca_fantasia',	($_POST['busca_fantasia']?? ''),	2,'',				'maxlength="65"'),
+			campo('CPF/CNPJ',		'busca_cnpj',		($_POST['busca_cnpj']?? ''),		2,'MASCARA_CPF'),
+			combo('UF',				'busca_uf',			($_POST['busca_uf']?? ''),			1,$uf),
+			combo('Situação',		'busca_situacao',	($_POST['busca_situacao']?? ''),	2,['' => 'Todos', 'ativo' => 'Ativo', 'inativo' => 'Inativo'])
 		];
 
 		$botao = [
@@ -507,14 +491,25 @@
 		linha_form($c);
 		fecha_form($botao);
 
-		// $sql = "SELECT * FROM empresa, cidade WHERE empr_tx_status != 'inativo' AND empr_nb_cidade = cida_nb_id $extra";
-		$sql = "SELECT *
-		FROM empresa, cidade
-		WHERE empr_tx_status != 'inativo' AND empr_nb_cidade = cida_nb_id $extra
-		ORDER BY empr_tx_EhMatriz DESC, empr_nb_id";
-		$cab = ['CÓDIGO','NOME','FANTASIA','CPF/CNPJ','CIDADE/UF','SITUAÇÃO','',''];
-		$val = ['empr_nb_id','empr_tx_nome','empr_tx_fantasia','empr_tx_cnpj','concat(cida_nb_id)','empr_tx_situacao','icone_modificar(empr_nb_id,modifica_empresa)','icone_excluir(empr_nb_id,exclui_empresa)'];
-		grid($sql,$cab,$val,'','',1,'',10);
+		$sql = 
+			"SELECT * FROM empresa
+				JOIN cidade ON empr_nb_cidade = cida_nb_id
+				WHERE empr_tx_status != 'inativo' 
+					$extra
+				ORDER BY empr_tx_EhMatriz DESC, empr_nb_id";
+		
+		$gridCols = [
+			'CÓDIGO' => 'empr_nb_id',
+			'NOME' => 'empr_tx_nome',
+			'FANTASIA' => 'empr_tx_fantasia',
+			'CPF/CNPJ' => 'empr_tx_cnpj',
+			'CIDADE/UF' => 'concat(cida_nb_id)',
+			'SITUAÇÃO' => 'empr_tx_situacao',
+			'<spam class="glyphicon glyphicon-search"></spam>' => 'icone_modificar(empr_nb_id,modifica_empresa)',
+			'<spam class="glyphicon glyphicon-remove"></spam>' => 'icone_excluir(empr_nb_id,exclui_empresa)'
+		];
+		
+		grid($sql,array_keys($gridCols),array_values($gridCols),'','',1,'',10);
 
 		rodape();
 
