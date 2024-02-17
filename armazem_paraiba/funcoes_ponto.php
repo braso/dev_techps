@@ -87,7 +87,7 @@
 		
 		for ($i = $begin; $i <= $end; $i->modify('+1 day')) {
 
-			$sqlRemover = query("SELECT * FROM abono WHERE abon_tx_data = '" . $i->format("Y-m-d") . "' AND abon_tx_matricula = '$a[enti_tx_matricula]' AND abon_tx_status = 'ativo'");
+			$sqlRemover = query("SELECT * FROM abono WHERE abon_tx_data = '".$i->format("Y-m-d")."' AND abon_tx_matricula = '$a[enti_tx_matricula]' AND abon_tx_status = 'ativo'");
 			while ($aRemover = carrega_array($sqlRemover)) {
 				remover('abono', $aRemover['abon_nb_id']);
 			}
@@ -309,8 +309,8 @@
 		if (!preg_match('/^\d{2}:\d{2}$/', $tempoEfetuado) || !preg_match('/^\d{2}:\d{2}$/', $limite)) {
 			return '';
 		}
-		$datetime1 = new DateTime('2000-01-01 ' . $tempoEfetuado);
-		$datetime2 = new DateTime('2000-01-01 ' . $limite);
+		$datetime1 = new DateTime('2000-01-01 '.$tempoEfetuado);
+		$datetime2 = new DateTime('2000-01-01 '.$limite);
 
 		if($datetime1 > $datetime2){
 			return "<a style='white-space: nowrap;'><i style='color:orange;' title='Tempo excedido de $limite' class='fa fa-warning'></i></a>&nbsp;".$tempoEfetuado;
@@ -648,7 +648,7 @@
 		}
 
 		$aParametro = carregar('parametro', $aMotorista['enti_nb_parametro']);
-		$alertaJorEfetiva = ((isset($aParametro['para_tx_acordo']) && $aParametro['para_tx_acordo'] == 'Sim')? '12:00': '10:00');
+		$alertaJorEfetiva = ((isset($aParametro['para_tx_acordo']) && $aParametro['para_tx_acordo'] == 'sim')? '12:00': '10:00');
 
 		$queryFeriado = query(
 			"SELECT feri_tx_nome FROM feriado 
@@ -657,7 +657,7 @@
 		);
 		$stringFeriado = '';
 		while ($row = carrega_array($queryFeriado)) {
-			$stringFeriado .= $row[0] . "\n";
+			$stringFeriado .= $row[0]."\n";
 		}
 
 		$tiposRegistrados = [];
@@ -697,24 +697,16 @@
 				$diaSeguinte = (new DateTime($data))->add(DateInterval::createFromDateString('1 day'));
 				$diaSeguinte = $diaSeguinte->format('Y-m-d');
 				
-				$sql = query(
+				$sqlDiaSeguinte = query(
 					"SELECT macroponto.macr_tx_nome, ponto.* FROM ponto 
 					JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
 					WHERE pont_tx_status != 'inativo' 
-						AND pont_tx_matricula = $matricula 
-						AND pont_tx_data LIKE '".$diaSeguinte."%' 
-						-- AND pont_nb_id >= (
-						-- 	SELECT pont_nb_id FROM ponto 
-						-- 		WHERE pont_tx_status != 'inativo' 
-						-- 			AND pont_tx_matricula = '".$matricula."' 
-						-- 			AND pont_tx_data LIKE '".$diaSeguinte."%'
-						-- 			AND pont_tx_tipo = '1'
-						-- 		LIMIT 1
-						-- )
+						AND pont_tx_matricula = '$matricula' 
+						AND pont_tx_data LIKE '".$diaSeguinte."%'
 					ORDER BY pont_tx_data ASC;"
 				);
 				$pontosDiaSeguinte = [];
-				while($ponto = carrega_array($sql)){
+				while($ponto = carrega_array($sqlDiaSeguinte)){
 					$ponto['diaSeguinte'] = True;
 					$pontosDiaSeguinte[] = $ponto;
 					if($ponto['pont_tx_tipo'] == '2'){
@@ -767,10 +759,10 @@
 		$registros['repousoCompleto']['totalIntervalo'] = operarHorarios([$registros['repousoCompleto']['totalIntervalo'], $registros['repousoPorEspera']['repousoCompleto']['totalIntervalo']], '+');
 		$registros['repousoCompleto']['icone'] .= $registros['repousoPorEspera']['repousoCompleto']['icone'];
 		
-		$aRetorno['diffRefeicao'] = $registros['refeicaoCompleto']['icone'] . $registros['refeicaoCompleto']['totalIntervalo'];
-		$aRetorno['diffEspera']   = $registros['esperaCompleto']['icone'] . $registros['esperaCompleto']['totalIntervalo'];
-		$aRetorno['diffDescanso'] = $registros['descansoCompleto']['icone'] . $registros['descansoCompleto']['totalIntervalo'];
-		$aRetorno['diffRepouso']  = $registros['repousoCompleto']['icone'] . $registros['repousoCompleto']['totalIntervalo'];
+		$aRetorno['diffRefeicao'] = $registros['refeicaoCompleto']['icone'].$registros['refeicaoCompleto']['totalIntervalo'];
+		$aRetorno['diffEspera']   = $registros['esperaCompleto']['icone'].$registros['esperaCompleto']['totalIntervalo'];
+		$aRetorno['diffDescanso'] = $registros['descansoCompleto']['icone'].$registros['descansoCompleto']['totalIntervalo'];
+		$aRetorno['diffRepouso']  = $registros['repousoCompleto']['icone'].$registros['repousoCompleto']['totalIntervalo'];
 
 		$contagemEspera += count($registros['esperaCompleto']['pares']);
 
@@ -1020,11 +1012,11 @@
 					"<a><i "
 						."style='color:orange;' "
 						."title='"
-							."Jornada Original: " . str_pad($jornadaPrevistaOriginal, 2, '0', STR_PAD_LEFT) . ":00:00\n"
+							."Jornada Original: ".str_pad($jornadaPrevistaOriginal, 2, '0', STR_PAD_LEFT).":00:00\n"
 							."Abono: ".$aAbono['abon_tx_abono']."\n"
 							."Motivo: ".$aAbono['moti_tx_nome']."\n"
 							."Justificativa: ".$aAbono['abon_tx_descricao']."\n\n"
-							."Registro efetuado por ".$aAbono['user_tx_login']." em " . data($aAbono['abon_tx_dataCadastro'], 1)."' "
+							."Registro efetuado por ".$aAbono['user_tx_login']." em ".data($aAbono['abon_tx_dataCadastro'], 1)."' "
 						."class='fa fa-warning'></i>"
 					."</a>&nbsp;"
 				;
