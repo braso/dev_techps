@@ -7,14 +7,24 @@
 	include_once "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
 
 	function index() {
+
 		global $CONTEX, $totalResumo;
 	
 		cabecalho('Espelho de Ponto');
 		
 		$extraBuscaMotorista = '';
+		$extraCampoData = '';
 		if ($_SESSION['user_tx_nivel'] == 'Motorista') {
 			$_POST['busca_motorista'] = $_SESSION['user_nb_entidade'];
 			$extraBuscaMotorista = " AND enti_nb_id = '$_SESSION[user_nb_entidade]'";
+			$extraCampoData= 'readonly';
+
+			if (isset($_POST['busca_dataInicio']) || !empty($_POST['busca_dataInicio'])){
+				$_POST['busca_dataInicio'] = date("Y-m-01");
+			}
+			if (isset($_POST['busca_dataFim']) || !empty($_POST['busca_dataFim'])){
+				$_POST['busca_dataFim'] = date("Y-m-d");
+			}
 		}
 	
 		if (!empty($_POST['busca_motorista'])) {
@@ -27,47 +37,97 @@
 			$extraEmpresa = " AND enti_nb_empresa = '$_SESSION[user_nb_empresa]'";
 		}
 	
-		if (!isset($_POST['busca_data1']) || empty($_POST['busca_data1'])) {
-			$_POST['busca_data1'] = date("Y-m-01");
+		if (!isset($_POST['busca_dataInicio']) || empty($_POST['busca_dataInicio'])){
+			$_POST['busca_dataInicio'] = date("Y-m-01");
 		}
-	
-		if (!isset($_POST['busca_data2']) || empty($_POST['busca_data2'])) {
-			$_POST['busca_data2'] = date("Y-m-d");
+		if (!isset($_POST['busca_dataFim']) || empty($_POST['busca_dataFim'])){
+			$_POST['busca_dataFim'] = date("Y-m-d");
 		}
-	
+
+		//Confere se há algum erro na pesquisa{
+		$searchError = false;
+		if(isset($_POST['acao']) && $_POST['acao'] == 'index'){
+			$errorMsg = 'Insira os campos para pesquisar: ';
+			if(empty($_POST['busca_empresa'])){
+				$searchError = true;
+				$errorMsg .= 'Empresa, ';
+				$_POST['busca_empresa'] = $_SESSION['user_nb_empresa'];
+			}
+			if(empty($_POST['busca_motorista'])){
+				$searchError = true;
+				$errorMsg .= 'Motorista, ';
+			}
+			if(empty($_POST['busca_dataInicio'])){
+				$searchError = true;
+				$errorMsg .= 'Data Início, ';
+			}
+			if(empty($_POST['busca_dataFim'])){
+				$searchError = true;
+				$errorMsg .= 'Data Fim, ';
+			}
+
+			if(!$searchError && !empty($_POST['busca_empresa']) && !empty($_POST['busca_motorista'])){
+				$motorista = mysqli_fetch_all(
+					query(
+						"SELECT enti_nb_id FROM entidade
+							WHERE enti_tx_status = 'ativo'
+								AND enti_nb_empresa = ".$_POST['busca_empresa']."
+								AND enti_nb_id = ".$_POST['busca_motorista']."
+							LIMIT 1"
+					),
+					MYSQLI_ASSOC
+				);
+
+				if(empty($motorista)){
+					$searchError = true;
+					$errorMsg = 'Este motorista não pertence a esta empresa. ';
+				}
+			}
+
+			if($searchError){
+				$errorMsg = substr($errorMsg, 0, -2).'.';
+				set_status('ERRO: '.$errorMsg);
+			}
+		}else{
+			$_POST['busca_empresa'] = intval($_SESSION['user_nb_empresa']);
+		}
+		//}
+
 		//CAMPOS DE CONSULTA
+
 		$c = [
-			combo_net('Motorista*:', 'busca_motorista', $_POST['busca_motorista']?? '', 4, 'entidade', '', " AND enti_tx_tipo = \"Motorista\" $extraEmpresa $extraBuscaMotorista", 'enti_tx_matricula')
-			,campo_data('Data Início:', 'busca_data1', $_POST['busca_data1']?? '', 2)
-			,campo_data('Data Fim:', 'busca_data2', $_POST['busca_data2']?? '', 2)
+			combo_net('Empresa*:', 'busca_empresa', ($_POST['busca_empresa']?? ''), 3, 'empresa', 'onchange=selecionaMotorista(this.value)', $extraEmpresa),
+			combo_net('Motorista*:', 'busca_motorista', ($_POST['busca_motorista']?? ''), 4, 'entidade', '', " AND enti_tx_tipo = \"Motorista\" $extraEmpresa $extraBuscaMotorista", 'enti_tx_matricula'),
+			campo_data('Data Início:', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ''), 2,$extraCampoData),
+			campo_data('Data Fim:', 'busca_dataFim', ($_POST['busca_dataFim']?? ''), 2,$extraCampoData)
 		];
 	
 		//BOTOES
-		$b = [botao("Buscar", 'index')];
+		$b = [
+			botao("Buscar", 'index','','','','','btn btn-success')
+		];
 		if ($_SESSION['user_tx_nivel'] != 'Motorista') {
-			$b[] = botao("Cadastrar Abono", 'layout_abono','','','','','btn btn-success');
+			$b[] = botao("Cadastrar Abono", 'layout_abono');
 		}
 	
 		abre_form('Filtro de Busca');
 		linha_form($c);
 		fecha_form($b);
 	
-		// $cab = array("MATRÍCULA", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA", "REFEIÇÃO", "ESPERA", "ATRASO", "EFETIVA", "PERÍODO TOTAL", "INTERSTÍCIO DIÁRIO", "INT. SEMANAL", "ABONOS", "FALTAS", "FOLGAS", "H.E.", "H.E. 100%", "ADICIONAL NOTURNO", "ESPERA INDENIZADA", "OBSERVAÇÕES");
-		$cab = array(
+		$cab = [
 			"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "HE 50%", "HE&nbsp;100%",
 			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
-		);
+		];
 	
 		// Converte as datas para objetos DateTime
-		$startDate = !empty($_POST['busca_data1'])? new DateTime($_POST['busca_data1']): '';
-		$endDate   = !empty($_POST['busca_data2'])? new DateTime($_POST['busca_data2']): '';
-	
-		// Loop for para percorrer as datas
+		$startDate = !empty($_POST['busca_dataInicio'])? new DateTime($_POST['busca_dataInicio']): '';
+		$endDate   = !empty($_POST['busca_dataFim'])? new DateTime($_POST['busca_dataFim']): '';
 
-
-		if (!empty($_POST['busca_data1']) && !empty($_POST['busca_data2']) && !empty($_POST['busca_motorista'])){
+		if (!$searchError && !empty($_POST['acao']) && $_POST['acao'] == 'index'){
 			$aDia = [];
+
+			// Loop for para percorrer as datas
 			for ($date = $startDate; $date <= $endDate; $date->modify('+1 day')) {
 				$dataVez = $date->format('Y-m-d');
 
@@ -85,7 +145,7 @@
 				$aDia[] = $row;
 			}
 	
-			if ($aEmpresa['empr_nb_parametro'] > 0) {
+			if (!empty($aEmpresa['empr_nb_parametro'])) {
 				$aParametro = carregar('parametro', $aEmpresa['empr_nb_parametro']);
 				if (
 					$aParametro['para_tx_jornadaSemanal'] != $aMotorista['enti_tx_jornadaSemanal'] ||
@@ -94,19 +154,19 @@
 					$aParametro['para_tx_percentualSabadoHE'] != $aMotorista['enti_tx_percentualSabadoHE'] ||
 					$aParametro['para_nb_id'] != $aMotorista['enti_nb_parametro']
 				) {
-					$ehPadrao = 'Não';
+					$parametroPadrao = 'Convenção Não Padronizada, Semanal ('.$aMotorista['enti_tx_jornadaSemanal'].'), Sábado ('.$aMotorista['enti_tx_jornadaSabado'].')';
 				} else {
-					$ehPadrao = 'Sim';
+					$parametroPadrao = 'Convenção Padronizada: '.$aParametro['para_tx_nome'].', Semanal ('.$aParametro['para_tx_jornadaSemanal'].'), Sábado ('.$aParametro['para_tx_jornadaSabado'].')';
 				}
-
-				$convencaoPadrao = '| Convenção Padrão? ' . $ehPadrao;
+			}else{
+				$parametroPadrao = 'Convenção Não Padronizada, Semanal ('.$aMotorista['enti_tx_jornadaSemanal'].'), Sábado ('.$aMotorista['enti_tx_jornadaSabado'].')';
 			}
 
 			$saldoAnterior = mysqli_fetch_assoc(
 				query(
 					"SELECT endo_tx_saldo FROM `endosso`
 						WHERE endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-							AND endo_tx_ate < '".$_POST['busca_data1']."'
+							AND endo_tx_ate < '".$_POST['busca_dataInicio']."'
 							AND endo_tx_status = 'ativo'
 						ORDER BY endo_tx_ate DESC
 						LIMIT 1;"
@@ -129,27 +189,36 @@
 			}
 			
 
-			$saldosMotorista = ' <div class="table-responsive">
+			$saldosMotorista = 'SALDOS: <br>
+				<div class="table-responsive">
 					<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact" id="saldo">
-					  <thead><tr>
-						<th>Saldo Anterior:</th>
-						<th>Saldo do Período:</th>
-						<th>Saldo Final:</th>
-					  </thead></tr>
-					  <tbody>
-						<tr>
-						  <td>'.$saldoAnterior.'</td>
-						  <td>'.$totalResumo['diffSaldo'].'</td>
-						  <td>'.$saldoFinal.'</td>
-						</tr>
-					  </tbody>
+						<thead>
+							<tr>
+								<th>Anterior:</th>
+								<th>Período:</th>
+								<th>Final:</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td>'.$saldoAnterior.'</td>
+								<td>'.$totalResumo['diffSaldo'].'</td>
+								<td>'.$saldoFinal.'</td>
+							</tr>
+						</tbody>
 					</table>
-				  </div>';
+				  </div>'
+			;
 				 
-      $periodoPesquisa = 'PERÍODO DA BUSCA : '.date("d/m/Y", strtotime($_POST['busca_data1'])).' ATÉ '.date("d/m/Y", strtotime($_POST['busca_data2']));
+			$periodoPesquisa = 'De '.date("d/m/Y", strtotime($_POST['busca_dataInicio'])).' até '.date("d/m/Y", strtotime($_POST['busca_dataFim']));
       
-			abre_form("[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome] | $aEmpresa[empr_tx_nome] $convencaoPadrao | $periodoPesquisa $saldosMotorista");
-	
+			abre_form(
+				"$aEmpresa[empr_tx_nome]<br>"
+				."[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome]<br>"
+				."$parametroPadrao<br><br>"
+				."$periodoPesquisa<br>"
+				."$saldosMotorista"
+			);
 	?>
 	
 			<style>
@@ -173,7 +242,7 @@
 			grid2($cab, $aDia, "Jornada Semanal (Horas): $aMotorista[enti_tx_jornadaSemanal]");
 			fecha_form();
 		}
-	
+		
 		rodape();
 	
 		?>
@@ -189,9 +258,43 @@
 			<input type="hidden" name="acao" value="layout_ajuste">
 			<input type="hidden" name="id" value="<?= $aMotorista['enti_nb_id'] ?>">
 			<input type="hidden" name="data">
-			<input type="hidden" name="data_de" value="<?=$_POST['busca_data1']?>">
-			<input type="hidden" name="data_ate" value="<?=$_POST['busca_data2']?>">
+			<input type="hidden" name="data_de" value="<?=$_POST['busca_dataInicio']?>">
+			<input type="hidden" name="data_ate" value="<?=$_POST['busca_dataFim']?>">
 		</form>
+
+		<script>
+			function selecionaMotorista(idEmpresa) {
+				let buscaExtra = '';
+				if (idEmpresa > 0) {
+					buscaExtra = encodeURI('AND enti_tx_tipo = "Motorista" AND enti_nb_empresa = "' + idEmpresa + '"');
+					$('.busca_motorista')[0].innerHTML = null
+				} else {
+					buscaExtra = encodeURI('AND enti_tx_tipo = "Motorista"');
+				}
+				// Verifique se o elemento está usando Select2 antes de destruí-lo
+				if ($('.busca_motorista').data('select2')) {
+					$('.busca_motorista').select2('destroy');
+				}
+
+				$.fn.select2.defaults.set("theme", "bootstrap");
+				$('.busca_motorista').select2({
+					language: 'pt-BR',
+					placeholder: 'Selecione um item',
+					allowClear: true,
+					ajax: {
+						url: "/contex20/select2.php?path=" + "<?= $CONTEX['path'] ?>" + "&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=" + buscaExtra + "&extra_busca=enti_tx_matricula",
+						dataType: 'json',
+						delay: 250,
+						processResults: function(data) {
+							return {
+								results: data
+							};
+						},
+						cache: true
+					}
+				});
+			}
+		</script>
 	<?
 	}
 ?>
