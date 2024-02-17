@@ -7,15 +7,17 @@
 	include_once "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
 
 	function index() {
+
 		global $CONTEX, $totalResumo;
 	
 		cabecalho('Espelho de Ponto');
 		
 		$extraBuscaMotorista = '';
+		$extraCampoData = '';
 		if ($_SESSION['user_tx_nivel'] == 'Motorista') {
 			$_POST['busca_motorista'] = $_SESSION['user_nb_entidade'];
 			$extraBuscaMotorista = " AND enti_nb_id = '$_SESSION[user_nb_entidade]'";
-			$extraCampoData= 'disabled';
+			$extraCampoData= 'readonly';
 
 			if (isset($_POST['busca_dataInicio']) || !empty($_POST['busca_dataInicio'])){
 				$_POST['busca_dataInicio'] = date("Y-m-01");
@@ -23,7 +25,6 @@
 			if (isset($_POST['busca_dataFim']) || !empty($_POST['busca_dataFim'])){
 				$_POST['busca_dataFim'] = date("Y-m-d");
 			}
-	
 		}
 	
 		if (!empty($_POST['busca_motorista'])) {
@@ -102,7 +103,7 @@
 		];
 	
 		//BOTOES
-    $b = [
+		$b = [
 			botao("Buscar", 'index', '', '', '', '', 'btn btn-success')
 		];
 		if ($_SESSION['user_tx_nivel'] != 'Motorista') {
@@ -158,7 +159,7 @@
 					$parametroPadrao = 'Convenção Padronizada: '.$aParametro['para_tx_nome'].', Semanal ('.$aParametro['para_tx_jornadaSemanal'].'), Sábado ('.$aParametro['para_tx_jornadaSabado'].')';
 				}
 			}else{
-
+				$parametroPadrao = 'Convenção Não Padronizada, Semanal ('.$aMotorista['enti_tx_jornadaSemanal'].'), Sábado ('.$aMotorista['enti_tx_jornadaSabado'].')';
 			}
 
 			$saldoAnterior = mysqli_fetch_assoc(
@@ -191,18 +192,20 @@
 			$saldosMotorista = 'SALDOS: <br>
 				<div class="table-responsive">
 					<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact" id="saldo">
-					  <thead><tr>
-						<th>Anterior:</th>
-						<th>Período:</th>
-						<th>Final:</th>
-					  </thead></tr>
-					  <tbody>
-						<tr>
-						  <td>'.$saldoAnterior.'</td>
-						  <td>'.$totalResumo['diffSaldo'].'</td>
-						  <td>'.$saldoFinal.'</td>
-						</tr>
-					  </tbody>
+						<thead>
+							<tr>
+								<th>Anterior:</th>
+								<th>Período:</th>
+								<th>Final:</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td>'.$saldoAnterior.'</td>
+								<td>'.$totalResumo['diffSaldo'].'</td>
+								<td>'.$saldoFinal.'</td>
+							</tr>
+						</tbody>
 					</table>
 				  </div>'
 			;
