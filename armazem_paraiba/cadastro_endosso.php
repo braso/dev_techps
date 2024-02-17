@@ -248,14 +248,19 @@
 				);
 				$dadosMotorista = carrega_array($sqlMotorista);
 
-				$dataCicloProx = strtotime($dadosMotorista['para_tx_inicioAcordo']);
-				while($dataCicloProx < strtotime($aEndosso['endo_tx_ate'])){
-					$dataCicloProx += intval($dadosMotorista['para_nb_qDias'])*60*60*24;
+				if(!empty($dadosMotorista['para_nb_qDias'])){
+					$dataCicloProx = strtotime($dadosMotorista['para_tx_inicioAcordo']);
+				    while($dataCicloProx < strtotime($aEndosso['endo_tx_ate'])){
+    					$dataCicloProx += intval($dadosMotorista['para_nb_qDias'])*60*60*24;
+    				}
+    				$dataCicloAnt = $dataCicloProx - intval($dadosMotorista['para_nb_qDias'])*60*60*24;
+    
+    				$dataCicloProx = date('Y-m-d', $dataCicloProx);
+    				$dataCicloAnt  = date('Y-m-d', $dataCicloAnt);
+				}else{
+				    $dataCicloProx = '--/--/----';
+				    $dataCicloAnt  = '--/--/----';
 				}
-				$dataCicloAnt = $dataCicloProx - intval($dadosMotorista['para_nb_qDias'])*60*60*24;
-
-				$dataCicloProx = date('Y-m-d', $dataCicloProx);
-				$dataCicloAnt  = date('Y-m-d', $dataCicloAnt);
 
 				$saldoAtual = operarHorarios([$saldoAnterior, $totalResumo['diffSaldo']], '+');
 				$saldoAtual = operarHorarios([$saldoAtual, $totalResumo['he50'], $totalResumo['he100']], '-');
@@ -306,15 +311,13 @@
 				continue;
 			}
 			
-			if($novoEndosso['endo_tx_pagarHoras'] == 'sim'){
-				$showSuccess = True;
-				$he50 = json_decode($novoEndosso['totalResumo']);
-				$he50 = $he50->he50;
-				if($he50 > $novoEndosso['endo_tx_horasApagar']){
-					$he50 = $novoEndosso['endo_tx_horasApagar'];
-				}
-				$successMsg .= '- ['.$novoEndosso['endo_tx_matricula'].'] '.$novoEndosso['endo_tx_nome'].': '.$he50.'<br>';
+			$showSuccess = True;
+			$he50 = json_decode($novoEndosso['totalResumo']);
+			$he50 = $he50->he50;
+			if($he50 > $novoEndosso['endo_tx_horasApagar']){
+				$he50 = $novoEndosso['endo_tx_horasApagar'];
 			}
+			$successMsg .= '- ['.$novoEndosso['endo_tx_matricula'].'] '.$novoEndosso['endo_tx_nome'].': '.$he50.'<br>';
 			//*
 			$filename = md5($novoEndosso['endo_tx_matricula'].$novoEndosso['endo_tx_mes']);
 			if(!is_dir("./arquivos/endosso")){
