@@ -253,7 +253,8 @@
 			if(!empty($_POST['busca_empresa'])){
 				$_POST['busca_empresa'] = (int)$_POST['busca_empresa'];
 			}else{
-				$_POST['busca_empresa'] = $_SESSION['user_nb_empresa'];
+				$_POST['busca_empresa'] = '';
+				// $_POST['busca_empresa'] = $_SESSION['user_nb_empresa'];
 			}
 			$extraMotorista = " AND enti_nb_empresa = " . $_POST['busca_empresa'];
 			if(!empty($_POST['busca_endossado']) && !empty($_POST['busca_empresa'])){
