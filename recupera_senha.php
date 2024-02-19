@@ -12,8 +12,29 @@ use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
 
+function extrairDominio($url, $dominio_array) {
+    $parsed_url = parse_url($url);
+    $path_segments = explode('/', $parsed_url['path']);
+    $dominio = $path_segments[2] ?? '';
+
+    return in_array($dominio, $dominio_array) ? $dominio : null;
+}
+
 if ($_POST['botao'] == 'ENVIAR') {
-    $dominio = $_POST['dominio'];
+    $dominio_url = $_POST['dominio'];
+
+    $dominio_array = [
+        "techps",
+        "braso",
+        "armazem_paraiba",
+        "opafrutas",
+        "qualy_transportes",
+        "feijao_turqueza"
+    ];
+
+    $dominio = extrairDominio($dominio_url, $dominio_array);
+    var_dump($dominio);
+
     $login = $_POST['login'];
     // $email = $_POST['email'];
     if(!empty($dominio)){

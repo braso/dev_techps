@@ -7,15 +7,14 @@ if(isset($_SERVER['SCRIPT_URI'])){
 }
 include $server_base_link."/armazem_paraiba/conecta.php";
 
-$arrayDominio = array(
-    "techps" => "Tech PS",
-    "feijao_turqueza" => "Feijão Turqueza",
-    "armazem_paraiba" => "Armazém Paraiba",
-    'opafrutas' => 'Opafrutas',
-    'qualy_transportes' => 'Qualy Transportes',
-    'feijao_turqueza' => 'Feijão turqueza',
-    'braso' => 'Braso'
-);
+$dominio_array = [
+    "techps",
+    "braso",
+    "armazem_paraiba",
+    "opafrutas",
+    "qualy_transportes",
+    "feijao_turqueza"
+];
 
 $dominios = "<div class='form-group'>
     <select class='form-control' name='dominio'>
@@ -29,21 +28,5 @@ $dominios = "<div class='form-group'>
         <option value=''>Leroy Merlin</option>
     </select>
 </div>";
-
-$dominiosRecupera = "<div class='form-group'>
-    <select class='form-control' name='dominio'>
-        <option value='' selected>Domínio</option>
-        <option value='techps'>Techps</option>
-        <option value='braso'>Braso</option>
-        <option value='armazem_paraiba'>Armazem Paraiba</option>
-        <option value='opafrutas'>Opafrutas</option>
-        <option value='qualy_transportes'>Qualy Transportes</option>
-        <option value='feijao_turqueza'>Feijão turqueza</option>
-        <option value=''>Leroy Merlin</option>
-    </select>
-</div>";
-
-
-
 
 ?>
