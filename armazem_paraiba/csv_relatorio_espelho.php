@@ -19,10 +19,10 @@ $cabecalho3 = ['DATA','DIA','INÍCIO','INÍCIO REF.','FIM REF','FIM','REFEIÇÃO
 $arquivo = fopen($nomeArquivoCaminho, 'w');
 
 // Adiciona os cabeçalhos
-fputcsv($arquivo, $cabecalho1);
-fputcsv($arquivo, $cabecalho2);
-fputcsv($arquivo, $espaco);
-fputcsv($arquivo, $cabecalho3);
+fputcsv($arquivo, $cabecalho1, ';');
+fputcsv($arquivo, $cabecalho2, ';');
+fputcsv($arquivo, $espaco, ';');
+fputcsv($arquivo, $cabecalho3, ';');
 
 // Adiciona os dados ao CSV
 foreach ($aDia as $aDiaVez) {
@@ -33,7 +33,7 @@ foreach ($aDia as $aDiaVez) {
         $linha[] = strip_tags(html_entity_decode($aDiaVez[$j],ENT_QUOTES | ENT_HTML5,'UTF-8'));
     }
 
-    fputcsv($arquivo, $linha);
+    fputcsv($arquivo, $linha,';');
 }
 
 $totalDias = ['TOTAL:',"$diasEndossados dias",'','','','','','','','','','','','','','',''];
@@ -45,16 +45,16 @@ $tabelaInfo4 = ['','','','DSR','Descanso Semanal Remunerado e Abono','','','',''
 $tabelaInfo5 = ['Horas Extras (50%) - a pagar:',"$totalResumo[he50]",'','*','Registros excluídos manualmente','','','','','','','','','','','',''];
 $tabelaInfo6 = ['Horas Extras (100%) - a pagar:',"$totalResumo[he100]",'','D+1','Jornada terminada nos dias seguintes','','','','','','','','','','','','','Impressão Doc.:',date("d/m/Y \T H:i:s") . "(UTC-3)"];
 
-fputcsv($arquivo, $espaco);
-fputcsv($arquivo, $totalDias);
-fputcsv($arquivo, $espaco);
-fputcsv($arquivo, $tabelaInfo);
-fputcsv($arquivo, $tabelaInfo1);
-fputcsv($arquivo, $tabelaInfo2);
-fputcsv($arquivo, $tabelaInfo3);
-fputcsv($arquivo, $tabelaInfo4);
-fputcsv($arquivo, $tabelaInfo5);
-fputcsv($arquivo, $tabelaInfo6);
+fputcsv($arquivo, $espaco, ';');
+fputcsv($arquivo, $totalDias, ';');
+fputcsv($arquivo, $espaco, ';');
+fputcsv($arquivo, $tabelaInfo, ';');
+fputcsv($arquivo, $tabelaInfo1, ';');
+fputcsv($arquivo, $tabelaInfo2, ';');
+fputcsv($arquivo, $tabelaInfo3, ';');
+fputcsv($arquivo, $tabelaInfo4, ';');
+fputcsv($arquivo, $tabelaInfo5, ';');
+fputcsv($arquivo, $tabelaInfo6, ';');
 // Fecha o arquivo
 fclose($arquivo);
 
