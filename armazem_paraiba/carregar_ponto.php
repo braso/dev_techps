@@ -279,10 +279,13 @@
 
 		$extra = '';
 		if (!empty($_POST['busca_inicio'])){
-			$extra .= " AND arqu_tx_data >= '".data($_POST['busca_inicio'], 1)."'";
+			$extra .= " AND arqu_tx_data >= '".$_POST['busca_inicio']."'";
 		}
 		if (!empty($_POST['busca_fim'])){
-			$extra .= " AND arqu_tx_data <= '".data($_POST['busca_fim'], 1)."'";
+			$extra .= " AND arqu_tx_data <= '".$_POST['busca_fim']."'";
+		}
+		if (!empty($_POST['busca_codigo'])){
+			$extra .= " AND arqu_nb_id = $_POST[busca_codigo]";
 		}
 
 		//CONSULTA
