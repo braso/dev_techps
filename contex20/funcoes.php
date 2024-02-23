@@ -737,9 +737,10 @@
 
 	}
 
-	function arquivo($nome,$variavel,$modificador,$tamanho,$extra=''){
+	function arquivo($nome,$variavel,$modificador = '',$tamanho,$extra=''){
 		global $CONTEX;
-		if($modificador){
+		$ver = '';
+		if(!empty($modificador)){
 			$ver = "<a href=$CONTEX[path]/$modificador target=_blank>(Ver)</a>";
 		}
 
