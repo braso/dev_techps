@@ -1,7 +1,7 @@
 <?php
-	/* Modo debug
-		ini_set('display_errors', 1);
-		error_reporting(E_ALL);
+	//* Modo debug
+		// ini_set('display_errors', 1);
+		// error_reporting(E_ALL);
 	//*/
 
 	include_once "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
@@ -104,7 +104,11 @@
 	
 		//BOTOES
 		$b = [
+<<<<<<< HEAD
 			botao("Buscar", 'index','','','','','btn btn-success')
+=======
+			botao("Buscar", 'index', '', '', '', '', 'btn btn-success')
+>>>>>>> adcfec7444494b156971c02da54aed5e318b450a
 		];
 		if ($_SESSION['user_tx_nivel'] != 'Motorista') {
 			$b[] = botao("Cadastrar Abono", 'layout_abono');
