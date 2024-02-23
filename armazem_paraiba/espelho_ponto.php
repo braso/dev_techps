@@ -83,12 +83,11 @@
 			if($searchError){
 				$errorMsg = substr($errorMsg, 0, -2).'.';
 				set_status('ERRO: '.$errorMsg);
-			}
+      }
 		}else{
 			$_POST['busca_empresa'] = '';
 			$_POST['busca_motorista'] = '';
 		}
-		//}
 
 		//CAMPOS DE CONSULTA
 		$c = [
@@ -100,11 +99,7 @@
 	
 		//BOTOES
 		$b = [
-<<<<<<< HEAD
-			botao("Buscar", 'index','','','','','btn btn-success')
-=======
 			botao("Buscar", 'index', '', '', '', '', 'btn btn-success')
->>>>>>> adcfec7444494b156971c02da54aed5e318b450a
 		];
 		if ($_SESSION['user_tx_nivel'] != 'Motorista') {
 			$b[] = botao("Cadastrar Abono", 'layout_abono');

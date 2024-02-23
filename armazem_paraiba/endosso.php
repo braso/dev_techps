@@ -253,7 +253,7 @@
 			if(!empty($_POST['busca_empresa'])){
 				$_POST['busca_empresa'] = (int)$_POST['busca_empresa'];
 			}else{
-				$_POST['busca_empresa'] = $_SESSION['user_nb_empresa'];
+				$_POST['busca_empresa'] = '';
 			}
 			$extraMotorista = " AND enti_nb_empresa = " . $_POST['busca_empresa'];
 			if(!empty($_POST['busca_endossado']) && !empty($_POST['busca_empresa'])){
@@ -446,22 +446,22 @@
 
 						$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
 
-						if (!empty($aEmpresa['empr_nb_parametro'])) {
-							$aParametro = carregar('parametro', $aEmpresa['empr_nb_parametro']);
-							if (
-								$aParametro['para_tx_jornadaSemanal'] != $aMotorista['enti_tx_jornadaSemanal'] ||
-								$aParametro['para_tx_jornadaSabado'] != $aMotorista['enti_tx_jornadaSabado'] ||
-								$aParametro['para_tx_percentualHE'] != $aMotorista['enti_tx_percentualHE'] ||
-								$aParametro['para_tx_percentualSabadoHE'] != $aMotorista['enti_tx_percentualSabadoHE'] ||
-								$aParametro['para_nb_id'] != $aMotorista['enti_nb_parametro']
-							) {
-								$parametroPadrao = 'Convenção Não Padronizada, Semanal ('.$aMotorista['enti_tx_jornadaSemanal'].'), Sábado ('.$aMotorista['enti_tx_jornadaSabado'].')';
-							} else {
-								$parametroPadrao = 'Convenção Padronizada: '.$aParametro['para_tx_nome'].', Semanal ('.$aParametro['para_tx_jornadaSemanal'].'), Sábado ('.$aParametro['para_tx_jornadaSabado'].')';
-							}
-						}else{
+						// if (!empty($aEmpresa['empr_nb_parametro'])) {
+						// 	$aParametro = carregar('parametro', $aEmpresa['empr_nb_parametro']);
+						// 	if (
+						// 		$aParametro['para_tx_jornadaSemanal'] != $aMotorista['enti_tx_jornadaSemanal'] ||
+						// 		$aParametro['para_tx_jornadaSabado'] != $aMotorista['enti_tx_jornadaSabado'] ||
+						// 		$aParametro['para_tx_percentualHE'] != $aMotorista['enti_tx_percentualHE'] ||
+						// 		$aParametro['para_tx_percentualSabadoHE'] != $aMotorista['enti_tx_percentualSabadoHE'] ||
+						// 		$aParametro['para_nb_id'] != $aMotorista['enti_nb_parametro']
+						// 	) {
+						// 		$parametroPadrao = 'Convenção Não Padronizada, Semanal ('.$aMotorista['enti_tx_jornadaSemanal'].'), Sábado ('.$aMotorista['enti_tx_jornadaSabado'].')';
+						// 	} else {
+						// 		$parametroPadrao = 'Convenção Padronizada: '.$aParametro['para_tx_nome'].', Semanal ('.$aParametro['para_tx_jornadaSemanal'].'), Sábado ('.$aParametro['para_tx_jornadaSabado'].')';
+						// 	}
+						// }else{
 							
-						}
+						// }
 
 						$saldosMotorista = 'SALDOS: <br>
 							<div class="table-responsive">
@@ -489,7 +489,7 @@
 						abre_form(
 							"$aEmpresa[empr_tx_nome]<br>"
 							."[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome]<br>"
-							."$parametroPadrao<br><br>"
+							."<br>"/*."$parametroPadrao<br><br>"*/
 							."$saldosMotorista"
 						);
 						
