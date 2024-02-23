@@ -376,8 +376,6 @@
 
 	}
 
-
-
 	function abre_form($nome_form='',$col='12',$focus='2'){
 		global $idContexForm;
 		?>
