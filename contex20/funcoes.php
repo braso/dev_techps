@@ -335,7 +335,7 @@
 		$data_input = "<script>";
 		switch($mascara){
 			case "MASCARA_DATA":
-				$data_input .= "$(\"#$variavel\").inputmask(\"date\", { \"clearIncomplete\": false, \"placeholder\": \"dd/mm/aaaa\")};";
+				$data_input .= "$('name=\"#$variavel\"').inputmask(\"date\", {clearIncomplete: false, placeholder: \"dd/mm/aaaa\"});";
 				$type = "date";
 			break;
 			case "MASCARA_MES":
@@ -566,7 +566,7 @@
 						placeholder: 'Selecione um item',
 						allowClear: true,
 						ajax: {
-							url: '/contex20/select2.php?path=<?=$CONTEX['path']?>&tabela=<?=$tabela?>&extra_ordem=<?=$extra_ordem?>&extra_limite=<?=$extra_limite?>&extra_bd=<?=urlencode($extra_bd)?>&extra_busca=<?=urlencode($extra_busca)?>',
+							url: '/dev_techps/contex20/select2.php?path=<?=$CONTEX['path']?>&tabela=<?=$tabela?>&extra_ordem=<?=$extra_ordem?>&extra_limite=<?=$extra_limite?>&extra_bd=<?=urlencode($extra_bd)?>&extra_busca=<?=urlencode($extra_busca)?>',
 							dataType: 'json',
 							delay: 250,
 							processResults: function (data) {
@@ -580,6 +580,7 @@
 				});
 			</script>
 		<?
+
 		return $campo;
 	}
 
@@ -933,194 +934,4 @@
 		// onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\",\"$data_de\",\"$data_ate\");
 		return "<center><a title=\"$title\" style='color:gray' data-toggle='modal' data-target='#myModal'onclick='solicitarDados(\"$id\",\"$acao\",\"$data_de\",\"$data_ate\",\"$campos\",\"$valores\")' ><spam $icone></spam></a></center>".$modal;
 	}
-	/*
-		function data_extenso($data){
-			setlocale(LC_TIME, 'portuguese');
-			return utf8_encode(strftime('%d de %B de %Y', strtotime($data)));
-		}
-
-		function entre($string_inicio,$string_fim,$string_completa){
-			$temp1 = strpos($string_completa,$string_inicio)+strlen($string_inicio);
-			$result = substr($string_completa,$temp1,strlen($string_completa));
-			$dd=strpos($result,$string_fim);
-			if($dd == 0){
-				$dd = strlen($result);
-			}
-
-			return substr($result,0,$dd);
-		}
-		
-		function dias_internacao($id){
-			$a = carregar('evolucao',$id);
-			if($a['evol_tx_dataAlta']=='')
-				$a['evol_tx_dataAlta'] = date("Y-m-d");
-
-			$data1 = new DateTime ($a['evol_tx_data']);
-			$data2 = new DateTime ($a['evol_tx_dataAlta']);
-			$intervalo = $data1 -> diff($data2);
-			return $intervalo -> days + 1;
-			exit;
-		}
-
-		function valorPorExtenso($valorExtenso=0) {
-			$singular = array("centavo", "real", "mil", "milhão", "bilhão", "trilhão", "quatrilhão");
-			$plural = array("centavos", "reais", "mil", "milhões", "bilhões", "trilhões","quatrilhões");
-		
-			$c = array("", "cem", "duzentos", "trezentos", "quatrocentos","quinhentos", "seiscentos", "setecentos", "oitocentos", "novecentos");
-			$d = array("", "dez", "vinte", "trinta", "quarenta", "cinquenta","sessenta", "setenta", "oitenta", "noventa");
-			$d10 = array("dez", "onze", "doze", "treze", "quatorze", "quinze","dezesseis", "dezesete", "dezoito", "dezenove");
-			$u = array("", "um", "dois", "três", "quatro", "cinco", "seis","sete", "oito", "nove");
-		
-			$z=0;
-		
-			$valorExtenso = number_format($valorExtenso, 2, ".", ".");
-			$inteiro = explode(".", $valorExtenso);
-			for($i=0;$i<count($inteiro);$i++)
-				for($ii=strlen($inteiro[$i]);$ii<3;$ii++)
-					$inteiro[$i] = "0".$inteiro[$i];
-		
-			// $fim identifica onde que deve se dar junção de centenas por "e" ou por "," 😉
-			$fim = count($inteiro) - ($inteiro[count($inteiro)-1] > 0 ? 1 : 2);
-			for ($i=0;$i<count($inteiro);$i++) {
-				$valorExtenso = $inteiro[$i];
-				$rc = (($valorExtenso > 100) && ($valorExtenso < 200)) ? "cento" : $c[$valorExtenso[0]];
-				$rd = ($valorExtenso[1] < 2) ? "" : $d[$valorExtenso[1]];
-				$ru = ($valorExtenso > 0) ? (($valorExtenso[1] == 1) ? $d10[$valorExtenso[2]] : $u[$valorExtenso[2]]) : "";
-			
-				$r = $rc.(($rc && ($rd || $ru)) ? " e " : "").$rd.(($rd && $ru) ? " e " : "").$ru;
-				$t = count($inteiro)-1-$i;
-				$r .= $r ? " ".($valorExtenso > 1 ? $plural[$t] : $singular[$t]) : "";
-				if ($valorExtenso == "000")$z++; elseif ($z > 0) $z--;
-				if (($t==1) && ($z>0) && ($inteiro[0] > 0)) $r .= (($z>1) ? " de " : "").$plural[$t]; 
-				if ($r) $rt = $rt . ((($i > 0) && ($i <= $fim) && ($inteiro[0] > 0) && ($z < 1)) ? ( ($i < $fim) ? ", " : " e ") : " ") . $r;
-			}
-		
-			return($rt ? $rt : "zero");
-		}
-
-		function valorPorExtenso2($valorExtenso=0) {
-			// $singular = array("centavo", "real", "mil", "milhão", "bilhão", "trilhão", "quatrilhão");
-			// $plural = array("centavos", "reais", "mil", "milhões", "bilhões", "trilhões","quatrilhões");
-		
-			$c = array("", "cem", "duzentos", "trezentos", "quatrocentos","quinhentos", "seiscentos", "setecentos", "oitocentos", "novecentos");
-			$d = array("", "dez", "vinte", "trinta", "quarenta", "cinquenta","sessenta", "setenta", "oitenta", "noventa");
-			$d10 = array("dez", "onze", "doze", "treze", "quatorze", "quinze","dezesseis", "dezesete", "dezoito", "dezenove");
-			$u = array("", "um", "dois", "três", "quatro", "cinco", "seis","sete", "oito", "nove");
-		
-			$z=0;
-		
-			$valorExtenso = number_format($valorExtenso, 2, ".", ".");
-			$inteiro = explode(".", $valorExtenso);
-			for($i=0;$i<count($inteiro);$i++)
-				for($ii=strlen($inteiro[$i]);$ii<3;$ii++)
-					$inteiro[$i] = "0".$inteiro[$i];
-		
-			// $fim identifica onde que deve se dar junção de centenas por "e" ou por "," 😉
-			$fim = count($inteiro) - ($inteiro[count($inteiro)-1] > 0 ? 1 : 2);
-			for ($i=0;$i<count($inteiro);$i++) {
-				$valorExtenso = $inteiro[$i];
-				$rc = (($valorExtenso > 100) && ($valorExtenso < 200)) ? "cento" : $c[$valorExtenso[0]];
-				$rd = ($valorExtenso[1] < 2) ? "" : $d[$valorExtenso[1]];
-				$ru = ($valorExtenso > 0) ? (($valorExtenso[1] == 1) ? $d10[$valorExtenso[2]] : $u[$valorExtenso[2]]) : "";
-			
-				$r = $rc.(($rc && ($rd || $ru)) ? " e " : "").$rd.(($rd && $ru) ? " e " : "").$ru;
-				$t = count($inteiro)-1-$i;
-				// $r .= $r ? " ".($valorExtenso > 1 ? $plural[$t] : $singular[$t]) : "";
-				if ($valorExtenso == "000")$z++; elseif ($z > 0) $z--;
-				if (($t==1) && ($z>0) && ($inteiro[0] > 0)) $r .= (($z>1) ? " de " : "").$plural[$t]; 
-				if ($r) $rt = $rt . ((($i > 0) && ($i <= $fim) && ($inteiro[0] > 0) && ($z < 1)) ? ( ($i < $fim) ? ", " : " e ") : " ") . $r;
-			}
-		
-			return($rt ? $rt : "zero");
-		}
-
-		function campo_jornada($nome,$variavel,$modificador,$tamanho){
-			$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
-					<label><b>'.$nome.'</b></label>
-					<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="text" class="form-control input-sm" '.$extra.' '.$data_input2.'>
-				</div>';
-			return $campo;
-		}
-
-		function historico_paciente($id_paciente){
-			$sql = query("SELECT hist_tx_descricao,hist_tx_data,user_tx_nome FROM historico,user WHERE user_nb_id = hist_nb_user AND hist_nb_entidade = '$id_paciente' ORDER BY hist_nb_id DESC");
-			while($a=carrega_array($sql)){
-
-				$historico .= "=================== <b>DATA: ".data($a['hist_tx_data'])." - PROFISSIONAL: $a[user_tx_nome]</b> ===================<br>";
-				$historico .= $a['hist_tx_descricao'];
-				$historico .= "<br><br>";
-			}
-			return $historico;
-		}
-
-		function texto2($nome,$modificador,$tamanho,$extra=''){
-			$campo='<div class="col-xs-'.$tamanho.' margin-bottom-5" '.$extra.'>
-					<label><b>'.$nome.'</b></label><br>
-					<p class="text-left">'.$modificador.'&nbsp;</p>
-				</div>';
-
-			return $campo;
-
-		}
-
-		function abre_menu_aba($nome,$id,$contexAbaAtiva=''){
-			global $CONTEX;
-			$CONTEX['abaAtiva'] = $contexAbaAtiva;
-			$a_nome = explode(",",$nome);
-			$a_id = explode(",",$id);
-
-			if(count($a_nome) != count($a_id)){
-				echo "ERRO: Função de abas errada!";
-			}
-
-			$aba = "<div class='portlet-body'>";
-			$aba .= "<ul class='nav nav-tabs'>";
-			for($i=0;$i<count($a_nome);$i++){
-				if($CONTEX['abaAtiva']==''){
-					$CONTEX['abaAtiva']=$a_id[$i];
-					$active = 'class="active"';
-				}else{
-
-
-					if($a_id[$i]==$CONTEX['abaAtiva']){
-						$CONTEX['abaAtiva']=$a_id[$i];
-						$active = 'class="active"';
-					}else{
-						$active = '';
-					}
-
-				}
-
-				$aba .= "<li $active>";
-				$aba .= "<a href='#".$a_id[$i]."' data-toggle='tab'> ".$a_nome[$i]." </a>";
-				$aba .= "</li>";
-
-			}
-
-			$aba.='</ul>';
-
-			
-			echo $aba.'<div class="tab-content">';
-		}
-
-		function fecha_menu_aba(){
-			echo '</div>';
-			echo '</div>';
-		}
-
-		function abre_aba($id){
-			global $CONTEX;
-			if($CONTEX['abaAtiva'] == $id){
-				$active = 'active in';
-			}else{
-				$active = '';
-			}
-
-			echo '<div class="tab-pane fade '.$active.'" id="'.$id.'">';
-		}
-
-		function fecha_aba(){
-			echo '</div>';
-		}
-	*/
 ?>
