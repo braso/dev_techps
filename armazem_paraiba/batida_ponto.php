@@ -91,21 +91,33 @@
 
 		$aMotorista = carregar('entidade', $_SESSION['user_nb_entidade']);
 
-		$extra = " AND pont_tx_data LIKE '" . date('Y-m-d') . " %' AND pont_tx_matricula = '$aMotorista[enti_tx_matricula]'";
+		//$extra filtra os pontos que estão entre o último início de jornada (tipo == 1) e a data atual.
+		$extra = 
+			" AND pont_tx_data >= (
+				SELECT pont_tx_data FROM ponto 
+					WHERE pont_tx_tipo = 1 
+						AND pont_tx_data <= '".date('Y-m-d H:i:s')."'
+						AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
+					ORDER BY pont_tx_data DESC
+					LIMIT 1
+			)
+			AND pont_tx_data <= '".date('Y-m-d H:i:s')."'";
 		
 		$queryPonto = [
-			"SELECT pont_tx_tipo, pont_nb_id, pont_tx_data FROM ponto
+			"SELECT * FROM ponto
 				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
 				JOIN user ON ponto.pont_nb_user = user.user_nb_id
 				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
 				WHERE ponto.pont_tx_status != 'inativo'",
 					//Aqui é onde irá diferenciar o primeiro do último ponto.
 					$extra.
-				"ORDER BY 
+				" AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
+				ORDER BY 
 					pont_tx_data DESC, 
 					pont_nb_id DESC 
 				LIMIT 1"
 		];
+
 
 		$pontos = [
 			'primeiro' => mysqli_fetch_all(
@@ -124,6 +136,7 @@
 				MYSQLI_ASSOC
 			)
 		];
+
 		if(!empty($pontos['primeiro'])){
 			$pontos['primeiro'] = $pontos['primeiro'][0];
 		}
@@ -259,8 +272,6 @@
 		$pontos['primeiro']['pont_tx_tipo'] = isset($pontos['primeiro']['pont_tx_tipo'])? intval($pontos['primeiro']['pont_tx_tipo']): null;
 		$pontos['ultimo']['pont_tx_tipo'] = isset($pontos['ultimo']['pont_tx_tipo'])? intval($pontos['ultimo']['pont_tx_tipo']): null;
 
-
-
 		if (empty($pontos['ultimo']['pont_tx_tipo']) || intval($pontos['ultimo']['pont_tx_tipo']) == 2) {
 			$botoesVisiveis = [$botoes['inicioJornada']];
 		} elseif ($pontos['ultimo']['pont_tx_tipo'] == 1 || in_array($pontos['ultimo']['pont_tx_tipo'], array_keys($fins))){
@@ -334,7 +345,7 @@
 			'DATA CADASTRO'	=> 'data(pont_tx_dataCadastro,1)'
 		];
 
-		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 2, 'ASC', -1);
+		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 2, 'desc', -1);
 		rodape();
 	?>
 
