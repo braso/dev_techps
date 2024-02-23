@@ -44,8 +44,9 @@
 			cabecalho("Bem-Vindo ao sistema TechPS, $a[user_tx_nome]. Período da $turno iniciado às ".$_SESSION['horaEntrada']);
 
 			rodape();
-		}else{			
-			header("Location: https://braso.mobi".$CONTEX['path']."/index2.php?erro=1");
+		}else{
+		    $dev = (is_int(strpos($_SERVER["REQUEST_URI"], 'dev_')) || is_int(strpos(($_POST["path"]?? ''), 'dev_'))? "dev_techps": "techps");
+			header("Location: https://braso.mobi/".$dev."/index2.php?erro=1");
 			exit;
 		}
 	}elseif(isset($_SESSION['user_nb_id']) && $_SESSION['user_nb_id']>0){
