@@ -141,12 +141,16 @@
 
 	function voltar(){
 		global $CONTEX;
+ 		
+		$aMotorista = carregar('entidade',$_POST['id']);
 		echo 
 			'<form action="https://braso.mobi'.$CONTEX['path'].'/espelho_ponto" name="form_voltar" method="post">
 				<input type="hidden" name="busca_motorista" value="'.$_POST['id'].'">
-				<input type="hidden" name="busca_data1" value="'.$_POST['data_de'].'">
-				<input type="hidden" name="busca_data2" value="'.$_POST['data_ate'].'">
-			</form>
+				<input type="hidden" name="busca_dataInicio" value="'.$_POST['data_de'].'">
+				<input type="hidden" name="busca_dataFim" value="'.$_POST['data_ate'].'">
+				<input type="hidden" name="busca_empresa" value="'.$aMotorista['enti_nb_empresa'].'">
+				<input type="hidden" name="acao" value="index">
+				</form>
 			<script>
 				document.form_voltar.submit();
 			</script>'
