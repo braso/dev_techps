@@ -210,9 +210,6 @@
 			break; //Adaptar posteriormente para conseguir imprimir mais de um motorista??
 		}
 		
-		if (!empty($_POST['csv'])) {
-		    var_dump($aEmpresa);
-	    }
 		include "./relatorio_espelho.php";
 		include "./csv_relatorio_espelho.php";
 		exit;
