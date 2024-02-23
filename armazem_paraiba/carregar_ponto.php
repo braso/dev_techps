@@ -3,30 +3,33 @@
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//}*/
-	session_start();
-	include "conecta.php";
-	include "alerta_carrega_ponto.php";
-
-//     $url = 'https://braso.mobi/dev_techps/armazem_paraiba/carregar_ponto';
-// 	function isActive($url) {
-// 	    return strpos($_SERVER["REQUEST_URI"], $url) !== false;
-// 	}
+	
+	include_once "conecta.php";
+	include_once "alerta_carrega_ponto.php";
 
 	function carrega_ponto(){
 
-		$arquivo = 'apontamento' . date('dmY') . '*.txt';
-		// $arquivo = '*.txt';
+		$arquivo = 'apontamento'.date('dmY').'*.txt';
 		$path = 'arquivos/pontos/';
-		$local_file = $path . $arquivo;
+		$local_file = $path.$arquivo;
 		$arquivo = $_FILES['arquivo'];
 		
 		if($arquivo['error'] === 0){
-			$local_file = $path . $arquivo['name'];
+			$local_file = $path.$arquivo['name'];
 			
 			move_uploaded_file($arquivo['tmp_name'],$path.$arquivo['name']);
 			$campos = ['arqu_tx_nome', 'arqu_tx_data', 'arqu_nb_user', 'arqu_tx_status'];
 			$valores = [$arquivo['name'], date("Y-m-d H:i:s"), $_SESSION['user_nb_id'], 'ativo'];
-			$idArquivo = inserir('arquivoponto', $campos, $valores)[0];
+			$newArquivoPonto = [
+				'arqu_tx_nome' 		=> $arquivo['name'],
+				'arqu_tx_data' 		=> date("Y-m-d H:i:s"),
+				'arqu_nb_user' 		=> $_SESSION['user_nb_id'],
+				'arqu_tx_status' 	=> 'ativo'
+			];
+
+			$newPontos = [];
+
+			$error = false;
 
 			foreach (file($local_file) as $line) {
 				//matricula dmYhi 999 macroponto.codigoExterno
@@ -34,27 +37,56 @@
 				//Ex.: 000000591322012024091999911
 				$line = trim($line);
 				$matricula = substr($line, 0, 10)+0;
+
 				$data = substr($line, 10, 8);
 				$data = substr($data, 4, 4)."-".substr($data, 2, 2)."-".substr($data, 0, 2);
+
 				$hora = substr($line, 18, 4);
 				$hora = substr($hora, 0, 2).":".substr($hora, 2, 2).":00";
+
 				$codigoExterno = substr($line, -2, 2)+0;
-				$queryMacroPonto = query("SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_codigoExterno = '" . $codigoExterno . "'");
+
+				$queryMacroPonto = query("SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_codigoExterno = '".$codigoExterno."'");
+
 				$aTipo = carrega_array($queryMacroPonto);
-				$campos = ['pont_nb_user', 'pont_nb_arquivoponto', 'pont_tx_matricula', 'pont_tx_data', 'pont_tx_tipo', 'pont_tx_tipoOriginal', 'pont_tx_status', 'pont_tx_dataCadastro'];
-				$valores = [$_SESSION['user_nb_id'], $idArquivo, $matricula, "$data $hora", $aTipo[0], $codigoExterno, 'ativo', date("Y-m-d H:i:s")];
+
+				$newPonto = [
+					'pont_nb_user'			=> $_SESSION['user_nb_id'],
+					'pont_nb_arquivoponto'	=> null,						//Será definido após inserir o arquivo de ponto.
+					'pont_tx_matricula'		=> $matricula,
+					'pont_tx_data'			=> $data." ".$hora,
+					'pont_tx_tipo'			=> $aTipo[0],
+					'pont_tx_tipoOriginal'	=> $codigoExterno,
+					'pont_tx_status'		=> 'ativo',
+					'pont_tx_dataCadastro'	=> date("Y-m-d H:i:s")
+				];
 				
-				$check = query('SELECT * FROM ponto WHERE pont_tx_matricula = '.$matricula.' AND pont_tx_data = "'."$data $hora".'" AND pont_tx_tipo = '.$aTipo[0].' AND pont_tx_tipoOriginal = '.$codigoExterno.';');
+				$check = query(
+					"SELECT * FROM ponto 
+						WHERE pont_tx_matricula = ".$newPonto['pont_tx_matricula']."
+							AND pont_tx_data = '".$newPonto['pont_tx_data']."'
+							AND pont_tx_tipo = '".$newPonto['pont_tx_tipo']."'
+							AND pont_tx_tipoOriginal = '".$newPonto['pont_tx_tipoOriginal']."';"
+				);
 				
 				if(num_linhas($check) === 0){
-					inserir('ponto', $campos, $valores);
+					$newPontos[] = $newPonto;
 				}else{
-					set_status("Alguns pontos, já existem no banco");
+					$error = true;
+					set_status("Alguns pontos já existem no banco.");
+					break;
 				}
 			}
 
+			if(!$error){
+				$arquivoPontoId = inserir('arquivoponto', array_keys($newArquivoPonto), array_values($newArquivoPonto));
+				foreach($newPontos as $newPonto){
+					$newPonto['pont_nb_arquivoponto'] = intval($arquivoPontoId);
+					inserir('ponto', array_keys($newPonto), array_values($newPonto));
+				}
+			}
 		}else{
-			set_status("Ocorreu um problema ao gravar o arquivo\n");
+			set_status("Ocorreu um problema ao gravar o arquivo.\n");
 		}
 		index();
 		exit;
@@ -110,12 +142,12 @@
 
 		$cAtualiza = [];
 		if (!empty($cadastro)) {
-			$txtCadastro = "Registro inserido às " . data($cadastro, 1) . ".";
+			$txtCadastro = "Registro inserido às ".data($cadastro, 1).".";
 			$cAtualiza[] = texto("Data de Cadastro", "$txtCadastro", 5);
 		}
 
 		if (!empty($atualizacao)) {
-			$txtAtualiza = "Registro atualizado às " . data($atualizacao, 1) . ".";
+			$txtAtualiza = "Registro atualizado às ".data($atualizacao, 1).".";
 			$cAtualiza[] = texto("Última Atualização", "$txtAtualiza", 5);
 		}
 
@@ -145,11 +177,11 @@
 	function layout_ftp(){
 		// error_reporting(E_ALL);
 
-		$arquivo = 'apontamento' . date('dmY') . '*.txt';
+		$arquivo = 'apontamento'.date('dmY').'*.txt';
 		$path = 'arquivos/pontos/';
 
-		$local_file = $path . $arquivo;
-		$server_file = './' . $arquivo;
+		$local_file = $path.$arquivo;
+		$server_file = './'.$arquivo;
 
 		// connect and login to FTP server
 
@@ -175,7 +207,7 @@
 			$queryCheck = query($sqlCheck);
 			if (num_linhas($queryCheck) > 0) continue;
 
-			$local_file = $path . $fileList[$i];
+			$local_file = $path.$fileList[$i];
 
 			if (ftp_get($ftp_conn, $local_file, $fileList[$i], FTP_BINARY)) {
 				// echo "Successfully written to $path$fileList[$i]<br>";
@@ -218,7 +250,7 @@
 		}
 
 		ftp_close($ftp_conn);
-		if ($_SERVER['HTTP_ENV'] == 'carrega_cron') {
+		if ($_SERVER['HTTP_ENV'] == 'carrega_cron'){
 			exit;
 		}
 		index();
@@ -237,7 +269,6 @@
 			$_SESSION['user_nb_id'] = 138;
 			$_SESSION['user_tx_nivel'] = 'Super Administrador';
 			$_SESSION['user_tx_login'] = 'Techps.admin';
-			// $_SESSION['user_tx_login'] = 'Techps.admin';
 			layout_ftp();
 			exit;
 		}
@@ -245,20 +276,19 @@
 		cabecalho('Carregar Ponto', 1);
 
 		$extra = '';
-		if ($_POST['busca_inicio'])
-			$extra .= " AND reto_tx_dataArquivo >= '" . data($_POST['busca_inicio'], 1) . "'";
-		if ($_POST['busca_fim'])
-			$extra .= " AND reto_tx_dataArquivo <= '" . data($_POST['busca_fim'], 1) . "'";
-
-
+		if (!empty($_POST['busca_inicio'])){
+			$extra .= " AND arqu_tx_data >= '".data($_POST['busca_inicio'], 1)."'";
+		}
+		if (!empty($_POST['busca_fim'])){
+			$extra .= " AND arqu_tx_data <= '".data($_POST['busca_fim'], 1)."'";
+		}
 
 		//CONSULTA
 		$c = [ 
-			campo('Código:', 'busca_codigo', $_POST['busca_codigo'], 2),
-			campo('Data Início:', 'busca_inicio', $_POST['busca_inicio'], 2, 'MASCARA_DATA'),
-			campo('Data Fim:', 'busca_fim', $_POST['busca_fim'], 2, 'MASCARA_DATA')
+			campo('Código:', 'busca_codigo', ($_POST['busca_codigo']?? ''), 2),
+			campo('Data Início:', 'busca_inicio', ($_POST['busca_inicio']?? ''), 2, 'MASCARA_DATA'),
+			campo('Data Fim:', 'busca_fim', ($_POST['busca_fim']?? ''), 2, 'MASCARA_DATA')
 		];
-
 
 		//BOTOES
 		$b = [
@@ -272,10 +302,16 @@
 		linha_form($c);
 		fecha_form($b);
 
-		$sql = "SELECT * FROM arquivoponto,user WHERE arqu_nb_user = user_nb_id AND arqu_tx_status != 'inativo' $extra";
+		$sql = 
+			"SELECT * FROM arquivoponto, user 
+				WHERE arqu_nb_user = user_nb_id 
+					AND arqu_tx_status != 'inativo' 
+					".$extra."
+				LIMIT 400"
+		;
+
 		$cab = ['CÓD', 'ARQUIVO', 'USUÁRIO', 'DATA', 'SITUAÇÃO'];
 
-		// $ver2 = "icone_modificar(arqu_nb_id,layout_confirma)";
 		$val = ['arqu_nb_id', 'arqu_tx_nome', 'user_tx_nome', 'data(arqu_tx_data,1)', 'ucfirst(arqu_tx_status)'];
 		grid($sql, $cab, $val, '', '', 0, 'desc');
 
