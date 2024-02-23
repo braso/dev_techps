@@ -14,6 +14,22 @@
 		return $inp;
 	}
 
+	function conferirParametroPadrao($idEmpresa, $jornadaSemanal, $jornadaSabado, $percentualHE, $percentualSabadoHE){
+
+		echo "<script>
+			function conferirParametroPadrao(jornadaSemanal, jornadaSabado, percentualHE, percentualSabadoHE){
+				var padronizado = (
+					jornadaSemanal == parent.document.contex_form.jornadaSemanal.value &&
+					jornadaSabado == parent.document.contex_form.jornadaSabado.value &&
+					percentualHE == parent.document.contex_form.percentualHE.value &&
+					percentualSabadoHE == parent.document.contex_form.percentualSabadoHE.value
+				);
+				parent.document.getElementsByName('textoParametroPadrao')[0].getElementsByTagName('p')[0].innerText = (padronizado? 'Sim': 'Não');
+			}
+			</script>"
+		;
+	}
+
 	function grid2($cabecalho,$valores){
 		// $rand = md5($sql);
 
@@ -51,16 +67,16 @@
 		echo '</div>';
 
 		
-	?>
-	<!-- 
-	<form id='contex_icone_form' method="post" target="" action="">
-		<input type="hidden" name="id" value="0">
-		<input type="hidden" name="acao" value="sem_acao">
-		<input type="hidden" id="hidden">
-	</form>
-	-->
-	<?
-	// js_contex_icone();
+		?>
+		<!-- 
+		<form id='contex_icone_form' method="post" target="" action="">
+			<input type="hidden" name="id" value="0">
+			<input type="hidden" name="acao" value="sem_acao">
+			<input type="hidden" id="hidden">
+		</form>
+		-->
+		<?
+		// js_contex_icone();
 
 	}
 
@@ -114,7 +130,6 @@
 			</script>
 		';
 	}
-
 
 	function grid($sql,$cabecalho,$valores=[],$label='',$col='12',$ordenar_coluna=1,$ordenar_sentido='asc',$paginar='10'){		
 		global $CONTEX;
