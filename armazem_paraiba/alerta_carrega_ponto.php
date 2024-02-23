@@ -6,7 +6,6 @@
 include_once (getcwd()."/../")."PHPMailer/src/Exception.php";
 include_once (getcwd()."/../")."PHPMailer/src/PHPMailer.php";
 include_once (getcwd()."/../")."PHPMailer/src/SMTP.php";
-include "conecta.php";
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
