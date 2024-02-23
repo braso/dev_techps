@@ -226,10 +226,10 @@
 
 		if(is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador"))){
 			$campo_dominio = campo_domain('Nome do Domínio','nomeDominio',$input_values['domain'],2,'domain');
-			$campo_EhMatriz = combo('É matriz?','matriz',$input_values['empr_tx_Ehmatriz'],2,['sim' => 'Sim', 'nao' => 'Não']);
+			$campo_EhMatriz = combo('É matriz?','matriz',$input_values['matriz'],2,['sim' => 'Sim', 'nao' => 'Não']);
 		}else{
-			$campo_dominio = texto('Nome do Domínio',$input_values['domain'],2);
-			$campo_EhMatriz = texto('É matriz?',$input_values['empr_tx_Ehmatriz'],2);
+			$campo_dominio = texto('Nome do Domínio',$input_values['domain'],3);
+			$campo_EhMatriz = texto('É matriz?',$input_values['matriz'],2);
 		}
 
 		if(isset($input_values['cidade'])){
@@ -477,7 +477,7 @@
 			campo('Código',			'busca_codigo',		($_POST['busca_codigo']?? ''),		2,'MASCARA_NUMERO',	'maxlength="6"'),
 			campo('Nome',			'busca_nome',		($_POST['busca_nome']?? ''),		3,'',				'maxlength="65"'),
 			campo('Nome Fantasia',	'busca_fantasia',	($_POST['busca_fantasia']?? ''),	2,'',				'maxlength="65"'),
-			campo('CPF/CNPJ',		'busca_cnpj',		($_POST['busca_cnpj']?? ''),		2,'MASCARA_CPF'),
+			campo('CPF/CNPJ',		'busca_cnpj',		($_POST['busca_cnpj']?? ''),		2,'MASCARA_CPF/CNPJ'),
 			combo('UF',				'busca_uf',			($_POST['busca_uf']?? ''),			1,$uf),
 			combo('Situação',		'busca_situacao',	($_POST['busca_situacao']?? ''),	2,['' => 'Todos', 'ativo' => 'Ativo', 'inativo' => 'Inativo'])
 		];

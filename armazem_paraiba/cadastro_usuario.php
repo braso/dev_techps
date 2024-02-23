@@ -96,7 +96,8 @@
 			['user_tx_email','email'],
 			['user_tx_fone','telefone'],
 			['user_nb_empresa','empresa'],
-			['user_tx_expiracao', 'expiracao']
+			['user_tx_expiracao', 'expiracao'],
+			
 		];
 		foreach($campos_variaveis as $campo){
 			if(isset($_POST[$campo[1]]) && !empty($_POST[$campo[1]])){
@@ -106,7 +107,9 @@
 		}
 		if(is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) && !empty($_POST['nivel'])){
 			$bd_campos[] = 'user_tx_nivel';
+			$bd_campos[] = 'user_tx_status';
 			$valores[] = $_POST['nivel'];
+			$valores[] = $_POST['status'];
 		}
 
 		if (!empty($_POST['nivel']) && $_POST['nivel'] == 'Motorista' && (!isset($_POST['cpf']) || empty($_POST['cpf']))) {
@@ -176,6 +179,7 @@
 					$bd_campos[] = 'user_tx_senha';
 					$valores[] = md5($_POST['senha']);
 				}
+
 				atualizar('user', $bd_campos, $valores, $_POST['id']);
 			}
 		}
@@ -209,6 +213,7 @@
 					$niveis[] = "Funcionário";
 			}
 			$campo_nivel = combo('Nível*', 'nivel', $a_mod['user_tx_nivel'], 2, $niveis, "style='margin-bottom:-10px;'");
+			$campo_status = combo('Status', 'status', $a_mod['user_tx_status'], 2, ['ativo' => 'Ativo', 'inativo' => 'Inativo'], 'tabindex=04');
 
 			$campo_login = campo('Login*', 'login', $a_mod['user_tx_login'], 2,'','maxlength="30"');
 			$campo_nascimento = campo_data('Dt. Nascimento*', 'nascimento', ($a_mod['user_tx_nascimento']?? ($_POST['nascimento']?? '')), 2);
@@ -239,6 +244,7 @@
 					$niveis[] = "Funcionário";
 			}
 			$campo_nivel = combo('Nível*', 'nivel', ($_POST['nivel']?? ''), 2, $niveis, "style='margin-bottom:-10px;'");
+			$campo_status = combo('status', 'status', $a_mod['enti_tx_status'], 2, ['ativo' => 'Ativo', 'inativo' => 'Inativo'], 'tabindex=04');
 
 			$campo_login = campo('Login*', 'login', ($_POST['login']?? ''), 2,'','maxlength="30"');
 			$campo_nascimento = campo_data('Dt. Nascimento*', 'nascimento', ($_POST['nascimento']?? ''), 2);
@@ -297,6 +303,7 @@
 		$c = [
 			$campo_nome,
 			$campo_nivel,
+			$campo_status,
 			$campo_login,
 			$campo_senha,
 			$campo_confirma,

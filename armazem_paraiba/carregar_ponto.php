@@ -261,14 +261,16 @@
 		global $CACTUX_CONF;
 		if ($_SERVER['HTTP_ENV'] == 'carrega_cron') {
 			// Aplicar após criar o usuário REP-P
-			// $rep_p_user = query('SELECT user_nb_id, user_tx_nivel, user_tx_login FROM user WHERE user_tx_login LIKE "%REP-P%" LIMIT 1');
-			// $_SESSION['user_nb_id'] = $rep_p_user['user_nb_id'];
-			// $_SESSION['user_tx_nivel'] = $rep_p_user['user_tx_nivel'];
-			// $_SESSION['user_tx_login'] = $rep_p_user['user_tx_login'];
+			$rep_p_user = query('SELECT user_nb_id, user_tx_nivel, user_tx_login FROM user WHERE user_tx_login LIKE "%Techps.admin%" LIMIT 1');
+			$user = mysqli_fetch_all($rep_p_user, MYSQLI_ASSOC);
 
-			$_SESSION['user_nb_id'] = 138;
-			$_SESSION['user_tx_nivel'] = 'Super Administrador';
-			$_SESSION['user_tx_login'] = 'Techps.admin';
+ 			$_SESSION['user_nb_id'] = $user[0]['user_nb_id'];
+			$_SESSION['user_tx_nivel'] = $user[0]['user_tx_nivel'];
+			$_SESSION['user_tx_login'] = $user[0]['user_tx_login'];
+
+// 			$_SESSION['user_nb_id'] = 138;
+// 			$_SESSION['user_tx_nivel'] = 'Super Administrador';
+// 			$_SESSION['user_tx_login'] = 'Techps.admin';
 			layout_ftp();
 			exit;
 		}
@@ -277,10 +279,13 @@
 
 		$extra = '';
 		if (!empty($_POST['busca_inicio'])){
-			$extra .= " AND arqu_tx_data >= '".data($_POST['busca_inicio'], 1)."'";
+			$extra .= " AND arqu_tx_data >= '".$_POST['busca_inicio']."'";
 		}
 		if (!empty($_POST['busca_fim'])){
-			$extra .= " AND arqu_tx_data <= '".data($_POST['busca_fim'], 1)."'";
+			$extra .= " AND arqu_tx_data <= '".$_POST['busca_fim']."'";
+		}
+		if (!empty($_POST['busca_codigo'])){
+			$extra .= " AND arqu_nb_id = $_POST[busca_codigo]";
 		}
 
 		//CONSULTA
@@ -307,13 +312,14 @@
 				WHERE arqu_nb_user = user_nb_id 
 					AND arqu_tx_status != 'inativo' 
 					".$extra."
+					ORDER BY arqu_tx_data DESC
 				LIMIT 400"
 		;
 
 		$cab = ['CÓD', 'ARQUIVO', 'USUÁRIO', 'DATA', 'SITUAÇÃO'];
 
 		$val = ['arqu_nb_id', 'arqu_tx_nome', 'user_tx_nome', 'data(arqu_tx_data,1)', 'ucfirst(arqu_tx_status)'];
-		grid($sql, $cab, $val, '', '', 0, 'desc');
+		grid($sql, $cab, $val, '', '', 0, '');
 
 		rodape();
 	}

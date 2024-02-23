@@ -141,7 +141,7 @@
 
 	function voltar(){
 		global $CONTEX;
- 		
+    
 		$aMotorista = carregar('entidade',$_POST['id']);
 		echo 
 			'<form action="https://braso.mobi'.$CONTEX['path'].'/espelho_ponto" name="form_voltar" method="post">
