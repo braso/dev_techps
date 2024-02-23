@@ -76,16 +76,16 @@ function index(){
 	$extra = '';
 
 	if($_POST['busca_codigo'])
-		$extra .= " AND feri_nb_id LIKE '%$_POST[busca_codigo]%'";
+		$extra .= " AND feri_nb_id LIKE '%".$_POST['busca_codigo']."%'";
 
 	if($_POST['busca_nome'])
-		$extra .= " AND feri_tx_nome LIKE '%$_POST[busca_nome]%'";
+		$extra .= " AND feri_tx_nome LIKE '%".$_POST['busca_nome']."%'";
 
 	if($_POST['busca_uf']){
-		$extra .= " AND feri_tx_uf = '$_POST[busca_uf]'";
+		$extra .= " AND feri_tx_uf = '".$_POST['busca_uf']."'";
 	}
 	if($_POST['busca_cidade']){
-		$extra .= " AND feri_nb_cidade = '$_POST[busca_cidade]'";
+		$extra .= " AND feri_nb_cidade = '".$_POST['busca_cidade']."'";
 	}
 
 	// EXIBE APENAS OS FeriadoS
@@ -111,11 +111,18 @@ function index(){
 	linha_form($c);
 	fecha_form($botao);
 
-	$sql = "SELECT * FROM feriado LEFT JOIN cidade ON cida_nb_id = feri_nb_cidade WHERE feri_tx_status != 'inativo' $extra";
-	$cab = array('CÓDIGO','NOME','DATA','ESTADUAL','MUNICIPAL','','');
-	$val = array('feri_nb_id','feri_tx_nome','data(feri_tx_data)','feri_tx_uf','cida_tx_nome','icone_modificar(feri_nb_id,modifica_feriado)','icone_excluir(feri_nb_id,exclui_feriado)');
+	$sql = "SELECT * FROM feriado LEFT JOIN cidade ON cida_nb_id = feri_nb_cidade WHERE feri_tx_status != 'inativo'".$extra;
+	$gridFields = [
+		'CÓDIGO' 											=> 'feri_nb_id',
+		'NOME' 												=> 'feri_tx_nome',
+		'DATA' 												=> 'data(feri_tx_data)',
+		'ESTADUAL' 											=> 'feri_tx_uf',
+		'MUNICIPAL' 										=> 'cida_tx_nome',
+		'<spam class="glyphicon glyphicon-search"></spam>' 	=> 'icone_modificar(feri_nb_id,modifica_feriado)',
+		'<spam class="glyphicon glyphicon-remove"></spam>' 	=> 'icone_excluir(feri_nb_id,exclui_feriado)'
+	];
 
-	grid($sql,$cab,$val);
+	grid($sql,array_keys($gridFields),array_values($gridFields));
 
 	rodape();
 

@@ -344,26 +344,27 @@
 			case "MASCARA_VALOR":
 				$data_input .= "$('[name=\"$variavel\"]').maskMoney({prefix: 'R$', allowNegative: true, thousands:'.', decimal:',', affixesStay: false});";
 			break;
+			case "MASCARA_CEL":
 			case "MASCARA_FONE":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['(99) 9999-9999', '(99) 99999-9999'], placeholder: \"\" });";
+				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['(99) 9999-9999', '(99) 99999-9999'], placeholder: ''});";
 			break;
 			case "MASCARA_NUMERO":
 				$data_input .= "$('[name=\"$variavel\"]').inputmask(\"numeric\", {rightAlign: false});";
 			break;
-			case "MASCARA_CEL":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['(99) 9999-9999', '(99) 99999-9999'], placeholder: \"\" });";
-			break;
 			case "MASCARA_CEP":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask('99999-999', { clearIncomplete: true, placeholder: \"\" });";
+				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: '99999-999', clearIncomplete: true, placeholder: \"00000-000\" });";
 			break;
 			case "MASCARA_CPF":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99'], placeholder: \"\" });";
-			break;
-			case "MASCARA_RG":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999'], placeholder: \"\" });";
+				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99'], placeholder: \"000.000.000-00\" });";
 			break;
 			case "MASCARA_CNPJ":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask('99.999.999/9999-99', {placeholder: \"\" });";
+				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['99.999.999/9999-99'], placeholder: \"00.000.000/000-00\" });";
+			break;
+			case "MASCARA_CPF/CNPJ":
+				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99', '99.999.999/9999-99']});";
+			break;
+			case "MASCARA_RG":
+				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999']});";
 			break;
 			case "MASCARA_DINHERO":
 				$data_input .= 
@@ -377,7 +378,7 @@
 				;
 			break;
 			case "MASCARA_HORAS":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['99:99', '999:99']});";
+				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['99:99', '999:99'], placeholder: \"\"});";
 			break;
 			case "MASCARA_HORA":
 				$type = "time";
@@ -470,7 +471,7 @@
 	}
 
 	function ckeditor($nome,$variavel,$modificador,$tamanho,$extra=''){
-
+		return '';
 		// echo '';
 		$campo=
 			'<script src="/ckeditor/ckeditor.js"></script>
