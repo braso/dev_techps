@@ -6,11 +6,9 @@
 		global $CONTEX,$conn;
 
 		if(!$_SESSION['user_nb_id']){
-
 			echo "<meta http-equiv='refresh' content='0; url=".$CONTEX['path']."/index.php' />";
 			exit;
 		}
-
 		global $CONTEX;
 		?>
 			<!DOCTYPE html>
@@ -329,6 +327,8 @@
 				<!-- FIM INNER FOOTER -->
 				<!-- FIM FOOTER -->
 				<!-- INICIO CORE PLUGINS -->
+
+				<form id="loginTimeoutForm" method="post" target="https://braso.mobi<?=$CONTEX['path']?>/logout.php" action="logout"></form>
 				
 				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
 				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/js.cookie.min.js" type="text/javascript"></script>
@@ -346,8 +346,16 @@
 				<script src="<?=$CONTEX['path']?>/../contex20/assets/layout/scripts/demo.min.js" type="text/javascript"></script>
 				<!-- FIM TEMA LAYOUT SCRIPTS -->
 
-			</body>
 
+				<script>
+					setTimeout(function(){
+						let form = document.getElementById('loginTimeoutForm');
+						form.submit();
+						window.location.reload();
+					}, 15*60*1000);
+				</script>
+
+			</body>
 		</html>	
 		<!-- 
 		<script type="text/javascript">
@@ -382,7 +390,7 @@
 											?>
 											<div class="portlet-title">
 												<div class="caption">
-													<span class="caption-subject font-dark bold uppercase"><?=$nome_form?></span>
+													<span class="caption-subject font-dark bold"><?=$nome_form?></span>
 												</div>
 											</div>
 											<?

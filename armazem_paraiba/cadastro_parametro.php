@@ -124,8 +124,9 @@
 			$camposObrigatorios[] = 'quandDias';
 			$camposObrigatorios[] = 'quandHoras';
 		}
+
 		foreach($camposObrigatorios as $campo){
-			if(!isset($_POST[$campo]) || (empty($_POST[$campo]) && !in_array($_POST[$campo], ['0', 0]))){
+			if(!isset($_POST[$campo]) || $_POST[$campo] == ''){
 				echo '<script>alert("Preencha todos os campos obrigatórios.")</script>';
 				layout_parametro();
 				exit;
@@ -235,20 +236,20 @@
 		cabecalho("Cadastro de Parâmetros");
 		
 		$c = [
-			campo('Nome*', 'nome', $a_mod['para_tx_nome'], 6),
-			campo_hora('Jornada Semanal (Horas/Dia)*', 'jornadaSemanal', $a_mod['para_tx_jornadaSemanal'], 3),
-			campo_hora('Jornada Sábado (Horas/Dia)*', 'jornadaSabado', $a_mod['para_tx_jornadaSabado'], 3),
-			campo('Tolerância de jornada Saldo diário (Minutos)*', 'tolerancia', $a_mod['para_tx_tolerancia'], 3,'MASCARA_NUMERO','maxlength="3"'),
-			campo('Percentual da Hora Extra(%)*', 'percentualHE', $a_mod['para_tx_percentualHE'], 3, 'MASCARA_NUMERO', 'maxlength="3"'),
-			campo('Percentual da Hora Extra 100% (domingos e feriados)*', 'percentualSabadoHE', $a_mod['para_tx_percentualSabadoHE'], 3, 'MASCARA_NUMERO'),
-			campo_hora('Quando Exceder o limite de Horas Extras %, o excedente será Hora Extra 100% (Horas/Minutos)*', 'HorasEXExcedente', $a_mod['para_tx_HorasEXExcedente'], 3),
+			campo('Nome*:', 'nome', $a_mod['para_tx_nome'], 6),
+			campo_hora('Jornada Semanal (Horas/Dia)*:', 'jornadaSemanal', $a_mod['para_tx_jornadaSemanal'], 3),
+			campo_hora('Jornada Sábado (Horas/Dia)*:', 'jornadaSabado', $a_mod['para_tx_jornadaSabado'], 3),
+			campo('Tolerância de jornada Saldo diário (Minutos)*:', 'tolerancia', $a_mod['para_tx_tolerancia'], 3,'MASCARA_NUMERO','maxlength="3"'),
+			campo('Percentual da Hora Extra (Semanal)*:', 'percentualHE', $a_mod['para_tx_percentualHE'], 3, 'MASCARA_NUMERO', 'maxlength="3"'),
+			campo('Percentual da Hora Extra (Dias sem Jornada Prevista)*:', 'percentualSabadoHE', $a_mod['para_tx_percentualSabadoHE'], 3, 'MASCARA_NUMERO'),
+			campo_hora('Máximo de Horas Extras 50% (diário)*', 'HorasEXExcedente', $a_mod['para_tx_HorasEXExcedente'], 3),
 			campo('Diária Café da Manhã(R$)', 'diariasCafe', $a_mod['para_tx_diariasCafe'], 3, 'MASCARA_DINHERO'),
 			campo('Diária Almoço(R$)', 'diariasAlmoco', $a_mod['para_tx_diariasAlmoco'], 3, 'MASCARA_DINHERO'),
 			campo('Diária Jantar(R$)', 'diariasJanta', $a_mod['para_tx_diariasJanta'], 3, 'MASCARA_DINHERO'),
 			combo('Acordo Sindical', 'acordo', $a_mod['para_tx_acordo'], 3, ['sim' => "Sim", 'nao' => "Não"]),
 			campo_data('Início do Acordo*', 'inicioAcordo', $a_mod['para_tx_inicioAcordo'], 3),
 			campo_data('Fim do Acordo*', 'fimAcordo', $a_mod['para_tx_fimAcordo'], 3),
-			checkbox_banco('Utiliza regime de banco de horas?','banco',$a_mod['para_tx_banco'],$a_mod['para_nb_qDias'], $a_mod['para_tx_horasLimite'],3),
+			checkbox_banco('Utilizar regime de banco de horas?','banco',$a_mod['para_tx_banco'],$a_mod['para_nb_qDias'], $a_mod['para_tx_horasLimite'],3),
 			ckeditor('Descrição:', 'paramObs', $a_mod['para_tx_paramObs'], 12,'maxlength="100"'),
 		];
 
@@ -334,7 +335,7 @@
 		$c = [
 			campo('Código', 'busca_codigo', $_POST['busca_codigo']?? '', 2, 'MASCARA_NUMERO', 'maxlength="6"'),
 			campo('Nome', 'busca_nome', $_POST['busca_nome']?? '', 4, '', 'maxlength="65"'),
-      combo('Acordo', 'busca_acordo', $_POST['busca_acordo']?? '', 2, ['' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não']),
+      		combo('Acordo', 'busca_acordo', $_POST['busca_acordo']?? '', 2, ['' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não']),
 			combo('Banco de Horas', 'busca_banco', $_POST['busca_banco']?? '', 2, ['' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não']),
 			combo('Vencidos', 'busca_vencidos', $_POST['busca_vencidos']?? '', 2, ['' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não'])
 		];

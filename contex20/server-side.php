@@ -1,109 +1,93 @@
 <?php
-	// storing  request (ie, get/post) global array to a variable  
-	$requestData= $_REQUEST;
-
-
-	/* Database connection start */
 	include_once $_SERVER['DOCUMENT_ROOT'].$_POST['path']."/conecta.php";
-	include_once $_POST['arquivo'];
+	
+	$columns = $_POST['columns'];
 
-	/* Database connection end */
-	$columns = $_POST['valores'];
-	$t_valores = count($columns);
+	$_POST['totalQuery'] = str_replace(["null", "\t", "\n", "\r"], ["\"\"", "", "", ""], $_POST['totalQuery']);
 
-
-	// getting total number records without any search
-	$sql=$_POST['sql'];
-
-
-	$query=mysqli_query($conn, $sql) or die(mysqli_error($conn));
-	$totalData = mysqli_num_rows($query);
-	$totalFiltered = $totalData;  // when there is no search parameter then total number rows = total number filtered rows.
-
-	preg_match('/(.*)\((.*?)\)(.*)/',$columns[$requestData['order'][0]['column']], $match2);
-	if(isset($match2[2])){
-		$parametros = explode(',',$match2[2]);
-		$order2 = $parametros[0];
+	$totalQuery = json_decode($_POST['totalQuery']);
+	
+	$limit = ['start' => $_REQUEST['start'], 'length' => $_REQUEST['length']];
+	$limitedQuery = [];
+	if($limit['length'] != '-1'){
+		for($f = $limit['start']; $f < $limit['start']+$limit['length']; $f++){
+			if(!empty($totalQuery[$f])){
+				$limitedQuery[] = $totalQuery[$f];
+			}
+		}
 	}else{
-		$order2 = $columns[$requestData['order'][0]['column']];
+		$limitedQuery = $totalQuery;
 	}
-
-
-	$query=mysqli_query($conn, $sql) or die(mysqli_error($conn));
-	$totalFiltered = mysqli_num_rows($query); // when there is a search parameter then we have to modify total number filtered rows as per search result. 
-
-	if($requestData['length'] != '-1'){
-		$limit =  " LIMIT ".$requestData['start']." ,".$requestData['length'];
-	}else{
-		$limit = '';
-	}
-
-	if (!empty($requestData['order'][0]['dir'])) {
-		$sql.=" ORDER BY ". $order2." ".$requestData['order'][0]['dir'];
-	}
-	$sql.=" $limit";
-
-	/* $requestData['order'][0]['column'] contains colmun index, $requestData['order'][0]['dir'] contains order such as asc/desc  */	
-	$query=mysqli_query($conn, $sql) or die(mysqli_error($conn));
-
-	$data = array();
-
 	//EXEMPLO DO PREG_MATCH PARA EXTRAIR FUNCAO E SEUS PARAMETROS
 	// $text = 'This is a line (an example between parenthesis)';
 	// preg_match('/(.*)\((.*?)\)(.*)/', $text, $match);
 	// echo "in parenthesis: " . $match[2] . "<br>";
 	// echo "before and after: " . $match[1] . $match[3] . "<br>";
 
-
-	while( $row=mysqli_fetch_array($query) ) {  // preparing an array
-		$nestedData=[];
-
-
-		for($i=0;$i<$t_valores;$i++){
+	$nomeEmpresaMatriz = mysqli_fetch_assoc(
+		query(
+			"SELECT empr_tx_nome FROM empresa
+				WHERE empr_tx_Ehmatriz = 'sim'
+			LIMIT 1"
+		)
+	);
+	$nomeEmpresaMatriz = !empty($nomeEmpresaMatriz)? $nomeEmpresaMatriz['empr_tx_nome']: null;
+	
+	$data = [];
+	foreach($limitedQuery as $row){  // preparing an array
+		$nestedData = [];
+		for($i = 0; $i < count($columns); $i++){
+			$row = (array)$row;
 			$text = $columns[$i];
 			preg_match('/(.*)\((.*?)\)(.*)/', $text, $match);
-			if(empty($match[2])){
-				$nestedData[] = $row[$columns[$i]];
-				$nome_sql = 'SELECT empr_tx_nome FROM `empresa` WHERE empr_tx_Ehmatriz = "sim" LIMIT 1';
-				$query_empresa=mysqli_query($conn, $nome_sql ) or die(mysqli_error($conn));
-				$nome_empresa = mysqli_fetch_all($query_empresa, MYSQLI_ASSOC);
-
-				if(!empty($nome_empresa[0]['empr_tx_nome'])){
+			$isAFunction = !empty($match[2]);
+			if(!$isAFunction){
+				$nestedData[] = !empty($row[$columns[$i]])? $row[$columns[$i]]: '';
+				if(!empty($nomeEmpresaMatriz)){
 					if($text == 'empr_tx_nome'){
-						$novoNome = $nome_empresa[0]['empr_tx_nome'].'  <i class="fa fa-star" aria-hidden="true"></i>';
-					}
-					if (in_array($nome_empresa[0]['empr_tx_nome'], $nestedData)) {
-						$indice = array_search($nome_empresa[0]['empr_tx_nome'], $nestedData);
-						$nestedData[$indice] = $novoNome;
+						$nomeEmpresaComIcone = $nomeEmpresaMatriz.'  <i class="fa fa-star" aria-hidden="true"></i>';
+						if (in_array($nomeEmpresaMatriz, $nestedData)) {
+							$indice = array_search($nomeEmpresaMatriz, $nestedData);
+							$nestedData[$indice] = $nomeEmpresaComIcone;
+						}
 					}
 				}
 			}else{
-				$parametros = explode(',',$match[2]);
+				$parametros = explode(',', $match[2]);
 				$parametros[0] = $row[$parametros[0]];
-				$result = call_user_func_array($match[1],$parametros);
-				if($result=='')
-					$result='';
+				$result = call_user_func_array($match[1], $parametros);
 				$nestedData[] = $result;
 			}
 		}
-		
-	// 	if($nestedData[0][1]){
-	// 	    $nestedData[1][1] = "$nestedData[1][1] <i class='fa fa-star' aria-hidden='true'></i>";
-	// 	}
-
 		$data[] = $nestedData;
 	}
 
+	//Ordenar{
+		$orderBy = $_REQUEST['order'][0]['column'];
 
+		$isInt = (!empty($columns[$_REQUEST['order'][0]['column']]) && $columns[$_REQUEST['order'][0]['column']] == '');
 
-	$json_data = array(
-				"draw"            => intval( $requestData['draw'] ),   // for every request/draw by clientside , they send a number as a parameter, when they recieve a response/data they first check the draw number, so we are sending same number in draw. 
-				"recordsTotal"    => intval( $totalData ),  // total number of records
-				"recordsFiltered" => intval( $totalFiltered ), // total number of records after searching, if there is no searching then totalFiltered = totalData
-				"data"            => $data   // total data array
-				);
+		$orderArray = [];
+		foreach($data as $row){
+			if($isInt){
+				$orderArray[] = intval($row[$orderBy]);
+			}else{
+				$orderArray[] = $row[$orderBy];
+			}
+		}
+		array_multisort(
+			$orderArray,
+			($_REQUEST['order'][0]['dir'] == 'desc'? SORT_ASC: SORT_DESC),
+			$data
+		);
+	//}
+
+	$json_data = [
+		"draw"            => intval($_REQUEST['draw']), // for every request/draw by clientside , they send a number as a parameter, when they recieve a response/data they first check the draw number, so we are sending same number in draw. 
+		"recordsTotal"    => count($totalQuery),  		// total number of records
+		"recordsFiltered" => count($totalQuery), 		// total number of records after searching, if there is no searching then totalFiltered = totalData
+		"data"            => $data						// total data array
+	];
 
 	echo json_encode($json_data);  // send data as json format
-
-
 ?>
