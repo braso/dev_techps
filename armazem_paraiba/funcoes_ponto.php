@@ -358,7 +358,7 @@
 				MYSQLI_ASSOC
 			);
 			if(count($endossado) > 0){
-				$retorno = '<a title="Ajuste de Ponto (endossado)" onclick="avisar_ponto_endossado()"><i style="color:'.$cor.';" class="fa fa-circle">(E)</i></a>';
+				$retorno = '<a title="Ajuste de Ponto (endossado)" onclick="avisar_ponto_endossado('.$idMotorista.',\''.$data.'\')"><i style="color:'.$cor.';" class="fa fa-circle">(E)</i></a>';
 			}else{
 				$retorno = '<a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto('.$idMotorista.',\''.$data.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
 			}
@@ -372,8 +372,11 @@
 					document.form_ajuste_ponto.data.value = data;
 					document.form_ajuste_ponto.submit();
 				}
-				function avisar_ponto_endossado(){
+				function avisar_ponto_endossado(motorista, data){
 					alert("Dia já endossado.");
+					document.form_ajuste_ponto.id.value = motorista;
+					document.form_ajuste_ponto.data.value = data;
+					document.form_ajuste_ponto.submit();
 				}
 			</script>'
 		;
