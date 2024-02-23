@@ -16,15 +16,11 @@
 		$extraCampoData = '';
 		if ($_SESSION['user_tx_nivel'] == 'Motorista') {
 			$_POST['busca_motorista'] = $_SESSION['user_nb_entidade'];
+			$_POST['busca_empresa'] = $_SESSION['user_nb_empresa'];
+			$_POST['busca_dataInicio'] = date("Y-m-01");
+			$_POST['busca_dataFim'] = date("Y-m-d");
 			$extraBuscaMotorista = " AND enti_nb_id = '$_SESSION[user_nb_entidade]'";
 			$extraCampoData= 'readonly';
-
-			if (isset($_POST['busca_dataInicio']) || !empty($_POST['busca_dataInicio'])){
-				$_POST['busca_dataInicio'] = date("Y-m-01");
-			}
-			if (isset($_POST['busca_dataFim']) || !empty($_POST['busca_dataFim'])){
-				$_POST['busca_dataFim'] = date("Y-m-d");
-			}
 		}
 	
 		if (!empty($_POST['busca_motorista'])) {
@@ -33,8 +29,8 @@
 		}
 
 		$extraEmpresa = '';
-		if ($_SESSION['user_nb_empresa'] > 0 && $_SESSION['user_tx_nivel'] != 'Administrador' && $_SESSION['user_tx_nivel'] != 'Super Administrador') {
-			$extraEmpresa = " AND enti_nb_empresa = '$_SESSION[user_nb_empresa]'";
+		if (!empty($_SESSION['user_nb_empresa']) && $_SESSION['user_tx_nivel'] != 'Administrador' && $_SESSION['user_tx_nivel'] != 'Super Administrador') {
+			$extraEmpresa = " AND enti_nb_empresa = ".$_SESSION['user_nb_empresa'];
 		}
 	
 		if (!isset($_POST['busca_dataInicio']) || empty($_POST['busca_dataInicio'])){
@@ -90,15 +86,14 @@
       }
 		}else{
 			$_POST['busca_empresa'] = '';
-			// $_POST['busca_empresa'] = intval($_SESSION['user_nb_empresa']);
+			$_POST['busca_motorista'] = '';
 		}
 
 		//CAMPOS DE CONSULTA
-
 		$c = [
 			combo_net('Empresa*:', 'busca_empresa', ($_POST['busca_empresa']?? ''), 3, 'empresa', 'onchange=selecionaMotorista(this.value)', $extraEmpresa),
 			combo_net('Motorista*:', 'busca_motorista', ($_POST['busca_motorista']?? ''), 4, 'entidade', '', " AND enti_tx_tipo = \"Motorista\" $extraEmpresa $extraBuscaMotorista", 'enti_tx_matricula'),
-			campo_data('Data Início:', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ''), 2,$extraCampoData),
+			campo_data('Data Início:', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ''), 2, $extraCampoData),
 			campo_data('Data Fim:', 'busca_dataFim', ($_POST['busca_dataFim']?? ''), 2,$extraCampoData)
 		];
 	
@@ -146,17 +141,17 @@
 			}
 	
 			if (!empty($aEmpresa['empr_nb_parametro'])) {
-				$aParametro = carregar('parametro', $aEmpresa['empr_nb_parametro']);
+				$parametroPadrao = carregar('parametro', $aEmpresa['empr_nb_parametro']);
 				if (
-					$aParametro['para_tx_jornadaSemanal'] != $aMotorista['enti_tx_jornadaSemanal'] ||
-					$aParametro['para_tx_jornadaSabado'] != $aMotorista['enti_tx_jornadaSabado'] ||
-					$aParametro['para_tx_percentualHE'] != $aMotorista['enti_tx_percentualHE'] ||
-					$aParametro['para_tx_percentualSabadoHE'] != $aMotorista['enti_tx_percentualSabadoHE'] ||
-					$aParametro['para_nb_id'] != $aMotorista['enti_nb_parametro']
+					$parametroPadrao['para_tx_jornadaSemanal'] 		!= $aMotorista['enti_tx_jornadaSemanal'] ||
+					$parametroPadrao['para_tx_jornadaSabado'] 		!= $aMotorista['enti_tx_jornadaSabado'] ||
+					$parametroPadrao['para_tx_percentualHE'] 		!= $aMotorista['enti_tx_percentualHE'] ||
+					$parametroPadrao['para_tx_percentualSabadoHE'] 	!= $aMotorista['enti_tx_percentualSabadoHE'] ||
+					$parametroPadrao['para_nb_id'] 					!= $aMotorista['enti_nb_parametro']
 				) {
 					$parametroPadrao = 'Convenção Não Padronizada, Semanal ('.$aMotorista['enti_tx_jornadaSemanal'].'), Sábado ('.$aMotorista['enti_tx_jornadaSabado'].')';
 				} else {
-					$parametroPadrao = 'Convenção Padronizada: '.$aParametro['para_tx_nome'].', Semanal ('.$aParametro['para_tx_jornadaSemanal'].'), Sábado ('.$aParametro['para_tx_jornadaSabado'].')';
+					$parametroPadrao = 'Convenção Padronizada: '.$parametroPadrao['para_tx_nome'].', Semanal ('.$parametroPadrao['para_tx_jornadaSemanal'].'), Sábado ('.$parametroPadrao['para_tx_jornadaSabado'].')';
 				}
 			}else{
 				$parametroPadrao = 'Convenção Não Padronizada, Semanal ('.$aMotorista['enti_tx_jornadaSemanal'].'), Sábado ('.$aMotorista['enti_tx_jornadaSabado'].')';
