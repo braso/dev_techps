@@ -1,29 +1,85 @@
 @media print {
     body {
-        width: 297mm;
         margin: 1cm;
-        margin-left: 20cm;
+        margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
+        transform: scale(1.0);
+        transform-origin: top left;
     }
+
     @page {
         size: A4 landscape;
-        margin: 0mm;
+        margin: 1cm;
     }
-    td.impressao {
-        position: static; 
-        text-align: center;
-        left:58.8rem !important;
+
+    .table-resumo {
+        width: 89% !important;
+        page-break-inside: avoid !important;
+        border-collapse: collapse !important;
+        border: 0 !important;
     }
+    
     .table th, .table td {
         padding-top: 0px !important;
-        padding-right: 11.2px !important;
+        padding-right: 3.2px !important;
         padding-bottom: 0px !important;
-        padding-left: 11.2px !important;
+        padding-left: 3.2px !important;
         text-align: center !important;
         border: 0.01px solid black !important;
         page-break-inside: avoid !important;
-        
+    }
+    
+    #impressao {
+        left: 53rem !important;
+    }
+
+    #exporta{
+        display: none;
     }
 }
+
+.company-info>td{
+    text-align: left;
+}
+
+#exporta{
+    position: relative;
+	left: 37rem;
+}
+
+#exporta > #btnImprimir{
+  padding: 10px 15px; 
+  font-size: 16px;
+  background-color: #36c6d3; 
+  color: white; 
+  border: none; 
+  border-radius: 5px; 
+  cursor: pointer;
+}
+
+#exporta > #btnCsv{
+  padding: 10px 15px; 
+  font-size: 16px;
+  background-color: #4CAF50; 
+  color: white; 
+  border: none; 
+  border-radius: 5px; 
+  cursor: pointer;
+}
+
+#exporta > #btnCsv:hover{
+    background-color: #45a049; 
+}
+
+#exporta > #btnImprimir:hover{
+    background-color: #259ca7; 
+}
+
+#btnImprimir,
+#btnCsv{
+    display: inline-block;
+    margin-right: 10px; /* Espaço entre os botões, opcional */
+}
+
 
 /* table thead tr th:nth-child(3),
 table thead tr th:nth-child(7),
@@ -48,7 +104,7 @@ body {
     align-items: center;
     justify-content: space-between;
     background-color: #f2f2f2;
-    padding: 10px;
+    padding: 3px;
 }
 
 .header img {
@@ -113,7 +169,8 @@ body {
 }
 
 .signature-block {
-    width: 30%;
+    display: inline-block;
+    width: 45%;
 }
 
 .signature-block p {
@@ -130,7 +187,7 @@ body {
 .table-info td {
     border: 0.01px solid black;
     border-collapse: collapse;
-    margin-top: 5px;
+    margin-top: -18px;
     page-break-inside: avoid;
     /* width: 280px; */
 }
@@ -147,7 +204,7 @@ body {
     border-collapse: collapse;
     page-break-inside: avoid;
     /* width: 280px; */
-    margin-top: 5px;
+    margin-top: 12px;
 }
 
 .table-legenda,
@@ -182,4 +239,9 @@ body {
 td .empty {
     border: 0.01px solid transparent;
     border-right: 0.01px solid black;
+}
+
+#impressao {
+    position: absolute; 
+    left: 73rem;
 }
