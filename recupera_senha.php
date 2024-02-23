@@ -33,7 +33,6 @@ if ($_POST['botao'] == 'ENVIAR') {
     ];
 
     $dominio = extrairDominio($dominio_url, $dominio_array);
-    var_dump($dominio);
 
     $login = $_POST['login'];
     // $email = $_POST['email'];
