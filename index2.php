@@ -1,5 +1,6 @@
 <?php
 include_once("version.php");
+include_once('dominios.php');
 
 if(isset($_SERVER['SCRIPT_URI'])){
 	$server_base_link = substr($_SERVER['SCRIPT_URI'], 0, strrpos($_SERVER['SCRIPT_URI'], '/'));
@@ -8,7 +9,7 @@ if(isset($_SERVER['SCRIPT_URI'])){
 }
 include $server_base_link."/armazem_paraiba/conecta.php";
 
-// $sql = query('SELECT * FROM domain');
+// $sql = query('SELECT * FROM dominio');
 // $result = mysqli_fetch_all($sql, MYSQLI_ASSOC);
 
 $msg = '';
@@ -22,11 +23,11 @@ if (isset($_GET['erro']) && $_GET['erro'] != '') {
 }
 
 if (isset($_POST['botao']) && $_POST['botao'] == 'Entrar') {
-	if ($_POST['domain'] != '' && $_POST['login'] != '' && $_POST['senha'] != '') {
-		$domain = $_POST['domain'];
-		header("Location: " . $domain . '?user=' . $_POST['login'] . '&password=' . md5($_POST['senha']));
+	if ($_POST['dominio'] != '' && $_POST['login'] != '' && $_POST['senha'] != '') {
+		$dominio = $_POST['dominio'];
+		header("Location: " . $dominio . '?user=' . $_POST['login'] . '&password=' . md5($_POST['senha']));
 		exit;
-	} else if($_POST['domain'] == '' && $_POST['login'] != '' && $_POST['senha'] != ''){
+	} else if($_POST['dominio'] == '' && $_POST['login'] != '' && $_POST['senha'] != ''){
 		$msg = "<div class='alert alert-danger display-block'>
 
 					<span> Nenhum domínio selecionado.  </span>
@@ -192,18 +193,11 @@ License: You must have a valid license purchased only from themeforest(the above
 
 			<h3 class="form-title font-green">Login</h3>
 
-			<div class="form-group">
-				<select class="form-control" name="domain">
-					<option value="" selected>Domínio</option>
-					<option value=<?=$server_base_link."/techps/index.php"?>>Techps</option>
-					<option value=<?=$server_base_link."/braso/index.php"?>>Braso</option>
-					<option value=<?=$server_base_link."/armazem_paraiba/index.php"?>>Armazem Paraiba</option>
-					<option value=<?=$server_base_link."/opafrutas/index.php"?>>Opafrutas</option>
-					<option value=<?=$server_base_link."/qualy_transportes/index.php"?>>Qualy Transportes</option>
-					<option value=<?=$server_base_link."/feijao_turqueza/index.php"?>>Feijão turqueza</option>
-					<option value="">Leroy Merlin</option>
-				</select>
-			</div>
+			<?php
+			
+			echo $dominios;
+			
+			?>
 
 			<div class="form-group">
 
