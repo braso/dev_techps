@@ -1,12 +1,9 @@
 <?php
+	include "conecta.php";
 
-include"conecta.php";
+	global $CONTEX;
 
-session_unset();
-session_destroy();
-
+	$_SESSION = [];
+    session_destroy();
 ?>
-
-
-
-<meta http-equiv="refresh" content="0; url=index.php" />
+<meta http-equiv="refresh" content="0; url=./../index2.php" />
