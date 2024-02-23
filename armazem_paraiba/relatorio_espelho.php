@@ -11,7 +11,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Espelho de Ponto</title>
-    <link rel="stylesheet" href="css/endosso.css">
+    <link rel="stylesheet" href="./css/endosso.css">
 
     <link rel="apple-touch-icon" sizes="180x180" href="/contex20/img/favicon/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/contex20/img/favicon/favicon-32x32.png">

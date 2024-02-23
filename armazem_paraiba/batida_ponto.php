@@ -1,5 +1,5 @@
 <?php
-    /*Modo debug{
+    //*Modo debug{
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//}*/
@@ -91,58 +91,81 @@
 
 		$aMotorista = carregar('entidade', $_SESSION['user_nb_entidade']);
 
-		//$extra filtra os pontos que estão entre o último início de jornada (tipo == 1) e a data atual.
-		$extra = 
-			" AND pont_tx_data >= (
-				SELECT pont_tx_data FROM ponto 
-					WHERE pont_tx_tipo = 1 
-						AND pont_tx_data <= '".date('Y-m-d H:i:s')."'
-						AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-					ORDER BY pont_tx_data DESC
-					LIMIT 1
+		$condicoesPontoBasicas = 
+			"ponto.pont_tx_status != 'inativo'
+			AND ponto.pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'"
+		;
+
+		$abriuJornadaHoje = mysqli_fetch_assoc(
+			query(
+				"SELECT * FROM ponto
+					WHERE ".$condicoesPontoBasicas."
+						AND ponto.pont_tx_tipo = 1
+						AND ponto.pont_tx_data LIKE '%".date('Y-m-d')."%'
+					ORDER BY ponto.pont_tx_data ASC
+					LIMIT 1;"
 			)
-			AND pont_tx_data <= '".date('Y-m-d H:i:s')."'";
+		);
+
+		if(empty($abriuJornadaHoje)){
+			//Confere se há uma jornada aberta que veio do dia anterior.
+			$temJornadaAberta = mysqli_fetch_assoc(
+				query(
+					"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 1) as temJornadaAberta FROM ponto
+						WHERE ".$condicoesPontoBasicas."
+							AND ponto.pont_tx_tipo IN (1,2)
+							AND pont_tx_data <= '".date('Y-m-d 00:00:00')."'
+						ORDER BY pont_tx_data DESC
+						LIMIT 1;"
+				)
+			);
+
+			if(!empty($temJornadaAberta) && intval($temJornadaAberta['temJornadaAberta'])){
+				$jornadaFechadaHoje = mysqli_fetch_assoc(
+					query(
+						"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 2) as jornadaFechadaHoje FROM ponto
+							WHERE ".$condicoesPontoBasicas."
+								AND ponto.pont_tx_tipo = 2
+								AND pont_tx_data LIKE '%".date('Y-m-d')."%'
+							ORDER BY pont_tx_data ASC
+							LIMIT 1;"
+					)
+				);
+				if(!empty($jornadaFechadaHoje) && intval($jornadaFechadaHoje['jornadaFechadaHoje'])){
+					$sqlDataInicio = date('Y-m-d H:i:s');
+				}else{
+					$sqlDataInicio = $temJornadaAberta['pont_tx_data'];
+				}
+			}else{
+				$sqlDataInicio = date('Y-m-d H:i:s');
+			}
+		}else{
+			$sqlDataInicio = $abriuJornadaHoje['pont_tx_data'];
+		}
 		
-		$queryPonto = [
+		$sql = 
 			"SELECT * FROM ponto
-				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
-				JOIN user ON ponto.pont_nb_user = user.user_nb_id
-				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
-				WHERE ponto.pont_tx_status != 'inativo'",
-					//Aqui é onde irá diferenciar o primeiro do último ponto.
-					$extra.
-				" AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-				ORDER BY 
-					pont_tx_data DESC, 
-					pont_nb_id DESC 
-				LIMIT 1"
-		];
+				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
+				WHERE ".$condicoesPontoBasicas."
+					AND ponto.pont_tx_data >= '".$sqlDataInicio."'
+				ORDER BY pont_tx_data ASC"
+		;
+
+		$pontosCompleto = mysqli_fetch_all(query($sql),MYSQLI_ASSOC);
 
 
-		$pontos = [
-			'primeiro' => mysqli_fetch_all(
-				query(
-					$queryPonto[0]
-						."AND macr_tx_codigoInterno = '1'"
-					.$queryPonto[1]
-				),
-				MYSQLI_ASSOC
-			),
-			'ultimo' => mysqli_fetch_all(
-				query(
-					$queryPonto[0]
-					.$queryPonto[1]
-				),
-				MYSQLI_ASSOC
-			)
-		];
-
-		if(!empty($pontos['primeiro'])){
-			$pontos['primeiro'] = $pontos['primeiro'][0];
+		if(!empty($pontosCompleto)){
+			$pontos = [
+				'primeiro' => $pontosCompleto[0],
+				'ultimo' => $pontosCompleto[count($pontosCompleto)-1]
+			];	
+		}else{
+			$pontos = [
+				'primeiro' => null,
+				'ultimo' => null
+			];
 		}
-		if(!empty($pontos['ultimo'])){
-			$pontos['ultimo'] = $pontos['ultimo'][0];
-		}
+
 		$inicios = [
 			1  => 'inicioJornada', 
 			3  => 'inicioRefeição', 
@@ -160,19 +183,6 @@
 			12 => 'fimRepousoEmbarcado'
 		];
 
-		$pontosCompleto = mysqli_fetch_all(
-			query("SELECT pont_tx_tipo, pont_nb_id, pont_tx_data FROM ponto
-				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
-				JOIN user ON ponto.pont_nb_user = user.user_nb_id
-				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
-				WHERE ponto.pont_tx_status != 'inativo'".
-					$extra.
-				"ORDER BY 
-					pont_tx_data ASC, 
-					pont_nb_id ASC"
-			),
-			MYSQLI_ASSOC
-		);
 		$pares = [
 			'jornada' 			=> [],
 			'refeicao' 			=> [],
@@ -191,7 +201,11 @@
 
 			switch(intval($pontosCompleto[$f]['pont_tx_tipo'])){
 				case 1:
-					$pares['jornada'][] = ['inicio' => $value->format("H:i")];
+					if($value->format('Y-m-d') < date('Y-m-d')){
+						$pares['jornada'][] = ['inicio' => $value->format("H:i"), 'diaAnterior' => true];
+					}else{
+						$pares['jornada'][] = ['inicio' => $value->format("H:i")];
+					}
 				break;
 				case 2:
 					$pares['jornada'][count($pares['jornada'])-1]['fim'] = $value->format("H:i");
@@ -228,9 +242,20 @@
 				break;
 			}
 		}
-		
-		$ultimoInicioJornada = $pares['jornada'][count($pares['jornada'])-1]['inicio'];
 
+		$ultimoInicioJornada = !empty($pares['jornada'])? $pares['jornada'][count($pares['jornada'])-1]['inicio']: null;
+
+		$jornadaCompleta = '00:00';
+		for($f = 0; $f < count($pares['jornada']); $f++){
+			if(!empty($pares['jornada'][$f]['fim'])){
+				if(!empty($pares['jornada'][$f]['diaAnterior'])){
+					$pares['jornada'][$f]['inicio'] = operarHorarios([$pares['jornada'][0]['inicio'], "24:00"], '-');
+				}
+				$jornada = operarHorarios([$pares['jornada'][$f]['fim'], $pares['jornada'][$f]['inicio']], '-');
+				$jornadaCompleta = operarHorarios([$jornadaCompleta, $jornada], '+');
+			}
+		}
+		
 		foreach($pares as $key => $value){
 			if(is_array($value) && count($value) > 0){
 				for($f = 0; $f < count($value); $f++){
@@ -246,8 +271,10 @@
 			}
 			$pares[$key] = $value;
 		}
+
 		
 		$jornadaEfetiva = operarHorarios([$pares['refeicao'], $pares['espera'], $pares['descanso'], $pares['repouso'], $pares['repousoEmbarcado']], '+');
+
 		$jornadaEfetiva = operarHorarios([$pares['jornada'], $jornadaEfetiva], '-');
 
 
@@ -268,9 +295,6 @@
 		];
 
 		$botoesVisiveis = [];
-
-		$pontos['primeiro']['pont_tx_tipo'] = isset($pontos['primeiro']['pont_tx_tipo'])? intval($pontos['primeiro']['pont_tx_tipo']): null;
-		$pontos['ultimo']['pont_tx_tipo'] = isset($pontos['ultimo']['pont_tx_tipo'])? intval($pontos['ultimo']['pont_tx_tipo']): null;
 
 		if (empty($pontos['ultimo']['pont_tx_tipo']) || intval($pontos['ultimo']['pont_tx_tipo']) == 2) {
 			$botoesVisiveis = [$botoes['inicioJornada']];
@@ -304,17 +328,18 @@
 			campo_hidden('motivo', 'Registro de ponto mobile')
 		];
 
-		$sqlCheck = query(
-			"SELECT user_tx_login, endo_tx_dataCadastro
-				FROM endosso, user
-				WHERE endo_tx_status = 'ativo'
-					AND '".date('Y-m-d')."' BETWEEN endo_tx_de AND endo_tx_ate
-					AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'
-					AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-					AND endo_nb_userCadastro = user_nb_id
-				LIMIT 1"
+		$aEndosso = carrega_array(
+			query(
+				"SELECT user_tx_login, endo_tx_dataCadastro
+					FROM endosso, user
+					WHERE endo_tx_status = 'ativo'
+						AND '".date('Y-m-d')."' BETWEEN endo_tx_de AND endo_tx_ate
+						AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'
+						AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
+						AND endo_nb_userCadastro = user_nb_id
+					LIMIT 1"
+			)
 		);
-		$aEndosso = carrega_array($sqlCheck);
 		if (!empty($aEndosso)){
 			$c[2] = texto('Endosso:', "Endossado por " . $aEndosso['user_tx_login'] . " em " . data($aEndosso['endo_tx_dataCadastro'], 1), 6);
 			$botoesVisiveis = [];
@@ -326,18 +351,10 @@
 		linha_form($c[2]);
 		fecha_form($botoesVisiveis);
 
-		$sql = 
-			"SELECT * FROM ponto
-				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
-				JOIN user ON ponto.pont_nb_user = user.user_nb_id
-				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
-				WHERE ponto.pont_tx_status != 'inativo' 
-				$extra";
-
 
 		$gridFields = [
 			'CÓD'			=> 'pont_nb_id',  
-			'DATA'			=> 'data(pont_tx_data)',  
+			'DATA'			=> 'data(pont_tx_data)', 
 			'HORA'			=> 'data(pont_tx_data,3)',  
 			'TIPO'			=> 'macr_tx_nome',  
 			'MOTIVO'		=> 'moti_tx_nome',  
@@ -483,8 +500,8 @@
 						minute: '2-digit',
 					});
 					
-					let ultimaJornada = operarHorarios([localTimeString, "<?=$ultimoInicioJornada?>"], '-');
-					jornadaEfetiva = operarHorarios(["<?= $jornadaEfetiva ?>", ultimaJornada], '+')
+					jornadaAtual = operarHorarios([localTimeString, '<?=$ultimoInicioJornada?>'], '-');
+					jornadaEfetiva = operarHorarios(['<?=$jornadaEfetiva?>', jornadaAtual], '+');
 					
 					duracao = calculateElapsedTime('<?= ($pontos['primeiro']['pont_tx_data']?? '') ?>');
 					msg += "<br><br>Total da jornada efetiva: " + jornadaEfetiva;

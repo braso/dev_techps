@@ -5,14 +5,36 @@ global $CONTEX;
 include_once "./PHPMailer/src/Exception.php";
 include_once "./PHPMailer/src/PHPMailer.php";
 include_once "./PHPMailer/src/SMTP.php";
+include_once 'dominios.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
 
+function extrairDominio($url, $dominio_array) {
+    $parsed_url = parse_url($url);
+    $path_segments = explode('/', $parsed_url['path']);
+    $dominio = $path_segments[2] ?? '';
+
+    return in_array($dominio, $dominio_array) ? $dominio : null;
+}
+
 if ($_POST['botao'] == 'ENVIAR') {
-    $dominio = $_POST['dominio'];
+    $dominio_url = $_POST['dominio'];
+
+    $dominio_array = [
+        "techps",
+        "braso",
+        "armazem_paraiba",
+        "opafrutas",
+        "qualy_transportes",
+        "feijao_turqueza"
+    ];
+
+    $dominio = extrairDominio($dominio_url, $dominio_array);
+    var_dump($dominio);
+
     $login = $_POST['login'];
     // $email = $_POST['email'];
     if(!empty($dominio)){
@@ -218,14 +240,9 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
                     ?>
                     <h3 class="form-title font-green">Redefinir Senha</h3>
                     <p style="text-align:justify">Um link de redefinição de senha será enviado para o seu endereço de e-mail.</p>
-                    <div class="form-group">
-                        <select class="form-control" name="dominio">
-					        <option value="" selected>Domínio</option>
-					        <option value="techps">techps</option>
-					        <option value="feijao_turqueza">Feijão turqueza</option>
-					        <option value="armazem_paraiba">Armazem Paraiba</option>
-				        </select>
-                    </div>
+                    <?php
+                    echo $dominios;
+                    ?>
                     <div class="form-group">
                         <label class="control-label visible-ie8 visible-ie9">Login</label>
                         <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="text" autocomplete="off" placeholder="Login" name="login" />
@@ -236,12 +253,6 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
                     </div>
                     <?
                 } else {
-                    $arrayDominio = array(
-                        "techps" => "Tech PS",
-                        "feijao_turqueza" => "Feijão Turqueza",
-                        "armazem_paraiba" => "Armazém Paraiba"
-                    );
-
                 ?>
                 <h3 class="form-title font-green">Redifinição de Senha - <?= $arrayDominio[$_GET['dominio']]; ?></h3>
                     <div class="form-group">

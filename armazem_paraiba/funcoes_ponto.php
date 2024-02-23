@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -700,22 +700,28 @@
 				$diaSeguinte = (new DateTime($data))->add(DateInterval::createFromDateString('1 day'));
 				$diaSeguinte = $diaSeguinte->format('Y-m-d');
 				
-				$sqlDiaSeguinte = query(
-					"SELECT macroponto.macr_tx_nome, ponto.* FROM ponto 
-					JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
-					WHERE pont_tx_status != 'inativo' 
-						AND pont_tx_matricula = '$matricula' 
-						AND pont_tx_data LIKE '".$diaSeguinte."%'
-					ORDER BY pont_tx_data ASC;"
+				$pontosDiaSeguinte = mysqli_fetch_all(
+					query(
+						"SELECT macroponto.macr_tx_nome, ponto.*, (1) as diaSeguinte FROM ponto 
+						JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
+						WHERE pont_tx_status != 'inativo' 
+							AND pont_tx_matricula = '$matricula' 
+							AND pont_tx_data LIKE '".$diaSeguinte."%'
+						ORDER BY pont_tx_data ASC;"
+					),
+					MYSQLI_ASSOC
 				);
-				$pontosDiaSeguinte = [];
-				while($ponto = carrega_array($sqlDiaSeguinte)){
-					$ponto['diaSeguinte'] = True;
-					$pontosDiaSeguinte[] = $ponto;
-					if($ponto['pont_tx_tipo'] == '2'){
+
+				for($f = 0; $f < count($pontosDiaSeguinte); $f++){
+
+					//Se encontrar um fim de jornada, ignora os pontos que estiverem depois dele, pois corresponderão a uma próxima jornada.
+					if($pontosDiaSeguinte[$f]['pont_tx_tipo'] == '2'){
+						$pontosDiaSeguinte = array_slice($pontosDiaSeguinte, 0, $f+1);
 						break;
 					}
-					if($ponto['pont_tx_tipo'] == '1'){
+
+					//Não pega os pontos do dia seguinte caso tenha um início de jornada sem ter fechado o anterior. Isso impede dos mesmos pontos ficarem repetidos em dois dias distintos.
+					if($pontosDiaSeguinte[$f]['pont_tx_tipo'] == '1'){
 						$pontosDiaSeguinte = [];
 						break;
 					}
@@ -1045,6 +1051,13 @@
 		
 		//LEGENDAS{
 			if(!empty($registros['inicioJornada'])){
+				$datas = 
+					'("'.implode('", "', $registros['inicioJornada']).'"'
+					.(!empty($registros['inicioRefeicao'])? ', "'.implode('", "', $registros['inicioRefeicao']).'"': '')
+					.(!empty($registros['fimRefeicao'])? ', "'.implode('", "', $registros['fimRefeicao']).'"': '')
+					.(!empty($registros['fimJornada'])? ', "'.implode('", "', $registros['fimJornada']).'")': ')')
+				;
+
 				$legendas = mysqli_fetch_all(
 					query(
 						"SELECT * FROM ponto
@@ -1053,7 +1066,7 @@
 							LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
 							WHERE ponto.pont_nb_motivo IS NOT NULL 
 								AND pont_tx_status != 'inativo'
-								AND pont_tx_data LIKE '%$data%' 
+								AND pont_tx_data IN ".$datas." 
 								AND pont_tx_matricula = '$matricula'"
 					),
 					MYSQLI_ASSOC
@@ -1095,6 +1108,7 @@
 						$contagens[$acao][$legenda]++;
 					}
 				}
+				
 				foreach ($contagens as $acao => $tipos) {
 					foreach ($tipos as $tipo => $quantidade) {
 						if($quantidade > 0){
@@ -1169,12 +1183,31 @@
 			$aRetorno['diffSaldo'] = "<b>".$aRetorno['diffSaldo']."</b>";
 		}
 
-		if(
-			isset($aRetorno['fimJornada'][0]) && 
-			is_bool(strpos($aRetorno['fimJornada'][count($aRetorno['fimJornada'])-1], 'não registrada')) &&
-			substr($aRetorno['fimJornada'][count($aRetorno['fimJornada'])-1], 0, 11) > substr($aRetorno['inicioJornada'][count($aRetorno['fimJornada'])-1], 0, 11)
-		){
-			array_splice($aRetorno['fimJornada'], count($aRetorno['fimJornada']), 0, 'D+1');
+		$ultimoFimJornada = [];
+		if(count($aRetorno['fimJornada']) > 0){
+			for($f = count($aRetorno['fimJornada'])-1; $f >= 0; $f--){
+				if(preg_match("/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/", $aRetorno['fimJornada'][$f])){
+					$ultimoFimJornada = [
+						'key' => $f, 
+						'value' => $aRetorno['fimJornada'][$f]
+					];
+					break;
+				}
+			}
+		}else{
+			$ultimoFimJornada = null;
+		}
+
+		if(!empty($ultimoFimJornada)){
+			$dataDia = DateTime::createFromFormat('d/m/Y H:i:s', $aRetorno['data'].' 00:00:00');
+			$dataFim = DateTime::createFromFormat('Y-m-d H:i:s', $ultimoFimJornada['value']);
+			$qttDias = date_diff($dataDia, $dataFim);
+			if(!is_bool($qttDias)){
+				$qttDias = intval($qttDias->format('%d'));
+				if($qttDias > 0){
+					array_splice($aRetorno['fimJornada'], $ultimoFimJornada['key']+1, 0, 'D+1');
+				}
+			}
 		}
 
 		//Converter array em string{
@@ -1187,14 +1220,9 @@
 			foreach(['inicioJornada', 'fimJornada', 'inicioRefeicao', 'fimRefeicao'] as $tipo){
 				if (count($aRetorno[$tipo]) > 0){
 					for($f = 0; $f < count($aRetorno[$tipo]); $f++){
-						//Formatar datas para hora e minutos sem perder o D+1, caso tiver
+						//Formatar datas para hora e minutos
 						if(strlen($aRetorno[$tipo][$f]) > 3 && strpos($aRetorno[$tipo][$f], ':00', strlen($aRetorno[$tipo][$f])-3) !== false){
-							if(strpos($aRetorno[$tipo][$f], 'D+1') !== false){
-								$aRetorno[$tipo][$f] = explode(' ', $aRetorno[$tipo][$f]);
-								$aRetorno[$tipo][$f] = substr($aRetorno[$tipo][$f][1], 0, strlen($aRetorno[$tipo][$f][1])-3)+$aRetorno[$tipo][$f][2];
-							}else{
-								$aRetorno[$tipo][$f] = date('H:i', strtotime($aRetorno[$tipo][$f]));
-							}
+							$aRetorno[$tipo][$f] = date('H:i', strtotime($aRetorno[$tipo][$f]));
 						}
 					}
 					$aRetorno[$tipo] = implode("<br>", $aRetorno[$tipo]);
