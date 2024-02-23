@@ -87,12 +87,11 @@
 			if($searchError){
 				$errorMsg = substr($errorMsg, 0, -2).'.';
 				set_status('ERRO: '.$errorMsg);
-			}
+      }
 		}else{
 			$_POST['busca_empresa'] = '';
 			// $_POST['busca_empresa'] = intval($_SESSION['user_nb_empresa']);
 		}
-		//}
 
 		//CAMPOS DE CONSULTA
 
