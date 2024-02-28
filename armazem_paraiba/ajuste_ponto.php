@@ -164,9 +164,33 @@
 		exit;
 	}
 
-	function index(){
+	function status() {
+		global $CONTEX;
 
-		// var_dump($_POST);
+		return  "
+					<style>
+					#status-label{
+						position: absolute;
+						left: 290px;
+						top: 306px;
+					}
+					#status {
+						position: absolute;
+						top: 301px;
+						left: 392px;
+						width: 93px;
+					}
+					</style>
+					<div>
+						<label id='status-label'>Mostra Pontos:</label>
+						<select name='status' id='status' class='form-control input-sm'>
+							<option value='inativo'>Ativos</option>
+							<option value='ativo'>Excluidos</option>
+						</select>
+					</div>";
+	}
+
+	function index(){
 		global $CONTEX;
 
 		if (empty($_POST['id']) || empty($_POST['data'])) {
@@ -221,70 +245,48 @@
 			$_POST['status'] = 'inativo';
 		}
 
-		$status = "
-					<style>
-					#status-label{
-						position: absolute;
-						left: 990px;
-						top: 306px;
-					}
-					#status {
-						position: absolute;
-						top: 301px;
-						left: 1100px;
-						width: 93px;
-					}
-					</style>
-					<div>
-						<label id='status-label'>Mostra Pontos:</label>
-						<select name='status' id='status' class='form-control input-sm'>
-							<option value='inativo'>Ativos</option>
-							<option value='ativo'>Excluidos</option>
-						</select>
-					</div>";
-
 		$formStatus = "
-					<form name='form_ajuste_status' action='https://braso.mobi$CONTEX[path]/ajuste_ponto' method='post'>
-						<input type='hidden' name='acao' value='index'>
-						<input type='hidden' name='id'>
-						<input type='hidden' name='data'>
-						<input type='hidden' name='data_de'>
-						<input type='hidden' name='data_ate'>
-						<input type='hidden' name='status'>
-					</form>
-					<script>
-					selecionarOpcaoPorValor('$_POST[status]');
-					
-					function selecionarOpcaoPorValor(valor) {
-						// Obtém o elemento select
-						var selectElement = document.getElementById('status');
-	
-						// Define o valor da opção desejada como selecionado
-						selectElement.value = valor;
-					}
-					$(document).ready(function() {
-						// Adicione sua função aqui
-						var select = document.getElementById('status');
-						
-						select.addEventListener('change', function() {
-							var value = select.value;  // Correção aqui
-							console.log('O valor selecionado é: ' + value);
-							
-							ajusta_ponto($_POST[id], '$_POST[data]', '$_POST[data_de]',  '$_POST[data_ate]', value);
-						});
-					});
-					
-					function ajusta_ponto(motorista, data, data_de, data_ate, status) {
-						console.log(motorista);
-						document.form_ajuste_status.id.value = motorista;
-						document.form_ajuste_status.data.value = data;
-						document.form_ajuste_status.data_de.value = data_de;
-						document.form_ajuste_status.data_ate.value = data_ate;
-						document.form_ajuste_status.status.value = status;
-						document.form_ajuste_status.submit();
-					}
-					
-					</script>";
+		        <form name='form_ajuste_status' action='https://braso.mobi$CONTEX[path]/ajuste_ponto' method='post'>
+					<input type='hidden' name='acao' value='index'>
+					<input type='hidden' name='id'>
+					<input type='hidden' name='data'>
+					<input type='hidden' name='data_de'>
+					<input type='hidden' name='data_ate'>
+					<input type='hidden' name='status'>
+				</form>
+				<script>
+				selecionarOpcaoPorValor('$_POST[status]');
+				
+				function selecionarOpcaoPorValor(valor) {
+				    // Obtém o elemento select
+				    var selectElement = document.getElementById('status');
+
+                    // Define o valor da opção desejada como selecionado
+                    selectElement.value = valor;
+                }
+				$(document).ready(function() {
+                    // Adicione sua função aqui
+                    var select = document.getElementById('status');
+                    
+                    select.addEventListener('change', function() {
+                        var value = select.value;  // Correção aqui
+                        console.log('O valor selecionado é: ' + value);
+                        
+                        ajusta_ponto($_POST[id], '$_POST[data]', '$_POST[data_de]',  '$_POST[data_ate]', value);
+                    });
+                });
+                
+                function ajusta_ponto(motorista, data, data_de, data_ate, status) {
+                    console.log(motorista);
+					document.form_ajuste_status.id.value = motorista;
+					document.form_ajuste_status.data.value = data;
+					document.form_ajuste_status.data_de.value = data_de;
+					document.form_ajuste_status.data_ate.value = data_ate;
+					document.form_ajuste_status.status.value = status;
+					document.form_ajuste_status.submit();
+				}
+                
+				</script>";
 
 		$c[] = texto('Matrícula', $aMotorista['enti_tx_matricula'], 2);
 		$c[] = texto('Motorista', $aMotorista['enti_tx_nome'], 5);
@@ -311,7 +313,7 @@
 			'data_de,data_ate,id,busca_empresa,busca_motorista,data,busca_data',
 			($_POST['data_de'] ?? '') . "," . ($_POST['data_ate'] ?? '') . "," . $_POST['id'] . "," . $aMotorista['enti_nb_empresa'] . "," . $_POST['id'] . "," . $_POST['data'] . "," . substr($_POST['data'], 0, -3)
 		);
-		$botao[] = $status;
+		$botao[] = status();
 
 
 		abre_form('Dados do Ajuste de Ponto');
@@ -342,7 +344,7 @@
 			'DATA CADASTRO'										=> 'data(pont_tx_dataCadastro,1)',
 			'<spam class="glyphicon glyphicon-remove"></spam>'	=> $iconeExcluir
 		];
-		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 2, 'DESC', -1);
+		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 3, 'ASC', -1);
 		echo $formStatus;
 		rodape();
 	}
