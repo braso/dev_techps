@@ -503,7 +503,7 @@
 			'NOME' => 'empr_tx_nome',
 			'FANTASIA' => 'empr_tx_fantasia',
 			'CPF/CNPJ' => 'empr_tx_cnpj',
-			'CIDADE/UF' => 'concat(cida_nb_id)',
+			'CIDADE/UF' => 'cida_nb_id',
 			'SITUAÇÃO' => 'empr_tx_situacao',
 			'<spam class="glyphicon glyphicon-search"></spam>' => 'icone_modificar(empr_nb_id,modifica_empresa)',
 			'<spam class="glyphicon glyphicon-remove"></spam>' => 'icone_excluir(empr_nb_id,exclui_empresa)'

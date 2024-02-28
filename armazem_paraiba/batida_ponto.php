@@ -500,7 +500,7 @@
 						minute: '2-digit',
 					});
 					
-					jornadaAtual = operarHorarios([localTimeString, '<?=$ultimoInicioJornada?>'], '-');
+					jornadaAtual = "<?=!empty($ultimoInicioJornada)? "operarHorarios([localTimeString, '".$ultimoInicioJornada."'], '-')": '00:00'?>";
 					jornadaEfetiva = operarHorarios(['<?=$jornadaEfetiva?>', jornadaAtual], '+');
 					
 					duracao = calculateElapsedTime('<?= ($pontos['primeiro']['pont_tx_data']?? '') ?>');

@@ -51,7 +51,7 @@
 						$error = true;
 						$errorMsg .= 'Não é possível registrar um '.strtolower($aTipo['macr_tx_nome']).' sem fechar o anterior.';
 					}elseif(intval($aTipo['macr_tx_codigoInterno']) == $codigosJornada['fim']){
-						$jornadaFechada = mysqli_fetch_all(
+						$jornadaFechada = mysqli_fetch_assoc(
 							query(
 								"SELECT * FROM ponto 
 									WHERE pont_tx_tipo IN ('".$codigosJornada['inicio']."', '".$codigosJornada['fim']."')
@@ -60,9 +60,15 @@
 										AND pont_tx_data >= '".$_POST['data'].' '.$_POST['hora']."'
 									ORDER BY pont_tx_data ASC
 									LIMIT 1"
-							),
-							MYSQLI_ASSOC
-						)[0];
+							)
+						);
+						var_dump("SELECT * FROM ponto 
+									WHERE pont_tx_tipo IN ('".$codigosJornada['inicio']."', '".$codigosJornada['fim']."')
+										AND pont_tx_status != 'inativo'
+										AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
+										AND pont_tx_data >= '".$_POST['data'].' '.$_POST['hora']."'
+									ORDER BY pont_tx_data ASC
+									LIMIT 1"); echo '<br><br>';
 						$jornadaFechada = ($jornadaFechada['pont_tx_tipo'] == $codigosJornada['fim']);
 						if($jornadaFechada){
 							$error = true;
@@ -128,13 +134,13 @@
 			}
 		//}
 
-		
+
 
 		$campos = ['pont_nb_user', 'pont_tx_matricula', 'pont_tx_data', 'pont_tx_tipo', 'pont_tx_tipoOriginal', 'pont_tx_status', 'pont_tx_dataCadastro', 'pont_nb_motivo', 'pont_tx_descricao'];
 		$valores = [$_SESSION['user_nb_id'], $aMotorista['enti_tx_matricula'], "$_POST[data] $_POST[hora]", $aTipo['macr_tx_codigoInterno'], $aTipo['macr_tx_codigoExterno'], 'ativo', date("Y-m-d H:i:s"),$_POST['motivo'],$_POST['descricao']];
 		
 		
-		inserir('ponto',$campos,$valores);
+		// inserir('ponto',$campos,$valores);
 		index();
 		exit;
 	}
@@ -159,101 +165,175 @@
 	}
 
 	function index(){
+
+		// var_dump($_POST);
 		global $CONTEX;
 
-		if(empty($_POST['id']) || empty($_POST['data'])){
+		if (empty($_POST['id']) || empty($_POST['data'])) {
 			echo '<script>alert("ERRO: Deve ser selecionado um motorista e uma data para ajustar.")</script>';
 
-			echo 
-				'<form action="https://braso.mobi'.$CONTEX['path'].'/espelho_ponto" name="form_voltar" method="post">
-					<input type="hidden" name="data_de" value="'.$_POST['data_de'].'">
-					<input type="hidden" name="data_ate" value="'.$_POST['data_ate'].'">
-				</form>
-				<script>
-					document.form_voltar.submit();
-				</script>'
-			;
+			echo
+			'<form action="https://braso.mobi' . $CONTEX['path'] . '/espelho_ponto" name="form_voltar" method="post">
+						<input type="hidden" name="data_de" value="' . $_POST['data_de'] . '">
+						<input type="hidden" name="data_ate" value="' . $_POST['data_ate'] . '">
+					</form>
+					<script>
+						document.form_voltar.submit();
+					</script>';
 			exit;
-		}else{
+		} else {
 			$a_mod['data'] = $_POST['data'];
 			$a_mod['id'] = $_POST['id'];
 		}
 		cabecalho('Ajuste de Ponto');
 
-		if(empty($_POST['data_de']) && !empty($_POST['data'])){
+		if (empty($_POST['data_de']) && !empty($_POST['data'])) {
 			$_POST['data_de'] = $_POST['data'];
 		}
-		if(empty($_POST['data_ate']) && !empty($_POST['data'])){
+		if (empty($_POST['data_ate']) && !empty($_POST['data'])) {
 			$_POST['data_ate'] = $_POST['data'];
 		}
 
-		$aMotorista = carregar('entidade',$_POST['id']);
+		$aMotorista = carregar('entidade', $_POST['id']);
 
-		$sqlCheck = query("SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user 
-			WHERE '".$_POST['data']."' BETWEEN endo_tx_de AND endo_tx_ate
-				AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'
-				AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."' 
-				AND endo_tx_status = 'ativo' 
-				AND endo_nb_userCadastro = user_nb_id 
-			LIMIT 1"
+		$sqlCheck = query(
+			"SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user 
+				WHERE '" . $_POST['data'] . "' BETWEEN endo_tx_de AND endo_tx_ate
+					AND endo_nb_entidade = '" . $aMotorista['enti_nb_id'] . "'
+					AND endo_tx_matricula = '" . $aMotorista['enti_tx_matricula'] . "' 
+					AND endo_tx_status = 'ativo' 
+					AND endo_nb_userCadastro = user_nb_id 
+				LIMIT 1"
 		);
 		$aEndosso = carrega_array($sqlCheck);
 
-		$botao_imprimir = 
+		$botao_imprimir =
 			'<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
-				<script>
-					function imprimir() {
-						// Abrir a caixa de diálogo de impressão
-						window.print();
+					<script>
+						function imprimir() {
+							// Abrir a caixa de diálogo de impressão
+							window.print();
+						}
+					</script>';
+
+
+		if (empty($_POST['status'])) {
+			$_POST['status'] = 'inativo';
+		}
+
+		$status = "
+					<style>
+					#status-label{
+						position: absolute;
+						left: 990px;
+						top: 306px;
 					}
-				</script>';
+					#status {
+						position: absolute;
+						top: 301px;
+						left: 1100px;
+						width: 93px;
+					}
+					</style>
+					<div>
+						<label id='status-label'>Mostra Pontos:</label>
+						<select name='status' id='status' class='form-control input-sm'>
+							<option value='inativo'>Ativos</option>
+							<option value='ativo'>Excluidos</option>
+						</select>
+					</div>";
 
-		$c[] = texto('Matrícula',$aMotorista['enti_tx_matricula'],2);
-		$c[] = texto('Motorista',$aMotorista['enti_tx_nome'],5);
-		$c[] = texto('CPF',$aMotorista['enti_tx_cpf'],3);
+		$formStatus = "
+					<form name='form_ajuste_status' action='https://braso.mobi$CONTEX[path]/ajuste_ponto' method='post'>
+						<input type='hidden' name='acao' value='index'>
+						<input type='hidden' name='id'>
+						<input type='hidden' name='data'>
+						<input type='hidden' name='data_de'>
+						<input type='hidden' name='data_ate'>
+						<input type='hidden' name='status'>
+					</form>
+					<script>
+					selecionarOpcaoPorValor('$_POST[status]');
+					
+					function selecionarOpcaoPorValor(valor) {
+						// Obtém o elemento select
+						var selectElement = document.getElementById('status');
+	
+						// Define o valor da opção desejada como selecionado
+						selectElement.value = valor;
+					}
+					$(document).ready(function() {
+						// Adicione sua função aqui
+						var select = document.getElementById('status');
+						
+						select.addEventListener('change', function() {
+							var value = select.value;  // Correção aqui
+							console.log('O valor selecionado é: ' + value);
+							
+							ajusta_ponto($_POST[id], '$_POST[data]', '$_POST[data_de]',  '$_POST[data_ate]', value);
+						});
+					});
+					
+					function ajusta_ponto(motorista, data, data_de, data_ate, status) {
+						console.log(motorista);
+						document.form_ajuste_status.id.value = motorista;
+						document.form_ajuste_status.data.value = data;
+						document.form_ajuste_status.data_de.value = data_de;
+						document.form_ajuste_status.data_ate.value = data_ate;
+						document.form_ajuste_status.status.value = status;
+						document.form_ajuste_status.submit();
+					}
+					
+					</script>";
+
+		$c[] = texto('Matrícula', $aMotorista['enti_tx_matricula'], 2);
+		$c[] = texto('Motorista', $aMotorista['enti_tx_nome'], 5);
+		$c[] = texto('CPF', $aMotorista['enti_tx_cpf'], 3);
 
 
-		$c2[] = campo('Data','data',data($_POST['data']),2,'','readonly=readonly');
-		$c2[] = campo_hora('Hora','hora',$_POST['hora'],2);
-		$c2[] = combo_bd('Código Macro','idMacro',$_POST['idMacro'],4,'macroponto','','ORDER BY macr_nb_id ASC');
-		$c2[] = combo_bd('Motivo:','motivo',$_POST['motivo'],4,'motivo','',' AND moti_tx_tipo = "Ajuste"');
+		$c2[] = campo('Data', 'data', data($_POST['data']), 2, '', 'readonly=readonly');
+		$c2[] = campo_hora('Hora', 'hora', $_POST['hora'], 2);
+		$c2[] = combo_bd('Código Macro', 'idMacro', $_POST['idMacro'], 4, 'macroponto', '', 'ORDER BY macr_nb_id ASC');
+		$c2[] = combo_bd('Motivo:', 'motivo', $_POST['motivo'], 4, 'motivo', '', ' AND moti_tx_tipo = "Ajuste"');
 
-		$c3[] = textarea('Justificativa:','descricao',$_POST['descricao'],12);
+		$c3[] = textarea('Justificativa:', 'descricao', $_POST['descricao'], 12);
 
-		if(!empty($aEndosso) && count($aEndosso) > 0){
-			$c2[] = texto('Endosso:',"Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1),6);
-		}else{
-			$botao[] = botao('Gravar','cadastra_ajuste','id,busca_motorista,data_de,data_ate,data,busca_data',"$_POST[id],$_POST[id],$_POST[data_de],$_POST[data_ate],$_POST[data],".substr($_POST['data'],0, -3));
-			$iconeExcluir = "icone_excluir_ajuste(pont_nb_id,excluir_ponto,idEntidade,".$_POST['data_de'].",".$_POST['data_ate'].",".strval($_POST['id']).")"; //Utilizado em grid()
+		if (!empty($aEndosso) && count($aEndosso) > 0) {
+			$c2[] = texto('Endosso:', "Endossado por " . $aEndosso['user_tx_login'] . " em " . data($aEndosso['endo_tx_dataCadastro'], 1), 6);
+		} else {
+			$botao[] = botao('Gravar', 'cadastra_ajuste', 'id,busca_motorista,data_de,data_ate,data,busca_data', "$_POST[id],$_POST[id],$_POST[data_de],$_POST[data_ate],$_POST[data]," . substr($_POST['data'], 0, -3));
+			$iconeExcluir = "icone_excluir_ajuste(pont_nb_id,excluir_ponto,idEntidade," . $_POST['data_de'] . "," . $_POST['data_ate'] . "," . strval($_POST['id']) . ")"; //Utilizado em grid()
 		}
 		$botao[] = $botao_imprimir;
 		$botao[] = botao(
-			'Voltar', 
-			'voltar', 
-			'data_de,data_ate,id,busca_empresa,busca_motorista,data,busca_data', 
-			($_POST['data_de']??'').",".($_POST['data_ate']??'').",".$_POST['id'].",".$aMotorista['enti_nb_empresa'].",".$_POST['id'].",".$_POST['data'].",".substr($_POST['data'], 0, -3)
+			'Voltar',
+			'voltar',
+			'data_de,data_ate,id,busca_empresa,busca_motorista,data,busca_data',
+			($_POST['data_de'] ?? '') . "," . ($_POST['data_ate'] ?? '') . "," . $_POST['id'] . "," . $aMotorista['enti_nb_empresa'] . "," . $_POST['id'] . "," . $_POST['data'] . "," . substr($_POST['data'], 0, -3)
 		);
-		
+		$botao[] = $status;
+
+
 		abre_form('Dados do Ajuste de Ponto');
 		linha_form($c);
 		linha_form($c2);
 		linha_form($c3);
 		fecha_form($botao);
 
-		$sql = 
-			"SELECT * FROM ponto".
-				" JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id".
-				" JOIN user ON ponto.pont_nb_user = user.user_nb_id".
-				" LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id".
-				" WHERE ponto.pont_tx_status != 'inativo' ".
-					" AND pont_tx_data LIKE '".$_POST['data']."%' ".
-					" AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'"
-		;
+		$sql =
+			"SELECT * FROM ponto" .
+			" JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id" .
+			" JOIN user ON ponto.pont_nb_user = user.user_nb_id" .
+			" LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id" .
+			" WHERE ponto.pont_tx_status != '$_POST[status]' " .
+			" AND pont_tx_data LIKE '" . $_POST['data'] . "%' " .
+			" AND pont_tx_matricula = '" . $aMotorista['enti_tx_matricula'] . "'";
+
+
 
 		$gridFields = [
 			'CÓD'												=> 'pont_nb_id',
-			'DATA'												=> 'data(pont_tx_data)',
-			'HORA'												=> 'data(pont_tx_data,3)',
+			'DATA'												=> 'data(pont_tx_data, 1)',
 			'TIPO'												=> 'macr_tx_nome',
 			'MOTIVO'											=> 'moti_tx_nome',
 			'LEGENDA'											=> 'moti_tx_legenda',
@@ -262,8 +342,8 @@
 			'DATA CADASTRO'										=> 'data(pont_tx_dataCadastro,1)',
 			'<spam class="glyphicon glyphicon-remove"></spam>'	=> $iconeExcluir
 		];
-
-		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 2, 'ASC', -1);
+		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 2, 'DESC', -1);
+		echo $formStatus;
 		rodape();
 	}
 ?>
