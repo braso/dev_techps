@@ -169,15 +169,19 @@
 
 		return  "
 					<style>
+					#statusDiv{
+					    position: relative;
+                        top: -27px;
+                        left: 180px;
+                        align-items: center;
+                        display: flex;
+					}
 					#status-label{
-						position: absolute;
-						left: 290px;
-						top: 306px;
+					margin-right: 10px; 
+					
 					}
 					#status {
-						position: absolute;
-						top: 301px;
-						left: 392px;
+					    margin-top: -5px;
 						width: 93px;
 					}
 					</style>
@@ -185,7 +189,7 @@
 						<label id='status-label'>Mostra Pontos:</label>
 						<select name='status' id='status' class='form-control input-sm'>
 							<option value='inativo'>Ativos</option>
-							<option value='ativo'>Excluidos</option>
+							<option value='ativo'>Inativos</option>
 						</select>
 					</div>";
 	}
