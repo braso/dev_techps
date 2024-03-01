@@ -1,8 +1,10 @@
 <?php
-	include_once $_SERVER['DOCUMENT_ROOT'].$_POST['path']."/conecta.php";
+
+	$interno = true; //Utilizado no conecta.php para reconhecer se quem está tentando acessar é uma tela ou uma query interna.
+	include_once "../..".$_POST['path']."/conecta.php";
 	
 	$columns = $_POST['columns'];
-
+	
 	$_POST['totalQuery'] = str_replace(["null", "\t", "\n", "\r"], ["\"\"", "", "", ""], $_POST['totalQuery']);
 
 	$totalQuery = json_decode($_POST['totalQuery']);
