@@ -7,7 +7,8 @@
 	// $conn = mysqli_connect($servername, $username, $password, $dbname) or die("Connection failed: " . mysqli_connect_error());
 	// $conn->set_charset("utf8");
 	// GLOBAL $CONTEX;
-	include "../..".$_GET['path']."/conecta.php";
+	$interno = true; //Utilizado no conecta.php para reconhecer se quem está tentando acessar é uma tela ou uma query interna.
+	include_once "../..".$_GET['path']."/conecta.php";
 	GLOBAL $conn;
 
 	$tabela = $_GET['tabela'];
@@ -65,3 +66,4 @@
 	}
 
 	echo json_encode($json);
+?>
