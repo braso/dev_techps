@@ -1,15 +1,10 @@
 <?php
-	/* Modo debug
-		ini_set('display_errors', 1);
-		error_reporting(E_ALL);
-		// if(!isset($_GET['debug'])){
-		// 	echo '<div style="text-align:center; vertical-align: center; height: 100%; padding-top: 20%">Esta página está em desenvolvimento.</div>';
-		// 	exit;
-		// }
-	//*/
-
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
 	
+	//* Modo debug
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
+	//*/
 
 	function intToTime(int $time): string{
 		//Obs.: Variável $time deve estar em minutos.
@@ -94,17 +89,21 @@
 						$endossos[] = $aDetalhado;
 					}
 
-					$endossoCompleto = $endossos[0];
-					for($f = 1; $f < count($endossos); $f++){
-						$endossoCompleto['endo_tx_ate'] = $endossos[$f]['endo_tx_ate'];
-						$endossoCompleto['endo_tx_pontos'] = array_merge($endossoCompleto['endo_tx_pontos'], $endossos[$f]['endo_tx_pontos']);
-						$endossoCompleto['endo_tx_pagarHoras'] = $endossos[$f]['endo_tx_pagarHoras'] == 'sim'? 'sim': $endossoCompleto['endo_tx_pagarHoras'];
-						if($endossoCompleto['endo_tx_pagarHoras'] == 'sim'){
-							$endossoCompleto['endo_tx_horasApagar'] = operarHorarios([$endossoCompleto['endo_tx_horasApagar'], $endossos[$f]['endo_tx_horasApagar']], '+');	
+					if(count($endossos) > 0){
+						$endossoCompleto = $endossos[0];
+						for($f = 1; $f < count($endossos); $f++){
+							$endossoCompleto['endo_tx_ate'] = $endossos[$f]['endo_tx_ate'];
+							$endossoCompleto['endo_tx_pontos'] = array_merge($endossoCompleto['endo_tx_pontos'], $endossos[$f]['endo_tx_pontos']);
+							$endossoCompleto['endo_tx_pagarHoras'] = $endossos[$f]['endo_tx_pagarHoras'] == 'sim'? 'sim': $endossoCompleto['endo_tx_pagarHoras'];
+							if($endossoCompleto['endo_tx_pagarHoras'] == 'sim'){
+								$endossoCompleto['endo_tx_horasApagar'] = operarHorarios([$endossoCompleto['endo_tx_horasApagar'], $endossos[$f]['endo_tx_horasApagar']], '+');	
+							}
+							foreach($endossos[$f]['totalResumo'] as $key => $value){
+								$endossoCompleto['totalResumo'][$key] = operarHorarios([$endossoCompleto['totalResumo'][$key], $value], '+');
+							}
 						}
-						foreach($endossos[$f]['totalResumo'] as $key => $value){
-							$endossoCompleto['totalResumo'][$key] = operarHorarios([$endossoCompleto['totalResumo'][$key], $value], '+');
-						}
+					}else{
+						$endossoCompleto = [];
 					}
 
 					//Pesquisar o saldo de um endosso antes do mês pesquisado{
@@ -349,6 +348,12 @@
 								),
 								MYSQLI_ASSOC
 							);
+
+							if(count($sqlEndossos) == 0){
+								$counts['endossados']['nao']++;
+								$motNaoEndossados .= "- [".$aMotorista['enti_tx_matricula']."] ".$aMotorista['enti_tx_nome'].'<br>';
+								continue;
+							}
 						
 							$endossos = [];
 							foreach($sqlEndossos as $endosso){
@@ -367,17 +372,21 @@
 								$endossos[] = $aDetalhado;
 							}
 
-							$endossoCompleto = $endossos[0];
-							for($f = 1; $f < count($endossos); $f++){
-								$endossoCompleto['endo_tx_ate'] = $endossos[$f]['endo_tx_ate'];
-								$endossoCompleto['endo_tx_pontos'] = array_merge($endossoCompleto['endo_tx_pontos'], $endossos[$f]['endo_tx_pontos']);
-								$endossoCompleto['endo_tx_pagarHoras'] = $endossos[$f]['endo_tx_pagarHoras'] == 'sim'? 'sim': $endossoCompleto['endo_tx_pagarHoras'];
-								if($endossoCompleto['endo_tx_pagarHoras'] == 'sim'){
-									$endossoCompleto['endo_tx_horasApagar'] = operarHorarios([$endossoCompleto['endo_tx_horasApagar'], $endossos[$f]['endo_tx_horasApagar']], '+');	
+							if(count($endossos) > 0){
+								$endossoCompleto = $endossos[0];
+								for($f = 1; $f < count($endossos); $f++){
+									$endossoCompleto['endo_tx_ate'] = $endossos[$f]['endo_tx_ate'];
+									$endossoCompleto['endo_tx_pontos'] = array_merge($endossoCompleto['endo_tx_pontos'], $endossos[$f]['endo_tx_pontos']);
+									$endossoCompleto['endo_tx_pagarHoras'] = $endossos[$f]['endo_tx_pagarHoras'] == 'sim'? 'sim': $endossoCompleto['endo_tx_pagarHoras'];
+									if($endossoCompleto['endo_tx_pagarHoras'] == 'sim'){
+										$endossoCompleto['endo_tx_horasApagar'] = operarHorarios([$endossoCompleto['endo_tx_horasApagar'], $endossos[$f]['endo_tx_horasApagar']], '+');	
+									}
+									foreach($endossos[$f]['totalResumo'] as $key => $value){
+										$endossoCompleto['totalResumo'][$key] = operarHorarios([$endossoCompleto['totalResumo'][$key], $endossos[$f]['totalResumo'][$key]], '+');
+									}
 								}
-								foreach($endossos[$f]['totalResumo'] as $key => $value){
-									$endossoCompleto['totalResumo'][$key] = operarHorarios([$endossoCompleto['totalResumo'][$key], $endossos[$f]['totalResumo'][$key]], '+');
-								}
+							}else{
+								$endossoCompleto = [];
 							}
 
 							//Pesquisar o saldo de um endosso antes do mês pesquisado{
@@ -527,6 +536,30 @@
 		rodape();
 
 		$counts['message'] = '<br><br><b>Motoristas: '.$counts['total'].' | Verificados: '.$counts['verificados'].' | Não Conformidades: '.$counts['naoConformidade'].' | Endossados: '.$counts['endossados']['sim'].' | Não Endossados: '.$counts['endossados']['nao'].'</b>';
+
+		$select2URL = 
+			$CONTEX['path']."/../contex20/select2.php"
+			."?path=".$CONTEX['path']
+			."&tabela=entidade"
+			."&extra_limite=15"
+			."&extra_busca=enti_tx_matricula"
+		; // Utilizado dentro de endosso_html.php
+
 		include 'endosso_html.php';
+		echo 
+			"<script>
+				window.onload = function() {
+					document.getElementById('dadosResumo').innerHTML = '".$counts['message']."';
+			
+					document.getElementById('botaoContexCadastrar CadastrarEndosso').onclick = function() {
+						window.location.href = 'https://braso.mobi".$CONTEX['path']."/cadastro_endosso';
+					}
+			
+					document.getElementById('botaoContexCadastrar ImprimirRelatorio').onclick = function() {
+						document.form_imprimir_relatorio.submit();
+					}
+				};
+			</script>"
+		;
 	}
 ?>
