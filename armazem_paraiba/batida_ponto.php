@@ -6,7 +6,8 @@
 	include "funcoes_ponto.php";
 
 	function cadastra_ponto() {
-		$dataHora = date('Y-m-d')." ".date('H:i');
+		$hoje = date('Y-m-d');
+		$dataHora = $hoje." ".date('H:i').':00';
 		$aMotorista = carregar('entidade', $_POST['id']);
 
 		if(empty($_POST['motivo'])){
@@ -17,22 +18,11 @@
 		}
 		$_POST['motivo'] = intval($_POST['motivo']);
 
-		$ultimoPonto = mysqli_fetch_all(
-			query(
-				"SELECT *, (macr_tx_codigoInterno = ".$_POST['idMacro'].") as sameTypeError FROM ponto
-					JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
-					JOIN user ON ponto.pont_nb_user = user.user_nb_id
-					LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
-					WHERE ponto.pont_tx_status != 'inativo' 
-						AND pont_tx_data <= '".date('Y-m-d')." 23:59'
-						AND pont_tx_matricula = '$aMotorista[enti_tx_matricula]'
-					ORDER BY 
-						pont_tx_data DESC, 
-						pont_nb_id DESC 
-					LIMIT 1"
-			),
-			MYSQLI_ASSOC
-		)[0];
+		$ultimoPonto = pegarPontosDia($aMotorista['enti_tx_matricula'])[0];
+		if(!empty($ultimoPonto)){
+			$ultimoPonto = $ultimoPonto[count($ultimoPonto)-1];
+			$ultimoPonto['sameTypeError'] = ($ultimoPonto['pont_tx_tipo'] == $_POST['idMacro']);
+		}
 
 		$aTipo = mysqli_fetch_all(
 			query(
@@ -52,7 +42,7 @@
 				'pont_tx_tipo' 			=> $aTipo['macr_tx_codigoInterno'],
 				'pont_tx_tipoOriginal' 	=> $aTipo['macr_tx_codigoExterno'],
 				'pont_tx_status' 		=> 'ativo',
-				'pont_tx_dataCadastro' 	=> date("Y-m-d H:i:s"),
+				'pont_tx_dataCadastro' 	=> $hoje.' '.date("H:i:s"),
 				'pont_nb_motivo' 		=> $_POST['motivo'],
 			];
 			inserir('ponto', array_keys($novoPonto), array_values($novoPonto));
@@ -60,6 +50,74 @@
 
 		index();
 		exit;
+	}
+
+	function pegarPontosDia(string $matricula): array{
+		$hoje = date('Y-m-d');
+		$condicoesPontoBasicas = 
+			"ponto.pont_tx_status != 'inativo'
+			AND ponto.pont_tx_matricula = '".$matricula."'
+			AND ponto.pont_tx_data <= '".$hoje.' '.date('H:i:s')."'"
+		;
+
+		$abriuJornadaHoje = mysqli_fetch_assoc(
+			query(
+				"SELECT * FROM ponto
+					WHERE ".$condicoesPontoBasicas."
+						AND ponto.pont_tx_tipo = 1
+						AND ponto.pont_tx_data LIKE '%".$hoje."%'
+					ORDER BY ponto.pont_tx_data ASC
+					LIMIT 1;"
+			)
+		);
+
+		if(empty($abriuJornadaHoje)){
+			//Confere se há uma jornada aberta que veio do dia anterior.
+			$temJornadaAberta = mysqli_fetch_assoc(
+				query(
+					"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 1) as temJornadaAberta FROM ponto
+						WHERE ".$condicoesPontoBasicas."
+							AND ponto.pont_tx_tipo IN (1,2)
+							AND pont_tx_data <= '".$hoje." 00:00:00'
+						ORDER BY pont_tx_data DESC
+						LIMIT 1;"
+				)
+			);
+
+			if(!empty($temJornadaAberta) && intval($temJornadaAberta['temJornadaAberta'])){//Se tem uma jornada que veio do dia anterior
+				$jornadaFechadaHoje = mysqli_fetch_assoc(
+					query(
+						"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 2) as jornadaFechadaHoje FROM ponto
+							WHERE ".$condicoesPontoBasicas."
+								AND ponto.pont_tx_tipo IN (1,2)
+								AND pont_tx_data LIKE '%".$hoje."%'
+							ORDER BY pont_tx_data ASC
+							LIMIT 1;"
+					)
+				);
+				if(!empty($jornadaFechadaHoje) && intval($jornadaFechadaHoje['jornadaFechadaHoje'])){
+					$sqlDataInicio = $jornadaFechadaHoje['pont_tx_data'];
+				}else{
+					$sqlDataInicio = $temJornadaAberta['pont_tx_data'];
+				}
+			}else{
+				$sqlDataInicio = $hoje." ".date('H:i:s');
+			}
+		}else{
+			$sqlDataInicio = $abriuJornadaHoje['pont_tx_data'];
+		}
+		
+		$sql = 
+			"SELECT * FROM ponto
+				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
+				WHERE ".$condicoesPontoBasicas."
+					AND ponto.pont_tx_data >= '".$sqlDataInicio."'
+				ORDER BY pont_tx_data ASC"
+		;
+
+		$pontosCompleto = mysqli_fetch_all(query($sql),MYSQLI_ASSOC);
+
+		return [$pontosCompleto, $sql];
 	}
 
 	function criaBotaoRegistro(string $classe, int $tipoRegistro, string $nome, string $iconClass){
@@ -71,7 +129,8 @@
 			</button>";
 	}
 
-	function index() {
+	function index() {		
+		$hoje = date('Y-m-d');
 		cabecalho('Registrar Ponto');
 		
 		$motivo = mysqli_fetch_all(
@@ -91,74 +150,13 @@
 
 		$aMotorista = carregar('entidade', $_SESSION['user_nb_entidade']);
 
-		$condicoesPontoBasicas = 
-			"ponto.pont_tx_status != 'inativo'
-			AND ponto.pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'"
-		;
-
-		$abriuJornadaHoje = mysqli_fetch_assoc(
-			query(
-				"SELECT * FROM ponto
-					WHERE ".$condicoesPontoBasicas."
-						AND ponto.pont_tx_tipo = 1
-						AND ponto.pont_tx_data LIKE '%".date('Y-m-d')."%'
-					ORDER BY ponto.pont_tx_data ASC
-					LIMIT 1;"
-			)
-		);
-
-		if(empty($abriuJornadaHoje)){
-			//Confere se há uma jornada aberta que veio do dia anterior.
-			$temJornadaAberta = mysqli_fetch_assoc(
-				query(
-					"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 1) as temJornadaAberta FROM ponto
-						WHERE ".$condicoesPontoBasicas."
-							AND ponto.pont_tx_tipo IN (1,2)
-							AND pont_tx_data <= '".date('Y-m-d 00:00:00')."'
-						ORDER BY pont_tx_data DESC
-						LIMIT 1;"
-				)
-			);
-
-			if(!empty($temJornadaAberta) && intval($temJornadaAberta['temJornadaAberta'])){
-				$jornadaFechadaHoje = mysqli_fetch_assoc(
-					query(
-						"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 2) as jornadaFechadaHoje FROM ponto
-							WHERE ".$condicoesPontoBasicas."
-								AND ponto.pont_tx_tipo = 2
-								AND pont_tx_data LIKE '%".date('Y-m-d')."%'
-							ORDER BY pont_tx_data ASC
-							LIMIT 1;"
-					)
-				);
-				if(!empty($jornadaFechadaHoje) && intval($jornadaFechadaHoje['jornadaFechadaHoje'])){
-					$sqlDataInicio = date('Y-m-d H:i:s');
-				}else{
-					$sqlDataInicio = $temJornadaAberta['pont_tx_data'];
-				}
-			}else{
-				$sqlDataInicio = date('Y-m-d H:i:s');
-			}
-		}else{
-			$sqlDataInicio = $abriuJornadaHoje['pont_tx_data'];
-		}
-		
-		$sql = 
-			"SELECT * FROM ponto
-				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
-				WHERE ".$condicoesPontoBasicas."
-					AND ponto.pont_tx_data >= '".$sqlDataInicio."'
-				ORDER BY pont_tx_data ASC"
-		;
-
-		$pontosCompleto = mysqli_fetch_all(query($sql),MYSQLI_ASSOC);
-
+		[$pontosCompleto, $sql] = pegarPontosDia($aMotorista['enti_tx_matricula']);
 
 		if(!empty($pontosCompleto)){
 			$pontos = [
 				'primeiro' => $pontosCompleto[0],
 				'ultimo' => $pontosCompleto[count($pontosCompleto)-1]
-			];	
+			];
 		}else{
 			$pontos = [
 				'primeiro' => null,
@@ -201,14 +199,18 @@
 
 			switch(intval($pontosCompleto[$f]['pont_tx_tipo'])){
 				case 1:
-					if($value->format('Y-m-d') < date('Y-m-d')){
+					if($value->format('Y-m-d') < $hoje){
 						$pares['jornada'][] = ['inicio' => $value->format("H:i"), 'diaAnterior' => true];
 					}else{
 						$pares['jornada'][] = ['inicio' => $value->format("H:i")];
 					}
 				break;
 				case 2:
-					$pares['jornada'][count($pares['jornada'])-1]['fim'] = $value->format("H:i");
+					if(count($pares['jornada']) == 0){
+						$pares['jornada'][0] = ['inicio' => null, 'fim' => $value->format("H:i")];
+					}else{
+						$pares['jornada'][count($pares['jornada'])-1]['fim'] = $value->format("H:i");
+					}
 				break;
 				case 3:
 					$pares['refeicao'][] = ['inicio' => $value->format("H:i")];
@@ -323,7 +325,7 @@
 		];
 
 		$c[] = [
-			campo('Data', 'data', data(date('Y-m-d')), 2, '', 'readonly=readonly'),
+			campo('Data', 'data', data($hoje), 2, '', 'readonly=readonly'),
 			texto('Motivo:', 'Registro de ponto mobile', 4),
 			campo_hidden('motivo', 'Registro de ponto mobile')
 		];
@@ -333,7 +335,7 @@
 				"SELECT user_tx_login, endo_tx_dataCadastro
 					FROM endosso, user
 					WHERE endo_tx_status = 'ativo'
-						AND '".date('Y-m-d')."' BETWEEN endo_tx_de AND endo_tx_ate
+						AND '".$hoje."' BETWEEN endo_tx_de AND endo_tx_ate
 						AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'
 						AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
 						AND endo_nb_userCadastro = user_nb_id
@@ -354,15 +356,14 @@
 
 		$gridFields = [
 			'CÓD'			=> 'pont_nb_id',  
-			'DATA'			=> 'data(pont_tx_data)', 
-			'HORA'			=> 'data(pont_tx_data,3)',  
+			'DATA'			=> 'data(pont_tx_data, 1)',
 			'TIPO'			=> 'macr_tx_nome',  
 			'MOTIVO'		=> 'moti_tx_nome',  
 			'USUÁRIO'		=> 'user_tx_login',  
 			'DATA CADASTRO'	=> 'data(pont_tx_dataCadastro,1)'
 		];
 
-		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 2, 'desc', -1);
+		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 1, 'desc', -1);
 		rodape();
 	?>
 
@@ -499,8 +500,13 @@
 						hour:   '2-digit',
 						minute: '2-digit',
 					});
-					
-					jornadaAtual = operarHorarios([localTimeString, '<?=$ultimoInicioJornada?>'], '-');
+					<?
+						if(!empty($ultimoInicioJornada)){
+							echo "jornadaAtual = operarHorarios([localTimeString, '".$ultimoInicioJornada."'], '-');";
+						}else{
+							echo "jornadaAtual = '00:00';";
+						}
+					?>
 					jornadaEfetiva = operarHorarios(['<?=$jornadaEfetiva?>', jornadaAtual], '+');
 					
 					duracao = calculateElapsedTime('<?= ($pontos['primeiro']['pont_tx_data']?? '') ?>');
@@ -538,7 +544,7 @@
 					$('#myModal').modal('hide');
 					document.form_submit.acao.value = 'cadastra_ponto';
 					document.form_submit.id.value = <?= $_SESSION['user_nb_entidade'] ?>;
-					document.form_submit.data.value = '<?= date('Y-m-d') ?>';
+					document.form_submit.data.value = '<?= $hoje ?>';
 					document.form_submit.idMacro.value = idMacro;
 					<?= (isset($motivo['moti_nb_id'])? 'document.form_submit.motivo.value = '.$motivo['moti_nb_id'].';': '') ?>;
 					document.form_submit.submit();

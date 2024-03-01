@@ -11,21 +11,10 @@
 	}
 </style>
 
-<form name="form_cadastrar_endosso" method="post">
-	<input type="hidden" name="acao" value="cadastrar_endosso">
-	<input type="hidden" name="idMotorista" value="<?= implode(",", $aIdMotorista) ?>">
-	<input type="hidden" name="matriculaMotorista" value="<?= implode(",", $aMatriculaMotorista) ?>">
-	<input type="hidden" name="busca_empresa" value="<?= $_POST['busca_empresa'] ?>">
-	<input type="hidden" name="busca_data" value="<?= $_POST['busca_data'] ?>">
-	<input type="hidden" name="busca_motorista" value="<?= $_POST['busca_motorista'] ?>">
-	<input type="hidden" name="busca_situacao" value="<?= $_POST['busca_situacao'] ?>">
-	<input type="hidden" name="aSaldo" value="<?= htmlspecialchars(json_encode($aSaldo)) ?>">
-</form>
-
 <form name="form_imprimir_relatorio" method="post" target="_blank">
 	<input type="hidden" name="acao" value="imprimir_relatorio">
-	<input type="hidden" name="idMotoristaEndossado" value="<?= implode(",", $aIdMotoristaEndossado) ?>">
-	<input type="hidden" name="matriculaMotoristaEndossado" value="<?= (implode(",", $aMatriculaMotoristaEndossado)) ?>">
+	<input type="hidden" name="idMotoristaEndossado" value="<?=(!empty($aIdMotoristaEndossado)? implode(",", $aIdMotoristaEndossado) : '')?>">
+	<input type="hidden" name="matriculaMotoristaEndossado" value="<?=(!empty($aMatriculaMotoristaEndossado)? implode(",", $aMatriculaMotoristaEndossado): '')?>">
 	<input type="hidden" name="busca_empresa" value="<?= $_POST['busca_empresa'] ?>">
 	<input type="hidden" name="busca_data" value="<?= $_POST['busca_data'] ?>">
 	<input type="hidden" name="busca_motorista" value="<?= $_POST['busca_motorista'] ?>">
@@ -43,11 +32,13 @@
 <script>
 	function selecionaMotorista(idEmpresa) {
 		let buscaExtra = '';
-		if (idEmpresa > 0) {
-			buscaExtra = encodeURI('AND enti_tx_tipo = "Motorista" AND enti_nb_empresa = "' + idEmpresa + '"');
-		} else {
-			buscaExtra = encodeURI('AND enti_tx_tipo = "Motorista"');
+		if(idEmpresa > 0){
+			buscaExtra = '&extra_bd'+encodeURI('AND enti_tx_tipo = "Motorista" AND enti_nb_empresa = "' + idEmpresa + '"');
+			$('.busca_motorista')[0].innerHTML = null;
+		}else{
+			buscaExtra = '&extra_bd'+encodeURI('AND enti_tx_tipo = "Motorista"');
 		}
+
 		// Verifique se o elemento está usando Select2 antes de destruí-lo
 		if ($('.busca_motorista').data('select2')) {
 			$('.busca_motorista').select2('destroy');
@@ -59,7 +50,7 @@
 			placeholder: 'Selecione um item',
 			allowClear: true,
 			ajax: {
-				url: "/contex20/select2.php?path=" + "<?= $CONTEX['path'] ?>" + "&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=" + buscaExtra + "&extra_busca=enti_tx_matricula",
+				url: "<?=$select2URL?>"+buscaExtra,
 				dataType: 'json',
 				delay: 250,
 				processResults: function(data) {
@@ -71,16 +62,4 @@
 			}
 		});
 	}
-
-	window.onload = function() {
-		document.getElementById('dadosResumo').innerHTML = '<?=$counts['message']?>';
-
-		document.getElementById('botaoContexCadastrar CadastrarEndosso').onclick = function() {
-			window.location.href = '<?= "https://braso.mobi" . $CONTEX['path'] . "/cadastro_endosso" ?>';
-		}
-
-		document.getElementById('botaoContexCadastrar ImprimirRelatorio').onclick = function() {
-			document.form_imprimir_relatorio.submit();
-		}
-	};
 </script>

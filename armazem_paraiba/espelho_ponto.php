@@ -97,13 +97,22 @@
 			campo_data('Data Fim:', 'busca_dataFim', ($_POST['busca_dataFim']?? ''), 2,$extraCampoData)
 		];
 		
+		$botao_imprimir =
+			'<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
+					<script>
+						function imprimir() {
+							// Abrir a caixa de diálogo de impressão
+							window.print();
+						}
+					</script>';
 		//BOTOES
 		$b = [
-			botao("Buscar", 'index', '', '', '', '', 'btn btn-success')
+			botao("Buscar", 'index', '', '', '', '', 'btn btn-success'),
 		];
 		if ($_SESSION['user_tx_nivel'] != 'Motorista') {
 			$b[] = botao("Cadastrar Abono", 'layout_abono');
 		}
+		$b[] = $botao_imprimir;
 		
 		abre_form('Filtro de Busca');
 		linha_form($c);
@@ -250,6 +259,38 @@
 	
 		?>
 		<style>
+			@media print {
+    		        body {
+                        margin: 1cm;
+                        margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
+                        transform: scale(1.0);
+                        transform-origin: top left;
+                    }
+                
+                    @page {
+                        size: A4 landscape;
+                        margin: 1cm;
+                    }
+                    body > div.scroll-to-top{
+                        display: none;
+                    }
+                    body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3){
+                        display: none;
+                    }
+                    .portlet-body.form .table-responsive {
+                        overflow-x: visible !important;
+                        margin-left: -50px !important;
+                    }
+                    .portlet.light>.portlet-title {
+                        border-bottom: none;
+                        margin-bottom: 0px;
+                    }
+                    .caption{
+                        padding-top: 0px;
+                        margin-left: -50px !important;
+                        padding-bottom: 0px;
+                    }
+            }
 			#saldo {
 				width: 50% !important;
 				margin-top: 9px !important;
@@ -266,6 +307,10 @@
 		</form>
 
 		<script>
+			function imprimir() {
+				window.print();
+			}
+
 			function selecionaMotorista(idEmpresa) {
 				let buscaExtra = '';
 				if(idEmpresa > 0){
