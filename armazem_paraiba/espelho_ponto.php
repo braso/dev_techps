@@ -324,7 +324,6 @@
 				if ($('.busca_motorista').data('select2')) {
 					$('.busca_motorista').select2('destroy');
 				}
-
 				$.fn.select2.defaults.set("theme", "bootstrap");
 				$('.busca_motorista').select2({
 					language: 'pt-BR',
