@@ -4,57 +4,69 @@
 		error_reporting(E_ALL);
 	//*/
 
-	include_once "conecta.php";	
+	if(empty(session_id())){
+		session_start();
+	}
 	
-	if(date('H')>=6 && date("H")<=12){
-		$turno='Manhã';
-	}elseif(date('H')>=13 && date("H")<=18){
-		$turno='Tarde';
-	}else{
-		$turno='Noite';
+	$turnos = ['Noite', 'Manhã', 'Tarde', 'Noite'];
+	$turnoAtual = $turnos[intval(intval(date('H'))/6)];
+
+	if(isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id'])){ //Se já há um usuário logado
+		cabecalho("Bem-Vindo ao sistema TechPS, ".$_SESSION['user_tx_nome'].". Período da $turnoAtual iniciado às ".$_SESSION['horaEntrada']);
+		rodape();
+		exit;
 	}
 
-	if(!empty($_GET['user']) && !empty($_GET['password'])){
+	if(!empty($_POST['user']) && !empty($_POST['password'])){//Tentando logar
 
-		$sql = query("SELECT * FROM user WHERE user_tx_status != 'inativo' AND user_tx_login = '$_GET[user]' AND user_tx_senha = '$_GET[password]'");
+		$_SESSION['user_tx_login'] = $_POST['user'];
+
+		include_once "conecta.php";
 		
-		if(mysqli_num_rows($sql)>0){
-			
-			$a = mysqli_fetch_array($sql);
+		$usuario = mysqli_fetch_assoc(
+			query(
+				"SELECT * FROM user 
+					WHERE user_tx_status != 'inativo' 
+						AND user_tx_login = '".$_POST['user']."' 
+						AND user_tx_senha = '".$_POST['password']."'"
+			)
+		);
+
+		if(!empty($usuario)){ //Se encontrou um usuário
+			$usuario = $usuario;
 			$dataHoje = strtotime(date("Y-m-d")); // Transforma a data de hoje em timestamp
-			$dataVerificarObj = strtotime($a['user_tx_expiracao']);
-			if ($dataVerificarObj >= $dataHoje && !empty($a['user_tx_expiracao']) && $a['user_tx_expiracao'] == '0000-00-00') {
+			$dataVerificarObj = strtotime($usuario['user_tx_expiracao']);
+			if ($dataVerificarObj >= $dataHoje && !empty($usuario['user_tx_expiracao']) && $usuario['user_tx_expiracao'] == '0000-00-00') {
 				$msg = "<div class='alert alert-danger display-block'>
 					<span> Usuário expirado. </span>
 				</div>";
 			} else {
-				$_SESSION['user_nb_id'] 		= $a['user_nb_id'];
-				$_SESSION['user_tx_nivel'] 		= $a['user_tx_nivel'];
-				$_SESSION['user_tx_login'] 		= $a['user_tx_login'];
-				$_SESSION['user_nb_entidade'] 	= $a['user_nb_entidade'];
-				$_SESSION['user_nb_empresa'] 	= $a['user_nb_empresa'];
-				$_SESSION['user_tx_foto'] 		= !empty($a['user_tx_foto'])? $a['user_tx_foto']: '/contex20/img/user.png';
+				$_SESSION['user_nb_id'] 		= $usuario['user_nb_id'];
+				$_SESSION['user_tx_nivel'] 		= $usuario['user_tx_nivel'];
+				$_SESSION['user_tx_login'] 		= $usuario['user_tx_login'];
+				$_SESSION['user_nb_entidade'] 	= $usuario['user_nb_entidade'];
+				$_SESSION['user_nb_empresa'] 	= $usuario['user_nb_empresa'];
+				$_SESSION['user_tx_foto'] 		= !empty($usuario['user_tx_foto'])? $usuario['user_tx_foto']: '/contex20/img/user.png';
 			}
 
 			if(!isset($_SESSION['horaEntrada'])){
 				$_SESSION['horaEntrada'] = date('H:i');
-				$_SESSION['user_tx_nome'] = $a['user_tx_nome'];
+				$_SESSION['user_tx_nome'] = $usuario['user_tx_nome'];
 			}
 
-			cabecalho("Bem-Vindo ao sistema TechPS, $a[user_tx_nome]. Período da $turno iniciado às ".$_SESSION['horaEntrada']);
-
+			cabecalho("Bem-Vindo ao sistema TechPS, $usuario[user_tx_nome]. Período da $turnoAtual iniciado às ".$_SESSION['horaEntrada']);
 			rodape();
 		}else{
-		    $dev = (is_int(strpos($_SERVER["REQUEST_URI"], 'dev_')) || is_int(strpos(($_POST["path"]?? ''), 'dev_'))? "dev_techps": "techps");
-			header("Location: https://braso.mobi/".$dev."/index2.php?erro=1");
-			exit;
+			echo 
+				"<form action='https://braso.mobi".$CONTEX['path']."/../index2.php?error=notfound' name='form_voltar' method='post'>
+					<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
+					<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
+					<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
+				</form>"
+			;
+			echo "<script>document.form_voltar.submit();</script>";
 		}
-	}elseif(isset($_SESSION['user_nb_id']) && $_SESSION['user_nb_id']>0){
-		cabecalho("Bem-Vindo ao sistema TechPS, ".$_SESSION['user_tx_nome'].". Período da $turno iniciado às ".$_SESSION['horaEntrada']);
-
-		rodape();
-	} else {
-		echo '<meta http-equiv="refresh" content="0; url=./../index2.php" />';
-		exit;
+	}else{
+		echo '<meta http-equiv="refresh" content="0; url=./../index2.php?error=emptyfields"/>';
 	}
 ?>
