@@ -7,50 +7,43 @@ if(isset($_SERVER['SCRIPT_URI'])){
 }else{
 	$server_base_link = substr($_SERVER['SCRIPT_FILENAME'], 0, strrpos($_SERVER['SCRIPT_FILENAME'], '/'));
 }
-include $server_base_link."/armazem_paraiba/conecta.php";
-
-// $sql = query('SELECT * FROM dominio');
-// $result = mysqli_fetch_all($sql, MYSQLI_ASSOC);
 
 $msg = '';
 
-if (isset($_GET['erro']) && $_GET['erro'] != '') {
-	$msg = "<div class='alert alert-danger display-block'>
-
-					<span> Login e/ou senha incorreto. </span>
-
-				</div>";
-}
-
-if (isset($_POST['botao']) && $_POST['botao'] == 'Entrar') {
-	if ($_POST['dominio'] != '' && $_POST['login'] != '' && $_POST['senha'] != '') {
-		$dominio = $_POST['dominio'];
-		header("Location: " . $dominio . '?user=' . $_POST['login'] . '&password=' . md5($_POST['senha']));
-		exit;
-	} else if($_POST['dominio'] == '' && $_POST['login'] != '' && $_POST['senha'] != ''){
-		$msg = "<div class='alert alert-danger display-block'>
-
-					<span> Nenhum domínio selecionado.  </span>
-
-				</div>";
+$error = false;
+if(isset($_GET['error'])){
+	if(empty($_POST['dominio'])){
+		$msg = 
+			"<div class='alert alert-danger display-block'>
+				<span>Preencha todos os campos para entrar.</span>
+			</div>"
+		;
+	}elseif(!empty($_GET['error'])){
+		$msgs = [
+			'notfound' => 'Usuário não encontrado neste domínio.',
+			'emptyfields' => 'Usuário não encontrado neste domínio.',
+		];
+		$msg = 
+			"<div class='alert alert-danger display-block'>
+				<span>".$msgs[$_GET['error']]."</span>
+			</div>"
+		;
 	}
-}elseif(isset($_GET['erro']) && $_GET['erro'] != '') {
-	$msg = "<div class='alert alert-danger display-block'>
-
-					<span> Login e/ou senha incorreto. </span>
-
-				</div>";
 }
-// else if ($_POST['botao'] == 'Entrar' && $_POST['login'] === '' && $_POST['senha'] === '' ) {
 
-// 	$msg = "<div class='alert alert-danger display-block'>
-
-// 					<span> Preencha o login e senha. </span>
-
-// 				</div>";
-
-
-// }
+if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
+	$_POST['password'] = md5($_POST['password']);
+	$dominio = $_POST['dominio'];
+	echo 
+		"<form action='".$dominio."' name='formTelaPrincipal' method='post'>
+			<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
+			<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
+			<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
+		</form>"
+	;
+	echo "<script>document.formTelaPrincipal.submit();</script>";
+	exit;
+}
 ?>
 <!DOCTYPE html>
 
@@ -169,7 +162,7 @@ License: You must have a valid license purchased only from themeforest(the above
 
 
 
-<body class=" login">
+<body class="login">
 
 	<!-- COMECO LOGO -->
 
@@ -191,11 +184,11 @@ License: You must have a valid license purchased only from themeforest(the above
 
 		<form class="login-form" method="post">
 
-			<h3 class="form-title font-green">Login</h3>
+			<h3 class="form-title font-green">Login <?=(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_techps'))? '(Dev)': '')?></h3>
 
 			<?php
 			
-			echo $dominios;
+			echo $dominiosInput; //Vem do arquivo dominios.php
 			
 			?>
 
@@ -205,16 +198,29 @@ License: You must have a valid license purchased only from themeforest(the above
 
 				<label class="control-label visible-ie8 visible-ie9">Usuário</label>
 
-				<input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="text"
-					autocomplete="off" placeholder="Usuário" name="login" />
+				<input 
+					focus 
+					autofocus 
+					class="form-control form-control-solid placeholder-no-fix" 
+					type="text"
+					autocomplete="off" 
+					placeholder="Usuário" 
+					name="user"
+					<?=(!empty($_POST['user'])? "value=".$_POST['user']: '')?>
+				/>
 			</div>
 
 			<div class="form-group">
 
 				<label class="control-label visible-ie8 visible-ie9">Senha</label>
 
-				<input class="form-control form-control-solid placeholder-no-fix" type="password" autocomplete="off"
-					placeholder="Senha" name="senha" />
+				<input 
+					class="form-control form-control-solid placeholder-no-fix" 
+					type="password" 
+					autocomplete="off"
+					placeholder="Senha" 
+					name="password"
+				/>
 			</div>
 
 			<?= $msg ?>
