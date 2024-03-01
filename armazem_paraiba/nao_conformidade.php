@@ -1,10 +1,10 @@
 <?php
-	/* Modo debug
+	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto	
+
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
-
-	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto	
 
 	function cadastrar(){
 		$url = substr($_SERVER['REQUEST_URI'], 0, strrpos($_SERVER['REQUEST_URI'], '/'));
@@ -56,8 +56,8 @@
 
 		//CAMPOS DE CONSULTA{
 			$c = [
-				campo_mes('Data*:',    'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2),
-				combo_net('Motorista:', 'busca_motorista', (!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ''), 3, 'entidade', '', ' AND enti_tx_tipo = "Motorista"' . $extraMotorista . $extraEmpresaMotorista, 'enti_tx_matricula')
+				combo_net('Motorista:', 'busca_motorista', (!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ''), 3, 'entidade', '', ' AND enti_tx_tipo = "Motorista"' . $extraMotorista . $extraEmpresaMotorista, 'enti_tx_matricula'),
+				campo_mes('Data*:',     'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2)
 			];
 
 			if(is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))){
@@ -181,13 +181,13 @@
 							query(
 								"SELECT endo_tx_saldo FROM `endosso`
 									WHERE endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-										AND endo_tx_ate < '".$_POST['busca_data1']."'
+										AND endo_tx_ate < '".$_POST['busca_data']."'
 										AND endo_tx_status = 'ativo'
 									ORDER BY endo_tx_ate DESC
 									LIMIT 1;"
-							),
-							MYSQLI_ASSOC
+							)
 						);
+						
 						if(isset($saldoAnterior['endo_tx_saldo'])){
 							$saldoAnterior = $saldoAnterior['endo_tx_saldo'];
 						}elseif(!empty($aMotorista['enti_tx_banco'])){
@@ -291,7 +291,22 @@
 		rodape();
 
 		$counts['message'] = '<br><br><b>Total: '.$counts['total'].' | Não Conformidades: '.$counts['naoConformidade'].'</b>';
+
+		$select2URL = 
+			$CONTEX['path']."/../contex20/select2.php"
+			."?path=".$CONTEX['path']
+			."&tabela=entidade"
+			."&extra_limite=15"
+			."&extra_busca=enti_tx_matricula"
+		; // Utilizado dentro de endosso_html.php
 		
 		include 'endosso_html.php';
+		echo 
+			"<script>
+				window.onload = function() {
+					document.getElementById('dadosResumo').innerHTML = '".$counts['message']."';
+				};
+			</script>"
+		;
 	}
 ?>
