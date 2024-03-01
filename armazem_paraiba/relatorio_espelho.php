@@ -1,7 +1,6 @@
 <?
-	include_once $_SERVER['DOCUMENT_ROOT'].($CONTEX['path']."/../")."contex20/funcoes_form.php";
+	include_once $_SERVER['DOCUMENT_ROOT'].($CONTEX['path'])."/conecta.php";
 	include $_SERVER['DOCUMENT_ROOT'].($CONTEX['path'])."/csv_relatorio_espelho.php";
-	
 ?>
 <!DOCTYPE html>
 <html lang="en">
