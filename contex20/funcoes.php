@@ -86,7 +86,7 @@
 			set_status("Registro inserido com sucesso!");
 		}catch (Exception $e){
 			set_status("Falha ao registrar.");
-			return [];
+			return $e;
 		}
 
 		$a = carrega_array($sql);
@@ -226,15 +226,14 @@
 
 
 
-		if (strstr($data, "/")){//verifica se tem a barra /
+		if(is_int(strpos($data, "/"))){//verifica se tem a barra /
 			$d = explode ("/", $data);//tira a barra
 			$rstData = "$d[2]-$d[1]-$d[0]";//separa as datas $d[2] = ano $d[1] = mes etc...
 			return $rstData.$hora;
-		}
-		else if(strstr($data, "-")){
+		}elseif(is_int(strpos($data, "-"))){
 			$data = substr($data, 0, 10);
 			$d = explode ("-", $data);
-			$rstData = "$d[2]/$d[1]/$d[0]";
+			$rstData = $d[2]."/".$d[1]."/".$d[0];
 			return $rstData.$hora;
 		}
 		else{
@@ -274,7 +273,7 @@
 		return campo($nome, $variavel, $modificador, $tamanho, 'MASCARA_MES', $extra);
 	}
 
-	function checkbox_banco($nome, $variavel, $modificadoRadio, $modificadoCampo=0, $modificadoCampo2=0, $tamanho) {
+	function checkbox_banco($nome, $variavel, $modificadoRadio, $modificadoCampo=0, $modificadoCampo2=0, $tamanho=3) {
 		$campo = 
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5" style="min-width:200px">
 				<label><b>'.$nome.'</b></label><br>
@@ -335,7 +334,7 @@
 		$data_input = "<script>";
 		switch($mascara){
 			case "MASCARA_DATA":
-				$data_input .= "$('name=\"#$variavel\"').inputmask(\"date\", {clearIncomplete: false, placeholder: \"dd/mm/aaaa\"});";
+				$data_input .= "$('name=\"$variavel\"').inputmask(\"date\", {clearIncomplete: false, placeholder: \"dd/mm/aaaa\"});";
 				$type = "date";
 			break;
 			case "MASCARA_MES":
@@ -509,7 +508,6 @@
 	function combo($nome, $variavel, $modificador, $tamanho, array $opcoes, $extra = ''){
 		$res = '';
 		foreach($opcoes as $key => $value){
-			
 			//Correção da chave para os casos em que a variável $campos é um array comum, e não um dicionário. Retirar quando for necessário utilizar um dicionário com chaves numerais
 			$key = is_int($key)? $value: $key;
 
@@ -530,56 +528,73 @@
 	}
 
 	function combo_net($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra_bd='',$extra_busca='',$extra_ordem='',$extra_limite='15'){
+
 		global $CONTEX,$conn;
 
-		if($modificador>0){
+		if(!empty($modificador)){
 			$tab = substr($tabela,0,4);
 			if($extra_busca != '')
 				$extra_campo = ",$extra_busca";
 			else{
 				$extra_campo = '';
 			}
-				
 
-			$sql=query("SELECT ".$tab."_tx_nome $extra_campo FROM $tabela WHERE  ".$tab."_nb_id = '$modificador' AND ".$tab."_tx_status = 'ativo'");
-			$a=carrega_array($sql);
-			if($extra_busca != '')
-				$a[0] = "[$a[1]] $a[0]";
-			$opt="<option value='$modificador'>$a[0]</option>";
+			$queryResult = carrega_array(
+				query(
+					"SELECT ".$tab."_tx_nome $extra_campo FROM $tabela 
+						WHERE ".$tab."_nb_id = '$modificador'
+							AND ".$tab."_tx_status = 'ativo'"
+				)
+			);
+
+			if($extra_busca != ''){
+				$queryResult[0] = "[$queryResult[1]] $queryResult[0]";
+			}
+			$opt="<option value='$modificador'>$queryResult[0]</option>";
 		}else{
 			$opt = '';
 		}
-		// <select id="'.$variavel.'" name="'.$variavel.'" class="form-control input-sm select2 '.$variavel.'" '.$extra.'></select>
-		$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
-					<label><b>'.$nome.'</b></label>
-					<select class="'.$variavel.' form-control input-sm" id="'.$variavel.'" style="width:100%" '.$extra.' name="'.$variavel.'">
-					'.$opt.'
-					</select>
-				</div>';
+		$campo=
+			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
+				<label><b>'.$nome.'</b></label>
+				<select class="'.$variavel.' form-control input-sm" id="'.$variavel.'" style="width:100%" '.$extra.' name="'.$variavel.'">
+				'.$opt.'
+				</select>
+			</div>'
+		;
 
-		?>
-			<script type="text/javascript">
-				$.fn.select2.defaults.set("theme", "bootstrap");
-				$(window).bind("load", function() {
-					$('.<?=$variavel?>').select2({
+		$select2URL = 
+			$CONTEX['path']."/../contex20/select2.php"
+			."?path=".$CONTEX['path']
+			."&tabela=".$tabela
+			."&extra_ordem=".$extra_ordem
+			."&extra_limite=".$extra_limite
+			."&extra_bd=".urlencode($extra_bd)
+			."&extra_busca=".urlencode($extra_busca);
+
+		echo "
+			<script type=\"text/javascript\">
+				$.fn.select2.defaults.set(\"theme\", \"bootstrap\");
+				$(window).bind(\"load\", function() {
+					$('.".$variavel."').select2({
 						language: 'pt-BR',
 						placeholder: 'Selecione um item',
 						allowClear: true,
 						ajax: {
-							url: '/dev_techps/contex20/select2.php?path=<?=$CONTEX['path']?>&tabela=<?=$tabela?>&extra_ordem=<?=$extra_ordem?>&extra_limite=<?=$extra_limite?>&extra_bd=<?=urlencode($extra_bd)?>&extra_busca=<?=urlencode($extra_busca)?>',
+							url: '".$select2URL."',
 							dataType: 'json',
 							delay: 250,
 							processResults: function (data) {
-							return {
-								results: data
-							};
+								return {
+									results: data
+								};
 							},
 							cache: true
 						}
 					});
 				});
 			</script>
-		<?
+		";
 
 		return $campo;
 	}
@@ -605,25 +620,24 @@
 		$sql=query("SELECT ".$tab."_nb_id, ".$tab."_tx_nome FROM $tabela WHERE ".$tab."_tx_status != 'inativo' $extra_bd");
 		while($a=mysqli_fetch_array($sql)){
 
-			if($a[0] == $modificador || $a[1] == $modificador)
+			if($a[0] == $modificador || $a[1] == $modificador){
 				$selected="selected";
-			else
+			}else{
 				$selected='';
-
+			}
 			$c_opcao .= '<option value="'.$a[0].'" '.$selected.'>'.$a[1].'</option>';
-
 		}
 
-		$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
-					<label><b>'.$nome.'</b></label>
-					<select name="'.$variavel.'" id="'.$variavel.'" class="form-control input-sm" '.$extra.'>
-						'.$c_opcao.'
-					</select>
-				</div>';
-
+		$campo=
+			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
+				<label><b>'.$nome.'</b></label>
+				<select name="'.$variavel.'" id="'.$variavel.'" class="form-control input-sm" '.$extra.'>
+					'.$c_opcao.'
+				</select>
+			</div>'
+		;
 
 		return $campo;
-
 	}
 
 	function arquivosParametro($nome,$idParametro,$arquivos){
@@ -738,7 +752,7 @@
 
 	}
 
-	function arquivo($nome,$variavel,$modificador = '',$tamanho,$extra=''){
+	function arquivo($nome,$variavel,$modificador = '',$tamanho=4, $extra=''){
 		global $CONTEX;
 		$ver = '';
 		if(!empty($modificador)){
