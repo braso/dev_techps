@@ -1,15 +1,9 @@
 <?php
-	include "./../version.php";
+	include_once "./../version.php";
 
-	global $CONTEX, $conn, $version;
+	global $conn, $version;
 	function cabecalho($nome_pagina,$foco=0,$relatorio=0){
-		global $CONTEX,$conn;
-
-		if(!$_SESSION['user_nb_id']){
-			echo "<meta http-equiv='refresh' content='0; url=".$CONTEX['path']."/index.php' />";
-			exit;
-		}
-		global $CONTEX;
+		global $CONTEX, $_SESSION;
 		?>
 			<!DOCTYPE html>
 			<!--[if IE 8]> <html lang="pt-br" class="ie8 no-js"> <![endif]-->
@@ -203,13 +197,6 @@
 			}
 		</style>
 		<?
-
-		if(!$_SESSION['user_nb_id']){
-			?>
-				<meta http-equiv="refresh" content="0; url=index.php" />
-			<?
-			exit;
-		}
 
 	global $CONTEX;
 		?>
