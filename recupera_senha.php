@@ -240,7 +240,7 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
                     <h3 class="form-title font-green">Redefinir Senha</h3>
                     <p style="text-align:justify">Um link de redefinição de senha será enviado para o seu endereço de e-mail.</p>
                     <?php
-                    echo $dominios;
+                    echo $dominiosInput;
                     ?>
                     <div class="form-group">
                         <label class="control-label visible-ie8 visible-ie9">Login</label>
