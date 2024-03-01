@@ -500,7 +500,6 @@
 						hour:   '2-digit',
 						minute: '2-digit',
 					});
-
 					<?
 						if(!empty($ultimoInicioJornada)){
 							echo "jornadaAtual = operarHorarios([localTimeString, '".$ultimoInicioJornada."'], '-');";
