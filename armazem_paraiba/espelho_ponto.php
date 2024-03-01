@@ -1,14 +1,14 @@
 <?php
-	//* Modo debug
-		// ini_set('display_errors', 1);
-		// error_reporting(E_ALL);
+	/* Modo debug
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
 	//*/
 
-	include_once "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
+	include "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
 
 	function index() {
 
-		global $CONTEX, $totalResumo;
+		global $CONTEX, $totalResumo, $conn;
 	
 		cabecalho('Espelho de Ponto');
 		
@@ -79,14 +79,14 @@
 					$errorMsg = 'Este motorista não pertence a esta empresa. ';
 				}
 			}
-
+			
 			if($searchError){
 				$errorMsg = substr($errorMsg, 0, -2).'.';
 				set_status('ERRO: '.$errorMsg);
-      }
+      		}
 		}else{
-			$_POST['busca_empresa'] = '';
-			$_POST['busca_motorista'] = '';
+			$_POST['busca_empresa'] = $_POST['busca_empresa']?? '';
+			$_POST['busca_motorista'] = $_POST['busca_motorista']?? '';
 		}
 
 		//CAMPOS DE CONSULTA
@@ -96,7 +96,7 @@
 			campo_data('Data Início:', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ''), 2, $extraCampoData),
 			campo_data('Data Fim:', 'busca_dataFim', ($_POST['busca_dataFim']?? ''), 2,$extraCampoData)
 		];
-	
+		
 		//BOTOES
 		$b = [
 			botao("Buscar", 'index', '', '', '', '', 'btn btn-success')
@@ -104,17 +104,17 @@
 		if ($_SESSION['user_tx_nivel'] != 'Motorista') {
 			$b[] = botao("Cadastrar Abono", 'layout_abono');
 		}
-	
+		
 		abre_form('Filtro de Busca');
 		linha_form($c);
 		fecha_form($b);
-	
+		
 		$cab = [
 			"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "HE 50%", "HE&nbsp;100%",
 			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 		];
-	
+		
 		// Converte as datas para objetos DateTime
 		$startDate = !empty($_POST['busca_dataInicio'])? new DateTime($_POST['busca_dataInicio']): '';
 		$endDate   = !empty($_POST['busca_dataFim'])? new DateTime($_POST['busca_dataFim']): '';
@@ -239,6 +239,14 @@
 		}
 		
 		rodape();
+
+		$select2URL = 
+			$CONTEX['path']."/../contex20/select2.php"
+			."?path=".$CONTEX['path']
+			."&tabela=entidade"
+			."&extra_limite=15"
+			."&extra_busca=enti_tx_matricula"
+		;
 	
 		?>
 		<style>
@@ -260,24 +268,24 @@
 		<script>
 			function selecionaMotorista(idEmpresa) {
 				let buscaExtra = '';
-				if (idEmpresa > 0) {
-					buscaExtra = encodeURI('AND enti_tx_tipo = "Motorista" AND enti_nb_empresa = "' + idEmpresa + '"');
-					$('.busca_motorista')[0].innerHTML = null
-				} else {
-					buscaExtra = encodeURI('AND enti_tx_tipo = "Motorista"');
+				if(idEmpresa > 0){
+					buscaExtra = '&extra_bd'+encodeURI('AND enti_tx_tipo = "Motorista" AND enti_nb_empresa = "' + idEmpresa + '"');
+					$('.busca_motorista')[0].innerHTML = null;
+				}else{
+					buscaExtra = '&extra_bd'+encodeURI('AND enti_tx_tipo = "Motorista"');
 				}
+
 				// Verifique se o elemento está usando Select2 antes de destruí-lo
 				if ($('.busca_motorista').data('select2')) {
 					$('.busca_motorista').select2('destroy');
 				}
-
 				$.fn.select2.defaults.set("theme", "bootstrap");
 				$('.busca_motorista').select2({
 					language: 'pt-BR',
 					placeholder: 'Selecione um item',
 					allowClear: true,
 					ajax: {
-						url: "/contex20/select2.php?path=" + "<?= $CONTEX['path'] ?>" + "&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=" + buscaExtra + "&extra_busca=enti_tx_matricula",
+						url: "<?=$select2URL?>"+buscaExtra,
 						dataType: 'json',
 						delay: 250,
 						processResults: function(data) {
