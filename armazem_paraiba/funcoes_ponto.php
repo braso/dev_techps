@@ -1217,6 +1217,7 @@
 				), 
 				MYSQLI_ASSOC
 			);
+
 			foreach(['inicioJornada', 'fimJornada', 'inicioRefeicao', 'fimRefeicao'] as $tipo){
 				if (count($aRetorno[$tipo]) > 0){
 					for($f = 0; $f < count($aRetorno[$tipo]); $f++){
