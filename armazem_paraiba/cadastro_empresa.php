@@ -103,8 +103,14 @@
 
 
 
-	function busca_cep($cep){	
-		$resultado = @file_get_contents('https://viacep.com.br/ws/'.urlencode($cep).'/json/');
+	function busca_cep($cep){
+		// 		$resultado = @file_get_contents('https://viacep.com.br/ws/'.urlencode($cep).'/json/');
+				
+		$url = 'https://viacep.com.br/ws/'.urlencode($cep).'/json/';
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			
+		$resultado = curl_exec($ch);
 		$arr = json_decode($resultado, true);
 		return $arr;  
 	}
@@ -397,7 +403,7 @@
 							console.log(response);
 							$('#nome').val(response[0].empr_tx_nome);
 							$('#fantasia').val(response[0].empr_tx_fantasia);
-							$('#situação').val(response[0].empr_tx_fantasia);
+							$('#situação').val(response[0].empr_tx_situacao);
 							$('#cep').val(response[0].empr_tx_cep);
 							$('#numero').val(response[0].empr_tx_email);
 							$('#complemento').val(response[0].empr_tx_complemento);
