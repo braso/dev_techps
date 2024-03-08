@@ -166,7 +166,7 @@
 
 		$inicios = [
 			1  => 'inicioJornada', 
-			3  => 'inicioRefeição', 
+			3  => 'inicioRefeicao', 
 			5  => 'inicioEspera', 
 			7  => 'inicioDescanso', 
 			9  => 'inicioRepouso', 
@@ -199,11 +199,9 @@
 
 			switch(intval($pontosCompleto[$f]['pont_tx_tipo'])){
 				case 1:
-					if($value->format('Y-m-d') < $hoje){
-						$pares['jornada'][] = ['inicio' => $value->format("H:i"), 'diaAnterior' => true];
-					}else{
-						$pares['jornada'][] = ['inicio' => $value->format("H:i")];
-					}
+					$pares['jornada'][] = [
+						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i"), "24:00"], '-'): $value->format("H:i"))
+					];
 				break;
 				case 2:
 					if(count($pares['jornada']) == 0){
@@ -213,31 +211,41 @@
 					}
 				break;
 				case 3:
-					$pares['refeicao'][] = ['inicio' => $value->format("H:i")];
+					$pares['refeicao'][] = [
+						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i"), "24:00"], '-'): $value->format("H:i"))
+					];
 				break;
 				case 4:
 					$pares['refeicao'][count($pares['refeicao'])-1]['fim'] = $value->format("H:i");
 				break;
 				case 5:
-					$pares['espera'][] = ['inicio' => $value->format("H:i")];
+					$pares['espera'][] = [
+						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i"), "24:00"], '-'): $value->format("H:i"))
+					];
 				break;
 				case 6:
 					$pares['espera'][count($pares['espera'])-1]['fim'] = $value->format("H:i");
 				break;
 				case 7:
-					$pares['descanso'][] = ['inicio' => $value->format("H:i")];
+					$pares['descanso'][] = [
+						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i"), "24:00"], '-'): $value->format("H:i"))
+					];
 				break;
 				case 8:
 					$pares['descanso'][count($pares['descanso'])-1]['fim'] = $value->format("H:i");
 				break;
 				case 9:
-					$pares['repouso'][] = ['inicio' => $value->format("H:i")];
+					$pares['repouso'][] = [
+						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i"), "24:00"], '-'): $value->format("H:i"))
+					];
 				break;
 				case 10:
 					$pares['repouso'][count($pares['repouso'])-1]['fim'] = $value->format("H:i");
 				break;
 				case 11:
-					$pares['repousoEmbarcado'][] = ['inicio' => $value->format("H:i")];
+					$pares['repousoEmbarcado'][] = [
+						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i"), "24:00"], '-'): $value->format("H:i"))
+					];
 				break;
 				case 12:
 					$pares['repousoEmbarcado'][count($pares['repousoEmbarcado'])-1]['fim'] = $value->format("H:i");
@@ -245,18 +253,15 @@
 			}
 		}
 
-		$ultimoInicioJornada = !empty($pares['jornada'])? $pares['jornada'][count($pares['jornada'])-1]['inicio']: null;
-
 		$jornadaCompleta = '00:00';
 		for($f = 0; $f < count($pares['jornada']); $f++){
 			if(!empty($pares['jornada'][$f]['fim'])){
-				if(!empty($pares['jornada'][$f]['diaAnterior'])){
-					$pares['jornada'][$f]['inicio'] = operarHorarios([$pares['jornada'][0]['inicio'], "24:00"], '-');
-				}
 				$jornada = operarHorarios([$pares['jornada'][$f]['fim'], $pares['jornada'][$f]['inicio']], '-');
 				$jornadaCompleta = operarHorarios([$jornadaCompleta, $jornada], '+');
 			}
 		}
+
+		$ultimoInicioJornada = !empty($pares['jornada'])? $pares['jornada'][count($pares['jornada'])-1]['inicio']: null;
 		
 		foreach($pares as $key => $value){
 			if(is_array($value) && count($value) > 0){
