@@ -12,13 +12,6 @@
     <title>Espelho de Ponto</title>
     <link rel="stylesheet" href="./css/endosso.css">
 
-    <link rel="apple-touch-icon" sizes="180x180" href="/contex20/img/favicon/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/contex20/img/favicon/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/contex20/img/favicon/favicon-16x16.png">
-    <link rel="shortcut icon" type="image/x-icon" href="/contex20/img/favicon/favicon-32x32.png?v=2">
-    <link rel="manifest" href="/contex20/img/favicon/site.webmanifest">
-    <link rel= "stylesheet" href= "https://maxst.icons8.com/vue-static/landings/line-awesome/font-awesome-line-awesome/css/all.min.css" >
-
     <script>
     function imprimir() {
         // Abrir a caixa de diálogo de impressão
@@ -27,13 +20,7 @@
     </script>
 </head>
 
-<body>
-    <div id="exporta">
-        <button id="btnImprimir" class="btn default" type="button" onclick="imprimir()">
-            <img width="20" height="20" src="https://img.icons8.com/android/24/FFFFFF/print.png" alt="print"/> Imprimir</button>
-        <button id="btnCsv" onclick="downloadCSV()">
-            <img width="20" height="20" src="https://img.icons8.com/glyph-neue/64/FFFFFF/csv.png" alt="csv"/> Baixar CSV</button>
-    </div>
+<body>    
     <script>
     function downloadCSV() {
         // Caminho do arquivo CSV no servidor
@@ -293,10 +280,17 @@
             </td>
         </tr>
         <tr>
+            <td></td>
+            <td></td>
             <td id="impressao"><b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . "(UTC-3)" ?></td>
         </tr>
     </table>
+    <div id="exporta">
+        <button id="btnImprimir" class="btn default" type="button" onclick="imprimir()">
+            <img width="20" height="20" src="https://img.icons8.com/android/24/FFFFFF/print.png" alt="print"/> Imprimir</button>
+        <button id="btnCsv" onclick="downloadCSV()">
+            <img width="20" height="20" src="https://img.icons8.com/glyph-neue/64/FFFFFF/csv.png" alt="csv"/> Baixar CSV</button>
+    </div>
+    <div style="page-break-after: always;"></div>
 </body>
-
 </html>
-<div style="page-break-after: always;"></div>
