@@ -11,7 +11,8 @@
 	$turnos = ['Noite', 'Manhã', 'Tarde', 'Noite'];
 	$turnoAtual = $turnos[intval(intval(date('H'))/6)];
 
-	if(isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id'])){ //Se já há um usuário logado
+	if(isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id']) && empty($_POST)){ //Se já há um usuário logado e não está tentando um novo login
+		include_once "conecta.php";
 		cabecalho("Bem-Vindo ao sistema TechPS, ".$_SESSION['user_tx_nome'].". Período da $turnoAtual iniciado às ".$_SESSION['horaEntrada']);
 		rodape();
 		exit;
@@ -19,8 +20,14 @@
 
 	if(!empty($_POST['user']) && !empty($_POST['password'])){//Tentando logar
 
-		$_SESSION['user_tx_login'] = $_POST['user'];
+		if(isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id'])){ //Se já há um usuário logado
+			$_SESSION = [];
+			session_destroy();
+		}else{
+			$_SESSION['user_tx_login'] = $_POST['user'];
+		}
 
+		$interno = true;
 		include_once "conecta.php";
 		
 		$usuario = mysqli_fetch_assoc(
@@ -46,7 +53,7 @@
 				$_SESSION['user_tx_login'] 		= $usuario['user_tx_login'];
 				$_SESSION['user_nb_entidade'] 	= $usuario['user_nb_entidade'];
 				$_SESSION['user_nb_empresa'] 	= $usuario['user_nb_empresa'];
-				$_SESSION['user_tx_foto'] 		= !empty($usuario['user_tx_foto'])? $usuario['user_tx_foto']: '/contex20/img/user.png';
+				$_SESSION['user_tx_foto'] 		= !empty($usuario['user_tx_foto'])? $usuario['user_tx_foto']: $CONTEX['path'].'/../contex20/img/user.png';
 			}
 
 			if(!isset($_SESSION['horaEntrada'])){
