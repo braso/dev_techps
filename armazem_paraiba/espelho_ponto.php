@@ -98,7 +98,7 @@
 		];
 		
 		$botao_imprimir =
-			'<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
+			'<button class="btn default" type="button" onclick="imprimir()" id="imprimir">Imprimir</button >
 					<script>
 						function imprimir() {
 							// Abrir a caixa de diálogo de impressão
@@ -117,6 +117,16 @@
 		abre_form('Filtro de Busca');
 		linha_form($c);
 		fecha_form($b);
+		?>
+		<div id="tituloRelatorio">
+			<h1>Espelho de Ponto</h1>
+		</div>
+		<style>
+			#tituloRelatorio{
+			    display: none;
+    		}
+		</style>
+		<?php
 		
 		$cab = [
 			"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
@@ -224,8 +234,52 @@
 				."$saldosMotorista"
 			);
 	?>
-	
-			<style>
+
+	<style>
+
+			@media print {
+    		        body {
+                        margin: 1cm;
+                        margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
+                        transform: scale(1.0);
+                        transform-origin: top left;
+                    }
+                
+                    @page {
+                        size: A4 landscape;
+                        margin: 1cm;
+                    }
+                    #tituloRelatorio{
+                        display: block; /* Torna visível apenas ao imprimir */
+                        font-size: 12px;
+                        padding-left: 500px;
+                    }
+                    body > div.scroll-to-top{
+                        display: none !important;
+                    }
+                    body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3){
+                        display: none;
+                    }
+                    .portlet-body.form .table-responsive {
+                        overflow-x: visible !important;
+                        margin-left: -50px !important;
+                    }
+                    .portlet.light>.portlet-title {
+                        border-bottom: none;
+                        margin-bottom: 0px;
+                    }
+                    .caption{
+                        padding-top: 0px;
+                        margin-left: -50px !important;
+                        padding-bottom: 0px;
+                    }
+            }
+			#saldo {
+				width: 50% !important;
+				margin-top: 9px !important;
+				text-align: center;
+			}
+		
 				table thead tr th:nth-child(3),
 				table thead tr th:nth-child(7),
 				table thead tr th:nth-child(11),
@@ -258,45 +312,7 @@
 		;
 	
 		?>
-		<style>
-			@media print {
-    		        body {
-                        margin: 1cm;
-                        margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
-                        transform: scale(1.0);
-                        transform-origin: top left;
-                    }
-                
-                    @page {
-                        size: A4 landscape;
-                        margin: 1cm;
-                    }
-                    body > div.scroll-to-top{
-                        display: none;
-                    }
-                    body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3){
-                        display: none;
-                    }
-                    .portlet-body.form .table-responsive {
-                        overflow-x: visible !important;
-                        margin-left: -50px !important;
-                    }
-                    .portlet.light>.portlet-title {
-                        border-bottom: none;
-                        margin-bottom: 0px;
-                    }
-                    .caption{
-                        padding-top: 0px;
-                        margin-left: -50px !important;
-                        padding-bottom: 0px;
-                    }
-            }
-			#saldo {
-				width: 50% !important;
-				margin-top: 9px !important;
-				text-align: center;
-			}
-		</style>
+		
 	
 		<form name="form_ajuste_ponto" method="post">
 			<input type="hidden" name="acao" value="layout_ajuste">
@@ -314,10 +330,10 @@
 			function selecionaMotorista(idEmpresa) {
 				let buscaExtra = '';
 				if(idEmpresa > 0){
-					buscaExtra = '&extra_bd'+encodeURI('AND enti_tx_tipo = "Motorista" AND enti_nb_empresa = "' + idEmpresa + '"');
+					buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_tipo = "Motorista" AND enti_nb_empresa = "' + idEmpresa + '"');
 					$('.busca_motorista')[0].innerHTML = null;
 				}else{
-					buscaExtra = '&extra_bd'+encodeURI('AND enti_tx_tipo = "Motorista"');
+					buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_tipo = "Motorista"');
 				}
 
 				// Verifique se o elemento está usando Select2 antes de destruí-lo

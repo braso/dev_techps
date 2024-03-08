@@ -1,7 +1,7 @@
 <?php
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
 	
-	//* Modo debug
+	/* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -97,6 +97,9 @@
 							$endossoCompleto['endo_tx_pagarHoras'] = $endossos[$f]['endo_tx_pagarHoras'] == 'sim'? 'sim': $endossoCompleto['endo_tx_pagarHoras'];
 							if($endossoCompleto['endo_tx_pagarHoras'] == 'sim'){
 								$endossoCompleto['endo_tx_horasApagar'] = operarHorarios([$endossoCompleto['endo_tx_horasApagar'], $endossos[$f]['endo_tx_horasApagar']], '+');	
+								if(is_int(strpos($endossoCompleto['endo_tx_horasApagar'], '-'))){
+									$endossoCompleto['endo_tx_horasApagar'] = '00:00';
+								}
 							}
 							foreach($endossos[$f]['totalResumo'] as $key => $value){
 								$endossoCompleto['totalResumo'][$key] = operarHorarios([$endossoCompleto['totalResumo'][$key], $value], '+');
@@ -148,7 +151,11 @@
 				}
 
 				//Limitar a quantidade de HE50 à quantidade informada em endo_tx_horasAPagar{
-					if(	!empty($endossoCompleto['endo_tx_pagarHoras']) && $endossoCompleto['endo_tx_pagarHoras'] == 'sim' && !empty($endossoCompleto['endo_tx_horasApagar'])){
+					if(
+						$totalResumo['diffSaldo'] > "00:00"
+						&& !empty($endossoCompleto['endo_tx_pagarHoras']) && $endossoCompleto['endo_tx_pagarHoras'] == 'sim'
+						&& !empty($endossoCompleto['endo_tx_horasApagar'])
+					){
 						if($totalResumo['diffSaldo'] > $endossoCompleto['endo_tx_horasApagar']){
 							$transferir = $endossoCompleto['endo_tx_horasApagar'];
 						}else{
@@ -380,6 +387,9 @@
 									$endossoCompleto['endo_tx_pagarHoras'] = $endossos[$f]['endo_tx_pagarHoras'] == 'sim'? 'sim': $endossoCompleto['endo_tx_pagarHoras'];
 									if($endossoCompleto['endo_tx_pagarHoras'] == 'sim'){
 										$endossoCompleto['endo_tx_horasApagar'] = operarHorarios([$endossoCompleto['endo_tx_horasApagar'], $endossos[$f]['endo_tx_horasApagar']], '+');	
+										if(is_int(strpos($endossoCompleto['endo_tx_horasApagar'], '-'))){
+											$endossoCompleto['endo_tx_horasApagar'] = '00:00';
+										}
 									}
 									foreach($endossos[$f]['totalResumo'] as $key => $value){
 										$endossoCompleto['totalResumo'][$key] = operarHorarios([$endossoCompleto['totalResumo'][$key], $endossos[$f]['totalResumo'][$key]], '+');
@@ -496,7 +506,7 @@
 							"$aEmpresa[empr_tx_nome]<br>"
 							."[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome]<br>"
 							."<br>"/*."$parametroPadrao<br><br>"*/
-							."$saldosMotorista"
+							.$saldosMotorista
 						);
 						
 						grid2($cab, $aDia);
@@ -545,7 +555,7 @@
 			."&extra_busca=enti_tx_matricula"
 		; // Utilizado dentro de endosso_html.php
 
-		include 'endosso_html.php';
+		include_once 'endosso_html.php';
 		echo 
 			"<script>
 				window.onload = function() {

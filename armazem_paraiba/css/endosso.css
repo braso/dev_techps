@@ -42,8 +42,7 @@
 }
 
 #exporta{
-    position: relative;
-	left: 37rem;
+    text-align: center;
 }
 
 #exporta > #btnImprimir{
@@ -240,8 +239,7 @@ td .empty {
     border: 0.01px solid transparent;
     border-right: 0.01px solid black;
 }
-
 #impressao {
-    position: absolute; 
-    left: 73rem;
+    position: relative;
+    text-align: end;
 }
