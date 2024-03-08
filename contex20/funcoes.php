@@ -1,4 +1,8 @@
 <?php
+	/* Modo debug
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
+	//*/
 	global $CONTEX;
 
 	if(isset($_GET['acao']) && empty($_POST['acao'])){
@@ -86,7 +90,7 @@
 			set_status("Registro inserido com sucesso!");
 		}catch (Exception $e){
 			set_status("Falha ao registrar.");
-			return $e;
+			return [$e];
 		}
 
 		$a = carrega_array($sql);
@@ -121,7 +125,7 @@
 		}
 
 		try{
-			query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id=$id") or die();
+			query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id = $id");
 			set_status("Registro atualizado com sucesso!");
 		}catch(Exception $e){
 			set_status("Falha ao atualizar.");
@@ -330,6 +334,26 @@
 		return $campo . $data_input;
 	}
 
+	function checkbox(string $titulo, string $variavel, array $opcoes, int $tamanho=3, string $extra=''){
+		$campo = 
+			"<div class='col-sm-".$tamanho." margin-bottom-5' style='min-width:200px' id='".$variavel."' ".$extra.">
+			<div class='margin-bottom-5'>
+				<b>".$titulo."</b>
+			</div>"
+		;
+		
+		foreach($opcoes as $key => $value){
+			$campo .=
+				"<label>
+					<input type='checkbox' id='".$key."' name='".$variavel."_".$key."' value='true' ".(!empty($_POST[$variavel."_".$key]) && $_POST[$variavel."_".$key] == 'true'? 'checked': '')."> ".$value."
+				</label>"
+			;
+		}
+		$campo .= "</div>";
+
+		return $campo;
+	}
+
 	function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 		$data_input = "<script>";
 		switch($mascara){
@@ -377,7 +401,7 @@
 				;
 			break;
 			case "MASCARA_HORAS":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['99:99', '999:99'], placeholder: \"\"});";
+				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['99:99', '-99:99', '999:99', '-999:99'], placeholder: \"\"});";
 			break;
 			case "MASCARA_HORA":
 				$type = "time";
@@ -796,20 +820,18 @@
 		$hidden = '';
 		$funcaoOnClick = '';
 		if(!empty($campos[0])){
-
 			$a_campos=explode(',',$campos);
 			$a_valores=explode(',',$valores);
-			for($i=0;$i<count($a_campos);$i++){
-
+			for($i=0; $i<count($a_campos); $i++){
 				// $hidden.="<input type='hidden' name='$a_campos[$i]' value='$a_valores[$i]'>";
-				$hidden.="var input$i = document.createElement('input');
-						input$i.type = 'hidden';
-						input$i.name = '$a_campos[$i]';
-						input$i.value = '$a_valores[$i]';
-						document.forms[0].appendChild(input$i);";
-
+				$hidden .= 
+					"var input".$i." = document.createElement('input');
+					input".$i.".type = 'hidden';
+					input".$i.".name = '".$a_campos[$i]."';
+					input".$i.".value = '".$a_valores[$i]."';
+					document.forms[0].appendChild(input".$i.");"
+				;
 			}
-
 		}
 
 		if($salvar == 1){
@@ -825,9 +847,7 @@
 						if(elements[i].name == 'acao' && elements[i].value  != 'index'){
 							continue;
 						}
-
 						values.push(encodeURIComponent(elements[i].name) + '=' + encodeURIComponent(elements[i].value));
-
 					}
 					form.action = '?' + values.join('&');
 				}
@@ -868,7 +888,6 @@
 			echo $query;
 		}
 		return $sql;
-
 	}
 
 	function icone_modificar($id,$acao,$campos='',$valores='',$target='',$icone='glyphicon glyphicon-search',$action='',$msg='',$title=''){
