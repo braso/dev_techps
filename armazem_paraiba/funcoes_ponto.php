@@ -809,15 +809,31 @@
 		//JORNADA EFETIVA{
 			$jornadaIntervalo = new DateTime($registros['jornadaCompleto']['totalIntervalo']);
 
-			//SOMATORIO DE TODAS AS ESPERAS
-			$totalNaoJornada = new DateTime(
-				somarHorarios([
+			$totalNaoJornada = [
+				$registros['refeicaoCompleto']['totalIntervalo']
+			];
+
+			//Ignorar intervalos que tenham sido marcados para ignorar no parâmetro{
+				if(!empty($aMotorista['enti_nb_parametro']) && !empty($aParametro['para_tx_ignorarCampos'])){
+					$campos = ['espera', 'descanso', 'repouso'/*, 'repousoEmbarcado'*/];
+					foreach($campos as $campo){
+						if(is_bool(strpos($aParametro['para_tx_ignorarCampos'], $campo))){
+							$totalNaoJornada[] = $registros[$campo.'Completo']['totalIntervalo'];
+						}
+					}
+				}else{
+					$totalNaoJornada = [
 						$registros['refeicaoCompleto']['totalIntervalo'],
 						$registros['esperaCompleto']['totalIntervalo'],
 						$registros['descansoCompleto']['totalIntervalo'],
 						$registros['repousoCompleto']['totalIntervalo']
-				])
-			);
+					];
+				}
+			//}
+			
+			//SOMATORIO DE TODAS AS ESPERAS
+
+			$totalNaoJornada = new DateTime(somarHorarios($totalNaoJornada));
 
 			$jornadaEfetiva = $jornadaIntervalo->diff($totalNaoJornada); //$diffJornadaEfetiva
 			$jornadaEfetiva = DateTime::createFromFormat('H:i', $jornadaEfetiva->format("%H:%I"));
