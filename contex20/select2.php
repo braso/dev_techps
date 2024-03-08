@@ -11,45 +11,36 @@
 	include_once "../..".$_GET['path']."/conecta.php";
 	GLOBAL $conn;
 
-	$tabela = $_GET['tabela'];
-	$tab = substr($_GET['tabela'],0,4);
-	$extra_bd = urldecode($_GET['extra_bd']);
-	$extra_busca = urldecode($_GET['extra_busca']);
-	$extra_ordem = urldecode($_GET['extra_ordem']);
-	$extra_limite = urldecode($_GET['extra_limite']);
+	$tabela 	  = $_GET['tabela'];
+	$tab 		  = substr($_GET['tabela'],0,4);
+	$extra_bd 	  = urldecode($_GET['extra_bd']);
+	$extra_busca  = urldecode($_GET['extra_busca']);
 
-	if($extra_busca != ''){
-		$extra_campo = ",$extra_busca";
-		$extra = " AND (".$tab."_tx_nome LIKE '%".$_GET['q']."%' OR $extra_busca LIKE '%".$_GET['q']."%')";
+	$extra = " AND (".$tab."_tx_nome LIKE '%".$_GET['q']."%'";
+	if(!empty($extra_busca)){
+		$extra_campo = ",".$extra_busca;
+		$extra .= " OR $extra_busca LIKE '%".$_GET['q']."%')";
 	}else{
-		$extra = " AND ".$tab."_tx_nome LIKE '%".$_GET['q']."%'";
+		$extra_campo = "";
+		$extra .= ")";
 	}
-
-	if($extra_ordem == ''){
-		$extra_ordem = "ORDER BY ".$tab."_tx_nome ASC ";
-	}
-
-	$extra_limite = " LIMIT $extra_limite";
 
 	if($tabela == 'servico' && $_GET['path'] == '/imagem'){
 		$sql = 
 			"SELECT ".$tab."_nb_id,CONCAT(".$tab."_tx_nome,' | ',".$tab."_tx_tipo) AS ".$tab."_tx_nome FROM ".$tabela." 
-				WHERE ".$tab."_tx_nome LIKE '%".$_GET['q']."%' 
-					AND ".$tab."_tx_status != 'inativo' 
-						$extra_bd
-				$extra_ordem 
-				$extra_limite"
-		; 
+				WHERE ".$tab."_tx_nome LIKE '%".$_GET['q']."%'"; 
 	}else{
 		$sql = 
-			"SELECT ".$tab."_nb_id,".$tab."_tx_nome $extra_campo FROM ".$tabela." 
-				WHERE 1 $extra 
-					AND ".$tab."_tx_status != 'inativo' 
-					$extra_bd
-				$extra_ordem 
-				$extra_limite"
+			"SELECT ".$tab."_nb_id, ".$tab."_tx_nome ".(!empty($extra_busca)? ",".$extra_busca: "")." FROM ".$tabela." 
+				WHERE 1 $extra"
 		;
 	}
+
+	$sql .= " AND ".$tab."_tx_status != 'inativo' 
+			$extra_bd
+		".(!empty(urldecode($_GET['extra_ordem']))? urldecode($_GET['extra_ordem']): " ORDER BY ".$tab."_tx_nome ASC")." 
+		".(!empty(urldecode($_GET['extra_limite']))? " LIMIT ".urldecode($_GET['extra_limite']): '').";"
+	;
 
 	$result = mysqli_fetch_all(
 		query($sql),
