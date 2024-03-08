@@ -1,7 +1,7 @@
 <?php
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto	
 
-	//* Modo debug
+	/* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -310,50 +310,49 @@
 		
 		?>
 
-	<style>
-
-			@media print {
-    		        body {
-                        margin: 1cm;
-                        margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
-                        transform: scale(1.0);
-                        transform-origin: top left;
-                    }
-                
-                    @page {
-                        size: A4 landscape;
-                        margin: 1cm;
-                    }
-                    #tituloRelatorio{
-                        display: block; /* Torna visível apenas ao imprimir */
-                        font-size: 12px;
-                        padding-left: 500px;
-                    }
-                    body > div.scroll-to-top{
-                        display: none !important;
-                    }
-                    body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(5){
-                        display: none;
-                    }
-                    .portlet-body.form .table-responsive {
-                        overflow-x: visible !important;
-                        margin-left: -50px !important;
-                    }
-                    .portlet.light>.portlet-title {
-                        border-bottom: none;
-                        margin-bottom: 0px;
-                    }
-                    .caption{
-                        padding-top: 0px;
-                        margin-left: -50px !important;
-                        padding-bottom: 0px;
-                    }
-            }
-			#saldo {
-				width: 50% !important;
-				margin-top: 9px !important;
-				text-align: center;
-			}
+			<style>
+				@media print {
+					body {
+						margin: 1cm;
+						margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
+						transform: scale(1.0);
+						transform-origin: top left;
+					}
+				
+					@page {
+						size: A4 landscape;
+						margin: 1cm;
+					}
+					#tituloRelatorio{
+						display: block; /* Torna visível apenas ao imprimir */
+						font-size: 12px;
+						padding-left: 500px;
+					}
+					body > div.scroll-to-top{
+						display: none !important;
+					}
+					body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(5){
+						display: none;
+					}
+					.portlet-body.form .table-responsive {
+						overflow-x: visible !important;
+						margin-left: -50px !important;
+					}
+					.portlet.light>.portlet-title {
+						border-bottom: none;
+						margin-bottom: 0px;
+					}
+					.caption{
+						padding-top: 0px;
+						margin-left: -50px !important;
+						padding-bottom: 0px;
+					}
+				}
+				#saldo {
+					width: 50% !important;
+					margin-top: 9px !important;
+					text-align: center;
+				}
 		
 				table thead tr th:nth-child(3),
 				table thead tr th:nth-child(7),
