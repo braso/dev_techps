@@ -293,45 +293,45 @@
 	function index(){
 		global $CONTEX;
 
-		if (empty($_POST['id']) || empty($_POST['data'])) {
+		if(empty($_POST['id']) || empty($_POST['data'])){
 			echo '<script>alert("ERRO: Deve ser selecionado um motorista e uma data para ajustar.")</script>';
 
-			echo
-			'<form action="https://braso.mobi' . $CONTEX['path'] . '/espelho_ponto" name="form_voltar" method="post">
-						<input type="hidden" name="data_de" value="' . $_POST['data_de'] . '">
-						<input type="hidden" name="data_ate" value="' . $_POST['data_ate'] . '">
-					</form>
-					<script>
-						document.form_voltar.submit();
-					</script>';
+			echo 
+				'<form action="https://braso.mobi'.$CONTEX['path'].'/espelho_ponto" name="form_voltar" method="post">
+					<input type="hidden" name="data_de" value="'.$_POST['data_de'].'">
+					<input type="hidden" name="data_ate" value="'.$_POST['data_ate'].'">
+				</form>
+				<script>
+					document.form_voltar.submit();
+				</script>'
+			;
 			exit;
-		} else {
+		}else{
 			$a_mod['data'] = $_POST['data'];
 			$a_mod['id'] = $_POST['id'];
 		}
 		cabecalho('Ajuste de Ponto');
 
-		if (empty($_POST['data_de']) && !empty($_POST['data'])) {
+		if(empty($_POST['data_de']) && !empty($_POST['data'])){
 			$_POST['data_de'] = $_POST['data'];
 		}
-		if (empty($_POST['data_ate']) && !empty($_POST['data'])) {
+		if(empty($_POST['data_ate']) && !empty($_POST['data'])){
 			$_POST['data_ate'] = $_POST['data'];
 		}
 
-		$aMotorista = carregar('entidade', $_POST['id']);
+		$aMotorista = carregar('entidade',$_POST['id']);
 
-		$sqlCheck = query(
-			"SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user 
-				WHERE '" . $_POST['data'] . "' BETWEEN endo_tx_de AND endo_tx_ate
-					AND endo_nb_entidade = '" . $aMotorista['enti_nb_id'] . "'
-					AND endo_tx_matricula = '" . $aMotorista['enti_tx_matricula'] . "' 
-					AND endo_tx_status = 'ativo' 
-					AND endo_nb_userCadastro = user_nb_id 
-				LIMIT 1"
+		$sqlCheck = query("SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user 
+			WHERE '".$_POST['data']."' BETWEEN endo_tx_de AND endo_tx_ate
+				AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'
+				AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."' 
+				AND endo_tx_status = 'ativo' 
+				AND endo_nb_userCadastro = user_nb_id 
+			LIMIT 1"
 		);
 		$aEndosso = carrega_array($sqlCheck);
 
-$botao_imprimir =
+		$botao_imprimir =
 			'<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
 					<script>
 						function imprimir() {
@@ -385,21 +385,21 @@ $botao_imprimir =
 					document.form_ajuste_status.status.value = status;
 					document.form_ajuste_status.submit();
 				}
-                
-				</script>";
+			</script>"
+		;
 
-		$c[] = texto('Matrícula', $aMotorista['enti_tx_matricula'], 2);
-		$c[] = texto('Motorista', $aMotorista['enti_tx_nome'], 5);
-		$c[] = texto('CPF', $aMotorista['enti_tx_cpf'], 3);
+		$c[] = texto('Matrícula',$aMotorista['enti_tx_matricula'],2);
+		$c[] = texto('Motorista',$aMotorista['enti_tx_nome'],5);
+		$c[] = texto('CPF',$aMotorista['enti_tx_cpf'],3);
 
 		$_POST['status'] = (!empty($_POST['status']) && $_POST['status'] != 'undefined'? $_POST['status']: 'ativo');
 
-    $c2[] = campo_data('Data', 'data', ($_POST['data']?? ''), 2, "onfocusout='ajusta_ponto(".$_POST['id'].", this.value, \"".$_POST['data_de']."\", \"".$_POST['data_ate']."\")', null");
+		$c2[] = campo_data('Data', 'data', ($_POST['data']?? ''), 2, "onfocusout='ajusta_ponto(".$_POST['id'].", this.value, \"".$_POST['data_de']."\", \"".$_POST['data_ate']."\")', null");
 		$c2[] = campo_hora('Hora','hora',$_POST['hora'],2);
 		$c2[] = combo_bd('Código Macro','idMacro',$_POST['idMacro'],4,'macroponto','','ORDER BY macr_nb_id ASC');
 		$c2[] = combo_bd('Motivo:','motivo',$_POST['motivo'],4,'motivo','',' AND moti_tx_tipo = "Ajuste"');
 
-		$c3[] = textarea('Justificativa:', 'descricao', $_POST['descricao'], 12);
+		$c3[] = textarea('Justificativa:','descricao',$_POST['descricao'],12);
 
 		if(!empty($aEndosso) && count($aEndosso) > 0){
 			$c2[] = texto('Endosso:',"Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1),6);
@@ -409,10 +409,10 @@ $botao_imprimir =
 		}
 		$botao[] = $botao_imprimir;
 		$botao[] = botao(
-			'Voltar',
-			'voltar',
-			'data_de,data_ate,id,busca_empresa,busca_motorista,data,busca_data',
-			($_POST['data_de'] ?? '') . "," . ($_POST['data_ate'] ?? '') . "," . $_POST['id'] . "," . $aMotorista['enti_nb_empresa'] . "," . $_POST['id'] . "," . $_POST['data'] . "," . substr($_POST['data'], 0, -3)
+			'Voltar', 
+			'voltar', 
+			'data_de,data_ate,id,busca_empresa,busca_motorista,data,busca_data', 
+			($_POST['data_de']??'').",".($_POST['data_ate']??'').",".$_POST['id'].",".$aMotorista['enti_nb_empresa'].",".$_POST['id'].",".$_POST['data'].",".substr($_POST['data'], 0, -3)
 		);
 		$botao[] = status();
 		
@@ -423,6 +423,10 @@ $botao_imprimir =
 		fecha_form($botao);
 
 		$sql = pegarSqlDia($aMotorista['enti_tx_matricula']);
+		$justificativa = 'pont_tx_descricao';
+		if($_POST['status'] === 'inativo'){
+		    $justificativa = 'pont_tx_justificativa';
+		}
 
 		$gridFields = [
 			'CÓD'												=> 'pont_nb_id',
@@ -430,7 +434,7 @@ $botao_imprimir =
 			'TIPO'												=> 'macr_tx_nome',
 			'MOTIVO'											=> 'moti_tx_nome',
 			'LEGENDA'											=> 'moti_tx_legenda',
-			'JUSTIFICATIVA'										=> 'pont_tx_descricao',
+			'JUSTIFICATIVA'										=> $justificativa,
 			'USUÁRIO'											=> 'user_tx_login',
 			'DATA CADASTRO'										=> 'data(pont_tx_dataCadastro,1)',
 			'<spam class="glyphicon glyphicon-remove"></spam>'	=> $iconeExcluir
