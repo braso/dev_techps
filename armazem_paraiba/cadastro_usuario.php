@@ -158,20 +158,21 @@
 				}
 			}else{
 				if(!empty($_POST['id'])){
-					$sqlCheckNivel = query("SELECT user_tx_nivel FROM user WHERE user_nb_id = '".$_POST['id']."'")->fetch_assoc();
+					$sqlCheckNivel = mysqli_fetch_assoc(query("SELECT user_tx_nivel FROM user WHERE user_nb_id = '".$_POST['id']."' LIMIT 1;"));
 				}else{
 					$sqlCheckNivel = null;
 				}
+
 				if (isset($sqlCheckNivel['user_tx_nivel']) && $sqlCheckNivel['user_tx_nivel'] == 'Motorista') {
 					if (!empty($_POST['senha']) && !empty($_POST['senha2'])) {
-						$nova_senha = ['user_tx_senha' => md5($_POST['senha'])];
+						$novaSenha = ['user_tx_senha' => md5($_POST['senha'])];
 					}
-					atualizar('user', array_keys($nova_senha), array_values($nova_senha), $_POST['id']);
+					atualizar('user', array_keys($novaSenha), array_values($novaSenha), $_POST['id']);
 					index();
 					exit;
 				}
 				$usuario['user_nb_userAtualiza'] = $_SESSION['user_nb_id'];
-				$usuario['user_nb_dataAtualiza'] = date("Y-m-d H:i:s");
+				$usuario['user_tx_dataAtualiza'] = date("Y-m-d H:i:s");
 
 				if (!empty($_POST['senha']) && !empty($_POST['senha2'])) {
 					$usuario['user_tx_senha'] = md5($_POST['senha']);
@@ -221,7 +222,7 @@
 			$campo_telefone = campo('Telefone', 'telefone', $a_mod['user_tx_fone'], 3,'MASCARA_FONE');
 			$campo_empresa = combo_bd('!Empresa*', 'empresa', $a_mod['user_nb_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)"');
 			$campo_expiracao = campo_data('Dt. Expiraçao', 'expiracao', $a_mod['user_tx_expiracao'], 2);
-			$campo_senha = campo_senha('Senha*', 'senha', "", 2,'maxlength="12"');
+			$campo_senha = campo_senha('Senha*', 'senha', "", 2,'maxlength="50"');
 			$campo_confirma = campo_senha('Confirmar Senha*', 'senha2', "", 2,'maxlength="12"');
 			$campo_matricula = '';
 
