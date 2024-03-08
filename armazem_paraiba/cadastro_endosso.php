@@ -318,6 +318,7 @@
 				$he50 = $novoEndosso['endo_tx_horasApagar'];
 			}
 			$successMsg .= '- ['.$novoEndosso['endo_tx_matricula'].'] '.$novoEndosso['endo_tx_nome'].': '.$he50.'<br>';
+			
 			//*
 			$filename = md5($novoEndosso['endo_tx_matricula'].$novoEndosso['endo_tx_mes']);
 			if(!is_dir("./arquivos/endosso")){
@@ -352,7 +353,7 @@
 		exit;
 	}
 
-	function load_js_functions(){
+	function carregarJS(){
 		global $CONTEX;
 		?><script>
 			function selecionaMotorista(idEmpresa) {
@@ -370,7 +371,7 @@
 					placeholder: 'Selecione um item',
 					allowClear: true,
 					ajax: {
-						url: "/contex20/select2.php?path=<?=$CONTEX['path']?>&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd="+buscaExtra+"&extra_busca=enti_tx_matricula",
+						url: "<?=$CONTEX['path']?>/../contex20/select2.php?path=<?=$CONTEX['path']?>&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd="+buscaExtra+"&extra_busca=enti_tx_matricula",
 						dataType: 'json',
 						delay: 250,
 						processResults: function(data){
@@ -407,9 +408,9 @@
 		}
 
 		$c = [
+			combo_net('Motorista*:','busca_motorista',$_POST['busca_motorista']?? '',4,'entidade','',$extra_bd_motorista,'enti_tx_matricula'),
 			campo_data('De*:','data_de',$_POST['data_de']?? '',2),
 			campo_data('Ate*:','data_ate',$_POST['data_ate']?? '',2),
-			combo_net('Motorista*:','busca_motorista',$_POST['busca_motorista']?? '',4,'entidade','',$extra_bd_motorista,'enti_tx_matricula'),
 			checkbox2('Pagar Horas Extras', 'horasApagar', $_POST['pagar_horas']?? '', 3)
 		];
 		if(is_int(strpos($_SESSION['user_tx_nivel'], "Administrador"))){
@@ -428,6 +429,6 @@
 		
 		rodape();
 
-		load_js_functions();
+		carregarJS();
 	}
 ?>
