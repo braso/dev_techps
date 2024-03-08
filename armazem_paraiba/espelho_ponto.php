@@ -98,7 +98,7 @@
 		];
 		
 		$botao_imprimir =
-			'<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
+			'<button class="btn default" type="button" onclick="imprimir()" id="imprimir">Imprimir</button >
 					<script>
 						function imprimir() {
 							// Abrir a caixa de diálogo de impressão
@@ -314,10 +314,10 @@
 			function selecionaMotorista(idEmpresa) {
 				let buscaExtra = '';
 				if(idEmpresa > 0){
-					buscaExtra = '&extra_bd'+encodeURI('AND enti_tx_tipo = "Motorista" AND enti_nb_empresa = "' + idEmpresa + '"');
+					buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_tipo = "Motorista" AND enti_nb_empresa = "' + idEmpresa + '"');
 					$('.busca_motorista')[0].innerHTML = null;
 				}else{
-					buscaExtra = '&extra_bd'+encodeURI('AND enti_tx_tipo = "Motorista"');
+					buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_tipo = "Motorista"');
 				}
 
 				// Verifique se o elemento está usando Select2 antes de destruí-lo
