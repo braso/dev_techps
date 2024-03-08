@@ -133,7 +133,7 @@
 		$valores = [$_SESSION['user_nb_id'], $aMotorista['enti_tx_matricula'], "$_POST[data] $_POST[hora]", $aTipo['macr_tx_codigoInterno'], $aTipo['macr_tx_codigoExterno'], 'ativo', date("Y-m-d H:i:s"),$_POST['motivo'],$_POST['descricao']];
 		
 		
-		// inserir('ponto',$campos,$valores);
+		inserir('ponto',$campos,$valores);
 		index();
 		exit;
 	}
@@ -266,6 +266,8 @@
 					}else{
 						$sqlDataFim = date('Y-m-d').' 23:59:59';
 					}
+				}else{
+				   $sqlDataFim = $_POST['data'].' 23:59:59';
 				}
 			}else{
 				$sqlDataFim = $_POST['data'].' 23:59:59';
@@ -340,7 +342,7 @@ $botao_imprimir =
 
 
 		if (empty($_POST['status'])) {
-			$_POST['status'] = 'inativo';
+			$_POST['status'] = 'ativo';
 		}
 
 		$formStatus = "
