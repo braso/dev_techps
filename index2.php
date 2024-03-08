@@ -19,13 +19,14 @@ if(isset($_GET['error'])){
 			</div>"
 		;
 	}elseif(!empty($_GET['error'])){
-		$msgs = [
-			'notfound' => 'Usuário não encontrado neste domínio.',
-			'emptyfields' => 'Usuário não encontrado neste domínio.',
+		$errorMsgs = [
+			'notfound' => 'Login ou senha incorretos.',
+			'emptyfields' => 'Preencha as informações para entrar.',
+			'notfounddomain' => 'Domínio não encontrado.'
 		];
 		$msg = 
 			"<div class='alert alert-danger display-block'>
-				<span>".$msgs[$_GET['error']]."</span>
+				<span>".$errorMsgs[$_GET['error']]."</span>
 			</div>"
 		;
 	}
@@ -33,17 +34,29 @@ if(isset($_GET['error'])){
 
 if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
 	$_POST['password'] = md5($_POST['password']);
-	$dominio = $_POST['dominio'];
-	echo 
-		"<form action='".$dominio."' name='formTelaPrincipal' method='post'>
-			<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
-			<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
-			<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
-		</form>"
-	;
-	echo "<script>document.formTelaPrincipal.submit();</script>";
+	$file = "/home/brasomo/public_html".str_replace("https://braso.mobi", "", $_POST['dominio']);
+	if(is_int(strpos($dominiosInput, $_POST['dominio'])) && file_exists($file)){
+		echo 
+			"<form action='".$_POST['dominio']."' name='formTelaPrincipal' method='post'>
+				<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
+				<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
+				<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
+			</form>"
+		;
+		echo "<script>document.formTelaPrincipal.submit();</script>";
+	}else{
+		echo 
+			"<form action='index2.php?error=notfounddomain' name='formLogin' method='post'>
+				<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
+				<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
+				<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
+			</form>"
+		;
+		echo "<script>document.formLogin.submit();</script>";
+	}
 	exit;
 }
+
 ?>
 <!DOCTYPE html>
 
@@ -151,11 +164,14 @@ License: You must have a valid license purchased only from themeforest(the above
 
 	<!-- FIM THEME LAYOUT STYLES -->
 
-	<link rel="apple-touch-icon" sizes="180x180" href="/contex20/img/favicon/apple-touch-icon.png">
-	<link rel="icon" type="image/png" sizes="32x32" href="/contex20/img/favicon/favicon-32x32.png">
-	<link rel="icon" type="image/png" sizes="16x16" href="/contex20/img/favicon/favicon-16x16.png">
-	<link rel="shortcut icon" type="image/x-icon" href="/contex20/img/favicon/favicon-32x32.png?v=2">
-	<link rel="manifest" href="/contex20/img/favicon/site.webmanifest">
+	<?= 
+		"<link rel='apple-touch-icon' sizes='180x180' href='./contex20/img/favicon/apple-touch-icon.png'>
+		<link rel='icon' type='image/png' sizes='32x32' href='./contex20/img/favicon/favicon-32x32.png'>
+		<link rel='icon' type='image/png' sizes='16x16' href='./contex20/img/favicon/favicon-16x16.png'>
+		<link rel='shortcut icon' type='image/x-icon' href='./contex20/img/favicon/favicon-32x32.png?v=2'>
+		<link rel='manifest' href='./contex20/img/favicon/site.webmanifest'>".
+		""
+	?>
 </head>
 
 <!-- FIM HEAD -->
@@ -233,8 +249,8 @@ License: You must have a valid license purchased only from themeforest(the above
 
 			</div>
 
-			<p style="font-size: small;">Versão:
-				<?php echo $version; ?>
+			<p style="font-size: small; margin: 10px 0px">Versão:
+				<?php echo $version; ?><br>
 				Data de lançamento:
 				<?php echo $release_date; ?>
 			</p>
