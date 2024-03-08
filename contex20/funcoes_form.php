@@ -189,10 +189,10 @@
 			}
 			@media print{
 				table.table thead tr th{
-					font-size: 8pt;	    	
+					font-size: 8pt;
 				}
 				table.table td{
-					font-size: 6pt; 	
+					font-size: 6pt;
 				}
 			}
 		</style>
@@ -338,7 +338,7 @@
 					setTimeout(function(){
 						let form = document.getElementById('loginTimeoutForm');
 						form.submit();
-						window.location.reload();
+				        window.location.href = '<?=$CONTEX['path']?>/logout.php';
 					}, 15*60*1000);
 				</script>
 
@@ -366,7 +366,6 @@
 	function abre_form($nome_form='',$col='12',$focus='2'){
 		global $idContexForm;
 		?>
-
 									<!-- INICIO FORMULARIO-->
 									<div class="col-md-<?=$col?> col-sm-<?=$col?>">
 										<div class="portlet light ">
