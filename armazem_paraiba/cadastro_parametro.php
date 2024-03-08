@@ -6,11 +6,9 @@
 	include "conecta.php";
 
 	function exclui_parametro(){
-
 		remover('parametro',$_POST['id']);
 		index();
 		exit;
-
 	}
 
 	function downloadArquivo() {
@@ -66,38 +64,41 @@
 			unset($campos);
 		}
 
-		$idParametro = $_POST['idParametro'];
-		$arquivos =  $_FILES['file'];
-		$novo_nome = $_POST['file-name'];
-		$descricao = $_POST['description-text'];
+		$novoParametro = [
+			'para_nb_id' => $_POST['idParametro'],
+			'doc_tx_nome' => $_POST['file-name'],
+			'doc_tx_descricao' => $_POST['description-text'],
+			//doc_tx_caminho está mais abaixo
+			'doc_tx_dataCadastro' => date("Y-m-d H:i:s")
+		];
+		
+		$arquivo =  $_FILES['file'];
+		$formatosImg = ['image/jpeg', 'image/png', 'application/msword', 'application/pdf'];
 
-		$allowed = array('image/jpeg', 'image/png', 'application/msword', 'application/pdf');
-
-		if (in_array($arquivos['type'], $allowed) && $arquivos['name'] != '') {
-				$pasta_parametro = "arquivos/parametro/$idParametro/";
+		if (in_array($arquivo['type'], $formatosImg) && $arquivo['name'] != '') {
+				$pasta_parametro = "arquivos/parametro/".$novoParametro['para_nb_id']."/";
 		
 				if (!is_dir($pasta_parametro)) {
 					mkdir($pasta_parametro, 0777, true);
 				}
 		
-				$arquivo_temporario = $arquivos['tmp_name'];
-				$extensao = pathinfo($arquivos['name'], PATHINFO_EXTENSION); 
-				$novo_nome_com_extensao = $novo_nome . '.' . $extensao;
-				$caminho_destino = $pasta_parametro . $novo_nome_com_extensao;
+				$arquivo_temporario = $arquivo['tmp_name'];
+				$extensao = pathinfo($arquivo['name'], PATHINFO_EXTENSION);
+				$novoParametro['doc_tx_nome'] .= '.'.$extensao;
+				$novoParametro['doc_tx_caminho'] = $pasta_parametro.$novoParametro['doc_tx_nome'];
 		
-				if (move_uploaded_file($arquivo_temporario, $caminho_destino)) {
-					inserir('documento_parametro', ['para_nb_id','doc_tx_nome','doc_tx_descricao','doc_tx_caminho','doc_tx_dataCadastro'],[$idParametro,$novo_nome_com_extensao,$descricao,$caminho_destino,date("Y-m-d H:i:s")]);
+				if (move_uploaded_file($arquivo_temporario, $novoParametro['doc_tx_caminho'])) {
+					inserir('documento_parametro', array_keys($novoParametro), array_values($novoParametro));
 				}
 		}
 
-		$_POST['id'] = $idParametro;
+		$_POST['id'] = $novoParametro['para_nb_id'];
 		modifica_parametro();
 		exit;
 	}
 
 	function excluir_documento() {
-
-		query("DELETE FROM `documento_parametro` WHERE doc_nb_id = $_POST[idArq]");
+		query("DELETE FROM `documento_parametro` WHERE doc_nb_id = ".$_POST['idArq'].";");
 		
 		$_POST['id'] = $_POST['idParametro'];
 		modifica_parametro();
@@ -106,15 +107,26 @@
 
 	function modifica_parametro(){
 		global $a_mod;
-
 		$a_mod=carregar('parametro',$_POST['id']);
-
 		layout_parametro();
 		exit;
-
 	}
 
 	function cadastra_parametro(){
+
+		if(is_int(strpos(implode(",",array_keys($_POST)), "ignorarCampos"))){
+			$campos = ['descanso', 'espera', 'repouso', 'repousoEmbarcado'];
+			$_POST['ignorarCampos'] = [];
+			foreach($campos as $campo){
+				if(isset($_POST['ignorarCampos_'.$campo])){
+					$_POST['ignorarCampos'][] = $campo;
+				}
+			}
+			$_POST['ignorarCampos'] = implode(",",$_POST['ignorarCampos']);
+		}else{
+			$_POST['ignorarCampos'] = null;
+		}
+
 		$camposObrigatorios = ['nome', 'jornadaSemanal', 'jornadaSabado', 'tolerancia', 'percentualHE', 'percentualSabadoHE', 'HorasEXExcedente'];
 		if(!empty($_POST['acordo']) && $_POST['acordo'] == 'sim'){
 			$camposObrigatorios[] = 'inicioAcordo';
@@ -141,6 +153,7 @@
 			'para_tx_percentualSabadoHE' 	=> $_POST['percentualSabadoHE'], 
 			'para_tx_HorasEXExcedente' 		=> $_POST['HorasEXExcedente'], 
 			'para_tx_tolerancia' 			=> $_POST['tolerancia'], 
+			//ignorarCampos está mais abaixo
 			'para_tx_acordo' 				=> $_POST['acordo'], 
 			'para_tx_inicioAcordo' 			=> $_POST['inicioAcordo'], 
 			'para_tx_fimAcordo' 			=> $_POST['fimAcordo'], 
@@ -157,6 +170,10 @@
 			'para_tx_paramObs' 				=> $_POST['paramObs'],
 		];
 
+		if(!empty($_POST['ignorarCampos']) || $_POST['ignorarCampos'] == null){
+			$novoParametro['para_tx_ignorarCampos'] = $_POST['ignorarCampos'];
+		}
+
 		if(!empty($_POST['banco']) && $_POST['banco'] == 'nao'){
 			unset($novoParametro['para_nb_qDias']);
 			unset($novoParametro['para_tx_horasLimite']);
@@ -171,27 +188,31 @@
 		$novoParametro['para_nb_userAtualiza'] = $_SESSION['user_nb_id'];
 		$novoParametro['para_tx_dataAtualiza'] = date("Y-m-d H:i:s");
 		
-		if($_POST['id']>0){ //Se está editando
+		if(!empty($_POST['id'])){ //Se está editando
 
 			$aParametro = carregar('parametro', $_POST['id']);
 
+			$motoristasNoPadrao = mysqli_fetch_all(
+				query(
+					"SELECT * FROM entidade 
+						WHERE enti_tx_status != 'inativo'
+							AND enti_nb_parametro = '".(int)$_POST['id']."'"
+				),
+				MYSQLI_ASSOC
+			);
+
 			atualizar('parametro',array_keys($novoParametro),array_values($novoParametro),$_POST['id']);
 			
-			$sql = query("SELECT * FROM entidade WHERE enti_tx_status != 'inativo'
-				AND enti_nb_parametro = '".(int)$_POST['id']."'");
-			while($a = carrega_array($sql)){
-				//SE O PARAMETRO FOR EXATAMENTE IGUAL AO DO MOTORISTA E ELE ESTIVER NO PARAMETRO ATUALIZA
-				if( $aParametro['para_tx_jornadaSemanal'] == $a['enti_tx_jornadaSemanal'] && $aParametro['para_tx_jornadaSabado'] == $a['enti_tx_jornadaSabado'] &&
-					$aParametro['para_tx_percentualHE'] == $a['enti_tx_percentualHE'] && $aParametro['para_tx_percentualSabadoHE'] == $a['enti_tx_percentualSabadoHE']){
-		
-					atualizar('entidade',
+			foreach($motoristasNoPadrao as $motorista){
+				// Se o motorista estava dentro do padrão do parâmetro antes da atualização, atualiza os parâmetros do motorista junto.
+				if($aParametro['para_nb_id'] == $motorista['enti_nb_parametro'] && $motorista['enti_tx_ehPadrao'] == 'sim'){
+					atualizar(
+						'entidade',
 						['enti_tx_jornadaSemanal', 'enti_tx_jornadaSabado', 'enti_tx_percentualHE', 'enti_tx_percentualSabadoHE'],
 						[$_POST['jornadaSemanal'], $_POST['jornadaSabado'], $_POST['percentualHE'], $_POST['percentualSabadoHE']],
-						$a['enti_nb_id']
+						$motorista['enti_nb_id']
 					);
-
 				}
-				
 			}
 		} else {
 			inserir('parametro',array_keys($novoParametro),array_values($novoParametro));
@@ -201,123 +222,145 @@
 		exit;
 	}
 
-
-
 	function layout_parametro(){
 		global $a_mod;
 
-		if(empty($a_mod)){
+		if(!empty($_POST['id'])){
 			$a_mod = carregar('parametro', $_POST['id']);
 			$campos = [
-				'nome',
-				'jornadaSemanal',
-				'jornadaSabado',
-				'tolerancia',
-				'percentualHE',
-				'percentualSabadoHE',
-				'HorasEXExcedente',
-				'diariasCafe',
-				'diariasAlmoco',
-				'diariasJanta',
-				'acordo',
-				'inicioAcordo',
-				'fimAcordo',
-				'banco',
-				'paramObs'
+				'nome', 'jornadaSemanal', 'jornadaSabado', 'tolerancia', 'percentualHE',
+				'percentualSabadoHE', 'HorasEXExcedente', 'diariasCafe', 'diariasAlmoco', 'diariasJanta',
+				'acordo', 'inicioAcordo', 'fimAcordo', 'banco', 'paramObs'
 			];
 			foreach($campos as $campo){
-				$a_mod['para_tx_'.$campo] = $_POST[$campo];
+				if(!empty($_POST[$campo])){
+					$a_mod['para_tx_'.$campo] = $_POST[$campo];
+				}
 			}
-			$a_mod['para_nb_qDias'] = $_POST['quandDias'];
-			$a_mod['para_tx_horasLimite'] = $_POST['quandHoras'];
+			if(!empty($a_mod['para_tx_ignorarCampos'])){
+				foreach(explode(',', $a_mod['para_tx_ignorarCampos']) as $campo){
+					$_POST['ignorarCampos_'.$campo] = true;
+				}
+			}
+			if(!empty($_POST['quandDias'])){
+				$a_mod['para_nb_qDias'] = $_POST['quandDias'];
+			}
+			if(!empty($_POST['quandHoras'])){
+				$a_mod['para_tx_horasLimite'] = $_POST['quandHoras'];
+			}
 			unset($campos);
 		}
 
 		cabecalho("Cadastro de Parâmetros");
 		
 		$c = [
-			campo('Nome*:', 'nome', $a_mod['para_tx_nome'], 6),
-			campo_hora('Jornada Semanal (Horas/Dia)*:', 'jornadaSemanal', $a_mod['para_tx_jornadaSemanal'], 3),
-			campo_hora('Jornada Sábado (Horas/Dia)*:', 'jornadaSabado', $a_mod['para_tx_jornadaSabado'], 3),
-			campo('Tolerância de jornada Saldo diário (Minutos)*:', 'tolerancia', $a_mod['para_tx_tolerancia'], 3,'MASCARA_NUMERO','maxlength="3"'),
-			campo('Percentual da Hora Extra (Semanal)*:', 'percentualHE', $a_mod['para_tx_percentualHE'], 3, 'MASCARA_NUMERO', 'maxlength="3"'),
-			campo('Percentual da Hora Extra (Dias sem Jornada Prevista)*:', 'percentualSabadoHE', $a_mod['para_tx_percentualSabadoHE'], 3, 'MASCARA_NUMERO'),
-			campo_hora('Máximo de Horas Extras 50% (diário)*', 'HorasEXExcedente', $a_mod['para_tx_HorasEXExcedente'], 3),
-			campo('Diária Café da Manhã(R$)', 'diariasCafe', $a_mod['para_tx_diariasCafe'], 3, 'MASCARA_DINHERO'),
-			campo('Diária Almoço(R$)', 'diariasAlmoco', $a_mod['para_tx_diariasAlmoco'], 3, 'MASCARA_DINHERO'),
-			campo('Diária Jantar(R$)', 'diariasJanta', $a_mod['para_tx_diariasJanta'], 3, 'MASCARA_DINHERO'),
-			combo('Acordo Sindical', 'acordo', $a_mod['para_tx_acordo'], 3, ['sim' => "Sim", 'nao' => "Não"]),
-			campo_data('Início do Acordo*', 'inicioAcordo', $a_mod['para_tx_inicioAcordo'], 3),
-			campo_data('Fim do Acordo*', 'fimAcordo', $a_mod['para_tx_fimAcordo'], 3),
-			checkbox_banco('Utilizar regime de banco de horas?','banco',$a_mod['para_tx_banco'],$a_mod['para_nb_qDias'], $a_mod['para_tx_horasLimite'],3),
-			ckeditor('Descrição:', 'paramObs', $a_mod['para_tx_paramObs'], 12,'maxlength="100"'),
+			campo('Nome*:', 'nome', ($a_mod['para_tx_nome']?? ''), 6),
+			campo_hora('Jornada Semanal (Horas/Dia)*:', 'jornadaSemanal', ($a_mod['para_tx_jornadaSemanal']?? ''), 3),
+			campo_hora('Jornada Sábado (Horas/Dia)*:', 'jornadaSabado', ($a_mod['para_tx_jornadaSabado']?? ''), 3),
+			campo('Tolerância de jornada Saldo diário (Minutos)*:', 'tolerancia', ($a_mod['para_tx_tolerancia']?? ''), 3,'MASCARA_NUMERO','maxlength="3"'),
+			campo('Percentual da Hora Extra (Semanal)*:', 'percentualHE', ($a_mod['para_tx_percentualHE']?? ''), 3, 'MASCARA_NUMERO', 'maxlength="3"'),
+			campo('Percentual da Hora Extra (Dias sem Jornada Prevista)*:', 'percentualSabadoHE', ($a_mod['para_tx_percentualSabadoHE']?? ''), 3, 'MASCARA_NUMERO'),
+			campo_hora('Máximo de Horas Extras 50% (diário)*', 'HorasEXExcedente', ($a_mod['para_tx_HorasEXExcedente']?? ''), 3),
+			campo('Diária Café da Manhã(R$)', 'diariasCafe', ($a_mod['para_tx_diariasCafe']?? ''), 3, 'MASCARA_DINHERO'),
+			campo('Diária Almoço(R$)', 'diariasAlmoco', ($a_mod['para_tx_diariasAlmoco']?? ''), 3, 'MASCARA_DINHERO'),
+			campo('Diária Jantar(R$)', 'diariasJanta', ($a_mod['para_tx_diariasJanta']?? ''), 3, 'MASCARA_DINHERO'),
+			combo('Acordo Sindical', 'acordo', ($a_mod['para_tx_acordo']?? ''), 3, ['sim' => "Sim", 'nao' => "Não"]),
+			campo_data('Início do Acordo*', 'inicioAcordo', ($a_mod['para_tx_inicioAcordo']?? ''), 3),
+			campo_data('Fim do Acordo*', 'fimAcordo', ($a_mod['para_tx_fimAcordo']?? ''), 3),
+			checkbox_banco('Utilizar regime de banco de horas?','banco',($a_mod['para_tx_banco']?? ''),($a_mod['para_nb_qDias']?? ''), ($a_mod['para_tx_horasLimite']?? ''),3),
+			ckeditor('Descrição:', 'paramObs', ($a_mod['para_tx_paramObs']?? ''), 12,'maxlength="100"'),
 		];
 
 		if (!empty($a_mod['para_nb_id'])) {
 			$sqlArquivos= query("SELECT * FROM `documento_parametro` WHERE para_nb_id = $a_mod[para_nb_id]");
 			$arquivos = mysqli_fetch_all($sqlArquivos, MYSQLI_ASSOC);
 		}
-		
+
+		$camposAIgnorar = [
+			checkbox(
+				'Ignorar intervalos:',
+				'ignorarCampos', (
+					[
+						'repouso' => 'Repouso', 
+						'descanso' => 'Descanso',
+						'espera' => 'Espera',
+						'repousoEmbarcado' => 'Repouso Embarcado',
+					]
+				), 
+				5
+			)
+		];
 		
 		$botao = [
-			botao('Gravar','cadastra_parametro','id',$_POST['id'],'','','btn btn-success'),
+			botao('Gravar','cadastra_parametro','id',($_POST['id']?? ''),'','','btn btn-success'),
 			botao('Voltar','index')
 		];
 		
 		abre_form('Dados dos Parâmetros');
 		linha_form($c);
+		linha_form($camposAIgnorar);
 
-		if($a_mod['para_nb_userCadastro'] > 0){
-			$a_userCadastro = carregar('user',$a_mod['para_nb_userCadastro']);
-			$txtCadastro = "Registro inserido por $a_userCadastro[user_tx_login] às ".data($a_mod['para_tx_dataCadastro'],1).".";
-			$cAtualiza[] = texto("Data de Cadastro","$txtCadastro",5);
-			if($a_mod['para_nb_userAtualiza'] > 0){
-				$a_userAtualiza = carregar('user',$a_mod['para_nb_userAtualiza']);
-				$txtAtualiza = "Registro atualizado por $a_userAtualiza[user_tx_login] às ".data($a_mod['para_tx_dataAtualiza'],1).".";
-				$cAtualiza[] = texto("Última Atualização","$txtAtualiza",5);
+		if(!empty($a_mod['para_nb_userCadastro'])){
+			$a_userCadastro = carregar('user', $a_mod['para_nb_userCadastro']);
+			if(!empty($a_userCadastro)){
+				$cAtualiza = [
+					texto(
+						"Data de Cadastro",
+						"Registro inserido por ".$a_userCadastro['user_tx_login']." às ".data($a_mod['para_tx_dataCadastro'],1).".",
+						5
+					)
+				];
+				
+				if($a_mod['para_nb_userAtualiza'] > 0){
+					$a_userAtualiza = carregar('user',$a_mod['para_nb_userAtualiza']);
+					$cAtualiza[] = texto(
+						"Última Atualização",
+						"Registro atualizado por ".$a_userAtualiza['user_tx_login']." às ".data($a_mod['para_tx_dataAtualiza'],1).".",
+						5
+					);
+				}
+				echo "<br>";
+				linha_form($cAtualiza);
 			}
-			echo "<br>";
-			linha_form($cAtualiza);
 		}
 
-		
 		fecha_form($botao);
 
 		if (!empty($a_mod['para_nb_id'])) {
 			echo arquivosParametro("Documentos", $a_mod['para_nb_id'], $arquivos);
 		}
-
 		rodape();
+
 		?>
-		<form name="form_excluir_arquivo" method="post" action="cadastro_parametro.php">
-			<input type="hidden" name="idParametro" value="">
-			<input type="hidden" name="idArq" value="">
-			<input type="hidden" name="acao" value="">
-		</form>
+			<form name="form_excluir_arquivo" method="post" action="cadastro_parametro.php">
+				<input type="hidden" name="idParametro" value="">
+				<input type="hidden" name="idArq" value="">
+				<input type="hidden" name="acao" value="">
+			</form>
 
-		<form name="form_download_arquivo" method="post" action="cadastro_parametro.php">
-			<input type="hidden" name="idParametro" value="">
-			<input type="hidden" name="caminho" value="">
-			<input type="hidden" name="acao" value="">
-		</form>
-		
-		<script type="text/javascript">
-			function remover_arquivo(id, idArq, arquivo, acao ) {
-				if (confirm('Deseja realmente excluir o arquivo ' + arquivo + '?')) {
-					document.form_excluir_arquivo.idParametro.value = id;
-					document.form_excluir_arquivo.idArq.value = idArq;
-					document.form_excluir_arquivo.acao.value = acao;
-					document.form_excluir_arquivo.submit();
+			<form name="form_download_arquivo" method="post" action="cadastro_parametro.php">
+				<input type="hidden" name="idParametro" value="">
+				<input type="hidden" name="caminho" value="">
+				<input type="hidden" name="acao" value="">
+			</form>
+			
+			<script type="text/javascript">
+				function remover_arquivo(id, idArq, arquivo, acao ){
+					if (confirm('Deseja realmente excluir o arquivo '+arquivo+'?')){
+						document.form_excluir_arquivo.idParametro.value = id;
+						document.form_excluir_arquivo.idArq.value = idArq;
+						document.form_excluir_arquivo.acao.value = acao;
+						document.form_excluir_arquivo.submit();
+					}
 				}
-			}
 
-			function downloadArquivo(id, caminho, acao) {
-				document.form_download_arquivo.idParametro.value = id;
-				document.form_download_arquivo.caminho.value = caminho;
-				document.form_download_arquivo.acao.value = acao;
-				document.form_download_arquivo.submit();
-			}
-		</script>
+				function downloadArquivo(id, caminho, acao){
+					document.form_download_arquivo.idParametro.value = id;
+					document.form_download_arquivo.caminho.value = caminho;
+					document.form_download_arquivo.acao.value = acao;
+					document.form_download_arquivo.submit();
+				}
+			</script>
 		<?
 	}
 
