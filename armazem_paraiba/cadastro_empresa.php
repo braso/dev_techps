@@ -19,6 +19,70 @@
 		exit;
 	}
 
+	function downloadArquivo() {
+		// Verificar se o arquivo existe
+		if (file_exists($_POST['caminho'])) {
+			// Configurar cabeçalhos para forçar o download
+			header('Content-Description: File Transfer');
+			header('Content-Type: application/octet-stream');
+			header('Content-Disposition: attachment; filename=' . basename($_POST['caminho']));
+			header('Expires: 0');
+			header('Cache-Control: must-revalidate');
+			header('Pragma: public');
+			header('Content-Length: ' . filesize($_POST['caminho']));
+
+			// Lê o arquivo e o envia para o navegador
+			readfile($_POST['caminho']);
+			exit;
+		} else {
+			echo 'O arquivo não foi encontrado.';
+		}
+		$_POST['id'] = $_POST['idEmpresa'];
+		modifica_parametro();
+		exit;
+	}
+
+	function enviar_documento() {
+		// global $a_mod;
+
+		$idEmpresa = $_POST['idEmpresa'];
+		$arquivos =  $_FILES['file'];
+		$novo_nome = $_POST['file-name'];
+		$descricao = $_POST['description-text'];
+
+		$allowed = array('image/jpeg', 'image/png', 'application/msword', 'application/pdf');
+
+		if (in_array($arquivos['type'], $allowed) && $arquivos['name'] != '') {
+				$pasta_empresa = "arquivos/doc_empresa/$idEmpresa/";
+		
+				if (!is_dir($pasta_empresa)) {
+					mkdir($pasta_empresa, 0755, true);
+				}
+		
+				$arquivo_temporario = $arquivos['tmp_name'];
+				$extensao = pathinfo($arquivos['name'], PATHINFO_EXTENSION); 
+				$novo_nome_com_extensao = $novo_nome . '.' . $extensao;
+				$caminho_destino = $pasta_empresa . $novo_nome_com_extensao;
+		
+				if (move_uploaded_file($arquivo_temporario, $caminho_destino)) {
+					inserir('documento_empresa', ['empr_nb_id','doc_tx_nome','doc_tx_descricao','doc_tx_caminho','doc_tx_dataCadastro'],[$idEmpresa,$novo_nome_com_extensao,$descricao,$caminho_destino,date("Y-m-d H:i:s")]);
+				}
+		}
+
+		$_POST['id'] = $idEmpresa;
+		modifica_empresa();
+		exit;
+	}
+
+	function excluir_documento() {
+
+		query("DELETE FROM `documento_empresa` WHERE doc_nb_id = $_POST[idArq]");
+		
+		$_POST['id'] = $_POST['idEmpresa'];
+		modifica_empresa();
+		exit;
+	}
+
 	function modificarEmpresa(){
 		global $a_mod;
 
@@ -111,8 +175,15 @@
 		exit;
 	}
 
+
 	function buscarCEP($cep){
-		$resultado = @file_get_contents('https://viacep.com.br/ws/'.urlencode($cep).'/json/');
+		// 		$resultado = @file_get_contents('https://viacep.com.br/ws/'.urlencode($cep).'/json/');
+				
+		$url = 'https://viacep.com.br/ws/'.urlencode($cep).'/json/';
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			
+		$resultado = curl_exec($ch);
 		$arr = json_decode($resultado, true);
 		return $arr;
 	}
@@ -297,6 +368,11 @@
 		$file = basename(__FILE__);
 		$file = explode('.', $file);
 
+		if (!empty($a_mod['empr_nb_id'])) {
+			$sqlArquivos= query("SELECT * FROM `documento_empresa` WHERE empr_nb_id = $a_mod[empr_nb_id]");
+			$arquivos = mysqli_fetch_all($sqlArquivos, MYSQLI_ASSOC);
+		}
+
 		$botao = [
 			botao($btn_txt,'cadastrarEmpresa','id',($_POST['id']?? ''),'','','btn btn-success'),
 			botao('Voltar','index')
@@ -334,12 +410,45 @@
 			}
 		</script>
 		<?php
+		if (!empty($a_mod['empr_nb_id'])) {
+			echo arquivosParametro("Documentos", $a_mod['empr_nb_id'], $arquivos);
+		}
 
 		rodape();
 
 		
 		$path_parts = pathinfo( __FILE__ );
 		?>
+		<form name="form_excluir_arquivo2" method="post" action="cadastro_empresa.php">
+			<input type="hidden" name="idEmpresa" value="">
+			<input type="hidden" name="idArq" value="">
+			<input type="hidden" name="acao" value="">
+		</form>
+
+		<form name="form_download_arquivo" method="post" action="cadastro_empresa.php">
+			<input type="hidden" name="idEmpresa" value="">
+			<input type="hidden" name="caminho" value="">
+			<input type="hidden" name="acao" value="">
+		</form>
+
+		<script type="text/javascript">
+			function remover_arquivo(id, idArq, arquivo, acao ) {
+				if (confirm('Deseja realmente excluir o arquivo ' + arquivo + '?')) {
+					document.form_excluir_arquivo2.idEmpresa.value = id;
+					document.form_excluir_arquivo2.idArq.value = idArq;
+					document.form_excluir_arquivo2.acao.value = acao;
+					document.form_excluir_arquivo.submit();
+				}
+			}
+
+			function downloadArquivo(id, caminho, acao) {
+				document.form_download_arquivo.idEmpresa.value = id;
+				document.form_download_arquivo.caminho.value = caminho;
+				document.form_download_arquivo.acao.value = acao;
+				document.form_download_arquivo.submit();
+			}
+		</script>
+
 		<iframe id=frame_cep style="display: none;"></iframe>
 		<form method="post" name="form_modifica" id="form_modifica">
 			<input type="hidden" name="id" value="">
@@ -386,7 +495,7 @@
 							console.log(response);
 							$('#nome').val(response[0].empr_tx_nome);
 							$('#fantasia').val(response[0].empr_tx_fantasia);
-							$('#situação').val(response[0].empr_tx_fantasia);
+							$('#situação').val(response[0].empr_tx_situacao);
 							$('#cep').val(response[0].empr_tx_cep);
 							$('#numero').val(response[0].empr_tx_email);
 							$('#complemento').val(response[0].empr_tx_complemento);
