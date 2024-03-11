@@ -201,7 +201,7 @@
 
 		//Definir data de início da query{
 			if(empty($abriuJornadaHoje)){
-				//Confere se há uma jornada aberta que veio do dia anterior.
+				//Se não abriu uma jornada hoje, confere se há uma jornada aberta que veio de antes do dia.
 				$temJornadaAberta = mysqli_fetch_assoc(
 					query(
 						"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 1) as temJornadaAberta FROM ponto
@@ -214,6 +214,7 @@
 				);
 
 				if(!empty($temJornadaAberta) && intval($temJornadaAberta['temJornadaAberta'])){
+					//Se tem uma jornada que veio de antes do dia, confere se esta foi fechada hoje.
 					$jornadaFechadaHoje = mysqli_fetch_assoc(
 						query(
 							"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 2) as jornadaFechadaHoje FROM ponto
@@ -225,21 +226,26 @@
 						)
 					);
 					if(!empty($jornadaFechadaHoje) && intval($jornadaFechadaHoje['jornadaFechadaHoje'])){
+						//Se a jornada aberta antes do dia foi fechada, deve considerar apenas após esse fechamento.
 						$sqlDataInicio = $jornadaFechadaHoje['pont_tx_data'];
 					}else{
+						//Se não, pega desde o momento em que a jornada foi aberta.
 						$sqlDataInicio = $temJornadaAberta['pont_tx_data'];
 					}
 				}else{
+					//Se não tem uma jornada que veio de antes, considera a partir de meia-noite de hoje.
 					$sqlDataInicio = $_POST['data']." 00:00:00";
 				}
 			}else{
+				//Se abriu jornada hoje, considera a partir da data de abertura da jornada.
 				$sqlDataInicio = $abriuJornadaHoje['pont_tx_data'];
 			}
 		//}
 
 		//Definir data de fim da query{
+			$sqlDataFim = $_POST['data'].' 23:59:59';
 			if(!empty($abriuJornadaHoje)){
-				//Confere se teve uma jornada aberta que seguiu pro dia seguinte
+				//Se abriu jornada hoje, confere se teve uma jornada aberta que seguiu pros dias seguintes
 				$deixouJornadaAberta = mysqli_fetch_assoc(
 					query(
 						"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 1) as deixouJornadaAberta FROM ponto
@@ -251,6 +257,7 @@
 					)
 				);
 				if(!empty($deixouJornadaAberta) && intval($deixouJornadaAberta['deixouJornadaAberta'])){
+					//Se deixou uma jornada aberta pros dias seguintes, confere se ela terminou.
 					$fimJornada = mysqli_fetch_assoc(
 						query(
 							"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 2) as fimJornada FROM ponto
@@ -262,15 +269,10 @@
 						)
 					);
 					if(!empty($fimJornada) && intval($fimJornada['fimJornada'])){
+						//Se a jornada deixada aberta já foi finalizada, pega até o fechamento dessa jornada deixada.
 						$sqlDataFim = $fimJornada['pont_tx_data'];
-					}else{
-						$sqlDataFim = date('Y-m-d').' 23:59:59';
 					}
-				}else{
-				   $sqlDataFim = $_POST['data'].' 23:59:59';
 				}
-			}else{
-				$sqlDataFim = $_POST['data'].' 23:59:59';
 			}
 		//}
 
@@ -285,7 +287,7 @@
 					AND ponto.pont_tx_data >= '".$sqlDataInicio."'
 					AND ponto.pont_tx_data <= '".$sqlDataFim."'
 				ORDER BY pont_tx_data ASC"
-		;		
+		;
 
 		return $sql;
 	}
