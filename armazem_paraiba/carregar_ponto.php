@@ -3,7 +3,7 @@
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//}*/
-	
+	$interno = true;
 	include_once "conecta.php";
 	include_once "alerta_carrega_ponto.php";
 
