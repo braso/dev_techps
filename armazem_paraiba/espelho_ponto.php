@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -14,13 +14,13 @@
 		
 		$extraBuscaMotorista = '';
 		$extraCampoData = '';
-		if ($_SESSION['user_tx_nivel'] == 'Motorista') {
+		if (in_array($_SESSION['user_tx_nivel'], ['Motorista', 'Ajudante'])) {
 			$_POST['busca_motorista'] = $_SESSION['user_nb_entidade'];
 			$_POST['busca_empresa'] = $_SESSION['user_nb_empresa'];
-			$_POST['busca_dataInicio'] = date("Y-m-01");
-			$_POST['busca_dataFim'] = date("Y-m-d");
-			$extraBuscaMotorista = " AND enti_nb_id = '$_SESSION[user_nb_entidade]'";
-			$extraCampoData= 'readonly';
+			$extraBuscaMotorista = " AND enti_nb_id = '".$_SESSION['user_nb_entidade']."'";
+			// $_POST['busca_dataInicio'] = date("Y-m-01");
+			// $_POST['busca_dataFim'] = date("Y-m-d");
+			// $extraCampoData = 'readonly';
 		}
 	
 		if (!empty($_POST['busca_motorista'])) {
@@ -51,7 +51,7 @@
 			}
 			if(empty($_POST['busca_motorista'])){
 				$searchError = true;
-				$errorMsg .= 'Motorista, ';
+				$errorMsg .= 'Motorista/Ajudante, ';
 			}
 			if(empty($_POST['busca_dataInicio'])){
 				$searchError = true;
@@ -63,21 +63,22 @@
 			}
 
 			if(!$searchError && !empty($_POST['busca_empresa']) && !empty($_POST['busca_motorista'])){
-				$motorista = mysqli_fetch_all(
+				$motorista = mysqli_fetch_assoc(
 					query(
-						"SELECT enti_nb_id FROM entidade
+						"SELECT enti_nb_id, enti_tx_nome FROM entidade
 							WHERE enti_tx_status = 'ativo'
 								AND enti_nb_empresa = ".$_POST['busca_empresa']."
 								AND enti_nb_id = ".$_POST['busca_motorista']."
 							LIMIT 1"
-					),
-					MYSQLI_ASSOC
+					)
 				);
 
 				if(empty($motorista)){
 					$searchError = true;
 					$errorMsg = 'Este motorista não pertence a esta empresa. ';
 				}
+
+				$opt = "<option value='".$motorista['enti_nb_id']."'>[".$motorista['enti_nb_id']."]".$motorista['enti_tx_nome']."</option>";
 			}
 			
 			if($searchError){
@@ -91,8 +92,17 @@
 
 		//CAMPOS DE CONSULTA
 		$c = [
-			combo_net('Empresa*:', 'busca_empresa', ($_POST['busca_empresa']?? ''), 3, 'empresa', 'onchange=selecionaMotorista(this.value)', $extraEmpresa),
-			combo_net('Motorista*:', 'busca_motorista', ($_POST['busca_motorista']?? ''), 4, 'entidade', '', " AND enti_tx_tipo = \"Motorista\" $extraEmpresa $extraBuscaMotorista", 'enti_tx_matricula'),
+			combo_net('Empresa*:', 'busca_empresa', ($_POST['busca_empresa']?? ''), 3, 'empresa', "onchange=selecionaMotorista(this.value) ", $extraEmpresa),
+			combo_net(
+				'Motorista/Ajudante*:', 
+				'busca_motorista', 
+				(!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ""), 
+				4, 
+				'entidade', 
+				'', 
+				(!empty($_POST['busca_empresa'])?" AND enti_nb_empresa = ".$_POST['busca_empresa']:"")." AND enti_tx_tipo IN ('Motorista', 'Ajudante') ".$extraEmpresa." ".$extraBuscaMotorista, 
+				'enti_tx_matricula'
+			),
 			campo_data('Data Início:', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ''), 2, $extraCampoData),
 			campo_data('Data Fim:', 'busca_dataFim', ($_POST['busca_dataFim']?? ''), 2,$extraCampoData)
 		];
@@ -109,7 +119,7 @@
 		$b = [
 			botao("Buscar", 'index', '', '', '', '', 'btn btn-success'),
 		];
-		if ($_SESSION['user_tx_nivel'] != 'Motorista') {
+		if (!in_array($_SESSION['user_tx_nivel'], ['Motorista', 'Ajudante'])) {
 			$b[] = botao("Cadastrar Abono", 'layout_abono');
 		}
 		$b[] = $botao_imprimir;
@@ -310,7 +320,6 @@
 			."&extra_limite=15"
 			."&extra_busca=enti_tx_matricula"
 		;
-	
 		?>
 		
 	
@@ -330,16 +339,17 @@
 			function selecionaMotorista(idEmpresa) {
 				let buscaExtra = '';
 				if(idEmpresa > 0){
-					buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_tipo = "Motorista" AND enti_nb_empresa = "' + idEmpresa + '"');
+					buscaExtra = "&extra_bd="+encodeURI("AND enti_tx_tipo IN ('Motorista', 'Ajudante') AND enti_nb_empresa = '" + idEmpresa + "'");
 					$('.busca_motorista')[0].innerHTML = null;
 				}else{
-					buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_tipo = "Motorista"');
+					buscaExtra = "&extra_bd="+encodeURI("AND enti_tx_tipo IN ('Motorista', 'Ajudante')");
 				}
 
 				// Verifique se o elemento está usando Select2 antes de destruí-lo
 				if ($('.busca_motorista').data('select2')) {
 					$('.busca_motorista').select2('destroy');
 				}
+
 				$.fn.select2.defaults.set("theme", "bootstrap");
 				$('.busca_motorista').select2({
 					language: 'pt-BR',
@@ -357,6 +367,17 @@
 						cache: true
 					}
 				});
+
+
+			}
+
+			if(<?=(!empty($_POST['busca_empresa'])? $_POST['busca_empresa']: 0)?> !== 0){
+				empresa = document.getElementById("busca_empresa").value;
+				selecionaMotorista(empresa);
+
+				if(<?=(!empty($_POST['busca_motorista'])?1:0)?>){
+					document.getElementById("busca_motorista").innerHTML = '<?=$opt?>';
+				}
 			}
 		</script>
 	<?
