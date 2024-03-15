@@ -38,7 +38,7 @@
 			echo 'O arquivo não foi encontrado.';
 		}
 		$_POST['id'] = $_POST['idEmpresa'];
-		modifica_parametro();
+		modificarEmpresa();
 		exit;
 	}
 
@@ -70,7 +70,7 @@
 		}
 
 		$_POST['id'] = $idEmpresa;
-		modifica_empresa();
+		modificarEmpresa();
 		exit;
 	}
 
@@ -79,7 +79,7 @@
 		query("DELETE FROM `documento_empresa` WHERE doc_nb_id = $_POST[idArq]");
 		
 		$_POST['id'] = $_POST['idEmpresa'];
-		modifica_empresa();
+		modificarEmpresa();
 		exit;
 	}
 
@@ -359,7 +359,7 @@
 		
 
 		
-		$cJornada[]=combo_bd('Parâmetros da Jornada*','parametro',($a_mod['empr_nb_parametro']?? ''),6,'parametro','onchange="carrega_parametro(this.value)"');
+		$cJornada[]=combo_bd('Parâmetros da Jornada*','parametro',($a_mod['empr_nb_parametro']?? ''),6,'parametro','onchange="carregarParametro(this.value)"');
 		// $cJornada[]=campo('Jornada Semanal (Horas)','jornadaSemanal',$a_mod['enti_tx_jornadaSemanal'],3,MASCARA_NUMERO,'disabled=disabled');
 		// $cJornada[]=campo('Jornada Sábado (Horas)','jornadaSabado',$a_mod['enti_tx_jornadaSabado'],3,MASCARA_NUMERO,'disabled=disabled');
 		// $cJornada[]=campo('Percentual da HE(%)','percentualHE',$a_mod['enti_tx_percentualHE'],3,MASCARA_NUMERO,'disabled=disabled');
@@ -405,8 +405,8 @@
 		?>
 		<iframe id=frame_parametro style="display: none;"></iframe>
 		<script>
-			function carrega_parametro(id){
-				document.getElementById('frame_parametro').src='cadastro_motorista.php?acao=carrega_parametro&parametro='+id;
+			function carregarParametro(id){
+				document.getElementById('frame_parametro').src='cadastro_motorista.php?acao=carregarParametro&parametro='+id;
 			}
 		</script>
 		<?php
