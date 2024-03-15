@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -140,28 +140,34 @@
 			'subcontratado', 'admissao', 'desligamento',
 			'cnhRegistro', 'cnhValidade', 'cnhPrimeiraHabilitacao', 'cnhCategoria', 'cnhPermissao',
 			'cnhObs', 'cnhCidade', 'cnhEmissao', 'cnhPontuacao', 'cnhAtividadeRemunerada', 
-			'setBanco', 'nivel',
+			'setBanco', 'nivel'
 		];
 
+		$novoMotorista = [];
 		for($f = 0; $f < sizeof($enti_campos); $f++){
 			if(in_array($enti_campos[$f], ['cidade', 'empresa', 'parametro', 'cnhCidade'])){
 				$bd_campo = 'enti_nb_'.$enti_campos[$f];	
 			}else{
 				$bd_campo = 'enti_tx_'.$enti_campos[$f];
 			}
-			if(isset($_POST[$enti_campos[$f]]) && !empty($_POST[$enti_campos[$f]])){
-				$a_mod[$bd_campo] = $_POST[$enti_campos[$f]];
+			if(isset($_POST[$post_values[$f]]) && !empty($_POST[$post_values[$f]])){
+				$a_mod[$bd_campo] = $_POST[$post_values[$f]];
+				$novoMotorista[$bd_campo] = $a_mod[$bd_campo];
 			}
-			$enti_campos[$f] = $bd_campo;
 		}
+		unset($enti_campos);
 
 		//Conferir campos obrigatórios{
 			$campos_obrigatorios = [
-				'nome' => 'Nome', 'nascimento' => 'Dt. Nascimento', 'parametro' => 'Parâmetros da Jornada', 'admissao' => 'Dt Admissão', 'cnhValidade' => 'Validade do CNH', 'cnhCategoria' => 'Categoria do CNH', 
-				'cnhCidade' => 'Cidade do CNH', 'cnhEmissao' => 'Data de Emissão do CNH', 
-				'parametro' => 'Parâmetro', 'jornadaSemanal' => 'Jornada Semanal', 'jornadaSabado' => 'Jornada Sábado', 'percentualHE' => 'Percentual da HE', 'percentualSabadoHE' => 'Percentual da HE Sábado', 
-				'empresa' => 'Empresa', 'ocupacao' => 'Ocupação', 'cidade' => 'Cidade/UF', 'rg' => 'RG', 'endereco' => 'Endereço', 'cep' => 'CEP', 'bairro' => 'Bairro', 
-				'email' => 'E-mail', 'cnhRegistro' => 'N° Registro da CNH'
+				'nome' => 'Nome', 'nascimento' => 'Dt. Nascimento',
+				'cpf' => 'CPF', 'rg' => 'RG', 'bairro' => 'Bairro',
+				'cep' => 'CEP', 'endereco' => 'Endereço', 'cidade' => 'Cidade/UF', 'fone1' => 'Telefone 1',
+				'email' => 'E-mail',
+				'empresa' => 'Empresa', 'ocupacao' => 'Ocupação', 'admissao' => 'Dt Admissão',
+				'parametro' => 'Parâmetro', 'jornadaSemanal' => 'Jornada Semanal', 'jornadaSabado' => 'Jornada Sábado', 
+				'percentualHE' => 'Percentual da HE', 'percentualSabadoHE' => 'Percentual da HE Sábado', 
+				'cnhRegistro' => 'N° Registro da CNH', 'cnhValidade' => 'Validade do CNH', 'cnhCategoria' => 'Categoria do CNH', 
+				'cnhCidade' => 'Cidade do CNH', 'cnhEmissao' => 'Data de Emissão do CNH'
 			];
 
 			if(empty($a_mod['enti_tx_matricula'])){
@@ -187,7 +193,14 @@
 			unset($campos_obrigatorios);
 		//}
 
-		if(count(carregar('entidade', '', 'enti_tx_matricula', $_POST['postMatricula'])) > 0 && !isset($_POST['id'])){
+		$matriculaExistente = mysqli_fetch_assoc(
+			query(
+				"SELECT * FROM entidade WHERE enti_tx_matricula = '".($_POST['postMatricula']?? "-1")."' LIMIT 1;"
+			)
+		);
+		$matriculaExistente = !empty($matriculaExistente);
+
+		if($matriculaExistente && !isset($_POST['id'])){
 			echo '<script>alert("Matrícula já cadastrada.")</script>';
 			visualizarCadastro();
 			exit;
@@ -211,8 +224,6 @@
 		if(!isset($_POST['desligamento']) || empty($_POST['desligamento'])){
 			$_POST['desligamento'] = '0000-00-00';
 		}
-		
-		$_POST['nivel'] = 'Motorista';
 
 		$enti_valores = [];
 		for($f = 0; $f < sizeof($post_values); $f++){
@@ -222,7 +233,7 @@
 		$cpfLimpo = str_replace(array('.', '-', '/'), "", $_POST['cpf']);
 		
 
-		if (!$_POST['id']) {//Se está criando um motorista novo
+		if (empty($_POST['id'])) {//Se está criando um motorista novo
 			$aEmpresa = carregar('empresa', $_POST['empresa']);
 			if ($aEmpresa['empr_nb_parametro'] > 0) {
 				$aParametro = carregar('parametro', $aEmpresa['empr_nb_parametro']);
@@ -238,9 +249,11 @@
 					$ehPadrao = 'sim';
 				}
 			}
-			$enti_campos = array_merge($enti_campos, ['enti_nb_userCadastro', 'enti_tx_dataCadastro', 'enti_tx_ehPadrao']);
-			$enti_valores = array_merge($enti_valores, [$_SESSION['user_nb_id'], date("Y-m-d H:i:s"), $ehPadrao]);
-			$id = inserir('entidade', $enti_campos, $enti_valores)[0];
+			$novoMotorista['enti_nb_userCadastro'] = $_SESSION['user_nb_id'];
+			$novoMotorista['enti_tx_dataCadastro'] = date("Y-m-d H:i:s");
+			$novoMotorista['enti_tx_ehPadrao'] = $ehPadrao;
+			$id = inserir('entidade', array_keys($novoMotorista), array_values($novoMotorista))[0];
+			
 			
 			$user_infos = [
 				'user_tx_matricula' 	=> $_POST['postMatricula'], 
@@ -272,8 +285,10 @@
 			$a_user = carrega_array(query(
 				"SELECT * FROM user 
 					WHERE user_nb_entidade = ".$_POST['id']."
-						AND user_tx_nivel = 'Motorista'"
+						AND user_tx_nivel IN ('Motorista', 'Ajudante')"
 			));
+
+			$_POST['nivel'] = $_POST['ocupacao'];
 
 			if($a_user['user_nb_id'] > 0){
 				$user_infos = [
@@ -314,9 +329,10 @@
 					$ehPadrao = 'sim';
 				}
 			}
-			$enti_campos = array_merge($enti_campos, ['enti_nb_userAtualiza', 'enti_tx_dataAtualiza', 'enti_tx_ehPadrao']);
-			$enti_valores = array_merge($enti_valores, [$_SESSION['user_nb_id'], date("Y-m-d H:i:s"), $ehPadrao]);
-			atualizar('entidade', $enti_campos, $enti_valores, $_POST['id']);
+			$novoMotorista['enti_nb_userAtualiza'] = $_SESSION['user_nb_id'];
+			$novoMotorista['enti_tx_dataAtualiza'] = date("Y-m-d H:i:s");
+			$novoMotorista['enti_tx_ehPadrao'] = $ehPadrao;
+			atualizar('entidade', array_keys($novoMotorista), array_values($novoMotorista), $_POST['id']);
 			$id = $_POST['id'];
 		}
 
@@ -335,7 +351,8 @@
 			}
 		}
 		
-		$idUserFoto = query("SELECT user_nb_id FROM `user` WHERE user_nb_entidade = $id")->fetch_assoc();
+		
+		$idUserFoto = mysqli_fetch_assoc(query("SELECT user_nb_id FROM `user` WHERE user_nb_entidade = '".$id."' LIMIT 1;"));
 		$file_type = $_FILES['foto']['type']; //returns the mimetype
 
 		$allowed = array("image/jpeg", "image/gif", "image/png");
@@ -452,47 +469,49 @@
 			$img = '';
 		}
 
-		$c = [
-			$img,
-			campo('Nome*', 'nome', ($a_mod['enti_tx_nome']?? ''), 3,'','maxlength="65" tabindex=02'),
-			campo_data('Dt. Nascimento*', 'nascimento', ($a_mod['enti_tx_nascimento']?? ''), 2, 'tabindex=03'),
-			combo('status', 'status', ($a_mod['enti_tx_status']?? ''), 2, ['ativo' => 'Ativo', 'inativo' => 'Inativo'], 'tabindex=04'),
-			campo('Login','login', ($a_mod['user_tx_login']?? ''),2, '', 'tabindex=05'),
-			texto('Idade',$idade?? '',2, 'tabindex=06'),
-
-			campo('CPF*', 'cpf', ($a_mod['enti_tx_cpf']?? ''), 2, 'MASCARA_CPF', 'tabindex=07'),
-			campo('RG*', 'rg', ($a_mod['enti_tx_rg']?? ''), 2, 'MASCARA_RG', 'tabindex=08, maxlength=11'),
-			campo('Emissor RG', 'rgOrgao', ($a_mod['enti_tx_rgOrgao']?? ''), 2,'','maxlength="6" tabindex=09'),
-			campo_data('Data Emissão RG', 'rgDataEmissao', ($a_mod['enti_tx_rgDataEmissao']?? ''), 2, 'tabindex=10'),
-			combo('UF RG', 'rgUf', ($a_mod['enti_tx_rgUf']?? ''), 2, $UFs, 'tabindex=11'),
-			combo('Estado Civil', 'civil', ($a_mod['enti_tx_civil']?? ''), 2, ['', 'Casado(a)', 'Solteiro(a)', 'Divorciado(a)', 'Viúvo(a)'], 'tabindex=12'),
-
-			combo('Sexo', 'sexo', ($a_mod['enti_tx_sexo']?? ''), 2, ['', 'Feminino', 'Masculino'], 'tabindex=13'),
-			campo('CEP*', 'cep', ($a_mod['enti_tx_cep']?? ''), 2, 'MASCARA_CEP', 'onfocusout="buscarCEP(this.value);" tabindex=14'),
-			campo('Endereço*', 'endereco', ($a_mod['enti_tx_endereco']?? ''), 4, '', 'tabindex=15'),
-			campo('Número', 'numero', ($a_mod['enti_tx_numero']?? ''), 2, 'MASCARA_NUMERO', 'tabindex=16'),
-			campo('Bairro*', 'bairro', ($a_mod['enti_tx_bairro']?? ''), 2, '', 'tabindex=17'),
-
-			campo('Complemento', 'complemento', ($a_mod['enti_tx_complemento']?? ''), 2, '', 'tabindex=18'),
-			campo('Ponto de Referência', 'referencia', ($a_mod['enti_tx_referencia']?? ''), 3, '', 'tabindex=19'),
-			combo_net('Cidade/UF*', 'cidade', ($a_mod['enti_nb_cidade']?? ''), 3, 'cidade', 'tabindex=20', '', 'cida_tx_uf'),
-			campo('Telefone 1*', 'fone1', ($a_mod['enti_tx_fone1']?? ''), 2, 'MASCARA_CEL', 'tabindex=21'),
-			campo('Telefone 2', 'fone2', ($a_mod['enti_tx_fone2']?? ''), 2, 'MASCARA_CEL', 'tabindex=22'),
-			campo('E-mail*', 'email', ($a_mod['enti_tx_email']?? ''), 3, '', 'tabindex=23'),
-
-			campo('Filiação Pai', 'pai', ($a_mod['enti_tx_pai']?? ''), 3,'', 'maxlength="65" tabindex=24'),
-			campo('Filiação Mãe', 'mae', ($a_mod['enti_tx_mae']?? ''), 3,'', 'maxlength="65" tabindex=25'),
-			campo('Nome do Cônjugue', 'conjugue', ($a_mod['enti_tx_conjugue']?? ''), 3,'', 'maxlength="65" tabindex=26'),
-			campo('Tipo de Operação', 'tipoOperacao', ($a_mod['enti_tx_tipoOperacao']?? ''), 3,'', 'maxlength="40" tabindex=27'),
-			arquivo('Foto (.png, .jpg)', 'foto', ($a_mod['enti_tx_foto']?? ''), 4, 'tabindex=28'),
-			ckeditor('Observações:', 'obs', ($a_mod['enti_tx_obs']?? ''), 12, 'tabindex=29')
-		];
-
-		if(!empty($a_mod['enti_tx_matricula'])){
-			array_splice($c, 1, 0, texto('Matrícula*', $a_mod['enti_tx_matricula'], 1, 'tabindex=01'));
+		$tabIndex = 1;
+		
+		if(!empty($_POST['id'])){
+			$c = [texto('Matrícula*', $a_mod['enti_tx_matricula'], 1, 'tabindex='.sprintf("%02d", $tabIndex++))];
 		}else{
-			array_splice($c, 1, 0, campo('Matrícula*', 'postMatricula', '', 1, '', 'tabindex=01'));
+			$c = [campo('Matrícula*', 'postMatricula', $a_mod['enti_tx_matricula'], 1, '', 'tabindex='.sprintf("%02d", $tabIndex++))];
 		}
+
+		$c = array_merge($c, [
+			$img,
+			campo('Nome*', 'nome', ($a_mod['enti_tx_nome']?? ''), 3,'','maxlength="65" tabindex='.sprintf("%02d", $tabIndex++)),
+			campo_data('Dt. Nascimento*', 'nascimento', ($a_mod['enti_tx_nascimento']?? ''), 1, 'tabindex='.sprintf("%02d", $tabIndex++)),
+			combo('status', 'status', ($a_mod['enti_tx_status']?? ''), 2, ['ativo' => 'Ativo', 'inativo' => 'Inativo'], 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Login','login', ($a_mod['user_tx_login']?? ''),2, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			texto('Idade',($idade?? ''),2, 'tabindex='.sprintf("%02d", $tabIndex++)),
+
+			campo('CPF*', 'cpf', ($a_mod['enti_tx_cpf']?? ''), 2, 'MASCARA_CPF', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('RG*', 'rg', ($a_mod['enti_tx_rg']?? ''), 2, 'MASCARA_RG', 'tabindex='.+sprintf("%02d", $tabIndex++).', maxlength=11'),
+			campo('Emissor RG', 'rgOrgao', ($a_mod['enti_tx_rgOrgao']?? ''), 2,'','maxlength="6" tabindex='.sprintf("%02d", $tabIndex++)),
+			campo_data('Data Emissão RG', 'rgDataEmissao', ($a_mod['enti_tx_rgDataEmissao']?? ''), 2, 'tabindex='.sprintf("%02d", $tabIndex++)),
+			combo('UF RG', 'rgUf', ($a_mod['enti_tx_rgUf']?? ''), 2, $UFs, 'tabindex='.sprintf("%02d", $tabIndex++)),
+			combo('Estado Civil', 'civil', ($a_mod['enti_tx_civil']?? ''), 2, ['', 'Casado(a)', 'Solteiro(a)', 'Divorciado(a)', 'Viúvo(a)'], 'tabindex='.sprintf("%02d", $tabIndex++)),
+
+			combo('Sexo', 'sexo', ($a_mod['enti_tx_sexo']?? ''), 2, ['', 'Feminino', 'Masculino'], 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('CEP*', 'cep', ($a_mod['enti_tx_cep']?? ''), 2, 'MASCARA_CEP', 'onfocusout="buscarCEP(this.value);" tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Endereço*', 'endereco', ($a_mod['enti_tx_endereco']?? ''), 4, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Número', 'numero', ($a_mod['enti_tx_numero']?? ''), 2, 'MASCARA_NUMERO', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Bairro*', 'bairro', ($a_mod['enti_tx_bairro']?? ''), 2, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
+
+			campo('Complemento', 'complemento', ($a_mod['enti_tx_complemento']?? ''), 2, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Ponto de Referência', 'referencia', ($a_mod['enti_tx_referencia']?? ''), 3, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			combo_net('Cidade/UF*', 'cidade', ($a_mod['enti_nb_cidade']?? ''), 3, 'cidade', 'tabindex='.sprintf("%02d", $tabIndex++), '', 'cida_tx_uf'),
+			campo('Telefone 1*', 'fone1', ($a_mod['enti_tx_fone1']?? ''), 2, 'MASCARA_CEL', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Telefone 2', 'fone2', ($a_mod['enti_tx_fone2']?? ''), 2, 'MASCARA_CEL', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('E-mail*', 'email', ($a_mod['enti_tx_email']?? ''), 3, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
+
+			campo('Filiação Pai', 'pai', ($a_mod['enti_tx_pai']?? ''), 3,'', 'maxlength="65" tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Filiação Mãe', 'mae', ($a_mod['enti_tx_mae']?? ''), 3,'', 'maxlength="65" tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Nome do Cônjugue', 'conjugue', ($a_mod['enti_tx_conjugue']?? ''), 3,'', 'maxlength="65" tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Tipo de Operação', 'tipoOperacao', ($a_mod['enti_tx_tipoOperacao']?? ''), 3,'', 'maxlength="40" tabindex='.sprintf("%02d", $tabIndex++)),
+			arquivo('Foto (.png, .jpg)', 'foto', ($a_mod['enti_tx_foto']?? ''), 4, 'tabindex='.sprintf("%02d", $tabIndex++)),
+			ckeditor('Observações:', 'obs', ($a_mod['enti_tx_obs']?? ''), 12, 'tabindex='.sprintf("%02d", $tabIndex++))
+		]);
 
 		$extraEmpresa = '';
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
@@ -504,7 +523,7 @@
 
 		$cContratual = [
 			combo_bd('Empresa*', 'empresa', ($a_mod['enti_nb_empresa']?? ''), 3, 'empresa', 'onchange="carregarEmpresa(this.value)" tabindex=30', $extraEmpresa),
-			combo('Ocupação*', 'ocupacao', ($a_mod['enti_tx_ocupacao']?? ''), 2, ['Motorista'], 'tabindex=31'),
+			combo('Ocupação*', 'ocupacao', ($a_mod['enti_tx_ocupacao']?? ''), 2, ['Motorista', 'Ajudante'], 'tabindex=31'),
 			$campoSalario,
 			combo('Subcontratado', 'subcontratado', ($a_mod['enti_tx_subcontratado']?? ''), 2, ['' => '', 'sim' => 'Sim', 'nao' => 'Não'], 'tabindex=33'),
 			campo_data('Dt Admissão*', 'admissao', ($a_mod['enti_tx_admissao']?? ''), 2, 'tabindex=34'),
@@ -563,10 +582,10 @@
 		];
 
 
-		$campos = [
-			'id' => $_POST['id'],
-			'matricula' => $a_mod['enti_tx_matricula']
-		];
+		// $campos = [
+		// 	'id' => $_POST['id'],
+		// 	'matricula' => $a_mod['enti_tx_matricula']
+		// ];
 		$b[] = botao(
 			'Gravar', 
 			'cadastrarMotorista', 
@@ -608,7 +627,7 @@
 		?>
 		<iframe id=frame_parametro style="display: none;"></iframe>
 		<script>
-			function carregarCEP(cep) {
+			function buscarCEP(cep) {
 				var num = cep.replace(/[^0-9]/g, '');
 				if (num.length == '8') {
 					document.getElementById('frame_parametro').src = 'cadastro_motorista.php?acao=carregarEndereco&cep=' + num;
@@ -741,7 +760,7 @@
 				campo('Matrícula', 'busca_matricula', ($_POST['busca_matricula']?? ''), 1,'','maxlength="6"'),
 				campo('CPF', 'busca_cpf', ($_POST['busca_cpf']?? ''), 2, 'MASCARA_CPF'),
 				combo_bd('!Empresa', 'busca_empresa', ($_POST['busca_empresa']?? ''), 2, 'empresa', '', $extraEmpresa),
-				combo('Ocupação', 'busca_ocupacao', ($_POST['busca_ocupacao']?? ''), 2, array("", "Motorista")), //TODO PRECISO SABER QUAIS AS OCUPACOES
+				combo('Ocupação', 'busca_ocupacao', ($_POST['busca_ocupacao']?? ''), 2, array("", "Motorista", "Ajudante")),
 				combo('Convenção Padrão', 'busca_padrao', ($_POST['busca_padrao']?? ''), 2, ['' => 'todos', 'sim' => 'Sim', 'nao' => 'Não']),
 				combo_bd('!Parâmetros da Jornada', 'busca_parametro', ($_POST['busca_parametro']?? ''), 6, 'parametro'),
 				combo('Status', 'busca_status', ($_POST['busca_status']?? ''), 2, ['' => 'todos', 'ativo' => 'Ativo', 'inativo' => 'Inativo'])
@@ -760,7 +779,7 @@
 			"SELECT * FROM entidade 
 				JOIN empresa ON enti_nb_empresa = empr_nb_id 
 				JOIN parametro ON enti_nb_parametro = para_nb_id 
-				WHERE enti_tx_tipo = 'Motorista' 
+				WHERE enti_tx_tipo IN ('Motorista', 'Ajudante') 
 					$extraEmpresa 
 					$extra"
 		);
