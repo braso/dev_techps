@@ -749,22 +749,37 @@
 
 		$registros['jornadaCompleto']  = ordenar_horarios($registros['inicioJornada'],  $registros['fimJornada']);		/* $jornadaOrdenado */
 		$registros['refeicaoCompleto'] = ordenar_horarios($registros['inicioRefeicao'], $registros['fimRefeicao']);		/* $refeicaoOrdenada */
-		$registros['esperaCompleto']   = ordenar_horarios($registros['inicioEspera'],   $registros['fimEspera'], True);	/* $esperaOrdenada */
-		$registros['descansoCompleto'] = ordenar_horarios($registros['inicioDescanso'], $registros['fimDescanso']);		/* $descansoOrdenado */
-		$registros['repousoCompleto']  = ordenar_horarios($registros['inicioRepouso'], $registros['fimRepouso']);		/* $repousoOrdenado */
+		if(is_bool(strpos($aParametro['para_tx_ignorarCampos'], 'espera'))){
+			$registros['esperaCompleto']   = ordenar_horarios($registros['inicioEspera'],   $registros['fimEspera'], True);	/* $esperaOrdenada */
+		}else{
+			$registros['esperaCompleto'] = ordenar_horarios([], []);
+		}
+		if(is_bool(strpos($aParametro['para_tx_ignorarCampos'], 'descanso'))){
+			$registros['descansoCompleto'] = ordenar_horarios($registros['inicioDescanso'], $registros['fimDescanso']);		/* $descansoOrdenado */
+		}else{
+			$registros['descansoCompleto'] = ordenar_horarios([], []);
+		}
+		if(is_bool(strpos($aParametro['para_tx_ignorarCampos'], 'repouso'))){
+			$registros['repousoCompleto']  = ordenar_horarios($registros['inicioRepouso'], $registros['fimRepouso']);		/* $repousoOrdenado */
+		}else{
+			$registros['repousoCompleto'] = ordenar_horarios([], []);
+		}
 
 		
-		if (isset($registros['esperaCompleto']['paresParaRepouso']) && !empty($registros['esperaCompleto']['paresParaRepouso'])){
-			$paresParaRepouso = $registros['esperaCompleto']['paresParaRepouso'];
-			// unset($registros['esperaCompleto']['paresParaRepouso']);
-			for ($i = 0; $i < count($paresParaRepouso); $i++) {
-				$registros['repousoPorEspera']['inicioRepouso'][] 	= $data.' '.$paresParaRepouso[$i]['inicio'].':00';	/*$aDataHorainicioRepouso*/
-				$registros['repousoPorEspera']['fimRepouso'][] 		= $data.' '.$paresParaRepouso[$i]['fim'].':00';		/*$aDataHorafimRepouso*/
+		//REPOUSO POR ESPERA{
+			if (isset($registros['esperaCompleto']['paresParaRepouso']) && !empty($registros['esperaCompleto']['paresParaRepouso'])){
+				$paresParaRepouso = $registros['esperaCompleto']['paresParaRepouso'];
+				// unset($registros['esperaCompleto']['paresParaRepouso']);
+				for ($i = 0; $i < count($paresParaRepouso); $i++) {
+					$registros['repousoPorEspera']['inicioRepouso'][] 	= $data.' '.$paresParaRepouso[$i]['inicio'].':00';	/*$aDataHorainicioRepouso*/
+					$registros['repousoPorEspera']['fimRepouso'][] 		= $data.' '.$paresParaRepouso[$i]['fim'].':00';		/*$aDataHorafimRepouso*/
+				}
+				$registros['repousoPorEspera']['repousoCompleto'] = ordenar_horarios($registros['repousoPorEspera']['inicioRepouso'], $registros['repousoPorEspera']['fimRepouso'],false,true);
+			}else{
+				$registros['repousoPorEspera']['repousoCompleto'] = ordenar_horarios([], []);
 			}
-			$registros['repousoPorEspera']['repousoCompleto'] = ordenar_horarios($registros['repousoPorEspera']['inicioRepouso'], $registros['repousoPorEspera']['fimRepouso'],false,true);
-		}else{
-			$registros['repousoPorEspera']['repousoCompleto'] = ordenar_horarios([], []);
-		}
+		//}
+
 		$registros['repousoCompleto']['totalIntervalo'] = operarHorarios([$registros['repousoCompleto']['totalIntervalo'], $registros['repousoPorEspera']['repousoCompleto']['totalIntervalo']], '+');
 		$registros['repousoCompleto']['icone'] .= $registros['repousoPorEspera']['repousoCompleto']['icone'];
 		
@@ -797,7 +812,7 @@
 				'feriado'=> ($stringFeriado != ''? True: null)
 			];
 
-			[$jornadaPrevistaOriginal, $jornadaPrevista] = calcJorPre($data, $jornadas, $aAbono['abon_tx_abono']);
+			[$jornadaPrevistaOriginal, $jornadaPrevista] = calcJorPre($data, $jornadas, ($aAbono['abon_tx_abono']?? null));
 
 			$aRetorno['jornadaPrevista'] = $jornadaPrevista;
 			if($jornadas['feriado'] == True){
