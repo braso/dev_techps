@@ -241,7 +241,7 @@
 				$sqlMotorista = query(
 					"SELECT * FROM entidade".
 						" LEFT JOIN parametro ON enti_nb_parametro = para_nb_id".
-						" WHERE enti_tx_tipo = 'Motorista'".
+						" WHERE enti_tx_tipo IN ('Motorista', 'Ajudante')".
 						" AND enti_nb_id IN (".$motorista['enti_nb_id'].")".
 						" AND enti_nb_empresa = ".$motorista['enti_nb_empresa'].
 						" ORDER BY enti_tx_nome"
@@ -357,8 +357,8 @@
 		global $CONTEX;
 		?><script>
 			function selecionaMotorista(idEmpresa) {
-				let buscaExtra = encodeURI('AND enti_tx_tipo = "Motorista"'+
-					(idEmpresa > 0? ' AND enti_nb_empresa = "'+idEmpresa+'"': '')
+				let buscaExtra = encodeURI("AND enti_tx_tipo IN ('Motorista', 'Ajudante')"+
+					(idEmpresa > 0? " AND enti_nb_empresa = '"+idEmpresa+"'": "")
 				);
 
 				if ($('.busca_motorista').data('select2')) {// Verifica se o elemento está usando Select2 antes de destruí-lo
@@ -399,7 +399,7 @@
 
 		cabecalho('Cadastro Endosso');
 
-		$extra_bd_motorista = ' AND enti_tx_tipo = "Motorista"';
+		$extra_bd_motorista = " AND enti_tx_tipo IN ('Motorista', 'Ajudante')";
 		if($_SESSION['user_tx_nivel'] != 'Super Administrador'){
 			$extra_bd_motorista .= ' AND enti_nb_empresa = '.$_SESSION['user_tx_emprCnpj'];
 		}
