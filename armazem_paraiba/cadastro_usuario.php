@@ -110,8 +110,8 @@
 			$usuario['user_tx_nivel'] =  $_POST['nivel'];
 		}
 
-		if (!empty($_POST['nivel']) && $_POST['nivel'] == 'Motorista' && (!isset($_POST['cpf']) || empty($_POST['cpf']))) {
-			set_status("ERRO: CPF obrigatório para motorista.");
+		if (!empty($_POST['nivel']) && in_array($_POST['nivel'], ['Motorista', 'Ajudante']) && (!isset($_POST['cpf']) || empty($_POST['cpf']))) {
+			set_status("ERRO: CPF obrigatório para motorista/ajudante.");
 			modifica_usuario();
 			exit;
 		}
@@ -163,7 +163,7 @@
 					$sqlCheckNivel = null;
 				}
 
-				if (isset($sqlCheckNivel['user_tx_nivel']) && $sqlCheckNivel['user_tx_nivel'] == 'Motorista') {
+				if (isset($sqlCheckNivel['user_tx_nivel']) && in_array($sqlCheckNivel['user_tx_nivel'], ['Motorista', 'Ajudante'])) {
 					if (!empty($_POST['senha']) && !empty($_POST['senha2'])) {
 						$novaSenha = ['user_tx_senha' => md5($_POST['senha'])];
 					}
@@ -188,10 +188,9 @@
 
 	function layout_usuario() {
 		global $a_mod;
-		cabecalho("Cadastro de Usuário");
 	
 		if(!empty($_POST['id']) &&												//Se está editando um usuário existente e
-			$a_mod['user_tx_nivel'] != 'Motorista' && 							//Esse usuário não é motorista e
+			!in_array($a_mod['user_tx_nivel'], ['Motorista', 'Ajudante']) && 	//Esse usuário não é motorista e
 			(
 				is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) ||	//O usuário logado é administrador ou
 				$_SESSION['user_nb_id'] == $_POST['id']							//Editando o próprio usuário
@@ -258,7 +257,7 @@
 			$campo_matricula = '';
 
 		}else{
-			//Entrará aqui caso (editando e o user_nivel != motorista) ou (session_nivel != administrador e não editando próprio usuário)
+			//Entrará aqui caso (editando e o user_nivel != motorista ou ajudante) ou (session_nivel != administrador e não editando próprio usuário)
 
 			$editPermission = false;
 			$campo_nome = texto('Nome*', ($a_mod['user_tx_nome']?? ''), 3, "style='margin-bottom:-10px'; for='nome'");
@@ -298,6 +297,12 @@
 			$campo_matricula = texto('Matricula', ($a_mod['user_tx_matricula']?? ''), 2, "style='margin-bottom:-10px;'");
 		}
 
+		if($editPermission){
+			cabecalho("Cadastro de Usuário");
+		}else{
+			cabecalho("Detalhes do Usuário");
+		}
+
 		$c = [
 			$campo_nome,
 			$campo_nivel,
@@ -318,7 +323,7 @@
 		];
 
 		$b = [];
-		if(is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) || (!empty($_GET['id']) && $_GET['id'] == $_SESSION['user_nb_id'])){				//Permitir gravar usuário apenas se for administrador ou se for o próprio usuário logado.
+		if($editPermission || is_int(strpos($_SESSION['user_tx_nivel'], "Administrador"))){
 			$b[] = botao('Gravar', 'cadastra_usuario', 'id,editPermission', ($_POST['id']?? '').','.strval($editPermission),'','','btn btn-success');
 		}
 		$b[] = botao('Voltar', 'index');
@@ -359,7 +364,7 @@
 			exit;
 		}
 
-		if ($_SESSION['user_tx_nivel'] == 'Motorista') {
+		if (in_array($_SESSION['user_tx_nivel'], ['Motorista', 'Ajudante'])) {
 			$_POST['id'] = $_SESSION['user_nb_id'];
 			modifica_usuario();
 		}
@@ -400,6 +405,7 @@
 				$niveis[] = "Funcionário";
 			default;
 				$niveis[] = "Motorista";
+				$niveis[] = "Ajudante";
 			break;
 		}
 
