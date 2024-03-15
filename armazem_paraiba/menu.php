@@ -135,7 +135,7 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 <? } ?>
 
 
-<? if (is_int(strpos($_SESSION['user_tx_nivel'], 'Motorista'))) {?>
+<? if(in_array($_SESSION['user_tx_nivel'], ['Motorista', 'Ajudante'])){?>
 
 	<!-- INICIO HEADER MENU -->
 	<div class="page-header-menu">
