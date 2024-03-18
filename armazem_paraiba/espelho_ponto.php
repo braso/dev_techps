@@ -108,7 +108,7 @@
 		];
 		
 		$botao_imprimir =
-			'<button class="btn default" type="button" onclick="imprimir()" id="imprimir">Imprimir</button >
+			'<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
 					<script>
 						function imprimir() {
 							// Abrir a caixa de diálogo de impressão
@@ -332,9 +332,6 @@
 		</form>
 
 		<script>
-			function imprimir() {
-				window.print();
-			}
 
 			function selecionaMotorista(idEmpresa) {
 				let buscaExtra = '';
