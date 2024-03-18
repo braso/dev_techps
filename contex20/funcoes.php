@@ -358,7 +358,7 @@
 		$data_input = "<script>";
 		switch($mascara){
 			case "MASCARA_DATA":
-				$data_input .= "$('name=\"$variavel\"').inputmask(\"date\", {clearIncomplete: false, placeholder: \"dd/mm/aaaa\"});";
+				$data_input .= "$('[name=\'$variavel\']').inputmask(\'date\', {clearIncomplete: false, placeholder: \'dd/mm/aaaa\'});";
 				$type = "date";
 			break;
 			case "MASCARA_MES":
