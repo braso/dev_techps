@@ -1,8 +1,9 @@
 <?
-    header('Content-Type: text/html; charset=utf-8');
     global $CONTEX;
 	include_once $_SERVER['DOCUMENT_ROOT'].($CONTEX['path'])."/conecta.php";
 	// include $_SERVER['DOCUMENT_ROOT'].($CONTEX['path'])."/csv_relatorio_espelho.php";
+	$periodoInicio = DateTime::createFromFormat('Y-m-d', $dataInicio);
+	$periodoFim = DateTime::createFromFormat('Y-m-d', $dataFim);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -85,7 +86,7 @@
     <table class="table" border="1">
         <thead>
             <tr class="totais">
-                <th colspan="1">PERÍODO: <?= $dataInicio. ' - ' .$dataFim ?></th>
+                <th colspan="1">PERÍODO: <?= $periodoInicio->format('d/m/Y') . ' - ' .$periodoFim->format('d/m/Y') ?></th>
                 <th colspan="1"></th>
                 <th colspan="1"><?= $totais["jornadaPrevista"] ?></th>
                 <th colspan="1"><?= $totais["JornadaEfetiva"] ?></th>
