@@ -26,6 +26,7 @@ function criar_relatorio(){
     foreach($motoristas as $motorista){
         $endossado = '';
 
+        // Status Endosso{
         $endossos = mysqli_fetch_all(query("SELECT * FROM endosso 
         WHERE endo_tx_status = 'ativo'
             AND (endo_tx_de = '$dataInicio'
@@ -48,7 +49,9 @@ function criar_relatorio(){
                 $endossoQuantN += 1;
                 break;
         }
+        // }
         
+        // Jornada Prevista, Jornada Efetiva, HE50%, HE100%, Adicional Noturno, Espera Indenizada{
         $totalJorPrevResut = "00:00";
         $totalJorPrev = "00:00";
         $totalJorEfe = "00:00";
@@ -66,7 +69,8 @@ function criar_relatorio(){
             $dataVez = $dia->format('Y-m-d');
             $diasPonto[] = diaDetalhePonto($motorista['enti_tx_matricula'], $dataVez);
         }
-        
+    // }
+    // saldoAnterior, saldoPeriodo e saldoFinal{
         $saldoAnterior = mysqli_fetch_all(query("SELECT endo_tx_saldo FROM `endosso`
 					WHERE endo_tx_matricula = '".$motorista['enti_tx_matricula']."'
 						AND endo_tx_ate < '".$dataInicio."'
@@ -82,7 +86,8 @@ function criar_relatorio(){
 		}else{
 			$saldoAnterior = '00:00';
 		}
-// 		var_dump($diasPonto);
+// 		}
+
         foreach ($diasPonto as $diaPonto) {
             if(strlen($diaPonto['diffJornadaEfetiva']) > 5){
                 $JorPrevHtml = strpos($diaPonto['diffJornadaEfetiva'], "&nbsp;") + 6;
