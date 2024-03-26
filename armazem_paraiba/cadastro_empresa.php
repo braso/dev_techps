@@ -411,7 +411,7 @@
 		</script>
 		<?php
 		if (!empty($a_mod['empr_nb_id'])) {
-			echo arquivosParametro("Documentos", $a_mod['empr_nb_id'], $arquivos);
+			echo arquivosEmpresa("Documentos", $a_mod['empr_nb_id'], $arquivos);
 		}
 
 		rodape();
