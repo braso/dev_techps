@@ -23,14 +23,6 @@ function extrairDominio($url, $dominio_array) {
 if ($_POST['botao'] == 'ENVIAR') {
     $dominio_url = $_POST['dominio'];
 
-    $dominio_array = [
-        "techps",
-        "braso",
-        "armazem_paraiba",
-        "opafrutas",
-        "qualy_transportes",
-        "feijao_turqueza"
-    ];
 
     $dominio = extrairDominio($dominio_url, $dominio_array);
 

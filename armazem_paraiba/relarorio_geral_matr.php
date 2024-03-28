@@ -16,7 +16,7 @@ function criar_relatorio(){
 			exit;
 	}
     
-    $motoristas = mysqli_fetch_all(query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_nb_empresa = $idEmpresa AND enti_tx_status != 'inativo'"), 
+    $motoristas = mysqli_fetch_all(query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_nb_empresa = $idEmpresa AND enti_tx_status != 'inativo'  AND enti_tx_tipo IN ('Motorista', 'Ajudante') "), 
     MYSQLI_ASSOC);
 
     $rows = [];

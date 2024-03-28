@@ -6,12 +6,25 @@ if(isset($_SERVER['SCRIPT_URI'])){
 }
 
 $dominios = [
-    "techps"            => 'Techps',
+    "armazem_paraiba"   => 'Armazem Paraíba',
     "braso"             => 'Braso',
-    "armazem_paraiba"   => 'Armazem Paraíba', 
+    "carau_transporte"  => 'Carau Transportes',
+    "feijao_turqueza"   => 'Feijão Turqueza',
     "opafrutas"         => 'Opafrutas',
     "qualy_transportes" => 'Qualy Transportes',
-    "feijao_turqueza"   => 'Feijão Turqueza'
+    "techps"            => 'Techps',
+    "apx_solucoes"      => 'Fs Log Transportes',
+];
+
+$dominio_array = [
+    "armazem_paraiba",
+    "braso",
+    "carau_transporte",
+    "feijao_turqueza",
+    "opafrutas",
+    "qualy_transportes",
+    "techps",
+    "apx_solucoes",
 ];
 
 $dominiosInput = "<div class='form-group'>
