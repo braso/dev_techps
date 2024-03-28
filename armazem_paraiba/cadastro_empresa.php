@@ -172,14 +172,29 @@
 			}
 		} else
 			$empresa = [
-				'empr_tx_cnpj' => $_POST['cnpj'],
 				'empr_nb_parametro' => $_POST['parametro'],
 				'empr_nb_userAtualiza' => $_SESSION['user_nb_id'],
 				'empr_tx_dataAtualiza' => date('Y-m-d H:i:s')
 			];
 			
 			atualizar('empresa',array_keys($empresa),array_values($empresa),$_POST['id']);
+
 			$id_empresa = $_POST['id'];
+
+			$file_type = $_FILES['logo']['type']; //returns the mimetype
+
+			$allowed = array("image/jpeg", "image/gif", "image/png");
+			if(in_array($file_type, $allowed) && $_FILES['logo']['name']!='') {
+
+				if(!is_dir("arquivos/empresa/$id_empresa")){
+					mkdir("arquivos/empresa/$id_empresa");
+				}
+
+				$arq=enviar('logo',"arquivos/empresa/$id_empresa/",$id_empresa);
+				if($arq){
+					atualizar('empresa',['empr_tx_logo'],[$arq],$id_empresa);
+				}
+			}
 
 
 
@@ -212,7 +227,7 @@
 
 				var selecionado = $('.cidade',parent.document);
 				selecionado.empty();
-				selecionado.append('<option value=".$arr['ibge'].">".[$arr['uf']]." ".$arr['localidade']."</option>');
+				selecionado.append('<option value=".$arr['ibge'].">[".$arr['uf']."] ".$arr['localidade']."</option>');
 				selecionado.val('".$arr['ibge']."').trigger('change');
 			</script>";
 		exit;
@@ -309,6 +324,7 @@
 			$cidade = ['cida_tx_nome' => ''];
 		}
 		$campo_cidade = texto('Cidade/UF', $cidade['cida_tx_nome'], 2);
+		
 
 		if (is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) != TRUE && $input_values['Ehmatriz'] == 'sim') {
 			$c = [
@@ -333,6 +349,7 @@
 				texto('Data Reg. CNPJ',$input_values['dataRegistroCNPJ'],3),
 				$campo_dominio,
 				$campo_EhMatriz,
+				arquivo('Logo (.png, .jpg)'.$iconeExcluirLogo,'logo',$input_values['logo'],4),
 				
 				texto('Servidor FTP',$input_values['ftpServer'],3),
 				texto('Usuário FTP',$input_values['ftpUsername'],3)
@@ -344,7 +361,7 @@
 				campo('Nome*','nome',$input_values['nome'],4,'','maxlength="65"'),
 				campo('Nome Fantasia','fantasia',$input_values['fantasia'],4,'','maxlength="65"'),
 				combo('Situação','situacao',$input_values['situacao'],2,['ativo' => 'Ativo', 'inativo' => 'Inativo']),
-				campo('CEP*','cep',$input_values['cep'],2,'MASCARA_CEP','onkeyup="carrega_cep(this.value);"'),
+				campo('CEP*','cep',$input_values['cep'],2,'MASCARA_CEP','onfocusout="carrega_cep(this.value);"'),
 				campo('Endereço*','endereco',$input_values['endereco'],5,'','maxlength="100"'),
 				campo('Número*','numero',$input_values['numero'],2),
 				campo('Bairro*','bairro',$input_values['bairro'],3,'','maxlength="30"'),
@@ -550,10 +567,6 @@
 
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
-		}
-		
-		if(!empty($_SESSION['user_tx_nivel']) && $_SESSION['user_tx_nivel'] != "Super Administrador"){
-			$extra .= " AND empr_tx_Ehmatriz = 'nao'";
 		}
 
 		if(!empty($_POST['busca_codigo'])){
