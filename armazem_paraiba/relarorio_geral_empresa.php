@@ -5,10 +5,16 @@
 include "funcoes_ponto.php";
 
 function criar_relatorio(){
-    $dataInicio = '2024-02-01';
-    $dataFim = '2024-02-29';
-    // $dataInicio = $_POST['busca_dataInicio'];
-    // $dataFim = $_POST['busca_dataFim'];
+
+    $mesAtual = date("n");
+    $anoAtual = date("Y");
+    // Obtém a data de início do mês atual
+    $dataTimeInicio = new DateTime('first day of this month');
+    $dataInicio= $dataTimeInicio->format('Y-m-d');
+
+    // Obtém a data de fim do mês atual
+    $dataTimeFim = new DateTime('last day of this month');
+    $dataFim = $dataTimeFim->format('Y-m-d');
 
     if (empty($dataInicio) || empty($dataFim)) {
         echo '<script>alert("Insira data e empresa para gerar relat贸rio.");</script>';
@@ -38,7 +44,7 @@ function criar_relatorio(){
 
             // Status Endosso{
             $endossos = mysqli_fetch_all(query("SELECT * FROM endosso 
-        WHERE endo_tx_status = 'ativo'
+            WHERE endo_tx_status = 'ativo'
             AND (endo_tx_de = '$dataInicio'
             OR endo_tx_ate = '$dataFim')
             AND endo_nb_entidade = $motorista[enti_nb_id]"), MYSQLI_ASSOC);
@@ -62,20 +68,18 @@ function criar_relatorio(){
             // }
 
             // Jornada Prevista, Jornada Efetiva, HE50%, HE100%, Adicional Noturno, Espera Indenizada{
-            $totalJorPrevResut = "00:00";
-            $totalJorPrev = "00:00";
-            $totalJorEfe = "00:00";
-            $totalHE50 = "00:00";
-            $totalHE100 = "00:00";
-            $totalAdicNot = "00:00";
-            $totalEspInd = "00:00";
-            $totalSaldoPeriodo = "00:00";
+            $totalJorPrevResut = '00:00';
+            $totalJorPrev = '00:00';
+            $totalJorEfe = '00:00';
+            $totalHE50 = '00:00';
+            $totalHE100 = '00:00';
+            $totalAdicNot = '00:00';
+            $totalEspInd = '00:00';
+            $totalSaldoPeriodo = '00:00';
             $saldoFinal = '00:00';
-            $dateTimeInicio = new DateTime($dataInicio);
-            $dateTimeFim = new DateTime($dataFim);
             $diasPonto = [];
 
-            for ($dia = $dateTimeInicio; $dia <= $dateTimeFim; $dia->modify('+1 day')) {
+            for ($dia = $dataTimeInicio; $dia <= $dataTimeFim; $dia->modify('+1 day')) {
                 $dataVez = $dia->format('Y-m-d');
                 $diasPonto[] = diaDetalhePonto($motorista['enti_tx_matricula'], $dataVez);
             }
@@ -135,6 +139,14 @@ function criar_relatorio(){
             ];
         }
 
+        if(!is_dir("./arquivos/paineis/$empresa[empr_nb_id]/$anoAtual-$mesAtual")){
+            mkdir("./arquivos/paineis/$empresa[empr_nb_id]/$anoAtual-$mesAtual",0755,true);
+        }
+        $path = "./arquivos/paineis/$empresa[empr_nb_id]/$anoAtual-$mesAtual/";
+        $fileName = 'motoristas.json';
+        $jsonArquiMoto = json_encode($rows,JSON_UNESCAPED_UNICODE);
+        file_put_contents($path.$fileName, $jsonArquiMoto);
+
         $totalJorPrevResut = "00:00";
         $totalJorPrev = "00:00";
         $totalJorEfe = "00:00";
@@ -173,9 +185,74 @@ function criar_relatorio(){
             'endossoPacial'    => $endossoQuantEp,
             'totalMotorista'   => count($motoristas)
         ];
+        
+        if(!is_dir("./arquivos/paineis/$empresa[empr_nb_id]/$anoAtual-$mesAtual")){
+            mkdir("./arquivos/paineis/$empresa[empr_nb_id]/$anoAtual-$mesAtual",0755,true);
+        }
+        $path = "./arquivos/paineis/$empresa[empr_nb_id]/$anoAtual-$mesAtual/";
+        $fileName = 'totalMotoristas.json';
+        $jsonArquiTotais = json_encode($totais,JSON_UNESCAPED_UNICODE);
+        file_put_contents($path.$fileName, $jsonArquiTotais);
+            
     }
-    // include "./relatorio_espelho_geral.php";
-    // exit;
+    
+    // $totalJorPrevResut = "00:00";
+    $totalJorPrev = '00:00';
+    $totalJorEfe = '00:00';
+    $totalHE50 = '00:00';
+    $totalHE100 = '00:00';
+    $totalAdicNot = '00:00';
+    $totalEspInd = '00:00';
+    $totalSaldoPeriodo = '00:00';
+    $toralSaldoAnter = '00:00';
+    $saldoFinal = '00:00';
+    $totalMotorista = 0;
+    $totalNaoEndossados = 0;
+    $totalEndossados = 0;
+    $totalEndossoPacial = 0;
+    
+    foreach ($totais as $totalEmpresa) {
+
+        $totalMotorista += $totalEmpresa['totalMotorista'];
+    	$totalNaoEndossados += $totalEmpresa['naoEndossados'];
+    	$totalEndossados += $totalEmpresa['endossados'];
+    	$totalEndossoPacial += $totalEmpresa['endossoPacial'];
+    	
+        $totalJorPrev           = somarHorarios([$totalEmpresa['jornadaPrevista'],$totalJorPrev]);
+        $totalJorEfe            = somarHorarios([$totalJorEfe, $totalEmpresa['jornadaEfetiva']]);
+        $totalHE50              = somarHorarios([$totalHE50, $totalEmpresa['he50']]);
+        $totalHE100             = somarHorarios([$totalHE100, $totalEmpresa['he100']]);
+        $totalAdicNot           = somarHorarios([$totalAdicNot, $totalEmpresa['adicionalNoturno']]);
+        $totalEspInd            = somarHorarios([$totalEspInd, $totalEmpresa['esperaIndenizada']]);
+        $toralSaldoAnter        = somarHorarios([$toralSaldoAnter, $totalEmpresa['saldoAnterior']]);
+        $totalSaldoPeriodo      = somarHorarios([$totalSaldoPeriodo, $totalEmpresa['saldoPeriodo']]);
+        $saldoFinal             = somarHorarios([$saldoFinal, $totalEmpresa['saldoFinal']]);
+    }
+    
+    $jsonTotaisEmpr = [
+        'EmprTotalJorPrev'      => $totalJorPrev,
+        'EmprTotalJorEfe'       => $totalJorEfe,
+        'EmprTotalHE50'         => $totalHE50,
+        'EmprTotalHE100'        => $totalHE100,
+        'EmprTotalAdicNot'      => $totalAdicNot,
+        'EmprTotalEspInd'       => $totalEspInd,
+        'EmprTotalSaldoAnter'   => $toralSaldoAnter,
+        'EmprTotalSaldoPeriodo' => $totalSaldoPeriodo,
+        'EmprTotalSaldoFinal'   => $saldoFinal,
+        'EmprTotalMotorista'    => $totalMotorista,
+        'EmprTotalNaoEnd'       => $totalNaoEndossados,
+        'EmprTotalEnd'          => $totalEndossados,
+        'EmprTotalEndPac'       => $totalEndossoPacial,
+        
+    ];
+
+    if(!is_dir("./arquivos/paineis/empresas/$mesAtual-$anoAtual")){
+        mkdir("./arquivos/paineis/empresas/$mesAtual-$anoAtual",0755,true);
+    }
+    $path = "./arquivos/paineis/empresas/$mesAtual-$anoAtual/";
+    $fileName = 'empresas.json';
+    $jsonArqui = json_encode($jsonTotaisEmpr);
+    file_put_contents($path.$fileName, $jsonArqui);
 }
 
 function index() {
@@ -187,20 +264,21 @@ function index() {
     $extraCampoData = '';
 
     $c = [
-        campo_data('Data In铆cio:', 'busca_dataInicio', ($_POST['busca_dataInicio'] ?? ''), 2, $extraCampoData),
+        campo_data('Data In閾哻io:', 'busca_dataInicio', ($_POST['busca_dataInicio'] ?? ''), 2, $extraCampoData),
         campo_data('Data Fim:', 'busca_dataFim', ($_POST['busca_dataFim'] ?? ''), 2, $extraCampoData)
     ];
 
     $b = [
-        '<button name="acao" id="criaRelatorio" type="button" onload="disablePrintButton()" class="btn btn-info">Imprimir Relat贸rio</button>',
+        '<button name="acao" id="criaRelatorio" type="button" onload="disablePrintButton()" class="btn btn-info">Imprimir Relat璐竢io</button>',
     ];
 
     abre_form('Filtro de Busca');
     linha_form($c);
     fecha_form($b);
-
+    
     $totaisEmpresas = criar_relatorio();
-    include_once 'relarorio_geral_empresa_html.php';
+    
+    // include_once 'relarorio_geral_empresa_html.php';
 ?>
     <!--<form name="form_imprimir_relatorio" method="post" target="_blank">-->
     <!--    <input type="hidden" name="acao" value="criar_relatorio">-->

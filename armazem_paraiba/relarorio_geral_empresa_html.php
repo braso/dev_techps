@@ -1,7 +1,9 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-// var_dump($totaisEmpresas);
+// ini_set('display_errors', 1);
+// error_reporting(E_ALL);
+
+$dataInicio = '2024-02-01';
+$dataFim = '2024-02-29';
 
 $totalJorPrevResut = "00:00";
 $totalJorPrev = "00:00";
@@ -13,21 +15,30 @@ $totalEspInd = "00:00";
 $totalSaldoPeriodo = "00:00";
 $saldoFinal = '00:00';
 
+
 foreach ($totaisEmpresas as $totalEmpresa) {
-	$totalJorPrev      += somarHorarios([$totalJorPrev, $totalEmpresa['jornadaPrevista']]);
-//     $totalJorEfe       += somarHorarios([$totalJorEfe, $totalEmpresa['jornadaEfetiva']]);
-// 	$totalHE50         += somarHorarios([$totalHE50, $totalEmpresa['he50']]);
-//     $totalHE100        += somarHorarios([$totalHE100, $totalEmpresa['he100']]);
-//     $totalAdicNot      += somarHorarios([$totalAdicNot, $totalEmpresa['adicionalNoturno']]);
-//     $totalEspInd       += somarHorarios([$totalEspInd, $totalEmpresa['esperaIndenizada']]);
-//     $saldoAnterior     += somarHorarios([$saldoAnterior, $totalEmpresa['saldoAnterior']]);
-// 	$totalSaldoPeriodo += somarHorarios([$totalSaldoPeriodo, $totalEmpresa['saldoPeriodo']]);
-//     $saldoFinal        += somarHorarios([$saldoFinal, $totalEmpresa['saldoFinal']]);
-// 	$totalMotorista += $totalEmpresa['totalMotorista'];
-// 	$totalNaoEndossados += $totalEmpresa['naoEndossados'];
-// 	$totalEndossados += $totalEmpresa['endossados'];
-// 	$totalEndossoPacial += $totalEmpresa['endossoPacial'];
+	$jsonTotaisEmpr =[
+		'totalJorPrevEmpr' => operarHorarios([$totalJorPrev, $totalEmpresa['jornadaPrevista']],'+'),
+		'totalJorEfeEmpr'  => operarHorarios([$totalJorEfe, $totalEmpresa['jornadaEfetiva']],'+'),
+		'totalHE50'        => operarHorarios([$totalHE50, $totalEmpresa['he50']],'+'),
+		'totalHE100'       => operarHorarios([$totalHE100, $totalEmpresa['he100']],'+'),
+		'totalAdicNot'     => operarHorarios([$totalAdicNot, $totalEmpresa['adicionalNoturno']],'+'),
+		'totalEspInd'      => operarHorarios([$totalEspInd, $totalEmpresa['esperaIndenizada']],'+'),
+		
+	];
+
+    $totalEspInd       = somarHorarios([$totalEspInd, $totalEmpresa['esperaIndenizada']]);
+    $saldoAnterior     = somarHorarios([$saldoAnterior, $totalEmpresa['saldoAnterior']]);
+// 	$totalSaldoPeriodo = somarHorarios([$totalSaldoPeriodo, $totalEmpresa['saldoPeriodo']]);
+//     $saldoFinal        = somarHorarios([$saldoFinal, $totalEmpresa['saldoFinal']]);
+	$totalMotorista += $totalEmpresa['totalMotorista'];
+	$totalNaoEndossados += $totalEmpresa['naoEndossados'];
+	$totalEndossados += $totalEmpresa['endossados'];
+	$totalEndossoPacial += $totalEmpresa['endossoPacial'];
 }
+
+var_dump($totalAdicNot);
+exit;
 ?>
 
 <style>
@@ -70,20 +81,20 @@ foreach ($totaisEmpresas as $totalEmpresa) {
 			<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact" id="saldo">
 				<thead>
 					<tr class="totais">
-						<th colspan="1">PERÍODO: <?= $periodoInicio->format('d/m/Y') . ' - ' . $periodoFim->format('d/m/Y') ?></th>
+						<th colspan="1">PERÍODO: <?= $dataInicio . ' - ' . $dataFim ?></th>
 						<th colspan="1"></th>
-						<th colspan="1"><?= $totalJorPrev ?></th>
-						<th colspan="1"><?= $totalJorEfe ?></th>
-						<th colspan="1"><?= $totalHE50  ?></th>
-						<th colspan="1"><?= $totalHE100 ?></th>
-						<th colspan="1"><?= $totalAdicNot ?></th>
-						<th colspan="1"><?= $totalEspInd ?></th>
-						<th colspan="1"><?= $saldoAnterior ?></th>
-						<th colspan="1"><?= $totalSaldoPeriodo ?></th>
-						<th colspan="1"><?= $saldoFinal ?></th>
+						<th colspan="1"><? //$totalJorPrev ?></th>
+						<th colspan="1"><?// $totalJorEfe ?></th>
+						<th colspan="1"><?// $totalHE50  ?></th>
+						<th colspan="1"><?// $totalHE100 ?></th>
+						<th colspan="1"><?// $totalAdicNot ?></th>
+						<th colspan="1"><?// $totalEspInd ?></th>
+						<th colspan="1"><?// $saldoAnterior ?></th>
+						<th colspan="1"><?// $totalSaldoPeriodo ?></th>
+						<th colspan="1"><?// $saldoFinal ?></th>
 					</tr>
 					<tr class="titulos">
-						<th>Unidade - <?= $nomeEmpresa[0]['empr_tx_nome'] ?></th>
+						<th>Unidade - <? ?></th>
 						<th>Status Endosso</th>
 						<th>Jornada Prevista</th>
 						<th>Jornada Efetiva</th>
