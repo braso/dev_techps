@@ -569,6 +569,10 @@
 			$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
 		}
 
+		if(!empty($_SESSION['user_tx_nivel']) && $_SESSION['user_tx_nivel'] != "Super Administrador"){
+			$extra .= " AND empr_tx_Ehmatriz = 'nao'";
+		}
+
 		if(!empty($_POST['busca_codigo'])){
 			$extra .= " AND empr_nb_id = '".$_POST['busca_codigo']."'";
 		}

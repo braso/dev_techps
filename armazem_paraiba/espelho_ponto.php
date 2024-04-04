@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -42,7 +42,7 @@
 
 		//Confere se há algum erro na pesquisa{
 		$searchError = false;
-		if(isset($_POST['acao']) && $_POST['acao'] == 'index'){
+		if(isset($_POST['acao']) && $_POST['acao'] == 'index' && !isset($_POST['returning'])){
 			$errorMsg = 'Insira os campos para pesquisar: ';
 			if(empty($_POST['busca_empresa'])){
 				$searchError = true;
@@ -100,7 +100,7 @@
 				4, 
 				'entidade', 
 				'', 
-				(!empty($_POST['busca_empresa'])?" AND enti_nb_empresa = ".$_POST['busca_empresa']:"")." AND enti_tx_tipo IN ('Motorista', 'Ajudante') ".$extraEmpresa." ".$extraBuscaMotorista, 
+				(!empty($_POST['busca_empresa'])?" AND enti_nb_empresa = ".$_POST['busca_empresa']:"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') ".$extraEmpresa." ".$extraBuscaMotorista, 
 				'enti_tx_matricula'
 			),
 			campo_data('Data Início:', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ''), 2, $extraCampoData),
@@ -336,10 +336,10 @@
 			function selecionaMotorista(idEmpresa) {
 				let buscaExtra = '';
 				if(idEmpresa > 0){
-					buscaExtra = "&extra_bd="+encodeURI("AND enti_tx_tipo IN ('Motorista', 'Ajudante') AND enti_nb_empresa = '" + idEmpresa + "'");
+					buscaExtra = "&extra_bd="+encodeURI("AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') AND enti_nb_empresa = '" + idEmpresa + "'");
 					$('.busca_motorista')[0].innerHTML = null;
 				}else{
-					buscaExtra = "&extra_bd="+encodeURI("AND enti_tx_tipo IN ('Motorista', 'Ajudante')");
+					buscaExtra = "&extra_bd="+encodeURI("AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')");
 				}
 
 				// Verifique se o elemento está usando Select2 antes de destruí-lo

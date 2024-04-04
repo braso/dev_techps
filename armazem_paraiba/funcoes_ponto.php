@@ -113,14 +113,14 @@
 
 		cabecalho('Cadastro Abono');
 
-		$c[] = combo_net('Motorista*:','motorista',$_POST['busca_motorista']?? '',4,'entidade','',' AND enti_tx_tipo = "Motorista"','enti_tx_matricula');
+		$c[] = combo_net('Motorista*:','motorista',$_POST['busca_motorista']?? '',4,'entidade','',' AND enti_tx_ocupacao IN ("Motorista", "Ajudante")','enti_tx_matricula');
 		$c[] = campo('Data(s)*:','daterange', ($_POST['daterange']?? ''),3);
-		$c[] = campo_hora('Abono*: (hh:mm)','abono', ($_POST['abono']?? ''),3);
+		$c[] = campo_hora('Horas de abono*:','abono', ($_POST['abono']?? ''),3);
 		$c2[] = combo_bd('Motivo*:','motivo', ($_POST['motivo']?? ''),4,'motivo','',' AND moti_tx_tipo = "Abono"');
 		$c2[] = textarea('Justificativa:','descricao', ($_POST['descricao']?? ''),12);
 		
 		//BOTOES
-		$b[] = botao("Voltar",'index');
+		$b[] = botao("Voltar",'index', 'returning', 'true');
 		$b[] = botao("Gravar",'cadastra_abono','','','','','btn btn-success');
 		
 		abre_form('Filtro de Busca');
