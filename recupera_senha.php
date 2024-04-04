@@ -1,7 +1,7 @@
 <?php
 
-		// ini_set('display_errors', 1);
-		// error_reporting(E_ALL);
+// 		ini_set('display_errors', 1);
+// 		error_reporting(E_ALL);
 // include "conecta.php";
 global $CONTEX;
 $interno = true;
@@ -61,6 +61,16 @@ if ($_POST['botao'] == 'ENVIAR') {
 if ($_POST['botao'] == 'Redefinir senha') {
     $dominio = $_GET['dominio'];
     include $dominio."/conecta.php";
+    
+    $token = $_GET['token'];
+    $checkTokenSql = query("SELECT user_nb_id FROM `user` WHERE user_tx_token = '$_GET[token]'");
+    $checkToken = mysqli_fetch_assoc($checkTokenSql);
+
+    if (!isset($checkToken) && empty($checkToken)) {
+        echo '<script>alert("Link já utilizado ou invalido, por favor solicita novamente a  redefinição de senha.  ")</script>';
+        echo "<meta http-equiv='refresh' content='0; url=https://braso.mobi/techps/index2.php' />";
+        exit;
+    }
     
     if (!empty($_POST['senha']) && !empty($_POST['senha2']) && $_POST['senha'] == $_POST['senha2']) {
             $userSql = query("SELECT user_nb_id FROM `user` WHERE user_tx_token = '$_GET[token]'");
@@ -258,8 +268,12 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
                         <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="text" autocomplete="off" placeholder="Login" name="login" />
                     </div>
                     <?= $msg ?>
+                    <? if(!empty($msg)){echo '<style>
+                    #enviar{
+                    display:none;
+                    }</style>';} ?>
                     <div class="form-actions" style="padding: 26px 140px !important">
-                        <input type="submit" class="btn green uppercase" name="botao" value="ENVIAR"></input>
+                        <input type="submit" id='enviar' class="btn green uppercase" name="botao" value="ENVIAR"></input>
                     </div>
                     <?
                 } else {
@@ -308,9 +322,9 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
     <script>
         function redirectIndex() {
             <?php
-    $dominio = $_GET['dominio'];
-    include $dominio."/conecta.php";
-    global $CONTEX;?>
+        $dominio = $_GET['dominio'];
+        include $dominio."/conecta.php";
+        global $CONTEX;?>
             window.location.href = "https://braso.mobi<?=$CONTEX['path']?>/index.php";
         }
             
