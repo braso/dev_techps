@@ -6,11 +6,11 @@ $mesAtual = date("n");
 $anoAtual = date("Y");
 // Obtém a data de início do mês atual
 $dataTimeInicio = new DateTime('first day of this month');
-$dataInicio= $dataTimeInicio->format('Y-m-d');
+$dataInicio= $dataTimeInicio->format('d/m/Y');
 
 // Obtém a data de fim do mês atual
 $dataTimeFim = new DateTime('last day of this month');
-$dataFim = $dataTimeFim->format('Y-m-d');
+$dataFim = $dataTimeFim->format('d/m/Y');
 
 // Obtém O total dos saldos das empresa
 $file = "./arquivos/paineis/$idEmpresa/$anoAtual-$mesAtual/totalMotoristas.json";
@@ -31,6 +31,7 @@ if (file_exists("./arquivos/paineis/$idEmpresa/$anoAtual-$mesAtual")) {
 // Obtém o tempo da última modificação do arquivo
 $timestamp = filemtime($file);
 $Emissão = date('d/m/Y H:i:s', $timestamp);
+
 
 // Calcula a porcentagem
 $porcentagenNaEndo = number_format(($MotoristasTotais['naoEndossados'] / $MotoristasTotais['totalMotorista']) * 100,2);
@@ -130,7 +131,7 @@ if ($porcentagenEndo == 0.00) {
 			<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact" id="tabela2">
 				<thead>
 					<tr class="totais">
-						<th colspan="1">PERÍODO: <?= $dataInicio . ' - ' . $dataFim ?></th>
+						<th colspan="1">PERÍODO: De <?= $dataInicio . ' até ' . $dataFim ?></th>
 						<th colspan="1"></th>
 						<?php
 								if ($MotoristasTotais != null) {

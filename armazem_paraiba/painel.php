@@ -8,9 +8,21 @@ function index() {
     global $totalResumo, $CONTEX;
 
     cabecalho('Relatorio Geral de Espelho de Ponto');
+    // Define o local para português do Brasil
+    setlocale(LC_TIME, 'pt_BR');
+
+    // Cria um objeto DateTime com a data atual
+    $dataAtual = new DateTime();
+
+    // Formata o mês usando o IntlDateFormatter
+    $mesAtual = IntlDateFormatter::formatObject($dataAtual, 'MMMM', 'pt_BR');
+    $anoAtual = date('Y');
+
+    $texto = "<div style='position: absolute; top: 101px; left: 420px;'><b>Periodo da Busca:</b> $mesAtual de $anoAtual</div>";
 
     $c = [
-        combo_net('Empresa:','empresa','',4,'empresa', '')
+        combo_net('Empresa:','empresa',$_POST['empresa']?? '',4,'empresa', ''),
+        $texto,
     ];
 
     $botao_imprimir =
@@ -23,7 +35,7 @@ function index() {
 					</script>';
 
     $b = [
-       botao("Buscar", 'index', $_POST['empresa']?? '', '', '', 1,'btn btn-info'),
+       botao("Buscar", 'index', '', '', '', 1,'btn btn-info'),
        $botao_imprimir
     ];
 

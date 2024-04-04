@@ -6,11 +6,11 @@ $mesAtual = date("n");
 $anoAtual = date("Y");
 // Obtém a data de início do mês atual
 $dataTimeInicio = new DateTime('first day of this month');
-$dataInicio= $dataTimeInicio->format('Y-m-d');
+$dataInicio= $dataTimeInicio->format('d/m/Y');
 
 // Obtém a data de fim do mês atual
 $dataTimeFim = new DateTime('last day of this month');
-$dataFim = $dataTimeFim->format('Y-m-d');
+$dataFim = $dataTimeFim->format('d/m/Y');
 
 
 // Obtém O total dos saldos das empresas
@@ -32,6 +32,36 @@ if (file_exists("./arquivos/paineis/empresas/$anoAtual-$mesAtual")) {
 $timestamp = filemtime($file);
 $Emissão = date('d/m/Y H:i:s', $timestamp);
 
+// Calcula a porcentagem
+$porcentagenNaEndo = number_format(($empresasTotais['EmprTotalNaoEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
+$porcentagenEndoPc = number_format(($empresasTotais['EmprTotalEndPac']/ $empresasTotais['EmprTotalMotorista']) * 100, 2);
+$porcentagenEndo = number_format(($empresasTotais['EmprTotalEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
+
+// Define a cor com base na porcentagem
+if ($porcentagenNaEndo == 0.00) {
+    $cssBgNaEndo = 'background-color: #85e085';
+} elseif ($porcentagenNaEndo <= 50.00) {
+    $cssBgNaEndo = 'background-color: #ffff4d';
+} else {
+    $cssBgNaEndo = 'background-color: #ff4d4d';
+}
+
+if ($porcentagenEndoPc == 0.00) {
+    $cssBgEndopc = 'background-color: #85e085';
+} elseif ($porcentagenEndoPc <= 50.00) {
+    $cssBgEndopc = 'background-color: #ffff4d';
+} else {
+    $cssBgEndopc = 'background-color: #ff4d4d';
+}
+
+if ($porcentagenEndo == 0.00) {
+    $cssBgEndo = 'background-color: #ff4d4d';
+} elseif ($porcentagenEndo <= 50.00) {
+    $cssBgEndo = 'background-color: #ffff4d';
+} else {
+    $cssBgEndo = 'background-color: #85e085';
+}
+
 ?>
 
 <style>
@@ -41,6 +71,15 @@ $Emissão = date('d/m/Y H:i:s', $timestamp);
 		text-align: center;
 		margin-bottom: -10px !important;
 	}
+	.textPocentagemNEndosado {
+            <? echo $cssBgNaEndo ?>
+    }
+    .textPocentagemEndosadoPc {
+            <? echo $cssBgEndopc ?>
+    }
+    .textPocentagemEndosado {
+            <? echo $cssBgEndo ?>
+    }
 </style>
 
 <div id="tituloRelatorio">
@@ -72,17 +111,17 @@ $Emissão = date('d/m/Y H:i:s', $timestamp);
 					<tr>
 						<td>NÃO ENDOSSADO</td>
 						<td class="textCentralizado"><?= $empresasTotais['EmprTotalNaoEnd'] ?></td>
-						<td class="textPocentagemNEndosado"><?= number_format(($empresasTotais['EmprTotalNaoEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2) ?></td>
+						<td class="textPocentagemNEndosado"><?= $porcentagenNaEndo ?></td>
 					</tr>
 					<tr>
 						<td>ENDOSSO PARCIAL</td>
 						<td class="textCentralizado"><?= $empresasTotais['EmprTotalEndPac']?></td>
-						<td class="textPocentagemNEndosado"><?= number_format(($empresasTotais['EmprTotalEndPac']/ $empresasTotais['EmprTotalMotorista']) * 100, 2) ?></td>
+						<td class="textPocentagemEndosadoPc"><?= $porcentagenEndoPc ?></td>
 					</tr>
 					<tr>
 						<td>ENDOSSADO</td>
 						<td class="textCentralizado"><?= $empresasTotais['EmprTotalEnd'] ?></td>
-						<td class="textPocentagemNEndosado"><?= number_format(($empresasTotais['EmprTotalEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2) ?></td>
+						<td class="textPocentagemEndosado"><?= $porcentagenEndo  ?></td>
 					</tr>
 				</tbody>
 			</table>
@@ -91,7 +130,7 @@ $Emissão = date('d/m/Y H:i:s', $timestamp);
 			<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact" id="tabela2">
 				<thead>
 					<tr class="totais">
-						<th colspan="1">PERÍODO: <?= $dataInicio . ' - ' . $dataFim ?></th>
+					<th colspan="1">PERÍODO: De <?= $dataInicio . ' até ' . $dataFim ?></th>
 						<th> </th>
 						<?php
 								if ($empresasTotais != null) {
