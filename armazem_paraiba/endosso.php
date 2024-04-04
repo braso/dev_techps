@@ -1,7 +1,7 @@
 <?php
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
 	
-	/* Modo debug
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -50,7 +50,7 @@
 
 		$sqlMotorista = query(
 			"SELECT * FROM entidade 
-				WHERE enti_tx_tipo IN ('Motorista', 'Ajudante') 
+				WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante') 
 					AND enti_nb_id IN (".$_POST['idMotoristaEndossado'].") 
 					AND enti_nb_empresa = ".$_POST['busca_empresa']." 
 					AND enti_tx_status != 'inativo'
@@ -226,7 +226,7 @@
 
 		cabecalho('Endosso');
 
-		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
+		if (!empty($_SESSION['user_nb_empresa']) && $_SESSION['user_tx_nivel'] != 'Administrador' && $_SESSION['user_tx_nivel'] != 'Super Administrador') {
 			$extraEmpresa = " AND empr_nb_id = '" . $_SESSION['user_nb_empresa'] . "'";
 			$extraEmpresaMotorista = " AND enti_nb_empresa = '" . $_SESSION['user_nb_empresa'] . "'";
 		}else{
@@ -278,13 +278,21 @@
 
 		//CAMPOS DE CONSULTA{
 			$c = [
-				combo_net('Motorista:', 'busca_motorista', (!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ''), 3, 'entidade', '', ' AND enti_tx_tipo IN ("Motorista", "Ajudante")' . $extraMotorista . $extraEmpresaMotorista, 'enti_tx_matricula'),
+				combo_net(
+					'Motorista/Ajudante:', 
+					'busca_motorista', 
+					(!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ''), 
+					3, 
+					'entidade', 
+					'', 
+					(!empty($_POST['busca_empresa'])?" AND enti_nb_empresa = ".$_POST['busca_empresa']:"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') ".$extraEmpresa, 
+				),
 				campo_mes('Data:',     'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2),
 				combo(	  'Endossado:',	'busca_endossado', (!empty($_POST['busca_endossado'])? $_POST['busca_endossado']: ''), 2, ['' => '', 'endossado' => 'Sim', 'naoEndossado' => 'Não'])
 			];
 
 			if(is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))){
-				array_unshift($c, combo_net('Empresa*:', 'busca_empresa',   (!empty($_POST['busca_empresa'])?   $_POST['busca_empresa']  : ''), 3, 'empresa', 'onchange=selecionaMotorista(this.value)', $extraEmpresa));
+				array_unshift($c, combo_net('Empresa*:', 'busca_empresa',   ($_POST['busca_empresa']?? ''), 3, 'empresa', 'onchange=selecionaMotorista(this.value)', $extraEmpresa));
 			}
 		//}
 
@@ -323,7 +331,7 @@
 	
 				$sqlMotorista = query(
 					"SELECT * FROM entidade
-						WHERE enti_tx_tipo IN ('Motorista', 'Ajudante')
+						WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante')
 							AND enti_nb_empresa = ".$_POST['busca_empresa']." ".$extra."
 							AND enti_tx_status != 'inativo'
 						ORDER BY enti_tx_nome"

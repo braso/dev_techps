@@ -200,7 +200,7 @@
 
 				var selecionado = $('.cidade',parent.document);
 				selecionado.empty();
-				selecionado.append('<option value=".$arr['ibge'].">".[$arr['uf']]." ".$arr['localidade']."</option>');
+				selecionado.append('<option value=".$arr['ibge'].">[".$arr['uf']."] ".$arr['localidade']."</option>');
 				selecionado.val('".$arr['ibge']."').trigger('change');
 			</script>";
 		exit;
@@ -538,6 +538,10 @@
 
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
+		}
+
+		if(!empty($_SESSION['user_tx_nivel']) && $_SESSION['user_tx_nivel'] != "Super Administrador"){
+			$extra .= " AND empr_tx_Ehmatriz = 'nao'";
 		}
 
 		if(!empty($_POST['busca_codigo'])){
