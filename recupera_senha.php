@@ -1,6 +1,10 @@
 <?php
+
+		// ini_set('display_errors', 1);
+		// error_reporting(E_ALL);
 // include "conecta.php";
 global $CONTEX;
+$interno = true;
 
 include_once "./PHPMailer/src/Exception.php";
 include_once "./PHPMailer/src/PHPMailer.php";
@@ -23,6 +27,14 @@ function extrairDominio($url, $dominio_array) {
 if ($_POST['botao'] == 'ENVIAR') {
     $dominio_url = $_POST['dominio'];
 
+    // $dominio_array = [
+    //     "techps",
+    //     "braso",
+    //     "armazem_paraiba",
+    //     "opafrutas",
+    //     "qualy_transportes",
+    //     "feijao_turqueza"
+    // ];
 
     $dominio = extrairDominio($dominio_url, $dominio_array);
 
