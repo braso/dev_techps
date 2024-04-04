@@ -14,11 +14,12 @@ function verificarAtividade($paginasAtivas) {
     }
     return '';
 }
-$paginasRelatorios = ['/relarorio_geral_matr'];
 
 $paginasPonto = ['/carregar_ponto', '/espelho_ponto', '/endosso', '/nao_conformidade', '/nao_cadastrados'];
 
 $paginasCadastro = ['/cadastro_empresa', '/cadastro_motorista', '/cadastro_parametro', '/cadastro_motivo', '/cadastro_feriado','/cadastro_usuario','/cadastro_macro'];
+
+$paginaPainel = ['/painel'];
 
 if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos($_SESSION['user_tx_nivel'], 'Super Administrador'))) { ?>
 
@@ -56,11 +57,8 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 							<li class=""><a href="<?= $CONTEX["path"] ?>/nao_cadastrados" class="nav-link">Não Cadastrados</a></li> 
 						</ul>
 					</li>
-					<li class="menu-dropdown classic-menu-dropdown <?= verificarAtividade($paginasRelatorios)?>">
-						<a href="javascript:;">Relatorios<span class="arrow"></span></a>
-						<ul class="dropdown-menu pull-left">
-							<li class=""><a href="<?= $CONTEX["path"] ?>/relarorio_geral_matr" class="nav-link ">Geral Espelho de ponto por matrícula</a></li>
-						</ul>
+					<li class="menu-dropdown classic-menu-dropdown <?= verificarAtividade($paginaPainel) ?>">
+						<a href="<?= $CONTEX["path"]?>/painel">Painel<span class="arrow"></span></a>
 					</li>
 					<?php if(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))){ ?>
 					<li class="menu-dropdown classic-menu-dropdown ">
