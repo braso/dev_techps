@@ -223,7 +223,7 @@
 
 				foreach (file($local_file) as $line) {
 					$line = trim($line);
-					$matricula = substr($line, 0, 10) + 0;
+					$matricula = substr($line, 0, 10);
 
 					$data = substr($line, 10, 8);
 					$data = substr($data, 4, 4)."-".substr($data, 2, 2)."-".substr($data, 0, 2);
