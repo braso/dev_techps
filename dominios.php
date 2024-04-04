@@ -16,6 +16,17 @@ $dominios = [
     "apx_solucoes"      => 'Fs Log Transportes',
 ];
 
+$dominio_array = [
+    "armazem_paraiba",
+    "braso",
+    "carau_transporte",
+    "feijao_turqueza",
+    "opafrutas",
+    "qualy_transportes",
+    "techps",
+    "apx_solucoes",
+];
+
 $dominiosInput = "<div class='form-group'>
     <select class='form-control' name='dominio'>
         <option value='' hidden selected>Domínio</option>";
