@@ -1458,6 +1458,7 @@
 			}
 	
 			$totais[] = [
+				'empresaId'        => $empresa['empr_nb_id'],
 				'empresaNome'      => $empresa['empr_tx_nome'],
 				'jornadaPrevista'  => $totalJorPrev,
 				'JornadaEfetiva'   => $totalJorEfe,
@@ -1475,7 +1476,6 @@
 			];
 
 			$totaisJson = [
-			    'empresaId'        => $empresa['empr_nb_id'],
 				'empresaNome'      => $empresa['empr_tx_nome'],
 				'jornadaPrevista'  => $totalJorPrev,
 				'JornadaEfetiva'   => $totalJorEfe,
