@@ -72,7 +72,7 @@
             </tr>
 
             <tr class="employee-info">
-                <td style="padding-left: 12px; text-align: left;"><b><?=$aMotorista['enti_tx_nivel']?>:</b> <?= $aMotorista['enti_tx_nome'] ?>
+                <td style="padding-left: 12px; text-align: left;"><b><?= $aMotorista['enti_tx_ocupacao']?>:</b> <?= $aMotorista['enti_tx_nome'] ?>
                 </td>
                 <td style="text-align: left;"><b>Função:</b> <?= $aMotorista['enti_tx_ocupacao'] ?></td>
                 <td style="text-align: left;"><b>CPF:</b> <?= $aMotorista['enti_tx_cpf'] ?></td>

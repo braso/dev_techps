@@ -19,6 +19,7 @@ $paginasPonto = ['/carregar_ponto', '/espelho_ponto', '/endosso', '/nao_conformi
 
 $paginasCadastro = ['/cadastro_empresa', '/cadastro_motorista', '/cadastro_parametro', '/cadastro_motivo', '/cadastro_feriado','/cadastro_usuario','/cadastro_macro'];
 
+$paginaPainel = ['/painel'];
 if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos($_SESSION['user_tx_nivel'], 'Super Administrador'))) { ?>
 
 	<!-- INICIO HEADER MENU -->
@@ -54,6 +55,9 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 							<li class=""><a href="<?= $CONTEX["path"] ?>/nao_conformidade" class="nav-link ">Não Conformidades</a></li>
 							<li class=""><a href="<?= $CONTEX["path"] ?>/nao_cadastrados" class="nav-link">Não Cadastrados</a></li> 
 						</ul>
+					</li>
+					<li class="menu-dropdown classic-menu-dropdown <?= verificarAtividade($paginaPainel) ?>">
+						<a href="<?= $CONTEX["path"]?>/painel">Painel<span class="arrow"></span></a>
 					</li>
 					<?php if(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))){ ?>
 					<li class="menu-dropdown classic-menu-dropdown ">

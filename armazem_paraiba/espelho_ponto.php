@@ -7,10 +7,10 @@
 	include "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
 
 	function index() {
-
 		global $CONTEX, $totalResumo, $conn;
 	
 		cabecalho('Espelho de Ponto');
+		
 		
 		$extraBuscaMotorista = '';
 		$extraCampoData = '';
@@ -89,6 +89,7 @@
 			$_POST['busca_empresa'] = $_POST['busca_empresa']?? '';
 			$_POST['busca_motorista'] = $_POST['busca_motorista']?? '';
 		}
+		
 
 		//CAMPOS DE CONSULTA
 		$c = [
@@ -106,6 +107,10 @@
 			campo_data('Data Início:', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ''), 2, $extraCampoData),
 			campo_data('Data Fim:', 'busca_dataFim', ($_POST['busca_dataFim']?? ''), 2,$extraCampoData)
 		];
+		if (isset($_POST['AtualizarPainel']) && !empty($_POST['AtualizarPainel'])) {
+		    echo '<script>alert("Atualizando os painéis, aguarde um pouco ")</script>';
+            criar_relatorio();
+        }
 		
 		$botao_imprimir =
 			'<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
@@ -115,6 +120,12 @@
 							window.print();
 						}
 					</script>';
+					
+		$botaoAtualizarPainel = '<div style="position: absolute; top: 151px; left: 345px;">
+		<form method="post">
+		    <input class="btn default" type="submit" name="AtualizarPainel" value="AtualizarPainel">
+		</form>
+		</div>';
 		//BOTOES
 		$b = [
 			botao("Buscar", 'index', '', '', '', '', 'btn btn-success'),
@@ -123,6 +134,7 @@
 			$b[] = botao("Cadastrar Abono", 'layout_abono');
 		}
 		$b[] = $botao_imprimir;
+		$b[] = $botaoAtualizarPainel;
 		
 		abre_form('Filtro de Busca');
 		linha_form($c);
@@ -130,6 +142,7 @@
 		?>
 		<div id="tituloRelatorio">
 			<h1>Espelho de Ponto</h1>
+			<img id="logo" style='width: 150px' src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 		</div>
 		<style>
 			#tituloRelatorio{
@@ -211,7 +224,6 @@
 			}else{
 				$saldoFinal = somarHorarios(['00:00', $totalResumo['diffSaldo']]);
 			}
-			
 
 			$saldosMotorista = 'SALDOS: <br>
 				<div class="table-responsive">
@@ -231,7 +243,8 @@
 							</tr>
 						</tbody>
 					</table>
-				  </div>'
+				  </div>
+				  '
 			;
 				 
 			$periodoPesquisa = 'De '.date("d/m/Y", strtotime($_POST['busca_dataInicio'])).' até '.date("d/m/Y", strtotime($_POST['busca_dataFim']));
@@ -263,6 +276,12 @@
                         display: block; /* Torna visível apenas ao imprimir */
                         font-size: 12px;
                         padding-left: 500px;
+                    }
+                    #logo{
+						display: flex;
+                        position: absolute;
+                        top: 5px;
+                        right: 20px;
                     }
                     body > div.scroll-to-top{
                         display: none !important;
@@ -304,6 +323,7 @@
 				    
 				}
 			</style>
+			
 		<?
 			$aDia[] = array_values(array_merge(array('', '', '', '', '', '', '<b>TOTAL</b>'), $totalResumo));
 			

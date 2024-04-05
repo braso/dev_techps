@@ -100,6 +100,7 @@
 		}
 		$camposObrigatorios = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade', 'endereco', 'bairro'];
 		foreach($camposObrigatorios as $campo){
+
 			if($sqlCheckNivel["empr_tx_Ehmatriz"] != 'sim' && (!isset($_POST[$campo]) || empty($_POST[$campo]))){
 				echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
 				visualizarCadastro();
@@ -126,7 +127,6 @@
 			foreach($campos as $campo){
 				$empresa['empr_tx_'.$campo] = $_POST[$campo];
 			}
-			
 
 			$empty_ftp_inputs = empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) + 0;
 
@@ -201,6 +201,7 @@
 				if(!is_dir("arquivos/empresa/$id_empresa")){
 					mkdir("arquivos/empresa/$id_empresa");
 				}
+
 
 				$arq=enviar('logo',"arquivos/empresa/$id_empresa/",$id_empresa);
 				if($arq){
