@@ -2,6 +2,8 @@
 // ini_set('display_errors', 1);
 // error_reporting(E_ALL);
 
+include 'painel_empresa_csv.php';
+
 $mesAtual = date("n");
 $anoAtual = date("Y");
 // Obtém a data de início do mês atual
@@ -64,7 +66,6 @@ if ($porcentagenEndo == 0.00) {
 }
 
 ?>
-
 <style>
 	#tabela1 {
 		width: 30% !important;
@@ -86,7 +87,7 @@ if ($porcentagenEndo == 0.00) {
 <div id="tituloRelatorio">
     <img style='width: 150px' src="<?=  $aEmpresa[0]['empr_tx_logo'] ?>" alt="Logo Empresa Esquerda">
 	<h3>Relatorio Geral de Espelho de Ponto</h3>
-	 <div class="right-logo">
+	<div class="right-logo">
         <p></p>
         <img style='width: 150px' src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
     </div>
@@ -188,3 +189,25 @@ if ($porcentagenEndo == 0.00) {
 		</div>
 	</div>
 </div>
+<script>
+    function downloadCSV() {
+        // Caminho do arquivo CSV no servidor
+        var filePath = '<?="./arquivos/paineis/Painel_$MotoristasTotais[empresaNome].csv" ?>' // Substitua pelo caminho do seu arquivo
+
+        // Cria um link para download
+        var link = document.createElement('a');
+
+        // Configurações do link
+        link.setAttribute('href', filePath);
+        link.setAttribute('download', '<?= "Painel_$MotoristasTotais[empresaNome].csv"?>');
+
+        // Adiciona o link ao documento
+        document.body.appendChild(link);
+
+        // Simula um clique no link para iniciar o download
+        link.click();
+
+        // Remove o link
+        document.body.removeChild(link);
+    }
+</script>

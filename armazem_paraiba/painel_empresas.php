@@ -1,6 +1,7 @@
 <?php
 // ini_set('display_errors', 1);
 // error_reporting(E_ALL);
+include 'painel_empresas_csv.php';
 
 $mesAtual = date("n");
 $anoAtual = date("Y");
@@ -165,7 +166,7 @@ if ($porcentagenEndo == 0.00) {
 					if ($empresaTotais != null) {
 						foreach ($empresaTotais as $empresaTotal) {
 							echo '<tr class="conteudo">';
-							echo "<td> $empresaTotal[empresaNome]</td>";
+							echo "<td onclick=\"setAndSubmit('".$empresaTotal['empresaId']."')\">".$empresaTotal['empresaNome']."</td>";
 							echo "<td> $empresaTotal[totalMotorista]</td>";
 							echo "<td> $empresaTotal[jornadaPrevista]</td>";
 							echo "<td> $empresaTotal[JornadaEfetiva]</td>";
@@ -187,3 +188,26 @@ if ($porcentagenEndo == 0.00) {
 		</div>
 	</div>
 </div>
+
+<script>
+    function downloadCSV() {
+        // Caminho do arquivo CSV no servidor
+        var filePath = './arquivos/paineis/Painel_Geral.csv' // Substitua pelo caminho do seu arquivo
+
+        // Cria um link para download
+        var link = document.createElement('a');
+
+        // Configurações do link
+        link.setAttribute('href', filePath);
+        link.setAttribute('download', 'Painel_Geral.csv');
+
+        // Adiciona o link ao documento
+        document.body.appendChild(link);
+
+        // Simula um clique no link para iniciar o download
+        link.click();
+
+        // Remove o link
+        document.body.removeChild(link);
+    }
+</script>

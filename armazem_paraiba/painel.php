@@ -2,6 +2,7 @@
 // ini_set('display_errors', 1);
 // error_reporting(E_ALL);
 
+
 include "funcoes_ponto.php";
 
 function index() {
@@ -33,12 +34,15 @@ function index() {
 							window.print();
 						}
 					</script>';
-
+	$botaoCsv = "
+	<button id='btnCsv' class='btn btn-success' style='background-color: green !important;' onclick='downloadCSV()'>Baixar CSV</button>";
+    
     $b = [
        botao("Buscar", 'index', '', '', '', 1,'btn btn-info'),
-       $botao_imprimir
+       $botao_imprimir,
+       $botaoCsv
     ];
-
+    
     abre_form('Filtro de Busca');
     linha_form($c);
     fecha_form($b);
@@ -120,6 +124,17 @@ function index() {
                     position: absolute;
                 }
         </style>
+         <form name="myForm" method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">-->
+           <input type="hidden" name="empresa" id="empresa">
+        </form>
+
+        <script>
+               function setAndSubmit(empresa) {
+                  document.myForm.empresa.value = empresa;
+                //   console.log(document.myForm.empresa.value);
+                 document.myForm.submit();
+               }
+        </script>
 
     <?php
     
