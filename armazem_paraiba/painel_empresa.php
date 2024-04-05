@@ -87,7 +87,7 @@ if ($porcentagenEndo == 0.00) {
 <div id="tituloRelatorio">
     <img style='width: 150px' src="<?=  $aEmpresa[0]['empr_tx_logo'] ?>" alt="Logo Empresa Esquerda">
 	<h3>Relatorio Geral de Espelho de Ponto</h3>
-	<div class="right-logo">
+	 <div class="right-logo">
         <p></p>
         <img style='width: 150px' src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
     </div>

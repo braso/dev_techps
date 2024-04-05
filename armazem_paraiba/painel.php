@@ -124,7 +124,7 @@ function index() {
                     position: absolute;
                 }
         </style>
-         <form name="myForm" method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">-->
+         <form name="myForm" method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
            <input type="hidden" name="empresa" id="empresa">
         </form>
 
