@@ -265,7 +265,8 @@
 		
 		foreach($pares as $key => $value){
 			if(is_array($value) && count($value) > 0){
-				for($f = 0; $f < count($value); $f++){
+				$valueSize = count($value);
+				for($f = 0; $f < $valueSize; $f++){
 					if(isset($value[$f]['inicio']) && isset($value[$f]['fim'])){
 						$value[$f] = operarHorarios([$value[$f]['fim'], $value[$f]['inicio']], '-');
 					}else{

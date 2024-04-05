@@ -100,8 +100,7 @@
 		}
 		$camposObrigatorios = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade', 'endereco', 'bairro'];
 		foreach($camposObrigatorios as $campo){
-
-			if($sqlCheckNivel["empr_tx_Ehmatriz"] != 'sim' && (!isset($_POST[$campo]) || empty($_POST[$campo]))){
+			if(!isset($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'sim' || $sqlCheckNivel["empr_tx_Ehmatriz"] != 'sim' && empty($_POST[$campo])){
 				echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
 				visualizarCadastro();
 				exit;
@@ -127,6 +126,7 @@
 			foreach($campos as $campo){
 				$empresa['empr_tx_'.$campo] = $_POST[$campo];
 			}
+			
 
 			$empty_ftp_inputs = empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) + 0;
 
@@ -201,7 +201,6 @@
 				if(!is_dir("arquivos/empresa/$id_empresa")){
 					mkdir("arquivos/empresa/$id_empresa");
 				}
-
 
 				$arq=enviar('logo',"arquivos/empresa/$id_empresa/",$id_empresa);
 				if($arq){
@@ -581,10 +580,6 @@
 
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
-		}
-
-		if(!empty($_SESSION['user_tx_nivel']) && $_SESSION['user_tx_nivel'] != "Super Administrador"){
-			$extra .= " AND empr_tx_Ehmatriz = 'nao'";
 		}
 
 		if(!empty($_POST['busca_codigo'])){

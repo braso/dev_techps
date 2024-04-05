@@ -67,11 +67,12 @@
 				
 				$check = query(
 					"SELECT * FROM ponto 
-						WHERE pont_tx_matricula = ".$newPonto['pont_tx_matricula']."
+						WHERE pont_tx_matricula = '".$newPonto['pont_tx_matricula']."'
 							AND pont_tx_data = '".$newPonto['pont_tx_data']."'
 							AND pont_tx_tipo = '".$newPonto['pont_tx_tipo']."'
 							AND pont_tx_tipoOriginal = '".$newPonto['pont_tx_tipoOriginal']."';"
 				);
+				
 				
 				if(num_linhas($check) === 0){
 					$newPontos[] = $newPonto;
@@ -223,7 +224,7 @@
 
 				foreach (file($local_file) as $line) {
 					$line = trim($line);
-					$matricula = substr($line, 0, 10) + 0;
+					$matricula = substr($line, 0, 10);
 
 					$data = substr($line, 10, 8);
 					$data = substr($data, 4, 4)."-".substr($data, 2, 2)."-".substr($data, 0, 2);

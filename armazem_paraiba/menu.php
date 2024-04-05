@@ -20,7 +20,6 @@ $paginasPonto = ['/carregar_ponto', '/espelho_ponto', '/endosso', '/nao_conformi
 $paginasCadastro = ['/cadastro_empresa', '/cadastro_motorista', '/cadastro_parametro', '/cadastro_motivo', '/cadastro_feriado','/cadastro_usuario','/cadastro_macro'];
 
 $paginaPainel = ['/painel'];
-
 if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos($_SESSION['user_tx_nivel'], 'Super Administrador'))) { ?>
 
 	<!-- INICIO HEADER MENU -->
