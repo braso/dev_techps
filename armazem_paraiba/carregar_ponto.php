@@ -224,6 +224,10 @@
 
 				foreach (file($local_file) as $line) {
 					$line = trim($line);
+					$matricula = preg_replace('/[0-9]+/', '', $line);
+					if (empty($matricula)) {
+						$matricula = substr($line, 0, 10)+0;
+					}
 					$matricula = substr($line, 0, 10);
 
 					$data = substr($line, 10, 8);

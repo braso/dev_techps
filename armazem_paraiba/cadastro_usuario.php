@@ -51,6 +51,7 @@
 
 		$error_msg = "ERRO: Insira os campos ";
 		$hasError = false;
+		// if(empty($_POST['id']))
     	if ($_POST['editPermission'] == true) {
 			$check_fields = [
 				//['nome', 'msg_erro']

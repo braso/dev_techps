@@ -583,7 +583,7 @@
 			$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
 		}
 
-		if(!empty($_SESSION['user_tx_nivel']) && $_SESSION['user_tx_nivel'] != "Super Administrador"){
+		if(!empty($_SESSION['user_tx_nivel']) && !is_bool(strpos($_SESSION['user_tx_nivel'], 'Funcionário')) ){
 			$extra .= " AND empr_tx_Ehmatriz = 'nao'";
 		}
 
