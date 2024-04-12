@@ -27,12 +27,18 @@ function index() {
     ];
 
     $botao_imprimir =
-			'<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
+			'<button class="btn default" type="button" onclick="printDiv(\'pdf2htmldiv\')">Imprimir</button >
 					<script>
-						function imprimir() {
-							// Abrir a caixa de diálogo de impressão
-							window.print();
-						}
+						function printDiv(divName) {
+                            var printContents = document.getElementById(divName).innerHTML;
+                            var originalContents = document.body.innerHTML;
+                
+                            document.body.innerHTML = printContents;
+                
+                            window.print();
+                
+                            document.body.innerHTML = originalContents;
+                        }
 					</script>';
 	$botaoCsv = "
 	<button id='btnCsv' class='btn btn-success' style='background-color: green !important;' onclick='downloadCSV()'>Baixar CSV</button>";
@@ -59,7 +65,7 @@ function index() {
     ?>
     	<style>
 
-            @media print {
+           @media print {
                     body {
                         margin: 1cm;
                         margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
@@ -102,6 +108,15 @@ function index() {
                         text-align: left;
                         padding-left: 300px !important;
                         position: absolute;
+                    }
+                    .porcentagenEndo{
+                        box-shadow: 0 0 0 1000px #66b3ff inset !important;
+                    }
+                    .porcentagenNaEndo{
+                        box-shadow: 0 0 0 1000px #ff471a inset !important;
+                    }
+                    .porcentagenEndoPc{
+                        box-shadow: 0 0 0 1000px #ffff66 inset !important;
                     }
             }
 

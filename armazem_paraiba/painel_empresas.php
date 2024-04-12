@@ -34,33 +34,17 @@ $timestamp = filemtime($file);
 $Emissão = date('d/m/Y H:i:s', $timestamp);
 
 // Calcula a porcentagem
-$porcentagenNaEndo = number_format(($empresasTotais['EmprTotalNaoEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
-$porcentagenEndoPc = number_format(($empresasTotais['EmprTotalEndPac']/ $empresasTotais['EmprTotalMotorista']) * 100, 2);
-$porcentagenEndo = number_format(($empresasTotais['EmprTotalEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
-
-// Define a cor com base na porcentagem
-if ($porcentagenNaEndo == 0.00) {
-    $cssBgNaEndo = 'background-color: #85e085';
-} elseif ($porcentagenNaEndo <= 50.00) {
-    $cssBgNaEndo = 'background-color: #ffff4d';
-} else {
-    $cssBgNaEndo = 'background-color: #ff4d4d';
+$porcentagenNaEndo = number_format(0,2);
+$porcentagenEndoPc = number_format(0,2);
+$porcentagenEndo = number_format(0,2);
+if ($empresasTotais['EmprTotalNaoEnd'] != 0) {
+	$porcentagenNaEndo = number_format(($empresasTotais['EmprTotalNaoEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
 }
-
-if ($porcentagenEndoPc == 0.00) {
-    $cssBgEndopc = 'background-color: #85e085';
-} elseif ($porcentagenEndoPc <= 50.00) {
-    $cssBgEndopc = 'background-color: #ffff4d';
-} else {
-    $cssBgEndopc = 'background-color: #ff4d4d';
+if ($empresasTotais['EmprTotalEndPac'] != 0) {
+	$porcentagenEndoPc = number_format(($empresasTotais['EmprTotalEndPac'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
 }
-
-if ($porcentagenEndo == 0.00) {
-    $cssBgEndo = 'background-color: #ff4d4d';
-} elseif ($porcentagenEndo <= 50.00) {
-    $cssBgEndo = 'background-color: #ffff4d';
-} else {
-    $cssBgEndo = 'background-color: #85e085';
+if ($empresasTotais['EmprTotalEnd'] != 0) {
+	$porcentagenEndo = number_format(($empresasTotais['EmprTotalEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
 }
 
 ?>
@@ -72,15 +56,12 @@ if ($porcentagenEndo == 0.00) {
 		text-align: center;
 		margin-bottom: -10px !important;
 	}
-	.textPocentagemNEndosado {
-            <? echo $cssBgNaEndo ?>
-    }
-    .textPocentagemEndosadoPc {
-            <? echo $cssBgEndopc ?>
-    }
-    .textPocentagemEndosado {
-            <? echo $cssBgEndo ?>
-    }
+	.totais{
+	    background-color: #e6ac00;
+	}
+	.titulos{
+		background-color: #99ccff;
+	}
 </style>
 
 <div id="tituloRelatorio">
@@ -96,7 +77,7 @@ if ($porcentagenEndo == 0.00) {
 		display: none;
     }
 </style>
-<div class="col-md-12 col-sm-12">
+<div class="col-md-12 col-sm-12" id="pdf2htmldiv">
 	<div class="portlet light ">
 	<div class="emissao">Emissão Doc.: <?= $Emissão?></div>
 		<div class="table-responsive">
@@ -112,27 +93,28 @@ if ($porcentagenEndo == 0.00) {
 					<tr>
 						<td>NÃO ENDOSSADO</td>
 						<td class="textCentralizado"><?= $empresasTotais['EmprTotalNaoEnd'] ?></td>
-						<td class="textPocentagemNEndosado"><?= $porcentagenNaEndo ?></td>
+						<td style="background-color: #ff471a;" class="porcentagenNaEndo"><?= $porcentagenNaEndo ?></td>
 					</tr>
 					<tr>
 						<td>ENDOSSO PARCIAL</td>
 						<td class="textCentralizado"><?= $empresasTotais['EmprTotalEndPac']?></td>
-						<td class="textPocentagemEndosadoPc"><?= $porcentagenEndoPc ?></td>
+						<td style="background-color: #ffff66;" class="porcentagenEndoPc"><?= $porcentagenEndoPc ?></td>
 					</tr>
 					<tr>
 						<td>ENDOSSADO</td>
 						<td class="textCentralizado"><?= $empresasTotais['EmprTotalEnd'] ?></td>
-						<td class="textPocentagemEndosado"><?= $porcentagenEndo  ?></td>
+						<td style="background-color: #66b3ff;" class='porcentagenEndo'><?= $porcentagenEndo  ?></td>
 					</tr>
 				</tbody>
 			</table>
 			<br>
 			<div class="portlet-body form">
-			<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact" id="tabela2">
+			<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact">
 				<thead>
-					<tr class="totais">
+					<tr class="totais" style="text-align: justify;">
 					<th colspan="1">PERÍODO: De <?= $dataInicio . ' até ' . $dataFim ?></th>
-						<th> </th>
+						<th>Status</th>
+						<th></th>
 						<?php
 								if ($empresasTotais != null) {
 									echo "<th colspan='1'> $empresasTotais[EmprTotalJorPrev]</th>";
@@ -149,7 +131,8 @@ if ($porcentagenEndo == 0.00) {
 					</tr>
 					<tr class="titulos">
 						<th>Todos os CNPJ</th>
-						<th>Quantidade de Motoristas</th>
+						<th>End %</th>
+						<th>Quant. Motoristas</th>
 						<th>Jornada Prevista</th>
 						<th>Jornada Efetiva</th>
 						<th>HE 50%</th>
@@ -165,8 +148,13 @@ if ($porcentagenEndo == 0.00) {
 				<?
 					if ($empresaTotais != null) {
 						foreach ($empresaTotais as $empresaTotal) {
+						    $porcentagenEndoEmpresa = number_format(0,2);
+							if ($empresaTotal['endossados'] != 0) {
+							    $porcentagenEndoEmpresa = number_format(($empresaTotal['endossados'] / $empresaTotal['totalMotorista']) * 100,2);
+                            }
 							echo '<tr class="conteudo">';
 							echo "<td onclick=\"setAndSubmit('".$empresaTotal['empresaId']."')\">".$empresaTotal['empresaNome']."</td>";
+							echo "<td>$porcentagenEndoEmpresa</td>";
 							echo "<td> $empresaTotal[totalMotorista]</td>";
 							echo "<td> $empresaTotal[jornadaPrevista]</td>";
 							echo "<td> $empresaTotal[JornadaEfetiva]</td>";

@@ -33,9 +33,18 @@ $timestamp = filemtime($file);
 $Emissão = date('d/m/Y H:i:s', $timestamp);
 
 // Calcula a porcentagem
-$porcentagenNaEndo = number_format(($empresasTotais['EmprTotalNaoEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
-$porcentagenEndoPc = number_format(($empresasTotais['EmprTotalEndPac']/ $empresasTotais['EmprTotalMotorista']) * 100, 2);
-$porcentagenEndo = number_format(($empresasTotais['EmprTotalEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
+$porcentagenNaEndo = number_format(0,2);
+$porcentagenEndoPc = number_format(0,2);
+$porcentagenEndo = number_format(0,2);
+if ($empresasTotais['EmprTotalNaoEnd'] != 0) {
+	$porcentagenNaEndo = number_format(($empresasTotais['EmprTotalNaoEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
+}
+if ($empresasTotais['EmprTotalEndPac'] != 0) {
+	$porcentagenEndoPc = number_format(($empresasTotais['EmprTotalEndPac'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
+}
+if ($empresasTotais['EmprTotalEnd'] != 0) {
+	$porcentagenEndo = number_format(($empresasTotais['EmprTotalEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
+}
 
 if(!is_dir("./arquivos/paineis")){
     mkdir("./arquivos/paineis",0755,true);
@@ -57,17 +66,21 @@ fputcsv($arquivo, $tabela1Ep, ';');
 fputcsv($arquivo, $tabela1E, ';');
 fputcsv($arquivo, $espaco, ';');
 
-$tabela2Totais = ["PERÍODO: De $dataInicio até $dataFim",'',"$empresasTotais[EmprTotalJorPrev]","$empresasTotais[EmprTotalJorEfe]",
+$tabela2Totais = ["PERÍODO: De $dataInicio até $dataFim",'Status','',"$empresasTotais[EmprTotalJorPrev]","$empresasTotais[EmprTotalJorEfe]",
 "$empresasTotais[EmprTotalHE50]","$empresasTotais[EmprTotalHE100]","$empresasTotais[EmprTotalAdicNot]","$empresasTotais[EmprTotalEspInd]",
 "$empresasTotais[EmprTotalSaldoAnter]","$empresasTotais[EmprTotalSaldoPeriodo]","$empresasTotais[EmprTotalSaldoFinal]"];
-$tabela2Cabecalho = ["Todos os CNPJ",'Quantidade de Motoristas','Jornada Prevista','Jornada Efetiva','HE 50%','HE 100%',
+$tabela2Cabecalho = ["Todos os CNPJ",'End %','Quantidade de Motoristas','Jornada Prevista','Jornada Efetiva','HE 50%','HE 100%',
 'Adicional Noturno','Espera Indenizada','Saldo Anterior','Saldo Periodo','Saldo Final'];
 
 fputcsv($arquivo, $tabela2Totais, ';');
 fputcsv($arquivo, $tabela2Cabecalho, ';');
 
 foreach ($empresaTotais as $empresaTotal) {
-    $tabela2Conteudo = ["$empresaTotal[empresaNome]","$empresaTotal[totalMotorista]","$empresaTotal[jornadaPrevista]",
+    $porcentagenEndoEmpresa = number_format(0,2);
+    if ($empresaTotal['endossados'] != 0) {
+        $porcentagenEndoEmpresa = number_format(($empresaTotal['endossados'] / $empresaTotal['totalMotorista']) * 100,2);
+    }
+    $tabela2Conteudo = ["$empresaTotal[empresaNome]","$porcentagenEndoEmpresa","$empresaTotal[totalMotorista]","$empresaTotal[jornadaPrevista]",
     "$empresaTotal[JornadaEfetiva]","$empresaTotal[he50]","$empresaTotal[he100]","$empresaTotal[adicionalNoturno]",
     "$empresaTotal[esperaIndenizada]","$empresaTotal[saldoAnterior]","$empresaTotal[saldoPeriodo]","$empresaTotal[saldoFinal]"];
     fputcsv($arquivo, $tabela2Conteudo, ';');

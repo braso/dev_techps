@@ -32,11 +32,20 @@ if (file_exists("./arquivos/paineis/$idEmpresa/$anoAtual-$mesAtual")) {
 $timestamp = filemtime($file);
 $Emissão = date('d/m/Y H:i:s', $timestamp);
 
-
 // Calcula a porcentagem
-$porcentagenNaEndo = number_format(($MotoristasTotais['naoEndossados'] / $MotoristasTotais['totalMotorista']) * 100,2);
-$porcentagenEndoPc = number_format(($MotoristasTotais['endossoPacial']/ $MotoristasTotais['totalMotorista']) * 100, 2) ;
-$porcentagenEndo = number_format(($MotoristasTotais['endossados'] / $MotoristasTotais['totalMotorista']) * 100, 2);
+$porcentagenNaEndo = number_format(0,2);
+$porcentagenEndoPc = number_format(0,2);
+$porcentagenEndo = number_format(0,2);
+if ($MotoristasTotais['naoEndossados'] != 0) {
+    $porcentagenNaEndo = number_format(($MotoristasTotais['naoEndossados'] / $MotoristasTotais['totalMotorista']) * 100,2);
+}
+if ($MotoristasTotais['endossoPacial'] != 0) {
+    $porcentagenEndoPc = number_format(($MotoristasTotais['endossoPacial']/ $MotoristasTotais['totalMotorista']) * 100, 2) ;
+}
+if ($MotoristasTotais['endossados'] != 0) {
+    $porcentagenNaEndo = number_format(($MotoristasTotais['endossados'] / $MotoristasTotais['totalMotorista']) * 100,2);
+}
+
 
 if(!is_dir("./arquivos/paineis")){
     mkdir("./arquivos/paineis",0755,true);
