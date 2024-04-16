@@ -47,6 +47,36 @@ if ($empresasTotais['EmprTotalEnd'] != 0) {
 	$porcentagenEndo = number_format(($empresasTotais['EmprTotalEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
 }
 
+$quantPosi = 0;
+$quantNega = 0;
+$quantMeta = 0;
+
+foreach ($empresaTotais as $empresaTotal) {
+    $saldoFinal = $empresaTotal['saldoFinal'];
+
+    if ($saldoFinal === '00:00') {
+        $quantMeta++;
+    } elseif ($saldoFinal > '00:00') {
+        $quantPosi++;
+    } elseif ($saldoFinal < '00:00') {
+        $quantNega++;
+    }
+}
+
+$porcentagenMeta = number_format(0,2);
+$porcentagenNega = number_format(0,2);
+$porcentagenPosi = number_format(0,2);
+
+if ($quantMeta != 0) {
+	$porcentagenMeta  = number_format(($quantMeta / count($empresaTotais)) * 100, 2);
+}
+if ($quantNega != 0) {
+	$porcentagenNega = number_format(($quantNega / count($empresaTotais)) * 100, 2);
+}
+if ($quantPosi != 0) {
+	$porcentagenPosi = number_format(($quantPosi / count($empresaTotais)) * 100, 2);
+}
+
 ?>
 
 <style>
@@ -56,12 +86,48 @@ if ($empresasTotais['EmprTotalEnd'] != 0) {
 		text-align: center;
 		margin-bottom: -10px !important;
 	}
+	#tabela2 {
+		width: 30% !important;
+		/*margin-top: 9px !important;*/
+		text-align: center;
+		margin-bottom: -10px !important;
+		margin-left: 10px;
+	}
 	.totais{
-	    background-color: #e6ac00;
+	    background-color: #ffe699;
+	}
+	tr.totais > th:nth-child(1),
+	tr.totais > th:nth-child(2),
+	tr.totais > th:nth-child(3),
+	tr.totais > th:nth-child(4),
+	tr.totais > th:nth-child(5),
+	tr.totais > th:nth-child(6),
+	tr.totais > th:nth-child(7),
+	tr.totais > th:nth-child(8),
+	tr.totais > th:nth-child(9),
+	tr.totais > th:nth-child(10),
+	tr.totais > th:nth-child(11),
+	tr.totais > th:nth-child(12){
+	    text-align: justify;
 	}
 	.titulos{
 		background-color: #99ccff;
 	}
+	tr.titulos > th:nth-child(1),
+	tr.titulos > th:nth-child(2),
+	tr.titulos > th:nth-child(3),
+	tr.titulos > th:nth-child(4),
+	tr.titulos > th:nth-child(5),
+	tr.titulos > th:nth-child(6),
+	tr.titulos > th:nth-child(7),
+	tr.titulos > th:nth-child(8),
+	tr.titulos > th:nth-child(9),
+	tr.titulos > th:nth-child(10),
+	tr.titulos > th:nth-child(11),
+	tr.titulos > th:nth-child(12){
+	    text-align: justify;
+	}
+	
 </style>
 
 <div id="tituloRelatorio">
@@ -81,6 +147,7 @@ if ($empresasTotais['EmprTotalEnd'] != 0) {
 	<div class="portlet light ">
 	<div class="emissao">Emissão Doc.: <?= $Emissão?></div>
 		<div class="table-responsive">
+		    <div style="display: flex;">
 			<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact" id="tabela1">
 				<thead>
 					<tr>
@@ -108,11 +175,39 @@ if ($empresasTotais['EmprTotalEnd'] != 0) {
 				</tbody>
 			</table>
 			<br>
+			<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact" id="tabela2">
+				<thead>
+					<tr>
+						<th colspan="1">SALDO FINAL</th>
+						<th colspan="1">QUANT</th>
+						<th colspan="1">%</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td  class="porcentagenMeta" style="background-color: #66b3ff;">META</td>
+						<td class="textCentralizado"><?= $quantMeta ?></td>
+						<td><?= $porcentagenMeta ?></td>
+					</tr>
+					<tr>
+						<td class='porcentagenPosit' style="background-color: #00b33c;">POSITIVO</td>
+						<td class="textCentralizado"><?= $quantPosi?></td>
+						<td><?= $porcentagenPosi ?></td>
+					</tr>
+					<tr>
+						<td class='porcentagenNegat' style="background-color: #ff471a;">NEGATIVO</td>
+						<td class="textCentralizado"><?= $quantNega ?></td>
+						<td><?= $porcentagenNega  ?></td>
+					</tr>
+				</tbody>
+			</table>
+			</div>
+			<br>
 			<div class="portlet-body form">
 			<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact">
 				<thead>
-					<tr class="totais" style="text-align: justify;">
-					<th colspan="1">PERÍODO: De <?= $dataInicio . ' até ' . $dataFim ?></th>
+					<tr class="totais">
+					<th colspan="1">Período: De <?= $dataInicio . ' até ' . $dataFim ?></th>
 						<th>Status</th>
 						<th></th>
 						<?php
@@ -158,10 +253,10 @@ if ($empresasTotais['EmprTotalEnd'] != 0) {
 							echo "<td> $empresaTotal[totalMotorista]</td>";
 							echo "<td> $empresaTotal[jornadaPrevista]</td>";
 							echo "<td> $empresaTotal[JornadaEfetiva]</td>";
-							echo "<td> $empresaTotal[he50]</td>";
-							echo "<td> $empresaTotal[he100]</td>";
-							echo "<td> $empresaTotal[adicionalNoturno]</td>";
-							echo "<td> $empresaTotal[esperaIndenizada]</td>";
+							echo "<td>" . (($empresaTotal['he50'] == '00:00') ? '' : $empresaTotal['he50']) . "</td>";
+							echo "<td>" . (($empresaTotal['he100'] == '00:00') ? '' : $empresaTotal['he100']) . "</td>";
+							echo "<td>" . (($empresaTotal['adicionalNoturno'] == '00:00') ? '' : $empresaTotal['adicionalNoturno']) . "</td>";
+							echo "<td>" . (($empresaTotal['esperaIndenizada'] == '00:00') ? '' : $empresaTotal['esperaIndenizada']) . "</td>";
 							echo "<td> $empresaTotal[saldoAnterior]</td>";
 							echo "<td> $empresaTotal[saldoPeriodo]</td>";
 							echo "<td> $empresaTotal[saldoFinal]</td>";

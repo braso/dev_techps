@@ -27,18 +27,12 @@ function index() {
     ];
 
     $botao_imprimir =
-			'<button class="btn default" type="button" onclick="printDiv(\'pdf2htmldiv\')">Imprimir</button >
+			'<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
 					<script>
-						function printDiv(divName) {
-                            var printContents = document.getElementById(divName).innerHTML;
-                            var originalContents = document.body.innerHTML;
-                
-                            document.body.innerHTML = printContents;
-                
-                            window.print();
-                
-                            document.body.innerHTML = originalContents;
-                        }
+						function imprimir() {
+							// Abrir a caixa de diálogo de impressão
+							window.print();
+						}
 					</script>';
 	$botaoCsv = "
 	<button id='btnCsv' class='btn btn-success' style='background-color: green !important;' onclick='downloadCSV()'>Baixar CSV</button>";
@@ -106,7 +100,7 @@ function index() {
                     }
                     .emissao{
                         text-align: left;
-                        padding-left: 300px !important;
+                        padding-left: 570px !important;
                         position: absolute;
                     }
                     .porcentagenEndo{
@@ -117,6 +111,21 @@ function index() {
                     }
                     .porcentagenEndoPc{
                         box-shadow: 0 0 0 1000px #ffff66 inset !important;
+                    }
+                    thead tr.totais th {
+                        box-shadow: 0 0 0 1000px #ffe699 inset !important; /* Cor para impressão */
+                    }
+                    thead tr.titulos th {
+                        box-shadow: 0 0 0 1000px #99ccff inset !important; /* Cor para impressão */
+                    }
+                    .porcentagenMeta{
+                        box-shadow: 0 0 0 1000px #66b3ff inset !important;
+                    }
+                    .porcentagenPosit{
+                        box-shadow: 0 0 0 1000px #00b33c inset !important;
+                    }
+                    .porcentagenNegat{
+                        box-shadow: 0 0 0 1000px #ff471a inset !important;
                     }
             }
 
@@ -135,7 +144,7 @@ function index() {
                 }
                 .emissao{
                     text-align: left;
-                    padding-left: 350px;
+                    padding-left: 710px;
                     position: absolute;
                 }
         </style>

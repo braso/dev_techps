@@ -46,16 +46,46 @@ if ($empresasTotais['EmprTotalEnd'] != 0) {
 	$porcentagenEndo = number_format(($empresasTotais['EmprTotalEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
 }
 
+$quantPosi = 0;
+$quantNega = 0;
+$quantMeta = 0;
+
+foreach ($empresaTotais as $empresaTotal) {
+    $saldoFinal = $empresaTotal['saldoFinal'];
+
+    if ($saldoFinal === '00:00') {
+        $quantMeta++;
+    } elseif ($saldoFinal > '00:00') {
+        $quantPosi++;
+    } elseif ($saldoFinal < '00:00') {
+        $quantNega++;
+    }
+}
+
+$porcentagenMeta = number_format(0,2);
+$porcentagenNega = number_format(0,2);
+$porcentagenPosi = number_format(0,2);
+
+if ($quantMeta != 0) {
+	$porcentagenMeta  = number_format(($quantMeta / count($empresaTotais)) * 100, 2);
+}
+if ($quantNega != 0) {
+	$porcentagenNega = number_format(($quantNega / count($empresaTotais)) * 100, 2);
+}
+if ($quantPosi != 0) {
+	$porcentagenPosi = number_format(($quantPosi / count($empresaTotais)) * 100, 2);
+}
+
 if(!is_dir("./arquivos/paineis")){
     mkdir("./arquivos/paineis",0755,true);
 }
 
 $csvPainelEmpresa = "./arquivos/paineis/Painel_Geral.csv";
 // Cabeçalhos
-$tabela1Cabecalho = ['','QUANT','%'];
-$tabela1Ne = ['NÃO ENDOSSADO',"$empresasTotais[EmprTotalNaoEnd]","$porcentagenNaEndo"];
-$tabela1Ep = ['ENDOSSO PARCIAL',"$empresasTotais[EmprTotalEndPac]","$porcentagenEndoPc"];
-$tabela1E = ['ENDOSSADO',"$empresasTotais[EmprTotalEnd]","$porcentagenEndo"];
+$tabela1Cabecalho = ['','QUANT','%','',"SALDO FINAL",'QUANT','%'];
+$tabela1Ne = ['NÃO ENDOSSADO',"$empresasTotais[EmprTotalNaoEnd]","$porcentagenNaEndo",'',"$quantMeta","$porcentagenMeta"];
+$tabela1Ep = ['ENDOSSO PARCIAL',"$empresasTotais[EmprTotalEndPac]","$porcentagenEndoPc",'',"$quantPosi","$porcentagenPosi"];
+$tabela1E = ['ENDOSSADO',"$empresasTotais[EmprTotalEnd]","$porcentagenEndo",'',"$quantNega","$porcentagenNega"];
 $espaco = ['','','','','','','','','','','','','','','','',''];
 
 $arquivo = fopen($csvPainelEmpresa, 'w');
@@ -66,7 +96,7 @@ fputcsv($arquivo, $tabela1Ep, ';');
 fputcsv($arquivo, $tabela1E, ';');
 fputcsv($arquivo, $espaco, ';');
 
-$tabela2Totais = ["PERÍODO: De $dataInicio até $dataFim",'Status','',"$empresasTotais[EmprTotalJorPrev]","$empresasTotais[EmprTotalJorEfe]",
+$tabela2Totais = ["Período: De $dataInicio até $dataFim",'Status','',"$empresasTotais[EmprTotalJorPrev]","$empresasTotais[EmprTotalJorEfe]",
 "$empresasTotais[EmprTotalHE50]","$empresasTotais[EmprTotalHE100]","$empresasTotais[EmprTotalAdicNot]","$empresasTotais[EmprTotalEspInd]",
 "$empresasTotais[EmprTotalSaldoAnter]","$empresasTotais[EmprTotalSaldoPeriodo]","$empresasTotais[EmprTotalSaldoFinal]"];
 $tabela2Cabecalho = ["Todos os CNPJ",'End %','Quantidade de Motoristas','Jornada Prevista','Jornada Efetiva','HE 50%','HE 100%',

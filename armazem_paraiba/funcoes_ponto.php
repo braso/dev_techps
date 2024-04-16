@@ -1394,13 +1394,27 @@
 					} else {
 						$JorPrev = $diaPonto['diffJornadaEfetiva'];
 					}
+
+					
+					if(count($endossos) > 0){
+						$he50 = empty($diaPonto['he50']) ? '00:00' : $diaPonto['he50'];
+						$he100 = empty($diaPonto['he100']) ? '00:00' : $diaPonto['he100'];
+						$adicNot = $diaPonto['adicionalNoturno'];
+						$espInd  = $diaPonto['esperaIndenizada'];
+					}
+					else {
+						$he50 = '00:00';
+						$he100 = '00:00';
+						$adicNot = '00:00';
+						$espInd  = '00:00';
+					}
 					
 					$totalJorPrev      = somarHorarios([$totalJorPrev,      $diaPonto['jornadaPrevista']]);
 					$totalJorEfe       = somarHorarios([$totalJorEfe,       $JorPrev]);
-					$totalHE50         = somarHorarios([$totalHE50,         (empty($diaPonto['he50']) ? '00:00' : $diaPonto['he50'])]);
-					$totalHE100        = somarHorarios([$totalHE100,        (empty($diaPonto['he100']) ? '00:00' : $diaPonto['he100'])]);
-					$totalAdicNot      = somarHorarios([$totalAdicNot,      $diaPonto['adicionalNoturno']]);
-					$totalEspInd       = somarHorarios([$totalEspInd,       $diaPonto['esperaIndenizada']]);
+					$totalHE50         = somarHorarios([$totalHE50,         $he50]);
+					$totalHE100        = somarHorarios([$totalHE100,        $he100]);
+					$totalAdicNot      = somarHorarios([$totalAdicNot,      $adicNot ]);
+					$totalEspInd       = somarHorarios([$totalEspInd,       $espInd]);
 					$totalSaldoPeriodo = somarHorarios([$totalSaldoPeriodo, $diaPonto['diffSaldo']]);
 					
 				}
