@@ -26,7 +26,6 @@
 				</script>"
 			;
 		}
-
 		exit;
 	}
 
@@ -141,6 +140,7 @@
 			'enti_tx_nome' 						=> 'nome', 
 			'enti_tx_nascimento' 				=> 'nascimento', 
 			'enti_tx_status' 					=> 'status', 
+			'enti_tx_status' 					=> 'status', 
 			'enti_tx_cpf' 						=> 'cpf',
 			'enti_tx_rg' 						=> 'rg',
 			'enti_tx_civil' 					=> 'civil',
@@ -179,7 +179,7 @@
 			'enti_tx_cnhCategoria' 				=> 'cnhCategoria', 
 			'enti_tx_cnhPermissao' 				=> 'cnhPermissao',
 			'enti_tx_cnhObs' 					=> 'cnhObs', 
-			'enti_tx_enti_nb_cnhCidade' 		=> 'cnhCidade', 
+			'enti_nb_cnhCidade'			 		=> 'cnhCidade', 
 			'enti_tx_cnhEmissao' 				=> 'cnhEmissao', 
 			'enti_tx_cnhPontuacao' 				=> 'cnhPontuacao', 
 			'enti_tx_cnhAtividadeRemunerada' 	=> 'cnhAtividadeRemunerada',
@@ -197,6 +197,8 @@
 		if(isset($_POST['ocupacao']) && !empty($_POST['ocupacao'])){
 			$a_mod['enti_tx_nivel'] = $_POST['ocupacao'];
 		}
+
+
 
 		//Conferir campos obrigatórios{
 			$campos_obrigatorios = [
@@ -410,7 +412,7 @@
 		}
 
 		$_POST['id'] = $id;
-		index();
+		visualizarCadastro();
 		exit;
 	}
 

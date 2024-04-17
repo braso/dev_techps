@@ -78,7 +78,7 @@
 			$hasError = true;
 			$error_msg .= 'Nível, ';
 		}
-		if(!empty($_POST['senha']) || !empty($_POST['senha2']) || ($_POST['senha'] != $_POST['senha2'])){
+		if(empty($_POST['senha']) || empty($_POST['senha2']) || ($_POST['senha'] != $_POST['senha2'])){
 			$hasError = true;
 			$error_msg .= "Confirmação de senha correta, ";
 		}

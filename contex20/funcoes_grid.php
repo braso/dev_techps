@@ -223,12 +223,12 @@
 		);
 
 		preg_match('/(.*)\((.*?)\)(.*)/', $ordenar_coluna, $match);
-		if(isset($match[2])){
-			$parametros = explode(',',$match[2]);
-			$order = $parametros[0];
-		}else{
-			$order = $ordenar_coluna;
-		}
+		// if(isset($match[2])){
+		// 	$parametros = explode(',',$match[2]);
+		// 	$order = $parametros[0];
+		// }else{
+		// 	$order = $ordenar_coluna;
+		// }
 		
 		echo 
 			"<script type=\"text/javascript\" language=\"javascript\" >
@@ -240,8 +240,6 @@
 						\"sEcho\": true,
 						\"lengthMenu\": [ [10, 25, 50, 100, -1], [10, 25, 50, 100, \"Todos\"] ],
 						\"pageLength\": ".$paginar.",
-						// \"stateSave\": true,
-						\"order\": [".$order.", \"".$ordenar_sentido."\"],
 						\"ajax\":{
 							url :\"".$CONTEX['path']."/../contex20/server-side.php\", // json datasource
 							type: \"post\",  // method  , by default get

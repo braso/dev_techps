@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -107,7 +107,9 @@
 			}
 		}
 
-		$_POST['status'] = 'ativo';
+		if(!isset($_POST['id']) || empty($_POST['id'])){
+			unset($_POST['id']);
+			$_POST['status'] = 'ativo';
 
 		$empresa = [
 			'empr_tx_Ehmatriz'	=> $_POST['matriz'],
@@ -122,56 +124,95 @@
 			'ftpServer', 'ftpUsername', 'ftpUserpass', 'dataRegistroCNPJ'
 		];
 
-		foreach($campos as $campo){
-			$empresa['empr_tx_'.$campo] = $_POST[$campo];
-		}
-
-
-		$empty_ftp_inputs = empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) + 0;
-
-		if($empty_ftp_inputs == 3){
-			$_POST['ftpServer']   = 'ftp:ftp-jornadas.positronrt.com.br';
-			$_POST['ftpUsername'] = 'u:08995631000108';
-			$_POST['ftpUserpass'] = 'p:0899';
-		}elseif($empty_ftp_inputs > 0){
-			echo '<script>alert("Preencha os 3 campos de FTP.")</script>';
-			visualizarCadastro();
-			exit;
-		}
-
-		if(isset($_POST['id']) && !empty($_POST['id'])){
-			$empresa['empr_nb_userAtualiza'] = $_SESSION['user_nb_id'];
-			$empresa['empr_tx_dataAtualiza'] = date('Y-m-d H:i:s');
+			foreach($campos as $campo){
+				if(!empty($_POST[$campo])){
+					$empresa['empr_tx_'.$campo] = $_POST[$campo];
+				}
+			}
 			
+
+			$empty_ftp_inputs = empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) + 0;
+
+			if($empty_ftp_inputs == 3){
+				$_POST['ftpServer']   = 'ftp:ftp-jornadas.positronrt.com.br';
+				$_POST['ftpUsername'] = 'u:08995631000108';
+				$_POST['ftpUserpass'] = 'p:0899';
+			}elseif($empty_ftp_inputs > 0){
+				echo '<script>alert("Preencha os 3 campos de FTP.")</script>';
+				visualizarCadastro();
+				exit;
+			}
+
+			if(isset($_POST['id']) && !empty($_POST['id'])){
+				$empresa['empr_nb_userAtualiza'] = $_SESSION['user_nb_id'];
+				$empresa['empr_tx_dataAtualiza'] = date('Y-m-d H:i:s');
+				
+				atualizar('empresa',array_keys($empresa),array_values($empresa),$_POST['id']);
+				$id_empresa = $_POST['id'];
+			}else{
+				$empresa['empr_nb_userCadastro'] = $_SESSION['user_nb_id'];
+				$empresa['empr_tx_dataCadastro'] = date('Y-m-d H:i:s');
+				try{
+					$id_empresa = inserir('empresa',array_keys($empresa),array_values($empresa));
+				}catch(Exception $e){
+					print_r($e);
+				}
+			}
+			
+			$file_type = $_FILES['logo']['type']; //returns the mimetype
+
+			$allowed = array("image/jpeg", "image/gif", "image/png");
+			if(in_array($file_type, $allowed) && $_FILES['logo']['name']!='') {
+
+				if(!is_dir("arquivos/empresa/$id_empresa")){
+					mkdir("arquivos/empresa/$id_empresa");
+				}
+
+				$arq=enviar('logo',"arquivos/empresa/$id_empresa/",$id_empresa);
+				if($arq){
+					atualizar('empresa',['empr_tx_logo'],[$arq],$id_empresa);
+				}
+			}
+		} else {
+			$empresa = [
+				'empr_nb_parametro' => $_POST['parametro'],
+				'empr_nb_userAtualiza' => $_SESSION['user_nb_id'],
+				'empr_tx_dataAtualiza' => date('Y-m-d H:i:s')
+			];
+
+			$campos = [
+				'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento', 
+				'referencia', 'fone1', 'fone2', 'email', 'inscricaoEstadual', 'inscricaoMunicipal', 
+				'regimeTributario', 'status', 'situacao', 'contato', 
+				'ftpServer', 'ftpUsername', 'ftpUserpass', 'dataRegistroCNPJ'
+			];
+	
+			foreach($campos as $campo){
+				$empresa['empr_tx_'.$campo] = $_POST[$campo];
+			}
+			
+	
 			atualizar('empresa',array_keys($empresa),array_values($empresa),$_POST['id']);
+	
 			$id_empresa = $_POST['id'];
-		}else{
-			$empresa['empr_nb_userCadastro'] = $_SESSION['user_nb_id'];
-			$empresa['empr_tx_dataCadastro'] = date('Y-m-d H:i:s');
-			try{
-				$id_empresa = inserir('empresa',array_keys($empresa),array_values($empresa))[0];
-			}catch(Exception $e){
-				print_r($e);
-			}
-		}
-		
-		$file_type = $_FILES['logo']['type']; //returns the mimetype
-
-		$allowed = array("image/jpeg", "image/gif", "image/png");
-		if(in_array($file_type, $allowed) && $_FILES['logo']['name']!='') {
-
-			if(!is_dir("arquivos/empresa/$id_empresa")){
-				mkdir("arquivos/empresa/$id_empresa");
-			}
-
-			$arq=enviar('logo',"arquivos/empresa/$id_empresa/",$id_empresa);
-			if($arq){
-				atualizar('empresa',['empr_tx_logo'],[$arq],$id_empresa);
+	
+			$file_type = $_FILES['logo']['type']; //returns the mimetype
+	
+			$allowed = array("image/jpeg", "image/gif", "image/png");
+			if(in_array($file_type, $allowed) && $_FILES['logo']['name']!='') {
+	
+				if(!is_dir("arquivos/empresa/$id_empresa")){
+					mkdir("arquivos/empresa/$id_empresa");
+				}
+	
+				$arq=enviar('logo',"arquivos/empresa/$id_empresa/",$id_empresa);
+				if($arq){
+					atualizar('empresa',['empr_tx_logo'],[$arq],$id_empresa);
+				}
 			}
 		}
 
-
-		index();
+		visualizarCadastro();
 		exit;
 	}
 
@@ -608,7 +649,7 @@
 			'<spam class="glyphicon glyphicon-remove"></spam>' => 'icone_excluir(empr_nb_id,excluirEmpresa)'
 		];
 		
-		grid($sql,array_keys($gridCols),array_values($gridCols),'','',1,'',10);
+		grid($sql,array_keys($gridCols),array_values($gridCols),'','12',2,"desc",'10');
 
 		rodape();
 
