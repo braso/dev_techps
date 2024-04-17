@@ -89,6 +89,7 @@
 		?>
 		<div id="tituloRelatorio">
 			<h1>Não Conformidade</h1>
+			<img id="logo" style='width: 150px' src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 		</div>
 		<style>
 			#tituloRelatorio{
@@ -326,8 +327,13 @@
 					#tituloRelatorio{
 						display: block; /* Torna visível apenas ao imprimir */
 						font-size: 12px;
-						padding-left: 500px;
+						padding-left: 300px;
 					}
+					#logo{
+                        position: absolute;
+                        top: 5px;
+                        right: 20px;
+                    }
 					body > div.scroll-to-top{
 						display: none !important;
 					}

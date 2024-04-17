@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -100,16 +100,14 @@
 		}
 		$camposObrigatorios = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade', 'endereco', 'bairro'];
 		foreach($camposObrigatorios as $campo){
-
-			if($sqlCheckNivel["empr_tx_Ehmatriz"] != 'sim' && (!isset($_POST[$campo]) || empty($_POST[$campo]))){
+			if(!isset($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'sim' || $sqlCheckNivel["empr_tx_Ehmatriz"] != 'sim' && empty($_POST[$campo])){
 				echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
 				visualizarCadastro();
 				exit;
 			}
 		}
 
-		if(!isset($_POST['id']) || empty($_POST['id'])){
-			unset($_POST['id']);
+		if(!isset($_POST['id']) && empty($_POST['id'])){
 			$_POST['status'] = 'ativo';
 
 			$empresa = [
@@ -126,9 +124,7 @@
 			];
 
 			foreach($campos as $campo){
-				if(!empty($_POST[$campo])){
-					$empresa['empr_tx_'.$campo] = $_POST[$campo];
-				}
+				$empresa['empr_tx_'.$campo] = $_POST[$campo];
 			}
 			
 
@@ -154,7 +150,7 @@
 				$empresa['empr_nb_userCadastro'] = $_SESSION['user_nb_id'];
 				$empresa['empr_tx_dataCadastro'] = date('Y-m-d H:i:s');
 				try{
-					$id_empresa = inserir('empresa',array_keys($empresa),array_values($empresa));
+					$id_empresa = inserir('empresa',array_keys($empresa),array_values($empresa))[0];
 				}catch(Exception $e){
 					print_r($e);
 				}
@@ -174,45 +170,47 @@
 					atualizar('empresa',['empr_tx_logo'],[$arq],$id_empresa);
 				}
 			}
-		} else {
+		} else
 			$empresa = [
 				'empr_nb_parametro' => $_POST['parametro'],
 				'empr_nb_userAtualiza' => $_SESSION['user_nb_id'],
 				'empr_tx_dataAtualiza' => date('Y-m-d H:i:s')
 			];
+			
 			$campos = [
 				'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento', 
 				'referencia', 'fone1', 'fone2', 'email', 'inscricaoEstadual', 'inscricaoMunicipal', 
 				'regimeTributario', 'status', 'situacao', 'contato', 
 				'ftpServer', 'ftpUsername', 'ftpUserpass', 'dataRegistroCNPJ'
 			];
-	
+
 			foreach($campos as $campo){
 				$empresa['empr_tx_'.$campo] = $_POST[$campo];
 			}
 			
-	
+
 			atualizar('empresa',array_keys($empresa),array_values($empresa),$_POST['id']);
-	
+
 			$id_empresa = $_POST['id'];
-	
+
 			$file_type = $_FILES['logo']['type']; //returns the mimetype
-	
+
 			$allowed = array("image/jpeg", "image/gif", "image/png");
 			if(in_array($file_type, $allowed) && $_FILES['logo']['name']!='') {
-	
+
 				if(!is_dir("arquivos/empresa/$id_empresa")){
 					mkdir("arquivos/empresa/$id_empresa");
 				}
-	
+
 				$arq=enviar('logo',"arquivos/empresa/$id_empresa/",$id_empresa);
 				if($arq){
 					atualizar('empresa',['empr_tx_logo'],[$arq],$id_empresa);
 				}
 			}
-		}
 
-		visualizarCadastro();
+
+
+		index();
 		exit;
 	}
 
@@ -584,10 +582,6 @@
 			$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
 		}
 
-		if(!empty($_SESSION['user_tx_nivel']) && !is_bool(strpos($_SESSION['user_tx_nivel'], 'Funcionário')) ){
-			$extra .= " AND empr_tx_Ehmatriz = 'nao'";
-		}
-
 		if(!empty($_POST['busca_codigo'])){
 			$extra .= " AND empr_nb_id = '".$_POST['busca_codigo']."'";
 		}
@@ -652,7 +646,7 @@
 			'<spam class="glyphicon glyphicon-remove"></spam>' => 'icone_excluir(empr_nb_id,excluirEmpresa)'
 		];
 		
-		grid($sql,array_keys($gridCols),array_values($gridCols),'','12',2,"desc",'10');
+		grid($sql,array_keys($gridCols),array_values($gridCols),'','',1,'',10);
 
 		rodape();
 

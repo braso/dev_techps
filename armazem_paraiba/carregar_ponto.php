@@ -1,9 +1,10 @@
 <?php
-	/*Modo debug{
-		ini_set('display_errors', 1);
-		error_reporting(E_ALL);
+	//*Modo debug{
+// 		ini_set('display_errors', 1);
+// 		error_reporting(E_ALL);
 	//}*/
 	$interno = true;
+	include "funcoes_ponto.php";
 	include_once "conecta.php";
 	include_once "alerta_carrega_ponto.php";
 
@@ -86,7 +87,8 @@
 				$arquivoPontoId = inserir('arquivoponto', array_keys($newArquivoPonto), array_values($newArquivoPonto));
 				foreach($newPontos as $newPonto){
 					$newPonto['pont_nb_arquivoponto'] = intval($arquivoPontoId);
-					inserir('ponto', array_keys($newPonto), array_values($newPonto));
+					var_dump($newPonto); echo '<br><br>';
+					// inserir('ponto', array_keys($newPonto), array_values($newPonto));
 				}
 			}
 		}else{
@@ -198,7 +200,6 @@
 
 	// 	$ftp_userpass = '0899';
 
-
 		$ftp_conn = ftp_connect($infos['empr_tx_ftpServer']) or die("Could not connect to $infos[empr_tx_ftpServer]");
 		$login = ftp_login($ftp_conn, $infos['empr_tx_ftpUsername'], $infos['empr_tx_ftpUserpass']);
 
@@ -223,7 +224,10 @@
 
 				foreach (file($local_file) as $line) {
 					$line = trim($line);
-					$matricula = substr($line, 0, 10) + 0;
+					$matricula = substr($line, 0, 10);
+					while($matricula[0] == "0"){
+						$matricula = substr($matricula, 1);
+					}
 
 					$data = substr($line, 10, 8);
 					$data = substr($data, 4, 4)."-".substr($data, 2, 2)."-".substr($data, 0, 2);
@@ -252,9 +256,9 @@
 			index();
 			exit;
 		}
-
 		ftp_close($ftp_conn);
 		if ($_SERVER['HTTP_ENV'] == 'carrega_cron'){
+		    criar_relatorio();
 			exit;
 		}
 		index();
