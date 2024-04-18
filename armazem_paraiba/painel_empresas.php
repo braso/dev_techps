@@ -5,33 +5,37 @@ include 'painel_empresas_csv.php';
 
 $mesAtual = date("n");
 $anoAtual = date("Y");
-// Obtém a data de início do mês atual
-$dataTimeInicio = new DateTime('first day of this month');
-$dataInicio= $dataTimeInicio->format('d/m/Y');
+$motoristas = mysqli_fetch_all(
+	query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_tx_status != 'inativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante');"),
+	MYSQLI_ASSOC
+);
+$totalMotorEmpr = count($motoristas);
 
-// Obtém a data de fim do mês atual
-$dataTimeFim = new DateTime('last day of this month');
-$dataFim = $dataTimeFim->format('d/m/Y');
+$empresasTotais = [];
+$empresaTotais = [];
+$Emissão = '';
+if (is_dir("./arquivos/paineis/empresas/$_POST[busca_data]") != false) {
+	$file = "./arquivos/paineis/empresas/$_POST[busca_data]/empresas.json";
+	if (file_exists("./arquivos/paineis/empresas/$_POST[busca_data]")) {
+		$conteudo_json = file_get_contents($file);
+		$empresasTotais = json_decode($conteudo_json,true);
+	}
+
+	// Obtém O total dos saldos de cada empresa
+	$fileEmpresas = "./arquivos/paineis/empresas/$_POST[busca_data]/totalEmpresas.json";
+
+	if (file_exists("./arquivos/paineis/empresas/$_POST[busca_data]")) {
+		$conteudo_json = file_get_contents($fileEmpresas);
+		$empresaTotais = json_decode($conteudo_json,true);
+	}
+	
+	// Obtém o tempo da última modificação do arquivo
+    $timestamp = filemtime($file);
+    $Emissão = date('d/m/Y H:i:s', $timestamp);
+}else   
+    echo '<script>alert("Não Possui dados desse més")</script>';
 
 
-// Obtém O total dos saldos das empresas
-$file = "./arquivos/paineis/empresas/$anoAtual-$mesAtual/empresas.json";
-
-if (file_exists("./arquivos/paineis/empresas/$anoAtual-$mesAtual")) {
-	$conteudo_json = file_get_contents($file);
-	$empresasTotais = json_decode($conteudo_json,true);
-}
-
-// Obtém O total dos saldos de cada empresa
-$fileEmpresas = "./arquivos/paineis/empresas/$anoAtual-$mesAtual/totalEmpresas.json";
-if (file_exists("./arquivos/paineis/empresas/$anoAtual-$mesAtual")) {
-	$conteudo_json = file_get_contents($fileEmpresas);
-	$empresaTotais = json_decode($conteudo_json,true);
-}
-
-// Obtém o tempo da última modificação do arquivo
-$timestamp = filemtime($file);
-$Emissão = date('d/m/Y H:i:s', $timestamp);
 
 // Calcula a porcentagem
 $porcentagenNaEndo = number_format(0,2);
@@ -96,7 +100,6 @@ if ($quantPosi != 0) {
 	.totais{
 	    background-color: #ffe699;
 	}
-	tr.totais > th:nth-child(1),
 	tr.totais > th:nth-child(2),
 	tr.totais > th:nth-child(3),
 	tr.totais > th:nth-child(4),
@@ -214,10 +217,10 @@ if ($quantPosi != 0) {
 								if ($empresasTotais != null) {
 									echo "<th colspan='1'> $empresasTotais[EmprTotalJorPrev]</th>";
 									echo "<th colspan='1'> $empresasTotais[EmprTotalJorEfe]</th>";
-									echo "<th colspan='1'> $empresasTotais[EmprTotalHE50]</th>";
-									echo "<th colspan='1'> $empresasTotais[EmprTotalHE100]</th>";
-									echo "<th colspan='1'> $empresasTotais[EmprTotalAdicNot]</th>";
-									echo "<th colspan='1'> $empresasTotais[EmprTotalEspInd]</th>";
+									echo "<th colspan='1'> ".(($empresasTotais['EmprTotalHE50'] == '00:00') ? '' : $empresasTotais['EmprTotalHE50'])."</th>";
+									echo "<th colspan='1'> ".(($empresasTotais['EmprTotalHE100'] == '00:00') ? '' : $empresasTotais['EmprTotalHE100'])."</th>";
+									echo "<th colspan='1'> ".(($empresasTotais['EmprTotalAdicNot'] == '00:00') ? '' : $empresasTotais['EmprTotalAdicNot'])."</th>";
+									echo "<th colspan='1'> ".(($empresasTotais['EmprTotalEspInd'] == '00:00') ? '' : $empresasTotais['EmprTotalEspInd'])."</th>";
 									echo "<th colspan='1'> $empresasTotais[EmprTotalSaldoAnter]</th>";
 									echo "<th colspan='1'> $empresasTotais[EmprTotalSaldoPeriodo]</th>";
 									echo "<th colspan='1'> $empresasTotais[EmprTotalSaldoFinal]</th>";

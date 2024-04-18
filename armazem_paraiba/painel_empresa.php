@@ -4,33 +4,30 @@
 
 include 'painel_empresa_csv.php';
 
-$mesAtual = date("n");
-$anoAtual = date("Y");
-// Obtém a data de início do mês atual
-$dataTimeInicio = new DateTime('first day of this month');
-$dataInicio= $dataTimeInicio->format('d/m/Y');
+$MotoristasTotais = [];
+$MotoristaTotais = [];
+if (is_dir("./arquivos/paineis/empresas/$_POST[busca_data]") != false) {
+	// Obtém O total dos saldos das empresa
+	$file = "./arquivos/paineis/$idEmpresa/$_POST[busca_data]/totalMotoristas.json";
 
-// Obtém a data de fim do mês atual
-$dataTimeFim = new DateTime('last day of this month');
-$dataFim = $dataTimeFim->format('d/m/Y');
-
-// Obtém O total dos saldos das empresa
-$file = "./arquivos/paineis/$idEmpresa/$anoAtual-$mesAtual/totalMotoristas.json";
-
-if (file_exists("./arquivos/paineis/$idEmpresa/$anoAtual-$mesAtual")) {
-	$conteudo_json = file_get_contents($file);
-	$MotoristasTotais = json_decode($conteudo_json,true);
-}
+	if (file_exists("./arquivos/paineis/$idEmpresa/$_POST[busca_data]")) {
+		$conteudo_json = file_get_contents($file);
+		$MotoristasTotais = json_decode($conteudo_json,true);
+	}
 
 
-// Obtém O total dos saldos de cada Motorista
-$fileEmpresas = "./arquivos/paineis/$idEmpresa/$anoAtual-$mesAtual/motoristas.json";
-if (file_exists("./arquivos/paineis/$idEmpresa/$anoAtual-$mesAtual")) {
-	$conteudo_json = file_get_contents($fileEmpresas);
-	$MotoristaTotais = json_decode($conteudo_json,true);
-}
+	// Obtém O total dos saldos de cada Motorista
+	$fileEmpresas = "./arquivos/paineis/$idEmpresa/$_POST[busca_data]/motoristas.json";
+	if (file_exists("./arquivos/paineis/$idEmpresa/$_POST[busca_data]")) {
+		$conteudo_json = file_get_contents($fileEmpresas);
+		$MotoristaTotais = json_decode($conteudo_json,true);
+	}
+}else   
+    echo '<script>alert("Não Possui dados desse més")</script>';
+
 
 // Obtém o tempo da última modificação do arquivo
+$timestamp = '';
 $timestamp = filemtime($file);
 $Emissão = date('d/m/Y H:i:s', $timestamp);
 
@@ -214,7 +211,7 @@ if ($quantPosi != 0) {
 								if ($MotoristasTotais != null) {
 									echo "<th colspan='1'> $MotoristasTotais[jornadaPrevista]</th>";
 									echo "<th colspan='1'> $MotoristasTotais[JornadaEfetiva]</th>";
-									echo "<th colspan='1'> $MotoristasTotais[he50]</th>";
+									echo "<th colspan='1'>".(($MotoristasTotais['he50'] == '00:00') ? '' : $MotoristasTotais['he50'])."</th>";
 									echo "<th colspan='1'> $MotoristasTotais[he100]</th>";
 									echo "<th colspan='1'> $MotoristasTotais[adicionalNoturno]</th>";
 									echo "<th colspan='1'> $MotoristasTotais[esperaIndenizada]</th>";

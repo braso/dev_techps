@@ -3,6 +3,10 @@
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
+	
+				ini_set('display_errors', 1);
+		error_reporting(E_ALL);
+		
 	include "conecta.php";
 
 	function exclui_parametro(){
@@ -127,24 +131,37 @@
 			$_POST['ignorarCampos'] = null;
 		}
 
-		$camposObrigatorios = ['nome', 'jornadaSemanal', 'jornadaSabado', 'tolerancia', 'percentualHE', 'percentualSabadoHE', 'HorasEXExcedente'];
+		$camposObrigatorios = ['nome' => 'Nome', 'jornadaSemanal' => 'Jornada Semanal (Horas/Dia)', 'jornadaSabado' => 'Jornada Sábado (Horas/Dia)',
+		'tolerancia' => 'Tolerância de jornada Saldo diário (Minutos)', 'percentualHE' => 'Percentual da Hora Extra (Semanal)', 
+		'percentualSabadoHE' => 'Percentual da Hora Extra (Dias sem Jornada Prevista)', 'HorasEXExcedente' => 'Máximo de Horas Extras 50% (diário)'];
 		// Removido temporariamente
 // 		if(!empty($_POST['acordo']) && $_POST['acordo'] == 'sim'){
 // 			$camposObrigatorios[] = 'inicioAcordo';
 // 			$camposObrigatorios[] = 'fimAcordo';
 // 		}
 		if(!empty($_POST['banco']) && $_POST['banco'] == 'sim'){
-			$camposObrigatorios[] = 'quandDias';
-			$camposObrigatorios[] = 'quandHoras';
+			$camposObrigatorios['quandDias'] = 'Quantidade de Dias';
+			$camposObrigatorios['quandHoras'] = 'Quantidade de Horas Limite';
 		}
-
-		foreach($camposObrigatorios as $campo){
-			if(!isset($_POST[$campo]) || $_POST[$campo] == ''){
-				echo '<script>alert("Preencha todos os campos obrigatórios.")</script>';
-				layout_parametro();
-				exit;
+		
+		$error = false;
+		$emptyFields = '';
+		foreach(array_keys($camposObrigatorios) as $campo){
+		    if(!isset($_POST[$campo]) || empty($_POST[$campo])){
+		        $error = true;
+				$emptyFields .= $camposObrigatorios[$campo].', ';
 			}
 		}
+		
+		$emptyFields = substr($emptyFields, 0, strlen($emptyFields)-2);
+
+		if($error){
+		    echo '<script>alert("Informações obrigatórias faltando: '.$emptyFields.'.")</script>';
+			layout_parametro();
+			exit;
+		}
+
+		unset($campos_obrigatorios);
 		
 		$novoParametro = [
 			'para_tx_nome' 					=> $_POST['nome'], 
@@ -227,7 +244,7 @@
 	function layout_parametro(){
 		global $a_mod;
 
-		if(!empty($_POST['id'])){
+		if(empty($a_mod) && !empty($_POST['id'])){
 			$a_mod = carregar('parametro', $_POST['id']);
 			$campos = [
 				'nome', 'jornadaSemanal', 'jornadaSabado', 'tolerancia', 'percentualHE',

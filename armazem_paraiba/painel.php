@@ -7,22 +7,40 @@ include "funcoes_ponto.php";
 
 function index() {
     global $totalResumo, $CONTEX;
+    
+    if(empty($_POST['busca_data'])){
+		$_POST['busca_data'] = date("Y-m");
+	}
+
+    $dateParts = explode('-',$_POST['busca_data']);
+    $monthNum = $dateParts[1];
+    $year = $dateParts[0];
+
+    $monthNames = array(
+        '01' => 'Janeiro',
+        '02' => 'Fevereiro',
+        '03' => 'Março',
+        '04' => 'Abril',
+        '05' => 'Maio',
+        '06' => 'Junho',
+        '07' => 'Julho',
+        '08' => 'Agosto',
+        '09' => 'Setembro',
+        '10' => 'Outubro',
+        '11' => 'Novembro',
+        '12' => 'Dezembro'
+    );
+
+    
+    $monthName = $monthNames[$monthNum];
 
     cabecalho('Relatorio Geral de Espelho de Ponto');
-    // Define o local para português do Brasil
-    setlocale(LC_TIME, 'pt_BR');
 
-    // Cria um objeto DateTime com a data atual
-    $dataAtual = new DateTime();
-
-    // Formata o mês usando o IntlDateFormatter
-    $mesAtual = IntlDateFormatter::formatObject($dataAtual, 'MMMM', 'pt_BR');
-    $anoAtual = date('Y');
-
-    $texto = "<div style='position: absolute; top: 101px; left: 420px;'><b>Periodo da Busca:</b> $mesAtual de $anoAtual</div>";
-
+    $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
+    //position: absolute; top: 101px; left: 420px;
     $c = [
         combo_net('Empresa:','empresa',$_POST['empresa']?? '',4,'empresa', ''),
+        campo_mes('Data:',     'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2),
         $texto,
     ];
 
@@ -34,20 +52,24 @@ function index() {
 							window.print();
 						}
 					</script>';
-	$botaoCsv = "
-	<button id='btnCsv' class='btn btn-success' style='background-color: green !important;' onclick='downloadCSV()'>Baixar CSV</button>";
+	$botaoCsv = "<button id='btnCsv' class='btn btn-success' style='background-color: green !important;' onclick='downloadCSV()'>Baixar CSV</button>";
+	
+    if (isset($_POST['empresa']) && !empty($_POST['empresa'])) {
+        $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
+    }
     
     $b = [
        botao("Buscar", 'index', '', '', '', 1,'btn btn-info'),
        $botao_imprimir,
-       $botaoCsv
+       $botaoCsv,
+       $botao_volta
     ];
     
     abre_form('Filtro de Busca');
     linha_form($c);
     fecha_form($b);
     
-    if (isset($_POST['empresa']) && !empty($_POST['empresa'])) {
+    if (isset($_POST['empresa']) && !empty($_POST['empresa']) && isset($_POST['busca_data']) && !empty($_POST['busca_data'])) {
          $idEmpresa = $_POST['empresa'];
          $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM `empresa` WHERE empr_tx_Ehmatriz = 'sim' AND empr_nb_id = $idEmpresa"), MYSQLI_ASSOC);
          include_once 'painel_empresa.php';
@@ -100,7 +122,7 @@ function index() {
                     }
                     .emissao{
                         text-align: left;
-                        padding-left: 570px !important;
+                        padding-left: 590px !important;
                         position: absolute;
                     }
                     .porcentagenEndo{
@@ -144,7 +166,7 @@ function index() {
                 }
                 .emissao{
                     text-align: left;
-                    padding-left: 710px;
+                    padding-left: 63%;
                     position: absolute;
                 }
         </style>

@@ -4,14 +4,6 @@
 
 $mesAtual = date("n");
 $anoAtual = date("Y");
-// Obtém a data de início do mês atual
-$dataTimeInicio = new DateTime('first day of this month');
-$dataInicio= $dataTimeInicio->format('d/m/Y');
-
-// Obtém a data de fim do mês atual
-$dataTimeFim = new DateTime('last day of this month');
-$dataFim = $dataTimeFim->format('d/m/Y');
-
 
 // Obtém O total dos saldos das empresas
 $file = "./arquivos/paineis/empresas/$anoAtual-$mesAtual/empresas.json";
