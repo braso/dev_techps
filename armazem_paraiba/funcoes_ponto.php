@@ -1343,13 +1343,13 @@
 				AND (endo_tx_de = '$dataInicio'
 				OR endo_tx_ate = '$dataFim')
 				AND endo_nb_entidade = $motorista[enti_nb_id]"), MYSQLI_ASSOC);
-	
+				
 				switch (count($endossos)) {
 					case 1:
 						if (strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) == strtotime($endossos[0]['endo_tx_ate'])) {
 							$endossado = "E";
 							$endossoQuantE += 1;
-						} else if (strtotime($dataFim) != strtotime($endossos[0]['endo_tx_ate'])) {
+						} else {
 							$endossado = "EP";
 							$endossoQuantEp += 1;
 						}
