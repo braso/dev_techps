@@ -445,24 +445,7 @@
 		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 1, 'desc', -1);
 
 		echo
-			"
-			<div id='tituloRelatorio'>
-				<img id='logo' style='width: 150px' src='$CONTEX[path]/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
-			</div>
-			<style>
-			@media print {
-				#tituloRelatorio{
-					display: flex !important;
-					position: absolute;
-					top: 5px;
-					right: 20px;
-				}
-			}
-				#tituloRelatorio{
-					display: none;
-				}
-			</style>
-			<form name='form_ajuste_status' action='https://braso.mobi".$CONTEX['path']."/ajuste_ponto' method='post'>
+			"<form name='form_ajuste_status' action='https://braso.mobi".$CONTEX['path']."/ajuste_ponto' method='post'>
 				<input type='hidden' name='acao' value='index'>
 				<input type='hidden' name='id'>
 				<input type='hidden' name='data'>

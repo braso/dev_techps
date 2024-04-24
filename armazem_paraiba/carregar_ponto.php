@@ -1,10 +1,9 @@
 <?php
-	//*Modo debug{
-// 		ini_set('display_errors', 1);
-// 		error_reporting(E_ALL);
+	/*Modo debug{
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
 	//}*/
 	$interno = true;
-	include "funcoes_ponto.php";
 	include_once "conecta.php";
 	include_once "alerta_carrega_ponto.php";
 
@@ -37,10 +36,7 @@
 				//Obs.: A matrícula deve ter 10 dígitos, então se tiver menos, adicione zeros à esquerda.
 				//Ex.: 000000591322012024091999911
 				$line = trim($line);
-				$matricula = substr($line, 0, 10);
-				while($matricula[0] == "0"){
-					$matricula = substr($matricula, 1);
-				}
+				$matricula = substr($line, 0, 10)+0;
 
 				$data = substr($line, 10, 8);
 				$data = substr($data, 4, 4)."-".substr($data, 2, 2)."-".substr($data, 0, 2);
@@ -67,12 +63,11 @@
 				
 				$check = query(
 					"SELECT * FROM ponto 
-						WHERE pont_tx_matricula = '".$newPonto['pont_tx_matricula']."'
+						WHERE pont_tx_matricula = ".$newPonto['pont_tx_matricula']."
 							AND pont_tx_data = '".$newPonto['pont_tx_data']."'
 							AND pont_tx_tipo = '".$newPonto['pont_tx_tipo']."'
 							AND pont_tx_tipoOriginal = '".$newPonto['pont_tx_tipoOriginal']."';"
 				);
-				
 				
 				if(num_linhas($check) === 0){
 					$newPontos[] = $newPonto;
@@ -87,8 +82,7 @@
 				$arquivoPontoId = inserir('arquivoponto', array_keys($newArquivoPonto), array_values($newArquivoPonto));
 				foreach($newPontos as $newPonto){
 					$newPonto['pont_nb_arquivoponto'] = intval($arquivoPontoId);
-					var_dump($newPonto); echo '<br><br>';
-					// inserir('ponto', array_keys($newPonto), array_values($newPonto));
+					inserir('ponto', array_keys($newPonto), array_values($newPonto));
 				}
 			}
 		}else{
@@ -200,6 +194,7 @@
 
 	// 	$ftp_userpass = '0899';
 
+
 		$ftp_conn = ftp_connect($infos['empr_tx_ftpServer']) or die("Could not connect to $infos[empr_tx_ftpServer]");
 		$login = ftp_login($ftp_conn, $infos['empr_tx_ftpUsername'], $infos['empr_tx_ftpUserpass']);
 
@@ -224,10 +219,7 @@
 
 				foreach (file($local_file) as $line) {
 					$line = trim($line);
-					$matricula = substr($line, 0, 10);
-					while($matricula[0] == "0"){
-						$matricula = substr($matricula, 1);
-					}
+					$matricula = substr($line, 0, 10) + 0;
 
 					$data = substr($line, 10, 8);
 					$data = substr($data, 4, 4)."-".substr($data, 2, 2)."-".substr($data, 0, 2);
@@ -256,9 +248,9 @@
 			index();
 			exit;
 		}
+
 		ftp_close($ftp_conn);
 		if ($_SERVER['HTTP_ENV'] == 'carrega_cron'){
-		    criar_relatorio();
 			exit;
 		}
 		index();

@@ -19,7 +19,7 @@
                 <div class='modal-footer'>
                     <button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
                     <button type='button' class='btn btn-primary' data-dismiss='modal' 
-					onclick='javascript:contex_icone( <?= ( $id ?? "") ?>,<?= ( $acao ?? "") ?>,<?= ( $campos ?? "" ) ?>,<?= ( $valores ?? "" ) ?>,<?= ( $target ?? "" ) ?>,<?= ( $msg ?? "" ) ?>,<?= ( $action ?? "" ) ?>,<?= ($data_de ?? "" ) ?>, <?= ( $data_ate ?? "") ?> ,document.getElementById("justificar").value);'>Gravar</button>
+					onclick='javascript:contex_icone( <?php echo ( $id ?? "") ?>,<?php echo ( $acao ?? "") ?>,<?php echo ( $campos ?? "" ) ?>,<?php echo ( $valores ?? "" ) ?>,<?php echo ( $target ?? "" ) ?>,<?php echo ( $msg ?? "" ) ?>,<?php echo ( $action ?? "" ) ?>,<?php echo ($data_de ?? "" ) ?>, <?php echo ( $data_ate ?? "") ?> ,document.getElementById("justificar").value);'>Gravar</button>
                 </div>
             </div>
         </div>

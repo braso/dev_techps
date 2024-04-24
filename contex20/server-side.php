@@ -1,7 +1,9 @@
-<?php
-
+<?php	
 	$interno = true; //Utilizado no conecta.php para reconhecer se quem está tentando acessar é uma tela ou uma query interna.
 	include_once "../..".$_POST['path']."/conecta.php";
+	echo '<script>';
+	echo "console.log('$_POST[path]');";
+	echo '</script>';
 	
 	$columns = $_POST['columns'];
 	

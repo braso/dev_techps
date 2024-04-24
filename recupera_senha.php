@@ -1,10 +1,6 @@
 <?php
-
-// 		ini_set('display_errors', 1);
-// 		error_reporting(E_ALL);
 // include "conecta.php";
 global $CONTEX;
-$interno = true;
 
 include_once "./PHPMailer/src/Exception.php";
 include_once "./PHPMailer/src/PHPMailer.php";
@@ -27,14 +23,14 @@ function extrairDominio($url, $dominio_array) {
 if ($_POST['botao'] == 'ENVIAR') {
     $dominio_url = $_POST['dominio'];
 
-    // $dominio_array = [
-    //     "techps",
-    //     "braso",
-    //     "armazem_paraiba",
-    //     "opafrutas",
-    //     "qualy_transportes",
-    //     "feijao_turqueza"
-    // ];
+    $dominio_array = [
+        "techps",
+        "braso",
+        "armazem_paraiba",
+        "opafrutas",
+        "qualy_transportes",
+        "feijao_turqueza"
+    ];
 
     $dominio = extrairDominio($dominio_url, $dominio_array);
 
@@ -61,16 +57,6 @@ if ($_POST['botao'] == 'ENVIAR') {
 if ($_POST['botao'] == 'Redefinir senha') {
     $dominio = $_GET['dominio'];
     include $dominio."/conecta.php";
-    
-    $token = $_GET['token'];
-    $checkTokenSql = query("SELECT user_nb_id FROM `user` WHERE user_tx_token = '$_GET[token]'");
-    $checkToken = mysqli_fetch_assoc($checkTokenSql);
-
-    if (!isset($checkToken) && empty($checkToken)) {
-        echo '<script>alert("Link já utilizado ou invalido, por favor solicita novamente a  redefinição de senha.  ")</script>';
-        echo "<meta http-equiv='refresh' content='0; url=https://braso.mobi/techps/index2.php' />";
-        exit;
-    }
     
     if (!empty($_POST['senha']) && !empty($_POST['senha2']) && $_POST['senha'] == $_POST['senha2']) {
             $userSql = query("SELECT user_nb_id FROM `user` WHERE user_tx_token = '$_GET[token]'");
@@ -220,7 +206,7 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
 
     <!-- FIM THEME LAYOUT STYLES -->
 
-    <?= 
+    <?php echo 
 		"<link rel='apple-touch-icon' sizes='180x180' href='./contex20/img/favicon/apple-touch-icon.png'>
 		<link rel='icon' type='image/png' sizes='32x32' href='./contex20/img/favicon/favicon-32x32.png'>
 		<link rel='icon' type='image/png' sizes='16x16' href='./contex20/img/favicon/favicon-16x16.png'>
@@ -267,18 +253,14 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
                         <label class="control-label visible-ie8 visible-ie9">Login</label>
                         <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="text" autocomplete="off" placeholder="Login" name="login" />
                     </div>
-                    <?= $msg ?>
-                    <? if(!empty($msg)){echo '<style>
-                    #enviar{
-                    display:none;
-                    }</style>';} ?>
+                    <?php echo $msg ?>
                     <div class="form-actions" style="padding: 26px 140px !important">
-                        <input type="submit" id='enviar' class="btn green uppercase" name="botao" value="ENVIAR"></input>
+                        <input type="submit" class="btn green uppercase" name="botao" value="ENVIAR"></input>
                     </div>
                     <?
                 } else {
                 ?>
-                <h3 class="form-title font-green">Redifinição de Senha - <?= $arrayDominio[$_GET['dominio']]; ?></h3>
+                <h3 class="form-title font-green">Redifinição de Senha - <?php echo $arrayDominio[$_GET['dominio']]; ?></h3>
                     <div class="form-group">
                         <label class="control-label visible-ie8 visible-ie9">Senha</label>
                         <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="password" autocomplete="off" placeholder="Senha" name="senha" />
@@ -288,7 +270,7 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
                         <label class="control-label visible-ie8 visible-ie9">Confirmar Senha</label>
                         <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="password" autocomplete="off" placeholder="Confirmar Senha" name="senha2" />
                     </div>
-                    <?= $msg ?>
+                    <?php echo $msg ?>
                     <div class="form-actions" style="padding: 26px 110px !important">
                         <input type="submit" class="btn green uppercase" name="botao" value="Redefinir senha"></input>
                     </div>
@@ -301,7 +283,7 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
 
     </div>
 
-    <div class="copyright"> <?= date("Y") ?> © TechPS. </div>
+    <div class="copyright"> <?php echo date("Y") ?> © TechPS. </div>
 
     <!-- COMECO PLUGINS PRINCIPAL -->
 
@@ -322,10 +304,10 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
     <script>
         function redirectIndex() {
             <?php
-        $dominio = $_GET['dominio'];
-        include $dominio."/conecta.php";
-        global $CONTEX;?>
-            window.location.href = "https://braso.mobi<?=$CONTEX['path']?>/index.php";
+    $dominio = $_GET['dominio'];
+    include $dominio."/conecta.php";
+    global $CONTEX;?>
+            window.location.href = "https://braso.mobi<?php echo$CONTEX['path']?>/index.php";
         }
             
         function esconderErro() {

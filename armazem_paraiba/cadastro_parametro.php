@@ -128,11 +128,10 @@
 		}
 
 		$camposObrigatorios = ['nome', 'jornadaSemanal', 'jornadaSabado', 'tolerancia', 'percentualHE', 'percentualSabadoHE', 'HorasEXExcedente'];
-		// Removido temporariamente
-// 		if(!empty($_POST['acordo']) && $_POST['acordo'] == 'sim'){
-// 			$camposObrigatorios[] = 'inicioAcordo';
-// 			$camposObrigatorios[] = 'fimAcordo';
-// 		}
+		if(!empty($_POST['acordo']) && $_POST['acordo'] == 'sim'){
+			$camposObrigatorios[] = 'inicioAcordo';
+			$camposObrigatorios[] = 'fimAcordo';
+		}
 		if(!empty($_POST['banco']) && $_POST['banco'] == 'sim'){
 			$camposObrigatorios[] = 'quandDias';
 			$camposObrigatorios[] = 'quandHoras';
@@ -180,11 +179,10 @@
 			unset($novoParametro['para_tx_horasLimite']);
 		}
 
-		// Removido temporariamente
-		// if(!empty($_POST['acordo']) && $_POST['acordo'] == 'nao'){
-		// 	unset($novoParametro['para_tx_inicioAcordo']);
-		// 	unset($novoParametro['para_tx_fimAcordo']);
-		// }
+		if(!empty($_POST['acordo']) && $_POST['acordo'] == 'nao'){
+			unset($novoParametro['para_tx_inicioAcordo']);
+			unset($novoParametro['para_tx_fimAcordo']);
+		}
 		
 
 		$novoParametro['para_nb_userAtualiza'] = $_SESSION['user_nb_id'];

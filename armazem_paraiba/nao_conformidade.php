@@ -8,7 +8,7 @@
 
 	function cadastrar(){
 		$url = substr($_SERVER['REQUEST_URI'], 0, strrpos($_SERVER['REQUEST_URI'], '/'));
-		header('Location: ' . 'https://braso.mobi' . $url . '/cadastro_endosso');
+		header('Location: ' . $_ENV['URL_BASE'] . $url . '/cadastro_endosso');
 		exit();
 	}
 
@@ -56,7 +56,7 @@
 
 		//CAMPOS DE CONSULTA{
 			$c = [
-				combo_net('Motorista:', 'busca_motorista', (!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ''), 3, 'entidade', '', ' AND enti_tx_ocupacao IN ("Motorista", "Ajudante")' . $extraMotorista . $extraEmpresaMotorista, 'enti_tx_matricula'),
+				combo_net('Motorista:', 'busca_motorista', (!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ''), 3, 'entidade', '', ' AND enti_tx_tipo IN ("Motorista", "Ajudante")' . $extraMotorista . $extraEmpresaMotorista, 'enti_tx_matricula'),
 				campo_mes('Data*:',     'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2)
 			];
 
@@ -89,7 +89,6 @@
 		?>
 		<div id="tituloRelatorio">
 			<h1>Não Conformidade</h1>
-			<img id="logo" style='width: 150px' src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 		</div>
 		<style>
 			#tituloRelatorio{
@@ -119,7 +118,7 @@
 	
 				$sqlMotorista = query(
 					"SELECT * FROM entidade
-						WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante')
+						WHERE enti_tx_tipo IN ('Motorista', 'Ajudante')
 							AND enti_nb_empresa = ".$_POST['busca_empresa']." ".$extra."
 							AND enti_tx_status != 'inativo'
 						ORDER BY enti_tx_nome"
@@ -327,13 +326,8 @@
 					#tituloRelatorio{
 						display: block; /* Torna visível apenas ao imprimir */
 						font-size: 12px;
-						padding-left: 300px;
+						padding-left: 500px;
 					}
-					#logo{
-                        position: absolute;
-                        top: 5px;
-                        right: 20px;
-                    }
 					body > div.scroll-to-top{
 						display: none !important;
 					}
