@@ -77,9 +77,9 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 	</div>
 	<!-- FIM HEADER MENU -->
 
-<? } ?>
+<?php } ?>
 
-<? if (is_int(strpos($_SESSION['user_tx_nivel'], 'Funcionário'))) { ?>
+<?php if (is_int(strpos($_SESSION['user_tx_nivel'], 'Funcionário'))) { ?>
 
 	<!-- INICIO HEADER MENU -->
 	<div class="page-header-menu">
@@ -121,9 +121,9 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 	</div>
 	<!-- FIM HEADER MENU -->
 
-<? } ?>
+<?php } ?>
 
-<? if(in_array($_SESSION['user_tx_nivel'], ['Motorista', 'Ajudante'])){?>
+<?php if(in_array($_SESSION['user_tx_nivel'], ['Motorista', 'Ajudante'])){?>
 
 	<!-- INICIO HEADER MENU -->
 	<div class="page-header-menu">
