@@ -1,7 +1,7 @@
 <?php
 	/* Modo debug
 		ini_set('display_errors', 1);
-		error_reporting(E_ALL);c
+		error_reporting(E_ALL);
 	//*/
 	function mysql_escape_mimic($inp) {
 		if(is_array($inp))
@@ -75,7 +75,7 @@
 			<input type="hidden" id="hidden">
 		</form>
 		-->
-		<?php
+		<?
 		// js_contex_icone();
 
 	}
@@ -147,7 +147,7 @@
 			<input type="hidden" name="just" value="">
 			<input type="hidden" id="hidden">
 		</form>
-		<?php
+		<?
 			js_contex_icone();
 
 			$rand = md5($sql);
@@ -168,8 +168,8 @@
 				form > div:nth-child(2) > div:nth-child(6),
 				form > div:nth-child(3) > div,
 				form > div.form-actions,
-				#contex-grid-<?php echo$rand?>_length,
-				#contex-grid-<?php echo$rand?>_info,
+				#contex-grid-<?=$rand?>_length,
+				#contex-grid-<?=$rand?>_info,
 				body > div.scroll-to-top > i
 				{
 					display: none;
@@ -178,21 +178,21 @@
 			}
 		</style>
 				<!-- BEGIN EXAMPLE TABLE PORTLET-->
-				<div class="col-md-<?php echo$col?> col-sm-<?php echo$col?>">
+				<div class="col-md-<?=$col?> col-sm-<?=$col?>">
 					<div class="portlet light ">
-						<?php if($label!=''){?>
+						<?if($label!=''){?>
 						<div class="portlet-title">
 								<div class="caption">
-									<span class="caption-subject font-dark bold uppercase"><?php echo$label?></span>
+									<span class="caption-subject font-dark bold uppercase"><?=$label?></span>
 								</div>
 								<!-- <div class="tools"> </div> -->
 						</div>
-						<?php }?>
+						<?}?>
 						<div class="portlet-body">
-							<table id="contex-grid-<?php echo$rand?>" class="table compact table-striped table-bordered table-hover dt-responsive" width="100%" id="sample_2">
+							<table id="contex-grid-<?=$rand?>" class="table compact table-striped table-bordered table-hover dt-responsive" width="100%" id="sample_2">
 								<thead>
 									<tr>
-										<?php echo$cabecalho?>
+										<?=$cabecalho?>
 									</tr>
 								</thead>
 							</table>
@@ -202,19 +202,19 @@
 				<!-- END EXAMPLE TABLE PORTLET-->
 
 				<!-- BEGIN PAGE LEVEL PLUGINS -->
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
+				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
+				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
+				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
 				<!-- END PAGE LEVEL PLUGINS -->
 
 				<!-- BEGIN PAGE LEVEL SCRIPTS -->
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
+				<script src="<?=$CONTEX['path']?>/../contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
 				<!-- END PAGE LEVEL SCRIPTS -->
 
 
-		<?php
+		<?
 
-		include_once "conecta.php";
+		include_once $_SERVER['DOCUMENT_ROOT'].$CONTEX['path']."/conecta.php";
 		include_once $_SERVER['DOCUMENT_ROOT'].strtok($_SERVER['SCRIPT_NAME'], '?');
 
 		$totalQuery = mysqli_fetch_all(
@@ -278,7 +278,7 @@
 			<input type="hidden" name="just" value="">
 			<input type="hidden" id="hidden">
 		</form>
-		<?php
+		<?
 			js_contex_icone();
 
 			for($i=0; $i<count($cabecalho); $i++){
@@ -308,21 +308,21 @@
 			}
 		</style>
 				<!-- BEGIN EXAMPLE TABLE PORTLET-->
-				<div class="col-md-<?php echo $col;?> col-sm-<?php echo $col;?>">
+				<div class="col-md-<?=$col?> col-sm-<?=$col?>">
 					<div class="portlet light ">
-						<?php if($label!=''){?>
+						<?if($label!=''){?>
 							<div class="portlet-title">
 									<div class="caption">
-										<span class="caption-subject font-dark bold uppercase"><?php echo$label?></span>
+										<span class="caption-subject font-dark bold uppercase"><?=$label?></span>
 									</div>
 									<!-- <div class="tools"> </div> -->
 							</div>
-						<?php }?>
+						<?}?>
 						<div class="portlet-body">
 							<table id="contex-grid-teste" class="table compact table-striped table-bordered table-hover dt-responsive" width="100%" id="sample_2">
 								<thead>
 									<tr>
-										<?php echo$cabecalho?>
+										<?=$cabecalho?>
 									</tr>
 								</thead>
 							</table>
@@ -332,15 +332,15 @@
 				<!-- END EXAMPLE TABLE PORTLET-->
 
 				<!-- BEGIN PAGE LEVEL PLUGINS -->
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
+				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
+				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
+				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
 				<!-- END PAGE LEVEL PLUGINS -->
 
 				<!-- BEGIN PAGE LEVEL SCRIPTS -->
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
+				<script src="<?=$CONTEX['path']?>/../contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
 				<!-- END PAGE LEVEL SCRIPTS -->
-		<?php
+		<?
 
 		include_once $_SERVER['DOCUMENT_ROOT'].$CONTEX['path']."/conecta.php";
 		include_once $_SERVER['DOCUMENT_ROOT'].strtok($_SERVER['SCRIPT_NAME'], '?');

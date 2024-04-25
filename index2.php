@@ -34,18 +34,16 @@ if(isset($_GET['error'])){
 
 if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
 	$_POST['password'] = md5($_POST['password']);
-	$file = $_POST['dominio'];
-
-
-	if(is_int(strpos($dominiosInput, $_POST['dominio'])) /*&& file_exists($file)*/){
-		
+	$file = "/home/brasomo/public_html".str_replace("https://braso.mobi", "", $_POST['dominio']);
+	if(is_int(strpos($dominiosInput, $_POST['dominio'])) && file_exists($file)){
 		echo 
-			"<form action='http://".$_POST['dominio']."' name='formTelaPrincipal' method='post'>
+			"<form action='".$_POST['dominio']."' name='formTelaPrincipal' method='post'>
 				<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
 				<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
 				<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
 			</form>"
 		;
+		echo "<script>document.formTelaPrincipal.submit();</script>";
 	}else{
 		echo 
 			"<form action='index2.php?error=notfounddomain' name='formLogin' method='post'>
@@ -54,8 +52,8 @@ if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
 				<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
 			</form>"
 		;
+		echo "<script>document.formLogin.submit();</script>";
 	}
-	echo "<script>document.formTelaPrincipal.submit();</script>";
 	exit;
 }
 
@@ -166,7 +164,7 @@ License: You must have a valid license purchased only from themeforest(the above
 
 	<!-- FIM THEME LAYOUT STYLES -->
 
-	<?php echo 
+	<?= 
 		"<link rel='apple-touch-icon' sizes='180x180' href='./contex20/img/favicon/apple-touch-icon.png'>
 		<link rel='icon' type='image/png' sizes='32x32' href='./contex20/img/favicon/favicon-32x32.png'>
 		<link rel='icon' type='image/png' sizes='16x16' href='./contex20/img/favicon/favicon-16x16.png'>
@@ -202,7 +200,7 @@ License: You must have a valid license purchased only from themeforest(the above
 
 		<form class="login-form" method="post">
 
-			<h3 class="form-title font-green">Login <?php echo(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_techps'))? '(Dev)': '')?></h3>
+			<h3 class="form-title font-green">Login <?=(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_techps'))? '(Dev)': '')?></h3>
 
 			<?php
 			
@@ -224,7 +222,7 @@ License: You must have a valid license purchased only from themeforest(the above
 					autocomplete="off" 
 					placeholder="Usuário" 
 					name="user"
-					<?php echo(!empty($_POST['user'])? "value=".$_POST['user']: '')?>
+					<?=(!empty($_POST['user'])? "value=".$_POST['user']: '')?>
 				/>
 			</div>
 
@@ -241,13 +239,13 @@ License: You must have a valid license purchased only from themeforest(the above
 				/>
 			</div>
 
-			<?php echo $msg ?>
+			<?= $msg ?>
 
 			<div class="form-actions">
 
 				<input type="submit" class="btn green uppercase" name="botao" value="Entrar"></input>
 
-				<a href="<?php echo$server_base_link."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
+				<a href="<?=$server_base_link."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
 
 			</div>
 
@@ -267,7 +265,7 @@ License: You must have a valid license purchased only from themeforest(the above
 	</div>
 
 	<div class="copyright">
-		<?php echo date("Y") ?> © TechPS.
+		<?= date("Y") ?> © TechPS.
 	</div>
 
 	<!--[if lt IE 9]>
