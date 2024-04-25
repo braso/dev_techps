@@ -88,7 +88,7 @@ function index(){
 	$cab = array('CÓDIGO','NOME','CÓD. INTERNO','CÓD. EXTERNO','');
 	$val = array('macr_nb_id','macr_tx_nome','macr_tx_codigoInterno','macr_tx_codigoExterno','icone_modificar(macr_nb_id,modifica_macro)');
 
-	grid($sql,$cab,$val,'','',0,'asc',-1);
+	grid($sql,$cab,$val,'','',1,'desc',10);
 
 	rodape();
 

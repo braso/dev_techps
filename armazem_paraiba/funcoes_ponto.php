@@ -110,7 +110,6 @@
 	}
 
 	function layout_abono(){
-
 		cabecalho('Cadastro Abono');
 
 		$c[] = combo_net('Motorista*:','motorista',$_POST['busca_motorista']?? '',4,'entidade','',' AND enti_tx_ocupacao IN ("Motorista", "Ajudante")','enti_tx_matricula');
@@ -120,7 +119,12 @@
 		$c2[] = textarea('Justificativa:','descricao', ($_POST['descricao']?? ''),12);
 		
 		//BOTOES
-		$b[] = botao("Voltar",'index', 'returning', 'true');
+		$b[] = botao(
+			'Voltar', 
+			'voltar', 
+			'data_de,data_ate,id,busca_empresa', 
+			($_POST['data_de']??'').",".($_POST['data_ate']??'').",".$_POST['busca_motorista'].",".$_POST['busca_empresa']
+		);
 		$b[] = botao("Gravar",'cadastra_abono','','','','','btn btn-success');
 		
 		abre_form('Filtro de Busca');

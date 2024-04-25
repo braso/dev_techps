@@ -122,7 +122,7 @@
 
 				var selecionado = $('.cidade', parent.document);
 				selecionado.empty();
-				selecionado.append('<option value='".$arr['ibge']."'>[".$arr['uf']."] ".$arr['localidade']."</option>');
+				selecionado.append('<option value=\'".$arr['ibge']."\'>[".$arr['uf']."] ".$arr['localidade']."</option>');
 				selecionado.val('".$arr['ibge']."').trigger('change');
 			</script>
 		";
@@ -179,7 +179,7 @@
 			'enti_tx_cnhCategoria' 				=> 'cnhCategoria', 
 			'enti_tx_cnhPermissao' 				=> 'cnhPermissao',
 			'enti_tx_cnhObs' 					=> 'cnhObs', 
-			'enti_tx_enti_nb_cnhCidade' 		=> 'cnhCidade', 
+			'enti_nb_cnhCidade' 		        => 'cnhCidade', 
 			'enti_tx_cnhEmissao' 				=> 'cnhEmissao', 
 			'enti_tx_cnhPontuacao' 				=> 'cnhPontuacao', 
 			'enti_tx_cnhAtividadeRemunerada' 	=> 'cnhAtividadeRemunerada',
