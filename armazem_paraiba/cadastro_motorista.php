@@ -114,8 +114,8 @@
 			$arr = json_decode($resultado, true);
 		//}
 
-		echo "
-			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
+		echo 
+      "<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
 			<script type='text/javascript'>
 				parent.document.contex_form.endereco.value = '".$arr['logradouro']."';
 				parent.document.contex_form.bairro.value = '".$arr['bairro']."';
@@ -124,8 +124,8 @@
 				selecionado.empty();
 				selecionado.append('<option value=\'".$arr['ibge']."\'>[".$arr['uf']."] ".$arr['localidade']."</option>');
 				selecionado.val('".$arr['ibge']."').trigger('change');
-			</script>
-		";
+			</script>"
+    ;
 		exit;
 	}
 

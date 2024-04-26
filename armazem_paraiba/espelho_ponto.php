@@ -108,8 +108,14 @@
 			campo_data('Data Fim:', 'busca_dataFim', ($_POST['busca_dataFim']?? ''), 2,$extraCampoData)
 		];
 		if (isset($_POST['AtualizarPainel']) && !empty($_POST['AtualizarPainel'])) {
-		    echo '<script>alert("Atualizando os painéis, aguarde um pouco ")</script>';
-            criar_relatorio();
+		    list($anoInicio, $mesInicio) = explode('-', $_POST['busca_dataInicio']);
+		    list($anoFim, $mesFim) = explode('-', $_POST['busca_dataFim']);
+		    if ($anoInicio == $anoFim && $mesInicio == $mesFim) {
+				echo '<script>alert("Atualizando os painéis, aguarde um pouco ")</script>';
+				criar_relatorio("$anoInicio-$mesInicio");
+			}else {
+				echo '<script>alert("Periodo invalido, so pode atulizar um mes por vez")</script>';
+			}
         }
 		
 		$botao_imprimir =
