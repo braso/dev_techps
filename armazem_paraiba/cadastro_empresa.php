@@ -93,6 +93,7 @@
 	}
 
 	function cadastrarEmpresa(){
+
 		if(!empty($_POST['id'])){
 			$sqlCheckNivel = mysqli_fetch_assoc(query("SELECT empr_tx_Ehmatriz FROM empresa WHERE empr_nb_id = ".$_POST['id']." LIMIT 1;"));
 		}else{
@@ -108,14 +109,14 @@
 			}
 		}
 
-		if(!isset($_POST['id']) && empty($_POST['id'])){
+		if(!isset($_POST['id']) || empty($_POST['id'])){
 			$_POST['status'] = 'ativo';
 
 			$empresa = [
 				'empr_tx_Ehmatriz'	=> $_POST['matriz'],
 				'empr_nb_parametro' => $_POST['parametro'], 
 				'empr_nb_cidade' 	=> $_POST['cidade'],
-				'empr_tx_domain' 	=> "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio']
+				'empr_tx_domain' 	=> $_SERVER['HTTP_ORIGIN'].(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio']
 			];
 			$campos = [
 				'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento', 
@@ -125,8 +126,11 @@
 			];
 
 			foreach($campos as $campo){
-				$empresa['empr_tx_'.$campo] = $_POST[$campo];
+				if(!empty($_POST[$campo])){
+					$empresa['empr_tx_'.$campo] = $_POST[$campo];
+				}
 			}
+			
 
 			$empty_ftp_inputs = empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) + 0;
 
@@ -150,7 +154,7 @@
 				$empresa['empr_nb_userCadastro'] = $_SESSION['user_nb_id'];
 				$empresa['empr_tx_dataCadastro'] = date('Y-m-d H:i:s');
 				try{
-					$id_empresa = inserir('empresa',array_keys($empresa),array_values($empresa))[0];
+					$id_empresa = inserir('empresa',array_keys($empresa),array_values($empresa));
 				}catch(Exception $e){
 					print_r($e);
 				}
@@ -170,48 +174,45 @@
 					atualizar('empresa',['empr_tx_logo'],[$arq],$id_empresa);
 				}
 			}
-		} else
+		} else {
 			$empresa = [
 				'empr_nb_parametro' => $_POST['parametro'],
 				'empr_nb_userAtualiza' => $_SESSION['user_nb_id'],
 				'empr_tx_dataAtualiza' => date('Y-m-d H:i:s')
 			];
-			
 			$campos = [
 				'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento', 
 				'referencia', 'fone1', 'fone2', 'email', 'inscricaoEstadual', 'inscricaoMunicipal', 
 				'regimeTributario', 'status', 'situacao', 'contato', 
 				'ftpServer', 'ftpUsername', 'ftpUserpass', 'dataRegistroCNPJ'
 			];
-
+	
 			foreach($campos as $campo){
 				$empresa['empr_tx_'.$campo] = $_POST[$campo];
 			}
 			
-
+	
 			atualizar('empresa',array_keys($empresa),array_values($empresa),$_POST['id']);
-
+	
 			$id_empresa = $_POST['id'];
-
+	
 			$file_type = $_FILES['logo']['type']; //returns the mimetype
-
+	
 			$allowed = array("image/jpeg", "image/gif", "image/png");
 			if(in_array($file_type, $allowed) && $_FILES['logo']['name']!='') {
-
+	
 				if(!is_dir("arquivos/empresa/$id_empresa")){
 					mkdir("arquivos/empresa/$id_empresa");
 				}
-
-
+	
 				$arq=enviar('logo',"arquivos/empresa/$id_empresa/",$id_empresa);
 				if($arq){
 					atualizar('empresa',['empr_tx_logo'],[$arq],$id_empresa);
 				}
 			}
+		}
 
-
-
-		index();
+		visualizarCadastro();
 		exit;
 	}
 
@@ -233,7 +234,6 @@
 		
 		$arr = buscarCEP($_GET['cep']);
 		echo 
-			"<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>".
 			"<script type='text/javascript'>
 				parent.document.contex_form.endereco.value='".$arr['logradouro']."';
 				parent.document.contex_form.bairro.value='".$arr['bairro']."';
@@ -651,7 +651,7 @@
 			'<spam class="glyphicon glyphicon-remove"></spam>' => 'icone_excluir(empr_nb_id,excluirEmpresa)'
 		];
 		
-		grid($sql,array_keys($gridCols),array_values($gridCols),'','',1,'',10);
+		grid($sql,array_keys($gridCols),array_values($gridCols),'','12',2,"desc",'10');
 
 		rodape();
 

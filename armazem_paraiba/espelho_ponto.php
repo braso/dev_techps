@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -126,12 +126,12 @@
 							window.print();
 						}
 					</script>';
-		if (!empty($_SESSION['user_tx_nivel']) && !is_bool(strpos($_SESSION['user_tx_nivel'], 'Funcionário'))) {
-			$botaoAtualizarPainel = '<div style="width: fit-content;display: inline-block;">
-			<form method="post">
-				<input class="btn default" type="submit" name="AtualizarPainel" value="AtualizarPainel">
-			</form>
-			</div>';
+    if (!empty($_SESSION['user_tx_nivel']) && !is_bool(strpos($_SESSION['user_tx_nivel'], 'Funcionário'))) {
+      $botaoAtualizarPainel = '<div style="width: fit-content;display: inline-block;">
+      <form method="post">
+        <input class="btn default" type="submit" name="AtualizarPainel" value="AtualizarPainel">
+      </form>
+      </div>';
 		}
 		//BOTOES
 		$b = [

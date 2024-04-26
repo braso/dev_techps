@@ -48,7 +48,7 @@
 		return $campo;
 	}
 
-	function voltar(){
+	function voltarEndosso(){
 		header('Location: '.$_SERVER['REQUEST_URI'].'/../endosso');
 	}
 
@@ -421,8 +421,8 @@
 			array_unshift($c, campo_hidden('empresa', $_SESSION['user_nb_empresa']));
 		}
 		$b = [
-			botao('Voltar', 'voltar'),
-			botao('Cadastrar Endosso', 'cadastrar')
+			botao('Voltar', 'voltarEndosso'),
+			botao('Cadastrar Endosso', 'cadastrar', '', '', '', '', 'btn btn-success')
 		];
 
 		abre_form();

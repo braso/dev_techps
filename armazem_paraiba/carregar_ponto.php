@@ -1,7 +1,7 @@
 <?php
-	//*Modo debug{
-// 		ini_set('display_errors', 1);
-// 		error_reporting(E_ALL);
+	/*Modo debug{
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
 	//}*/
 	$interno = true;
 	include "funcoes_ponto.php";
@@ -87,8 +87,7 @@
 				$arquivoPontoId = inserir('arquivoponto', array_keys($newArquivoPonto), array_values($newArquivoPonto));
 				foreach($newPontos as $newPonto){
 					$newPonto['pont_nb_arquivoponto'] = intval($arquivoPontoId);
-					var_dump($newPonto); echo '<br><br>';
-					// inserir('ponto', array_keys($newPonto), array_values($newPonto));
+					inserir('ponto', array_keys($newPonto), array_values($newPonto));
 				}
 			}
 		}else{
@@ -235,7 +234,7 @@
 					$hora = substr($line, 18, 4);
 					$hora = substr($hora, 0, 2).":".substr($hora, 2, 2).":00";
 
-					$codigoExterno = substr($line, -2, 2) + 0;
+					$codigoExterno = substr($line, -2, 2);
 
 					$queryMacroPonto = query("SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_codigoExterno = '".$codigoExterno."'");
 					$aTipo = carrega_array($queryMacroPonto);

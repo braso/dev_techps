@@ -1,7 +1,7 @@
 <?php
-    //* Modo debug
-		// ini_set('display_errors', 1);
-		// error_reporting(E_ALL);
+    /* Modo debug
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
 	//*/
 	include "conecta.php";
 
@@ -26,7 +26,6 @@
 				</script>"
 			;
 		}
-
 		exit;
 	}
 
@@ -141,6 +140,7 @@
 			'enti_tx_nome' 						=> 'nome', 
 			'enti_tx_nascimento' 				=> 'nascimento', 
 			'enti_tx_status' 					=> 'status', 
+			'enti_tx_status' 					=> 'status', 
 			'enti_tx_cpf' 						=> 'cpf',
 			'enti_tx_rg' 						=> 'rg',
 			'enti_tx_civil' 					=> 'civil',
@@ -179,7 +179,7 @@
 			'enti_tx_cnhCategoria' 				=> 'cnhCategoria', 
 			'enti_tx_cnhPermissao' 				=> 'cnhPermissao',
 			'enti_tx_cnhObs' 					=> 'cnhObs', 
-			'enti_nb_cnhCidade' 		        => 'cnhCidade', 
+			'enti_nb_cnhCidade'			 		=> 'cnhCidade', 
 			'enti_tx_cnhEmissao' 				=> 'cnhEmissao', 
 			'enti_tx_cnhPontuacao' 				=> 'cnhPontuacao', 
 			'enti_tx_cnhAtividadeRemunerada' 	=> 'cnhAtividadeRemunerada',
@@ -197,6 +197,8 @@
 		if(isset($_POST['ocupacao']) && !empty($_POST['ocupacao'])){
 			$a_mod['enti_tx_nivel'] = $_POST['ocupacao'];
 		}
+
+
 
 		//Conferir campos obrigatórios{
 			$campos_obrigatorios = [
@@ -410,7 +412,7 @@
 		}
 
 		$_POST['id'] = $id;
-		index();
+		visualizarCadastro();
 		exit;
 	}
 
@@ -521,24 +523,27 @@
 				2
 			);
 		}else{
-			$img = '';
+			$img = texto(
+				"Imagem", 
+				'<img style="width: 100%;" src="../contex20/img/driver.png" />',
+				2
+			);
 		}
-
+		
 		$tabIndex = 1;
 		
 		if(!empty($_POST['id'])){
-			$c = [texto('Matrícula*', $a_mod['enti_tx_matricula'], 1, 'tabindex='.sprintf("%02d", $tabIndex++))];
+			$c = [$img, texto('Matrícula*', $a_mod['enti_tx_matricula'], 1, 'tabindex='.sprintf("%02d", $tabIndex++))];
 		}else{
-			$c = [campo('Matrícula*', 'postMatricula', ($a_mod['enti_tx_matricula']?? ''), 1, '', 'tabindex='.sprintf("%02d", $tabIndex++))];
+			$c = [$img, campo('Matrícula*', 'postMatricula', ($a_mod['enti_tx_matricula']?? ''), 1, '', 'tabindex='.sprintf("%02d", $tabIndex++))];
 		}
 
 		$c = array_merge($c, [
-			$img,
 			campo('Nome*', 'nome', ($a_mod['enti_tx_nome']?? ''), 3,'','maxlength="65" tabindex='.sprintf("%02d", $tabIndex++)),
 			campo_data('Dt. Nascimento*', 'nascimento', ($a_mod['enti_tx_nascimento']?? ''), 2, 'tabindex='.sprintf("%02d", $tabIndex++)),
+			texto('Idade',($idade?? ''), 1),
 			combo('status', 'status', ($a_mod['enti_tx_status']?? ''), 1, ['ativo' => 'Ativo', 'inativo' => 'Inativo'], 'tabindex='.sprintf("%02d", $tabIndex++)),
 			campo('Login','login', ($a_mod['user_tx_login']?? ''),2, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
-			texto('Idade',($idade?? ''),2, 'tabindex='.sprintf("%02d", $tabIndex++)),
 
 			campo('CPF*', 'cpf', ($a_mod['enti_tx_cpf']?? ''), 2, 'MASCARA_CPF', 'tabindex='.sprintf("%02d", $tabIndex++)),
 			campo('RG*', 'rg', ($a_mod['enti_tx_rg']?? ''), 2, 'MASCARA_RG', 'tabindex='.+sprintf("%02d", $tabIndex++).', maxlength=11'),
@@ -549,16 +554,16 @@
 
 			combo('Sexo', 'sexo', ($a_mod['enti_tx_sexo']?? ''), 2, ['', 'Feminino', 'Masculino'], 'tabindex='.sprintf("%02d", $tabIndex++)),
 			campo('CEP*', 'cep', ($a_mod['enti_tx_cep']?? ''), 2, 'MASCARA_CEP', 'onfocusout="buscarCEP(this.value);" tabindex='.sprintf("%02d", $tabIndex++)),
-			campo('Endereço*', 'endereco', ($a_mod['enti_tx_endereco']?? ''), 4, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
-			campo('Número', 'numero', ($a_mod['enti_tx_numero']?? ''), 2, 'MASCARA_NUMERO', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Endereço*', 'endereco', ($a_mod['enti_tx_endereco']?? ''), 3, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Número', 'numero', ($a_mod['enti_tx_numero']?? ''), 1, 'MASCARA_NUMERO', 'tabindex='.sprintf("%02d", $tabIndex++)),
 			campo('Bairro*', 'bairro', ($a_mod['enti_tx_bairro']?? ''), 2, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
 
 			campo('Complemento', 'complemento', ($a_mod['enti_tx_complemento']?? ''), 2, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
 			campo('Ponto de Referência', 'referencia', ($a_mod['enti_tx_referencia']?? ''), 3, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
 			combo_net('Cidade/UF*', 'cidade', ($a_mod['enti_nb_cidade']?? ''), 3, 'cidade', 'tabindex='.sprintf("%02d", $tabIndex++), '', 'cida_tx_uf'),
-			campo('Telefone 1*', 'fone1', ($a_mod['enti_tx_fone1']?? ''), 2, 'MASCARA_CEL', 'tabindex='.sprintf("%02d", $tabIndex++)),
-			campo('Telefone 2', 'fone2', ($a_mod['enti_tx_fone2']?? ''), 2, 'MASCARA_CEL', 'tabindex='.sprintf("%02d", $tabIndex++)),
-			campo('E-mail*', 'email', ($a_mod['enti_tx_email']?? ''), 3, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Telefone 1*', 'fone1', ($a_mod['enti_tx_fone1']?? ''), 1, 'MASCARA_CEL', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Telefone 2', 'fone2', ($a_mod['enti_tx_fone2']?? ''), 1, 'MASCARA_CEL', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('E-mail*', 'email', ($a_mod['enti_tx_email']?? ''), 2, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
 
 			campo('Filiação Pai', 'pai', ($a_mod['enti_tx_pai']?? ''), 3,'', 'maxlength="65" tabindex='.sprintf("%02d", $tabIndex++)),
 			campo('Filiação Mãe', 'mae', ($a_mod['enti_tx_mae']?? ''), 3,'', 'maxlength="65" tabindex='.sprintf("%02d", $tabIndex++)),
