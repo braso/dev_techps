@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -121,7 +121,7 @@
 						}
 					</script>';
 					
-		$botaoAtualizarPainel = '<div style="position: absolute; top: 151px; left: 345px;">
+		$botaoAtualizarPainel = '<div style="width: fit-content;display: inline-block;">
 		<form method="post">
 		    <input class="btn default" type="submit" name="AtualizarPainel" value="AtualizarPainel">
 		</form>

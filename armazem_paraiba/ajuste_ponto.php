@@ -136,25 +136,6 @@
 		index();
 		exit;
 	}
-
-	function voltar(){
-		global $CONTEX;
-    
-		$aMotorista = carregar('entidade',$_POST['id']);
-		echo 
-			'<form action="https://braso.mobi'.$CONTEX['path'].'/espelho_ponto" name="form_voltar" method="post">
-				<input type="hidden" name="busca_motorista" value="'.$_POST['id'].'">
-				<input type="hidden" name="busca_dataInicio" value="'.$_POST['data_de'].'">
-				<input type="hidden" name="busca_dataFim" value="'.$_POST['data_ate'].'">
-				<input type="hidden" name="busca_empresa" value="'.$aMotorista['enti_nb_empresa'].'">
-				<input type="hidden" name="acao" value="index">
-				</form>
-			<script>
-				document.form_voltar.submit();
-			</script>'
-		;
-		exit;
-	}
 	
 	function status() {
 		return  
@@ -298,7 +279,7 @@
 			echo '<script>alert("ERRO: Deve ser selecionado um motorista e uma data para ajustar.")</script>';
 
 			echo 
-				'<form action="https://braso.mobi'.$CONTEX['path'].'/espelho_ponto" name="form_voltar" method="post">
+				'<form action="'.$_SERVER['HTTP_ORIGIN'].$CONTEX['path'].'/espelho_ponto" name="form_voltar" method="post">
 					<input type="hidden" name="data_de" value="'.$_POST['data_de'].'">
 					<input type="hidden" name="data_ate" value="'.$_POST['data_ate'].'">
 				</form>
@@ -347,7 +328,7 @@
 		}
 
 		$formStatus = "
-		        <form name='form_ajuste_status' action='https://braso.mobi$CONTEX[path]/ajuste_ponto' method='post'>
+		        <form name='form_ajuste_status' action='$_SERVER[HTTP_ORIGIN]$CONTEX[path]/ajuste_ponto' method='post'>
 					<input type='hidden' name='acao' value='index'>
 					<input type='hidden' name='id'>
 					<input type='hidden' name='data'>
@@ -461,7 +442,7 @@
 					display: none;
 				}
 			</style>
-			<form name='form_ajuste_status' action='https://braso.mobi".$CONTEX['path']."/ajuste_ponto' method='post'>
+			<form name='form_ajuste_status' action='".$_SERVER['HTTP_ORIGIN'].$CONTEX['path']."/ajuste_ponto' method='post'>
 				<input type='hidden' name='acao' value='index'>
 				<input type='hidden' name='id'>
 				<input type='hidden' name='data'>

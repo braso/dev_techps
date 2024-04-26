@@ -1,13 +1,6 @@
 <?php
 include_once("version.php");
 include_once('dominios.php');
-
-if(isset($_SERVER['SCRIPT_URI'])){
-	$server_base_link = substr($_SERVER['SCRIPT_URI'], 0, strrpos($_SERVER['SCRIPT_URI'], '/'));
-}else{
-	$server_base_link = substr($_SERVER['SCRIPT_FILENAME'], 0, strrpos($_SERVER['SCRIPT_FILENAME'], '/'));
-}
-
 $msg = '';
 
 $error = false;
@@ -34,10 +27,17 @@ if(isset($_GET['error'])){
 
 if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
 	$_POST['password'] = md5($_POST['password']);
-	$file = "/home/brasomo/public_html".str_replace("https://braso.mobi", "", $_POST['dominio']);
+	$file = getcwd().$_POST['dominio'];
 	if(is_int(strpos($dominiosInput, $_POST['dominio'])) && file_exists($file)){
+
+		$formAction = $_SERVER['SCRIPT_URI'];
+		if(substr($formAction, -1) != "/"){
+			$formAction .= "/../";
+		}
+		$formAction .= substr($_POST['dominio'], 1);
+
 		echo 
-			"<form action='".$_POST['dominio']."' name='formTelaPrincipal' method='post'>
+			"<form action='".$formAction."' name='formTelaPrincipal' method='post'>
 				<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
 				<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
 				<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
@@ -46,7 +46,7 @@ if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
 		echo "<script>document.formTelaPrincipal.submit();</script>";
 	}else{
 		echo 
-			"<form action='index2.php?error=notfounddomain' name='formLogin' method='post'>
+			"<form action='index.php?error=notfounddomain' name='formLogin' method='post'>
 				<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
 				<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
 				<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
@@ -200,7 +200,7 @@ License: You must have a valid license purchased only from themeforest(the above
 
 		<form class="login-form" method="post">
 
-			<h3 class="form-title font-green">Login <?=(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_techps'))? '(Dev)': '')?></h3>
+			<h3 class="form-title font-green">Login <?=(is_int(strpos($_SERVER["REQUEST_URI"], 'dev'))? '(Dev)': '')?></h3>
 
 			<?php
 			

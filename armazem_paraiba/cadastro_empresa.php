@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -93,6 +93,7 @@
 	}
 
 	function cadastrarEmpresa(){
+
 		if(!empty($_POST['id'])){
 			$sqlCheckNivel = mysqli_fetch_assoc(query("SELECT empr_tx_Ehmatriz FROM empresa WHERE empr_nb_id = ".$_POST['id']." LIMIT 1;"));
 		}else{
@@ -109,14 +110,13 @@
 		}
 
 		if(!isset($_POST['id']) || empty($_POST['id'])){
-			unset($_POST['id']);
 			$_POST['status'] = 'ativo';
 
 			$empresa = [
 				'empr_tx_Ehmatriz'	=> $_POST['matriz'],
 				'empr_nb_parametro' => $_POST['parametro'], 
 				'empr_nb_cidade' 	=> $_POST['cidade'],
-				'empr_tx_domain' 	=> "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio']
+				'empr_tx_domain' 	=> $_SERVER['HTTP_ORIGIN'].(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio']
 			];
 			$campos = [
 				'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento', 
@@ -234,7 +234,6 @@
 		
 		$arr = buscarCEP($_GET['cep']);
 		echo 
-			"<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>".
 			"<script type='text/javascript'>
 				parent.document.contex_form.endereco.value='".$arr['logradouro']."';
 				parent.document.contex_form.bairro.value='".$arr['bairro']."';

@@ -28,6 +28,7 @@
 					<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/select2/js/i18n/pt-BR.js" type="text/javascript"></script>
 
 					<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js" type="text/javascript"></script>
+					<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/jquery-inputmask/inputmask/jquery.inputmask.js" type="text/javascript"></script>
 					<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/jquery-inputmask/maskMoney.js" type="text/javascript"></script>
 					<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css" />
 					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
@@ -37,6 +38,8 @@
 					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet" type="text/css" />
 					<!-- FIM GLOBAL MANDATORY STYLES -->
 
+					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.js" rel="stylesheet" type="text/css" />
+					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" rel="stylesheet" type="text/css" />
 					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.css" rel="stylesheet" type="text/css" />
 					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css" rel="stylesheet" type="text/css" />
 
@@ -67,6 +70,26 @@
 						}
 
 					</script>
+
+					<style>
+						.form-actions{
+							display: flex;
+						}
+
+						.fecha-form-btn {
+							margin: 0.5rem;
+							min-width: 12rem;
+							width: fit-content;
+							height: fit-content;
+							text-align: -webkit-center;
+						}
+
+						.msg-status-text {
+							width: -webkit-fill-available;
+							text-align: center;
+							margin: 1rem;
+						}
+					</style>
 				</head>
 				<!-- FIM HEAD -->
 
@@ -155,7 +178,7 @@
 								<div class="container-fluid">
 									<!-- INICIO PAGE TITLE -->
 									<div class="page-title">
-										<h1><?=$nome_pagina.(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? ' (Dev)': '')?> </h1>
+										<h1><?=$nome_pagina.(is_int(strpos($_SERVER["REQUEST_URI"], 'dev'))? ' (Dev)': '')?> </h1>
 									</div>
 									<!-- FIM PAGE TITLE -->
 								</div>
@@ -198,7 +221,7 @@
 		</style>
 		<?
 
-	global $CONTEX;
+		global $CONTEX;
 		?>
 			<!DOCTYPE html>
 		<!--[if IE 8]> <html lang="pt-br" class="ie8 no-js"> <![endif]-->
@@ -232,6 +255,8 @@
 				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet" type="text/css" />
 				<!-- FIM GLOBAL MANDATORY STYLES -->
 
+				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.js" rel="stylesheet" type="text/css" />
+				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" rel="stylesheet" type="text/css" />
 				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.css" rel="stylesheet" type="text/css" />
 				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css" rel="stylesheet" type="text/css" />
 
@@ -315,7 +340,7 @@
 				<!-- FIM FOOTER -->
 				<!-- INICIO CORE PLUGINS -->
 
-				<form id="loginTimeoutForm" method="post" target="https://braso.mobi<?=$CONTEX['path']?>/logout.php" action="logout"></form>
+				<form id="loginTimeoutForm" method="post" target="<?=$_SERVER['HTTP_ORIGIN'].$CONTEX['path']?>/logout.php" action="logout"></form>
 				
 				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
 				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/js.cookie.min.js" type="text/javascript"></script>
@@ -403,14 +428,14 @@
 	}
 
 
-	function fecha_form(array $botao = []){
+	function fecha_form(array $botao = [], string $extra = ""){
 		$botoes = '';
 		if($botao !='' || $_POST['msg_status']){
 			for($i=0;$i<count($botao);$i++){
-				$botoes.=$botao[$i]."&nbsp;&nbsp;";
+				$botoes.="<div class='fecha-form-btn'>".$botao[$i]."</div>";
 			}
 
-			$botoes .= "&nbsp;&nbsp;<b>".($_POST['msg_status']?? '')."</b>";
+			$botoes .= "<b class='msg-status-text'>".($_POST['msg_status']?? '')."</b>";
 
 	?>
 														<div class="form-actions">
@@ -420,7 +445,7 @@
 		}
 	?>
 													</form>
-													
+													<?=$extra?>
 												</div>
 											</div>
 										</div>

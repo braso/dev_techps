@@ -109,6 +109,23 @@
 		exit;
 	}
 
+	function voltar(){
+		global $CONTEX;
+		echo 
+			'<form action="'.$_SERVER['HTTP_ORIGIN'].$CONTEX['path'].'/espelho_ponto" name="form_voltar" method="post">
+				<input type="hidden" name="busca_motorista" value="'.$_POST['id'].'">
+				<input type="hidden" name="busca_dataInicio" value="'.$_POST['data_de'].'">
+				<input type="hidden" name="busca_dataFim" value="'.$_POST['data_ate'].'">
+				<input type="hidden" name="busca_empresa" value="'.$_POST['busca_empresa'].'">
+				<input type="hidden" name="acao" value="index">
+			</form>
+			<script>
+				document.form_voltar.submit();
+			</script>'
+		;
+		exit;
+	}
+
 	function layout_abono(){
 
 		cabecalho('Cadastro Abono');
@@ -120,7 +137,12 @@
 		$c2[] = textarea('Justificativa:','descricao', ($_POST['descricao']?? ''),12);
 		
 		//BOTOES
-		$b[] = botao("Voltar",'index', 'returning', 'true');
+		$b[] = botao(
+			'Voltar', 
+			'voltar', 
+			'data_de,data_ate,id,busca_empresa', 
+			($_POST['data_de']??'').",".($_POST['data_ate']??'').",".$_POST['busca_motorista'].",".$_POST['busca_empresa']
+		);
 		$b[] = botao("Gravar",'cadastra_abono','','','','','btn btn-success');
 		
 		abre_form('Filtro de Busca');
@@ -163,7 +185,7 @@
 	function layout_ajuste(){
 		global $CONTEX;
 		echo 
-			'<form action="https://braso.mobi'.$CONTEX['path'].'/ajuste_ponto" name="form_ajuste_ponto" method="post">
+			'<form action="'.$_SERVER['HTTP_ORIGIN'].$CONTEX['path'].'/ajuste_ponto" name="form_ajuste_ponto" method="post">
 				<input type="hidden" name="id" value="'.$_POST['id'].'">
 				<input type="hidden" name="data" value="'.$_POST['data'].'">
 				<input type="hidden" name="data_de" value="'.$_POST['data_de'].'">
@@ -309,7 +331,14 @@
 		if (!preg_match('/^\d{2}:\d{2}$/', $tempoEfetuado) || !preg_match('/^\d{2}:\d{2}$/', $limite)) {
 			return '';
 		}
-		$datetime1 = new DateTime('2000-01-01 '.$tempoEfetuado);
+		if(intval(explode(":", $tempoEfetuado)[0]) > 23){
+			$vals = explode(":", $tempoEfetuado);
+			$dateInterval = new DateInterval("P".floor($vals[0]/24)."DT".($vals[0]%24)."H".$vals[1]."M");
+			$datetime1 = new DateTime('2000-01-01 00:00');
+			$datetime1->add($dateInterval);
+		}else{
+			$datetime1 = new DateTime('2000-01-01 '.$tempoEfetuado);
+		}
 		$datetime2 = new DateTime('2000-01-01 '.$limite);
 
 		if($datetime1 > $datetime2){
@@ -519,12 +548,11 @@
 		}else{
 			$iconeAlerta = "<a><i style='color:green;' title='$tooltip' class='fa fa-info-circle'></i></a>";
 		}
-		
 
 		$pares_horarios = [
 			'horariosOrdenados' => $horarios_com_origem,
 			'pares' => $pares,
-			'totalIntervalo' => $totalIntervalo->format('H:i'),
+			'totalIntervalo' => $totalIntervalo,
 			'icone' => $iconeAlerta
 		];
 		
@@ -748,17 +776,46 @@
 		}
 
 		$registros['jornadaCompleto']  = ordenar_horarios($registros['inicioJornada'],  $registros['fimJornada']);		/* $jornadaOrdenado */
-		$registros['refeicaoCompleto'] = ordenar_horarios($registros['inicioRefeicao'], $registros['fimRefeicao']);		/* $refeicaoOrdenada */
+		$registros['jornadaCompleto']['totalIntervalo'] = is_string($registros['jornadaCompleto']['totalIntervalo'])? 
+			new DateTime($data." ".$registros['jornadaCompleto']['totalIntervalo']): 
+			$registros['jornadaCompleto']['totalIntervalo']
+		;
+		if(!empty($registros['inicioJornada'][0])){
+
+			$diffJornada = date_diff(
+				new DateTime(substr($registros['inicioJornada'][0], 0, strpos($registros['inicioJornada'][0], " "))." 00:00:00"), 
+				$registros['jornadaCompleto']['totalIntervalo']
+			);
+			$diffJornada = operarHorarios(
+				[
+					$diffJornada->d*24+$diffJornada->h.":".$diffJornada->i,
+					"00:00"
+				],
+				"+"
+			);
+
+		}else{
+			$diffJornada = "00:00";
+		}
+
 		if(is_bool(strpos($aParametro['para_tx_ignorarCampos'], 'espera'))){
-			$registros['esperaCompleto']   = ordenar_horarios($registros['inicioEspera'],   $registros['fimEspera'], True);	/* $esperaOrdenada */
+			$registros['refeicaoCompleto'] = ordenar_horarios($registros['inicioRefeicao'], $registros['fimRefeicao']);		/* $refeicaoOrdenada */
+		}else{
+			$registros['refeicaoCompleto'] = ordenar_horarios([], []);
+		}
+
+		if(is_bool(strpos($aParametro['para_tx_ignorarCampos'], 'espera'))){
+			$registros['esperaCompleto'] = ordenar_horarios($registros['inicioEspera'],   $registros['fimEspera'], True);	/* $esperaOrdenada */
 		}else{
 			$registros['esperaCompleto'] = ordenar_horarios([], []);
 		}
+
 		if(is_bool(strpos($aParametro['para_tx_ignorarCampos'], 'descanso'))){
 			$registros['descansoCompleto'] = ordenar_horarios($registros['inicioDescanso'], $registros['fimDescanso']);		/* $descansoOrdenado */
 		}else{
 			$registros['descansoCompleto'] = ordenar_horarios([], []);
 		}
+
 		if(is_bool(strpos($aParametro['para_tx_ignorarCampos'], 'repouso'))){
 			$registros['repousoCompleto']  = ordenar_horarios($registros['inicioRepouso'], $registros['fimRepouso']);		/* $repousoOrdenado */
 		}else{
@@ -779,6 +836,29 @@
 				$registros['repousoPorEspera']['repousoCompleto'] = ordenar_horarios([], []);
 			}
 		//}
+
+		foreach(['refeicao', 'descanso', 'repouso', 'espera'] as $campo){
+			$totalIntervalo = (is_string($registros[$campo.'Completo']['totalIntervalo']))?
+				new DateTime($data." ".$registros[$campo.'Completo']['totalIntervalo']):
+				$registros[$campo.'Completo']['totalIntervalo']
+			;
+
+			
+			$totalIntervalo = date_diff(new DateTime($data." 00:00"), $totalIntervalo);
+			$totalIntervalo = operarHorarios([$totalIntervalo->d*24+$totalIntervalo->h.":".$totalIntervalo->i, "00:00"], "+");
+
+			$registros[$campo.'Completo']['totalIntervalo'] = $totalIntervalo;
+		}
+		$totalIntervalo = (is_string($registros['repousoPorEspera']['repousoCompleto']['totalIntervalo']))?
+			new DateTime($data." ".$registros['repousoPorEspera']['repousoCompleto']['totalIntervalo']):
+			$registros['repousoPorEspera']['repousoCompleto']['totalIntervalo']
+		;
+		
+		$totalIntervalo = date_diff(new DateTime($data." 00:00"), $totalIntervalo);
+		$totalIntervalo = $totalIntervalo->d*24+$totalIntervalo->h.":".$totalIntervalo->i;
+
+		$registros['repousoPorEspera']['repousoCompleto']['totalIntervalo'] = $totalIntervalo;
+
 
 		$registros['repousoCompleto']['totalIntervalo'] = operarHorarios([$registros['repousoCompleto']['totalIntervalo'], $registros['repousoPorEspera']['repousoCompleto']['totalIntervalo']], '+');
 		$registros['repousoCompleto']['icone'] .= $registros['repousoPorEspera']['repousoCompleto']['icone'];
@@ -803,7 +883,7 @@
 			)
 		);
 		
-		$aRetorno['diffJornada'] = $registros['jornadaCompleto']['icone'].$registros['jornadaCompleto']['totalIntervalo'];
+		$aRetorno['diffJornada'] = $registros['jornadaCompleto']['icone'].$diffJornada;
 
 		//JORNADA PREVISTA{
 			$jornadas = [
@@ -822,7 +902,12 @@
 		//}
 
 		//JORNADA EFETIVA{
-			$jornadaIntervalo = new DateTime($registros['jornadaCompleto']['totalIntervalo']);
+
+			if(is_string($registros['jornadaCompleto']['totalIntervalo'])){
+				$jornadaIntervalo = new DateTime($data." 00:00");
+			}else{
+				$jornadaIntervalo = $registros['jornadaCompleto']['totalIntervalo'];
+			}
 
 			$totalNaoJornada = [
 				$registros['refeicaoCompleto']['totalIntervalo']
@@ -848,11 +933,27 @@
 			
 			//SOMATORIO DE TODAS AS ESPERAS
 
-			$totalNaoJornada = new DateTime(somarHorarios($totalNaoJornada));
+			if(!empty($registros['inicioJornada'][0])){
+				$value = new DateTime($data." 00:00");
+				for($f = 0; $f < count($totalNaoJornada); $f++){
+					$times = explode(":", $totalNaoJornada[$f]);
+					$totalNaoJornada[$f] = new DateInterval("P".floor($times[0]/24)."DT".($times[0]%24)."H".$times[1]."M");
+					$value->add($totalNaoJornada[$f]);
+				}
+				$totalNaoJornada = $value;
+			}else{
+				$totalNaoJornada = new DateTime($data." 00:00");
+			}
 
-			$jornadaEfetiva = $jornadaIntervalo->diff($totalNaoJornada); //$diffJornadaEfetiva
-			$jornadaEfetiva = DateTime::createFromFormat('H:i', $jornadaEfetiva->format("%H:%I"));
-			$aRetorno['diffJornadaEfetiva'] = verificaLimiteTempo($jornadaEfetiva->format('H:i'), $alertaJorEfetiva);
+			$jornadaEfetiva = $totalNaoJornada->diff($jornadaIntervalo);
+			$diffJornadaEfetiva = operarHorarios([$jornadaEfetiva->d*24+$jornadaEfetiva->h.":".$jornadaEfetiva->i, "00:00"], "+");
+			if($jornadaEfetiva->d > 0){
+				$jornadaEfetiva = (new DateTime($data." 00:00"))->add($jornadaEfetiva);
+			}else{
+				$jornadaEfetiva = DateTime::createFromFormat('H:i', $jornadaEfetiva->format("%H:%I"));
+			}
+
+			$aRetorno['diffJornadaEfetiva'] = verificaLimiteTempo($diffJornadaEfetiva, $alertaJorEfetiva);
 		//}
 
 		//CÁLCULO DE INSTERTÍCIO{
@@ -1243,7 +1344,7 @@
 
 		//Converter array em string{
 			$legendas = mysqli_fetch_all(query(
-				"SELECT UNIQUE moti_tx_legenda FROM motivo 
+				"SELECT DISTINCT moti_tx_legenda FROM motivo 
 					WHERE moti_tx_legenda IS NOT NULL;"
 				), 
 				MYSQLI_ASSOC
@@ -1312,7 +1413,7 @@
 		foreach ($empresas as $empresa) {
 	
 			$motoristas = mysqli_fetch_all(
-				query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_nb_empresa = $empresa[empr_nb_id] AND enti_tx_status != 'inativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') "),
+				query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_nb_empresa = $empresa[empr_nb_id] AND enti_tx_status != 'inativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"),
 				MYSQLI_ASSOC
 			);
 			
@@ -1383,7 +1484,6 @@
 				// $dia = $dataTimeInicio;
 				for ($dia = clone $dataTimeInicio; $dia <= $dataTimeFim; $dia->modify('+1 day')) {
 					$dataVez = $dia->format('Y-m-d');
-					// var_dump($dia);
 					$diasPonto[] = diaDetalhePonto($motorista['enti_tx_matricula'], $dataVez);
 				};
 				

@@ -5,6 +5,8 @@
 	//*/
 	global $CONTEX;
 
+	
+
 	if(isset($_GET['acao']) && empty($_POST['acao'])){
 		$_POST['acao']=$_GET['acao'];
 	}
@@ -260,7 +262,7 @@
 			global $msg;
 		}
 		if(is_int(strrpos($msg, 'ERRO'))){
-			$msg = substr($msg, 0, strpos($msg, 'ERRO')).'<b style="color: red">'.substr($msg, strpos($msg, 'ERRO')).'</b><br>';
+			$msg = substr($msg, 0, strpos($msg, 'ERRO')).'<b style="color: red">'.substr($msg, strpos($msg, 'ERRO')).'</b>';
 		}
 		$_POST['msg_status'] = $msg;
 	}
@@ -355,6 +357,8 @@
 	}
 
 	function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
+		global $CONTEX;
+
 		$data_input = "<script>";
 		switch($mascara){
 			case "MASCARA_DATA":
@@ -409,7 +413,7 @@
 			case "MASCARA_DOMAIN":
 				$data_input .= "$(document).ready(function() {
 						var inputField = $('#nomeDominio');
-						var domainPrefix = 'https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/')."';
+						var domainPrefix = '".$_SERVER['HTTP_ORIGIN'].(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/')."';
 
 						function updateDisplayedText() {
 							var inputValue = inputField.val();
@@ -447,7 +451,6 @@
 				<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="'.$type.'" class="form-control input-sm" '.$extra.'>
 			</div>';
 		}
-		
 
 		return $campo.$data_input;
 
@@ -523,7 +526,7 @@
 		$campo=
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5" '.$extra.'>
 				<label><b>'.$nome.'</b></label><br>
-				<p class="text-left">'.$modificador.'&nbsp;</p>
+				<p class="text-left">'.$modificador.'</p>
 			</div>';
 
 		return $campo;
@@ -595,11 +598,12 @@
 			."&extra_limite=".$extra_limite
 			."&extra_bd=".urlencode($extra_bd)
 			."&extra_busca=".urlencode($extra_busca);
-		
 
-
-		echo "
-			<script type=\"text/javascript\">
+		echo "	
+			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
+			<script src='https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/js/select2.min.js'></script>
+			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js' type='text/javascript'></script>
+			<script type=\"text/javascript\" language=\"javascript\">
 				$.fn.select2.defaults.set(\"theme\", \"bootstrap\");
 				$(window).bind(\"load\", function() {
 					$('.".$variavel."').select2({
