@@ -435,7 +435,7 @@
 				$botoes.="<div class='fecha-form-btn'>".$botao[$i]."</div>";
 			}
 
-			$botoes .= "<b class='msg-status-text'>".($_POST['msg_status']?? '')."</b>";
+    $botoes .= "<b class='msg-status-text'>".($_POST['msg_status']?? '')."</b>";
 
 	?>
 														<div class="form-actions">
