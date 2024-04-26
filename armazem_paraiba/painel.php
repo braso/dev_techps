@@ -7,22 +7,40 @@ include "funcoes_ponto.php";
 
 function index() {
     global $totalResumo, $CONTEX;
+    
+    if(empty($_POST['busca_data'])){
+		$_POST['busca_data'] = date("Y-m");
+	}
+
+    $dateParts = explode('-',$_POST['busca_data']);
+    $monthNum = $dateParts[1];
+    $year = $dateParts[0];
+
+    $monthNames = array(
+        '01' => 'Janeiro',
+        '02' => 'Fevereiro',
+        '03' => 'Março',
+        '04' => 'Abril',
+        '05' => 'Maio',
+        '06' => 'Junho',
+        '07' => 'Julho',
+        '08' => 'Agosto',
+        '09' => 'Setembro',
+        '10' => 'Outubro',
+        '11' => 'Novembro',
+        '12' => 'Dezembro'
+    );
+
+    
+    $monthName = $monthNames[$monthNum];
 
     cabecalho('Relatorio Geral de Espelho de Ponto');
-    // Define o local para português do Brasil
-    setlocale(LC_TIME, 'pt_BR');
 
-    // Cria um objeto DateTime com a data atual
-    $dataAtual = new DateTime();
-
-    // Formata o mês usando o IntlDateFormatter
-    $mesAtual = IntlDateFormatter::formatObject($dataAtual, 'MMMM', 'pt_BR');
-    $anoAtual = date('Y');
-
-    $texto = "<div style='position: absolute; top: 101px; left: 420px;'><b>Periodo da Busca:</b> $mesAtual de $anoAtual</div>";
-
+    $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
+    //position: absolute; top: 101px; left: 420px;
     $c = [
         combo_net('Empresa:','empresa',$_POST['empresa']?? '',4,'empresa', ''),
+        campo_mes('Data:',     'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2),
         $texto,
     ];
 
@@ -34,20 +52,24 @@ function index() {
 							window.print();
 						}
 					</script>';
-	$botaoCsv = "
-	<button id='btnCsv' class='btn btn-success' style='background-color: green !important;' onclick='downloadCSV()'>Baixar CSV</button>";
+	$botaoCsv = "<button id='btnCsv' class='btn btn-success' style='background-color: green !important;' onclick='downloadCSV()'>Baixar CSV</button>";
+	
+    if (isset($_POST['empresa']) && !empty($_POST['empresa'])) {
+        $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
+    }
     
     $b = [
        botao("Buscar", 'index', '', '', '', 1,'btn btn-info'),
        $botao_imprimir,
-       $botaoCsv
+       $botaoCsv,
+       $botao_volta
     ];
     
     abre_form('Filtro de Busca');
     linha_form($c);
     fecha_form($b);
     
-    if (isset($_POST['empresa']) && !empty($_POST['empresa'])) {
+    if (isset($_POST['empresa']) && !empty($_POST['empresa']) && isset($_POST['busca_data']) && !empty($_POST['busca_data'])) {
          $idEmpresa = $_POST['empresa'];
          $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM `empresa` WHERE empr_tx_Ehmatriz = 'sim' AND empr_nb_id = $idEmpresa"), MYSQLI_ASSOC);
          include_once 'painel_empresa.php';
@@ -59,7 +81,7 @@ function index() {
     ?>
     	<style>
 
-            @media print {
+           @media print {
                     body {
                         margin: 1cm;
                         margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
@@ -100,8 +122,32 @@ function index() {
                     }
                     .emissao{
                         text-align: left;
-                        padding-left: 300px !important;
+                        padding-left: 590px !important;
                         position: absolute;
+                    }
+                    .porcentagenEndo{
+                        box-shadow: 0 0 0 1000px #66b3ff inset !important;
+                    }
+                    .porcentagenNaEndo{
+                        box-shadow: 0 0 0 1000px #ff471a inset !important;
+                    }
+                    .porcentagenEndoPc{
+                        box-shadow: 0 0 0 1000px #ffff66 inset !important;
+                    }
+                    thead tr.totais th {
+                        box-shadow: 0 0 0 1000px #ffe699 inset !important; /* Cor para impressão */
+                    }
+                    thead tr.titulos th {
+                        box-shadow: 0 0 0 1000px #99ccff inset !important; /* Cor para impressão */
+                    }
+                    .porcentagenMeta{
+                        box-shadow: 0 0 0 1000px #66b3ff inset !important;
+                    }
+                    .porcentagenPosit{
+                        box-shadow: 0 0 0 1000px #00b33c inset !important;
+                    }
+                    .porcentagenNegat{
+                        box-shadow: 0 0 0 1000px #ff471a inset !important;
                     }
             }
 
@@ -120,7 +166,7 @@ function index() {
                 }
                 .emissao{
                     text-align: left;
-                    padding-left: 350px;
+                    padding-left: 63%;
                     position: absolute;
                 }
         </style>
