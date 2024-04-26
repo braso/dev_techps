@@ -81,12 +81,13 @@
 		//}
 
 		//Conferir se o endosso tem mais de um mês{
-			$mesInicio = explode('-', $_POST['data_de'])[1];
-			$mesFim = explode('-', $_POST['data_ate'])[1];
-			if($mesInicio != $mesFim){
+			$difference = strtotime($_POST['data_ate']) - strtotime($_POST['data_de']);
+			$qttDays = floor($difference / (60 * 60 * 24));
+			if($qttDays > 31){
 				$showError = True;
-				$errorMsg = 'Não é possível cadastrar endosso entre meses.  ';
+				$errorMsg = 'Não é possível cadastrar um endosso com mais de um mês.';
 			}
+			unset($difference);
 		//}
 
 		$queryMotoristas = 
@@ -110,6 +111,7 @@
 		$novosEndossos = [];
 
 		foreach($motoristas as $motorista){
+			$showError = False;
 			//Conferir se está entrelaçado com outro endosso{
 				$endossosMotorista = mysqli_fetch_all(
 					query(
@@ -186,7 +188,7 @@
 							$errorMsg = 'Há um tempo não endossado entre '.$ultimoEndosso['endo_tx_ate']->format('d/m/Y').' e '.$dataDe->format('d/m/Y').'.  ';
 						}
 					}else{ //Se é o primeiro endosso sendo feito para este motorista
-						if(!empty($motorista['enti_tx_banco'])){
+						if(isset($motorista['enti_tx_banco'])){
 							$ultimoEndosso['endo_tx_saldo'] = $motorista['enti_tx_banco'];
 						}else{
 							$ultimoEndosso['endo_tx_saldo'] = '00:00';
@@ -196,18 +198,17 @@
 			//}
 
 			if($showError){
-				$endossoComErro = [
+				$novoEndosso = [
 					'endo_nb_entidade' 	=> $motorista['enti_nb_id'],
 					'endo_tx_matricula' => $motorista['enti_tx_matricula'],
 					'error' 			=> True,
 					'errorMsg' 			=> '['.$motorista['enti_tx_matricula'].'] '.$motorista['enti_tx_nome'].': '.substr($errorMsg, 0, strlen($errorMsg)-2)
 				];
-				$novosEndossos[] = $endossoComErro;
+				$novosEndossos[] = $novoEndosso;
 				continue;
 			}
 
 			//<Pegar dados do ponto>
-				$qttDays = floor((strtotime($_POST['data_ate']) - strtotime($_POST['data_de'])) / (60 * 60 * 24));
 				$aDia = [];
 				for ($i = 0; $i <= $qttDays; $i++) {
 					$dataVez = strtotime($_POST['data_de']);
@@ -240,7 +241,7 @@
 				$sqlMotorista = query(
 					"SELECT * FROM entidade".
 						" LEFT JOIN parametro ON enti_nb_parametro = para_nb_id".
-						" WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante')".
+						" WHERE enti_tx_tipo IN ('Motorista', 'Ajudante')".
 						" AND enti_nb_id IN (".$motorista['enti_nb_id'].")".
 						" AND enti_nb_empresa = ".$motorista['enti_nb_empresa'].
 						" ORDER BY enti_tx_nome"
@@ -249,7 +250,7 @@
 
 				if(!empty($dadosMotorista['para_nb_qDias'])){
 					$dataCicloProx = strtotime($dadosMotorista['para_tx_inicioAcordo']);
-				    while(!empty($aEndosso['endo_tx_ate']) && $dataCicloProx < strtotime($aEndosso['endo_tx_ate'])){
+				    while($dataCicloProx < strtotime($aEndosso['endo_tx_ate'])){
     					$dataCicloProx += intval($dadosMotorista['para_nb_qDias'])*60*60*24;
     				}
     				$dataCicloAnt = $dataCicloProx - intval($dadosMotorista['para_nb_qDias'])*60*60*24;
@@ -311,15 +312,12 @@
 			}
 			
 			$showSuccess = True;
-			$valorAPagar = json_decode($novoEndosso['totalResumo']);
-			$valorAPagar = $valorAPagar->diffSaldo;
-			if($valorAPagar > $novoEndosso['endo_tx_horasApagar']){
-				$valorAPagar = $novoEndosso['endo_tx_horasApagar'];
-			}elseif(strpos($valorAPagar, "-") != -1){
-				$valorAPagar = "00:00";
+			$he50 = json_decode($novoEndosso['totalResumo']);
+			$he50 = $he50->he50;
+			if($he50 > $novoEndosso['endo_tx_horasApagar']){
+				$he50 = $novoEndosso['endo_tx_horasApagar'];
 			}
-			$successMsg .= '- ['.$novoEndosso['endo_tx_matricula'].'] '.$novoEndosso['endo_tx_nome'].': '.$valorAPagar.'<br>';
-
+			$successMsg .= '- ['.$novoEndosso['endo_tx_matricula'].'] '.$novoEndosso['endo_tx_nome'].': '.$he50.'<br>';
 			
 			//*
 			$filename = md5($novoEndosso['endo_tx_matricula'].$novoEndosso['endo_tx_mes']);
@@ -359,7 +357,7 @@
 		global $CONTEX;
 		?><script>
 			function selecionaMotorista(idEmpresa) {
-				let buscaExtra = encodeURI("AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"+
+				let buscaExtra = encodeURI("AND enti_tx_tipo IN ('Motorista', 'Ajudante')"+
 					(idEmpresa > 0? " AND enti_nb_empresa = '"+idEmpresa+"'": "")
 				);
 
@@ -373,7 +371,7 @@
 					placeholder: 'Selecione um item',
 					allowClear: true,
 					ajax: {
-						url: "<?=$CONTEX['path']?>/../contex20/select2.php?path=<?=$CONTEX['path']?>&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd="+buscaExtra+"&extra_busca=enti_tx_matricula",
+						url: "<?php echo$CONTEX['path']?>/../contex20/select2.php?path=<?php echo$CONTEX['path']?>&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd="+buscaExtra+"&extra_busca=enti_tx_matricula",
 						dataType: 'json',
 						delay: 250,
 						processResults: function(data){
@@ -401,7 +399,7 @@
 
 		cabecalho('Cadastro Endosso');
 
-		$extra_bd_motorista = " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')";
+		$extra_bd_motorista = " AND enti_tx_tipo IN ('Motorista', 'Ajudante')";
 		if($_SESSION['user_tx_nivel'] != 'Super Administrador'){
 			$extra_bd_motorista .= ' AND enti_nb_empresa = '.$_SESSION['user_tx_emprCnpj'];
 		}

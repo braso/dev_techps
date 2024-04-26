@@ -32,4 +32,4 @@ cabecalho('');
 </body>
 </html>
 
-<?= rodape(''); ?>
+<?php echo rodape(''); ?>

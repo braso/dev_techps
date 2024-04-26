@@ -100,115 +100,75 @@
 		}
 		$camposObrigatorios = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade', 'endereco', 'bairro'];
 		foreach($camposObrigatorios as $campo){
-
-			if($sqlCheckNivel["empr_tx_Ehmatriz"] != 'sim' && (!isset($_POST[$campo]) || empty($_POST[$campo]))){
+			if(!isset($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'sim' || empty($_POST[$campo])){
 				echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
 				visualizarCadastro();
 				exit;
 			}
 		}
 
-		if(!isset($_POST['id']) && empty($_POST['id'])){
-			$_POST['status'] = 'ativo';
+		$_POST['status'] = 'ativo';
 
-			$empresa = [
-				'empr_tx_Ehmatriz'	=> $_POST['matriz'],
-				'empr_nb_parametro' => $_POST['parametro'], 
-				'empr_nb_cidade' 	=> $_POST['cidade'],
-				'empr_tx_domain' 	=> "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio']
-			];
-			$campos = [
-				'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento', 
-				'referencia', 'fone1', 'fone2', 'email', 'inscricaoEstadual', 'inscricaoMunicipal', 
-				'regimeTributario', 'status', 'situacao', 'contato', 
-				'ftpServer', 'ftpUsername', 'ftpUserpass', 'dataRegistroCNPJ'
-			];
+		$empresa = [
+			'empr_tx_Ehmatriz'	=> $_POST['matriz'],
+			'empr_nb_parametro' => $_POST['parametro'], 
+			'empr_nb_cidade' 	=> $_POST['cidade'],
+			'empr_tx_domain' 	=> "https://braso.mobi/".(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/').$_POST['nomeDominio']
+		];
+		$campos = [
+			'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento', 
+			'referencia', 'fone1', 'fone2', 'email', 'inscricaoEstadual', 'inscricaoMunicipal', 
+			'regimeTributario', 'status', 'situacao', 'contato', 
+			'ftpServer', 'ftpUsername', 'ftpUserpass', 'dataRegistroCNPJ'
+		];
 
-			foreach($campos as $campo){
-				$empresa['empr_tx_'.$campo] = $_POST[$campo];
-			}
+		foreach($campos as $campo){
+			$empresa['empr_tx_'.$campo] = $_POST[$campo];
+		}
 
-			$empty_ftp_inputs = empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) + 0;
 
-			if($empty_ftp_inputs == 3){
-				$_POST['ftpServer']   = 'ftp:ftp-jornadas.positronrt.com.br';
-				$_POST['ftpUsername'] = 'u:08995631000108';
-				$_POST['ftpUserpass'] = 'p:0899';
-			}elseif($empty_ftp_inputs > 0){
-				echo '<script>alert("Preencha os 3 campos de FTP.")</script>';
-				visualizarCadastro();
-				exit;
-			}
+		$empty_ftp_inputs = empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) + 0;
 
-			if(isset($_POST['id']) && !empty($_POST['id'])){
-				$empresa['empr_nb_userAtualiza'] = $_SESSION['user_nb_id'];
-				$empresa['empr_tx_dataAtualiza'] = date('Y-m-d H:i:s');
-				
-				atualizar('empresa',array_keys($empresa),array_values($empresa),$_POST['id']);
-				$id_empresa = $_POST['id'];
-			}else{
-				$empresa['empr_nb_userCadastro'] = $_SESSION['user_nb_id'];
-				$empresa['empr_tx_dataCadastro'] = date('Y-m-d H:i:s');
-				try{
-					$id_empresa = inserir('empresa',array_keys($empresa),array_values($empresa))[0];
-				}catch(Exception $e){
-					print_r($e);
-				}
-			}
+		if($empty_ftp_inputs == 3){
+			$_POST['ftpServer']   = 'ftp:ftp-jornadas.positronrt.com.br';
+			$_POST['ftpUsername'] = 'u:08995631000108';
+			$_POST['ftpUserpass'] = 'p:0899';
+		}elseif($empty_ftp_inputs > 0){
+			echo '<script>alert("Preencha os 3 campos de FTP.")</script>';
+			visualizarCadastro();
+			exit;
+		}
+
+		if(isset($_POST['id']) && !empty($_POST['id'])){
+			$empresa['empr_nb_userAtualiza'] = $_SESSION['user_nb_id'];
+			$empresa['empr_tx_dataAtualiza'] = date('Y-m-d H:i:s');
 			
-			$file_type = $_FILES['logo']['type']; //returns the mimetype
-
-			$allowed = array("image/jpeg", "image/gif", "image/png");
-			if(in_array($file_type, $allowed) && $_FILES['logo']['name']!='') {
-
-				if(!is_dir("arquivos/empresa/$id_empresa")){
-					mkdir("arquivos/empresa/$id_empresa");
-				}
-
-				$arq=enviar('logo',"arquivos/empresa/$id_empresa/",$id_empresa);
-				if($arq){
-					atualizar('empresa',['empr_tx_logo'],[$arq],$id_empresa);
-				}
-			}
-		} else
-			$empresa = [
-				'empr_nb_parametro' => $_POST['parametro'],
-				'empr_nb_userAtualiza' => $_SESSION['user_nb_id'],
-				'empr_tx_dataAtualiza' => date('Y-m-d H:i:s')
-			];
-			
-			$campos = [
-				'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento', 
-				'referencia', 'fone1', 'fone2', 'email', 'inscricaoEstadual', 'inscricaoMunicipal', 
-				'regimeTributario', 'status', 'situacao', 'contato', 
-				'ftpServer', 'ftpUsername', 'ftpUserpass', 'dataRegistroCNPJ'
-			];
-
-			foreach($campos as $campo){
-				$empresa['empr_tx_'.$campo] = $_POST[$campo];
-			}
-			
-
 			atualizar('empresa',array_keys($empresa),array_values($empresa),$_POST['id']);
-
 			$id_empresa = $_POST['id'];
+		}else{
+			$empresa['empr_nb_userCadastro'] = $_SESSION['user_nb_id'];
+			$empresa['empr_tx_dataCadastro'] = date('Y-m-d H:i:s');
+			try{
+				$id_empresa = inserir('empresa',array_keys($empresa),array_values($empresa))[0];
+			}catch(Exception $e){
+				print_r($e);
+			}
+		}
+		
+		$file_type = $_FILES['logo']['type']; //returns the mimetype
 
-			$file_type = $_FILES['logo']['type']; //returns the mimetype
+		$allowed = array("image/jpeg", "image/gif", "image/png");
+		if(in_array($file_type, $allowed) && $_FILES['logo']['name']!='') {
 
-			$allowed = array("image/jpeg", "image/gif", "image/png");
-			if(in_array($file_type, $allowed) && $_FILES['logo']['name']!='') {
-
-				if(!is_dir("arquivos/empresa/$id_empresa")){
-					mkdir("arquivos/empresa/$id_empresa");
-				}
-
-
-				$arq=enviar('logo',"arquivos/empresa/$id_empresa/",$id_empresa);
-				if($arq){
-					atualizar('empresa',['empr_tx_logo'],[$arq],$id_empresa);
-				}
+			if(!is_dir("arquivos/empresa/$id_empresa")){
+				mkdir("arquivos/empresa/$id_empresa");
 			}
 
+			$arq=enviar('logo',"arquivos/empresa/$id_empresa/",$id_empresa);
+			if($arq){
+				atualizar('empresa',['empr_tx_logo'],[$arq],$id_empresa);
+			}
+		}
 
 
 		index();
@@ -240,7 +200,7 @@
 
 				var selecionado = $('.cidade',parent.document);
 				selecionado.empty();
-				selecionado.append('<option value=".$arr['ibge'].">[".$arr['uf']."] ".$arr['localidade']."</option>');
+				selecionado.append('<option value=".$arr['ibge'].">".[$arr['uf']]." ".$arr['localidade']."</option>');
 				selecionado.val('".$arr['ibge']."').trigger('change');
 			</script>";
 		exit;
@@ -258,13 +218,13 @@
 				?>
 				<script type="text/javascript">
 					if(confirm("CPF/CNPJ já cadastrado, deseja atualizar o registro?")){
-						parent.document.form_modifica.id.value='<?=$a['empr_nb_id']?>';
+						parent.document.form_modifica.id.value='<?php echo$a['empr_nb_id']?>';
 						parent.document.form_modifica.submit();
 					}else{
 						parent.document.contex_form.cnpj.value='';
 					}
 				</script>
-				<?
+				<?php
 			}
 		}
 
@@ -309,7 +269,7 @@
 			'situacao','cep','endereco','numero','bairro','cnpj',
 			'nome','fantasia','complemento','referencia','fone1',
 			'fone2','contato','email','inscricaoEstadual','inscricaoMunicipal',
-			'regimeTributario','logo','domain','Ehmatriz'
+			'regimeTributario','logo','domain'
 		];
 		foreach($campos as $campo){
 			$input_values[$campo] = !empty($values[$prefix.$campo])? $values[$prefix.$campo]: '';
@@ -324,10 +284,10 @@
 
 		if(is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador"))){
 			$campo_dominio = campo_domain('Nome do Domínio','nomeDominio',$input_values['domain']?? '',2,'domain');
-			$campo_EhMatriz = combo('É matriz?','matriz',$input_values['Ehmatriz']?? '',2,['sim' => 'Sim', 'nao' => 'Não']);
+			$campo_EhMatriz = combo('É matriz?','matriz',$input_values['matriz']?? '',2,['sim' => 'Sim', 'nao' => 'Não']);
 		}else{
 			$campo_dominio = texto('Nome do Domínio',$input_values['domain']?? '',3);
-			$campo_EhMatriz = texto('É matriz?',$input_values['Ehmatriz']?? '',2);
+			$campo_EhMatriz = texto('É matriz?',$input_values['matriz']?? '',2);
 		}
 
 		if(!empty($input_values['cidade'])){
@@ -337,9 +297,8 @@
 			$cidade = ['cida_tx_nome' => ''];
 		}
 		$campo_cidade = texto('Cidade/UF', $cidade['cida_tx_nome'], 2);
-		
 
-		if (is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) != TRUE && $input_values['Ehmatriz'] == 'sim') {
+		if (is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) != TRUE && $input_values['matriz'] == 'sim') {
 			$c = [
 				texto('CPF/CNPJ*',$input_values['cnpj'],2),
 				texto('Nome*',$input_values['nome'],4),
@@ -362,8 +321,6 @@
 				texto('Data Reg. CNPJ',$input_values['dataRegistroCNPJ'],3),
 				$campo_dominio,
 				$campo_EhMatriz,
-				arquivo('Logo (.png, .jpg)'.$iconeExcluirLogo,'logo',$input_values['logo'],4),
-				
 				
 				texto('Servidor FTP',$input_values['ftpServer'],3),
 				texto('Usuário FTP',$input_values['ftpUsername'],3)
@@ -375,7 +332,7 @@
 				campo('Nome*','nome',$input_values['nome'],4,'','maxlength="65"'),
 				campo('Nome Fantasia','fantasia',$input_values['fantasia'],4,'','maxlength="65"'),
 				combo('Situação','situacao',$input_values['situacao'],2,['ativo' => 'Ativo', 'inativo' => 'Inativo']),
-				campo('CEP*','cep',$input_values['cep'],2,'MASCARA_CEP','onfocusout="carrega_cep(this.value);"'),
+				campo('CEP*','cep',$input_values['cep'],2,'MASCARA_CEP','onkeyup="carrega_cep(this.value);"'),
 				campo('Endereço*','endereco',$input_values['endereco'],5,'','maxlength="100"'),
 				campo('Número*','numero',$input_values['numero'],2),
 				campo('Bairro*','bairro',$input_values['bairro'],3,'','maxlength="30"'),
@@ -454,7 +411,7 @@
 		</script>
 		<?php
 		if (!empty($a_mod['empr_nb_id'])) {
-			echo arquivosEmpresa("Documentos", $a_mod['empr_nb_id'], $arquivos);
+			echo arquivosParametro("Documentos", $a_mod['empr_nb_id'], $arquivos);
 		}
 
 		rodape();
@@ -516,13 +473,13 @@
 			function carrega_cep(cep) {
 				var num = cep.replace(/[^0-9]/g, '');
 				if (num.length == '8') {
-					document.getElementById('frame_cep').src = '<?= $path_parts['basename'] ?>?acao=carregarEndereco&cep=' + num;
+					document.getElementById('frame_cep').src = '<?php echo $path_parts['basename'] ?>?acao=carregarEndereco&cep=' + num;
 				}
 			}
 			
 			function checarCNPJ(cnpj){
 				if(cnpj.length == '18' || cnpj.length == '14'){
-					document.getElementById('frame_cep').src='<?=$path_parts['basename']?>?acao=checarCNPJ&cnpj='+cnpj+'&id=<?=$a_mod['empr_nb_id']?>'
+					document.getElementById('frame_cep').src='<?php echo$path_parts['basename']?>?acao=checarCNPJ&cnpj='+cnpj+'&id=<?php echo$a_mod['empr_nb_id']?>'
 				}
 			}
 			$(document).ready(function() {
@@ -581,10 +538,6 @@
 
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
-		}
-
-		if(!empty($_SESSION['user_tx_nivel']) && !is_bool(strpos($_SESSION['user_tx_nivel'], 'Funcionário')) ){
-			$extra .= " AND empr_tx_Ehmatriz = 'nao'";
 		}
 
 		if(!empty($_POST['busca_codigo'])){

@@ -6,7 +6,7 @@ function cabecaRelatorio2($titulo){
 	<!DOCTYPE html>
 	<html>
 	<head>
-		<title><?=$titulo?></title>	
+		<title><?php echo$titulo?></title>	
 		<style>
 			body{
 				font-family: arial;
