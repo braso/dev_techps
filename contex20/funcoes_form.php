@@ -410,7 +410,7 @@
 				$botoes.=$botao[$i]."&nbsp;&nbsp;";
 			}
 
-			$botoes .= "&nbsp;&nbsp;<b>".($_POST['msg_status']?? '')."</b>";
+			$botoes .= "<br><b>".($_POST['msg_status']?? '')."</b>";
 
 	?>
 														<div class="form-actions">
