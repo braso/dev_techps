@@ -362,7 +362,7 @@
 		$data_input = "<script>";
 		switch($mascara){
 			case "MASCARA_DATA":
-				$data_input .= "$('[name=\'".$variavel."\']').inputmask('9999-99-99', {clearIncomplete: false, placeholder: 'dd/mm/aaaa'});";
+				$data_input .= "$('[name=\'$variavel\']').inputmask(\'date\', {clearIncomplete: false, placeholder: \'dd/mm/aaaa\'});";
 				$type = "date";
 			break;
 			case "MASCARA_MES":
@@ -439,7 +439,7 @@
 				$type = "password";
 			break;
 		}
-		$data_input .= "</script>";
+		$data_input .= '</script>';
 
 		if(empty($type)){
 			$type = "text";
@@ -581,13 +581,13 @@
 		}else{
 			$opt = '';
 		}
-		$campo =
-			"<div class='col-sm-".$tamanho." margin-bottom-5'>
-				<label><b>".$nome."</b></label>
-				<select class='".$variavel." form-control input-sm' id='".$variavel."' style='width:100%' ".$extra." name='".$variavel."'>
-				".$opt."
+		$campo=
+			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
+				<label><b>'.$nome.'</b></label>
+				<select class="'.$variavel.' form-control input-sm" id="'.$variavel.'" style="width:100%" '.$extra.' name="'.$variavel.'">
+				'.$opt.'
 				</select>
-			</div>"
+			</div>'
 		;
 
 		$select2URL = 
@@ -970,7 +970,7 @@
 					form.action = '?' + values.join('&');
 				}
 				</script>
-			<?
+			<?php
 			$funcaoOnClick = 'criarGET();';
 		}
 

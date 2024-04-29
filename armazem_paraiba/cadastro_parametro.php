@@ -134,11 +134,13 @@
 		$camposObrigatorios = ['nome' => 'Nome', 'jornadaSemanal' => 'Jornada Semanal (Horas/Dia)', 'jornadaSabado' => 'Jornada Sábado (Horas/Dia)',
 		'tolerancia' => 'Tolerância de jornada Saldo diário (Minutos)', 'percentualHE' => 'Percentual da Hora Extra (Semanal)', 
 		'percentualSabadoHE' => 'Percentual da Hora Extra (Dias sem Jornada Prevista)', 'HorasEXExcedente' => 'Máximo de Horas Extras 50% (diário)'];
+
 		// Removido temporariamente
-// 		if(!empty($_POST['acordo']) && $_POST['acordo'] == 'sim'){
-// 			$camposObrigatorios[] = 'inicioAcordo';
-// 			$camposObrigatorios[] = 'fimAcordo';
-// 		}
+		// if(!empty($_POST['acordo']) && $_POST['acordo'] == 'sim'){
+		// 	$camposObrigatorios[] = 'inicioAcordo';
+		// 	$camposObrigatorios[] = 'fimAcordo';
+		// }
+		
 		if(!empty($_POST['banco']) && $_POST['banco'] == 'sim'){
 			$camposObrigatorios['quandDias'] = 'Quantidade de Dias';
 			$camposObrigatorios['quandHoras'] = 'Quantidade de Horas Limite';
@@ -197,11 +199,10 @@
 			unset($novoParametro['para_tx_horasLimite']);
 		}
 
-		// Removido temporariamente
-		// if(!empty($_POST['acordo']) && $_POST['acordo'] == 'nao'){
-		// 	unset($novoParametro['para_tx_inicioAcordo']);
-		// 	unset($novoParametro['para_tx_fimAcordo']);
-		// }
+		if(!empty($_POST['acordo']) && $_POST['acordo'] == 'nao'){
+			unset($novoParametro['para_tx_inicioAcordo']);
+			unset($novoParametro['para_tx_fimAcordo']);
+		}
 		
 
 		$novoParametro['para_nb_userAtualiza'] = $_SESSION['user_nb_id'];
@@ -380,7 +381,7 @@
 					document.form_download_arquivo.submit();
 				}
 			</script>
-		<?
+		<?php
 	}
 
 	function index(){

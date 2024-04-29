@@ -21,21 +21,21 @@
 					<meta content="" name="description" />
 					<meta content="" name="author" />
 					<!-- INICIO GLOBAL MANDATORY STYLES -->
-					<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
+					<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
 
 					<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/css/select2.min.css" rel="stylesheet" />
 					<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/js/select2.min.js"></script>
-					<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/select2/js/i18n/pt-BR.js" type="text/javascript"></script>
+					<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/select2/js/i18n/pt-BR.js" type="text/javascript"></script>
 
 					<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js" type="text/javascript"></script>
 					<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/jquery-inputmask/inputmask/jquery.inputmask.js" type="text/javascript"></script>
 					<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/jquery-inputmask/maskMoney.js" type="text/javascript"></script>
 					<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css" />
-					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
-					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet" type="text/css" />
-					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
-					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
-					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet" type="text/css" />
+					<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+					<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet" type="text/css" />
+					<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+					<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
+					<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet" type="text/css" />
 					<!-- FIM GLOBAL MANDATORY STYLES -->
 
 					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.js" rel="stylesheet" type="text/css" />
@@ -43,27 +43,27 @@
 					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.css" rel="stylesheet" type="text/css" />
 					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css" rel="stylesheet" type="text/css" />
 
-					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
-					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet" type="text/css" />
+					<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
+					<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet" type="text/css" />
 
 					<!-- INICIO TEMA GLOBAL STYLES -->
-					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components" type="text/css" />
-					<link href="<?=$CONTEX['path']?>/../contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
+					<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components" type="text/css" />
+					<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
 					<!-- FIM TEMA GLOBAL STYLES -->
 					<!-- INICIO TEMA LAYOUT STYLES -->
-					<link href="<?=$CONTEX['path']?>/../contex20/assets/layout/css/layout.min.css" rel="stylesheet" type="text/css" />
-					<link href="<?=$CONTEX['path']?>/../contex20/assets/layout/css/themes/default.min.css" rel="stylesheet" type="text/css" id="style_color" />
-					<link href="<?=$CONTEX['path']?>/../contex20/assets/layout/css/custom.min.css" rel="stylesheet" type="text/css" />
+					<link href="<?php echo $CONTEX['path']?>/../contex20/assets/layout/css/layout.min.css" rel="stylesheet" type="text/css" />
+					<link href="<?php echo $CONTEX['path']?>/../contex20/assets/layout/css/themes/default.min.css" rel="stylesheet" type="text/css" id="style_color" />
+					<link href="<?php echo $CONTEX['path']?>/../contex20/assets/layout/css/custom.min.css" rel="stylesheet" type="text/css" />
 					<!-- FIM TEMA LAYOUT STYLES -->
-					<link rel="apple-touch-icon" sizes="180x180" href="<?=$CONTEX['path']?>/../contex20/img/favicon/apple-touch-icon.png">
-					<link rel="icon" type="image/png" sizes="32x32" href="<?=$CONTEX['path']?>/../contex20/img/favicon/favicon-32x32.png">
-					<link rel="icon" type="image/png" sizes="16x16" href="<?=$CONTEX['path']?>/../contex20/img/favicon/favicon-16x16.png">
-					<link rel="shortcut icon" type="image/x-icon" href="<?=$CONTEX['path']?>/../contex20/img/favicon/favicon-32x32.png?v=2">
-					<link rel="manifest" href="<?=$CONTEX['path']?>/../contex20/img/favicon/site.webmanifest">
+					<link rel="apple-touch-icon" sizes="180x180" href="<?php echo $CONTEX['path']?>/../contex20/img/favicon/apple-touch-icon.png">
+					<link rel="icon" type="image/png" sizes="32x32" href="<?php echo $CONTEX['path']?>/../contex20/img/favicon/favicon-32x32.png">
+					<link rel="icon" type="image/png" sizes="16x16" href="<?php echo $CONTEX['path']?>/../contex20/img/favicon/favicon-16x16.png">
+					<link rel="shortcut icon" type="image/x-icon" href="<?php echo $CONTEX['path']?>/../contex20/img/favicon/favicon-32x32.png?v=2">
+					<link rel="manifest" href="<?php echo $CONTEX['path']?>/../contex20/img/favicon/site.webmanifest">
 					<script type="text/javascript">
 
 						function contex_foco(elemento){
-							var campoFoco=document.forms[0].elements[<?=$foco?>];
+							var campoFoco=document.forms[0].elements[<?php echo $foco?>];
 							if(campoFoco != null)
 								campoFoco.focus();
 
@@ -95,7 +95,7 @@
 
 				<!-- <body style="zoom:100%;" class="page-container-bg-solid page-boxed"> -->
 				<body onload="contex_foco()" style="zoom:100%;" class="page-container-bg-solid page-boxed">
-		<?
+		<?php
 		if($relatorio==0){
 			?>
 					<!-- INICIO HEADER -->
@@ -105,8 +105,8 @@
 							<div class="container-fluid">
 								<!-- INICIO LOGO -->
 								<div class="page-logo">
-									<a href="<?=$CONTEX['path']?>/index.php">
-										<img src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="logo" class="logo-default">
+									<a href="<?php echo $CONTEX['path']?>/index.php">
+										<img src="<?php echo $CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="logo" class="logo-default">
 									</a>
 								</div>
 								<!-- FIM LOGO -->
@@ -122,17 +122,17 @@
 										<!-- INICIO USER LOGIN DROPDOWN -->
 										<li class="dropdown dropdown-user dropdown-dark">
 											<a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
-												<img alt="" class="img-circle" src="<?=$_SESSION['user_tx_foto'] ? $_SESSION['user_tx_foto'] : '/contex20/img/user.png'?>">
-												<span class="username username-hide-mobile"><?=$_SESSION['user_tx_login']?></span>
+												<img alt="" class="img-circle" src="<?php echo $_SESSION['user_tx_foto'] ? $_SESSION['user_tx_foto'] : '/contex20/img/user.png'?>">
+												<span class="username username-hide-mobile"><?php echo $_SESSION['user_tx_login']?></span>
 											</a>
 											<ul class="dropdown-menu dropdown-menu-default">
 												<li>
-													<a href="<?=$CONTEX['path']?>/cadastro_usuario.php?id=<?=$_SESSION['user_nb_id']?>">
+													<a href="<?php echo $CONTEX['path']?>/cadastro_usuario.php?id=<?php echo $_SESSION['user_nb_id']?>">
 														<i class="icon-user"></i> Perfil </a>
 												</li>
 												<li class="divider"> </li>
 												<li>
-													<a href="<?=$CONTEX['path']?>/logout.php">
+													<a href="<?php echo $CONTEX['path']?>/logout.php">
 														<i class="icon-key"></i> Sair </a>
 												</li>
 											</ul>
@@ -149,12 +149,12 @@
 							</div>
 						</div>
 						<!-- FIM HEADER TOP -->
-			<?
-			include($_SERVER['DOCUMENT_ROOT'].$CONTEX['path'].'/menu.php');
+			<?php
+			include('menu.php');
 			?>	
 					</div>
 					<!-- FIM HEADER -->
-			<?
+			<?php
 		}
 
 		if($relatorio=='1'){
@@ -192,7 +192,7 @@
 									<div class="page-content-inner">
 										<div class="row ">
 											<div class="col-md-12">
-		<?
+		<?php
 	}
 
 	function cabecaRelatorio($nome_pagina,$foco=0){
@@ -219,7 +219,7 @@
 				}
 			}
 		</style>
-		<?
+		<?php
 
 		global $CONTEX;
 		?>
@@ -239,20 +239,20 @@
 				<meta content="" name="description" />
 				<meta content="" name="author" />
 				<!-- INICIO GLOBAL MANDATORY STYLES -->
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
+				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
 
 				<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/css/select2.min.css" rel="stylesheet" />
 				<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/js/select2.min.js"></script>
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/select2/js/i18n/pt-BR.js" type="text/javascript"></script>
+				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/select2/js/i18n/pt-BR.js" type="text/javascript"></script>
 
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js" type="text/javascript"></script>
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/jquery-inputmask/maskMoney.js" type="text/javascript"></script>
+				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js" type="text/javascript"></script>
+				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/jquery-inputmask/maskMoney.js" type="text/javascript"></script>
 				<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css" />
-				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
-				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet" type="text/css" />
-				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
-				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
-				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet" type="text/css" />
+				<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+				<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet" type="text/css" />
+				<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+				<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
+				<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet" type="text/css" />
 				<!-- FIM GLOBAL MANDATORY STYLES -->
 
 				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.js" rel="stylesheet" type="text/css" />
@@ -260,22 +260,22 @@
 				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.css" rel="stylesheet" type="text/css" />
 				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css" rel="stylesheet" type="text/css" />
 
-				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
-				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet" type="text/css" />
+				<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
+				<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet" type="text/css" />
 
 				<!-- INICIO TEMA GLOBAL STYLES -->
-				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components" type="text/css" />
-				<link href="<?=$CONTEX['path']?>/../contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
+				<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components" type="text/css" />
+				<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
 				<!-- FIM TEMA GLOBAL STYLES -->
 				<!-- INICIO TEMA LAYOUT STYLES -->
-				<link href="<?=$CONTEX['path']?>/../contex20/assets/layout/css/layout.min.css" rel="stylesheet" type="text/css" />
-				<link href="<?=$CONTEX['path']?>/../contex20/assets/layout/css/themes/default.min.css" rel="stylesheet" type="text/css" id="style_color" />
-				<link href="<?=$CONTEX['path']?>/../contex20/assets/layout/css/custom.min.css" rel="stylesheet" type="text/css" />
+				<link href="<?php echo $CONTEX['path']?>/../contex20/assets/layout/css/layout.min.css" rel="stylesheet" type="text/css" />
+				<link href="<?php echo $CONTEX['path']?>/../contex20/assets/layout/css/themes/default.min.css" rel="stylesheet" type="text/css" id="style_color" />
+				<link href="<?php echo $CONTEX['path']?>/../contex20/assets/layout/css/custom.min.css" rel="stylesheet" type="text/css" />
 				<!-- FIM TEMA LAYOUT STYLES -->
 				<link rel="shortcut icon" href="favicon.ico" />
 				<script type="text/javascript">
 					function contex_foco(elemento){
-						var campoFoco=document.forms[0].elements[<?=$foco?>];
+						var campoFoco=document.forms[0].elements[<?php echo $foco?>];
 						if(campoFoco != null)
 							campoFoco.focus();
 
@@ -293,7 +293,7 @@
 						<div class="page-head">
 							<div class="container-fluid">
 								<div class="page-title">
-									<h1><?=$nome_pagina?> </h1>
+									<h1><?php echo $nome_pagina?> </h1>
 								</div>
 							</div>
 						</div>
@@ -303,7 +303,7 @@
 								<div class="page-content-inner">
 									<div class="row ">
 										<div class="col-md-12">
-		<?
+		<?php
 	}
 
 	function rodape(){
@@ -330,7 +330,7 @@
 				<!-- INICIO INNER FOOTER -->
 				<div class="page-footer">
 					<div class="container-fluid"> 
-						<?=date("Y")?> &copy; <a href="https://www.techps.com.br" target="_blank" style="margin-right: 30px">TechPS</a> Versão: <?=$version?>
+						<?php date("Y")?> &copy; <a href="https://www.techps.com.br" target="_blank" style="margin-right: 30px">TechPS</a> Versão: <?php echo $version?>
 					</div>
 				</div>
 				<div class="scroll-to-top">
@@ -342,20 +342,20 @@
 
 				<form id="loginTimeoutForm" method="post" target="<?=$_SERVER['HTTP_ORIGIN'].$CONTEX['path']?>/logout.php" action="logout"></form>
 				
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/js.cookie.min.js" type="text/javascript"></script>
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap-hover-dropdown/bootstrap-hover-dropdown.min.js" type="text/javascript"></script>
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js" type="text/javascript"></script>
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap-switch/js/bootstrap-switch.min.js" type="text/javascript"></script>
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap-tabdrop/js/bootstrap-tabdrop.js" type="text/javascript"></script>
+				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
+				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/js.cookie.min.js" type="text/javascript"></script>
+				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap-hover-dropdown/bootstrap-hover-dropdown.min.js" type="text/javascript"></script>
+				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js" type="text/javascript"></script>
+				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
+				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap-switch/js/bootstrap-switch.min.js" type="text/javascript"></script>
+				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/bootstrap-tabdrop/js/bootstrap-tabdrop.js" type="text/javascript"></script>
 				<!-- FIM CORE PLUGINS -->
 				<!-- INICIO TEMA GLOBAL SCRIPTS -->
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/scripts/app.min.js" type="text/javascript"></script>
+				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/scripts/app.min.js" type="text/javascript"></script>
 				<!-- FIM TEMA GLOBAL SCRIPTS -->
 				<!-- INICIO TEMA LAYOUT SCRIPTS -->
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/layout/scripts/layout.min.js" type="text/javascript"></script>
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/layout/scripts/demo.min.js" type="text/javascript"></script>
+				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/layout/scripts/layout.min.js" type="text/javascript"></script>
+				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/layout/scripts/demo.min.js" type="text/javascript"></script>
 				<!-- FIM TEMA LAYOUT SCRIPTS -->
 
 
@@ -363,7 +363,7 @@
 					setTimeout(function(){
 						let form = document.getElementById('loginTimeoutForm');
 						form.submit();
-				        window.location.href = '<?=$CONTEX['path']?>/logout.php';
+				        window.location.href = '<?php echo $CONTEX['path']?>/logout.php';
 					}, 15*60*1000);
 				</script>
 
@@ -384,7 +384,7 @@
 				});
 		</script>
 		-->
-		<?
+		<?php
 
 	}
 
@@ -392,24 +392,24 @@
 		global $idContexForm;
 		?>
 									<!-- INICIO FORMULARIO-->
-									<div class="col-md-<?=$col?> col-sm-<?=$col?>">
+									<div class="col-md-<?php echo $col?> col-sm-<?php echo $col?>">
 										<div class="portlet light ">
-											<?
+											<?php
 											if($nome_form){
 											?>
 											<div class="portlet-title">
 												<div class="caption">
-													<span class="caption-subject font-dark bold"><?=$nome_form?></span>
+													<span class="caption-subject font-dark bold"><?php echo $nome_form?></span>
 												</div>
 											</div>
-											<?
+											<?php
 											}
 											?>
 
 											<div class="portlet-body form">
-												<form role="form" name='contex_form<?=$idContexForm?>' method="post" enctype="multipart/form-data">
+												<form role="form" name='contex_form<?php echo $idContexForm?>' method="post" enctype="multipart/form-data">
 
-		<?
+		<?php
 		$idContexForm++;
 	}
 
@@ -421,10 +421,10 @@
 
 	?>
 		<div class="row">
-			<?=$campo?>
+			<?php echo $campo?>
 		</div>
 
-	<?
+	<?php
 	}
 
 
@@ -439,9 +439,9 @@
 
 	?>
 														<div class="form-actions">
-															<?=$botoes?>
+															<?php echo $botoes?>
 														</div>
-	<?
+	<?php
 		}
 	?>
 													</form>
@@ -451,6 +451,6 @@
 										</div>
 										<!-- FIM FORMULARIO-->
 
-	<?
+	<?php
 	}
 ?>

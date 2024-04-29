@@ -47,18 +47,18 @@ function index()
                         <thead>
                             <tr>
                                 <th>MATRÍCULAS</th>
-                                <?
+                                <?php
                                  echo "<th>Ultima Data do Cadastro do Ponto</th>";
                                  echo "<th>Total de Matrículas = ".sizeof(motorista_nao_cadastrado())."</th>";
                                 ?>
                         </thead>
                         </tr>
-                        <?
+                        <?php
                         $matriculas = motorista_nao_cadastrado();
                         ?>
 
                         <tbody>
-                            <?
+                            <?php
                             foreach ($matriculas as $valor) {
                                 echo '<tr>';
                                 echo '<td style="text-align: center;">' . $valor['pont_tx_matricula']. '</td>';

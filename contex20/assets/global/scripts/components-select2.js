@@ -17,7 +17,7 @@ var ComponentsSelect2 = function() {
                 placeholder: placeholder,
                  "language": "pt-BR",
         ajax: {
-            url: '/contex20/select2.php?tabela=<?=$tabela?>&extra=<?=$extra_bd?>',
+            url: '/contex20/select2.php?tabela=<?php echo$tabela?>&extra=<?php echo$extra_bd?>',
             dataType: 'json',
             delay: 250,
             processResults: function (data) {

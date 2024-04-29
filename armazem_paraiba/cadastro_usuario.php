@@ -7,9 +7,7 @@
 	include "conecta.php";
 
 	function combo_empresa($nome,$variavel,$modificador,$tamanho,$opcao, $opcao2,$extra=''){
-		
 		$t_opcao=count($opcao);
-
 		for($i=0;$i<$t_opcao;$i++){
 			$selected = ($opcao[$i] == $modificador)? 'selected': '';
 			$c_opcao = '<option value="'.$opcao[$i].'" '.$selected.'>'.$opcao2[$i].'</option>';
@@ -51,7 +49,6 @@
 
 		$error_msg = "ERRO: Insira os campos ";
 		$hasError = false;
-		// if(empty($_POST['id']))
     	if ($_POST['editPermission'] == true) {
 			$check_fields = [
 				//['nome', 'msg_erro']
@@ -64,19 +61,17 @@
 			];
 			foreach ($check_fields as $field) {
 				if (!isset($_POST[$field[0]]) || empty($_POST[$field[0]])) {
-					$hasError = true;
 					$error_msg .= $field[1];
+					$hasError = true;
 				}
 			}
 		}else{
-			// if(empty($_POST['senha']) || empty($_POST['senha2'])){
-			// 	$hasError = true;
-			// 	$error_msg .= 'Senha e Confirmação, ';
-			// }
+			if(empty($_POST['senha']) || empty($_POST['senha2'])){
+				$error_msg .= 'Senha e Confirmação, ';
+			}
 		}
 
 		if(is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) && isset($_POST['nivel']) && empty($_POST['nivel'])){	//Se usuário = Administrador && nivelUsuario indefinido
-			$hasError = true;
 			$error_msg .= 'Nível, ';
 		}
 		if(($_POST['senha'] != $_POST['senha2'])){
@@ -172,8 +167,8 @@
 				if (isset($sqlCheckNivel['user_tx_nivel']) && in_array($sqlCheckNivel['user_tx_nivel'], ['Motorista', 'Ajudante'])) {
 					if (!empty($_POST['senha']) && !empty($_POST['senha2'])) {
 						$novaSenha = ['user_tx_senha' => md5($_POST['senha'])];
-						atualizar('user', array_keys($novaSenha), array_values($novaSenha), $_POST['id']);
 					}
+					atualizar('user', array_keys($novaSenha), array_values($novaSenha), $_POST['id']);
 					index();
 					exit;
 				}
@@ -283,7 +278,7 @@
 					$niveis[] = "Funcionário";
 			}
 			$campo_nivel = combo('Nível*', 'nivel', ($_POST['nivel']?? ''), 2, $niveis, "style='margin-bottom:-10px;'");
-			$campo_status = combo('status', 'status', ($a_mod['enti_tx_status']?? ''), 2, ['ativo' => 'Ativo', 'inativo' => 'Inativo'], 'tabindex=04');
+			$campo_status = combo('status', 'status', $a_mod['enti_tx_status'], 2, ['ativo' => 'Ativo', 'inativo' => 'Inativo'], 'tabindex=04');
 
 			$campo_login = campo('Login*', 'login', ($_POST['login']?? ''), 2,'','maxlength="30"');
 			$campo_nascimento = campo_data('Dt. Nascimento*', 'nascimento', ($_POST['nascimento']?? ''), 2);
@@ -318,7 +313,6 @@
 			$campo_nome = texto('Nome*', ($a_mod['user_tx_nome']?? ''), 3, "style='margin-bottom:-10px'; for='nome'");
 			$campo_login = texto('Login*', ($a_mod['user_tx_login']?? ''), 3, "style='margin-bottom:-10px;'");
 			$campo_nivel = texto('Nível*', ($a_mod['user_tx_nivel']?? ''), 2, "style='margin-bottom:-10px;'");
-			$campo_status = "";
 			$data_nascimento = ($a_mod['user_tx_nascimento'] != '0000-00-00') ? date("d/m/Y", strtotime($a_mod['user_tx_nascimento'])) : '00/00/0000' ;
 			$campo_nascimento = texto('Dt. Nascimento*', $data_nascimento, 2, "style='margin-bottom:-10px;'");
 			$campo_cpf = texto('CPF', ($a_mod['user_tx_cpf']?? ''), 2, "style='margin-bottom:-10px; margin-top: 10px;'");
@@ -390,7 +384,7 @@
 		linha_form($c);
 		
 
-		if (!empty($a_mod['user_nb_userCadastro']) || !empty($a_mod['user_nb_userAtualiza'])) {
+		if ($a_mod['user_nb_userCadastro'] > 0 || $a_mod['user_nb_userAtualiza'] > 0) {
 			$a_userCadastro = carregar('user', $a_mod['user_nb_userCadastro']);
 			$txtCadastro = "Registro inserido por ".($a_userCadastro['user_tx_login']?? 'admin').(!empty($a_mod['user_tx_dataCadastro'])?" às ".data($a_mod['user_tx_dataCadastro'], 1): '').".";
 			$cAtualiza[] = texto("Data de Cadastro", "$txtCadastro", 5);
@@ -423,7 +417,7 @@
 		rodape();
 	}
 
-	
+
 	function index() {
 		global $CONTEX;
 		

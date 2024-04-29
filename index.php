@@ -43,7 +43,6 @@ if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
 				<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
 			</form>"
 		;
-		echo "<script>document.formTelaPrincipal.submit();</script>";
 	}else{
 		echo 
 			"<form action='index.php?error=notfounddomain' name='formLogin' method='post'>
@@ -52,8 +51,8 @@ if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
 				<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
 			</form>"
 		;
-		echo "<script>document.formLogin.submit();</script>";
 	}
+	echo "<script>document.formTelaPrincipal.submit();</script>";
 	exit;
 }
 
@@ -164,7 +163,7 @@ License: You must have a valid license purchased only from themeforest(the above
 
 	<!-- FIM THEME LAYOUT STYLES -->
 
-	<?= 
+	<?php echo 
 		"<link rel='apple-touch-icon' sizes='180x180' href='./contex20/img/favicon/apple-touch-icon.png'>
 		<link rel='icon' type='image/png' sizes='32x32' href='./contex20/img/favicon/favicon-32x32.png'>
 		<link rel='icon' type='image/png' sizes='16x16' href='./contex20/img/favicon/favicon-16x16.png'>
@@ -222,7 +221,7 @@ License: You must have a valid license purchased only from themeforest(the above
 					autocomplete="off" 
 					placeholder="Usuário" 
 					name="user"
-					<?=(!empty($_POST['user'])? "value=".$_POST['user']: '')?>
+					<?php echo(!empty($_POST['user'])? "value=".$_POST['user']: '')?>
 				/>
 			</div>
 
@@ -239,13 +238,13 @@ License: You must have a valid license purchased only from themeforest(the above
 				/>
 			</div>
 
-			<?= $msg ?>
+			<?php echo $msg ?>
 
 			<div class="form-actions">
 
 				<input type="submit" class="btn green uppercase" name="botao" value="Entrar"></input>
 
-				<a href="<?=$server_base_link."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
+				<a href="<?php echo$server_base_link."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
 
 			</div>
 
@@ -265,7 +264,7 @@ License: You must have a valid license purchased only from themeforest(the above
 	</div>
 
 	<div class="copyright">
-		<?= date("Y") ?> © TechPS.
+		<?php echo date("Y") ?> © TechPS.
 	</div>
 
 	<!--[if lt IE 9]>

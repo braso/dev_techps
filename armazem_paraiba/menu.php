@@ -20,6 +20,8 @@ $paginasPonto = ['/carregar_ponto', '/espelho_ponto', '/endosso', '/nao_conformi
 $paginasCadastro = ['/cadastro_empresa', '/cadastro_motorista', '/cadastro_parametro', '/cadastro_motivo', '/cadastro_feriado','/cadastro_usuario','/cadastro_macro'];
 
 $paginaPainel = ['/painel'];
+var_dump($_SESSION['user_tx_nivel']);
+var_dump(is_int(strpos($_SESSION['user_tx_nivel'], 'Funcionário')));
 if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos($_SESSION['user_tx_nivel'], 'Super Administrador'))) { ?>
 
 	<!-- INICIO HEADER MENU -->
@@ -34,14 +36,14 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 						<a href="javascript:;">Cadastros<span class="arrow"></span></a>
 						<ul class="dropdown-menu pull-left">
 
-							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_empresa" class="nav-link ">Empresa/Filial</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_endosso" class="nav-link ">Endosso</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_feriado" class="nav-link ">Feriado</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_macro" class="nav-link ">Macro (Positron)</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_motivo" class="nav-link ">Motivo</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_motorista" class="nav-link ">Motorista</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_parametro" class="nav-link ">Parâmetro</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_usuario" class="nav-link ">Usuário</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_empresa.php" class="nav-link ">Empresa/Filial</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_endosso.php" class="nav-link ">Endosso</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_feriado.php" class="nav-link ">Feriado</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_macro.php" class="nav-link ">Macro (Positron)</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_motivo.php" class="nav-link ">Motivo</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_motorista.php" class="nav-link ">Motorista</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_parametro.php" class="nav-link ">Parâmetro</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_usuario.php" class="nav-link ">Usuário</a></li>
 						</ul>
 					</li>
 
@@ -49,11 +51,11 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 					<li class="menu-dropdown classic-menu-dropdown <?= verificarAtividade($paginasPonto)?>">
 						<a href="javascript:;">Ponto<span class="arrow"></span></a>
 						<ul class="dropdown-menu pull-left">
-							<li class=""><a href="<?= $CONTEX["path"] ?>/endosso" class="nav-link ">Endossos</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/espelho_ponto" class="nav-link ">Espelhos de Ponto</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/carregar_ponto" class="nav-link ">Integrações de Ponto</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/nao_conformidade" class="nav-link ">Não Conformidades</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/nao_cadastrados" class="nav-link">Não Cadastrados</a></li> 
+							<li class=""><a href="<?= $CONTEX["path"] ?>/endosso.php" class="nav-link ">Endossos</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/espelho_ponto.php" class="nav-link ">Espelhos de Ponto</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/carregar_ponto.php" class="nav-link ">Integrações de Ponto</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/nao_conformidade.php" class="nav-link ">Não Conformidades</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/nao_cadastrados.php" class="nav-link">Não Cadastrados</a></li> 
 						</ul>
 					</li>
 					<li class="menu-dropdown classic-menu-dropdown <?= verificarAtividade($paginaPainel) ?>">
@@ -77,9 +79,9 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 	</div>
 	<!-- FIM HEADER MENU -->
 
-<? } ?>
+<?php } ?>
 
-<? if (is_int(strpos($_SESSION['user_tx_nivel'], 'Funcionário'))) { ?>
+<?php if (is_int(strpos($_SESSION['user_tx_nivel'], 'Funcionário'))) { ?>
 
 	<!-- INICIO HEADER MENU -->
 	<div class="page-header-menu">
@@ -93,14 +95,14 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 						<a href="javascript:;">Cadastrar<span class="arrow"></span></a>
 						<ul class="dropdown-menu pull-left">
 
-							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_empresa" class="nav-link ">Empresas/Filiais</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_endosso" class="nav-link ">Endossos</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_feriado" class="nav-link ">Feriados</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_macro" class="nav-link ">Macros (Positron)</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_motivo" class="nav-link ">Motivos</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_motorista" class="nav-link ">Motoristas</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_parametro" class="nav-link ">Parâmetros</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_usuario" class="nav-link ">Usuários</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_empresa.php" class="nav-link ">Empresas/Filiais</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_endosso.php" class="nav-link ">Endossos</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_feriado.php" class="nav-link ">Feriados</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_macro.php" class="nav-link ">Macros (Positron)</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_motivo.php" class="nav-link ">Motivos</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_motorista.php" class="nav-link ">Motoristas</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_parametro.php" class="nav-link ">Parâmetros</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_usuario.php" class="nav-link ">Usuários</a></li>
 						</ul>
 					</li>
 
@@ -108,10 +110,10 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 					<li class="menu-dropdown classic-menu-dropdown <?= verificarAtividade($paginasPonto)?>">
 						<a href="javascript:;">Visualizar<span class="arrow"></span></a>
 						<ul class="dropdown-menu pull-left">
-							<li class=""><a href="<?= $CONTEX["path"] ?>/endosso" class="nav-link ">Endossos</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/espelho_ponto" class="nav-link ">Espelhos de Ponto</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/carregar_ponto" class="nav-link ">Integrações de Ponto</a></li>
-							<li class=""><a href="<?= $CONTEX["path"] ?>/nao_conformidade" class="nav-link ">Não Conformidades</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/endosso.php" class="nav-link ">Endossos</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/espelho_ponto.php" class="nav-link ">Espelhos de Ponto</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/carregar_ponto.php" class="nav-link ">Integrações de Ponto</a></li>
+							<li class=""><a href="<?= $CONTEX["path"] ?>/nao_conformidade.php" class="nav-link ">Não Conformidades</a></li>
 						</ul>
 					</li>
 				</ul>
@@ -121,9 +123,9 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 	</div>
 	<!-- FIM HEADER MENU -->
 
-<? } ?>
+<?php } ?>
 
-<? if(in_array($_SESSION['user_tx_nivel'], ['Motorista', 'Ajudante'])){?>
+<?php if(in_array($_SESSION['user_tx_nivel'], ['Motorista', 'Ajudante'])){?>
 
 	<!-- INICIO HEADER MENU -->
 	<div class="page-header-menu">
@@ -145,4 +147,4 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 	</div>
 	<!-- FIM HEADER MENU -->
 
-<? } ?>
+<?php } ?>

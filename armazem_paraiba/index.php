@@ -1,13 +1,15 @@
-<?
+<?php
+
 	/* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
+	ini_set('display_errors', 1);
+		error_reporting(E_ALL);
 
 	if(empty(session_id())){
 		session_start();
 	}
-	
 	$turnos = ['Noite', 'Manhã', 'Tarde', 'Noite'];
 	$turnoAtual = $turnos[intval((intval(date('H'))-3)/6)];
 
@@ -19,7 +21,7 @@
 	}
 
 	if(!empty($_POST['user']) && !empty($_POST['password'])){//Tentando logar
-
+	
 		if(isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id'])){ //Se já há um usuário logado
 			$_SESSION = [];
 			session_destroy();
@@ -42,8 +44,8 @@
 		if(!empty($usuario)){ //Se encontrou um usuário
 			$usuario = $usuario;
 			$dataHoje = strtotime(date("Y-m-d")); // Transforma a data de hoje em timestamp
-			
-			if (!empty($usuario['user_tx_expiracao']) && $usuario['user_tx_expiracao'] != '0000-00-00' && strtotime($usuario['user_tx_expiracao']) >= $dataHoje) {
+			$dataVerificarObj = strtotime($usuario['user_tx_expiracao']);
+			if ($dataVerificarObj >= $dataHoje && !empty($usuario['user_tx_expiracao']) && $usuario['user_tx_expiracao'] == '0000-00-00') {
 				echo "<div class='alert alert-danger display-block'>
 					<span> Usuário expirado. </span>
 				</div>";
