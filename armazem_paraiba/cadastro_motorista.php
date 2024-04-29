@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+    /* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -15,7 +15,6 @@
 				</script>
 			<?php
 		}
-
 		exit;
 	}
 
@@ -67,44 +66,18 @@
 
 		$arr = buscarCEP($_GET['cep']);
 
-		?>
-		<script src="<?php echo$CONTEX['path']?>/../contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
-		<script type="text/javascript">
-			parent.document.contex_form.endereco.value = '<?php echo $arr['logradouro'] ?>';
-			parent.document.contex_form.bairro.value = '<?php echo $arr['bairro'] ?>';
+		echo 
+      "<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
+			<script type='text/javascript'>
+				parent.document.contex_form.endereco.value = '".$arr['logradouro']."';
+				parent.document.contex_form.bairro.value = '".$arr['bairro']."';
 
-			var selecionado = $('.cidade', parent.document);
-			selecionado.empty();
-			selecionado.append('<option value=<?php echo $arr['ibge'] ?>><?php echo "[$arr[uf]] " . $arr['localidade'] ?></option>');
-			selecionado.val("<?php echo $arr['ibge'] ?>").trigger("change");
-		</script>
-		<?php
-
-		exit;
-	}
-
-	function carregarMatricula(){
-		echo '<script>alert("carrega_matricula")</script>';
-
-		$matricula = (int)$_GET['matricula'];
-		$id = (int)$_GET['id'];
-
-		$sql = query("SELECT * FROM entidade WHERE enti_tx_matricula = '$matricula' AND enti_nb_id != $id LIMIT 1");
-		$a = carrega_array($sql);
-
-		if ($a['enti_nb_id'] > 0) {
-		?>
-			<script type="text/javascript">
-				if (confirm("Matrícula já cadastrada, deseja atualizar o registro?")) {
-					parent.document.form_modifica.id.value = '<?php echo $a['enti_nb_id'] ?>';
-					parent.document.form_modifica.submit();
-				} else {
-					parent.document.contex_form.matricula.value = '';
-				}
-			</script>
-		<?php
-		}
-
+				var selecionado = $('.cidade', parent.document);
+				selecionado.empty();
+				selecionado.append('<option value=\'".$arr['ibge']."\'>[".$arr['uf']."] ".$arr['localidade']."</option>');
+				selecionado.val('".$arr['ibge']."').trigger('change');
+			</script>"
+    ;
 		exit;
 	}
 
@@ -118,29 +91,54 @@
 
 
 		$enti_campos = [
-			'matricula', 'nome', 'nascimento', 'status', 
-			'cpf','rg','civil','sexo','endereco','numero','complemento',
-			'bairro','cidade','cep','fone1','fone2','email','ocupacao','salario', 'parametro', 'obs', 'empresa',
-			'parametro','jornadaSemanal','jornadaSabado','percentualHE','percentualSabadoHE',
-			'rgOrgao', 'rgDataEmissao', 'rgUf',
-			'pai', 'mae', 'conjugue', 'tipoOperacao',
-			'subcontratado', 'admissao', 'desligamento',
-			'cnhRegistro', 'cnhValidade', 'cnhPrimeiraHabilitacao', 'cnhCategoria', 'cnhPermissao',
-			'cnhObs', 'cnhCidade', 'cnhEmissao', 'cnhPontuacao', 'cnhAtividadeRemunerada',
-			'banco', 'tipo'
-		];
-		
-		$post_values = [
-			'postMatricula', 'nome', 'nascimento', 'status',
-			'cpf', 'rg', 'civil', 'sexo', 'endereco', 'numero', 'complemento',
-			'bairro', 'cidade', 'cep', 'fone1', 'fone2', 'email', 'ocupacao', 'salario', 'parametro', 'obs', 'empresa',
-			'parametro', 'jornadaSemanal', 'jornadaSabado', 'percentualHE', 'percentualSabadoHE',
-			'rgOrgao', 'rgDataEmissao', 'rgUf',
-			'pai', 'mae', 'conjugue', 'tipoOperacao',
-			'subcontratado', 'admissao', 'desligamento',
-			'cnhRegistro', 'cnhValidade', 'cnhPrimeiraHabilitacao', 'cnhCategoria', 'cnhPermissao',
-			'cnhObs', 'cnhCidade', 'cnhEmissao', 'cnhPontuacao', 'cnhAtividadeRemunerada', 
-			'setBanco', 'nivel'
+			'enti_tx_matricula' 				=> 'postMatricula', 
+			'enti_tx_nome' 						=> 'nome', 
+			'enti_tx_nascimento' 				=> 'nascimento', 
+			'enti_tx_status' 					=> 'status', 
+			'enti_tx_status' 					=> 'status', 
+			'enti_tx_cpf' 						=> 'cpf',
+			'enti_tx_rg' 						=> 'rg',
+			'enti_tx_civil' 					=> 'civil',
+			'enti_tx_sexo' 						=> 'sexo',
+			'enti_tx_endereco' 					=> 'endereco',
+			'enti_tx_numero' 					=> 'numero',
+			'enti_tx_complemento' 				=> 'complemento',
+			'enti_tx_bairro' 					=> 'bairro',
+			'enti_nb_cidade' 					=> 'cidade',
+			'enti_tx_cep' 						=> 'cep',
+			'enti_tx_fone1' 					=> 'fone1',
+			'enti_tx_fone2' 					=> 'fone2',
+			'enti_tx_email' 					=> 'email',
+			'enti_tx_ocupacao' 					=> 'ocupacao',
+			'enti_tx_salario' 					=> 'salario',
+			'enti_nb_parametro' 				=> 'parametro', 
+			'enti_tx_obs' 						=> 'obs', 
+			'enti_nb_empresa' 					=> 'empresa',
+			'enti_tx_jornadaSemanal' 			=> 'jornadaSemanal',
+			'enti_tx_jornadaSabado' 			=> 'jornadaSabado',
+			'enti_tx_percentualHE' 				=> 'percentualHE',
+			'enti_tx_percentualSabadoHE' 		=> 'percentualSabadoHE',
+			'enti_tx_rgOrgao' 					=> 'rgOrgao', 
+			'enti_tx_rgDataEmissao' 			=> 'rgDataEmissao', 
+			'enti_tx_rgUf' 						=> 'rgUf',
+			'enti_tx_pai' 						=> 'pai', 
+			'enti_tx_mae' 						=> 'mae', 
+			'enti_tx_conjugue' 					=> 'conjugue', 
+			'enti_tx_tipoOperacao' 				=> 'tipoOperacao',
+			'enti_tx_subcontratado' 			=> 'subcontratado', 
+			'enti_tx_admissao' 					=> 'admissao', 
+			'enti_tx_desligamento' 				=> 'desligamento',
+			'enti_tx_cnhRegistro' 				=> 'cnhRegistro', 
+			'enti_tx_cnhValidade' 				=> 'cnhValidade', 
+			'enti_tx_cnhPrimeiraHabilitacao' 	=> 'cnhPrimeiraHabilitacao', 
+			'enti_tx_cnhCategoria' 				=> 'cnhCategoria', 
+			'enti_tx_cnhPermissao' 				=> 'cnhPermissao',
+			'enti_tx_cnhObs' 					=> 'cnhObs', 
+			'enti_nb_cnhCidade'			 		=> 'cnhCidade', 
+			'enti_tx_cnhEmissao' 				=> 'cnhEmissao', 
+			'enti_tx_cnhPontuacao' 				=> 'cnhPontuacao', 
+			'enti_tx_cnhAtividadeRemunerada' 	=> 'cnhAtividadeRemunerada',
+			'enti_tx_banco' 					=> 'setBanco'
 		];
 
 		$novoMotorista = [];
@@ -156,6 +154,8 @@
 			}
 		}
 		unset($enti_campos);
+
+
 
 		//Conferir campos obrigatórios{
 			$campos_obrigatorios = [
@@ -370,7 +370,7 @@
 		}
 
 		$_POST['id'] = $id;
-		index();
+		visualizarCadastro();
 		exit;
 	}
 
@@ -466,24 +466,27 @@
 				2
 			);
 		}else{
-			$img = '';
+			$img = texto(
+				"Imagem", 
+				'<img style="width: 100%;" src="../contex20/img/driver.png" />',
+				2
+			);
 		}
-
+		
 		$tabIndex = 1;
 		
 		if(!empty($_POST['id'])){
-			$c = [texto('Matrícula*', $a_mod['enti_tx_matricula'], 1, 'tabindex='.sprintf("%02d", $tabIndex++))];
+			$c = [$img, texto('Matrícula*', $a_mod['enti_tx_matricula'], 1, 'tabindex='.sprintf("%02d", $tabIndex++))];
 		}else{
-			$c = [campo('Matrícula*', 'postMatricula', $a_mod['enti_tx_matricula'], 1, '', 'tabindex='.sprintf("%02d", $tabIndex++))];
+			$c = [$img, campo('Matrícula*', 'postMatricula', ($a_mod['enti_tx_matricula']?? ''), 1, '', 'tabindex='.sprintf("%02d", $tabIndex++))];
 		}
 
 		$c = array_merge($c, [
-			$img,
 			campo('Nome*', 'nome', ($a_mod['enti_tx_nome']?? ''), 3,'','maxlength="65" tabindex='.sprintf("%02d", $tabIndex++)),
-			campo_data('Dt. Nascimento*', 'nascimento', ($a_mod['enti_tx_nascimento']?? ''), 1, 'tabindex='.sprintf("%02d", $tabIndex++)),
-			combo('status', 'status', ($a_mod['enti_tx_status']?? ''), 2, ['ativo' => 'Ativo', 'inativo' => 'Inativo'], 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo_data('Dt. Nascimento*', 'nascimento', ($a_mod['enti_tx_nascimento']?? ''), 2, 'tabindex='.sprintf("%02d", $tabIndex++)),
+			texto('Idade',($idade?? ''), 1),
+			combo('status', 'status', ($a_mod['enti_tx_status']?? ''), 1, ['ativo' => 'Ativo', 'inativo' => 'Inativo'], 'tabindex='.sprintf("%02d", $tabIndex++)),
 			campo('Login','login', ($a_mod['user_tx_login']?? ''),2, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
-			texto('Idade',($idade?? ''),2, 'tabindex='.sprintf("%02d", $tabIndex++)),
 
 			campo('CPF*', 'cpf', ($a_mod['enti_tx_cpf']?? ''), 2, 'MASCARA_CPF', 'tabindex='.sprintf("%02d", $tabIndex++)),
 			campo('RG*', 'rg', ($a_mod['enti_tx_rg']?? ''), 2, 'MASCARA_RG', 'tabindex='.+sprintf("%02d", $tabIndex++).', maxlength=11'),
@@ -494,16 +497,16 @@
 
 			combo('Sexo', 'sexo', ($a_mod['enti_tx_sexo']?? ''), 2, ['', 'Feminino', 'Masculino'], 'tabindex='.sprintf("%02d", $tabIndex++)),
 			campo('CEP*', 'cep', ($a_mod['enti_tx_cep']?? ''), 2, 'MASCARA_CEP', 'onfocusout="buscarCEP(this.value);" tabindex='.sprintf("%02d", $tabIndex++)),
-			campo('Endereço*', 'endereco', ($a_mod['enti_tx_endereco']?? ''), 4, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
-			campo('Número', 'numero', ($a_mod['enti_tx_numero']?? ''), 2, 'MASCARA_NUMERO', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Endereço*', 'endereco', ($a_mod['enti_tx_endereco']?? ''), 3, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Número', 'numero', ($a_mod['enti_tx_numero']?? ''), 1, 'MASCARA_NUMERO', 'tabindex='.sprintf("%02d", $tabIndex++)),
 			campo('Bairro*', 'bairro', ($a_mod['enti_tx_bairro']?? ''), 2, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
 
 			campo('Complemento', 'complemento', ($a_mod['enti_tx_complemento']?? ''), 2, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
 			campo('Ponto de Referência', 'referencia', ($a_mod['enti_tx_referencia']?? ''), 3, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
 			combo_net('Cidade/UF*', 'cidade', ($a_mod['enti_nb_cidade']?? ''), 3, 'cidade', 'tabindex='.sprintf("%02d", $tabIndex++), '', 'cida_tx_uf'),
-			campo('Telefone 1*', 'fone1', ($a_mod['enti_tx_fone1']?? ''), 2, 'MASCARA_CEL', 'tabindex='.sprintf("%02d", $tabIndex++)),
-			campo('Telefone 2', 'fone2', ($a_mod['enti_tx_fone2']?? ''), 2, 'MASCARA_CEL', 'tabindex='.sprintf("%02d", $tabIndex++)),
-			campo('E-mail*', 'email', ($a_mod['enti_tx_email']?? ''), 3, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Telefone 1*', 'fone1', ($a_mod['enti_tx_fone1']?? ''), 1, 'MASCARA_CEL', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('Telefone 2', 'fone2', ($a_mod['enti_tx_fone2']?? ''), 1, 'MASCARA_CEL', 'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo('E-mail*', 'email', ($a_mod['enti_tx_email']?? ''), 2, '', 'tabindex='.sprintf("%02d", $tabIndex++)),
 
 			campo('Filiação Pai', 'pai', ($a_mod['enti_tx_pai']?? ''), 3,'', 'maxlength="65" tabindex='.sprintf("%02d", $tabIndex++)),
 			campo('Filiação Mãe', 'mae', ($a_mod['enti_tx_mae']?? ''), 3,'', 'maxlength="65" tabindex='.sprintf("%02d", $tabIndex++)),

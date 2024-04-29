@@ -8,7 +8,7 @@
 
 	function cadastrar(){
 		$url = substr($_SERVER['REQUEST_URI'], 0, strrpos($_SERVER['REQUEST_URI'], '/'));
-		header('Location: ' . $_ENV['URL_BASE'] . $url . '/cadastro_endosso');
+		header('Location: ' . $_SERVER['HTTP_ORIGIN'] . $url . '/cadastro_endosso');
 		exit();
 	}
 

@@ -82,18 +82,17 @@
 							$matchedTypes['fins'][$f]    = intval($matchedTypes['fins'][$f]['macr_tx_codigoInterno']);
 						}
 
-						$temPeriodoAberto = mysqli_fetch_all(
+						$temPeriodoAberto = mysqli_fetch_assoc(
 							query(
 								"SELECT * FROM ponto 
 									WHERE pont_tx_status != 'inativo'
 										AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
 										AND pont_tx_data LIKE '".$_POST['data']."%'
 										AND pont_tx_data < '".$_POST['data'].' '.$_POST['hora']."'
-									ORDER BY pont_tx_data DESC
+									ORDER BY pont_tx_data DESC, pont_nb_id DESC
 									LIMIT 1"
-							),
-							MYSQLI_ASSOC
-						)[0];
+							)
+						);
 						
 						$temPeriodoAberto['pont_tx_tipo'] = intval($temPeriodoAberto['pont_tx_tipo']);
 						$temPeriodoAberto['macr_tx_codigoInterno'] = intval($temPeriodoAberto['macr_tx_codigoInterno']);
@@ -135,25 +134,6 @@
 		
 		inserir('ponto',$campos,$valores);
 		index();
-		exit;
-	}
-
-	function voltar(){
-		global $CONTEX;
-    
-		$aMotorista = carregar('entidade',$_POST['id']);
-		echo 
-			'<form action="https://braso.mobi'.$CONTEX['path'].'/espelho_ponto" name="form_voltar" method="post">
-				<input type="hidden" name="busca_motorista" value="'.$_POST['id'].'">
-				<input type="hidden" name="busca_dataInicio" value="'.$_POST['data_de'].'">
-				<input type="hidden" name="busca_dataFim" value="'.$_POST['data_ate'].'">
-				<input type="hidden" name="busca_empresa" value="'.$aMotorista['enti_nb_empresa'].'">
-				<input type="hidden" name="acao" value="index">
-				</form>
-			<script>
-				document.form_voltar.submit();
-			</script>'
-		;
 		exit;
 	}
 	
@@ -299,7 +279,7 @@
 			echo '<script>alert("ERRO: Deve ser selecionado um motorista e uma data para ajustar.")</script>';
 
 			echo 
-				'<form action="https://braso.mobi'.$CONTEX['path'].'/espelho_ponto" name="form_voltar" method="post">
+				'<form action="'.$_SERVER['HTTP_ORIGIN'].$CONTEX['path'].'/espelho_ponto" name="form_voltar" method="post">
 					<input type="hidden" name="data_de" value="'.$_POST['data_de'].'">
 					<input type="hidden" name="data_ate" value="'.$_POST['data_ate'].'">
 				</form>
@@ -348,7 +328,7 @@
 		}
 
 		$formStatus = "
-		        <form name='form_ajuste_status' action='https://braso.mobi$CONTEX[path]/ajuste_ponto' method='post'>
+		        <form name='form_ajuste_status' action='$_SERVER[HTTP_ORIGIN]$CONTEX[path]/ajuste_ponto' method='post'>
 					<input type='hidden' name='acao' value='index'>
 					<input type='hidden' name='id'>
 					<input type='hidden' name='data'>
@@ -445,7 +425,24 @@
 		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 1, 'desc', -1);
 
 		echo
-			"<form name='form_ajuste_status' action='https://braso.mobi".$CONTEX['path']."/ajuste_ponto' method='post'>
+			"
+			<div id='tituloRelatorio'>
+				<img id='logo' style='width: 150px' src='$CONTEX[path]/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
+			</div>
+			<style>
+			@media print {
+				#tituloRelatorio{
+					display: flex !important;
+					position: absolute;
+					top: 5px;
+					right: 20px;
+				}
+			}
+				#tituloRelatorio{
+					display: none;
+				}
+			</style>
+			<form name='form_ajuste_status' action='".$_SERVER['HTTP_ORIGIN'].$CONTEX['path']."/ajuste_ponto' method='post'>
 				<input type='hidden' name='acao' value='index'>
 				<input type='hidden' name='id'>
 				<input type='hidden' name='data'>

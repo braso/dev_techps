@@ -1,5 +1,9 @@
 <?php
-// include "conecta.php";
+    /* Modo debug
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
+    //*/
+
 global $CONTEX;
 
 include_once "./PHPMailer/src/Exception.php";
@@ -15,7 +19,7 @@ use PHPMailer\PHPMailer\Exception;
 function extrairDominio($url, $dominio_array) {
     $parsed_url = parse_url($url);
     $path_segments = explode('/', $parsed_url['path']);
-    $dominio = $path_segments[2] ?? '';
+    $dominio = $path_segments[1] ?? '';
 
     return in_array($dominio, $dominio_array) ? $dominio : null;
 }
@@ -23,21 +27,12 @@ function extrairDominio($url, $dominio_array) {
 if ($_POST['botao'] == 'ENVIAR') {
     $dominio_url = $_POST['dominio'];
 
-    $dominio_array = [
-        "techps",
-        "braso",
-        "armazem_paraiba",
-        "opafrutas",
-        "qualy_transportes",
-        "feijao_turqueza"
-    ];
-
     $dominio = extrairDominio($dominio_url, $dominio_array);
 
     $login = $_POST['login'];
-    // $email = $_POST['email'];
     if(!empty($dominio)){
         include $dominio."/conecta.php";
+        
         global $CONTEX;
         if (!empty($login))
             $msg = tokenGenerate($login, $dominio);
@@ -57,6 +52,16 @@ if ($_POST['botao'] == 'ENVIAR') {
 if ($_POST['botao'] == 'Redefinir senha') {
     $dominio = $_GET['dominio'];
     include $dominio."/conecta.php";
+    
+    $token = $_GET['token'];
+    $checkTokenSql = query("SELECT user_nb_id FROM `user` WHERE user_tx_token = '$_GET[token]'");
+    $checkToken = mysqli_fetch_assoc($checkTokenSql);
+
+    if (!isset($checkToken) && empty($checkToken)) {
+        echo '<script>alert("Link já utilizado ou invalido, por favor solicita novamente a  redefinição de senha.  ")</script>';
+        echo "<meta http-equiv='refresh' content='0; url=https://gestaodejornada.braso.com.br/dev/index2.php' />";
+        exit;
+    }
     
     if (!empty($_POST['senha']) && !empty($_POST['senha2']) && $_POST['senha'] == $_POST['senha2']) {
             $userSql = query("SELECT user_nb_id FROM `user` WHERE user_tx_token = '$_GET[token]'");
@@ -102,17 +107,17 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
 
         // Configurações do servidor
         $mail->CharSet = 'UTF-8';
-        $mail->Host = 'mail.braso.mobi';
+        $mail->Host = 'gestaodejornada.braso.com.br';
         $mail->SMTPAuth = true;
-        $mail->Username = 'suporte_techps@braso.mobi';
-        $mail->Password = 'm&ic=p{tg15#';
+        $mail->Username = 'techps@gestaodejornada.braso.com.br';
+        $mail->Password = '3Gra!G@~O9ef';
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
         $mail->Port = 465;
 
         // Remetente e Destinatários
-        $mail->setFrom('suporte_techps@braso.mobi', 'Tech PS');
+        $mail->setFrom('suporte@techps.com.br ', 'Tech PS');
         $mail->addAddress($destinatario, $nomeDestinatario);
-        $mail->addReplyTo('suporte_techps@braso.mobi', 'Tech PS Suporte');
+        $mail->addReplyTo('suporte@techps.com.br', 'Tech PS Suporte');
         // $mail->addCC('wallacealanmorais@gmail.com');
         // $mail->addBCC('wallacealanmorais@gmail.com');
 
@@ -120,10 +125,10 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
         $mail->isHTML(true);
         $mail->Subject = 'Redefinição de Senha';
         $mail->Body = '<b>Redefinição de Senha</b><br>
-        Por favor, <a href="https://braso.mobi/' . basename($caminho)  . '/recupera_senha.php?dominio='.$domain.'&token=' . $token .'">clique aqui</a> para resetar sua senha.<br>
-        Caso você não tenha solicitado este e-mail de redefinição de senha, por favor, <a href="mailto:suporte_techps@braso.mobi">entre em contato</a> para que possamos resolver o problema.';
+        Por favor, <a href="https://gestaodejornada.braso.com.br/' . basename($caminho)  . '/recupera_senha.php?dominio='.$domain.'&token=' . $token .'">clique aqui</a> para resetar sua senha.<br>
+        Caso você não tenha solicitado este e-mail de redefinição de senha, por favor, <a href="mailto:suporte@techps.com.br ">entre em contato</a> para que possamos resolver o problema.';
         $mail->Encoding = 'base64';
-        $mail->AltBody = "Link para recupera senha: braso.mobi" . basename($caminho)  . "/recupera_senha.php?token=" . $token;
+        $mail->AltBody = "Link para recupera senha: gestaodejornada.braso.com.br" . basename($caminho)  . "/recupera_senha.php?token=" . $token;
 
         if ($mail->send()) {
             return "
@@ -132,10 +137,10 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
             </div>";
         }
     } catch (Exception $exception) {
-        return '
-        <div id="erro" style="background-color: red; padding: 1px; text-align: center;">
-            <h4 style = "color: #fff !important;">Erro ao enviar e-mail: {$mail->ErrorInfo}</h4>
-        </div>';
+        return "
+        <div id='erro' style='background-color: red; padding: 1px; text-align: center;'>
+            <h4 style = 'color: #fff !important;'>Erro ao enviar e-mail: {$mail->ErrorInfo}</h4>
+        </div>";
     }
 }
 
@@ -304,10 +309,10 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
     <script>
         function redirectIndex() {
             <?php
-    $dominio = $_GET['dominio'];
-    include $dominio."/conecta.php";
-    global $CONTEX;?>
-            window.location.href = "https://braso.mobi<?php echo$CONTEX['path']?>/index.php";
+        $dominio = $_GET['dominio'];
+        include $dominio."/conecta.php";
+        global $CONTEX;?>
+            window.location.href = "https://<?=$_SERVER['HTTP_ORIGIN'].$CONTEX['path']?>/index.php";
         }
             
         function esconderErro() {

@@ -3,7 +3,7 @@
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
-	
+
 	include "conecta.php";
 
 	function combo_empresa($nome,$variavel,$modificador,$tamanho,$opcao, $opcao2,$extra=''){
@@ -54,7 +54,7 @@
 				//['nome', 'msg_erro']
 				['nome', 'Nome, '],
 				['login', 'Login, '],
-				['senha', 'Senha, '],
+				// ['senha', 'Senha, '],
 				['nascimento', 'Data de nascimento, '],
 				['email', 'Email, '],
 				['empresa', 'Empresa, ']
@@ -74,7 +74,8 @@
 		if(is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) && isset($_POST['nivel']) && empty($_POST['nivel'])){	//Se usuário = Administrador && nivelUsuario indefinido
 			$error_msg .= 'Nível, ';
 		}
-		if($_POST['senha'] != $_POST['senha2']){
+		if(($_POST['senha'] != $_POST['senha2'])){
+			$hasError = true;
 			$error_msg .= "Confirmação de senha correta, ";
 		}
 		if($hasError){
@@ -146,7 +147,7 @@
 			$usuario['user_nb_userCadastro'] = $_SESSION['user_nb_id'];
 			$usuario['user_tx_dataCadastro'] = date("Y-m-d H:i:s");
 
-			inserir('user', array_keys($usuario), array_values($usuario));
+			$id = inserir('user', array_keys($usuario), array_values($usuario));
 			$_POST['id'] = ultimo_reg('user');
 			layout_usuario();
 			exit;
@@ -177,8 +178,25 @@
 				if (!empty($_POST['senha']) && !empty($_POST['senha2'])) {
 					$usuario['user_tx_senha'] = md5($_POST['senha']);
 				}
-
+				
 				atualizar('user', array_keys($usuario), array_values($usuario), $_POST['id']);
+				$id = $_POST['id'];
+			}
+		}
+
+		$idUserFoto = mysqli_fetch_assoc(query("SELECT user_nb_id FROM `user` WHERE user_nb_id = '".$id."' LIMIT 1;"));
+		$file_type = $_FILES['foto']['type']; //returns the mimetype
+
+		$allowed = array("image/jpeg", "image/gif", "image/png");
+		if (in_array($file_type, $allowed) && $_FILES['foto']['name'] != '') {
+
+			if (!is_dir("arquivos/user/$_POST[id]/")) {
+				mkdir("arquivos/user/$_POST[id]/", 0777, true);
+			}
+
+			$arq = enviar('foto', "arquivos/user/$_POST[id]/", 'FOTO_'.$id);
+			if($arq){
+				atualizar('user', array('user_tx_foto'), array($arq), $idUserFoto['user_nb_id']);
 			}
 		}
 
@@ -186,9 +204,15 @@
 		exit;
 	}
 
+	function excluirFoto(){
+		atualizar('user', array('user_tx_foto'), array(''), $_POST['id']);
+		$_POST['id'] = $_POST['id'];
+		layout_usuario();
+		exit;
+	}
+
 	function layout_usuario() {
-		global $a_mod;
-	
+		global $CONTEX, $a_mod;
 		if(!empty($_POST['id']) &&												//Se está editando um usuário existente e
 			!in_array($a_mod['user_tx_nivel'], ['Motorista', 'Ajudante']) && 	//Esse usuário não é motorista e
 			(
@@ -209,6 +233,18 @@
 				case "Funcionário":
 					$niveis[] = "Funcionário";
 			}
+			if(!empty($a_mod['user_tx_foto'])){
+				$img = texto(
+					"<a style='color:gray' onclick='javascript:remover_foto(\"".($a_mod['user_nb_id']?? '')."\",\"excluirFoto\",\"\",\"\",\"\",\"\");' >
+						<spam class='glyphicon glyphicon-remove'></spam>
+						Excluir
+					</a>", 
+					'<img style="width: 100%;" src="'.($a_mod['user_tx_foto']?? '').'" />', 
+					2
+				);
+			}else{
+				$img = '';
+			}
 			$campo_nivel = combo('Nível*', 'nivel', $a_mod['user_tx_nivel'], 2, $niveis, "style='margin-bottom:-10px;'");
 			$campo_status = combo('Status', 'status', $a_mod['user_tx_status'], 2, ['ativo' => 'Ativo', 'inativo' => 'Inativo'], 'tabindex=04');
 
@@ -224,6 +260,7 @@
 			$campo_senha = campo_senha('Senha*', 'senha', "", 2,'maxlength="50"');
 			$campo_confirma = campo_senha('Confirmar Senha*', 'senha2', "", 2,'maxlength="12"');
 			$campo_matricula = '';
+			$campo_foto = arquivo('Foto (.png, .jpg)', 'foto', ($a_mod['enti_tx_foto']?? ''), 4);
 
 		}elseif(empty($_POST['id'])){//Se está criando um usuário novo.
 
@@ -255,9 +292,22 @@
 			$campo_senha = campo_senha('Senha*', 'senha', "", 2,'maxlength="12"');
 			$campo_confirma = campo_senha('Confirmar Senha*', 'senha2', "", 2,'maxlength="12"');
 			$campo_matricula = '';
+			$campo_foto = arquivo('Foto (.png, .jpg)', 'foto', ($a_mod['enti_tx_foto']?? ''), 4);
 
 		}else{
 			//Entrará aqui caso (editando e o user_nivel != motorista ou ajudante) ou (session_nivel != administrador e não editando próprio usuário)
+			if(!empty($a_mod['user_tx_foto'])){
+				$img = texto(
+					"<a style='color:gray' onclick='javascript:remover_foto(\"".($a_mod['user_nb_id']?? '')."\",\"excluirFoto\",\"\",\"\",\"\",\"\");' >
+						<spam class='glyphicon glyphicon-remove'></spam>
+						Excluir
+					</a>", 
+					'<img style="width: 100%;" src="'.($a_mod['user_tx_foto']?? '').'" />', 
+					2
+				);
+			}else{
+				$img = '';
+			}
 
 			$editPermission = false;
 			$campo_nome = texto('Nome*', ($a_mod['user_tx_nome']?? ''), 3, "style='margin-bottom:-10px'; for='nome'");
@@ -304,6 +354,7 @@
 		}
 
 		$c = [
+			$img,
 			$campo_nome,
 			$campo_nivel,
 			$campo_status,
@@ -319,7 +370,8 @@
 			$campo_email,
 			$campo_telefone,
 			$campo_empresa,
-			$campo_expiracao
+			$campo_expiracao,
+			$campo_foto
 		];
 
 		$b = [];
@@ -346,6 +398,22 @@
 		}
 		
 		fecha_form($b);
+		echo "<form name='form_excluir_arquivo' method='post' action='cadastro_usuario.php'>
+				<input type='hidden' name='id' value=''>
+				<input type='hidden' name='nome_arquivo' value=''>
+				<input type='hidden' name='acao' value=''>
+			</form>
+			<script>
+			function remover_foto(id, acao, arquivo) {
+						if (confirm('Deseja realmente excluir o arquivo ' + arquivo + '?')) {
+							document.form_excluir_arquivo.id.value = id;
+							document.form_excluir_arquivo.nome_arquivo.value = arquivo;
+							document.form_excluir_arquivo.acao.value = acao;
+							document.form_excluir_arquivo.submit();
+						}
+			}
+			</script>";
+
 		rodape();
 	}
 

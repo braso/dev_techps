@@ -227,7 +227,7 @@
 					$hora = substr($line, 18, 4);
 					$hora = substr($hora, 0, 2).":".substr($hora, 2, 2).":00";
 
-					$codigoExterno = substr($line, -2, 2) + 0;
+					$codigoExterno = substr($line, -2, 2);
 
 					$queryMacroPonto = query("SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_codigoExterno = '".$codigoExterno."'");
 					$aTipo = carrega_array($queryMacroPonto);

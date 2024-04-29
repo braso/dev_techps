@@ -116,7 +116,8 @@
 									WHERE endo_tx_status = 'ativo'
 										AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
 										AND endo_tx_ate < '".$_POST['busca_data']."-01 00:00:00'
-								LIMIT 1"
+									ORDER BY endo_tx_ate DESC
+									LIMIT 1"
 							),
 							MYSQLI_ASSOC
 						);
@@ -294,13 +295,12 @@
 				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1),
 				'<button name="acao" id="botaoContexCadastrar CadastrarEndosso" value="cadastrar_endosso" type="button" class="btn btn-success">Cadastrar Endosso</button>',
 				'<button name="acao" id="botaoContexCadastrar ImprimirRelatorio" value="impressao_relatorio" type="button" onload="disablePrintButton()" class="btn btn-default">Imprimir Relatório</button>',
-				'<span id=dadosResumo><b>'.$carregando.'</b></span>'
 			];
 		//}
 
 		abre_form('Filtro de Busca');
 		linha_form($c);
-		fecha_form($b);
+		fecha_form($b, '<span id="dadosResumo" style="height:"><b>'.$carregando.'</b></span>');
 
 		$cab = [
 			"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
@@ -325,7 +325,7 @@
 					"SELECT * FROM entidade
 						WHERE enti_tx_tipo IN ('Motorista', 'Ajudante')
 							AND enti_nb_empresa = ".$_POST['busca_empresa']." ".$extra."
-							AND enti_tx_status != 'inativo'
+							AND enti_tx_status = 'ativo'
 						ORDER BY enti_tx_nome"
 				);
 
@@ -406,10 +406,12 @@
 											WHERE endo_tx_status = 'ativo'
 												AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
 												AND endo_tx_ate < '".$_POST['busca_data']."-01 00:00:00'
-										LIMIT 1"
+											ORDER BY endo_tx_ate DESC
+											LIMIT 1"
 									),
 									MYSQLI_ASSOC
 								);
+
 								if(!empty($saldoAnterior)){
 									$saldoAnterior = $saldoAnterior[0]['endo_tx_saldo'];
 								}elseif(!empty($aMotorista['enti_tx_banco'])){
@@ -545,7 +547,7 @@
 
 		rodape();
 
-		$counts['message'] = '<br><br><b>Motoristas: '.$counts['total'].' | Verificados: '.$counts['verificados'].' | Não Conformidades: '.$counts['naoConformidade'].' | Endossados: '.$counts['endossados']['sim'].' | Não Endossados: '.$counts['endossados']['nao'].'</b>';
+		$counts['message'] = '<b>Motoristas: '.$counts['total'].' | Verificados: '.$counts['verificados'].' | Não Conformidades: '.$counts['naoConformidade'].' | Endossados: '.$counts['endossados']['sim'].' | Não Endossados: '.$counts['endossados']['nao'].'</b>';
 
 		$select2URL = 
 			$CONTEX['path']."/../contex20/select2.php"
@@ -562,7 +564,7 @@
 					document.getElementById('dadosResumo').innerHTML = '".$counts['message']."';
 			
 					document.getElementById('botaoContexCadastrar CadastrarEndosso').onclick = function() {
-						window.location.href = 'https://braso.mobi".$CONTEX['path']."/cadastro_endosso';
+						window.location.href = '".$_SERVER['HTTP_ORIGIN'].$CONTEX['path']."/cadastro_endosso';
 					}
 			
 					document.getElementById('botaoContexCadastrar ImprimirRelatorio').onclick = function() {

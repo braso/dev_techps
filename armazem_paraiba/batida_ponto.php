@@ -1,5 +1,5 @@
 <?php
-    /*Modo debug{
+    //*Modo debug{
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//}*/
@@ -122,14 +122,18 @@
 
 	function criaBotaoRegistro(string $classe, int $tipoRegistro, string $nome, string $iconClass){
 		return 
-			"<button type='button'class='".$classe."' onclick='carregar_submit(\"".strval($tipoRegistro)."\",\" Tem certeza que deseja ".$nome."?\");'><br>
-				<i style='font-size: 30px; min-height: 30px;' class='".$iconClass."'></i><br>
-				".$nome."<br>
-				&nbsp;
+			"<button type='button'class='".$classe."' onclick='carregar_submit(\"".strval($tipoRegistro)."\",\" Tem certeza que deseja ".$nome."?\");'>
+				<div class='button-icon'>
+				    <i style='min-height: 30px;' class='".$iconClass."'></i>
+				</div>
+				<div class='button-title'>
+				    ".$nome."
+				</div>
 			</button>";
 	}
 
-	function index() {		
+	function index() {
+
 		$hoje = date('Y-m-d');
 		cabecalho('Registrar Ponto');
 		
@@ -286,19 +290,19 @@
 
 
 		$botoes = [
-			'inicioJornada' 			=> criaBotaoRegistro('btn green margin-bottom 10', 1,  'Iniciar Jornada', 'fa fa-car fa-6'),
-			'inicioRefeicao' 			=> criaBotaoRegistro('btn green margin-bottom 10', 3,  'Iniciar Refeição', 'fa fa-cutlery fa-6'),
-			'inicioEspera' 				=> criaBotaoRegistro('btn green margin-bottom 10', 5,  'Iniciar Espera', 'fa fa-clock-o fa-6'),
-			'inicioDescanso' 			=> criaBotaoRegistro('btn green margin-bottom 10', 7,  'Iniciar Descanso', 'fa fa-hourglass-start fa-6'),
-			'inicioRepouso' 			=> criaBotaoRegistro('btn green margin-bottom 10', 9,  'Iniciar Repouso', 'fa fa-bed fa-6'),
-			'inicioRepousoEmbarcado'	=> criaBotaoRegistro('btn green margin-bottom 10', 11, 'Iniciar Repouso Embarcado', 'fa fa-bed fa-6'),
+			'inicioJornada' 			=> criaBotaoRegistro('btn green', 1,  'Iniciar Jornada', 'fa fa-car fa-6'),
+			'inicioRefeicao' 			=> criaBotaoRegistro('btn green', 3,  'Iniciar Refeição', 'fa fa-cutlery fa-6'),
+			'inicioEspera' 				=> criaBotaoRegistro('btn green', 5,  'Iniciar Espera', 'fa fa-clock-o fa-6'),
+			'inicioDescanso' 			=> criaBotaoRegistro('btn green', 7,  'Iniciar Descanso', 'fa fa-hourglass-start fa-6'),
+			'inicioRepouso' 			=> criaBotaoRegistro('btn green', 9,  'Iniciar Repouso', 'fa fa-bed fa-6'),
+			// 'inicioRepousoEmbarcado'	=> criaBotaoRegistro('btn green', 11, 'Iniciar Repouso Embarcado', 'fa fa-bed fa-6'),
 
-			'fimJornada' 				=> criaBotaoRegistro('btn red margin-bottom 10', 2,  'Encerrar Jornada', 'fa fa-car fa-6'),
-			'fimRefeicao' 				=> criaBotaoRegistro('btn red margin-bottom 10', 4,  'Encerrar Refeição', 'fa fa-cutlery fa-6'),
-			'fimEspera' 				=> criaBotaoRegistro('btn red margin-bottom 10', 6,  'Encerrar Espera', 'fa fa-clock-o fa-6'),
-			'fimDescanso' 				=> criaBotaoRegistro('btn red margin-bottom 10', 8,  'Encerrar Descanso', 'fa fa-hourglass-end fa-6'),
-			'fimRepouso' 				=> criaBotaoRegistro('btn red margin-bottom 10', 10, 'Encerrar Repouso', 'fa fa-bed fa-6'),
-			'fimRepousoEmbarcado' 		=> criaBotaoRegistro('btn red margin-bottom 10', 12, 'Encerrar Repouso Embarcado', 'fa fa-bed fa-6'),
+			'fimJornada' 				=> criaBotaoRegistro('btn red', 2,  'Encerrar Jornada', 'fa fa-car fa-6'),
+			'fimRefeicao' 				=> criaBotaoRegistro('btn red', 4,  'Encerrar Refeição', 'fa fa-cutlery fa-6'),
+			'fimEspera' 				=> criaBotaoRegistro('btn red', 6,  'Encerrar Espera', 'fa fa-clock-o fa-6'),
+			'fimDescanso' 				=> criaBotaoRegistro('btn red', 8,  'Encerrar Descanso', 'fa fa-hourglass-end fa-6'),
+			'fimRepouso' 				=> criaBotaoRegistro('btn red', 10, 'Encerrar Repouso', 'fa fa-bed fa-6'),
+			// 'fimRepousoEmbarcado' 		=> criaBotaoRegistro('btn red', 12, 'Encerrar Repouso Embarcado', 'fa fa-bed fa-6'),
 		];
 
 		$botoesVisiveis = [];
@@ -307,12 +311,12 @@
 			$botoesVisiveis = [$botoes['inicioJornada']];
 		} elseif ($pontos['ultimo']['pont_tx_tipo'] == 1 || in_array($pontos['ultimo']['pont_tx_tipo'], array_keys($fins))){
 			$botoesVisiveis = [
-				$botoes['fimJornada'], 
-				$botoes['inicioRefeicao'], 
-				$botoes['inicioEspera'], 
+				$botoes['inicioRepouso'],
 				$botoes['inicioDescanso'], 
-				$botoes['inicioRepouso'], 
-				$botoes['inicioRepousoEmbarcado']
+				$botoes['inicioEspera'], 
+				$botoes['inicioRefeicao'], 
+				$botoes['fimJornada']
+				// $botoes['inicioRepousoEmbarcado']
 			];
 		}elseif(in_array($pontos['ultimo']['pont_tx_tipo'], array_keys($inicios))){
 			$botoesVisiveis = [
@@ -325,8 +329,8 @@
 		];
 		$c[] = [
 			texto('Matrícula', $aMotorista['enti_tx_matricula'], 2), 
-			texto('Motorista', $aMotorista['enti_tx_nome'], 5),
-			texto('CPF', $aMotorista['enti_tx_cpf'], 3)
+			texto('CPF', $aMotorista['enti_tx_cpf'], 2),
+			texto('Motorista', $aMotorista['enti_tx_nome'], 2)
 		];
 
 		$c[] = [
@@ -353,9 +357,9 @@
 		}
 
 		abre_form('Dados do Registro de Ponto');
-		linha_form($c[0]);
-		linha_form($c[1]);
-		linha_form($c[2]);
+		foreach($c as $row){
+			linha_form($row);
+		}
 		fecha_form($botoesVisiveis);
 
 
@@ -371,6 +375,8 @@
 		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 1, 'desc', -1);
 		rodape();
 	?>
+
+		<link rel="stylesheet" href="css/batida_ponto.css">
 
 		<form id="form_submit" name="form_submit" method="post" action="">
 			<input type="hidden" name="acao" id="acao" />

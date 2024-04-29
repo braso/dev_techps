@@ -73,7 +73,7 @@
 
 		}else{
 			echo 
-				"<form action='https://braso.mobi".$CONTEX['path']."/../index2.php?error=notfound' name='form_voltar' method='post'>
+				"<form action='".$_SERVER["HTTP_ORIGIN"].$CONTEX['path']."/../index.php?error=notfound' name='form_voltar' method='post'>
 					<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
 					<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
 					<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
@@ -82,6 +82,6 @@
 			echo "<script>document.form_voltar.submit();</script>";
 		}
 	}else{
-		echo '<meta http-equiv="refresh" content="0; url=./../index2.php?error=emptyfields"/>';
+		echo '<meta http-equiv="refresh" content="0; url=./../index.php?error=emptyfields"/>';
 	}
 ?>

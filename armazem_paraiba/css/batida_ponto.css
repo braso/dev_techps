@@ -1,0 +1,39 @@
+.button-icon {
+    --icon-size: 30px;
+    font-size: var(--icon-size);
+    overflow: hidden;
+    min-height: var(--icon-size);
+    align-content: center;
+    min-width: var(--icon-size);
+}
+
+.button-title {
+    width: -webkit-fill-available;
+    font-size: 13px;
+	min-width: fit-content;
+}
+
+.form-actions{
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+
+.form-actions button {
+    width: -webkit-fill-available;
+    max-width: 20rem;
+    min-width: 12rem;
+    padding: 6px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+	border-collapse: separate;
+}
+
+/* Desktop specifics */
+@media(min-width:768px){
+	.form-actions>button{
+		max-width:14rem;
+	}
+}
