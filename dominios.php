@@ -1,24 +1,30 @@
 <?php
-include_once "load_env.php";
-
-
-if($_ENV['URL_BASE']){
-    $server_base_link = $_ENV['URL_BASE'];
-}
-elseif(isset($_SERVER['SCRIPT_URI'])){
+if(isset($_SERVER['SCRIPT_URI'])){
 	$server_base_link = substr($_SERVER['SCRIPT_URI'], 0, strrpos($_SERVER['SCRIPT_URI'], '/'));
-    
 }else{
 	$server_base_link = substr($_SERVER['SCRIPT_FILENAME'], 0, strrpos($_SERVER['SCRIPT_FILENAME'], '/'));
 }
 
 $dominios = [
-    "techps"            => 'Techps',
+    "armazem_paraiba"   => 'Armazem Paraíba',
     "braso"             => 'Braso',
-    "armazem_paraiba"   => 'Armazem Paraíba', 
+    "carau_transporte"  => 'Carau Transportes',
+    "feijao_turqueza"   => 'Feijão Turqueza',
     "opafrutas"         => 'Opafrutas',
     "qualy_transportes" => 'Qualy Transportes',
-    "feijao_turqueza"   => 'Feijão Turqueza'
+    "techps"            => 'Techps',
+    "apx_solucoes"      => 'Fs Log Transportes',
+];
+
+$dominio_array = [
+    "armazem_paraiba",
+    "braso",
+    "carau_transporte",
+    "feijao_turqueza",
+    "opafrutas",
+    "qualy_transportes",
+    "techps",
+    "apx_solucoes",
 ];
 
 $dominiosInput = "<div class='form-group'>
