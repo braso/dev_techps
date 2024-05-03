@@ -246,7 +246,7 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
         <!-- COMECO LOGIN FORM -->
 
         <form class="login-form" method="post">
-                <?
+                <?php
                 if (empty($_GET['token'])) {
                     ?>
                     <h3 class="form-title font-green">Redefinir Senha</h3>
@@ -259,14 +259,14 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
                         <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="text" autocomplete="off" placeholder="Login" name="login" />
                     </div>
                     <?= $msg ?>
-                    <? if(!empty($msg)){echo '<style>
+                    <?php if(!empty($msg)){echo '<style>
                     #enviar{
                     display:none;
                     }</style>';} ?>
                     <div class="form-actions" style="padding: 26px 140px !important">
                         <input type="submit" id='enviar' class="btn green uppercase" name="botao" value="ENVIAR"></input>
                     </div>
-                    <?
+                    <?php
                 } else {
                 ?>
                 <h3 class="form-title font-green">Redifinição de Senha - <?= $arrayDominio[$_GET['dominio']]; ?></h3>
@@ -283,7 +283,7 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
                     <div class="form-actions" style="padding: 26px 110px !important">
                         <input type="submit" class="btn green uppercase" name="botao" value="Redefinir senha"></input>
                     </div>
-                <?
+                <?php
                 }
                 ?>
         </form>
