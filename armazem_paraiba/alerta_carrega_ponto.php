@@ -1,7 +1,8 @@
 <?php
-//  Modo debug
-// 		ini_set('display_errors', 1);
-// 		error_reporting(E_ALL);
+    /*Modo debug
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
+    //*/
 	
 include_once (getcwd()."/../")."PHPMailer/src/Exception.php";
 include_once (getcwd()."/../")."PHPMailer/src/PHPMailer.php";

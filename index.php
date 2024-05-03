@@ -27,14 +27,11 @@ if(isset($_GET['error'])){
 
 if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
 	$_POST['password'] = md5($_POST['password']);
-	$file = getcwd().$_POST['dominio'];
+	$file = $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_POST['dominio'];
+
 	if(is_int(strpos($dominiosInput, $_POST['dominio'])) && file_exists($file)){
 
-		$formAction = $_SERVER['SCRIPT_URI'];
-		if(substr($formAction, -1) != "/"){
-			$formAction .= "/../";
-		}
-		$formAction .= substr($_POST['dominio'], 1);
+		$formAction = $_ENV["URL_BASE"].$_POST['dominio'];
 
 		echo 
 			"<form action='".$formAction."' name='formTelaPrincipal' method='post'>
@@ -43,6 +40,7 @@ if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
 				<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
 			</form>"
 		;
+		echo "<script>document.formTelaPrincipal.submit();</script>";
 	}else{
 		echo 
 			"<form action='index.php?error=notfounddomain' name='formLogin' method='post'>
@@ -51,8 +49,8 @@ if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
 				<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
 			</form>"
 		;
+		echo "<script>document.formLogin.submit();</script>";
 	}
-	echo "<script>document.formTelaPrincipal.submit();</script>";
 	exit;
 }
 
@@ -241,11 +239,8 @@ License: You must have a valid license purchased only from themeforest(the above
 			<?php echo $msg ?>
 
 			<div class="form-actions">
-
+				<a href="<?php echo $server_base_link."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
 				<input type="submit" class="btn green uppercase" name="botao" value="Entrar"></input>
-
-				<a href="<?php echo$server_base_link."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
-
 			</div>
 
 			<p style="font-size: small; margin: 10px 0px">Versão:

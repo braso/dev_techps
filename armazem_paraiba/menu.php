@@ -15,13 +15,11 @@ function verificarAtividade($paginasAtivas) {
     return '';
 }
 
-$paginasPonto = ['/carregar_ponto', '/espelho_ponto', '/endosso', '/nao_conformidade', '/nao_cadastrados'];
+$paginasPonto = ['/carregar_ponto.php', '/espelho_ponto.php', '/endosso.php', '/nao_conformidade.php', '/nao_cadastrados.php'];
 
-$paginasCadastro = ['/cadastro_empresa', '/cadastro_motorista', '/cadastro_parametro', '/cadastro_motivo', '/cadastro_feriado','/cadastro_usuario','/cadastro_macro'];
+$paginasCadastro = ['/cadastro_empresa.php', '/cadastro_motorista.php', '/cadastro_parametro.php', '/cadastro_motivo.php', '/cadastro_feriado.php', '/cadastro_usuario.php', '/cadastro_macro.php'];
 
 $paginaPainel = ['/painel'];
-var_dump($_SESSION['user_tx_nivel']);
-var_dump(is_int(strpos($_SESSION['user_tx_nivel'], 'Funcionário')));
 if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos($_SESSION['user_tx_nivel'], 'Super Administrador'))) { ?>
 
 	<!-- INICIO HEADER MENU -->
@@ -136,9 +134,9 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 			<div class="hor-menu  ">
 				<ul class="nav navbar-nav">
 
-					<li class=""><a href="<?= $CONTEX["path"] ?>/batida_ponto" class="nav-link ">Registrar Ponto</a></li>
-					<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_usuario" class="nav-link ">Usuário</a></li>
-					<li class=""><a href="<?= $CONTEX["path"] ?>/espelho_ponto" class="nav-link ">Espelhos de Ponto</a></li>
+					<li class=""><a href="<?= $CONTEX["path"] ?>/batida_ponto.php" class="nav-link ">Registrar Ponto</a></li>
+					<li class=""><a href="<?= $CONTEX["path"] ?>/cadastro_usuario.php" class="nav-link ">Usuário</a></li>
+					<li class=""><a href="<?= $CONTEX["path"] ?>/espelho_ponto.php" class="nav-link ">Espelhos de Ponto</a></li>
 
 				</ul>
 			</div>

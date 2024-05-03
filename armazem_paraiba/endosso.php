@@ -564,7 +564,7 @@
 					document.getElementById('dadosResumo').innerHTML = '".$counts['message']."';
 			
 					document.getElementById('botaoContexCadastrar CadastrarEndosso').onclick = function() {
-						window.location.href = '".$_SERVER['HTTP_ORIGIN'].$CONTEX['path']."/cadastro_endosso';
+						window.location.href = '".$_SERVER['HTTP_ORIGIN'].$CONTEX['path']."/cadastro_endosso.php';
 					}
 			
 					document.getElementById('botaoContexCadastrar ImprimirRelatorio').onclick = function() {

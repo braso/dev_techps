@@ -1,4 +1,4 @@
-<?
+<?php
     global $CONTEX;
 	include_once $_SERVER['DOCUMENT_ROOT'].($CONTEX['path'])."/conecta.php";
 	// include $_SERVER['DOCUMENT_ROOT'].($CONTEX['path'])."/csv_relatorio_espelho.php";
@@ -56,7 +56,7 @@
             </tr>
         </thead>
         <tbody>
-            <?
+            <?php
             foreach ($rows as $row) {
                 echo '<tr class="conteudo">';
                 echo '<td>'. $row['motorista']                                                      .'</td>';

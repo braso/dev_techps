@@ -243,7 +243,7 @@ if ($quantPosi != 0) {
 					</tr>
 				</thead>
 				<tbody>
-				<?
+				<?php
 					if ($empresaTotais != null) {
 						foreach ($empresaTotais as $empresaTotal) {
 						    $porcentagenEndoEmpresa = number_format(0,2);

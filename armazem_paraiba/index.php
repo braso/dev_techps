@@ -41,6 +41,8 @@
 			)
 		);
 
+		
+
 		if(!empty($usuario)){ //Se encontrou um usuário
 			$usuario = $usuario;
 			$dataHoje = strtotime(date("Y-m-d")); // Transforma a data de hoje em timestamp
