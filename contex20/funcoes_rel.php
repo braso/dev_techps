@@ -176,5 +176,5 @@ function cabecaRelatorio2($titulo){
 		</style>
 	</head>
 	<body>
-	<?
+	<?php
 }
