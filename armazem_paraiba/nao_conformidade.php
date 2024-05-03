@@ -77,14 +77,13 @@
 			$b = [
 				botao("Buscar", 'index', '', '', '', 1,'btn btn-success'),
 				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1),
-				$botao_imprimir,
-				'<span id=dadosResumo><b>'.$carregando.'</b></span>'
+				$botao_imprimir
 			];
 		//}
 
 		abre_form('Filtro de Busca');
 		linha_form($c);
-		fecha_form($b);
+		fecha_form($b, '<span id=dadosResumo><b>'.$carregando.'</b></span>');
 		
 		?>
 		<div id="tituloRelatorio">
@@ -372,7 +371,7 @@
 
 		rodape();
 
-		$counts['message'] = '<br><br><b>Total: '.$counts['total'].' | Não Conformidades: '.$counts['naoConformidade'].'</b>';
+		$counts['message'] = '<b>Total: '.$counts['total'].' | Não Conformidades: '.$counts['naoConformidade'].'</b>';
 
 		$select2URL = 
 			$CONTEX['path']."/../contex20/select2.php"
