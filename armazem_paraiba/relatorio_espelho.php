@@ -1,4 +1,4 @@
-<?
+<?php
 	include_once $_SERVER['DOCUMENT_ROOT'].($CONTEX['path'])."/conecta.php";
 	include $_SERVER['DOCUMENT_ROOT'].($CONTEX['path'])."/csv_relatorio_espelho.php";
 ?>
@@ -117,7 +117,7 @@
             </tr>
         </thead>
         <tbody>
-            <?
+            <?php
 				foreach ($aDia as $aDiaVez) {
 					echo '<tr>';
 					for ($j = 0; $j < 20; $j++){
