@@ -5,6 +5,10 @@ services:
       MYSQL_ROOT_PASSWORD: example
       MYSQL_DATABASE:  armazem
 
+  apache:
+    image: php:7.4-apache
+    container_name: dev_techps_apache
+
   adminer:
     image: adminer
     volumes:
