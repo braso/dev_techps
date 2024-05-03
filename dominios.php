@@ -1,4 +1,7 @@
 <?php
+
+include "load_env.php";
+
 if(isset($_SERVER['SCRIPT_URI'])){
 	$server_base_link = substr($_SERVER['SCRIPT_URI'], 0, strrpos($_SERVER['SCRIPT_URI'], '/'));
 }else{
@@ -31,13 +34,13 @@ $dominiosInput = "<div class='form-group'>
     <select class='form-control' name='dominio'>
         <option value='' hidden selected>Domínio</option>";
 foreach($dominios as $key => $value){
-    if(!empty($_POST['dominio']) && $_POST['dominio'] == $server_base_link."/".$key."/index.php"){
+    if(!empty($_POST['dominio']) && $_POST['dominio'] == "/".$key."/index.php"){
         $selected = 'selected';
     }else{
         $selected = '';
     }
 
-    $dominiosInput .= "<option value='".$server_base_link."/".$key."/index.php' ".$selected.">".$value."</option>";
+    $dominiosInput .= "<option value='"."/".$key."/index.php' ".$selected.">".$value."</option>";
 }
 
 $dominiosInput .= "</select></div>";
