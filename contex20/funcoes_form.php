@@ -72,13 +72,17 @@
 					</script>
 
 					<style>
+						body{
+							--img_path: url("<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png");
+						}
+
 						.form-actions{
 							display: flex;
+							flex-wrap: wrap;
 						}
 
 						.fecha-form-btn {
 							margin: 0.5rem;
-							min-width: 12rem;
 							width: fit-content;
 							height: fit-content;
 							text-align: -webkit-center;
@@ -88,6 +92,12 @@
 							width: -webkit-fill-available;
 							text-align: center;
 							margin: 1rem;
+						}
+
+						@media(max-width: 992px){
+							body{
+								--img_path: url("<?=$CONTEX['path']?>/imagens/logo_mobile.png");
+							}
 						}
 					</style>
 				</head>
@@ -106,44 +116,46 @@
 								<!-- INICIO LOGO -->
 								<div class="page-logo">
 									<a href="<?php echo $CONTEX['path']?>/index.php">
-										<img src="<?php echo $CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="logo" class="logo-default">
+										<div class="logo-default"></div>
 									</a>
 								</div>
 								<!-- FIM LOGO -->
-								<!-- INICIO RESPONSIVE MENU TOGGLER -->
-								<a href="javascript:;" class="menu-toggler"></a>
-								<!-- FIM RESPONSIVE MENU TOGGLER -->
-								<!-- INICIO TOP NAVIGATION MENU -->
-								<div class="top-menu">
-									<ul class="nav navbar-nav pull-right">
-										<li class="droddown dropdown-separator">
-											<span class="separator"></span>
-										</li>
-										<!-- INICIO USER LOGIN DROPDOWN -->
-										<li class="dropdown dropdown-user dropdown-dark">
-											<a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
-												<img alt="" class="img-circle" src="<?php echo $_SESSION['user_tx_foto'] ? $_SESSION['user_tx_foto'] : '/contex20/img/user.png'?>">
-												<span class="username username-hide-mobile"><?php echo $_SESSION['user_tx_login']?></span>
-											</a>
-											<ul class="dropdown-menu dropdown-menu-default">
-												<li>
-													<a href="<?php echo $CONTEX['path']?>/cadastro_usuario.php?id=<?php echo $_SESSION['user_nb_id']?>">
-														<i class="icon-user"></i> Perfil </a>
-												</li>
-												<li class="divider"> </li>
-												<li>
-													<a href="<?php echo $CONTEX['path']?>/logout.php">
-														<i class="icon-key"></i> Sair </a>
-												</li>
-											</ul>
-										</li>
-										<!-- FIM USER LOGIN DROPDOWN -->
-										<!-- INICIO QUICK SIDEBAR TOGGLER -->
-										<!-- <li class="dropdown dropdown-extended quick-sidebar-toggler">
-											<i class="icon-logout"></i>
-										</li> -->
-										<!-- FIM QUICK SIDEBAR TOGGLER -->
-									</ul>
+								<div class="menu-options">
+									<!-- INICIO TOP NAVIGATION MENU -->
+									<div class="top-menu">
+										<ul class="nav navbar-nav pull-right">
+											<li class="droddown dropdown-separator">
+												<span class="separator"></span>
+											</li>
+											<!-- INICIO USER LOGIN DROPDOWN -->
+											<li class="dropdown dropdown-user dropdown-dark">
+												<a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
+													<img alt="" class="img-circle" src="<?php echo $_SESSION['user_tx_foto'] ? $_SESSION['user_tx_foto'] : '/contex20/img/user.png'?>">
+													<span class="username username-hide-mobile"><?php echo $_SESSION['user_tx_login']?></span>
+												</a>
+												<ul class="dropdown-menu dropdown-menu-default">
+													<li>
+														<a href="<?php echo $CONTEX['path']?>/cadastro_usuario.php?id=<?php echo $_SESSION['user_nb_id']?>">
+															<i class="icon-user"></i> Perfil </a>
+													</li>
+													<li class="divider"> </li>
+													<li>
+														<a href="<?php echo $CONTEX['path']?>/logout.php">
+															<i class="icon-key"></i> Sair </a>
+													</li>
+												</ul>
+											</li>
+											<!-- FIM USER LOGIN DROPDOWN -->
+											<!-- INICIO QUICK SIDEBAR TOGGLER -->
+											<!-- <li class="dropdown dropdown-extended quick-sidebar-toggler">
+												<i class="icon-logout"></i>
+											</li> -->
+											<!-- FIM QUICK SIDEBAR TOGGLER -->
+										</ul>
+									</div>
+									<!-- INICIO RESPONSIVE MENU TOGGLER -->
+									<a href="javascript:;" class="menu-toggler"></a>
+									<!-- FIM RESPONSIVE MENU TOGGLER -->
 								</div>
 								<!-- FIM TOP NAVIGATION MENU -->
 							</div>
