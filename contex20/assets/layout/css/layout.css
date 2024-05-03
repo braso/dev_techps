@@ -1,47 +1,60 @@
 @charset "UTF-8";
 
-/* Cubic Bezier Transition */
+html{
+	height:-webkit-fill-available;
+	background-color: #eff3f8;
+	min-width: 300px;
+}
+
+
+.pace .pace-progress-inner,
+.page-header,
+.page-header .page-header-top .top-menu .navbar-nav>li.dropdown-tasks .dropdown-menu .dropdown-menu-list>li .progress .progress-bar {
+	box-shadow: none
+}
+
 @media print {
+
+	.page-container,
+	.page-container .page-content {
+		padding: 0 !important;
+		margin: 0 !important
+	}
+
   body {
-    background-color: #fff !important; }
-  .page-header {
-    display: none; }
+		background-color: #fff !important
+	}
+
+	.hidden-print,
+	.page-breadcrumb,
+	.page-footer,
+	.page-head,
+	.page-header,
+	.page-prefooter,
   .theme-panel {
-    display: none; }
-  .hidden-print {
-    display: none; }
-  .page-prefooter {
-    display: none; }
-  .page-footer {
-    display: none; }
-  .page-head {
-    display: none; }
-  .page-breadcrumb {
-    display: none; }
+		display: none
+	}
+
   .no-page-break {
-    page-break-after: avoid; }
-  .page-container {
-    margin: 0px !important;
-    padding: 0px !important; }
-    .page-container .page-content {
-      padding: 0 !important;
-      margin: 0 !important; }
-      .page-container .page-content > .container {
+		page-break-after: avoid
+	}
+
+	.page-container .page-content>.container {
         width: 100%;
         max-width: none !important;
-        margin: 0 !important; }
-      .page-container .page-content > .container > .portlet,
-      .page-container .page-content > .container-fluid > .portlet {
-        padding: 0;
-        margin: 0; }
-        .page-container .page-content > .container > .portlet > .portlet-body,
-        .page-container .page-content > .container-fluid > .portlet > .portlet-body {
-          padding: 0;
-          margin: 0; } }
+		margin: 0 !important
+	}
 
-/***
-Page Header
-***/
+	.page-container .page-content>.container-fluid>.portlet,
+	.page-container .page-content>.container-fluid>.portlet>.portlet-body,
+	.page-container .page-content>.container>.portlet,
+	.page-container .page-content>.container>.portlet>.portlet-body {
+        padding: 0;
+		margin: 0
+	}
+}
+
+/***Page Header***/
 .page-header {
   opacity: 1 ;
   filter: alpha(opacity=100) ;
