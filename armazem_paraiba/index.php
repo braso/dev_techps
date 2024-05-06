@@ -5,7 +5,7 @@
 		error_reporting(E_ALL);
 	//*/
 	
-	include_once "load_env.php";
+	include_once "../load_env.php";
 	if(empty(session_id())){
 		session_start();
 	}

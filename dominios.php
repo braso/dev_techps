@@ -34,13 +34,16 @@ $dominiosInput = "<div class='form-group'>
     <select class='form-control' name='dominio'>
         <option value='' hidden selected>Domínio</option>";
 foreach($dominios as $key => $value){
-    if(!empty($_POST['dominio']) && $_POST['dominio'] == "/".$key."/index.php"){
+    if((!empty($_POST['dominio']) && $_POST['dominio'] == "/".$key."/index.php")||$key==$_ENV["APP_PATH"]){
         $selected = 'selected';
     }else{
         $selected = '';
     }
+    $file = $_SERVER["DOCUMENT_ROOT"]."/".$key;
 
-    $dominiosInput .= "<option value='"."/".$key."/index.php' ".$selected.">".$value."</option>";
+    if(file_exists($file)){
+        $dominiosInput .= "<option value='"."/".$key."/index.php' ".$selected.">".$value."</option>";
+    }
 }
 
 $dominiosInput .= "</select></div>";
