@@ -86,6 +86,7 @@
 							width: fit-content;
 							height: fit-content;
 							text-align: -webkit-center;
+							text-align: -moz-center;
 						}
 
 						.msg-status-text {

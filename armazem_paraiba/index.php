@@ -4,9 +4,8 @@
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
-	ini_set('display_errors', 1);
-		error_reporting(E_ALL);
-
+	
+	include_once "load_env.php";
 	if(empty(session_id())){
 		session_start();
 	}

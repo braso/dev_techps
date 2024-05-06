@@ -78,6 +78,7 @@ html{
 .page-header .container,
 .page-header .container-fluid {
 	height: -webkit-fill-available;
+	height: inherit;
 }
 
 .page-header-top .container-fluid{
@@ -106,6 +107,7 @@ html{
 .page-header .page-header-top .page-logo {
 	display: block;
 	height: -webkit-fill-available;
+	height: inherit;
 	width: fit-content;
 	align-content: center;
 	padding: 10px;
@@ -117,6 +119,7 @@ html{
     background-size: contain;
     background-position: center;
     min-height: -webkit-fill-available;
+    min-height: 55px;
     width: 25rem;
 }
 
@@ -539,6 +542,7 @@ html{
     display: none;
     min-width: 6rem;
     height: -webkit-fill-available;
+    height: 55px;
     background: url(../../../img/menu-toggler.png) center center no-repeat;
 }
 
@@ -987,6 +991,7 @@ html{
 		background-size: contain;
 		background-position: center;
 		min-height: -webkit-fill-available;
+		min-height: 55px;
 		width: 10rem;
 	}
 }

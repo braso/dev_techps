@@ -3,6 +3,7 @@ include_once("version.php");
 include_once('dominios.php');
 $msg = '';
 
+include_once "load_env.php";
 $error = false;
 if(isset($_GET['error'])){
 	if(empty($_POST['dominio'])){
@@ -31,7 +32,7 @@ if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
 
 	if(is_int(strpos($dominiosInput, $_POST['dominio'])) && file_exists($file)){
 
-		$formAction = $_ENV["URL_BASE"].$_POST['dominio'];
+		$formAction = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_POST['dominio'];
 
 		echo 
 			"<form action='".$formAction."' name='formTelaPrincipal' method='post'>
