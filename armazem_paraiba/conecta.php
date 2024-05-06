@@ -8,7 +8,7 @@
 	global $_SESSION, $CONTEX, $conn;
 	date_default_timezone_set('America/Fortaleza');
 
-	$CONTEX['path'] = $_ENV["APP_PATH"]; //Alterar de acordo com o domínio em que se encontra
+	$CONTEX['path'] = $_ENV["APP_URL"]; //Alterar de acordo com o domínio em que se encontra
 
 	$lifetime = 30*60;
 	ini_set('session.gc_maxlifetime', $lifetime);
