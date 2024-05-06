@@ -1,4 +1,18 @@
 <?php	
+
+	header("Access-Control-Allow-Origin: *");
+	header("Access-Control-Allow-Methods: POST");
+
+	//Conferir campos obrigatórios{
+		if(
+			empty($_POST) || empty($_POST["path"]) || empty($_POST["columns"]) || empty($_POST["totalQuery"])
+			|| empty($_REQUEST)
+		){
+			echo "Missing information.";
+			exit;
+		}
+	//}
+
 	$interno = true; //Utilizado no conecta.php para reconhecer se quem está tentando acessar é uma tela ou uma query interna.
 	include_once $_POST['path']."/conecta.php";
 	

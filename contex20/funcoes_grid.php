@@ -241,10 +241,10 @@
 						\"lengthMenu\": [ [10, 25, 50, 100, -1], [10, 25, 50, 100, \"Todos\"] ],
 						\"pageLength\": ".$paginar.",
 						\"ajax\":{
-							url :\"http://localhost:8000/braso/contex20/server-side.php\", // json datasource
+							url :\"".$_ENV["URL_BASE"].$_ENV['APP_PATH']."/contex20/server-side.php\", // json datasource
 							type: \"post\",  // method  , by default get
 							data: {
-								path: '/var/www/html/braso/armazem_paraiba',
+								path: '".$_SERVER['DOCUMENT_ROOT'].$CONTEX["path"]."',
 								arquivo: '".$_SERVER['DOCUMENT_ROOT'].strtok($_SERVER['SCRIPT_NAME'], '?')."',
 								totalQuery: '".json_encode($totalQuery)."',
 								columns: ["."'".implode("','", $valores)."'"."]
