@@ -36,7 +36,10 @@
 				//Obs.: A matrícula deve ter 10 dígitos, então se tiver menos, adicione zeros à esquerda.
 				//Ex.: 000000591322012024091999911
 				$line = trim($line);
-				$matricula = substr($line, 0, 10)+0;
+				$matricula = substr($line, 0, 10);
+				while($matricula[0] == "0"){
+					$matricula = substr($matricula, 1);
+				}
 
 				$data = substr($line, 10, 8);
 				$data = substr($data, 4, 4)."-".substr($data, 2, 2)."-".substr($data, 0, 2);
@@ -219,7 +222,10 @@
 
 				foreach (file($local_file) as $line) {
 					$line = trim($line);
-					$matricula = substr($line, 0, 10) + 0;
+					$matricula = substr($line, 0, 10);
+					while($matricula[0] == "0"){
+						$matricula = substr($matricula, 1);
+					}
 
 					$data = substr($line, 10, 8);
 					$data = substr($data, 4, 4)."-".substr($data, 2, 2)."-".substr($data, 0, 2);
