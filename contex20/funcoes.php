@@ -336,7 +336,7 @@
 		return $campo . $data_input;
 	}
 
-	function checkbox(string $titulo, string $variavel, array $opcoes, int $tamanho=3, string $extra=''){
+	function checkbox(string $titulo, string $variavel, array $opcoes, int $tamanho=3, string $extra='', string $modificadoCampo = ''){
 		$campo = 
 			"<div class='col-sm-".$tamanho." margin-bottom-5' style='min-width:200px' id='".$variavel."' ".$extra.">
 			<div class='margin-bottom-5'>
@@ -344,10 +344,13 @@
 			</div>"
 		;
 		
+		$valoresMarcados = explode(',', $modificadoCampo);
+		
 		foreach($opcoes as $key => $value){
+		    $checked = '';
 			$campo .=
 				"<label>
-					<input type='checkbox' id='".$key."' name='".$variavel."_".$key."' value='true' ".(!empty($_POST[$variavel."_".$key]) && $_POST[$variavel."_".$key] == 'true'? 'checked': '')."> ".$value."
+					<input type='checkbox' id='".$key."' name='".$variavel."_".$key."' value='true' ".(in_array($key,$valoresMarcados) ? 'checked': '')."> ".$value."
 				</label>"
 			;
 		}
