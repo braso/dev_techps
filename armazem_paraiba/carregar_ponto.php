@@ -38,7 +38,7 @@
 				$line = trim($line);
 				$matricula = substr($line, 0, 10);
 				while($matricula[0] == "0"){
-					$matricula = substr($matricula, 1);
+					$matricula = "'".substr($matricula, 1)."'";
 				}
 
 				$data = substr($line, 10, 8);
@@ -63,7 +63,7 @@
 					'pont_tx_status'		=> 'ativo',
 					'pont_tx_dataCadastro'	=> date("Y-m-d H:i:s")
 				];
-				
+
 				$check = query(
 					"SELECT * FROM ponto 
 						WHERE pont_tx_matricula = ".$newPonto['pont_tx_matricula']."

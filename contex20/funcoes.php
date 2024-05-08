@@ -347,7 +347,6 @@
 		$valoresMarcados = explode(',', $modificadoCampo);
 		
 		foreach($opcoes as $key => $value){
-		    $checked = '';
 			$campo .=
 				"<label>
 					<input type='checkbox' id='".$key."' name='".$variavel."_".$key."' value='true' ".(in_array($key,$valoresMarcados) ? 'checked': '')."> ".$value."
