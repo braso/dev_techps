@@ -478,7 +478,7 @@
 					document.form_excluir_arquivo2.idEmpresa.value = id;
 					document.form_excluir_arquivo2.idArq.value = idArq;
 					document.form_excluir_arquivo2.acao.value = acao;
-					document.form_excluir_arquivo.submit();
+					document.form_excluir_arquivo2.submit();
 				}
 			}
 
