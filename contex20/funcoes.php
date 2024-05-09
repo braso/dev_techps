@@ -349,7 +349,7 @@
 		foreach($opcoes as $key => $value){
 			$campo .=
 				"<label>
-					<input type='checkbox' id='".$key."' name='".$variavel."_".$key."' value='true' ".(in_array($key,$valoresMarcados) ? 'checked': '')."> ".$value."
+					<input type='checkbox' id='".$key."' name='".$variavel."_".$key."' value='true' ".(in_array($key,$valoresMarcados) && !empty($valoresMarcados) ? 'checked': '')."> ".$value."
 				</label>"
 			;
 		}
@@ -856,7 +856,7 @@
 					<h4 class='modal-title' id='myModalLabel'>Upload Arquivo</h4>
 					</div>
 					<div class='modal-body'>
-					<form name='form_enviar_arquivo' method='post' action='cadastro_empresa.php' enctype='multipart/form-data'>
+					<form name='form_enviar_arquivo2' method='post' action='cadastro_empresa.php' enctype='multipart/form-data'>
 						<div class='form-group'>
 							<label for='file-name' class='control-label'>Nome do arquivo:</label>
 							<input type='text' class='form-control' name='file-name'>
@@ -886,7 +886,7 @@
 		
 		<script type='text/javascript'>
 		function enviar_arquivo() {
-			document.form_enviar_arquivo.submit();
+			document.form_enviar_arquivo2.submit();
 		}
 		
 		</script>
