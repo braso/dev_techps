@@ -38,7 +38,7 @@
 				$line = trim($line);
 				$matricula = substr($line, 0, 10);
 				while($matricula[0] == "0"){
-					$matricula = "'".substr($matricula, 1)."'";
+					$matricula = substr($matricula, 1);
 				}
 
 				$data = substr($line, 10, 8);
@@ -56,7 +56,7 @@
 				$newPonto = [
 					'pont_nb_user'			=> $_SESSION['user_nb_id'],
 					'pont_nb_arquivoponto'	=> null,						//Será definido após inserir o arquivo de ponto.
-					'pont_tx_matricula'		=> $matricula,
+					'pont_tx_matricula'		=> "$matricula",
 					'pont_tx_data'			=> $data." ".$hora,
 					'pont_tx_tipo'			=> $aTipo[0],
 					'pont_tx_tipoOriginal'	=> $codigoExterno,
@@ -66,11 +66,10 @@
 
 				$check = query(
 					"SELECT * FROM ponto 
-						WHERE pont_tx_matricula = ".$newPonto['pont_tx_matricula']."
+						WHERE pont_tx_matricula = '".$newPonto['pont_tx_matricula']."'
 							AND pont_tx_data = '".$newPonto['pont_tx_data']."'
 							AND pont_tx_tipo = '".$newPonto['pont_tx_tipo']."'
-							AND pont_tx_tipoOriginal = '".$newPonto['pont_tx_tipoOriginal']."';"
-				);
+							AND pont_tx_tipoOriginal = '".$newPonto['pont_tx_tipoOriginal']."';");
 				
 				if(num_linhas($check) === 0){
 					$newPontos[] = $newPonto;
@@ -81,7 +80,7 @@
 				}
 			}
 
-			if(!$error){
+			if(!$error){;
 				$arquivoPontoId = inserir('arquivoponto', array_keys($newArquivoPonto), array_values($newArquivoPonto));
 				foreach($newPontos as $newPonto){
 					$newPonto['pont_nb_arquivoponto'] = intval($arquivoPontoId);
@@ -223,9 +222,9 @@
 				foreach (file($local_file) as $line) {
 					$line = trim($line);
 					$matricula = substr($line, 0, 10);
-					while($matricula[0] == "0"){
-						$matricula = substr($matricula, 1);
-					}
+    				while($matricula[0] == "0"){
+    					$matricula = substr($matricula, 1);
+    				}
 
 					$data = substr($line, 10, 8);
 					$data = substr($data, 4, 4)."-".substr($data, 2, 2)."-".substr($data, 0, 2);
@@ -239,7 +238,7 @@
 					$aTipo = carrega_array($queryMacroPonto);
 
 					$campos = ['pont_nb_user', 'pont_nb_arquivoponto', 'pont_tx_matricula', 'pont_tx_data', 'pont_tx_tipo', 'pont_tx_tipoOriginal', 'pont_tx_status', 'pont_tx_dataCadastro'];
-					$valores = [$_SESSION['user_nb_id'], $idArquivo, $matricula, "$data $hora", $aTipo[0], $codigoExterno, 'ativo', date("Y-m-d H:i:s")];
+					$valores = [$_SESSION['user_nb_id'], $idArquivo, "$matricula", "$data $hora", $aTipo[0], $codigoExterno, 'ativo', date("Y-m-d H:i:s")];
 					inserir('ponto', $campos, $valores);
 
 				}
