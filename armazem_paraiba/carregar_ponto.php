@@ -20,7 +20,9 @@
 			move_uploaded_file($arquivo['tmp_name'],$path.$arquivo['name']);
 			$campos = ['arqu_tx_nome', 'arqu_tx_data', 'arqu_nb_user', 'arqu_tx_status'];
 			$valores = [$arquivo['name'], date("Y-m-d H:i:s"), $_SESSION['user_nb_id'], 'ativo'];
-			salvarPontosArquivo($arquivo['name'], $local_file);
+      
+      salvarPontosArquivo($arquivo['name'], $local_file);
+
 		}else{
 			set_status("Ocorreu um problema ao gravar o arquivo.");
 		}
@@ -135,7 +137,7 @@
 			$queryCheck = query($sqlCheck);
 			if (num_linhas($queryCheck) > 0) continue;
 
-			$local_file = $path.$arquivoNome;
+      $local_file = $path.$arquivoNome;
 
 			if (ftp_get($ftp_conn, $local_file, $arquivoNome, FTP_BINARY)) {
 				salvarPontosArquivo($arquivoNome, $local_file);

@@ -8,7 +8,7 @@
 .vscode
 ehthumbs.db
 Thumbs.db
-
+.env
 .well-known
 
 .brasomo_dev_techps_sistema.sql

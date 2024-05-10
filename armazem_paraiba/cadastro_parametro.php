@@ -307,7 +307,9 @@
 						'repousoEmbarcado' => 'Repouso Embarcado',
 					]
 				), 
-				5
+				5,
+				'',
+				$a_mod['para_tx_ignorarCampos']
 			)
 		];
 		
