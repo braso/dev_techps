@@ -96,7 +96,7 @@
 		}
 
 		$a = carrega_array($sql);
-		if(is_array(($a))){
+		if(is_array($a)){
 			return $a;
 		}else{
 			return [];
@@ -108,12 +108,12 @@
 	}
 	function updateById(string $tabela, array $campos, array $valores, string $id): void{
 		if(count($campos) != count($valores)){
-			echo "ERRO: Número de campos não confere com número de linhas na função de atualizar!";
+			set_status("ERRO: Número de campos não confere com número de linhas na função de atualizar!");
 			exit;
 		}
 
 		if(count($campos) == 0){
-			echo "ERRO: Campos para atualização não informados.";
+			set_status("ERRO: Campos para atualização não informados.");
 			exit;
 		}
 
@@ -282,7 +282,7 @@
 	function checkbox_banco($nome, $variavel, $modificadoRadio, $modificadoCampo=0, $modificadoCampo2=0, $tamanho=3) {
 		$campo = 
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5" style="min-width:200px">
-				<label><b>'.$nome.'</b></label><br>
+				<label>'.$nome.'</label><br>
 				<label class="radio-inline">
 					<input type="radio" id="sim" name="banco" value="sim"> Sim
 				</label>
@@ -291,11 +291,11 @@
 				</label>
 			</div>
 			<div id="'.$variavel.'" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
-					<label><b>Quantidade de Dias:</b></label>
+					<label>Quantidade de Dias:</label>
 					<input class="form-control input-sm" type="number" value="'.$modificadoCampo.'" id="outroCampo" name="quandDias" autocomplete="off">
 			</div>
 			<div id="limiteHoras" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
-				<label><b>Quantidade de Horas Limite:</b></label>
+				<label>Quantidade de Horas Limite:</label>
 				<input class="form-control input-sm" type="number" value="'.$modificadoCampo2.'" id="outroCampo" name="quandHoras" autocomplete="off">
 			</div>'
 		;
@@ -340,7 +340,7 @@
 		$campo = 
 			"<div class='col-sm-".$tamanho." margin-bottom-5' style='min-width:200px' id='".$variavel."' ".$extra.">
 			<div class='margin-bottom-5'>
-				<b>".$titulo."</b>
+				".$titulo."
 			</div>"
 		;
 		
@@ -359,42 +359,42 @@
 	function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 		global $CONTEX;
 
-		$data_input = "<script>";
+		$dataScript = "<script>";
 		switch($mascara){
 			case "MASCARA_DATA":
-				$data_input .= "$('[name=\'$variavel\']').inputmask(\'date\', {clearIncomplete: false, placeholder: \'dd/mm/aaaa\'});";
+				$dataScript .= "$('[name=\'$variavel\']').inputmask(\"date\", {clearIncomplete: false, placeholder: \"dd/mm/aaaa\"});";
 				$type = "date";
 			break;
 			case "MASCARA_MES":
 				$type = "month";
 			break;
 			case "MASCARA_VALOR":
-				$data_input .= "$('[name=\"$variavel\"]').maskMoney({prefix: 'R$', allowNegative: true, thousands:'.', decimal:',', affixesStay: false});";
+				$dataScript .= "$('[name=\"$variavel\"]').maskMoney({prefix: 'R$', allowNegative: true, thousands:'.', decimal:',', affixesStay: false});";
 			break;
 			case "MASCARA_CEL":
 			case "MASCARA_FONE":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['(99) 9999-9999', '(99) 99999-9999'], placeholder: ''});";
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['(99) 9999-9999', '(99) 99999-9999'], placeholder: ''});";
 			break;
 			case "MASCARA_NUMERO":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask(\"numeric\", {rightAlign: false});";
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask(\"numeric\", {rightAlign: false});";
 			break;
 			case "MASCARA_CEP":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: '99999-999', clearIncomplete: true, placeholder: \"00000-000\" });";
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: '99999-999', clearIncomplete: true, placeholder: \"00000-000\" });";
 			break;
 			case "MASCARA_CPF":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99'], placeholder: \"000.000.000-00\" });";
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99'], placeholder: \"000.000.000-00\" });";
 			break;
 			case "MASCARA_CNPJ":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['99.999.999/9999-99'], placeholder: \"00.000.000/000-00\" });";
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['99.999.999/9999-99'], placeholder: \"00.000.000/000-00\" });";
 			break;
 			case "MASCARA_CPF/CNPJ":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99', '99.999.999/9999-99']});";
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99', '99.999.999/9999-99']});";
 			break;
 			case "MASCARA_RG":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999']});";
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999']});";
 			break;
 			case "MASCARA_DINHERO":
-				$data_input .= 
+				$dataScript .= 
 					"$(function(){
 						$('[name=\"$variavel\"]').maskMoney({
 						allowNegative: true,
@@ -405,13 +405,13 @@
 				;
 			break;
 			case "MASCARA_HORAS":
-				$data_input .= "$('[name=\"$variavel\"]').inputmask({mask: ['99:99', '-99:99', '999:99', '-999:99'], placeholder: \"\"});";
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['99:99', '-99:99', '999:99', '-999:99'], placeholder: \"\"});";
 			break;
 			case "MASCARA_HORA":
 				$type = "time";
 			break;
 			case "MASCARA_DOMAIN":
-				$data_input .= "$(document).ready(function() {
+				$dataScript .= "$(document).ready(function() {
 						var inputField = $('#nomeDominio');
 						var domainPrefix = '".$_SERVER['HTTP_ORIGIN'].(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/')."';
 
@@ -439,7 +439,7 @@
 				$type = "password";
 			break;
 		}
-		$data_input .= '</script>';
+		$dataScript .= '</script>';
 
 		if(empty($type)){
 			$type = "text";
@@ -447,12 +447,12 @@
 
 		if(empty($campo)){
 			$campo = '<div class="col-sm-'.$tamanho.' margin-bottom-5">
-				<label><b>'.$nome.'</b></label>
+				<label>'.$nome.'</label>
 				<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="'.$type.'" class="form-control input-sm" '.$extra.'>
 			</div>';
 		}
 
-		return $campo.$data_input;
+		return $campo.$dataScript;
 
 	}
 
@@ -460,7 +460,7 @@
 		global $CONTEX;
 
 		$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
-				<label><b>'.$nome.'</b></label>
+				<label>'.$nome.'</label>
 				<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" size="16" readonly style="background-color:white;" autocomplete="off" type="text" class="form-control input-sm" '.$extra.'>
 			</div>
 
@@ -488,7 +488,7 @@
 	function textarea($nome,$variavel,$modificador,$tamanho,$extra=''){
 		$campo=
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
-				<label><b>'.$nome.'</b></label>
+				<label>'.$nome.'</label>
 				<textarea name="'.$variavel.'" id="'.$variavel.'" autocomplete="off" type="password" class="form-control input-sm" '.$extra.'>'.$modificador.'</textarea>
 			</div>'
 		;
@@ -502,7 +502,7 @@
 		$campo=
 			'<script src="/ckeditor/ckeditor.js"></script>
 			<div class="col-sm-'.$tamanho.' margin-bottom-5">
-				<label><b>'.$nome.'</b></label>
+				<label>'.$nome.'</label>
 				<textarea id="'.$variavel.'" name="'.$variavel.'" class="form-control input-sm" '.$extra.'>'.$modificador.'</textarea>
 			</div>
 			<script>
@@ -525,7 +525,7 @@
 	function texto($nome,$modificador,$tamanho='',$extra=''){
 		$campo=
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5" '.$extra.'>
-				<label><b>'.$nome.'</b></label><br>
+				<label>'.$nome.'</label><br>
 				<p class="text-left">'.$modificador.'</p>
 			</div>';
 
@@ -544,7 +544,29 @@
 
 		$campo=
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
-				<label><b>'.$nome.'</b></label>
+				<label>'.$nome.'</label>
+				<select name="'.$variavel.'" class="form-control input-sm" '.$extra.'>
+					'.$res.'
+				</select>
+			</div>';
+
+		return $campo;
+
+	}
+
+	function combo_2($nome, $variavel, $modificador, $tamanho, array $opcoes, $extra = ''){
+		$res = '';
+		foreach($opcoes as $key => $value){
+			//Correção da chave para os casos em que a variável $campos é um array comum, e não um dicionário. Retirar quando for necessário utilizar um dicionário com chaves numerais
+			$key = is_int($key)? $value: $key;
+
+			$selected = ($key != $modificador)? '': 'selected';
+			$res .= '<option value="'.$key.'" '.$selected.'>'.$value.'</option>';
+		}
+
+		$campo=
+			'<div class="margin-bottom-5" style="width:'.$tamanho.'px">
+				<label>'.$nome.'</label>
 				<select name="'.$variavel.'" class="form-control input-sm" '.$extra.'>
 					'.$res.'
 				</select>
@@ -583,7 +605,7 @@
 		}
 		$campo=
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
-				<label><b>'.$nome.'</b></label>
+				<label>'.$nome.'</label>
 				<select class="'.$variavel.' form-control input-sm" id="'.$variavel.'" style="width:100%" '.$extra.' name="'.$variavel.'">
 				'.$opt.'
 				</select>
@@ -601,8 +623,9 @@
 
 		echo "	
 			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
-			<script src='https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/js/select2.min.js'></script>
+			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/select2/js/select2.min.js'></script>
 			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js' type='text/javascript'></script>
+			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery-inputmask/maskMoney.js' type='text/javascript'></script>
 			<script type=\"text/javascript\" language=\"javascript\">
 				$.fn.select2.defaults.set(\"theme\", \"bootstrap\");
 				$(window).bind(\"load\", function() {
@@ -660,7 +683,7 @@
 
 		$campo=
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
-				<label><b>'.$nome.'</b></label>
+				<label>'.$nome.'</label>
 				<select name="'.$variavel.'" id="'.$variavel.'" class="form-control input-sm" '.$extra.'>
 					'.$c_opcao.'
 				</select>
@@ -902,7 +925,7 @@
 		}
 
 		$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
-					<label><b>'.$nome.$ver.'</b></label>
+					<label>'.$nome.$ver.'</label>
 					<input name="'.$variavel.'" value="'.$CONTEX['path']."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
 				</div>';
 
