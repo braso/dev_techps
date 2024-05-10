@@ -32,8 +32,10 @@ if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
 
 	if(is_int(strpos($dominiosInput, $_POST['dominio'])) && file_exists($file)){
 
+		$formAction = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_POST['dominio'];
+
 		echo 
-			"<form action='".$_ENV["APP_PATH"].$_POST['dominio']."' name='formTelaPrincipal' method='post'>
+			"<form action='".$formAction."' name='formTelaPrincipal' method='post'>
 				<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
 				<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
 				<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
