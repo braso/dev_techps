@@ -6,8 +6,12 @@ services:
       MYSQL_DATABASE:  armazem
 
   apache:
-    image: php:7.4-apache
+    build: .
     container_name: dev_techps_apache
+    volumes:
+        - .:/var/www/html/
+    ports:
+      - 80:80
 
   adminer:
     image: adminer
