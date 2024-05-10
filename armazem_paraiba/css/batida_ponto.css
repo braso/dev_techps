@@ -1,3 +1,11 @@
+#clock{
+    font-size:25px;
+    font-weight: bold;
+}
+#clockParent{
+    margin-right:50%;
+}
+
 .button-icon {
     --icon-size: 30px;
     font-size: var(--icon-size);
@@ -19,6 +27,7 @@
 	justify-content: center;
 }
 
+
 .form-actions button {
     width: -webkit-fill-available;
     max-width: 20rem;
@@ -31,9 +40,27 @@
 	border-collapse: separate;
 }
 
+@media(max-width:767px){
+    #clockParent{
+        margin-right:0%;
+    }
+}
+
+@media(max-width: 489px){
+    @media(min-width: 360px){
+        .last-button{
+            width: 30rem;
+        }
+    }
+}
+
+
 /* Desktop specifics */
-@media(min-width:768px){
-	.form-actions>button{
-		max-width:14rem;
+@media(min-width:992px){
+    .form-actions{
+        justify-content: left;
+    }
+	.fecha-form-btn{
+		width:14rem;
 	}
 }
