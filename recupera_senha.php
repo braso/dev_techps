@@ -6,6 +6,8 @@
 global $CONTEX;
 $interno = true;
 
+include_once "load_env.php";
+
 include_once "./PHPMailer/src/Exception.php";
 include_once "./PHPMailer/src/PHPMailer.php";
 include_once "./PHPMailer/src/SMTP.php";
@@ -15,6 +17,8 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
+$_POST['botao'] = '';
+$msg = '';
 
 function extrairDominio($url, $dominio_array) {
     $parsed_url = parse_url($url);
@@ -59,7 +63,7 @@ if ($_POST['botao'] == 'Redefinir senha') {
 
     if (!isset($checkToken) && empty($checkToken)) {
         echo '<script>alert("Link já utilizado ou invalido, por favor solicita novamente a  redefinição de senha.  ")</script>';
-        echo "<meta http-equiv='refresh' content='0; url=https://gestaodejornada.braso.com.br/dev/index2.php' />";
+        echo "<meta http-equiv='refresh' content='0; url=https://$_ENV[URL_BASE]/index.php' />";
         exit;
     }
     
@@ -107,12 +111,12 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
 
         // Configurações do servidor
         $mail->CharSet = 'UTF-8';
-        $mail->Host = 'gestaodejornada.braso.com.br';
+        $mail->Host = $_ENV['SMTP_HOST'];
         $mail->SMTPAuth = true;
-        $mail->Username = 'techps@gestaodejornada.braso.com.br';
-        $mail->Password = '3Gra!G@~O9ef';
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        $mail->Port = 465;
+        $mail->Username = $_ENV['SMTP_USERNAME'];
+        $mail->Password = $_ENV['SMTP_PASSWORD'];
+        $mail->SMTPSecure = $_ENV['SMTP_ENCRYPTION'];
+        $mail->Port = $_ENV['SMTP_PORT'];
 
         // Remetente e Destinatários
         $mail->setFrom('suporte@techps.com.br ', 'Tech PS');
@@ -125,10 +129,10 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
         $mail->isHTML(true);
         $mail->Subject = 'Redefinição de Senha';
         $mail->Body = '<b>Redefinição de Senha</b><br>
-        Por favor, <a href="https://gestaodejornada.braso.com.br/' . basename($caminho)  . '/recupera_senha.php?dominio='.$domain.'&token=' . $token .'">clique aqui</a> para resetar sua senha.<br>
+        Por favor, <a href="'.$_ENV['URL_BASE'].'/' . basename($caminho)  . '/recupera_senha.php?dominio='.$domain.'&token=' . $token .'">clique aqui</a> para resetar sua senha.<br>
         Caso você não tenha solicitado este e-mail de redefinição de senha, por favor, <a href="mailto:suporte@techps.com.br ">entre em contato</a> para que possamos resolver o problema.';
         $mail->Encoding = 'base64';
-        $mail->AltBody = "Link para recupera senha: gestaodejornada.braso.com.br" . basename($caminho)  . "/recupera_senha.php?token=" . $token;
+        $mail->AltBody = "Link para recupera senha: $_ENV[URL_BASE]/" . basename($caminho)  . "/recupera_senha.php?token=" . $token;
 
         if ($mail->send()) {
             return "
@@ -231,7 +235,7 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
 
     <div class="logo">
 
-        <a href="index2.php">
+        <a href="index.php">
 
             <img src="../contex20/img/logo.png" alt="" /> </a>
 
@@ -316,7 +320,7 @@ function sendEmail($destinatario, $token, $nomeDestinatario, $domain) {
         $dominio = $_GET['dominio'];
         include $dominio."/conecta.php";
         global $CONTEX;?>
-            window.location.href = "https://gestaodejornada.braso.com.br<?=$CONTEX['path']?>/index.php";
+            window.location.href = "<?=$_ENV['URL_BASE'].$CONTEX['path']?>/index.php";
         }
             
         function esconderErro() {
