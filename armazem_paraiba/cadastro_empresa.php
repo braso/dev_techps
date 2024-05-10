@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -645,7 +645,7 @@
 			'<spam class="glyphicon glyphicon-remove"></spam>' => 'icone_excluir(empr_nb_id,excluirEmpresa)'
 		];
 		
-		grid($sql,array_keys($gridCols),array_values($gridCols),'','12',2,"desc",'10');
+		grid($sql,array_keys($gridCols),array_values($gridCols),'','12',1,"desc",'10');
 
 		rodape();
 
