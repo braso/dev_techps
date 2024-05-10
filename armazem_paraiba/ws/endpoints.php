@@ -55,9 +55,10 @@
         $query = 
             "SELECT 
                 distinct user_nb_id                                     as id, 
+                coalesce(user_tx_nome,enti_tx_nome)                     as name,
                 coalesce(user_tx_matricula,enti_tx_matricula)           as registration,
                 coalesce(e.empr_tx_nome)                                as company,
-                coalesce(u.user_tx_login,user_tx_cpf,enti.enti_tx_cpf)  as cpf,
+                coalesce(user_tx_cpf,enti.enti_tx_cpf)  				as cpf,
                 coalesce(enti.enti_tx_carteira,user_tx_rg)              as rg,
                 enti.enti_tx_cnhRegistro                                as cnh,
                 user_tx_email                                           as email,
@@ -112,10 +113,9 @@
     }
 
     function begin_journey(){
-
         $key = $_ENV["APP_KEY"];
         $decoded = validate_token($key);
-        
+		
         if(empty($_POST)){
             $putfp = fopen('php://input', 'r');
             $putdata = '';
@@ -168,6 +168,7 @@
             }
             $entity = $entity[0];
         //}
+		
 
         //Check if break type (macro) exists{
             $macro = 
@@ -182,6 +183,7 @@
             }
             $macro = $macro[0];
         //}
+		
 
         //Check if startDateTime is correctly formatted{
             if(!preg_match("/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/", $_POST['startDateTime'])){
@@ -289,14 +291,14 @@
                 "SELECT *, (lower(macr_tx_nome) like '%inicio%') as open_journey FROM ponto
                     JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                     WHERE pont_tx_status = 'ativo'
-                        AND pont_tx_matricula = ".$entity["enti_tx_matricula"]."
+                        AND pont_tx_matricula = '".$entity["enti_tx_matricula"]."'
                         AND macr_tx_nome LIKE '%jornada%'
                         AND pont_tx_data < '".$_POST["startDateTime"]."'
                     ORDER BY pont_tx_data DESC
                     LIMIT 1;"
-            )[0];
+            );
 
-            if($lastJourney['open_journey']){
+            if($lastJourney[0]['open_journey']){
                 header('HTTP/1.0 400 Bad Request');
                 echo "Journey open without closing";
                 exit;
@@ -328,6 +330,11 @@
             )"
         ;
         $result = insert_data($query,$ponto);
+		
+		if($_POST["type"] == "break"){
+			$result = "Break registered successfully.";
+		}
+		
         echo $result;
         exit;
     }
@@ -510,6 +517,11 @@
         fclose($putfp);
 
         $requestdata = json_decode($putdata);
+		
+		if(empty($requestdata)){
+			parse_str($putdata, $putdata);
+			$requestdata = (object)$putdata;
+		}
 
         //Check mandatory fields{
             if(empty($requestdata->userID) || empty($requestdata->endDateTime) || empty($requestdata->journeyID)){
@@ -543,7 +555,7 @@
         //}
 
         //Check if endDateTime is correctly formatted{
-            if(!preg_match("/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/", $_POST['endDateTime'])){
+            if(!preg_match("/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/", $requestdata->endDateTime)){
                 header('HTTP/1.0 400 Bad Request');
                 echo "Bad date formatting.";
                 exit;
@@ -560,7 +572,7 @@
         )[0];
 
         //Check if there's an open interval before trying to close{
-            $lastBreakOpening = 
+            $lastRegister = 
                 "SELECT *, (macr_tx_nome like '%inicio%') as open_break FROM ponto
                     JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                     WHERE pont_tx_status = 'ativo'
@@ -574,21 +586,14 @@
                     LIMIT 1;"
             ;
 
-            $lastBreakOpening = get_data($lastBreakOpening);
-
-            if(empty($lastBreakOpening)){
-                header('HTTP/1.0 400 Bad Request');
-                echo "Breakpoint opening not found";
-                exit;
-            }
-
-            $lastBreakOpening = $lastBreakOpening[0];
+            $lastRegister = get_data($lastRegister);
+            $lastRegister = $lastRegister[0];
 
             $msg = '';
             if($requestdata->type != "journey"){
-                if(empty($lastBreakOpening['open_break']) || $lastBreakOpening['open_break'] == 0){
+                if(empty($lastRegister['open_break']) || $lastRegister['open_break'] == 0){
                     $msg = "No breakpoint open to close.";
-                }elseif($lastBreakOpening['pont_tx_tipo'] != $macroAbertura['macr_tx_codigoInterno']){
+                }elseif($lastRegister['pont_tx_tipo'] != $macroAbertura['macr_tx_codigoInterno']){
                     $msg = "Breakpoint type different from the open one.";
                 }
             }else{
@@ -621,7 +626,6 @@
                 WHERE user_tx_status = 'ativo'
                     AND user_nb_id = ".$requestdata->userID.""
         )[0];
-
 
         $ponto = [
             "pont_nb_user"          => $decoded->data->user_id,
