@@ -28,12 +28,12 @@ if(isset($_GET['error'])){
 
 if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
 	$_POST['password'] = md5($_POST['password']);
-	$file = $_SERVER["DOCUMENT_ROOT"]."/".$_POST['dominio'];
+	$file = $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_POST['dominio'];
 
 	if(is_int(strpos($dominiosInput, $_POST['dominio'])) && file_exists($file)){
 
 		echo 
-			"<form action='".$_POST['dominio']."' name='formTelaPrincipal' method='post'>
+			"<form action='".$_ENV["APP_PATH"].$_POST['dominio']."' name='formTelaPrincipal' method='post'>
 				<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
 				<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
 				<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
