@@ -2,9 +2,8 @@
 
 html{
 	background-color: #eff3f8;
-	min-width: 300px;
+	min-width: 340px;
 }
-
 
 .pace .pace-progress-inner,
 .page-header,
@@ -438,6 +437,7 @@ html{
 	margin-top: -8px;
 	margin-right: 8px;
 	height: 40px;
+	width: 40px;
 	float: left
 }
 
@@ -991,7 +991,7 @@ html{
 		background-size: contain;
 		background-position: center;
 		min-height: -webkit-fill-available;
-		min-height: 55px;
+		min-height: 40px;
 		width: 10rem;
 	}
 }
@@ -1152,11 +1152,9 @@ html{
 
 .page-head .page-title {
     display: inline-block;
-    float: left;
-    height: 60px;
     min-width: 250px;
     align-content: center;
-    padding-left: 3rem;
+    margin: 1.5rem 3rem;
 }
 
 .page-head .page-title>h1 {
@@ -1210,7 +1208,27 @@ html{
 	}
 }
 
-@media (max-width:991px) {
+.modal.in .modal-dialog {
+    -webkit-transform: translate(0,0);
+    -ms-transform: translate(0,0);
+    -o-transform: translate(0,0);
+    transform: translate(0,0);
+    text-align: -webkit-center;
+}
+
+.modal-content {
+    background-color: #fff;
+    border: 1px solid #999;
+    border: 1px solid rgba(0,0,0,.2);
+    border-radius: 6px;
+    -webkit-box-shadow: 0 3px 9px rgba(0,0,0,.5);
+    box-shadow: 0 3px 9px rgba(0,0,0,.5);
+    outline: 0;
+    max-width: 90%;
+    text-align: initial;
+}
+
+@media (max-width:992px) {
 
 	.page-content>.container,
 	.page-head>.container {
@@ -1284,6 +1302,7 @@ html{
 	align-content: center;
 	position: fixed;
 	bottom: 0;
+	z-index: 2;
 }
 
 .page-footer a {

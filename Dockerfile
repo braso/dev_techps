@@ -43,7 +43,6 @@ RUN	set -x \
 &&	apk add --virtual .phpexts-rundeps $runDeps \
 &&	apk del --no-network .build-deps
 
-
 USER	adminer
 CMD	[ "php", "-S", "[::]:80", "-t", "/var/www/html" ]
 

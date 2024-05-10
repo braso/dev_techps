@@ -279,7 +279,7 @@
 			echo '<script>alert("ERRO: Deve ser selecionado um motorista e uma data para ajustar.")</script>';
 
 			echo 
-				'<form action="'.$_SERVER['HTTP_ORIGIN'].$CONTEX['path'].'/espelho_ponto" name="form_voltar" method="post">
+				'<form action="'.$_SERVER['HTTP_ORIGIN'].$CONTEX['path'].'/espelho_ponto.php" name="form_voltar" method="post">
 					<input type="hidden" name="data_de" value="'.$_POST['data_de'].'">
 					<input type="hidden" name="data_ate" value="'.$_POST['data_ate'].'">
 				</form>
@@ -328,7 +328,7 @@
 		}
 
 		$formStatus = "
-		        <form name='form_ajuste_status' action='$_SERVER[HTTP_ORIGIN]$CONTEX[path]/ajuste_ponto' method='post'>
+		        <form name='form_ajuste_status' action='$_SERVER[HTTP_ORIGIN]$CONTEX[path]/ajuste_ponto.php' method='post'>
 					<input type='hidden' name='acao' value='index'>
 					<input type='hidden' name='id'>
 					<input type='hidden' name='data'>
@@ -442,7 +442,7 @@
 					display: none;
 				}
 			</style>
-			<form name='form_ajuste_status' action='".$_SERVER['HTTP_ORIGIN'].$CONTEX['path']."/ajuste_ponto' method='post'>
+			<form name='form_ajuste_status' action='".$_SERVER['HTTP_ORIGIN'].$CONTEX['path']."/ajuste_ponto.php' method='post'>
 				<input type='hidden' name='acao' value='index'>
 				<input type='hidden' name='id'>
 				<input type='hidden' name='data'>

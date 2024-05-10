@@ -33,6 +33,7 @@
 		transform: translate(0, -50%);
 		top: 30%;
 		margin: 0 auto;
+		text-align: -webkit-center;
 	}
 </style>
 <script>

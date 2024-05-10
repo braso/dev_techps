@@ -3,6 +3,7 @@ html {
     align-content: center;
     text-align: -webkit-center;
 	text-align: -moz-center;
+	min-width: 340px;
 }
 
 .login {
@@ -33,6 +34,7 @@ html {
     width: 400px;
     padding: 30px;
     overflow: hidden;
+	box-shadow: 0px 5px 10px 0px black;
 }
 
 .login .content h3 {
@@ -101,9 +103,7 @@ html {
 .login .content .form-actions {
     padding: 25px 15px;
     display: flex;
-    flex-wrap: nowrap;
-    justify-content: space-between;
-    align-items: center;
+    justify-content: flex-end;
 }
 
 .login-options {
@@ -165,8 +165,14 @@ html {
 }
 
 .login .content .forget-password {
-	font-size: 14px;
+	font-size: 12px;
 	display: inline-block;
+}
+
+.form-group a.forget-password {
+    width: -webkit-fill-available;
+    width: -moz-available;
+    text-align: right;
 }
 
 .login .content .check {
@@ -221,16 +227,10 @@ html {
 	}
 
 	.login .content {
-		width: 280px
+		width: 90%
 	}
 
 	.login .content h3 {
-		font-size: 22px
-	}
-
-	.forget-password {
-		display: inline-block;
-		margin-top: 20px
 	}
 
 	.login-options .social-icons {

@@ -19,16 +19,7 @@ $dominios = [
     "apx_solucoes"      => 'Fs Log Transportes',
 ];
 
-$dominio_array = [
-    "armazem_paraiba",
-    "braso",
-    "carau_transporte",
-    "feijao_turqueza",
-    "opafrutas",
-    "qualy_transportes",
-    "techps",
-    "apx_solucoes",
-];
+$dominio_array = array_keys($dominios);
 
 $dominiosInput = "<div class='form-group'>
     <select class='form-control' name='dominio'>
@@ -39,8 +30,8 @@ foreach($dominios as $key => $value){
     }else{
         $selected = '';
     }
-    $file = $_SERVER["DOCUMENT_ROOT"]."/".$key;
-
+    $file = $_SERVER["DOCUMENT_ROOT"].$_ENV['APP_PATH']."/".$key."/index.php";
+  
     if(file_exists($file)){
         $dominiosInput .= "<option value='"."/".$key."/index.php' ".$selected.">".$value."</option>";
     }

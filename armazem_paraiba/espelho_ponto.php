@@ -78,7 +78,7 @@
 					$errorMsg = 'Este motorista não pertence a esta empresa. ';
 				}
 
-				$opt = "<option value='".$motorista['enti_nb_id']."'>[".$motorista['enti_nb_id']."]".$motorista['enti_tx_nome']."</option>";
+				$opt = "<option value=\"".$motorista['enti_nb_id']."\">[".$motorista['enti_nb_id']."]".$motorista['enti_tx_nome']."</option>";
 			}
 			
 			if($searchError){
@@ -100,12 +100,13 @@
 				4, 
 				'entidade', 
 				'', 
-				(!empty($_POST['busca_empresa'])?" AND enti_nb_empresa = ".$_POST['busca_empresa']:"")." AND enti_tx_tipo IN ('Motorista', 'Ajudante') ".$extraEmpresa." ".$extraBuscaMotorista, 
+				(!empty($_POST['busca_empresa'])?" AND enti_nb_empresa = ".$_POST['busca_empresa']:"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') ".$extraEmpresa." ".$extraBuscaMotorista, 
 				'enti_tx_matricula'
 			),
 			campo_data('Data Início:', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ''), 2, $extraCampoData),
 			campo_data('Data Fim:', 'busca_dataFim', ($_POST['busca_dataFim']?? ''), 2,$extraCampoData)
 		];
+
 		if (isset($_POST['AtualizarPainel']) && !empty($_POST['AtualizarPainel'])) {
 		    list($anoInicio, $mesInicio) = explode('-', $_POST['busca_dataInicio']);
 		    list($anoFim, $mesFim) = explode('-', $_POST['busca_dataFim']);
@@ -173,6 +174,8 @@
 				$dataVez = $date->format('Y-m-d');
 
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
+
+				// die(var_dump($aDetalhado));
 				
 				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDetalhado));
 				for($f = 0; $f < sizeof($row)-1; $f++){
@@ -353,10 +356,10 @@
 			function selecionaMotorista(idEmpresa) {
 				let buscaExtra = '';
 				if(idEmpresa > 0){
-					buscaExtra = "&extra_bd="+encodeURI("AND enti_tx_tipo IN ('Motorista', 'Ajudante') AND enti_nb_empresa = '" + idEmpresa + "'");
+					buscaExtra = "&extra_bd="+encodeURI("AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') AND enti_nb_empresa = '" + idEmpresa + "'");
 					$('.busca_motorista')[0].innerHTML = null;
 				}else{
-					buscaExtra = "&extra_bd="+encodeURI("AND enti_tx_tipo IN ('Motorista', 'Ajudante')");
+					buscaExtra = "&extra_bd="+encodeURI("AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')");
 				}
 
 				// Verifique se o elemento está usando Select2 antes de destruí-lo
@@ -390,7 +393,7 @@
 				selecionaMotorista(empresa);
 
 				if(<?php echo(!empty($_POST['busca_motorista'])?1:0)?>){
-					document.getElementById("busca_motorista").innerHTML = '<?php echo$opt?>';
+					document.getElementById("busca_motorista").innerHTML = '<?= $opt?>';
 				}
 			}
 		</script>

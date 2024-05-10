@@ -325,15 +325,13 @@
 		}
 
 		$c = [
-			[texto('Hora', '<h1 id="clock">Carregando...</h1>', 2)]
-		];
-		$c[] = [
+			"<div id='clockParent' class='col-sm-5 margin-bottom-5' >
+			<label>Hora</label><br>
+			<p class='text-left' id='clock'>Carregando...</p>
+		</div>",
 			texto('Matrícula', $aMotorista['enti_tx_matricula'], 2), 
 			campo_hidden('CPF', $aMotorista['enti_tx_cpf'], 2),
-			campo_hidden('Motorista', $aMotorista['enti_tx_nome'], 2)
-		];
-
-		$c[] = [
+			campo_hidden('Motorista', $aMotorista['enti_tx_nome'], 2),
 			campo('Data', 'data', data($hoje), 2, '', 'readonly=readonly'),
 			campo_hidden('motivo', 'Registro de ponto mobile')
 		];
@@ -356,22 +354,17 @@
 		}
 
 		abre_form('Dados do Registro de Ponto');
-		foreach($c as $row){
-			linha_form($row);
-		}
+		linha_form($c);
 		fecha_form($botoesVisiveis);
 
 
 		$gridFields = [
-			'CÓD'			=> 'pont_nb_id',  
 			'DATA'			=> 'data(pont_tx_data, 1)',
-			'TIPO'			=> 'macr_tx_nome',  
-			'MOTIVO'		=> 'moti_tx_nome',  
-			'USUÁRIO'		=> 'user_tx_login',  
+			'TIPO'			=> 'macr_tx_nome',
 			'DATA CADASTRO'	=> 'data(pont_tx_dataCadastro,1)'
 		];
 
-		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 1, 'desc', -1);
+		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 0, 'desc', -1);
 		rodape();
 
 

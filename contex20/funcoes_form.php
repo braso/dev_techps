@@ -23,8 +23,8 @@
 					<!-- INICIO GLOBAL MANDATORY STYLES -->
 					<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
 
-					<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/css/select2.min.css" rel="stylesheet" />
-					<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/js/select2.min.js"></script>
+					<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" />
+					<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/select2/js/select2.min.js"></script>
 					<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/select2/js/i18n/pt-BR.js" type="text/javascript"></script>
 
 					<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js" type="text/javascript"></script>
@@ -81,6 +81,56 @@
 							flex-wrap: wrap;
 						}
 
+						.imageForm .row {
+							display: grid;
+							justify-items: center;
+						}
+
+						.row{
+							margin: 0px 0px 25px 0px;
+						}
+
+						.row div{
+							min-width: min-content;
+						}
+
+						@media(max-width:768px){
+							.row div{
+								min-width: auto;
+							}
+						}
+
+						.row div label {
+							margin: 0px 10px;
+							background-color: white;
+							z-index: 1;
+							position: relative;
+							padding: 0px 5px;
+							border-radius: 10px;
+							text-wrap: nowrap;
+						}
+
+						.row div p {
+							padding: 10px;
+							text-align: center;
+							border-top: 1px solid #c2cad8;
+							border-bottom: 1px solid #c2cad8;
+						}
+
+						.portlet>.portlet-body p{
+							margin-top: -10px;
+						}
+
+						.row div img {
+							max-width: 414px;
+						}
+
+						.input-sm, select.input-sm, span.select2-selection.select2-selection--single{
+							height:40px;
+							margin-top: -10px;
+							align-content: center;
+						}
+
 						.fecha-form-btn {
 							margin: 0.5rem;
 							width: fit-content;
@@ -89,10 +139,15 @@
 							text-align: -moz-center;
 						}
 
+						#botaoContexVoltar:focus, #botaoContexVoltar:hover {
+							background-color: darkgray;
+						}
+
 						.msg-status-text {
 							width: -webkit-fill-available;
 							text-align: center;
 							margin: 1rem;
+							font-weight: bold;
 						}
 
 						@media(max-width: 992px){
@@ -254,8 +309,8 @@
 				<!-- INICIO GLOBAL MANDATORY STYLES -->
 				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
 
-				<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/css/select2.min.css" rel="stylesheet" />
-				<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.3/js/select2.min.js"></script>
+				<link href="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" />
+				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/select2/js/select2.min.js"></script>
 				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/select2/js/i18n/pt-BR.js" type="text/javascript"></script>
 
 				<script src="<?php echo $CONTEX['path']?>/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js" type="text/javascript"></script>
@@ -403,26 +458,27 @@
 
 	function abre_form($nome_form='',$col='12',$focus='2'){
 		global $idContexForm;
-		?>
-									<!-- INICIO FORMULARIO-->
-									<div class="col-md-<?php echo $col?> col-sm-<?php echo $col?>">
-										<div class="portlet light ">
-											<?php
-											if($nome_form){
-											?>
-											<div class="portlet-title">
-												<div class="caption">
-													<span class="caption-subject font-dark bold"><?php echo $nome_form?></span>
-												</div>
-											</div>
-											<?php
-											}
-											?>
 
-											<div class="portlet-body form">
-												<form role="form" name='contex_form<?php echo $idContexForm?>' method="post" enctype="multipart/form-data">
 
-		<?php
+		echo 
+			"<div class='col-md-".$col." col-sm-".$col."'>
+				<div class='portlet light'>"
+		;
+
+		if($nome_form){
+			echo 
+				"<div class='portlet-title'>
+					<div class='caption'>
+						<span class='caption-subject font-dark bold'>".$nome_form."</span>
+					</div>
+				</div>"
+			;
+		}
+
+		echo 
+			"<div class='portlet-body form'>
+			<form role='form' name='contex_form".$idContexForm."' method='post' enctype='multipart/form-data'>"
+		;
 		$idContexForm++;
 	}
 
@@ -432,12 +488,11 @@
 			$campo.="$c[$i]";
 		}
 
-	?>
-		<div class="row">
-			<?php echo $campo?>
-		</div>
-
-	<?php
+		echo 
+			"<div class='row'>
+				".$campo."
+			</div>"
+		;
 	}
 
 
@@ -448,12 +503,11 @@
 				$botoes.="<div class='fecha-form-btn'>".$botao[$i]."</div>";
 			}
 
-    $botoes .= "<b class='msg-status-text'>".($_POST['msg_status']?? '')."</b>";
-
 	?>
 														<div class="form-actions">
 															<?php echo $botoes?>
 														</div>
+														<div class='msg-status-text'><?=($_POST['msg_status']?? '')?></div>
 	<?php
 		}
 	?>

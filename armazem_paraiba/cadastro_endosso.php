@@ -241,7 +241,7 @@
 				$sqlMotorista = query(
 					"SELECT * FROM entidade".
 						" LEFT JOIN parametro ON enti_nb_parametro = para_nb_id".
-						" WHERE enti_tx_tipo IN ('Motorista', 'Ajudante')".
+						" WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante')".
 						" AND enti_nb_id IN (".$motorista['enti_nb_id'].")".
 						" AND enti_nb_empresa = ".$motorista['enti_nb_empresa'].
 						" ORDER BY enti_tx_nome"
@@ -357,7 +357,7 @@
 		global $CONTEX;
 		?><script>
 			function selecionaMotorista(idEmpresa) {
-				let buscaExtra = encodeURI("AND enti_tx_tipo IN ('Motorista', 'Ajudante')"+
+				let buscaExtra = encodeURI("AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"+
 					(idEmpresa > 0? " AND enti_nb_empresa = '"+idEmpresa+"'": "")
 				);
 
@@ -399,7 +399,7 @@
 
 		cabecalho('Cadastro Endosso');
 
-		$extra_bd_motorista = " AND enti_tx_tipo IN ('Motorista', 'Ajudante')";
+		$extra_bd_motorista = " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')";
 		if($_SESSION['user_tx_nivel'] != 'Super Administrador'){
 			$extra_bd_motorista .= ' AND enti_nb_empresa = '.$_SESSION['user_tx_emprCnpj'];
 		}

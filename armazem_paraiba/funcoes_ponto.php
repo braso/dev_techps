@@ -112,7 +112,7 @@
 	function voltar(){
 		global $CONTEX;
 		echo 
-			'<form action="'.$_SERVER['HTTP_ORIGIN'].$CONTEX['path'].'/espelho_ponto" name="form_voltar" method="post">
+			'<form action="'.$_SERVER['HTTP_ORIGIN'].$CONTEX['path'].'/espelho_ponto.php" name="form_voltar" method="post">
 				<input type="hidden" name="busca_motorista" value="'.$_POST['id'].'">
 				<input type="hidden" name="busca_dataInicio" value="'.$_POST['data_de'].'">
 				<input type="hidden" name="busca_dataFim" value="'.$_POST['data_ate'].'">
@@ -129,7 +129,7 @@
 	function layout_abono(){
 		cabecalho('Cadastro Abono');
 
-		$c[] = combo_net('Motorista*:','motorista',$_POST['busca_motorista']?? '',4,'entidade','',' AND enti_tx_tipo = "Motorista"','enti_tx_matricula');
+		$c[] = combo_net('Motorista*:','motorista',$_POST['busca_motorista']?? '',4,'entidade','',' AND enti_tx_ocupacao = "Motorista"','enti_tx_matricula');
 		$c[] = campo('Data(s)*:','daterange', ($_POST['daterange']?? ''),3);
 		$c[] = campo_hora('Abono*: (hh:mm)','abono', ($_POST['abono']?? ''),3);
 		$c2[] = combo_bd('Motivo*:','motivo', ($_POST['motivo']?? ''),4,'motivo','',' AND moti_tx_tipo = "Abono"');
@@ -184,7 +184,7 @@
 	function layout_ajuste(){
 		global $CONTEX;
 		echo 
-			'<form action="'.$_SERVER['HTTP_ORIGIN'].$CONTEX['path'].'/ajuste_ponto" name="form_ajuste_ponto" method="post">
+			'<form action="'.$_SERVER['HTTP_ORIGIN'].$CONTEX['path'].'/ajuste_ponto.php" name="form_ajuste_ponto" method="post">
 				<input type="hidden" name="id" value="'.$_POST['id'].'">
 				<input type="hidden" name="data" value="'.$_POST['data'].'">
 				<input type="hidden" name="data_de" value="'.$_POST['data_de'].'">
@@ -766,6 +766,8 @@
 				}
 			}
 		}
+
+		// die(var_dump($pontosDia));
 		foreach($pontosDia as $ponto){
 			$tiposRegistrados[] = [date("H:i", strtotime($ponto['pont_tx_data'])), $ponto['pont_tx_tipo']];
 			if(!isset($registros[$tipos[$ponto['pont_tx_tipo']]])){
