@@ -30,7 +30,7 @@ foreach($dominios as $key => $value){
     }else{
         $selected = '';
     }
-    $file = $_SERVER["DOCUMENT_ROOT"].$_ENV['APP_PATH']."/".$key."/index.php";
+    $file = $_SERVER["DOCUMENT_ROOT"]."/".$key."/index.php";
   
     if(file_exists($file)){
         $dominiosInput .= "<option value='"."/".$key."/index.php' ".$selected.">".$value."</option>";

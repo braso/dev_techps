@@ -15,8 +15,6 @@ services:
 
   adminer:
     image: adminer
-    volumes:
-      - .:/var/www/html/braso/
     environment:
       UPLOAD: 4096M
     ports:

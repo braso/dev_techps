@@ -4,7 +4,7 @@
 		error_reporting(E_ALL);
 	//*/	
 	
-	include_once "load_env.php";
+	include_once "../load_env.php";
 	global $_SESSION, $CONTEX, $conn;
 	date_default_timezone_set('America/Fortaleza');
 
@@ -46,8 +46,8 @@
 		$conn->set_charset("utf8");
 	//}
 
-	include_once $_SERVER['DOCUMENT_ROOT'].($CONTEX['path']."/../")."contex20/funcoes_grid.php";
-	include_once $_SERVER['DOCUMENT_ROOT'].($CONTEX['path']."/../")."contex20/funcoes_form.php";
-	include_once $_SERVER['DOCUMENT_ROOT'].($CONTEX['path']."/../")."contex20/funcoes.php";
+	include_once "../contex20/funcoes_grid.php";
+	include_once "../contex20/funcoes_form.php";
+	include_once "../contex20/funcoes.php";
 	
 ?>
