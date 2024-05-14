@@ -202,13 +202,13 @@
 				<!-- END EXAMPLE TABLE PORTLET-->
 
 				<!-- BEGIN PAGE LEVEL PLUGINS -->
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
+				<script src="<?php echo$_ENV['URL_BASE']?>/contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
+				<script src="<?php echo$_ENV['URL_BASE']?>/contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
+				<script src="<?php echo$_ENV['URL_BASE']?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
 				<!-- END PAGE LEVEL PLUGINS -->
 
 				<!-- BEGIN PAGE LEVEL SCRIPTS -->
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
+				<script src="<?php echo$_ENV['URL_BASE']?>/contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
 				<!-- END PAGE LEVEL SCRIPTS -->
 
 
@@ -242,7 +242,7 @@
 						\"pageLength\": ".$paginar.",
             \"order\": [".$order.", \"".$ordenar_sentido."\"],
 						\"ajax\":{
-							url :\"".$_ENV["URL_BASE"].$_ENV['APP_PATH']."/contex20/server-side.php\", // json datasource
+							url :\"".$_ENV["URL_BASE"]."/".$_ENV['APP_PATH']."/contex20/server-side.php\", // json datasource
 							type: \"post\",  // method  , by default get
 							data: {
 								path: '".$_SERVER['DOCUMENT_ROOT'].$CONTEX["path"]."',
@@ -331,13 +331,13 @@
 				<!-- END EXAMPLE TABLE PORTLET-->
 
 				<!-- BEGIN PAGE LEVEL PLUGINS -->
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
+				<script src="<?php echo$_ENV['URL_BASE']?>/contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
+				<script src="<?php echo$_ENV['URL_BASE']?>/contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
+				<script src="<?php echo$_ENV['URL_BASE']?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
 				<!-- END PAGE LEVEL PLUGINS -->
 
 				<!-- BEGIN PAGE LEVEL SCRIPTS -->
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
+				<script src="<?php echo$_ENV['URL_BASE']?>/contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
 				<!-- END PAGE LEVEL SCRIPTS -->
 		<?php
 
@@ -368,7 +368,7 @@
 						// \"stateSave\": true,
 						\"order\": [".$order.", \"".$ordenar_sentido."\"],
 						\"ajax\":{
-							url :\"".$CONTEX['path']."/../contex20/server-side.php\", // json datasource
+							url :\"".$_ENV['URL_BASE']."/contex20/server-side.php\", // json datasource
 							type: \"post\",  // method  , by default get
 							data: {
 								path: '".$CONTEX['path']."',
