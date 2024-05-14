@@ -10,7 +10,7 @@
     if(empty(session_id())){
         session_start();
     }
-	include_once "../load_env.php";
+	include_once "load_env.php";
 	global $_SESSION, $CONTEX, $conn;
 	date_default_timezone_set('America/Fortaleza');
 

@@ -240,12 +240,12 @@
 						\"sEcho\": true,
 						\"lengthMenu\": [ [10, 25, 50, 100, -1], [10, 25, 50, 100, \"Todos\"] ],
 						\"pageLength\": ".$paginar.",
-            \"order\": [".$order.", \"".$ordenar_sentido."\"],
+						\"order\": [".$order.", \"".$ordenar_sentido."\"],
 						\"ajax\":{
-							url :\"".$_ENV["URL_BASE"]."/".$_ENV['APP_PATH']."/contex20/server-side.php\", // json datasource
+							url :\"".$_ENV["URL_BASE"]."/contex20/server-side.php\", // json datasource
 							type: \"post\",  // method  , by default get
 							data: {
-								path: '".$_SERVER['DOCUMENT_ROOT'].$CONTEX["path"]."',
+								path: '".$_SERVER['DOCUMENT_ROOT'].$_ENV["APP_PATH"]."',
 								arquivo: '".$_SERVER['DOCUMENT_ROOT'].strtok($_SERVER['SCRIPT_NAME'], '?')."',
 								totalQuery: '".json_encode($totalQuery)."',
 								columns: ["."'".implode("','", $valores)."'"."]
