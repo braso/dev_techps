@@ -3,7 +3,7 @@ services:
     image: mysql
     environment:
       MYSQL_ROOT_PASSWORD: example
-      MYSQL_DATABASE:  armazem
+      MYSQL_DATABASE:  techpsjornada_dev
 
   apache:
     build: .

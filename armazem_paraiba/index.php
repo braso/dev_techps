@@ -4,11 +4,12 @@
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
-include_once "load_env.php";
+
 
 	if(empty(session_id())){
 		session_start();
 	}
+    include_once "load_env.php";
 	$turnos = ['Noite', 'Manhã', 'Tarde', 'Noite'];
 	$turnoAtual = $turnos[intval((intval(date('H'))-3)/6)];
 
@@ -72,7 +73,7 @@ include_once "load_env.php";
 
 		}else{
 			echo 
-				"<form action='".$_SERVER["HTTP_ORIGIN"].$CONTEX['path']."/../index.php?error=notfound' name='form_voltar' method='post'>
+				"<form action='".$_ENV['URL_BASE']."/index.php?error=notfound' name='form_voltar' method='post'>
 					<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
 					<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
 					<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
