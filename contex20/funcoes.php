@@ -616,7 +616,7 @@
 
 		$select2URL = 
 			$_ENV['URL_BASE']."/contex20/select2.php"
-			."?path=".$CONTEX['path']
+			."?path=".$_ENV["APP_PATH"]
 			."&tabela=".$tabela
 			."&extra_ordem=".$extra_ordem
 			."&extra_limite=".$extra_limite

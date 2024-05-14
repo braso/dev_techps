@@ -1,4 +1,6 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ERROR | E_WARNING | E_PARSE);
 	// $servername = "localhost";
 	// $username = "conta402_contex2";
 	// $password = "contex000contex";
@@ -8,8 +10,10 @@
 	// $conn->set_charset("utf8");
 	// GLOBAL $CONTEX;
 	$interno = true; //Utilizado no conecta.php para reconhecer se quem está tentando acessar é uma tela ou uma query interna.
-	include_once "../..".$_GET['path']."/conecta.php";
+	include_once "..".$_GET['path']."/conecta.php";
 	GLOBAL $conn;
+
+	$extra_exibe = '';
 
 	$tabela 	  = $_GET['tabela'];
 	$tab 		  = substr($_GET['tabela'],0,4);
