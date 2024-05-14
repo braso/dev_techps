@@ -30,8 +30,9 @@
 			(empty($_SESSION['last_activity']) || (time()-(int)$_SESSION['last_activity'] > (int)ini_get('session.gc_maxlifetime')))	//Se a sessão expirou
 			|| (empty($_SESSION['domain']) || $_SESSION['domain'] != $CONTEX['path'])													//ou se o login é relacionado a outro domínio
 		){
+
 			echo 
-				"<form action='".$_ENV["URL_BASE"].$CONTEX['path']."/logout.php' name='form_logout' method='post'>
+				"<form action='".$_ENV["URL_BASE"]."/".$CONTEX['path']."/logout.php' name='form_logout' method='post'>
 				</form>"
 			;
 			echo "<script>document.form_logout.submit();</script>";

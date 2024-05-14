@@ -242,7 +242,7 @@
 						\"pageLength\": ".$paginar.",
             \"order\": [".$order.", \"".$ordenar_sentido."\"],
 						\"ajax\":{
-							url :\"".$_ENV["URL_BASE"].$_ENV['APP_PATH']."/contex20/server-side.php\", // json datasource
+							url :\"".$_ENV["URL_BASE"]."/".$_ENV['APP_PATH']."/contex20/server-side.php\", // json datasource
 							type: \"post\",  // method  , by default get
 							data: {
 								path: '".$_SERVER['DOCUMENT_ROOT'].$CONTEX["path"]."',
@@ -368,7 +368,7 @@
 						// \"stateSave\": true,
 						\"order\": [".$order.", \"".$ordenar_sentido."\"],
 						\"ajax\":{
-							url :\"".$CONTEX['path']."/../contex20/server-side.php\", // json datasource
+							url :\"".$_ENV['URL_BASE']."/contex20/server-side.php\", // json datasource
 							type: \"post\",  // method  , by default get
 							data: {
 								path: '".$CONTEX['path']."',
