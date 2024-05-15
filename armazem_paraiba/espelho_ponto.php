@@ -42,6 +42,9 @@
 
 		//Confere se há algum erro na pesquisa{
 		$searchError = false;
+		
+		$opt = "";
+
 		if(isset($_POST['acao']) && $_POST['acao'] == 'index'){
 			$errorMsg = 'Insira os campos para pesquisar: ';
 			if(empty($_POST['busca_empresa'])){
@@ -174,8 +177,6 @@
 				$dataVez = $date->format('Y-m-d');
 
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
-
-				// die(var_dump($aDetalhado));
 				
 				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDetalhado));
 				for($f = 0; $f < sizeof($row)-1; $f++){
@@ -334,7 +335,7 @@
 		rodape();
 
 		$select2URL = 
-			$_ENV['URL_BASE']."/contex20/select2.php"
+			$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php"
 			."?path=".$CONTEX['path']
 			."&tabela=entidade"
 			."&extra_limite=15"
@@ -345,10 +346,10 @@
 	
 		<form name="form_ajuste_ponto" method="post">
 			<input type="hidden" name="acao" value="layout_ajuste">
-			<input type="hidden" name="id" value="<?php echo $aMotorista['enti_nb_id'] ?>">
+			<input type="hidden" name="id" value="<?= $aMotorista['enti_nb_id'] ?>">
 			<input type="hidden" name="data">
-			<input type="hidden" name="data_de" value="<?php echo$_POST['busca_dataInicio']?>">
-			<input type="hidden" name="data_ate" value="<?php echo$_POST['busca_dataFim']?>">
+			<input type="hidden" name="data_de" value="<?=empty($_POST['busca_dataInicio'])?: date("01/m/Y");?>">
+			<input type="hidden" name="data_ate" value="<?=$_POST['busca_dataFim']?>">
 		</form>
 
 		<script>
@@ -373,7 +374,7 @@
 					placeholder: 'Selecione um item',
 					allowClear: true,
 					ajax: {
-						url: "<?php echo$select2URL?>"+buscaExtra,
+						url: "<?=$select2URL?>"+buscaExtra,
 						dataType: 'json',
 						delay: 250,
 						processResults: function(data) {
@@ -388,12 +389,12 @@
 
 			}
 
-			if(<?php echo(!empty($_POST['busca_empresa'])? $_POST['busca_empresa']: 0)?> !== 0){
+			if(<?=(!empty($_POST['busca_empresa'])? $_POST['busca_empresa']: 0)?> !== 0){
 				empresa = document.getElementById("busca_empresa").value;
 				selecionaMotorista(empresa);
 
-				if(<?php echo(!empty($_POST['busca_motorista'])?1:0)?>){
-					document.getElementById("busca_motorista").innerHTML = '<?= $opt?>';
+				if(<?=(!empty($_POST['busca_motorista'])?1:0)?>){
+					document.getElementById("busca_motorista").innerHTML = '<?=$opt?>';
 				}
 			}
 		</script>
