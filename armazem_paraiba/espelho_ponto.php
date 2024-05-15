@@ -334,7 +334,7 @@
 		rodape();
 
 		$select2URL = 
-			$CONTEX['path']."/../contex20/select2.php"
+			$_ENV['URL_BASE']."/contex20/select2.php"
 			."?path=".$CONTEX['path']
 			."&tabela=entidade"
 			."&extra_limite=15"

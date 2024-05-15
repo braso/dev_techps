@@ -550,7 +550,7 @@
 		$counts['message'] = '<b>Motoristas: '.$counts['total'].' | Verificados: '.$counts['verificados'].' | Não Conformidades: '.$counts['naoConformidade'].' | Endossados: '.$counts['endossados']['sim'].' | Não Endossados: '.$counts['endossados']['nao'].'</b>';
 
 		$select2URL = 
-			$CONTEX['path']."/../contex20/select2.php"
+			$_ENV['URL_BASE']."/contex20/select2.php"
 			."?path=".$CONTEX['path']
 			."&tabela=entidade"
 			."&extra_limite=15"
