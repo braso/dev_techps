@@ -50,7 +50,7 @@
 		$error_msg = "ERRO: Insira os campos ";
 		$hasError = false;
     	if ($_POST['editPermission'] == true) {
-			$check_fields = [
+			$campos_obrigatorios = [
 				//['nome', 'msg_erro']
 				['nome', 'Nome, '],
 				['login', 'Login, '],
@@ -59,7 +59,7 @@
 				['email', 'Email, '],
 				['empresa', 'Empresa, ']
 			];
-			foreach ($check_fields as $field) {
+			foreach ($campos_obrigatorios as $field) {
 				if (!isset($_POST[$field[0]]) || empty($_POST[$field[0]])) {
 					$error_msg .= $field[1];
 					$hasError = true;
@@ -272,7 +272,7 @@
 			$campo_telefone = campo('Telefone', 'telefone', $a_mod['user_tx_fone'], 3,'MASCARA_FONE');
 			$campo_empresa = combo_bd('!Empresa*', 'empresa', $a_mod['user_nb_empresa'], 3, 'empresa', 'onchange="carrega_empresa(this.value)"');
 			$campo_expiracao = campo_data('Dt. Expiraçao', 'expiracao', $a_mod['user_tx_expiracao'], 2);
-			$campo_senha = campo_senha('Senha*', 'senha', "", 2,'maxlength="50"');
+			$campo_senha = campo_senha('Senha*', 'senha', "", 2, 'maxlength="50"');
 			$campo_confirma = campo_senha('Confirmar Senha*', 'senha2', "", 2,'maxlength="12"');
 			$campo_matricula = '';
 			$campo_foto = arquivo('Foto (.png, .jpg)', 'foto', ($a_mod['enti_tx_foto']?? ''), 4);
