@@ -603,8 +603,9 @@
 			}
 			$opt="<option value='$modificador'>$queryResult[0]</option>";
 		}else{
-			$opt = '';
+			$opt = "";
 		}
+
 		$campo=
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
 				<label>'.$nome.'</label>
@@ -615,7 +616,7 @@
 		;
 
 		$select2URL = 
-			$_ENV['URL_BASE']."/contex20/select2.php"
+			$CONTEX['path']."/../contex20/select2.php"
 			."?path=".$CONTEX['path']
 			."&tabela=".$tabela
 			."&extra_ordem=".$extra_ordem
@@ -624,14 +625,15 @@
 			."&extra_busca=".urlencode($extra_busca);
 
 		echo "	
-			<script src='".$_ENV['URL_BASE']."/contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
-			<script src='".$_ENV['URL_BASE']."/contex20/assets/global/plugins/select2/js/select2.min.js'></script>
-			<script src='".$_ENV['URL_BASE']."/contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js' type='text/javascript'></script>
-			<script src='".$_ENV['URL_BASE']."/contex20/assets/global/plugins/jquery-inputmask/maskMoney.js' type='text/javascript'></script>
+			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
+			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/select2/js/select2.min.js'></script>
+			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js' type='text/javascript'></script>
+			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery-inputmask/maskMoney.js' type='text/javascript'></script>
+
 			<script type=\"text/javascript\" language=\"javascript\">
 				$.fn.select2.defaults.set(\"theme\", \"bootstrap\");
 				$(window).bind(\"load\", function() {
-					$('.".$variavel."').select2({
+					var res = $('.".$variavel."').select2({
 						language: 'pt-BR',
 						placeholder: 'Selecione um item',
 						allowClear: true,
