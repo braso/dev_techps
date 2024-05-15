@@ -1,83 +1,86 @@
 <?php
-// ini_set('display_errors', 1);
-// error_reporting(E_ALL);
+	/* Modo debug
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
+	//*/
 
-include 'painel_empresa_csv.php';
+	include 'painel_empresa_csv.php';
 
-$MotoristasTotais = [];
-$MotoristaTotais = [];
-if (is_dir("./arquivos/paineis/empresas/$_POST[busca_data]") != false) {
-	// Obtém O total dos saldos das empresa
-	$file = "./arquivos/paineis/$idEmpresa/$_POST[busca_data]/totalMotoristas.json";
+	$MotoristasTotais = [];
+	$MotoristaTotais = [];
+	if (is_dir("./arquivos/paineis/empresas/$_POST[busca_data]") != false) {
+		// Obtém O total dos saldos das empresa
+		$file = "./arquivos/paineis/$idEmpresa/$_POST[busca_data]/totalMotoristas.json";
 
-	if (file_exists("./arquivos/paineis/$idEmpresa/$_POST[busca_data]")) {
-		$conteudo_json = file_get_contents($file);
-		$MotoristasTotais = json_decode($conteudo_json,true);
+		if (file_exists("./arquivos/paineis/$idEmpresa/$_POST[busca_data]")) {
+			$conteudo_json = file_get_contents($file);
+			$MotoristasTotais = json_decode($conteudo_json,true);
+		}
+
+
+		// Obtém O total dos saldos de cada Motorista
+		$fileEmpresas = "./arquivos/paineis/$idEmpresa/$_POST[busca_data]/motoristas.json";
+		if (file_exists("./arquivos/paineis/$idEmpresa/$_POST[busca_data]")) {
+			$conteudo_json = file_get_contents($fileEmpresas);
+			$MotoristaTotais = json_decode($conteudo_json,true);
+		}
+	}else   
+		echo '<script>alert("Não Possui dados desse més")</script>';
+
+
+	// Obtém o tempo da última modificação do arquivo
+	$timestamp = '';
+	$timestamp = filemtime($file);
+	$Emissão = date('d/m/Y H:i:s', $timestamp);
+
+
+	// Calcula a porcentagem
+	$porcentagenNaEndo = number_format(0,2);
+	$porcentagenEndoPc = number_format(0,2);
+	$porcentagenEndo = number_format(0,2);
+	if ($MotoristasTotais['naoEndossados'] != 0) {
+		$porcentagenNaEndo = number_format(($MotoristasTotais['naoEndossados'] / $MotoristasTotais['totalMotorista']) * 100,2);
+	}
+	if ($MotoristasTotais['endossoPacial'] != 0) {
+		$porcentagenEndoPc = number_format(($MotoristasTotais['endossoPacial']/ $MotoristasTotais['totalMotorista']) * 100, 2) ;
+	}
+	if ($MotoristasTotais['endossados'] != 0) {
+		$porcentagenEndo = number_format(($MotoristasTotais['endossados'] / $MotoristasTotais['totalMotorista']) * 100,2);
 	}
 
 
-	// Obtém O total dos saldos de cada Motorista
-	$fileEmpresas = "./arquivos/paineis/$idEmpresa/$_POST[busca_data]/motoristas.json";
-	if (file_exists("./arquivos/paineis/$idEmpresa/$_POST[busca_data]")) {
-		$conteudo_json = file_get_contents($fileEmpresas);
-		$MotoristaTotais = json_decode($conteudo_json,true);
+	$quantPosi = 0;
+	$quantNega = 0;
+	$quantMeta = 0;
+
+	foreach ($MotoristaTotais as $MotoristaTotal) {
+		$saldoFinal = $MotoristaTotal['saldoFinal'];
+
+		if ($saldoFinal == '00:00') {
+			$quantMeta++;
+		} elseif ($saldoFinal > '00:00') {
+			$quantPosi++;
+		} elseif ($saldoFinal < '00:00') {
+			$quantNega++;
+		}
 	}
-}else   
-    echo '<script>alert("Não Possui dados desse més")</script>';
 
+	$porcentagenMeta = number_format(0,2);
+	$porcentagenNega = number_format(0,2);
+	$porcentagenPosi = number_format(0,2);
 
-// Obtém o tempo da última modificação do arquivo
-$timestamp = '';
-$timestamp = filemtime($file);
-$Emissão = date('d/m/Y H:i:s', $timestamp);
-
-
-// Calcula a porcentagem
-$porcentagenNaEndo = number_format(0,2);
-$porcentagenEndoPc = number_format(0,2);
-$porcentagenEndo = number_format(0,2);
-if ($MotoristasTotais['naoEndossados'] != 0) {
-    $porcentagenNaEndo = number_format(($MotoristasTotais['naoEndossados'] / $MotoristasTotais['totalMotorista']) * 100,2);
-}
-if ($MotoristasTotais['endossoPacial'] != 0) {
-    $porcentagenEndoPc = number_format(($MotoristasTotais['endossoPacial']/ $MotoristasTotais['totalMotorista']) * 100, 2) ;
-}
-if ($MotoristasTotais['endossados'] != 0) {
-    $porcentagenEndo = number_format(($MotoristasTotais['endossados'] / $MotoristasTotais['totalMotorista']) * 100,2);
-}
-
-
-$quantPosi = 0;
-$quantNega = 0;
-$quantMeta = 0;
-
-foreach ($MotoristaTotais as $MotoristaTotal) {
-    $saldoFinal = $MotoristaTotal['saldoFinal'];
-
-    if ($saldoFinal == '00:00') {
-        $quantMeta++;
-    } elseif ($saldoFinal > '00:00') {
-        $quantPosi++;
-    } elseif ($saldoFinal < '00:00') {
-        $quantNega++;
-    }
-}
-
-$porcentagenMeta = number_format(0,2);
-$porcentagenNega = number_format(0,2);
-$porcentagenPosi = number_format(0,2);
-
-if ($quantMeta != 0) {
-	$porcentagenMeta  = number_format(($quantMeta / count($MotoristaTotais)) * 100, 2);
-}
-if ($quantNega != 0) {
-	$porcentagenNega = number_format(($quantNega / count($MotoristaTotais)) * 100, 2);
-}
-if ($quantPosi != 0) {
-	$porcentagenPosi = number_format(($quantPosi / count($MotoristaTotais)) * 100, 2);
-}
+	if ($quantMeta != 0) {
+		$porcentagenMeta  = number_format(($quantMeta / count($MotoristaTotais)) * 100, 2);
+	}
+	if ($quantNega != 0) {
+		$porcentagenNega = number_format(($quantNega / count($MotoristaTotais)) * 100, 2);
+	}
+	if ($quantPosi != 0) {
+		$porcentagenPosi = number_format(($quantPosi / count($MotoristaTotais)) * 100, 2);
+	}
 
 ?>
+
 <style>
 	#tabela1 {
 		width: 30% !important;

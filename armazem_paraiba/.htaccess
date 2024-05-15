@@ -1,15 +1,10 @@
 <IfModule mod_rewrite.c>
 
   RewriteEngine on
-
-  RewriteCond %{REQUEST_FILENAME} -d
-  RewriteRule ^(.*)$ $1/index.php
-
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteCond %{REQUEST_FILENAME}.php -f
-  RewriteRule ^(.*)$ $1.php
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME}.php -f
+    RewriteRule ^(.*)$ $1.php
   
-
 </IfModule>
 
 # php -- BEGIN cPanel-generated handler, do not edit
