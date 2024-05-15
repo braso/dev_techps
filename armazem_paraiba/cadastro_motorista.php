@@ -76,7 +76,7 @@
 		$arr = buscarCEP($_GET['cep']);
 
 		echo 
-      	"<script src='".$_ENV['URL_BASE']."/contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
+      	"<script src='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
 			<script type='text/javascript'>
 				parent.document.contex_form.endereco.value = '".$arr['logradouro']."';
 				parent.document.contex_form.bairro.value = '".$arr['bairro']."';
