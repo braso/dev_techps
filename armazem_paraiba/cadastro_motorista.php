@@ -10,7 +10,7 @@
 		if ($aEmpresa['empr_nb_parametro'] > 0) {
 			?>
 				<script type="text/javascript">
-					parent.document.contex_form.parametro.value = '<?php echo $aEmpresa['empr_nb_parametro'] ?>';
+					parent.document.contex_form.parametro.value = '<?= $aEmpresa['empr_nb_parametro'] ?>';
 					parent.document.contex_form.parametro.onchange();
 				</script>
 			<?php

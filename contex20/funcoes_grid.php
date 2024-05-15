@@ -202,13 +202,13 @@
 				<!-- END EXAMPLE TABLE PORTLET-->
 
 				<!-- BEGIN PAGE LEVEL PLUGINS -->
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
+				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
+				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
+				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
 				<!-- END PAGE LEVEL PLUGINS -->
 
 				<!-- BEGIN PAGE LEVEL SCRIPTS -->
-				<script src="<?php echo$CONTEX['path']?>/../contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
+				<script src="<?=$CONTEX['path']?>/../contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
 				<!-- END PAGE LEVEL SCRIPTS -->
 
 
@@ -232,6 +232,7 @@
 		
 		echo 
 			"<script type=\"text/javascript\" language=\"javascript\" >
+				console.log('".$_ENV["URL_BASE"].$_ENV['APP_PATH']."/contex20/server-side.php"."');
 				$(document).ready(function() {
 					var dataTable = $('#contex-grid-".$rand."').DataTable( {
 						\"processing\": true,
