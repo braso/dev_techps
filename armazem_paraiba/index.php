@@ -74,7 +74,7 @@
 
 		}else{
 			echo 
-				"<form action='".$_ENV['URL_BASE']."/index.php?error=notfound' name='form_voltar' method='post'>
+				"<form action='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/index.php?error=notfound' name='form_voltar' method='post'>
 					<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
 					<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
 					<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
