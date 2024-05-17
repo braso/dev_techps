@@ -1,9 +1,13 @@
+.container, .container-fluid{
+    padding: 0px 20px;
+}
+
+
 #clock{
     font-size:25px;
     font-weight: bold;
 }
 #clockParent{
-    margin-right:50%;
 }
 
 .button-icon {
@@ -40,17 +44,43 @@
 	border-collapse: separate;
 }
 
-@media(max-width:767px){
+@media(max-width:768px){
     #clockParent{
         margin-right:0%;
     }
 }
 
-@media(max-width: 489px){
+@media(max-width: 480px){
     @media(min-width: 360px){
         .last-button{
             width: 30rem;
         }
+    }
+
+    /* .fecha-form-btn {
+        width: -webkit-fill-available;
+        width: -moz-available;
+    }
+
+    .form-actions button{
+        min-width: inherit;
+    }
+
+    .fecha-form-btn:first-child {
+        min-width: -webkit-fill-available;
+        min-width: -moz-available;
+    } */
+
+    .dataTables_length {
+        display: none;
+    }
+
+    .table-scrollable{
+        min-height: 150px;
+    }
+
+    .dataTables_info {
+        display: none;
     }
 }
 
