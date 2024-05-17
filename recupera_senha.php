@@ -68,7 +68,8 @@
         if (!empty($_POST['senha']) && !empty($_POST['senha2']) && $_POST['senha'] == $_POST['senha2']) {
                 $userSql = query("SELECT user_nb_id FROM `user` WHERE user_tx_token = '$_GET[token]'");
                 $userId = mysqli_fetch_assoc($userSql);
-                atualizar('user', ['user_tx_senha', 'user_tx_token'], [md5($_POST['senha']), '-'], $userId['user_nb_id']);
+                $_POST['senha'] = md5($_POST['senha']);
+                atualizar('user', ['user_tx_senha', 'user_tx_token'], [$_POST['senha'], '-'], $userId['user_nb_id']);
                 $msg = "
                 <div id='redefinido' style='background-color: #0af731; padding: 1px; text-align: center;'>
                     <h4 style = 'color: #fff !important;'>Senha Redefinida.</h4>
