@@ -91,6 +91,8 @@
 	}
 
 	function cadastrarMotorista(){
+		visualizarCadastro();
+		exit;
 		global $a_mod;
 		
 
@@ -258,6 +260,7 @@
 			$novoMotorista['enti_nb_userCadastro'] = $_SESSION['user_nb_id'];
 			$novoMotorista['enti_tx_dataCadastro'] = date("Y-m-d H:i:s");
 			$novoMotorista['enti_tx_ehPadrao'] = $ehPadrao;
+			die(var_dump($novoMotorista));
 			$id = inserir('entidade', array_keys($novoMotorista), array_values($novoMotorista))[0];
 			
 			
@@ -412,13 +415,15 @@
 
 	function visualizarCadastro(){
 		global $a_mod;
-
+		
 		if(!empty($a_mod['enti_nb_empresa'])){
 			carregarParametroPadrao($a_mod['enti_nb_empresa']);
 		}
 		
-		if(empty($a_mod) && !empty($_POST['id'])){
-			$a_mod = carregar('entidade', $_POST['id']);
+		if(empty($a_mod) && !empty($_POST)){
+			if(isset($_POST['id'])){
+				$a_mod = carregar('entidade', $_POST['id']);
+			}
 			
 			$campos = ['matricula', 'nome','nascimento','cpf','rg','civil','sexo','endereco','numero','complemento', 'bairro','cidade','cep','fone1','fone2','email','ocupacao','salario','obs',
 				'tipo','status','empresa', 'parametro','jornadaSemanal','jornadaSabado','percentualHE','percentualSabadoHE', 'rgOrgao', 'rgDataEmissao', 'rgUf',
