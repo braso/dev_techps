@@ -27,7 +27,9 @@ if(isset($_GET['error'])){
 }
 
 if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
-	$_POST['password'] = md5($_POST['password']);
+	if(!empty($_POST['password'])){
+		$_POST['password'] = md5($_POST['password']);
+	}
 	$file = $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_POST['dominio'];
 
 	if(is_int(strpos($dominiosInput, $_POST['dominio'])) && file_exists($file)){
