@@ -20,7 +20,8 @@
 
 	function carregarParametroPadrao(int $idEmpresa = null){
 		global $a_mod;
-		if(empty($idEmpresa) && !empty($a_mod['enti_nb_empresa'])){
+		var_dump($idEmpresa);
+		if(!empty($idEmpresa) && !empty($a_mod['enti_nb_empresa'])){
 			$idEmpresa = intval($a_mod['enti_nb_empresa']);
 		}else{
 			$idEmpresa = -1;
@@ -59,16 +60,16 @@
 	}
 
 	function buscarCEP($cep){
-		//$resultado = @file_get_contents('https://viacep.com.br/ws/' . urlencode($cep) . '/json/');
+		// 		$resultado = @file_get_contents('https://viacep.com.br/ws/'.urlencode($cep).'/json/');
+				
 		$url = 'https://viacep.com.br/ws/'.urlencode($cep).'/json/';
 		$ch = curl_init($url);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 			
 		$resultado = curl_exec($ch);
 		$arr = json_decode($resultado, true);
-		return $arr;  
+		return $arr;
 	}
-
 	function carregarEndereco(){
 		global $CONTEX;
 
@@ -684,7 +685,7 @@
 			function buscarCEP(cep) {
 				var num = cep.replace(/[^0-9]/g, '');
 				if (num.length == '8') {
-					document.getElementById('frame_parametro').src = 'cadastro_motorista.php?acao=carregarEndereco&cep=' + num;
+					document.getElementById('frame_parametro').src = '<?php echo $path_parts['basename'] ?>?acao=carregarEndereco&cep=' + num;
 				}
 			}
 
@@ -700,12 +701,12 @@
 				<?php
 				if(!empty($a_mod['parametroPadrao'])){
 					echo 
-						"conferirParametroPadrao("
-							.$a_mod['parametroPadrao']['para_nb_id'].","
-							.$a_mod['parametroPadrao']['para_tx_jornadaSemanal'].","
-							.$a_mod['parametroPadrao']['para_tx_jornadaSabado'].","
-							.$a_mod['parametroPadrao']['para_tx_percentualHE'].","
-							.$a_mod['parametroPadrao']['para_tx_percentualSabadoHE']."
+						"conferirParametroPadrao('"
+							.$a_mod['parametroPadrao']['para_nb_id']."','"
+							.$a_mod['parametroPadrao']['para_tx_jornadaSemanal']."','"
+							.$a_mod['parametroPadrao']['para_tx_jornadaSabado']."','"
+							.$a_mod['parametroPadrao']['para_tx_percentualHE']."','"
+							.$a_mod['parametroPadrao']['para_tx_percentualSabadoHE']."'
 						);"
 					;
 				}

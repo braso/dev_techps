@@ -358,7 +358,7 @@
 			<input type="hidden" name="acao" value="layout_ajuste">
 			<input type="hidden" name="id" value="<?= $aMotorista['enti_nb_id'] ?>">
 			<input type="hidden" name="data">
-			<input type="hidden" name="data_de" value="<?=$_POST['busca_dataInicio']?>">
+			<input type="hidden" name="data_de" value="<?=empty($_POST['busca_dataInicio'])?: date("01/m/Y");?>">
 			<input type="hidden" name="data_ate" value="<?=$_POST['busca_dataFim']?>">
 		</form>
 
@@ -384,7 +384,7 @@
 					placeholder: 'Selecione um item',
 					allowClear: true,
 					ajax: {
-						url: "<?php echo$select2URL?>"+buscaExtra,
+						url: "<?=$select2URL?>"+buscaExtra,
 						dataType: 'json',
 						delay: 250,
 						processResults: function(data) {
@@ -399,11 +399,11 @@
 
 			}
 
-			if(<?php echo(!empty($_POST['busca_empresa'])? $_POST['busca_empresa']: 0)?> !== 0){
+			if(<?=(!empty($_POST['busca_empresa'])? $_POST['busca_empresa']: 0)?> !== 0){
 				empresa = document.getElementById("busca_empresa").value;
 				selecionaMotorista(empresa);
 
-				if(<?php echo(!empty($_POST['busca_motorista'])?1:0)?>){
+				if(<?=(!empty($_POST['busca_motorista'])?1:0)?>){
 					document.getElementById("busca_motorista").innerHTML = '<?=$opt?>';
 				}
 			}

@@ -49,7 +49,7 @@
 	}
 
 	function voltarEndosso(){
-		header('Location: '.$_SERVER['REQUEST_URI'].'/../endosso');
+		header('Location: '.$_SERVER['REQUEST_URI'].'/../endosso.php');
 	}
 
 	function cadastrar(){
