@@ -19,7 +19,7 @@
         //}
 
         //Check if user exists{
-            $data = get_data("SELECT * FROM user WHERE user_tx_login = '".$_POST["username"]."'");
+            $data = get_data("SELECT user_tx_senha, user_nb_id FROM user WHERE user_tx_login = '".$_POST["username"]."'");
 
             if(empty($data)){
                 $msg = 'Wrong Username Address';
