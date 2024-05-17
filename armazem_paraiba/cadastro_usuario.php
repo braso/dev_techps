@@ -254,7 +254,7 @@
 						<spam class='glyphicon glyphicon-remove'></spam>
 						Excluir
 					</a>", 
-					'<img style="width: 100%;" src="'.($a_mod['user_tx_foto']?? '').'" />', 
+					'<img src="'.($a_mod['user_tx_foto']?? '').'" />', 
 					2
 				);
 			}else{
@@ -369,7 +369,10 @@
 		}
 
 		$c = [
-			$img,
+			"<div class='img-section'>"
+			.$img.
+			$campo_foto
+			."</div>",
 			$campo_nome,
 			$campo_nivel,
 			$campo_status,
@@ -386,7 +389,6 @@
 			$campo_telefone,
 			$campo_empresa,
 			$campo_expiracao,
-			$campo_foto
 		];
 
 		$b = [];

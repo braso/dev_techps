@@ -286,8 +286,8 @@
 		}
 
 		$result = 
-			(($result < 0)?'-':'').
-			sprintf('%02d:%02d', abs(intval($result/60)), abs(intval($result%60)));
+			(($result < 0)?'-':'')
+			.sprintf('%02d:%02d', abs(intval($result/60)), abs(intval($result%60)));
 
 		return $result;
 	}
@@ -1355,7 +1355,7 @@
 				if (count($aRetorno[$tipo]) > 0){
 					for($f = 0; $f < count($aRetorno[$tipo]); $f++){
 						//Formatar datas para hora e minutos
-						if(strlen($aRetorno[$tipo][$f]) > 3 && strpos($aRetorno[$tipo][$f], ':00', strlen($aRetorno[$tipo][$f])-3) !== false){
+						if(strlen($aRetorno[$tipo][$f]) > 3 && strpos($aRetorno[$tipo][$f], ':', strlen($aRetorno[$tipo][$f])-3) !== false){
 							$aRetorno[$tipo][$f] = date('H:i', strtotime($aRetorno[$tipo][$f]));
 						}
 					}

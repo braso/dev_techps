@@ -7,8 +7,8 @@
 
 
 	if(empty(session_id())){
-			$started = session_start();
-			echo "<script>console.log('ind: ".($started? "yes": "no")."');</script>";
+		$started = session_start();
+		echo "<script>console.log('ind: ".($started? "yes": "no")."');</script>";
 	}
     include_once "load_env.php";
 	$turnos = ['Noite', 'Manhã', 'Tarde', 'Noite'];
@@ -19,6 +19,10 @@
 		cabecalho("Bem-Vindo ao sistema TechPS, ".$_SESSION['user_tx_nome'].". Período da $turnoAtual iniciado às ".$_SESSION['horaEntrada']);
 		rodape();
 		exit;
+	}
+
+	if(empty($_POST['user']) && !empty($_POST['username'])){
+		$_POST['user'] = $_POST['username'];
 	}
 
 	if(!empty($_POST['user']) && !empty($_POST['password'])){//Tentando logar

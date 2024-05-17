@@ -23,16 +23,22 @@
         break;
         case 'journeys':
 
-            if(empty($elements[2])){
+            if(empty($elements[2]) && $_SERVER['REQUEST_METHOD'] !== "GET"){
                 header('HTTP/1.0 400 Bad Request');
                 echo "Open journey not found";
                 exit;
             }
-            if($_SERVER['REQUEST_METHOD'] === 'POST' && $elements[2] == "begin"){	
+
+            if($_SERVER['REQUEST_METHOD'] === "POST" && $elements[2] == "begin"){
                 begin_journey();
-            }elseif($_SERVER['REQUEST_METHOD'] === 'GET'){
+            }elseif($_SERVER['REQUEST_METHOD'] === "GET"){
+                if(empty($elements[2])){
+                    header('HTTP/1.0 400 Bad Request');
+                    echo "Open journey not found";
+                    exit;
+                }
                 get_journeys();
-            }elseif($_SERVER['REQUEST_METHOD'] === 'PUT' && $elements[2] == "finish"){
+            }elseif($_SERVER['REQUEST_METHOD'] === "PUT" && $elements[2] == "finish"){
                 finish_journey($elements[2]);
             }
             

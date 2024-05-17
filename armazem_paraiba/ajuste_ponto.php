@@ -378,8 +378,8 @@
 
 		$c2[] = campo_data('Data', 'data', ($_POST['data']?? ''), 2, "onfocusout='ajusta_ponto(".$_POST['id'].", this.value, \"".$_POST['data_de']."\", \"".$_POST['data_ate']."\")', null");
 		$c2[] = campo_hora('Hora','hora',$_POST['hora'],2);
-		$c2[] = combo_bd('Código Macro','idMacro',$_POST['idMacro'],4,'macroponto','','ORDER BY macr_nb_id ASC');
-		$c2[] = combo_bd('Motivo:','motivo',$_POST['motivo'],4,'motivo','',' AND moti_tx_tipo = "Ajuste"');
+		$c2[] = combo_bd('Código Macro','idMacro',$_POST['idMacro'],4,"macroponto","","ORDER BY macr_nb_id");
+		$c2[] = combo_bd('Motivo:','motivo',$_POST['motivo'],4,'motivo','',' AND moti_tx_tipo = "Ajuste" ORDER BY moti_tx_nome');
 
 		$c3[] = textarea('Justificativa:','descricao',$_POST['descricao'],12);
 
