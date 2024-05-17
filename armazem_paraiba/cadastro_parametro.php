@@ -306,7 +306,7 @@
 				), 
 				5,
 				'',
-				$a_mod['para_tx_ignorarCampos']
+				$a_mod['para_tx_ignorarCampos'] ?? ''
 			)
 		];
 		

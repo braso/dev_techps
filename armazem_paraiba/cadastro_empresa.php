@@ -1,8 +1,8 @@
 <?php
 	//* Modo debug
-		ini_set('display_errors', 1);
+		// ini_set('display_errors', 1);
 		// error_reporting(E_ALL);
-		error_reporting(E_ERROR | E_WARNING | E_PARSE);
+		// error_reporting(E_ERROR | E_WARNING | E_PARSE);
 	//*/
 	include "conecta.php";
 
@@ -514,7 +514,6 @@
 			
 			function carrega_cep(cep) {
 				var num = cep.replace(/[^0-9]/g, '');
-				console.log(num);
 				if (num.length == '8') {
 					document.getElementById('frame_cep').src = '<?php echo $path_parts['basename'] ?>?acao=carregarEndereco&cep=' + num;
 				}
