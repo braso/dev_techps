@@ -113,6 +113,7 @@
 						.row div p {
 							padding: 10px;
 							text-align: center;
+							align-content: center;
 							border-top: 1px solid #c2cad8;
 							border-bottom: 1px solid #c2cad8;
 						}
@@ -121,8 +122,26 @@
 							margin-top: -10px;
 						}
 
+						.img-section {
+							float: left;
+							width: 25%;
+							margin-bottom: 20px;
+						}
+
+						.img-section div {
+							width: 100%;
+						}
+
+						.img-section .text-left {
+							margin-bottom: 10px;
+						}
+
+						.img-section .text-left img{
+							width: 100%;
+						}
+
 						.row div img {
-							max-width: 414px;
+							max-width: 200px;
 						}
 
 						.input-sm, select.input-sm, span.select2-selection.select2-selection--single{
@@ -153,6 +172,14 @@
 						@media(max-width: 992px){
 							body{
 								--img_path: url("<?=$CONTEX['path']?>/imagens/logo_mobile.png");
+							}
+
+							.img-section {
+								width: 100%;
+							}
+
+							.img-section .text-left img{
+								width:25%;
 							}
 						}
 					</style>
