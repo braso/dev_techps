@@ -20,7 +20,7 @@
 	
 	// $_POST['totalQuery'] = str_replace(["null", "\t", "\n", "\r"], ["\"\"", "", "", ""], $_POST['totalQuery']);
 	// $totalQuery = json_decode($_POST['totalQuery']);
-	$totalQuery = $_POST['totalQuery'];
+	$totalQuery = !empty($_POST['totalQuery'])? $_POST['totalQuery']: [];
 
 	
 	$limit = ['start' => $_REQUEST['start'], 'length' => $_REQUEST['length']];
