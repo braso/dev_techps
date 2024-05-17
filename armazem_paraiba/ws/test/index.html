@@ -45,7 +45,7 @@
 				<div class="col-6">
 					<div class="btn-group-vertical">
 						<button id="getUser" type="button" class="btn btn-outline-primary">Get User Info</button>
-						<button id="getJourney" type="button" class="btn btn-outline-danger">Get Journeys</button>
+						<button id="getJourneys" type="button" class="btn btn-outline-danger">Get Journeys</button>
 						<button id="startJourney" type="button" class="btn btn-outline-warning">Begin Journey</button>
 						<button id="endJourney" type="button" class="btn btn-outline-default">End Journey</button>
 						<button id="logout" type="button"  class="btn btn-outline-info">Logout</button>
@@ -80,10 +80,9 @@
 					// Send POST request
 					$.ajax({
 						type: 'POST',
-						url: '../login',
+						url: window.location.pathname+'/../login',
 						data: formData,
 						success: function(response){
-
 							response = JSON.parse(response);
 							var token = response['token'];
 							storeJWT.setJWT(token)
@@ -101,7 +100,7 @@
 
 				$("#getUser").click(async e => {
 					$("#response").html("")
-					const result = await fetch("../users/"+$("#queryId").val(), {
+					const result = await fetch(window.location.pathname+"/../users/"+$("#queryId").val(), {
 					headers: {
 						Authorization: `Bearer ${storeJWT.JWT}`,
 						},
@@ -110,9 +109,9 @@
 					$("#response").html(textResponse)
 				})
 				
-				$("#getJourney").click(async e => {
+				$("#getJourneys").click(async e => {
 					$("#response").html("")
-					const result = await fetch("../journeys/"+$("#queryId").val(), {
+					const result = await fetch(window.location.pathname+"/../journeys/"+$("#queryId").val(), {
 					headers: {
 						Authorization: `Bearer ${storeJWT.JWT}`,
 						},
@@ -123,7 +122,7 @@
 
 				$("#startJourney").click(async e => {
 					$("#response").html("")
-					const result = await fetch("../journeys/begin", {
+					const result = await fetch(window.location.pathname+"/../journeys/begin", {
 						method: "POST",
 						headers: {
 							Authorization: `Bearer ${storeJWT.JWT}`,
@@ -137,7 +136,7 @@
 
 				$("#endJourney").click(async e => {
 					$("#response").html("")
-					const result = await fetch("../journeys/finish", {
+					const result = await fetch(window.location.pathname+"/../journeys/finish", {
 						method: "PUT",
 						headers: {
 							Authorization: `Bearer ${storeJWT.JWT}`,
@@ -151,7 +150,7 @@
 
 				$("#refresh").click(async e => {
 					$("#response").html("")
-					const result = await fetch("../refresh", {
+					const result = await fetch(window.location.pathname+"/../refresh", {
 					headers: {
 						Authorization: `Bearer ${storeJWT.JWT}`,
 						},
