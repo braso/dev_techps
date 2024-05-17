@@ -18,10 +18,6 @@
 
 	$CONTEX['path'] = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"];
 
-	if(empty(session_id())){
-		$lifetime = 30*60;
-		ini_set('session.gc_maxlifetime', $lifetime);
-	}
 	
 	// session_cache_limiter("public, no-store");
 
