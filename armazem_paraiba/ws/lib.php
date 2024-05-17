@@ -47,18 +47,18 @@
     }
 
     function get_data($query,$querydata=[]){
-        $connect = new PDO("mysql:host=".$_ENV["DB_HOST"].";dbname=".$_ENV["DB_NAME"], $_ENV["DB_USER"], $_ENV["DB_PASSWORD"]);
+        $connect = new PDO("mysql:host=".$_ENV["DB_HOST"].";dbname=".$_ENV["DB_NAME"].";charset=utf8mb4", $_ENV["DB_USER"], $_ENV["DB_PASSWORD"]);
         
         $statement = $connect->prepare($query);
 
         $statement->execute($querydata);
-        $data = $statement->fetchAll(PDO::FETCH_ASSOC);  
+        $data = $statement->fetchAll(PDO::FETCH_ASSOC);
         $statement->closeCursor(); 
         return $data;
     }
 
     function insert_data($query,$querdata){
-        $connect = new PDO("mysql:host=".$_ENV["DB_HOST"].";dbname=".$_ENV["DB_NAME"], $_ENV["DB_USER"], $_ENV["DB_PASSWORD"]);
+        $connect = new PDO("mysql:host=".$_ENV["DB_HOST"].";dbname=".$_ENV["DB_NAME"].";charset=utf8mb4", $_ENV["DB_USER"], $_ENV["DB_PASSWORD"]);
         
         $connect->prepare($query)->execute($querdata);
         
