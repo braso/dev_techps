@@ -10,29 +10,29 @@
     if(empty(session_id())){
         session_start();
     }
-	include_once "../load_env.php";
+
+	include_once __DIR__."/load_env.php";
+
 	global $_SESSION, $CONTEX, $conn;
 	date_default_timezone_set('America/Fortaleza');
 
+	$CONTEX['path'] = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"];
 
 	
 	// session_cache_limiter("public, no-store");
 
-
-    $CONTEX['path'] = $_ENV["URL_BASE"].'/'.$_ENV["APP_PATH"];
 	$_SESSION['last_activity'] = time();
 	if(isset($_SESSION['user_tx_login']) && !isset($_SESSION['domain'])){
 		$_SESSION['domain'] = $CONTEX['path'];
 	}
 
 	if(!isset($interno)){
-
 		if(
 			(empty($_SESSION['last_activity']) || (time()-(int)$_SESSION['last_activity'] > (int)ini_get('session.gc_maxlifetime')))	//Se a sessão expirou
 			|| (empty($_SESSION['domain']) || $_SESSION['domain'] != $CONTEX['path'])													//ou se o login é relacionado a outro domínio
 		){
 			echo 
-				"<form action='".$CONTEX['path']."/logout.php?asas' name='form_logout' method='post'>
+				"<form action='".$_ENV["URL_BASE"].$CONTEX['path']."/logout.php' name='form_logout' method='post'>
 				</form>"
 			;
 			echo "<script>document.form_logout.submit();</script>";
@@ -43,12 +43,17 @@
 	$_SESSION['last_activity'] = time();
 	
 	//CONEXÃO BASE DE DADOS{
-		$conn = mysqli_connect($_ENV["DB_HOST"], $_ENV["DB_USER"], $_ENV["DB_PASSWORD"], $_ENV["DB_NAME"]) or die("Connection failed: " . mysqli_connect_error());
+		$conn = mysqli_connect(
+			$_ENV["DB_HOST"],
+			$_ENV["DB_USER"],
+			$_ENV["DB_PASSWORD"],
+			$_ENV["DB_NAME"]
+		) or die("Connection failed: " . mysqli_connect_error());
 		$conn->set_charset("utf8");
 	//}
 
-	include_once "../contex20/funcoes_grid.php";
-	include_once "../contex20/funcoes_form.php";
-	include_once "../contex20/funcoes.php";
+	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_grid.php";
+	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
+	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes.php";
 	
 ?>

@@ -9,7 +9,7 @@ services:
     build: .
     container_name: dev_techps_apache
     volumes:
-        - .:/var/www/html/
+        - .:/var/www/html/braso/
     ports:
       - 80:80
 

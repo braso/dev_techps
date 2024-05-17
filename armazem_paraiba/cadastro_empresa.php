@@ -1,7 +1,8 @@
 <?php
 	//* Modo debug
-		ini_set('display_errors', 1);
-		error_reporting(E_ALL);
+		// ini_set('display_errors', 1);
+		// error_reporting(E_ALL);
+		// error_reporting(E_ERROR | E_WARNING | E_PARSE);
 	//*/
 	include "conecta.php";
 
@@ -259,7 +260,7 @@
 				?>
 				<script type="text/javascript">
 					if(confirm("CPF/CNPJ já cadastrado, deseja atualizar o registro?")){
-						parent.document.form_modifica.id.value='<?php echo$a['empr_nb_id']?>';
+						parent.document.form_modifica.id.value='<?=$a['empr_nb_id']?>';
 						parent.document.form_modifica.submit();
 					}else{
 						parent.document.contex_form.cnpj.value='';
@@ -520,7 +521,7 @@
 			
 			function checarCNPJ(cnpj){
 				if(cnpj.length == '18' || cnpj.length == '14'){
-					document.getElementById('frame_cep').src='<?php echo$path_parts['basename']?>?acao=checarCNPJ&cnpj='+cnpj+'&id=<?php echo$a_mod['empr_nb_id']?>'
+					document.getElementById('frame_cep').src='<?=$path_parts['basename']?>?acao=checarCNPJ&cnpj='+cnpj+'&id=<?=$a_mod['empr_nb_id']?>'
 				}
 			}
 			$(document).ready(function() {

@@ -374,7 +374,7 @@
 		$counts['message'] = '<b>Total: '.$counts['total'].' | Não Conformidades: '.$counts['naoConformidade'].'</b>';
 
 		$select2URL = 
-			$_ENV['URL_BASE']."/contex20/select2.php"
+			$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php"
 			."?path=".$CONTEX['path']
 			."&tabela=entidade"
 			."&extra_limite=15"

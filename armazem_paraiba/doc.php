@@ -1,10 +1,14 @@
 <?php 
-//ini_set('display_errors', 1);
-//error_reporting(E_ALL);
-include 'conecta.php';
+    /* Modo debug
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
+	//*/
+    
+    include 'conecta.php';
 
-cabecalho(''); 
+    cabecalho(''); 
 ?>
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -32,4 +36,4 @@ cabecalho('');
 </body>
 </html>
 
-<?php echo rodape(''); ?>
+<?= rodape(''); ?>

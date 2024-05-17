@@ -49,7 +49,7 @@
 	}
 
 	function voltarEndosso(){
-		header('Location: '.$_SERVER['REQUEST_URI'].'/../endosso');
+		header('Location: '.$_SERVER['REQUEST_URI'].'/../endosso.php');
 	}
 
 	function cadastrar(){
@@ -371,7 +371,7 @@
 					placeholder: 'Selecione um item',
 					allowClear: true,
 					ajax: {
-						url: "<?php echo$_ENV['URL_BASE']?>/contex20/select2.php?path=<?php echo$CONTEX['path']?>&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd="+buscaExtra+"&extra_busca=enti_tx_matricula",
+						url: "<?=$CONTEX["path"]?>/../contex20/select2.php?path=<?=$CONTEX['path']?>&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd="+buscaExtra+"&extra_busca=enti_tx_matricula",
 						dataType: 'json',
 						delay: 250,
 						processResults: function(data){
