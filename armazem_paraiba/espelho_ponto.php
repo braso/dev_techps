@@ -42,6 +42,9 @@
 
 		//Confere se há algum erro na pesquisa{
 		$searchError = false;
+		
+		$opt = "";
+
 		if(isset($_POST['acao']) && $_POST['acao'] == 'index'){
 			$errorMsg = 'Insira os campos para pesquisar: ';
 			if(empty($_POST['busca_empresa'])){
@@ -103,7 +106,7 @@
 				(!empty($_POST['busca_empresa'])?" AND enti_nb_empresa = ".$_POST['busca_empresa']:"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') ".$extraEmpresa." ".$extraBuscaMotorista, 
 				'enti_tx_matricula'
 			),
-			campo_data('Data Início:', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ''), 2, $extraCampoData),
+			campo_data('Data Início:', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ""), 2, $extraCampoData),
 			campo_data('Data Fim:', 'busca_dataFim', ($_POST['busca_dataFim']?? ''), 2,$extraCampoData)
 		];
 
@@ -174,8 +177,6 @@
 				$dataVez = $date->format('Y-m-d');
 
 				$aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
-
-				// die(var_dump($aDetalhado));
 				
 				$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $aMotorista['enti_nb_id'])], $aDetalhado));
 				for($f = 0; $f < sizeof($row)-1; $f++){
@@ -257,73 +258,83 @@
 			$periodoPesquisa = 'De '.date("d/m/Y", strtotime($_POST['busca_dataInicio'])).' até '.date("d/m/Y", strtotime($_POST['busca_dataFim']));
       
 			abre_form(
-				"$aEmpresa[empr_tx_nome]<br>"
-				."[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome]<br>"
-				."$parametroPadrao<br><br>"
-				."$periodoPesquisa<br>"
+				"<div>"
+					.$aEmpresa["empr_tx_nome"]."<br>"
+					."[".$aMotorista["enti_tx_matricula"]."] ".$aMotorista["enti_tx_nome"]."<br>"
+					."$parametroPadrao<br><br>"
+					."$periodoPesquisa<br>"
+				."</div>"
 				."$saldosMotorista"
 			);
 	?>
 
 	<style>
 
-			@media print {
-    		        body {
-                        margin: 1cm;
-                        margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
-                        transform: scale(1.0);
-                        transform-origin: top left;
-                    }
-                
-                    @page {
-                        size: A4 landscape;
-                        margin: 1cm;
-                    }
-                    #tituloRelatorio{
-                        display: block; /* Torna visível apenas ao imprimir */
-                        font-size: 12px;
-                        padding-left: 500px;
-                    }
-                    body > div.scroll-to-top{
-                        display: none !important;
-                    }
-                    body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3){
-                        display: none;
-                    }
-                    .portlet-body.form .table-responsive {
-                        overflow-x: visible !important;
-                        margin-left: -50px !important;
-                    }
-                    .portlet.light>.portlet-title {
-                        border-bottom: none;
-                        margin-bottom: 0px;
-                    }
-                    .caption{
-                        padding-top: 0px;
-                        margin-left: -50px !important;
-                        padding-bottom: 0px;
-                    }
-            }
-			#saldo {
-				width: 50% !important;
-				margin-top: 9px !important;
-				text-align: center;
-			}
-		
-				table thead tr th:nth-child(3),
-				table thead tr th:nth-child(7),
-				table thead tr th:nth-child(11),
-				table td:nth-child(3),
-				table td:nth-child(7),
-				table td:nth-child(11) {
-					border-right: 3px solid #d8e4ef !important;
+		@media print {
+				body {
+					margin: 1cm;
+					margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
+					transform: scale(1.0);
+					transform-origin: top left;
 				}
-				.th-align {
-				    text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
-				    vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
-				    
+			
+				@page {
+					size: A4 landscape;
+					margin: 1cm;
 				}
-			</style>
+				#tituloRelatorio{
+					display: block; /* Torna visível apenas ao imprimir */
+					font-size: 12px;
+					padding-left: 500px;
+				}
+				body > div.scroll-to-top{
+					display: none !important;
+				}
+				body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3){
+					display: none;
+				}
+				.portlet-body.form .table-responsive {
+					overflow-x: visible !important;
+					margin-left: -50px !important;
+				}
+				.portlet.light>.portlet-title {
+					border-bottom: none;
+					margin-bottom: 0px;
+				}
+				.caption{
+					padding-top: 0px;
+					margin-left: -50px !important;
+					padding-bottom: 0px;
+				}
+		}
+		#saldo {
+			width: 50% !important;
+			margin-top: 9px !important;
+			text-align: center;
+		}
+
+		table thead tr th:nth-child(3),
+		table thead tr th:nth-child(7),
+		table thead tr th:nth-child(11),
+		table td:nth-child(3),
+		table td:nth-child(7),
+		table td:nth-child(11) {
+			border-right: 3px solid #d8e4ef !important;
+		}
+		.th-align {
+			text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
+			vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
+			
+		}
+
+		.table-responsive {
+			overflow: overlay;
+		}
+
+		.row div {
+			min-width: auto;
+		}
+	</style>
 		<?php
 			$aDia[] = array_values(array_merge(array('', '', '', '', '', '', '<b>TOTAL</b>'), $totalResumo));
 			
@@ -334,8 +345,8 @@
 		rodape();
 
 		$select2URL = 
-			$_ENV['URL_BASE']."/contex20/select2.php"
-			."?path=".$_ENV["APP_PATH"]
+			$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php"
+			."?path=".$CONTEX['path']
 			."&tabela=entidade"
 			."&extra_limite=15"
 			."&extra_busca=enti_tx_matricula"
@@ -345,10 +356,10 @@
 	
 		<form name="form_ajuste_ponto" method="post">
 			<input type="hidden" name="acao" value="layout_ajuste">
-			<input type="hidden" name="id" value="<?php echo $aMotorista['enti_nb_id'] ?>">
+			<input type="hidden" name="id" value="<?= $aMotorista['enti_nb_id'] ?>">
 			<input type="hidden" name="data">
-			<input type="hidden" name="data_de" value="<?php echo$_POST['busca_dataInicio']?>">
-			<input type="hidden" name="data_ate" value="<?php echo$_POST['busca_dataFim']?>">
+			<input type="hidden" name="data_de" value="<?=empty($_POST['busca_dataInicio'])?: date("01/m/Y");?>">
+			<input type="hidden" name="data_ate" value="<?=$_POST['busca_dataFim']?>">
 		</form>
 
 		<script>
@@ -373,7 +384,7 @@
 					placeholder: 'Selecione um item',
 					allowClear: true,
 					ajax: {
-						url: "<?php echo$select2URL?>"+buscaExtra,
+						url: "<?=$select2URL?>"+buscaExtra,
 						dataType: 'json',
 						delay: 250,
 						processResults: function(data) {
@@ -388,12 +399,12 @@
 
 			}
 
-			if(<?php echo(!empty($_POST['busca_empresa'])? $_POST['busca_empresa']: 0)?> !== 0){
+			if(<?=(!empty($_POST['busca_empresa'])? $_POST['busca_empresa']: 0)?> !== 0){
 				empresa = document.getElementById("busca_empresa").value;
 				selecionaMotorista(empresa);
 
-				if(<?php echo(!empty($_POST['busca_motorista'])?1:0)?>){
-					document.getElementById("busca_motorista").innerHTML = '<?= $opt?>';
+				if(<?=(!empty($_POST['busca_motorista'])?1:0)?>){
+					document.getElementById("busca_motorista").innerHTML = '<?=$opt?>';
 				}
 			}
 		</script>

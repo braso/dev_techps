@@ -1,189 +1,190 @@
 <?php
-// ini_set('display_errors', 1);
-// error_reporting(E_ALL);
+    /* Modo debug
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
+	//*/
 
+    include "funcoes_ponto.php";
 
-include "funcoes_ponto.php";
-
-function index() {
-    global $totalResumo, $CONTEX;
-    
-    if(empty($_POST['busca_data'])){
-		$_POST['busca_data'] = date("Y-m");
-	}
-
-    $dateParts = explode('-',$_POST['busca_data']);
-    $monthNum = $dateParts[1];
-    $year = $dateParts[0];
-
-    $monthNames = array(
-        '01' => 'Janeiro',
-        '02' => 'Fevereiro',
-        '03' => 'Março',
-        '04' => 'Abril',
-        '05' => 'Maio',
-        '06' => 'Junho',
-        '07' => 'Julho',
-        '08' => 'Agosto',
-        '09' => 'Setembro',
-        '10' => 'Outubro',
-        '11' => 'Novembro',
-        '12' => 'Dezembro'
-    );
-
-    
-    $monthName = $monthNames[$monthNum];
-
-    cabecalho('Relatorio Geral de Espelho de Ponto');
-
-    $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
-    //position: absolute; top: 101px; left: 420px;
-    $c = [
-        combo_net('Empresa:','empresa',$_POST['empresa']?? '',4,'empresa', ''),
-        campo_mes('Data:',     'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2),
-        $texto,
-    ];
-
-    $botao_imprimir =
-			'<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
-					<script>
-						function imprimir() {
-							// Abrir a caixa de diálogo de impressão
-							window.print();
-						}
-					</script>';
-	$botaoCsv = "<button id='btnCsv' class='btn btn-success' style='background-color: green !important;' onclick='downloadCSV()'>Baixar CSV</button>";
-	
-    if (isset($_POST['empresa']) && !empty($_POST['empresa'])) {
-        $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
-    }
-    
-    $b = [
-       botao("Buscar", 'index', '', '', '', 1,'btn btn-info'),
-       $botao_imprimir,
-       $botaoCsv,
-       $botao_volta
-    ];
-    
-    abre_form('Filtro de Busca');
-    linha_form($c);
-    fecha_form($b);
-    
-    if (isset($_POST['empresa']) && !empty($_POST['empresa']) && isset($_POST['busca_data']) && !empty($_POST['busca_data'])) {
-         $idEmpresa = $_POST['empresa'];
-         $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM `empresa` WHERE empr_tx_Ehmatriz = 'sim' AND empr_nb_id = $idEmpresa"), MYSQLI_ASSOC);
-         include_once 'painel_empresa.php';
+    function index() {
+        global $totalResumo, $CONTEX;
         
-    }else{
-        $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM `empresa` WHERE empr_tx_Ehmatriz = 'sim'"), MYSQLI_ASSOC);
-        include_once 'painel_empresas.php';
-    }
-    ?>
-    	<style>
+        if(empty($_POST['busca_data'])){
+            $_POST['busca_data'] = date("Y-m");
+        }
 
-           @media print {
-                    body {
-                        margin: 1cm;
-                        margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
-                        transform: scale(1.0);
-                        transform-origin: top left;
+        $dateParts = explode('-',$_POST['busca_data']);
+        $monthNum = $dateParts[1];
+        $year = $dateParts[0];
+
+        $monthNames = array(
+            '01' => 'Janeiro',
+            '02' => 'Fevereiro',
+            '03' => 'Março',
+            '04' => 'Abril',
+            '05' => 'Maio',
+            '06' => 'Junho',
+            '07' => 'Julho',
+            '08' => 'Agosto',
+            '09' => 'Setembro',
+            '10' => 'Outubro',
+            '11' => 'Novembro',
+            '12' => 'Dezembro'
+        );
+
+        
+        $monthName = $monthNames[$monthNum];
+
+        cabecalho('Relatorio Geral de Espelho de Ponto');
+
+        $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
+        //position: absolute; top: 101px; left: 420px;
+        $c = [
+            combo_net('Empresa:','empresa',$_POST['empresa']?? '',4,'empresa', ''),
+            campo_mes('Data:',     'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2),
+            $texto,
+        ];
+
+        $botao_imprimir =
+                '<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
+                        <script>
+                            function imprimir() {
+                                // Abrir a caixa de diálogo de impressão
+                                window.print();
+                            }
+                        </script>';
+        $botaoCsv = "<button id='btnCsv' class='btn btn-success' style='background-color: green !important;' onclick='downloadCSV()'>Baixar CSV</button>";
+        
+        if (isset($_POST['empresa']) && !empty($_POST['empresa'])) {
+            $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
+        }
+        
+        $b = [
+        botao("Buscar", 'index', '', '', '', 1,'btn btn-info'),
+        $botao_imprimir,
+        $botaoCsv,
+        $botao_volta
+        ];
+        
+        abre_form('Filtro de Busca');
+        linha_form($c);
+        fecha_form($b);
+        
+        if (isset($_POST['empresa']) && !empty($_POST['empresa']) && isset($_POST['busca_data']) && !empty($_POST['busca_data'])) {
+            $idEmpresa = $_POST['empresa'];
+            $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM `empresa` WHERE empr_tx_Ehmatriz = 'sim' AND empr_nb_id = $idEmpresa"), MYSQLI_ASSOC);
+            include_once 'painel_empresa.php';
+            
+        }else{
+            $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM `empresa` WHERE empr_tx_Ehmatriz = 'sim'"), MYSQLI_ASSOC);
+            include_once 'painel_empresas.php';
+        }
+        ?>
+            <style>
+
+            @media print {
+                        body {
+                            margin: 1cm;
+                            margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
+                            transform: scale(1.0);
+                            transform-origin: top left;
+                        }
+                    
+                        @page {
+                            size: A4 landscape;
+                            margin: 1cm;
+                        }
+                        #tituloRelatorio{
+                            /*font-size: 2px !important;*/
+                            /*padding-left: 200px;*/
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-bottom: -50px !important;
+                        }
+                        body > div.scroll-to-top{
+                            display: none !important;
+                        }
+                        body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3){
+                            display: none;
+                        }
+                        .portlet-body.form .table-responsive {
+                            overflow-x: visible !important;
+                            margin-left: -50px !important;
+                        }
+                        .portlet.light>.portlet-title {
+                            border-bottom: none;
+                            margin-bottom: 0px;
+                        }
+                        .caption{
+                            padding-top: 0px;
+                            margin-left: -50px !important;
+                            padding-bottom: 0px;
+                        }
+                        .emissao{
+                            text-align: left;
+                            padding-left: 590px !important;
+                            position: absolute;
+                        }
+                        .porcentagenEndo{
+                            box-shadow: 0 0 0 1000px #66b3ff inset !important;
+                        }
+                        .porcentagenNaEndo{
+                            box-shadow: 0 0 0 1000px #ff471a inset !important;
+                        }
+                        .porcentagenEndoPc{
+                            box-shadow: 0 0 0 1000px #ffff66 inset !important;
+                        }
+                        thead tr.totais th {
+                            box-shadow: 0 0 0 1000px #ffe699 inset !important; /* Cor para impressão */
+                        }
+                        thead tr.titulos th {
+                            box-shadow: 0 0 0 1000px #99ccff inset !important; /* Cor para impressão */
+                        }
+                        .porcentagenMeta{
+                            box-shadow: 0 0 0 1000px #66b3ff inset !important;
+                        }
+                        .porcentagenPosit{
+                            box-shadow: 0 0 0 1000px #00b33c inset !important;
+                        }
+                        .porcentagenNegat{
+                            box-shadow: 0 0 0 1000px #ff471a inset !important;
+                        }
+                }
+
+                    table thead tr th:nth-child(3),
+                    table thead tr th:nth-child(7),
+                    table thead tr th:nth-child(11),
+                    table td:nth-child(3),
+                    table td:nth-child(7),
+                    table td:nth-child(11) {
+                        border-right: 3px solid #d8e4ef !important;
                     }
-                
-                    @page {
-                        size: A4 landscape;
-                        margin: 1cm;
-                    }
-                    #tituloRelatorio{
-                        /*font-size: 2px !important;*/
-                        /*padding-left: 200px;*/
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        margin-bottom: -50px !important;
-                    }
-                    body > div.scroll-to-top{
-                        display: none !important;
-                    }
-                    body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3){
-                        display: none;
-                    }
-                    .portlet-body.form .table-responsive {
-                        overflow-x: visible !important;
-                        margin-left: -50px !important;
-                    }
-                    .portlet.light>.portlet-title {
-                        border-bottom: none;
-                        margin-bottom: 0px;
-                    }
-                    .caption{
-                        padding-top: 0px;
-                        margin-left: -50px !important;
-                        padding-bottom: 0px;
+                    .th-align {
+                        text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
+                        vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
+                        
                     }
                     .emissao{
                         text-align: left;
-                        padding-left: 590px !important;
+                        padding-left: 63%;
                         position: absolute;
                     }
-                    .porcentagenEndo{
-                        box-shadow: 0 0 0 1000px #66b3ff inset !important;
-                    }
-                    .porcentagenNaEndo{
-                        box-shadow: 0 0 0 1000px #ff471a inset !important;
-                    }
-                    .porcentagenEndoPc{
-                        box-shadow: 0 0 0 1000px #ffff66 inset !important;
-                    }
-                    thead tr.totais th {
-                        box-shadow: 0 0 0 1000px #ffe699 inset !important; /* Cor para impressão */
-                    }
-                    thead tr.titulos th {
-                        box-shadow: 0 0 0 1000px #99ccff inset !important; /* Cor para impressão */
-                    }
-                    .porcentagenMeta{
-                        box-shadow: 0 0 0 1000px #66b3ff inset !important;
-                    }
-                    .porcentagenPosit{
-                        box-shadow: 0 0 0 1000px #00b33c inset !important;
-                    }
-                    .porcentagenNegat{
-                        box-shadow: 0 0 0 1000px #ff471a inset !important;
-                    }
-            }
+            </style>
+            <form name="myForm" method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+            <input type="hidden" name="empresa" id="empresa">
+            </form>
 
-                table thead tr th:nth-child(3),
-                table thead tr th:nth-child(7),
-                table thead tr th:nth-child(11),
-                table td:nth-child(3),
-                table td:nth-child(7),
-                table td:nth-child(11) {
-                    border-right: 3px solid #d8e4ef !important;
+            <script>
+                function setAndSubmit(empresa) {
+                    document.myForm.empresa.value = empresa;
+                    //   console.log(document.myForm.empresa.value);
+                    document.myForm.submit();
                 }
-                .th-align {
-                    text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
-                    vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
-                    
-                }
-                .emissao{
-                    text-align: left;
-                    padding-left: 63%;
-                    position: absolute;
-                }
-        </style>
-         <form name="myForm" method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
-           <input type="hidden" name="empresa" id="empresa">
-        </form>
+            </script>
 
-        <script>
-               function setAndSubmit(empresa) {
-                  document.myForm.empresa.value = empresa;
-                //   console.log(document.myForm.empresa.value);
-                 document.myForm.submit();
-               }
-        </script>
-
-    <?php
-    
-    rodape();
-}
+        <?php
+        
+        rodape();
+    }
 ?>

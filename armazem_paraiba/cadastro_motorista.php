@@ -10,7 +10,7 @@
 		if ($aEmpresa['empr_nb_parametro'] > 0) {
 			?>
 				<script type="text/javascript">
-					parent.document.contex_form.parametro.value = '<?php echo $aEmpresa['empr_nb_parametro'] ?>';
+					parent.document.contex_form.parametro.value = '<?= $aEmpresa['empr_nb_parametro'] ?>';
 					parent.document.contex_form.parametro.onchange();
 				</script>
 			<?php
@@ -20,7 +20,8 @@
 
 	function carregarParametroPadrao(int $idEmpresa = null){
 		global $a_mod;
-		if(empty($idEmpresa) && !empty($a_mod['enti_nb_empresa'])){
+		var_dump($idEmpresa);
+		if(!empty($idEmpresa) && !empty($a_mod['enti_nb_empresa'])){
 			$idEmpresa = intval($a_mod['enti_nb_empresa']);
 		}else{
 			$idEmpresa = -1;
@@ -59,16 +60,16 @@
 	}
 
 	function buscarCEP($cep){
-		//$resultado = @file_get_contents('https://viacep.com.br/ws/' . urlencode($cep) . '/json/');
+		// 		$resultado = @file_get_contents('https://viacep.com.br/ws/'.urlencode($cep).'/json/');
+				
 		$url = 'https://viacep.com.br/ws/'.urlencode($cep).'/json/';
 		$ch = curl_init($url);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 			
 		$resultado = curl_exec($ch);
 		$arr = json_decode($resultado, true);
-		return $arr;  
+		return $arr;
 	}
-
 	function carregarEndereco(){
 		global $CONTEX;
 
@@ -76,7 +77,7 @@
 		$arr = buscarCEP($_GET['cep']);
 
 		echo 
-      	"<script src='".$_ENV['URL_BASE']."/contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
+      	"<script src='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
 			<script type='text/javascript'>
 				parent.document.contex_form.endereco.value = '".$arr['logradouro']."';
 				parent.document.contex_form.bairro.value = '".$arr['bairro']."';
@@ -91,6 +92,8 @@
 	}
 
 	function cadastrarMotorista(){
+		visualizarCadastro();
+		exit;
 		global $a_mod;
 		
 
@@ -258,6 +261,7 @@
 			$novoMotorista['enti_nb_userCadastro'] = $_SESSION['user_nb_id'];
 			$novoMotorista['enti_tx_dataCadastro'] = date("Y-m-d H:i:s");
 			$novoMotorista['enti_tx_ehPadrao'] = $ehPadrao;
+			die(var_dump($novoMotorista));
 			$id = inserir('entidade', array_keys($novoMotorista), array_values($novoMotorista))[0];
 			
 			
@@ -412,13 +416,15 @@
 
 	function visualizarCadastro(){
 		global $a_mod;
-
+		
 		if(!empty($a_mod['enti_nb_empresa'])){
 			carregarParametroPadrao($a_mod['enti_nb_empresa']);
 		}
 		
-		if(empty($a_mod) && !empty($_POST['id'])){
-			$a_mod = carregar('entidade', $_POST['id']);
+		if(empty($a_mod) && !empty($_POST)){
+			if(isset($_POST['id'])){
+				$a_mod = carregar('entidade', $_POST['id']);
+			}
 			
 			$campos = ['matricula', 'nome','nascimento','cpf','rg','civil','sexo','endereco','numero','complemento', 'bairro','cidade','cep','fone1','fone2','email','ocupacao','salario','obs',
 				'tipo','status','empresa', 'parametro','jornadaSemanal','jornadaSabado','percentualHE','percentualSabadoHE', 'rgOrgao', 'rgDataEmissao', 'rgUf',
@@ -679,7 +685,7 @@
 			function buscarCEP(cep) {
 				var num = cep.replace(/[^0-9]/g, '');
 				if (num.length == '8') {
-					document.getElementById('frame_parametro').src = 'cadastro_motorista.php?acao=carregarEndereco&cep=' + num;
+					document.getElementById('frame_parametro').src = '<?php echo $path_parts['basename'] ?>?acao=carregarEndereco&cep=' + num;
 				}
 			}
 
@@ -695,12 +701,12 @@
 				<?php
 				if(!empty($a_mod['parametroPadrao'])){
 					echo 
-						"conferirParametroPadrao("
-							.$a_mod['parametroPadrao']['para_nb_id'].","
-							.$a_mod['parametroPadrao']['para_tx_jornadaSemanal'].","
-							.$a_mod['parametroPadrao']['para_tx_jornadaSabado'].","
-							.$a_mod['parametroPadrao']['para_tx_percentualHE'].","
-							.$a_mod['parametroPadrao']['para_tx_percentualSabadoHE']."
+						"conferirParametroPadrao('"
+							.$a_mod['parametroPadrao']['para_nb_id']."','"
+							.$a_mod['parametroPadrao']['para_tx_jornadaSemanal']."','"
+							.$a_mod['parametroPadrao']['para_tx_jornadaSabado']."','"
+							.$a_mod['parametroPadrao']['para_tx_percentualHE']."','"
+							.$a_mod['parametroPadrao']['para_tx_percentualSabadoHE']."'
 						);"
 					;
 				}

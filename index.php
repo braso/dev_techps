@@ -27,12 +27,14 @@ if(isset($_GET['error'])){
 }
 
 if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
-	$_POST['password'] = md5($_POST['password']);
-	$file = $_SERVER["DOCUMENT_ROOT"].$_POST['dominio'];
+	if(!empty($_POST['password'])){
+		$_POST['password'] = md5($_POST['password']);
+	}
+	$file = $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_POST['dominio'];
 
 	if(is_int(strpos($dominiosInput, $_POST['dominio'])) && file_exists($file)){
 
-		$formAction = $_ENV["URL_BASE"].$_POST['dominio'];
+		$formAction = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_POST['dominio'];
 
 		echo 
 			"<form action='".$formAction."' name='formTelaPrincipal' method='post'>
@@ -119,42 +121,42 @@ License: You must have a valid license purchased only from themeforest(the above
 	<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet"
 		type="text/css" />
 
-	<link href="./contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet"
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet"
 		type="text/css" />
 
-	<link href="./contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet"
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet"
 		type="text/css" />
 
-	<link href="./contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
 
-	<link href="./contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
 
-	<link href="./contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet"
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet"
 		type="text/css" />
 
 	<!-- FIM GLOBAL MANDATORY STYLES -->
 
 	<!-- COMECO PLUGINS DE PAGINA -->
 
-	<link href="./contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
 
-	<link href="./contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet"
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet"
 		type="text/css" />
 
 	<!-- FIM PLUGINS DE PAGINA -->
 
 	<!-- COMECO THEME GLOBAL STYLES -->
 
-	<link href="./contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components"
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components"
 		type="text/css" />
 
-	<link href="./contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
 
 	<!-- FIM THEME GLOBAL STYLES -->
 
 	<!-- COMECO PAGE LEVEL STYLES -->
 
-	<link href="./contex20/assets/pages/css/login.min.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/pages/css/login.min.css" rel="stylesheet" type="text/css" />
 
 	<!-- FIM PAGE LEVEL STYLES -->
 
@@ -162,12 +164,12 @@ License: You must have a valid license purchased only from themeforest(the above
 
 	<!-- FIM THEME LAYOUT STYLES -->
 
-	<?php echo 
-		"<link rel='apple-touch-icon' sizes='180x180' href='./contex20/img/favicon/apple-touch-icon.png'>
-		<link rel='icon' type='image/png' sizes='32x32' href='./contex20/img/favicon/favicon-32x32.png'>
-		<link rel='icon' type='image/png' sizes='16x16' href='./contex20/img/favicon/favicon-16x16.png'>
-		<link rel='shortcut icon' type='image/x-icon' href='./contex20/img/favicon/favicon-32x32.png?v=2'>
-		<link rel='manifest' href='./contex20/img/favicon/site.webmanifest'>".
+	<?=
+		"<link rel='apple-touch-icon' sizes='180x180' href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/img/favicon/apple-touch-icon.png'>
+		<link rel='icon' type='image/png' sizes='32x32' href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/img/favicon/favicon-32x32.png'>
+		<link rel='icon' type='image/png' sizes='16x16' href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/img/favicon/favicon-16x16.png'>
+		<link rel='shortcut icon' type='image/x-icon' href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/img/favicon/favicon-32x32.png?v=2'>
+		<link rel='manifest' href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/img/favicon/site.webmanifest'>".
 		""
 	?>
 </head>
@@ -184,7 +186,7 @@ License: You must have a valid license purchased only from themeforest(the above
 
 		<a href="https://techps.com.br/">
 
-			<img src="./contex20/img/logo.png" alt="" /> </a>
+			<img src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/img/logo.png" alt="" /> </a>
 
 	</div>
 
@@ -265,53 +267,37 @@ License: You must have a valid license purchased only from themeforest(the above
 
 	<!--[if lt IE 9]>
 
-<script src="./contex20/assets/global/plugins/respond.min.js"></script>
-
-<script src="./contex20/assets/global/plugins/excanvas.min.js"></script> 
-
-<![endif]-->
+	<![endif]-->
 
 	<!-- COMECO PLUGINS PRINCIPAL -->
 
-	<script src="./contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
+	<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
 
-	<script src="./contex20/assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
+	<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
 
-	<script src="./contex20/assets/global/plugins/js.cookie.min.js" type="text/javascript"></script>
+	<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/js.cookie.min.js" type="text/javascript"></script>
 
-	<script src="./contex20/assets/global/plugins/bootstrap-hover-dropdown/bootstrap-hover-dropdown.min.js"
+	<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-hover-dropdown/bootstrap-hover-dropdown.min.js"
 		type="text/javascript"></script>
 
-	<script src="./contex20/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js"
+	<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js"
 		type="text/javascript"></script>
 
-	<script src="./contex20/assets/global/plugins/jquery.blockui.min.js" type="text/javascript"></script>
+	<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery.blockui.min.js" type="text/javascript"></script>
 
-	<script src="./contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
-
-	<!-- <script src="./contex20/assets/global/plugins/bootstrap-switch/js/bootstrap-switch.min.js" type="text/javascript"></script> -->
+	<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
 
 	<!-- FIM PLUGINS PRINCIPAL -->
 
 	<!-- COMECO PLUGINS DE PAGINA -->
 
-	<!-- <script src="./contex20/assets/global/plugins/jquery-validation/js/jquery.validate.min.js" type="text/javascript"></script> -->
-
-	<!-- <script src="./contex20/assets/global/plugins/jquery-validation/js/additional-methods.min.js" type="text/javascript"></script> -->
-
-	<!-- <script src="./contex20/assets/global/plugins/select2/js/select2.full.min.js" type="text/javascript"></script> -->
-
 	<!-- FIM PLUGINS DE PAGINA -->
 
 	<!-- COMECO SCRIPTS GLOBAL -->
 
-	<!-- <script src="./contex20/assets/global/scripts/app.min.js" type="text/javascript"></script> -->
-
 	<!-- FIM SCRIPTS GLOBAL -->
 
 	<!-- COMECO PAGE LEVEL SCRIPTS -->
-
-	<!-- <script src="./contex20/assets/pages/scripts/login.min.js" type="text/javascript"></script> -->
 
 	<!-- FIM PAGE LEVEL SCRIPTS -->
 
@@ -320,7 +306,4 @@ License: You must have a valid license purchased only from themeforest(the above
 	<!-- FIM THEME LAYOUT SCRIPTS -->
 
 </body>
-
-
-
 </html>

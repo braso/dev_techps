@@ -168,8 +168,8 @@
 				form > div:nth-child(2) > div:nth-child(6),
 				form > div:nth-child(3) > div,
 				form > div.form-actions,
-				#contex-grid-<?php echo$rand?>_length,
-				#contex-grid-<?php echo$rand?>_info,
+				#contex-grid-<?=$rand?>_length,
+				#contex-grid-<?=$rand?>_info,
 				body > div.scroll-to-top > i
 				{
 					display: none;
@@ -178,21 +178,21 @@
 			}
 		</style>
 				<!-- BEGIN EXAMPLE TABLE PORTLET-->
-				<div class="col-md-<?php echo$col?> col-sm-<?php echo$col?>">
+				<div class="col-md-<?=$col?> col-sm-<?=$col?>">
 					<div class="portlet light ">
 						<?php if($label!=''){?>
 						<div class="portlet-title">
 								<div class="caption">
-									<span class="caption-subject font-dark bold uppercase"><?php echo$label?></span>
+									<span class="caption-subject font-dark bold uppercase"><?=$label?></span>
 								</div>
 								<!-- <div class="tools"> </div> -->
 						</div>
 						<?php }?>
 						<div class="portlet-body">
-							<table id="contex-grid-<?php echo$rand?>" class="table compact table-striped table-bordered table-hover dt-responsive" width="100%" id="sample_2">
+							<table id="contex-grid-<?=$rand?>" class="table compact table-striped table-bordered table-hover dt-responsive" width="100%" id="sample_2">
 								<thead>
 									<tr>
-										<?php echo$cabecalho?>
+										<?=$cabecalho?>
 									</tr>
 								</thead>
 							</table>
@@ -202,21 +202,21 @@
 				<!-- END EXAMPLE TABLE PORTLET-->
 
 				<!-- BEGIN PAGE LEVEL PLUGINS -->
-				<script src="<?php echo$_ENV['URL_BASE']?>/contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
-				<script src="<?php echo$_ENV['URL_BASE']?>/contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
-				<script src="<?php echo$_ENV['URL_BASE']?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
+				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
+				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
+				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
 				<!-- END PAGE LEVEL PLUGINS -->
 
 				<!-- BEGIN PAGE LEVEL SCRIPTS -->
-				<script src="<?php echo$_ENV['URL_BASE']?>/contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
+				<script src="<?=$CONTEX['path']?>/../contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
 				<!-- END PAGE LEVEL SCRIPTS -->
 
 
 		<?php
 
 		include_once "conecta.php";
-		// include_once $_SERVER['DOCUMENT_ROOT'].strtok($_SERVER['SCRIPT_NAME'], '?');
 
+		
 		$totalQuery = mysqli_fetch_all(
 			query($sql),
 			MYSQLI_ASSOC
@@ -232,6 +232,7 @@
 		
 		echo 
 			"<script type=\"text/javascript\" language=\"javascript\" >
+				console.log('".$_ENV["URL_BASE"].$_ENV['APP_PATH']."/contex20/server-side.php"."');
 				$(document).ready(function() {
 					var dataTable = $('#contex-grid-".$rand."').DataTable( {
 						\"processing\": true,
@@ -240,15 +241,15 @@
 						\"sEcho\": true,
 						\"lengthMenu\": [ [10, 25, 50, 100, -1], [10, 25, 50, 100, \"Todos\"] ],
 						\"pageLength\": ".$paginar.",
-						\"order\": [".$order.", \"".$ordenar_sentido."\"],
+            			\"order\": [".$order.", \"".$ordenar_sentido."\"],
 						\"ajax\":{
-							url :\"".$_ENV["URL_BASE"]."/contex20/server-side.php\", // json datasource
-							type: \"post\",  // method  , by default get
-							data: {
-								path: '".$_SERVER['DOCUMENT_ROOT'].$_ENV["APP_PATH"]."',
-								arquivo: '".$_SERVER['DOCUMENT_ROOT'].strtok($_SERVER['SCRIPT_NAME'], '?')."',
-								totalQuery: '".json_encode($totalQuery)."',
-								columns: ["."'".implode("','", $valores)."'"."]
+							\"url\" :\"".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/server-side.php\", // json datasource
+							\"type\": \"post\",  // method  , by default get
+							\"data\": {
+								\"path\": \"".$CONTEX["path"]."\",
+								\"arquivo\": \"".$_SERVER["DOCUMENT_ROOT"].strtok($_SERVER["SCRIPT_NAME"], "?")."\",
+								\"totalQuery\": ".json_encode($totalQuery).",
+								\"columns\": ["."'".implode("','", $valores)."']
 							},
 							error: function (request, error) {
 								console.log(request);
@@ -307,12 +308,12 @@
 			}
 		</style>
 				<!-- BEGIN EXAMPLE TABLE PORTLET-->
-				<div class="col-md-<?php echo $col;?> col-sm-<?php echo $col;?>">
+				<div class="col-md-<?= $col;?> col-sm-<?= $col;?>">
 					<div class="portlet light ">
 						<?php if($label!=''){?>
 							<div class="portlet-title">
 									<div class="caption">
-										<span class="caption-subject font-dark bold uppercase"><?php echo$label?></span>
+										<span class="caption-subject font-dark bold uppercase"><?=$label?></span>
 									</div>
 									<!-- <div class="tools"> </div> -->
 							</div>
@@ -321,7 +322,7 @@
 							<table id="contex-grid-teste" class="table compact table-striped table-bordered table-hover dt-responsive" width="100%" id="sample_2">
 								<thead>
 									<tr>
-										<?php echo$cabecalho?>
+										<?=$cabecalho?>
 									</tr>
 								</thead>
 							</table>
@@ -331,13 +332,13 @@
 				<!-- END EXAMPLE TABLE PORTLET-->
 
 				<!-- BEGIN PAGE LEVEL PLUGINS -->
-				<script src="<?php echo$_ENV['URL_BASE']?>/contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
-				<script src="<?php echo$_ENV['URL_BASE']?>/contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
-				<script src="<?php echo$_ENV['URL_BASE']?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
 				<!-- END PAGE LEVEL PLUGINS -->
 
 				<!-- BEGIN PAGE LEVEL SCRIPTS -->
-				<script src="<?php echo$_ENV['URL_BASE']?>/contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
 				<!-- END PAGE LEVEL SCRIPTS -->
 		<?php
 

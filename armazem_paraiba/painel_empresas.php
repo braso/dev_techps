@@ -1,85 +1,87 @@
 <?php
-// ini_set('display_errors', 1);
-// error_reporting(E_ALL);
-include 'painel_empresas_csv.php';
+	/* Modo debug
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
+	//*/
+	include 'painel_empresas_csv.php';
 
-$mesAtual = date("n");
-$anoAtual = date("Y");
-$motoristas = mysqli_fetch_all(
-	query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_tx_status != 'inativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante');"),
-	MYSQLI_ASSOC
-);
-$totalMotorEmpr = count($motoristas);
+	$mesAtual = date("n");
+	$anoAtual = date("Y");
+	$motoristas = mysqli_fetch_all(
+		query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_tx_status != 'inativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante');"),
+		MYSQLI_ASSOC
+	);
+	$totalMotorEmpr = count($motoristas);
 
-$empresasTotais = [];
-$empresaTotais = [];
-$Emissão = '';
-if (is_dir("./arquivos/paineis/empresas/$_POST[busca_data]") != false) {
-	$file = "./arquivos/paineis/empresas/$_POST[busca_data]/empresas.json";
-	if (file_exists("./arquivos/paineis/empresas/$_POST[busca_data]")) {
-		$conteudo_json = file_get_contents($file);
-		$empresasTotais = json_decode($conteudo_json,true);
+	$empresasTotais = [];
+	$empresaTotais = [];
+	$Emissão = '';
+	if (is_dir("./arquivos/paineis/empresas/$_POST[busca_data]") != false) {
+		$file = "./arquivos/paineis/empresas/$_POST[busca_data]/empresas.json";
+		if (file_exists("./arquivos/paineis/empresas/$_POST[busca_data]")) {
+			$conteudo_json = file_get_contents($file);
+			$empresasTotais = json_decode($conteudo_json,true);
+		}
+
+		// Obtém O total dos saldos de cada empresa
+		$fileEmpresas = "./arquivos/paineis/empresas/$_POST[busca_data]/totalEmpresas.json";
+
+		if (file_exists("./arquivos/paineis/empresas/$_POST[busca_data]")) {
+			$conteudo_json = file_get_contents($fileEmpresas);
+			$empresaTotais = json_decode($conteudo_json,true);
+		}
+		
+		// Obtém o tempo da última modificação do arquivo
+		$timestamp = filemtime($file);
+		$Emissão = date('d/m/Y H:i:s', $timestamp);
+	}else   
+		echo '<script>alert("Não Possui dados desse més")</script>';
+
+
+
+	// Calcula a porcentagem
+	$porcentagenNaEndo = number_format(0,2);
+	$porcentagenEndoPc = number_format(0,2);
+	$porcentagenEndo = number_format(0,2);
+	if ($empresasTotais['EmprTotalNaoEnd'] != 0) {
+		$porcentagenNaEndo = number_format(($empresasTotais['EmprTotalNaoEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
+	}
+	if ($empresasTotais['EmprTotalEndPac'] != 0) {
+		$porcentagenEndoPc = number_format(($empresasTotais['EmprTotalEndPac'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
+	}
+	if ($empresasTotais['EmprTotalEnd'] != 0) {
+		$porcentagenEndo = number_format(($empresasTotais['EmprTotalEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
 	}
 
-	// Obtém O total dos saldos de cada empresa
-	$fileEmpresas = "./arquivos/paineis/empresas/$_POST[busca_data]/totalEmpresas.json";
+	$quantPosi = 0;
+	$quantNega = 0;
+	$quantMeta = 0;
 
-	if (file_exists("./arquivos/paineis/empresas/$_POST[busca_data]")) {
-		$conteudo_json = file_get_contents($fileEmpresas);
-		$empresaTotais = json_decode($conteudo_json,true);
+	foreach ($empresaTotais as $empresaTotal) {
+		$saldoFinal = $empresaTotal['saldoFinal'];
+
+		if ($saldoFinal === '00:00') {
+			$quantMeta++;
+		} elseif ($saldoFinal > '00:00') {
+			$quantPosi++;
+		} elseif ($saldoFinal < '00:00') {
+			$quantNega++;
+		}
 	}
-	
-	// Obtém o tempo da última modificação do arquivo
-    $timestamp = filemtime($file);
-    $Emissão = date('d/m/Y H:i:s', $timestamp);
-}else   
-    echo '<script>alert("Não Possui dados desse més")</script>';
 
+	$porcentagenMeta = number_format(0,2);
+	$porcentagenNega = number_format(0,2);
+	$porcentagenPosi = number_format(0,2);
 
-
-// Calcula a porcentagem
-$porcentagenNaEndo = number_format(0,2);
-$porcentagenEndoPc = number_format(0,2);
-$porcentagenEndo = number_format(0,2);
-if ($empresasTotais['EmprTotalNaoEnd'] != 0) {
-	$porcentagenNaEndo = number_format(($empresasTotais['EmprTotalNaoEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
-}
-if ($empresasTotais['EmprTotalEndPac'] != 0) {
-	$porcentagenEndoPc = number_format(($empresasTotais['EmprTotalEndPac'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
-}
-if ($empresasTotais['EmprTotalEnd'] != 0) {
-	$porcentagenEndo = number_format(($empresasTotais['EmprTotalEnd'] / $empresasTotais['EmprTotalMotorista']) * 100, 2);
-}
-
-$quantPosi = 0;
-$quantNega = 0;
-$quantMeta = 0;
-
-foreach ($empresaTotais as $empresaTotal) {
-    $saldoFinal = $empresaTotal['saldoFinal'];
-
-    if ($saldoFinal === '00:00') {
-        $quantMeta++;
-    } elseif ($saldoFinal > '00:00') {
-        $quantPosi++;
-    } elseif ($saldoFinal < '00:00') {
-        $quantNega++;
-    }
-}
-
-$porcentagenMeta = number_format(0,2);
-$porcentagenNega = number_format(0,2);
-$porcentagenPosi = number_format(0,2);
-
-if ($quantMeta != 0) {
-	$porcentagenMeta  = number_format(($quantMeta / count($empresaTotais)) * 100, 2);
-}
-if ($quantNega != 0) {
-	$porcentagenNega = number_format(($quantNega / count($empresaTotais)) * 100, 2);
-}
-if ($quantPosi != 0) {
-	$porcentagenPosi = number_format(($quantPosi / count($empresaTotais)) * 100, 2);
-}
+	if ($quantMeta != 0) {
+		$porcentagenMeta  = number_format(($quantMeta / count($empresaTotais)) * 100, 2);
+	}
+	if ($quantNega != 0) {
+		$porcentagenNega = number_format(($quantNega / count($empresaTotais)) * 100, 2);
+	}
+	if ($quantPosi != 0) {
+		$porcentagenPosi = number_format(($quantPosi / count($empresaTotais)) * 100, 2);
+	}
 
 ?>
 

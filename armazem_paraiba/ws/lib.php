@@ -47,18 +47,18 @@
     }
 
     function get_data($query,$querydata=[]){
-        $connect = new PDO("mysql:host=".$_ENV["DB_HOST"].";dbname=".$_ENV["DB_NAME"], $_ENV["DB_USER"], $_ENV["DB_PASSWORD"]);
+        $connect = new PDO("mysql:host=".$_ENV["DB_HOST"].";dbname=".$_ENV["DB_NAME"].";charset=utf8mb4", $_ENV["DB_USER"], $_ENV["DB_PASSWORD"]);
         
         $statement = $connect->prepare($query);
 
         $statement->execute($querydata);
-        $data = $statement->fetchAll(PDO::FETCH_ASSOC);  
+        $data = $statement->fetchAll(PDO::FETCH_ASSOC);
         $statement->closeCursor(); 
         return $data;
     }
 
     function insert_data($query,$querdata){
-        $connect = new PDO("mysql:host=".$_ENV["DB_HOST"].";dbname=".$_ENV["DB_NAME"], $_ENV["DB_USER"], $_ENV["DB_PASSWORD"]);
+        $connect = new PDO("mysql:host=".$_ENV["DB_HOST"].";dbname=".$_ENV["DB_NAME"].";charset=utf8mb4", $_ENV["DB_USER"], $_ENV["DB_PASSWORD"]);
         
         $connect->prepare($query)->execute($querdata);
         
@@ -75,17 +75,21 @@
             $macroNomes[$typo["macr_nb_id"]] = $typo["macr_tx_nome"];
         }
 
-        $query =  
+        $limitDate = new DateTime();
+        date_sub($limitDate, date_interval_create_from_date_string("31 days"));
+
+        $query = 
 			"SELECT p.*, m.*
         		FROM ponto p
 				JOIN macroponto m ON m.macr_tx_codigoInterno = p.pont_tx_tipo
-        		join entidade e on p.pont_tx_matricula=e.enti_tx_matricula
-        		join user u on u.user_nb_entidade = e.enti_nb_id
-        		where p.pont_tx_status = 'ativo' 
-					and u.user_nb_id = ?
-        		order by pont_tx_data asc";
+        		JOIN entidade e ON p.pont_tx_matricula=e.enti_tx_matricula
+        		JOIN user u ON u.user_nb_entidade = e.enti_nb_id
+        		WHERE p.pont_tx_status = 'ativo'
+					AND u.user_nb_id = ?
+                    AND p.pont_tx_data > ?
+        		ORDER BY pont_tx_data ASC";
         
-        $data = get_data($query,[$userid]);
+        $data = get_data($query,[$userid, date_format($limitDate,"Y-m-d")]);
 
         $currentJourney = (object)[];
         $currentBreak = [];

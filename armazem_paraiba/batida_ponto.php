@@ -7,7 +7,6 @@
 
 	function cadastra_ponto() {
 		$hoje = date('Y-m-d');
-		$dataHora = $hoje." ".date('H:i').':00';
 		$aMotorista = carregar('entidade', $_POST['id']);
 
 		if(empty($_POST['motivo'])){
@@ -32,9 +31,25 @@
 			MYSQLI_ASSOC
 		)[0];
 
+		$dataHora = $hoje." ".date('H:i').':00';
+
 		if (!empty($ultimoPonto) && intval($ultimoPonto['sameTypeError'])){
 			set_status("ERRO: Último ponto é do mesmo tipo.");
 		}else{
+
+			//Confere se já tem um ponto no mesmo minuto, e adiciona aos segundos como índice de ordenação{
+				if(
+					!empty($ultimoPonto["pont_tx_data"]) && 
+					substr($ultimoPonto["pont_tx_data"], 0, strlen($ultimoPonto["pont_tx_data"])-2) == substr(strval($dataHora), 0, strlen($dataHora)-2)
+				){
+					$indiceSeg = intval(substr($ultimoPonto["pont_tx_data"], -2))+1;
+					if($indiceSeg > 1){
+					}
+					$dataHora = substr($dataHora, 0, strlen($dataHora)-2).sprintf('%02d', $indiceSeg);
+				}
+			//}
+
+
 			$novoPonto = [
 				'pont_nb_user' 			=> $_SESSION['user_nb_id'],
 				'pont_tx_matricula' 	=> $aMotorista['enti_tx_matricula'],
@@ -204,55 +219,55 @@
 			switch(intval($pontosCompleto[$f]['pont_tx_tipo'])){
 				case 1:
 					$pares['jornada'][] = [
-						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i"), "24:00"], '-'): $value->format("H:i"))
+						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i:s"), "24:00"], '-'): $value->format("H:i:s"))
 					];
 				break;
 				case 2:
 					if(count($pares['jornada']) == 0){
-						$pares['jornada'][0] = ['inicio' => null, 'fim' => $value->format("H:i")];
+						$pares['jornada'][0] = ['inicio' => null, 'fim' => $value->format("H:i:s")];
 					}else{
-						$pares['jornada'][count($pares['jornada'])-1]['fim'] = $value->format("H:i");
+						$pares['jornada'][count($pares['jornada'])-1]['fim'] = $value->format("H:i:s");
 					}
 				break;
 				case 3:
 					$pares['refeicao'][] = [
-						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i"), "24:00"], '-'): $value->format("H:i"))
+						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i:s"), "24:00"], '-'): $value->format("H:i:s"))
 					];
 				break;
 				case 4:
-					$pares['refeicao'][count($pares['refeicao'])-1]['fim'] = $value->format("H:i");
+					$pares['refeicao'][count($pares['refeicao'])-1]['fim'] = $value->format("H:i:s");
 				break;
 				case 5:
 					$pares['espera'][] = [
-						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i"), "24:00"], '-'): $value->format("H:i"))
+						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i:s"), "24:00"], '-'): $value->format("H:i:s"))
 					];
 				break;
 				case 6:
-					$pares['espera'][count($pares['espera'])-1]['fim'] = $value->format("H:i");
+					$pares['espera'][count($pares['espera'])-1]['fim'] = $value->format("H:i:s");
 				break;
 				case 7:
 					$pares['descanso'][] = [
-						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i"), "24:00"], '-'): $value->format("H:i"))
+						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i:s"), "24:00"], '-'): $value->format("H:i:s"))
 					];
 				break;
 				case 8:
-					$pares['descanso'][count($pares['descanso'])-1]['fim'] = $value->format("H:i");
+					$pares['descanso'][count($pares['descanso'])-1]['fim'] = $value->format("H:i:s");
 				break;
 				case 9:
 					$pares['repouso'][] = [
-						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i"), "24:00"], '-'): $value->format("H:i"))
+						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i:s"), "24:00"], '-'): $value->format("H:i:s"))
 					];
 				break;
 				case 10:
-					$pares['repouso'][count($pares['repouso'])-1]['fim'] = $value->format("H:i");
+					$pares['repouso'][count($pares['repouso'])-1]['fim'] = $value->format("H:i:s");
 				break;
 				case 11:
 					$pares['repousoEmbarcado'][] = [
-						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i"), "24:00"], '-'): $value->format("H:i"))
+						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i:s"), "24:00"], '-'): $value->format("H:i:s"))
 					];
 				break;
 				case 12:
-					$pares['repousoEmbarcado'][count($pares['repousoEmbarcado'])-1]['fim'] = $value->format("H:i");
+					$pares['repousoEmbarcado'][count($pares['repousoEmbarcado'])-1]['fim'] = $value->format("H:i:s");
 				break;
 			}
 		}
@@ -326,14 +341,16 @@
 
 		$c = [
 			"<div id='clockParent' class='col-sm-5 margin-bottom-5' >
-			<label>Hora</label><br>
-			<p class='text-left' id='clock'>Carregando...</p>
-		</div>",
-			texto('Matrícula', $aMotorista['enti_tx_matricula'], 2), 
-			campo_hidden('CPF', $aMotorista['enti_tx_cpf'], 2),
-			campo_hidden('Motorista', $aMotorista['enti_tx_nome'], 2),
+				<label>Hora</label><br>
+				<p class='text-left' id='clock'>Carregando...</p>
+			</div>",
 			campo('Data', 'data', data($hoje), 2, '', 'readonly=readonly'),
-			campo_hidden('motivo', 'Registro de ponto mobile')
+			"<div class='col-sm-5 margin-bottom-5 margin-top-10	'>"
+			."Matrícula: ".$aMotorista['enti_tx_matricula']."<br><br>"
+			."CPF: ".$aMotorista['enti_tx_cpf']."<br><br>"
+			."Motorista: ".$aMotorista['enti_tx_nome']."<br><br>"
+			."Motivo: "."Registro de ponto mobile"."<br><br>"
+			."</div>"
 		];
 
 		$aEndosso = carrega_array(

@@ -7,7 +7,8 @@
 
 
 	if(empty(session_id())){
-		session_start();
+		$started = session_start();
+		echo "<script>console.log('ind: ".($started? "yes": "no")."');</script>";
 	}
     include_once "load_env.php";
 	$turnos = ['Noite', 'Manhã', 'Tarde', 'Noite'];
@@ -18,6 +19,10 @@
 		cabecalho("Bem-Vindo ao sistema TechPS, ".$_SESSION['user_tx_nome'].". Período da $turnoAtual iniciado às ".$_SESSION['horaEntrada']);
 		rodape();
 		exit;
+	}
+
+	if(empty($_POST['user']) && !empty($_POST['username'])){
+		$_POST['user'] = $_POST['username'];
 	}
 
 	if(!empty($_POST['user']) && !empty($_POST['password'])){//Tentando logar
@@ -73,7 +78,7 @@
 
 		}else{
 			echo 
-				"<form action='".$_ENV['URL_BASE']."/index.php?error=notfound' name='form_voltar' method='post'>
+				"<form action='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/index.php?error=notfound' name='form_voltar' method='post'>
 					<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
 					<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
 					<input type='hidden' name='password' value='".($_POST['password']?? '')."'>

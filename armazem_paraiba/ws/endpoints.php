@@ -3,7 +3,6 @@
     require_once "lib.php";
 
     function make_login(){
-        $key = $_ENV["APP_KEY"];
         $msg = '';
 
         //Check mandatory fields{
@@ -20,7 +19,7 @@
         //}
 
         //Check if user exists{
-            $data = get_data("SELECT * FROM user WHERE user_tx_login = '".$_POST["username"]."'");
+            $data = get_data("SELECT user_tx_senha, user_nb_id FROM user WHERE user_tx_login = '".$_POST["username"]."'");
 
             if(empty($data)){
                 $msg = 'Wrong Username Address';
@@ -37,8 +36,7 @@
 
         $data = $data[0];
 
-        $key = $_ENV["APP_KEY"];
-        $token = makeToken((object)$data,$key);
+        $token = makeToken((object)$data,$_ENV["APP_KEY"]);
         
         echo "{ \"id\": ".$data['user_nb_id'].", \"token\": \"".$token."\"}";
         exit;
@@ -46,8 +44,7 @@
 
     function get_user($userid = null){
 
-        $key = $_ENV["APP_KEY"];
-        $decoded = validate_token($key);
+        $decoded = validate_token($_ENV["APP_KEY"]);
         if(empty($userid)){
             $userid = $decoded->data->user_id;
         }
@@ -85,8 +82,7 @@
     }
 
     function get_journeys($userid = null){
-        $key = $_ENV["APP_KEY"];
-        $decoded = validate_token($key);
+        $decoded = validate_token($_ENV["APP_KEY"]);
         
         if(empty($userid)){
             $userid = $decoded->data->user_id;
@@ -103,18 +99,16 @@
     }
 
     function refresh(){
-        $key = $_ENV["APP_KEY"];
-        $decoded = validate_token($key);
+        $decoded = validate_token($_ENV["APP_KEY"]);
 
-        $token = makeToken($decoded->data, $key);
+        $token = makeToken($decoded->data, $_ENV["APP_KEY"]);
         echo $token;
         
         exit;
     }
 
     function begin_journey(){
-        $key = $_ENV["APP_KEY"];
-        $decoded = validate_token($key);
+        $decoded = validate_token($_ENV["APP_KEY"]);
 		
         if(empty($_POST)){
             $putfp = fopen('php://input', 'r');
@@ -249,43 +243,6 @@
                 }
             //}
         }elseif($_POST["type"] == "journey"){
-            /*
-                $sqltst = 
-                    "SELECT * from ponto
-                        JOIN macroponto ON macr_tx_codigoInterno = pont_tx_tipo
-                        where pont_tx_data < :data_i
-                            and macr_tx_nome like '%".$macroName."%'
-                            and pont_tx_matricula=:mat 
-                        order by pont_tx_data DESC 
-                        limit 1"
-                ;
-                $test = get_data($sqltst,[
-                    "data_i"=>$_POST["startDateTime"],
-                    "tipo_e"=>$macroid,
-                    "mat"=>$entity[0]["enti_tx_matricula"]]
-                )[0];
-
-                $tipoPonto = get_data("SELECT macr_tx_nome FROM macroponto WHERE macr_tx_codigoInterno = '".$test["pont_tx_tipo"]."'");
-                $tipoPonto = explode(" ", $tipoPonto[0]["macr_tx_nome"]);
-                $macroFechamento = get_data("SELECT * FROM macroponto WHERE macr_tx_nome LIKE '%fim%".$tipoPonto[2]."'")[0];
-
-                $sqltst = 
-                    "SELECT * from ponto 
-                        where pont_tx_data < :data_i 
-                        and pont_tx_data > :data_o
-                        and pont_tx_tipo = :tipo_e
-                        and pont_tx_matricula=:mat"
-                ;
-                $test2 = get_data(
-                    $sqltst,
-                    [
-                        "data_i"=>$_POST["startDateTime"],
-                        "data_o"=>$test[0]["pont_tx_data"],
-                        "tipo_e"=>$macroFechamento['macr_tx_codigoInterno'],
-                        "mat"   =>$entity[0]["enti_tx_matricula"]
-                    ]
-                );
-            //*/
 
             $lastJourney = get_data(
                 "SELECT *, (lower(macr_tx_nome) like '%inicio%') as open_journey FROM ponto
@@ -300,7 +257,7 @@
 
             if($lastJourney[0]['open_journey']){
                 header('HTTP/1.0 400 Bad Request');
-                echo "Journey open without closing";
+                echo "Journey open without closing previous one.";
                 exit;
             }
         }else{
@@ -318,196 +275,32 @@
             "pont_tx_tipoOriginal" => $outerid,
             "pont_nb_motivo" => null,
             "pont_tx_descricao" => null,
+            "pont_tx_latitude" => (!empty($_POST["latitude"])? $_POST["latitude"]: null),
+            "pont_tx_longitude" => (!empty($_POST["longitude"])? $_POST["longitude"]: null),
             "pont_tx_status" => 'ativo',
             "pont_tx_justificativa" => null
         ];
 
         $query =
             "INSERT INTO ponto (
-                pont_nb_user, pont_tx_dataCadastro, pont_tx_matricula, pont_tx_data, pont_tx_tipo,pont_tx_tipoOriginal,pont_nb_motivo,pont_tx_descricao,pont_tx_status,pont_tx_justificativa
+                ".implode(", ", array_keys($ponto))."
             ) VALUES (
-                :pont_nb_user, :pont_tx_dataCadastro, :pont_tx_matricula, :pont_tx_data,:pont_tx_tipo,:pont_tx_tipoOriginal,:pont_nb_motivo,:pont_tx_descricao,:pont_tx_status,:pont_tx_justificativa 
+                :".implode(", :", array_keys($ponto))."
             )"
         ;
         $result = insert_data($query,$ponto);
 		
 		if($_POST["type"] == "break"){
-			$result = "Break registered successfully.";
+			$result = "Break begin registered successfully.";
 		}
 		
         echo $result;
         exit;
     }
 
-    function begin_journey_2(){
-
-        $key = $_ENV["APP_KEY"];
-        $decoded = validate_token($key);
-        
-        //Get infos{
-            if(empty($_POST)){
-                $putfp = fopen('php://input', 'r');
-                $putdata = '';
-                while($data = fread($putfp, 1024)){
-                    $putdata .= $data;
-                }
-                fclose($putfp);
-                
-                $requestdata = json_decode($putdata);
-    
-                $_POST = $requestdata;
-            }
-
-            if(!empty($_POST["id"])){
-                $_POST["userID"] = $_POST["id"];
-            }
-        //}
-        
-        //Check mandatory fields{
-            if(empty($_POST["userID"]) || empty($_POST["startDateTime"]) || empty($_POST["type"])){
-                header('HTTP/1.0 400 Bad Request');
-                echo "Bad Request: missing values (userID, startDateTime, type)";
-                exit;
-            }
-            if(in_array($_POST["type"], ['journey', 'break'])){
-                header('HTTP/1.0 400 Bad Request');
-                echo "Bad Request: type value";
-                exit;
-            }
-            if(empty($_POST['breakType'])){
-                $_POST['breakType'] = 'jornada';
-            }
-        //}
-
-        //Check if user has entity{
-            $entity = 
-                "SELECT * from entidade e
-                    join user u on u.user_nb_entidade = e.enti_nb_id
-                    where u.user_nb_id = ".$_POST["userID"]
-            ;
-            $entity = get_data($entity);
-            if(empty($entity)){
-                header('HTTP/1.0 400 Bad Request');
-                echo "User Id does not have entity";
-                exit;
-            }
-            $entity = $entity[0];
-        //}
-
-        //Check if break type (macro) exists{
-            $macro = 
-                "SELECT * from macroponto
-                    where lower(macr_tx_nome) LIKE '"."in%cio%".strtolower($_POST["breakType"])."'";
-            ;
-            $macro = get_data($macro);
-            if(empty($macro)){
-                header('HTTP/1.0 400 Bad Request');
-                echo "Break type not found";
-                exit;
-            }
-            $macro = $macro[0];
-        //}
-
-        
-        $macroid = $macro["macr_tx_codigoInterno"];
-        $outerid = $macro["macr_tx_codigoExterno"];
-        $macroName = explode(" ", $macro["macr_tx_nome"]);
-        unset($macroName[0]);
-        unset($macroName[1]);
-        $macroName = implode(" ", $macroName);
-
-        //Check errors in both cases{
-            if($_POST["type"] == "break"){
-                //Check mandatory fields{
-                    if(empty($_POST["journeyID"]) || empty($_POST["breakType"])){
-                        header('HTTP/1.0 400 Bad Request');
-                        echo "Bad Request missing values (journeyID, breakType)";
-                        exit;
-                    }
-                //}
-
-                //Check if there is an open journey with this id{
-                    $query = 
-                        "SELECT * from ponto
-                            WHERE pont_tx_status = 'ativo'
-                                AND pont_nb_user = ".$_POST['userID']."
-                                AND pont_nb_id = ".$_POST['journeyID']."
-                                AND pont_tx_data < '".$_POST['startDateTime']."'"
-                    ;
-                    $openJourney = get_data($query);
-                    if(empty($openJourney)){
-                        header('HTTP/1.0 400 Bad Request');
-                        echo "Open journey not found";
-                        exit;
-                    }
-                //}
-
-                //Check if there is an open break before trying to insert another opening{
-                    $lastBreakOpening = 
-                        "SELECT *, (macr_tx_nome like '%inicio%') as open_break FROM ponto
-                            JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
-                            WHERE pont_tx_status = 'ativo'
-                                AND pont_tx_data < '".$_POST['startDateTime']."'
-                                AND lower(macr_tx_nome) != 'inicio de jornada'
-                            ORDER BY pont_tx_data DESC
-                            LIMIT 1;"
-                    ;
-
-                    $lastBreakOpening = get_data($lastBreakOpening)[0];
-                    if(empty($lastBreakOpening) || $lastBreakOpening['open_break']){
-                        header('HTTP/1.0 400 Bad Request');
-                        echo "Breakpoint open without closing";
-                        exit;
-                    }
-                //}
-            }elseif($_POST["type"] == "journey"){
-                //Check if already exists an open journey{
-                    $lastJourney = get_data(
-                        "SELECT *, (lower(macr_tx_nome) like '%inicio%') as open_journey FROM ponto
-                            JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
-                            WHERE pont_tx_status = 'ativo'
-                                AND pont_tx_matricula = ".$entity["enti_tx_matricula"]."
-                                AND macr_tx_nome LIKE '%jornada%'
-                                AND pont_tx_data < '".$_POST['startDateTime']."'
-                            ORDER BY pont_tx_data DESC
-                            LIMIT 1;"
-                    );
-        
-                    if(!empty($lastJourney) && $lastJourney[0]['open_journey']){
-                        header('HTTP/1.0 400 Bad Request');
-                        echo "Journey already open";
-                        exit;
-                    }
-                //}
-            }
-        //}
-
-        $ponto = [
-            "pont_nb_user"          => $decoded->data->user_id,
-            "pont_tx_dataCadastro"  => date("Y-m-d H:i:s"),
-            "pont_tx_matricula"     => $entity["enti_tx_matricula"],
-            "pont_tx_data"          => $_POST["startDateTime"],
-            "pont_tx_tipo"          => $macroid,
-            "pont_tx_tipoOriginal"  => $outerid,
-            "pont_tx_status"        => 'ativo'
-        ];
-
-        $query =
-            "INSERT INTO ponto (
-                pont_nb_user,   pont_tx_dataCadastro,  pont_tx_matricula,  pont_tx_data,  pont_tx_tipo,  pont_tx_tipoOriginal,  pont_tx_status
-            ) VALUES (
-                :pont_nb_user, :pont_tx_dataCadastro, :pont_tx_matricula, :pont_tx_data, :pont_tx_tipo, :pont_tx_tipoOriginal, :pont_tx_status
-            )"
-        ;
-        $result = insert_data($query,$ponto);
-        echo $result;
-        exit;
-    }
-
     function finish_journey(){
 
-        $key = $_ENV["APP_KEY"];
-        $decoded = validate_token($key);
+        $decoded = validate_token($_ENV["APP_KEY"]);
         $putfp = fopen('php://input', 'r');
         $putdata = '';
         
@@ -636,13 +429,23 @@
             "pont_tx_tipoOriginal"  => $macroFechamento["macr_tx_codigoExterno"],
             "pont_nb_motivo"        => null,
             "pont_tx_descricao"     => null,
+            "pont_tx_latitude"      => (!empty($requestdata->latitude)? $requestdata->latitude: null),
+            "pont_tx_longitude"     => (!empty($requestdata->longitude)? $requestdata->longitude: null),
             "pont_tx_status"        => 'ativo',
             "pont_tx_justificativa" => null
         ];
 
-        $query = "INSERT INTO ponto (pont_nb_user, pont_tx_dataCadastro, pont_tx_matricula, pont_tx_data, pont_tx_tipo,pont_tx_tipoOriginal,pont_nb_motivo,pont_tx_descricao,pont_tx_status,pont_tx_justificativa) 
-        VALUES (:pont_nb_user, :pont_tx_dataCadastro, :pont_tx_matricula, :pont_tx_data,:pont_tx_tipo,:pont_tx_tipoOriginal,:pont_nb_motivo,:pont_tx_descricao,:pont_tx_status,:pont_tx_justificativa )";
+        $query =
+            "INSERT INTO ponto (
+                ".implode(", ", array_keys($ponto))."
+            ) VALUES (
+                :".implode(", :", array_keys($ponto))."
+            )"
+        ;
         $result = insert_data($query,$ponto);
+        if($requestdata->type == "break"){
+			$result = "Break finish registered successfully.";
+		}
         echo $result;
         exit;
     }

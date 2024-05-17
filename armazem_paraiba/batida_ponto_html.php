@@ -141,19 +141,19 @@
 					echo "jornadaAtual = '00:00';";
 				}
 			?>
-			jornadaEfetiva = operarHorarios(['<?php echo$jornadaEfetiva?>', jornadaAtual], '+');
+			jornadaEfetiva = operarHorarios(['<?=$jornadaEfetiva?>', jornadaAtual], '+');
 			
-			duracao = calculateElapsedTime('<?php echo ($pontos['primeiro']['pont_tx_data']?? '') ?>');
+			duracao = calculateElapsedTime('<?= ($pontos['primeiro']['pont_tx_data']?? '') ?>');
 			msg += "<br><br>Total da jornada efetiva: " + jornadaEfetiva;
 		}
 
 		if (['4'].includes(idMacro)) {
-			duracao = calculateElapsedTime('<?php echo ($pontos['primeiro']['pont_tx_data']?? '') ?>');
+			duracao = calculateElapsedTime('<?= ($pontos['primeiro']['pont_tx_data']?? '') ?>');
 			msg += "<br><br>Duração Esperada: 01:00";
 		}
 
 		if (['4', '6', '8', '10', '12'].includes(idMacro)) {
-			duracao = calculateElapsedTime('<?php echo ($pontos['ultimo']['pont_tx_data']?? '') ?>');
+			duracao = calculateElapsedTime('<?= ($pontos['ultimo']['pont_tx_data']?? '') ?>');
 			msg += "<br><br>Duração: " + duracao;
 		}
 
@@ -177,10 +177,10 @@
 		$('#modal-confirm').on('click', function() {
 			$('#myModal').modal('hide');
 			document.form_submit.acao.value = 'cadastra_ponto';
-			document.form_submit.id.value = <?php echo $_SESSION['user_nb_entidade'] ?>;
-			document.form_submit.data.value = '<?php echo $hoje ?>';
+			document.form_submit.id.value = <?= $_SESSION['user_nb_entidade'] ?>;
+			document.form_submit.data.value = '<?= $hoje ?>';
 			document.form_submit.idMacro.value = idMacro;
-			<?php echo (isset($motivo['moti_nb_id'])? 'document.form_submit.motivo.value = '.$motivo['moti_nb_id'].';': '') ?>;
+			<?= (isset($motivo['moti_nb_id'])? 'document.form_submit.motivo.value = '.$motivo['moti_nb_id'].';': '') ?>;
 			document.form_submit.submit();
 		});
 
