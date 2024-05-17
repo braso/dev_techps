@@ -168,8 +168,8 @@
 				form > div:nth-child(2) > div:nth-child(6),
 				form > div:nth-child(3) > div,
 				form > div.form-actions,
-				#contex-grid-<?php echo$rand?>_length,
-				#contex-grid-<?php echo$rand?>_info,
+				#contex-grid-<?=$rand?>_length,
+				#contex-grid-<?=$rand?>_info,
 				body > div.scroll-to-top > i
 				{
 					display: none;
@@ -178,21 +178,21 @@
 			}
 		</style>
 				<!-- BEGIN EXAMPLE TABLE PORTLET-->
-				<div class="col-md-<?php echo$col?> col-sm-<?php echo$col?>">
+				<div class="col-md-<?=$col?> col-sm-<?=$col?>">
 					<div class="portlet light ">
 						<?php if($label!=''){?>
 						<div class="portlet-title">
 								<div class="caption">
-									<span class="caption-subject font-dark bold uppercase"><?php echo$label?></span>
+									<span class="caption-subject font-dark bold uppercase"><?=$label?></span>
 								</div>
 								<!-- <div class="tools"> </div> -->
 						</div>
 						<?php }?>
 						<div class="portlet-body">
-							<table id="contex-grid-<?php echo$rand?>" class="table compact table-striped table-bordered table-hover dt-responsive" width="100%" id="sample_2">
+							<table id="contex-grid-<?=$rand?>" class="table compact table-striped table-bordered table-hover dt-responsive" width="100%" id="sample_2">
 								<thead>
 									<tr>
-										<?php echo$cabecalho?>
+										<?=$cabecalho?>
 									</tr>
 								</thead>
 							</table>
@@ -308,12 +308,12 @@
 			}
 		</style>
 				<!-- BEGIN EXAMPLE TABLE PORTLET-->
-				<div class="col-md-<?php echo $col;?> col-sm-<?php echo $col;?>">
+				<div class="col-md-<?= $col;?> col-sm-<?= $col;?>">
 					<div class="portlet light ">
 						<?php if($label!=''){?>
 							<div class="portlet-title">
 									<div class="caption">
-										<span class="caption-subject font-dark bold uppercase"><?php echo$label?></span>
+										<span class="caption-subject font-dark bold uppercase"><?=$label?></span>
 									</div>
 									<!-- <div class="tools"> </div> -->
 							</div>
@@ -322,7 +322,7 @@
 							<table id="contex-grid-teste" class="table compact table-striped table-bordered table-hover dt-responsive" width="100%" id="sample_2">
 								<thead>
 									<tr>
-										<?php echo$cabecalho?>
+										<?=$cabecalho?>
 									</tr>
 								</thead>
 							</table>
