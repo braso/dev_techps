@@ -30,7 +30,7 @@
 		$_SESSION['domain'] = $CONTEX['path'];
 	}
 
-	if(!isset($interno)){
+	if(!isset($interno) && !isset($_POST['interno'])){
 		if(
 			(empty($_SESSION['last_activity']) || (time()-(int)$_SESSION['last_activity'] > (int)ini_get('session.gc_maxlifetime')))	//Se a sessão expirou
 			|| (empty($_SESSION['domain']) || $_SESSION['domain'] != $CONTEX['path'])													//ou se o login é relacionado a outro domínio
