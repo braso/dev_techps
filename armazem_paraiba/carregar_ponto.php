@@ -190,7 +190,7 @@
 			$hora = substr($line, 18, 4);
 			$hora = substr($hora, 0, 2).":".substr($hora, 2, 2).":00";
 
-			$codigoExterno = intval(substr($line, -2, 2));
+			$codigoExterno = substr($line, -2, 2);
 
 			$macroPonto = mysqli_fetch_assoc(query("SELECT macr_tx_codigoInterno, macr_tx_codigoExterno FROM macroponto WHERE macr_tx_codigoExterno = '".$codigoExterno."'"));
 
@@ -233,7 +233,6 @@
 		}
 
 		if(!$error){
-		    die("passou");
 			$arquivoPontoId = inserir('arquivoponto', array_keys($newArquivoPonto), array_values($newArquivoPonto));
 			foreach($newPontos as $newPonto){
 				$newPonto['pont_nb_arquivoponto'] = intval($arquivoPontoId[0]);
