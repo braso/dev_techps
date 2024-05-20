@@ -799,7 +799,7 @@
 			$diffJornada = "00:00";
 		}
 
-		if(is_bool(strpos($aParametro['para_tx_ignorarCampos'], 'espera'))){
+		if(is_bool(strpos($aParametro['para_tx_ignorarCampos'], 'refeicao'))){
 			$registros['refeicaoCompleto'] = ordenar_horarios($registros['inicioRefeicao'], $registros['fimRefeicao']);		/* $refeicaoOrdenada */
 		}else{
 			$registros['refeicaoCompleto'] = ordenar_horarios([], []);
