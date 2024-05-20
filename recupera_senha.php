@@ -14,7 +14,6 @@
     include_once 'dominios.php';
 
     use PHPMailer\PHPMailer\PHPMailer;
-    use PHPMailer\PHPMailer\SMTP;
     use PHPMailer\PHPMailer\Exception;
 
 
@@ -27,27 +26,31 @@
     }
 
     if ($_POST['botao'] == 'ENVIAR') {
-        $dominio_url = $_POST['dominio'];
-
-        $dominio = extrairDominio($dominio_url, $dominio_array);
-
+        // $dominio = extrairDominio($_POST['dominio'], $dominio_array);
+        $dominio = str_replace("/index.php", "", $_POST['dominio']);
+        
         $login = $_POST['login'];
+        
         if(!empty($dominio)){
-            include $dominio."/conecta.php";
+            include __DIR__.$dominio."/conecta.php";
             
             global $CONTEX;
-            if (!empty($login))
+            if (!empty($login)){
                 $msg = tokenGenerate($login, $dominio);
-            else 
-                $msg = '
-                <div id="erro" style="background-color: red; padding: 1px; text-align: center;">
-                    <h4 style = "color: #fff !important;">Campo E-mail ou Login não foi preenchido </h4>
-                </div>';
-        } else
-            $msg = '
-            <div id="erro" style="background-color: red; padding: 1px; text-align: center;">
-                <h4 style = "color: #fff !important;">Selecione um dominio</h4>
-            </div>';
+            }else{ 
+                $msg = 
+                    "<div class='alert alert-danger display-block'>
+                        <span> Campo E-mail ou Login não foi preenchido </span>
+                    </div>"
+                ;
+            }
+        }else{
+            $msg = 
+                "<div class='alert alert-danger display-block'>
+                    <span> Selecione um domínio </span>
+                </div>"
+            ;
+        }
 
     }
 
@@ -61,7 +64,7 @@
 
         if (!isset($checkToken) && empty($checkToken)) {
             echo '<script>alert("Link já utilizado ou invalido, por favor solicita novamente a  redefinição de senha.  ")</script>';
-            echo "<meta http-equiv='refresh' content='0; url=https://gestaodejornada.braso.com.br/dev/index2.php' />";
+            echo "<meta http-equiv='refresh' content='0; url=https://gestaodejornada.braso.com.br/dev/index.php' />";
             exit;
         }
         
@@ -70,14 +73,15 @@
                 $userId = mysqli_fetch_assoc($userSql);
                 $_POST['senha'] = md5($_POST['senha']);
                 atualizar('user', ['user_tx_senha', 'user_tx_token'], [$_POST['senha'], '-'], $userId['user_nb_id']);
-                $msg = "
-                <div id='redefinido' style='background-color: #0af731; padding: 1px; text-align: center;'>
-                    <h4 style = 'color: #fff !important;'>Senha Redefinida.</h4>
-                </div>";
+                $msg = 
+                    "<div class='alert display-block'>
+                        <span>Senha Redefinida.</span>
+                    </div>"
+                ;
         } else {
             $msg = '
             <div id="erro" style="background-color: red; padding: 1px; text-align: center;">
-                <h4 style = "color: #fff !important;">Confirmação de senha incorreta</h4>
+                <h4>Confirmação de senha incorreta</h4>
             </div>';
         }
     }
@@ -93,7 +97,7 @@
         } else
             return '
             <div id="erro" style="background-color: red; padding: 1px; text-align: center;">
-                <h4 style = "color: #fff !important;"> As informações não estão corretas  </h4>
+                <h4> As informações não estão corretas  </h4>
             </div>';
     }
 
@@ -135,14 +139,14 @@
 
             if ($mail->send()) {
                 return "
-                <div id='enviado' style='background-color: #0af731; padding: 1px; text-align: center;'>
-                    <h4 style = 'color: #fff !important;'>E-mail enviado para $destinatario</h4>
+                <div id='enviado' style='text-align: center;'>
+                    <h4>E-mail enviado para $destinatario</h4>
                 </div>";
             }
         } catch (Exception $exception) {
             return "
-            <div id='erro' style='background-color: red; padding: 1px; text-align: center;'>
-                <h4 style = 'color: #fff !important;'>Erro ao enviar e-mail: {$mail->ErrorInfo}</h4>
+            <div id='erro' style='text-align: center;'>
+                <h4>Erro ao enviar e-mail: {$mail->ErrorInfo}</h4>
             </div>";
         }
     }
@@ -233,11 +237,8 @@
     <!-- COMECO LOGO -->
 
     <div class="logo">
-
-        <a href="index2.php">
-
-            <img src="../contex20/img/logo.png" alt="" /> </a>
-
+        <a href="index.php">
+        <img src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/img/logo.png" alt="" /> </a>
     </div>
 
     <!-- FIM LOGO -->
@@ -249,29 +250,19 @@
         <!-- COMECO LOGIN FORM -->
 
         <form class="login-form" method="post">
-                <?php
-                if (empty($_GET['token'])) {
-                    ?>
+                <?php if (empty($_GET['token'])) {?>
                     <h3 class="form-title font-green">Redefinir Senha</h3>
                     <p style="text-align:justify">Um link de redefinição de senha será enviado para o seu endereço de e-mail.</p>
-                    <?php
-                    echo $dominiosInput;
-                    ?>
+                    <?=$dominiosInput?>
                     <div class="form-group">
                         <label class="control-label visible-ie8 visible-ie9">Login</label>
                         <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="text" autocomplete="off" placeholder="Login" name="login" />
                     </div>
-                    <?= $msg ?>
-                    <?php if(!empty($msg)){echo '<style>
-                    #enviar{
-                    display:none;
-                    }</style>';} ?>
-                    <div class="form-actions" style="padding: 26px 140px !important">
+                    <?=$msg?>
+                    <div class="form-actions">
                         <input type="submit" id='enviar' class="btn green uppercase" name="botao" value="ENVIAR"></input>
                     </div>
-                    <?php
-                } else {
-                ?>
+                <?php } else {?>
                 <h3 class="form-title font-green">Redifinição de Senha - <?= $arrayDominio[$_GET['dominio']]; ?></h3>
                     <div class="form-group">
                         <label class="control-label visible-ie8 visible-ie9">Senha</label>
@@ -286,9 +277,7 @@
                     <div class="form-actions" style="padding: 26px 110px !important">
                         <input type="submit" class="btn green uppercase" name="botao" value="Redefinir senha"></input>
                     </div>
-                <?php
-                }
-                ?>
+                <?php } ?>
         </form>
 
         <!-- FIM LOGIN FORM -->
