@@ -235,7 +235,7 @@
 			inserir('parametro',array_keys($novoParametro),array_values($novoParametro));
 		}
 
-		index();
+		layout_parametro();
 		exit;
 	}
 
