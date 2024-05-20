@@ -151,6 +151,7 @@
 		?>
 		<div id="tituloRelatorio">
 			<h1>Espelho de Ponto</h1>
+			<img id="logo" style='width: 150px' src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 		</div>
 		<style>
 			#tituloRelatorio{
@@ -271,42 +272,65 @@
 	<style>
 
 		@media print {
-				body {
-					margin: 1cm;
-					margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
-					transform: scale(1.0);
-					transform-origin: top left;
-				}
-			
-				@page {
-					size: A4 landscape;
-					margin: 1cm;
-				}
-				#tituloRelatorio{
-					display: block; /* Torna visível apenas ao imprimir */
-					font-size: 12px;
-					padding-left: 500px;
-				}
-				body > div.scroll-to-top{
-					display: none !important;
-				}
-				body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3){
-					display: none;
-				}
-				.portlet-body.form .table-responsive {
-					overflow-x: visible !important;
-					margin-left: -50px !important;
-				}
-				.portlet.light>.portlet-title {
-					border-bottom: none;
-					margin-bottom: 0px;
-				}
-				.caption{
-					padding-top: 0px;
-					margin-left: -50px !important;
-					padding-bottom: 0px;
-				}
+			body {
+				margin: 1cm;
+				margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
+				transform: scale(1.0);
+				transform-origin: top left;
+			}
+
+			@page {
+				size: A4 landscape;
+				margin: 1cm;
+			}
+
+			#tituloRelatorio {
+				display: block; /* Torna visível apenas ao imprimir */
+				font-size: 12px;
+				padding-left: 555px;
+			}
+
+			#logo {
+				display: flex;
+				position: absolute;
+				top: 5px;
+				right: 50px;
+			}
+
+			body > div.scroll-to-top {
+				display: none !important;
+			}
+
+			body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3) {
+				display: none;
+			}
+
+			div:nth-child(11) > .portlet.light {
+				display: none !important;
+			}
+
+			.portlet.light {
+				padding: 0px 6px !important; /* Reduzindo o padding */
+				font-size: 12px !important; /* Reduzindo o tamanho da fonte */
+				margin-bottom: 0px !important;
+			}
+
+			div.table-responsive > table{
+				margin-bottom: 0px !important;
+			}
+
+			.row div {
+				min-width: fit-content !important;
+			}
+
+			.caption {
+				padding-top: 0px;
+				margin-left: -50px !important;
+				padding-bottom: 0px;
+				/* line-height: 15px !important; */
+			}
 		}
+
 		#saldo {
 			width: 50% !important;
 			margin-top: 9px !important;
