@@ -2,12 +2,6 @@
 
 include "load_env.php";
 
-if(isset($_SERVER['SCRIPT_URI'])){
-	$server_base_link = substr($_SERVER['SCRIPT_URI'], 0, strrpos($_SERVER['SCRIPT_URI'], '/'));
-}else{
-	$server_base_link = substr($_SERVER['SCRIPT_FILENAME'], 0, strrpos($_SERVER['SCRIPT_FILENAME'], '/'));
-}
-
 $dominios = [
     "armazem_paraiba"   => 'Armazem Paraíba',
     "braso"             => 'Braso',
