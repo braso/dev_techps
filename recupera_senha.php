@@ -4,32 +4,34 @@
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
-
-    global $CONTEX;
     $interno = true;
+    global $CONTEX;
 
     include_once "./PHPMailer/src/Exception.php";
     include_once "./PHPMailer/src/PHPMailer.php";
     include_once "./PHPMailer/src/SMTP.php";
+    include_once "load_env.php";
     include_once 'dominios.php';
 
     use PHPMailer\PHPMailer\PHPMailer;
     use PHPMailer\PHPMailer\SMTP;
     use PHPMailer\PHPMailer\Exception;
 
-$_POST['botao'] = '';
-$msg = '';
+// $_POST['botao'] = '';
+// $msg = '';
 
     function extrairDominio($url, $dominio_array) {
         $parsed_url = parse_url($url);
         $path_segments = explode('/', $parsed_url['path']);
-        $dominio = $path_segments[2] ?? '';
+
+        $dominio = $path_segments[1] ?? '';
 
         return in_array($dominio, $dominio_array) ? $dominio : null;
     }
 
     if ($_POST['botao'] == 'ENVIAR') {
         $dominio_url = $_POST['dominio'];
+
 
         $dominio = extrairDominio($dominio_url, $dominio_array);
 
@@ -63,15 +65,14 @@ $msg = '';
 
         if (!isset($checkToken) && empty($checkToken)) {
             echo '<script>alert("Link já utilizado ou invalido, por favor solicita novamente a  redefinição de senha.  ")</script>';
-            echo "<meta http-equiv='refresh' content='0; url=https://gestaodejornada.braso.com.br/dev/index2.php' />";
+            echo "<meta http-equiv='refresh' content='0; $_ENV[URL_BASE].$_ENV[APP_PATH]/index2.php' />";
             exit;
         }
         
         if (!empty($_POST['senha']) && !empty($_POST['senha2']) && $_POST['senha'] == $_POST['senha2']) {
                 $userSql = query("SELECT user_nb_id FROM `user` WHERE user_tx_token = '$_GET[token]'");
                 $userId = mysqli_fetch_assoc($userSql);
-                $_POST['senha'] = md5($_POST['senha']);
-                atualizar('user', ['user_tx_senha', 'user_tx_token'], [$_POST['senha'], '-'], $userId['user_nb_id']);
+                atualizar('user', ['user_tx_senha', 'user_tx_token'], [md5($_POST['senha']), '-'], $userId['user_nb_id']);
                 $msg = "
                 <div id='redefinido' style='background-color: #0af731; padding: 1px; text-align: center;'>
                     <h4 style = 'color: #fff !important;'>Senha Redefinida.</h4>
@@ -87,6 +88,7 @@ $msg = '';
 
     function tokenGenerate($login, $domain) {
         $token = bin2hex(random_bytes(16));
+
         $userSql = query("SELECT user_nb_id, user_tx_nome, user_tx_email FROM `user` WHERE user_tx_login = '$login' AND user_tx_status != 'inativo'");
         $userId = mysqli_fetch_assoc($userSql);
         if(!empty($userId)){
@@ -130,10 +132,10 @@ $msg = '';
             $mail->isHTML(true);
             $mail->Subject = 'Redefinição de Senha';
             $mail->Body = '<b>Redefinição de Senha</b><br>
-            Por favor, <a href="https://gestaodejornada.braso.com.br/' . basename($caminho)  . '/recupera_senha.php?dominio='.$domain.'&token=' . $token .'">clique aqui</a> para resetar sua senha.<br>
+            Por favor, <a href="'. $_ENV["URL_BASE"] .'/'. basename($caminho)  . '/recupera_senha.php?dominio='.$domain.'&token=' . $token .'">clique aqui</a> para resetar sua senha.<br>
             Caso você não tenha solicitado este e-mail de redefinição de senha, por favor, <a href="mailto:suporte@techps.com.br ">entre em contato</a> para que possamos resolver o problema.';
             $mail->Encoding = 'base64';
-            $mail->AltBody = "Link para recupera senha: gestaodejornada.braso.com.br" . basename($caminho)  . "/recupera_senha.php?token=" . $token;
+            $mail->AltBody = "Link para recupera senha: ". $_ENV["URL_BASE"] .'/'. basename($caminho)  . "/recupera_senha.php?token=" . $token;
 
             if ($mail->send()) {
                 return "
@@ -176,7 +178,7 @@ $msg = '';
 
     <!-- COMECO GLOBAL MANDATORY STYLES -->
 
-    <link href="http://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css" />
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css" />
 
     <link href="./contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
 
@@ -238,7 +240,7 @@ $msg = '';
 
         <a href="index.php">
 
-            <img src="../contex20/img/logo.png" alt="" /> </a>
+            <img src="./contex20/img/logo.png" alt="" /> </a>
 
     </div>
 
@@ -268,9 +270,9 @@ $msg = '';
                     #enviar{
                     display:none;
                     }</style>';} ?>
-                    <div class="form-actions" style="padding: 26px 140px !important">
-                        <input type="submit" id='enviar' class="btn green uppercase" name="botao" value="ENVIAR"></input>
-                    </div>
+                      <div class="form-actions" style="padding: 26px 140px !important">
+                        <input type="submit" class="btn green uppercase" name="botao" value="ENVIAR">
+                     </div>
                     <?php
                 } else {
                 ?>
@@ -321,7 +323,7 @@ $msg = '';
         $dominio = $_GET['dominio'];
         include $dominio."/conecta.php";
         global $CONTEX;?>
-            window.location.href = "<?=$_ENV['URL_BASE'].$CONTEX['path']?>/index.php";
+            window.location.href = "<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/index.php";
         }
             
         function esconderErro() {

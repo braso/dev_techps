@@ -310,7 +310,7 @@
 			'situacao','cep','endereco','numero','bairro','cnpj',
 			'nome','fantasia','complemento','referencia','fone1',
 			'fone2','contato','email','inscricaoEstadual','inscricaoMunicipal',
-			'regimeTributario','logo','domain'
+			'regimeTributario','logo','domain','Ehmatriz'
 		];
 		foreach($campos as $campo){
 			$input_values[$campo] = !empty($values[$prefix.$campo])? $values[$prefix.$campo]: '';
@@ -325,10 +325,10 @@
 
 		if(is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador"))){
 			$campo_dominio = campo_domain('Nome do Domínio','nomeDominio',$input_values['domain']?? '',2,'domain');
-			$campo_EhMatriz = combo('É matriz?','matriz',$input_values['matriz']?? '',2,['sim' => 'Sim', 'nao' => 'Não']);
+			$campo_EhMatriz = combo('É matriz?','matriz',$input_values['Ehmatriz']?? '',2,['sim' => 'Sim', 'nao' => 'Não']);
 		}else{
 			$campo_dominio = texto('Nome do Domínio',$input_values['domain']?? '',3);
-			$campo_EhMatriz = texto('É matriz?',$input_values['matriz']?? '',2);
+			$campo_EhMatriz = texto('É matriz?',$input_values['Ehmatriz']?? '',2);
 		}
 
 		if(!empty($input_values['cidade'])){
@@ -338,8 +338,8 @@
 			$cidade = ['cida_tx_nome' => ''];
 		}
 		$campo_cidade = texto('Cidade/UF', $cidade['cida_tx_nome'], 2);
-
-		if (is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) != TRUE && $input_values['matriz'] == 'sim') {
+		
+		if (is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) != TRUE && $input_values['Ehmatriz'] == 'sim') {
 			$c = [
 				texto('CPF/CNPJ*',$input_values['cnpj'],2),
 				texto('Nome*',$input_values['nome'],4),
