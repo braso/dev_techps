@@ -685,7 +685,7 @@
 			function buscarCEP(cep) {
 				var num = cep.replace(/[^0-9]/g, '');
 				if (num.length == '8') {
-					document.getElementById('frame_parametro').src = '<?php echo $path_parts['basename'] ?>?acao=carregarEndereco&cep=' + num;
+					document.getElementById('frame_parametro').src = '<?=$path_parts['basename']?>?acao=carregarEndereco&cep=' + num;
 				}
 			}
 
