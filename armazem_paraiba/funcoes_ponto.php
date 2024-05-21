@@ -1504,15 +1504,14 @@
 						$JorPrev = $diaPonto['jornadaPrevista'];
 					}
 
-					
-					if(count($endossos) > 0){
+
+					if($endossos[0]["endo_tx_matricula"] == $motorista["enti_tx_matricula"]){
 						$he50 = empty($diaPonto['he50']) ? '00:00' : $diaPonto['he50'];
 						$he100 = empty($diaPonto['he100']) ? '00:00' : $diaPonto['he100'];
 						$adicNot = $diaPonto['adicionalNoturno'];
 						$espInd  = $diaPonto['esperaIndenizada'];
 						$saldoAnt = $saldoAnterior;
-						$saldoPer = $totalSaldoPeriodo;
-						$saldoFn = $saldoFinal;
+						$saldoPer = $diaPonto['diffSaldo'];
 					}
 					else {
 						$he50 = '00:00';
@@ -1521,7 +1520,6 @@
 						$espInd  = '00:00';
 						$saldoAnt = '00:00';
 						$saldoPer = '00:00';
-						$saldoFn = '00:00';
 					}
 
 					$totalJorPrev      = somarHorarios([$totalJorPrev,      $JorPrev]);
@@ -1530,7 +1528,7 @@
 					$totalHE100        = somarHorarios([$totalHE100,        $he100]);
 					$totalAdicNot      = somarHorarios([$totalAdicNot,      $adicNot ]);
 					$totalEspInd       = somarHorarios([$totalEspInd,       $espInd]);
-					$totalSaldoPeriodo = somarHorarios([$saldoPer, $diaPonto['diffSaldo']]);
+					$totalSaldoPeriodo = somarHorarios([$totalSaldoPeriodo, $saldoPer]);
 					
 				}
 	
@@ -1541,6 +1539,7 @@
 				}
 	
 				$rows[] = [
+					'IdMotorista' => $motorista['enti_nb_id'],
 					'motorista' => $motorista['enti_tx_nome'],
 					'statusEndosso' => $endossado,
 					'jornadaPrevista' => $totalJorPrev,
@@ -1549,9 +1548,9 @@
 					'he100' => $totalHE100,
 					'adicionalNoturno' => $totalAdicNot,
 					'esperaIndenizada' => $totalEspInd,
-					'saldoAnterior' => $saldoAnterior,
+					'saldoAnterior' => $saldoAnt,
 					'saldoPeriodo' => $totalSaldoPeriodo,
-					'saldoFinal' => $saldoFn
+					'saldoFinal' => $saldoFinal
 				];
 				
 			}
@@ -1605,6 +1604,7 @@
 			];
 
 			$totaisJson = [
+				'empresaId'        => $empresa['empr_nb_id'],
 				'empresaNome'      => $empresa['empr_tx_nome'],
 				'jornadaPrevista'  => $totalJorPrev,
 				'JornadaEfetiva'   => $totalJorEfe,

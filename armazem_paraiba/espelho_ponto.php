@@ -129,12 +129,12 @@
 							window.print();
 						}
 					</script>';
-    if (!empty($_SESSION['user_tx_nivel']) && !is_bool(strpos($_SESSION['user_tx_nivel'], 'Funcionário'))) {
-      $botaoAtualizarPainel = '<div style="width: fit-content;display: inline-block;">
-      <form method="post">
-        <input class="btn default" type="submit" name="AtualizarPainel" value="AtualizarPainel">
-      </form>
-      </div>';
+		if (!empty($_SESSION['user_tx_nivel']) && !is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
+			$botaoAtualizarPainel = '<div style="width: fit-content;display: inline-block;">
+			<form method="post">
+				<input class="btn btn-warning" type="submit" name="AtualizarPainel" value="AtualizarPainel">
+			</form>
+			</div>';
 		}
 		//BOTOES
 		$b = [
@@ -144,6 +144,7 @@
 			$b[] = botao("Cadastrar Abono", 'layout_abono');
 		}
 		$b[] = $botao_imprimir;
+		$b[] = $botaoAtualizarPainel;
 		
 		abre_form('Filtro de Busca');
 		linha_form($c);

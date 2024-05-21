@@ -212,7 +212,7 @@
 			<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact">
 				<thead>
 					<tr class="totais">
-					<th colspan="1">Período: De <?= $dataInicio . ' até ' . $dataFim ?></th>
+					<th colspan="1">Período: De <?= $dataInicioFormatada . ' até ' . $dataFimFormatada ?></th>
 						<th>Status</th>
 						<th></th>
 						<?php
@@ -223,9 +223,9 @@
 									echo "<th colspan='1'> ".(($empresasTotais['EmprTotalHE100'] == '00:00') ? '' : $empresasTotais['EmprTotalHE100'])."</th>";
 									echo "<th colspan='1'> ".(($empresasTotais['EmprTotalAdicNot'] == '00:00') ? '' : $empresasTotais['EmprTotalAdicNot'])."</th>";
 									echo "<th colspan='1'> ".(($empresasTotais['EmprTotalEspInd'] == '00:00') ? '' : $empresasTotais['EmprTotalEspInd'])."</th>";
-									echo "<th colspan='1'> $empresasTotais[EmprTotalSaldoAnter]</th>";
-									echo "<th colspan='1'> $empresasTotais[EmprTotalSaldoPeriodo]</th>";
-									echo "<th colspan='1'> $empresasTotais[EmprTotalSaldoFinal]</th>";
+									echo "<th colspan='1'> ".(($empresasTotais['EmprTotalSaldoAnter'] == '00:00') ? '' : $empresasTotais['EmprTotalSaldoAnter'])."</th>";
+									echo "<th colspan='1'> ".(($empresasTotais['EmprTotalSaldoPeriodo'] == '00:00') ? '' : $empresasTotais['EmprTotalSaldoPeriodo'])."</th>";
+									echo "<th colspan='1'> ".(($empresasTotais['EmprTotalSaldoFinal'] == '00:00') ? '' : $empresasTotais['EmprTotalSaldoFinal'])."</th>";
 								}
 						?>
 					</tr>
@@ -262,9 +262,9 @@
 							echo "<td>" . (($empresaTotal['he100'] == '00:00') ? '' : $empresaTotal['he100']) . "</td>";
 							echo "<td>" . (($empresaTotal['adicionalNoturno'] == '00:00') ? '' : $empresaTotal['adicionalNoturno']) . "</td>";
 							echo "<td>" . (($empresaTotal['esperaIndenizada'] == '00:00') ? '' : $empresaTotal['esperaIndenizada']) . "</td>";
-							echo "<td> $empresaTotal[saldoAnterior]</td>";
-							echo "<td> $empresaTotal[saldoPeriodo]</td>";
-							echo "<td> $empresaTotal[saldoFinal]</td>";
+							echo "<td>" . (($empresaTotal['saldoAnterior'] == '00:00') ? '' : $empresaTotal['saldoAnterior']) . "</td>";
+							echo "<td>" . (($empresaTotal['saldoPeriodo'] == '00:00') ? '' : $empresaTotal['saldoPeriodo']) . "</td>";
+							echo "<td>" . (($empresaTotal['saldoFinal'] == '00:00') ? '' : $empresaTotal['saldoFinal']) . "</td>";
 							echo '</tr>';
 						}
 					}
