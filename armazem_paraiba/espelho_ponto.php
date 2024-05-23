@@ -115,6 +115,8 @@
 		    list($anoFim, $mesFim) = explode('-', $_POST['busca_dataFim']);
 		    if ($anoInicio == $anoFim && $mesInicio == $mesFim) {
 				echo '<script>alert("Atualizando os painéis, aguarde um pouco ")</script>';
+				ob_flush();
+				flush();
 				criar_relatorio("$anoInicio-$mesInicio");
 			}else {
 				echo '<script>alert("Periodo invalido, so pode atulizar um mes por vez")</script>';
