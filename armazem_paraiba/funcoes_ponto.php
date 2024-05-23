@@ -103,7 +103,11 @@
 			inserir('abono', $campos, $valores);
 		}
 
+		$_POST['acao'] = $_POST['acao2'];
+		$_POST['busca_empresa'] = $_POST['empresa'];
 		$_POST['busca_motorista'] = $_POST['motorista'];
+		$_POST['busca_dataInicio'] = $_POST['dataInicio'];
+		$_POST['busca_dataFim'] = $_POST['dataFim'];
 
 		index();
 		exit;
@@ -134,6 +138,10 @@
 		$c[] = campo_hora('Abono*: (hh:mm)','abono', ($_POST['abono']?? ''),3);
 		$c2[] = combo_bd('Motivo*:','motivo', ($_POST['motivo']?? ''),4,'motivo','',' AND moti_tx_tipo = "Abono"');
 		$c2[] = textarea('Justificativa:','descricao', ($_POST['descricao']?? ''),12);
+		$c2[] = "<input type='hidden' name='empresa' value='$_POST[busca_empresa]'>";
+		$c2[] = "<input type='hidden' name='dataInicio' value='$_POST[busca_dataInicio]'>";
+		$c2[] = "<input type='hidden' name='dataFim' value='$_POST[busca_dataFim]'>";
+		$c2[] = "<input type='hidden' name='acao2' value='index'>";
 		
 		//BOTOES
 		$b[] = botao(
@@ -1411,14 +1419,14 @@
 
 		
 		$empresas = mysqli_fetch_all(
-			query("SELECT empr_nb_id, empr_tx_nome FROM `empresa` WHERE empr_tx_status != 'inativo';"),
+			query("SELECT empr_nb_id, empr_tx_nome FROM `empresa` WHERE empr_tx_status != 'inativo' ORDER BY empr_tx_nome ASC;"),
 			MYSQLI_ASSOC
 		);
 		
 		foreach ($empresas as $empresa) {
 	
 			$motoristas = mysqli_fetch_all(
-				query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_nb_empresa = $empresa[empr_nb_id] AND enti_tx_status != 'inativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"),
+				query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_nb_empresa = $empresa[empr_nb_id] AND enti_tx_status != 'inativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') ORDER BY enti_tx_nome ASC"),
 				MYSQLI_ASSOC
 			);
 			
