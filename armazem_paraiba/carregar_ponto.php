@@ -302,10 +302,11 @@
 				LIMIT 400"
 		;
 
-		$cab = ['CÓD', 'ARQUIVO', 'USUÁRIO', 'DATA', 'SITUAÇÃO'];
 
-		$val = ['arqu_nb_id', 'arqu_tx_nome', 'user_tx_nome', 'data(arqu_tx_data,1)', 'ucfirst(arqu_tx_status)'];
-		grid($sql, $cab, $val, '', '', 0, '');
+		$cab = ['CÓD', 'ARQUIVO', 'USUÁRIO', 'DATA', 'SITUAÇÃO','<spam class="glyphicon glyphicon-download" style="font-size: 16px;"></spam>'];
+
+		$val = ['arqu_nb_id', 'arqu_tx_nome', 'user_tx_nome', 'data(arqu_tx_data,1)', 'ucfirst(arqu_tx_status)', "icone_download(arqu_tx_nome)"];
+		grid($sql, $cab, $val, '', 12, 0, '');
 
 		rodape();
 	}
