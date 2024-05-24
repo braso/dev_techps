@@ -6,6 +6,8 @@
 	<input type="hidden" name="data" id="data" />
 	<input type="hidden" name="idMacro" id="idMacro" />
 	<input type="hidden" name="motivo" id="motivo"/>
+	<input type="hidden" name="latitude" id="latitude">
+	<input type="hidden" name="longitude" id="longitude">
 </form>
 
 <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
