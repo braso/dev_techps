@@ -572,8 +572,7 @@
 			'icone_modificar(user_nb_id,modifica_usuario)',
 			'icone_excluir(user_nb_id,exclui_usuario)'
 		];
-
-		// noSQLGrid($cab, $valores);
+		
 		grid($sql, $cab, $val);
 		rodape();
 	}
