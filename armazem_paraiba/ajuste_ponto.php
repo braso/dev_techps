@@ -38,7 +38,7 @@
 							WHERE pont_tx_tipo IN ('".$codigosJornada['inicio']."', '".$codigosJornada['fim']."')
 								AND pont_tx_status != 'inativo'
 								AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-								AND pont_tx_data < '".$_POST['data'].' '.$_POST['hora']."'
+								AND pont_tx_data < STR_TO_DATE('".$_POST['data'].' '.$_POST['hora']."', '%Y-%m-%d %H:%i')
 							ORDER BY pont_tx_data DESC
 							LIMIT 1"
 					),
@@ -57,7 +57,7 @@
 									WHERE pont_tx_tipo IN ('".$codigosJornada['inicio']."', '".$codigosJornada['fim']."')
 										AND pont_tx_status != 'inativo'
 										AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-										AND pont_tx_data >= '".$_POST['data'].' '.$_POST['hora']."'
+										AND pont_tx_data >= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora']."', '%Y-%m-%d %H:%i')
 									ORDER BY pont_tx_data ASC
 									LIMIT 1"
 							)
@@ -88,7 +88,7 @@
 									WHERE pont_tx_status != 'inativo'
 										AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
 										AND pont_tx_data LIKE '".$_POST['data']."%'
-										AND pont_tx_data < '".$_POST['data'].' '.$_POST['hora']."'
+										AND pont_tx_data < STR_TO_DATE('".$_POST['data'].' '.$_POST['hora']."', '%Y-%m-%d %H:%i')
 									ORDER BY pont_tx_data DESC, pont_nb_id DESC
 									LIMIT 1"
 							)
@@ -126,13 +126,19 @@
 			}
 		//}
 
-
-
-		$campos = ['pont_nb_user', 'pont_tx_matricula', 'pont_tx_data', 'pont_tx_tipo', 'pont_tx_tipoOriginal', 'pont_tx_status', 'pont_tx_dataCadastro', 'pont_nb_motivo', 'pont_tx_descricao'];
-		$valores = [$_SESSION['user_nb_id'], $aMotorista['enti_tx_matricula'], "$_POST[data] $_POST[hora]", $aTipo['macr_tx_codigoInterno'], $aTipo['macr_tx_codigoExterno'], 'ativo', date("Y-m-d H:i:s"),$_POST['motivo'],$_POST['descricao']];
 		
+		$newPonto = [
+			'pont_nb_user' => $_SESSION['user_nb_id'],
+			'pont_tx_matricula' => $aMotorista['enti_tx_matricula'],
+			'pont_tx_data' => "$_POST[data] $_POST[hora]",
+			'pont_tx_tipo' => $aTipo['macr_tx_codigoInterno'],
+			'pont_tx_status' => 'ativo',
+			'pont_tx_dataCadastro' => date("Y-m-d H:i:s"),
+			'pont_nb_motivo' => $_POST['motivo'],
+			'pont_tx_descricao' => $_POST['descricao']
+		];
 		
-		inserir('ponto',$campos,$valores);
+		inserir('ponto',array_keys($newPonto),array_values($newPonto));
 		index();
 		exit;
 	}
@@ -187,7 +193,7 @@
 						"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 1) as temJornadaAberta FROM ponto
 							WHERE ".implode(" AND ", $condicoesPontoBasicas)."
 								AND ponto.pont_tx_tipo IN (1,2)
-								AND pont_tx_data <= '".$_POST['data']." 00:00:00'
+								AND pont_tx_data <= STR_TO_DATE('".$_POST['data']." 00:00:00', '%Y-%m-%d %H:%i:%s')
 							ORDER BY pont_tx_data DESC
 							LIMIT 1;"
 					)
@@ -231,7 +237,7 @@
 						"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 1) as deixouJornadaAberta FROM ponto
 							WHERE ".implode(" AND ", $condicoesPontoBasicas)."
 								AND ponto.pont_tx_tipo IN (1,2)
-								AND pont_tx_data <= '".$_POST['data']." 23:59:59'
+								AND pont_tx_data <= STR_TO_DATE('".$_POST['data']." 23:59:59', '%Y-%m-%d %H:%i:%s')
 							ORDER BY pont_tx_data DESC
 							LIMIT 1;"
 					)
@@ -243,7 +249,7 @@
 							"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 2) as fimJornada FROM ponto
 								WHERE ".implode(" AND ", $condicoesPontoBasicas)."
 									AND ponto.pont_tx_tipo IN (1,2)
-									AND pont_tx_data > '".$_POST['data']." 23:59:59'
+									AND pont_tx_data > STR_TO_DATE('".$_POST['data']." 23:59:59', '%Y-%m-%d %H:%i:%s')
 								ORDER BY pont_tx_data ASC
 								LIMIT 1;"
 						)
@@ -264,8 +270,8 @@
 				JOIN user ON ponto.pont_nb_user = user.user_nb_id
 				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
 				WHERE ".implode(" AND ", $condicoesPontoBasicas)."
-					AND ponto.pont_tx_data >= '".$sqlDataInicio."'
-					AND ponto.pont_tx_data <= '".$sqlDataFim."'
+					AND ponto.pont_tx_data >= STR_TO_DATE('".$sqlDataInicio."', '%Y-%m-%d %H:%i:%s')
+					AND ponto.pont_tx_data <= STR_TO_DATE('".$sqlDataFim."', '%Y-%m-%d %H:%i:%s')
 				ORDER BY pont_tx_data ASC"
 		;
 
