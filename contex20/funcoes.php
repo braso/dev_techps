@@ -83,11 +83,18 @@
 			return [];
 		}
 
-		$valores= "'".implode("','",$valores)."'";
-		$campos=implode(',',$campos);
+		for($f = 0; $f < count($campos); $f++){
+			if(is_int(strpos($campos[$f], "_tx_"))){
+				$valores[$f] = "'".strval($valores[$f])."'";
+			}else{
+				$valores[$f] = strval($valores[$f]);
+			}
+		}
+		$valores = implode(",",$valores);
+		$campos  = implode(',',$campos);
 
 		try{
-			query("INSERT INTO $tabela ($campos) VALUES($valores);");
+			query("INSERT INTO $tabela (".$campos.") VALUES(".$valores.");");
 			$sql = query("SELECT LAST_INSERT_ID();");
 			set_status("Registro inserido com sucesso!");
 		}catch (Exception $e){
@@ -590,23 +597,24 @@
 				$extra_campo = '';
 			}
 
-			$queryResult = carrega_array(
+			$queryResult = mysqli_fetch_array(
 				query(
-					"SELECT ".$tab."_tx_nome $extra_campo FROM $tabela 
-						WHERE ".$tab."_nb_id = '$modificador'
+					"SELECT ".$tab."_tx_nome ".$extra_campo." FROM ".$tabela." 
+						WHERE ".$tab."_nb_id = ".$modificador."
 							AND ".$tab."_tx_status = 'ativo'"
 				)
 			);
 
+			
 			if($extra_busca != ''){
-				$queryResult[0] = "[$queryResult[1]] $queryResult[0]";
+				$queryResult[0] = "[".$queryResult[1]."] ".$queryResult[0];
 			}
 			$opt="<option value='$modificador'>$queryResult[0]</option>";
 		}else{
 			$opt = "";
 		}
-
-		$campo=
+		
+		$campo =
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
 				<label>'.$nome.'</label>
 				<select class="'.$variavel.' form-control input-sm" id="'.$variavel.'" style="width:100%" '.$extra.' name="'.$variavel.'">
@@ -615,6 +623,7 @@
 			</div>'
 		;
 
+		
 		$select2URL = 
 			$_ENV['URL_BASE'].$_ENV['APP_PATH']."/contex20/select2.php"
 			."?path=".$CONTEX['path']
@@ -624,7 +633,7 @@
 			."&extra_bd=".urlencode($extra_bd)
 			."&extra_busca=".urlencode($extra_busca);
 
-		echo "	
+		echo "
 			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
 			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/select2/js/select2.min.js'></script>
 			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js' type='text/javascript'></script>
