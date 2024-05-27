@@ -20,7 +20,6 @@
 
 	function carregarParametroPadrao(int $idEmpresa = null){
 		global $a_mod;
-		var_dump($idEmpresa);
 		if(!empty($idEmpresa) && !empty($a_mod['enti_nb_empresa'])){
 			$idEmpresa = intval($a_mod['enti_nb_empresa']);
 		}else{
@@ -92,13 +91,15 @@
 	}
 
 	function cadastrarMotorista(){
-		visualizarCadastro();
-		exit;
 		global $a_mod;
 		
 
 		if(!empty($_POST['matricula'])){
 			$_POST['postMatricula'] = $_POST['matricula'];
+		}
+
+		while($_POST['postMatricula'][0] == "0"){
+			$_POST['postMatricula'] = substr($_POST['postMatricula'], 1);
 		}
 
 
@@ -122,7 +123,7 @@
 			'enti_tx_fone2' 					=> 'fone2',
 			'enti_tx_email' 					=> 'email',
 			'enti_tx_ocupacao' 					=> 'ocupacao',
-			'enti_tx_salario' 					=> 'salario',
+			'enti_nb_salario' 					=> 'salario',
 			'enti_nb_parametro' 				=> 'parametro', 
 			'enti_tx_obs' 						=> 'obs', 
 			'enti_nb_empresa' 					=> 'empresa',
@@ -164,6 +165,10 @@
 		}
 		unset($enti_campos);
 
+		if(isset($novoMotorista["enti_nb_salario"])){
+			$novoMotorista["enti_nb_salario"] = str_replace([".", ","], ["", "."], $novoMotorista["enti_nb_salario"]);
+		}
+
 
 
 		//Conferir campos obrigatórios{
@@ -181,6 +186,9 @@
 
 			if(empty($a_mod['enti_tx_matricula'])){
 				$campos_obrigatorios['postMatricula'] = 'Matrícula';
+			}
+			if($_POST['ocupacao'] == "Ajudante"){
+				unset($campos_obrigatorios["cnhRegistro"], $campos_obrigatorios["cnhValidade"], $campos_obrigatorios["cnhCategoria"], $campos_obrigatorios["cnhCidade"], $campos_obrigatorios["cnhEmissao"]);
 			}
 
 			$error = false;
@@ -241,7 +249,6 @@
 
 		$cpfLimpo = str_replace(array('.', '-', '/'), "", $_POST['cpf']);
 		
-
 		if (empty($_POST['id'])) {//Se está criando um motorista novo
 			$aEmpresa = carregar('empresa', $_POST['empresa']);
 			if ($aEmpresa['empr_nb_parametro'] > 0) {
@@ -261,7 +268,6 @@
 			$novoMotorista['enti_nb_userCadastro'] = $_SESSION['user_nb_id'];
 			$novoMotorista['enti_tx_dataCadastro'] = date("Y-m-d H:i:s");
 			$novoMotorista['enti_tx_ehPadrao'] = $ehPadrao;
-			die(var_dump($novoMotorista));
 			$id = inserir('entidade', array_keys($novoMotorista), array_values($novoMotorista))[0];
 			
 			
@@ -455,20 +461,6 @@
 		}
 		
 		cabecalho("Cadastro de Motorista");
-		// echo 
-		// 	"<style>
-		// 		form .row {
-		// 			display: grid;
-		// 			grid: auto / auto auto auto auto auto;
-		// 			gap: 15px 10px;
-		// 			margin: 0px;
-		// 		}
-
-		// 		.row:before{
-		// 			content: none;
-		// 		}
-		// 	</style>"
-		// ;
 
 		if(!empty($a_mod['enti_tx_nascimento'])){
 			$data1 = new DateTime($a_mod['enti_tx_nascimento']);
@@ -512,8 +504,8 @@
 
 		$camposUsuario = [
 			campo(	  	'E-mail*', 				'email', 			($a_mod['enti_tx_email']?? ''),			2, '', 					'tabindex='.sprintf("%02d", $tabIndex++)),
-			campo(	  	'Telefone 1*', 			'fone1', 			($a_mod['enti_tx_fone1']?? ''),			1, 'MASCARA_CEL', 		'tabindex='.sprintf("%02d", $tabIndex++)),
-			campo(	  	'Telefone 2',  			'fone2', 			($a_mod['enti_tx_fone2']?? ''),			1, 'MASCARA_CEL', 		'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo(	  	'Telefone 1*', 			'fone1', 			($a_mod['enti_tx_fone1']?? ''),			2, 'MASCARA_CEL', 		'tabindex='.sprintf("%02d", $tabIndex++)),
+			campo(	  	'Telefone 2',  			'fone2', 			($a_mod['enti_tx_fone2']?? ''),			2, 'MASCARA_CEL', 		'tabindex='.sprintf("%02d", $tabIndex++)),
 			campo(	  	'Login',				'login', 			($a_mod['user_tx_login']?? ''),			2, '', 					'tabindex='.sprintf("%02d", $tabIndex++)),
 			combo(		'Status', 				'status', 			($a_mod['enti_tx_status']?? ''),		1, $statusOpt, 			'tabindex='.sprintf("%02d", $tabIndex++))
 		];
@@ -560,7 +552,7 @@
 		}
 		$campoSalario = "";
 		if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
-			$campoSalario = campo('Salário*', 'salario', valor(($a_mod['enti_tx_salario']?? '0')), 1, 'MASCARA_VALOR', 'tabindex='.sprintf("%02d", $tabIndex+2));
+			$campoSalario = campo('Salário*', 'salario', valor(($a_mod['enti_nb_salario']?? '0')), 1, 'MASCARA_VALOR', 'tabindex='.sprintf("%02d", $tabIndex+2));
 		}
 
 		$cContratual = [
@@ -569,7 +561,7 @@
 		];
 		$tabIndex++;
 		$cContratual = array_merge($cContratual, [
-			combo('Ocupação*', 'ocupacao', ($a_mod['enti_tx_ocupacao']?? ''), 2, ['Motorista', 'Ajudante'], 'tabindex='.sprintf("%02d", $tabIndex++)),
+			combo('Ocupação*', 'ocupacao', ($a_mod['enti_tx_ocupacao']?? ''), 2, ['Motorista', 'Ajudante'], 'tabindex='.sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
 			campo_data('Dt Admissão*', 'admissao', ($a_mod['enti_tx_admissao']?? ''), 2, 'tabindex='.sprintf("%02d", $tabIndex++)),
 			campo_data('Dt. Desligamento', 'desligamento', ($a_mod['enti_tx_desligamento']?? ''), 2, 'tabindex='.sprintf("%02d", $tabIndex++)),
 			campo('Saldo de Horas', 'setBanco', ($a_mod['enti_tx_banco']?? '00:00'), 1, 'MASCARA_HORAS', 'placeholder="HH:mm" tabindex='.sprintf("%02d", $tabIndex++)),
@@ -662,8 +654,10 @@
 		fieldset('CONVENÇÃO SINDICAL - JORNADA PADRÃO DO MOTORISTA');
 		linha_form($cJornada);
 		echo "<br>";
-		fieldset('CARTEIRA NACIONAL DE HABILITAÇÃO');
-		linha_form($cCNH);
+		echo "<div class='cnh-row'>";
+			fieldset('CARTEIRA NACIONAL DE HABILITAÇÃO');
+			linha_form($cCNH);
+		echo "</div>";
 
 		if (!empty($a_mod['enti_nb_userCadastro'])) {
 			$a_userCadastro = carregar('user', $a_mod['enti_nb_userCadastro']);
@@ -738,12 +732,17 @@
 					percentualHE == parent.document.contex_form.percentualHE.value &&
 					percentualSabadoHE == parent.document.contex_form.percentualSabadoHE.value
 				);
-				console.log(idParametro);
-				console.log(jornadaSemanal);
-				console.log(jornadaSabado);
-				console.log(percentualHE);
-				console.log(percentualSabadoHE);
+				console.log([idParametro, jornadaSemanal, jornadaSabado, percentualHE, percentualSabadoHE]);
 				parent.document.getElementsByName('textoParametroPadrao')[0].getElementsByTagName('p')[0].innerText = (padronizado? 'Sim': 'Não');
+			}
+
+			function checkOcupation(ocupation){
+				console.log(ocupation);
+				if(ocupation == "Ajudante"){
+					document.getElementsByClassName("cnh-row")[0].setAttribute("style", "display:none")
+				}else{
+					document.getElementsByClassName("cnh-row")[0].setAttribute("style", "")
+				}
 			}
 		</script>
 		<?php
@@ -821,7 +820,7 @@
 				campo('Matrícula', 'busca_matricula', ($_POST['busca_matricula']?? ''), 1,'','maxlength="6"'),
 				campo('CPF', 'busca_cpf', ($_POST['busca_cpf']?? ''), 2, 'MASCARA_CPF'),
 				combo_bd('!Empresa', 'busca_empresa', ($_POST['busca_empresa']?? ''), 2, 'empresa', '', $extraEmpresa),
-				combo('Ocupação', 'busca_ocupacao', ($_POST['busca_ocupacao']?? ''), 2, array("", "Motorista", "Ajudante")),
+				combo('Ocupação', 'busca_ocupacao', ($_POST['busca_ocupacao']?? ''), 2, ["", "Motorista", "Ajudante"]),
 				combo('Convenção Padrão', 'busca_padrao', ($_POST['busca_padrao']?? ''), 2, ['' => 'todos', 'sim' => 'Sim', 'nao' => 'Não']),
 				combo_bd('!Parâmetros da Jornada', 'busca_parametro', ($_POST['busca_parametro']?? ''), 6, 'parametro'),
 				combo('Status', 'busca_status', ($_POST['busca_status']?? ''), 2, ['' => 'todos', 'ativo' => 'Ativo', 'inativo' => 'Inativo'])
@@ -835,15 +834,6 @@
 		abre_form('Filtro de Busca');
 		linha_form($camposBusca);
 		fecha_form($botoesBusca);
-
-		$sql = ( 
-			"SELECT * FROM entidade 
-				JOIN empresa ON enti_nb_empresa = empr_nb_id 
-				JOIN parametro ON enti_nb_parametro = para_nb_id 
-				WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante') 
-					$extraEmpresa 
-					$extra"
-		);
 
 		$icone_modificar = 'icone_modificar(enti_nb_id,modificarMotorista)';
 
@@ -864,10 +854,22 @@
 			'OCUPAÇÃO' 				=> 'enti_tx_ocupacao', 
 			'PARÂMETRO DA JORNADA' 	=> 'para_tx_nome', 
 			'CONVENÇÃO PADRÃO' 		=> 'enti_tx_ehPadrao',
-			'STATUS' 				=> 'enti_tx_status', 
+			'STATUS' 				=> 'enti_tx_status'
+		];
+
+		$sql = ( 
+			"SELECT ".implode(", ", array_values($gridFields))." FROM entidade 
+				JOIN empresa ON enti_nb_empresa = empr_nb_id 
+				JOIN parametro ON enti_nb_parametro = para_nb_id 
+				WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante') 
+					$extraEmpresa 
+					$extra"
+		);
+
+		$gridFields = array_merge($gridFields, [
 			'<spam class="glyphicon glyphicon-search"></spam>' => $icone_modificar, 
 			'<spam class="glyphicon glyphicon-remove"></spam>' => $icone_excluir
-		];
+		]);
 		
 		grid($sql, array_keys($gridFields), array_values($gridFields));
 		rodape();
