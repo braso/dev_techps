@@ -18,9 +18,10 @@
 	
 	$columns = $_POST['columns'];
 	
-	// $_POST['totalQuery'] = str_replace(["null", "\t", "\n", "\r"], ["\"\"", "", "", ""], $_POST['totalQuery']);
-	// $totalQuery = json_decode($_POST['totalQuery']);
-	$totalQuery = !empty($_POST['totalQuery'])? $_POST['totalQuery']: [];
+	$totalQuery = !empty($_POST["sql"])? 
+		mysqli_fetch_all(query($_POST["sql"]), MYSQLI_ASSOC): 
+		[]
+	;
 
 	
 	$limit = ['start' => $_REQUEST['start'], 'length' => $_REQUEST['length']];
