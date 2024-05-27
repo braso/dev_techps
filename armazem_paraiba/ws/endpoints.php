@@ -12,7 +12,7 @@
                 $msg = 'Please Enter Password Details';
             }
             if(!empty($msg)){
-                header('HTTP/1.0 400 Bad Request');
+                // header('HTTP/1.0 400 Bad Request');
                 echo $msg;
                 exit;
             }
@@ -28,7 +28,7 @@
                 $msg = 'Wrong Password';
             }
             if(!empty($msg)){
-                header('HTTP/1.0 400 Bad Request');
+                // header('HTTP/1.0 400 Bad Request');
                 echo $msg;
                 exit;
             }
@@ -72,7 +72,7 @@
 
         $data = get_data($query);
         if(empty($data)){
-            header('HTTP/1.0 400 Bad Request');
+            // header('HTTP/1.0 400 Bad Request');
             echo "User does not exists";
             exit;
         }
@@ -90,7 +90,7 @@
 
         $data = get_user_journeys($userid);
         if(empty($data)){
-            header('HTTP/1.0 400 Bad Request');
+            // header('HTTP/1.0 400 Bad Request');
             echo "Could not find journeys";
         }
 
@@ -134,12 +134,12 @@
         
         //Check mandatory fields{
             if(empty($_POST["userID"]) || empty($_POST["startDateTime"])){
-                header('HTTP/1.0 400 Bad Request');
+                // header('HTTP/1.0 400 Bad Request');
                 echo "Bad Request: missing values (userID, startDateTime)";
                 exit;
             }
             if(!in_array($_POST["type"], ["journey", "break"])){
-                header('HTTP/1.0 400 Bad Request');
+                // header('HTTP/1.0 400 Bad Request');
                 echo "Bad Request: type value";
                 exit;
             }
@@ -156,7 +156,7 @@
             ;
             $entity = get_data($entity);
             if(empty($entity)){
-                header('HTTP/1.0 400 Bad Request');
+                // header('HTTP/1.0 400 Bad Request');
                 echo "User Id does not have entity";
                 exit;
             }
@@ -167,11 +167,11 @@
         //Check if break type (macro) exists{
             $macro = 
                 "SELECT * from macroponto
-                    where lower(macr_tx_nome) LIKE '"."in%cio%".strtolower($_POST["breakType"])."'";
+                    WHERE lower(macr_tx_nome) LIKE '"."in%cio%".strtolower($_POST["breakType"])."'";
             ;
             $macro = get_data($macro);
             if(empty($macro)){
-                header('HTTP/1.0 400 Bad Request');
+                // header('HTTP/1.0 400 Bad Request');
                 echo "Break type not found";
                 exit;
             }
@@ -181,7 +181,7 @@
 
         //Check if startDateTime is correctly formatted{
             if(!preg_match("/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/", $_POST['startDateTime'])){
-                header('HTTP/1.0 400 Bad Request');
+                // header('HTTP/1.0 400 Bad Request');
                 echo "Bad date formatting.";
                 exit;
             }
@@ -198,7 +198,7 @@
         if($_POST["type"] == "break"){
             //Check mandatory fields
             if(empty($_POST["journeyID"]) || empty($_POST["breakType"])){
-                header('HTTP/1.0 400 Bad Request');
+                // header('HTTP/1.0 400 Bad Request');
                 echo "Bad Request missing values (journeyID, breakType)";
                 exit;
             }
@@ -210,7 +210,7 @@
                         WHERE pont_tx_status = 'ativo'
                             AND pont_nb_user = ".$_POST['userID']."
                             AND pont_nb_id >= ".$_POST['journeyID']."
-                            AND pont_tx_data < '".$_POST['startDateTime']."'
+                            AND pont_tx_data < STR_TO_DATE('".$_POST['startDateTime']."', '%Y-%m-%d %H:%i')
                             AND lower(macr_tx_nome) LIKE '%jornada%'
                         ORDER BY pont_tx_data DESC
                         LIMIT 1;"
@@ -218,7 +218,7 @@
                 $openJourney = get_data($query);
                 $openJourney = !empty($openJourney)? $openJourney[0]: $openJourney;
                 if(empty($openJourney) || is_numeric(strpos(strtolower($openJourney['macr_tx_nome']), 'fim'))){
-                    header('HTTP/1.0 400 Bad Request');
+                    // header('HTTP/1.0 400 Bad Request');
                     echo "Open journey not found";
                     exit;
                 }
@@ -229,7 +229,7 @@
                     "SELECT *, (macr_tx_nome like '%inicio%') as open_break FROM ponto
                         JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                         WHERE pont_tx_status = 'ativo'
-                            AND pont_tx_data < '".$_POST['startDateTime']."'
+                            AND pont_tx_data <= STR_TO_DATE('".$_POST['startDateTime']."', '%Y-%m-%d %H:%i')
                             AND lower(macr_tx_nome) != 'inicio de jornada'
                         ORDER BY pont_tx_data DESC
                         LIMIT 1;"
@@ -237,7 +237,7 @@
 
                 $lastBreakOpening = get_data($lastBreakOpening)[0];
                 if(empty($lastBreakOpening) || $lastBreakOpening['open_break']){
-                    header('HTTP/1.0 400 Bad Request');
+                    // header('HTTP/1.0 400 Bad Request');
                     echo "Breakpoint open without closing previous one.";
                     exit;
                 }
@@ -250,18 +250,22 @@
                     WHERE pont_tx_status = 'ativo'
                         AND pont_tx_matricula = '".$entity["enti_tx_matricula"]."'
                         AND macr_tx_nome LIKE '%jornada%'
-                        AND pont_tx_data < '".$_POST["startDateTime"]."'
+                        AND pont_tx_data <= STR_TO_DATE('".$_POST["startDateTime"]."', '%Y-%m-%d %H:%i')
                     ORDER BY pont_tx_data DESC
                     LIMIT 1;"
             );
 
             if($lastJourney[0]['open_journey']){
-                header('HTTP/1.0 400 Bad Request');
-                echo "Journey open without closing previous one.";
+                // header('HTTP/1.0 400 Bad Request');
+                if(substr($lastJourney[0]['pont_tx_data'], 0, strlen($lastJourney[0]['pont_tx_data'])-3) == $_POST["startDateTime"]){
+                    echo intval($lastJourney[0]["pont_nb_id"]);
+                }else{
+                    echo "Journey open without closing previous one.";
+                }
                 exit;
             }
         }else{
-            header('HTTP/1.0 400 Bad Request');
+            // header('HTTP/1.0 400 Bad Request');
             echo "Type not found";
             exit;
         }
@@ -272,7 +276,6 @@
             "pont_tx_matricula" => $entity["enti_tx_matricula"],
             "pont_tx_data" => $_POST["startDateTime"],
             "pont_tx_tipo" => $macroid,
-            "pont_tx_tipoOriginal" => $outerid,
             "pont_nb_motivo" => null,
             "pont_tx_descricao" => null,
             "pont_tx_latitude" => (!empty($_POST["latitude"])? $_POST["latitude"]: null),
@@ -288,8 +291,9 @@
                 :".implode(", :", array_keys($ponto))."
             )"
         ;
+
         $result = insert_data($query,$ponto);
-		
+
 		if($_POST["type"] == "break"){
 			$result = "Break begin registered successfully.";
 		}
@@ -318,7 +322,7 @@
 
         //Check mandatory fields{
             if(empty($requestdata->userID) || empty($requestdata->endDateTime) || empty($requestdata->journeyID)){
-                header('HTTP/1.0 400 Bad Request');
+                // header('HTTP/1.0 400 Bad Request');
                 echo "Bad Request missing values (userID, endDateTime, journeyID)";
                 exit;
             }
@@ -334,22 +338,22 @@
             $query = 
                 "SELECT * from ponto
                     where pont_tx_status = 'ativo'
-                        AND pont_tx_data < '".$requestdata->endDateTime."'
+                        AND pont_tx_data <= STR_TO_DATE('".$requestdata->endDateTime."', '%Y-%m-%d %H:%i')
                         AND pont_nb_user = ".$requestdata->userID."
-                        AND pont_nb_id = ".$requestdata->journeyID
+                        AND pont_nb_id = ".($requestdata->journeyID?? -1)
             ;
             $jornadaAberta = get_data($query);
             
             if(empty($jornadaAberta)){
-                header('HTTP/1.0 400 Bad Request');
-                echo "Open journey not found";
+                // header('HTTP/1.0 400 Bad Request');
+                echo "Open journey not found: ".$requestdata->journeyID;
                 exit;
             }
         //}
 
         //Check if endDateTime is correctly formatted{
             if(!preg_match("/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/", $requestdata->endDateTime)){
-                header('HTTP/1.0 400 Bad Request');
+                // header('HTTP/1.0 400 Bad Request');
                 echo "Bad date formatting.";
                 exit;
             }
@@ -369,7 +373,7 @@
                 "SELECT *, (macr_tx_nome like '%inicio%') as open_break FROM ponto
                     JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                     WHERE pont_tx_status = 'ativo'
-                        AND pont_tx_data < '".$requestdata->endDateTime."'
+                        AND pont_tx_data <= STR_TO_DATE('".$requestdata->endDateTime."', '%Y-%m-%d %H:%i')
                         ".(
                             ($requestdata->breakType != "jornada")?
                                 "AND lower(macr_tx_nome) != 'inicio de jornada'": 
@@ -407,7 +411,7 @@
             }
 
             if(!empty($msg)){
-                header('HTTP/1.0 400 Bad Request');
+                // header('HTTP/1.0 400 Bad Request');
                 echo $msg;
                 exit;
             }
@@ -426,7 +430,6 @@
             "pont_tx_matricula"     => $userEntityRegistry["enti_tx_matricula"],
             "pont_tx_data"          => $requestdata->endDateTime,
             "pont_tx_tipo"          => $macroFechamento["macr_tx_codigoInterno"],
-            "pont_tx_tipoOriginal"  => $macroFechamento["macr_tx_codigoExterno"],
             "pont_nb_motivo"        => null,
             "pont_tx_descricao"     => null,
             "pont_tx_latitude"      => (!empty($requestdata->latitude)? $requestdata->latitude: null),
@@ -448,5 +451,9 @@
 		}
         echo $result;
         exit;
+    }
+
+    function delLastRegister(int $driverId){
+        return delete_last($driverId);
     }
 ?>
