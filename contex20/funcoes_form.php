@@ -20,6 +20,7 @@
 					<meta content="width=device-width, initial-scale=1" name="viewport" />
 					<meta content="" name="description" />
 					<meta content="" name="author" />
+					
 					<!-- INICIO GLOBAL MANDATORY STYLES -->
 					<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
 
@@ -71,7 +72,7 @@
 
 					</script>
 
-					<style>
+<style>
 						body{
 							--img_path: url("<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png");
 						}
@@ -187,10 +188,11 @@
 				<!-- FIM HEAD -->
 
 				<!-- <body style="zoom:100%;" class="page-container-bg-solid page-boxed"> -->
-				<body onload="contex_foco()" style="zoom:100%;" class="page-container-bg-solid page-boxed">
-		<?php
-		if($relatorio==0){
-			?>
+				<body onload="contex_foco()" onclick="updateTimer()" style="zoom:100%;" class="page-container-bg-solid page-boxed">
+
+					<?php /*include "loading.html";*/ ?>
+
+		<?php if($relatorio==0){ ?>
 					<!-- INICIO HEADER -->
 					<div class="page-header">
 						<!-- INICIO HEADER TOP -->
@@ -455,11 +457,17 @@
 
 
 				<script>
-					setTimeout(function(){
-						let form = document.getElementById('loginTimeoutForm');
-						form.submit();
-				        window.location.href = '<?= $CONTEX['path']?>/logout.php';
-					}, 15*60*1000);
+					var timeoutId;
+					function updateTimer(){
+						if(timeoutId){
+							clearTimeout(timeoutId);
+						}
+						timeoutId = setTimeout(function(){
+							let form = document.getElementById('loginTimeoutForm');
+							form.submit();
+							window.location.href = '<?= $CONTEX['path']?>/logout.php';
+						}, 15*60*1000);
+					}
 				</script>
 
 			</body>
@@ -509,14 +517,14 @@
 		$idContexForm++;
 	}
 
-	function linha_form($c){
+	function linha_form($fields, $extraClasse = ""){
 		$campo = '';
-		for($i=0;$i<count($c);$i++){
-			$campo.="$c[$i]";
+		foreach($fields as $field){
+			$campo .= strval($field);
 		}
 
 		echo 
-			"<div class='row'>
+			"<div class='row ".$extraClasse."'>
 				".$campo."
 			</div>"
 		;
