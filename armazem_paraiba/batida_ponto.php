@@ -6,6 +6,7 @@
 	include "funcoes_ponto.php";
 
 	function cadastra_ponto() {
+
 		$hoje = date('Y-m-d');
 		$aMotorista = carregar('entidade', $_POST['id']);
 
@@ -55,7 +56,6 @@
 				'pont_tx_matricula' 	=> $aMotorista['enti_tx_matricula'],
 				'pont_tx_data' 			=> strval($dataHora),
 				'pont_tx_tipo' 			=> $aTipo['macr_tx_codigoInterno'],
-				'pont_tx_tipoOriginal' 	=> $aTipo['macr_tx_codigoExterno'],
 				'pont_tx_status' 		=> 'ativo',
 				'pont_tx_dataCadastro' 	=> $hoje.' '.date("H:i:s"),
 				'pont_nb_motivo' 		=> $_POST['motivo'],
@@ -148,19 +148,8 @@
 	}
 
 	function index() {
-
 		$hoje = date('Y-m-d');
 		cabecalho('Registrar Ponto');
-		
-		$motivo = mysqli_fetch_all(
-			query(
-				'SELECT moti_nb_id FROM `motivo` 
-					WHERE moti_tx_status != "inativo" 
-						AND moti_tx_nome = "Registro de ponto mobile" 
-						AND moti_tx_tipo = "Ajuste"'
-			), 
-			MYSQLI_ASSOC
-		);
 		
 		if(empty($_SESSION['user_nb_entidade'])){
 			echo "Motorista não localizado. Tente fazer o login novamente.";
@@ -346,10 +335,10 @@
 			</div>",
 			campo('Data', 'data', data($hoje), 2, '', 'readonly=readonly'),
 			"<div class='col-sm-5 margin-bottom-5 margin-top-10	'>"
-			."Matrícula: ".$aMotorista['enti_tx_matricula']."<br><br>"
-			."CPF: ".$aMotorista['enti_tx_cpf']."<br><br>"
-			."Motorista: ".$aMotorista['enti_tx_nome']."<br><br>"
-			."Motivo: "."Registro de ponto mobile"."<br><br>"
+				."Matrícula: ".$aMotorista['enti_tx_matricula']."<br><br>"
+				."CPF: ".$aMotorista['enti_tx_cpf']."<br><br>"
+				."Motorista: ".$aMotorista['enti_tx_nome']."<br><br>"
+				."Motivo: "."Registro de ponto mobile"."<br><br>"
 			."</div>"
 		];
 
