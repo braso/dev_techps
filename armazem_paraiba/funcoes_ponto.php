@@ -590,18 +590,15 @@
 		return $pares_horarios;
 	}
 
-	function dateTimeToSecs(DateTime $dateTime, $baseDate = ''): int{
+	function dateTimeToSecs(DateTime $dateTime, DateTime $baseDate): int{
 		if(empty($baseDate)){
 			$baseDate = DateTime::createFromFormat('Y-m-d H:i:s', '1970-01-01 00:00:00');
 		}
     	$res = date_diff($baseDate, $dateTime);
-		$monthDays = [31, 28+($res->y%4 == 0? 1: 0), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
         $res = 
         	($res->invert? 1:-1)*
 			(
-				$res->y*24*60*60*30*365+
-				$res->m*24*60*60*$monthDays[$res->m]+
-				$res->d*24*60*60+
+				$res->days*24*60*60+
 				$res->h*60*60+
 				$res->i*60+
 				$res->s
@@ -643,20 +640,20 @@
 			'inicioRefeicao' => [],
 			'fimRefeicao' => [],
 			'fimJornada' => [],
-			'diffRefeicao' => '',
-			'diffEspera' => '',
-			'diffDescanso' => '',
-			'diffRepouso' => '',
-			'diffJornada' => '',
-			'jornadaPrevista' => '',
-			'diffJornadaEfetiva' => '',
-			'maximoDirecaoContinua' => '',
-			'intersticio' => '',
-			'he50' => '',
-			'he100' => '',
-			'adicionalNoturno' => '',
-			'esperaIndenizada' => '',
-			'diffSaldo' => ''
+			'diffRefeicao' => "",
+			'diffEspera' => "",
+			'diffDescanso' => "",
+			'diffRepouso' => "",
+			'diffJornada' => "",
+			'jornadaPrevista' => "",
+			'diffJornadaEfetiva' => "",
+			'maximoDirecaoContinua' => "",
+			'intersticio' => "",
+			'he50' => "",
+			'he100' => "",
+			'adicionalNoturno' => "",
+			'esperaIndenizada' => "",
+			'diffSaldo' => "00:00"
 		];
 		$aMotorista = carrega_array(query(
 			"SELECT * FROM entidade
@@ -767,7 +764,6 @@
 			}
 		}
 
-		// die(var_dump($pontosDia));
 		foreach($pontosDia as $ponto){
 			$tiposRegistrados[] = [date("H:i", strtotime($ponto['pont_tx_data'])), $ponto['pont_tx_tipo']];
 			if(!isset($registros[$tipos[$ponto['pont_tx_tipo']]])){
@@ -789,7 +785,7 @@
 			);
 			$diffJornada = operarHorarios(
 				[
-					$diffJornada->d*24+$diffJornada->h.":".$diffJornada->i,
+					$diffJornada->days*24+$diffJornada->h.":".$diffJornada->i,
 					"00:00"
 				],
 				"+"
@@ -846,7 +842,7 @@
 
 			
 			$totalIntervalo = date_diff(new DateTime($data." 00:00"), $totalIntervalo);
-			$totalIntervalo = operarHorarios([$totalIntervalo->d*24+$totalIntervalo->h.":".$totalIntervalo->i, "00:00"], "+");
+			$totalIntervalo = operarHorarios([$totalIntervalo->days*24+$totalIntervalo->h.":".$totalIntervalo->i, "00:00"], "+");
 
 			$registros[$campo.'Completo']['totalIntervalo'] = $totalIntervalo;
 		}
@@ -856,7 +852,7 @@
 		;
 		
 		$totalIntervalo = date_diff(new DateTime($data." 00:00"), $totalIntervalo);
-		$totalIntervalo = $totalIntervalo->d*24+$totalIntervalo->h.":".$totalIntervalo->i;
+		$totalIntervalo = $totalIntervalo->days*24+$totalIntervalo->h.":".$totalIntervalo->i;
 
 		$registros['repousoPorEspera']['repousoCompleto']['totalIntervalo'] = $totalIntervalo;
 
@@ -947,11 +943,11 @@
 			}
 
 			$jornadaEfetiva = $totalNaoJornada->diff($jornadaIntervalo);
-			$diffJornadaEfetiva = operarHorarios([$jornadaEfetiva->d*24+$jornadaEfetiva->h.":".$jornadaEfetiva->i, "00:00"], "+");
-			if($jornadaEfetiva->d > 0){
+			$diffJornadaEfetiva = operarHorarios([$jornadaEfetiva->days*24+$jornadaEfetiva->h.":".$jornadaEfetiva->i, "00:00"], "+");
+			if($jornadaEfetiva->days > 0){
 				$jornadaEfetiva = (new DateTime($data." 00:00"))->add($jornadaEfetiva);
 			}else{
-				$jornadaEfetiva = DateTime::createFromFormat('H:i', $jornadaEfetiva->format("%H:%I"));
+				$jornadaEfetiva = DateTime::createFromFormat('Y-m-d H:i', $data." ".$jornadaEfetiva->format("%H:%I"));
 			}
 
 			$aRetorno['diffJornadaEfetiva'] = verificaLimiteTempo($diffJornadaEfetiva, $alertaJorEfetiva);
@@ -976,9 +972,7 @@
 					
 					// Obter a diferença total em minutos
 					$minInterDiario = (
-						$intersticioDiario->y*60*24*30*365+
-						$intersticioDiario->m*60*24*30+
-						$intersticioDiario->d*60*24+
+						$intersticioDiario->days*60*24+
 						$intersticioDiario->h*60+
 						$intersticioDiario->i
 					);
@@ -1008,7 +1002,12 @@
 		//}
 
 		//CALCULO SALDO{
-			$saldoDiario = (date_diff(DateTime::createFromFormat('H:i', $jornadaPrevista), $jornadaEfetiva))->format("%r%H:%I");
+			$saldoDiario = date_diff(
+				DateTime::createFromFormat('Y-m-d H:i', $data." ".$jornadaPrevista),
+				$jornadaEfetiva
+			);
+			
+			$saldoDiario = ($saldoDiario->invert? "-": "").sprintf("%02d:%02d", abs($saldoDiario->days*24+$saldoDiario->h), abs($saldoDiario->i));
 			$aRetorno['diffSaldo'] = $saldoDiario;
 		//}
 
@@ -1061,7 +1060,8 @@
 					LIMIT 1;"
 			))[0];
 			$tolerancia = intval($tolerancia);
-			
+		
+
 			$saldo = explode(':', $aRetorno['diffSaldo']);
 			$saldo = intval($saldo[0])*60 + ($saldo[0][0] == '-'? -1: 1)*intval($saldo[1]);
 			
@@ -1091,6 +1091,7 @@
 				}
 			}
 		//}
+
 		
 
 		//MÁXIMA DIREÇÃO CONTÍNUA{
