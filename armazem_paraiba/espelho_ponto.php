@@ -9,20 +9,17 @@
 	function index() {
 
 		global $CONTEX, $totalResumo, $conn;
-	
+
 		cabecalho('Espelho de Ponto');
-		
+
 		$extraBuscaMotorista = '';
 		$extraCampoData = '';
 		if (in_array($_SESSION['user_tx_nivel'], ['Motorista', 'Ajudante'])) {
 			$_POST['busca_motorista'] = $_SESSION['user_nb_entidade'];
 			$_POST['busca_empresa'] = $_SESSION['user_nb_empresa'];
 			$extraBuscaMotorista = " AND enti_nb_id = '".$_SESSION['user_nb_entidade']."'";
-			// $_POST['busca_dataInicio'] = date("Y-m-01");
-			// $_POST['busca_dataFim'] = date("Y-m-d");
-			// $extraCampoData = 'readonly';
 		}
-	
+
 		if (!empty($_POST['busca_motorista'])) {
 			$aMotorista = carregar('entidade', $_POST['busca_motorista']);
 			$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
@@ -32,17 +29,17 @@
 		if (!empty($_SESSION['user_nb_empresa']) && $_SESSION['user_tx_nivel'] != 'Administrador' && $_SESSION['user_tx_nivel'] != 'Super Administrador') {
 			$extraEmpresa = " AND enti_nb_empresa = ".$_SESSION['user_nb_empresa'];
 		}
-	
-		if (!isset($_POST['busca_dataInicio']) || empty($_POST['busca_dataInicio'])){
+
+		if (empty($_POST['busca_dataInicio'])){
 			$_POST['busca_dataInicio'] = date("Y-m-01");
 		}
-		if (!isset($_POST['busca_dataFim']) || empty($_POST['busca_dataFim'])){
+		if (empty($_POST['busca_dataFim'])){
 			$_POST['busca_dataFim'] = date("Y-m-d");
 		}
 
 		//Confere se há algum erro na pesquisa{
 		$searchError = false;
-		
+
 		$opt = "";
 
 		if(isset($_POST['acao']) && $_POST['acao'] == 'index'){
@@ -83,32 +80,46 @@
 
 				$opt = "<option value=\"".$motorista['enti_nb_id']."\">[".$motorista['enti_nb_id']."]".$motorista['enti_tx_nome']."</option>";
 			}
-			
+
 			if($searchError){
 				$errorMsg = substr($errorMsg, 0, -2).'.';
 				set_status('ERRO: '.$errorMsg);
       		}
 		}else{
-			$_POST['busca_empresa'] = $_POST['busca_empresa']?? '';
+			$_POST['busca_empresa']   = $_POST['busca_empresa']?? '';
 			$_POST['busca_motorista'] = $_POST['busca_motorista']?? '';
 		}
 
 		//CAMPOS DE CONSULTA
-		$c = [
-			combo_net('Empresa*:', 'busca_empresa', ($_POST['busca_empresa']?? ''), 3, 'empresa', "onchange=selecionaMotorista(this.value) ", $extraEmpresa),
-			combo_net(
-				'Motorista/Ajudante*:', 
-				'busca_motorista', 
-				(!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ""), 
-				4, 
-				'entidade', 
-				'', 
-				(!empty($_POST['busca_empresa'])?" AND enti_nb_empresa = ".$_POST['busca_empresa']:"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') ".$extraEmpresa." ".$extraBuscaMotorista, 
-				'enti_tx_matricula'
-			),
-			campo_data('Data Início:', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ""), 2, $extraCampoData),
-			campo_data('Data Fim:', 'busca_dataFim', ($_POST['busca_dataFim']?? ''), 2,$extraCampoData)
-		];
+		if($_SESSION['user_tx_nivel'] == "Motorista"){
+			$nomeEmpresa = mysqli_fetch_assoc(query("SELECT empr_tx_nome FROM empresa WHERE empr_nb_id = ".$_SESSION["user_nb_empresa"]));
+			$searchFields = [
+				texto("Empresa*:", $nomeEmpresa["empr_tx_nome"], 3),
+				texto("Motorista/Ajudante*:", $_SESSION["user_tx_nome"], 3),
+			];
+		}else{
+			$searchFields = [
+				combo_net('Empresa*:', 'busca_empresa', ($_POST['busca_empresa']?? ''), 3, 'empresa', "onchange=selecionaMotorista(this.value) ", $extraEmpresa),
+				combo_net(
+					'Motorista/Ajudante*:',
+					'busca_motorista',
+					(!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ""),
+					4, 
+					'entidade', 
+					'', 
+					(!empty($_POST['busca_empresa'])?" AND enti_nb_empresa = ".$_POST['busca_empresa']:"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') ".$extraEmpresa." ".$extraBuscaMotorista, 
+					'enti_tx_matricula'
+				)
+			];
+		}
+
+		$searchFields = array_merge(
+			$searchFields,
+			[
+				campo_data('Data Início:', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ""), 2, $extraCampoData),
+				campo_data('Data Fim:', 'busca_dataFim', ($_POST['busca_dataFim']?? ''), 2,$extraCampoData)
+			]
+		);
 
 		if (isset($_POST['AtualizarPainel']) && !empty($_POST['AtualizarPainel'])) {
 		    list($anoInicio, $mesInicio) = explode('-', $_POST['busca_dataInicio']);
@@ -120,7 +131,7 @@
 				echo '<script>alert("Periodo invalido, so pode atulizar um mes por vez")</script>';
 			}
         }
-		
+
 		$botao_imprimir =
 			'<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
 					<script>
@@ -129,12 +140,13 @@
 							window.print();
 						}
 					</script>';
-    if (!empty($_SESSION['user_tx_nivel']) && !is_bool(strpos($_SESSION['user_tx_nivel'], 'Funcionário'))) {
-      $botaoAtualizarPainel = '<div style="width: fit-content;display: inline-block;">
-      <form method="post">
-        <input class="btn default" type="submit" name="AtualizarPainel" value="AtualizarPainel">
-      </form>
-      </div>';
+		if (!empty($_SESSION['user_tx_nivel']) && !is_bool(strpos($_SESSION['user_tx_nivel'], 'Funcionário'))) {
+			$botaoAtualizarPainel = 
+				'<div style="width: fit-content;display: inline-block;">
+					<form method="post">
+						<input class="btn default" type="submit" name="AtualizarPainel" value="AtualizarPainel">
+					</form>
+				</div>';
 		}
 		//BOTOES
 		$b = [
@@ -146,25 +158,25 @@
 		$b[] = $botao_imprimir;
 		
 		abre_form('Filtro de Busca');
-		linha_form($c);
+		linha_form($searchFields);
 		fecha_form($b);
-		?>
-		<div id="tituloRelatorio">
-			<h1>Espelho de Ponto</h1>
-		</div>
-		<style>
-			#tituloRelatorio{
-			    display: none;
-    		}
-		</style>
-		<?php
-		
+		echo 
+			"<div id='tituloRelatorio'>
+				<h1>Espelho de Ponto</h1>
+			</div>
+			<style>
+				#tituloRelatorio{
+					display: none;
+				}
+			</style>"
+		;
+
 		$cab = [
 			"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "HE 50%", "HE&nbsp;100%",
 			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 		];
-		
+
 		// Converte as datas para objetos DateTime
 		$startDate = !empty($_POST['busca_dataInicio'])? new DateTime($_POST['busca_dataInicio']): '';
 		$endDate   = !empty($_POST['busca_dataFim'])? new DateTime($_POST['busca_dataFim']): '';
@@ -255,88 +267,87 @@
 				  </div>'
 			;
 				 
-			$periodoPesquisa = 'De '.date("d/m/Y", strtotime($_POST['busca_dataInicio'])).' até '.date("d/m/Y", strtotime($_POST['busca_dataFim']));
+			$periodoPesquisa = "De ".date("d/m/Y", strtotime($_POST["busca_dataInicio"]))." até ".date("d/m/Y", strtotime($_POST["busca_dataFim"]));
       
 			abre_form(
 				"<div>"
 					.$aEmpresa["empr_tx_nome"]."<br>"
 					."[".$aMotorista["enti_tx_matricula"]."] ".$aMotorista["enti_tx_nome"]."<br>"
-					."$parametroPadrao<br><br>"
-					."$periodoPesquisa<br>"
+					.$parametroPadrao."<br><br>"
+					.$periodoPesquisa."<br>"
 				."</div>"
-				."$saldosMotorista"
+				.$saldosMotorista
 			);
-	?>
+			echo 
+				"<style>
+					@media print {
+							body {
+								margin: 1cm;
+								margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
+								transform: scale(1.0);
+								transform-origin: top left;
+							}
+						
+							@page {
+								size: A4 landscape;
+								margin: 1cm;
+							}
+							#tituloRelatorio{
+								display: block; /* Torna visível apenas ao imprimir */
+								font-size: 12px;
+								padding-left: 500px;
+							}
+							body > div.scroll-to-top{
+								display: none !important;
+							}
+							body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3){
+								display: none;
+							}
+							.portlet-body.form .table-responsive {
+								overflow-x: visible !important;
+								margin-left: -50px !important;
+							}
+							.portlet.light>.portlet-title {
+								border-bottom: none;
+								margin-bottom: 0px;
+							}
+							.caption{
+								padding-top: 0px;
+								margin-left: -50px !important;
+								padding-bottom: 0px;
+							}
+					}
+					#saldo {
+						width: 50% !important;
+						margin-top: 9px !important;
+						text-align: center;
+					}
+		
+					table thead tr th:nth-child(3),
+					table thead tr th:nth-child(7),
+					table thead tr th:nth-child(11),
+					table td:nth-child(3),
+					table td:nth-child(7),
+					table td:nth-child(11) {
+						border-right: 3px solid #d8e4ef !important;
+					}
+					.th-align {
+						text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
+						vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
+						
+					}
+		
+					.table-responsive {
+						overflow: overlay;
+					}
+		
+					.row div {
+						min-width: auto;
+					}
+				</style>"
+			;
 
-	<style>
-
-		@media print {
-				body {
-					margin: 1cm;
-					margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
-					transform: scale(1.0);
-					transform-origin: top left;
-				}
-			
-				@page {
-					size: A4 landscape;
-					margin: 1cm;
-				}
-				#tituloRelatorio{
-					display: block; /* Torna visível apenas ao imprimir */
-					font-size: 12px;
-					padding-left: 500px;
-				}
-				body > div.scroll-to-top{
-					display: none !important;
-				}
-				body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3){
-					display: none;
-				}
-				.portlet-body.form .table-responsive {
-					overflow-x: visible !important;
-					margin-left: -50px !important;
-				}
-				.portlet.light>.portlet-title {
-					border-bottom: none;
-					margin-bottom: 0px;
-				}
-				.caption{
-					padding-top: 0px;
-					margin-left: -50px !important;
-					padding-bottom: 0px;
-				}
-		}
-		#saldo {
-			width: 50% !important;
-			margin-top: 9px !important;
-			text-align: center;
-		}
-
-		table thead tr th:nth-child(3),
-		table thead tr th:nth-child(7),
-		table thead tr th:nth-child(11),
-		table td:nth-child(3),
-		table td:nth-child(7),
-		table td:nth-child(11) {
-			border-right: 3px solid #d8e4ef !important;
-		}
-		.th-align {
-			text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
-			vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
-			
-		}
-
-		.table-responsive {
-			overflow: overlay;
-		}
-
-		.row div {
-			min-width: auto;
-		}
-	</style>
-		<?php
-			$aDia[] = array_values(array_merge(array('', '', '', '', '', '', '<b>TOTAL</b>'), $totalResumo));
+			$aDia[] = array_values(array_merge(['', '', '', '', '', '', '<b>TOTAL</b>'], $totalResumo));
 			
 			grid2($cab, $aDia, "Jornada Semanal (Horas): $aMotorista[enti_tx_jornadaSemanal]");
 			fecha_form();
@@ -408,6 +419,6 @@
 				}
 			}
 		</script>
-	<?php
+<?php
 	}
 ?>
