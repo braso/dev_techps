@@ -122,9 +122,15 @@
                             overflow-x: visible !important;
                             margin-left: -50px !important;
                         }
-                        .portlet.light>.portlet-title {
+                        #pdf2htmldiv > div{
+                            padding: 88px 20px 15px !important;
+                        }
+                        /* .portlet.light>.portlet-title {
                             border-bottom: none;
                             margin-bottom: 0px;
+                        } */
+                        body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(7){
+                            display: none !important;
                         }
                         .caption{
                             padding-top: 0px;
@@ -133,7 +139,7 @@
                         }
                         .emissao{
                             text-align: left;
-                            padding-left: 590px !important;
+                            padding-left: 650px !important;
                             position: absolute;
                         }
                         .porcentagenEndo{

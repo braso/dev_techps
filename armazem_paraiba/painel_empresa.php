@@ -143,6 +143,15 @@
 	#tituloRelatorio{
 		display: none;
     }
+	th {
+        cursor: pointer;
+    }
+    th.sort-asc::after {
+        content: " \2191";
+    }
+    th.sort-desc::after {
+        content: " \2193";
+    }
 </style>
 <div class="col-md-12 col-sm-12">
 	<div class="portlet light ">
@@ -205,7 +214,7 @@
 		</div>
 			<br>
 			<div class="portlet-body form">
-			<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact">
+			<table id='tabela-motorista' class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact">
 				<thead>
 					<tr class="totais">
 						<th colspan="1">Período: De <?= $dataInicioFormatada . ' até ' . $dataFimFormatada ?></th>
@@ -224,40 +233,22 @@
 								}
 						?>
 					</tr>
-					<tr class="titulos">
-						<th>Unidade - <?= $MotoristasTotais['empresaNome']; ?></th>
-                        <th>Status Endosso</th>
-						<th>Jornada Prevista</th>
-						<th>Jornada Efetiva</th>
-						<th>HE 50%</th>
-						<th>HE 100%</th>
-						<th>Adicional Noturno</th>
-						<th>ESPERA INDENIZADA</th>
-						<th>Saldo Anterior</th>
-						<th>Saldo Periodo</th>
-						<th>Saldo Final</th>
+					<tr id="ti" class="titulos">
+						<th data-column="motorista" data-order="asc">Unidade - <?= $MotoristasTotais['empresaNome']; ?></th>
+                        <th data-column="statusEndosso" data-order="asc">Status Endosso</th>
+						<th data-column="jornadaPrevista" data-order="asc">Jornada Prevista</th>
+						<th data-column="jornadaEfetiva" data-order="asc">Jornada Efetiva</th>
+						<th data-column="he50" data-order="asc">HE 50%</th>
+						<th data-column="he100" data-order="asc">HE 100%</th>
+						<th data-column="adicionalNoturno" data-order="asc">Adicional Noturno</th>
+						<th data-column="esperaIndenizada" data-order="asc">ESPERA INDENIZADA</th>
+						<th data-column="saldoAnterior" data-order="asc">Saldo Anterior</th>
+						<th data-column="saldoPeriodo" data-order="asc">Saldo Periodo</th>
+						<th data-column="saldoFinal" data-order="asc">Saldo Final</th>
 					</tr>
 				</thead>
 				<tbody>
-				<?php
-					if ($MotoristaTotais != null) {
-						foreach ($MotoristaTotais as $MotoristaTotal) {
-							echo '<tr class="conteudo">';
-							echo "<td> $MotoristaTotal[motorista]</td>";
-							echo "<td> $MotoristaTotal[statusEndosso]</td>";
-							echo "<td> $MotoristaTotal[jornadaPrevista]</td>";
-							echo "<td> $MotoristaTotal[jornadaEfetiva]</td>";
-							echo "<td>" . (($MotoristaTotal['he50'] == '00:00') ? '' : $MotoristaTotal['he50']) . "</td>";
-							echo "<td>" . (($MotoristaTotal['he100'] == '00:00') ? '' : $MotoristaTotal['he100']) . "</td>";
-							echo "<td>" . (($MotoristaTotal['adicionalNoturno'] == '00:00') ? '' : $MotoristaTotal['adicionalNoturno']) . "</td>";
-							echo "<td>" . (($MotoristaTotal['esperaIndenizada'] == '00:00') ? '' : $MotoristaTotal['esperaIndenizada']) . "</td>";
-							echo "<td>" . (($MotoristaTotal['saldoAnterior'] == '00:00') ? '' : $MotoristaTotal['saldoAnterior']) . "</td>";
-							echo "<td>" . (($MotoristaTotal['saldoPeriodo'] == '00:00') ? '' : $MotoristaTotal['saldoPeriodo']) . "</td>";
-							echo "<td>" . (($MotoristaTotal['saldoFinal'] == '00:00') ? '' : $MotoristaTotal['saldoFinal']) . "</td>";
-							echo '</tr>';
-						}
-					}
-				?>
+						<!-- Conteúdo do json motoristas será inserido aqui -->
 				</tbody>
 			</table>
 			</div>
@@ -266,6 +257,89 @@
 	</div>
 </div>
 <script>
+
+	$(document).ready(function (){
+		var tabela = $('#tabela-motorista tbody');
+
+		function carregarDado() {
+			$.ajax({
+				url: 'arquivos/paineis/<?= $idEmpresa?>/<?=$_POST['busca_data']?>/motoristas.json',
+				dataType: 'json',
+				success: function(data){
+					tabela.empty();
+					$.each(data, function(index, item){
+						// console.log("Item " + index + ":");
+						// for (var chave in item) {
+						// 	if (item.hasOwnProperty(chave)) {
+						// 		console.log(chave + ": " + item[chave]);
+						// 	}
+						// }
+						
+						var he50 = (item.he50 === null || item.he50 === '00:00') ? '' : item.he50;
+						var he100 = (item.he100 === null || item.he100 === '00:00') ? '' : item.he100;
+						var adicionalNoturno = (item.adicionalNoturno === null || item.adicionalNoturno === '00:00') ? '' : item.adicionalNoturno;
+						var esperaIndenizada = (item.esperaIndenizada === null || item.esperaIndenizada === '00:00') ? '' : item.esperaIndenizada;
+						var saldoAnterior = (item.saldoAnterior === null || item.saldoAnterior === '00:00') ? '' : item.saldoAnterior;
+						var saldoPeriodo = (item.saldoPeriodo === null || item.saldoPeriodo === '00:00') ? '' : item.saldoPeriodo;
+						var saldoFinal = (item.saldoFinal === null || item.saldoFinal === '00:00') ? '' : item.saldoFinal;
+
+						var linha = '<tr>' +
+									'<td>' + item.motorista 		+ '</td>' +
+									'<td>' + item.statusEndosso		+ '</td>' +
+									'<td>' + item.jornadaPrevista	+ '</td>' +
+									'<td>' + item.jornadaEfetiva 	+ '</td>' +
+									'<td>' + he50					+ '</td>' +
+									'<td>' + he100					+ '</td>' +
+									'<td>' + adicionalNoturno		+ '</td>' +
+									'<td>' + esperaIndenizada		+ '</td>' +
+									'<td>' + saldoAnterior			+ '</td>' +
+									'<td>' + saldoPeriodo			+ '</td>' +
+									'<td>' + saldoFinal				+ '</td>' +
+									'</tr>';
+						tabela.append(linha);
+					});
+				},
+				error: function() {
+					console.log('Erro ao carregar os dados.');
+				}
+			});
+		}
+		// Função para ordenar a tabela
+		function ordenarTabela(coluna, ordem) {
+			var linhas = tabela.find('tr').get();
+			linhas.sort(function(a, b) {
+				var valorA = $(a).children('td').eq(coluna).text().toUpperCase();
+				var valorB = $(b).children('td').eq(coluna).text().toUpperCase();
+
+				if (valorA < valorB) {
+					return ordem === 'asc' ? -1 : 1;
+				}
+				if (valorA > valorB) {
+					return ordem === 'asc' ? 1 : -1;
+				}
+				return 0;
+			});
+			$.each(linhas, function(index, row) {
+				tabela.append(row);
+			});
+		}
+
+		// Evento de clique para ordenar a tabela ao clicar no cabeçalho
+		$('#ti th').click(function(){
+			var coluna = $(this).index();
+			var ordem = $(this).data('order');
+			$('#tabela-motorista th').data('order', 'desc'); // Redefinir ordem de todas as colunas
+			$(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
+			ordenarTabela(coluna, $(this).data('order'));
+
+			// Ajustar classes para setas de ordenação
+			$('#ti th').removeClass('sort-asc sort-desc');
+			$(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
+		});
+
+		carregarDado();
+	});
+
     function downloadCSV() {
         // Caminho do arquivo CSV no servidor
         var filePath = '<?="./arquivos/paineis/Painel_$MotoristasTotais[empresaNome].csv" ?>' // Substitua pelo caminho do seu arquivo

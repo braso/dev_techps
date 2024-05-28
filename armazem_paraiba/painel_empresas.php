@@ -132,6 +132,16 @@
 	tr.titulos > th:nth-child(12){
 	    text-align: justify;
 	}
+
+	th {
+        cursor: pointer;
+    }
+    th.sort-asc::after {
+        content: " \2191";
+    }
+    th.sort-desc::after {
+        content: " \2193";
+    }
 	
 </style>
 
@@ -139,7 +149,6 @@
     <img style='width: 150px' src="<?=  $aEmpresa[0]['empr_tx_logo'] ?>" alt="Logo Empresa Esquerda">
 	<h3>Relatorio Geral de Espelho de Ponto</h3>
 	 <div class="right-logo">
-        <p></p>
         <img style='width: 150px' src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
     </div>
 </div>
@@ -209,7 +218,7 @@
 			</div>
 			<br>
 			<div class="portlet-body form">
-			<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact">
+			<table id="tabela-empresas" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact">
 				<thead>
 					<tr class="totais">
 					<th colspan="1">Período: De <?= $dataInicioFormatada . ' até ' . $dataFimFormatada ?></th>
@@ -229,55 +238,120 @@
 								}
 						?>
 					</tr>
-					<tr class="titulos">
-						<th>Todos os CNPJ</th>
-						<th>End %</th>
-						<th>Quant. Motoristas</th>
-						<th>Jornada Prevista</th>
-						<th>Jornada Efetiva</th>
-						<th>HE 50%</th>
-						<th>HE 100%</th>
-						<th>Adicional Noturno</th>
-						<th>ESPERA INDENIZADA</th>
-						<th>Saldo Anterior</th>
-						<th>Saldo Periodo</th>
-						<th>Saldo Final</th>
+					<tr id='titulos' class="titulos">
+						<th data-column="empresaNome" data-order="asc">Todos os CNPJ</th>
+						<th data-column="porcentagem" data-order="asc">End %</th>
+						<th data-column="totalMotorista" data-order="asc">Quant. Motoristas</th>
+						<th data-column="jornadaPrevista" data-order="asc">Jornada Prevista</th>
+						<th data-column="JornadaEfetiva	" data-order="asc">Jornada Efetiva</th>
+						<th data-column="he50" data-order="asc">HE 50%</th>
+						<th data-column="he100" data-order="asc">HE 100%</th>
+						<th data-column="adicionalNoturno" data-order="asc">Adicional Noturno</th>
+						<th data-column="esperaIndenizada" data-order="asc">ESPERA INDENIZADA</th>
+						<th data-column="saldoAnterior" data-order="asc">Saldo Anterior</th>
+						<th data-column="saldoPeriodo" data-order="asc">Saldo Periodo</th>
+						<th data-column="saldoFinal" data-order="asc">Saldo Final</th>
 					</tr>
 				</thead>
 				<tbody>
-				<?php
-					if ($empresaTotais != null) {
-						foreach ($empresaTotais as $empresaTotal) {
-						    $porcentagenEndoEmpresa = number_format(0,2);
-							if ($empresaTotal['endossados'] != 0) {
-							    $porcentagenEndoEmpresa = number_format(($empresaTotal['endossados'] / $empresaTotal['totalMotorista']) * 100,2);
-                            }
-							echo '<tr class="conteudo">';
-							echo "<td onclick=\"setAndSubmit('".$empresaTotal['empresaId']."')\">".$empresaTotal['empresaNome']."</td>";
-							echo "<td>$porcentagenEndoEmpresa</td>";
-							echo "<td> $empresaTotal[totalMotorista]</td>";
-							echo "<td> $empresaTotal[jornadaPrevista]</td>";
-							echo "<td> $empresaTotal[JornadaEfetiva]</td>";
-							echo "<td>" . (($empresaTotal['he50'] == '00:00') ? '' : $empresaTotal['he50']) . "</td>";
-							echo "<td>" . (($empresaTotal['he100'] == '00:00') ? '' : $empresaTotal['he100']) . "</td>";
-							echo "<td>" . (($empresaTotal['adicionalNoturno'] == '00:00') ? '' : $empresaTotal['adicionalNoturno']) . "</td>";
-							echo "<td>" . (($empresaTotal['esperaIndenizada'] == '00:00') ? '' : $empresaTotal['esperaIndenizada']) . "</td>";
-							echo "<td>" . (($empresaTotal['saldoAnterior'] == '00:00') ? '' : $empresaTotal['saldoAnterior']) . "</td>";
-							echo "<td>" . (($empresaTotal['saldoPeriodo'] == '00:00') ? '' : $empresaTotal['saldoPeriodo']) . "</td>";
-							echo "<td>" . (($empresaTotal['saldoFinal'] == '00:00') ? '' : $empresaTotal['saldoFinal']) . "</td>";
-							echo '</tr>';
-						}
-					}
-				?>
+						<!-- Conteúdo do json empresas será inserido aqui -->
 				</tbody>
 			</table>
 			</div>
-
 		</div>
 	</div>
 </div>
 
 <script>
+	$(document).ready(function (){
+		var tabela = $('#tabela-empresas tbody');
+
+		function carregarDados() {
+			$.ajax({
+				url: 'arquivos/paineis/empresas/<?= $_POST['busca_data'];?>/totalEmpresas.json',
+				dataType: 'json',
+				success: function(data){
+					tabela.empty();
+					$.each(data, function(index, item){
+						// console.log("Item " + index + ":");
+						// for (var chave in item) {
+						// 	if (item.hasOwnProperty(chave)) {
+						// 		console.log(chave + ": " + item[chave]);
+						// 	}
+						// }
+						if(!isNaN(item.endossados) && !isNaN(item.totalMotorista) && item.totalMotorista !== 0){
+							var porcentagem = (item.endossados / item.totalMotorista) * 100;
+						}else{
+							var porcentagem = 0.00
+						}
+						
+						var he50 = (item.he50 === null || item.he50 === '00:00') ? '' : item.he50;
+						var he100 = (item.he100 === null || item.he100 === '00:00') ? '' : item.he100;
+						var adicionalNoturno = (item.adicionalNoturno === null || item.adicionalNoturno === '00:00') ? '' : item.adicionalNoturno;
+						var esperaIndenizada = (item.esperaIndenizada === null || item.esperaIndenizada === '00:00') ? '' : item.esperaIndenizada;
+						var saldoAnterior = (item.saldoAnterior === null || item.saldoAnterior === '00:00') ? '' : item.saldoAnterior;
+						var saldoPeriodo = (item.saldoPeriodo === null || item.saldoPeriodo === '00:00') ? '' : item.saldoPeriodo;
+						var saldoFinal = (item.saldoFinal === null || item.saldoFinal === '00:00') ? '' : item.saldoFinal;
+
+						var linha = '<tr>' +
+									'<td onclick=setAndSubmit('+ item.empresaId + ')>' + 
+									item.empresaNome				+ '</td>' +
+									'<td>' + porcentagem.toFixed(2) + '</td>' +
+									'<td>' + item.totalMotorista	+ '</td>' +
+									'<td>' + item.jornadaPrevista	+ '</td>' +
+									'<td>' + item.JornadaEfetiva	+ '</td>' +
+									'<td>' + he50					+ '</td>' +
+									'<td>' + he100					+ '</td>' +
+									'<td>' + adicionalNoturno		+ '</td>' +
+									'<td>' + esperaIndenizada		+ '</td>' +
+									'<td>' + saldoAnterior			+ '</td>' +
+									'<td>' + saldoPeriodo			+ '</td>' +
+									'<td>' + saldoFinal				+ '</td>' +
+									'</tr>';
+						tabela.append(linha);
+					});
+				},
+				error: function() {
+					console.log('Erro ao carregar os dados.');
+				}
+			});
+		}
+		// Função para ordenar a tabela
+		function ordenarTabela(coluna, ordem) {
+			var linhas = tabela.find('tr').get();
+			linhas.sort(function(a, b) {
+				var valorA = $(a).children('td').eq(coluna).text().toUpperCase();
+				var valorB = $(b).children('td').eq(coluna).text().toUpperCase();
+
+				if (valorA < valorB) {
+					return ordem === 'asc' ? -1 : 1;
+				}
+				if (valorA > valorB) {
+					return ordem === 'asc' ? 1 : -1;
+				}
+				return 0;
+			});
+			$.each(linhas, function(index, row) {
+				tabela.append(row);
+			});
+		}
+
+		// Evento de clique para ordenar a tabela ao clicar no cabeçalho
+		$('#titulos th').click(function(){
+			var coluna = $(this).index();
+			var ordem = $(this).data('order');
+			$('#tabela-empresas th').data('order', 'desc'); // Redefinir ordem de todas as colunas
+			$(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
+			ordenarTabela(coluna, $(this).data('order'));
+
+			// Ajustar classes para setas de ordenação
+			$('#titulos th').removeClass('sort-asc sort-desc');
+			$(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
+		});
+
+		carregarDados();
+	});
+
     function downloadCSV() {
         // Caminho do arquivo CSV no servidor
         var filePath = './arquivos/paineis/Painel_Geral.csv' // Substitua pelo caminho do seu arquivo

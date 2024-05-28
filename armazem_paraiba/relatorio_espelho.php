@@ -52,7 +52,6 @@
         <img src="<?= $aEmpresa['empr_tx_logo'] ?>" alt="Logo Empresa Esquerda">
         <h1>Espelho de Ponto</h1>
         <div class="right-logo">
-            <p></p>
             <img src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
         </div>
     </div>

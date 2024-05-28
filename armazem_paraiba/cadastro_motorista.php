@@ -20,7 +20,6 @@
 
 	function carregarParametroPadrao(int $idEmpresa = null){
 		global $a_mod;
-		var_dump($idEmpresa);
 		if(!empty($idEmpresa) && !empty($a_mod['enti_nb_empresa'])){
 			$idEmpresa = intval($a_mod['enti_nb_empresa']);
 		}else{
@@ -261,7 +260,6 @@
 			$novoMotorista['enti_nb_userCadastro'] = $_SESSION['user_nb_id'];
 			$novoMotorista['enti_tx_dataCadastro'] = date("Y-m-d H:i:s");
 			$novoMotorista['enti_tx_ehPadrao'] = $ehPadrao;
-			die(var_dump($novoMotorista));
 			$id = inserir('entidade', array_keys($novoMotorista), array_values($novoMotorista))[0];
 			
 			
