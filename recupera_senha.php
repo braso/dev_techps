@@ -240,7 +240,7 @@
 
         <a href="index.php">
 
-            <img src="./contex20/img/logo.png" alt="" /> </a>
+            <img src="/contex20/img/logo.png" alt="" /> </a>
 
     </div>
 
