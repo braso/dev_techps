@@ -115,6 +115,8 @@
 		    list($anoFim, $mesFim) = explode('-', $_POST['busca_dataFim']);
 		    if ($anoInicio == $anoFim && $mesInicio == $mesFim) {
 				echo '<script>alert("Atualizando os painéis, aguarde um pouco ")</script>';
+				ob_flush();
+				flush();
 				criar_relatorio("$anoInicio-$mesInicio");
 			}else {
 				echo '<script>alert("Periodo invalido, so pode atulizar um mes por vez")</script>';
@@ -129,12 +131,12 @@
 							window.print();
 						}
 					</script>';
-    if (!empty($_SESSION['user_tx_nivel']) && !is_bool(strpos($_SESSION['user_tx_nivel'], 'Funcionário'))) {
-      $botaoAtualizarPainel = '<div style="width: fit-content;display: inline-block;">
-      <form method="post">
-        <input class="btn default" type="submit" name="AtualizarPainel" value="AtualizarPainel">
-      </form>
-      </div>';
+		if (!empty($_SESSION['user_tx_nivel']) && !is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
+			$botaoAtualizarPainel = '<div style="width: fit-content;display: inline-block;">
+			<form method="post">
+				<input class="btn btn-warning" type="submit" name="AtualizarPainel" value="AtualizarPainel">
+			</form>
+			</div>';
 		}
 		//BOTOES
 		$b = [
@@ -144,6 +146,7 @@
 			$b[] = botao("Cadastrar Abono", 'layout_abono');
 		}
 		$b[] = $botao_imprimir;
+		$b[] = $botaoAtualizarPainel;
 		
 		abre_form('Filtro de Busca');
 		linha_form($c);
@@ -151,6 +154,7 @@
 		?>
 		<div id="tituloRelatorio">
 			<h1>Espelho de Ponto</h1>
+			<img id="logo" style='width: 150px' src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 		</div>
 		<style>
 			#tituloRelatorio{
@@ -271,42 +275,65 @@
 	<style>
 
 		@media print {
-				body {
-					margin: 1cm;
-					margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
-					transform: scale(1.0);
-					transform-origin: top left;
-				}
-			
-				@page {
-					size: A4 landscape;
-					margin: 1cm;
-				}
-				#tituloRelatorio{
-					display: block; /* Torna visível apenas ao imprimir */
-					font-size: 12px;
-					padding-left: 500px;
-				}
-				body > div.scroll-to-top{
-					display: none !important;
-				}
-				body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3){
-					display: none;
-				}
-				.portlet-body.form .table-responsive {
-					overflow-x: visible !important;
-					margin-left: -50px !important;
-				}
-				.portlet.light>.portlet-title {
-					border-bottom: none;
-					margin-bottom: 0px;
-				}
-				.caption{
-					padding-top: 0px;
-					margin-left: -50px !important;
-					padding-bottom: 0px;
-				}
+			body {
+				margin: 1cm;
+				margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
+				transform: scale(1.0);
+				transform-origin: top left;
+			}
+
+			@page {
+				size: A4 landscape;
+				margin: 1cm;
+			}
+
+			#tituloRelatorio {
+				display: block; /* Torna visível apenas ao imprimir */
+				font-size: 12px;
+				padding-left: 555px;
+			}
+
+			#logo {
+				display: flex;
+				position: absolute;
+				top: 5px;
+				right: 50px;
+			}
+
+			body > div.scroll-to-top {
+				display: none !important;
+			}
+
+			body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3) {
+				display: none;
+			}
+
+			div:nth-child(11) > .portlet.light {
+				display: none !important;
+			}
+
+			.portlet.light {
+				padding: 0px 6px !important; /* Reduzindo o padding */
+				font-size: 12px !important; /* Reduzindo o tamanho da fonte */
+				margin-bottom: 0px !important;
+			}
+
+			div.table-responsive > table{
+				margin-bottom: 0px !important;
+			}
+
+			.row div {
+				min-width: fit-content !important;
+			}
+
+			.caption {
+				padding-top: 0px;
+				margin-left: -50px !important;
+				padding-bottom: 0px;
+				/* line-height: 15px !important; */
+			}
 		}
+
 		#saldo {
 			width: 50% !important;
 			margin-top: 9px !important;

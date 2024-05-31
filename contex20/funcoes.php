@@ -1112,4 +1112,46 @@
 		// onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\",\"$data_de\",\"$data_ate\");
 		return "<center><a title=\"$title\" style='color:gray' data-toggle='modal' data-target='#myModal'onclick='solicitarDados(\"$id\",\"$acao\",\"$data_de\",\"$data_ate\",\"$campos\",\"$valores\")' ><spam $icone></spam></a></center>".$modal;
 	}
+
+	function icone_download($aquivo=''){
+		global $CONTEX;
+
+		$style = '<style>
+			/* Estilos para tornar o ícone clicável */
+			.glyphicon-clickable {
+				cursor: pointer;
+				transition: color 0.3s ease-in-out;
+				font-size: 16px;
+			}
+
+			.glyphicon-clickable:hover {
+				color: blue; /* Altere a cor conforme necessário */
+			}
+		</style>';
+
+		$script = "<script>
+			function download(arquivo) {
+				// Caminho do arquivo CSV no servidor
+				var filePath = './arquivos/pontos/' + arquivo // Substitua pelo caminho do seu arquivo
+
+				// Cria um link para download
+				var link = document.createElement('a');
+
+				// Configurações do link
+				link.setAttribute('href', filePath);
+				link.setAttribute('download', arquivo);
+
+				// Adiciona o link ao documento
+				document.body.appendChild(link);
+
+				// Simula um clique no link para iniciar o download
+				link.click();
+
+				// Remove o link
+				document.body.removeChild(link);
+			}
+		</script>";
+
+		return $style."<spam class='glyphicon glyphicon-download glyphicon-clickable' onclick=\"download('$aquivo')\"></spam>".$script;
+	}
 ?>
