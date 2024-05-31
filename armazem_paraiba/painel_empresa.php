@@ -224,7 +224,7 @@
 			<table id='tabela-motorista' class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact">
 				<thead>
 					<tr class="totais">
-						<th colspan="1">Período: De <?= $dataInicioFormatada . ' até ' . $dataFimFormatada ?></th>
+						<th colspan="1">Período: De <?= $dataInicioFormatada.' até '.$dataFimFormatada ?></th>
 						<th colspan="1"></th>
 						<?php
 								if ($MotoristasTotais != null) {
