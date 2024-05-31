@@ -303,10 +303,16 @@
 		;
 
 
-		$cab = ['CÓD', 'ARQUIVO', 'USUÁRIO', 'DATA', 'SITUAÇÃO','<spam class="glyphicon glyphicon-download" style="font-size: 16px;"></spam>'];
+		$gridValues = [
+			'CÓD' => "arqu_nb_id",
+			'ARQUIVO' => "arqu_tx_nome",
+			'USUÁRIO' => "user_tx_nome",
+			'DATA' => "data(arqu_tx_data,1)",
+			'SITUAÇÃO' => "ucfirst(arqu_tx_status)",
+			'<spam class="glyphicon glyphicon-download" style="font-size: 16px;"></spam>' => "icone_download(arqu_tx_nome)"
+		];
 
-		$val = ['arqu_nb_id', 'arqu_tx_nome', 'user_tx_nome', 'data(arqu_tx_data,1)', 'ucfirst(arqu_tx_status)', "icone_download(arqu_tx_nome)"];
-		grid($sql, $cab, $val, '', 12, 0, '');
+		grid($sql, array_keys($gridValues), array_values($gridValues), '', 12, 0, '');
 
 		rodape();
 	}
