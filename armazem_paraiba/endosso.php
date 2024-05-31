@@ -196,7 +196,20 @@
 						MYSQLI_ASSOC
 					);
 
+					$bdAbonos = mysqli_fetch_all(
+						query("SELECT motivo.moti_tx_nome FROM  abono
+								JOIN motivo ON abon_nb_motivo = moti_nb_id
+								WHERE abon_tx_matricula = '".$endossoCompleto['endo_tx_matricula']."' 
+								AND abon_tx_data LIKE '".$data."%' Limit 1"
+							), 
+						MYSQLI_ASSOC
+					);
+
 					$motivos = '';
+					if(!empty($bdAbonos[0]['moti_tx_nome'])){
+						$motivos .= 'Abono: '.$bdAbonos[0]['moti_tx_nome'].'<br>';
+					}
+
 					for($f2 = 0; $f2 < count($bdMotivos); $f2++){
 						$legendas = [
 							'' => '',
@@ -208,7 +221,7 @@
 						$motivo = isset($legendas[$bdMotivos[$f2]['moti_tx_legenda']])? $bdMotivos[$f2]['moti_tx_nome']: '';
 						if(!empty($motivo) && is_bool(strpos($motivos, $motivo))){
 							$motivos .= $motivo.'<br>';
-						}
+						} 
 					}
 					
 					array_splice($aDia[$f], 18, 0, $motivos); // inserir a coluna de motivo, no momento da implementação, estava na coluna 19

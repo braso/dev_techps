@@ -13,6 +13,16 @@
             $_POST['busca_data'] = date("Y-m");
         }
 
+        	// Obtenha o primeiro dia do mês
+        $dataInicio = new DateTime($_POST['busca_data']  . '-01');
+        $dataInicioFormatada = $dataInicio->format('d/m/Y');
+        $dataInicio = $dataInicio->format('Y-m-d');
+        // Obtenha o último dia do mês
+        $dataFim = new DateTime($_POST['busca_data']  . '-01');
+        $dataFim->modify('last day of this month');
+        $dataFimFormatada = $dataFim->format('d/m/Y');
+        $dataFim = $dataFim->format('Y-m-d');
+
         $dateParts = explode('-',$_POST['busca_data']);
         $monthNum = $dateParts[1];
         $year = $dateParts[0];
@@ -112,9 +122,15 @@
                             overflow-x: visible !important;
                             margin-left: -50px !important;
                         }
-                        .portlet.light>.portlet-title {
+                        #pdf2htmldiv > div{
+                            padding: 88px 20px 15px !important;
+                        }
+                        /* .portlet.light>.portlet-title {
                             border-bottom: none;
                             margin-bottom: 0px;
+                        } */
+                        body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(7){
+                            display: none !important;
                         }
                         .caption{
                             padding-top: 0px;
@@ -123,7 +139,7 @@
                         }
                         .emissao{
                             text-align: left;
-                            padding-left: 590px !important;
+                            padding-left: 650px !important;
                             position: absolute;
                         }
                         .porcentagenEndo{
@@ -173,12 +189,13 @@
             </style>
             <form name="myForm" method="post" action="<?= htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
             <input type="hidden" name="empresa" id="empresa">
+            <input type="hidden" name="busca_data" id="busca_data">
             </form>
 
             <script>
                 function setAndSubmit(empresa) {
                     document.myForm.empresa.value = empresa;
-                    //   console.log(document.myForm.empresa.value);
+                    document.myForm.busca_data.value = document.getElementById('busca_data').value;
                     document.myForm.submit();
                 }
             </script>

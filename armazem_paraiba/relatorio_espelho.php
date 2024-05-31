@@ -24,8 +24,7 @@
     <script>
     function downloadCSV() {
         // Caminho do arquivo CSV no servidor
-        var filePath =
-            '<?="./arquivos/endosso_csv/$aEmpresa[empr_nb_id]/$aMotorista[enti_nb_id]/espelho-de-ponto.csv"?>'; // Substitua pelo caminho do seu arquivo
+        var filePath = '<?="./arquivos/endosso_csv/$aEmpresa[empr_nb_id]/$aMotorista[enti_nb_id]/espelho-de-ponto.csv"?>'; // Substitua pelo caminho do seu arquivo
 
         // Cria um link para download
         var link = document.createElement('a');
@@ -52,7 +51,6 @@
         <img src="<?=$aEmpresa['empr_tx_logo']?>" alt="Logo Empresa Esquerda">
         <h1>Espelho de Ponto</h1>
         <div class="right-logo">
-            <p></p>
             <img src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
         </div>
     </div>

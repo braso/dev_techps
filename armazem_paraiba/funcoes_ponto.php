@@ -103,7 +103,11 @@
 			inserir('abono', $campos, $valores);
 		}
 
+		$_POST['acao'] = $_POST['acao2'];
+		$_POST['busca_empresa'] = $_POST['empresa'];
 		$_POST['busca_motorista'] = $_POST['motorista'];
+		$_POST['busca_dataInicio'] = $_POST['dataInicio'];
+		$_POST['busca_dataFim'] = $_POST['dataFim'];
 
 		index();
 		exit;
@@ -112,7 +116,7 @@
 	function layout_abono(){
 		echo "<form action='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_abono.php' name='form_cadastro_abono' method='post'>";
 
-		unset($_POST['acao']);
+    unset($_POST['acao']);
 		
 		foreach($_POST as $key => $value){
 			echo "<input type='hidden' name='".$key."' value='".$value."'>";
@@ -1348,14 +1352,14 @@
 
 		
 		$empresas = mysqli_fetch_all(
-			query("SELECT empr_nb_id, empr_tx_nome FROM `empresa` WHERE empr_tx_status != 'inativo';"),
+			query("SELECT empr_nb_id, empr_tx_nome FROM `empresa` WHERE empr_tx_status != 'inativo' ORDER BY empr_tx_nome ASC;"),
 			MYSQLI_ASSOC
 		);
 		
 		foreach ($empresas as $empresa) {
 	
 			$motoristas = mysqli_fetch_all(
-				query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_nb_empresa = $empresa[empr_nb_id] AND enti_tx_status != 'inativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"),
+				query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_nb_empresa = $empresa[empr_nb_id] AND enti_tx_status != 'inativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') ORDER BY enti_tx_nome ASC"),
 				MYSQLI_ASSOC
 			);
 			
@@ -1441,15 +1445,14 @@
 						$JorPrev = $diaPonto['jornadaPrevista'];
 					}
 
-					
-					if(count($endossos) > 0){
+
+					if($endossos[0]["endo_tx_matricula"] == $motorista["enti_tx_matricula"]){
 						$he50 = empty($diaPonto['he50']) ? '00:00' : $diaPonto['he50'];
 						$he100 = empty($diaPonto['he100']) ? '00:00' : $diaPonto['he100'];
 						$adicNot = $diaPonto['adicionalNoturno'];
 						$espInd  = $diaPonto['esperaIndenizada'];
 						$saldoAnt = $saldoAnterior;
-						$saldoPer = $totalSaldoPeriodo;
-						$saldoFn = $saldoFinal;
+						$saldoPer = $diaPonto['diffSaldo'];
 					}
 					else {
 						$he50 = '00:00';
@@ -1458,7 +1461,6 @@
 						$espInd  = '00:00';
 						$saldoAnt = '00:00';
 						$saldoPer = '00:00';
-						$saldoFn = '00:00';
 					}
 
 					$totalJorPrev      = somarHorarios([$totalJorPrev,      $JorPrev]);
@@ -1467,7 +1469,7 @@
 					$totalHE100        = somarHorarios([$totalHE100,        $he100]);
 					$totalAdicNot      = somarHorarios([$totalAdicNot,      $adicNot ]);
 					$totalEspInd       = somarHorarios([$totalEspInd,       $espInd]);
-					$totalSaldoPeriodo = somarHorarios([$saldoPer, $diaPonto['diffSaldo']]);
+					$totalSaldoPeriodo = somarHorarios([$totalSaldoPeriodo, $saldoPer]);
 					
 				}
 	
@@ -1478,6 +1480,7 @@
 				}
 	
 				$rows[] = [
+					'IdMotorista' => $motorista['enti_nb_id'],
 					'motorista' => $motorista['enti_tx_nome'],
 					'statusEndosso' => $endossado,
 					'jornadaPrevista' => $totalJorPrev,
@@ -1486,9 +1489,9 @@
 					'he100' => $totalHE100,
 					'adicionalNoturno' => $totalAdicNot,
 					'esperaIndenizada' => $totalEspInd,
-					'saldoAnterior' => $saldoAnterior,
+					'saldoAnterior' => $saldoAnt,
 					'saldoPeriodo' => $totalSaldoPeriodo,
-					'saldoFinal' => $saldoFn
+					'saldoFinal' => $saldoFinal
 				];
 				
 			}
@@ -1542,6 +1545,7 @@
 			];
 
 			$totaisJson = [
+				'empresaId'        => $empresa['empr_nb_id'],
 				'empresaNome'      => $empresa['empr_tx_nome'],
 				'jornadaPrevista'  => $totalJorPrev,
 				'JornadaEfetiva'   => $totalJorEfe,

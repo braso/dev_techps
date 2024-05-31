@@ -126,6 +126,8 @@
 		    list($anoFim, $mesFim) = explode('-', $_POST['busca_dataFim']);
 		    if ($anoInicio == $anoFim && $mesInicio == $mesFim) {
 				echo '<script>alert("Atualizando os painéis, aguarde um pouco ")</script>';
+				ob_flush();
+				flush();
 				criar_relatorio("$anoInicio-$mesInicio");
 			}else {
 				echo '<script>alert("Periodo invalido, so pode atulizar um mes por vez")</script>';
@@ -140,13 +142,13 @@
 							window.print();
 						}
 					</script>';
-		if (!empty($_SESSION['user_tx_nivel']) && !is_bool(strpos($_SESSION['user_tx_nivel'], 'Funcionário'))) {
+    if (!empty($_SESSION['user_tx_nivel']) && is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$botaoAtualizarPainel = 
-				'<div style="width: fit-content;display: inline-block;">
-					<form method="post">
-						<input class="btn default" type="submit" name="AtualizarPainel" value="AtualizarPainel">
-					</form>
-				</div>';
+        '<div style="width: fit-content;display: inline-block;">
+			    <form method="post">
+				    <input class="btn btn-warning" type="submit" name="AtualizarPainel" value="AtualizarPainel">
+			    </form>
+			  </div>';
 		}
 		//BOTOES
 		$b = [
@@ -156,21 +158,23 @@
 			$b[] = botao("Cadastrar Abono", 'layout_abono', '', '', 'btn btn-secondary');
 		}
 		$b[] = $botao_imprimir;
+		$b[] = $botaoAtualizarPainel;
 		
 		abre_form('Filtro de Busca');
 		linha_form($searchFields);
 		fecha_form($b);
+    
 		echo 
 			"<div id='tituloRelatorio'>
-				<h1>Espelho de Ponto</h1>
-			</div>
-			<style>
-				#tituloRelatorio{
-					display: none;
-				}
-			</style>"
+        <h1>Espelho de Ponto</h1>
+        <img id='logo' style='width: 150px' src='".$CONTEX["path"]."/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
+      </div>
+      <style>
+        #tituloRelatorio{
+            display: none;
+          }
+		  </style>"
 		;
-
 		$cab = [
 			"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "HE 50%", "HE&nbsp;100%",
@@ -279,74 +283,93 @@
 				."</div>"
 				.$saldosMotorista
 			);
-			echo 
-				"<style>
-					@media print {
-							body {
-								margin: 1cm;
-								margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
-								transform: scale(1.0);
-								transform-origin: top left;
-							}
-						
-							@page {
-								size: A4 landscape;
-								margin: 1cm;
-							}
-							#tituloRelatorio{
-								display: block; /* Torna visível apenas ao imprimir */
-								font-size: 12px;
-								padding-left: 500px;
-							}
-							body > div.scroll-to-top{
-								display: none !important;
-							}
-							body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3){
-								display: none;
-							}
-							.portlet-body.form .table-responsive {
-								overflow-x: visible !important;
-								margin-left: -50px !important;
-							}
-							.portlet.light>.portlet-title {
-								border-bottom: none;
-								margin-bottom: 0px;
-							}
-							.caption{
-								padding-top: 0px;
-								margin-left: -50px !important;
-								padding-bottom: 0px;
-							}
-					}
-					#saldo {
-						width: 50% !important;
-						margin-top: 9px !important;
-						text-align: center;
-					}
-		
-					table thead tr th:nth-child(3),
-					table thead tr th:nth-child(7),
-					table thead tr th:nth-child(11),
-					table td:nth-child(3),
-					table td:nth-child(7),
-					table td:nth-child(11) {
-						border-right: 3px solid #d8e4ef !important;
-					}
-					.th-align {
-						text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
-						vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
-						
-					}
-		
-					.table-responsive {
-						overflow: overlay;
-					}
-		
-					.row div {
-						min-width: auto;
-					}
-				</style>"
-			;
+	?>
+
+	<style>
+
+		@media print {
+			body {
+				margin: 1cm;
+				margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
+				transform: scale(1.0);
+				transform-origin: top left;
+			}
+
+			@page {
+				size: A4 landscape;
+				margin: 1cm;
+			}
+
+			#tituloRelatorio {
+				display: block; /* Torna visível apenas ao imprimir */
+				font-size: 12px;
+				padding-left: 555px;
+			}
+
+			#logo {
+				display: flex;
+				position: absolute;
+				top: 5px;
+				right: 50px;
+			}
+
+			body > div.scroll-to-top {
+				display: none !important;
+			}
+
+			body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3) {
+				display: none;
+			}
+
+			div:nth-child(11) > .portlet.light {
+				display: none !important;
+			}
+
+			.portlet.light {
+				padding: 0px 6px !important; /* Reduzindo o padding */
+				font-size: 12px !important; /* Reduzindo o tamanho da fonte */
+				margin-bottom: 0px !important;
+			}
+
+			div.table-responsive > table{
+				margin-bottom: 0px !important;
+			}
+
+			.row div {
+				min-width: fit-content !important;
+			}
+
+			.caption {
+				padding-top: 0px;
+				margin-left: -50px !important;
+				padding-bottom: 0px;
+				/* line-height: 15px !important; */
+			}
+		}
+
+		#saldo {
+			width: 50% !important;
+			margin-top: 9px !important;
+			text-align: center;
+		}
+
+		table thead tr th:nth-child(3),
+		table thead tr th:nth-child(7),
+		table thead tr th:nth-child(11),
+		table td:nth-child(3),
+		table td:nth-child(7),
+		table td:nth-child(11) {
+			border-right: 3px solid #d8e4ef !important;
+		}
+		.th-align {
+			text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
+			vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
+			
+		}
+
+		.table-responsive {
+			overflow: overlay;
+		}
 
 			$aDia[] = array_values(array_merge(['', '', '', '', '', '', '<b>TOTAL</b>'], $totalResumo));
 			

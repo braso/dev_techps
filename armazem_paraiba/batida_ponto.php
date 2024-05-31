@@ -59,6 +59,8 @@
 				'pont_tx_status' 		=> 'ativo',
 				'pont_tx_dataCadastro' 	=> $hoje.' '.date("H:i:s"),
 				'pont_nb_motivo' 		=> $_POST['motivo'],
+				'pont_tx_latitude'      => $_POST['latitude'],
+				'pont_tx_longitude'     => $_POST['longitude']
 			];
 			inserir('ponto', array_keys($novoPonto), array_values($novoPonto));
 		}
@@ -144,7 +146,34 @@
 				<div class='button-title'>
 				    ".$nome."
 				</div>
-			</button>";
+			</button>
+			<script>
+				document.addEventListener('DOMContentLoaded', function() {
+					if (navigator.geolocation) {
+						navigator.geolocation.getCurrentPosition(locationAllowed, locationDenied);
+					} else {
+						console.log('Geolocalização não é suportada pelo navegador.');
+					}
+				});
+				
+				function locationAllowed(pos) {
+					var latitude = pos.coords.latitude;
+					var longitude = pos.coords.longitude;
+				
+					console.log('Latitude: ' + latitude);
+					console.log('Longitude: ' + longitude);
+				
+					// Atribuir os valores aos campos do formulário
+					document.getElementById('latitude').value = latitude;
+					document.getElementById('longitude').value = longitude;
+				
+				}
+				
+				function locationDenied(err) {
+					console.log('Erro ao obter localização: ', err);
+				}
+			</script>
+			";
 	}
 
 	function index() {
