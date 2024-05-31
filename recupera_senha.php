@@ -266,13 +266,20 @@
                         <input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="text" autocomplete="off" placeholder="Login" name="login" />
                     </div>
                     <?= $msg ?>
-                    <?php if(!empty($msg)){echo '<style>
-                    #enviar{
-                    display:none;
-                    }</style>';} ?>
-                      <div class="form-actions" style="padding: 26px 140px !important">
+                    <?php 
+                        if(!empty($msg)){
+                            echo 
+                                '<style>
+                                    #enviar{
+                                        display:none;
+                                    }
+                                </style>'
+                            ;
+                        }
+                    ?>
+                    <div class="form-actions" style="padding: 26px 140px !important">
                         <input type="submit" class="btn green uppercase" name="botao" value="ENVIAR">
-                     </div>
+                    </div>
                     <?php
                 } else {
                 ?>
