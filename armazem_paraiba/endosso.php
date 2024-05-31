@@ -1,7 +1,7 @@
 <?php
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
 	
-	//* Modo debug
+	/* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
