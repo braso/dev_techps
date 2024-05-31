@@ -527,10 +527,10 @@
 		fecha_form($b);
 
 		$sql = 
-			"SELECT *, empresa.empr_tx_nome, entidade.enti_tx_matricula FROM user 
-				LEFT JOIN empresa ON empresa.empr_nb_id = user.user_nb_empresa 
-				LEFT JOIN entidade ON user_nb_entidade = enti_nb_id
-				WHERE 1
+			"SELECT user_nb_id, user_tx_nome, user_tx_matricula, user_tx_cpf, user_tx_login, user_tx_nivel, user_tx_email, user_tx_fone, user_tx_status, empresa.empr_tx_nome, entidade.enti_tx_matricula FROM user 
+			LEFT JOIN empresa ON empresa.empr_nb_id = user.user_nb_empresa 
+			LEFT JOIN entidade ON user_nb_entidade = enti_nb_id
+			WHERE 1
 					$extra"
 		;
 

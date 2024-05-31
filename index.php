@@ -237,12 +237,13 @@ License: You must have a valid license purchased only from themeforest(the above
 					placeholder="Senha" 
 					name="password"
 				/>
-				<a href="<?php echo $server_base_link."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
+				<a href="<?php echo $_ENV["URL_BASE"].$_ENV["APP_PATH"]."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
 			</div>
 
 			<?php echo $msg ?>
 
 			<div class="form-actions">
+			<a href="<?php echo $_ENV["URL_BASE"]."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
 				<input type="submit" class="btn green uppercase" name="botao" value="Entrar"></input>
 			</div>
 

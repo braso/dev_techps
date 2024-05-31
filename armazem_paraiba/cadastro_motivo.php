@@ -105,7 +105,7 @@ function index(){
 	$sql = "SELECT * FROM motivo WHERE moti_tx_status != 'inativo' $extra";
 	$cab = ['CÓDIGO','NOME','TIPO','LEGENDA', '', ''];
 	$val = ['moti_nb_id','moti_tx_nome','moti_tx_tipo', 'moti_tx_legenda', 'icone_modificar(moti_nb_id,modifica_motivo)','icone_excluir(moti_nb_id,exclui_motivo)'];
-	grid($sql,$cab,$val);
+	grid($sql,$cab,$val,'',12,1,'desc');
 
 	rodape();
 }
