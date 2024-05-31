@@ -3,6 +3,7 @@
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
+
 	include "conecta.php";
 
 	function excluirEmpresa(){
@@ -310,11 +311,15 @@
 			'situacao','cep','endereco','numero','bairro','cnpj',
 			'nome','fantasia','complemento','referencia','fone1',
 			'fone2','contato','email','inscricaoEstadual','inscricaoMunicipal',
-			'regimeTributario','logo','domain'
+			'regimeTributario','logo','domain', 'Ehmatriz',
+			'ftpServer', 'ftpUsername'
 		];
 		foreach($campos as $campo){
-			$input_values[$campo] = !empty($values[$prefix.$campo])? $values[$prefix.$campo]: '';
+			$input_values[$campo] = !empty($values[$prefix.$campo])? $values[$prefix.$campo]: "";
 		}
+
+		$input_values['ftpServer']	 = !empty($input_values['ftpServer'])? $input_values['ftpServer']: "---";
+		$input_values['ftpUsername'] = !empty($input_values['ftpUsername'])? $input_values['ftpUsername']: "---";
 
 
 		if(!empty($input_values['logo'])){
@@ -325,10 +330,10 @@
 
 		if(is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador"))){
 			$campo_dominio = campo_domain('Nome do Domínio','nomeDominio',$input_values['domain']?? '',2,'domain');
-			$campo_EhMatriz = combo('É matriz?','matriz',$input_values['matriz']?? '',2,['sim' => 'Sim', 'nao' => 'Não']);
+			$campo_EhMatriz = combo('É matriz?','matriz',$input_values['Ehmatriz']?? '',2,['sim' => 'Sim', 'nao' => 'Não']);
 		}else{
 			$campo_dominio = texto('Nome do Domínio',$input_values['domain']?? '',3);
-			$campo_EhMatriz = texto('É matriz?',$input_values['matriz']?? '',2);
+			$campo_EhMatriz = texto('É matriz?',$input_values['Ehmatriz']?? '',2);
 		}
 
 		if(!empty($input_values['cidade'])){
@@ -339,7 +344,7 @@
 		}
 		$campo_cidade = texto('Cidade/UF', $cidade['cida_tx_nome'], 2);
 
-		if (is_int(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) != TRUE && $input_values['matriz'] == 'sim') {
+		if (is_bool(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) && (!empty($input_values['Ehmatriz']) && $input_values['Ehmatriz'] == 'sim')) {
 			$c = [
 				texto('CPF/CNPJ*',$input_values['cnpj'],2),
 				texto('Nome*',$input_values['nome'],4),
@@ -358,13 +363,13 @@
 				texto('E-mail*',$input_values['email'],3),
 				texto('Inscrição Estadual',$input_values['inscricaoEstadual'],3),
 				texto('Inscrição Municipal',$input_values['inscricaoMunicipal'],3),
-				texto('Regime Tributário',$input_values['regimeTributario'],3,$regimes),
+				texto('Regime Tributário',$input_values['regimeTributario'],3),
 				texto('Data Reg. CNPJ',$input_values['dataRegistroCNPJ'],3),
 				$campo_dominio,
 				$campo_EhMatriz,
 				
-				texto('Servidor FTP',$input_values['ftpServer'],3),
-				texto('Usuário FTP',$input_values['ftpUsername'],3)
+				texto('Servidor FTP',$input_values['ftpServer'], 3),
+				texto('Usuário FTP',$input_values['ftpUsername'], 3)
 			];
 		
 		}else{
