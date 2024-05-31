@@ -64,8 +64,8 @@
         $checkToken = mysqli_fetch_assoc($checkTokenSql);
 
         if (!isset($checkToken) && empty($checkToken)) {
-            echo '<script>alert("Link já utilizado ou invalido, por favor solicita novamente a  redefinição de senha.  ")</script>';
-            echo "<meta http-equiv='refresh' content='0; $_ENV[URL_BASE].$_ENV[APP_PATH]/index2.php' />";
+            echo '<script>alert("Link já utilizado ou invalido, por favor solicita novamente a  redefinição de senha.")</script>';
+            echo "<meta http-equiv='refresh' content='0; url=".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/index2.php' />";
             exit;
         }
         
@@ -132,10 +132,10 @@
             $mail->isHTML(true);
             $mail->Subject = 'Redefinição de Senha';
             $mail->Body = '<b>Redefinição de Senha</b><br>
-            Por favor, <a href="'. $_ENV["URL_BASE"] .'/'. basename($caminho)  . '/recupera_senha.php?dominio='.$domain.'&token=' . $token .'">clique aqui</a> para resetar sua senha.<br>
+            Por favor, <a href="'.$_ENV["URL_BASE"].'/'.basename($caminho).'/recupera_senha.php?dominio='.$domain.'&token='.$token.'">clique aqui</a> para resetar sua senha.<br>
             Caso você não tenha solicitado este e-mail de redefinição de senha, por favor, <a href="mailto:suporte@techps.com.br ">entre em contato</a> para que possamos resolver o problema.';
             $mail->Encoding = 'base64';
-            $mail->AltBody = "Link para recupera senha: ". $_ENV["URL_BASE"] .'/'. basename($caminho)  . "/recupera_senha.php?token=" . $token;
+            $mail->AltBody = "Link para recupera senha: ".$_ENV["URL_BASE"].'/'.basename($caminho)."/recupera_senha.php?token=".$token;
 
             if ($mail->send()) {
                 return "
@@ -299,7 +299,7 @@
 
     </div>
 
-    <div class="copyright"> <?= date("Y") ?> © TechPS. </div>
+    <div class="copyright"> <?= date("Y") ?> © TechPS.</div>
 
     <!-- COMECO PLUGINS PRINCIPAL -->
 
