@@ -21,7 +21,6 @@
 
 	if(empty($_POST['acao'])){
 		if(function_exists('index')){
-
 			index();
 			exit;
 		}
@@ -532,7 +531,7 @@
 	}
 
 	function texto($nome,$modificador,$tamanho='',$extra=''){
-		$campo=
+		$campo =
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5" '.$extra.'>
 				<label>'.$nome.'</label><br>
 				<p class="text-left">'.$modificador.'</p>
@@ -977,7 +976,6 @@
 			$a_campos=explode(',',$campos);
 			$a_valores=explode(',',$valores);
 			for($i=0; $i<count($a_campos); $i++){
-				// $hidden.="<input type='hidden' name='$a_campos[$i]' value='$a_valores[$i]'>";
 				$hidden .= 
 					"var input".$i." = document.createElement('input');
 					input".$i.".type = 'hidden';
