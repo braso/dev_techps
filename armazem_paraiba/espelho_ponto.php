@@ -153,7 +153,7 @@
 			botao("Buscar", 'index', '', '', '', '', 'btn btn-success'),
 		];
 		if (!in_array($_SESSION['user_tx_nivel'], ['Motorista', 'Ajudante'])) {
-			$b[] = botao("Cadastrar Abono", 'layout_abono');
+			$b[] = botao("Cadastrar Abono", 'layout_abono', '', '', 'btn btn-secondary');
 		}
 		$b[] = $botao_imprimir;
 		
@@ -201,6 +201,7 @@
 				}
 				$aDia[] = $row;
 			}
+			criarFuncoesDeAjuste();
 	
 			if (!empty($aEmpresa['empr_nb_parametro'])) {
 				$parametroPadrao = carregar('parametro', $aEmpresa['empr_nb_parametro']);
