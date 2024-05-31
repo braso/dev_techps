@@ -138,9 +138,9 @@
 		$c[] = campo_hora('Abono*: (hh:mm)','abono', ($_POST['abono']?? ''),3);
 		$c2[] = combo_bd('Motivo*:','motivo', ($_POST['motivo']?? ''),4,'motivo','',' AND moti_tx_tipo = "Abono"');
 		$c2[] = textarea('Justificativa:','descricao', ($_POST['descricao']?? ''),12);
-		$c2[] = "<input type='hidden' name='empresa' value='$_POST[busca_empresa]'>";
-		$c2[] = "<input type='hidden' name='dataInicio' value='$_POST[busca_dataInicio]'>";
-		$c2[] = "<input type='hidden' name='dataFim' value='$_POST[busca_dataFim]'>";
+		$c2[] = "<input type='hidden' name='empresa' value='".$_POST["busca_empresa"]."'>";
+		$c2[] = "<input type='hidden' name='dataInicio' value='".$_POST["busca_dataInicio"]."'>";
+		$c2[] = "<input type='hidden' name='dataFim' value='".$_POST["busca_dataFim"]."'>";
 		$c2[] = "<input type='hidden' name='acao2' value='index'>";
 		
 		//BOTOES
