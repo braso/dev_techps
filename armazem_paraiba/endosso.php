@@ -1,7 +1,7 @@
 <?php
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
 	
-	/* Modo debug
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -22,7 +22,7 @@
 		}
 
 		if (empty($_POST['busca_data']) || empty($_POST['busca_empresa']) || empty($_POST['idMotoristaEndossado'])){
-			echo '<script>alert("Insira data e motorista para gerar relatório.");</script>';
+			set_status("ERRO: Insira data e motorista para gerar relatório.");
 			index();
 			exit;
 		}
@@ -243,36 +243,58 @@
 		}
 
 		//Conferir se os campos do $_POST estão preenchidos{
+			$error = false;
+			$errorMsg = [];
+			if(!empty($_POST['busca_empresa'])){
+				$_POST['busca_empresa'] = (int)$_POST['busca_empresa'];
+			}else{
+				$_POST['busca_empresa'] = '';
+				$error = true;
+				$errorMsg[] = "Empresa";
+			}
+
 			if(!empty($_POST['busca_motorista'])){
 				$extra = " AND enti_nb_id = " . $_POST['busca_motorista'];
 			}
+			
 			if(!empty($_POST['busca_data']) && !empty($_POST['busca_empresa'])){
 				$carregando = "Carregando...";
 			}else{
 				$carregando = '';
 			}
+
 			if(empty($_POST['busca_data'])){
 				$_POST['busca_data'] = date("Y-m");
-			}
-			if(!empty($_POST['busca_empresa'])){
-				$_POST['busca_empresa'] = (int)$_POST['busca_empresa'];
 			}else{
-				$_POST['busca_empresa'] = '';
+				$date = DateTime::createFromFormat("Y-m-d H:i:s", $_POST['busca_data']."-01 00:00:00");
+				if($date > new DateTime()){
+					$error = true;
+					$errorMsg[] = "Data antes da atualidade";
+				}
 			}
-			$extraMotorista = " AND enti_nb_empresa = " . $_POST['busca_empresa'];
-			if(!empty($_POST['busca_endossado']) && !empty($_POST['busca_empresa'])){
-				if($_POST['busca_endossado'] == 'endossado'){
-					$extra .= " AND enti_nb_id IN (SELECT endo_nb_entidade FROM endosso, entidade 
-						WHERE '".$_POST['busca_data']."-01' BETWEEN endo_tx_de AND endo_tx_ate".
-							" AND enti_nb_empresa = '" . $_POST['busca_empresa'] .
-							"' AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
-					)";
-				}elseif($_POST['busca_endossado'] == 'naoEndossado'){
-					$extra .= " AND enti_nb_id NOT IN (SELECT endo_nb_entidade FROM endosso, entidade 
-						WHERE '".$_POST['busca_data']."-01' BETWEEN endo_tx_de AND endo_tx_ate".
-							" AND enti_nb_empresa = '" . $_POST['busca_empresa'] .
-							"' AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
-					)";
+
+			if(isset($_POST["acao"])){
+
+				if($error){
+					set_status("ERRO: Insira os campos para pesquisar: ".implode(", ", $errorMsg).".");
+					unset($_GET['acao']);
+				}
+
+				$extraMotorista = " AND enti_nb_empresa = " . $_POST['busca_empresa'];
+				if(!empty($_POST['busca_endossado']) && !empty($_POST['busca_empresa'])){
+					if($_POST['busca_endossado'] == 'endossado'){
+						$extra .= " AND enti_nb_id IN (SELECT endo_nb_entidade FROM endosso, entidade 
+							WHERE '".$_POST['busca_data']."-01' BETWEEN endo_tx_de AND endo_tx_ate".
+								" AND enti_nb_empresa = '" . $_POST['busca_empresa'] .
+								"' AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
+						)";
+					}elseif($_POST['busca_endossado'] == 'naoEndossado'){
+						$extra .= " AND enti_nb_id NOT IN (SELECT endo_nb_entidade FROM endosso, entidade 
+							WHERE '".$_POST['busca_data']."-01' BETWEEN endo_tx_de AND endo_tx_ate".
+								" AND enti_nb_empresa = '" . $_POST['busca_empresa'] .
+								"' AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
+						)";
+					}
 				}
 			}
 		//}
@@ -292,8 +314,6 @@
 		//BOTOES{
 			$b = [
 				botao("Buscar", 'index', '', '', '', 1,'btn btn-info'),
-				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1),
-				'<button name="acao" id="botaoContexCadastrar CadastrarEndosso" value="cadastrar_endosso" type="button" class="btn btn-success">Cadastrar Endosso</button>',
 				'<button name="acao" id="botaoContexCadastrar ImprimirRelatorio" value="impressao_relatorio" type="button" onload="disablePrintButton()" class="btn btn-default">Imprimir Relatório</button>',
 			];
 		//}
