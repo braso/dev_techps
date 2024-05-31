@@ -109,91 +109,29 @@
 		exit;
 	}
 
-	function voltar(){
-		global $CONTEX;
-		echo 
-			'<form action="'.$_SERVER['HTTP_ORIGIN'].$CONTEX['path'].'/espelho_ponto.php" name="form_voltar" method="post">
-				<input type="hidden" name="busca_motorista" value="'.$_POST['id'].'">
-				<input type="hidden" name="busca_dataInicio" value="'.$_POST['data_de'].'">
-				<input type="hidden" name="busca_dataFim" value="'.$_POST['data_ate'].'">
-				<input type="hidden" name="busca_empresa" value="'.$_POST['busca_empresa'].'">
-				<input type="hidden" name="acao" value="index">
-			</form>
-			<script>
-				document.form_voltar.submit();
-			</script>'
-		;
-		exit;
-	}
-
 	function layout_abono(){
-		cabecalho('Cadastro Abono');
+		echo "<form action='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_abono.php' name='form_cadastro_abono' method='post'>";
 
-		$c[] = combo_net('Motorista*:','motorista',$_POST['busca_motorista']?? '',4,'entidade','',' AND enti_tx_ocupacao = "Motorista"','enti_tx_matricula');
-		$c[] = campo('Data(s)*:','daterange', ($_POST['daterange']?? ''),3);
-		$c[] = campo_hora('Abono*: (hh:mm)','abono', ($_POST['abono']?? ''),3);
-		$c2[] = combo_bd('Motivo*:','motivo', ($_POST['motivo']?? ''),4,'motivo','',' AND moti_tx_tipo = "Abono"');
-		$c2[] = textarea('Justificativa:','descricao', ($_POST['descricao']?? ''),12);
+		unset($_POST['acao']);
 		
-		//BOTOES
-		$b[] = botao(
-			'Voltar', 
-			'voltar', 
-			'data_de,data_ate,id,busca_empresa', 
-			($_POST['data_de']??'').",".($_POST['data_ate']??'').",".$_POST['busca_motorista'].",".$_POST['busca_empresa']
-		);
-		$b[] = botao("Gravar",'cadastra_abono','','','','','btn btn-success');
-		
-		abre_form('Filtro de Busca');
-		linha_form($c);
-		linha_form($c2);
-		fecha_form($b);
-
-		rodape();
-
-		?>
-		<script type="text/javascript" src="js/moment.min.js"></script>
-		<script type="text/javascript" src="js/daterangepicker.min.js"></script>
-		<link rel="stylesheet" type="text/css" href="js/daterangepicker.css" />
-
-		<script>
-			$(function() {
-				$('input[name="daterange"]').daterangepicker({
-					opens: 'left',
-					"locale": {
-						"format": "DD/MM/YYYY",
-						"separator": " - ",
-						"applyLabel": "Aplicar",
-						"cancelLabel": "Cancelar",
-						"fromLabel": "From",
-						"toLabel": "To",
-						"customRangeLabel": "Custom",
-						"weekLabel": "W",
-						"daysOfWeek": ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"],
-						"monthNames": ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"],
-						"firstDay": 1
-					},
-				}, function(start, end, label) {
-					// console.log("A new date selection was made: " + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD'));
-				});
-			});
-		</script>
-		<?php
+		foreach($_POST as $key => $value){
+			echo "<input type='hidden' name='".$key."' value='".$value."'>";
+		}
+		echo "</form>";
+		echo "<script>document.form_cadastro_abono.submit();</script>";
+		exit;
 	}
 
 	function layout_ajuste(){
 		global $CONTEX;
-		echo 
-			'<form action="'.$_SERVER['HTTP_ORIGIN'].$CONTEX['path'].'/ajuste_ponto.php" name="form_ajuste_ponto" method="post">
-				<input type="hidden" name="id" value="'.$_POST['id'].'">
-				<input type="hidden" name="data" value="'.$_POST['data'].'">
-				<input type="hidden" name="data_de" value="'.$_POST['data_de'].'">
-				<input type="hidden" name="data_ate" value="'.$_POST['data_ate'].'">
-			</form>
-			<script>
-				document.form_ajuste_ponto.submit();
-			</script>'
-		;
+		echo '<form action="'.$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"].'/ajuste_ponto.php" name="form_ajuste_ponto" method="post">';
+		unset($_POST['acao']);
+		foreach($_POST as $key => $value){
+			echo "<input type='hidden' name='".$key."' value='".$value."'>";
+		}
+		echo '</form>';
+		
+		echo '<script>document.form_ajuste_ponto.submit();</script>';
 		exit;
 	}
 
@@ -386,30 +324,28 @@
 				MYSQLI_ASSOC
 			);
 			if(count($endossado) > 0){
-				$retorno = '<a title="Ajuste de Ponto (endossado)" onclick="avisar_ponto_endossado('.$idMotorista.',\''.$data.'\')"><i style="color:'.$cor.';" class="fa fa-circle">(E)</i></a>';
+				$retorno = '<a title="Ajuste de Ponto (endossado)" onclick="ajusta_ponto('.$idMotorista.',\''.$data.'\', true)"><i style="color:'.$cor.';" class="fa fa-circle">(E)</i></a>';
 			}else{
-				$retorno = '<a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto('.$idMotorista.',\''.$data.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
+				$retorno = '<a title="Ajuste de Ponto" onclick="ajusta_ponto('.$idMotorista.',\''.$data.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
 			}
 		}
 
-		
+		return $retorno;
+	}
+
+	function criarFuncoesDeAjuste(){
 		echo 
 			'<script>
-				function ajusta_ponto(motorista, data) {
-					document.form_ajuste_ponto.id.value = motorista;
-					document.form_ajuste_ponto.data.value = data;
-					document.form_ajuste_ponto.submit();
-				}
-				function avisar_ponto_endossado(motorista, data){
-					alert("Dia já endossado.");
+				function ajusta_ponto(motorista, data, endossado = false) {
+					if(endossado == true){
+						alert("Dia já endossado.");
+					}
 					document.form_ajuste_ponto.id.value = motorista;
 					document.form_ajuste_ponto.data.value = data;
 					document.form_ajuste_ponto.submit();
 				}
 			</script>'
 		;
-
-		return $retorno;
 	}
 
 	function ordenar_horarios($inicio, $fim, $ehEspera = false, $ehEsperaRepouso = false) {
@@ -1155,7 +1091,7 @@
 					"<a><i "
 						."style='color:orange;' "
 						."title='"
-							."Jornada Original: ".str_pad($jornadaPrevistaOriginal, 2, '0', STR_PAD_LEFT).":00:00\n"
+							."Jornada Original: ".str_pad($jornadaPrevistaOriginal, 2, '0', STR_PAD_LEFT).":00\n"
 							."Abono: ".$aAbono['abon_tx_abono']."\n"
 							."Motivo: ".$aAbono['moti_tx_nome']."\n"
 							."Justificativa: ".$aAbono['abon_tx_descricao']."\n\n"
