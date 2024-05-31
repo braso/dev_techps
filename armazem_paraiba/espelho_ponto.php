@@ -371,6 +371,12 @@
 			overflow: overlay;
 		}
 
+		.row div {
+			min-width: auto;
+		}
+	</style>
+		<?php
+
 			$aDia[] = array_values(array_merge(['', '', '', '', '', '', '<b>TOTAL</b>'], $totalResumo));
 			
 			grid2($cab, $aDia, "Jornada Semanal (Horas): $aMotorista[enti_tx_jornadaSemanal]");
