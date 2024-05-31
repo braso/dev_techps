@@ -1,6 +1,10 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ERROR | E_WARNING | E_PARSE);
+
+	/* Modo debug
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
+	//*/
+
 	// $servername = "localhost";
 	// $username = "conta402_contex2";
 	// $password = "contex000contex";
