@@ -17,6 +17,12 @@
 			$MotoristasTotais = json_decode($conteudo_json,true);
 		}
 
+		foreach(['jornadaPrevista', 'JornadaEfetiva', 'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'saldoAnterior', 'saldoPeriodo', 'saldoFinal'] as $campo){
+			if($MotoristasTotais[$campo] == "00:00"){
+				$MotoristasTotais[$campo] = "";
+			}
+		}
+
 
 		// Obtém O total dos saldos de cada Motorista
 		$fileEmpresas = "./arquivos/paineis/$idEmpresa/$_POST[busca_data]/motoristas.json";
@@ -24,8 +30,9 @@
 			$conteudo_json = file_get_contents($fileEmpresas);
 			$MotoristaTotais = json_decode($conteudo_json,true);
 		}
-	}else   
+	}else{
 		echo '<script>alert("Não Possui dados desse més")</script>';
+	}
 
 
 	// Obtém o tempo da última modificação do arquivo
@@ -221,15 +228,15 @@
 						<th colspan="1"></th>
 						<?php
 								if ($MotoristasTotais != null) {
-									echo "<th colspan='1'>" .(($MotoristasTotais['jornadaPrevista'] == '00:00') ? '' : $MotoristasTotais['jornadaPrevista'])."</th>";
-									echo "<th colspan='1'>" .(($MotoristasTotais['JornadaEfetiva'] == '00:00') ? '' : $MotoristasTotais['JornadaEfetiva'])."</th>";
-									echo "<th colspan='1'>" .(($MotoristasTotais['he50'] == '00:00') ? '' : $MotoristasTotais['he50'])."</th>";
-									echo "<th colspan='1'>" .(($MotoristasTotais['he100'] == '00:00') ? '' : $MotoristasTotais['he100'])."</th>";
-									echo "<th colspan='1'>" .(($MotoristasTotais['adicionalNoturno'] == '00:00') ? '' : $MotoristasTotais['adicionalNoturno'] )."</th>";
-									echo "<th colspan='1'>" .(($MotoristasTotais['esperaIndenizada'] == '00:00') ? '' : $MotoristasTotais['esperaIndenizada'])."</th>";
-									echo "<th colspan='1'>" .(($MotoristasTotais['saldoAnterior'] == '00:00') ? '' : $MotoristasTotais['saldoAnterior'])."</th>";
-									echo "<th colspan='1'>" .(($MotoristasTotais['saldoPeriodo'] == '00:00') ? '' : $MotoristasTotais['saldoPeriodo'])."</th>";
-									echo "<th colspan='1'>" .(($MotoristasTotais['saldoFinal'] == '00:00') ? '' : $MotoristasTotais['saldoFinal'])."</th>";
+									echo "<th colspan='1'>".$MotoristasTotais['jornadaPrevista']."</th>";
+									echo "<th colspan='1'>".$MotoristasTotais['JornadaEfetiva']."</th>";
+									echo "<th colspan='1'>".$MotoristasTotais['he50']."</th>";
+									echo "<th colspan='1'>".$MotoristasTotais['he100']."</th>";
+									echo "<th colspan='1'>".$MotoristasTotais['adicionalNoturno']."</th>";
+									echo "<th colspan='1'>".$MotoristasTotais['esperaIndenizada']."</th>";
+									echo "<th colspan='1'>".$MotoristasTotais['saldoAnterior']."</th>";
+									echo "<th colspan='1'>".$MotoristasTotais['saldoPeriodo']."</th>";
+									echo "<th colspan='1'>".$MotoristasTotais['saldoFinal']."</th>";
 								}
 						?>
 					</tr>
