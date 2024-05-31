@@ -215,12 +215,13 @@
 					$dataVez = date('Y-m-d', $dataVez+($i*60*60*24));
 					$aDetalhado = diaDetalhePonto($motorista['enti_tx_matricula'], $dataVez);
 
+					
 					$row = array_values(array_merge([verificaTolerancia($aDetalhado['diffSaldo'], $dataVez, $motorista['enti_nb_id'])], $aDetalhado));
 					for ($f = 0; $f < sizeof($row) - 1; $f++) {
 						if(is_int(strpos($row[$f], 'ajusta_ponto('))){
 							$begin = strpos($row[$f], 'ajusta_ponto(');
 							$end = strpos($row[$f], ')', $begin);
-							$row[$f] = substr($row[$f], 0, $begin).'avisar_ponto_endossado()'.substr($row[$f], $end+1);
+							$row[$f] = substr($row[$f], 0, $end).", true".substr($row[$f], $end);
 						}
 						if(is_int(strpos($row[$f], "Ajuste de Ponto"))){
 							$row[$f] = str_replace("Ajuste de Ponto", "Ajuste de Ponto(endossado)", $row[$f]);
@@ -232,6 +233,8 @@
 					}
 					$aDia[] = $row;
 				}
+				criarFuncoesDeAjuste();
+				
 
 				$sqlEndosso = query("SELECT endo_tx_dataCadastro, endo_tx_ate, endo_tx_horasApagar, endo_tx_pagarHoras FROM endosso WHERE endo_tx_matricula = '$motorista[enti_tx_matricula]'");
 				$aEndosso = carrega_array($sqlEndosso);
