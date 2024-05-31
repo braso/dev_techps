@@ -1,11 +1,8 @@
 <?php
     require_once 'vendor/autoload.php';
-    require_once "../load_env.php";
+    require_once __DIR__."/../load_env.php";
     use Firebase\JWT\JWT;
     use Firebase\JWT\Key;
-    use Firebase\JWT\ExpiredException;
-    use Firebase\JWT\SignatureInvalidException;
-    use Firebase\JWT\BeforeValidException;
 
 
     function makeToken($data,$key){
@@ -28,7 +25,7 @@
     function validate_token($key){
 		
         if (! preg_match('/Bearer\s(\S+)/', $_SERVER['HTTP_AUTHORIZATION'], $matches)) {
-            header('HTTP/1.0 400 Bad Request');
+            // header('HTTP/1.0 400 Bad Request');
             echo 'Token not found in request';
             exit;
         }
@@ -86,7 +83,7 @@
         		JOIN user u ON u.user_nb_entidade = e.enti_nb_id
         		WHERE p.pont_tx_status = 'ativo'
 					AND u.user_nb_id = ?
-                    AND p.pont_tx_data > ?
+                    AND p.pont_tx_data > STR_TO_DATE(?, '%Y-%m-%d %H:%i')
         		ORDER BY pont_tx_data ASC";
         
         $data = get_data($query,[$userid, date_format($limitDate,"Y-m-d")]);
@@ -159,7 +156,13 @@
         return $journeysArray;
     }
 
+    function delete_last(int $driverId){
+        $connect = new PDO("mysql:host=".$_ENV["DB_HOST"].";dbname=".$_ENV["DB_NAME"].";charset=utf8mb4", $_ENV["DB_USER"], $_ENV["DB_PASSWORD"]);
 
+        $lastId = $connect->query("SELECT pont_nb_id FROM ponto WHERE pont_nb_user = ".$driverId." ORDER BY pont_nb_id DESC LIMIT 1;")->fetch(MYSQLI_ASSOC)->pont_nb_id;
+
+        return ($connect->exec("DELETE FROM ponto WHERE pont_nb_id = ".$lastId)? "deleted": "failed");
+    }
 
     //Journey Functions
     function create_journey_ob($ponto,$type,$userid,$btype=''){

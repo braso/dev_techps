@@ -30,6 +30,8 @@ RUN	set -x \
 &&	docker-php-ext-configure pdo_odbc --with-pdo-odbc=unixODBC,/usr \
 &&	docker-php-ext-install \
 	mysqli \
+	pdo \
+	pdo_mysql \
 	pdo_pgsql \
 	pdo_sqlite \
 	pdo_odbc \

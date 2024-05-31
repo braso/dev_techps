@@ -13,6 +13,7 @@
 	// $conn = mysqli_connect($servername, $username, $password, $dbname) or die("Connection failed: " . mysqli_connect_error());
 	// $conn->set_charset("utf8");
 	// GLOBAL $CONTEX;
+	
 	$interno = true; //Utilizado no conecta.php para reconhecer se quem está tentando acessar é uma tela ou uma query interna.
 	include_once "../..".$_GET['path']."/conecta.php";
 
@@ -32,15 +33,11 @@
 		$extra .= ")";
 	}
 	
+	$sql = "SELECT ".$tab."_nb_id";
 	if($tabela == 'servico' && $_GET['path'] == '/imagem'){
-		$sql = 
-		"SELECT ".$tab."_nb_id,CONCAT(".$tab."_tx_nome,' | ',".$tab."_tx_tipo) AS ".$tab."_tx_nome FROM ".$tabela." 
-		WHERE ".$tab."_tx_nome LIKE '%".$_GET['q']."%'"; 
+		$sql .= ", CONCAT(".$tab."_tx_nome,' | ',".$tab."_tx_tipo) AS ".$tab."_tx_nome FROM ".$tabela." WHERE ".$tab."_tx_nome LIKE '%".$_GET['q']."%'"; 
 	}else{
-		$sql = 
-		"SELECT ".$tab."_nb_id, ".$tab."_tx_nome ".(!empty($extra_busca)? ",".$extra_busca: "")." FROM ".$tabela." 
-		WHERE 1 $extra"
-		;
+		$sql .= ", ".$tab."_tx_nome ".(!empty($extra_busca)? ",".$extra_busca: "")." FROM ".$tabela." WHERE 1 ".$extra;
 	}
 	
 	$sql .= " AND ".$tab."_tx_status != 'inativo' 

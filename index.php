@@ -30,30 +30,26 @@ if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
 	if(!empty($_POST['password'])){
 		$_POST['password'] = md5($_POST['password']);
 	}
+	
 	$file = $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_POST['dominio'];
 
 	if(is_int(strpos($dominiosInput, $_POST['dominio'])) && file_exists($file)){
-
 		$formAction = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_POST['dominio'];
-
-		echo 
-			"<form action='".$formAction."' name='formTelaPrincipal' method='post'>
-				<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
-				<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
-				<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
-			</form>"
-		;
-		echo "<script>document.formTelaPrincipal.submit();</script>";
+		$formName = "formTelaPrincipal";
 	}else{
-		echo 
-			"<form action='index.php?error=notfounddomain' name='formLogin' method='post'>
-				<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
-				<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
-				<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
-			</form>"
-		;
-		echo "<script>document.formLogin.submit();</script>";
+		$formAction = "index.php?error=notfounddomain";
+		$formName = "formLogin";
 	}
+
+	echo 
+		"<form action='".$formAction."' name='".$formName."' method='post'>
+			<input type='hidden' name='dominio' value='".($_POST['dominio']?? '')."'>
+			<input type='hidden' name='user' value='".($_POST['user']?? '')."'>
+			<input type='hidden' name='password' value='".($_POST['password']?? '')."'>
+		</form>"
+	;
+	echo "<script>document.".$formName.".submit();</script>";
+	
 	exit;
 }
 
@@ -222,7 +218,7 @@ License: You must have a valid license purchased only from themeforest(the above
 					autocomplete="off" 
 					placeholder="Usuário" 
 					name="user"
-					<?php echo(!empty($_POST['user'])? "value=".$_POST['user']: '')?>
+					<?=(!empty($_POST['user'])? "value=".$_POST['user']: '')?>
 				/>
 			</div>
 
@@ -237,10 +233,10 @@ License: You must have a valid license purchased only from themeforest(the above
 					placeholder="Senha" 
 					name="password"
 				/>
-				<a href="<?php echo $_ENV["URL_BASE"].$_ENV["APP_PATH"]."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
+				<a href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
 			</div>
 
-			<?php echo $msg ?>
+			<?= $msg ?>
 
 			<div class="form-actions">
 			<a href="<?php echo $_ENV["URL_BASE"]."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
@@ -248,9 +244,9 @@ License: You must have a valid license purchased only from themeforest(the above
 			</div>
 
 			<p style="font-size: small; margin: 10px 0px">Versão:
-				<?php echo $version; ?><br>
+				<?= $version; ?><br>
 				Data de lançamento:
-				<?php echo $release_date; ?>
+				<?= $release_date; ?>
 			</p>
 
 
@@ -263,7 +259,7 @@ License: You must have a valid license purchased only from themeforest(the above
 	</div>
 
 	<div class="copyright">
-		<?php echo date("Y") ?> © TechPS.
+		<?= date("Y") ?> © TechPS.
 	</div>
 
 	<!--[if lt IE 9]>

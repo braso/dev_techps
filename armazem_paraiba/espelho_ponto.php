@@ -9,20 +9,17 @@
 	function index() {
 
 		global $CONTEX, $totalResumo, $conn;
-	
+
 		cabecalho('Espelho de Ponto');
-		
+
 		$extraBuscaMotorista = '';
 		$extraCampoData = '';
 		if (in_array($_SESSION['user_tx_nivel'], ['Motorista', 'Ajudante'])) {
 			$_POST['busca_motorista'] = $_SESSION['user_nb_entidade'];
 			$_POST['busca_empresa'] = $_SESSION['user_nb_empresa'];
 			$extraBuscaMotorista = " AND enti_nb_id = '".$_SESSION['user_nb_entidade']."'";
-			// $_POST['busca_dataInicio'] = date("Y-m-01");
-			// $_POST['busca_dataFim'] = date("Y-m-d");
-			// $extraCampoData = 'readonly';
 		}
-	
+
 		if (!empty($_POST['busca_motorista'])) {
 			$aMotorista = carregar('entidade', $_POST['busca_motorista']);
 			$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
@@ -32,17 +29,17 @@
 		if (!empty($_SESSION['user_nb_empresa']) && $_SESSION['user_tx_nivel'] != 'Administrador' && $_SESSION['user_tx_nivel'] != 'Super Administrador') {
 			$extraEmpresa = " AND enti_nb_empresa = ".$_SESSION['user_nb_empresa'];
 		}
-	
-		if (!isset($_POST['busca_dataInicio']) || empty($_POST['busca_dataInicio'])){
+
+		if (empty($_POST['busca_dataInicio'])){
 			$_POST['busca_dataInicio'] = date("Y-m-01");
 		}
-		if (!isset($_POST['busca_dataFim']) || empty($_POST['busca_dataFim'])){
+		if (empty($_POST['busca_dataFim'])){
 			$_POST['busca_dataFim'] = date("Y-m-d");
 		}
 
 		//Confere se há algum erro na pesquisa{
 		$searchError = false;
-		
+
 		$opt = "";
 
 		if(isset($_POST['acao']) && $_POST['acao'] == 'index'){
@@ -83,32 +80,46 @@
 
 				$opt = "<option value=\"".$motorista['enti_nb_id']."\">[".$motorista['enti_nb_id']."]".$motorista['enti_tx_nome']."</option>";
 			}
-			
+
 			if($searchError){
 				$errorMsg = substr($errorMsg, 0, -2).'.';
 				set_status('ERRO: '.$errorMsg);
       		}
 		}else{
-			$_POST['busca_empresa'] = $_POST['busca_empresa']?? '';
+			$_POST['busca_empresa']   = $_POST['busca_empresa']?? '';
 			$_POST['busca_motorista'] = $_POST['busca_motorista']?? '';
 		}
 
 		//CAMPOS DE CONSULTA
-		$c = [
-			combo_net('Empresa*:', 'busca_empresa', ($_POST['busca_empresa']?? ''), 3, 'empresa', "onchange=selecionaMotorista(this.value) ", $extraEmpresa),
-			combo_net(
-				'Motorista/Ajudante*:', 
-				'busca_motorista', 
-				(!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ""), 
-				4, 
-				'entidade', 
-				'', 
-				(!empty($_POST['busca_empresa'])?" AND enti_nb_empresa = ".$_POST['busca_empresa']:"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') ".$extraEmpresa." ".$extraBuscaMotorista, 
-				'enti_tx_matricula'
-			),
-			campo_data('Data Início:', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ""), 2, $extraCampoData),
-			campo_data('Data Fim:', 'busca_dataFim', ($_POST['busca_dataFim']?? ''), 2,$extraCampoData)
-		];
+		if($_SESSION['user_tx_nivel'] == "Motorista"){
+			$nomeEmpresa = mysqli_fetch_assoc(query("SELECT empr_tx_nome FROM empresa WHERE empr_nb_id = ".$_SESSION["user_nb_empresa"]));
+			$searchFields = [
+				texto("Empresa*:", $nomeEmpresa["empr_tx_nome"], 3),
+				texto("Motorista/Ajudante*:", $_SESSION["user_tx_nome"], 3),
+			];
+		}else{
+			$searchFields = [
+				combo_net('Empresa*:', 'busca_empresa', ($_POST['busca_empresa']?? ''), 3, 'empresa', "onchange=selecionaMotorista(this.value) ", $extraEmpresa),
+				combo_net(
+					'Motorista/Ajudante*:',
+					'busca_motorista',
+					(!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ""),
+					4, 
+					'entidade', 
+					'', 
+					(!empty($_POST['busca_empresa'])?" AND enti_nb_empresa = ".$_POST['busca_empresa']:"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') ".$extraEmpresa." ".$extraBuscaMotorista, 
+					'enti_tx_matricula'
+				)
+			];
+		}
+
+		$searchFields = array_merge(
+			$searchFields,
+			[
+				campo_data('Data Início:', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ""), 2, $extraCampoData),
+				campo_data('Data Fim:', 'busca_dataFim', ($_POST['busca_dataFim']?? ''), 2,$extraCampoData)
+			]
+		);
 
 		if (isset($_POST['AtualizarPainel']) && !empty($_POST['AtualizarPainel'])) {
 		    list($anoInicio, $mesInicio) = explode('-', $_POST['busca_dataInicio']);
@@ -122,7 +133,7 @@
 				echo '<script>alert("Periodo invalido, so pode atulizar um mes por vez")</script>';
 			}
         }
-		
+
 		$botao_imprimir =
 			'<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
 					<script>
@@ -131,44 +142,45 @@
 							window.print();
 						}
 					</script>';
-		if (!empty($_SESSION['user_tx_nivel']) && !is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
-			$botaoAtualizarPainel = '<div style="width: fit-content;display: inline-block;">
-			<form method="post">
-				<input class="btn btn-warning" type="submit" name="AtualizarPainel" value="AtualizarPainel">
-			</form>
-			</div>';
+    if (!empty($_SESSION['user_tx_nivel']) && is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
+			$botaoAtualizarPainel = 
+        '<div style="width: fit-content;display: inline-block;">
+			    <form method="post">
+				    <input class="btn btn-warning" type="submit" name="AtualizarPainel" value="AtualizarPainel">
+			    </form>
+			  </div>';
 		}
 		//BOTOES
 		$b = [
 			botao("Buscar", 'index', '', '', '', '', 'btn btn-success'),
 		];
 		if (!in_array($_SESSION['user_tx_nivel'], ['Motorista', 'Ajudante'])) {
-			$b[] = botao("Cadastrar Abono", 'layout_abono');
+			$b[] = botao("Cadastrar Abono", 'layout_abono', '', '', 'btn btn-secondary');
 		}
 		$b[] = $botao_imprimir;
 		$b[] = $botaoAtualizarPainel;
 		
 		abre_form('Filtro de Busca');
-		linha_form($c);
+		linha_form($searchFields);
 		fecha_form($b);
-		?>
-		<div id="tituloRelatorio">
-			<h1>Espelho de Ponto</h1>
-			<img id="logo" style='width: 150px' src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
-		</div>
-		<style>
-			#tituloRelatorio{
-			    display: none;
-    		}
-		</style>
-		<?php
-		
+    
+		echo 
+			"<div id='tituloRelatorio'>
+        <h1>Espelho de Ponto</h1>
+        <img id='logo' style='width: 150px' src='".$CONTEX["path"]."/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
+      </div>
+      <style>
+        #tituloRelatorio{
+            display: none;
+          }
+		  </style>"
+		;
 		$cab = [
 			"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "HE 50%", "HE&nbsp;100%",
 			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 		];
-		
+
 		// Converte as datas para objetos DateTime
 		$startDate = !empty($_POST['busca_dataInicio'])? new DateTime($_POST['busca_dataInicio']): '';
 		$endDate   = !empty($_POST['busca_dataFim'])? new DateTime($_POST['busca_dataFim']): '';
@@ -193,6 +205,7 @@
 				}
 				$aDia[] = $row;
 			}
+			criarFuncoesDeAjuste();
 	
 			if (!empty($aEmpresa['empr_nb_parametro'])) {
 				$parametroPadrao = carregar('parametro', $aEmpresa['empr_nb_parametro']);
@@ -259,16 +272,16 @@
 				  </div>'
 			;
 				 
-			$periodoPesquisa = 'De '.date("d/m/Y", strtotime($_POST['busca_dataInicio'])).' até '.date("d/m/Y", strtotime($_POST['busca_dataFim']));
+			$periodoPesquisa = "De ".date("d/m/Y", strtotime($_POST["busca_dataInicio"]))." até ".date("d/m/Y", strtotime($_POST["busca_dataFim"]));
       
 			abre_form(
 				"<div>"
 					.$aEmpresa["empr_tx_nome"]."<br>"
 					."[".$aMotorista["enti_tx_matricula"]."] ".$aMotorista["enti_tx_nome"]."<br>"
-					."$parametroPadrao<br><br>"
-					."$periodoPesquisa<br>"
+					.$parametroPadrao."<br><br>"
+					.$periodoPesquisa."<br>"
 				."</div>"
-				."$saldosMotorista"
+				.$saldosMotorista
 			);
 	?>
 
@@ -358,12 +371,7 @@
 			overflow: overlay;
 		}
 
-		.row div {
-			min-width: auto;
-		}
-	</style>
-		<?php
-			$aDia[] = array_values(array_merge(array('', '', '', '', '', '', '<b>TOTAL</b>'), $totalResumo));
+			$aDia[] = array_values(array_merge(['', '', '', '', '', '', '<b>TOTAL</b>'], $totalResumo));
 			
 			grid2($cab, $aDia, "Jornada Semanal (Horas): $aMotorista[enti_tx_jornadaSemanal]");
 			fecha_form();
@@ -435,6 +443,6 @@
 				}
 			}
 		</script>
-	<?php
+<?php
 	}
 ?>

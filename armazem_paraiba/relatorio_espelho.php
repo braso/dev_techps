@@ -24,15 +24,14 @@
     <script>
     function downloadCSV() {
         // Caminho do arquivo CSV no servidor
-        var filePath =
-            '<?=  "./arquivos/endosso_csv/$aEmpresa[empr_nb_id]/$aMotorista[enti_nb_id]/espelho-de-ponto.csv"?>'; // Substitua pelo caminho do seu arquivo
+        var filePath = '<?="./arquivos/endosso_csv/$aEmpresa[empr_nb_id]/$aMotorista[enti_nb_id]/espelho-de-ponto.csv"?>'; // Substitua pelo caminho do seu arquivo
 
         // Cria um link para download
         var link = document.createElement('a');
 
         // Configurações do link
         link.setAttribute('href', filePath);
-        link.setAttribute('download', '<?= "espelho-de-ponto-$aMotorista[enti_tx_nome].csv"?>');
+        link.setAttribute('download', '<?="espelho-de-ponto-$aMotorista[enti_tx_nome].csv"?>');
 
         // Adiciona o link ao documento
         document.body.appendChild(link);
@@ -49,7 +48,7 @@
     <br>
 
     <div class="header">
-        <img src="<?= $aEmpresa['empr_tx_logo'] ?>" alt="Logo Empresa Esquerda">
+        <img src="<?=$aEmpresa['empr_tx_logo']?>" alt="Logo Empresa Esquerda">
         <h1>Espelho de Ponto</h1>
         <div class="right-logo">
             <img src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
@@ -58,27 +57,27 @@
     <div class="info">
         <table class="table-header">
             <tr class="company-info">
-                <td style="padding-left: 12px; text-align: left;"><b>Empresa:</b> <?= $aEmpresa['empr_tx_nome'] ?></td>
-                <td style="text-align: left;"><b>CNPJ:</b> <?= $aEmpresa['empr_tx_cnpj'] ?></td>
+                <td style="padding-left: 12px; text-align: left;"><b>Empresa:</b> <?=$aEmpresa['empr_tx_nome']?></td>
+                <td style="text-align: left;"><b>CNPJ:</b> <?=$aEmpresa['empr_tx_cnpj']?></td>
                 <td colspan="2" style="text-align: left;"><b>End.</b>
-                    <?= "$enderecoEmpresa, $aEmpresa[cida_tx_nome]/$aEmpresa[cida_tx_uf], $aEmpresa[empr_tx_cep]" ?>
+                    <?="$enderecoEmpresa, $aEmpresa[cida_tx_nome]/$aEmpresa[cida_tx_uf], $aEmpresa[empr_tx_cep]"?>
                 </td>
                 <td style="text-align: left;"><b>Período:</b>
-                    <?= date("d/m/Y", strtotime($endossoCompleto['endo_tx_de']))  ?> -
-                    <?= date("d/m/Y", strtotime($endossoCompleto['endo_tx_ate'])) ?></td>
+                    <?=date("d/m/Y", strtotime($endossoCompleto['endo_tx_de']))?> -
+                    <?=date("d/m/Y", strtotime($endossoCompleto['endo_tx_ate']))?></td>
                 <td style="text-align: left;"><b>Emissão Doc.:</b>
-                    <?= date("d/m/Y H:i:s", strtotime($endossoCompleto['endo_tx_dataCadastro'])) . " (UTC-3)" ?> </td>
+                    <?=date("d/m/Y H:i:s", strtotime($endossoCompleto['endo_tx_dataCadastro'])) . " (UTC-3)"?> </td>
             </tr>
 
             <tr class="employee-info">
-                <td style="padding-left: 12px; text-align: left;"><b><?=$aMotorista['enti_tx_ocupacao']?>:</b> <?= $aMotorista['enti_tx_nome'] ?>
+                <td style="padding-left: 12px; text-align: left;"><b><?=$aMotorista['enti_tx_nivel']?>:</b> <?=$aMotorista['enti_tx_nome']?>
                 </td>
-                <td style="text-align: left;"><b>Função:</b> <?= $aMotorista['enti_tx_ocupacao'] ?></td>
-                <td style="text-align: left;"><b>CPF:</b> <?= $aMotorista['enti_tx_cpf'] ?></td>
-                <td style="text-align: left;"><b>Turno:</b> D.SEM/H: <?= $aMotorista['enti_tx_jornadaSemanal'] ?> FDS/H:
-                    <?= $aMotorista['enti_tx_jornadaSabado'] ?> </td>
-                <td style="text-align: left;"><b>Matrícula:</b> <?= $aMotorista['enti_tx_matricula'] ?></td>
-                <td style="text-align: left;"><b>Admissão:</b> <?= data($aMotorista['enti_tx_admissao']) ?></td>
+                <td style="text-align: left;"><b>Função:</b> <?=$aMotorista['enti_tx_ocupacao']?></td>
+                <td style="text-align: left;"><b>CPF:</b> <?=$aMotorista['enti_tx_cpf']?></td>
+                <td style="text-align: left;"><b>Turno:</b> D.SEM/H: <?=$aMotorista['enti_tx_jornadaSemanal']?> FDS/H:
+                    <?=$aMotorista['enti_tx_jornadaSabado']?> </td>
+                <td style="text-align: left;"><b>Matrícula:</b> <?=$aMotorista['enti_tx_matricula']?></td>
+                <td style="text-align: left;"><b>Admissão:</b> <?=data($aMotorista['enti_tx_admissao'])?></td>
             </tr>
         </table>
     </div>
@@ -129,7 +128,7 @@
         </tbody>
     </table>
 
-    <div><b>TOTAL: <?= $diasEndossados ?> dias</b></div>
+    <div><b>TOTAL: <?=$diasEndossados?> dias</b></div>
 
 
     <table class="table-bottom">
@@ -139,25 +138,25 @@
                     <tr>
                         <td>Carga Horaria Prevista:</td>
                         <td>
-                            <center><?= $totalResumo['jornadaPrevista'] ?></center>
+                            <center><?=$totalResumo['jornadaPrevista']?></center>
                         </td>
                     </tr>
                     <tr>
                         <td>Carga Horaria Efetiva Realizada:</td>
                         <td>
-                            <center><?= $totalResumo['diffJornadaEfetiva'] ?></center>
+                            <center><?=$totalResumo['diffJornadaEfetiva']?></center>
                         </td>
                     </tr>
                     <tr>
                         <td>Adicional Noturno:</td>
                         <td>
-                            <center><?= $totalResumo['adicionalNoturno'] ?></center>
+                            <center><?=$totalResumo['adicionalNoturno']?></center>
                         </td>
                     </tr>
                     <tr>
                         <td>Espera Indenizada:</td>
                         <td>
-                            <center><?= $totalResumo['esperaIndenizada'] ?></center>
+                            <center><?=$totalResumo['esperaIndenizada']?></center>
                         </td>
                     </tr>
                 </table>
@@ -166,13 +165,13 @@
                     <tr>
                         <td>Horas Extras (50%) - a pagar:</td>
                         <td>
-                            <center><?= $totalResumo['he50'] ?></center>
+                            <center><?=$totalResumo['he50']?></center>
                         </td>
                     </tr>
                     <tr>
                         <td>Horas Extras (100%) - a pagar:</td>
                         <td>
-                            <center><?= $totalResumo['he100'] ?></center>
+                            <center><?=$totalResumo['he100']?></center>
                         </td>
                     </tr>
                 </table>
@@ -243,10 +242,10 @@
                         <td><?=$totalResumo['saldoAnterior']?></td>
                         <td class="empty"></td>
                         <td>Saldo Período</td>
-                        <td><?= $totalResumo['diffSaldo'] ?></td>
+                        <td><?=$totalResumo['diffSaldo']?></td>
                         <td class="empty"></td>
                         <td>Saldo Atual</td>
-                        <td><?= $totalResumo['saldoAtual'] ?></td>
+                        <td><?=$totalResumo['saldoAtual']?></td>
                     </tr>
                 </table>
             </td>
@@ -270,7 +269,7 @@
                         <p>___________________________________________________________</p>
                     </center>
                     <center>
-                        <p><?= $aMotorista['enti_tx_nome'] ?></p>
+                        <p><?=$aMotorista['enti_tx_nome']?></p>
                     </center>
                     <center>
                         <p><?=$aMotorista['enti_tx_nivel']?></p>
@@ -281,7 +280,7 @@
         <tr>
             <td></td>
             <td></td>
-            <td id="impressao"><b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . "(UTC-3)" ?></td>
+            <td id="impressao"><b>Impressão Doc.:</b> <?=date("d/m/Y \T H:i:s") . "(UTC-3)"?></td>
         </tr>
     </table>
     <div id="exporta">

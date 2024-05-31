@@ -38,7 +38,7 @@
 							WHERE pont_tx_tipo IN ('".$codigosJornada['inicio']."', '".$codigosJornada['fim']."')
 								AND pont_tx_status != 'inativo'
 								AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-								AND pont_tx_data < '".$_POST['data'].' '.$_POST['hora']."'
+								AND pont_tx_data < STR_TO_DATE('".$_POST['data'].' '.$_POST['hora']."', '%Y-%m-%d %H:%i')
 							ORDER BY pont_tx_data DESC
 							LIMIT 1"
 					),
@@ -57,7 +57,7 @@
 									WHERE pont_tx_tipo IN ('".$codigosJornada['inicio']."', '".$codigosJornada['fim']."')
 										AND pont_tx_status != 'inativo'
 										AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-										AND pont_tx_data >= '".$_POST['data'].' '.$_POST['hora']."'
+										AND pont_tx_data >= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora']."', '%Y-%m-%d %H:%i')
 									ORDER BY pont_tx_data ASC
 									LIMIT 1"
 							)
@@ -88,7 +88,7 @@
 									WHERE pont_tx_status != 'inativo'
 										AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
 										AND pont_tx_data LIKE '".$_POST['data']."%'
-										AND pont_tx_data < '".$_POST['data'].' '.$_POST['hora']."'
+										AND pont_tx_data < STR_TO_DATE('".$_POST['data'].' '.$_POST['hora']."', '%Y-%m-%d %H:%i')
 									ORDER BY pont_tx_data DESC, pont_nb_id DESC
 									LIMIT 1"
 							)
@@ -126,13 +126,19 @@
 			}
 		//}
 
-
-
-		$campos = ['pont_nb_user', 'pont_tx_matricula', 'pont_tx_data', 'pont_tx_tipo', 'pont_tx_tipoOriginal', 'pont_tx_status', 'pont_tx_dataCadastro', 'pont_nb_motivo', 'pont_tx_descricao'];
-		$valores = [$_SESSION['user_nb_id'], $aMotorista['enti_tx_matricula'], "$_POST[data] $_POST[hora]", $aTipo['macr_tx_codigoInterno'], $aTipo['macr_tx_codigoExterno'], 'ativo', date("Y-m-d H:i:s"),$_POST['motivo'],$_POST['descricao']];
 		
+		$newPonto = [
+			'pont_nb_user' => $_SESSION['user_nb_id'],
+			'pont_tx_matricula' => $aMotorista['enti_tx_matricula'],
+			'pont_tx_data' => "$_POST[data] $_POST[hora]",
+			'pont_tx_tipo' => $aTipo['macr_tx_codigoInterno'],
+			'pont_tx_status' => 'ativo',
+			'pont_tx_dataCadastro' => date("Y-m-d H:i:s"),
+			'pont_nb_motivo' => $_POST['motivo'],
+			'pont_tx_descricao' => $_POST['descricao']
+		];
 		
-		inserir('ponto',$campos,$valores);
+		inserir('ponto',array_keys($newPonto),array_values($newPonto));
 		index();
 		exit;
 	}
@@ -154,7 +160,7 @@
 				</style>
 				<div id='statusDiv'>
 					<label id='status-label'>Status:</label>
-					<select name='status' id='status' class='form-control input-sm' onchange='ajusta_ponto(".$_POST['id'].", null, \"".$_POST['data_de']."\",  \"".$_POST['data_ate']."\", this.value)'>
+					<select name='status' id='status' class='form-control input-sm' onchange='atualizar_form(".$_POST['id'].", null, \"".$_POST['data_de']."\",  \"".$_POST['data_ate']."\", this.value)'>
 						<option value='ativo'>Ativos</option>
 						<option value='inativo' ".((!empty($_POST['status']) && $_POST['status'] == 'inativo')? 'selected': '').">Inativos</option>
 					</select>
@@ -187,7 +193,7 @@
 						"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 1) as temJornadaAberta FROM ponto
 							WHERE ".implode(" AND ", $condicoesPontoBasicas)."
 								AND ponto.pont_tx_tipo IN (1,2)
-								AND pont_tx_data <= '".$_POST['data']." 00:00:00'
+								AND pont_tx_data <= STR_TO_DATE('".$_POST['data']." 00:00:00', '%Y-%m-%d %H:%i:%s')
 							ORDER BY pont_tx_data DESC
 							LIMIT 1;"
 					)
@@ -231,7 +237,7 @@
 						"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 1) as deixouJornadaAberta FROM ponto
 							WHERE ".implode(" AND ", $condicoesPontoBasicas)."
 								AND ponto.pont_tx_tipo IN (1,2)
-								AND pont_tx_data <= '".$_POST['data']." 23:59:59'
+								AND pont_tx_data <= STR_TO_DATE('".$_POST['data']." 23:59:59', '%Y-%m-%d %H:%i:%s')
 							ORDER BY pont_tx_data DESC
 							LIMIT 1;"
 					)
@@ -243,7 +249,7 @@
 							"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 2) as fimJornada FROM ponto
 								WHERE ".implode(" AND ", $condicoesPontoBasicas)."
 									AND ponto.pont_tx_tipo IN (1,2)
-									AND pont_tx_data > '".$_POST['data']." 23:59:59'
+									AND pont_tx_data > STR_TO_DATE('".$_POST['data']." 23:59:59', '%Y-%m-%d %H:%i:%s')
 								ORDER BY pont_tx_data ASC
 								LIMIT 1;"
 						)
@@ -264,22 +270,32 @@
 				JOIN user ON ponto.pont_nb_user = user.user_nb_id
 				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
 				WHERE ".implode(" AND ", $condicoesPontoBasicas)."
-					AND ponto.pont_tx_data >= '".$sqlDataInicio."'
-					AND ponto.pont_tx_data <= '".$sqlDataFim."'
+					AND ponto.pont_tx_data >= STR_TO_DATE('".$sqlDataInicio."', '%Y-%m-%d %H:%i:%s')
+					AND ponto.pont_tx_data <= STR_TO_DATE('".$sqlDataFim."', '%Y-%m-%d %H:%i:%s')
 				ORDER BY pont_tx_data ASC"
 		;
 
 		return $sql;
 	}
 
+	function voltarAjuste(){
+		header("Location: ".$_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php");
+	}
+
 	function index(){
 		global $CONTEX;
 
-		if(empty($_POST['id']) || empty($_POST['data'])){
+		if(is_int(strpos($_SERVER['HTTP_REFERER'], "ajuste_ponto.php"))){
+			$_SERVER['HTTP_REFERER'] = $_POST["HTTP_REFERER"];
+		}elseif(empty($_SERVER["HTTP_REFERER"])){
+			$_SERVER['HTTP_REFERER'] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
+		}
+		
+		if(empty($_POST['id']) || empty($_POST['data'])){			
 			echo '<script>alert("ERRO: Deve ser selecionado um motorista e uma data para ajustar.")</script>';
 
 			echo 
-				'<form action="'.$_SERVER['HTTP_ORIGIN'].$CONTEX['path'].'/espelho_ponto.php" name="form_voltar" method="post">
+				'<form action="'.$_SERVER["HTTP_REFERER"].'" name="form_voltar" method="post">
 					<input type="hidden" name="data_de" value="'.$_POST['data_de'].'">
 					<input type="hidden" name="data_ate" value="'.$_POST['data_ate'].'">
 				</form>
@@ -292,6 +308,7 @@
 			$a_mod['data'] = $_POST['data'];
 			$a_mod['id'] = $_POST['id'];
 		}
+
 		cabecalho('Ajuste de Ponto');
 
 		if(empty($_POST['data_de']) && !empty($_POST['data'])){
@@ -327,74 +344,37 @@
 			$_POST['status'] = 'ativo';
 		}
 
-		$formStatus = "
-		        <form name='form_ajuste_status' action='$_SERVER[HTTP_ORIGIN]$CONTEX[path]/ajuste_ponto.php' method='post'>
-					<input type='hidden' name='acao' value='index'>
-					<input type='hidden' name='id'>
-					<input type='hidden' name='data'>
-					<input type='hidden' name='data_de'>
-					<input type='hidden' name='data_ate'>
-					<input type='hidden' name='status'>
-				</form>
-				<script>
-				selecionarOpcaoPorValor('$_POST[status]');
-				
-				function selecionarOpcaoPorValor(valor) {
-				    // Obtém o elemento select
-				    var selectElement = document.getElementById('status');
-
-                    // Define o valor da opção desejada como selecionado
-                    selectElement.value = valor;
-                }
-				$(document).ready(function() {
-                    // Adicione sua função aqui
-                    var select = document.getElementById('status');
-                    
-                    select.addEventListener('change', function() {
-                        var value = select.value;  // Correção aqui
-                        console.log('O valor selecionado é: ' + value);
-                        
-                        ajusta_ponto($_POST[id], '$_POST[data]', '$_POST[data_de]',  '$_POST[data_ate]', value);
-                    });
-                });
-                
-                function ajusta_ponto(motorista, data, data_de, data_ate, status) {
-                    console.log(motorista);
-					document.form_ajuste_status.id.value = motorista;
-					document.form_ajuste_status.data.value = data;
-					document.form_ajuste_status.data_de.value = data_de;
-					document.form_ajuste_status.data_ate.value = data_ate;
-					document.form_ajuste_status.status.value = status;
-					document.form_ajuste_status.submit();
-				}
-			</script>"
-		;
-
 		$c[] = texto('Matrícula',$aMotorista['enti_tx_matricula'],2);
 		$c[] = texto('Motorista',$aMotorista['enti_tx_nome'],5);
 		$c[] = texto('CPF',$aMotorista['enti_tx_cpf'],3);
 
 		$_POST['status'] = (!empty($_POST['status']) && $_POST['status'] != 'undefined'? $_POST['status']: 'ativo');
 
-		$c2[] = campo_data('Data', 'data', ($_POST['data']?? ''), 2, "onfocusout='ajusta_ponto(".$_POST['id'].", this.value, \"".$_POST['data_de']."\", \"".$_POST['data_ate']."\")', null");
-		$c2[] = campo_hora('Hora','hora',$_POST['hora'],2);
-		$c2[] = combo_bd('Código Macro','idMacro',$_POST['idMacro'],4,"macroponto","","ORDER BY macr_nb_id");
-		$c2[] = combo_bd('Motivo:','motivo',$_POST['motivo'],4,'motivo','',' AND moti_tx_tipo = "Ajuste" ORDER BY moti_tx_nome');
-
-		$c3[] = textarea('Justificativa:','descricao',$_POST['descricao'],12);
+		$c2 = [];
+		$c3 = [];
 
 		if(!empty($aEndosso) && count($aEndosso) > 0){
 			$c2[] = texto('Endosso:',"Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1),6);
 		}else{
-			$botao[] = botao('Gravar','cadastrarAjuste','id,busca_motorista,data_de,data_ate,data,busca_data',"$_POST[id],$_POST[id],$_POST[data_de],$_POST[data_ate],$_POST[data],".substr($_POST['data'],0, -3));
+			$_POST["busca_data"] = substr($_POST['data'],0, -3);
+			$botao[] = botao(
+				'Gravar',
+				'cadastrarAjuste',
+				implode(",", array_keys($_POST)),
+				implode(",", array_values($_POST))
+			);
 			$iconeExcluir = "icone_excluir_ajuste(pont_nb_id,excluir_ponto,idEntidade,".$_POST['data_de'].",".$_POST['data_ate'].",".strval($_POST['id']).")"; //Utilizado em grid()
+			$c2[] = campo_data('Data', 'data', ($_POST['data']?? ''), 2, "onfocusout='atualizar_form(".$_POST['id'].", this.value, \"".$_POST['data_de']."\", \"".$_POST['data_ate']."\")', null");
+			$c2[] = campo_hora('Hora','hora',$_POST['hora'],2);
+			$c2[] = combo_bd('Código Macro','idMacro',$_POST['idMacro'],4,"macroponto","","ORDER BY macr_nb_id");
+			$c2[] = combo_bd('Motivo:','motivo',$_POST['motivo'],4,'motivo','',' AND moti_tx_tipo = "Ajuste" ORDER BY moti_tx_nome');
+	
+			$c3[] = textarea('Justificativa:','descricao',$_POST['descricao'],12);
 		}
 		$botao[] = $botao_imprimir;
 		$botao[] = botao(
 			'Voltar', 
-			'voltar', 
-			'data_de,data_ate,id,busca_empresa,busca_motorista,data,busca_data', 
-			($_POST['data_de']??'').",".($_POST['data_ate']??'').",".$_POST['id'].",".$aMotorista['enti_nb_empresa'].",".$_POST['id'].",".$_POST['data'].",".substr($_POST['data'], 0, -3)
+			'voltarAjuste'
 		);
 		$botao[] = status();
 		
@@ -449,11 +429,12 @@
 				<input type='hidden' name='data_de'>
 				<input type='hidden' name='data_ate'>
 				<input type='hidden' name='status'>
+				<input type='hidden' name='HTTP_REFERER'>
 			</form>
 			<script>
 				valorDataInicial = document.getElementById('data').value;
 				valorStatusInicial = document.getElementById('status').value;
-				function ajusta_ponto(motorista, data, data_de, data_ate, status) {
+				function atualizar_form(motorista, data, data_de, data_ate, status) {
 					if(data == null){
 						data = document.getElementById('data').value;
 					}
@@ -467,6 +448,7 @@
 						document.form_ajuste_status.data_de.value = data_de;
 						document.form_ajuste_status.data_ate.value = data_ate;
 						document.form_ajuste_status.status.value = status;
+						document.form_ajuste_status.HTTP_REFERER.value = '".$_SERVER['HTTP_REFERER']."';
 						document.getElementById('status').value = status;
 						document.form_ajuste_status.submit();
 					}

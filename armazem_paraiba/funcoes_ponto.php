@@ -113,95 +113,29 @@
 		exit;
 	}
 
-	function voltar(){
-		global $CONTEX;
-		echo 
-			'<form action="'.$_SERVER['HTTP_ORIGIN'].$CONTEX['path'].'/espelho_ponto.php" name="form_voltar" method="post">
-				<input type="hidden" name="busca_motorista" value="'.$_POST['id'].'">
-				<input type="hidden" name="busca_dataInicio" value="'.$_POST['data_de'].'">
-				<input type="hidden" name="busca_dataFim" value="'.$_POST['data_ate'].'">
-				<input type="hidden" name="busca_empresa" value="'.$_POST['busca_empresa'].'">
-				<input type="hidden" name="acao" value="index">
-			</form>
-			<script>
-				document.form_voltar.submit();
-			</script>'
-		;
-		exit;
-	}
-
 	function layout_abono(){
-		cabecalho('Cadastro Abono');
+		echo "<form action='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_abono.php' name='form_cadastro_abono' method='post'>";
 
-		$c[] = combo_net('Motorista*:','motorista',$_POST['busca_motorista']?? '',4,'entidade','',' AND enti_tx_ocupacao = "Motorista"','enti_tx_matricula');
-		$c[] = campo('Data(s)*:','daterange', ($_POST['daterange']?? ''),3);
-		$c[] = campo_hora('Abono*: (hh:mm)','abono', ($_POST['abono']?? ''),3);
-		$c2[] = combo_bd('Motivo*:','motivo', ($_POST['motivo']?? ''),4,'motivo','',' AND moti_tx_tipo = "Abono"');
-		$c2[] = textarea('Justificativa:','descricao', ($_POST['descricao']?? ''),12);
-		$c2[] = "<input type='hidden' name='empresa' value='".$_POST["busca_empresa"]."'>";
-		$c2[] = "<input type='hidden' name='dataInicio' value='".$_POST["busca_dataInicio"]."'>";
-		$c2[] = "<input type='hidden' name='dataFim' value='".$_POST["busca_dataFim"]."'>";
-		$c2[] = "<input type='hidden' name='acao2' value='index'>";
+    unset($_POST['acao']);
 		
-		//BOTOES
-		$b[] = botao(
-			'Voltar', 
-			'voltar', 
-			'data_de,data_ate,id,busca_empresa', 
-			($_POST['data_de']??'').",".($_POST['data_ate']??'').",".$_POST['busca_motorista'].",".$_POST['busca_empresa']
-		);
-		$b[] = botao("Gravar",'cadastra_abono','','','','','btn btn-success');
-		
-		abre_form('Filtro de Busca');
-		linha_form($c);
-		linha_form($c2);
-		fecha_form($b);
-
-		rodape();
-
-		?>
-		<script type="text/javascript" src="js/moment.min.js"></script>
-		<script type="text/javascript" src="js/daterangepicker.min.js"></script>
-		<link rel="stylesheet" type="text/css" href="js/daterangepicker.css" />
-
-		<script>
-			$(function() {
-				$('input[name="daterange"]').daterangepicker({
-					opens: 'left',
-					"locale": {
-						"format": "DD/MM/YYYY",
-						"separator": " - ",
-						"applyLabel": "Aplicar",
-						"cancelLabel": "Cancelar",
-						"fromLabel": "From",
-						"toLabel": "To",
-						"customRangeLabel": "Custom",
-						"weekLabel": "W",
-						"daysOfWeek": ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"],
-						"monthNames": ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"],
-						"firstDay": 1
-					},
-				}, function(start, end, label) {
-					// console.log("A new date selection was made: " + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD'));
-				});
-			});
-		</script>
-		<?php
+		foreach($_POST as $key => $value){
+			echo "<input type='hidden' name='".$key."' value='".$value."'>";
+		}
+		echo "</form>";
+		echo "<script>document.form_cadastro_abono.submit();</script>";
+		exit;
 	}
 
 	function layout_ajuste(){
 		global $CONTEX;
-		echo 
-			'<form action="'.$_SERVER['HTTP_ORIGIN'].$CONTEX['path'].'/ajuste_ponto.php" name="form_ajuste_ponto" method="post">
-				<input type="hidden" name="id" value="'.$_POST['id'].'">
-				<input type="hidden" name="data" value="'.$_POST['data'].'">
-				<input type="hidden" name="data_de" value="'.$_POST['data_de'].'">
-				<input type="hidden" name="data_ate" value="'.$_POST['data_ate'].'">
-			</form>
-			<script>
-				document.form_ajuste_ponto.submit();
-			</script>'
-		;
+		echo '<form action="'.$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"].'/ajuste_ponto.php" name="form_ajuste_ponto" method="post">';
+		unset($_POST['acao']);
+		foreach($_POST as $key => $value){
+			echo "<input type='hidden' name='".$key."' value='".$value."'>";
+		}
+		echo '</form>';
+		
+		echo '<script>document.form_ajuste_ponto.submit();</script>';
 		exit;
 	}
 
@@ -394,30 +328,28 @@
 				MYSQLI_ASSOC
 			);
 			if(count($endossado) > 0){
-				$retorno = '<a title="Ajuste de Ponto (endossado)" onclick="avisar_ponto_endossado('.$idMotorista.',\''.$data.'\')"><i style="color:'.$cor.';" class="fa fa-circle">(E)</i></a>';
+				$retorno = '<a title="Ajuste de Ponto (endossado)" onclick="ajusta_ponto('.$idMotorista.',\''.$data.'\', true)"><i style="color:'.$cor.';" class="fa fa-circle">(E)</i></a>';
 			}else{
-				$retorno = '<a title="Ajuste de Ponto" href="#" onclick="ajusta_ponto('.$idMotorista.',\''.$data.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
+				$retorno = '<a title="Ajuste de Ponto" onclick="ajusta_ponto('.$idMotorista.',\''.$data.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
 			}
 		}
 
-		
+		return $retorno;
+	}
+
+	function criarFuncoesDeAjuste(){
 		echo 
 			'<script>
-				function ajusta_ponto(motorista, data) {
-					document.form_ajuste_ponto.id.value = motorista;
-					document.form_ajuste_ponto.data.value = data;
-					document.form_ajuste_ponto.submit();
-				}
-				function avisar_ponto_endossado(motorista, data){
-					alert("Dia já endossado.");
+				function ajusta_ponto(motorista, data, endossado = false) {
+					if(endossado == true){
+						alert("Dia já endossado.");
+					}
 					document.form_ajuste_ponto.id.value = motorista;
 					document.form_ajuste_ponto.data.value = data;
 					document.form_ajuste_ponto.submit();
 				}
 			</script>'
 		;
-
-		return $retorno;
 	}
 
 	function ordenar_horarios($inicio, $fim, $ehEspera = false, $ehEsperaRepouso = false) {
@@ -598,18 +530,15 @@
 		return $pares_horarios;
 	}
 
-	function dateTimeToSecs(DateTime $dateTime, $baseDate = ''): int{
+	function dateTimeToSecs(DateTime $dateTime, DateTime $baseDate): int{
 		if(empty($baseDate)){
 			$baseDate = DateTime::createFromFormat('Y-m-d H:i:s', '1970-01-01 00:00:00');
 		}
     	$res = date_diff($baseDate, $dateTime);
-		$monthDays = [31, 28+($res->y%4 == 0? 1: 0), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
         $res = 
         	($res->invert? 1:-1)*
 			(
-				$res->y*24*60*60*30*365+
-				$res->m*24*60*60*$monthDays[$res->m]+
-				$res->d*24*60*60+
+				$res->days*24*60*60+
 				$res->h*60*60+
 				$res->i*60+
 				$res->s
@@ -651,20 +580,20 @@
 			'inicioRefeicao' => [],
 			'fimRefeicao' => [],
 			'fimJornada' => [],
-			'diffRefeicao' => '',
-			'diffEspera' => '',
-			'diffDescanso' => '',
-			'diffRepouso' => '',
-			'diffJornada' => '',
-			'jornadaPrevista' => '',
-			'diffJornadaEfetiva' => '',
-			'maximoDirecaoContinua' => '',
-			'intersticio' => '',
-			'he50' => '',
-			'he100' => '',
-			'adicionalNoturno' => '',
-			'esperaIndenizada' => '',
-			'diffSaldo' => ''
+			'diffRefeicao' => "",
+			'diffEspera' => "",
+			'diffDescanso' => "",
+			'diffRepouso' => "",
+			'diffJornada' => "",
+			'jornadaPrevista' => "",
+			'diffJornadaEfetiva' => "",
+			'maximoDirecaoContinua' => "",
+			'intersticio' => "",
+			'he50' => "",
+			'he100' => "",
+			'adicionalNoturno' => "",
+			'esperaIndenizada' => "",
+			'diffSaldo' => "00:00"
 		];
 		$aMotorista = carrega_array(query(
 			"SELECT * FROM entidade
@@ -775,7 +704,6 @@
 			}
 		}
 
-		// die(var_dump($pontosDia));
 		foreach($pontosDia as $ponto){
 			$tiposRegistrados[] = [date("H:i", strtotime($ponto['pont_tx_data'])), $ponto['pont_tx_tipo']];
 			if(!isset($registros[$tipos[$ponto['pont_tx_tipo']]])){
@@ -797,7 +725,7 @@
 			);
 			$diffJornada = operarHorarios(
 				[
-					$diffJornada->d*24+$diffJornada->h.":".$diffJornada->i,
+					$diffJornada->days*24+$diffJornada->h.":".$diffJornada->i,
 					"00:00"
 				],
 				"+"
@@ -807,7 +735,7 @@
 			$diffJornada = "00:00";
 		}
 
-		if(is_bool(strpos($aParametro['para_tx_ignorarCampos'], 'espera'))){
+		if(is_bool(strpos($aParametro['para_tx_ignorarCampos'], 'refeicao'))){
 			$registros['refeicaoCompleto'] = ordenar_horarios($registros['inicioRefeicao'], $registros['fimRefeicao']);		/* $refeicaoOrdenada */
 		}else{
 			$registros['refeicaoCompleto'] = ordenar_horarios([], []);
@@ -854,7 +782,7 @@
 
 			
 			$totalIntervalo = date_diff(new DateTime($data." 00:00"), $totalIntervalo);
-			$totalIntervalo = operarHorarios([$totalIntervalo->d*24+$totalIntervalo->h.":".$totalIntervalo->i, "00:00"], "+");
+			$totalIntervalo = operarHorarios([$totalIntervalo->days*24+$totalIntervalo->h.":".$totalIntervalo->i, "00:00"], "+");
 
 			$registros[$campo.'Completo']['totalIntervalo'] = $totalIntervalo;
 		}
@@ -864,7 +792,7 @@
 		;
 		
 		$totalIntervalo = date_diff(new DateTime($data." 00:00"), $totalIntervalo);
-		$totalIntervalo = $totalIntervalo->d*24+$totalIntervalo->h.":".$totalIntervalo->i;
+		$totalIntervalo = $totalIntervalo->days*24+$totalIntervalo->h.":".$totalIntervalo->i;
 
 		$registros['repousoPorEspera']['repousoCompleto']['totalIntervalo'] = $totalIntervalo;
 
@@ -955,11 +883,11 @@
 			}
 
 			$jornadaEfetiva = $totalNaoJornada->diff($jornadaIntervalo);
-			$diffJornadaEfetiva = operarHorarios([$jornadaEfetiva->d*24+$jornadaEfetiva->h.":".$jornadaEfetiva->i, "00:00"], "+");
-			if($jornadaEfetiva->d > 0){
+			$diffJornadaEfetiva = operarHorarios([$jornadaEfetiva->days*24+$jornadaEfetiva->h.":".$jornadaEfetiva->i, "00:00"], "+");
+			if($jornadaEfetiva->days > 0){
 				$jornadaEfetiva = (new DateTime($data." 00:00"))->add($jornadaEfetiva);
 			}else{
-				$jornadaEfetiva = DateTime::createFromFormat('H:i', $jornadaEfetiva->format("%H:%I"));
+				$jornadaEfetiva = DateTime::createFromFormat('Y-m-d H:i', $data." ".$jornadaEfetiva->format("%H:%I"));
 			}
 
 			$aRetorno['diffJornadaEfetiva'] = verificaLimiteTempo($diffJornadaEfetiva, $alertaJorEfetiva);
@@ -984,9 +912,7 @@
 					
 					// Obter a diferença total em minutos
 					$minInterDiario = (
-						$intersticioDiario->y*60*24*30*365+
-						$intersticioDiario->m*60*24*30+
-						$intersticioDiario->d*60*24+
+						$intersticioDiario->days*60*24+
 						$intersticioDiario->h*60+
 						$intersticioDiario->i
 					);
@@ -1016,7 +942,12 @@
 		//}
 
 		//CALCULO SALDO{
-			$saldoDiario = (date_diff(DateTime::createFromFormat('H:i', $jornadaPrevista), $jornadaEfetiva))->format("%r%H:%I");
+			$saldoDiario = date_diff(
+				DateTime::createFromFormat('Y-m-d H:i', $data." ".$jornadaPrevista),
+				$jornadaEfetiva
+			);
+			
+			$saldoDiario = ($saldoDiario->invert? "-": "").sprintf("%02d:%02d", abs($saldoDiario->days*24+$saldoDiario->h), abs($saldoDiario->i));
 			$aRetorno['diffSaldo'] = $saldoDiario;
 		//}
 
@@ -1069,7 +1000,8 @@
 					LIMIT 1;"
 			))[0];
 			$tolerancia = intval($tolerancia);
-			
+		
+
 			$saldo = explode(':', $aRetorno['diffSaldo']);
 			$saldo = intval($saldo[0])*60 + ($saldo[0][0] == '-'? -1: 1)*intval($saldo[1]);
 			
@@ -1099,6 +1031,7 @@
 				}
 			}
 		//}
+
 		
 
 		//MÁXIMA DIREÇÃO CONTÍNUA{
@@ -1162,7 +1095,7 @@
 					"<a><i "
 						."style='color:orange;' "
 						."title='"
-							."Jornada Original: ".str_pad($jornadaPrevistaOriginal, 2, '0', STR_PAD_LEFT).":00:00\n"
+							."Jornada Original: ".str_pad($jornadaPrevistaOriginal, 2, '0', STR_PAD_LEFT).":00\n"
 							."Abono: ".$aAbono['abon_tx_abono']."\n"
 							."Motivo: ".$aAbono['moti_tx_nome']."\n"
 							."Justificativa: ".$aAbono['abon_tx_descricao']."\n\n"

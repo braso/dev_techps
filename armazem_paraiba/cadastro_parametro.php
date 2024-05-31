@@ -146,7 +146,7 @@
 		$error = false;
 		$emptyFields = '';
 		foreach(array_keys($camposObrigatorios) as $campo){
-		    if(!isset($_POST[$campo]) || empty($_POST[$campo])){
+		    if(empty($_POST[$campo]) && $_POST[$campo] != "0"){
 		        $error = true;
 				$emptyFields .= $camposObrigatorios[$campo].', ';
 			}
@@ -235,7 +235,7 @@
 			inserir('parametro',array_keys($novoParametro),array_values($novoParametro));
 		}
 
-		index();
+		layout_parametro();
 		exit;
 	}
 

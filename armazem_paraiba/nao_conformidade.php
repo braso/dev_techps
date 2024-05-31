@@ -145,6 +145,7 @@
 							$aDia[] = $row;
 						}
 					//}
+					criarFuncoesDeAjuste();
 
 					if (count($aDia) > 0) {
 

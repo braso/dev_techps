@@ -8,7 +8,6 @@
 
 	if(empty(session_id())){
 		$started = session_start();
-		echo "<script>console.log('ind: ".($started? "yes": "no")."');</script>";
 	}
     include_once "load_env.php";
 	$turnos = ['Noite', 'Manhã', 'Tarde', 'Noite'];
@@ -34,6 +33,7 @@
 			$_SESSION['user_tx_login'] = $_POST['user'];
 		}
 
+		
 		$interno = true;
 		include_once "conecta.php";
 		
@@ -65,6 +65,11 @@
 
 				if(!isset($_SESSION['horaEntrada'])){
 					$_SESSION['horaEntrada'] = date('H:i');
+				}
+
+				if(!empty($_POST['getSessionValues'])){
+					echo json_encode($_SESSION);
+					exit;
 				}
 
 				if(in_array($_SESSION['user_tx_nivel'], ['Motorista', 'Ajudante'])){

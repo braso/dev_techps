@@ -131,8 +131,10 @@
 		';
 	}
 
-	function grid($sql,$cabecalho,$valores=[],$label='',$col='12',$ordenar_coluna=1,$ordenar_sentido='asc',$paginar='10'){		
+	function grid($sql,$cabecalho,$valores=[],$label='',$col='12',$ordenar_coluna=1,$ordenar_sentido='asc',$paginar='10'){
 		global $CONTEX;
+
+		$sql = urldecode(str_replace(["%0D", "%0A", "%09"], " ", urlencode($sql)));
 
 		$paginar = (empty($paginar))? '10': $paginar;
 		$col = ($col < 1)? '12': $col;
@@ -147,6 +149,7 @@
 			<input type="hidden" name="just" value="">
 			<input type="hidden" id="hidden">
 		</form>
+		
 		<?php
 			js_contex_icone();
 
@@ -157,6 +160,7 @@
 			}
 			$cabecalho = implode('', $cabecalho);
 		?>
+		
 		<style type="text/css">
 			th { font-size: 10px !important; }
 			td { font-size: 10px !important; }
@@ -216,11 +220,6 @@
 
 		include_once "conecta.php";
 
-		
-		$totalQuery = mysqli_fetch_all(
-			query($sql),
-			MYSQLI_ASSOC
-		);
 
 		preg_match('/(.*)\((.*?)\)(.*)/', $ordenar_coluna, $match);
 		if(isset($match[2])){
@@ -232,7 +231,6 @@
 		
 		echo 
 			"<script type=\"text/javascript\" language=\"javascript\" >
-				console.log('".$_ENV["URL_BASE"].$_ENV['APP_PATH']."/contex20/server-side.php"."');
 				$(document).ready(function() {
 					var dataTable = $('#contex-grid-".$rand."').DataTable( {
 						\"processing\": true,
@@ -248,134 +246,8 @@
 							\"data\": {
 								\"path\": \"".$CONTEX["path"]."\",
 								\"arquivo\": \"".$_SERVER["DOCUMENT_ROOT"].strtok($_SERVER["SCRIPT_NAME"], "?")."\",
-								\"totalQuery\": ".json_encode($totalQuery).",
+								\"sql\": \"".$sql."\",
 								\"columns\": ["."'".implode("','", $valores)."']
-							},
-							error: function (request, error) {
-								console.log(request);
-							}
-						}
-					});
-					console.log(dataTable);
-				} );
-			</script>"
-		;
-	}
-
-	function noSQLGrid($cabecalho, $valores=[], $label='', $col='12', $ordenar_coluna=1, $ordenar_sentido='asc', $paginar='10'){		
-		global $CONTEX;
-
-		$paginar = (empty($paginar))? '10': $paginar;
-		$col = ($col < 1)? '12': $col;
-		
-		?>
-
-		<form id='contex_icone_form' method="post" target="" action="">
-			<input type="hidden" name="id" value="0">
-			<input type="hidden" name="acao" value="sem_acao">
-			<input type="hidden" name="data_de" value="">
-			<input type="hidden" name="data_ate" value="">
-			<input type="hidden" name="just" value="">
-			<input type="hidden" id="hidden">
-		</form>
-		<?php
-			js_contex_icone();
-
-			for($i=0; $i<count($cabecalho); $i++){
-				$cabecalho[$i] = "<th>$cabecalho[$i]</th>";
-			}
-			$cabecalho = implode('', $cabecalho);
-		?>
-		<style type="text/css">
-			th { font-size: 10px !important; }
-			td { font-size: 10px !important; }
-
-			@media print{
-				form > div:nth-child(2) > div:nth-child(1),
-				form > div:nth-child(2) > div:nth-child(3),
-				form > div:nth-child(2) > div:nth-child(5),
-				form > div:nth-child(2) > div:nth-child(6),
-				form > div:nth-child(3) > div,
-				form > div.form-actions,
-				#contex-grid-teste_length,
-				#contex-grid-teste_info,
-				body > div.scroll-to-top > i{
-					display: none;
-				}
-				@page {
-					size: landscape;
-				}
-			}
-		</style>
-				<!-- BEGIN EXAMPLE TABLE PORTLET-->
-				<div class="col-md-<?= $col;?> col-sm-<?= $col;?>">
-					<div class="portlet light ">
-						<?php if($label!=''){?>
-							<div class="portlet-title">
-									<div class="caption">
-										<span class="caption-subject font-dark bold uppercase"><?=$label?></span>
-									</div>
-									<!-- <div class="tools"> </div> -->
-							</div>
-						<?php }?>
-						<div class="portlet-body">
-							<table id="contex-grid-teste" class="table compact table-striped table-bordered table-hover dt-responsive" width="100%" id="sample_2">
-								<thead>
-									<tr>
-										<?=$cabecalho?>
-									</tr>
-								</thead>
-							</table>
-						</div>
-					</div>
-				</div>
-				<!-- END EXAMPLE TABLE PORTLET-->
-
-				<!-- BEGIN PAGE LEVEL PLUGINS -->
-				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
-				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
-				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
-				<!-- END PAGE LEVEL PLUGINS -->
-
-				<!-- BEGIN PAGE LEVEL SCRIPTS -->
-				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
-				<!-- END PAGE LEVEL SCRIPTS -->
-		<?php
-
-		include_once $_SERVER['DOCUMENT_ROOT'].$CONTEX['path']."/conecta.php";
-		include_once $_SERVER['DOCUMENT_ROOT'].strtok($_SERVER['SCRIPT_NAME'], '?');
-
-		$totalQuery = json_encode($valores);
-		$totalQuery = substr_replace($totalQuery, "'", "\'");
-
-		preg_match('/(.*)\((.*?)\)(.*)/', $ordenar_coluna, $match);
-		if(isset($match[2])){
-			$parametros = explode(',',$match[2]);
-			$order = $parametros[0];
-		}else{
-			$order = $ordenar_coluna;
-		}
-		
-		echo 
-			"<script type=\"text/javascript\" language=\"javascript\" >
-				$(document).ready(function() {
-					var dataTable = $('#contex-grid-teste').DataTable( {
-						\"processing\": true,
-						\"serverSide\": true,
-						\"bFilter\": false,
-						\"sEcho\": true,
-						\"lengthMenu\": [ [10, 25, 50, 100, -1], [10, 25, 50, 100, \"Todos\"] ],
-						\"pageLength\": ".$paginar.",
-						// \"stateSave\": true,
-						\"order\": [".$order.", \"".$ordenar_sentido."\"],
-						\"ajax\":{
-							url :\"".$_ENV['URL_BASE']."/contex20/server-side.php\", // json datasource
-							type: \"post\",  // method  , by default get
-							data: {
-								path: '".$CONTEX['path']."',
-								arquivo: '".$_SERVER['DOCUMENT_ROOT'].strtok($_SERVER['SCRIPT_NAME'], '?')."',
-								totalQuery: ".json_encode($totalQuery).",
-								columns: ["."'".implode("','", array_keys($valores[0]))."'"."]
 							},
 							error: function (request, error) {
 								console.log(request);

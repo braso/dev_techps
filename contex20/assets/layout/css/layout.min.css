@@ -118,6 +118,7 @@ html{
     background-size: contain;
     background-position: center;
     min-height: -webkit-fill-available;
+    min-height: -moz-available;
     min-height: 55px;
     width: 25rem;
 }
@@ -1303,7 +1304,7 @@ html{
 	align-content: center;
 	position: fixed;
 	bottom: 0;
-	z-index: 2;
+	z-index: 3;
 }
 
 .page-footer a {
