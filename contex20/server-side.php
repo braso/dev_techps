@@ -23,7 +23,7 @@
 		[]
 	;
 
-	
+
 	$limit = ['start' => $_REQUEST['start'], 'length' => $_REQUEST['length']];
 	$limitedQuery = [];
 	if($limit['length'] != '-1'){
