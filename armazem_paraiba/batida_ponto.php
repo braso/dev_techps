@@ -58,10 +58,14 @@
 				'pont_tx_tipo' 			=> $aTipo['macr_tx_codigoInterno'],
 				'pont_tx_status' 		=> 'ativo',
 				'pont_tx_dataCadastro' 	=> $hoje.' '.date("H:i:s"),
-				'pont_nb_motivo' 		=> $_POST['motivo'],
-				'pont_tx_latitude'      => $_POST['latitude'],
-				'pont_tx_longitude'     => $_POST['longitude']
+				'pont_nb_motivo' 		=> $_POST['motivo']
 			];
+			if(!empty($_POST['latitude'])){
+				$novoPonto['pont_tx_latitude'] = $_POST['latitude'];
+			}
+			if(!empty($_POST['longitude'])){
+				$novoPonto['pont_tx_longitude'] = $_POST['longitude'];
+			}
 			inserir('ponto', array_keys($novoPonto), array_values($novoPonto));
 		}
 

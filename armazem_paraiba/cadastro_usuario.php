@@ -111,7 +111,7 @@
 		$usuario['user_tx_status'] = !empty($_POST['status'])? $_POST['status']: 'ativo';
 
 		if(is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) && !empty($_POST['nivel'])){
-			$usuario['user_tx_nivel'] =  $_POST['nivel'];
+			$usuario['user_tx_nivel'] = $_POST['nivel'];
 		}
 
 		if (!empty($_POST['nivel']) && in_array($_POST['nivel'], ['Motorista', 'Ajudante']) && (!isset($_POST['cpf']) || empty($_POST['cpf']))) {

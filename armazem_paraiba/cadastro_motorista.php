@@ -274,7 +274,7 @@
 			$user_infos = [
 				'user_tx_matricula' 	=> $_POST['postMatricula'], 
 				'user_tx_nome' 			=> $_POST['nome'], 
-				'user_tx_nivel' 		=> $_POST['nivel'], 
+				'user_tx_nivel' 		=> $_POST['ocupacao'], 
 				'user_tx_login' 		=> (!empty($_POST['login'])? $_POST['login']: $_POST['postMatricula']), 
 				'user_tx_senha' 		=> md5($cpfLimpo), 
 				'user_tx_status' 		=> $_POST['status'], 

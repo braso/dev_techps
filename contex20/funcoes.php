@@ -370,7 +370,7 @@
 		$dataScript = "<script>";
 		switch($mascara){
 			case "MASCARA_DATA":
-				$dataScript .= "$('[name=\"$variavel\"]').inputmask(\"date\", {clearIncomplete: false, placeholder: \"dd/mm/aaaa\"});";
+				$dataScript .= "$('[name=\'$variavel\']').inputmask(\'date\', {clearIncomplete: false, placeholder: \'dd/mm/aaaa\'});";
 				$type = "date";
 			break;
 			case "MASCARA_MES":
