@@ -4,6 +4,7 @@
 		error_reporting(E_ALL);
 	//}*/
 
+	include_once "funcoes_ponto.php";
 	include_once "conecta.php";
 	include_once "alerta_carrega_ponto.php";
 
@@ -160,6 +161,7 @@
 
 		ftp_close($ftp_conn);
 		if ($_SERVER['HTTP_ENV'] == 'carrega_cron'){
+			criar_relatorio(null);
 			exit;
 		}
 		index();
@@ -306,7 +308,6 @@
 				 $_SESSION['user_nb_id'] 	= $user[0]['user_nb_id'];
 				$_SESSION['user_tx_nivel'] 	= $user[0]['user_tx_nivel'];
 				$_SESSION['user_tx_login'] 	= $user[0]['user_tx_login'];
-	
 				updateFTP();
 			}else{
 				echo "Server info not found.";

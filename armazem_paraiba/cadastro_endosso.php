@@ -275,20 +275,28 @@
 			//</Pegar dados do ponto>
 
 			$novoEndosso = [
-				'endo_nb_entidade' 		=> $motorista['enti_nb_id'],
-				'endo_tx_nome' 			=> $motorista['enti_tx_nome'],
-				'endo_tx_matricula' 	=> $motorista['enti_tx_matricula'],
-				'endo_tx_mes' 			=> substr($_POST['data_de'], 0, 8).'01',
-				'endo_tx_saldo' 		=> operarHorarios([$totalResumo['saldoAnterior'], $totalResumo['diffSaldo']], '+'),
-				'endo_tx_de' 			=> $_POST['data_de'],
-				'endo_tx_ate' 			=> $_POST['data_ate'],
-				'endo_tx_dataCadastro' 	=> date('Y-m-d h:i:s'),
-				'endo_nb_userCadastro' 	=> $_SESSION['user_nb_id'],
-				'endo_tx_status' 		=> 'ativo',
-				'endo_tx_pagarHoras' 	=> $_POST['pagar_horas']?? 'nao',
-				'endo_tx_horasApagar' 	=> $_POST['quantHoras']?? '00:00',
-				'endo_tx_pontos'		=> $aDia,
-				'totalResumo'			=> $totalResumo
+				'endo_nb_entidade' 		  => $motorista['enti_nb_id'],
+				'endo_tx_nome' 			  => $motorista['enti_tx_nome'],
+				'endo_tx_matricula' 	  => $motorista['enti_tx_matricula'],
+				'endo_tx_mes' 			  => substr($_POST['data_de'], 0, 8).'01',
+				'endo_tx_saldo' 		  => operarHorarios([$totalResumo['saldoAnterior'], $totalResumo['diffSaldo']], '+'),
+				'endo_tx_de' 			  => $_POST['data_de'],
+				'endo_tx_ate' 			  => $_POST['data_ate'],
+				'endo_tx_dataCadastro' 	  => date('Y-m-d h:i:s'),
+				'endo_nb_userCadastro' 	  => $_SESSION['user_nb_id'],
+				'endo_tx_status' 		  => 'ativo',
+				'endo_tx_pagarHoras' 	  => $_POST['pagar_horas']?? 'nao',
+				'endo_tx_horasApagar' 	  => $_POST['quantHoras']?? '00:00',
+				'endo_tx_pontos'		  => $aDia,
+				'endo_tx_jornadaEfetiva'  => $totalResumo['diffJornadaEfetiva'],
+				'endo_tx_jornadaPrevista' => $totalResumo['jornadaPrevista'],
+				'endo_tx_he50'            => $totalResumo['he50'],
+				'endo_tx_he100'           => $totalResumo['he100'],
+				'endo_tx_adicinalNoturno' => $totalResumo['adicionalNoturno'],
+				'endo_tx_esperaIndenizada'=> $totalResumo['esperaIndenizada'],
+				'endo_tx_saldoAnterior'   => $totalResumo['saldoAnterior'],
+				'endo_tx_periodo'         => $totalResumo['diffSaldo'],
+				'totalResumo'			  => $totalResumo
 			];
 
 			$novoEndosso['endo_tx_pontos'] = json_encode($novoEndosso['endo_tx_pontos']);

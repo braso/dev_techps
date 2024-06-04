@@ -34,7 +34,7 @@
         $login = $_POST['login'];
         
         if(!empty($dominio)){
-            include __DIR__.$dominio."/conecta.php";
+            include __DIR__.'/'.$dominio."/conecta.php";
             
             global $CONTEX;
             if (!empty($login)){
