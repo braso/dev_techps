@@ -200,12 +200,21 @@
                         position: absolute;
                     }
             </style>
+            <form name="myForm" method="post" action="<?= htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+                <input type="hidden" name="empresa" id="empresa">
+                <input type="hidden" name="busca_data" id="busca_data">
+            </form>
             <form name="formularioAtualizarPainel" method="post" action="<?= htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
                 <input type="hidden" name="atualizar" id="atualizar">
                 <input type="hidden" name="busca_data" id="busca_dataAtualizar">
             </form>
 
             <script>
+                 function setAndSubmit(empresa) {
+                    document.myForm.empresa.value = empresa;
+                    document.myForm.busca_data.value = document.getElementById('busca_data').value;
+                    document.myForm.submit();
+                 }
                 function atualizarPainel() {
                     document.formularioAtualizarPainel.busca_dataAtualizar.value = document.getElementById("busca_data").value;
                     document.formularioAtualizarPainel.atualizar.value = "atualizar";
