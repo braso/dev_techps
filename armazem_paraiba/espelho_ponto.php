@@ -121,19 +121,6 @@
 			]
 		);
 
-		if (isset($_POST['AtualizarPainel']) && !empty($_POST['AtualizarPainel'])) {
-		    list($anoInicio, $mesInicio) = explode('-', $_POST['busca_dataInicio']);
-		    list($anoFim, $mesFim) = explode('-', $_POST['busca_dataFim']);
-		    if ($anoInicio == $anoFim && $mesInicio == $mesFim) {
-				echo '<script>alert("Atualizando os painéis, aguarde um pouco ")</script>';
-				ob_flush();
-				flush();
-				criar_relatorio("$anoInicio-$mesInicio");
-			}else {
-				echo '<script>alert("Periodo invalido, so pode atulizar um mes por vez")</script>';
-			}
-        }
-
 		$botao_imprimir =
 			'<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
 					<script>
@@ -142,14 +129,6 @@
 							window.print();
 						}
 					</script>';
-    if (!empty($_SESSION['user_tx_nivel']) && is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
-			$botaoAtualizarPainel = 
-        '<div style="width: fit-content;display: inline-block;">
-			    <form method="post">
-				    <input class="btn btn-warning" type="submit" name="AtualizarPainel" value="AtualizarPainel">
-			    </form>
-			  </div>';
-		}
 		//BOTOES
 		$b = [
 			botao("Buscar", 'index', '', '', '', '', 'btn btn-success'),
@@ -158,7 +137,6 @@
 			$b[] = botao("Cadastrar Abono", 'layout_abono', '', '', 'btn btn-secondary');
 		}
 		$b[] = $botao_imprimir;
-		$b[] = $botaoAtualizarPainel;
 		
 		abre_form('Filtro de Busca');
 		linha_form($searchFields);

@@ -1369,16 +1369,6 @@
 			$endossoQuantEp = 0;
 			foreach ($motoristas as $motorista) {
 				$endossado = '';
-				// Jornada Prevista, Jornada Efetiva, HE50%, HE100%, Adicional Noturno, Espera Indenizada{
-				$totalJorPrevResut = '00:00';
-				$totalJorPrev = '00:00';
-				$totalJorEfe = '00:00';
-				$totalHE50 = '00:00';
-				$totalHE100 = '00:00';
-				$totalAdicNot = '00:00';
-				$totalEspInd = '00:00';
-				$totalSaldoPeriodo = '00:00';
-				$saldoFinal = '00:00';
 	
 				// Status Endosso{
 				$endossos = mysqli_fetch_all(query("SELECT * FROM endosso 
@@ -1422,76 +1412,48 @@
 				} else {
 					$saldoAnterior = '00:00';
 				}
-				// 		}
 				
-				$diasPonto = [];
-				$dataTimeInicio = new DateTime($dataInicio);
-				$dataTimeFim = new DateTime($dataFim);
-				for ($dia = clone $dataTimeInicio; $dia <= $dataTimeFim; $dia->modify('+1 day')) {
-					$dataVez = $dia->format('Y-m-d');
-					$diasPonto[] = diaDetalhePonto($motorista['enti_tx_matricula'], $dataVez);
-				};
-				
-				foreach ($diasPonto as $diaPonto) {
-					if (strlen($diaPonto['jornadaPrevista']) > 5) {
-				// 		$JorPrevHtml = strpos($diaPonto['jornadaPrevista'], "&nbsp;") + 6;
-				// 		$JorPrev = substr($diaPonto['jornadaPrevista'], $JorPrevHtml, 5);
-						
-						$diaPontoJ = preg_replace('/.*&nbsp;/', '', $diaPonto['jornadaPrevista']);
-						if (preg_match('/(\d{2}:\d{2})$/', $diaPontoJ, $matches)) {
-                            $JorPrev = $matches[1];
-                        }
+				if ($endossos[0]['endo_tx_periodo'] > '00:00') {
+					if ($endossos[0]['endo_tx_periodo'] > $endossos[0]['he100']) {
+						$he100 = $endossos[0]['he100'];
 					} else {
-						$JorPrev = $diaPonto['jornadaPrevista'];
+						$he100 = $endossos[0]['endo_tx_periodo'];
 					}
-
-
-					if($endossos[0]["endo_tx_matricula"] == $motorista["enti_tx_matricula"]){
-						$he50 = empty($diaPonto['he50']) ? '00:00' : $diaPonto['he50'];
-						$he100 = empty($diaPonto['he100']) ? '00:00' : $diaPonto['he100'];
-						$adicNot = $diaPonto['adicionalNoturno'];
-						$espInd  = $diaPonto['esperaIndenizada'];
-						$saldoAnt = $saldoAnterior;
-						$saldoPer = $diaPonto['diffSaldo'];
-					}
-					else {
-						$he50 = '00:00';
-						$he100 = '00:00';
-						$adicNot = '00:00';
-						$espInd  = '00:00';
-						$saldoAnt = '00:00';
-						$saldoPer = '00:00';
-					}
-
-					$totalJorPrev      = somarHorarios([$totalJorPrev,      $JorPrev]);
-					$totalJorEfe       = somarHorarios([$totalJorEfe,       $diaPonto['diffJornadaEfetiva']]);
-					$totalHE50         = somarHorarios([$totalHE50,         $he50]);
-					$totalHE100        = somarHorarios([$totalHE100,        $he100]);
-					$totalAdicNot      = somarHorarios([$totalAdicNot,      $adicNot ]);
-					$totalEspInd       = somarHorarios([$totalEspInd,       $espInd]);
-					$totalSaldoPeriodo = somarHorarios([$totalSaldoPeriodo, $saldoPer]);
-					
+				}else{
+					$he100 = '00:00';
 				}
-	
-				if ($saldoAnt != '00:00' && !empty($saldoAnt)) {
-					$saldoFinal = somarHorarios([$saldoAnt, $totalSaldoPeriodo]);
-				} else {
-					$saldoFinal = somarHorarios(['00:00', $totalSaldoPeriodo]);
+
+				if ($endossos[0]['endo_tx_periodo'] > '00:00') {
+					if ($endossos[0]['endo_tx_periodo'] > $endossos[0]['endo_tx_horasApagar']) {
+						$he50 = $endossos[0]['endo_tx_horasApagar'];
+					}else{
+						$he50 = $endossos[0]['endo_tx_periodo'];
+					}
+				}else{
+					$he50 = '00:00';
 				}
-	
+				// 		}
+				$jornadaPrevista = $endossos[0]['endo_tx_jornadaPrevista'] == null ? '00:00' : $endossos[0]['endo_tx_jornadaPrevista'];
+				$jornadaEfetiva = $endossos[0]['endo_tx_jornadaEfetiva'] == null ? '00:00' : $endossos[0]['endo_tx_jornadaEfetiva'];
+				$adicionalNoturno = $endossos[0]['endo_tx_adicinalNoturno'] == null ? '00:00' : $endossos[0]['endo_tx_adicinalNoturno'];
+				$esperaIndenizada = $endossos[0]['endo_tx_esperaIndenizada'] == null ? '00:00' : $endossos[0]['endo_tx_esperaIndenizada'];
+				$saldoAnterior = $endossos[0]['endo_tx_saldoAnterior'] == null ? '00:00' : $endossos[0]['endo_tx_saldoAnterior'];
+				$saldoPeriodo = $endossos[0]['endo_tx_periodo'] == null ? '00:00' : $endossos[0]['endo_tx_periodo'];
+				$saldoFinal = $endossos[0]['endo_tx_saldo'] == null ? '00:00' : $endossos[0]['endo_tx_saldo'];
+
 				$rows[] = [
 					'IdMotorista' => $motorista['enti_nb_id'],
 					'motorista' => $motorista['enti_tx_nome'],
 					'statusEndosso' => $endossado,
-					'jornadaPrevista' => $totalJorPrev,
-					'jornadaEfetiva' => $totalJorEfe,
-					'he50' => $totalHE50,
-					'he100' => $totalHE100,
-					'adicionalNoturno' => $totalAdicNot,
-					'esperaIndenizada' => $totalEspInd,
-					'saldoAnterior' => $saldoAnt,
-					'saldoPeriodo' => $totalSaldoPeriodo,
-					'saldoFinal' => $saldoFinal
+					'jornadaPrevista' => $jornadaPrevista,
+					'jornadaEfetiva' => $jornadaEfetiva,
+					'he50' => $he50,
+					'he100' => $he100,
+					'adicionalNoturno' => $adicionalNoturno,
+					'esperaIndenizada' => $esperaIndenizada,
+					'saldoAnterior' => $saldoAnterior,
+					'saldoPeriodo' => $saldoPeriodo,
+					'saldoFinal' => $saldoFinal,
 				];
 				
 			}
