@@ -18,7 +18,7 @@
 		//BOTOES
 		$b[] = botao(
 			'Voltar', 
-			'voltar', 
+			'index', 
 			implode(",",array_keys($_POST)),
 			implode(",",array_values($_POST))
 		);

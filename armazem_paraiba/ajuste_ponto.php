@@ -7,9 +7,8 @@
 	include_once 'funcoes_ponto.php';
 
 	function cadastrarAjuste(){
-		var_dump($_POST['hora']);
 		//Conferir se tem as informações necessárias{
-			if(empty($_POST['hora']) || empty($_POST['idMacro']) || empty($_POST['motivo'])){
+			if(empty($_POST['id']) || empty($_POST['hora']) || empty($_POST['idMacro']) || empty($_POST['motivo'])){
 				set_status("ERRO: Dados insuficientes!");
 				index();
 				exit;
@@ -39,7 +38,7 @@
 							WHERE pont_tx_tipo IN ('".$codigosJornada['inicio']."', '".$codigosJornada['fim']."')
 								AND pont_tx_status != 'inativo'
 								AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-								AND pont_tx_data < STR_TO_DATE('".$_POST['data'].' '.$_POST['hora']."', '%Y-%m-%d %H:%i')
+								AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora']."', '%Y-%m-%d %H:%i')
 							ORDER BY pont_tx_data DESC
 							LIMIT 1"
 					),
@@ -89,7 +88,7 @@
 									WHERE pont_tx_status != 'inativo'
 										AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
 										AND pont_tx_data LIKE '".$_POST['data']."%'
-										AND pont_tx_data < STR_TO_DATE('".$_POST['data'].' '.$_POST['hora']."', '%Y-%m-%d %H:%i')
+										AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora']."', '%Y-%m-%d %H:%i')
 									ORDER BY pont_tx_data DESC, pont_nb_id DESC
 									LIMIT 1"
 							)
@@ -129,14 +128,14 @@
 
 		
 		$newPonto = [
-			'pont_nb_user' => $_SESSION['user_nb_id'],
-			'pont_tx_matricula' => $aMotorista['enti_tx_matricula'],
-			'pont_tx_data' => "$_POST[data] $_POST[hora]",
-			'pont_tx_tipo' => $aTipo['macr_tx_codigoInterno'],
-			'pont_tx_status' => 'ativo',
-			'pont_tx_dataCadastro' => date("Y-m-d H:i:s"),
-			'pont_nb_motivo' => $_POST['motivo'],
-			'pont_tx_descricao' => $_POST['descricao']
+			'pont_nb_user' 			=> $_SESSION['user_nb_id'],
+			'pont_tx_matricula' 	=> $aMotorista['enti_tx_matricula'],
+			'pont_tx_data' 			=> "$_POST[data] $_POST[hora]",
+			'pont_tx_tipo' 			=> $aTipo['macr_tx_codigoInterno'],
+			'pont_tx_status' 		=> 'ativo',
+			'pont_tx_dataCadastro' 	=> date("Y-m-d H:i:s"),
+			'pont_nb_motivo' 		=> $_POST['motivo'],
+			'pont_tx_descricao' 	=> $_POST['descricao']
 		];
 		
 		inserir('ponto',array_keys($newPonto),array_values($newPonto));
@@ -187,6 +186,9 @@
 		);
 
 		//Definir data de início da query{
+			//Se abriu jornada hoje, considera a partir da data de abertura da jornada.
+			$sqlDataInicio = $abriuJornadaHoje['pont_tx_data'];
+
 			if(empty($abriuJornadaHoje)){
 				//Se não abriu uma jornada hoje, confere se há uma jornada aberta que veio de antes do dia.
 				$temJornadaAberta = mysqli_fetch_assoc(
@@ -200,6 +202,9 @@
 					)
 				);
 
+				//Se não tem uma jornada que veio de antes, considera a partir de meia-noite de hoje.
+				$sqlDataInicio = $_POST['data']." 00:00:00";
+
 				if(!empty($temJornadaAberta) && intval($temJornadaAberta['temJornadaAberta'])){
 					//Se tem uma jornada que veio de antes do dia, confere se esta foi fechada hoje.
 					$jornadaFechadaHoje = mysqli_fetch_assoc(
@@ -212,20 +217,14 @@
 								LIMIT 1;"
 						)
 					);
+
+					//Se a jornada aberta antes do dia não foi fechada, pega desde o momento em que a jornada foi aberta.
+					$sqlDataInicio = $temJornadaAberta['pont_tx_data'];
 					if(!empty($jornadaFechadaHoje) && intval($jornadaFechadaHoje['jornadaFechadaHoje'])){
 						//Se a jornada aberta antes do dia foi fechada, deve considerar apenas após esse fechamento.
 						$sqlDataInicio = $jornadaFechadaHoje['pont_tx_data'];
-					}else{
-						//Se não, pega desde o momento em que a jornada foi aberta.
-						$sqlDataInicio = $temJornadaAberta['pont_tx_data'];
 					}
-				}else{
-					//Se não tem uma jornada que veio de antes, considera a partir de meia-noite de hoje.
-					$sqlDataInicio = $_POST['data']." 00:00:00";
 				}
-			}else{
-				//Se abriu jornada hoje, considera a partir da data de abertura da jornada.
-				$sqlDataInicio = $abriuJornadaHoje['pont_tx_data'];
 			}
 		//}
 
@@ -279,31 +278,17 @@
 		return $sql;
 	}
 
-	function voltarAjuste(){
-		header("Location: ".$_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php");
-	}
-
 	function index(){
 		global $CONTEX;
 
-		if(is_int(strpos($_SERVER['HTTP_REFERER'], "ajuste_ponto.php"))){
-			$_SERVER['HTTP_REFERER'] = $_POST["HTTP_REFERER"];
-		}elseif(empty($_SERVER["HTTP_REFERER"])){
-			$_SERVER['HTTP_REFERER'] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
+		if(empty($_POST['data'])){
+			$_POST['data'] = date("Y-m-d");
 		}
 		
-		if(empty($_POST['id']) || empty($_POST['data'])){			
-			echo '<script>alert("ERRO: Deve ser selecionado um motorista e uma data para ajustar.")</script>';
+		if(empty($_POST['id'])){
+			echo '<script>alert("ERRO: Deve ser selecionado um motorista para ajustar.")</script>';
 
-			echo 
-				'<form action="'.$_SERVER["HTTP_REFERER"].'" name="form_voltar" method="post">
-					<input type="hidden" name="data_de" value="'.$_POST['data_de'].'">
-					<input type="hidden" name="data_ate" value="'.$_POST['data_ate'].'">
-				</form>
-				<script>
-					document.form_voltar.submit();
-				</script>'
-			;
+			voltar();
 			exit;
 		}else{
 			$a_mod['data'] = $_POST['data'];
@@ -345,46 +330,65 @@
 			$_POST['status'] = 'ativo';
 		}
 
-		$c[] = texto('Matrícula',$aMotorista['enti_tx_matricula'],2);
-		$c[] = texto('Motorista',$aMotorista['enti_tx_nome'],5);
-		$c[] = texto('CPF',$aMotorista['enti_tx_cpf'],3);
+		$textFields[] = texto('Matrícula',$aMotorista['enti_tx_matricula'],2);
+		$textFields[] = texto('Motorista',$aMotorista['enti_tx_nome'],5);
+		$textFields[] = texto('CPF',$aMotorista['enti_tx_cpf'],3);
 
 		$_POST['status'] = (!empty($_POST['status']) && $_POST['status'] != 'undefined'? $_POST['status']: 'ativo');
 
-		$c2 = [];
-		$c3 = [];
+		$variableFields = [];
+		$campoJust = [];
 
 		if(!empty($aEndosso) && count($aEndosso) > 0){
-			$c2[] = texto('Endosso:',"Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1),6);
+			$variableFields[] = texto('Endosso:',"Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1),6);
 		}else{
 			$_POST["busca_data"] = substr($_POST['data'],0, -3);
-			$botao[] = botao(
+			$botoes[] = botao(
 				'Gravar',
-				'cadastrarAjuste',
-				implode(",", array_keys($_POST)),
-				implode(",", array_values($_POST))
+				'cadastrarAjuste'
 			);
-			var_dump($_POST['data']);
-			$iconeExcluir = "icone_excluir_ajuste(pont_nb_id,excluir_ponto,idEntidade,".$_POST['data_de'].",".$_POST['data_ate'].",".strval($_POST['id']).")"; //Utilizado em grid()
-			$c2[] = campo_data('Data', 'data', ($_POST['data']?? ''), 2, "onfocusout='atualizar_form(".$_POST['id'].", this.value, \"".$_POST['data_de']."\", \"".$_POST['data_ate']."\")', null");
-			$c2[] = campo_hora('Hora','hora',$_POST['hora'],2);
-			$c2[] = combo_bd('Código Macro','idMacro',$_POST['idMacro'],4,"macroponto","","ORDER BY macr_nb_id");
-			$c2[] = combo_bd('Motivo:','motivo',$_POST['motivo'],4,'motivo','',' AND moti_tx_tipo = "Ajuste" ORDER BY moti_tx_nome');
+      $parametros = [
+				"pont_nb_id",
+				"excluir_ponto",
+				"idEntidade",
+				$_POST['data_de'],
+				$_POST['data_ate'],
+				$_POST["id"]
+			];
+
+			$iconeExcluir = "icone_excluir_ajuste(".implode(",", $parametros).")"; //Utilizado em grid()
+			$variableFields[] = campo_data('Data', 'data', ($_POST['data']?? ''), 2, "onfocusout='atualizar_form(".$_POST['id'].", this.value, \"".$_POST['data_de']."\", \"".$_POST['data_ate']."\")', null");
+			$variableFields[] = campo_hora('Hora','hora',$_POST['hora'],2);
+			$variableFields[] = combo_bd('Código Macro','idMacro',$_POST['idMacro'],4,"macroponto","","ORDER BY macr_nb_id");
+			$variableFields[] = combo_bd('Motivo:','motivo',$_POST['motivo'],4,'motivo','',' AND moti_tx_tipo = "Ajuste" ORDER BY moti_tx_nome');
 	
-			$c3[] = textarea('Justificativa:','descricao',$_POST['descricao'],12);
+			$campoJust[] = textarea('Justificativa:','descricao',$_POST['descricao'],12);
 		}
-		$botao[] = $botao_imprimir;
-		$botao[] = botao(
-			'Voltar', 
-			'voltarAjuste'
+
+		$botoes[] = $botao_imprimir;
+		$botoes[] = botao(
+			'Voltar',
+			'voltar'
 		);
-		$botao[] = status();
+		$botoes[] = status();
+		
+
+		if(empty($_POST["HTTP_REFERER"])){
+			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
+			if(is_int(strpos($_SERVER["HTTP_REFERER"], "ajuste_ponto.php"))){
+				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
+			}
+		}
 		
 		abre_form('Dados do Ajuste de Ponto');
-		linha_form($c);
-		linha_form($c2);
-		linha_form($c3);
-		fecha_form($botao);
+		linha_form($textFields);
+		campo_hidden("id", $_POST["id"]);
+		campo_hidden("busca_motorista", $_POST["id"]);
+		campo_hidden("busca_data", $_POST["data"]);
+		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+		linha_form($variableFields);
+		linha_form($campoJust);
+		fecha_form($botoes);
 
 		$sql = pegarSqlDia($aMotorista['enti_tx_matricula']);
 		$justificativa = 'pont_tx_descricao';
@@ -427,7 +431,9 @@
 			<form name='form_ajuste_status' action='".$_SERVER['HTTP_ORIGIN'].$CONTEX['path']."/ajuste_ponto.php' method='post'>
 				<input type='hidden' name='acao' value='index'>
 				<input type='hidden' name='id'>
+				<input type='hidden' name='busca_motorista'>
 				<input type='hidden' name='data'>
+				<input type='hidden' name='busca_data'>
 				<input type='hidden' name='data_de'>
 				<input type='hidden' name='data_ate'>
 				<input type='hidden' name='status'>
@@ -450,7 +456,7 @@
 						document.form_ajuste_status.data_de.value = data_de;
 						document.form_ajuste_status.data_ate.value = data_ate;
 						document.form_ajuste_status.status.value = status;
-						document.form_ajuste_status.HTTP_REFERER.value = '".$_SERVER['HTTP_REFERER']."';
+						document.form_ajuste_status.HTTP_REFERER.value = '".$_POST['HTTP_REFERER']."';
 						document.getElementById('status').value = status;
 						document.form_ajuste_status.submit();
 					}

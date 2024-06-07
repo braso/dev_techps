@@ -48,10 +48,6 @@
 		return $campo;
 	}
 
-	function voltarEndosso(){
-		header('Location: '.$_SERVER['REQUEST_URI'].'/../endosso.php');
-	}
-
 	function cadastrar(){
 		global $totalResumo;
 
@@ -430,7 +426,7 @@
 			array_unshift($c, campo_hidden('empresa', $_SESSION['user_nb_empresa']));
 		}
 		$b = [
-			botao('Voltar', 'voltarEndosso'),
+			botao('Voltar', 'index'),
 			botao('Cadastrar Endosso', 'cadastrar', '', '', '', '', 'btn btn-success')
 		];
 

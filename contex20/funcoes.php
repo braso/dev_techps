@@ -1047,8 +1047,9 @@
 			$icone = 'glyphicon glyphicon-search';
 		}
 		
-		if($icone == 'glyphicon glyphicon-search' && $title == '')
+		if($icone == 'glyphicon glyphicon-search' && $title == ''){
 			$title = 'Modificar';
+		}
 		
 		$icone='class="'.$icone.'"';
 		
@@ -1070,13 +1071,8 @@
 		
 	}
 
-	function modal_just($id,$acao,$campos='',$data_de='',$data_ate='',$valores='',$target='',$icone='',$msg='', $action='', $title=''){
-	    global $CONTEX;
-	    include "modal_justificativa.php";
-	}
-
 	function icone_excluir_ajuste($id, $acao, $campos='', $data_de='', $data_ate='', $valores='', $target='', $icone='', $msg='Deseja excluir o registro?', $action='', $title=''){
-		// 		return icone_excluir($id, $acao, $campos, $valores, $target, $icone, $msg, $action, $title);
+
 		global $CONTEX;
 		if($icone==''){
 			$icone = 'glyphicon glyphicon-remove';
@@ -1118,6 +1114,11 @@
 		";
 		// onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\",\"$data_de\",\"$data_ate\");
 		return "<center><a title=\"$title\" style='color:gray' data-toggle='modal' data-target='#myModal'onclick='solicitarDados(\"$id\",\"$acao\",\"$data_de\",\"$data_ate\",\"$campos\",\"$valores\")' ><spam $icone></spam></a></center>".$modal;
+	}	
+
+	function modal_just($id,$acao,$campos='',$data_de='',$data_ate='',$valores='',$target='',$icone='',$msg='', $action='', $title=''){
+	    global $CONTEX;
+	    include "modal_justificativa.php";
 	}
 
 	function icone_download($aquivo=''){

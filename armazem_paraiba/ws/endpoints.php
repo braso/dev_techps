@@ -91,7 +91,8 @@
         $data = get_user_journeys($userid);
         if(empty($data)){
             // header('HTTP/1.0 400 Bad Request');
-            echo "Could not find journeys";
+            echo json_encode([["id" => ""]]);
+            exit;
         }
 
         echo json_encode($data);
@@ -346,7 +347,7 @@
             
             if(empty($jornadaAberta)){
                 // header('HTTP/1.0 400 Bad Request');
-                echo "Open journey not found: ".$requestdata->journeyID;
+                echo "Open journey not found";
                 exit;
             }
         //}

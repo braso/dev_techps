@@ -245,7 +245,7 @@
 	}
 
 	function voltar(){
-		if(empty($_SERVER["HTTP_REFERER"])){
+		if(empty($_POST["HTTP_REFERER"])){
 			set_status("Tela de origem indefinida.");
 			index();
 			exit;
@@ -253,7 +253,7 @@
 		
 		$_POST['acao'] = "index";
 		
-		echo "<form action='".str_replace($_ENV["URL_BASE"], "", $_SERVER["HTTP_REFERER"])."' name='form_voltar' method='post'>";
+		echo "<form action='".str_replace($_ENV["URL_BASE"], "", $_POST["HTTP_REFERER"])."' name='form_voltar' method='post'>";
 		foreach($_POST as $key => $value){
 			echo "<input type='hidden' name='".$key."' value='".$value."'>";
 		}

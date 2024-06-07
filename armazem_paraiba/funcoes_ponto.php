@@ -116,7 +116,7 @@
 	function layout_abono(){
 		echo "<form action='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_abono.php' name='form_cadastro_abono' method='post'>";
 
-    unset($_POST['acao']);
+    	unset($_POST['acao']);
 		
 		foreach($_POST as $key => $value){
 			echo "<input type='hidden' name='".$key."' value='".$value."'>";
@@ -782,6 +782,14 @@
 
 			
 			$totalIntervalo = date_diff(new DateTime($data." 00:00"), $totalIntervalo);
+			if($totalIntervalo->s > 0){
+				$totalIntervalo->i++;
+				$totalIntervalo->s = 0;
+				if($totalIntervalo->i >=60){
+					$totalIntervalo->h++;
+					$totalIntervalo->i -= 60;
+				}
+			}
 			$totalIntervalo = operarHorarios([$totalIntervalo->days*24+$totalIntervalo->h.":".$totalIntervalo->i, "00:00"], "+");
 
 			$registros[$campo.'Completo']['totalIntervalo'] = $totalIntervalo;
