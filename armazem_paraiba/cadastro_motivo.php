@@ -60,7 +60,7 @@ function layout_motivo(){
 	];
 	$botao = [
 		botao('Gravar','cadastra_motivo','id',$_POST['id'],'','','btn btn-success'),
-		botao('Voltar','voltar')
+		botao('Voltar','index')
 	];
 
 	abre_form('Dados do Motivo');

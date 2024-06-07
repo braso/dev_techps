@@ -418,7 +418,7 @@
 			array_unshift($c, campo_hidden('empresa', $_SESSION['user_nb_empresa']));
 		}
 		$b = [
-			botao('Voltar', 'voltar'),
+			botao('Voltar', 'index'),
 			botao('Cadastrar Endosso', 'cadastrar', '', '', '', '', 'btn btn-success')
 		];
 

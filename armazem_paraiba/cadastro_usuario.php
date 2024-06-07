@@ -393,7 +393,7 @@
 		$buttons = [];
 		$buttons[] = botao((!empty($_POST['id'])? "Atualizar": "Gravar"), 'cadastra_usuario', 'id,editPermission', ($_POST['id']?? '').','.strval($editPermission),'','','btn btn-success');
 		if($_GET['id'] != $_SESSION['user_nb_id']){
-			$buttons[] = botao('Voltar', 'voltar');
+			$buttons[] = botao('Voltar', 'index');
 		}
 
 		abre_form('Dados do Usuário');

@@ -116,7 +116,7 @@
 	function layout_abono(){
 		echo "<form action='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_abono.php' name='form_cadastro_abono' method='post'>";
 
-    unset($_POST['acao']);
+    	unset($_POST['acao']);
 		
 		foreach($_POST as $key => $value){
 			echo "<input type='hidden' name='".$key."' value='".$value."'>";

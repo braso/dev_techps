@@ -88,7 +88,7 @@
 									WHERE pont_tx_status != 'inativo'
 										AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
 										AND pont_tx_data LIKE '".$_POST['data']."%'
-										AND pont_tx_data < STR_TO_DATE('".$_POST['data'].' '.$_POST['hora']."', '%Y-%m-%d %H:%i')
+										AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora']."', '%Y-%m-%d %H:%i')
 									ORDER BY pont_tx_data DESC, pont_nb_id DESC
 									LIMIT 1"
 							)
@@ -288,7 +288,7 @@
 		if(empty($_POST['id'])){
 			echo '<script>alert("ERRO: Deve ser selecionado um motorista para ajustar.")</script>';
 
-			voltarAjuste();
+			voltar();
 			exit;
 		}else{
 			$a_mod['data'] = $_POST['data'];
@@ -347,7 +347,17 @@
 				'Gravar',
 				'cadastrarAjuste'
 			);
-			$iconeExcluir = "icone_excluir_ajuste(pont_nb_id,excluir_ponto,idEntidade,".$_POST['data_de'].",".$_POST['data_ate'].",".strval($_POST['id']).")"; //Utilizado em grid()
+
+			$parametros = [
+				"pont_nb_id",
+				"excluir_ponto",
+				"idEntidade",
+				$_POST['data_de'],
+				$_POST['data_ate'],
+				$_POST["id"]
+			];
+
+			$iconeExcluir = "icone_excluir_ajuste(".implode(",", $parametros).")"; //Utilizado em grid()
 			$variableFields[] = campo_data('Data', 'data', ($_POST['data']?? ''), 2, "onfocusout='atualizar_form(".$_POST['id'].", this.value, \"".$_POST['data_de']."\", \"".$_POST['data_ate']."\")', null");
 			$variableFields[] = campo_hora('Hora','hora',$_POST['hora'],2);
 			$variableFields[] = combo_bd('Código Macro','idMacro',$_POST['idMacro'],4,"macroponto","","ORDER BY macr_nb_id");
@@ -355,21 +365,29 @@
 	
 			$campoJust[] = textarea('Justificativa:','descricao',$_POST['descricao'],12);
 		}
+
 		$botoes[] = $botao_imprimir;
-		var_dump($_SERVER["HTTP_REFERER"]);
 		$botoes[] = botao(
-			'Voltar', 
-			'voltarAjuste'
+			'Voltar',
+			'voltar'
 		);
 		$botoes[] = status();
 
+		var_dump($_POST);
+		
+
 		if(empty($_POST["HTTP_REFERER"])){
 			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
+			if(is_int(strpos($_SERVER["HTTP_REFERER"], "ajuste_ponto.php"))){
+				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
+			}
 		}
 		
 		abre_form('Dados do Ajuste de Ponto');
 		linha_form($textFields);
 		campo_hidden("id", $_POST["id"]);
+		campo_hidden("busca_motorista", $_POST["id"]);
+		campo_hidden("busca_data", $_POST["data"]);
 		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($variableFields);
 		linha_form($campoJust);
@@ -416,7 +434,9 @@
 			<form name='form_ajuste_status' action='".$_SERVER['HTTP_ORIGIN'].$CONTEX['path']."/ajuste_ponto.php' method='post'>
 				<input type='hidden' name='acao' value='index'>
 				<input type='hidden' name='id'>
+				<input type='hidden' name='busca_motorista'>
 				<input type='hidden' name='data'>
+				<input type='hidden' name='busca_data'>
 				<input type='hidden' name='data_de'>
 				<input type='hidden' name='data_ate'>
 				<input type='hidden' name='status'>
@@ -439,7 +459,7 @@
 						document.form_ajuste_status.data_de.value = data_de;
 						document.form_ajuste_status.data_ate.value = data_ate;
 						document.form_ajuste_status.status.value = status;
-						document.form_ajuste_status.HTTP_REFERER.value = '".$_SERVER['HTTP_REFERER']."';
+						document.form_ajuste_status.HTTP_REFERER.value = '".$_POST['HTTP_REFERER']."';
 						document.getElementById('status').value = status;
 						document.form_ajuste_status.submit();
 					}
