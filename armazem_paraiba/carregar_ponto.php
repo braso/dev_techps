@@ -178,10 +178,10 @@
 		$ext = substr($arquivoNome, strrpos($arquivoNome, "."));
 		$arquivoNome = str_replace($ext, "", $arquivoNome);
 
-		if(file_exists($path."/".$arquivoNome.$ext)){
+		if(file_exists($path.$arquivoNome)){
 			$f = 2;
 			$arquivoNome .= "_".$f;
-			for(; file_exists($path."/".$arquivoNome.$ext); $f++){
+			for(; file_exists($path.$arquivoNome); $f++){
 				$arquivoNome = substr($arquivoNome, 0, strlen($arquivoNome)-2)."_".$f;
 			}
 		}
