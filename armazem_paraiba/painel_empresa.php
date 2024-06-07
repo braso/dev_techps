@@ -63,7 +63,7 @@
 	foreach ($MotoristaTotais as $MotoristaTotal) {
 		$saldoFinal = $MotoristaTotal['saldoFinal'];
 
-		if ($saldoFinal == '00:00') {
+		if ($MotoristaTotal['statusEndosso'] == 'E' && $saldoFinal == '00:00') {
 			$quantMeta++;
 		} elseif ($saldoFinal > '00:00') {
 			$quantPosi++;

@@ -4,6 +4,7 @@
 		error_reporting(E_ALL);
 	//}*/
 
+	include_once "funcoes_ponto.php";
 	include_once "conecta.php";
 	include_once "alerta_carrega_ponto.php";
 
@@ -160,6 +161,7 @@
 
 		ftp_close($ftp_conn);
 		if ($_SERVER['HTTP_ENV'] == 'carrega_cron'){
+			criar_relatorio(null);
 			exit;
 		}
 		index();
@@ -176,10 +178,10 @@
 		$ext = substr($arquivoNome, strrpos($arquivoNome, "."));
 		$arquivoNome = str_replace($ext, "", $arquivoNome);
 
-		if(file_exists($path."/".$arquivoNome.$ext)){
+		if(file_exists($path.$arquivoNome)){
 			$f = 2;
 			$arquivoNome .= "_".$f;
-			for(; file_exists($path."/".$arquivoNome.$ext); $f++){
+			for(; file_exists($path.$arquivoNome); $f++){
 				$arquivoNome = substr($arquivoNome, 0, strlen($arquivoNome)-2)."_".$f;
 			}
 		}
@@ -201,23 +203,27 @@
 			//Ex.: 000000591322012024091999911
 			$line = trim($line);
 
+			if ($line === '') {
+				continue; // Pula para a próxima iteração
+			}
+
 			//CONFERIR MATRÍCULA{
 				$matricula = substr($line, 0, 10);
 				while($matricula[0] == "0"){
 					$matricula = substr($matricula, 1);
 				}
-				$matriculaExiste = mysqli_fetch_assoc(query(
-					"SELECT enti_tx_matricula FROM entidade 
-						WHERE enti_tx_matricula = '".$matricula."'
-						LIMIT 1"
-				));
-				if(empty($matriculaExiste) || count($matriculaExiste) == 0){
-					$error = true;
-					if(empty($errorMsg["registerNotFound"])){
-						$errorMsg["registerNotFound"] = "Matrículas não encontradas:";
-					}
-					$errorMsg["registerNotFound"] .= "<br>	". $matricula;
-				}
+				// $matriculaExiste = mysqli_fetch_assoc(query(
+				// 	"SELECT enti_tx_matricula FROM entidade 
+				// 		WHERE enti_tx_matricula = '".$matricula."'
+				// 		LIMIT 1"
+				// ));
+				// if(empty($matriculaExiste) || count($matriculaExiste) == 0){
+				// 	$error = true;
+				// 	if(empty($errorMsg["registerNotFound"])){
+				// 		$errorMsg["registerNotFound"] = "Matrículas não encontradas:";
+				// 	}
+				// 	$errorMsg["registerNotFound"] .= "<br>	". $matricula;
+				// }
 			//}
 
 			$data = substr($line, 10, 8);
@@ -306,7 +312,6 @@
 				 $_SESSION['user_nb_id'] 	= $user[0]['user_nb_id'];
 				$_SESSION['user_tx_nivel'] 	= $user[0]['user_tx_nivel'];
 				$_SESSION['user_tx_login'] 	= $user[0]['user_tx_login'];
-	
 				updateFTP();
 			}else{
 				echo "Server info not found.";

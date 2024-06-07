@@ -7,6 +7,7 @@
 	include_once 'funcoes_ponto.php';
 
 	function cadastrarAjuste(){
+		var_dump($_POST['hora']);
 		//Conferir se tem as informações necessárias{
 			if(empty($_POST['hora']) || empty($_POST['idMacro']) || empty($_POST['motivo'])){
 				set_status("ERRO: Dados insuficientes!");
@@ -363,6 +364,7 @@
 				implode(",", array_keys($_POST)),
 				implode(",", array_values($_POST))
 			);
+			var_dump($_POST['data']);
 			$iconeExcluir = "icone_excluir_ajuste(pont_nb_id,excluir_ponto,idEntidade,".$_POST['data_de'].",".$_POST['data_ate'].",".strval($_POST['id']).")"; //Utilizado em grid()
 			$c2[] = campo_data('Data', 'data', ($_POST['data']?? ''), 2, "onfocusout='atualizar_form(".$_POST['id'].", this.value, \"".$_POST['data_de']."\", \"".$_POST['data_ate']."\")', null");
 			$c2[] = campo_hora('Hora','hora',$_POST['hora'],2);
