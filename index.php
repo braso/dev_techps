@@ -68,7 +68,7 @@ if (!empty($_POST['botao']) && $_POST['botao'] == 'Entrar' && !$error){
 <!--[if IE 8]> <html lang="en" class="ie8 no-js"> <![endif]-->
 <!--[if IE 9]> <html lang="en" class="ie9 no-js"> <![endif]-->
 <html lang="pt-BR">
-	<!-- COMECO HEAD -->
+<!-- COMECO HEAD -->
 	<head>
 		<meta charset="utf-8" />
 		<title>TechPS</title>

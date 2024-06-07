@@ -347,8 +347,7 @@
 				'Gravar',
 				'cadastrarAjuste'
 			);
-
-			$parametros = [
+      $parametros = [
 				"pont_nb_id",
 				"excluir_ponto",
 				"idEntidade",
@@ -372,8 +371,6 @@
 			'voltar'
 		);
 		$botoes[] = status();
-
-		var_dump($_POST);
 		
 
 		if(empty($_POST["HTTP_REFERER"])){

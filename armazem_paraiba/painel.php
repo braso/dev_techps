@@ -8,6 +8,13 @@
 
     function index() {
         global $totalResumo, $CONTEX;
+
+        if(array_key_exists('atualizar', $_POST) && !empty($_POST['atualizar'])){
+            echo '<script>alert("Atualizando os painéis, aguarde um pouco ")</script>';
+			ob_flush();
+			flush();
+			criar_relatorio($_POST['busca_data']);
+        }
         
         if(empty($_POST['busca_data'])){
             $_POST['busca_data'] = date("Y-m");
@@ -65,6 +72,11 @@
                         </script>';
         $botaoCsv = "<button id='btnCsv' class='btn btn-success' style='background-color: green !important;' onclick='downloadCSV()'>Baixar CSV</button>";
         
+        if (!empty($_SESSION['user_tx_nivel']) && is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
+            $botaoAtualizarPainel = 
+            '<a class="btn btn-warning" onclick="atualizarPainel()"> Atualizar Painel </a>';
+        }
+
         if (isset($_POST['empresa']) && !empty($_POST['empresa'])) {
             $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
         }
@@ -73,7 +85,8 @@
         botao("Buscar", 'index', '', '', '', 1,'btn btn-info'),
         $botao_imprimir,
         $botaoCsv,
-        $botao_volta
+        $botao_volta,
+        $botaoAtualizarPainel
         ];
         
         abre_form('Filtro de Busca');
@@ -188,15 +201,24 @@
                     }
             </style>
             <form name="myForm" method="post" action="<?= htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
-            <input type="hidden" name="empresa" id="empresa">
-            <input type="hidden" name="busca_data" id="busca_data">
+                <input type="hidden" name="empresa" id="empresa">
+                <input type="hidden" name="busca_data" id="busca_data">
+            </form>
+            <form name="formularioAtualizarPainel" method="post" action="<?= htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+                <input type="hidden" name="atualizar" id="atualizar">
+                <input type="hidden" name="busca_data" id="busca_dataAtualizar">
             </form>
 
             <script>
-                function setAndSubmit(empresa) {
+                 function setAndSubmit(empresa) {
                     document.myForm.empresa.value = empresa;
                     document.myForm.busca_data.value = document.getElementById('busca_data').value;
                     document.myForm.submit();
+                 }
+                function atualizarPainel() {
+                    document.formularioAtualizarPainel.busca_dataAtualizar.value = document.getElementById("busca_data").value;
+                    document.formularioAtualizarPainel.atualizar.value = "atualizar";
+                    document.formularioAtualizarPainel.submit();
                 }
             </script>
 
