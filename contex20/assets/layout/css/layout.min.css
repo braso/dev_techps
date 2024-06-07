@@ -1144,11 +1144,12 @@ html{
 }
 
 .page-container {
+	background-color: #eff3f8;
 	clear: both;
 }
 
 .page-head {
-	background-color: #EFF3F8
+	background-color: transparent;
 }
 
 .page-head .page-title {
@@ -1198,7 +1199,7 @@ html{
 }
 
 .page-content {
-	background-color: #eff3f8;
+	background-color: transparent;
 	margin-bottom: 45px;
 }
 

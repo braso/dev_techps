@@ -634,7 +634,7 @@
 			'btn btn-success'
 		);
 
-		$botoesCadastro[] = botao('Voltar', 'index', '', '', 'tabindex=54');
+		$botoesCadastro[] = botao('Voltar', 'voltar', '', '', 'tabindex=54');
 
 		abre_form();
 		fieldset('Dados de Usuário');

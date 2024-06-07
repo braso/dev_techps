@@ -420,7 +420,7 @@
 
 		$botao = [
 			botao($btn_txt,'cadastrarEmpresa','id',($_POST['id']?? ''),'','','btn btn-success'),
-			botao('Voltar','index')
+			botao('Voltar','voltar')
 		];
 		
 		abre_form("Dados da Empresa/Filial");

@@ -49,7 +49,7 @@ function layout_macro(){
 
 	$botao = [
 		botao('Gravar','cadastra_macro','id',$_POST['id'],'','','btn btn-success'),
-		botao('Voltar','index')
+		botao('Voltar','voltar')
 	];
 	
 	abre_form('Dados do Macro');

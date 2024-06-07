@@ -312,7 +312,7 @@
 		
 		$botao = [
 			botao('Gravar','cadastra_parametro','id',($_POST['id']?? ''),'','','btn btn-success'),
-			botao('Voltar','index')
+			botao('Voltar','voltar')
 		];
 		
 		abre_form('Dados dos Parâmetros');

@@ -11,11 +11,15 @@ Thumbs.db
 .env
 .well-known
 
-.brasomo_dev_techps_sistema.sql
-.contex20/backup
-
 .vscode
 brasomo_dev_techps_sistema.sql
 
 armazem_paraiba/.env
-armazem_paraiba/arquivos/
+armazem_paraiba/arquivos/empresa/*
+armazem_paraiba/arquivos/endosso/*
+armazem_paraiba/arquivos/endosso_csv/*
+armazem_paraiba/arquivos/paineis/*
+armazem_paraiba/arquivos/pontos/*
+armazem_paraiba/arquivos/user/*
+
+.contex20/backup

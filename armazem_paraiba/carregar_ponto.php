@@ -32,7 +32,7 @@
 		$c[] = arquivo('Arquivo Ponto (.txt)', 'arquivo', '', 5);
 
 		$b[] = botao("Enviar", 'insertFile','','','','','btn btn-success');
-		$b[] = botao("Voltar", 'index');
+		$b[] = botao("Voltar", 'voltar');
 
 		abre_form('Arquivo de Ponto');
 		linha_form($c);
@@ -94,7 +94,7 @@
 
 		$b= [ 
 			botao("Gravar", 'cadastra_notificacao', 'id', $_POST['id']),
-			botao("Voltar", 'index')
+			botao("Voltar", 'voltar')
 		];
 
 		abre_form('Arquivo de Ponto');

@@ -59,7 +59,7 @@ function layout_feriado(){
 
 	$botao = [
 		botao('Gravar','cadastra_feriado','id',$_POST['id'],'','','btn btn-success'),
-		botao('Voltar','index')
+		botao('Voltar','voltar')
 	];
 	
 	abre_form('Dados do Feriado');
