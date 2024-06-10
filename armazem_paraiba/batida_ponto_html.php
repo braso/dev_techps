@@ -182,7 +182,6 @@
 			document.form_submit.id.value = <?= $_SESSION['user_nb_entidade'] ?>;
 			document.form_submit.data.value = '<?= $hoje ?>';
 			document.form_submit.idMacro.value = idMacro;
-			<?= (isset($motivo['moti_nb_id'])? 'document.form_submit.motivo.value = '.$motivo['moti_nb_id'].';': '') ?>;
 			document.form_submit.submit();
 		});
 
