@@ -3,21 +3,31 @@
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//}*/
-
 	include_once "funcoes_ponto.php";
 	include_once "conecta.php";
 	include_once "alerta_carrega_ponto.php";
 
-	function insertFile(){
+    function insertFile(){
 
 		$arquivo = $_FILES['arquivo'];
 		$path = 'arquivos/pontos/';
-		$local_file = $path.$arquivo["name"];
-		
+
 		if(isset($arquivo["error"]) && $arquivo["error"] === 0){
 			$local_file = $path.$arquivo["name"];
-			
-     		saveFileRegisters($arquivo["name"], $local_file);
+			$ext = substr($arquivo["name"], strrpos($arquivo["name"], "."));
+			$arquivoNome = str_replace($ext, "", $arquivo["name"]);
+
+			if(file_exists($path.$arquivo["name"])){
+				$f = 2;
+				$arquivoNome  .= "_".$f;
+				$arquivo["name"] = $arquivoNome.$ext;
+				$local_file = $path.$arquivo["name"]  ;
+				for(; file_exists($path.$arquivoNome ); $f++){
+					$arquivo["name"]  = substr($arquivoNome , 0, strlen($arquivoNome )-2)."_".$f;
+					$local_file = $path.$arquivo["name"]  ;
+				}
+			}
+     		saveFileRegisters($arquivo, $local_file);
 
 		}else{
 			set_status("ERRO: Ocorreu um problema ao gravar o arquivo.");
@@ -154,7 +164,7 @@
 		}
 		
 		if(count($fileList) === 0){
-			diffData(date('dmY'));
+// 			diffData(date('dmY'));
 			index();
 			exit;
 		}
@@ -169,43 +179,45 @@
 	}
 
 	function saveFileRegisters($arquivoNome, $local_file){
-
-		
-		$arquivo = $_FILES['arquivo'];
+// 		$arquivo = $_FILES['arquivo'];
 		$path = 'arquivos/pontos/';
-		$local_file = $path.$arquivo['name'];
+		$local_file = $path.$arquivoNome;
 
-		$ext = substr($arquivoNome, strrpos($arquivoNome, "."));
-		$arquivoNome = str_replace($ext, "", $arquivoNome);
-
-		if(file_exists($path.$arquivoNome)){
-			$f = 2;
-			$arquivoNome .= "_".$f;
-			for(; file_exists($path.$arquivoNome); $f++){
-				$arquivoNome = substr($arquivoNome, 0, strlen($arquivoNome)-2)."_".$f;
-			}
-		}
-
-		$newArquivoPonto = [
-			'arqu_tx_nome' 		=> $arquivoNome.$ext,
-			'arqu_tx_data' 		=> date("Y-m-d H:i:s"),
-			'arqu_nb_user' 		=> $_SESSION['user_nb_id'],
-			'arqu_tx_status' 	=> 'ativo'
-		];
+// 		$ext = substr($arquivoNome, strrpos($arquivoNome, "."));
+// 		$arquivoNome = str_replace($ext, "", $arquivoNome);
+		
+		
 
 		$newPontos = [];
 		$error = false;
 		$errorMsg = ["ERROS:"];
+
+		
+		if (is_array($arquivoNome)) {
+			$arquivo['tmp_name'] = $arquivoNome['tmp_name'];
+			$ext = substr($arquivoNome['name'], strrpos($arquivoNome['name'], "."));
+			$arquivoNome2 = str_replace($ext, "", $arquivoNome['name']);
+			$local_file = $path.$arquivoNome["name"].$ext;
+		} else {
+		    $ext = substr($local_file, strrpos($local_file, "."));
+			$arquivoNome2 = str_replace($ext, "", $local_file);
+			$arquivoNome2 = basename($arquivoNome2);
+			$arquivo['tmp_name'] = $local_file;
+		}
+		
+
+		$newArquivoPonto = [
+			'arqu_tx_nome' 		=> $arquivoNome2.$ext,
+			'arqu_tx_data' 		=> date("Y-m-d H:i:s"),
+			'arqu_nb_user' 		=> $_SESSION['user_nb_id'],
+			'arqu_tx_status' 	=> 'ativo'
+		];
 
 		foreach (file($arquivo['tmp_name']) as $line) {
 			//matricula dmYhi 999 macroponto.codigoExterno
 			//Obs.: A matrícula deve ter 10 dígitos, então se tiver menos, adicione zeros à esquerda.
 			//Ex.: 000000591322012024091999911
 			$line = trim($line);
-
-			if ($line === '') {
-				continue; // Pula para a próxima iteração
-			}
 
 			//CONFERIR MATRÍCULA{
 				$matricula = substr($line, 0, 10);
@@ -312,6 +324,7 @@
 				 $_SESSION['user_nb_id'] 	= $user[0]['user_nb_id'];
 				$_SESSION['user_tx_nivel'] 	= $user[0]['user_tx_nivel'];
 				$_SESSION['user_tx_login'] 	= $user[0]['user_tx_login'];
+	
 				updateFTP();
 			}else{
 				echo "Server info not found.";
