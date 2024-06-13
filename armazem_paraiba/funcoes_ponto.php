@@ -1397,7 +1397,10 @@
 							$endossoQuantEp += 1;
 						}
 						break;
-	
+					case 2:
+						$endossado = "E";
+						$endossoQuantE += 1;
+						break;
 					default:
 						$endossado = "N";
 						$endossoQuantN += 1;
@@ -1414,6 +1417,7 @@
 						LIMIT 1;"), MYSQLI_ASSOC);
 
 				$arquivo = fopen($_SERVER['DOCUMENT_ROOT'].$CONTEX['path'].'/arquivos/endosso/'.$endossos[0]['endo_tx_filename'].'.csv', 'r');
+				
 				$keys = fgetcsv($arquivo);
 				$values = fgetcsv($arquivo);
 				for($j = 0; $j < count($keys); $j++){

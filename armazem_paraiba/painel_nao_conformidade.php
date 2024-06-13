@@ -7,23 +7,83 @@
 	//*/
 
 	function totalNaoConformidade(){
-
 		
 		$date = new DateTime($_POST['busca_data']);
 		$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $date->format('m'), $date->format('Y'));
 		$sqlMotorista = query(
 			"SELECT * FROM entidade
 				WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante')
-					AND enti_nb_empresa = ".$_POST['busca_empresa']."
+					AND enti_nb_empresa = ".$_POST['empresa']."
 					AND enti_tx_status != 'inativo'
 				ORDER BY enti_tx_nome"
 		);
-		var_dump($sqlMotorista);
-		for ($i = 1; $i <= $daysInMonth; $i++) {
-			$dataVez = $_POST['busca_data']."-".str_pad($i, 2, 0, STR_PAD_LEFT);
-			var_dump($dataVez);
-		}
-		die();
+		
+        while ($aMotorista = carrega_array($sqlMotorista)) {
+			$counts = [];
+            for ($i = 1; $i <= $daysInMonth; $i++) {
+                $dataVez = $_POST['busca_data']."-".str_pad($i, 2, 0, STR_PAD_LEFT);
+                $aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
+                var_dump($aDetalhado);
+                die();
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $counts['maximoDirecaoContinua'] += 1;
+                }
+            }
+
+        }
+        var_dump($counts);
+        die();
 		// $aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 		// for($f = 0; $f < count($aDia); $f++){
 		// 	$keys = array_keys($aDia[$f]);
@@ -42,6 +102,13 @@
         if(empty($_POST['busca_data'])){
             $_POST['busca_data'] = date("Y-m");
         }
+
+        // if(empty($_POST['empresa'])){
+        //     $empresa = mysqli_fetch_all(
+        //         query("SELECT empr_nb_id, empr_tx_nome, empr_tx_logo FROM `empresa` WHERE empr_tx_status != 'inativo' ORDER BY empr_tx_nome ASC;"),
+        //         MYSQLI_ASSOC
+        //     );
+        // }
 
         // 	// Obtenha o primeiro dia do mês
         // $dataInicio = new DateTime($_POST['busca_data']  . '-01');
@@ -77,7 +144,7 @@
 
 		// $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         $c = [
-            combo_net('Empresa:*','empresa',($_POST['busca_empresa']?? ''),4,'empresa', ''),
+            combo_net('Empresa:*','empresa',($_POST['empresa']?? ''),4,'empresa', ''),
             campo_mes('Data:',     'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2),
             // $texto,
         ];
@@ -102,11 +169,11 @@
         // }
         
         $b = [
-        botao("Buscar", 'index', '', '', '', 1,'btn btn-info'),
-        // $botao_imprimir,
-        // $botaoCsv,
-        // $botao_volta,
-        // $botaoAtualizarPainel
+            botao("Buscar", 'index', '', '', '', '', 'btn btn-success'),
+            // $botao_imprimir,
+            // $botaoCsv,
+            // $botao_volta,
+            // $botaoAtualizarPainel
         ];
 		abre_form('Filtro de Busca');
 		linha_form($c);
