@@ -1205,8 +1205,8 @@ html{
 
 @media (min-width:992px) {
 	.container-fluid {
-		padding-left: 60px;
-		padding-right: 60px
+		padding-left: 15px;
+		padding-right: 15px
 	}
 }
 
@@ -1338,7 +1338,7 @@ html{
 	text-align: center;
 	position: fixed;
 	z-index: 10001;
-	bottom: 5px;
+	bottom: 50px;
 	display: none;
 	right: 20px
 }

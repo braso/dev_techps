@@ -152,7 +152,7 @@
                         }
                         .emissao{
                             text-align: left;
-                            padding-left: 650px !important;
+                            padding-left: 710px !important;
                             position: absolute;
                         }
                         .porcentagenEndo{
@@ -179,6 +179,9 @@
                         .porcentagenNegat{
                             box-shadow: 0 0 0 1000px #ff471a inset !important;
                         }
+                       div:nth-child(11) > div{
+                        padding: 50px 20px 15px !important;
+                       }
                 }
 
                     table thead tr th:nth-child(3),

@@ -10,13 +10,13 @@
 		$hoje = date('Y-m-d');
 		$aMotorista = carregar('entidade', $_POST['id']);
 
-		if(empty($_POST['motivo'])){
-			$_POST['motivo'] = mysqli_fetch_all(
-				query("SELECT moti_nb_id FROM motivo WHERE moti_tx_nome = 'Registro de ponto mobile' LIMIT 1"),
-				MYSQLI_ASSOC
-			)[0]['moti_nb_id'];
-		}
-		$_POST['motivo'] = intval($_POST['motivo']);
+		// if(empty($_POST['motivo'])){
+		// 	$_POST['motivo'] = mysqli_fetch_all(
+		// 		query("SELECT moti_nb_id FROM motivo WHERE moti_tx_nome = 'Registro de ponto mobile' LIMIT 1"),
+		// 		MYSQLI_ASSOC
+		// 	)[0]['moti_nb_id'];
+		// }
+		// $_POST['motivo'] = intval($_POST['motivo']);
 
 		$ultimoPonto = pegarPontosDia($aMotorista['enti_tx_matricula'])[0];
 		if(!empty($ultimoPonto)){
@@ -58,7 +58,7 @@
 				'pont_tx_tipo' 			=> $aTipo['macr_tx_codigoInterno'],
 				'pont_tx_status' 		=> 'ativo',
 				'pont_tx_dataCadastro' 	=> $hoje.' '.date("H:i:s"),
-				'pont_nb_motivo' 		=> $_POST['motivo']
+				// 'pont_nb_motivo' 		=> $_POST['motivo']
 			];
 			if(!empty($_POST['latitude'])){
 				$novoPonto['pont_tx_latitude'] = $_POST['latitude'];
