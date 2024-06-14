@@ -1387,25 +1387,28 @@
 				OR endo_tx_ate = '$dataFim')
 				AND endo_nb_entidade = $motorista[enti_nb_id]"), MYSQLI_ASSOC);
 				
-				switch (count($endossos)) {
-					case 1:
-						if (strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) == strtotime($endossos[0]['endo_tx_ate']) 
+				if (count($endossos) == 1) {
+					if (strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) == strtotime($endossos[0]['endo_tx_ate']) 
 						|| strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) < strtotime($endossos[0]['endo_tx_ate'])) {
-							$endossado = "E";
-							$endossoQuantE += 1;
-						} else {
-							$endossado = "EP";
-							$endossoQuantEp += 1;
-						}
-						break;
-					case 2:
 						$endossado = "E";
 						$endossoQuantE += 1;
-						break;
-					default:
-						$endossado = "N";
-						$endossoQuantN += 1;
-						break;
+					} else {
+						$endossado = "EP";
+						$endossoQuantEp += 1;
+					}
+				} elseif (count($endossos) > 1 ) {
+					$ultimoEnd = count($endossos) - 1;
+					if (strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) == strtotime($endossos[$ultimoEnd]['endo_tx_ate']) 
+					|| strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) < strtotime($endossos[$ultimoEnd]['endo_tx_ate'])) {
+						$endossado = "E";
+						$endossoQuantE += 1;
+					} else {
+						$endossado = "EP";
+						$endossoQuantEp += 1;
+					}
+				} else {
+					$endossado = "N";
+					$endossoQuantN += 1;
 				}
 				// }
 				

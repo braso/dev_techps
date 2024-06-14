@@ -408,7 +408,7 @@
 			'<spam class="glyphicon glyphicon-remove"></spam>'	=> $iconeExcluir
 		];
 		
-		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 1, 'desc', -1);
+		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 0, 'desc', -1);
 
 		echo
 			"

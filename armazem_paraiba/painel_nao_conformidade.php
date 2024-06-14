@@ -20,70 +20,78 @@
 		
         while ($aMotorista = carrega_array($sqlMotorista)) {
 			$counts = [];
+            $rows = [];
+            $inicioJornada = 0;
+            $inicioRefeicao = 0;
+            $fimRefeicao = 0;
+            $fimJornada = 0;
+            $diffRefeicao = 0;
+            $diffJornada = 0;
+            $jornadaPrevista = 0;
+            $diffJornadaEfetiva = 0;
+            $maximoDirecaoContinua = 0;
+            $diffEspera = 0;
+            $diffDescanso = 0;
+            $diffRepouso = 0;
+
             for ($i = 1; $i <= $daysInMonth; $i++) {
                 $dataVez = $_POST['busca_data']."-".str_pad($i, 2, 0, STR_PAD_LEFT);
                 $aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
-                var_dump($aDetalhado);
-                die();
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
-                    $counts['maximoDirecaoContinua'] += 1;
-                }
-            }
 
+                if(strpos($aDetalhado['inicioJornada'] , 'fa-warning') !== false){
+                    $inicioJornada += 1;
+                }
+                if(strpos($aDetalhado['inicioRefeicao'] , 'fa-warning') !== false){
+                    $inicioRefeicao += 1;
+                }
+                if(strpos($aDetalhado['fimRefeicao'] , 'fa-warning') !== false){
+                    $fimRefeicao += 1;
+                }
+                if(strpos($aDetalhado['fimJornada'] , 'fa-warning') !== false){
+                    $fimJornada += 1;
+                }
+                if(strpos($aDetalhado['diffRefeicao'] , 'fa-warning') !== false){
+                    $diffRefeicao += 1;
+                }
+                if(strpos($aDetalhado['diffEspera'] , 'fa-warning') !== false){
+                    $diffEspera += 1;
+                }
+                if(strpos($aDetalhado['diffDescanso'] , 'fa-warning') !== false){
+                    $diffDescanso += 1;
+                }
+                if(strpos($aDetalhado['diffRepouso'] , 'fa-warning') !== false){
+                    $diffRepouso += 1;
+                }
+                if(strpos($aDetalhado['diffJornada'] , 'fa-warning') !== false){
+                    $diffJornada += 1;
+                }
+                if(strpos($aDetalhado['jornadaPrevista'] , 'fa-warning') !== false){
+                    $jornadaPrevista += 1;
+                }
+                if(strpos($aDetalhado['diffJornadaEfetiva'] , 'fa-warning') !== false){
+                    $diffJornadaEfetiva += 1;
+                }
+                if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
+                    $maximoDirecaoContinua += 1;
+                }
+                $counts [] = [
+                    'data' => $dataVez,
+                    'inicioJornada' => $inicioJornada,
+                    'inicioRefeicao' => $inicioRefeicao,
+                    'fimRefeicao' => $fimRefeicao,
+                    'fimJornada' => $fimJornada,
+                    'diffRefeicao' => $diffRefeicao,
+                    'diffEspera' => $diffEspera,
+                    'diffDescanso' => $diffDescanso,
+                    'diffRepouso' => $diffRepouso,
+                    'diffJornada' => $diffJornada,
+                    'jornadaPrevista' => $jornadaPrevista,
+                    'diffJornadaEfetiva' => $diffJornadaEfetiva,
+                    'maximoDirecaoContinua' => $maximoDirecaoContinua
+                ];
+            }
+            die(var_dump($counts));
         }
-        var_dump($counts);
-        die();
 		// $aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
 		// for($f = 0; $f < count($aDia); $f++){
 		// 	$keys = array_keys($aDia[$f]);
