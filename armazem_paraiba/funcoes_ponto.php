@@ -1389,7 +1389,8 @@
 				
 				switch (count($endossos)) {
 					case 1:
-						if (strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) == strtotime($endossos[0]['endo_tx_ate'])) {
+						if (strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) == strtotime($endossos[0]['endo_tx_ate']) 
+						|| strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) < strtotime($endossos[0]['endo_tx_ate'])) {
 							$endossado = "E";
 							$endossoQuantE += 1;
 						} else {
@@ -1415,9 +1416,14 @@
 							AND endo_tx_status = 'ativo'
 						ORDER BY endo_tx_ate DESC
 						LIMIT 1;"), MYSQLI_ASSOC);
-
-				$arquivo = fopen($_SERVER['DOCUMENT_ROOT'].$CONTEX['path'].'/arquivos/endosso/'.$endossos[0]['endo_tx_filename'].'.csv', 'r');
 				
+				if (count($endossos) == 2) {
+					$key = count($endossos) - 1;
+					$arquivo = fopen($_SERVER['DOCUMENT_ROOT'].$CONTEX['path'].'/arquivos/endosso/'.$endossos[$key]['endo_tx_filename'].'.csv', 'r');
+				}else{
+					$arquivo = fopen($_SERVER['DOCUMENT_ROOT'].$CONTEX['path'].'/arquivos/endosso/'.$endossos[0]['endo_tx_filename'].'.csv', 'r');
+				}
+
 				$keys = fgetcsv($arquivo);
 				$values = fgetcsv($arquivo);
 				for($j = 0; $j < count($keys); $j++){
