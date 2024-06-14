@@ -408,7 +408,7 @@
 			'<spam class="glyphicon glyphicon-remove"></spam>'	=> $iconeExcluir
 		];
 		
-		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 1, 'desc', -1);
+		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 0, 'desc', -1);
 
 		echo
 			"
@@ -417,11 +417,42 @@
 			</div>
 			<style>
 			@media print {
+				body {
+                    margin: 1cm;
+                    margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
+                    transform: scale(1.0);
+                    transform-origin: top left;
+                }
 				#tituloRelatorio{
 					display: flex !important;
 					position: absolute;
 					top: 5px;
 					right: 20px;
+				}
+				div:nth-child(10) > div:nth-child(1),
+				div:nth-child(10) > div:nth-child(3),
+				div:nth-child(10) > div:nth-child(5),
+				div:nth-child(10) > div:nth-child(6),
+				div:nth-child(11) > div{
+				    display: none;
+				}
+
+				.portlet.light {
+					padding: 0px 20px 0px !important;
+				}
+				.row {
+					margin: 0px 0px 0px 0px !important;
+				}
+
+				form > div:nth-child(1){
+					display: flex;
+					flex-wrap: wrap;
+				}
+				.col-sm-2,
+				.col-sm-5,
+				.col-sm-3 {
+					width: 40% !important;
+					padding-left: 0px;
 				}
 			}
 				#tituloRelatorio{
