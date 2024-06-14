@@ -56,7 +56,11 @@ if (is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador')) || is_int(strpos
 						</ul>
 					</li>
 					<li class="menu-dropdown classic-menu-dropdown <?= verificarAtividade($paginaPainel) ?>">
-						<a href="<?= $CONTEX["path"]?>/painel.php">Painel<span class="arrow"></span></a>
+						<a href="javascript:;">Painel<span class="arrow"></span></a>
+							<ul class="dropdown-menu pull-left">
+								<li class=""><a href="<?= $CONTEX["path"] ?>/painel.php" class="nav-link ">Endossos</a></li>
+								<li class=""><a href="<?= $CONTEX["path"] ?>/painel_nao_conformidade.php" class="nav-link">Não Conformidade</a></li>
+							</ul>		
 					</li>
 					<?php if(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))){ ?>
 					<li class="menu-dropdown classic-menu-dropdown ">
