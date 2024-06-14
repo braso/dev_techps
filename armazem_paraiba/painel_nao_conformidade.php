@@ -19,7 +19,7 @@
 		);
 		
         while ($aMotorista = carrega_array($sqlMotorista)) {
-			$counts = [];
+			      $counts = [];
             $rows = [];
             $inicioJornada = 0;
             $inicioRefeicao = 0;
