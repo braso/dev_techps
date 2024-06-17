@@ -16,7 +16,7 @@
 	$interno = true; //Utilizado no conecta.php para reconhecer se quem está tentando acessar é uma tela ou uma query interna.
 	include_once "../..".$_POST['path']."/conecta.php";
 	
-	$columns = $_POST['columns'];
+	$columns = $_POST["columns"];
 	
 	$totalQuery = !empty($_POST["sql"])? 
 		mysqli_fetch_all(query($_POST["sql"]), MYSQLI_ASSOC): 

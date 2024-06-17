@@ -139,6 +139,14 @@
 		$paginar = (empty($paginar))? '10': $paginar;
 		$col = ($col < 1)? '12': $col;
 		
+		js_contex_icone();
+
+		$rand = md5($sql);
+
+		for($i=0; $i<count($cabecalho); $i++){
+			$cabecalho[$i] = "<th>$cabecalho[$i]</th>";
+		}
+		$cabecalho = implode('', $cabecalho);
 		?>
 
 		<form id='contex_icone_form' method="post" target="" action="">
@@ -149,17 +157,6 @@
 			<input type="hidden" name="just" value="">
 			<input type="hidden" id="hidden">
 		</form>
-		
-		<?php
-			js_contex_icone();
-
-			$rand = md5($sql);
-
-			for($i=0; $i<count($cabecalho); $i++){
-				$cabecalho[$i] = "<th>$cabecalho[$i]</th>";
-			}
-			$cabecalho = implode('', $cabecalho);
-		?>
 		
 		<style type="text/css">
 			th { font-size: 10px !important; }

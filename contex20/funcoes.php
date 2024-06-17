@@ -603,7 +603,6 @@
 							AND ".$tab."_tx_status = 'ativo'"
 				)
 			);
-
 			
 			if($extra_busca != ''){
 				$queryResult[0] = "[".$queryResult[1]."] ".$queryResult[0];
@@ -1087,7 +1086,7 @@
 			<script>
 			function solicitarDados(id,acao,data_de,data_ate,campos,valores) {
 				// Solicitar ao usuário que insira os dados
-				var just = prompt('Insira a Justificativa:');
+				var just = prompt('Qual a justificativa da exclusão do ponto?');
 				if(just !== null && just !== ''){
 					console.log('id ', id);
 					
