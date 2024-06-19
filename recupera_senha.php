@@ -98,8 +98,20 @@
         } else
             return '
             <div id="erro" style="background-color: red; padding: 1px; text-align: center;">
-                <h4> As informações não estão corretas  </h4>
+                <h4 style="color: white;"><strong> Informações não estão corretas </strong></h4>
             </div>';
+    }
+
+    function obscureEmail($email) {
+        list($user, $domain) = explode('@', $email);
+        $userLength = strlen($user);
+        $obscureLength = ceil($userLength * 0.8); // Calcula 80% do comprimento do usuário
+        $visibleLength = $userLength - $obscureLength;
+    
+        // Cria a parte obscurecida do usuário
+        $obscuredUser = substr($user, 0, $visibleLength) . str_repeat('*', $obscureLength);
+    
+        return $obscuredUser . '@' . $domain;
     }
 
 
@@ -123,7 +135,7 @@
             $mail->Port = 465;
 
             // Remetente e Destinatários
-            $mail->setFrom('suporte@techps.com.br ', 'Tech PS');
+            $mail->setFrom('suporte@techps.com.br', 'Tech PS');
             $mail->addAddress($destinatario, $nomeDestinatario);
             $mail->addReplyTo('suporte@techps.com.br', 'Tech PS Suporte');
             // $mail->addCC('wallacealanmorais@gmail.com');
@@ -138,10 +150,11 @@
             $mail->Encoding = 'base64';
             $mail->AltBody = "Link para recupera senha: ".$_ENV["URL_BASE"].'/'.basename($caminho)."/recupera_senha.php?token=".$token;
 
+            $obscuredEmail = obscureEmail($destinatario);
             if ($mail->send()) {
                 return "
                 <div id='enviado' style='text-align: center;'>
-                    <h4>E-mail enviado para $destinatario</h4>
+                    <h4>E-mail enviado para $obscuredEmail</h4>
                 </div>";
             }
         } catch (Exception $exception) {

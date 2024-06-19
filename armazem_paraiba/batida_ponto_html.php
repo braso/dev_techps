@@ -8,6 +8,7 @@
 	<input type="hidden" name="motivo" id="motivo"/>
 	<input type="hidden" name="latitude" id="latitude">
 	<input type="hidden" name="longitude" id="longitude">
+	<input type="hidden" name="placa" id="placa" />
 </form>
 
 <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
@@ -178,9 +179,12 @@
 
 		$('#modal-confirm').on('click', function() {
 			$('#myModal').modal('hide');
+			var placa = document.getElementById('placa').value;
+
 			document.form_submit.acao.value = 'cadastra_ponto';
 			document.form_submit.id.value = <?= $_SESSION['user_nb_entidade'] ?>;
 			document.form_submit.data.value = '<?= $hoje ?>';
+			document.form_submit.placa.value = placa;
 			document.form_submit.idMacro.value = idMacro;
 			document.form_submit.submit();
 		});
