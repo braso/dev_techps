@@ -382,7 +382,10 @@
 				."Motorista: ".$aMotorista['enti_tx_nome']."<br><br>"
 				."Motivo: "."Registro de ponto mobile"."<br><br>"
 			."</div>",
-			campo('Placa Do Veiculo', 'placa', '', 2)
+			'<div class="col-sm-2 margin-bottom-5" style="float: left; top: -90px;">
+				<label>Placa Do Veiculo</label>
+				<input name="placa" id="placa" value="" autocomplete="off" type="text" class="form-control input-sm">
+			</div>'
 		];
 
 		$aEndosso = carrega_array(

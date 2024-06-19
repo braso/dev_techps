@@ -166,6 +166,10 @@
 		} else {
 			confirmButtonText = 'INICIAR';
 			confirmButtonClass = 'btn-primary';
+			var placa = document.getElementById('placa').value;
+			if (placa === "") {
+				msg += "<br><br><span style='color: red;' class='fa fa-warning'></span> Falta inseri placa do veiculo ";
+			}
 		}
 
 		const modalContent = document.getElementById('modal-content');
