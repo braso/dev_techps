@@ -74,34 +74,18 @@
                 if(strpos($aDetalhado['maximoDirecaoContinua'] , 'fa-warning') !== false){
                     $maximoDirecaoContinua += 1;
                 }
-                $counts [] = [
-                    'data' => $dataVez,
-                    'inicioJornada' => $inicioJornada,
-                    'inicioRefeicao' => $inicioRefeicao,
-                    'fimRefeicao' => $fimRefeicao,
-                    'fimJornada' => $fimJornada,
-                    'diffRefeicao' => $diffRefeicao,
-                    'diffEspera' => $diffEspera,
-                    'diffDescanso' => $diffDescanso,
-                    'diffRepouso' => $diffRepouso,
-                    'diffJornada' => $diffJornada,
-                    'jornadaPrevista' => $jornadaPrevista,
-                    'diffJornadaEfetiva' => $diffJornadaEfetiva,
-                    'maximoDirecaoContinua' => $maximoDirecaoContinua
-                ];
             }
-            die(var_dump($counts));
+
+
+            // $rows[$aMotorista['enti_tx_matricula']] = $counts;
+            // $path = "./arquivos/paineis/nao_conformidade/$_POST[empresa]";
+            // if(!is_dir($path)){
+            //     mkdir($path,0700,true);
+            // }
+            // $fileName = 'nao_comformidade'.date('YmdHis').'.json';
+            // $json = json_encode($rows,JSON_UNESCAPED_UNICODE);
+            // file_put_contents($path.'/'.$fileName,$json);
         }
-		// $aDetalhado = diaDetalhePonto($aMotorista['enti_tx_matricula'], $dataVez);
-		// for($f = 0; $f < count($aDia); $f++){
-		// 	$keys = array_keys($aDia[$f]);
-		// 	$hasUnconformities = false;
-		// 	foreach($keys as $key){
-		// 		if(strpos($aDia[$f][$key], 'fa-warning') !== false){
-		// 			$hasUnconformities = true;
-		// 			$counts['naoConformidade'] += substr_count($aDia[$f][$key], 'fa-warning');
-		// 		}
-		// 	}
 	}
 
     function index(){
