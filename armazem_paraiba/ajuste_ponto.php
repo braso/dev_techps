@@ -36,9 +36,9 @@
 					query(
 						"SELECT * FROM ponto 
 							WHERE pont_tx_tipo IN ('".$codigosJornada['inicio']."', '".$codigosJornada['fim']."')
-								AND pont_tx_status != 'inativo'
+								AND pont_tx_status = 'ativo'
 								AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-								AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora']."', '%Y-%m-%d %H:%i')
+								AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora'].":59', '%Y-%m-%d %H:%i:%s')
 							ORDER BY pont_tx_data DESC
 							LIMIT 1"
 					),
@@ -55,9 +55,9 @@
 							query(
 								"SELECT * FROM ponto 
 									WHERE pont_tx_tipo IN ('".$codigosJornada['inicio']."', '".$codigosJornada['fim']."')
-										AND pont_tx_status != 'inativo'
+										AND pont_tx_status = 'ativo'
 										AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-										AND pont_tx_data >= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora']."', '%Y-%m-%d %H:%i')
+										AND pont_tx_data >= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora'].":00', '%Y-%m-%d %H:%i:%s')
 									ORDER BY pont_tx_data ASC
 									LIMIT 1"
 							)
@@ -85,10 +85,10 @@
 						$temPeriodoAberto = mysqli_fetch_assoc(
 							query(
 								"SELECT * FROM ponto 
-									WHERE pont_tx_status != 'inativo'
+									WHERE pont_tx_status = 'ativo'
 										AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
 										AND pont_tx_data LIKE '".$_POST['data']."%'
-										AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora']."', '%Y-%m-%d %H:%i')
+										AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora'].":59', '%Y-%m-%d %H:%i:%s')
 									ORDER BY pont_tx_data DESC, pont_nb_id DESC
 									LIMIT 1"
 							)
@@ -126,11 +126,31 @@
 			}
 		//}
 
+		$temPonto = mysqli_fetch_assoc(query(
+			"SELECT pont_nb_id, pont_tx_data FROM ponto
+				WHERE pont_tx_status = 'ativo'
+					AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
+					AND STR_TO_DATE(pont_tx_data, '%Y-%m-%d %H:%i') = STR_TO_DATE('".($_POST["data"]." ".$_POST["hora"])."', '%Y-%m-%d %H:%i')
+				ORDER BY pont_tx_data DESC
+				LIMIT 1"
+		));
+
+		$data = $_POST["data"]." ".$_POST["hora"];
+
+		if(!empty($temPonto["pont_tx_data"])){
+			$seg = explode(":", $temPonto["pont_tx_data"])[2];
+			$seg = intval($seg)+1;
+			$data = $data.":".str_pad(strval($seg), 2, "0", STR_PAD_LEFT);
+		}else{
+			$data = $data.":00";
+		}
+
+
 		
 		$newPonto = [
 			'pont_nb_user' 			=> $_SESSION['user_nb_id'],
 			'pont_tx_matricula' 	=> $aMotorista['enti_tx_matricula'],
-			'pont_tx_data' 			=> "$_POST[data] $_POST[hora]",
+			'pont_tx_data' 			=> $data,
 			'pont_tx_tipo' 			=> $aTipo['macr_tx_codigoInterno'],
 			'pont_tx_status' 		=> 'ativo',
 			'pont_tx_dataCadastro' 	=> date("Y-m-d H:i:s"),
@@ -138,7 +158,7 @@
 			'pont_tx_descricao' 	=> $_POST['descricao']
 		];
 		
-		inserir('ponto',array_keys($newPonto),array_values($newPonto));
+		inserir('ponto', array_keys($newPonto), array_values($newPonto));
 		index();
 		exit;
 	}
@@ -168,7 +188,7 @@
 		;
 	}
 
-	function pegarSqlDia(string $matricula): string{
+	function pegarSqlDia(string $matricula, array $cols): string{
 		$condicoesPontoBasicas = [
 			"ponto.pont_tx_status = 'ativo'",
 			"ponto.pont_tx_matricula = '".$matricula."'"
@@ -176,7 +196,7 @@
 
 		$abriuJornadaHoje = mysqli_fetch_assoc(
 			query(
-				"SELECT * FROM ponto
+				"SELECT pont_tx_data FROM ponto
 					WHERE ".implode(" AND ", $condicoesPontoBasicas)."
 						AND ponto.pont_tx_tipo = 1
 						AND ponto.pont_tx_data LIKE '%".$_POST['data']."%'
@@ -187,7 +207,6 @@
 
 		//Definir data de início da query{
 			//Se abriu jornada hoje, considera a partir da data de abertura da jornada.
-			$sqlDataInicio = $abriuJornadaHoje['pont_tx_data'];
 
 			if(empty($abriuJornadaHoje)){
 				//Se não abriu uma jornada hoje, confere se há uma jornada aberta que veio de antes do dia.
@@ -231,6 +250,7 @@
 		//Definir data de fim da query{
 			$sqlDataFim = $_POST['data'].' 23:59:59';
 			if(!empty($abriuJornadaHoje)){
+				$sqlDataInicio = $abriuJornadaHoje["pont_tx_data"];
 				//Se abriu jornada hoje, confere se teve uma jornada aberta que seguiu pros dias seguintes
 				$deixouJornadaAberta = mysqli_fetch_assoc(
 					query(
@@ -265,7 +285,7 @@
 		$condicoesPontoBasicas[0] = "ponto.pont_tx_status = '".$_POST['status']."'";
 		
 		$sql = 
-			"SELECT * FROM ponto
+			"SELECT DISTINCT pont_nb_id, ".implode(",", $cols)." FROM ponto
 				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
 				JOIN user ON ponto.pont_nb_user = user.user_nb_id
 				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
@@ -288,6 +308,7 @@
 		if(empty($_POST['id'])){
 			echo '<script>alert("ERRO: Deve ser selecionado um motorista para ajustar.")</script>';
 
+			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
 			voltar();
 			exit;
 		}else{
@@ -304,7 +325,7 @@
 			$_POST['data_ate'] = $_POST['data'];
 		}
 
-		$aMotorista = carregar('entidade',$_POST['id']);
+		$aMotorista = carregar('entidade', $_POST['id']);
 
 		$sqlCheck = query("SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user 
 			WHERE '".$_POST['data']."' BETWEEN endo_tx_de AND endo_tx_ate
@@ -340,14 +361,14 @@
 		$campoJust = [];
 
 		if(!empty($aEndosso) && count($aEndosso) > 0){
-			$variableFields[] = texto('Endosso:',"Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1),6);
+			$variableFields[] = texto('Endosso',"Endossado por ".$aEndosso['user_tx_login']." em ".data($aEndosso['endo_tx_dataCadastro'],1),6);
 		}else{
 			$_POST["busca_data"] = substr($_POST['data'],0, -3);
 			$botoes[] = botao(
 				'Gravar',
 				'cadastrarAjuste'
 			);
-      $parametros = [
+      		$parametros = [
 				"pont_nb_id",
 				"excluir_ponto",
 				"idEntidade",
@@ -357,12 +378,12 @@
 			];
 
 			$iconeExcluir = "icone_excluir_ajuste(".implode(",", $parametros).")"; //Utilizado em grid()
-			$variableFields[] = campo_data('Data', 'data', ($_POST['data']?? ''), 2, "onfocusout='atualizar_form(".$_POST['id'].", this.value, \"".$_POST['data_de']."\", \"".$_POST['data_ate']."\")', null");
-			$variableFields[] = campo_hora('Hora','hora',$_POST['hora'],2);
-			$variableFields[] = combo_bd('Código Macro','idMacro',$_POST['idMacro'],4,"macroponto","","ORDER BY macr_nb_id");
-			$variableFields[] = combo_bd('Motivo:','motivo',$_POST['motivo'],4,'motivo','',' AND moti_tx_tipo = "Ajuste" ORDER BY moti_tx_nome');
+			$variableFields[] = campo_data('Data', 'data', ($_POST['data']?? ""), 2, "onfocusout='atualizar_form(".$_POST['id'].", this.value, \"".$_POST['data_de']."\", \"".$_POST['data_ate']."\")', null");
+			$variableFields[] = campo_hora('Hora','hora',($_POST['hora']?? ""),2);
+			$variableFields[] = combo_bd('Código Macro','idMacro',($_POST['idMacro']?? ""),4,"macroponto","","ORDER BY macr_nb_id");
+			$variableFields[] = combo_bd('Motivo','motivo',($_POST['motivo']?? ""),4,'motivo','',' AND moti_tx_tipo = "Ajuste" ORDER BY moti_tx_nome');
 	
-			$campoJust[] = textarea('Justificativa:','descricao',$_POST['descricao'],12);
+			$campoJust[] = textarea('Justificativa','descricao',($_POST['descricao']?? ""),12);
 		}
 
 		$botoes[] = $botao_imprimir;
@@ -390,7 +411,7 @@
 		linha_form($campoJust);
 		fecha_form($botoes);
 
-		$sql = pegarSqlDia($aMotorista['enti_tx_matricula']);
+		$sql = pegarSqlDia($aMotorista['enti_tx_matricula'], ["pont_nb_id", "pont_tx_data", "macr_tx_nome", "moti_tx_nome", "moti_tx_legenda", "pont_tx_descricao", "pont_tx_justificativa", "user_tx_login", "pont_tx_dataCadastro"]);
 		$justificativa = 'pont_tx_descricao';
 		if($_POST['status'] === 'inativo'){
 		    $justificativa = 'pont_tx_justificativa';
