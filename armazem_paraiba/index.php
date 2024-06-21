@@ -5,7 +5,6 @@
 		error_reporting(E_ALL);
 	//*/
 
-
 	if(empty(session_id())){
 		$started = session_start();
 	}
@@ -40,7 +39,7 @@
 		$usuario = mysqli_fetch_assoc(
 			query(
 				"SELECT * FROM user 
-					WHERE user_tx_status != 'inativo' 
+					WHERE user_tx_status = 'ativo' 
 						AND user_tx_login = '".$_POST['user']."' 
 						AND user_tx_senha = '".$_POST['password']."'"
 			)
