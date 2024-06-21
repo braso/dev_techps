@@ -160,7 +160,7 @@
 			exit;
 			
 		}else{//Atualizando usuário existente
-			atualiza_usuario();
+			atualiza_usuario($usuario);
 			$id = $_POST['id'];
 		}
 
@@ -194,7 +194,7 @@
 		exit;
 	}
 
-	function atualiza_usuario(){
+	function atualiza_usuario(array $usuario){
 		if (is_bool(strpos($_SESSION['user_tx_nivel'], "Administrador"))){
 			if (!empty($_POST['senha']) && !empty($_POST['senha2'])) {
 				atualizar('user', ['user_tx_senha'], [md5($_POST['senha'])], $_POST['id']);
@@ -210,11 +210,12 @@
 			if (isset($sqlCheckNivel['user_tx_nivel']) && in_array($sqlCheckNivel['user_tx_nivel'], ['Motorista', 'Ajudante'])) {
 				if (!empty($_POST['senha']) && !empty($_POST['senha2'])) {
 					$novaSenha = ['user_tx_senha' => md5($_POST['senha'])];
+					atualizar('user', array_keys($novaSenha), array_values($novaSenha), $_POST['id']);
 				}
-				atualizar('user', array_keys($novaSenha), array_values($novaSenha), $_POST['id']);
 				index();
 				exit;
 			}
+
 			$usuario['user_nb_userAtualiza'] = $_SESSION['user_nb_id'];
 			$usuario['user_tx_dataAtualiza'] = date("Y-m-d H:i:s");
 
@@ -258,7 +259,7 @@
 			);
 		}
 
-		$campo_foto = arquivo('Foto (.png, .jpg)', 'foto', ($a_mod['enti_tx_foto']?? ''), 4);
+		$campo_foto  = arquivo('Foto (.png, .jpg)', 'foto', ($a_mod['enti_tx_foto']?? ''), 4);
 		$campo_login = campo('Login*', 'login', ($_POST['login']?? ($a_mod['user_tx_login']?? "")), 2,'','maxlength="30"');
 
 		if(!empty($_POST['id']) &&							//Se está editando um usuário existente e
@@ -392,11 +393,18 @@
 
 		$buttons = [];
 		$buttons[] = botao((!empty($_POST['id'])? "Atualizar": "Gravar"), 'cadastra_usuario', 'id,editPermission', ($_POST['id']?? '').','.strval($editPermission),'','','btn btn-success');
-		if($_GET['id'] != $_SESSION['user_nb_id']){
-			$buttons[] = botao('Voltar', 'index');
+		if(empty($_POST["HTTP_REFERER"])){
+			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
+			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_usuario.php"))){
+				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_usuario.php";
+			}
+		}
+		if(!empty($_POST['HTTP_REFERER'])){
+			$buttons[] = botao('Voltar', 'voltar');
 		}
 
 		abre_form('Dados do Usuário');
+		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($fields);
 		
 
@@ -422,7 +430,7 @@
 			echo "<br>";
 			linha_form($cAtualiza);
 		}
-		
+
 		fecha_form($buttons);
 		echo "<form name='form_excluir_arquivo' method='post' action='cadastro_usuario.php'>
 				<input type='hidden' name='id' value=''>
@@ -462,7 +470,7 @@
 			$_POST['id'] = $_SESSION['user_nb_id'];
 			modifica_usuario();
 		}
-		$extraEmpresa = " AND empr_tx_situacao != 'inativo' ORDER BY empr_tx_nome";
+		$extraEmpresa = " AND empr_tx_situacao = 'ativo' ORDER BY empr_tx_nome";
 
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa .= " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";

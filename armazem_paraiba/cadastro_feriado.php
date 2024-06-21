@@ -59,10 +59,18 @@ function layout_feriado(){
 
 	$botao = [
 		botao('Gravar','cadastra_feriado','id',$_POST['id'],'','','btn btn-success'),
-		botao('Voltar','index')
+		botao('Voltar','voltar')
 	];
+
+	if(empty($_POST["HTTP_REFERER"])){
+		$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
+		if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_feriado.php"))){
+			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_feriado.php";
+		}
+	}
 	
 	abre_form('Dados do Feriado');
+	campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 	linha_form($c);
 	fecha_form($botao);
 
@@ -111,7 +119,7 @@ function index(){
 	linha_form($c);
 	fecha_form($botao);
 
-	$sql = "SELECT * FROM feriado LEFT JOIN cidade ON cida_nb_id = feri_nb_cidade WHERE feri_tx_status != 'inativo'".$extra;
+	$sql = "SELECT * FROM feriado LEFT JOIN cidade ON cida_nb_id = feri_nb_cidade WHERE feri_tx_status = 'ativo'".$extra;
 	$gridFields = [
 		'CÓDIGO' 											=> 'feri_nb_id',
 		'NOME' 												=> 'feri_tx_nome',
@@ -122,8 +130,7 @@ function index(){
 		'<spam class="glyphicon glyphicon-remove"></spam>' 	=> 'icone_excluir(feri_nb_id,exclui_feriado)'
 	];
 
-	grid($sql,array_keys($gridFields),array_values($gridFields));
+	grid($sql,array_keys($gridFields),array_values($gridFields), "", "", 2, "desc");
 
 	rodape();
-
 }

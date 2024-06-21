@@ -90,7 +90,7 @@
     function tokenGenerate($login, $domain) {
         $token = bin2hex(random_bytes(16));
 
-        $userSql = query("SELECT user_nb_id, user_tx_nome, user_tx_email FROM `user` WHERE user_tx_login = '$login' AND user_tx_status != 'inativo'");
+        $userSql = query("SELECT user_nb_id, user_tx_nome, user_tx_email FROM `user` WHERE user_tx_login = '$login' AND user_tx_status = 'ativo'");
         $userId = mysqli_fetch_assoc($userSql);
         if(!empty($userId)){
             atualizar('user', ['user_tx_token'], [$token], $userId['user_nb_id']);

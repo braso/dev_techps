@@ -4,3 +4,5 @@ arquivos/endosso_csv/*
 arquivos/paineis/*
 arquivos/pontos/*
 arquivos/user/*
+arquivos/doc_empresa/*
+conecta.php

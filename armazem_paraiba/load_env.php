@@ -9,5 +9,3 @@ if(file_exists($envFilePath)){
         $_ENV[$attr] = $val;
     }
 }
-?>
- 

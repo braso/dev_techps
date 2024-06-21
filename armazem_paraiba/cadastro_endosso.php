@@ -91,7 +91,7 @@
 				JOIN empresa ON enti_nb_empresa = empr_nb_id
 				JOIN cidade ON empr_nb_cidade = cida_nb_id
 				JOIN parametro ON enti_nb_parametro = para_nb_id
-				WHERE enti_tx_status != 'inativo'";
+				WHERE enti_tx_status = 'ativo'";
 
 		if(!isset($_POST['busca_motorista'])){
 			$queryMotoristas .= " AND enti_nb_empresa = ".$_POST['empresa']."";
@@ -117,7 +117,7 @@
 									(endo_tx_ate >= '".$_POST['data_de']."') 
 									AND ('".$_POST['data_ate']."' >= endo_tx_de)
 								)
-								AND endo_tx_status != 'inativo'
+								AND endo_tx_status = 'ativo'
 							LIMIT 1;"
 					),
 					MYSQLI_ASSOC
@@ -141,7 +141,7 @@
 						query(
 							"SELECT * FROM endosso 
 								WHERE endo_tx_matricula = '".$motorista['enti_tx_matricula']."'
-									AND endo_tx_status != 'inativo'
+									AND endo_tx_status = 'ativo'
 								ORDER BY endo_tx_de DESC
 								LIMIT 1"
 						), 
@@ -426,11 +426,19 @@
 			array_unshift($c, campo_hidden('empresa', $_SESSION['user_nb_empresa']));
 		}
 		$b = [
-			botao('Voltar', 'index'),
+			botao('Voltar', 'voltar'),
 			botao('Cadastrar Endosso', 'cadastrar', '', '', '', '', 'btn btn-success')
 		];
 
+		if(empty($_POST["HTTP_REFERER"])){
+			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
+			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_endosso.php"))){
+				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/endosso.php";
+			}
+		}
+
 		abre_form();
+		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($c);
 		fecha_form($b);
 		

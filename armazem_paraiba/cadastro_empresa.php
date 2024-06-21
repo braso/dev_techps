@@ -32,10 +32,11 @@
 			header('Content-Length: ' . filesize($_POST['caminho']));
 
 			// Lê o arquivo e o envia para o navegador
+			die("debug");
 			readfile($_POST['caminho']);
 			exit;
 		} else {
-			echo 'O arquivo não foi encontrado.';
+			set_status("O arquivo não foi encontrado.");
 		}
 		$_POST['id'] = $_POST['idEmpresa'];
 		modificarEmpresa();
@@ -420,29 +421,36 @@
 
 		$botao = [
 			botao($btn_txt,'cadastrarEmpresa','id',($_POST['id']?? ''),'','','btn btn-success'),
-			botao('Voltar','index')
+			botao('Voltar','voltar')
 		];
+
+		if(empty($_POST["HTTP_REFERER"])){
+			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
+			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_empresa.php"))){
+				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_empresa.php";
+			}
+		}
 		
 		abre_form("Dados da Empresa/Filial");
+		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($c);
 		echo "<br>";
 		fieldset("CONVEÇÃO SINDICAL - JORNADA DO MOTORISTA PADRÃO");
-		linha_form($cJornada);
 
 		if(!empty($a_mod['empr_nb_userCadastro'])){
 			$a_userCadastro = carregar('user',$a_mod['empr_nb_userCadastro']);
-			$txtCadastro = "Registro inserido por $a_userCadastro[user_tx_login] às ".data($a_mod['empr_tx_dataCadastro']).".";
-			$cAtualiza[] = texto("Data de Cadastro","$txtCadastro",5);
+			$txtCadastro = "Registro inserido por ".$a_userCadastro["user_tx_login"]." às ".data($a_mod['empr_tx_dataCadastro']).".";
+			$cJornada[] = texto("Data de Cadastro",$txtCadastro,3);
 			if(!empty($a_mod['empr_nb_userAtualiza'])){
 				$atualizacaoUser = carregar('user',$a_mod['empr_nb_userAtualiza']);
 				if(!empty($atualizacaoUser)){
 					$txtAtualiza = "Registro atualizado por ".$atualizacaoUser['user_tx_login']." às ".data($a_mod['empr_tx_dataAtualiza'],1).".";
-					$cAtualiza[] = texto("Última Atualização","$txtAtualiza",5);
+					$cJornada[] = texto("Última Atualização",$txtAtualiza,3);
 				}
 			}
-			echo "<br>";
-			linha_form($cAtualiza);
 		}
+
+		linha_form($cJornada);
 
 		fecha_form($botao);
 
@@ -579,47 +587,31 @@
 	function index(){
 
 		cabecalho("Cadastro Empresa/Filial");
-		$extra = '';
 
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa = " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
 		}
 
-		if(!empty($_POST['busca_codigo'])){
-			$extra .= " AND empr_nb_id = '".$_POST['busca_codigo']."'";
-		}
-
-		if(!empty($_POST['busca_nome'])){
-			$extra .= " AND empr_tx_nome LIKE '%".$_POST['busca_nome']."%'";
-		}
-
-		if(!empty($_POST['busca_fantasia'])){
-			$extra .= " AND empr_tx_fantasia LIKE '%".$_POST['busca_fantasia']."%'";
-		}
-
-		if(!empty($_POST['busca_cnpj'])){
-			$extra .= " AND empr_tx_cnpj = '".$_POST['busca_cnpj']."'";
-		}
-
-		if(!empty($_POST['busca_situacao']) && $_POST['busca_situacao'] != 'Todos'){
-			$extra .= " AND empr_tx_situacao = '".$_POST['busca_situacao']."'";
-		}
-
-		if(!empty($_POST['busca_uf'])){
-			$extra .= " AND cida_tx_uf = '".$_POST['busca_uf']."'";
-		}
+		$extra = 
+			((!empty($_POST["busca_codigo"]))? 											" AND empr_nb_id = '".$_POST["busca_codigo"]."'": "").
+			((!empty($_POST["busca_nome"]))? 											" AND empr_tx_nome LIKE '%".$_POST["busca_nome"]."%'": "").
+			((!empty($_POST["busca_fantasia"]))? 										" AND empr_tx_fantasia LIKE '%".$_POST["busca_fantasia"]."%'": "").
+			((!empty($_POST["busca_cnpj"]))? 											" AND empr_tx_cnpj = '".$_POST["busca_cnpj"]."'": "").
+			((!empty($_POST["busca_situacao"]) && $_POST["busca_situacao"] != "Todos")? " AND empr_tx_situacao = '".$_POST["busca_situacao"]."'": "").
+			((!empty($_POST["busca_uf"]))? 												" AND cida_tx_uf = '".$_POST["busca_uf"]."'": "")
+		;
 		
 
 		$uf = ['', 'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 		
 
 		$c = [
-			campo('Código',			'busca_codigo',		($_POST['busca_codigo']?? ''),		2,'MASCARA_NUMERO',	'maxlength="6"'),
-			campo('Nome',			'busca_nome',		($_POST['busca_nome']?? ''),		3,'',				'maxlength="65"'),
-			campo('Nome Fantasia',	'busca_fantasia',	($_POST['busca_fantasia']?? ''),	2,'',				'maxlength="65"'),
-			campo('CPF/CNPJ',		'busca_cnpj',		($_POST['busca_cnpj']?? ''),		2,'MASCARA_CPF/CNPJ'),
-			combo('UF',				'busca_uf',			($_POST['busca_uf']?? ''),			1,$uf),
-			combo('Situação',		'busca_situacao',	($_POST['busca_situacao']?? ''),	2,['' => 'Todos', 'ativo' => 'Ativo', 'inativo' => 'Inativo'])
+			campo("Código",			"busca_codigo",		($_POST["busca_codigo"]?? ""),		2, "MASCARA_NUMERO",	"maxlength='6'"),
+			campo("Nome",			"busca_nome",		($_POST["busca_nome"]?? ""),		3, "",					"maxlength='65'"),
+			campo("Nome Fantasia",	"busca_fantasia",	($_POST["busca_fantasia"]?? ""),	2, "",					"maxlength='65'"),
+			campo("CPF/CNPJ",		"busca_cnpj",		($_POST["busca_cnpj"]?? ""),		2, "MASCARA_CPF/CNPJ"),
+			combo("UF",				"busca_uf",			($_POST["busca_uf"]?? ""),			1, $uf),
+			combo("Situação",		"busca_situacao",	($_POST["busca_situacao"]?? ""),	2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
 		];
 
 		$botao = [
@@ -632,18 +624,18 @@
 		fecha_form($botao);
 
 		$sql = 
-			"SELECT * FROM empresa
+			"SELECT *, concat('[', cida_tx_uf, '] ', cida_tx_nome) as ufCidade FROM empresa
 				JOIN cidade ON empr_nb_cidade = cida_nb_id
-				WHERE empr_tx_status != 'inativo' 
+				WHERE empr_tx_status = 'ativo' 
 					$extra
 				ORDER BY empr_tx_EhMatriz DESC, empr_nb_id";
-		
+
 		$gridCols = [
 			'CÓDIGO' => 'empr_nb_id',
 			'NOME' => 'empr_tx_nome',
 			'FANTASIA' => 'empr_tx_fantasia',
 			'CPF/CNPJ' => 'empr_tx_cnpj',
-			'CIDADE/UF' => 'cida_nb_id',
+			'CIDADE/UF' => 'ufCidade',
 			'SITUAÇÃO' => 'empr_tx_situacao',
 			'<spam class="glyphicon glyphicon-search"></spam>' => 'icone_modificar(empr_nb_id,modificarEmpresa)',
 			'<spam class="glyphicon glyphicon-remove"></spam>' => 'icone_excluir(empr_nb_id,excluirEmpresa)'

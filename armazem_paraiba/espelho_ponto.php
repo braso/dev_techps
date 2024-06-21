@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -45,9 +45,19 @@
 		if(isset($_POST['acao']) && $_POST['acao'] == 'index'){
 			$errorMsg = 'Insira os campos para pesquisar: ';
 			if(empty($_POST['busca_empresa'])){
-				$searchError = true;
-				$errorMsg .= 'Empresa, ';
-				$_POST['busca_empresa'] = $_SESSION['user_nb_empresa'];
+				if(empty($_POST["busca_motorista"])){
+					$searchError = true;
+					$errorMsg .= 'Empresa, ';
+					$_POST['busca_empresa'] = $_SESSION['user_nb_empresa'];
+				}else{
+					$idEmpresa = mysqli_fetch_assoc(query(
+						"SELECT empr_nb_id FROM entidade 
+							JOIN empresa ON enti_nb_empresa = empr_nb_id
+							WHERE enti_tx_status = 'ativo'
+								AND enti_nb_id = ".$_POST["busca_motorista"].";"
+					));
+					$_POST["busca_empresa"] = $idEmpresa["empr_nb_id"];
+				}
 			}
 			if(empty($_POST['busca_motorista'])){
 				$searchError = true;
@@ -94,14 +104,14 @@
 		if($_SESSION['user_tx_nivel'] == "Motorista"){
 			$nomeEmpresa = mysqli_fetch_assoc(query("SELECT empr_tx_nome FROM empresa WHERE empr_nb_id = ".$_SESSION["user_nb_empresa"]));
 			$searchFields = [
-				texto("Empresa*:", $nomeEmpresa["empr_tx_nome"], 3),
-				texto("Motorista/Ajudante*:", $_SESSION["user_tx_nome"], 3),
+				texto("Empresa*", $nomeEmpresa["empr_tx_nome"], 3),
+				texto("Motorista/Ajudante*", $_SESSION["user_tx_nome"], 3),
 			];
 		}else{
 			$searchFields = [
-				combo_net('Empresa*:', 'busca_empresa', ($_POST['busca_empresa']?? ''), 3, 'empresa', "onchange=selecionaMotorista(this.value) ", $extraEmpresa),
+				combo_net('Empresa*', 'busca_empresa', ($_POST['busca_empresa']?? ''), 3, 'empresa', "onchange=selecionaMotorista(this.value) ", $extraEmpresa),
 				combo_net(
-					'Motorista/Ajudante*:',
+					'Motorista/Ajudante*',
 					'busca_motorista',
 					(!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ""),
 					4, 
@@ -116,8 +126,8 @@
 		$searchFields = array_merge(
 			$searchFields,
 			[
-				campo_data('Data Início:', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ""), 2, $extraCampoData),
-				campo_data('Data Fim:', 'busca_dataFim', ($_POST['busca_dataFim']?? ''), 2,$extraCampoData)
+				campo_data('Data Início', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ""), 2, $extraCampoData),
+				campo_data('Data Fim', 'busca_dataFim', ($_POST['busca_dataFim']?? ''), 2,$extraCampoData)
 			]
 		);
 
@@ -418,12 +428,15 @@
 
 			}
 
-			if(<?=(!empty($_POST['busca_empresa'])? $_POST['busca_empresa']: 0)?> !== 0){
-				empresa = document.getElementById("busca_empresa").value;
-				selecionaMotorista(empresa);
+			function updateValues(){
+				if(<?=(!empty($_POST['busca_empresa'])? $_POST['busca_empresa']: 0)?> !== 0){
+					empresa = document.getElementById("busca_empresa").value;
+					selecionaMotorista(empresa);
 
-				if(<?=(!empty($_POST['busca_motorista'])?1:0)?>){
-					document.getElementById("busca_motorista").innerHTML = '<?=$opt?>';
+					if(<?=(!empty($_POST['busca_motorista'])?1:0)?>){
+						document.getElementById("busca_motorista").innerHTML = '<?=$opt?>';
+						alert(document.getElementById("busca_motorista").value);
+					}
 				}
 			}
 		</script>

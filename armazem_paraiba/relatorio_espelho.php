@@ -225,7 +225,7 @@
                     </tr>
                     <tr>
                         <td>
-                            <center><b>D+1</b></center>
+                            <center><b>D+</b></center>
                         </td>
                         <td>
                             <center>Jornada terminada nos dias seguintes</center>

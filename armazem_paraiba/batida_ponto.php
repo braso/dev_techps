@@ -17,8 +17,7 @@
 		// }
 		// $_POST['motivo'] = intval($_POST['motivo']);
 
-		$ultimoPonto = pegarPontosDia($aMotorista['enti_tx_matricula'])[0];
-		
+		$ultimoPonto = pegarPontosDia($aMotorista['enti_tx_matricula'], ["pont_tx_tipo", "pont_tx_data", "pont_tx_placa"])[0];		
 		if (!empty($ultimoPonto[count($ultimoPonto)-1] ['pont_tx_placa']) && $ultimoPonto[count($ultimoPonto)-1] ['pont_tx_placa'] != "Fim de Jornada") {
 			$placa = $ultimoPonto[count($ultimoPonto)-1] ['pont_tx_placa'];
 		} else {
@@ -26,7 +25,6 @@
 				$placa = $_POST['placa'];
 			}
 		}
-
 		if(!empty($ultimoPonto)){
 			$ultimoPonto = $ultimoPonto[count($ultimoPonto)-1];
 			$ultimoPonto['sameTypeError'] = ($ultimoPonto['pont_tx_tipo'] == $_POST['idMacro']);
@@ -66,7 +64,7 @@
 				'pont_tx_tipo' 			=> $aTipo['macr_tx_codigoInterno'],
 				'pont_tx_status' 		=> 'ativo',
 				'pont_tx_dataCadastro' 	=> $hoje.' '.date("H:i:s"),
-				// 'pont_nb_motivo' 		=> $_POST['motivo']
+				'pont_nb_motivo' 		=> $_POST['motivo'],
 				'pont_tx_placa'         => $placa
 			];
 			if(!empty($_POST['latitude'])){
@@ -75,6 +73,10 @@
 			if(!empty($_POST['longitude'])){
 				$novoPonto['pont_tx_longitude'] = $_POST['longitude'];
 			}
+			if(!empty($_POST['justificativa'])){
+				$novoPonto['pont_tx_justificativa'] = $_POST['justificativa'];
+			}
+
 			inserir('ponto', array_keys($novoPonto), array_values($novoPonto));
 		}
 
@@ -82,10 +84,10 @@
 		exit;
 	}
 
-	function pegarPontosDia(string $matricula): array{
-		$hoje = date('Y-m-d');
+	function pegarPontosDia(string $matricula, $columns = ["*"]): array{
+		$hoje = date("Y-m-d");
 		$condicoesPontoBasicas = 
-			"ponto.pont_tx_status != 'inativo'
+			"ponto.pont_tx_status = 'ativo'
 			AND ponto.pont_tx_matricula = '".$matricula."'
 			AND ponto.pont_tx_data <= '".$hoje.' '.date('H:i:s')."'"
 		;
@@ -138,7 +140,7 @@
 		}
 		
 		$sql = 
-			"SELECT * FROM ponto
+			"SELECT DISTINCT pont_nb_id, ".implode(", ", $columns)." FROM ponto
 				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
 				WHERE ".$condicoesPontoBasicas."
 					AND ponto.pont_tx_data >= '".$sqlDataInicio."'
@@ -190,7 +192,7 @@
 	}
 
 	function index() {
-		$hoje = date('Y-m-d');
+		$hoje = date("Y-m-d");
 		cabecalho('Registrar Ponto');
 		
 		if(empty($_SESSION['user_nb_entidade'])){
@@ -200,7 +202,7 @@
 
 		$aMotorista = carregar('entidade', $_SESSION['user_nb_entidade']);
 
-		[$pontosCompleto, $sql] = pegarPontosDia($aMotorista['enti_tx_matricula']);
+		[$pontosCompleto, $sql] = pegarPontosDia($aMotorista['enti_tx_matricula'], ["pont_tx_data", "pont_tx_tipo", "pont_tx_dataCadastro", "macr_tx_nome"]);
 
 		if(!empty($pontosCompleto)){
 			$pontos = [
@@ -240,65 +242,68 @@
 			'repousoEmbarcado' 	=> []
 		];
 
+		
 		for($f = 0; $f < count($pontosCompleto); $f++){
 			if(empty($pontosCompleto[$f])){
 				continue;
 			}
-
+			
 			$value = DateTime::createFromFormat('Y-m-d H:i:s', $pontosCompleto[$f]['pont_tx_data']);
 
+			$value = ($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i:s"), "24:00"], '-'): $value->format("H:i:s");
+			
 			switch(intval($pontosCompleto[$f]['pont_tx_tipo'])){
 				case 1:
 					$pares['jornada'][] = [
-						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i:s"), "24:00"], '-'): $value->format("H:i:s"))
+						'inicio' => $value
 					];
 				break;
 				case 2:
 					if(count($pares['jornada']) == 0){
-						$pares['jornada'][0] = ['inicio' => null, 'fim' => $value->format("H:i:s")];
+						$pares['jornada'][0] = ['inicio' => null, 'fim' => $value];
 					}else{
-						$pares['jornada'][count($pares['jornada'])-1]['fim'] = $value->format("H:i:s");
+						$pares['jornada'][count($pares['jornada'])-1]['fim'] = $value;
 					}
 				break;
 				case 3:
 					$pares['refeicao'][] = [
-						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i:s"), "24:00"], '-'): $value->format("H:i:s"))
+						'inicio' => $value
 					];
 				break;
 				case 4:
-					$pares['refeicao'][count($pares['refeicao'])-1]['fim'] = $value->format("H:i:s");
+					$pares['refeicao'][count($pares['refeicao'])-1]['fim'] = $value;
 				break;
 				case 5:
 					$pares['espera'][] = [
-						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i:s"), "24:00"], '-'): $value->format("H:i:s"))
+						'inicio' => $value
 					];
 				break;
 				case 6:
-					$pares['espera'][count($pares['espera'])-1]['fim'] = $value->format("H:i:s");
+					$pares['espera'][count($pares['espera'])-1]['fim'] = $value;
 				break;
 				case 7:
 					$pares['descanso'][] = [
-						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i:s"), "24:00"], '-'): $value->format("H:i:s"))
+						'inicio' => $value
 					];
 				break;
 				case 8:
-					$pares['descanso'][count($pares['descanso'])-1]['fim'] = $value->format("H:i:s");
+					$pares['descanso'][count($pares['descanso'])-1]['fim'] = $value;
 				break;
 				case 9:
 					$pares['repouso'][] = [
-						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i:s"), "24:00"], '-'): $value->format("H:i:s"))
+						'inicio' => $value
 					];
 				break;
 				case 10:
-					$pares['repouso'][count($pares['repouso'])-1]['fim'] = $value->format("H:i:s");
+					$pares['repouso'][count($pares['repouso'])-1]['fim'] = $value;
 				break;
 				case 11:
 					$pares['repousoEmbarcado'][] = [
-						'inicio' => (($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i:s"), "24:00"], '-'): $value->format("H:i:s"))
+						'inicio' => $value
 					];
 				break;
 				case 12:
-					$pares['repousoEmbarcado'][count($pares['repousoEmbarcado'])-1]['fim'] = $value->format("H:i:s");
+					$pares['repousoEmbarcado'][count($pares['repousoEmbarcado'])-1]['fim'] = $value;
 				break;
 			}
 		}
@@ -333,6 +338,7 @@
 		$jornadaEfetiva = operarHorarios([$pares['refeicao'], $pares['espera'], $pares['descanso'], $pares['repouso'], $pares['repousoEmbarcado']], '+');
 
 		$jornadaEfetiva = operarHorarios([$pares['jornada'], $jornadaEfetiva], '-');
+
 
 
 		$botoes = [
@@ -370,7 +376,7 @@
 			];
 		}
 
-		$c = [
+		$fields = [
 			"<div id='clockParent' class='col-sm-5 margin-bottom-5' >
 				<label>Hora</label><br>
 				<p class='text-left' id='clock'>Carregando...</p>
@@ -401,12 +407,14 @@
 			)
 		);
 		if (!empty($aEndosso)){
-			$c[2] = texto('Endosso:', "Endossado por " . $aEndosso['user_tx_login'] . " em " . data($aEndosso['endo_tx_dataCadastro'], 1), 6);
+			$fields[] = texto('Endosso:', "Endossado por " . $aEndosso['user_tx_login'] . " em " . data($aEndosso['endo_tx_dataCadastro'], 1), 6);
 			$botoesVisiveis = [];
+		}else{
+			$fields[] = textarea("Justificativa", "justificativa", "", 5, "style='resize: vertical;' placeholder='Em caso de inconsistência, justificar aqui.'");
 		}
 
 		abre_form('Dados do Registro de Ponto');
-		linha_form($c);
+		linha_form($fields);
 		fecha_form($botoesVisiveis);
 
 

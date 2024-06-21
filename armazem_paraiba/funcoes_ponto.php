@@ -87,7 +87,7 @@
 		
 		for ($i = $begin; $i <= $end; $i->modify('+1 day')) {
 
-			$sqlRemover = query("SELECT * FROM abono WHERE abon_tx_data = '".$i->format("Y-m-d")."' AND abon_tx_matricula = '$a[enti_tx_matricula]' AND abon_tx_status = 'ativo'");
+			$sqlRemover = query("SELECT * FROM abono WHERE abon_tx_data = '".$i->format("Y-m-d")."' AND abon_tx_matricula = '".$a["enti_tx_matricula"]."' AND abon_tx_status = 'ativo'");
 			while ($aRemover = carrega_array($sqlRemover)) {
 				remover('abono', $aRemover['abon_nb_id']);
 			}
@@ -103,13 +103,18 @@
 			inserir('abono', $campos, $valores);
 		}
 
-		$_POST['acao'] = $_POST['acao2'];
-		$_POST['busca_empresa'] = $_POST['empresa'];
+		$_POST['acao'] = "index";
+		$_POST['busca_empresa'] = $_POST['busca_empresa']??$_POST['empresa'];
 		$_POST['busca_motorista'] = $_POST['motorista'];
 		$_POST['busca_dataInicio'] = $_POST['dataInicio'];
 		$_POST['busca_dataFim'] = $_POST['dataFim'];
 
-		index();
+		echo "<form name='form_voltar' action='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php' method='post'>";
+		foreach($_POST as $key => $value){
+			echo "<input type='hidden' name='".$key."' value='".$value."'/>";
+		}
+		echo "</form>";
+		echo "<script>document.form_voltar.submit()</script>";
 		exit;
 	}
 
@@ -314,26 +319,32 @@
 			$cor = 'blue';
 		}
 
-		if ($_SESSION['user_tx_nivel'] == 'Motorista') {
-			$retorno = '<span><i style="color:'.$cor.';" class="fa fa-circle"></i></span>';
-		} else {
-			$endossado = mysqli_fetch_all(
-				query(
-					'SELECT * FROM endosso 
-						JOIN entidade ON endo_tx_matricula = enti_tx_matricula
-						WHERE \''.$data.'\' BETWEEN endo_tx_de AND endo_tx_ate
-							AND enti_nb_id = '.$idMotorista.'
-							AND endo_tx_status != "inativo";'
-				), 
-				MYSQLI_ASSOC
-			);
-			if(count($endossado) > 0){
-				$retorno = '<a title="Ajuste de Ponto (endossado)" onclick="ajusta_ponto('.$idMotorista.',\''.$data.'\', true)"><i style="color:'.$cor.';" class="fa fa-circle">(E)</i></a>';
-			}else{
-				$retorno = '<a title="Ajuste de Ponto" onclick="ajusta_ponto('.$idMotorista.',\''.$data.'\')"><i style="color:'.$cor.';" class="fa fa-circle"></i></a>';
-			}
-		}
+		$endossado = mysqli_fetch_all(
+			query(
+				"SELECT * FROM endosso 
+					JOIN entidade ON endo_tx_matricula = enti_tx_matricula
+					WHERE '".$data."' BETWEEN endo_tx_de AND endo_tx_ate
+						AND enti_nb_id = ".$idMotorista."
+						AND endo_tx_status = 'ativo';"
+			), 
+			MYSQLI_ASSOC
+		);
 
+		$title = "Ajuste de Ponto";
+		$func = "ajusta_ponto(".$idMotorista.",'".$data."'";
+		$content = '<i style="color:'.$cor.';" class="fa fa-circle">';
+		if(count($endossado) > 0){
+			$title .= " (endossado)";
+			$func .= ", true";
+			$content .= "(E)";
+		}
+		$func .= ")";
+		if ($_SESSION['user_tx_nivel'] == 'Motorista') {
+			$func = "";
+		}
+		$content .= "</i>";
+		
+		$retorno = '<a title="'.$title.'" onclick="'.$func.'">'.$content.'</a>';
 		return $retorno;
 	}
 
@@ -599,7 +610,7 @@
 			"SELECT * FROM entidade
 				LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
 				LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
-				WHERE enti_tx_status != 'inativo' 
+				WHERE enti_tx_status = 'ativo' 
 					AND enti_tx_matricula = '$matricula' 
 				LIMIT 1"
 		));
@@ -620,7 +631,7 @@
 		$queryFeriado = query(
 			"SELECT feri_tx_nome FROM feriado 
 				WHERE feri_tx_data LIKE '".$data."%' 
-					AND feri_tx_status != 'inativo' ".$extraFeriado
+					AND feri_tx_status = 'ativo' ".$extraFeriado
 		);
 		$stringFeriado = '';
 		while ($row = carrega_array($queryFeriado)) {
@@ -650,7 +661,7 @@
 		$pontosDia = [];
 		$sql = query(
 			"SELECT * FROM ponto 
-				WHERE pont_tx_status != 'inativo' 
+				WHERE pont_tx_status = 'ativo' 
 					AND pont_tx_matricula = '$matricula' 
 					AND pont_tx_data LIKE '$data%' 
 				ORDER BY pont_tx_data ASC"
@@ -660,21 +671,37 @@
 		}
 
 		if(count($pontosDia) > 0){
-			if($pontosDia[count($pontosDia)-1]['pont_tx_tipo'] != '2'){ //Se o último registro do dia != fim de jornada => há uma jornada aberta que seguiu para o outro dia
+			if($pontosDia[count($pontosDia)-1]['pont_tx_tipo'] != '2'){ //Se o último registro do dia != fim de jornada => há uma jornada aberta que seguiu para os dias seguintes
+
+				$dataProxFim = mysqli_fetch_assoc(query(
+					"SELECT pont_tx_data FROM ponto
+						JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
+						WHERE pont_tx_status = 'ativo'
+							AND pont_tx_matricula = '".$matricula."'
+							AND pont_tx_data > '".$data." 23:59:59'
+							AND pont_tx_tipo = '2'
+						ORDER BY pont_tx_data ASC
+						LIMIT 1;"
+				));
+
 				$diaSeguinte = (new DateTime($data))->add(DateInterval::createFromDateString('1 day'));
 				$diaSeguinte = $diaSeguinte->format('Y-m-d');
 				
-				$pontosDiaSeguinte = mysqli_fetch_all(
-					query(
-						"SELECT macroponto.macr_tx_nome, ponto.*, (1) as diaSeguinte FROM ponto 
-						JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
-						WHERE pont_tx_status != 'inativo' 
-							AND pont_tx_matricula = '$matricula' 
-							AND pont_tx_data LIKE '".$diaSeguinte."%'
-						ORDER BY pont_tx_data ASC;"
-					),
-					MYSQLI_ASSOC
-				);
+				$pontosDiaSeguinte = [];
+				if(!empty($dataProxFim["pont_tx_data"])){
+					$pontosDiaSeguinte = mysqli_fetch_all(
+						query(
+							"SELECT macroponto.macr_tx_nome, ponto.* FROM ponto 
+							JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
+							WHERE pont_tx_status = 'ativo' 
+								AND pont_tx_matricula = '".$matricula."'
+								AND pont_tx_data > '".$data." 23:59:59'
+								AND pont_tx_data <= '".$dataProxFim["pont_tx_data"]."'
+							ORDER BY pont_tx_data ASC;"
+						),
+						MYSQLI_ASSOC
+					);
+				}
 
 				for($f = 0; $f < count($pontosDiaSeguinte); $f++){
 
@@ -818,7 +845,7 @@
 		$aAbono = carrega_array(
 			query(
 				"SELECT * FROM abono, motivo, user 
-					WHERE abon_tx_status != 'inativo' 
+					WHERE abon_tx_status = 'ativo' 
 						AND abon_nb_userCadastro = user_nb_id 
 						AND abon_tx_matricula = '$matricula' 
 						AND abon_tx_data = '$data' 
@@ -906,7 +933,7 @@
 
 				$ultimoFimJornada = carrega_array(query(
 					"SELECT pont_tx_data FROM ponto
-						WHERE pont_tx_status != 'inativo'
+						WHERE pont_tx_status = 'ativo'
 							AND pont_tx_tipo = 2
 							AND pont_tx_matricula = '$matricula'
 							AND pont_tx_data < '".$registros['inicioJornada'][0]."'
@@ -1069,7 +1096,7 @@
 					$maiorRefeicao = '00:00';
 					if(count($registros['refeicaoCompleto']['pares']) > 0){
 						for ($i = 0; $i < count($registros['refeicaoCompleto']['pares']); $i++) {
-							if($maiorRefeicao < $registros['refeicaoCompleto']['pares'][$i]['intervalo']){
+							if(!empty($registros['refeicaoCompleto']['pares'][$i]['intervalo']) && $maiorRefeicao < $registros['refeicaoCompleto']['pares'][$i]['intervalo']){
 								$maiorRefeicao = $registros['refeicaoCompleto']['pares'][$i]['intervalo'];
 							}
 						}
@@ -1147,7 +1174,7 @@
 							JOIN user ON ponto.pont_nb_user = user.user_nb_id
 							LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
 							WHERE ponto.pont_nb_motivo IS NOT NULL 
-								AND pont_tx_status != 'inativo'
+								AND pont_tx_status = 'ativo'
 								AND pont_tx_data IN ".$datas." 
 								AND pont_tx_matricula = '$matricula'"
 					),
@@ -1287,7 +1314,7 @@
 			if(!is_bool($qttDias)){
 				$qttDias = intval($qttDias->format('%d'));
 				if($qttDias > 0){
-					array_splice($aRetorno['fimJornada'], $ultimoFimJornada['key']+1, 0, 'D+1');
+					array_splice($aRetorno['fimJornada'], $ultimoFimJornada['key']+1, 0, "D+".$qttDias);
 				}
 			}
 		}
@@ -1312,7 +1339,7 @@
 					foreach($legendas as $legenda){
 						$aRetorno[$tipo] = str_replace('<br><strong>'.$legenda['moti_tx_legenda'].'</strong>', ' <strong>'.$legenda['moti_tx_legenda'].'</strong>', $aRetorno[$tipo]);
 					}
-					$aRetorno[$tipo] = str_replace('<br>D+1', ' D+1', $aRetorno[$tipo]);
+					$aRetorno[$tipo] = str_replace('<br>D+', ' D+', $aRetorno[$tipo]);
 					$aRetorno[$tipo] = str_replace('<br>*', ' *', $aRetorno[$tipo]);
 				}else{
 					$aRetorno[$tipo] = '';
@@ -1343,17 +1370,15 @@
 		if (empty($mesAno)) {
 			$mesAno = date("Y-m");
 			// Obtém a data de início do mês atual
-			$dataTimeInicio = new DateTime('first day of this month');
-			$dataInicio = $dataTimeInicio->format('Y-m-d');
+			$dataInicio = date("Y-m-01");
 		
 			// Obtém a data de fim do mês atual
-			$dataTimeFim = new DateTime('last day of this month');
-			$dataFim = $dataTimeFim->format('Y-m-d');
+			$dataFim = date('Y-m-t');
 		} else {
-			list($ano, $mes) = explode('-', $mesAno);
+			[$ano, $mes] = explode('-', $mesAno);
 
 			// Cria a data de início do mês especificado
-			$dataInicio = date("Y-m-d", mktime(0, 0, 0, $mes, 1, $ano));
+			$dataInicio = date($ano."-".$mes."-01 00:00:00");
 
 			// Cria a data de fim do mês especificado
 			$ultimoDia = date("t", mktime(0, 0, 0, $mes, 1, $ano));
@@ -1362,14 +1387,14 @@
 
 		
 		$empresas = mysqli_fetch_all(
-			query("SELECT empr_nb_id, empr_tx_nome FROM `empresa` WHERE empr_tx_status != 'inativo' ORDER BY empr_tx_nome ASC;"),
+			query("SELECT empr_nb_id, empr_tx_nome FROM `empresa` WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome ASC;"),
 			MYSQLI_ASSOC
 		);
 		
 		foreach ($empresas as $empresa) {
 	
 			$motoristas = mysqli_fetch_all(
-				query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_nb_empresa = $empresa[empr_nb_id] AND enti_tx_status != 'inativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') ORDER BY enti_tx_nome ASC"),
+				query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_nb_empresa = $empresa[empr_nb_id] AND enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') ORDER BY enti_tx_nome ASC"),
 				MYSQLI_ASSOC
 			);
 			

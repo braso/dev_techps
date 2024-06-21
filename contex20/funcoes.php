@@ -603,7 +603,6 @@
 							AND ".$tab."_tx_status = 'ativo'"
 				)
 			);
-
 			
 			if($extra_busca != ''){
 				$queryResult[0] = "[".$queryResult[1]."] ".$queryResult[0];
@@ -682,7 +681,7 @@
 		}
 
 		
-		$sql=query("SELECT ".$tab."_nb_id, ".$tab."_tx_nome FROM $tabela WHERE ".$tab."_tx_status != 'inativo' $extra_bd");
+		$sql=query("SELECT ".$tab."_nb_id, ".$tab."_tx_nome FROM $tabela WHERE ".$tab."_tx_status = 'ativo' $extra_bd");
 		while($a=mysqli_fetch_array($sql)){
 
 			if($a[0] == $modificador || $a[1] == $modificador){
@@ -1087,7 +1086,7 @@
 			<script>
 			function solicitarDados(id,acao,data_de,data_ate,campos,valores) {
 				// Solicitar ao usuário que insira os dados
-				var just = prompt('Insira a Justificativa:');
+				var just = prompt('Qual a justificativa da exclusão do ponto?');
 				if(just !== null && just !== ''){
 					console.log('id ', id);
 					

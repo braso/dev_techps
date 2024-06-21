@@ -212,7 +212,7 @@
 			$motoristasNoPadrao = mysqli_fetch_all(
 				query(
 					"SELECT * FROM entidade 
-						WHERE enti_tx_status != 'inativo'
+						WHERE enti_tx_status = 'ativo'
 							AND enti_nb_parametro = '".(int)$_POST['id']."'"
 				),
 				MYSQLI_ASSOC
@@ -310,12 +310,20 @@
 			)
 		];
 		
-		$botao = [
+		$botoes = [
 			botao('Gravar','cadastra_parametro','id',($_POST['id']?? ''),'','','btn btn-success'),
-			botao('Voltar','index')
+			botao('Voltar','voltar')
 		];
+
+		if(empty($_POST["HTTP_REFERER"])){
+			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
+			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_parametro.php"))){
+				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_parametro.php";
+			}
+		}
 		
 		abre_form('Dados dos Parâmetros');
+		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($c);
 		linha_form($camposAIgnorar);
 
@@ -343,7 +351,7 @@
 			}
 		}
 
-		fecha_form($botao);
+		fecha_form($botoes);
 
 		if (!empty($a_mod['para_nb_id'])) {
 			echo arquivosParametro("Documentos", $a_mod['para_nb_id'], $arquivos);
@@ -402,23 +410,25 @@
 			combo('Vencidos', 'busca_vencidos', $_POST['busca_vencidos']?? '', 2, ['' => 'Todos', 'sim' => 'Sim', 'nao' => 'Não'])
 		];
 
-		$botao = [
+		$botoes = [
 			botao('Buscar', 'index'),
 			botao('Inserir', 'layout_parametro','','','','','btn btn-success'),
 		];
 		
 		abre_form('Filtro de Busca');
 		linha_form($c);
-		fecha_form($botao);
-		if (isset($_POST['busca_vencidos']) && $_POST['busca_vencidos'] === 'sim') {
-			$sql = "SELECT *, DATEDIFF('".date('Y-m-d')."' ,para_tx_setData) AS diferenca_em_dias
-			FROM `parametro` WHERE DATEDIFF('".date('Y-m-d')."',para_tx_setData) < para_nb_qDias OR DATEDIFF('".date('Y-m-d')."',para_tx_setData) IS NULL $extra";
-		}
-		else if(isset($_POST['busca_vencidos']) && $_POST['busca_vencidos'] === 'nao'){
-			$sql = "SELECT *, DATEDIFF('".date('Y-m-d')."' ,para_tx_setData) AS diferenca_em_dias
-			FROM `parametro` WHERE DATEDIFF('".date('Y-m-d')."',para_tx_setData) > para_nb_qDias OR DATEDIFF('".date('Y-m-d')."',para_tx_setData) IS NULL $extra";
+		fecha_form($botoes);
+		if (isset($_POST['busca_vencidos'])){
+			$sql = "SELECT *, DATEDIFF('".date('Y-m-d')."' ,para_tx_setData) AS diferenca_em_dias FROM `parametro` WHERE 1";
+			if($_POST['busca_vencidos'] === 'sim'){
+				$sql .= " AND DATEDIFF('".date('Y-m-d')."',para_tx_setData) < para_nb_qDias OR DATEDIFF('".date('Y-m-d')."',para_tx_setData) IS NULL";
+			}elseif($_POST['busca_vencidos'] === 'nao'){
+				$sql .= " AND DATEDIFF('".date('Y-m-d')."',para_tx_setData) > para_nb_qDias OR DATEDIFF('".date('Y-m-d')."',para_tx_setData) IS NULL";
+			}
+			
+			$sql .= " ".$extra;
 		} else{
-			$sql = "SELECT * FROM parametro WHERE para_tx_status != 'inativo' $extra";
+			$sql = "SELECT * FROM parametro WHERE para_tx_status = 'ativo' $extra";
 		}
 
 		$cab = ['CÓDIGO','NOME','JORNADA SEMANAL/DIA','JORNADA SÁBADO','HE(%)','HE SÁBADO(%)','ACORDO','INÍCIO','FIM','',''];
