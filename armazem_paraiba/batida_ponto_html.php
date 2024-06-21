@@ -9,6 +9,7 @@
 	<input type="hidden" name="justificativa" id="justificativa"/>
 	<input type="hidden" name="latitude" id="latitude">
 	<input type="hidden" name="longitude" id="longitude">
+	<input type="hidden" name="placa" id="placa" />
 </form>
 
 <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
@@ -166,6 +167,10 @@
 		} else {
 			confirmButtonText = 'INICIAR';
 			confirmButtonClass = 'btn-primary';
+			var placa = document.getElementById('placa').value;
+			if (placa === "") {
+				msg += "<br><br><span style='color: red;' class='fa fa-warning'></span> Falta inseri placa do veiculo ";
+			}
 		}
 
 		const modalContent = document.getElementById('modal-content');
@@ -179,9 +184,12 @@
 
 		$('#modal-confirm').on('click', function() {
 			$('#myModal').modal('hide');
+			var placa = document.getElementById('placa').value;
+
 			document.form_submit.acao.value = 'cadastra_ponto';
 			document.form_submit.id.value = <?= $_SESSION['user_nb_entidade'] ?>;
 			document.form_submit.data.value = '<?= $hoje ?>';
+			document.form_submit.placa.value = placa;
 			document.form_submit.idMacro.value = idMacro;
 			document.form_submit.justificativa.value = document.getElementById("justificativa").value;
 			<?= (isset($motivo['moti_nb_id'])? 'document.form_submit.motivo.value = '.$motivo['moti_nb_id'].';': '') ?>;

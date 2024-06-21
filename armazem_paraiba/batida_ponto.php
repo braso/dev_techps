@@ -6,19 +6,25 @@
 	include "funcoes_ponto.php";
 
 	function cadastra_ponto() {
-
 		$hoje = date('Y-m-d');
 		$aMotorista = carregar('entidade', $_POST['id']);
 
-		if(empty($_POST['motivo'])){
-			$_POST['motivo'] = mysqli_fetch_all(
-				query("SELECT moti_nb_id FROM motivo WHERE moti_tx_nome = 'Registro de ponto mobile' LIMIT 1"),
-				MYSQLI_ASSOC
-			)[0]['moti_nb_id'];
-		}
-		$_POST['motivo'] = intval($_POST['motivo']);
+		// if(empty($_POST['motivo'])){
+		// 	$_POST['motivo'] = mysqli_fetch_all(
+		// 		query("SELECT moti_nb_id FROM motivo WHERE moti_tx_nome = 'Registro de ponto mobile' LIMIT 1"),
+		// 		MYSQLI_ASSOC
+		// 	)[0]['moti_nb_id'];
+		// }
+		// $_POST['motivo'] = intval($_POST['motivo']);
 
-		$ultimoPonto = pegarPontosDia($aMotorista['enti_tx_matricula'], ["pont_tx_tipo", "pont_tx_data"])[0];
+		$ultimoPonto = pegarPontosDia($aMotorista['enti_tx_matricula'], ["pont_tx_tipo", "pont_tx_data", "pont_tx_placa"])[0];		
+		if (!empty($ultimoPonto[count($ultimoPonto)-1] ['pont_tx_placa']) && $ultimoPonto[count($ultimoPonto)-1] ['pont_tx_placa'] != "Fim de Jornada") {
+			$placa = $ultimoPonto[count($ultimoPonto)-1] ['pont_tx_placa'];
+		} else {
+			if (!empty($_POST['placa'])) {
+				$placa = $_POST['placa'];
+			}
+		}
 		if(!empty($ultimoPonto)){
 			$ultimoPonto = $ultimoPonto[count($ultimoPonto)-1];
 			$ultimoPonto['sameTypeError'] = ($ultimoPonto['pont_tx_tipo'] == $_POST['idMacro']);
@@ -59,6 +65,7 @@
 				'pont_tx_status' 		=> 'ativo',
 				'pont_tx_dataCadastro' 	=> $hoje.' '.date("H:i:s"),
 				'pont_nb_motivo' 		=> $_POST['motivo'],
+				'pont_tx_placa'         => $placa
 			];
 			if(!empty($_POST['latitude'])){
 				$novoPonto['pont_tx_latitude'] = $_POST['latitude'];
@@ -174,7 +181,7 @@
 					// Atribuir os valores aos campos do formulário
 					document.getElementById('latitude').value = latitude;
 					document.getElementById('longitude').value = longitude;
-				
+		
 				}
 				
 				function locationDenied(err) {
@@ -380,7 +387,11 @@
 				."CPF: ".$aMotorista['enti_tx_cpf']."<br><br>"
 				."Motorista: ".$aMotorista['enti_tx_nome']."<br><br>"
 				."Motivo: "."Registro de ponto mobile"."<br><br>"
-			."</div>"
+			."</div>",
+			'<div class="col-sm-2 margin-bottom-5" style="float: left; top: -90px;">
+				<label>Placa Do Veiculo</label>
+				<input name="placa" id="placa" value="" autocomplete="off" type="text" class="form-control input-sm">
+			</div>'
 		];
 
 		$aEndosso = carrega_array(
@@ -410,7 +421,8 @@
 		$gridFields = [
 			'DATA'			=> 'data(pont_tx_data, 1)',
 			'TIPO'			=> 'macr_tx_nome',
-			'DATA CADASTRO'	=> 'data(pont_tx_dataCadastro,1)'
+			'DATA CADASTRO'	=> 'data(pont_tx_dataCadastro,1)',
+			'PLACA'			=> 'pont_tx_placa'
 		];
 
 		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 0, 'desc', -1);

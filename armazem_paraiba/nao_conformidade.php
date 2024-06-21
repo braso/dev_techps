@@ -331,8 +331,8 @@
 					body > div.scroll-to-top{
 						display: none !important;
 					}
-					body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(5){
-						display: none;
+					div:nth-child(13){
+						display: none !important;
 					}
 					.portlet-body.form .table-responsive {
 						overflow-x: visible !important;

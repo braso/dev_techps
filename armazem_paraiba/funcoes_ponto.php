@@ -1365,6 +1365,8 @@
 	}
 
 	function criar_relatorio($mesAno){
+		global $CONTEX;
+
 		if (empty($mesAno)) {
 			$mesAno = date("Y-m");
 			// Obtém a data de início do mês atual
@@ -1410,21 +1412,28 @@
 				OR endo_tx_ate = '$dataFim')
 				AND endo_nb_entidade = $motorista[enti_nb_id]"), MYSQLI_ASSOC);
 				
-				switch (count($endossos)) {
-					case 1:
-						if (strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) == strtotime($endossos[0]['endo_tx_ate'])) {
-							$endossado = "E";
-							$endossoQuantE += 1;
-						} else {
-							$endossado = "EP";
-							$endossoQuantEp += 1;
-						}
-						break;
-	
-					default:
-						$endossado = "N";
-						$endossoQuantN += 1;
-						break;
+				if (count($endossos) == 1) {
+					if (strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) == strtotime($endossos[0]['endo_tx_ate']) 
+						|| strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) < strtotime($endossos[0]['endo_tx_ate'])) {
+						$endossado = "E";
+						$endossoQuantE += 1;
+					} else {
+						$endossado = "EP";
+						$endossoQuantEp += 1;
+					}
+				} elseif (count($endossos) > 1 ) {
+					$ultimoEnd = count($endossos) - 1;
+					if (strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) == strtotime($endossos[$ultimoEnd]['endo_tx_ate']) 
+					|| strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) < strtotime($endossos[$ultimoEnd]['endo_tx_ate'])) {
+						$endossado = "E";
+						$endossoQuantE += 1;
+					} else {
+						$endossado = "EP";
+						$endossoQuantEp += 1;
+					}
+				} else {
+					$endossado = "N";
+					$endossoQuantN += 1;
 				}
 				// }
 				
@@ -1435,44 +1444,59 @@
 							AND endo_tx_status = 'ativo'
 						ORDER BY endo_tx_ate DESC
 						LIMIT 1;"), MYSQLI_ASSOC);
-						
+				
+				if (count($endossos) == 2) {
+					$key = count($endossos) - 1;
+					$arquivo = fopen($_SERVER['DOCUMENT_ROOT'].$CONTEX['path'].'/arquivos/endosso/'.$endossos[$key]['endo_tx_filename'].'.csv', 'r');
+				}else{
+					$arquivo = fopen($_SERVER['DOCUMENT_ROOT'].$CONTEX['path'].'/arquivos/endosso/'.$endossos[0]['endo_tx_filename'].'.csv', 'r');
+				}
+
+				$keys = fgetcsv($arquivo);
+				$values = fgetcsv($arquivo);
+				for($j = 0; $j < count($keys); $j++){
+					$aDetalhado[$keys[$j]] = $values[$j];
+				}
+				$aDetalhado['endo_tx_pontos'] 	= (array)json_decode($aDetalhado['endo_tx_pontos']);
+				$aDetalhado['totalResumo'] 		= (array)json_decode($aDetalhado['totalResumo']);
 	
-				if (isset($saldoAnterior[0]['endo_tx_saldo'])) {
-					$saldoAnterior = $saldoAnterior[0]['endo_tx_saldo'];
+				if (isset($aDetalhado['totalResumo'] ['saldoAnterior'])) {
+					$saldoAnterior = $aDetalhado['totalResumo'] ['saldoAnterior'];
 				} elseif (!empty($aMotorista['enti_tx_banco'])) {
 					$saldoAnterior = $aMotorista['enti_tx_banco'];
-					$saldoAnterior = $saldoAnterior[0][0] == '0' && strlen($saldoAnterior) > 5 ? substr($saldoAnterior, 1) : $saldoAnterior;
+					// $saldoAnterior = $saldoAnterior[0][0] == '0' && strlen($saldoAnterior) > 5 ? substr($saldoAnterior, 1) : $saldoAnterior;
 				} else {
 					$saldoAnterior = '00:00';
 				}
 				
-				if ($endossos[0]['endo_tx_periodo'] > '00:00') {
-					if ($endossos[0]['endo_tx_periodo'] > $endossos[0]['he100']) {
-						$he100 = $endossos[0]['he100'];
+				if ($aDetalhado['totalResumo'] ['diffSaldo'] > '00:00') {
+					if ($aDetalhado['totalResumo'] ['diffSaldo'] > $aDetalhado['totalResumo'] ['he100']) {
+						$he100 = $aDetalhado['totalResumo'] ['he100'];
 					} else {
-						$he100 = $endossos[0]['endo_tx_periodo'];
+						$he100 = $aDetalhado['totalResumo'] ['diffSaldo'];
 					}
 				}else{
 					$he100 = '00:00';
 				}
 
-				if ($endossos[0]['endo_tx_periodo'] > '00:00') {
-					if ($endossos[0]['endo_tx_periodo'] > $endossos[0]['endo_tx_horasApagar']) {
+				if ($aDetalhado['totalResumo'] ['diffSaldo'] > '00:00') {
+					if ($aDetalhado['totalResumo'] ['diffSaldo'] > $endossos[0]['endo_tx_horasApagar']) {
 						$he50 = $endossos[0]['endo_tx_horasApagar'];
 					}else{
-						$he50 = $endossos[0]['endo_tx_periodo'];
+						$he50 = $aDetalhado['totalResumo'] ['diffSaldo'];
 					}
 				}else{
 					$he50 = '00:00';
 				}
+
 				// 		}
-				$jornadaPrevista = $endossos[0]['endo_tx_jornadaPrevista'] == null ? '00:00' : $endossos[0]['endo_tx_jornadaPrevista'];
-				$jornadaEfetiva = $endossos[0]['endo_tx_jornadaEfetiva'] == null ? '00:00' : $endossos[0]['endo_tx_jornadaEfetiva'];
-				$adicionalNoturno = $endossos[0]['endo_tx_adicinalNoturno'] == null ? '00:00' : $endossos[0]['endo_tx_adicinalNoturno'];
-				$esperaIndenizada = $endossos[0]['endo_tx_esperaIndenizada'] == null ? '00:00' : $endossos[0]['endo_tx_esperaIndenizada'];
-				$saldoAnterior = $endossos[0]['endo_tx_saldoAnterior'] == null ? '00:00' : $endossos[0]['endo_tx_saldoAnterior'];
-				$saldoPeriodo = $endossos[0]['endo_tx_periodo'] == null ? '00:00' : $endossos[0]['endo_tx_periodo'];
-				$saldoFinal = $endossos[0]['endo_tx_saldo'] == null ? '00:00' : $endossos[0]['endo_tx_saldo'];
+				$jornadaPrevista = $aDetalhado['totalResumo'] ['jornadaPrevista'] == null ? '00:00' : $aDetalhado['totalResumo'] ['jornadaPrevista'];
+				$jornadaEfetiva = $aDetalhado['totalResumo'] ['diffJornadaEfetiva'] == null ? '00:00' : $aDetalhado['totalResumo'] ['diffJornadaEfetiva'];
+				$adicionalNoturno = $aDetalhado['totalResumo'] ['adicionalNoturno'] == null ? '00:00' : $aDetalhado['totalResumo'] ['adicionalNoturno'];
+				$esperaIndenizada = $aDetalhado['totalResumo'] ['esperaIndenizada'] == null ? '00:00' : $aDetalhado['totalResumo'] ['esperaIndenizada'];
+				$saldoAnterior = $aDetalhado['totalResumo'] ['saldoAnterior'] == null ? '00:00' : $aDetalhado['totalResumo'] ['saldoAnterior'];
+				$saldoPeriodo = $aDetalhado['totalResumo'] ['diffSaldo'] == null ? '00:00' : $aDetalhado['totalResumo'] ['diffSaldo'];
+				$saldoFinal = $aDetalhado['totalResumo'] ['diffSaldo'] == null ? '00:00' : $aDetalhado['totalResumo'] ['diffSaldo'];
 
 				$rows[] = [
 					'IdMotorista' => $motorista['enti_nb_id'],
@@ -1488,7 +1512,6 @@
 					'saldoPeriodo' => $saldoPeriodo,
 					'saldoFinal' => $saldoFinal,
 				];
-				
 			}
 	
 			if(!is_dir("./arquivos/paineis/$empresa[empr_nb_id]/$mesAno")){

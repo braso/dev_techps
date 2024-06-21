@@ -4,7 +4,13 @@
 		error_reporting(E_ALL);
 	//*/
 
+    // ini_set('display_errors', 1);
+    // error_reporting(E_ALL);
+
+    include 'painel_empresas.php';
+    include 'painel_empresa.php';
     include "funcoes_ponto.php";
+   
 
     function index() {
         global $totalResumo, $CONTEX;
@@ -52,13 +58,13 @@
         
         $monthName = $monthNames[$monthNum];
 
-        cabecalho('Relatorio Geral de Espelho de Ponto');
+        cabecalho('Painel Endosso');
 
         $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
         $c = [
             combo_net('Empresa:','empresa',$_POST['empresa']?? '',4,'empresa', ''),
-            campo_mes('Data:',     'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2),
+            campo_mes('Data:','busca_data',(!empty($_POST['busca_data'])?$_POST['busca_data'] : ''), 2),
             $texto,
         ];
 
@@ -82,11 +88,11 @@
         }
         
         $b = [
-        botao("Buscar", 'index', '', '', '', 1,'btn btn-info'),
-        $botao_imprimir,
-        $botaoCsv,
-        $botao_volta,
-        $botaoAtualizarPainel
+            botao("Buscar", 'index', '', '', '', '', 'btn btn-success'),
+            $botao_imprimir,
+            $botaoCsv,
+            $botao_volta,
+            $botaoAtualizarPainel
         ];
         
         abre_form('Filtro de Busca');
@@ -96,11 +102,10 @@
         if (isset($_POST['empresa']) && !empty($_POST['empresa']) && isset($_POST['busca_data']) && !empty($_POST['busca_data'])) {
             $idEmpresa = $_POST['empresa'];
             $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM `empresa` WHERE empr_tx_Ehmatriz = 'sim' AND empr_nb_id = $idEmpresa"), MYSQLI_ASSOC);
-            include_once 'painel_empresa.php';
-            
+            empresa($aEmpresa,$idEmpresa);
         }else{
             $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM `empresa` WHERE empr_tx_Ehmatriz = 'sim'"), MYSQLI_ASSOC);
-            include_once 'painel_empresas.php';
+            empresas($aEmpresa);
         }
         ?>
             <style>
@@ -152,7 +157,7 @@
                         }
                         .emissao{
                             text-align: left;
-                            padding-left: 650px !important;
+                            padding-left: 710px !important;
                             position: absolute;
                         }
                         .porcentagenEndo{
@@ -179,6 +184,9 @@
                         .porcentagenNegat{
                             box-shadow: 0 0 0 1000px #ff471a inset !important;
                         }
+                       div:nth-child(11) > div{
+                        padding: 50px 20px 15px !important;
+                       }
                 }
 
                     table thead tr th:nth-child(3),
@@ -200,11 +208,11 @@
                         position: absolute;
                     }
             </style>
-            <form name="myForm" method="post" action="<?= htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+            <form name="myForm" method="POST" action="<?= htmlspecialchars(basename($_SERVER["PHP_SELF"])); ?>">
                 <input type="hidden" name="empresa" id="empresa">
                 <input type="hidden" name="busca_data" id="busca_data">
             </form>
-            <form name="formularioAtualizarPainel" method="post" action="<?= htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+            <form name="formularioAtualizarPainel" method="POST" action="<?= htmlspecialchars(basename($_SERVER["PHP_SELF"])); ?>">
                 <input type="hidden" name="atualizar" id="atualizar">
                 <input type="hidden" name="busca_data" id="busca_dataAtualizar">
             </form>

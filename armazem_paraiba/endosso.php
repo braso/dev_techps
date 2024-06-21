@@ -207,7 +207,7 @@
 
 					$motivos = '';
 					if(!empty($bdAbonos[0]['moti_tx_nome'])){
-						$motivos .= 'Abono: '.$bdAbonos[0]['moti_tx_nome'].'<br>';
+						$motivos .= $bdAbonos[0]['moti_tx_nome'].'<br>';
 					}
 
 					for($f2 = 0; $f2 < count($bdMotivos); $f2++){
@@ -240,6 +240,12 @@
 		global $totalResumo, $CONTEX;
 
 		cabecalho('Endosso');
+		echo '
+		<style>
+			.row div {
+				min-width: auto;
+			}
+		</style>';
 
 		if ($_SESSION['user_nb_empresa'] > 0 && is_bool(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
 			$extraEmpresa = " AND empr_nb_id = '" . $_SESSION['user_nb_empresa'] . "'";
@@ -537,16 +543,35 @@
 						;
 						
 						$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
+						if (empty($_POST['busca_motorista'])){
+							$buttonInprimir = "<button name='acao' id='botaoContexCadastrar ImprimirRelatorio_$aMotorista[enti_tx_matricula]' value='impressao_relatorio' type='button' class='btn btn-default' 
+							style='position: absolute; top: 20px; left: 420px;'>Imprimir Relatório</button>";
+						}
 
 						abre_form(
 							"$aEmpresa[empr_tx_nome]<br>"
 							."[$aMotorista[enti_tx_matricula]] $aMotorista[enti_tx_nome]<br>"
 							."<br>"/*."$parametroPadrao<br><br>"*/
-							.$saldosMotorista
+							.$saldosMotorista.
+							$buttonInprimir
 						);
 						
 						grid2($cab, $aDia);
 						fecha_form();
+
+						echo "
+							<script>
+								document.addEventListener('DOMContentLoaded', function() {
+									document.getElementById('botaoContexCadastrar ImprimirRelatorio_$aMotorista[enti_tx_matricula]').onclick = function() {
+										document.form_imprimir_relatorio_$aMotorista[enti_tx_matricula].submit();
+									}
+								});
+							</script>
+							<form name='form_imprimir_relatorio_$aMotorista[enti_tx_matricula]' method='post' target='_blank'>
+								<input type='hidden' name='acao' value='imprimir_relatorio'>
+								<input type='hidden' name='idMotoristaEndossado' value='$aMotorista[enti_nb_id]'>
+								<input type='hidden' name='matriculaMotoristaEndossado' value='$aMotorista[enti_tx_matricula]'>
+							</form>";
 
 						$aSaldo[$aMotorista['enti_tx_matricula']] = $totalResumo['diffSaldo'];
 					}else{
