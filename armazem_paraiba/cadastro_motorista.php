@@ -634,9 +634,17 @@
 			'btn btn-success'
 		);
 
-		$botoesCadastro[] = botao('Voltar', 'index', '', '', 'tabindex=54');
+		$botoesCadastro[] = botao('Voltar', 'voltar', '', '', 'tabindex=54');
+
+		if(empty($_POST["HTTP_REFERER"])){
+			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
+			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_motorista.php"))){
+				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_motorista.php";
+			}
+		}
 
 		abre_form();
+		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		fieldset('Dados de Usuário');
 		linha_form($camposUsuario);
 		echo "<br>";
