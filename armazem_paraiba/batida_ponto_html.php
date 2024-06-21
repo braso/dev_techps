@@ -6,6 +6,7 @@
 	<input type="hidden" name="data" id="data" />
 	<input type="hidden" name="idMacro" id="idMacro" />
 	<input type="hidden" name="motivo" id="motivo"/>
+	<input type="hidden" name="justificativa" id="justificativa"/>
 	<input type="hidden" name="latitude" id="latitude">
 	<input type="hidden" name="longitude" id="longitude">
 </form>
@@ -182,6 +183,7 @@
 			document.form_submit.id.value = <?= $_SESSION['user_nb_entidade'] ?>;
 			document.form_submit.data.value = '<?= $hoje ?>';
 			document.form_submit.idMacro.value = idMacro;
+			document.form_submit.justificativa.value = document.getElementById("justificativa").value;
 			<?= (isset($motivo['moti_nb_id'])? 'document.form_submit.motivo.value = '.$motivo['moti_nb_id'].';': '') ?>;
 			document.form_submit.submit();
 		});
