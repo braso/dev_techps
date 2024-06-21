@@ -33,6 +33,7 @@
 		){
 			echo 
 				"<form action='".$_ENV["URL_BASE"].$CONTEX['path']."/logout.php' name='form_logout' method='post'>
+					<input name='sourcePage' type='hidden' value='".$_SERVER["REQUEST_URI"]."'>
 				</form>"
 			;
 			echo "<script>document.form_logout.submit();</script>";
