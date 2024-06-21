@@ -11,6 +11,11 @@ function exclui_motivo(){
 function modifica_motivo(){
 	global $a_mod;
 	$a_mod = carregar('motivo',$_POST['id']);
+	foreach($_POST as $key => $value){
+		if(empty($a_mod[$key])){
+			$a_mod[$key] = $value;
+		}
+	}
 	layout_motivo();
 	exit;
 }
@@ -54,16 +59,24 @@ function layout_motivo(){
 	];
 
 	$c = [
-		campo('Nome','nome',$a_mod['moti_tx_nome'],6),
-		combo('Tipo','tipo',$a_mod['moti_tx_tipo'],2,['Ajuste','Abono']),
-		combo('Legenda de Marcação','legenda',array_search($a_mod['moti_tx_legenda'], $legendas),4,array_keys($legendas))
+		campo('Nome', 'nome', $a_mod['moti_tx_nome'], 6),
+		combo('Tipo', 'tipo', $a_mod['moti_tx_tipo'], 2, ['Ajuste','Abono']),
+		combo('Legenda de Marcação', 'legenda', array_search($a_mod['moti_tx_legenda'], $legendas), 4, array_keys($legendas))
 	];
 	$botao = [
-		botao('Gravar','cadastra_motivo','id',$_POST['id'],'','','btn btn-success'),
-		botao('Voltar','index')
+		botao('Gravar', 'cadastra_motivo', 'id', $_POST['id'], '', '', 'btn btn-success'),
+		botao('Voltar', 'voltar')
 	];
 
+	if(empty($_POST["HTTP_REFERER"])){
+		$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
+		if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_motivo.php"))){
+			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_motivo.php";
+		}
+	}
+
 	abre_form('Dados do Motivo');
+	campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 	linha_form($c);
 	fecha_form($botao);
 
@@ -74,11 +87,11 @@ function index(){
 	cabecalho("Cadastro de Motivo");
 
 	$legendas = [
-		'' => '',
-		'Incluída Manualmente' => 'I',
-		'Pré-Assinalada' => 'P',
-		'Outras fontes de marcação' => 'T',
-		'Descanso Semanal Remunerado e Abono' => 'DSR'
+		"" => "",
+		"Incluída Manualmente" => "I",
+		"Pré-Assinalada" => "P",
+		"Outras fontes de marcação" => "T",
+		"Descanso Semanal Remunerado e Abono" => "DSR"
 	];
 
 	$extra = 
@@ -102,10 +115,17 @@ function index(){
 	linha_form($c);
 	fecha_form($botao);
 
-	$sql = "SELECT * FROM motivo WHERE moti_tx_status != 'inativo' $extra";
-	$cab = ['CÓDIGO','NOME','TIPO','LEGENDA', '', ''];
-	$val = ['moti_nb_id','moti_tx_nome','moti_tx_tipo', 'moti_tx_legenda', 'icone_modificar(moti_nb_id,modifica_motivo)','icone_excluir(moti_nb_id,exclui_motivo)'];
-	grid($sql,$cab,$val, "", "12", 1, "desc");
+	$sql = "SELECT * FROM motivo WHERE moti_tx_status = 'ativo' $extra";
+	$gridParams = [
+		"CÓDIGO" => "moti_nb_id",
+		"NOME" => "moti_tx_nome",
+		"TIPO" => "moti_tx_tipo",
+		"LEGENDA" => "moti_tx_legenda",
+		"<spam class='glyphicon glyphicon-search'></spam>" => "icone_modificar(moti_nb_id,modifica_motivo)",
+		"<spam class='glyphicon glyphicon-remove'></spam>" => "icone_excluir(moti_nb_id,exclui_motivo)"
+	];
+
+	grid($sql, array_keys($gridParams), array_values($gridParams), "", "12", 1, "desc");
 
 	rodape();
 }
