@@ -85,8 +85,6 @@
             // $fileName = 'nao_comformidade'.date('YmdHis').'.json';
             // $json = json_encode($rows,JSON_UNESCAPED_UNICODE);
             // file_put_contents($path.'/'.$fileName,$json);
-
-            die(var_dump($inicioJornada));
         }
 	}
 
