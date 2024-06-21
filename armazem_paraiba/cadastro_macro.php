@@ -51,8 +51,16 @@ function layout_macro(){
 		botao('Gravar','cadastra_macro','id',$_POST['id'],'','','btn btn-success'),
 		botao('Voltar','index')
 	];
+
+	if(empty($_POST["HTTP_REFERER"])){
+		$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
+		if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_macro.php"))){
+			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_macro.php";
+		}
+	}
 	
 	abre_form('Dados do Macro');
+	campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 	linha_form($c);
 	fecha_form($botao);
 
@@ -84,7 +92,7 @@ function index(){
 	linha_form($c);
 	fecha_form($botao);
 
-	$sql = "SELECT * FROM macroponto WHERE macr_tx_status != 'inativo' $extra";
+	$sql = "SELECT * FROM macroponto WHERE macr_tx_status = 'ativo' $extra";
 	$cab = array('CÓDIGO','NOME','CÓD. INTERNO','CÓD. EXTERNO','');
 	$val = array('macr_nb_id','macr_tx_nome','macr_tx_codigoInterno','macr_tx_codigoExterno','icone_modificar(macr_nb_id,modifica_macro)');
 
