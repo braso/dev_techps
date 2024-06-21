@@ -11,11 +11,11 @@
                 'iat'		=>	time(),
                 'nbf'		=>	time(),
                 'exp'		=>	time() + 3600,
-                'username' => $data->user_tx_nome,
-                'data'	=> array(
+                'username'  => $data->user_tx_nome,
+                'data'	    => [
                     'user_id'	=>	$data->user_nb_id,
                     'user_name'	=>	$data->user_tx_nome
-                )
+                ]
             ),
             $key,
             'HS256'
@@ -181,4 +181,3 @@
         }
         return $current;
     }
-?>
