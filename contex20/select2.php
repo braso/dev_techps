@@ -40,7 +40,7 @@
 		$sql .= ", ".$tab."_tx_nome ".(!empty($extra_busca)? ",".$extra_busca: "")." FROM ".$tabela." WHERE 1 ".$extra;
 	}
 	
-	$sql .= " AND ".$tab."_tx_status != 'inativo' 
+	$sql .= " AND ".$tab."_tx_status = 'ativo' 
 			$extra_bd
 		".(!empty(urldecode($_GET['extra_ordem']))? urldecode($_GET['extra_ordem']): " ORDER BY ".$tab."_tx_nome ASC")." 
 		".(!empty(urldecode($_GET['extra_limite']))? " LIMIT ".urldecode($_GET['extra_limite']): '').";"
