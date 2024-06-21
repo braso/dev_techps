@@ -28,9 +28,9 @@
                 $msg = 'Wrong Password';
             }
             if(!empty($msg)){
-                // header('HTTP/1.0 400 Bad Request');
+                header("HTTP/1.1 204 No Content");
                 echo $msg;
-                exit;
+                die();
             }
         //}
 
@@ -91,7 +91,7 @@
         $data = get_user_journeys($userid);
         if(empty($data)){
             // header('HTTP/1.0 400 Bad Request');
-            echo json_encode([["id" => ""]]);
+            echo json_encode([]);
             exit;
         }
 
