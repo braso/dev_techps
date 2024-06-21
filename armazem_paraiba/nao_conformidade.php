@@ -119,7 +119,7 @@
 					"SELECT * FROM entidade
 						WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante')
 							AND enti_nb_empresa = ".$_POST['busca_empresa']." ".$extra."
-							AND enti_tx_status != 'inativo'
+							AND enti_tx_status = 'ativo'
 						ORDER BY enti_tx_nome"
 				);
 				while ($aMotorista = carrega_array($sqlMotorista)) {
