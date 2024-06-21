@@ -8,7 +8,7 @@
 	$mesAtual = date("n");
 	$anoAtual = date("Y");
 	$motoristas = mysqli_fetch_all(
-		query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_tx_status != 'inativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante');"),
+		query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante');"),
 		MYSQLI_ASSOC
 	);
 	$totalMotorEmpr = count($motoristas);
