@@ -53,7 +53,7 @@
 				WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante') 
 					AND enti_nb_id IN (".$_POST['idMotoristaEndossado'].") 
 					AND enti_nb_empresa = ".$_POST['busca_empresa']." 
-					AND enti_tx_status != 'inativo'
+					AND enti_tx_status = 'ativo'
 				ORDER BY enti_tx_nome"
 		);
 		
@@ -65,12 +65,12 @@
 				//Montar endosso completo{
 					$sqlEndossos = mysqli_fetch_all(
 						query(
-							'SELECT * FROM endosso 
-								WHERE endo_tx_matricula = \''.$aMotorista['enti_tx_matricula'].'\'
-									AND endo_tx_status != \'inativo\'
-									AND endo_tx_de >= \''.sprintf('%04d-%02d-%02d', $year, $month, '01').'\'
-									AND endo_tx_ate <= \''.sprintf('%04d-%02d-%02d', $year, $month, $daysInMonth).'\'
-								ORDER BY endo_tx_de ASC'
+							"SELECT * FROM endosso 
+								WHERE endo_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'
+									AND endo_tx_status = 'ativo'
+									AND endo_tx_de >= ".sprintf("%04d-%02d-%02d", $year, $month, "01")."
+									AND endo_tx_ate <= ".sprintf("%04d-%02d-%02d", $year, $month, $daysInMonth)."
+								ORDER BY endo_tx_de ASC"
 						),
 						MYSQLI_ASSOC
 					);
@@ -236,6 +236,7 @@
 	}
 
 	function index(){
+
 		global $totalResumo, $CONTEX;
 
 		cabecalho('Endosso');
@@ -313,27 +314,27 @@
 		//}
 
 		//CAMPOS DE CONSULTA{
-			$c = [
+			$fields = [
 				combo_net('Motorista:', 'busca_motorista', (!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ''), 3, 'entidade', '', ' AND enti_tx_ocupacao IN ("Motorista", "Ajudante")' . $extraMotorista . $extraEmpresaMotorista, 'enti_tx_matricula'),
-				campo_mes('Data:',     'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2),
+				campo_mes('Data:',      'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2),
 				combo(	  'Endossado:',	'busca_endossado', (!empty($_POST['busca_endossado'])? $_POST['busca_endossado']: ''), 2, ['' => '', 'endossado' => 'Sim', 'naoEndossado' => 'Não'])
 			];
 
 			if(is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))){
-				array_unshift($c, combo_net('Empresa*:', 'busca_empresa',   (!empty($_POST['busca_empresa'])?   $_POST['busca_empresa']  : ''), 3, 'empresa', 'onchange=selecionaMotorista(this.value)', $extraEmpresa));
+				array_unshift($fields, combo_net('Empresa*:', 'busca_empresa', (!empty($_POST['busca_empresa'])? $_POST['busca_empresa'] : ""), 3, 'empresa', 'onchange=selecionaMotorista(this.value)', $extraEmpresa));
 			}
 		//}
 
 		//BOTOES{
-			$b = [
+			$buttons = [
 				botao("Buscar", 'index', '', '', '', 1,'btn btn-info'),
 				'<button name="acao" id="botaoContexCadastrar ImprimirRelatorio" value="impressao_relatorio" type="button" onload="disablePrintButton()" class="btn btn-default">Imprimir Relatório</button>',
 			];
 		//}
 
 		abre_form('Filtro de Busca');
-		linha_form($c);
-		fecha_form($b, '<span id="dadosResumo" style="height:"><b>'.$carregando.'</b></span>');
+		linha_form($fields);
+		fecha_form($buttons, '<span id="dadosResumo" style="height:"><b>'.$carregando.'</b></span>');
 
 		$cab = [
 			"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
@@ -379,12 +380,12 @@
 						//Montar endosso completo{
 							$sqlEndossos = mysqli_fetch_all(
 								query(
-									'SELECT * FROM endosso 
-										WHERE endo_tx_matricula = \''.$aMotorista['enti_tx_matricula'].'\'
-											AND endo_tx_status != \'inativo\'
-											AND endo_tx_de >= \''.sprintf('%04d-%02d-%02d', $year, $month, '01').'\'
-											AND endo_tx_ate <= \''.sprintf('%04d-%02d-%02d', $year, $month, $daysInMonth).'\'
-										ORDER BY endo_tx_de ASC'
+									"SELECT * FROM endosso 
+										WHERE endo_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'
+											AND endo_tx_status = 'ativo'
+											AND endo_tx_de >= '".sprintf("%04d-%02d-%02d", $year, $month, "01")."'
+											AND endo_tx_ate <= '".sprintf("%04d-%02d-%02d", $year, $month, $daysInMonth)."'
+										ORDER BY endo_tx_de ASC"
 								),
 								MYSQLI_ASSOC
 							);
@@ -563,7 +564,7 @@
 				abre_form($motNaoEndossados);
 				fecha_form();
 			}
-			if(!isset($_POST['busca_motorista']) || empty($_POST['busca_motorista']) || (!empty($_POST['busca_motorista']) && $counts['endossados']['sim'] == 0)){
+			if(empty($_POST['busca_motorista']) || (!empty($_POST['busca_motorista']) && $counts['endossados']['sim'] == 0)){
 				echo 
 					'<script>
 						(function(){
