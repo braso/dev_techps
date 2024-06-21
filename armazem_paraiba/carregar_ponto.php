@@ -33,9 +33,17 @@
 		$c[] = arquivo('Arquivo Ponto (.txt)', 'arquivo', '', 5);
 
 		$b[] = botao("Enviar", 'insertFile','','','','','btn btn-success');
-		$b[] = botao("Voltar", 'index');
+		$b[] = botao("Voltar", 'voltar');
+
+		if(empty($_POST["HTTP_REFERER"])){
+			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
+			if(is_int(strpos($_SERVER["HTTP_REFERER"], "carregar_ponto.php"))){
+				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/carregar_ponto.php";
+			}
+		}
 
 		abre_form('Arquivo de Ponto');
+		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($c);
 		fecha_form($b);
 
@@ -95,10 +103,18 @@
 
 		$b= [ 
 			botao("Gravar", 'cadastra_notificacao', 'id', $_POST['id']),
-			botao("Voltar", 'index')
+			botao("Voltar", 'voltar')
 		];
 
+		if(empty($_POST["HTTP_REFERER"])){
+			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
+			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_usuario.php"))){
+				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_usuario.php";
+			}
+		}
+
 		abre_form('Arquivo de Ponto');
+		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($c);
 		if (count($cAtualiza) > 0){
 			linha_form($cAtualiza);
@@ -200,15 +216,16 @@
 		foreach (file($arquivo['tmp_name']) as $line) {
 			//matricula dmYhi 999 macroponto.codigoExterno
 			//Obs.: A matrícula deve ter 10 dígitos, então se tiver menos, adicione zeros à esquerda.
-			//Ex.: 000000591322012024091999911
+			//Ex.: 0000005913 22012024 0919 999 11
 			$line = trim($line);
-
-			if ($line === '') {
+			if (empty($line)) {
 				continue; // Pula para a próxima iteração
 			}
 
+
+			[$matricula, $data, $hora, $codigoExterno] = [substr($line, 0, 10), substr($line, 10, 8), substr($line, 18, 4), substr($line, 25, 2)];
+
 			//CONFERIR MATRÍCULA{
-				$matricula = substr($line, 0, 10);
 				while($matricula[0] == "0"){
 					$matricula = substr($matricula, 1);
 				}
@@ -226,15 +243,14 @@
 				// }
 			//}
 
-			$data = substr($line, 10, 8);
 			$data = substr($data, 4, 4)."-".substr($data, 2, 2)."-".substr($data, 0, 2);
-
-			$hora = substr($line, 18, 4);
 			$hora = substr($hora, 0, 2).":".substr($hora, 2, 2).":00";
 
-			$codigoExterno = substr($line, -2, 2);
-
-			$macroPonto = mysqli_fetch_assoc(query("SELECT macr_tx_codigoInterno, macr_tx_codigoExterno FROM macroponto WHERE macr_tx_codigoExterno = '".$codigoExterno."'"));
+			$macroPonto = mysqli_fetch_assoc(query(
+				"SELECT macr_tx_codigoInterno, macr_tx_codigoExterno FROM macroponto 
+					WHERE macr_tx_status = 'ativo'
+						AND (macr_tx_codigoExterno = '".$codigoExterno."' OR macr_tx_codigoExterno = ".intval($codigoExterno).")"
+			));
 
 			if(empty($macroPonto)){
 				$error = true;
@@ -242,7 +258,7 @@
 					$errorMsg["notRecognized"] = "Tipo de ponto não reconhecido: ";
 				}
 				$errorMsg["notRecognized"] .= "<br>	".$codigoExterno;
-				break;
+				continue;
 			}
 
 			$newPonto = [
@@ -280,16 +296,14 @@
 			}
 		}
 
-		if(!$error){
-			move_uploaded_file($arquivo['tmp_name'],$local_file);
-			
-			$arquivoPontoId = inserir('arquivoponto', array_keys($newArquivoPonto), array_values($newArquivoPonto));
-			foreach($newPontos as $newPonto){
-				$newPonto['pont_nb_arquivoponto'] = intval($arquivoPontoId[0]);
-				inserir('ponto', array_keys($newPonto), array_values($newPonto));
-			}
-		}else{
-
+		move_uploaded_file($arquivo['tmp_name'],$local_file);
+		
+		$arquivoPontoId = inserir('arquivoponto', array_keys($newArquivoPonto), array_values($newArquivoPonto));
+		foreach($newPontos as $newPonto){
+			$newPonto['pont_nb_arquivoponto'] = intval($arquivoPontoId[0]);
+			inserir('ponto', array_keys($newPonto), array_values($newPonto));
+		}
+		if($error){
 			$fileContent = implode("\n", $errorMsg);
 			$fileContent = str_replace("<br>	", "\n	", $fileContent);
 			file_put_contents($path.$arquivoNome."_log".$ext, $fileContent);
@@ -355,7 +369,7 @@
 		$sql = 
 			"SELECT * FROM arquivoponto, user
 				WHERE arqu_nb_user = user_nb_id
-					AND arqu_tx_status != 'inativo'
+					AND arqu_tx_status = 'ativo'
 					".$extra."
 					ORDER BY arqu_tx_data DESC
 				LIMIT 400"
