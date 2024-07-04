@@ -152,6 +152,7 @@
 		$_POST['data'] = substr($a['pont_tx_data'],0, -9);
 		$_POST['busca_data'] = $a['pont_tx_data'];
 
+
 		layout_ajuste();
 		exit;
 	}
@@ -1395,11 +1396,14 @@
 				$endossado = '';
 	
 				// Status Endosso{
-				$endossos = mysqli_fetch_all(query("SELECT * FROM endosso 
+				$endossos = mysqli_fetch_all(query("SELECT * FROM endosso
 				WHERE endo_tx_status = 'ativo'
-				AND (endo_tx_de = '$dataInicio'
-				OR endo_tx_ate = '$dataFim')
-				AND endo_nb_entidade = $motorista[enti_nb_id]"), MYSQLI_ASSOC);
+				AND endo_nb_entidade = '$motorista[enti_nb_id]'
+				AND (
+					(endo_tx_de >= '$dataInicio' AND endo_tx_de <= '$dataFim')
+					OR (endo_tx_ate >= '$dataInicio' AND endo_tx_ate <= '$dataFim')
+					OR (endo_tx_de <= '$dataInicio' AND endo_tx_ate >= '$dataFim')
+				)"), MYSQLI_ASSOC);
 				
 				if (count($endossos) == 1) {
 					if (strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) == strtotime($endossos[0]['endo_tx_ate']) 
@@ -1410,7 +1414,7 @@
 						$endossado = "EP";
 						$endossoQuantEp += 1;
 					}
-				} elseif (count($endossos) > 1 ) {
+				} else if (count($endossos) > 1 ) {
 					$ultimoEnd = count($endossos) - 1;
 					if (strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) == strtotime($endossos[$ultimoEnd]['endo_tx_ate']) 
 					|| strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) < strtotime($endossos[$ultimoEnd]['endo_tx_ate'])) {
@@ -1479,13 +1483,13 @@
 				}
 
 				// 		}
-				$jornadaPrevista = $aDetalhado['totalResumo'] ['jornadaPrevista'] == null ? '00:00' : $aDetalhado['totalResumo'] ['jornadaPrevista'];
-				$jornadaEfetiva = $aDetalhado['totalResumo'] ['diffJornadaEfetiva'] == null ? '00:00' : $aDetalhado['totalResumo'] ['diffJornadaEfetiva'];
-				$adicionalNoturno = $aDetalhado['totalResumo'] ['adicionalNoturno'] == null ? '00:00' : $aDetalhado['totalResumo'] ['adicionalNoturno'];
-				$esperaIndenizada = $aDetalhado['totalResumo'] ['esperaIndenizada'] == null ? '00:00' : $aDetalhado['totalResumo'] ['esperaIndenizada'];
-				$saldoAnterior = $aDetalhado['totalResumo'] ['saldoAnterior'] == null ? '00:00' : $aDetalhado['totalResumo'] ['saldoAnterior'];
-				$saldoPeriodo = $aDetalhado['totalResumo'] ['diffSaldo'] == null ? '00:00' : $aDetalhado['totalResumo'] ['diffSaldo'];
-				$saldoFinal = $aDetalhado['totalResumo'] ['diffSaldo'] == null ? '00:00' : $aDetalhado['totalResumo'] ['diffSaldo'];
+				$jornadaPrevista 	= $aDetalhado['totalResumo']['jornadaPrevista'] == null 	? '00:00' : $aDetalhado['totalResumo']['jornadaPrevista'];
+				$jornadaEfetiva 	= $aDetalhado['totalResumo']['diffJornadaEfetiva'] == null 	? '00:00' : $aDetalhado['totalResumo']['diffJornadaEfetiva'];
+				$adicionalNoturno 	= $aDetalhado['totalResumo']['adicionalNoturno'] == null 	? '00:00' : $aDetalhado['totalResumo']['adicionalNoturno'];
+				$esperaIndenizada 	= $aDetalhado['totalResumo']['esperaIndenizada'] == null 	? '00:00' : $aDetalhado['totalResumo']['esperaIndenizada'];
+				$saldoAnterior 		= $aDetalhado['totalResumo']['saldoAnterior'] == null 		? '00:00' : $aDetalhado['totalResumo']['saldoAnterior'];
+				$saldoPeriodo 		= $aDetalhado['totalResumo']['diffSaldo'] == null 			? '00:00' : $aDetalhado['totalResumo']['diffSaldo'];
+				$saldoFinal 		= $aDetalhado['totalResumo']['saldoAtual'] == null 			? '00:00' : $aDetalhado['totalResumo']['saldoAtual'];
 
 				$rows[] = [
 					'IdMotorista' => $motorista['enti_nb_id'],

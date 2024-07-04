@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -7,8 +7,6 @@
 	include "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
 
 	function index() {
-
-		var_dump($_POST); echo "<br><br>";
 
 		global $CONTEX, $totalResumo, $conn;
 
