@@ -303,7 +303,8 @@
 						'espera' => 'Espera',
 						'repousoEmbarcado' => 'Repouso Embarcado',
 					]
-				), 
+				),
+				"checkbox",
 				5,
 				'',
 				$a_mod['para_tx_ignorarCampos'] ?? ''

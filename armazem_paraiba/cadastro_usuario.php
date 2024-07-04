@@ -6,37 +6,22 @@
 
 	include "conecta.php";
 
-	function combo_empresa($nome,$variavel,$modificador,$tamanho,$opcao, $opcao2,$extra=''){
-		$t_opcao=count($opcao);
-		for($i=0;$i<$t_opcao;$i++){
-			$selected = ($opcao[$i] == $modificador)? 'selected': '';
-			$c_opcao = '<option value="'.$opcao[$i].'" '.$selected.'>'.$opcao2[$i].'</option>';
-		}
+	// function combo_empresa($nome,$variavel,$modificador,$tamanho,$opcao, $opcao2,$extra=''){
+	// 	$t_opcao=count($opcao);
+	// 	for($i=0;$i<$t_opcao;$i++){
+	// 		$selected = ($opcao[$i] == $modificador)? 'selected': '';
+	// 		$c_opcao = '<option value="'.$opcao[$i].'" '.$selected.'>'.$opcao2[$i].'</option>';
+	// 	}
 
-		$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
-					<label><b>'.$nome.'</b></label>
-					<select name="'.$variavel.'" class="form-control input-sm" '.$extra.'>
-						'.$c_opcao.'
-					</select>
-				</div>';
+	// 	$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
+	// 				<label><b>'.$nome.'</b></label>
+	// 				<select name="'.$variavel.'" class="form-control input-sm" '.$extra.'>
+	// 					'.$c_opcao.'
+	// 				</select>
+	// 			</div>';
 
-		return $campo;
-	}
-
-	function exclui_usuario(){
-		remover('user',$_POST['id']);
-		index();
-		exit;
-	}
-
-	function modifica_usuario() {
-		global $a_mod;
-
-		$a_mod = carregar('user', $_POST['id']);
-
-		layout_usuario();
-		exit;
-	}
+	// 	return $campo;
+	// }
 
 	function cadastra_usuario() {
 		global $a_mod;
@@ -44,40 +29,61 @@
 		$_POST['editPermission'] = (isset($_POST['editPermission']))? (intval($_POST['editPermission']) == 1): false;
 
 		//Conferir casos de erro e montar mensagem de erro{
-			$error_msg = "ERRO: Insira os campos ";
-			$hasError = false;
-			if ($_POST['editPermission'] == true) {
-				$campos_obrigatorios = [
-					//['nome', 'msg_erro']
-					['nome', 'Nome, '],
-					['login', 'Login, '],
-					// ['senha', 'Senha, '],
-					['nascimento', 'Data de nascimento, '],
-					['email', 'Email, '],
-					['empresa', 'Empresa, ']
-				];
-				foreach ($campos_obrigatorios as $field) {
-					if (!isset($_POST[$field[0]]) || empty($_POST[$field[0]])) {
-						$error_msg .= $field[1];
-						$hasError = true;
+			//Campos obrigatórios não preenchidos{
+				$baseErrMsg = "ERRO: Insira os campos ";
+				$error_msg = $baseErrMsg;
+				if ($_POST['editPermission'] == true) {
+					$campos_obrigatorios = [
+						//['nome', 'msg_erro']
+						['nome', 'Nome, '],
+						['login', 'Login, '],
+						// ['senha', 'Senha, '],
+						['nascimento', 'Data de nascimento, '],
+						['email', 'Email, '],
+						['empresa', 'Empresa, ']
+					];
+					foreach ($campos_obrigatorios as $field) {
+						if (!isset($_POST[$field[0]]) || empty($_POST[$field[0]])) {
+							$error_msg .= $field[1];
+						}
+					}
+				}else{
+					if(empty($_POST['senha']) || empty($_POST['senha2'])){
+						$error_msg .= 'Senha e Confirmação, ';
 					}
 				}
-			}else{
-				if(empty($_POST['senha']) || empty($_POST['senha2'])){
-					$error_msg .= 'Senha e Confirmação, ';
+	
+				if(is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) && isset($_POST['nivel']) && empty($_POST['nivel'])){	//Se usuário = Administrador && nivelUsuario indefinido
+					$error_msg .= 'Nível, ';
+				}
+				if(($_POST['senha'] != $_POST['senha2'])){
+					$error_msg .= "Confirmação de senha correta, ";
+				}
+				if($error_msg != $baseErrMsg){
+					set_status(substr($error_msg, 0, strlen($error_msg)-2).".");
+					mostrarFormCadastro();
+					exit;
+				}
+			//}
+
+			$baseErrMsg = "ERRO: ";
+			$error_msg = $baseErrMsg;
+			if(!empty($_POST["cpf"])){
+				$_POST["cpf"] = str_replace([".", "-", "_"], "", $_POST["cpf"]);
+				if(strlen($_POST["cpf"]) != 11){
+					$error_msg .= "CPF parcial, ";
+				}
+			}
+			if(!empty($_POST["rg"])){
+				$_POST["rg"] = str_replace([".", "_"], "", $_POST["rg"]);
+				if(strlen($_POST["rg"]) != 9){
+					$error_msg .= "RG parcial, ";
 				}
 			}
 
-			if(is_int(strpos($_SESSION['user_tx_nivel'], "Administrador")) && isset($_POST['nivel']) && empty($_POST['nivel'])){	//Se usuário = Administrador && nivelUsuario indefinido
-				$error_msg .= 'Nível, ';
-			}
-			if(($_POST['senha'] != $_POST['senha2'])){
-				$hasError = true;
-				$error_msg .= "Confirmação de senha correta, ";
-			}
-			if($hasError){
+			if($error_msg != $baseErrMsg){
 				set_status(substr($error_msg, 0, strlen($error_msg)-2).".");
-				modifica_usuario();
+				mostrarFormCadastro();
 				exit;
 			}
 		//}
@@ -114,7 +120,7 @@
 
 		if (!empty($_POST['nivel']) && in_array($_POST['nivel'], ['Motorista', 'Ajudante']) && (!isset($_POST['cpf']) || empty($_POST['cpf']))) {
 			set_status("ERRO: CPF obrigatório para motorista/ajudante.");
-			modifica_usuario();
+			mostrarFormCadastro();
 			exit;
 		}
 
@@ -125,7 +131,7 @@
 			&& !$canUpdateWithoutPassword
 		){
 			set_status("ERRO: Preencha o campo senha e confirme-a.");
-			modifica_usuario();
+			mostrarFormCadastro();
 			exit;
 		}
 
@@ -146,9 +152,13 @@
 			&& $usuarioCadastrado[0]['user_nb_id'] != $_POST['id'] 					//E não é o mesmo usuário que está sendo editado
 		){
 			set_status("ERRO: Login já cadastrado.");
-			modifica_usuario();
+			mostrarFormCadastro();
 			exit;
 		}
+
+		var_dump($usuario);
+		mostrarFormCadastro();
+		exit;
 		
 		if(empty($_POST['id'])){//Criando novo usuário
 			$usuario['user_nb_userCadastro'] = $_SESSION['user_nb_id'];
@@ -156,7 +166,7 @@
 
 			$id = inserir('user', array_keys($usuario), array_values($usuario));
 			$_POST['id'] = ultimo_reg('user');
-			layout_usuario();
+			mostrarFormCadastro();
 			exit;
 			
 		}else{//Atualizando usuário existente
@@ -193,6 +203,19 @@
 		index();
 		exit;
 	}
+
+	function deleteUser(){
+		remover('user',$_POST['id']);
+		index();
+		exit;
+	}
+
+	// function modifica_usuario() {
+	// 	global $a_mod;
+	// 	$a_mod = carregar('user', $_POST['id']);
+	// 	mostrarFormCadastro();
+	// 	exit;
+	// }
 
 	function atualiza_usuario(array $usuario){
 		if (is_bool(strpos($_SESSION['user_tx_nivel'], "Administrador"))){
@@ -231,12 +254,17 @@
 	function excluirFoto(){
 		atualizar('user', array('user_tx_foto'), array(''), $_POST['id']);
 		$_POST['id'] = $_POST['id'];
-		layout_usuario();
+		mostrarFormCadastro();
 		exit;
 	}
 
-	function layout_usuario() {
-		global $CONTEX, $a_mod;
+	function mostrarFormCadastro() {
+
+		global $a_mod;
+
+		if(!empty($_POST["id"])){
+			$a_mod = carregar("user", $_POST["id"]);
+		}
 
 		$editingDriver = in_array($a_mod['user_tx_nivel'], ['Motorista', 'Ajudante']);
 		$loggedUserIsAdmin = is_int(strpos($_SESSION['user_tx_nivel'], "Administrador"));
@@ -462,13 +490,13 @@
 				exit;
 			}
 			$_POST['id'] = $_GET['id'];
-			modifica_usuario();
+			mostrarFormCadastro();
 			exit;
 		}
 
 		if (in_array($_SESSION['user_tx_nivel'], ['Motorista', 'Ajudante'])) {
 			$_POST['id'] = $_SESSION['user_nb_id'];
-			modifica_usuario();
+			mostrarFormCadastro();
 		}
 		$extraEmpresa = " AND empr_tx_situacao = 'ativo' ORDER BY empr_tx_nome";
 
@@ -524,7 +552,7 @@
 		$buttons[] = botao('Buscar', 'index');
 
 		if(is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))){
-			$buttons[] = botao('Inserir', 'layout_usuario','','','','','btn btn-success');
+			$buttons[] = botao('Inserir', 'mostrarFormCadastro','','','','','btn btn-success');
 		}
 
 		abre_form('Filtro de Busca');
@@ -556,8 +584,8 @@
 				'user_tx_fone' => $valores[$f]['user_tx_fone'],
 				'empr_tx_nome' => $valores[$f]['empr_tx_nome'],
 				'user_tx_status' => $valores[$f]['user_tx_status'],
-				'modificar_usuario' => icone_modificar($valores[$f]['user_nb_id'], 'modifica_usuario'),
-				'excluir_usuario' => icone_excluir($valores[$f]['user_nb_id'], 'exclui_usuario')
+				'modificar_usuario' => icone_modificar($valores[$f]['user_nb_id'], 'mostrarFormCadastro'),
+				'excluir_usuario' => icone_excluir($valores[$f]['user_nb_id'], 'deleteUser')
 			];
 		}
 
@@ -574,8 +602,8 @@
 			'user_tx_fone',
 			'empr_tx_nome',
 			'user_tx_status',
-			'icone_modificar(user_nb_id,modifica_usuario)',
-			'icone_excluir(user_nb_id,exclui_usuario)'
+			'icone_modificar(user_nb_id,mostrarFormCadastro)',
+			'icone_excluir(user_nb_id,deleteUser)'
 		];
 		
 		grid($sql, $cab, $val);

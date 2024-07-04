@@ -152,7 +152,6 @@
 		$_POST['data'] = substr($a['pont_tx_data'],0, -9);
 		$_POST['busca_data'] = $a['pont_tx_data'];
 
-
 		layout_ajuste();
 		exit;
 	}
@@ -193,7 +192,7 @@
 			}
 		}
 
-		return $mdc > 0 ? gmdate('H:i', $mdc) : '0';
+		return $mdc > 0 ? gmdate("H:i", $mdc) : "00:00";
 	}
 
 	function operarHorarios(array $horarios, string $operacao): string{
@@ -243,33 +242,23 @@
 		return operarHorarios($horarios, '+');	
 	}
 
-	function verificaTempoMdc($tempo1 = '00:00', $tempoDescanso = '00:00') {
-		// Verifica se os parâmetros são strings e possuem o formato correto
-		if (!is_string($tempo1) || !is_string($tempoDescanso) || !preg_match('/^\d{2}:\d{2}$/', $tempo1) || !preg_match('/^\d{2}:\d{2}$/', $tempoDescanso)) {
-			return '';
+	function verificarAlertaMDC(string $tempo1 = "00:00", string $tempoDescanso = "00:00"): string {
+		// Retorna erro se os parâmetros não possuírem o formato correto
+		if (!preg_match('/^\d{2}:\d{2}$/', $tempo1) || !preg_match('/^\d{2}:\d{2}$/', $tempoDescanso)) {
+			return "--:--";
 		}
-		// $datetime1 = new DateTime('2000-01-01 '.$tempo1);
-		// $datetimeDescanso = new DateTime('2000-01-01 '.$tempoDescanso);
-		$datetime2 = '05:30';
-		$datetime3 = '03:00';
-		$datetimeDescanso1 = '00:30';
-		$datetimeDescanso2 = '00:15';
 
-		$alertaDescanso = '';
-
-		if($tempo1 > $datetime2){
-			if($tempoDescanso < $datetimeDescanso1){
-				$alertaDescanso = "<i style='color:orange;' title='Descanso de 00:30 não respeitado' class='fa fa-warning'></i>";
-			}
-			return "<a style='white-space: nowrap;'>$alertaDescanso<i style='color:orange;' title='Tempo excedido de 05:30' class='fa fa-warning'></i></a>&nbsp;".$tempo1;
-		}elseif($tempo1 > $datetime3){
-			if($tempoDescanso < $datetimeDescanso2){
-				$alertaDescanso = "<i style='color:orange;' title='Descanso de 00:15 não respeitado' class='fa fa-warning'></i>";
-			}
-			return "<a style='white-space: nowrap;'>$alertaDescanso</a>&nbsp;".$tempo1;
-		}else{
-			return $tempo1;
+		$res = "";
+		if($tempo1 > "05:30" && $tempoDescanso < "00:30"){
+			$res = "<a style='white-space: nowrap;'>".
+						"<i style='color:orange;' title='Descanso de 00:30 a cada 05:30 não respeitado' class='fa fa-warning'></i>".
+					"</a>".
+					"&nbsp;"
+			;
 		}
+		$res .= $tempo1;
+		
+		return $res;
 	}
 
 	function verificaLimiteTempo(string $tempoEfetuado, string $limite) {
@@ -939,9 +928,9 @@
 							AND pont_tx_data < '".$registros['inicioJornada'][0]."'
 						ORDER BY pont_tx_data DESC
 						LIMIT 1"
-				))[0];
+				));
 				if(!empty($ultimoFimJornada)){
-					$ultimoFimJornada = DateTime::createFromFormat('Y-m-d H:i:s', $ultimoFimJornada);
+					$ultimoFimJornada = DateTime::createFromFormat('Y-m-d H:i:s', $ultimoFimJornada[0]);
 					
 					$intersticioDiario = (new DateTime($registros['inicioJornada'][0]))->diff($ultimoFimJornada);
 					
@@ -1050,7 +1039,7 @@
 			$aRetorno['he100'] = '';
 			if($aRetorno['diffSaldo'][0] != '-'){ 	//Se o saldo for positivo
 
-				if($jornadas['feriado'] == True){
+				if($jornadas['feriado'] == True || (new DateTime($data." 00:00:00"))->format("D") == "Sun"){
 					$aRetorno['he100'] = $aRetorno['diffSaldo'];
 					$aRetorno['he50'] = '00:00';
 				}else{
@@ -1070,7 +1059,7 @@
 		
 
 		//MÁXIMA DIREÇÃO CONTÍNUA{
-			$aRetorno['maximoDirecaoContinua'] = verificaTempoMdc(
+			$aRetorno['maximoDirecaoContinua'] = verificarAlertaMDC(
 				maxDirecaoContinua($tiposRegistrados),
 				$registros['descansoCompleto']['totalIntervalo']
 			);

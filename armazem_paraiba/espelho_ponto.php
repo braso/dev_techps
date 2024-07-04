@@ -8,6 +8,8 @@
 
 	function index() {
 
+		var_dump($_POST); echo "<br><br>";
+
 		global $CONTEX, $totalResumo, $conn;
 
 		cabecalho('Espelho de Ponto');
@@ -37,67 +39,73 @@
 			$_POST['busca_dataFim'] = date("Y-m-d");
 		}
 
-		//Confere se há algum erro na pesquisa{
 		$searchError = false;
-
+		
 		$opt = "";
-
+		
 		if(isset($_POST['acao']) && $_POST['acao'] == 'index'){
-			$errorMsg = 'Insira os campos para pesquisar: ';
-			if(empty($_POST['busca_empresa'])){
-				if(empty($_POST["busca_motorista"])){
-					$searchError = true;
-					$errorMsg .= 'Empresa, ';
-					$_POST['busca_empresa'] = $_SESSION['user_nb_empresa'];
-				}else{
-					$idEmpresa = mysqli_fetch_assoc(query(
-						"SELECT empr_nb_id FROM entidade 
-							JOIN empresa ON enti_nb_empresa = empr_nb_id
-							WHERE enti_tx_status = 'ativo'
-								AND enti_nb_id = ".$_POST["busca_motorista"].";"
-					));
-					$_POST["busca_empresa"] = $idEmpresa["empr_nb_id"];
+			//Confere se há algum erro na pesquisa{
+				$errorMsg = 'Insira os campos para pesquisar: ';
+				if(empty($_POST['busca_empresa'])){
+					if(empty($_POST["busca_motorista"])){
+						$searchError = true;
+						$errorMsg .= 'Empresa, ';
+						$_POST['busca_empresa'] = $_SESSION['user_nb_empresa'];
+					}else{
+						$idEmpresa = mysqli_fetch_assoc(query(
+							"SELECT empr_nb_id FROM entidade 
+								JOIN empresa ON enti_nb_empresa = empr_nb_id
+								WHERE enti_tx_status = 'ativo'
+									AND enti_nb_id = ".$_POST["busca_motorista"].";"
+						));
+						$_POST["busca_empresa"] = $idEmpresa["empr_nb_id"];
+					}
 				}
-			}
-			if(empty($_POST['busca_motorista'])){
-				$searchError = true;
-				$errorMsg .= 'Motorista/Ajudante, ';
-			}
-			if(empty($_POST['busca_dataInicio'])){
-				$searchError = true;
-				$errorMsg .= 'Data Início, ';
-			}
-			if(empty($_POST['busca_dataFim'])){
-				$searchError = true;
-				$errorMsg .= 'Data Fim, ';
-			}
-
-			if(!$searchError && !empty($_POST['busca_empresa']) && !empty($_POST['busca_motorista'])){
-				$motorista = mysqli_fetch_assoc(
-					query(
-						"SELECT enti_nb_id, enti_tx_nome FROM entidade
-							WHERE enti_tx_status = 'ativo'
-								AND enti_nb_empresa = ".$_POST['busca_empresa']."
-								AND enti_nb_id = ".$_POST['busca_motorista']."
-							LIMIT 1"
-					)
-				);
-
-				if(empty($motorista)){
+				if(empty($_POST['busca_motorista'])){
 					$searchError = true;
-					$errorMsg = 'Este motorista não pertence a esta empresa. ';
+					$errorMsg .= 'Motorista/Ajudante, ';
 				}
+				if(empty($_POST['busca_dataInicio'])){
+					$searchError = true;
+					$errorMsg .= 'Data Início, ';
+				}
+				if(empty($_POST['busca_dataFim'])){
+					$searchError = true;
+					$errorMsg .= 'Data Fim, ';
+				}
+	
+				if(!$searchError && !empty($_POST['busca_empresa']) && !empty($_POST['busca_motorista'])){
+					if($_POST["busca_dataInicio"] > date("Y-m-d") || $_POST["busca_dataFim"] > date("Y-m-d")){
+						$searchError = true;
+						$errorMsg = "Data de pesquisa não pode ser após hoje (".date("d/m/Y")."). ";
+					}
 
-				$opt = "<option value=\"".$motorista['enti_nb_id']."\">[".$motorista['enti_nb_id']."]".$motorista['enti_tx_nome']."</option>";
-			}
-
-			if($searchError){
-				$errorMsg = substr($errorMsg, 0, -2).'.';
-				set_status('ERRO: '.$errorMsg);
-      		}
+					$motorista = mysqli_fetch_assoc(
+						query(
+							"SELECT enti_nb_id, enti_tx_nome FROM entidade
+								WHERE enti_tx_status = 'ativo'
+									AND enti_nb_empresa = ".$_POST['busca_empresa']."
+									AND enti_nb_id = ".$_POST['busca_motorista']."
+								LIMIT 1"
+						)
+					);
+	
+					if(empty($motorista)){
+						$searchError = true;
+						$errorMsg = 'Este motorista não pertence a esta empresa. ';
+					}
+	
+					$opt = "<option value=\"".$motorista['enti_nb_id']."\">[".$motorista['enti_nb_id']."]".$motorista['enti_tx_nome']."</option>";
+				}
+	
+				if($searchError){
+					$errorMsg = substr($errorMsg, 0, -2).'.';
+					set_status('ERRO: '.$errorMsg);
+				}
+			//}
 		}else{
-			$_POST['busca_empresa']   = $_POST['busca_empresa']?? '';
-			$_POST['busca_motorista'] = $_POST['busca_motorista']?? '';
+			$_POST['busca_empresa']   = $_POST['busca_empresa']?? "";
+			$_POST['busca_motorista'] = $_POST['busca_motorista']?? "";
 		}
 
 		//CAMPOS DE CONSULTA
@@ -387,7 +395,7 @@
 			<input type="hidden" name="acao" value="layout_ajuste">
 			<input type="hidden" name="id" value="<?= $aMotorista['enti_nb_id'] ?>">
 			<input type="hidden" name="data">
-			<input type="hidden" name="data_de" value="<?=empty($_POST['busca_dataInicio'])?: date("01/m/Y");?>">
+			<input type="hidden" name="data_de" value="<?=(!empty($_POST['busca_dataInicio'])? $_POST['busca_dataInicio']: date("01/m/Y"));?>">
 			<input type="hidden" name="data_ate" value="<?=$_POST['busca_dataFim']?>">
 		</form>
 

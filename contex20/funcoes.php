@@ -342,7 +342,7 @@
 		return $campo . $data_input;
 	}
 
-	function checkbox(string $titulo, string $variavel, array $opcoes, int $tamanho=3, string $extra='', string $modificadoCampo = ''){
+	function checkbox(string $titulo, string $variavel, array $opcoes, int $tamanho=3, string $tipo = "checkbox", string $extra='', string $modificadoCampo = ''){
 		$campo = 
 			"<div class='col-sm-".$tamanho." margin-bottom-5' style='min-width:200px' id='".$variavel."' ".$extra.">
 			<div class='margin-bottom-5'>
@@ -355,7 +355,7 @@
 		foreach($opcoes as $key => $value){
 			$campo .=
 				"<label>
-					<input type='checkbox' id='".$key."' name='".$variavel."_".$key."' value='true' ".(in_array($key,$valoresMarcados) && !empty($valoresMarcados) ? 'checked': '')."> ".$value."
+					<input type='".$tipo."' id='".$key."' name='".$variavel."_".$key."' value='true' ".(in_array($key,$valoresMarcados) && !empty($valoresMarcados) ? 'checked': '')."> ".$value."
 				</label>"
 			;
 		}
@@ -390,7 +390,7 @@
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: '99999-999', clearIncomplete: true, placeholder: \"00000-000\" });";
 			break;
 			case "MASCARA_CPF":
-				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99'], placeholder: \"000.000.000-00\" });";
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99']});";
 			break;
 			case "MASCARA_CNPJ":
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['99.999.999/9999-99'], placeholder: \"00.000.000/000-00\" });";
@@ -445,6 +445,9 @@
 			break;
 			case "MASCARA_SENHA":
 				$type = "password";
+			break;
+			case "MASCARA_PLACA":
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['AAA-9A99', 'AAA-9999']});";
 			break;
 		}
 		$dataScript .= '</script>';

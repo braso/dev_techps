@@ -68,13 +68,13 @@
 							"SELECT * FROM endosso 
 								WHERE endo_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'
 									AND endo_tx_status = 'ativo'
-									AND endo_tx_de >= ".sprintf("%04d-%02d-%02d", $year, $month, "01")."
-									AND endo_tx_ate <= ".sprintf("%04d-%02d-%02d", $year, $month, $daysInMonth)."
+									AND endo_tx_de >= '".sprintf("%04d-%02d-%02d", $year, $month, "01")."'
+									AND endo_tx_ate <= '".sprintf("%04d-%02d-%02d", $year, $month, $daysInMonth)."'
 								ORDER BY endo_tx_de ASC"
 						),
 						MYSQLI_ASSOC
 					);
-				
+
 					$endossos = [];
 					foreach($sqlEndossos as $endosso){
 						$aDetalhado = fopen($_SERVER['DOCUMENT_ROOT'].$CONTEX['path'].'/arquivos/endosso/'.$endosso['endo_tx_filename'].'.csv', 'r');
@@ -109,32 +109,8 @@
 						$endossoCompleto = [];
 					}
 
-					//Pesquisar o saldo de um endosso antes do mês pesquisado{
-						$saldoAnterior = mysqli_fetch_all(
-							query(
-								"SELECT endo_tx_saldo FROM endosso 
-									WHERE endo_tx_status = 'ativo'
-										AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-										AND endo_tx_ate < '".$_POST['busca_data']."-01 00:00:00'
-									ORDER BY endo_tx_ate DESC
-									LIMIT 1"
-							),
-							MYSQLI_ASSOC
-						);
-						if(!empty($saldoAnterior)){
-							$saldoAnterior = $saldoAnterior[0]['endo_tx_saldo'];
-						}elseif(!empty($aMotorista['enti_tx_banco'])){
-							$saldoAnterior = $aMotorista['enti_tx_banco'];
-						}else{
-							$saldoAnterior = '00:00';
-						}
-						$endossoCompleto['totalResumo']['saldoAnterior'] = $saldoAnterior;
-					//}
-
 					$totalResumo = $endossoCompleto['totalResumo'];
 				//}
-
-				$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAnterior'], $totalResumo['diffSaldo']], '+');
 
 				if($totalResumo['diffSaldo'] > "00:00"){
 					//Tirar a parte do saldoPeriodo que corresponde ao HE100
@@ -144,7 +120,6 @@
 					   $transferir = $totalResumo['diffSaldo'];
 				   }
 
-				   $totalResumo['diffSaldo'] = operarHorarios([$totalResumo['diffSaldo'], $transferir], '-');
 				   $totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '-');
 				   $totalResumo['he100'] = $transferir;
 				}else{
@@ -152,22 +127,15 @@
 				}
 
 				//Limitar a quantidade de HE50 à quantidade informada em endo_tx_horasAPagar{
-					if(
-						$totalResumo['diffSaldo'] > "00:00"
-						&& !empty($endossoCompleto['endo_tx_pagarHoras']) && $endossoCompleto['endo_tx_pagarHoras'] == 'sim'
-						&& !empty($endossoCompleto['endo_tx_horasApagar'])
-					){
-						if($totalResumo['diffSaldo'] > $endossoCompleto['endo_tx_horasApagar']){
+					$transferir = "00:00";
+					if(!empty($endossoCompleto['endo_tx_pagarHoras']) && $endossoCompleto['endo_tx_pagarHoras'] == 'sim' && !empty($endossoCompleto['endo_tx_horasApagar'])){
+						if($totalResumo['saldoAtual'] > $endossoCompleto['endo_tx_horasApagar']){
 							$transferir = $endossoCompleto['endo_tx_horasApagar'];
-						}else{
-							$transferir = $totalResumo['diffSaldo'];
+						}elseif($totalResumo['saldoAtual'][0] != "-"){
+							$transferir = $totalResumo['saldoAtual'];
 						}
-						$totalResumo['diffSaldo'] = operarHorarios([$totalResumo['diffSaldo'], $transferir], '-');
-						$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAtual'], $transferir], '-');
-						$totalResumo['he50'] = $transferir;
-					}else{
-						$totalResumo['he50'] = '00:00';
 					}
+					$totalResumo['he50'] = $transferir;
 				//}
 
 				for ($i = 0; $i < count($endossoCompleto['endo_tx_pontos']); $i++) {
@@ -229,6 +197,7 @@
 			//}
 			break; //Adaptar posteriormente para conseguir imprimir mais de um motorista??
 		}
+
 		
 		include "./relatorio_espelho.php";
 		include "./csv_relatorio_espelho.php";
@@ -239,7 +208,7 @@
 
 		global $totalResumo, $CONTEX;
 
-		cabecalho('Endosso');
+		cabecalho('Buscar Endosso');
 		echo '
 		<style>
 			.row div {
@@ -321,13 +290,13 @@
 
 		//CAMPOS DE CONSULTA{
 			$fields = [
-				combo_net('Motorista:', 'busca_motorista', (!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ''), 3, 'entidade', '', ' AND enti_tx_ocupacao IN ("Motorista", "Ajudante")' . $extraMotorista . $extraEmpresaMotorista, 'enti_tx_matricula'),
-				campo_mes('Data:',      'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2),
-				combo(	  'Endossado:',	'busca_endossado', (!empty($_POST['busca_endossado'])? $_POST['busca_endossado']: ''), 2, ['' => '', 'endossado' => 'Sim', 'naoEndossado' => 'Não'])
+				combo_net('Motorista', 'busca_motorista', (!empty($_POST['busca_motorista'])? $_POST['busca_motorista']: ''), 3, 'entidade', '', ' AND enti_tx_ocupacao IN ("Motorista", "Ajudante")' . $extraMotorista . $extraEmpresaMotorista, 'enti_tx_matricula'),
+				campo_mes('Data',      'busca_data',      (!empty($_POST['busca_data'])?      $_POST['busca_data']     : ''), 2),
+				combo(	  'Endossado',	'busca_endossado', (!empty($_POST['busca_endossado'])? $_POST['busca_endossado']: ''), 2, ['' => '', 'endossado' => 'Sim', 'naoEndossado' => 'Não'])
 			];
 
 			if(is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))){
-				array_unshift($fields, combo_net('Empresa*:', 'busca_empresa', (!empty($_POST['busca_empresa'])? $_POST['busca_empresa'] : ""), 3, 'empresa', 'onchange=selecionaMotorista(this.value)', $extraEmpresa));
+				array_unshift($fields, combo_net('Empresa*', 'busca_empresa', (!empty($_POST['busca_empresa'])? $_POST['busca_empresa'] : ""), 3, 'empresa', 'onchange=selecionaMotorista(this.value)', $extraEmpresa));
 			}
 		//}
 
@@ -439,33 +408,8 @@
 								$endossoCompleto = [];
 							}
 
-							//Pesquisar o saldo de um endosso antes do mês pesquisado{
-								$saldoAnterior = mysqli_fetch_all(
-									query(
-										"SELECT endo_tx_saldo FROM endosso 
-											WHERE endo_tx_status = 'ativo'
-												AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-												AND endo_tx_ate < '".$_POST['busca_data']."-01 00:00:00'
-											ORDER BY endo_tx_ate DESC
-											LIMIT 1"
-									),
-									MYSQLI_ASSOC
-								);
-
-								if(!empty($saldoAnterior)){
-									$saldoAnterior = $saldoAnterior[0]['endo_tx_saldo'];
-								}elseif(!empty($aMotorista['enti_tx_banco'])){
-									$saldoAnterior = $aMotorista['enti_tx_banco'];
-								}else{
-									$saldoAnterior = '00:00';
-								}
-								$endossoCompleto['totalResumo']['saldoAnterior'] = $saldoAnterior;
-							//}
-
 							$totalResumo = $endossoCompleto['totalResumo'];
 						//}
-
-						$totalResumo['saldoAtual'] = operarHorarios([$totalResumo['saldoAnterior'], $totalResumo['diffSaldo']], '+');
 
 						for ($i = 0; $i < count($endossoCompleto['endo_tx_pontos']); $i++) {
 							$aDetalhado = $endossoCompleto['endo_tx_pontos'][$i];
@@ -518,8 +462,19 @@
 						// 		$parametroPadrao = 'Convenção Padronizada: '.$aParametro['para_tx_nome'].', Semanal ('.$aParametro['para_tx_jornadaSemanal'].'), Sábado ('.$aParametro['para_tx_jornadaSabado'].')';
 						// 	}
 						// }else{
-							
 						// }
+
+						$somaSaldos = operarHorarios([$totalResumo["saldoAnterior"], $totalResumo["diffSaldo"]], "+");
+						$pago = "--:--";
+						if($somaSaldos[0] != "-"){
+							$pago = operarHorarios([$somaSaldos, $totalResumo["saldoAtual"]], "-");
+						}
+						if($endossoCompleto["endo_tx_dataCadastro"] > "2024-07-03"){
+							$pago = (operarHorarios([$endossoCompleto["endo_tx_horasApagar"], $totalResumo["he100"]], "+"));
+							if(operarHorarios([$somaSaldos, $pago], "-")[0] == "-"){
+								$pago = $somaSaldos;
+							}
+						}
 
 						$saldosMotorista = 'SALDOS: <br>
 							<div class="table-responsive">
@@ -528,6 +483,7 @@
 										<tr>
 											<th>Anterior:</th>
 											<th>Período:</th>
+											<th>Pago:</th>
 											<th>Final:</th>
 										</tr>
 									</thead>
@@ -535,6 +491,7 @@
 										<tr>
 											<td>'.$totalResumo['saldoAnterior'].'</td>
 											<td>'.$totalResumo['diffSaldo'].'</td>
+											<td>'.$pago.'</td>
 											<td>'.$totalResumo['saldoAtual'].'</td>
 										</tr>
 									</tbody>
@@ -544,7 +501,7 @@
 						
 						$aEmpresa = carregar('empresa', $aMotorista['enti_nb_empresa']);
 						if (empty($_POST['busca_motorista'])){
-							$buttonInprimir = "<button name='acao' id='botaoContexCadastrar ImprimirRelatorio_$aMotorista[enti_tx_matricula]' value='impressao_relatorio' type='button' class='btn btn-default' 
+							$buttonInprimir = "<button name='acao' id='botaoContexCadastrar ImprimirRelatorio_".$aMotorista['enti_tx_matricula']."' value='impressao_relatorio' type='button' class='btn btn-default' 
 							style='position: absolute; top: 20px; left: 420px;'>Imprimir Relatório</button>";
 						}
 
@@ -562,15 +519,15 @@
 						echo "
 							<script>
 								document.addEventListener('DOMContentLoaded', function() {
-									document.getElementById('botaoContexCadastrar ImprimirRelatorio_$aMotorista[enti_tx_matricula]').onclick = function() {
-										document.form_imprimir_relatorio_$aMotorista[enti_tx_matricula].submit();
+									document.getElementById('botaoContexCadastrar ImprimirRelatorio_".$aMotorista["enti_tx_matricula"]."').onclick = function() {
+										document.form_imprimir_relatorio_".$aMotorista["enti_tx_matricula"].".submit();
 									}
 								});
 							</script>
-							<form name='form_imprimir_relatorio_$aMotorista[enti_tx_matricula]' method='post' target='_blank'>
+							<form name='form_imprimir_relatorio_".$aMotorista["enti_tx_matricula"]."' method='post' target='_blank'>
 								<input type='hidden' name='acao' value='imprimir_relatorio'>
 								<input type='hidden' name='idMotoristaEndossado' value='$aMotorista[enti_nb_id]'>
-								<input type='hidden' name='matriculaMotoristaEndossado' value='$aMotorista[enti_tx_matricula]'>
+								<input type='hidden' name='matriculaMotoristaEndossado' value='".$aMotorista["enti_tx_matricula"]."'>
 							</form>";
 
 						$aSaldo[$aMotorista['enti_tx_matricula']] = $totalResumo['diffSaldo'];

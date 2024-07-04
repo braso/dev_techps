@@ -301,6 +301,8 @@
 	function index(){
 		global $CONTEX;
 
+		var_dump($_POST); echo "<br><br>";
+
 		if(empty($_POST['data'])){
 			$_POST['data'] = date("Y-m-d");
 		}
@@ -389,7 +391,7 @@
 		$botoes[] = $botao_imprimir;
 		$botoes[] = botao(
 			'Voltar',
-			'voltar'
+			'voltar',
 		);
 		$botoes[] = status();
 		
@@ -412,25 +414,21 @@
 		fecha_form($botoes);
 
 		$sql = pegarSqlDia($aMotorista['enti_tx_matricula'], ["pont_nb_id", "pont_tx_data", "macr_tx_nome", "moti_tx_nome", "moti_tx_legenda", "pont_tx_descricao", "pont_tx_justificativa", "user_tx_login", "pont_tx_dataCadastro"]);
-		$justificativa = 'pont_tx_descricao';
-		if($_POST['status'] === 'inativo'){
-		    $justificativa = 'pont_tx_justificativa';
-		}
-
+		
 		$gridFields = [
-			'CÓD'												=> 'pont_nb_id',
-			'DATA'												=> 'data(pont_tx_data, 1)',
-			'PLACA'                                             => 'pont_tx_placa',
-			'TIPO'												=> 'macr_tx_nome',
-			'MOTIVO'											=> 'moti_tx_nome',
-			'LEGENDA'											=> 'moti_tx_legenda',
-			'JUSTIFICATIVA'										=> $justificativa,
-			'USUÁRIO'											=> 'user_tx_login',
-			'DATA CADASTRO'										=> 'data(pont_tx_dataCadastro,1)',
-			'<spam class="glyphicon glyphicon-remove"></spam>'	=> $iconeExcluir
+			"CÓD"												=> "pont_nb_id",
+			"DATA"												=> "data(pont_tx_data, 1)",
+			"PLACA"                                             => "pont_tx_placa",
+			"TIPO"												=> "macr_tx_nome",
+			"MOTIVO"											=> "moti_tx_nome",
+			"LEGENDA"											=> "moti_tx_legenda",
+			"JUSTIFICATIVA"										=> "pont_tx_justificativa",
+			"USUÁRIO"											=> "user_tx_login",
+			"DATA CADASTRO"										=> "data(pont_tx_dataCadastro,1)",
+			"<spam class='glyphicon glyphicon-remove'></spam>"	=> $iconeExcluir
 		];
 		
-		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 0, 'desc', -1);
+		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 1, 'desc', -1);
 
 		echo
 			"

@@ -1,9 +1,10 @@
-<?php 
+<?php
+    
     require_once "../load_env.php";
     require_once "lib.php";
 
     function make_login(){
-        $msg = '';
+        $msg = "";
 
         //Check mandatory fields{
             if(empty($_POST["username"])){
@@ -168,7 +169,8 @@
         //Check if break type (macro) exists{
             $macro = 
                 "SELECT * from macroponto
-                    WHERE lower(macr_tx_nome) LIKE '"."in%cio%".strtolower($_POST["breakType"])."'";
+                    WHERE macr_tx_status = 'ativo'
+                        AND lower(macr_tx_nome) LIKE '"."in%cio%".strtolower($_POST["breakType"])."'";
             ;
             $macro = get_data($macro);
             if(empty($macro)){
@@ -211,7 +213,7 @@
                         WHERE pont_tx_status = 'ativo'
                             AND pont_nb_user = ".$_POST['userID']."
                             AND pont_nb_id >= ".$_POST['journeyID']."
-                            AND pont_tx_data < STR_TO_DATE('".$_POST['startDateTime']."', '%Y-%m-%d %H:%i')
+                            AND pont_tx_data <= STR_TO_DATE('".$_POST['startDateTime'].":59', '%Y-%m-%d %H:%i:%s')
                             AND lower(macr_tx_nome) LIKE '%jornada%'
                         ORDER BY pont_tx_data DESC
                         LIMIT 1;"
@@ -230,7 +232,8 @@
                     "SELECT *, (macr_tx_nome like '%inicio%') as open_break FROM ponto
                         JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                         WHERE pont_tx_status = 'ativo'
-                            AND pont_tx_data <= STR_TO_DATE('".$_POST['startDateTime']."', '%Y-%m-%d %H:%i')
+                            AND pont_nb_user = ".$_POST['userID']."
+                            AND pont_tx_data <= STR_TO_DATE('".$_POST['startDateTime'].":59', '%Y-%m-%d %H:%i:%s')
                             AND lower(macr_tx_nome) != 'inicio de jornada'
                         ORDER BY pont_tx_data DESC
                         LIMIT 1;"
@@ -250,8 +253,9 @@
                     JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                     WHERE pont_tx_status = 'ativo'
                         AND pont_tx_matricula = '".$entity["enti_tx_matricula"]."'
+                        AND macr_tx_status = 'ativo'
                         AND macr_tx_nome LIKE '%jornada%'
-                        AND pont_tx_data <= STR_TO_DATE('".$_POST["startDateTime"]."', '%Y-%m-%d %H:%i')
+                        AND pont_tx_data <= STR_TO_DATE('".$_POST["startDateTime"].":59', '%Y-%m-%d %H:%i:%s')
                     ORDER BY pont_tx_data DESC
                     LIMIT 1;"
             );
@@ -270,6 +274,29 @@
             echo "Type not found";
             exit;
         }
+
+        //Confere se já tem um ponto no mesmo minuto, e adiciona aos segundos como índice de ordenação{
+            
+            $pontoMesmoMinuto = get_data(
+                "SELECT * FROM ponto 
+                    WHERE pont_tx_status = 'ativo'
+                        AND pont_nb_user = ".$_POST["userID"]."
+                        AND pont_tx_data LIKE '%".$_POST["startDateTime"]."%'
+                    ORDER BY pont_tx_data DESC
+                    LIMIT 1;"
+            );
+            $pontoMesmoMinuto = !empty($pontoMesmoMinuto)? $pontoMesmoMinuto[0]: $pontoMesmoMinuto;
+
+            
+            if(!empty($pontoMesmoMinuto["pont_tx_data"])){
+                if($pontoMesmoMinuto["pont_tx_tipo"] == $macroid){
+                    echo "Same register already sent.";
+                    exit;
+                }
+                $indiceSeg = intval(substr($pontoMesmoMinuto["pont_tx_data"], -2))+1;
+                $_POST["startDateTime"] = $_POST["startDateTime"].":".sprintf('%02d', $indiceSeg);
+            }
+        //}
 
         $ponto = [
             "pont_nb_user" => $decoded->data->user_id,
@@ -307,7 +334,7 @@
 
         $decoded = validate_token($_ENV["APP_KEY"]);
         $putfp = fopen('php://input', 'r');
-        $putdata = '';
+        $putdata = "";
         
         while($data = fread($putfp, 1024)){
             $putdata .= $data;
@@ -339,8 +366,8 @@
             $query = 
                 "SELECT * from ponto
                     where pont_tx_status = 'ativo'
-                        AND pont_tx_data <= STR_TO_DATE('".$requestdata->endDateTime."', '%Y-%m-%d %H:%i')
                         AND pont_nb_user = ".$requestdata->userID."
+                        AND pont_tx_data <= STR_TO_DATE('".$requestdata->endDateTime.":59', '%Y-%m-%d %H:%i:%s')
                         AND pont_nb_id = ".($requestdata->journeyID?? -1)
             ;
             $jornadaAberta = get_data($query);
@@ -362,11 +389,13 @@
 
         $macroAbertura = get_data(
             "SELECT * FROM macroponto 
-                WHERE lower(macr_tx_nome) LIKE '%inicio%".$requestdata->breakType."'"
+                WHERE macr_tx_status = 'ativo'
+                    AND lower(macr_tx_nome) LIKE '%inicio%".$requestdata->breakType."'"
         )[0];
         $macroFechamento = get_data(
             "SELECT * FROM macroponto 
-                WHERE lower(macr_tx_nome) LIKE '%fim%".$requestdata->breakType."'"
+                WHERE macr_tx_status = 'ativo'
+                    AND lower(macr_tx_nome) LIKE '%fim%".$requestdata->breakType."'"
         )[0];
 
         //Check if there's an open interval before trying to close{
@@ -374,7 +403,9 @@
                 "SELECT *, (macr_tx_nome like '%inicio%') as open_break FROM ponto
                     JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                     WHERE pont_tx_status = 'ativo'
-                        AND pont_tx_data <= STR_TO_DATE('".$requestdata->endDateTime."', '%Y-%m-%d %H:%i')
+                        AND pont_nb_user = ".$requestdata->userID."
+                        AND macr_tx_status = 'ativo'
+                        AND pont_tx_data <= STR_TO_DATE('".$requestdata->endDateTime.":59', '%Y-%m-%d %H:%i:%s')
                         ".(
                             ($requestdata->breakType != "jornada")?
                                 "AND lower(macr_tx_nome) != 'inicio de jornada'": 
@@ -400,6 +431,7 @@
                         JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                         WHERE pont_tx_status = 'ativo'
                             AND pont_nb_user = ".$requestdata->userID."
+                            AND macr_tx_status = 'ativo'
                         ORDER BY pont_tx_data DESC
                         LIMIT 1"
                 );
@@ -425,6 +457,29 @@
                     AND user_nb_id = ".$requestdata->userID.""
         )[0];
 
+        //Confere se já tem um ponto no mesmo minuto, e adiciona aos segundos como índice de ordenação{
+            $pontoMesmoMinuto = get_data(
+                "SELECT * FROM ponto 
+                    WHERE pont_tx_status = 'ativo'
+                        AND pont_nb_user = ".$requestdata->userID."
+                        AND pont_tx_data LIKE '%".$requestdata->endDateTime."%'
+                    ORDER BY pont_tx_data DESC
+                    LIMIT 1;"
+            );
+            $pontoMesmoMinuto = !empty($pontoMesmoMinuto)? $pontoMesmoMinuto[0]: $pontoMesmoMinuto;
+            
+
+
+            if(!empty($pontoMesmoMinuto["pont_tx_data"])){
+                if($pontoMesmoMinuto["pont_tx_tipo"] == $macroFechamento["macr_tx_codigoInterno"]){
+                    echo "Same register already sent.";
+                    exit;
+                }
+                $indiceSeg = intval(substr($pontoMesmoMinuto["pont_tx_data"], -2))+1;
+                $requestdata->endDateTime = $requestdata->endDateTime.":".sprintf('%02d', $indiceSeg);
+            }
+        //}
+
         $ponto = [
             "pont_nb_user"          => $decoded->data->user_id,
             "pont_tx_dataCadastro"  => date("Y-m-d H:i:s"),
@@ -446,6 +501,7 @@
                 :".implode(", :", array_keys($ponto))."
             )"
         ;
+        
         $result = insert_data($query,$ponto);
         if($requestdata->type == "break"){
 			$result = "Break finish registered successfully.";
