@@ -9,20 +9,18 @@
 		$hoje = date('Y-m-d');
 		$aMotorista = carregar('entidade', $_POST['id']);
 
-		// if(empty($_POST['motivo'])){
-		// 	$_POST['motivo'] = mysqli_fetch_all(
-		// 		query("SELECT moti_nb_id FROM motivo WHERE moti_tx_nome = 'Registro de ponto mobile' LIMIT 1"),
-		// 		MYSQLI_ASSOC
-		// 	)[0]['moti_nb_id'];
+		// if(empty($_POST["placa"])){
+		// 	set_status("ERRO: Insira a placa do veículo para registrar um ponto.");
+		// 	index();
+		// 	exit;
 		// }
-		// $_POST['motivo'] = intval($_POST['motivo']);
 
-		$ultimoPonto = pegarPontosDia($aMotorista['enti_tx_matricula'], ["pont_tx_tipo", "pont_tx_data", "pont_tx_placa"])[0];		
+		$ultimoPonto = pegarPontosDia($aMotorista['enti_tx_matricula'], ["pont_tx_tipo", "pont_tx_data", "pont_tx_placa"])[0];
 		if (!empty($ultimoPonto[count($ultimoPonto)-1] ['pont_tx_placa']) && $ultimoPonto[count($ultimoPonto)-1] ['pont_tx_placa'] != "Fim de Jornada") {
 			$placa = $ultimoPonto[count($ultimoPonto)-1] ['pont_tx_placa'];
 		} else {
-			if (!empty($_POST['placa'])) {
-				$placa = $_POST['placa'];
+			if (!empty($_POST["placa"])) {
+				$placa = str_replace(["_", "-"], ["", ""], $_POST["placa"]);
 			}
 		}
 		if(!empty($ultimoPonto)){
@@ -42,43 +40,54 @@
 
 		if (!empty($ultimoPonto) && intval($ultimoPonto['sameTypeError'])){
 			set_status("ERRO: Último ponto é do mesmo tipo.");
-		}else{
-
-			//Confere se já tem um ponto no mesmo minuto, e adiciona aos segundos como índice de ordenação{
-				if(
-					!empty($ultimoPonto["pont_tx_data"]) && 
-					substr($ultimoPonto["pont_tx_data"], 0, strlen($ultimoPonto["pont_tx_data"])-2) == substr(strval($dataHora), 0, strlen($dataHora)-2)
-				){
-					$indiceSeg = intval(substr($ultimoPonto["pont_tx_data"], -2))+1;
-					if($indiceSeg > 1){
-					}
-					$dataHora = substr($dataHora, 0, strlen($dataHora)-2).sprintf('%02d', $indiceSeg);
-				}
-			//}
-
-
-			$novoPonto = [
-				'pont_nb_user' 			=> $_SESSION['user_nb_id'],
-				'pont_tx_matricula' 	=> $aMotorista['enti_tx_matricula'],
-				'pont_tx_data' 			=> strval($dataHora),
-				'pont_tx_tipo' 			=> $aTipo['macr_tx_codigoInterno'],
-				'pont_tx_status' 		=> 'ativo',
-				'pont_tx_dataCadastro' 	=> $hoje.' '.date("H:i:s"),
-				'pont_nb_motivo' 		=> $_POST['motivo'],
-				'pont_tx_placa'         => $placa
-			];
-			if(!empty($_POST['latitude'])){
-				$novoPonto['pont_tx_latitude'] = $_POST['latitude'];
-			}
-			if(!empty($_POST['longitude'])){
-				$novoPonto['pont_tx_longitude'] = $_POST['longitude'];
-			}
-			if(!empty($_POST['justificativa'])){
-				$novoPonto['pont_tx_justificativa'] = $_POST['justificativa'];
-			}
-
-			inserir('ponto', array_keys($novoPonto), array_values($novoPonto));
+			index();
+			exit;
 		}
+
+		//Confere se já tem um ponto no mesmo minuto, e adiciona aos segundos como índice de ordenação{
+			if(
+				!empty($ultimoPonto["pont_tx_data"]) && 
+				substr($ultimoPonto["pont_tx_data"], 0, strlen($ultimoPonto["pont_tx_data"])-2) == substr(strval($dataHora), 0, strlen($dataHora)-2)
+			){
+				$indiceSeg = intval(substr($ultimoPonto["pont_tx_data"], -2))+1;
+				$dataHora = substr($dataHora, 0, strlen($dataHora)-2).sprintf('%02d', $indiceSeg);
+			}
+		//}
+
+		//Conferir se a placa foi preenchida parcialmente{
+			if(!empty($placa) && strlen($placa) != 7){
+				set_status("ERRO: Placa do veículo parcial.");
+				index();
+				exit;
+			}
+		//}
+
+
+		$novoPonto = [
+			'pont_nb_user' 			=> $_SESSION['user_nb_id'],
+			'pont_tx_matricula' 	=> $aMotorista['enti_tx_matricula'],
+			'pont_tx_data' 			=> strval($dataHora),
+			'pont_tx_tipo' 			=> $aTipo['macr_tx_codigoInterno'],
+			'pont_tx_status' 		=> 'ativo',
+			'pont_tx_dataCadastro' 	=> $hoje.' '.date("H:i:s")
+		];
+		if(!empty($_POST['motivo'])){
+			$novoPonto['pont_nb_motivo'] = $_POST['motivo'];
+		}
+		if(!empty($placa)){
+			$novoPonto['pont_tx_placa'] = $placa;
+		}
+		if(!empty($_POST['latitude'])){
+			$novoPonto['pont_tx_latitude'] = $_POST['latitude'];
+		}
+		if(!empty($_POST['longitude'])){
+			$novoPonto['pont_tx_longitude'] = $_POST['longitude'];
+		}
+		if(!empty($_POST['justificativa'])){
+			$novoPonto['pont_tx_justificativa'] = $_POST['justificativa'];
+		}
+
+		inserir('ponto', array_keys($novoPonto), array_values($novoPonto));
 
 		index();
 		exit;
@@ -249,8 +258,8 @@
 			}
 			
 			$value = DateTime::createFromFormat('Y-m-d H:i:s', $pontosCompleto[$f]['pont_tx_data']);
-
-			$value = ($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i:s"), "24:00"], '-'): $value->format("H:i:s");
+			$fullDaysCount = (date_diff($value, DateTime::createFromFormat("Y-m-d", $hoje))->d)-1;
+			$value = ($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i:s"), ($fullDaysCount*24).":00"], '-'): $value->format("H:i:s");
 			
 			switch(intval($pontosCompleto[$f]['pont_tx_tipo'])){
 				case 1:
@@ -316,6 +325,7 @@
 			}
 		}
 
+		//Utilizado em batida_ponto_html.php
 		$ultimoInicioJornada = !empty($pares['jornada'])? $pares['jornada'][count($pares['jornada'])-1]['inicio']: null;
 		
 		foreach($pares as $key => $value){
@@ -386,12 +396,7 @@
 				."Matrícula: ".$aMotorista['enti_tx_matricula']."<br><br>"
 				."CPF: ".$aMotorista['enti_tx_cpf']."<br><br>"
 				."Motorista: ".$aMotorista['enti_tx_nome']."<br><br>"
-				."Motivo: "."Registro de ponto mobile"."<br><br>"
 			."</div>",
-			'<div class="col-sm-2 margin-bottom-5" style="float: left; top: -90px;">
-				<label>Placa Do Veiculo</label>
-				<input name="placa" id="placa" value="" autocomplete="off" type="text" class="form-control input-sm">
-			</div>'
 		];
 
 		$aEndosso = carrega_array(
@@ -410,6 +415,7 @@
 			$fields[] = texto('Endosso:', "Endossado por " . $aEndosso['user_tx_login'] . " em " . data($aEndosso['endo_tx_dataCadastro'], 1), 6);
 			$botoesVisiveis = [];
 		}else{
+			$fields[] = campo("Placa do Veículo", "placa", $_POST["placa"], 2, "MASCARA_PLACA");
 			$fields[] = textarea("Justificativa", "justificativa", "", 5, "style='resize: vertical;' placeholder='Em caso de inconsistência, justificar aqui.'");
 		}
 

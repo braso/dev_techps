@@ -36,7 +36,7 @@
 			$timestamp = filemtime($file);
 			$Emissão = date('d/m/Y H:i:s', $timestamp);
 		}else   
-			echo '<script>alert("Não Possui dados desse més")</script>';
+			echo '<script>alert("Não Possui dados desse mês")</script>';
 
 
 
