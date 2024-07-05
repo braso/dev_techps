@@ -32,7 +32,6 @@
 			header('Content-Length: ' . filesize($_POST['caminho']));
 
 			// Lê o arquivo e o envia para o navegador
-			die("debug");
 			readfile($_POST['caminho']);
 			exit;
 		} else {

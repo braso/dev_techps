@@ -304,9 +304,6 @@
 		if(empty($_POST['data'])){
 			$_POST['data'] = date("Y-m-d");
 		}
-
-
-		var_dump($_POST); echo "<br><br>";
 		
 		if(empty($_POST['id'])){
 			echo '<script>alert("ERRO: Deve ser selecionado um motorista para ajustar.")</script>';
