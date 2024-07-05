@@ -7,7 +7,7 @@
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto	
 
 	function cadastrar(){
-		global $totalResumo;
+		global $totalResumo, $CONTEX;
 
 		//Conferir se os campos obrigatórios estão preenchidos corretamente{
 			$baseErrMsg = "Há campos obrigatórios não preenchidos: ";
@@ -309,19 +309,19 @@
 			//* Salvando arquivo e cadastrando no banco de dados
 
 				$filename = md5($novoEndosso['endo_tx_matricula'].$novoEndosso['endo_tx_mes']);
-				if(!is_dir("./arquivos/endosso")){
-					mkdir("./arquivos/endosso");
+				$path = $_SERVER['DOCUMENT_ROOT'].$CONTEX['path']."/arquivos/endosso";
+				if(!is_dir($path)){
+					mkdir($path);
 				}
-				$path = './arquivos/endosso/';
-				if(file_exists($path.$filename.'.csv')){
+				if(file_exists($path."/".$filename.'.csv')){
 					$version = 2;
-					while(file_exists($path.$filename.'_'.strval($version).'.csv')){
+					while(file_exists($path."/".$filename.'_'.strval($version).'.csv')){
 						$version++;
 					}
 					$filename = $filename.'_'.strval($version);
 				}
 				$novoEndosso['endo_tx_filename'] = $filename;
-				$file = fopen($path.$filename.'.csv', 'w');
+				$file = fopen($path."/".$filename.'.csv', 'w');
 				fputcsv($file, array_keys($novoEndosso));
 				fputcsv($file, array_values($novoEndosso));
 				fclose($file);

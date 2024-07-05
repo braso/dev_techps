@@ -32,7 +32,7 @@
 				$MotoristaTotais = json_decode($conteudo_json,true);
 			}
 		}else{
-			echo '<script>alert("Não Possui dados desse més")</script>';
+			echo '<script>alert("Não Possui dados desse mês")</script>';
 		}
 
 

@@ -250,8 +250,6 @@
 			index();
 			exit;
 		}
-
-		die(var_dump($_POST));
 		
 		$_POST['acao'] = "index";
 		

@@ -31,10 +31,18 @@
 		}
 
 		if (empty($_POST['busca_dataInicio'])){
-			$_POST['busca_dataInicio'] = date("Y-m-01");
+			if(!empty($_POST["data_de"])){
+				$_POST['busca_dataInicio'] = $_POST["data_de"];
+			}else{
+				$_POST['busca_dataInicio'] = date("Y-m-01");
+			}
 		}
 		if (empty($_POST['busca_dataFim'])){
-			$_POST['busca_dataFim'] = date("Y-m-d");
+			if(!empty($_POST["data_ate"])){
+				$_POST['busca_dataFim'] = $_POST["data_ate"];
+			}else{
+				$_POST['busca_dataFim'] = date("Y-m-d");
+			}
 		}
 
 		$searchError = false;

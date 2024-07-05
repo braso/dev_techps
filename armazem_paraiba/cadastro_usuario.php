@@ -156,7 +156,6 @@
 			exit;
 		}
 
-		var_dump($usuario);
 		mostrarFormCadastro();
 		exit;
 		

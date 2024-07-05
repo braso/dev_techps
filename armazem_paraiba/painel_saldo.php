@@ -25,35 +25,34 @@ function criar_relatorio_saldo($periodoInicio, $periodoFim){
         foreach ($motoristas as $motorista) {
             $endossado = '';
             // Jornada Prevista, Jornada Efetiva, HE50%, HE100%, Adicional Noturno, Espera Indenizada{
-            $totalJorPrevResut = '00:00';
-            $totalJorPrev = '00:00';
-            $totalJorEfe = '00:00';
-            $totalHE50 = '00:00';
-            $totalHE100 = '00:00';
-            $totalAdicNot = '00:00';
-            $totalEspInd = '00:00';
-            $totalSaldoPeriodo = '00:00';
-            $totalSaldofinal = '00:00';
-            $saldoAnt = '00:00';
+            $totalJorPrevResut = "00:00";
+            $totalJorPrev = "00:00";
+            $totalJorEfe = "00:00";
+            $totalHE50 = "00:00";
+            $totalHE100 = "00:00";
+            $totalAdicNot = "00:00";
+            $totalEspInd = "00:00";
+            $totalSaldoPeriodo = "00:00";
+            $totalSaldofinal = "00:00";
+            $saldoAnt = "00:00";
             
             // saldoAnterior, saldoPeriodo e saldoFinal{
-            $saldoAnterior = mysqli_fetch_all(query("SELECT endo_tx_saldo FROM `endosso`
-                    WHERE endo_tx_matricula = '" . $motorista['enti_tx_matricula'] . "'
-                        AND endo_tx_ate < '" . $periodoInicio . "'
-                        AND endo_tx_status = 'ativo'
-                    ORDER BY endo_tx_ate DESC
-                    LIMIT 1;"), MYSQLI_ASSOC);
-                    
+                $saldoAnterior = mysqli_fetch_all(query("SELECT endo_tx_saldo FROM `endosso`
+                        WHERE endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'
+                            AND endo_tx_ate < '".$periodoInicio."'
+                            AND endo_tx_status = 'ativo'
+                        ORDER BY endo_tx_ate DESC
+                        LIMIT 1;"), MYSQLI_ASSOC);
+                        
 
-            if (isset($saldoAnterior[0]['endo_tx_saldo'])) {
-                $saldoAnterior = $saldoAnterior[0]['endo_tx_saldo'];
-            } elseif (!empty($aMotorista['enti_tx_banco'])) {
-                $saldoAnterior = $aMotorista['enti_tx_banco'];
-                $saldoAnterior = $saldoAnterior[0][0] == '0' && strlen($saldoAnterior) > 5 ? substr($saldoAnterior, 1) : $saldoAnterior;
-            } else {
-                $saldoAnterior = '00:00';
-            }
-            // 		}
+                if (!empty($saldoAnterior[0]["endo_tx_saldo"])) {
+                    $saldoAnterior = $saldoAnterior[0]["endo_tx_saldo"];
+                } elseif (!empty($aMotorista["enti_tx_banco"])) {
+                    $saldoAnterior = $aMotorista["enti_tx_banco"][0][0] == "0" && strlen($aMotorista["enti_tx_banco"]) > 5 ? substr($aMotorista["enti_tx_banco"], 1) : $aMotorista["enti_tx_banco"];
+                } else {
+                    $saldoAnterior = "00:00";
+                }
+            //}
             
             $diasPonto = [];
             $dataTimeInicio = new DateTime($periodoInicio);
@@ -279,7 +278,7 @@ function index() {
                         }
                     </script>';
     
-    if (isset($_POST['empresa']) && !empty($_POST['empresa'])) {
+    if (!empty($_POST['empresa'])) {
         $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
     }
     
@@ -294,14 +293,13 @@ function index() {
     linha_form($c);
     fecha_form($b);
     
-    if (isset($_POST['empresa']) && !empty($_POST['empresa']) && isset($_POST['busca_data']) && !empty($_POST['busca_data'])) {
+    if (!empty($_POST['empresa']) && !empty($_POST['busca_data'])) {
         $idEmpresa = $_POST['empresa'];
         $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM `empresa` WHERE empr_tx_Ehmatriz = 'sim' AND empr_nb_id = $idEmpresa"), MYSQLI_ASSOC);
         empresa($aEmpresa,$idEmpresa);
-        
     }else{
         $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM `empresa` WHERE empr_tx_Ehmatriz = 'sim'"), MYSQLI_ASSOC);
-        include_once 'painel_empresas.php';
+        include_once "painel_empresas.php";
     }
     ?>
         <style>

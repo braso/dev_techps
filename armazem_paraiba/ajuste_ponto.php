@@ -301,16 +301,18 @@
 	function index(){
 		global $CONTEX;
 
-		var_dump($_POST); echo "<br><br>";
-
 		if(empty($_POST['data'])){
 			$_POST['data'] = date("Y-m-d");
 		}
+
+
+		var_dump($_POST); echo "<br><br>";
 		
 		if(empty($_POST['id'])){
 			echo '<script>alert("ERRO: Deve ser selecionado um motorista para ajustar.")</script>';
 
 			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
+
 			voltar();
 			exit;
 		}else{
@@ -388,10 +390,19 @@
 			$campoJust[] = textarea('Justificativa','descricao',($_POST['descricao']?? ""),12);
 		}
 
+		if(!empty($_POST["data_de"])){
+			$variableFields[] = campo_hidden("data_de", $_POST["data_de"]);
+		}
+		if(!empty($_POST["data_ate"])){
+			$variableFields[] = campo_hidden("data_ate", $_POST["data_ate"]);
+		}
+
 		$botoes[] = $botao_imprimir;
 		$botoes[] = botao(
 			'Voltar',
 			'voltar',
+			implode(",", array_keys($_POST)),
+			implode(",", array_values($_POST))
 		);
 		$botoes[] = status();
 		
