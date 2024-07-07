@@ -39,6 +39,7 @@
         try {
             return JWT::decode($jwt, new Key($key, 'HS256'));
         } catch (Exception $e) {
+            header('HTTP/1.0 401 Bad Request');
             die($e->getMessage());
         }
     }
