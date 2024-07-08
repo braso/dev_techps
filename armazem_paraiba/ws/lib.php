@@ -25,7 +25,7 @@
     function validate_token($key){
 		
         if (! preg_match('/Bearer\s(\S+)/', $_SERVER['HTTP_AUTHORIZATION'], $matches)) {
-            // header('HTTP/1.0 400 Bad Request');
+            header('HTTP/1.0 400 Bad Request');
             echo 'Token not found in request';
             exit;
         }
@@ -39,7 +39,7 @@
         try {
             return JWT::decode($jwt, new Key($key, 'HS256'));
         } catch (Exception $e) {
-            die($e->getMessage());
+            header('HTTP/1.0 401 Not Authorized');
         }
     }
 
@@ -166,18 +166,18 @@
 
     //Journey Functions
     function create_journey_ob($ponto,$type,$userid,$btype=''){
-        $current = new stdClass();
-        $current->id = $ponto["pont_nb_id"];
-        $current->userID = $userid;
-        $current->startDateTime = $ponto["pont_tx_data"];
-        $current->finalDateTime = $ponto["pont_tx_data"];
-        $current->type = $type;
-        $current->breakType = $btype;
-        if($btype==''){
+        $current = (object)[
+            "id"            => $ponto["pont_nb_id"],
+            "userID"        => $userid,
+            "startDateTime" => $ponto["pont_tx_data"],
+            "finalDateTime" => $ponto["pont_tx_data"],
+            "type"          => $type,
+            "breakType"     => $btype,
+            "breaks"        => null
+        ];
+        
+        if($btype==""){
             $current->breaks = [];
-        }
-        else{
-            $current->breaks = null;
         }
         return $current;
     }

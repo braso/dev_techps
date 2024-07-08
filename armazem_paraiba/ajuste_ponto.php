@@ -307,7 +307,7 @@
 		
 		if(empty($_POST['id'])){
 			echo '<script>alert("ERRO: Deve ser selecionado um motorista para ajustar.")</script>';
-
+			
 			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
 
 			voltar();
@@ -385,13 +385,6 @@
 			$variableFields[] = combo_bd('Motivo','motivo',($_POST['motivo']?? ""),4,'motivo','',' AND moti_tx_tipo = "Ajuste" ORDER BY moti_tx_nome');
 	
 			$campoJust[] = textarea('Justificativa','descricao',($_POST['descricao']?? ""),12);
-		}
-
-		if(!empty($_POST["data_de"])){
-			$variableFields[] = campo_hidden("data_de", $_POST["data_de"]);
-		}
-		if(!empty($_POST["data_ate"])){
-			$variableFields[] = campo_hidden("data_ate", $_POST["data_ate"]);
 		}
 
 		$botoes[] = $botao_imprimir;
