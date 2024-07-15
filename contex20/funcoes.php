@@ -45,26 +45,61 @@
 		return $interval->format('%Y-%m-%d');
 	}
 
-	function validaCPF(string $cpf){
+	function validarCPF(string $cpf): bool{
 		// Extrai somente os números
-		$cpf = preg_replace( '/[^0-9]/is', '', $cpf );
+		$cpf = preg_replace( "/[^0-9]/is", "", $cpf);
 		
-		// Verifica se foi informado todos os digitos corretamente ou se todos os dígitos estão repetidos
-		if (strlen($cpf) != 11 || preg_match('/(\d)\1{10}/', $cpf) === false){
+		if (strlen($cpf) != 11 || preg_match_all("/\d{11}/", $cpf) === false){
 			return false;
 		}
 
-		// Faz o calculo para validar o CPF
-		for ($t = 9; $t < 11; $t++) {
-			$d = 0;
-			for ($c = 0; $c < $t; $c++) {
-				$d += $cpf[$c] * (($t + 1) - $c);
+		$digitosVerificadores = [$cpf[9], $cpf[10]];
+		$verificadores = [0,0];
+
+
+		for($f=0; $f<2; $f++){
+			for($f2 = 0; $f2 < $f+9; $f2++){
+				$verificadores[$f] += $cpf[$f2]*($f-$f2+10);
 			}
-			$d = ((10 * $d) % 11) % 10;
-			if ($cpf[$c] != $d) {
+			$verificadores[$f] = (($verificadores[$f]*10)%11)%10;
+			if($digitosVerificadores[$f] != $verificadores[$f]){
 				return false;
 			}
 		}
+
+		switch($cpf[8]){
+			case 0:
+				echo "CPF do Rio Grande do Sul";
+			break;
+			case 1:
+				echo "CPF do Distrito Federal, Goiás, Mato Grosso do Sul ou Tocantins";
+			break;
+			case 2:
+				echo "CPF do Pará, Amazonas, Acre, Amapá, Rondônia ou Roraima";
+			break;
+			case 3:
+				echo "CPF do Ceará, Maranhão ou Piauí";
+			break;
+			case 4:
+				echo "CPF do Pernambuco, Rio Grande do Norte, Paraíba ou Alagoas";
+			break;
+			case 5:
+				echo "CPF do Bahia ou Sergipe";
+			break;
+			case 6:
+				echo "CPF do Minas Gerais";
+			break;
+			case 7:
+				echo "CPF do Rio de Janeiro ou Espírito Santo";
+			break;
+			case 8:
+				echo "CPF do São Paulo";
+			break;
+			case 9:
+				echo "CPF do Paraná ou Santa Catarina";
+			break;
+		}
+		echo "<br>";
 		return true;
 	}
 

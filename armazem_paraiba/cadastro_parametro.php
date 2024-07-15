@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -304,8 +304,8 @@
 						'repousoEmbarcado' => 'Repouso Embarcado',
 					]
 				),
-				"checkbox",
 				5,
+				"checkbox",
 				'',
 				$a_mod['para_tx_ignorarCampos'] ?? ''
 			)

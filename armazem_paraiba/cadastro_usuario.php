@@ -69,7 +69,7 @@
 			$baseErrMsg = "ERRO: ";
 			$error_msg = $baseErrMsg;
 			if(!empty($_POST["cpf"])){
-				$_POST["cpf"] = str_replace([".", "-", "_"], "", $_POST["cpf"]);
+				$_POST["cpf"] = preg_replace( "/[^0-9]/is", "", $_POST["cpf"]);
 				if(strlen($_POST["cpf"]) != 11){
 					$error_msg .= "CPF parcial, ";
 				}

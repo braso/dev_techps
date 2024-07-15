@@ -247,7 +247,7 @@
 			$enti_valores[] = !empty($_POST[$post_values[$f]])? $_POST[$post_values[$f]]: '';
 		}
 
-		$cpfLimpo = str_replace(array('.', '-', '/'), "", $_POST['cpf']);
+		$cpfLimpo = preg_replace("/[^0-9]/is", "", $_POST["cpf"]);
 		
 		if (empty($_POST['id'])) {//Se está criando um motorista novo
 			$aEmpresa = carregar('empresa', $_POST['empresa']);
@@ -803,24 +803,20 @@
 			$extraEmpresa = " AND empr_nb_id = '".$_SESSION['user_nb_empresa']."'";
 		}
 		
-		while(
-			!empty($_POST['busca_cpf'])
-			&& !empty($_POST['busca_cpf'][strlen($_POST['busca_cpf'])-1]) 
-			&& in_array($_POST['busca_cpf'][strlen($_POST['busca_cpf'])-1], ['.', '-', ' '])
-		){
-			$_POST['busca_cpf'] = substr($_POST['busca_cpf'], 0, strlen($_POST['busca_cpf'])-1);
+		if(!empty($_POST["busca_cpf"])){
+			$_POST["busca_cpf"] = preg_replace( "/[^0-9]/is", "", $_POST["busca_cpf"]);
 		}
 
 		$extra =
-			((!empty($_POST['busca_codigo']))? 		" AND enti_nb_id LIKE '%".$_POST['busca_codigo']."%'": '').
-			((!empty($_POST['busca_matricula']))? 	" AND enti_tx_matricula LIKE '%".$_POST['busca_matricula']."%'": '').
-			((!empty($_POST['busca_empresa']))? 	" AND enti_nb_empresa = '".$_POST['busca_empresa']."'": '').
-			((!empty($_POST['busca_nome']))? 		" AND enti_tx_nome LIKE '%".$_POST['busca_nome']."%'": '').
-			((!empty($_POST['busca_cpf']))? 		" AND enti_tx_cpf LIKE '%".$_POST['busca_cpf']."%'": '').
-			((!empty($_POST['busca_ocupacao']))? 	" AND enti_tx_ocupacao = '".$_POST['busca_ocupacao']."'": '').
-			((!empty($_POST['busca_parametro']))? 	" AND enti_nb_parametro = '".$_POST['busca_parametro']."'": '').
-			(!empty($_POST['busca_status'])?		" AND enti_tx_status = '".strtolower($_POST['busca_status'])."'": '').
-			(!empty($_POST['busca_padrao'])?		" AND enti_tx_ehPadrao = '".$_POST['busca_padrao']."'": '');
+			((!empty($_POST["busca_codigo"]))? 		" AND enti_nb_id LIKE '%".$_POST["busca_codigo"]."%'": '').
+			((!empty($_POST["busca_matricula"]))? 	" AND enti_tx_matricula LIKE '%".$_POST["busca_matricula"]."%'": '').
+			((!empty($_POST["busca_empresa"]))? 	" AND enti_nb_empresa = '".$_POST["busca_empresa"]."'": '').
+			((!empty($_POST["busca_nome"]))? 		" AND enti_tx_nome LIKE '%".$_POST["busca_nome"]."%'": '').
+			((!empty($_POST["busca_cpf"]))? 		" AND enti_tx_cpf LIKE '%".$_POST["busca_cpf"]."%'": '').
+			((!empty($_POST["busca_ocupacao"]))? 	" AND enti_tx_ocupacao = '".$_POST["busca_ocupacao"]."'": '').
+			((!empty($_POST["busca_parametro"]))? 	" AND enti_nb_parametro = '".$_POST["busca_parametro"]."'": '').
+			(!empty($_POST["busca_status"])?		" AND enti_tx_status = '".strtolower($_POST["busca_status"])."'": '').
+			(!empty($_POST["busca_padrao"])?		" AND enti_tx_ehPadrao = '".$_POST["busca_padrao"]."'": '');
 
 			$camposBusca = [ 
 				campo('Código', 'busca_codigo', ($_POST['busca_codigo']?? ''), 1,'','maxlength="6"'),

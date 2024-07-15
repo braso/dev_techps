@@ -35,6 +35,7 @@
 	}else{
 		$limitedQuery = $totalQuery;
 	}
+
 	//EXEMPLO DO PREG_MATCH PARA EXTRAIR FUNCAO E SEUS PARAMETROS
 	// $text = 'This is a line (an example between parenthesis)';
 	// preg_match('/(.*)\((.*?)\)(.*)/', $text, $match);
@@ -54,6 +55,27 @@
 
 	
 	$data = [];
+
+	//Ordenar{
+		$orderBy = $_REQUEST['order'][0]['column'];
+
+		$isInt = (!empty($columns[$_REQUEST['order'][0]['column']]) && $columns[$_REQUEST['order'][0]['column']] == '');
+
+		$orderArray = [];
+		foreach($limitedQuery as $row){
+			if($isInt){
+				$orderArray[] = intval(array_values($row)[$orderBy]);
+			}else{
+				$orderArray[] = array_values($row)[$orderBy];
+			}
+		}
+		array_multisort(
+			$orderArray,
+			($_REQUEST['order'][0]['dir'] == 'desc'? SORT_ASC: SORT_DESC),
+			$limitedQuery
+		);
+	//}
+
 	foreach($limitedQuery as $row){  // preparing an array
 		$nestedData = [];
 		for($i = 0; $i < count($columns); $i++){
@@ -81,26 +103,6 @@
 		}
 		$data[] = $nestedData;
 	}
-
-	//Ordenar{
-		$orderBy = $_REQUEST['order'][0]['column'];
-
-		$isInt = (!empty($columns[$_REQUEST['order'][0]['column']]) && $columns[$_REQUEST['order'][0]['column']] == '');
-
-		$orderArray = [];
-		foreach($data as $row){
-			if($isInt){
-				$orderArray[] = intval($row[$orderBy]);
-			}else{
-				$orderArray[] = $row[$orderBy];
-			}
-		}
-		array_multisort(
-			$orderArray,
-			($_REQUEST['order'][0]['dir'] == 'desc'? SORT_ASC: SORT_DESC),
-			$data
-		);
-	//}
 
 	$json_data = [
 		"draw"            => intval($_REQUEST['draw']), // for every request/draw by clientside , they send a number as a parameter, when they recieve a response/data they first check the draw number, so we are sending same number in draw. 

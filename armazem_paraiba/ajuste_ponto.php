@@ -94,8 +94,8 @@
 							)
 						);
 						
-						$temPeriodoAberto['pont_tx_tipo'] = intval($temPeriodoAberto['pont_tx_tipo']);
-						$temPeriodoAberto['macr_tx_codigoInterno'] = intval($temPeriodoAberto['macr_tx_codigoInterno']);
+						$temPeriodoAberto['pont_tx_tipo'] = !empty($temPeriodoAberto['pont_tx_tipo'])? intval($temPeriodoAberto['pont_tx_tipo']): $temPeriodoAberto['pont_tx_tipo'];
+						$temPeriodoAberto['macr_tx_codigoInterno'] = !empty($temPeriodoAberto['macr_tx_codigoInterno'])? intval($temPeriodoAberto['macr_tx_codigoInterno']): $temPeriodoAberto['macr_tx_codigoInterno'];
 						
 						$openTypeValue = intval($aTipo['macr_tx_codigoInterno'])-(intval($aTipo['macr_tx_codigoInterno'])%2 == 0? 1: 0); //O código de abertura do tipo que está sendo registrado.
 						$sameType = ($temPeriodoAberto['pont_tx_tipo'] == $openTypeValue || $temPeriodoAberto['pont_tx_tipo'] == $openTypeValue+1); //Se esse período encontrado é do mesmo tipo que está tentando ser cadastrado
@@ -304,6 +304,10 @@
 		if(empty($_POST['data'])){
 			$_POST['data'] = date("Y-m-d");
 		}
+
+		if(empty($_POST['HTTP_REFERER'])){
+			$_POST['HTTP_REFERER'] = $_SERVER["HTTP_REFERER"];
+		}
 		
 		if(empty($_POST['id'])){
 			echo '<script>alert("ERRO: Deve ser selecionado um motorista para ajustar.")</script>';
@@ -381,19 +385,14 @@
 			$iconeExcluir = "icone_excluir_ajuste(".implode(",", $parametros).")"; //Utilizado em grid()
 			$variableFields[] = campo_data('Data', 'data', ($_POST['data']?? ""), 2, "onfocusout='atualizar_form(".$_POST['id'].", this.value, \"".$_POST['data_de']."\", \"".$_POST['data_ate']."\")', null");
 			$variableFields[] = campo_hora('Hora','hora',($_POST['hora']?? ""),2);
-			$variableFields[] = combo_bd('Código Macro','idMacro',($_POST['idMacro']?? ""),4,"macroponto","","ORDER BY macr_nb_id");
+			$variableFields[] = combo_bd('Tipo de Registro','idMacro',($_POST['idMacro']?? ""),4,"macroponto","","ORDER BY macr_nb_id");
 			$variableFields[] = combo_bd('Motivo','motivo',($_POST['motivo']?? ""),4,'motivo','',' AND moti_tx_tipo = "Ajuste" ORDER BY moti_tx_nome');
 	
 			$campoJust[] = textarea('Justificativa','descricao',($_POST['descricao']?? ""),12);
 		}
 
 		$botoes[] = $botao_imprimir;
-		$botoes[] = botao(
-			'Voltar',
-			'voltar',
-			implode(",", array_keys($_POST)),
-			implode(",", array_values($_POST))
-		);
+		$botoes[] = "<button name='acao' id='botaoContexVoltar' value='voltar' type='submit' class='btn btn-secondary'>Voltar</button>";
 		$botoes[] = status();
 		
 
@@ -429,7 +428,7 @@
 			"<spam class='glyphicon glyphicon-remove'></spam>"	=> $iconeExcluir
 		];
 		
-		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 1, 'desc', -1);
+		grid($sql, array_keys($gridFields), array_values($gridFields), '', '12', 1, "desc", -1);
 
 		echo
 			"

@@ -208,6 +208,7 @@
 
 		cabecalho("Buscar Endosso");
 
+		$extra = "";
 		$extraEmpresa = "";
 		$extraEmpresaMotorista = "";
 		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
@@ -250,7 +251,6 @@
 				}
 			}
 
-			$extra = "";
 			if(isset($_POST["acao"])){
 				if($error){
 					set_status("ERRO: Insira os campos para pesquisar: ".implode(", ", $errorMsg).".");
@@ -404,11 +404,9 @@
 						if($somaSaldos[0] != "-"){
 							$pago = operarHorarios([$somaSaldos, $totalResumo["saldoAtual"]], "-");
 						}
-						if($endossoCompleto["endo_tx_dataCadastro"] > "2024-07-03"){
-							$pago = (operarHorarios([$endossoCompleto["endo_tx_horasApagar"], $totalResumo["he100"]], "+"));
-							if(operarHorarios([$somaSaldos, $pago], "-")[0] == "-"){
-								$pago = $somaSaldos;
-							}
+						$pago = (operarHorarios([$endossoCompleto["endo_tx_horasApagar"], $totalResumo["he100"]], "+"));
+						if(operarHorarios([$somaSaldos, $pago], "-")[0] == "-"){
+							$pago = $somaSaldos;
 						}
 
 						$saldosMotorista = "SALDOS: <br>

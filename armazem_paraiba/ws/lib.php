@@ -1,4 +1,5 @@
 <?php
+
     require_once 'vendor/autoload.php';
     require_once __DIR__."/../load_env.php";
     use Firebase\JWT\JWT;
@@ -40,6 +41,7 @@
             return JWT::decode($jwt, new Key($key, 'HS256'));
         } catch (Exception $e) {
             header('HTTP/1.0 401 Not Authorized');
+            die($e->getMessage());
         }
     }
 
@@ -86,7 +88,7 @@
                     AND p.pont_tx_data > STR_TO_DATE(?, '%Y-%m-%d %H:%i')
         		ORDER BY pont_tx_data ASC";
         
-        $data = get_data($query,[$userid, date_format($limitDate,"Y-m-d")]);
+        $data = get_data($query,[$userid, date_format($limitDate, "Y-m-d")]);
 
         $currentJourney = (object)[];
         $currentBreak = [];
@@ -96,23 +98,23 @@
 				if(strtolower($ponto["macr_tx_nome"]) == "inicio de jornada"){
 					$currentBreak = [];
 					$currentJourney->breaks = [];
-					$currentJourney= create_journey_ob($ponto,"journey",$userid);
-					$currentJourney->finalDateTime = Null;
+					$currentJourney = create_journey_ob($ponto, "journey", $ponto["pont_nb_user"]);
+					$currentJourney->finalDateTime = null;
 				}else{
 					$currentBreak[$ponto["pont_tx_tipo"]] = null;
 					$currentBreak[$ponto["pont_tx_tipo"]] = create_journey_ob(
 						$ponto,
 						"break",
-						$userid,
+						$ponto["pont_nb_user"],
 						trim(str_replace("inicio de ", "", strtolower($macroNomes[$ponto["pont_tx_tipo"]])))
 					);
-					$currentBreak[$ponto["pont_tx_tipo"]]->finalDateTime = Null;
+					$currentBreak[$ponto["pont_tx_tipo"]]->finalDateTime = null;
 				}
 			}else{
 				if(strtolower($ponto["macr_tx_nome"]) == "fim de jornada"){
 					if(empty($currentJourney) || $currentJourney == (object)[]){
-						$currentJourney= create_journey_ob($ponto,"journey",$userid);
-						$currentJourney->startDateTime = Null; 
+						$currentJourney= create_journey_ob($ponto, "journey" ,$ponto["pont_nb_user"]);
+						$currentJourney->startDateTime = null;
 					}
 
 					$currentJourney->breaks = array_merge($currentJourney->breaks,array_values($currentBreak));
@@ -140,7 +142,7 @@
 						$userid,
 						trim(str_replace("fim de ", "", strtolower($macroNomes[$tipo])))
 					);
-					$currentBreak[$tipo]->startDateTime = Null;
+					$currentBreak[$tipo]->startDateTime = null;
 					$currentJourney->breaks = array_merge($currentJourney->breaks,array_values($currentBreak));
 					$currentBreak = [];
 				}
