@@ -342,7 +342,7 @@
 		}else{
 			$cidade = ['cida_tx_nome' => ''];
 		}
-		$campo_cidade = texto('Cidade/UF', $cidade['cida_tx_nome'], 2);
+		$campo_cidade = texto('Cidade/UF', "[".$cidade['cida_tx_uf']."] ".$cidade['cida_tx_nome'], 2);
     if (is_bool(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) && (!empty($input_values['Ehmatriz']) && $input_values['Ehmatriz'] == 'sim')) {
 			$c = [
 				texto('CPF/CNPJ*',$input_values['cnpj'],2),

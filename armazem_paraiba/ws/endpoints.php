@@ -1,4 +1,8 @@
 <?php
+    /* Modo debug
+        ini_set('display_errors', 1);
+        error_reporting(E_ALL);
+    //*/
     
     require_once "../load_env.php";
     require_once "lib.php";
@@ -45,7 +49,12 @@
 
     function get_user($userid = null){
 
-        $decoded = validate_token($_ENV["APP_KEY"]);
+        try{
+            $decoded = validate_token($_ENV["APP_KEY"]);
+        }catch(Exception $e){
+            die($e->getMessage());
+        }
+
         if(empty($userid)){
             $userid = $decoded->data->user_id;
         }
@@ -83,7 +92,11 @@
     }
 
     function get_journeys($userid = null){
-        $decoded = validate_token($_ENV["APP_KEY"]);
+        try{
+            $decoded = validate_token($_ENV["APP_KEY"]);
+        }catch(Exception $e){
+            die($e->getMessage());
+        }
         
         if(empty($userid)){
             $userid = $decoded->data->user_id;
@@ -101,7 +114,11 @@
     }
 
     function refresh(){
-        $decoded = validate_token($_ENV["APP_KEY"]);
+        try{
+            $decoded = validate_token($_ENV["APP_KEY"]);
+        }catch(Exception $e){
+            die($e->getMessage());
+        }
 
         $token = makeToken($decoded->data, $_ENV["APP_KEY"]);
         echo $token;
@@ -110,7 +127,11 @@
     }
 
     function begin_journey(){
-        $decoded = validate_token($_ENV["APP_KEY"]);
+        try{
+            $decoded = validate_token($_ENV["APP_KEY"]);
+        }catch(Exception $e){
+            die($e->getMessage());
+        }
 		
         if(empty($_POST)){
             $putfp = fopen('php://input', 'r');
@@ -149,6 +170,8 @@
                 $_POST['breakType'] = 'jornada';
             }
         //}
+
+        $_POST["startDateTime"] = substr($_POST["startDateTime"], 0, 16);
 
         //Check if user has entity{
             $entity = 
@@ -331,8 +354,12 @@
     }
 
     function finish_journey(){
-
-        $decoded = validate_token($_ENV["APP_KEY"]);
+        try{
+            $decoded = validate_token($_ENV["APP_KEY"]);
+        }catch(Exception $e){
+            die($e->getMessage());
+        }
+        
         $putfp = fopen('php://input', 'r');
         $putdata = "";
         
@@ -361,6 +388,8 @@
                 $requestdata->breakType = 'jornada';
             }
         //}
+
+        $requestdata->endDateTime = substr($requestdata->endDateTime, 0, 16);
         
         //Check if there's an open journey{
             $query = 

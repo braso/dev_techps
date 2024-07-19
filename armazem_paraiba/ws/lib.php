@@ -1,4 +1,5 @@
 <?php
+
     require_once 'vendor/autoload.php';
     require_once __DIR__."/../load_env.php";
     use Firebase\JWT\JWT;
@@ -23,9 +24,8 @@
     }
 
     function validate_token($key){
-		
         if (! preg_match('/Bearer\s(\S+)/', $_SERVER['HTTP_AUTHORIZATION'], $matches)) {
-            // header('HTTP/1.0 400 Bad Request');
+            header('HTTP/1.0 400 Bad Request');
             echo 'Token not found in request';
             exit;
         }
@@ -36,11 +36,30 @@
             exit;
         }
 
-        try {
-            return JWT::decode($jwt, new Key($key, 'HS256'));
-        } catch (Exception $e) {
+        $token = null;
+        try{
+            $token = JWT::decode($jwt, new Key($key, 'HS256'));
+            if(!isset($token->exp) || time() >= $token->exp){
+                throw new Exception("Token Expired.");
+            }
+        }catch (Exception $e){
+            header('HTTP/1.0 401 Not Authorized');
             die($e->getMessage());
         }
+
+        return $token;
+
+        // try {
+        //     $decoded = JWT::decode($jwt, new Key($key, 'HS256'));
+        //     $expireDate = date("Y-m-d H:i:s", $decoded->exp);
+        //     if(date("Y-m-d H:i:s") > $expireDate){
+        //         throw new Exception("Token Expired.");
+        //     }
+        //     return $decoded;
+        // } catch (Exception $e) {
+        //     header('HTTP/1.0 401 Not Authorized');
+        //     die($e->getMessage());
+        // }
     }
 
     function get_data($query,$querydata=[]){
@@ -86,7 +105,7 @@
                     AND p.pont_tx_data > STR_TO_DATE(?, '%Y-%m-%d %H:%i')
         		ORDER BY pont_tx_data ASC";
         
-        $data = get_data($query,[$userid, date_format($limitDate,"Y-m-d")]);
+        $data = get_data($query,[$userid, date_format($limitDate, "Y-m-d")]);
 
         $currentJourney = (object)[];
         $currentBreak = [];
@@ -96,23 +115,23 @@
 				if(strtolower($ponto["macr_tx_nome"]) == "inicio de jornada"){
 					$currentBreak = [];
 					$currentJourney->breaks = [];
-					$currentJourney= create_journey_ob($ponto,"journey",$userid);
-					$currentJourney->finalDateTime = Null;
+					$currentJourney = create_journey_ob($ponto, "journey", $ponto["pont_nb_user"]);
+					$currentJourney->finalDateTime = null;
 				}else{
 					$currentBreak[$ponto["pont_tx_tipo"]] = null;
 					$currentBreak[$ponto["pont_tx_tipo"]] = create_journey_ob(
 						$ponto,
 						"break",
-						$userid,
+						$ponto["pont_nb_user"],
 						trim(str_replace("inicio de ", "", strtolower($macroNomes[$ponto["pont_tx_tipo"]])))
 					);
-					$currentBreak[$ponto["pont_tx_tipo"]]->finalDateTime = Null;
+					$currentBreak[$ponto["pont_tx_tipo"]]->finalDateTime = null;
 				}
 			}else{
 				if(strtolower($ponto["macr_tx_nome"]) == "fim de jornada"){
 					if(empty($currentJourney) || $currentJourney == (object)[]){
-						$currentJourney= create_journey_ob($ponto,"journey",$userid);
-						$currentJourney->startDateTime = Null; 
+						$currentJourney= create_journey_ob($ponto, "journey" ,$ponto["pont_nb_user"]);
+						$currentJourney->startDateTime = null;
 					}
 
 					$currentJourney->breaks = array_merge($currentJourney->breaks,array_values($currentBreak));
@@ -140,7 +159,7 @@
 						$userid,
 						trim(str_replace("fim de ", "", strtolower($macroNomes[$tipo])))
 					);
-					$currentBreak[$tipo]->startDateTime = Null;
+					$currentBreak[$tipo]->startDateTime = null;
 					$currentJourney->breaks = array_merge($currentJourney->breaks,array_values($currentBreak));
 					$currentBreak = [];
 				}
@@ -166,18 +185,18 @@
 
     //Journey Functions
     function create_journey_ob($ponto,$type,$userid,$btype=''){
-        $current = new stdClass();
-        $current->id = $ponto["pont_nb_id"];
-        $current->userID = $userid;
-        $current->startDateTime = $ponto["pont_tx_data"];
-        $current->finalDateTime = $ponto["pont_tx_data"];
-        $current->type = $type;
-        $current->breakType = $btype;
-        if($btype==''){
+        $current = (object)[
+            "id"            => $ponto["pont_nb_id"],
+            "userID"        => $userid,
+            "startDateTime" => $ponto["pont_tx_data"],
+            "finalDateTime" => $ponto["pont_tx_data"],
+            "type"          => $type,
+            "breakType"     => $btype,
+            "breaks"        => null
+        ];
+        
+        if($btype==""){
             $current->breaks = [];
-        }
-        else{
-            $current->breaks = null;
         }
         return $current;
     }

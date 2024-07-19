@@ -248,6 +248,7 @@
 							},
 							error: function (request, error) {
 								console.log(request);
+								console.log(error);
 							}
 						}
 					});

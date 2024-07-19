@@ -1,7 +1,7 @@
 <?php
     require_once 'endpoints.php';
     require_once '../load_env.php';
-
+    
     
     $path = str_replace($_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/", "", $_SERVER['REQUEST_URI']);
     $elements = explode('/', $path);
