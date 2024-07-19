@@ -200,7 +200,7 @@
 
 <body onload="contex_foco()" onclick="updateTimer()" style="zoom:100%;" class="page-container-bg-solid page-boxed">
 
-	<?php /*include "loading.html";*/ ?>
+	<?php /* include "loading.html"; */ ?>
 	
 	<!-- INICIO HEADER -->
 	<div class="page-header">

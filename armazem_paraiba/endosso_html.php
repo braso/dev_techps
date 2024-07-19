@@ -5,7 +5,6 @@
 	}
 	
 	#saldo {
-		width: 50% !important;
 		margin-top: 9px !important;
 		text-align: center;
 	}

@@ -249,7 +249,7 @@
 			if($saldoAnterior != '--:--'){
 				$saldoFinal = somarHorarios([$saldoAnterior, $totalResumo['diffSaldo']]);
 			}else{
-				$saldoFinal = somarHorarios(['00:00', $totalResumo['diffSaldo']]);
+				$saldoFinal = $totalResumo['diffSaldo'];
 			}
 			
 

@@ -1,40 +1,39 @@
 <?php
 	/* Modo debug
-		ini_set('display_errors', 1);
+		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
 	global $CONTEX;
 
 	
-
-	if(isset($_GET['acao']) && empty($_POST['acao'])){
-		$_POST['acao']=$_GET['acao'];
+	if(isset($_GET["acao"]) && empty($_POST["acao"])){
+		$_POST["acao"] = $_GET["acao"];
 	}
 
-	if(isset($_GET['acao']) && ($_POST['acao'] == $_GET['acao'] || $_GET['acao'] == 'index')){
+	if(isset($_GET["acao"]) && ($_POST["acao"] == $_GET["acao"] || $_GET["acao"] == "index")){
 		foreach ($_GET as $key => $value) {
-			if($key != 'acao' && $value != ''){
+			if($key != "acao" && $value != ""){
 				$_POST[$key] = $value;
 			}
 		}
 	}
 
-	if(empty($_POST['acao'])){
-		if(function_exists('index')){
+	if(empty($_POST["acao"])){
+		if(function_exists("index")){
 			index();
 			exit;
 		}
 	}else{
-		if(function_exists($_POST['acao'])){
-			$_POST['acao']();
+		if(function_exists($_POST["acao"])){
+			$_POST["acao"]();
 		}else{
-			echo"ERRO: Função '".$_POST['acao']."' não existe!";
+			echo "ERRO: Função '".$_POST["acao"]."' não existe!";
 			exit;
 		}
 		
 	}
 
-	function diferenca_data(string $data1, string $data2=''){
+	function diferenca_data(string $data1, string $data2=""){
 		if(empty($data2)){
 			$data2=date("Y-m-d");
 		}
@@ -42,7 +41,7 @@
 		// formato da data yyyy-mm-dd
 		$date = new DateTime($data1);
 		$interval = $date->diff(new DateTime($data2));
-		return $interval->format('%Y-%m-%d');
+		return $interval->format("%Y-%m-%d");
 	}
 
 	function validarCPF(string $cpf): bool{
@@ -103,9 +102,38 @@
 		return true;
 	}
 
+	function formatToTime(int $hours, int $minutes, int $seconds = 0): string{
+		return 
+			str_pad($hours,   2, "0", STR_PAD_LEFT)
+			.":".str_pad($minutes, 2, "0", STR_PAD_LEFT)
+			.($seconds != 0? ":".str_pad($seconds, 2, "0", STR_PAD_LEFT): "")
+		;
+	}
+
+	function lerEndossoCSV(string $filename){
+		global $CONTEX;
+		
+		if(substr($filename, -4) != ".csv"){
+			$filename .= ".csv";
+		}
+
+		$endosso = fopen($_SERVER["DOCUMENT_ROOT"].$CONTEX["path"]."/arquivos/endosso/".$filename, "r");
+		$keys = fgetcsv($endosso);
+		$values = fgetcsv($endosso);
+		$endosso = [];
+		for($j = 0; $j < count($keys); $j++){
+			$endosso[$keys[$j]] = $values[$j];
+		}
+
+		$endosso["endo_tx_pontos"] = (array)json_decode($endosso["endo_tx_pontos"]);
+		$endosso["totalResumo"] = (array)json_decode($endosso["totalResumo"]);
+
+		return $endosso;
+	}
+
 	function modal_alert($title, $msg){
 		global $CONTEX;
-		include 'modal_alert.php';
+		include "modal_alert.php";
 	}
 
 	function inserir(string $tabela, array $campos, array $valores): array{
@@ -125,7 +153,7 @@
 			}
 		}
 		$valores = implode(",",$valores);
-		$campos  = implode(',',$campos);
+		$campos  = implode(",",$campos);
 
 		try{
 			query("INSERT INTO $tabela (".$campos.") VALUES(".$valores.");");
@@ -159,9 +187,9 @@
 		}
 
 		$tab = substr($tabela,0,4);
-		$inserir = '';
+		$inserir = "";
 		for($i=0;$i<count($campos);$i++){
-			$inserir .= ", $campos[$i] = '$valores[$i]'";
+			$inserir .= ", ".$campos[$i]." = ".$valores[$i]."";
 		}
 		if(strlen($inserir) > 2){
 			$inserir = substr($inserir, 2);
@@ -180,18 +208,18 @@
 	}
 	function inactivateById(string $tabela, string $id){
 		$tab=substr($tabela,0,4);
-		query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '$id' LIMIT 1");
+		query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '".$id."' LIMIT 1");
 	}
 
-	function remover_ponto($tabela,$id,$just){
-		$tab=substr($tabela,0,4);
+	function remover_ponto(int $id,$just){
+		$tab=substr("ponto",0,4);
 		$campos = [$tab."_tx_status", $tab."_tx_justificativa"];
-		$valores = ['inativo', $just];
+		$valores = ["inativo", $just];
 
-		updateById($tabela, $campos, $valores, $id);
+		updateById("ponto", $campos, $valores, $id);
 	}
 
-	function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
+	function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara="",$extra=""){
 		return campo($nome,$variavel,$modificador,$tamanho,"MASCARA_DOMAIN",$extra);
 	}
 
@@ -210,18 +238,18 @@
 		return carrega_array($sql)[0];
 	}
 
-	function carregar($tabela,$id='',$campo='',$valor='',$extra='',$exibe=0){
+	function carregar($tabela,$id="",$campo="",$valor="",$extra="",$exibe=0){
 		$campoId = substr($tabela,0,4)."_nb_id";
-		$ext = '';
+		$ext = "";
 
-		$extra_id = (!empty($id))? " AND ".$campoId." = $id": '';
+		$extra_id = (!empty($id))? " AND ".$campoId." = ".$id: "";
 
 		if(!empty($campo[0])) {
-			$a_campo = explode(',', $campo);
-			$a_valor = explode(',', $valor);
+			$a_campo = explode(",", $campo);
+			$a_valor = explode(",", $valor);
 
 			for ($i = 0; $i < count($a_campo); $i++) {
-				$ext .= " AND " . str_replace(',', '', $a_campo[$i]) . " = '" . str_replace(',', '', $a_valor[$i]) . "' ";
+				$ext .= " AND " . str_replace(",", "", $a_campo[$i]) . " = '" . str_replace(",", "", $a_valor[$i]) . "' ";
 			}
 		}
 
@@ -240,24 +268,24 @@
 
 	function valor($valor,$mostrar=0){
 
-		if(floatval(@str_replace(array(','), array('.'), $valor)) ){
+		if(floatval(@str_replace(array(","), array("."), $valor)) ){
 			$mostrar = 1;//SEMPRE VAI EXIBIR
 		}
 
 		if($mostrar == 1 || $valor > 0 ) {
 			// nosso formato
-			if (substr($valor, -3, 1) == ',')
-				return @str_replace(array('.', ','), array('', '.'), $valor); // retorna 100000.50
+			if (substr($valor, -3, 1) == ",")
+				return @str_replace(array(".", ","), array("", "."), $valor); // retorna 100000.50
 			else
-				return @number_format($valor, 2, ',', '.'); // retorna 100.000,50
+				return @number_format($valor, 2, ",", "."); // retorna 100.000,50
 		}else
-			return '';
+			return "";
 	}
 
 	function data($data,$hora=0){
 
-		if($data=='0000-00-00' || $data=='00/00/0000' )
-			return '';
+		if($data=="0000-00-00" || $data=="00/00/0000" )
+			return "";
 
 		if($hora==1){
 			$hora="&nbsp;(".substr($data,11).")";
@@ -266,11 +294,10 @@
 		}elseif($hora==3){
 			return substr($data,11, -3);
 		}else{
-			$hora='';
+			$hora="";
 		}
 
 		$data=substr($data,0,10);
-
 
 
 		if(is_int(strpos($data, "/"))){//verifica se tem a barra /
@@ -284,12 +311,12 @@
 			return $rstData.$hora;
 		}
 		else{
-			return '';
+			return "";
 		}
 
 	}
 
-	function fieldset($nome=''){
+	function fieldset($nome=""){
 		echo 
 			"<div class=portlet-title>
 				<span class='caption-subject font-dark bold uppercase'> $nome</span>
@@ -404,8 +431,8 @@
 
 		$dataScript = "<script>";
 		switch($mascara){
-			case "MASCARA_DATA":
-				$dataScript .= "$('[name=\'$variavel\']').inputmask(\'date\', {clearIncomplete: false, placeholder: \'dd/mm/aaaa\'});";
+			case "MASCARA_DATA";
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({clearIncomplete: false});";
 				$type = "date";
 			break;
 			case "MASCARA_MES":
@@ -578,8 +605,8 @@
 		return $campo;
 	}
 
-	function combo($nome, $variavel, $modificador, $tamanho, array $opcoes, $extra = ''){
-		$res = '';
+	function combo($nome, $variavel, $modificador, $tamanho, array $opcoes, $extra = ""){
+		$res = "";
 		foreach($opcoes as $key => $value){
 			//Correção da chave para os casos em que a variável $campos é um array comum, e não um dicionário. Retirar quando for necessário utilizar um dicionário com chaves numerais
 			$key = is_int($key)? $value: $key;
@@ -669,12 +696,26 @@
 			."&extra_bd=".urlencode($extra_bd)
 			."&extra_busca=".urlencode($extra_busca);
 
+		$ajax = "{}";
+		if(is_bool(strpos($extra, "startEmpty"))){
+			$ajax = "{
+				url: '".$select2URL."',
+				dataType: 'json',
+				delay: 250,
+				processResults: function (data) {
+					return {
+						results: data
+					};
+				},
+				cache: true
+			}";
+		}
+
 		echo "
 			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
 			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/select2/js/select2.min.js'></script>
 			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js' type='text/javascript'></script>
 			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery-inputmask/maskMoney.js' type='text/javascript'></script>
-
 			<script type=\"text/javascript\" language=\"javascript\">
 				$.fn.select2.defaults.set(\"theme\", \"bootstrap\");
 				$(window).bind(\"load\", function() {
@@ -682,17 +723,7 @@
 						language: 'pt-BR',
 						placeholder: 'Selecione um item',
 						allowClear: true,
-						ajax: {
-							url: '".$select2URL."',
-							dataType: 'json',
-							delay: 250,
-							processResults: function (data) {
-								return {
-									results: data
-								};
-							},
-							cache: true
-						}
+						ajax: ".$ajax."
 					});
 				});
 			</script>

@@ -35,9 +35,6 @@
 		
 		$interno = true;
 		include_once "conecta.php";
-
-		var_dump(validarCPF("039.463.770-41"));
-		die();
 		
 		$usuario = mysqli_fetch_assoc(
 			query(

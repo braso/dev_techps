@@ -24,7 +24,6 @@
     }
 
     function validate_token($key){
-		
         if (! preg_match('/Bearer\s(\S+)/', $_SERVER['HTTP_AUTHORIZATION'], $matches)) {
             header('HTTP/1.0 400 Bad Request');
             echo 'Token not found in request';
@@ -37,12 +36,30 @@
             exit;
         }
 
-        try {
-            return JWT::decode($jwt, new Key($key, 'HS256'));
-        } catch (Exception $e) {
+        $token = null;
+        try{
+            $token = JWT::decode($jwt, new Key($key, 'HS256'));
+            if(!isset($token->exp) || time() >= $token->exp){
+                throw new Exception("Token Expired.");
+            }
+        }catch (Exception $e){
             header('HTTP/1.0 401 Not Authorized');
             die($e->getMessage());
         }
+
+        return $token;
+
+        // try {
+        //     $decoded = JWT::decode($jwt, new Key($key, 'HS256'));
+        //     $expireDate = date("Y-m-d H:i:s", $decoded->exp);
+        //     if(date("Y-m-d H:i:s") > $expireDate){
+        //         throw new Exception("Token Expired.");
+        //     }
+        //     return $decoded;
+        // } catch (Exception $e) {
+        //     header('HTTP/1.0 401 Not Authorized');
+        //     die($e->getMessage());
+        // }
     }
 
     function get_data($query,$querydata=[]){

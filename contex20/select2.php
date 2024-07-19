@@ -39,7 +39,7 @@
 	}else{
 		$sql .= ", ".$tab."_tx_nome ".(!empty($extra_busca)? ",".$extra_busca: "")." FROM ".$tabela." WHERE 1 ".$extra;
 	}
-	
+
 	$sql .= " AND ".$tab."_tx_status = 'ativo' 
 			$extra_bd
 		".(!empty(urldecode($_GET['extra_ordem']))? urldecode($_GET['extra_ordem']): " ORDER BY ".$tab."_tx_nome ASC")." 
@@ -59,7 +59,6 @@
 			$extra_exibe = "[".$row[$extra_busca]."]";
 		}
 		$json[] = ['id'=>$row[$tab.'_nb_id'], 'text'=>$extra_exibe.$row[$tab.'_tx_nome']];
-
 	}
 
 	echo json_encode($json);

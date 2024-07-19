@@ -49,7 +49,12 @@
 
     function get_user($userid = null){
 
-        $decoded = validate_token($_ENV["APP_KEY"]);
+        try{
+            $decoded = validate_token($_ENV["APP_KEY"]);
+        }catch(Exception $e){
+            die($e->getMessage());
+        }
+
         if(empty($userid)){
             $userid = $decoded->data->user_id;
         }
@@ -87,7 +92,11 @@
     }
 
     function get_journeys($userid = null){
-        $decoded = validate_token($_ENV["APP_KEY"]);
+        try{
+            $decoded = validate_token($_ENV["APP_KEY"]);
+        }catch(Exception $e){
+            die($e->getMessage());
+        }
         
         if(empty($userid)){
             $userid = $decoded->data->user_id;
@@ -105,7 +114,11 @@
     }
 
     function refresh(){
-        $decoded = validate_token($_ENV["APP_KEY"]);
+        try{
+            $decoded = validate_token($_ENV["APP_KEY"]);
+        }catch(Exception $e){
+            die($e->getMessage());
+        }
 
         $token = makeToken($decoded->data, $_ENV["APP_KEY"]);
         echo $token;
@@ -114,7 +127,11 @@
     }
 
     function begin_journey(){
-        $decoded = validate_token($_ENV["APP_KEY"]);
+        try{
+            $decoded = validate_token($_ENV["APP_KEY"]);
+        }catch(Exception $e){
+            die($e->getMessage());
+        }
 		
         if(empty($_POST)){
             $putfp = fopen('php://input', 'r');
@@ -337,8 +354,12 @@
     }
 
     function finish_journey(){
-
-        $decoded = validate_token($_ENV["APP_KEY"]);
+        try{
+            $decoded = validate_token($_ENV["APP_KEY"]);
+        }catch(Exception $e){
+            die($e->getMessage());
+        }
+        
         $putfp = fopen('php://input', 'r');
         $putdata = "";
         

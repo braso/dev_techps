@@ -12,10 +12,12 @@
     $nomeArquivoCaminho = "$_SERVER[DOCUMENT_ROOT]$CONTEX[path]/arquivos/endosso_csv/$aEmpresa[empr_nb_id]/$aMotorista[enti_nb_id]/espelho-de-ponto.csv";
 
     // Cabeçalhos
-    $cabecalho1 = ['Empresa:', "$aEmpresa[empr_tx_nome]", '','CNPJ:',"$aEmpresa[empr_tx_cnpj]",'','End.',"$enderecoEmpresa,$aEmpresa[cida_tx_nome]/$aEmpresa[cida_tx_uf], $aEmpresa[empr_tx_cep]",'','Período:',date("d/m/Y", strtotime($endossoCompleto['endo_tx_de'])).''.date("d/m/Y", strtotime($endossoCompleto['endo_tx_ate'])),'','Emissão Doc.:',date("d/m/Y H:i:s", strtotime($endossoCompleto['endo_tx_dataCadastro'])). " (UTC-3)"];
-    $cabecalho2 = ['Motorista:',"$aMotorista[enti_tx_nome]",'','Função:',"$aMotorista[enti_tx_ocupacao]",'','Turno:',"D.SEM/H: $aMotorista[enti_tx_jornadaSemanal]",'','Matrícula:',"$aMotorista[enti_tx_matricula]",'','Admissão:',data($aMotorista['enti_tx_admissao'])];
-    $espaco = ['','','','','','','','','','','','','','','','',''];
-    $cabecalho3 = ['DATA','DIA','INÍCIO','INÍCIO REF.','FIM REF','FIM','REFEIÇÃO','ESPERA','DESCANSO','REPOUSO','PREVISTA','EFETIVA','MDC','INTERSTÍCIO','HE 50%','HE 100%','ADICIONAL NOT.','ESPERA IND.','MOTIVO','SALDO'];
+    $cabecalhos = [
+        ['Empresa:', "$aEmpresa[empr_tx_nome]", '','CNPJ:',"$aEmpresa[empr_tx_cnpj]",'','End.',"$enderecoEmpresa,$aEmpresa[cida_tx_nome]/$aEmpresa[cida_tx_uf], $aEmpresa[empr_tx_cep]",'','Período:',date("d/m/Y", strtotime($endossoCompleto['endo_tx_de'])).''.date("d/m/Y", strtotime($endossoCompleto['endo_tx_ate'])),'','Emissão Doc.:',date("d/m/Y H:i:s", strtotime($endossoCompleto['endo_tx_dataCadastro'])). " (UTC-3)"],
+        ['Motorista:',"$aMotorista[enti_tx_nome]",'','Função:',"$aMotorista[enti_tx_ocupacao]",'','Turno:',"D.SEM/H: $aMotorista[enti_tx_jornadaSemanal]",'','Matrícula:',"$aMotorista[enti_tx_matricula]",'','Admissão:',data($aMotorista['enti_tx_admissao'])],
+        ['','','','','','','','','','','','','','','','',''],
+        ['DATA','DIA','INÍCIO','INÍCIO REF.','FIM REF','FIM','REFEIÇÃO','ESPERA','DESCANSO','REPOUSO','PREVISTA','EFETIVA','MDC','INTERSTÍCIO','HE 50%','HE 100%','ADICIONAL NOT.','ESPERA IND.','MOTIVO','SALDO']
+    ];
 
     // Abre o arquivo para escrita (ou cria se não existir)
     $arquivo = fopen($nomeArquivoCaminho, 'w');
@@ -59,6 +61,3 @@
     fputcsv($arquivo, $tabelaInfo6, ';');
     // Fecha o arquivo
     fclose($arquivo);
-
-
-?>
