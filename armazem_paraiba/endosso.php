@@ -30,6 +30,7 @@
 			$endossos[] = lerEndossoCSV($endosso["endo_tx_filename"]);
 		}
 
+
 		$endossoCompleto = [];
 
 		if(count($endossos) > 0){
@@ -50,15 +51,15 @@
 					}
 				}
 				foreach($endossos[$f]["totalResumo"] as $key => $value){
-					if(in_array($key, ["diffSaldo", "saldoAnterior", "saldoAtual"])){
+					if(in_array($key, ["saldoAnterior"])){
 						continue;
 					}
 					$endossoCompleto["totalResumo"][$key] = operarHorarios([$endossoCompleto["totalResumo"][$key], $value], "+");
 				}
 
-				$endossoCompleto["totalResumo"]["saldoAnterior"] = $endossoCompleto["totalResumo"]["saldoAtual"];
-				$endossoCompleto["totalResumo"]["diffSaldo"] = $endossos[$f]["totalResumo"]["diffSaldo"];
-				$endossoCompleto["totalResumo"]["saldoAtual"] = $endossos[$f]["totalResumo"]["saldoAtual"];
+				
+				// $endossoCompleto["totalResumo"]["diffSaldo"] = $endossos[$f]["totalResumo"]["diffSaldo"];
+				// $endossoCompleto["totalResumo"]["saldoAtual"] = $endossos[$f]["totalResumo"]["saldoAtual"];
 			}
 		}
 
@@ -493,7 +494,7 @@
 			."&extra_busca=enti_tx_matricula"
 		; // Utilizado dentro de endosso_html.php
 
-		include_once "endosso_html.php";
+		include_once "html/endosso_html.php";
 		echo 
 			"<script>
 				window.onload = function() {
@@ -506,4 +507,3 @@
 			</script>"
 		;
 	}
-?>

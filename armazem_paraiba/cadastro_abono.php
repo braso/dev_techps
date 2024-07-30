@@ -34,9 +34,9 @@
 		$aData[1] = explode('/', $aData[1]);
 		$aData[1] = $aData[1][2].'-'.$aData[1][1].'-'.$aData[1][0];
 		//Conferir se há um período entrelaçado com essa data{
-			$endosso = mysqli_fetch_all(
+			$endosso = mysqli_fetch_assoc(
 				query(
-					"SELECT * FROM endosso
+					"SELECT endo_tx_de, endo_tx_ate FROM endosso
 						WHERE endo_tx_status = 'ativo'
 							AND endo_nb_entidade = ".$_POST['motorista']."
 							AND (
@@ -44,12 +44,10 @@
 								OR '".$aData[1]."' BETWEEN endo_tx_de AND endo_tx_ate
 							)
 						LIMIT 1"
-				),
-				MYSQLI_ASSOC
+				)
 			);
 
 			if(!empty($endosso)){
-				$endosso = $endosso[0];
 				$endosso['endo_tx_de'] = explode('-', $endosso['endo_tx_de']);
 				$endosso['endo_tx_de'] = $endosso['endo_tx_de'][2].'/'.$endosso['endo_tx_de'][1].'/'.$endosso['endo_tx_de'][0];
 

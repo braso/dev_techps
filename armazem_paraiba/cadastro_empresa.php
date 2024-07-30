@@ -76,7 +76,7 @@
 
 	function excluir_documento() {
 
-		query("DELETE FROM `documento_empresa` WHERE doc_nb_id = $_POST[idArq]");
+		query("DELETE FROM documento_empresa WHERE doc_nb_id = $_POST[idArq]");
 		
 		$_POST['id'] = $_POST['idEmpresa'];
 		modificarEmpresa();
@@ -257,20 +257,85 @@
 			$a = carrega_array($sql);
 			
 			if($a['empr_nb_id'] > 0){
-				?>
-				<script type="text/javascript">
-					if(confirm("CPF/CNPJ já cadastrado, deseja atualizar o registro?")){
-						parent.document.form_modifica.id.value='<?=$a['empr_nb_id']?>';
-						parent.document.form_modifica.submit();
-					}else{
-						parent.document.contex_form.cnpj.value='';
-					}
-				</script>
-				<?php
+				echo 
+					"<script type='text/javascript'>
+						if(confirm('CPF/CNPJ já cadastrado, deseja atualizar o registro?')){
+							parent.document.form_modifica.id.value='".$a["empr_nb_id"]."';
+							parent.document.form_modifica.submit();
+						}else{
+							parent.document.contex_form.cnpj.value = '';
+						}
+					</script>"
+				;
 			}
 		}
 
 		exit;
+	}
+
+	function carregarCadastroJS($a_mod){
+		$path_parts = pathinfo( __FILE__ );
+
+		echo 
+			"<script>
+				function remover_foto(id,acao,arquivo){
+					if(confirm('Deseja realmente excluir a logo '+arquivo+'?')){
+						document.form_excluir_arquivo.idEntidade.value=id;
+						document.form_excluir_arquivo.nome_arquivo.value=arquivo;
+						document.form_excluir_arquivo.acao.value=acao;
+						document.form_excluir_arquivo.submit();
+					}
+				}
+
+				
+				function carrega_cep(cep) {
+					var num = cep.replace(/[^0-9]/g, '');
+					if (num.length == '8') {
+						document.getElementById('frame_cep').src = '".$path_parts["basename"]."?acao=carregarEndereco&cep=' + num;
+					}
+				}
+				
+				function checarCNPJ(cnpj){
+					if(cnpj.length == '18' || cnpj.length == '14'){
+						document.getElementById('frame_cep').src='".$path_parts["basename"]."?acao=checarCNPJ&cnpj='+cnpj+'&id=".$a_mod["empr_nb_id"]."'
+					}
+				}
+				$(document).ready(function() {
+					$('#cnpj').on('blur', function(){
+						var cnpj = $(this).val();
+
+						$.ajax({
+							url: 'conecta.php',
+							method: 'POST',
+							data: { cnpj: cnpj },
+							dataType: 'json',
+							success: function(response) {
+								console.log(response);
+								$('#nome').val(response[0].empr_tx_nome);
+								$('#fantasia').val(response[0].empr_tx_fantasia);
+								$('#situação').val(response[0].empr_tx_situacao);
+								$('#cep').val(response[0].empr_tx_cep);
+								$('#numero').val(response[0].empr_tx_email);
+								$('#complemento').val(response[0].empr_tx_complemento);
+								$('#referencia').val(response[0].empr_tx_referencia);
+								$('#fone1').val(response[0].empr_tx_fone1);
+								$('#fone2').val(response[0].empr_tx_fone2);
+								$('#contato').val(response[0].empr_tx_contato);
+								$('#email').val(response[0].empr_tx_email);
+								$('#inscricaoEstadual').val(response[0].empr_tx_inscricaoEstadual);
+								$('#inscricaoMunicipal').val(response[0].empr_tx_inscricaoMunicipal);
+								$('#regimeTributario').val(response[0].empr_tx_regimeTributario);
+								$('#dataRegistroCNPJ').val(response[0].empr_tx_dataRegistroCNPJ);
+								$('#nomeDominio').val(response[0].empr_tx_domain);
+							},
+							error: function(error) {
+								console.error('Erro na consulta:', error);
+							}
+						});
+					});
+				});
+			</script>"
+		;
 	}
 
 	function visualizarCadastro(){
@@ -337,7 +402,7 @@
 		}
 
 		if(!empty($input_values['cidade'])){
-			$cidade_query = query("SELECT * FROM `cidade` WHERE cida_tx_status = 'ativo' AND cida_nb_id = ".$input_values['cidade']);
+			$cidade_query = query("SELECT * FROM cidade WHERE cida_tx_status = 'ativo' AND cida_nb_id = ".$input_values['cidade']);
 			$cidade = mysqli_fetch_array($cidade_query);
 		}else{
 			$cidade = ['cida_tx_nome' => ''];
@@ -414,7 +479,7 @@
 		$file = explode('.', $file);
 
 		if (!empty($a_mod['empr_nb_id'])) {
-			$sqlArquivos= query("SELECT * FROM `documento_empresa` WHERE empr_nb_id = $a_mod[empr_nb_id]");
+			$sqlArquivos= query("SELECT * FROM documento_empresa WHERE empr_nb_id = $a_mod[empr_nb_id]");
 			$arquivos = mysqli_fetch_all($sqlArquivos, MYSQLI_ASSOC);
 		}
 
@@ -454,14 +519,15 @@
 		fecha_form($botao);
 
 		$path_parts = pathinfo( __FILE__ );
-		?>
-		<iframe id=frame_parametro style="display: none;"></iframe>
-		<script>
-			function carregarParametro(id){
-				document.getElementById('frame_parametro').src='cadastro_motorista.php?acao=carregarParametro&parametro='+id;
-			}
-		</script>
-		<?php
+		echo 
+			"<iframe id=frame_parametro style='display: none;'></iframe>
+			<script>
+				function carregarParametro(id){
+					document.getElementById('frame_parametro').src='cadastro_motorista.php?acao=carregarParametro&parametro='+id;
+				}
+			</script>"
+		;
+
 		if (!empty($a_mod['empr_nb_id'])) {
 			echo arquivosEmpresa("Documentos", $a_mod['empr_nb_id'], $arquivos);
 		}
@@ -469,107 +535,50 @@
 		rodape();
 
 		
-		$path_parts = pathinfo( __FILE__ );
-		?>
-		<form name="form_excluir_arquivo2" method="post" action="cadastro_empresa.php">
-			<input type="hidden" name="idEmpresa" value="">
-			<input type="hidden" name="idArq" value="">
-			<input type="hidden" name="acao" value="">
-		</form>
+		echo 
+			"<form name='form_excluir_arquivo2' method='post' action='cadastro_empresa.php'>
+				<input type='hidden' name='idEmpresa' value=''>
+				<input type='hidden' name='idArq' value=''>
+				<input type='hidden' name='acao' value=''>
+			</form>
 
-		<form name="form_download_arquivo" method="post" action="cadastro_empresa.php">
-			<input type="hidden" name="idEmpresa" value="">
-			<input type="hidden" name="caminho" value="">
-			<input type="hidden" name="acao" value="">
-		</form>
+			<form name='form_download_arquivo' method='post' action='cadastro_empresa.php'>
+				<input type='hidden' name='idEmpresa' value=''>
+				<input type='hidden' name='caminho' value=''>
+				<input type='hidden' name='acao' value=''>
+			</form>
 
-		<script type="text/javascript">
-			function remover_arquivo(id, idArq, arquivo, acao ) {
-				if (confirm('Deseja realmente excluir o arquivo ' + arquivo + '?')) {
-					document.form_excluir_arquivo2.idEmpresa.value = id;
-					document.form_excluir_arquivo2.idArq.value = idArq;
-					document.form_excluir_arquivo2.acao.value = acao;
-					document.form_excluir_arquivo2.submit();
+			<script type='text/javascript'>
+				function remover_arquivo(id, idArq, arquivo, acao ) {
+					if (confirm('Deseja realmente excluir o arquivo ' + arquivo + '?')) {
+						document.form_excluir_arquivo2.idEmpresa.value = id;
+						document.form_excluir_arquivo2.idArq.value = idArq;
+						document.form_excluir_arquivo2.acao.value = acao;
+						document.form_excluir_arquivo2.submit();
+					}
 				}
-			}
 
-			function downloadArquivo(id, caminho, acao) {
-				document.form_download_arquivo.idEmpresa.value = id;
-				document.form_download_arquivo.caminho.value = caminho;
-				document.form_download_arquivo.acao.value = acao;
-				document.form_download_arquivo.submit();
-			}
-		</script>
-
-		<iframe id=frame_cep style="display: none;"></iframe>
-		<form method="post" name="form_modifica" id="form_modifica">
-			<input type="hidden" name="id" value="">
-			<input type="hidden" name="acao" value="modificarEmpresa">
-		</form>
-		<form name="form_excluir_arquivo" method="post" action="cadastro_empresa.php">
-			<input type="hidden" name="idEntidade" value="">
-			<input type="hidden" name="nome_arquivo" value="">
-			<input type="hidden" name="acao" value="">
-		</form>
-		<script>
-			function remover_foto(id,acao,arquivo){
-				if(confirm('Deseja realmente excluir a logo '+arquivo+'?')){
-					document.form_excluir_arquivo.idEntidade.value=id;
-					document.form_excluir_arquivo.nome_arquivo.value=arquivo;
-					document.form_excluir_arquivo.acao.value=acao;
-					document.form_excluir_arquivo.submit();
+				function downloadArquivo(id, caminho, acao) {
+					document.form_download_arquivo.idEmpresa.value = id;
+					document.form_download_arquivo.caminho.value = caminho;
+					document.form_download_arquivo.acao.value = acao;
+					document.form_download_arquivo.submit();
 				}
-			}
+			</script>
 
-			
-			function carrega_cep(cep) {
-				var num = cep.replace(/[^0-9]/g, '');
-				if (num.length == '8') {
-					document.getElementById('frame_cep').src = '<?= $path_parts['basename'] ?>?acao=carregarEndereco&cep=' + num;
-				}
-			}
-			
-			function checarCNPJ(cnpj){
-				if(cnpj.length == '18' || cnpj.length == '14'){
-					document.getElementById('frame_cep').src='<?=$path_parts['basename']?>?acao=checarCNPJ&cnpj='+cnpj+'&id=<?=$a_mod['empr_nb_id']?>'
-				}
-			}
-			$(document).ready(function() {
-				$('#cnpj').on('blur', function(){
-					var cnpj = $(this).val();
+			<iframe id=frame_cep style='display: none;'></iframe>
+			<form method='post' name='form_modifica' id='form_modifica'>
+				<input type='hidden' name='id' value=''>
+				<input type='hidden' name='acao' value='modificarEmpresa'>
+			</form>
+			<form name='form_excluir_arquivo' method='post' action='cadastro_empresa.php'>
+				<input type='hidden' name='idEntidade' value=''>
+				<input type='hidden' name='nome_arquivo' value=''>
+				<input type='hidden' name='acao' value=''>
+			</form>"
+		;
 
-					$.ajax({
-						url: 'conecta.php',
-						method: 'POST',
-						data: { cnpj: cnpj },
-						dataType: 'json',
-						success: function(response) {
-							console.log(response);
-							$('#nome').val(response[0].empr_tx_nome);
-							$('#fantasia').val(response[0].empr_tx_fantasia);
-							$('#situação').val(response[0].empr_tx_situacao);
-							$('#cep').val(response[0].empr_tx_cep);
-							$('#numero').val(response[0].empr_tx_email);
-							$('#complemento').val(response[0].empr_tx_complemento);
-							$('#referencia').val(response[0].empr_tx_referencia);
-							$('#fone1').val(response[0].empr_tx_fone1);
-							$('#fone2').val(response[0].empr_tx_fone2);
-							$('#contato').val(response[0].empr_tx_contato);
-							$('#email').val(response[0].empr_tx_email);
-							$('#inscricaoEstadual').val(response[0].empr_tx_inscricaoEstadual);
-							$('#inscricaoMunicipal').val(response[0].empr_tx_inscricaoMunicipal);
-							$('#regimeTributario').val(response[0].empr_tx_regimeTributario);
-							$('#dataRegistroCNPJ').val(response[0].empr_tx_dataRegistroCNPJ);
-							$('#nomeDominio').val(response[0].empr_tx_domain);
-						},
-						error: function(error) {
-							console.error('Erro na consulta:', error);
-						}
-					});
-				});
-			});
-		</script>
-		<?php
+		carregarCadastroJS($a_mod);
 	}
 
 	function gerarLogoExcluir(int $id, $acao, $campos='', $valores='', $target=''){
@@ -645,4 +654,3 @@
 		rodape();
 
 	}
-?>

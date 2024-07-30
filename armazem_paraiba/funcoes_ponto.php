@@ -62,7 +62,11 @@
 				$horario = "00:00";
 			}
 			if(!preg_match("/^-?\d{2,4}:\d{2}$/", $horario)){
-				throw new Exception("Format error: |".$horario."|");
+				if(preg_match("/^-?\d{2,4}:\d{2}:\d{2}$/", $horario)){
+					$horario = substr($horario, 0, strlen($horario)-3);
+				}else{
+					throw new Exception("Format error: |".$horario."|");
+				}
 			}
 		}
 
@@ -216,7 +220,7 @@
 		date_default_timezone_set('America/Recife');
 		$sqlTolerancia = query(
 			"SELECT en.enti_nb_parametro, par.para_tx_tolerancia
-				FROM `entidade` en
+				FROM entidade en
 				INNER JOIN parametro par ON en.enti_nb_parametro = par.para_nb_id
 				WHERE en.enti_nb_id = '".$idMotorista."'");
 		
@@ -1342,7 +1346,7 @@
 
 		
 		$empresas = mysqli_fetch_all(
-			query("SELECT empr_nb_id, empr_tx_nome FROM `empresa` WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome ASC;"),
+			query("SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome ASC;"),
 			MYSQLI_ASSOC
 		);
 		
@@ -1396,7 +1400,7 @@
 				// }
 				
 				// saldoAnterior, saldoPeriodo e saldoFinal{
-				$saldoAnterior = mysqli_fetch_all(query("SELECT endo_tx_saldo FROM `endosso`
+				$saldoAnterior = mysqli_fetch_all(query("SELECT endo_tx_saldo FROM endosso
 						WHERE endo_tx_matricula = '" . $motorista['enti_tx_matricula'] . "'
 							AND endo_tx_ate < '" . $dataInicio . "'
 							AND endo_tx_status = 'ativo'
@@ -1616,4 +1620,3 @@
 		file_put_contents($path.$fileName, $jsonArqui);
 		return;
 	}
-?>

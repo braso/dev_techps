@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -99,7 +99,7 @@
 	}
 
 	function excluir_documento() {
-		query("DELETE FROM `documento_parametro` WHERE doc_nb_id = ".$_POST['idArq'].";");
+		query("DELETE FROM documento_parametro WHERE doc_nb_id = ".$_POST['idArq'].";");
 		
 		$_POST['id'] = $_POST['idParametro'];
 		modifica_parametro();
@@ -181,7 +181,7 @@
 			'para_tx_diariasJanta' 			=> $_POST['diariasJanta'], 
 			'para_tx_status' 				=> 'ativo', 
 			'para_tx_banco' 				=> $_POST['banco'], 
-			'para_tx_setData' 				=> $_POST['setCampo'], 
+			'para_tx_setData' 				=> ($_POST['setCampo']?? ""), 
 			'para_nb_qDias' 				=> $_POST['quandDias'],
 			'para_tx_horasLimite' 			=> $_POST['quandHoras'],
 			'para_tx_paramObs' 				=> $_POST['paramObs'],
@@ -289,7 +289,7 @@
 		];
 
 		if (!empty($a_mod['para_nb_id'])) {
-			$sqlArquivos= query("SELECT * FROM `documento_parametro` WHERE para_nb_id = $a_mod[para_nb_id]");
+			$sqlArquivos= query("SELECT * FROM documento_parametro WHERE para_nb_id = $a_mod[para_nb_id]");
 			$arquivos = mysqli_fetch_all($sqlArquivos, MYSQLI_ASSOC);
 		}
 
@@ -359,20 +359,22 @@
 		}
 		rodape();
 
-		?>
-			<form name="form_excluir_arquivo" method="post" action="cadastro_parametro.php">
-				<input type="hidden" name="idParametro" value="">
-				<input type="hidden" name="idArq" value="">
-				<input type="hidden" name="acao" value="">
+		echo 
+			"<form name='form_excluir_arquivo' method='post' action='cadastro_parametro.php'>
+				<input type='hidden' name='idParametro' value=''>
+				<input type='hidden' name='idArq' value=''>
+				<input type='hidden' name='acao' value=''>
 			</form>
 
-			<form name="form_download_arquivo" method="post" action="cadastro_parametro.php">
-				<input type="hidden" name="idParametro" value="">
-				<input type="hidden" name="caminho" value="">
-				<input type="hidden" name="acao" value="">
-			</form>
-			
-			<script type="text/javascript">
+			<form name='form_download_arquivo' method='post' action='cadastro_parametro.php'>
+				<input type='hidden' name='idParametro' value=''>
+				<input type='hidden' name='caminho' value=''>
+				<input type='hidden' name='acao' value=''>
+			</form>"
+		;
+
+		echo 
+			"<script type='text/javascript'>
 				function remover_arquivo(id, idArq, arquivo, acao ){
 					if (confirm('Deseja realmente excluir o arquivo '+arquivo+'?')){
 						document.form_excluir_arquivo.idParametro.value = id;
@@ -388,8 +390,8 @@
 					document.form_download_arquivo.acao.value = acao;
 					document.form_download_arquivo.submit();
 				}
-			</script>
-		<?php
+			</script>"
+		;
 	}
 
 	function index(){
@@ -420,7 +422,7 @@
 		linha_form($c);
 		fecha_form($botoes);
 		if (isset($_POST['busca_vencidos'])){
-			$sql = "SELECT *, DATEDIFF('".date('Y-m-d')."' ,para_tx_setData) AS diferenca_em_dias FROM `parametro` WHERE 1";
+			$sql = "SELECT *, DATEDIFF('".date('Y-m-d')."' ,para_tx_setData) AS diferenca_em_dias FROM parametro WHERE 1";
 			if($_POST['busca_vencidos'] === 'sim'){
 				$sql .= " AND DATEDIFF('".date('Y-m-d')."',para_tx_setData) < para_nb_qDias OR DATEDIFF('".date('Y-m-d')."',para_tx_setData) IS NULL";
 			}elseif($_POST['busca_vencidos'] === 'nao'){
@@ -440,4 +442,3 @@
 		rodape();
 
 	}
-?>

@@ -6,4 +6,3 @@
 
 	$interno = true;
 	include_once "carregar_ponto.php";
-?>

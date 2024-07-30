@@ -189,14 +189,20 @@
 		$tab = substr($tabela,0,4);
 		$inserir = "";
 		for($i=0;$i<count($campos);$i++){
-			$inserir .= ", ".$campos[$i]." = ".$valores[$i]."";
+			$inserir .= ", ".$campos[$i]." = ";
+
+			if(is_int(strpos($campos[$i], "_nb_"))){
+				$inserir .= $valores[$i];
+			}else{
+				$inserir .= "'".$valores[$i]."'";
+			}
 		}
 		if(strlen($inserir) > 2){
 			$inserir = substr($inserir, 2);
 		}
 
 		try{
-			query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id = $id");
+			query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id = ".$id);
 			set_status("Registro atualizado com sucesso!");
 		}catch(Exception $e){
 			set_status("Falha ao atualizar.");
@@ -1036,7 +1042,7 @@
 
 	}
 
-	function botao($nome,$acao,$campos='',$valores='',$extra='',$salvar='',$botaoCor='btn btn-secondary'){
+	function botao($nome, $acao, $campos='', $valores='', $extra='', $salvar='', $botaoCor='btn btn-secondary'){
 		global $idsBotaoContex;	
 		$hidden = '';
 		$funcaoOnClick = '';
@@ -1099,7 +1105,6 @@
 		}
 
 		return $funcaoJs.'<button '.$funcaoOnClick.' name="acao" id="botaoContex'.$nome.'" value="'.$acao.'"  type="submit" '.$extra.'  class="'.$botaoCor.'">'.$nome.'</button>';
-
 	}
 
 	function query($query,$debug=''){
@@ -1158,7 +1163,6 @@
 				// Solicitar ao usuário que insira os dados
 				var just = prompt('Qual a justificativa da exclusão do ponto?');
 				if(just !== null && just !== ''){
-					console.log('id ', id);
 					
 					var form = document.getElementById('contex_icone_form');
 					form.id.value=id;
@@ -1173,7 +1177,11 @@
 					campos = campos.split(',');
 					valores = valores.split(',');
 					for(f = 0; f < campos.length; f++){
-						form.append('<input type=\'hidden\' name=\'campos[f]\' value=\'valores[f]\' />');
+						input = document.createElement('input');
+						input.type = 'hidden';
+						input.name = campos[f]
+						input.value = valores[f]
+						form.append(input);
 					}
 					form.submit();
 					
@@ -1182,7 +1190,7 @@
 			</script>
 		";
 		// onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\",\"$data_de\",\"$data_ate\");
-		return "<center><a title=\"$title\" style='color:gray' data-toggle='modal' data-target='#myModal'onclick='solicitarDados(\"$id\",\"$acao\",\"$data_de\",\"$data_ate\",\"$campos\",\"$valores\")' ><spam $icone></spam></a></center>".$modal;
+		return "<center><a title='".$title."' style='color:gray' data-toggle='modal' data-target='#myModal'onclick='solicitarDados(\"".$id."\",\"".$acao."\",\"".$data_de."\",\"".$data_ate."\",\"".$campos."\",\"".$valores."\")' ><spam ".$icone."></spam></a></center>".$modal;
 	}	
 
 	function modal_just($id,$acao,$campos='',$data_de='',$data_ate='',$valores='',$target='',$icone='',$msg='', $action='', $title=''){
@@ -1231,4 +1239,3 @@
 
 		return $style."<spam class='glyphicon glyphicon-download glyphicon-clickable' onclick=\"download('$aquivo')\"></spam>".$script;
 	}
-?>

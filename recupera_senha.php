@@ -61,7 +61,7 @@
         include $dominio."/conecta.php";
         
         $token = $_GET['token'];
-        $checkTokenSql = query("SELECT user_nb_id FROM `user` WHERE user_tx_token = '$_GET[token]'");
+        $checkTokenSql = query("SELECT user_nb_id FROM user WHERE user_tx_token = '$_GET[token]'");
         $checkToken = mysqli_fetch_assoc($checkTokenSql);
 
         if (!isset($checkToken) && empty($checkToken)) {
@@ -71,7 +71,7 @@
         }
         
         if (!empty($_POST['senha']) && !empty($_POST['senha2']) && $_POST['senha'] == $_POST['senha2']) {
-                $userSql = query("SELECT user_nb_id FROM `user` WHERE user_tx_token = '$_GET[token]'");
+                $userSql = query("SELECT user_nb_id FROM user WHERE user_tx_token = '$_GET[token]'");
                 $userId = mysqli_fetch_assoc($userSql);
                 atualizar('user', ['user_tx_senha', 'user_tx_token'], [md5($_POST['senha']), '-'], $userId['user_nb_id']);
                 $msg = "
@@ -90,7 +90,7 @@
     function tokenGenerate($login, $domain) {
         $token = bin2hex(random_bytes(16));
 
-        $userSql = query("SELECT user_nb_id, user_tx_nome, user_tx_email FROM `user` WHERE user_tx_login = '$login' AND user_tx_status = 'ativo'");
+        $userSql = query("SELECT user_nb_id, user_tx_nome, user_tx_email FROM user WHERE user_tx_login = '$login' AND user_tx_status = 'ativo'");
         $userId = mysqli_fetch_assoc($userSql);
         if(!empty($userId)){
             atualizar('user', ['user_tx_token'], [$token], $userId['user_nb_id']);

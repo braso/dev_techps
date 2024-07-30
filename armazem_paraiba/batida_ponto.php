@@ -1,13 +1,13 @@
 <?php
     /* Modo debug{
-		ini_set('display_errors', 1);
+		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//}*/
 	include "funcoes_ponto.php";
 
 	function cadastra_ponto() {
-		$hoje = date('Y-m-d');
-		$aMotorista = carregar('entidade', $_POST['id']);
+		$hoje = date("Y-m-d");
+		$aMotorista = carregar("entidade", $_POST["id"]);
 
 		// if(empty($_POST["placa"])){
 		// 	set_status("ERRO: Insira a placa do veículo para registrar um ponto.");
@@ -15,9 +15,9 @@
 		// 	exit;
 		// }
 
-		$ultimoPonto = pegarPontosDia($aMotorista['enti_tx_matricula'], ["pont_tx_tipo", "pont_tx_data", "pont_tx_placa"])[0];
-		if (!empty($ultimoPonto[count($ultimoPonto)-1] ['pont_tx_placa']) && $ultimoPonto[count($ultimoPonto)-1] ['pont_tx_placa'] != "Fim de Jornada") {
-			$placa = $ultimoPonto[count($ultimoPonto)-1] ['pont_tx_placa'];
+		$ultimoPonto = pegarPontosDia($aMotorista["enti_tx_matricula"], ["pont_tx_tipo", "pont_tx_data", "pont_tx_placa"])[0];
+		if (!empty($ultimoPonto[count($ultimoPonto)-1] ["pont_tx_placa"]) && $ultimoPonto[count($ultimoPonto)-1] ["pont_tx_placa"] != "Fim de Jornada") {
+			$placa = $ultimoPonto[count($ultimoPonto)-1] ["pont_tx_placa"];
 		} else {
 			if (!empty($_POST["placa"])) {
 				$placa = str_replace(["_", "-"], ["", ""], $_POST["placa"]);
@@ -25,20 +25,20 @@
 		}
 		if(!empty($ultimoPonto)){
 			$ultimoPonto = $ultimoPonto[count($ultimoPonto)-1];
-			$ultimoPonto['sameTypeError'] = ($ultimoPonto['pont_tx_tipo'] == $_POST['idMacro']);
+			$ultimoPonto["sameTypeError"] = ($ultimoPonto["pont_tx_tipo"] == $_POST["idMacro"]);
 		}
 
 		$aTipo = mysqli_fetch_all(
 			query(
 				"SELECT macr_tx_codigoInterno, macr_tx_codigoExterno FROM macroponto 
-					WHERE macr_nb_id = '".$_POST['idMacro']."'"
+					WHERE macr_nb_id = '".$_POST["idMacro"]."'"
 			),
 			MYSQLI_ASSOC
 		)[0];
 
-		$dataHora = $hoje." ".date('H:i').':00';
+		$dataHora = $hoje." ".date("H:i").":00";
 
-		if (!empty($ultimoPonto) && intval($ultimoPonto['sameTypeError'])){
+		if (!empty($ultimoPonto) && intval($ultimoPonto["sameTypeError"])){
 			set_status("ERRO: Último ponto é do mesmo tipo.");
 			index();
 			exit;
@@ -50,7 +50,7 @@
 				substr($ultimoPonto["pont_tx_data"], 0, strlen($ultimoPonto["pont_tx_data"])-2) == substr(strval($dataHora), 0, strlen($dataHora)-2)
 			){
 				$indiceSeg = intval(substr($ultimoPonto["pont_tx_data"], -2))+1;
-				$dataHora = substr($dataHora, 0, strlen($dataHora)-2).sprintf('%02d', $indiceSeg);
+				$dataHora = substr($dataHora, 0, strlen($dataHora)-2).sprintf("%02d", $indiceSeg);
 			}
 		//}
 
@@ -64,30 +64,35 @@
 
 
 		$novoPonto = [
-			'pont_nb_user' 			=> $_SESSION['user_nb_id'],
-			'pont_tx_matricula' 	=> $aMotorista['enti_tx_matricula'],
-			'pont_tx_data' 			=> strval($dataHora),
-			'pont_tx_tipo' 			=> $aTipo['macr_tx_codigoInterno'],
-			'pont_tx_status' 		=> 'ativo',
-			'pont_tx_dataCadastro' 	=> $hoje.' '.date("H:i:s")
+			"pont_nb_user" 			=> $_SESSION["user_nb_id"],
+			"pont_tx_matricula" 	=> $aMotorista["enti_tx_matricula"],
+			"pont_tx_data" 			=> strval($dataHora),
+			"pont_tx_tipo" 			=> $aTipo["macr_tx_codigoInterno"],
+			"pont_tx_status" 		=> "ativo",
+			"pont_tx_dataCadastro" 	=> $hoje." ".date("H:i:s")
 		];
-		if(!empty($_POST['motivo'])){
-			$novoPonto['pont_nb_motivo'] = $_POST['motivo'];
-		}
-		if(!empty($placa)){
-			$novoPonto['pont_tx_placa'] = $placa;
-		}
-		if(!empty($_POST['latitude'])){
-			$novoPonto['pont_tx_latitude'] = $_POST['latitude'];
-		}
-		if(!empty($_POST['longitude'])){
-			$novoPonto['pont_tx_longitude'] = $_POST['longitude'];
-		}
-		if(!empty($_POST['justificativa'])){
-			$novoPonto['pont_tx_justificativa'] = $_POST['justificativa'];
+
+		foreach([] as $key => $value){
+
 		}
 
-		inserir('ponto', array_keys($novoPonto), array_values($novoPonto));
+		if(!empty($_POST["motivo"])){
+			$novoPonto["pont_nb_motivo"] = $_POST["motivo"];
+		}
+		if(!empty($placa)){
+			$novoPonto["pont_tx_placa"] = $placa;
+		}
+		if(!empty($_POST["latitude"])){
+			$novoPonto["pont_tx_latitude"] = $_POST["latitude"];
+		}
+		if(!empty($_POST["longitude"])){
+			$novoPonto["pont_tx_longitude"] = $_POST["longitude"];
+		}
+		if(!empty($_POST["justificativa"])){
+			$novoPonto["pont_tx_justificativa"] = $_POST["justificativa"];
+		}
+
+		inserir("ponto", array_keys($novoPonto), array_values($novoPonto));
 
 		index();
 		exit;
@@ -98,7 +103,7 @@
 		$condicoesPontoBasicas = 
 			"ponto.pont_tx_status = 'ativo'
 			AND ponto.pont_tx_matricula = '".$matricula."'
-			AND ponto.pont_tx_data <= '".$hoje.' '.date('H:i:s')."'"
+			AND ponto.pont_tx_data <= '".$hoje." ".date("H:i:s")."'"
 		;
 
 		$abriuJornadaHoje = mysqli_fetch_assoc(
@@ -125,7 +130,7 @@
 				)
 			);
 
-			if(!empty($temJornadaAberta) && intval($temJornadaAberta['temJornadaAberta'])){//Se tem uma jornada que veio do dia anterior
+			if(!empty($temJornadaAberta) && intval($temJornadaAberta["temJornadaAberta"])){//Se tem uma jornada que veio do dia anterior
 				$jornadaFechadaHoje = mysqli_fetch_assoc(
 					query(
 						"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 2) as jornadaFechadaHoje FROM ponto
@@ -136,16 +141,16 @@
 							LIMIT 1;"
 					)
 				);
-				if(!empty($jornadaFechadaHoje) && intval($jornadaFechadaHoje['jornadaFechadaHoje'])){
-					$sqlDataInicio = $jornadaFechadaHoje['pont_tx_data'];
+				if(!empty($jornadaFechadaHoje) && intval($jornadaFechadaHoje["jornadaFechadaHoje"])){
+					$sqlDataInicio = $jornadaFechadaHoje["pont_tx_data"];
 				}else{
-					$sqlDataInicio = $temJornadaAberta['pont_tx_data'];
+					$sqlDataInicio = $temJornadaAberta["pont_tx_data"];
 				}
 			}else{
-				$sqlDataInicio = $hoje." ".date('H:i:s');
+				$sqlDataInicio = $hoje." ".date("H:i:s");
 			}
 		}else{
-			$sqlDataInicio = $abriuJornadaHoje['pont_tx_data'];
+			$sqlDataInicio = $abriuJornadaHoje["pont_tx_data"];
 		}
 		
 		$sql = 
@@ -172,12 +177,16 @@
 				</div>
 			</button>
 			<script>
+				triedLocation = false;
 				document.addEventListener('DOMContentLoaded', function() {
-					if (navigator.geolocation) {
-						navigator.geolocation.getCurrentPosition(locationAllowed, locationDenied);
-					} else {
-						console.log('Geolocalização não é suportada pelo navegador.');
+					if(!triedLocation){
+						if (navigator.geolocation){
+							navigator.geolocation.getCurrentPosition(locationAllowed, locationDenied);
+						} else {
+							console.log('Geolocalização não é suportada pelo navegador.');
+						}
 					}
+					triedLocation = true;
 				});
 				
 				function locationAllowed(pos) {
@@ -201,54 +210,57 @@
 	}
 
 	function index() {
+		global $CONTEX;
 		$hoje = date("Y-m-d");
-		cabecalho('Registrar Ponto');
+		cabecalho("Registrar Ponto");
 		
-		if(empty($_SESSION['user_nb_entidade'])){
-			echo "Motorista não localizado. Tente fazer o login novamente.";
+		if(empty($_SESSION["user_nb_entidade"])){
+			echo headers_sent();
+			echo "<script>alert('Motorista não localizado. Tente fazer o login novamente.')</script>";
+			header("Location: ".$CONTEX["path"]."/index.php");
 			exit;
 		}
 
-		$aMotorista = carregar('entidade', $_SESSION['user_nb_entidade']);
+		$aMotorista = carregar("entidade", $_SESSION["user_nb_entidade"]);
 
-		[$pontosCompleto, $sql] = pegarPontosDia($aMotorista['enti_tx_matricula'], ["pont_tx_data", "pont_tx_tipo", "pont_tx_dataCadastro", "macr_tx_nome"]);
+		[$pontosCompleto, $sql] = pegarPontosDia($aMotorista["enti_tx_matricula"], ["pont_tx_data", "pont_tx_tipo", "pont_tx_dataCadastro", "macr_tx_nome"]);
 
 		if(!empty($pontosCompleto)){
 			$pontos = [
-				'primeiro' => $pontosCompleto[0],
-				'ultimo' => $pontosCompleto[count($pontosCompleto)-1]
+				"primeiro" => $pontosCompleto[0],
+				"ultimo" => $pontosCompleto[count($pontosCompleto)-1]
 			];
 		}else{
 			$pontos = [
-				'primeiro' => null,
-				'ultimo' => null
+				"primeiro" => null,
+				"ultimo" => null
 			];
 		}
 
 		$inicios = [
-			1  => 'inicioJornada', 
-			3  => 'inicioRefeicao', 
-			5  => 'inicioEspera', 
-			7  => 'inicioDescanso', 
-			9  => 'inicioRepouso', 
-			11 => 'inicioRepousoEmbarcado'
+			1  => "inicioJornada", 
+			3  => "inicioRefeicao", 
+			5  => "inicioEspera", 
+			7  => "inicioDescanso", 
+			9  => "inicioRepouso", 
+			11 => "inicioRepousoEmbarcado"
 		];
 		$fins = [
-			2  => 'fimJornada', 
-			4  => 'fimRefeicao', 
-			6  => 'fimEspera', 
-			8  => 'fimDescanso', 
-			10 => 'fimRepouso', 
-			12 => 'fimRepousoEmbarcado'
+			2  => "fimJornada", 
+			4  => "fimRefeicao", 
+			6  => "fimEspera", 
+			8  => "fimDescanso", 
+			10 => "fimRepouso", 
+			12 => "fimRepousoEmbarcado"
 		];
 
 		$pares = [
-			'jornada' 			=> [],
-			'refeicao' 			=> [],
-			'espera' 			=> [],
-			'descanso'			=> [],
-			'repouso'			=> [],
-			'repousoEmbarcado' 	=> []
+			"jornada" 			=> [],
+			"refeicao" 			=> [],
+			"espera" 			=> [],
+			"descanso"			=> [],
+			"repouso"			=> [],
+			"repousoEmbarcado" 	=> []
 		];
 
 		
@@ -257,132 +269,132 @@
 				continue;
 			}
 			
-			$value = DateTime::createFromFormat('Y-m-d H:i:s', $pontosCompleto[$f]['pont_tx_data']);
+			$value = DateTime::createFromFormat("Y-m-d H:i:s", $pontosCompleto[$f]["pont_tx_data"]);
 			$fullDaysCount = (date_diff($value, DateTime::createFromFormat("Y-m-d", $hoje))->d)-1;
-			$value = ($value->format('Y-m-d') < $hoje)? operarHorarios([$value->format("H:i:s"), ($fullDaysCount*24).":00"], '-'): $value->format("H:i:s");
+			$value = ($value->format("Y-m-d") < $hoje)? operarHorarios([$value->format("H:i:s"), sprintf("%02d:%02d", ($fullDaysCount*24), "00")], "-"): $value->format("H:i:s");
 			
-			switch(intval($pontosCompleto[$f]['pont_tx_tipo'])){
+			switch(intval($pontosCompleto[$f]["pont_tx_tipo"])){
 				case 1:
-					$pares['jornada'][] = [
-						'inicio' => $value
+					$pares["jornada"][] = [
+						"inicio" => $value
 					];
 				break;
 				case 2:
-					if(count($pares['jornada']) == 0){
-						$pares['jornada'][0] = ['inicio' => null, 'fim' => $value];
+					if(count($pares["jornada"]) == 0){
+						$pares["jornada"][0] = ["inicio" => null, "fim" => $value];
 					}else{
-						$pares['jornada'][count($pares['jornada'])-1]['fim'] = $value;
+						$pares["jornada"][count($pares["jornada"])-1]["fim"] = $value;
 					}
 				break;
 				case 3:
-					$pares['refeicao'][] = [
-						'inicio' => $value
+					$pares["refeicao"][] = [
+						"inicio" => $value
 					];
 				break;
 				case 4:
-					$pares['refeicao'][count($pares['refeicao'])-1]['fim'] = $value;
+					$pares["refeicao"][count($pares["refeicao"])-1]["fim"] = $value;
 				break;
 				case 5:
-					$pares['espera'][] = [
-						'inicio' => $value
+					$pares["espera"][] = [
+						"inicio" => $value
 					];
 				break;
 				case 6:
-					$pares['espera'][count($pares['espera'])-1]['fim'] = $value;
+					$pares["espera"][count($pares["espera"])-1]["fim"] = $value;
 				break;
 				case 7:
-					$pares['descanso'][] = [
-						'inicio' => $value
+					$pares["descanso"][] = [
+						"inicio" => $value
 					];
 				break;
 				case 8:
-					$pares['descanso'][count($pares['descanso'])-1]['fim'] = $value;
+					$pares["descanso"][count($pares["descanso"])-1]["fim"] = $value;
 				break;
 				case 9:
-					$pares['repouso'][] = [
-						'inicio' => $value
+					$pares["repouso"][] = [
+						"inicio" => $value
 					];
 				break;
 				case 10:
-					$pares['repouso'][count($pares['repouso'])-1]['fim'] = $value;
+					$pares["repouso"][count($pares["repouso"])-1]["fim"] = $value;
 				break;
 				case 11:
-					$pares['repousoEmbarcado'][] = [
-						'inicio' => $value
+					$pares["repousoEmbarcado"][] = [
+						"inicio" => $value
 					];
 				break;
 				case 12:
-					$pares['repousoEmbarcado'][count($pares['repousoEmbarcado'])-1]['fim'] = $value;
+					$pares["repousoEmbarcado"][count($pares["repousoEmbarcado"])-1]["fim"] = $value;
 				break;
 			}
 		}
 
-		$jornadaCompleta = '00:00';
-		for($f = 0; $f < count($pares['jornada']); $f++){
-			if(!empty($pares['jornada'][$f]['fim'])){
-				$jornada = operarHorarios([$pares['jornada'][$f]['fim'], $pares['jornada'][$f]['inicio']], '-');
-				$jornadaCompleta = operarHorarios([$jornadaCompleta, $jornada], '+');
+		$jornadaCompleta = "00:00";
+		for($f = 0; $f < count($pares["jornada"]); $f++){
+			if(!empty($pares["jornada"][$f]["fim"])){
+				$jornada = operarHorarios([$pares["jornada"][$f]["fim"], $pares["jornada"][$f]["inicio"]], "-");
+				$jornadaCompleta = operarHorarios([$jornadaCompleta, $jornada], "+");
 			}
 		}
 
 		//Utilizado em batida_ponto_html.php
-		$ultimoInicioJornada = !empty($pares['jornada'])? $pares['jornada'][count($pares['jornada'])-1]['inicio']: null;
+		$ultimoInicioJornada = !empty($pares["jornada"])? $pares["jornada"][count($pares["jornada"])-1]["inicio"]: null;
 		
 		foreach($pares as $key => $value){
 			if(is_array($value) && count($value) > 0){
 				for($f = 0; $f < count($value); $f++){
-					if(isset($value[$f]['inicio']) && isset($value[$f]['fim'])){
-						$value[$f] = operarHorarios([$value[$f]['fim'], $value[$f]['inicio']], '-');
+					if(isset($value[$f]["inicio"]) && isset($value[$f]["fim"])){
+						$value[$f] = operarHorarios([$value[$f]["fim"], $value[$f]["inicio"]], "-");
 					}else{
-						$value[$f] = '00:00';
+						$value[$f] = "00:00";
 					}
 				}
-				$value = operarHorarios($value, '+');
+				$value = operarHorarios($value, "+");
 			}else{
-				$value = '00:00';
+				$value = "00:00";
 			}
 			$pares[$key] = $value;
 		}
 		
 		
-		$jornadaEfetiva = operarHorarios([$pares['refeicao'], $pares['espera'], $pares['descanso'], $pares['repouso'], $pares['repousoEmbarcado']], '+');
+		$jornadaEfetiva = operarHorarios([$pares["refeicao"], $pares["espera"], $pares["descanso"], $pares["repouso"], $pares["repousoEmbarcado"]], "+");
 
-		$jornadaEfetiva = operarHorarios([$pares['jornada'], $jornadaEfetiva], '-');
+		$jornadaEfetiva = operarHorarios([$pares["jornada"], $jornadaEfetiva], "-");
 
 
 
 		$botoes = [
-			'inicioJornada' 			=> criaBotaoRegistro('btn green', 1,  'Iniciar Jornada', 'fa fa-car fa-6'),
-			'inicioRefeicao' 			=> criaBotaoRegistro('btn green', 3,  'Iniciar Refeição', 'fa fa-cutlery fa-6'),
-			'inicioEspera' 				=> criaBotaoRegistro('btn green', 5,  'Iniciar Espera', 'fa fa-clock-o fa-6'),
-			'inicioDescanso' 			=> criaBotaoRegistro('btn green', 7,  'Iniciar Descanso', 'fa fa-hourglass-start fa-6'),
-			'inicioRepouso' 			=> criaBotaoRegistro('btn green', 9,  'Iniciar Repouso', 'fa fa-bed fa-6'),
-			// 'inicioRepousoEmbarcado'	=> criaBotaoRegistro('btn green', 11, 'Iniciar Repouso Embarcado', 'fa fa-bed fa-6'),
+			"inicioJornada" 			=> criaBotaoRegistro("btn green", 1,  "Iniciar Jornada", "fa fa-car fa-6"),
+			"inicioRefeicao" 			=> criaBotaoRegistro("btn green", 3,  "Iniciar Refeição", "fa fa-cutlery fa-6"),
+			"inicioEspera" 				=> criaBotaoRegistro("btn green", 5,  "Iniciar Espera", "fa fa-clock-o fa-6"),
+			"inicioDescanso" 			=> criaBotaoRegistro("btn green", 7,  "Iniciar Descanso", "fa fa-hourglass-start fa-6"),
+			"inicioRepouso" 			=> criaBotaoRegistro("btn green", 9,  "Iniciar Repouso", "fa fa-bed fa-6"),
+			// "inicioRepousoEmbarcado"	=> criaBotaoRegistro("btn green", 11, "Iniciar Repouso Embarcado", "fa fa-bed fa-6"),
 
-			'fimJornada' 				=> criaBotaoRegistro('btn red', 2,  'Encerrar Jornada', 'fa fa-car fa-6'),
-			'fimRefeicao' 				=> criaBotaoRegistro('btn red', 4,  'Encerrar Refeição', 'fa fa-cutlery fa-6'),
-			'fimEspera' 				=> criaBotaoRegistro('btn red', 6,  'Encerrar Espera', 'fa fa-clock-o fa-6'),
-			'fimDescanso' 				=> criaBotaoRegistro('btn red', 8,  'Encerrar Descanso', 'fa fa-hourglass-end fa-6'),
-			'fimRepouso' 				=> criaBotaoRegistro('btn red', 10, 'Encerrar Repouso', 'fa fa-bed fa-6'),
-			// 'fimRepousoEmbarcado' 		=> criaBotaoRegistro('btn red', 12, 'Encerrar Repouso Embarcado', 'fa fa-bed fa-6'),
+			"fimJornada" 				=> criaBotaoRegistro("btn red", 2,  "Encerrar Jornada", "fa fa-car fa-6"),
+			"fimRefeicao" 				=> criaBotaoRegistro("btn red", 4,  "Encerrar Refeição", "fa fa-cutlery fa-6"),
+			"fimEspera" 				=> criaBotaoRegistro("btn red", 6,  "Encerrar Espera", "fa fa-clock-o fa-6"),
+			"fimDescanso" 				=> criaBotaoRegistro("btn red", 8,  "Encerrar Descanso", "fa fa-hourglass-end fa-6"),
+			"fimRepouso" 				=> criaBotaoRegistro("btn red", 10, "Encerrar Repouso", "fa fa-bed fa-6"),
+			// "fimRepousoEmbarcado" 		=> criaBotaoRegistro("btn red", 12, "Encerrar Repouso Embarcado", "fa fa-bed fa-6"),
 		];
 
 		$botoesVisiveis = [];
 
-		if (empty($pontos['ultimo']['pont_tx_tipo']) || intval($pontos['ultimo']['pont_tx_tipo']) == 2) {
-			$botoesVisiveis = [$botoes['inicioJornada']];
-		} elseif ($pontos['ultimo']['pont_tx_tipo'] == 1 || in_array($pontos['ultimo']['pont_tx_tipo'], array_keys($fins))){
+		if (empty($pontos["ultimo"]["pont_tx_tipo"]) || intval($pontos["ultimo"]["pont_tx_tipo"]) == 2) {
+			$botoesVisiveis = [$botoes["inicioJornada"]];
+		} elseif ($pontos["ultimo"]["pont_tx_tipo"] == 1 || in_array($pontos["ultimo"]["pont_tx_tipo"], array_keys($fins))){
 			$botoesVisiveis = [
-				$botoes['inicioRepouso'],
-				$botoes['inicioDescanso'], 
-				$botoes['inicioEspera'], 
-				$botoes['inicioRefeicao'], 
-				$botoes['fimJornada']
-				// $botoes['inicioRepousoEmbarcado']
+				$botoes["inicioRepouso"],
+				$botoes["inicioDescanso"], 
+				$botoes["inicioEspera"], 
+				$botoes["inicioRefeicao"], 
+				$botoes["fimJornada"]
+				// $botoes["inicioRepousoEmbarcado"]
 			];
-		}elseif(in_array($pontos['ultimo']['pont_tx_tipo'], array_keys($inicios))){
+		}elseif(in_array($pontos["ultimo"]["pont_tx_tipo"], array_keys($inicios))){
 			$botoesVisiveis = [
-				$botoes[$fins[$pontos['ultimo']['pont_tx_tipo']+1]]
+				$botoes[$fins[$pontos["ultimo"]["pont_tx_tipo"]+1]]
 			];
 		}
 
@@ -391,11 +403,11 @@
 				<label>Hora</label><br>
 				<p class='text-left' id='clock'>Carregando...</p>
 			</div>",
-			campo('Data', 'data', data($hoje), 2, '', 'readonly=readonly'),
+			campo("Data", "data", data($hoje), 2, "", "readonly=readonly"),
 			"<div class='col-sm-5 margin-bottom-5 margin-top-10	'>"
-				."Matrícula: ".$aMotorista['enti_tx_matricula']."<br><br>"
-				."CPF: ".$aMotorista['enti_tx_cpf']."<br><br>"
-				."Motorista: ".$aMotorista['enti_tx_nome']."<br><br>"
+				."Matrícula: ".$aMotorista["enti_tx_matricula"]."<br><br>"
+				."CPF: ".$aMotorista["enti_tx_cpf"]."<br><br>"
+				."Motorista: ".$aMotorista["enti_tx_nome"]."<br><br>"
 			."</div>",
 		];
 
@@ -405,36 +417,35 @@
 					FROM endosso, user
 					WHERE endo_tx_status = 'ativo'
 						AND '".$hoje."' BETWEEN endo_tx_de AND endo_tx_ate
-						AND endo_nb_entidade = '".$aMotorista['enti_nb_id']."'
-						AND endo_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
+						AND endo_nb_entidade = '".$aMotorista["enti_nb_id"]."'
+						AND endo_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'
 						AND endo_nb_userCadastro = user_nb_id
 					LIMIT 1"
 			)
 		);
 		if (!empty($aEndosso)){
-			$fields[] = texto('Endosso:', "Endossado por " . $aEndosso['user_tx_login'] . " em " . data($aEndosso['endo_tx_dataCadastro'], 1), 6);
+			$fields[] = texto("Endosso:", "Endossado por " . $aEndosso["user_tx_login"] . " em " . data($aEndosso["endo_tx_dataCadastro"], 1), 6);
 			$botoesVisiveis = [];
 		}else{
-			$fields[] = campo("Placa do Veículo", "placa", $_POST["placa"], 2, "MASCARA_PLACA");
-			$fields[] = textarea("Justificativa", "justificativa", "", 5, "style='resize: vertical;' placeholder='Em caso de inconsistência, justificar aqui.'");
+			$fields[] = campo("Placa do Veículo", "placa", ($_POST["placa"]?? ""), 2, "MASCARA_PLACA");
+			$fields[] = textarea("Justificativa", "justificativa", ($_POST["justificativa"]?? ""), 5, "style='resize: vertical;' placeholder='Em caso de inconsistência, justificar aqui.'");
 		}
 
-		abre_form('Dados do Registro de Ponto');
+		abre_form("Dados do Registro de Ponto");
 		linha_form($fields);
 		fecha_form($botoesVisiveis);
 
 
 		$gridFields = [
-			'DATA'			=> 'data(pont_tx_data, 1)',
-			'TIPO'			=> 'macr_tx_nome',
-			'DATA CADASTRO'	=> 'data(pont_tx_dataCadastro,1)',
-			'PLACA'			=> 'pont_tx_placa'
+			"DATA"			=> "data(pont_tx_data, 1)",
+			"TIPO"			=> "macr_tx_nome",
+			"DATA CADASTRO"	=> "data(pont_tx_dataCadastro,1)",
+			"PLACA"			=> "pont_tx_placa"
 		];
 
-		grid($sql, array_keys($gridFields), array_values($gridFields), '', '', 0, 'desc', -1);
+		grid($sql, array_keys($gridFields), array_values($gridFields), "", "", 0, "desc", -1);
 		rodape();
 
 
-		include "batida_ponto_html.php";
+		include "html/batida_ponto_html.php";
 	}
-?>

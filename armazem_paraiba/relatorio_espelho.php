@@ -24,14 +24,14 @@
     <script>
     function downloadCSV() {
         // Caminho do arquivo CSV no servidor
-        var filePath = '<?="./arquivos/endosso_csv/$aEmpresa[empr_nb_id]/$aMotorista[enti_nb_id]/espelho-de-ponto.csv"?>'; // Substitua pelo caminho do seu arquivo
+        var filePath = '<?="./arquivos/endosso_csv/".$aEmpresa["empr_nb_id"]."/".$aMotorista["enti_nb_id"]."/espelho-de-ponto.csv"?>'; // Substitua pelo caminho do seu arquivo
 
         // Cria um link para download
         var link = document.createElement('a');
 
         // Configurações do link
         link.setAttribute('href', filePath);
-        link.setAttribute('download', '<?="espelho-de-ponto-$aMotorista[enti_tx_nome].csv"?>');
+        link.setAttribute('download', '<?="espelho-de-ponto-".$aMotorista["enti_tx_nome"].".csv"?>');
 
         // Adiciona o link ao documento
         document.body.appendChild(link);

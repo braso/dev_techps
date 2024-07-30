@@ -173,7 +173,7 @@
 			$id = $_POST["id"];
 		}
 
-		$idUserFoto = mysqli_fetch_assoc(query("SELECT user_nb_id FROM `user` WHERE user_nb_id = '".$id."' LIMIT 1;"));
+		$idUserFoto = mysqli_fetch_assoc(query("SELECT user_nb_id FROM user WHERE user_nb_id = '".$id."' LIMIT 1;"));
 		$file_type = $_FILES["foto"]["type"]; //returns the mimetype
 
 		$allowed = array("image/jpeg", "image/gif", "image/png");
@@ -366,7 +366,7 @@
 			$campo_rg = texto("RG", ($a_mod["user_tx_rg"]?? ""), 2, "style=''");
 			
 			if(!empty($a_mod["user_nb_cidade"])){
-				$cidade_query = query("SELECT * FROM `cidade` WHERE cida_tx_status = 'ativo' AND cida_nb_id = ".$a_mod["user_nb_cidade"]."");
+				$cidade_query = query("SELECT * FROM cidade WHERE cida_tx_status = 'ativo' AND cida_nb_id = ".$a_mod["user_nb_cidade"]."");
 				$cidade = mysqli_fetch_array($cidade_query);
 			}else{
 				$cidade = ["cida_tx_nome" => ""];
@@ -377,7 +377,7 @@
 			$campo_telefone = texto("Telefone", ($a_mod["user_tx_fone"]?? ""), 2, "style=''");
 			
 			if(!empty($a_mod["user_nb_empresa"])){
-				$empresa_query = query("SELECT * FROM `empresa` WHERE empr_tx_status = 'ativo' AND empr_nb_id = ".$a_mod["user_nb_empresa"]."");
+				$empresa_query = query("SELECT * FROM empresa WHERE empr_tx_status = 'ativo' AND empr_nb_id = ".$a_mod["user_nb_empresa"]."");
 				$empresa = mysqli_fetch_array($empresa_query);
 			}
 
@@ -608,4 +608,3 @@
 		grid($sql, $cab, $val);
 		rodape();
 	}
-?>

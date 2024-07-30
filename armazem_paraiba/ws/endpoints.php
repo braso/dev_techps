@@ -66,7 +66,7 @@
                 coalesce(user_tx_matricula,enti_tx_matricula)           as registration,
                 coalesce(e.empr_tx_nome)                                as company,
                 coalesce(user_tx_cpf,enti.enti_tx_cpf)  				as cpf,
-                coalesce(enti.enti_tx_carteira,user_tx_rg)              as rg,
+                coalesce(user_tx_rg)              as rg,
                 enti.enti_tx_cnhRegistro                                as cnh,
                 user_tx_email                                           as email,
                 user_tx_nivel                                           as role,
@@ -542,4 +542,3 @@
     function delLastRegister(int $driverId){
         return delete_last($driverId);
     }
-?>

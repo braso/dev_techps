@@ -83,7 +83,7 @@
 				//Conferir se é o primeiro endosso que está sendo registrado{
 					$primEndosso = mysqli_fetch_all(
 						query(
-							"SELECT * FROM endosso 
+							"SELECT endo_tx_de FROM endosso 
 								WHERE endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'
 									AND endo_tx_status = 'ativo'
 								ORDER BY endo_tx_de DESC
@@ -106,7 +106,7 @@
 				//Conferir se tem espaço entre o último endosso e o endosso atual{
 					$ultimoEndosso = mysqli_fetch_all(
 						query(
-							"SELECT * FROM `endosso`
+							"SELECT * FROM endosso
 								WHERE endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'
 									AND endo_tx_ate < '".$_POST["data_de"]."'
 									AND endo_tx_status = 'ativo'
@@ -168,7 +168,7 @@
 		}
 
 		$ultimoEndosso = mysqli_fetch_assoc(query(
-			"SELECT enti_tx_matricula, endo_tx_ate, endo_tx_filename, endo_tx_saldo, endo_tx_max50APagar FROM endosso "
+			"SELECT enti_tx_matricula, endo_tx_ate, endo_tx_filename FROM endosso "
 			." JOIN entidade ON enti_nb_id = endo_nb_entidade"
 			." WHERE endo_tx_status = 'ativo'"
 				." AND endo_nb_entidade = ".$_POST["busca_motorista"]
@@ -181,9 +181,9 @@
 		$pago = ["00:00", "00:00"];
 		if(!empty($ultimoEndosso["endo_tx_filename"])){
 			$ultimoEndossoCSV = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
-			$pago = calcularHorasAPagar($ultimoEndosso["endo_tx_saldo"], $ultimoEndossoCSV["totalResumo"]["he50"], $ultimoEndossoCSV["totalResumo"]["he100"], $ultimoEndosso["endo_tx_max50APagar"]);
+			$pago = calcularHorasAPagar($ultimoEndossoCSV["endo_tx_saldo"], $ultimoEndossoCSV["totalResumo"]["he50"], $ultimoEndossoCSV["totalResumo"]["he100"], $ultimoEndossoCSV["endo_tx_max50APagar"]);
 		}
-		$saldoAnterior = operarHorarios([$ultimoEndosso["endo_tx_saldo"], $pago[0], $pago[1]], "-");
+		$saldoAnterior = operarHorarios([$ultimoEndossoCSV["endo_tx_saldo"], $pago[0], $pago[1]], "-");
 		
 		$dataAte = new DateTime($_POST["data_ate"]);
 		$ultimoEndosso["endo_tx_ate"] = new DateTime($ultimoEndosso["endo_tx_ate"]);
@@ -289,7 +289,7 @@
 
 			$ultimoEndosso = mysqli_fetch_assoc(
 				query(
-					"SELECT * FROM `endosso`
+					"SELECT * FROM endosso
 						WHERE endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'
 							AND endo_tx_ate < '".$_POST["data_de"]."'
 							AND endo_tx_status = 'ativo'
@@ -306,11 +306,12 @@
 				}
 			}
 			$pago = ["00:00", "00:00"];
+			$saldoAnterior = "00:00";
 			if(!empty($ultimoEndosso["endo_tx_filename"])){
 				$ultimoEndossoCSV = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
-				$pago = calcularHorasAPagar($ultimoEndosso["endo_tx_saldo"], $ultimoEndossoCSV["totalResumo"]["he50"], $ultimoEndossoCSV["totalResumo"]["he100"], $ultimoEndosso["endo_tx_max50APagar"]);
+				$pago = calcularHorasAPagar($ultimoEndossoCSV["endo_tx_saldo"], $ultimoEndossoCSV["totalResumo"]["he50"], $ultimoEndossoCSV["totalResumo"]["he100"], $ultimoEndossoCSV["endo_tx_max50APagar"]);
+				$saldoAnterior = operarHorarios([$ultimoEndossoCSV["endo_tx_saldo"], $pago[0], $pago[1]], "-");
 			}
-			$saldoAnterior = operarHorarios([$ultimoEndosso["endo_tx_saldo"], $pago[0], $pago[1]], "-");
 				
 			//Calculando datas de início e fim do ciclo{
 				$aEndosso = carrega_array(query(
@@ -380,7 +381,7 @@
 		$baseErrMsg = "<br><br>ERRO(S):<br>";
 		$errorMsg = $baseErrMsg;
 
-		$baseSucMsg = "<br><br>Registro(s) inserido(s) com sucesso!<br><br>H.E. 50% a pagar:<br>";
+		$baseSucMsg = "<br><br>Registro(s) inserido(s) com sucesso!<br><br>H.E. Semanal a pagar:<br>";
 		$successMsg = $baseSucMsg;
 		
 		foreach($novosEndossos as $novoEndosso){
@@ -428,80 +429,8 @@
 		exit;
 	}
 
-	function carregarJS(){
-		global $CONTEX;
-		echo "
-			<script>
-				const radioSim = document.getElementById('sim');
-				const radioNao = document.getElementById('nao');
-				$('[name=\"quantHoras\"]').inputmask({mask: ['99:99', '999:99']});
-				const campo = document.getElementById('max50APagar');
-				if (radioSim.checked) {
-					campo.style.display = 'flex'; // Exibe o campo quando 'Mostrar Campo' é selecionado
-				}
-				
-				// Adicionando um ouvinte de eventos aos elementos de rádio
-				radioSim.addEventListener('change', function() {
-					if (radioSim.checked) {
-						campo.style.display = 'flex'; // Exibe o campo quando 'Mostrar Campo' é selecionado
-					}
-				});
-				
-				radioNao.addEventListener('change', function() {
-				if (radioNao.checked) {
-					campo.style.display = 'none'; // Oculta o campo quando 'Não Mostrar Campo' é selecionado
-				}
-				});
-				function carregarMotorista() {
-					alert('carregarMotorista()');
-				}
-				function selecionaMotorista(idEmpresa) {
-					let buscaExtra = encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\")'+
-						(idEmpresa > 0? ' AND enti_nb_empresa = \"'+idEmpresa+'\"': '')
-					);
-
-					if ($('.busca_motorista').data('select2')) {// Verifica se o elemento está usando Select2 antes de destruí-lo
-						$('.busca_motorista').select2('destroy');
-						$('.busca_motorista').html('');
-						$('.busca_motorista').val('');
-					}
-					
-					$.fn.select2.defaults.set('theme', 'bootstrap');
-					$('.busca_motorista').select2({
-						language: 'pt-BR',
-						placeholder: 'Selecione um item',
-						allowClear: true,
-						ajax: {
-							url: '".$_ENV["APP_PATH"]."/contex20/select2.php?path=".$CONTEX["path"]."&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd='+buscaExtra+'&extra_busca=enti_tx_matricula',
-							dataType: 'json',
-							delay: 250,
-							processResults: function(data){
-								return {results: data};
-							},
-							cache: true,
-							success: function(result){
-							},
-							error: function(jqxhr, status, exception) {
-								alert('Exception:', exception);
-							}
-						}
-					});
-				}
-
-				function pegarSaldoTotal(){
-					if(Array.isArray(document.forms[0].acao)){
-						button = document.forms[0].acao[0];
-					}else{
-						button = document.forms[0].acao;
-					}
-					button.value = 'pegarSaldoTotal';
-					button.click();
-				}
-			</script>
-		";
-	}
-
 	function index(){
+		global $CONTEX;
 
 		if(!empty($_GET["test"])){
 			$_GET["test"] = explode(", ", $_GET["test"]);
@@ -537,7 +466,7 @@
 		
 			<div id='max50APagar' class='col-sm-3 margin-bottom-5' style='display: ".(!empty($_POST["pagar_horas"]) && $_POST["pagar_horas"] == "sim"? "flex": "none")."; align-content: flex-end; align-items: flex-end;'>
 				<div>
-					<label>Máx. de HE50% a pagar</label>
+					<label>Máx. de HE Semanal a pagar</label>
 					<input class='form-control input-sm' id='outroCampo' name='quantHoras' autocomplete='off' value = '".(!empty($_POST["quantHoras"])? $_POST["quantHoras"]:"")."'>
 				</div>
 				<div style='margin-left: 5px;width: max-content; font-size: 12px;'><a onclick='pegarSaldoTotal()'>Inserir todo o saldo possível.</a></div>
@@ -575,7 +504,7 @@
 		
 		rodape();
 
-		carregarJS();
-
+		echo "<script>";
+		include "js/cadastro_endosso.js";
+		echo "</script>";
 	}
-?>
