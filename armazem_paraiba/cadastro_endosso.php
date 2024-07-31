@@ -196,15 +196,15 @@
 			diaDetalhePonto($ultimoEndosso["enti_tx_matricula"], $date->format("Y-m-d"));
 		}
 		
-		$saldoAtual = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
-		$aPagar = calcularHorasAPagar($saldoAtual, $totalResumo["he50"], $totalResumo["he100"], "00:00");
+		$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
+		$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], "00:00");
 		
 		$totalResumo["saldoAnterior"] = $saldoAnterior;
-		$totalResumo["saldoAtual"] = $saldoAtual;
+		$totalResumo["saldoBruto"] = $saldoBruto;
 		$totalResumo["he50APagar"] = $aPagar[0];
 		$totalResumo["he100APagar"] = $aPagar[1];
 
-		$_POST["quantHoras"] = operarHorarios([$totalResumo["saldoAtual"], $totalResumo["he100APagar"]], "-");
+		$_POST["quantHoras"] = operarHorarios([$totalResumo["saldoBruto"], $totalResumo["he100APagar"]], "-");
 		if($_POST["quantHoras"][0] == "-"){
 			$_POST["quantHoras"] = "00:00";
 		}
@@ -343,12 +343,12 @@
 			//}
 
 
-			$saldoAtual = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
-			$aPagar = calcularHorasAPagar($saldoAtual, $totalResumo["he50"], $totalResumo["he100"], (!empty($_POST["quantHoras"])? $_POST["quantHoras"]: "00:00"));
-			$saldoAtual = operarHorarios([$saldoAtual, $aPagar[0], $aPagar[1]], "-");
+			$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
+			$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], (!empty($_POST["quantHoras"])? $_POST["quantHoras"]: "00:00"));
+			$saldoBruto = operarHorarios([$saldoBruto, $aPagar[0], $aPagar[1]], "-");
 			
 			$totalResumo["saldoAnterior"] = $saldoAnterior;
-			$totalResumo["saldoAtual"] = $saldoAtual;
+			$totalResumo["saldoBruto"] = $saldoBruto;
 			$totalResumo["he50APagar"] = $aPagar[0];
 			$totalResumo["he100APagar"] = $aPagar[1];
 
@@ -357,7 +357,7 @@
 				"endo_tx_nome" 			  => $motorista["enti_tx_nome"],
 				"endo_tx_matricula" 	  => $motorista["enti_tx_matricula"],
 				"endo_tx_mes" 			  => substr($_POST["data_de"], 0, 8)."01",
-				"endo_tx_saldo" 		  => $totalResumo["saldoAtual"],
+				"endo_tx_saldo" 		  => $totalResumo["saldoBruto"],
 				"endo_tx_de" 			  => $_POST["data_de"],
 				"endo_tx_ate" 			  => $_POST["data_ate"],
 				"endo_tx_dataCadastro" 	  => date("Y-m-d h:i:s"),

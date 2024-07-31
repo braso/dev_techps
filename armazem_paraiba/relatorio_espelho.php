@@ -250,8 +250,8 @@
                         <td>Saldo Período</td>
                         <td><?=$totalResumo['diffSaldo']?></td>
                         <td class="empty"></td>
-                        <td>Saldo Atual</td>
-                        <td><?=$totalResumo['saldoAtual']?></td>
+                        <td>Saldo Bruto</td>
+                        <td><?=$totalResumo['saldoBruto']?></td>
                     </tr>
                 </table>
             </td>

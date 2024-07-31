@@ -109,7 +109,6 @@
 		}
 
 		if (!isset($_POST['id']) || empty($_POST['id'])) {
-			$_POST['status'] = 'ativo';
 
 			$empresa = [
 				'empr_tx_Ehmatriz'	=> $_POST['matriz'],
@@ -120,7 +119,7 @@
 			$campos = [
 				'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento',
 				'referencia', 'fone1', 'fone2', 'email', 'inscricaoEstadual', 'inscricaoMunicipal',
-				'regimeTributario', 'status', 'situacao', 'contato',
+				'regimeTributario', 'status', 'status', 'contato',
 				'ftpServer', 'ftpUsername', 'ftpUserpass', 'dataRegistroCNPJ'
 			];
 
@@ -183,7 +182,7 @@
 			$campos = [
 				'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento',
 				'referencia', 'fone1', 'fone2', 'email', 'inscricaoEstadual', 'inscricaoMunicipal',
-				'regimeTributario', 'status', 'situacao', 'contato',
+				'regimeTributario', 'status', 'status', 'contato',
 				'ftpServer', 'ftpUsername', 'ftpUserpass', 'dataRegistroCNPJ'
 			];
 
@@ -253,7 +252,7 @@
 			$id = (int)$_GET['id'];
 			$cnpj = substr($_GET['cnpj'], 0, 18);
 
-			$sql = query("SELECT * FROM empresa WHERE empr_tx_cnpj = '$cnpj' AND empr_nb_id != $id AND empr_tx_status = 'ativo' LIMIT 1");
+			$sql = query("SELECT * FROM empresa WHERE empr_tx_cnpj = '$cnpj' AND empr_nb_id != $id LIMIT 1");
 			$a = carrega_array($sql);
 			
 			if($a['empr_nb_id'] > 0){
@@ -313,7 +312,7 @@
 								console.log(response);
 								$('#nome').val(response[0].empr_tx_nome);
 								$('#fantasia').val(response[0].empr_tx_fantasia);
-								$('#situação').val(response[0].empr_tx_situacao);
+								$('#status').val(response[0].empr_tx_status);
 								$('#cep').val(response[0].empr_tx_cep);
 								$('#numero').val(response[0].empr_tx_email);
 								$('#complemento').val(response[0].empr_tx_complemento);
@@ -373,7 +372,7 @@
 		}
 
 		$campos = [
-			'situacao','cep','endereco','numero','bairro','cnpj',
+			'status','cep','endereco','numero','bairro','cnpj',
 			'nome','fantasia','complemento','referencia','fone1',
 			'fone2','contato','email','inscricaoEstadual','inscricaoMunicipal',
 			'regimeTributario','logo','domain', 'Ehmatriz',
@@ -413,7 +412,7 @@
 				texto('CPF/CNPJ*',$input_values['cnpj'],2),
 				texto('Nome*',$input_values['nome'],4),
 				texto('Nome Fantasia',$input_values['fantasia'],3),
-				texto('Situação',$input_values['situacao'],2),
+				texto('Status',$input_values['status'],2),
 				texto('CEP*',$input_values['cep'],2),
 				texto('Endereço*',$input_values['endereco'],4),
 				texto('Número*',$input_values['numero'],2),
@@ -441,7 +440,7 @@
 				campo('CPF/CNPJ*','cnpj',$input_values['cnpj'],2,'MASCARA_CPF/CNPJ','onkeyup="checarCNPJ(this.value);"'),
 				campo('Nome*','nome',$input_values['nome'],4,'','maxlength="65"'),
 				campo('Nome Fantasia','fantasia',$input_values['fantasia'],4,'','maxlength="65"'),
-				combo('Situação','situacao',$input_values['situacao'],2,['ativo' => 'Ativo', 'inativo' => 'Inativo']),
+				combo('Status','status',$input_values['status'],2,['ativo' => 'Ativo', 'inativo' => 'Inativo']),
 				campo('CEP*','cep',$input_values['cep'],2,'MASCARA_CEP','onkeyup="carrega_cep(this.value);"'),
 				campo('Endereço*','endereco',$input_values['endereco'],5,'','maxlength="100"'),
 				campo('Número*','numero',$input_values['numero'],2),
@@ -601,12 +600,12 @@
 		}
 
 		$extra = 
-			((!empty($_POST["busca_codigo"]))? 											" AND empr_nb_id = '".$_POST["busca_codigo"]."'": "").
-			((!empty($_POST["busca_nome"]))? 											" AND empr_tx_nome LIKE '%".$_POST["busca_nome"]."%'": "").
-			((!empty($_POST["busca_fantasia"]))? 										" AND empr_tx_fantasia LIKE '%".$_POST["busca_fantasia"]."%'": "").
-			((!empty($_POST["busca_cnpj"]))? 											" AND empr_tx_cnpj = '".$_POST["busca_cnpj"]."'": "").
-			((!empty($_POST["busca_situacao"]) && $_POST["busca_situacao"] != "Todos")? " AND empr_tx_situacao = '".$_POST["busca_situacao"]."'": "").
-			((!empty($_POST["busca_uf"]))? 												" AND cida_tx_uf = '".$_POST["busca_uf"]."'": "")
+			((!empty($_POST["busca_codigo"]))? 		" AND empr_nb_id = '".$_POST["busca_codigo"]."'": "").
+			((!empty($_POST["busca_nome"]))? 		" AND empr_tx_nome LIKE '%".$_POST["busca_nome"]."%'": "").
+			((!empty($_POST["busca_fantasia"]))? 	" AND empr_tx_fantasia LIKE '%".$_POST["busca_fantasia"]."%'": "").
+			((!empty($_POST["busca_cnpj"]))? 		" AND empr_tx_cnpj = '".$_POST["busca_cnpj"]."'": "").
+			((!empty($_POST["busca_status"]))? 		" AND empr_tx_status = '".$_POST["busca_status"]."'": "").
+			((!empty($_POST["busca_uf"]))? 			" AND cida_tx_uf = '".$_POST["busca_uf"]."'": "")
 		;
 		
 
@@ -619,7 +618,7 @@
 			campo("Nome Fantasia",	"busca_fantasia",	($_POST["busca_fantasia"]?? ""),	2, "",					"maxlength='65'"),
 			campo("CPF/CNPJ",		"busca_cnpj",		($_POST["busca_cnpj"]?? ""),		2, "MASCARA_CPF/CNPJ"),
 			combo("UF",				"busca_uf",			($_POST["busca_uf"]?? ""),			1, $uf),
-			combo("Situação",		"busca_situacao",	($_POST["busca_situacao"]?? ""),	2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
+			combo("Status",			"busca_status",		($_POST["busca_status"]?? ""),	2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
 		];
 
 		$botao = [
@@ -634,7 +633,7 @@
 		$sql = 
 			"SELECT *, concat('[', cida_tx_uf, '] ', cida_tx_nome) as ufCidade FROM empresa
 				JOIN cidade ON empr_nb_cidade = cida_nb_id
-				WHERE empr_tx_status = 'ativo' 
+				WHERE 1 = 1
 					$extra
 				ORDER BY empr_tx_EhMatriz DESC, empr_nb_id";
 
@@ -644,7 +643,7 @@
 			'FANTASIA' => 'empr_tx_fantasia',
 			'CPF/CNPJ' => 'empr_tx_cnpj',
 			'CIDADE/UF' => 'ufCidade',
-			'SITUAÇÃO' => 'empr_tx_situacao',
+			'STATUS' => 'empr_tx_status',
 			'<spam class="glyphicon glyphicon-search"></spam>' => 'icone_modificar(empr_nb_id,modificarEmpresa)',
 			'<spam class="glyphicon glyphicon-remove"></spam>' => 'icone_excluir(empr_nb_id,excluirEmpresa)'
 		];

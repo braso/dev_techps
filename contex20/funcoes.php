@@ -489,7 +489,7 @@
 			case "MASCARA_DOMAIN":
 				$dataScript .= "$(document).ready(function() {
 						var inputField = $('#nomeDominio');
-						var domainPrefix = '".$_SERVER['HTTP_ORIGIN'].(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/')."';
+						var domainPrefix = '".$_SERVER['HTTP_ORIGIN'].(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? '/dev_techps/': '/techps/')."';
 
 						function updateDisplayedText() {
 							var inputValue = inputField.val();

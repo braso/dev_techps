@@ -120,7 +120,7 @@
 		for($f = 0; $f < count($intervalos); $f++){
 			$date = date_add(new DateTime("1970-01-01 00:00:00"), $intervalos[$f][1]);
 			$intervalos[$f][1] = sprintf('%02d:%02d', abs(intval((dateTimeToSecs($date)/60)/60)), abs(intval((dateTimeToSecs($date)/60)%60)));
-			if($intervalos[$f][1] > $mdc){
+			if($intervalos[$f][0] == true && $intervalos[$f][1] > $mdc){
 				$mdc = $intervalos[$f][1];
 			}
 		}
@@ -787,7 +787,7 @@
 
 			$aRetorno['jornadaPrevista'] = $jornadaPrevista;
 			if($jornadas['feriado'] == True){
-				$iconeFeriado =  " <a><i style='color:orange;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
+				$iconeFeriado =  " <a><i style='color:green;' title='$stringFeriado' class='fa fa-info-circle'></i></a>";
 				$aRetorno['diaSemana'] .= $iconeFeriado;
 			}
 		//}
@@ -1000,7 +1000,7 @@
 					$interAtivo = new DateTime($ponto["pont_tx_data"]);
 					continue;
 				}
-
+				
 				$intervalos[] = [
 					!($tipos[$ponto["pont_tx_tipo"]] == "inicioJornada" || (is_int(strpos($tipos[$ponto["pont_tx_tipo"]], "fim")) && $tipos[$ponto["pont_tx_tipo"]] != "fimJornada")), 
 					date_diff($interAtivo, new DateTime($ponto["pont_tx_data"]))
@@ -1063,7 +1063,7 @@
 			if (is_array($aAbono) && count($aAbono) > 0) {
 				$warning = 
 					"<a><i "
-						."style='color:orange;' "
+						."style='color:green;' "
 						."title='"
 							."Jornada Original: ".str_pad($jornadaPrevistaOriginal, 2, '0', STR_PAD_LEFT).":00\n"
 							."Abono: ".$aAbono['abon_tx_abono']."\n"
@@ -1300,22 +1300,22 @@
 	}
 
 	//@return [he50, he100]
-	function calcularHorasAPagar(string $saldoAtual, string $he50, string $he100, string $max50APagar): array{
-		$params = [$saldoAtual, $he50, $he100, $max50APagar];
+	function calcularHorasAPagar(string $saldoBruto, string $he50, string $he100, string $max50APagar): array{
+		$params = [$saldoBruto, $he50, $he100, $max50APagar];
 		foreach($params as $param){
 			if(!preg_match("/^-?\d{2,4}:\d{2}$/", $param)){
 				throw new Exception("Format error: "+$param);
 			}
 		}
 
-		if($saldoAtual[0] == "-"){
+		if($saldoBruto[0] == "-"){
 			return ["00:00", "00:00"];
 		}
-		if($saldoAtual <= $he100){
-			return ["00:00", $saldoAtual];
+		if($saldoBruto <= $he100){
+			return ["00:00", $saldoBruto];
 		}
 
-		$excedente = operarHorarios([$saldoAtual, $he100], "-");
+		$excedente = operarHorarios([$saldoBruto, $he100], "-");
 		if($excedente <= $max50APagar){
 			return [$excedente, $he100];
 		}
@@ -1458,7 +1458,7 @@
 				$esperaIndenizada 	= $aDetalhado['totalResumo']['esperaIndenizada'] == null 	? '00:00' : $aDetalhado['totalResumo']['esperaIndenizada'];
 				$saldoAnterior 		= $aDetalhado['totalResumo']['saldoAnterior'] == null 		? '00:00' : $aDetalhado['totalResumo']['saldoAnterior'];
 				$saldoPeriodo 		= $aDetalhado['totalResumo']['diffSaldo'] == null 			? '00:00' : $aDetalhado['totalResumo']['diffSaldo'];
-				$saldoFinal 		= $aDetalhado['totalResumo']['saldoAtual'] == null 			? '00:00' : $aDetalhado['totalResumo']['saldoAtual'];
+				$saldoFinal 		= $aDetalhado['totalResumo']['saldoBruto'] == null 			? '00:00' : $aDetalhado['totalResumo']['saldoBruto'];
 
 				$rows[] = [
 					'IdMotorista' => $motorista['enti_nb_id'],
