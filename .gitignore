@@ -14,13 +14,5 @@ Thumbs.db
 .vscode
 brasomo_dev_techps_sistema.sql
 
-armazem_paraiba/.env
-armazem_paraiba/arquivos/empresa/*
-armazem_paraiba/arquivos/endosso/*
-armazem_paraiba/arquivos/endosso_csv/*
-armazem_paraiba/arquivos/paineis/*
-armazem_paraiba/arquivos/pontos/*
-armazem_paraiba/arquivos/user/*
-armazem_paraiba/arquivos/doc_empresa/*
 
 .contex20/backup

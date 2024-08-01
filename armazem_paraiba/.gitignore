@@ -1,7 +1,2 @@
-arquivos/empresa/*
-arquivos/endosso/*
-arquivos/endosso_csv/*
-arquivos/paineis/*
-arquivos/pontos/*
-arquivos/user/*
-arquivos/doc_empresa/*
+.env
+arquivos/*
