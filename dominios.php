@@ -8,6 +8,7 @@ $dominios = [
     "carau_transporte"  => 'Carau Transportes',
     "feijao_turqueza"   => 'Feijão Turqueza',
     "opafrutas"         => 'Opafrutas',
+    "pkf_medeiros"      => 'PKF Medeiros',
     "qualy_transportes" => 'Qualy Transportes',
     "techps"            => 'Techps',
     "apx_solucoes"      => 'Fs Log Transportes',

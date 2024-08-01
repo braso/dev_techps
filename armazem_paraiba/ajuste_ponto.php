@@ -413,8 +413,11 @@
 		linha_form($campoJust);
 		fecha_form($botoes);
 
-		$sql = pegarSqlDia($aMotorista['enti_tx_matricula'], ["pont_nb_id", "pont_tx_data", "macr_tx_nome", "moti_tx_nome", "moti_tx_legenda", "pont_tx_descricao", "pont_tx_justificativa", "user_tx_login", "pont_tx_dataCadastro"]);
-		
+		$sql = pegarSqlDia($aMotorista['enti_tx_matricula'], ["pont_nb_id", "pont_tx_data", "macr_tx_nome", "moti_tx_nome", 
+		"moti_tx_legenda", "pont_tx_descricao", "pont_tx_justificativa", "user_tx_login", "pont_tx_dataCadastro",
+		"pont_tx_latitude", "pont_tx_longitude"]);
+
+
 		$gridFields = [
 			"CÓD"												=> "pont_nb_id",
 			"DATA"												=> "data(pont_tx_data, 1)",
@@ -425,6 +428,7 @@
 			"JUSTIFICATIVA"										=> "pont_tx_justificativa",
 			"USUÁRIO"											=> "user_tx_login",
 			"DATA CADASTRO"										=> "data(pont_tx_dataCadastro,1)",
+			"LOCALIZAÇÃO"                                       => "map(pont_nb_id)",
 			"<spam class='glyphicon glyphicon-remove'></spam>"	=> $iconeExcluir
 		];
 		

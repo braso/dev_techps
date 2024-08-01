@@ -189,7 +189,7 @@
 		$tab = substr($tabela,0,4);
 		$inserir = "";
 		for($i=0;$i<count($campos);$i++){
-			$inserir .= ", ".$campos[$i]." = ".$valores[$i]."";
+			$inserir .= ", ".$campos[$i]." = '".$valores[$i]."'";
 		}
 		if(strlen($inserir) > 2){
 			$inserir = substr($inserir, 2);
@@ -280,6 +280,20 @@
 				return @number_format($valor, 2, ",", "."); // retorna 100.000,50
 		}else
 			return "";
+	}
+
+	function map($idPonto){
+		$location = mysqli_fetch_all(
+			query("SELECT pont_tx_latitude, pont_tx_longitude 
+			FROM ponto WHERE pont_nb_id = $idPonto"), MYSQLI_ASSOC);
+		$url = "https://www.google.com/maps?q=".$location[0]['pont_tx_latitude'].","
+		.$location[0]['pont_tx_longitude'];
+
+		return "<center>
+		<a href='$url' target='_blank'>
+			<i class='fa fa-map-marker' aria-hidden='true' style='color: black; font-size: 20px;'></i>
+		</a>
+		</center>";
 	}
 
 	function data($data,$hora=0){
@@ -461,7 +475,8 @@
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99', '99.999.999/9999-99']});";
 			break;
 			case "MASCARA_RG":
-				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999']});";
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['9{1,3}.999.999'], placeholder: '',
+            numericInput: true});";
 			break;
 			case "MASCARA_DINHERO":
 				$dataScript .= 

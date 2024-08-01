@@ -50,7 +50,7 @@
 		$novo_nome = $_POST['file-name'];
 		$descricao = $_POST['description-text'];
 
-		$allowed = array('image/jpeg', 'image/png', 'application/msword', 'application/pdf');
+		$allowed = array('image/jpeg', 'image/png', 'application/msword', 'application/pdf','application/vnd.android.package-archive');
 
 		if (in_array($arquivos['type'], $allowed) && $arquivos['name'] != '') {
 				$pasta_empresa = "arquivos/doc_empresa/$idEmpresa/";
