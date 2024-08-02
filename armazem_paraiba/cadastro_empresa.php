@@ -164,8 +164,8 @@
 			$allowed = array("image/jpeg", "image/gif", "image/png");
 			if (in_array($file_type, $allowed) && $_FILES['logo']['name'] != '') {
 
-				if (!is_dir("arquivos/empresa/$id_empresa")) {
-					mkdir("arquivos/empresa/$id_empresa");
+				if (!is_dir("arquivos/empresa/$id_empresa/")) {
+					mkdir("arquivos/empresa/$id_empresa/");
 				}
 
 				$arq = enviar('logo', "arquivos/empresa/$id_empresa/", $id_empresa);

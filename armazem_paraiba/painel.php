@@ -4,9 +4,6 @@
 		error_reporting(E_ALL);
 	//*/
 
-    // ini_set('display_errors', 1);
-    // error_reporting(E_ALL);
-
     include 'painel_empresas.php';
     include 'painel_empresa.php';
     include "funcoes_ponto.php";
@@ -58,7 +55,7 @@
         
         $monthName = $monthNames[$monthNum];
 
-        cabecalho('Painel Endosso');
+        cabecalho('Relatório Final de Endosso');
 
         $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
@@ -130,6 +127,8 @@
                             align-items: center;
                             margin-bottom: -50px !important;
                         }
+
+                        div:nth-child(6) > div,
                         body > div.scroll-to-top{
                             display: none !important;
                         }
@@ -157,7 +156,7 @@
                         }
                         .emissao{
                             text-align: left;
-                            padding-left: 710px !important;
+                            margin-left: 25px !important;
                             position: absolute;
                         }
                         .porcentagenEndo{
@@ -184,8 +183,8 @@
                         .porcentagenNegat{
                             box-shadow: 0 0 0 1000px #ff471a inset !important;
                         }
-                       div:nth-child(11) > div{
-                        padding: 50px 20px 15px !important;
+                        div:nth-child(10) > div{
+                        padding: 75px 20px 15px !important;
                        }
                 }
 
