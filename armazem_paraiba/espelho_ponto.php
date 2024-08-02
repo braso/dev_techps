@@ -8,7 +8,17 @@
 
 	function cadastro_abono(){
 		global $CONTEX;
-		header("Location: ".$CONTEX["path"]."/cadastro_abono.php");
+
+		unset($_POST["acao"]);
+		$form = "<form id='cadastrarAbono' action='".$CONTEX["path"]."/cadastro_abono.php' method='post'>";
+		foreach($_POST as $key => $value){
+			$form .= "<input name='".$key."' value='".$value."'/>";
+		}
+		$form .= "</form>";
+
+		echo $form.
+			"<script>document.getElementById('cadastrarAbono').submit();</script>";
+		;
 		exit;
 	}
 
@@ -78,6 +88,8 @@
 
 	function index() {
 		global $CONTEX, $totalResumo, $conn;
+
+		var_dump($_POST); echo "<br><br>";
 
 		cabecalho("Espelho de Ponto");
 

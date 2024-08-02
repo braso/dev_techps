@@ -65,7 +65,7 @@
 				if(preg_match("/^-?\d{2,4}:\d{2}:\d{2}$/", $horario)){
 					$horario = substr($horario, 0, strlen($horario)-3);
 				}else{
-					throw new Exception("Format error: |".$horario."|");
+					// throw new Exception("Format error: |".$horario."|");
 				}
 			}
 		}

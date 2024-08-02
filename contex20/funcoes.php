@@ -41,7 +41,7 @@
 		// formato da data yyyy-mm-dd
 		$date = new DateTime($data1);
 		$interval = $date->diff(new DateTime($data2));
-		return $interval->format("%Y-%m-%d");
+		return $interval->format("%Y-%M-%D");
 	}
 
 	function validarCPF(string $cpf): bool{
@@ -66,39 +66,39 @@
 			}
 		}
 
-		switch($cpf[8]){
-			case 0:
-				echo "CPF do Rio Grande do Sul";
-			break;
-			case 1:
-				echo "CPF do Distrito Federal, Goiás, Mato Grosso do Sul ou Tocantins";
-			break;
-			case 2:
-				echo "CPF do Pará, Amazonas, Acre, Amapá, Rondônia ou Roraima";
-			break;
-			case 3:
-				echo "CPF do Ceará, Maranhão ou Piauí";
-			break;
-			case 4:
-				echo "CPF do Pernambuco, Rio Grande do Norte, Paraíba ou Alagoas";
-			break;
-			case 5:
-				echo "CPF do Bahia ou Sergipe";
-			break;
-			case 6:
-				echo "CPF do Minas Gerais";
-			break;
-			case 7:
-				echo "CPF do Rio de Janeiro ou Espírito Santo";
-			break;
-			case 8:
-				echo "CPF do São Paulo";
-			break;
-			case 9:
-				echo "CPF do Paraná ou Santa Catarina";
-			break;
-		}
-		echo "<br>";
+		// switch($cpf[8]){
+		// 	case 0:
+		// 		echo "CPF do Rio Grande do Sul";
+		// 	break;
+		// 	case 1:
+		// 		echo "CPF do Distrito Federal, Goiás, Mato Grosso do Sul ou Tocantins";
+		// 	break;
+		// 	case 2:
+		// 		echo "CPF do Pará, Amazonas, Acre, Amapá, Rondônia ou Roraima";
+		// 	break;
+		// 	case 3:
+		// 		echo "CPF do Ceará, Maranhão ou Piauí";
+		// 	break;
+		// 	case 4:
+		// 		echo "CPF do Pernambuco, Rio Grande do Norte, Paraíba ou Alagoas";
+		// 	break;
+		// 	case 5:
+		// 		echo "CPF do Bahia ou Sergipe";
+		// 	break;
+		// 	case 6:
+		// 		echo "CPF do Minas Gerais";
+		// 	break;
+		// 	case 7:
+		// 		echo "CPF do Rio de Janeiro ou Espírito Santo";
+		// 	break;
+		// 	case 8:
+		// 		echo "CPF do São Paulo";
+		// 	break;
+		// 	case 9:
+		// 		echo "CPF do Paraná ou Santa Catarina";
+		// 	break;
+		// }
+		// echo "<br>";
 		return true;
 	}
 
@@ -202,7 +202,7 @@
 		}
 
 		try{
-			query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id = ".$id);
+			query("UPDATE ".$tabela." SET ".$inserir." WHERE ".$tab."_nb_id = ".$id);
 			set_status("Registro atualizado com sucesso!");
 		}catch(Exception $e){
 			set_status("Falha ao atualizar.");

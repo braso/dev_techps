@@ -97,7 +97,6 @@
 		if(!empty($_POST["matricula"])){
 			$_POST["postMatricula"] = $_POST["matricula"];
 		}
-
 		while($_POST["postMatricula"][0] == "0"){
 			$_POST["postMatricula"] = substr($_POST["postMatricula"], 1);
 		}
@@ -206,7 +205,7 @@
 			$emptyFields = substr($emptyFields, 0, strlen($emptyFields)-2);
 			
 			if($error){
-				echo "<script>alert('Informações obrigatórias faltando: ".$emptyFields.".')</script>";
+				set_status("ERRO: Insira os campos ".$emptyFields);
 				visualizarCadastro();
 				exit;
 			}
@@ -435,19 +434,16 @@
 			if(isset($_POST["id"])){
 				$a_mod = carregar("entidade", $_POST["id"]);
 			}
+
+			$campos = mysqli_fetch_all(query("SHOW COLUMNS FROM entidade;"));
+
+			for($f = 0; $f < sizeof($campos); $f++){
+				$campos[$f] = $campos[$f][0];
+			}
 			
-			$campos = ["matricula", "nome","nascimento","cpf","rg","civil","sexo","endereco","numero","complemento", "bairro","cidade","cep","fone1","fone2","email","ocupacao","salario","obs",
-				"tipo","status","empresa", "parametro","jornadaSemanal","jornadaSabado","percentualHE","percentualSabadoHE", "rgOrgao", "rgDataEmissao", "rgUf",
-				"pai", "mae", "conjugue", "tipoOperacao", "subcontratado", "admissao", "desligamento", "cnhRegistro", "cnhValidade", "cnhPrimeiraHabilitacao", "cnhCategoria", "cnhPermissao",
-				"cnhObs", "cnhCidade", "cnhEmissao", "cnhPontuacao", "cnhAtividadeRemunerada"
-			];
 			foreach($campos as $campo){
 				if(isset($_POST[$campo]) && !empty($_POST[$campo])){
-					if(in_array($campo, ["cidade", "empresa", "parametro", "cnhCidade"])){
-						$a_mod["enti_nb_".$campo] = $_POST[$campo];
-					}else{
-						$a_mod["enti_tx_".$campo] = $_POST[$campo];
-					}
+					$a_mod[$campo] = $_POST[str_replace(["enti_tx_", "enti_nb_"], "", $campo)];
 				}
 			}
 		}

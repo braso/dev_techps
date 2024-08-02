@@ -42,6 +42,9 @@
 				if(empty($endossos[$f]["endo_tx_max50APagar"]) && !empty($endossos[$f]["endo_tx_horasApagar"])){
 					$endossos[$f]["endo_tx_max50APagar"] = $endossos[$f]["endo_tx_horasApagar"];
 				}
+				if(empty($endossoCompleto["endo_tx_max50APagar"])){
+					$endossoCompleto["endo_tx_max50APagar"] = "00:00";
+				}
 				$endossoCompleto["endo_tx_ate"] = $endossos[$f]["endo_tx_ate"];
 				$endossoCompleto["endo_tx_pontos"] = array_merge($endossoCompleto["endo_tx_pontos"], $endossos[$f]["endo_tx_pontos"]);
 				if($endossoCompleto["endo_tx_max50APagar"] != "00:00"){

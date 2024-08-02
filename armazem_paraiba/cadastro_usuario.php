@@ -53,12 +53,13 @@
 					}
 				}
 	
-				if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")) && isset($_POST["nivel"]) && empty($_POST["nivel"])){	//Se usuário = Administrador && nivelUsuario indefinido
+				if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")) && isset($_POST["nivel"]) && empty($_POST["nivel"])){	//Se usuárioLogado = Administrador && nivelUsuario indefinido
 					$error_msg .= "Nível, ";
 				}
 				if(($_POST["senha"] != $_POST["senha2"])){
 					$error_msg .= "Confirmação de senha correta, ";
 				}
+
 				if($error_msg != $baseErrMsg){
 					set_status(substr($error_msg, 0, strlen($error_msg)-2).".");
 					mostrarFormCadastro();
@@ -72,10 +73,14 @@
 				$_POST["cpf"] = preg_replace( "/[^0-9]/is", "", $_POST["cpf"]);
 				if(strlen($_POST["cpf"]) != 11){
 					$error_msg .= "CPF parcial, ";
+				}else{
+					if(!validarCPF($_POST["cpf"])){
+						$error_msg .= "CPF inválido, ";
+					}
 				}
 			}
 			if(!empty($_POST["rg"])){
-				$_POST["rg"] = str_replace([".", "_"], "", $_POST["rg"]);
+				$_POST["rg"] = preg_replace( "/[^0-9]/is", "", $_POST["rg"]);
 				if(strlen($_POST["rg"]) != 9){
 					$error_msg .= "RG parcial, ";
 				}
@@ -156,15 +161,14 @@
 			exit;
 		}
 
-		mostrarFormCadastro();
-		exit;
 		
 		if(empty($_POST["id"])){//Criando novo usuário
 			$usuario["user_nb_userCadastro"] = $_SESSION["user_nb_id"];
 			$usuario["user_tx_dataCadastro"] = date("Y-m-d H:i:s");
 
-			$id = inserir("user", array_keys($usuario), array_values($usuario));
-			$_POST["id"] = ultimo_reg("user");
+			var_dump($usuario); echo "<br><br>";
+			// $id = inserir("user", array_keys($usuario), array_values($usuario));
+			// $_POST["id"] = ultimo_reg("user");
 			mostrarFormCadastro();
 			exit;
 			
@@ -177,10 +181,10 @@
 		$file_type = $_FILES["foto"]["type"]; //returns the mimetype
 
 		$allowed = array("image/jpeg", "image/gif", "image/png");
-		if (in_array($file_type, $allowed) && $_FILES["foto"]["name"] != "") {
+		if (in_array($file_type, $allowed) && $_FILES["foto"]["name"] != "" && !empty($_POST["id"])) {
 
-			if (!is_dir("arquivos/user/$_POST[id]/")) {
-				mkdir("arquivos/user/$_POST[id]/", 0777, true);
+			if (!is_dir("arquivos/user/".$_POST["id"]."/")) {
+				mkdir("arquivos/user/".$_POST["id"]."/", 0777, true);
 			}
 
 			$arq = enviar("foto", "arquivos/user/".$_POST["id"]."/", "FOTO_".$id);
@@ -265,7 +269,7 @@
 			$a_mod = carregar("user", $_POST["id"]);
 		}
 
-		$editingDriver = in_array($a_mod["user_tx_nivel"], ["Motorista", "Ajudante"]);
+		$editingDriver = in_array(($a_mod["user_tx_nivel"]?? ""), ["Motorista", "Ajudante"]);
 		$loggedUserIsAdmin = is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"));
 
 
@@ -340,7 +344,7 @@
 					$niveis[] = "Funcionário";
 			}
 			$campo_nivel = combo("Nível*", "nivel", ($_POST["nivel"]?? ""), 2, $niveis, "");
-			$campo_status = combo("Status", "status", $a_mod["enti_tx_status"], 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
+			$campo_status = combo("Status", "status", ($a_mod["enti_tx_status"]?? ""), 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
 
 			$campo_nascimento = campo_data("Dt. Nascimento*", "nascimento", ($_POST["nascimento"]?? ""), 2);
 			$campo_cpf = campo("CPF", "cpf", ($_POST["cpf"]?? ""), 2, "MASCARA_CPF");
@@ -435,7 +439,7 @@
 		linha_form($fields);
 		
 
-		if ($a_mod["user_nb_userCadastro"] > 0 || $a_mod["user_nb_userAtualiza"] > 0) {
+		if (!empty($a_mod["user_nb_userCadastro"]) && !empty($a_mod["user_nb_userAtualiza"]) && ($a_mod["user_nb_userCadastro"] > 0 || $a_mod["user_nb_userAtualiza"] > 0)) {
 			$a_userCadastro = carregar("user", $a_mod["user_nb_userCadastro"]);
 			$txtCadastro = "Registro inserido por ".($a_userCadastro["user_tx_login"]?? "admin").(!empty($a_mod["user_tx_dataCadastro"])?" às ".data($a_mod["user_tx_dataCadastro"], 1): "").".";
 			$cAtualiza[] = 
