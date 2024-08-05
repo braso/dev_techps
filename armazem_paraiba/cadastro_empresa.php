@@ -99,8 +99,8 @@
 		} else {
 			$sqlCheckNivel = ['empr_tx_Ehmatriz' => 'nao'];
 		}
-		$camposObrigatorios = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade', 'endereco', 'bairro'];
-		foreach ($camposObrigatorios as $campo) {
+		$camposObrig = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade', 'endereco', 'bairro'];
+		foreach ($camposObrig as $campo) {
 			if (!isset($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'sim' || empty($_POST[$campo])) {
 				echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
 				visualizarCadastro();

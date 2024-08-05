@@ -89,8 +89,6 @@
 	function index() {
 		global $CONTEX, $totalResumo, $conn;
 
-		var_dump($_POST); echo "<br><br>";
-
 		cabecalho("Espelho de Ponto");
 
 		$extraBuscaMotorista = "";

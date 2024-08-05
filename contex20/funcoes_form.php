@@ -202,7 +202,6 @@
 		</script>
 		-->
 		<?php
-
 	}
 
 	function abre_form($nome_form='',$col='12',$focus='2'){
@@ -245,6 +244,9 @@
 	}
 
 	function voltar(){
+
+		die(var_dump($_POST));
+
 		if(empty($_POST["HTTP_REFERER"])){
 			set_status("Tela de origem indefinida.");
 			index();
@@ -263,7 +265,6 @@
 		exit;
 	}
 
-
 	function fecha_form(array $botao = [], string $extra = ""){
 		$botoes = '';
 		if($botao !='' || $_POST['msg_status']){
@@ -271,20 +272,33 @@
 				$botoes.="<div class='fecha-form-btn'>".$botao[$i]."</div>";
 			}
 
-	?>
-														<div class="form-actions">
-															<?= $botoes?>
-														</div>
-														<div class='msg-status-text'><?=($_POST['msg_status']?? '')?></div>
-	<?php
+			echo 
+				"<div class='form-actions'>
+					".$botoes."
+				</div>
+				<div class='msg-status-text'>".($_POST["msg_status"]?? "")."</div>"
+			;
 		}
-	?>
-													</form>
-													<?=$extra?>
-												</div>
-											</div>
-										</div>
-										<!-- FIM FORMULARIO-->
 
-	<?php
+		echo "</form>".$extra."</div></div></div><!-- FIM FORMULARIO-->";
+	}
+
+	function conferirCamposObrig(array $camposObrig, array $camposEnviados): string{
+		//Ainda em desenvolvimento.
+		$baseErrMsg = "ERRO: Campos obrigatórios não preenchidos:";
+		$errorMsg = $baseErrMsg."  ";
+
+		foreach($camposObrig as $key => $value){
+			var_dump([empty($_POST[$key]), $_POST[$key] != "0"]); echo "<br>";
+			if(empty($_POST[$key]) && $_POST[$key] != "0"){
+				$errorMsg .= " ".$camposObrig[$key].", ";
+			}
+		}
+		$errorMsg = substr($errorMsg, 0, strlen($errorMsg)-2);
+
+		if($errorMsg == $baseErrMsg){
+			return "";
+		}
+
+		return $errorMsg;
 	}

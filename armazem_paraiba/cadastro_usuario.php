@@ -18,7 +18,7 @@
 	// 				<select name='".$variavel."' class='form-control input-sm' ".$extra.">
 	// 					".$c_opcao."
 	// 				</select>
-	// 			</div>";l
+	// 			</div>";
 
 	// 	return $campo;
 	// }
@@ -166,16 +166,17 @@
 			$usuario["user_nb_userCadastro"] = $_SESSION["user_nb_id"];
 			$usuario["user_tx_dataCadastro"] = date("Y-m-d H:i:s");
 
-			var_dump($usuario); echo "<br><br>";
-			// $id = inserir("user", array_keys($usuario), array_values($usuario));
-			// $_POST["id"] = ultimo_reg("user");
+			$id = inserir("user", array_keys($usuario), array_values($usuario));
+			$_POST["id"] = ultimo_reg("user");
 			mostrarFormCadastro();
 			exit;
 			
-		}else{//Atualizando usuário existente
-			atualiza_usuario($usuario);
-			$id = $_POST["id"];
 		}
+
+		//Atualizando usuário existente
+
+		atualiza_usuario($usuario);
+		$id = $_POST["id"];
 
 		$idUserFoto = mysqli_fetch_assoc(query("SELECT user_nb_id FROM user WHERE user_nb_id = '".$id."' LIMIT 1;"));
 		$file_type = $_FILES["foto"]["type"]; //returns the mimetype
@@ -279,13 +280,13 @@
 					<spam class='glyphicon glyphicon-remove'></spam>
 					Excluir
 				</a>", 
-				'<img src="'.($a_mod["user_tx_foto"]?? "").'" />', 
+				"<img src='".($a_mod["user_tx_foto"]?? "")."' />", 
 				2
 			);
 		}else{
 			$img = texto( 
 				"Imagem",
-				'<img src="../contex20/img/user.png" />', 
+				"<img src='../contex20/img/user.png' />", 
 				2
 			);
 		}
@@ -504,7 +505,7 @@
 		$extraEmpresa = " AND empr_tx_situacao = 'ativo' ORDER BY empr_tx_nome";
 
 		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
-			$extraEmpresa .= " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
+			$extraEmpresa .= " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
 		}
 
 		cabecalho("Cadastro de Usuário");

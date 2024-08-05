@@ -35,7 +35,6 @@
 
             $rows = [];
 
-            var_dump("");
             $motoristas = [$motoristas[9]];
 
             foreach ($motoristas as $motorista){
