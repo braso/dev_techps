@@ -31,15 +31,6 @@
 		</div>
 	</div>
 </div>
-
-<style>
-	.modal-dialog {
-		transform: translate(0, -50%);
-		top: 30%;
-		margin: 0 auto;
-		text-align: -webkit-center;
-	}
-</style>
 <script>
 
 	function operarHorarios(horarios = [], operacao){
@@ -110,7 +101,7 @@
 		// Formata a hora e os minutos como HH:MM
 		const formattedHours = hours.toString().padStart(2, '0');
 		const formattedMinutes = minutes.toString().padStart(2, '0');
-		const formattedTime = formattedHours + ':' + formattedMinutes;
+		const formattedTime = formattedHours+':'+formattedMinutes;
 
 		return formattedTime;
 	}
@@ -131,43 +122,45 @@
 		let duracao = '';
 		let confirmButtonText = '';
 		let confirmButtonClass = '';
+		<?=
+			"let ultimoInicioJornada 	= '".($ultimoInicioJornada?? "")."';"
+			."let jornadaEfetiva 		= '".($jornadaEfetiva?? "")."';"
+			."let primeiroPonto 		= '".($pontos["primeiro"]["pont_tx_data"]?? "")."';"
+			."let ultimoPonto 			= '".($pontos["ultimo"]["pont_tx_data"]?? "")."';"
+			."let hoje 					= '".$hoje."';"
+			."let idEntidade 			= '".$_SESSION["user_nb_entidade"]."';"
+			."let idMotivo 				= '".($motivo["moti_nb_id"]?? "")."';"
+		?>
 
 		if (['2'].includes(idMacro)) {
-
 			let localTimeString = (new Date()).toLocaleTimeString(undefined, {
 				hour:   '2-digit',
 				minute: '2-digit',
 			});
-			<?php
-				if(!empty($ultimoInicioJornada)){
-					echo "jornadaAtual = operarHorarios([localTimeString, '".$ultimoInicioJornada."'], '-');";
-				}else{
-					echo "jornadaAtual = '00:00';";
-				}
-			?>
-			jornadaEfetiva = operarHorarios(['<?=$jornadaEfetiva?>', jornadaAtual], '+');
-			
-			duracao = calculateElapsedTime('<?= ($pontos['primeiro']['pont_tx_data']?? '') ?>');
-			msg += "<br><br>Total da jornada efetiva: " + jornadaEfetiva;
+			jornadaAtual = (ultimoInicioJornada != '')? operarHorarios([localTimeString, ultimoInicioJornada], '-'): '00:00';
+			jornadaEfetiva = operarHorarios([jornadaEfetiva, jornadaAtual], '+');
+			duracao = calculateElapsedTime(primeiroPonto);
+			msg += "<br><br>Total da jornada efetiva: "+jornadaEfetiva;
 		}
 
-		if (['4'].includes(idMacro)) {
-			duracao = calculateElapsedTime('<?= ($pontos['primeiro']['pont_tx_data']?? '') ?>');
+		if (['4'].includes(idMacro)) { //Se está encerrando uma refeição
+			duracao = calculateElapsedTime(primeiroPonto);
 			msg += "<br><br>Duração Esperada: 01:00";
 		}
 
-		if (['4', '6', '8', '10', '12'].includes(idMacro)) {
-			duracao = calculateElapsedTime('<?= ($pontos['ultimo']['pont_tx_data']?? '') ?>');
-			msg += "<br><br>Duração: " + duracao;
+		if (['4', '6', '8', '10', '12'].includes(idMacro)) { //Se está encerrando algum intervalo
+			duracao = calculateElapsedTime(ultimoPonto);
+			msg += "<br><br>Duração: "+duracao;
 		}
 
-		if (['2', '4', '6', '8', '10', '12'].includes(idMacro)) {
+		var placa = document.getElementById('placa').value;
+
+		if (['2', '4', '6', '8', '10', '12'].includes(idMacro)) { 	//Se está encerrando algum intervalo
 			confirmButtonText = 'ENCERRAR';
 			confirmButtonClass = 'btn-danger';
-		} else {
+		} else {													//Se está iniciando algum intervalo
 			confirmButtonText = 'INICIAR';
 			confirmButtonClass = 'btn-primary';
-			var placa = document.getElementById('placa').value;
 			if (placa === "") {
 				msg += "<br><br><span style='color: red;' class='fa fa-warning'></span>Placa do veículo vazia";
 			}
@@ -180,19 +173,20 @@
 
 		const confirmButton = document.getElementById('modal-confirm');
 		confirmButton.innerHTML = confirmButtonText;
-		confirmButton.className = 'btn ' + confirmButtonClass;
+		confirmButton.className = 'btn '+confirmButtonClass;
 
 		$('#modal-confirm').on('click', function() {
 			$('#myModal').modal('hide');
-			var placa = document.getElementById('placa').value;
 
 			document.form_submit.acao.value = 'cadastra_ponto';
-			document.form_submit.id.value = <?= $_SESSION['user_nb_entidade'] ?>;
-			document.form_submit.data.value = '<?= $hoje ?>';
+			document.form_submit.id.value = idEntidade;
+			document.form_submit.data.value = hoje;
 			document.form_submit.placa.value = placa;
 			document.form_submit.idMacro.value = idMacro;
 			document.form_submit.justificativa.value = document.getElementById("justificativa").value;
-			<?= (isset($motivo['moti_nb_id'])? 'document.form_submit.motivo.value = '.$motivo['moti_nb_id'].';': '') ?>;
+			if(idMotivo != ""){
+				document.form_submit.motivo.value = idMotivo;
+			}
 			document.form_submit.submit();
 		});
 
@@ -207,7 +201,7 @@
 		const now = new Date();
 		const hours = String(now.getHours()).padStart(2, '0');
 		const minutes = String(now.getMinutes()).padStart(2, '0');
-		const timeString = hours + ':' + minutes;
+		const timeString = hours+':'+minutes;
 
 		document.getElementById('clock').textContent = timeString;
 	}

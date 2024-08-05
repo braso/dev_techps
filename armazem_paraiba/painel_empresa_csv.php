@@ -116,6 +116,3 @@
     }
 
     fclose($arquivo);
-
-
-?>

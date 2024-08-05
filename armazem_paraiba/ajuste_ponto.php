@@ -7,6 +7,7 @@
 	include_once 'funcoes_ponto.php';
 
 	function cadastrarAjuste(){
+
 		//Conferir se tem as informações necessárias{
 			if(empty($_POST['id']) || empty($_POST['hora']) || empty($_POST['idMacro']) || empty($_POST['motivo'])){
 				set_status("ERRO: Dados insuficientes!");
@@ -26,6 +27,41 @@
 				exit;
 			}
 		//}
+
+		// //Conferir se tem as informações necessárias 2.0{
+		// 	$camposObrig = [
+		// 		"id" => "Motorista",
+		// 		"hora" => "Hora",
+		// 		"idMacro" => "Tipo de Registro",
+		// 		"motivo" => "Motivo",
+		// 	];
+		// 	$errorMsg = conferirCamposObrig($camposObrig, $_POST);
+		// 	if(!empty($errorMsg)){
+		// 		set_status($errorMsg);
+		// 		index();
+		// 		exit;
+		// 	}
+
+		// 	var_dump($camposObrig); echo "<br><br>";
+		// 	var_dump($_POST); echo "<br><br>";
+		// 	var_dump($errorMsg); echo "<br><br>";
+
+		// 	die("debug");
+
+		// 	$aMotorista = carregar('entidade',$_POST['id']);
+		// 	if(empty($aMotorista)){
+		// 		set_status("ERRO: Motorista não encontrado.");
+		// 		index();
+		// 		exit;
+		// 	}
+
+		// 	$aTipo = carregar('macroponto', $_POST['idMacro']);
+		// 	if(empty($aTipo)){
+		// 		set_status("ERRO: Tipo de registro não encontrado.");
+		// 		index();
+		// 		exit;
+		// 	}
+		// //}
 		
 		//Tratamento de erros{
 			$error = false;
@@ -35,10 +71,10 @@
 				$temJornadaAberta = mysqli_fetch_all(
 					query(
 						"SELECT * FROM ponto 
-							WHERE pont_tx_tipo IN ('".$codigosJornada['inicio']."', '".$codigosJornada['fim']."')
+							WHERE pont_tx_tipo IN ('".$codigosJornada["inicio"]."', '".$codigosJornada['fim']."')
 								AND pont_tx_status = 'ativo'
 								AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-								AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora'].":59', '%Y-%m-%d %H:%i:%s')
+								AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST["hora"].":59', '%Y-%m-%d %H:%i:%s')
 							ORDER BY pont_tx_data DESC
 							LIMIT 1"
 					),
@@ -75,7 +111,7 @@
 
 						$matchedTypes = [
 							'inicios' => mysqli_fetch_all(query("SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_nome LIKE 'Inicio%' AND macr_tx_nome NOT LIKE '%de Jornada'"), MYSQLI_ASSOC),
-							'fins' 	  => mysqli_fetch_all(query("SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_nome LIKE 'Fim%' AND macr_tx_nome NOT LIKE '%de Jornada'"),    MYSQLI_ASSOC),
+							'fins' 	  => mysqli_fetch_all(query("SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_nome LIKE 'Fim%'    AND macr_tx_nome NOT LIKE '%de Jornada'"),    MYSQLI_ASSOC),
 						];
 						for($f = 0; $f < count($matchedTypes['inicios']); $f++){
 							$matchedTypes['inicios'][$f] = intval($matchedTypes['inicios'][$f]['macr_tx_codigoInterno']);
@@ -301,6 +337,8 @@
 	function index(){
 		global $CONTEX;
 
+		die(var_dump($_POST));
+
 		if(empty($_POST['data'])){
 			$_POST['data'] = date("Y-m-d");
 		}
@@ -392,9 +430,10 @@
 		}
 
 		$botoes[] = $botao_imprimir;
-		$botoes[] = "<button name='acao' id='botaoContexVoltar' value='voltar' type='submit' class='btn btn-secondary'>Voltar</button>";
-		$botoes[] = status();
+		$botoes[] = botao("Voltar", "voltar", implode(",", array_keys($_POST)), implode(",", array_values($_POST)));
 		
+		$botoes[] = status();
+
 
 		if(empty($_POST["HTTP_REFERER"])){
 			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
@@ -408,6 +447,8 @@
 		campo_hidden("id", $_POST["id"]);
 		campo_hidden("busca_motorista", $_POST["id"]);
 		campo_hidden("busca_data", $_POST["data"]);
+		campo_hidden("data_de", $_POST["data_de"]);
+		campo_hidden("data_ate", $_POST["data_ate"]);
 		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($variableFields);
 		linha_form($campoJust);
@@ -440,45 +481,45 @@
 				<img id='logo' style='width: 150px' src='$CONTEX[path]/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
 			</div>
 			<style>
-			@media print {
-				body {
-                    margin: 1cm;
-                    margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
-                    transform: scale(1.0);
-                    transform-origin: top left;
-                }
-				#tituloRelatorio{
-					display: flex !important;
-					position: absolute;
-					top: 5px;
-					right: 20px;
-				}
-				div:nth-child(10) > div:nth-child(1),
-				div:nth-child(10) > div:nth-child(3),
-				div:nth-child(10) > div:nth-child(5),
-				div:nth-child(10) > div:nth-child(6),
-				div:nth-child(11) > div{
-				    display: none;
-				}
+				@media print {
+					body {
+						margin: 1cm;
+						margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
+						transform: scale(1.0);
+						transform-origin: top left;
+					}
+					#tituloRelatorio{
+						display: flex !important;
+						position: absolute;
+						top: 5px;
+						right: 20px;
+					}
+					div:nth-child(10) > div:nth-child(1),
+					div:nth-child(10) > div:nth-child(3),
+					div:nth-child(10) > div:nth-child(5),
+					div:nth-child(10) > div:nth-child(6),
+					div:nth-child(11) > div{
+						display: none;
+					}
 
-				.portlet.light {
-					padding: 0px 20px 0px !important;
-				}
-				.row {
-					margin: 0px 0px 0px 0px !important;
-				}
+					.portlet.light {
+						padding: 0px 20px 0px !important;
+					}
+					.row {
+						margin: 0px 0px 0px 0px !important;
+					}
 
-				form > div:nth-child(1){
-					display: flex;
-					flex-wrap: wrap;
+					form > div:nth-child(1){
+						display: flex;
+						flex-wrap: wrap;
+					}
+					.col-sm-2,
+					.col-sm-5,
+					.col-sm-3 {
+						width: 40% !important;
+						padding-left: 0px;
+					}
 				}
-				.col-sm-2,
-				.col-sm-5,
-				.col-sm-3 {
-					width: 40% !important;
-					padding-left: 0px;
-				}
-			}
 				#tituloRelatorio{
 					display: none;
 				}
@@ -521,4 +562,3 @@
 
 		rodape();
 	}
-?>

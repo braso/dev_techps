@@ -41,7 +41,7 @@
 		// formato da data yyyy-mm-dd
 		$date = new DateTime($data1);
 		$interval = $date->diff(new DateTime($data2));
-		return $interval->format("%Y-%m-%d");
+		return $interval->format("%Y-%M-%D");
 	}
 
 	function validarCPF(string $cpf): bool{
@@ -66,39 +66,39 @@
 			}
 		}
 
-		switch($cpf[8]){
-			case 0:
-				echo "CPF do Rio Grande do Sul";
-			break;
-			case 1:
-				echo "CPF do Distrito Federal, Goiás, Mato Grosso do Sul ou Tocantins";
-			break;
-			case 2:
-				echo "CPF do Pará, Amazonas, Acre, Amapá, Rondônia ou Roraima";
-			break;
-			case 3:
-				echo "CPF do Ceará, Maranhão ou Piauí";
-			break;
-			case 4:
-				echo "CPF do Pernambuco, Rio Grande do Norte, Paraíba ou Alagoas";
-			break;
-			case 5:
-				echo "CPF do Bahia ou Sergipe";
-			break;
-			case 6:
-				echo "CPF do Minas Gerais";
-			break;
-			case 7:
-				echo "CPF do Rio de Janeiro ou Espírito Santo";
-			break;
-			case 8:
-				echo "CPF do São Paulo";
-			break;
-			case 9:
-				echo "CPF do Paraná ou Santa Catarina";
-			break;
-		}
-		echo "<br>";
+		// switch($cpf[8]){
+		// 	case 0:
+		// 		echo "CPF do Rio Grande do Sul";
+		// 	break;
+		// 	case 1:
+		// 		echo "CPF do Distrito Federal, Goiás, Mato Grosso do Sul ou Tocantins";
+		// 	break;
+		// 	case 2:
+		// 		echo "CPF do Pará, Amazonas, Acre, Amapá, Rondônia ou Roraima";
+		// 	break;
+		// 	case 3:
+		// 		echo "CPF do Ceará, Maranhão ou Piauí";
+		// 	break;
+		// 	case 4:
+		// 		echo "CPF do Pernambuco, Rio Grande do Norte, Paraíba ou Alagoas";
+		// 	break;
+		// 	case 5:
+		// 		echo "CPF do Bahia ou Sergipe";
+		// 	break;
+		// 	case 6:
+		// 		echo "CPF do Minas Gerais";
+		// 	break;
+		// 	case 7:
+		// 		echo "CPF do Rio de Janeiro ou Espírito Santo";
+		// 	break;
+		// 	case 8:
+		// 		echo "CPF do São Paulo";
+		// 	break;
+		// 	case 9:
+		// 		echo "CPF do Paraná ou Santa Catarina";
+		// 	break;
+		// }
+		// echo "<br>";
 		return true;
 	}
 
@@ -189,14 +189,20 @@
 		$tab = substr($tabela,0,4);
 		$inserir = "";
 		for($i=0;$i<count($campos);$i++){
-			$inserir .= ", ".$campos[$i]." = '".$valores[$i]."'";
+			$inserir .= ", ".$campos[$i]." = ";
+
+			if(is_int(strpos($campos[$i], "_nb_"))){
+				$inserir .= $valores[$i];
+			}else{
+				$inserir .= "'".$valores[$i]."'";
+			}
 		}
 		if(strlen($inserir) > 2){
 			$inserir = substr($inserir, 2);
 		}
 
 		try{
-			query("UPDATE $tabela SET $inserir WHERE ".$tab."_nb_id = $id");
+			query("UPDATE ".$tabela." SET ".$inserir." WHERE ".$tab."_nb_id = ".$id);
 			set_status("Registro atualizado com sucesso!");
 		}catch(Exception $e){
 			set_status("Falha ao atualizar.");
@@ -498,7 +504,7 @@
 			case "MASCARA_DOMAIN":
 				$dataScript .= "$(document).ready(function() {
 						var inputField = $('#nomeDominio');
-						var domainPrefix = '".$_SERVER['HTTP_ORIGIN'].(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? 'dev_techps/': 'techps/')."';
+						var domainPrefix = '".$_SERVER['HTTP_ORIGIN'].(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? '/dev_techps/': '/techps/')."';
 
 						function updateDisplayedText() {
 							var inputValue = inputField.val();
@@ -1051,7 +1057,7 @@
 
 	}
 
-	function botao($nome,$acao,$campos='',$valores='',$extra='',$salvar='',$botaoCor='btn btn-secondary'){
+	function botao($nome, $acao, $campos='', $valores='', $extra='', $salvar='', $botaoCor='btn btn-secondary'){
 		global $idsBotaoContex;	
 		$hidden = '';
 		$funcaoOnClick = '';
@@ -1114,7 +1120,6 @@
 		}
 
 		return $funcaoJs.'<button '.$funcaoOnClick.' name="acao" id="botaoContex'.$nome.'" value="'.$acao.'"  type="submit" '.$extra.'  class="'.$botaoCor.'">'.$nome.'</button>';
-
 	}
 
 	function query($query,$debug=''){
@@ -1173,7 +1178,6 @@
 				// Solicitar ao usuário que insira os dados
 				var just = prompt('Qual a justificativa da exclusão do ponto?');
 				if(just !== null && just !== ''){
-					console.log('id ', id);
 					
 					var form = document.getElementById('contex_icone_form');
 					form.id.value=id;
@@ -1188,7 +1192,11 @@
 					campos = campos.split(',');
 					valores = valores.split(',');
 					for(f = 0; f < campos.length; f++){
-						form.append('<input type=\'hidden\' name=\'campos[f]\' value=\'valores[f]\' />');
+						input = document.createElement('input');
+						input.type = 'hidden';
+						input.name = campos[f]
+						input.value = valores[f]
+						form.append(input);
 					}
 					form.submit();
 					
@@ -1197,7 +1205,7 @@
 			</script>
 		";
 		// onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\",\"$data_de\",\"$data_ate\");
-		return "<center><a title=\"$title\" style='color:gray' data-toggle='modal' data-target='#myModal'onclick='solicitarDados(\"$id\",\"$acao\",\"$data_de\",\"$data_ate\",\"$campos\",\"$valores\")' ><spam $icone></spam></a></center>".$modal;
+		return "<center><a title='".$title."' style='color:gray' data-toggle='modal' data-target='#myModal'onclick='solicitarDados(\"".$id."\",\"".$acao."\",\"".$data_de."\",\"".$data_ate."\",\"".$campos."\",\"".$valores."\")' ><spam ".$icone."></spam></a></center>".$modal;
 	}	
 
 	function modal_just($id,$acao,$campos='',$data_de='',$data_ate='',$valores='',$target='',$icone='',$msg='', $action='', $title=''){
@@ -1246,4 +1254,3 @@
 
 		return $style."<spam class='glyphicon glyphicon-download glyphicon-clickable' onclick=\"download('$aquivo')\"></spam>".$script;
 	}
-?>

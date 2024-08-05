@@ -15,35 +15,13 @@
 	.totais{
 		background-color: #ffe699;
 	}
-	tr.totais > th:nth-child(1),
-	tr.totais > th:nth-child(2),
-	tr.totais > th:nth-child(3),
-	tr.totais > th:nth-child(4),
-	tr.totais > th:nth-child(5),
-	tr.totais > th:nth-child(6),
-	tr.totais > th:nth-child(7),
-	tr.totais > th:nth-child(8),
-	tr.totais > th:nth-child(9),
-	tr.totais > th:nth-child(10),
-	tr.totais > th:nth-child(11),
-	tr.totais > th:nth-child(12){
+	tr.totais > th:nth-child(n+1):nth-child(-n+12){
 		text-align: justify;
 	}
 	.titulos{
 		background-color: #99ccff;
 	}
-	tr.titulos > th:nth-child(1),
-	tr.titulos > th:nth-child(2),
-	tr.titulos > th:nth-child(3),
-	tr.titulos > th:nth-child(4),
-	tr.titulos > th:nth-child(5),
-	tr.titulos > th:nth-child(6),
-	tr.titulos > th:nth-child(7),
-	tr.titulos > th:nth-child(8),
-	tr.titulos > th:nth-child(9),
-	tr.titulos > th:nth-child(10),
-	tr.titulos > th:nth-child(11),
-	tr.titulos > th:nth-child(12){
+	tr.titulos > th:nth-child(n+1):nth-child(-n+12){
 		text-align: justify;
 	}
 	#tituloRelatorio{
@@ -61,15 +39,15 @@
 </style>
 
 <div id='tituloRelatorio'>
-	<img style='width: 150px' src='<?=$aEmpresa[0]['empr_tx_logo']?>' alt='Logo Empresa Esquerda'>
+	<img class='left-logo' style='width: 150px' src='' alt='Logo Empresa Esquerda'>
 	<h3>Relatorio Geral de Espelho de Ponto</h3>
-	<div class='right-logo'>
-		<img style='width: 150px' src='<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
+	<div>
+		<img class='right-logo' style='width: 150px' src='' alt='Logo Empresa Direita'>
 	</div>
 </div>
 <div class='col-md-12 col-sm-12'>
 	<div class='portlet light '>
-		<div class='emissao'>Emissão Doc.: <?=$emissão?></div>
+		<div class='emissao'></div>
 		<div class='table-responsive'>
 		<div style='display: flex;'>
 			<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact' id='tabela1'>
@@ -83,18 +61,18 @@
 				<tbody>
 					<tr>
 						<td>NÃO ENDOSSADO</td>
-						<td class='textCentralizado'><?=$MotoristasTotais['naoEndossados']?></td>
-						<td style='background-color: #ff471a;' class='porcentagenNaEndo'><?=$porcentagenNaEndo?></td>
+						<td class='porcentagenNaEndoTitle textCentralizado'></td>
+						<td style='background-color: #ff471a;' class='porcentagenNaEndo'></td>
 					</tr>
 					<tr>
 						<td>ENDOSSO PARCIAL</td>
-						<td class='textCentralizado'><?=$MotoristasTotais['endossoPacial']?></td>
-						<td style='background-color: #ffff66;' class='porcentagenEndoPc;'><?=$porcentagenEndoPc?></td>
+						<td class='porcentagenEndoPcTitle textCentralizado'></td>
+						<td style='background-color: #ffff66;' class='porcentagenEndoPc'></td>
 					</tr>
 					<tr>
 						<td>ENDOSSADO</td>
-						<td class='textCentralizado'><?=$MotoristasTotais['endossados']?></td>
-						<td style='background-color: #66b3ff;' class='porcentagenEndo'><?=$porcentagenEndo?></td>
+						<td class='porcentagenEndoTitle textCentralizado'></td>
+						<td style='background-color: #66b3ff;' class='porcentagenEndo'></td>
 					</tr>
 				</tbody>
 			</table>
@@ -109,19 +87,19 @@
 				</thead>
 				<tbody>
 					<tr>
-						<td  class='porcentagenMeta' style='background-color: #66b3ff;'>META</td>
-						<td class='textCentralizado'><?=$quantMeta?></td>
-						<td><?=$porcentagenMeta?></td>
+						<td class='porcentagenMeta' style='background-color: #66b3ff;'>META</td>
+						<td class='quantMeta textCentralizado'></td>
+						<td class='porcentagenMetaValue'></td>
 					</tr>
 					<tr>
 						<td class='porcentagenPosit' style='background-color: #00b33c;'>POSITIVO</td>
-						<td class='textCentralizado'><?=$quantPosi?></td>
-						<td><?=$porcentagenPosi?></td>
+						<td class='quantPosi textCentralizado'></td>
+						<td class='porcentagenPosiValue'></td>
 					</tr>
 					<tr>
-						<td class='porcentagenNegat' style='background-color: #ff471a;'>NEGATIVO</td>
-						<td class='textCentralizado'><?=$quantNega?></td>
-						<td><?=$porcentagenNega?></td>
+						<td class='porcentagenNega' style='background-color: #ff471a;'>NEGATIVO</td>
+						<td class='quantNega textCentralizado'></td>
+						<td class='porcentagenNegaValue'></td>
 					</tr>
 				</tbody>
 			</table>
@@ -134,7 +112,7 @@
 						<th colspan='1'>Período: De <?=$dataInicioFormatada.' até '.$dataFimFormatada?></th>
 						<th colspan='1'></th>
 						<?=(!empty($MotoristasTotais)?
-								"<th colspan='1'>".$MotoristasTotais['jornadaPrevista']."</th>"
+								 "<th colspan='1'>".$MotoristasTotais['jornadaPrevista']."</th>"
 								."<th colspan='1'>".$MotoristasTotais['JornadaEfetiva']."</th>"
 								."<th colspan='1'>".$MotoristasTotais['he50']."</th>"
 								."<th colspan='1'>".$MotoristasTotais['he100']."</th>"
@@ -171,6 +149,30 @@
 </div>
 <script>
 
+	<?=
+		"document.getElementsByClassName('left-logo')[0].src = '".$aEmpresa[0]["empr_tx_logo"]."';"
+		."document.getElementsByClassName('right-logo')[0].src = '".$CONTEX['path']."/imagens/logo_topo_cliente.png"."';"
+		."document.getElementsByClassName('emissao')[0].innerHTML = '".("Emissão Doc.: ".$emissão)."';"
+
+		."document.getElementsByClassName('porcentagenEndoTitle')[0].innerHTML = '".$MotoristasTotais["endossados"]."';"
+		."document.getElementsByClassName('porcentagenEndoPcTitle')[0].innerHTML = '".$MotoristasTotais["endossoPacial"]."';"
+		."document.getElementsByClassName('porcentagenNaEndoTitle')[0].innerHTML = '".$MotoristasTotais["naoEndossados"]."';"
+
+		."document.getElementsByClassName('porcentagenEndo')[0].innerHTML   = '".$percentuaisEndossos["endossados"]."';"
+		."document.getElementsByClassName('porcentagenEndoPc')[0].innerHTML = '".$percentuaisEndossos["endossadosParcialmente"]."';"
+		."document.getElementsByClassName('porcentagenNaEndo')[0].innerHTML = '".$percentuaisEndossos["naoEndossados"]."';"
+
+		."document.getElementsByClassName('quantPosi')[0].innerHTML = '".$contagemSaldos["positivos"]."';"
+		."document.getElementsByClassName('quantMeta')[0].innerHTML = '".$contagemSaldos["zerados"]."';"
+		."document.getElementsByClassName('quantNega')[0].innerHTML = '".$contagemSaldos["negativos"]."';"
+
+		."document.getElementsByClassName('porcentagenPosiValue')[0].innerHTML = '".$percentuaisSaldos["positivos"]."';"
+		."document.getElementsByClassName('porcentagenMetaValue')[0].innerHTML = '".$percentuaisSaldos["zerados"]."';"
+		."document.getElementsByClassName('porcentagenNegaValue')[0].innerHTML = '".$percentuaisSaldos["negativos"]."';"
+
+		// ."document.getElementsByClassName('totais')[0].innerHTML = '".$porcentagenNega."';"
+	?>
+
 	$(document).ready(function (){
 		var tabela = $('#tabela-motorista tbody');
 
@@ -188,27 +190,30 @@
 						// 	}
 						// }
 						
-						var he50 = (item.he50 === null || item.he50 === '00:00') ? '' : item.he50;
-						var he100 = (item.he100 === null || item.he100 === '00:00') ? '' : item.he100;
-						var adicionalNoturno = (item.adicionalNoturno === null || item.adicionalNoturno === '00:00') ? '' : item.adicionalNoturno;
-						var esperaIndenizada = (item.esperaIndenizada === null || item.esperaIndenizada === '00:00') ? '' : item.esperaIndenizada;
+						var he50 = (item.he50 === null || item.he50 === '00:00')? '' : item.he50;
+						var he100 = (item.he100 === null || item.he100 === '00:00')? '' : item.he100;
+						var adicionalNoturno = (item.adicionalNoturno === null || item.adicionalNoturno === '00:00')? '' : item.adicionalNoturno;
+						var esperaIndenizada = (item.esperaIndenizada === null || item.esperaIndenizada === '00:00')? '' : item.esperaIndenizada;
 						var saldoAnterior = item.saldoAnterior;
 						var saldoPeriodo = item.saldoPeriodo;
 						var saldoFinal = item.saldoFinal;
 
-						var linha = '<tr>'+
-									'<td>'+item.motorista+'</td>'+
-									'<td>'+item.statusEndosso+'</td>'+
-									'<td>'+item.jornadaPrevista+'</td>'+
-									'<td>'+item.jornadaEfetiva+'</td>'+
-									'<td>'+he50+'</td>'+
-									'<td>'+he100+'</td>'+
-									'<td>'+adicionalNoturno+'</td>'+
-									'<td>'+esperaIndenizada+'</td>'+
-									'<td>'+saldoAnterior+'</td>'+
-									'<td>'+saldoPeriodo+'</td>'+
-									'<td>'+saldoFinal+'</td>'+
-									'</tr>';
+						var linha = 
+							'<tr>'+
+								'<td>'+item.motorista+'</td>'+
+								'<td>'+item.statusEndosso+'</td>'+
+								'<td>'+item.jornadaPrevista+'</td>'+
+								'<td>'+item.jornadaEfetiva+'</td>'+
+								'<td>'+he50+'</td>'+
+								'<td>'+he100+'</td>'+
+								'<td>'+adicionalNoturno+'</td>'+
+								'<td>'+esperaIndenizada+'</td>'+
+								'<td>'+saldoAnterior+'</td>'+
+								'<td>'+saldoPeriodo+'</td>'+
+								'<td>'+saldoFinal+'</td>'+
+							'</tr>'
+						;
+
 						tabela.append(linha);
 					});
 				},

@@ -24,14 +24,14 @@
     <script>
     function downloadCSV() {
         // Caminho do arquivo CSV no servidor
-        var filePath = '<?="./arquivos/endosso_csv/$aEmpresa[empr_nb_id]/$aMotorista[enti_nb_id]/espelho-de-ponto.csv"?>'; // Substitua pelo caminho do seu arquivo
+        var filePath = '<?="./arquivos/endosso_csv/".$aEmpresa["empr_nb_id"]."/".$aMotorista["enti_nb_id"]."/espelho-de-ponto.csv"?>'; // Substitua pelo caminho do seu arquivo
 
         // Cria um link para download
         var link = document.createElement('a');
 
         // Configurações do link
         link.setAttribute('href', filePath);
-        link.setAttribute('download', '<?="espelho-de-ponto-$aMotorista[enti_tx_nome].csv"?>');
+        link.setAttribute('download', '<?="espelho-de-ponto-".$aMotorista["enti_tx_nome"].".csv"?>');
 
         // Adiciona o link ao documento
         document.body.appendChild(link);
@@ -250,8 +250,8 @@
                         <td>Saldo Período</td>
                         <td><?=$totalResumo['diffSaldo']?></td>
                         <td class="empty"></td>
-                        <td>Saldo Atual</td>
-                        <td><?=$totalResumo['saldoAtual']?></td>
+                        <td>Saldo Bruto</td>
+                        <td><?=$totalResumo['saldoBruto']?></td>
                     </tr>
                 </table>
             </td>

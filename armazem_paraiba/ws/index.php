@@ -48,4 +48,3 @@
             echo delLastRegister($elements[2]);
         break;
     }
-?>

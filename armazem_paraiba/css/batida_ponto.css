@@ -44,6 +44,13 @@
 	border-collapse: separate;
 }
 
+.modal-dialog {
+    transform: translate(0, -50%);
+    top: 30%;
+    margin: 0 auto;
+    text-align: -webkit-center;
+}
+
 @media(max-width:768px){
     #clockParent{
         margin-right:0%;

@@ -30,6 +30,7 @@
 			$endossos[] = lerEndossoCSV($endosso["endo_tx_filename"]);
 		}
 
+
 		$endossoCompleto = [];
 
 		if(count($endossos) > 0){
@@ -41,6 +42,9 @@
 				if(empty($endossos[$f]["endo_tx_max50APagar"]) && !empty($endossos[$f]["endo_tx_horasApagar"])){
 					$endossos[$f]["endo_tx_max50APagar"] = $endossos[$f]["endo_tx_horasApagar"];
 				}
+				if(empty($endossoCompleto["endo_tx_max50APagar"])){
+					$endossoCompleto["endo_tx_max50APagar"] = "00:00";
+				}
 				$endossoCompleto["endo_tx_ate"] = $endossos[$f]["endo_tx_ate"];
 				$endossoCompleto["endo_tx_pontos"] = array_merge($endossoCompleto["endo_tx_pontos"], $endossos[$f]["endo_tx_pontos"]);
 				if($endossoCompleto["endo_tx_max50APagar"] != "00:00"){
@@ -50,19 +54,19 @@
 					}
 				}
 				foreach($endossos[$f]["totalResumo"] as $key => $value){
-					if(in_array($key, ["diffSaldo", "saldoAnterior", "saldoAtual"])){
+					if(in_array($key, ["saldoAnterior"])){
 						continue;
 					}
 					$endossoCompleto["totalResumo"][$key] = operarHorarios([$endossoCompleto["totalResumo"][$key], $value], "+");
 				}
 
-				$endossoCompleto["totalResumo"]["saldoAnterior"] = $endossoCompleto["totalResumo"]["saldoAtual"];
-				$endossoCompleto["totalResumo"]["diffSaldo"] = $endossos[$f]["totalResumo"]["diffSaldo"];
-				$endossoCompleto["totalResumo"]["saldoAtual"] = $endossos[$f]["totalResumo"]["saldoAtual"];
+				
+				// $endossoCompleto["totalResumo"]["diffSaldo"] = $endossos[$f]["totalResumo"]["diffSaldo"];
+				// $endossoCompleto["totalResumo"]["saldoBruto"] = $endossos[$f]["totalResumo"]["saldoBruto"];
 			}
 		}
 
-		$endossoCompleto["totalResumo"]["saldoAtual"] = operarHorarios([$endossoCompleto["totalResumo"]["saldoAnterior"], $endossoCompleto["totalResumo"]["diffSaldo"]], "+");
+		$endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$endossoCompleto["totalResumo"]["saldoAnterior"], $endossoCompleto["totalResumo"]["diffSaldo"]], "+");
 
 		return $endossoCompleto;
 	}
@@ -101,11 +105,11 @@
 
 				$totalResumo = $endossoCompleto["totalResumo"];
 
-				$aPagar = calcularHorasAPagar($totalResumo["saldoAtual"], $totalResumo["he50"], $totalResumo["he100"], $endossoCompleto["endo_tx_max50APagar"]);
+				$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $endossoCompleto["endo_tx_max50APagar"]);
 
 				$totalResumo["he50_aPagar"] = $aPagar[0];
 				$totalResumo["he100_aPagar"] = $aPagar[1];
-				$totalResumo["saldoFinal"] = operarHorarios([$totalResumo["saldoAtual"], $totalResumo["he50_aPagar"], $totalResumo["he100_aPagar"]], "-");
+				$totalResumo["saldoFinal"] = operarHorarios([$totalResumo["saldoBruto"], $totalResumo["he50_aPagar"], $totalResumo["he100_aPagar"]], "-");
 
 				for ($i = 0; $i < count($endossoCompleto["endo_tx_pontos"]); $i++) {
 					$diasEndossados++;
@@ -338,7 +342,7 @@
 							$aDia[] = $aDetalhado;
 						}
 						$totalResumoGrid = $totalResumo;
-						unset($totalResumoGrid["saldoAtual"]);
+						unset($totalResumoGrid["saldoBruto"]);
 						unset($totalResumoGrid["saldoAnterior"]);
 						if(count($aDia) > 0){
 							$aDia[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumoGrid));
@@ -389,9 +393,9 @@
 
 						$aPagar = "--:--";
 
-						$aPagar = calcularHorasAPagar($totalResumo["saldoAtual"], $totalResumo["he50"], $totalResumo["he100"], $endossoCompleto["endo_tx_max50APagar"]);
+						$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $endossoCompleto["endo_tx_max50APagar"]);
 						$aPagar = operarHorarios($aPagar, "+");
-						$saldoFinal = operarHorarios([$totalResumo["saldoAtual"], $aPagar], "-");
+						$saldoFinal = operarHorarios([$totalResumo["saldoBruto"], $aPagar], "-");
 
 						$saldosMotorista = "SALDOS: <br>
 							<div class='table-responsive'>
@@ -409,7 +413,7 @@
 										<tr>
 											<td>".$totalResumo["saldoAnterior"]."</td>
 											<td>".$totalResumo["diffSaldo"]."</td>
-											<td>".$totalResumo["saldoAtual"]."</td>
+											<td>".$totalResumo["saldoBruto"]."</td>
 											<td>".$aPagar."</td>
 											<td>".$saldoFinal."</td>
 										</tr>
@@ -493,7 +497,7 @@
 			."&extra_busca=enti_tx_matricula"
 		; // Utilizado dentro de endosso_html.php
 
-		include_once "endosso_html.php";
+		include_once "html/endosso_html.php";
 		echo 
 			"<script>
 				window.onload = function() {
@@ -506,4 +510,3 @@
 			</script>"
 		;
 	}
-?>

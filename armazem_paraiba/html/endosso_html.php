@@ -12,23 +12,36 @@
 
 <form name="form_imprimir_relatorio" method="post" target="_blank">
 	<input type="hidden" name="acao" value="imprimir_relatorio">
-	<input type="hidden" name="idMotoristaEndossado" value="<?=(!empty($aIdMotoristaEndossado)? implode(",", $aIdMotoristaEndossado) : '')?>">
-	<input type="hidden" name="matriculaMotoristaEndossado" value="<?=(!empty($aMatriculaMotoristaEndossado)? implode(",", $aMatriculaMotoristaEndossado): '')?>">
-	<input type="hidden" name="busca_empresa" value="<?= $_POST['busca_empresa'] ?>">
-	<input type="hidden" name="busca_data" value="<?= $_POST['busca_data'] ?>">
-	<input type="hidden" name="busca_motorista" value="<?= $_POST['busca_motorista'] ?>">
-	<input type="hidden" name="busca_situacao" value="<?= $_POST['busca_situacao'] ?>">
+	<input type="hidden" name="idMotoristaEndossado">
+	<input type="hidden" name="matriculaMotoristaEndossado">
+	<input type="hidden" name="busca_empresa">
+	<input type="hidden" name="busca_data">
+	<input type="hidden" name="busca_motorista">
+	<input type="hidden" name="busca_situacao">
 </form>
 
 <form name="form_ajuste_ponto" method="post" target="_blank">
 	<input type="hidden" name="acao" value="layout_ajuste">
-	<input type="hidden" name="id" value="<?= $aMotorista['enti_nb_id'] ?>">
+	<input type="hidden" name="id">
 	<input type="hidden" name="data">
 	<input type="hidden" name="data_de">
 	<input type="hidden" name="data_ate">
 </form>
 
 <script>
+	<?=
+		"document.getElementsByName('idMotoristaEndossado')[0].value 		= '".(!empty($aIdMotoristaEndossado)? implode(",", $aIdMotoristaEndossado) : "")."';
+		document.getElementsByName('matriculaMotoristaEndossado')[0].value 	= '".(!empty($aMatriculaMotoristaEndossado)? implode(",", $aMatriculaMotoristaEndossado): '')."';
+		document.getElementsByName('busca_empresa')[0].value 				= '".$_POST["busca_empresa"]."';
+		document.getElementsByName('busca_data')[0].value 					= '".$_POST["busca_data"]."';
+		document.getElementsByName('busca_motorista')[0].value 				= '".$_POST["busca_motorista"]."';
+		document.getElementsByName('busca_situacao')[0].value 				= '".$_POST["busca_situacao"]."';
+
+		document.getElementsByName('id')[0].value 							= '".$aMotorista["enti_nb_id"]."';
+		
+		let select2URL = '".$select2URL."'"
+	?>
+
 	function selecionaMotorista(idEmpresa) {
 		let buscaExtra = '';
 		if(idEmpresa > 0){
@@ -49,7 +62,7 @@
 			placeholder: 'Selecione um item',
 			allowClear: true,
 			ajax: {
-				url: "<?=$select2URL?>"+buscaExtra,
+				url: select2URL+buscaExtra,
 				dataType: 'json',
 				delay: 250,
 				processResults: function(data) {

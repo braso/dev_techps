@@ -41,7 +41,7 @@
     }
 
     $totalDias = ['TOTAL:',"$diasEndossados dias",'','','','','','','','','','','','','','',''];
-    $tabelaInfo = ['Carga Horaria Prevista:',"$totalResumo[jornadaPrevista]",'','Legendas','','Saldo Anterior:',"$totalResumo[saldoAnterior]",'Saldo Período:',"$totalResumo[diffSaldo]",'Saldo Atual:',"$totalResumo[saldoAtual]",'','','','','',''];
+    $tabelaInfo = ['Carga Horaria Prevista:',"$totalResumo[jornadaPrevista]",'','Legendas','','Saldo Anterior:',"$totalResumo[saldoAnterior]",'Saldo Período:',"$totalResumo[diffSaldo]",'Saldo Burto:',"$totalResumo[saldoBruto]",'','','','','',''];
     $tabelaInfo1 = ['Carga Horaria Efetiva Realizada:',"$totalResumo[diffJornadaEfetiva]",'','I','Incluída Manualmente','','','','','','','','','','','',''];
     $tabelaInfo2 = ['Adicional Noturno:',"$totalResumo[adicionalNoturno]",'','P','Pré-Assinalada','','','','','','','','','','','',''];
     $tabelaInfo3 = ['Espera Indenizada:',"$totalResumo[esperaIndenizada]",'','T','Outras fontes de marcação','','','','','','','','','','','',''];

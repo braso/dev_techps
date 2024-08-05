@@ -18,7 +18,7 @@
 	// 				<select name='".$variavel."' class='form-control input-sm' ".$extra.">
 	// 					".$c_opcao."
 	// 				</select>
-	// 			</div>";l
+	// 			</div>";
 
 	// 	return $campo;
 	// }
@@ -53,12 +53,13 @@
 					}
 				}
 	
-				if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")) && isset($_POST["nivel"]) && empty($_POST["nivel"])){	//Se usuário = Administrador && nivelUsuario indefinido
+				if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")) && isset($_POST["nivel"]) && empty($_POST["nivel"])){	//Se usuárioLogado = Administrador && nivelUsuario indefinido
 					$error_msg .= "Nível, ";
 				}
 				if(($_POST["senha"] != $_POST["senha2"])){
 					$error_msg .= "Confirmação de senha correta, ";
 				}
+
 				if($error_msg != $baseErrMsg){
 					set_status(substr($error_msg, 0, strlen($error_msg)-2).".");
 					mostrarFormCadastro();
@@ -72,11 +73,15 @@
 				$_POST["cpf"] = preg_replace( "/[^0-9]/is", "", $_POST["cpf"]);
 				if(strlen($_POST["cpf"]) != 11){
 					$error_msg .= "CPF parcial, ";
+				}else{
+					if(!validarCPF($_POST["cpf"])){
+						$error_msg .= "CPF inválido, ";
+					}
 				}
 			}
 			if(!empty($_POST["rg"])){
-				$_POST["rg"] = str_replace([".", "_"], "", $_POST["rg"]);
-				if(strlen($_POST["rg"]) < 7){
+        $_POST["rg"] = preg_replace( "/[^0-9]/is", "", $_POST["rg"]);
+				if(strlen($_POST["rg"]) != 9){
 					$error_msg .= "RG parcial, ";
 				}
 			}
@@ -155,8 +160,6 @@
 			mostrarFormCadastro();
 			exit;
 		}
-
-		mostrarFormCadastro();
 		
 		if(empty($_POST["id"])){//Criando novo usuário
 			$usuario["user_nb_userCadastro"] = $_SESSION["user_nb_id"];
@@ -167,19 +170,21 @@
 			mostrarFormCadastro();
 			exit;
 			
-		}else{//Atualizando usuário existente
-			atualiza_usuario($usuario);
-			$id = $_POST["id"];
 		}
 
-		$idUserFoto = mysqli_fetch_assoc(query("SELECT user_nb_id FROM `user` WHERE user_nb_id = '".$id."' LIMIT 1;"));
+		//Atualizando usuário existente
+
+		atualiza_usuario($usuario);
+		$id = $_POST["id"];
+
+		$idUserFoto = mysqli_fetch_assoc(query("SELECT user_nb_id FROM user WHERE user_nb_id = '".$id."' LIMIT 1;"));
 		$file_type = $_FILES["foto"]["type"]; //returns the mimetype
 
 		$allowed = array("image/jpeg", "image/gif", "image/png");
-		if (in_array($file_type, $allowed) && $_FILES["foto"]["name"] != "") {
+		if (in_array($file_type, $allowed) && $_FILES["foto"]["name"] != "" && !empty($_POST["id"])) {
 
-			if (!is_dir("arquivos/user/$_POST[id]/")) {
-				mkdir("arquivos/user/$_POST[id]/", 0777, true);
+			if (!is_dir("arquivos/user/".$_POST["id"]."/")) {
+				mkdir("arquivos/user/".$_POST["id"]."/", 0777, true);
 			}
 
 			$arq = enviar("foto", "arquivos/user/".$_POST["id"]."/", "FOTO_".$id);
@@ -265,7 +270,7 @@
 			$a_mod = carregar("user", $_POST["id"]);
 		}
 
-		$editingDriver = in_array($a_mod["user_tx_nivel"], ["Motorista", "Ajudante"]);
+		$editingDriver = in_array(($a_mod["user_tx_nivel"]?? ""), ["Motorista", "Ajudante"]);
 		$loggedUserIsAdmin = is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"));
 
 
@@ -275,13 +280,13 @@
 					<spam class='glyphicon glyphicon-remove'></spam>
 					Excluir
 				</a>", 
-				'<img src="'.($a_mod["user_tx_foto"]?? "").'" />', 
+				"<img src='".($a_mod["user_tx_foto"]?? "")."' />", 
 				2
 			);
 		}else{
 			$img = texto( 
 				"Imagem",
-				'<img src="../contex20/img/user.png" />', 
+				"<img src='../contex20/img/user.png' />", 
 				2
 			);
 		}
@@ -340,7 +345,7 @@
 					$niveis[] = "Funcionário";
 			}
 			$campo_nivel = combo("Nível*", "nivel", ($_POST["nivel"]?? ""), 2, $niveis, "");
-			$campo_status = combo("Status", "status", $a_mod["enti_tx_status"], 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
+			$campo_status = combo("Status", "status", ($a_mod["enti_tx_status"]?? ""), 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
 
 			$campo_nascimento = campo_data("Dt. Nascimento*", "nascimento", ($_POST["nascimento"]?? ""), 2);
 			$campo_cpf = campo("CPF", "cpf", ($_POST["cpf"]?? ""), 2, "MASCARA_CPF");
@@ -366,7 +371,7 @@
 			$campo_rg = texto("RG", ($a_mod["user_tx_rg"]?? ""), 2, "style=''");
 			
 			if(!empty($a_mod["user_nb_cidade"])){
-				$cidade_query = query("SELECT * FROM `cidade` WHERE cida_tx_status = 'ativo' AND cida_nb_id = ".$a_mod["user_nb_cidade"]."");
+				$cidade_query = query("SELECT * FROM cidade WHERE cida_tx_status = 'ativo' AND cida_nb_id = ".$a_mod["user_nb_cidade"]."");
 				$cidade = mysqli_fetch_array($cidade_query);
 			}else{
 				$cidade = ["cida_tx_nome" => ""];
@@ -377,7 +382,7 @@
 			$campo_telefone = texto("Telefone", ($a_mod["user_tx_fone"]?? ""), 2, "style=''");
 			
 			if(!empty($a_mod["user_nb_empresa"])){
-				$empresa_query = query("SELECT * FROM `empresa` WHERE empr_tx_status = 'ativo' AND empr_nb_id = ".$a_mod["user_nb_empresa"]."");
+				$empresa_query = query("SELECT * FROM empresa WHERE empr_tx_status = 'ativo' AND empr_nb_id = ".$a_mod["user_nb_empresa"]."");
 				$empresa = mysqli_fetch_array($empresa_query);
 			}
 
@@ -435,7 +440,7 @@
 		linha_form($fields);
 		
 
-		if ($a_mod["user_nb_userCadastro"] > 0 || $a_mod["user_nb_userAtualiza"] > 0) {
+		if (!empty($a_mod["user_nb_userCadastro"]) && !empty($a_mod["user_nb_userAtualiza"]) && ($a_mod["user_nb_userCadastro"] > 0 || $a_mod["user_nb_userAtualiza"] > 0)) {
 			$a_userCadastro = carregar("user", $a_mod["user_nb_userCadastro"]);
 			$txtCadastro = "Registro inserido por ".($a_userCadastro["user_tx_login"]?? "admin").(!empty($a_mod["user_tx_dataCadastro"])?" às ".data($a_mod["user_tx_dataCadastro"], 1): "").".";
 			$cAtualiza[] = 
@@ -500,7 +505,7 @@
 		$extraEmpresa = " AND empr_tx_situacao = 'ativo' ORDER BY empr_tx_nome";
 
 		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
-			$extraEmpresa .= " AND empr_nb_id = '$_SESSION[user_nb_empresa]'";
+			$extraEmpresa .= " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
 		}
 
 		cabecalho("Cadastro de Usuário");
@@ -608,4 +613,3 @@
 		grid($sql, $cab, $val);
 		rodape();
 	}
-?>

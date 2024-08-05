@@ -81,7 +81,7 @@
 	}
 
 	function layout_notificacao(){
-		$sqlCheck = query("SELECT * FROM `configuracao_alerta` LIMIT 1");
+		$sqlCheck = query("SELECT * FROM configuracao_alerta LIMIT 1");
 		$emails = mysqli_fetch_assoc($sqlCheck);
 
 		if (!empty($emails)) {
@@ -404,4 +404,3 @@
 
 		rodape();
 	}
-?>

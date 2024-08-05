@@ -73,7 +73,7 @@ function diffData($dataAtual){
     $dominio = substr($CONTEX['path'],12);
     $msg = '';
 
-    $sqlCheck = query("SELECT * FROM `configuracao_alerta` LIMIT 1");
+    $sqlCheck = query("SELECT * FROM configuracao_alerta LIMIT 1");
 	$emails = mysqli_fetch_assoc($sqlCheck);
     // Verifica ser possui diferença de 2 dias
     if ((int)$diferenca == 2 || $diferenca <= 6){
@@ -84,5 +84,3 @@ function diffData($dataAtual){
         sendEmailAlerta($emails['conf_tx_emailAdm'],$emails['conf_tx_emailAdm'],$msg);
     }
 }
-
-?>
