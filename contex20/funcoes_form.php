@@ -245,8 +245,6 @@
 
 	function voltar(){
 
-		die(var_dump($_POST));
-
 		if(empty($_POST["HTTP_REFERER"])){
 			set_status("Tela de origem indefinida.");
 			index();
