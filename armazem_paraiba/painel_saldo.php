@@ -1,13 +1,9 @@
 <?php
-// ini_set('display_errors', 1);
-// error_reporting(E_ALL);
 
 include "funcoes_ponto.php";
 include_once 'painel_saldo_motoristas.php';
+
 function criar_relatorio_saldo($periodoInicio, $periodoFim){
-    global $totalResumo;
-    $periodoInicio = '2024-06-01';
-    $periodoFim = '2024-06-28';
 
     $empresas = mysqli_fetch_all(
         query("SELECT empr_nb_id, empr_tx_nome FROM `empresa` WHERE empr_tx_status != 'inativo' ORDER BY empr_tx_nome ASC;"),
@@ -76,14 +72,24 @@ function criar_relatorio_saldo($periodoInicio, $periodoFim){
                     $JorPrev = $diaPonto['jornadaPrevista'];
                 }
 
+                if (strlen($diaPonto['diffJornadaEfetiva']) > 5) {
+                    
+                    $diaPontojP = preg_replace('/.*&nbsp;/', '', $diaPonto['diffJornadaEfetiva']);
+                    if (preg_match('/(\d{2}:\d{2})$/', $diaPontojP, $matches)) {
+                        $JorEfet = $matches[1];
+                    }
+                } else {
+                    $JorEfet = $diaPonto['diffJornadaEfetiva'];
+                }
+
                 $he50 = empty($diaPonto['he50']) ? '00:00' : $diaPonto['he50'];
                 $he100 = empty($diaPonto['he100']) ? '00:00' : $diaPonto['he100'];
                 $adicNot = $diaPonto['adicionalNoturno'];
                 $espInd  = $diaPonto['esperaIndenizada'];
-                $saldoPer = $diaPonto['diffSaldo'];
+                $saldoPer = strip_tags($diaPonto['diffSaldo']);
 
                 $totalJorPrev      = somarHorarios([$totalJorPrev,      $JorPrev]);
-                $totalJorEfe       = somarHorarios([$totalJorEfe,       $diaPonto['diffJornadaEfetiva']]);
+                $totalJorEfe       = somarHorarios([$totalJorEfe,       $JorEfet]);
                 $totalHE50         = somarHorarios([$totalHE50,         $he50]);
                 $totalHE100        = somarHorarios([$totalHE100,        $he100]);
                 $totalAdicNot      = somarHorarios([$totalAdicNot,      $adicNot ]);
@@ -250,6 +256,15 @@ function criar_relatorio_saldo($periodoInicio, $periodoFim){
 function index() {
     global $totalResumo, $CONTEX;
 
+    if(array_key_exists('atualizar', $_POST) && !empty($_POST['atualizar'])){
+        $periodoInicio = '2024-06-01';
+        $periodoFim = '2024-06-30';
+        echo '<script>alert("Atualizando os painéis, aguarde um pouco ")</script>';
+        ob_flush();
+        flush();
+        criar_relatorio_saldo($periodoInicio, $periodoFim);
+    }
+
     cabecalho('Relatorio Geral de saldo');
 
     $extraCampoData = '';
@@ -277,6 +292,10 @@ function index() {
                             window.print();
                         }
                     </script>';
+    if (!empty($_SESSION['user_tx_nivel']) && is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
+        $botaoAtualizarPainel = 
+        '<a class="btn btn-warning" onclick="atualizarPainel()"> Atualizar Painel </a>';
+    }
     
     if (!empty($_POST['empresa'])) {
         $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
@@ -285,7 +304,8 @@ function index() {
     $b = [
         botao("Buscar", 'index', '', '', '', '','btn btn-info'),
         $botao_imprimir,
-        $botao_volta
+        $botao_volta,
+        $botaoAtualizarPainel
     ];
 
     
@@ -299,7 +319,7 @@ function index() {
         empresa($aEmpresa,$idEmpresa);
     }else{
         $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM `empresa` WHERE empr_tx_Ehmatriz = 'sim'"), MYSQLI_ASSOC);
-        include_once "painel_empresas.php";
+        include_once "painel_saldo_empresas.php";
     }
     ?>
         <style>
@@ -400,8 +420,12 @@ function index() {
                 }
         </style>
         <form name="myForm" method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
-        <input type="hidden" name="empresa" id="empresa">
-        <input type="hidden" name="busca_data" id="busca_data">
+            <input type="hidden" name="empresa" id="empresa">
+            <input type="hidden" name="busca_data" id="busca_data">
+        </form>
+        <form name="formularioAtualizarPainel" method="POST" action="<?= htmlspecialchars(basename($_SERVER["PHP_SELF"])); ?>">
+            <input type="hidden" name="atualizar" id="atualizar">
+            <input type="hidden" name="busca_data" id="busca_dataAtualizar">
         </form>
 
         <script>
@@ -409,6 +433,11 @@ function index() {
                 document.myForm.empresa.value = empresa;
                 document.myForm.busca_data.value = document.getElementById('busca_data').value;
                 document.myForm.submit();
+            }
+            function atualizarPainel() {
+                document.formularioAtualizarPainel.busca_dataAtualizar.value = document.getElementById("busca_data").value;
+                document.formularioAtualizarPainel.atualizar.value = "atualizar";
+                document.formularioAtualizarPainel.submit();
             }
         </script>
 

@@ -11,14 +11,6 @@
 	function empresas($aEmpresa) {
 		include 'painel_empresas_csv.php';
 
-    $mesAtual = date("n");
-    $anoAtual = date("Y");
-    $motoristas = mysqli_fetch_all(
-      query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante');"),
-      MYSQLI_ASSOC
-    );
-    $totalMotorEmpr = count($motoristas);
-
 		$empresasTotais = [];
 		$empresaTotais = [];
 		$Emissão = '';
@@ -153,7 +145,7 @@
 
 	<div id="tituloRelatorio">
 		<img style='width: 150px' src="<?=  $aEmpresa[0]['empr_tx_logo'] ?>" alt="Logo Empresa Esquerda">
-		<h3>Relatorio Geral de Espelho de Ponto</h3>
+		<h3>Relatório Final de Endosso</h3>
 		<div class="right-logo">
 			<img style='width: 150px' src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 		</div>
