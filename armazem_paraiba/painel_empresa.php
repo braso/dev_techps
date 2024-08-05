@@ -174,7 +174,7 @@
 							<tbody>
 								<tr>
 									<td  class='porcentagenMeta' style='background-color: #66b3ff;'>META</td>
-									<td class='textCentralizado'>".$quantMeta."s</td>
+									<td class='textCentralizado'>".$quantMeta."</td>
 									<td>".$porcentagenMeta."</td>
 								</tr>
 								<tr>

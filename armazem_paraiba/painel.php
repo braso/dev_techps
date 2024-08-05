@@ -110,84 +110,76 @@
         }
         echo 
             "<style>
-                @media print {
-                    body {
-                        margin: 1cm;
-                        margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
-                        transform: scale(1.0);
-                        transform-origin: top left;
-                    }
-                
-                    @page {
-                        size: A4 landscape;
-                        margin: 1cm;
-                    }
-                    #tituloRelatorio{
-                        /*font-size: 2px !important;*/
-                        /*padding-left: 200px;*/
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        margin-bottom: -50px !important;
-                    }
-                    body > div.scroll-to-top{
-                        display: none !important;
-                    }
-                    body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3){
-                        display: none;
-                    }
-                    .portlet-body.form .table-responsive {
-                        overflow-x: visible !important;
-                        margin-left: -50px !important;
-                    }
-                    #pdf2htmldiv > div{
-                        padding: 88px 20px 15px !important;
-                    }
-                    /* .portlet.light>.portlet-title {
-                        border-bottom: none;
-                        margin-bottom: 0px;
-                    } */
-                    body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(7){
-                        display: none !important;
-                    }
-                    .caption{
-                        padding-top: 0px;
-                        margin-left: -50px !important;
-                        padding-bottom: 0px;
-                    }
-                    .emissao{
-                        text-align: left;
-                        padding-left: 710px !important;
-                        position: absolute;
-                    }
-                    .porcentagenEndo{
-                        box-shadow: 0 0 0 1000px #66b3ff inset !important;
-                    }
-                    .porcentagenNaEndo{
-                        box-shadow: 0 0 0 1000px #ff471a inset !important;
-                    }
-                    .porcentagenEndoPc{
-                        box-shadow: 0 0 0 1000px #ffff66 inset !important;
-                    }
-                    thead tr.totais th {
-                        box-shadow: 0 0 0 1000px #ffe699 inset !important; /* Cor para impressão */
-                    }
-                    thead tr.titulos th {
-                        box-shadow: 0 0 0 1000px #99ccff inset !important; /* Cor para impressão */
-                    }
-                    .porcentagenMeta{
-                        box-shadow: 0 0 0 1000px #66b3ff inset !important;
-                    }
-                    .porcentagenPosit{
-                        box-shadow: 0 0 0 1000px #00b33c inset !important;
-                    }
-                    .porcentagenNega{
-                        box-shadow: 0 0 0 1000px #ff471a inset !important;
-                    }
-                div:nth-child(11) > div{
-                    padding: 50px 20px 15px !important;
+                 @media print {
+                        body {
+                            margin: 1cm;
+                            margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
+                            transform: scale(1.0);
+                            transform-origin: top left;
+                        }
+                    
+                        @page {
+                            size: A4 landscape;
+                            margin: 1cm;
+                        }
+                        #tituloRelatorio{
+                            /*font-size: 2px !important;*/
+                            /*padding-left: 200px;*/
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-bottom: -50px !important;
+                        }
+                        body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(6) > div.portlet.light,
+                        body > div.scroll-to-top{
+                            display: none !important;
+                        }
+                        #pdf2htmldiv > div{
+                            padding: 88px 20px 15px !important;
+                        }
+                        /* .portlet.light>.portlet-title {
+                            border-bottom: none;
+                            margin-bottom: 0px;
+                        } */
+                        body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(7){
+                            display: none !important;
+                        }
+                        .caption{
+                            padding-top: 0px;
+                            margin-left: -50px !important;
+                            padding-bottom: 0px;
+                        }
+                        .emissao{
+                            padding-left: 680px !important;
+                        }
+                        .porcentagenEndo{
+                            box-shadow: 0 0 0 1000px #66b3ff inset !important;
+                        }
+                        .porcentagenNaEndo{
+                            box-shadow: 0 0 0 1000px #ff471a inset !important;
+                        }
+                        .porcentagenEndoPc{
+                            box-shadow: 0 0 0 1000px #ffff66 inset !important;
+                        }
+                        thead tr.totais th {
+                            box-shadow: 0 0 0 1000px #ffe699 inset !important; /* Cor para impressão */
+                        }
+                        thead tr.titulos th {
+                            box-shadow: 0 0 0 1000px #99ccff inset !important; /* Cor para impressão */
+                        }
+                        .porcentagenMeta{
+                            box-shadow: 0 0 0 1000px #66b3ff inset !important;
+                        }
+                        .porcentagenPosit{
+                            box-shadow: 0 0 0 1000px #00b33c inset !important;
+                        }
+                        .porcentagenNegat{
+                            box-shadow: 0 0 0 1000px #ff471a inset !important;
+                        }
+                        .portlet.light{
+                            padding: 75px 20px 15px !important;
+                        }
                 }
-            }
 
                 table thead tr th:nth-child(3),
                 table thead tr th:nth-child(7),

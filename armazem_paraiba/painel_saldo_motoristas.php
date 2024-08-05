@@ -1,7 +1,331 @@
 <?php
-	/* Modo debug
-		ini_set("display_errors", 1);
+/* Modo debug
+		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
 
-	
+// ini_set('display_errors', 1);
+// 	error_reporting(E_ALL);
+
+header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+header("Pragma: no-cache"); // HTTP 1.0.
+header("Expires: 0");
+
+$empresas = [];
+$empresasTotais = [];
+$emissao = [];
+
+$dataTimeInicio = new DateTime($_POST['busca_dataInicio']);
+$dataTimeFim = new DateTime($_POST['busca_dataFim']);
+$mes = $dataTimeInicio->format('m');
+$ano = $dataTimeInicio->format('Y');
+
+if (is_dir("./arquivos/paineis/Saldo/$idEmpresa/$mes-$ano") != false) {
+	$file = "./arquivos/paineis/Saldo/$idEmpresa/$mes-$ano/motoristas.json";
+	if (file_exists($file)) {
+		$conteudo_json = file_get_contents($file);
+		$motoristas = json_decode($conteudo_json, true);
+	}
+
+	// Obtém O total dos saldos de cada empresa
+	$fileEmpresas = "./arquivos/paineis/Saldo/$idEmpresa/$mes-$ano/totalMotoristas.json";
+
+	if (file_exists($fileEmpresas)) {
+		$conteudo_json = file_get_contents($fileEmpresas);
+		$motoristasTotais = json_decode($conteudo_json, true);
+	}
+
+	// Obtém o tempo da última modificação do arquivo
+	$timestamp = filemtime($file);
+	$Emissão = date('d/m/Y H:i:s', $timestamp);
+} else
+	echo '<script>alert("Não Possui dados desse mês")</script>';
+
+
+$quantPosi = 0;
+$quantNega = 0;
+$quantMeta = 0;
+
+foreach ($motoristas as $motoristasTotal) {
+	$saldoFinal = $motoristasTotal['saldoFinal'];
+
+	if ($saldoFinal === '00:00') {
+		$quantMeta++;
+	} elseif ($saldoFinal > '00:00') {
+		$quantPosi++;
+	} elseif ($saldoFinal < '00:00') {
+		$quantNega++;
+	}
+}
+
+$porcentagenMeta = number_format(0, 2);
+$porcentagenNega = number_format(0, 2);
+$porcentagenPosi = number_format(0, 2);
+
+if ($quantMeta != 0) {
+	$porcentagenMeta  = number_format(($quantMeta / count($motoristas)) * 100, 2);
+}
+if ($quantNega != 0) {
+	$porcentagenNega = number_format(($quantNega / count($motoristas)) * 100, 2);
+}
+if ($quantPosi != 0) {
+	$porcentagenPosi = number_format(($quantPosi / count($motoristas)) * 100, 2);
+}
+
+?>
+
+<style>
+	#tabela1 {
+		width: 30% !important;
+		/*margin-top: 9px !important;*/
+		text-align: center;
+		margin-bottom: -10px !important;
+	}
+
+	#tabela2 {
+		width: 30% !important;
+		/*margin-top: 9px !important;*/
+		text-align: center;
+		margin-bottom: -10px !important;
+		margin-left: 10px;
+	}
+
+	.totais {
+		background-color: #ffe699;
+	}
+
+	tr.totais>th:nth-child(1),
+	tr.totais>th:nth-child(2),
+	tr.totais>th:nth-child(3),
+	tr.totais>th:nth-child(4),
+	tr.totais>th:nth-child(5),
+	tr.totais>th:nth-child(6),
+	tr.totais>th:nth-child(7),
+	tr.totais>th:nth-child(8),
+	tr.totais>th:nth-child(9),
+	tr.totais>th:nth-child(10),
+	tr.totais>th:nth-child(11),
+	tr.totais>th:nth-child(12) {
+		text-align: justify;
+	}
+
+	.titulos {
+		background-color: #99ccff;
+	}
+
+	tr.titulos>th:nth-child(1),
+	tr.titulos>th:nth-child(2),
+	tr.titulos>th:nth-child(3),
+	tr.titulos>th:nth-child(4),
+	tr.titulos>th:nth-child(5),
+	tr.titulos>th:nth-child(6),
+	tr.titulos>th:nth-child(7),
+	tr.titulos>th:nth-child(8),
+	tr.titulos>th:nth-child(9),
+	tr.titulos>th:nth-child(10),
+	tr.titulos>th:nth-child(11),
+	tr.titulos>th:nth-child(12) {
+		text-align: justify;
+	}
+
+	#tituloRelatorio {
+		display: none;
+	}
+
+	th {
+		cursor: pointer;
+	}
+
+	th.sort-asc::after {
+		content: " \2191";
+	}
+
+	th.sort-desc::after {
+		content: " \2193";
+	}
+</style>
+
+<div id="tituloRelatorio">
+	<img style='width: 150px' src="<?= $aEmpresa[0]['empr_tx_logo'] ?>" alt="Logo Empresa Esquerda">
+	<h3>Relatório Final de Endosso</h3>
+	<div class="right-logo">
+		<img style='width: 150px' src="<?= $CONTEX['path'] ?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
+	</div>
+</div>
+<div class="col-md-12 col-sm-12">
+	<div class="portlet light ">
+		<div class="emissao">Emissão Doc.: <?= $Emissão ?></div>
+		<div class="table-responsive">
+			<div style="display: flex;">
+				<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact" id="tabela2">
+					<thead>
+						<tr>
+							<th colspan="1">SALDO FINAL</th>
+							<th colspan="1">QUANT</th>
+							<th colspan="1">%</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td class="porcentagenMeta" style="background-color: #66b3ff;">META</td>
+							<td class="textCentralizado"><?= $quantMeta ?></td>
+							<td><?= $porcentagenMeta ?></td>
+						</tr>
+						<tr>
+							<td class='porcentagenPosit' style="background-color: #00b33c;">POSITIVO</td>
+							<td class="textCentralizado"><?= $quantPosi ?></td>
+							<td><?= $porcentagenPosi ?></td>
+						</tr>
+						<tr>
+							<td class='porcentagenNegat' style="background-color: #ff471a;">NEGATIVO</td>
+							<td class="textCentralizado"><?= $quantNega ?></td>
+							<td><?= $porcentagenNega  ?></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+			<br>
+			<div class="portlet-body form">
+				<table id='tabela-motorista' class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact">
+					<thead>
+						<tr class="totais">
+							<th colspan="1">Período: De <?= $_POST['busca_dataInicio'] . ' até ' . $_POST['busca_dataFim'] ?></th>
+							<?php
+							if ($motoristasTotais != null) {
+								echo "<th colspan='1'>" . $motoristasTotais['jornadaPrevista'] . "</th>";
+								echo "<th colspan='1'>" . $motoristasTotais['JornadaEfetiva'] . "</th>";
+								echo "<th colspan='1'>" . $motoristasTotais['he50'] . "</th>";
+								echo "<th colspan='1'>" . $motoristasTotais['he100'] . "</th>";
+								echo "<th colspan='1'>" . $motoristasTotais['adicionalNoturno'] . "</th>";
+								echo "<th colspan='1'>" . $motoristasTotais['esperaIndenizada'] . "</th>";
+								echo "<th colspan='1'>" . $motoristasTotais['saldoAnterior'] . "</th>";
+								echo "<th colspan='1'>" . $motoristasTotais['saldoPeriodo'] . "</th>";
+								echo "<th colspan='1'>" . $motoristasTotais['saldoFinal'] . "</th>";
+							}
+							?>
+						</tr>
+						<tr id="ti" class="titulos">
+							<th data-column="motorista" data-order="asc">Unidade - <?= $motoristasTotais['empresaNome']; ?></th>
+							<th data-column="jornadaPrevista" data-order="asc">Jornada Prevista</th>
+							<th data-column="jornadaEfetiva" data-order="asc">Jornada Efetiva</th>
+							<th data-column="he50" data-order="asc">HE 50%</th>
+							<th data-column="he100" data-order="asc">HE 100%</th>
+							<th data-column="adicionalNoturno" data-order="asc">Adicional Noturno</th>
+							<th data-column="esperaIndenizada" data-order="asc">ESPERA INDENIZADA</th>
+							<th data-column="saldoAnterior" data-order="asc">Saldo Anterior</th>
+							<th data-column="saldoPeriodo" data-order="asc">Saldo Periodo</th>
+							<th data-column="saldoFinal" data-order="asc">Saldo Final</th>
+						</tr>
+					</thead>
+					<tbody>
+						<!-- Conteúdo do json motoristas será inserido aqui -->
+					</tbody>
+				</table>
+			</div>
+
+		</div>
+	</div>
+</div>
+<script>
+	$(document).ready(function() {
+		var tabela = $('#tabela-motorista tbody');
+
+		function carregarDado() {
+			$.ajax({
+				url: 'arquivos/paineis/Saldo/<?= $idEmpresa ?>/<?= $mes . '-' . $ano ?>/motoristas.json',
+				dataType: 'json',
+				success: function(data) {
+					tabela.empty();
+					$.each(data, function(index, item) {
+						// console.log("Item " + index + ":");
+						// for (var chave in item) {
+						// 	if (item.hasOwnProperty(chave)) {
+						// 		console.log(chave + ": " + item[chave]);
+						// 	}
+						// }
+
+						var he50 = (item.he50 === null || item.he50 === '00:00') ? '' : item.he50;
+						var he100 = (item.he100 === null || item.he100 === '00:00') ? '' : item.he100;
+						var adicionalNoturno = (item.adicionalNoturno === null || item.adicionalNoturno === '00:00') ? '' : item.adicionalNoturno;
+						var esperaIndenizada = (item.esperaIndenizada === null || item.esperaIndenizada === '00:00') ? '' : item.esperaIndenizada;
+						var saldoAnterior = item.saldoAnterior;
+						var saldoPeriodo = item.saldoPeriodo;
+						var saldoFinal = item.saldoFinal;
+
+						var linha = '<tr>' +
+							'<td>' + item.motorista + '</td>' +
+							'<td>' + item.jornadaPrevista + '</td>' +
+							'<td>' + item.jornadaEfetiva + '</td>' +
+							'<td>' + he50 + '</td>' +
+							'<td>' + he100 + '</td>' +
+							'<td>' + adicionalNoturno + '</td>' +
+							'<td>' + esperaIndenizada + '</td>' +
+							'<td>' + saldoAnterior + '</td>' +
+							'<td>' + saldoPeriodo + '</td>' +
+							'<td>' + saldoFinal + '</td>' +
+							'</tr>';
+						tabela.append(linha);
+					});
+				},
+				error: function() {
+					console.log('Erro ao carregar os dados.');
+				}
+			});
+		}
+		// Função para ordenar a tabela
+		function ordenarTabela(coluna, ordem) {
+			var linhas = tabela.find('tr').get();
+			linhas.sort(function(a, b) {
+				var valorA = $(a).children('td').eq(coluna).text().toUpperCase();
+				var valorB = $(b).children('td').eq(coluna).text().toUpperCase();
+
+				if (valorA < valorB) {
+					return ordem === 'asc' ? -1 : 1;
+				}
+				if (valorA > valorB) {
+					return ordem === 'asc' ? 1 : -1;
+				}
+				return 0;
+			});
+			$.each(linhas, function(index, row) {
+				tabela.append(row);
+			});
+		}
+
+		// Evento de clique para ordenar a tabela ao clicar no cabeçalho
+		$('#ti th').click(function(){
+			var coluna = $(this).index();
+			var ordem = $(this).data('order');
+			$('#tabela-motorista th').data('order', 'desc'); // Redefinir ordem de todas as colunas
+			$(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
+			ordenarTabela(coluna, $(this).data('order'));
+
+			// Ajustar classes para setas de ordenação
+			$('#ti th').removeClass('sort-asc sort-desc');
+			$(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
+		});
+
+		carregarDado();
+	});
+
+	// function downloadCSV() {
+	// 	// Caminho do arquivo CSV no servidor
+	// 	var filePath = '<?= "./arquivos/paineis/Painel_$MotoristasTotais[empresaNome].csv" ?>' // Substitua pelo caminho do seu arquivo
+
+	// 	// Cria um link para download
+	// 	var link = document.createElement('a');
+
+	// 	// Configurações do link
+	// 	link.setAttribute('href', filePath);
+	// 	link.setAttribute('download', '<?= "Painel_$MotoristasTotais[empresaNome].csv" ?>');
+
+	// 	// Adiciona o link ao documento
+	// 	document.body.appendChild(link);
+
+	// 	// Simula um clique no link para iniciar o download
+	// 	link.click();
+
+	// 	// Remove o link
+	// 	document.body.removeChild(link);
+	// }
+</script>
