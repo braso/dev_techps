@@ -6,6 +6,29 @@
 
 	include "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
 
+	function cadastro_abono(){
+		global $CONTEX;
+		if(empty($_POST['busca_motorista'])){
+			header("Location: ".$CONTEX["path"]."/cadastro_abono.php");
+			exit;
+		}
+	
+		// Gerar o HTML do formulário e a página de redirecionamento
+		echo "
+			<form id='forms_abono' action='".$CONTEX["path"]."/cadastro_abono.php' method='post'>
+				<input type='hidden' name='acao' value='layout_abono'>
+				<input type='hidden' name='busca_motorista' value='".htmlspecialchars($_POST['busca_motorista'])."'>
+				<input type='hidden' name='busca_empresa' value='".htmlspecialchars($_POST['busca_empresa'])."'>
+				<input type='hidden' name='busca_dataInicio' value='".htmlspecialchars($_POST['busca_dataInicio'])."'>
+				<input type='hidden' name='busca_dataFim' value='".htmlspecialchars($_POST['busca_dataFim'])."'>
+			</form>
+			<script>
+				document.getElementById('forms_abono').submit();
+			</script>";
+		exit;
+	}
+	
+
 	function index() {
 
 		global $CONTEX, $totalResumo, $conn;
@@ -158,7 +181,7 @@
 			botao("Buscar", 'index', '', '', '', '', 'btn btn-success'),
 		];
 		if (!in_array($_SESSION['user_tx_nivel'], ['Motorista', 'Ajudante'])) {
-			$b[] = botao("Cadastrar Abono", 'layout_abono', '', '', 'btn btn-secondary');
+			$b[] = botao("Cadastrar Abono", 'cadastro_abono', '', '', 'btn btn-secondary');
 		}
 		$b[] = $botao_imprimir;
 		

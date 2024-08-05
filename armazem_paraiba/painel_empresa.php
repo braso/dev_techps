@@ -4,6 +4,10 @@
 		error_reporting(E_ALL);
 	//*/
 
+	header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+	header("Pragma: no-cache"); // HTTP 1.0.
+	header("Expires: 0");
+
 	function empresa($aEmpresa,$idEmpresa){
 		include 'painel_empresa_csv.php';
 
@@ -141,7 +145,7 @@
 
 	<div id="tituloRelatorio">
 		<img style='width: 150px' src="<?=  $aEmpresa[0]['empr_tx_logo'] ?>" alt="Logo Empresa Esquerda">
-		<h3>Relatorio Geral de Espelho de Ponto</h3>
+		<h3>Relatório Final de Endosso</h3>
 		<div class="right-logo">
 			<img style='width: 150px' src="<?=$CONTEX['path']?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 		</div>

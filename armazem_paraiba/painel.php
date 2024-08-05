@@ -4,9 +4,10 @@
 		error_reporting(E_ALL);
 	//*/
 
-    // ini_set('display_errors', 1);
-    // error_reporting(E_ALL);
-
+    header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+	header("Pragma: no-cache"); // HTTP 1.0.
+	header("Expires: 0");
+    
     include 'painel_empresas.php';
     include 'painel_empresa.php';
     include "funcoes_ponto.php";
@@ -58,7 +59,7 @@
         
         $monthName = $monthNames[$monthNum];
 
-        cabecalho('Painel Endosso');
+        cabecalho('Relatório Final de Endosso');
 
         $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
@@ -130,15 +131,9 @@
                             align-items: center;
                             margin-bottom: -50px !important;
                         }
+                        body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(6) > div.portlet.light,
                         body > div.scroll-to-top{
                             display: none !important;
-                        }
-                        body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3){
-                            display: none;
-                        }
-                        .portlet-body.form .table-responsive {
-                            overflow-x: visible !important;
-                            margin-left: -50px !important;
                         }
                         #pdf2htmldiv > div{
                             padding: 88px 20px 15px !important;
@@ -156,9 +151,7 @@
                             padding-bottom: 0px;
                         }
                         .emissao{
-                            text-align: left;
-                            padding-left: 710px !important;
-                            position: absolute;
+                            padding-left: 680px !important;
                         }
                         .porcentagenEndo{
                             box-shadow: 0 0 0 1000px #66b3ff inset !important;
@@ -184,9 +177,9 @@
                         .porcentagenNegat{
                             box-shadow: 0 0 0 1000px #ff471a inset !important;
                         }
-                       div:nth-child(11) > div{
-                        padding: 50px 20px 15px !important;
-                       }
+                        .portlet.light{
+                            padding: 75px 20px 15px !important;
+                        }
                 }
 
                     table thead tr th:nth-child(3),

@@ -1403,58 +1403,55 @@
 						ORDER BY endo_tx_ate DESC
 						LIMIT 1;"), MYSQLI_ASSOC);
 				
-				if (count($endossos) == 2) {
-					$key = count($endossos) - 1;
-					$arquivo = fopen($_SERVER['DOCUMENT_ROOT'].$CONTEX['path'].'/arquivos/endosso/'.$endossos[$key]['endo_tx_filename'].'.csv', 'r');
-				}else{
-					$arquivo = fopen($_SERVER['DOCUMENT_ROOT'].$CONTEX['path'].'/arquivos/endosso/'.$endossos[0]['endo_tx_filename'].'.csv', 'r');
-				}
+				$arquivosEndo = [];
 
-				$keys = fgetcsv($arquivo);
-				$values = fgetcsv($arquivo);
-				for($j = 0; $j < count($keys); $j++){
-					$aDetalhado[$keys[$j]] = $values[$j];
+				foreach($endossos as $arquivo){
+					$arquivosEndo [] = lerEndossoCSV($arquivo['endo_tx_filename']);
 				}
-				$aDetalhado['endo_tx_pontos'] 	= (array)json_decode($aDetalhado['endo_tx_pontos']);
-				$aDetalhado['totalResumo'] 		= (array)json_decode($aDetalhado['totalResumo']);
-	
-				if (isset($aDetalhado['totalResumo'] ['saldoAnterior'])) {
-					$saldoAnterior = $aDetalhado['totalResumo'] ['saldoAnterior'];
-				} elseif (!empty($aMotorista['enti_tx_banco'])) {
-					$saldoAnterior = $aMotorista['enti_tx_banco'];
-					// $saldoAnterior = $saldoAnterior[0][0] == '0' && strlen($saldoAnterior) > 5 ? substr($saldoAnterior, 1) : $saldoAnterior;
-				} else {
-					$saldoAnterior = '00:00';
-				}
-				
-				if ($aDetalhado['totalResumo'] ['diffSaldo'] > '00:00') {
-					if ($aDetalhado['totalResumo'] ['diffSaldo'] > $aDetalhado['totalResumo'] ['he100']) {
-						$he100 = $aDetalhado['totalResumo'] ['he100'];
-					} else {
-						$he100 = $aDetalhado['totalResumo'] ['diffSaldo'];
+				$endossoCompleto = [];
+				$saldoFinal = '00:00';
+
+				if (count($arquivosEndo) > 0) {
+					$endossoCompleto = $arquivosEndo[0];
+
+					if (empty($endossoCompleto["endo_tx_max50APagar"]) && !empty($endossoCompleto["endo_tx_horasApagar"])) {
+						$endossoCompleto["endo_tx_max50APagar"] = $endossoCompleto["endo_tx_horasApagar"];
 					}
-				}else{
-					$he100 = '00:00';
-				}
+					$saldoFinal = $endossoCompleto['endo_tx_saldo'];
 
-				if ($aDetalhado['totalResumo'] ['diffSaldo'] > '00:00') {
-					if ($aDetalhado['totalResumo'] ['diffSaldo'] > $endossos[0]['endo_tx_max50APagar']) {
-						$he50 = $endossos[0]['endo_tx_max50APagar'];
-					}else{
-						$he50 = $aDetalhado['totalResumo'] ['diffSaldo'];
+					for ($i = 1; $i < count($arquivosEndo); $i++) { 
+						if (empty($arquivosEndo[$i]["endo_tx_max50APagar"]) && !empty($arquivosEndo[$i]["endo_tx_horasApagar"])) {
+							$arquivosEndo[$i]["endo_tx_max50APagar"] = $arquivosEndo[$i]["endo_tx_horasApagar"];
+						}
+
+						$endossoCompleto["endo_tx_ate"] = $arquivosEndo[$i]["endo_tx_ate"];
+						$endossoCompleto["endo_tx_pontos"] = array_merge($endossoCompleto["endo_tx_ponto"], $arquivosEndo[$i]["endo_tx_pontos"]);
+						if($endossoCompleto["endo_tx_max50APagar"] != "00:00"){
+							$endossoCompleto["endo_tx_max50APagar"] = operarHorarios([$endossoCompleto["endo_tx_max50APagar"], $arquivosEndo[$i]["endo_tx_max50APagar"]], "+");	
+							if(is_int(strpos($endossoCompleto["endo_tx_max50APagar"], "-"))){
+								$endossoCompleto["endo_tx_max50APagar"] = "00:00";
+							}
+						}
+						foreach($arquivosEndo[$i]["totalResumo"] as $key => $value){
+							if(in_array($key, ["diffSaldo", "saldoAnterior", "saldoAtual"])){
+								continue;
+							}
+							$endossoCompleto["totalResumo"][$key] = operarHorarios([$endossoCompleto["totalResumo"][$key], $value], "+");
+						}
+
+						$endossoCompleto["totalResumo"]["saldoAnterior"] = $endossoCompleto["totalResumo"]["saldoAtual"];
+						$endossoCompleto["totalResumo"]["diffSaldo"] = $arquivosEndo[$i]["totalResumo"]["diffSaldo"];
+						$endossoCompleto["totalResumo"]["saldoAtual"] = $arquivosEndo[$i]["totalResumo"]["saldoAtual"];
+						$saldoFinal = operarHorarios([$endossoCompleto["totalResumo"]["diffSaldo"], $endossoCompleto["totalResumo"]["saldoAnterior"]],'+');
 					}
-				}else{
-					$he50 = '00:00';
 				}
-
-				// 		}
-				$jornadaPrevista 	= $aDetalhado['totalResumo']['jornadaPrevista'] == null 	? '00:00' : $aDetalhado['totalResumo']['jornadaPrevista'];
-				$jornadaEfetiva 	= $aDetalhado['totalResumo']['diffJornadaEfetiva'] == null 	? '00:00' : $aDetalhado['totalResumo']['diffJornadaEfetiva'];
-				$adicionalNoturno 	= $aDetalhado['totalResumo']['adicionalNoturno'] == null 	? '00:00' : $aDetalhado['totalResumo']['adicionalNoturno'];
-				$esperaIndenizada 	= $aDetalhado['totalResumo']['esperaIndenizada'] == null 	? '00:00' : $aDetalhado['totalResumo']['esperaIndenizada'];
-				$saldoAnterior 		= $aDetalhado['totalResumo']['saldoAnterior'] == null 		? '00:00' : $aDetalhado['totalResumo']['saldoAnterior'];
-				$saldoPeriodo 		= $aDetalhado['totalResumo']['diffSaldo'] == null 			? '00:00' : $aDetalhado['totalResumo']['diffSaldo'];
-				$saldoFinal 		= $aDetalhado['totalResumo']['saldoAtual'] == null 			? '00:00' : $aDetalhado['totalResumo']['saldoAtual'];
+						// }
+				$jornadaPrevista 	= $endossoCompleto['totalResumo']['jornadaPrevista'] == null 	? '00:00' : $endossoCompleto['totalResumo']['jornadaPrevista'];
+				$jornadaEfetiva 	= $endossoCompleto['totalResumo']['diffJornadaEfetiva'] == null ? '00:00' : $endossoCompleto['totalResumo']['diffJornadaEfetiva'];
+				$adicionalNoturno 	= $endossoCompleto['totalResumo']['adicionalNoturno'] == null 	? '00:00' : $endossoCompleto['totalResumo']['adicionalNoturno'];
+				$esperaIndenizada 	= $endossoCompleto['totalResumo']['esperaIndenizada'] == null 	? '00:00' : $endossoCompleto['totalResumo']['esperaIndenizada'];
+				$saldoAnterior 		= $endossoCompleto['totalResumo']['saldoAnterior'] == null 		? '00:00' : $endossoCompleto['totalResumo']['saldoAnterior'];
+				$saldoPeriodo 		= $endossoCompleto['totalResumo']['diffSaldo'] == null 			? '00:00' : $endossoCompleto['totalResumo']['diffSaldo'];
 
 				$rows[] = [
 					'IdMotorista' => $motorista['enti_nb_id'],
@@ -1462,8 +1459,8 @@
 					'statusEndosso' => $endossado,
 					'jornadaPrevista' => $jornadaPrevista,
 					'jornadaEfetiva' => $jornadaEfetiva,
-					'he50' => $he50,
-					'he100' => $he100,
+					'he50' => $endossoCompleto["totalResumo"]["he50"],
+					'he100' => $endossoCompleto["totalResumo"]["he100"],
 					'adicionalNoturno' => $adicionalNoturno,
 					'esperaIndenizada' => $esperaIndenizada,
 					'saldoAnterior' => $saldoAnterior,
@@ -1487,10 +1484,16 @@
 			$totalHE100 = "00:00";
 			$totalAdicNot = "00:00";
 			$totalEspInd = "00:00";
-			$totalSaldoPeriodo = "00:00";
+			$saldoAnterior = "00:00"
+;			$totalSaldoPeriodo = "00:00";
 			$saldoFinal = '00:00';
-	
 			foreach ($rows as $row) {
+				var_dump("saldoAnterior ".$row['saldoAnterior']);
+				echo "<br>";
+				var_dump("saldoPeriodo ".$row['saldoPeriodo']);
+				echo "<br>";
+				var_dump("saldoFinal ".$row['saldoFinal']);
+				echo "<br>";
 				$totalJorPrev      = somarHorarios([$totalJorPrev, $row['jornadaPrevista']]);
 				$totalJorEfe       = somarHorarios([$totalJorEfe, $row['jornadaEfetiva']]);
 				$totalHE50         = somarHorarios([$totalHE50, $row['he50']]);

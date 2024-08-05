@@ -6,6 +6,28 @@
 		error_reporting(E_ALL);
 	//*/
 
+	function cadastro_abono(){
+		global $CONTEX;
+		if(empty($_POST['busca_motorista'])){
+			header("Location: ".$CONTEX["path"]."/cadastro_abono.php");
+			exit;
+		}
+	
+		// Gerar o HTML do formulário e a página de redirecionamento
+		echo "
+			<form id='forms_abono' action='".$CONTEX["path"]."/cadastro_abono.php' method='post'>
+				<input type='hidden' name='acao' value='layout_abono'>
+				<input type='hidden' name='busca_motorista' value='".htmlspecialchars($_POST['busca_motorista'])."'>
+				<input type='hidden' name='busca_empresa' value='".htmlspecialchars($_POST['busca_empresa'])."'>
+				<input type='hidden' name='busca_data' value='".htmlspecialchars($_POST['busca_data'])."'>
+				<input type='hidden' name='HTTP_REFERER' value='".$CONTEX["path"]."/nao_conformidade.php'>
+			</form>
+			<script>
+				document.getElementById('forms_abono').submit();
+			</script>";
+		exit;
+	}
+
 	function cadastrar(){
 		$url = substr($_SERVER['REQUEST_URI'], 0, strrpos($_SERVER['REQUEST_URI'], '/'));
 		header('Location: ' . $_SERVER['HTTP_ORIGIN'] . $url . '/cadastro_endosso');
@@ -76,7 +98,7 @@
 		//BOTOES{
 			$b = [
 				botao("Buscar", 'index', '', '', '', 1,'btn btn-success'),
-				botao("Cadastrar Abono", 'layout_abono', '', '', '', 1),
+				botao("Cadastrar Abono", 'cadastro_abono', '', '', '', 1),
 				$botao_imprimir
 			];
 		//}
