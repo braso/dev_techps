@@ -4,6 +4,10 @@
 		error_reporting(E_ALL);
 	//*/
 
+    header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+	header("Pragma: no-cache"); // HTTP 1.0.
+	header("Expires: 0");
+    
     include 'painel_empresas.php';
     include 'painel_empresa.php';
     include "funcoes_ponto.php";
@@ -127,17 +131,9 @@
                             align-items: center;
                             margin-bottom: -50px !important;
                         }
-
-                        div:nth-child(6) > div,
+                        body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(6) > div.portlet.light,
                         body > div.scroll-to-top{
                             display: none !important;
-                        }
-                        body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3){
-                            display: none;
-                        }
-                        .portlet-body.form .table-responsive {
-                            overflow-x: visible !important;
-                            margin-left: -50px !important;
                         }
                         #pdf2htmldiv > div{
                             padding: 88px 20px 15px !important;
@@ -155,9 +151,7 @@
                             padding-bottom: 0px;
                         }
                         .emissao{
-                            text-align: left;
-                            margin-left: 25px !important;
-                            position: absolute;
+                            padding-left: 680px !important;
                         }
                         .porcentagenEndo{
                             box-shadow: 0 0 0 1000px #66b3ff inset !important;
@@ -183,9 +177,9 @@
                         .porcentagenNegat{
                             box-shadow: 0 0 0 1000px #ff471a inset !important;
                         }
-                        div:nth-child(10) > div{
-                        padding: 75px 20px 15px !important;
-                       }
+                        .portlet.light{
+                            padding: 75px 20px 15px !important;
+                        }
                 }
 
                     table thead tr th:nth-child(3),

@@ -1484,10 +1484,16 @@
 			$totalHE100 = "00:00";
 			$totalAdicNot = "00:00";
 			$totalEspInd = "00:00";
-			$totalSaldoPeriodo = "00:00";
+			$saldoAnterior = "00:00"
+;			$totalSaldoPeriodo = "00:00";
 			$saldoFinal = '00:00';
-	
 			foreach ($rows as $row) {
+				var_dump("saldoAnterior ".$row['saldoAnterior']);
+				echo "<br>";
+				var_dump("saldoPeriodo ".$row['saldoPeriodo']);
+				echo "<br>";
+				var_dump("saldoFinal ".$row['saldoFinal']);
+				echo "<br>";
 				$totalJorPrev      = somarHorarios([$totalJorPrev, $row['jornadaPrevista']]);
 				$totalJorEfe       = somarHorarios([$totalJorEfe, $row['jornadaEfetiva']]);
 				$totalHE50         = somarHorarios([$totalHE50, $row['he50']]);
