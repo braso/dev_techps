@@ -80,7 +80,7 @@
 				}
 			}
 			if(!empty($_POST["rg"])){
-				$_POST["rg"] = preg_replace( "/[^0-9]/is", "", $_POST["rg"]);
+        $_POST["rg"] = preg_replace( "/[^0-9]/is", "", $_POST["rg"]);
 				if(strlen($_POST["rg"]) != 9){
 					$error_msg .= "RG parcial, ";
 				}
@@ -160,7 +160,6 @@
 			mostrarFormCadastro();
 			exit;
 		}
-
 		
 		if(empty($_POST["id"])){//Criando novo usuário
 			$usuario["user_nb_userCadastro"] = $_SESSION["user_nb_id"];
@@ -250,8 +249,9 @@
 			if (!empty($_POST["senha"]) && !empty($_POST["senha2"])) {
 				$usuario["user_tx_senha"] = md5($_POST["senha"]);
 			}
-			
+
 			atualizar("user", array_keys($usuario), array_values($usuario), $_POST["id"]);
+			exit;
 		}
 	}
 

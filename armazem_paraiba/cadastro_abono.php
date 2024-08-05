@@ -126,9 +126,8 @@
 		$c2[] = textarea("Justificativa","descricao", ($_POST["descricao"]?? ""),12);
 		
 		//BOTOES
-		$b[] = botao("Gravar","cadastra_abono", "","","","","btn btn-success");
-		$b[] = botao("Voltar", "voltar", implode(",",array_keys($_POST)), implode(",",array_values($_POST)));
-		
+    $b[] = botao("Gravar","cadastra_abono", "","","","","btn btn-success");
+		$b[] = botao("Voltar", "voltar", implode(",",array_keys($_POST)), implode(",",array_values($_POST))); 
 		abre_form("Filtro de Busca");
 
 		if(empty($_POST["HTTP_REFERER"])){
@@ -136,6 +135,8 @@
 			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_abono.php"))){
 				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
 			}
+		}else {
+			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/nao_conformidade.php";
 		}
 
 		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);

@@ -50,7 +50,7 @@
 		$novo_nome = $_POST['file-name'];
 		$descricao = $_POST['description-text'];
 
-		$allowed = array('image/jpeg', 'image/png', 'application/msword', 'application/pdf');
+		$allowed = array('image/jpeg', 'image/png', 'application/msword', 'application/pdf','application/vnd.android.package-archive');
 
 		if (in_array($arquivos['type'], $allowed) && $arquivos['name'] != '') {
 				$pasta_empresa = "arquivos/doc_empresa/$idEmpresa/";
@@ -163,8 +163,8 @@
 			$allowed = array("image/jpeg", "image/gif", "image/png");
 			if (in_array($file_type, $allowed) && $_FILES['logo']['name'] != '') {
 
-				if (!is_dir("arquivos/empresa/$id_empresa")) {
-					mkdir("arquivos/empresa/$id_empresa");
+				if (!is_dir("arquivos/empresa/$id_empresa/")) {
+					mkdir("arquivos/empresa/$id_empresa/");
 				}
 
 				$arq = enviar('logo', "arquivos/empresa/$id_empresa/", $id_empresa);

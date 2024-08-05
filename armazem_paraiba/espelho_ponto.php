@@ -8,8 +8,7 @@
 
 	function cadastro_abono(){
 		global $CONTEX;
-
-		unset($_POST["acao"]);
+unset($_POST["acao"]);
 		$form = "<form id='cadastrarAbono' action='".$CONTEX["path"]."/cadastro_abono.php' method='post'>";
 		foreach($_POST as $key => $value){
 			$form .= "<input name='".$key."' value='".$value."'/>";
@@ -236,7 +235,7 @@
 		$b = [
 			botao("Buscar", "index", "", "", "", "", "btn btn-success"),
 		];
-		if (!in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])) {
+    if (!in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])) {
 			$b[] = botao("Cadastrar Abono", "cadastro_abono", "", "", "btn btn-secondary");
 		}
 		$b[] = $botao_imprimir;

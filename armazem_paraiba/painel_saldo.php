@@ -280,73 +280,69 @@
 
     function empresa($aEmpresa, $idEmpresa){
 
-		if(empty($_POST["busca_data"]) && !empty($_POST["busca_dataInicio"])){
-			$_POST["busca_data"] = substr($_POST["busca_dataInicio"], 0, 7);
-		}
+    if(array_key_exists('atualizar', $_POST) && !empty($_POST['atualizar'])){
+        $periodoInicio = '2024-06-01';
+        $periodoFim = '2024-06-30';
+        echo '<script>alert("Atualizando os painéis, aguarde um pouco ")</script>';
+        ob_flush();
+        flush();
+        criar_relatorio_saldo($periodoInicio, $periodoFim);
+    }
+
+    cabecalho('Relatorio Geral de saldo');
 
 		$MotoristasTotais = [];
 		$MotoristaTotais = [];
 		$endPastaPaineis = "./arquivos/paineis";
 
-		global $CONTEX;
-		
-		if (!(is_dir($endPastaPaineis."/saldos/empresas/".$_POST["busca_data"]))){
-			echo "<script>alert('Não Possui dados desse mês')</script>";
-			exit;
-		}
+    // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
+    //position: absolute; top: 101px; left: 420px;
+    $c = [
+        combo_net('Empresa:','empresa',$_POST['empresa']?? '',4,'empresa', ''),
+        campo_data('Data Início', 'busca_dataInicio', ($_POST['busca_dataInicio']?? ""), 2, $extraCampoData),
+		campo_data('Data Fim', 'busca_dataFim', ($_POST['busca_dataFim']?? ''), 2,$extraCampoData)
+        // $texto,
+    ];
 
-		// Obtém O total dos saldos das empresa
-		$file = $endPastaPaineis."/saldos/".$idEmpresa."/".$_POST["busca_data"]."/totalMotoristas.json";
+    $botao_imprimir =
+            '<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
+                    <script>
+                        function imprimir() {
+                            // Abrir a caixa de diálogo de impressão
+                            window.print();
+                        }
+                    </script>';
+    if (!empty($_SESSION['user_tx_nivel']) && is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
+        $botaoAtualizarPainel = 
+        '<a class="btn btn-warning" onclick="atualizarPainel()"> Atualizar Painel </a>';
+    }
+    
+    if (!empty($_POST['empresa'])) {
+        $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
+    }
+    
+    $b = [
+        botao("Buscar", 'index', '', '', '', '','btn btn-info'),
+        $botao_imprimir,
+        $botao_volta,
+        $botaoAtualizarPainel
+    ];
 
-		if (file_exists($endPastaPaineis."/saldos/".$idEmpresa."/".$_POST["busca_data"])){
-			$conteudo_json = file_get_contents($file);
-			$MotoristasTotais = json_decode($conteudo_json,true);
-		}
-
-		foreach(["jornadaPrevista", "JornadaEfetiva", "he50", "he100", "adicionalNoturno", "esperaIndenizada", "saldoAnterior", "saldoPeriodo", "saldoFinal"] as $campo){
-			if($MotoristasTotais[$campo] == "00:00"){
-				$MotoristasTotais[$campo] = "";
-			}
-		}
-
-		// Obtém o total dos saldos de cada Motorista
-		$fileEmpresa = $endPastaPaineis."/".$idEmpresa."/".$_POST["busca_data"]."/motoristas.json";
-		if (file_exists($endPastaPaineis."/".$idEmpresa."/".$_POST["busca_data"])){
-			$conteudo_json = file_get_contents($fileEmpresa);
-			$MotoristaTotais = json_decode($conteudo_json, true);
-		}
-
-        var_dump($MotoristaTotais);
-
-		// Obtém o tempo da última modificação do arquivo
-		$timestamp = filemtime($file);
-		$emissão = date("d/m/Y H:i:s", $timestamp);
-
-
-		// Calcula os percentuais de cada tipo de endosso, utilizado em painel_saldo_html
-        $percentuaisEndossos = [
-            "endossados" => number_format(($MotoristasTotais["endossados"]/$MotoristasTotais["totalMotorista"])*100, 2),
-            "endossadosParcialmente" => number_format(($MotoristasTotais["endossoPacial"]/$MotoristasTotais["totalMotorista"])*100, 2),
-            "naoEndossados" => number_format(($MotoristasTotais["naoEndossados"]/$MotoristasTotais["totalMotorista"])*100, 2),
-        ];
-
-		
-        //Contar a quantidade de saldos positivos, na meta e negativos
-		$contagemSaldos = [
-            "positivos" => 0,
-            "zerados" => 0,
-            "negativos" => 0
-        ];
-
-		foreach ($MotoristaTotais as $MotoristaTotal){
-            if($MotoristaTotal["saldoFinal"] > "00:00"){
-				$contagemSaldos["positivos"]++;
-			}elseif($MotoristaTotal["saldoFinal"] < "00:00"){
-				$contagemSaldos["negativos"]++;
-			}else{
-                $contagemSaldos["zerados"]++;
-            }
-		}
+    
+    abre_form('Filtro de Busca');
+    linha_form($c);
+    fecha_form($b);
+    
+    if (!empty($_POST['empresa']) && !empty($_POST['busca_data'])) {
+        $idEmpresa = $_POST['empresa'];
+        $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM `empresa` WHERE empr_tx_Ehmatriz = 'sim' AND empr_nb_id = $idEmpresa"), MYSQLI_ASSOC);
+        empresa($aEmpresa,$idEmpresa);
+    }else{
+        $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM `empresa` WHERE empr_tx_Ehmatriz = 'sim'"), MYSQLI_ASSOC);
+        include_once "painel_saldo_empresas.php";
+    }
+    ?>
+        <style>
 
         $percentuaisSaldos = [
             "positivos" => number_format(($contagemSaldos["zerados"]/count($MotoristaTotais))*100, 2),
@@ -497,12 +493,28 @@
                     padding-left: 63%;
                     position: absolute;
                 }
-            </style>
+        </style>
+        <form name="myForm" method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+            <input type="hidden" name="empresa" id="empresa">
+            <input type="hidden" name="busca_data" id="busca_data">
+        </form>
+        <form name="formularioAtualizarPainel" method="POST" action="<?= htmlspecialchars(basename($_SERVER["PHP_SELF"])); ?>">
+            <input type="hidden" name="atualizar" id="atualizar">
+            <input type="hidden" name="busca_data" id="busca_dataAtualizar">
+        </form>
 
-            <form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"])."'>
-                <input type='hidden' name='empresa' id='empresa'>
-                <input type='hidden' name='busca_data' id='busca_data'>
-            </form>
+        <script>
+            function setAndSubmit(empresa) {
+                document.myForm.empresa.value = empresa;
+                document.myForm.busca_data.value = document.getElementById('busca_data').value;
+                document.myForm.submit();
+            }
+            function atualizarPainel() {
+                document.formularioAtualizarPainel.busca_dataAtualizar.value = document.getElementById("busca_data").value;
+                document.formularioAtualizarPainel.atualizar.value = "atualizar";
+                document.formularioAtualizarPainel.submit();
+            }
+        </script>
 
             <script>
                 function imprimir(){

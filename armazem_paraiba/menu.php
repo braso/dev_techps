@@ -1,5 +1,5 @@
 <?php
-	echo 
+echo 
 		"<style>
 			.menu-dropdown.active > a {
 				background-color: #8c98a6 !important;

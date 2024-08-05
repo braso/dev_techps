@@ -4,9 +4,10 @@
 		error_reporting(E_ALL);
 	//*/
 
-    // ini_set('display_errors', 1);
-    // error_reporting(E_ALL);
-
+    header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+	header("Pragma: no-cache"); // HTTP 1.0.
+	header("Expires: 0");
+    
     include 'painel_empresas.php';
     include 'painel_empresa.php';
     include "funcoes_ponto.php";
@@ -58,7 +59,7 @@
         
         $monthName = $monthNames[$monthNum];
 
-        cabecalho('Painel Endosso');
+        cabecalho('Relatório Final de Endosso');
 
         $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
