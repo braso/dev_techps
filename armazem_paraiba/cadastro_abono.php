@@ -20,7 +20,7 @@
 			}
 
 			if($error){
-				set_status(" ". substr($errorMsg, 0, strlen($errorMsg)-2).".");
+				set_status('ERRO: Campos obrigatórios não preenchidos: '. substr($errorMsg, 0, strlen($errorMsg)-2).'.');
 				layout_abono();
 				exit;
 			}

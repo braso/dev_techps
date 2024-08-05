@@ -7,40 +7,61 @@
 	include_once 'funcoes_ponto.php';
 
 	function cadastrarAjuste(){
+
 		//Conferir se tem as informações necessárias{
-			$camposObrig = [
-				"id" => "Motorista",
-				"hora" => "Hora",
-				"idMacro" => "Tipo de Registro",
-				"motivo" => "Motivo",
-			];
-			$errorMsg = conferirCamposObrig($camposObrig, $_POST);
-			if(!empty($errorMsg)){
-				set_status($errorMsg);
+			if(empty($_POST['id']) || empty($_POST['hora']) || empty($_POST['idMacro']) || empty($_POST['motivo'])){
+				set_status("ERRO: Dados insuficientes!");
 				index();
 				exit;
 			}
-
-			var_dump($camposObrig); echo "<br><br>";
-			var_dump($_POST); echo "<br><br>";
-			var_dump($errorMsg); echo "<br><br>";
-
-			die("debug");
-
 			$aMotorista = carregar('entidade',$_POST['id']);
+			$aTipo = carregar('macroponto', $_POST['idMacro']);
 			if(empty($aMotorista)){
 				set_status("ERRO: Motorista não encontrado.");
 				index();
 				exit;
 			}
-
-			$aTipo = carregar('macroponto', $_POST['idMacro']);
 			if(empty($aTipo)){
-				set_status("ERRO: Tipo de registro não encontrado.");
+				set_status("ERRO: Macro não encontrado.");
 				index();
 				exit;
 			}
 		//}
+
+		// //Conferir se tem as informações necessárias 2.0{
+		// 	$camposObrig = [
+		// 		"id" => "Motorista",
+		// 		"hora" => "Hora",
+		// 		"idMacro" => "Tipo de Registro",
+		// 		"motivo" => "Motivo",
+		// 	];
+		// 	$errorMsg = conferirCamposObrig($camposObrig, $_POST);
+		// 	if(!empty($errorMsg)){
+		// 		set_status($errorMsg);
+		// 		index();
+		// 		exit;
+		// 	}
+
+		// 	var_dump($camposObrig); echo "<br><br>";
+		// 	var_dump($_POST); echo "<br><br>";
+		// 	var_dump($errorMsg); echo "<br><br>";
+
+		// 	die("debug");
+
+		// 	$aMotorista = carregar('entidade',$_POST['id']);
+		// 	if(empty($aMotorista)){
+		// 		set_status("ERRO: Motorista não encontrado.");
+		// 		index();
+		// 		exit;
+		// 	}
+
+		// 	$aTipo = carregar('macroponto', $_POST['idMacro']);
+		// 	if(empty($aTipo)){
+		// 		set_status("ERRO: Tipo de registro não encontrado.");
+		// 		index();
+		// 		exit;
+		// 	}
+		// //}
 		
 		//Tratamento de erros{
 			$error = false;
@@ -426,6 +447,8 @@
 		campo_hidden("id", $_POST["id"]);
 		campo_hidden("busca_motorista", $_POST["id"]);
 		campo_hidden("busca_data", $_POST["data"]);
+		campo_hidden("data_de", $_POST["data_de"]);
+		campo_hidden("data_ate", $_POST["data_ate"]);
 		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($variableFields);
 		linha_form($campoJust);

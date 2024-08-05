@@ -168,7 +168,7 @@
 		}
 
 		$ultimoEndosso = mysqli_fetch_assoc(query(
-			"SELECT enti_tx_matricula, endo_tx_ate, endo_tx_filename FROM endosso "
+			"SELECT enti_tx_matricula, endo_tx_ate, endo_tx_filename, endo_tx_saldo, endo_tx_max50APagar FROM endosso "
 			." JOIN entidade ON enti_nb_id = endo_nb_entidade"
 			." WHERE endo_tx_status = 'ativo'"
 				." AND endo_nb_entidade = ".$_POST["busca_motorista"]
@@ -430,7 +430,6 @@
 	}
 
 	function index(){
-		global $CONTEX;
 
 		if(!empty($_GET["test"])){
 			$_GET["test"] = explode(", ", $_GET["test"]);

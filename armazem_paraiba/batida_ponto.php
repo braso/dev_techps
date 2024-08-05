@@ -357,6 +357,7 @@
 		}
 		
 		
+		
 		$jornadaEfetiva = operarHorarios([$pares["refeicao"], $pares["espera"], $pares["descanso"], $pares["repouso"], $pares["repousoEmbarcado"]], "+");
 
 		$jornadaEfetiva = operarHorarios([$pares["jornada"], $jornadaEfetiva], "-");

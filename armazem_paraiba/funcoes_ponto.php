@@ -62,16 +62,12 @@
 				$horario = "00:00";
 			}
 			if(!preg_match("/^-?\d{2,4}:\d{2}$/", $horario)){
-				if(preg_match("/^-?\d{2,4}:\d{2}:\d{2}$/", $horario)){
-					$horario = substr($horario, 0, strlen($horario)-3);
-				}else{
-					// throw new Exception("Format error: |".$horario."|");
-				}
+				throw new Exception("Format error: |".$horario."|");
 			}
 		}
 
-		$negative = ($horarios[0][0] == "-");
-		$result = explode(":", $horarios[0]);
+		$negative = ($horarios[0][0] == '-');
+		$result = explode(':', $horarios[0]);
 		$result = intval($result[0]*60)+($negative?-1:1)*intval($result[1]);
 
 		for($f = 1; $f < count($horarios); $f++){
