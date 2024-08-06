@@ -430,7 +430,6 @@
 	}
 
 	function index(){
-
 		global $CONTEX;
 
 		if(!empty($_GET["test"])){
