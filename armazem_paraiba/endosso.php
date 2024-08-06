@@ -196,9 +196,8 @@
 	}
 
 	function index(){
-
 		global $totalResumo, $CONTEX;
-
+		print_r($_POST);
 		cabecalho("Buscar Endosso");
 
 		$extra = "";
@@ -439,20 +438,38 @@
 						
 						grid2($cab, $aDia);
 						fecha_form();
-
+						// ".$aMotorista['enti_nb_id']."
+						// ".$aMotorista["enti_tx_matricula"]."
 						echo "
+						<form name='form_imprimir_relatorio_".$aMotorista["enti_tx_matricula"]."' method='post' target='_blank'>
+							<input type='hidden' name='acao' value=''>
+							<input type='hidden' name='idMotoristaEndossado' value=''>
+							<input type='hidden' name='matriculaMotoristaEndossado' value=''>
+						</form>
 							<script>
 								document.addEventListener('DOMContentLoaded', function() {
-									document.getElementById('botaoContexCadastrar ImprimirRelatorio_".$aMotorista["enti_tx_matricula"]."').onclick = function() {
-										document.form_imprimir_relatorio_".$aMotorista["enti_tx_matricula"].".submit();
+									const acao = 'imprimir_relatorio';
+									const idMotorista = '".$aMotorista['enti_nb_id']."';
+									const matricula = '".$aMotorista["enti_tx_matricula"]."';
+
+									const form = document.forms['form_imprimir_relatorio_".$aMotorista["enti_tx_matricula"]."'];
+
+									if (form) {
+										// Atualiza os valores dos campos ocultos
+										form.elements['acao'].value = acao;
+										form.elements['idMotoristaEndossado'].value = idMotorista;
+										form.elements['matriculaMotoristaEndossado'].value = matricula;
+
+										// Adiciona o evento de clique ao botão para submeter o formulário
+										document.getElementById('botaoContexCadastrar ImprimirRelatorio_".$aMotorista["enti_tx_matricula"]."').onclick = function() {
+											form.submit();
+										}
+									} else {
+										console.error('Formulário não encontrado.');
 									}
 								});
 							</script>
-							<form name='form_imprimir_relatorio_".$aMotorista["enti_tx_matricula"]."' method='post' target='_blank'>
-								<input type='hidden' name='acao' value='imprimir_relatorio'>
-								<input type='hidden' name='idMotoristaEndossado' value='$aMotorista[enti_nb_id]'>
-								<input type='hidden' name='matriculaMotoristaEndossado' value='".$aMotorista["enti_tx_matricula"]."'>
-							</form>";
+							";
 
 						$aSaldo[$aMotorista["enti_tx_matricula"]] = $totalResumo["diffSaldo"];
 					}else{
