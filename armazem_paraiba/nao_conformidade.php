@@ -6,7 +6,7 @@
 	
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto	
 
-	function cadastro_abono(){
+	function redirParaAbono(){
 		global $CONTEX;
 		if(empty($_POST['busca_motorista'])){
 			header("Location: ".$CONTEX["path"]."/cadastro_abono.php");
@@ -97,7 +97,7 @@
 		//BOTOES{
 			$b = [
 				botao("Buscar", "index", "", "", "", 1,"btn btn-success"),
-				botao("Cadastrar Abono", "layout_abono", "", "", "", 1),
+				botao("Cadastrar Abono", "redirParaAbono", "", "", "", 1),
 				$botao_imprimir
 			];
 		//}
