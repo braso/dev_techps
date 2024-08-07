@@ -197,7 +197,6 @@
 
 	function index(){
 		global $totalResumo, $CONTEX;
-		print_r($_POST);
 		cabecalho("Buscar Endosso");
 
 		$extra = "";

@@ -1,115 +1,180 @@
 <?php
-    /* Modo debug
+/* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
 
-    header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
-	header("Pragma: no-cache"); // HTTP 1.0.
-	header("Expires: 0");
-    
-    include 'painel_empresas.php';
-    include 'painel_empresa.php';
-    include "funcoes_ponto.php";
-   
+header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+header("Pragma: no-cache"); // HTTP 1.0.
+header("Expires: 0");
 
-    function index() {
-        global $totalResumo, $CONTEX;
+include "funcoes_ponto.php";
 
-        if(array_key_exists('atualizar', $_POST) && !empty($_POST['atualizar'])){
-            echo '<script>alert("Atualizando os painéis, aguarde um pouco ")</script>';
-			ob_flush();
-			flush();
-			criar_relatorio($_POST['busca_data']);
-        }
-        
-        if(empty($_POST['busca_data'])){
-            $_POST['busca_data'] = date("Y-m");
-        }
+function index(){
+    global $totalResumo, $CONTEX;
 
-        	// Obtenha o primeiro dia do mês
-        $dataInicio = new DateTime($_POST['busca_data']  . '-01');
-        $dataInicioFormatada = $dataInicio->format('d/m/Y');
-        $dataInicio = $dataInicio->format('Y-m-d');
-        // Obtenha o último dia do mês
-        $dataFim = new DateTime($_POST['busca_data']  . '-01');
-        $dataFim->modify('last day of this month');
-        $dataFimFormatada = $dataFim->format('d/m/Y');
-        $dataFim = $dataFim->format('Y-m-d');
+    if (array_key_exists('atualizar', $_POST) && !empty($_POST['atualizar'])) {
+        echo '<script>alert("Atualizando os painéis, aguarde um pouco ")</script>';
+        ob_flush();
+        flush();
+        criar_relatorio($_POST['busca_data']);
+    }
 
-        $dateParts = explode('-',$_POST['busca_data']);
-        $monthNum = $dateParts[1];
-        $year = $dateParts[0];
+    if (empty($_POST['busca_data'])) {
+        $_POST['busca_data'] = date("Y-m");
+    }
 
-        $monthNames = array(
-            '01' => 'Janeiro',
-            '02' => 'Fevereiro',
-            '03' => 'Março',
-            '04' => 'Abril',
-            '05' => 'Maio',
-            '06' => 'Junho',
-            '07' => 'Julho',
-            '08' => 'Agosto',
-            '09' => 'Setembro',
-            '10' => 'Outubro',
-            '11' => 'Novembro',
-            '12' => 'Dezembro'
-        );
+    // Obtenha o primeiro dia do mês
+    $dataInicio = new DateTime($_POST['busca_data']  . '-01');
+    $dataInicioFormatada = $dataInicio->format('d/m/Y');
+    $dataInicio = $dataInicio->format('Y-m-d');
+    // Obtenha o último dia do mês
+    $dataFim = new DateTime($_POST['busca_data']  . '-01');
+    $dataFim->modify('last day of this month');
+    $dataFimFormatada = $dataFim->format('d/m/Y');
+    $dataFim = $dataFim->format('Y-m-d');
 
-        
-        $monthName = $monthNames[$monthNum];
+    $dateParts = explode('-', $_POST['busca_data']);
+    $monthNum = $dateParts[1];
+    $year = $dateParts[0];
 
-        cabecalho('Relatório Final de Endosso');
+    $monthNames = array(
+        '01' => 'Janeiro',
+        '02' => 'Fevereiro',
+        '03' => 'Março',
+        '04' => 'Abril',
+        '05' => 'Maio',
+        '06' => 'Junho',
+        '07' => 'Julho',
+        '08' => 'Agosto',
+        '09' => 'Setembro',
+        '10' => 'Outubro',
+        '11' => 'Novembro',
+        '12' => 'Dezembro'
+    );
 
-        $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
-        //position: absolute; top: 101px; left: 420px;
-        $c = [
-            combo_net('Empresa:','empresa',$_POST['empresa']?? '',4,'empresa', ''),
-            campo_mes('Data:','busca_data',(!empty($_POST['busca_data'])?$_POST['busca_data'] : ''), 2),
-            $texto,
-        ];
 
-        $botao_imprimir =
-                '<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
+    $monthName = $monthNames[$monthNum];
+
+    cabecalho('Relatório Final de Endosso');
+
+    $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
+    //position: absolute; top: 101px; left: 420px;
+    $c = [
+        combo_net('Empresa:', 'empresa', $_POST['empresa'] ?? '', 4, 'empresa', ''),
+        campo_mes('Data:', 'busca_data', (!empty($_POST['busca_data']) ? $_POST['busca_data'] : ''), 2),
+        $texto,
+    ];
+
+    $botao_imprimir =
+        '<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
                         <script>
                             function imprimir() {
                                 // Abrir a caixa de diálogo de impressão
                                 window.print();
                             }
                         </script>';
-        $botaoCsv = "<button id='btnCsv' class='btn btn-success' style='background-color: green !important;' onclick='downloadCSV()'>Baixar CSV</button>";
-        
-        if (!empty($_SESSION['user_tx_nivel']) && is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
-            $botaoAtualizarPainel = 
+    $botaoCsv = "<button id='btnCsv' class='btn btn-success' style='background-color: green !important;' onclick='downloadCSV()'>Baixar CSV</button>";
+
+    if (!empty($_SESSION['user_tx_nivel']) && is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
+        $botaoAtualizarPainel =
             '<a class="btn btn-warning" onclick="atualizarPainel()"> Atualizar Painel </a>';
+    }
+
+    if (isset($_POST['empresa']) && !empty($_POST['empresa'])) {
+        $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
+    }
+
+    $b = [
+        botao("Buscar", 'index', '', '', '', '', 'btn btn-success'),
+        $botao_imprimir,
+        // $botaoCsv,
+        $botao_volta,
+        $botaoAtualizarPainel
+    ];
+
+    abre_form('Filtro de Busca');
+    linha_form($c);
+    fecha_form($b);
+
+    if (isset($_POST['empresa']) && !empty($_POST['empresa']) && isset($_POST['busca_data']) && !empty($_POST['busca_data'])) {
+        $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM empresa WHERE empr_tx_Ehmatriz = 'sim' AND empr_nb_id = $_POST[empresa]"), MYSQLI_ASSOC);
+
+        $totaisMotoristas = [];
+        $motoristaTotais = [];
+        if (is_dir("./arquivos/paineis/empresas/$_POST[busca_data]") != false) {
+            // Obtém O total dos saldos das empresa
+            $file = "./arquivos/paineis/$_POST[empresa]/$_POST[busca_data]";
+
+            if (file_exists($file . '/totalMotoristas.json')) {
+                $conteudo_json = file_get_contents($file . '/totalMotoristas.json');
+                $totaisMotoristas = json_decode($conteudo_json, true);
+            }
+
+            foreach (['jornadaPrevista', 'JornadaEfetiva', 'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'saldoAnterior', 'saldoPeriodo', 'saldoFinal'] as $campo) {
+                if ($totaisMotoristas[$campo] == "00:00") {
+                    $totaisMotoristas[$campo] = "";
+                }
+            }
+
+            // Obtém O total dos saldos de cada Motorista
+            if (file_exists("$file")) {
+                $conteudo_json = file_get_contents($file . '/motoristas.json');
+                $motoristaTotais = json_decode($conteudo_json, true);
+            }
+
+            // Obtém o tempo da última modificação do arquivo
+            $timestamp = '';
+            $timestamp = filemtime($file . '/motoristas.json');
+            if (filemtime($file . '/totalMotoristas.json') == filemtime($file . '/motoristas.json')) {
+                $Emissão = date('d/m/Y H:i:s', $timestamp);
+            }
+
+            // Calcula a porcentagem
+            $porcentagenNaEndo = number_format(0, 2);
+            $porcentagenEndoPc = number_format(0, 2);
+            $porcentagenEndo = number_format(0, 2);
+            if ($totaisMotoristas['naoEndossados'] != 0) {
+                $porcentagenNaEndo = number_format(($totaisMotoristas['naoEndossados'] / $totaisMotoristas['totalMotorista']) * 100, 2);
+            }
+            if ($totaisMotoristas['endossoPacial'] != 0) {
+                $porcentagenEndoPc = number_format(($totaisMotoristas['endossoPacial'] / $totaisMotoristas['totalMotorista']) * 100, 2);
+            }
+            if ($totaisMotoristas['endossados'] != 0) {
+                $porcentagenEndo = number_format(($totaisMotoristas['endossados'] / $totaisMotoristas['totalMotorista']) * 100, 2);
+            }
+
+
+            $quantPosi = 0;
+            $quantNega = 0;
+            $quantMeta = 0;
+
+            foreach ($totaisMotoristas as $MotoristaTotal) {
+                $saldoFinal = $MotoristaTotal['saldoFinal'];
+
+                if ($MotoristaTotal['statusEndosso'] == 'E' && $saldoFinal == '00:00') {
+                    $quantMeta++;
+                } elseif ($saldoFinal > '00:00') {
+                    $quantPosi++;
+                } elseif ($saldoFinal < '00:00') {
+                    $quantNega++;
+                }
+            }
+
+            $porcentagenMeta = ($quantMeta != 0) ? number_format(($quantMeta / count($totaisMotoristas)) * 100, 2) : number_format(0, 2);
+            $porcentagenNega = ($quantNega != 0) ? number_format(($quantNega / count($totaisMotoristas)) * 100, 2) : number_format(0, 2);
+            $porcentagenPosi = ($quantPosi != 0) ? number_format(($quantPosi / count($totaisMotoristas)) * 100, 2) : number_format(0, 2);
+        } else {
+            echo '<script>alert("Não Possui dados desse mês")</script>';
         }
 
-        if (isset($_POST['empresa']) && !empty($_POST['empresa'])) {
-            $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
-        }
-        
-        $b = [
-            botao("Buscar", 'index', '', '', '', '', 'btn btn-success'),
-            $botao_imprimir,
-            $botaoCsv,
-            $botao_volta,
-            $botaoAtualizarPainel
-        ];
-        
-        abre_form('Filtro de Busca');
-        linha_form($c);
-        fecha_form($b);
-        
-        if (isset($_POST['empresa']) && !empty($_POST['empresa']) && isset($_POST['busca_data']) && !empty($_POST['busca_data'])) {
-            $idEmpresa = $_POST['empresa'];
-            $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM empresa WHERE empr_tx_Ehmatriz = 'sim' AND empr_nb_id = $idEmpresa"), MYSQLI_ASSOC);
-            empresa($aEmpresa,$idEmpresa);
-        }else{
-            $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM empresa WHERE empr_tx_Ehmatriz = 'sim'"), MYSQLI_ASSOC);
-            empresas($aEmpresa);
-        }
-        echo 
-            "<style>
+        include_once 'painel_tabela.php';
+    } else {
+        $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM empresa WHERE empr_tx_Ehmatriz = 'sim'"), MYSQLI_ASSOC);
+        empresas($aEmpresa);
+    }
+    echo
+    "<style>
                  @media print {
                         body {
                             margin: 1cm;
@@ -200,11 +265,11 @@
                     position: absolute;
                 }
             </style>
-            <form name='myForm' method='POST' action='".htmlspecialchars(basename($_SERVER["PHP_SELF"]))."'>
+            <form name='myForm' method='POST' action='" . htmlspecialchars(basename($_SERVER["PHP_SELF"])) . "'>
                 <input type='hidden' name='empresa' id='empresa'>
                 <input type='hidden' name='busca_data' id='busca_data'>
             </form>
-            <form name='formularioAtualizarPainel' method='POST' action='".htmlspecialchars(basename($_SERVER["PHP_SELF"]))."'>
+            <form name='formularioAtualizarPainel' method='POST' action='" . htmlspecialchars(basename($_SERVER["PHP_SELF"])) . "'>
                 <input type='hidden' name='atualizar' id='atualizar'>
                 <input type='hidden' name='busca_data' id='busca_dataAtualizar'>
             </form>
@@ -220,8 +285,7 @@
                     document.formularioAtualizarPainel.atualizar.value = 'atualizar';
                     document.formularioAtualizarPainel.submit();
                 }
-            </script>"
-        ;
-        
-        rodape();
-    }
+            </script>";
+
+    rodape();
+}
