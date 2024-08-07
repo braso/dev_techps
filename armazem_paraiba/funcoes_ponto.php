@@ -62,7 +62,7 @@
 				$horario = "00:00";
 			}
 			if(!preg_match("/^-?\d{2,4}:\d{2}$/", $horario)){
-				throw new Exception("Format error: |".$horario."|");
+				echo "<script>console.log('".("Format error: |".$horario."|")."')</script>";
 			}
 		}
 
