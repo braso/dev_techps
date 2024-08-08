@@ -10,6 +10,28 @@ header("Expires: 0");
 
 include "funcoes_ponto.php";
 
+function porcentagemEndosso($total, $meta_endo, $nega_naEndo, $posi_endoPc) : array {
+    $porcentagen = [
+        'meta_endo' => number_format(0, 2),
+        'nega_naEndo' => number_format(0, 2),
+        'posi_endoPc' => number_format(0, 2),
+    ];
+    $porcentagen['meta_endo'] = 0;
+    $porcentagen['nega_naEndo'] = 0;
+    $porcentagen['posi_endoPc'] = 0;
+    if ($meta_endo != 0) {
+		$porcentagen['meta_endo']= number_format(($meta_endo / $total) * 100, 2);
+	}
+	if ($nega_naEndo != 0) {
+		$porcentagen['nega_naEndo'] = number_format(($nega_naEndo / $total) * 100, 2);
+	}
+	if ($posi_endoPc != 0) {
+		$porcentagen['posi_endoPc'] = number_format(($posi_endoPc / $total) * 100, 2);
+	}
+
+    return $porcentagen;
+}
+
 function index(){
     global $totalResumo, $CONTEX;
 
@@ -130,26 +152,13 @@ function index(){
                 $Emissão = date('d/m/Y H:i:s', $timestamp);
             }
 
-            // Calcula a porcentagem
-            $porcentagenNaEndo = number_format(0, 2);
-            $porcentagenEndoPc = number_format(0, 2);
-            $porcentagenEndo = number_format(0, 2);
-            if ($totaisMotoristas['naoEndossados'] != 0) {
-                $porcentagenNaEndo = number_format(($totaisMotoristas['naoEndossados'] / $totaisMotoristas['totalMotorista']) * 100, 2);
-            }
-            if ($totaisMotoristas['endossoPacial'] != 0) {
-                $porcentagenEndoPc = number_format(($totaisMotoristas['endossoPacial'] / $totaisMotoristas['totalMotorista']) * 100, 2);
-            }
-            if ($totaisMotoristas['endossados'] != 0) {
-                $porcentagenEndo = number_format(($totaisMotoristas['endossados'] / $totaisMotoristas['totalMotorista']) * 100, 2);
-            }
-
+            $endosso = porcentagemEndosso($totaisMotoristas['totalMotorista'],$totaisMotoristas['endossados'], $totaisMotoristas['naoEndossados'], $totaisMotoristas['endossoPacial']);
 
             $quantPosi = 0;
             $quantNega = 0;
             $quantMeta = 0;
 
-            foreach ($totaisMotoristas as $MotoristaTotal) {
+            foreach ($motoristaTotais as $MotoristaTotal) {
                 $saldoFinal = $MotoristaTotal['saldoFinal'];
 
                 if ($MotoristaTotal['statusEndosso'] == 'E' && $saldoFinal == '00:00') {
@@ -161,18 +170,70 @@ function index(){
                 }
             }
 
-            $porcentagenMeta = ($quantMeta != 0) ? number_format(($quantMeta / count($totaisMotoristas)) * 100, 2) : number_format(0, 2);
-            $porcentagenNega = ($quantNega != 0) ? number_format(($quantNega / count($totaisMotoristas)) * 100, 2) : number_format(0, 2);
-            $porcentagenPosi = ($quantPosi != 0) ? number_format(($quantPosi / count($totaisMotoristas)) * 100, 2) : number_format(0, 2);
+           $perfomace = porcentagemEndosso(count($motoristaTotais ), $quantMeta, $quantNega, $quantPosi);
+
         } else {
             echo '<script>alert("Não Possui dados desse mês")</script>';
         }
 
         include_once 'painel_tabela.php';
+
     } else {
         $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM empresa WHERE empr_tx_Ehmatriz = 'sim'"), MYSQLI_ASSOC);
-        empresas($aEmpresa);
+        $motoristas = mysqli_fetch_all(
+            query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante');"),
+            MYSQLI_ASSOC
+        );
+
+        $empresasTotais = [];
+        $empresaTotais = [];
+        $Emissão = "";
+        $file = "./arquivos/paineis/empresas/$_POST[busca_data]";
+        if (is_dir($file) != false) {
+            if (file_exists($file)) {
+                $conteudo_json = file_get_contents($file.'/empresas.json');
+                $empresasTotais = json_decode($conteudo_json, true);
+            }
+    
+            // Obtém O total dos saldos de cada empresa
+            if (file_exists($file)) {
+                $conteudo_json = file_get_contents($file.'/totalEmpresas.json');
+                $empresaTotais = json_decode($conteudo_json, true);
+            }
+    
+            // Obtém o tempo da última modificação do arquivo
+            $timestamp = '';
+            $timestamp = filemtime($file . '/empresas.json');
+            if (filemtime($file . '/empresas.json') == filemtime($file . '/totalEmpresas.json')) {
+                $Emissão = date('d/m/Y H:i:s', $timestamp);
+            }
+        } else
+            echo "<script>alert('Não Possui dados desse mês')</script>";
+
+            // Calcula a porcentagem
+        $endosso = porcentagemEndosso($empresasTotais["EmprTotalMotorista"], $empresasTotais["EmprTotalEnd"], $empresasTotais["EmprTotalNaoEnd"], $empresasTotais["EmprTotalEndPac"]);
+
+        $quantPosi = 0;
+        $quantNega = 0;
+        $quantMeta = 0;
+
+        foreach ($empresaTotais as $empresaTotal) {
+            $saldoFinal = $empresaTotal["saldoFinal"];
+
+            if ($saldoFinal === "00:00") {
+                $quantMeta++;
+            } elseif ($saldoFinal > "00:00") {
+                $quantPosi++;
+            } elseif ($saldoFinal < "00:00") {
+                $quantNega++;
+            }
+        }
+
+        $perfomace = porcentagemEndosso(count($empresaTotais), $quantMeta, $quantNega, $quantPosi);
+
+        include_once 'painel_tabela.php';
     }
+
     echo
     "<style>
                  @media print {
@@ -238,11 +299,16 @@ function index(){
                         .porcentagenPosit{
                             box-shadow: 0 0 0 1000px #00b33c inset !important;
                         }
-                        .porcentagenNegat{
+                        .porcentagenNega{
                             box-shadow: 0 0 0 1000px #ff471a inset !important;
                         }
                         .portlet.light{
                             padding: 75px 20px 15px !important;
+                        }
+                        #impressao{
+                            display: block !important;
+                            position: relative;
+                            padding-left: 630px;
                         }
                 }
 

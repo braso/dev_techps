@@ -1418,7 +1418,6 @@
 					$endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$saldoAnterior,$saldoPeriodo],'+');
 					$aPagar = calcularHorasAPagar($endossoCompleto["totalResumo"]["saldoBruto"], $endossoCompleto["totalResumo"]["he50"], $endossoCompleto["totalResumo"]["he100"], $endossoCompleto["endo_tx_max50APagar"]);
 
-					// print_r($endossoCompleto["totalResumo"]["saldoBruto"]);
 					$he50Pagar = $aPagar[0];
 					$he100Pagar = $aPagar[1];
 					$saldoFinal = operarHorarios([$endossoCompleto["totalResumo"]["saldoBruto"], $he50Pagar, $he100Pagar], "-");
@@ -1462,6 +1461,7 @@
 
 				$rows[] = [
 					'IdMotorista' => $motorista['enti_nb_id'],
+					'matricula' => $motorista['enti_tx_matricula'],
 					'motorista' => $motorista['enti_tx_nome'],
 					'statusEndosso' => $endossado,
 					'jornadaPrevista' => $jornadaPrevista,
