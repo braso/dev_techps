@@ -11,6 +11,7 @@
         $dataUltimoArquivo = mysqli_fetch_assoc(query(
             "SELECT arqu_tx_data FROM arquivoponto"
             ." WHERE arqu_tx_status = 'ativo'"
+            ." AND arqu_tx_nome LIKE '%apontamento%'"
             ." ORDER BY arqu_tx_data DESC"
             ." LIMIT 1;"
         ));
@@ -50,19 +51,19 @@
 		if(isset($arquivo["error"]) && $arquivo["error"] === 0){
 			$local_file = $path.$arquivo["name"];
 			$ext = substr($arquivo["name"], strrpos($arquivo["name"], "."));
-			$arquivoNome = str_replace($ext, "", $arquivo["name"]);
+			$nomeArquivo = str_replace($ext, "", $arquivo["name"]);
 
 			if(file_exists($path.$arquivo["name"])){
 				$f = 2;
-				$arquivoNome  .= "_".$f;
-				$arquivo["name"] = $arquivoNome.$ext;
+				$nomeArquivo  .= "_".$f;
+				$arquivo["name"] = $nomeArquivo.$ext;
 				$local_file = $path.$arquivo["name"]  ;
-				for(; file_exists($path.$arquivoNome); $f++){
-					$arquivo["name"] = substr($arquivoNome , 0, strlen($arquivoNome )-2)."_".$f;
+				for(; file_exists($path.$nomeArquivo); $f++){
+					$arquivo["name"] = substr($nomeArquivo , 0, strlen($nomeArquivo )-2)."_".$f;
 					$local_file = $path.$arquivo["name"];
 				}
 			}
-     		saveFile($arquivo, $local_file);
+     		saveRegisterFile($arquivo, $local_file);
 
 		}else{
 			set_status("ERRO: Ocorreu um problema ao gravar o arquivo.");
@@ -170,9 +171,6 @@
 	}
 
 	function updateFTP(){
-		$arquivo = "apontamento".date("dmY")."*.txt";
-		$path = "arquivos/pontos/";
-		$local_file = $path.$arquivo;
 
 		// connect and login to FTP server
 		$infos = mysqli_fetch_assoc(query(
@@ -194,90 +192,92 @@
 				throw new Exception("ftp_connect() returned false.");
 			}
 
-			
-			// $login = ftp_login($ftp_conn, $infos["empr_tx_ftpUsername"], $infos["empr_tx_ftpUserpass"]);
-			
-			$fileList = ftp_nlist($ftp_conn, $arquivo);
-			var_dump($fileList);
-		
-			//BUSCA O ARQUIVO{
-				if(empty($fileList)){
-					set_status(getLastFileDate(date("dmY")));
-					index();
-					exit;
-				}
-			//}
+			ftp_login($ftp_conn, $infos["empr_tx_ftpUsername"], $infos["empr_tx_ftpUserpass"]);
 		}catch(Exception $e){
 			set_status("ERRO: Não foi possível conectar à ".$infos["empr_tx_ftpServer"]);
 			echo "<script>console.log('".$e->getMessage()."')</script>";
 			index();
 			exit;
 		}
+
+		$lastFile = mysqli_fetch_assoc(query(
+			"SELECT arqu_tx_data FROM arquivoponto"
+			." WHERE arqu_tx_status = 'ativo'"
+			." AND (arqu_tx_nome REGEXP '[apontamento][[:digit:]]{14}.txt') = 1"
+			." ORDER BY arqu_tx_data DESC"
+			." LIMIT 1;"
+		));
+
 		
+		$path = "arquivos/pontos/";
 
-		foreach ($fileList as $arquivoNome) {
-			var_dump($arquivoNome); echo "<br><br>";
-			continue;
-			$sqlCheck = "SELECT * FROM arquivoponto WHERE arqu_tx_nome = '".$arquivoNome."' AND arqu_tx_status = 'ativo' LIMIT 1";
-			if (num_linhas(query($sqlCheck)) > 0) {
-				continue;
+		//Teste{
+			$lastFile["arqu_tx_data"] = "2024-07-01";
+		//}
+
+
+		for($data = new DateTime($lastFile["arqu_tx_data"]); $data->format("Y-m-d") < date("Y-m-d 00:00:00"); $data->modify("+1 day")){
+			$fileList = ftp_nlist($ftp_conn, "apontamento".$data->format("dmY")."*.txt");
+			if(!empty($fileList)){
+				foreach ($fileList as $nomeArquivo) {
+					$sqlCheck = "SELECT * FROM arquivoponto WHERE arqu_tx_nome = '".$nomeArquivo."' AND arqu_tx_status = 'ativo' LIMIT 1";
+					if (num_linhas(query($sqlCheck)) > 0) {
+						continue;
+					}
+		
+					$local_file = $path.$nomeArquivo;
+		
+					if(ftp_get($ftp_conn, $local_file, $nomeArquivo, FTP_BINARY) === false){
+						set_status("ERRO: Houve um problema ao salvar o arquivo.");
+						index();
+						exit;
+					}
+					saveRegisterFile($nomeArquivo, $local_file);
+				}
 			}
-
-      		$local_file = $path.$arquivoNome;
-
-			if(ftp_get($ftp_conn, $local_file, $arquivoNome, FTP_BINARY) === false){
-				set_status("ERRO: Houve um problema ao salvar o arquivo.");
-				index();
-				exit;
-			}
-			saveFile($arquivoNome, $local_file);
 		}
+		die();
 
 		ftp_close($ftp_conn);
 		if ($_SERVER["HTTP_ENV"] == "carrega_cron"){
 			criar_relatorio(null);
-			exit;
 		}
 		index();
 		exit;
 	}
 
-	function saveFile($arquivoNome, $local_file){
-		//$arquivo = $_FILES["arquivo"];
+	function saveRegisterFile($nomeArquivo, $local_file){
 		$path = "arquivos/pontos/";
-		$local_file = $path.$arquivoNome;
-
-		//$ext = substr($arquivoNome, strrpos($arquivoNome, "."));
-		//$arquivoNome = str_replace($ext, "", $arquivoNome);
-		
-		
-
+		$local_file = $path.$nomeArquivo;
 		$newPontos = [];
-		$error = false;
-		$errorMsg = ["ERROS:"];
+		$baseErrMsg = "ERROS:";
+		$errorMsg = [$baseErrMsg];
 
-		
-		if (is_array($arquivoNome)) {
-			$arquivo["tmp_name"] = $arquivoNome["tmp_name"];
-			$ext = substr($arquivoNome["name"], strrpos($arquivoNome["name"], "."));
-			$arquivoNome2 = str_replace($ext, "", $arquivoNome["name"]);
-			$local_file = $path.$arquivoNome["name"].$ext;
-		} else {
-		    $ext = substr($local_file, strrpos($local_file, "."));
-			$arquivoNome2 = str_replace($ext, "", $local_file);
-			$arquivoNome2 = basename($arquivoNome2);
-			$arquivo["tmp_name"] = $local_file;
+
+		if(is_array($nomeArquivo)){
+			$arquivo["name"] = $nomeArquivo["name"];
+			$ext = substr($arquivo["name"], strrpos($arquivo["name"], "."));
+			$nomeArquivo2 = str_replace($ext, "", $arquivo["name"]);
+			$local_file = $path.$arquivo["name"].$ext;
+		}else{
+			$arquivo["name"] = $local_file;
+		    $ext = substr($arquivo["name"], strrpos($arquivo["name"], "."));
+			$nomeArquivo2 = str_replace($ext, "", $arquivo["name"]);
+			$nomeArquivo2 = basename($nomeArquivo2);
 		}
 		
 
 		$newArquivoPonto = [
-			"arqu_tx_nome" 		=> $arquivoNome2.$ext,
+			"arqu_tx_nome" 		=> $nomeArquivo2.$ext,
 			"arqu_tx_data" 		=> date("Y-m-d H:i:s"),
 			"arqu_nb_user" 		=> $_SESSION["user_nb_id"],
 			"arqu_tx_status" 	=> "ativo"
 		];
 
-		foreach (file($arquivo["tmp_name"]) as $line) {
+		var_dump($newArquivoPonto); echo "<br><br>";
+		return;
+
+		foreach (file($arquivo["name"]) as $line) {
 			//matricula dmYhi 999 macroponto.codigoExterno
 			//Obs.: A matrícula deve ter 10 dígitos, então se tiver menos, adicione zeros à esquerda.
 			//Ex.: 0000005913 22012024 0919 999 11
@@ -291,18 +291,17 @@
 				while($matricula[0] == "0"){
 					$matricula = substr($matricula, 1);
 				}
-				// $matriculaExiste = mysqli_fetch_assoc(query(
-				// 	"SELECT enti_tx_matricula FROM entidade 
-				// 		WHERE enti_tx_matricula = '".$matricula."'
-				// 		LIMIT 1"
-				// ));
-				// if(empty($matriculaExiste) || count($matriculaExiste) == 0){
-				// 	$error = true;
-				// 	if(empty($errorMsg["registerNotFound"])){
-				// 		$errorMsg["registerNotFound"] = "Matrículas não encontradas:";
-				// 	}
-				// 	$errorMsg["registerNotFound"] .= "<br>	". $matricula;
-				// }
+				$matriculaExiste = mysqli_fetch_assoc(query(
+					"SELECT enti_tx_matricula FROM entidade 
+						WHERE enti_tx_matricula = '".$matricula."'
+						LIMIT 1"
+				));
+				if(empty($matriculaExiste) || count($matriculaExiste) == 0){
+					if(empty($errorMsg["registerNotFound"])){
+						$errorMsg["registerNotFound"] = "Matrículas não encontradas:";
+					}
+					$errorMsg["registerNotFound"] .= "<br>	". $matricula;
+				}
 			//}
 
 			$data = substr($data, 4, 4)."-".substr($data, 2, 2)."-".substr($data, 0, 2);
@@ -315,7 +314,6 @@
 			));
 
 			if(empty($macroPonto)){
-				$error = true;
 				if(empty($errorMsg["notRecognized"])){
 					$errorMsg["notRecognized"] = "Tipo de ponto não reconhecido: ";
 				}
@@ -346,7 +344,6 @@
 			if(empty($check) || count($check) === 0){
 				$newPontos[] = $newPonto;
 			}else{
-				$error = true;
 				$check["pont_tx_data"] = explode(" ", $check["pont_tx_data"]);
 				$check["pont_tx_data"][0] = explode("-", $check["pont_tx_data"][0]);
 				$check["pont_tx_data"] = implode("/", array_reverse($check["pont_tx_data"][0]))." ".$check["pont_tx_data"][1];
@@ -358,27 +355,31 @@
 			}
 		}
 
-		move_uploaded_file($arquivo["tmp_name"],$local_file);
+		move_uploaded_file($arquivo["name"],$local_file);
 		
 		$arquivoPontoId = inserir("arquivoponto", array_keys($newArquivoPonto), array_values($newArquivoPonto));
 		foreach($newPontos as $newPonto){
 			$newPonto["pont_nb_arquivoponto"] = intval($arquivoPontoId[0]);
 			inserir("ponto", array_keys($newPonto), array_values($newPonto));
 		}
-		if($error){
-			$fileContent = implode("\n", $errorMsg);
+		$errorMsg = implode("\n", $errorMsg);
+		if($errorMsg != $baseErrMsg){
+			$fileContent = $errorMsg;
 			$fileContent = str_replace("<br>	", "\n	", $fileContent);
-			file_put_contents($path.$arquivoNome."_log".$ext, $fileContent);
+			file_put_contents($path.$nomeArquivo."_log".$ext, $fileContent);
 
 			set_status(
 				"<div style='width:50%; text-align:left;'>"
-					."<a href='".($path.$arquivoNome."_log".$ext)."'>Visualizar Erros</a>"
+					."<a href='".($path.$nomeArquivo."_log".$ext)."'>Visualizar Erros</a>"
 				."</div>"
 			);
 		}
 	}
 
 	function index(){
+
+		echo "testando5";
+
 		if(is_int(strpos($_SERVER["REQUEST_URI"], "carregar_ftp"))){
 			if (!empty($_SERVER["HTTP_ENV"]) && $_SERVER["HTTP_ENV"] == "carrega_cron") {
 				// Aplicar após criar o usuário REP-P

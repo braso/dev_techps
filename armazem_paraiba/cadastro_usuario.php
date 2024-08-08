@@ -253,7 +253,7 @@
 		$usuario["user_tx_dataAtualiza"] = date("Y-m-d H:i:s");
 		
 		
-		if (!empty($_POST["senha"]) && !empty($_POST["senha2"])) {
+		if(!empty($_POST["senha"]) && !empty($_POST["senha2"])){
 			$usuario["user_tx_senha"] = md5($_POST["senha"]);
 		}
 		

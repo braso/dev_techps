@@ -1484,8 +1484,8 @@
 			$totalHE100 = "00:00";
 			$totalAdicNot = "00:00";
 			$totalEspInd = "00:00";
-			$saldoAnterior = "00:00"
-;			$totalSaldoPeriodo = "00:00";
+			$saldoAnterior = "00:00";
+			$totalSaldoPeriodo = "00:00";
 			$saldoFinal = '00:00';
 			foreach ($rows as $row) {
 				var_dump("saldoAnterior ".$row['saldoAnterior']);
