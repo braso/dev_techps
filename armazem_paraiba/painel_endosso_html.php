@@ -219,7 +219,7 @@ header("Expires: 0");
     </div>
 </div>
 <div id="impressao">
-<b>Impressão Doc.:</b> <?=date("d/m/Y \T H:i:s") . " (UTC-3)"?>
+    <b>Impressão Doc.:</b> <?=date("d/m/Y \T H:i:s") . " (UTC-3)"?>
 </div>
 <script>
     $(document).ready(function() {

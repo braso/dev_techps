@@ -176,7 +176,7 @@ function index(){
             echo '<script>alert("Não Possui dados desse mês")</script>';
         }
 
-        include_once 'painel_tabela.php';
+        include_once 'painel_endosso_html.php';
 
     } else {
         $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM empresa WHERE empr_tx_Ehmatriz = 'sim'"), MYSQLI_ASSOC);
@@ -231,7 +231,7 @@ function index(){
 
         $perfomace = porcentagemEndosso(count($empresaTotais), $quantMeta, $quantNega, $quantPosi);
 
-        include_once 'painel_tabela.php';
+        include_once 'painel_endosso_html.php';
     }
 
     echo

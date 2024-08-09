@@ -1,15 +1,48 @@
 <?php
-    /* Modo debug
+/* Modo debug
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
     //*/
 
-    include "funcoes_ponto.php";
+include "funcoes_ponto.php";
 
-    function criar_relatorio_saldo(){
-        global $totalResumo;
-        $periodoInicio = $_POST["busca_dataInicio"];
-        $periodoFim = $_POST["busca_dataFim"];
+function porcentagemSaldo($total, $meta_endo, $nega_naEndo, $posi_endoPc): array {
+
+    $porcentagen['meta_endo'] = 0;
+    $porcentagen['nega_naEndo'] = 0;
+    $porcentagen['posi_endoPc'] = 0;
+
+    $porcentagen = [
+        'meta_endo' => number_format(0, 2),
+        'nega_naEndo' => number_format(0, 2),
+        'posi_endoPc' => number_format(0, 2),
+    ];
+
+    // var_dump($meta_endo);
+    // echo '<br>';
+    // var_dump($meta_endo);
+    // echo '<br>';
+    // var_dump($meta_endo);
+    // echo '<br>';
+    // var_dump($meta_endo);
+    // echo '<br>';
+    if ($meta_endo != 0) {
+        $porcentagen['meta_endo'] = number_format(($meta_endo / $total) * 100, 2);
+    }
+    if ($nega_naEndo != 0) {
+        $porcentagen['nega_naEndo'] = number_format(($nega_naEndo / $total) * 100, 2);
+    }
+    if ($posi_endoPc != 0) {
+        $porcentagen['posi_endoPc'] = number_format(($posi_endoPc / $total) * 100, 2);
+    }
+
+    return $porcentagen;
+}
+
+function criar_relatorio_saldo() {
+    global $totalResumo;
+    $periodoInicio = $_POST["busca_dataInicio"];
+    $periodoFim = $_POST["busca_dataFim"];
 
     $empresas = mysqli_fetch_all(
         query("SELECT empr_nb_id, empr_tx_nome FROM `empresa` WHERE empr_tx_status != 'inativo' ORDER BY empr_tx_nome ASC;"),
@@ -45,7 +78,6 @@
                             AND endo_tx_status = 'ativo'
                         ORDER BY endo_tx_ate DESC
                         LIMIT 1;"), MYSQLI_ASSOC);
-
 
             if (!empty($saldoAnterior[0]["endo_tx_saldo"])) {
                 $saldoAnterior = $saldoAnterior[0]["endo_tx_saldo"];
@@ -106,6 +138,7 @@
 
             $rows[] = [
                 'IdMotorista' => $motorista['enti_nb_id'],
+                'matricula' => $motorista['enti_tx_matricula'],
                 'motorista' => $motorista['enti_tx_nome'],
                 'statusEndosso' => $endossado,
                 'jornadaPrevista' => $totalJorPrev,
@@ -127,42 +160,42 @@
         $jsonArquiMoto = json_encode($rows, JSON_UNESCAPED_UNICODE);
         file_put_contents($path . $fileName, $jsonArquiMoto);
 
-            $totalJorPrevResut = "00:00";
-            $totalJorPrev = "00:00";
-            $totalJorEfe = "00:00";
-            $totalHE50 = "00:00";
-            $totalHE100 = "00:00";
-            $totalAdicNot = "00:00";
-            $totalEspInd = "00:00";
-            $totalSaldoPeriodo = "00:00";
-            $saldoFinal = "00:00";
+        $totalJorPrevResut = "00:00";
+        $totalJorPrev = "00:00";
+        $totalJorEfe = "00:00";
+        $totalHE50 = "00:00";
+        $totalHE100 = "00:00";
+        $totalAdicNot = "00:00";
+        $totalEspInd = "00:00";
+        $totalSaldoPeriodo = "00:00";
+        $saldoFinal = "00:00";
 
-            foreach ($rows as $row){
-                $totalJorPrev      = somarHorarios([$totalJorPrev, $row["jornadaPrevista"]]);
-                $totalJorEfe       = somarHorarios([$totalJorEfe, $row["jornadaEfetiva"]]);
-                $totalHE50         = somarHorarios([$totalHE50, $row["he50"]]);
-                $totalHE100        = somarHorarios([$totalHE100, $row["he100"]]);
-                $totalAdicNot      = somarHorarios([$totalAdicNot, $row["adicionalNoturno"]]);
-                $totalEspInd       = somarHorarios([$totalEspInd, $row["esperaIndenizada"]]);
-                $saldoAnterior     = somarHorarios([$saldoAnterior, $row["saldoAnterior"]]);
-                $totalSaldoPeriodo = somarHorarios([$totalSaldoPeriodo, $row["saldoPeriodo"]]);
-                $saldoFinal        = somarHorarios([$saldoFinal, $row["saldoFinal"]]);
-            }
+        foreach ($rows as $row) {
+            $totalJorPrev      = somarHorarios([$totalJorPrev, $row["jornadaPrevista"]]);
+            $totalJorEfe       = somarHorarios([$totalJorEfe, $row["jornadaEfetiva"]]);
+            $totalHE50         = somarHorarios([$totalHE50, $row["he50"]]);
+            $totalHE100        = somarHorarios([$totalHE100, $row["he100"]]);
+            $totalAdicNot      = somarHorarios([$totalAdicNot, $row["adicionalNoturno"]]);
+            $totalEspInd       = somarHorarios([$totalEspInd, $row["esperaIndenizada"]]);
+            $saldoAnterior     = somarHorarios([$saldoAnterior, $row["saldoAnterior"]]);
+            $totalSaldoPeriodo = somarHorarios([$totalSaldoPeriodo, $row["saldoPeriodo"]]);
+            $saldoFinal        = somarHorarios([$saldoFinal, $row["saldoFinal"]]);
+        }
 
-            $totais[] = [
-                "empresaId"        => $empresa["empr_nb_id"],
-                "empresaNome"      => $empresa["empr_tx_nome"],
-                "jornadaPrevista"  => $totalJorPrev,
-                "JornadaEfetiva"   => $totalJorEfe,
-                "he50"             => $totalHE50,
-                "he100"            => $totalHE100,
-                "adicionalNoturno" => $totalAdicNot,
-                "esperaIndenizada" => $totalEspInd,
-                "saldoAnterior"    => $saldoAnterior,
-                "saldoPeriodo"     => $totalSaldoPeriodo,
-                "saldoFinal"       => $saldoFinal,
-                "totalMotorista"   => count($motoristas)
-            ];
+        $totais[] = [
+            "empresaId"        => $empresa["empr_nb_id"],
+            "empresaNome"      => $empresa["empr_tx_nome"],
+            "jornadaPrevista"  => $totalJorPrev,
+            "JornadaEfetiva"   => $totalJorEfe,
+            "he50"             => $totalHE50,
+            "he100"            => $totalHE100,
+            "adicionalNoturno" => $totalAdicNot,
+            "esperaIndenizada" => $totalEspInd,
+            "saldoAnterior"    => $saldoAnterior,
+            "saldoPeriodo"     => $totalSaldoPeriodo,
+            "saldoFinal"       => $saldoFinal,
+            "totalMotorista"   => count($motoristas)
+        ];
 
         $totaisJson = [
             'empresaId'        => $empresa['empr_nb_id'],
@@ -246,15 +279,14 @@
     return;
 }
 
-    function empresa($aEmpresa, $idEmpresa){
+function index() {
+    global $totalResumo, $CONTEX;
 
     if (array_key_exists('atualizar', $_POST) && !empty($_POST['atualizar'])) {
-        $periodoInicio = '2024-06-01';
-        $periodoFim = '2024-06-30';
         echo '<script>alert("Atualizando os painéis, aguarde um pouco ")</script>';
         ob_flush();
         flush();
-        criar_relatorio_saldo($periodoInicio, $periodoFim);
+        criar_relatorio_saldo();
     }
 
     cabecalho('Relatorio Geral de saldo');
@@ -305,13 +337,113 @@
     linha_form($c);
     fecha_form($b);
 
+    $dataTimeInicio = new DateTime($_POST['busca_dataInicio']);
+    $dataTimeFim = new DateTime($_POST['busca_dataFim']);
+    $mes = $dataTimeInicio->format('m');
+    $ano = $dataTimeInicio->format('Y');
+
     if (!empty($_POST['empresa']) && !empty($_POST['busca_dataInicio']) && !empty($_POST['busca_dataFim'])) {
         $idEmpresa = $_POST['empresa'];
         $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM `empresa` WHERE empr_tx_Ehmatriz = 'sim' AND empr_nb_id = $idEmpresa"), MYSQLI_ASSOC);
-        include_once 'painel_saldo_motoristas.php';
+
+        $empresas = [];
+        $empresasTotais = [];
+        $emissao = [];
+
+        $pasta = "./arquivos/paineis/Saldo/$idEmpresa/$mes-$ano";
+
+        if (is_dir($pasta) != false) {
+            $file = "$pasta/motoristas.json";
+            if (file_exists($file)) {
+                $conteudo_json = file_get_contents($file);
+                $motoristas = json_decode($conteudo_json, true);
+            }
+
+            // Obtém O total dos saldos de cada empresa 
+            if (file_exists("$pasta/totalMotoristas.json")) {
+                $conteudo_json = file_get_contents("$pasta/totalMotoristas.json");
+                $motoristasTotais = json_decode($conteudo_json, true);
+            }
+
+
+
+            // Obtém o tempo da última modificação do arquivo
+            $timestamp = '';
+            $timestamp = filemtime($pasta . '/motoristas.json');
+            if (filemtime($pasta . '/totalMotoristas.json') == filemtime($pasta . '/motoristas.json')) {
+                $Emissão = date('d/m/Y H:i:s', $timestamp);
+            }
+        } else
+            echo '<script>alert("Não Possui dados desse mês")</script>';
+
+        $quantPosi = 0;
+        $quantNega = 0;
+        $quantMeta = 0;
+
+        foreach ($motoristas as $motoristasTotal) {
+            $saldoFinal = $motoristasTotal['saldoFinal'];
+
+            if ($saldoFinal === '00:00') {
+                $quantMeta++;
+            } elseif ($saldoFinal > '00:00') {
+                $quantPosi++;
+            } elseif ($saldoFinal < '00:00') {
+                $quantNega++;
+            }
+        }
+
+        $perfomace = porcentagemSaldo(count($motoristas), $quantMeta, $quantNega, $quantPosi);
+
+        include_once "painel_saldo_html.php";
     } else {
+        $empresas = [];
+        $empresasTotais = [];
+        $emissao = '';
         $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM `empresa` WHERE empr_tx_Ehmatriz = 'sim'"), MYSQLI_ASSOC);
-        include_once "painel_saldo_empresas.php";
+        $pasta = "./arquivos/paineis/Saldo/empresas/$mes-$ano";
+
+        if (is_dir($pasta) != false) {
+            $file = "$pasta/empresas.json";
+            if (file_exists($file)) {
+                $conteudo_json = file_get_contents($file);
+                $empresas = json_decode($conteudo_json, true);
+            }
+
+            // Obtém O total dos saldos de cada empresa
+            $fileEmpresas = "$pasta/totalEmpresas.json";
+
+            if (file_exists($fileEmpresas)) {
+                $conteudo_json = file_get_contents($fileEmpresas);
+                $empresasTotais = json_decode($conteudo_json, true);
+            }
+
+            // Obtém o tempo da última modificação do arquivo
+            $timestamp = '';
+            $timestamp = filemtime($pasta . '/empresas.json');
+            if (filemtime($pasta . '/totalEmpresas.json') == filemtime($pasta . '/empresas.json')) {
+                $Emissão = date('d/m/Y H:i:s', $timestamp);
+            }
+        } else
+            echo '<script>alert("Não Possui dados desse mês")</script>';
+
+        $quantPosi = 0;
+        $quantNega = 0;
+        $quantMeta = 0;
+        foreach ($empresasTotais as $empresaTotal) {
+            $saldoFinal = $empresaTotal["saldoFinal"];
+
+            if ($saldoFinal === "00:00") {
+                $quantMeta++;
+            } elseif ($saldoFinal > "00:00") {
+                $quantPosi++;
+            } elseif ($saldoFinal < "00:00") {
+                $quantNega++;
+            }
+        }
+
+        $perfomace = porcentagemSaldo(count($empresasTotais), $quantMeta, $quantNega, $quantPosi);
+
+        include_once "painel_saldo_html.php";
     }
 ?>
     <style>
@@ -338,8 +470,8 @@
                 margin-bottom: -50px !important;
             }
 
-            body>div.page-container>div>div.page-content>div>div>div>div>div:nth-child(6)>div.portlet.light,
-            body>div.scroll-to-top {
+            div:nth-child(6)>div.portlet.light,
+            .scroll-to-top  {
                 display: none !important;
             }
 
@@ -351,9 +483,6 @@
                 border-bottom: none;
                 margin-bottom: 0px;
             } */
-            body>div.page-container>div>div.page-content>div>div>div>div>div:nth-child(7) {
-                display: none !important;
-            }
 
             .caption {
                 padding-top: 0px;
@@ -402,6 +531,12 @@
             .portlet.light {
                 padding: 75px 20px 15px !important;
             }
+
+            #impressao {
+                display: block !important;
+                position: relative;
+                padding-left: 630px!important;
+            }
         }
 
         table thead tr th:nth-child(3),
@@ -429,22 +564,26 @@
     </style>
     <form name="myForm" method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
         <input type="hidden" name="empresa" id="empresa">
-        <input type="hidden" name="busca_data" id="busca_data">
+        <input type="hidden" name="busca_dataInicio" id="busca_dataInicio">
+        <input type="hidden" name="busca_dataFim" id="busca_dataFim">
     </form>
     <form name="formularioAtualizarPainel" method="POST" action="<?= htmlspecialchars(basename($_SERVER["PHP_SELF"])); ?>">
         <input type="hidden" name="atualizar" id="atualizar">
-        <input type="hidden" name="busca_data" id="busca_dataAtualizar">
+        <input type="hidden" name="busca_dataInicio" id="busca_dataInicio">
+        <input type="hidden" name="busca_dataFim" id="busca_dataFim">
     </form>
 
     <script>
         function setAndSubmit(empresa) {
             document.myForm.empresa.value = empresa;
-            document.myForm.busca_data.value = document.getElementById('busca_data').value;
+            document.formularioAtualizarPainel.busca_dataInicio.value = document.getElementById("busca_dataInicio").value;
+            document.formularioAtualizarPainel.busca_dataFim.value = document.getElementById("busca_dataFim").value;
             document.myForm.submit();
         }
 
         function atualizarPainel() {
-            document.formularioAtualizarPainel.busca_dataAtualizar.value = document.getElementById("busca_data").value;
+            document.formularioAtualizarPainel.busca_dataInicio.value = document.getElementById("busca_dataInicio").value;
+            document.formularioAtualizarPainel.busca_dataFim.value = document.getElementById("busca_dataFim").value;
             document.formularioAtualizarPainel.atualizar.value = "atualizar";
             document.formularioAtualizarPainel.submit();
         }
