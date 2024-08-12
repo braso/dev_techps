@@ -510,9 +510,9 @@
 		rodape();
 
 		echo 
-			"<script>"
-				." appPath = '".($_ENV["APP_PATH"]?? "")."';"
-				." contexPath = '".($CONTEX["path"]?? "")."';"
+      "<script>"
+          ." appPath = '".($_ENV["APP_PATH"]?? "")."';"
+          ." contexPath = '".($CONTEX["path"]?? "")."';"
 		;
 		include "js/cadastro_endosso.js";
 		echo "</script>";
