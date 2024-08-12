@@ -89,7 +89,7 @@
 		}
 
 		abre_form("Arquivo de Ponto");
-		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($c);
 		fecha_form($b);
 
@@ -160,7 +160,7 @@
 		}
 
 		abre_form("Arquivo de Ponto");
-		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($c);
 		if (count($cAtualiza) > 0){
 			linha_form($cAtualiza);

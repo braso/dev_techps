@@ -495,7 +495,7 @@
 		}
 		
 		abre_form("Dados da Empresa/Filial");
-		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($c);
 		echo "<br>";
 		fieldset("CONVEÇÃO SINDICAL - JORNADA DO MOTORISTA PADRÃO");

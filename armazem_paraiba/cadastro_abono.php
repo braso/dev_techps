@@ -139,10 +139,10 @@
 			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/nao_conformidade.php";
 		}
 
-		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		campo_hidden("busca_empresa", $_POST["busca_empresa"]);
-		campo_hidden("busca_dataInicio", $_POST["busca_dataInicio"]);
-		campo_hidden("busca_dataFim", $_POST["busca_dataFim"]);
+		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+		echo campo_hidden("busca_empresa", $_POST["busca_empresa"]);
+		echo campo_hidden("busca_dataInicio", $_POST["busca_dataInicio"]);
+		echo campo_hidden("busca_dataFim", $_POST["busca_dataFim"]);
 		
 		linha_form($c);
 		linha_form($c2);

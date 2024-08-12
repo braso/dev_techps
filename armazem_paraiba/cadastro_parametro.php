@@ -337,7 +337,7 @@
 		}
 		
 		abre_form("Dados dos Parâmetros");
-		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($c);
 		linha_form($camposAIgnorar);
 

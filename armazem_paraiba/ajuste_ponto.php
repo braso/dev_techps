@@ -444,12 +444,12 @@
 		
 		abre_form('Dados do Ajuste de Ponto');
 		linha_form($textFields);
-		campo_hidden("id", $_POST["id"]);
-		campo_hidden("busca_motorista", $_POST["id"]);
-		campo_hidden("busca_data", $_POST["data"]);
-		campo_hidden("data_de", $_POST["data_de"]);
-		campo_hidden("data_ate", $_POST["data_ate"]);
-		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+		echo campo_hidden("id", $_POST["id"]);
+		echo campo_hidden("busca_motorista", $_POST["id"]);
+		echo campo_hidden("busca_data", $_POST["data"]);
+		echo campo_hidden("data_de", $_POST["data_de"]);
+		echo campo_hidden("data_ate", $_POST["data_ate"]);
+		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($variableFields);
 		linha_form($campoJust);
 		fecha_form($botoes);

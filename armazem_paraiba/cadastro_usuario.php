@@ -441,7 +441,7 @@
 		}
 
 		abre_form("Dados do Usuário");
-		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($fields);
 		
 

@@ -503,7 +503,7 @@
 		}
 
 		abre_form();
-		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($fields);
 		fecha_form($buttons);
 		
@@ -511,8 +511,8 @@
 
 		echo 
 			"<script>"
-				." appPath = '".($_ENV["APP_PATH"]?? "")."';"
-				." contexPath = '".($CONTEX["path"]?? "")."';"
+				."appPath = '".($_ENV["APP_PATH"]?? "")."';"
+				."contexPath = '".($CONTEX["path"]?? "")."';\n"
 		;
 		include "js/cadastro_endosso.js";
 		echo "</script>";
