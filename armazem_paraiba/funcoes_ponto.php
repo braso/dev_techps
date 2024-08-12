@@ -1091,10 +1091,10 @@
 		//LEGENDAS{
 			if(!empty($registros["inicioJornada"])){
 				$datas = 
-					"('".implode("", "", $registros["inicioJornada"])."'"
-					.(!empty($registros["inicioRefeicao"])? ", '".implode("", "", $registros["inicioRefeicao"])."'": "")
-					.(!empty($registros["fimRefeicao"])? ", '".implode("", "", $registros["fimRefeicao"])."'": "")
-					.(!empty($registros["fimJornada"])? ", '".implode("", "", $registros["fimJornada"])."')": ")")
+					"('".implode("', '", $registros["inicioJornada"])."'"
+					.(!empty($registros["inicioRefeicao"])? ", '".implode("', '", $registros["inicioRefeicao"])."'": "")
+					.(!empty($registros["fimRefeicao"])? ", '".implode("', '", $registros["fimRefeicao"])."'": "")
+					.(!empty($registros["fimJornada"])? ", '".implode("', '", $registros["fimJornada"])."')": ")")
 				;
 
 				$legendas = mysqli_fetch_all(
@@ -1258,7 +1258,6 @@
 			);
 
 			foreach(["inicioJornada", "fimJornada", "inicioRefeicao", "fimRefeicao"] as $tipo){
-				$aRetorno[$tipo] = "";
 				if (count($aRetorno[$tipo]) > 0){
 					for($f = 0; $f < count($aRetorno[$tipo]); $f++){
 						//Formatar datas para hora e minutos
@@ -1272,6 +1271,8 @@
 					}
 					$aRetorno[$tipo] = str_replace("<br>D+", " D+", $aRetorno[$tipo]);
 					$aRetorno[$tipo] = str_replace("<br>*", " *", $aRetorno[$tipo]);
+				}else{
+					$aRetorno[$tipo] = "";
 				}
 			}
 		//}
