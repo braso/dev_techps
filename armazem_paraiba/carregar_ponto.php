@@ -273,10 +273,6 @@
 			"arqu_nb_user" 		=> $_SESSION["user_nb_id"],
 			"arqu_tx_status" 	=> "ativo"
 		];
-
-		// var_dump($newArquivoPonto); echo "<br><br>";
-		// return;
-
 		foreach (file($arquivo["name"]) as $line) {
 			//matricula dmYhi 999 macroponto.codigoExterno
 			//Obs.: A matrícula deve ter 10 dígitos, então se tiver menos, adicione zeros à esquerda.
