@@ -430,6 +430,7 @@
 	}
 
 	function index(){
+		global $CONTEX;
 
 		if(!empty($_GET["test"])){
 			$_GET["test"] = explode(", ", $_GET["test"]);
@@ -503,7 +504,12 @@
 		
 		rodape();
 
-		echo "<script>";
+		echo 
+			"<script>
+				appPath = '".($_ENV["APP_PATH"]?? "")."';
+				contexPath = '".($CONTEX["path"]?? "")."';
+		"
+		;
 		include "js/cadastro_endosso.js";
 		echo "</script>";
 	}

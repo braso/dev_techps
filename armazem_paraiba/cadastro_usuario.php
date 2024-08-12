@@ -176,7 +176,7 @@
 
 		atualiza_usuario($usuario);
 		$id = $_POST["id"];
-
+		
 		$idUserFoto = mysqli_fetch_assoc(query("SELECT user_nb_id FROM user WHERE user_nb_id = '".$id."' LIMIT 1;"));
 		$file_type = $_FILES["foto"]["type"]; //returns the mimetype
 
@@ -203,7 +203,7 @@
 			}
 		}
 
-		index();
+		mostrarFormCadastro();
 		exit;
 	}
 
@@ -231,7 +231,7 @@
 			}else{
 				$sqlCheckNivel = null;
 			}
-
+			
 			
 			if (isset($sqlCheckNivel["user_tx_nivel"]) && in_array($sqlCheckNivel["user_tx_nivel"], ["Motorista", "Ajudante"])) {
 				if (!empty($_POST["senha"]) && !empty($_POST["senha2"])) {
@@ -241,17 +241,16 @@
 				index();
 				exit;
 			}
-
+			
 			$usuario["user_nb_userAtualiza"] = $_SESSION["user_nb_id"];
 			$usuario["user_tx_dataAtualiza"] = date("Y-m-d H:i:s");
-
+			
 			
 			if (!empty($_POST["senha"]) && !empty($_POST["senha2"])) {
 				$usuario["user_tx_senha"] = md5($_POST["senha"]);
 			}
-
+			
 			atualizar("user", array_keys($usuario), array_values($usuario), $_POST["id"]);
-			exit;
 		}
 	}
 
