@@ -1,12 +1,12 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
 
-	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto	
+	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
 
-	function conferirErros($modo = 0): string{
+	function conferirErros($modo = 0, $idMotorista = null): string{
 		//Modo = 0: Conferência geral dos parâmetros do formulário.
 		//Modo = 1: Conferência do caso de um motorista específico.
 		
@@ -49,11 +49,16 @@
 				return "ERRO: ".$errorMsg;
 			}
 		}
-		if($modo == 1){
+
+		if($modo == 1 && empty($idMotorista)){
+			return "ERRO: parâmetros de conferirErros() incorretos.  ";
+		}
+
+		if($modo == 1 && !empty($idMotorista)){
 			$motorista = mysqli_fetch_assoc(query(
 				"SELECT * FROM entidade "
 				." WHERE enti_tx_status = 'ativo'"
-					." AND enti_nb_id = '".$_POST["busca_motorista"]."'"
+					." AND enti_nb_id = ".$idMotorista.";"
 			));
 
 			//Conferir se está entrelaçado com outro endosso{
@@ -152,7 +157,7 @@
 			exit;	
 		}
 
-		$err = conferirErros(1);
+		$err = conferirErros(1, $_POST["busca_motorista"]);
 		if(!empty($err)){
 			set_status("ERRO: ".$err);
 			index();
@@ -245,8 +250,7 @@
 		$novosEndossos = [];
 
 		foreach($motoristas as $motorista){
-
-			$motErrMsg = conferirErros(1);
+			$motErrMsg = conferirErros(1, $motorista["enti_nb_id"]);
 			if(!empty($motErrMsg)){
 				$novoEndosso = [
 					"endo_nb_entidade" 	=> $motorista["enti_nb_id"],
@@ -392,6 +396,7 @@
 			
 			$successMsg .= "- [".$novoEndosso["endo_tx_matricula"]."] ".$novoEndosso["endo_tx_nome"].": ".$novoEndosso["totalResumo"]["he50APagar"]."<br>";
 
+			
 			//* Salvando arquivo e cadastrando no banco de dados
 
 				$filename = md5($novoEndosso["endo_tx_matricula"].$novoEndosso["endo_tx_mes"]);
@@ -430,6 +435,7 @@
 	}
 
 	function index(){
+		global $CONTEX;
 
 		if(!empty($_GET["test"])){
 			$_GET["test"] = explode(", ", $_GET["test"]);
@@ -503,7 +509,11 @@
 		
 		rodape();
 
-		echo "<script>";
+		echo 
+      "<script>"
+          ." appPath = '".($_ENV["APP_PATH"]?? "")."';"
+          ." contexPath = '".($CONTEX["path"]?? "")."';"
+		;
 		include "js/cadastro_endosso.js";
 		echo "</script>";
 	}

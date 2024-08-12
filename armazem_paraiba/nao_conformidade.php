@@ -6,7 +6,7 @@
 	
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto	
 
-	function cadastro_abono(){
+	function redirParaAbono(){
 		global $CONTEX;
 		if(empty($_POST['busca_motorista'])){
 			header("Location: ".$CONTEX["path"]."/cadastro_abono.php");
@@ -28,10 +28,15 @@
 		exit;
 	}
 
-	function cadastrar(){
-		$url = substr($_SERVER["REQUEST_URI"], 0, strrpos($_SERVER["REQUEST_URI"], "/"));
-		header("Location: ".$_SERVER["HTTP_ORIGIN"].$url."/cadastro_endosso");
-		exit();
+	// function cadastrar(){
+	// 	$url = substr($_SERVER["REQUEST_URI"], 0, strrpos($_SERVER["REQUEST_URI"], "/"));
+	// 	header("Location: ".$_SERVER["HTTP_ORIGIN"].$url."/cadastro_endosso");
+	// 	exit();
+	// }
+
+	function buscar(){
+		index();
+		exit;
 	}
 
 	function index(){
@@ -96,8 +101,8 @@
 
 		//BOTOES{
 			$b = [
-				botao("Buscar", "index", "", "", "", 1,"btn btn-success"),
-				botao("Cadastrar Abono", "layout_abono", "", "", "", 1),
+				botao("Buscar", "buscar", "", "", "", "","btn btn-success"),
+				botao("Cadastrar Abono", "redirParaAbono", "", "", "", 1),
 				$botao_imprimir
 			];
 		//}
@@ -151,7 +156,12 @@
 	
 					//Pegando e formatando registros dos dias{
 						for ($i = 1; $i <= $daysInMonth; $i++) {
+							
 							$dataVez = $_POST["busca_data"]."-".str_pad($i, 2, 0, STR_PAD_LEFT);
+							if($dataVez >= date("Y-m-d")){
+								break;
+							}
+							
 							$aDetalhado = diaDetalhePonto($aMotorista["enti_tx_matricula"], $dataVez);
 		
 							$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $dataVez, $aMotorista["enti_nb_id"])], $aDetalhado));
