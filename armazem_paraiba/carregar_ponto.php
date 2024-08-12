@@ -274,8 +274,8 @@
 			"arqu_tx_status" 	=> "ativo"
 		];
 
-		var_dump($newArquivoPonto); echo "<br><br>";
-		return;
+		// var_dump($newArquivoPonto); echo "<br><br>";
+		// return;
 
 		foreach (file($arquivo["name"]) as $line) {
 			//matricula dmYhi 999 macroponto.codigoExterno
