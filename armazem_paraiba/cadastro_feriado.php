@@ -70,7 +70,7 @@ function layout_feriado(){
 	}
 	
 	abre_form('Dados do Feriado');
-	campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+	echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 	linha_form($c);
 	fecha_form($botao);
 

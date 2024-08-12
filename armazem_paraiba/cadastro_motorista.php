@@ -649,7 +649,7 @@
 		}
 
 		abre_form();
-		campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		fieldset("Dados de Usuário");
 		linha_form($camposUsuario);
 		echo "<br>";

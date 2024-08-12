@@ -60,7 +60,7 @@ function layout_macro(){
 	}
 	
 	abre_form('Dados do Macro');
-	campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+	echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 	linha_form($c);
 	fecha_form($botao);
 
