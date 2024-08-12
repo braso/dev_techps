@@ -3,18 +3,19 @@
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
-
-
+	include_once 'informativos.php';
 	if(empty(session_id())){
 		$started = session_start();
 	}
     include_once "load_env.php";
+
 	$turnos = ['Noite', 'Manhã', 'Tarde', 'Noite'];
 	$turnoAtual = $turnos[intval((intval(date('H'))-3)/6)];
 
 	if(isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id']) && empty($_POST)){ //Se já há um usuário logado e não está tentando um novo login
 		include_once "conecta.php";
-		cabecalho("Bem-Vindo ao sistema TechPS, ".$_SESSION['user_tx_nome'].". Período da $turnoAtual iniciado às ".$_SESSION['horaEntrada']);
+		cabecalho("");
+		bemVindo($_SESSION['user_tx_nome'],$turnoAtual,$_SESSION['horaEntrada']);
 		rodape();
 		exit;
 	}
@@ -74,7 +75,8 @@
 				if(in_array($_SESSION['user_tx_nivel'], ['Motorista', 'Ajudante'])){
 					echo '<meta http-equiv="refresh" content="0; url=./batida_ponto.php"/>';
 				}else{
-					cabecalho("Bem-Vindo ao sistema TechPS, $usuario[user_tx_nome]. Período da $turnoAtual iniciado às ".$_SESSION['horaEntrada']);
+					cabecalho("");
+					bemVindo($usuario['user_tx_nome'],$turnoAtual,$_SESSION['horaEntrada']);
 					rodape();
 				}
 	

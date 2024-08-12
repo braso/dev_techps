@@ -239,13 +239,12 @@
 			$sqlCheckNivel = mysqli_fetch_assoc(query("SELECT user_tx_nivel FROM user WHERE user_nb_id = '".$_POST["id"]."' LIMIT 1;"));
 		}
 		
-		
 		if (isset($sqlCheckNivel["user_tx_nivel"]) && in_array($sqlCheckNivel["user_tx_nivel"], ["Motorista", "Ajudante"])) {
 			if (!empty($_POST["senha"]) && !empty($_POST["senha2"])) {
 				$novaSenha = ["user_tx_senha" => md5($_POST["senha"])];
 				atualizar("user", array_keys($novaSenha), array_values($novaSenha), $_POST["id"]);
 			}
-			index();
+      index();
 			exit;
 		}
 		
