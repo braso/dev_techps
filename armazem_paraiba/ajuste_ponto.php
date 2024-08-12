@@ -337,7 +337,7 @@
 	function index(){
 		global $CONTEX;
 
-		die(var_dump($_POST));
+		var_dump($_POST); echo "<br><br>";
 
 		if(empty($_POST['data'])){
 			$_POST['data'] = date("Y-m-d");

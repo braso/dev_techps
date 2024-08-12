@@ -1,9 +1,11 @@
 if(typeof(appPath) == typeof(undefined)){
-	alert('appPath indefinido');
+	alert('Erro');
+	console.log('appPath indefinido');
 	exit();
 }
 if(typeof(contexPath) == typeof(undefined)){
-	alert('contexPath indefinido');
+	alert('Erro');
+	console.log('contexPath indefinido');
 	exit();
 }
 

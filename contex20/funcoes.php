@@ -608,8 +608,8 @@
 
 	}
 
-	function campo_hidden($nome,$valor){
-		echo campo($nome, $nome, $valor, 0, "MASCARA_HIDDEN");
+	function campo_hidden($nome,$valor): string{
+		return campo($nome, $nome, $valor, 0, "MASCARA_HIDDEN");
 	}
 
 	function campo_senha($nome,$variavel,$modificador,$tamanho,$extra=''){

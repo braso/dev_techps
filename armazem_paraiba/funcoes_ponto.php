@@ -62,7 +62,7 @@
 				$horario = "00:00";
 			}
 			if(!preg_match("/^-?\d{2,4}:\d{2}$/", $horario)){
-				throw new Exception("Format error: |".$horario."|");
+				echo "<script>console.log('".("Format error: |".$horario."|")."')</script>";
 			}
 		}
 
@@ -1484,8 +1484,8 @@
 			$totalHE100 = "00:00";
 			$totalAdicNot = "00:00";
 			$totalEspInd = "00:00";
-			$saldoAnterior = "00:00"
-;			$totalSaldoPeriodo = "00:00";
+			$saldoAnterior = "00:00";
+			$totalSaldoPeriodo = "00:00";
 			$saldoFinal = '00:00';
 			foreach ($rows as $row) {
 				var_dump("saldoAnterior ".$row['saldoAnterior']);

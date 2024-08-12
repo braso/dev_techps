@@ -189,6 +189,7 @@
 
 			$arq = enviar("foto", "arquivos/user/".$_POST["id"]."/", "FOTO_".$id);
 			if($arq){
+				//Atualizando foto
 				atualizar("user", array("user_tx_foto"), array($arq), $idUserFoto["user_nb_id"]);
 			}
 
@@ -221,41 +222,45 @@
 	// }
 
 	function atualiza_usuario(array $usuario){
+		
+		
+		//Atualizando a senha caso seja administrador{
+		//}
 		if (is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
 			if (!empty($_POST["senha"]) && !empty($_POST["senha2"])) {
-				atualizar("user", ["user_tx_senha"], [md5($_POST["senha"])], $_POST["id"]);
+				$novaSenha = ["user_tx_senha" => md5($_POST["senha"])];
+				atualizar("user", array_keys($novaSenha), array_values($novaSenha), $_POST["id"]);
+				return;
 			}
-		}else{
-			if(!empty($_POST["id"])){
-				$sqlCheckNivel = mysqli_fetch_assoc(query("SELECT user_tx_nivel FROM user WHERE user_nb_id = '".$_POST["id"]."' LIMIT 1;"));
-			}else{
-				$sqlCheckNivel = null;
-			}
-			
-			
-			if (isset($sqlCheckNivel["user_tx_nivel"]) && in_array($sqlCheckNivel["user_tx_nivel"], ["Motorista", "Ajudante"])) {
-				if (!empty($_POST["senha"]) && !empty($_POST["senha2"])) {
-					$novaSenha = ["user_tx_senha" => md5($_POST["senha"])];
-					atualizar("user", array_keys($novaSenha), array_values($novaSenha), $_POST["id"]);
-				}
-				index();
-				exit;
-			}
-			
-			$usuario["user_nb_userAtualiza"] = $_SESSION["user_nb_id"];
-			$usuario["user_tx_dataAtualiza"] = date("Y-m-d H:i:s");
-			
-			
-			if (!empty($_POST["senha"]) && !empty($_POST["senha2"])) {
-				$usuario["user_tx_senha"] = md5($_POST["senha"]);
-			}
-			
-			atualizar("user", array_keys($usuario), array_values($usuario), $_POST["id"]);
 		}
+
+		$sqlCheckNivel = null;
+		if(!empty($_POST["id"])){
+			$sqlCheckNivel = mysqli_fetch_assoc(query("SELECT user_tx_nivel FROM user WHERE user_nb_id = '".$_POST["id"]."' LIMIT 1;"));
+		}
+		
+		if (isset($sqlCheckNivel["user_tx_nivel"]) && in_array($sqlCheckNivel["user_tx_nivel"], ["Motorista", "Ajudante"])) {
+			if (!empty($_POST["senha"]) && !empty($_POST["senha2"])) {
+				$novaSenha = ["user_tx_senha" => md5($_POST["senha"])];
+				atualizar("user", array_keys($novaSenha), array_values($novaSenha), $_POST["id"]);
+			}
+      index();
+			exit;
+		}
+		
+		$usuario["user_nb_userAtualiza"] = $_SESSION["user_nb_id"];
+		$usuario["user_tx_dataAtualiza"] = date("Y-m-d H:i:s");
+		
+		
+		if(!empty($_POST["senha"]) && !empty($_POST["senha2"])){
+			$usuario["user_tx_senha"] = md5($_POST["senha"]);
+		}
+		
+		atualizar("user", array_keys($usuario), array_values($usuario), $_POST["id"]);
 	}
 
 	function excluirFoto(){
-		atualizar("user", array("user_tx_foto"), array(""), $_POST["id"]);
+		atualizar("user", ["user_tx_foto"], [""], $_POST["id"]);
 		$_POST["id"] = $_POST["id"];
 		mostrarFormCadastro();
 		exit;
