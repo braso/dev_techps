@@ -1327,7 +1327,7 @@
 			$dataInicio = date("Y-m-01");
 		
 			// Obtém a data de fim do mês atual
-			$dataFim = date('Y-m-t');
+			$dataFim = date('Y-m-d');
 		} else {
 			[$ano, $mes] = explode('-', $mesAno);
 
@@ -1341,7 +1341,7 @@
 
 		
 		$empresas = mysqli_fetch_all(
-			query("SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome ASC;"),
+			query("SELECT empr_nb_id, empr_tx_nome FROM `empresa` WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome ASC;"),
 			MYSQLI_ASSOC
 		);
 		
@@ -1394,15 +1394,8 @@
 				}
 				// }
 				
-				// saldoAnterior, saldoPeriodo e saldoFinal{
-				$saldoAnterior = mysqli_fetch_all(query("SELECT endo_tx_saldo FROM endosso
-						WHERE endo_tx_matricula = '" . $motorista['enti_tx_matricula'] . "'
-							AND endo_tx_ate < '" . $dataInicio . "'
-							AND endo_tx_status = 'ativo'
-						ORDER BY endo_tx_ate DESC
-						LIMIT 1;"), MYSQLI_ASSOC);
-				
 				$arquivosEndo = [];
+				$saldoPeriodo = '00:00';
 
 				foreach($endossos as $arquivo){
 					$arquivosEndo [] = lerEndossoCSV($arquivo['endo_tx_filename']);
@@ -1416,15 +1409,25 @@
 					if (empty($endossoCompleto["endo_tx_max50APagar"]) && !empty($endossoCompleto["endo_tx_horasApagar"])) {
 						$endossoCompleto["endo_tx_max50APagar"] = $endossoCompleto["endo_tx_horasApagar"];
 					}
-					$saldoFinal = $endossoCompleto['endo_tx_saldo'];
+
+					$endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$endossoCompleto["totalResumo"]["saldoAnterior"], $endossoCompleto["totalResumo"]["diffSaldo"]], "+");
+
+					$saldoAnterior = $arquivosEndo[0]["totalResumo"]['saldoAnterior'];
+					$saldoPeriodo  = $endossoCompleto["totalResumo"]["diffSaldo"];
+
+					$endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$saldoAnterior,$saldoPeriodo],'+');
+					$aPagar = calcularHorasAPagar($endossoCompleto["totalResumo"]["saldoBruto"], $endossoCompleto["totalResumo"]["he50"], $endossoCompleto["totalResumo"]["he100"], $endossoCompleto["endo_tx_max50APagar"]);
+
+					$he50Pagar = $aPagar[0];
+					$he100Pagar = $aPagar[1];
+					$saldoFinal = operarHorarios([$endossoCompleto["totalResumo"]["saldoBruto"], $he50Pagar, $he100Pagar], "-");
+
 
 					for ($i = 1; $i < count($arquivosEndo); $i++) { 
 						if (empty($arquivosEndo[$i]["endo_tx_max50APagar"]) && !empty($arquivosEndo[$i]["endo_tx_horasApagar"])) {
 							$arquivosEndo[$i]["endo_tx_max50APagar"] = $arquivosEndo[$i]["endo_tx_horasApagar"];
 						}
 
-						$endossoCompleto["endo_tx_ate"] = $arquivosEndo[$i]["endo_tx_ate"];
-						$endossoCompleto["endo_tx_pontos"] = array_merge($endossoCompleto["endo_tx_ponto"], $arquivosEndo[$i]["endo_tx_pontos"]);
 						if($endossoCompleto["endo_tx_max50APagar"] != "00:00"){
 							$endossoCompleto["endo_tx_max50APagar"] = operarHorarios([$endossoCompleto["endo_tx_max50APagar"], $arquivosEndo[$i]["endo_tx_max50APagar"]], "+");	
 							if(is_int(strpos($endossoCompleto["endo_tx_max50APagar"], "-"))){
@@ -1432,35 +1435,39 @@
 							}
 						}
 						foreach($arquivosEndo[$i]["totalResumo"] as $key => $value){
-							if(in_array($key, ["diffSaldo", "saldoAnterior", "saldoAtual"])){
+							if(in_array($key, ["saldoAnterior"])){
 								continue;
 							}
 							$endossoCompleto["totalResumo"][$key] = operarHorarios([$endossoCompleto["totalResumo"][$key], $value], "+");
 						}
+						
+						$diffSaldo = $endossoCompleto["totalResumo"] ['diffSaldo'];
+						$saldoPeriodo = $endossoCompleto["totalResumo"] ['diffSaldo'];
 
-						$endossoCompleto["totalResumo"]["saldoAnterior"] = $endossoCompleto["totalResumo"]["saldoAtual"];
-						$endossoCompleto["totalResumo"]["diffSaldo"] = $arquivosEndo[$i]["totalResumo"]["diffSaldo"];
-						$endossoCompleto["totalResumo"]["saldoAtual"] = $arquivosEndo[$i]["totalResumo"]["saldoAtual"];
-						$saldoFinal = operarHorarios([$endossoCompleto["totalResumo"]["diffSaldo"], $endossoCompleto["totalResumo"]["saldoAnterior"]],'+');
+						$endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$saldoAnterior, $diffSaldo], "+");
+						$aPagar = calcularHorasAPagar($endossoCompleto["totalResumo"]["saldoBruto"], $endossoCompleto["totalResumo"]["he50"], $endossoCompleto["totalResumo"]["he100"], $endossoCompleto["endo_tx_max50APagar"]);
+						
+						$he50Pagar = $aPagar[0];
+						$he100Pagar = $aPagar[1];
+						$saldoFinal = operarHorarios([$endossoCompleto["totalResumo"]["saldoBruto"], $endossoCompleto["totalResumo"]["he50_aPagar"], $endossoCompleto["totalResumo"]["he100_aPagar"]], "-");
 					}
 				}
-				// 		}
-				$jornadaPrevista 	= $aDetalhado['totalResumo']['jornadaPrevista'] == null 	? '00:00' : $aDetalhado['totalResumo']['jornadaPrevista'];
-				$jornadaEfetiva 	= $aDetalhado['totalResumo']['diffJornadaEfetiva'] == null 	? '00:00' : $aDetalhado['totalResumo']['diffJornadaEfetiva'];
-				$adicionalNoturno 	= $aDetalhado['totalResumo']['adicionalNoturno'] == null 	? '00:00' : $aDetalhado['totalResumo']['adicionalNoturno'];
-				$esperaIndenizada 	= $aDetalhado['totalResumo']['esperaIndenizada'] == null 	? '00:00' : $aDetalhado['totalResumo']['esperaIndenizada'];
-				$saldoAnterior 		= $aDetalhado['totalResumo']['saldoAnterior'] == null 		? '00:00' : $aDetalhado['totalResumo']['saldoAnterior'];
-				$saldoPeriodo 		= $aDetalhado['totalResumo']['diffSaldo'] == null 			? '00:00' : $aDetalhado['totalResumo']['diffSaldo'];
-				$saldoFinal 		= $aDetalhado['totalResumo']['saldoBruto'] == null 			? '00:00' : $aDetalhado['totalResumo']['saldoBruto'];
+
+						// }
+				$jornadaPrevista 	= $endossoCompleto['totalResumo']['jornadaPrevista'] == null 	? '00:00' : $endossoCompleto['totalResumo']['jornadaPrevista'];
+				$jornadaEfetiva 	= $endossoCompleto['totalResumo']['diffJornadaEfetiva'] == null ? '00:00' : $endossoCompleto['totalResumo']['diffJornadaEfetiva'];
+				$adicionalNoturno 	= $endossoCompleto['totalResumo']['adicionalNoturno'] == null 	? '00:00' : $endossoCompleto['totalResumo']['adicionalNoturno'];
+				$esperaIndenizada 	= $endossoCompleto['totalResumo']['esperaIndenizada'] == null 	? '00:00' : $endossoCompleto['totalResumo']['esperaIndenizada'];
 
 				$rows[] = [
 					'IdMotorista' => $motorista['enti_nb_id'],
+					'matricula' => $motorista['enti_tx_matricula'],
 					'motorista' => $motorista['enti_tx_nome'],
 					'statusEndosso' => $endossado,
 					'jornadaPrevista' => $jornadaPrevista,
 					'jornadaEfetiva' => $jornadaEfetiva,
-					'he50' => $endossoCompleto["totalResumo"]["he50"],
-					'he100' => $endossoCompleto["totalResumo"]["he100"],
+					'he50' => $he50Pagar,
+					'he100' => $he100Pagar,
 					'adicionalNoturno' => $adicionalNoturno,
 					'esperaIndenizada' => $esperaIndenizada,
 					'saldoAnterior' => $saldoAnterior,
@@ -1487,13 +1494,8 @@
 			$saldoAnterior = "00:00";
 			$totalSaldoPeriodo = "00:00";
 			$saldoFinal = '00:00';
+
 			foreach ($rows as $row) {
-				var_dump("saldoAnterior ".$row['saldoAnterior']);
-				echo "<br>";
-				var_dump("saldoPeriodo ".$row['saldoPeriodo']);
-				echo "<br>";
-				var_dump("saldoFinal ".$row['saldoFinal']);
-				echo "<br>";
 				$totalJorPrev      = somarHorarios([$totalJorPrev, $row['jornadaPrevista']]);
 				$totalJorEfe       = somarHorarios([$totalJorEfe, $row['jornadaEfetiva']]);
 				$totalHE50         = somarHorarios([$totalHE50, $row['he50']]);
