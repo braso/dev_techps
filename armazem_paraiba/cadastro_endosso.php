@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
@@ -43,6 +43,12 @@
 					$errorMsg = "Não é possível cadastrar um endosso com mais de um mês.";
 				}
 				unset($difference);
+			//}
+
+			//Conferir se o endosso passa da data atual{
+				if($_POST["data_de"] >= date("Y-m-d") || $_POST["data_ate"] >= date("Y-m-d")){
+					$errorMsg = "Não é possível cadastrar um endosso que inclua a data atual ou datas futuras.";
+				}
 			//}
 
 			if($errorMsg != $baseErrMsg){
@@ -313,6 +319,10 @@
 			$saldoAnterior = "00:00";
 			if(!empty($ultimoEndosso["endo_tx_filename"])){
 				$ultimoEndossoCSV = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
+				if(empty($ultimoEndossoCSV["endo_tx_max50APagar"])){
+					$ultimoEndossoCSV["endo_tx_max50APagar"] = "00:00";
+				}
+
 				$pago = calcularHorasAPagar($ultimoEndossoCSV["endo_tx_saldo"], $ultimoEndossoCSV["totalResumo"]["he50"], $ultimoEndossoCSV["totalResumo"]["he100"], $ultimoEndossoCSV["endo_tx_max50APagar"]);
 				$saldoAnterior = operarHorarios([$ultimoEndossoCSV["endo_tx_saldo"], $pago[0], $pago[1]], "-");
 			}
@@ -496,6 +506,9 @@
 		];
 
 		if(empty($_POST["HTTP_REFERER"])){
+			if(empty($_SERVER["HTTP_REFERER"])){
+				$_SERVER["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/endosso.php";
+			}
 			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
 			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_endosso.php"))){
 				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/endosso.php";

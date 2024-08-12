@@ -374,8 +374,6 @@
 
 	function index(){
 
-		echo "testando5";
-
 		if(is_int(strpos($_SERVER["REQUEST_URI"], "carregar_ftp"))){
 			if (!empty($_SERVER["HTTP_ENV"]) && $_SERVER["HTTP_ENV"] == "carrega_cron") {
 				// Aplicar após criar o usuário REP-P
