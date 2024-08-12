@@ -292,14 +292,17 @@
 		$location = mysqli_fetch_all(
 			query("SELECT pont_tx_latitude, pont_tx_longitude 
 			FROM ponto WHERE pont_nb_id = $idPonto"), MYSQLI_ASSOC);
-		$url = "https://www.google.com/maps?q=".$location[0]['pont_tx_latitude'].","
-		.$location[0]['pont_tx_longitude'];
+		if (!empty($location[0]['pont_tx_latitude']) && !empty($location[0]['pont_tx_longitude'])) {
+			$url = "https://www.google.com/maps?q=".$location[0]['pont_tx_latitude'].","
+			.$location[0]['pont_tx_longitude'];
 
-		return "<center>
-		<a href='$url' target='_blank'>
-			<i class='fa fa-map-marker' aria-hidden='true' style='color: black; font-size: 20px;'></i>
-		</a>
-		</center>";
+			return "<center>
+			<a href='$url' target='_blank'>
+				<i class='fa fa-map-marker' aria-hidden='true' style='color: black; font-size: 20px;'></i>
+			</a>
+			</center>";
+		} else
+			return '';
 	}
 
 	function data($data,$hora=0){
