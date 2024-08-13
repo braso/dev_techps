@@ -1,5 +1,5 @@
 <?php
-	include_once "./../version.php";
+	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/version.php";
 
 	global $conn, $version;
 	function cabecalho($nome_pagina,$foco=0,$relatorio=0){
