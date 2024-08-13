@@ -16,6 +16,10 @@ $dominios = [
 
 $dominio_array = array_keys($dominios);
 
+if(empty($_POST["dominio"]) && !empty($_GET["dominio"])){
+    $_POST["dominio"] = $_GET["dominio"];
+}
+
 $dominiosInput = "<div class='form-group'>
     <select class='form-control' name='dominio'>
         <option value='' hidden selected>Domínio</option>";
