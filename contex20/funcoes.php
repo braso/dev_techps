@@ -307,7 +307,7 @@
 
 	function data($data,$hora=0){
 
-		if($data=="0000-00-00" || $data=="00/00/0000" )
+		if($data=="0000-00-00" || $data=="00/00/0000" || $data=="0001-01-01" )
 			return "";
 
 		if($hora==1){

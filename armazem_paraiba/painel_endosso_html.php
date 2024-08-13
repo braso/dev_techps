@@ -243,7 +243,8 @@ header("Expires: 0");
                         console.log('Item \"+index+\":');
                         for (var chave in item) {
                             if (item.hasOwnProperty(chave)) {
-                                console.log(chave + ': ' + item[chave]);
+                                // console.log(chave + ': ' + item[chave]);
+                                console.log('Item ' + index + ': ' + JSON.stringify(item, null, 2));
                             }
                         }
 
@@ -253,7 +254,6 @@ header("Expires: 0");
                                     var he100 = (item.he100 === null || item.he100 === '00:00') ? '' : item.he100;
                                     var adicionalNoturno = (item.adicionalNoturno === null || item.adicionalNoturno === '00:00') ? '' : item.adicionalNoturno;
                                     var esperaIndenizada = (item.esperaIndenizada === null || item.esperaIndenizada === '00:00') ? '' : item.esperaIndenizada;
-                                    var saldoAnterior = (item.saldoAnterior === null) ? '00:00': item.saldoPeriodo;;
                                     var saldoPeriodo = (item.saldoPeriodo === null) ? '00:00': item.saldoPeriodo;
                                     var saldoFinal =  (item.saldoFinal === null) ? '00:00': item.saldoFinal;
 
@@ -268,7 +268,7 @@ header("Expires: 0");
                                         '<td>' + he100 + '</td>' +
                                         '<td>' + adicionalNoturno + '</td>' +
                                         '<td>' + esperaIndenizada + '</td>' +
-                                        '<td>' + saldoAnterior + '</td>' +
+                                        '<td>' + item.saldoAnterior  + '</td>' +
                                         '<td>' + saldoPeriodo + '</td>' +
                                         '<td>' + saldoFinal + '</td>' +
                                         '</tr>';";
@@ -279,7 +279,6 @@ header("Expires: 0");
 							var he100 = (!item.he100 || item.he100 === '00:00') ? '' : item.he100;
 							var adicionalNoturno = (!item.adicionalNoturno || item.adicionalNoturno === '00:00') ? '' : item.adicionalNoturno;
 							var esperaIndenizada = (!item.esperaIndenizada || item.esperaIndenizada === '00:00') ? '' : item.esperaIndenizada;
-							var saldoAnterior = (!item.saldoAnterior || item.saldoAnterior === '00:00') ? '' : item.saldoAnterior;
 							var saldoPeriodo = (!item.saldoPeriodo || item.saldoPeriodo === '00:00') ? '' : item.saldoPeriodo;
 							var saldoFinal = (!item.saldoFinal || item.saldoFinal === '00:00') ? '' : item.saldoFinal;
 
@@ -294,9 +293,9 @@ header("Expires: 0");
 								'<td>' + he100 + '</td>' +
 								'<td>' + adicionalNoturno + '</td>' +
 								'<td>' + esperaIndenizada + '</td>' +
-								'<td>' + saldoAnterior + '</td>' +
+								'<td>' + item.saldoAnterior  + '</td>' +
 								'<td>' + saldoPeriodo + '</td>' +
-								'<td>' + saldoFinal + '</td>' +
+								'<td class=\'saldo-final\'>' + saldoFinal + '</td>' +
 								'</tr>';";
                         }
 

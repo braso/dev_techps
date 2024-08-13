@@ -1327,9 +1327,9 @@
 			$dataInicio = date("Y-m-01");
 		
 			// Obtém a data de fim do mês atual
-			$dataFim = date("Y-m-t");
+			$dataFim = date('Y-m-d');
 		} else {
-			[$ano, $mes] = explode("-", $mesAno);
+			[$ano, $mes] = explode('-', $mesAno);
 
 			// Cria a data de início do mês especificado
 			$dataInicio = date($ano."-".$mes."-01 00:00:00");
@@ -1357,21 +1357,21 @@
 			$endossoQuantE = 0;
 			$endossoQuantEp = 0;
 			foreach ($motoristas as $motorista) {
-				$endossado = "";
+				$endossado = '';
 	
 				// Status Endosso{
 				$endossos = mysqli_fetch_all(query("SELECT * FROM endosso
 				WHERE endo_tx_status = 'ativo'
-				AND endo_nb_entidade = '".$motorista["enti_nb_id"]."'
+				AND endo_nb_entidade = '$motorista[enti_nb_id]'
 				AND (
-					(endo_tx_de >= '".$dataInicio."' AND endo_tx_de <= '".$dataFim."')
-					OR (endo_tx_ate >= '".$dataInicio."' AND endo_tx_ate <= '".$dataFim."')
-					OR (endo_tx_de <= '".$dataInicio."' AND endo_tx_ate >= '".$dataFim."')
+					(endo_tx_de >= '$dataInicio' AND endo_tx_de <= '$dataFim')
+					OR (endo_tx_ate >= '$dataInicio' AND endo_tx_ate <= '$dataFim')
+					OR (endo_tx_de <= '$dataInicio' AND endo_tx_ate >= '$dataFim')
 				)"), MYSQLI_ASSOC);
 				
 				if (count($endossos) == 1) {
-					if (strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) == strtotime($endossos[0]["endo_tx_ate"]) 
-						|| strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) < strtotime($endossos[0]["endo_tx_ate"])) {
+					if (strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) == strtotime($endossos[0]['endo_tx_ate']) 
+						|| strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) < strtotime($endossos[0]['endo_tx_ate'])) {
 						$endossado = "E";
 						$endossoQuantE += 1;
 					} else {
@@ -1380,8 +1380,8 @@
 					}
 				} else if (count($endossos) > 1 ) {
 					$ultimoEnd = count($endossos) - 1;
-					if (strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) == strtotime($endossos[$ultimoEnd]["endo_tx_ate"]) 
-					|| strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) < strtotime($endossos[$ultimoEnd]["endo_tx_ate"])) {
+					if (strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) == strtotime($endossos[$ultimoEnd]['endo_tx_ate']) 
+					|| strtotime($dataInicio) == strtotime($endossos[0]["endo_tx_de"]) && strtotime($dataFim) < strtotime($endossos[$ultimoEnd]['endo_tx_ate'])) {
 						$endossado = "E";
 						$endossoQuantE += 1;
 					} else {
@@ -1393,23 +1393,15 @@
 					$endossoQuantN += 1;
 				}
 				// }
-	
-        // saldoAnterior, saldoPeriodo e saldoFinal{
-				$saldoAnterior = mysqli_fetch_all(query("SELECT endo_tx_saldo FROM endosso
-						WHERE endo_tx_matricula = '" . $motorista["enti_tx_matricula"] . "'
-							AND endo_tx_ate < '" . $dataInicio . "'
-							AND endo_tx_status = 'ativo'
-						ORDER BY endo_tx_ate DESC
-						LIMIT 1;"), MYSQLI_ASSOC);
-        
- 				$arquivosEndo = [];
+				
+				$arquivosEndo = [];
 				$saldoPeriodo = '00:00';
 
 				foreach($endossos as $arquivo){
-					$arquivosEndo [] = lerEndossoCSV($arquivo["endo_tx_filename"]);
+					$arquivosEndo [] = lerEndossoCSV($arquivo['endo_tx_filename']);
 				}
 				$endossoCompleto = [];
-				$saldoFinal = "00:00";
+				$saldoFinal = '00:00';
 
 				if (count($arquivosEndo) > 0) {
 					$endossoCompleto = $arquivosEndo[0];
@@ -1418,7 +1410,7 @@
 						$endossoCompleto["endo_tx_max50APagar"] = $endossoCompleto["endo_tx_horasApagar"];
 					}
 
-          $endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$endossoCompleto["totalResumo"]["saldoAnterior"], $endossoCompleto["totalResumo"]["diffSaldo"]], "+");
+					$endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$endossoCompleto["totalResumo"]["saldoAnterior"], $endossoCompleto["totalResumo"]["diffSaldo"]], "+");
 
 					$saldoAnterior = $arquivosEndo[0]["totalResumo"]['saldoAnterior'];
 					$saldoPeriodo  = $endossoCompleto["totalResumo"]["diffSaldo"];
@@ -1430,7 +1422,7 @@
 					$he100Pagar = $aPagar[1];
 					$saldoFinal = operarHorarios([$endossoCompleto["totalResumo"]["saldoBruto"], $he50Pagar, $he100Pagar], "-");
 
-          
+
 					for ($i = 1; $i < count($arquivosEndo); $i++) { 
 						if (empty($arquivosEndo[$i]["endo_tx_max50APagar"]) && !empty($arquivosEndo[$i]["endo_tx_horasApagar"])) {
 							$arquivosEndo[$i]["endo_tx_max50APagar"] = $arquivosEndo[$i]["endo_tx_horasApagar"];
@@ -1448,6 +1440,7 @@
 							}
 							$endossoCompleto["totalResumo"][$key] = operarHorarios([$endossoCompleto["totalResumo"][$key], $value], "+");
 						}
+						
 						$diffSaldo = $endossoCompleto["totalResumo"] ['diffSaldo'];
 						$saldoPeriodo = $endossoCompleto["totalResumo"] ['diffSaldo'];
 
@@ -1487,22 +1480,20 @@
 				mkdir("./arquivos/paineis/$empresa[empr_nb_id]/$mesAno",0755,true);
 			}
 			$path = "./arquivos/paineis/$empresa[empr_nb_id]/$mesAno/";
-			$fileName = "motoristas.json";
+			$fileName = 'motoristas.json';
 			$jsonArquiMoto = json_encode($rows,JSON_UNESCAPED_UNICODE);
 			file_put_contents($path.$fileName, $jsonArquiMoto);
 	
-			[
-				$totalJorPrevResut,
-				$totalJorPrev,
-				$totalJorEfe,
-				$totalHE50,
-				$totalHE100,
-				$totalAdicNot,
-				$totalEspInd,
-				$saldoAnterior,
-				$totalSaldoPeriodo,
-				$saldoFinal
-			] = array_pad([], 10, "00:00");
+			$totalJorPrevResut = "00:00";
+			$totalJorPrev = "00:00";
+			$totalJorEfe = "00:00";
+			$totalHE50 = "00:00";
+			$totalHE100 = "00:00";
+			$totalAdicNot = "00:00";
+			$totalEspInd = "00:00";
+			$saldoAnterior = "00:00";
+			$totalSaldoPeriodo = "00:00";
+			$saldoFinal = '00:00';
 
 			foreach ($rows as $row) {
 				$totalJorPrev      = somarHorarios([$totalJorPrev, $row['jornadaPrevista']]);
@@ -1515,96 +1506,117 @@
 				$totalSaldoPeriodo = somarHorarios([$totalSaldoPeriodo, $row['saldoPeriodo']]);
 				$saldoFinal        = somarHorarios([$saldoFinal, $row['saldoFinal']]);
 			}
+	
+			$totais[] = [
+				'empresaId'        => $empresa['empr_nb_id'],
+				'empresaNome'      => $empresa['empr_tx_nome'],
+				'jornadaPrevista'  => $totalJorPrev,
+				'JornadaEfetiva'   => $totalJorEfe,
+				'he50'             => $totalHE50,
+				'he100'            => $totalHE100,
+				'adicionalNoturno' => $totalAdicNot,
+				'esperaIndenizada' => $totalEspInd,
+				'saldoAnterior'    => $saldoAnterior,
+				'saldoPeriodo'     => $totalSaldoPeriodo,
+				'saldoFinal'       => $saldoFinal,
+				'naoEndossados'    => $endossoQuantN,
+				'endossados'       => $endossoQuantE,
+				'endossoPacial'    => $endossoQuantEp,
+				'totalMotorista'   => count($motoristas)
+			];
 
 			$totaisJson = [
-				"empresaId"        => $empresa["empr_nb_id"],
-				"empresaNome"      => $empresa["empr_tx_nome"],
-				"jornadaPrevista"  => $totalJorPrev,
-				"JornadaEfetiva"   => $totalJorEfe,
-				"he50"             => $totalHE50,
-				"he100"            => $totalHE100,
-				"adicionalNoturno" => $totalAdicNot,
-				"esperaIndenizada" => $totalEspInd,
-				"saldoAnterior"    => $saldoAnterior,
-				"saldoPeriodo"     => $totalSaldoPeriodo,
-				"saldoFinal"       => $saldoFinal,
-				"naoEndossados"    => $endossoQuantN,
-				"endossados"       => $endossoQuantE,
-				"endossoPacial"    => $endossoQuantEp,
-				"totalMotorista"   => count($motoristas)
+				'empresaId'        => $empresa['empr_nb_id'],
+				'empresaNome'      => $empresa['empr_tx_nome'],
+				'jornadaPrevista'  => $totalJorPrev,
+				'JornadaEfetiva'   => $totalJorEfe,
+				'he50'             => $totalHE50,
+				'he100'            => $totalHE100,
+				'adicionalNoturno' => $totalAdicNot,
+				'esperaIndenizada' => $totalEspInd,
+				'saldoAnterior'    => $saldoAnterior,
+				'saldoPeriodo'     => $totalSaldoPeriodo,
+				'saldoFinal'       => $saldoFinal,
+				'naoEndossados'    => $endossoQuantN,
+				'endossados'       => $endossoQuantE,
+				'endossoPacial'    => $endossoQuantEp,
+				'totalMotorista'   => count($motoristas)
 			];
-	
-			$totais[] = $totaisJson;
 			
-			if(!is_dir("./arquivos/paineis/".$empresa["empr_nb_id"]."/".$mesAno."")){
-				mkdir("./arquivos/paineis/".$empresa["empr_nb_id"]."/".$mesAno."",0755,true);
+			if(!is_dir("./arquivos/paineis/$empresa[empr_nb_id]/$mesAno")){
+				mkdir("./arquivos/paineis/$empresa[empr_nb_id]/$mesAno",0755,true);
 			}
-			$path = "./arquivos/paineis/".$empresa["empr_nb_id"]."/".$mesAno."/";
-			$fileName = "totalMotoristas.json";
-			$jsonArquiTotais = json_encode($totaisJson, JSON_UNESCAPED_UNICODE);
+			$path = "./arquivos/paineis/$empresa[empr_nb_id]/$mesAno/";
+			$fileName = 'totalMotoristas.json';
+			$jsonArquiTotais = json_encode($totaisJson,JSON_UNESCAPED_UNICODE);
 			file_put_contents($path.$fileName, $jsonArquiTotais);
 				
 		}
 	
-		if(!is_dir("./arquivos/paineis/empresas/".$mesAno."")){
-			mkdir("./arquivos/paineis/empresas/".$mesAno."",0755,true);
+		if(!is_dir("./arquivos/paineis/empresas/$mesAno")){
+			mkdir("./arquivos/paineis/empresas/$mesAno",0755,true);
 		}
-		$path = "./arquivos/paineis/empresas/".$mesAno."/";
-		$fileName = "totalEmpresas.json";
-		$jsonArquiTotais = json_encode($totais, JSON_UNESCAPED_UNICODE);
+		$path = "./arquivos/paineis/empresas/$mesAno/";
+		$fileName = 'totalEmpresas.json';
+		$jsonArquiTotais = json_encode($totais,JSON_UNESCAPED_UNICODE);
 		file_put_contents($path.$fileName, $jsonArquiTotais);
 		
-		[
-			/*$totalJorPrevResut, */$totalJorPrev, $totalJorEfe, $totalHE50, $totalHE100, $totalAdicNot,
-			$totalEspInd, $totalSaldoPeriodo, $toralSaldoAnter, $saldoFinal
-		] = array_pad([], 9, "00:00");
-
-		$totalMotorista 	= 0;
+		// $totalJorPrevResut = "00:00";
+		$totalJorPrev = '00:00';
+		$totalJorEfe = '00:00';
+		$totalHE50 = '00:00';
+		$totalHE100 = '00:00';
+		$totalAdicNot = '00:00';
+		$totalEspInd = '00:00';
+		$totalSaldoPeriodo = '00:00';
+		$toralSaldoAnter = '00:00';
+		$saldoFinal = '00:00';
+		$totalMotorista = 0;
 		$totalNaoEndossados = 0;
-		$totalEndossados 	= 0;
+		$totalEndossados = 0;
 		$totalEndossoPacial = 0;
 		
 		foreach ($totais as $totalEmpresa) {
 	
-			$totalMotorista 	+= $totalEmpresa["totalMotorista"];
-			$totalNaoEndossados += $totalEmpresa["naoEndossados"];
-			$totalEndossados 	+= $totalEmpresa["endossados"];
-			$totalEndossoPacial += $totalEmpresa["endossoPacial"];
+			$totalMotorista += $totalEmpresa['totalMotorista'];
+			$totalNaoEndossados += $totalEmpresa['naoEndossados'];
+			$totalEndossados += $totalEmpresa['endossados'];
+			$totalEndossoPacial += $totalEmpresa['endossoPacial'];
 			
-			$totalJorPrev           = somarHorarios([$totalEmpresa["jornadaPrevista"],$totalJorPrev]);
-			$totalJorEfe            = somarHorarios([$totalJorEfe, $totalEmpresa["JornadaEfetiva"]]);
-			$totalHE50              = somarHorarios([$totalHE50, $totalEmpresa["he50"]]);
-			$totalHE100             = somarHorarios([$totalHE100, $totalEmpresa["he100"]]);
-			$totalAdicNot           = somarHorarios([$totalAdicNot, $totalEmpresa["adicionalNoturno"]]);
-			$totalEspInd            = somarHorarios([$totalEspInd, $totalEmpresa["esperaIndenizada"]]);
-			$toralSaldoAnter        = somarHorarios([$toralSaldoAnter, $totalEmpresa["saldoAnterior"]]);
-			$totalSaldoPeriodo      = somarHorarios([$totalSaldoPeriodo, $totalEmpresa["saldoPeriodo"]]);
-			$saldoFinal             = somarHorarios([$saldoFinal, $totalEmpresa["saldoFinal"]]);
+			$totalJorPrev           = somarHorarios([$totalEmpresa['jornadaPrevista'],$totalJorPrev]);
+			$totalJorEfe            = somarHorarios([$totalJorEfe, $totalEmpresa['JornadaEfetiva']]);
+			$totalHE50              = somarHorarios([$totalHE50, $totalEmpresa['he50']]);
+			$totalHE100             = somarHorarios([$totalHE100, $totalEmpresa['he100']]);
+			$totalAdicNot           = somarHorarios([$totalAdicNot, $totalEmpresa['adicionalNoturno']]);
+			$totalEspInd            = somarHorarios([$totalEspInd, $totalEmpresa['esperaIndenizada']]);
+			$toralSaldoAnter        = somarHorarios([$toralSaldoAnter, $totalEmpresa['saldoAnterior']]);
+			$totalSaldoPeriodo      = somarHorarios([$totalSaldoPeriodo, $totalEmpresa['saldoPeriodo']]);
+			$saldoFinal             = somarHorarios([$saldoFinal, $totalEmpresa['saldoFinal']]);
 		}
 		
 		$jsonTotaisEmpr = [
-			"EmprTotalJorPrev"      => $totalJorPrev,
-			"EmprTotalJorEfe"       => $totalJorEfe,
-			"EmprTotalHE50"         => $totalHE50,
-			"EmprTotalHE100"        => $totalHE100,
-			"EmprTotalAdicNot"      => $totalAdicNot,
-			"EmprTotalEspInd"       => $totalEspInd,
-			"EmprTotalSaldoAnter"   => $toralSaldoAnter,
-			"EmprTotalSaldoPeriodo" => $totalSaldoPeriodo,
-			"EmprTotalSaldoFinal"   => $saldoFinal,
-			"EmprTotalMotorista"    => $totalMotorista,
-			"EmprTotalNaoEnd"       => $totalNaoEndossados,
-			"EmprTotalEnd"          => $totalEndossados,
-			"EmprTotalEndPac"       => $totalEndossoPacial,
+			'EmprTotalJorPrev'      => $totalJorPrev,
+			'EmprTotalJorEfe'       => $totalJorEfe,
+			'EmprTotalHE50'         => $totalHE50,
+			'EmprTotalHE100'        => $totalHE100,
+			'EmprTotalAdicNot'      => $totalAdicNot,
+			'EmprTotalEspInd'       => $totalEspInd,
+			'EmprTotalSaldoAnter'   => $toralSaldoAnter,
+			'EmprTotalSaldoPeriodo' => $totalSaldoPeriodo,
+			'EmprTotalSaldoFinal'   => $saldoFinal,
+			'EmprTotalMotorista'    => $totalMotorista,
+			'EmprTotalNaoEnd'       => $totalNaoEndossados,
+			'EmprTotalEnd'          => $totalEndossados,
+			'EmprTotalEndPac'       => $totalEndossoPacial,
 			
 		];
 		
 	
-		if(!is_dir("./arquivos/paineis/empresas/".$mesAno."")){
-			mkdir("./arquivos/paineis/empresas/".$mesAno."",0755,true);
+		if(!is_dir("./arquivos/paineis/empresas/$mesAno")){
+			mkdir("./arquivos/paineis/empresas/$mesAno",0755,true);
 		}
-		$path = "./arquivos/paineis/empresas/".$mesAno."/";
-		$fileName = "empresas.json";
+		$path = "./arquivos/paineis/empresas/$mesAno/";
+		$fileName = 'empresas.json';
 		$jsonArqui = json_encode($jsonTotaisEmpr);
 		file_put_contents($path.$fileName, $jsonArqui);
 		return;
