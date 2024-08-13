@@ -274,6 +274,7 @@
 					}
 					document.form_ajuste_ponto.id.value = motorista;
 					document.form_ajuste_ponto.data.value = data;
+					document.form_ajuste_ponto.HTTP_REFERER.value = ".(!empty($_POST["HTTP_REFERER"])? $_POST["HTTP_REFERER"]: $_SERVER["REQUEST_URI"]).";
 					document.form_ajuste_ponto.submit();
 				}
 			</script>"
@@ -1299,7 +1300,7 @@
 		$params = [$saldoBruto, $he50, $he100, $max50APagar];
 		foreach($params as $param){
 			if(!preg_match("/^-?\d{2,4}:\d{2}$/", $param)){
-				throw new Exception("Format error: "+$param);
+				throw new Exception("Format error: ".$param);
 			}
 		}
 
