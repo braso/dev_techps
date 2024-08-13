@@ -60,7 +60,7 @@
 	<link rel="manifest" href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/img/favicon/site.webmanifest">
 	<style>
 		body {
-			--img_path: url("<?= $CONTEX['path'] ?>/imagens/logo_topo_cliente.png");
+			--img_path: url("<?= $CONTEX["path"] ?>/imagens/logo_topo_cliente.png");
 		}
 
 		.form-actions {
@@ -172,7 +172,7 @@
 
 		@media(max-width: 992px) {
 			body {
-				--img_path: url("<?= $CONTEX['path'] ?>/imagens/logo_mobile.png");
+				--img_path: url("<?= $CONTEX["path"] ?>/imagens/logo_mobile.png");
 			}
 
 			.img-section {
@@ -209,7 +209,7 @@
 			<div class="container-fluid">
 				<!-- INICIO LOGO -->
 				<div class="page-logo">
-					<a href="<?= $CONTEX['path'] ?>/index.php">
+					<a href="<?= $CONTEX["path"] ?>/index.php">
 						<div class="logo-default"></div>
 					</a>
 				</div>
@@ -224,17 +224,17 @@
 							<!-- INICIO USER LOGIN DROPDOWN -->
 							<li class="dropdown dropdown-user dropdown-dark">
 								<a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
-									<img alt="" class="img-circle" src="<?= $_SESSION['user_tx_foto'] ? $_SESSION['user_tx_foto'] : '/contex20/img/user.png' ?>">
-									<span class="username username-hide-mobile"><?= $_SESSION['user_tx_login'] ?></span>
+									<img alt="" class="img-circle" src="<?= $_SESSION["user_tx_foto"] ? $_SESSION["user_tx_foto"] : "/contex20/img/user.png" ?>">
+									<span class="username username-hide-mobile"><?= $_SESSION["user_tx_login"] ?></span>
 								</a>
 								<ul class="dropdown-menu dropdown-menu-default">
 									<li>
-										<a href="<?= $CONTEX['path'] ?>/cadastro_usuario.php?id=<?= $_SESSION['user_nb_id'] ?>">
+										<a href="<?= $CONTEX["path"] ?>/cadastro_usuario.php?id=<?= $_SESSION["user_nb_id"] ?>">
 											<i class="icon-user"></i> Perfil </a>
 									</li>
 									<li class="divider"> </li>
 									<li>
-										<a href="<?= $CONTEX['path'] ?>/logout.php">
+										<a href="<?= $CONTEX["path"] ?>/logout.php">
 											<i class="icon-key"></i> Sair </a>
 									</li>
 								</ul>
@@ -255,13 +255,13 @@
 			</div>
 		</div>
 		<!-- FIM HEADER TOP -->
-		<?php include('menu.php'); ?>
+		<?php include($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/menu.php"); ?>
 	</div>
 	<!-- FIM HEADER -->
 
 	<?php
 	/*Descomentar quando for utilizar.
-		if ($relatorio == '1') {
+		if ($relatorio == "1") {
 			echo
 				"<style>
 					@media print {
@@ -290,7 +290,7 @@
 				<div class="container-fluid">
 					<!-- INICIO PAGE TITLE -->
 					<div class="page-title">
-						<h1><?=$nome_pagina.(is_int(strpos($_SERVER["REQUEST_URI"], 'dev')) ? ' (Dev)' : '') ?> </h1>
+						<h1><?=$nome_pagina.(is_int(strpos($_SERVER["REQUEST_URI"], "dev")) ? " (Dev)" : "") ?> </h1>
 					</div>
 					<!-- FIM PAGE TITLE -->
 				</div>
