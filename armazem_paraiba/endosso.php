@@ -65,8 +65,10 @@
 				// $endossoCompleto["totalResumo"]["saldoBruto"] = $endossos[$f]["totalResumo"]["saldoBruto"];
 			}
 		}
+		if(!empty($endossoCompleto)){
+			$endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$endossoCompleto["totalResumo"]["saldoAnterior"], $endossoCompleto["totalResumo"]["diffSaldo"]], "+");
+		}
 
-		$endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$endossoCompleto["totalResumo"]["saldoAnterior"], $endossoCompleto["totalResumo"]["diffSaldo"]], "+");
 
 		return $endossoCompleto;
 	}
@@ -390,6 +392,10 @@
 						*/
 
 						$aPagar = "--:--";
+
+						if(empty($endossoCompleto["endo_tx_max50APagar"])){
+							$endossoCompleto["endo_tx_max50APagar"] = "00:00";
+						}
 
 						$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $endossoCompleto["endo_tx_max50APagar"]);
 						$aPagar = operarHorarios($aPagar, "+");
