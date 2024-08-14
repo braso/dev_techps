@@ -287,8 +287,8 @@
 		$errorMsg = $baseErrMsg."  ";
 
 		foreach($camposObrig as $key => $value){
-			var_dump([empty($_POST[$key]), $_POST[$key] != "0"]); echo "<br>";
-			if(empty($_POST[$key]) && $_POST[$key] != "0"){
+			var_dump([empty($camposEnviados[$key]), $camposEnviados[$key] != "0"]); echo "<br>";
+			if(empty($camposEnviados[$key]) && $camposEnviados[$key] != "0"){
 				$errorMsg .= " ".$camposObrig[$key].", ";
 			}
 		}
