@@ -24,20 +24,20 @@
 
     // Obtém o tempo da última modificação do arquivo
     $timestamp = filemtime($file);
-    $Emissão = date("d/m/Y H:i:s", $timestamp);
+    $emissao = date("d/m/Y H:i:s", $timestamp);
 
     // Calcula a porcentagem
-    $porcentagenNaEndo = number_format(0,2);
-    $porcentagenEndoPc = number_format(0,2);
-    $porcentagenEndo = number_format(0,2);
+    $porcentagemNaEndo = number_format(0,2);
+    $porcentagemEndoPc = number_format(0,2);
+    $porcentagemEndo = number_format(0,2);
     if ($empresasTotais["EmprTotalNaoEnd"] != 0) {
-        $porcentagenNaEndo = number_format(($empresasTotais["EmprTotalNaoEnd"] / $empresasTotais["EmprTotalMotorista"]) * 100, 2);
+        $porcentagemNaEndo = number_format(($empresasTotais["EmprTotalNaoEnd"] / $empresasTotais["EmprTotalMotorista"]) * 100, 2);
     }
     if ($empresasTotais["EmprTotalEndPac"] != 0) {
-        $porcentagenEndoPc = number_format(($empresasTotais["EmprTotalEndPac"] / $empresasTotais["EmprTotalMotorista"]) * 100, 2);
+        $porcentagemEndoPc = number_format(($empresasTotais["EmprTotalEndPac"] / $empresasTotais["EmprTotalMotorista"]) * 100, 2);
     }
     if ($empresasTotais["EmprTotalEnd"] != 0) {
-        $porcentagenEndo = number_format(($empresasTotais["EmprTotalEnd"] / $empresasTotais["EmprTotalMotorista"]) * 100, 2);
+        $porcentagemEndo = number_format(($empresasTotais["EmprTotalEnd"] / $empresasTotais["EmprTotalMotorista"]) * 100, 2);
     }
 
     $quantPosi = 0;
@@ -56,9 +56,9 @@
         }
     }
 
-    $porcentagenMeta = ($quantMeta != 0)? number_format(($quantMeta / count($empresaTotais)) * 100, 2): number_format(0,2);
-    $porcentagenNega = ($quantNega != 0)? number_format(($quantNega / count($empresaTotais)) * 100, 2): number_format(0,2);
-    $porcentagenPosi = ($quantPosi != 0)? number_format(($quantPosi / count($empresaTotais)) * 100, 2): number_format(0,2);
+    $porcentagemMeta = ($quantMeta != 0)? number_format(($quantMeta / count($empresaTotais)) * 100, 2): number_format(0,2);
+    $porcentagemNega = ($quantNega != 0)? number_format(($quantNega / count($empresaTotais)) * 100, 2): number_format(0,2);
+    $porcentagemPosi = ($quantPosi != 0)? number_format(($quantPosi / count($empresaTotais)) * 100, 2): number_format(0,2);
 
     if(!is_dir("./arquivos/paineis")){
         mkdir("./arquivos/paineis", 0755, true);
@@ -68,9 +68,9 @@
     // Cabeçalhos
     $tabela1 = [
         "cabecalho" =>              ["",                "QUANT",                                    "%",                "", "SALDO FINAL",  "QUANT","%"],
-        "naoEndossado" =>           ["NÃO ENDOSSADO",   strval($empresasTotais["EmprTotalNaoEnd"]), $porcentagenNaEndo, "", $quantMeta,     $porcentagenMeta],
-        "endossadoParcialmente" =>  ["ENDOSSO PARCIAL", strval($empresasTotais["EmprTotalEndPac"]), $porcentagenEndoPc, "", $quantPosi,     $porcentagenPosi],
-        "endossado" =>              ["ENDOSSADO",        strval($empresasTotais["EmprTotalEnd"]),    $porcentagenEndo,  "", $quantNega,     $porcentagenNega],
+        "naoEndossado" =>           ["NÃO ENDOSSADO",   strval($empresasTotais["EmprTotalNaoEnd"]), $porcentagemNaEndo, "", $quantMeta,     $porcentagemMeta],
+        "endossadoParcialmente" =>  ["ENDOSSO PARCIAL", strval($empresasTotais["EmprTotalEndPac"]), $porcentagemEndoPc, "", $quantPosi,     $porcentagemPosi],
+        "endossado" =>              ["ENDOSSADO",        strval($empresasTotais["EmprTotalEnd"]),    $porcentagemEndo,  "", $quantNega,     $porcentagemNega],
         "espacos" =>                []
     ];
     for($f = 0; $f < 17; $f++){
@@ -119,13 +119,13 @@
     }
 
     foreach ($empresaTotais as $empresaTotal) {
-        $porcentagenEndoEmpresa = number_format(0,2);
+        $porcentagemEndoEmpresa = number_format(0,2);
         if ($empresaTotal["endossados"] != 0) {
-            $porcentagenEndoEmpresa = number_format(($empresaTotal["endossados"]/$empresaTotal["totalMotorista"])*100, 2);
+            $porcentagemEndoEmpresa = number_format(($empresaTotal["endossados"]/$empresaTotal["totalMotorista"])*100, 2);
         }
         $tabela2["conteudo"] = [
             $empresaTotal["empresaNome"],
-            $porcentagenEndoEmpresa,
+            $porcentagemEndoEmpresa,
             $empresaTotal["totalMotorista"],
             $empresaTotal["jornadaPrevista"],
             $empresaTotal["JornadaEfetiva"],
