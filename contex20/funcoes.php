@@ -3,13 +3,12 @@
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
-	global $CONTEX;
-
 	
+	
+	global $CONTEX;
 	if(isset($_GET["acao"]) && empty($_POST["acao"])){
 		$_POST["acao"] = $_GET["acao"];
 	}
-
 	if(isset($_GET["acao"]) && ($_POST["acao"] == $_GET["acao"] || $_GET["acao"] == "index")){
 		foreach ($_GET as $key => $value) {
 			if($key != "acao" && $value != ""){
@@ -35,7 +34,7 @@
 
 	function diferenca_data(string $data1, string $data2=""){
 		if(empty($data2)){
-			$data2=date("Y-m-d");
+			$data2 = date("Y-m-d");
 		}
 		
 		// formato da data yyyy-mm-dd
@@ -66,39 +65,20 @@
 			}
 		}
 
-		// switch($cpf[8]){
-		// 	case 0:
-		// 		echo "CPF do Rio Grande do Sul";
-		// 	break;
-		// 	case 1:
-		// 		echo "CPF do Distrito Federal, Goiás, Mato Grosso do Sul ou Tocantins";
-		// 	break;
-		// 	case 2:
-		// 		echo "CPF do Pará, Amazonas, Acre, Amapá, Rondônia ou Roraima";
-		// 	break;
-		// 	case 3:
-		// 		echo "CPF do Ceará, Maranhão ou Piauí";
-		// 	break;
-		// 	case 4:
-		// 		echo "CPF do Pernambuco, Rio Grande do Norte, Paraíba ou Alagoas";
-		// 	break;
-		// 	case 5:
-		// 		echo "CPF do Bahia ou Sergipe";
-		// 	break;
-		// 	case 6:
-		// 		echo "CPF do Minas Gerais";
-		// 	break;
-		// 	case 7:
-		// 		echo "CPF do Rio de Janeiro ou Espírito Santo";
-		// 	break;
-		// 	case 8:
-		// 		echo "CPF do São Paulo";
-		// 	break;
-		// 	case 9:
-		// 		echo "CPF do Paraná ou Santa Catarina";
-		// 	break;
-		// }
-		// echo "<br>";
+		$estados = [
+			"Rio Grande do Sul",
+			"Distrito Federal, Goiás, Mato Grosso do Sul ou Tocantins",
+			"Pará, Amazonas, Acre, Amapá, Rondônia ou Roraima",
+			"Ceará, Maranhão ou Piauí",
+			"Pernambuco, Rio Grande do Norte, Paraíba ou Alagoas",
+			"Bahia ou Sergipe",
+			"Minas Gerais",
+			"Rio de Janeiro ou Espírito Santo",
+			"São Paulo",
+			"Paraná ou Santa Catarina"
+		];
+		// echo "CPF do ".$estados[intval($cpf[8])];
+
 		return true;
 	}
 
