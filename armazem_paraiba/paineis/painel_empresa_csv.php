@@ -32,20 +32,20 @@
 
     // Obtém o tempo da última modificação do arquivo
     $timestamp = filemtime($file);
-    $Emissão = date('d/m/Y H:i:s', $timestamp);
+    $emissao = date('d/m/Y H:i:s', $timestamp);
 
     // Calcula a porcentagem
-    $porcentagenNaEndo = number_format(0,2);
-    $porcentagenEndoPc = number_format(0,2);
-    $porcentagenEndo = number_format(0,2);
+    $porcentagemNaEndo = number_format(0,2);
+    $porcentagemEndoPc = number_format(0,2);
+    $porcentagemEndo = number_format(0,2);
     if ($MotoristasTotais['naoEndossados'] != 0) {
-        $porcentagenNaEndo = number_format(($MotoristasTotais['naoEndossados'] / $MotoristasTotais['totalMotorista']) * 100,2);
+        $porcentagemNaEndo = number_format(($MotoristasTotais['naoEndossados'] / $MotoristasTotais['totalMotorista']) * 100,2);
     }
     if ($MotoristasTotais['endossoPacial'] != 0) {
-        $porcentagenEndoPc = number_format(($MotoristasTotais['endossoPacial']/ $MotoristasTotais['totalMotorista']) * 100, 2) ;
+        $porcentagemEndoPc = number_format(($MotoristasTotais['endossoPacial']/ $MotoristasTotais['totalMotorista']) * 100, 2) ;
     }
     if ($MotoristasTotais['endossados'] != 0) {
-        $porcentagenNaEndo = number_format(($MotoristasTotais['endossados'] / $MotoristasTotais['totalMotorista']) * 100,2);
+        $porcentagemNaEndo = number_format(($MotoristasTotais['endossados'] / $MotoristasTotais['totalMotorista']) * 100,2);
     }
 
     $quantPosi = 0;
@@ -64,18 +64,18 @@
         }
     }
 
-    $porcentagenMeta = number_format(0,2);
-    $porcentagenNega = number_format(0,2);
-    $porcentagenPosi = number_format(0,2);
+    $porcentagemMeta = number_format(0,2);
+    $porcentagemNega = number_format(0,2);
+    $porcentagemPosi = number_format(0,2);
 
     if ($quantMeta != 0) {
-        $porcentagenMeta  = number_format(($quantMeta / count($MotoristaTotais)) * 100, 2);
+        $porcentagemMeta  = number_format(($quantMeta / count($MotoristaTotais)) * 100, 2);
     }
     if ($quantNega != 0) {
-        $porcentagenNega = number_format(($quantNega / count($MotoristaTotais)) * 100, 2);
+        $porcentagemNega = number_format(($quantNega / count($MotoristaTotais)) * 100, 2);
     }
     if ($quantPosi != 0) {
-        $porcentagenPosi = number_format(($quantPosi / count($MotoristaTotais)) * 100, 2);
+        $porcentagemPosi = number_format(($quantPosi / count($MotoristaTotais)) * 100, 2);
     }
 
 
@@ -86,9 +86,9 @@
     $csvPainelEmpresa = "./arquivos/paineis/Painel_$MotoristasTotais[empresaNome].csv";
     // Cabeçalhos
     $tabela1Cabecalho = ['','QUANT','%','','SALDO FINAL','QUANT','%'];
-    $tabela1Ne = ['NÃO ENDOSSADO',"$MotoristasTotais[naoEndossados]","$porcentagenNaEndo",'',"$quantMeta","$porcentagenMeta"];
-    $tabela1Ep = ['ENDOSSO PARCIAL',"$MotoristasTotais[endossoPacial]","$porcentagenEndoPc",'',"$quantPosi","$porcentagenPosi"];
-    $tabela1E = ['ENDOSSADO',"$MotoristasTotais[endossados]","$porcentagenEndo",'',"$quantNega","$porcentagenNega"];
+    $tabela1Ne = ['NÃO ENDOSSADO',"$MotoristasTotais[naoEndossados]","$porcentagemNaEndo",'',"$quantMeta","$porcentagemMeta"];
+    $tabela1Ep = ['ENDOSSO PARCIAL',"$MotoristasTotais[endossoPacial]","$porcentagemEndoPc",'',"$quantPosi","$porcentagemPosi"];
+    $tabela1E = ['ENDOSSADO',"$MotoristasTotais[endossados]","$porcentagemEndo",'',"$quantNega","$porcentagemNega"];
     $espaco = ['','','','','','','','','','','','','','','','',''];
 
     $arquivo = fopen($csvPainelEmpresa, 'w');
