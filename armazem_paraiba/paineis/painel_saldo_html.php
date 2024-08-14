@@ -1,36 +1,23 @@
-<?php
-	/* Modo debug
-		ini_set('display_errors', 1);
-		error_reporting(E_ALL);
-	//*/
-
-	$dataTimeInicio = new DateTime($_POST['busca_dataInicio']);
-	$dataTimeFim = new DateTime($_POST['busca_dataFim']);
-	$dataInicioFormatada = $dataTimeInicio->format('d/m/Y');
-	$dataFimFormatada = $dataTimeFim->format('d/m/Y');
-?>
 <style>
 	#tabela1 {
-		width: 30% !important;
-		/*margin-top: 9px !important;*/
+		min-width:30%;
 		text-align: center;
-		margin-bottom: -10px !important;
 	}
 
 	#tabela2 {
-		width: 30% !important;
-		/*margin-top: 9px !important;*/
+		min-width: 30%;
 		text-align: center;
-		margin-bottom: -10px !important;
-		margin-left: 10px;
+	}
+
+	.emissao {
+		margin-bottom: 20px;
+		width: -webkit-fill-available;
+		align-content: center;
+		text-align: center;
 	}
 
 	.totais {
 		background-color: #ffe699;
-	}
-
-	tr.totais {
-		text-align: justify;
 	}
 
 	.titulos {
@@ -55,17 +42,129 @@
 	#impressao{
         display: none;
     }
+
+	@media print {
+		body {
+			margin: 1cm;
+			margin-right: 0cm;
+			/* Ajuste o valor conforme necessário para afastar do lado direito */
+			transform: scale(1.0);
+			transform-origin: top left;
+		}
+
+		@page {
+			size: A4 landscape;
+			margin: 1cm;
+		}
+
+		#tituloRelatorio {
+			/*font-size: 2px !important;*/
+			/*padding-left: 200px;*/
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: -50px !important;
+		}
+
+		div:nth-child(6)>div.portlet.light,
+		.scroll-to-top  {
+			display: none !important;
+		}
+
+		#pdf2htmldiv>div {
+			padding: 88px 20px 15px !important;
+		}
+
+		/* .portlet.light>.portlet-title {
+			border-bottom: none;
+			margin-bottom: 0px;
+		} */
+
+		.caption {
+			padding-top: 0px;
+			margin-left: -50px !important;
+			padding-bottom: 0px;
+		}
+
+		.emissao {
+			padding-left: 680px !important;
+		}
+
+		.porcentagemEndo {
+			box-shadow: 0 0 0 1000px #66b3ff inset !important;
+		}
+
+		.porcentagemNaEndo {
+			box-shadow: 0 0 0 1000px #ff471a inset !important;
+		}
+
+		.porcentagemEndoPc {
+			box-shadow: 0 0 0 1000px #ffff66 inset !important;
+		}
+
+		thead tr.totais th {
+			box-shadow: 0 0 0 1000px #ffe699 inset !important;
+			/* Cor para impressão */
+		}
+
+		thead tr.titulos th {
+			box-shadow: 0 0 0 1000px #99ccff inset !important;
+			/* Cor para impressão */
+		}
+
+		.porcentagemMeta {
+			box-shadow: 0 0 0 1000px #66b3ff inset !important;
+		}
+
+		.porcentagemPosit {
+			box-shadow: 0 0 0 1000px #00b33c inset !important;
+		}
+
+		.porcentagemNegat {
+			box-shadow: 0 0 0 1000px #ff471a inset !important;
+		}
+
+		.portlet.light {
+			padding: 75px 20px 15px !important;
+		}
+
+		#impressao {
+			display: block !important;
+			position: relative;
+			padding-left: 630px!important;
+		}
+	}
+
+	table thead tr th:nth-child(3),
+	table thead tr th:nth-child(7),
+	table thead tr th:nth-child(11),
+	table td:nth-child(3),
+	table td:nth-child(7),
+	table td:nth-child(11) {
+		border-right: 3px solid #d8e4ef !important;
+	}
+
+	.th-align {
+		text-align: center;
+		/* Define o alinhamento horizontal desejado, pode ser center, left ou right */
+		vertical-align: middle !important;
+		/* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
+
+	}
+
+	.emissao {
+
+	}
 </style>
 <div id="tituloRelatorio">
-	<img style='width: 150px' src="<?= $aEmpresa[0]['empr_tx_logo'] ?>" alt="Logo Empresa Esquerda">
+	<img style='width: 150px' src="<?=$aEmpresa[0]["empr_tx_logo"]?>" alt="Logo Empresa Esquerda">
 	<h3>Relatorio Geral de saldo</h3>
 	<div class="right-logo">
-		<img style='width: 150px' src="<?= $CONTEX['path'] ?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
+		<img style='width: 150px' src="<?=$CONTEX["path"]?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 	</div>
 </div>
 <div class="col-md-12 col-sm-12" id="pdf2htmldiv">
 	<div class="portlet light ">
-		<div class="emissao">Emissão Doc.: <?= $Emissão ?></div>
 		<div class="table-responsive">
 			<div style="display: flex;">
 				<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact" id="tabela1">
@@ -78,90 +177,54 @@
 					</thead>
 					<tbody>
 						<tr>
-							<td class="porcentagenMeta" style="background-color: #66b3ff;">META</td>
-							<td class="textCentralizado"><?= $quantMeta ?></td>
-							<td><?= $perfomace['meta_endo'] ?></td>
+							<td class="porcentagemMeta" style="background-color: #66b3ff;">META</td>
+							<td class="textCentralizado"><?=$quantMeta?></td>
+							<td><?=$performance["meta_endo"]?></td>
 						</tr>
 						<tr>
-							<td class='porcentagenPosit' style="background-color: #00b33c;">POSITIVO</td>
-							<td class="textCentralizado"><?= $quantPosi ?></td>
-							<td><?= $perfomace['posi_endoPc'] ?></td>
+							<td class='porcentagemPosit' style="background-color: #00b33c;">POSITIVO</td>
+							<td class="textCentralizado"><?=$quantPosi?></td>
+							<td><?=$performance["posi_endoPc"]?></td>
 						</tr>
 						<tr>
-							<td class='porcentagenNegat' style="background-color: #ff471a;">NEGATIVO</td>
-							<td class="textCentralizado"><?= $quantNega ?></td>
-							<td><?= $perfomace['nega_naEndo']  ?></td>
+							<td class='porcentagemNegat' style="background-color: #ff471a;">NEGATIVO</td>
+							<td class="textCentralizado"><?=$quantNega?></td>
+							<td><?=$performance["nega_naEndo"]?></td>
 						</tr>
 					</tbody>
 				</table>
+				<div class="emissao">
+					<?=(!empty($emissao)? "<b>Atualizado em:</b> ".$emissao."<br>": "")
+					."<b>Período do relatório:</b> ".$dataInicioFormatada." a ".$dataFimFormatada?></div>
 			</div>
 			<br>
 			<div class="portlet-body form">
 				<table id="tabela-empresas" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact">
 					<thead>
 						<tr class="totais">
-							<th colspan="1">Período: De <?= $dataInicioFormatada . ' até ' . $dataFimFormatada ?></th>
-							<th></th>
-							<?php
-							if (
-								isset($_POST['empresa']) && !empty($_POST['empresa']) && isset($_POST['busca_dataInicio']) && !empty($_POST['busca_dataInicio'])
-								&& isset($_POST['busca_dataFim']) && !empty($_POST['busca_dataFim'])
-							) {
-								echo "<th colspan='1'>" . $motoristasTotais['jornadaPrevista'] . "</th>"
-									. "<th colspan='1'>" . $motoristasTotais['JornadaEfetiva'] . "</th>"
-									. "<th colspan='1'>" . $motoristasTotais['he50'] . "</th>"
-									. "<th colspan='1'>" . $motoristasTotais['he100'] . "</th>"
-									. "<th colspan='1'>" . $motoristasTotais['adicionalNoturno'] . "</th>"
-									. "<th colspan='1'>" . $motoristasTotais['esperaIndenizada'] . "</th>"
-									. "<th colspan='1'>" . $motoristasTotais['saldoAnterior'] . "</th>"
-									. "<th colspan='1'>" . $motoristasTotais['saldoPeriodo'] . "</th>"
-									. "<th colspan='1'>" . $motoristasTotais['saldoFinal'] . "</th>";
-							} else {
-								echo "<th colspan='1'> $empresas[EmprTotalJorPrev]</th>"
-									. "<th colspan='1'> $empresas[EmprTotalJorEfe]</th>"
-									. "<th colspan='1'> " . (($empresas['EmprTotalHE50'] == '00:00') ? '' : $empresas['EmprTotalHE50']) . "</th>"
-									. "<th colspan='1'> " . (($empresas['EmprTotalHE100'] == '00:00') ? '' : $empresas['EmprTotalHE100']) . "</th>"
-									. "<th colspan='1'> " . (($empresas['EmprTotalAdicNot'] == '00:00') ? '' : $empresas['EmprTotalAdicNot']) . "</th>"
-									. "<th colspan='1'> " . (($empresas['EmprTotalEspInd'] == '00:00') ? '' : $empresas['EmprTotalEspInd']) . "</th>"
-									. "<th colspan='1'> " . (($empresas['EmprTotalSaldoAnter'] == '00:00') ? '' : $empresas['EmprTotalSaldoAnter']) . "</th>"
-									. "<th colspan='1'> " . (($empresas['EmprTotalSaldoPeriodo'] == '00:00') ? '' : $empresas['EmprTotalSaldoPeriodo']) . "</th>"
-									. "<th colspan='1'> " . (($empresas['EmprTotalSaldoFinal'] == '00:00') ? '' : $empresas['EmprTotalSaldoFinal']) . "</th>";
-							}
-							?>
+							<th colspan='2'></th>
+							<th colspan='1'></th>
+							<th colspan='1'></th>
+							<th colspan='1'></th>
+							<th colspan='1'></th>
+							<th colspan='1'></th>
+							<th colspan='1'></th>
+							<th colspan='1'></th>
+							<th colspan='1'></th>
+							<th colspan='1'></th>
 						</tr>
 						<tr id='titulos' class="titulos">
-							<?php
-
-							if (
-								isset($_POST['empresa']) && !empty($_POST['empresa']) && isset($_POST['busca_dataInicio']) && !empty($_POST['busca_dataInicio'])
-								&& isset($_POST['busca_dataFim']) && !empty($_POST['busca_dataFim'])
-							) {
-								echo "<th data-column='motorista' data-order='asc'>Matricula</th>"
-									. "<th data-column='motorista' data-order='asc'>Unidade -  $motoristasTotais[empresaNome]</th>"
-									. "<th data-column='jornadaPrevista' data-order='asc'>Jornada Prevista</th>"
-									. "<th data-column='jornadaEfetiva' data-order='asc'>Jornada Efetiva</th>"
-									. "<th data-column='he50' data-order='asc'>HE 50%</th>"
-									. "<th data-column='he100' data-order='asc'>HE 100%</th>"
-									. "<th data-column='adicionalNoturno' data-order='asc'>Adicional Noturno</th>"
-									. "<th data-column='esperaIndenizada' data-order='asc'>ESPERA INDENIZADA</th>"
-									. "<th data-column='saldoAnterior' data-order='asc'>Saldo Anterior</th>"
-									. "<th data-column='saldoPeriodo' data-order='asc'>Saldo Periodo</th>"
-									. "<th data-column='saldoFinal' data-order='asc'>Saldo Final</th>";
-							} else {
-								echo "<th data-column='empresaNome' data-order='asc'>Todos os CNPJ</th>"
-									. "<th data-column='totalMotorista' data-order='asc'>Quant. Motoristas</th>"
-									. "<th data-column='jornadaPrevista' data-order='asc'>Jornada Prevista</th>"
-									. "<th data-column='JornadaEfetiva	' data-order='asc'>Jornada Efetiva</th>"
-									. "<th data-column='he50' data-order='asc'>HE 50%</th>"
-									. "<th data-column='he100' data-order='asc'>HE 100%</th>"
-									. "<th data-column='adicionalNoturno' data-order='asc'>Adicional Noturno</th>"
-									. "<th data-column='esperaIndenizada' data-order='asc'>ESPERA INDENIZADA</th>"
-									. "<th data-column='saldoAnterior' data-order='asc'>Saldo Anterior</th>"
-									. "<th data-column='saldoPeriodo' data-order='asc'>Saldo Periodo</th>"
-									. "<th data-column='saldoFinal' data-order='asc'>Saldo Final</th>";
-							}
-
-							?>
+							<th data-order='asc'></th>
+							<th data-order='asc'></th>
+							<th data-order='asc'></th>
+							<th data-order='asc'></th>
+							<th data-order='asc'></th>
+							<th data-order='asc'></th>
+							<th data-order='asc'></th>
+							<th data-order='asc'></th>
+							<th data-order='asc'></th>
+							<th data-order='asc'></th>
+							<th data-order='asc'></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -173,7 +236,7 @@
 	</div>
 </div>
 	<div id="impressao">
-		<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . " (UTC-3)" ?>
+		<b>Impressão Doc.:</b> <?=date("d/m/Y \T H:i:s")." (UTC-3)"?>
 	</div>
 	<script>
 		$(document).ready(function() {
@@ -192,61 +255,45 @@
 
 			function carregarDados() {
 				$.ajax({
-					url: '<?= $url ?>',
+					url: '<?=$url?>',
 					dataType: 'json',
 					success: function(data) {
 						tabela.empty();
 						$.each(data, function(index, item) {
-							console.log("Item " + index + ":");
+							//console.log("Item " + index + ":");
 							for (var chave in item) {
 								if (item.hasOwnProperty(chave)) {
-									console.log(chave + ": " + item[chave]);
+									//console.log(chave + ": " + item[chave]);
 								}
 							}
 
+							console.log(item);
+
 							<?php
-							if (
-								isset($_POST['empresa']) && !empty($_POST['empresa']) && isset($_POST['busca_dataInicio']) && !empty($_POST['busca_dataInicio'])
-								&& isset($_POST['busca_dataFim']) && !empty($_POST['busca_dataFim'])
-							) {
-								echo "var linha = '<tr>' +
-									'<td>' + item.matricula + '</td>' +
-									'<td>' + item.motorista + '</td>' +
-									'<td>' + item.jornadaPrevista + '</td>' +
-									'<td>' + item.jornadaEfetiva + '</td>' +
-									'<td>' + item.he50 + '</td>' +
-									'<td>' + item.he100 + '</td>' +
-									'<td>' + item.adicionalNoturno + '</td>' +
-									'<td>' + item.esperaIndenizada + '</td>' +
-									'<td>' + item.saldoAnterior + '</td>' +
-									'<td>' + item.saldoPeriodo + '</td>' +
-									'<td>' + item.saldoFinal + '</td>' +
-									'</tr>';";
-							} else {
-								echo "var he50 = (item.he50 === null || item.he50 === '00:00') ? '' : item.he50;
-								var he100 = (item.he100 === null || item.he100 === '00:00') ? '' : item.he100;
-								var adicionalNoturno = (item.adicionalNoturno === null || item.adicionalNoturno === '00:00') ? '' : item.adicionalNoturno;
-								var esperaIndenizada = (item.esperaIndenizada === null || item.esperaIndenizada === '00:00') ? '' : item.esperaIndenizada;
-								var saldoAnterior = (item.saldoAnterior === null || item.saldoAnterior === '00:00') ? '' : item.saldoAnterior;
-								var saldoPeriodo = (item.saldoPeriodo === null || item.saldoPeriodo === '00:00') ? '' : item.saldoPeriodo;
-								var saldoFinal = (item.saldoFinal === null || item.saldoFinal === '00:00') ? '' : item.saldoFinal;
-
-								var linha = '<tr>' +
-									'<td style=\'cursor: pointer;\' onclick=setAndSubmit(' + item.empresaId + ')>' +
-									item.empresaNome + '</td>' +
-									'<td>' + item.totalMotorista + '</td>' +
-									'<td>' + item.jornadaPrevista + '</td>' +
-									'<td>' + item.JornadaEfetiva + '</td>' +
-									'<td>' + he50 + '</td>' +
-									'<td>' + he100 + '</td>' +
-									'<td>' + adicionalNoturno + '</td>' +
-									'<td>' + esperaIndenizada + '</td>' +
-									'<td>' + saldoAnterior + '</td>' +
-									'<td>' + saldoPeriodo + '</td>' +
-									'<td>' + saldoFinal + '</td>' +
-									'</tr>';";
-							}
-
+								$linha = "'<tr>'";
+								if (!empty($_POST['empresa']) && !empty($_POST['busca_dataInicio']) && !empty($_POST['busca_dataFim'])){
+									$linha .= 
+										"+'<td>'+item.matricula+'</td>'"
+										."+'<td>'+item.motorista+'</td>'";
+								} else {
+									$linha .= 
+										"+'<td style=\"cursor: pointer;\" onclick=setAndSubmit('+item.empresaId+')>'+item.empresaNome+'</td>'"
+										."+'<td>'+item.totalMotorista+'</td>'"
+									;
+								}
+								$linha .= 
+									"+'<td>'+item.jornadaPrevista+'</td>'"
+									."+'<td>'+item.jornadaEfetiva+'</td>'"
+									."+'<td>'+((item.he50 === null || item.he50 === '00:00')? '': item.he50)+'</td>'"
+									."+'<td>'+((item.he100 === null || item.he100 === '00:00')? '': item.he100)+'</td>'"
+									."+'<td>'+((item.adicionalNoturno === null || item.adicionalNoturno === '00:00')? '': item.adicionalNoturno)+'</td>'"
+									."+'<td>'+((item.esperaIndenizada === null || item.esperaIndenizada === '00:00')? '': item.esperaIndenizada)+'</td>'"
+									."+'<td>'+((item.saldoAnterior === null || item.saldoAnterior === '00:00')? '': item.saldoAnterior)+'</td>'"
+									."+'<td>'+((item.saldoPeriodo === null || item.saldoPeriodo === '00:00')? '': item.saldoPeriodo)+'</td>'"
+									."+'<td>'+((item.saldoFinal === null || item.saldoFinal === '00:00')? '': item.saldoFinal)+'</td>'";
+								
+								$linha .= "+'</tr>'";
+								echo "var linha = ".$linha.";";
 							?>
 							tabela.append(linha);
 						});
@@ -264,10 +311,10 @@
 					var valorB = $(b).children('td').eq(coluna).text().toUpperCase();
 
 					if (valorA < valorB) {
-						return ordem === 'asc' ? -1 : 1;
+						return ordem === 'asc'? -1: 1;
 					}
 					if (valorA > valorB) {
-						return ordem === 'asc' ? 1 : -1;
+						return ordem === 'asc'? 1: -1;
 					}
 					return 0;
 				});
@@ -281,12 +328,12 @@
 				var coluna = $(this).index();
 				var ordem = $(this).data('order');
 				$('#tabela-empresas th').data('order', 'desc'); // Redefinir ordem de todas as colunas
-				$(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
+				$(this).data('order', ordem === 'desc'? 'asc': 'desc');
 				ordenarTabela(coluna, $(this).data('order'));
 
 				// Ajustar classes para setas de ordenação
 				$('#titulos th').removeClass('sort-asc sort-desc');
-				$(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
+				$(this).addClass($(this).data('order') === 'asc'? 'sort-asc': 'sort-desc');
 			});
 
 			carregarDados();
