@@ -1,17 +1,25 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
-
-	echo "<style>";
-	include "css/index.css";
-	echo "</style>";
 
 	if(empty(session_id())){
 		$started = session_start();
 	}
     include_once "load_env.php";
+
+	echo "<style>";
+	include "css/index.css";
+	echo "</style>";
+
+	if(!empty($_SESSION["user_tx_nivel"]) && in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
+		echo "<form action='batida_ponto.php' name='form_voltar' method='post'>"
+			."<input type='hidden' name='acao' value='index'>"
+			."</form>"
+			."<script>document.form_voltar.submit();</script>"
+		;
+	}
 
 	function showWelcome($usuario, $turnoAtual, $horaEntrada) {
 
@@ -31,9 +39,9 @@
         $table .= "</tbody></table>";
         
         echo 
-            "<div id='boas-vindas' class='portlet light'>"
+			"<div id='boas-vindas' class='portlet light'>"
 				."<div style='text-align: center; align-content: center; height: 5em;'>"
-					."Bem Vindo(a), ".$usuario.".<br>"
+					."Bem Vindo(a), <b>".$usuario."</b>.<br>"
 					."Período da ".$turnoAtual." iniciado às ".$horaEntrada."."
 				."</div>"
 				."<p>Neste sistema, você encontra informações relacionadas a: "
@@ -49,7 +57,7 @@
 				."<h4><b>Contatos:</b></h4>"
 				."".$table."
 			</div>"
-        ;
+		;
     }
 
 	$turnos = ["Noite", "Manhã", "Tarde", "Noite"];
@@ -130,5 +138,6 @@
 
 	$_POST["HTTP_REFERER"] = ($_SERVER["HTTP_REFERER"]?? "/index.php")."?error=".$error;
 
+	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
 	voltar();
 	exit;
