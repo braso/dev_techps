@@ -11,25 +11,25 @@
     include "../funcoes_ponto.php";
 
     function porcentagemEndosso($total, $meta_endo, $nega_naEndo, $posi_endoPc) : array {
-        $porcentagen = [
+        $porcentagem = [
             'meta_endo' => number_format(0, 2),
             'nega_naEndo' => number_format(0, 2),
             'posi_endoPc' => number_format(0, 2),
         ];
-        $porcentagen['meta_endo'] = 0;
-        $porcentagen['nega_naEndo'] = 0;
-        $porcentagen['posi_endoPc'] = 0;
+        $porcentagem['meta_endo'] = 0;
+        $porcentagem['nega_naEndo'] = 0;
+        $porcentagem['posi_endoPc'] = 0;
         if ($meta_endo != 0) {
-            $porcentagen['meta_endo']= number_format(($meta_endo / $total) * 100, 2);
+            $porcentagem['meta_endo']= number_format(($meta_endo / $total) * 100, 2);
         }
         if ($nega_naEndo != 0) {
-            $porcentagen['nega_naEndo'] = number_format(($nega_naEndo / $total) * 100, 2);
+            $porcentagem['nega_naEndo'] = number_format(($nega_naEndo / $total) * 100, 2);
         }
         if ($posi_endoPc != 0) {
-            $porcentagen['posi_endoPc'] = number_format(($posi_endoPc / $total) * 100, 2);
+            $porcentagem['posi_endoPc'] = number_format(($posi_endoPc / $total) * 100, 2);
         }
 
-        return $porcentagen;
+        return $porcentagem;
     }
 
     function index(){
@@ -149,7 +149,7 @@
                 $timestamp = '';
                 $timestamp = filemtime($file . '/motoristas.json');
                 if (filemtime($file . '/totalMotoristas.json') == filemtime($file . '/motoristas.json')) {
-                    $Emissão = date('d/m/Y H:i:s', $timestamp);
+                    $emissao = date('d/m/Y H:i:s', $timestamp);
                 }
 
                 $endosso = porcentagemEndosso($totaisMotoristas['totalMotorista'],$totaisMotoristas['endossados'], $totaisMotoristas['naoEndossados'], $totaisMotoristas['endossoPacial']);
@@ -170,7 +170,7 @@
                     }
                 }
 
-            $perfomace = porcentagemEndosso(count($motoristaTotais ), $quantMeta, $quantNega, $quantPosi);
+            $performance = porcentagemEndosso(count($motoristaTotais ), $quantMeta, $quantNega, $quantPosi);
 
             } else {
                 echo '<script>alert("Não Possui dados desse mês")</script>';
@@ -187,7 +187,7 @@
 
             $empresasTotais = [];
             $empresaTotais = [];
-            $Emissão = "";
+            $emissao = "";
             $file = "./arquivos/paineis/empresas/$_POST[busca_data]";
             if (is_dir($file) != false) {
                 if (file_exists($file)) {
@@ -205,7 +205,7 @@
                 $timestamp = '';
                 $timestamp = filemtime($file . '/empresas.json');
                 if (filemtime($file . '/empresas.json') == filemtime($file . '/totalEmpresas.json')) {
-                    $Emissão = date('d/m/Y H:i:s', $timestamp);
+                    $emissao = date('d/m/Y H:i:s', $timestamp);
                 }
             } else
                 echo "<script>alert('Não Possui dados desse mês')</script>";
@@ -229,7 +229,11 @@
                 }
             }
 
-            $perfomace = porcentagemEndosso(count($empresaTotais), $quantMeta, $quantNega, $quantPosi);
+            $performance = porcentagemEndosso(count($empresaTotais), $quantMeta, $quantNega, $quantPosi);
+            $dataTimeInicio = new DateTime($_POST['busca_dataInicio']);
+            $dataTimeFim = new DateTime($_POST['busca_dataFim']);
+            $dataInicioFormatada = $dataTimeInicio->format('d/m/Y');
+            $dataFimFormatada = $dataTimeFim->format('d/m/Y');
 
             include_once 'painel_endosso_html.php';
         }
@@ -278,13 +282,13 @@
                             .emissao{
                                 padding-left: 680px !important;
                             }
-                            .porcentagenEndo{
+                            .porcentagemEndo{
                                 box-shadow: 0 0 0 1000px #66b3ff inset !important;
                             }
-                            .porcentagenNaEndo{
+                            .porcentagemNaEndo{
                                 box-shadow: 0 0 0 1000px #ff471a inset !important;
                             }
-                            .porcentagenEndoPc{
+                            .porcentagemEndoPc{
                                 box-shadow: 0 0 0 1000px #ffff66 inset !important;
                             }
                             thead tr.totais th {
@@ -293,13 +297,13 @@
                             thead tr.titulos th {
                                 box-shadow: 0 0 0 1000px #99ccff inset !important; /* Cor para impressão */
                             }
-                            .porcentagenMeta{
+                            .porcentagemMeta{
                                 box-shadow: 0 0 0 1000px #66b3ff inset !important;
                             }
-                            .porcentagenPosit{
+                            .porcentagemPosit{
                                 box-shadow: 0 0 0 1000px #00b33c inset !important;
                             }
-                            .porcentagenNega{
+                            .porcentagemNega{
                                 box-shadow: 0 0 0 1000px #ff471a inset !important;
                             }
                             .portlet.light{
