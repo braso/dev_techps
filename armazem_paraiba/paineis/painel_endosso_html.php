@@ -67,7 +67,7 @@
 </style>
 <div class='col-md-12 col-sm-12'>
     <div class='portlet light '>
-        <div class='emissao'>Emissão Doc.: <?= $Emissão ?></div>
+        <div class='emissao'>Emissão Doc.: <?= $emissao ?></div>
         <div class='table-responsive'>
             <div style='display: flex;'>
                 <table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact' id='tabela1'>
@@ -84,33 +84,33 @@
                             echo "<tr>
                                 <td>NÃO ENDOSSADO</td>
                                 <td class='textCentralizado'> $totaisMotoristas[naoEndossados] </td>
-                                <td style='background-color: #ff471a;' class='porcentagenNaEndo'> $endosso[nega_naEndo] </td>
+                                <td style='background-color: #ff471a;' class='porcentagemNaEndo'> $endosso[nega_naEndo] </td>
                             </tr>
                             <tr>
                                 <td>ENDOSSO PARCIAL</td>
                                 <td class='textCentralizado'> $totaisMotoristas[endossoPacial] </td>
-                                <td style='background-color: #ffff66;' class='porcentagenEndoPc;'> $endosso[posi_endoPc] </td>
+                                <td style='background-color: #ffff66;' class='porcentagemEndoPc;'> $endosso[posi_endoPc] </td>
                             </tr>
                             <tr>
                                 <td>ENDOSSADO</td>
                                 <td class='textCentralizado'> $totaisMotoristas[endossados] </td>
-                                <td style='background-color: #66b3ff;' class='porcentagenEndo'> $endosso[meta_endo] </td>
+                                <td style='background-color: #66b3ff;' class='porcentagemEndo'> $endosso[meta_endo] </td>
                             </tr>";
                         } else {
                             echo "<tr>
 								<td>NÃO ENDOSSADO</td>
 								<td class='textCentralizado'>$empresasTotais[EmprTotalNaoEnd]</td>
-								<td style='background-color: #ff471a;' class='porcentagenNaEndo'> $endosso[nega_naEndo]</td>
+								<td style='background-color: #ff471a;' class='porcentagemNaEndo'> $endosso[nega_naEndo]</td>
 							</tr>
 							<tr>
 								<td>ENDOSSO PARCIAL</td>
 								<td class='textCentralizado'>$empresasTotais[EmprTotalEndPac]</td>
-								<td style='background-color: #ffff66;' class='porcentagenEndoPc'>$endosso[posi_endoPc]</td>
+								<td style='background-color: #ffff66;' class='porcentagemEndoPc'>$endosso[posi_endoPc]</td>
 							</tr>
 							<tr>
 								<td>ENDOSSADO</td>
 								<td class='textCentralizado'>$empresasTotais[EmprTotalEnd]</td>
-								<td style='background-color: #66b3ff;' class='porcentagenEndo'>$endosso[meta_endo] </td>
+								<td style='background-color: #66b3ff;' class='porcentagemEndo'>$endosso[meta_endo] </td>
 							</tr>";
                         }
                         ?>
@@ -127,19 +127,19 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td class='porcentagenMeta' style='background-color: #66b3ff;'>META</td>
+                            <td class='porcentagemMeta' style='background-color: #66b3ff;'>META</td>
                             <td class='textCentralizado'><?= $quantMeta ?></td>
-                            <td><?= $perfomace['meta_endo'] ?></td>
+                            <td><?= $performance['meta_endo'] ?></td>
                         </tr>
                         <tr>
-                            <td class='porcentagenPosit' style='background-color: #00b33c;'>POSITIVO</td>
+                            <td class='porcentagemPosit' style='background-color: #00b33c;'>POSITIVO</td>
                             <td class='textCentralizado'><?= $quantPosi ?></td>
-                            <td><?= $perfomace['posi_endoPc'] ?></td>
+                            <td><?= $performance['posi_endoPc'] ?></td>
                         </tr>
                         <tr>
-                            <td class='porcentagenNega' style='background-color: #ff471a;'>NEGATIVO</td>
+                            <td class='porcentagemNega' style='background-color: #ff471a;'>NEGATIVO</td>
                             <td class='textCentralizado'><?= $quantNega ?></td>
-                            <td><?= $perfomace['nega_naEndo'] ?></td>
+                            <td><?= $performance['nega_naEndo'] ?></td>
                         </tr>
                     </tbody>
                 </table>
