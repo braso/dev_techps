@@ -85,7 +85,7 @@
 
     $csvPainelEmpresa = "./arquivos/paineis/Painel_$MotoristasTotais[empresaNome].csv";
     // Cabeçalhos
-    $tabela1Cabecalho = ['','QUANT','%','','SALDO FINAL','QUANT','%'];
+    $tabela1Cabecalho = ['','TOTAL','%','','SALDO FINAL','TOTAL','%'];
     $tabela1Ne = ['NÃO ENDOSSADO',"$MotoristasTotais[naoEndossados]","$porcentagemNaEndo",'',"$quantMeta","$porcentagemMeta"];
     $tabela1Ep = ['ENDOSSO PARCIAL',"$MotoristasTotais[endossoPacial]","$porcentagemEndoPc",'',"$quantPosi","$porcentagemPosi"];
     $tabela1E = ['ENDOSSADO',"$MotoristasTotais[endossados]","$porcentagemEndo",'',"$quantNega","$porcentagemNega"];
