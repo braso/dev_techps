@@ -1,0 +1,192 @@
+body{
+    --var-blue: #66B4FF;
+    --var-red: #FF4719;
+    --var-yellow: #F1C413;
+    --var-green: #00B33D;
+}
+
+#tabela1 {
+    min-width:30%;
+    text-align: center;
+}
+
+#tabela2 {
+    min-width: 30%;
+    text-align: center;
+}
+
+#tabela1 th, #tabela2 th{
+    text-align: center;
+}
+
+#tabela1 tbody tr td:first-child, #tabela2 tbody tr td:first-child{
+    color: white;
+    text-shadow: 2px 2px 3px black;
+}
+
+.porcentagemMeta{
+    background-color: var(--var-blue);
+}
+.porcentagemPosit{
+    background-color: var(--var-green);
+}
+.porcentagemNegat{
+    background-color: var(--var-red);
+}
+
+.emissao {
+    margin-bottom: 20px;
+    width: -webkit-fill-available;
+    align-content: center;
+    text-align: center;
+}
+
+.totais {
+    background-color: var(--var-yellow);
+}
+
+.totais th {
+    text-align: center;
+    align-content: center;
+}
+
+.titulos {
+    background-color: var(--var-blue);
+}
+
+.titulos th {
+    text-align: center;
+    align-content: center;
+}
+
+#tituloRelatorio {
+    display: none;
+}
+
+th {
+    cursor: pointer;
+}
+
+th.sort-asc::after {
+    content: " \2191";
+}
+
+th.sort-desc::after {
+    content: " \2193";
+}
+#impressao{
+    display: none;
+}
+
+@media print {
+    body {
+        margin: 1cm;
+        margin-right: 0cm;
+        /* Ajuste o valor conforme necessário para afastar do lado direito */
+        transform: scale(1.0);
+        transform-origin: top left;
+    }
+
+    @page {
+        size: A4 landscape;
+        margin: 1cm;
+    }
+
+    #tituloRelatorio {
+        /*font-size: 2px !important;*/
+        /*padding-left: 200px;*/
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: -50px !important;
+    }
+
+    div:nth-child(6)>div.portlet.light,
+    .scroll-to-top  {
+        display: none !important;
+    }
+
+    #pdf2htmldiv>div {
+        padding: 88px 20px 15px !important;
+    }
+
+    /* .portlet.light>.portlet-title {
+        border-bottom: none;
+        margin-bottom: 0px;
+    } */
+
+    .caption {
+        padding-top: 0px;
+        margin-left: -50px !important;
+        padding-bottom: 0px;
+    }
+
+    .emissao {
+        padding-left: 680px !important;
+    }
+
+    .porcentagemEndo {
+        box-shadow: 0 0 0 1000px #66b3ff inset !important;
+    }
+
+    .porcentagemNaEndo {
+        box-shadow: 0 0 0 1000px #ff471a inset !important;
+    }
+
+    .porcentagemEndoPc {
+        box-shadow: 0 0 0 1000px #ffff66 inset !important;
+    }
+
+    thead tr.totais th {
+        box-shadow: 0 0 0 1000px #ffe699 inset !important;
+        /* Cor para impressão */
+    }
+
+    thead tr.titulos th {
+        box-shadow: 0 0 0 1000px #99ccff inset !important;
+        /* Cor para impressão */
+    }
+
+    .porcentagemMeta {
+        box-shadow: 0 0 0 1000px #66b3ff inset !important;
+    }
+
+    .porcentagemPosit {
+        box-shadow: 0 0 0 1000px #00b33c inset !important;
+    }
+
+    .porcentagemNegat {
+        box-shadow: 0 0 0 1000px #ff471a inset !important;
+    }
+
+    .portlet.light {
+        padding: 75px 20px 15px !important;
+    }
+
+    #impressao {
+        display: block !important;
+        position: relative;
+        padding-left: 630px!important;
+    }
+}
+
+table thead tr th:nth-child(3),
+table thead tr th:nth-child(7),
+table thead tr th:nth-child(11),
+table td:nth-child(3),
+table td:nth-child(7),
+table td:nth-child(11) {
+    border-right: 3px solid #d8e4ef !important;
+}
+
+.th-align {
+    text-align: center;
+    /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
+    vertical-align: middle !important;
+    /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
+
+}
+
+.emissao {
+
+}
