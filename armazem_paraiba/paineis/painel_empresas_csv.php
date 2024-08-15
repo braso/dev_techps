@@ -67,7 +67,7 @@
     $csvPainelEmpresa = "./arquivos/paineis/Painel_Geral.csv";
     // Cabeçalhos
     $tabela1 = [
-        "cabecalho" =>              ["",                "QUANT",                                    "%",                "", "SALDO FINAL",  "QUANT","%"],
+        "cabecalho" =>              ["",                "TOTAL",                                    "%",                "", "SALDO FINAL",  "TOTAL","%"],
         "naoEndossado" =>           ["NÃO ENDOSSADO",   strval($empresasTotais["EmprTotalNaoEnd"]), $porcentagemNaEndo, "", $quantMeta,     $porcentagemMeta],
         "endossadoParcialmente" =>  ["ENDOSSO PARCIAL", strval($empresasTotais["EmprTotalEndPac"]), $porcentagemEndoPc, "", $quantPosi,     $porcentagemPosi],
         "endossado" =>              ["ENDOSSADO",        strval($empresasTotais["EmprTotalEnd"]),    $porcentagemEndo,  "", $quantNega,     $porcentagemNega],
