@@ -36,7 +36,8 @@ echo
 		],
 		"painel" => [
 			"/painel_saldo.php" => "Saldo", 
-			"/painel.php" 		=> "Endossos"
+			"/painel.php" 		=> "Endossos",
+			"/painel_jornada_aberta.php" => "Jornada Aberta"
 		],
 		"suporte" => [
 			"/#" 		=> "Perguntas Frequentes", 

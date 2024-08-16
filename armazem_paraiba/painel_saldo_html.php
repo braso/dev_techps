@@ -188,9 +188,9 @@ $dataFimFormatada = $dataTimeFim->format('d/m/Y');
 				isset($_POST['empresa']) && !empty($_POST['empresa']) && isset($_POST['busca_dataInicio']) && !empty($_POST['busca_dataInicio'])
 				&& isset($_POST['busca_dataFim']) && !empty($_POST['busca_dataFim'])
 			) {
-				$url = "./arquivos/paineis/Saldo/$idEmpresa/$mes-$ano/motoristas.json";
+				$url = "./arquivos/paineis/saldos/$idEmpresa/$mes-$ano/motoristas.json";
 			} else {
-				$url = "arquivos/paineis/Saldo/empresas/$mes-$ano/totalEmpresas.json";
+				$url = "arquivos/paineis/saldos/empresas/$mes-$ano/totalEmpresas.json";
 			}
 			?>
 
