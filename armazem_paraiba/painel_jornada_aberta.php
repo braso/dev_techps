@@ -4,8 +4,9 @@
 	error_reporting(E_ALL);
 //*/
 
-// ini_set("display_errors", 1);
-// error_reporting(E_ALL);
+ini_set("display_errors", 1);
+
+error_reporting(E_ERROR | E_WARNING | E_PARSE);
 
 include "funcoes_ponto.php";
 
@@ -16,7 +17,7 @@ function criar_relatorio_saldo()
     // $periodoInicio = $_POST["busca_dataInicio"];
     // $periodoFim = $_POST["busca_dataFim"];
 
-    $periodoInicio = "2024-08-01";
+    $periodoInicio = "2024-07-16";
     $periodoFim = "2024-08-16";
 
     $empresas = mysqli_fetch_all(
@@ -45,15 +46,20 @@ function criar_relatorio_saldo()
                 $diasPonto[] = diaDetalhePonto($motorista['enti_tx_matricula'], $dataVez);
             }
 
-
-
             $campos = ['fimJornada', 'inicioRefeicao', 'fimRefeicao'];
-            $totais = array_fill_keys($campos, 0); // Inicializa totais para cada campo
+            $totais = [];
 
+            // Inicializa o array $totais com chaves para cada campo e arrays vazios para armazenar as datas
+            foreach ($campos as $campo) {
+                $totais[$campo] = [];
+            }
+            
             foreach ($diasPonto as $diaPonto) {
+                $dataTimeDia = DateTime::createFromFormat('d/m/Y', $diaPonto["data"]);
+                $dia = $dataTimeDia->format('d/m');
                 foreach ($campos as $campo) {
                     if (strpos($diaPonto[$campo], "fa-warning") !== false) {
-                        $totais[$campo] += substr_count($diaPonto[$campo], "fa-warning");
+                        $totais[$campo] [$dia] += 1 ;
                     }
                 }
             }
@@ -67,6 +73,10 @@ function criar_relatorio_saldo()
                 'fimRefeicao' =>  $totais['fimRefeicao'],
             ];
         }
+        echo '<pre>';
+        echo json_encode($motoristasTotal, JSON_PRETTY_PRINT);
+        echo '</pre>';
+        die();
 
         $path = "./arquivos/paineis/jornada/$empresa[empr_nb_id]/$mes-$ano";
         $fileName = 'motoristas.json';
@@ -80,10 +90,10 @@ function criar_relatorio_saldo()
         $totalinicioRefeicao = 0;
         $totalfimRefeicao = 0;
 
-        foreach ($motoristasTotal as $row) {
-            $totalFimJornada     +=  $row['fimJornada'];
-            $totalinicioRefeicao +=  $row['inicioRefeicao'];
-            $totalfimRefeicao    +=  $row['fimRefeicao'];
+        foreach ($motoristasTotal as $motorista) {
+            $totalFimJornada += count($motorista['fimJornada']);
+            $totalinicioRefeicao += count($motorista['inicioRefeicao']);
+            $totalfimRefeicao += count($motorista['fimRefeicao']);
         }
 
         $empresaTotal[] = [
@@ -102,22 +112,6 @@ function criar_relatorio_saldo()
         $jsonArquiTotais = json_encode($empresaTotal, JSON_UNESCAPED_UNICODE);
         file_put_contents($path . '/' . $fileName, $jsonArquiTotais);
     }
-
-    $path = "./arquivos/paineis/jornada/empresas/$mes-$ano";
-    $fileName = 'totalEmpresas.json';
-    if (!is_dir($path)) {
-        mkdir($path, 0755, true);
-    }
-    $jsonArquiTotais = json_encode($empresaTotal, JSON_UNESCAPED_UNICODE);
-    file_put_contents($path . '/' . $fileName, $jsonArquiTotais);
-
-    $totais[] = [
-        'empresaId'        => $empresa['empr_nb_id'],
-        'empresaNome'      => $empresa['empr_tx_nome'],
-        'fimJornada'       =>  $totalFimJornada,
-        'inicioRefeicao'   =>  $totalinicioRefeicao,
-        'fimRefeicao'      =>  $totalfimRefeicao,
-    ];
 }
 
 criar_relatorio_saldo();
