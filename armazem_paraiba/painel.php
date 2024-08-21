@@ -149,7 +149,7 @@ function index(){
             $timestamp = '';
             $timestamp = filemtime($file . '/motoristas.json');
             if (filemtime($file . '/totalMotoristas.json') == filemtime($file . '/motoristas.json')) {
-                $Emissão = date('d/m/Y H:i:s', $timestamp);
+                $emissao  = date('d/m/Y H:i:s', $timestamp);
             }
 
             $endosso = porcentagemEndosso($totaisMotoristas['totalMotorista'],$totaisMotoristas['endossados'], $totaisMotoristas['naoEndossados'], $totaisMotoristas['endossoPacial']);
@@ -187,7 +187,7 @@ function index(){
 
         $empresasTotais = [];
         $empresaTotais = [];
-        $Emissão = "";
+        $emissao  = "";
         $file = "./arquivos/paineis/empresas/$_POST[busca_data]";
         if (is_dir($file) != false) {
             if (file_exists($file)) {
@@ -205,7 +205,7 @@ function index(){
             $timestamp = '';
             $timestamp = filemtime($file . '/empresas.json');
             if (filemtime($file . '/empresas.json') == filemtime($file . '/totalEmpresas.json')) {
-                $Emissão = date('d/m/Y H:i:s', $timestamp);
+                $emissao  = date('d/m/Y H:i:s', $timestamp);
             }
         } else
             echo "<script>alert('Não Possui dados desse mês')</script>";

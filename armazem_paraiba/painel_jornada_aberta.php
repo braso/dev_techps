@@ -16,9 +16,10 @@ function salvarArquivo($path, $fileName, $data) {
 function dadosMotorista($idEnpresa, $periodoInicio, $periodoFim) {
     $motoristas = mysqli_fetch_all(
         query(
-        "SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula" 
-        ." FROM entidade WHERE enti_nb_empresa = $idEnpresa"
-        ." AND enti_tx_status != 'inativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
+        "SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula FROM entidade" 
+        ." WHERE enti_tx_status = 'ativo'"
+        ." AND enti_nb_empresa = $idEnpresa"
+        ." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
         ." ORDER BY enti_tx_nome ASC;"
         ),
         MYSQLI_ASSOC
@@ -80,7 +81,7 @@ function criar_relatorio_saldo() {
     $empresas = mysqli_fetch_all(
         query(
         "SELECT empr_nb_id, empr_tx_nome"
-        ." FROM `empresa` WHERE empr_tx_status != 'inativo'"
+        ." FROM `empresa` WHERE empr_tx_status = 'ativo'"
         ." ORDER BY empr_tx_nome ASC;"
         ),
         MYSQLI_ASSOC
@@ -108,10 +109,10 @@ function criar_relatorio_saldo() {
         ];
 
 
-        echo '<pre>';
-        echo json_encode($empresaTotal, JSON_PRETTY_PRINT);
-        echo '</pre>';
-        die();
+        // echo '<pre>';
+        // echo json_encode($empresaTotal, JSON_PRETTY_PRINT);
+        // echo '</pre>';
+        // die();
 
 
         $mesAno = (new DateTime($periodoInicio))->format('m-Y');

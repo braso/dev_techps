@@ -18,14 +18,6 @@ function porcentagemSaldo($total, $meta_endo, $nega_naEndo, $posi_endoPc): array
         'posi_endoPc' => number_format(0, 2),
     ];
 
-    // var_dump($meta_endo);
-    // echo '<br>';
-    // var_dump($meta_endo);
-    // echo '<br>';
-    // var_dump($meta_endo);
-    // echo '<br>';
-    // var_dump($meta_endo);
-    // echo '<br>';
     if ($meta_endo != 0) {
         $porcentagen['meta_endo'] = number_format(($meta_endo / $total) * 100, 2);
     }
@@ -45,7 +37,7 @@ function criar_relatorio_saldo() {
     $periodoFim = $_POST["busca_dataFim"];
 
     $empresas = mysqli_fetch_all(
-        query("SELECT empr_nb_id, empr_tx_nome FROM `empresa` WHERE empr_tx_status != 'inativo' ORDER BY empr_tx_nome ASC;"),
+        query("SELECT empr_nb_id, empr_tx_nome FROM `empresa` WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome ASC;"),
         MYSQLI_ASSOC
     );
 
