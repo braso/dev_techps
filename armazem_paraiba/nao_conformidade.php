@@ -287,6 +287,12 @@
 									$hasUnconformities = true;
 									$counts["naoConformidade"] += substr_count($aDia[$f][$key], "fa-warning");
 								}
+								if (strpos($aDia[$f][$key], "fa-info-circle") !== false) {
+									if (strpos($aDia[$f][$key], "color:red;") !== false) {
+										$hasUnconformities = true;
+										$counts["naoConformidade"] += substr_count($aDia[$f][$key], "fa-warning");
+									}
+								}
 							}
 							$showRow = !(($_POST["busca_situacao"] == "Não conformidade" && !$hasUnconformities));
 							$aDia[$f]["exibir"] = $showRow;
