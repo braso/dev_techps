@@ -484,8 +484,8 @@
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99', '99.999.999/9999-99']});";
 			break;
 			case "MASCARA_RG":
-				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['9{1,3}.999.999'], placeholder: '',
-            numericInput: true});";
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999'], placeholder: '0',
+            numericInput: true, numericInput: true, rightAlign: false});";
 			break;
 			case "MASCARA_DINHERO":
 				$dataScript .= 

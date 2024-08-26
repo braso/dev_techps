@@ -3,7 +3,7 @@
 	ini_set("display_errors", 1);
 	error_reporting(E_ALL);
 //*/
-include "funcoes_ponto.php";
+include __DIR__ . "../../funcoes_ponto.php";
 
 function salvarArquivo($path, $fileName, $data) {
     if (!is_dir($path)) {
@@ -57,7 +57,7 @@ function dadosMotorista($idEnpresa, $periodoInicio, $periodoFim) {
             }
         }
 
-        $motoristasTotal[] = [
+        $motoristasTotal = [
             'IdMotorista' => $motorista['enti_nb_id'],
             'matricula' => $motorista['enti_tx_matricula'],
             'motorista' => $motorista['enti_tx_nome'],
@@ -65,9 +65,14 @@ function dadosMotorista($idEnpresa, $periodoInicio, $periodoFim) {
             'inicioRefeicao' =>  $totais['inicioRefeicao'],
             'fimRefeicao' =>  $totais['fimRefeicao'],
         ];
+
+        $path = "./arquivos/jornada/$idEnpresa";
+        salvarArquivo($path, $motorista['enti_tx_matricula'].'.json', $motoristasTotal);
+
+        $todos[] = $motoristasTotal;
     }
 
-    return $motoristasTotal;
+    return $todos ;
 }
 
 function criar_relatorio_saldo() {
@@ -100,27 +105,40 @@ function criar_relatorio_saldo() {
             $totalfimRefeicao += sizeof($motorista['fimRefeicao']);
         }
 
-        $empresaTotal[] = [
-            'empresaId'        => $empresa['empr_nb_id'],
-            'empresaNome'      => $empresa['empr_tx_nome'],
+        $empresaTotal = [
+            'empresaId'        =>  $empresa['empr_nb_id'],
+            'empresaNome'      =>  $empresa['empr_tx_nome'],
             'fimJornada'       =>  $totalFimJornada,
             'inicioRefeicao'   =>  $totalinicioRefeicao,
             'fimRefeicao'      =>  $totalfimRefeicao,
         ];
 
-
-        // echo '<pre>';
-        // echo json_encode($empresaTotal, JSON_PRETTY_PRINT);
-        // echo '</pre>';
-        // die();
-
-
-        $mesAno = (new DateTime($periodoInicio))->format('m-Y');
-        $path = "./arquivos/paineis/jornada/$empresa[empr_nb_id]/$mesAno";
+        $path = "./arquivos/jornada/$empresa[empr_nb_id]/";
     
-        salvarArquivo($path, 'motoristas.json', $motoristasTotal);
-        salvarArquivo($path, 'totalEmpresas.json', $empresaTotal);
+        // salvarArquivo($path, 'motoristas.json', $motoristasTotal);
+        salvarArquivo($path, 'empresa_'.$empresa['empr_nb_id'].'.json', $empresaTotal);
+
+        $totalEmpresa [] = $empresaTotal;
+        $path = "./arquivos/jornada/";
+
+        salvarArquivo($path, 'empresa_'.$empresa['empr_nb_id'].'.json', $totalEmpresa);
     }
+
+    foreach ($totalEmpresa as $empresa) {
+        $totalFimJornada += sizeof($empresa['fimJornada']);
+        $totalinicioRefeicao += sizeof($empresa['inicioRefeicao']);
+        $totalfimRefeicao += sizeof($empresa['fimRefeicao']);
+    }
+
+    $empresaTotal = [
+        'fimJornada'       =>  $totalFimJornada,
+        'inicioRefeicao'   =>  $totalinicioRefeicao,
+        'fimRefeicao'      =>  $totalfimRefeicao,
+    ];
+
+    $path = "./arquivos/jornada/";
+
+    salvarArquivo($path, 'totalEmpresa.json', $empresaTotal);
 
 }
 

@@ -191,7 +191,7 @@
 			'pont_tx_status' 		=> 'ativo',
 			'pont_tx_dataCadastro' 	=> date("Y-m-d H:i:s"),
 			'pont_nb_motivo' 		=> $_POST['motivo'],
-			'pont_tx_descricao' 	=> $_POST['descricao']
+			'pont_tx_justificativa' => $_POST['descricao']
 		];
 		
 		inserir('ponto', array_keys($newPonto), array_values($newPonto));
@@ -427,7 +427,7 @@
 		}
 
 		$botoes[] = $botao_imprimir;
-		$botoes[] = botao("Voltar", "voltar", implode(",", array_keys($_POST)), implode(",", array_values($_POST)));
+		$botoes[] = botao("Voltar", "voltar");
 		
 		$botoes[] = status();
 
@@ -452,7 +452,7 @@
 		fecha_form($botoes);
 
 		$sql = pegarSqlDia($aMotorista['enti_tx_matricula'], ["pont_nb_id", "pont_tx_data", "macr_tx_nome", "moti_tx_nome", 
-		"moti_tx_legenda", "pont_tx_descricao", "pont_tx_justificativa", "user_tx_login", "pont_tx_dataCadastro",
+		"moti_tx_legenda", "pont_tx_justificativa", "user_tx_login", "pont_tx_dataCadastro",
 		"pont_tx_latitude", "pont_tx_longitude"]);
 
 
