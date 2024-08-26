@@ -4,33 +4,44 @@
 		error_reporting(E_ALL);
 	//*/
 	global $CONTEX;
-
-	
-	if(isset($_GET["acao"]) && empty($_POST["acao"])){
-		$_POST["acao"] = $_GET["acao"];
-	}
-
-	if(isset($_GET["acao"]) && ($_POST["acao"] == $_GET["acao"] || $_GET["acao"] == "index()")){
-		foreach ($_GET as $key => $value) {
-			if($key != "acao" && $value != ""){
-				$_POST[$key] = $value;
+	if(isset($_GET["acao"])){
+		if(empty($_POST["acao"])){
+			$_POST["acao"] = $_GET["acao"];
+		}
+		
+		if(($_POST["acao"] == $_GET["acao"] || $_GET["acao"] == "index" || $_GET["acao"] == "index()")){
+			foreach($_GET as $key => $value) {
+				if($key != "acao" && $value != ""){
+					$_POST[$key] = $value;
+				}
 			}
 		}
 	}
 
-	if(empty($_POST["acao"])){
+	if(!empty($_POST["acao"])){
+		$nomeFuncao = $_POST["acao"];
+		if(is_int(strpos($_POST["acao"], "(")) && is_int(strpos($_POST["acao"], ")"))){
+			$nomeFuncao = substr($_POST["acao"], 0, strpos($_POST["acao"], "("));
+		}else{
+			$_POST["acao"] .= "()";
+		}
+		if(function_exists($nomeFuncao)){
+
+			if(preg_match_all("/^((.+[^\n])*)\((.*)\)$/", $_POST["acao"])){
+				eval($_POST["acao"].";");
+			}else{
+				echo "ERRO: função mal formatada: ".$_POST["acao"];
+			}
+			exit;
+		}else{
+			echo "ERRO: Função '".$nomeFuncao."' não existe!";
+			exit;
+		}
+	}else{
 		if(function_exists("index")){
 			index();
 			exit;
 		}
-	}else{
-		if(function_exists($_POST["acao"])){
-			$_POST["acao"]();
-		}else{
-			echo "ERRO: Função '".$_POST["acao"]."' não existe!";
-			exit;
-		}
-		
 	}
 
 	function diferenca_data(string $data1, string $data2=""){
@@ -307,7 +318,7 @@
 
 	function data($data,$hora=0){
 
-		if($data=="0000-00-00" || $data=="00/00/0000" || $data=="0001-01-01" )
+		if($data=="0000-00-00" || $data=="00/00/0000" )
 			return "";
 
 		if($hora==1){
@@ -485,7 +496,7 @@
 			break;
 			case "MASCARA_RG":
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999'], placeholder: '0',
-            numericInput: true, numericInput: true, rightAlign: false});";
+				numericInput: true, numericInput: true, rightAlign: false});";
 			break;
 			case "MASCARA_DINHERO":
 				$dataScript .= 
