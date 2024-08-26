@@ -10,7 +10,7 @@
 		$_POST["acao"] = $_GET["acao"];
 	}
 
-	if(isset($_GET["acao"]) && ($_POST["acao"] == $_GET["acao"] || $_GET["acao"] == "index")){
+	if(isset($_GET["acao"]) && ($_POST["acao"] == $_GET["acao"] || $_GET["acao"] == "index()")){
 		foreach ($_GET as $key => $value) {
 			if($key != "acao" && $value != ""){
 				$_POST[$key] = $value;
