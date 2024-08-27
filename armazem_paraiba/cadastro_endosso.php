@@ -286,7 +286,7 @@
 						}
 						if(is_int(strpos($row[$f], "Ajuste de Ponto"))){
 							$row[$f] = str_replace("Ajuste de Ponto", "Ajuste de Ponto(endossado)", $row[$f]);
-							$row[$f] = str_replace("class=\"fa fa-circle\">", "class=\"fa fa-circle\">(E)", $row[$f]);
+							$row[$f] = str_replace("class='fa fa-circle'>", "class='fa fa-circle'>(E)", $row[$f]);
 						}
 						if ($row[$f] == "00:00") {
 							$row[$f] = "";
@@ -406,7 +406,6 @@
 			
 			$successMsg .= "- [".$novoEndosso["endo_tx_matricula"]."] ".$novoEndosso["endo_tx_nome"].": ".$novoEndosso["totalResumo"]["he50APagar"]."<br>";
 
-			
 			//* Salvando arquivo e cadastrando no banco de dados
 
 				$filename = md5($novoEndosso["endo_tx_matricula"].$novoEndosso["endo_tx_mes"]);
