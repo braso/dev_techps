@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
@@ -35,6 +35,12 @@
 	// }
 
 	function buscar(){
+		if(!empty($_GET["acao"]) && $_GET["acao"] == "buscar"){//Se estiver pesquisando
+			//Conferir se os campos foram inseridos.
+			if(empty($_GET["busca_data"])){
+				echo "<script>alert('Insira data para pesquisar.');</script>";
+			}
+		}
 		index();
 		exit;
 	}
@@ -42,19 +48,10 @@
 	function index(){
 		global $totalResumo, $CONTEX;
 
-		var_dump($_SERVER); echo "<br><br>";
-
-		if(!empty($_GET["acao"]) && $_GET["acao"] == "index"){//Se estiver pesquisando
-			//Conferir se os campos foram inseridos.
-			if(empty($_GET["busca_data"])){
-				echo "<script>alert('Insira data para pesquisar.');</script>";
-			}
-		}
-
 		cabecalho("Não Conformidade");
 
 		$extraEmpresa = "";
-			$extraEmpresaMotorista = "";
+		$extraEmpresaMotorista = "";
 		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
 			$extraEmpresa = " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
 			$extraEmpresaMotorista = " AND enti_nb_empresa = '".$_SESSION["user_nb_empresa"]."'";
