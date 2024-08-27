@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
@@ -44,15 +44,17 @@
 					."Bem Vindo(a), <b>".$usuario."</b>.<br>"
 					."Período da ".$turnoAtual." iniciado às ".$horaEntrada."."
 				."</div>"
-				."<p>Neste sistema, você encontra informações relacionadas a: "
-					."<ul>"
-						."<li>Registros;</li>"
-						."<li>Apontamentos de espelho de ponto;</li>"
-						."<li>Endosso;</li>"
-						."<li>Não conformidades;</li>"
-						."<li>Acesso aos relatórios dos serviços contratados.</li>"
-					."</ul>"
-				."</p>"
+				."<div class='obs'>"
+					."<p>Neste sistema, você encontra informações relacionadas a: "
+						."<ul>"
+							."<li>Registros;</li>"
+							."<li>Apontamentos de espelho de ponto;</li>"
+							."<li>Endosso;</li>"
+							."<li>Não conformidades;</li>"
+							."<li>Acesso aos relatórios dos serviços contratados.</li>"
+						."</ul>"
+					."</p>"
+				."</div>"
 				."<p>Em caso de dúvida, respondemos a partir de uma das formas de contato abaixo.</p>"
 				."<h4><b>Contatos:</b></h4>"
 				."".$table."
