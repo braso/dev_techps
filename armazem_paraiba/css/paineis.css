@@ -5,9 +5,14 @@ body{
     --var-green: #00B33D;
 }
 
+.table-responsive div:first-child{
+    display:flex;
+}
+
 #tabela1 {
     min-width:30%;
     text-align: center;
+    display: none;
 }
 
 #tabela2 {
@@ -24,13 +29,17 @@ body{
     text-shadow: 2px 2px 3px black;
 }
 
-.porcentagemMeta{
+#tabela1 > tbody > tr:nth-child(1) > td:nth-child(1){
+    background-color: var(--var-red);
+}
+
+.porcentagemMeta td:first-child, .porcentagemEndoPc td:first-child{
     background-color: var(--var-blue);
 }
-.porcentagemPosit{
+.porcentagemPosi td:first-child, .porcentagemEndo td:first-child{
     background-color: var(--var-green);
 }
-.porcentagemNegat{
+.porcentagemNega td:first-child, .porcentagemNaEndo td:first-child{
     background-color: var(--var-red);
 }
 
@@ -59,7 +68,7 @@ body{
     align-content: center;
 }
 
-#tituloRelatorio {
+#printTitulo {
     display: none;
 }
 
@@ -92,7 +101,7 @@ th.sort-desc::after {
         margin: 1cm;
     }
 
-    #tituloRelatorio {
+    #printTitulo {
         /*font-size: 2px !important;*/
         /*padding-left: 200px;*/
         display: flex;
@@ -170,23 +179,10 @@ th.sort-desc::after {
     }
 }
 
-table thead tr th:nth-child(3),
-table thead tr th:nth-child(7),
-table thead tr th:nth-child(11),
-table td:nth-child(3),
-table td:nth-child(7),
-table td:nth-child(11) {
-    border-right: 3px solid #d8e4ef !important;
-}
-
 .th-align {
     text-align: center;
     /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
     vertical-align: middle !important;
     /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
-
-}
-
-.emissao {
 
 }
