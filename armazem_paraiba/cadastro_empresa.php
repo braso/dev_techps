@@ -299,7 +299,7 @@
 						document.getElementById('frame_cep').src='".$path_parts["basename"]."?acao=checarCNPJ&cnpj='+cnpj+'&id=".$a_mod["empr_nb_id"]."'
 					}
 				}
-				$(document).ready(function() {
+				$(document).ready(function(){
 					$('#cnpj').on('blur', function(){
 						var cnpj = $(this).val();
 
