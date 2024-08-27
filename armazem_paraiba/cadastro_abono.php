@@ -88,8 +88,6 @@
 			inserir("abono", $campos, $valores);
 		}
 
-		$_POST["acao"] = "index";
-
 		voltar();
 		exit;
 	}
