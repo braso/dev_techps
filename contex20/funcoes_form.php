@@ -151,22 +151,22 @@
 				<!-- FIM FOOTER -->
 				<!-- INICIO CORE PLUGINS -->
 
-				<form id="loginTimeoutForm" method="post" target="<?=$_SERVER['HTTP_ORIGIN'].$CONTEX['path']?>/logout.php" action="logout"></form>
+				<form id="loginTimeoutForm" method="post" target="<?=($_SERVER['DOCUMENT_ROOT']).$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]?>/logout.php" action="logout"></form>
 				
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/js.cookie.min.js" type="text/javascript"></script>
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-hover-dropdown/bootstrap-hover-dropdown.min.js" type="text/javascript"></script>
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js" type="text/javascript"></script>
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-switch/js/bootstrap-switch.min.js" type="text/javascript"></script>
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-tabdrop/js/bootstrap-tabdrop.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/js.cookie.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-hover-dropdown/bootstrap-hover-dropdown.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-switch/js/bootstrap-switch.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-tabdrop/js/bootstrap-tabdrop.js" type="text/javascript"></script>
 				<!-- FIM CORE PLUGINS -->
 				<!-- INICIO TEMA GLOBAL SCRIPTS -->
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/scripts/app.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/scripts/app.min.js" type="text/javascript"></script>
 				<!-- FIM TEMA GLOBAL SCRIPTS -->
 				<!-- INICIO TEMA LAYOUT SCRIPTS -->
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/scripts/layout.min.js" type="text/javascript"></script>
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/scripts/demo.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/scripts/layout.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/scripts/demo.min.js" type="text/javascript"></script>
 				<!-- FIM TEMA LAYOUT SCRIPTS -->
 
 
@@ -231,7 +231,7 @@
 	}
 
 	function linha_form($fields, $extraClasse = ""){
-		$campo = '';
+		$campo = "";
 		foreach($fields as $field){
 			$campo .= strval($field);
 		}
@@ -253,13 +253,14 @@
 		
 		$_POST['acao'] = "index";
 		
-		echo "<form action='".str_replace($_ENV["URL_BASE"], "", $_POST["HTTP_REFERER"])."' name='form_voltar' method='post'>";
+		$formVoltar = "<form action='".str_replace($_ENV["URL_BASE"], "", $_POST["HTTP_REFERER"])."' name='form_voltar' method='post'>";
 		foreach($_POST as $key => $value){
-			echo "<input type='hidden' name='".$key."' value='".$value."'>";
+			$formVoltar .= "<input type='hidden' name='".$key."' value='".$value."'>";
 		}
-		echo "</form>";
+		$formVoltar .= "</form>";
+		$formVoltar .= "<script>document.form_voltar.submit();</script>";
 		
-		echo "<script>document.form_voltar.submit();</script>";
+		echo $formVoltar;
 		exit;
 	}
 
@@ -287,7 +288,6 @@
 		$errorMsg = $baseErrMsg."  ";
 
 		foreach($camposObrig as $key => $value){
-			var_dump([empty($camposEnviados[$key]), $camposEnviados[$key] != "0"]); echo "<br>";
 			if(empty($camposEnviados[$key]) && $camposEnviados[$key] != "0"){
 				$errorMsg .= " ".$camposObrig[$key].", ";
 			}
