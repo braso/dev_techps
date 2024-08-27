@@ -1,288 +1,223 @@
 <?php
-    //* Modo debug
-        ini_set("display_errors", 1);
-        error_reporting(E_ALL);
-    //*/
+    /* Modo debug
+		ini_set('display_errors', 1);
+		error_reporting(E_ALL);
+        header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+        header("Pragma: no-cache"); // HTTP 1.0.
+        header("Expires: 0");
+	//*/
 
-    header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
-    header("Pragma: no-cache"); // HTTP 1.0.
-    header("Expires: 0");
 
-    include "../funcoes_ponto.php";
+    include "funcoes_ponto.php";
 
-    function calcPercs($total, int $meta_endo, int $nega_naEndo, int $posi_endoPc): array {
-        $porcentagens = [
-            "meta_endo"     => number_format(($meta_endo / $total)*100, 2),
-            "nega_naEndo"   => number_format(($nega_naEndo / $total)*100, 2),
-            "posi_endoPc"   => number_format(($posi_endoPc / $total)*100, 2),
+    function porcentagemEndosso($total, $meta_endo, $nega_naEndo, $posi_endoPc) : array {
+        $porcentagen = [
+            'meta_endo' => number_format(0, 2),
+            'nega_naEndo' => number_format(0, 2),
+            'posi_endoPc' => number_format(0, 2),
         ];
-        
-        return $porcentagens;
+        $porcentagen['meta_endo'] = 0;
+        $porcentagen['nega_naEndo'] = 0;
+        $porcentagen['posi_endoPc'] = 0;
+        if ($meta_endo != 0) {
+            $porcentagen['meta_endo']= number_format(($meta_endo / $total) * 100, 2);
+        }
+        if ($nega_naEndo != 0) {
+            $porcentagen['nega_naEndo'] = number_format(($nega_naEndo / $total) * 100, 2);
+        }
+        if ($posi_endoPc != 0) {
+            $porcentagen['posi_endoPc'] = number_format(($posi_endoPc / $total) * 100, 2);
+        }
+
+        return $porcentagen;
     }
 
     function index(){
         global $totalResumo, $CONTEX;
 
-        if (array_key_exists("atualizar", $_POST) && !empty($_POST["atualizar"])) {
-            echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
+        if (array_key_exists('atualizar', $_POST) && !empty($_POST['atualizar'])) {
+            echo '<script>alert("Atualizando os painéis, aguarde um pouco ")</script>';
             ob_flush();
             flush();
-            criar_relatorio($_POST["busca_data"]);
+            criar_relatorio($_POST['busca_data']);
         }
 
-        if (empty($_POST["busca_data"])){       
-            $_POST["busca_data"] = date("Y-m");
-        }
-        if (empty($_POST["busca_dataInicio"])) {
-            $_POST["busca_dataInicio"] = $_POST["busca_data"]."-01";
-        }
-        if (empty($_POST["busca_dataFim"])) {
-            $_POST["busca_dataFim"] = (DateTime::createFromFormat("Y-m", $_POST["busca_data"]))->format("Y-m-t");
+        if (empty($_POST['busca_data'])) {
+            $_POST['busca_data'] = date("Y-m");
         }
 
+        // Obtenha o primeiro dia do mês
+        $dataInicio = new DateTime($_POST['busca_data']  . '-01');
+        $dataInicioFormatada = $dataInicio->format('d/m/Y');
+        $dataInicio = $dataInicio->format('Y-m-d');
+        // Obtenha o último dia do mês
+        $dataFim = new DateTime($_POST['busca_data']  . '-01');
+        $dataFim->modify('last day of this month');
+        $dataFimFormatada = $dataFim->format('d/m/Y');
+        $dataFim = $dataFim->format('Y-m-d');
+
+        $dateParts = explode('-', $_POST['busca_data']);
+        $monthNum = $dateParts[1];
+        $year = $dateParts[0];
+
+        $monthNames = array(
+            '01' => 'Janeiro',
+            '02' => 'Fevereiro',
+            '03' => 'Março',
+            '04' => 'Abril',
+            '05' => 'Maio',
+            '06' => 'Junho',
+            '07' => 'Julho',
+            '08' => 'Agosto',
+            '09' => 'Setembro',
+            '10' => 'Outubro',
+            '11' => 'Novembro',
+            '12' => 'Dezembro'
+        );
+
+
+        $monthName = $monthNames[$monthNum];
+
+        cabecalho('Relatório Final de Endosso');
+
+        $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
+        //position: absolute; top: 101px; left: 420px;
         $c = [
-            combo_net("Empresa", "empresa", ($_POST["empresa"]?? ""), 4, "empresa", ""),
-            campo_mes("Data*", "busca_data", (!empty($_POST["busca_data"])? $_POST["busca_data"]: ""), 2),
+            combo_net('Empresa:', 'empresa', $_POST['empresa'] ?? '', 4, 'empresa', ''),
+            campo_mes('Data:', 'busca_data', (!empty($_POST['busca_data']) ? $_POST['busca_data'] : ''), 2),
+            $texto,
         ];
-        
-        cabecalho("Relatório Final de Endosso");
 
-        $botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
-        if (!empty($_SESSION["user_tx_nivel"]) && is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
-            $botaoAtualizarPainel = "<a class='btn btn-warning' onclick='atualizarPainel()'> Atualizar Painel </a>";
+        $botao_imprimir =
+            '<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
+                            <script>
+                                function imprimir() {
+                                    // Abrir a caixa de diálogo de impressão
+                                    window.print();
+                                }
+                            </script>';
+        $botaoCsv = "<button id='btnCsv' class='btn btn-success' style='background-color: green !important;' onclick='downloadCSV()'>Baixar CSV</button>";
+
+        if (!empty($_SESSION['user_tx_nivel']) && is_int(strpos($_SESSION['user_tx_nivel'], 'Administrador'))) {
+            $botaoAtualizarPainel =
+                '<a class="btn btn-warning" onclick="atualizarPainel()"> Atualizar Painel </a>';
         }
 
-        $botao_volta = "";
-        if (!empty($_POST["empresa"])) {
+        if (isset($_POST['empresa']) && !empty($_POST['empresa'])) {
             $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
         }
 
         $b = [
-            botao("Buscar", "index", "", "", "", "", "btn btn-info"),
+            botao("Buscar", 'index', '', '', '', '', 'btn btn-success'),
             $botao_imprimir,
+            // $botaoCsv,
             $botao_volta,
             $botaoAtualizarPainel
         ];
 
-
-        abre_form("Filtro de Busca");
+        abre_form('Filtro de Busca');
         linha_form($c);
         fecha_form($b);
 
-        $dataInicio = new DateTime($_POST["busca_dataInicio"]);
-        $dataFim = new DateTime($_POST["busca_dataFim"]);
-        $pasta = "./arquivos/paineis";
+        if (isset($_POST['empresa']) && !empty($_POST['empresa']) && isset($_POST['busca_data']) && !empty($_POST['busca_data'])) {
+            $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM empresa WHERE empr_tx_Ehmatriz = 'sim' AND empr_nb_id = $_POST[empresa]"), MYSQLI_ASSOC);
 
-        if (!empty($_POST["empresa"])) {
-            $idEmpresa = $_POST["empresa"];
+            $totaisMotoristas = [];
+            $motoristaTotais = [];
+            if (is_dir("./arquivos/paineis/empresas/$_POST[busca_data]") != false) {
+                // Obtém O total dos saldos das empresa
+                $file = "./arquivos/paineis/$_POST[empresa]/$_POST[busca_data]";
 
-            $aEmpresa = mysqli_fetch_all(query(
-                "SELECT empr_tx_logo FROM empresa"
-                ." WHERE empr_tx_status = 'ativo'"
-                    ." AND empr_tx_Ehmatriz = 'sim'"
-                    ." AND empr_nb_id = ".$idEmpresa
-                ), MYSQLI_ASSOC);
-
-            $objetos = [];
-            $totais = [];
-            $emissao = [];
-
-            $pasta .= "/saldos/".$idEmpresa."/".$mes."-".$ano;
-
-            if (is_dir($pasta)){
-                $file = $pasta."/motoristas.json";
-                if (file_exists($file)) {
-                    $conteudo_json = file_get_contents($file);
-                    $objetos = json_decode($conteudo_json, true);
+                if (file_exists($file . '/totalMotoristas.json')) {
+                    $conteudo_json = file_get_contents($file . '/totalMotoristas.json');
+                    $totaisMotoristas = json_decode($conteudo_json, true);
                 }
 
-                $file = $pasta."/../../".$_POST["empresa"]."/".$_POST["busca_data"]."totalMotoristas.json";
-                // Obtém O total dos saldos
-                if (file_exists($file)) {
-                    $conteudo_json = file_get_contents($file);
-                    $totais = json_decode($conteudo_json, true);
-                }
-
-                foreach (["jornadaPrevista", "JornadaEfetiva", "he50", "he100", "adicionalNoturno", "esperaIndenizada", "saldoAnterior", "saldoPeriodo", "saldoFinal"] as $campo) {
-                    if ($totais[$campo] == "00:00") {
-                        $totais[$campo] = "";
+                foreach (['jornadaPrevista', 'JornadaEfetiva', 'he50', 'he100', 'adicionalNoturno', 'esperaIndenizada', 'saldoAnterior', 'saldoPeriodo', 'saldoFinal'] as $campo) {
+                    if ($totaisMotoristas[$campo] == "00:00") {
+                        $totaisMotoristas[$campo] = "";
                     }
                 }
 
-                
-
-                // Obtém o tempo da última modificação do arquivo
-                $lastUpdateTimestamp = filemtime($pasta."/motoristas.json");
-                if (filemtime($pasta."/totalMotoristas.json") == $lastUpdateTimestamp) {
-                    $emissao = date("d/m/Y H:i", $lastUpdateTimestamp); //Utilizado no HTML.php
+                // Obtém O total dos saldos de cada Motorista
+                if (file_exists("$file")) {
+                    $conteudo_json = file_get_contents($file . '/motoristas.json');
+                    $motoristaTotais = json_decode($conteudo_json, true);
                 }
 
-                $endosso = calcPercs($totais["totalMotorista"],$totais["endossados"], $totais["naoEndossados"], $totais["endossoPacial"]);
+                // Obtém o tempo da última modificação do arquivo
+                $timestamp = '';
+                $timestamp = filemtime($file . '/motoristas.json');
+                if (filemtime($file . '/totalMotoristas.json') == filemtime($file . '/motoristas.json')) {
+                    $Emissão = date('d/m/Y H:i:s', $timestamp);
+                }
+
+                $endosso = porcentagemEndosso($totaisMotoristas['totalMotorista'],$totaisMotoristas['endossados'], $totaisMotoristas['naoEndossados'], $totaisMotoristas['endossoPacial']);
 
                 $quantPosi = 0;
                 $quantNega = 0;
                 $quantMeta = 0;
 
-                foreach ($objetos as $MotoristaTotal) {
-                    $saldoFinal = $MotoristaTotal["saldoFinal"];
+                foreach ($motoristaTotais as $MotoristaTotal) {
+                    $saldoFinal = $MotoristaTotal['saldoFinal'];
 
-                    if ($MotoristaTotal["statusEndosso"] == "E" && $saldoFinal == "00:00") {
+                    if ($MotoristaTotal['statusEndosso'] == 'E' && $saldoFinal == '00:00') {
                         $quantMeta++;
-                    } elseif ($saldoFinal > "00:00") {
+                    } elseif ($saldoFinal > '00:00') {
                         $quantPosi++;
-                    } elseif ($saldoFinal < "00:00") {
+                    } elseif ($saldoFinal < '00:00') {
                         $quantNega++;
                     }
                 }
 
-                $performance = calcPercs(count($objetos), $quantMeta, $quantNega, $quantPosi);
+            $perfomace = porcentagemEndosso(count($motoristaTotais ), $quantMeta, $quantNega, $quantPosi);
 
-                $dataInicio = (new DateTime($_POST["busca_dataInicio"]));
-
-                if(!empty($_POST["empresa"]) && !empty($_POST["busca_data"])){
-                    $url = $pasta."/motoristas.json";
-                }else{
-                    $url = $pasta."/totalEmpresas.json";
-                }
-
-                include_once "painel_endosso_html.php";
-
-                echo "<script>";
-                echo 
-                    "var percNaoEndossado = '".$endosso["nega_naEndo"]."';"
-                    ."var percEndoPC = '".$endosso["posi_endoPc"]."';"
-                    ."var percEndossado = '".$endosso["meta_endo"]."'";
-                
-                if (!empty($_POST['empresa']) && !empty($_POST['busca_data'])) {
-                        echo 
-                            "var totalNaoEndossado = '".$totaisMotoristas["naoEndossados"]."';"
-                            ."var totalEndoPC = '".$totaisMotoristas["endossoPacial"]."';"
-                            ."var totalEndossado = '".$totaisMotoristas["endossados"]."';";
-                }else{
-                    echo 
-                        "var totalNaoEndossado = '".$empresasTotais["EmprTotalNaoEnd"]."';"
-                        ."var totalEndoPC = '".$empresasTotais["EmprTotalEndPac"]."';"
-                        ."var totalEndossado = '".$empresasTotais["EmprTotalEnd"]."';";
-                }
-                echo 
-                    "document.getElementsByClassName('porcentagemNaEndo')[0] = totalNaoEndossado;"
-                    ."document.getElementsByClassName('porcentagemNaEndo')[1] = percNaoEndossado;"
-                    
-                    ."document.getElementsByClassName('porcentagemEndoPc')[0] = totalEndoPc;"
-                    ."document.getElementsByClassName('porcentagemEndoPc')[1] = percEndoPc;"
-                    
-                    ."document.getElementsByClassName('porcentagemEndo')[0] = totalEndossado;"
-                    ."document.getElementsByClassName('porcentagemEndo')[1] = percEndossado;";
-                echo "</script>";
-
-                echo "<script>document.getElementById('tabela1').display = 'block'</script>";
-
-                if(!empty($_POST["empresa"]) && !empty($_POST["busca_data"])){
-                    $valorTotais = [
-                        $totais["jornadaPrevista"],
-                        $totais["JornadaEfetiva"],
-                        $totais["he50"],
-                        $totais["he100"],
-                        $totais["adicionalNoturno"],
-                        $totais["esperaIndenizada"],
-                        $totais["saldoAnterior"],
-                        $totais["saldoPeriodo"],
-                        $totais["saldoFinal"]
-                    ];
-                    $nomeTitulos = [
-                        "motorista" => "Matrícula",
-                        "empresaNome" => "Nome",
-                        "status" => "Status",
-                        "jornadaPrevista" => "Jornada Prevista",
-                        "jornadaEfetiva" => "Jornada Efetiva",
-                        "he50" => "H.E. Semanal",
-                        "he100" => "H.E. Domingo",
-                        "adicionalNoturno" => "Adicional Noturno",
-                        "esperaIndenizada" => "Espera Indenizada",
-                        "saldoAnterior" => "Saldo Anterior",
-                        "saldoPeriodo" => "Saldo Periodo",
-                        "saldoFinal" => "Saldo Final"
-                    ];
-                }else{
-                    $valorTotais = [
-                        $empresasTotais["EmprTotalJorPrev"],
-                        $empresasTotais["EmprTotalJorEfe"]
-                        (($empresasTotais["EmprTotalHE50"] == "00:00") ? "" : $empresasTotais["EmprTotalHE50"]),
-                        (($empresasTotais["EmprTotalHE100"] == "00:00") ? "" : $empresasTotais["EmprTotalHE100"]),
-                        (($empresasTotais["EmprTotalAdicNot"] == "00:00") ? "" : $empresasTotais["EmprTotalAdicNot"]),
-                        (($empresasTotais["EmprTotalEspInd"] == "00:00") ? "" : $empresasTotais["EmprTotalEspInd"]),
-                        (($empresasTotais["EmprTotalSaldoAnter"] == "00:00" || $empresasTotais["EmprTotalSaldoAnter"] == null) ? "" : $empresasTotais["EmprTotalSaldoAnter"]),
-                        (($empresasTotais["EmprTotalSaldoPeriodo"] == "00:00") ? "" : $empresasTotais["EmprTotalSaldoPeriodo"]),
-                        (($empresasTotais["EmprTotalSaldoFinal"] == "00:00") ? "" : $empresasTotais["EmprTotalSaldoFinal"])
-                    ];
-
-                    $nomeTitulos = [
-                        "empresaNome"       => "Todos os CNPJ",
-                        "porcentagem"       => "End %",
-                        "totalMotorista"    => "Quant. Motoristas",
-                        "jornadaPrevista"   => "Jornada Prevista",
-                        "jornadaEfetiva"    => "Jornada Efetiva",
-                        "he50"              => "H.E. Semanal",
-                        "he100"             => "H.E. Domingo",
-                        "adicionalNoturno"  => "Adicional Noturno",
-                        "esperaIndenizada"  => "Espera Indenizada",
-                        "saldoAnterior"     => "Saldo Anterior",
-                        "saldoPeriodo"      => "Saldo Periodo",
-                        "saldoFinal"        => "Saldo Final"
-                    ];
-                }
-                echo "<script>";
-                for($f = 0; $f < sizeof($valorTotais); $f++){
-                    echo "document.getElementsByClassName('totais')[0].getElementsByTagName('th')[".($f)."].innerHTML = '".$valorTotais[$f]."';\n";
-                }
-                $f = 0;
-                foreach($nomeTitulos as $key => $value){
-                    echo "document.getElementsByClassName('titulos')[0].getElementsByTagName('th')[".$f."].setAttribute('data-column', '".$key."');\n";
-                    echo "document.getElementsByClassName('titulos')[0].getElementsByTagName('th')[".$f++."].innerHTML = '".$value."';\n";
-                }
-                echo "</script>";
-            }else{
-                echo "<script>alert('Não Possui dados desse mês')</script>";
+            } else {
+                echo '<script>alert("Não Possui dados desse mês")</script>';
             }
+
+            include_once 'painel_endosso_html.php';
+
         } else {
-            $aEmpresa = mysqli_fetch_all(query(
-                "SELECT empr_tx_logo FROM empresa"
-                ." WHERE empr_tx_Ehmatriz = 'sim'"
-            ), MYSQLI_ASSOC);
+            $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM empresa WHERE empr_tx_Ehmatriz = 'sim'"), MYSQLI_ASSOC);
+            $motoristas = mysqli_fetch_all(
+                query("SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula  FROM entidade WHERE enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante');"),
+                MYSQLI_ASSOC
+            );
 
             $empresasTotais = [];
-            $totais = [];
-            $emissao = "";
-            $pasta = "./arquivos/paineis/empresas/".$_POST["busca_data"];
-            if (is_dir($pasta)){
-                if (file_exists($pasta."/empresas.json")){
-                    $conteudo_json = file_get_contents($pasta."/empresas.json");
+            $empresaTotais = [];
+            $Emissão = "";
+            $file = "./arquivos/paineis/empresas/$_POST[busca_data]";
+            if (is_dir($file) != false) {
+                if (file_exists($file)) {
+                    $conteudo_json = file_get_contents($file.'/empresas.json');
                     $empresasTotais = json_decode($conteudo_json, true);
                 }
         
                 // Obtém O total dos saldos de cada empresa
-                if (file_exists($pasta."/totalEmpresas.json")){
-                    $conteudo_json = file_get_contents($pasta."/totalEmpresas.json");
-                    $totais = json_decode($conteudo_json, true);
+                if (file_exists($file)) {
+                    $conteudo_json = file_get_contents($file.'/totalEmpresas.json');
+                    $empresaTotais = json_decode($conteudo_json, true);
                 }
         
                 // Obtém o tempo da última modificação do arquivo
-                $lastUpdateTimestamp = filemtime($pasta."/empresas.json");
-                if (filemtime($pasta."/totalEmpresas.json") == $lastUpdateTimestamp){
-                    $emissao = date("d/m/Y H:i", $lastUpdateTimestamp);
+                $timestamp = '';
+                $timestamp = filemtime($file . '/empresas.json');
+                if (filemtime($file . '/empresas.json') == filemtime($file . '/totalEmpresas.json')) {
+                    $Emissão = date('d/m/Y H:i:s', $timestamp);
                 }
-            }else{
+            } else
                 echo "<script>alert('Não Possui dados desse mês')</script>";
-            }
 
                 // Calcula a porcentagem
-            $endosso = calcPercs($empresasTotais["EmprTotalMotorista"], $empresasTotais["EmprTotalEnd"], $empresasTotais["EmprTotalNaoEnd"], $empresasTotais["EmprTotalEndPac"]);
+            $endosso = porcentagemEndosso($empresasTotais["EmprTotalMotorista"], $empresasTotais["EmprTotalEnd"], $empresasTotais["EmprTotalNaoEnd"], $empresasTotais["EmprTotalEndPac"]);
 
             $quantPosi = 0;
             $quantNega = 0;
             $quantMeta = 0;
 
-            foreach ($totais as $empresaTotal) {
+            foreach ($empresaTotais as $empresaTotal) {
                 $saldoFinal = $empresaTotal["saldoFinal"];
 
                 if ($saldoFinal === "00:00") {
@@ -294,35 +229,129 @@
                 }
             }
 
-            $performance = calcPercs(count($totais), $quantMeta, $quantNega, $quantPosi);
+            $perfomace = porcentagemEndosso(count($empresaTotais), $quantMeta, $quantNega, $quantPosi);
 
+            include_once 'painel_endosso_html.php';
         }
-        echo
-            "<form name='myForm' method='POST' action='".htmlspecialchars(basename($_SERVER["PHP_SELF"]))."'>
-                <input type='hidden' name='empresa' id='empresa'>
-                <input type='hidden' name='busca_data' id='busca_data'>
-            </form>
-            <form name='formularioAtualizarPainel' method='POST' action='".htmlspecialchars(basename($_SERVER["PHP_SELF"]))."'>
-                <input type='hidden' name='atualizar' id='atualizar'>
-                <input type='hidden' name='busca_data' id='busca_dataAtualizar'>
-            </form>
 
-            <script>
-                function imprimir(){
-                    window.print();
-                }
-                
-                function setAndSubmit(empresa){
-                    document.myForm.empresa.value = empresa;
-                    document.myForm.busca_data.value = document.getElementById('busca_data').value;
-                    document.myForm.submit();
-                }
-                function atualizarPainel() {
-                    document.formularioAtualizarPainel.busca_dataAtualizar.value = document.getElementById('busca_data').value;
-                    document.formularioAtualizarPainel.atualizar.value = 'atualizar';
-                    document.formularioAtualizarPainel.submit();
-                }
-            </script>";
+        echo
+        "<style>
+                    @media print {
+                            body {
+                                margin: 1cm;
+                                margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
+                                transform: scale(1.0);
+                                transform-origin: top left;
+                            }
+                        
+                            @page {
+                                size: A4 landscape;
+                                margin: 1cm;
+                            }
+                            #tituloRelatorio{
+                                /*font-size: 2px !important;*/
+                                /*padding-left: 200px;*/
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                                margin-bottom: -50px !important;
+                            }
+                            body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(6) > div.portlet.light,
+                            body > div.scroll-to-top{
+                                display: none !important;
+                            }
+                            #pdf2htmldiv > div{
+                                padding: 88px 20px 15px !important;
+                            }
+                            /* .portlet.light>.portlet-title {
+                                border-bottom: none;
+                                margin-bottom: 0px;
+                            } */
+                            body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(7){
+                                display: none !important;
+                            }
+                            .caption{
+                                padding-top: 0px;
+                                margin-left: -50px !important;
+                                padding-bottom: 0px;
+                            }
+                            .emissao{
+                                padding-left: 680px !important;
+                            }
+                            .porcentagenEndo{
+                                box-shadow: 0 0 0 1000px #66b3ff inset !important;
+                            }
+                            .porcentagenNaEndo{
+                                box-shadow: 0 0 0 1000px #ff471a inset !important;
+                            }
+                            .porcentagenEndoPc{
+                                box-shadow: 0 0 0 1000px #ffff66 inset !important;
+                            }
+                            thead tr.totais th {
+                                box-shadow: 0 0 0 1000px #ffe699 inset !important; /* Cor para impressão */
+                            }
+                            thead tr.titulos th {
+                                box-shadow: 0 0 0 1000px #99ccff inset !important; /* Cor para impressão */
+                            }
+                            .porcentagenMeta{
+                                box-shadow: 0 0 0 1000px #66b3ff inset !important;
+                            }
+                            .porcentagenPosit{
+                                box-shadow: 0 0 0 1000px #00b33c inset !important;
+                            }
+                            .porcentagenNega{
+                                box-shadow: 0 0 0 1000px #ff471a inset !important;
+                            }
+                            .portlet.light{
+                                padding: 75px 20px 15px !important;
+                            }
+                            #impressao{
+                                display: block !important;
+                                position: relative;
+                                padding-left: 630px;
+                            }
+                    }
+
+                    table thead tr th:nth-child(3),
+                    table thead tr th:nth-child(7),
+                    table thead tr th:nth-child(11),
+                    table td:nth-child(3),
+                    table td:nth-child(7),
+                    table td:nth-child(11) {
+                        border-right: 3px solid #d8e4ef !important;
+                    }
+                    .th-align {
+                        text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
+                        vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
+                        
+                    }
+                    .emissao{
+                        text-align: left;
+                        padding-left: 63%;
+                        position: absolute;
+                    }
+                </style>
+                <form name='myForm' method='POST' action='" . htmlspecialchars(basename($_SERVER["PHP_SELF"])) . "'>
+                    <input type='hidden' name='empresa' id='empresa'>
+                    <input type='hidden' name='busca_data' id='busca_data'>
+                </form>
+                <form name='formularioAtualizarPainel' method='POST' action='" . htmlspecialchars(basename($_SERVER["PHP_SELF"])) . "'>
+                    <input type='hidden' name='atualizar' id='atualizar'>
+                    <input type='hidden' name='busca_data' id='busca_dataAtualizar'>
+                </form>
+
+                <script>
+                    function setAndSubmit(empresa) {
+                        document.myForm.empresa.value = empresa;
+                        document.myForm.busca_data.value = document.getElementById('busca_data').value;
+                        document.myForm.submit();
+                    }
+                    function atualizarPainel() {
+                        document.formularioAtualizarPainel.busca_dataAtualizar.value = document.getElementById('busca_data').value;
+                        document.formularioAtualizarPainel.atualizar.value = 'atualizar';
+                        document.formularioAtualizarPainel.submit();
+                    }
+                </script>";
 
         rodape();
     }
