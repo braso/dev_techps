@@ -2,305 +2,446 @@
     //* Modo debug
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
+     
+        header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+		header("Pragma: no-cache"); // HTTP 1.0.
+		header("Expires: 0");
     //*/
-
-    header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
-	header("Pragma: no-cache"); // HTTP 1.0.
-	header("Expires: 0");
 
     include "../funcoes_ponto.php";
 
-    function calcPercs($total, int $meta_endo, int $nega_naEndo, int $posi_endoPc): array {
-        $porcentagens = [
-            "meta_endo"     => number_format(($meta_endo / $total)*100, 2),
-            "nega_naEndo"   => number_format(($nega_naEndo / $total)*100, 2),
-            "posi_endoPc"   => number_format(($posi_endoPc / $total)*100, 2),
-        ];
+    function calcPercs(array $values): array{
+        $total = 0;
+        foreach($values as $value){
+            $total += $value;
+        }
+
+        if($total == 0){
+            return [0];
+        }
         
-        return $porcentagens;
+        $percentuais = array_pad([], sizeof($values), 0);
+        for($f = 0; $f < sizeof($values); $f++){
+            $percentuais[$f] = $values[$f]/$total;
+        }
+
+        return $percentuais;
+    }
+
+    function carregarJS(array $arquivos){
+
+        $linha = "linha = '<tr>'";
+        if(!empty($_POST["empresa"])){
+            $linha .= "+'<td>'+row.matricula+'</td>'
+                    +'<td>'+row.nome+'</td>'
+                    +'<td>'+row.statusEndosso+'</td>'
+                    +'<td>'+row.jornadaPrevista+'</td>'
+                    +'<td>'+row.jornadaEfetiva+'</td>'
+                    +'<td>'+row.HESemanal+'</td>'
+                    +'<td>'+row.HESabado+'</td>'
+                    +'<td>'+row.adicionalNoturno+'</td>'
+                    +'<td>'+row.esperaIndenizada+'</td>'
+                    +'<td>'+row.saldoAnterior+'</td>'
+                    +'<td>'+row.saldoPeriodo+'</td>'
+                    +'<td>'+row.saldoFinal+'</td>'
+                +'</tr>';";
+        }else{
+            $linha .= "+'<td style=\"cursor: pointer;\" onclick=setAndSubmit('+row.empresaId+')>'+row.empr_tx_nome+'</td>'
+                    +'<td>'+row.qtdMotoristas+'</td>'
+                    +'<td>'+row.totais.jornadaPrevista+'</td>'
+                    +'<td>'+row.totais.jornadaEfetiva+'</td>'
+                    +'<td>'+row.totais.HESemanal+'</td>'
+                    +'<td>'+row.totais.HESabado+'</td>'
+                    +'<td>'+row.totais.adicionalNoturno+'</td>'
+                    +'<td>'+row.totais.esperaIndenizada+'</td>'
+                    +'<td>'+row.totais.saldoAnterior+'</td>'
+                    +'<td>'+row.totais.saldoPeriodo+'</td>'
+                    +'<td>'+row.totais.saldoFinal+'</td>'
+                +'</tr>';";
+        }
+
+        $carregarDados = "";
+        foreach($arquivos as $arquivo){
+            $carregarDados .= "carregarDados('".$arquivo."');";
+        }
+
+        echo 
+            "<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"])."'>
+                <input type='hidden' name='atualizar' id='atualizar'>
+                <input type='hidden' name='empresa' id='empresa'>
+                <input type='hidden' name='busca_dataInicio' id='busca_dataInicio'>
+                <input type='hidden' name='busca_dataFim' id='busca_dataFim'>
+            </form>
+            <script>
+                document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[1].innerHTML = saldos.quant.meta;
+                document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[1].innerHTML = saldos.quant.positivos;
+                document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[1].innerHTML = saldos.quant.negativos;
+                document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[2].innerHTML = saldos.porcentagens.meta*100+'%';
+                document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[2].innerHTML = saldos.porcentagens.positivos*100+'%';
+                document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[2].innerHTML = saldos.porcentagens.negativos*100+'%';
+
+                function setAndSubmit(empresa){
+                    document.myForm.empresa.value = empresa;
+                    document.myForm.busca_dataInicio.value = document.getElementById('busca_dataInicio').value;
+                    document.myForm.busca_dataFim.value = document.getElementById('busca_dataFim').value;
+                    document.myForm.submit();
+                }
+
+                function atualizarPainel(){
+                    document.myForm.empresa.value = document.getElementById('empresa').value;
+                    document.myForm.busca_dataInicio.value = document.getElementById('busca_dataInicio').value;
+                    document.myForm.busca_dataFim.value = document.getElementById('busca_dataFim').value;
+                    document.myForm.atualizar.value = 'atualizar';
+                    document.myForm.submit();
+                }
+
+                function imprimir(){
+                    window.print();
+                }
+            
+                $(document).ready(function(){
+                    var tabela = $('#tabela-empresas tbody');
+
+                    function carregarDados(urlArquivo){
+                        $.ajax({
+                            url: urlArquivo,
+                            dataType: 'json',
+                            success: function(data){
+                                var row = {};
+                                $.each(data, function(index, item){
+                                    row[index] = item;
+                                });
+                                if(row.idMotorista != undefined){
+                                    delete row.idMotorista;
+                                }"
+                                .$linha
+                                ."tabela.append(linha);
+                            },
+                            error: function(){
+                                console.log('Erro ao carregar os dados.');
+                            }
+                        });
+                    }
+                    // Função para ordenar a tabela
+                    function ordenarTabela(coluna, ordem){
+                        var linhas = tabela.find('tr').get();
+                        linhas.sort(function(a, b){
+                            var valorA = $(a).children('td').eq(coluna).text().toUpperCase();
+                            var valorB = $(b).children('td').eq(coluna).text().toUpperCase();
+
+                            if(valorA < valorB){
+                                return ordem === 'asc' ? -1 : 1;
+                            }
+                            if(valorA > valorB){
+                                return ordem === 'asc' ? 1 : -1;
+                            }
+                            return 0;
+                        });
+                        $.each(linhas, function(index, row){
+                            tabela.append(row);
+                        });
+                    }
+
+                    // Evento de clique para ordenar a tabela ao clicar no cabeçalho
+                    $('#titulos th').click(function(){
+                        var coluna = $(this).index();
+                        var ordem = $(this).data('order');
+                        $('#tabela-empresas th').data('order', 'desc'); // Redefinir ordem de todas as colunas
+                        $(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
+                        ordenarTabela(coluna, $(this).data('order'));
+
+                        // Ajustar classes para setas de ordenação
+                        $('#titulos th').removeClass('sort-asc sort-desc');
+                        $(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
+                    });
+
+                    ".$carregarDados."
+                });
+
+                // function downloadCSV(){
+                //     // Caminho do arquivo CSV no servidor
+                //     var filePath = './arquivos/paineis/Painel_Geral.csv' // Substitua pelo caminho do seu arquivo
+
+                //     // Cria um link para download
+                //     var link = document.createElement('a');
+
+                //     // Configurações do link
+                //     link.setAttribute('href', filePath);
+                //     link.setAttribute('download', 'Painel_Geral.csv');
+
+                //     // Adiciona o link ao documento
+                //     document.body.appendChild(link);
+
+                //     // Simula um clique no link para iniciar o download
+                //     link.click();
+
+                //     // Remove o link
+                //     document.body.removeChild(link);
+                // }
+            </script>"
+        ;
     }
 
     function criar_relatorio_saldo(){
         global $totalResumo;
         $periodoInicio = $_POST["busca_dataInicio"];
         $periodoFim = $_POST["busca_dataFim"];
+        $dataInicio = new DateTime($periodoInicio);
+        $dataFim = new DateTime($periodoFim);
 
         $empresas = mysqli_fetch_all(query(
             "SELECT empr_nb_id, empr_tx_nome FROM empresa"
             ." WHERE empr_tx_status = 'ativo'"
-            .(!empty($_POST["empresa"])? " AND empr_nb_id = ".$_POST["empresa"]: "")
+                .(!empty($_POST["empresa"])? " AND empr_nb_id = ".$_POST["empresa"]: "")
             ." ORDER BY empr_tx_nome ASC;"
         ),MYSQLI_ASSOC);
 
-        foreach ($empresas as $empresa){
+        $totaisEmpresas = [
+            "jornadaPrevista" => "00:00",
+            "jornadaEfetiva" => "00:00",
+            "HESemanal" => "00:00",
+            "HESabado" => "00:00",
+            "adicionalNoturno" => "00:00",
+            "esperaIndenizada" => "00:00",
+            "saldoAnterior" => "00:00",
+            "saldoPeriodo" => "00:00",
+            "saldoFinal" => "00:00",
+            "qtdMotoristas" => 0
+        ];
+
+        foreach($empresas as $empresa){
+            $path = "./arquivos/saldos"."/".$empresa["empr_nb_id"];
+            if(!file_exists($path."/empresa_".$empresa["empr_nb_id"].".json")){
+                if(!is_dir($path)){
+                    mkdir($path, 0755, true);
+                }
+                file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", "");
+            }
+
             $motoristas = mysqli_fetch_all(query(
-                "SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula FROM entidade"
+                "SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_banco FROM entidade"
                 ." WHERE enti_tx_status = 'ativo'"
                     ." AND enti_nb_empresa = ".$empresa["empr_nb_id"]
                     ." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
-                ." ORDER BY enti_tx_nome ASC"
-            ), MYSQLI_ASSOC);
+                ." ORDER BY enti_tx_nome ASC;"
+            ),MYSQLI_ASSOC);
 
             $rows = [];
-            foreach ($motoristas as $motorista) {
-                $diasPonto = [];
+            $statusEndossos = [
+                "E" => 0,
+                "EP" => 0,
+                "N" => 0
+            ];
+            foreach($motoristas as $motorista){
+
                 $dataInicio = new DateTime($periodoInicio);
                 $dataFim = new DateTime($periodoFim);
-                $mes = $dataInicio->format("m");
-                $ano = $dataInicio->format("Y");
-                $endossado = "";
 
-                // Jornada Prevista, Jornada Efetiva, HE50%, HE100%, Adicional Noturno, Espera Indenizada{
-                    [
-                        $totalJorPrev, $totalJorEfe,
-                        $totalHE50, $totalHE100,
-                        $totalAdicNot, $totalEspInd,
-                        $totalSaldoPeriodo, $totalSaldofinal
-                    ] = array_pad([], 8, "00:00");
-                //}
-                
-                // saldoAnterior, saldoPeriodo e saldoFinal{
-                    $saldoAnterior = mysqli_fetch_all(query(
-                        "SELECT endo_tx_saldo FROM `endosso`"
+                //Status Endosso{
+                    $endossos = mysqli_fetch_all(query(
+                        "SELECT * FROM endosso"
                         ." WHERE endo_tx_status = 'ativo'"
-                            ." AND endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'"
+                            ." AND endo_nb_entidade = '".$motorista["enti_nb_id"]."'"
+                            ." AND ("
+                                ."(endo_tx_de  >= '".$periodoInicio."' AND endo_tx_de  <= '".$periodoFim."')"
+                                ."OR (endo_tx_ate >= '".$periodoInicio."' AND endo_tx_ate <= '".$periodoFim."')"
+                                ."OR (endo_tx_de  <= '".$periodoInicio."' AND endo_tx_ate >= '".$periodoFim."')"
+                            .");"
+                    ), MYSQLI_ASSOC);
+                    
+                    $statusEndosso = "N";
+                    if(count($endossos) >= 1){
+                        $statusEndosso = "E";
+                        if(strtotime($periodoInicio) != strtotime($endossos[0]["endo_tx_de"]) || strtotime($periodoFim) > strtotime($endossos[count($endossos)-1]["endo_tx_ate"])){
+                            $statusEndosso .= "P";
+                        }
+                    }
+                    $statusEndossos[$statusEndosso]++;
+                //}
+
+                //saldoAnterior{
+                    $saldoAnterior = mysqli_fetch_assoc(query(
+                        "SELECT endo_tx_saldo FROM endosso"
+                        ." WHERE endo_tx_status = 'ativo'"
                             ." AND endo_tx_ate < '".$periodoInicio."'"
+                            ." AND endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'"
                         ." ORDER BY endo_tx_ate DESC"
                         ." LIMIT 1;"
-                    ), MYSQLI_ASSOC);
-
-                    if (!empty($saldoAnterior[0]["endo_tx_saldo"])) {
-                        $saldoAnterior = $saldoAnterior[0]["endo_tx_saldo"];
-                    } elseif (!empty($aMotorista["enti_tx_banco"])) {
-                        $saldoAnterior = $aMotorista["enti_tx_banco"][0][0] == "0" && strlen($aMotorista["enti_tx_banco"]) > 5 ? substr($aMotorista["enti_tx_banco"], 1) : $aMotorista["enti_tx_banco"];
+                    ));
+                    
+                    if(!empty($saldoAnterior)){
+                        if(!empty($saldoAnterior["endo_tx_saldo"])){
+                            $saldoAnterior = $saldoAnterior["endo_tx_saldo"];
+                        }elseif(!empty($motorista["enti_tx_banco"])){
+                            $saldoAnterior = $motorista["enti_tx_banco"];
+                        }
+                        if(strlen($motorista["enti_tx_banco"]) > 5 && $motorista["enti_tx_banco"][0] == "0"){
+                            $saldoAnterior = substr($saldoAnterior, 1);
+                        }
                     }else{
                         $saldoAnterior = "00:00";
                     }
                 //}
-                
-                for ($date = $dataInicio; $date <= $dataFim; $date->modify("+1 day")) {
-                    $dataVez = $date->format("Y-m-d");
 
-                    $diasPonto[] = diaDetalhePonto($motorista["enti_tx_matricula"], $dataVez);
-                }
-
-                foreach ($diasPonto as $diaPonto) {
-                    $diaPonto["he50"]  = (empty($diaPonto["he50"])? "00:00": $diaPonto["he50"]);
-                    $diaPonto["he100"] = (empty($diaPonto["he100"])? "00:00": $diaPonto["he100"]);
-                    $JorPrev = "00:00";
-                    if (strlen($diaPonto["jornadaPrevista"]) > 5) {
-
-                        $diaPontoJ = preg_replace("/.*&nbsp;/", "", $diaPonto["jornadaPrevista"]);
-                        if (preg_match("/(\d{2}:\d{2})$/", $diaPontoJ, $matches)) {
-                            $JorPrev = $matches[1];
-                        }
-                    } else {
-                        $JorPrev = $diaPonto["jornadaPrevista"];
-                    }
-
-                    if (strlen($diaPonto["diffJornadaEfetiva"]) > 5) {
-
-                        $diaPontojP = preg_replace("/.*&nbsp;/", "", $diaPonto["diffJornadaEfetiva"]);
-                        if (preg_match("/(\d{2}:\d{2})$/", $diaPontojP, $matches)) {
-                            $JorEfet = $matches[1];
-                        }
-                    } else {
-                        $JorEfet = $diaPonto["diffJornadaEfetiva"];
-                    }
-
-                    $he50 = $diaPonto["he50"];
-                    $he100 = $diaPonto["he100"];
-                    $adicNot = $diaPonto["adicionalNoturno"];
-                    $espInd  = $diaPonto["esperaIndenizada"];
-                    $saldoPer = strip_tags($diaPonto["diffSaldo"]);
-
-                    $totalJorPrev      = operarHorarios([$totalJorPrev,      $JorPrev], "+");
-                    $totalJorEfe       = operarHorarios([$totalJorEfe,       $JorEfet], "+");
-                    $totalHE50         = operarHorarios([$totalHE50,         $he50], "+");
-                    $totalHE100        = operarHorarios([$totalHE100,        $he100], "+");
-                    $totalAdicNot      = operarHorarios([$totalAdicNot,      $adicNot], "+");
-                    $totalEspInd       = operarHorarios([$totalEspInd,       $espInd], "+");
-                    $totalSaldoPeriodo = operarHorarios([$totalSaldoPeriodo, $saldoPer], "+");
-                    $totalSaldofinal   = operarHorarios([$saldoAnterior,     $totalSaldoPeriodo], "+");
-                }
-
-                $rows[] = [
-                    "IdMotorista" => $motorista["enti_nb_id"],
-                    "matricula" => $motorista["enti_tx_matricula"],
-                    "motorista" => $motorista["enti_tx_nome"],
-                    "statusEndosso" => $endossado,
-                    "jornadaPrevista" => $totalJorPrev,
-                    "jornadaEfetiva" => $totalJorEfe,
-                    "he50" => $totalHE50,
-                    "he100" => $totalHE100,
-                    "adicionalNoturno" => $totalAdicNot,
-                    "esperaIndenizada" => $totalEspInd,
-                    "saldoAnterior" => $saldoAnterior,
-                    "saldoPeriodo" => $totalSaldoPeriodo,
-                    "saldoFinal" => $totalSaldofinal
+                $totaisMot = [
+                    "jornadaPrevista" => "00:00",
+                    "jornadaEfetiva" => "00:00",
+                    "HESemanal" => "00:00",
+                    "HESabado" => "00:00",
+                    "adicionalNoturno" => "00:00",
+                    "esperaIndenizada" => "00:00",
+                    "saldoPeriodo" => "00:00",
+                    "saldoFinal" => "00:00"
                 ];
-            }
-            if (!is_dir("./arquivos/paineis/saldos/$empresa[empr_nb_id]/$mes-$ano")) {
-                mkdir("./arquivos/paineis/saldos/$empresa[empr_nb_id]/$mes-$ano", 0755, true);
-            }
-            $path = "./arquivos/paineis/saldos/$empresa[empr_nb_id]/$mes-$ano/";
-            $fileName = "motoristas.json";
-            $jsonArquiMoto = json_encode($rows, JSON_UNESCAPED_UNICODE);
-            file_put_contents($path.$fileName, $jsonArquiMoto);
 
-            $totalJorPrev = "00:00";
-            $totalJorEfe = "00:00";
-            $totalHE50 = "00:00";
-            $totalHE100 = "00:00";
-            $totalAdicNot = "00:00";
-            $totalEspInd = "00:00";
-            $totalSaldoPeriodo = "00:00";
-            $saldoFinal = "00:00";
+                $dia = $dataInicio;
+                for(; $dia <= $dataFim; $dia->modify("+1 day")){
+                    $diaPonto = diaDetalhePonto($motorista["enti_tx_matricula"], $dia->format("Y-m-d"));
 
-            foreach ($rows as $row) {
-                $totalJorPrev      = somarHorarios([$totalJorPrev, $row["jornadaPrevista"]]);
-                $totalJorEfe       = somarHorarios([$totalJorEfe, $row["jornadaEfetiva"]]);
-                $totalHE50         = somarHorarios([$totalHE50, $row["he50"]]);
-                $totalHE100        = somarHorarios([$totalHE100, $row["he100"]]);
-                $totalAdicNot      = somarHorarios([$totalAdicNot, $row["adicionalNoturno"]]);
-                $totalEspInd       = somarHorarios([$totalEspInd, $row["esperaIndenizada"]]);
-                $saldoAnterior     = somarHorarios([$saldoAnterior, $row["saldoAnterior"]]);
-                $totalSaldoPeriodo = somarHorarios([$totalSaldoPeriodo, $row["saldoPeriodo"]]);
-                $saldoFinal        = somarHorarios([$saldoFinal, $row["saldoFinal"]]);
+                    //Formatando informações{
+                        foreach(array_keys($diaPonto) as $f){
+                            if(in_array($f, ["data", "diaSemana"])){
+                                continue;
+                            }
+                            if(strlen($diaPonto[$f]) > 5){
+                                $diaPonto[$f] = preg_replace("/.*&nbsp;/", "", $diaPonto[$f]);
+                                if(preg_match_all("/(-?\d{2,4}:\d{2})/", $diaPonto[$f], $matches)){
+                                    $diaPonto[$f] = array_pop($matches[1]);
+                                }else{
+                                    $diaPonto[$f] = "00:00";
+                                }
+                            }
+                        }
+                    // }
+                    
+                    
+                    $diaPonto["he50"]       = !empty($diaPonto["he50"])? $diaPonto["he50"]: "00:00";
+                    $diaPonto["he100"]      = !empty($diaPonto["he100"])? $diaPonto["he100"]: "00:00";
+                    
+                    $totaisMot["jornadaPrevista"]  = somarHorarios([$totaisMot["jornadaPrevista"],  $diaPonto["jornadaPrevista"]]);
+                    $totaisMot["jornadaEfetiva"]   = somarHorarios([$totaisMot["jornadaEfetiva"],   $diaPonto["diffJornadaEfetiva"]]);
+                    $totaisMot["HESemanal"]        = somarHorarios([$totaisMot["HESemanal"],        $diaPonto["he50"]]);
+                    $totaisMot["HESabado"]         = somarHorarios([$totaisMot["HESabado"],         $diaPonto["he100"]]);
+                    $totaisMot["adicionalNoturno"] = somarHorarios([$totaisMot["adicionalNoturno"], $diaPonto["adicionalNoturno"]]);
+                    $totaisMot["esperaIndenizada"] = somarHorarios([$totaisMot["esperaIndenizada"], $diaPonto["esperaIndenizada"]]);
+                    $totaisMot["saldoPeriodo"]     = somarHorarios([$totaisMot["saldoPeriodo"],     $diaPonto["diffSaldo"]]);
+                    $totaisMot["saldoFinal"]       = somarHorarios([$saldoAnterior,                 $totaisMot["saldoPeriodo"]]);
+                }
+
+                $row = [
+                    "idMotorista" => $motorista["enti_nb_id"],
+                    "matricula" => $motorista["enti_tx_matricula"],
+                    "nome" => $motorista["enti_tx_nome"],
+                    "statusEndosso" => $statusEndosso,
+                    "jornadaPrevista" => $totaisMot["jornadaPrevista"],
+                    "jornadaEfetiva" => $totaisMot["jornadaEfetiva"],
+                    "HESemanal" => $totaisMot["HESemanal"],
+                    "HESabado" => $totaisMot["HESabado"],
+                    "adicionalNoturno" => $totaisMot["adicionalNoturno"],
+                    "esperaIndenizada" => $totaisMot["esperaIndenizada"],
+                    "saldoAnterior" => $saldoAnterior,
+                    "saldoPeriodo" => $totaisMot["saldoPeriodo"],
+                    "saldoFinal" => $totaisMot["saldoFinal"]
+                ];
+                $nomeArquivo = $motorista["enti_tx_matricula"].".json";
+                file_put_contents($path."/".$nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE));
+
+                $rows[] = $row;
             }
 
-            $totais[] = [
-                "empresaId"        => $empresa["empr_nb_id"],
-                "empresaNome"      => $empresa["empr_tx_nome"],
-                "jornadaPrevista"  => $totalJorPrev,
-                "JornadaEfetiva"   => $totalJorEfe,
-                "he50"             => $totalHE50,
-                "he100"            => $totalHE100,
-                "adicionalNoturno" => $totalAdicNot,
-                "esperaIndenizada" => $totalEspInd,
-                "saldoAnterior"    => $saldoAnterior,
-                "saldoPeriodo"     => $totalSaldoPeriodo,
-                "saldoFinal"       => $saldoFinal,
-                "totalMotorista"   => count($motoristas)
+
+            $totaisEmpr = [
+                "jornadaPrevista" => "00:00",
+                "jornadaEfetiva" => "00:00",
+                "HESemanal" => "00:00",
+                "HESabado" => "00:00",
+                "adicionalNoturno" => "00:00",
+                "esperaIndenizada" => "00:00",
+                "saldoAnterior" => "00:00",
+                "saldoPeriodo" => "00:00",
+                "saldoFinal" => "00:00"
             ];
 
-            $totaisJson = [
-                "empresaId"        => $empresa["empr_nb_id"],
-                "empresaNome"      => $empresa["empr_tx_nome"],
-                "jornadaPrevista"  => $totalJorPrev,
-                "JornadaEfetiva"   => $totalJorEfe,
-                "he50"             => $totalHE50,
-                "he100"            => $totalHE100,
-                "adicionalNoturno" => $totalAdicNot,
-                "esperaIndenizada" => $totalEspInd,
-                "saldoAnterior"    => $saldoAnterior,
-                "saldoPeriodo"     => $totalSaldoPeriodo,
-                "saldoFinal"       => $saldoFinal,
-                "totalMotorista"   => count($motoristas)
-            ];
-
-            if (!is_dir("./arquivos/paineis/saldos/$empresa[empr_nb_id]/$mes-$ano")) {
-                mkdir("./arquivos/paineis/saldos/$empresa[empr_nb_id]/$mes-$ano", 0755, true);
+            foreach($rows as $row){
+                $totaisEmpr["jornadaPrevista"]  = operarHorarios([$totaisEmpr["jornadaPrevista"], $row["jornadaPrevista"]], "+");
+                $totaisEmpr["jornadaEfetiva"]   = operarHorarios([$totaisEmpr["jornadaEfetiva"], $row["jornadaEfetiva"]], "+");
+                $totaisEmpr["HESemanal"]        = operarHorarios([$totaisEmpr["HESemanal"], $row["HESemanal"]], "+");
+                $totaisEmpr["HESabado"]         = operarHorarios([$totaisEmpr["HESabado"], $row["HESabado"]], "+");
+                $totaisEmpr["adicionalNoturno"] = operarHorarios([$totaisEmpr["adicionalNoturno"], $row["adicionalNoturno"]], "+");
+                $totaisEmpr["esperaIndenizada"] = operarHorarios([$totaisEmpr["esperaIndenizada"], $row["esperaIndenizada"]], "+");
+                $totaisEmpr["saldoAnterior"]    = operarHorarios([$totaisEmpr["saldoAnterior"], $row["saldoAnterior"]], "+");
+                $totaisEmpr["saldoPeriodo"]     = operarHorarios([$totaisEmpr["saldoPeriodo"], $row["saldoPeriodo"]], "+");
+                $totaisEmpr["saldoFinal"]       = operarHorarios([$totaisEmpr["saldoFinal"], $row["saldoFinal"]], "+");
             }
-            $path = "./arquivos/paineis/saldos/$empresa[empr_nb_id]/$mes-$ano/";
-            $fileName = "totalMotoristas.json";
-            $jsonArquiTotais = json_encode($totaisJson, JSON_UNESCAPED_UNICODE);
-            file_put_contents($path.$fileName, $jsonArquiTotais);
-        }
-        if (!is_dir("./arquivos/paineis/saldos/empresas/$mes-$ano")) {
-            mkdir("./arquivos/paineis/saldos/empresas/$mes-$ano", 0755, true);
-        }
-        $path = "./arquivos/paineis/saldos/empresas/$mes-$ano/";
-        $fileName = "totalEmpresas.json";
-        $jsonArquiTotais = json_encode($totais, JSON_UNESCAPED_UNICODE);
-        file_put_contents($path.$fileName, $jsonArquiTotais);
 
-        $totalJorPrev = "00:00";
-        $totalJorEfe = "00:00";
-        $totalHE50 = "00:00";
-        $totalHE100 = "00:00";
-        $totalAdicNot = "00:00";
-        $totalEspInd = "00:00";
-        $totalSaldoPeriodo = "00:00";
-        $toralSaldoAnter = "00:00";
-        $saldoFinal = "00:00";
-        $totalMotorista = 0;
+            //Adicionar valores da empresa à soma total das empresas{
+                if(empty($_POST["empresa"])){
+                    foreach($totaisEmpr as $key => $value){
+                        $totaisEmpresas[$key] = operarHorarios([$totaisEmpresas[$key], $value], "+");
+                    }
+                    $totaisEmpresas["qtdMotoristas"] += count($motoristas);
+                }
+            //}
 
-        foreach ($totais as $totalEmpresa) {
+            $empresa["totais"] = $totaisEmpr;
+            $empresa["qtdMotoristas"] = count($motoristas);
+            $empresa["dataInicio"] = $periodoInicio;
+            $empresa["dataFim"] = $periodoFim;
 
-            $totalMotorista += $totalEmpresa["totalMotorista"];
-
-            $totalJorPrev           = somarHorarios([$totalEmpresa["jornadaPrevista"], $totalJorPrev]);
-            $totalJorEfe            = somarHorarios([$totalJorEfe, $totalEmpresa["JornadaEfetiva"]]);
-            $totalHE50              = somarHorarios([$totalHE50, $totalEmpresa["he50"]]);
-            $totalHE100             = somarHorarios([$totalHE100, $totalEmpresa["he100"]]);
-            $totalAdicNot           = somarHorarios([$totalAdicNot, $totalEmpresa["adicionalNoturno"]]);
-            $totalEspInd            = somarHorarios([$totalEspInd, $totalEmpresa["esperaIndenizada"]]);
-            $toralSaldoAnter        = somarHorarios([$toralSaldoAnter, $totalEmpresa["saldoAnterior"]]);
-            $totalSaldoPeriodo      = somarHorarios([$totalSaldoPeriodo, $totalEmpresa["saldoPeriodo"]]);
-            $saldoFinal             = somarHorarios([$saldoFinal, $totalEmpresa["saldoFinal"]]);
+            file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", json_encode($empresa));
         }
 
-        $jsonTotaisEmpr = [
-            "EmprTotalJorPrev"      => $totalJorPrev,
-            "EmprTotalJorEfe"       => $totalJorEfe,
-            "EmprTotalHE50"         => $totalHE50,
-            "EmprTotalHE100"        => $totalHE100,
-            "EmprTotalAdicNot"      => $totalAdicNot,
-            "EmprTotalEspInd"       => $totalEspInd,
-            "EmprTotalSaldoAnter"   => $toralSaldoAnter,
-            "EmprTotalSaldoPeriodo" => $totalSaldoPeriodo,
-            "EmprTotalSaldoFinal"   => $saldoFinal,
-            "EmprTotalMotorista"    => $totalMotorista
-        ];
-
-
-        if (!is_dir("./arquivos/paineis/saldos/empresas/$mes-$ano")) {
-            mkdir("./arquivos/paineis/saldos/empresas/$mes-$ano", 0755, true);
+        if(empty($_POST["empresa"])){
+            $path = "./arquivos/saldos";
+            if(!is_dir($path)){
+                mkdir($path,0755,true);
+            }
+            $totaisEmpresas["dataInicio"] = $periodoInicio;
+            $totaisEmpresas["dataFim"] = $periodoFim;
+            file_put_contents($path."/".$nomeArquivo, json_encode($totaisEmpresas));
         }
-        $path = "./arquivos/paineis/saldos/empresas/$mes-$ano/";
-        $fileName = "empresas.json";
-        $jsonArqui = json_encode($jsonTotaisEmpr);
-        file_put_contents($path.$fileName, $jsonArqui);
+        
         return;
+
     }
 
     function index(){
         global $totalResumo, $CONTEX;
 
-        if (array_key_exists("atualizar", $_POST) && !empty($_POST["atualizar"])) {
+        if(!empty($_POST["atualizar"])){
             echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
             ob_flush();
             flush();
             criar_relatorio_saldo();
         }
 
-        if (empty($_POST["busca_dataInicio"])) {
+        cabecalho("Relatorio Geral de saldo");
+
+        $extraCampoData = "";
+        if(empty($_POST["busca_dataInicio"])){
             $_POST["busca_dataInicio"] = date("Y-m-01");
         }
-        if (empty($_POST["busca_dataFim"])) {
+        if(empty($_POST["busca_dataFim"])){
             $_POST["busca_dataFim"] = date("Y-m-d");
         }
 
-        $c = [
-            combo_net("Empresa*", "empresa", ($_POST["empresa"]?? ""), 4, "empresa", ""),
-            campo_data("Data Início*", "busca_dataInicio", ($_POST["busca_dataInicio"]?? ""), 2, ""),
-            campo_data("Data Fim*", "busca_dataFim", ($_POST["busca_dataFim"]?? ""), 2, "")
+        // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
+        //position: absolute; top: 101px; left: 420px;
+        $fields = [
+            combo_net("Empresa:", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
+            campo_data("Data Início", "busca_dataInicio", ($_POST["busca_dataInicio"] ?? ""), 2, $extraCampoData),
+            campo_data("Data Fim", "busca_dataFim", ($_POST["busca_dataFim"] ?? ""), 2, $extraCampoData)
+            // $texto,
         ];
-        
-        cabecalho("Relatório Geral de Saldo");
-        
-        $botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
-        if (!empty($_SESSION["user_tx_nivel"]) && is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
-            $botaoAtualizarPainel = "<a class='btn btn-warning' onclick='atualizarPainel()'> Atualizar Painel </a>";
-        }
-
         $botao_volta = "";
-        if (!empty($_POST["empresa"])) {
+        if(!empty($_POST["empresa"])){
             $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
         }
-
-        $b = [
+        $botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
+        if(!empty($_SESSION["user_tx_nivel"]) && is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
+            $botaoAtualizarPainel = "<a class='btn btn-warning' onclick='atualizarPainel()'> Atualizar Painel</a>";
+        }
+        $buttons = [
             botao("Buscar", "index", "", "", "", "", "btn btn-info"),
             $botao_imprimir,
             $botao_volta,
@@ -309,204 +450,259 @@
 
 
         abre_form("Filtro de Busca");
-        linha_form($c);
-        fecha_form($b);
+        linha_form($fields);
+        fecha_form($buttons);
 
-        $dataInicio = new DateTime($_POST["busca_dataInicio"]);
-        $dataFim = new DateTime($_POST["busca_dataFim"]);
-        $pasta = "./arquivos/paineis";
-        $mes = $dataInicio->format("m");
-        $ano = $dataInicio->format("Y");
+        
+        $arquivos = [];
+        $dataEmissao = ""; //Utilizado no HTML
+        $encontrado = true;
+        $path = "./arquivos/saldos";
+        $periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
-        if (!empty($_POST["empresa"])) {
-            $idEmpresa = $_POST["empresa"];
 
+        if(!empty($_POST["empresa"])){
+            //Painel dos saldos dos motoristas de uma empresa específica
+            $aEmpresa = mysqli_fetch_assoc(query(
+                "SELECT * FROM empresa"
+                ." WHERE empr_tx_status = 'ativo'"
+                    ." AND empr_tx_Ehmatriz = 'sim'"
+                    ." AND empr_nb_id = ".$_POST["empresa"]
+                ." LIMIT 1;"
+            ));
+
+            $nomeTitulos = [
+                "motorista"         => "Matrícula",
+                "empresaNome"       => "Nome",
+                "status"            => "Status",
+                "jornadaPrevista"   => "Jornada Prevista",
+                "jornadaEfetiva"    => "Jornada Efetiva",
+                "HESemanal"         => "H.E. Semanal",
+                "HESabado"          => "H.E. Sábado",
+                "adicionalNoturno"  => "Adicional Noturno",
+                "esperaIndenizada"  => "Espera Indenizada",
+                "saldoAnterior"     => "Saldo Anterior",
+                "saldoPeriodo"      => "Saldo Período",
+                "saldoFinal"        => "Saldo Final",    
+            ];
+            
+            $path .= "/".$aEmpresa["empr_nb_id"];
+
+            if(is_dir($path)){
+                $pastaSaldosEmpresa = dir($path);
+                while($arquivo = $pastaSaldosEmpresa->read()){
+                    if(!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))){
+                        $arquivos[] = $arquivo;
+                    }
+                }
+                $pastaSaldosEmpresa->close();
+
+                $dataEmissao = date("d/m/Y H:i", filemtime($path."/"."empresa_".$aEmpresa["empr_nb_id"].".json")); //Utilizado no HTML.
+                $periodoRelatorio = json_decode(file_get_contents($path."/"."empresa_".$aEmpresa["empr_nb_id"].".json"), true);
+                $periodoRelatorio = [
+                    "dataInicio" => $periodoRelatorio["dataInicio"],
+                    "dataFim" => $periodoRelatorio["dataFim"]
+                ];
+                $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataInicio"])->format("d/m");
+                $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataFim"])->format("d/m");
+                
+
+                $totais = [
+                    "jornadaPrevista" => "00:00",
+                    "jornadaEfetiva" => "00:00",
+                    "HESemanal" => "00:00",
+                    "HESabado" => "00:00",
+                    "adicionalNoturno" => "00:00",
+                    "esperaIndenizada" => "00:00",
+                    "saldoAnterior" => "00:00",
+                    "saldoPeriodo" => "00:00",
+                    "saldoFinal" => "00:00"
+                ];
+
+
+                $motoristas = [];
+                foreach($arquivos as $arquivo){
+                    $json = json_decode(file_get_contents($path."/".$arquivo), true);
+                    $json["dataAtualizacao"] = date("d/m/Y H:i", filemtime($path."/".$arquivo));
+                    foreach($totais as $key => $value){
+                        $totais[$key] = operarHorarios([$totais[$key], $json[$key]], "+");
+                    }
+                    $motoristas[] = $json;
+                }
+                foreach($arquivos as &$arquivo){
+                    $arquivo = $path."/".$arquivo;
+                }
+                $totais["empresaNome"] = $aEmpresa["empr_tx_nome"];
+
+                $contagemSaldos = [
+                    "positivos" => 0,
+                    "meta" => 0,
+                    "negativos" => 0
+                ];
+                foreach($motoristas as $saldosMotorista){
+                    if($saldosMotorista["saldoFinal"] === "00:00"){
+                        $contagemSaldos["meta"]++;
+                    }elseif($saldosMotorista["saldoFinal"][0] == "-"){
+                        $contagemSaldos["negativos"]++;
+                    }else{
+                        $contagemSaldos["positivos"]++;
+                    }
+                }
+                [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
+            }else{
+                $encontrado = false;
+            }
+        }else{
+            //Painel geral das empresas
+            $empresas = [];
+            $totais = [
+                "jornadaPrevista" => "00:00",
+                "jornadaEfetiva" => "00:00",
+                "HESemanal" => "00:00",
+                "HESabado" => "00:00",
+                "adicionalNoturno" => "00:00",
+                "esperaIndenizada" => "00:00",
+                "saldoAnterior" => "00:00",
+                "saldoPeriodo" => "00:00",
+                "saldoFinal" => "00:00"
+            ];
             $aEmpresa = mysqli_fetch_all(query(
                 "SELECT empr_tx_logo FROM empresa"
                 ." WHERE empr_tx_status = 'ativo'"
-                    ." AND empr_tx_Ehmatriz = 'sim'"
-                    ." AND empr_nb_id = ".$idEmpresa
+                ." AND empr_tx_Ehmatriz = 'sim';"
             ), MYSQLI_ASSOC);
+            
+            if(is_dir($path) && file_exists($path."/"."empresas.json")){
+                $arquivoGeral = $path."/empresas.json";
+                $dataEmissao = date("d/m/Y H:i", filemtime($arquivoGeral)); //Utilizado no HTML.
+                $arquivoGeral = json_decode(file_get_contents($arquivoGeral), true);
 
-            $objetos = [];
-            $totais = [];
-            $emissao = [];
-
-            $pasta .= "/saldos/".$idEmpresa."/".$dataInicio->format('m-Y');
-
-            if (is_dir($pasta)){
-                $file = $pasta."/motoristas.json";
-                if (file_exists($file)) {
-                    $conteudo_json = file_get_contents($file);
-                    $objetos = json_decode($conteudo_json, true);
-                }
-
-                // Obtém O total dos saldos
-                if (file_exists($pasta."/totalMotoristas.json")) {
-                    $conteudo_json = file_get_contents($pasta."/totalMotoristas.json");
-                    $totais = json_decode($conteudo_json, true);
-                }
-
-
-
-                // Obtém o tempo da última modificação do arquivo
-                $lastUpdateTimestamp = filemtime($pasta."/motoristas.json");
-                if (filemtime($pasta."/totalMotoristas.json") == $lastUpdateTimestamp) {
-                    $emissao = date("d/m/Y H:i", $lastUpdateTimestamp); //Utilizado no HTML.php
-                }
-
-                $quantPosi = 0;
-                $quantNega = 0;
-                $quantMeta = 0;
-
-                foreach ($objetos as $motoristasTotal) {
-                    if ($motoristasTotal["saldoFinal"] === "00:00") {
-                        $quantMeta++;
-                    } elseif ($motoristasTotal["saldoFinal"] > "00:00") {
-                        $quantPosi++;
-                    } elseif ($motoristasTotal["saldoFinal"] < "00:00") {
-                        $quantNega++;
+                $pastaSaldos = dir($path);
+                while($arquivo = $pastaSaldos->read()){
+                    if(!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))){
+                        $arquivo = $path."/".$arquivo."/"."empresa_".$arquivo.".json";
+                        $arquivos[] = $arquivo;
+                        $json = json_decode(file_get_contents($arquivo), true);
+                        foreach($totais as $key => $value){
+                            $totais[$key] = operarHorarios([$totais[$key], $json["totais"][$key]], "+");
+                        }
+                        $empresas[] = $json;
                     }
                 }
+                $pastaSaldos->close();
 
-                $performance = calcPercs(count($objetos), $quantMeta, $quantNega, $quantPosi);
-
-                if(!empty($_POST["empresa"]) && !empty($_POST["busca_dataInicio"]) && !empty($_POST["busca_dataFim"])){
-                    $url = $pasta."/motoristas.json";
-                }else{
-                    $url = "./arquivos/paineis/saldos/empresas/".$mes."-".$ano."/totalEmpresas.json";
+                
+                $contagemSaldos = [
+                    "positivos" => 0,
+                    "meta" => 0,
+                    "negativos" => 0
+                ];
+                
+                foreach($empresas as $empresa){
+                    if($empresa["totais"]["saldoFinal"] === "00:00"){
+                        $contagemSaldos["meta"]++;
+                    }elseif($empresa["totais"]["saldoFinal"][0] == "-"){
+                        $contagemSaldos["negativos"]++;
+                    }else{
+                        $contagemSaldos["positivos"]++;
+                    }
                 }
+                [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
+            }else{
+                $encontrado = false;
+            }
+        }
+        
+        
+        if($encontrado){
+            echo 
+                "<script>
+                    var saldos = {
+                        'quant': {
+                            'meta': ".$contagemSaldos["meta"].",
+                            'positivos': ".$contagemSaldos["positivos"].",
+                            'negativos': ".$contagemSaldos["negativos"].",
+                        },
+                        'porcentagens': {
+                            'meta': ".$performance["meta"].",
+                            'positivos': ".$performance["positivos"].",
+                            'negativos': ".$performance["negativos"].",
+                        }
+                    };
+                </script>"
+            ;
+            include_once "painel_saldo_html.php";
 
-                include_once "painel_saldo_html.php";
-
-                echo "<script>document.getElementById('tabela1').style.display = 'none'</script>";
-
+            if(!empty($_POST["empresa"])){
+                $nomeTitulos = [
+                    "motorista"         => "Matricula",
+                    "nome"              => "Unidade -  ".$aEmpresa["empr_tx_nome"]."",
+                    "status"            => "Status Endosso",
+                    "jornadaPrevista"   => "Jornada Prevista",
+                    "jornadaEfetiva"    => "Jornada Efetiva",
+                    "HESemanal"         => "H.E. Semanal",
+                    "HESabado"          => "H.E. Sábado",
+                    "adicionalNoturno"  => "Adicional Noturno",
+                    "esperaIndenizada"  => "ESPERA INDENIZADA",
+                    "saldoAnterior"     => "Saldo Anterior",
+                    "saldoPeriodo"      => "Saldo Periodo",
+                    "saldoFinal"        => "Saldo Final",    
+                ];
                 $valorTotais = [
-                    $totais["empresaNome"],
                     "",
+                    $totais["nome"],
+                    ""
+                ];
+            }else{
+                $nomeTitulos = [
+                    "motorista"         => "Todos os CNPJ",
+                    "status"            => "Quant. Motoristas",
+                    "jornadaPrevista"   => "Jornada Prevista",
+                    "jornadaEfetiva"    => "Jornada Efetiva",
+                    "HESemanal"         => "H.E. Semanal",
+                    "HESabado"          => "H.E. Sábado",
+                    "adicionalNoturno"  => "Adicional Noturno",
+                    "esperaIndenizada"  => "ESPERA INDENIZADA",
+                    "saldoAnterior"     => "Saldo Anterior",
+                    "saldoPeriodo"      => "Saldo Periodo",
+                    "saldoFinal"        => "Saldo Final",    
+                ];
+                $valorTotais = [
+                    "",
+                    ""
+                ];
+            }
+
+            $valorTotais = array_merge($valorTotais, 
+                [
                     $totais["jornadaPrevista"],
-                    $totais["JornadaEfetiva"],
-                    $totais["he50"],
-                    $totais["he100"],
+                    $totais["jornadaEfetiva"],
+                    $totais["HESemanal"],
+                    $totais["HESabado"],
                     $totais["adicionalNoturno"],
                     $totais["esperaIndenizada"],
                     $totais["saldoAnterior"],
                     $totais["saldoPeriodo"],
                     $totais["saldoFinal"]
-                ];
-                $nomeTitulos = [
-                    "motorista"         => "Matrícula",
-                    "empresaNome"       => "Nome",
-                    "status"            => "Status",
-                    "jornadaPrevista"   => "Jornada Prevista",
-                    "jornadaEfetiva"    => "Jornada Efetiva",
-                    "he50"              => "H.E. Semanal",
-                    "he100"             => "H.E. Domingo",
-                    "adicionalNoturno"  => "Adicional Noturno",
-                    "esperaIndenizada"  => "Espera Indenizada",
-                    "saldoAnterior"     => "Saldo Anterior",
-                    "saldoPeriodo"      => "Saldo Período",
-                    "saldoFinal"        => "Saldo Final",    
-                ];
-                echo "<script>";
-                for($f = 0; $f < sizeof($valorTotais); $f++){
-                    echo "document.getElementsByClassName('totais')[0].getElementsByTagName('th')[".($f)."].innerHTML = '".$valorTotais[$f]."';\n";
-                }
-                $f = 0;
-                foreach($nomeTitulos as $key => $value){
-                    echo "document.getElementsByClassName('titulos')[0].getElementsByTagName('th')[".$f."].setAttribute('data-column', '".$key."');\n";
-                    echo "document.getElementsByClassName('titulos')[0].getElementsByTagName('th')[".$f++."].innerHTML = '".$value."';\n";
-                }
-                echo "</script>";
-            }else{
-                echo "<script>alert('Não Possui dados desse mês')</script>";
+                ]
+            );
+            echo "<div class='script'><script>";
+            for($f = 0; $f < sizeof($valorTotais); $f++){
+                echo "document.getElementsByClassName('totais')[0].getElementsByTagName('th')[".($f)."].innerHTML = '".$valorTotais[$f]."';\n";
             }
-        } else {
-            $objetos = [];
-            $totais = [];
-            $emissao = "";
-            $aEmpresa = mysqli_fetch_all(query(
-                "SELECT empr_tx_logo FROM `empresa`"
-                ." WHERE empr_tx_Ehmatriz = 'sim'"
-            ), MYSQLI_ASSOC);
-
-            $pasta = "./arquivos/paineis/saldos/empresas/$mes-$ano";
-
-            if(is_dir($pasta)){
-                $file = $pasta."/empresas.json";
-                if (file_exists($file)) {
-                    $conteudo_json = file_get_contents($file);
-                    $objetos = json_decode($conteudo_json, true);
-                }
-
-                // Obtém O total dos saldos de cada empresa
-                $fileEmpresas = $pasta."/totalEmpresas.json";
-
-                if (file_exists($fileEmpresas)) {
-                    $conteudo_json = file_get_contents($fileEmpresas);
-                    $totais = json_decode($conteudo_json, true);
-                }
-
-                // Obtém o tempo da última modificação do arquivo
-                $lastUpdateTimestamp = filemtime($pasta."/empresas.json");
-                if (filemtime($pasta."/totalEmpresas.json") == $lastUpdateTimestamp) {
-                    $emissao = date("d/m/Y H:i", $lastUpdateTimestamp);
-                }
-            }else{
-                echo "<script>alert('Não Possui dados desse mês')</script>";
+            $f = 0;
+            foreach($nomeTitulos as $key => $value){
+                echo "document.getElementsByClassName('titulos')[0].getElementsByTagName('th')[".$f."].setAttribute('data-column', '".$key."');\n";
+                echo "document.getElementsByClassName('titulos')[0].getElementsByTagName('th')[".$f++."].innerHTML = '".$value."';\n";
             }
-
-            $quantPosi = 0;
-            $quantNega = 0;
-            $quantMeta = 0;
-            foreach($totais as $empresaTotal){
-                if($empresaTotal["saldoFinal"] === "00:00"){
-                    $quantMeta++;
-                }elseif($empresaTotal["saldoFinal"] > "00:00"){
-                    $quantPosi++;
-                }elseif($empresaTotal["saldoFinal"] < "00:00"){
-                    $quantNega++;
-                }
-            }
-            $performance = calcPercs(count($totais), $quantMeta, $quantNega, $quantPosi);
-
-            include_once "painel_saldo_html.php";
+            echo 
+                "document.getElementsByClassName('script')[0].innerHTML = '';
+                </script></div>"
+            ;
+        }else{
+            echo "<script>alert('Não Possui dados desse mês')</script>";
         }
 
-        echo 
-            "<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"])."'>
-                <input type='hidden' name='empresa' id='empresa'>
-                <input type='hidden' name='busca_dataInicio' id='busca_dataInicio'>
-                <input type='hidden' name='busca_dataFim' id='busca_dataFim'>
-            </form>
-            <form name='formularioAtualizarPainel' method='POST' action='".htmlspecialchars(basename($_SERVER["PHP_SELF"]))."'>
-                <input type='hidden' name='atualizar' id='atualizar'>
-                <input type='hidden' name='empresa' id='empresa'>
-                <input type='hidden' name='busca_dataInicio' id='busca_dataInicio'>
-                <input type='hidden' name='busca_dataFim' id='busca_dataFim'>
-            </form>
-
-            <script>
-                function imprimir(){
-                    window.print();
-                }
-                
-                function setAndSubmit(empresa){
-                    document.myForm.empresa.value = empresa;
-                    document.formularioAtualizarPainel.busca_dataInicio.value = document.getElementById('busca_dataInicio').value;
-                    document.formularioAtualizarPainel.busca_dataFim.value = document.getElementById('busca_dataFim').value;
-                    document.myForm.submit();
-                }
-
-                function atualizarPainel(){
-                    document.formularioAtualizarPainel.empresa.value = document.getElementById('empresa').value;
-                    document.formularioAtualizarPainel.busca_dataInicio.value = document.getElementById('busca_dataInicio').value;
-                    document.formularioAtualizarPainel.busca_dataFim.value = document.getElementById('busca_dataFim').value;
-                    document.formularioAtualizarPainel.atualizar.value = 'atualizar';
-                    document.formularioAtualizarPainel.submit();
-                }
-            </script>"
-        ;
-
+        carregarJS($arquivos);
         rodape();
     }
