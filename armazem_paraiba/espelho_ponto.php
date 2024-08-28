@@ -378,6 +378,7 @@ unset($_POST["acao"]);
 			"<form name='form_ajuste_ponto' method='post'>
 				<input type='hidden' name='acao' value='layout_ajuste'>
 				<input type='hidden' name='id' value='". $aMotorista["enti_nb_id"] ."'>
+				<input type='hidden' name='HTTP_REFERER' value=''>
 				<input type='hidden' name='data'>
 				<input type='hidden' name='data_de' value='".((!empty($_POST["busca_dataInicio"])? $_POST["busca_dataInicio"]: date("01/m/Y")))."'>
 				<input type='hidden' name='data_ate' value='".$_POST["busca_dataFim"]."'>
