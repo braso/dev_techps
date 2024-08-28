@@ -238,11 +238,9 @@
 		return carrega_array($sql)[0];
 	}
 
-	function carregar($tabela,$id="",$campo="",$valor="",$extra="",$exibe=0){
-		$campoId = substr($tabela,0,4)."_nb_id";
+	function carregar($tabela, $id="", $campo="", $valor="", $extra="", $exibe=0){
 		$ext = "";
-
-		$extra_id = (!empty($id))? " AND ".$campoId." = ".$id: "";
+		$extra_id = (!empty($id))? " AND ".substr($tabela,0,4)."_nb_id"." = ".$id: "";
 
 		if(!empty($campo[0])) {
 			$a_campo = explode(",", $campo);
@@ -253,7 +251,7 @@
 			}
 		}
 
-		$query = "SELECT * FROM $tabela WHERE 1 $extra_id $ext $extra LIMIT 1";
+		$query = "SELECT * FROM ".$tabela." WHERE 1 ".$extra_id." ".$ext." ".$extra." LIMIT 1;";
 
 		if($exibe == 1){
 			echo $query;

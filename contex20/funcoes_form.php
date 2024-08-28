@@ -8,31 +8,6 @@
 	}
 
 	function cabecaRelatorio($nome_pagina,$foco=0){
-		?>
-		<style>
-			table.table thead tr th{
-				font-size: 10pt;	    	
-			}
-			table.table td{
-				font-size: 8pt;	    	
-			}
-			p.text-left{
-				font-size: 8pt;
-			}
-			label{
-				font-size: 8pt;
-			}
-			@media print{
-				table.table thead tr th{
-					font-size: 8pt;
-				}
-				table.table td{
-					font-size: 6pt;
-				}
-			}
-		</style>
-		<?php
-
 		global $CONTEX;
 		?>
 			<!DOCTYPE html>
@@ -85,6 +60,33 @@
 				<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/css/custom.min.css" rel="stylesheet" type="text/css" />
 				<!-- FIM TEMA LAYOUT STYLES -->
 				<link rel="shortcut icon" href="favicon.ico" />
+
+				<style>
+					table.table thead tr th{
+						font-size: 10pt;	    	
+					}
+					table.table td{
+						font-size: 8pt;	    	
+					}
+					p.text-left{
+						font-size: 8pt;
+					}
+					label{
+						font-size: 8pt;
+					}
+					@media print{
+						table.table thead tr th{
+							font-size: 8pt;
+						}
+						table.table td{
+							font-size: 6pt;
+						}
+					}
+
+					.page-header .page-header-menu{
+						background-color: white;
+					}
+				</style>
 
 				<script type="text/javascript">
 					function contex_foco(elemento){

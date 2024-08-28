@@ -88,6 +88,8 @@
 		criar_relatorio(date("Y-m"));
 		if(is_int(strpos($_SERVER["REQUEST_URI"], "carregar_ponto"))){
 			index();
+		}else{
+			echo "Pontos registrados com sucesso.";
 		}
 		exit;
 	}
@@ -118,4 +120,5 @@
 	}
 
 	$interno = true;
-	include_once("carregar_ponto.php");
+	// include_once("carregar_ponto.php");
+	include_once("carregar_ponto_2.php");

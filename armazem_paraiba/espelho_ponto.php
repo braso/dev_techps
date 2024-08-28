@@ -334,12 +334,10 @@
 			"<script>
 
 				function selecionaMotorista(idEmpresa){
-					let buscaExtra = '';
+					let buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\")';
 					if(idEmpresa > 0){
-						buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\") AND enti_nb_empresa = '+idEmpresa+'');
+						buscaExtra += ' AND enti_nb_empresa = '+idEmpresa+'');
 						$('.busca_motorista')[0].innerHTML = null;
-					}else{
-						buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\")');
 					}
 
 					// Verifique se o elemento está usando Select2 antes de destruí-lo

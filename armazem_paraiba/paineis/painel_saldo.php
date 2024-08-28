@@ -17,7 +17,7 @@
         }
 
         if($total == 0){
-            return [0];
+            return array_pad([], sizeof($values), 0);
         }
         
         $percentuais = array_pad([], sizeof($values), 0);
@@ -46,7 +46,8 @@
                     +'<td>'+row.saldoFinal+'</td>'
                 +'</tr>';";
         }else{
-            $linha .= "+'<td style=\"cursor: pointer;\" onclick=setAndSubmit('+row.empresaId+')>'+row.empr_tx_nome+'</td>'
+            $linha .= "+'<td style=\"cursor: pointer;\" onclick=setAndSubmit('+row.empr_nb_id+')>'+row.empr_tx_nome+'</td>'
+                    +'<td>'+(row.percEndossado*100)+'%</td>'
                     +'<td>'+row.qtdMotoristas+'</td>'
                     +'<td>'+row.totais.jornadaPrevista+'</td>'
                     +'<td>'+row.totais.jornadaEfetiva+'</td>'
@@ -73,13 +74,6 @@
                 <input type='hidden' name='busca_dataFim' id='busca_dataFim'>
             </form>
             <script>
-                document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[1].innerHTML = saldos.quant.meta;
-                document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[1].innerHTML = saldos.quant.positivos;
-                document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[1].innerHTML = saldos.quant.negativos;
-                document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[2].innerHTML = saldos.porcentagens.meta*100+'%';
-                document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[2].innerHTML = saldos.porcentagens.positivos*100+'%';
-                document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[2].innerHTML = saldos.porcentagens.negativos*100+'%';
-
                 function setAndSubmit(empresa){
                     document.myForm.empresa.value = empresa;
                     document.myForm.busca_dataInicio.value = document.getElementById('busca_dataInicio').value;
@@ -111,6 +105,7 @@
                                 $.each(data, function(index, item){
                                     row[index] = item;
                                 });
+                                console.log(row);
                                 if(row.idMotorista != undefined){
                                     delete row.idMotorista;
                                 }"
@@ -209,7 +204,9 @@
             "qtdMotoristas" => 0
         ];
 
+        echo "<script>";
         foreach($empresas as $empresa){
+            echo "console.log('Carregando ".$empresa["empr_tx_nome"]."');";
             $path = "./arquivos/saldos"."/".$empresa["empr_nb_id"];
             if(!file_exists($path."/empresa_".$empresa["empr_nb_id"].".json")){
                 if(!is_dir($path)){
@@ -233,7 +230,7 @@
                 "N" => 0
             ];
             foreach($motoristas as $motorista){
-
+                echo "console.log('    ".$motorista["enti_tx_nome"]."');";
                 $dataInicio = new DateTime($periodoInicio);
                 $dataFim = new DateTime($periodoFim);
 
@@ -348,7 +345,8 @@
 
                 $rows[] = $row;
             }
-
+            echo "console.log('Concluindo...');";
+            
 
             $totaisEmpr = [
                 "jornadaPrevista" => "00:00",
@@ -387,9 +385,12 @@
             $empresa["qtdMotoristas"] = count($motoristas);
             $empresa["dataInicio"] = $periodoInicio;
             $empresa["dataFim"] = $periodoFim;
+            $empresa["percEndossado"] = ($statusEndossos["E"])/array_sum(array_values($statusEndossos));
 
             file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", json_encode($empresa));
         }
+        echo "console.log('Finalizando...');";
+        echo "</script>";
 
         if(empty($_POST["empresa"])){
             $path = "./arquivos/saldos";
@@ -398,15 +399,13 @@
             }
             $totaisEmpresas["dataInicio"] = $periodoInicio;
             $totaisEmpresas["dataFim"] = $periodoFim;
-            file_put_contents($path."/".$nomeArquivo, json_encode($totaisEmpresas));
+            file_put_contents($path."/empresas.json", json_encode($totaisEmpresas));
         }
-        
         return;
 
     }
 
     function index(){
-        global $totalResumo, $CONTEX;
 
         if(!empty($_POST["atualizar"])){
             echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
@@ -460,31 +459,37 @@
         $path = "./arquivos/saldos";
         $periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
+        $contagemSaldos = [
+            "positivos" => 0,
+            "meta" => 0,
+            "negativos" => 0
+        ];
+        $contagemEndossos = [
+            "E" => 0,
+            "EP" => 0,
+            "N" => 0
+        ];
+        $totais = [
+            "jornadaPrevista" => "00:00",
+            "jornadaEfetiva" => "00:00",
+            "HESemanal" => "00:00",
+            "HESabado" => "00:00",
+            "adicionalNoturno" => "00:00",
+            "esperaIndenizada" => "00:00",
+            "saldoAnterior" => "00:00",
+            "saldoPeriodo" => "00:00",
+            "saldoFinal" => "00:00"
+        ];
 
         if(!empty($_POST["empresa"])){
             //Painel dos saldos dos motoristas de uma empresa específica
             $aEmpresa = mysqli_fetch_assoc(query(
                 "SELECT * FROM empresa"
                 ." WHERE empr_tx_status = 'ativo'"
-                    ." AND empr_tx_Ehmatriz = 'sim'"
                     ." AND empr_nb_id = ".$_POST["empresa"]
                 ." LIMIT 1;"
             ));
 
-            $nomeTitulos = [
-                "motorista"         => "Matrícula",
-                "empresaNome"       => "Nome",
-                "status"            => "Status",
-                "jornadaPrevista"   => "Jornada Prevista",
-                "jornadaEfetiva"    => "Jornada Efetiva",
-                "HESemanal"         => "H.E. Semanal",
-                "HESabado"          => "H.E. Sábado",
-                "adicionalNoturno"  => "Adicional Noturno",
-                "esperaIndenizada"  => "Espera Indenizada",
-                "saldoAnterior"     => "Saldo Anterior",
-                "saldoPeriodo"      => "Saldo Período",
-                "saldoFinal"        => "Saldo Final",    
-            ];
             
             $path .= "/".$aEmpresa["empr_nb_id"];
 
@@ -503,22 +508,6 @@
                     "dataInicio" => $periodoRelatorio["dataInicio"],
                     "dataFim" => $periodoRelatorio["dataFim"]
                 ];
-                $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataInicio"])->format("d/m");
-                $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataFim"])->format("d/m");
-                
-
-                $totais = [
-                    "jornadaPrevista" => "00:00",
-                    "jornadaEfetiva" => "00:00",
-                    "HESemanal" => "00:00",
-                    "HESabado" => "00:00",
-                    "adicionalNoturno" => "00:00",
-                    "esperaIndenizada" => "00:00",
-                    "saldoAnterior" => "00:00",
-                    "saldoPeriodo" => "00:00",
-                    "saldoFinal" => "00:00"
-                ];
-
 
                 $motoristas = [];
                 foreach($arquivos as $arquivo){
@@ -534,12 +523,8 @@
                 }
                 $totais["empresaNome"] = $aEmpresa["empr_tx_nome"];
 
-                $contagemSaldos = [
-                    "positivos" => 0,
-                    "meta" => 0,
-                    "negativos" => 0
-                ];
                 foreach($motoristas as $saldosMotorista){
+                    $contagemEndossos[$saldosMotorista["statusEndosso"]]++;
                     if($saldosMotorista["saldoFinal"] === "00:00"){
                         $contagemSaldos["meta"]++;
                     }elseif($saldosMotorista["saldoFinal"][0] == "-"){
@@ -548,24 +533,12 @@
                         $contagemSaldos["positivos"]++;
                     }
                 }
-                [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
             }else{
                 $encontrado = false;
             }
         }else{
             //Painel geral das empresas
             $empresas = [];
-            $totais = [
-                "jornadaPrevista" => "00:00",
-                "jornadaEfetiva" => "00:00",
-                "HESemanal" => "00:00",
-                "HESabado" => "00:00",
-                "adicionalNoturno" => "00:00",
-                "esperaIndenizada" => "00:00",
-                "saldoAnterior" => "00:00",
-                "saldoPeriodo" => "00:00",
-                "saldoFinal" => "00:00"
-            ];
             $aEmpresa = mysqli_fetch_all(query(
                 "SELECT empr_tx_logo FROM empresa"
                 ." WHERE empr_tx_status = 'ativo'"
@@ -577,9 +550,14 @@
                 $dataEmissao = date("d/m/Y H:i", filemtime($arquivoGeral)); //Utilizado no HTML.
                 $arquivoGeral = json_decode(file_get_contents($arquivoGeral), true);
 
+                $periodoRelatorio = [
+                    "dataInicio" => $arquivoGeral["dataInicio"],
+                    "dataFim" => $arquivoGeral["dataFim"]
+                ];
+
                 $pastaSaldos = dir($path);
                 while($arquivo = $pastaSaldos->read()){
-                    if(!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))){
+                    if(!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))){
                         $arquivo = $path."/".$arquivo."/"."empresa_".$arquivo.".json";
                         $arquivos[] = $arquivo;
                         $json = json_decode(file_get_contents($arquivo), true);
@@ -590,13 +568,6 @@
                     }
                 }
                 $pastaSaldos->close();
-
-                
-                $contagemSaldos = [
-                    "positivos" => 0,
-                    "meta" => 0,
-                    "negativos" => 0
-                ];
                 
                 foreach($empresas as $empresa){
                     if($empresa["totais"]["saldoFinal"] === "00:00"){
@@ -607,101 +578,141 @@
                         $contagemSaldos["positivos"]++;
                     }
                 }
-                [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
             }else{
                 $encontrado = false;
             }
         }
+        $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataInicio"])->format("d/m");
+        $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataFim"])->format("d/m");
+
+        [$percEndosso["E"], $percEndosso["EP"], $percEndosso["N"]] = calcPercs(array_values($contagemEndossos));
+        [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
         
-        
+        echo 
+            "<script>
+                var endossos = {
+                    'totais': {
+                        'E': ".$contagemEndossos["E"].",
+                        'EP': ".$contagemEndossos["EP"].",
+                        'N': ".$contagemEndossos["N"]."
+                    },
+                    'porcentagens': {
+                        'E': ".$percEndosso["E"].",
+                        'EP': ".$percEndosso["EP"].",
+                        'N': ".$percEndosso["N"].",
+                    }
+                }
+                var saldos = {
+                    'totais': {
+                        'meta': ".$contagemSaldos["meta"].",
+                        'positivos': ".$contagemSaldos["positivos"].",
+                        'negativos': ".$contagemSaldos["negativos"].",
+                    },
+                    'porcentagens': {
+                        'meta': ".$performance["meta"].",
+                        'positivos': ".$performance["positivos"].",
+                        'negativos': ".$performance["negativos"].",
+                    }
+                };
+            </script>"
+        ;
         if($encontrado){
-            echo 
-                "<script>
-                    var saldos = {
-                        'quant': {
-                            'meta': ".$contagemSaldos["meta"].",
-                            'positivos': ".$contagemSaldos["positivos"].",
-                            'negativos': ".$contagemSaldos["negativos"].",
-                        },
-                        'porcentagens': {
-                            'meta': ".$performance["meta"].",
-                            'positivos': ".$performance["positivos"].",
-                            'negativos': ".$performance["negativos"].",
-                        }
-                    };
-                </script>"
-            ;
-            include_once "painel_saldo_html.php";
+            $rowTotais = "<tr class='totais'>";
+            $rowTitulos = "<tr id='titulos' class='titulos'>";
 
             if(!empty($_POST["empresa"])){
-                $nomeTitulos = [
-                    "motorista"         => "Matricula",
-                    "nome"              => "Unidade -  ".$aEmpresa["empr_tx_nome"]."",
-                    "status"            => "Status Endosso",
-                    "jornadaPrevista"   => "Jornada Prevista",
-                    "jornadaEfetiva"    => "Jornada Efetiva",
-                    "HESemanal"         => "H.E. Semanal",
-                    "HESabado"          => "H.E. Sábado",
-                    "adicionalNoturno"  => "Adicional Noturno",
-                    "esperaIndenizada"  => "ESPERA INDENIZADA",
-                    "saldoAnterior"     => "Saldo Anterior",
-                    "saldoPeriodo"      => "Saldo Periodo",
-                    "saldoFinal"        => "Saldo Final",    
-                ];
-                $valorTotais = [
-                    "",
-                    $totais["nome"],
-                    ""
-                ];
-            }else{
-                $nomeTitulos = [
-                    "motorista"         => "Todos os CNPJ",
-                    "status"            => "Quant. Motoristas",
-                    "jornadaPrevista"   => "Jornada Prevista",
-                    "jornadaEfetiva"    => "Jornada Efetiva",
-                    "HESemanal"         => "H.E. Semanal",
-                    "HESabado"          => "H.E. Sábado",
-                    "adicionalNoturno"  => "Adicional Noturno",
-                    "esperaIndenizada"  => "ESPERA INDENIZADA",
-                    "saldoAnterior"     => "Saldo Anterior",
-                    "saldoPeriodo"      => "Saldo Periodo",
-                    "saldoFinal"        => "Saldo Final",    
-                ];
-                $valorTotais = [
-                    "",
-                    ""
-                ];
-            }
+                $rowTotais .= 
+                    "<th colspan='2'>".$totais["empresaNome"]."</th>"
+                    ."<th colspan='1'></th>"
+                    ."<th colspan='1'>".$totais["jornadaPrevista"]."</th>"
+                    ."<th colspan='1'>".$totais["jornadaEfetiva"]."</th>"
+                    ."<th colspan='1'>".$totais["HESemanal"]."</th>"
+                    ."<th colspan='1'>".$totais["HESabado"]."</th>"
+                    ."<th colspan='1'>".$totais["adicionalNoturno"]."</th>"
+                    ."<th colspan='1'>".$totais["esperaIndenizada"]."</th>"
+                    ."<th colspan='1'>".$totais["saldoAnterior"]."</th>"
+                    ."<th colspan='1'>".$totais["saldoPeriodo"]."</th>"
+                    ."<th colspan='1'>".$totais["saldoFinal"]."</th>";
+                ;
 
-            $valorTotais = array_merge($valorTotais, 
-                [
-                    $totais["jornadaPrevista"],
-                    $totais["jornadaEfetiva"],
-                    $totais["HESemanal"],
-                    $totais["HESabado"],
-                    $totais["adicionalNoturno"],
-                    $totais["esperaIndenizada"],
-                    $totais["saldoAnterior"],
-                    $totais["saldoPeriodo"],
-                    $totais["saldoFinal"]
-                ]
-            );
-            echo "<div class='script'><script>";
-            for($f = 0; $f < sizeof($valorTotais); $f++){
-                echo "document.getElementsByClassName('totais')[0].getElementsByTagName('th')[".($f)."].innerHTML = '".$valorTotais[$f]."';\n";
+                $rowTitulos .= 
+                    "<th class='matricula'>Matrícula</th>"
+                    ."<th class='nome'>Nome</th>"
+                    ."<th class='status'>Status Endosso</th>"
+                    ."<th class='jornadaPrevista'>Jornada Prevista</th>"
+                    ."<th class='jornadaEfetiva'>Jornada Efetiva</th>"
+                    ."<th class='HESemanal'>H.E. Semanal</th>"
+                    ."<th class='HESabado'>H.E. Sábado</th>"
+                    ."<th class='adicionalNoturno'>Adicional Noturno</th>"
+                    ."<th class='esperaIndenizada'>Espera Indenizada</th>"
+                    ."<th class='saldoAnterior'>Saldo Anterior</th>"
+                    ."<th class='saldoPeriodo'>Saldo Período</th>"
+                    ."<th class='saldoFinal'>Saldo Final</th>"
+                ;
+            }else{
+                $rowTotais .= 
+                    "<th colspan='1'></th>"
+                    ."<th colspan='1'></th>"
+                    ."<th colspan='1'></th>"
+                    ."<th colspan='1'>".$totais["jornadaPrevista"]."</th>"
+                    ."<th colspan='1'>".$totais["jornadaEfetiva"]."</th>"
+                    ."<th colspan='1'> ".(($totais["HESemanal"] == "00:00")? '': $totais["HESemanal"])."</th>"
+                    ."<th colspan='1'> ".(($totais["HESabado"] == "00:00")? '': $totais["HESabado"])."</th>"
+                    ."<th colspan='1'> ".(($totais["adicionalNoturno"] == "00:00")? '': $totais["adicionalNoturno"])."</th>"
+                    ."<th colspan='1'> ".(($totais["esperaIndenizada"] == "00:00")? '': $totais["esperaIndenizada"])."</th>"
+                    ."<th colspan='1'> ".(($totais["saldoAnterior"] == "00:00")? '': $totais["saldoAnterior"])."</th>"
+                    ."<th colspan='1'> ".(($totais["saldoPeriodo"] == "00:00")? '': $totais["saldoPeriodo"])."</th>"
+                    ."<th colspan='1'> ".(($totais["saldoFinal"] == "00:00")? '': $totais["saldoFinal"])."</th>"
+                ;
+
+                $rowTitulos .= 
+                    "<th data-column='nome' data-order='asc'>Nome da Empresa/Filial</th>"
+                    ."<th data-column='percEndossados' data-order='asc'>% Endossados</th>"
+                    ."<th data-column='qtdMotoristas' data-order='asc'>Qtd. Motoristas</th>"
+                    ."<th data-column='jornadaPrevista' data-order='asc'>Jornada Prevista</th>"
+                    ."<th data-column='JornadaEfetiva' data-order='asc'>Jornada Efetiva</th>"
+                    ."<th data-column='HESemanal' data-order='asc'>HE 50%</th>"
+                    ."<th data-column='HESabado' data-order='asc'>HE 100%</th>"
+                    ."<th data-column='adicionalNoturno' data-order='asc'>Adicional Noturno</th>"
+                    ."<th data-column='esperaIndenizada' data-order='asc'>Espera Indenizada</th>"
+                    ."<th data-column='saldoAnterior' data-order='asc'>Saldo Anterior</th>"
+                    ."<th data-column='saldoPeriodo' data-order='asc'>Saldo Periodo</th>"
+                    ."<th data-column='saldoFinal' data-order='asc'>Saldo Final</th>"
+                ;
             }
-            $f = 0;
-            foreach($nomeTitulos as $key => $value){
-                echo "document.getElementsByClassName('titulos')[0].getElementsByTagName('th')[".$f."].setAttribute('data-column', '".$key."');\n";
-                echo "document.getElementsByClassName('titulos')[0].getElementsByTagName('th')[".$f++."].innerHTML = '".$value."';\n";
-            }
+            $rowTotais .= "</tr>";
+            $rowTitulos .= "</tr>";
+
+            include_once "painel_saldo_html.php";
+
+            echo "<div class='script'>";
+            echo "<script>";
+            echo ((!empty($_POST["empresa"]))? "document.getElementById('tabela1').style.display = 'table';": "");
+            echo 
+                "console.log(endossos);
+                document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.E;
+                document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.EP;
+                document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.N;
+                document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[2].innerHTML = endossos.porcentagens.E*100+'%';
+                document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td')[2].innerHTML = endossos.porcentagens.EP*100+'%';
+                document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td')[2].innerHTML = endossos.porcentagens.N*100+'%';
+                
+                document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.positivos;
+                document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.meta;
+                document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.negativos;
+                document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[2].innerHTML = saldos.porcentagens.positivos*100+'%';
+                document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[2].innerHTML = saldos.porcentagens.meta*100+'%';
+                document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[2].innerHTML = saldos.porcentagens.negativos*100+'%';"
+            ;
             echo 
                 "document.getElementsByClassName('script')[0].innerHTML = '';
-                </script></div>"
+                </script>"
             ;
         }else{
             echo "<script>alert('Não Possui dados desse mês')</script>";
         }
+
+        echo "</div>";
 
         carregarJS($arquivos);
         rodape();

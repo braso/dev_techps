@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
@@ -64,7 +64,7 @@
 			if(empty($horario)){
 				$horario = "00:00";
 			}
-			if(!preg_match("/^-?\d{2,4}:\d{2}$/", $horario)){
+			if(!preg_match("/^-?\d{2,10}:\d{2}$/", $horario)){
 				echo "<script>console.log('".("Format error: |".strval($horario)."|")."')</script>";
 			}
 		}
@@ -277,7 +277,7 @@
 					}
 					document.form_ajuste_ponto.id.value = motorista;
 					document.form_ajuste_ponto.data.value = data;
-					document.form_ajuste_ponto.HTTP_REFERER.value = ".(!empty($_POST["HTTP_REFERER"])? $_POST["HTTP_REFERER"]: $_SERVER["REQUEST_URI"]).";
+					document.form_ajuste_ponto.HTTP_REFERER.value = '".(!empty($_POST["HTTP_REFERER"])? $_POST["HTTP_REFERER"]: $_SERVER["REQUEST_URI"])."';
 					document.form_ajuste_ponto.submit();
 				}
 			</script>"
@@ -524,13 +524,13 @@
 			"esperaIndenizada" => "00:00",
 			"diffSaldo" => "00:00"
 		];
-		$aMotorista = carrega_array(query(
-			"SELECT * FROM entidade
-				LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
-				LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
-				WHERE enti_tx_status = 'ativo' 
-					AND enti_tx_matricula = '".$matricula."' 
-				LIMIT 1"
+		$aMotorista = mysqli_fetch_assoc(query(
+			"SELECT * FROM entidade"
+			." LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id"
+			." LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id"
+			." WHERE enti_tx_status = 'ativo'"
+				." AND enti_tx_matricula = '".$matricula."'"
+			." LIMIT 1;"
 		));
 
 		if(empty($aMotorista["enti_nb_parametro"])){

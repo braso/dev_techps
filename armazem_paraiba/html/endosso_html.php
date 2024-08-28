@@ -32,12 +32,12 @@
 	<?=
 		"document.getElementsByName('idMotoristaEndossado')[0].value 		= '".(!empty($aIdMotoristaEndossado)? implode(",", $aIdMotoristaEndossado) : "")."';
 		document.getElementsByName('matriculaMotoristaEndossado')[0].value 	= '".(!empty($aMatriculaMotoristaEndossado)? implode(",", $aMatriculaMotoristaEndossado): '')."';
-		document.getElementsByName('busca_empresa')[0].value 				= '".$_POST["busca_empresa"]."';
-		document.getElementsByName('busca_data')[0].value 					= '".$_POST["busca_data"]."';
-		document.getElementsByName('busca_motorista')[0].value 				= '".$_POST["busca_motorista"]."';
-		document.getElementsByName('busca_situacao')[0].value 				= '".$_POST["busca_situacao"]."';
+		document.getElementsByName('busca_empresa')[0].value 				= '".(!empty($_POST["busca_empresa"])? $_POST["busca_empresa"]: "")."';
+		document.getElementsByName('busca_data')[0].value 					= '".(!empty($_POST["busca_data"])? $_POST["busca_data"]: "")."';
+		document.getElementsByName('busca_motorista')[0].value 				= '".(!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: "")."';
+		document.getElementsByName('busca_situacao')[0].value 				= '".(!empty($_POST["busca_situacao"])? $_POST["busca_situacao"]: "")."';
 
-		document.getElementsByName('id')[0].value 							= '".$aMotorista["enti_nb_id"]."';
+		document.getElementsByName('id')[0].value 							= '".(!empty($aMotorista["enti_nb_id"])? $aMotorista["enti_nb_id"]: "")."';
 		
 		let select2URL = '".$select2URL."'"
 	?>

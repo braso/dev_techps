@@ -178,6 +178,13 @@
 			exit;
 		}
 
+		$motorista = mysqli_fetch_assoc(query(
+			"SELECT * FROM entidade"
+			." WHERE enti_tx_status = 'ativo'"
+				." AND enti_nb_id = ".$_POST["busca_motorista"]
+			." LIMIT 1;"
+		));
+
 		$ultimoEndosso = mysqli_fetch_assoc(query(
 			"SELECT enti_tx_matricula, endo_tx_ate, endo_tx_filename, endo_tx_saldo, endo_tx_max50APagar FROM endosso "
 			." JOIN entidade ON enti_nb_id = endo_nb_entidade"
@@ -187,24 +194,27 @@
 			." LIMIT 1;"
 		));
 
-		$ultimoEndossoCSV = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
-
+		
 		$pago = ["00:00", "00:00"];
 		if(!empty($ultimoEndosso["endo_tx_filename"])){
 			$ultimoEndossoCSV = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
+			$ultimoEndossoCSV = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
 			$pago = calcularHorasAPagar($ultimoEndossoCSV["endo_tx_saldo"], $ultimoEndossoCSV["totalResumo"]["he50"], $ultimoEndossoCSV["totalResumo"]["he100"], $ultimoEndossoCSV["endo_tx_max50APagar"]);
+			$saldoAnterior = operarHorarios([$ultimoEndossoCSV["endo_tx_saldo"], $pago[0], $pago[1]], "-");
+			$dataDe = new DateTime($ultimoEndosso["endo_tx_ate"]);
+		}else{
+			$saldoAnterior = $motorista["enti_tx_banco"];
+			$dataDe = new DateTime($_POST["data_de"]);
 		}
-		$saldoAnterior = operarHorarios([$ultimoEndossoCSV["endo_tx_saldo"], $pago[0], $pago[1]], "-");
 		
 		$dataAte = new DateTime($_POST["data_ate"]);
-		$ultimoEndosso["endo_tx_ate"] = new DateTime($ultimoEndosso["endo_tx_ate"]);
 
 		for(
-			$date = date_add($ultimoEndosso["endo_tx_ate"], DateInterval::createFromDateString("1 day")); 
+			$date = $dataDe->modify("+1 day"); 
 			date_diff($date, $dataAte)->days >= 0 && !(date_diff($date, $dataAte)->invert);
 			$date = date_add($date, DateInterval::createFromDateString("1 day"))
 		){
-			diaDetalhePonto($ultimoEndosso["enti_tx_matricula"], $date->format("Y-m-d"));
+			diaDetalhePonto($motorista["enti_tx_matricula"], $date->format("Y-m-d"));
 		}
 		
 		$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");

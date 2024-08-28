@@ -11,7 +11,8 @@
 	global $path;
 	$path = "arquivos/pontos";
 
-	include_once "carregar_ftp.php";
+	include_once "carregar_ftp_2.php";
+    //include_once "carregar_ftp.php";
 	include_once "funcoes_ponto.php";
 
 	function showErrMsg(string $caminhoCompleto, string $errorMsg): string{
@@ -309,7 +310,9 @@
 			$errorMsg["existingPoints"][] = $pontoExistente["pont_tx_matricula"].": (".$pontoExistente["pont_tx_data"].")";
 		}
 
-		//*Salvar registros e arquivo{
+		var_dump($newPontos); echo "<br><br>";
+		var_dump($errorMsg); echo "<br><br>";
+		/*Salvar registros e arquivo{
 			move_uploaded_file($fileInfo["tmp_name"],$caminhoCompleto);
 			
 			$arquivoPontoId = inserir("arquivoponto", array_keys($newArquivoPonto), array_values($newArquivoPonto));
