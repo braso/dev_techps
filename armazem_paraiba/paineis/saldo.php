@@ -152,27 +152,6 @@
 
                     ".$carregarDados."
                 });
-
-                // function downloadCSV(){
-                //     // Caminho do arquivo CSV no servidor
-                //     var filePath = './arquivos/paineis/Painel_Geral.csv' // Substitua pelo caminho do seu arquivo
-
-                //     // Cria um link para download
-                //     var link = document.createElement('a');
-
-                //     // Configurações do link
-                //     link.setAttribute('href', filePath);
-                //     link.setAttribute('download', 'Painel_Geral.csv');
-
-                //     // Adiciona o link ao documento
-                //     document.body.appendChild(link);
-
-                //     // Simula um clique no link para iniciar o download
-                //     link.click();
-
-                //     // Remove o link
-                //     document.body.removeChild(link);
-                // }
             </script>"
         ;
     }
@@ -687,7 +666,7 @@
             $rowTotais .= "</tr>";
             $rowTitulos .= "</tr>";
 
-            include_once "painel_saldo_html.php";
+            include_once "saldo_html.php";
 
             echo "<div class='script'>";
             echo "<script>";

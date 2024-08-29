@@ -35,7 +35,7 @@
 				"/nao_cadastrados.php" 	=> "Não cadastrados"
 			],
 			"painel" => [
-				"/paineis/painel_saldo.php"	  => "Saldo"
+				"/paineis/saldo.php"	  => "Saldo"
 			],
 			"suporte" => [
 				"/#" 		=> "Perguntas Frequentes", 
