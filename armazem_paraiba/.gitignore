@@ -1,5 +1,5 @@
 .env
 arquivos/*
-# paineis/arquivos/*
+paineis/arquivos/*
 paineis_old/*
 diaDetalhePonto.php
