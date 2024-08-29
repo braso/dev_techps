@@ -94,8 +94,7 @@ function dadosMotorista($idEnpresa, $periodoInicio, $periodoFim) {
     return $todos;
 }
 
-function criar_relatorio_saldo()
-{
+function criar_relatorio_saldo(){
     global $totalResumo;
     // $periodoInicio = $_POST["busca_dataInicio"];
     // $periodoFim = $_POST["busca_dataFim"];

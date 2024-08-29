@@ -2,8 +2,15 @@
     //* Modo debug
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
+
+        header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+		header("Pragma: no-cache"); // HTTP 1.0.
+		header("Expires: 0");
     //*/
-    include __DIR__."../../funcoes_ponto.php";
+
+    die(var_dump($_ENV));
+
+    include __DIR__."/../funcoes_ponto.php";
 
     function salvarArquivo(string $path, string $fileName, string $data){
         if(!is_dir($path)){
@@ -20,7 +27,7 @@
                 ." AND enti_nb_empresa = ".$idEmpresa
                 ." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
             ." ORDER BY enti_tx_nome ASC;"
-        ),MYSQLI_ASSOC);
+        ), MYSQLI_ASSOC);
 
         foreach($motoristas as &$motorista){
             $dataTimeInicio = new DateTime($periodoInicio);

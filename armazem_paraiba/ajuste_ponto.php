@@ -168,7 +168,7 @@
 				ORDER BY pont_tx_data DESC
 				LIMIT 1"
 		));
-
+		
 		$data = $_POST["data"]." ".$_POST["hora"];
 
 		if(!empty($temPonto["pont_tx_data"])){

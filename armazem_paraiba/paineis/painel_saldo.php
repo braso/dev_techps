@@ -47,7 +47,7 @@
                 +'</tr>';";
         }else{
             $linha .= "+'<td style=\"cursor: pointer;\" onclick=setAndSubmit('+row.empr_nb_id+')>'+row.empr_tx_nome+'</td>'
-                    +'<td>'+(row.percEndossado*100)+'%</td>'
+                    +'<td>'+Math.round(row.percEndossado*10000)/100+'%</td>'
                     +'<td>'+row.qtdMotoristas+'</td>'
                     +'<td>'+row.totais.jornadaPrevista+'</td>'
                     +'<td>'+row.totais.jornadaEfetiva+'</td>'
@@ -697,16 +697,16 @@
                 document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.E;
                 document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.EP;
                 document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.N;
-                document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[2].innerHTML = endossos.porcentagens.E*100+'%';
-                document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td')[2].innerHTML = endossos.porcentagens.EP*100+'%';
-                document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td')[2].innerHTML = endossos.porcentagens.N*100+'%';
+                document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.E*10000)/100+'%';
+                document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.EP*10000)/100+'%';
+                document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.N*10000)/100+'%';
                 
                 document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.positivos;
                 document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.meta;
                 document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.negativos;
-                document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[2].innerHTML = saldos.porcentagens.positivos*100+'%';
-                document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[2].innerHTML = saldos.porcentagens.meta*100+'%';
-                document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[2].innerHTML = saldos.porcentagens.negativos*100+'%';"
+                document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[2].innerHTML = Math.round(saldos.porcentagens.positivos*10000)/100+'%';
+                document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[2].innerHTML = Math.round(saldos.porcentagens.meta*10000)/100+'%';
+                document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[2].innerHTML = Math.round(saldos.porcentagens.negativos*10000)/100+'%';"
             ;
             echo 
                 "document.getElementsByClassName('script')[0].innerHTML = '';
