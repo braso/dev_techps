@@ -114,6 +114,7 @@
 		echo 
 			"<div id='tituloRelatorio'>
 				<h1>Não Conformidade</h1>
+				<img id='logo' style='width: 150px' src='".$CONTEX["path"]."/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
 			</div>
 			<style>
 				#tituloRelatorio{
@@ -286,6 +287,12 @@
 								if(strpos($aDia[$f][$key], "fa-warning") !== false){
 									$hasUnconformities = true;
 									$counts["naoConformidade"] += substr_count($aDia[$f][$key], "fa-warning");
+								}
+								if (strpos($aDia[$f][$key], "fa-info-circle") !== false) {
+									if (strpos($aDia[$f][$key], "color:red;") !== false) {
+										$hasUnconformities = true;
+										$counts["naoConformidade"] += substr_count($aDia[$f][$key], "fa-warning");
+									}
 								}
 							}
 							$showRow = !(($_POST["busca_situacao"] == "Não conformidade" && !$hasUnconformities));

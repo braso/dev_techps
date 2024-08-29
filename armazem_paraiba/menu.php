@@ -35,8 +35,11 @@ echo
 			"/nao_cadastrados.php" 	=> "Não cadastrados"
 		],
 		"painel" => [
-			"/painel_saldo.php" => "Saldo", 
-			"/painel.php" 		=> "Endossos"
+			"/painel_saldo.php"          => "Saldo", 
+			"/painel.php" 		         => "Endossos",
+			// "/paineis/painel_jornada_aberta.php" => "Jornada Aberta",
+			// "/paineis/painel_ajustes.php"        => "Painel Ajustes",
+			// "/paineis/painel_nao_conformidade_ju.php" => "painel nao conformidade"
 		],
 		"suporte" => [
 			"/#" 		=> "Perguntas Frequentes", 

@@ -49,10 +49,25 @@
 		$arquivos =  $_FILES['file'];
 		$novo_nome = $_POST['file-name'];
 		$descricao = $_POST['description-text'];
+		$mimeType = mime_content_type($arquivos['tmp_name']);
 
-		$allowed = array('image/jpeg', 'image/png', 'application/msword', 'application/pdf','application/vnd.android.package-archive');
+		$allowed = array(
+			'image/jpeg',
+			'image/png',
+			'application/msword',
+			'application/pdf',
+			'application/vnd.android.package-archive',
+			'application/zip',
+			'application/octet-stream',
+			'application/x-zip-compressed'
+		);
 
-		if (in_array($arquivos['type'], $allowed) && $arquivos['name'] != '') {
+		if ($arquivos['error'] !== UPLOAD_ERR_OK) {
+			echo "Erro no upload: " . $arquivos['error'];
+			exit;
+		}
+
+		if (in_array($mimeType, $allowed) && $arquivos['name'] != '') {
 				$pasta_empresa = "arquivos/doc_empresa/$idEmpresa/";
 		
 				if (!is_dir($pasta_empresa)) {

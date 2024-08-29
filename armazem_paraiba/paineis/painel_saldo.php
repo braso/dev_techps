@@ -18,14 +18,6 @@ function porcentagemSaldo($total, $meta_endo, $nega_naEndo, $posi_endoPc): array
         'posi_endoPc' => number_format(0, 2),
     ];
 
-    // var_dump($meta_endo);
-    // echo '<br>';
-    // var_dump($meta_endo);
-    // echo '<br>';
-    // var_dump($meta_endo);
-    // echo '<br>';
-    // var_dump($meta_endo);
-    // echo '<br>';
     if ($meta_endo != 0) {
         $porcentagen['meta_endo'] = number_format(($meta_endo / $total) * 100, 2);
     }
@@ -45,7 +37,7 @@ function criar_relatorio_saldo() {
     $periodoFim = $_POST["busca_dataFim"];
 
     $empresas = mysqli_fetch_all(
-        query("SELECT empr_nb_id, empr_tx_nome FROM `empresa` WHERE empr_tx_status != 'inativo' ORDER BY empr_tx_nome ASC;"),
+        query("SELECT empr_nb_id, empr_tx_nome FROM `empresa` WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome ASC;"),
         MYSQLI_ASSOC
     );
 
@@ -152,10 +144,10 @@ function criar_relatorio_saldo() {
                 'saldoFinal' => $totalSaldofinal
             ];
         }
-        if (!is_dir("./arquivos/paineis/Saldo/$empresa[empr_nb_id]/$mes-$ano")) {
-            mkdir("./arquivos/paineis/Saldo/$empresa[empr_nb_id]/$mes-$ano", 0755, true);
+        if (!is_dir("./arquivos/paineis/saldos/$empresa[empr_nb_id]/$mes-$ano")) {
+            mkdir("./arquivos/paineis/saldos/$empresa[empr_nb_id]/$mes-$ano", 0755, true);
         }
-        $path = "./arquivos/paineis/Saldo/$empresa[empr_nb_id]/$mes-$ano/";
+        $path = "./arquivos/paineis/saldos/$empresa[empr_nb_id]/$mes-$ano/";
         $fileName = 'motoristas.json';
         $jsonArquiMoto = json_encode($rows, JSON_UNESCAPED_UNICODE);
         file_put_contents($path . $fileName, $jsonArquiMoto);
@@ -212,18 +204,18 @@ function criar_relatorio_saldo() {
             'totalMotorista'   => count($motoristas)
         ];
 
-        if (!is_dir("./arquivos/paineis/Saldo/$empresa[empr_nb_id]/$mes-$ano")) {
-            mkdir("./arquivos/paineis/Saldo/$empresa[empr_nb_id]/$mes-$ano", 0755, true);
+        if (!is_dir("./arquivos/paineis/saldos/$empresa[empr_nb_id]/$mes-$ano")) {
+            mkdir("./arquivos/paineis/saldos/$empresa[empr_nb_id]/$mes-$ano", 0755, true);
         }
-        $path = "./arquivos/paineis/Saldo/$empresa[empr_nb_id]/$mes-$ano/";
+        $path = "./arquivos/paineis/saldos/$empresa[empr_nb_id]/$mes-$ano/";
         $fileName = 'totalMotoristas.json';
         $jsonArquiTotais = json_encode($totaisJson, JSON_UNESCAPED_UNICODE);
         file_put_contents($path . $fileName, $jsonArquiTotais);
     }
-    if (!is_dir("./arquivos/paineis/Saldo/empresas/$mes-$ano")) {
-        mkdir("./arquivos/paineis/Saldo/empresas/$mes-$ano", 0755, true);
+    if (!is_dir("./arquivos/paineis/saldos/empresas/$mes-$ano")) {
+        mkdir("./arquivos/paineis/saldos/empresas/$mes-$ano", 0755, true);
     }
-    $path = "./arquivos/paineis/Saldo/empresas/$mes-$ano/";
+    $path = "./arquivos/paineis/saldos/empresas/$mes-$ano/";
     $fileName = 'totalEmpresas.json';
     $jsonArquiTotais = json_encode($totais, JSON_UNESCAPED_UNICODE);
     file_put_contents($path . $fileName, $jsonArquiTotais);
@@ -269,10 +261,10 @@ function criar_relatorio_saldo() {
     ];
 
 
-    if (!is_dir("./arquivos/paineis/Saldo/empresas/$mes-$ano")) {
-        mkdir("./arquivos/paineis/Saldo/empresas/$mes-$ano", 0755, true);
+    if (!is_dir("./arquivos/paineis/saldos/empresas/$mes-$ano")) {
+        mkdir("./arquivos/paineis/saldos/empresas/$mes-$ano", 0755, true);
     }
-    $path = "./arquivos/paineis/Saldo/empresas/$mes-$ano/";
+    $path = "./arquivos/paineis/saldos/empresas/$mes-$ano/";
     $fileName = 'empresas.json';
     $jsonArqui = json_encode($jsonTotaisEmpr);
     file_put_contents($path . $fileName, $jsonArqui);
@@ -350,7 +342,7 @@ function index() {
         $empresasTotais = [];
         $emissao = [];
 
-        $pasta = "./arquivos/paineis/Saldo/$idEmpresa/$mes-$ano";
+        $pasta = "./arquivos/paineis/saldos/$idEmpresa/$mes-$ano";
 
         if (is_dir($pasta) != false) {
             $file = "$pasta/motoristas.json";
@@ -400,7 +392,7 @@ function index() {
         $empresasTotais = [];
         $emissao = '';
         $aEmpresa = mysqli_fetch_all(query("SELECT empr_tx_logo FROM `empresa` WHERE empr_tx_Ehmatriz = 'sim'"), MYSQLI_ASSOC);
-        $pasta = "./arquivos/paineis/Saldo/empresas/$mes-$ano";
+        $pasta = "./arquivos/paineis/saldos/empresas/$mes-$ano";
 
         if (is_dir($pasta) != false) {
             $file = "$pasta/empresas.json";
