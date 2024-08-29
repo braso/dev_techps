@@ -14,17 +14,17 @@
 		}
 	
 		// Gerar o HTML do formulário e a página de redirecionamento
-		echo "
-			<form id='forms_abono' action='".$CONTEX["path"]."/cadastro_abono.php' method='post'>
-				<input type='hidden' name='acao' value='layout_abono'>
-				<input type='hidden' name='busca_motorista' value='".htmlspecialchars($_POST['busca_motorista'])."'>
-				<input type='hidden' name='busca_empresa' value='".htmlspecialchars($_POST['busca_empresa'])."'>
-				<input type='hidden' name='busca_data' value='".htmlspecialchars($_POST['busca_data'])."'>
-				<input type='hidden' name='HTTP_REFERER' value='".$CONTEX["path"]."/nao_conformidade.php'>
-			</form>
-			<script>
-				document.getElementById('forms_abono').submit();
-			</script>";
+
+		echo "<form id='forms_abono' action='".$CONTEX["path"]."/cadastro_abono.php' method='post'>"
+				.campo_hidden("acao", "layout_abono")
+				.campo_hidden("busca_motorista", htmlspecialchars($_POST['busca_motorista']))
+				.campo_hidden("busca_empresa", htmlspecialchars($_POST['busca_empresa']))
+				.campo_hidden("busca_data", htmlspecialchars($_POST['busca_data']))
+				.campo_hidden("HTTP_REFERER", $CONTEX["path"]."/nao_conformidade.php")
+			."</form>";
+		
+		echo "<script>document.getElementById('forms_abono').submit();</script>";
+
 		exit;
 	}
 
@@ -35,6 +35,12 @@
 	// }
 
 	function buscar(){
+		if(!empty($_GET["acao"]) && $_GET["acao"] == "buscar"){//Se estiver pesquisando
+			//Conferir se os campos foram inseridos.
+			if(empty($_GET["busca_data"])){
+				echo "<script>alert('Insira data para pesquisar.');</script>";
+			}
+		}
 		index();
 		exit;
 	}
@@ -42,17 +48,10 @@
 	function index(){
 		global $totalResumo, $CONTEX;
 
-		if(!empty($_GET["acao"]) && $_GET["acao"] == "index"){//Se estiver pesquisando
-			//Conferir se os campos foram inseridos.
-			if(empty($_GET["busca_data"])){
-				echo "<script>alert('Insira data para pesquisar.');</script>";
-			}
-		}
-
 		cabecalho("Não Conformidade");
 
 		$extraEmpresa = "";
-			$extraEmpresaMotorista = "";
+		$extraEmpresaMotorista = "";
 		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
 			$extraEmpresa = " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
 			$extraEmpresaMotorista = " AND enti_nb_empresa = '".$_SESSION["user_nb_empresa"]."'";
@@ -277,7 +276,6 @@
 	
 						$tolerancia = intval($dadosParametro["para_tx_tolerancia"]);
 
-						$showRow = True;
 						$saldoColIndex = 20;
 						
 						for($f = 0; $f < count($aDia); $f++){
@@ -295,8 +293,7 @@
 									}
 								}
 							}
-							$showRow = !(($_POST["busca_situacao"] == "Não conformidade" && !$hasUnconformities));
-							$aDia[$f]["exibir"] = $showRow;
+							$aDia[$f]["exibir"] = !(($_POST["busca_situacao"] == "Não conformidade" && !$hasUnconformities));
 
 							if(empty($aDia[$f][$saldoColIndex])){
 								$aDia[$f][$saldoColIndex] = "00:00";	
@@ -316,11 +313,10 @@
 						$aDia[count($aDia)-1]["exibir"] = True;
 
 						$qtt = count($aDia);
-						for($f = 0; $f < $qtt;){
+						for($f=0; $f<$qtt; $f++){
 							if(isset($aDia[$f]["exibir"]) && !$aDia[$f]["exibir"]){
 								$aDia = array_merge(array_slice($aDia, 0, $f), array_slice($aDia, $f+1));
-							}else{
-								$f++;
+								$f--;
 							}
 						}
 

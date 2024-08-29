@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug{
+	/* Modo debug{
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 		
@@ -8,10 +8,19 @@
         header("Expires: 0");
 	//}*/
 
-	include_once "funcoes_ponto.php";
-
 	global $path;
 	$path = "arquivos/pontos";
+
+    include_once "carregar_ftp.php";
+	include_once "funcoes_ponto.php";
+
+	function showErrMsg(string $caminhoCompleto, string $errorMsg): string{
+		$fileContent = str_replace("<br>	", "\n	", $errorMsg);
+		file_put_contents($caminhoCompleto, $fileContent);
+		return "<div style='width:50%; text-align:left;'>"
+				."<a href='".($caminhoCompleto)."'>Visualizar Erros</a>"
+			."</div>";
+	}
 
 	function getLastFileDate($dataAtual): string{
 
@@ -40,7 +49,7 @@
 			    "SELECT * FROM configuracao_alerta"
 			    ." LIMIT 1"
 			));
-			if ((int)$diferenca <= 6){
+			if((int)$diferenca <= 6){
 				sendEmailAlerta($emails['conf_tx_emailFun'], $emails['conf_tx_emailFun'], $msg);
 			}else{
 				sendEmailAlerta($emails['conf_tx_emailAdm'], $emails['conf_tx_emailAdm'], $msg);
@@ -105,181 +114,32 @@
 		rodape();
 	}
 
-	// function cadastra_notificacao(){
-		// 	die("cadastra_notificacao");
-			
-		// 	$campos = ["conf_tx_emailFun","conf_tx_emailAdm"];
-		// 	$valores = [$_POST["emailFuncionario"],$_POST["emailFuncionario"]];
-
-		// 	if(!empty($_POST["id"])) {
-		// 		$campos = array_merge($campos,["conf_tx_dataAtualiza"]);
-		// 		$valores = array_merge($valores,[date("Y-m-d H:i:s")]);
-		// 		atualizar("configuracao_alerta",$campos,$valores,$_POST["id"]);
-		// 	}else {
-		// 		$campos = array_merge($campos,["conf_tx_dataCadastro"]);
-		// 		$valores = array_merge($valores,[date("Y-m-d H:i:s")]);
-		// 		inserir("configuracao_alerta",$campos,$valores);
-		// 	}
-
-		// 	index();
-		// 	exit;
-	// }
-
-	// function layout_notificacao(){
-		// Separar para um arquivo específico de cadastro de notificação
-		// die("layout_notificacao");
-		// $sqlCheck = query("SELECT * FROM configuracao_alerta LIMIT 1");
-		// $emails = mysqli_fetch_assoc($sqlCheck);
-
-		// if (!empty($emails)) {
-		// 	$emailFun = $emails["conf_tx_emailFun"];
-		// 	$emailAdm = $emails["conf_tx_emailAdm"];
-		// 	$atualizacao = $emails["conf_tx_dataAtualiza"];
-		// 	$cadastro = $emails["conf_tx_dataCadastro"];
-		// }
-		
-
-		// $camposData = [];
-		// if (!empty($cadastro)) {
-		// 	$txtCadastro = "Registro inserido às ".data($cadastro, 1).".";
-		// 	$camposData[] = texto("Data de Cadastro", $txtCadastro, 5);
-		// }
-
-		// if (!empty($atualizacao)) {
-		// 	$txtAtualiza = "Registro atualizado às ".data($atualizacao, 1).".";
-		// 	$camposData[] = texto("Última Atualização", $txtAtualiza, 5);
-		// }
-
-		// cabecalho("Configura Notificação");
-
-		// //$fields[] = campo("Data do Arquivo:","data",date("d/m/Y"),2,MASCARA_DATA);
-		// $fields = [
-		// 	campo("E-mail do Funcionario", "emailFuncionario", $emailFun, 2),
-		// 	campo("E-mail do Administrado", "emailAdministrado", $emailAdm, 2)
-		// ];
-
-		// $buttons = [ 
-		// 	botao("Gravar", "cadastra_notificacao", "id", $_POST["id"]),
-		// 	botao("Voltar", "voltar")
-		// ];
-
-		// if(empty($_POST["HTTP_REFERER"])){
-		// 	$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
-		// 	if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_usuario.php"))){
-		// 		$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_usuario.php";
-		// 	}
-		// }
-
-		// abre_form("Arquivo de Ponto");
-		// campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		// linha_form($fields);
-		// if (count($camposData) > 0){
-		// 	linha_form($camposData);
-		// }
-		// fecha_form($buttons);
-
-		// rodape();
-	// }
-
-	function updateFTP(){
-		global $path;
-
-		// connect and login to FTP server
-		$infos = mysqli_fetch_assoc(query(
-			"SELECT empr_tx_ftpServer, empr_tx_ftpUsername, empr_tx_ftpUserpass FROM empresa "
-			." JOIN user ON empresa.empr_nb_id = user.user_nb_empresa"
-			." WHERE user_nb_id = ".$_SESSION["user_nb_id"]
-		));
-		
-		if(empty($infos["empr_tx_ftpServer"]) || empty($infos["empr_tx_ftpUserpass"]) || empty($infos["empr_tx_ftpUserpass"])){
-			set_status("ERRO: Não foi possível encontrar o servidor FTP.");
-			index();
-			exit;
-		}
-		
-		
-		try{
-			$ftp_conn = ftp_connect($infos["empr_tx_ftpServer"]);
-			if($ftp_conn === false){
-				throw new Exception("Conexção FTP retornou falso.");
-			}
-
-			$loggedIn = ftp_login($ftp_conn, $infos["empr_tx_ftpUsername"], $infos["empr_tx_ftpUserpass"]);
-			if(!$loggedIn){
-				throw new Exception("Login retornou falso.");
-			}
-		}catch(Exception $e){
-			set_status("ERRO: Não foi possível conectar à ".$infos["empr_tx_ftpServer"]);
-			echo "<script>console.log('".$e->getMessage()."')</script>";
-			index();
-			exit;
-		}
-
-		$lastFile = mysqli_fetch_assoc(query(
-			"SELECT arqu_tx_data FROM arquivoponto"
-			." WHERE arqu_tx_status = 'ativo'"
-			." AND (arqu_tx_nome REGEXP '[apontamento][[:digit:]]{14}.txt') = 1"
-			." ORDER BY arqu_tx_data DESC"
-			." LIMIT 1;"
-		));
-
-		
-		for($data = new DateTime($lastFile["arqu_tx_data"]); $data->format("Y-m-d") <= date("Y-m-d"); $data->modify("+1 day")){
-			$fileList = ftp_nlist($ftp_conn, "apontamento".$data->format("dmY")."*.txt");
-			if(!empty($fileList)){
-				foreach($fileList as $nomeArquivo){
-					$fileExists = (
-						num_linhas(query(
-							"SELECT * FROM arquivoponto"
-							." WHERE arqu_tx_status = 'ativo'"
-							." AND arqu_tx_nome = '".$nomeArquivo."'"
-							." LIMIT 1"
-						)) > 0
-					);
-					if($fileExists){
-						continue;
-					}
-		
-					$caminhoCompleto = $path."/".$nomeArquivo;
-					
-					if(!ftp_get($ftp_conn, $caminhoCompleto, $nomeArquivo)){
-						set_status("ERRO: Houve um problema ao salvar o arquivo.");
-						index();
-						exit;
-					}
-					saveRegisterFile([$nomeArquivo], $caminhoCompleto);
-				}
-			}
-		}
-
-		ftp_close($ftp_conn);
-		if (!empty($_SERVER["HTTP_ENV"]) && $_SERVER["HTTP_ENV"] == "carrega_cron"){
-			criar_relatorio(null);
-		}
-		index();
-		exit;
-	}
-
 	function saveRegisterFile(array $fileInfo, string $caminhoCompleto){
 		global $path;
-	    
+
 		//$local_file = $path."/".$nomeArquivo;
 		$newPontos = [];
-		$baseErrMsg = "ERROS:";
-		$errorMsg = [$baseErrMsg];
+		$baseErrMsg = [
+			"ERROS:",
+			"camposObrigatorios" => ["Informações necessárias não encontradas: "],
+			"registerNotFound" => [],
+			"notRecognized" => [],
+		];
+		$errorMsg = $baseErrMsg;
 
 		//Conferir se as informações necessárias estão preenchidas{
 			if(empty($fileInfo["tmp_name"])){
-				$errorMsg["camposObrigatorios"] .= "<br>  Nome temporário.";
+				$errorMsg["camposObrigatorios"][] = "Nome temporário.";
 			}
 			if(empty($fileInfo["name"])){
-				$errorMsg["camposObrigatorios"] .= "<br>  Nome do arquivo.";
-			}
- 
-			if(isset($errosMsg["camposObrigatorios"])){
-				$errorMsg["camposObrigatorios"] = "Informações necessárias não encontradas: ".$errorMsg["camposObrigatorios"];
+				$errorMsg["camposObrigatorios"][] = "Nome do arquivo.";
 			}
 		//}
+
+		if($errorMsg["camposObrigatorios"] != $baseErrMsg["camposObrigatorios"]){
+			set_status($errorMsg[0]." ".implode("<br>	", $errorMsg["camposObrigatorios"]));
+			exit;
+		}
 
 		$ext = substr($fileInfo["name"], strrpos($fileInfo["name"], "."));
 
@@ -290,13 +150,13 @@
 			"arqu_tx_status" 	=> "ativo"
 		];
 		
-		foreach (file($fileInfo["tmp_name"]) as $line){
+		foreach(file($fileInfo["tmp_name"]) as $line){
 		
 			//matricula dmYhi 999 macroponto.codigoExterno
 			//Obs.: A matrícula deve ter 10 dígitos, então se tiver menos, adicione zeros à esquerda.
 			//Ex.: 0000005913 22012024 0919 999 11
 			$line = trim($line);
-			if (empty($line)) {
+			if(empty($line)){
 				continue; // Pula para a próxima iteração
 			}
 			[$matricula, $data, $hora, $codigoExterno] = [substr($line, 0, 10), substr($line, 10, 8), substr($line, 18, 4), substr($line,25, 2)];
@@ -312,9 +172,9 @@
 				));
 				if(empty($matriculaExiste) || count($matriculaExiste) == 0){
 					if(empty($errorMsg["registerNotFound"])){
-						$errorMsg["registerNotFound"] = "Matrículas não encontradas:";
+						$errorMsg["registerNotFound"][] = "Matrículas não encontradas:";
 					}
-					$errorMsg["registerNotFound"] .= "<br>	". $matricula;
+					$errorMsg["registerNotFound"][] = $matricula;
 				}
 			//}
 
@@ -330,9 +190,9 @@
 
 			if(empty($macroPonto)){
 				if(empty($errorMsg["notRecognized"])){
-					$errorMsg["notRecognized"] = "Tipo de ponto não reconhecido: ";
+					$errorMsg["notRecognized"][] = "Tipo de ponto não reconhecido: ";
 				}
-				$errorMsg["notRecognized"] .= "<br>	".$codigoExterno;
+				$errorMsg["notRecognized"][] = $codigoExterno;
 				continue;
 			}
 
@@ -366,9 +226,9 @@
 			$pontoExistente["pont_tx_data"] = implode("/", array_reverse($pontoExistente["pont_tx_data"][0]))." ".$pontoExistente["pont_tx_data"][1];
 
 			if(empty($errorMsg["existingPoints"])){
-				$errorMsg["existingPoints"] = "Pontos já existentes: ";
+				$errorMsg["existingPoints"][] = "Pontos já existentes: ";
 			}
-			$errorMsg["existingPoints"] .= "<br>	".$pontoExistente["pont_tx_matricula"].": (".$pontoExistente["pont_tx_data"].")";
+			$errorMsg["existingPoints"][] = $pontoExistente["pont_tx_matricula"].": (".$pontoExistente["pont_tx_data"].")";
 		}
 
 		//*Salvar registros e arquivo{
@@ -380,28 +240,27 @@
 				inserir("ponto", array_keys($newPonto), array_values($newPonto));
 			}
 
+			foreach($errorMsg as $key => $value){
+				if(is_array($value)){
+					$errorMsg[$key] = implode("<br>	", array_unique($value));
+				}
+			}
+
 			$errorMsg = implode("\n", $errorMsg);
 			if($errorMsg != $baseErrMsg){
-				$fileContent = $errorMsg;
-				$fileContent = str_replace("<br>	", "\n	", $fileContent);
-				file_put_contents($path."/".$fileInfo["name"]."_log".$ext, $fileContent);
-	
-				set_status(
-					"<div style='width:50%; text-align:left;'>"
-						."<a href='".($path."/".$fileInfo["name"]."_log".$ext)."'>Visualizar Erros</a>"
-					."</div>"
-				);
+				set_status(showErrMsg($path."/".$fileInfo["name"]."_log".$ext, $errorMsg));
 			}
 		//}*/
 	}
 
 	function index(){
 		global $path;
-		// if(is_int(strpos($_SERVER["REQUEST_URI"], "carregar_ftp"))){
-		// 	carregar_ftp();
-		// 	exit;
-		// }
-
+		
+		if(is_int(strpos($_SERVER["REQUEST_URI"], "carregar_ftp"))){
+			carregar_ftp($path);
+			exit;
+		}
+		
 		cabecalho("Carregar Ponto", 1);
 
 		$extra = 
@@ -420,9 +279,9 @@
 		//BOTOES
 		$buttons = [
 			botao("Buscar", "index"),
-			botao("Inserir manualmente", "viewManualInsert","","","","","btn btn-success"),
-			botao("Atualizar FTP", "updateFTP","","","","","btn btn-primary"),
-			// botao("Configuração", "layout_notificacao","","","","","btn btn-warning")
+			botao("Inserir manualmente", "viewManualInsert", "", "", "", "", "btn btn-success"),
+			botao("Atualizar FTP", "updateFTP('".$path."')", "path", $path, "", "", "btn btn-primary"),
+			// botao("Configuração", "layout_notificacao", "", "", "", "", "btn btn-warning")
 		];
 
 		abre_form("Filtro de Busca");

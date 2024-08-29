@@ -80,7 +80,7 @@
 				}
 			}
 			if(!empty($_POST["rg"])){
-        $_POST["rg"] = preg_replace( "/[^0-9]/is", "", $_POST["rg"]);
+        		$_POST["rg"] = preg_replace( "/[^0-9]/is", "", $_POST["rg"]);
 				if(strlen($_POST["rg"]) != 9){
 					$error_msg .= "RG parcial, ";
 				}

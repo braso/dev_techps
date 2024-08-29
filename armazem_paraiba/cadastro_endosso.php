@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
@@ -43,6 +43,12 @@
 					$errorMsg = "Não é possível cadastrar um endosso com mais de um mês.";
 				}
 				unset($difference);
+			//}
+
+			//Conferir se o endosso passa da data atual{
+				if($_POST["data_de"] >= date("Y-m-d") || $_POST["data_ate"] >= date("Y-m-d")){
+					$errorMsg = "Não é possível cadastrar um endosso que inclua a data atual ou datas futuras.";
+				}
 			//}
 
 			if($errorMsg != $baseErrMsg){
@@ -172,6 +178,13 @@
 			exit;
 		}
 
+		$motorista = mysqli_fetch_assoc(query(
+			"SELECT * FROM entidade"
+			." WHERE enti_tx_status = 'ativo'"
+				." AND enti_nb_id = ".$_POST["busca_motorista"]
+			." LIMIT 1;"
+		));
+
 		$ultimoEndosso = mysqli_fetch_assoc(query(
 			"SELECT enti_tx_matricula, endo_tx_ate, endo_tx_filename, endo_tx_saldo, endo_tx_max50APagar FROM endosso "
 			." JOIN entidade ON enti_nb_id = endo_nb_entidade"
@@ -181,24 +194,27 @@
 			." LIMIT 1;"
 		));
 
-		$ultimoEndossoCSV = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
-
+		
 		$pago = ["00:00", "00:00"];
 		if(!empty($ultimoEndosso["endo_tx_filename"])){
 			$ultimoEndossoCSV = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
+			$ultimoEndossoCSV = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
 			$pago = calcularHorasAPagar($ultimoEndossoCSV["endo_tx_saldo"], $ultimoEndossoCSV["totalResumo"]["he50"], $ultimoEndossoCSV["totalResumo"]["he100"], $ultimoEndossoCSV["endo_tx_max50APagar"]);
+			$saldoAnterior = operarHorarios([$ultimoEndossoCSV["endo_tx_saldo"], $pago[0], $pago[1]], "-");
+			$dataDe = new DateTime($ultimoEndosso["endo_tx_ate"]);
+		}else{
+			$saldoAnterior = $motorista["enti_tx_banco"];
+			$dataDe = new DateTime($_POST["data_de"]);
 		}
-		$saldoAnterior = operarHorarios([$ultimoEndossoCSV["endo_tx_saldo"], $pago[0], $pago[1]], "-");
 		
 		$dataAte = new DateTime($_POST["data_ate"]);
-		$ultimoEndosso["endo_tx_ate"] = new DateTime($ultimoEndosso["endo_tx_ate"]);
 
 		for(
-			$date = date_add($ultimoEndosso["endo_tx_ate"], DateInterval::createFromDateString("1 day")); 
+			$date = $dataDe->modify("+1 day"); 
 			date_diff($date, $dataAte)->days >= 0 && !(date_diff($date, $dataAte)->invert);
 			$date = date_add($date, DateInterval::createFromDateString("1 day"))
 		){
-			diaDetalhePonto($ultimoEndosso["enti_tx_matricula"], $date->format("Y-m-d"));
+			diaDetalhePonto($motorista["enti_tx_matricula"], $date->format("Y-m-d"));
 		}
 		
 		$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
@@ -280,7 +296,7 @@
 						}
 						if(is_int(strpos($row[$f], "Ajuste de Ponto"))){
 							$row[$f] = str_replace("Ajuste de Ponto", "Ajuste de Ponto(endossado)", $row[$f]);
-							$row[$f] = str_replace("class='fa fa-circle'>", "class='fa fa-circle'>(E)", $row[$f]);
+							$row[$f] = str_replace("class=\'fa fa-circle\'>", "class=\'fa fa-circle\'>(E)", $row[$f]);
 						}
 						if ($row[$f] == "00:00") {
 							$row[$f] = "";
@@ -313,6 +329,10 @@
 			$saldoAnterior = "00:00";
 			if(!empty($ultimoEndosso["endo_tx_filename"])){
 				$ultimoEndossoCSV = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
+				if(empty($ultimoEndossoCSV["endo_tx_max50APagar"])){
+					$ultimoEndossoCSV["endo_tx_max50APagar"] = "00:00";
+				}
+
 				$pago = calcularHorasAPagar($ultimoEndossoCSV["endo_tx_saldo"], $ultimoEndossoCSV["totalResumo"]["he50"], $ultimoEndossoCSV["totalResumo"]["he100"], $ultimoEndossoCSV["endo_tx_max50APagar"]);
 				$saldoAnterior = operarHorarios([$ultimoEndossoCSV["endo_tx_saldo"], $pago[0], $pago[1]], "-");
 			}
@@ -396,7 +416,6 @@
 			
 			$successMsg .= "- [".$novoEndosso["endo_tx_matricula"]."] ".$novoEndosso["endo_tx_nome"].": ".$novoEndosso["totalResumo"]["he50APagar"]."<br>";
 
-			
 			//* Salvando arquivo e cadastrando no banco de dados
 
 				$filename = md5($novoEndosso["endo_tx_matricula"].$novoEndosso["endo_tx_mes"]);
@@ -496,6 +515,9 @@
 		];
 
 		if(empty($_POST["HTTP_REFERER"])){
+			if(empty($_SERVER["HTTP_REFERER"])){
+				$_SERVER["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/endosso.php";
+			}
 			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
 			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_endosso.php"))){
 				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/endosso.php";

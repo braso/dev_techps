@@ -227,33 +227,36 @@
 		}
 		
 		echo 
-			"<script type=\"text/javascript\" language=\"javascript\" >
-				$(document).ready(function() {
-					var dataTable = $('#contex-grid-".$rand."').DataTable( {
-						\"processing\": true,
-						\"serverSide\": true,
-						\"bFilter\": false,
-						\"sEcho\": true,
-						\"lengthMenu\": [ [10, 25, 50, 100, -1], [10, 25, 50, 100, \"Todos\"] ],
-						\"pageLength\": ".$paginar.",
-            			\"order\": [".$order.", \"".$ordenar_sentido."\"],
-						\"ajax\":{
-							\"url\" :\"".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/server-side.php\", // json datasource
-							\"type\": \"post\",  // method  , by default get
-							\"data\": {
-								\"path\": \"".$CONTEX["path"]."\",
-								\"arquivo\": \"".$_SERVER["DOCUMENT_ROOT"].strtok($_SERVER["SCRIPT_NAME"], "?")."\",
-								\"sql\": \"".$sql."\",
-								\"columns\": ["."'".implode("','", $valores)."']
-							},
-							error: function (request, error) {
-								console.log(request);
-								console.log(error);
+			"<div id='ajaxCall'>
+				<script type='text/javascript' language='javascript'>
+					$(document).ready(function(){
+						var dataTable = $('#contex-grid-".$rand."').DataTable({
+							'processing': true,
+							'serverSide': true,
+							'bFilter': false,
+							'sEcho': true,
+							'lengthMenu': [ [10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos'] ],
+							'pageLength': ".$paginar.",
+							'order': [".$order.", '".$ordenar_sentido."'],
+							'ajax':{
+								'url' :'".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/server-side.php', // json datasource
+								'type': 'post',  // method  , by default get
+								'data': {
+									'path': '".$CONTEX["path"]."',
+									'arquivo': '".$_SERVER["DOCUMENT_ROOT"].strtok($_SERVER["SCRIPT_NAME"], "?")."',
+									'sql': '".base64_encode($sql)."',
+									'columns': ["."'".implode("','", $valores)."']
+								},
+								error: function (request, error) {
+									console.log(request);
+									console.log(error);
+								}
 							}
-						}
+						});
+						// console.log(dataTable);
 					});
-					console.log(dataTable);
-				} );
-			</script>"
+					document.getElementById('ajaxCall').innerHTML = '';
+				</script>
+			</div>"
 		;
 	}

@@ -39,11 +39,12 @@
 				$endossoCompleto["endo_tx_max50APagar"] = $endossoCompleto["endo_tx_horasApagar"];
 			}
 			for($f = 1; $f < count($endossos); $f++){
-				if(empty($endossos[$f]["endo_tx_max50APagar"]) && !empty($endossos[$f]["endo_tx_horasApagar"])){
-					$endossos[$f]["endo_tx_max50APagar"] = $endossos[$f]["endo_tx_horasApagar"];
-				}
-				if(empty($endossoCompleto["endo_tx_max50APagar"])){
-					$endossoCompleto["endo_tx_max50APagar"] = "00:00";
+				if(empty($endossos[$f]["endo_tx_max50APagar"])){
+					if(!empty($endossos[$f]["endo_tx_horasApagar"])){
+						$endossos[$f]["endo_tx_max50APagar"] = $endossos[$f]["endo_tx_horasApagar"];
+					}else{
+						$endossoCompleto["endo_tx_max50APagar"] = "00:00";
+					}
 				}
 				$endossoCompleto["endo_tx_ate"] = $endossos[$f]["endo_tx_ate"];
 				$endossoCompleto["endo_tx_pontos"] = array_merge($endossoCompleto["endo_tx_pontos"], $endossos[$f]["endo_tx_pontos"]);
@@ -64,9 +65,9 @@
 				// $endossoCompleto["totalResumo"]["diffSaldo"] = $endossos[$f]["totalResumo"]["diffSaldo"];
 				// $endossoCompleto["totalResumo"]["saldoBruto"] = $endossos[$f]["totalResumo"]["saldoBruto"];
 			}
+			$endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$endossoCompleto["totalResumo"]["saldoAnterior"], $endossoCompleto["totalResumo"]["diffSaldo"]], "+");
 		}
 
-		$endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$endossoCompleto["totalResumo"]["saldoAnterior"], $endossoCompleto["totalResumo"]["diffSaldo"]], "+");
 
 		return $endossoCompleto;
 	}
@@ -208,7 +209,7 @@
 		}
 
 		foreach(["busca_empresa", "busca_data", "busca_motorista", "busca_endossado"] as $campo){
-			if(isset($_GET[$campo]) && !empty($_GET[$campo])){
+			if(!empty($_GET[$campo])){
 				$_POST[$campo] = $_GET[$campo];
 			}
 		}
@@ -243,7 +244,7 @@
 			}
 
 			$extraMotorista = "";
-			if(isset($_POST["acao"])){
+			if(!empty($_POST["acao"])){
 				if($error){
 					set_status("ERRO: Insira os campos para pesquisar: ".implode(", ", $errorMsg).".");
 					unset($_GET["acao"]);
@@ -304,15 +305,15 @@
 			"endossados" => ["sim" => 0, "nao" => 0],	//countEndossados e $countNaoEndossados
 		];
 		//function buscar_endosso(){
+			$motNaoEndossados = "MOTORISTA(S) NÃO ENDOSSADO(S): <br><br>";
 			if(!empty($_POST["busca_data"]) && !empty($_POST["busca_empresa"]) && !empty($_GET["acao"])){
 				$sqlMotorista = query(
-					"SELECT * FROM entidade
-						WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante')
-							AND enti_nb_empresa = ".$_POST["busca_empresa"]." ".$extra."
-							AND enti_tx_status = 'ativo'
-						ORDER BY enti_tx_nome"
+					"SELECT * FROM entidade"
+					." WHERE enti_tx_status = 'ativo'"
+						." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
+						." AND enti_nb_empresa = ".$_POST["busca_empresa"]." ".$extra
+					." ORDER BY enti_tx_nome;"
 				);
-				$motNaoEndossados = "MOTORISTA(S) NÃO ENDOSSADO(S): <br><br>";
 
 				while($aMotorista = carrega_array($sqlMotorista, MYSQLI_ASSOC)){
 					$counts["total"]++;
@@ -342,6 +343,9 @@
 						$totalResumoGrid = $totalResumo;
 						unset($totalResumoGrid["saldoBruto"]);
 						unset($totalResumoGrid["saldoAnterior"]);
+						unset($totalResumoGrid["he50APagar"]);
+						unset($totalResumoGrid["he100APagar"]);
+
 						if(count($aDia) > 0){
 							$aDia[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumoGrid));
 						}
@@ -391,6 +395,10 @@
 
 						$aPagar = "--:--";
 
+						if(empty($endossoCompleto["endo_tx_max50APagar"])){
+							$endossoCompleto["endo_tx_max50APagar"] = "00:00";
+						}
+
 						$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $endossoCompleto["endo_tx_max50APagar"]);
 						$aPagar = operarHorarios($aPagar, "+");
 						$saldoFinal = operarHorarios([$totalResumo["saldoBruto"], $aPagar], "-");
@@ -437,8 +445,7 @@
 						
 						grid2($cab, $aDia);
 						fecha_form();
-						// ".$aMotorista['enti_nb_id']."
-						// ".$aMotorista["enti_tx_matricula"]."
+
 						echo "
 						<form name='form_imprimir_relatorio_".$aMotorista["enti_tx_matricula"]."' method='post' target='_blank'>
 							<input type='hidden' name='acao' value=''>
@@ -507,7 +514,7 @@
 
 		$select2URL = 
 			$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php"
-			."?path=".$CONTEX["path"]
+			."?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]
 			."&tabela=entidade"
 			."&extra_limite=15"
 			."&extra_busca=enti_tx_matricula"

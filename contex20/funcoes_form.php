@@ -1,5 +1,5 @@
 <?php
-	include_once "./../version.php";
+	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/version.php";
 
 	global $conn, $version;
 	function cabecalho($nome_pagina,$foco=0,$relatorio=0){
@@ -8,31 +8,6 @@
 	}
 
 	function cabecaRelatorio($nome_pagina,$foco=0){
-		?>
-		<style>
-			table.table thead tr th{
-				font-size: 10pt;	    	
-			}
-			table.table td{
-				font-size: 8pt;	    	
-			}
-			p.text-left{
-				font-size: 8pt;
-			}
-			label{
-				font-size: 8pt;
-			}
-			@media print{
-				table.table thead tr th{
-					font-size: 8pt;
-				}
-				table.table td{
-					font-size: 6pt;
-				}
-			}
-		</style>
-		<?php
-
 		global $CONTEX;
 		?>
 			<!DOCTYPE html>
@@ -85,6 +60,33 @@
 				<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/css/custom.min.css" rel="stylesheet" type="text/css" />
 				<!-- FIM TEMA LAYOUT STYLES -->
 				<link rel="shortcut icon" href="favicon.ico" />
+
+				<style>
+					table.table thead tr th{
+						font-size: 10pt;	    	
+					}
+					table.table td{
+						font-size: 8pt;	    	
+					}
+					p.text-left{
+						font-size: 8pt;
+					}
+					label{
+						font-size: 8pt;
+					}
+					@media print{
+						table.table thead tr th{
+							font-size: 8pt;
+						}
+						table.table td{
+							font-size: 6pt;
+						}
+					}
+
+					.page-header .page-header-menu{
+						background-color: white;
+					}
+				</style>
 
 				<script type="text/javascript">
 					function contex_foco(elemento){
@@ -151,22 +153,22 @@
 				<!-- FIM FOOTER -->
 				<!-- INICIO CORE PLUGINS -->
 
-				<form id="loginTimeoutForm" method="post" target="<?=$_SERVER['HTTP_ORIGIN'].$CONTEX['path']?>/logout.php" action="logout"></form>
+				<form id="loginTimeoutForm" method="post" target="<?=($_SERVER['DOCUMENT_ROOT']).$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]?>/logout.php" action="logout"></form>
 				
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/js.cookie.min.js" type="text/javascript"></script>
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-hover-dropdown/bootstrap-hover-dropdown.min.js" type="text/javascript"></script>
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js" type="text/javascript"></script>
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-switch/js/bootstrap-switch.min.js" type="text/javascript"></script>
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-tabdrop/js/bootstrap-tabdrop.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/js.cookie.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-hover-dropdown/bootstrap-hover-dropdown.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-switch/js/bootstrap-switch.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-tabdrop/js/bootstrap-tabdrop.js" type="text/javascript"></script>
 				<!-- FIM CORE PLUGINS -->
 				<!-- INICIO TEMA GLOBAL SCRIPTS -->
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/scripts/app.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/scripts/app.min.js" type="text/javascript"></script>
 				<!-- FIM TEMA GLOBAL SCRIPTS -->
 				<!-- INICIO TEMA LAYOUT SCRIPTS -->
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/scripts/layout.min.js" type="text/javascript"></script>
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/scripts/demo.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/scripts/layout.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/scripts/demo.min.js" type="text/javascript"></script>
 				<!-- FIM TEMA LAYOUT SCRIPTS -->
 
 
@@ -231,7 +233,7 @@
 	}
 
 	function linha_form($fields, $extraClasse = ""){
-		$campo = '';
+		$campo = "";
 		foreach($fields as $field){
 			$campo .= strval($field);
 		}
@@ -253,13 +255,14 @@
 		
 		$_POST['acao'] = "index";
 		
-		echo "<form action='".str_replace($_ENV["URL_BASE"], "", $_POST["HTTP_REFERER"])."' name='form_voltar' method='post'>";
+		$formVoltar = "<form action='".str_replace($_ENV["URL_BASE"], "", $_POST["HTTP_REFERER"])."' name='form_voltar' method='post'>";
 		foreach($_POST as $key => $value){
-			echo "<input type='hidden' name='".$key."' value='".$value."'>";
+			$formVoltar .= "<input type='hidden' name='".$key."' value='".$value."'>";
 		}
-		echo "</form>";
+		$formVoltar .= "</form>";
+		$formVoltar .= "<script>document.form_voltar.submit();</script>";
 		
-		echo "<script>document.form_voltar.submit();</script>";
+		echo $formVoltar;
 		exit;
 	}
 
@@ -287,8 +290,7 @@
 		$errorMsg = $baseErrMsg."  ";
 
 		foreach($camposObrig as $key => $value){
-			var_dump([empty($_POST[$key]), $_POST[$key] != "0"]); echo "<br>";
-			if(empty($_POST[$key]) && $_POST[$key] != "0"){
+			if(empty($camposEnviados[$key]) && $camposEnviados[$key] != "0"){
 				$errorMsg .= " ".$camposObrig[$key].", ";
 			}
 		}

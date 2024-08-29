@@ -28,40 +28,38 @@
 			}
 		//}
 
-		// //Conferir se tem as informações necessárias 2.0{
-		// 	$camposObrig = [
-		// 		"id" => "Motorista",
-		// 		"hora" => "Hora",
-		// 		"idMacro" => "Tipo de Registro",
-		// 		"motivo" => "Motivo",
-		// 	];
-		// 	$errorMsg = conferirCamposObrig($camposObrig, $_POST);
-		// 	if(!empty($errorMsg)){
-		// 		set_status($errorMsg);
-		// 		index();
-		// 		exit;
-		// 	}
+		/*Conferir se tem as informações necessárias 2.0{
+			$camposObrig = [
+				"id" => "Motorista",
+				"hora" => "Hora",
+				"idMacro" => "Tipo de Registro",
+				"motivo" => "Motivo",
+			];
+			$errorMsg = conferirCamposObrig($camposObrig, $_POST);
+			if(!empty($errorMsg)){
+				set_status($errorMsg);
+				index();
+				exit;
+			}
 
-		// 	var_dump($camposObrig); echo "<br><br>";
-		// 	var_dump($_POST); echo "<br><br>";
-		// 	var_dump($errorMsg); echo "<br><br>";
+			var_dump($camposObrig); echo "<br><br>";
+			var_dump($_POST); echo "<br><br>";
+			var_dump($errorMsg); echo "<br><br>";
 
-		// 	die("debug");
+			$aMotorista = carregar('entidade',$_POST['id']);
+			if(empty($aMotorista)){
+				set_status("ERRO: Motorista não encontrado.");
+				index();
+				exit;
+			}
 
-		// 	$aMotorista = carregar('entidade',$_POST['id']);
-		// 	if(empty($aMotorista)){
-		// 		set_status("ERRO: Motorista não encontrado.");
-		// 		index();
-		// 		exit;
-		// 	}
-
-		// 	$aTipo = carregar('macroponto', $_POST['idMacro']);
-		// 	if(empty($aTipo)){
-		// 		set_status("ERRO: Tipo de registro não encontrado.");
-		// 		index();
-		// 		exit;
-		// 	}
-		// //}
+			$aTipo = carregar('macroponto', $_POST['idMacro']);
+			if(empty($aTipo)){
+				set_status("ERRO: Tipo de registro não encontrado.");
+				index();
+				exit;
+			}
+		//}*/
 		
 		//Tratamento de erros{
 			$error = false;
@@ -170,7 +168,7 @@
 				ORDER BY pont_tx_data DESC
 				LIMIT 1"
 		));
-
+		
 		$data = $_POST["data"]." ".$_POST["hora"];
 
 		if(!empty($temPonto["pont_tx_data"])){
@@ -184,17 +182,17 @@
 
 		
 		$newPonto = [
-			'pont_nb_user' 			=> $_SESSION['user_nb_id'],
-			'pont_tx_matricula' 	=> $aMotorista['enti_tx_matricula'],
-			'pont_tx_data' 			=> $data,
-			'pont_tx_tipo' 			=> $aTipo['macr_tx_codigoInterno'],
-			'pont_tx_status' 		=> 'ativo',
-			'pont_tx_dataCadastro' 	=> date("Y-m-d H:i:s"),
-			'pont_nb_motivo' 		=> $_POST['motivo'],
-			'pont_tx_justificativa' => $_POST['descricao']
+			"pont_nb_user" 			=> $_SESSION["user_nb_id"],
+			"pont_tx_matricula" 	=> $aMotorista["enti_tx_matricula"],
+			"pont_tx_data" 			=> $data,
+			"pont_tx_tipo" 			=> $aTipo["macr_tx_codigoInterno"],
+			"pont_tx_status" 		=> "ativo",
+			"pont_tx_dataCadastro" 	=> date("Y-m-d H:i:s"),
+			"pont_nb_motivo" 		=> $_POST["motivo"],
+			"pont_tx_justificativa" => $_POST["justificativa"]
 		];
 		
-		inserir('ponto', array_keys($newPonto), array_values($newPonto));
+		inserir("ponto", array_keys($newPonto), array_values($newPonto));
 		index();
 		exit;
 	}
@@ -423,7 +421,7 @@
 			$variableFields[] = combo_bd('Tipo de Registro','idMacro',($_POST['idMacro']?? ""),4,"macroponto","","ORDER BY macr_nb_id");
 			$variableFields[] = combo_bd('Motivo','motivo',($_POST['motivo']?? ""),4,'motivo','',' AND moti_tx_tipo = "Ajuste" ORDER BY moti_tx_nome');
 	
-			$campoJust[] = textarea('Justificativa','descricao',($_POST['descricao']?? ""),12);
+			$campoJust[] = textarea('Justificativa','justificativa',($_POST['justificativa']?? ""),12);
 		}
 
 		$botoes[] = $botao_imprimir;
@@ -475,7 +473,7 @@
 		echo
 			"
 			<div id='tituloRelatorio'>
-				<img id='logo' style='width: 150px' src='$CONTEX[path]/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
+				<img id='logo' style='width: 150px' src='".$CONTEX["path"]."/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
 			</div>
 			<style>
 				@media print {

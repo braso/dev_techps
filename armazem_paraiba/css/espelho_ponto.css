@@ -1,3 +1,7 @@
+#tituloRelatorio{
+	display: none;
+}
+
 @media print {
 	body {
 		margin: 1cm;

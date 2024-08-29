@@ -31,25 +31,27 @@
         $table .= "</tbody></table>";
         
         echo 
-            "<div id='boas-vindas' class='portlet light'>"
+			"<div id='boas-vindas' class='portlet light'>"
 				."<div style='text-align: center; align-content: center; height: 5em;'>"
-					."Bem Vindo(a), ".$usuario.".<br>"
+					."Bem Vindo(a), <b>".$usuario."</b>.<br>"
 					."Período da ".$turnoAtual." iniciado às ".$horaEntrada."."
 				."</div>"
-				."<p>Neste sistema, você encontra informações relacionadas a: "
-					."<ul>"
-						."<li>Registros;</li>"
-						."<li>Apontamentos de espelho de ponto;</li>"
-						."<li>Endosso;</li>"
-						."<li>Não conformidades;</li>"
-						."<li>Acesso aos relatórios dos serviços contratados.</li>"
-					."</ul>"
-				."</p>"
+				."<div class='obs'>"
+					."<p>Neste sistema, você encontra informações relacionadas a: "
+						."<ul>"
+							."<li>Registros;</li>"
+							."<li>Apontamentos de espelho de ponto;</li>"
+							."<li>Endosso;</li>"
+							."<li>Não conformidades;</li>"
+							."<li>Acesso aos relatórios dos serviços contratados.</li>"
+						."</ul>"
+					."</p>"
+				."</div>"
 				."<p>Em caso de dúvida, respondemos a partir de uma das formas de contato abaixo.</p>"
 				."<h4><b>Contatos:</b></h4>"
 				."".$table."
 			</div>"
-        ;
+		;
     }
 
 	$turnos = ["Noite", "Manhã", "Tarde", "Noite"];
@@ -130,5 +132,6 @@
 
 	$_POST["HTTP_REFERER"] = ($_SERVER["HTTP_REFERER"]?? "/index.php")."?error=".$error;
 
+	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
 	voltar();
 	exit;

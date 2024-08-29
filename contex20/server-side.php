@@ -18,8 +18,8 @@
 	
 	$columns = $_POST["columns"];
 	
-	$totalQuery = !empty($_POST["sql"])? 
-		mysqli_fetch_all(query($_POST["sql"]), MYSQLI_ASSOC): 
+	$totalQuery = !empty($_POST["sql"])?
+		mysqli_fetch_all(query(base64_decode($_POST["sql"])), MYSQLI_ASSOC):
 		[]
 	;
 
@@ -44,18 +44,15 @@
 
 	$nomeEmpresaMatriz = mysqli_fetch_assoc(
 		query(
-			"SELECT empr_tx_nome FROM empresa
-				WHERE empr_tx_Ehmatriz = 'sim'
-			LIMIT 1"
+			"SELECT empr_tx_nome FROM empresa"
+			." WHERE empr_tx_status = 'ativo'"
+				." AND empr_tx_Ehmatriz = 'sim'"
+			." LIMIT 1;"
 		)
 	);
-
-	
 	$nomeEmpresaMatriz = !empty($nomeEmpresaMatriz)? $nomeEmpresaMatriz['empr_tx_nome']: null;
-
 	
 	$data = [];
-
 	//Ordenar{
 		$orderBy = $_REQUEST['order'][0]['column'];
 

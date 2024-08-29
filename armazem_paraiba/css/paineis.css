@@ -1,0 +1,183 @@
+body{
+    --var-blue: #66B4FF;
+    --var-red: #FF4719;
+    --var-yellow: #F1C413;
+    --var-green: #00B33D;
+}
+
+.table-responsive div:first-child{
+    display:flex;
+}
+
+#tabela1 {
+    min-width:30%;
+    text-align: center;
+    display: none;
+    margin-right:20px;
+}
+
+#tabela2 {
+    min-width: 30%;
+    text-align: center;
+}
+
+#tabela1 th, #tabela2 th{
+    text-align: center;
+}
+
+#tabela1 tbody tr td:first-child, #tabela2 tbody tr td:first-child{
+    color: white;
+    text-shadow: 2px 2px 3px black;
+}
+
+.porcentagemMeta td:first-child, .porcentagemEndoPc td:first-child{
+    background-color: var(--var-blue);
+}
+.porcentagemPosi td:first-child, .porcentagemEndo td:first-child{
+    background-color: var(--var-green);
+}
+.porcentagemNega td:first-child, .porcentagemNaEndo td:first-child{
+    background-color: var(--var-red);
+}
+
+.emissao {
+    margin-bottom: 20px;
+    width: -webkit-fill-available;
+    align-content: center;
+    text-align: center;
+}
+
+.totais {
+    background-color: var(--var-yellow);
+    border-bottom: 10px solid white;
+}
+
+.totais th {
+    text-align: center;
+    align-content: center;
+}
+
+.titulos {
+    background-color: var(--var-blue);
+    cursor: pointer;
+}
+
+.titulos th {
+    text-align: center;
+    align-content: center;
+}
+
+#printTitulo {
+    display: none;
+}
+
+th.sort-asc::after {
+    content: " \2191";
+}
+
+th.sort-desc::after {
+    content: " \2193";
+}
+#impressao{
+    display: none;
+}
+
+@media print {
+    body {
+        margin: 1cm;
+        margin-right: 0cm;
+        /* Ajuste o valor conforme necessário para afastar do lado direito */
+        transform: scale(1.0);
+        transform-origin: top left;
+    }
+
+    @page {
+        size: A4 landscape;
+        margin: 1cm;
+    }
+
+    #printTitulo {
+        /*font-size: 2px !important;*/
+        /*padding-left: 200px;*/
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: -50px !important;
+    }
+
+    div:nth-child(6)>div.portlet.light,
+    .scroll-to-top  {
+        display: none !important;
+    }
+
+    #pdf2htmldiv>div {
+        padding: 88px 20px 15px !important;
+    }
+
+    /* .portlet.light>.portlet-title {
+        border-bottom: none;
+        margin-bottom: 0px;
+    } */
+
+    .caption {
+        padding-top: 0px;
+        margin-left: -50px !important;
+        padding-bottom: 0px;
+    }
+
+    .emissao {
+        padding-left: 680px !important;
+    }
+
+    .porcentagemEndo {
+        box-shadow: 0 0 0 1000px #66b3ff inset !important;
+    }
+
+    .porcentagemNaEndo {
+        box-shadow: 0 0 0 1000px #ff471a inset !important;
+    }
+
+    .porcentagemEndoPc {
+        box-shadow: 0 0 0 1000px #ffff66 inset !important;
+    }
+
+    thead tr.totais th {
+        box-shadow: 0 0 0 1000px #ffe699 inset !important;
+        /* Cor para impressão */
+    }
+
+    thead tr.titulos th {
+        box-shadow: 0 0 0 1000px #99ccff inset !important;
+        /* Cor para impressão */
+    }
+
+    .porcentagemMeta {
+        box-shadow: 0 0 0 1000px #66b3ff inset !important;
+    }
+
+    .porcentagemPosit {
+        box-shadow: 0 0 0 1000px #00b33c inset !important;
+    }
+
+    .porcentagemNegat {
+        box-shadow: 0 0 0 1000px #ff471a inset !important;
+    }
+
+    .portlet.light {
+        padding: 75px 20px 15px !important;
+    }
+
+    #impressao {
+        display: block !important;
+        position: relative;
+        padding-left: 630px!important;
+    }
+}
+
+.th-align {
+    text-align: center;
+    /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
+    vertical-align: middle !important;
+    /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
+
+}

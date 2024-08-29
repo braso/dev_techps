@@ -46,7 +46,7 @@
 
 	function diferenca_data(string $data1, string $data2=""){
 		if(empty($data2)){
-			$data2=date("Y-m-d");
+			$data2 = date("Y-m-d");
 		}
 		
 		// formato da data yyyy-mm-dd
@@ -59,7 +59,7 @@
 		// Extrai somente os números
 		$cpf = preg_replace( "/[^0-9]/is", "", $cpf);
 		
-		if (strlen($cpf) != 11 || preg_match_all("/\d{11}/", $cpf) === false){
+		if(strlen($cpf) != 11 || preg_match_all("/\d{11}/", $cpf) === false){
 			return false;
 		}
 
@@ -77,39 +77,20 @@
 			}
 		}
 
-		// switch($cpf[8]){
-		// 	case 0:
-		// 		echo "CPF do Rio Grande do Sul";
-		// 	break;
-		// 	case 1:
-		// 		echo "CPF do Distrito Federal, Goiás, Mato Grosso do Sul ou Tocantins";
-		// 	break;
-		// 	case 2:
-		// 		echo "CPF do Pará, Amazonas, Acre, Amapá, Rondônia ou Roraima";
-		// 	break;
-		// 	case 3:
-		// 		echo "CPF do Ceará, Maranhão ou Piauí";
-		// 	break;
-		// 	case 4:
-		// 		echo "CPF do Pernambuco, Rio Grande do Norte, Paraíba ou Alagoas";
-		// 	break;
-		// 	case 5:
-		// 		echo "CPF do Bahia ou Sergipe";
-		// 	break;
-		// 	case 6:
-		// 		echo "CPF do Minas Gerais";
-		// 	break;
-		// 	case 7:
-		// 		echo "CPF do Rio de Janeiro ou Espírito Santo";
-		// 	break;
-		// 	case 8:
-		// 		echo "CPF do São Paulo";
-		// 	break;
-		// 	case 9:
-		// 		echo "CPF do Paraná ou Santa Catarina";
-		// 	break;
-		// }
-		// echo "<br>";
+		$estados = [
+			"Rio Grande do Sul",
+			"Distrito Federal, Goiás, Mato Grosso do Sul ou Tocantins",
+			"Pará, Amazonas, Acre, Amapá, Rondônia ou Roraima",
+			"Ceará, Maranhão ou Piauí",
+			"Pernambuco, Rio Grande do Norte, Paraíba ou Alagoas",
+			"Bahia ou Sergipe",
+			"Minas Gerais",
+			"Rio de Janeiro ou Espírito Santo",
+			"São Paulo",
+			"Paraná ou Santa Catarina"
+		];
+		// echo "CPF do ".$estados[intval($cpf[8])];
+
 		return true;
 	}
 
@@ -170,7 +151,7 @@
 			query("INSERT INTO $tabela (".$campos.") VALUES(".$valores.");");
 			$sql = query("SELECT LAST_INSERT_ID();");
 			set_status("Registro inserido com sucesso!");
-		}catch (Exception $e){
+		}catch(Exception $e){
 			set_status("Falha ao registrar.");
 			return [$e];
 		}
@@ -255,22 +236,20 @@
 		return carrega_array($sql)[0];
 	}
 
-	function carregar($tabela,$id="",$campo="",$valor="",$extra="",$exibe=0){
-		$campoId = substr($tabela,0,4)."_nb_id";
+	function carregar($tabela, $id="", $campo="", $valor="", $extra="", $exibe=0){
 		$ext = "";
-
-		$extra_id = (!empty($id))? " AND ".$campoId." = ".$id: "";
+		$extra_id = (!empty($id))? " AND ".substr($tabela,0,4)."_nb_id"." = ".$id: "";
 
 		if(!empty($campo[0])) {
 			$a_campo = explode(",", $campo);
 			$a_valor = explode(",", $valor);
 
-			for ($i = 0; $i < count($a_campo); $i++) {
+			for($i = 0; $i < count($a_campo); $i++) {
 				$ext .= " AND " . str_replace(",", "", $a_campo[$i]) . " = '" . str_replace(",", "", $a_valor[$i]) . "' ";
 			}
 		}
 
-		$query = "SELECT * FROM $tabela WHERE 1 $extra_id $ext $extra LIMIT 1";
+		$query = "SELECT * FROM ".$tabela." WHERE 1 ".$extra_id." ".$ext." ".$extra." LIMIT 1;";
 
 		if($exibe == 1){
 			echo $query;
@@ -291,7 +270,7 @@
 
 		if($mostrar == 1 || $valor > 0 ) {
 			// nosso formato
-			if (substr($valor, -3, 1) == ",")
+			if(substr($valor, -3, 1) == ",")
 				return @str_replace(array(".", ","), array("", "."), $valor); // retorna 100000.50
 			else
 				return @number_format($valor, 2, ",", "."); // retorna 100.000,50
@@ -303,7 +282,7 @@
 		$location = mysqli_fetch_all(
 			query("SELECT pont_tx_latitude, pont_tx_longitude 
 			FROM ponto WHERE pont_nb_id = $idPonto"), MYSQLI_ASSOC);
-		if (!empty($location[0]['pont_tx_latitude']) && !empty($location[0]['pont_tx_longitude'])) {
+		if(!empty($location[0]['pont_tx_latitude']) && !empty($location[0]['pont_tx_longitude'])) {
 			$url = "https://www.google.com/maps?q=".$location[0]['pont_tx_latitude'].","
 			.$location[0]['pont_tx_longitude'];
 
@@ -312,8 +291,9 @@
 				<i class='fa fa-map-marker' aria-hidden='true' style='color: black; font-size: 20px;'></i>
 			</a>
 			</center>";
-		} else
+		}else{
 			return '';
+		}
 	}
 
 	function data($data,$hora=0){
@@ -335,12 +315,12 @@
 
 
 		if(is_int(strpos($data, "/"))){//verifica se tem a barra /
-			$d = explode ("/", $data);//tira a barra
+			$d = explode("/", $data);//tira a barra
 			$rstData = "$d[2]-$d[1]-$d[0]";//separa as datas $d[2] = ano $d[1] = mes etc...
 			return $rstData.$hora;
 		}elseif(is_int(strpos($data, "-"))){
 			$data = substr($data, 0, 10);
-			$d = explode ("-", $data);
+			$d = explode("-", $data);
 			$rstData = $d[2]."/".$d[1]."/".$d[0];
 			return $rstData.$hora;
 		}
@@ -414,19 +394,19 @@
 				else {
 					radioNao.checked = true;
 				}
-				if (radioSim.checked) {
+				if(radioSim.checked) {
 						campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
 						campo2.style.display = ""; 
 				}
 				// Adicionando um ouvinte de eventos aos elementos de rádio
 				radioSim.addEventListener("change", function() {
-					if (radioSim.checked) {
+					if(radioSim.checked) {
 						campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
 						campo2.style.display = ""; 
 					}
 				});
 				radioNao.addEventListener("change", function() {
-				if (radioNao.checked) {
+				if(radioNao.checked) {
 					campo.style.display = "none"; // Oculta o campo quando "Não Mostrar Campo" é selecionado
 					campo2.style.display = "none"; 
 				}
@@ -523,7 +503,7 @@
 						function updateDisplayedText() {
 							var inputValue = inputField.val();
 
-							if (inputValue.startsWith(domainPrefix)) {
+							if(inputValue.startsWith(domainPrefix)) {
 								var displayedText = inputValue.substring(domainPrefix.length);
 								inputField.val(displayedText);
 							}
@@ -575,7 +555,7 @@
 			<script src="'.$CONTEX['path'].'/../contex20/assets/global/plugins/bootstrap-datepicker/js/bootstrap-datepicker.min.js" type="text/javascript"></script>
 			<script src="'.$CONTEX['path'].'/../contex20/assets/global/plugins/bootstrap-datepicker/locales/bootstrap-datepicker.pt-BR.min.js" type="text/javascript"></script>
 			<script>
-				if (jQuery().datepicker) {
+				if(jQuery().datepicker) {
 				$("#'.$variavel.'").datepicker({
 					orientation: "left",
 					autoclose: true,
@@ -662,27 +642,26 @@
 
 	}
 
-	function combo_2($nome, $variavel, $modificador, $tamanho, array $opcoes, $extra = ''){
-		$res = '';
-		foreach($opcoes as $key => $value){
-			//Correção da chave para os casos em que a variável $campos é um array comum, e não um dicionário. Retirar quando for necessário utilizar um dicionário com chaves numerais
-			$key = is_int($key)? $value: $key;
+	// function combo_2($nome, $variavel, $modificador, $tamanho, array $opcoes, $extra = ''){
+		// $res = '';
+		// foreach($opcoes as $key => $value){
+		// 	//Correção da chave para os casos em que a variável $campos é um array comum, e não um dicionário. Retirar quando for necessário utilizar um dicionário com chaves numerais
+		// 	$key = is_int($key)? $value: $key;
 
-			$selected = ($key != $modificador)? '': 'selected';
-			$res .= '<option value="'.$key.'" '.$selected.'>'.$value.'</option>';
-		}
+		// 	$selected = ($key != $modificador)? '': 'selected';
+		// 	$res .= '<option value="'.$key.'" '.$selected.'>'.$value.'</option>';
+		// }
 
-		$campo=
-			'<div class="margin-bottom-5" style="width:'.$tamanho.'px">
-				<label>'.$nome.'</label>
-				<select name="'.$variavel.'" class="form-control input-sm" '.$extra.'>
-					'.$res.'
-				</select>
-			</div>';
+		// $campo=
+		// 	'<div class="margin-bottom-5" style="width:'.$tamanho.'px">
+		// 		<label>'.$nome.'</label>
+		// 		<select name="'.$variavel.'" class="form-control input-sm" '.$extra.'>
+		// 			'.$res.'
+		// 		</select>
+		// 	</div>';
 
-		return $campo;
-
-	}
+		// return $campo;
+	// }
 
 	function combo_net($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra_bd='',$extra_busca='',$extra_ordem='',$extra_limite='15'){
 
@@ -737,7 +716,7 @@
 				url: '".$select2URL."',
 				dataType: 'json',
 				delay: 250,
-				processResults: function (data) {
+				processResults: function(data) {
 					return {
 						results: data
 					};
@@ -811,7 +790,7 @@
 	function arquivosParametro($nome,$idParametro,$arquivos){
 
 		$arquivo_list = '';
-		if (!empty($arquivos)) {
+		if(!empty($arquivos)) {
 			foreach($arquivos as $arquivo){
 				$dataHoraOriginal = $arquivo['doc_tx_dataCadastro'];
 				$dataHora = new DateTime($dataHoraOriginal);
@@ -923,7 +902,7 @@
 	function arquivosEmpresa($nome,$idEmpresa,$arquivos){
 
 		$arquivo_list = '';
-		if (!empty($arquivos)) {
+		if(!empty($arquivos)) {
 			foreach($arquivos as $arquivo){
 				$dataHoraOriginal = $arquivo['doc_tx_dataCadastro'];
 				$dataHora = new DateTime($dataHoraOriginal);
@@ -1071,8 +1050,8 @@
 
 	}
 
-	function botao($nome, $acao, $campos='', $valores='', $extra='', $salvar='', $botaoCor='btn btn-secondary'){
-		global $idsBotaoContex;	
+	function botao($nome, $acao, $campos='', $valores='', $extra='', bool $salvar = false, $botaoCor='btn btn-secondary'){
+		global $idsBotaoContex;
 		$hidden = '';
 		$funcaoOnClick = '';
 		if(!empty($campos[0])){
@@ -1090,16 +1069,16 @@
 			}
 		}
 
-		if($salvar == 1){
-			?>
-				<script type="text/javascript">
+		if($salvar){
+			echo 
+				"<script type='text/javascript'>
 				function criarGET() {
 					var form = document.forms[0];
 					var elements = form.elements;
 					var values = [];
 					var primeiraAcao = '';
 
-					for (var i = 0; i < elements.length; i++){
+					for(var i = 0; i < elements.length; i++){
 						if(elements[i].name == 'acao' && elements[i].value  != 'index'){
 							continue;
 						}
@@ -1107,8 +1086,8 @@
 					}
 					form.action = '?' + values.join('&');
 				}
-				</script>
-			<?php
+				</script>"
+			;
 			$funcaoOnClick = 'criarGET();';
 		}
 

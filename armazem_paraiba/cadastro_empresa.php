@@ -123,6 +123,18 @@
 			}
 		}
 
+		$campos = [
+			'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento',
+			'referencia', 'fone1', 'fone2', 'email', 'inscricaoEstadual', 'inscricaoMunicipal',
+			'regimeTributario', 'status', 'contato',
+			'ftpServer', 'ftpUsername', 'ftpUserpass', 'dataRegistroCNPJ'
+		];
+
+		foreach ($campos as $campo) {
+			if (!empty($_POST[$campo])) {
+				$empresa['empr_tx_' . $campo] = $_POST[$campo];
+			}
+		}
 		if (!isset($_POST['id']) || empty($_POST['id'])) {
 
 			$empresa = [
@@ -131,18 +143,7 @@
 				'empr_nb_cidade' 	=> $_POST['cidade'],
 				'empr_tx_domain' 	=> $_SERVER['HTTP_ORIGIN'] . (is_int(strpos($_SERVER["REQUEST_URI"], 'dev_')) ? 'dev_techps/' : 'techps/') . $_POST['nomeDominio']
 			];
-			$campos = [
-				'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento',
-				'referencia', 'fone1', 'fone2', 'email', 'inscricaoEstadual', 'inscricaoMunicipal',
-				'regimeTributario', 'status', 'status', 'contato',
-				'ftpServer', 'ftpUsername', 'ftpUserpass', 'dataRegistroCNPJ'
-			];
-
-			foreach ($campos as $campo) {
-				if (!empty($_POST[$campo])) {
-					$empresa['empr_tx_' . $campo] = $_POST[$campo];
-				}
-			}
+			
 
 
 			$empty_ftp_inputs = empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) + 0;
@@ -194,16 +195,6 @@
 				'empr_tx_dataAtualiza' => date('Y-m-d H:i:s')
 			];
 
-			$campos = [
-				'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento',
-				'referencia', 'fone1', 'fone2', 'email', 'inscricaoEstadual', 'inscricaoMunicipal',
-				'regimeTributario', 'status', 'status', 'contato',
-				'ftpServer', 'ftpUsername', 'ftpUserpass', 'dataRegistroCNPJ'
-			];
-
-			foreach ($campos as $campo) {
-				$empresa['empr_tx_' . $campo] = $_POST[$campo];
-			}
 
 
 			atualizar('empresa', array_keys($empresa), array_values($empresa), $_POST['id']);
@@ -314,7 +305,7 @@
 						document.getElementById('frame_cep').src='".$path_parts["basename"]."?acao=checarCNPJ&cnpj='+cnpj+'&id=".$a_mod["empr_nb_id"]."'
 					}
 				}
-				$(document).ready(function() {
+				$(document).ready(function(){
 					$('#cnpj').on('blur', function(){
 						var cnpj = $(this).val();
 
