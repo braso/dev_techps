@@ -2,6 +2,10 @@
 	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
+
+		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+		header("Pragma: no-cache"); // HTTP 1.0.
+		header("Expires: 0");
 	//*/
 
 	include "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
@@ -21,6 +25,12 @@
 	}
 
 	function buscarEspelho(){
+
+		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
+			$_POST["busca_motorista"] = $_SESSION["user_nb_entidade"];
+			$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
+		}
+
 		//Confere se há algum erro na pesquisa{
 			$baseErrMsg = ["Insira os campos para pesquisar: ", "", ""];
 			$errorMsg = $baseErrMsg;
@@ -65,9 +75,9 @@
 
 				if(empty($motorista)){
 					$errorMsg[2] = "Este motorista não pertence a esta empresa. ";
+				}else{
+					$opt = "<option value=\"".$motorista["enti_nb_id"]."\">[".$motorista["enti_nb_id"]."]".$motorista["enti_tx_nome"]."</option>";
 				}
-
-				$opt = "<option value=\"".$motorista["enti_nb_id"]."\">[".$motorista["enti_nb_id"]."]".$motorista["enti_tx_nome"]."</option>";
 			}
 
 			if($errorMsg != $baseErrMsg){
@@ -118,7 +128,7 @@
 		}
 
 		//CAMPOS DE CONSULTA{
-			if($_SESSION["user_tx_nivel"] == "Motorista"){
+			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
 				$nomeEmpresa = mysqli_fetch_assoc(query("SELECT empr_tx_nome FROM empresa WHERE empr_nb_id = ".$_SESSION["user_nb_empresa"]));
 				$searchFields = [
 					texto("Empresa*", $nomeEmpresa["empr_tx_nome"], 3),
@@ -334,9 +344,9 @@
 			"<script>
 
 				function selecionaMotorista(idEmpresa){
-					let buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\"');
+					let buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\")');
 					if(idEmpresa > 0){
-						buscaExtra += ' AND enti_nb_empresa = '+idEmpresa+')';
+						buscaExtra += encodeURI(' AND enti_nb_empresa = '+idEmpresa);
 						$('.busca_motorista')[0].innerHTML = null;
 					}
 
@@ -344,7 +354,6 @@
 					if($('.busca_motorista').data('select2')){
 						$('.busca_motorista').select2('destroy');
 					}
-
 					$.fn.select2.defaults.set('theme', 'bootstrap');
 					$('.busca_motorista').select2({
 						language: 'pt-BR',

@@ -286,8 +286,8 @@
 									$hasUnconformities = true;
 									$counts["naoConformidade"] += substr_count($aDia[$f][$key], "fa-warning");
 								}
-								if (strpos($aDia[$f][$key], "fa-info-circle") !== false) {
-									if (strpos($aDia[$f][$key], "color:red;") !== false) {
+								if(is_int(strpos($aDia[$f][$key], "fa-info-circle"))){
+									if(is_int(strpos($aDia[$f][$key], "color:red;")) || is_int(strpos($aDia[$f][$key], "color:orange;"))){
 										$hasUnconformities = true;
 										$counts["naoConformidade"] += substr_count($aDia[$f][$key], "fa-warning");
 									}

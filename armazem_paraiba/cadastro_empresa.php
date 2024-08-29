@@ -3,8 +3,9 @@
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
-
+	
 	include "conecta.php";
+
 
 	function excluirEmpresa(){
 		remover('empresa',$_POST['id']);
@@ -135,16 +136,14 @@
 				$empresa['empr_tx_' . $campo] = $_POST[$campo];
 			}
 		}
-		if (!isset($_POST['id']) || empty($_POST['id'])) {
+		if (empty($_POST['id'])) {
 
-			$empresa = [
+			$empresa = array_merge($empresa, [
 				'empr_tx_Ehmatriz'	=> $_POST['matriz'],
 				'empr_nb_parametro' => $_POST['parametro'],
 				'empr_nb_cidade' 	=> $_POST['cidade'],
 				'empr_tx_domain' 	=> $_SERVER['HTTP_ORIGIN'] . (is_int(strpos($_SERVER["REQUEST_URI"], 'dev_')) ? 'dev_techps/' : 'techps/') . $_POST['nomeDominio']
-			];
-			
-
+			]);
 
 			$empty_ftp_inputs = empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) + 0;
 
@@ -158,20 +157,12 @@
 				exit;
 			}
 
-			if (isset($_POST['id']) && !empty($_POST['id'])) {
-				$empresa['empr_nb_userAtualiza'] = $_SESSION['user_nb_id'];
-				$empresa['empr_tx_dataAtualiza'] = date('Y-m-d H:i:s');
-
-				atualizar('empresa', array_keys($empresa), array_values($empresa), $_POST['id']);
-				$id_empresa = $_POST['id'];
-			} else {
-				$empresa['empr_nb_userCadastro'] = $_SESSION['user_nb_id'];
-				$empresa['empr_tx_dataCadastro'] = date('Y-m-d H:i:s');
-				try {
-					$id_empresa = inserir('empresa', array_keys($empresa), array_values($empresa))[0];
-				} catch (Exception $e) {
-					print_r($e);
-				}
+			$empresa['empr_nb_userCadastro'] = $_SESSION['user_nb_id'];
+			$empresa['empr_tx_dataCadastro'] = date('Y-m-d H:i:s');
+			try {
+				$id_empresa = inserir('empresa', array_keys($empresa), array_values($empresa))[0];
+			} catch (Exception $e) {
+				print_r($e);
 			}
 
 			$file_type = $_FILES['logo']['type']; //returns the mimetype
@@ -189,12 +180,11 @@
 				}
 			}
 		} else {
-			$empresa = [
+			$empresa = array_merge($empresa, [
 				'empr_nb_parametro' => $_POST['parametro'],
 				'empr_nb_userAtualiza' => $_SESSION['user_nb_id'],
 				'empr_tx_dataAtualiza' => date('Y-m-d H:i:s')
-			];
-
+			]);
 
 
 			atualizar('empresa', array_keys($empresa), array_values($empresa), $_POST['id']);
@@ -223,32 +213,31 @@
 		exit;
 	}
 
-
-	function buscarCEP($cep){
-		// 		$resultado = @file_get_contents('https://viacep.com.br/ws/'.urlencode($cep).'/json/');
-				
-		$url = 'https://viacep.com.br/ws/'.urlencode($cep).'/json/';
-		$ch = curl_init($url);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-			
-		$resultado = curl_exec($ch);
-		$arr = json_decode($resultado, true);
-		return $arr;
-	}
-
 	function carregarEndereco(){
 		global $CONTEX;
-		
-		$arr = buscarCEP($_GET['cep']);
 		echo 
-			"<script type='text/javascript'>
-				parent.document.contex_form.endereco.value='".$arr['logradouro']."';
-				parent.document.contex_form.bairro.value='".$arr['bairro']."';
+			"<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
+			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/select2/js/select2.min.js'></script>
+			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js' type='text/javascript'></script>
+			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery-inputmask/maskMoney.js' type='text/javascript'></script>
 
-				var selecionado = $('.cidade',parent.document);
-				selecionado.empty();
-				selecionado.append('<option value=".$arr['ibge'].">".[$arr['uf']]." ".$arr['localidade']."</option>');
-				selecionado.val('".$arr['ibge']."').trigger('change');
+			<script>
+				jQuery.ajax({
+					url: 'https://viacep.com.br/ws/".urlencode($_GET["cep"])."/json/',
+					type: 'get',
+        			dataType: 'json',
+					success: function(data) {
+						console.log(data.erro);
+						if(data.erro == undefined){
+							parent.document.contex_form.endereco.value = data.logradouro
+							parent.document.contex_form.bairro.value = data.bairro;
+							var selecionado = $('.cidade', parent.document);
+							selecionado.empty();
+							selecionado.append('<option value='+data.ibge+'>['+data.uf+'] '+data.localidade+'</option>');
+							selecionado.val(data.ibge).trigger('change');
+						}
+					}
+				});
 			</script>";
 		exit;
 	}
@@ -296,7 +285,7 @@
 				function carrega_cep(cep) {
 					var num = cep.replace(/[^0-9]/g, '');
 					if (num.length == '8') {
-						document.getElementById('frame_cep').src = '".$path_parts["basename"]."?acao=carregarEndereco&cep=' + num;
+						document.getElementById('frame_cep').src = '".$path_parts["basename"]."?acao=carregarEndereco()&cep=' + num;
 					}
 				}
 				
@@ -410,10 +399,13 @@
 			$cidade_query = query("SELECT * FROM cidade WHERE cida_tx_status = 'ativo' AND cida_nb_id = ".$input_values['cidade']);
 			$cidade = mysqli_fetch_array($cidade_query);
 		}else{
-			$cidade = ['cida_tx_nome' => ''];
+			$cidade = [
+				'cida_tx_uf' => '',
+				'cida_tx_nome' => ''
+			];
 		}
 		$campo_cidade = texto('Cidade/UF', "[".$cidade['cida_tx_uf']."] ".$cidade['cida_tx_nome'], 2);
-    if (is_bool(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) && (!empty($input_values['Ehmatriz']) && $input_values['Ehmatriz'] == 'sim')) {
+    	if (is_bool(strpos($_SESSION['user_tx_nivel'], "Super Administrador")) && (!empty($input_values['Ehmatriz']) && $input_values['Ehmatriz'] == 'sim')) {
 			$c = [
 				texto('CPF/CNPJ*',$input_values['cnpj'],2),
 				texto('Nome*',$input_values['nome'],4),

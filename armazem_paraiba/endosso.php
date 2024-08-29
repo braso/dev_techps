@@ -105,8 +105,12 @@
 				$endossoCompleto = montarEndossoMes($date, $aMotorista);
 
 				$totalResumo = $endossoCompleto["totalResumo"];
+				$max50APagar = $endossoCompleto["endo_tx_max50APagar"];
+				if(empty($max50APagar)){
+				    $max50APagar = "00:00";
+				}
 
-				$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $endossoCompleto["endo_tx_max50APagar"]);
+				$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $max50APagar);
 
 				$totalResumo["he50_aPagar"] = $aPagar[0];
 				$totalResumo["he100_aPagar"] = $aPagar[1];

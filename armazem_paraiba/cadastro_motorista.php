@@ -2,8 +2,13 @@
     /* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
+
+		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+		header("Pragma: no-cache"); // HTTP 1.0.
+		header("Expires: 0");
 	//*/
 	include "conecta.php";
+
 
 	function carregarEmpresa(){
 		$aEmpresa = carregar("empresa", (int)$_GET["emp"]);
@@ -57,34 +62,32 @@
 		;
 		exit;
 	}
-
-	function buscarCEP($cep){
-		// 		$resultado = @file_get_contents("https://viacep.com.br/ws/".urlencode($cep)."/json/");
-				
-		$url = "https://viacep.com.br/ws/".urlencode($cep)."/json/";
-		$ch = curl_init($url);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-			
-		$resultado = curl_exec($ch);
-		$arr = json_decode($resultado, true);
-		return $arr;
-	}
 	function carregarEndereco(){
 		global $CONTEX;
 
-		
-		$arr = buscarCEP($_GET["cep"]);
-
 		echo 
-      	"<script src='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
-			<script type='text/javascript'>
-				parent.document.contex_form.endereco.value = '".$arr["logradouro"]."';
-				parent.document.contex_form.bairro.value = '".$arr["bairro"]."';
+	      	"<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
+			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/select2/js/select2.min.js'></script>
+			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js' type='text/javascript'></script>
+			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery-inputmask/maskMoney.js' type='text/javascript'></script>
 
-				var selecionado = $('.cidade', parent.document);
-				selecionado.empty();
-				selecionado.append('<option value=\'".$arr["ibge"]."\'>[".$arr["uf"]."] ".$arr["localidade"]."</option>');
-				selecionado.val('".$arr["ibge"]."').trigger('change');
+			<script type='text/javascript'>
+				jQuery.ajax({
+					url: 'https://viacep.com.br/ws/".urlencode($_GET["cep"])."/json/',
+					type: 'get',
+        			dataType: 'json',
+					success: function(data) {
+						console.log(data.erro);
+						if(data.erro == undefined){
+							parent.document.contex_form.endereco.value = data.logradouro
+							parent.document.contex_form.bairro.value = data.bairro;
+							var selecionado = $('.cidade', parent.document);
+							selecionado.empty();
+							selecionado.append('<option value='+data.ibge+'>['+data.uf+'] '+data.localidade+'</option>');
+							selecionado.val(data.ibge).trigger('change');
+						}
+					}
+				});
 			</script>"
     	;
 		exit;
@@ -92,7 +95,6 @@
 
 	function cadastrarMotorista(){
 		global $a_mod;
-		
 
 		if(!empty($_POST["matricula"])){
 			$_POST["postMatricula"] = $_POST["matricula"];
@@ -225,6 +227,13 @@
 			visualizarCadastro();
 			exit;
 		}
+
+		if(sizeof($_POST["postMatricula"]) > 10){
+			set_status("ERRO: Matrícula com mais de 10 caracteres.");
+			visualizarCadastro();
+			exit;
+		}
+
 		if(!empty($_POST["login"])){
 			$otherUser = mysqli_fetch_assoc(query("SELECT * FROM user WHERE user_tx_matricula = '".($_POST["login"]?? $_POST["postMatricula"])."' LIMIT 1"));
 			if (!empty($otherUser) && strval($otherUser["user_tx_matricula"]) != strval($_POST["postMatricula"]) && $otherUser["user_tx_login"] == $_POST["login"]){
@@ -520,8 +529,8 @@
 
 		$camposPessoais = [
 			((!empty($_POST["id"]))?
-				texto("Matrícula*", $a_mod["enti_tx_matricula"], 2, "tabindex=".sprintf("%02d", $tabIndex++)):
-				campo("Matrícula*", "postMatricula", ($a_mod["enti_tx_matricula"]?? ""), 2, "", "tabindex=".sprintf("%02d", $tabIndex++))
+				texto("Matrícula*", $a_mod["enti_tx_matricula"], 2, "tabindex=".sprintf("%02d", $tabIndex++)." maxlength=10"):
+				campo("Matrícula*", "postMatricula", ($a_mod["enti_tx_matricula"]?? ""), 2, "", "tabindex=".sprintf("%02d", $tabIndex++)." maxlength=10")
 			)
 		];
 

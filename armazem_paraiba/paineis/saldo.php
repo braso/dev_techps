@@ -1,5 +1,5 @@
 <?php
-    //* Modo debug
+    /* Modo debug
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
      
@@ -7,7 +7,7 @@
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
     //*/
-
+    
     include "../funcoes_ponto.php";
 
     function calcPercs(array $values): array{

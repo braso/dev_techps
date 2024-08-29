@@ -17,7 +17,7 @@
 			}
 		}
 	}
-
+	
 	if(!empty($_POST["acao"])){
 		$nomeFuncao = $_POST["acao"];
 		if(is_int(strpos($_POST["acao"], "(")) && is_int(strpos($_POST["acao"], ")"))){
@@ -26,17 +26,16 @@
 			$_POST["acao"] .= "()";
 		}
 		if(function_exists($nomeFuncao)){
-
+			
 			if(preg_match_all("/^((.+[^\n])*)\((.*)\)$/", $_POST["acao"])){
 				eval($_POST["acao"].";");
 			}else{
 				echo "ERRO: função mal formatada: ".$_POST["acao"];
 			}
-			exit;
 		}else{
 			echo "ERRO: Função '".$nomeFuncao."' não existe!";
-			exit;
 		}
+		exit;
 	}else{
 		if(function_exists("index")){
 			index();
@@ -463,7 +462,7 @@
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask(\"numeric\", {rightAlign: false});";
 			break;
 			case "MASCARA_CEP":
-				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: '99999-999', clearIncomplete: true, placeholder: \"00000-000\" });";
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: '99999-999', placeholder: \"00000-000\" });";
 			break;
 			case "MASCARA_CPF":
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99']});";

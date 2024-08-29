@@ -2,16 +2,19 @@
 	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
+
+		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+		header("Pragma: no-cache"); // HTTP 1.0.
+		header("Expires: 0");
 	//*/
 
+	$started = session_start();
+	
+	include_once "load_env.php";
+	
 	echo "<style>";
 	include "css/index.css";
 	echo "</style>";
-
-	if(empty(session_id())){
-		$started = session_start();
-	}
-    include_once "load_env.php";
 
 	function showWelcome($usuario, $turnoAtual, $horaEntrada) {
 
@@ -57,7 +60,7 @@
 	$turnos = ["Noite", "Manhã", "Tarde", "Noite"];
 	$turnoAtual = $turnos[intval((intval(date("H"))-3)/6)];
 
-	if(isset($_SESSION["user_nb_id"]) && !empty($_SESSION["user_nb_id"]) && empty($_POST)){ //Se já há um usuário logado e não está tentando um novo login
+	if(!empty($_SESSION["user_nb_id"]) && empty($_POST)){ //Se já há um usuário logado e não está tentando um novo login
 		include_once "conecta.php";
 		cabecalho("");
 		showWelcome($_SESSION["user_tx_nome"],$turnoAtual,$_SESSION["horaEntrada"]);
@@ -72,8 +75,8 @@
 	$error = "emptyfields";
 
 	if(!empty($_POST["user"]) && !empty($_POST["password"])){//Tentando logar
-	
-		if(isset($_SESSION["user_nb_id"]) && !empty($_SESSION["user_nb_id"])){ //Se já há um usuário logado
+
+		if(!empty($_SESSION["user_tx_login"]) && $_SESSION["user_tx_login"] != $_POST["user"]){ //Se já há um usuário logado
 			$_SESSION = [];
 			session_destroy();
 		}else{
@@ -108,7 +111,7 @@
 			foreach($usuario as $key => $value){
 				$_SESSION[$key] = $value;
 			}
-			$_SESSION["user_tx_foto"] 		= (!empty($usuario["user_tx_foto"])? $usuario["user_tx_foto"]: $CONTEX["path"]."/../contex20/img/user.png");
+			$_SESSION["user_tx_foto"] = (!empty($usuario["user_tx_foto"])? $usuario["user_tx_foto"]: $CONTEX["path"]."/../contex20/img/user.png");
 
 			if(!isset($_SESSION["horaEntrada"])){
 				$_SESSION["horaEntrada"] = date("H:i");
