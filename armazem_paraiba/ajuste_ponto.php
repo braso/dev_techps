@@ -489,11 +489,13 @@
 						top: 5px;
 						right: 20px;
 					}
-					div:nth-child(10) > div:nth-child(1),
-					div:nth-child(10) > div:nth-child(3),
-					div:nth-child(10) > div:nth-child(5),
-					div:nth-child(10) > div:nth-child(6),
-					div:nth-child(11) > div{
+					form > div:nth-child(14) > div:nth-child(1),
+					form > div:nth-child(14) > div:nth-child(3),
+					form > div:nth-child(14) > div:nth-child(4),
+					form > div:nth-child(14) > div:nth-child(5),
+					form > div:nth-child(14) > div:nth-child(6),
+					form > div:nth-child(15) > div
+					{
 						display: none;
 					}
 
