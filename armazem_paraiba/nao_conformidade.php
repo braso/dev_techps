@@ -114,6 +114,7 @@
 		echo 
 			"<div id='tituloRelatorio'>
 				<h1>Não Conformidade</h1>
+				<img id='logo' style='width: 150px' src='".$CONTEX["path"]."/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
 			</div>
 			<style>
 				#tituloRelatorio{
