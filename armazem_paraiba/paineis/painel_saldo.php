@@ -309,11 +309,11 @@
                                 }
                             }
                         }
-                    // }
+                    //}
                     
                     
-                    $diaPonto["he50"]       = !empty($diaPonto["he50"])? $diaPonto["he50"]: "00:00";
-                    $diaPonto["he100"]      = !empty($diaPonto["he100"])? $diaPonto["he100"]: "00:00";
+                    $diaPonto["he50"]              = !empty($diaPonto["he50"])? $diaPonto["he50"]: "00:00";
+                    $diaPonto["he100"]             = !empty($diaPonto["he100"])? $diaPonto["he100"]: "00:00";
                     
                     $totaisMot["jornadaPrevista"]  = somarHorarios([$totaisMot["jornadaPrevista"],  $diaPonto["jornadaPrevista"]]);
                     $totaisMot["jornadaEfetiva"]   = somarHorarios([$totaisMot["jornadaEfetiva"],   $diaPonto["diffJornadaEfetiva"]]);
@@ -402,7 +402,6 @@
             file_put_contents($path."/empresas.json", json_encode($totaisEmpresas));
         }
         return;
-
     }
 
     function index(){
@@ -481,6 +480,11 @@
             "saldoFinal" => "00:00"
         ];
 
+        $periodoRelatorio = [
+            "dataInicio" => "1900-01-01",
+            "dataFim" => "1900-01-01"
+        ];
+
         if(!empty($_POST["empresa"])){
             //Painel dos saldos dos motoristas de uma empresa específica
             $aEmpresa = mysqli_fetch_assoc(query(
@@ -543,7 +547,7 @@
                 "SELECT empr_tx_logo FROM empresa"
                 ." WHERE empr_tx_status = 'ativo'"
                 ." AND empr_tx_Ehmatriz = 'sim';"
-            ), MYSQLI_ASSOC);
+            ), MYSQLI_ASSOC);//Utilizado no HTML.
             
             if(is_dir($path) && file_exists($path."/"."empresas.json")){
                 $arquivoGeral = $path."/empresas.json";
@@ -587,7 +591,7 @@
 
         [$percEndosso["E"], $percEndosso["EP"], $percEndosso["N"]] = calcPercs(array_values($contagemEndossos));
         [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
-        
+
         echo 
             "<script>
                 var endossos = {
@@ -709,11 +713,14 @@
                 </script>"
             ;
         }else{
-            echo "<script>alert('Não Possui dados desse mês')</script>";
+            if(!empty($_POST["acao"])){
+                echo "<script>alert('Não Possui dados desse mês')</script>";
+            }
         }
 
         echo "</div>";
 
+        
         carregarJS($arquivos);
         rodape();
     }

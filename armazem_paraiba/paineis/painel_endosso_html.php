@@ -218,15 +218,9 @@
         console.log('<?= $file ?>');
 
         function carregarDado() {
-            $.ajax({
-                <?php
-                if (isset($_POST['empresa']) && !empty($_POST['empresa']) && isset($_POST['busca_data']) && !empty($_POST['busca_data'])) {
-                    $url = "$file/motoristas.json";
-                } else {
-                    $url = "$file/totalEmpresas.json";
-                }
-                ?>
-                url: '<?= $url ?>',
+            urlArquivo = '<?=((!empty($_POST['empresa']) && !empty($_POST['busca_data']))? "$file/motoristas.json": "$file/totalEmpresas.json")?>';
+            $(document).ajax({
+                url: urlArquivo,
                 dataType: 'json',
                 success: function(data) {
                     tabela.empty();

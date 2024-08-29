@@ -271,7 +271,7 @@
 			
 			$value = DateTime::createFromFormat("Y-m-d H:i:s", $pontosCompleto[$f]["pont_tx_data"]);
 			$fullDaysCount = (date_diff($value, DateTime::createFromFormat("Y-m-d", $hoje))->d)-1;
-			$value = ($value->format("Y-m-d") < $hoje)? operarHorarios([$value->format("H:i:s"), sprintf("%02d:%02d", ($fullDaysCount*24), "00")], "-"): $value->format("H:i:s");
+			$value = ($value->format("Y-m-d") < $hoje)? operarHorarios([$value->format("H:i"), sprintf("%02d:%02d", ($fullDaysCount*24), "00")], "-"): $value->format("H:i");
 			
 			switch(intval($pontosCompleto[$f]["pont_tx_tipo"])){
 				case 1:

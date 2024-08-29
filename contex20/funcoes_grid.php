@@ -253,7 +253,7 @@
 								}
 							}
 						});
-						console.log(dataTable);
+						// console.log(dataTable);
 					});
 					document.getElementById('ajaxCall').innerHTML = '';
 				</script>

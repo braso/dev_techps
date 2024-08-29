@@ -334,9 +334,9 @@
 			"<script>
 
 				function selecionaMotorista(idEmpresa){
-					let buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\")';
+					let buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\"');
 					if(idEmpresa > 0){
-						buscaExtra += ' AND enti_nb_empresa = '+idEmpresa+'');
+						buscaExtra += ' AND enti_nb_empresa = '+idEmpresa+')';
 						$('.busca_motorista')[0].innerHTML = null;
 					}
 
