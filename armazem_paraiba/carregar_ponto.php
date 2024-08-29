@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug{
+	/* Modo debug{
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 		
@@ -11,8 +11,7 @@
 	global $path;
 	$path = "arquivos/pontos";
 
-	include_once "carregar_ftp_2.php";
-    //include_once "carregar_ftp.php";
+    include_once "carregar_ftp.php";
 	include_once "funcoes_ponto.php";
 
 	function showErrMsg(string $caminhoCompleto, string $errorMsg): string{
@@ -114,84 +113,6 @@
 
 		rodape();
 	}
-
-	/*
-		function cadastra_notificacao(){
-				die("cadastra_notificacao");
-				
-				$campos = ["conf_tx_emailFun","conf_tx_emailAdm"];
-				$valores = [$_POST["emailFuncionario"],$_POST["emailFuncionario"]];
-
-				if(!empty($_POST["id"])){
-					$campos = array_merge($campos,["conf_tx_dataAtualiza"]);
-					$valores = array_merge($valores,[date("Y-m-d H:i:s")]);
-					atualizar("configuracao_alerta",$campos,$valores,$_POST["id"]);
-				}else{
-					$campos = array_merge($campos,["conf_tx_dataCadastro"]);
-					$valores = array_merge($valores,[date("Y-m-d H:i:s")]);
-					inserir("configuracao_alerta",$campos,$valores);
-				}
-
-				index();
-				exit;
-		}
-
-		function layout_notificacao(){
-			Separar para um arquivo específico de cadastro de notificação
-			die("layout_notificacao");
-			$sqlCheck = query("SELECT * FROM configuracao_alerta LIMIT 1");
-			$emails = mysqli_fetch_assoc($sqlCheck);
-
-			if(!empty($emails)){
-				$emailFun = $emails["conf_tx_emailFun"];
-				$emailAdm = $emails["conf_tx_emailAdm"];
-				$atualizacao = $emails["conf_tx_dataAtualiza"];
-				$cadastro = $emails["conf_tx_dataCadastro"];
-			}
-			
-
-			$camposData = [];
-			if(!empty($cadastro)){
-				$txtCadastro = "Registro inserido às ".data($cadastro, 1).".";
-				$camposData[] = texto("Data de Cadastro", $txtCadastro, 5);
-			}
-
-			if(!empty($atualizacao)){
-				$txtAtualiza = "Registro atualizado às ".data($atualizacao, 1).".";
-				$camposData[] = texto("Última Atualização", $txtAtualiza, 5);
-			}
-
-			cabecalho("Configura Notificação");
-
-			//$fields[] = campo("Data do Arquivo:","data",date("d/m/Y"),2,MASCARA_DATA);
-			$fields = [
-				campo("E-mail do Funcionario", "emailFuncionario", $emailFun, 2),
-				campo("E-mail do Administrado", "emailAdministrado", $emailAdm, 2)
-			];
-
-			$buttons = [ 
-				botao("Gravar", "cadastra_notificacao", "id", $_POST["id"]),
-				botao("Voltar", "voltar")
-			];
-
-			if(empty($_POST["HTTP_REFERER"])){
-				$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
-				if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_usuario.php"))){
-					$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_usuario.php";
-				}
-			}
-
-			abre_form("Arquivo de Ponto");
-			campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-			linha_form($fields);
-			if(count($camposData) > 0){
-				linha_form($camposData);
-			}
-			fecha_form($buttons);
-
-			rodape();
-		}
-	*/
 
 	function saveRegisterFile(array $fileInfo, string $caminhoCompleto){
 		global $path;
@@ -310,9 +231,7 @@
 			$errorMsg["existingPoints"][] = $pontoExistente["pont_tx_matricula"].": (".$pontoExistente["pont_tx_data"].")";
 		}
 
-		var_dump($newPontos); echo "<br><br>";
-		var_dump($errorMsg); echo "<br><br>";
-		/*Salvar registros e arquivo{
+		//*Salvar registros e arquivo{
 			move_uploaded_file($fileInfo["tmp_name"],$caminhoCompleto);
 			
 			$arquivoPontoId = inserir("arquivoponto", array_keys($newArquivoPonto), array_values($newArquivoPonto));

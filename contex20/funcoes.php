@@ -3,8 +3,6 @@
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
-	
-	
 	global $CONTEX;
 	if(isset($_GET["acao"])){
 		if(empty($_POST["acao"])){
@@ -20,7 +18,7 @@
 		}
 	}
 
-	if(!empty($_POST["acao"]) && $_POST["acao"] != "index" && $_POST["acao"] != "index()"){
+	if(!empty($_POST["acao"])){
 		$nomeFuncao = $_POST["acao"];
 		if(is_int(strpos($_POST["acao"], "(")) && is_int(strpos($_POST["acao"], ")"))){
 			$nomeFuncao = substr($_POST["acao"], 0, strpos($_POST["acao"], "("));
@@ -477,8 +475,8 @@
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99', '99.999.999/9999-99']});";
 			break;
 			case "MASCARA_RG":
-				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['9{1,3}.999.999'], placeholder: '',
-            numericInput: true});";
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999'], placeholder: '0',
+				numericInput: true, numericInput: true, rightAlign: false});";
 			break;
 			case "MASCARA_DINHERO":
 				$dataScript .= 

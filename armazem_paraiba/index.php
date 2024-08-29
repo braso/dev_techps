@@ -4,22 +4,14 @@
 		error_reporting(E_ALL);
 	//*/
 
-	if(empty(session_id())){
-		$started = session_start();
-	}
-    include_once "load_env.php";
-
 	echo "<style>";
 	include "css/index.css";
 	echo "</style>";
 
-	if(!empty($_SESSION["user_tx_nivel"]) && in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
-		echo "<form action='batida_ponto.php' name='form_voltar' method='post'>"
-			."<input type='hidden' name='acao' value='index'>"
-			."</form>"
-			."<script>document.form_voltar.submit();</script>"
-		;
+	if(empty(session_id())){
+		$started = session_start();
 	}
+    include_once "load_env.php";
 
 	function showWelcome($usuario, $turnoAtual, $horaEntrada) {
 

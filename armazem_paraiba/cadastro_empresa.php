@@ -49,10 +49,25 @@
 		$arquivos =  $_FILES['file'];
 		$novo_nome = $_POST['file-name'];
 		$descricao = $_POST['description-text'];
+		$mimeType = mime_content_type($arquivos['tmp_name']);
 
-		$allowed = array('image/jpeg', 'image/png', 'application/msword', 'application/pdf','application/vnd.android.package-archive');
+		$allowed = array(
+			'image/jpeg',
+			'image/png',
+			'application/msword',
+			'application/pdf',
+			'application/vnd.android.package-archive',
+			'application/zip',
+			'application/octet-stream',
+			'application/x-zip-compressed'
+		);
 
-		if (in_array($arquivos['type'], $allowed) && $arquivos['name'] != '') {
+		if ($arquivos['error'] !== UPLOAD_ERR_OK) {
+			echo "Erro no upload: " . $arquivos['error'];
+			exit;
+		}
+
+		if (in_array($mimeType, $allowed) && $arquivos['name'] != '') {
 				$pasta_empresa = "arquivos/doc_empresa/$idEmpresa/";
 		
 				if (!is_dir($pasta_empresa)) {
@@ -108,6 +123,18 @@
 			}
 		}
 
+		$campos = [
+			'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento',
+			'referencia', 'fone1', 'fone2', 'email', 'inscricaoEstadual', 'inscricaoMunicipal',
+			'regimeTributario', 'status', 'contato',
+			'ftpServer', 'ftpUsername', 'ftpUserpass', 'dataRegistroCNPJ'
+		];
+
+		foreach ($campos as $campo) {
+			if (!empty($_POST[$campo])) {
+				$empresa['empr_tx_' . $campo] = $_POST[$campo];
+			}
+		}
 		if (!isset($_POST['id']) || empty($_POST['id'])) {
 
 			$empresa = [
@@ -116,18 +143,7 @@
 				'empr_nb_cidade' 	=> $_POST['cidade'],
 				'empr_tx_domain' 	=> $_SERVER['HTTP_ORIGIN'] . (is_int(strpos($_SERVER["REQUEST_URI"], 'dev_')) ? 'dev_techps/' : 'techps/') . $_POST['nomeDominio']
 			];
-			$campos = [
-				'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento',
-				'referencia', 'fone1', 'fone2', 'email', 'inscricaoEstadual', 'inscricaoMunicipal',
-				'regimeTributario', 'status', 'status', 'contato',
-				'ftpServer', 'ftpUsername', 'ftpUserpass', 'dataRegistroCNPJ'
-			];
-
-			foreach ($campos as $campo) {
-				if (!empty($_POST[$campo])) {
-					$empresa['empr_tx_' . $campo] = $_POST[$campo];
-				}
-			}
+			
 
 
 			$empty_ftp_inputs = empty($_POST['ftpServer']) + empty($_POST['ftpUsername']) + empty($_POST['ftpUserpass']) + 0;
@@ -179,16 +195,6 @@
 				'empr_tx_dataAtualiza' => date('Y-m-d H:i:s')
 			];
 
-			$campos = [
-				'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento',
-				'referencia', 'fone1', 'fone2', 'email', 'inscricaoEstadual', 'inscricaoMunicipal',
-				'regimeTributario', 'status', 'status', 'contato',
-				'ftpServer', 'ftpUsername', 'ftpUserpass', 'dataRegistroCNPJ'
-			];
-
-			foreach ($campos as $campo) {
-				$empresa['empr_tx_' . $campo] = $_POST[$campo];
-			}
 
 
 			atualizar('empresa', array_keys($empresa), array_values($empresa), $_POST['id']);

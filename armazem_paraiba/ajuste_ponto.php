@@ -182,17 +182,17 @@
 
 		
 		$newPonto = [
-			'pont_nb_user' 			=> $_SESSION['user_nb_id'],
-			'pont_tx_matricula' 	=> $aMotorista['enti_tx_matricula'],
-			'pont_tx_data' 			=> $data,
-			'pont_tx_tipo' 			=> $aTipo['macr_tx_codigoInterno'],
-			'pont_tx_status' 		=> 'ativo',
-			'pont_tx_dataCadastro' 	=> date("Y-m-d H:i:s"),
-			'pont_nb_motivo' 		=> $_POST['motivo'],
-			'pont_tx_justificativa' => $_POST['justificativa']
+			"pont_nb_user" 			=> $_SESSION["user_nb_id"],
+			"pont_tx_matricula" 	=> $aMotorista["enti_tx_matricula"],
+			"pont_tx_data" 			=> $data,
+			"pont_tx_tipo" 			=> $aTipo["macr_tx_codigoInterno"],
+			"pont_tx_status" 		=> "ativo",
+			"pont_tx_dataCadastro" 	=> date("Y-m-d H:i:s"),
+			"pont_nb_motivo" 		=> $_POST["motivo"],
+			"pont_tx_justificativa" => $_POST["justificativa"]
 		];
 		
-		inserir('ponto', array_keys($newPonto), array_values($newPonto));
+		inserir("ponto", array_keys($newPonto), array_values($newPonto));
 		index();
 		exit;
 	}
@@ -425,7 +425,7 @@
 		}
 
 		$botoes[] = $botao_imprimir;
-		$botoes[] = botao("Voltar", "voltar", implode(",", array_keys($_POST)), implode(",", array_values($_POST)));
+		$botoes[] = botao("Voltar", "voltar");
 		
 		$botoes[] = status();
 
@@ -473,7 +473,7 @@
 		echo
 			"
 			<div id='tituloRelatorio'>
-				<img id='logo' style='width: 150px' src='$CONTEX[path]/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
+				<img id='logo' style='width: 150px' src='".$CONTEX["path"]."/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
 			</div>
 			<style>
 				@media print {

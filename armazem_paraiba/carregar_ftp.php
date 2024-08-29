@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug{
+	/* Modo debug{
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 		
@@ -120,5 +120,4 @@
 	}
 
 	$interno = true;
-	// include_once("carregar_ponto.php");
-	include_once("carregar_ponto_2.php");
+	include_once("carregar_ponto.php");

@@ -39,11 +39,12 @@
 				$endossoCompleto["endo_tx_max50APagar"] = $endossoCompleto["endo_tx_horasApagar"];
 			}
 			for($f = 1; $f < count($endossos); $f++){
-				if(empty($endossos[$f]["endo_tx_max50APagar"]) && !empty($endossos[$f]["endo_tx_horasApagar"])){
-					$endossos[$f]["endo_tx_max50APagar"] = $endossos[$f]["endo_tx_horasApagar"];
-				}
-				if(empty($endossoCompleto["endo_tx_max50APagar"])){
-					$endossoCompleto["endo_tx_max50APagar"] = "00:00";
+				if(empty($endossos[$f]["endo_tx_max50APagar"])){
+					if(!empty($endossos[$f]["endo_tx_horasApagar"])){
+						$endossos[$f]["endo_tx_max50APagar"] = $endossos[$f]["endo_tx_horasApagar"];
+					}else{
+						$endossoCompleto["endo_tx_max50APagar"] = "00:00";
+					}
 				}
 				$endossoCompleto["endo_tx_ate"] = $endossos[$f]["endo_tx_ate"];
 				$endossoCompleto["endo_tx_pontos"] = array_merge($endossoCompleto["endo_tx_pontos"], $endossos[$f]["endo_tx_pontos"]);
@@ -64,8 +65,6 @@
 				// $endossoCompleto["totalResumo"]["diffSaldo"] = $endossos[$f]["totalResumo"]["diffSaldo"];
 				// $endossoCompleto["totalResumo"]["saldoBruto"] = $endossos[$f]["totalResumo"]["saldoBruto"];
 			}
-		}
-		if(!empty($endossoCompleto)){
 			$endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$endossoCompleto["totalResumo"]["saldoAnterior"], $endossoCompleto["totalResumo"]["diffSaldo"]], "+");
 		}
 
@@ -446,8 +445,7 @@
 						
 						grid2($cab, $aDia);
 						fecha_form();
-						// ".$aMotorista['enti_nb_id']."
-						// ".$aMotorista["enti_tx_matricula"]."
+
 						echo "
 						<form name='form_imprimir_relatorio_".$aMotorista["enti_tx_matricula"]."' method='post' target='_blank'>
 							<input type='hidden' name='acao' value=''>

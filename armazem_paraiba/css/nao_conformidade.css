@@ -18,9 +18,17 @@
 	body > div.scroll-to-top{
 		display: none !important;
 	}
-	div:nth-child(13){
+	div:nth-child(12) > .portlet.light {
 		display: none !important;
 	}
+
+	#logo {
+		display: flex;
+		position: absolute;
+		top: 5px;	
+		right: 50px;
+	}
+	
 	.portlet-body.form .table-responsive {
 		overflow-x: visible !important;
 		margin-left: -50px !important;

@@ -296,7 +296,7 @@
 						}
 						if(is_int(strpos($row[$f], "Ajuste de Ponto"))){
 							$row[$f] = str_replace("Ajuste de Ponto", "Ajuste de Ponto(endossado)", $row[$f]);
-							$row[$f] = str_replace("class='fa fa-circle'>", "class='fa fa-circle'>(E)", $row[$f]);
+							$row[$f] = str_replace("class=\'fa fa-circle\'>", "class=\'fa fa-circle\'>(E)", $row[$f]);
 						}
 						if ($row[$f] == "00:00") {
 							$row[$f] = "";

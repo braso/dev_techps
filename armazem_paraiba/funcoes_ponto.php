@@ -2,11 +2,11 @@
 	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
+		
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
         header("Pragma: no-cache"); // HTTP 1.0.
         header("Expires: 0");
 	//*/
-
 	include_once __DIR__."/conecta.php";
 
 	function calcularAbono($horario1, $horario2){
@@ -1385,30 +1385,6 @@
                         }
                     }
                     $statusEndossos[$statusEndosso]++;
-                //}
-
-                //saldoAnterior{
-                    $saldoAnterior = mysqli_fetch_assoc(query(
-                        "SELECT endo_tx_saldo FROM endosso"
-                        ." WHERE endo_tx_status = 'ativo'"
-                            ." AND endo_tx_ate < '".$periodoInicio."'"
-                            ." AND endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'"
-                        ." ORDER BY endo_tx_ate DESC"
-                        ." LIMIT 1;"
-                    ));
-
-                    if(!empty($saldoAnterior)){
-                        if(!empty($saldoAnterior["endo_tx_saldo"])){
-                            $saldoAnterior = $saldoAnterior["endo_tx_saldo"];
-                        }elseif(!empty($motorista["enti_tx_banco"])){
-                            $saldoAnterior = $motorista["enti_tx_banco"];
-                        }
-                        if(strlen($motorista["enti_tx_banco"]) > 5 && $motorista["enti_tx_banco"][0] == "0"){
-                            $saldoAnterior = substr($saldoAnterior, 1);
-                        }
-                    }else{
-                        $saldoAnterior = "00:00";
-                    }
                 //}
                 
                 $arquivosEndo = [];

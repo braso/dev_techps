@@ -351,6 +351,15 @@
 			$novoMotorista["enti_nb_userAtualiza"] = $_SESSION["user_nb_id"];
 			$novoMotorista["enti_tx_dataAtualiza"] = date("Y-m-d H:i:s");
 			$novoMotorista["enti_tx_ehPadrao"] = $ehPadrao;
+
+			if (!array_key_exists('enti_tx_desligamento', $array)) {
+				if (!empty($novoMotorista['enti_tx_status']) && $novoMotorista['enti_tx_status'] === 'inativo') {
+					$novoMotorista['enti_tx_desligamento'] = date("Y-m-d H:i:s");
+				} else {
+					$novoMotorista['enti_tx_desligamento'] = '0001-01-01'; 
+				}
+			}
+
 			atualizar("entidade", array_keys($novoMotorista), array_values($novoMotorista), $_POST["id"]);
 			$id = $_POST["id"];
 		}
@@ -562,7 +571,7 @@
 		$cContratual = array_merge($cContratual, [
 			combo("Ocupação*", "ocupacao", ($a_mod["enti_tx_ocupacao"]?? ""), 2, ["Motorista", "Ajudante"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
 			campo_data("Dt Admissão*", "admissao", ($a_mod["enti_tx_admissao"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)),
-			campo_data("Dt. Desligamento", "desligamento", ($a_mod["enti_tx_desligamento"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)),
+			campo_data("Dt. Desligamento", "desligamento", (($a_mod["enti_tx_desligamento"] || $data === '0001-01-01') ? "" : $a_mod["enti_tx_desligamento"]), 2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Saldo de Horas", "setBanco", ($a_mod["enti_tx_banco"]?? "00:00"), 1, "MASCARA_HORAS", "placeholder='HH:mm' tabindex=".sprintf("%02d", $tabIndex++)),
 			combo("Subcontratado", "subcontratado", ($a_mod["enti_tx_subcontratado"]?? ""), 2, ["" => "", "sim" => "Sim", "nao" => "Não"], "tabindex=".sprintf("%02d", $tabIndex++)),
 		]);
@@ -846,14 +855,32 @@
 			"EMPRESA" 				=> "empr_tx_nome", 
 			"FONE 1" 				=> "enti_tx_fone1", 
 			"FONE 2" 				=> "enti_tx_fone2", 
-			"OCUPAÇÃO" 				=> "enti_tx_ocupacao", 
+			"OCUPAÇÃO" 				=> "enti_tx_ocupacao",
+			"DATA CADASTRO" 		=> "data(enti_tx_dataCadastro)",
+			"DATA INATIVAÇÃO"       => "data(enti_tx_desligamento)",
 			"PARÂMETRO DA JORNADA" 	=> "para_tx_nome", 
 			"CONVENÇÃO PADRÃO" 		=> "enti_tx_ehPadrao",
 			"STATUS" 				=> "enti_tx_status"
 		];
 
+		$sqlFields = [
+			"enti_nb_id", 
+			"enti_tx_nome", 
+			"enti_tx_matricula", 
+			"enti_tx_cpf", 
+			"empr_tx_nome", 
+			"enti_tx_fone1", 
+			"enti_tx_fone2", 
+			"enti_tx_ocupacao",
+			"enti_tx_dataCadastro",
+			"enti_tx_desligamento",
+			"para_tx_nome", 
+			"enti_tx_ehPadrao",
+			"enti_tx_status"
+		]; 
+
 		$sql = ( 
-			"SELECT ".implode(", ", array_values($gridFields))." FROM entidade 
+			"SELECT ".implode(", ", array_values($sqlFields))." FROM entidade 
 				JOIN empresa ON enti_nb_empresa = empr_nb_id 
 				JOIN parametro ON enti_nb_parametro = para_nb_id 
 				WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante') 
