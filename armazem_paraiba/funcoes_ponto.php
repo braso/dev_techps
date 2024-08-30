@@ -492,7 +492,9 @@
 		$jornadaPrevistaOriginal = $jornadaPrevista;
 		$jornadaPrevista = (new DateTime($data." ".$jornadaPrevista))->format("H:i");
 		if($abono !== null){
-			$jornadaPrevista = (new DateTime($data." ".$abono))->diff(new DateTime($data." ".$jornadaPrevista))->format("%H:%I");
+			if ($jornadas["feriado"] === null) {
+				$jornadaPrevista = (new DateTime($data." ".$abono))->diff(new DateTime($data." ".$jornadaPrevista))->format("%H:%I");
+			}
 		}
 
 		return [$jornadaPrevistaOriginal, $jornadaPrevista];
