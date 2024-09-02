@@ -95,7 +95,7 @@
 	}
 
 	function index(){
-
+		var_dump($_POST);
 		cabecalho("Espelho de Ponto");
 
 		$condBuscaMotorista = "";
@@ -316,6 +316,7 @@
 					<input type='hidden' name='id' value='". $aMotorista["enti_nb_id"] ."'>
 					<input type='hidden' name='HTTP_REFERER' value=''>
 					<input type='hidden' name='data'>
+					<input type='hidden' name='busca_empresa' value='".$aMotorista['enti_nb_empresa']."'>
 					<input type='hidden' name='data_de' value='".((!empty($_POST["busca_dataInicio"])? $_POST["busca_dataInicio"]: date("01/m/Y")))."'>
 					<input type='hidden' name='data_ate' value='".$_POST["busca_dataFim"]."'>
 				</form>"

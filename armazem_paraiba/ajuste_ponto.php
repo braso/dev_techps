@@ -241,7 +241,6 @@
 
 		//Definir data de início da query{
 			//Se abriu jornada hoje, considera a partir da data de abertura da jornada.
-
 			if(empty($abriuJornadaHoje)){
 				//Se não abriu uma jornada hoje, confere se há uma jornada aberta que veio de antes do dia.
 				$temJornadaAberta = mysqli_fetch_assoc(
@@ -254,7 +253,6 @@
 							LIMIT 1;"
 					)
 				);
-
 				//Se não tem uma jornada que veio de antes, considera a partir de meia-noite de hoje.
 				$sqlDataInicio = $_POST['data']." 00:00:00";
 
@@ -270,7 +268,6 @@
 								LIMIT 1;"
 						)
 					);
-
 					//Se a jornada aberta antes do dia não foi fechada, pega desde o momento em que a jornada foi aberta.
 					$sqlDataInicio = $temJornadaAberta['pont_tx_data'];
 					if(!empty($jornadaFechadaHoje) && intval($jornadaFechadaHoje['jornadaFechadaHoje'])){
@@ -445,6 +442,7 @@
 		echo campo_hidden("data_de", $_POST["data_de"]);
 		echo campo_hidden("data_ate", $_POST["data_ate"]);
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+		echo campo_hidden("busca_empresa", $_POST["busca_empresa"]);
 		linha_form($variableFields);
 		linha_form($campoJust);
 		fecha_form($botoes);
