@@ -8,7 +8,7 @@ deployment:
 
     - name: Deploy application  # Task to deploy the application
       command: |
-        GIT_REPO_PATH="/home/techpsjornada/repositories/dev_techps/*"
+        GIT_REPO_PATH="/home/techpsjornada/repositories/dev_techps/armazem_paraiba/*"
         DEPLOY_DEV_PATH="/home/techpsjornada/public_html/dev/armazem_paraiba/"
         # Copy files to dev path
         /bin/cp -R $GITPATH $DEPLOYPATH
