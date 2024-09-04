@@ -1,13 +1,14 @@
----
+# This is the main deployment section
 deployment:
   tasks:
-    - export DEPLOYPATH="/home/brasomo/public_html"
-    - /bin/cp .gitignore "$DEPLOYPATH"
-    - /bin/cp htaccess "$DEPLOYPATH"
-    - /bin/cp index.php "$DEPLOYPATH"
-    - /bin/cp recupera_senha.php "$DEPLOYPATH"
-    - /bin/cp Temos_de_uso.html "$DEPLOYPATH"
-    - /bin/cp version.php "$DEPLOYPATH"
-    - /bin/cp -r PHPMailer "$DEPLOYPATH"
-    - /bin/cp -r contex20 "$DEPLOYPATH"
-    - /bin/cp -r armazem_paraiba "$DEPLOYPATH"
+    - name: Run tests  # Task to run all tests before deployment
+      command: |
+        # TODO fazer testes
+        echo 'ok'
+
+    - name: Deploy application  # Task to deploy the application
+      command: |
+        GIT_REPO_PATH="/home/techpsjornada/repositories/dev_techps/*"
+        DEPLOY_DEV_PATH="/home/techpsjornada/public_html/dev/armazem_paraiba/"
+        # Copy files to dev path
+        /bin/cp -R $GITPATH $DEPLOYPATH
