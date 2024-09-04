@@ -1,14 +1,5 @@
-# This is the main deployment section
 deployment:
   tasks:
-    - name: Run tests  # Task to run all tests before deployment
-      command: |
-        # TODO fazer testes
-        echo 'ok'
-
-    - name: Deploy application  # Task to deploy the application
-      command: |
-        GIT_REPO_PATH="/home/techpsjornada/repositories/dev_techps/armazem_paraiba/*"
-        DEPLOY_DEV_PATH="/home/techpsjornada/public_html/dev/armazem_paraiba/"
-        # Copy files to dev path
-        /bin/cp -R $GITPATH $DEPLOYPATH
+    - export GITPATH=/home/techpsjornada/repositories/dev_techps/armazem_paraiba/*
+    - export DEPLOYPATH=/home/techpsjornada/public_html/dev/armazem_paraiba/
+    - /bin/cp -R $GITPATH $DEPLOYPATH
