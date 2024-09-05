@@ -25,12 +25,14 @@
 	}
 
 	function buscarEspelho(){
+		$data_inicio_obj = new DateTime($_POST["busca_dataInicio"]);
+		$data_fim_obj = new DateTime($_POST["busca_dataFim"]);
 
 		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
 			$_POST["busca_motorista"] = $_SESSION["user_nb_entidade"];
 			$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
 		}
-
+		
 		//Confere se há algum erro na pesquisa{
 			$baseErrMsg = ["Insira os campos para pesquisar: ", "", ""];
 			$errorMsg = $baseErrMsg;
@@ -57,7 +59,11 @@
 			if(empty($_POST["busca_dataFim"])){
 				$errorMsg[0] .= "Data Fim, ";
 			}
-
+			
+			if ($data_fim_obj < $data_inicio_obj) {
+				$errorMsg[2] .= "A data final não pode ser anterior à data inicial.";
+			}
+			
 			if(!empty($_POST["busca_empresa"]) && !empty($_POST["busca_motorista"])){
 				if($_POST["busca_dataInicio"] > date("Y-m-d") || $_POST["busca_dataFim"] > date("Y-m-d")){
 					$errorMsg[1] = "Data de pesquisa não pode ser após hoje (".date("d/m/Y")."). ";
@@ -65,13 +71,18 @@
 
 				$motorista = mysqli_fetch_assoc(
 					query(
-						"SELECT enti_nb_id, enti_tx_nome FROM entidade
+						"SELECT enti_nb_id, enti_tx_nome, enti_tx_dataCadastro FROM entidade
 							WHERE enti_tx_status = 'ativo'
 								AND enti_nb_empresa = ".$_POST["busca_empresa"]."
 								AND enti_nb_id = ".$_POST["busca_motorista"]."
 							LIMIT 1"
 					)
 				);
+
+				$data_cadastro = new DateTime($motorista["enti_tx_dataCadastro"]);
+				if ($data_inicio_obj < $data_cadastro) {
+					$errorMsg[1] = "Erro: A data inicial não pode ser anterior à data de cadastro. ";
+				}
 
 				if(empty($motorista)){
 					$errorMsg[2] = "Este motorista não pertence a esta empresa. ";
@@ -95,7 +106,6 @@
 	}
 
 	function index(){
-		var_dump($_POST);
 		cabecalho("Espelho de Ponto");
 
 		$condBuscaMotorista = "";

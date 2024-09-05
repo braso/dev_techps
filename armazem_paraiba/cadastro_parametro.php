@@ -116,7 +116,7 @@
 	function cadastra_parametro(){
 
 		if(is_int(strpos(implode(",",array_keys($_POST)), "ignorarCampos"))){
-			$campos = ["descanso", "espera", "repouso", "repousoEmbarcado"];
+			$campos = ["descanso", "espera", "repouso", "repousoEmbarcado","maximoDirecaoContinua"];
 			$_POST["ignorarCampos"] = [];
 			foreach($campos as $campo){
 				if(isset($_POST["ignorarCampos_".$campo])){
@@ -182,6 +182,7 @@
 			"para_tx_percentualHE" 			=> $_POST["percentualHE"], 
 			"para_tx_percentualSabadoHE" 	=> $_POST["percentualSabadoHE"], 
 			"para_tx_HorasEXExcedente" 		=> $_POST["HorasEXExcedente"], 
+			"para_tx_apagaHeNegativo"       => $_POST["pagaHeNegativo"],
 			"para_tx_tolerancia" 			=> $_POST["tolerancia"], 
 			//ignorarCampos está mais abaixo
 			"para_tx_acordo" 				=> $_POST["acordo"], 
@@ -291,6 +292,7 @@
 			campo("Percentual da Hora Extra (Semanal)*:", "percentualHE", ($a_mod["para_tx_percentualHE"]?? ""), 3, "MASCARA_NUMERO", "maxlength='3'"),
 			campo("Percentual da Hora Extra (Dias sem Jornada Prevista)*:", "percentualSabadoHE", ($a_mod["para_tx_percentualSabadoHE"]?? ""), 3, "MASCARA_NUMERO"),
 			campo_hora("Máximo de Horas Extras 50% (diário)*", "HorasEXExcedente", ($a_mod["para_tx_HorasEXExcedente"]?? ""), 3),
+			combo("Pagar H.E com Saldo negativo?","pagaHeNegativo",$a_mod["para_tx_apagaHeNegativo"],3,["sim" => "Sim", "nao" => "Não"]),
 			campo("Diária Café da Manhã(R$)", "diariasCafe", ($a_mod["para_tx_diariasCafe"]?? ""), 3, "MASCARA_DINHERO"),
 			campo("Diária Almoço(R$)", "diariasAlmoco", ($a_mod["para_tx_diariasAlmoco"]?? ""), 3, "MASCARA_DINHERO"),
 			campo("Diária Jantar(R$)", "diariasJanta", ($a_mod["para_tx_diariasJanta"]?? ""), 3, "MASCARA_DINHERO"),
@@ -315,6 +317,7 @@
 						"descanso" => "Descanso",
 						"espera" => "Espera",
 						"repousoEmbarcado" => "Repouso Embarcado",
+						"maximoDirecaoContinua" => "Máximo de direção contínua"
 					]
 				),
 				5,

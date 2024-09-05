@@ -79,7 +79,6 @@
                     and u.user_nb_entidade is not null
                 where u.user_tx_status = 'ativo' 
                 AND u.user_nb_id = ".$userid
-                
         ;
 
         $data = get_data($query);
