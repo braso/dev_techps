@@ -1,13 +1,5 @@
----
 deployment:
   tasks:
-    - export DEPLOYPATH="/home/brasomo/public_html"
-    - /bin/cp .gitignore "$DEPLOYPATH"
-    - /bin/cp htaccess "$DEPLOYPATH"
-    - /bin/cp index.php "$DEPLOYPATH"
-    - /bin/cp recupera_senha.php "$DEPLOYPATH"
-    - /bin/cp Temos_de_uso.html "$DEPLOYPATH"
-    - /bin/cp version.php "$DEPLOYPATH"
-    - /bin/cp -r PHPMailer "$DEPLOYPATH"
-    - /bin/cp -r contex20 "$DEPLOYPATH"
-    - /bin/cp -r armazem_paraiba "$DEPLOYPATH"
+    - export GITPATH=/home/techpsjornada/repositories/dev_techps/armazem_paraiba/*
+    - export DEPLOYPATH=/home/techpsjornada/public_html/dev/armazem_paraiba/
+    - /bin/cp -R $GITPATH $DEPLOYPATH
