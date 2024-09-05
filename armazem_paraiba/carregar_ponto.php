@@ -209,7 +209,7 @@
 			
 			$pontoExistente = mysqli_fetch_assoc(query(
 				"SELECT pont_nb_id, pont_tx_matricula, pont_tx_data, pont_tx_tipo FROM ponto 
-					WHERE pont_tx_status = 'ativo'"
+					WHERE 1"
 					." AND pont_tx_matricula = '".$newPonto["pont_tx_matricula"]."'"
 					." AND pont_tx_data = '".$newPonto["pont_tx_data"]."'"
 					." AND pont_tx_tipo = '".$newPonto["pont_tx_tipo"]."'"
