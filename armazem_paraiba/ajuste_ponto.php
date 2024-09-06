@@ -387,7 +387,7 @@
 		}
 
 		$textFields[] = texto('Matrícula',$aMotorista['enti_tx_matricula'],2);
-		$textFields[] = texto('Motorista',$aMotorista['enti_tx_nome'],5);
+		$textFields[] = texto($aMotorista["enti_tx_ocupacao"],$aMotorista['enti_tx_nome'],5);
 		$textFields[] = texto('CPF',$aMotorista['enti_tx_cpf'],3);
 
 		$_POST['status'] = (!empty($_POST['status']) && $_POST['status'] != 'undefined'? $_POST['status']: 'ativo');

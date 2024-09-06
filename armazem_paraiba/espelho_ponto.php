@@ -80,8 +80,12 @@
 				);
 
 				$data_cadastro = new DateTime($motorista["enti_tx_dataCadastro"]);
-				if ($data_inicio_obj < $data_cadastro) {
-					$errorMsg[1] = "Erro: A data inicial não pode ser anterior à data de cadastro. ";
+				$ano_cadastro = $data_cadastro->format('Y');
+        		$mes_cadastro = $data_cadastro->format('m');
+       			$ano_inicio = $data_inicio_obj->format('Y');
+        		$mes_inicio = $data_inicio_obj->format('m');
+				if ($ano_inicio < $ano_cadastro || ($ano_inicio == $ano_cadastro && $mes_inicio < $mes_cadastro)) {
+					$errorMsg[1] = "Erro: A data inicial não pode estar em um mês anterior ao da data de cadastro. ";
 				}
 
 				if(empty($motorista)){

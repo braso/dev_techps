@@ -140,14 +140,25 @@
 				$date = new DateTime($_POST["busca_data"]);
 
 				$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $date->format("m"), $date->format("Y"));
-	
+
 				$sqlMotorista = query(
 					"SELECT * FROM entidade
-						WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante')
-							AND enti_nb_empresa = ".$_POST["busca_empresa"]." ".$extra."
-							AND enti_tx_status = 'ativo'
+						WHERE enti_tx_status = 'ativo' 
+						AND enti_nb_empresa = ".$_POST["busca_empresa"]." ".$extra."
+						AND (enti_tx_ocupacao IN ('Motorista', 'Ajudante')
+						AND enti_tx_dataCadastro < '".$_POST["busca_data"]."-01'
+						OR (enti_tx_ocupacao = 'Motorista' 
+						AND enti_tx_dataCadastro LIKE '".$_POST["busca_data"]."-%'))
 						ORDER BY enti_tx_nome"
 				);
+				// Caso tenha que voltar o codigo
+				// $sqlMotorista = query(
+				// 	"SELECT * FROM entidade
+				// 		WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante')
+				// 			AND enti_nb_empresa = ".$_POST["busca_empresa"]." ".$extra."
+				// 			AND enti_tx_status = 'ativo'
+				// 		ORDER BY enti_tx_nome"
+				// );
 				while ($aMotorista = carrega_array($sqlMotorista)) {
 					$counts["total"]++;
 					if(empty($aMotorista["enti_tx_nome"]) || empty($aMotorista["enti_tx_matricula"])){
