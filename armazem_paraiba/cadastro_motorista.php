@@ -366,12 +366,10 @@
 			$novoMotorista["enti_tx_dataAtualiza"] = date("Y-m-d H:i:s");
 			$novoMotorista["enti_tx_ehPadrao"] = $ehPadrao;
 
-			if (!array_key_exists('enti_tx_desligamento', $array)) {
-				if (!empty($novoMotorista['enti_tx_status']) && $novoMotorista['enti_tx_status'] === 'inativo') {
-					$novoMotorista['enti_tx_desligamento'] = date("Y-m-d H:i:s");
-				} else {
-					$novoMotorista['enti_tx_desligamento'] = '0001-01-01'; 
-				}
+			if (!empty($novoMotorista['enti_tx_status']) && $novoMotorista['enti_tx_status'] === 'inativo') {
+				$novoMotorista['enti_tx_desligamento'] = date("Y-m-d H:i:s");
+			} else {
+				$novoMotorista['enti_tx_desligamento'] = null;
 			}
 
 			atualizar("entidade", array_keys($novoMotorista), array_values($novoMotorista), $_POST["id"]);
