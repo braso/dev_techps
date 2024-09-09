@@ -8,25 +8,8 @@
 		header("Expires: 0");
     //*/
     
-    include "../funcoes_ponto.php";
-
-    function calcPercs(array $values): array{
-        $total = 0;
-        foreach($values as $value){
-            $total += $value;
-        }
-
-        if($total == 0){
-            return array_pad([], sizeof($values), 0);
-        }
-        
-        $percentuais = array_pad([], sizeof($values), 0);
-        for($f = 0; $f < sizeof($values); $f++){
-            $percentuais[$f] = $values[$f]/$total;
-        }
-
-        return $percentuais;
-    }
+    require "../funcoes_ponto.php";
+    require_once "funcoes_paineis.php";
 
     function carregarJS(array $arquivos){
 
@@ -156,239 +139,13 @@
         ;
     }
 
-    function criar_relatorio_saldo(){
-        global $totalResumo;
-        $periodoInicio = $_POST["busca_dataInicio"];
-        $periodoFim = $_POST["busca_dataFim"];
-        $dataInicio = new DateTime($periodoInicio);
-        $dataFim = new DateTime($periodoFim);
-
-        $empresas = mysqli_fetch_all(query(
-            "SELECT empr_nb_id, empr_tx_nome FROM empresa"
-            ." WHERE empr_tx_status = 'ativo'"
-                .(!empty($_POST["empresa"])? " AND empr_nb_id = ".$_POST["empresa"]: "")
-            ." ORDER BY empr_tx_nome ASC;"
-        ),MYSQLI_ASSOC);
-
-        $totaisEmpresas = [
-            "jornadaPrevista" => "00:00",
-            "jornadaEfetiva" => "00:00",
-            "HESemanal" => "00:00",
-            "HESabado" => "00:00",
-            "adicionalNoturno" => "00:00",
-            "esperaIndenizada" => "00:00",
-            "saldoAnterior" => "00:00",
-            "saldoPeriodo" => "00:00",
-            "saldoFinal" => "00:00",
-            "qtdMotoristas" => 0
-        ];
-
-        echo "<script>";
-        foreach($empresas as $empresa){
-            echo "console.log('Carregando ".$empresa["empr_tx_nome"]."');";
-            $path = "./arquivos/saldos"."/".$empresa["empr_nb_id"];
-            if(!file_exists($path."/empresa_".$empresa["empr_nb_id"].".json")){
-                if(!is_dir($path)){
-                    mkdir($path, 0755, true);
-                }
-                file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", "");
-            }
-
-            $motoristas = mysqli_fetch_all(query(
-                "SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_banco FROM entidade"
-                ." WHERE enti_tx_status = 'ativo'"
-                    ." AND enti_nb_empresa = ".$empresa["empr_nb_id"]
-                    ." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
-                ." ORDER BY enti_tx_nome ASC;"
-            ),MYSQLI_ASSOC);
-
-            $rows = [];
-            $statusEndossos = [
-                "E" => 0,
-                "EP" => 0,
-                "N" => 0
-            ];
-            foreach($motoristas as $motorista){
-                echo "console.log('    ".$motorista["enti_tx_nome"]."');";
-                $dataInicio = new DateTime($periodoInicio);
-                $dataFim = new DateTime($periodoFim);
-
-                //Status Endosso{
-                    $endossos = mysqli_fetch_all(query(
-                        "SELECT * FROM endosso"
-                        ." WHERE endo_tx_status = 'ativo'"
-                            ." AND endo_nb_entidade = '".$motorista["enti_nb_id"]."'"
-                            ." AND ("
-                                ."(endo_tx_de  >= '".$periodoInicio."' AND endo_tx_de  <= '".$periodoFim."')"
-                                ."OR (endo_tx_ate >= '".$periodoInicio."' AND endo_tx_ate <= '".$periodoFim."')"
-                                ."OR (endo_tx_de  <= '".$periodoInicio."' AND endo_tx_ate >= '".$periodoFim."')"
-                            .");"
-                    ), MYSQLI_ASSOC);
-                    
-                    $statusEndosso = "N";
-                    if(count($endossos) >= 1){
-                        $statusEndosso = "E";
-                        if(strtotime($periodoInicio) != strtotime($endossos[0]["endo_tx_de"]) || strtotime($periodoFim) > strtotime($endossos[count($endossos)-1]["endo_tx_ate"])){
-                            $statusEndosso .= "P";
-                        }
-                    }
-                    $statusEndossos[$statusEndosso]++;
-                //}
-
-                //saldoAnterior{
-                    $saldoAnterior = mysqli_fetch_assoc(query(
-                        "SELECT endo_tx_saldo FROM endosso"
-                        ." WHERE endo_tx_status = 'ativo'"
-                            ." AND endo_tx_ate < '".$periodoInicio."'"
-                            ." AND endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'"
-                        ." ORDER BY endo_tx_ate DESC"
-                        ." LIMIT 1;"
-                    ));
-                    
-                    if(!empty($saldoAnterior)){
-                        if(!empty($saldoAnterior["endo_tx_saldo"])){
-                            $saldoAnterior = $saldoAnterior["endo_tx_saldo"];
-                        }elseif(!empty($motorista["enti_tx_banco"])){
-                            $saldoAnterior = $motorista["enti_tx_banco"];
-                        }
-                        if(strlen($motorista["enti_tx_banco"]) > 5 && $motorista["enti_tx_banco"][0] == "0"){
-                            $saldoAnterior = substr($saldoAnterior, 1);
-                        }
-                    }else{
-                        $saldoAnterior = "00:00";
-                    }
-                //}
-
-                $totaisMot = [
-                    "jornadaPrevista" => "00:00",
-                    "jornadaEfetiva" => "00:00",
-                    "HESemanal" => "00:00",
-                    "HESabado" => "00:00",
-                    "adicionalNoturno" => "00:00",
-                    "esperaIndenizada" => "00:00",
-                    "saldoPeriodo" => "00:00",
-                    "saldoFinal" => "00:00"
-                ];
-
-                $dia = $dataInicio;
-                for(; $dia <= $dataFim; $dia->modify("+1 day")){
-                    $diaPonto = diaDetalhePonto($motorista["enti_tx_matricula"], $dia->format("Y-m-d"));
-
-                    //Formatando informações{
-                        foreach(array_keys($diaPonto) as $f){
-                            if(in_array($f, ["data", "diaSemana"])){
-                                continue;
-                            }
-                            if(strlen($diaPonto[$f]) > 5){
-                                $diaPonto[$f] = preg_replace("/.*&nbsp;/", "", $diaPonto[$f]);
-                                if(preg_match_all("/(-?\d{2,4}:\d{2})/", $diaPonto[$f], $matches)){
-                                    $diaPonto[$f] = array_pop($matches[1]);
-                                }else{
-                                    $diaPonto[$f] = "00:00";
-                                }
-                            }
-                        }
-                    //}
-                    
-                    
-                    $diaPonto["he50"]              = !empty($diaPonto["he50"])? $diaPonto["he50"]: "00:00";
-                    $diaPonto["he100"]             = !empty($diaPonto["he100"])? $diaPonto["he100"]: "00:00";
-                    
-                    $totaisMot["jornadaPrevista"]  = somarHorarios([$totaisMot["jornadaPrevista"],  $diaPonto["jornadaPrevista"]]);
-                    $totaisMot["jornadaEfetiva"]   = somarHorarios([$totaisMot["jornadaEfetiva"],   $diaPonto["diffJornadaEfetiva"]]);
-                    $totaisMot["HESemanal"]        = somarHorarios([$totaisMot["HESemanal"],        $diaPonto["he50"]]);
-                    $totaisMot["HESabado"]         = somarHorarios([$totaisMot["HESabado"],         $diaPonto["he100"]]);
-                    $totaisMot["adicionalNoturno"] = somarHorarios([$totaisMot["adicionalNoturno"], $diaPonto["adicionalNoturno"]]);
-                    $totaisMot["esperaIndenizada"] = somarHorarios([$totaisMot["esperaIndenizada"], $diaPonto["esperaIndenizada"]]);
-                    $totaisMot["saldoPeriodo"]     = somarHorarios([$totaisMot["saldoPeriodo"],     $diaPonto["diffSaldo"]]);
-                    $totaisMot["saldoFinal"]       = somarHorarios([$saldoAnterior,                 $totaisMot["saldoPeriodo"]]);
-                }
-
-                $row = [
-                    "idMotorista" => $motorista["enti_nb_id"],
-                    "matricula" => $motorista["enti_tx_matricula"],
-                    "nome" => $motorista["enti_tx_nome"],
-                    "statusEndosso" => $statusEndosso,
-                    "jornadaPrevista" => $totaisMot["jornadaPrevista"],
-                    "jornadaEfetiva" => $totaisMot["jornadaEfetiva"],
-                    "HESemanal" => $totaisMot["HESemanal"],
-                    "HESabado" => $totaisMot["HESabado"],
-                    "adicionalNoturno" => $totaisMot["adicionalNoturno"],
-                    "esperaIndenizada" => $totaisMot["esperaIndenizada"],
-                    "saldoAnterior" => $saldoAnterior,
-                    "saldoPeriodo" => $totaisMot["saldoPeriodo"],
-                    "saldoFinal" => $totaisMot["saldoFinal"]
-                ];
-                $nomeArquivo = $motorista["enti_tx_matricula"].".json";
-                file_put_contents($path."/".$nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE));
-
-                $rows[] = $row;
-            }
-            echo "console.log('Concluindo...');";
-            
-
-            $totaisEmpr = [
-                "jornadaPrevista" => "00:00",
-                "jornadaEfetiva" => "00:00",
-                "HESemanal" => "00:00",
-                "HESabado" => "00:00",
-                "adicionalNoturno" => "00:00",
-                "esperaIndenizada" => "00:00",
-                "saldoAnterior" => "00:00",
-                "saldoPeriodo" => "00:00",
-                "saldoFinal" => "00:00"
-            ];
-
-            foreach($rows as $row){
-                $totaisEmpr["jornadaPrevista"]  = operarHorarios([$totaisEmpr["jornadaPrevista"], $row["jornadaPrevista"]], "+");
-                $totaisEmpr["jornadaEfetiva"]   = operarHorarios([$totaisEmpr["jornadaEfetiva"], $row["jornadaEfetiva"]], "+");
-                $totaisEmpr["HESemanal"]        = operarHorarios([$totaisEmpr["HESemanal"], $row["HESemanal"]], "+");
-                $totaisEmpr["HESabado"]         = operarHorarios([$totaisEmpr["HESabado"], $row["HESabado"]], "+");
-                $totaisEmpr["adicionalNoturno"] = operarHorarios([$totaisEmpr["adicionalNoturno"], $row["adicionalNoturno"]], "+");
-                $totaisEmpr["esperaIndenizada"] = operarHorarios([$totaisEmpr["esperaIndenizada"], $row["esperaIndenizada"]], "+");
-                $totaisEmpr["saldoAnterior"]    = operarHorarios([$totaisEmpr["saldoAnterior"], $row["saldoAnterior"]], "+");
-                $totaisEmpr["saldoPeriodo"]     = operarHorarios([$totaisEmpr["saldoPeriodo"], $row["saldoPeriodo"]], "+");
-                $totaisEmpr["saldoFinal"]       = operarHorarios([$totaisEmpr["saldoFinal"], $row["saldoFinal"]], "+");
-            }
-
-            //Adicionar valores da empresa à soma total das empresas{
-                if(empty($_POST["empresa"])){
-                    foreach($totaisEmpr as $key => $value){
-                        $totaisEmpresas[$key] = operarHorarios([$totaisEmpresas[$key], $value], "+");
-                    }
-                    $totaisEmpresas["qtdMotoristas"] += count($motoristas);
-                }
-            //}
-
-            $empresa["totais"] = $totaisEmpr;
-            $empresa["qtdMotoristas"] = count($motoristas);
-            $empresa["dataInicio"] = $periodoInicio;
-            $empresa["dataFim"] = $periodoFim;
-            $empresa["percEndossado"] = ($statusEndossos["E"])/array_sum(array_values($statusEndossos));
-
-            file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", json_encode($empresa));
-        }
-        echo "console.log('Finalizando...');";
-        echo "</script>";
-
-        if(empty($_POST["empresa"])){
-            $path = "./arquivos/saldos";
-            if(!is_dir($path)){
-                mkdir($path,0755,true);
-            }
-            $totaisEmpresas["dataInicio"] = $periodoInicio;
-            $totaisEmpresas["dataFim"] = $periodoFim;
-            file_put_contents($path."/empresas.json", json_encode($totaisEmpresas));
-        }
-        return;
-    }
-
     function index(){
 
         if(!empty($_POST["atualizar"])){
             echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
             ob_flush();
             flush();
+            require_once "funcoes_paineis.php";
             criar_relatorio_saldo();
         }
 
@@ -448,15 +205,15 @@
             "N" => 0
         ];
         $totais = [
-            "jornadaPrevista" => "00:00",
-            "jornadaEfetiva" => "00:00",
-            "HESemanal" => "00:00",
-            "HESabado" => "00:00",
-            "adicionalNoturno" => "00:00",
-            "esperaIndenizada" => "00:00",
-            "saldoAnterior" => "00:00",
-            "saldoPeriodo" => "00:00",
-            "saldoFinal" => "00:00"
+            "jornadaPrevista" 	=> "00:00",
+            "jornadaEfetiva" 	=> "00:00",
+            "HESemanal" 		=> "00:00",
+            "HESabado" 			=> "00:00",
+            "adicionalNoturno" 	=> "00:00",
+            "esperaIndenizada" 	=> "00:00",
+            "saldoAnterior" 	=> "00:00",
+            "saldoPeriodo" 		=> "00:00",
+            "saldoFinal" 		=> "00:00"
         ];
 
         $periodoRelatorio = [
@@ -464,19 +221,18 @@
             "dataFim" => "1900-01-01"
         ];
 
-        if(!empty($_POST["empresa"])){
-            //Painel dos saldos dos motoristas de uma empresa específica
-            $aEmpresa = mysqli_fetch_assoc(query(
-                "SELECT * FROM empresa"
-                ." WHERE empr_tx_status = 'ativo'"
-                    ." AND empr_nb_id = ".$_POST["empresa"]
-                ." LIMIT 1;"
-            ));
-
-            
-            $path .= "/".$aEmpresa["empr_nb_id"];
-
+		//Painel dos saldos dos motoristas de uma empresa específica
+        if(!empty($_POST["empresa"]) && is_dir($path)){
             if(is_dir($path)){
+				$aEmpresa = mysqli_fetch_assoc(query(
+					"SELECT * FROM empresa"
+					." WHERE empr_tx_status = 'ativo'"
+						." AND empr_nb_id = ".$_POST["empresa"]
+					." LIMIT 1;"
+				));
+	
+				
+				$path .= "/".$aEmpresa["empr_nb_id"];
                 $pastaSaldosEmpresa = dir($path);
                 while($arquivo = $pastaSaldosEmpresa->read()){
                     if(!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))){
@@ -520,51 +276,9 @@
                 $encontrado = false;
             }
         }else{
-            //Painel geral das empresas
-            $empresas = [];
-            $aEmpresa = mysqli_fetch_all(query(
-                "SELECT empr_tx_logo FROM empresa"
-                ." WHERE empr_tx_status = 'ativo'"
-                ." AND empr_tx_Ehmatriz = 'sim';"
-            ), MYSQLI_ASSOC);//Utilizado no HTML.
-            
-            if(is_dir($path) && file_exists($path."/"."empresas.json")){
-                $arquivoGeral = $path."/empresas.json";
-                $dataEmissao = date("d/m/Y H:i", filemtime($arquivoGeral)); //Utilizado no HTML.
-                $arquivoGeral = json_decode(file_get_contents($arquivoGeral), true);
-
-                $periodoRelatorio = [
-                    "dataInicio" => $arquivoGeral["dataInicio"],
-                    "dataFim" => $arquivoGeral["dataFim"]
-                ];
-
-                $pastaSaldos = dir($path);
-                while($arquivo = $pastaSaldos->read()){
-                    if(!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))){
-                        $arquivo = $path."/".$arquivo."/"."empresa_".$arquivo.".json";
-                        $arquivos[] = $arquivo;
-                        $json = json_decode(file_get_contents($arquivo), true);
-                        foreach($totais as $key => $value){
-                            $totais[$key] = operarHorarios([$totais[$key], $json["totais"][$key]], "+");
-                        }
-                        $empresas[] = $json;
-                    }
-                }
-                $pastaSaldos->close();
-                
-                foreach($empresas as $empresa){
-                    if($empresa["totais"]["saldoFinal"] === "00:00"){
-                        $contagemSaldos["meta"]++;
-                    }elseif($empresa["totais"]["saldoFinal"][0] == "-"){
-                        $contagemSaldos["negativos"]++;
-                    }else{
-                        $contagemSaldos["positivos"]++;
-                    }
-                }
-            }else{
-                $encontrado = false;
-            }
+			$encontrado = false;
         }
+
         $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataInicio"])->format("d/m");
         $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataFim"])->format("d/m");
 
@@ -666,14 +380,13 @@
             $rowTotais .= "</tr>";
             $rowTitulos .= "</tr>";
 
-            include_once "saldo_html.php";
+            include_once "painel_html.php";
 
             echo "<div class='script'>";
             echo "<script>";
             echo ((!empty($_POST["empresa"]))? "document.getElementById('tabela1').style.display = 'table';": "");
             echo 
-                "console.log(endossos);
-                document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.E;
+                "document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.E;
                 document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.EP;
                 document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.N;
                 document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.E*10000)/100+'%';
