@@ -142,14 +142,12 @@
 				$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $date->format("m"), $date->format("Y"));
 
 				$sqlMotorista = query(
-					"SELECT * FROM entidade
-						WHERE enti_tx_status = 'ativo' 
-						AND enti_nb_empresa = ".$_POST["busca_empresa"]." ".$extra."
-						AND (enti_tx_ocupacao IN ('Motorista', 'Ajudante')
-						AND enti_tx_dataCadastro < '".$_POST["busca_data"]."-01'
-						OR (enti_tx_ocupacao = 'Motorista' 
-						AND enti_tx_dataCadastro LIKE '".$_POST["busca_data"]."-%'))
-						ORDER BY enti_tx_nome"
+					"SELECT * FROM entidade"
+						." WHERE enti_tx_status = 'ativo'"
+							." AND enti_nb_empresa = ".$_POST["busca_empresa"]
+							." AND (enti_tx_ocupacao IN ('Motorista', 'Ajudante') AND enti_tx_dataCadastro < '".$date->format("Y-m-t")."')"
+							." ".$extra
+						." ORDER BY enti_tx_nome;"
 				);
 				// Caso tenha que voltar o codigo
 				// $sqlMotorista = query(
@@ -167,8 +165,10 @@
 	
 					//Pegando e formatando registros dos dias{
 						for ($i = 1; $i <= $daysInMonth; $i++) {
-							
-							$dataVez = $_POST["busca_data"]."-".str_pad($i, 2, 0, STR_PAD_LEFT);
+							$dataVez = $date->format("Y-m")."-".str_pad($i, 2, 0, STR_PAD_LEFT);
+							if($dataVez < $aMotorista["enti_tx_dataCadastro"]){
+								continue;
+							}
 							if($dataVez >= date("Y-m-d")){
 								break;
 							}
