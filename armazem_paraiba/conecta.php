@@ -11,21 +11,22 @@
         session_start();
     }
 
+	
 	include_once __DIR__."/load_env.php";
-
+	
 	global $_SESSION, $CONTEX, $conn;
 	date_default_timezone_set('America/Fortaleza');
-
+	
 	$CONTEX['path'] = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"];
-
+	
 	
 	// session_cache_limiter("public, no-store");
-
+	
 	$_SESSION['last_activity'] = time();
 	if(isset($_SESSION['user_tx_login']) && !isset($_SESSION['domain'])){
 		$_SESSION['domain'] = $CONTEX['path'];
 	}
-
+	
 	if(!isset($interno) && !isset($_POST['interno'])){
 		if(
 			(empty($_SESSION['last_activity']) || (time()-(int)$_SESSION['last_activity'] > (int)ini_get('session.gc_maxlifetime')))	//Se a sessão expirou
