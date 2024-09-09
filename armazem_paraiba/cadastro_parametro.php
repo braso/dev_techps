@@ -116,7 +116,7 @@
 	function cadastra_parametro(){
 
 		if(is_int(strpos(implode(",",array_keys($_POST)), "ignorarCampos"))){
-			$campos = ["descanso", "espera", "repouso", "repousoEmbarcado"];
+			$campos = ["descanso", "espera", "repouso", "repousoEmbarcado", "mdc"];
 			$_POST["ignorarCampos"] = [];
 			foreach($campos as $campo){
 				if(isset($_POST["ignorarCampos_".$campo])){
@@ -183,7 +183,6 @@
 			"para_tx_percentualSabadoHE" 	=> $_POST["percentualSabadoHE"], 
 			"para_tx_HorasEXExcedente" 		=> $_POST["HorasEXExcedente"], 
 			"para_tx_tolerancia" 			=> $_POST["tolerancia"], 
-			//ignorarCampos está mais abaixo
 			"para_tx_acordo" 				=> $_POST["acordo"], 
 			"para_tx_inicioAcordo" 			=> $_POST["inicioAcordo"], 
 			"para_tx_fimAcordo" 			=> $_POST["fimAcordo"], 
@@ -301,11 +300,6 @@
 			ckeditor("Descrição:", "paramObs", ($a_mod["para_tx_paramObs"]?? ""), 12,"maxlength='100'"),
 		];
 
-		if (!empty($a_mod["para_nb_id"])) {
-			$sqlArquivos= query("SELECT * FROM documento_parametro WHERE para_nb_id = $a_mod[para_nb_id]");
-			$arquivos = mysqli_fetch_all($sqlArquivos, MYSQLI_ASSOC);
-		}
-
 		$camposAIgnorar = [
 			checkbox(
 				"Ignorar intervalos:",
@@ -315,6 +309,7 @@
 						"descanso" => "Descanso",
 						"espera" => "Espera",
 						"repousoEmbarcado" => "Repouso Embarcado",
+						"mdc" => "MDC",
 					]
 				),
 				5,
@@ -368,6 +363,10 @@
 		fecha_form($botoes);
 
 		if (!empty($a_mod["para_nb_id"])) {
+			$arquivos = mysqli_fetch_all(query(
+				"SELECT * FROM documento_parametro"
+					." WHERE para_nb_id = ".$a_mod["para_nb_id"]
+			),MYSQLI_ASSOC);
 			echo arquivosParametro("Documentos", $a_mod["para_nb_id"], $arquivos);
 		}
 		rodape();
@@ -433,25 +432,32 @@
 		linha_form($c);
 		fecha_form($botoes);
 
-		$sql = "SELECT * FROM parametro WHERE para_tx_status = 'ativo' ".$extra;
+		$sql = 
+			"SELECT * FROM parametro"
+				." WHERE para_tx_status = 'ativo' ".$extra
+		;
 		if (isset($_POST["busca_vencidos"])){
-			$sql = "SELECT *, DATEDIFF('".date("Y-m-d")."' ,para_tx_setData) AS diferenca_em_dias FROM parametro WHERE 1"
-				." AND DATEDIFF('".date("Y-m-d")."',para_tx_setData) ".($_POST["busca_vencidos"] === "sim"? "<": ">")." para_nb_qDias OR DATEDIFF('".date("Y-m-d")."',para_tx_setData) IS NULL"
-				." ".$extra;
+			$sql = 
+				"SELECT *, DATEDIFF('".date("Y-m-d")."' ,para_tx_setData) AS diferenca_em_dias FROM parametro"
+					." WHERE 1"
+						." AND DATEDIFF('".date("Y-m-d")."',para_tx_setData) ".($_POST["busca_vencidos"] === "sim"? "<": ">")." para_nb_qDias"
+						." OR DATEDIFF('".date("Y-m-d")."',para_tx_setData) IS NULL"
+						." ".$extra.";"
+			;
 		}
 
 		$gridCols = [
-			"CÓDIGO" => "para_nb_id",
-			"NOME" => "para_tx_nome",
-			"JORNADA SEMANAL/DIA" => "para_tx_jornadaSemanal",
-			"JORNADA SÁBADO" => "para_tx_jornadaSabado",
-			"HE(%)" => "para_tx_percentualHE",
-			"HE SÁBADO(%)" => "para_tx_percentualSabadoHE",
-			"ACORDO" => "para_tx_acordo",
-			"INÍCIO" => "data(para_tx_inicioAcordo)",
-			"FIM" => "data(para_tx_fimAcordo)",
-			"<spam class='glyphicon glyphicon-search'></spam>" => "icone_modificar(para_nb_id,modifica_parametro)",
-			"<spam class='glyphicon glyphicon-remove'></spam>" => "icone_excluir(para_nb_id,exclui_parametro)"
+			"CÓDIGO" 											=> "para_nb_id",
+			"NOME" 												=> "para_tx_nome",
+			"JORNADA SEMANAL/DIA" 								=> "para_tx_jornadaSemanal",
+			"JORNADA SÁBADO" 									=> "para_tx_jornadaSabado",
+			"H.E. SEMANAL" 										=> "formatPerc(para_tx_percentualHE)",
+			"H.E. SÁBADO" 										=> "formatPerc(para_tx_percentualHE)",
+			"ACORDO" 											=> "para_tx_acordo",
+			"INÍCIO" 											=> "data(para_tx_inicioAcordo)",
+			"FIM" 												=> "data(para_tx_fimAcordo)",
+			"<spam class='glyphicon glyphicon-search'></spam>" 	=> "icone_modificar(para_nb_id,modifica_parametro)",
+			"<spam class='glyphicon glyphicon-remove'></spam>" 	=> "icone_excluir(para_nb_id,exclui_parametro)"
 		];
 
 		grid($sql,array_keys($gridCols),array_values($gridCols));
