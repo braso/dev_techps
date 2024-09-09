@@ -3,13 +3,13 @@
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
-	global $CONTEX;
+
 	if(isset($_GET["acao"])){
 		if(empty($_POST["acao"])){
 			$_POST["acao"] = $_GET["acao"];
 		}
 		
-		if(($_POST["acao"] == $_GET["acao"] || $_GET["acao"] == "index" || $_GET["acao"] == "index()")){
+		if(($_POST["acao"] == $_GET["acao"] || in_array($_GET["acao"], ["index", "index()"]))){
 			foreach($_GET as $key => $value) {
 				if($key != "acao" && $value != ""){
 					$_POST[$key] = $value;
@@ -17,7 +17,6 @@
 			}
 		}
 	}
-	
 	if(!empty($_POST["acao"])){
 		$nomeFuncao = $_POST["acao"];
 		if(is_int(strpos($_POST["acao"], "(")) && is_int(strpos($_POST["acao"], ")"))){
@@ -26,7 +25,6 @@
 			$_POST["acao"] .= "()";
 		}
 		if(function_exists($nomeFuncao)){
-			
 			if(preg_match_all("/^((.+[^\n])*)\((.*)\)$/", $_POST["acao"])){
 				eval($_POST["acao"].";");
 			}else{
@@ -36,23 +34,29 @@
 			echo "ERRO: Função '".$nomeFuncao."' não existe!";
 		}
 		exit;
-	}else{
-		if(function_exists("index")){
-			index();
-			exit;
-		}
+	}
+	if(function_exists("index")){
+		index();
+		exit;
 	}
 
-	function diferenca_data(string $data1, string $data2=""){
-		if(empty($data2)){
-			$data2 = date("Y-m-d");
-		}
-		
-		// formato da data yyyy-mm-dd
-		$date = new DateTime($data1);
-		$interval = $date->diff(new DateTime($data2));
-		return $interval->format("%Y-%M-%D");
+	function dd($variavel){
+		echo "<pre>";
+		var_dump(json_encode($variavel, JSON_PRETTY_PRINT));
+		echo "</pre>";
+		die();
 	}
+	
+	// function diferenca_data(string $data1, string $data2=""){
+	// 	if(empty($data2)){
+	// 		$data2 = date("Y-m-d");
+	// 	}
+		
+	// 	// formato da data yyyy-mm-dd
+	// 	$date = new DateTime($data1);
+	// 	$interval = $date->diff(new DateTime($data2));
+	// 	return $interval->format("%Y-%M-%D");
+	// }
 
 	function validarCPF(string $cpf): bool{
 		// Extrai somente os números
@@ -119,11 +123,50 @@
 		$endosso["endo_tx_pontos"] = (array)json_decode($endosso["endo_tx_pontos"]);
 		$endosso["totalResumo"] = (array)json_decode($endosso["totalResumo"]);
 
+		//Referente a $endosso["totalResumo"]
+		$versoesEndosso = [
+			["diffRefeicao", "diffEspera", "diffDescanso", "diffRepouso", "diffJornada", "jornadaPrevista", "diffJornadaEfetiva", "maximoDirecaoContinua", "intersticio", "he50", "he100", "adicionalNoturno", "esperaIndenizada", "diffSaldo", "saldoAnterior", "saldoAtual"],
+			["diffRefeicao", "diffEspera", "diffDescanso", "diffRepouso", "diffJornada", "jornadaPrevista", "diffJornadaEfetiva", "maximoDirecaoContinua", "intersticio", "he50", "he100", "adicionalNoturno", "esperaIndenizada", "diffSaldo", "saldoAnterior", "saldoBruto", "he50APagar", "he100APagar"]
+		];
+
+		switch(array_keys($endosso["totalResumo"])){
+			case $versoesEndosso[0]:
+				$endosso["totalResumo"]["saldoBruto"] = $endosso["totalResumo"]["saldoAtual"];
+				unset($endosso["totalResumo"]["saldoAtual"]);
+				[$endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]] = calcularHorasAPagar($endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50"], $endosso["totalResumo"]["he100"], ($endosso["endo_tx_max50APagar"]?? "00:00"));
+				$endosso["totalResumo"]["saldoFinal"] = operarHorarios([$endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]], "-");
+			break;
+			case $versoesEndosso[1]:
+				//Versão atual
+				$endosso["totalResumo"]["saldoFinal"] = operarHorarios([$endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]], "-");
+			break;
+			default:
+				echo implode(", ", array_keys($endosso["totalResumo"]));
+			break;
+		}
+		
 		return $endosso;
 	}
 
-	function modal_alert($title, $msg){
-		global $CONTEX;
+	function modal_alert(string $title, string $msg, array $formValues = []){
+		$formValuesJS = "";
+		foreach($formValues as $key => $value){
+			if($key == 'acao'){
+				$formValuesJS .= 
+					"form.action = '".$value."'";	
+				;
+				continue;
+			}
+
+
+			$formValuesJS .= 
+				"input = document.createElement('input');"
+				."input.name = '".$key."';"
+				."input.setAttribute('value', '".$value."');"
+				."form.appendChild(input);"
+			;
+		}
+		$title; $msg;
 		include "modal_alert.php";
 	}
 
@@ -208,7 +251,7 @@
 		query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '".$id."' LIMIT 1");
 	}
 
-	function remover_ponto(int $id,$just){
+	function remover_ponto(int $id, $just){
 		$tab=substr("ponto",0,4);
 		$campos = [$tab."_tx_status", $tab."_tx_justificativa"];
 		$valores = ["inativo", $just];
@@ -278,55 +321,66 @@
 	}
 
 	function map($idPonto){
-		$location = mysqli_fetch_all(
-			query("SELECT pont_tx_latitude, pont_tx_longitude 
-			FROM ponto WHERE pont_nb_id = $idPonto"), MYSQLI_ASSOC);
-		if(!empty($location[0]['pont_tx_latitude']) && !empty($location[0]['pont_tx_longitude'])) {
+		$location = mysqli_fetch_all(query(
+			"SELECT pont_tx_latitude, pont_tx_longitude FROM ponto"
+			." WHERE pont_nb_id = ".$idPonto.";"
+		), MYSQLI_ASSOC);
+
+		if(!empty($location[0]['pont_tx_latitude']) && !empty($location[0]['pont_tx_longitude'])){
 			$url = "https://www.google.com/maps?q=".$location[0]['pont_tx_latitude'].","
 			.$location[0]['pont_tx_longitude'];
 
-			return "<center>
-			<a href='$url' target='_blank'>
-				<i class='fa fa-map-marker' aria-hidden='true' style='color: black; font-size: 20px;'></i>
-			</a>
-			</center>";
-		}else{
-			return '';
+			return 
+				"<center>"
+					."<a href='$url' target='_blank'>"
+						."<i class='fa fa-map-marker' aria-hidden='true' style='color: black; font-size: 20px;'></i>"
+					."</a>"
+				."</center>"
+			;
 		}
+
+		return "";
 	}
 
-	function data($data,$hora=0){
+	function data($data, $hora = 0): string{
 
-		if($data=="0000-00-00" || $data=="00/00/0000" )
+		if(in_array($data, ["0000-00-00", "00/00/0000"]))
 			return "";
 
-		if($hora==1){
-			$hora="&nbsp;(".substr($data,11).")";
-		}elseif($hora==2){
-			return substr($data,11);
-		}elseif($hora==3){
-			return substr($data,11, -3);
-		}else{
-			$hora="";
+		switch($hora){
+			case 1:
+				$hora="&nbsp;(".substr($data,11).")";
+			break;
+			case 2:
+				return substr($data, 11);
+			break;
+			case 3:
+				return substr($data, 11, -3);
+			break;
+			default:
+				$hora = "";
+			break;
 		}
 
-		$data=substr($data,0,10);
-
-
-		if(is_int(strpos($data, "/"))){//verifica se tem a barra /
-			$d = explode("/", $data);//tira a barra
-			$rstData = "$d[2]-$d[1]-$d[0]";//separa as datas $d[2] = ano $d[1] = mes etc...
-			return $rstData.$hora;
+		$data = substr($data, 0, 10);
+		if(is_int(strpos($data, "/"))){
+			$data = implode("-", array_reverse(explode("/", $data)));
 		}elseif(is_int(strpos($data, "-"))){
-			$data = substr($data, 0, 10);
-			$d = explode("-", $data);
-			$rstData = $d[2]."/".$d[1]."/".$d[0];
-			return $rstData.$hora;
-		}
-		else{
-			return "";
+			$data = implode("/", array_reverse(explode("-", $data)));
 		}
 
+		return $data.$hora;
+
+	}
+
+	function formatPerc(int $value): string{
+		// $res = "";
+		// if($value < 1){
+		// 	$value = ($value*100);
+		// }
+		$res = $value."%";
+
+		return $res;
 	}
 
 	function fieldset($nome=""){
@@ -346,97 +400,6 @@
 			$msg = substr($msg, 0, strpos($msg, 'ERRO')).'<b style="color: red">'.substr($msg, strpos($msg, 'ERRO')).'</b>';
 		}
 		$_POST['msg_status'] = $msg;
-	}
-
-	function campo_data($nome,$variavel,$modificador,$tamanho,$extra=''){
-		return campo($nome, $variavel, $modificador, $tamanho, 'MASCARA_DATA', $extra.' max="9999-12-31"');
-	}
-
-	function campo_hora($nome,$variavel,$modificador,$tamanho,$extra='',$intervalo=''){
-		return campo($nome,$variavel,$modificador,$tamanho, 'MASCARA_HORA', $extra.' step="'.$intervalo.'"');
-	}
-
-	function campo_mes($nome,$variavel,$modificador,$tamanho,$extra=''){
-		return campo($nome, $variavel, $modificador, $tamanho, 'MASCARA_MES', $extra);
-	}
-
-	function checkbox_banco($nome, $variavel, $modificadoRadio, $modificadoCampo=0, $modificadoCampo2=0, $tamanho=3) {
-		$campo = 
-			'<div class="col-sm-'.$tamanho.' margin-bottom-5" style="min-width:200px">
-				<label>'.$nome.'</label><br>
-				<label class="radio-inline">
-					<input type="radio" id="sim" name="banco" value="sim"> Sim
-				</label>
-				<label class="radio-inline">
-					<input type="radio" id="nao" name="banco" value="nao"> Não
-				</label>
-			</div>
-			<div id="'.$variavel.'" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
-					<label>Quantidade de Dias:</label>
-					<input class="form-control input-sm" type="number" value="'.$modificadoCampo.'" id="outroCampo" name="quandDias" autocomplete="off">
-			</div>
-			<div id="limiteHoras" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
-				<label>Quantidade de Horas Limite:</label>
-				<input class="form-control input-sm" type="number" value="'.$modificadoCampo2.'" id="outroCampo" name="quandHoras" autocomplete="off">
-			</div>'
-		;
-
-		$data_input = 
-			'<script>
-				const radioSim = document.getElementById("sim");
-				const radioNao = document.getElementById("nao");
-				const campo = document.getElementById("'.$variavel.'");
-				const campo2 = document.getElementById("limiteHoras");
-				if("'.$modificadoRadio.'" === "sim"){
-					radioSim.checked = true;
-				}
-				else {
-					radioNao.checked = true;
-				}
-				if(radioSim.checked) {
-						campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
-						campo2.style.display = ""; 
-				}
-				// Adicionando um ouvinte de eventos aos elementos de rádio
-				radioSim.addEventListener("change", function() {
-					if(radioSim.checked) {
-						campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
-						campo2.style.display = ""; 
-					}
-				});
-				radioNao.addEventListener("change", function() {
-				if(radioNao.checked) {
-					campo.style.display = "none"; // Oculta o campo quando "Não Mostrar Campo" é selecionado
-					campo2.style.display = "none"; 
-				}
-				});
-			</script>'
-		;
-		//  Utiliza regime de banco de horas?
-
-		return $campo . $data_input;
-	}
-
-	function checkbox(string $titulo, string $variavel, array $opcoes, int $tamanho=3, string $tipo = "checkbox", string $extra='', string $modificadoCampo = ''){
-		$campo = 
-			"<div class='col-sm-".$tamanho." margin-bottom-5' style='min-width:200px' id='".$variavel."' ".$extra.">
-			<div class='margin-bottom-5'>
-				".$titulo."
-			</div>"
-		;
-		
-		$valoresMarcados = explode(',', $modificadoCampo);
-		
-		foreach($opcoes as $key => $value){
-			$campo .=
-				"<label>
-					<input type='".$tipo."' id='".$key."' name='".$variavel."_".$key."' value='true' ".(in_array($key,$valoresMarcados) && !empty($valoresMarcados) ? 'checked': '')."> ".$value."
-				</label>"
-			;
-		}
-		$campo .= "</div>";
-
-		return $campo;
 	}
 
 	function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
@@ -542,6 +505,102 @@
 		return $campo.$dataScript;
 
 	}
+	function campo_data($nome,$variavel,$modificador,$tamanho,$extra=''){
+		return campo($nome, $variavel, $modificador, $tamanho, 'MASCARA_DATA', $extra.' max="9999-12-31"');
+	}
+	function campo_hora($nome,$variavel,$modificador,$tamanho,$extra='',$intervalo=''){
+		return campo($nome,$variavel,$modificador,$tamanho, 'MASCARA_HORA', $extra.' step="'.$intervalo.'"');
+	}
+	function campo_mes($nome,$variavel,$modificador,$tamanho,$extra=''){
+		return campo($nome, $variavel, $modificador, $tamanho, 'MASCARA_MES', $extra);
+	}
+	function campo_hidden($nome,$valor): string{
+		return campo($nome, $nome, $valor, 0, "MASCARA_HIDDEN");
+	}
+	function campo_senha($nome,$variavel,$modificador,$tamanho,$extra=''){
+		return campo($nome, $variavel, $modificador, $tamanho, "MASCARA_SENHA", $extra);
+	}
+
+	function checkbox_banco($nome, $variavel, $modificadoRadio, $modificadoCampo=0, $modificadoCampo2=0, $tamanho=3) {
+		$campo = 
+			'<div class="col-sm-'.$tamanho.' margin-bottom-5" style="min-width:200px">
+				<label>'.$nome.'</label><br>
+				<label class="radio-inline">
+					<input type="radio" id="sim" name="banco" value="sim"> Sim
+				</label>
+				<label class="radio-inline">
+					<input type="radio" id="nao" name="banco" value="nao"> Não
+				</label>
+			</div>
+			<div id="'.$variavel.'" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
+					<label>Quantidade de Dias:</label>
+					<input class="form-control input-sm" type="number" value="'.$modificadoCampo.'" id="outroCampo" name="quandDias" autocomplete="off">
+			</div>
+			<div id="limiteHoras" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
+				<label>Quantidade de Horas Limite:</label>
+				<input class="form-control input-sm" type="number" value="'.$modificadoCampo2.'" id="outroCampo" name="quandHoras" autocomplete="off">
+			</div>'
+		;
+
+		$data_input = 
+			'<script>
+				const radioSim = document.getElementById("sim");
+				const radioNao = document.getElementById("nao");
+				const campo = document.getElementById("'.$variavel.'");
+				const campo2 = document.getElementById("limiteHoras");
+				if("'.$modificadoRadio.'" === "sim"){
+					radioSim.checked = true;
+				}
+				else {
+					radioNao.checked = true;
+				}
+				if(radioSim.checked) {
+						campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
+						campo2.style.display = ""; 
+				}
+				// Adicionando um ouvinte de eventos aos elementos de rádio
+				radioSim.addEventListener("change", function() {
+					if(radioSim.checked) {
+						campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
+						campo2.style.display = ""; 
+					}
+				});
+				radioNao.addEventListener("change", function() {
+				if(radioNao.checked) {
+					campo.style.display = "none"; // Oculta o campo quando "Não Mostrar Campo" é selecionado
+					campo2.style.display = "none"; 
+				}
+				});
+			</script>'
+		;
+		//  Utiliza regime de banco de horas?
+
+		return $campo . $data_input;
+	}
+
+	function checkbox(string $titulo, string $variavel, array $opcoes, int $tamanho=3, string $tipo = "checkbox", string $extra='', string $modificadoCampo = ''){
+		$campo = 
+			"<div class='col-sm-".$tamanho." margin-bottom-5' style='min-width:200px' id='".$variavel."' ".$extra.">
+			<div class='margin-bottom-5'>
+				".$titulo."
+			</div>"
+		;
+		
+		$valoresMarcados = explode(',', $modificadoCampo);
+		
+		foreach($opcoes as $key => $value){
+			$campo .=
+				"<label>
+					<input type='".$tipo."' id='".$key."' name='".$variavel."_".$key."' value='true' ".(in_array($key,$valoresMarcados) && !empty($valoresMarcados) ? 'checked': '')."> ".$value."
+				</label>"
+			;
+		}
+		$campo .= "</div>";
+
+		return $campo;
+	}
+
+	
 
 	function datepick($nome,$variavel,$modificador,$tamanho,$extra=''){
 		global $CONTEX;
@@ -583,9 +642,7 @@
 		return $campo;
 	}
 
-	function ckeditor($nome,$variavel,$modificador,$tamanho,$extra=''){
-		return '';
-		// echo '';
+	function ckeditor($nome,$variavel,$modificador,$tamanho,$extra=''){//Obsoleto
 		$campo=
 			'<script src="/ckeditor/ckeditor.js"></script>
 			<div class="col-sm-'.$tamanho.' margin-bottom-5">
@@ -601,15 +658,7 @@
 
 	}
 
-	function campo_hidden($nome,$valor): string{
-		return campo($nome, $nome, $valor, 0, "MASCARA_HIDDEN");
-	}
-
-	function campo_senha($nome,$variavel,$modificador,$tamanho,$extra=''){
-		return campo($nome, $variavel, $modificador, $tamanho, "MASCARA_SENHA", $extra);
-	}
-
-	function texto($nome,$modificador,$tamanho='',$extra=''){
+	function texto($nome,$modificador,$tamanho='',$extra=''){//Campo de texto que não pode ser editado
 		$campo =
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5" '.$extra.'>
 				<label>'.$nome.'</label><br>
