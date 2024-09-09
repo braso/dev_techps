@@ -42,7 +42,7 @@
 
 	function excluir_ponto(){
 		$a=carregar("ponto", (int)$_POST["id"]);
-		remover_ponto((int)$_POST["id"],$_POST["just"]);
+		remover_ponto((int)$_POST["id"],$_POST["just"],$_POST["atualiza"]);
 		
 		$_POST["id"] = $_POST["idEntidade"];
 		$_POST["data"] = substr($a["pont_tx_data"],0, -9);
@@ -492,7 +492,9 @@
 		$jornadaPrevistaOriginal = $jornadaPrevista;
 		$jornadaPrevista = (new DateTime($data." ".$jornadaPrevista))->format("H:i");
 		if($abono !== null){
-			$jornadaPrevista = (new DateTime($data." ".$abono))->diff(new DateTime($data." ".$jornadaPrevista))->format("%H:%I");
+			if ($jornadas["feriado"] === null) {
+				$jornadaPrevista = (new DateTime($data." ".$abono))->diff(new DateTime($data." ".$jornadaPrevista))->format("%H:%I");
+			}
 		}
 
 		return [$jornadaPrevistaOriginal, $jornadaPrevista];
@@ -1008,7 +1010,12 @@
 				$interAtivo = new DateTime($ponto["pont_tx_data"]);
 			}
 			
-			$aRetorno["maximoDirecaoContinua"] = verificarAlertaMDC($intervalos);
+			if(is_bool(strpos($aParametro["para_tx_ignorarCampos"], "maximoDirecaoContinua"))){
+				$aRetorno["maximoDirecaoContinua"] = verificarAlertaMDC($intervalos);	/* $repousoOrdenado */
+			}else{
+				$aRetorno["maximoDirecaoContinua"] = "";
+			}
+			// $aRetorno["maximoDirecaoContinua"] = verificarAlertaMDC($intervalos);
 		//}
 
 		//JORNADA MÍNIMA

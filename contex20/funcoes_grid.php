@@ -155,6 +155,7 @@
 			<input type="hidden" name="data_de" value="">
 			<input type="hidden" name="data_ate" value="">
 			<input type="hidden" name="just" value="">
+			<input type="hidden" name="atualiza" value="">
 			<input type="hidden" id="hidden">
 		</form>
 		

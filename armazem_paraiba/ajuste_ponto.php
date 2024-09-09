@@ -241,7 +241,6 @@
 
 		//Definir data de início da query{
 			//Se abriu jornada hoje, considera a partir da data de abertura da jornada.
-
 			if(empty($abriuJornadaHoje)){
 				//Se não abriu uma jornada hoje, confere se há uma jornada aberta que veio de antes do dia.
 				$temJornadaAberta = mysqli_fetch_assoc(
@@ -254,7 +253,6 @@
 							LIMIT 1;"
 					)
 				);
-
 				//Se não tem uma jornada que veio de antes, considera a partir de meia-noite de hoje.
 				$sqlDataInicio = $_POST['data']." 00:00:00";
 
@@ -270,7 +268,6 @@
 								LIMIT 1;"
 						)
 					);
-
 					//Se a jornada aberta antes do dia não foi fechada, pega desde o momento em que a jornada foi aberta.
 					$sqlDataInicio = $temJornadaAberta['pont_tx_data'];
 					if(!empty($jornadaFechadaHoje) && intval($jornadaFechadaHoje['jornadaFechadaHoje'])){
@@ -390,7 +387,7 @@
 		}
 
 		$textFields[] = texto('Matrícula',$aMotorista['enti_tx_matricula'],2);
-		$textFields[] = texto('Motorista',$aMotorista['enti_tx_nome'],5);
+		$textFields[] = texto($aMotorista["enti_tx_ocupacao"],$aMotorista['enti_tx_nome'],5);
 		$textFields[] = texto('CPF',$aMotorista['enti_tx_cpf'],3);
 
 		$_POST['status'] = (!empty($_POST['status']) && $_POST['status'] != 'undefined'? $_POST['status']: 'ativo');
@@ -445,13 +442,14 @@
 		echo campo_hidden("data_de", $_POST["data_de"]);
 		echo campo_hidden("data_ate", $_POST["data_ate"]);
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+		echo campo_hidden("busca_empresa", $_POST["busca_empresa"]);
 		linha_form($variableFields);
 		linha_form($campoJust);
 		fecha_form($botoes);
 
 		$sql = pegarSqlDia($aMotorista['enti_tx_matricula'], ["pont_nb_id", "pont_tx_data", "macr_tx_nome", "moti_tx_nome", 
 		"moti_tx_legenda", "pont_tx_justificativa", "user_tx_login", "pont_tx_dataCadastro",
-		"pont_tx_latitude", "pont_tx_longitude"]);
+		"pont_tx_latitude", "pont_tx_longitude","pont_tx_dataAtualiza"]);
 
 
 		$gridFields = [
@@ -464,6 +462,7 @@
 			"JUSTIFICATIVA"										=> "pont_tx_justificativa",
 			"USUÁRIO"											=> "user_tx_login",
 			"DATA CADASTRO"										=> "data(pont_tx_dataCadastro,1)",
+			"DATA EXCLUSÃO"                                     => "data(pont_tx_dataAtualiza,1)",
 			"LOCALIZAÇÃO"                                       => "map(pont_nb_id)",
 			"<spam class='glyphicon glyphicon-remove'></spam>"	=> $iconeExcluir
 		];
@@ -477,6 +476,10 @@
 			</div>
 			<style>
 				@media print {
+					@page {
+						size: A4 landscape;
+						margin: 1cm;
+					}
 					body {
 						margin: 1cm;
 						margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
@@ -489,21 +492,20 @@
 						top: 5px;
 						right: 20px;
 					}
-					form > div:nth-child(14) > div:nth-child(1),
-					form > div:nth-child(14) > div:nth-child(3),
-					form > div:nth-child(14) > div:nth-child(4),
-					form > div:nth-child(14) > div:nth-child(5),
-					form > div:nth-child(14) > div:nth-child(6),
-					form > div:nth-child(15) > div
+						
+					form > .row
 					{
 						display: none;
 					}
 
 					.portlet.light {
-						padding: 0px 20px 0px !important;
+						padding: 0px 10px !important; /* Reduzindo o padding */
+						font-size: 10px !important; /* Reduzindo o tamanho da fonte */
+						margin-bottom: 0px !important;
 					}
-					.row {
-						margin: 0px 0px 0px 0px !important;
+
+					.row div {
+						min-width: min-content !important;
 					}
 
 					form > div:nth-child(1){

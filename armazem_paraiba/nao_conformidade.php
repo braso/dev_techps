@@ -81,7 +81,7 @@
 
 		//CAMPOS DE CONSULTA{
 			$c = [
-				combo_net("Motorista:", "busca_motorista", (!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 3, "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')".$extraMotorista.$extraEmpresaMotorista, "enti_tx_matricula"),
+				combo_net("Motorista/Ajudante:", "busca_motorista", (!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 3, "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')".$extraMotorista.$extraEmpresaMotorista, "enti_tx_matricula"),
 				campo_mes("Data*:",     "busca_data",      (!empty($_POST["busca_data"])?      $_POST["busca_data"]     : ""), 2)
 			];
 
@@ -140,14 +140,23 @@
 				$date = new DateTime($_POST["busca_data"]);
 
 				$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $date->format("m"), $date->format("Y"));
-	
+
 				$sqlMotorista = query(
-					"SELECT * FROM entidade
-						WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante')
-							AND enti_nb_empresa = ".$_POST["busca_empresa"]." ".$extra."
-							AND enti_tx_status = 'ativo'
-						ORDER BY enti_tx_nome"
+					"SELECT * FROM entidade"
+						." WHERE enti_tx_status = 'ativo'"
+							." AND enti_nb_empresa = ".$_POST["busca_empresa"]
+							." AND (enti_tx_ocupacao IN ('Motorista', 'Ajudante') AND enti_tx_dataCadastro < '".$date->format("Y-m-t")."')"
+							." ".$extra
+						." ORDER BY enti_tx_nome;"
 				);
+				// Caso tenha que voltar o codigo
+				// $sqlMotorista = query(
+				// 	"SELECT * FROM entidade
+				// 		WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante')
+				// 			AND enti_nb_empresa = ".$_POST["busca_empresa"]." ".$extra."
+				// 			AND enti_tx_status = 'ativo'
+				// 		ORDER BY enti_tx_nome"
+				// );
 				while ($aMotorista = carrega_array($sqlMotorista)) {
 					$counts["total"]++;
 					if(empty($aMotorista["enti_tx_nome"]) || empty($aMotorista["enti_tx_matricula"])){
@@ -156,8 +165,10 @@
 	
 					//Pegando e formatando registros dos dias{
 						for ($i = 1; $i <= $daysInMonth; $i++) {
-							
-							$dataVez = $_POST["busca_data"]."-".str_pad($i, 2, 0, STR_PAD_LEFT);
+							$dataVez = $date->format("Y-m")."-".str_pad($i, 2, 0, STR_PAD_LEFT);
+							if($dataVez < $aMotorista["enti_tx_dataCadastro"]){
+								continue;
+							}
 							if($dataVez >= date("Y-m-d")){
 								break;
 							}

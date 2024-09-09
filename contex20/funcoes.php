@@ -208,10 +208,11 @@
 		query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '".$id."' LIMIT 1");
 	}
 
-	function remover_ponto(int $id,$just){
+	function remover_ponto(int $id,$just,$atualizar = null){
+		var_dump($atualizar);
 		$tab=substr("ponto",0,4);
-		$campos = [$tab."_tx_status", $tab."_tx_justificativa"];
-		$valores = ["inativo", $just];
+		$campos = [$tab."_tx_status", $tab."_tx_justificativa",$tab."_tx_dataAtualiza"];
+		$valores = ["inativo", $just,$atualizar];
 
 		updateById("ponto", $campos, $valores, $id);
 	}
@@ -1166,7 +1167,7 @@
 
 		$modal = "
 			<script>
-			function solicitarDados(id,acao,data_de,data_ate,campos,valores) {
+			function solicitarDados(id,acao,data_de,data_ate,campos,valores,atualiza) {
 				// Solicitar ao usuário que insira os dados
 				var just = prompt('Qual a justificativa da exclusão do ponto?');
 				if(just !== null && just !== ''){
@@ -1177,6 +1178,7 @@
 					form.data_de.value=data_de;
 					form.data_ate.value=data_ate;
 					form.just.value=just;
+					form.atualiza.value=atualiza;
 					if(campos){
 						form.hidden.value=valores;
 						form.hidden.name=campos;
@@ -1197,7 +1199,7 @@
 			</script>
 		";
 		// onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\",\"$data_de\",\"$data_ate\");
-		return "<center><a title='".$title."' style='color:gray' data-toggle='modal' data-target='#myModal'onclick='solicitarDados(\"".$id."\",\"".$acao."\",\"".$data_de."\",\"".$data_ate."\",\"".$campos."\",\"".$valores."\")' ><spam ".$icone."></spam></a></center>".$modal;
+		return "<center><a title='".$title."' style='color:gray' data-toggle='modal' data-target='#myModal'onclick='solicitarDados(\"".$id."\",\"".$acao."\",\"".$data_de."\",\"".$data_ate."\",\"".$campos."\",\"".$valores."\",\"".date('Y-m-d H:i:s')."\")' ><spam ".$icone."></spam></a></center>".$modal;
 	}	
 
 	function modal_just($id,$acao,$campos='',$data_de='',$data_ate='',$valores='',$target='',$icone='',$msg='', $action='', $title=''){
