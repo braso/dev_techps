@@ -121,10 +121,9 @@
 								"SELECT * FROM ponto 
 									WHERE pont_tx_status = 'ativo'
 										AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-										AND pont_tx_data LIKE '".$_POST['data']."%'
 										AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora'].":59', '%Y-%m-%d %H:%i:%s')
 									ORDER BY pont_tx_data DESC, pont_nb_id DESC
-									LIMIT 1"
+									LIMIT 1;"
 							)
 						);
 						
@@ -345,6 +344,7 @@
 		if(empty($_POST['id'])){
 			echo '<script>alert("ERRO: Deve ser selecionado um motorista para ajustar.")</script>';
 			
+			$_POST["acao"] = "buscarEspelho()";
 			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
 
 			voltar();
@@ -440,6 +440,7 @@
 		abre_form('Dados do Ajuste de Ponto');
 		linha_form($textFields);
 		echo campo_hidden("id", $_POST["id"]);
+		echo campo_hidden("busca_empresa", $_POST["busca_empresa"]);
 		echo campo_hidden("busca_motorista", $_POST["id"]);
 		echo campo_hidden("busca_data", $_POST["data"]);
 		echo campo_hidden("data_de", $_POST["data_de"]);
