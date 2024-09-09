@@ -5,7 +5,6 @@
 	//*/
 	
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
-
 	function montarEndossoMes(DateTime $dateMes, array $aMotorista): array{
 		global $CONTEX;
 
@@ -13,23 +12,18 @@
 		$year = intval($dateMes->format("Y"));
 		
 		$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
-		$sqlEndossos = mysqli_fetch_all(
-			query(
-				"SELECT * FROM endosso 
-					WHERE endo_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'
-						AND endo_tx_status = 'ativo'
-						AND endo_tx_de >= '".sprintf("%04d-%02d-%02d", $year, $month, "01")."'
-						AND endo_tx_ate <= '".sprintf("%04d-%02d-%02d", $year, $month, $daysInMonth)."'
-					ORDER BY endo_tx_de ASC"
-			),
-			MYSQLI_ASSOC
-		);
+		$endossos = mysqli_fetch_all(query(
+			"SELECT endo_tx_filename FROM endosso 
+				WHERE endo_tx_status = 'ativo'
+					AND endo_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'
+					AND endo_tx_de >= '".sprintf("%04d-%02d-%02d", $year, $month, "01")."'
+					AND endo_tx_ate <= '".sprintf("%04d-%02d-%02d", $year, $month, $daysInMonth)."'
+				ORDER BY endo_tx_de ASC"
+		),MYSQLI_ASSOC);
 
-		$endossos = [];
-		foreach($sqlEndossos as $endosso){
-			$endossos[] = lerEndossoCSV($endosso["endo_tx_filename"]);
+		foreach($endossos as &$endosso){
+			$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
 		}
-
 
 		$endossoCompleto = [];
 
