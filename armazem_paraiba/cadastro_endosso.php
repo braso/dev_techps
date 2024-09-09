@@ -2,6 +2,10 @@
 	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
+
+		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+		header("Pragma: no-cache"); // HTTP 1.0.
+		header("Expires: 0");
 	//*/
 
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
@@ -54,33 +58,30 @@
 			if($errorMsg != $baseErrMsg){
 				return "ERRO: ".$errorMsg;
 			}
-		}
-
-		if($modo == 1 && empty($idMotorista)){
-			return "ERRO: parâmetros de conferirErros() incorretos.  ";
-		}
-
-		if($modo == 1 && !empty($idMotorista)){
+		}elseif($modo == 1){
+			if(empty($idMotorista)){
+				return "ERRO: parâmetros de conferirErros() incorretos.  ";
+			}
+			
 			$motorista = mysqli_fetch_assoc(query(
 				"SELECT * FROM entidade "
 				." WHERE enti_tx_status = 'ativo'"
 					." AND enti_nb_id = ".$idMotorista.";"
 			));
 
+			$motErrMsg = "";
+
 			//Conferir se está entrelaçado com outro endosso{
-				$endossosMotorista = mysqli_fetch_assoc(
-					query(
-						"SELECT endo_tx_de, endo_tx_ate FROM endosso
-							WHERE endo_nb_entidade = ".$motorista["enti_nb_id"]."
-								AND (
-									(endo_tx_ate >= '".$_POST["data_de"]."') 
-									AND ('".$_POST["data_ate"]."' >= endo_tx_de)
-								)
-								AND endo_tx_status = 'ativo'
-							LIMIT 1;"
-					)
-				);
-				$motErrMsg = "";
+				$endossosMotorista = mysqli_fetch_assoc(query(
+					"SELECT endo_tx_de, endo_tx_ate FROM endosso"
+						." WHERE endo_nb_entidade = ".$motorista["enti_nb_id"].""
+							." AND ("
+								." (endo_tx_ate >= '".$_POST["data_de"]."')"
+								." AND ('".$_POST["data_ate"]."' >= endo_tx_de)"
+							." )"
+							." AND endo_tx_status = 'ativo'"
+						." LIMIT 1;"
+				));
 				if(!empty($endossosMotorista)){
 					$endossosMotorista["endo_tx_de"]  = vsprintf("%02d/%02d/%04d", array_reverse(explode("-", $endossosMotorista["endo_tx_de"])));
 					$endossosMotorista["endo_tx_ate"] = vsprintf("%02d/%02d/%04d", array_reverse(explode("-", $endossosMotorista["endo_tx_ate"])));
@@ -89,27 +90,24 @@
 				unset($endossosMotorista);
 			//}
 
-			$primEndosso = false;
-			if(!empty($motErrMsg)){
-				//Conferir se é o primeiro endosso que está sendo registrado{
-					$primEndosso = mysqli_fetch_all(
-						query(
-							"SELECT endo_tx_de FROM endosso 
-								WHERE endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'
-									AND endo_tx_status = 'ativo'
-								ORDER BY endo_tx_de DESC
-								LIMIT 1"
-						), 
-						MYSQLI_ASSOC
-					);
-					if((count($primEndosso) > 0)){
+			$possuiEndoPosterior = false;
+			if(empty($motErrMsg)){
+				//Conferir se está tentando endossar antes de outro endosso{
+					$possuiEndoPosterior = mysqli_fetch_all(query(
+							"SELECT endo_tx_de FROM endosso"
+								." WHERE endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'"
+									." AND endo_tx_status = 'ativo'"
+								." ORDER BY endo_tx_de DESC"
+								." LIMIT 1;"
+					),MYSQLI_ASSOC);
+					if((count($possuiEndoPosterior) > 0)){
 						//Conferir se o endosso que está sendo feito vem antes do primeiro{
-							if($_POST["data_ate"] < $primEndosso[0]["endo_tx_de"]){
-								$motErrMsg = "Não é possível endossar antes do primeiro endosso.  ";
+							if($_POST["data_ate"] < $possuiEndoPosterior[0]["endo_tx_de"]){
+								$motErrMsg = "Já existe um endosso depois de ".vsprintf("%02d/%02d/%04d", array_reverse(explode("-", $_POST["data_ate"]))).".  ";
 							}
 						//}
 					}
-					$primEndosso = (count($primEndosso) == 0);
+					$possuiEndoPosterior = (count($possuiEndoPosterior) == 0);
 				//}
 			}
 
@@ -127,7 +125,7 @@
 						MYSQLI_ASSOC
 					);
 
-					if(is_array($ultimoEndosso) && count($ultimoEndosso) > 0 && !$primEndosso){ //Se possui um último Endosso
+					if(is_array($ultimoEndosso) && count($ultimoEndosso) > 0 && !$possuiEndoPosterior){ //Se possui um último Endosso
 						$ultimoEndosso = $ultimoEndosso[0];
 						$ultimoEndosso["endo_tx_ate"] = DateTime::createFromFormat("Y-m-d", $ultimoEndosso["endo_tx_ate"]);
 						$dataDe = DateTime::createFromFormat("Y-m-d", $_POST["data_de"]);
@@ -148,8 +146,11 @@
 			if(!empty($motErrMsg)){
 				return $motErrMsg;
 			}
+		}else{
+			return "Modo incorreto em conferirErros.";
 		}
 
+		//String vazia significa "Sem Erros";
 		return "";
 	}
 
@@ -170,6 +171,8 @@
 			exit;
 		}
 
+		die("passou");
+
 		$_POST["quantHoras"] = "00:00";
 
 		if(empty($_POST["busca_motorista"]) || empty($_POST["data_de"]) || empty($_POST["data_ate"])){
@@ -186,31 +189,29 @@
 		));
 
 		$ultimoEndosso = mysqli_fetch_assoc(query(
-			"SELECT enti_tx_matricula, endo_tx_ate, endo_tx_filename, endo_tx_saldo, endo_tx_max50APagar FROM endosso "
-			." JOIN entidade ON enti_nb_id = endo_nb_entidade"
-			." WHERE endo_tx_status = 'ativo'"
-				." AND endo_nb_entidade = ".$_POST["busca_motorista"]
-			." ORDER BY endo_tx_ate DESC, endo_nb_id DESC"
-			." LIMIT 1;"
+			"SELECT enti_tx_matricula, endo_tx_filename FROM endosso "
+				." JOIN entidade ON enti_nb_id = endo_nb_entidade"
+				." WHERE endo_tx_status = 'ativo'"
+					." AND endo_nb_entidade = ".$_POST["busca_motorista"]
+				." ORDER BY endo_tx_ate DESC, endo_nb_id DESC"
+				." LIMIT 1;"
 		));
 
 		
-		$pago = ["00:00", "00:00"];
 		if(!empty($ultimoEndosso["endo_tx_filename"])){
-			$ultimoEndossoCSV = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
-			$ultimoEndossoCSV = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
-			$pago = calcularHorasAPagar($ultimoEndossoCSV["endo_tx_saldo"], $ultimoEndossoCSV["totalResumo"]["he50"], $ultimoEndossoCSV["totalResumo"]["he100"], $ultimoEndossoCSV["endo_tx_max50APagar"]);
-			$saldoAnterior = operarHorarios([$ultimoEndossoCSV["endo_tx_saldo"], $pago[0], $pago[1]], "-");
+			$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
+			$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoFinal"];
+
 			$dataDe = new DateTime($ultimoEndosso["endo_tx_ate"]);
+			$dataDe->modify("+1 day");
 		}else{
 			$saldoAnterior = $motorista["enti_tx_banco"];
 			$dataDe = new DateTime($_POST["data_de"]);
 		}
-		
 		$dataAte = new DateTime($_POST["data_ate"]);
-
+		
 		for(
-			$date = $dataDe->modify("+1 day"); 
+			$date = $dataDe;
 			date_diff($date, $dataAte)->days >= 0 && !(date_diff($date, $dataAte)->invert);
 			$date = date_add($date, DateInterval::createFromDateString("1 day"))
 		){
@@ -219,12 +220,9 @@
 		
 		$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
 		$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], "00:00");
-		
 		$totalResumo["saldoAnterior"] = $saldoAnterior;
 		$totalResumo["saldoBruto"] = $saldoBruto;
-		$totalResumo["he50APagar"] = $aPagar[0];
-		$totalResumo["he100APagar"] = $aPagar[1];
-
+		[$totalResumo["he50APagar"], $totalResumo["he100APagar"]] = $aPagar;
 		$_POST["quantHoras"] = operarHorarios([$totalResumo["saldoBruto"], $totalResumo["he100APagar"]], "-");
 		if($_POST["quantHoras"][0] == "-"){
 			$_POST["quantHoras"] = "00:00";
@@ -244,6 +242,43 @@
 			index();
 			exit;
 		}
+
+
+		if(!empty($_POST["empresa"]) && empty($_POST["busca_motorista"])){
+			//Criar formulário de confirmação{
+				$formConfirmacao = 
+					"var formConfirmacao = document.createElement('form');"
+					."formConfirmacao.name = 'formConfirmacao';"
+					."formConfirmacao.method = 'post';"
+					."formConfirmacao.style.display = 'none';"
+					."formConfirmacao.action = '".$_SERVER["REQUEST_URI"]."';";
+				foreach($_POST as $key => $value){
+					if($key == 'acao'){
+						continue;
+					}
+
+					$formConfirmacao .= 
+						"input = document.createElement('input');"
+						."input.name = '".$key."';"
+						."input.setAttribute('value', '".$value."');"
+						."formConfirmacao.appendChild(input);"
+					;
+				}
+
+				echo
+					"<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>Document</title></head><body></body></html>"
+					."<script>"
+						."var confirmado = confirm('Esta ação realizará um endosso em massa, deseja continuar?');"
+						."if(!confirmado){"
+							.$formConfirmacao
+							."document.body.appendChild(formConfirmacao);"
+							."formConfirmacao.submit();"
+						."}"
+					."</script>"
+				;
+			//}
+		}
+
 
 		$queryMotoristas = 
 			"SELECT entidade.*, empresa.empr_nb_cidade, cidade.cida_nb_id, cidade.cida_tx_uf, parametro.para_tx_acordo FROM entidade
@@ -307,16 +342,14 @@
 				criarFuncoesDeAjuste();
 			//}
 
-			$ultimoEndosso = mysqli_fetch_assoc(
-				query(
-					"SELECT * FROM endosso
-						WHERE endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'
-							AND endo_tx_ate < '".$_POST["data_de"]."'
-							AND endo_tx_status = 'ativo'
-						ORDER BY endo_tx_ate DESC
-						LIMIT 1;"
-				)
-			);
+			$ultimoEndosso = mysqli_fetch_assoc(query(
+				"SELECT * FROM endosso
+					WHERE endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'
+						AND endo_tx_ate < '".$_POST["data_de"]."'
+						AND endo_tx_status = 'ativo'
+					ORDER BY endo_tx_ate DESC
+					LIMIT 1;"
+			));
 
 			if(empty($ultimoEndosso)){
 				if(isset($motorista["enti_tx_banco"])){
@@ -455,17 +488,6 @@
 
 	function index(){
 		global $CONTEX;
-
-		if(!empty($_GET["test"])){
-			$_GET["test"] = explode(", ", $_GET["test"]);
-			$_POST["empresa"] = intval($_GET["test"][0]);
-			$_POST["data_de"] = $_GET["test"][1];
-			$_POST["data_ate"] = $_GET["test"][2];
-			$_POST["busca_motorista"] = intval($_GET["test"][3]);
-		}
-
-		// $url = explode("/", $_SERVER["SCRIPT_URL"]);
-		// $url = implode("/", [$url[0], $url[1], $url[2]]);
 
 		cabecalho("Cadastro de Endosso");
 
