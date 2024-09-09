@@ -12,9 +12,11 @@
 	
 	include_once "load_env.php";
 	
-	echo "<style>";
-	include "css/index.css";
-	echo "</style>";
+	if(empty($_POST["getSessionValues"])){
+		echo "<style>";
+		include "css/index.css";
+		echo "</style>";
+	}
 
 	function showWelcome($usuario, $turnoAtual, $horaEntrada) {
 
@@ -87,19 +89,17 @@
 		$interno = true; //Utilizado em conecta.php;
 		include_once "conecta.php";
 		
-		$usuario = mysqli_fetch_assoc(
-			query(
-				"SELECT * FROM user 
-					WHERE user_tx_status = 'ativo' 
-						AND user_tx_login = '".$_POST["user"]."' 
-						AND user_tx_senha = '".$_POST["password"]."'"
-			)
-		);
+		$usuario = mysqli_fetch_assoc(query(
+			"SELECT * FROM user"
+				." WHERE user_tx_status = 'ativo'"
+					." AND user_tx_login = '".$_POST["user"]."'"
+					." AND user_tx_senha = '".$_POST["password"]."';"
+		));
 
 		if(!empty($usuario)){ //Se encontrou um usuário
 			$dataHoje = strtotime(date("Y-m-d")); // Transforma a data de hoje em timestamp
 			$dataVerificarObj = strtotime($usuario["user_tx_expiracao"]);
-			if ($dataVerificarObj >= $dataHoje && !empty($usuario["user_tx_expiracao"]) && $usuario["user_tx_expiracao"] == "0000-00-00") {
+			if ($dataVerificarObj >= $dataHoje && !empty($usuario["user_tx_expiracao"]) && $usuario["user_tx_expiracao"] != "0000-00-00"){
 				echo 
 					"<div class='alert alert-danger display-block'>
 						<span> Usuário expirado. </span>
@@ -125,6 +125,13 @@
 				exit;
 			}
 
+			if(!empty($_POST["sourcePage"]) && is_int(strpos($_POST["sourcePage"], $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]))){
+				echo 
+					"<form name='goToSourceForm' action='".$_POST["sourcePage"]."'></form>"
+					."<script>document.goToSourceForm.submit();</script>"
+				;
+			}
+
 			cabecalho("");
 			showWelcome($usuario["user_tx_nome"], $turnoAtual, $_SESSION["horaEntrada"]);
 			rodape();
@@ -133,7 +140,7 @@
 		$error = "notfound";
 	}
 
-	$_POST["HTTP_REFERER"] = ($_SERVER["HTTP_REFERER"]?? "/index.php")."?error=".$error;
+	$_POST["HTTP_REFERER"] = ($_SERVER["HTTP_REFERER"]?? $_ENV["APP_PATH"]."/index.php")."?error=".$error;
 
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
 	voltar();
