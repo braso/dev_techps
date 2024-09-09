@@ -69,24 +69,13 @@
 					$errorMsg[1] = "Data de pesquisa não pode ser após hoje (".date("d/m/Y")."). ";
 				}
 
-				$motorista = mysqli_fetch_assoc(
-					query(
-						"SELECT enti_nb_id, enti_tx_nome, enti_tx_dataCadastro FROM entidade
-							WHERE enti_tx_status = 'ativo'
-								AND enti_nb_empresa = ".$_POST["busca_empresa"]."
-								AND enti_nb_id = ".$_POST["busca_motorista"]."
-							LIMIT 1"
-					)
-				);
-
-				$data_cadastro = new DateTime($motorista["enti_tx_dataCadastro"]);
-				$ano_cadastro = $data_cadastro->format('Y');
-        		$mes_cadastro = $data_cadastro->format('m');
-       			$ano_inicio = $data_inicio_obj->format('Y');
-        		$mes_inicio = $data_inicio_obj->format('m');
-				if ($ano_inicio < $ano_cadastro || ($ano_inicio == $ano_cadastro && $mes_inicio < $mes_cadastro)) {
-					$errorMsg[1] = "Erro: A data inicial não pode estar em um mês anterior ao da data de cadastro. ";
-				}
+				$motorista = mysqli_fetch_assoc(query(
+					"SELECT enti_nb_id, enti_tx_nome, enti_tx_dataCadastro FROM entidade
+						WHERE enti_tx_status = 'ativo'
+							AND enti_nb_empresa = ".$_POST["busca_empresa"]."
+							AND enti_nb_id = ".$_POST["busca_motorista"]."
+						LIMIT 1;"
+				));
 
 				if(empty($motorista)){
 					$errorMsg[2] = "Este motorista não pertence a esta empresa. ";
@@ -105,6 +94,29 @@
 				set_status("ERRO: ".$errorMsg);
 				$_POST["acao"] = "";
 			}
+
+			//Conferir se a data de início da pesquisa está antes do cadastro do motorista{
+				if(!empty($motorista)){
+					$baseErrMsg = [];
+					$errorMsg = $baseErrMsg; 
+					$data_cadastro = new DateTime($motorista["enti_tx_dataCadastro"]);
+
+					if(date_diff($data_cadastro, $data_inicio_obj)->invert){
+						$errorMsg = ["A data inicial deve ser anterior ao cadastro do motorista (".$data_cadastro->format("d/m/Y")."). "];
+					}
+				}
+
+				if($errorMsg != $baseErrMsg){
+					foreach($errorMsg as &$msg){
+						if(!empty($msg)){
+							$msg = substr($msg, 0, -2).".";
+						}
+					}
+					$errorMsg = implode("<br>", $errorMsg);
+					set_status("ERRO: ".$errorMsg);
+					$_POST["acao"] = "";
+				}
+			//}
 		//}
 		index();
 	}
