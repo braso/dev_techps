@@ -476,6 +476,10 @@
 			</div>
 			<style>
 				@media print {
+					@page {
+						size: A4 landscape;
+						margin: 1cm;
+					}
 					body {
 						margin: 1cm;
 						margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
@@ -488,21 +492,20 @@
 						top: 5px;
 						right: 20px;
 					}
-					form > div:nth-child(14) > div:nth-child(1),
-					form > div:nth-child(14) > div:nth-child(3),
-					form > div:nth-child(14) > div:nth-child(4),
-					form > div:nth-child(14) > div:nth-child(5),
-					form > div:nth-child(14) > div:nth-child(6),
-					form > div:nth-child(15) > div
+						
+					form > .row
 					{
 						display: none;
 					}
 
 					.portlet.light {
-						padding: 0px 20px 0px !important;
+						padding: 0px 10px !important; /* Reduzindo o padding */
+						font-size: 10px !important; /* Reduzindo o tamanho da fonte */
+						margin-bottom: 0px !important;
 					}
-					.row {
-						margin: 0px 0px 0px 0px !important;
+
+					.row div {
+						min-width: min-content !important;
 					}
 
 					form > div:nth-child(1){
