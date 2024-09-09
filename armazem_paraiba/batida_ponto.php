@@ -412,7 +412,7 @@
 			"<div class='col-sm-5 margin-bottom-5 margin-top-10	'>"
 				."Matrícula: ".$aMotorista["enti_tx_matricula"]."<br><br>"
 				."CPF: ".$aMotorista["enti_tx_cpf"]."<br><br>"
-				."Motorista: ".$aMotorista["enti_tx_nome"]."<br><br>"
+				."Nome: ".$aMotorista["enti_tx_nome"]."<br><br>"
 			."</div>",
 		];
 

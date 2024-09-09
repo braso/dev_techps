@@ -25,12 +25,14 @@
 	}
 
 	function buscarEspelho(){
+		$data_inicio_obj = new DateTime($_POST["busca_dataInicio"]);
+		$data_fim_obj = new DateTime($_POST["busca_dataFim"]);
 
 		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
 			$_POST["busca_motorista"] = $_SESSION["user_nb_entidade"];
 			$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
 		}
-
+		
 		//Confere se há algum erro na pesquisa{
 			$baseErrMsg = ["Insira os campos para pesquisar: ", "", ""];
 			$errorMsg = $baseErrMsg;
@@ -57,18 +59,22 @@
 			if(empty($_POST["busca_dataFim"])){
 				$errorMsg[0] .= "Data Fim, ";
 			}
-
+			
+			if ($data_fim_obj < $data_inicio_obj) {
+				$errorMsg[2] .= "A data final não pode ser anterior à data inicial.";
+			}
+			
 			if(!empty($_POST["busca_empresa"]) && !empty($_POST["busca_motorista"])){
 				if($_POST["busca_dataInicio"] > date("Y-m-d") || $_POST["busca_dataFim"] > date("Y-m-d")){
 					$errorMsg[1] = "Data de pesquisa não pode ser após hoje (".date("d/m/Y")."). ";
 				}
 
 				$motorista = mysqli_fetch_assoc(query(
-					"SELECT enti_nb_id, enti_tx_nome FROM entidade
+					"SELECT enti_nb_id, enti_tx_nome, enti_tx_dataCadastro FROM entidade
 						WHERE enti_tx_status = 'ativo'
 							AND enti_nb_empresa = ".$_POST["busca_empresa"]."
 							AND enti_nb_id = ".$_POST["busca_motorista"]."
-						LIMIT 1"
+						LIMIT 1;"
 				));
 
 				if(empty($motorista)){
@@ -89,13 +95,33 @@
 				$_POST["acao"] = "";
 			}
 
+			//Conferir se a data de início da pesquisa está antes do cadastro do motorista{
+				if(!empty($motorista)){
+					$baseErrMsg = [];
+					$errorMsg = $baseErrMsg; 
+					$data_cadastro = new DateTime($motorista["enti_tx_dataCadastro"]);
 
+					if(date_diff($data_cadastro, $data_inicio_obj)->invert){
+						$errorMsg = ["A data inicial deve ser anterior ao cadastro do motorista (".$data_cadastro->format("d/m/Y")."). "];
+					}
+				}
+
+				if($errorMsg != $baseErrMsg){
+					foreach($errorMsg as &$msg){
+						if(!empty($msg)){
+							$msg = substr($msg, 0, -2).".";
+						}
+					}
+					$errorMsg = implode("<br>", $errorMsg);
+					set_status("ERRO: ".$errorMsg);
+					$_POST["acao"] = "";
+				}
+			//}
 		//}
 		index();
 	}
 
 	function index(){
-
 		cabecalho("Espelho de Ponto");
 
 		$condBuscaMotorista = "";
@@ -314,6 +340,7 @@
 					<input type='hidden' name='id' value='".$aMotorista["enti_nb_id"]."'>
 					<input type='hidden' name='HTTP_REFERER' value=''>
 					<input type='hidden' name='data'>
+					<input type='hidden' name='busca_empresa' value='".$aMotorista['enti_nb_empresa']."'>
 					<input type='hidden' name='data_de' value='".((!empty($_POST["busca_dataInicio"])? $_POST["busca_dataInicio"]: date("01/m/Y")))."'>
 					<input type='hidden' name='data_ate' value='".$_POST["busca_dataFim"]."'>
 				</form>"

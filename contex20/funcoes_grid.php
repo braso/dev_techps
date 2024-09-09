@@ -148,13 +148,14 @@
 
 		?>
 
-		<form id='contex_icone_form' method='post' target='' action=''>
-			<input type='hidden' name='id' value='0'>
-			<input type='hidden' name='acao' value='sem_acao'>
-			<input type='hidden' name='data_de' value=''>
-			<input type='hidden' name='data_ate' value=''>
-			<input type='hidden' name='just' value=''>
-			<input type='hidden' id='hidden'>
+		<form id='contex_icone_form' method="post" target="" action="">
+			<input type="hidden" name="id" value="0">
+			<input type="hidden" name="acao" value="sem_acao">
+			<input type="hidden" name="data_de" value="">
+			<input type="hidden" name="data_ate" value="">
+			<input type="hidden" name="just" value="">
+			<input type="hidden" name="atualiza" value="">
+			<input type="hidden" id="hidden">
 		</form>
 		
 		<style type="text/css">

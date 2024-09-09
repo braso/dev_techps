@@ -41,8 +41,12 @@
 	}
 
 	function excluir_ponto(){
+		if(empty($_POST["id"]) || empty($_POST["just"]) || empty($_POST["atualiza"])){
+			return false;
+		}
+
 		$a=carregar("ponto", (int)$_POST["id"]);
-		remover_ponto((int)$_POST["id"],$_POST["just"]);
+		remover_ponto((int)$_POST["id"], $_POST["just"], $_POST["atualiza"]);
 		
 		$_POST["id"] = $_POST["idEntidade"];
 		$_POST["data"] = substr($a["pont_tx_data"],0, -9);

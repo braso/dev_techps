@@ -77,7 +77,8 @@
                     and u.user_nb_entidade is not null
                 left join empresa e on enti_nb_empresa = e.empr_nb_id 
                     and u.user_nb_entidade is not null
-                where u.user_nb_id = ".$userid
+                where u.user_tx_status = 'ativo' 
+                AND u.user_nb_id = ".$userid
         ;
 
         $data = get_data($query);
