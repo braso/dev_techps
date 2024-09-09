@@ -215,9 +215,13 @@
 		cabecalho("Registrar Ponto");
 		
 		if(empty($_SESSION["user_nb_entidade"])){
-			echo headers_sent();
-			echo "<script>alert('Motorista não localizado. Tente fazer o login novamente.')</script>";
-			header("Location: ".$CONTEX["path"]."/index.php");
+			echo 
+				"<form name='goToIndexForm' action='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php'></form>"
+				."<script>"
+					."alert('Motorista não localizado. Tente fazer o login novamente.');"
+					."document.goToIndexForm.submit();"
+				."</script>"
+			;
 			exit;
 		}
 
