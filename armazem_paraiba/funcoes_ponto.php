@@ -41,8 +41,12 @@
 	}
 
 	function excluir_ponto(){
+		if(empty($_POST["id"]) || empty($_POST["just"]) || empty($_POST["atualiza"])){
+			return false;
+		}
+
 		$a=carregar("ponto", (int)$_POST["id"]);
-		remover_ponto((int)$_POST["id"],$_POST["just"],$_POST["atualiza"]);
+		remover_ponto((int)$_POST["id"], $_POST["just"], $_POST["atualiza"]);
 		
 		$_POST["id"] = $_POST["idEntidade"];
 		$_POST["data"] = substr($a["pont_tx_data"],0, -9);
@@ -285,15 +289,17 @@
 	}
 
 	function ordenar_horarios($inicio, $fim, $ehEspera = false, $ehEsperaRepouso = false){
-		if(empty($inicio) && empty($fim)){
-			return [
-				"horariosOrdenados" => [],
-				"pares" => [],
-				"totalIntervalo" => "00:00",
-				"icone" => "",
-				"paresAdicionalNot" => "00:00",
-				"totalIntervaloAdicionalNot" => "00:00"
-			];
+		$pares_horarios = [
+			"horariosOrdenados" => [],
+			"pares" => [],
+			"totalIntervalo" => "00:00",
+			"icone" => "",
+			"paresAdicionalNot" => "00:00",
+			"totalIntervaloAdicionalNot" => "00:00"
+		];
+
+		if(empty($inicio) || empty($fim)){
+			return $pares_horarios;
 		}
 		// Inicializa o array resultante e o array de indicação
 		$horarios = [];
@@ -338,7 +344,8 @@
 		foreach ($horarios_com_origem as $item){
 			if($item["origem"] == "inicio"){
 				if(!empty($inicio_atual)){
-					$pares[] = ["inicio" => date("H:i", strtotime($inicio_atual)), "fim" => ""];
+					// $pares[] = ["inicio" => date("H:i", strtotime($inicio_atual)), "fim" => ""];
+					$pares[] = ["inicio" => $inicio_atual, "fim" => ""];
 					$temErroJornada = True;
 				}
 				$inicio_atual = $item["horario"];
@@ -350,12 +357,14 @@
 
 				// se intervalo > 2 horas && ehEspera true
 				if($ehEspera && (($interval->h*60) + $interval->i > 120)){
-					$paresParaRepouso[] = ["inicio" => date("H:i", strtotime($inicio_atual)), "fim" => date("H:i", strtotime($item["horario"]))];
+					// $paresParaRepouso[] = ["inicio" => date("H:i", strtotime($inicio_atual)), "fim" => date("H:i", strtotime($item["horario"]))];
+					$paresParaRepouso[] = ["inicio" => $inicio_atual, "fim" => $item["horario"]];
 				}else{
 					$totalIntervalo->add($interval);
 					$interval = $interval->format("%H:%I");
 				}
-				$pares[] = ["inicio" => date("H:i", strtotime($inicio_atual)), "fim" => date("H:i", strtotime($item["horario"])), "intervalo" => $interval];
+				// $pares[] = ["inicio" => date("H:i", strtotime($inicio_atual)), "fim" => date("H:i", strtotime($item["horario"])), "intervalo" => $interval];
+				$pares[] = ["inicio" => $inicio_atual, "fim" => $item["horario"], "intervalo" => $interval];
 
 				// VERIFICA HORA SE HÁ HORA EXTRA ACIMA DAS 22:00
 				if($hFim > $dtFimAdicionalNot){
@@ -370,10 +379,10 @@
 
 					$intervalAdicionalNot = $hInicioAdicionalNot->diff($hFim);
 					$totalIntervaloAdicionalNot->add($intervalAdicionalNot);
-					
-					$intervalAdicionalNot = $intervalAdicionalNot->format("%H:%I");
-					
 
+					$intervalAdicionalNot = $intervalAdicionalNot->format("%d %H:%I");
+					
+					
 					$paresAdicionalNot[] = ["inicio" => $incioExtra, "fim" => $fimExtra, "intervalo" => $intervalAdicionalNot];
 				}
 
@@ -403,13 +412,14 @@
 			}
 		}
 		if($item["origem"] == "inicio"){
-			$pares[] = ["inicio" => date("H:i", strtotime($item["horario"])), "fim" => ""];
+			// $pares[] = ["inicio" => date("H:i", strtotime($item["horario"])), "fim" => ""];
+			$pares[] = ["inicio" => $item["horario"], "fim" => ""];
 		}
 
 		$tooltip = "";
 		for($f = 0; $f < count($pares); $f++){
-			$tooltip .= "Início: "." ".$pares[$f]["inicio"]."\n"
-				."Fim: "." ".$pares[$f]["fim"]."\n\n";
+			$tooltip .= "Início:_".$pares[$f]["inicio"]."\n"
+				."Fim:___".$pares[$f]["fim"]."\n\n";
 		}
 		$iconeAlerta = "";
 		if(!((count($inicio)+count($fim) == 0) || empty($tooltip))){
@@ -491,10 +501,8 @@
 
 		$jornadaPrevistaOriginal = $jornadaPrevista;
 		$jornadaPrevista = (new DateTime($data." ".$jornadaPrevista))->format("H:i");
-		if($abono !== null){
-			if ($jornadas["feriado"] === null) {
-				$jornadaPrevista = (new DateTime($data." ".$abono))->diff(new DateTime($data." ".$jornadaPrevista))->format("%H:%I");
-			}
+		if($abono !== null || $jornadas["feriado"] === null){
+			$jornadaPrevista = (new DateTime($data." ".$abono))->diff(new DateTime($data." ".$jornadaPrevista))->format("%H:%I");
 		}
 
 		return [$jornadaPrevistaOriginal, $jornadaPrevista];
@@ -621,8 +629,7 @@
 				
 				$pontosDiaSeguinte = [];
 				if(!empty($dataProxFim["pont_tx_data"])){
-					$pontosDiaSeguinte = mysqli_fetch_all(
-						query(
+					$pontosDiaSeguinte = mysqli_fetch_all(query(
 							"SELECT macroponto.macr_tx_nome, ponto.* FROM ponto 
 							JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
 							WHERE pont_tx_status = 'ativo' 
@@ -630,9 +637,7 @@
 								AND pont_tx_data > '".$data." 23:59:59'
 								AND pont_tx_data <= '".$dataProxFim["pont_tx_data"]."'
 							ORDER BY pont_tx_data ASC;"
-						),
-						MYSQLI_ASSOC
-					);
+					),MYSQLI_ASSOC);
 				}
 
 				for($f = 0; $f < count($pontosDiaSeguinte); $f++){
@@ -682,30 +687,13 @@
 			$diffJornada = "00:00";
 		}
 
-		if(is_bool(strpos($aParametro["para_tx_ignorarCampos"], "refeicao"))){
-			$registros["refeicaoCompleto"] = ordenar_horarios($registros["inicioRefeicao"], $registros["fimRefeicao"]);		/* $refeicaoOrdenada */
-		}else{
-			$registros["refeicaoCompleto"] = ordenar_horarios([], []);
+		foreach(["refeicao", "espera", "descanso", "repouso"] as $campoIgnorado){
+			if(is_bool(strpos($aParametro["para_tx_ignorarCampos"], $campoIgnorado))){
+				$registros[$campoIgnorado."Completo"] = ordenar_horarios($registros["inicio".ucfirst($campoIgnorado)], $registros["fim".ucfirst($campoIgnorado)]);		/* $refeicaoOrdenada */
+			}else{
+				$registros[$campoIgnorado."Completo"] = ordenar_horarios([], []);
+			}
 		}
-
-		if(is_bool(strpos($aParametro["para_tx_ignorarCampos"], "espera"))){
-			$registros["esperaCompleto"] = ordenar_horarios($registros["inicioEspera"],   $registros["fimEspera"], True);	/* $esperaOrdenada */
-		}else{
-			$registros["esperaCompleto"] = ordenar_horarios([], []);
-		}
-
-		if(is_bool(strpos($aParametro["para_tx_ignorarCampos"], "descanso"))){
-			$registros["descansoCompleto"] = ordenar_horarios($registros["inicioDescanso"], $registros["fimDescanso"]);		/* $descansoOrdenado */
-		}else{
-			$registros["descansoCompleto"] = ordenar_horarios([], []);
-		}
-
-		if(is_bool(strpos($aParametro["para_tx_ignorarCampos"], "repouso"))){
-			$registros["repousoCompleto"]  = ordenar_horarios($registros["inicioRepouso"], $registros["fimRepouso"]);		/* $repousoOrdenado */
-		}else{
-			$registros["repousoCompleto"] = ordenar_horarios([], []);
-		}
-
 		
 		//REPOUSO POR ESPERA{
 			if(isset($registros["esperaCompleto"]["paresParaRepouso"]) && !empty($registros["esperaCompleto"]["paresParaRepouso"])){
@@ -727,7 +715,6 @@
 				$registros[$campo."Completo"]["totalIntervalo"]
 			;
 
-			
 			$totalIntervalo = date_diff(new DateTime($data." 00:00"), $totalIntervalo);
 			if($totalIntervalo->s > 0){
 				$totalIntervalo->i++;
@@ -737,9 +724,8 @@
 					$totalIntervalo->i -= 60;
 				}
 			}
-
 			$totalIntervalo = formatToTime($totalIntervalo->days*24+$totalIntervalo->h, $totalIntervalo->i);
-
+			
 			$registros[$campo."Completo"]["totalIntervalo"] = $totalIntervalo;
 		}
 		$totalIntervalo = (is_string($registros["repousoPorEspera"]["repousoCompleto"]["totalIntervalo"]))?
@@ -995,27 +981,23 @@
 			// 	$registros["descansoCompleto"]["totalIntervalo"]
 			// );
 
-			$intervalos = [];
-			$interAtivo = null;
-			foreach($pontosDia as $ponto){
-				if(empty($interAtivo)){
+			if(is_bool(strpos($aParametro["para_tx_ignorarCampos"], "mdc"))){
+				$intervalos = [];
+				$interAtivo = null;
+				foreach($pontosDia as $ponto){
+					if(empty($interAtivo)){
+						$interAtivo = new DateTime($ponto["pont_tx_data"]);
+						continue;
+					}
+					
+					$intervalos[] = [
+						!($tipos[$ponto["pont_tx_tipo"]] == "inicioJornada" || (is_int(strpos($tipos[$ponto["pont_tx_tipo"]], "fim")) && $tipos[$ponto["pont_tx_tipo"]] != "fimJornada")), 
+						date_diff($interAtivo, new DateTime($ponto["pont_tx_data"]))
+					];
 					$interAtivo = new DateTime($ponto["pont_tx_data"]);
-					continue;
 				}
-				
-				$intervalos[] = [
-					!($tipos[$ponto["pont_tx_tipo"]] == "inicioJornada" || (is_int(strpos($tipos[$ponto["pont_tx_tipo"]], "fim")) && $tipos[$ponto["pont_tx_tipo"]] != "fimJornada")), 
-					date_diff($interAtivo, new DateTime($ponto["pont_tx_data"]))
-				];
-				$interAtivo = new DateTime($ponto["pont_tx_data"]);
+				$aRetorno["maximoDirecaoContinua"] = verificarAlertaMDC($intervalos);
 			}
-			
-			if(is_bool(strpos($aParametro["para_tx_ignorarCampos"], "maximoDirecaoContinua"))){
-				$aRetorno["maximoDirecaoContinua"] = verificarAlertaMDC($intervalos);	/* $repousoOrdenado */
-			}else{
-				$aRetorno["maximoDirecaoContinua"] = "";
-			}
-			// $aRetorno["maximoDirecaoContinua"] = verificarAlertaMDC($intervalos);
 		//}
 
 		//JORNADA MÍNIMA
@@ -1234,32 +1216,35 @@
 			$aRetorno["diffSaldo"] = "<b>".$aRetorno["diffSaldo"]."</b>";
 		}
 
-		$ultimoFimJornada = [];
-		if(count($aRetorno["fimJornada"]) > 0){
-			for($f = count($aRetorno["fimJornada"])-1; $f >= 0; $f--){
-				if(preg_match("/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/", $aRetorno["fimJornada"][$f])){
-					$ultimoFimJornada = [
-						"key" => $f, 
-						"value" => $aRetorno["fimJornada"][$f]
-					];
-					break;
+		foreach(["inicioJornada", "fimJornada", "inicioRefeicao", "fimRefeicao"] as $tipo){
+			$pontos = [];
+			if(count($aRetorno[$tipo]) > 0){
+				foreach($aRetorno[$tipo] as $ponto){
+					if(preg_match("/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/", $ponto)){
+						$pontos[] = [
+							"key" => count($pontos),
+							"value" => $ponto
+						];
+					}
 				}
 			}
-		}else{
-			$ultimoFimJornada = null;
+
+			
+			if(!empty($pontos)){
+				$dataDia = DateTime::createFromFormat("d/m/Y H:i:s", $aRetorno["data"]." 00:00:00");
+				foreach($pontos as $ponto){
+					$dataFim = DateTime::createFromFormat("Y-m-d H:i:s", $ponto["value"]);
+					$qttDias = date_diff($dataDia, $dataFim);
+					if(!is_bool($qttDias)){
+						$qttDias = intval($qttDias->format("%d"));
+						if($qttDias > 0){
+							array_splice($aRetorno[$tipo], $ponto["key"]+1, 0, "D+".$qttDias);
+						}
+					}
+				}
+			}
 		}
 
-		if(!empty($ultimoFimJornada)){
-			$dataDia = DateTime::createFromFormat("d/m/Y H:i:s", $aRetorno["data"]." 00:00:00");
-			$dataFim = DateTime::createFromFormat("Y-m-d H:i:s", $ultimoFimJornada["value"]);
-			$qttDias = date_diff($dataDia, $dataFim);
-			if(!is_bool($qttDias)){
-				$qttDias = intval($qttDias->format("%d"));
-				if($qttDias > 0){
-					array_splice($aRetorno["fimJornada"], $ultimoFimJornada["key"]+1, 0, "D+".$qttDias);
-				}
-			}
-		}
 
 		//Converter array em string{
 			$legendas = mysqli_fetch_all(query(

@@ -9,7 +9,7 @@
 	//*/
 
 	include "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
-
+	
 	function cadastro_abono(){
 		unset($_POST["acao"]);
 		$form = "<form id='cadastrarAbono' action='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_abono.php' method='post'>";
@@ -254,47 +254,44 @@
 			criarFuncoesDeAjuste();
 
 
+			$parametroPadrao = "Convenção Não Padronizada, Semanal (".$aMotorista["enti_tx_jornadaSemanal"]."), Sábado (".$aMotorista["enti_tx_jornadaSabado"].")";
+
 			if(!empty($aEmpresa["empr_nb_parametro"])){
-				$parametroPadrao = carregar("parametro", $aEmpresa["empr_nb_parametro"]);
-				if(
-					$parametroPadrao["para_tx_jornadaSemanal"] 		!= $aMotorista["enti_tx_jornadaSemanal"] ||
-					$parametroPadrao["para_tx_jornadaSabado"] 		!= $aMotorista["enti_tx_jornadaSabado"] ||
-					$parametroPadrao["para_tx_percentualHE"] 		!= $aMotorista["enti_tx_percentualHE"] ||
-					$parametroPadrao["para_tx_percentualSabadoHE"] 	!= $aMotorista["enti_tx_percentualSabadoHE"] ||
-					$parametroPadrao["para_nb_id"] 					!= $aMotorista["enti_nb_parametro"]
-				){
-					$parametroPadrao = "Convenção Não Padronizada, Semanal (".$aMotorista["enti_tx_jornadaSemanal"]."), Sábado (".$aMotorista["enti_tx_jornadaSabado"].")";
-				}else{
-					$parametroPadrao = "Convenção Padronizada: ".$parametroPadrao["para_tx_nome"].", Semanal (".$parametroPadrao["para_tx_jornadaSemanal"]."), Sábado (".$parametroPadrao["para_tx_jornadaSabado"].")";
+				$parametroEmpresa = mysqli_fetch_assoc(query(
+					"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percentualHE, para_tx_percentualSabadoHE, para_nb_id, para_tx_nome, para_tx_jornadaSemanal, para_tx_jornadaSabado FROM parametro"
+						." WHERE para_tx_status = 'ativo'"
+							." AND para_nb_id = ".$aEmpresa["empr_nb_parametro"]
+						." LIMIT 1;"
+				));
+				if(array_keys(array_intersect($parametroEmpresa, $aMotorista)) == ["para_tx_jornadaSemanal", "para_tx_jornadaSabado", "para_tx_percentualHE", "para_tx_percentualSabadoHE", "para_nb_id"]){
+					$parametroPadrao = "Convenção Padronizada: ".$parametroEmpresa["para_tx_nome"].", Semanal (".$parametroEmpresa["para_tx_jornadaSemanal"]."), Sábado (".$parametroEmpresa["para_tx_jornadaSabado"].")";
 				}
-			}else{
-				$parametroPadrao = "Convenção Não Padronizada, Semanal (".$aMotorista["enti_tx_jornadaSemanal"]."), Sábado (".$aMotorista["enti_tx_jornadaSabado"].")";
 			}
 
-			$saldoAnterior = mysqli_fetch_assoc(
-				query(
-					"SELECT endo_tx_saldo FROM endosso
-						WHERE endo_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'
-							AND endo_tx_ate < '".$_POST["busca_dataInicio"]."'
-							AND endo_tx_status = 'ativo'
-						ORDER BY endo_tx_ate DESC
-						LIMIT 1;"
-				)
-			);
-			if(isset($saldoAnterior["endo_tx_saldo"])){
-				$saldoAnterior = $saldoAnterior["endo_tx_saldo"];
+			$ultimoEndosso = mysqli_fetch_assoc(query(
+					"SELECT endo_tx_filename FROM endosso"
+						." WHERE endo_tx_status = 'ativo'"
+							." AND endo_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'"
+							." AND endo_tx_ate < '".$_POST["busca_dataInicio"]."'"
+						." ORDER BY endo_tx_ate DESC"
+						." LIMIT 1;"
+			));
+
+			
+			
+			$saldoAnterior = "";
+			if(!empty($ultimoEndosso)){
+				$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
+				$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoFinal"];
 			}elseif(!empty($aMotorista["enti_tx_banco"])){
 				$saldoAnterior = $aMotorista["enti_tx_banco"];
 				$saldoAnterior = $saldoAnterior[0] == "0" && strlen($saldoAnterior) > 5? substr($saldoAnterior, 1): $saldoAnterior;
-			}else{
-				$saldoAnterior = "--:--";
 			}
 
-			$saldoFinal = "--:--";
-			if($saldoAnterior != "--:--"){
-				$saldoFinal = somarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]]);
-			}else{
-				$saldoFinal = $totalResumo["diffSaldo"];
+
+			$saldoFinal = $totalResumo["diffSaldo"];
+			if(!empty($saldoAnterior)){
+				$saldoFinal = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
 			}
 			
 
@@ -310,9 +307,9 @@
 						</thead>
 						<tbody>
 							<tr>
-								<td>".$saldoAnterior."</td>
-								<td>".$totalResumo["diffSaldo"]."</td>
-								<td>".$saldoFinal."</td>
+								<td>".($saldoAnterior?? "--:--")."</td>
+								<td>".($totalResumo["diffSaldo"]?? "--:--")."</td>
+								<td>".($saldoFinal?? "--:--")."</td>
 							</tr>
 						</tbody>
 					</table>
@@ -339,7 +336,8 @@
 			echo   
 				"<form name='form_ajuste_ponto' method='post'>
 					<input type='hidden' name='acao' value='layout_ajuste'>
-					<input type='hidden' name='id' value='". $aMotorista["enti_nb_id"] ."'>
+					<input type='hidden' name='busca_empresa' value='".$_POST["busca_empresa"]."'>
+					<input type='hidden' name='id' value='".$aMotorista["enti_nb_id"]."'>
 					<input type='hidden' name='HTTP_REFERER' value=''>
 					<input type='hidden' name='data'>
 					<input type='hidden' name='busca_empresa' value='".$aMotorista['enti_nb_empresa']."'>

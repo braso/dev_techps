@@ -63,10 +63,10 @@
             "SELECT 
                 distinct user_nb_id                                     as id, 
                 coalesce(user_tx_nome,enti_tx_nome)                     as name,
-                coalesce(user_tx_matricula,enti_tx_matricula)           as registration,
+                enti_tx_matricula                                       as registration,
                 coalesce(e.empr_tx_nome)                                as company,
                 coalesce(user_tx_cpf,enti.enti_tx_cpf)  				as cpf,
-                coalesce(user_tx_rg)              as rg,
+                coalesce(user_tx_rg)                                    as rg,
                 enti.enti_tx_cnhRegistro                                as cnh,
                 user_tx_email                                           as email,
                 user_tx_nivel                                           as role,

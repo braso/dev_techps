@@ -1,6 +1,6 @@
 <link rel="stylesheet" href="../css/paineis.css">
 <div id="printTitulo">
-	<img style='width: 150px' src="<?= $aEmpresa[0]['empr_tx_logo']?>" alt="Logo Empresa Esquerda">
+	<img style='width: 150px' src="<?=$logoEmpresa?>" alt="Logo Empresa Esquerda">
 	<h3>Relatorio Geral de saldo</h3>
 	<div class="right-logo">
 		<img style='width: 150px' src="<?=$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
@@ -10,7 +10,7 @@
 	<div class="portlet light ">
 		<div class="table-responsive">
 			<div>
-				<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact' id='tabela1'>
+				<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact' id='tabela1'>
                     <thead>
                         <tr>
                             <th colspan='1'>STATUS</th>
@@ -36,7 +36,7 @@
 						</tr>
                     </tbody>
                 </table>
-                <table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact' id='tabela2'>
+                <table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact' id='tabela2'>
                     <thead>
                         <tr>
                             <th colspan='1'>SALDO FINAL</th>
@@ -63,12 +63,12 @@
                     </tbody>
                 </table>
 				<div class='emissao'>
-					<?=(!empty($dataEmissao)? "<b>Atualizado em:</b> ".$dataEmissao."<br>": "")
+					<?=$dataEmissao."<br>"
 					."<b>Período do relatório:</b> ".$periodoRelatorio["dataInicio"]." a ".$periodoRelatorio["dataFim"]?>
 				</div>
 			</div>
 			<div class="portlet-body form">
-				<table id="tabela-empresas" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact">
+				<table id="tabela-empresas" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
 					<thead>
 						<?=$rowTotais?>
 						<?=$rowTitulos?>

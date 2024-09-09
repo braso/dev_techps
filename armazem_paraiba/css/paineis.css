@@ -1,5 +1,6 @@
 body{
     --var-blue: #66B4FF;
+    --var-darkblue: #487fb3;
     --var-red: #FF4719;
     --var-yellow: #F1C413;
     --var-green: #00B33D;
@@ -12,7 +13,7 @@ body{
 #tabela1 {
     min-width:30%;
     text-align: center;
-    display: none;
+    /* display: none; */
     margin-right:20px;
 }
 
@@ -67,6 +68,11 @@ body{
     align-content: center;
 }
 
+.titulos th:hover{
+    background-color: var(--var-darkblue);
+    color: white;
+}
+
 #printTitulo {
     display: none;
 }
@@ -78,6 +84,11 @@ th.sort-asc::after {
 th.sort-desc::after {
     content: " \2193";
 }
+
+#tabela-empresas tbody tr td:first-child:hover{
+    background-color: #b5b8bb;
+}
+
 #impressao{
     display: none;
 }

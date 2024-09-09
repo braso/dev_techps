@@ -1,5 +1,5 @@
 deployment:
   tasks:
-    - export GITPATH=/home/techpsjornada/repositories/dev_techps/armazem_paraiba/*
-    - export DEPLOYPATH=/home/techpsjornada/public_html/dev/armazem_paraiba/
+    - export GITPATH=/home/techpsjornada/repositories/dev_techps/*
+    - export DEPLOYPATH=/home/techpsjornada/public_html/dev/
     - /bin/cp -R $GITPATH $DEPLOYPATH

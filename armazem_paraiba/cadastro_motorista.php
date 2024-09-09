@@ -215,11 +215,11 @@
 			unset($camposObrig);
 		//}
 
-		$matriculaExistente = mysqli_fetch_assoc(
-			query(
-				"SELECT * FROM entidade WHERE enti_tx_matricula = '".($_POST["postMatricula"]?? "-1")."' LIMIT 1;"
-			)
-		);
+		$matriculaExistente = mysqli_fetch_assoc(query(
+			"SELECT * FROM entidade"
+				." WHERE enti_tx_matricula = '".($_POST["postMatricula"]?? "-1")."'"
+			." LIMIT 1;"
+		));
 		$matriculaExistente = !empty($matriculaExistente);
 
 		if($matriculaExistente && !isset($_POST["id"])){
@@ -235,8 +235,13 @@
 		}
 
 		if(!empty($_POST["login"])){
-			$otherUser = mysqli_fetch_assoc(query("SELECT * FROM user WHERE user_tx_matricula = '".($_POST["login"]?? $_POST["postMatricula"])."' LIMIT 1"));
-			if (!empty($otherUser) && strval($otherUser["user_tx_matricula"]) != strval($_POST["postMatricula"]) && $otherUser["user_tx_login"] == $_POST["login"]){
+			$otherUser = mysqli_fetch_assoc(query(
+				"SELECT * FROM user"
+					." WHERE user_tx_status = 'ativo'"
+						." AND user_tx_login = '".$_POST["login"]."'"
+					." LIMIT 1;"
+			));
+			if(!empty($otherUser)){
 				set_status("ERRO: Login já cadastrado.");
 				$a_mod = $_POST;
 				modificarMotorista();
@@ -560,7 +565,7 @@
 			campo(	  	"Nome do Cônjuge",	 	"conjugue", 		($a_mod["enti_tx_conjugue"]?? ""),		3, "", 					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"Tipo de Operação", 	"tipoOperacao", 	($a_mod["enti_tx_tipoOperacao"]?? ""),	3, "", 					"maxlength='40' tabindex=".sprintf("%02d", $tabIndex++)),
 
-			ckeditor(	"Observações:", "obs", ($a_mod["enti_tx_obs"]?? ""), 12, "tabindex=".sprintf("%02d", $tabIndex++))
+			textarea(	"Observações:", "obs", ($a_mod["enti_tx_obs"]?? ""), 12, "tabindex=".sprintf("%02d", $tabIndex++))
 		]);
 
 		$extraEmpresa = "";

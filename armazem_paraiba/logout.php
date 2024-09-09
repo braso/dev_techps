@@ -2,5 +2,9 @@
 	session_start();
 	$_SESSION = [];
     session_destroy();
+?>
 
-	echo "<meta http-equiv='refresh' content='0; url=./../index.php' />";
+<form name='logoutForm' action='../index.php' method='post'>
+	<input type='text' name='sourcePage' value='<?=($_POST["sourcePage"]?? "")?>'>
+</form>
+<script>document.logoutForm.submit();</script>

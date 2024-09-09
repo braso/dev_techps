@@ -1,6 +1,6 @@
 <?php
 	/* Modo debug
-		ini_set('display_errors', 1);
+		ini_set("display_errors", 1);
 		error_reporting(E_ALL);c
 	//*/
 	function mysql_escape_mimic($inp) {
@@ -8,7 +8,7 @@
 			return array_map(__METHOD__, $inp);
 
 		if(!empty($inp) && is_string($inp)) {
-			return str_replace(array('\\', "\0", "\n", "\r", "'", '"', "\x1a"), array('\\\\', '\\0', '\\n', '\\r', "\\'", '\\"', '\\Z'), $inp);
+			return str_replace(["\\", "\0", "\n", "\r", "'", "'", "\x1a"], ["\\\\", "\\0", "\\n", "\\r", "\\'", "\\'", "\\Z"], $inp);
 		}
 
 		return $inp;
@@ -33,60 +33,52 @@
 	function grid2($cabecalho,$valores){
 		// $rand = md5($sql);
 
-		echo '<div class="table-responsive">';
-		echo "<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact'"./*id=$rand.*/">";
-		
+		$grid = 
+			"<div class='table-responsive'>"
+			."<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact'"/*.id=$rand*/.">"
+		;
+
 		if(count($cabecalho)>0){
 
-			echo "<thead><tr>";
+			$grid .= "<thead><tr>";
 
 			for($i=0;$i<count($cabecalho);$i++){
-				echo "<th class='th-align'>$cabecalho[$i]</th>";
+				$grid .= "<th class='th-align'>".$cabecalho[$i]."</th>";
 			}
 
-			echo "</thead></tr>";
+			$grid .= "</thead></tr>";
 		}
 
 		if(count($valores)>0){
-			echo "<tbody>";
+			$grid .= "<tbody>";
 			
 			for($i=0;$i<count($valores);$i++){
-				echo "<tr>";
+				$grid .= "<tr>";
 				for($j=0;$j<count($valores[$i]);$j++){
-					echo "<td>".$valores[$i][$j]."</td>";
+					$grid .= "<td>".$valores[$i][$j]."</td>";
 				}
-				echo "</tr>";
+				$grid .= "</tr>";
 			}
 
-			echo "</tbody>";
+			$grid .= "</tbody>";
 		}
 
-		echo "</table>";
-		echo "(*): Registros excluídos manualmente.<br>";
-		echo "(**): 00:00 Caso esteja dentro da tolerância";
-		echo '</div>';
+		$grid .= "</table>"
+			."(*): Registros excluídos manualmente.<br>"
+			."(**): 00:00 Caso esteja dentro da tolerância"
+			."</div>"
+		;
 
-		
-		?>
-		<!-- 
-		<form id='contex_icone_form' method="post" target="" action="">
-			<input type="hidden" name="id" value="0">
-			<input type="hidden" name="acao" value="sem_acao">
-			<input type="hidden" id="hidden">
-		</form>
-		-->
-		<?php
-		// js_contex_icone();
-
+		echo $grid;
 	}
 
 	function js_contex_icone(){
-		echo '
-			<script type="text/javascript">
-				function contex_icone(id,acao,campos=\'\',valores=\'\',target=\'\',msg=\'\',action=\'\',data_de=\'\',data_ate=\'\',just=\'\'){
+		echo "
+			<script type='text/javascript'>
+				function contex_icone(id,acao,campos='',valores='',target='',msg='',action='',data_de='',data_ate='',just=''){
 					if(msg){
 						if(confirm(msg)){
-							var form = document.getElementById("contex_icone_form"); 
+							var form = document.getElementById('contex_icone_form'); 
 							form.target=target;
 							form.action=action;
 							form.id.value=id;
@@ -97,15 +89,15 @@
 								form.hidden.value=valores;
 								form.hidden.name=campos;
 							}
-							campos = campos.split(\',\');
-							valores = valores.split(\',\');
+							campos = campos.split(',');
+							valores = valores.split(',');
 							for(f = 0; f < campos.length; f++){
-								form.append(\'<input type="hidden" name="\'+campos[f]+\'" value="\'+valores[f]+\'" /> \');
+								form.append('<input type=\"hidden\" name=\"'+campos[f]+'\" value=\"'+valores[f]+'\" /> ');
 							}
 							form.submit();
 						}
 					}else{
-						var form = document.getElementById("contex_icone_form"); 
+						var form = document.getElementById('contex_icone_form'); 
 						form.target=target;
 						form.action=action;
 						form.id.value=id;
@@ -117,36 +109,43 @@
 							form.hidden.value=valores;
 							form.hidden.name=campos;
 						}
-						campos = campos.split(\',\');
-						valores = valores.split(\',\');
+						campos = campos.split(',');
+						valores = valores.split(',');
 						for(f = 0; f < campos.length; f++){
-							form.append(\'<input type="hidden" name="\'+campos[f]+\'" value="\'+valores[f]+\'" /> \');
+							form.append('<input type=\"hidden\" name=\"'+campos[f]+'\" value=\"'+valores[f]+'\" /> ');
 						}
 						form.submit();
 					}
-
 				}
-
 			</script>
-		';
+		";
 	}
 
-	function grid($sql,$cabecalho,$valores=[],$label='',$col='12',$ordenar_coluna=1,$ordenar_sentido='asc',$paginar='10'){
+	function grid($sql,$cabecalho,$valores=[],$label="",$col="12",$ordenar_coluna=1,$ordenar_sentido="asc",$paginar="10"){
 		global $CONTEX;
 
 		$sql = urldecode(str_replace(["%0D", "%0A", "%09"], " ", urlencode($sql)));
 
-		$paginar = (empty($paginar))? '10': $paginar;
-		$col = ($col < 1)? '12': $col;
+		$paginar = (empty($paginar))? "10": $paginar;
+		$col = ($col < 1)? "12": $col;
 		
 		js_contex_icone();
 
 		$rand = md5($sql);
 
-		for($i=0; $i<count($cabecalho); $i++){
-			$cabecalho[$i] = "<th>$cabecalho[$i]</th>";
+		$cabecalho = "<th>".implode("</th><th>", $cabecalho)."</th>";
+		
+		if(!empty($label)){
+			$label = 
+				"<div class='portlet-title'>
+						<div class='caption'>
+							<span class='caption-subject font-dark bold uppercase'>".$label."</span>
+						</div>
+						<!-- <div class='tools'> </div> -->
+				</div>"
+			;
 		}
-		$cabecalho = implode('', $cabecalho);
+
 		?>
 
 		<form id='contex_icone_form' method="post" target="" action="">
@@ -170,26 +169,20 @@
 				form > div:nth-child(2) > div:nth-child(6),
 				form > div:nth-child(3) > div,
 				form > div.form-actions,
-				#contex-grid-<?=$rand?>_length,
-				#contex-grid-<?=$rand?>_info,
-				body > div.scroll-to-top > i
-				{
+				<?="#contex-grid-".$rand."_length,"?>
+				<?="#contex-grid-".$rand."_info,"?>
+				body > div.scroll-to-top > i{
 					display: none;
 				}
-				@page { size: landscape; }	
+				@page{
+					size: landscape;
+				}
 			}
 		</style>
 				<!-- BEGIN EXAMPLE TABLE PORTLET-->
 				<div class="col-md-<?=$col?> col-sm-<?=$col?>">
 					<div class="portlet light ">
-						<?php if($label!=''){?>
-						<div class="portlet-title">
-								<div class="caption">
-									<span class="caption-subject font-dark bold uppercase"><?=$label?></span>
-								</div>
-								<!-- <div class="tools"> </div> -->
-						</div>
-						<?php }?>
+						<?=$label?>
 						<div class="portlet-body">
 							<table id="contex-grid-<?=$rand?>" class="table compact table-striped table-bordered table-hover dt-responsive" width="100%" id="sample_2">
 								<thead>

@@ -253,7 +253,9 @@
 			exit;
 		}
 		
-		$_POST['acao'] = "index";
+		if(empty($_POST['acao']) || $_POST["acao"] == "voltar()"){
+			$_POST['acao'] = "index";
+		}
 		
 		$formVoltar = "<form action='".str_replace($_ENV["URL_BASE"], "", $_POST["HTTP_REFERER"])."' name='form_voltar' method='post'>";
 		foreach($_POST as $key => $value){

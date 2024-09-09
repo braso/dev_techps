@@ -135,8 +135,7 @@
 				"verificados" => 0,							//countVerificados
 				"endossados" => ["sim" => 0, "nao" => 0],	//countEndossados e $countNaoEndossados
 			];
-			if(!empty($_POST["busca_data"]) && !empty($_POST["busca_empresa"])){
-
+			if(!empty($_POST["busca_empresa"])){
 				$date = new DateTime($_POST["busca_data"]);
 
 				$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $date->format("m"), $date->format("Y"));
@@ -174,7 +173,7 @@
 							}
 							
 							$aDetalhado = diaDetalhePonto($aMotorista["enti_tx_matricula"], $dataVez);
-		
+							
 							$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $dataVez, $aMotorista["enti_nb_id"])], $aDetalhado));
 							for($f = 0; $f < sizeof($row)-1; $f++){
 								if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
@@ -188,7 +187,7 @@
 						}
 					//}
 					criarFuncoesDeAjuste();
-
+					
 					if (count($aDia) > 0) {
 
 						$aEndosso = carrega_array(query(
@@ -234,7 +233,7 @@
 						));
 						$dataCicloProx = strtotime($dadosParametro["para_tx_dataCadastro"]);
 						if($dataCicloProx !== false){
-							while($dataCicloProx < strtotime($aEndosso["endo_tx_ate"])){
+							while(!empty($aEndosso["endo_tx_ate"]) && $dataCicloProx < strtotime($aEndosso["endo_tx_ate"])){
 								$dataCicloProx += intval($dadosParametro["para_nb_qDias"])*60*60*24;
 							}
 						}
