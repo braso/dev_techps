@@ -47,11 +47,12 @@
 		}
 
 		echo 
-			"<form action='".$formAction."' name='".$formName."' method='post'>
-				<input type='hidden' name='dominio' value='".($_POST["dominio"]?? '')."'>
-				<input type='hidden' name='user' value='".($_POST["user"]?? '')."'>
-				<input type='hidden' name='password' value='".($_POST["password"]?? '')."'>
-			</form>"
+			"<form action='".$formAction."' name='".$formName."' method='post'>"
+				."<input type='hidden' name='dominio' value='".($_POST["dominio"]?? '')."'>"
+				."<input type='hidden' name='user' value='".($_POST["user"]?? '')."'>"
+				."<input type='hidden' name='password' value='".($_POST["password"]?? '')."'>"
+				.(!empty($_POST["sourcePage"])? "<input type='hidden' name='sourcePage' value='".($_POST["sourcePage"]?? '')."'>": "")
+			."</form>"
 		;
 		echo "<script>document.".$formName.".submit();</script>";
 		
