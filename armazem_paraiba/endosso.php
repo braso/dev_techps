@@ -429,8 +429,19 @@
 						$aEmpresa = carregar("empresa", $aMotorista["enti_nb_empresa"]);
 						$buttonInprimir = "";
 						if (empty($_POST["busca_motorista"])){
-							$buttonInprimir = "<button name='acao' id='botaoContexCadastrar ImprimirRelatorio_".$aMotorista["enti_tx_matricula"]."' value='impressao_relatorio' type='button' class='btn btn-default' 
-							style='position: absolute; top: 20px; left: 420px;'>Imprimir Relatório</button>";
+							$buttonInprimir = 
+								"<button"
+									." name='acao'"
+									." id='botaoContexCadastrar ImprimirRelatorio_".$aMotorista["enti_tx_matricula"]."'"
+									." value='impressao_relatorio'"
+									." type='button'"
+									." class='btn btn-default'"
+									." style='position: absolute; top: 20px; left: 420px;'"
+									// ." disabled"
+								.">"
+									."Imprimir Relatório"
+								."</button>"
+							;
 						}
 
 						abre_form(
@@ -494,12 +505,11 @@
 			if(empty($_POST["busca_motorista"]) || (!empty($_POST["busca_motorista"]) && $counts["endossados"]["sim"] == 0)){
 				echo 
 					"<script>
-						(function(){
-							button = document.getElementById('botaoContexCadastrar ImprimirRelatorio');
-							button.setAttribute('disabled', true);
-							button.setAttribute('title', 'Pesquise um motorista endossado para efetuar a impressão do endosso.');
-							return;
-						})();
+						button = document.getElementById('botaoContexCadastrar ImprimirRelatorio');
+						button.setAttribute('disabled', true);
+						button.setAttribute('title', 'Pesquise um motorista endossado para efetuar a impressão do endosso.');
+
+						btnsImprimir = document.getElementsByName('');
 					</script>"
 				;
 			}
