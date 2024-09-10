@@ -72,9 +72,9 @@
 			"pont_tx_dataCadastro" 	=> $hoje." ".date("H:i:s")
 		];
 
-		foreach([] as $key => $value){
+		// foreach([] as $key => $value){
 
-		}
+		// }
 
 		if(!empty($_POST["motivo"])){
 			$novoPonto["pont_nb_motivo"] = $_POST["motivo"];
