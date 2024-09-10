@@ -1,5 +1,27 @@
 deployment:
   tasks:
-    - export GITPATH=/home/techpsjornada/repositories/dev_techps/*
-    - export DEPLOYPATH=/home/techpsjornada/public_html/dev/
-    - /bin/cp -R $GITPATH $DEPLOYPATH
+    - export GENERAL=/home/techpsjornada/repositories/gestaodeponto/*
+    - export DOMAIN=/home/techpsjornada/repositories/gestaodeponto/armazem_paraiba/*
+
+    - export GENERALDEPLOY=/home/techpsjornada/public_html/gestaodeponto
+    - export APX=/home/techpsjornada/public_html/gestaodeponto/apx_solucoes
+    - export BRASO=/home/techpsjornada/public_html/gestaodeponto/braso
+    - export CARAU=/home/techpsjornada/public_html/gestaodeponto/carau_transporte
+    - export FEIJAO=/home/techpsjornada/public_html/gestaodeponto/feijao_turqueza
+    - export LOGSYNC=/home/techpsjornada/public_html/gestaodeponto/logsync_techps
+    - export OPAFRUTAS=/home/techpsjornada/public_html/gestaodeponto/opafrutas
+    - export PKF=/home/techpsjornada/public_html/gestaodeponto/pkf_medeiros
+    - export QUALY=/home/techpsjornada/public_html/gestaodeponto/qualy_transportes
+    - export TECHPS=/home/techpsjornada/public_html/gestaodeponto/techps
+    
+    - /bin/cp -R $GENERAL $GENERALDEPLOY
+    
+    - /bin/cp -R $DOMAIN $APX
+    - /bin/cp -R $DOMAIN $BRASO
+    - /bin/cp -R $DOMAIN $CARAU
+    - /bin/cp -R $DOMAIN $FEIJAO
+    - /bin/cp -R $DOMAIN $LOGSYNC
+    - /bin/cp -R $DOMAIN $OPAFRUTAS
+    - /bin/cp -R $DOMAIN $PKF
+    - /bin/cp -R $DOMAIN $QUALY
+    - /bin/cp -R $DOMAIN $TECHPS
