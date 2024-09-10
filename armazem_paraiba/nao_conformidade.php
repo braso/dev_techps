@@ -122,12 +122,6 @@
 			</style>"
 		;
 
-		$cab = [
-			"", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
-			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "HE 50%", "HE&nbsp;100%",
-			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
-		];
-
 		//function buscar_endosso(){
 			$counts = [
 				"total" => 0,								//$countEndosso
@@ -262,6 +256,13 @@
 						if($saldoAnterior != "--:--"){
 							$saldoFinal = somarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]]);
 						}
+
+						$cab = [
+							"", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
+							"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "H.E. ".$aMotorista["enti_tx_percentualHE"]."%", "H.E. ".$aMotorista["enti_tx_percentualSabadoHE"]."%",
+							"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
+						];
+				
 	
 						$saldosMotorista = 
 							"<div class='table-responsive'>
