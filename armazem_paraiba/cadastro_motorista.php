@@ -9,7 +9,6 @@
 	//*/
 	include "conecta.php";
 
-
 	function carregarEmpresa(){
 		$aEmpresa = carregar("empresa", (int)$_GET["emp"]);
 		if ($aEmpresa["empr_nb_parametro"] > 0) {
@@ -228,7 +227,7 @@
 			exit;
 		}
 
-		if(sizeof($_POST["postMatricula"]) > 10){
+		if(!empty($_POST["postMatricula"]) && strlen($_POST["postMatricula"]) > 10){
 			set_status("ERRO: Matrícula com mais de 10 caracteres.");
 			visualizarCadastro();
 			exit;
@@ -236,9 +235,11 @@
 
 		if(!empty($_POST["login"])){
 			$otherUser = mysqli_fetch_assoc(query(
-				"SELECT * FROM user"
+				"SELECT user.* FROM user"
+					." JOIN entidade ON user_nb_entidade = enti_nb_id"
 					." WHERE user_tx_status = 'ativo'"
 						." AND user_tx_login = '".$_POST["login"]."'"
+						.(!empty($_POST["id"])? " AND enti_nb_id <> ".$_POST["id"]: "")
 					." LIMIT 1;"
 			));
 			if(!empty($otherUser)){
@@ -369,7 +370,7 @@
 			if (!empty($novoMotorista['enti_tx_status']) && $novoMotorista['enti_tx_status'] === 'inativo') {
 				$novoMotorista['enti_tx_desligamento'] = date("Y-m-d H:i:s");
 			} else {
-				$novoMotorista['enti_tx_desligamento'] = null;
+				unset($novoMotorista['enti_tx_desligamento']);
 			}
 
 			atualizar("entidade", array_keys($novoMotorista), array_values($novoMotorista), $_POST["id"]);
