@@ -1,5 +1,5 @@
 <?php
-    /* Modo debug
+    //* Modo debug
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
     //*/
@@ -26,7 +26,7 @@
                     +'<td>'+row.jornadaPrevista+'</td>'
                     +'<td>'+row.jornadaEfetiva+'</td>'
                     +'<td>'+row.HESemanal+'</td>'
-                    +'<td>'+row.HESabado+'</td>'
+                    +'<td>'+row.HEEx+'</td>'
                     +'<td>'+row.adicionalNoturno+'</td>'
                     +'<td>'+row.esperaIndenizada+'</td>'
                     +'<td>'+row.saldoAnterior+'</td>'
@@ -392,7 +392,7 @@
                     ."<th class='jornadaPrevista'>Jornada Prevista</th>"
                     ."<th class='jornadaEfetiva'>Jornada Efetiva</th>"
                     ."<th class='HESemanal'>H.E. Semanal</th>"
-                    ."<th class='HESabado'>H.E. Sábado</th>"
+                    ."<th class='HEEx'>H.E. Ex.</th>"
                     ."<th class='adicionalNoturno'>Adicional Noturno</th>"
                     ."<th class='esperaIndenizada'>Espera Indenizada</th>"
                     ."<th class='saldoAnterior'>Saldo Anterior</th>"
@@ -421,8 +421,8 @@
                     ."<th data-column='qtdMotoristas' data-order='asc'>Qtd. Motoristas</th>"
                     ."<th data-column='jornadaPrevista' data-order='asc'>Jornada Prevista</th>"
                     ."<th data-column='JornadaEfetiva' data-order='asc'>Jornada Efetiva</th>"
-                    ."<th data-column='HESemanal' data-order='asc'>HE 50%</th>"
-                    ."<th data-column='HESabado' data-order='asc'>HE 100%</th>"
+                    ."<th data-column='HESemanal' data-order='asc'>H.E. Semanal</th>"
+                    ."<th data-column='HEEx' data-order='asc'>H.E. Ex.</th>"
                     ."<th data-column='adicionalNoturno' data-order='asc'>Adicional Noturno</th>"
                     ."<th data-column='esperaIndenizada' data-order='asc'>Espera Indenizada</th>"
                     ."<th data-column='saldoAnterior' data-order='asc'>Saldo Anterior</th>"
@@ -459,6 +459,7 @@
         }else{
             if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarRelatorio()"){
                 set_status("Não Possui dados desse mês");
+                echo "<script>alert('Não Possui dados desse mês')</script>";
             }
         }
         
