@@ -127,10 +127,8 @@
 						"saldoFinal" => "00:00"
 					];
 	
-					$dia = $dataInicio;
-					for(; $dia <= $dataFim; $dia->modify("+1 day")){
+					for($dia = new DateTime($dataInicio->format("Y-m-d")); $dia <= $dataFim; $dia->modify("+1 day")){
 						$diaPonto = diaDetalhePonto($motorista["enti_tx_matricula"], $dia->format("Y-m-d"));
-	
 						//Formatando informações{
 							foreach(array_keys($diaPonto) as $f){
 								if(in_array($f, ["data", "diaSemana"])){
@@ -141,7 +139,7 @@
 									if(preg_match_all("/(-?\d{2,4}:\d{2})/", $diaPonto[$f], $matches)){
 										$diaPonto[$f] = array_pop($matches[1]);
 									}else{
-										$diaPonto[$f] = "00:00";
+										$diaPonto[$f] = "";
 									}
 								}
 							}
@@ -150,7 +148,7 @@
 						
 						$diaPonto["he50"]              = !empty($diaPonto["he50"])? $diaPonto["he50"]: "00:00";
 						$diaPonto["he100"]             = !empty($diaPonto["he100"])? $diaPonto["he100"]: "00:00";
-						
+
 						$totaisMot["jornadaPrevista"]  = somarHorarios([$totaisMot["jornadaPrevista"],  $diaPonto["jornadaPrevista"]]);
 						$totaisMot["jornadaEfetiva"]   = somarHorarios([$totaisMot["jornadaEfetiva"],   $diaPonto["diffJornadaEfetiva"]]);
 						$totaisMot["HESemanal"]        = somarHorarios([$totaisMot["HESemanal"],        $diaPonto["he50"]]);
@@ -172,6 +170,7 @@
 						"HESabado" => $totaisMot["HESabado"],
 						"adicionalNoturno" => $totaisMot["adicionalNoturno"],
 						"esperaIndenizada" => $totaisMot["esperaIndenizada"],
+
 						"saldoAnterior" => $saldoAnterior,
 						"saldoPeriodo" => $totaisMot["saldoPeriodo"],
 						"saldoFinal" => $totaisMot["saldoFinal"]
@@ -262,7 +261,7 @@
 			];
 	
 			foreach($empresas as $empresa){
-				$path = "./arquivos/endossos"."/".$empresa["empr_nb_id"]."/".$dataInicio->format("Y-m");
+				$path = "./arquivos/endossos"."/".$empresa["empr_nb_id"]."/".$mes->format("Y-m");
 				if(!file_exists($path."/empresa_".$empresa["empr_nb_id"].".json")){
 					if(!is_dir($path)){
 						mkdir($path, 0755, true);
