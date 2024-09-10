@@ -14,6 +14,7 @@ deployment:
     - export QUALY=/home/techpsjornada/public_html/gestaodeponto/qualy_transportes
     - export TECHPS=/home/techpsjornada/public_html/gestaodeponto/techps
     
+    
     - /bin/cp -R $GENERAL $GENERALDEPLOY
     
     - /bin/cp -R $DOMAIN $APX
