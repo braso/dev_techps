@@ -11,6 +11,11 @@
     require_once __DIR__."/funcoes_paineis.php";
     require __DIR__."/../funcoes_ponto.php";
 
+
+    function buscarRelatorio(){
+        index();
+    }
+
     function carregarJS(array $arquivos){
 
         $linha = "linha = '<tr>'";
@@ -158,6 +163,11 @@
             $_POST["busca_dataFim"] = date("Y-m-d");
         }
 
+        if($_POST["busca_dataInicio"] > date("Y-m-d") || $_POST["busca_dataFim"] > date("Y-m-d")){
+            unset($_POST["acao"]);
+            set_status("ERRO: Não é possível perquisar após a data atual.");
+        }
+
         // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
         $fields = [
@@ -175,7 +185,7 @@
             $botaoAtualizarPainel = "<a class='btn btn-warning' onclick='atualizarPainel()'> Atualizar Painel</a>";
         }
         $buttons = [
-            botao("Buscar", "index", "", "", "", "", "btn btn-info"),
+            botao("Buscar", "buscarRelatorio()", "", "", "", "", "btn btn-info"),
             $botao_imprimir,
             $botao_volta,
             $botaoAtualizarPainel
@@ -189,7 +199,7 @@
         
         $arquivos = [];
         $dataEmissao = ""; //Utilizado no HTML
-        $encontrado = true;
+        $encontrado = false;
         $path = "./arquivos/saldos";
         $periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
@@ -219,62 +229,107 @@
             "dataInicio" => "1900-01-01",
             "dataFim" => "1900-01-01"
         ];
-
-		//Painel dos saldos dos motoristas de uma empresa específica
-        if(!empty($_POST["empresa"]) && !empty($_POST["busca_dataInicio"]) && is_dir($path)){
-            $aEmpresa = mysqli_fetch_assoc(query(
-                "SELECT * FROM empresa"
-                ." WHERE empr_tx_status = 'ativo'"
-                    ." AND empr_nb_id = ".$_POST["empresa"]
-                ." LIMIT 1;"
-            ));
+        
+        
+        if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarRelatorio()"){
             $dataInicio = new DateTime($_POST["busca_dataInicio"]);
-            $path .= "/".$aEmpresa["empr_nb_id"]."/".$dataInicio->format("Y-m");
-            if(is_dir($path)){
-                $pastaSaldosEmpresa = dir($path);
-                while($arquivo = $pastaSaldosEmpresa->read()){
-                    if(!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))){
-                        $arquivos[] = $arquivo;
+            $path .= "/".$dataInicio->format("Y-m");
+            if(!empty($_POST["empresa"])){
+                //Painel dos saldos dos motoristas de uma empresa específica
+                $aEmpresa = mysqli_fetch_assoc(query(
+                    "SELECT * FROM empresa"
+                    ." WHERE empr_tx_status = 'ativo'"
+                        ." AND empr_nb_id = ".$_POST["empresa"]
+                    ." LIMIT 1;"
+                ));
+                $path .= "/".$aEmpresa["empr_nb_id"];
+                if(is_dir($path)){
+                    $encontrado = true;
+                    $pastaSaldosEmpresa = dir($path);
+                    while($arquivo = $pastaSaldosEmpresa->read()){
+                        if(!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))){
+                            $arquivos[] = $arquivo;
+                        }
                     }
-                }
-                $pastaSaldosEmpresa->close();
-
-                $dataEmissao = date("d/m/Y H:i", filemtime($path."/"."empresa_".$aEmpresa["empr_nb_id"].".json")); //Utilizado no HTML.
-                $periodoRelatorio = json_decode(file_get_contents($path."/"."empresa_".$aEmpresa["empr_nb_id"].".json"), true);
-                $periodoRelatorio = [
-                    "dataInicio" => $periodoRelatorio["dataInicio"],
-                    "dataFim" => $periodoRelatorio["dataFim"]
-                ];
-
-                $motoristas = [];
-                foreach($arquivos as $arquivo){
-                    $json = json_decode(file_get_contents($path."/".$arquivo), true);
-                    $json["dataAtualizacao"] = date("d/m/Y H:i", filemtime($path."/".$arquivo));
-                    foreach($totais as $key => $value){
-                        $totais[$key] = operarHorarios([$totais[$key], $json[$key]], "+");
+                    $pastaSaldosEmpresa->close();
+    
+                    $dataEmissao = date("d/m/Y H:i", filemtime($path."/"."empresa_".$aEmpresa["empr_nb_id"].".json")); //Utilizado no HTML.
+                    $periodoRelatorio = json_decode(file_get_contents($path."/"."empresa_".$aEmpresa["empr_nb_id"].".json"), true);
+                    $periodoRelatorio = [
+                        "dataInicio" => $periodoRelatorio["dataInicio"],
+                        "dataFim" => $periodoRelatorio["dataFim"]
+                    ];
+    
+                    $motoristas = [];
+                    foreach($arquivos as $arquivo){
+                        $json = json_decode(file_get_contents($path."/".$arquivo), true);
+                        $json["dataAtualizacao"] = date("d/m/Y H:i", filemtime($path."/".$arquivo));
+                        foreach($totais as $key => $value){
+                            $totais[$key] = operarHorarios([$totais[$key], $json[$key]], "+");
+                        }
+                        $motoristas[] = $json;
                     }
-                    $motoristas[] = $json;
-                }
-                foreach($arquivos as &$arquivo){
-                    $arquivo = $path."/".$arquivo;
-                }
-                $totais["empresaNome"] = $aEmpresa["empr_tx_nome"];
-
-                foreach($motoristas as $saldosMotorista){
-                    $contagemEndossos[$saldosMotorista["statusEndosso"]]++;
-                    if($saldosMotorista["saldoFinal"] === "00:00"){
-                        $contagemSaldos["meta"]++;
-                    }elseif($saldosMotorista["saldoFinal"][0] == "-"){
-                        $contagemSaldos["negativos"]++;
-                    }else{
-                        $contagemSaldos["positivos"]++;
+                    foreach($arquivos as &$arquivo){
+                        $arquivo = $path."/".$arquivo;
+                    }
+                    $totais["empresaNome"] = $aEmpresa["empr_tx_nome"];
+    
+                    foreach($motoristas as $saldosMotorista){
+                        $contagemEndossos[$saldosMotorista["statusEndosso"]]++;
+                        if($saldosMotorista["saldoFinal"] === "00:00"){
+                            $contagemSaldos["meta"]++;
+                        }elseif($saldosMotorista["saldoFinal"][0] == "-"){
+                            $contagemSaldos["negativos"]++;
+                        }else{
+                            $contagemSaldos["positivos"]++;
+                        }
                     }
                 }
             }else{
-                $encontrado = false;
+                //Painel geral das empresas
+                $empresas = [];
+                $logoEmpresa = mysqli_fetch_all(query(
+                    "SELECT empr_tx_logo FROM empresa"
+                    ." WHERE empr_tx_status = 'ativo'"
+                    ." AND empr_tx_Ehmatriz = 'sim';"
+                ), MYSQLI_ASSOC);//Utilizado no HTML.
+                
+                if(is_dir($path)){
+                    $encontrado = true;
+                    $arquivoGeral = $path."/empresas.json";
+                    $dataEmissao = date("d/m/Y H:i", filemtime($arquivoGeral)); //Utilizado no HTML.
+                    $arquivoGeral = json_decode(file_get_contents($arquivoGeral), true);
+
+                    $periodoRelatorio = [
+                        "dataInicio" => $arquivoGeral["dataInicio"],
+                        "dataFim" => $arquivoGeral["dataFim"]
+                    ];
+
+                    $pastaSaldos = dir($path);
+                    while($arquivo = $pastaSaldos->read()){
+                        if(!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))){
+                            $arquivo = $path."/".$arquivo."/empresa_".$arquivo.".json";
+                            $arquivos[] = $arquivo;
+                            $json = json_decode(file_get_contents($arquivo), true);
+                            foreach($totais as $key => $value){
+                                $totais[$key] = operarHorarios([$totais[$key], $json["totais"][$key]], "+");
+                            }
+                            $empresas[] = $json;
+                        }
+                    }
+                    $pastaSaldos->close();
+                    
+                    foreach($empresas as $empresa){
+                        if($empresa["totais"]["saldoFinal"] === "00:00"){
+                            $contagemSaldos["meta"]++;
+                        }elseif($empresa["totais"]["saldoFinal"][0] == "-"){
+                            $contagemSaldos["negativos"]++;
+                        }else{
+                            $contagemSaldos["positivos"]++;
+                        }
+                    }
+                }
             }
-        }else{
-			$encontrado = false;
         }
 
         $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataInicio"])->format("d/m");
@@ -400,14 +455,12 @@
                     document.getElementsByClassName('script')[0].innerHTML = '';
                 </script>"
             ;
+            echo "</div>";
         }else{
-            if(!empty($_POST["acao"])){
-                echo "<script>alert('Não Possui dados desse mês')</script>";
+            if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarRelatorio()"){
+                set_status("Não Possui dados desse mês");
             }
         }
-
-        echo "</div>";
-
         
         carregarJS($arquivos);
         rodape();

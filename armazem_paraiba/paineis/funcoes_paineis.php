@@ -22,6 +22,7 @@
 
 	//Funções de criação de cada painel{
 		function criar_relatorio_saldo(){
+
 			global $totalResumo;
 			$dataInicio = new DateTime($_POST["busca_dataInicio"]);
 			$dataFim = new DateTime($_POST["busca_dataFim"]);
@@ -47,12 +48,19 @@
 			];
 
 			foreach($empresas as $empresa){
-				$path = "./arquivos/saldos"."/".$empresa["empr_nb_id"]."/".$dataInicio->format("Y-m");
-				if(!file_exists($path."/empresa_".$empresa["empr_nb_id"].".json")){
-					if(!is_dir($path)){
-						mkdir($path, 0755, true);
+				$path = "./arquivos/saldos"."/".$dataInicio->format("Y-m")."/".$empresa["empr_nb_id"];
+				if(!is_dir($path)){
+					mkdir($path, 0755, true);
+				}
+				if(file_exists($path."/empresa_".$empresa["empr_nb_id"].".json")){
+					if(date("Y-m-d", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")) == date("Y-m-d")){
+						// echo 
+						// 	"<script>"
+						// 	."confirm('O relatório de ".$empresa["empr_tx_nome"]." já foi gerado hoje, deseja gerar novamente?');"
+						// 	."</script>"
+						// ;
+						continue;
 					}
-					file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", "");
 				}
 	
 				$motoristas = mysqli_fetch_all(query(
@@ -220,15 +228,12 @@
 				$empresa["dataInicio"] = $dataInicio->format("Y-m-d");
 				$empresa["dataFim"] = $dataFim->format("Y-m-d");
 				$empresa["percEndossado"] = ($statusEndossos["E"])/array_sum(array_values($statusEndossos));
-	
+
 				file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", json_encode($empresa));
 			}
 	
 			if(empty($_POST["empresa"])){
-				$path = "./arquivos/saldos";
-				if(!is_dir($path)){
-					mkdir($path,0755,true);
-				}
+				$path = "./arquivos/saldos"."/".$dataInicio->format("Y-m");
 				$totaisEmpresas["dataInicio"] = $dataInicio->format("Y-m-d");
 				$totaisEmpresas["dataFim"] = $dataFim->format("Y-m-d");
 				file_put_contents($path."/empresas.json", json_encode($totaisEmpresas));
@@ -261,12 +266,19 @@
 			];
 	
 			foreach($empresas as $empresa){
-				$path = "./arquivos/endossos"."/".$empresa["empr_nb_id"]."/".$mes->format("Y-m");
-				if(!file_exists($path."/empresa_".$empresa["empr_nb_id"].".json")){
-					if(!is_dir($path)){
-						mkdir($path, 0755, true);
+				$path = "./arquivos/endossos"."/".$mes->format("Y-m")."/".$empresa["empr_nb_id"];
+				if(!is_dir($path)){
+					mkdir($path, 0755, true);
+				}
+				if(file_exists($path."/empresa_".$empresa["empr_nb_id"].".json")){
+					if(date("Y-m-d", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")) == date("Y-m-d")){
+						// echo 
+						// 	"<script>"
+						// 	."confirm('O relatório de ".$empresa["empr_tx_nome"]." já foi gerado hoje, deseja gerar novamente?');"
+						// 	."</script>"
+						// ;
+						continue;
 					}
-					file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", "");
 				}
 	
 				$motoristas = mysqli_fetch_all(query(
@@ -451,10 +463,7 @@
 			}
 	
 			if(empty($_POST["empresa"])){
-				$path = "./arquivos/endossos"."/".$dataInicio->format("Y-m");
-				if(!is_dir($path)){
-					mkdir($path,0755,true);
-				}
+				$path = "./arquivos/endossos"."/".$mes->format("Y-m");
 				$totaisEmpresas["dataInicio"] = $mes->format("Y-m-01");
 				$totaisEmpresas["dataFim"] = $mes->format("Y-m-t");
 				file_put_contents($path."/empresas.json", json_encode($totaisEmpresas));
