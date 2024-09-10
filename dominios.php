@@ -1,7 +1,7 @@
 <?php
 
 include "load_env.php";
-
+ 
 $dominios = [
     "armazem_paraiba"   => 'Armazem Paraíba',
     "braso"             => 'Braso',
