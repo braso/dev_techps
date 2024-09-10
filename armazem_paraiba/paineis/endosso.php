@@ -2,11 +2,11 @@
     /* Modo debug
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
-     
-        header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
-		header("Pragma: no-cache"); // HTTP 1.0.
-		header("Expires: 0");
     //*/
+
+    header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+    header("Pragma: no-cache"); // HTTP 1.0.
+    header("Expires: 0");
     
     require "../funcoes_ponto.php";
     require_once __DIR__."/funcoes_paineis.php";
@@ -202,7 +202,7 @@
         $arquivos = [];
         $dataEmissao = ""; //Utilizado no HTML
         $encontrado = true;
-        $path = "./arquivos/".$_POST["busca_data"]."/endossos";
+        $path = "./arquivos/endossos";
         $periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
         $contagemSaldos = [
@@ -232,7 +232,7 @@
             "dataFim" => "1900-01-01"
         ];
 
-        if(!empty($_POST["empresa"])){
+        if(!empty($_POST["empresa"]) && !empty($_POST["busca_data"])){
             //Painel dos endossos dos motoristas de uma empresa específica
             $empresa = mysqli_fetch_assoc(query(
                 "SELECT * FROM empresa"
@@ -240,9 +240,9 @@
                     ." AND empr_nb_id = ".$_POST["empresa"]
                 ." LIMIT 1;"
             ));
-
             
-            $path .= "/".$empresa["empr_nb_id"];
+            
+            $path .= "/".$empresa["empr_nb_id"]."/".$_POST["busca_data"];
 
             if(is_dir($path)){
                 $pastaSaldosEmpresa = dir($path);
