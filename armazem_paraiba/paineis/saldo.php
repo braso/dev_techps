@@ -8,8 +8,8 @@
 		header("Expires: 0");
     //*/
     
-    require "../funcoes_ponto.php";
-    require_once "funcoes_paineis.php";
+    require_once __DIR__."/funcoes_paineis.php";
+    require __DIR__."/../funcoes_ponto.php";
 
     function carregarJS(array $arquivos){
 
@@ -140,7 +140,6 @@
     }
 
     function index(){
-
         if(!empty($_POST["atualizar"])){
             echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
             ob_flush();
@@ -222,17 +221,16 @@
         ];
 
 		//Painel dos saldos dos motoristas de uma empresa específica
-        if(!empty($_POST["empresa"]) && is_dir($path)){
+        if(!empty($_POST["empresa"]) && !empty($_POST["busca_dataInicio"]) && is_dir($path)){
+            $aEmpresa = mysqli_fetch_assoc(query(
+                "SELECT * FROM empresa"
+                ." WHERE empr_tx_status = 'ativo'"
+                    ." AND empr_nb_id = ".$_POST["empresa"]
+                ." LIMIT 1;"
+            ));
+            $dataInicio = new DateTime($_POST["busca_dataInicio"]);
+            $path .= "/".$aEmpresa["empr_nb_id"]."/".$dataInicio->format("Y-m");
             if(is_dir($path)){
-				$aEmpresa = mysqli_fetch_assoc(query(
-					"SELECT * FROM empresa"
-					." WHERE empr_tx_status = 'ativo'"
-						." AND empr_nb_id = ".$_POST["empresa"]
-					." LIMIT 1;"
-				));
-	
-				
-				$path .= "/".$aEmpresa["empr_nb_id"];
                 $pastaSaldosEmpresa = dir($path);
                 while($arquivo = $pastaSaldosEmpresa->read()){
                     if(!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))){
