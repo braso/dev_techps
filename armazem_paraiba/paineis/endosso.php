@@ -1,5 +1,5 @@
 <?php
-    /* Modo debug
+    //* Modo debug
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
     //*/
@@ -242,7 +242,7 @@
             ));
             
             
-            $path .= "/".$empresa["empr_nb_id"]."/".$_POST["busca_data"];
+            $path .= "/".$_POST["busca_data"]."/".$empresa["empr_nb_id"];
 
             if(is_dir($path)){
                 $pastaSaldosEmpresa = dir($path);
@@ -289,7 +289,7 @@
             }else{
                 $encontrado = false;
             }
-        }else{
+        }elseif(!empty($_POST["busca_data"])){
             //Painel geral das empresas
             $empresas = [];
             $logoEmpresa = mysqli_fetch_assoc(query(
@@ -298,6 +298,8 @@
                     ." AND empr_tx_Ehmatriz = 'sim'"
                 ." LIMIT 1;"
             ))["empr_tx_logo"];//Utilizado no HTML.
+
+            $path .= "/".$_POST["busca_data"];
 
             
             if(is_dir($path) && file_exists($path."/empresas.json")){
@@ -336,6 +338,14 @@
                         }
                     }else{
                         $contagemEndossos["E"]++;
+                        
+                        if($empresa["totais"]["saldoFinal"] === "00:00"){
+                            $contagemSaldos["meta"]++;
+                        }elseif($empresa["totais"]["saldoFinal"][0] == "-"){
+                            $contagemSaldos["negativos"]++;
+                        }else{
+                            $contagemSaldos["positivos"]++;
+                        }
                     }
                 }
             }else{
