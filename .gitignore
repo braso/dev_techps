@@ -8,8 +8,9 @@
 .vscode
 ehthumbs.db
 Thumbs.db
-.env
 .well-known
+.env
+.cpanel.yml
 
 .vscode
 brasomo_dev_techps_sistema.sql
