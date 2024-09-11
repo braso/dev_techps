@@ -103,7 +103,7 @@
 			." WHERE user_tx_status = 'ativo'"
 				." AND user_tx_nivel = 'Super Administrador'"
 				." AND user_tx_login = '".$_GET["login"]."'"
-				." AND user_tx_senha = '".md5($_GET["senha"])."'"
+				." AND user_tx_senha = '".$_GET["senha"]."'"
 			." LIMIT 1;"
 		));
 
