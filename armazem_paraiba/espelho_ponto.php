@@ -226,7 +226,7 @@
 			
 			$cab = [
 				"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
-				"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "H.E. ".$aMotorista["enti_tx_percentualHE"]."%", "H.E. ".$aMotorista["enti_tx_percentualSabadoHE"]."%",
+				"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "H.E. ".$aMotorista["enti_tx_percHESemanal"]."%", "H.E. ".$aMotorista["enti_tx_percHEEx"]."%",
 				"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 			];
 
@@ -258,12 +258,12 @@
 
 			if(!empty($aEmpresa["empr_nb_parametro"])){
 				$parametroEmpresa = mysqli_fetch_assoc(query(
-					"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percentualHE, para_tx_percentualSabadoHE, para_nb_id, para_tx_nome, para_tx_jornadaSemanal, para_tx_jornadaSabado FROM parametro"
+					"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percHESemanal, para_tx_percHEEx, para_nb_id, para_tx_nome, para_tx_jornadaSemanal, para_tx_jornadaSabado FROM parametro"
 						." WHERE para_tx_status = 'ativo'"
 							." AND para_nb_id = ".$aEmpresa["empr_nb_parametro"]
 						." LIMIT 1;"
 				));
-				if(array_keys(array_intersect($parametroEmpresa, $aMotorista)) == ["para_tx_jornadaSemanal", "para_tx_jornadaSabado", "para_tx_percentualHE", "para_tx_percentualSabadoHE", "para_nb_id"]){
+				if(array_keys(array_intersect($parametroEmpresa, $aMotorista)) == ["para_tx_jornadaSemanal", "para_tx_jornadaSabado", "para_tx_percHESemanal", "para_tx_percHEEx", "para_nb_id"]){
 					$parametroPadrao = "Convenção Padronizada: ".$parametroEmpresa["para_tx_nome"].", Semanal (".$parametroEmpresa["para_tx_jornadaSemanal"]."), Sábado (".$parametroEmpresa["para_tx_jornadaSabado"].")";
 				}
 			}

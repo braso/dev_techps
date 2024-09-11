@@ -960,11 +960,11 @@
 					$aRetorno["he100"] = $aRetorno["diffSaldo"];
 					$aRetorno["he50"] = "00:00";
 				}else{
-					if(	(isset($aParametro["para_tx_HorasEXExcedente"]) && !empty($aParametro["para_tx_HorasEXExcedente"])) &&
-						$aParametro["para_tx_HorasEXExcedente"] != "00:00" && 
-						$aRetorno["diffSaldo"] >= $aParametro["para_tx_HorasEXExcedente"]
+					if(	(isset($aParametro["para_tx_maxHESemanalDiario"]) && !empty($aParametro["para_tx_maxHESemanalDiario"])) &&
+						$aParametro["para_tx_maxHESemanalDiario"] != "00:00" && 
+						$aRetorno["diffSaldo"] >= $aParametro["para_tx_maxHESemanalDiario"]
 					){// saldo diário >= limite de horas extras 100%
-						$aRetorno["he100"] = operarHorarios([$aRetorno["diffSaldo"], $aParametro["para_tx_HorasEXExcedente"]], "-");
+						$aRetorno["he100"] = operarHorarios([$aRetorno["diffSaldo"], $aParametro["para_tx_maxHESemanalDiario"]], "-");
 					}else{
 						$aRetorno["he100"] = "00:00";
 					}
@@ -1292,7 +1292,7 @@
 	}
 
 	//@return [he50, he100]
-	function calcularHorasAPagar(string $saldoBruto, string $he50, string $he100, string $max50APagar): array{
+	function calcularHorasAPagar(string $saldoBruto, string $he50, string $he100, string $max50APagar, string $pagarHEExComPerNeg = "sim"): array{
 		$params = [$saldoBruto, $he50, $he100, $max50APagar];
 		foreach($params as $param){
 			if(!preg_match("/^-?\d{2,4}:\d{2}$/", $param)){
@@ -1301,6 +1301,10 @@
 		}
 
 		if($saldoBruto[0] == "-"){
+			if($pagarHEExComPerNeg != "nao"){
+				return ["00:00", $he100];
+			}
+
 			return ["00:00", "00:00"];
 		}
 		if($saldoBruto <= $he100){
@@ -1359,14 +1363,14 @@
 
                 //Status Endosso{
                     $endossos = mysqli_fetch_all(query(
-                        "SELECT * FROM endosso"
-                        ." WHERE endo_tx_status = 'ativo'"
-                            ." AND endo_nb_entidade = '".$motorista["enti_nb_id"]."'"
-                            ." AND ("
-                                ."(endo_tx_de  >= '".$periodoInicio."' AND endo_tx_de  <= '".$periodoFim."')"
-                                ."OR (endo_tx_ate >= '".$periodoInicio."' AND endo_tx_ate <= '".$periodoFim."')"
-                                ."OR (endo_tx_de  <= '".$periodoInicio."' AND endo_tx_ate >= '".$periodoFim."')"
-                            .");"
+                        "SELECT endosso.*, parametro.para_tx_pagarHEExComPerNeg FROM endosso"
+							." WHERE endo_tx_status = 'ativo'"
+								." AND endo_nb_entidade = '".$motorista["enti_nb_id"]."'"
+								." AND ("
+									."(endo_tx_de  >= '".$periodoInicio."' AND endo_tx_de  <= '".$periodoFim."')"
+									."OR (endo_tx_ate >= '".$periodoInicio."' AND endo_tx_ate <= '".$periodoFim."')"
+									."OR (endo_tx_de  <= '".$periodoInicio."' AND endo_tx_ate >= '".$periodoFim."')"
+								.");"
                     ), MYSQLI_ASSOC);
                     
                     $statusEndosso = "N";
@@ -1396,6 +1400,7 @@
                     "saldoFinal" => "00:00"
                 ];
 
+				$saldoAnterior = "00:00";
                 if(count($arquivosEndo) > 0){
                     $endossoCompleto = $arquivosEndo[0];
                     $saldoAnterior = $endossoCompleto["totalResumo"]["saldoAnterior"];
@@ -1422,14 +1427,22 @@
                         }    
                     }
 
+					$parametro = mysqli_fetch_assoc(query(
+						"SELECT para_tx_pagarHEExComPerNeg FROM parametro"
+							." WHERE para_nb_id = ".$motorista["enti_nb_parametro"]
+							." LIMIT 1;"
+					));
+
+					die(var_dump($parametro));
+
                     $row["saldoPeriodo"]                            = $endossoCompleto["totalResumo"]["diffSaldo"];
                     $endossoCompleto["totalResumo"]["saldoBruto"]   = operarHorarios([$saldoAnterior, $row["saldoPeriodo"]], "+");
-                    [$row["HESemanal"], $row["HESabado"]]           = calcularHorasAPagar($endossoCompleto["totalResumo"]["saldoBruto"], $endossoCompleto["totalResumo"]["he50"], $endossoCompleto["totalResumo"]["he100"], $endossoCompleto["endo_tx_max50APagar"]);
+                    [$row["HESemanal"], $row["HESabado"]]           = calcularHorasAPagar($endossoCompleto["totalResumo"]["saldoBruto"], $endossoCompleto["totalResumo"]["he50"], $endossoCompleto["totalResumo"]["he100"], $endossoCompleto["endo_tx_max50APagar"], ($parametro["para_tx_pagarHEExComPerNeg"]?? "sim"));
                     $row["jornadaPrevista"]                         = $endossoCompleto["totalResumo"]["jornadaPrevista"];
                     $row["jornadaEfetiva"]                          = $endossoCompleto["totalResumo"]["diffJornadaEfetiva"];
                     $row["adicionalNoturno"]                        = $endossoCompleto["totalResumo"]["adicionalNoturno"];
                     $row["esperaIndenizada"]                        = $endossoCompleto["totalResumo"]["esperaIndenizada"];
-                    $row["saldoFinal"]                              = operarHorarios([$endossoCompleto["totalResumo"]["saldoBruto"], $endossoCompleto["totalResumo"]["he50_aPagar"], $endossoCompleto["totalResumo"]["he100_aPagar"]], "-");
+                    $row["saldoFinal"]                              = operarHorarios([$endossoCompleto["totalResumo"]["saldoBruto"], $endossoCompleto["totalResumo"]["HESemanalAPagar"], $endossoCompleto["totalResumo"]["HEExAPagar"]], "-");
                 }
 
                 $rows[] = [ 

@@ -45,9 +45,9 @@
 				"jornadaSemanal",
 				"jornadaSabado",
 				"tolerancia",
-				"percentualHE",
-				"percentualSabadoHE",
-				"HorasEXExcedente",
+				"percHESemanal",
+				"percHEEx",
+				"maxHESemanalDiario",
 				"diariasCafe",
 				"diariasAlmoco",
 				"diariasJanta",
@@ -55,7 +55,7 @@
 				"inicioAcordo",
 				"fimAcordo",
 				"banco",
-				"paramObs"
+				"Obs"
 			];
 			foreach($campos as $campo){
 				$a_mod["para_tx_".$campo] = $_POST[$campo];
@@ -144,24 +144,25 @@
 			"jornadaSemanal" => "Jornada Semanal (Horas/Dia)",
 			"jornadaSabado" => "Jornada Sábado (Horas/Dia)",
 			"tolerancia" => "Tolerância de jornada Saldo diário (Minutos)",
-			"percentualHE" => "Percentual da Hora Extra (Semanal)",
-			"percentualSabadoHE" => "Percentual da Hora Extra (Dias sem Jornada Prevista)",
-			"HorasEXExcedente" => "Máximo de Horas Extras 50% (diário)"
+			"percHESemanal" => "Hora Extra Semanal (%)",
+			"percHEEx" => "Hora Extra Extraordinária (%)",
+			"maxHESemanalDiario" => "Máx. de \"H.E. Semanal\" por dia"
 		];
 
-		$error = false;
-		$emptyFields = '';
+		$emptyFields = "";
+		$_POST["errorFields"] = [];
 		foreach(array_keys($camposObrig) as $campo){
 		    if(empty($_POST[$campo]) && $_POST[$campo] != "0"){
-		        $error = true;
 				$emptyFields .= $camposObrig[$campo].', ';
+				$_POST["errorFields"][] = $campo;
 			}
 		}
 		
 		$emptyFields = substr($emptyFields, 0, strlen($emptyFields)-2);
 
-		if($error){
-		    echo '<script>alert("Informações obrigatórias faltando: '.$emptyFields.'.")</script>';
+		if(!empty($emptyFields)){
+		    // echo '<script>alert("Informações obrigatórias faltando: '.$emptyFields.'.")</script>';
+			set_status("ERRO: Informações obrigatórias faltando: ".$emptyFields);
 			layout_parametro();
 			exit;
 		}
@@ -176,28 +177,27 @@
 		unset($campos_obrigatorios);
 		
 		$novoParametro = [
-			"para_tx_nome" 					=> $_POST["nome"], 
-			"para_tx_jornadaSemanal" 		=> $_POST["jornadaSemanal"], 
-			"para_tx_jornadaSabado" 		=> $_POST["jornadaSabado"], 
-			"para_tx_percentualHE" 			=> $_POST["percentualHE"], 
-			"para_tx_percentualSabadoHE" 	=> $_POST["percentualSabadoHE"], 
-			"para_tx_HorasEXExcedente" 		=> $_POST["HorasEXExcedente"], 
-			// "para_tx_apagaHeNegativo"       => $_POST["pagaHeNegativo"],
-			"para_tx_tolerancia" 			=> $_POST["tolerancia"], 
-			"para_tx_acordo" 				=> $_POST["acordo"], 
-			"para_tx_inicioAcordo" 			=> $_POST["inicioAcordo"], 
-			"para_tx_fimAcordo" 			=> $_POST["fimAcordo"], 
+			"para_tx_nome" 					=> $_POST["nome"],
+			"para_tx_jornadaSemanal" 		=> $_POST["jornadaSemanal"],
+			"para_tx_jornadaSabado" 		=> $_POST["jornadaSabado"],
+			"para_tx_percHESemanal" 		=> $_POST["percHESemanal"],
+			"para_tx_percHEEx" 				=> $_POST["percHEEx"],
+			"para_tx_maxHESemanalDiario" 	=> $_POST["maxHESemanalDiario"],
+			"para_tx_pagarHEExComPerNeg"    => $_POST["pagarHEExComPerNeg"],
+			"para_tx_tolerancia" 			=> $_POST["tolerancia"],
+			"para_tx_acordo" 				=> $_POST["acordo"],
+			"para_tx_inicioAcordo" 			=> $_POST["inicioAcordo"],
+			"para_tx_fimAcordo" 			=> $_POST["fimAcordo"],
 			"para_nb_userCadastro" 			=> intval($_SESSION["user_nb_id"]),
-			"para_tx_dataCadastro" 			=> date("Y-m-d"), 
-			"para_tx_diariasCafe" 			=> $_POST["diariasCafe"], 
-			"para_tx_diariasAlmoco" 		=> $_POST["diariasAlmoco"], 
-			"para_tx_diariasJanta" 			=> $_POST["diariasJanta"], 
-			"para_tx_status" 				=> "ativo", 
-			"para_tx_banco" 				=> $_POST["banco"], 
-			"para_tx_setData" 				=> ($_POST["setCampo"]?? ""), 
+			"para_tx_dataCadastro" 			=> date("Y-m-d"),
+			"para_tx_diariasCafe" 			=> $_POST["diariasCafe"],
+			"para_tx_diariasAlmoco" 		=> $_POST["diariasAlmoco"],
+			"para_tx_diariasJanta" 			=> $_POST["diariasJanta"],
+			"para_tx_status" 				=> "ativo",
+			"para_tx_banco" 				=> $_POST["banco"],
 			"para_nb_qDias" 				=> $_POST["quandDias"],
 			"para_tx_horasLimite" 			=> $_POST["quandHoras"],
-			"para_tx_paramObs" 				=> $_POST["paramObs"],
+			"para_tx_Obs" 					=> $_POST["Obs"],
 		];
 
 		if(!empty($_POST["ignorarCampos"]) || $_POST["ignorarCampos"] == null){
@@ -238,8 +238,8 @@
 				if($aParametro["para_nb_id"] == $motorista["enti_nb_parametro"] && $motorista["enti_tx_ehPadrao"] == "sim"){
 					atualizar(
 						"entidade",
-						["enti_tx_jornadaSemanal", "enti_tx_jornadaSabado", "enti_tx_percentualHE", "enti_tx_percentualSabadoHE"],
-						[$_POST["jornadaSemanal"], $_POST["jornadaSabado"], $_POST["percentualHE"], $_POST["percentualSabadoHE"]],
+						["enti_tx_jornadaSemanal", "enti_tx_jornadaSabado", "enti_tx_percHESemanal", "enti_tx_percHEEx"],
+						[$_POST["jornadaSemanal"], $_POST["jornadaSabado"], $_POST["percHESemanal"], $_POST["percHEEx"]],
 						$motorista["enti_nb_id"]
 					);
 				}
@@ -258,13 +258,14 @@
 		if(empty($a_mod) && !empty($_POST["id"])){
 			$a_mod = carregar("parametro", $_POST["id"]);
 			$campos = [
-				"nome", "jornadaSemanal", "jornadaSabado", "tolerancia", "percentualHE",
-				"percentualSabadoHE", "HorasEXExcedente", "diariasCafe", "diariasAlmoco", "diariasJanta",
-				"acordo", "inicioAcordo", "fimAcordo", "banco", "paramObs"
+				"nome", "jornadaSemanal", "jornadaSabado", "tolerancia", "percHESemanal",
+				"percHEEx", "maxHESemanalDiario", "diariasCafe", "diariasAlmoco", "diariasJanta",
+				"acordo", "inicioAcordo", "fimAcordo", "banco", "Obs"
 			];
 			foreach($campos as $campo){
 				if(!empty($_POST[$campo])){
 					$a_mod["para_tx_".$campo] = $_POST[$campo];
+					
 				}
 			}
 			if(!empty($a_mod["para_tx_ignorarCampos"])){
@@ -283,42 +284,49 @@
 
 		cabecalho("Cadastro de Parâmetros");
 		
-		$c = [
-			campo("Nome*:", "nome", ($a_mod["para_tx_nome"]?? ""), 6),
-			campo_hora("Jornada Semanal (Horas/Dia)*:", "jornadaSemanal", ($a_mod["para_tx_jornadaSemanal"]?? ""), 3),
-			campo_hora("Jornada Sábado (Horas/Dia)*:", "jornadaSabado", ($a_mod["para_tx_jornadaSabado"]?? ""), 3),
-			campo("Tolerância de jornada Saldo diário (Minutos)*:", "tolerancia", ($a_mod["para_tx_tolerancia"]?? ""), 3,"MASCARA_NUMERO","maxlength='3'"),
-			campo("Percentual da Hora Extra (Semanal)*:", "percentualHE", ($a_mod["para_tx_percentualHE"]?? ""), 3, "MASCARA_NUMERO", "maxlength='3'"),
-			campo("Percentual da Hora Extra (Dias sem Jornada Prevista)*:", "percentualSabadoHE", ($a_mod["para_tx_percentualSabadoHE"]?? ""), 3, "MASCARA_NUMERO"),
-			campo_hora("Máximo de Horas Extras 50% (diário)*", "HorasEXExcedente", ($a_mod["para_tx_HorasEXExcedente"]?? ""), 3),
-			// combo("Pagar H.E. com Saldo negativo?","pagaHeNegativo",$a_mod["para_tx_apagaHeNegativo"],3,["sim" => "Sim", "nao" => "Não"]),
-			campo("Diária Café da Manhã(R$)", "diariasCafe", ($a_mod["para_tx_diariasCafe"]?? ""), 3, "MASCARA_DINHERO"),
-			campo("Diária Almoço(R$)", "diariasAlmoco", ($a_mod["para_tx_diariasAlmoco"]?? ""), 3, "MASCARA_DINHERO"),
-			campo("Diária Jantar(R$)", "diariasJanta", ($a_mod["para_tx_diariasJanta"]?? ""), 3, "MASCARA_DINHERO"),
-			combo("Acordo Sindical", "acordo", ($a_mod["para_tx_acordo"]?? ""), 3, ["sim" => "Sim", "nao" => "Não"]),
-			campo_data("Início do Acordo*", "inicioAcordo", ($a_mod["para_tx_inicioAcordo"]?? ""), 3),
-			campo_data("Fim do Acordo*", "fimAcordo", ($a_mod["para_tx_fimAcordo"]?? ""), 3),
-			checkbox_banco("Utilizar regime de banco de horas?","banco",($a_mod["para_tx_banco"]?? ""),($a_mod["para_nb_qDias"]?? ""), ($a_mod["para_tx_horasLimite"]?? ""),3),
-			ckeditor("Descrição:", "paramObs", ($a_mod["para_tx_paramObs"]?? ""), 12,"maxlength='100'"),
-		];
-
-		$camposAIgnorar = [
-			checkbox(
-				"Ignorar intervalos:",
-				"ignorarCampos", (
-					[
-						"repouso" => "Repouso", 
-						"descanso" => "Descanso",
-						"espera" => "Espera",
-						"repousoEmbarcado" => "Repouso Embarcado",
-						"mdc" => "MDC",
-					]
-				),
-				5,
-				"checkbox",
-				"",
-				$a_mod["para_tx_ignorarCampos"] ?? ""
-			)
+		$campos = [
+			[
+				campo("Nome*", "nome", ($a_mod["para_tx_nome"]?? ""), 5),
+				campo_hora("Jornada Semanal (Horas/Dia)*", "jornadaSemanal", ($a_mod["para_tx_jornadaSemanal"]?? ""), 2),
+				campo_hora("Jornada Sábado (Horas/Dia)*", "jornadaSabado", ($a_mod["para_tx_jornadaSabado"]?? ""), 2),
+				campo("Tolerância de jornada Saldo diário (Minutos)*", "tolerancia", ($a_mod["para_tx_tolerancia"]?? ""), 2,"MASCARA_NUMERO","maxlength='3'")
+			],
+			[
+				campo("Hora Extra Semanal (%)*", "percHESemanal", ($a_mod["para_tx_percHESemanal"]?? ""), 3, "MASCARA_NUMERO", "maxlength='3'"),
+				campo("Hora Extra Extraordinária (%)*", "percHEEx", ($a_mod["para_tx_percHEEx"]?? ""), 3, "MASCARA_NUMERO"),
+				campo_hora("Máx. de \"H.E. Semanal\" por dia*", "maxHESemanalDiario", ($a_mod["para_tx_maxHESemanalDiario"]?? "02:00"), 3),
+				combo("Pagar H.E. Ex. mesmo com Período Neg.*", "pagarHEExComPerNeg", ($a_mod["para_tx_pagarHEExComPerNeg"]?? "sim"), 3, ["sim" => "Sim", "nao" => "Não"])
+			],
+			[
+				campo("Diária Café da Manhã(R$)", "diariasCafe", ($a_mod["para_tx_diariasCafe"]?? ""), 2, "MASCARA_DINHERO"),
+				campo("Diária Almoço(R$)", "diariasAlmoco", ($a_mod["para_tx_diariasAlmoco"]?? ""), 2, "MASCARA_DINHERO"),
+				campo("Diária Jantar(R$)", "diariasJanta", ($a_mod["para_tx_diariasJanta"]?? ""), 2, "MASCARA_DINHERO")
+			],
+			[
+				combo("Acordo Sindical", "acordo", ($a_mod["para_tx_acordo"]?? ""), 1, ["sim" => "Sim", "nao" => "Não"]),
+				campo_data("Início do Acordo*", "inicioAcordo", ($a_mod["para_tx_inicioAcordo"]?? ""), 1),
+				campo_data("Fim do Acordo*", "fimAcordo", ($a_mod["para_tx_fimAcordo"]?? ""), 1)
+			],
+			[
+				checkbox_banco("Utilizar regime de banco de horas?","banco",($a_mod["para_tx_banco"]?? ""),($a_mod["para_nb_qDias"]?? ""), ($a_mod["para_tx_horasLimite"]?? ""),2),
+				ckeditor("Descrição", "Obs", ($a_mod["para_tx_Obs"]?? ""), 12,"maxlength='100' style='min-width:fit-content; max-width: 100%;'"),
+				checkbox(
+					"Ignorar intervalos",
+					"ignorarCampos", (
+						[
+							"repouso" => "Repouso", 
+							"descanso" => "Descanso",
+							"espera" => "Espera",
+							"repousoEmbarcado" => "Repouso Embarcado",
+							"mdc" => "MDC",
+						]
+					),
+					5,
+					"checkbox",
+					"",
+					$a_mod["para_tx_ignorarCampos"] ?? ""
+				)
+			],
 		];
 		
 		$botoes = [
@@ -335,8 +343,16 @@
 		
 		abre_form("Dados dos Parâmetros");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		linha_form($c);
-		linha_form($camposAIgnorar);
+		fieldset("Geral");
+		linha_form($campos[0]);
+		fieldset("Hora Extra");
+		linha_form($campos[1]);
+		fieldset("Diárias");
+		linha_form($campos[2]);
+		fieldset("Acordo Sindical");
+		linha_form($campos[3]);
+		fieldset("Outros");
+		linha_form($campos[4]);
 
 		if(!empty($a_mod["para_nb_userCadastro"])){
 			$a_userCadastro = carregar("user", $a_mod["para_nb_userCadastro"]);
@@ -417,12 +433,12 @@
 		.((!empty($_POST["busca_acordo"]) &&  $_POST["busca_acordo"] != "Todos") ? " AND para_tx_acordo = '".$_POST["busca_acordo"]."'" : "")
 		.((!empty($_POST["busca_banco"]) &&  $_POST["busca_banco"] != "Todos") ? " AND para_tx_banco = '".$_POST["busca_banco"]."'" : "");
 
-		$c = [
+		$campos = [
 			campo("Código", "busca_codigo", $_POST["busca_codigo"]?? "", 2, "MASCARA_NUMERO", "maxlength='6'"),
 			campo("Nome", "busca_nome", $_POST["busca_nome"]?? "", 4, "", "maxlength='65'"),
       		combo("Acordo", "busca_acordo", $_POST["busca_acordo"]?? "", 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
 			combo("Banco de Horas", "busca_banco", $_POST["busca_banco"]?? "", 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
-			combo("Vencidos", "busca_vencidos", $_POST["busca_vencidos"]?? "", 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"])
+			// combo("Vencidos", "busca_vencidos", $_POST["busca_vencidos"]?? "", 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"])
 		];
 
 		$botoes = [
@@ -431,30 +447,30 @@
 		];
 		
 		abre_form("Filtro de Busca");
-		linha_form($c);
+		linha_form($campos);
 		fecha_form($botoes);
 
 		$sql = 
 			"SELECT * FROM parametro"
 				." WHERE para_tx_status = 'ativo' ".$extra
 		;
-		if (isset($_POST["busca_vencidos"])){
-			$sql = 
-				"SELECT *, DATEDIFF('".date("Y-m-d")."' ,para_tx_setData) AS diferenca_em_dias FROM parametro"
-					." WHERE 1"
-						." AND DATEDIFF('".date("Y-m-d")."',para_tx_setData) ".($_POST["busca_vencidos"] === "sim"? "<": ">")." para_nb_qDias"
-						." OR DATEDIFF('".date("Y-m-d")."',para_tx_setData) IS NULL"
-						." ".$extra.";"
-			;
-		}
+		// if (isset($_POST["busca_vencidos"])){
+		// 	$sql = 
+		// 		"SELECT *, DATEDIFF('".date("Y-m-d")."' ,para_tx_setData) AS diferenca_em_dias FROM parametro"
+		// 			." WHERE 1"
+		// 				." AND DATEDIFF('".date("Y-m-d")."',para_tx_setData) ".($_POST["busca_vencidos"] === "sim"? "<": ">")." para_nb_qDias"
+		// 				." OR DATEDIFF('".date("Y-m-d")."',para_tx_setData) IS NULL"
+		// 				." ".$extra.";"
+		// 	;
+		// }
 
 		$gridCols = [
 			"CÓDIGO" 											=> "para_nb_id",
 			"NOME" 												=> "para_tx_nome",
 			"JORNADA SEMANAL/DIA" 								=> "para_tx_jornadaSemanal",
 			"JORNADA SÁBADO" 									=> "para_tx_jornadaSabado",
-			"H.E. SEMANAL" 										=> "formatPerc(para_tx_percentualHE)",
-			"H.E. SÁBADO" 										=> "formatPerc(para_tx_percentualHE)",
+			"H.E. SEMANAL" 										=> "formatPerc(para_tx_percHESemanal)",
+			"H.E. EX." 											=> "formatPerc(para_tx_percHEEx)",
 			"ACORDO" 											=> "para_tx_acordo",
 			"INÍCIO" 											=> "data(para_tx_inicioAcordo)",
 			"FIM" 												=> "data(para_tx_fimAcordo)",

@@ -165,13 +165,13 @@
                     <tr>
                         <td>Horas Extras (50%) - a pagar:</td>
                         <td>
-                            <center><?=$totalResumo["he50_aPagar"]?></center>
+                            <center><?=$totalResumo["HESemanalAPagar"]?></center>
                         </td>
                     </tr>
                     <tr>
                         <td>Horas Extras (100%) - a pagar:</td>
                         <td>
-                            <center><?=$totalResumo["he100_aPagar"]?></center>
+                            <center><?=$totalResumo["HEExAPagar"]?></center>
                         </td>
                     </tr>
                     <tr>

@@ -55,8 +55,8 @@
 			"<script type='text/javascript'>
 				parent.document.contex_form.jornadaSemanal.value = '".$parametro["para_tx_jornadaSemanal"]."';
 				parent.document.contex_form.jornadaSabado.value = '".$parametro["para_tx_jornadaSabado"]."';
-				parent.document.contex_form.percentualHE.value = '".$parametro["para_tx_percentualHE"]."';
-				parent.document.contex_form.percentualSabadoHE.value = '".$parametro["para_tx_percentualSabadoHE"]."';
+				parent.document.contex_form.percHESemanal.value = '".$parametro["para_tx_percHESemanal"]."';
+				parent.document.contex_form.percHEEx.value = '".$parametro["para_tx_percHEEx"]."';
 			</script>"
 		;
 		exit;
@@ -128,8 +128,8 @@
 			"enti_nb_empresa" 					=> "empresa",
 			"enti_tx_jornadaSemanal" 			=> "jornadaSemanal",
 			"enti_tx_jornadaSabado" 			=> "jornadaSabado",
-			"enti_tx_percentualHE" 				=> "percentualHE",
-			"enti_tx_percentualSabadoHE" 		=> "percentualSabadoHE",
+			"enti_tx_percHESemanal" 			=> "percHESemanal",
+			"enti_tx_percHEEx" 		=> "percHEEx",
 			"enti_tx_rgOrgao" 					=> "rgOrgao", 
 			"enti_tx_rgDataEmissao" 			=> "rgDataEmissao", 
 			"enti_tx_rgUf" 						=> "rgUf",
@@ -190,11 +190,11 @@
 			if($_POST["ocupacao"] == "Ajudante"){
 				unset($camposObrig["cnhRegistro"], $camposObrig["cnhValidade"], $camposObrig["cnhCategoria"], $camposObrig["cnhCidade"], $camposObrig["cnhEmissao"]);
 			}
-			if(empty($_POST["percentualHE"]) && $_POST["percentualHE"] != "0"){
-				$emptyFields .= "Percentual da HE, ";
+			if(empty($_POST["percHESemanal"]) && $_POST["percHESemanal"] != "0"){
+				$emptyFields .= "H.E. Semanal (%), ";
 			}
-			if(empty($_POST["percentualSabadoHE"]) && $_POST["percentualSabadoHE"] != "0"){
-				$emptyFields .= "Percentual da HE Sábado, ";
+			if(empty($_POST["percHEEx"]) && $_POST["percHEEx"] != "0"){
+				$emptyFields .= "H.E. Extraordinária (%), ";
 			}
 
 			foreach(array_keys($camposObrig) as $campo){
@@ -275,8 +275,8 @@
 				if (
 					$aParametro["para_tx_jornadaSemanal"] != $a_mod["enti_tx_jornadaSemanal"] ||
 					$aParametro["para_tx_jornadaSabado"] != $a_mod["enti_tx_jornadaSabado"] ||
-					$aParametro["para_tx_percentualHE"] != $a_mod["enti_tx_percentualHE"] ||
-					$aParametro["para_tx_percentualSabadoHE"] != $a_mod["enti_tx_percentualSabadoHE"] ||
+					$aParametro["para_tx_percHESemanal"] != $a_mod["enti_tx_percHESemanal"] ||
+					$aParametro["para_tx_percHEEx"] != $a_mod["enti_tx_percHEEx"] ||
 					$aParametro["para_nb_id"] != $a_mod["enti_nb_parametro"]
 				) {
 					$ehPadrao = "nao";
@@ -354,8 +354,8 @@
 				if (
 					$aParametro["para_tx_jornadaSemanal"] != $a_mod["enti_tx_jornadaSemanal"] ||
 					$aParametro["para_tx_jornadaSabado"] != $a_mod["enti_tx_jornadaSabado"] ||
-					$aParametro["para_tx_percentualHE"] != $a_mod["enti_tx_percentualHE"] ||
-					$aParametro["para_tx_percentualSabadoHE"] != $a_mod["enti_tx_percentualSabadoHE"] ||
+					$aParametro["para_tx_percHESemanal"] != $a_mod["enti_tx_percHESemanal"] ||
+					$aParametro["para_tx_percHEEx"] != $a_mod["enti_tx_percHEEx"] ||
 					$aParametro["para_nb_id"] != $a_mod["enti_nb_parametro"]
 				) {
 					$ehPadrao = "nao";
@@ -598,8 +598,8 @@
 				'".$a_mod["parametroPadrao"]["para_nb_id"]
 				."', '".$a_mod["parametroPadrao"]["para_tx_jornadaSemanal"]
 				."', '".$a_mod['parametroPadrao']['para_tx_jornadaSabado']
-				."', '".$a_mod['parametroPadrao']['para_tx_percentualHE']
-				."', '".$a_mod['parametroPadrao']['para_tx_percentualSabadoHE']
+				."', '".$a_mod['parametroPadrao']['para_tx_percHESemanal']
+				."', '".$a_mod['parametroPadrao']['para_tx_percHEEx']
 			."')";
 		}else{
 			$conferirPadraoJS = "";
@@ -610,8 +610,8 @@
 			"<div class='col-sm-2 margin-bottom-5' style='width:100%; height:25px'></div>",
 			campo_hora(	"Jornada Semanal (Horas/Dia)*", "jornadaSemanal", ($a_mod["enti_tx_jornadaSemanal"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'"),
 			campo_hora(	"Jornada Sábado (Horas/Dia)*", "jornadaSabado", ($a_mod["enti_tx_jornadaSabado"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'"),
-			campo(		"Percentual da HE(%)*", "percentualHE", ($a_mod["enti_tx_percentualHE"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'"),
-			campo(		"Percentual da HE Sábado(%)*", "percentualSabadoHE", ($a_mod["enti_tx_percentualSabadoHE"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'")
+			campo(		"H.E. Semanal (%)*", "percHESemanal", ($a_mod["enti_tx_percHESemanal"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'"),
+			campo(		"H.E. Extraordinária (%)*", "percHEEx", ($a_mod["enti_tx_percHEEx"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'")
 		];
 		if(!empty($a_mod["enti_nb_empresa"])){
 			$aEmpresa = carregar("empresa", (int)$a_mod["enti_nb_empresa"]);
@@ -620,8 +620,8 @@
 			$padronizado = (
 				$a_mod["enti_tx_jornadaSemanal"] 		== $aParametro["para_tx_jornadaSemanal"] &&
 				$a_mod["enti_tx_jornadaSabado"] 		== $aParametro["para_tx_jornadaSabado"] &&
-				$a_mod["enti_tx_percentualHE"] 			== $aParametro["para_tx_percentualHE"] &&
-				$a_mod["enti_tx_percentualSabadoHE"] 	== $aParametro["para_tx_percentualSabadoHE"]
+				$a_mod["enti_tx_percHESemanal"] 			== $aParametro["para_tx_percHESemanal"] &&
+				$a_mod["enti_tx_percHEEx"] 	== $aParametro["para_tx_percHEEx"]
 			);
 			
 			$cJornada[]=texto("Convenção Padrão?", ($padronizado? "Sim": "Não"), 2, "name='textoParametroPadrao'");
@@ -713,8 +713,8 @@
 			$a_mod["parametroPadrao"]["para_nb_id"],
 			$a_mod["parametroPadrao"]["para_tx_jornadaSemanal"],
 			$a_mod["parametroPadrao"]["para_tx_jornadaSabado"],
-			$a_mod["parametroPadrao"]["para_tx_percentualHE"],
-			$a_mod["parametroPadrao"]["para_tx_percentualSabadoHE"]
+			$a_mod["parametroPadrao"]["para_tx_percHESemanal"],
+			$a_mod["parametroPadrao"]["para_tx_percHEEx"]
 		];
 
 		echo 
@@ -741,22 +741,22 @@
 					parent.document.contex_form.parametro.value 			= '".($a_mod["parametroPadrao"]["para_nb_id"]?? "")."';
 					parent.document.contex_form.jornadaSemanal.value 		= '".($a_mod["parametroPadrao"]["para_tx_jornadaSemanal"]?? "")."';
 					parent.document.contex_form.jornadaSabado.value 		= '".($a_mod["parametroPadrao"]["para_tx_jornadaSabado"]?? "")."';
-					parent.document.contex_form.percentualHE.value 			= '".($a_mod["parametroPadrao"]["para_tx_percentualHE"]?? "")."';
-					parent.document.contex_form.percentualSabadoHE.value 	= '".($a_mod["parametroPadrao"]["para_tx_percentualSabadoHE"]?? "")."';
+					parent.document.contex_form.percHESemanal.value 			= '".($a_mod["parametroPadrao"]["para_tx_percHESemanal"]?? "")."';
+					parent.document.contex_form.percHEEx.value 	= '".($a_mod["parametroPadrao"]["para_tx_percHEEx"]?? "")."';
 
 					conferirParametroPadrao('".implode("','", $params)."');
 				}
 
-				function conferirParametroPadrao(idParametro, jornadaSemanal, jornadaSabado, percentualHE, percentualSabadoHE){
+				function conferirParametroPadrao(idParametro, jornadaSemanal, jornadaSabado, percHESemanal, percHEEx){
 
 					var padronizado = (
 						idParametro == parent.document.contex_form.parametro.value &&
 						jornadaSemanal == parent.document.contex_form.jornadaSemanal.value &&
 						jornadaSabado == parent.document.contex_form.jornadaSabado.value &&
-						percentualHE == parent.document.contex_form.percentualHE.value &&
-						percentualSabadoHE == parent.document.contex_form.percentualSabadoHE.value
+						percHESemanal == parent.document.contex_form.percHESemanal.value &&
+						percHEEx == parent.document.contex_form.percHEEx.value
 					);
-					console.log([idParametro, jornadaSemanal, jornadaSabado, percentualHE, percentualSabadoHE]);
+					console.log([idParametro, jornadaSemanal, jornadaSabado, percHESemanal, percHEEx]);
 					parent.document.getElementsByName('textoParametroPadrao')[0].getElementsByTagName('p')[0].innerText = (padronizado? 'Sim': 'Não');
 				}
 

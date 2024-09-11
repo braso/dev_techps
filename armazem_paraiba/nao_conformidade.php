@@ -214,7 +214,7 @@
 						if ($aEmpresa["empr_nb_parametro"] > 0) {
 							$aParametro = carregar("parametro", $aEmpresa["empr_nb_parametro"]);
 							$convencaoPadrao = "| Convenção Padrão? Sim";
-							foreach(["tx_jornadaSemanal", "tx_jornadaSabado", "tx_percentualHE", "tx_percentualSabadoHE"] as $campo){
+							foreach(["tx_jornadaSemanal", "tx_jornadaSabado", "tx_percHESemanal", "tx_percHEEx"] as $campo){
 								if($aParametro["para_".$campo] != $aMotorista["enti_".$campo]){
 									$convencaoPadrao = "| Convenção Padrão? Não";
 									break;
