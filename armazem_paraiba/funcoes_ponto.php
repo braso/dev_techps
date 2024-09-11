@@ -1433,8 +1433,6 @@
 							." LIMIT 1;"
 					));
 
-					die(var_dump($parametro));
-
                     $row["saldoPeriodo"]                            = $endossoCompleto["totalResumo"]["diffSaldo"];
                     $endossoCompleto["totalResumo"]["saldoBruto"]   = operarHorarios([$saldoAnterior, $row["saldoPeriodo"]], "+");
                     [$row["HESemanal"], $row["HESabado"]]           = calcularHorasAPagar($endossoCompleto["totalResumo"]["saldoBruto"], $endossoCompleto["totalResumo"]["he50"], $endossoCompleto["totalResumo"]["he100"], $endossoCompleto["endo_tx_max50APagar"], ($parametro["para_tx_pagarHEExComPerNeg"]?? "sim"));
