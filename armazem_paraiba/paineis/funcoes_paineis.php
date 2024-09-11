@@ -368,15 +368,6 @@
 	
 						foreach($endossos as $endosso){
 							$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
-							if(empty($endosso["totalResumo"]["he50APagar"])){
-								$pago = calcularHorasAPagar(
-									operarHorarios([$endosso["totalResumo"]["saldoAnterior"], $endosso["totalResumo"]["diffSaldo"]], "+"),
-									$endosso["totalResumo"]["he50"],
-									$endosso["totalResumo"]["he100"],
-									$endosso["endo_tx_horasApagar"]
-								);
-								[$endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]] = $pago;
-							}
 							$totaisMot["jornadaPrevista"] 	= operarHorarios([$totaisMot["jornadaPrevista"], $endosso["totalResumo"]["jornadaPrevista"]], "+");
 							$totaisMot["jornadaEfetiva"] 	= operarHorarios([$totaisMot["jornadaEfetiva"], $endosso["totalResumo"]["diffJornadaEfetiva"]], "+");
 							$totaisMot["he50APagar"] 		= operarHorarios([$totaisMot["he50APagar"], $endosso["totalResumo"]["he50APagar"]], "+");
