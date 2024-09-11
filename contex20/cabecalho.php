@@ -139,6 +139,10 @@
 			align-content: center;
 		}
 
+		.error-field {
+			border-color: red;
+		}
+
 		.fecha-form-btn {
 			margin: 0.5rem;
 			width: fit-content;

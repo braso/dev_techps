@@ -411,6 +411,12 @@
 	function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 		global $CONTEX;
 
+		$classe = "form-control input-sm";
+
+		if(!empty($_POST["errorFields"]) && in_array($variavel, $_POST["errorFields"])){
+			$classe .= " error-field";
+		}
+
 		$dataScript = "<script>";
 		switch($mascara){
 			case "MASCARA_DATA";
@@ -486,7 +492,7 @@
 			break;
 			case "MASCARA_HIDDEN":
 				$type = "hidden";
-				$campo = '<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="'.$type.'" class="form-control input-sm" '.$extra.'>';
+				$campo = '<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="'.$type.'" class="'.$classe.'" '.$extra.'>';
 			break;
 			case "MASCARA_SENHA":
 				$type = "password";
@@ -504,7 +510,7 @@
 		if(empty($campo)){
 			$campo = '<div class="col-sm-'.$tamanho.' margin-bottom-5">
 				<label>'.$nome.'</label>
-				<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="'.$type.'" class="form-control input-sm" '.$extra.'>
+				<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="'.$type.'" class="'.$classe.'" '.$extra.'>
 			</div>';
 		}
 
@@ -527,9 +533,9 @@
 		return campo($nome, $variavel, $modificador, $tamanho, "MASCARA_SENHA", $extra);
 	}
 
-	function checkbox_banco($nome, $variavel, $modificadoRadio, $modificadoCampo=0, $modificadoCampo2=0, $tamanho=3) {
+	function checkbox_banco($nome, $variavel, $modificadoRadio, $modificadoCampo=0, $modificadoCampo2=0, $tamanho=3){
 		$campo = 
-			'<div class="col-sm-'.$tamanho.' margin-bottom-5" style="min-width:200px">
+			'<div class="col-sm-'.$tamanho.' margin-bottom-5" style="min-width:fit-content; min-height: 50px;">
 				<label>'.$nome.'</label><br>
 				<label class="radio-inline">
 					<input type="radio" id="sim" name="banco" value="sim"> Sim
@@ -585,6 +591,7 @@
 	}
 
 	function checkbox(string $titulo, string $variavel, array $opcoes, int $tamanho=3, string $tipo = "checkbox", string $extra='', string $modificadoCampo = ''){
+
 		$campo = 
 			"<div class='col-sm-".$tamanho." margin-bottom-5' style='min-width:200px' id='".$variavel."' ".$extra.">
 			<div class='margin-bottom-5'>
@@ -597,7 +604,13 @@
 		foreach($opcoes as $key => $value){
 			$campo .=
 				"<label>
-					<input type='".$tipo."' id='".$key."' name='".$variavel."_".$key."' value='true' ".(in_array($key,$valoresMarcados) && !empty($valoresMarcados) ? 'checked': '')."> ".$value."
+					<input 
+						type='".$tipo."' 
+						id='".$key."' 
+						name='".$variavel."_".$key."' 
+						value='true' ".(in_array($key,$valoresMarcados) && !empty($valoresMarcados) ? 'checked': '')."
+					>
+					".$value."
 				</label>"
 			;
 		}
@@ -638,7 +651,8 @@
 	}
 
 	function textarea($nome,$variavel,$modificador,$tamanho,$extra=''){
-		$campo=
+
+		$campo =
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
 				<label>'.$nome.'</label>
 				<textarea name="'.$variavel.'" id="'.$variavel.'" autocomplete="off" type="password" class="form-control input-sm" '.$extra.'>'.$modificador.'</textarea>
@@ -675,6 +689,12 @@
 	}
 
 	function combo($nome, $variavel, $modificador, $tamanho, array $opcoes, $extra = ""){
+		$classe = "form-control input-sm";
+
+		if(!empty($_POST["errorFields"]) && in_array($variavel, $_POST["errorFields"])){
+			$classe .= " error-field";
+		}
+
 		$res = "";
 		foreach($opcoes as $key => $value){
 			//Correção da chave para os casos em que a variável $campos é um array comum, e não um dicionário. Retirar quando for necessário utilizar um dicionário com chaves numerais
@@ -687,7 +707,7 @@
 		$campo=
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
 				<label>'.$nome.'</label>
-				<select name="'.$variavel.'" class="form-control input-sm" '.$extra.'>
+				<select name="'.$variavel.'" class="'.$classe.'" '.$extra.'>
 					'.$res.'
 				</select>
 			</div>';
@@ -718,8 +738,12 @@
 	// }
 
 	function combo_net($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra_bd='',$extra_busca='',$extra_ordem='',$extra_limite='15'){
-
 		global $CONTEX,$conn;
+
+		$classe = "form-control input-sm";
+		if(!empty($_POST["errorFields"]) && in_array($variavel, $_POST["errorFields"])){
+			$classe .= " error-field";
+		}
 
 		if(!empty($modificador)){
 			$tab = substr($tabela,0,4);
@@ -748,7 +772,7 @@
 		$campo =
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
 				<label>'.$nome.'</label>
-				<select class="'.$variavel.' form-control input-sm" id="'.$variavel.'" style="width:100%" '.$extra.' name="'.$variavel.'">
+				<select class="'.$variavel.' '.$classe.'" id="'.$variavel.'" style="width:100%" '.$extra.' name="'.$variavel.'">
 				'.$opt.'
 				</select>
 			</div>'
@@ -829,10 +853,15 @@
 			$c_opcao .= '<option value="'.$a[0].'" '.$selected.'>'.$a[1].'</option>';
 		}
 
+		$classe = "form-control input-sm";
+		if(!empty($_POST["errorFields"]) && in_array($variavel, $_POST["errorFields"])){
+			$classe .= " error-field";
+		}
+
 		$campo=
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
 				<label>'.$nome.'</label>
-				<select name="'.$variavel.'" id="'.$variavel.'" class="form-control input-sm" '.$extra.'>
+				<select name="'.$variavel.'" id="'.$variavel.'" class="'.$classe.'" '.$extra.'>
 					'.$c_opcao.'
 				</select>
 			</div>'
