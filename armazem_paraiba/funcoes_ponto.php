@@ -288,7 +288,7 @@
 		;
 	}
 
-	function ordenar_horarios($inicio, $fim, $ehEspera = false, $ehEsperaRepouso = false){
+	function ordenar_horarios(array $inicios, array $fins, bool $ehEspera = false, bool $ehEsperaRepouso = false){
 		$pares_horarios = [
 			"horariosOrdenados" => [],
 			"pares" => [],
@@ -298,41 +298,32 @@
 			"totalIntervaloAdicionalNot" => "00:00"
 		];
 
-		if(empty($inicio) || empty($fim)){
+		if(empty($inicios) || empty($fins)){
 			return $pares_horarios;
 		}
-		// Inicializa o array resultante e o array de indicação
-		$horarios = [];
-		$origem = [];
-
-		// Adiciona os horários do array de início e marca a origem como "inicio"
-		foreach ($inicio as $h){
-			$horarios[] = $h;
-			$origem[] = "inicio";
-		}
-
-		// Adiciona os horários do array de fim e marca a origem como "fim"
-		foreach ($fim as $h){
-			$horarios[] = $h;
-			$origem[] = "fim";
-		}
-
+		
+		$horarios = array_merge($inicios, $fins);
+		$tipos = array_pad([], count($inicios), "inicio");
+		$tipos = array_pad($tipos, count($tipos)+count($fins), "fim");
+		
 		// Ordena o array de horários
-		array_multisort($horarios, SORT_ASC, $origem, SORT_DESC);
+		array_multisort($horarios, SORT_ASC, $tipos, SORT_DESC);
 
 		// Cria um array associativo para cada horário com sua origem correspondente
 		$horarios_com_origem = [];
 		for ($i = 0; $i < count($horarios); $i++){
 			$horarios_com_origem[] = [
 				"horario" => $horarios[$i],
-				"origem" => $origem[$i]
+				"tipo" => $tipos[$i]
 			];
 		}
 
-		$dtInicioAdicionalNot = new DateTime(substr($horarios[0],0,10)." 05:00");
-		$dtFimAdicionalNot = new DateTime(substr($horarios[0],0,10)." 22:00");
-		$totalIntervalo = new DateTime(substr($horarios[0],0,10)." 00:00");
-		$totalIntervaloAdicionalNot = new DateTime(substr($horarios[0],0,10)." 00:00");
+		$dia = DateTime::createFromFormat("Y-m-d H:i:s", $horarios[0]);
+
+		$dtInicioAdicionalNot = "05:00";
+		$dtFimAdicionalNot = "22:00";
+		$totalIntervalo = "00:00";
+		$totalIntervaloAdicionalNot = "00:00";
 		$inicio_atual = null;
 		$inicio_anterio = null;
 		$pares = [];
@@ -342,14 +333,14 @@
 
 		$inicio_atual = "";
 		foreach ($horarios_com_origem as $item){
-			if($item["origem"] == "inicio"){
+			if($item["tipo"] == "inicio"){
 				if(!empty($inicio_atual)){
 					// $pares[] = ["inicio" => date("H:i", strtotime($inicio_atual)), "fim" => ""];
 					$pares[] = ["inicio" => $inicio_atual, "fim" => ""];
 					$temErroJornada = True;
 				}
 				$inicio_atual = $item["horario"];
-			}elseif($item["origem"] == "fim" && !empty($inicio_atual)){
+			}elseif($item["tipo"] == "fim" && !empty($inicio_atual)){
 				$hInicio = new DateTime($inicio_atual);
 				$hFim = new DateTime($item["horario"]);
 				
@@ -406,12 +397,12 @@
 				}
 
 				$inicio_atual = null;
-			}elseif($item["origem"] == "fim" && $inicio_atual == null){
+			}elseif($item["tipo"] == "fim" && $inicio_atual == null){
 				// Se encontrarmos um fim sem um início correspondente, armazenamos o horário sem par
 				$sem_fim[] = $item["horario"];
 			}
 		}
-		if($item["origem"] == "inicio"){
+		if($item["tipo"] == "inicio"){
 			// $pares[] = ["inicio" => date("H:i", strtotime($item["horario"])), "fim" => ""];
 			$pares[] = ["inicio" => $item["horario"], "fim" => ""];
 		}
@@ -422,8 +413,8 @@
 				."Fim:___".$pares[$f]["fim"]."\n\n";
 		}
 		$iconeAlerta = "";
-		if(!((count($inicio)+count($fim) == 0) || empty($tooltip))){
-			if(count($inicio) != count($fim) || count($horarios_com_origem)/2 != (count($pares)) || $temErroJornada){ 
+		if(!((count($inicios)+count($fins) == 0) || empty($tooltip))){
+			if(count($inicios) != count($fins) || count($horarios_com_origem)/2 != (count($pares)) || $temErroJornada){ 
 				$iconeAlerta = "<a><i style='color:red;' title='".$tooltip."' class='fa fa-info-circle'></i></a>";
 			}elseif($ehEsperaRepouso){
 				$iconeAlerta = "<a><i style='color:#99ff99;' title='".$tooltip."' class='fa fa-info-circle'></i></a>";
@@ -444,7 +435,7 @@
 			for ($i = 1; $i < count($horarios_com_origem); $i++){ 
 				$horarioVez = $horarios_com_origem[$i];
 				$horarioAnterior = $horarios_com_origem[($i-1)];
-				if($horarioVez["origem"] == "inicio" && $horarioAnterior["origem"] == "fim"){
+				if($horarioVez["tipo"] == "inicio" && $horarioAnterior["tipo"] == "fim"){
 					$dtInicio = new DateTime($horarioVez["horario"]);
 					$dtFim = new DateTime($horarioAnterior["horario"]);
 					
@@ -469,6 +460,7 @@
 			$pares_horarios["totalIntervaloAdicionalNot"] = $totalIntervaloAdicionalNot->format("H:i");
 		}
 		// Retorna o array de horários com suas respectivas origens
+
 		return $pares_horarios;
 	}
 
