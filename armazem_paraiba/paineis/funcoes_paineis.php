@@ -52,19 +52,19 @@
 				if(!is_dir($path)){
 					mkdir($path, 0755, true);
 				}
-				if(file_exists($path."/empresa_".$empresa["empr_nb_id"].".json")){
-					if(date("Y-m-d", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")) == date("Y-m-d")){
-						// echo 
-						// 	"<script>"
-						// 	."confirm('O relatório de ".$empresa["empr_tx_nome"]." já foi gerado hoje, deseja gerar novamente?');"
-						// 	."</script>"
-						// ;
-						continue;
-					}
-				}
+				// if(file_exists($path."/empresa_".$empresa["empr_nb_id"].".json")){
+				// 	if(date("Y-m-d", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")) == date("Y-m-d")){
+				// 		// echo 
+				// 		// 	"<script>"
+				// 		// 	."confirm('O relatório de ".$empresa["empr_tx_nome"]." já foi gerado hoje, deseja gerar novamente?');"
+				// 		// 	."</script>"
+				// 		// ;
+				// 		continue;
+				// 	}
+				// }
 	
 				$motoristas = mysqli_fetch_all(query(
-					"SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_banco FROM entidade"
+					"SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_banco, enti_tx_ocupacao FROM entidade"
 					." WHERE enti_tx_status = 'ativo'"
 						." AND enti_nb_empresa = ".$empresa["empr_nb_id"]
 						." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
@@ -170,6 +170,7 @@
 					$row = [
 						"idMotorista" => $motorista["enti_nb_id"],
 						"matricula" => $motorista["enti_tx_matricula"],
+						"ocupacao" => $motorista["enti_tx_ocupacao"],
 						"nome" => $motorista["enti_tx_nome"],
 						"statusEndosso" => $statusEndosso,
 						"jornadaPrevista" => $totaisMot["jornadaPrevista"],
@@ -270,19 +271,19 @@
 				if(!is_dir($path)){
 					mkdir($path, 0755, true);
 				}
-				if(file_exists($path."/empresa_".$empresa["empr_nb_id"].".json")){
-					if(date("Y-m-d", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")) == date("Y-m-d")){
-						// echo 
-						// 	"<script>"
-						// 	."confirm('O relatório de ".$empresa["empr_tx_nome"]." já foi gerado hoje, deseja gerar novamente?');"
-						// 	."</script>"
-						// ;
-						continue;
-					}
-				}
+				// if(file_exists($path."/empresa_".$empresa["empr_nb_id"].".json")){
+				// 	if(date("Y-m-d", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")) == date("Y-m-d")){
+				// 		// echo 
+				// 		// 	"<script>"
+				// 		// 	."confirm('O relatório de ".$empresa["empr_tx_nome"]." já foi gerado hoje, deseja gerar novamente?');"
+				// 		// 	."</script>"
+				// 		// ;
+				// 		continue;
+				// 	}
+				// }
 	
 				$motoristas = mysqli_fetch_all(query(
-					"SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_banco FROM entidade"
+					"SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_banco, enti_tx_ocupacao FROM entidade"
 					." WHERE enti_tx_status = 'ativo'"
 						." AND enti_nb_empresa = ".$empresa["empr_nb_id"]
 						." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
@@ -387,12 +388,10 @@
 								$totaisMot["saldoAnterior"] = $endosso["totalResumo"]["saldoAnterior"];
 							}
 							$totaisMot["saldoPeriodo"] 		= operarHorarios([$totaisMot["saldoPeriodo"], $endosso["totalResumo"]["diffSaldo"]], "+");
-							$totaisMot["saldoPeriodo"] 		= operarHorarios([$totaisMot["saldoPeriodo"], $endosso["totalResumo"]["diffSaldo"]], "+");
-	
 							if(empty($endosso["totalResumo"]["saldoBruto"]) && !empty($endosso["totalResumo"]["saldoAtual"])){
 								$totaisMot["saldoFinal"] = operarHorarios([$endosso["totalResumo"]["saldoAtual"], $endosso["totalResumo"]["he100"]], "+");
 							}else{
-								$totaisMot["saldoFinal"] = operarHorarios([$endosso["totalResumo"]["saldoAnterior"], $endosso["totalResumo"]["saldoBruto"]], "+");
+								$totaisMot["saldoFinal"] = operarHorarios([$endosso["totalResumo"]["saldoAnterior"], $totaisMot["saldoPeriodo"] ], "+");
 								$totaisMot["saldoFinal"] = operarHorarios([$totaisMot["saldoFinal"], $endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]], "-");
 							}
 						}
@@ -402,6 +401,7 @@
 						"idMotorista" => $motorista["enti_nb_id"],
 						"matricula" => $motorista["enti_tx_matricula"],
 						"nome" => $motorista["enti_tx_nome"],
+						"ocupacao" => $motorista["enti_tx_ocupacao"],
 						"statusEndosso" => $statusEndosso,
 						"jornadaPrevista" => $totaisMot["jornadaPrevista"],
 						"jornadaEfetiva" => $totaisMot["jornadaEfetiva"],
