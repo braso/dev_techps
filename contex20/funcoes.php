@@ -539,11 +539,11 @@
 				</label>
 			</div>
 			<div id="'.$variavel.'" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
-					<label>Quantidade de Dias:</label>
+					<label>Quantidade de Dias*:</label>
 					<input class="form-control input-sm" type="number" value="'.$modificadoCampo.'" id="outroCampo" name="quandDias" autocomplete="off">
 			</div>
 			<div id="limiteHoras" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
-				<label>Quantidade de Horas Limite:</label>
+				<label>Quantidade de Horas Limite*:</label>
 				<input class="form-control input-sm" type="number" value="'.$modificadoCampo2.'" id="outroCampo" name="quandHoras" autocomplete="off">
 			</div>'
 		;
