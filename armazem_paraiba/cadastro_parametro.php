@@ -139,7 +139,7 @@
 			$camposObrig["quandHoras"] = "Quantidade de Horas Limite";
 		}
 
-		$camposObrig = [
+		$camposObrig = array_merge($camposObrig, [
 			"nome" => "Nome",
 			"jornadaSemanal" => "Jornada Semanal (Horas/Dia)",
 			"jornadaSabado" => "Jornada Sábado (Horas/Dia)",
@@ -147,7 +147,7 @@
 			"percHESemanal" => "Hora Extra Semanal (%)",
 			"percHEEx" => "Hora Extra Extraordinária (%)",
 			"maxHESemanalDiario" => "Máx. de \"H.E. Semanal\" por dia"
-		];
+		]);
 
 		$emptyFields = "";
 		$_POST["errorFields"] = [];
