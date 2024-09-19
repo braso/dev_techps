@@ -7,6 +7,7 @@
 	include "funcoes_ponto.php";
 
 	function cadastra_abono(){
+		$_POST["acao"] = "index";
 
 		// Conferir se os campos obrigatórios estão preenchidos{
 			$camposObrig = ["daterange" => "Data", "abono" => "Horas", "motivo" => "Motivo"];
@@ -124,7 +125,7 @@
 		$c2[] = textarea("Justificativa","descricao", ($_POST["descricao"]?? ""),12);
 		
 		//BOTOES
-    $b[] = botao("Gravar","cadastra_abono", "","","","","btn btn-success");
+    	$b[] = botao("Gravar","cadastra_abono", "","","","","btn btn-success");
 		$b[] = botao("Voltar", "voltar", implode(",",array_keys($_POST)), implode(",",array_values($_POST))); 
 		abre_form("Filtro de Busca");
 

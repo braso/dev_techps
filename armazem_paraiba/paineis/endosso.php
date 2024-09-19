@@ -94,6 +94,7 @@
                                         row = {
                                             'matricula': row.matricula,
                                             'nome': row.nome,
+                                            'ocupacao': row.ocupacao,
                                             'statusEndosso': row.statusEndosso,
                                             'saldoAnterior': row.saldoAnterior
                                         };
