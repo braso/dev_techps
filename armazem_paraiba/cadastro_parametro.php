@@ -139,7 +139,7 @@
 			$camposObrig["quandHoras"] = "Quantidade de Horas Limite";
 		}
 
-		$camposObrig = [
+		$camposObrig = array_merge($camposObrig, [
 			"nome" => "Nome",
 			"jornadaSemanal" => "Jornada Semanal (Horas/Dia)",
 			"jornadaSabado" => "Jornada Sábado (Horas/Dia)",
@@ -147,7 +147,7 @@
 			"percentualHE" => "Percentual da Hora Extra (Semanal)",
 			"percentualSabadoHE" => "Percentual da Hora Extra (Dias sem Jornada Prevista)",
 			"HorasEXExcedente" => "Máximo de Horas Extras 50% (diário)"
-		];
+		]);
 
 		$error = false;
 		$emptyFields = '';
