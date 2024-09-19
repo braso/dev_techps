@@ -40,11 +40,17 @@
 		exit;
 	}
 
-	function dd($variavel){
+	/**
+	 * Pôe uma variável em um <pre></pre> para ser exibido de forma identada. 
+	 * $die indica se o código deve parar logo após exibir essa variável.
+	 */
+	function dd($variavel, bool $die = true){
 		echo "<pre>";
-		var_dump(json_encode($variavel, JSON_PRETTY_PRINT));
+		var_dump($variavel);
 		echo "</pre>";
-		die();
+		if($die){
+			die();
+		}
 	}
 	
 	// function diferenca_data(string $data1, string $data2=""){
@@ -98,6 +104,17 @@
 	}
 
 	function formatToTime(int $hours, int $minutes, int $seconds = 0): string{
+		if($seconds > 59){
+			$qtdMinutes = intval($seconds/60);
+			$seconds -= $qtdMinutes*60;
+			$minutes += $qtdMinutes;
+		}
+		if($minutes > 59){
+			$qtdHours = intval($minutes/60);
+			$minutes -= $qtdHours*60;
+			$hours += $qtdHours;
+		}
+
 		return 
 			str_pad($hours,   2, "0", STR_PAD_LEFT)
 			.":".str_pad($minutes, 2, "0", STR_PAD_LEFT)

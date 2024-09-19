@@ -88,6 +88,8 @@
 			inserir("abono", $campos, $valores);
 		}
 
+		$_POST["acao"] = "index";
+
 		voltar();
 		exit;
 	}
@@ -124,7 +126,7 @@
 		$c2[] = textarea("Justificativa","descricao", ($_POST["descricao"]?? ""),12);
 		
 		//BOTOES
-    $b[] = botao("Gravar","cadastra_abono", "","","","","btn btn-success");
+    	$b[] = botao("Gravar","cadastra_abono", "","","","","btn btn-success");
 		$b[] = botao("Voltar", "voltar", implode(",",array_keys($_POST)), implode(",",array_values($_POST))); 
 		abre_form("Filtro de Busca");
 

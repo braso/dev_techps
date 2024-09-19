@@ -339,6 +339,8 @@
 						unset($totalResumoGrid["saldoAnterior"]);
 						unset($totalResumoGrid["he50APagar"]);
 						unset($totalResumoGrid["he100APagar"]);
+						unset($totalResumoGrid["saldoFinal"]);
+
 
 						if(count($aDia) > 0){
 							$aDia[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumoGrid));

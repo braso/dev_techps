@@ -116,16 +116,14 @@
 							$matchedTypes['fins'][$f]    = intval($matchedTypes['fins'][$f]['macr_tx_codigoInterno']);
 						}
 
-						$temPeriodoAberto = mysqli_fetch_assoc(
-							query(
-								"SELECT * FROM ponto 
-									WHERE pont_tx_status = 'ativo'
-										AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-										AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora'].":59', '%Y-%m-%d %H:%i:%s')
-									ORDER BY pont_tx_data DESC, pont_nb_id DESC
-									LIMIT 1;"
-							)
-						);
+						$temPeriodoAberto = mysqli_fetch_assoc(query(
+							"SELECT * FROM ponto"
+								." WHERE pont_tx_status = 'ativo'"
+									." AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'"
+									." AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora'].":59', '%Y-%m-%d %H:%i:%s')"
+								." ORDER BY pont_tx_data DESC, pont_nb_id DESC"
+								." LIMIT 1;"
+						));
 						
 						$temPeriodoAberto['pont_tx_tipo'] = !empty($temPeriodoAberto['pont_tx_tipo'])? intval($temPeriodoAberto['pont_tx_tipo']): $temPeriodoAberto['pont_tx_tipo'];
 						$temPeriodoAberto['macr_tx_codigoInterno'] = !empty($temPeriodoAberto['macr_tx_codigoInterno'])? intval($temPeriodoAberto['macr_tx_codigoInterno']): $temPeriodoAberto['macr_tx_codigoInterno'];

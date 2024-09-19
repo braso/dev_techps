@@ -242,7 +242,7 @@
 				
 				$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $dataVez, $aMotorista["enti_nb_id"])], $aDetalhado));
 				for($f = 0; $f < sizeof($row)-1; $f++){
-					if($f == 12){//Se for da coluna "Jornada Prevista", não apaga
+					if(in_array($f, [3, 4, 5, 6, 12])){//Se for das colunas de jornada, refeição ou "Jornada Prevista", não apaga
 						continue;
 					}
 					if($row[$f] == "00:00"){
