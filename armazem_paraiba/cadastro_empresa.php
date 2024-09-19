@@ -496,7 +496,7 @@
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($c);
 		echo "<br>";
-		fieldset("CONVEÇÃO SINDICAL - JORNADA DO MOTORISTA PADRÃO");
+		fieldset("CONVEÇÃO SINDICAL - JORNADA DO FUNCIONÁRIO PADRÃO");
 
 		if(!empty($a_mod['empr_nb_userCadastro'])){
 			$a_userCadastro = carregar('user',$a_mod['empr_nb_userCadastro']);

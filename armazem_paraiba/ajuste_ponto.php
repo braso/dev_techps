@@ -17,7 +17,7 @@
 			$aMotorista = carregar('entidade',$_POST['id']);
 			$aTipo = carregar('macroponto', $_POST['idMacro']);
 			if(empty($aMotorista)){
-				set_status("ERRO: Motorista não encontrado.");
+				set_status("ERRO: Funcionário não encontrado.");
 				index();
 				exit;
 			}
@@ -339,7 +339,7 @@
 		}
 		
 		if(empty($_POST['id'])){
-			echo '<script>alert("ERRO: Deve ser selecionado um motorista para ajustar.")</script>';
+			echo '<script>alert("ERRO: Deve ser selecionado um Funcionário para ajustar.")</script>';
 			
 			$_POST["acao"] = "buscarEspelho()";
 			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";

@@ -218,7 +218,7 @@
 			echo 
 				"<form name='goToIndexForm' action='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php'></form>"
 				."<script>"
-					."alert('Motorista não localizado. Tente fazer o login novamente.');"
+					."alert('Funcionário não localizado. Tente fazer o login novamente.');"
 					."document.goToIndexForm.submit();"
 				."</script>"
 			;

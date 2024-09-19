@@ -176,7 +176,7 @@
 		$_POST["quantHoras"] = "00:00";
 
 		if(empty($_POST["busca_motorista"]) || empty($_POST["data_de"]) || empty($_POST["data_ate"])){
-			set_status("ERRO: Insira motorista e datas para inserir o saldo possível.");
+			set_status("ERRO: Insira funcionário e datas para inserir o saldo possível.");
 			index();
 			exit;
 		}
@@ -227,7 +227,7 @@
 		if($_POST["quantHoras"][0] == "-"){
 			$_POST["quantHoras"] = "00:00";
 		}
-		set_status("O máximo que pode ser pago a este(a) motorista é: ".$_POST["quantHoras"]);
+		set_status("O máximo que pode ser pago a este(a) funcionário(a) é: ".$_POST["quantHoras"]);
 
 		index();
 		exit;
@@ -378,7 +378,7 @@
 				$dadosMotorista = carrega_array(query(
 					"SELECT * FROM entidade".
 						" LEFT JOIN parametro ON enti_nb_parametro = para_nb_id".
-						" WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante')".
+						" WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')".
 						" AND enti_nb_id IN (".$motorista["enti_nb_id"].")".
 						" AND enti_nb_empresa = ".$motorista["enti_nb_empresa"].
 						" ORDER BY enti_tx_nome"
@@ -491,7 +491,7 @@
 
 		cabecalho("Cadastro de Endosso");
 
-		$extra_bd_motorista = " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')";
+		$extra_bd_motorista = " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')";
 		if($_SESSION["user_tx_nivel"] != "Super Administrador"){
 			$extra_bd_motorista .= " AND enti_nb_empresa = ".$_SESSION["user_tx_emprCnpj"];
 		}
@@ -520,7 +520,7 @@
 		;
 
 		$fields = [
-			combo_net("Motorista", "busca_motorista", $_POST["busca_motorista"]?? "", 4, "entidade", "", $extra_bd_motorista, "enti_tx_matricula"),
+			combo_net("Funcionário", "busca_motorista", $_POST["busca_motorista"]?? "", 4, "entidade", "", $extra_bd_motorista, "enti_tx_matricula"),
 			campo_data("De*", "data_de", ($_POST["data_de"]?? ""), 2),
 			campo_data("Ate*", "data_ate", ($_POST["data_ate"]?? ""), 2),
 			// checkbox("Pagar Horas Extras", "pagar_horas", ["sim" => "Sim", "nao" => "Não"], 3, "radio"),

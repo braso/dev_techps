@@ -109,13 +109,13 @@
 		cabecalho("Cadastro Abono");
 
 		$c[] = combo_net(
-			"Motorista/Ajudante*",
+			"Funcionário*",
 			"motorista",
 			(!empty($_POST["motorista"])? $_POST["motorista"]: $_POST["busca_motorista"]?? ""),
 			4,
 			"entidade",
 			"",
-			" AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')",
+			" AND enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário')",
 			"enti_tx_matricula"
 		);
 		$c[] = campo("Data(s)*","daterange", ($_POST["daterange"]?? ""),3);
