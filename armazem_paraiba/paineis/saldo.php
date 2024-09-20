@@ -22,11 +22,12 @@
         if(!empty($_POST["empresa"])){
             $linha .= "+'<td>'+row.matricula+'</td>'
                     +'<td>'+row.nome+'</td>'
+                    +'<td>'+row.ocupacao+'</td>'
                     +'<td>'+row.statusEndosso+'</td>'
                     +'<td>'+row.jornadaPrevista+'</td>'
                     +'<td>'+row.jornadaEfetiva+'</td>'
                     +'<td>'+row.HESemanal+'</td>'
-                    +'<td>'+row.HEEx+'</td>'
+                    +'<td>'+row.HESabado+'</td>'
                     +'<td>'+row.adicionalNoturno+'</td>'
                     +'<td>'+row.esperaIndenizada+'</td>'
                     +'<td>'+row.saldoAnterior+'</td>'
@@ -374,6 +375,7 @@
                 $rowTotais .= 
                     "<th colspan='2'>".$totais["empresaNome"]."</th>"
                     ."<th colspan='1'></th>"
+                    ."<th colspan='1'></th>"
                     ."<th colspan='1'>".$totais["jornadaPrevista"]."</th>"
                     ."<th colspan='1'>".$totais["jornadaEfetiva"]."</th>"
                     ."<th colspan='1'>".$totais["HESemanal"]."</th>"
@@ -388,6 +390,7 @@
                 $rowTitulos .= 
                     "<th class='matricula'>Matrícula</th>"
                     ."<th class='nome'>Nome</th>"
+                    ."<th class='ocupacao'>Ocupação</th>"
                     ."<th class='status'>Status Endosso</th>"
                     ."<th class='jornadaPrevista'>Jornada Prevista</th>"
                     ."<th class='jornadaEfetiva'>Jornada Efetiva</th>"

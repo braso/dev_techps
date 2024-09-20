@@ -187,7 +187,7 @@
 			if(empty($a_mod["enti_tx_matricula"])){
 				$camposObrig["postMatricula"] = "Matrícula";
 			}
-			if($_POST["ocupacao"] == "Ajudante"){
+			if($_POST["ocupacao"] == "Ajudante" || $_POST["ocupacao"] == "Funcionário"){
 				unset($camposObrig["cnhRegistro"], $camposObrig["cnhValidade"], $camposObrig["cnhCategoria"], $camposObrig["cnhCidade"], $camposObrig["cnhEmissao"]);
 			}
 			if(empty($_POST["percentualHE"]) && $_POST["percentualHE"] != "0"){
@@ -319,7 +319,7 @@
 			$a_user = carrega_array(query(
 				"SELECT * FROM user 
 					WHERE user_nb_entidade = ".$_POST["id"]."
-						AND user_tx_nivel IN ('Motorista', 'Ajudante')"
+						AND user_tx_nivel IN ('Motorista', 'Ajudante','Funcionário')"
 			));
 
 			$_POST["nivel"] = $_POST["ocupacao"];
@@ -481,7 +481,7 @@
 			$a_mod["user_tx_login"] = $login["user_tx_login"];
 		}
 		
-		cabecalho("Cadastro de Motorista");
+		cabecalho("Cadastro de Funcionário");
 
 		if(!empty($a_mod["enti_tx_nascimento"])){
 			$data1 = new DateTime($a_mod["enti_tx_nascimento"]);
@@ -582,7 +582,7 @@
 		];
 		$tabIndex++;
 		$cContratual = array_merge($cContratual, [
-			combo("Ocupação*", "ocupacao", ($a_mod["enti_tx_ocupacao"]?? ""), 2, ["Motorista", "Ajudante"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
+			combo("Ocupação*", "ocupacao", ($a_mod["enti_tx_ocupacao"]?? ""), 2, ["Motorista", "Ajudante", "Funcionário"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
 			campo_data("Dt Admissão*", "admissao", ($a_mod["enti_tx_admissao"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data("Dt. Desligamento", "desligamento", (($a_mod["enti_tx_desligamento"] || $data === '0001-01-01') ? "" : $a_mod["enti_tx_desligamento"]), 2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Saldo de Horas", "setBanco", ($a_mod["enti_tx_banco"]?? "00:00"), 1, "MASCARA_HORAS", "placeholder='HH:mm' tabindex=".sprintf("%02d", $tabIndex++)),
@@ -686,7 +686,7 @@
 		fieldset("Dados Contratuais");
 		linha_form($cContratual);
 		echo "<br>";
-		fieldset("CONVENÇÃO SINDICAL - JORNADA PADRÃO DO MOTORISTA");
+		fieldset("CONVENÇÃO SINDICAL - JORNADA PADRÃO DO FUNCIONÁRIO");
 		linha_form($cJornada);
 		echo "<br>";
 		echo "<div class='cnh-row'>";
@@ -762,7 +762,7 @@
 
 				function checkOcupation(ocupation){
 					console.log(ocupation);
-					if(ocupation == 'Ajudante'){
+					if(ocupation == 'Ajudante' || ocupation == 'Funcionário'){
 						document.getElementsByClassName('cnh-row')[0].setAttribute('style', 'display:none')
 					}else{
 						document.getElementsByClassName('cnh-row')[0].setAttribute('style', '')
@@ -809,7 +809,7 @@
 	}
 
 	function index(){
-		cabecalho("Cadastro de Motorista");
+		cabecalho("Cadastro de Funcionário");
 
 		$extraEmpresa = "";
 		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
@@ -837,7 +837,7 @@
 				campo("Matrícula", "busca_matricula", ($_POST["busca_matricula"]?? ""), 1,"","maxlength='6'"),
 				campo("CPF", "busca_cpf", ($_POST["busca_cpf"]?? ""), 2, "MASCARA_CPF"),
 				combo_bd("!Empresa", "busca_empresa", ($_POST["busca_empresa"]?? ""), 2, "empresa", "", $extraEmpresa),
-				combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"]?? ""), 2, ["", "Motorista", "Ajudante"]),
+				combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"]?? ""), 2, ["", "Motorista", "Ajudante", "Funcionário"]),
 				combo("Convenção Padrão", "busca_padrao", ($_POST["busca_padrao"]?? ""), 2, ["" => "todos", "sim" => "Sim", "nao" => "Não"]),
 				combo_bd("!Parâmetros da Jornada", "busca_parametro", ($_POST["busca_parametro"]?? ""), 6, "parametro"),
 				combo("Status", "busca_status", ($_POST["busca_status"]?? ""), 2, ["" => "todos", "ativo" => "Ativo", "inativo" => "Inativo"])
@@ -896,7 +896,7 @@
 			"SELECT ".implode(", ", array_values($sqlFields))." FROM entidade 
 				JOIN empresa ON enti_nb_empresa = empr_nb_id 
 				JOIN parametro ON enti_nb_parametro = para_nb_id 
-				WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante') 
+				WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') 
 					$extraEmpresa 
 					$extra"
 		);

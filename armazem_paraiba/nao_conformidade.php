@@ -81,7 +81,7 @@
 
 		//CAMPOS DE CONSULTA{
 			$c = [
-				combo_net("Motorista/Ajudante:", "busca_motorista", (!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 3, "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')".$extraMotorista.$extraEmpresaMotorista, "enti_tx_matricula"),
+				combo_net("Funcionário:", "busca_motorista", (!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 3, "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')".$extraMotorista.$extraEmpresaMotorista, "enti_tx_matricula"),
 				campo_mes("Data*:",     "busca_data",      (!empty($_POST["busca_data"])?      $_POST["busca_data"]     : ""), 2)
 			];
 
@@ -122,12 +122,6 @@
 			</style>"
 		;
 
-		$cab = [
-			"", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
-			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "HE 50%", "HE&nbsp;100%",
-			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
-		];
-
 		//function buscar_endosso(){
 			$counts = [
 				"total" => 0,								//$countEndosso
@@ -144,7 +138,7 @@
 					"SELECT * FROM entidade"
 						." WHERE enti_tx_status = 'ativo'"
 							." AND enti_nb_empresa = ".$_POST["busca_empresa"]
-							." AND (enti_tx_ocupacao IN ('Motorista', 'Ajudante') AND enti_tx_dataCadastro < '".$date->format("Y-m-t")."')"
+							." AND (enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário') AND enti_tx_dataCadastro < '".$date->format("Y-m-t")."')"
 							." ".$extra
 						." ORDER BY enti_tx_nome;"
 				);
@@ -262,6 +256,13 @@
 						if($saldoAnterior != "--:--"){
 							$saldoFinal = somarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]]);
 						}
+
+						$cab = [
+							"", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
+							"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "H.E. ".$aMotorista["enti_tx_percentualHE"]."%", "H.E. ".$aMotorista["enti_tx_percentualSabadoHE"]."%",
+							"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
+						];
+				
 	
 						$saldosMotorista = 
 							"<div class='table-responsive'>

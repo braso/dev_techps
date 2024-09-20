@@ -33,7 +33,7 @@ function carregarMotorista() {
 	alert('carregarMotorista()');
 }
 function selecionaMotorista(idEmpresa) {
-	let buscaExtra = encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\")'+
+	let buscaExtra = encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")'+
 		(idEmpresa > 0? ' AND enti_nb_empresa = \"'+idEmpresa+'\"': '')
 	);
 
