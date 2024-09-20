@@ -428,7 +428,7 @@ $motorista = htmlspecialchars($aMotorista['enti_tx_nome']);
 $data = $_POST['data'];  // Data do formulário
 
 // Construir o botão com o código JavaScript embutido
-$botao_novo = '
+$botaoConsLog = '
 <button class="btn default" type="button" onclick="consultarLogistica()">Consultar Logística</button>
 
 <script>
@@ -526,7 +526,7 @@ function consultarLogistica() {
 
 		$botoes[] = $botao_imprimir;
 		$botoes[] = botao("Voltar", "voltar");
-		$botoes[] = $botao_novo; //BOTÃO CONSULTAR LOGISTICA
+		$botoes[] = $botaoConsLog; //BOTÃO CONSULTAR LOGISTICA
 		$botoes[] = status();
 
 
