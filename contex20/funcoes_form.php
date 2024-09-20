@@ -3,6 +3,7 @@
 
 	global $conn, $version;
 	function cabecalho($nome_pagina,$foco=0,$relatorio=0){
+		include "loading.html";
 		//As variáveis são utilizadas dentro de cabecalho.php
 		include "cabecalho.php";
 	}
@@ -184,6 +185,8 @@
 							window.location.href = '<?= $CONTEX['path']?>/logout.php';
 						}, 15*60*1000);
 					}
+
+					document.getElementsByClassName('loading')[0].style.display = 'none';
 				</script>
 
 			</body>
