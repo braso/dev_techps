@@ -15,7 +15,7 @@
 
 	// 	$campo="<div class='col-sm-".$tamanho." margin-bottom-5'>
 	// 				<label><b>".$nome."</b></label>
-	// 				<select name='".$variavel."' class='form-control input-sm' ".$extra.">
+	// 				<select name='".$variavel."' class='form-control input-sm campo-fit-content' ".$extra.">
 	// 					".$c_opcao."
 	// 				</select>
 	// 			</div>";
