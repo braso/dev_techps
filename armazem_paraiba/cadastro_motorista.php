@@ -855,6 +855,7 @@
 		$icone_modificar = "icone_modificar(enti_nb_id,modificarMotorista)";
 
 		if (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
+			// $icone_excluir = icone_excluir("enti_nb_id", "excluirMotorista");
 			$icone_excluir = "icone_excluir(enti_nb_id,excluirMotorista)";
 		}else{
 			$icone_excluir = "";
