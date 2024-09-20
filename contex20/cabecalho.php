@@ -78,7 +78,7 @@
 		}
 
 		.row div {
-			min-width: min-content;
+			/* min-width: min-content; */
 		}
 
 		@media(max-width:768px) {
@@ -190,11 +190,11 @@
 	</style>
 
 	<script type="text/javascript">
-		function contex_foco(elemento) {
+		function contex_foco(elemento){
 			var campoFoco = document.forms[0].elements[<?= $foco ?>];
-			if (campoFoco != null)
+			if (campoFoco != null){
 				campoFoco.focus();
-
+			}
 		}
 	</script>
 </head>
@@ -203,8 +203,6 @@
 <!-- <body style="zoom:100%;" class="page-container-bg-solid page-boxed"> -->
 
 <body onload="contex_foco()" onclick="updateTimer()" style="zoom:100%;" class="page-container-bg-solid page-boxed">
-
-	<?php /* include "loading.html"; */ ?>
 	
 	<!-- INICIO HEADER -->
 	<div class="page-header">
