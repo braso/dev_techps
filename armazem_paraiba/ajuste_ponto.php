@@ -211,7 +211,7 @@
 				</style>
 				<div id='statusDiv'>
 					<label id='status-label'>Status:</label>
-					<select name='status' id='status' class='form-control input-sm' onchange='atualizar_form(".$_POST['id'].", null, \"".$_POST['data_de']."\",  \"".$_POST['data_ate']."\", this.value)'>
+					<select name='status' id='status' class='form-control input-sm campo-fit-content' onchange='atualizar_form(".$_POST['id'].", null, \"".$_POST['data_de']."\",  \"".$_POST['data_ate']."\", this.value)'>
 						<option value='ativo'>Ativos</option>
 						<option value='inativo' ".((!empty($_POST['status']) && $_POST['status'] == 'inativo')? 'selected': '').">Inativos</option>
 					</select>
