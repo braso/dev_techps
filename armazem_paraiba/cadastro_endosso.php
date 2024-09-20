@@ -506,7 +506,7 @@
 			<div id='max50APagar' class='col-sm-3 margin-bottom-5' style='display: ".(!empty($_POST["pagar_horas"]) && $_POST["pagar_horas"] == "sim"? "flex": "none")."; align-content: flex-end; align-items: flex-end;'>
 				<div>
 					<label>Máx. de HE Semanal a pagar</label>
-					<input class='form-control input-sm' id='outroCampo' name='quantHoras' autocomplete='off' value = '".(!empty($_POST["quantHoras"])? $_POST["quantHoras"]:"")."'>
+					<input class='form-control input-sm campo-fit-content' id='outroCampo' name='quantHoras' autocomplete='off' value = '".(!empty($_POST["quantHoras"])? $_POST["quantHoras"]:"")."'>
 				</div>
 				<div style='margin-left: 5px;width: max-content; font-size: 12px;'><a onclick='pegarSaldoTotal()'>Inserir todo o saldo possível.</a></div>
 			</div>"
