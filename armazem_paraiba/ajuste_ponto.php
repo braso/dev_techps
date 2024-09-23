@@ -42,9 +42,6 @@
 				exit;
 			}
 
-			var_dump($camposObrig); echo "<br><br>";
-			var_dump($_POST); echo "<br><br>";
-			var_dump($errorMsg); echo "<br><br>";
 
 			$aMotorista = carregar('entidade',$_POST['id']);
 			if(empty($aMotorista)){
