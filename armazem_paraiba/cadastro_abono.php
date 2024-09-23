@@ -7,7 +7,6 @@
 	include "funcoes_ponto.php";
 
 	function cadastra_abono(){
-		$_POST["acao"] = "index";
 
 		// Conferir se os campos obrigatórios estão preenchidos{
 			$camposObrig = ["daterange" => "Data", "abono" => "Horas", "motivo" => "Motivo"];
