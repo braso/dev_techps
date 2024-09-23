@@ -208,7 +208,7 @@
 						if ($aEmpresa["empr_nb_parametro"] > 0) {
 							$aParametro = carregar("parametro", $aEmpresa["empr_nb_parametro"]);
 							$convencaoPadrao = "| Convenção Padrão? Sim";
-							foreach(["tx_jornadaSemanal", "tx_jornadaSabado", "tx_percentualHE", "tx_percentualSabadoHE"] as $campo){
+							foreach(["tx_jornadaSemanal", "tx_jornadaSabado", "tx_percHESemanal", "tx_percHEEx"] as $campo){
 								if($aParametro["para_".$campo] != $aMotorista["enti_".$campo]){
 									$convencaoPadrao = "| Convenção Padrão? Não";
 									break;
@@ -259,14 +259,14 @@
 
 						$cab = [
 							"", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
-							"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "H.E. ".$aMotorista["enti_tx_percentualHE"]."%", "H.E. ".$aMotorista["enti_tx_percentualSabadoHE"]."%",
+							"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "H.E. ".$aMotorista["enti_tx_percHESemanal"]."%", "H.E. ".$aMotorista["enti_tx_percHEEx"]."%",
 							"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 						];
 				
 	
 						$saldosMotorista = 
 							"<div class='table-responsive'>
-								<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
+								<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
 									<thead><tr>
 										<th>Saldo Anterior:</th>
 										<th>Saldo do Período:</th>

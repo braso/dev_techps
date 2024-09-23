@@ -1,18 +1,34 @@
 
 <style>
-	.loading{
+	.loading {
 		width: 100%;
 		height: 100%;
 		position: absolute;
-		background-color: #4545454d;
+		top: 0px;
+		left: 0px;
+		background-color: #000000a3;
 		z-index: 10;
 		align-content: center;
 	}
 
-	.loading-icon{
-		margin: auto;
+	.loading-icon {
 		min-height: 10rem;
 		width: 10rem;
+		margin: auto;
+		animation: loading 2s linear infinite;
+		border-radius: 100%;
+		border: 0px solid transparent;
+		border-top: 10px double #36c6d3;
+	}
+
+	@keyframes loading {
+		0% {
+			transform: rotate(0);
+		}
+
+		100% {
+			transform: rotate(360deg);
+		}
 	}
 </style>
 

@@ -42,9 +42,6 @@
 				exit;
 			}
 
-			var_dump($camposObrig); echo "<br><br>";
-			var_dump($_POST); echo "<br><br>";
-			var_dump($errorMsg); echo "<br><br>";
 
 			$aMotorista = carregar('entidade',$_POST['id']);
 			if(empty($aMotorista)){
@@ -116,16 +113,14 @@
 							$matchedTypes['fins'][$f]    = intval($matchedTypes['fins'][$f]['macr_tx_codigoInterno']);
 						}
 
-						$temPeriodoAberto = mysqli_fetch_assoc(
-							query(
-								"SELECT * FROM ponto 
-									WHERE pont_tx_status = 'ativo'
-										AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-										AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora'].":59', '%Y-%m-%d %H:%i:%s')
-									ORDER BY pont_tx_data DESC, pont_nb_id DESC
-									LIMIT 1;"
-							)
-						);
+						$temPeriodoAberto = mysqli_fetch_assoc(query(
+							"SELECT * FROM ponto"
+								." WHERE pont_tx_status = 'ativo'"
+									." AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'"
+									." AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora'].":59', '%Y-%m-%d %H:%i:%s')"
+								." ORDER BY pont_tx_data DESC, pont_nb_id DESC"
+								." LIMIT 1;"
+						));
 						
 						$temPeriodoAberto['pont_tx_tipo'] = !empty($temPeriodoAberto['pont_tx_tipo'])? intval($temPeriodoAberto['pont_tx_tipo']): $temPeriodoAberto['pont_tx_tipo'];
 						$temPeriodoAberto['macr_tx_codigoInterno'] = !empty($temPeriodoAberto['macr_tx_codigoInterno'])? intval($temPeriodoAberto['macr_tx_codigoInterno']): $temPeriodoAberto['macr_tx_codigoInterno'];
@@ -213,7 +208,7 @@
 				</style>
 				<div id='statusDiv'>
 					<label id='status-label'>Status:</label>
-					<select name='status' id='status' class='form-control input-sm' onchange='atualizar_form(".$_POST['id'].", null, \"".$_POST['data_de']."\",  \"".$_POST['data_ate']."\", this.value)'>
+					<select name='status' id='status' class='form-control input-sm campo-fit-content' onchange='atualizar_form(".$_POST['id'].", null, \"".$_POST['data_de']."\",  \"".$_POST['data_ate']."\", this.value)'>
 						<option value='ativo'>Ativos</option>
 						<option value='inativo' ".((!empty($_POST['status']) && $_POST['status'] == 'inativo')? 'selected': '').">Inativos</option>
 					</select>
@@ -546,7 +541,6 @@ function consultarLogistica() {
 		echo campo_hidden("data_de", $_POST["data_de"]);
 		echo campo_hidden("data_ate", $_POST["data_ate"]);
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		echo campo_hidden("busca_empresa", $_POST["busca_empresa"]);
 		linha_form($variableFields);
 		linha_form($campoJust);
 		fecha_form($botoes);

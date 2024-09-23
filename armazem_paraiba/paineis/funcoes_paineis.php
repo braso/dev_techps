@@ -37,7 +37,6 @@ function criar_relatorio_saldo() {
 	global $totalResumo;
 	$dataInicio = new DateTime($_POST["busca_dataInicio"]);
 	$dataFim = new DateTime($_POST["busca_dataFim"]);
-	// var_dump($_POST["empresa"]);
 
 	$empresas = mysqli_fetch_all(query(
 		"SELECT empr_nb_id, empr_tx_nome FROM empresa"

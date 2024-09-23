@@ -40,11 +40,24 @@
 		exit;
 	}
 
-	function dd($variavel){
+	/**
+	 * Pôe uma variável em um <pre></pre> para ser exibido de forma identada. 
+	 * $die indica se o código deve parar logo após exibir essa variável.
+	 */
+	function dd($variavel, bool $die = true){
 		echo "<pre>";
-		var_dump(json_encode($variavel, JSON_PRETTY_PRINT));
+		var_dump($variavel);
 		echo "</pre>";
-		die();
+		if($die){
+			echo 
+				"<script>
+					if(document.getElementsByClassName('loading')[0].style.display != 'none'){
+						document.getElementsByClassName('loading')[0].style.display = 'none';
+					}
+				</script>"
+			;
+			die();
+		}
 	}
 	
 	// function diferenca_data(string $data1, string $data2=""){
@@ -98,6 +111,17 @@
 	}
 
 	function formatToTime(int $hours, int $minutes, int $seconds = 0): string{
+		if($seconds > 59){
+			$qtdMinutes = intval($seconds/60);
+			$seconds -= $qtdMinutes*60;
+			$minutes += $qtdMinutes;
+		}
+		if($minutes > 59){
+			$qtdHours = intval($minutes/60);
+			$minutes -= $qtdHours*60;
+			$hours += $qtdHours;
+		}
+
 		return 
 			str_pad($hours,   2, "0", STR_PAD_LEFT)
 			.":".str_pad($minutes, 2, "0", STR_PAD_LEFT)
@@ -411,6 +435,12 @@
 	function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 		global $CONTEX;
 
+		$classe = "form-control input-sm campo-fit-content";
+
+		if(!empty($_POST["errorFields"]) && in_array($variavel, $_POST["errorFields"])){
+			$classe .= " error-field";
+		}
+
 		$dataScript = "<script>";
 		switch($mascara){
 			case "MASCARA_DATA";
@@ -486,7 +516,7 @@
 			break;
 			case "MASCARA_HIDDEN":
 				$type = "hidden";
-				$campo = '<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="'.$type.'" class="form-control input-sm" '.$extra.'>';
+				$campo = '<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="'.$type.'" class="'.$classe.'" '.$extra.'>';
 			break;
 			case "MASCARA_SENHA":
 				$type = "password";
@@ -502,9 +532,9 @@
 		}
 
 		if(empty($campo)){
-			$campo = '<div class="col-sm-'.$tamanho.' margin-bottom-5">
+			$campo = '<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content">
 				<label>'.$nome.'</label>
-				<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="'.$type.'" class="form-control input-sm" '.$extra.'>
+				<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="'.$type.'" class="'.$classe.'" '.$extra.'>
 			</div>';
 		}
 
@@ -527,9 +557,9 @@
 		return campo($nome, $variavel, $modificador, $tamanho, "MASCARA_SENHA", $extra);
 	}
 
-	function checkbox_banco($nome, $variavel, $modificadoRadio, $modificadoCampo=0, $modificadoCampo2=0, $tamanho=3) {
+	function checkbox_banco($nome, $variavel, $modificadoRadio, $modificadoCampo=0, $modificadoCampo2=0, $tamanho=3){
 		$campo = 
-			'<div class="col-sm-'.$tamanho.' margin-bottom-5" style="min-width:200px">
+			'<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content" style="min-width:fit-content; min-height: 50px;">
 				<label>'.$nome.'</label><br>
 				<label class="radio-inline">
 					<input type="radio" id="sim" name="banco" value="sim"> Sim
@@ -538,13 +568,13 @@
 					<input type="radio" id="nao" name="banco" value="nao"> Não
 				</label>
 			</div>
-			<div id="'.$variavel.'" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
+			<div id="'.$variavel.'" class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content" style="display: none;">
 					<label>Quantidade de Dias*:</label>
-					<input class="form-control input-sm" type="number" value="'.$modificadoCampo.'" id="outroCampo" name="quandDias" autocomplete="off">
+					<input class="form-control input-sm campo-fit-content" type="number" value="'.$modificadoCampo.'" id="outroCampo" name="quandDias" autocomplete="off">
 			</div>
-			<div id="limiteHoras" class="col-sm-'.$tamanho.' margin-bottom-5" style="display: none;">
+			<div id="limiteHoras" class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content" style="display: none;">
 				<label>Quantidade de Horas Limite*:</label>
-				<input class="form-control input-sm" type="number" value="'.$modificadoCampo2.'" id="outroCampo" name="quandHoras" autocomplete="off">
+				<input class="form-control input-sm campo-fit-content" type="number" value="'.$modificadoCampo2.'" id="outroCampo" name="quandHoras" autocomplete="off">
 			</div>'
 		;
 
@@ -585,8 +615,9 @@
 	}
 
 	function checkbox(string $titulo, string $variavel, array $opcoes, int $tamanho=3, string $tipo = "checkbox", string $extra='', string $modificadoCampo = ''){
+
 		$campo = 
-			"<div class='col-sm-".$tamanho." margin-bottom-5' style='min-width:200px' id='".$variavel."' ".$extra.">
+			"<div class='col-sm-".$tamanho." margin-bottom-5 campo-fit-content' style='min-width:200px' id='".$variavel."' ".$extra.">
 			<div class='margin-bottom-5'>
 				".$titulo."
 			</div>"
@@ -597,7 +628,13 @@
 		foreach($opcoes as $key => $value){
 			$campo .=
 				"<label>
-					<input type='".$tipo."' id='".$key."' name='".$variavel."_".$key."' value='true' ".(in_array($key,$valoresMarcados) && !empty($valoresMarcados) ? 'checked': '')."> ".$value."
+					<input 
+						type='".$tipo."' 
+						id='".$key."' 
+						name='".$variavel."_".$key."' 
+						value='true' ".(in_array($key,$valoresMarcados) && !empty($valoresMarcados) ? 'checked': '')."
+					>
+					".$value."
 				</label>"
 			;
 		}
@@ -611,9 +648,9 @@
 	function datepick($nome,$variavel,$modificador,$tamanho,$extra=''){
 		global $CONTEX;
 
-		$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
+		$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content">
 				<label>'.$nome.'</label>
-				<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" size="16" readonly style="background-color:white;" autocomplete="off" type="text" class="form-control input-sm" '.$extra.'>
+				<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" size="16" readonly style="background-color:white;" autocomplete="off" type="text" class="form-control input-sm campo-fit-content" '.$extra.'>
 			</div>
 
 			<script src="'.$CONTEX['path'].'/../contex20/assets/global/plugins/bootstrap-datepicker/js/bootstrap-datepicker.min.js" type="text/javascript"></script>
@@ -638,10 +675,11 @@
 	}
 
 	function textarea($nome,$variavel,$modificador,$tamanho,$extra=''){
-		$campo=
-			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
+
+		$campo =
+			'<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content">
 				<label>'.$nome.'</label>
-				<textarea name="'.$variavel.'" id="'.$variavel.'" autocomplete="off" type="password" class="form-control input-sm" '.$extra.'>'.$modificador.'</textarea>
+				<textarea name="'.$variavel.'" id="'.$variavel.'" autocomplete="off" type="password" class="form-control input-sm campo-fit-content" '.$extra.'>'.$modificador.'</textarea>
 			</div>'
 		;
 
@@ -651,9 +689,9 @@
 	function ckeditor($nome,$variavel,$modificador,$tamanho,$extra=''){//Obsoleto
 		$campo=
 			'<script src="/ckeditor/ckeditor.js"></script>
-			<div class="col-sm-'.$tamanho.' margin-bottom-5">
+			<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content">
 				<label>'.$nome.'</label>
-				<textarea id="'.$variavel.'" name="'.$variavel.'" class="form-control input-sm" '.$extra.'>'.$modificador.'</textarea>
+				<textarea id="'.$variavel.'" name="'.$variavel.'" class="form-control input-sm campo-fit-content" '.$extra.'>'.$modificador.'</textarea>
 			</div>
 			<script>
 				CKEDITOR.replace( "'.$variavel.'" );
@@ -666,7 +704,7 @@
 
 	function texto($nome,$modificador,$tamanho='',$extra=''){//Campo de texto que não pode ser editado
 		$campo =
-			'<div class="col-sm-'.$tamanho.' margin-bottom-5" '.$extra.'>
+			'<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content" '.$extra.'>
 				<label>'.$nome.'</label><br>
 				<p class="text-left">'.$modificador.'</p>
 			</div>';
@@ -675,6 +713,12 @@
 	}
 
 	function combo($nome, $variavel, $modificador, $tamanho, array $opcoes, $extra = ""){
+		$classe = "form-control input-sm campo-fit-content";
+
+		if(!empty($_POST["errorFields"]) && in_array($variavel, $_POST["errorFields"])){
+			$classe .= " error-field";
+		}
+
 		$res = "";
 		foreach($opcoes as $key => $value){
 			//Correção da chave para os casos em que a variável $campos é um array comum, e não um dicionário. Retirar quando for necessário utilizar um dicionário com chaves numerais
@@ -685,9 +729,9 @@
 		}
 
 		$campo=
-			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
+			'<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content">
 				<label>'.$nome.'</label>
-				<select name="'.$variavel.'" class="form-control input-sm" '.$extra.'>
+				<select name="'.$variavel.'" class="'.$classe.'" '.$extra.'>
 					'.$res.'
 				</select>
 			</div>';
@@ -709,7 +753,7 @@
 		// $campo=
 		// 	'<div class="margin-bottom-5" style="width:'.$tamanho.'px">
 		// 		<label>'.$nome.'</label>
-		// 		<select name="'.$variavel.'" class="form-control input-sm" '.$extra.'>
+		// 		<select name="'.$variavel.'" class="form-control input-sm campo-fit-content" '.$extra.'>
 		// 			'.$res.'
 		// 		</select>
 		// 	</div>';
@@ -718,8 +762,12 @@
 	// }
 
 	function combo_net($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra_bd='',$extra_busca='',$extra_ordem='',$extra_limite='15'){
-
 		global $CONTEX,$conn;
+
+		$classe = "form-control input-sm campo-fit-content";
+		if(!empty($_POST["errorFields"]) && in_array($variavel, $_POST["errorFields"])){
+			$classe .= " error-field";
+		}
 
 		if(!empty($modificador)){
 			$tab = substr($tabela,0,4);
@@ -746,9 +794,9 @@
 		}
 		
 		$campo =
-			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
+			'<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content">
 				<label>'.$nome.'</label>
-				<select class="'.$variavel.' form-control input-sm" id="'.$variavel.'" style="width:100%" '.$extra.' name="'.$variavel.'">
+				<select class="'.$variavel.' '.$classe.'" id="'.$variavel.'" style="width:100%" '.$extra.' name="'.$variavel.'">
 				'.$opt.'
 				</select>
 			</div>'
@@ -829,10 +877,15 @@
 			$c_opcao .= '<option value="'.$a[0].'" '.$selected.'>'.$a[1].'</option>';
 		}
 
+		$classe = "form-control input-sm campo-fit-content";
+		if(!empty($_POST["errorFields"]) && in_array($variavel, $_POST["errorFields"])){
+			$classe .= " error-field";
+		}
+
 		$campo=
-			'<div class="col-sm-'.$tamanho.' margin-bottom-5">
+			'<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content">
 				<label>'.$nome.'</label>
-				<select name="'.$variavel.'" id="'.$variavel.'" class="form-control input-sm" '.$extra.'>
+				<select name="'.$variavel.'" id="'.$variavel.'" class="'.$classe.'" '.$extra.'>
 					'.$c_opcao.'
 				</select>
 			</div>'
@@ -1072,9 +1125,9 @@
 			$ver = "<a href=$CONTEX[path]/$modificador target=_blank>(Ver)</a>";
 		}
 
-		$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5">
+		$campo='<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content">
 					<label>'.$nome.$ver.'</label>
-					<input name="'.$variavel.'" value="'.$CONTEX['path']."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm" '.$extra.'>
+					<input name="'.$variavel.'" value="'.$CONTEX['path']."/".$modificador.'" autocomplete="off" type="file" class="form-control input-sm campo-fit-content" '.$extra.'>
 				</div>';
 
 		return $campo;
@@ -1193,18 +1246,18 @@
 		
 	}
 
-	function icone_excluir($id,$acao,$campos='',$valores='',$target='',$icone='',$msg='Deseja excluir o registro?', $action='', $title=''){
-		if($icone==''){
+	function icone_excluir($id,$acao,$campos='',$valores='',$target='',$icone='',$msg='Deseja inativar o registro?', $action='', $title=''){
+		if(empty($icone)){
 			$icone = 'glyphicon glyphicon-remove';
 		}
 		
-		if($icone == 'glyphicon glyphicon-remove' && $title == '')
+		if($icone == 'glyphicon glyphicon-remove' && empty($title)){
 			$title = 'Excluir';
+		}
 
 		$icone='class="'.$icone.'"';
 		
-		return "<center><a title=\"$title\" style='color:gray' onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\");' ><spam $icone></spam></a></center>";
-		
+		return "<center><a title='$title' style='color:gray' onclick='javascript:contex_icone(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\",\"$action\");'><spam $icone></spam></a></center>";
 	}
 
 	function icone_excluir_ajuste($id, $acao, $campos='', $data_de='', $data_ate='', $valores='', $target='', $icone='', $msg='Deseja excluir o registro?', $action='', $title=''){
