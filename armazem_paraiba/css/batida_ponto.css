@@ -17,6 +17,7 @@
     min-height: var(--icon-size);
     align-content: center;
     min-width: var(--icon-size);
+    padding: 10px;
 }
 
 .button-title {

@@ -139,6 +139,10 @@
 			align-content: center;
 		}
 
+		.campo-fit-content{
+			min-width: fit-content;
+		}
+
 		.error-field {
 			border-color: red;
 		}

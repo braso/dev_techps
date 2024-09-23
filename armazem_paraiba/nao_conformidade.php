@@ -1,7 +1,11 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
+		
+		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+		header("Pragma: no-cache"); // HTTP 1.0.
+		header("Expires: 0");
 	//*/
 	
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto	
@@ -157,12 +161,14 @@
 					}
 	
 					//Pegando e formatando registros dos dias{
+						$aDia = [];
+						$dataCadastro = new DateTime($aMotorista["enti_tx_dataCadastro"]);
 						for ($i = 1; $i <= $daysInMonth; $i++) {
 							$dataVez = $date->format("Y-m")."-".str_pad($i, 2, 0, STR_PAD_LEFT);
-							if($dataVez < $aMotorista["enti_tx_dataCadastro"]){
+							if($date->format("Y-m") < $dataCadastro->format("Y-m")){
 								continue;
 							}
-							if($dataVez >= date("Y-m-d")){
+							if($dataVez > date("Y-m-d")){
 								break;
 							}
 							
