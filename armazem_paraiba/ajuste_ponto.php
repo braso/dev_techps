@@ -17,7 +17,7 @@
 			$aMotorista = carregar('entidade',$_POST['id']);
 			$aTipo = carregar('macroponto', $_POST['idMacro']);
 			if(empty($aMotorista)){
-				set_status("ERRO: Motorista não encontrado.");
+				set_status("ERRO: Funcionário não encontrado.");
 				index();
 				exit;
 			}
@@ -337,7 +337,7 @@
 		}
 		
 		if(empty($_POST['id'])){
-			echo '<script>alert("ERRO: Deve ser selecionado um motorista para ajustar.")</script>';
+			echo '<script>alert("ERRO: Deve ser selecionado um funcionário para ajustar.")</script>';
 			
 			$_POST["acao"] = "buscarEspelho()";
 			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
@@ -378,6 +378,109 @@
 							window.print();
 						}
 					</script>';
+
+
+
+
+
+
+
+
+
+
+// Função para carregar os CNPJs formatados da tabela 'empresa'
+function carregarCNPJsFormatados() {
+    global $conn;
+    // Consulta SQL para buscar os CNPJs
+    $sql = "SELECT empr_tx_cnpj FROM empresa";
+
+    $result = mysqli_query($conn, $sql);
+
+    if (!$result) {
+        die("Erro ao consultar CNPJs: " . mysqli_error($conn));
+    }
+
+    $cnpjs_formatados = [];
+    while ($row = mysqli_fetch_assoc($result)) {
+        // Remove pontos, traços e barras do CNPJ
+        $cnpj_formatado = preg_replace('/[^0-9]/', '', $row['empr_tx_cnpj']);
+        $cnpjs_formatados[] = $cnpj_formatado;
+    }
+    return $cnpjs_formatados;
+}
+
+// Chama a função para carregar os CNPJs formatados
+$cnpjs = carregarCNPJsFormatados();
+
+// Variáveis do ambiente carregadas
+$baseUrl = $_ENV['URL_BASE'];
+$appPath = $_ENV['APP_PATH'];
+$contextPath = $_ENV['CONTEX_PATH'];
+
+// Monta a URL base para a logística
+$urlLogistica = $baseUrl . $appPath . $contextPath . "/logistica.php";
+
+// Assumindo que $aMotorista já tenha os valores definidos
+$matricula = htmlspecialchars($aMotorista['enti_tx_matricula']);
+$motorista = htmlspecialchars($aMotorista['enti_tx_nome']);
+$data = $_POST['data'];  // Data do formulário
+
+// Construir o botão com o código JavaScript embutido
+$botaoConsLog = '
+<button class="btn default" type="button" onclick="consultarLogistica()">Consultar Logística</button>
+
+<script>
+function consultarLogistica() {
+    // Obter valores do PHP e HTML
+    var matricula = "' . addslashes($matricula) . '";
+    var motorista = "' . addslashes($motorista) . '";
+    var data = document.getElementById("data").value;
+
+    // Obter todos os CNPJs da variável PHP
+    var cnpjs = ' . json_encode($cnpjs) . ';
+
+    // Verificar o conteúdo de cnpjs no console
+    console.log("CNPJs:", cnpjs);
+
+    if (!Array.isArray(cnpjs)) {
+        console.error("CNPJs não é um array:", cnpjs);
+        return;
+    }
+
+    if (cnpjs.length === 0) {
+        console.error("A lista de CNPJs está vazia.");
+        return;
+    }
+
+    // Converte a lista de CNPJs para uma string separada por vírgulas
+    var cnpjString = cnpjs.map(String).join(",");
+
+    // Construir a URL com os parâmetros dinâmicos
+    var url = "' . addslashes($urlLogistica) . '";
+    url += "?motorista=" + encodeURIComponent(motorista) + 
+           "&matricula=" + encodeURIComponent(matricula) + 
+           "&data=" + encodeURIComponent(data) +
+           "&cnpj=" + encodeURIComponent(cnpjString);  // Adicionando todos os CNPJs
+
+    // Abrir a nova página em uma nova aba
+    window.open(url, "_blank");
+}
+</script>
+';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 		if (empty($_POST['status'])) {
@@ -421,7 +524,7 @@
 
 		$botoes[] = $botao_imprimir;
 		$botoes[] = botao("Voltar", "voltar");
-		
+		$botoes[] = $botaoConsLog; //BOTÃO CONSULTAR LOGISTICA
 		$botoes[] = status();
 
 
@@ -447,7 +550,7 @@
 		fecha_form($botoes);
 
 		$sql = pegarSqlDia($aMotorista['enti_tx_matricula'], ["pont_nb_id", "pont_tx_data", "macr_tx_nome", "moti_tx_nome", 
-		"moti_tx_legenda", "pont_tx_justificativa", "user_tx_login", "pont_tx_dataCadastro",
+		"moti_tx_legenda", "pont_tx_justificativa", "user_tx_login", "pont_tx_dataCadastro", "pont_tx_placa",
 		"pont_tx_latitude", "pont_tx_longitude","pont_tx_dataAtualiza"]);
 
 

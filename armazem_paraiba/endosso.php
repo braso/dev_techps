@@ -75,7 +75,7 @@
 		}
 
 		if (empty($_POST["busca_data"]) || empty($_POST["busca_empresa"]) || empty($_POST["idMotoristaEndossado"])){
-			set_status("ERRO: Insira data e motorista para gerar relatório.");
+			set_status("ERRO: Insira data e Funcionário para gerar relatório.");
 			index();
 			exit;
 		}
@@ -268,7 +268,7 @@
 
 		//CAMPOS DE CONSULTA{
 			$fields = [
-				combo_net("Motorista/Ajudante", "busca_motorista", (!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 3, "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')".$extraMotorista.$extraEmpresaMotorista, "enti_tx_matricula"),
+				combo_net("Funcionário", "busca_motorista", (!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 3, "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')".$extraMotorista.$extraEmpresaMotorista, "enti_tx_matricula"),
 				campo_mes("Data",      "busca_data",      (!empty($_POST["busca_data"])?      $_POST["busca_data"]     : ""), 2),
 				combo(	  "Endossado",	"busca_endossado", (!empty($_POST["busca_endossado"])? $_POST["busca_endossado"]: ""), 2, ["" => "", "endossado" => "Sim", "naoEndossado" => "Não"])
 			];
@@ -298,7 +298,7 @@
 			"endossados" => ["sim" => 0, "nao" => 0],	//countEndossados e $countNaoEndossados
 		];
 		//function buscar_endosso(){
-			$motNaoEndossados = "MOTORISTA(S) NÃO ENDOSSADO(S): <br><br>";
+			$motNaoEndossados = "FUNCIONÁRIO(S) NÃO ENDOSSADO(S): <br><br>";
 			if(!empty($_POST["busca_data"]) && !empty($_POST["busca_empresa"]) && !empty($_GET["acao"])){
 				$sqlMotorista = query(
 					"SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg, parametro.para_tx_inicioAcordo, parametro.para_nb_qDias, parametro.para_nb_qDias FROM entidade"
@@ -504,7 +504,7 @@
 					"<script>
 						button = document.getElementById('botaoContexCadastrar ImprimirRelatorio');
 						button.setAttribute('disabled', true);
-						button.setAttribute('title', 'Pesquise um motorista endossado para efetuar a impressão do endosso.');
+						button.setAttribute('title', 'Pesquise um funcionário endossado para efetuar a impressão do endosso.');
 
 						btnsImprimir = document.getElementsByName('');
 					</script>"
@@ -515,7 +515,7 @@
 
 		rodape();
 
-		$counts["message"] = "<b>Motoristas: ".$counts["total"]." | Verificados: ".$counts["verificados"]." | Não Conformidades: ".$counts["naoConformidade"]." | Endossados: ".$counts["endossados"]["sim"]." | Não Endossados: ".$counts["endossados"]["nao"]."</b>";
+		$counts["message"] = "<b>Funcionários: ".$counts["total"]." | Verificados: ".$counts["verificados"]." | Não Conformidades: ".$counts["naoConformidade"]." | Endossados: ".$counts["endossados"]["sim"]." | Não Endossados: ".$counts["endossados"]["nao"]."</b>";
 
 		$select2URL = 
 			$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php"

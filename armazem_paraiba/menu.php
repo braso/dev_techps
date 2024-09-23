@@ -21,9 +21,9 @@
 				"/cadastro_empresa.php" 	=> "Empresa/Filial", 
 				"/cadastro_endosso.php" 	=> "Endosso", 
 				"/cadastro_feriado.php" 	=> "Feriado", 
+				"/cadastro_motorista.php" 	=> "Funcionário", 
 				"/cadastro_macro.php" 		=> "Macro (Positron)",
 				"/cadastro_motivo.php" 		=> "Motivo", 
-				"/cadastro_motorista.php" 	=> "Motorista", 
 				"/cadastro_parametro.php" 	=> "Parâmetro", 
 				"/cadastro_usuario.php" 	=> "Usuário" 
 			],
@@ -76,10 +76,10 @@
 		if (is_int(strpos($nivel, "Administrador")) || is_int(strpos($nivel, "Super Administrador"))) {
 			return $menus["cadastros"].$menus["ponto"].$menus["painel"].($menus["suporte"]?? "");
 		}
-		if (is_int(strpos($nivel, "Funcionário"))) {
-			return $menus["cadastros"].$menus["ponto"];
-		}
-		if(in_array($nivel, ["Motorista", "Ajudante"])){
+		// if (is_int(strpos($nivel, "Funcionário"))) {
+		// 	return $menus["cadastros"].$menus["ponto"];
+		// }
+		if(in_array($nivel, ["Motorista", "Ajudante", "Funcionário"])){
 			return $menuMotorista;
 		}
 	}

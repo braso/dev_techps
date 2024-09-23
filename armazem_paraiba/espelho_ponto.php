@@ -28,7 +28,7 @@
 		$data_inicio_obj = new DateTime($_POST["busca_dataInicio"]);
 		$data_fim_obj = new DateTime($_POST["busca_dataFim"]);
 
-		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
+		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 			$_POST["busca_motorista"] = $_SESSION["user_nb_entidade"];
 			$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
 		}
@@ -51,7 +51,7 @@
 				}
 			}
 			if(empty($_POST["busca_motorista"])){
-				$errorMsg[0] .= "Motorista/Ajudante, ";
+				$errorMsg[0] .= "Funcionário, ";
 			}
 			if(empty($_POST["busca_dataInicio"])){
 				$errorMsg[0] .= "Data Início, ";
@@ -78,7 +78,7 @@
 				));
 
 				if(empty($motorista)){
-					$errorMsg[2] = "Este motorista não pertence a esta empresa. ";
+					$errorMsg[2] = "Este funcionário não pertence a esta empresa. ";
 				}else{
 					$opt = "<option value=\"".$motorista["enti_nb_id"]."\">[".$motorista["enti_nb_id"]."]".$motorista["enti_tx_nome"]."</option>";
 				}
@@ -98,11 +98,11 @@
 			//Conferir se a data de início da pesquisa está antes do cadastro do motorista{
 				if(!empty($motorista)){
 					$baseErrMsg = [];
-					$errorMsg = $baseErrMsg; 
+					$errorMsg = $baseErrMsg;
 					$data_cadastro = new DateTime($motorista["enti_tx_dataCadastro"]);
 
 					if(date_diff($data_cadastro, $data_inicio_obj)->invert){
-						$errorMsg = ["A data inicial deve ser anterior ao cadastro do motorista (".$data_cadastro->format("d/m/Y")."). "];
+						$errorMsg = ["A data inicial deve ser posterior ao cadastro do funcionário (".$data_cadastro->format("d/m")."). "];
 					}
 				}
 
@@ -128,7 +128,7 @@
 		$condBuscaEmpresa = "";
 
 
-		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
+		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 			$_POST["busca_motorista"] = $_SESSION["user_nb_entidade"];
 			$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
 			$condBuscaMotorista = " AND enti_nb_id = '".$_SESSION["user_nb_entidade"]."'";
@@ -154,23 +154,23 @@
 		}
 
 		//CAMPOS DE CONSULTA{
-			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
+			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 				$nomeEmpresa = mysqli_fetch_assoc(query("SELECT empr_tx_nome FROM empresa WHERE empr_nb_id = ".$_SESSION["user_nb_empresa"]));
 				$searchFields = [
 					texto("Empresa*", $nomeEmpresa["empr_tx_nome"], 3),
-					texto("Motorista/Ajudante*", $_SESSION["user_tx_nome"], 3),
+					texto("Funcionário*", $_SESSION["user_tx_nome"], 3),
 				];
 			}else{
 				$searchFields = [
 					combo_net("Empresa*", "busca_empresa", ($_POST["busca_empresa"]?? ""), 3, "empresa", "onchange=selecionaMotorista(this.value) ", $condBuscaEmpresa),
 					combo_net(
-						"Motorista/Ajudante*",
+						"Funcionário*",
 						"busca_motorista",
 						(!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""),
 						4, 
 						"entidade", 
 						"", 
-						(!empty($_POST["busca_empresa"])?" AND enti_nb_empresa = ".$_POST["busca_empresa"]:"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') ".$condBuscaEmpresa." ".$condBuscaMotorista, 
+						(!empty($_POST["busca_empresa"])?" AND enti_nb_empresa = ".$_POST["busca_empresa"]:"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') ".$condBuscaEmpresa." ".$condBuscaMotorista, 
 						"enti_tx_matricula"
 					)
 				];
@@ -189,7 +189,7 @@
 			$b = [
 				botao("Buscar", "buscarEspelho()", "", "", "", "", "btn btn-success"),
 			];
-			if(!in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
+			if(!in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 				$b[] = botao("Cadastrar Abono", "cadastro_abono", "", "", "btn btn-secondary");
 			}
 
@@ -370,7 +370,7 @@
 			"<script>
 
 				function selecionaMotorista(idEmpresa){
-					let buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\")');
+					let buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")');
 					if(idEmpresa > 0){
 						buscaExtra += encodeURI(' AND enti_nb_empresa = '+idEmpresa);
 						$('.busca_motorista')[0].innerHTML = null;

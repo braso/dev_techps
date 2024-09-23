@@ -123,8 +123,8 @@
 			$usuario["user_tx_nivel"] = $_POST["nivel"];
 		}
 
-		if (!empty($_POST["nivel"]) && in_array($_POST["nivel"], ["Motorista", "Ajudante"]) && (!isset($_POST["cpf"]) || empty($_POST["cpf"]))) {
-			set_status("ERRO: CPF obrigatório para motorista/ajudante.");
+		if (!empty($_POST["nivel"]) && in_array($_POST["nivel"], ["Motorista", "Ajudante","Funcionário"]) && (!isset($_POST["cpf"]) || empty($_POST["cpf"]))) {
+			set_status("ERRO: CPF obrigatório para motorista/ajudante/funcionário.");
 			mostrarFormCadastro();
 			exit;
 		}
@@ -239,7 +239,7 @@
 			$sqlCheckNivel = mysqli_fetch_assoc(query("SELECT user_tx_nivel FROM user WHERE user_nb_id = '".$_POST["id"]."' LIMIT 1;"));
 		}
 		
-		if (isset($sqlCheckNivel["user_tx_nivel"]) && in_array($sqlCheckNivel["user_tx_nivel"], ["Motorista", "Ajudante"])) {
+		if (isset($sqlCheckNivel["user_tx_nivel"]) && in_array($sqlCheckNivel["user_tx_nivel"], ["Motorista", "Ajudante","Funcionário"])) {
 			if (!empty($_POST["senha"]) && !empty($_POST["senha2"])) {
 				$novaSenha = ["user_tx_senha" => md5($_POST["senha"])];
 				atualizar("user", array_keys($novaSenha), array_values($novaSenha), $_POST["id"]);
@@ -274,7 +274,7 @@
 			$a_mod = carregar("user", $_POST["id"]);
 		}
 
-		$editingDriver = in_array(($a_mod["user_tx_nivel"]?? ""), ["Motorista", "Ajudante"]);
+		$editingDriver = in_array(($a_mod["user_tx_nivel"]?? ""), ["Motorista", "Ajudante", "Funcionário"]);
 		$loggedUserIsAdmin = is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"));
 
 
@@ -315,8 +315,8 @@
 					$niveis[] = "Super Administrador";
 				case "Administrador":
 					$niveis[] = "Administrador";
-				case "Funcionário":
-					$niveis[] = "Funcionário";
+				case "Embarcador":
+					$niveis[] = "Embarcador";
 			}
 			$campo_nivel = combo("Nível*", "nivel", $a_mod["user_tx_nivel"], 2, $niveis, "");
 			$campo_status = combo("Status", "status", $a_mod["user_tx_status"], 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
@@ -345,8 +345,8 @@
 					$niveis[] = "Super Administrador";
 				case "Administrador":
 					$niveis[] = "Administrador";
-				case "Funcionário":
-					$niveis[] = "Funcionário";
+				case "mbarcador":
+					$niveis[] = "Embarcador";
 			}
 			$campo_nivel = combo("Nível*", "nivel", ($_POST["nivel"]?? ""), 2, $niveis, "");
 			$campo_status = combo("Status", "status", ($a_mod["enti_tx_status"]?? ""), 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
@@ -364,7 +364,7 @@
 			$campo_matricula = "";
 
 		}else{
-			//Entrará aqui caso (editando e o user_nivel != motorista ou ajudante) ou (session_nivel != administrador e não editando próprio usuário)
+			//Entrará aqui caso (editando e o user_nivel != motorista, ajudante ou funcionário) ou (session_nivel != administrador e não editando próprio usuário)
 			$editPermission = false;
 			$campo_nome = texto("Nome*", ($a_mod["user_tx_nome"]?? ""), 2, "for='nome'");
 			$campo_nivel = texto("Nível*", ($a_mod["user_tx_nivel"]?? ""), 2);
@@ -502,7 +502,7 @@
 			exit;
 		}
 
-		if (in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])) {
+		if (in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])) {
 			$_POST["id"] = $_SESSION["user_nb_id"];
 			mostrarFormCadastro();
 		}

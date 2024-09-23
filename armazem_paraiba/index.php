@@ -120,7 +120,7 @@
 				echo json_encode($_SESSION);
 				exit;
 			}
-			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
+			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 				echo "<meta http-equiv='refresh' content='0; url=./batida_ponto.php'/>";
 				exit;
 			}
