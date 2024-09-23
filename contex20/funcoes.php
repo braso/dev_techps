@@ -49,6 +49,13 @@
 		var_dump($variavel);
 		echo "</pre>";
 		if($die){
+			echo 
+				"<script>
+					if(document.getElementsByClassName('loading')[0].style.display != 'none'){
+						document.getElementsByClassName('loading')[0].style.display = 'none';
+					}
+				</script>"
+			;
 			die();
 		}
 	}
