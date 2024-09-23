@@ -544,7 +544,6 @@ function consultarLogistica() {
 		echo campo_hidden("data_de", $_POST["data_de"]);
 		echo campo_hidden("data_ate", $_POST["data_ate"]);
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		echo campo_hidden("busca_empresa", $_POST["busca_empresa"]);
 		linha_form($variableFields);
 		linha_form($campoJust);
 		fecha_form($botoes);
