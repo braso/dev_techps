@@ -339,7 +339,7 @@
 		}
 		
 		if(empty($_POST['id'])){
-			echo '<script>alert("ERRO: Deve ser selecionado um Funcionário para ajustar.")</script>';
+			echo '<script>alert("ERRO: Deve ser selecionado um funcionário para ajustar.")</script>';
 			
 			$_POST["acao"] = "buscarEspelho()";
 			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";

@@ -187,7 +187,7 @@
 			if(empty($a_mod["enti_tx_matricula"])){
 				$camposObrig["postMatricula"] = "Matrícula";
 			}
-			if($_POST["ocupacao"] == "Ajudante" || $_POST["ocupacao"] == "Funcionário"){
+			if(in_array($_POST["ocupacao"], ["Ajudante", "Funcionário"])){
 				unset($camposObrig["cnhRegistro"], $camposObrig["cnhValidade"], $camposObrig["cnhCategoria"], $camposObrig["cnhCidade"], $camposObrig["cnhEmissao"]);
 			}
 			if(empty($_POST["percentualHE"]) && $_POST["percentualHE"] != "0"){
