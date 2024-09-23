@@ -106,8 +106,8 @@
                 <th>EFETIVA</th>
                 <th>MDC</th>
                 <th>INTERSTÍCIO</th>
-                <th>HE <?=$aMotorista["enti_tx_percentualHE"]?>%</th>
-                <th>HE&nbsp;<?=$aMotorista["enti_tx_percentualSabadoHE"]?>%</th>
+                <th>HE <?=$aMotorista["enti_tx_percHESemanal"]?>%</th>
+                <th>HE&nbsp;<?=$aMotorista["enti_tx_percHEEx"]?>%</th>
                 <th>ADICIONAL NOT.</th>
                 <th>ESPERA IND.</th>
                 <th>MOTIVO</th>
@@ -163,13 +163,13 @@
 
                 <table class="table-info2">
                     <tr>
-                        <td>Horas Extras (<?=$aMotorista["enti_tx_percentualHE"]?>%) - a pagar:</td>
+                        <td>Horas Extras (<?=$aMotorista["enti_tx_percHESemanal"]?>%) - a pagar:</td>
                         <td>
                             <center><?=$totalResumo["HESemanalAPagar"]?></center>
                         </td>
                     </tr>
                     <tr>
-                        <td>Horas Extras (<?=$aMotorista["enti_tx_percentualSabadoHE"]?>%) - a pagar:</td>
+                        <td>Horas Extras (<?=$aMotorista["enti_tx_percHEEx"]?>%) - a pagar:</td>
                         <td>
                             <center><?=$totalResumo["HEExAPagar"]?></center>
                         </td>
