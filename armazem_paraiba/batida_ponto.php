@@ -170,7 +170,7 @@
 		return 
 			"<button type='button'class='".$classe."' onclick='carregar_submit(\"".strval($tipoRegistro)."\",\" Tem certeza que deseja ".$nome."?\");'>
 				<div class='button-icon'>
-				    <i style='min-height: 30px;' class='".$iconClass."'></i>
+				    <i style='min-height: var(--icon-size); line-height: var(--icon-size);' class='".$iconClass."'></i>
 				</div>
 				<div class='button-title'>
 				    ".$nome."
