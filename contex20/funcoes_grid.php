@@ -14,15 +14,15 @@
 		return $inp;
 	}
 
-	function conferirParametroPadrao($idEmpresa, $jornadaSemanal, $jornadaSabado, $percentualHE, $percentualSabadoHE){
+	function conferirParametroPadrao($idEmpresa, $jornadaSemanal, $jornadaSabado, $percHESemanal, $percHEEx){
 
 		echo "<script>
-			function conferirParametroPadrao(jornadaSemanal, jornadaSabado, percentualHE, percentualSabadoHE){
+			function conferirParametroPadrao(jornadaSemanal, jornadaSabado, percHESemanal, percHEEx){
 				var padronizado = (
 					jornadaSemanal == parent.document.contex_form.jornadaSemanal.value &&
 					jornadaSabado == parent.document.contex_form.jornadaSabado.value &&
-					percentualHE == parent.document.contex_form.percentualHE.value &&
-					percentualSabadoHE == parent.document.contex_form.percentualSabadoHE.value
+					percHESemanal == parent.document.contex_form.percHESemanal.value &&
+					percHEEx == parent.document.contex_form.percHEEx.value
 				);
 				parent.document.getElementsByName('textoParametroPadrao')[0].getElementsByTagName('p')[0].innerText = (padronizado? 'Sim': 'Não');
 			}

@@ -469,8 +469,8 @@
 		$cJornada[]=combo_bd('Parâmetros da Jornada*','parametro',($a_mod['empr_nb_parametro']?? ''),6,'parametro','onchange="carregarParametro(this.value)"');
 		// $cJornada[]=campo('Jornada Semanal (Horas)','jornadaSemanal',$a_mod['enti_tx_jornadaSemanal'],3,MASCARA_NUMERO,'disabled=disabled');
 		// $cJornada[]=campo('Jornada Sábado (Horas)','jornadaSabado',$a_mod['enti_tx_jornadaSabado'],3,MASCARA_NUMERO,'disabled=disabled');
-		// $cJornada[]=campo('Percentual da HE(%)','percentualHE',$a_mod['enti_tx_percentualHE'],3,MASCARA_NUMERO,'disabled=disabled');
-		// $cJornada[]=campo('Percentual da HE Sábado(%)','percentualSabadoHE',$a_mod['enti_tx_percentualSabadoHE'],3,MASCARA_NUMERO,'disabled=disabled');
+		// $cJornada[]=campo('Percentual da HE(%)','percHESemanal',$a_mod['enti_tx_percHESemanal'],3,MASCARA_NUMERO,'disabled=disabled');
+		// $cJornada[]=campo('Percentual da HE Sábado(%)','percHEEx',$a_mod['enti_tx_percHEEx'],3,MASCARA_NUMERO,'disabled=disabled');
 
 		$file = basename(__FILE__);
 		$file = explode('.', $file);
@@ -496,7 +496,7 @@
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		linha_form($c);
 		echo "<br>";
-		fieldset("CONVEÇÃO SINDICAL - JORNADA DO MOTORISTA PADRÃO");
+		fieldset("CONVEÇÃO SINDICAL - JORNADA DO FUNCIONÁRIO PADRÃO");
 
 		if(!empty($a_mod['empr_nb_userCadastro'])){
 			$a_userCadastro = carregar('user',$a_mod['empr_nb_userCadastro']);

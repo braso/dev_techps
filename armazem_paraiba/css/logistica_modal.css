@@ -1,0 +1,383 @@
+      body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            background-color: rgb(163, 161, 161);
+        }
+img{
+    height:30px;
+   width:30px;
+}
+        .card-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+
+        .card {
+            flex: 1 1 calc(33.333% - 15px);
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+        }
+
+        .card i {
+            font-size: 3rem; /* Tamanho maior dos ícones */
+            margin-bottom: 10px;
+        }
+
+        .card-user i {
+            color: #007bff; /* Cor azul para ícone de usuário */
+        }
+
+        .card-car i {
+            color: #28a745; /* Cor verde para ícone de carro */
+        }
+
+        .card h3 {
+            margin-bottom: 5px;
+            font-size: 1.2rem;
+            color: #343a40;
+        }
+
+        .card p {
+            font-size: 1.5rem;
+            color: #007bff;
+        }
+
+        /* Media Queries para ajustar em telas menores */
+        @media (max-width: 768px) {
+            .card {
+                flex: 1 1 calc(50% - 15px);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                flex: 1 1 100%;
+            }
+        }
+
+        .container {
+            margin-top: 20px;
+            padding: 15px;
+        }
+
+        .form-container {
+            padding: 15px;
+            position: fixed;
+            top: 0;
+            right: -700px;
+            width: 400px;
+            overflow-y: auto;
+            height: 100%;
+            background-color: #f8f9fa;
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+            transition: right 0.3s ease;
+            z-index: 1050;
+        }
+
+        .form-container.show {
+            right: 0;
+        }
+
+        .table-container {
+            padding: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            background-color: transparent;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            background-color: transparent;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #fff;
+        }
+
+        .btn-dark {
+            background-color: #343a40;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+        }
+
+        .alert {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .autocomplete-items {
+            border: 1px solid #ddd;
+            background-color: #fff;
+            max-height: 150px;
+            overflow-y: auto;
+            position: absolute;
+            z-index: 1000;
+        }
+
+        .autocomplete-items div {
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        .autocomplete-items div:hover {
+            background-color: #f1f1f1;
+        }
+
+        #label-plate, #label-date {
+            background-color: transparent;
+        }
+
+        .form-container #formContainer label {
+            background-color: transparent;
+        }
+
+        .adjustment-list {
+            margin-top: 20px;
+        }
+
+        .adjustment-list table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .adjustment-list th, .adjustment-list td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .adjustment-list th {
+            background-color: #f2f2f2;
+        }
+        
+        
+           /* Loading Screen */
+        #loading-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 9999;
+            text-align: center;
+            padding-top: 20%;
+        }
+
+        #loading-screen i {
+            font-size: 4rem;
+            color: #007bff;
+        }
+
+
+
+        /*ESTILO BOTAÃO CONSULTA*/
+
+
+        #consultarBtn {
+    background: linear-gradient(to right, #007BFF, #44c1eb); /* Azul para azul claro */
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background 0.3s ease;
+}
+
+
+
+#consultarBtn:hover {
+    background: linear-gradient(to right, #0056b3, #87CEFA); /* Escurece os tons ao passar o mouse */
+}
+
+
+
+
+
+
+
+
+
+
+
+    /*ESTILO BOTAÃO AJSUTAR PONTO*/
+       #toggleFormBtn {
+    background: linear-gradient(to right, #0a6e96, #063747); /* Azul para azul claro */
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background 0.3s ease;
+}
+
+#toggleFormBtn:hover {
+    background: linear-gradient(to right, #0056b3, #87CEFA); /* Escurece os tons ao passar o mouse */
+}
+
+
+
+
+    /*ESTILO BOTAÃO AJSUTAR PONTO*/
+       #addAdjustmentBtn {
+    background: linear-gradient(to right, #0a6e96, #063747); /* Azul para azul claro */
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background 0.3s ease;
+}
+
+#addAdjustmentBtn:hover {
+    background: linear-gradient(to right, #0056b3, #87CEFA); /* Escurece os tons ao passar o mouse */
+}
+
+
+    /*ESTILO BOTAÃO ENVIAR LISTA DE AJUSTE*/
+       #submitAdjustmentsBtn {
+    background: linear-gradient(to right, #0a6e96, #063747); /* Azul para azul claro */
+    border: none;
+    color: white;
+    margin-top: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background 0.3s ease;
+}
+
+#submitAdjustmentsBtn:hover {
+    background: linear-gradient(to right, #0056b3, #87CEFA); /* Escurece os tons ao passar o mouse */
+}
+
+
+
+
+
+
+/*ESTILO PO UP SUCESSO E RROR*/
+
+/* Estilo para o popup */
+.popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    opacity: 1;
+    transition: opacity 0.5s ease-in-out;
+}
+
+/* Estilo específico para o popup de erro */
+.popup-erro {
+    background-color: #f44336; /* Cor vermelha para erros */
+}
+
+/* Estilo específico para o popup de sucesso */
+.popup-sucesso {
+    background-color: #4CAF50; /* Cor verde para sucesso */
+}
+
+/* Oculta o popup (após a animação) */
+.popup.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+
+/* Estilo para a linha selecionada */
+.selected-row {
+    background-color: #1C03D3 !important; /* Cor de fundo */
+    color: white !important; /* Cor do texto */
+}
+
+/* Estilo para a linha inicial */
+.start-row {
+    background-color: #3B44FF !important; /* Cor de fundo */
+    color: white !important; /* Cor do texto */
+}
+
+
+#plate-suggestions {
+    border: 1px solid #ccc;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 5px;
+    padding-left: 0;
+    list-style: none;
+}
+
+#plate-suggestions .list-group-item {
+    padding: 10px;
+    cursor: pointer;
+}
+
+#plate-suggestions .list-group-item:hover {
+    background-color: #f0f0f0;
+}
+
+
+
+.row div label{
+    
+       margin: 0px 10px;
+    background-color: transparent;
+    z-index: 1;
+    position: relative;
+    padding: 0px 5px;
+    border-radius: 10px;
+    text-wrap: nowrap;
+}

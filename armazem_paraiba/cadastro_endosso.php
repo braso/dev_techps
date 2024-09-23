@@ -171,18 +171,17 @@
 			exit;
 		}
 
-		die("passou");
-
 		$_POST["quantHoras"] = "00:00";
 
 		if(empty($_POST["busca_motorista"]) || empty($_POST["data_de"]) || empty($_POST["data_ate"])){
-			set_status("ERRO: Insira motorista e datas para inserir o saldo possível.");
+			set_status("ERRO: Insira funcionário e datas para inserir o saldo possível.");
 			index();
 			exit;
 		}
 
 		$motorista = mysqli_fetch_assoc(query(
-			"SELECT * FROM entidade"
+			"SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg FROM entidade"
+			." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
 			." WHERE enti_tx_status = 'ativo'"
 				." AND enti_nb_id = ".$_POST["busca_motorista"]
 			." LIMIT 1;"
@@ -219,7 +218,7 @@
 		}
 		
 		$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
-		$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], "00:00");
+		$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], "00:00", ($motorista["para_tx_pagarHEExComPerNeg"]?? "sim"));
 		$totalResumo["saldoAnterior"] = $saldoAnterior;
 		$totalResumo["saldoBruto"] = $saldoBruto;
 		[$totalResumo["he50APagar"], $totalResumo["he100APagar"]] = $aPagar;
@@ -227,7 +226,7 @@
 		if($_POST["quantHoras"][0] == "-"){
 			$_POST["quantHoras"] = "00:00";
 		}
-		set_status("O máximo que pode ser pago a este(a) motorista é: ".$_POST["quantHoras"]);
+		set_status("O máximo que pode ser pago a este(a) funcionário(a) é: ".$_POST["quantHoras"]);
 
 		index();
 		exit;
@@ -281,10 +280,10 @@
 
 
 		$queryMotoristas = 
-			"SELECT entidade.*, empresa.empr_nb_cidade, cidade.cida_nb_id, cidade.cida_tx_uf, parametro.para_tx_acordo FROM entidade
+			"SELECT entidade.*, empresa.empr_nb_cidade, cidade.cida_nb_id, cidade.cida_tx_uf, parametro.para_tx_acordo, parametro.para_tx_pagarHEExComPerNeg FROM entidade
 				JOIN empresa ON enti_nb_empresa = empr_nb_id
 				JOIN cidade ON empr_nb_cidade = cida_nb_id
-				JOIN parametro ON enti_nb_parametro = para_nb_id
+				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
 				WHERE enti_tx_status = 'ativo'";
 
 		if(!isset($_POST["busca_motorista"])){
@@ -358,16 +357,10 @@
 					$ultimoEndosso["endo_tx_saldo"] = "00:00";
 				}
 			}
-			$pago = ["00:00", "00:00"];
 			$saldoAnterior = "00:00";
 			if(!empty($ultimoEndosso["endo_tx_filename"])){
 				$ultimoEndossoCSV = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
-				if(empty($ultimoEndossoCSV["endo_tx_max50APagar"])){
-					$ultimoEndossoCSV["endo_tx_max50APagar"] = "00:00";
-				}
-
-				$pago = calcularHorasAPagar($ultimoEndossoCSV["endo_tx_saldo"], $ultimoEndossoCSV["totalResumo"]["he50"], $ultimoEndossoCSV["totalResumo"]["he100"], $ultimoEndossoCSV["endo_tx_max50APagar"]);
-				$saldoAnterior = operarHorarios([$ultimoEndossoCSV["endo_tx_saldo"], $pago[0], $pago[1]], "-");
+				$saldoAnterior = $ultimoEndossoCSV["totalResumo"]["saldoFinal"];
 			}
 				
 			//Calculando datas de início e fim do ciclo{
@@ -378,7 +371,7 @@
 				$dadosMotorista = carrega_array(query(
 					"SELECT * FROM entidade".
 						" LEFT JOIN parametro ON enti_nb_parametro = para_nb_id".
-						" WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante')".
+						" WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')".
 						" AND enti_nb_id IN (".$motorista["enti_nb_id"].")".
 						" AND enti_nb_empresa = ".$motorista["enti_nb_empresa"].
 						" ORDER BY enti_tx_nome"
@@ -401,7 +394,7 @@
 
 
 			$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
-			$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], (!empty($_POST["quantHoras"])? $_POST["quantHoras"]: "00:00"));
+			$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], (!empty($_POST["quantHoras"])? $_POST["quantHoras"]: "00:00"), ($motorista["para_tx_pagarHEExComPerNeg"]?? "sim"));
 			$saldoBruto = operarHorarios([$saldoBruto, $aPagar[0], $aPagar[1]], "-");
 			
 			$totalResumo["saldoAnterior"] = $saldoAnterior;
@@ -491,7 +484,7 @@
 
 		cabecalho("Cadastro de Endosso");
 
-		$extra_bd_motorista = " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')";
+		$extra_bd_motorista = " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')";
 		if($_SESSION["user_tx_nivel"] != "Super Administrador"){
 			$extra_bd_motorista .= " AND enti_nb_empresa = ".$_SESSION["user_tx_emprCnpj"];
 		}
@@ -513,14 +506,14 @@
 			<div id='max50APagar' class='col-sm-3 margin-bottom-5' style='display: ".(!empty($_POST["pagar_horas"]) && $_POST["pagar_horas"] == "sim"? "flex": "none")."; align-content: flex-end; align-items: flex-end;'>
 				<div>
 					<label>Máx. de HE Semanal a pagar</label>
-					<input class='form-control input-sm' id='outroCampo' name='quantHoras' autocomplete='off' value = '".(!empty($_POST["quantHoras"])? $_POST["quantHoras"]:"")."'>
+					<input class='form-control input-sm campo-fit-content' id='outroCampo' name='quantHoras' autocomplete='off' value = '".(!empty($_POST["quantHoras"])? $_POST["quantHoras"]:"")."'>
 				</div>
 				<div style='margin-left: 5px;width: max-content; font-size: 12px;'><a onclick='pegarSaldoTotal()'>Inserir todo o saldo possível.</a></div>
 			</div>"
 		;
 
 		$fields = [
-			combo_net("Motorista", "busca_motorista", $_POST["busca_motorista"]?? "", 4, "entidade", "", $extra_bd_motorista, "enti_tx_matricula"),
+			combo_net("Funcionário", "busca_motorista", $_POST["busca_motorista"]?? "", 4, "entidade", "", $extra_bd_motorista, "enti_tx_matricula"),
 			campo_data("De*", "data_de", ($_POST["data_de"]?? ""), 2),
 			campo_data("Ate*", "data_ate", ($_POST["data_ate"]?? ""), 2),
 			// checkbox("Pagar Horas Extras", "pagar_horas", ["sim" => "Sim", "nao" => "Não"], 3, "radio"),

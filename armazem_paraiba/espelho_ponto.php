@@ -28,7 +28,7 @@
 		$data_inicio_obj = new DateTime($_POST["busca_dataInicio"]);
 		$data_fim_obj = new DateTime($_POST["busca_dataFim"]);
 
-		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
+		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 			$_POST["busca_motorista"] = $_SESSION["user_nb_entidade"];
 			$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
 		}
@@ -38,7 +38,6 @@
 			$errorMsg = $baseErrMsg;
 			if(empty($_POST["busca_empresa"])){
 				if(empty($_POST["busca_motorista"])){
-					$errorMsg[0] .= "Empresa, ";
 					$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
 				}else{
 					$idEmpresa = mysqli_fetch_assoc(query(
@@ -50,15 +49,13 @@
 					$_POST["busca_empresa"] = $idEmpresa["empr_nb_id"];
 				}
 			}
-			if(empty($_POST["busca_motorista"])){
-				$errorMsg[0] .= "Motorista/Ajudante, ";
-			}
-			if(empty($_POST["busca_dataInicio"])){
-				$errorMsg[0] .= "Data Início, ";
-			}
-			if(empty($_POST["busca_dataFim"])){
-				$errorMsg[0] .= "Data Fim, ";
-			}
+
+			$errorMsg[0] .= 
+				(empty($_POST["busca_empresa"])? "Empresa, ": "")
+				.(empty($_POST["busca_motorista"])? "Funcionário, ": "")
+				.(empty($_POST["busca_dataInicio"])? "Data Início, ": "")
+				.(empty($_POST["busca_dataFim"])? "Data Fim, ": "")
+			;
 			
 			if ($data_fim_obj < $data_inicio_obj) {
 				$errorMsg[2] .= "A data final não pode ser anterior à data inicial.";
@@ -66,7 +63,7 @@
 			
 			if(!empty($_POST["busca_empresa"]) && !empty($_POST["busca_motorista"])){
 				if($_POST["busca_dataInicio"] > date("Y-m-d") || $_POST["busca_dataFim"] > date("Y-m-d")){
-					$errorMsg[1] = "Data de pesquisa não pode ser após hoje (".date("d/m/Y")."). ";
+					$errorMsg[1] = "Data de pesquisa não pode ser após hoje (".date("d/m/Y").").";
 				}
 
 				$motorista = mysqli_fetch_assoc(query(
@@ -78,7 +75,7 @@
 				));
 
 				if(empty($motorista)){
-					$errorMsg[2] = "Este motorista não pertence a esta empresa. ";
+					$errorMsg[2] = "Este funcionário não pertence a esta empresa.";
 				}else{
 					$opt = "<option value=\"".$motorista["enti_nb_id"]."\">[".$motorista["enti_nb_id"]."]".$motorista["enti_tx_nome"]."</option>";
 				}
@@ -86,29 +83,30 @@
 
 			if($errorMsg != $baseErrMsg){
 				foreach($errorMsg as &$msg){
-					if(!empty($msg)){
+					if(!empty($msg) && substr($msg, -1, 1) == " "){
 						$msg = substr($msg, 0, -2).".";
 					}
 				}
 				$errorMsg = implode("<br>", $errorMsg);
 				set_status("ERRO: ".$errorMsg);
 				$_POST["acao"] = "";
+				index();
+				exit;
 			}
 
 			//Conferir se a data de início da pesquisa está antes do cadastro do motorista{
 				if(!empty($motorista)){
 					$baseErrMsg = [];
-					$errorMsg = $baseErrMsg; 
+					$errorMsg = $baseErrMsg;
 					$data_cadastro = new DateTime($motorista["enti_tx_dataCadastro"]);
-
-					if(date_diff($data_cadastro, $data_inicio_obj)->invert){
-						$errorMsg = ["A data inicial deve ser anterior ao cadastro do motorista (".$data_cadastro->format("d/m/Y")."). "];
+					if($data_inicio_obj->format("Y-m") < $data_cadastro->format("Y-m")){
+						$errorMsg = ["O mês inicial deve ser posterior ou igual ao mês de cadastro do funcionário (".$data_cadastro->format("m/Y").")."];
 					}
 				}
 
 				if($errorMsg != $baseErrMsg){
 					foreach($errorMsg as &$msg){
-						if(!empty($msg)){
+						if(!empty($msg) && substr($msg, -1, 1) == " "){
 							$msg = substr($msg, 0, -2).".";
 						}
 					}
@@ -118,6 +116,7 @@
 				}
 			//}
 		//}
+
 		index();
 	}
 
@@ -128,7 +127,7 @@
 		$condBuscaEmpresa = "";
 
 
-		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
+		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 			$_POST["busca_motorista"] = $_SESSION["user_nb_entidade"];
 			$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
 			$condBuscaMotorista = " AND enti_nb_id = '".$_SESSION["user_nb_entidade"]."'";
@@ -154,23 +153,23 @@
 		}
 
 		//CAMPOS DE CONSULTA{
-			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
+			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 				$nomeEmpresa = mysqli_fetch_assoc(query("SELECT empr_tx_nome FROM empresa WHERE empr_nb_id = ".$_SESSION["user_nb_empresa"]));
 				$searchFields = [
 					texto("Empresa*", $nomeEmpresa["empr_tx_nome"], 3),
-					texto("Motorista/Ajudante*", $_SESSION["user_tx_nome"], 3),
+					texto("Funcionário*", $_SESSION["user_tx_nome"], 3),
 				];
 			}else{
 				$searchFields = [
 					combo_net("Empresa*", "busca_empresa", ($_POST["busca_empresa"]?? ""), 3, "empresa", "onchange=selecionaMotorista(this.value) ", $condBuscaEmpresa),
 					combo_net(
-						"Motorista/Ajudante*",
+						"Funcionário*",
 						"busca_motorista",
 						(!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""),
 						4, 
 						"entidade", 
 						"", 
-						(!empty($_POST["busca_empresa"])?" AND enti_nb_empresa = ".$_POST["busca_empresa"]:"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante') ".$condBuscaEmpresa." ".$condBuscaMotorista, 
+						(!empty($_POST["busca_empresa"])?" AND enti_nb_empresa = ".$_POST["busca_empresa"]:"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') ".$condBuscaEmpresa." ".$condBuscaMotorista, 
 						"enti_tx_matricula"
 					)
 				];
@@ -189,7 +188,7 @@
 			$b = [
 				botao("Buscar", "buscarEspelho()", "", "", "", "", "btn btn-success"),
 			];
-			if(!in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
+			if(!in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 				$b[] = botao("Cadastrar Abono", "cadastro_abono", "", "", "btn btn-secondary");
 			}
 
@@ -226,7 +225,7 @@
 			
 			$cab = [
 				"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
-				"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "H.E. ".$aMotorista["enti_tx_percentualHE"]."%", "H.E. ".$aMotorista["enti_tx_percentualSabadoHE"]."%",
+				"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "H.E. ".$aMotorista["enti_tx_percHESemanal"]."%", "H.E. ".$aMotorista["enti_tx_percHEEx"]."%",
 				"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 			];
 
@@ -242,7 +241,7 @@
 				
 				$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $dataVez, $aMotorista["enti_nb_id"])], $aDetalhado));
 				for($f = 0; $f < sizeof($row)-1; $f++){
-					if($f == 12){//Se for da coluna "Jornada Prevista", não apaga
+					if(in_array($f, [3, 4, 5, 6, 12])){//Se for das colunas de jornada, refeição ou "Jornada Prevista", não apaga
 						continue;
 					}
 					if($row[$f] == "00:00"){
@@ -258,12 +257,12 @@
 
 			if(!empty($aEmpresa["empr_nb_parametro"])){
 				$parametroEmpresa = mysqli_fetch_assoc(query(
-					"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percentualHE, para_tx_percentualSabadoHE, para_nb_id, para_tx_nome, para_tx_jornadaSemanal, para_tx_jornadaSabado FROM parametro"
+					"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percHESemanal, para_tx_percHEEx, para_nb_id, para_tx_nome, para_tx_jornadaSemanal, para_tx_jornadaSabado FROM parametro"
 						." WHERE para_tx_status = 'ativo'"
 							." AND para_nb_id = ".$aEmpresa["empr_nb_parametro"]
 						." LIMIT 1;"
 				));
-				if(array_keys(array_intersect($parametroEmpresa, $aMotorista)) == ["para_tx_jornadaSemanal", "para_tx_jornadaSabado", "para_tx_percentualHE", "para_tx_percentualSabadoHE", "para_nb_id"]){
+				if(array_keys(array_intersect($parametroEmpresa, $aMotorista)) == ["para_tx_jornadaSemanal", "para_tx_jornadaSabado", "para_tx_percHESemanal", "para_tx_percHEEx", "para_nb_id"]){
 					$parametroPadrao = "Convenção Padronizada: ".$parametroEmpresa["para_tx_nome"].", Semanal (".$parametroEmpresa["para_tx_jornadaSemanal"]."), Sábado (".$parametroEmpresa["para_tx_jornadaSabado"].")";
 				}
 			}
@@ -297,7 +296,7 @@
 
 			$saldosMotorista = "SALDOS: <br>
 				<div class='table-responsive'>
-					<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
+					<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
 						<thead>
 							<tr>
 								<th>Anterior:</th>
@@ -370,7 +369,7 @@
 			"<script>
 
 				function selecionaMotorista(idEmpresa){
-					let buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\")');
+					let buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")');
 					if(idEmpresa > 0){
 						buscaExtra += encodeURI(' AND enti_nb_empresa = '+idEmpresa);
 						$('.busca_motorista')[0].innerHTML = null;

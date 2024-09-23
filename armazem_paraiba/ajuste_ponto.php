@@ -17,7 +17,7 @@
 			$aMotorista = carregar('entidade',$_POST['id']);
 			$aTipo = carregar('macroponto', $_POST['idMacro']);
 			if(empty($aMotorista)){
-				set_status("ERRO: Motorista não encontrado.");
+				set_status("ERRO: Funcionário não encontrado.");
 				index();
 				exit;
 			}
@@ -42,9 +42,6 @@
 				exit;
 			}
 
-			var_dump($camposObrig); echo "<br><br>";
-			var_dump($_POST); echo "<br><br>";
-			var_dump($errorMsg); echo "<br><br>";
 
 			$aMotorista = carregar('entidade',$_POST['id']);
 			if(empty($aMotorista)){
@@ -116,16 +113,14 @@
 							$matchedTypes['fins'][$f]    = intval($matchedTypes['fins'][$f]['macr_tx_codigoInterno']);
 						}
 
-						$temPeriodoAberto = mysqli_fetch_assoc(
-							query(
-								"SELECT * FROM ponto 
-									WHERE pont_tx_status = 'ativo'
-										AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-										AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora'].":59', '%Y-%m-%d %H:%i:%s')
-									ORDER BY pont_tx_data DESC, pont_nb_id DESC
-									LIMIT 1;"
-							)
-						);
+						$temPeriodoAberto = mysqli_fetch_assoc(query(
+							"SELECT * FROM ponto"
+								." WHERE pont_tx_status = 'ativo'"
+									." AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'"
+									." AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora'].":59', '%Y-%m-%d %H:%i:%s')"
+								." ORDER BY pont_tx_data DESC, pont_nb_id DESC"
+								." LIMIT 1;"
+						));
 						
 						$temPeriodoAberto['pont_tx_tipo'] = !empty($temPeriodoAberto['pont_tx_tipo'])? intval($temPeriodoAberto['pont_tx_tipo']): $temPeriodoAberto['pont_tx_tipo'];
 						$temPeriodoAberto['macr_tx_codigoInterno'] = !empty($temPeriodoAberto['macr_tx_codigoInterno'])? intval($temPeriodoAberto['macr_tx_codigoInterno']): $temPeriodoAberto['macr_tx_codigoInterno'];
@@ -213,7 +208,7 @@
 				</style>
 				<div id='statusDiv'>
 					<label id='status-label'>Status:</label>
-					<select name='status' id='status' class='form-control input-sm' onchange='atualizar_form(".$_POST['id'].", null, \"".$_POST['data_de']."\",  \"".$_POST['data_ate']."\", this.value)'>
+					<select name='status' id='status' class='form-control input-sm campo-fit-content' onchange='atualizar_form(".$_POST['id'].", null, \"".$_POST['data_de']."\",  \"".$_POST['data_ate']."\", this.value)'>
 						<option value='ativo'>Ativos</option>
 						<option value='inativo' ".((!empty($_POST['status']) && $_POST['status'] == 'inativo')? 'selected': '').">Inativos</option>
 					</select>
@@ -339,7 +334,7 @@
 		}
 		
 		if(empty($_POST['id'])){
-			echo '<script>alert("ERRO: Deve ser selecionado um motorista para ajustar.")</script>';
+			echo '<script>alert("ERRO: Deve ser selecionado um funcionário para ajustar.")</script>';
 			
 			$_POST["acao"] = "buscarEspelho()";
 			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
@@ -380,6 +375,109 @@
 							window.print();
 						}
 					</script>';
+
+
+
+
+
+
+
+
+
+
+// Função para carregar os CNPJs formatados da tabela 'empresa'
+function carregarCNPJsFormatados() {
+    global $conn;
+    // Consulta SQL para buscar os CNPJs
+    $sql = "SELECT empr_tx_cnpj FROM empresa";
+
+    $result = mysqli_query($conn, $sql);
+
+    if (!$result) {
+        die("Erro ao consultar CNPJs: " . mysqli_error($conn));
+    }
+
+    $cnpjs_formatados = [];
+    while ($row = mysqli_fetch_assoc($result)) {
+        // Remove pontos, traços e barras do CNPJ
+        $cnpj_formatado = preg_replace('/[^0-9]/', '', $row['empr_tx_cnpj']);
+        $cnpjs_formatados[] = $cnpj_formatado;
+    }
+    return $cnpjs_formatados;
+}
+
+// Chama a função para carregar os CNPJs formatados
+$cnpjs = carregarCNPJsFormatados();
+
+// Variáveis do ambiente carregadas
+$baseUrl = $_ENV['URL_BASE'];
+$appPath = $_ENV['APP_PATH'];
+$contextPath = $_ENV['CONTEX_PATH'];
+
+// Monta a URL base para a logística
+$urlLogistica = $baseUrl . $appPath . $contextPath . "/logistica.php";
+
+// Assumindo que $aMotorista já tenha os valores definidos
+$matricula = htmlspecialchars($aMotorista['enti_tx_matricula']);
+$motorista = htmlspecialchars($aMotorista['enti_tx_nome']);
+$data = $_POST['data'];  // Data do formulário
+
+// Construir o botão com o código JavaScript embutido
+$botaoConsLog = '
+<button class="btn default" type="button" onclick="consultarLogistica()">Consultar Logística</button>
+
+<script>
+function consultarLogistica() {
+    // Obter valores do PHP e HTML
+    var matricula = "' . addslashes($matricula) . '";
+    var motorista = "' . addslashes($motorista) . '";
+    var data = document.getElementById("data").value;
+
+    // Obter todos os CNPJs da variável PHP
+    var cnpjs = ' . json_encode($cnpjs) . ';
+
+    // Verificar o conteúdo de cnpjs no console
+    console.log("CNPJs:", cnpjs);
+
+    if (!Array.isArray(cnpjs)) {
+        console.error("CNPJs não é um array:", cnpjs);
+        return;
+    }
+
+    if (cnpjs.length === 0) {
+        console.error("A lista de CNPJs está vazia.");
+        return;
+    }
+
+    // Converte a lista de CNPJs para uma string separada por vírgulas
+    var cnpjString = cnpjs.map(String).join(",");
+
+    // Construir a URL com os parâmetros dinâmicos
+    var url = "' . addslashes($urlLogistica) . '";
+    url += "?motorista=" + encodeURIComponent(motorista) + 
+           "&matricula=" + encodeURIComponent(matricula) + 
+           "&data=" + encodeURIComponent(data) +
+           "&cnpj=" + encodeURIComponent(cnpjString);  // Adicionando todos os CNPJs
+
+    // Abrir a nova página em uma nova aba
+    window.open(url, "_blank");
+}
+</script>
+';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 		if (empty($_POST['status'])) {
@@ -423,7 +521,7 @@
 
 		$botoes[] = $botao_imprimir;
 		$botoes[] = botao("Voltar", "voltar");
-		
+		$botoes[] = $botaoConsLog; //BOTÃO CONSULTAR LOGISTICA
 		$botoes[] = status();
 
 
@@ -443,13 +541,12 @@
 		echo campo_hidden("data_de", $_POST["data_de"]);
 		echo campo_hidden("data_ate", $_POST["data_ate"]);
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		echo campo_hidden("busca_empresa", $_POST["busca_empresa"]);
 		linha_form($variableFields);
 		linha_form($campoJust);
 		fecha_form($botoes);
 
 		$sql = pegarSqlDia($aMotorista['enti_tx_matricula'], ["pont_nb_id", "pont_tx_data", "macr_tx_nome", "moti_tx_nome", 
-		"moti_tx_legenda", "pont_tx_justificativa", "user_tx_login", "pont_tx_dataCadastro",
+		"moti_tx_legenda", "pont_tx_justificativa", "user_tx_login", "pont_tx_dataCadastro", "pont_tx_placa",
 		"pont_tx_latitude", "pont_tx_longitude","pont_tx_dataAtualiza"]);
 
 

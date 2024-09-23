@@ -75,18 +75,19 @@
 		}
 
 		if (empty($_POST["busca_data"]) || empty($_POST["busca_empresa"]) || empty($_POST["idMotoristaEndossado"])){
-			set_status("ERRO: Insira data e motorista para gerar relatório.");
+			set_status("ERRO: Insira data e Funcionário para gerar relatório.");
 			index();
 			exit;
 		}
 
 		$sqlMotorista = query(
-			"SELECT * FROM entidade 
-				WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante') 
-					AND enti_nb_id IN (".$_POST["idMotoristaEndossado"].") 
-					AND enti_nb_empresa = ".$_POST["busca_empresa"]." 
-					AND enti_tx_status = 'ativo'
-				ORDER BY enti_tx_nome"
+			"SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg FROM entidade"
+				." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
+				." WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
+					."	AND enti_nb_id IN (".$_POST["idMotoristaEndossado"].")"
+					."	AND enti_nb_empresa = ".$_POST["busca_empresa"]
+					."	AND enti_tx_status = 'ativo'"
+				." ORDER BY enti_tx_nome;"
 		);
 		
 		$diasEndossados = 0;
@@ -104,11 +105,11 @@
 				    $max50APagar = "00:00";
 				}
 
-				$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $max50APagar);
+				$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $max50APagar, ($aMotorista["para_tx_pagarHEExComPerNeg"]?? "sim"));
 
-				$totalResumo["he50_aPagar"] = $aPagar[0];
-				$totalResumo["he100_aPagar"] = $aPagar[1];
-				$totalResumo["saldoFinal"] = operarHorarios([$totalResumo["saldoBruto"], $totalResumo["he50_aPagar"], $totalResumo["he100_aPagar"]], "-");
+				$totalResumo["HESemanalAPagar"] = $aPagar[0];
+				$totalResumo["HEExAPagar"] = $aPagar[1];
+				$totalResumo["saldoFinal"] = operarHorarios([$totalResumo["saldoBruto"], $totalResumo["HESemanalAPagar"], $totalResumo["HEExAPagar"]], "-");
 
 				for ($i = 0; $i < count($endossoCompleto["endo_tx_pontos"]); $i++) {
 					$diasEndossados++;
@@ -267,7 +268,7 @@
 
 		//CAMPOS DE CONSULTA{
 			$fields = [
-				combo_net("Motorista/Ajudante", "busca_motorista", (!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 3, "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')".$extraMotorista.$extraEmpresaMotorista, "enti_tx_matricula"),
+				combo_net("Funcionário", "busca_motorista", (!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 3, "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')".$extraMotorista.$extraEmpresaMotorista, "enti_tx_matricula"),
 				campo_mes("Data",      "busca_data",      (!empty($_POST["busca_data"])?      $_POST["busca_data"]     : ""), 2),
 				combo(	  "Endossado",	"busca_endossado", (!empty($_POST["busca_endossado"])? $_POST["busca_endossado"]: ""), 2, ["" => "", "endossado" => "Sim", "naoEndossado" => "Não"])
 			];
@@ -297,14 +298,15 @@
 			"endossados" => ["sim" => 0, "nao" => 0],	//countEndossados e $countNaoEndossados
 		];
 		//function buscar_endosso(){
-			$motNaoEndossados = "MOTORISTA(S) NÃO ENDOSSADO(S): <br><br>";
+			$motNaoEndossados = "FUNCIONÁRIO(S) NÃO ENDOSSADO(S): <br><br>";
 			if(!empty($_POST["busca_data"]) && !empty($_POST["busca_empresa"]) && !empty($_GET["acao"])){
 				$sqlMotorista = query(
-					"SELECT * FROM entidade"
-					." WHERE enti_tx_status = 'ativo'"
-						." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
-						." AND enti_nb_empresa = ".$_POST["busca_empresa"]." ".$extra
-					." ORDER BY enti_tx_nome;"
+					"SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg, parametro.para_tx_inicioAcordo, parametro.para_nb_qDias, parametro.para_nb_qDias FROM entidade"
+						." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
+						." WHERE enti_tx_status = 'ativo'"
+							." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
+							." AND enti_nb_empresa = ".$_POST["busca_empresa"]." ".$extra
+						." ORDER BY enti_tx_nome;"
 				);
 
 				while($aMotorista = carrega_array($sqlMotorista, MYSQLI_ASSOC)){
@@ -337,6 +339,8 @@
 						unset($totalResumoGrid["saldoAnterior"]);
 						unset($totalResumoGrid["he50APagar"]);
 						unset($totalResumoGrid["he100APagar"]);
+						unset($totalResumoGrid["saldoFinal"]);
+
 
 						if(count($aDia) > 0){
 							$aDia[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumoGrid));
@@ -346,18 +350,11 @@
 
 					if (count($aDia) > 0) {
 						$counts["endossados"]["sim"]++;
-						
-						$dadosParametro = carrega_array(query(
-							"SELECT para_tx_tolerancia, para_tx_dataCadastro, para_nb_qDias, para_tx_inicioAcordo FROM parametro 
-								JOIN entidade ON para_nb_id = enti_nb_parametro 
-								WHERE enti_nb_parametro = ".$aMotorista["enti_nb_parametro"]." 
-								LIMIT 1;"
-						));
 
-						$dataCicloProx = strtotime($dadosParametro["para_tx_inicioAcordo"]." 00:00:00");
+						$dataCicloProx = strtotime($aMotorista["para_tx_inicioAcordo"]." 00:00:00");
 						$endoTimestamp = strtotime($endossoCompleto["endo_tx_ate"]." 00:00:00");
-						while($dataCicloProx < $endoTimestamp && !empty($dadosParametro["para_nb_qDias"])){
-							$dataCicloProx += $dadosParametro["para_nb_qDias"]*24*60*60;
+						while($dataCicloProx < $endoTimestamp && !empty($aMotorista["para_nb_qDias"])){
+							$dataCicloProx += $aMotorista["para_nb_qDias"]*24*60*60;
 						}
 						$dataCicloProx = date("Y-m-d", $dataCicloProx);
 						$dataCicloProx = explode("-", $dataCicloProx);
@@ -374,8 +371,8 @@
 							if (
 								$aParametro["para_tx_jornadaSemanal"] != $aMotorista["enti_tx_jornadaSemanal"] ||
 								$aParametro["para_tx_jornadaSabado"] != $aMotorista["enti_tx_jornadaSabado"] ||
-								$aParametro["para_tx_percentualHE"] != $aMotorista["enti_tx_percentualHE"] ||
-								$aParametro["para_tx_percentualSabadoHE"] != $aMotorista["enti_tx_percentualSabadoHE"] ||
+								$aParametro["para_tx_percHESemanal"] != $aMotorista["enti_tx_percHESemanal"] ||
+								$aParametro["para_tx_percHEEx"] != $aMotorista["enti_tx_percHEEx"] ||
 								$aParametro["para_nb_id"] != $aMotorista["enti_nb_parametro"]
 							) {
 								$parametroPadrao = "Convenção Não Padronizada, Semanal (".$aMotorista["enti_tx_jornadaSemanal"]."), Sábado (".$aMotorista["enti_tx_jornadaSabado"].")";
@@ -391,13 +388,13 @@
 							$endossoCompleto["endo_tx_max50APagar"] = "00:00";
 						}
 
-						$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $endossoCompleto["endo_tx_max50APagar"]);
+						$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $endossoCompleto["endo_tx_max50APagar"], ($aMotorista["para_tx_pagarHEExComPerNeg"]?? "sim"));
 						$aPagar = operarHorarios($aPagar, "+");
 						$saldoFinal = operarHorarios([$totalResumo["saldoBruto"], $aPagar], "-");
 
 						$saldosMotorista = "SALDOS: <br>
 							<div class='table-responsive'>
-								<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
+								<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
 									<thead>
 										<tr>
 											<th>Anterior:</th>
@@ -448,7 +445,7 @@
 						
 						$cab = [
 							"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
-							"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "H.E. ".$aMotorista["enti_tx_percentualHE"]."%", "H.E. ".$aMotorista["enti_tx_percentualSabadoHE"]."%",
+							"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "H.E. ".$aMotorista["enti_tx_percHESemanal"]."%", "H.E. ".$aMotorista["enti_tx_percHEEx"]."%",
 							"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 						];
 
@@ -507,7 +504,7 @@
 					"<script>
 						button = document.getElementById('botaoContexCadastrar ImprimirRelatorio');
 						button.setAttribute('disabled', true);
-						button.setAttribute('title', 'Pesquise um motorista endossado para efetuar a impressão do endosso.');
+						button.setAttribute('title', 'Pesquise um funcionário endossado para efetuar a impressão do endosso.');
 
 						btnsImprimir = document.getElementsByName('');
 					</script>"
@@ -518,7 +515,7 @@
 
 		rodape();
 
-		$counts["message"] = "<b>Motoristas: ".$counts["total"]." | Verificados: ".$counts["verificados"]." | Não Conformidades: ".$counts["naoConformidade"]." | Endossados: ".$counts["endossados"]["sim"]." | Não Endossados: ".$counts["endossados"]["nao"]."</b>";
+		$counts["message"] = "<b>Funcionários: ".$counts["total"]." | Verificados: ".$counts["verificados"]." | Não Conformidades: ".$counts["naoConformidade"]." | Endossados: ".$counts["endossados"]["sim"]." | Não Endossados: ".$counts["endossados"]["nao"]."</b>";
 
 		$select2URL = 
 			$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php"

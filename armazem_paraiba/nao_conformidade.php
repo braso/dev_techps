@@ -81,7 +81,7 @@
 
 		//CAMPOS DE CONSULTA{
 			$c = [
-				combo_net("Motorista/Ajudante:", "busca_motorista", (!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 3, "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')".$extraMotorista.$extraEmpresaMotorista, "enti_tx_matricula"),
+				combo_net("Funcionário:", "busca_motorista", (!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 3, "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')".$extraMotorista.$extraEmpresaMotorista, "enti_tx_matricula"),
 				campo_mes("Data*:",     "busca_data",      (!empty($_POST["busca_data"])?      $_POST["busca_data"]     : ""), 2)
 			];
 
@@ -122,12 +122,6 @@
 			</style>"
 		;
 
-		$cab = [
-			"", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
-			"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "HE 50%", "HE&nbsp;100%",
-			"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
-		];
-
 		//function buscar_endosso(){
 			$counts = [
 				"total" => 0,								//$countEndosso
@@ -144,7 +138,7 @@
 					"SELECT * FROM entidade"
 						." WHERE enti_tx_status = 'ativo'"
 							." AND enti_nb_empresa = ".$_POST["busca_empresa"]
-							." AND (enti_tx_ocupacao IN ('Motorista', 'Ajudante') AND enti_tx_dataCadastro < '".$date->format("Y-m-t")."')"
+							." AND (enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário') AND enti_tx_dataCadastro < '".$date->format("Y-m-t")."')"
 							." ".$extra
 						." ORDER BY enti_tx_nome;"
 				);
@@ -214,7 +208,7 @@
 						if ($aEmpresa["empr_nb_parametro"] > 0) {
 							$aParametro = carregar("parametro", $aEmpresa["empr_nb_parametro"]);
 							$convencaoPadrao = "| Convenção Padrão? Sim";
-							foreach(["tx_jornadaSemanal", "tx_jornadaSabado", "tx_percentualHE", "tx_percentualSabadoHE"] as $campo){
+							foreach(["tx_jornadaSemanal", "tx_jornadaSabado", "tx_percHESemanal", "tx_percHEEx"] as $campo){
 								if($aParametro["para_".$campo] != $aMotorista["enti_".$campo]){
 									$convencaoPadrao = "| Convenção Padrão? Não";
 									break;
@@ -262,10 +256,17 @@
 						if($saldoAnterior != "--:--"){
 							$saldoFinal = somarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]]);
 						}
+
+						$cab = [
+							"", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
+							"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "H.E. ".$aMotorista["enti_tx_percHESemanal"]."%", "H.E. ".$aMotorista["enti_tx_percHEEx"]."%",
+							"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
+						];
+				
 	
 						$saldosMotorista = 
 							"<div class='table-responsive'>
-								<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
+								<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
 									<thead><tr>
 										<th>Saldo Anterior:</th>
 										<th>Saldo do Período:</th>

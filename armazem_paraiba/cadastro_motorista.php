@@ -55,8 +55,8 @@
 			"<script type='text/javascript'>
 				parent.document.contex_form.jornadaSemanal.value = '".$parametro["para_tx_jornadaSemanal"]."';
 				parent.document.contex_form.jornadaSabado.value = '".$parametro["para_tx_jornadaSabado"]."';
-				parent.document.contex_form.percentualHE.value = '".$parametro["para_tx_percentualHE"]."';
-				parent.document.contex_form.percentualSabadoHE.value = '".$parametro["para_tx_percentualSabadoHE"]."';
+				parent.document.contex_form.percHESemanal.value = '".$parametro["para_tx_percHESemanal"]."';
+				parent.document.contex_form.percHEEx.value = '".$parametro["para_tx_percHEEx"]."';
 			</script>"
 		;
 		exit;
@@ -128,8 +128,8 @@
 			"enti_nb_empresa" 					=> "empresa",
 			"enti_tx_jornadaSemanal" 			=> "jornadaSemanal",
 			"enti_tx_jornadaSabado" 			=> "jornadaSabado",
-			"enti_tx_percentualHE" 				=> "percentualHE",
-			"enti_tx_percentualSabadoHE" 		=> "percentualSabadoHE",
+			"enti_tx_percHESemanal" 			=> "percHESemanal",
+			"enti_tx_percHEEx" 		=> "percHEEx",
 			"enti_tx_rgOrgao" 					=> "rgOrgao", 
 			"enti_tx_rgDataEmissao" 			=> "rgDataEmissao", 
 			"enti_tx_rgUf" 						=> "rgUf",
@@ -187,14 +187,14 @@
 			if(empty($a_mod["enti_tx_matricula"])){
 				$camposObrig["postMatricula"] = "Matrícula";
 			}
-			if($_POST["ocupacao"] == "Ajudante"){
+			if(in_array($_POST["ocupacao"], ["Ajudante", "Funcionário"])){
 				unset($camposObrig["cnhRegistro"], $camposObrig["cnhValidade"], $camposObrig["cnhCategoria"], $camposObrig["cnhCidade"], $camposObrig["cnhEmissao"]);
 			}
-			if(empty($_POST["percentualHE"]) && $_POST["percentualHE"] != "0"){
-				$emptyFields .= "Percentual da HE, ";
+			if(empty($_POST["percHESemanal"]) && $_POST["percHESemanal"] != "0"){
+				$emptyFields .= "H.E. Semanal (%), ";
 			}
-			if(empty($_POST["percentualSabadoHE"]) && $_POST["percentualSabadoHE"] != "0"){
-				$emptyFields .= "Percentual da HE Sábado, ";
+			if(empty($_POST["percHEEx"]) && $_POST["percHEEx"] != "0"){
+				$emptyFields .= "H.E. Extraordinária (%), ";
 			}
 
 			foreach(array_keys($camposObrig) as $campo){
@@ -275,8 +275,8 @@
 				if (
 					$aParametro["para_tx_jornadaSemanal"] != $a_mod["enti_tx_jornadaSemanal"] ||
 					$aParametro["para_tx_jornadaSabado"] != $a_mod["enti_tx_jornadaSabado"] ||
-					$aParametro["para_tx_percentualHE"] != $a_mod["enti_tx_percentualHE"] ||
-					$aParametro["para_tx_percentualSabadoHE"] != $a_mod["enti_tx_percentualSabadoHE"] ||
+					$aParametro["para_tx_percHESemanal"] != $a_mod["enti_tx_percHESemanal"] ||
+					$aParametro["para_tx_percHEEx"] != $a_mod["enti_tx_percHEEx"] ||
 					$aParametro["para_nb_id"] != $a_mod["enti_nb_parametro"]
 				) {
 					$ehPadrao = "nao";
@@ -319,7 +319,7 @@
 			$a_user = carrega_array(query(
 				"SELECT * FROM user 
 					WHERE user_nb_entidade = ".$_POST["id"]."
-						AND user_tx_nivel IN ('Motorista', 'Ajudante')"
+						AND user_tx_nivel IN ('Motorista', 'Ajudante','Funcionário')"
 			));
 
 			$_POST["nivel"] = $_POST["ocupacao"];
@@ -354,8 +354,8 @@
 				if (
 					$aParametro["para_tx_jornadaSemanal"] != $a_mod["enti_tx_jornadaSemanal"] ||
 					$aParametro["para_tx_jornadaSabado"] != $a_mod["enti_tx_jornadaSabado"] ||
-					$aParametro["para_tx_percentualHE"] != $a_mod["enti_tx_percentualHE"] ||
-					$aParametro["para_tx_percentualSabadoHE"] != $a_mod["enti_tx_percentualSabadoHE"] ||
+					$aParametro["para_tx_percHESemanal"] != $a_mod["enti_tx_percHESemanal"] ||
+					$aParametro["para_tx_percHEEx"] != $a_mod["enti_tx_percHEEx"] ||
 					$aParametro["para_nb_id"] != $a_mod["enti_nb_parametro"]
 				) {
 					$ehPadrao = "nao";
@@ -481,7 +481,7 @@
 			$a_mod["user_tx_login"] = $login["user_tx_login"];
 		}
 		
-		cabecalho("Cadastro de Motorista");
+		cabecalho("Cadastro de Funcionário");
 
 		if(!empty($a_mod["enti_tx_nascimento"])){
 			$data1 = new DateTime($a_mod["enti_tx_nascimento"]);
@@ -582,7 +582,7 @@
 		];
 		$tabIndex++;
 		$cContratual = array_merge($cContratual, [
-			combo("Ocupação*", "ocupacao", ($a_mod["enti_tx_ocupacao"]?? ""), 2, ["Motorista", "Ajudante"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
+			combo("Ocupação*", "ocupacao", ($a_mod["enti_tx_ocupacao"]?? ""), 2, ["Motorista", "Ajudante", "Funcionário"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
 			campo_data("Dt Admissão*", "admissao", ($a_mod["enti_tx_admissao"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data("Dt. Desligamento", "desligamento", (($a_mod["enti_tx_desligamento"] || $data === '0001-01-01') ? "" : $a_mod["enti_tx_desligamento"]), 2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Saldo de Horas", "setBanco", ($a_mod["enti_tx_banco"]?? "00:00"), 1, "MASCARA_HORAS", "placeholder='HH:mm' tabindex=".sprintf("%02d", $tabIndex++)),
@@ -598,8 +598,8 @@
 				'".$a_mod["parametroPadrao"]["para_nb_id"]
 				."', '".$a_mod["parametroPadrao"]["para_tx_jornadaSemanal"]
 				."', '".$a_mod['parametroPadrao']['para_tx_jornadaSabado']
-				."', '".$a_mod['parametroPadrao']['para_tx_percentualHE']
-				."', '".$a_mod['parametroPadrao']['para_tx_percentualSabadoHE']
+				."', '".$a_mod['parametroPadrao']['para_tx_percHESemanal']
+				."', '".$a_mod['parametroPadrao']['para_tx_percHEEx']
 			."')";
 		}else{
 			$conferirPadraoJS = "";
@@ -610,8 +610,8 @@
 			"<div class='col-sm-2 margin-bottom-5' style='width:100%; height:25px'></div>",
 			campo_hora(	"Jornada Semanal (Horas/Dia)*", "jornadaSemanal", ($a_mod["enti_tx_jornadaSemanal"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'"),
 			campo_hora(	"Jornada Sábado (Horas/Dia)*", "jornadaSabado", ($a_mod["enti_tx_jornadaSabado"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'"),
-			campo(		"Percentual da HE(%)*", "percentualHE", ($a_mod["enti_tx_percentualHE"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'"),
-			campo(		"Percentual da HE Sábado(%)*", "percentualSabadoHE", ($a_mod["enti_tx_percentualSabadoHE"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'")
+			campo(		"H.E. Semanal (%)*", "percHESemanal", ($a_mod["enti_tx_percHESemanal"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'"),
+			campo(		"H.E. Extraordinária (%)*", "percHEEx", ($a_mod["enti_tx_percHEEx"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'")
 		];
 		if(!empty($a_mod["enti_nb_empresa"])){
 			$aEmpresa = carregar("empresa", (int)$a_mod["enti_nb_empresa"]);
@@ -620,8 +620,8 @@
 			$padronizado = (
 				$a_mod["enti_tx_jornadaSemanal"] 		== $aParametro["para_tx_jornadaSemanal"] &&
 				$a_mod["enti_tx_jornadaSabado"] 		== $aParametro["para_tx_jornadaSabado"] &&
-				$a_mod["enti_tx_percentualHE"] 			== $aParametro["para_tx_percentualHE"] &&
-				$a_mod["enti_tx_percentualSabadoHE"] 	== $aParametro["para_tx_percentualSabadoHE"]
+				$a_mod["enti_tx_percHESemanal"] 			== $aParametro["para_tx_percHESemanal"] &&
+				$a_mod["enti_tx_percHEEx"] 	== $aParametro["para_tx_percHEEx"]
 			);
 			
 			$cJornada[]=texto("Convenção Padrão?", ($padronizado? "Sim": "Não"), 2, "name='textoParametroPadrao'");
@@ -686,7 +686,7 @@
 		fieldset("Dados Contratuais");
 		linha_form($cContratual);
 		echo "<br>";
-		fieldset("CONVENÇÃO SINDICAL - JORNADA PADRÃO DO MOTORISTA");
+		fieldset("CONVENÇÃO SINDICAL - JORNADA PADRÃO DO FUNCIONÁRIO");
 		linha_form($cJornada);
 		echo "<br>";
 		echo "<div class='cnh-row'>";
@@ -713,8 +713,8 @@
 			$a_mod["parametroPadrao"]["para_nb_id"],
 			$a_mod["parametroPadrao"]["para_tx_jornadaSemanal"],
 			$a_mod["parametroPadrao"]["para_tx_jornadaSabado"],
-			$a_mod["parametroPadrao"]["para_tx_percentualHE"],
-			$a_mod["parametroPadrao"]["para_tx_percentualSabadoHE"]
+			$a_mod["parametroPadrao"]["para_tx_percHESemanal"],
+			$a_mod["parametroPadrao"]["para_tx_percHEEx"]
 		];
 
 		echo 
@@ -741,28 +741,28 @@
 					parent.document.contex_form.parametro.value 			= '".($a_mod["parametroPadrao"]["para_nb_id"]?? "")."';
 					parent.document.contex_form.jornadaSemanal.value 		= '".($a_mod["parametroPadrao"]["para_tx_jornadaSemanal"]?? "")."';
 					parent.document.contex_form.jornadaSabado.value 		= '".($a_mod["parametroPadrao"]["para_tx_jornadaSabado"]?? "")."';
-					parent.document.contex_form.percentualHE.value 			= '".($a_mod["parametroPadrao"]["para_tx_percentualHE"]?? "")."';
-					parent.document.contex_form.percentualSabadoHE.value 	= '".($a_mod["parametroPadrao"]["para_tx_percentualSabadoHE"]?? "")."';
+					parent.document.contex_form.percHESemanal.value 			= '".($a_mod["parametroPadrao"]["para_tx_percHESemanal"]?? "")."';
+					parent.document.contex_form.percHEEx.value 	= '".($a_mod["parametroPadrao"]["para_tx_percHEEx"]?? "")."';
 
 					conferirParametroPadrao('".implode("','", $params)."');
 				}
 
-				function conferirParametroPadrao(idParametro, jornadaSemanal, jornadaSabado, percentualHE, percentualSabadoHE){
+				function conferirParametroPadrao(idParametro, jornadaSemanal, jornadaSabado, percHESemanal, percHEEx){
 
 					var padronizado = (
 						idParametro == parent.document.contex_form.parametro.value &&
 						jornadaSemanal == parent.document.contex_form.jornadaSemanal.value &&
 						jornadaSabado == parent.document.contex_form.jornadaSabado.value &&
-						percentualHE == parent.document.contex_form.percentualHE.value &&
-						percentualSabadoHE == parent.document.contex_form.percentualSabadoHE.value
+						percHESemanal == parent.document.contex_form.percHESemanal.value &&
+						percHEEx == parent.document.contex_form.percHEEx.value
 					);
-					console.log([idParametro, jornadaSemanal, jornadaSabado, percentualHE, percentualSabadoHE]);
+					console.log([idParametro, jornadaSemanal, jornadaSabado, percHESemanal, percHEEx]);
 					parent.document.getElementsByName('textoParametroPadrao')[0].getElementsByTagName('p')[0].innerText = (padronizado? 'Sim': 'Não');
 				}
 
 				function checkOcupation(ocupation){
 					console.log(ocupation);
-					if(ocupation == 'Ajudante'){
+					if(ocupation == 'Ajudante' || ocupation == 'Funcionário'){
 						document.getElementsByClassName('cnh-row')[0].setAttribute('style', 'display:none')
 					}else{
 						document.getElementsByClassName('cnh-row')[0].setAttribute('style', '')
@@ -809,7 +809,7 @@
 	}
 
 	function index(){
-		cabecalho("Cadastro de Motorista");
+		cabecalho("Cadastro de Funcionário");
 
 		$extraEmpresa = "";
 		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
@@ -837,7 +837,7 @@
 				campo("Matrícula", "busca_matricula", ($_POST["busca_matricula"]?? ""), 1,"","maxlength='6'"),
 				campo("CPF", "busca_cpf", ($_POST["busca_cpf"]?? ""), 2, "MASCARA_CPF"),
 				combo_bd("!Empresa", "busca_empresa", ($_POST["busca_empresa"]?? ""), 2, "empresa", "", $extraEmpresa),
-				combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"]?? ""), 2, ["", "Motorista", "Ajudante"]),
+				combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"]?? ""), 2, ["", "Motorista", "Ajudante", "Funcionário"]),
 				combo("Convenção Padrão", "busca_padrao", ($_POST["busca_padrao"]?? ""), 2, ["" => "todos", "sim" => "Sim", "nao" => "Não"]),
 				combo_bd("!Parâmetros da Jornada", "busca_parametro", ($_POST["busca_parametro"]?? ""), 6, "parametro"),
 				combo("Status", "busca_status", ($_POST["busca_status"]?? ""), 2, ["" => "todos", "ativo" => "Ativo", "inativo" => "Inativo"])
@@ -855,6 +855,7 @@
 		$icone_modificar = "icone_modificar(enti_nb_id,modificarMotorista)";
 
 		if (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
+			// $icone_excluir = icone_excluir("enti_nb_id", "excluirMotorista");
 			$icone_excluir = "icone_excluir(enti_nb_id,excluirMotorista)";
 		}else{
 			$icone_excluir = "";
@@ -896,7 +897,7 @@
 			"SELECT ".implode(", ", array_values($sqlFields))." FROM entidade 
 				JOIN empresa ON enti_nb_empresa = empr_nb_id 
 				JOIN parametro ON enti_nb_parametro = para_nb_id 
-				WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante') 
+				WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') 
 					$extraEmpresa 
 					$extra"
 		);

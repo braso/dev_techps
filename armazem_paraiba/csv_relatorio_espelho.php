@@ -20,7 +20,7 @@
             "Período:",date("d/m/Y", strtotime($endossoCompleto["endo_tx_de"])).date("d/m/Y", strtotime($endossoCompleto["endo_tx_ate"])),""
             ,"Emissão Doc.:",date("d/m/Y H:i:s", strtotime($endossoCompleto["endo_tx_dataCadastro"])). " (UTC-3)"
         ],
-        ["Motorista:",$aMotorista["enti_tx_nome"],"",
+        ["Nome:",$aMotorista["enti_tx_nome"],"",
         "Função:",$aMotorista["enti_tx_ocupacao"],"",
         "Turno:","D.SEM/H: ".$aMotorista["enti_tx_jornadaSemanal"],"",
         "Matrícula:",$aMotorista["enti_tx_matricula"],"",
