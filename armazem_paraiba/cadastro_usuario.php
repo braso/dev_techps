@@ -244,7 +244,7 @@
 				$novaSenha = ["user_tx_senha" => md5($_POST["senha"])];
 				atualizar("user", array_keys($novaSenha), array_values($novaSenha), $_POST["id"]);
 			}
-      index();
+      		index();
 			exit;
 		}
 		
@@ -505,6 +505,7 @@
 		if (in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])) {
 			$_POST["id"] = $_SESSION["user_nb_id"];
 			mostrarFormCadastro();
+			exit;
 		}
 		$extraEmpresa = " AND empr_tx_situacao = 'ativo' ORDER BY empr_tx_nome";
 
