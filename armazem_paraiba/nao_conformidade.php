@@ -266,7 +266,7 @@
 	
 						$saldosMotorista = 
 							"<div class='table-responsive'>
-								<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
+								<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
 									<thead><tr>
 										<th>Saldo Anterior:</th>
 										<th>Saldo do Período:</th>
