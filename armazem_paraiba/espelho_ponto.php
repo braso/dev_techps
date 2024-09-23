@@ -98,11 +98,11 @@
 			//Conferir se a data de início da pesquisa está antes do cadastro do motorista{
 				if(!empty($motorista)){
 					$baseErrMsg = [];
-					$errorMsg = $baseErrMsg; 
+					$errorMsg = $baseErrMsg;
 					$data_cadastro = new DateTime($motorista["enti_tx_dataCadastro"]);
 
 					if(date_diff($data_cadastro, $data_inicio_obj)->invert){
-						$errorMsg = ["A data inicial deve ser anterior ao cadastro do funcionário (".$data_cadastro->format("d/m/Y")."). "];
+						$errorMsg = ["A data inicial deve ser posterior ao cadastro do funcionário (".$data_cadastro->format("d/m")."). "];
 					}
 				}
 
