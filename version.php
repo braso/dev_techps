@@ -1,4 +1,4 @@
 <?php 
-	$version = "1.13.25";
-	$release_date = "10/09/2024";
+	$version = "1.14.02";
+	$release_date = "23/09/2024";
 ?>
