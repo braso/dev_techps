@@ -2,8 +2,9 @@ body{
     --var-blue: #66B4FF;
     --var-darkblue: #487fb3;
     --var-red: #FF4719;
-    --var-yellow: #F1C413;
-    --var-green: #00B33D;
+    --var-yellow: #FFE789;
+    --var-yellowlight: #FFFF75;
+    --var-green: #1aff66;
 }
 
 .table-responsive div:first-child{
@@ -31,13 +32,16 @@ body{
     text-shadow: 2px 2px 3px black;
 }
 
-.porcentagemMeta td:first-child, .porcentagemEndoPc td:first-child{
+.porcentagemEndoPc td:first-child{
+    background-color: var(--var-yellowlight);
+}
+.porcentagemEndo td:first-child, .porcentagemMeta td:first-child{
     background-color: var(--var-blue);
 }
-.porcentagemPosi td:first-child, .porcentagemEndo td:first-child{
+.porcentagemPosi td:first-child{
     background-color: var(--var-green);
 }
-.porcentagemNega td:first-child, .porcentagemNaEndo td:first-child{
+.porcentagemNaEndo td:first-child, .porcentagemNega td:first-child{
     background-color: var(--var-red);
 }
 

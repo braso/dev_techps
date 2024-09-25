@@ -485,8 +485,8 @@ function criar_relatorio_endosso() {
 function criar_relatorio_jornada() {
 	global $totalResumo;
 
-	$_POST["busca_dataInicio"] = "2024-08-01";
-	$_POST["busca_dataFim"] = "2024-08-31";
+	$_POST["busca_dataInicio"] = "2024-09-01";
+	$_POST["busca_dataFim"] = "2024-09-24";
 
 
 	$periodoInicio = new DateTime($_POST["busca_dataInicio"]);
@@ -522,7 +522,7 @@ function criar_relatorio_jornada() {
 
 		foreach ($motoristas as $motorista) {
 
-			$totais = [];
+			$totais [] = [];
 			// Inicializa o array $totais com chaves para cada campo e arrays vazios para armazenar as datas
 			foreach ($campos as $campo) {
 				$totais[$campo] = [];
@@ -534,7 +534,7 @@ function criar_relatorio_jornada() {
 				$dia = $dataTimeDia->format('d/m');
 				foreach ($campos as $campo) {
 					if (is_int(strpos($diaPonto[$campo], "fa-warning"))) {
-						$totais[$campo][$dia] += 1;
+						$totais[$campo] [] = $dia;
 					}
 				}
 			}
@@ -553,6 +553,7 @@ function criar_relatorio_jornada() {
 
 			$rows[] = $row;
 		}
+
 		$totaisEmpr = [
 			"fimJornada" => 0,
 			"inicioRefeicao" => 0,
@@ -560,9 +561,9 @@ function criar_relatorio_jornada() {
 		];
 
 		foreach ($rows as $row) {
-			$totaisEmpr["fimJornada"] += array_sum($row["fimJornada"]);
-			$totaisEmpr["inicioRefeicao"] += array_sum($row["inicioRefeicao"]);
-			$totaisEmpr["fimRefeicao"] += array_sum($row["fimRefeicao"]);
+			$totaisEmpr["fimJornada"] = sizeof($row["fimJornada"]);
+			$totaisEmpr["inicioRefeicao"] = sizeof($row["inicioRefeicao"]);
+			$totaisEmpr["fimRefeicao"] = sizeof($row["fimRefeicao"]);
 		}
 
 		//Adicionar valores da empresa à soma total das empresas{
@@ -591,4 +592,3 @@ function criar_relatorio_jornada() {
 
 	return;
 }
-	//}

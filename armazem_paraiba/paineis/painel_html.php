@@ -19,8 +19,8 @@
                         </tr>
                     </thead>
                     <tbody>
-						<tr class='porcentagemEndo'>
-							<td>Endossado</td>
+						<tr class='porcentagemNaEndo'>
+							<td>Não Endossado</td>
 							<td></td>
 							<td></td>
 						</tr>
@@ -29,8 +29,8 @@
 							<td></td>
 							<td></td>
 						</tr>
-						<tr class='porcentagemNaEndo'>
-							<td>Não Endossado</td>
+						<tr class='porcentagemEndo'>
+							<td>Endossado</td>
 							<td></td>
 							<td></td>
 						</tr>
@@ -45,16 +45,16 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr class='porcentagemPosi'>
-                            <td>Positivo</td>
-                            <td></td>
-                            <td></td>
-                        </tr>
 						<tr class='porcentagemMeta'>
-                            <td>Meta</td>
+							<td>Meta</td>
                             <td></td>
                             <td></td>
                         </tr>
+						<tr class='porcentagemPosi'>
+							<td>Positivo</td>
+							<td></td>
+							<td></td>
+						</tr>
                         <tr class='porcentagemNega'>
                             <td>Negativo</td>
                             <td></td>
