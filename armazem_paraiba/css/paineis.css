@@ -1,10 +1,13 @@
 body{
-    --var-blue: #66B4FF;
+    --var-blue: #b3daff;
     --var-darkblue: #487fb3;
-    --var-red: #FF4719;
+    --var-red: #FF6666;
+    --var-reddark: #E60000;
     --var-yellow: #FFE789;
     --var-yellowlight: #FFFF75;
-    --var-green: #1aff66;
+    --var-yellowdark: #FFD700;
+    --var-green: #8CFF66;
+    --var-greendark: #33CC00;
 }
 
 .table-responsive div:first-child{
@@ -25,6 +28,7 @@ body{
 
 #tabela1 th, #tabela2 th{
     text-align: center;
+    cursor: pointer;
 }
 
 #tabela1 tbody tr td:first-child, #tabela2 tbody tr td:first-child{
@@ -32,18 +36,57 @@ body{
     text-shadow: 2px 2px 3px black;
 }
 
+.titulos th:hover{
+    background-color: var(--var-darkblue);
+    color: white;
+}
+
+
 .porcentagemEndoPc td:first-child{
     background-color: var(--var-yellowlight);
+    cursor: pointer;
 }
+
+.porcentagemEndoPc td:first-child:hover{
+    background-color: var(--var-yellowdark);
+    cursor: pointer;
+}
+
 .porcentagemEndo td:first-child, .porcentagemMeta td:first-child{
     background-color: var(--var-blue);
+    cursor: pointer;
 }
+
+.porcentagemEndo td:first-child:hover, .porcentagemMeta td:first-child:hover{
+    background-color: var(--var-darkblue);
+    cursor: pointer;
+}
+
 .porcentagemPosi td:first-child{
     background-color: var(--var-green);
+    cursor: pointer;
 }
+
+.porcentagemPosi td:first-child:hover{
+    background-color: var(--var-greendark);
+    cursor: pointer;
+}
+
 .porcentagemNaEndo td:first-child, .porcentagemNega td:first-child{
     background-color: var(--var-red);
+    cursor: pointer;
 }
+
+.porcentagemNaEndo td:first-child:hover, .porcentagemNega td:first-child:hover{
+    background-color: var(--var-reddark);
+    cursor: pointer;
+}
+
+.nomeEmpresa:hover, #tabela1 thead tr th:first-child:hover, #tabela2 thead tr th:first-child:hover {
+    background-color: #b5b8bb;
+    cursor: pointer;
+}
+
 
 .emissao {
     margin-bottom: 20px;
@@ -87,10 +130,6 @@ th.sort-asc::after {
 
 th.sort-desc::after {
     content: " \2193";
-}
-
-#tabela-empresas tbody tr td:first-child:hover{
-    background-color: #b5b8bb;
 }
 
 #impressao{

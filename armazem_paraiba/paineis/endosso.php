@@ -33,7 +33,7 @@
                     +(row.saldoFinal?? '')+'</td>'
                 +'</tr>';";
         }else{
-            $linha .= "+'<td style=\"cursor: pointer;\" onclick=\"setAndSubmit(' + row.empr_nb_id + ')\">'+row.empr_tx_nome+'</td>'
+            $linha .= "+'<td class=\"nomeEmpresa\" style=\"cursor: pointer;\" onclick=\"setAndSubmit(' + row.empr_nb_id + ')\">'+row.empr_tx_nome+'</td>'
                     +'<td>'+Math.round(row.percEndossado*10000)/100+'%</td>'
                     +'<td>'+row.qtdMotoristas+'</td>'
                     +'<td>'+(row.totais.jornadaPrevista == '00:00' ? '' : row.totais.jornadaPrevista)+'</td>'
@@ -121,12 +121,29 @@
                             }
                         });
                     }
+                    // Função para conversão de Horas para Minutos
+                    function horasParaMinutos(horas) {
+                        var partes = horas.split(':');
+                        var horasNumeros = parseInt(partes[0], 10);  // Horas (pode ser positivo ou negativo)
+                        var minutos = parseInt(partes[1], 10);       // Minutos
+
+                        // Converte as horas para minutos totais
+                        return (horasNumeros * 60) + (horasNumeros < 0 ? -minutos : minutos);
+                    }
+                        
                     // Função para ordenar a tabela
                     function ordenarTabela(coluna, ordem){
                         var linhas = tabela.find('tr').get();
+                        
                         linhas.sort(function(a, b){
-                            var valorA = $(a).children('td').eq(coluna).text().toUpperCase();
-                            var valorB = $(b).children('td').eq(coluna).text().toUpperCase();
+                            var valorA = $(a).children('td').eq(coluna).text();
+                            var valorB = $(b).children('td').eq(coluna).text();
+
+                            // Verifica se os valores estão no formato HHH:mm (inclui 1, 2 ou 3 dígitos nas horas)
+                            if (valorA.match(/^-?\d{1,3}:\d{2}$/) && valorB.match(/^-?\d{1,3}:\d{2}$/)) {
+                                valorA = horasParaMinutos(valorA);
+                                valorB = horasParaMinutos(valorB);
+                            }
 
                             if(valorA < valorB){
                                 return ordem === 'asc' ? -1 : 1;
@@ -136,6 +153,7 @@
                             }
                             return 0;
                         });
+
                         $.each(linhas, function(index, row){
                             tabela.append(row);
                         });
@@ -153,6 +171,92 @@
                         $('#titulos th').removeClass('sort-asc sort-desc');
                         $(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
                     });
+
+                    $('#tabela1 tbody td').click(function(event) {
+                        if ($(this).is(':first-child')) {
+                            var textoPrimeiroTd = $(this).text().trim(); // Pega o texto do primeiro <td>
+                            var status = '';
+                            if(textoPrimeiroTd === 'Não Endossado'){
+                                var status = 'N';
+                            } else if (textoPrimeiroTd === 'Endo. Parcialmente'){
+                                var status = 'EP';
+                            } else{
+                                var status = 'E'
+                            }
+
+                            $('#tabela-empresas tbody tr').each(function() {
+                                var textoCelula = $(this).find('td').eq(3).text().trim(); // Pegar o texto da primeira célula (coluna 3) de cada linha
+                                // Mostrar ou ocultar a linha com base na comparação
+                                if (textoCelula === status) {
+                                    $(this).show(); // Mostrar linha se o texto da célula corresponder ao valor clicado
+                                } else {
+                                    $(this).hide(); // Ocultar linha se o texto da célula for diferente
+                                }
+                            });
+
+            
+                        } else {
+                            event.stopPropagation(); // Impede que o evento de clique se propague
+                        }
+                    });
+
+                    $('#tabela1 thead tr th').click(function(event) {
+                        if ($(this).is(':first-child')) {
+                            var textoPrimeiroTd = $(this).text().trim(); // Pega o texto do primeiro <td>
+                            $('#tabela-empresas tbody tr').each(function() {
+                                $(this).show(); // Mostrar linha se o texto da célula corresponder ao valor clicado
+                            });
+                        } else {
+                            event.stopPropagation(); // Impede que o evento de clique se propague
+                        }
+                    });
+
+                    $('#tabela2 tbody td').click(function(event) {
+                        if ($(this).is(':first-child')) {
+                            var textoPrimeiroTd = $(this).text().trim(); // Pega o texto do primeiro <td>
+
+                            // Definindo a condição de filtro com base no texto do primeiro <td>
+                            var condicao;
+                            if (textoPrimeiroTd === 'Meta') {
+                                condicao = function(textoCelula) {
+                                    return textoCelula === '00:00'; // Exibir se for igual a 00:00
+                                };
+                            } else if (textoPrimeiroTd === 'Positivo') {
+                                condicao = function(textoCelula) {
+                                    return textoCelula > '00:00'; // Exibir se for maior que 00:00
+                                };
+                            } else {
+                                condicao = function(textoCelula) {
+                                    return textoCelula < '00:00'; // Exibir se for menor que 00:00
+                                };
+                            }
+
+                            // Percorrendo as linhas da tabela #tabela-empresas
+                            $('#tabela-empresas tbody tr').each(function() {
+                                var textoCelula = $(this).find('td').eq(12).text().trim(); // Pegar o texto da coluna 13 de cada linha
+                                // Mostrar ou ocultar a linha com base na condição definida
+                                if (condicao(textoCelula)) {
+                                    $(this).show(); // Mostrar linha se a condição for verdadeira
+                                } else {
+                                    $(this).hide(); // Ocultar linha se a condição for falsa
+                                }
+                            });
+                        } else {
+                            event.stopPropagation(); // Impede que o evento de clique se propague
+                        }
+                    });
+
+                    $('#tabela2 thead tr th').click(function(event) {
+                        if ($(this).is(':first-child')) {
+                            var textoPrimeiroTd = $(this).text().trim(); // Pega o texto do primeiro <td>
+                            $('#tabela-empresas tbody tr').each(function() {
+                                $(this).show(); // Mostrar linha se o texto da célula corresponder ao valor clicado
+                            });
+                        } else {
+                            event.stopPropagation(); // Impede que o evento de clique se propague
+                        }
+                    });
+
 
                     ".$carregarDados."
                 });
