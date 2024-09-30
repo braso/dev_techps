@@ -19,14 +19,24 @@
 				$baseErrMsg = "Há campos obrigatórios incorretos: ";
 				$errorMsg = $baseErrMsg;
 				if(!isset($_POST["empresa"])){
-					if($_SESSION["user_tx_nivel"] == "Super Administrador"){
-						$errorMsg .= "Empresa, ";
+					if(!isset($_POST["busca_motorista"])){
+						if($_SESSION["user_tx_nivel"] == "Super Administrador"){
+							$_POST["errorFields"][] = "empresa";
+							$errorMsg .= "Empresa, ";
+						}else{
+							$_POST["empresa"] = $_SESSION["user_nb_empresa"];
+						}
 					}else{
-						$_POST["empresa"] = $_SESSION["user_nb_empresa"];
+						$empresa = mysqli_fetch_assoc(query(
+							"SELECT empresa.empr_nb_id FROM empresa JOIN entidade ON empr_nb_id = enti_nb_empresa WHERE enti_nb_id = ".$_POST["busca_motorista"]." LIMIT 1;"
+						));
+						$_POST["empresa"] = $empresa["empr_nb_id"];
 					}
 				}
 				if(empty($_POST["data_de"]) || empty($_POST["data_ate"]) || !preg_match("/^\d{4}-\d{2}-\d{2}$/", $_POST["data_de"]) || !preg_match("/^\d{4}-\d{2}-\d{2}$/", $_POST["data_ate"])){
 					$errorMsg .= "Data, ";
+					$_POST["errorFields"][] = "data_de";
+					$_POST["errorFields"][] = "data_ate";
 				}
 				if($errorMsg != $baseErrMsg){
 					return "ERRO: ".substr($errorMsg, 0, strlen($errorMsg)-2);
@@ -34,6 +44,7 @@
 	
 				if(!empty($_POST["quantHoras"]) && !preg_match("/^\d{2,4}:\d{2}$/", $_POST["quantHoras"])){
 					$errorMsg = "Máximo de horas preenchido incorretamente. ";
+					$_POST["errorFields"][] = "quantHoras";
 				}
 				if($errorMsg != $baseErrMsg){
 					return "ERRO: ".substr($errorMsg, 0, strlen($errorMsg)-2);
@@ -52,6 +63,8 @@
 			//Conferir se o endosso passa da data atual{
 				if($_POST["data_de"] >= date("Y-m-d") || $_POST["data_ate"] >= date("Y-m-d")){
 					$errorMsg = "Não é possível cadastrar um endosso que inclua a data atual ou datas futuras.";
+					$_POST["errorFields"][] = "data_de";
+					$_POST["errorFields"][] = "data_ate";
 				}
 			//}
 
@@ -71,27 +84,38 @@
 
 			$motErrMsg = "";
 
-			//Conferir se está entrelaçado com outro endosso{
-				$endossosMotorista = mysqli_fetch_assoc(query(
-					"SELECT endo_tx_de, endo_tx_ate FROM endosso"
-						." WHERE endo_nb_entidade = ".$motorista["enti_nb_id"].""
-							." AND ("
-								." (endo_tx_ate >= '".$_POST["data_de"]."')"
-								." AND ('".$_POST["data_ate"]."' >= endo_tx_de)"
-							." )"
-							." AND endo_tx_status = 'ativo'"
-						." LIMIT 1;"
-				));
-				if(!empty($endossosMotorista)){
-					$endossosMotorista["endo_tx_de"]  = vsprintf("%02d/%02d/%04d", array_reverse(explode("-", $endossosMotorista["endo_tx_de"])));
-					$endossosMotorista["endo_tx_ate"] = vsprintf("%02d/%02d/%04d", array_reverse(explode("-", $endossosMotorista["endo_tx_ate"])));
-					$motErrMsg = "Já endossado de ".$endossosMotorista["endo_tx_de"]." até ".$endossosMotorista["endo_tx_ate"].".  ";
+			//Conferir se está tentando endossar meses anteriores ao cadastro do motorista{
+				$dataCadastro = new DateTime($motorista["enti_tx_dataCadastro"]." 00:00:00");
+				if($_POST["data_de"] < $dataCadastro->format("Y-m-01")){
+					$motErrMsg = "Não é possível cadastrar um endosso antes do mês de cadastro (".$dataCadastro->format("m/Y")."). ";
+					$_POST["errorFields"][] = "data_de";
 				}
-				unset($endossosMotorista);
 			//}
 
-			$possuiEndoPosterior = false;
 			if(empty($motErrMsg)){
+				//Conferir se está entrelaçado com outro endosso{
+					$endossosMotorista = mysqli_fetch_assoc(query(
+						"SELECT endo_tx_de, endo_tx_ate FROM endosso"
+							." WHERE endo_nb_entidade = ".$motorista["enti_nb_id"].""
+								." AND ("
+									." (endo_tx_ate >= '".$_POST["data_de"]."')"
+									." AND ('".$_POST["data_ate"]."' >= endo_tx_de)"
+								." )"
+								." AND endo_tx_status = 'ativo'"
+							." LIMIT 1;"
+					));
+					if(!empty($endossosMotorista)){
+						$endossosMotorista["endo_tx_de"]  = vsprintf("%02d/%02d/%04d", array_reverse(explode("-", $endossosMotorista["endo_tx_de"])));
+						$endossosMotorista["endo_tx_ate"] = vsprintf("%02d/%02d/%04d", array_reverse(explode("-", $endossosMotorista["endo_tx_ate"])));
+						$motErrMsg = "Já endossado de ".$endossosMotorista["endo_tx_de"]." até ".$endossosMotorista["endo_tx_ate"].".  ";
+						$_POST["errorFields"][] = "data_de";
+						$_POST["errorFields"][] = "data_ate";
+					}
+					unset($endossosMotorista);
+				//}
+
+				$possuiEndoPosterior = false;
+			
 				//Conferir se está tentando endossar antes de outro endosso{
 					$possuiEndoPosterior = mysqli_fetch_all(query(
 							"SELECT endo_tx_de FROM endosso"
@@ -104,6 +128,7 @@
 						//Conferir se o endosso que está sendo feito vem antes do primeiro{
 							if($_POST["data_ate"] < $possuiEndoPosterior[0]["endo_tx_de"]){
 								$motErrMsg = "Já existe um endosso depois de ".vsprintf("%02d/%02d/%04d", array_reverse(explode("-", $_POST["data_ate"]))).".  ";
+								$_POST["errorFields"][] = "data_ate";
 							}
 						//}
 					}
@@ -132,6 +157,7 @@
 						$qtdDias = date_diff($ultimoEndosso["endo_tx_ate"], $dataDe);
 						if($qtdDias->d > 1){
 							$motErrMsg = "Há um tempo não endossado entre ".$ultimoEndosso["endo_tx_ate"]->format("d/m/Y")." e ".$dataDe->format("d/m/Y").".  ";
+							$_POST["errorFields"][] = "data_de";
 						}
 					}else{ //Se é o primeiro endosso sendo feito para este motorista
 						if(isset($motorista["enti_tx_banco"])){
@@ -441,7 +467,6 @@
 			}
 			
 			$successMsg .= "- [".$novoEndosso["endo_tx_matricula"]."] ".$novoEndosso["endo_tx_nome"].": ".$novoEndosso["totalResumo"]["he50APagar"]."<br>";
-
 			//* Salvando arquivo e cadastrando no banco de dados
 
 				$filename = md5($novoEndosso["endo_tx_matricula"].$novoEndosso["endo_tx_mes"]);
