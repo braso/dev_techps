@@ -2,10 +2,12 @@
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/version.php";
 
 	global $conn, $version;
+
 	function cabecalho($nome_pagina,$foco=0,$relatorio=0){
-		include "loading.html";
+		include $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/loading.html";
+		
 		//As variáveis são utilizadas dentro de cabecalho.php
-		include "cabecalho.php";
+		include __DIR__."/cabecalho.php";
 	}
 
 	function cabecaRelatorio($nome_pagina,$foco=0){
