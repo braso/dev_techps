@@ -7,20 +7,22 @@
 	include "funcoes_ponto.php";
 
 	function cadastra_abono(){
-
 		// Conferir se os campos obrigatórios estão preenchidos{
-			$camposObrig = ["daterange" => "Data", "abono" => "Horas", "motivo" => "Motivo"];
-			$error = false;
-			$errorMsg = "";
-			foreach(array_keys($camposObrig) as $campo){
-				if(!isset($_POST[$campo]) || empty($_POST[$campo])){
-					$error = true;
-					$errorMsg .= $camposObrig[$campo].", ";
+			$camposObrig = [
+				"motorista" => "Funcionário", "daterange" => "Data", "abono" => "Abono", 
+				"motivo" => "Motivo"
+			];
+			$baseErrMsg = "ERRO: Campos obrigatórios não preenchidos: ";
+			$errorMsg = $baseErrMsg;
+			foreach($camposObrig as $key => $value){
+				if(empty($_POST[$key])){
+					$_POST["errorFields"][] = $key;
+					$errorMsg .= $value.", ";
 				}
 			}
 
-			if($error){
-				set_status('ERRO: Campos obrigatórios não preenchidos: '. substr($errorMsg, 0, strlen($errorMsg)-2).'.');
+			if($errorMsg != $baseErrMsg){
+				set_status(substr($errorMsg, 0, -2).".");
 				layout_abono();
 				exit;
 			}
@@ -44,7 +46,7 @@
 								'".$aData[0]."' BETWEEN endo_tx_de AND endo_tx_ate
 								OR '".$aData[1]."' BETWEEN endo_tx_de AND endo_tx_ate
 							)
-						LIMIT 1"
+						LIMIT 1;"
 				)
 			);
 
@@ -55,6 +57,7 @@
 				$endosso["endo_tx_ate"] = explode("-", $endosso["endo_tx_ate"]);
 				$endosso["endo_tx_ate"] = $endosso["endo_tx_ate"][2]."/".$endosso["endo_tx_ate"][1]."/".$endosso["endo_tx_ate"][0];
 
+				$_POST["errorFields"][] = "daterange";
 				set_status("ERRO: Possui um endosso de ".$endosso["endo_tx_de"]." até ".$endosso["endo_tx_ate"].".");
 				layout_abono();
 				exit;
@@ -66,26 +69,26 @@
 
 		$a=carregar("entidade",$_POST["motorista"]);
 		
-		for ($i = $begin; $i <= $end; $i->modify("+1 day")) {
-
+		for ($i = $begin; $i <= $end; $i->modify("+1 day")){
 			$sqlRemover = query("SELECT * FROM abono WHERE abon_tx_data = '".$i->format("Y-m-d")."' AND abon_tx_matricula = '".$a["enti_tx_matricula"]."' AND abon_tx_status = 'ativo'");
 			while ($aRemover = carrega_array($sqlRemover)) {
 				remover("abono", $aRemover["abon_nb_id"]);
 			}
-
 			$aDetalhado = diaDetalhePonto($a["enti_tx_matricula"], $i->format("Y-m-d"));
-
 			$abono = calcularAbono($aDetalhado["diffSaldo"], $_POST["abono"]);
 
 			$novoAbono = [
-				
+				"abon_tx_data" 			=> $i->format("Y-m-d"),
+				"abon_tx_matricula" 	=> $a["enti_tx_matricula"],
+				"abon_tx_abono" 		=> $abono,
+				"abon_nb_motivo" 		=> $_POST["motivo"],
+				"abon_tx_descricao" 	=> $_POST["descricao"],
+				"abon_nb_userCadastro" 	=> $_SESSION["user_nb_id"],
+				"abon_tx_dataCadastro" 	=> date("Y-m-d H:i:s"),
+				"abon_tx_status" 		=> "ativo"
 			];
 
-			$campos = ["abon_tx_data", "abon_tx_matricula", "abon_tx_abono", "abon_nb_motivo", "abon_tx_descricao", "abon_nb_userCadastro", "abon_tx_dataCadastro", "abon_tx_status"];
-			$valores = [$i->format("Y-m-d"), $a["enti_tx_matricula"], $abono, $_POST["motivo"], $_POST["descricao"], $_SESSION["user_nb_id"], date("Y-m-d H:i:s"), "ativo"];
-
-
-			inserir("abono", $campos, $valores);
+			inserir("abono", array_keys($novoAbono), array_values($novoAbono));
 		}
 
 		$_POST["acao"] = "index";
@@ -95,22 +98,28 @@
 	}
 
 	function layout_abono(){
-		echo "<form action='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_abono.php' name='form_cadastro_abono' method='post'>";
-
+		// echo "<form action='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_abono.php' name='form_cadastro_abono' method='post'>";
     	unset($_POST["acao"]);
 		
-		foreach($_POST as $key => $value){
-			echo "<input type='hidden' name='".$key."' value='".$value."'>";
-		}
-		echo "</form>";
-		echo "<script>document.form_cadastro_abono.submit();</script>";
+		// foreach($_POST as $key => $value){
+		// 	if(is_array($value)){
+		// 		foreach($value as $val){
+		// 			echo "<input type='hidden' name='".$key."[]' value='".$val."'>";
+		// 		}
+		// 	}else{
+		// 		echo "<input type='hidden' name='".$key."' value='".$value."'>";
+		// 	}
+		// }
+		// echo "</form>";
+		// echo "<script>document.form_cadastro_abono.submit();</script>";
+		index();
 		exit;
 	}
 	
 	function index(){
 		cabecalho("Cadastro Abono");
 
-		$c[] = combo_net(
+		$campos[0][] = combo_net(
 			"Funcionário*",
 			"motorista",
 			(!empty($_POST["motorista"])? $_POST["motorista"]: $_POST["busca_motorista"]?? ""),
@@ -120,15 +129,15 @@
 			" AND enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário')",
 			"enti_tx_matricula"
 		);
-		$c[] = campo("Data(s)*","daterange", ($_POST["daterange"]?? ""),3);
-		$c[] = campo("Abono*", "abono", ($_POST["abono"]?? ""), 3, "MASCARA_HORAS");
-		$c2[] = combo_bd("Motivo*","motivo", ($_POST["motivo"]?? ""),4,"motivo",""," AND moti_tx_tipo = 'Abono'");
-		$c2[] = textarea("Justificativa","descricao", ($_POST["descricao"]?? ""),12);
+		$campos[0][] = campo("Data(s)*", "daterange", ($_POST["daterange"]?? ""),3, "MASCARA_PERIODO");
+		$campos[0][] = campo("Abono*", "abono", ($_POST["abono"]?? ""), 3, "MASCARA_HORAS");
+		$campos[1][] = combo_bd("Motivo*","motivo", ($_POST["motivo"]?? ""),4,"motivo",""," AND moti_tx_tipo = 'Abono'");
+		$campos[1][] = textarea("Justificativa","descricao", ($_POST["descricao"]?? ""),12);
 		
 		//BOTOES
     	$b[] = botao("Gravar","cadastra_abono", "","","","","btn btn-success");
 		$b[] = botao("Voltar", "voltar", implode(",",array_keys($_POST)), implode(",",array_values($_POST))); 
-		abre_form("Filtro de Busca");
+		abre_form();
 
 		if(empty($_POST["HTTP_REFERER"])){
 			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
@@ -144,39 +153,9 @@
 		echo campo_hidden("busca_dataInicio", $_POST["busca_dataInicio"]);
 		echo campo_hidden("busca_dataFim", $_POST["busca_dataFim"]);
 		
-		linha_form($c);
-		linha_form($c2);
+		linha_form($campos[0]);
+		linha_form($campos[1]);
 		fecha_form($b);
 
 		rodape();
-
-
-		echo 
-			"<script type='text/javascript' src='js/moment.min.js'></script>
-			<script type='text/javascript' src='js/daterangepicker.min.js'></script>
-			<link rel='stylesheet' type='text/css' href='js/daterangepicker.css' />
-
-			<script>
-				$(function() {
-					$('input[name=\"daterange\"]').daterangepicker({
-						opens: 'left',
-						'locale': {
-							'format': 'DD/MM/YYYY',
-							'separator': ' - ',
-							'applyLabel': 'Aplicar',
-							'cancelLabel': 'Cancelar',
-							'fromLabel': 'From',
-							'toLabel': 'To',
-							'customRangeLabel': 'Custom',
-							'weekLabel': 'W',
-							'daysOfWeek': ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'],
-							'monthNames': ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
-							'firstDay': 1
-						},
-					}, function(start, end, label) {
-						// console.log('A new date selection was made: '+start.format('YYYY-MM-DD')+' to '+end.format('YYYY-MM-DD'));
-					});
-				});
-			</script>"
-		;
 	}
