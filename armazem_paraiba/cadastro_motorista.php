@@ -176,37 +176,31 @@
 				"cpf" => "CPF", "rg" => "RG", "bairro" => "Bairro",
 				"cep" => "CEP", "endereco" => "Endereço", "cidade" => "Cidade/UF", "fone1" => "Telefone 1",
 				"email" => "E-mail",
-				"empresa" => "Empresa", "ocupacao" => "Ocupação", "admissao" => "Dt Admissão",
+				"empresa" => "Empresa", "salario" => "Salário", "ocupacao" => "Ocupação", "admissao" => "Dt Admissão",
 				"parametro" => "Parâmetro", "jornadaSemanal" => "Jornada Semanal", "jornadaSabado" => "Jornada Sábado",
-				"cnhRegistro" => "N° Registro da CNH", "cnhValidade" => "Validade do CNH", "cnhCategoria" => "Categoria do CNH", 
-				"cnhCidade" => "Cidade do CNH", "cnhEmissao" => "Data de Emissão do CNH"
+				"percHESemanal" => "H.E. Semanal", "percHEEx" => "H.E. Extraordinária",
+				"cnhRegistro" => "N° Registro da CNH", "cnhCategoria" => "Categoria do CNH", "cnhCidade" => "Cidade do CNH", "cnhEmissao" => "Data de Emissão do CNH",
+				"cnhValidade" => "Validade do CNH", "cnhPrimeiraHabilitacao" => "1° Habilitação"
 			];
-			$error = false;
 			$emptyFields = "";
 
 			if(empty($a_mod["enti_tx_matricula"])){
 				$camposObrig["postMatricula"] = "Matrícula";
 			}
 			if(in_array($_POST["ocupacao"], ["Ajudante", "Funcionário"])){
-				unset($camposObrig["cnhRegistro"], $camposObrig["cnhValidade"], $camposObrig["cnhCategoria"], $camposObrig["cnhCidade"], $camposObrig["cnhEmissao"]);
-			}
-			if(empty($_POST["percHESemanal"]) && $_POST["percHESemanal"] != "0"){
-				$emptyFields .= "H.E. Semanal (%), ";
-			}
-			if(empty($_POST["percHEEx"]) && $_POST["percHEEx"] != "0"){
-				$emptyFields .= "H.E. Extraordinária (%), ";
+				unset($camposObrig["cnhRegistro"], $camposObrig["cnhCategoria"], $camposObrig["cnhCidade"], $camposObrig["cnhEmissao"], $camposObrig["cnhValidade"], $camposObrig["cnhPrimeiraHabilitacao"]);
 			}
 
 			foreach(array_keys($camposObrig) as $campo){
-				if(empty($_POST[$campo])){
-					$error = true;
+				if(empty($_POST[$campo]) && $_POST[$campo] != "0"){
+					$_POST["errorFields"][] = $campo;
 					$emptyFields .= $camposObrig[$campo].", ";
 				}
 			}
-			$emptyFields = substr($emptyFields, 0, strlen($emptyFields)-2);
 			
-			if($error){
-				set_status("ERRO: Insira os campos ".$emptyFields);
+			if(!empty($emptyFields)){
+				$emptyFields = substr($emptyFields, 0, strlen($emptyFields)-2);
+				set_status("ERRO: Campos obrigatórios não preenchidos: ".$emptyFields);
 				visualizarCadastro();
 				exit;
 			}
@@ -222,12 +216,14 @@
 		$matriculaExistente = !empty($matriculaExistente);
 
 		if($matriculaExistente && !isset($_POST["id"])){
+			$_POST["errorFields"][] = "postMatricula";
 			set_status("ERRO: Matrícula já cadastrada");
 			visualizarCadastro();
 			exit;
 		}
 
 		if(!empty($_POST["postMatricula"]) && strlen($_POST["postMatricula"]) > 10){
+			$_POST["errorFields"][] = "postMatricula";
 			set_status("ERRO: Matrícula com mais de 10 caracteres.");
 			visualizarCadastro();
 			exit;
@@ -243,6 +239,7 @@
 					." LIMIT 1;"
 			));
 			if(!empty($otherUser)){
+				$_POST["errorFields"][] = "login";
 				set_status("ERRO: Login já cadastrado.");
 				$a_mod = $_POST;
 				modificarMotorista();
@@ -632,7 +629,7 @@
 			$iconeExcluirCNH = "<a style='text-shadow: none; color: #337ab7;' onclick='javascript:remover_cnh(\"".$a_mod["enti_nb_id"]."\",\"excluirCNH\",\"\",\"\",\"\",\"Deseja excluir a CNH?\");' > (Excluir) </a>";
 		}
 
-		$cCNH = [
+		$camposCNH = [
 			campo("N° Registro*", "cnhRegistro", ($a_mod["enti_tx_cnhRegistro"]?? ""), 3,"","maxlength='11' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Categoria*", "cnhCategoria", ($a_mod["enti_tx_cnhCategoria"]?? ""), 3, "", "tabindex=".sprintf("%02d", $tabIndex++)),
 			combo_net("Cidade/UF Emissão*", "cnhCidade", ($a_mod["enti_nb_cnhCidade"]?? ""), 3, "cidade", "tabindex=".sprintf("%02d", $tabIndex++), "", "cida_tx_uf"),
@@ -647,10 +644,6 @@
 		];
 
 
-		// $campos = [
-		// 	"id" => $_POST["id"],
-		// 	"matricula" => $a_mod["enti_tx_matricula"]
-		// ];
 		$botoesCadastro[] = botao(
 			"Gravar", 
 			"cadastrarMotorista", 
@@ -691,7 +684,7 @@
 		echo "<br>";
 		echo "<div class='cnh-row'>";
 			fieldset("CARTEIRA NACIONAL DE HABILITAÇÃO");
-			linha_form($cCNH);
+			linha_form($camposCNH);
 		echo "</div>";
 
 		if (!empty($a_mod["enti_nb_userCadastro"])) {
@@ -838,9 +831,9 @@
 				campo("CPF", "busca_cpf", ($_POST["busca_cpf"]?? ""), 2, "MASCARA_CPF"),
 				combo_bd("!Empresa", "busca_empresa", ($_POST["busca_empresa"]?? ""), 2, "empresa", "", $extraEmpresa),
 				combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"]?? ""), 2, ["", "Motorista", "Ajudante", "Funcionário"]),
-				combo("Convenção Padrão", "busca_padrao", ($_POST["busca_padrao"]?? ""), 2, ["" => "todos", "sim" => "Sim", "nao" => "Não"]),
+				combo("Convenção Padrão", "busca_padrao", ($_POST["busca_padrao"]?? ""), 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
 				combo_bd("!Parâmetros da Jornada", "busca_parametro", ($_POST["busca_parametro"]?? ""), 6, "parametro"),
-				combo("Status", "busca_status", ($_POST["busca_status"]?? ""), 2, ["" => "todos", "ativo" => "Ativo", "inativo" => "Inativo"])
+				combo("Status", "busca_status", ($_POST["busca_status"]?? ""), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
 			];
 
 		$botoesBusca = [
@@ -848,18 +841,13 @@
 			botao("Inserir", "visualizarCadastro","","","","","btn btn-success")
 		];
 
-		abre_form("Filtro de Busca");
+		abre_form();
 		linha_form($camposBusca);
 		fecha_form($botoesBusca);
 
 		$icone_modificar = "icone_modificar(enti_nb_id,modificarMotorista)";
 
-		if (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
-			// $icone_excluir = icone_excluir("enti_nb_id", "excluirMotorista");
-			$icone_excluir = "icone_excluir(enti_nb_id,excluirMotorista)";
-		}else{
-			$icone_excluir = "";
-		}
+		$icone_excluir = (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")))? "icone_excluir(enti_nb_id,excluirMotorista)": "";
 
 		$gridFields = [
 			"CÓDIGO" 				=> "enti_nb_id", 
@@ -894,12 +882,12 @@
 		]; 
 
 		$sql = ( 
-			"SELECT ".implode(", ", array_values($sqlFields))." FROM entidade 
-				JOIN empresa ON enti_nb_empresa = empr_nb_id 
-				JOIN parametro ON enti_nb_parametro = para_nb_id 
-				WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') 
-					$extraEmpresa 
-					$extra"
+			"SELECT ".implode(", ", array_values($sqlFields))." FROM entidade"
+				." JOIN empresa ON enti_nb_empresa = empr_nb_id"
+				." JOIN parametro ON enti_nb_parametro = para_nb_id"
+				." WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
+					.$extraEmpresa." "
+					.$extra.";"
 		);
 
 		$gridFields = array_merge($gridFields, [
