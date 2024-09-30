@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug{
+	//* Modo debug{
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 		
@@ -38,6 +38,8 @@
 			exit;
 		}
 		ftp_pasv($ftp_conn, true);
+
+		dd("debug2");
 
 		$lastFile = mysqli_fetch_assoc(query(
 			"SELECT arqu_tx_nome, arqu_tx_data FROM arquivoponto"
@@ -95,8 +97,6 @@
 	}
 
 	function carregar_ftp(string $path){
-
-		
 		// Aplicar após criar o usuário REP-P
 		$user = mysqli_fetch_assoc(query(
 			"SELECT * FROM user"

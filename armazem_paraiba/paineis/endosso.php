@@ -267,14 +267,16 @@
     function index(){
         require_once __DIR__."/funcoes_paineis.php";
 
+        
         if(!empty($_POST["atualizar"])){
             echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
             ob_flush();
             flush();
+            cabecalho("Relatório de Endossos");
             criar_relatorio_endosso();
+        }else{
+            cabecalho("Relatório de Endossos");
         }
-
-        cabecalho("Relatório de Endossos");
 
         $extraCampoData = "";
         if(empty($_POST["busca_data"])){
@@ -304,7 +306,7 @@
         ];
 
 
-        abre_form("Filtro de Busca");
+        abre_form();
         linha_form($fields);
         fecha_form($buttons);
 

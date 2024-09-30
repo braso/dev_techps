@@ -50,19 +50,28 @@
 				}
 			}
 
-			$errorMsg[0] .= 
-				(empty($_POST["busca_empresa"])? "Empresa, ": "")
-				.(empty($_POST["busca_motorista"])? "Funcionário, ": "")
-				.(empty($_POST["busca_dataInicio"])? "Data Início, ": "")
-				.(empty($_POST["busca_dataFim"])? "Data Fim, ": "")
-			;
+			$camposObrig = [
+				"busca_empresa" => "Empresa",
+				"busca_motorista" => "Funcionário",
+				"busca_dataInicio" => "Data Início",
+				"busca_dataFim" => "Data Fim"
+			];
+			foreach($camposObrig as $key => $value){
+				if(empty($_POST[$key])){
+					$_POST["errorFields"][] = $key;
+					$errorMsg[0] .= $value;
+				}
+			}
 			
-			if ($data_fim_obj < $data_inicio_obj) {
+			if ($data_fim_obj < $data_inicio_obj){
+				$_POST["errorFields"][] = "busca_dataFim";
 				$errorMsg[2] .= "A data final não pode ser anterior à data inicial.";
 			}
 			
 			if(!empty($_POST["busca_empresa"]) && !empty($_POST["busca_motorista"])){
 				if($_POST["busca_dataInicio"] > date("Y-m-d") || $_POST["busca_dataFim"] > date("Y-m-d")){
+					$_POST["errorFields"][] = "busca_dataInicio";
+					$_POST["errorFields"][] = "busca_dataFim";
 					$errorMsg[1] = "Data de pesquisa não pode ser após hoje (".date("d/m/Y").").";
 				}
 
@@ -75,6 +84,7 @@
 				));
 
 				if(empty($motorista)){
+					$_POST["errorFields"][] = "busca_motorista";
 					$errorMsg[2] = "Este funcionário não pertence a esta empresa.";
 				}else{
 					$opt = "<option value=\"".$motorista["enti_nb_id"]."\">[".$motorista["enti_nb_id"]."]".$motorista["enti_tx_nome"]."</option>";
@@ -100,6 +110,7 @@
 					$errorMsg = $baseErrMsg;
 					$data_cadastro = new DateTime($motorista["enti_tx_dataCadastro"]);
 					if($data_inicio_obj->format("Y-m") < $data_cadastro->format("Y-m")){
+						$_POST["errorFields"][] = "busca_dataInicio";
 						$errorMsg = ["O mês inicial deve ser posterior ou igual ao mês de cadastro do funcionário (".$data_cadastro->format("m/Y").")."];
 					}
 				}
@@ -121,7 +132,7 @@
 	}
 
 	function index(){
-		cabecalho("Espelho de Ponto");
+		cabecalho("Buscar Espelho de Ponto");
 
 		$condBuscaMotorista = "";
 		$condBuscaEmpresa = "";
@@ -196,7 +207,7 @@
 			$b[] = $botao_imprimir;
 		//}
 		
-		abre_form("Filtro de Busca");
+		abre_form();
 		linha_form($searchFields);
 		fecha_form($b);
 

@@ -1,71 +1,91 @@
 <?php
+	/* Modo debug
+		ini_set("display_errors", 1);
+		error_reporting(E_ALL);
 
+		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+		header("Pragma: no-cache"); // HTTP 1.0.
+		header("Expires: 0");
+	//*/
+	
+	global $legendas;
+	$legendas = [
+		"" => "",
+		"I" => "Incluída Manualmente",
+		"P" => "Pré-Assinalada",
+		"T" => "Outras fontes de marcação",
+		"DSR" => "Descanso Semanal Remunerado e Abono"
+	];
+	
 	include "conecta.php";
 
 	function exclui_motivo(){
-		remover('motivo',$_POST['id']);
+		remover("motivo",$_POST["id"]);
 		index();
 		exit;
 	}
 
 	function modifica_motivo(){
-		global $a_mod;
-		$a_mod = carregar('motivo',$_POST['id']);
-		foreach($_POST as $key => $value){
-			if(empty($a_mod[$key])){
-				$a_mod[$key] = $value;
-			}
-		}
+		$_POST = array_merge($_POST, carregar("motivo", $_POST["id"]));
+		
 		layout_motivo();
 		exit;
 	}
 
 	function cadastra_motivo(){
-		$campos = ['moti_tx_nome', 'moti_tx_tipo', 'moti_tx_status'];
-		$valores = [$_POST['nome'], $_POST['tipo'], 'ativo'];
-
-		$legendas = [
-			'' => '',
-			'Incluída Manualmente' => 'I',
-			'Pré-Assinalada' => 'P',
-			'Outras fontes de marcação' => 'T',
-			'Descanso Semanal Remunerado e Abono' => 'DSR'
+		$camposObrig = [
+			"nome" => "Nome",
+			"tipo" => "Tipo",
+			"legenda" => "Legenda de Marcação",
 		];
 
-		$campos[] = 'moti_tx_legenda';
-		$valores[] = $legendas[$_POST['legenda']];
-		
-		if($_POST['id']>0) {
-			atualizar('motivo',$campos,$valores,$_POST['id']);
-		} else {
-			array_push($campos, 'moti_nb_userCadastro','moti_tx_dataCadastro');
-			array_push($valores, $_SESSION['user_nb_id'],date("Y-m-d H:i:s"));
-			inserir('motivo',$campos,$valores);
+		$errorMsg = "ERRO: Campos obrigatórios não preenchidos: ";
+		foreach($camposObrig as $key => $value){
+			if(empty($_POST[$key])){
+				$_POST["errorFields"][] = $key;
+				$errorMsg .= $value.", ";
+			}
 		}
+
+		if(!empty($_POST["errorFields"])){
+			set_status(substr($errorMsg, 0, -2).".");
+			layout_motivo();
+			exit;
+		}
+
+		$novoMotivo = [
+			"moti_tx_nome" => $_POST["nome"],
+			"moti_tx_tipo" => $_POST["tipo"],
+			"moti_tx_legenda" => $_POST["legenda"],
+			"moti_tx_status" => "ativo"
+		];
+		
+
+		if(!empty($_POST["id"])){
+			atualizar("motivo", array_keys($novoMotivo), array_values($novoMotivo), $_POST["id"]);
+		}else{
+			$novoMotivo["moti_nb_userCadastro"] = $_SESSION["user_nb_id"];
+			$novoMotivo["moti_tx_dataCadastro"] = date("Y-m-d H:i:s");
+			inserir("motivo", array_keys($novoMotivo), array_values($novoMotivo));
+		}
+
 		index();
 		exit;
 	}
 
 	function layout_motivo(){
-		global $a_mod;
+		global $legendas;
 		cabecalho("Cadastro de Motivo");
 
-		$legendas = [
-			'' => '',
-			'Incluída Manualmente' => 'I',
-			'Pré-Assinalada' => 'P',
-			'Outras fontes de marcação' => 'T',
-			'Descanso Semanal Remunerado e Abono' => 'DSR'
+		$campos = [
+			campo("Nome*", "nome", (!empty($_POST["nome"])? $_POST["nome"]: ""), 6),
+			combo("Tipo*", "tipo", (!empty($_POST["tipo"])? $_POST["tipo"]: ""), 2, ["Ajuste","Abono"]),
+			combo("Legenda de Marcação*", "legenda", !empty($_POST["legenda"])? array_search($_POST["legenda"], $legendas): "", 4, $legendas)
 		];
 
-		$c = [
-			campo('Nome', 'nome', $a_mod['moti_tx_nome'], 6),
-			combo('Tipo', 'tipo', $a_mod['moti_tx_tipo'], 2, ['Ajuste','Abono']),
-			combo('Legenda de Marcação', 'legenda', array_search($a_mod['moti_tx_legenda'], $legendas), 4, array_keys($legendas))
-		];
-		$botao = [
-			botao('Gravar', 'cadastra_motivo', 'id', $_POST['id'], '', '', 'btn btn-success'),
-			botao('Voltar', 'voltar')
+		$botoes = [
+			botao("Gravar", "cadastra_motivo", "id", (!empty($_POST["id"])? $_POST["id"]: NULL), "", "", "btn btn-success"),
+			botao("Voltar", "voltar")
 		];
 
 		if(empty($_POST["HTTP_REFERER"])){
@@ -75,47 +95,41 @@
 			}
 		}
 
-		abre_form('Dados do Motivo');
+		abre_form("Dados do Motivo");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		linha_form($c);
-		fecha_form($botao);
+		linha_form($campos);
+		fecha_form($botoes);
 
 		rodape();
 	}
 
 	function index(){
+		global $legendas;
+
 		cabecalho("Cadastro de Motivo");
 
-		$legendas = [
-			"" => "",
-			"Incluída Manualmente" => "I",
-			"Pré-Assinalada" => "P",
-			"Outras fontes de marcação" => "T",
-			"Descanso Semanal Remunerado e Abono" => "DSR"
-		];
-
 		$extra = 
-			(isset($_POST['busca_codigo']) 	&& !empty($_POST['busca_codigo'])? 	" AND moti_nb_id LIKE '%".$_POST['busca_codigo']."%'": '').
-			(isset($_POST['busca_nome']) 	&& !empty($_POST['busca_nome'])? 	" AND moti_tx_nome LIKE '%".$_POST['busca_nome']."%'": '').
-			(isset($_POST['busca_tipo']) 	&& !empty($_POST['busca_tipo'])? 	" AND moti_tx_tipo LIKE '%".$_POST['busca_tipo']."%'": '').
-			(isset($_POST['busca_legenda']) && !empty($_POST['busca_legenda'])? " AND moti_tx_legenda LIKE '%".$legendas[$_POST['busca_legenda']]."%'": '');
+			(!empty($_POST["busca_codigo"])? 	" AND moti_nb_id = ".$_POST["busca_codigo"]."": "")
+			.(!empty($_POST["busca_nome"])? 	" AND moti_tx_nome LIKE '%".$_POST["busca_nome"]."%'": "")
+			.(!empty($_POST["busca_tipo"])? 	" AND moti_tx_tipo LIKE '%".$_POST["busca_tipo"]."%'": "")
+			.(!empty($_POST["busca_legenda"])? 	" AND moti_tx_legenda LIKE '%".$legendas[$_POST["busca_legenda"]]."%'": "");
 
-		$c = [
-			campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO','maxlength="6"'),
-			campo('Nome','busca_nome',$_POST['busca_nome'],5, '', 'maxlength="65"'),
-			combo('Tipo','busca_tipo',$_POST['busca_tipo'],2,['','Ajuste','Abono']),
-			combo('Legenda','busca_legenda',$_POST['busca_legenda'],3,['','Incluída Manualmente', 'Pré-Assinalada', 'Outras fontes de marcação', 'Descanso Semanal Remunerado e Abono'])
+		$campos = [
+			campo("Código", "busca_codigo", (!empty($_POST["busca_codigo"])? $_POST["busca_codigo"]: ""), 2, "MASCARA_NUMERO", "maxlength='6'"),
+			campo("Nome", "busca_nome", (!empty($_POST["busca_nome"])? $_POST["busca_nome"]: ""), 5, "", "maxlength='65'"),
+			combo("Tipo", "busca_tipo", (!empty($_POST["busca_tipo"])? $_POST["busca_tipo"]: ""), 2, ["", "Ajuste", "Abono"]),
+			combo("Legenda", "busca_legenda", (!empty($_POST["busca_legenda"])? $_POST["busca_legenda"]: ""), 3, $legendas)
 		];
-		$botao = [
-			botao('Buscar','index'),
-			botao('Inserir','layout_motivo','','','','','btn btn-success')
+		$botoes = [
+			botao("Buscar","index"),
+			botao("Inserir","layout_motivo","","","","","btn btn-success")
 		];
 
-		abre_form('Filtro de Busca');
-		linha_form($c);
-		fecha_form($botao);
+		abre_form();
+		linha_form($campos);
+		fecha_form($botoes);
 
-		$sql = "SELECT * FROM motivo WHERE moti_tx_status = 'ativo' $extra";
+		$sql = "SELECT * FROM motivo WHERE moti_tx_status = 'ativo' ".$extra;
 		$gridParams = [
 			"CÓDIGO" => "moti_nb_id",
 			"NOME" => "moti_tx_nome",

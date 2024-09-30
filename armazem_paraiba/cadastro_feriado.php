@@ -1,136 +1,144 @@
 <?php
-include "conecta.php";
+	include "conecta.php";
 
-function exclui_feriado(){
+	function exclui_feriado(){
+		remover("feriado",$_POST["id"]);
+		index();
+		exit;
 
-	remover('feriado',$_POST['id']);
-	index();
-	exit;
-
-}
-function modifica_feriado(){
-	global $a_mod;
-
-	$a_mod=carregar('feriado',$_POST['id']);
-
-	layout_feriado();
-	exit;
-
-}
-
-function cadastra_feriado(){
-	
-	$campos=array('feri_tx_nome','feri_tx_data','feri_tx_uf','feri_nb_cidade','feri_tx_status');
-	
-	$data = ($_POST['data'] == '') ? '0000-00-00' : $_POST['data'];
-	$cidade = ($_POST['cidade'] == '') ? 00 : $_POST['cidade'];
-	
-	$valores=array($_POST['nome'],$data,$_POST['uf'],$cidade,'ativo');
-	
-
-
-	if($_POST['id']>0) {
-		atualizar('feriado',$campos,$valores,$_POST['id']);
-	} else {
-		array_push($campos, 'feri_nb_userCadastro','feri_tx_dataCadastro');
-		array_push($valores, $_SESSION['user_nb_id'],date("Y-m-d H:i:s"));
-
-		inserir('feriado',$campos,$valores);
+	}
+	function modifica_feriado(){
+		$a_mod = carregar("feriado", $_POST["id"]);
+		
+		[$_POST["id"], $_POST["nome"], $_POST["data"], $_POST["uf"], $_POST["cidade"]] = [$a_mod["feri_nb_id"], $a_mod["feri_tx_nome"], $a_mod["feri_tx_data"], $a_mod["feri_tx_uf"], $a_mod["feri_nb_cidade"]];
+		
+		layout_feriado();
+		exit;
 	}
 
-	index();
-	exit;
-}
+	function cadastra_feriado(){
 
-
-function layout_feriado(){
-	global $a_mod;
-
-	cabecalho("Cadastro de Feriado");
-
-	$uf = array ('','AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MS', 'MT', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO');
-	
-	$c = [ 
-		campo('Nome','nome',$a_mod['feri_tx_nome'],4),
-		campo_data('Data','data',$a_mod['feri_tx_data'],2),
-		combo('Estadual','uf',$a_mod['feri_tx_uf'],2,$uf),
-		combo_net('Municipal','cidade',$a_mod['feri_nb_cidade'],4,'cidade','','','cida_tx_uf')
-	];
-
-	$botao = [
-		botao('Gravar','cadastra_feriado','id',$_POST['id'],'','','btn btn-success'),
-		botao('Voltar','voltar')
-	];
-
-	if(empty($_POST["HTTP_REFERER"])){
-		$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
-		if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_feriado.php"))){
-			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_feriado.php";
+		$camposObrig = [
+			"nome" => "Nome",
+			"data" => "Data"
+		];
+		$errorMsg = "";
+		foreach($camposObrig as $key => $value){
+			if(empty($_POST[$key])){
+				$_POST["errorFields"][] = $key;
+				$errorMsg .= $value.", ";
+			}
 		}
+
+		if(!empty($errorMsg)){
+			set_status("ERRO: Campos obrigatórios não preenchidos: ". substr($errorMsg, 0, strlen($errorMsg)-2).".");
+			layout_feriado();
+			exit;
+		}
+		
+		$novoFeriado = [
+			"feri_tx_nome" => $_POST["nome"],
+			"feri_tx_data" => $_POST["data"],
+			"feri_tx_uf" => $_POST["uf"],
+			"feri_nb_cidade" => $_POST["cidade"],
+			"feri_tx_status" => "ativo"
+		];
+
+		dd("Passou");
+		if(!empty($_POST["id"])){
+			atualizar("feriado", array_keys($novoFeriado), array_values($novoFeriado), $_POST["id"]);
+		}else{
+			$novoFeriado["feri_nb_userCadastro"] = $_SESSION["user_nb_id"];
+			$novoFeriado["feri_tx_dataCadastro"] = date("Y-m-d H:i:s");
+			inserir("feriado", array_keys($novoFeriado), array_values($novoFeriado));
+		}
+
+		index();
+		exit;
 	}
-	
-	abre_form('Dados do Feriado');
-	echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-	linha_form($c);
-	fecha_form($botao);
 
-	rodape();
 
-}
+	function layout_feriado(){
+		global $a_mod;
 
-function index(){
+		cabecalho("Cadastro de Feriado");
 
-	cabecalho("Cadastro de Feriado");
-	$extra = '';
+		$ufs = ["", "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MS", "MT", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
+		
+		$campos = [ 
+			campo("Nome*", "nome", $_POST["nome"], 4),
+			campo_data("Data*", "data", $_POST["data"], 2),
+			combo("Estado", "uf", $_POST["uf"], 2, $ufs),
+			combo_net("Município", "cidade", $_POST["cidade"], 4, "cidade", "", "", "cida_tx_uf")
+		];
 
-	if($_POST['busca_codigo'])
-		$extra .= " AND feri_nb_id LIKE '%".$_POST['busca_codigo']."%'";
+		$botoes = [
+			botao("Gravar", "cadastra_feriado", "id", $_POST["id"], "", "", "btn btn-success"),
+			botao("Voltar", "voltar")
+		];
 
-	if($_POST['busca_nome'])
-		$extra .= " AND feri_tx_nome LIKE '%".$_POST['busca_nome']."%'";
+		if(empty($_POST["HTTP_REFERER"])){
+			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
+			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_feriado.php"))){
+				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_feriado.php";
+			}
+		}
+		
+		abre_form("Dados do Feriado");
+		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+		linha_form($campos);
+		fecha_form($botoes);
 
-	if($_POST['busca_uf']){
-		$extra .= " AND feri_tx_uf = '".$_POST['busca_uf']."'";
+		rodape();
+
 	}
-	if($_POST['busca_cidade']){
-		$extra .= " AND feri_nb_cidade = '".$_POST['busca_cidade']."'";
+
+	function index(){
+
+		cabecalho("Cadastro de Feriado");
+		$extra = "";
+
+		$extra .= (($_POST["busca_codigo"])? " AND feri_nb_id LIKE '%".$_POST["busca_codigo"]."%'": "")
+			.(($_POST["busca_nome"])?" AND feri_tx_nome LIKE '%".$_POST["busca_nome"]."%'": "")
+			.(($_POST["busca_uf"])? " AND feri_tx_uf = '".$_POST["busca_uf"]."'": "")
+			.(($_POST["busca_cidade"])? " AND feri_nb_cidade = '".$_POST["busca_cidade"]."'": "")
+		;
+		$ufs = ["", "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MS", "MT", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
+
+		
+		$campos = [ 
+			campo("Código", "busca_codigo", $_POST["busca_codigo"], 2, "MASCARA_NUMERO", "maxlength='6'"),
+			campo("Nome", "busca_nome", $_POST["busca_nome"], 4, "", "maxlength='65'"),
+			combo("Estado", "busca_uf", $_POST["busca_uf"], 2, $ufs),
+			combo_net("Município", "busca_cidade", $_POST["busca_cidade"], 4, "cidade", "", "", "cida_tx_uf")
+		];
+
+		$botoes = [ 
+			botao("Buscar", "index"),
+			botao("Inserir", "layout_feriado", "", "", "", "", "btn btn-success")
+		];
+		
+		abre_form();
+		linha_form($campos);
+		fecha_form($botoes);
+
+		$sql = 
+			"SELECT * FROM feriado"
+				." LEFT JOIN cidade ON cida_nb_id = feri_nb_cidade"
+				." WHERE feri_tx_status = 'ativo'"
+				.$extra.";"
+		;
+		$gridFields = [
+			"CÓDIGO" 											=> "feri_nb_id",
+			"NOME" 												=> "feri_tx_nome",
+			"DATA" 												=> "data(feri_tx_data)",
+			"ESTADUAL" 											=> "feri_tx_uf",
+			"MUNICIPAL" 										=> "cida_tx_nome",
+			"<spam class='glyphicon glyphicon-search'></spam>" 	=> "icone_modificar(feri_nb_id,modifica_feriado)",
+			"<spam class='glyphicon glyphicon-remove'></spam>" 	=> "icone_excluir(feri_nb_id,exclui_feriado)"
+		];
+
+		grid($sql,array_keys($gridFields),array_values($gridFields), "", "", 2, "desc");
+
+		rodape();
 	}
-
-	// EXIBE APENAS OS FeriadoS
-	// $extra .= " AND feri_tx_feriado = 'sim'";
-
-	$uf = array ('','AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MS', 'MT', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO');
-	
-	
-
-	$c = [ 
-		campo('Código','busca_codigo',$_POST['busca_codigo'],2,'MASCARA_NUMERO','maxlength="6"'),
-		campo('Nome','busca_nome',$_POST['busca_nome'],4, '', 'maxlength="65"'),
-		combo('Estadual','busca_uf',$_POST['busca_uf'],2,$uf),
-		combo_net('Municipal','busca_cidade',$_POST['busca_cidade'],4,'cidade','','','cida_tx_uf')
-	];
-
-	$botao = [ 
-		botao('Buscar','index'),
-		botao('Inserir','layout_feriado','','','','','btn btn-success')
-	];
-	
-	abre_form('Filtro de Busca');
-	linha_form($c);
-	fecha_form($botao);
-
-	$sql = "SELECT * FROM feriado LEFT JOIN cidade ON cida_nb_id = feri_nb_cidade WHERE feri_tx_status = 'ativo'".$extra;
-	$gridFields = [
-		'CÓDIGO' 											=> 'feri_nb_id',
-		'NOME' 												=> 'feri_tx_nome',
-		'DATA' 												=> 'data(feri_tx_data)',
-		'ESTADUAL' 											=> 'feri_tx_uf',
-		'MUNICIPAL' 										=> 'cida_tx_nome',
-		'<spam class="glyphicon glyphicon-search"></spam>' 	=> 'icone_modificar(feri_nb_id,modifica_feriado)',
-		'<spam class="glyphicon glyphicon-remove"></spam>' 	=> 'icone_excluir(feri_nb_id,exclui_feriado)'
-	];
-
-	grid($sql,array_keys($gridFields),array_values($gridFields), "", "", 2, "desc");
-
-	rodape();
-}

@@ -56,7 +56,7 @@
 	//Ordenar{
 		$orderBy = $_REQUEST['order'][0]['column'];
 
-		$isInt = (!empty($columns[$_REQUEST['order'][0]['column']]) && $columns[$_REQUEST['order'][0]['column']] == '');
+		$isInt = (!empty($columns[$orderBy]) && is_int(strpos($columns[$orderBy], "_nb_")));
 
 		$orderArray = [];
 		foreach($limitedQuery as $row){
