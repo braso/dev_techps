@@ -58,6 +58,7 @@
 	<link rel="icon" type="image/png" sizes="16x16" href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/img/favicon/favicon-16x16.png">
 	<link rel="shortcut icon" type="image/x-icon" href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/img/favicon/favicon-32x32.png?v=2">
 	<link rel="manifest" href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/img/favicon/site.webmanifest">
+
 	<style>
 		body {
 			--img_path: url("<?= $CONTEX["path"] ?>/imagens/logo_topo_cliente.png");
@@ -75,10 +76,6 @@
 
 		.row {
 			margin: 0px 0px 25px 0px;
-		}
-
-		.row div {
-			/* min-width: min-content; */
 		}
 
 		@media(max-width:768px) {
@@ -103,6 +100,10 @@
 			align-content: center;
 			border-top: 1px solid #c2cad8;
 			border-bottom: 1px solid #c2cad8;
+		}
+
+		.portlet.light {
+			box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.5);
 		}
 
 		.portlet>.portlet-body p {
@@ -143,7 +144,7 @@
 			min-width: fit-content;
 		}
 
-		.error-field {
+		.error-field, .select-error-field span.select2-selection.select2-selection--single {
 			border-color: red;
 		}
 
