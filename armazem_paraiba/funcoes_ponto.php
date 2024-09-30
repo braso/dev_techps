@@ -690,7 +690,7 @@
 			}
 
 			if($dataInicio->format("Y-m-d H:i") > $dataPara->format("Y-m-d H:i")){
-				$dataInicio = $dataInicio->sub(DateInterval::createFromDateString("1 day"));
+				$dataInicio = $dataInicio->sub(DateInterval::createFromDateString(($qtdDias)." days"));
 			}
 			return $qtdDias;
 		});
@@ -1673,7 +1673,7 @@
             }
 
             $motoristas = mysqli_fetch_all(query(
-                "SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_banco FROM entidade"
+                "SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_banco, enti_nb_parametro FROM entidade"
                 ." WHERE enti_tx_status = 'ativo'"
                     ." AND enti_nb_empresa = ".$empresa["empr_nb_id"]
                     ." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
@@ -1690,7 +1690,7 @@
 
                 //Status Endosso{
                     $endossos = mysqli_fetch_all(query(
-                        "SELECT endosso.*, parametro.para_tx_pagarHEExComPerNeg FROM endosso"
+                        "SELECT endosso.* FROM endosso"
 							." WHERE endo_tx_status = 'ativo'"
 								." AND endo_nb_entidade = '".$motorista["enti_nb_id"]."'"
 								." AND ("
