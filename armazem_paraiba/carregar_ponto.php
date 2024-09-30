@@ -121,7 +121,7 @@
 		$newPontos = [];
 		$baseErrMsg = [
 			"ERROS:",
-			"camposObrigatorios" => ["Informações necessárias não encontradas: "],
+			"camposObrigatorios" => ["Campos obrigatórios não preenchidos: "],
 			"registerNotFound" => [],
 			"notRecognized" => [],
 		];
@@ -284,7 +284,7 @@
 			// botao("Configuração", "layout_notificacao", "", "", "", "", "btn btn-warning")
 		];
 
-		abre_form("Filtro de Busca");
+		abre_form();
 		linha_form($fields);
 		fecha_form($buttons);
 
