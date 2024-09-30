@@ -9,19 +9,36 @@
 	function cadastrarAjuste(){
 
 		//Conferir se tem as informações necessárias{
-			if(empty($_POST['id']) || empty($_POST['hora']) || empty($_POST['idMacro']) || empty($_POST['motivo'])){
-				set_status("ERRO: Dados insuficientes!");
+			$baseErrMsg = "ERRO: Campos obrigatórios não preenchidos: ";
+			$errorMsg = $baseErrMsg;
+			$camposObrig = [
+				"id" => "Motorista",
+				"hora" => "Hora",
+				"idMacro" => "Tipo de Registro",
+				"motivo" => "Motivo",
+			];
+			foreach($camposObrig as $key => $value){
+				if(empty($_POST[$key])){
+					$_POST["errorFields"][] = $key;
+					$errorMsg .= $value.", ";
+				}
+			}
+			if($errorMsg != $baseErrMsg){
+				set_status(substr($errorMsg, 0, -2).".");
 				index();
 				exit;
 			}
+
 			$aMotorista = carregar('entidade',$_POST['id']);
 			$aTipo = carregar('macroponto', $_POST['idMacro']);
 			if(empty($aMotorista)){
+				$_POST["errorFields"][] = "id";
 				set_status("ERRO: Funcionário não encontrado.");
 				index();
 				exit;
 			}
 			if(empty($aTipo)){
+				$_POST["errorFields"][] = "idMacro";
 				set_status("ERRO: Macro não encontrado.");
 				index();
 				exit;
