@@ -157,15 +157,18 @@ function carregarJS(array $arquivos) {
 
 
 function index() {
+
+    
     if(!empty($_POST["atualizar"])){
         echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
         ob_flush();
         flush();
+        cabecalho("Relatório de Jornadas Abertas");
         require_once "funcoes_paineis.php";
         criar_relatorio_saldo();
+    }else{
+        cabecalho("Relatório de Jornadas Abertas");
     }
-
-    cabecalho("Relatorio Geral de saldo");
 
     $extraCampoData = "";
     if(empty($_POST["busca_dataInicio"])){
@@ -204,7 +207,7 @@ function index() {
     ];
 
 
-    abre_form("Filtro de Busca");
+    abre_form();
     linha_form($fields);
     fecha_form($buttons);
 

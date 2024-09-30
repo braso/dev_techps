@@ -146,15 +146,18 @@
     }
 
     function index(){
+
         if(!empty($_POST["atualizar"])){
             echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
             ob_flush();
             flush();
+            cabecalho("Relatório Geral de Saldo");
             require_once "funcoes_paineis.php";
             criar_relatorio_saldo();
+        }else{
+            cabecalho("Relatório Geral de Saldo");
         }
 
-        cabecalho("Relatorio Geral de saldo");
 
         $extraCampoData = "";
         if(empty($_POST["busca_dataInicio"])){
@@ -166,13 +169,15 @@
 
         if($_POST["busca_dataInicio"] > date("Y-m-d") || $_POST["busca_dataFim"] > date("Y-m-d")){
             unset($_POST["acao"]);
+            $_POST["errorFields"][] = "busca_dataInicio";
             set_status("ERRO: Não é possível perquisar após a data atual.");
         }
 
         // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
         $fields = [
-            combo_net("Empresa:", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
+            combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
+            campo("Período*", "daterange", ($_POST["daterange"]?? ""), 3, "MASCARA_PERIODO"),
             campo_data("Data Início", "busca_dataInicio", ($_POST["busca_dataInicio"] ?? ""), 2, $extraCampoData),
             campo_data("Data Fim", "busca_dataFim", ($_POST["busca_dataFim"] ?? ""), 2, $extraCampoData)
             // $texto,
@@ -193,7 +198,7 @@
         ];
 
 
-        abre_form("Filtro de Busca");
+        abre_form();
         linha_form($fields);
         fecha_form($buttons);
 
