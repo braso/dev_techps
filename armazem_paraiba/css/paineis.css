@@ -1,13 +1,13 @@
-body{
-    --var-blue: #b3daff;
-    --var-darkblue: #487fb3;
-    --var-red: #FF6666;
-    --var-reddark: #E60000;
-    --var-yellow: #FFE789;
-    --var-yellowlight: #FFFF75;
-    --var-yellowdark: #FFD700;
-    --var-green: #8CFF66;
-    --var-greendark: #33CC00;
+body {
+    --var-blue: #4ea9ff;
+    --var-darkblue: #0757a2;
+    --var-red: #ec4141;
+    --var-darkred: #a30000;
+    --var-yellow: #f1c61f;
+    --var-lightyellow: #ffff75;
+    --var-darkyellow: #c1a300;
+    --var-green: #53d02a;
+    --var-darkgreen: #29a300;
 }
 
 .table-responsive div:first-child{
@@ -28,7 +28,6 @@ body{
 
 #tabela1 th, #tabela2 th{
     text-align: center;
-    cursor: pointer;
 }
 
 #tabela1 tbody tr td:first-child, #tabela2 tbody tr td:first-child{
@@ -43,12 +42,12 @@ body{
 
 
 .porcentagemEndoPc td:first-child{
-    background-color: var(--var-yellowlight);
+    background-color: var(--var-yellow);
     cursor: pointer;
 }
 
 .porcentagemEndoPc td:first-child:hover{
-    background-color: var(--var-yellowdark);
+    background-color: var(--var-darkyellow);
     cursor: pointer;
 }
 
@@ -68,7 +67,7 @@ body{
 }
 
 .porcentagemPosi td:first-child:hover{
-    background-color: var(--var-greendark);
+    background-color: var(--var-darkgreen);
     cursor: pointer;
 }
 
@@ -78,11 +77,11 @@ body{
 }
 
 .porcentagemNaEndo td:first-child:hover, .porcentagemNega td:first-child:hover{
-    background-color: var(--var-reddark);
+    background-color: var(--var-darkred);
     cursor: pointer;
 }
 
-.nomeEmpresa:hover, #tabela1 thead tr th:first-child:hover, #tabela2 thead tr th:first-child:hover {
+.nomeEmpresa:hover{
     background-color: #b5b8bb;
     cursor: pointer;
 }
