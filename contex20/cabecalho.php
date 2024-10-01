@@ -60,6 +60,11 @@
 	<link rel="manifest" href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/img/favicon/site.webmanifest">
 
 	<style>
+
+		*{
+			transition: background-color .3s;
+		}
+		
 		body {
 			--img_path: url("<?= $CONTEX["path"] ?>/imagens/logo_topo_cliente.png");
 		}

@@ -23,7 +23,7 @@
             $linha .= "+'<td>'+row.matricula+'</td>'
                     +'<td>'+row.nome+'</td>'
                     +'<td>'+(row.ocupacao?? '')+'</td>'
-                    +'<td style=\"background-color:'+(row.statusEndosso === 'E' ? 'var(--var-blue)' : (row.statusEndosso === 'EP' ? 'var(--var-yellowlight)' : 'var(--var-red)'))
+                    +'<td style=\"background-color:'+(row.statusEndosso === 'E' ? 'var(--var-blue)' : (row.statusEndosso === 'EP' ? 'var(--var-darkyellow)' : 'var(--var-red)'))
                     +'; color:white; text-shadow:2px 2px 3px black\"><strong>'
                     +row.statusEndosso+'</strong></td>'
                     +'<td>'+(row.jornadaPrevista == '00:00' ? '' : row.jornadaPrevista?? '')+'</td>'
@@ -99,7 +99,6 @@
                                 $.each(data, function(index, item){
                                     row[index] = item;
                                 });
-                                console.log(row);
                                 if(row.idMotorista != undefined){
                                     delete row.idMotorista;
                                 }"
@@ -266,14 +265,13 @@
             cabecalho("Relatório Geral de Saldo");
         }
 
+        if(empty($_POST["busca_periodo"])){
+            $_POST["busca_periodo"] = date("01/m/Y")." - ".date("d/m/Y");
+        }
+        $datas = explode(" - ", $_POST["busca_periodo"]);
+        $_POST["busca_dataInicio"] = DateTime::createFromFormat("d/m/Y", $datas[0])->format("Y-m-d");
+        $_POST["busca_dataFim"] = DateTime::createFromFormat("d/m/Y", $datas[1])->format("Y-m-d");
 
-        $extraCampoData = "";
-        if(empty($_POST["busca_dataInicio"])){
-            $_POST["busca_dataInicio"] = date("Y-m-01");
-        }
-        if(empty($_POST["busca_dataFim"])){
-            $_POST["busca_dataFim"] = date("Y-m-d");
-        }
 
         if($_POST["busca_dataInicio"] > date("Y-m-d") || $_POST["busca_dataFim"] > date("Y-m-d")){
             unset($_POST["acao"]);
@@ -285,7 +283,7 @@
         //position: absolute; top: 101px; left: 420px;
         $fields = [
             combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
-            campo("Período*", "daterange", ($_POST["daterange"]?? ""), 3, "MASCARA_PERIODO"),
+            // campo("Período*", "busca_periodo", ($_POST["busca_periodo"]?? ""), 3, "MASCARA_PERIODO"),
             campo_data("Data Início", "busca_dataInicio", ($_POST["busca_dataInicio"] ?? ""), 2, $extraCampoData),
             campo_data("Data Fim", "busca_dataFim", ($_POST["busca_dataFim"] ?? ""), 2, $extraCampoData)
             // $texto,
@@ -402,11 +400,15 @@
             }else{
                 //Painel geral das empresas
                 $empresas = [];
-                $logoEmpresa = mysqli_fetch_all(query(
+                $logoEmpresa = mysqli_fetch_assoc(query(
                     "SELECT empr_tx_logo FROM empresa"
                     ." WHERE empr_tx_status = 'ativo'"
-                    ." AND empr_tx_Ehmatriz = 'sim';"
-                ), MYSQLI_ASSOC);//Utilizado no HTML.
+                        ." AND empr_tx_Ehmatriz = 'sim'"
+                    ." LIMIT 1;"
+                ))["empr_tx_logo"];//Utilizado no HTML.
+
+                $logoEmpresa = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$logoEmpresa;
+
                 
                 if(is_dir($path)){
                     $encontrado = true;
@@ -554,8 +556,8 @@
             echo "<div class='script'>"
                 ."<script>"
                     .((!empty($_POST["empresa"]))? "document.getElementById('tabela1').style.display = 'table';": "")
-                    ."console.log(endossos);
-                    document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.E;
+                    // ."console.log(endossos);"
+                    ."document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.E;
                     document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.EP;
                     document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.N;
                     document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.E*10000)/100+'%';

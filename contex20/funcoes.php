@@ -452,33 +452,44 @@
 				$type = "month";
 			break;
 			case "MASCARA_PERIODO":
-				$dataScript .= 
-					"</script>
-					<script type='text/javascript' src='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/js/moment.min.js'></script>
+				$datas = ["", ""];
+				if(!empty($_POST[$variavel])){
+					$datas = implode(" - ", $_POST[$variavel]);
+				}
+				$dataScript = 
+					"<script type='text/javascript' src='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/js/moment.min.js'></script>
 					<script type='text/javascript' src='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/js/daterangepicker.min.js'></script>
 					<link rel='stylesheet' type='text/css' href='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/js/daterangepicker.css' />
 
 					<script>
-					$(function() {
-						$('input[name=\"$variavel\"]').daterangepicker({
-							opens: 'left',
-							'locale': {
-								'format': 'DD/MM/YYYY',
-								'separator': ' - ',
-								'applyLabel': 'Aplicar',
-								'cancelLabel': 'Cancelar',
-								'fromLabel': 'From',
-								'toLabel': 'To',
-								'customRangeLabel': 'Custom',
-								'weekLabel': 'W',
-								'daysOfWeek': ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'],
-								'monthNames': ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
-								'firstDay': 1
-							},
-						}, function(start, end, label) {
-							// console.log('A new date selection was made: '+start.format('YYYY-MM-DD')+' to '+end.format('YYYY-MM-DD'));
-						});
-					});"
+						$(function() {
+							$('input[name=\"$variavel\"]').daterangepicker({
+								opens: 'left',
+								'startDate': '".(!empty($datas[0])? $datas[0]: date("01/m/Y"))."',
+								'endDate': '".(!empty($datas[1])? $datas[1]: date("d/m/Y"))."',
+								'minYear': 2023,
+								'autoApply': true,
+								'locale': {
+									'format': 'DD/MM/YYYY',
+									'separator': ' - ',
+									'applyLabel': 'Aplicar',
+									'cancelLabel': 'Cancelar',
+									'fromLabel': 'De',
+									'toLabel': 'Até',
+									'customRangeLabel': 'Custom',
+									'daysOfWeek': ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+									'monthNames': ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
+									'firstDay': 1
+								},
+								'isInvalidDate': function(date){
+									data = new Date(date._i[0], date._i[1]+1, date._i[2]).valueOf();
+									return (data > Date.now() || data < new Date(2023, 0, 1).valueOf());
+								}
+							}, function(start, end, label) {
+								console.log(document.getElementsByClassName('contex_form'));
+								console.log('A new date selection was made: '+start.format('YYYY-MM-DD')+' to '+end.format('YYYY-MM-DD'));
+							});
+						});"
 				;
 			break;
 			case "MASCARA_VALOR":

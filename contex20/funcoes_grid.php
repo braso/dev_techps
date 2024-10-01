@@ -168,9 +168,8 @@
 				form > div:nth-child(2) > div:nth-child(5),
 				form > div:nth-child(2) > div:nth-child(6),
 				form > div:nth-child(3) > div,
-				form > div.form-actions,
-				<?="#contex-grid-".$rand."_length,"?>
-				<?="#contex-grid-".$rand."_info,"?>
+				form > div.form-actions
+				<?=", #contex-grid-".$rand."_length, #contex-grid-".$rand."_info"?>
 				body > div.scroll-to-top > i{
 					display: none;
 				}
