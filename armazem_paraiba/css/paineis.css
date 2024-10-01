@@ -40,7 +40,6 @@ body {
     color: white;
 }
 
-
 .porcentagemEndoPc td:first-child{
     background-color: var(--var-yellow);
     cursor: pointer;

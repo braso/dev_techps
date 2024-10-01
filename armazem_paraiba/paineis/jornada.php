@@ -16,16 +16,16 @@ function carregarJS(array $arquivos) {
 
     $linha = "linha = '<tr>'";
     if (!empty($_POST["empresa"])) {
-        $linha .= "+'<td>'+formatarData(item.data)+'</td>'
-                    +'<td>'+item.matricula+'</td>'
-                    +'<td>'+item.nome+'</td>'
-                    +'<td>'+item.ocupacao+'</td>'
-                    +'<td>'+item.jornada+'</td>'
-                    +'<td>'+item.jornadaEfetiva+'</td>'
-                    +'<td><strong>'+(item.refeicao? item.refeicao : '-')+'</strong></td>'
-                    +'<td>'+(item.espera? item.espera : '-')+'</td>'
-                    +'<td>'+(item.descanso? item.descanso : '-')+'</td>'
-                    +'<td>'+(item.repouso? item.repouso : '-')+'</td>'
+        $linha .= "+'<td style=\'text-align: center;\'>'+item.data+'</td>'
+                    +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
+                    +'<td style=\'text-align: center;\'>'+item.nome+'</td>'
+                    +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
+                    +'<td style=\'text-align: center;\'>'+item.jornada+'</td>'
+                    +'<td style=\'text-align: center;\'>'+item.jornadaEfetiva+'</td>'
+                    +'<td style=\'text-align: center;\'>'+(item.refeicao? item.refeicao : '<strong>----</strong>')+'</td>'
+                    +'<td style=\'text-align: center;\'>'+(item.espera? item.espera : '<strong>----</strong>')+'</td>'
+                    +'<td style=\'text-align: center;\'>'+(item.descanso? item.descanso : '<strong>----</strong>')+'</td>'
+                    +'<td style=\'text-align: center;\'>'+(item.repouso? item.repouso : '<strong>----</strong>')+'</td>'
                 +'</tr>';";
     } 
 
@@ -35,16 +35,22 @@ function carregarJS(array $arquivos) {
     }
 
     echo
-            "<script>
+            "<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"])."'>
+                <input type='hidden' name='atualizar' id='atualizar'>
+                <input type='hidden' name='empresa' id='empresa'>
+                <input type='hidden' name='busca_data' id='busca_data'>
+            </form>
+            <script>
+                function atualizarPainel(){
+                    document.myForm.empresa.value = document.getElementById('empresa').value;
+                    document.myForm.busca_data.value = document.getElementById('busca_data').value;
+                    document.myForm.atualizar.value = 'atualizar';
+                    document.myForm.submit();
+                }
+
                 function imprimir(){
                     window.print();
                 }
-
-                function formatarData(data) {
-                    // Substitui os hífens por barras para o formato dd/mm/aaaa
-                    return data.replace(/-/g, '/');
-                }
-
             
                 $(document).ready(function(){
                     var tabela = $('#tabela-empresas tbody');
@@ -67,37 +73,50 @@ function carregarJS(array $arquivos) {
                         });
                     }
                     // Função para ordenar a tabela
-                    // function ordenarTabela(coluna, ordem){
-                    //     var linhas = tabela.find('tr').get();
-                    //     linhas.sort(function(a, b){
-                    //         var valorA = $(a).children('td').eq(coluna).text().toUpperCase();
-                    //         var valorB = $(b).children('td').eq(coluna).text().toUpperCase();
+                    function ordenarTabela(coluna, ordem){
+                        var linhas = tabela.find('tr').get();
+                        linhas.sort(function(a, b){
+                            var valorA = $(a).children('td').eq(coluna).text().toUpperCase();
+                            var valorB = $(b).children('td').eq(coluna).text().toUpperCase();
 
-                    //         if(valorA < valorB){
-                    //             return ordem === 'asc' ? -1 : 1;
-                    //         }
-                    //         if(valorA > valorB){
-                    //             return ordem === 'asc' ? 1 : -1;
-                    //         }
-                    //         return 0;
-                    //     });
-                    //     $.each(linhas, function(index, row){
-                    //         tabela.append(row);
-                    //     });
-                    // }
-
+                            if(valorA < valorB){
+                                return ordem === 'asc' ? -1 : 1;
+                            }
+                            if(valorA > valorB){
+                                return ordem === 'asc' ? 1 : -1;
+                            }
+                            return 0;
+                        });
+                        $.each(linhas, function(index, row){
+                            tabela.append(row);
+                        });
+                    }
+                    var colunasPermitidas = ['data', 'nome', 'matricula', 'ocupacao']; 
                     // Evento de clique para ordenar a tabela ao clicar no cabeçalho
-                    // $('#titulos th').click(function(){
-                    //     var coluna = $(this).index();
-                    //     var ordem = $(this).data('order');
-                    //     $('#tabela-empresas th').data('order', 'desc'); // Redefinir ordem de todas as colunas
-                    //     $(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
-                    //     ordenarTabela(coluna, $(this).data('order'));
+                    $('#titulos th').click(function(){
+                        var colunaClicada = $(this).attr('class');
+                        // console.log(colunaClicada)
+                        
+                         var classePermitida = colunasPermitidas.some(function(coluna) {
+                            return colunaClicada.includes(coluna);
+                        });
 
-                    //     // Ajustar classes para setas de ordenação
-                    //     $('#titulos th').removeClass('sort-asc sort-desc');
-                    //     $(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
-                    // });
+                        if (classePermitida) {
+                            var coluna = $(this).index();
+                            var ordem = $(this).data('order');
+
+                            // Redefinir ordem de todas as colunas
+                            $('#tabela-empresas th').data('order', 'desc'); 
+                            $(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
+                            
+                            // Chama a função de ordenação
+                            ordenarTabela(coluna, $(this).data('order'));
+
+                            // Ajustar classes para setas de ordenação
+                            $('#titulos th').removeClass('sort-asc sort-desc');
+                            $(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
+                        }
+                    });
 
                     " . $carregarDados . "
                 });
@@ -113,21 +132,12 @@ function index() {
         criar_relatorio_jornada();
     }
 
-    cabecalho("Relatorio Geral de saldo");
+    cabecalho("Relatorio de Jornada Aberta");
 
     $extraCampoData = "";
-    if(empty($_POST["busca_dataInicio"])){
-        $_POST["busca_dataInicio"] = date("Y-m-01");
+    if(empty($_POST["busca_data"])){
+        $_POST["busca_data"] = date("Y-m");
     }
-    if(empty($_POST["busca_dataFim"])){
-        $_POST["busca_dataFim"] = date("Y-m-d");
-    }
-
-    if($_POST["busca_dataInicio"] > date("Y-m-d") || $_POST["busca_dataFim"] > date("Y-m-d")){
-        unset($_POST["acao"]);
-        set_status("ERRO: Não é possível perquisar após a data atual.");
-    }
-
     // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
     //position: absolute; top: 101px; left: 420px;
     $fields = [
@@ -157,7 +167,7 @@ function index() {
 
     $arquivos = [];
     $dataEmissao = ""; //Utilizado no HTML
-    $encontrado = true;
+    $encontrado = false;
     $path = "./arquivos/jornada";
     $periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
@@ -181,16 +191,23 @@ function index() {
             }
             $pasta->close();
 
-            $motoristas = [];
-            foreach($arquivos as $arquivo){
-                $json = json_decode(file_get_contents($path."/".$arquivo), true);
-                $json["dataAtualizacao"] = date("d/m/Y H:i", filemtime($path."/".$arquivo));
-                $motoristas[] = $json;
-            }
             foreach($arquivos as &$arquivo){
                 $arquivo = $path."/".$arquivo;
             }
 
+            if (!empty($arquivo)) {
+                $dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($arquivo)); //Utilizado no HTML.
+                $arquivoGeral = json_decode(file_get_contents($arquivo), true);
+
+                $periodoRelatorio = [
+                    "dataInicio" => $arquivoGeral[0]["dataInicio"],
+                    "dataFim" => $arquivoGeral[0]["dataFim"]
+                ];
+
+                $encontrado = true;
+            } else {
+                echo "<script>alert('Não tem jornadas abertas.')</script>";
+            }
         }else{
             $encontrado = false;
         }
@@ -204,12 +221,12 @@ function index() {
         ."<th class='matricula'>Matrícula</th>"
         ."<th class='nome'>Nome</th>"
         ."<th class='ocupacao'>Ocupação</th>"
-        ."<th class='jornada'>Jornada</th>"
-        ."<th class='jornadaEfetiva'>Jornada Efetiva</th>"
-        ."<th class='refeicao'>Refeicao</th>"
-        ."<th class='espera'>Espera</th>"
-        ."<th class='descanso'>Descanso</th>"
-        ."<th class='repouso'>Repouso</th>";
+        ."<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornada'>Jornada</th>"
+        ."<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornadaEfetiva'>Jornada Efetiva</th>"
+        ."<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='refeicao'>Refeicao</th>"
+        ."<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='espera'>Espera</th>"
+        ."<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='descanso'>Descanso</th>"
+        ."<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='repouso'>Repouso</th>";
         $rowTitulos .= "</tr>";
         include_once "painel_html2.php";
     }

@@ -551,6 +551,7 @@
             $rowTotais .= "</tr>";
             $rowTitulos .= "</tr>";
 
+            $titulo = "Geral de saldo";
             include_once "painel_html.php";
 
             echo "<div class='script'>"

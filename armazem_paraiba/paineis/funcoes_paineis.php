@@ -485,12 +485,9 @@ function criar_relatorio_endosso() {
 function criar_relatorio_jornada() {
 	global $totalResumo;
 
-	$_POST["busca_dataInicio"] = "2024-09-01";
-	$_POST["busca_dataFim"] = "2024-09-24";
+	$periodoInicio = new DateTime($_POST["busca_data"] . "-01");
+	$periodoFim = new DateTime($periodoInicio->format("Y-m-t"));
 
-
-	$periodoInicio = new DateTime($_POST["busca_dataInicio"]);
-	$periodoFim = new DateTime($_POST["busca_dataFim"]);
 	$campos = ["fimJornada", "inicioRefeicao", "fimRefeicao"];
 
 	$empresas = mysqli_fetch_all(query(
@@ -583,7 +580,7 @@ function criar_relatorio_jornada() {
 				} elseif (!is_int(strpos($diaPonto["inicioJornada"], "fa fa-warning")) && !is_int(strpos($diaPonto["fimJornada"], "fa fa-warning"))) {
 					$inicioRefeicaoWarning = is_int(strpos($diaPonto["inicioRefeicao"], "fa-warning"));
 					$fimRefeicaoWarning = is_int(strpos($diaPonto["fimRefeicao"], "fa-warning"));
-
+					
 					if ($inicioRefeicaoWarning && $fimRefeicaoWarning) {
 						$refeicao = "";
 					} elseif ($inicioRefeicaoWarning || $fimRefeicaoWarning) {
@@ -632,7 +629,7 @@ function criar_relatorio_jornada() {
 
 				if (!empty(array_filter([$descanso, $espera, $refeicao, $repouso]))) {
 					$row [] = [
-						"data" => $date->format('d-m-Y'),
+						"data" => $date->format('d/m/Y'),
 						"matricula" => $motorista["enti_tx_matricula"],
 						"nome" => $motorista["enti_tx_nome"],
 						"ocupacao" => $motorista["enti_tx_ocupacao"],
@@ -641,7 +638,9 @@ function criar_relatorio_jornada() {
 						"refeicao" => strip_tags($refeicao),
 						"espera" => strip_tags($espera),
 						"descanso" => strip_tags($descanso),
-						"repouso" => strip_tags($repouso)
+						"repouso" => strip_tags($repouso),
+						"dataInicio" => $periodoInicio->format('d/m/Y'),
+						"dataFim" => $periodoInicio->format('d/m/Y')
 					];
 
 					if (!empty($row)) {

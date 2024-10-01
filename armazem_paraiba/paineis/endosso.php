@@ -572,6 +572,7 @@
             $rowTotais .= "</tr>";
             $rowTitulos .= "</tr>";
 
+            $titulo = "de Endosso"; // usado no html
             include_once "painel_html.php";
 
             echo "<div class='script'>";

@@ -85,7 +85,7 @@
 		$sqlMotorista = query(
 			"SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg FROM entidade"
 				." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
-				." WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
+				." WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário')"
 					."	AND enti_nb_id IN (".$_POST["idMotoristaEndossado"].")"
 					."	AND enti_nb_empresa = ".$_POST["busca_empresa"]
 					."	AND enti_tx_status = 'ativo'"
@@ -311,7 +311,7 @@
 					"SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg, parametro.para_tx_inicioAcordo, parametro.para_nb_qDias, parametro.para_nb_qDias FROM entidade"
 						." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
 						." WHERE enti_tx_status = 'ativo'"
-							." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
+							." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
 							." AND enti_nb_empresa = ".$_POST["busca_empresa"]." ".$extra
 						." ORDER BY enti_tx_nome;"
 				);
@@ -439,7 +439,7 @@
 								.">"
 									."Imprimir Relatório"
 								."</button>"
-							;
+							; 
 						}
 
 						abre_form(
