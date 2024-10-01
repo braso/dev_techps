@@ -379,11 +379,11 @@
 		$tooltip = "";
 		for($f = 0; $f < count($pares)-1; $f++){
 			$temp = [
-				DateTime::createFromFormat("Y-m-d H:i:s", $pares[$f]["inicio"]),
-				DateTime::createFromFormat("Y-m-d H:i:s", $pares[$f]["fim"])
+				(!empty($pares[$f]["inicio"])? DateTime::createFromFormat("Y-m-d H:i:s", $pares[$f]["inicio"])->format("d/m H:i"): ""),
+				(!empty($pares[$f]["fim"])? DateTime::createFromFormat("Y-m-d H:i:s", $pares[$f]["fim"])->format("d/m H:i"): "")
 			];
-			$tooltip .= "Início:_".$temp[0]->format("d/m H:i")."\n"
-				."Fim:___".$temp[1]->format("d/m H:i")."\n\n";
+			$tooltip .= "Início:_".$temp[0]."\n"
+				."Fim:___".$temp[1]."\n\n";
 		}
 		unset($temp);
 		$icone = "";
