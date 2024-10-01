@@ -527,7 +527,6 @@
 
 		fecha_form($botao);
 
-		$path_parts = pathinfo( __FILE__ );
 		echo 
 			"<iframe id=frame_parametro style='display: none;'></iframe>
 			<script>
@@ -538,7 +537,7 @@
 		;
 
 		if (!empty($a_mod['empr_nb_id'])) {
-			echo arquivosEmpresa("Documentos", $a_mod['empr_nb_id'], $arquivos);
+			echo "</div><div class='col-md-12'><div class='col-md-12 col-sm-12'>".arquivosEmpresa("Documentos", $a_mod['empr_nb_id'], $arquivos);
 		}
 
 		rodape();
