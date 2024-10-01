@@ -18,33 +18,33 @@
             $linha .= "+'<td>'+row.matricula+'</td>'
                     +'<td>'+row.nome+'</td>'
                     +'<td>'+(row.ocupacao?? '')+'</td>'
-                    +'<td style=\"background-color:'+(row.statusEndosso === 'E' ? 'var(--var-blue)' : (row.statusEndosso === 'EP' ? 'var(--var-yellowlight)' : 'var(--var-red)'))
+                    +'<td style=\"background-color:'+(row.statusEndosso === 'E' ? 'var(--var-darkblue)' : (row.statusEndosso === 'EP' ? 'var(--var-darkyellow)' : 'var(--var-darkred)'))
                     +'; color:white; text-shadow:2px 2px 3px black\"><strong>'
                     +row.statusEndosso+'</strong></td>'
-                    +'<td>'+(row.jornadaPrevista == '00:00' ? '' : row.jornadaPrevista?? '')+'</td>'
-                    +'<td>'+(row.jornadaEfetiva == '00:00' ? '' : row.jornadaEfetiva?? '')+'</td>'
-                    +'<td>'+(row.he50APagar == '00:00' ? '' : row.he50APagar?? '')+'</td>'
-                    +'<td>'+(row.he100APagar== '00:00' ? '' : row.he100APagar?? '')+'</td>'
-                    +'<td>'+(row.adicionalNoturno == '00:00' ? '' : row.adicionalNoturno?? '')+'</td>'
-                    +'<td>'+(row.esperaIndenizada == '00:00' ? '' : row.esperaIndenizada?? '')+'</td>'
+                    +'<td>'+(invalidValues.includes(row.jornadaPrevista) ? '' : row.jornadaPrevista?? '')+'</td>'
+                    +'<td>'+(invalidValues.includes(row.jornadaEfetiva) ? '' : row.jornadaEfetiva?? '')+'</td>'
+                    +'<td>'+(invalidValues.includes(row.he50APagar) ? '' : row.he50APagar?? '')+'</td>'
+                    +'<td>'+(invalidValues.includes(row.he100APagar) ? '' : row.he100APagar?? '')+'</td>'
+                    +'<td>'+(invalidValues.includes(row.adicionalNoturno) ? '' : row.adicionalNoturno?? '')+'</td>'
+                    +'<td>'+(invalidValues.includes(row.esperaIndenizada) ? '' : row.esperaIndenizada?? '')+'</td>'
                     +'<td>'+(row.saldoAnterior?? '')+'</td>'
                     +'<td>'+(row.saldoPeriodo > '00:00' ? '<strong>' + row.saldoPeriodo + '</strong>' : (row.saldoPeriodo ?? ''))+'</td>'
-                    +'<td style=\"color:'+(row.saldoFinal > '00:00' ? 'green' : (row.saldoFinal === '00:00' ? 'blue' : 'red'))+';\">'
+                    +'<td style=\"color:'+(row.saldoFinal > '00:00' ? 'green' : (invalidValues.includes(row.saldoFinal)? 'blue': 'red'))+';\">'
                     +(row.saldoFinal?? '')+'</td>'
                 +'</tr>';";
         }else{
             $linha .= "+'<td class=\"nomeEmpresa\" style=\"cursor: pointer;\" onclick=\"setAndSubmit(' + row.empr_nb_id + ')\">'+row.empr_tx_nome+'</td>'
                     +'<td>'+Math.round(row.percEndossado*10000)/100+'%</td>'
                     +'<td>'+row.qtdMotoristas+'</td>'
-                    +'<td>'+(row.totais.jornadaPrevista == '00:00' ? '' : row.totais.jornadaPrevista)+'</td>'
-                    +'<td>'+(row.totais.jornadaEfetiva == '00:00' ? '' : row.totais.jornadaEfetiva)+'</td>'
-                    +'<td>'+(row.totais.HESemanal == '00:00' ? '' : row.totais.HESemanal)+'</td>'
-                    +'<td>'+(row.totais.HESabado == '00:00' ? '' : row.totais.HESabado)+'</td>'
-                    +'<td>'+(row.totais.adicionalNoturno == '00:00' ? '' : row.totais.adicionalNoturno)+'</td>'
-                    +'<td>'+(row.totais.esperaIndenizada == '00:00' ? '' : row.totais.esperaIndenizada)+'</td>'
-                    +'<td>'+(row.totais.saldoAnterior == '00:00' ? '' : row.totais.saldoAnterior)+'</td>'
+                    +'<td>'+(invalidValues.includes(row.totais.jornadaPrevista) ? '' : row.totais.jornadaPrevista)+'</td>'
+                    +'<td>'+(invalidValues.includes(row.totais.jornadaEfetiva) ? '' : row.totais.jornadaEfetiva)+'</td>'
+                    +'<td>'+(invalidValues.includes(row.totais.HESemanal) ? '' : row.totais.HESemanal)+'</td>'
+                    +'<td>'+(invalidValues.includes(row.totais.HESabado) ? '' : row.totais.HESabado)+'</td>'
+                    +'<td>'+(invalidValues.includes(row.totais.adicionalNoturno) ? '' : row.totais.adicionalNoturno)+'</td>'
+                    +'<td>'+(invalidValues.includes(row.totais.esperaIndenizada) ? '' : row.totais.esperaIndenizada)+'</td>'
+                    +'<td>'+(invalidValues.includes(row.totais.saldoAnterior) ? '' : row.totais.saldoAnterior)+'</td>'
                     +'<td>'+(row.totais.saldoPeriodo > '00:00' ? '<strong>' + row.totais.saldoPeriodo + '</strong>' : (row.totais.saldoPeriodo ?? ''))+'</td>'
-                    +'<td style=\"color:'+(row.totais.saldoFinal > '00:00' ? 'green' : (row.totais.saldoFinal === '00:00' ? 'blue' : 'red'))+';\">'
+                    +'<td style=\"color:'+(row.totais.saldoFinal > '00:00' ? 'green' : (invalidValues.includes(row.totais.saldoFinal)? 'blue': 'red'))+';\">'
                     +(row.totais.saldoFinal ?? '')+'</td>'
                 +'</tr>';";
         }
@@ -106,12 +106,14 @@
                                 }else{
                                     // Mostrar painel geral das empresas.
                                 
+                                    console.log(row['totais']);
                                     if(row.percEndossado < 1){
                                         row.totais = {
                                             'saldoAnterior': row.totais.saldoAnterior
                                         };
                                     }
                                 }
+                                invalidValues = [undefined, '00:00'];
                                 "
                                 .$linha
                                 ."tabela.append(linha);
@@ -410,6 +412,9 @@
                     ." AND empr_tx_Ehmatriz = 'sim'"
                 ." LIMIT 1;"
             ))["empr_tx_logo"];//Utilizado no HTML.
+
+            $logoEmpresa = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$logoEmpresa;
+
 
             $path .= "/".$_POST["busca_data"];
 
