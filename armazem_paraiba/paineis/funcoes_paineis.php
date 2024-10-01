@@ -513,7 +513,7 @@ function criar_relatorio_jornada() {
 		}
 
 		$motoristas = mysqli_fetch_all(query(
-			"SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula FROM entidade"
+			"SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_ocupacao FROM entidade"
 				. " WHERE enti_tx_status = 'ativo'"
 				. " AND enti_nb_empresa = " . $empresa["empr_nb_id"]
 				. " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
@@ -521,74 +521,138 @@ function criar_relatorio_jornada() {
 		), MYSQLI_ASSOC);
 
 		foreach ($motoristas as $motorista) {
-
-			$totais [] = [];
-			// Inicializa o array $totais com chaves para cada campo e arrays vazios para armazenar as datas
-			foreach ($campos as $campo) {
-				$totais[$campo] = [];
-			}
-
+			$row = [];
 			for ($date = clone $periodoInicio; $date <= $periodoFim; $date->modify('+1 day')) {
 				$diaPonto = diaDetalhePonto($motorista["enti_tx_matricula"], $date->format('Y-m-d'));
-				$dataTimeDia = DateTime::createFromFormat('d/m/Y', $diaPonto["data"]);
-				$dia = $dataTimeDia->format('d/m');
-				foreach ($campos as $campo) {
-					if (is_int(strpos($diaPonto[$campo], "fa-warning"))) {
-						$totais[$campo] [] = $dia;
+				$descanso = "";
+				$espera = "";
+				$jornada = "";
+				$jornadaEfetiva = ""; 
+				$refeicao = "";
+				$repouso = "";
+
+				if (!is_int(strpos($diaPonto["inicioJornada"], "fa fa-warning")) && is_int(strpos($diaPonto["fimJornada"], "fa fa-warning"))) {
+					$inicioRefeicaoWarning = is_int(strpos($diaPonto["inicioRefeicao"], "fa-warning"));
+					$fimRefeicaoWarning = is_int(strpos($diaPonto["fimRefeicao"], "fa-warning"));
+
+					if ($inicioRefeicaoWarning && $fimRefeicaoWarning) {
+						$refeicao = "";
+					} elseif ($inicioRefeicaoWarning || $fimRefeicaoWarning) {
+						$refeicao = "*";
+					} else {
+						if (is_int(strpos($diaPonto["diffRefeicao"], "fa-info-circle")) 
+						&& is_int(strpos($diaPonto["diffRefeicao"], "color:red;"))
+						&& !is_int(strpos($diaPonto["diffRefeicao"], "fa fa-warning"))) {
+							$refeicao = "*";
+						}
 					}
+
+					if (trim($diaPonto["diffDescanso"]) == "00:00") {
+						$descanso = "";
+					} else {
+						if (is_int(strpos($diaPonto["diffDescanso"], "fa-info-circle")) 
+						&& is_int(strpos($diaPonto["diffDescanso"], "color:red;"))
+						&& !is_int(strpos($diaPonto["diffDescanso"], "fa fa-warning"))) {
+							$descanso  = "*";
+						}
+					}
+
+					if ($diaPonto["diffEspera"] == "00:00") {
+						$espera = "";
+					} else {
+						if (is_int(strpos($diaPonto["diffEspera"], "fa-info-circle")) 
+						&& is_int(strpos($diaPonto["diffEspera"], "color:red;"))
+						&& !is_int(strpos($diaPonto["diffEspera"], "fa fa-warning"))) {
+							$espera = "*";
+						}
+					}
+
+					if ($diaPonto["diffRepouso"] == "00:00") {
+						$repouso = "";
+					} else {
+						if (is_int(strpos($diaPonto["diffRepouso"], "fa-info-circle")) 
+						&& is_int(strpos($diaPonto["diffRepouso"], "color:red;"))
+						&& !is_int(strpos($diaPonto["diffRepouso"], "fa fa-warning"))) {
+							$repouso = "*";
+						}
+					}
+
+					$jornada = $diaPonto["diffJornada"] == "00:00" ? "*" : $diaPonto["diffJornada"];
+					$jornadaEfetiva = $diaPonto["diffJornadaEfetiva"] == "00:00" ? "-" : $diaPonto["diffJornadaEfetiva"];
+
+				} elseif (!is_int(strpos($diaPonto["inicioJornada"], "fa fa-warning")) && !is_int(strpos($diaPonto["fimJornada"], "fa fa-warning"))) {
+					$inicioRefeicaoWarning = is_int(strpos($diaPonto["inicioRefeicao"], "fa-warning"));
+					$fimRefeicaoWarning = is_int(strpos($diaPonto["fimRefeicao"], "fa-warning"));
+
+					if ($inicioRefeicaoWarning && $fimRefeicaoWarning) {
+						$refeicao = "";
+					} elseif ($inicioRefeicaoWarning || $fimRefeicaoWarning) {
+						$refeicao = "*";
+					} else {
+						if (is_int(strpos($diaPonto["diffRefeicao"], "fa-info-circle")) 
+						&& is_int(strpos($diaPonto["diffRefeicao"], "color:red;"))
+						&& !is_int(strpos($diaPonto["diffRefeicao"], "fa fa-warning"))) {
+							$refeicao = "*";
+						}
+					}
+
+					if (trim($diaPonto["diffDescanso"]) == "00:00") {
+						$descanso = "";
+					} else {
+						if (is_int(strpos($diaPonto["diffDescanso"], "fa-info-circle")) 
+						&& is_int(strpos($diaPonto["diffDescanso"], "color:red;"))
+						&& !is_int(strpos($diaPonto["diffDescanso"], "fa fa-warning"))) {
+							$descanso  = "*";
+						}
+					}
+
+					if ($diaPonto["diffEspera"] == "00:00") {
+						$espera = "";
+					} else {
+						if (is_int(strpos($diaPonto["diffEspera"], "fa-info-circle")) 
+						&& is_int(strpos($diaPonto["diffEspera"], "color:red;"))
+						&& !is_int(strpos($diaPonto["diffEspera"], "fa fa-warning"))) {
+							$espera = "*";
+						}
+					}
+
+					if ($diaPonto["diffRepouso"] == "00:00") {
+						$repouso = "";
+					} else {
+						if (is_int(strpos($diaPonto["diffRepouso"], "fa-info-circle")) 
+						&& is_int(strpos($diaPonto["diffRepouso"], "color:red;"))
+						&& !is_int(strpos($diaPonto["diffRepouso"], "fa fa-warning"))) {
+							$repouso = "*";
+						}
+					}
+
+					$jornada = $diaPonto["diffJornada"] == "00:00" ? "-" : ($diaPonto["diffJornada"] > "00:00" ? $diaPonto["diffJornada"] : "-");
+					$jornadaEfetiva = $diaPonto["diffJornadaEfetiva"] == "00:00" ? "-" : ($diaPonto["diffJornadaEfetiva"] > "00:00" ? $diaPonto["diffJornadaEfetiva"] : "-");
 				}
+
+				if (!empty(array_filter([$descanso, $espera, $refeicao, $repouso]))) {
+					$row [] = [
+						"data" => $date->format('d-m-Y'),
+						"matricula" => $motorista["enti_tx_matricula"],
+						"nome" => $motorista["enti_tx_nome"],
+						"ocupacao" => $motorista["enti_tx_ocupacao"],
+						"jornada" => strip_tags($jornada),
+						"jornadaEfetiva" => strip_tags($jornadaEfetiva),
+						"refeicao" => strip_tags($refeicao),
+						"espera" => strip_tags($espera),
+						"descanso" => strip_tags($descanso),
+						"repouso" => strip_tags($repouso)
+					];
+
+					if (!empty($row)) {
+						$nomeArquivo = $motorista["enti_tx_matricula"] . ".json";
+						file_put_contents($path . "/" . $nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+					}
+	
+				}
+				
 			}
-
-			$row = [
-				"idMotorista"       => $motorista["enti_nb_id"],
-				"matricula"         => $motorista["enti_tx_matricula"],
-				"nome"              => $motorista["enti_tx_nome"],
-				"fimJornada"        => $totais["fimJornada"],
-				"inicioRefeicao"    => $totais["inicioRefeicao"],
-				"fimRefeicao"       => $totais["fimRefeicao"],
-			];
-
-			$nomeArquivo = $motorista["enti_tx_matricula"] . ".json";
-			file_put_contents($path . "/" . $nomeArquivo, json_encode($row , JSON_UNESCAPED_UNICODE));
-
-			$rows[] = $row;
 		}
-
-		$totaisEmpr = [
-			"fimJornada" => 0,
-			"inicioRefeicao" => 0,
-			"fimRefeicao" => 0
-		];
-
-		foreach ($rows as $row) {
-			$totaisEmpr["fimJornada"] = sizeof($row["fimJornada"]);
-			$totaisEmpr["inicioRefeicao"] = sizeof($row["inicioRefeicao"]);
-			$totaisEmpr["fimRefeicao"] = sizeof($row["fimRefeicao"]);
-		}
-
-		//Adicionar valores da empresa à soma total das empresas{
-		if (empty($_POST["empresa"])) {
-			foreach ($totaisEmpr as $key => $value) {
-				$totaisEmpresas[$key] += $value;
-			}
-			$totaisEmpresas["qtdMotoristas"] += count($motoristas);
-		}
-		//}
-
-		$empresa["totais"] = $totaisEmpr;
-		$empresa["qtdMotoristas"] = count($motoristas);
-		$empresa["dataInicio"] = $periodoInicio->format("Y-m-d");
-		$empresa["dataFim"] = $periodoFim->format("Y-m-d");
-
-		file_put_contents($path . "/empresa_" . $empresa["empr_nb_id"] . ".json", json_encode($empresa));
 	}
-
-	if (empty($_POST["empresa"])) {
-		$path = "./arquivos/jornada" . "/" . $periodoInicio->format("Y-m");
-		$totaisEmpresas["dataInicio"] = $periodoInicio->format("Y-m-d");
-		$totaisEmpresas["dataFim"] = $periodoFim->format("Y-m-d");
-		file_put_contents($path . "/empresas.json", json_encode($totaisEmpresas));
-	}
-
 	return;
 }

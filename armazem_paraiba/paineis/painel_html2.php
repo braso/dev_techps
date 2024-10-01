@@ -17,6 +17,8 @@
 			<div class="portlet-body form">
 				<table id="tabela-empresas" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
 					<thead>
+					<?=$rowTotais?>
+					<?=$rowTitulos?>
 					</thead>
 					<tbody>
 						<!-- Conteúdo do json empresas será inserido aqui -->
