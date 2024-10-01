@@ -159,7 +159,7 @@
 			case $versoesEndosso[1]:
 				$endosso["totalResumo"]["saldoBruto"] = $endosso["totalResumo"]["saldoAtual"];
 				unset($endosso["totalResumo"]["saldoAtual"]);
-				[$endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]] = calcularHorasAPagar($endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50"], $endosso["totalResumo"]["he100"], ($endosso["endo_tx_max50APagar"]?? "00:00"));
+				[$endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]] = calcularHorasAPagar($endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50"], $endosso["totalResumo"]["he100"], (!empty($endosso["endo_tx_max50APagar"])? $endosso["endo_tx_max50APagar"]: "00:00"));
 				$endosso["totalResumo"]["saldoFinal"] = operarHorarios([$endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]], "-");
 			break;
 			case $versoesEndosso[2]:
@@ -374,8 +374,9 @@
 
 	function data($data, $hora = 0): string{
 
-		if(in_array($data, ["0000-00-00", "00/00/0000"]))
+		if(in_array($data, ["0000-00-00", "00/00/0000"]) || empty($data)){
 			return "";
+		}
 
 		switch($hora){
 			case 1:
@@ -449,6 +450,47 @@
 			break;
 			case "MASCARA_MES":
 				$type = "month";
+			break;
+			case "MASCARA_PERIODO":
+				$datas = ["", ""];
+				if(!empty($_POST[$variavel])){
+					$datas = implode(" - ", $_POST[$variavel]);
+				}
+				$dataScript = 
+					"<script type='text/javascript' src='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/js/moment.min.js'></script>
+					<script type='text/javascript' src='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/js/daterangepicker.min.js'></script>
+					<link rel='stylesheet' type='text/css' href='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/js/daterangepicker.css' />
+
+					<script>
+						$(function() {
+							$('input[name=\"$variavel\"]').daterangepicker({
+								opens: 'left',
+								'startDate': '".(!empty($datas[0])? $datas[0]: date("01/m/Y"))."',
+								'endDate': '".(!empty($datas[1])? $datas[1]: date("d/m/Y"))."',
+								'minYear': 2023,
+								'autoApply': true,
+								'locale': {
+									'format': 'DD/MM/YYYY',
+									'separator': ' - ',
+									'applyLabel': 'Aplicar',
+									'cancelLabel': 'Cancelar',
+									'fromLabel': 'De',
+									'toLabel': 'Até',
+									'customRangeLabel': 'Custom',
+									'daysOfWeek': ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+									'monthNames': ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
+									'firstDay': 1
+								},
+								'isInvalidDate': function(date){
+									data = new Date(date._i[0], date._i[1]+1, date._i[2]).valueOf();
+									return (data > Date.now() || data < new Date(2023, 0, 1).valueOf());
+								}
+							}, function(start, end, label) {
+								console.log(document.getElementsByClassName('contex_form'));
+								console.log('A new date selection was made: '+start.format('YYYY-MM-DD')+' to '+end.format('YYYY-MM-DD'));
+							});
+						});"
+				;
 			break;
 			case "MASCARA_VALOR":
 				$dataScript .= "$('[name=\"$variavel\"]').maskMoney({prefix: 'R$', allowNegative: true, thousands:'.', decimal:',', affixesStay: false});";
@@ -764,11 +806,6 @@
 	function combo_net($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra_bd='',$extra_busca='',$extra_ordem='',$extra_limite='15'){
 		global $CONTEX,$conn;
 
-		$classe = "form-control input-sm campo-fit-content";
-		if(!empty($_POST["errorFields"]) && in_array($variavel, $_POST["errorFields"])){
-			$classe .= " error-field";
-		}
-
 		if(!empty($modificador)){
 			$tab = substr($tabela,0,4);
 			if($extra_busca != '')
@@ -793,10 +830,14 @@
 			$opt = "";
 		}
 		
+		$classe = 'col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content';
+		if(!empty($_POST["errorFields"]) && in_array($variavel, $_POST["errorFields"])){
+			$classe .= " select-error-field";
+		}
 		$campo =
-			'<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content">
+			'<div class="'.$classe.'">
 				<label>'.$nome.'</label>
-				<select class="'.$variavel.' '.$classe.'" id="'.$variavel.'" style="width:100%" '.$extra.' name="'.$variavel.'">
+				<select class="'.$variavel.' form-control input-sm campo-fit-content" id="'.$variavel.'" style="width:100%" '.$extra.' name="'.$variavel.'">
 				'.$opt.'
 				</select>
 			</div>'
@@ -980,7 +1021,7 @@
 							<input type='file' class='form-control' name='file'>
 						</div>
 						
-						<input type='hidden' name='acao' value='enviar_documento'>
+						<input type='hidden' name='acao' value='enviarDocumento'>
 						
 						<input type='hidden' name='idParametro' value='$idParametro'>
 					</form>
@@ -1092,7 +1133,7 @@
 							<input type='file' class='form-control' name='file'>
 						</div>
 						
-						<input type='hidden' name='acao' value='enviar_documento'>
+						<input type='hidden' name='acao' value='enviarDocumento'>
 						
 						<input type='hidden' name='idEmpresa' value='$idEmpresa'>
 					</form>

@@ -288,7 +288,8 @@
 		;
 	}
 
-	function ordenar_horarios_2($inicio, $fim, $ehEspera = false, $ehEsperaRepouso = false){
+	function ordenar_horarios_2($inicio, $fim, $ehEspera = false){
+		
 		//Resposta padrão{
 			$pares_horarios = [
 				"horariosOrdenados" => [],
@@ -336,6 +337,7 @@
 		$iniciosConsecutivos = false;
 
 		$inicio_atual = null;
+		
 		foreach ($horarios_com_origem as $item){
 			if($item["origem"] == "inicio"){
 				if(!empty($inicio_atual)){
@@ -376,15 +378,18 @@
 
 		$tooltip = "";
 		for($f = 0; $f < count($pares)-1; $f++){
-			$tooltip .= "Início:_".$pares[$f]["inicio"]."\n"
-				."Fim:___".$pares[$f]["fim"]."\n\n";
+			$temp = [
+				(!empty($pares[$f]["inicio"])? DateTime::createFromFormat("Y-m-d H:i:s", $pares[$f]["inicio"])->format("d/m H:i"): ""),
+				(!empty($pares[$f]["fim"])? DateTime::createFromFormat("Y-m-d H:i:s", $pares[$f]["fim"])->format("d/m H:i"): "")
+			];
+			$tooltip .= "Início:_".$temp[0]."\n"
+				."Fim:___".$temp[1]."\n\n";
 		}
+		unset($temp);
 		$icone = "";
 		if(!((count($inicio)+count($fim) == 0) || empty($tooltip))){
 			if(count($inicio) != count($fim) || count($horarios_com_origem)/2 != (count($pares)-1) || $iniciosConsecutivos){ 
 				$color = "red";
-			}elseif($ehEsperaRepouso){
-				$color = "#99ff99";
 			}else{
 				$color = "green";
 			}
@@ -427,193 +432,8 @@
 	}
 	
 	function ordenar_horarios($inicio, $fim, $ehEspera = false, $ehEsperaRepouso = false){
-		//temporário
-		return ordenar_horarios_2($inicio, $fim, $ehEspera, $ehEsperaRepouso);
-
-		// //Resposta padrão{
-		// 	$pares_horarios = [
-		// 		"horariosOrdenados" => [],
-		// 		"pares" => [],
-		// 		"totalIntervalo" => "00:00",
-		// 		"icone" => "",
-		// 		"paresAdicionalNot" => "00:00",
-		// 		"totalIntervaloAdicionalNot" => "00:00"
-		// 	];
-	
-		// 	if(empty($inicio) || empty($fim)){
-		// 		return $pares_horarios;
-		// 	}
-		// //}
-		
-		// //Montar $horarios_com_origem{
-		// 	$horarios = [];
-		// 	$origem = [];
-
-		// 	foreach ($inicio as $h){
-		// 		$horarios[] = $h;
-		// 		$origem[] = "inicio";
-		// 	}
-
-		// 	foreach ($fim as $h){
-		// 		$horarios[] = $h;
-		// 		$origem[] = "fim";
-		// 	}
-
-		// 	array_multisort($horarios, SORT_ASC, $origem, SORT_DESC);
-
-		// 	$horarios_com_origem = [];
-		// 	for ($i = 0; $i < count($horarios); $i++){
-		// 		$horarios_com_origem[] = [
-		// 			"horario" => $horarios[$i],
-		// 			"origem" => $origem[$i]
-		// 		];
-		// 	}
-		// //}
-
-		
-		// $primReg = $horarios[0];
-		// $adicNot = [
-		// 	"inicio" => new DateTime(substr($primReg,0,10)." 05:00"),
-		// 	"fim" => new DateTime(substr($primReg,0,10)." 22:00"),
-		// ];
-		// $totalIntervalo 			= new DateTime(substr($primReg,0,10)." 00:00");
-		// $totalIntervaloAdicionalNot = new DateTime(substr($primReg,0,10)." 00:00");
-		// $pares = ["repouso" => []];
-		// $iniciosConsecutivos = false;
-
-		// $inicio_atual = null;
-		// foreach ($horarios_com_origem as $item){
-		// 	if($item["origem"] == "inicio"){
-		// 		if(!empty($inicio_atual)){
-		// 			//Significa que tem dois inícios consecutivos
-		// 			// $pares[] = ["inicio" => date("H:i", strtotime($inicio_atual)), "fim" => ""];
-		// 			$pares[] = ["inicio" => $inicio_atual, "fim" => ""];
-		// 			$iniciosConsecutivos = true;
-		// 		}
-		// 		$inicio_atual = $item["horario"];
-		// 	}elseif($item["origem"] == "fim" && empty($inicio_atual)){
-		// 		//Significa que tem dois fins consecutivos
-		// 		$sem_fim[] = $item["horario"];
-		// 	}
-			
-		// 	if($item["origem"] == "fim" && !empty($inicio_atual)){
-		// 		$hInicio = new DateTime($inicio_atual);
-		// 		$hFim = new DateTime($item["horario"]);
-				
-		// 		$interval = $hInicio->diff($hFim);
-
-		// 		// se intervalo > 2 horas && ehEspera true
-		// 		if($ehEspera && (($interval->h*60) + $interval->i > 120)){
-		// 			// $pares["repouso"][] = ["inicio" => date("H:i", strtotime($inicio_atual)), "fim" => date("H:i", strtotime($item["horario"]))];
-		// 			$pares["repouso"][] = ["inicio" => $inicio_atual, "fim" => $item["horario"]];
-		// 		}else{
-		// 			$totalIntervalo->add($interval);
-		// 			$interval = $interval->format("%H:%I");
-		// 		}
-		// 		// $pares[] = ["inicio" => date("H:i", strtotime($inicio_atual)), "fim" => date("H:i", strtotime($item["horario"])), "intervalo" => $interval];
-		// 		$pares[] = ["inicio" => $inicio_atual, "fim" => $item["horario"], "intervalo" => $interval];
-
-		// 		// VERIFICA HORA SE HÁ HORA EXTRA ACIMA DAS 22:00
-		// 		if($hFim > $adicNot["fim"]){
-		// 			$fimExtra = date("H:i", strtotime($item["horario"]));
-		// 			if($hInicio > $adicNot["fim"]){
-		// 				$hInicioAdicionalNot = $hInicio; //CRIA UMA NOVA VARIAVEL PARA NO CASO DAS 05:00
-		// 				$incioExtra = date("H:i", strtotime($inicio_atual));
-		// 			}else{
-		// 				$hInicioAdicionalNot = new DateTime(substr($primReg,0,10)." 22:00");
-		// 				$incioExtra = "22:00";
-		// 			}
-
-		// 			$intervalAdicionalNot = $hInicioAdicionalNot->diff($hFim);
-		// 			$totalIntervaloAdicionalNot->add($intervalAdicionalNot);
-
-		// 			$intervalAdicionalNot = $intervalAdicionalNot->format("%d %H:%I");
-					
-					
-		// 			$paresAdicionalNot[] = ["inicio" => $incioExtra, "fim" => $fimExtra, "intervalo" => $intervalAdicionalNot];
-		// 		}
-
-		// 		// VERIFICA HORA SE HÁ HORA EXTRA ABAIXO DAS 05:00
-		// 		if($hInicio < $adicNot["inicio"]){
-		// 			$incioExtra = date("H:i", strtotime($inicio_atual));
-		// 			if($hFim > $adicNot["inicio"]){
-		// 				$hFim = new DateTime(substr($primReg,0,10)." 05:00");
-		// 				$fimExtra = "05:00";
-		// 			}else{
-		// 				$fimExtra = date("H:i", strtotime($item["horario"]));
-		// 			}
-
-		// 			$intervalAdicionalNot = $hInicio->diff($hFim);
-		// 			$totalIntervaloAdicionalNot->add($intervalAdicionalNot);
-					
-		// 			$intervalAdicionalNot = $intervalAdicionalNot->format("%H:%I");;
-					
-
-		// 			$paresAdicionalNot[] = ["inicio" => $incioExtra, "fim" => $fimExtra, "intervalo" => $intervalAdicionalNot];
-		// 		}
-
-		// 		$inicio_atual = null;
-		// 	}
-		// }
-		// if($item["origem"] == "inicio"){
-		// 	// $pares[] = ["inicio" => date("H:i", strtotime($item["horario"])), "fim" => ""];
-		// 	$pares[] = ["inicio" => $item["horario"], "fim" => ""];
-		// }
-
-		// $tooltip = "";
-		// for($f = 0; $f < count($pares)-1; $f++){
-		// 	$tooltip .= "Início:_".$pares[$f]["inicio"]."\n"
-		// 		."Fim:___".$pares[$f]["fim"]."\n\n";
-		// }
-		// $iconeAlerta = "";
-		// if(!((count($inicio)+count($fim) == 0) || empty($tooltip))){
-		// 	if(count($inicio) != count($fim) || count($horarios_com_origem)/2 != (count($pares)-1) || $iniciosConsecutivos){ 
-		// 		$iconeAlerta = "<a><i style='color:red;' title='".$tooltip."' class='fa fa-info-circle'></i></a>";
-		// 	}elseif($ehEsperaRepouso){
-		// 		$iconeAlerta = "<a><i style='color:#99ff99;' title='".$tooltip."' class='fa fa-info-circle'></i></a>";
-		// 	}else{
-		// 		$iconeAlerta = "<a><i style='color:green;' title='".$tooltip."' class='fa fa-info-circle'></i></a>";
-		// 	}
-		// }
-
-		// $pares_horarios = [
-		// 	"horariosOrdenados" => $horarios_com_origem,
-		// 	"pares" => $pares,
-		// 	"totalIntervalo" => $totalIntervalo,
-		// 	"icone" => $iconeAlerta
-		// ];
-		
-		// if(count($horarios_com_origem) > 2){
-		// 	$totalInterjornada = new DateTime(substr($primReg,0,10)." 00:00");
-		// 	for ($i = 1; $i < count($horarios_com_origem); $i++){ 
-		// 		$horarioVez = $horarios_com_origem[$i];
-		// 		$horarioAnterior = $horarios_com_origem[($i-1)];
-		// 		if($horarioVez["origem"] == "inicio" && $horarioAnterior["origem"] == "fim"){
-		// 			$dtInicio = new DateTime($horarioVez["horario"]);
-		// 			$dtFim = new DateTime($horarioAnterior["horario"]);
-					
-		// 			$intervalInterjornada = $dtFim->diff($dtInicio);
-
-		// 			$totalInterjornada->add($intervalInterjornada);
-					
-		// 		}
-		// 	}
-
-		// 	$pares_horarios["interjornada"] = $totalInterjornada->format("H:i");
-
-		// }
-
-		// if(count($pares["repouso"]) > 0){
-		// 	$pares_horarios["paresParaRepouso"] = $pares["repouso"];
-		// }
-		// $pares_horarios["paresAdicionalNot"] = "00:00";
-		// $pares_horarios["totalIntervaloAdicionalNot"] = "00:00";
-		// if(isset($paresAdicionalNot) && count($paresAdicionalNot) > 0){
-		// 	$pares_horarios["paresAdicionalNot"] = $paresAdicionalNot;
-		// 	$pares_horarios["totalIntervaloAdicionalNot"] = $totalIntervaloAdicionalNot->format("H:i");
-		// }
-		// // Retorna o array de horários com suas respectivas origens
-		// return $pares_horarios;
+		//Mudar nome da função
+		return ordenar_horarios_2($inicio, $fim, $ehEspera);
 	}
 
 	function ordenarHorariosTipo(array $inicios, array $fins, string $tipo = "", int $order = SORT_ASC): array{
@@ -690,7 +510,7 @@
 			}
 
 			if($dataInicio->format("Y-m-d H:i") > $dataPara->format("Y-m-d H:i")){
-				$dataInicio = $dataInicio->sub(DateInterval::createFromDateString("1 day"));
+				$dataInicio = $dataInicio->sub(DateInterval::createFromDateString(($qtdDias)." days"));
 			}
 			return $qtdDias;
 		});
@@ -1028,7 +848,7 @@
 
 		foreach(["refeicao", "espera", "descanso", "repouso"] as $campoIgnorado){
 			if(is_bool(strpos($aParametro["para_tx_ignorarCampos"], $campoIgnorado))){
-				$registros[$campoIgnorado."Completo"] = ordenar_horarios_2($registros["inicio".ucfirst($campoIgnorado)], $registros["fim".ucfirst($campoIgnorado)]);		/* $refeicaoOrdenada */
+				$registros[$campoIgnorado."Completo"] = ordenar_horarios_2($registros["inicio".ucfirst($campoIgnorado)], $registros["fim".ucfirst($campoIgnorado)], ($campoIgnorado == "espera"));		/* $refeicaoOrdenada */
 			}else{
 				$registros[$campoIgnorado."Completo"] = ordenar_horarios_2([], []);
 			}
@@ -1039,10 +859,24 @@
 				$pares["repouso"] = $registros["esperaCompleto"]["paresParaRepouso"];
 				// unset($registros["esperaCompleto"]["paresParaRepouso"]);
 				for ($i = 0; $i < count($pares["repouso"]); $i++){
-					$registros["repousoPorEspera"]["inicioRepouso"][] 	= $data." ".$pares["repouso"][$i]["inicio"].":00";	/*$aDataHorainicioRepouso*/
-					$registros["repousoPorEspera"]["fimRepouso"][] 		= $data." ".$pares["repouso"][$i]["fim"].":00";		/*$aDataHorafimRepouso*/
+					$registros["repousoPorEspera"]["inicioRepouso"][] 	= $pares["repouso"][$i]["inicio"];	/*$aDataHorainicioRepouso*/
+					$registros["repousoPorEspera"]["fimRepouso"][] 		= $pares["repouso"][$i]["fim"];		/*$aDataHorafimRepouso*/
 				}
-				$registros["repousoPorEspera"]["repousoCompleto"] = ordenar_horarios_2($registros["repousoPorEspera"]["inicioRepouso"], $registros["repousoPorEspera"]["fimRepouso"],false,true);
+				$registros["repousoPorEspera"]["repousoCompleto"] = ordenar_horarios_2($registros["repousoPorEspera"]["inicioRepouso"], $registros["repousoPorEspera"]["fimRepouso"]);
+				
+				// [strpos($registros["repousoPorEspera"]["repousoCompleto"]["icone"], "color:"), strpos($registros["repousoPorEspera"]["repousoCompleto"]["icone"], ";", strpos($registros["repousoPorEspera"]["repousoCompleto"]["icone"], "color:")+6)];
+
+				$registros["repousoPorEspera"]["repousoCompleto"]["icone"] = substr(
+						$registros["repousoPorEspera"]["repousoCompleto"]["icone"],
+						0, 
+						strpos($registros["repousoPorEspera"]["repousoCompleto"]["icone"], "color:")+6
+					)
+					."#00ff00"
+					.substr(
+						$registros["repousoPorEspera"]["repousoCompleto"]["icone"],
+						strpos($registros["repousoPorEspera"]["repousoCompleto"]["icone"], ";", strpos($registros["repousoPorEspera"]["repousoCompleto"]["icone"], "color:")+6),
+					)
+				;
 			}else{
 				$registros["repousoPorEspera"]["repousoCompleto"] = ordenar_horarios_2([], []);
 			}
@@ -1673,7 +1507,7 @@
             }
 
             $motoristas = mysqli_fetch_all(query(
-                "SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_banco FROM entidade"
+                "SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_banco, enti_nb_parametro FROM entidade"
                 ." WHERE enti_tx_status = 'ativo'"
                     ." AND enti_nb_empresa = ".$empresa["empr_nb_id"]
                     ." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
@@ -1690,7 +1524,7 @@
 
                 //Status Endosso{
                     $endossos = mysqli_fetch_all(query(
-                        "SELECT endosso.*, parametro.para_tx_pagarHEExComPerNeg FROM endosso"
+                        "SELECT endosso.* FROM endosso"
 							." WHERE endo_tx_status = 'ativo'"
 								." AND endo_nb_entidade = '".$motorista["enti_nb_id"]."'"
 								." AND ("

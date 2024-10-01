@@ -168,9 +168,8 @@
 				form > div:nth-child(2) > div:nth-child(5),
 				form > div:nth-child(2) > div:nth-child(6),
 				form > div:nth-child(3) > div,
-				form > div.form-actions,
-				<?="#contex-grid-".$rand."_length,"?>
-				<?="#contex-grid-".$rand."_info,"?>
+				form > div.form-actions
+				<?=", #contex-grid-".$rand."_length, #contex-grid-".$rand."_info"?>
 				body > div.scroll-to-top > i{
 					display: none;
 				}
@@ -197,13 +196,13 @@
 				<!-- END EXAMPLE TABLE PORTLET-->
 
 				<!-- BEGIN PAGE LEVEL PLUGINS -->
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
 				<!-- END PAGE LEVEL PLUGINS -->
 
 				<!-- BEGIN PAGE LEVEL SCRIPTS -->
-				<script src="<?=$CONTEX['path']?>/../contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
+				<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
 				<!-- END PAGE LEVEL SCRIPTS -->
 
 
@@ -216,10 +215,11 @@
 		if(isset($match[2])){
 			$parametros = explode(',',$match[2]);
 			$order = $parametros[0];
+			dd([$ordenar_coluna, $match, $order]);
 		}else{
 			$order = $ordenar_coluna;
 		}
-		
+
 		echo 
 			"<div id='ajaxCall'>
 				<script type='text/javascript' language='javascript'>

@@ -43,7 +43,7 @@
 		exit;
 	}
 
-	function enviar_documento() {
+	function enviarDocumento() {
 		// global $a_mod;
 
 		$idEmpresa = $_POST['idEmpresa'];
@@ -117,13 +117,15 @@
 		}
 		$camposObrig = ['cnpj', 'nome', 'cep', 'numero', 'email', 'parametro', 'cidade', 'endereco', 'bairro'];
 		foreach ($camposObrig as $campo) {
-			if (!isset($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'sim' || empty($_POST[$campo])) {
-				echo '<script>alert("Preencha todas as informações obrigatórias.")</script>';
-				visualizarCadastro();
-				exit;
+			if (empty($_POST[$campo]) && $sqlCheckNivel["empr_tx_Ehmatriz"] != 'sim' || empty($_POST[$campo])) {
+				$_POST["errorFields"][] = $campo;
 			}
 		}
-
+		if(!empty($_POST["errorFields"])){
+			set_status("ERRO: Preencha todas as informações obrigatórias.");
+			visualizarCadastro();
+			exit;
+		}
 		$campos = [
 			'nome', 'fantasia', 'cnpj', 'cep', 'endereco', 'bairro', 'numero', 'complemento',
 			'referencia', 'fone1', 'fone2', 'email', 'inscricaoEstadual', 'inscricaoMunicipal',
@@ -152,13 +154,15 @@
 				$_POST['ftpUsername'] = 'u:08995631000108';
 				$_POST['ftpUserpass'] = 'p:0899';
 			} elseif ($empty_ftp_inputs > 0) {
-				echo '<script>alert("Preencha os 3 campos de FTP.")</script>';
+				$_POST["errorFields"] = array_merge(!empty($_POST["errorFields"])? $_POST["errorFields"]: [], ["ftpServer", "ftpUsername", "ftpUserpass"]);
+				set_status("ERRO: Preencha os 3 campos de FTP.");
 				visualizarCadastro();
 				exit;
 			}
 
+			
 			$empresa['empr_nb_userCadastro'] = $_SESSION['user_nb_id'];
-			$empresa['empr_tx_dataCadastro'] = date('Y-m-d H:i:s');
+			$empresa['empr_tx_dataCadastro'] = date('Y-m-d H:i:s');			
 			try {
 				$id_empresa = inserir('empresa', array_keys($empresa), array_values($empresa))[0];
 			} catch (Exception $e) {
@@ -344,12 +348,18 @@
 			$prefix = '';
 
 			$input_values = [
+				'nome' => ($_POST['busca_nome']?? ''),
+				'fantasia' => ($_POST['busca_fantasia']?? ''),
+				'cnpj' => ($_POST['busca_cnpj']?? ''),
+				'uf' => ($_POST['uf']?? ''),
+
 				'ftpServer' => ($_POST['ftpServer']?? ''),
 				'ftpUsername' => ($_POST['ftpUsername']?? ''),
 				'ftpUserpass' => ($_POST['ftpUserpass']?? ''),
 				'cidade' => ($_POST['cidade']?? ''),
 				'dataRegistroCNPJ' => ($_POST['dataRegistroCNPJ']?? '')
 			];
+
 			$btn_txt = 'Cadastrar';
 		}else{ //Tem os dados de atualização, então apenas mantém os valores.
 			$values = $a_mod;
@@ -374,11 +384,13 @@
 			'ftpServer', 'ftpUsername'
 		];
 		foreach($campos as $campo){
-			$input_values[$campo] = !empty($values[$prefix.$campo])? $values[$prefix.$campo]: "";
+			if(empty($input_values[$campo])){
+				$input_values[$campo] = !empty($values[$prefix.$campo])? $values[$prefix.$campo]: "";
+			}
 		}
 
-		$input_values['ftpServer']	 = !empty($input_values['ftpServer'])? $input_values['ftpServer']: "---";
-		$input_values['ftpUsername'] = !empty($input_values['ftpUsername'])? $input_values['ftpUsername']: "---";
+		$input_values['ftpServer']	 = !empty($input_values['ftpServer'])? $input_values['ftpServer']: "";
+		$input_values['ftpUsername'] = !empty($input_values['ftpUsername'])? $input_values['ftpUsername']: "";
 
 
 		if(!empty($input_values['logo'])){
@@ -515,7 +527,6 @@
 
 		fecha_form($botao);
 
-		$path_parts = pathinfo( __FILE__ );
 		echo 
 			"<iframe id=frame_parametro style='display: none;'></iframe>
 			<script>
@@ -526,7 +537,7 @@
 		;
 
 		if (!empty($a_mod['empr_nb_id'])) {
-			echo arquivosEmpresa("Documentos", $a_mod['empr_nb_id'], $arquivos);
+			echo "</div><div class='col-md-12'><div class='col-md-12 col-sm-12'>".arquivosEmpresa("Documentos", $a_mod['empr_nb_id'], $arquivos);
 		}
 
 		rodape();
@@ -624,7 +635,7 @@
 			botao('Inserir','visualizarCadastro','','','','','btn btn-success')
 		];
 		
-		abre_form('Filtro de Busca');
+		abre_form();
 		linha_form($c);
 		fecha_form($botao);
 

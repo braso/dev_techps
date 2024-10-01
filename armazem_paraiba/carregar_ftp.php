@@ -39,6 +39,8 @@
 		}
 		ftp_pasv($ftp_conn, true);
 
+		dd("debug2");
+
 		$lastFile = mysqli_fetch_assoc(query(
 			"SELECT arqu_tx_nome, arqu_tx_data FROM arquivoponto"
 			." WHERE arqu_tx_status = 'ativo'"
@@ -95,8 +97,6 @@
 	}
 
 	function carregar_ftp(string $path){
-
-		
 		// Aplicar após criar o usuário REP-P
 		$user = mysqli_fetch_assoc(query(
 			"SELECT * FROM user"

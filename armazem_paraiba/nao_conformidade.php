@@ -39,10 +39,23 @@
 	// }
 
 	function buscar(){
-		if(!empty($_GET["acao"]) && $_GET["acao"] == "buscar"){//Se estiver pesquisando
+		if(!empty($_POST["acao"]) && $_POST["acao"] == "buscar()"){//Se estiver pesquisando
 			//Conferir se os campos foram inseridos.
-			if(empty($_GET["busca_data"])){
-				echo "<script>alert('Insira data para pesquisar.');</script>";
+			$baseErrMsg = "ERRO: Campos obrigatórios não preenchidos: ";
+			$errorMsg = $baseErrMsg;
+			$camposObrig = [
+				"busca_empresa" => "Empresa",
+				"busca_data" => "Data",
+			];
+			foreach($camposObrig as $key => $value){
+				if(empty($_POST[$key])){
+					$_POST["errorFields"][] = $key;
+					$errorMsg .= $value.", ";
+				}
+			}
+
+			if($errorMsg != $baseErrMsg){
+				set_status(substr($errorMsg, 0, -2).".");
 			}
 		}
 		index();
@@ -62,12 +75,7 @@
 		}
 
 		$extra = "";
-		$_GET["busca_situacao"] = "Não conformidade";
-		foreach(["busca_empresa", "busca_data", "busca_motorista", "busca_situacao"] as $campo){
-			if(isset($_GET[$campo]) && !empty($_GET[$campo])){
-				$_POST[$campo] = $_GET[$campo];
-			}
-		}
+		$_POST["busca_situacao"] = "Não conformidade";
 
 		if(!empty($_POST["busca_motorista"])){
 			$extra = " AND enti_nb_id = ".$_POST["busca_motorista"];
@@ -75,7 +83,7 @@
 		if(!empty($_POST["busca_data"]) && !empty($_POST["busca_empresa"])){
 			$carregando = "Carregando...";
 		}
-		if(empty($_POST["busca_data"])){
+		if(empty($_POST["acao"]) && empty($_POST["busca_data"])){
 			$_POST["busca_data"] = date("Y-m");
 		}
 		if(!empty($_POST["busca_empresa"])){
@@ -110,7 +118,7 @@
 			];
 		//}
 
-		abre_form("Filtro de Busca");
+		abre_form();
 		linha_form($c);
 		fecha_form($b, "<span id=dadosResumo><b>".$carregando."</b></span>");
 		
@@ -347,7 +355,22 @@
 						$aSaldo[$aMotorista["enti_tx_matricula"]] = $totalResumo["diffSaldo"];
 					}
 	
-					$totalResumo = ["diffRefeicao" => "00:00", "diffEspera" => "00:00", "diffDescanso" => "00:00", "diffRepouso" => "00:00", "diffJornada" => "00:00", "jornadaPrevista" => "00:00", "diffJornadaEfetiva" => "00:00", "maximoDirecaoContinua" => "", "intersticio" => "00:00", "he50" => "00:00", "he100" => "00:00", "adicionalNoturno" => "00:00", "esperaIndenizada" => "00:00", "diffSaldo" => "00:00"];
+					$totalResumo = [
+						"diffRefeicao" => "00:00",
+						"diffEspera" => "00:00",
+						"diffDescanso" => "00:00",
+						"diffRepouso" => "00:00",
+						"diffJornada" => "00:00",
+						"jornadaPrevista" => "00:00",
+						"diffJornadaEfetiva" => "00:00",
+						"maximoDirecaoContinua" => "",
+						"intersticio" => "00:00",
+						"he50" => "00:00",
+						"he100" => "00:00",
+						"adicionalNoturno" => "00:00",
+						"esperaIndenizada" => "00:00",
+						"diffSaldo" => "00:00"
+					];
 					unset($aDia);
 				}
 			}

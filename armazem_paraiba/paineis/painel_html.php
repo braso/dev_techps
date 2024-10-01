@@ -1,9 +1,9 @@
 <link rel="stylesheet" href="../css/paineis.css">
 <div id="printTitulo">
-	<img style='width: 150px' src="<?=$logoEmpresa?>" alt="Logo Empresa Esquerda">
+	<img style="width: 150px" src="<?=$logoEmpresa?>" alt="Logo Empresa Esquerda">
 	<h3>Relatorio Geral de saldo</h3>
 	<div class="right-logo">
-		<img style='width: 150px' src="<?=$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
+		<img style="width: 150px" src="<?=$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 	</div>
 </div>
 <div class="col-md-12 col-sm-12" id="pdf2htmldiv">
@@ -19,8 +19,8 @@
                         </tr>
                     </thead>
                     <tbody>
-						<tr class='porcentagemEndo'>
-							<td>Endossado</td>
+						<tr class='porcentagemNaEndo'>
+							<td>Não Endossado</td>
 							<td></td>
 							<td></td>
 						</tr>
@@ -29,8 +29,8 @@
 							<td></td>
 							<td></td>
 						</tr>
-						<tr class='porcentagemNaEndo'>
-							<td>Não Endossado</td>
+						<tr class='porcentagemEndo'>
+							<td>Endossado</td>
 							<td></td>
 							<td></td>
 						</tr>
@@ -45,16 +45,16 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr class='porcentagemPosi'>
-                            <td>Positivo</td>
-                            <td></td>
-                            <td></td>
-                        </tr>
 						<tr class='porcentagemMeta'>
-                            <td>Meta</td>
+							<td>Meta</td>
                             <td></td>
                             <td></td>
                         </tr>
+						<tr class='porcentagemPosi'>
+							<td>Positivo</td>
+							<td></td>
+							<td></td>
+						</tr>
                         <tr class='porcentagemNega'>
                             <td>Negativo</td>
                             <td></td>

@@ -2,19 +2,23 @@
 	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
+
+		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+		header("Pragma: no-cache"); // HTTP 1.0.
+		header("Expires: 0");
 	//*/
 		
 	include "conecta.php";
 
-	function exclui_parametro(){
-		remover("parametro",$_POST["id"]);
+	function excluirParametro(){
+		inactivateById("parametro", $_POST["id"]);
 		index();
 		exit;
 	}
 
 	function downloadArquivo() {
 		// Verificar se o arquivo existe
-		if (file_exists($_POST["caminho"])) {
+		if(file_exists($_POST["caminho"])){
 			// Configurar cabeçalhos para forçar o download
 			header("Content-Description: File Transfer");
 			header("Content-Type: application/octet-stream");
@@ -27,7 +31,7 @@
 			// Lê o arquivo e o envia para o navegador
 			readfile($_POST["caminho"]);
 			exit;
-		} else {
+		}else{
 			echo "O arquivo não foi encontrado.";
 		}
 		$_POST["id"] = $_POST["idParametro"];
@@ -77,20 +81,20 @@
 		$formatosImg = ["image/jpeg", "image/png", "application/msword", "application/pdf"];
 
 		if (in_array($arquivo["type"], $formatosImg) && $arquivo["name"] != "") {
-				$pasta_parametro = "arquivos/parametro/".$novoParametro["para_nb_id"]."/";
-		
-				if (!is_dir($pasta_parametro)) {
-					mkdir($pasta_parametro, 0777, true);
-				}
-		
-				$arquivo_temporario = $arquivo["tmp_name"];
-				$extensao = pathinfo($arquivo["name"], PATHINFO_EXTENSION);
-				$novoParametro["doc_tx_nome"] .= ".".$extensao;
-				$novoParametro["doc_tx_caminho"] = $pasta_parametro.$novoParametro["doc_tx_nome"];
-		
-				if (move_uploaded_file($arquivo_temporario, $novoParametro["doc_tx_caminho"])) {
-					inserir("documento_parametro", array_keys($novoParametro), array_values($novoParametro));
-				}
+			$pasta_parametro = "arquivos/parametro/".$novoParametro["para_nb_id"]."/";
+	
+			if (!is_dir($pasta_parametro)) {
+				mkdir($pasta_parametro, 0777, true);
+			}
+	
+			$arquivo_temporario = $arquivo["tmp_name"];
+			$extensao = pathinfo($arquivo["name"], PATHINFO_EXTENSION);
+			$novoParametro["doc_tx_nome"] .= ".".$extensao;
+			$novoParametro["doc_tx_caminho"] = $pasta_parametro.$novoParametro["doc_tx_nome"];
+	
+			if (move_uploaded_file($arquivo_temporario, $novoParametro["doc_tx_caminho"])) {
+				inserir("documento_parametro", array_keys($novoParametro), array_values($novoParametro));
+			}
 		}
 
 		$_POST["id"] = $novoParametro["para_nb_id"];
@@ -98,7 +102,7 @@
 		exit;
 	}
 
-	function excluir_documento() {
+	function excluir_documento(){
 		query("DELETE FROM documento_parametro WHERE doc_nb_id = ".$_POST["idArq"].";");
 		
 		$_POST["id"] = $_POST["idParametro"];
@@ -127,13 +131,13 @@
 		}else{
 			$_POST["ignorarCampos"] = null;
 		}
+		$camposObrig = [];
 
-		// Removido temporariamente
-		// if(!empty($_POST["acordo"]) && $_POST["acordo"] == "sim"){
-		// 	$camposObrig[] = "inicioAcordo";
-		// 	$camposObrig[] = "fimAcordo";
-		// }
-		
+		if(!empty($_POST["acordo"]) && $_POST["acordo"] == "sim"){
+			$camposObrig["inicioAcordo"] = "Início do Acordo";
+			$camposObrig["fimAcordo"] = "Fim do Acordo";
+		}
+
 		if(!empty($_POST["banco"]) && $_POST["banco"] == "sim"){
 			$camposObrig["quandDias"] = "Quantidade de Dias";
 			$camposObrig["quandHoras"] = "Quantidade de Horas Limite";
@@ -144,8 +148,8 @@
 			"jornadaSemanal" => "Jornada Semanal (Horas/Dia)",
 			"jornadaSabado" => "Jornada Sábado (Horas/Dia)",
 			"tolerancia" => "Tolerância de jornada Saldo diário (Minutos)",
-			"percHESemanal" => "Hora Extra Semanal (%)",
-			"percHEEx" => "Hora Extra Extraordinária (%)",
+			"percHESemanal" => "Hora Extra Semanal",
+			"percHEEx" => "Hora Extra Extraordinária",
 			"maxHESemanalDiario" => "Máx. de \"H.E. Semanal\" por dia"
 		]);
 
@@ -158,11 +162,10 @@
 			}
 		}
 		
-		$emptyFields = substr($emptyFields, 0, strlen($emptyFields)-2);
-
+		
+		
 		if(!empty($emptyFields)){
-		    // echo '<script>alert("Informações obrigatórias faltando: '.$emptyFields.'.")</script>';
-			set_status("ERRO: Informações obrigatórias faltando: ".$emptyFields);
+			set_status("ERRO: Campos obrigatórios não preenchidos: ".substr($emptyFields, 0, strlen($emptyFields)-2));
 			layout_parametro();
 			exit;
 		}
@@ -385,7 +388,7 @@
 				"SELECT * FROM documento_parametro"
 					." WHERE para_nb_id = ".$a_mod["para_nb_id"]
 			),MYSQLI_ASSOC);
-			echo arquivosParametro("Documentos", $a_mod["para_nb_id"], $arquivos);
+			echo "</div><div class='col-md-12'><div class='col-md-12 col-sm-12'>".arquivosParametro("Documentos", $a_mod["para_nb_id"], $arquivos);
 		}
 		rodape();
 
@@ -446,7 +449,7 @@
 			botao("Inserir", "layout_parametro","","","","","btn btn-success"),
 		];
 		
-		abre_form("Filtro de Busca");
+		abre_form();
 		linha_form($campos);
 		fecha_form($botoes);
 
@@ -475,7 +478,7 @@
 			"INÍCIO" 											=> "data(para_tx_inicioAcordo)",
 			"FIM" 												=> "data(para_tx_fimAcordo)",
 			"<spam class='glyphicon glyphicon-search'></spam>" 	=> "icone_modificar(para_nb_id,modifica_parametro)",
-			"<spam class='glyphicon glyphicon-remove'></spam>" 	=> "icone_excluir(para_nb_id,exclui_parametro)"
+			"<spam class='glyphicon glyphicon-remove'></spam>" 	=> "icone_excluir(para_nb_id,excluirParametro)"
 		];
 
 		grid($sql,array_keys($gridCols),array_values($gridCols));

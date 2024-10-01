@@ -1,9 +1,13 @@
-body{
-    --var-blue: #66B4FF;
-    --var-darkblue: #487fb3;
-    --var-red: #FF4719;
-    --var-yellow: #F1C413;
-    --var-green: #00B33D;
+body {
+    --var-blue: #4ea9ff;
+    --var-darkblue: #0757a2;
+    --var-red: #ec4141;
+    --var-darkred: #a30000;
+    --var-yellow: #f1c61f;
+    --var-lightyellow: #ffff75;
+    --var-darkyellow: #c1a300;
+    --var-green: #53d02a;
+    --var-darkgreen: #29a300;
 }
 
 .table-responsive div:first-child{
@@ -31,15 +35,57 @@ body{
     text-shadow: 2px 2px 3px black;
 }
 
-.porcentagemMeta td:first-child, .porcentagemEndoPc td:first-child{
+.titulos th:hover{
+    background-color: var(--var-darkblue);
+    color: white;
+}
+
+
+.porcentagemEndoPc td:first-child{
+    background-color: var(--var-yellow);
+    cursor: pointer;
+}
+
+.porcentagemEndoPc td:first-child:hover{
+    background-color: var(--var-darkyellow);
+    cursor: pointer;
+}
+
+.porcentagemEndo td:first-child, .porcentagemMeta td:first-child{
     background-color: var(--var-blue);
+    cursor: pointer;
 }
-.porcentagemPosi td:first-child, .porcentagemEndo td:first-child{
+
+.porcentagemEndo td:first-child:hover, .porcentagemMeta td:first-child:hover{
+    background-color: var(--var-darkblue);
+    cursor: pointer;
+}
+
+.porcentagemPosi td:first-child{
     background-color: var(--var-green);
+    cursor: pointer;
 }
-.porcentagemNega td:first-child, .porcentagemNaEndo td:first-child{
+
+.porcentagemPosi td:first-child:hover{
+    background-color: var(--var-darkgreen);
+    cursor: pointer;
+}
+
+.porcentagemNaEndo td:first-child, .porcentagemNega td:first-child{
     background-color: var(--var-red);
+    cursor: pointer;
 }
+
+.porcentagemNaEndo td:first-child:hover, .porcentagemNega td:first-child:hover{
+    background-color: var(--var-darkred);
+    cursor: pointer;
+}
+
+.nomeEmpresa:hover{
+    background-color: #b5b8bb;
+    cursor: pointer;
+}
+
 
 .emissao {
     margin-bottom: 20px;
@@ -83,10 +129,6 @@ th.sort-asc::after {
 
 th.sort-desc::after {
     content: " \2193";
-}
-
-#tabela-empresas tbody tr td:first-child:hover{
-    background-color: #b5b8bb;
 }
 
 #impressao{

@@ -75,6 +75,8 @@
 		}
 
 		if (empty($_POST["busca_data"]) || empty($_POST["busca_empresa"]) || empty($_POST["idMotoristaEndossado"])){
+			$_POST["errorFields"][] = "busca_data";
+			$_POST["errorFields"][] = "busca_empresa";
 			set_status("ERRO: Insira data e Funcionário para gerar relatório.");
 			index();
 			exit;
@@ -213,15 +215,19 @@
 			}
 		}
 		//Conferir se os campos do $_POST estão preenchidos{
-			$error = false;
+		if(!empty($_POST["acao"])){
 			$errorMsg = [];
-			if(!empty($_POST["busca_empresa"])){
-				$_POST["busca_empresa"] = (int)$_POST["busca_empresa"];
-			}else{
-				$_POST["busca_empresa"] = "";
-				$error = true;
-				$errorMsg[] = "Empresa";
+			if(empty($_POST["busca_empresa"])){
+				if(empty($_POST["busca_motorista"])){
+					$_POST["busca_empresa"] = "0";
+					$_POST["errorFields"][] = "busca_empresa";
+					$errorMsg[] = "Empresa";
+				}else{
+					$_POST["busca_empresa"] = mysqli_fetch_assoc(query("SELECT enti_nb_empresa FROM entidade WHERE enti_nb_id = ".$_POST["busca_motorista"].";"));
+					$_POST["busca_empresa"] = $_POST["busca_empresa"]["enti_nb_empresa"];
+				}
 			}
+			$_POST["busca_empresa"] = (int)$_POST["busca_empresa"];
 
 			if(!empty($_POST["busca_motorista"])){
 				$extra = " AND enti_nb_id = ".$_POST["busca_motorista"];
@@ -232,45 +238,46 @@
 				$carregando = "Carregando...";
 			}
 
-			if(empty($_POST["busca_data"])){
-				$_POST["busca_data"] = date("Y-m");
-			}else{
+			if(!empty($_POST["busca_data"])){
 				$date = DateTime::createFromFormat("Y-m-d H:i:s", $_POST["busca_data"]."-01 00:00:00");
 				if($date > new DateTime()){
-					$error = true;
-					$errorMsg[] = "Data antes da atualidade";
+					$_POST["errorFields"][] = "busca_data";
+					$errorMsg[] = "<br>Não é possível pesquisar uma data futura.";
 				}
 			}
 
 			$extraMotorista = "";
-			if(!empty($_POST["acao"])){
-				if($error){
-					set_status("ERRO: Insira os campos para pesquisar: ".implode(", ", $errorMsg).".");
-					unset($_GET["acao"]);
-				}
-
-				$extraMotorista = " AND enti_nb_empresa = ".$_POST["busca_empresa"];
-				if(!empty($_POST["busca_endossado"]) && !empty($_POST["busca_empresa"])){
-					$extra .= " AND enti_nb_id";
-					if($_POST["busca_endossado"] == "naoEndossado"){
-						$extra .= " NOT";
-					}
-					$extra .= " IN (
-							SELECT endo_nb_entidade FROM endosso, entidade" 
-								." WHERE '".$_POST["busca_data"]."-01' BETWEEN endo_tx_de AND endo_tx_ate"
-								." AND enti_nb_empresa = '".$_POST["busca_empresa"]."'"
-								." AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
-						)"
-					;
-				}
+			if(!empty($errorMsg)){
+				set_status("ERRO: Insira os campos para pesquisar: ".implode(", ", $errorMsg).".");
+				unset($_GET["acao"]);
 			}
+
+			$extraMotorista = " AND enti_nb_empresa = ".$_POST["busca_empresa"];
+			if(!empty($_POST["busca_endossado"]) && !empty($_POST["busca_empresa"])){
+				$extra .= " AND enti_nb_id";
+				if($_POST["busca_endossado"] == "naoEndossado"){
+					$extra .= " NOT";
+				}
+				$extra .= " IN (
+						SELECT endo_nb_entidade FROM endosso, entidade" 
+							." WHERE '".$_POST["busca_data"]."-01' BETWEEN endo_tx_de AND endo_tx_ate"
+							." AND enti_nb_empresa = '".$_POST["busca_empresa"]."'"
+							." AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
+					)"
+				;
+			}
+		}
+
+		if(empty($_POST["busca_data"])){
+			$_POST["busca_data"] = date("Y-m");
+		}
 		//}
 
 		//CAMPOS DE CONSULTA{
 			$fields = [
 				combo_net("Funcionário", "busca_motorista", (!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 3, "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')".$extraMotorista.$extraEmpresaMotorista, "enti_tx_matricula"),
-				campo_mes("Data",      "busca_data",      (!empty($_POST["busca_data"])?      $_POST["busca_data"]     : ""), 2),
-				combo(	  "Endossado",	"busca_endossado", (!empty($_POST["busca_endossado"])? $_POST["busca_endossado"]: ""), 2, ["" => "", "endossado" => "Sim", "naoEndossado" => "Não"])
+				campo_mes("Data*",      "busca_data",      	(!empty($_POST["busca_data"])?      $_POST["busca_data"]     : ""), 2),
+				combo(	  "Endossado",	"busca_endossado", 	(!empty($_POST["busca_endossado"])? $_POST["busca_endossado"]: ""), 2, ["" => "", "endossado" => "Sim", "naoEndossado" => "Não"])
 			];
 
 			if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
@@ -287,7 +294,7 @@
 
 		echo "<style>.row div {min-width: auto;}</style>";
 
-		abre_form("Filtro de Busca");
+		abre_form();
 		linha_form($fields);
 		fecha_form($buttons, "<span id='dadosResumo' style='height:'><b>".$carregando."</b></span>");
 
