@@ -623,11 +623,17 @@ function criar_relatorio_jornada() {
 						}
 					}
 
-					$jornada = $diaPonto["diffJornada"] == "00:00" ? "-" : ($diaPonto["diffJornada"] > "00:00" ? $diaPonto["diffJornada"] : "-");
+					$jornada = $diaPonto["diffJornada"] == "00:00" ? "" : ($diaPonto["diffJornada"] > "00:00" ? $diaPonto["diffJornada"] : "");
 					$jornadaEfetiva = $diaPonto["diffJornadaEfetiva"] == "00:00" ? "-" : ($diaPonto["diffJornadaEfetiva"] > "00:00" ? $diaPonto["diffJornadaEfetiva"] : "-");
 				}
 
-				if (!empty(array_filter([$descanso, $espera, $refeicao, $repouso]))) {
+				if ($jornada == '*') {
+					$campos = !empty(array_filter([$jornada,$descanso, $espera, $refeicao, $repouso]));
+				} else{
+					$campos = !empty(array_filter([$descanso, $espera, $refeicao, $repouso]));
+				}
+
+				if ($campos) {
 					$row [] = [
 						"data" => $date->format('d/m/Y'),
 						"matricula" => $motorista["enti_tx_matricula"],
