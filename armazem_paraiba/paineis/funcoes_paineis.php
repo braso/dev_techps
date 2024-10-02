@@ -661,3 +661,74 @@ function criar_relatorio_jornada() {
 	}
 	return;
 }
+
+function relatorio_nao_conformidade_juridica() {
+	// $periodoInicio = $_POST["busca_dataInicio"];
+	// $periodoFim = $_POST["busca_dataFim"];
+
+	$periodoInicio = "2024-07-01";
+	$periodoFim = "2024-07-31";
+
+	$empresas = mysqli_fetch_all(
+		query(
+			"SELECT empr_nb_id, empr_tx_nome"
+			. " FROM `empresa` WHERE empr_tx_status = 'ativo'"
+			. " ORDER BY empr_tx_nome ASC;"
+		),
+		MYSQLI_ASSOC
+	);
+
+	foreach ($empresas as $empresa) {
+		$motoristas = mysqli_fetch_all(
+			query(
+				"SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula FROM entidade"
+				. " WHERE enti_tx_status = 'ativo'"
+				. " AND enti_nb_empresa = " . $empresa['empr_nb_id']
+				. " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
+				. " ORDER BY enti_tx_nome ASC;"
+			),
+			MYSQLI_ASSOC
+		);
+
+		foreach ($motoristas as $motorista) {
+			$row = [];
+
+			$diasPonto = [];
+			$dataTimeInicio = new DateTime($periodoInicio);
+			$dataTimeFim = new DateTime($periodoFim);
+
+			$mes = $dataTimeInicio->format('m');
+			$ano = $dataTimeInicio->format('Y');
+
+			for ($date = $dataTimeInicio; $date <= $dataTimeFim; $date->modify('+1 day')) {
+				$dataVez = $date->format('Y-m-d');
+
+				$diasPonto[] = diaDetalhePonto($motorista['enti_tx_matricula'], $dataVez);
+			}
+
+			$linhas = [
+				"inicioJornada", "inicioRefeicao", "fimRefeicao", "fimJornada", "diffRefeicao",
+				"diffEspera", "diffDescanso", "diffRepouso", "diffJornada", "jornadaPrevista", 
+				"diffJornadaEfetiva", "maximoDirecaoContinua", "intersticio", "he50", "he100", 
+				"adicionalNoturno", "esperaIndenizada"
+			];
+		
+			$row = array_fill_keys($linhas, 0); // Inicia o array com valores 0
+		
+			foreach ($diasPonto as $diaPonto) {
+				foreach ($linhas as $linha) {
+					if (isset($diaPonto[$linha]) && strpos($diaPonto[$linha], "fa-warning") !== false) {
+						$row[$linha] += 1;
+					}
+				}
+			}
+
+			echo '<pre>';
+			var_dump($motorista["enti_tx_nome"]);
+			echo json_encode($row, JSON_PRETTY_PRINT);
+			echo '</pre>';
+		}
+
+		die();
+	}
+}
