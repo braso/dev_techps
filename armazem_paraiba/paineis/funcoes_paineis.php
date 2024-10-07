@@ -666,8 +666,8 @@ function relatorio_nao_conformidade_juridica() {
 	// $periodoInicio = $_POST["busca_dataInicio"];
 	// $periodoFim = $_POST["busca_dataFim"];
 
-	$periodoInicio = "2024-07-01";
-	$periodoFim = "2024-07-31";
+	$periodoInicio = "2024-10-01";
+	$periodoFim = "2024-10-07";
 
 	$empresas = mysqli_fetch_all(
 		query(
@@ -706,22 +706,72 @@ function relatorio_nao_conformidade_juridica() {
 				$diasPonto[] = diaDetalhePonto($motorista['enti_tx_matricula'], $dataVez);
 			}
 
-			$linhas = [
-				"inicioJornada", "inicioRefeicao", "fimRefeicao", "fimJornada", "diffRefeicao",
-				"diffEspera", "diffDescanso", "diffRepouso", "diffJornada", "jornadaPrevista", 
-				"diffJornadaEfetiva", "maximoDirecaoContinua", "intersticio", "he50", "he100", 
-				"adicionalNoturno", "esperaIndenizada"
-			];
-		
-			$row = array_fill_keys($linhas, 0); // Inicia o array com valores 0
-		
+			$inicioSemRegistro = 0;
+			$inicioRefeicaoSemRegistro = 0;
+			$fimRefeicaoSemRegistro = 0;
+			$fimSemRegistro = 0;
+			$refeicao1h = 0;
+			$refeicao2h = 0;
+			$esperaAberto = 0;
+			$descansoAberto = 0;
+			$repousoAberto = 0;
+
 			foreach ($diasPonto as $diaPonto) {
-				foreach ($linhas as $linha) {
-					if (isset($diaPonto[$linha]) && strpos($diaPonto[$linha], "fa-warning") !== false) {
-						$row[$linha] += 1;
-					}
+				if (strpos($diaPonto["inicioJornada"], "fa-warning") !== false) {
+					$inicioSemRegistro += 1;
 				}
+				if (strpos($diaPonto["inicioRefeicao"], "fa-warning") !== false) {
+					$inicioRefeicaoSemRegistro += 1;
+				}
+				if (strpos($diaPonto["fimRefeicao"], "fa-warning") !== false) {
+					$fimRefeicaoSemRegistro += 1;
+				}
+				if (strpos($diaPonto["fimJornada"], "fa-warning") !== false) {
+					$fimSemRegistro += 1;
+				}
+
+				if (strpos($diaPonto["diffRefeicao"], "fa-warning") !== false) {
+					$refeicao1h += 1;
+				}
+				
+				if (strpos($diaPonto["diffRefeicao"], "fa-info-circle") !== false &&
+				strpos($diaPonto["diffRefeicao"], "color:orange;") !== false) {
+					$refeicao2h += 1;
+				}
+
+				if (strpos($diaPonto["diffEspera"], "fa-info-circle") !== false &&
+				strpos($diaPonto["diffEspera"], "color:red;") !== false) {
+					$esperaAberto += 1;
+				}
+
+				if (strpos($diaPonto["diffDescanso"], "fa-info-circle") !== false &&
+				strpos($diaPonto["diffDescanso"], "color:red;") !== false) {
+					$descansoAberto += 1;
+				}
+
+				if (strpos($diaPonto["diffRepouso"], "fa-info-circle") !== false &&
+				strpos($diaPonto["diffRepouso"], "color:red;") !== false) {
+					$repousoAberto += 1;
+				}
+
+				$row = [
+					"inicioSemRegistro" => $inicioSemRegistro,
+					"inicioRefeicaoSemRegistro" => $inicioRefeicaoSemRegistro,
+					"fimRefeicaoSemRegistro" => $fimRefeicaoSemRegistro,
+					"fimSemRegistro" => $fimSemRegistro,
+					"refeicao1h" => $refeicao1h,
+					"refecao2h" => $refeicao2h,
+					"esperaAberto" => $esperaAberto,
+					"descansoAberto" => $descansoAberto,
+					"repousoAberto" => $repousoAberto,
+				];
 			}
+
+						// $linhas = [
+			// "diffJornada", "jornadaPrevista", 
+			// 	"diffJornadaEfetiva", "maximoDirecaoContinua", "intersticio", "he50", "he100", 
+			// 	"adicionalNoturno", "esperaIndenizada"
+			// ];
 
 			echo '<pre>';
 			var_dump($motorista["enti_tx_nome"]);
