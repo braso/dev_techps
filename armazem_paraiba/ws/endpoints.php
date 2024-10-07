@@ -28,8 +28,7 @@
 
             if(empty($data)){
                 $msg = 'Wrong Username Address';
-            }
-            if($data[0]['user_tx_senha'] !== md5($_POST['password'])){
+            }elseif($data[0]['user_tx_senha'] !== md5($_POST['password'])){
                 $msg = 'Wrong Password';
             }
             if(!empty($msg)){
