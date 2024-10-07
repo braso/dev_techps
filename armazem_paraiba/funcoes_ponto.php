@@ -9,22 +9,14 @@
 	//*/
 	include_once __DIR__."/conecta.php";
 
-	function calcularAbono($horario1, $horario2){
-		// Converter os horários em minutos
-		$horario1 = str_replace("-", "", $horario1);
-		$horario2 = str_replace("-", "", $horario2);
-		$saldoPositivo = $horario1;
+	function calcularAbono($saldo, $tempoAbono){
+		$saldoPositivo = $saldo;
 
-		$minutos1 = intval(substr($horario1, 0, 2)) * 60 + intval(substr($horario1, 3, 2));
-		$minutos2 = intval(substr($horario2, 0, 2)) * 60 + intval(substr($horario2, 3, 2));
-
-		$diferencaMinutos = $minutos2 - $minutos1;
-
-		if($diferencaMinutos > 0){
-			return $saldoPositivo;
+		if($saldo[0] == "-"){
+			return ((substr($saldo, 1) >= $tempoAbono)? $tempoAbono: substr($saldo, 1));
+		}else{
+			return "00:00";
 		}
-		
-		return $horario2;
 	}
 
 	function layout_ajuste(){
@@ -348,7 +340,7 @@
 				$inicio_atual = $item["horario"];
 			}elseif($item["origem"] == "fim" && empty($inicio_atual)){
 				//Significa que tem dois fins consecutivos
-				$sem_fim[] = $item["horario"];
+				$pares[] = ["inicio" => "", "fim" => $item["horario"]];
 			}
 			
 			if($item["origem"] == "fim" && !empty($inicio_atual)){
@@ -382,7 +374,8 @@
 				(!empty($pares[$f]["inicio"])? DateTime::createFromFormat("Y-m-d H:i:s", $pares[$f]["inicio"])->format("d/m H:i"): ""),
 				(!empty($pares[$f]["fim"])? DateTime::createFromFormat("Y-m-d H:i:s", $pares[$f]["fim"])->format("d/m H:i"): "")
 			];
-			$tooltip .= "Início:_".$temp[0]."\n"
+			$tooltip .= 
+				"Início:_".$temp[0]."\n"
 				."Fim:___".$temp[1]."\n\n";
 		}
 		unset($temp);
@@ -576,7 +569,6 @@
 						}
 					}
 				}else{
-					//Necessário alinhar o $periodosAdicNot com a data de $hInicio (incompleto)
 					if($hInicio->format("Y-m-d") == $periodosAdicNot["inicios"][0]->format("Y-m-d")){
 						$hInicio->sub(DateInterval::createFromDateString(((date_diff($periodosAdicNot["inicios"][0], $hInicio))->d-1)." day"));
 						$qtdDias = $avancarDias($hInicio, $hFim, $periodosAdicNot);
@@ -849,6 +841,12 @@
 		foreach(["refeicao", "espera", "descanso", "repouso"] as $campoIgnorado){
 			if(is_bool(strpos($aParametro["para_tx_ignorarCampos"], $campoIgnorado))){
 				$registros[$campoIgnorado."Completo"] = ordenar_horarios_2($registros["inicio".ucfirst($campoIgnorado)], $registros["fim".ucfirst($campoIgnorado)], ($campoIgnorado == "espera"));		/* $refeicaoOrdenada */
+				if(!empty($registros["inicio".ucfirst($campoIgnorado)][0]) && !empty($data)){
+        		    $qtdDias = date_diff(DateTime::createFromFormat("Y-m-d H:i:s", $registros["inicio".ucfirst($campoIgnorado)][0]), DateTime::createFromFormat("Y-m-d H:i:s", $data." 00:00:00"))->d;
+        		    if($qtdDias > 0){
+        		        $registros[$campoIgnorado."Completo"]["totalIntervalo"]->sub(DateInterval::createFromDateString($qtdDias." days"));
+        		    }
+        		}
 			}else{
 				$registros[$campoIgnorado."Completo"] = ordenar_horarios_2([], []);
 			}
@@ -1453,7 +1451,7 @@
 	}
 
 	//@return [he50, he100]
-	function calcularHorasAPagar(string $saldoBruto, string $he50, string $he100, string $max50APagar, string $pagarHEExComPerNeg = "sim"): array{
+	function calcularHorasAPagar(string $saldoBruto, string $he50, string $he100, string $max50APagar, string $pagarHEExComPerNeg = "nao"): array{
 		$params = [$saldoBruto, $he50, $he100, $max50APagar];
 		foreach($params as $param){
 			if(!preg_match("/^-?\d{2,4}:\d{2}$/", $param)){
@@ -1462,7 +1460,7 @@
 		}
 
 		if($saldoBruto[0] == "-"){
-			if($pagarHEExComPerNeg != "nao"){
+			if($pagarHEExComPerNeg == "sim"){
 				return ["00:00", $he100];
 			}
 
@@ -1596,7 +1594,7 @@
 
                     $row["saldoPeriodo"]                            = $endossoCompleto["totalResumo"]["diffSaldo"];
                     $endossoCompleto["totalResumo"]["saldoBruto"]   = operarHorarios([$saldoAnterior, $row["saldoPeriodo"]], "+");
-                    [$row["HESemanal"], $row["HESabado"]]           = calcularHorasAPagar($endossoCompleto["totalResumo"]["saldoBruto"], $endossoCompleto["totalResumo"]["he50"], $endossoCompleto["totalResumo"]["he100"], $endossoCompleto["endo_tx_max50APagar"], ($parametro["para_tx_pagarHEExComPerNeg"]?? "sim"));
+                    [$row["HESemanal"], $row["HESabado"]]           = calcularHorasAPagar($endossoCompleto["totalResumo"]["saldoBruto"], $endossoCompleto["totalResumo"]["he50"], $endossoCompleto["totalResumo"]["he100"], $endossoCompleto["endo_tx_max50APagar"], ($parametro["para_tx_pagarHEExComPerNeg"]?? "nao"));
                     $row["jornadaPrevista"]                         = $endossoCompleto["totalResumo"]["jornadaPrevista"];
                     $row["jornadaEfetiva"]                          = $endossoCompleto["totalResumo"]["diffJornadaEfetiva"];
                     $row["adicionalNoturno"]                        = $endossoCompleto["totalResumo"]["adicionalNoturno"];
