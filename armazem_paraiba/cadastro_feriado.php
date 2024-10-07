@@ -44,7 +44,6 @@
 			"feri_tx_status" => "ativo"
 		];
 
-		dd("Passou");
 		if(!empty($_POST["id"])){
 			atualizar("feriado", array_keys($novoFeriado), array_values($novoFeriado), $_POST["id"]);
 		}else{
