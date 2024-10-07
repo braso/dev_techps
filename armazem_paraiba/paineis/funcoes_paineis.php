@@ -35,6 +35,15 @@ function salvarArquivo(string $path, string $fileName, string $data) {
 function criar_relatorio_saldo() {
 
 	global $totalResumo;
+
+	//Conferir se os campos POST estão preenchidos{
+		$camposObrig = ["busca_dataInicio", "busca_dataFim"];
+		if(array_values(array_intersect(array_keys($_POST), $camposObrig)) != $camposObrig){
+			echo "L".__LINE__.": Campos obrigatórios não preenchidos.";
+			exit;
+		}
+	//}
+
 	$dataInicio = new DateTime($_POST["busca_dataInicio"]);
 	$dataFim = new DateTime($_POST["busca_dataFim"]);
 
@@ -59,7 +68,7 @@ function criar_relatorio_saldo() {
 	];
 
 	foreach ($empresas as $empresa) {
-		$path = "./arquivos/saldos" . "/" . $dataInicio->format("Y-m") . "/" . $empresa["empr_nb_id"];
+		$path = "./arquivos/saldos"."/".$dataInicio->format("Y-m")."/".$empresa["empr_nb_id"];
 		if (!is_dir($path)) {
 			mkdir($path, 0755, true);
 		}
