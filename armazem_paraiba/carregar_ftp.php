@@ -39,8 +39,6 @@
 		}
 		ftp_pasv($ftp_conn, true);
 
-		dd("debug2");
-
 		$lastFile = mysqli_fetch_assoc(query(
 			"SELECT arqu_tx_nome, arqu_tx_data FROM arquivoponto"
 			." WHERE arqu_tx_status = 'ativo'"
