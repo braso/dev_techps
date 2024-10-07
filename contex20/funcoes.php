@@ -159,7 +159,7 @@
 			case $versoesEndosso[1]:
 				$endosso["totalResumo"]["saldoBruto"] = $endosso["totalResumo"]["saldoAtual"];
 				unset($endosso["totalResumo"]["saldoAtual"]);
-				[$endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]] = calcularHorasAPagar($endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50"], $endosso["totalResumo"]["he100"], (!empty($endosso["endo_tx_max50APagar"])? $endosso["endo_tx_max50APagar"]: "00:00"));
+				[$endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]] = calcularHorasAPagar($endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50"], $endosso["totalResumo"]["he100"], (!empty($endosso["endo_tx_max50APagar"])? $endosso["endo_tx_max50APagar"]: "00:00"), ($endosso["totalResumo"]["para_tx_pagarHEExComPerNeg"]?? "nao"));
 				$endosso["totalResumo"]["saldoFinal"] = operarHorarios([$endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]], "-");
 			break;
 			case $versoesEndosso[2]:
@@ -304,7 +304,7 @@
 	function ultimo_reg($tabela){
 		$campo = substr($tabela,0,4)."_nb_id";
 
-		$sql=query("SELECT $campo FROM $tabela ORDER BY $campo DESC LIMIT 1");
+		$sql=query("SELECT $campo FROM $tabela ORDER BY $campo DESC LIMIT 1;");
 		return carrega_array($sql)[0];
 	}
 
@@ -404,6 +404,13 @@
 
 	}
 
+	function destacarJornadas(string $texto){
+		if(in_array($texto, ["Inicio de Jornada", "Fim de Jornada"])){
+			$texto = "<b>".$texto."</b>";
+		}
+		return $texto;
+	}
+
 	function formatPerc(int $value): string{
 		// $res = "";
 		// if($value < 1){
@@ -433,6 +440,15 @@
 		$_POST['msg_status'] = $msg;
 	}
 
+	function separarPeriodo(string $periodo): array{
+		preg_match_all("/(\d{2}\/\d{2}\/\d{4})+(\d{2}:\d{2}:\d{2})?/", $periodo, $matches);
+		$matches = !empty($matches)? $matches[0]: $matches;
+		foreach($matches as &$match){
+			$match = DateTime::createFromFormat("d/m/Y", $match)->format("Y-m-d");
+		}
+		return $matches;
+	}
+
 	function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 		global $CONTEX;
 
@@ -452,10 +468,33 @@
 				$type = "month";
 			break;
 			case "MASCARA_PERIODO":
+				//Deve receber os valores como ["Y-m-d", "Y-m-d"], mas retornará "d/m/Y - d/m/Y"
+
 				$datas = ["", ""];
-				if(!empty($_POST[$variavel])){
-					$datas = implode(" - ", $_POST[$variavel]);
+				if(!empty($modificador)){
+					if(!is_array($modificador)){
+						set_status("ERRO: ".$variavel." deve ser um array.");
+						index();
+						exit;
+					}elseif(count($modificador) != 2){
+						set_status("ERRO: ".$variavel." deve ter 2 valores.");
+						index();
+						exit;
+					}
+					$datas = [
+						DateTime::createFromFormat("Y-m-d", $modificador[0])->format("d/m/Y"),
+						DateTime::createFromFormat("Y-m-d", $modificador[1])->format("d/m/Y"),
+					];
+
+					if(in_array(false, $datas)){
+						set_status("ERRO: datas com formatação incorreta.");
+						index();
+						exit;
+					}
+
+					$modificador = "";
 				}
+
 				$dataScript = 
 					"<script type='text/javascript' src='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/js/moment.min.js'></script>
 					<script type='text/javascript' src='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/js/daterangepicker.min.js'></script>
@@ -482,13 +521,22 @@
 									'firstDay': 1
 								},
 								'isInvalidDate': function(date){
-									data = new Date(date._i[0], date._i[1]+1, date._i[2]).valueOf();
-									return (data > Date.now() || data < new Date(2023, 0, 1).valueOf());
+									data = new Date(date._i[0], date._i[1], date._i[2]).valueOf();
+									return (data > Date.now() || data < new Date(2022, 11, 1).valueOf());
 								}
 							}, function(start, end, label) {
-								console.log(document.getElementsByClassName('contex_form'));
-								console.log('A new date selection was made: '+start.format('YYYY-MM-DD')+' to '+end.format('YYYY-MM-DD'));
+								// console.log(start);
+								// console.log(end);
 							});
+
+							$('input[name=\"$variavel\"]').isOverwriteMode = true;
+
+							var date = new Date();
+							$('input[name=\"$variavel\"]').inputmask({mask: ['99/99/9999 - 99/99/9999'], placeholder: '01/01/2023 - 01/01/2023'})
+
+							// $('input[name=\"$variavel\"]').on('apply.daterangepicker', function(ev, picker) {
+							// 	console.log(picker.startDate.format('YYYY-MM-DD')+' - '+picker.endDate.format('YYYY-MM-DD'));
+							// });
 						});"
 				;
 			break;
@@ -515,8 +563,7 @@
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999-99', '99.999.999/9999-99']});";
 			break;
 			case "MASCARA_RG":
-				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999'],
-				numericInput: true, numericInput: true, rightAlign: false});";
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999'], numericInput: true, rightAlign: false});";
 			break;
 			case "MASCARA_DINHERO":
 				$dataScript .= 
@@ -574,10 +621,10 @@
 		}
 
 		if(empty($campo)){
-			$campo = '<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content">
-				<label>'.$nome.'</label>
-				<input name="'.$variavel.'" id="'.$variavel.'" value="'.$modificador.'" autocomplete="off" type="'.$type.'" class="'.$classe.'" '.$extra.'>
-			</div>';
+			$campo = "<div class='col-sm-".$tamanho." margin-bottom-5 campo-fit-content'>
+				<label>".$nome."</label>
+				<input name='".$variavel."' id='".$variavel."' value='".$modificador."' autocomplete='off' type='".$type."' class='".$classe."' ".$extra.">
+			</div>";
 		}
 
 		return $campo.$dataScript;
