@@ -56,7 +56,6 @@ body {
     color: white;
 }
 
-
 .porcentagemEndoPc td:first-child{
     background-color: var(--var-yellow);
     cursor: pointer;
@@ -156,7 +155,7 @@ th.sort-desc::after {
         margin: 1cm;
         margin-right: 0cm;
         /* Ajuste o valor conforme necessário para afastar do lado direito */
-        transform: scale(1.0);
+        transform: scale(0.99);
         transform-origin: top left;
     }
 
@@ -236,10 +235,15 @@ th.sort-desc::after {
         padding: 75px 20px 15px !important;
     }
 
+    .table-responsive {
+        overflow-x: visible !important;
+        min-height: auto !important;
+    }
+
     #impressao {
         display: block !important;
         position: relative;
-        padding-left: 630px!important;
+        padding-left: 970px !important;
     }
 }
 

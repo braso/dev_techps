@@ -439,7 +439,7 @@
 								.">"
 									."Imprimir Relatório"
 								."</button>"
-							;
+							; 
 						}
 
 						abre_form(

@@ -17,7 +17,6 @@
 	}
 
 	function cadastra_feriado(){
-
 		$camposObrig = [
 			"nome" => "Nome",
 			"data" => "Data"
@@ -36,6 +35,10 @@
 			exit;
 		}
 		
+		if (empty($_POST["cidade"])) {
+			$_POST["cidade"] = 0;
+		}
+
 		$novoFeriado = [
 			"feri_tx_nome" => $_POST["nome"],
 			"feri_tx_data" => $_POST["data"],
