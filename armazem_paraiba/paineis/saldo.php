@@ -5,7 +5,8 @@
     //*/
      
     header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
-    header("Pragma: no-cache"); // HTTP 1.0.
+    header('Cache-Control: post-check=0, pre-check=0', FALSE);
+    header('Pragma: no-cache');
     header("Expires: 0");
     
     require_once __DIR__."/funcoes_paineis.php";
@@ -551,6 +552,7 @@
             $rowTotais .= "</tr>";
             $rowTitulos .= "</tr>";
 
+            $titulo = "Geral de saldo";
             include_once "painel_html.php";
 
             echo "<div class='script'>"
