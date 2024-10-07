@@ -210,9 +210,7 @@
 
 		if($_POST["id"] == $_SESSION["user_nb_id"]){
 			foreach($usuario as $key => $value){
-				if(!empty($_SESSION[$key])){
-					$_SESSION[$key] = $usuario[$key];
-				}
+				$_SESSION[$key] = $usuario[$key];
 			}
 		}
 
@@ -238,11 +236,11 @@
 		
 		//Atualizando a senha caso seja administrador{
 		//}
+
 		if (is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
 			if (!empty($_POST["senha"]) && !empty($_POST["senha2"])) {
 				$novaSenha = ["user_tx_senha" => md5($_POST["senha"])];
 				atualizar("user", array_keys($novaSenha), array_values($novaSenha), $_POST["id"]);
-				return;
 			}
 		}
 
@@ -256,8 +254,6 @@
 				$novaSenha = ["user_tx_senha" => md5($_POST["senha"])];
 				atualizar("user", array_keys($novaSenha), array_values($novaSenha), $_POST["id"]);
 			}
-      		index();
-			exit;
 		}
 		
 		$usuario["user_nb_userAtualiza"] = $_SESSION["user_nb_id"];
@@ -273,7 +269,7 @@
 
 	function excluirFoto(){
 		atualizar("user", ["user_tx_foto"], [""], $_POST["id"]);
-		$_POST["id"] = $_POST["id"];
+		$_SESSION["user_tx_foto"] = "";
 		mostrarFormCadastro();
 		exit;
 	}
