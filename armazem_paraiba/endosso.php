@@ -107,7 +107,7 @@
 				    $max50APagar = "00:00";
 				}
 
-				$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $max50APagar, ($aMotorista["para_tx_pagarHEExComPerNeg"]?? "sim"));
+				$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $max50APagar, ($aMotorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
 
 				$totalResumo["HESemanalAPagar"] = $aPagar[0];
 				$totalResumo["HEExAPagar"] = $aPagar[1];
@@ -395,7 +395,7 @@
 							$endossoCompleto["endo_tx_max50APagar"] = "00:00";
 						}
 
-						$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $endossoCompleto["endo_tx_max50APagar"], ($aMotorista["para_tx_pagarHEExComPerNeg"]?? "sim"));
+						$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $endossoCompleto["endo_tx_max50APagar"], ($aMotorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
 						$aPagar = operarHorarios($aPagar, "+");
 						$saldoFinal = operarHorarios([$totalResumo["saldoBruto"], $aPagar], "-");
 
