@@ -69,6 +69,19 @@
 			--img_path: url("<?= $CONTEX["path"] ?>/imagens/logo_topo_cliente.png");
 		}
 
+		.logo-default{
+			transition: filter .3s;
+		}
+
+		.logo-default:hover{
+			filter: brightness(1.5);
+			transition: filter .3s;
+		}
+
+		.dropdown-toggle{
+			height: -webkit-fill-available;
+		}
+
 		.form-actions {
 			display: flex;
 			flex-wrap: wrap;
@@ -236,7 +249,7 @@
 							<!-- INICIO USER LOGIN DROPDOWN -->
 							<li class="dropdown dropdown-user dropdown-dark">
 								<a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
-									<img alt="" class="img-circle" src="<?= $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"].(!empty($_SESSION["user_tx_foto"])? "/".$_SESSION["user_tx_foto"]: "/contex20/img/user.png") ?>">
+									<img alt="" class="img-circle" src="<?= (!empty($_SESSION["user_tx_foto"])? $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$_SESSION["user_tx_foto"]: $_ENV["APP_PATH"]."/contex20/img/user.png") ?>">
 									<span class="username username-hide-mobile"><?= $_SESSION["user_tx_login"] ?></span>
 								</a>
 								<ul class="dropdown-menu dropdown-menu-default">
