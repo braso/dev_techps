@@ -547,7 +547,7 @@
 			"CÓD"												=> "pont_nb_id",
 			"DATA"												=> "data(pont_tx_data, 1)",
 			"PLACA"                                             => "pont_tx_placa",
-			"TIPO"												=> "macr_tx_nome",
+			"TIPO"												=> "destacarJornadas(macr_tx_nome)",
 			"MOTIVO"											=> "moti_tx_nome",
 			"LEGENDA"											=> "moti_tx_legenda",
 			"JUSTIFICATIVA"										=> "pont_tx_justificativa",
