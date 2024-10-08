@@ -213,6 +213,10 @@
 	</style>
 
 	<script type="text/javascript">
+		function validChar(e, pattern = '[a-zA-z0-9]'){
+			char = String.fromCharCode(e.keyCode);
+			return (char.match(pattern));
+		};
 		function contex_foco(elemento){
 			var campoFoco = document.forms[0].elements[<?= $foco ?>];
 			if (campoFoco != null){

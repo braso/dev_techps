@@ -614,17 +614,29 @@
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['AAA-9A99', 'AAA-9999']});";
 			break;
 		}
-		$dataScript .= '</script>';
+		$dataScript .= 
+				"field = document.querySelector('#".$variavel."');
+				if(typeof field.addEventListener !== 'undefined'){
+					field.addEventListener('keypress', function(e){
+						if(!validChar(e, \"[^!-/]\")){
+							e.preventDefault();
+						}
+					});
+				}
+			</script>"
+		;
 
 		if(empty($type)){
 			$type = "text";
 		}
 
 		if(empty($campo)){
-			$campo = "<div class='col-sm-".$tamanho." margin-bottom-5 campo-fit-content'>
-				<label>".$nome."</label>
-				<input name='".$variavel."' id='".$variavel."' value='".$modificador."' autocomplete='off' type='".$type."' class='".$classe."' ".$extra.">
-			</div>";
+			$campo = 
+				"<div class='col-sm-".$tamanho." margin-bottom-5 campo-fit-content'>
+					<label>".$nome."</label>
+					<input name='".$variavel."' id='".$variavel."' value='".$modificador."' autocomplete='off' type='".$type."' class='".$classe."' ".$extra.">
+				</div>"
+			;
 		}
 
 		return $campo.$dataScript;
