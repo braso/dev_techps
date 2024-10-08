@@ -618,7 +618,7 @@
 				"field = document.querySelector('#".$variavel."');
 				if(typeof field.addEventListener !== 'undefined'){
 					field.addEventListener('keypress', function(e){
-						if(!validChar(e, \"[^!-\-]\")){
+						if(!validChar(e, \"[^!-']\")){
 							e.preventDefault();
 						}
 					});
