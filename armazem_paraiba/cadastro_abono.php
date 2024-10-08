@@ -75,6 +75,7 @@
 				remover("abono", $aRemover["abon_nb_id"]);
 			}
 			$aDetalhado = diaDetalhePonto($a["enti_tx_matricula"], $i->format("Y-m-d"));
+			$aDetalhado["diffSaldo"] = str_replace(["<b>", "</b>"], ["", ""], $aDetalhado["diffSaldo"]);
 			$abono = calcularAbono($aDetalhado["diffSaldo"], $_POST["abono"]);
 
 			$novoAbono = [
@@ -87,7 +88,6 @@
 				"abon_tx_dataCadastro" 	=> date("Y-m-d H:i:s"),
 				"abon_tx_status" 		=> "ativo"
 			];
-
 			inserir("abono", array_keys($novoAbono), array_values($novoAbono));
 		}
 
@@ -140,18 +140,13 @@
 		abre_form();
 
 		if(empty($_POST["HTTP_REFERER"])){
-			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
-			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_abono.php"))){
-				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
-			}
-		}else {
-			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/nao_conformidade.php";
+			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
 		}
 
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		echo campo_hidden("busca_empresa", $_POST["busca_empresa"]);
-		echo campo_hidden("busca_dataInicio", $_POST["busca_dataInicio"]);
-		echo campo_hidden("busca_dataFim", $_POST["busca_dataFim"]);
+		echo campo_hidden("busca_empresa", ($_POST["busca_empresa"]?? ""));
+		echo campo_hidden("busca_dataInicio", ($_POST["busca_dataInicio"]?? ""));
+		echo campo_hidden("busca_dataFim", ($_POST["busca_dataFim"]?? ""));
 		
 		linha_form($campos[0]);
 		linha_form($campos[1]);

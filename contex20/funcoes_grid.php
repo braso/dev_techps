@@ -215,7 +215,6 @@
 		if(isset($match[2])){
 			$parametros = explode(',',$match[2]);
 			$order = $parametros[0];
-			dd([$ordenar_coluna, $match, $order]);
 		}else{
 			$order = $ordenar_coluna;
 		}

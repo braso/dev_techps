@@ -111,7 +111,6 @@
 			foreach($usuario as $key => $value){
 				$_SESSION[$key] = $value;
 			}
-			$_SESSION["user_tx_foto"] = (!empty($usuario["user_tx_foto"])? $usuario["user_tx_foto"]: $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/../contex20/img/user.png");
 
 			if(!isset($_SESSION["horaEntrada"])){
 				$_SESSION["horaEntrada"] = date("H:i");

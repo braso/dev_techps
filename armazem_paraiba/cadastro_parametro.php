@@ -119,6 +119,54 @@
 
 	function cadastra_parametro(){
 
+		//Conferir se os campos obrigatórios estão preenchidos{
+			$camposObrig = [];
+
+			if(!empty($_POST["acordo"]) && $_POST["acordo"] == "sim"){
+				$camposObrig["inicioAcordo"] = "Início do Acordo";
+				$camposObrig["fimAcordo"] = "Fim do Acordo";
+			}
+	
+			if(!empty($_POST["banco"]) && $_POST["banco"] == "sim"){
+				$camposObrig["quandDias"] = "Quantidade de Dias";
+				$camposObrig["quandHoras"] = "Quantidade de Horas Limite";
+			}
+	
+			$camposObrig = array_merge($camposObrig, [
+				"nome" => "Nome",
+				"jornadaSemanal" => "Jornada Semanal (Horas/Dia)",
+				"jornadaSabado" => "Jornada Sábado (Horas/Dia)",
+				"tolerancia" => "Tolerância de jornada Saldo diário (Minutos)",
+				"percHESemanal" => "Hora Extra Semanal",
+				"percHEEx" => "Hora Extra Extraordinária",
+				"maxHESemanalDiario" => "Máx. de \"H.E. Semanal\" por dia"
+			]);
+			
+			$errorMsg = conferirCamposObrig($camposObrig, $_POST);
+			if(!empty($errorMsg)){
+				set_status($errorMsg);
+				layout_parametro();
+				exit;
+			}
+			unset($camposObrig);
+		//}
+
+		//Conferir se as porcentagens de hora extra estão dentro do válido{
+			// De acordo com a Lei n° 5452, artigo 59, parágrafo 1°
+			if(intval($_POST["percHESemanal"]) < 50){
+				$_POST["errorFields"][] = "percHESemanal";
+				$errorMsg = "ERRO: O valor mínimo de Hora Extra Semanal é 50%.";
+			}elseif(intval($_POST["percHEEx"]) < 50){
+				$_POST["errorFields"][] = "percHEEx";
+				$errorMsg = "ERRO: O valor mínimo de Hora Extra Extraodinária é 50%.";
+			}
+			if(!empty($errorMsg)){
+				set_status($errorMsg);
+				layout_parametro();
+				exit;
+			}
+		//}
+
 		if(is_int(strpos(implode(",",array_keys($_POST)), "ignorarCampos"))){
 			$campos = ["descanso", "espera", "repouso", "repousoEmbarcado", "mdc"];
 			$_POST["ignorarCampos"] = [];
@@ -131,53 +179,6 @@
 		}else{
 			$_POST["ignorarCampos"] = null;
 		}
-		$camposObrig = [];
-
-		if(!empty($_POST["acordo"]) && $_POST["acordo"] == "sim"){
-			$camposObrig["inicioAcordo"] = "Início do Acordo";
-			$camposObrig["fimAcordo"] = "Fim do Acordo";
-		}
-
-		if(!empty($_POST["banco"]) && $_POST["banco"] == "sim"){
-			$camposObrig["quandDias"] = "Quantidade de Dias";
-			$camposObrig["quandHoras"] = "Quantidade de Horas Limite";
-		}
-
-		$camposObrig = array_merge($camposObrig, [
-			"nome" => "Nome",
-			"jornadaSemanal" => "Jornada Semanal (Horas/Dia)",
-			"jornadaSabado" => "Jornada Sábado (Horas/Dia)",
-			"tolerancia" => "Tolerância de jornada Saldo diário (Minutos)",
-			"percHESemanal" => "Hora Extra Semanal",
-			"percHEEx" => "Hora Extra Extraordinária",
-			"maxHESemanalDiario" => "Máx. de \"H.E. Semanal\" por dia"
-		]);
-
-		$emptyFields = "";
-		$_POST["errorFields"] = [];
-		foreach(array_keys($camposObrig) as $campo){
-		    if(empty($_POST[$campo]) && $_POST[$campo] != "0"){
-				$emptyFields .= $camposObrig[$campo].', ';
-				$_POST["errorFields"][] = $campo;
-			}
-		}
-		
-		
-		
-		if(!empty($emptyFields)){
-			set_status("ERRO: Campos obrigatórios não preenchidos: ".substr($emptyFields, 0, strlen($emptyFields)-2));
-			layout_parametro();
-			exit;
-		}
-
-		// $errorMsg = conferirCamposObrig($camposObrig, $_POST);
-		// if(!empty($errorMsg)){
-		//     set_status($errorMsg);
-		// 	layout_parametro();
-		// 	exit;
-		// }
-
-		unset($campos_obrigatorios);
 		
 		$novoParametro = [
 			"para_tx_nome" 					=> $_POST["nome"],

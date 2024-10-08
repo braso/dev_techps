@@ -35,6 +35,22 @@ body {
     text-shadow: 2px 2px 3px black;
 }
 
+.endo, .endo-parc, .nao-endo{
+    color:white;
+    text-shadow:2px 2px 3px black;
+}
+
+.endo{
+    background-color: var(--var-blue);
+}
+.endo-parc{
+    background-color: var(--var-darkyellow);
+}
+
+.nao-endo{
+    background-color: var(--var-red);
+}
+
 .titulos th:hover{
     background-color: var(--var-darkblue);
     color: white;
