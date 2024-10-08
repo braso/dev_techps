@@ -7,6 +7,7 @@ deployment:
     - export APX=/home/techpsjornada/public_html/gestaodeponto/apx_solucoes
     - export BRASO=/home/techpsjornada/public_html/gestaodeponto/braso
     - export CARAU=/home/techpsjornada/public_html/gestaodeponto/carau_transporte
+    - export COMAV=/home/techpsjornada/public_html/gestaodeponto/comav
     - export FEIJAO=/home/techpsjornada/public_html/gestaodeponto/feijao_turqueza
     - export LOGSYNC=/home/techpsjornada/public_html/gestaodeponto/logsync_techps
     - export OPAFRUTAS=/home/techpsjornada/public_html/gestaodeponto/opafrutas
@@ -20,6 +21,7 @@ deployment:
     - /bin/cp -R $DOMAIN $APX
     - /bin/cp -R $DOMAIN $BRASO
     - /bin/cp -R $DOMAIN $CARAU
+    - /bin/cp -R $DOMAIN $COMAV
     - /bin/cp -R $DOMAIN $FEIJAO
     - /bin/cp -R $DOMAIN $LOGSYNC
     - /bin/cp -R $DOMAIN $OPAFRUTAS
