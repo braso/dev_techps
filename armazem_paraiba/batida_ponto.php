@@ -225,7 +225,11 @@
 			exit;
 		}
 
-		$aMotorista = carregar("entidade", $_SESSION["user_nb_entidade"]);
+		$aMotorista = mysqli_fetch_assoc(query(
+			"SELECT * FROM entidade"
+			." JOIN user ON enti_nb_id = user_nb_entidade"
+			." WHERE enti_nb_id = ".$_SESSION["user_nb_entidade"].";"
+		));
 
 		[$pontosCompleto, $sql] = pegarPontosDia($aMotorista["enti_tx_matricula"], ["pont_tx_data", "pont_tx_tipo", "pont_tx_dataCadastro", "macr_tx_nome"]);
 
@@ -403,6 +407,9 @@
 			];
 		}
 
+		$aMotorista["user_tx_cpf"] = str_split($aMotorista["user_tx_cpf"], 3);
+		$aMotorista["user_tx_cpf"] = $aMotorista["user_tx_cpf"][0].".".$aMotorista["user_tx_cpf"][1].".".$aMotorista["user_tx_cpf"][2]."-".$aMotorista["user_tx_cpf"][3];
+
 		$fields = [
 			"<div id='clockParent' class='col-sm-5 margin-bottom-5' >
 				<label>Hora</label><br>
@@ -411,8 +418,8 @@
 			campo("Data", "data", data($hoje), 2, "", "readonly=readonly"),
 			"<div class='col-sm-5 margin-bottom-5 margin-top-10	'>"
 				."Matrícula: ".$aMotorista["enti_tx_matricula"]."<br><br>"
-				."CPF: ".$aMotorista["enti_tx_cpf"]."<br><br>"
-				."Nome: ".$aMotorista["enti_tx_nome"]."<br><br>"
+				."CPF: ".$aMotorista["user_tx_cpf"]."<br><br>"
+				."Nome: ".$aMotorista["user_tx_nome"]."<br><br>"
 			."</div>",
 		];
 

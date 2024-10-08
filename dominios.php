@@ -6,6 +6,7 @@ $dominios = [
     "armazem_paraiba"   => 'Armazem Paraíba',
     "braso"             => 'Braso',
     "carau_transporte"  => 'Carau Transportes',
+    "comav"             => 'Comav',
     "feijao_turqueza"   => 'Feijão Turqueza',
     "opafrutas"         => 'Opafrutas',
     "pkf_medeiros"      => 'PKF Medeiros',

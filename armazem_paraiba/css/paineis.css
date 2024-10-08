@@ -35,11 +35,26 @@ body {
     text-shadow: 2px 2px 3px black;
 }
 
+.endo, .endo-parc, .nao-endo{
+    color:white;
+    text-shadow:2px 2px 3px black;
+}
+
+.endo{
+    background-color: var(--var-blue);
+}
+.endo-parc{
+    background-color: var(--var-darkyellow);
+}
+
+.nao-endo{
+    background-color: var(--var-red);
+}
+
 .titulos th:hover{
     background-color: var(--var-darkblue);
     color: white;
 }
-
 
 .porcentagemEndoPc td:first-child{
     background-color: var(--var-yellow);
@@ -140,7 +155,7 @@ th.sort-desc::after {
         margin: 1cm;
         margin-right: 0cm;
         /* Ajuste o valor conforme necessário para afastar do lado direito */
-        transform: scale(1.0);
+        transform: scale(0.99);
         transform-origin: top left;
     }
 
@@ -220,10 +235,15 @@ th.sort-desc::after {
         padding: 75px 20px 15px !important;
     }
 
+    .table-responsive {
+        overflow-x: visible !important;
+        min-height: auto !important;
+    }
+
     #impressao {
         display: block !important;
         position: relative;
-        padding-left: 630px!important;
+        padding-left: 970px !important;
     }
 }
 

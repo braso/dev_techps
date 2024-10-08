@@ -85,7 +85,7 @@
 		$sqlMotorista = query(
 			"SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg FROM entidade"
 				." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
-				." WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
+				." WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário')"
 					."	AND enti_nb_id IN (".$_POST["idMotoristaEndossado"].")"
 					."	AND enti_nb_empresa = ".$_POST["busca_empresa"]
 					."	AND enti_tx_status = 'ativo'"
@@ -107,7 +107,7 @@
 				    $max50APagar = "00:00";
 				}
 
-				$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $max50APagar, ($aMotorista["para_tx_pagarHEExComPerNeg"]?? "sim"));
+				$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $max50APagar, ($aMotorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
 
 				$totalResumo["HESemanalAPagar"] = $aPagar[0];
 				$totalResumo["HEExAPagar"] = $aPagar[1];
@@ -311,7 +311,7 @@
 					"SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg, parametro.para_tx_inicioAcordo, parametro.para_nb_qDias, parametro.para_nb_qDias FROM entidade"
 						." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
 						." WHERE enti_tx_status = 'ativo'"
-							." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')"
+							." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
 							." AND enti_nb_empresa = ".$_POST["busca_empresa"]." ".$extra
 						." ORDER BY enti_tx_nome;"
 				);
@@ -395,7 +395,7 @@
 							$endossoCompleto["endo_tx_max50APagar"] = "00:00";
 						}
 
-						$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $endossoCompleto["endo_tx_max50APagar"], ($aMotorista["para_tx_pagarHEExComPerNeg"]?? "sim"));
+						$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $endossoCompleto["endo_tx_max50APagar"], ($aMotorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
 						$aPagar = operarHorarios($aPagar, "+");
 						$saldoFinal = operarHorarios([$totalResumo["saldoBruto"], $aPagar], "-");
 
@@ -439,7 +439,7 @@
 								.">"
 									."Imprimir Relatório"
 								."</button>"
-							;
+							; 
 						}
 
 						abre_form(
