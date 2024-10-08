@@ -291,8 +291,6 @@
 
     function index(){
 
-        cabecalho("Relatório Geral de Saldo");
-
         if(empty($_POST["busca_dataMes"])){
             $_POST["busca_dataMes"] = date("Y-m"); 
         }
@@ -316,10 +314,13 @@
                 $_POST["errorFields"][] = "busca_dataMes";
                 set_status("ERRO: Não é possível pesquisar após a data atual.");
             }
+            cabecalho("Relatório Geral de Saldo");
         }elseif(!empty($_POST["acao"]) && $_POST["acao"] == "atualizarPainel"){
             echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
             ob_flush();
             flush();
+
+            cabecalho("Relatório Geral de Saldo");
 
             $err = ($_POST["busca_dataInicio"] > date("Y-m-d"))*1+($_POST["busca_dataFim"] > date("Y-m-d"))*2;
             if($err > 0){
@@ -341,6 +342,8 @@
                 require_once "funcoes_paineis.php";
                 criar_relatorio_saldo();
             }
+        }else{
+            cabecalho("Relatório Geral de Saldo");
         }
 
 
