@@ -30,8 +30,8 @@
                     +'</td>'
                     +'<td>'+(row.jornadaPrevista == '00:00' ? '' : row.jornadaPrevista?? '')+'</td>'
                     +'<td>'+(row.jornadaEfetiva == '00:00' ? '' : row.jornadaEfetiva?? '')+'</td>'
-                    +'<td>'+(row.he50APagar == '00:00' ? '' : row.he50APagar?? '')+'</td>'
-                    +'<td>'+(row.he100APagar== '00:00' ? '' : row.he100APagar?? '')+'</td>'
+                    +'<td>'+(row.HESemanal == '00:00' ? '' : row.HESemanal?? '')+'</td>'
+                    +'<td>'+(row.HESabado == '00:00' ? '' : row.HESabado?? '')+'</td>'
                     +'<td>'+(row.adicionalNoturno == '00:00' ? '' : row.adicionalNoturno?? '')+'</td>'
                     +'<td>'+(row.esperaIndenizada == '00:00' ? '' : row.esperaIndenizada?? '')+'</td>'
                     +'<td>'+(row.saldoAnterior?? '')+'</td>'
@@ -104,6 +104,7 @@
                                 $.each(data, function(index, item){
                                     row[index] = item;
                                 });
+                                console.log(row);
                                 if(row.idMotorista != undefined){
                                     delete row.idMotorista;
                                 }"
