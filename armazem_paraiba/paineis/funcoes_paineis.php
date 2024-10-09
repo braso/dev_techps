@@ -667,7 +667,7 @@ function relatorio_nao_conformidade_juridica() {
 
 		$motoristas = mysqli_fetch_all(
 			query(
-				"SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula FROM entidade"
+				"SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula, enti_tx_ocupacao FROM entidade"
 				. " WHERE enti_tx_status = 'ativo'"
 				. " AND enti_nb_empresa = " . $empresa['empr_nb_id']
 				. " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
@@ -688,7 +688,9 @@ function relatorio_nao_conformidade_juridica() {
 			}
 
 			$totalMotorista = [
-				"motorista" => $motorista["enti_tx_nome"],
+				"matricula" => $motorista["enti_tx_matricula"],
+				"nome" => $motorista["enti_tx_nome"],
+				"ocupacao" => $motorista["enti_tx_ocupacao"],
 				"inicioSemRegistro" => 0,
 				"inicioRefeicaoSemRegistro" => 0,
 				"fimRefeicaoSemRegistro" => 0,
@@ -762,7 +764,7 @@ function relatorio_nao_conformidade_juridica() {
 					$totalMotorista["intersticio"] += 1;
 				}
 
-				if (!empty($row)) {
+				if (!empty($totalMotorista)) {
 					$nomeArquivo = $motorista["enti_tx_matricula"] . ".json";
 					file_put_contents($path . "/" . $nomeArquivo, json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 				}
@@ -784,7 +786,7 @@ function relatorio_nao_conformidade_juridica() {
 			"jornadaAberto" => 0,
 			"jornadaExedida" => 0,
 			"mdcDescanso" => 0,
-			"intersticio" => 0,
+			"intersticio" => 0
 		];
 
 		foreach ($row as $motorista) {
@@ -805,8 +807,8 @@ function relatorio_nao_conformidade_juridica() {
 
 		$empresa["totais"] = $totaisEmpr;
 		$empresa["qtdMotoristas"] = count($motoristas);
-		$empresa["dataInicio"] = $periodoInicio;
-		$empresa["dataFim"] = $periodoFim;
+		$empresa["dataInicio"] = $periodoInicio->format('d/m/Y');
+		$empresa["dataFim"] = $periodoFim->format('d/m/Y');
 
 		if (empty($_POST["empresa"])) {
 			foreach ($totaisEmpr as $key => $value) {
@@ -821,7 +823,7 @@ function relatorio_nao_conformidade_juridica() {
 	}
 
 	if (empty($_POST["empresa"])) {
-		// $path = "./arquivos/endossos" . "/" . $periodoInicio->format("Y-m");
+		$path = "./arquivos/nao_conformidade_juridica" . "/" . $periodoInicio->format("Y-m");
 		$totaisEmpresas["dataInicio"] = $periodoInicio;
 		$totaisEmpresas["dataFim"] = $periodoFim;
 		file_put_contents($path . "/empresas.json", json_encode($totaisEmpresas));
