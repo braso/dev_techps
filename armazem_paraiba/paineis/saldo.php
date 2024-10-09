@@ -63,20 +63,18 @@
         }
 
         echo 
-            "<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"])."'>
+            "<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"]). "'>
                 <input type='hidden' name='acao'>
                 <input type='hidden' name='campoAcao'>
                 <input type='hidden' name='empresa'>
-                <input type='hidden' name='busca_dataInicio'>
-                <input type='hidden' name='busca_dataFim'>
+                <input type='hidden' name='busca_dataMes'>
             </form>
             <script>
                 function setAndSubmit(empresa){
                     document.myForm.acao.value = 'enviarForm()';
                     document.myForm.campoAcao.value = 'buscar';
                     document.myForm.empresa.value = empresa;
-                    document.myForm.busca_dataInicio.value = document.getElementById('busca_dataInicio').value;
-                    document.myForm.busca_dataFim.value = document.getElementById('busca_dataFim').value;
+                    document.myForm.busca_dataMes.value = document.getElementById('busca_dataMes').value;
                     document.myForm.submit();
                 }
 
@@ -347,7 +345,6 @@
             cabecalho("Relatório Geral de Saldo");
         }
 
-
         // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
 
@@ -530,6 +527,14 @@
                             $contagemSaldos["negativos"]++;
                         }else{
                             $contagemSaldos["positivos"]++;
+                        }
+
+                        if ($empresa["percEndossado"] === 1) {
+                            $contagemEndossos["E"]++;
+                        }elseif($empresa["percEndossado"] === 0){
+                            $contagemEndossos["N"]++;
+                        }else{
+                            $contagemEndossos["EP"]++;
                         }
                     }
                 }
