@@ -58,11 +58,20 @@
     }
 }
 
+/* Mobile specifics */
 @media(max-width: 480px){
     @media(min-width: 360px){
         .last-button{
             width: 30rem;
         }
+    }
+
+    .container, .container-fluid{
+        padding: 0px;
+    }
+
+    .page-footer{
+        display:none;
     }
 
     /* .fecha-form-btn {

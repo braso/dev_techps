@@ -45,7 +45,6 @@
 			"macr_tx_status" => "ativo"
 		];
 
-		dd("teste");
 		if(!empty($_POST["id"])){
 			atualizar("macroponto",array_keys($novaMacro), array_values($novaMacro),$_POST["id"]);
 		}else{

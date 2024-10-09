@@ -85,9 +85,9 @@
 			$motErrMsg = "";
 
 			//Conferir se está tentando endossar meses anteriores ao cadastro do motorista{
-				$dataCadastro = new DateTime($motorista["enti_tx_dataCadastro"]." 00:00:00");
+				$dataCadastro = new DateTime($motorista["enti_tx_admissao"]." 00:00:00");
 				if($_POST["data_de"] < $dataCadastro->format("Y-m-01")){
-					$motErrMsg = "Não é possível cadastrar um endosso antes do mês de cadastro (".$dataCadastro->format("m/Y")."). ";
+					$motErrMsg = "Não é possível cadastrar um endosso antes do mês de admissão (".$dataCadastro->format("m/Y")."). ";
 					$_POST["errorFields"][] = "data_de";
 				}
 			//}
@@ -244,7 +244,7 @@
 		}
 		
 		$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
-		$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], "00:00", ($motorista["para_tx_pagarHEExComPerNeg"]?? "sim"));
+		$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], "00:00", ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
 		$totalResumo["saldoAnterior"] = $saldoAnterior;
 		$totalResumo["saldoBruto"] = $saldoBruto;
 		[$totalResumo["he50APagar"], $totalResumo["he100APagar"]] = $aPagar;
@@ -420,7 +420,7 @@
 
 
 			$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
-			$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], (!empty($_POST["quantHoras"])? $_POST["quantHoras"]: "00:00"), ($motorista["para_tx_pagarHEExComPerNeg"]?? "sim"));
+			$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], (!empty($_POST["quantHoras"])? $_POST["quantHoras"]: "00:00"), ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
 			$saldoBruto = operarHorarios([$saldoBruto, $aPagar[0], $aPagar[1]], "-");
 			
 			$totalResumo["saldoAnterior"] = $saldoAnterior;

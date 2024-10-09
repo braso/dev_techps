@@ -150,7 +150,7 @@
 					"SELECT * FROM entidade"
 						." WHERE enti_tx_status = 'ativo'"
 							." AND enti_nb_empresa = ".$_POST["busca_empresa"]
-							." AND (enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário') AND enti_tx_dataCadastro < '".$date->format("Y-m-t")."')"
+							." AND (enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário') AND enti_tx_admissao < '".$date->format("Y-m-t")."')"
 							." ".$extra
 						." ORDER BY enti_tx_nome;"
 				);
@@ -170,10 +170,10 @@
 	
 					//Pegando e formatando registros dos dias{
 						$aDia = [];
-						$dataCadastro = new DateTime($aMotorista["enti_tx_dataCadastro"]);
+						$dataAdmissao = new DateTime($aMotorista["enti_tx_admissao"]);
 						for ($i = 1; $i <= $daysInMonth; $i++) {
 							$dataVez = $date->format("Y-m")."-".str_pad($i, 2, 0, STR_PAD_LEFT);
-							if($date->format("Y-m") < $dataCadastro->format("Y-m")){
+							if($date->format("Y-m") < $dataAdmissao->format("Y-m")){
 								continue;
 							}
 							if($dataVez > date("Y-m-d")){

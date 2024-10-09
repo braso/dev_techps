@@ -13,7 +13,8 @@
     require __DIR__."/../funcoes_ponto.php";
 
 
-    function buscarRelatorio(){
+    function enviarForm(){
+        $_POST["acao"] = $_POST["campoAcao"];
         index();
     }
 
@@ -24,13 +25,13 @@
             $linha .= "+'<td>'+row.matricula+'</td>'
                     +'<td>'+row.nome+'</td>'
                     +'<td>'+(row.ocupacao?? '')+'</td>'
-                    +'<td style=\"background-color:'+(row.statusEndosso === 'E' ? 'var(--var-blue)' : (row.statusEndosso === 'EP' ? 'var(--var-darkyellow)' : 'var(--var-red)'))
-                    +'; color:white; text-shadow:2px 2px 3px black\"><strong>'
-                    +row.statusEndosso+'</strong></td>'
+                    +'<td class=\"'+(row.statusEndosso === 'E' ? 'endo' : (row.statusEndosso === 'EP' ? 'endo-parc' : 'nao-endo'))+'\">'
+                        +'<strong>'+row.statusEndosso+'</strong>'
+                    +'</td>'
                     +'<td>'+(row.jornadaPrevista == '00:00' ? '' : row.jornadaPrevista?? '')+'</td>'
                     +'<td>'+(row.jornadaEfetiva == '00:00' ? '' : row.jornadaEfetiva?? '')+'</td>'
-                    +'<td>'+(row.he50APagar == '00:00' ? '' : row.he50APagar?? '')+'</td>'
-                    +'<td>'+(row.he100APagar== '00:00' ? '' : row.he100APagar?? '')+'</td>'
+                    +'<td>'+(row.HESemanal == '00:00' ? '' : row.HESemanal?? '')+'</td>'
+                    +'<td>'+(row.HESabado == '00:00' ? '' : row.HESabado?? '')+'</td>'
                     +'<td>'+(row.adicionalNoturno == '00:00' ? '' : row.adicionalNoturno?? '')+'</td>'
                     +'<td>'+(row.esperaIndenizada == '00:00' ? '' : row.esperaIndenizada?? '')+'</td>'
                     +'<td>'+(row.saldoAnterior?? '')+'</td>'
@@ -63,13 +64,16 @@
 
         echo 
             "<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"])."'>
-                <input type='hidden' name='atualizar' id='atualizar'>
-                <input type='hidden' name='empresa' id='empresa'>
-                <input type='hidden' name='busca_dataInicio' id='busca_dataInicio'>
-                <input type='hidden' name='busca_dataFim' id='busca_dataFim'>
+                <input type='hidden' name='acao'>
+                <input type='hidden' name='campoAcao'>
+                <input type='hidden' name='empresa'>
+                <input type='hidden' name='busca_dataInicio'>
+                <input type='hidden' name='busca_dataFim'>
             </form>
             <script>
                 function setAndSubmit(empresa){
+                    document.myForm.acao.value = 'enviarForm()';
+                    document.myForm.campoAcao.value = 'buscar';
                     document.myForm.empresa.value = empresa;
                     document.myForm.busca_dataInicio.value = document.getElementById('busca_dataInicio').value;
                     document.myForm.busca_dataFim.value = document.getElementById('busca_dataFim').value;
@@ -80,14 +84,14 @@
                     document.myForm.empresa.value = document.getElementById('empresa').value;
                     document.myForm.busca_dataInicio.value = document.getElementById('busca_dataInicio').value;
                     document.myForm.busca_dataFim.value = document.getElementById('busca_dataFim').value;
-                    document.myForm.atualizar.value = 'atualizar';
+                    document.myForm.acao.value = 'atualizar';
                     document.myForm.submit();
                 }
 
                 function imprimir(){
                     window.print();
                 }
-            
+
                 $(document).ready(function(){
                     var tabela = $('#tabela-empresas tbody');
 
@@ -100,6 +104,7 @@
                                 $.each(data, function(index, item){
                                     row[index] = item;
                                 });
+                                console.log(row);
                                 if(row.idMotorista != undefined){
                                     delete row.idMotorista;
                                 }"
@@ -249,64 +254,142 @@
 
                     ".$carregarDados."
                 });
+
+                //Variação dos campos de pesquisa{
+                    var camposAcao = document.getElementsByName('campoAcao');
+                    if (camposAcao[0].checked){
+                        document.getElementById('botaoContexBuscar').innerHTML = 'Buscar';
+                        document.getElementById('busca_dataMes').parentElement.style.display = 'block';
+                        document.getElementById('busca_dataInicio').parentElement.style.display = 'none';
+                        document.getElementById('busca_dataFim').parentElement.style.display = 'none';
+                    }
+                    if (camposAcao[1].checked){
+                        document.getElementById('botaoContexBuscar').innerHTML = 'Atualizar';
+                        document.getElementById('busca_dataMes').parentElement.style.display = 'none';
+                        document.getElementById('busca_dataInicio').parentElement.style.display = 'block';
+                        document.getElementById('busca_dataFim').parentElement.style.display = 'block';
+                    }
+                    camposAcao[0].addEventListener('change', function() {
+                        if (camposAcao[0].checked){
+                            document.getElementById('botaoContexBuscar').innerHTML = 'Buscar';
+                            document.getElementById('busca_dataMes').parentElement.style.display = 'block';
+                            document.getElementById('busca_dataInicio').parentElement.style.display = 'none';
+                            document.getElementById('busca_dataFim').parentElement.style.display = 'none';
+                        }
+                    });
+                    camposAcao[1].addEventListener('change', function() {
+                        if (camposAcao[1].checked){
+                            document.getElementById('botaoContexBuscar').innerHTML = 'Atualizar';
+                            document.getElementById('busca_dataMes').parentElement.style.display = 'none';
+                            document.getElementById('busca_dataInicio').parentElement.style.display = 'block';
+                            document.getElementById('busca_dataFim').parentElement.style.display = 'block';
+                        }
+                    });
+                //}
             </script>"
         ;
     }
 
     function index(){
 
-        if(!empty($_POST["atualizar"])){
+        if(empty($_POST["busca_dataMes"])){
+            $_POST["busca_dataMes"] = date("Y-m"); 
+        }
+        if(empty($_POST["busca_dataInicio"])){
+            $_POST["busca_dataInicio"] = date("Y-m-01"); 
+        }
+        if(empty($_POST["busca_dataFim"])){
+            $_POST["busca_dataFim"] = date("Y-m-d"); 
+        }
+
+        if(!empty($_POST["acao"]) && $_POST["acao"] == "buscar"){
+            // if(empty($_POST["busca_periodo"])){
+            //     $_POST["busca_periodo"] = date("01/m/Y")." - ".date("d/m/Y");
+            // }
+            // $datas = explode(" - ", $_POST["busca_periodo"]);
+            // $_POST["busca_dataInicio"] = DateTime::createFromFormat("d/m/Y", $datas[0])->format("Y-m-d");
+            // $_POST["busca_dataFim"] = DateTime::createFromFormat("d/m/Y", $datas[1])->format("Y-m-d");
+
+            if($_POST["busca_dataMes"] > date("Y-m")){
+                unset($_POST["acao"]);
+                $_POST["errorFields"][] = "busca_dataMes";
+                set_status("ERRO: Não é possível pesquisar após a data atual.");
+            }
+            cabecalho("Relatório Geral de Saldo");
+        }elseif(!empty($_POST["acao"]) && $_POST["acao"] == "atualizarPainel"){
             echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
             ob_flush();
             flush();
+
             cabecalho("Relatório Geral de Saldo");
-            require_once "funcoes_paineis.php";
-            criar_relatorio_saldo();
+
+            $err = ($_POST["busca_dataInicio"] > date("Y-m-d"))*1+($_POST["busca_dataFim"] > date("Y-m-d"))*2;
+            if($err > 0){
+                switch($err){
+                    case 1:
+                        $_POST["errorFields"][] = "busca_dataInicio";
+                    break;
+                    case 2:
+                        $_POST["errorFields"][] = "busca_dataFim";
+                    break;
+                    case 3:
+                        $_POST["errorFields"][] = "busca_dataInicio";
+                        $_POST["errorFields"][] = "busca_dataFim";
+                    break;
+                }        
+                unset($_POST["acao"]);        
+                set_status("ERRO: Não é possível atualizar após a data atual.");
+            }else{
+                require_once "funcoes_paineis.php";
+                criar_relatorio_saldo();
+            }
         }else{
             cabecalho("Relatório Geral de Saldo");
         }
 
-        if(empty($_POST["busca_periodo"])){
-            $_POST["busca_periodo"] = date("01/m/Y")." - ".date("d/m/Y");
-        }
-        $datas = explode(" - ", $_POST["busca_periodo"]);
-        $_POST["busca_dataInicio"] = DateTime::createFromFormat("d/m/Y", $datas[0])->format("Y-m-d");
-        $_POST["busca_dataFim"] = DateTime::createFromFormat("d/m/Y", $datas[1])->format("Y-m-d");
-
-
-        if($_POST["busca_dataInicio"] > date("Y-m-d") || $_POST["busca_dataFim"] > date("Y-m-d")){
-            unset($_POST["acao"]);
-            $_POST["errorFields"][] = "busca_dataInicio";
-            set_status("ERRO: Não é possível perquisar após a data atual.");
-        }
 
         // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
-        $fields = [
+
+        $campoAcao = 
+            "<div class='col-sm-2 margin-bottom-5' style='min-width:200px;'>
+				<label>"."Ação"."</label><br>
+				<label class='radio-inline'>
+					<input type='radio' name='campoAcao' value='buscar' ".((empty($_POST["campoAcao"]) || $_POST["campoAcao"] == "buscar")? "checked": "")."> Buscar
+				</label>
+				<label class='radio-inline'>
+          			<input type='radio' name='campoAcao' value='atualizarPainel'".(!empty($_POST["campoAcao"]) && $_POST["campoAcao"] == "atualizarPainel"? "checked": "")."> Atualizar
+				</label>
+			</div>"
+        ;
+
+        $campos = [
             combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
             // campo("Período*", "busca_periodo", ($_POST["busca_periodo"]?? ""), 3, "MASCARA_PERIODO"),
-            campo_data("Data Início", "busca_dataInicio", ($_POST["busca_dataInicio"] ?? ""), 2, $extraCampoData),
-            campo_data("Data Fim", "busca_dataFim", ($_POST["busca_dataFim"] ?? ""), 2, $extraCampoData)
+            $campoAcao,
+            campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"]?? date("Y-m")), 2),
+            campo_data("Data Início*", "busca_dataInicio", ($_POST["busca_dataInicio"] ?? ""), 2),
+            campo_data("Data Fim*", "busca_dataFim", ($_POST["busca_dataFim"] ?? ""), 2)
             // $texto,
         ];
+
+
+
         $botao_volta = "";
         if(!empty($_POST["empresa"])){
             $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
         }
         $botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
-        if(!empty($_SESSION["user_tx_nivel"]) && is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-            $botaoAtualizarPainel = "<a class='btn btn-warning' onclick='atualizarPainel()'> Atualizar Painel</a>";
-        }
+
         $buttons = [
-            botao("Buscar", "buscarRelatorio()", "", "", "", "", "btn btn-info"),
+            botao("Buscar", "enviarForm()", "", "", "", "", "btn btn-info"),
             $botao_imprimir,
-            $botao_volta,
-            $botaoAtualizarPainel
+            $botao_volta
         ];
 
 
         abre_form();
-        linha_form($fields);
+        linha_form($campos);
         fecha_form($buttons);
 
         
@@ -344,9 +427,8 @@
         ];
         
         
-        if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarRelatorio()"){
-            $dataInicio = new DateTime($_POST["busca_dataInicio"]);
-            $path .= "/".$dataInicio->format("Y-m");
+        if(!empty($_POST["acao"]) && $_POST["acao"] == "buscar"){
+            $path .= "/".$_POST["busca_dataMes"];
             if(!empty($_POST["empresa"])){
                 //Painel dos saldos dos motoristas de uma empresa específica
                 $aEmpresa = mysqli_fetch_assoc(query(
@@ -366,12 +448,14 @@
                     }
                     $pastaSaldosEmpresa->close();
     
-                    $dataEmissao = date("d/m/Y H:i", filemtime($path."/"."empresa_".$aEmpresa["empr_nb_id"].".json")); //Utilizado no HTML.
+                    $dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($path."/"."empresa_".$aEmpresa["empr_nb_id"].".json")); //Utilizado no HTML.
                     $periodoRelatorio = json_decode(file_get_contents($path."/"."empresa_".$aEmpresa["empr_nb_id"].".json"), true);
                     $periodoRelatorio = [
                         "dataInicio" => $periodoRelatorio["dataInicio"],
                         "dataFim" => $periodoRelatorio["dataFim"]
                     ];
+                    $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataInicio"])->format("d/m");
+                    $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataFim"])->format("d/m");
     
                     $motoristas = [];
                     foreach($arquivos as $arquivo){
@@ -411,16 +495,19 @@
                 $logoEmpresa = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$logoEmpresa;
 
                 
-                if(is_dir($path)){
+                if(is_dir($path) && is_file($path."/empresas.json")){
                     $encontrado = true;
                     $arquivoGeral = $path."/empresas.json";
-                    $dataEmissao = date("d/m/Y H:i", filemtime($arquivoGeral)); //Utilizado no HTML.
+                    $dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($arquivoGeral)); //Utilizado no HTML.
                     $arquivoGeral = json_decode(file_get_contents($arquivoGeral), true);
 
                     $periodoRelatorio = [
                         "dataInicio" => $arquivoGeral["dataInicio"],
                         "dataFim" => $arquivoGeral["dataFim"]
                     ];
+
+                    $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataInicio"])->format("d/m");
+                    $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataFim"])->format("d/m");
 
                     $pastaSaldos = dir($path);
                     while($arquivo = $pastaSaldos->read()){
@@ -448,9 +535,6 @@
                 }
             }
         }
-
-        $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataInicio"])->format("d/m");
-        $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataFim"])->format("d/m");
 
         [$percEndosso["E"], $percEndosso["EP"], $percEndosso["N"]] = calcPercs(array_values($contagemEndossos));
         [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
@@ -577,7 +661,7 @@
             ;
             echo "</div>";
         }else{
-            if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarRelatorio()"){
+            if(!empty($_POST["acao"]) && $_POST["acao"] == "buscar"){
                 set_status("Não Possui dados desse mês");
                 echo "<script>alert('Não Possui dados desse mês')</script>";
             }

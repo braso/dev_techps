@@ -52,7 +52,8 @@ function dadosAjusteMotoristas($idEmpresa, $periodoInicio, $periodoFim) {
     return $resultado;
 }
 
-function criar_relatorio_saldo(){
+function relatorio_ajustes(){
+    dd("Incompleto");
     global $totalResumo;
     // $periodoInicio = $_POST["busca_dataInicio"];
     // $periodoFim = $_POST["busca_dataFim"];
@@ -101,4 +102,4 @@ function salvarArquivo($path, $fileName, $data)
     file_put_contents($path.'/'.$fileName, $jsonData);
 }
 
-criar_relatorio_saldo();
+relatorio_ajustes();

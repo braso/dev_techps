@@ -1,7 +1,15 @@
 <?php	
 
-	header("Access-Control-Allow-Origin: *");
-	header("Access-Control-Allow-Methods: POST");
+	/* Modo debug
+		ini_set("display_errors", 1);
+		error_reporting(E_ALL);
+
+		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+		header("Pragma: no-cache"); // HTTP 1.0.
+		header("Expires: 0");
+	//*/
+		header("Access-Control-Allow-Origin: *");
+		header("Access-Control-Allow-Methods: POST");
 
 	//Conferir campos obrigatórios{
 		if(
@@ -54,6 +62,7 @@
 	
 	$data = [];
 	//Ordenar{
+		
 		$orderBy = $_REQUEST['order'][0]['column'];
 
 		$isInt = (!empty($columns[$orderBy]) && is_int(strpos($columns[$orderBy], "_nb_")));
@@ -91,10 +100,16 @@
 						}
 					}
 				}
-			}else{
+			}elseif(!empty($match)){
 				$parametros = explode(',', $match[2]);
 				$parametros[0] = $row[$parametros[0]];
-				$result = call_user_func_array($match[1], $parametros);
+				if(!empty($parametros)){
+					try{
+						$result = call_user_func_array($match[1], $parametros);
+					}catch(TypeError $e){
+						$result = "";
+					}
+				}
 				$nestedData[] = $result;
 			}
 		}
