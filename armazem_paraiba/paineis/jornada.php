@@ -13,6 +13,11 @@ require "../funcoes_ponto.php";
 require_once __DIR__ . "/funcoes_paineis.php";
 // criar_relatorio_jornada();
 
+function enviarForm() {
+    $_POST["acao"] = $_POST["campoAcao"];
+    index();
+}
+
 function carregarJS(array $arquivos) {
 
     $linha = "linha = '<tr>'";
@@ -36,10 +41,14 @@ function carregarJS(array $arquivos) {
     }
 
     echo
-            "<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"])."'>
-                <input type='hidden' name='atualizar' id='atualizar'>
-                <input type='hidden' name='empresa' id='empresa'>
-                <input type='hidden' name='busca_data' id='busca_data'>
+    "<form name='myForm' method='post' action='" . htmlspecialchars($_SERVER["PHP_SELF"]) . "'>
+                <input type='hidden' name='acao'>
+                <input type='hidden' name='campoAcao'>
+                <input type='hidden' name='empresa'>
+                <input type='hidden' name='busca_dataMes'>
+                <input type='hidden' name='busca_dataInicio'>
+                <input type='hidden' name='busca_dataFim'>
+                <input type='hidden' name='busca_data'>
             </form>
             <script>
                 function atualizarPainel(){
@@ -121,49 +130,138 @@ function carregarJS(array $arquivos) {
 
                     " . $carregarDados . "
                 });
+                //Variação dos campos de pesquisa{
+                    var camposAcao = document.getElementsByName('campoAcao');
+                    if (camposAcao[0].checked){
+                        document.getElementById('botaoContexBuscar').innerHTML = 'Buscar';
+                        document.getElementById('busca_dataMes').parentElement.style.display = 'block';
+                        document.getElementById('busca_dataInicio').parentElement.style.display = 'none';
+                        document.getElementById('busca_dataFim').parentElement.style.display = 'none';
+                    }
+                    if (camposAcao[1].checked){
+                        document.getElementById('botaoContexBuscar').innerHTML = 'Atualizar';
+                        document.getElementById('busca_dataMes').parentElement.style.display = 'none';
+                        document.getElementById('busca_dataInicio').parentElement.style.display = 'block';
+                        document.getElementById('busca_dataFim').parentElement.style.display = 'block';
+                    }
+                    camposAcao[0].addEventListener('change', function() {
+                        if (camposAcao[0].checked){
+                            document.getElementById('botaoContexBuscar').innerHTML = 'Buscar';
+                            document.getElementById('busca_dataMes').parentElement.style.display = 'block';
+                            document.getElementById('busca_dataInicio').parentElement.style.display = 'none';
+                            document.getElementById('busca_dataFim').parentElement.style.display = 'none';
+                        }
+                    });
+                    camposAcao[1].addEventListener('change', function() {
+                        if (camposAcao[1].checked){
+                            document.getElementById('botaoContexBuscar').innerHTML = 'Atualizar';
+                            document.getElementById('busca_dataMes').parentElement.style.display = 'none';
+                            document.getElementById('busca_dataInicio').parentElement.style.display = 'block';
+                            document.getElementById('busca_dataFim').parentElement.style.display = 'block';
+                        }
+                    });
+                //}
             </script>";
 }
 
 function index() {
-    if(!empty($_POST["atualizar"])){
+
+    if (empty($_POST["busca_dataMes"])) {
+        $_POST["busca_dataMes"] = date("Y-m");
+    }
+    if (empty($_POST["busca_dataInicio"])) {
+        $_POST["busca_dataInicio"] = date("Y-m-01");
+    }
+    if (empty($_POST["busca_dataFim"])) {
+        $_POST["busca_dataFim"] = date("Y-m-d");
+    }
+
+    if (!empty($_POST["acao"]) && $_POST["acao"] == "buscar") {
+        // if(empty($_POST["busca_periodo"])){
+        //     $_POST["busca_periodo"] = date("01/m/Y")." - ".date("d/m/Y");
+        // }
+        // $datas = explode(" - ", $_POST["busca_periodo"]);
+        // $_POST["busca_dataInicio"] = DateTime::createFromFormat("d/m/Y", $datas[0])->format("Y-m-d");
+        // $_POST["busca_dataFim"] = DateTime::createFromFormat("d/m/Y", $datas[1])->format("Y-m-d");
+
+        if ($_POST["busca_dataMes"] > date("Y-m")) {
+            unset($_POST["acao"]);
+            $_POST["errorFields"][] = "busca_dataMes";
+            set_status("ERRO: Não é possível pesquisar após a data atual.");
+        }
+        cabecalho("Relatorio de Jornada Aberta");
+    } elseif (!empty($_POST["acao"]) && $_POST["acao"] == "atualizarPainel") {
         echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
         ob_flush();
         flush();
-        require_once "funcoes_paineis.php";
-        criar_relatorio_jornada();
+
+        cabecalho("Relatorio de Jornada Aberta");
+
+        $err = ($_POST["busca_dataInicio"] > date("Y-m-d")) * 1 + ($_POST["busca_dataFim"] > date("Y-m-d")) * 2;
+        if ($err > 0) {
+            switch ($err) {
+                case 1:
+                    $_POST["errorFields"][] = "busca_dataInicio";
+                    break;
+                case 2:
+                    $_POST["errorFields"][] = "busca_dataFim";
+                    break;
+                case 3:
+                    $_POST["errorFields"][] = "busca_dataInicio";
+                    $_POST["errorFields"][] = "busca_dataFim";
+                    break;
+            }
+            unset($_POST["acao"]);
+            set_status("ERRO: Não é possível atualizar após a data atual.");
+        } else {
+            require_once "funcoes_paineis.php";
+            criar_relatorio_jornada();
+        }
+    } else {
+        cabecalho("Relatório Geral de Saldo");
     }
 
-    cabecalho("Relatorio de Jornada Aberta");
-
-    $extraCampoData = "";
-    if(empty($_POST["busca_data"])){
-        $_POST["busca_data"] = date("Y-m");
-    }
     // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
     //position: absolute; top: 101px; left: 420px;
-    $fields = [
-        combo_net("Empresa:", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
-        campo_mes("Data", "busca_data", ($_POST["busca_data"] ?? ""), 2, $extraCampoData)
+
+    $campoAcao =
+        "<div class='col-sm-2 margin-bottom-5' style='min-width:200px;'>
+				<label>" . "Ação" . "</label><br>
+				<label class='radio-inline'>
+					<input type='radio' name='campoAcao' value='buscar' " . ((empty($_POST["campoAcao"]) || $_POST["campoAcao"] == "buscar") ? "checked" : "") . "> Buscar
+				</label>
+				<label class='radio-inline'>
+          			<input type='radio' name='campoAcao' value='atualizarPainel'" . (!empty($_POST["campoAcao"]) && $_POST["campoAcao"] == "atualizarPainel" ? "checked" : "") . "> Atualizar
+				</label>
+			</div>";
+
+    $campos = [
+        combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
+        // campo("Período*", "busca_periodo", ($_POST["busca_periodo"]?? ""), 3, "MASCARA_PERIODO"),
+        $campoAcao,
+        campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
+        campo_data("Data Início*", "busca_dataInicio", ($_POST["busca_dataInicio"] ?? ""), 2),
+        campo_data("Data Fim*", "busca_dataFim", ($_POST["busca_dataFim"] ?? ""), 2)
+        // $texto,
     ];
 
+
+
     $botao_volta = "";
-    if(!empty($_POST["empresa"])){
+    if (!empty($_POST["empresa"])) {
         $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
     }
     $botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
-    if(!empty($_SESSION["user_tx_nivel"]) && is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-        $botaoAtualizarPainel = "<a class='btn btn-warning' onclick='atualizarPainel()'> Atualizar Painel</a>";
-    }
+
     $buttons = [
-        botao("Buscar", "index", "", "", "", "", "btn btn-info"),
+        botao("Buscar", "enviarForm()", "", "", "", "", "btn btn-info"),
         $botao_imprimir,
-        $botao_volta,
-        $botaoAtualizarPainel
+        $botao_volta
     ];
 
 
-    abre_form("Filtro de Busca");
-    linha_form($fields);
+    abre_form();
+    linha_form($campos);
     fecha_form($buttons);
 
     $arquivos = [];
@@ -172,7 +270,7 @@ function index() {
     $path = "./arquivos/jornada";
     $periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
-    if(!empty($_POST["empresa"]) && !empty($_POST["busca_data"])){
+    if(!empty($_POST["empresa"]) && !empty($_POST["busca_dataMes"])){
         
         $empresa = mysqli_fetch_assoc(query(
             "SELECT * FROM empresa"
@@ -181,7 +279,7 @@ function index() {
             ." LIMIT 1;"
         ));
         
-        $path .= "/".$_POST["busca_data"]."/".$empresa["empr_nb_id"];
+        $path .= "/".$_POST["busca_dataMes"]."/".$empresa["empr_nb_id"];
 
         if(is_dir($path)){
             $pasta = dir($path);
