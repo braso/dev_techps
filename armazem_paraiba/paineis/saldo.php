@@ -62,12 +62,15 @@
             $carregarDados .= "carregarDados('".$arquivo."');";
         }
 
-        echo 
-            "<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"]). "'>
+        echo
+            "<form name='myForm' method='post' action='" . htmlspecialchars($_SERVER["PHP_SELF"]) . "'>
                 <input type='hidden' name='acao'>
                 <input type='hidden' name='campoAcao'>
                 <input type='hidden' name='empresa'>
                 <input type='hidden' name='busca_dataMes'>
+                <input type='hidden' name='busca_dataInicio'>
+                <input type='hidden' name='busca_dataFim'>
+                <input type='hidden' name='busca_data'>
             </form>
             <script>
                 function setAndSubmit(empresa){
