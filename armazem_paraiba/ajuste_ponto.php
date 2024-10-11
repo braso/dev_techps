@@ -361,6 +361,9 @@
 		return $cnpjs_formatados;
 	}
 
+
+
+
 	function index(){
 		global $CONTEX;
 		if(empty($_POST['data'])){
@@ -414,64 +417,65 @@
 						}
 					</script>';
 
-		// Chama a função para carregar os CNPJs formatados
-		$cnpjs = carregarCNPJsFormatados();
 
-		// Variáveis do ambiente carregadas
-		$baseUrl = $_ENV['URL_BASE'];
-		$appPath = $_ENV['APP_PATH'];
-		$contextPath = $_ENV['CONTEX_PATH'];
+// Chama a função para carregar os CNPJs formatados
+$cnpjs = carregarCNPJsFormatados();
 
-		// Monta a URL base para a logística
-		$urlLogistica = $baseUrl . $appPath . $contextPath . "/logistica.php";
+// Variáveis do ambiente carregadas
+$baseUrl = $_ENV['URL_BASE'];
+$appPath = $_ENV['APP_PATH'];
+$contextPath = $_ENV['CONTEX_PATH'];
 
-		// Assumindo que $aMotorista já tenha os valores definidos
-		$matricula = htmlspecialchars($aMotorista['enti_tx_matricula']);
-		$motorista = htmlspecialchars($aMotorista['enti_tx_nome']);
-		$data = $_POST['data'];  // Data do formulário
+// Monta a URL base para a logística
+$urlLogistica = $baseUrl . $appPath . $contextPath . "/logistica.php";
 
-		// Construir o botão com o código JavaScript embutido
-		$botaoConsLog = '
-			<button class="btn default" type="button" onclick="consultarLogistica()">Consultar Logística</button>
+// Assumindo que $aMotorista já tenha os valores definidos
+$matricula = htmlspecialchars($aMotorista['enti_tx_matricula']);
+$motorista = htmlspecialchars($aMotorista['enti_tx_nome']);
+$data = $_POST['data'];  // Data do formulário
 
-			<script>
-			function consultarLogistica() {
-				// Obter valores do PHP e HTML
-				var matricula = "' . addslashes($matricula) . '";
-				var motorista = "' . addslashes($motorista) . '";
-				var data = document.getElementById("data").value;
+// Construir o botão com o código JavaScript embutido
+$botaoConsLog = '
+<button class="btn default" type="button" onclick="consultarLogistica()">Consultar Logística</button>
 
-				// Obter todos os CNPJs da variável PHP
-				var cnpjs = ' . json_encode($cnpjs) . ';
+<script>
+function consultarLogistica() {
+    // Obter valores do PHP e HTML
+    var matricula = "' . addslashes($matricula) . '";
+    var motorista = "' . addslashes($motorista) . '";
+    var data = document.getElementById("data").value;
 
-				// Verificar o conteúdo de cnpjs no console
-				console.log("CNPJs:", cnpjs);
+    // Obter todos os CNPJs da variável PHP
+    var cnpjs = ' . json_encode($cnpjs) . ';
 
-				if (!Array.isArray(cnpjs)) {
-					console.error("CNPJs não é um array:", cnpjs);
-					return;
-				}
+    // Verificar o conteúdo de cnpjs no console
+    console.log("CNPJs:", cnpjs);
 
-				if (cnpjs.length === 0) {
-					console.error("A lista de CNPJs está vazia.");
-					return;
-				}
+    if (!Array.isArray(cnpjs)) {
+        console.error("CNPJs não é um array:", cnpjs);
+        return;
+    }
 
-				// Converte a lista de CNPJs para uma string separada por vírgulas
-				var cnpjString = cnpjs.map(String).join(",");
+    if (cnpjs.length === 0) {
+        console.error("A lista de CNPJs está vazia.");
+        return;
+    }
 
-				// Construir a URL com os parâmetros dinâmicos
-				var url = "' . addslashes($urlLogistica) . '";
-				url += "?motorista=" + encodeURIComponent(motorista) + 
-					"&matricula=" + encodeURIComponent(matricula) + 
-					"&data=" + encodeURIComponent(data) +
-					"&cnpj=" + encodeURIComponent(cnpjString);  // Adicionando todos os CNPJs
+    // Converte a lista de CNPJs para uma string separada por vírgulas
+    var cnpjString = cnpjs.map(String).join(",");
 
-				// Abrir a nova página em uma nova aba
-				window.open(url, "_blank");
-			}
-			</script>'
-		;
+    // Construir a URL com os parâmetros dinâmicos
+    var url = "' . addslashes($urlLogistica) . '";
+    url += "?motorista=" + encodeURIComponent(motorista) + 
+           "&matricula=" + encodeURIComponent(matricula) + 
+           "&data=" + encodeURIComponent(data) +
+           "&cnpj=" + encodeURIComponent(cnpjString);  // Adicionando todos os CNPJs
+
+    // Abrir a nova página em uma nova aba
+    window.open(url, "_blank");
+}
+</script>
+';
 
 		if (empty($_POST['status'])) {
 			$_POST['status'] = 'ativo';
@@ -514,7 +518,7 @@
 
 		$botoes[] = $botao_imprimir;
 		$botoes[] = botao("Voltar", "voltar");
-		// $botoes[] = $botaoConsLog; //BOTÃO CONSULTAR LOGISTICA
+		$botoes[] = $botaoConsLog; //BOTÃO CONSULTAR LOGISTICA
 		$botoes[] = status();
 
 

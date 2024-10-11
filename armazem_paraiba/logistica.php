@@ -47,7 +47,7 @@ if ($cnpjList) {
     
     
     
-    // Função para buscar pontos
+// Função para buscar pontos
 function buscarPontos($matricula, $data) {
     global $conn;
     
@@ -90,6 +90,10 @@ function buscarPontos($matricula, $data) {
     // Armazenar os resultados
     $pontos = [];
     while ($row = mysqli_fetch_assoc($result)) {
+        // Formatar a data pont_tx_data no formato dd/mm/yyyy
+        $row['pont_tx_data'] = date('d/m/Y H:i:s', strtotime($row['pont_tx_data']));
+        $row['pont_tx_dataCadastro'] = date('d/m/Y H:i:s', strtotime($row['pont_tx_dataCadastro']));
+        
         $pontos[] = $row;
     }
     
@@ -98,6 +102,8 @@ function buscarPontos($matricula, $data) {
     
     return $pontos;
 }
+
+
 
 // Recuperar os parâmetros da URL
 $matricula = isset($_GET['matricula']) ? $_GET['matricula'] : '';
@@ -181,6 +187,7 @@ function carregarMotivos() {
         $motoristas = [];
         while ($row = mysqli_fetch_assoc($result)) {
             $motoristas[] = $row;
+            
         }
         return $motoristas;
     }
@@ -395,21 +402,7 @@ cabecalho('');
     </div>
 <?php endif; ?>
 
-<script>
-    // Função para ocultar as mensagens após 5 segundos
-    function hideMessageAfterDelay(messageId) {
-        var messageElement = document.getElementById(messageId);
-        if (messageElement) {
-            setTimeout(function() {
-                messageElement.style.display = 'none';
-            }, 5000); // 5000 milissegundos = 5 segundos
-        }
-    }
 
-    // Chama a função para esconder mensagens de erro e sucesso
-    hideMessageAfterDelay('popupErro');
-    hideMessageAfterDelay('popupSucesso');
-</script>
 
 
 
@@ -419,30 +412,24 @@ cabecalho('');
 </div>
 
 
-<div class="card-container">
-    <div class="card">
-        <i class="fas fa-user"></i>
-        <h3>Total de Motoristas</h3>
 
-        <p><?= htmlspecialchars($totalMotoristas) ?></p>
-    </div>
 
-    <!<div class="card-container">
-    <div class="card">
-        <i class="fas fa-car"></i> <!-- Ícone de carro -->
-        <h3>Total de Placas</h3>
-        <p><?= htmlspecialchars( $plateCount) ?></p>
-    </div>
-</div>
-    
-    
-    <div class="container">
+
+       <div class="container">
+        <div id="form_header" class="form_title">
+            <img src="LGC.png" alt="Logo" class="logo">
+            <h2 class="title-section">Painel de Não Conformidades Logísticas</h2>
+            <button type="button" class="btn btn-primary" id="toggleFormBtn">Ajustar Ponto</button>
+        </div>
+  
+
+
+      
         <div class="table-container">
-            <h2>Painel de Não Conformidades Logísticas</h2>
             <form id="filterForm" method="post">
                 <div class="form-group">
-                    <label id="label-plate" for="id">Motorista:</label>
-                    <select class="form-control" id="id" name="id"  disabled>
+                    <label class="label-form" for="id">Motorista:</label>
+                    <select class="form-control field-form" id="id" name="id" disabled>
                         <?php foreach ($motoristas as $motorista): ?>
                             <option value="<?= htmlspecialchars($motorista['enti_tx_matricula']) ?>">
                                 <?= htmlspecialchars($motorista['enti_tx_nome']) ?>
@@ -451,16 +438,14 @@ cabecalho('');
                     </select>
                 </div>
                 
-                
-                
+                           
 <div class="form-group">
     <label for="plate-search">Buscar Placa:</label>
-    <input type="text" id="plate" name="plate" class="form-control" placeholder="Digite a placa">
+    <input type="text" id="plate" name="plate" class="form-control field-form" placeholder="Digite a placa">
     <ul id="plate-suggestions" class="list-group"></ul>
        
 
 </div>
-
 
 
 <script>
@@ -498,45 +483,63 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 </script>
-
-
-
-
                 <div class="form-group">
-                    <label id="label-date" for="date">Selecione a Data:</label>
-                    <input type="date" class="form-control" id="date" name="date" >
+                    <label class="label-form" for="date">Período a consultar</label>
+                    <input type="date" class="form-control field-form" id="date" name="date">
                 </div>
-                <div class="form-group text-end">
+                
+                <div class="form-group text-end button-search">
                     <div class="btn-group">
-                        <button type="submit" id="consultarBtn" class="btn btn-dark">Consultar</button>
-                        <button type="button"  class="btn btn-primary" id="toggleFormBtn">Ajustar Ponto</button>
-                        
+                        <button type="submit" id="consultarBtn" class="btn btn-dark button-consulta">Consultar</button>
+                     
                     </div>
                 </div>
             </form>
-            <div id="messageDiv"></div>
-     <div class="container mt-5">
-        <h1 class="mb-4">Ponto Registrado Pelo Colaborador.</h1>
-        <table class="table table-striped table-bordered">
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>Tipo</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($pontos as $ponto): ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($ponto['pont_tx_data']); ?></td>
-                        <td><?php echo htmlspecialchars($ponto['macr_tx_nome']); ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-            <div id="results"></div>
         </div>
-        
+    </div>
+            
+            
+            
+            
+            <div id="messageDiv"></div>
+                 <div class="container">
+    <div class="accordion" id="accordionExample">
+        <!-- Accordion -->
+        <div class="accordion-item">
+            <h2 class="title-section" class="accordion-header" id="headingOne">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                 
+                    Ver Ponto registrado pelo colaborador    <i class="fa-solid fa-arrow-down"></i>
+                </button>
+            </h2>
+            <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
+                <div class="accordion-body">
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($pontos as $ponto): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($ponto['pont_tx_data']); ?></td>
+                                    <td><?php echo htmlspecialchars($ponto['macr_tx_nome']); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    <div class="container" id="results">
+        <h2 class="title-section">Histórico de paradas</h2>
+
+    </div>
+
    
         
         
@@ -544,7 +547,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         
         <div class="form-container" id="formContainer">
-    <h2>Inserir Ajuste de Ponto</h2>
+    <h3 id="formContainer">Inserir Ajuste de Ponto</h3>
 
 
 
@@ -552,7 +555,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <form id="adjustmentForm">
         <div class="form-group">
             <label for="motorista">Motorista:</label>
-            <select class="form-control" id="motorista" name="motorista" disabled>
+            <select class="form-control field-form  " id="motorista" name="motorista" disabled>
                 <?php foreach ($motoristas as $motorista): ?>
                     <option value="<?= htmlspecialchars($motorista['enti_tx_matricula']) ?>">
                         <?= htmlspecialchars($motorista['enti_tx_nome']) ?>
@@ -563,27 +566,28 @@ document.addEventListener('DOMContentLoaded', function() {
         
         <div class="form-group">
             <label for="data">Data:</label>
-            <input type="date" class="form-control" id="data" name="data" value="<?php echo date('Y-m-d'); ?>" disabled >
+            <input type="date" class="form-control field-form" id="data" name="data" value="<?php echo date('Y-m-d'); ?>" disabled >
         </div>
         <div class="form-group">
             <label for="hora">Hora Inicio:</label>
-            <input type="time" class="form-control" id="hora" name="hora" required>
+            <input type="time" class="form-control field-form" id="hora" name="hora" required>
         </div>
         <div class="form-group">
     <label for="horaFim">Hora Fim:</label>
-    <input type="time" class="form-control" id="horaFim" name="horaFim" required>
+    <input type="time" class="form-control field-form" id="horaFim" name="horaFim" required>
 </div>
   <div class="form-group">
         <label for="latitude">Latitude:</label>
-        <input type="text" class="form-control" id="latitude" name="latitude" placeholder="Latitude">
+        <input type="text" class="form-control field-form" id="latitude" name="latitude" placeholder="Latitude" disabled>
     </div>
     <div class="form-group">
         <label for="longitude">Longitude:</label>
-        <input type="text" class="form-control" id="longitude" name="longitude" placeholder="Longitude">
+        <input type="text" class="form-control field-form" id="longitude" name="longitude" placeholder="Longitude" disabled>
     </div>
+    
         <div class="form-group">
             <label for="idMacro">Tipo de Registro:</label>
-            <select class="form-control" id="idMacro" name="idMacro" required>
+            <select class="form-control field-form" id="idMacro" name="idMacro" required>
                  <option value="" disabled selected>Selecionar</option>
                 <?php foreach ($tipos as $tipo): ?>
                     <option value="<?= htmlspecialchars($tipo['macr_tx_codigoInterno']) ?>">
@@ -594,7 +598,7 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
         <div class="form-group">
             <label for="motivo">Motivo:</label>
-            <select class="form-control" id="motivo" name="motivo" required>
+            <select class="form-control field-form" id="motivo" name="motivo" required>
                  <option value="" disabled selected>Selecionar</option>
                 <?php foreach ($motivos as $motivo): ?>
                     <option value="<?= htmlspecialchars($motivo['moti_nb_id']) ?>">
@@ -617,12 +621,92 @@ document.addEventListener('DOMContentLoaded', function() {
     </form>
 <!-- Resumo -->
 <div class="resumo" id="resumoContainer">
-    <p>Resumo dos ajustes será exibido aqui.</p>
+  
 </div>
 <style>
     #adjustmentTable{
         display:none;
     }
+    
+    .field-form{
+        border: 1px solid #35A3BC;
+        border-radius: 20px;
+        padding: 1rem;
+        width: 250px;
+        height: 40px;
+    }
+    #plate-suggestions{
+        border: none;
+    }
+    .form-control[disabled]{
+        background-color: white;
+    }
+    .label-form{
+        padding: 10px;
+    }
+    .row div label{
+        margin: 0;
+        padding: 10px;
+        text-transform: uppercase;
+    }
+    #consultarBtn{
+        margin-top: 2.6rem;
+        background: #35A3BC;
+        border-radius: 20px;
+        width: 200px;
+    }
+     #toggleFormBtn{
+        margin-top: 2.6rem;
+        background: #192942;
+        border-radius: 20px;
+        width: 200px;
+    }
+     #toggleFormBtn:hover{
+        margin-top: 2.6rem;
+        background: #35A3BC;
+        border-radius: 20px;
+        width: 200px;
+        transition: 5s all-ease;
+    }
+     #consultarBtn:hover{
+        margin-top: 2.6rem;
+        background: #35A3BC;
+        border-radius: 20px;
+                width: 200px;
+
+    
+         
+     }
+    .accordion-button{
+    border: none;
+    background: none;
+    font-size: 24px;
+        display: flex;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    flex-direction: row;
+    width: 100%;
+    }
+   .title-section{
+       font-size: 24px;
+       font-weight: 500;
+       text-transform: uppercase;
+   }
+    .title-section button{
+       font-size: 24px;
+       font-weight: 500;
+       text-transform: uppercase;
+   }
+   .fa-arrow-down{
+       color: white;
+       padding: 10px;
+       background-color: #35A3BC;
+       border-radius: 50px;
+    font-size: 20px;
+   }
+  
+  
+  
 </style>
     <!-- Lista de Ajustes -->
     <div class="adjustment-list">
@@ -665,3 +749,60 @@ document.addEventListener('DOMContentLoaded', function() {
     echo "Você precisa estar logado para acessar esta página.";
 }
 ?>
+
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('plate');
+    const suggestionsList = document.getElementById('plate-suggestions');
+
+    // Array de placas vindo do PHP
+    const plates = <?php echo json_encode($plates); ?>;
+
+    // Escuta o evento de input no campo de busca
+    searchInput.addEventListener('input', function() {
+        const filter = searchInput.value.toUpperCase(); // Converte o texto digitado em maiúsculas
+        suggestionsList.innerHTML = ''; // Limpa as sugestões anteriores
+
+        if (filter === '') return; // Se o campo de busca estiver vazio, não mostra nada
+
+        // Filtra as placas com base no que foi digitado
+        const filteredPlates = plates.filter(plate => plate.toUpperCase().includes(filter));
+
+        // Exibe as sugestões filtradas
+        filteredPlates.forEach(plate => {
+            const li = document.createElement('li');
+            li.textContent = plate;
+            li.classList.add('list-group-item');
+            suggestionsList.appendChild(li);
+
+            // Quando uma sugestão for clicada, preenche o campo de texto e limpa as sugestões
+            li.addEventListener('click', function() {
+                searchInput.value = plate;
+                suggestionsList.innerHTML = ''; // Limpa a lista de sugestões
+            });
+        });
+    });
+});
+
+
+
+
+    // Função para ocultar as mensagens após 5 segundos
+    function hideMessageAfterDelay(messageId) {
+        var messageElement = document.getElementById(messageId);
+        if (messageElement) {
+            setTimeout(function() {
+                messageElement.style.display = 'none';
+            }, 5000); // 5000 milissegundos = 5 segundos
+        }
+    }
+
+    // Chama a função para esconder mensagens de erro e sucesso
+    hideMessageAfterDelay('popupErro');
+    hideMessageAfterDelay('popupSucesso');
+</script>
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"></script>
