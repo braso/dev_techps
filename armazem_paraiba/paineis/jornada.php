@@ -20,18 +20,18 @@ function enviarForm() {
 
 function carregarJS(array $arquivos) {
 
-    $linha = "<tr>";
+    $linha = "linha = '<tr>'";
     if (!empty($_POST["empresa"])) {
         $linha .= "+'<td style=\'text-align: center;\'>'+item.data+'</td>'
                     +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
                     +'<td style=\'text-align: center;\'>'+item.nome+'</td>'
                     +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
-                    +'<td style=\'text-align: center;\'>'+item.jornada+'</td>'
-                    +'<td style=\'text-align: center;\'>'+item.jornadaEfetiva+'</td>'
-                    +'<td style=\'text-align: center;\'>'+(item.refeicao? item.refeicao : '<strong>----</strong>')+'</td>'
-                    +'<td style=\'text-align: center;\'>'+(item.espera? item.espera : '<strong>----</strong>')+'</td>'
-                    +'<td style=\'text-align: center;\'>'+(item.descanso? item.descanso : '<strong>----</strong>')+'</td>'
-                    +'<td style=\'text-align: center;\'>'+(item.repouso? item.repouso : '<strong>----</strong>')+'</td>'
+                    +'<td style=\'text-align: center;'+ cor +'\'>'+jornada+'</td>'
+                    +'<td style=\'text-align: center;'+ cor +'\'>'+item.jornadaEfetiva+'</td>'
+                    +'<td style=\'text-align: center;'+ cor +'\'>'+(refeicao ? refeicao : '<strong>----</strong>')+'</td>'
+                    +'<td style=\'text-align: center;'+ cor +'\'>'+(espera ? espera : '<strong>----</strong>')+'</td>'
+                    +'<td style=\'text-align: center;'+ cor +'\'>'+(descanso ? descanso : '<strong>----</strong>')+'</td>'
+                    +'<td style=\'text-align: center;'+ cor +'\'>'+(repouso ? repouso : '<strong>----</strong>')+'</td>'
                 +'</tr>';";
     } 
 
@@ -72,10 +72,55 @@ function carregarJS(array $arquivos) {
                             success: function(data){
                                 var row = {};
                                 $.each(data, function(index, item){
-										row[index] = item;
-									});"
-                                . $linha
-                                . "tabela.append(linha);
+                                    function parseData(dataString) {
+                                        var partes = dataString.split('/'); // Divide a string 'dd/mm/yyyy'
+                                        var dia = parseInt(partes[0], 10);  // Pega o dia
+                                        var mes = parseInt(partes[1], 10) - 1; // Pega o mês (0-11)
+                                        var ano = parseInt(partes[2], 10);  // Pega o ano
+                                        return new Date(ano, mes, dia);  // Retorna a data como um objeto Date
+                                    }
+
+                                    function processaCampo(campo, diferencaDias, isDataAtual) {
+                                        // Só aplicar a lógica se a data não for a atual
+                                        if (!isDataAtual && campo === '*') {
+                                            return '* D+' + diferencaDias;
+                                        }
+                                        return campo;
+                                    }
+
+
+                                    // Converte a string de data do item para um objeto Date
+                                    var dataItem = parseData(item.data);
+                                    var dataAtual = new Date(); // Pega a data atual
+
+                                    dataItem.setHours(0, 0, 0, 0);
+                                    dataAtual.setHours(0, 0, 0, 0);
+
+                                    var isDataAtual = dataItem.getTime() === dataAtual.getTime();
+                                    var diferencaDias = isDataAtual ? 0 : Math.floor((dataAtual - dataItem) / (1000 * 60 * 60 * 24));
+
+                                    console.log(item.data.indexOf('(E)'));
+                                    if(item.data.indexOf('(E)') == -1) {
+                                        var cor = '';
+                                        // Definir a cor com base na quantidade de dias
+                                        if (diferencaDias <= 3) {
+                                            cor = 'background-color: green; color:white';
+                                        } else if (diferencaDias <= 5) {
+                                            cor = 'background-color: yellow;'
+                                        } else {
+                                            cor = 'background-color: red; color:white';
+                                        }
+                                    }
+
+                                    var jornada = processaCampo(item.jornada, diferencaDias, isDataAtual);
+                                    var refeicao = processaCampo(item.refeicao, diferencaDias, isDataAtual);
+                                    var espera = processaCampo(item.espera, diferencaDias, isDataAtual);
+                                    var descanso = processaCampo(item.descanso, diferencaDias, isDataAtual);
+                                    var repouso = processaCampo(item.repouso, diferencaDias, isDataAtual);
+                                "
+                                    . $linha ."
+                                    tabela.append(linha);
+								});
                             },
                             error: function(){
                                 console.error('Erro ao carregar os dados.');
