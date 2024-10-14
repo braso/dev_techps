@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
@@ -8,30 +8,28 @@
 
 	function cadastra_abono(){
 		// Conferir se os campos obrigatórios estão preenchidos{
+			
 			$camposObrig = [
-				"motorista" => "Funcionário", "daterange" => "Data", "abono" => "Abono", 
+				"motorista" => "Funcionário",
+				"busca_periodo" => "Data",
+				"abono" => "Abono",
 				"motivo" => "Motivo"
 			];
-			$baseErrMsg = "ERRO: Campos obrigatórios não preenchidos: ";
-			$errorMsg = $baseErrMsg;
-			foreach($camposObrig as $key => $value){
-				if(empty($_POST[$key])){
-					$_POST["errorFields"][] = $key;
-					$errorMsg .= $value.", ";
-				}
-			}
 
-			if($errorMsg != $baseErrMsg){
-				set_status(substr($errorMsg, 0, -2).".");
+			$errorMsg = conferirCamposObrig($camposObrig, $_POST);
+
+			if(!empty($errorMsg)){
+				set_status("ERRO: ".$errorMsg);
 				layout_abono();
 				exit;
 			}
+			dd($_POST);
 		// }
 
 		$_POST["busca_motorista"] = $_POST["motorista"];
 
 		
-		$aData = explode(" - ", $_POST["daterange"]);
+		$aData = explode(" - ", $_POST["busca_periodo"]);
 		$aData[0] = explode("/", $aData[0]);
 		$aData[0] = $aData[0][2]."-".$aData[0][1]."-".$aData[0][0];
 		$aData[1] = explode("/", $aData[1]);
@@ -57,7 +55,7 @@
 				$endosso["endo_tx_ate"] = explode("-", $endosso["endo_tx_ate"]);
 				$endosso["endo_tx_ate"] = $endosso["endo_tx_ate"][2]."/".$endosso["endo_tx_ate"][1]."/".$endosso["endo_tx_ate"][0];
 
-				$_POST["errorFields"][] = "daterange";
+				$_POST["errorFields"][] = "busca_periodo";
 				set_status("ERRO: Possui um endosso de ".$endosso["endo_tx_de"]." até ".$endosso["endo_tx_ate"].".");
 				layout_abono();
 				exit;
@@ -98,20 +96,8 @@
 	}
 
 	function layout_abono(){
-		// echo "<form action='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_abono.php' name='form_cadastro_abono' method='post'>";
     	unset($_POST["acao"]);
 		
-		// foreach($_POST as $key => $value){
-		// 	if(is_array($value)){
-		// 		foreach($value as $val){
-		// 			echo "<input type='hidden' name='".$key."[]' value='".$val."'>";
-		// 		}
-		// 	}else{
-		// 		echo "<input type='hidden' name='".$key."' value='".$value."'>";
-		// 	}
-		// }
-		// echo "</form>";
-		// echo "<script>document.form_cadastro_abono.submit();</script>";
 		index();
 		exit;
 	}
@@ -129,14 +115,19 @@
 			" AND enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário')",
 			"enti_tx_matricula"
 		);
-		$campos[0][] = campo("Data(s)*", "daterange", ($_POST["daterange"]?? ""),3, "MASCARA_PERIODO");
+		$campos[0][] = campo("Data(s)*", "busca_periodo", ($_POST["busca_periodo"]?? ""),3, "MASCARA_PERIODO");
 		$campos[0][] = campo("Abono*", "abono", ($_POST["abono"]?? ""), 3, "MASCARA_HORAS");
 		$campos[1][] = combo_bd("Motivo*","motivo", ($_POST["motivo"]?? ""),4,"motivo",""," AND moti_tx_tipo = 'Abono'");
 		$campos[1][] = textarea("Justificativa","descricao", ($_POST["descricao"]?? ""),12);
 		
 		//BOTOES
     	$b[] = botao("Gravar","cadastra_abono", "","","","","btn btn-success");
-		$b[] = botao("Voltar", "voltar", implode(",",array_keys($_POST)), implode(",",array_values($_POST))); 
+		
+		$voltarInfo = $_POST;
+		unset($voltarInfo["errorFields"]);
+		$voltarInfo["busca_periodo"] = json_encode($voltarInfo["busca_periodo"]);
+
+		$b[] = botao("Voltar", "voltar", implode(",",array_keys($voltarInfo)), implode(",",array_values($voltarInfo))); 
 		abre_form();
 
 		if(empty($_POST["HTTP_REFERER"])){
