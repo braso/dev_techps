@@ -293,20 +293,19 @@
 
 	function conferirCamposObrig(array $camposObrig, array $camposEnviados): string{
 		//Ainda em desenvolvimento.
-		$baseErrMsg = "ERRO: Campos obrigatórios não preenchidos:";
-		$errorMsg = $baseErrMsg;
+		$baseErrMsg = "Campos obrigatórios não preenchidos:";
+		$errorMsg = [];	
 
-		foreach($camposObrig as $key => $value){
-			if(empty($camposEnviados[$key]) && $camposEnviados[$key] != "0"){
+		$parteComum = array_intersect_key($camposEnviados, $camposObrig);
+		$parteComum = array_filter($parteComum, function($value){
+			return !empty($value);
+		});
+		if($parteComum != $camposObrig){
+			foreach(array_diff_key($camposObrig, $parteComum) as $key => $value){
 				$_POST["errorFields"][] = $key;
-				$errorMsg .= " ".$camposObrig[$key].", ";
+				$errorMsg[] = $value;
 			}
 		}
-		
-		if($errorMsg == $baseErrMsg){
-			return "";
-		}
-		
-		$errorMsg = substr($errorMsg, 0, strlen($errorMsg)-2).". ";
-		return $errorMsg;
+
+		return ((empty($errorMsg))? "": $baseErrMsg." ".implode(", ", $errorMsg).".");
 	}
