@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -27,112 +27,83 @@
 	function buscarEspelho(){
 
 		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
-			$_POST["busca_motorista"] = $_SESSION["user_nb_entidade"];
-			$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
+			[$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], $_SESSION["user_nb_empresa"]];
+		}
+
+		if(empty($_POST["busca_periodo"])){
+			$_POST["busca_periodo"][0] = (!empty($_POST["data_de"]))? $_POST["data_de"]: date("Y-m-01");
+			$_POST["busca_periodo"][1] = (!empty($_POST["data_ate"]))? $_POST["data_ate"]: date("Y-m-d");
 		}
 		
 		//Confere se há algum erro na pesquisa{
-			$baseErrMsg = ["Insira os campos para pesquisar: ", "", ""];
-			$errorMsg = $baseErrMsg;
-			if(empty($_POST["busca_empresa"])){
-				if(empty($_POST["busca_motorista"])){
-					$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
-				}else{
-					$idEmpresa = mysqli_fetch_assoc(query(
-						"SELECT empr_nb_id FROM entidade
-							JOIN empresa ON enti_nb_empresa = empr_nb_id
-							WHERE enti_tx_status = 'ativo'
-								AND enti_nb_id = ".$_POST["busca_motorista"].";"
-					));
-					$_POST["busca_empresa"] = $idEmpresa["empr_nb_id"];
-				}
-			}
-
-			$camposObrig = [
-				"busca_empresa" => "Empresa",
-				"busca_motorista" => "Funcionário",
-				"busca_periodo" => "Período",
-				// "busca_dataInicio" => "Data Início",
-				// "busca_dataFim" => "Data Fim"
-			];
-			foreach($camposObrig as $key => $value){
-				if(empty($_POST[$key])){
-					$_POST["errorFields"][] = $key;
-					$errorMsg[0] .= $value;
-				}
-			}
-
-			$_POST["busca_periodo"] = separarPeriodo($_POST["busca_periodo"]);
-
-			$data_inicio_obj = new DateTime($_POST["busca_periodo"][0]);
-			$data_fim_obj = new DateTime($_POST["busca_periodo"][1]);
-			
-			if ($data_fim_obj < $data_inicio_obj){
-				$_POST["errorFields"][] = "busca_dataFim";
-				$errorMsg[2] .= "A data final não pode ser anterior à data inicial.";
-			}
-			
-			if(!empty($_POST["busca_empresa"]) && !empty($_POST["busca_motorista"])){
-				if($_POST["busca_periodo"][0] > date("Y-m-d") || $_POST["busca_periodo"][1] > date("Y-m-d")){
-					$_POST["errorFields"][] = "busca_dataInicio";
-					$_POST["errorFields"][] = "busca_dataFim";
-					$errorMsg[1] = "Data de pesquisa não pode ser após hoje (".date("d/m/Y").").";
-				}
-
-				$motorista = mysqli_fetch_assoc(query(
-					"SELECT enti_nb_id, enti_tx_nome, enti_tx_admissao FROM entidade
-						WHERE enti_tx_status = 'ativo'
-							AND enti_nb_empresa = ".$_POST["busca_empresa"]."
-							AND enti_nb_id = ".$_POST["busca_motorista"]."
-						LIMIT 1;"
-				));
-
-				if(empty($motorista)){
-					$_POST["errorFields"][] = "busca_motorista";
-					$errorMsg[2] = "Este funcionário não pertence a esta empresa.";
-				}else{
-					$opt = "<option value=\"".$motorista["enti_nb_id"]."\">[".$motorista["enti_nb_id"]."]".$motorista["enti_tx_nome"]."</option>";
-				}
-			}
-
-			if($errorMsg != $baseErrMsg){
-				foreach($errorMsg as &$msg){
-					if(!empty($msg) && substr($msg, -1, 1) == " "){
-						$msg = substr($msg, 0, -2).".";
+			try{
+				if(empty($_POST["busca_empresa"])){
+					if(empty($_POST["busca_motorista"])){
+						$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
+					}else{
+						$idEmpresa = mysqli_fetch_assoc(query(
+							"SELECT empr_nb_id FROM entidade
+								JOIN empresa ON enti_nb_empresa = empr_nb_id
+								WHERE enti_tx_status = 'ativo'
+									AND enti_nb_id = ".$_POST["busca_motorista"].";"
+						));
+						$_POST["busca_empresa"] = $idEmpresa["empr_nb_id"];
 					}
 				}
-				$errorMsg = implode("<br>", $errorMsg);
-				set_status("ERRO: ".$errorMsg);
-				$_POST["acao"] = "";
-				index();
-				exit;
-			}
-
-			//Conferir se a data de início da pesquisa está antes do cadastro do motorista{
-				if(!empty($motorista)){
-					$baseErrMsg = [];
-					$errorMsg = $baseErrMsg;
-					$data_cadastro = new DateTime($motorista["enti_tx_admissao"]);
-					if($data_inicio_obj->format("Y-m") < $data_cadastro->format("Y-m")){
+	
+				//Conferir campos obrigatórios{
+					$camposObrig = [
+						"busca_empresa" => "Empresa",
+						"busca_motorista" => "Funcionário",
+						"busca_periodo" => "Período"
+					];
+					$errorMsg = conferirCamposObrig($camposObrig, $_POST);
+					
+					if(!empty($errorMsg)){
+						throw new Exception($errorMsg);
+					}
+				//}
+				
+				if(!empty($_POST["busca_empresa"]) && !empty($_POST["busca_motorista"])){
+					if($_POST["busca_periodo"][0] > date("Y-m-d") || $_POST["busca_periodo"][1] > date("Y-m-d")){
 						$_POST["errorFields"][] = "busca_dataInicio";
-						$errorMsg = ["O mês inicial deve ser posterior ou igual ao mês de admissão do funcionário (".$data_cadastro->format("m/Y").")."];
-					}
-				}
-
-				if($errorMsg != $baseErrMsg){
-					foreach($errorMsg as &$msg){
-						if(!empty($msg) && substr($msg, -1, 1) == " "){
-							$msg = substr($msg, 0, -2).".";
+						$_POST["errorFields"][] = "busca_dataFim";
+						throw new Exception("Data de pesquisa não pode ser após hoje (".date("d/m/Y").").");
+					}else{
+						$motorista = mysqli_fetch_assoc(query(
+							"SELECT enti_nb_id, enti_tx_nome, enti_tx_admissao FROM entidade"
+								." WHERE enti_tx_status = 'ativo'"
+									." AND enti_nb_empresa = ".$_POST["busca_empresa"]
+									." AND enti_nb_id = ".$_POST["busca_motorista"]
+								." LIMIT 1;"
+						));
+		
+						if(empty($motorista)){
+							$_POST["errorFields"][] = "busca_motorista";
+							throw new Exception("Este funcionário não pertence a esta empresa.");
 						}
 					}
-					$errorMsg = implode("<br>", $errorMsg);
-					set_status("ERRO: ".$errorMsg);
-					$_POST["acao"] = "";
 				}
-			//}
+	
+	
+				//Conferir se a data de início da pesquisa está antes do cadastro do motorista{
+					if(!empty($motorista)){
+						$dataInicio = new DateTime($_POST["busca_periodo"][0]);
+						$data_cadastro = new DateTime($motorista["enti_tx_admissao"]);
+						if($dataInicio->format("Y-m") < $data_cadastro->format("Y-m")){
+							$_POST["errorFields"][] = "busca_dataInicio";
+							throw new Exception("O mês inicial deve ser posterior ou igual ao mês de admissão do funcionário (".$data_cadastro->format("m/Y").").");
+						}
+					}
+				//}
+			}catch(Exception $error){
+				set_status("ERRO: ".$error->getMessage());
+				unset($_POST["acao"]);
+			}
 		//}
 
 		index();
+		exit;
 	}
 
 	function index(){
@@ -175,11 +146,11 @@
 				];
 			}
 
-			$searchFields = array_merge(
-				$searchFields,
-				[
-					campo("Período", "busca_periodo", (!empty($_POST["busca_periodo"])? $_POST["busca_periodo"]: [date("Y-m-01"), date("Y-m-d")]), 2, "MASCARA_PERIODO"),
-				]
+			$searchFields[] = campo(
+				"Período", "busca_periodo",
+				(!empty($_POST["busca_periodo"])? $_POST["busca_periodo"]: [date("Y-m-01"), date("Y-m-d")]),
+				2,
+				"MASCARA_PERIODO"
 			);
 		//}
 
@@ -207,13 +178,7 @@
 			if(!empty($_POST["busca_motorista"])){
 				$aMotorista = carregar("entidade", $_POST["busca_motorista"]);
 				$aEmpresa = carregar("empresa", $aMotorista["enti_nb_empresa"]);
-			}
-			if(empty($_POST["busca_periodo"][0])){
-				$_POST["busca_periodo"][0] = (!empty($_POST["data_de"]))? $_POST["data_de"]: date("Y-m-01");
-			}
-			if(empty($_POST["busca_periodo"][1])){
-				$_POST["busca_periodo"][1] = (!empty($_POST["data_ate"]))? $_POST["data_ate"]: date("Y-m-d");
-			}
+			}			
 
 			echo   
 				"<div style='display:none' id='tituloRelatorio'>
@@ -221,16 +186,9 @@
 					<img id='logo' style='width: 150px' src='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
 				</div>"
 			;
-			
-			$cab = [
-				"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
-				"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "H.E. ".$aMotorista["enti_tx_percHESemanal"]."%", "H.E. ".$aMotorista["enti_tx_percHEEx"]."%",
-				"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
-			];
 
 			// Converte as datas para objetos DateTime
-			$startDate = new DateTime($_POST["busca_periodo"][0]);
-			$endDate   = new DateTime($_POST["busca_periodo"][1]);
+			[$startDate, $endDate] = [new DateTime($_POST["busca_periodo"][0]), new DateTime($_POST["busca_periodo"][1])];
 
 			$aDia = [];
 			// Loop for para percorrer as datas
@@ -326,6 +284,12 @@
 				.$saldosMotorista
 			);
 
+			$cab = [
+				"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
+				"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "H.E. ".$aMotorista["enti_tx_percHESemanal"]."%", "H.E. ".$aMotorista["enti_tx_percHEEx"]."%",
+				"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
+			];
+			
 			$aDia[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumo));
 			
 			grid2($cab, $aDia, "Jornada Semanal (Horas): ".$aMotorista["enti_tx_jornadaSemanal"]);
