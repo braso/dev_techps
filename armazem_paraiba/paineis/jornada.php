@@ -20,7 +20,7 @@ function enviarForm() {
 
 function carregarJS(array $arquivos) {
 
-    $linha = "linha = '<tr>'";
+    $linha = "<tr>";
     if (!empty($_POST["empresa"])) {
         $linha .= "+'<td style=\'text-align: center;\'>'+item.data+'</td>'
                     +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
@@ -71,11 +71,11 @@ function carregarJS(array $arquivos) {
                             dataType: 'json',
                             success: function(data){
                                 var row = {};
-                                $.each(data, function(index, item){"
+                                $.each(data, function(index, item){
+										row[index] = item;
+									});"
                                 . $linha
-                                . "tabela.append(linha);"
-                                . " console.log(item);
-                                });
+                                . "tabela.append(linha);
                             },
                             error: function(){
                                 console.error('Erro ao carregar os dados.');
@@ -218,7 +218,7 @@ function index() {
             criar_relatorio_jornada();
         }
     } else {
-        cabecalho("Relatório Geral de Saldo");
+        cabecalho("Relatorio de Jornada Aberta");
     }
 
     // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";

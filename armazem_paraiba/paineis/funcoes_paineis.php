@@ -848,3 +848,69 @@
 		}
 		return;
 	}
+
+	function criar_relatorio_ajustes() {
+		// dd("Incompleto");
+		global $totalResumo;
+		// $periodoInicio = $_POST["busca_dataInicio"];
+		// $periodoFim = $_POST["busca_dataFim"];
+		$periodoInicio = "2024-10-01";
+		$periodoFim = "2024-10-11";
+
+		$empresas = mysqli_fetch_all(
+			query(
+				"SELECT empr_nb_id, empr_tx_nome"
+				. " FROM `empresa` WHERE empr_tx_status = 'ativo'"
+				. " ORDER BY empr_tx_nome ASC;"
+			),
+			MYSQLI_ASSOC
+		);
+
+		$pontosTipos = [];
+
+		foreach ($empresas as $empresa) {
+			$motoristas = mysqli_fetch_all(
+				query(
+					"SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula, enti_tx_ocupacao FROM entidade"
+					. " WHERE enti_tx_status = 'ativo'"
+					. " AND enti_nb_empresa = " . $empresa['empr_nb_id']
+					. " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
+					. " ORDER BY enti_tx_nome ASC;"
+				),
+				MYSQLI_ASSOC
+			);
+			foreach($motoristas as $motorista){
+				$pontos =mysqli_fetch_all(
+					query(
+					"SELECT ponto.pont_tx_data, ponto.pont_tx_matricula, motivo.moti_tx_nome, pont_tx_tipo"
+						. " FROM ponto"
+						. " INNER JOIN motivo motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id"
+						. " WHERE pont_tx_status = 'ativo'"
+						. " AND pont_tx_matricula = '" . $motorista["enti_tx_matricula"] ."'"
+						. " AND pont_nb_arquivoponto IS NULL"
+						. " AND pont_tx_data BETWEEN STR_TO_DATE('2024-10-01 00:00:00', '%Y-%m-%d %H:%i:%s')"
+						. " AND STR_TO_DATE('2024-10-11 23:59:59', '%Y-%m-%d %H:%i:%s');"
+					),
+					MYSQLI_ASSOC
+				);
+				echo "<br>";
+				var_dump($pontos);
+				echo "<br>";
+			}
+
+			// echo '<pre>';
+			// echo json_encode($pontosTipos, JSON_PRETTY_PRINT);
+			// echo '</pre>';
+			die();
+		}
+
+
+		// $totalMotorista = count($ajustes);
+		// foreach ($ajustes as $value) {
+		// 	$totalInicioJorn += count($value["tipos"]["Inicio de Jornada"]);
+		// 	$totalFimJorn  += count($value["tipos"]["Fim de Jornada"]);
+		// 	$totalInicioReif += count($value["tipos"]["Inicio de Refeição"]);
+		// 	$totalFimReif += count($value["tipos"]["Fim de Refeição"]);
+		// }
+
+	}
