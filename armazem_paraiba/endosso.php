@@ -248,7 +248,7 @@
 
 			$extraMotorista = "";
 			if(!empty($errorMsg)){
-				set_status("ERRO: Insira os campos para pesquisar: ".implode(", ", $errorMsg).".");
+				set_status("ERRO: Campos obrigatórios não preenchidos: ".implode(", ", $errorMsg).".");
 				unset($_GET["acao"]);
 			}
 
