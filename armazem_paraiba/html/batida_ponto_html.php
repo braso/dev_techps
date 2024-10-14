@@ -138,6 +138,13 @@
 				minute: '2-digit',
 			});
 			jornadaAtual = (ultimoInicioJornada != '')? operarHorarios([localTimeString, ultimoInicioJornada], '-'): '00:00';
+			if(primeiroPonto.substring(0, 10) < hoje){
+				primPontoTime = new Date(primeiroPonto);
+				hojeTime = new Date();
+				timestampValue = hojeTime.getTime()-primPontoTime.getTime();
+				horas = Math.floor(timestampValue/1000/60/60);
+				jornadaAtual = horas+":"+String(Math.floor(((timestampValue/1000/60/60)-horas)*60)).padStart(2, '0');
+			}
 			jornadaEfetiva = operarHorarios([jornadaEfetiva, jornadaAtual], '+');
 			duracao = calculateElapsedTime(primeiroPonto);
 			msg += "<br><br>Total da jornada efetiva: "+jornadaEfetiva;
