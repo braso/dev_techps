@@ -36,19 +36,11 @@
 		$camposObrig = [
 			"nome" => "Nome",
 			"tipo" => "Tipo",
-			"legenda" => "Legenda de Marcação",
+			"legenda" => "Legenda de Marcação"
 		];
-
-		$errorMsg = "ERRO: Campos obrigatórios não preenchidos: ";
-		foreach($camposObrig as $key => $value){
-			if(empty($_POST[$key])){
-				$_POST["errorFields"][] = $key;
-				$errorMsg .= $value.", ";
-			}
-		}
-
-		if(!empty($_POST["errorFields"])){
-			set_status(substr($errorMsg, 0, -2).".");
+		$errorMsg = conferirCamposObrig($camposObrig, $_POST);
+		if(!empty($errorMsg)){
+			set_status("ERRO: ".$errorMsg);
 			layout_motivo();
 			exit;
 		}

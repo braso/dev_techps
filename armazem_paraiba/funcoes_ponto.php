@@ -532,7 +532,7 @@
 						$b = date_diff($periodosAdicNot["fins"][0], $hInicio);
 						$valAtual->d = ($a->d)+($b->d);
 						$valAtual->h = ($a->h)+($b->h);
-						$valAtual->i = $a->i+$b->i;
+						$valAtual->i = ($a->i)+($b->i);
 					}else{												//$hFim > $periodosAdicNot["fins"][1]
 						//($hFim - $hInicio >= "24:00", logo, considerar a quantidade de períodos noturnos entre início e fim)
 						$qtdDias = $avancarDias($hInicio, $hFim, $periodosAdicNot);
@@ -583,37 +583,6 @@
 				$adicNot = operarHorarios([$adicNot, $valAtual], "+");
 				$paresAdicionalNot[] = ["inicio" => $hInicio, "fim" => $hFim, "intervalo" => $valAtual];
 				
-				// if($hFim > $adicNot["fim"]){
-				// 	$fimExtra = $hFim->format("H:i");
-				// 	if($hInicio > $adicNot["fim"]){
-				// 		$hInicioAdicionalNot = $hInicio; //CRIA UMA NOVA VARIAVEL PARA NO CASO DAS 05:00
-				// 		$incioExtra = $hInicio->format("H:i");
-				// 	}else{
-				// 		$hInicioAdicionalNot = new DateTime(substr($primReg,0,10)." 22:00");
-				// 		$incioExtra = "22:00";
-				// 	}
-
-				// 	$intervalAdicionalNot = $hInicioAdicionalNot->diff($hFim);
-				// 	$totalIntervaloAdicionalNot->add($intervalAdicionalNot);
-
-				// 	$intervalAdicionalNot = $intervalAdicionalNot->format("%d %H:%I");
-					
-				// 	$paresAdicionalNot[] = ["inicio" => $incioExtra, "fim" => $fimExtra, "intervalo" => $intervalAdicionalNot];
-				// }
-
-				// if($hInicio < $adicNot["inicio"]){
-				// 	$incioExtra = date("H:i", strtotime($inicio_atual));
-				// 	if($hFim > $adicNot["inicio"]){
-				// 		$hFim = new DateTime(substr($primReg,0,10)." 05:00");
-				// 		$fimExtra = "05:00";
-				// 	}else{
-				// 		$fimExtra = date("H:i", strtotime($item["horario"]));
-				// 	}
-
-				// 	$intervalAdicionalNot = $hInicio->diff($hFim);
-				// 	$totalIntervaloAdicionalNot->add($intervalAdicionalNot);
-				// }
-
 				unset($hInicio);
 				unset($hFim);
 				unset($qtdDias);
@@ -665,28 +634,28 @@
 		setlocale(LC_ALL, "pt_BR.utf8");
 
 		$aRetorno = [
-			"data" => data($data),
-			"diaSemana" => strtoupper(substr(pegarDiaDaSemana($data), 0, 3)),
-			"inicioJornada" => [],
-			"inicioRefeicao" => [],
-			"fimRefeicao" => [],
-			"fimJornada" => [],
-			"diffRefeicao" => "00:00",
-			"diffEspera" => "00:00",
-			"diffDescanso" => "00:00",
-			"diffRepouso" => "00:00",
-			"diffJornada" => "00:00",
-			"jornadaPrevista" => "00:00",
-			"diffJornadaEfetiva" => "00:00",
+			"data" 					=> data($data),
+			"diaSemana" 			=> strtoupper(substr(pegarDiaDaSemana($data), 0, 3)),
+			"inicioJornada" 		=> [],
+			"inicioRefeicao" 		=> [],
+			"fimRefeicao" 			=> [],
+			"fimJornada" 			=> [],
+			"diffRefeicao" 			=> "00:00",
+			"diffEspera" 			=> "00:00",
+			"diffDescanso" 			=> "00:00",
+			"diffRepouso" 			=> "00:00",
+			"diffJornada" 			=> "00:00",
+			"jornadaPrevista" 		=> "00:00",
+			"diffJornadaEfetiva" 	=> "00:00",
 			"maximoDirecaoContinua" => "00:00",
-			"intersticio" => "00:00",
-			"he50" => "00:00",
-			"he100" => "00:00",
-			"adicionalNoturno" => "00:00",
-			"esperaIndenizada" => "00:00",
-			"diffSaldo" => "00:00"
+			"intersticio" 			=> "00:00",
+			"he50" 					=> "00:00",
+			"he100" 				=> "00:00",
+			"adicionalNoturno" 		=> "00:00",
+			"esperaIndenizada" 		=> "00:00",
+			"diffSaldo" 			=> "00:00"
 		];
-		$aMotorista = mysqli_fetch_assoc(query(
+		$motorista = mysqli_fetch_assoc(query(
 			"SELECT * FROM entidade"
 			." LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id"
 			." LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id"
@@ -695,16 +664,16 @@
 			." LIMIT 1;"
 		));
 
-		if(empty($aMotorista["enti_nb_parametro"])){
-			$aMotorista["enti_nb_parametro"] = $aMotorista["empr_nb_parametro"];
+		if(empty($motorista["enti_nb_parametro"])){
+			$motorista["enti_nb_parametro"] = $motorista["empr_nb_parametro"];
 		}
 
 		$extraFeriado = "";
-		if(!empty($aMotorista["enti_nb_empresa"]) && !empty($aMotorista["empr_nb_cidade"]) && !empty($aMotorista["cida_nb_id"]) && !empty($aMotorista["cida_tx_uf"])){
-			$extraFeriado = " AND ((feri_nb_cidade = '".$aMotorista["cida_nb_id"]."' OR feri_tx_uf = '".$aMotorista["cida_tx_uf"]."') OR ((feri_nb_cidade = '' OR feri_nb_cidade IS NULL) AND (feri_tx_uf = '' OR feri_tx_uf IS NULL)))";
+		if(!empty($motorista["enti_nb_empresa"]) && !empty($motorista["empr_nb_cidade"]) && !empty($motorista["cida_nb_id"]) && !empty($motorista["cida_tx_uf"])){
+			$extraFeriado = " AND ((feri_nb_cidade = '".$motorista["cida_nb_id"]."' OR feri_tx_uf = '".$motorista["cida_tx_uf"]."') OR ((feri_nb_cidade = '' OR feri_nb_cidade IS NULL) AND (feri_tx_uf = '' OR feri_tx_uf IS NULL)))";
 		}
 
-		$aParametro = carregar("parametro", $aMotorista["enti_nb_parametro"]);
+		$aParametro = carregar("parametro", $motorista["enti_nb_parametro"]);
 		$alertaJorEfetiva = ((isset($aParametro["para_tx_acordo"]) && $aParametro["para_tx_acordo"] == "sim")? "12:00": "10:00");
 
 		$queryFeriado = query(
@@ -717,7 +686,6 @@
 			$stringFeriado .= $row[0]."\n";
 		}
 
-		$tiposRegistrados = [];
 		$tipos = [
 			"inicioJornada" => "Inicio de Jornada",
 			"fimJornada" => "Fim de Jornada",
@@ -937,8 +905,8 @@
 
 		//JORNADA PREVISTA{
 			$jornadas = [
-				"sabado" => $aMotorista["enti_tx_jornadaSabado"],
-				"semanal"=> $aMotorista["enti_tx_jornadaSemanal"],
+				"sabado" => $motorista["enti_tx_jornadaSabado"],
+				"semanal"=> $motorista["enti_tx_jornadaSemanal"],
 				"feriado"=> ($stringFeriado != ""? True: null)
 			];
 
@@ -964,7 +932,7 @@
 			];
 
 			//Ignorar intervalos que tenham sido marcados para ignorar no parâmetro{
-				if(!empty($aMotorista["enti_nb_parametro"]) && !empty($aParametro["para_tx_ignorarCampos"])){
+				if(!empty($motorista["enti_nb_parametro"]) && !empty($aParametro["para_tx_ignorarCampos"])){
 					$campos = ["espera", "descanso", "repouso"/*, "repousoEmbarcado"*/];
 					foreach($campos as $campo){
 						if(is_bool(strpos($aParametro["para_tx_ignorarCampos"], $campo))){
@@ -1097,7 +1065,7 @@
 			$tolerancia = carrega_array(query(
 				"SELECT parametro.para_tx_tolerancia FROM entidade 
 					JOIN parametro ON enti_nb_parametro = para_nb_id 
-					WHERE enti_nb_parametro = ".$aMotorista["enti_nb_parametro"]."
+					WHERE enti_nb_parametro = ".$motorista["enti_nb_parametro"]."
 					LIMIT 1;"
 			))[0];
 			$tolerancia = intval($tolerancia);
@@ -1135,11 +1103,6 @@
 		
 
 		//MÁXIMA DIREÇÃO CONTÍNUA{
-			// $aRetorno["maximoDirecaoContinua"] = verificarAlertaMDC(
-			// 	maxDirecaoContinua($tiposRegistrados),
-			// 	$registros["descansoCompleto"]["totalIntervalo"]
-			// );
-
 			if(is_bool(strpos($aParametro["para_tx_ignorarCampos"], "mdc"))){
 				$intervalos = [];
 				$interAtivo = null;
@@ -1414,22 +1377,24 @@
 			);
 
 			foreach(["inicioJornada", "fimJornada", "inicioRefeicao", "fimRefeicao"] as $tipo){
-				if(count($aRetorno[$tipo]) > 0){
-					for($f = 0; $f < count($aRetorno[$tipo]); $f++){
-						//Formatar datas para hora e minutos
-						if(strlen($aRetorno[$tipo][$f]) > 3 && strpos($aRetorno[$tipo][$f], ":", strlen($aRetorno[$tipo][$f])-3) !== false){
-							$aRetorno[$tipo][$f] = date("H:i", strtotime($aRetorno[$tipo][$f]));
-						}
-					}
-					$aRetorno[$tipo] = implode("<br>", $aRetorno[$tipo]);
-					foreach($legendas as $legenda){
-						$aRetorno[$tipo] = str_replace("<br><strong>".$legenda["moti_tx_legenda"]."</strong>", " <strong>".$legenda["moti_tx_legenda"]."</strong>", $aRetorno[$tipo]);
-					}
-					$aRetorno[$tipo] = str_replace("<br>D+", " D+", $aRetorno[$tipo]);
-					$aRetorno[$tipo] = str_replace("<br>*", " *", $aRetorno[$tipo]);
-				}else{
+				if(count($aRetorno[$tipo]) == 0 || (count($aRetorno[$tipo]) == 1 && $aRetorno[$tipo][0] == "")){
 					$aRetorno[$tipo] = "";
+					continue;
 				}
+				
+				foreach($aRetorno[$tipo] as &$value){
+					//Formatar datas para H:i
+					if(preg_match("/-?\d{2,4}:\d{2}:\d{2}$/", $value, $matches)){
+						$value = substr($matches[0], 0, -3);
+					}
+				}
+				$aRetorno[$tipo] = implode("<br>", $aRetorno[$tipo]);
+				
+				foreach($legendas as $legenda){
+					$aRetorno[$tipo] = str_replace("<br><strong>".$legenda["moti_tx_legenda"]."</strong>", " <strong>".$legenda["moti_tx_legenda"]."</strong>", $aRetorno[$tipo]);
+				}
+				$aRetorno[$tipo] = str_replace("<br>D+", " D+", $aRetorno[$tipo]);
+				$aRetorno[$tipo] = str_replace("<br>*", " *", $aRetorno[$tipo]);
 			}
 		//}
 		

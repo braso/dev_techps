@@ -2,13 +2,17 @@
     padding: 0px 20px;
 }
 
-
 #clock{
     font-size:25px;
     font-weight: bold;
+    margin-bottom: 10px;
 }
 #clockParent{
 }
+
+form .row{
+    display:flex;
+}    
 
 .button-icon {
     --icon-size: 30px;
@@ -52,9 +56,35 @@
     text-align: -webkit-center;
 }
 
+/* Desktop specifics */
+@media(min-width:992px){
+    .form-actions{
+        justify-content: left;
+    }
+	.fecha-form-btn{
+		width:14rem;
+	}
+}
+
+@media(max-width:992px){
+    form .row{
+        display: grid;
+        justify-items: center;
+    }
+    form .row div{
+        width: 100%;
+    }
+    form .row div:nth-child(2){
+        text-align: center;
+    }
+}
+
 @media(max-width:768px){
     #clockParent{
         margin-right:0%;
+    }
+    form .row{
+        display: block;
     }
 }
 
@@ -99,15 +129,4 @@
     .dataTables_info {
         display: none;
     }
-}
-
-
-/* Desktop specifics */
-@media(min-width:992px){
-    .form-actions{
-        justify-content: left;
-    }
-	.fecha-form-btn{
-		width:14rem;
-	}
 }

@@ -4,10 +4,10 @@
         error_reporting(E_ALL);
     //*/
 
+    header("Expires: 01 Jan 2001 00:00:00 GMT");
     header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
     header('Cache-Control: post-check=0, pre-check=0', FALSE);
     header('Pragma: no-cache');
-    header("Expires: 0");
     
     require "../funcoes_ponto.php";
     require_once __DIR__."/funcoes_paineis.php";

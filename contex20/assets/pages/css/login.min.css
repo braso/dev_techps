@@ -15,13 +15,13 @@ html {
 	margin-bottom: 5rem;
 }
 
-.login .logo img:hover{
+.login .logo img{
 	transition: filter 0.5s;
-	transition-timing-function: ease-in-out;
 }
 
 .login .logo img:hover{
 	filter: brightness(1.5);
+	transition: filter 0.5s;
 }
 
 .login .content {

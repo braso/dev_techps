@@ -30,8 +30,6 @@
 
 		//Conferir casos de erro e montar mensagem de erro{
 			//Campos obrigatórios não preenchidos{
-				$baseErrMsg = "ERRO: Campos obrigatórios não preenchidos: ";
-				$errorMsg = $baseErrMsg;
 				if ($_POST["editPermission"]) {
 					$camposObrig = [
 						"nome" => "Nome",
@@ -41,51 +39,40 @@
 						"email" => "Email",
 						"empresa" => "Empresa"
 					];
-					foreach ($camposObrig as $key => $value) {
-						if (!isset($_POST[$key]) || empty($_POST[$key])) {
-							$_POST["errorFields"][] = $key;
-							$errorMsg .= $value.", ";
-						}
+					if(empty($_POST["id"])){
+						$camposObrig["senha"] = "Senha";
+						$camposObrig["senha2"] = "Confirmação de senha";
 					}
-
-					if(empty($_POST["id"]) && (empty($_POST["senha"]) || empty($_POST["senha2"]))){
-						$_POST["errorFields"][] = "senha";
-						$_POST["errorFields"][] = "senha2";
-						$errorMsg .= "Senha e Confirmação".", ";
-					}
-
 				}else{
-					if(empty($_POST["senha"]) || empty($_POST["senha2"])){
-						$_POST["errorFields"][] = "senha";
-						$_POST["errorFields"][] = "senha2";
-						$errorMsg .= "Senha e Confirmação".", ";
-					}
+					$camposObrig = [
+						"senha" => "Senha",
+						"senha2" => "Confirmação de senha",
+					];
 				}
 	
-				if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")) && isset($_POST["nivel"]) && empty($_POST["nivel"])){	//Se usuárioLogado = Administrador && nivelUsuario indefinido
-					$_POST["errorFields"][] = "nivel";
-					$errorMsg .= "Nível".", ";
-				}
-				if(($_POST["senha"] != $_POST["senha2"])){
-					$_POST["errorFields"][] = "senha2";
-					$errorMsg .= "Confirmação de senha correta".", ";
+				if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){	//Se usuárioLogado = Administrador
+					$camposObrig["nivel"] = "Nível";
 				}
 
-				if($errorMsg != $baseErrMsg){
-					set_status(substr($errorMsg, 0, strlen($errorMsg)-2).".");
+				$errorMsg = conferirCamposObrig($camposObrig, $_POST);
+
+				if(!empty($errorMsg)){
+					set_status("ERRO: ".$errorMsg);
 					mostrarFormCadastro();
 					exit;
 				}
 			//}
 
-			$baseErrMsg = "ERRO: ";
-			$errorMsg = $baseErrMsg;
+			$errorMsg = "";
+
+			if(!empty($_POST["senha"]) && ($_POST["senha"] != $_POST["senha2"])){
+				$_POST["errorFields"][] = "senha2";
+				$errorMsg .= "Confirmação de senha correta, ";
+			}
+
 			if(!empty($_POST["cpf"])){
 				$_POST["cpf"] = preg_replace( "/[^0-9]/is", "", $_POST["cpf"]);
-				if(strlen($_POST["cpf"]) != 11){
-					$_POST["errorFields"][] = "cpf";
-					$errorMsg .= "CPF parcial, ";
-				}elseif(!validarCPF($_POST["cpf"])){
+				if(!validarCPF($_POST["cpf"])){
 					$_POST["errorFields"][] = "cpf";
 					$errorMsg .= "CPF inválido, ";
 				}
@@ -98,8 +85,8 @@
 				}
 			}
 
-			if($errorMsg != $baseErrMsg){
-				set_status(substr($errorMsg, 0, strlen($errorMsg)-2).".");
+			if(!empty($errorMsg)){
+				set_status("ERRO: ".substr($errorMsg, 0, strlen($errorMsg)-2).".");
 				mostrarFormCadastro();
 				exit;
 			}

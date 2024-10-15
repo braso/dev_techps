@@ -139,7 +139,7 @@
 		$error = "notfound";
 	}
 
-	$_POST["HTTP_REFERER"] = ($_SERVER["HTTP_REFERER"]?? $_ENV["APP_PATH"]."/index.php")."?error=".$error;
+	$_POST["HTTP_REFERER"] = ($_SERVER["HTTP_REFERER"]?? $_ENV["APP_PATH"]."/index.php");
 
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
 	voltar();
