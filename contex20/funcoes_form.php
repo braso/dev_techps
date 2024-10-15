@@ -264,7 +264,13 @@
 		
 		$formVoltar = "<form action='".str_replace($_ENV["URL_BASE"], "", $_POST["HTTP_REFERER"])."' name='form_voltar' method='post'>";
 		foreach($_POST as $key => $value){
-			$formVoltar .= "<input type='hidden' name='".$key."' value='".$value."'>";
+			if(is_array($value)){
+				foreach($value as $val){
+					$formVoltar .= "<input type='hidden' name='".$key."[]' value='".$val."'>";
+				}
+			}else{
+				$formVoltar .= "<input type='hidden' name='".$key."' value='".$value."'>";
+			}
 		}
 		$formVoltar .= "</form>";
 		$formVoltar .= "<script>document.form_voltar.submit();</script>";
