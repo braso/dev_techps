@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
@@ -23,17 +23,12 @@
 				layout_abono();
 				exit;
 			}
-			dd($_POST);
 		// }
 
 		$_POST["busca_motorista"] = $_POST["motorista"];
 
-		
-		$aData = explode(" - ", $_POST["busca_periodo"]);
-		$aData[0] = explode("/", $aData[0]);
-		$aData[0] = $aData[0][2]."-".$aData[0][1]."-".$aData[0][0];
-		$aData[1] = explode("/", $aData[1]);
-		$aData[1] = $aData[1][2]."-".$aData[1][1]."-".$aData[1][0];
+		$aData[0] = $_POST["busca_periodo"][0];
+		$aData[1] = $_POST["busca_periodo"][1];
 		//Conferir se há um período entrelaçado com essa data{
 			$endosso = mysqli_fetch_assoc(
 				query(
@@ -88,6 +83,7 @@
 			];
 			inserir("abono", array_keys($novoAbono), array_values($novoAbono));
 		}
+
 
 		$_POST["acao"] = "index";
 

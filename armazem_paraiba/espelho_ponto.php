@@ -14,7 +14,13 @@
 		unset($_POST["acao"]);
 		$form = "<form id='cadastrarAbono' action='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_abono.php' method='post'>";
 		foreach($_POST as $key => $value){
-			$form .= "<input name='".$key."' value='".$value."'/>";
+			if(is_array($value)){
+				foreach($value as $val){
+					$form .= "<input name='".$key."[]' value='".$val."'/>";
+				}
+			}else{
+				$form .= "<input name='".$key."' value='".$value."'/>";
+			}
 		}
 		$form .= "</form>";
 
