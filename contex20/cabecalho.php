@@ -125,6 +125,10 @@
 			border-bottom: 1px solid #c2cad8;
 		}
 
+		.portlet{
+			border-radius: 20px;
+		}
+
 		.portlet.light {
 			box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.2);
 		}
