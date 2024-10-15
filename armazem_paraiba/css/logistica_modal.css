@@ -1,10 +1,10 @@
-      body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            background-color: rgb(163, 161, 161);
-        }
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    background-color: rgb(163, 161, 161);
+}
 img{
     height:30px;
    width:30px;
@@ -236,93 +236,93 @@ h2 {
 
 
 
-        .alert {
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-        }
+.alert {
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
 
-        .alert-danger {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+}
 
-        .alert-success {
-            background-color: #d4edda;
-            color: #155724;
-        }
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+}
 
-        .autocomplete-items {
-            border: 1px solid #ddd;
-            background-color: #fff;
-            max-height: 150px;
-            overflow-y: auto;
-            position: absolute;
-            z-index: 1000;
-        }
+.autocomplete-items {
+    border: 1px solid #ddd;
+    background-color: #fff;
+    max-height: 150px;
+    overflow-y: auto;
+    position: absolute;
+    z-index: 1000;
+}
 
-        .autocomplete-items div {
-            padding: 10px;
-            cursor: pointer;
-        }
+.autocomplete-items div {
+    padding: 10px;
+    cursor: pointer;
+}
 
-        .autocomplete-items div:hover {
-            background-color: #f1f1f1;
-        }
+.autocomplete-items div:hover {
+    background-color: #f1f1f1;
+}
 
-        #label-plate, #label-date {
-            background-color: transparent;
-        }
+#label-plate, #label-date {
+    background-color: transparent;
+}
 
-        .form-container #formContainer label {
-            background-color: transparent;
-        }
+.form-container #formContainer label {
+    background-color: transparent;
+}
 
-        .adjustment-list {
-            margin-top: 20px;
-        }
+.adjustment-list {
+    margin-top: 20px;
+}
 
-        .adjustment-list table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+.adjustment-list table {
+    width: 100%;
+    border-collapse: collapse;
+}
 
-        .adjustment-list th, .adjustment-list td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
+.adjustment-list th, .adjustment-list td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
 
-        .adjustment-list th {
-            background-color: #f2f2f2;
-        }
-        
-        
-           /* Loading Screen */
-        #loading-screen {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.8);
-            z-index: 9999;
-            text-align: center;
-            padding-top: 20%;
-        }
-
-        #loading-screen i {
-            font-size: 4rem;
-            color: #007bff;
-        }
+.adjustment-list th {
+    background-color: #f2f2f2;
+}
 
 
+    /* Loading Screen */
+#loading-screen {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 9999;
+    text-align: center;
+    padding-top: 20%;
+}
 
-        /*ESTILO BOTAÃO CONSULTA*/
+#loading-screen i {
+    font-size: 4rem;
+    color: #007bff;
+}
 
 
-        #consultarBtn {
+
+/*ESTILO BOTAÃO CONSULTA*/
+
+
+#consultarBtn {
     background: linear-gradient(to right, #007BFF, #44c1eb); /* Azul para azul claro */
     border: none;
     color: white;
@@ -349,8 +349,8 @@ h2 {
 
 
 
-    /*ESTILO BOTAÃO AJSUTAR PONTO*/
-       #toggleFormBtn {
+/*ESTILO BOTAÃO AJSUTAR PONTO*/
+#toggleFormBtn {
     background: linear-gradient(to right, #0a6e96, #063747); /* Azul para azul claro */
     border: none;
     color: white;
@@ -368,8 +368,8 @@ h2 {
 
 
 
-    /*ESTILO BOTAÃO AJSUTAR PONTO*/
-       #addAdjustmentBtn {
+/*ESTILO BOTAÃO AJSUTAR PONTO*/
+#addAdjustmentBtn {
     background: linear-gradient(to right, #0a6e96, #063747); /* Azul para azul claro */
     border: none;
     color: white;
@@ -385,8 +385,8 @@ h2 {
 }
 
 
-    /*ESTILO BOTAÃO ENVIAR LISTA DE AJUSTE*/
-       #submitAdjustmentsBtn {
+/*ESTILO BOTAÃO ENVIAR LISTA DE AJUSTE*/
+#submitAdjustmentsBtn {
     background: linear-gradient(to right, #0a6e96, #063747); /* Azul para azul claro */
     border: none;
     color: white;
@@ -475,15 +475,12 @@ h2 {
 
 
 .row div label{
-    
-       margin: 0px 10px;
+    margin: 0px 10px;
     background-color: transparent;
     z-index: 1;
     position: relative;
     padding: 0px 5px;
     border-radius: 10px;
     text-wrap: nowrap;
-  
-			/* min-width: min-content; */
-		
+    /* min-width: min-content; */
 }

@@ -47,13 +47,9 @@ document.getElementById("toggleFormBtn").addEventListener("click", function () {
 // Mapeamento dos tipos de ajuste
 var tipoAjusteMap = {
     "3": "Início e Fim de Refeição",
-
     "5": "Início e Fim de Espera",
-
     "7": "Início e Fim de Descanso",
-
     "9": "Início e Fim de Repouso",
-
 };
 // Função para atualizar o resumo acima da tabela
 function atualizarResumo() {
@@ -67,7 +63,7 @@ function atualizarResumo() {
     for (var i = 0; i < rows.length; i++) {
         var cells = rows[i].getElementsByTagName("td");
         var horaInicio = cells[2].textContent.trim();
-        var horaFim = (i + 1 < rows.length) ? rows[i + 1].getElementsByTagName("td")[2].textContent.trim() : "";
+        var horaFim = ((i + 1 < rows.length)? rows[i + 1].getElementsByTagName("td")[2].textContent.trim(): "");
         var tipoAjusteCodigo = cells[5].textContent.trim();
 
         // Converte o código do tipo de ajuste para o nome usando o mapeamento
@@ -132,32 +128,20 @@ function excluirLinha(button) {
 
 document.getElementById("addAdjustmentBtn").addEventListener("click", function () {
     // Obtém os valores dos campos do formulário
-    var motorista = document.getElementById("motorista").value;
-    var data = document.getElementById("data").value;
-    var hora = document.getElementById("hora").value;
-    var horaFim = document.getElementById("horaFim").value;
-    var idMacro = document.getElementById("idMacro").value;
-    var motivo = document.getElementById("motivo").value;
-    var descricao = document.getElementById("descricao").value;
-    var plate = document.getElementById("plate").value;
-    var comentario = document.getElementById("coment").value;
-
-    // Latitude e Longitude
-    var latitude = document.getElementById("latitude").value;
-    var longitude = document.getElementById("longitude").value;
+    var motorista 	= document.getElementById("motorista").value;
+    var data 		= document.getElementById("data").value;
+    var hora 		= document.getElementById("hora").value;
+    var horaFim 	= document.getElementById("horaFim").value;
+    var idMacro 	= document.getElementById("idMacro").value;
+    var motivo 		= document.getElementById("motivo").value;
+    var descricao 	= document.getElementById("descricao").value;
+    var plate 		= document.getElementById("plate").value;
+    var comentario 	= document.getElementById("coment").value;
+    var latitude 	= document.getElementById("latitude").value;
+    var longitude 	= document.getElementById("longitude").value;
 
     // Verifica se todos os campos obrigatórios estão preenchidos
-    if (
-        motorista &&
-        data &&
-        hora &&
-        idMacro &&
-        motivo &&
-        descricao &&
-        plate &&
-        latitude &&
-        longitude
-    ) {
+    if (motorista && data && hora && idMacro && motivo && descricao && plate && latitude && longitude){
         var table = document.getElementById("adjustmentTable").getElementsByTagName("tbody")[0];
 
         // Cria a descrição concatenada com o comentário
@@ -260,15 +244,15 @@ document.getElementById("submitAdjustmentsBtn").addEventListener("click", functi
     for (var i = 0; i < rows.length; i++) {
         var cells = rows[i].getElementsByTagName("td");
         adjustments.push({
-            motorista: cells[0].textContent,
-            data: cells[1].textContent,
-            hora: cells[2].textContent,
-            latitude: cells[3].textContent,  // Adiciona Latitude
-            longitude: cells[4].textContent, // Adiciona Longitude
-            idMacro: cells[5].textContent,
-            motivo: cells[6].textContent,
-            descricao: cells[7].textContent,
-            plate: cells[8].textContent
+            motorista: 	cells[0].textContent,
+            data: 		cells[1].textContent,
+            hora: 		cells[2].textContent,
+            latitude: 	cells[3].textContent,	// Adiciona Latitude
+            longitude: 	cells[4].textContent,	// Adiciona Longitude
+            idMacro: 	cells[5].textContent,
+            motivo: 	cells[6].textContent,
+            descricao: 	cells[7].textContent,
+            plate: 		cells[8].textContent
         });
     }
 
@@ -301,6 +285,4 @@ setTimeout(function () {
     messages.forEach(function (message) {
         message.style.display = "none";
     });
-
-    
 }, 5000); // 5000 milissegundos = 5 segundos
