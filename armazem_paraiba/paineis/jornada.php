@@ -99,13 +99,12 @@ function carregarJS(array $arquivos) {
                                     var isDataAtual = dataItem.getTime() === dataAtual.getTime();
                                     var diferencaDias = isDataAtual ? 0 : Math.floor((dataAtual - dataItem) / (1000 * 60 * 60 * 24));
 
-                                    console.log(item.data.indexOf('(E)'));
                                     if(item.data.indexOf('(E)') == -1) {
                                         var cor = '';
                                         // Definir a cor com base na quantidade de dias
                                         if (diferencaDias <= 3) {
                                             cor = 'background-color: green; color:white';
-                                        } else if (diferencaDias <= 5) {
+                                        } else if (diferencaDias <= 6) {
                                             cor = 'background-color: yellow;'
                                         } else {
                                             cor = 'background-color: red; color:white';
