@@ -371,7 +371,6 @@
 		
 		
 		$jornadaEfetiva = operarHorarios([$pares["refeicao"], $pares["espera"], $pares["descanso"], $pares["repouso"], $pares["repousoEmbarcado"]], "+");
-		
 		$jornadaEfetiva = operarHorarios([$jornadaCompleta, $jornadaEfetiva], "-");
 		// dd([$pares, $jornadaEfetiva]);
 
@@ -421,6 +420,7 @@
 				<p class='text-left' id='clock'>Carregando...</p>
 			</div>",
 			"<div class='col-sm-5 margin-bottom-5'>"
+				."<div class='margin-bottom-5'>Data: ".date("d/m")."</div>"
 				."<div class='margin-bottom-5'>Matrícula: ".$aMotorista["enti_tx_matricula"]."</div>"
 				."<div class='margin-bottom-5'>CPF: ".$aMotorista["user_tx_cpf"]."</div>"
 				."<div class='margin-bottom-10'>Nome: ".$aMotorista["user_tx_nome"]."</div>"
