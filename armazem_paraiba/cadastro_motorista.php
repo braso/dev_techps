@@ -107,7 +107,6 @@
 			"enti_tx_nome" 						=> "nome", 
 			"enti_tx_nascimento" 				=> "nascimento", 
 			"enti_tx_status" 					=> "status", 
-			"enti_tx_status" 					=> "status", 
 			"enti_tx_cpf" 						=> "cpf",
 			"enti_tx_rg" 						=> "rg",
 			"enti_tx_civil" 					=> "civil",
@@ -129,7 +128,7 @@
 			"enti_tx_jornadaSemanal" 			=> "jornadaSemanal",
 			"enti_tx_jornadaSabado" 			=> "jornadaSabado",
 			"enti_tx_percHESemanal" 			=> "percHESemanal",
-			"enti_tx_percHEEx" 		=> "percHEEx",
+			"enti_tx_percHEEx" 					=> "percHEEx",
 			"enti_tx_rgOrgao" 					=> "rgOrgao", 
 			"enti_tx_rgDataEmissao" 			=> "rgDataEmissao", 
 			"enti_tx_rgUf" 						=> "rgUf",
@@ -154,12 +153,12 @@
 		];
 
 		$novoMotorista = [];
-		$post_values = array_values($enti_campos);
-		for($f = 0; $f < sizeof(array_values($enti_campos)); $f++){
-			$bd_campo = array_keys($enti_campos)[$f];
-			if(isset($_POST[$post_values[$f]]) && !empty($_POST[$post_values[$f]])){
-				$a_mod[$bd_campo] = $_POST[$post_values[$f]];
-				$novoMotorista[$bd_campo] = $a_mod[$bd_campo];
+		$postKeys = array_values($enti_campos);
+
+		foreach($enti_campos as $bdKey => $postKey){
+			if(!empty($_POST[$postKey])){
+				$a_mod[$bdKey] = $_POST[$postKey];
+				$novoMotorista[$bdKey] = $a_mod[$bdKey];
 			}
 		}
 		unset($enti_campos);
@@ -168,43 +167,53 @@
 			$novoMotorista["enti_nb_salario"] = str_replace([".", ","], ["", "."], $novoMotorista["enti_nb_salario"]);
 		}
 
-
-
 		//Conferir se os campos obrigatórios estão preenchidos{
 			$camposObrig = [
-				"nome" => "Nome", "nascimento" => "Dt. Nascimento",
-				"cpf" => "CPF", "rg" => "RG", "bairro" => "Bairro",
-				"cep" => "CEP", "endereco" => "Endereço", "cidade" => "Cidade/UF", "fone1" => "Telefone 1",
-				"email" => "E-mail",
-				"empresa" => "Empresa", "salario" => "Salário", "ocupacao" => "Ocupação", "admissao" => "Dt Admissão",
-				"parametro" => "Parâmetro", "jornadaSemanal" => "Jornada Semanal", "jornadaSabado" => "Jornada Sábado",
-				"percHESemanal" => "H.E. Semanal", "percHEEx" => "H.E. Extraordinária",
-				"cnhRegistro" => "N° Registro da CNH", "cnhCategoria" => "Categoria do CNH", "cnhCidade" => "Cidade do CNH", "cnhEmissao" => "Data de Emissão do CNH",
-				"cnhValidade" => "Validade do CNH", "cnhPrimeiraHabilitacao" => "1° Habilitação"
+				"nome" 						=> "Nome", 
+				"nascimento" 				=> "Dt. Nascimento",
+				"cpf" 						=> "CPF",
+				"rg" 						=> "RG",
+				"bairro" 					=> "Bairro",
+				"cep" 						=> "CEP",
+				"endereco" 					=> "Endereço",
+				"cidade" 					=> "Cidade/UF",
+				"fone1" 					=> "Telefone 1",
+				"email" 					=> "E-mail",
+				"empresa" 					=> "Empresa",
+				"salario" 					=> "Salário",
+				"ocupacao" 					=> "Ocupação",
+				"admissao" 					=> "Dt Admissão",
+				"parametro" 				=> "Parâmetro",
+				"jornadaSemanal" 			=> "Jornada Semanal",
+				"jornadaSabado" 			=> "Jornada Sábado",
+				"percHESemanal" 			=> "H.E. Semanal",
+				"percHEEx" 					=> "H.E. Extraordinária",
+				"cnhRegistro" 				=> "N° Registro da CNH",
+				"cnhCategoria" 				=> "Categoria do CNH",
+				"cnhCidade" 				=> "Cidade do CNH",
+				"cnhEmissao" 				=> "Data de Emissão do CNH",
+				"cnhValidade" 				=> "Validade do CNH",
+				"cnhPrimeiraHabilitacao" 	=> "1° Habilitação"
 			];
-			$emptyFields = "";
-
 			if(empty($a_mod["enti_tx_matricula"])){
 				$camposObrig["postMatricula"] = "Matrícula";
 			}
 			if(in_array($_POST["ocupacao"], ["Ajudante", "Funcionário"])){
-				unset($camposObrig["cnhRegistro"], $camposObrig["cnhCategoria"], $camposObrig["cnhCidade"], $camposObrig["cnhEmissao"], $camposObrig["cnhValidade"], $camposObrig["cnhPrimeiraHabilitacao"]);
+				unset(
+					$camposObrig["cnhRegistro"],
+					$camposObrig["cnhCategoria"],
+					$camposObrig["cnhCidade"],
+					$camposObrig["cnhEmissao"],
+					$camposObrig["cnhValidade"],
+					$camposObrig["cnhPrimeiraHabilitacao"]
+				);
 			}
-
-			foreach(array_keys($camposObrig) as $campo){
-				if(empty($_POST[$campo]) && $_POST[$campo] != "0"){
-					$_POST["errorFields"][] = $campo;
-					$emptyFields .= $camposObrig[$campo].", ";
-				}
-			}
-			
-			if(!empty($emptyFields)){
-				$emptyFields = substr($emptyFields, 0, strlen($emptyFields)-2);
-				set_status("ERRO: Campos obrigatórios não preenchidos: ".$emptyFields);
+			$errorMsg = conferirCamposObrig($camposObrig, $_POST);
+			if(!empty($errorMsg)){
+				set_status("ERRO: ".$errorMsg);
 				visualizarCadastro();
 				exit;
 			}
-
 			unset($camposObrig);
 		//}
 
@@ -258,8 +267,8 @@
 		}
 
 		$enti_valores = [];
-		for($f = 0; $f < sizeof($post_values); $f++){
-			$enti_valores[] = !empty($_POST[$post_values[$f]])? $_POST[$post_values[$f]]: "";
+		for($f = 0; $f < count($postKeys); $f++){
+			$enti_valores[] = !empty($_POST[$postKeys[$f]])? $_POST[$postKeys[$f]]: "";
 		}
 
 		$_POST["cpf"] = preg_replace("/[^0-9]/is", "", $_POST["cpf"]);
