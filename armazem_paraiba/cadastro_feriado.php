@@ -21,16 +21,9 @@
 			"nome" => "Nome",
 			"data" => "Data"
 		];
-		$errorMsg = "";
-		foreach($camposObrig as $key => $value){
-			if(empty($_POST[$key])){
-				$_POST["errorFields"][] = $key;
-				$errorMsg .= $value.", ";
-			}
-		}
-
+		$errorMsg = conferirCamposObrig($camposObrig, $_POST);
 		if(!empty($errorMsg)){
-			set_status("ERRO: Campos obrigatórios não preenchidos: ". substr($errorMsg, 0, strlen($errorMsg)-2).".");
+			set_status("ERRO: ".$errorMsg);
 			layout_feriado();
 			exit;
 		}
