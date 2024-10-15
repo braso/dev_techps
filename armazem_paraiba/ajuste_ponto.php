@@ -361,6 +361,9 @@
 		return $cnpjs_formatados;
 	}
 
+
+
+
 	function index(){
 		global $CONTEX;
 		if(empty($_POST['data'])){
@@ -414,6 +417,7 @@
 						}
 					</script>';
 
+
 		// Chama a função para carregar os CNPJs formatados
 		$cnpjs = carregarCNPJsFormatados();
 
@@ -432,46 +436,46 @@
 
 		// Construir o botão com o código JavaScript embutido
 		$botaoConsLog = '
-			<button class="btn default" type="button" onclick="consultarLogistica()">Consultar Logística</button>
+		<button class="btn default" type="button" onclick="consultarLogistica()">Consultar Logística</button>
 
-			<script>
-			function consultarLogistica() {
-				// Obter valores do PHP e HTML
-				var matricula = "' . addslashes($matricula) . '";
-				var motorista = "' . addslashes($motorista) . '";
-				var data = document.getElementById("data").value;
+		<script>
+		function consultarLogistica() {
+			// Obter valores do PHP e HTML
+			var matricula = "' . addslashes($matricula) . '";
+			var motorista = "' . addslashes($motorista) . '";
+			var data = document.getElementById("data").value;
 
-				// Obter todos os CNPJs da variável PHP
-				var cnpjs = ' . json_encode($cnpjs) . ';
+			// Obter todos os CNPJs da variável PHP
+			var cnpjs = ' . json_encode($cnpjs) . ';
 
-				// Verificar o conteúdo de cnpjs no console
-				console.log("CNPJs:", cnpjs);
+			// Verificar o conteúdo de cnpjs no console
+			console.log("CNPJs:", cnpjs);
 
-				if (!Array.isArray(cnpjs)) {
-					console.error("CNPJs não é um array:", cnpjs);
-					return;
-				}
-
-				if (cnpjs.length === 0) {
-					console.error("A lista de CNPJs está vazia.");
-					return;
-				}
-
-				// Converte a lista de CNPJs para uma string separada por vírgulas
-				var cnpjString = cnpjs.map(String).join(",");
-
-				// Construir a URL com os parâmetros dinâmicos
-				var url = "' . addslashes($urlLogistica) . '";
-				url += "?motorista=" + encodeURIComponent(motorista) + 
-					"&matricula=" + encodeURIComponent(matricula) + 
-					"&data=" + encodeURIComponent(data) +
-					"&cnpj=" + encodeURIComponent(cnpjString);  // Adicionando todos os CNPJs
-
-				// Abrir a nova página em uma nova aba
-				window.open(url, "_blank");
+			if (!Array.isArray(cnpjs)) {
+				console.error("CNPJs não é um array:", cnpjs);
+				return;
 			}
-			</script>'
-		;
+
+			if (cnpjs.length === 0) {
+				console.error("A lista de CNPJs está vazia.");
+				return;
+			}
+
+			// Converte a lista de CNPJs para uma string separada por vírgulas
+			var cnpjString = cnpjs.map(String).join(",");
+
+			// Construir a URL com os parâmetros dinâmicos
+			var url = "' . addslashes($urlLogistica) . '";
+			url += "?motorista=" + encodeURIComponent(motorista) + 
+				"&matricula=" + encodeURIComponent(matricula) + 
+				"&data=" + encodeURIComponent(data) +
+				"&cnpj=" + encodeURIComponent(cnpjString);  // Adicionando todos os CNPJs
+
+			// Abrir a nova página em uma nova aba
+			window.open(url, "_blank");
+		}
+		</script>
+		';
 
 		if (empty($_POST['status'])) {
 			$_POST['status'] = 'ativo';
@@ -514,7 +518,7 @@
 
 		$botoes[] = $botao_imprimir;
 		$botoes[] = botao("Voltar", "voltar");
-		// $botoes[] = $botaoConsLog; //BOTÃO CONSULTAR LOGISTICA
+		$botoes[] = $botaoConsLog; //BOTÃO CONSULTAR LOGISTICA
 		$botoes[] = status();
 
 
