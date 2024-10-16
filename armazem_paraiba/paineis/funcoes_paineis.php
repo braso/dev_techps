@@ -512,7 +512,7 @@
 		];
 
 		foreach ($empresas as $empresa) {
-			$path = "./arquivos/jornada"."/".$periodoInicio->format("Y-m")."/".$empresa["empr_nb_id"];
+			$path = "./arquivos/jornada" . "/" . $periodoInicio->format("Y-m") . "/" . $empresa["empr_nb_id"];
 			if (!is_dir($path)) {
 				mkdir($path, 0755, true);
 			}
@@ -520,7 +520,7 @@
 			$motoristas = mysqli_fetch_all(query(
 				"SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_ocupacao FROM entidade"
 				. " WHERE enti_tx_status = 'ativo'"
-				. " AND enti_nb_empresa = ".$empresa["empr_nb_id"]
+				. " AND enti_nb_empresa = " . $empresa["empr_nb_id"]
 				. " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
 				. " ORDER BY enti_tx_nome ASC;"
 			), MYSQLI_ASSOC);
@@ -539,7 +539,6 @@
 
 					if (
 						!is_int(strpos($diaPonto["inicioJornada"], "fa fa-warning")) && is_int(strpos($diaPonto["fimJornada"], "fa fa-warning"))
-						|| !is_int(strpos($diaPonto["inicioJornada"], "fa fa-warning")) && ! is_int(strpos($diaPonto["fimJornada"], "fa fa-warning"))
 					) {
 						$inicioRefeicaoWarning = is_int(strpos($diaPonto["inicioRefeicao"], "fa-warning"));
 						$fimRefeicaoWarning = is_int(strpos($diaPonto["fimRefeicao"], "fa-warning"));
@@ -549,11 +548,9 @@
 
 						if ($inicioRefeicaoWarning && $fimRefeicaoWarning) {
 							$refeicao = "";
-						}
-						elseif ($inicioRefeicaoWarning || $fimRefeicaoWarning || (!empty($diaPonto["inicioRefeicao"]) && empty($diaPonto["fimRefeicao"]))) {
+						} elseif ($inicioRefeicaoWarning || $fimRefeicaoWarning || (!empty($diaPonto["inicioRefeicao"]) && empty($diaPonto["fimRefeicao"]))) {
 							$refeicao = "*";
-						}
-						elseif ($diffRefeicaoInfo && $diffRefeicaoRed && !$diffRefeicaoWarning) {
+						} elseif ($diffRefeicaoInfo && $diffRefeicaoRed && !$diffRefeicaoWarning) {
 							$refeicao = "*";
 						} else {
 							$refeicao = ""; // Se não atender a nenhuma das condições, manter o valor vazio
@@ -600,14 +597,15 @@
 							is_int(strpos($diaPonto["diffJornada"], "fa-info-circle"))
 							&& is_int(strpos($diaPonto["diffJornada"], "color:red;"))
 							|| is_int(
-							strpos($diaPonto["fimJornada"], "fa fa-warning"))
+								strpos($diaPonto["fimJornada"], "fa fa-warning")
+							)
 						) {
 							$jornada = "*";
 						} else {
 							$jornada = $diaPonto["diffJornada"];
 						}
 
-						if($jornada != "00:00"){
+						if ($jornada != "00:00") {
 							$jornadaEfetiva = $diaPonto["diffJornadaEfetiva"] == "00:00" ? "*" : $diaPonto["diffJornadaEfetiva"];
 						}
 					}
@@ -615,29 +613,34 @@
 					if ($jornada == '*') {
 						$campos = !empty(array_filter([$jornada, $descanso, $espera, $refeicao, $repouso]));
 					} else {
-						$campos = !empty(array_filter([ $descanso, $espera, $refeicao, $repouso]));
+						$campos = !empty(array_filter([$descanso, $espera, $refeicao, $repouso]));
 					}
 
 					$endossado = mysqli_fetch_all(
 						query(
 							"SELECT * FROM endosso 
-							JOIN entidade ON endo_tx_matricula = enti_tx_matricula
-							WHERE '".$data."' BETWEEN endo_tx_de AND endo_tx_ate
-								AND enti_nb_id = ".$motorista["enti_nb_id"]."
-								AND endo_tx_status = 'ativo';"
+				JOIN entidade ON endo_tx_matricula = enti_tx_matricula
+				WHERE '" . $data . "' BETWEEN endo_tx_de AND endo_tx_ate
+				AND enti_nb_id = " . $motorista["enti_nb_id"] . "
+				AND endo_tx_status = 'ativo';"
 						),
 						MYSQLI_ASSOC
 					);
 
-					if(count($endossado) > 0){
-						$dia = $diaPonto["data"].' (E)';
-					}else {
+					if (count($endossado) > 0) {
+						$dia = $diaPonto["data"] . ' (E)';
+					} else {
 						$dia = $diaPonto["data"];
+						$dataItem = DateTime::createFromFormat('d/m/Y', $diaPonto["data"]);
+						$dataAtual = new DateTime();
+						$diferenca = $dataAtual->diff($dataItem);
+						$diaDiferenca = $diferenca->days;
 					}
 
 					if ($campos) {
-						$row [] = [
+						$row[] = [
 							"data" => $dia,
+							"diaDiferenca" => $diaDiferenca,
 							"matricula" => $motorista["enti_tx_matricula"],
 							"nome" => $motorista["enti_tx_nome"],
 							"ocupacao" => $motorista["enti_tx_ocupacao"],
@@ -651,10 +654,10 @@
 							"dataFim" => $periodoFim->format('d/m/Y')
 						];
 					}
-					
+
 					if (!empty($row)) {
-						$nomeArquivo = $motorista["enti_tx_matricula"].".json";
-						file_put_contents($path."/".$nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+						$nomeArquivo = $motorista["enti_tx_matricula"] . ".json";
+						file_put_contents($path . "/" . $nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 					}
 				}
 			}
