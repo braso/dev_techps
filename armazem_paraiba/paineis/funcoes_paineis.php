@@ -619,10 +619,10 @@
 					$endossado = mysqli_fetch_all(
 						query(
 							"SELECT * FROM endosso 
-				JOIN entidade ON endo_tx_matricula = enti_tx_matricula
-				WHERE '" . $data . "' BETWEEN endo_tx_de AND endo_tx_ate
-				AND enti_nb_id = " . $motorista["enti_nb_id"] . "
-				AND endo_tx_status = 'ativo';"
+							JOIN entidade ON endo_tx_matricula = enti_tx_matricula
+							WHERE '" . $data . "' BETWEEN endo_tx_de AND endo_tx_ate
+							AND enti_nb_id = " . $motorista["enti_nb_id"] . "
+							AND endo_tx_status = 'ativo';"
 						),
 						MYSQLI_ASSOC
 					);
@@ -666,18 +666,17 @@
 	}
 
 	function relatorio_nao_conformidade_juridica() {
-
-		$_POST["busca_data"] = "2024-10";
-		$periodoInicio = new DateTime($_POST["busca_data"]."-01");
+		
+		$periodoInicio = new DateTime($_POST["busca_dataMes"]."-01");
 		$hoje = new DateTime();
-
+		
 		if ($periodoInicio->format('Y-m') === $hoje->format('Y-m')) {
 			// Se for o mês atual, a data limite é o dia de hoje
 			$periodoFim = $hoje;
 		} else{
 			$periodoFim = new DateTime($periodoInicio->format("Y-m-t"));
 		}
-
+		
 		$empresas = mysqli_fetch_all(
 			query(
 				"SELECT empr_nb_id, empr_tx_nome"
@@ -704,10 +703,10 @@
 		];
 
 		foreach ($empresas as $empresa) {
-			$path = "./arquivos/nao_conformidade_juridica"."/".$periodoInicio->format("Y-m")."/".$empresa["empr_nb_id"];
-			if (!is_dir($path)) {
-				mkdir($path, 0755, true);
-			}
+			// $path = "./arquivos/nao_conformidade_juridica"."/".$periodoInicio->format("Y-m")."/".$empresa["empr_nb_id"];
+			// if (!is_dir($path)) {
+			// 	mkdir($path, 0755, true);
+			// }
 
 			$motoristas = mysqli_fetch_all(
 				query(
@@ -727,45 +726,54 @@
 					"matricula" 				=> $motorista["enti_tx_matricula"],
 					"nome" 						=> $motorista["enti_tx_nome"],
 					"ocupacao" 					=> $motorista["enti_tx_ocupacao"],
-					"inicioSemRegistro" 		=> 0,
-					"inicioRefeicaoSemRegistro" => 0,
-					"fimRefeicaoSemRegistro" 	=> 0,
-					"fimSemRegistro" 			=> 0,
-					"refeicao1h" 				=> 0,
-					"refeicao2h" 				=> 0,
-					"esperaAberto" 				=> 0,
-					"descansoAberto" 			=> 0,
-					"repousoAberto" 			=> 0,
+					"jornnadaPrevista" 			=> 0,
+					"refeicao" 					=> 0,
+					"espera" 					=> 0,
+					"descanso" 					=> 0,
+					"repouso" 					=> 0,
 					"jornadaAberto" 			=> 0,
 					"jornadaExedida" 			=> 0,
 					"mdcDescanso" 				=> 0,
 					"intersticio" 				=> 0,
 				];
-
-				for ($date = new $periodoInicio; $date <= $periodoFim; $date->modify('+1 day')) {
+				
+				for ($date = clone $periodoInicio; $date <= $periodoFim; $date->modify('+1 day')) {
 					$diaPonto = diaDetalhePonto($motorista['enti_tx_matricula'], $date->format('Y-m-d'));
 
-					if(is_int(strpos($diaPonto["inicioJornada"], "fa-warning"))){
-						$totalMotorista["inicioSemRegistro"] += 1;
+					$inicioJornadaWarning = is_int(strpos($diaPonto["inicioJornada"], "fa-warning"));
+					$fimJornadaWarning = is_int(strpos($diaPonto["fimJornada"], "fa-warning"));
+
+					// Verificar se o inicio ou fim têm "fa-warning" e incrementar apenas uma vez
+					if ($inicioJornadaWarning || $fimJornadaWarning) {
+						$totalMotorista["jornnadaPrevista"] += 1;
 					}
-					if(is_int(strpos($diaPonto["inicioRefeicao"], "fa-warning"))){
-						$totalMotorista["inicioRefeicaoSemRegistro"] += 1;
+
+					$inicioRefeicao = is_int(strpos($diaPonto["inicioRefeicao"], "fa-warning"));
+					$fimRefeicao = is_int(strpos($diaPonto["fimRefeicao"], "fa-warning"));
+
+					if (
+						($inicioRefeicao && $fimRefeicao) ||  // Ambos inicio e fim com warning
+						(!$inicioRefeicao && $fimRefeicao)
+					) {
+						$totalMotorista["refeicao"] += 1;
 					}
-					if(is_int(strpos($diaPonto["fimRefeicao"], "fa-warning"))){
-						$totalMotorista["fimRefeicaoSemRegistro"] += 1;
-					}
-					if(is_int(strpos($diaPonto["fimJornada"], "fa-warning"))){
-						$totalMotorista["fimSemRegistro"] += 1;
-					}
+
 					if(is_int(strpos($diaPonto["diffRefeicao"], "fa-warning"))){
-						$totalMotorista["refeicao1h"] += 1;
+						$totalMotorista["refeicao"] += 1;
 					}
 					if(is_int(strpos($diaPonto["diffRefeicao"], "fa-info-circle")) && is_int(strpos($diaPonto["diffRefeicao"], "color:orange;"))){
-						$totalMotorista["refeicao2h"] += 1;
+						$totalMotorista["refeicao"] += 1;
 					}
+
 					if(is_int(strpos($diaPonto["diffEspera"], "fa-info-circle")) && is_int(strpos($diaPonto["diffEspera"], "color:red;"))){
-						$totalMotorista["esperaAberto"] += 1;
+						$totalMotorista["espera"] += 1;
 					}
+
+					echo "<br>";
+					var_dump($motorista['enti_tx_matricula']);
+					var_dump($totalMotorista["jornnadaPrevista"]);
+					echo "<br>";
+
 					if(is_int(strpos($diaPonto["diffDescanso"], "fa-info-circle")) && is_int(strpos($diaPonto["diffDescanso"], "color:red;"))){
 						$totalMotorista["descansoAberto"] += 1;
 					}
@@ -785,57 +793,51 @@
 						$totalMotorista["intersticio"] += 1;
 					}
 				}
-
-				file_put_contents($path."/".$motorista["enti_tx_matricula"].".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-				$row[] = $totalMotorista;
+				// die();
+				// file_put_contents($path."/".$motorista["enti_tx_matricula"].".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+				// $row[] = $totalMotorista;
 			}
-			unset($totalMotorista);
+			// unset($totalMotorista);
 
-			$totaisEmpr = [
-				"inicioSemRegistro" 		=> 0,
-				"inicioRefeicaoSemRegistro" => 0,
-				"fimRefeicaoSemRegistro" 	=> 0,
-				"fimSemRegistro" 			=> 0,
-				"refeicao1h" 				=> 0,
-				"refeicao2h" 				=> 0,
-				"esperaAberto" 				=> 0,
-				"descansoAberto" 			=> 0,
-				"repousoAberto" 			=> 0,
-				"jornadaAberto" 			=> 0,
-				"jornadaExedida" 			=> 0,
-				"mdcDescanso" 				=> 0,
-				"intersticio" 				=> 0
-			];
+			// $totaisEmpr = [
+			// 	"inicioSemRegistro" 		=> 0,
+			// 	"inicioRefeicaoSemRegistro" => 0,
+			// 	"fimRefeicaoSemRegistro" 	=> 0,
+			// 	"fimSemRegistro" 			=> 0,
+			// 	"refeicao1h" 				=> 0,
+			// 	"refeicao2h" 				=> 0,
+			// 	"esperaAberto" 				=> 0,
+			// 	"descansoAberto" 			=> 0,
+			// 	"repousoAberto" 			=> 0,
+			// 	"jornadaAberto" 			=> 0,
+			// 	"jornadaExedida" 			=> 0,
+			// 	"mdcDescanso" 				=> 0,
+			// 	"intersticio" 				=> 0
+			// ];
 
-			foreach($row as $motorista){
-				foreach(array_keys($totaisEmpr) as $key){
-					$totaisEmpr[$key] += $motorista[$key];
-				}
-			}
+			// foreach($row as $motorista){
+			// 	foreach(array_keys($totaisEmpr) as $key){
+			// 		$totaisEmpr[$key] += $motorista[$key];
+			// 	}
+			// }
 
-			$empresa["totais"] = $totaisEmpr;
-			$empresa["qtdMotoristas"] = count($motoristas);
-			$empresa["dataInicio"] = $periodoInicio->format('d/m/Y');
-			$empresa["dataFim"] = $periodoFim->format('d/m/Y');
+			// $empresa["totais"] = $totaisEmpr;
+			// $empresa["qtdMotoristas"] = count($motoristas);
+			// $empresa["dataInicio"] = $periodoInicio->format('d/m/Y');
+			// $empresa["dataFim"] = $periodoFim->format('d/m/Y');
 
-			if (empty($_POST["empresa"])) {
-				foreach ($totaisEmpr as $key => $value) {
-					// Somando diretamente o valor de $totaisEmpr ao $totaisEmpresas
-					$totaisEmpresas[$key] += $value;
-				}
-				// Incrementando o número de motoristas
-				$totaisEmpresas["qtdMotoristas"] += count($motoristas);
-			}
+			// if (empty($_POST["empresa"])) {
+			// 	foreach ($totaisEmpr as $key => $value) {
+			// 		// Somando diretamente o valor de $totaisEmpr ao $totaisEmpresas
+			// 		$totaisEmpresas[$key] += $value;
+			// 	}
+			// 	// Incrementando o número de motoristas
+			// 	$totaisEmpresas["qtdMotoristas"] += count($motoristas);
+			// }
 
-			file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", json_encode($empresa));
+			// file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", json_encode($empresa));
 		}
 
-		if (empty($_POST["empresa"])) {
-			$path = "./arquivos/nao_conformidade_juridica"."/".$periodoInicio->format("Y-m");
-			$totaisEmpresas["dataInicio"] = $periodoInicio->format('d/m/Y');
-			$totaisEmpresas["dataFim"] = $periodoFim->format('d/m/Y');
-			file_put_contents($path."/empresas.json", json_encode($totaisEmpresas));
-		}
 		return;
 	}
 
