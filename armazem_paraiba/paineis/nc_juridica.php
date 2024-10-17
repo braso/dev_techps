@@ -1,13 +1,12 @@
 <?php
-	// Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
 	require_once __DIR__."/funcoes_paineis.php";
 	require __DIR__."/../funcoes_ponto.php";
-$_POST["busca_endossado"] = 'endossado';
-$_POST["busca_dataMes"] = '2024-08';
-relatorio_nao_conformidade_juridica();
+
+// relatorio_nao_conformidade_juridica();
 
 	// function enviarForm() {
 	// 	$_POST["acao"] = $_POST["campoAcao"];
@@ -296,312 +295,312 @@ relatorio_nao_conformidade_juridica();
 	// 	;
 	// }
 
-	// function index() {
+	function index() {
 
-	// 	if (empty($_POST["busca_dataMes"])) {
-	// 		$_POST["busca_dataMes"] = date("Y-m");
-	// 	}
+		if (empty($_POST["busca_dataMes"])) {
+			$_POST["busca_dataMes"] = date("Y-m");
+		}
 
-	// 	if (!empty($_POST["acao"]) && $_POST["acao"] == "buscar") {
+		if (!empty($_POST["acao"]) && $_POST["acao"] == "buscar") {
 
-	// 		if ($_POST["busca_dataMes"] > date("Y-m")) {
-	// 			unset($_POST["acao"]);
-	// 			$_POST["errorFields"][] = "busca_dataMes";
-	// 			set_status("ERRO: Não é possível pesquisar após a data atual.");
-	// 		}
-	// 		cabecalho("Relatório de Não Conformidade Juridica");
-	// 	} elseif (!empty($_POST["acao"]) && $_POST["acao"] == "atualizarPainel") {
-	// 		echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
-	// 		ob_flush();
-	// 		flush();
+			if ($_POST["busca_dataMes"] > date("Y-m")) {
+				unset($_POST["acao"]);
+				$_POST["errorFields"][] = "busca_dataMes";
+				set_status("ERRO: Não é possível pesquisar após a data atual.");
+			}
+			cabecalho("Relatório de Não Conformidade Juridica");
+		} elseif (!empty($_POST["acao"]) && $_POST["acao"] == "atualizarPainel") {
+			echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
+			ob_flush();
+			flush();
 
-	// 		cabecalho("Relatório de Não Conformidade Juridica");
+			cabecalho("Relatório de Não Conformidade Juridica");
 
-	// 		$err = ($_POST["busca_dataInicio"] > date("Y-m-d"))*1+($_POST["busca_dataFim"] > date("Y-m-d"))*2;
-	// 		if ($err > 0) {
-	// 			switch ($err) {
-	// 				case 1:
-	// 					$_POST["errorFields"][] = "busca_dataInicio";
-	// 					break;
-	// 				case 2:
-	// 					$_POST["errorFields"][] = "busca_dataFim";
-	// 					break;
-	// 				case 3:
-	// 					$_POST["errorFields"][] = "busca_dataInicio";
-	// 					$_POST["errorFields"][] = "busca_dataFim";
-	// 					break;
-	// 			}
-	// 			unset($_POST["acao"]);
-	// 			set_status("ERRO: Não é possível atualizar após a data atual.");
-	// 		} else {
-	// 			require_once "funcoes_paineis.php";
-	// 			relatorio_nao_conformidade_juridica();
-	// 		}
-	// 	} else {
-	// 		cabecalho("Relatório Geral de Saldo");
-	// 	}
+			$err = ($_POST["busca_dataInicio"] > date("Y-m-d"))*1+($_POST["busca_dataFim"] > date("Y-m-d"))*2;
+			if ($err > 0) {
+				switch ($err) {
+					case 1:
+						$_POST["errorFields"][] = "busca_dataInicio";
+						break;
+					case 2:
+						$_POST["errorFields"][] = "busca_dataFim";
+						break;
+					case 3:
+						$_POST["errorFields"][] = "busca_dataInicio";
+						$_POST["errorFields"][] = "busca_dataFim";
+						break;
+				}
+				unset($_POST["acao"]);
+				set_status("ERRO: Não é possível atualizar após a data atual.");
+			} else {
+				require_once "funcoes_paineis.php";
+				relatorio_nao_conformidade_juridica();
+			}
+		} else {
+			cabecalho("Relatório Geral de Saldo");
+		}
 
-	// // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
-	// //position: absolute; top: 101px; left: 420px;
+	// $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
+	//position: absolute; top: 101px; left: 420px;
 
-	// $campoAcao =
-	// "<div class='col-sm-2 margin-bottom-5' style='min-width: fit-content;'>
-	// 			<label>" . "Ação" . "</label><br>
-	// 			<label class='radio-inline'>
-	// 				<input type='radio' name='campoAcao' value='buscar' " . ((empty($_POST["campoAcao"]) || $_POST["campoAcao"] == "buscar") ? "checked" : "") . "> Buscar
-	// 			</label>
-	// 			<label class='radio-inline'>
-    //       			<input type='radio' name='campoAcao' value='atualizarPainel'" . (!empty($_POST["campoAcao"]) && $_POST["campoAcao"] == "atualizarPainel" ? "checked" : "") . "> Atualizar
-	// 			</label>
-	// 		</div>";
+	$campoAcao =
+	"<div class='col-sm-2 margin-bottom-5' style='min-width: fit-content;'>
+				<label>" . "Ação" . "</label><br>
+				<label class='radio-inline'>
+					<input type='radio' name='campoAcao' value='buscar' " . ((empty($_POST["campoAcao"]) || $_POST["campoAcao"] == "buscar") ? "checked" : "") . "> Buscar
+				</label>
+				<label class='radio-inline'>
+          			<input type='radio' name='campoAcao' value='atualizarPainel'" . (!empty($_POST["campoAcao"]) && $_POST["campoAcao"] == "atualizarPainel" ? "checked" : "") . "> Atualizar
+				</label>
+			</div>";
 
-	// 	$campos = [
-	// 		combo_net("Empresa", "empresa", $_POST["empresa"]?? "", 4, "empresa", ""),
-	// 		$campoAcao,
-	// 		campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
-	// 		combo("Endossado",	"busca_endossado", (!empty($_POST["busca_endossado"]) ? $_POST["busca_endossado"] : ""), 2, ["endossado" => "Sim", "naoEndossado" => "Não"])
-	// 	];
+		$campos = [
+			combo_net("Empresa", "empresa", $_POST["empresa"]?? "", 4, "empresa", ""),
+			$campoAcao,
+			campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
+			combo("Endossado",	"busca_endossado", (!empty($_POST["busca_endossado"]) ? $_POST["busca_endossado"] : ""), 2, ["endossado" => "Sim", "naoEndossado" => "Não"])
+		];
 
-	// 	$botao_volta = "";
-	// 	if (!empty($_POST["empresa"])) {
-	// 		$botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
-	// 	}
-	// 	$botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
+		$botao_volta = "";
+		if (!empty($_POST["empresa"])) {
+			$botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
+		}
+		$botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
 
-	// 	$buttons = [
-	// 		botao("Buscar", "enviarForm()", "", "", "", "", "btn btn-info"),
-	// 		$botao_imprimir,
-	// 		$botao_volta
-	// 	];
-
-
-	// 	abre_form();
-	// 	linha_form($campos);
-	// 	fecha_form($buttons);
+		$buttons = [
+			botao("Buscar", "enviarForm()", "", "", "", "", "btn btn-info"),
+			$botao_imprimir,
+			$botao_volta
+		];
 
 
-	// 	$arquivos = [];
-	// 	$dataEmissao = ""; //Utilizado no HTML
-	// 	$encontrado = true;
-	// 	$path = "./arquivos/nao_conformidade_juridica";
-	// 	$periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
-
-	// 	$totais = [
-	// 		"inicioSemRegistro" => 0,
-	// 		"inicioRefeicaoSemRegistro" => 0,
-	// 		"fimRefeicaoSemRegistro" => 0,
-	// 		"fimSemRegistro" => 0,
-	// 		"refeicao1h" => 0,
-	// 		"refeicao2h" => 0,
-	// 		"esperaAberto" => 0,
-	// 		"descansoAberto" => 0,
-	// 		"repousoAberto" => 0,
-	// 		"jornadaAberto" => 0,
-	// 		"jornadaExedida" => 0,
-	// 		"mdcDescanso" => 0,
-	// 		"intersticio" => 0
-	// 	];
-
-	// 	$periodoRelatorio = [
-	// 		"dataInicio" => "1900-01-01",
-	// 		"dataFim" => "1900-01-01"
-	// 	];
-
-	// 	if (!empty($_POST["empresa"]) && !empty($_POST["busca_dataMes"])) {
-	// 		//Painel dos endossos dos motoristas de uma empresa específica
-	// 		$empresa = mysqli_fetch_assoc(query(
-	// 			"SELECT * FROM empresa"
-	// 				." WHERE empr_tx_status = 'ativo'"
-	// 				." AND empr_nb_id = ".$_POST["empresa"]
-	// 				." LIMIT 1;"
-	// 		));
+		abre_form();
+		linha_form($campos);
+		fecha_form($buttons);
 
 
-	// 		$path .= "/".$_POST["busca_dataMes"]."/".$empresa["empr_nb_id"];
-	// 		if (is_dir($path)) {
-	// 			$pastaSaldosEmpresa = dir($path);
-	// 			while ($arquivo = $pastaSaldosEmpresa->read()) {
-	// 				if (!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
-	// 					$arquivos[] = $arquivo;
-	// 				}
-	// 			}
-	// 			$pastaSaldosEmpresa->close();
+		$arquivos = [];
+		$dataEmissao = ""; //Utilizado no HTML
+		$encontrado = true;
+		$path = "./arquivos/nao_conformidade_juridica";
+		$periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
-	// 			$dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")); //Utilizado no HTML.
-	// 			$periodoRelatorio = json_decode(file_get_contents($path."/empresa_".$empresa["empr_nb_id"].".json"), true);
-	// 			$periodoRelatorio = [
-	// 				"dataInicio" => $periodoRelatorio["dataInicio"],
-	// 				"dataFim" => $periodoRelatorio["dataFim"]
-	// 			];
+		$totais = [
+			"inicioSemRegistro" => 0,
+			"inicioRefeicaoSemRegistro" => 0,
+			"fimRefeicaoSemRegistro" => 0,
+			"fimSemRegistro" => 0,
+			"refeicao1h" => 0,
+			"refeicao2h" => 0,
+			"esperaAberto" => 0,
+			"descansoAberto" => 0,
+			"repousoAberto" => 0,
+			"jornadaAberto" => 0,
+			"jornadaExedida" => 0,
+			"mdcDescanso" => 0,
+			"intersticio" => 0
+		];
 
+		$periodoRelatorio = [
+			"dataInicio" => "1900-01-01",
+			"dataFim" => "1900-01-01"
+		];
 
-	// 			$motoristas = [];
-	// 			foreach ($arquivos as $arquivo) {
-	// 				$json = json_decode(file_get_contents($path."/".$arquivo), true);
-	// 				$json["dataAtualizacao"] = date("d/m/Y H:i", filemtime($path."/".$arquivo));
-	// 				foreach ($totais as $key => $value) {
-	// 					$totais[$key] += $json[$key];
-	// 				}
-	// 				$motoristas[] = $json;
-	// 			}
-
-	// 			foreach ($arquivos as &$arquivo) {
-	// 				$arquivo = $path."/".$arquivo;
-	// 			}
-	// 			$totais["empresaNome"] = $empresa["empr_tx_nome"];
-	// 		} else {
-	// 			$encontrado = false;
-	// 		}
-	// 	} elseif (!empty($_POST["busca_dataMes"])) {
-	// 		//Painel geral das empresas
-	// 		$empresas = [];
-	// 		$logoEmpresa = mysqli_fetch_assoc(query(
-	// 			"SELECT empr_tx_logo FROM empresa"
-	// 				." WHERE empr_tx_status = 'ativo'"
-	// 				." AND empr_tx_Ehmatriz = 'sim'"
-	// 				." LIMIT 1;"
-	// 		))["empr_tx_logo"]; //Utilizado no HTML.
-
-	// 		$logoEmpresa = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$logoEmpresa;
+		if (!empty($_POST["empresa"]) && !empty($_POST["busca_dataMes"])) {
+			//Painel dos endossos dos motoristas de uma empresa específica
+			$empresa = mysqli_fetch_assoc(query(
+				"SELECT * FROM empresa"
+					." WHERE empr_tx_status = 'ativo'"
+					." AND empr_nb_id = ".$_POST["empresa"]
+					." LIMIT 1;"
+			));
 
 
-	// 		$path .= "/".$_POST["busca_dataMes"];
+			$path .= "/".$_POST["busca_dataMes"]."/".$empresa["empr_nb_id"];
+			if (is_dir($path)) {
+				$pastaSaldosEmpresa = dir($path);
+				while ($arquivo = $pastaSaldosEmpresa->read()) {
+					if (!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
+						$arquivos[] = $arquivo;
+					}
+				}
+				$pastaSaldosEmpresa->close();
+
+				$dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")); //Utilizado no HTML.
+				$periodoRelatorio = json_decode(file_get_contents($path."/empresa_".$empresa["empr_nb_id"].".json"), true);
+				$periodoRelatorio = [
+					"dataInicio" => $periodoRelatorio["dataInicio"],
+					"dataFim" => $periodoRelatorio["dataFim"]
+				];
 
 
-	// 		if (is_dir($path) && file_exists($path."/empresas.json")) {
-	// 			$dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresas.json")); //Utilizado no HTML.
-	// 			$arquivoGeral = json_decode(file_get_contents($path."/empresas.json"), true);
+				$motoristas = [];
+				foreach ($arquivos as $arquivo) {
+					$json = json_decode(file_get_contents($path."/".$arquivo), true);
+					$json["dataAtualizacao"] = date("d/m/Y H:i", filemtime($path."/".$arquivo));
+					foreach ($totais as $key => $value) {
+						$totais[$key] += $json[$key];
+					}
+					$motoristas[] = $json;
+				}
 
-	// 			$periodoRelatorio = [
-	// 				"dataInicio" => $arquivoGeral["dataInicio"],
-	// 				"dataFim" => $arquivoGeral["dataFim"]
-	// 			];
+				foreach ($arquivos as &$arquivo) {
+					$arquivo = $path."/".$arquivo;
+				}
+				$totais["empresaNome"] = $empresa["empr_tx_nome"];
+			} else {
+				$encontrado = false;
+			}
+		} elseif (!empty($_POST["busca_dataMes"])) {
+			//Painel geral das empresas
+			$empresas = [];
+			$logoEmpresa = mysqli_fetch_assoc(query(
+				"SELECT empr_tx_logo FROM empresa"
+					." WHERE empr_tx_status = 'ativo'"
+					." AND empr_tx_Ehmatriz = 'sim'"
+					." LIMIT 1;"
+			))["empr_tx_logo"]; //Utilizado no HTML.
 
-	// 			$pastaSaldos = dir($path);
-	// 			while ($arquivo = $pastaSaldos->read()) {
-	// 				if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))) {
-	// 					$arquivo = $path."/".$arquivo."/empresa_".$arquivo.".json";
-	// 					$arquivos[] = $arquivo;
-	// 					$json = json_decode(file_get_contents($arquivo), true);
-	// 					foreach ($totais as $key => $value) {
-	// 						$totais[$key] +=  $json["totais"][$key];
-	// 					}
-	// 					$empresas[] = $json;
-	// 				}
-	// 			}
-	// 			$pastaSaldos->close();
+			$logoEmpresa = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$logoEmpresa;
 
-	// 		} else {
-	// 			$encontrado = false;
-	// 		}
-	// 	}
 
-	// 	if ($encontrado) {
-	// 		$rowTotais = "<tr class='totais'>";
-	// 		$rowTitulos = "<tr id='titulos' class='titulos'>";
+			$path .= "/".$_POST["busca_dataMes"];
 
-	// 		if (!empty($_POST["empresa"])) {
-	// 			$rowTotais .=
-	// 				"<th colspan='2'>".$totais["empresaNome"]."</th>"
-	// 				."<th colspan='1'></th>"
-	// 				."<th colspan='1'>".$totais["inicioSemRegistro"]."</th>"
-	// 				."<th colspan='1'>".$totais["inicioRefeicaoSemRegistro"]."</th>"
-	// 				."<th colspan='1'>".$totais["fimRefeicaoSemRegistro"]."</th>"
-	// 				."<th colspan='1'>".$totais["fimSemRegistro"]."</th>"
-	// 				."<th colspan='1'>".$totais["refeicao1h"]."</th>"
-	// 				."<th colspan='1'>".$totais["refeicao2h"]."</th>"
-	// 				."<th colspan='1'>".$totais["esperaAberto"]."</th>"
-	// 				."<th colspan='1'>".$totais["descansoAberto"]."</th>"
-	// 				."<th colspan='1'>".$totais["repousoAberto"]."</th>"
-	// 				."<th colspan='1'>".$totais["jornadaAberto"]."</th>"
-	// 				."<th colspan='1'>".$totais["jornadaExedida"]."</th>"
-	// 				."<th colspan='1'>".$totais["mdcDescanso"]."</th>"
-	// 				."<th colspan='1'>".$totais["intersticio"]."</th>";
 
-	// 			$rowTitulos .=
-	// 				"<th class='matricula'>Matrícula</th>"
-	// 				."<th class='nome'>Nome</th>"
-	// 				."<th class='ocupacao'>Ocupação</th>"
-	// 				."<th class='status'>Início da Jornada</th>"
-	// 				."<th class='jornadaPrevista'>Início da Refeição</th>"
-	// 				."<th class='jornadaEfetiva'>Fim da Refeição</th>"
-	// 				."<th class='he50APagar'>Fim da Jornada</th>"
-	// 				."<th class='he100APagar'>Refeição menor que 01h</th>"
-	// 				."<th class='adicionalNoturno'>Refeição menor que 02h</th>"
-	// 				."<th class='esperaIndenizada'>Espera em Aberto</th>"
-	// 				."<th class='saldoAnterior'>Descanso em Aberto</th>"
-	// 				."<th class='saldoPeriodo'>Repouso em Aberto</th>"
-	// 				."<th class='saldoFinal'>Jornada em Aberto</th>"
-	// 				."<th class='saldoFinal'>Tempo de Jornada Excedido</th>"
-	// 				."<th class='saldoFinal'>Descanso de MDC não Respeitado</th>"
-	// 				."<th class='saldoFinal'>Interstício</th>";
-	// 		} else {
-	// 			$rowTotais .=
-	// 				"<th colspan='1'></th>"
-	// 				."<th colspan='1'></th>"
-	// 				."<th colspan='1'>".$totais["inicioSemRegistro"]."</th>"
-	// 				."<th colspan='1'>".$totais["inicioRefeicaoSemRegistro"]."</th>"
-	// 				."<th colspan='1'>".$totais["fimRefeicaoSemRegistro"]."</th>"
-	// 				."<th colspan='1'>".$totais["fimSemRegistro"]."</th>"
-	// 				."<th colspan='1'>".$totais["refeicao1h"]."</th>"
-	// 				."<th colspan='1'>".$totais["refeicao2h"]."</th>"
-	// 				."<th colspan='1'>".$totais["esperaAberto"]."</th>"
-	// 				."<th colspan='1'>".$totais["descansoAberto"]."</th>"
-	// 				."<th colspan='1'>".$totais["repousoAberto"]."</th>"
-	// 				."<th colspan='1'>".$totais["jornadaAberto"]."</th>"
-	// 				."<th colspan='1'>".$totais["jornadaExedida"]."</th>"
-	// 				."<th colspan='1'>".$totais["mdcDescanso"]."</th>"
-	// 				."<th colspan='1'>".$totais["intersticio"]."</th>";
-	// 			$rowTitulos .=
-	// 				"<th data-column='nome' data-order='asc'>Nome da Empresa/Filial</th>"
-	// 				."<th data-column='nome' data-order='asc'>Qtd.Motoristas</th>"
-	// 				."<th class='status'>Início da Jornada</th>"
-	// 				."<th class='jornadaPrevista'>Início da Refeição</th>"
-	// 				."<th class='jornadaEfetiva'>Fim da Refeição</th>"
-	// 				."<th class='he50APagar'>Fim da Jornada</th>"
-	// 				."<th class='he100APagar'>Refeição menor que 01h</th>"
-	// 				."<th class='adicionalNoturno'>Refeição menor que 02h</th>"
-	// 				."<th class='esperaIndenizada'>Espera em Aberto</th>"
-	// 				."<th class='saldoAnterior'>Descanso em Aberto</th>"
-	// 				."<th class='saldoPeriodo'>Repouso em Aberto</th>"
-	// 				."<th class='saldoFinal'>Jornada em Aberto</th>"
-	// 				."<th class='saldoFinal'>Tempo de Jornada Excedido</th>"
-	// 				."<th class='saldoFinal'>Descanso de MDC não Respeitado</th>"
-	// 				."<th class='saldoFinal'>Interstício</th>";
-	// 		}
-	// 		$rowTotais .= "</tr>";
-	// 		$rowTitulos .= "</tr>";
+			if (is_dir($path) && file_exists($path."/empresas.json")) {
+				$dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresas.json")); //Utilizado no HTML.
+				$arquivoGeral = json_decode(file_get_contents($path."/empresas.json"), true);
 
-	// 		$titulo = "Geral de saldo";
-	// 		include_once "painel_html2.php";
+				$periodoRelatorio = [
+					"dataInicio" => $arquivoGeral["dataInicio"],
+					"dataFim" => $arquivoGeral["dataFim"]
+				];
 
-	// 		echo "<div class='script'>"
-	// 			."<script>"
-	// 			.((!empty($_POST["empresa"]))? "document.getElementById('tabela1').style.display = 'table';": "")
-	// 			// ."console.log(endossos);"
-	// 			."document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.E;
-	// 					document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.EP;
-	// 					document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.N;
-	// 					document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.E*10000)/100+'%';
-	// 					document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.EP*10000)/100+'%';
-	// 					document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.N*10000)/100+'%';
+				$pastaSaldos = dir($path);
+				while ($arquivo = $pastaSaldos->read()) {
+					if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))) {
+						$arquivo = $path."/".$arquivo."/empresa_".$arquivo.".json";
+						$arquivos[] = $arquivo;
+						$json = json_decode(file_get_contents($arquivo), true);
+						foreach ($totais as $key => $value) {
+							$totais[$key] +=  $json["totais"][$key];
+						}
+						$empresas[] = $json;
+					}
+				}
+				$pastaSaldos->close();
+
+			} else {
+				$encontrado = false;
+			}
+		}
+
+		if ($encontrado) {
+			$rowTotais = "<tr class='totais'>";
+			$rowTitulos = "<tr id='titulos' class='titulos'>";
+
+			if (!empty($_POST["empresa"])) {
+				$rowTotais .=
+					"<th colspan='2'>".$totais["empresaNome"]."</th>"
+					."<th colspan='1'></th>"
+					."<th colspan='1'>".$totais["inicioSemRegistro"]."</th>"
+					."<th colspan='1'>".$totais["inicioRefeicaoSemRegistro"]."</th>"
+					."<th colspan='1'>".$totais["fimRefeicaoSemRegistro"]."</th>"
+					."<th colspan='1'>".$totais["fimSemRegistro"]."</th>"
+					."<th colspan='1'>".$totais["refeicao1h"]."</th>"
+					."<th colspan='1'>".$totais["refeicao2h"]."</th>"
+					."<th colspan='1'>".$totais["esperaAberto"]."</th>"
+					."<th colspan='1'>".$totais["descansoAberto"]."</th>"
+					."<th colspan='1'>".$totais["repousoAberto"]."</th>"
+					."<th colspan='1'>".$totais["jornadaAberto"]."</th>"
+					."<th colspan='1'>".$totais["jornadaExedida"]."</th>"
+					."<th colspan='1'>".$totais["mdcDescanso"]."</th>"
+					."<th colspan='1'>".$totais["intersticio"]."</th>";
+
+				$rowTitulos .=
+					"<th class='matricula'>Matrícula</th>"
+					."<th class='nome'>Nome</th>"
+					."<th class='ocupacao'>Ocupação</th>"
+					."<th class='status'>Início da Jornada</th>"
+					."<th class='jornadaPrevista'>Início da Refeição</th>"
+					."<th class='jornadaEfetiva'>Fim da Refeição</th>"
+					."<th class='he50APagar'>Fim da Jornada</th>"
+					."<th class='he100APagar'>Refeição menor que 01h</th>"
+					."<th class='adicionalNoturno'>Refeição menor que 02h</th>"
+					."<th class='esperaIndenizada'>Espera em Aberto</th>"
+					."<th class='saldoAnterior'>Descanso em Aberto</th>"
+					."<th class='saldoPeriodo'>Repouso em Aberto</th>"
+					."<th class='saldoFinal'>Jornada em Aberto</th>"
+					."<th class='saldoFinal'>Tempo de Jornada Excedido</th>"
+					."<th class='saldoFinal'>Descanso de MDC não Respeitado</th>"
+					."<th class='saldoFinal'>Interstício</th>";
+			} else {
+				$rowTotais .=
+					"<th colspan='1'></th>"
+					."<th colspan='1'></th>"
+					."<th colspan='1'>".$totais["inicioSemRegistro"]."</th>"
+					."<th colspan='1'>".$totais["inicioRefeicaoSemRegistro"]."</th>"
+					."<th colspan='1'>".$totais["fimRefeicaoSemRegistro"]."</th>"
+					."<th colspan='1'>".$totais["fimSemRegistro"]."</th>"
+					."<th colspan='1'>".$totais["refeicao1h"]."</th>"
+					."<th colspan='1'>".$totais["refeicao2h"]."</th>"
+					."<th colspan='1'>".$totais["esperaAberto"]."</th>"
+					."<th colspan='1'>".$totais["descansoAberto"]."</th>"
+					."<th colspan='1'>".$totais["repousoAberto"]."</th>"
+					."<th colspan='1'>".$totais["jornadaAberto"]."</th>"
+					."<th colspan='1'>".$totais["jornadaExedida"]."</th>"
+					."<th colspan='1'>".$totais["mdcDescanso"]."</th>"
+					."<th colspan='1'>".$totais["intersticio"]."</th>";
+				$rowTitulos .=
+					"<th data-column='nome' data-order='asc'>Nome da Empresa/Filial</th>"
+					."<th data-column='nome' data-order='asc'>Qtd.Motoristas</th>"
+					."<th class='status'>Início da Jornada</th>"
+					."<th class='jornadaPrevista'>Início da Refeição</th>"
+					."<th class='jornadaEfetiva'>Fim da Refeição</th>"
+					."<th class='he50APagar'>Fim da Jornada</th>"
+					."<th class='he100APagar'>Refeição menor que 01h</th>"
+					."<th class='adicionalNoturno'>Refeição menor que 02h</th>"
+					."<th class='esperaIndenizada'>Espera em Aberto</th>"
+					."<th class='saldoAnterior'>Descanso em Aberto</th>"
+					."<th class='saldoPeriodo'>Repouso em Aberto</th>"
+					."<th class='saldoFinal'>Jornada em Aberto</th>"
+					."<th class='saldoFinal'>Tempo de Jornada Excedido</th>"
+					."<th class='saldoFinal'>Descanso de MDC não Respeitado</th>"
+					."<th class='saldoFinal'>Interstício</th>";
+			}
+			$rowTotais .= "</tr>";
+			$rowTitulos .= "</tr>";
+
+			$titulo = "Geral de saldo";
+			include_once "painel_html2.php";
+
+			echo "<div class='script'>"
+				."<script>"
+				.((!empty($_POST["empresa"]))? "document.getElementById('tabela1').style.display = 'table';": "")
+				// ."console.log(endossos);"
+				."document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.E;
+						document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.EP;
+						document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.N;
+						document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.E*10000)/100+'%';
+						document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.EP*10000)/100+'%';
+						document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.N*10000)/100+'%';
 						
-	// 					document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.positivos;
-	// 					document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.meta;
-	// 					document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.negativos;
-	// 					document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[2].innerHTML = Math.round(saldos.porcentagens.positivos*10000)/100+'%';
-	// 					document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[2].innerHTML = Math.round(saldos.porcentagens.meta*10000)/100+'%';
-	// 					document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[2].innerHTML = Math.round(saldos.porcentagens.negativos*10000)/100+'%';
-	// 					document.getElementsByClassName('script')[0].innerHTML = '';
-	// 				</script>";
-	// 		echo "</div>";
-	// 	} else {
-	// 		if (!empty($_POST["acao"]) && $_POST["acao"] == "buscar") {
-	// 			set_status("Não Possui dados desse mês");
-	// 			echo "<script>alert('Não Possui dados desse mês')</script>";
-	// 		}
-	// 	}
+						document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.positivos;
+						document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.meta;
+						document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.negativos;
+						document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[2].innerHTML = Math.round(saldos.porcentagens.positivos*10000)/100+'%';
+						document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[2].innerHTML = Math.round(saldos.porcentagens.meta*10000)/100+'%';
+						document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[2].innerHTML = Math.round(saldos.porcentagens.negativos*10000)/100+'%';
+						document.getElementsByClassName('script')[0].innerHTML = '';
+					</script>";
+			echo "</div>";
+		} else {
+			if (!empty($_POST["acao"]) && $_POST["acao"] == "buscar") {
+				set_status("Não Possui dados desse mês");
+				echo "<script>alert('Não Possui dados desse mês')</script>";
+			}
+		}
 
-	// 	carregarJS($arquivos);
-	// 	rodape();
-	// }
+		// carregarJS($arquivos);
+		rodape();
+	}
