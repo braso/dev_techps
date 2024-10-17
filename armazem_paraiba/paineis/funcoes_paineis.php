@@ -720,7 +720,9 @@
 					"jornada" 					=> 0,
 					"mdc"		 				=> 0,
 					"intersticioInferior" 		=> 0,
-					"intersticioSuperior" 		=> 0
+					"intersticioSuperior" 		=> 0,
+					"dataInicio"				=> $periodoInicio->format("d/m/Y"),
+					"dataFim"					=> $periodoFim->format("d/m/Y")
 				];
 
 				if($_POST["busca_endossado"] == "endossado") {
