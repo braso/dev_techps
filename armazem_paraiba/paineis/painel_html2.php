@@ -66,7 +66,26 @@
 					</tr>
 				</thead>
 				<tbody>
-					<!-- Conteúdo do json empresas será inserido aqui -->
+					<tr>
+						<td>Batida início de refeição não registrada!</td>
+						<td></td>
+						<td></td>
+					</tr>
+					<tr>
+						<td>Batida fim de refeição não registrada!</td>
+						<td></td>
+						<td></td>
+					</tr>
+					<tr>
+						<td>Refeição Initerrupita maior do que 01:00h não respeitada.</td>
+						<td></td>
+						<td></td>
+					</tr>
+					<tr>
+						<td>Refeição com Tempo máximo de 02:00h não respeitada.</td>
+						<td></td>
+						<td></td>
+					</tr>
 				</tbody>
 			</table>
 		</div>
@@ -81,7 +100,16 @@
 					</tr>
 				</thead>
 				<tbody>
-					<!-- Conteúdo do json empresas será inserido aqui -->
+					<tr>
+						<td>INFERIOR: O mínimo de 08:00h ininterruptas no primeiro período não respeitado.</td>
+						<td></td>
+						<td></td>
+					</tr>
+					<tr>
+						<td>SUPERIOR: Interstício Total de 11:00 não respeitado, faltaram 00:32.</td>
+						<td></td>
+						<td></td>
+					</tr>
 				</tbody>
 			</table>
 		</div>
@@ -96,7 +124,16 @@
 					</tr>
 				</thead>
 				<tbody>
-					<!-- Conteúdo do json empresas será inserido aqui -->
+					<tr>
+						<td>Tempo exedido de 10:00h.</td>
+						<td></td>
+						<td></td>
+					</tr>
+					<tr>
+						<td>Tempo exedido de 12:00h.</td>
+						<td></td>
+						<td></td>
+					</tr>
 				</tbody>
 			</table>
 		</div>
@@ -111,7 +148,21 @@
 					</tr>
 				</thead>
 				<tbody>
-					<!-- Conteúdo do json empresas será inserido aqui -->
+					<tr>
+						<td>Descanso de 00:30 a cada 05:30 dirigidos não respeitado.</td>
+						<td></td>
+						<td></td>
+					</tr>
+					<tr>
+						<td>Descanso de 00:15 não respeitado.</td>
+						<td></td>
+						<td></td>
+					</tr>
+					<tr>
+						<td>Descanso de 00:30 não respeitado.</td>
+						<td></td>
+						<td></td>
+					</tr>
 				</tbody>
 			</table>
 		</div>
@@ -126,22 +177,11 @@
 					</tr>
 				</thead>
 				<tbody>
-					<!-- Conteúdo do json empresas será inserido aqui -->
-				</tbody>
-			</table>
-		</div>
-
-		<div class="portlet-body form">
-			<table id="" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
-				<thead>
 					<tr>
+						<td>Abono (Folgas, Férias ou outros)</td>
 						<td></td>
-						<td>Quant.</td>
-						<td>%</td>
+						<td></td>
 					</tr>
-				</thead>
-				<tbody>
-					<!-- Conteúdo do json empresas será inserido aqui -->
 				</tbody>
 			</table>
 		</div>
