@@ -15,6 +15,7 @@
 			</div>
 		</div>
 		<div class="portlet-body form">
+			<?= $rowGravidade ?>
 			<table id="tabela-empresas" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
 				<thead>
 					<?= $rowTitulos ?>
@@ -25,6 +26,7 @@
 			</table>
 		</div>
 
+		<?php if($endossado === true) {?>
 		<div class="portlet-body form">
 			<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
 				<tbody>
@@ -56,7 +58,7 @@
 			</table>
 		</div>
 
-		<div class="portlet-body form">
+		<!-- <div class="portlet-body form">
 			<table id="" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
 				<thead>
 					<tr>
@@ -184,7 +186,9 @@
 					</tr>
 				</tbody>
 			</table>
-		</div>
+		</div> -->
+		<?php }?>
+
 	</div>
 </div>
 </div>

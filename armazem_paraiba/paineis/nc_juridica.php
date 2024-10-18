@@ -10,6 +10,11 @@
 // $_POST["busca_dataMes"] = "2024-05";
 // relatorio_nao_conformidade_juridica();
 
+	header("Expires: 01 Jan 2001 00:00:00 GMT");
+	header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+	header('Cache-Control: post-check=0, pre-check=0', FALSE);
+	header('Pragma: no-cache');
+
 	function enviarForm() {
 		$_POST["acao"] = $_POST["campoAcao"];
 		index();
@@ -18,41 +23,30 @@
 	function carregarJS(array $arquivos) {
 
 		$linha = "linha = '<tr>'";
-		if (!empty($_POST["empresa"])) {
-			$linha .= "+'<td>'+row.matricula+'</td>'
-						+'<td>'+row.nome+'</td>'
-						+'<td>'+(row.ocupacao?? '')+'</td>'
-						+'<td>'+(row.inicioSemRegistro?? '')+'</td>'
-						+'<td>'+(row.inicioRefeicaoSemRegistro	?? '')+'</td>'
-						+'<td>'+(row.fimRefeicaoSemRegistro	?? '')+'</td>'
-						+'<td>'+(row.fimSemRegistro	?? '')+'</td>'
-						+'<td>'+(row.refeicao1h	?? '')+'</td>'
-						+'<td>'+(row.refeicao2h	?? '')+'</td>'
-						+'<td>'+(row.esperaAberto	?? '')+'</td>'
-						+'<td>'+(row.descansoAberto	?? '')+'</td>'
-						+'<td>'+(row.repousoAberto	?? '')+'</td>'
-						+'<td>'+(row.jornadaAberto	?? '')+'</td>'
-						+'<td>'+(row.jornadaExedida	?? '')+'</td>'
-						+'<td>'+(row.mdcDescanso	?? '')+'</td>'
-						+'<td>'+(row.intersticio	?? '')+'</td>'
+		if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "naoEndossado") {
+			$linha .= "+'<td>'+row.nome+'</td>'
+						+'<td class=\'refeicao\'>'+ (row.refeicao === 0 ? '' : row.refeicao) +'</td>'
+						+'<td>'+(row.espera === 0 ? '' : row.espera )+'</td>'
+						+'<td>'+(row.descanso === 0 ? '' : row.descanso )+'</td>'
+						+'<td>'+(row.repouso === 0 ? '' : row.repouso )+'</td>'
+						+'<td>'+(row.jornada === 0 ? '' : row.jornada )+'</td>'
+						+'<td>'+(row.jornadaPrevista === 0 ? '' : row.jornadaPrevista )+'</td>'
+						+'<td>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
+						+'<td>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
+						+'<td>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
+						+'<td>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
+						+'<td>'+(totalNaEndossado)+'</td>'
 					+'</tr>';";
-		} else {
-			$linha .= "+'<td class=\"nomeEmpresa\" style=\"cursor: pointer;\" onclick=\"setAndSubmit('+row.empr_nb_id+')\">'+row.empr_tx_nome+'</td>'
-						+'<td>'+(row.qtdMotoristas?? '')+'</td>'
-						+'<td>'+(row.totais.inicioSemRegistro?? '')+'</td>'
-						+'<td>'+(row.totais.inicioRefeicaoSemRegistro	?? '')+'</td>'
-						+'<td>'+(row.totais.fimRefeicaoSemRegistro	?? '')+'</td>'
-						+'<td>'+(row.totais.fimSemRegistro	?? '')+'</td>'
-						+'<td>'+(row.totais.refeicao1h	?? '')+'</td>'
-						+'<td>'+(row.totais.refeicao2h	?? '')+'</td>'
-						+'<td>'+(row.totais.esperaAberto	?? '')+'</td>'
-						+'<td>'+(row.totais.descansoAberto	?? '')+'</td>'
-						+'<td>'+(row.totais.repousoAberto	?? '')+'</td>'
-						+'<td>'+(row.totais.jornadaAberto	?? '')+'</td>'
-						+'<td>'+(row.totais.jornadaExedida	?? '')+'</td>'
-						+'<td>'+(row.totais.mdcDescanso	?? '')+'</td>'
-						+'<td>'+(row.totais.intersticio	?? '')+'</td>'
-					+'</tr>';";
+		} elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
+			$linha .= "+'<td>'+row.nome+'</td>'
+							+'<td class=\'refeicao\'>'+ (row.refeicao === 0 ? '' : row.refeicao) +'</td>'
+							+'<td>'+(row.jornadaPrevista === 0 ? '' : row.jornadaPrevista )+'</td>'
+							+'<td>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
+							+'<td>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
+							+'<td>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
+							+'<td>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
+							+'<td>'+(totalEndossado)+'</td>'
+						+'</tr>';";
 		}
 
 		$carregarDados = "";
@@ -61,7 +55,7 @@
 		}
 
 		echo
-			"<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"])."'>
+			"<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"]). "'>
 				<input type='hidden' name='acao'>
 				<input type='hidden' name='campoAcao'>
 				<input type='hidden' name='empresa'>
@@ -90,51 +84,56 @@
 				function imprimir(){
 					window.print();
 				}
+
+				function calcularTotalColuna(tabelaId, colunaClasse, resultadoId) {
+					var total = 0;  // Inicializa a variável para acumular o total
+
+					// Itera por todas as células da coluna especificada (células com a classe fornecida)
+					$(tabelaId + ' tbody tr').each(function() {
+						var valor = parseFloat($(this).find(colunaClasse).text());  // Pega o valor da célula
+
+						// Verifica se o valor é numérico antes de somar
+						if (!isNaN(valor)) {
+							total += valor;
+						}
+					});
+
+					console.log(total);
+
+					// Exibe o resultado na tela
+					// $(resultadoId).text('Total: ' + total);
+				}
+
 			
 				$(document).ready(function(){
 					var tabela = $('#tabela-empresas tbody');
 
 					function carregarDados(urlArquivo){
 						$.ajax({
-							url: urlArquivo,
+							url: urlArquivo+ '?v=' + new Date().getTime(),
 							dataType: 'json',
 							success: function(data){
 								var row = {};
 								$.each(data, function(index, item){
 									row[index] = item;
-								});
-								if(row.idMotorista != undefined){
-									// Mostrar painel dos motoristas
-									delete row.idMotorista;
+									});
+									var totalNaEndossado = (row.jornadaPrevista || 0) + (row.jornadaEfetiva || 0) + (row.refeicao || 0) 
+									+ (row.espera || 0) + (row.descanso || 0) + (row.repouso || 0) + (row.jornada || 0) 
+									+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
 
-									if(row.statusEndosso != 'E'){
-										row = {
-											'matricula': row.matricula,
-											'nome': row.nome,
-											'ocupacao': row.ocupacao,
-											'statusEndosso': row.statusEndosso,
-											'saldoAnterior': row.saldoAnterior
-										};
-									}
-								}else{
-									// Mostrar painel geral das empresas.
-								
-									console.log(row['totais']);
-									if(row.percEndossado < 1){
-										row.totais = {
-											'saldoAnterior': row.totais.saldoAnterior
-										};
-									}
-								}
-								invalidValues = [undefined, '00:00'];"
+									var totalEndossado = (row.refeicao || 0) + (row.jornadaPrevista || 0) + (row.jornadaEfetiva || 0) 
+										+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
+									console.log(row);
+									"
 								.$linha
-								."tabela.append(linha);
+								. "tabela.append(linha);
 							},
 							error: function(){
 								console.log('Erro ao carregar os dados.');
 							}
 						});
 					}
+
 					// // Função para conversão de Horas para Minutos
 					// function horasParaMinutos(horas) {
 					//     var partes = horas.split(':');
@@ -339,7 +338,7 @@
 				relatorio_nao_conformidade_juridica();
 			}
 		} else {
-			cabecalho("Relatório Geral de Saldo");
+			cabecalho("Relatório de Não Conformidade Juridica");
 		}
 
 	// $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
@@ -360,7 +359,7 @@
 			combo_net("Empresa", "empresa", $_POST["empresa"]?? "", 4, "empresa", ""),
 			$campoAcao,
 			campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
-			combo("Endossado",	"busca_endossado", (!empty($_POST["busca_endossado"]) ? $_POST["busca_endossado"] : ""), 2, ["endossado" => "Sim", "naoEndossado" => "Não"])
+			combo("Endossado",	"busca_endossado", (!empty($_POST["busca_endossado"]) ? $_POST["busca_endossado"] : ""), 2, ["naoEndossado" => "Não","endossado" => "Sim"])
 		];
 
 		$botao_volta = "";
@@ -435,9 +434,40 @@
 
 				}
 				$pasta->close();
+
+				$totalRefeição = 0;
+				$totalJornadaPrevista = 0;
+				$totalJornadaEfetiva = 0; 
+				$totalEspera = 0;
+				$totalDescanso = 0;
+				$totalRepouso = 0; 
+				$totalJornada = 0;
+				$totalMdc = 0; 
+				$totalIntersticioInferior = 0;
+				$totalIntersticioSuperior = 0;
 				foreach ($arquivos as &$arquivo) {
 					$arquivo = $path . "/" . $arquivo;
+					if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado"){
+						$json = @json_decode(file_get_contents($arquivo), true);
+						$totalRefeição += $json["refeicao"];
+						$totalJornadaPrevista += $json["jornadaPrevista"];
+						$totalJornadaEfetiva += $json["jornadaEfetiva"];
+						$totalEspera += $json["espera"];
+						$totalDescanso += $json["descanso"];
+						$totalRepouso += $json["repouso"];
+						$totalJornada += $json["jornada"];
+						$totalMdc += $json["mdc"];
+						$totalIntersticioInferior += $json["intersticioInferior"];
+						$totalIntersticioSuperior += $json["intersticioSuperior"];
+					}
 				}
+
+				if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado"){
+					$gravidadeAlta = $totalRefeição + $totalIntersticioInferior + $totalIntersticioSuperior;
+					$gravidadeMedia = $totalJornadaEfetiva + $totalMdc;
+					$gravidadeBaixa = $totalJornadaPrevista;	
+				}
+
 
 				if (!empty($arquivo)) {
 					$dataEmissao = "Atualizado em: " . date("d/m/Y H:i", filemtime($arquivo)); //Utilizado no HTML.
@@ -458,55 +488,78 @@
 			}
 		} 
 
-	// 	if ($encontrado) {
-	// 		$rowTotais = "<tr class='totais'>";
-	// 		$rowTitulos = "<tr id='titulos' class='titulos'>";
+		if ($encontrado) {
+			
+			$rowTitulos = "<tr id='titulos' >";
 
-	// 		if (!empty($_POST["empresa"])) {
-	// 			$rowTotais .=
-	// 				"<th colspan='2'>".$totais["empresaNome"]."</th>"
-	// 				."<th colspan='1'></th>"
-	// 				."<th colspan='1'>".$totais["inicioSemRegistro"]."</th>"
-	// 				."<th colspan='1'>".$totais["inicioRefeicaoSemRegistro"]."</th>"
-	// 				."<th colspan='1'>".$totais["fimRefeicaoSemRegistro"]."</th>"
-	// 				."<th colspan='1'>".$totais["fimSemRegistro"]."</th>"
-	// 				."<th colspan='1'>".$totais["refeicao1h"]."</th>"
-	// 				."<th colspan='1'>".$totais["refeicao2h"]."</th>"
-	// 				."<th colspan='1'>".$totais["esperaAberto"]."</th>"
-	// 				."<th colspan='1'>".$totais["descansoAberto"]."</th>"
-	// 				."<th colspan='1'>".$totais["repousoAberto"]."</th>"
-	// 				."<th colspan='1'>".$totais["jornadaAberto"]."</th>"
-	// 				."<th colspan='1'>".$totais["jornadaExedida"]."</th>"
-	// 				."<th colspan='1'>".$totais["mdcDescanso"]."</th>"
-	// 				."<th colspan='1'>".$totais["intersticio"]."</th>";
+			if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "naoEndossado") {
+				
+				$rowTitulos .=
+					"<th class=''>Motoristas</th>"
+					."<th class=''>Refeição</th>"
+					."<th class=''>Espera</th>"
+					."<th class=''>Descanso</th>"
+					."<th class=''>Repouso</th>"
+					."<th class=''>Jornada</th>"
+					."<th class=''>Jornada Prevista</th>"
+					."<th class=''>Jornada Efetiva</th>"
+					."<th class=''>MDC</th>"
+					."<th class=''>Interstício Inferior</th>"
+					."<th class=''>Interstício Superior</th>"
+					."<th class=''>TOTAL</th>";
 
-	// 			$rowTitulos .=
-	// 				"<th class='matricula'>Matrícula</th>"
-	// 				."<th class='nome'>Nome</th>"
-	// 				."<th class='ocupacao'>Ocupação</th>"
-	// 				."<th class='status'>Início da Jornada</th>"
-	// 				."<th class='jornadaPrevista'>Início da Refeição</th>"
-	// 				."<th class='jornadaEfetiva'>Fim da Refeição</th>"
-	// 				."<th class='he50APagar'>Fim da Jornada</th>"
-	// 				."<th class='he100APagar'>Refeição menor que 01h</th>"
-	// 				."<th class='adicionalNoturno'>Refeição menor que 02h</th>"
-	// 				."<th class='esperaIndenizada'>Espera em Aberto</th>"
-	// 				."<th class='saldoAnterior'>Descanso em Aberto</th>"
-	// 				."<th class='saldoPeriodo'>Repouso em Aberto</th>"
-	// 				."<th class='saldoFinal'>Jornada em Aberto</th>"
-	// 				."<th class='saldoFinal'>Tempo de Jornada Excedido</th>"
-	// 				."<th class='saldoFinal'>Descanso de MDC não Respeitado</th>"
-	// 				."<th class='saldoFinal'>Interstício</th>";
-	// 		} else {
-	// 			if (!empty($_POST["acao"]) && $_POST["acao"] == "buscar") {
-	// 				set_status("Não Possui dados desse mês");
-	// 				echo "<script>alert('Não Possui dados desse mês')</script>";
-	// 			}
-	// 		}
+					$endossado = false;
 
-	// }
+					
+			}  elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
+				$rowTitulos .=
+					"<th class=''>Motoristas</th>"
+					. "<th class=''>Refeição</th>"
+					. "<th class=''>Jornada Prevista</th>"
+					. "<th class=''>Jornada Efetiva</th>"
+					. "<th class=''>MDC</th>"
+					. "<th class=''>Interstício Inferior</th>"
+					. "<th class=''>Interstício Superior</th>"
+					. "<th class=''>TOTAL</th>";
 
-	include_once "painel_html2.php";
-	// carregarJS($arquivos);
+				$rowGravidade = "<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
+					. "<thead>"
+					. "<tr>"
+					. "<td> Nivel de Gravidade</td>"
+					. "<td>%</td>"
+					. "</th>"
+					. "</thead>"
+					. "<tbody>"
+					. "<tr>"
+					. "<td>Baixa</td>"
+					. "<td>$gravidadeBaixa</td>"
+					. "<td></td>"
+					. "</tr>"
+					. "<tr>"
+					. "<td>Média</td>"
+					. "<td>$gravidadeMedia</td>"
+					. "<td>%</td>"
+					. "</tr>"
+					. "<tr>"
+					. "<td>Alta</td>"
+					. "<td>$gravidadeAlta</td>"
+					. "<td>%</td>"
+					. "</tr>"
+					. "</tbody>"
+					. "</table>";
+
+					$endossado = true;
+			}
+			$rowTitulos .= "</tr>";
+
+			include_once "painel_html2.php";
+
+			// if (!empty($_POST["acao"]) && $_POST["acao"] == "buscar") {
+			// 	set_status("Não Possui dados desse mês");
+			// 	echo "<script>alert('Não Possui dados desse mês')</script>";
+			// }
+		}
+
+	carregarJS($arquivos);
 	rodape();
 }
