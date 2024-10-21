@@ -1,5 +1,5 @@
 <?php
-if(is_int(strpos($diaPonto["inicioJornada"], "fa-warning"))){
+// if(is_int(strpos($diaPonto["inicioJornada"], "fa-warning"))){
 						$totalMotorista["inicioSemRegistro"] += 1;
 					}
 					if(is_int(strpos($diaPonto["inicioRefeicao"], "fa-warning"))){

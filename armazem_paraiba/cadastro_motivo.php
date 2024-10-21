@@ -67,12 +67,15 @@
 
 	function layout_motivo(){
 		global $legendas;
+
+		$_POST["moti_tx_legenda"] = "I";
+		var_dump(array_search($_POST["moti_tx_legenda"], $legendas));
 		cabecalho("Cadastro de Motivo");
 
 		$campos = [
-			campo("Nome*", "nome", (!empty($_POST["nome"])? $_POST["nome"]: ""), 6),
-			combo("Tipo*", "tipo", (!empty($_POST["tipo"])? $_POST["tipo"]: ""), 2, ["Ajuste","Abono"]),
-			combo("Legenda de Marcação*", "legenda", !empty($_POST["legenda"])? array_search($_POST["legenda"], $legendas): "", 4, $legendas)
+			campo("Nome*", "nome", (!empty($_POST["moti_tx_nome"]) ? $_POST["moti_tx_nome"] : (!empty($_POST["nome"]) ? $_POST["nome"] : "")), 6),
+			combo("Tipo*", "tipo", (!empty($_POST["moti_tx_tipo"]) ? $_POST["moti_tx_tipo"] : (!empty($_POST["tipo"]) ? $_POST["tipo"] : "")), 2, ["Ajuste","Abono"]),
+			combo("Legenda de Marcação*", "legenda", !empty($_POST["moti_tx_legenda"]) ? array_key_exists($_POST["moti_tx_legenda"], $legendas) : (!empty($_POST["legenda"]) ? array_search($_POST["legenda"], $legendas) : ""), 4, $legendas)
 		];
 
 		$botoes = [
