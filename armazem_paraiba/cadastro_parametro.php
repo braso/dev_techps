@@ -39,7 +39,7 @@
 		exit;
 	}
 
-	function enviar_documento() {
+	function enviarDocumento() {
 		global $a_mod;
 
 		if(empty($a_mod)){
