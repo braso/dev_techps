@@ -234,7 +234,7 @@
                     "SELECT * FROM ponto
                         JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                         WHERE pont_tx_status = 'ativo'
-                            AND pont_nb_user = ".$_POST['userID']."
+                            AND pont_tx_matricula = ".$entity['enti_tx_matricula']."
                             AND pont_nb_id >= ".$_POST['journeyID']."
                             AND pont_tx_data <= STR_TO_DATE('".$_POST['startDateTime'].":59', '%Y-%m-%d %H:%i:%s')
                             AND lower(macr_tx_nome) LIKE '%jornada%'
@@ -255,7 +255,7 @@
                     "SELECT *, (macr_tx_nome like '%inicio%') as open_break FROM ponto
                         JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                         WHERE pont_tx_status = 'ativo'
-                            AND pont_nb_user = ".$_POST['userID']."
+                            AND pont_tx_matricula = ".$entity['enti_tx_matricula']."
                             AND pont_tx_data <= STR_TO_DATE('".$_POST['startDateTime'].":59', '%Y-%m-%d %H:%i:%s')
                             AND lower(macr_tx_nome) != 'inicio de jornada'
                         ORDER BY pont_tx_data DESC
@@ -303,7 +303,7 @@
             $pontoMesmoMinuto = get_data(
                 "SELECT * FROM ponto 
                     WHERE pont_tx_status = 'ativo'
-                        AND pont_nb_user = ".$_POST["userID"]."
+                        AND pont_tx_matricula = ".$entity['enti_tx_matricula']."
                         AND pont_tx_data LIKE '%".$_POST["startDateTime"]."%'
                     ORDER BY pont_tx_data DESC
                     LIMIT 1;"
@@ -322,7 +322,7 @@
         //}
 
         $ponto = [
-            "pont_nb_user" => $decoded->data->user_id,
+            "pont_nb_userCadastro" => $decoded->data->user_id,
             "pont_tx_dataCadastro" => date("Y-m-d H:i:s"),
             "pont_tx_matricula" => $entity["enti_tx_matricula"],
             "pont_tx_data" => $_POST["startDateTime"],
@@ -390,12 +390,19 @@
         //}
 
         $requestdata->endDateTime = substr($requestdata->endDateTime, 0, 16);
+
+        $userEntityRegistry = get_data(
+            "SELECT entidade.enti_tx_matricula FROM entidade 
+                JOIN user ON user_tx_matricula = enti_tx_matricula
+                WHERE user_tx_status = 'ativo'
+                    AND user_nb_id = ".$requestdata->userID.""
+        )[0];
         
         //Check if there's an open journey{
             $query = 
                 "SELECT * from ponto
                     where pont_tx_status = 'ativo'
-                        AND pont_nb_user = ".$requestdata->userID."
+                        AND pont_tx_matricula = ".$userEntityRegistry["enti_tx_matricula"]."
                         AND pont_tx_data <= STR_TO_DATE('".$requestdata->endDateTime.":59', '%Y-%m-%d %H:%i:%s')
                         AND pont_nb_id = ".($requestdata->journeyID?? -1)
             ;
@@ -432,7 +439,7 @@
                 "SELECT *, (macr_tx_nome like '%inicio%') as open_break FROM ponto
                     JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                     WHERE pont_tx_status = 'ativo'
-                        AND pont_nb_user = ".$requestdata->userID."
+                        AND pont_tx_matricula = ".$userEntityRegistry["enti_tx_matricula"]."
                         AND macr_tx_status = 'ativo'
                         AND pont_tx_data <= STR_TO_DATE('".$requestdata->endDateTime.":59', '%Y-%m-%d %H:%i:%s')
                         ".(
@@ -459,7 +466,7 @@
                     "SELECT * FROM ponto 
                         JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                         WHERE pont_tx_status = 'ativo'
-                            AND pont_nb_user = ".$requestdata->userID."
+                            AND pont_tx_matricula = ".$userEntityRegistry["enti_tx_matricula"]."
                             AND macr_tx_status = 'ativo'
                         ORDER BY pont_tx_data DESC
                         LIMIT 1"
@@ -479,18 +486,11 @@
             }
         //}
 
-        $userEntityRegistry = get_data(
-            "SELECT entidade.enti_tx_matricula FROM entidade 
-                JOIN user ON user_tx_matricula = enti_tx_matricula
-                WHERE user_tx_status = 'ativo'
-                    AND user_nb_id = ".$requestdata->userID.""
-        )[0];
-
         //Confere se já tem um ponto no mesmo minuto, e adiciona aos segundos como índice de ordenação{
             $pontoMesmoMinuto = get_data(
                 "SELECT * FROM ponto 
                     WHERE pont_tx_status = 'ativo'
-                        AND pont_nb_user = ".$requestdata->userID."
+                        AND pont_tx_matricula = ".$userEntityRegistry["enti_tx_matricula"]."
                         AND pont_tx_data LIKE '%".$requestdata->endDateTime."%'
                     ORDER BY pont_tx_data DESC
                     LIMIT 1;"
@@ -510,7 +510,7 @@
         //}
 
         $ponto = [
-            "pont_nb_user"          => $decoded->data->user_id,
+            "pont_nb_userCadastro"  => $decoded->data->user_id,
             "pont_tx_dataCadastro"  => date("Y-m-d H:i:s"),
             "pont_tx_matricula"     => $userEntityRegistry["enti_tx_matricula"],
             "pont_tx_data"          => $requestdata->endDateTime,
@@ -539,6 +539,12 @@
         exit;
     }
 
-    function delLastRegister(int $driverId){
-        return delete_last($driverId);
+    function delLastRegister(int $userId){
+        $userEntityRegistry = get_data(
+            "SELECT entidade.enti_tx_matricula FROM entidade 
+                JOIN user ON user_tx_matricula = enti_tx_matricula
+                WHERE user_tx_status = 'ativo'
+                    AND user_nb_id = ".$userId.""
+        )[0];
+        return delete_last($userEntityRegistry["enti_tx_matricula"]);
     }
