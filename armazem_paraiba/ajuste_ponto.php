@@ -142,7 +142,7 @@
 
 		
 		$newPonto = [
-			"pont_nb_user" 			=> $_SESSION["user_nb_id"],
+			"pont_nb_userCadastro"	=> $_SESSION["user_nb_id"],
 			"pont_tx_matricula" 	=> $aMotorista["enti_tx_matricula"],
 			"pont_tx_data" 			=> $data,
 			"pont_tx_tipo" 			=> $aTipo["macr_tx_codigoInterno"],
@@ -188,16 +188,14 @@
 			"ponto.pont_tx_matricula = '".$matricula."'"
 		];
 
-		$abriuJornadaHoje = mysqli_fetch_assoc(
-			query(
-				"SELECT pont_tx_data FROM ponto
-					WHERE ".implode(" AND ", $condicoesPontoBasicas)."
-						AND ponto.pont_tx_tipo = 1
-						AND ponto.pont_tx_data LIKE '%".$_POST['data']."%'
-					ORDER BY ponto.pont_tx_data ASC
-					LIMIT 1;"
-			)
-		);
+		$abriuJornadaHoje = mysqli_fetch_assoc(query(
+			"SELECT pont_tx_data FROM ponto
+				WHERE ".implode(" AND ", $condicoesPontoBasicas)."
+					AND ponto.pont_tx_tipo = 1
+					AND ponto.pont_tx_data LIKE '%".$_POST['data']."%'
+				ORDER BY ponto.pont_tx_data ASC
+				LIMIT 1;"
+		));
 
 		//Definir data de início da query{
 			//Se abriu jornada hoje, considera a partir da data de abertura da jornada.
@@ -278,7 +276,8 @@
 		$sql = 
 			"SELECT DISTINCT pont_nb_id, ".implode(",", $cols)." FROM ponto
 				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
-				JOIN user ON ponto.pont_nb_user = user.user_nb_id
+				JOIN entidade ON ponto.pont_tx_matricula = entidade.enti_tx_matricula
+				JOIN user ON entidade.enti_tx_matricula = user.user_tx_matricula
 				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
 				WHERE ".implode(" AND ", $condicoesPontoBasicas)."
 					AND ponto.pont_tx_data >= STR_TO_DATE('".$sqlDataInicio."', '%Y-%m-%d %H:%i:%s')

@@ -20,7 +20,9 @@
 		$camposObrig = [
 			"nome" => "Nome", 
 			"codigoInterno" => "Código Interno", 
-			"codigoExterno" => "Código Externo"
+			"codigoExterno" => "Código Externo",
+			"fonte" => "Fonte",
+			"status" => "Status"
 		];
 		$errorMsg = conferirCamposObrig($camposObrig, $_POST);
 		if(!empty($errorMsg)){

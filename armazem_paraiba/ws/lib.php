@@ -115,14 +115,14 @@
 				if(strtolower($ponto["macr_tx_nome"]) == "inicio de jornada"){
 					$currentBreak = [];
 					$currentJourney->breaks = [];
-					$currentJourney = create_journey_ob($ponto, "journey", $ponto["pont_nb_user"]);
+					$currentJourney = create_journey_ob($ponto, "journey", $ponto["pont_nb_userCadastro"]);
 					$currentJourney->finalDateTime = null;
 				}else{
 					$currentBreak[$ponto["pont_tx_tipo"]] = null;
 					$currentBreak[$ponto["pont_tx_tipo"]] = create_journey_ob(
 						$ponto,
 						"break",
-						$ponto["pont_nb_user"],
+						$ponto["pont_nb_userCadastro"],
 						trim(str_replace("inicio de ", "", strtolower($macroNomes[$ponto["pont_tx_tipo"]])))
 					);
 					$currentBreak[$ponto["pont_tx_tipo"]]->finalDateTime = null;
@@ -130,7 +130,7 @@
 			}else{
 				if(strtolower($ponto["macr_tx_nome"]) == "fim de jornada"){
 					if(empty($currentJourney) || $currentJourney == (object)[]){
-						$currentJourney= create_journey_ob($ponto, "journey" ,$ponto["pont_nb_user"]);
+						$currentJourney= create_journey_ob($ponto, "journey" ,$ponto["pont_nb_userCadastro"]);
 						$currentJourney->startDateTime = null;
 					}
 
@@ -175,10 +175,10 @@
         return $journeysArray;
     }
 
-    function delete_last(int $driverId){
+    function delete_last(int $driverRegistration){
         $connect = new PDO("mysql:host=".$_ENV["DB_HOST"].";dbname=".$_ENV["DB_NAME"].";charset=utf8mb4", $_ENV["DB_USER"], $_ENV["DB_PASSWORD"]);
 
-        $lastId = $connect->query("SELECT pont_nb_id FROM ponto WHERE pont_nb_user = ".$driverId." ORDER BY pont_nb_id DESC LIMIT 1;")->fetch(MYSQLI_ASSOC)->pont_nb_id;
+        $lastId = $connect->query("SELECT pont_nb_id FROM ponto WHERE pont_tx_matricula = ".$driverRegistration." ORDER BY pont_nb_id DESC LIMIT 1;")->fetch(MYSQLI_ASSOC)->pont_nb_id;
 
         return ($connect->exec("DELETE FROM ponto WHERE pont_nb_id = ".$lastId)? "deleted": "failed");
     }

@@ -64,7 +64,7 @@
 
 
 		$novoPonto = [
-			"pont_nb_user" 			=> $_SESSION["user_nb_id"],
+			"pont_nb_userCadastro"	=> $_SESSION["user_nb_id"],
 			"pont_tx_matricula" 	=> $aMotorista["enti_tx_matricula"],
 			"pont_tx_data" 			=> strval($dataHora),
 			"pont_tx_tipo" 			=> $aTipo["macr_tx_codigoInterno"],

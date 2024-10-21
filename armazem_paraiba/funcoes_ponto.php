@@ -1213,25 +1213,21 @@
 					.(!empty($registros["fimJornada"])? ", '".implode("', '", $registros["fimJornada"])."')": ")")
 				;
 
-				$legendas = mysqli_fetch_all(
-					query(
-						"SELECT * FROM ponto
-							JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
-							JOIN user ON ponto.pont_nb_user = user.user_nb_id
-							LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
-							WHERE ponto.pont_nb_motivo IS NOT NULL 
-								AND pont_tx_status = 'ativo'
-								AND pont_tx_data IN ".$datas." 
-								AND pont_tx_matricula = '".$matricula."'"
-					),
-					MYSQLI_ASSOC
-				);
+				$legendas = mysqli_fetch_all(query(
+					"SELECT moti_tx_legenda, macr_tx_nome FROM ponto
+						JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
+						LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
+						WHERE ponto.pont_nb_motivo IS NOT NULL 
+							AND pont_tx_status = 'ativo'
+							AND pont_tx_data IN ".$datas." 
+							AND pont_tx_matricula = '".$matricula."'"
+				), MYSQLI_ASSOC);
 		
 				$tipos = [
-					"I" => 0, 
-					"P" => 0, 
-					"T" => 0, 
-					"DSR" => 0
+					"I" 	=> 0, 
+					"P" 	=> 0, 
+					"T" 	=> 0, 
+					"DSR" 	=> 0
 				];
 				$contagens = [
 					"inicioJornada" => $tipos,
@@ -1275,17 +1271,13 @@
 		//}
 
 		//Aviso de registro inativado{
-			$ajuste = mysqli_fetch_all(
-				query(
-					"SELECT pont_tx_data, macr_tx_nome, pont_tx_status FROM ponto
-						JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
-						JOIN user ON ponto.pont_nb_user = user.user_nb_id
-						LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
-						WHERE pont_tx_data LIKE '%".$data."%' 
-							AND pont_tx_matricula = '".$matricula."'"
-				),
-				MYSQLI_ASSOC
-			);
+			$ajuste = mysqli_fetch_all(query(
+				"SELECT pont_tx_data, macr_tx_nome, pont_tx_status FROM ponto
+					JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
+					LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
+					WHERE pont_tx_data LIKE '%".$data."%' 
+						AND pont_tx_matricula = '".$matricula."'"
+			), MYSQLI_ASSOC);
 	
 			$possuiAjustes = [
 				"jornada"  => ["inicio" => False, "fim" => False], 	//$quantidade_inicioJ e $quantidade_fimJ
