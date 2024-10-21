@@ -882,7 +882,6 @@
 	}
 
 	function criar_relatorio_ajustes() {
-		// dd("Incompleto");
 		global $totalResumo;
 		// $periodoInicio = $_POST["busca_dataInicio"];
 		// $periodoFim = $_POST["busca_dataFim"];
@@ -925,9 +924,6 @@
 					),
 					MYSQLI_ASSOC
 				);
-				echo "<br>";
-				var_dump($pontos);
-				echo "<br>";
 			}
 
 			// echo '<pre>';

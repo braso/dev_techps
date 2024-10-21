@@ -69,7 +69,6 @@
 		global $legendas;
 
 		$_POST["moti_tx_legenda"] = "I";
-		var_dump(array_search($_POST["moti_tx_legenda"], $legendas));
 		cabecalho("Cadastro de Motivo");
 
 		$campos = [
