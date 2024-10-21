@@ -22,7 +22,7 @@
 				"/cadastro_endosso.php" 	=> "Endosso", 
 				"/cadastro_feriado.php" 	=> "Feriado", 
 				"/cadastro_motorista.php" 	=> "Funcionário", 
-				"/cadastro_macro.php" 		=> "Macro (Positron)",
+				"/cadastro_macro.php" 		=> "Macro",
 				"/cadastro_motivo.php" 		=> "Motivo", 
 				"/cadastro_parametro.php" 	=> "Parâmetro", 
 				"/cadastro_usuario.php" 	=> "Usuário" 
