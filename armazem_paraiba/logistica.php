@@ -51,7 +51,7 @@ if (isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id'])) {
 		$sql = "SELECT pont_nb_id, pont_tx_data, macr_tx_nome, moti_tx_nome, moti_tx_legenda, pont_tx_justificativa, user_tx_login, pont_tx_dataCadastro, pont_tx_latitude, pont_tx_longitude 
                 FROM ponto
                 JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
-                JOIN user ON ponto.pont_nb_user = user.user_nb_id
+                JOIN user ON ponto.pont_nb_userCadastro = user.user_nb_id
                 LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
                 WHERE ponto.pont_tx_status = 'ativo'
                 AND ponto.pont_tx_matricula = ?
@@ -196,7 +196,7 @@ if (isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id'])) {
                 FROM ponto p
                 INNER JOIN macroponto t ON p.pont_tx_tipo = t.macr_tx_codigoInterno
                 INNER JOIN motivo m ON p.pont_nb_motivo = m.moti_nb_id
-                WHERE p.pont_nb_user = ?
+                WHERE p.pont_nb_userCadastro = ?
                 ORDER BY p.pont_tx_dataCadastro DESC
                 LIMIT 10";  // Ajuste o limite conforme necessário
 
@@ -258,7 +258,7 @@ if (isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id'])) {
 
 				// Inserir dados na tabela
 				$sql = "INSERT INTO ponto (
-                            pont_nb_user, 
+                            pont_nb_userCadastro, 
                             pont_tx_matricula, 
                             pont_tx_data, 
                             pont_tx_tipo, 
