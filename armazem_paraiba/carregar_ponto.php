@@ -184,6 +184,7 @@
 			$macroPonto = mysqli_fetch_assoc(query(
 				"SELECT macr_tx_codigoInterno, macr_tx_codigoExterno FROM macroponto"
 				." WHERE macr_tx_status = 'ativo'"
+					." AND macr_tx_fonte = 'positron'"
 					." AND macr_tx_codigoExterno = '".$codigoExterno."'"
 				." LIMIT 1;"
 			));
@@ -197,7 +198,7 @@
 			}
 
 			$newPonto = [
-				"pont_nb_user"			=> $_SESSION["user_nb_id"],
+				"pont_nb_userCadastro"	=> $_SESSION["user_nb_id"],
 				"pont_nb_arquivoponto"	=> null,						//Será definido após inserir o arquivo de ponto.
 				"pont_tx_matricula"		=> strval($matricula),
 				"pont_tx_data"			=> $data." ".$hora,
