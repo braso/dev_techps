@@ -200,36 +200,47 @@
 		return insertInto($tabela, $campos, $valores);
 	}
 	function insertInto(string $tabela, array $campos, array $valores): array{
+		global $conn;
+
 		if(count($campos) != count($valores)){
-			echo "ERRO Número de campos não confere com número de linhas na função de inserir!";
+			echo "ERRO: Número de campos não confere com número de linhas na função de inserir!";
 			return [];
 		}
 
-		for($f = 0; $f < count($campos); $f++){
-			if(is_int(strpos($campos[$f], "_tx_"))){
-				$valores[$f] = "'".strval($valores[$f])."'";
+		$types = "";
+		foreach($campos as $key => $campo){
+			if(is_int(strpos($campo, "_tx_"))){
+				$types .= "s";
 			}else{
-				$valores[$f] = strval($valores[$f]);
+				$types .= "d";
 			}
+			$novoRegistro[$campo] = $valores[$key];
 		}
-		$valores = implode(",",$valores);
-		$campos  = implode(",",$campos);
 
 		try{
-			query("INSERT INTO $tabela (".$campos.") VALUES(".$valores.");");
-			$sql = query("SELECT LAST_INSERT_ID();");
-			set_status("Registro inserido com sucesso!");
+			$statement = mysqli_prepare(
+				$conn,
+				"INSERT INTO $tabela (".implode(", ", array_keys($novoRegistro)).")"
+				." VALUES (".implode(", ", array_pad([], count($novoRegistro), "?")).");"
+			);
+			mysqli_stmt_bind_param($statement, $types, ...array_values($novoRegistro));
+			$registered = mysqli_stmt_execute($statement);
+			
+			mysqli_stmt_close($statement);
+			if(!$registered){
+				throw new Exception($statement->error);
+			}
+			
 		}catch(Exception $e){
-			set_status("Falha ao registrar.");
+			set_status("ERRO ao registrar.");
 			return [$e];
 		}
 
-		$a = carrega_array($sql);
-		if(is_array($a)){
-			return $a;
-		}else{
-			return [];
-		}
+		$result = mysqli_fetch_assoc(query(
+			"SELECT * FROM $tabela ORDER BY ".substr($tabela, 0, 4)."_nb_id DESC LIMIT 1;"
+		));
+
+		return (is_array($result)? $result: []);
 	}
 
 	function atualizar(string $tabela, array $campos, array $valores, string $id): void{
