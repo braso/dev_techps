@@ -58,6 +58,7 @@
         echo
         "<form name='myForm' method='post' action='" . htmlspecialchars($_SERVER["PHP_SELF"]) . "'>
                 <input type='hidden' name='acao'>
+                <input type='hidden' name='atualizar'>
                 <input type='hidden' name='campoAcao'>
                 <input type='hidden' name='empresa'>
                 <input type='hidden' name='busca_dataMes'>
@@ -90,7 +91,7 @@
 
                     function carregarDados(urlArquivo){
                         $.ajax({
-                            url: urlArquivo,
+                            url: urlArquivo + '?v=' + new Date().getTime(),
                             dataType: 'json',
                             success: function(data){
                                 var row = {};

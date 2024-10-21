@@ -1,13 +1,13 @@
 <?php
-    /* Modo debug
+/* Modo debug
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
     //*/
 
-    header("Expires: 01 Jan 2001 00:00:00 GMT");
     header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
     header('Cache-Control: post-check=0, pre-check=0', FALSE);
     header('Pragma: no-cache');
+    header("Expires: 0");
 
     require "../funcoes_ponto.php";
     require_once __DIR__ . "/funcoes_paineis.php";
@@ -33,7 +33,7 @@
                         +'<td style=\'text-align: center;'+ cor +'\'>'+(descanso ? descanso : '<strong>----</strong>')+'</td>'
                         +'<td style=\'text-align: center;'+ cor +'\'>'+(repouso ? repouso : '<strong>----</strong>')+'</td>'
                     +'</tr>';";
-        } 
+        }
 
         $carregarDados = "";
         foreach ($arquivos as $arquivo) {
@@ -61,7 +61,7 @@
                     function imprimir(){
                         window.print();
                     }
-                
+
                     $(document).ready(function(){
                         var tabela = $('#tabela-empresas tbody');
 
@@ -72,54 +72,41 @@
                                 success: function(data){
                                     var row = {};
                                     $.each(data, function(index, item){
-                                        function parseData(dataString) {
-                                            var partes = dataString.split('/'); // Divide a string 'dd/mm/yyyy'
-                                            var dia = parseInt(partes[0], 10);  // Pega o dia
-                                            var mes = parseInt(partes[1], 10) - 1; // Pega o mês (0-11)
-                                            var ano = parseInt(partes[2], 10);  // Pega o ano
-                                            return new Date(ano, mes, dia);  // Retorna a data como um objeto Date
-                                        }
+                                        console.log(item);
 
-                                        function processaCampo(campo, diferencaDias, isDataAtual) {
+                                        function processaCampo(campo,diferencaDias) {
                                             // Só aplicar a lógica se a data não for a atual
-                                            if (!isDataAtual && campo === '*') {
-                                                return '* D+' + diferencaDias;
+                                            if (campo === '*') {
+                                                if(diferencaDias !== 0){
+                                                    return '* D+' + diferencaDias;
+                                                }
+                                                return campo;
                                             }
                                             return campo;
                                         }
 
-
-                                        // Converte a string de data do item para um objeto Date
-                                        var dataItem = parseData(item.data);
-                                        var dataAtual = new Date(); // Pega a data atual
-
-                                        dataItem.setHours(0, 0, 0, 0);
-                                        dataAtual.setHours(0, 0, 0, 0);
-
-                                        var isDataAtual = dataItem.getTime() === dataAtual.getTime();
-                                        var diferencaDias = isDataAtual ? 0 : Math.floor((dataAtual - dataItem) / (1000 * 60 * 60 * 24));
+                                        var cor = '';
+                                        cor = 'background-color: var(--var-red); color: white;';
 
                                         if(item.data.indexOf('(E)') == -1) {
-                                            var cor = '';
-                                            // Definir a cor com base na quantidade de dias
-                                            if (diferencaDias <= 3) {
-                                                cor = 'background-color: green; color:white';
-                                            } else if (diferencaDias <= 6) {
-                                                cor = 'background-color: yellow;'
-                                            } else {
-                                                cor = 'background-color: red; color:white';
-                                            }
+                                            var diferencaDias = item.diaDiferenca;
+                                            
+                                            var jornada = processaCampo(item.jornada, diferencaDias);
+                                            var refeicao = processaCampo(item.refeicao, diferencaDias);
+                                            var espera = processaCampo(item.espera, diferencaDias);
+                                            var descanso = processaCampo(item.descanso, diferencaDias);
+                                            var repouso = processaCampo(item.repouso, diferencaDias);
+                                        } else {
+                                            var jornada = item.jornada;
+                                            var refeicao = item.refeicao;
+                                            var espera = item.espera;
+                                            var descanso = item.descanso;
+                                            var repouso = item.repouso;
                                         }
 
-                                        var jornada = processaCampo(item.jornada, diferencaDias, isDataAtual);
-                                        var refeicao = processaCampo(item.refeicao, diferencaDias, isDataAtual);
-                                        var espera = processaCampo(item.espera, diferencaDias, isDataAtual);
-                                        var descanso = processaCampo(item.descanso, diferencaDias, isDataAtual);
-                                        var repouso = processaCampo(item.repouso, diferencaDias, isDataAtual);
-                                    "
-                                        . $linha ."
-                                        tabela.append(linha);
-                                    });
+                                    ". $linha . "
+                                    tabela.append(linha);
+                    });
                                 },
                                 error: function(){
                                     console.error('Erro ao carregar os dados.');
@@ -150,7 +137,7 @@
                         $('#titulos th').click(function(){
                             var colunaClicada = $(this).attr('class');
                             // console.log(colunaClicada)
-                            
+
                             var classePermitida = colunasPermitidas.some(function(coluna) {
                                 return colunaClicada.includes(coluna);
                             });
@@ -162,7 +149,7 @@
                                 // Redefinir ordem de todas as colunas
                                 $('#tabela-empresas th').data('order', 'desc'); 
                                 $(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
-                                
+
                                 // Chama a função de ordenação
                                 ordenarTabela(coluna, $(this).data('order'));
 
@@ -270,14 +257,14 @@
 
         $campoAcao =
             "<div class='col-sm-2 margin-bottom-5' style='min-width:200px;'>
-                    <label>" . "Ação" . "</label><br>
-                    <label class='radio-inline'>
-                        <input type='radio' name='campoAcao' value='buscar' " . ((empty($_POST["campoAcao"]) || $_POST["campoAcao"] == "buscar") ? "checked" : "") . "> Buscar
-                    </label>
-                    <label class='radio-inline'>
-                        <input type='radio' name='campoAcao' value='atualizarPainel'" . (!empty($_POST["campoAcao"]) && $_POST["campoAcao"] == "atualizarPainel" ? "checked" : "") . "> Atualizar
-                    </label>
-                </div>";
+            <label>" . "Ação" . "</label><br>
+            <label class='radio-inline'>
+            <input type='radio' name='campoAcao' value='buscar' " . ((empty($_POST["campoAcao"]) || $_POST["campoAcao"] == "buscar") ? "checked" : "") . "> Buscar
+            </label>
+            <label class='radio-inline'>
+                    <input type='radio' name='campoAcao' value='atualizarPainel'" . (!empty($_POST["campoAcao"]) && $_POST["campoAcao"] == "atualizarPainel" ? "checked" : "") . "> Atualizar
+            </label>
+        </div>";
 
         $campos = [
             combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
@@ -314,32 +301,32 @@
         $path = "./arquivos/jornada";
         $periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
-        if(!empty($_POST["empresa"]) && !empty($_POST["busca_dataMes"])){
-            
+        if (!empty($_POST["empresa"]) && !empty($_POST["busca_dataMes"])) {
+
             $empresa = mysqli_fetch_assoc(query(
                 "SELECT * FROM empresa"
-                ." WHERE empr_tx_status = 'ativo'"
-                    ." AND empr_nb_id = ".$_POST["empresa"]
-                ." LIMIT 1;"
+                    . " WHERE empr_tx_status = 'ativo'"
+                    . " AND empr_nb_id = " . $_POST["empresa"]
+                    . " LIMIT 1;"
             ));
-            
-            $path .= "/".$_POST["busca_dataMes"]."/".$empresa["empr_nb_id"];
 
-            if(is_dir($path)){
+            $path .= "/" . $_POST["busca_dataMes"] . "/" . $empresa["empr_nb_id"];
+
+            if (is_dir($path)) {
                 $pasta = dir($path);
-                while($arquivo = $pasta->read()){
-                    if(!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))){
+                while ($arquivo = $pasta->read()) {
+                    if (!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
                         $arquivos[] = $arquivo;
                     }
                 }
                 $pasta->close();
 
-                foreach($arquivos as &$arquivo){
-                    $arquivo = $path."/".$arquivo;
+                foreach ($arquivos as &$arquivo) {
+                    $arquivo = $path . "/" . $arquivo;
                 }
 
                 if (!empty($arquivo)) {
-                    $dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($arquivo)); //Utilizado no HTML.
+                    $dataEmissao = "Atualizado em: " . date("d/m/Y H:i", filemtime($arquivo)); //Utilizado no HTML.
                     $arquivoGeral = json_decode(file_get_contents($arquivo), true);
 
                     $periodoRelatorio = [
@@ -351,30 +338,30 @@
                 } else {
                     echo "<script>alert('Não tem jornadas abertas.')</script>";
                 }
-            }else{
+            } else {
                 $encontrado = false;
             }
         }
 
-        if($encontrado){
+        if ($encontrado) {
             // $rowTotais = "<tr class='totais'>";
             $rowTitulos = "<tr id='titulos' class='titulos'>";
-            $rowTitulos .= 
-            "<th class='data'>Data</th>"
-            ."<th class='matricula'>Matrícula</th>"
-            ."<th class='nome'>Nome</th>"
-            ."<th class='ocupacao'>Ocupação</th>"
-            ."<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornada'>Jornada</th>"
-            ."<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornadaEfetiva'>Jornada Efetiva</th>"
-            ."<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='refeicao'>Refeicao</th>"
-            ."<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='espera'>Espera</th>"
-            ."<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='descanso'>Descanso</th>"
-            ."<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='repouso'>Repouso</th>";
+            $rowTitulos .=
+                "<th class='data'>Data</th>"
+                . "<th class='matricula'>Matrícula</th>"
+                . "<th class='nome'>Nome</th>"
+                . "<th class='ocupacao'>Ocupação</th>"
+                . "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornada'>Jornada</th>"
+                . "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornadaEfetiva'>Jornada Efetiva</th>"
+                . "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='refeicao'>Refeicao</th>"
+                . "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='espera'>Espera</th>"
+                . "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='descanso'>Descanso</th>"
+                . "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='repouso'>Repouso</th>";
             $rowTitulos .= "</tr>";
             include_once "painel_html2.php";
         }
 
         carregarJS($arquivos);
-        
+
         rodape();
     }

@@ -97,7 +97,7 @@
 
                     function carregarDados(urlArquivo){
                         $.ajax({
-                            url: urlArquivo,
+                            url: urlArquivo+ '?v=' + new Date().getTime(),
                             dataType: 'json',
                             success: function(data){
                                 var row = {};
