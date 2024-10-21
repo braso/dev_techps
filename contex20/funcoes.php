@@ -1015,19 +1015,19 @@
 		$arquivo_list = '';
 		if(!empty($arquivos)) {
 			foreach($arquivos as $arquivo){
-				$dataHoraOriginal = $arquivo['doc_tx_dataCadastro'];
+				$dataHoraOriginal = $arquivo['docu_tx_dataCadastro'];
 				$dataHora = new DateTime($dataHoraOriginal);
 				$dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
 				$arquivo_list .= "
 				<tr role='row' class='odd'>
-				<td>$arquivo[doc_tx_nome]</td>
-				<td>$arquivo[doc_tx_descricao]</td>
+				<td>$arquivo[docu_tx_nome]</td>
+				<td>$arquivo[docu_tx_descricao]</td>
 				<td>$dataHoraFormatada</td>
 				<td>
-					<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idParametro,'$arquivo[doc_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
+					<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idParametro,'$arquivo[docu_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
 				</td>
 				<td>
-					<a style='color: red;' onclick=\"javascript:remover_arquivo($idParametro,$arquivo[doc_nb_id],'$arquivo[doc_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
+					<a style='color: red;' onclick=\"javascript:remover_arquivo($idParametro,$arquivo[docu_nb_id],'$arquivo[docu_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
 				</td>";
 			}
 		}
@@ -1127,19 +1127,19 @@
 		$arquivo_list = '';
 		if(!empty($arquivos)) {
 			foreach($arquivos as $arquivo){
-				$dataHoraOriginal = $arquivo['doc_tx_dataCadastro'];
+				$dataHoraOriginal = $arquivo['docu_tx_dataCadastro'];
 				$dataHora = new DateTime($dataHoraOriginal);
 				$dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
 				$arquivo_list .= "
 				<tr role='row' class='odd'>
-				<td>$arquivo[doc_tx_nome]</td>
-				<td>$arquivo[doc_tx_descricao]</td>
+				<td>$arquivo[docu_tx_nome]</td>
+				<td>$arquivo[docu_tx_descricao]</td>
 				<td>$dataHoraFormatada</td>
 				<td>
-					<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idEmpresa,'$arquivo[doc_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
+					<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idEmpresa,'$arquivo[docu_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
 				</td>
 				<td>
-					<a style='color: red;' onclick=\"javascript:remover_arquivo($idEmpresa,$arquivo[doc_nb_id],'$arquivo[doc_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
+					<a style='color: red;' onclick=\"javascript:remover_arquivo($idEmpresa,$arquivo[docu_nb_id],'$arquivo[docu_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
 				</td>";
 			}
 		}

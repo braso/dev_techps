@@ -69,7 +69,7 @@
 		}
 
 		if (in_array($mimeType, $allowed) && $arquivos['name'] != '') {
-				$pasta_empresa = "arquivos/doc_empresa/$idEmpresa/";
+				$pasta_empresa = "arquivos/docu_empresa/$idEmpresa/";
 		
 				if (!is_dir($pasta_empresa)) {
 					mkdir($pasta_empresa, 0755, true);
@@ -81,7 +81,7 @@
 				$caminho_destino = $pasta_empresa . $novo_nome_com_extensao;
 		
 				if (move_uploaded_file($arquivo_temporario, $caminho_destino)) {
-					inserir('documento_empresa', ['empr_nb_id','doc_tx_nome','doc_tx_descricao','doc_tx_caminho','doc_tx_dataCadastro'],[$idEmpresa,$novo_nome_com_extensao,$descricao,$caminho_destino,date("Y-m-d H:i:s")]);
+					inserir('documento_empresa', ['empr_nb_id','docu_tx_nome','docu_tx_descricao','docu_tx_caminho','docu_tx_dataCadastro'],[$idEmpresa,$novo_nome_com_extensao,$descricao,$caminho_destino,date("Y-m-d H:i:s")]);
 				}
 		}
 
@@ -92,7 +92,7 @@
 
 	function excluir_documento() {
 
-		query("DELETE FROM documento_empresa WHERE doc_nb_id = $_POST[idArq]");
+		query("DELETE FROM documento_empresa WHERE docu_nb_id = $_POST[idArq]");
 		
 		$_POST['id'] = $_POST['idEmpresa'];
 		modificarEmpresa();
