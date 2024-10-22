@@ -20,18 +20,13 @@
 		$camposObrig = [
 			"nome" => "Nome", 
 			"codigoInterno" => "Código Interno", 
-			"codigoExterno" => "Código Externo"
+			"codigoExterno" => "Código Externo",
+			"fonte" => "Fonte",
+			"status" => "Status"
 		];
-		$errorMsg = "ERRO: Campos obrigatórios não preenchidos: ";
-		foreach($camposObrig as $key => $value){
-			if(empty($_POST[$key])){
-				$_POST["errorFields"][] = $key;
-				$errorMsg .= $value.", ";
-			}
-		}
-
-		if(!empty($_POST["errorFields"])){
-			set_status(substr($errorMsg, 0, -2).".");
+		$errorMsg = conferirCamposObrig($camposObrig, $_POST);
+		if(!empty($errorMsg)){
+			set_status("ERRO: ".$errorMsg);
 			layout_macro();
 			exit;
 		}

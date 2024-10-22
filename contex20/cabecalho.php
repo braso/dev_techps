@@ -75,11 +75,16 @@
 
 		.logo-default:hover{
 			filter: brightness(1.5);
-			transition: filter .3s;
+			transition: filter .5s;
 		}
 
 		.dropdown-toggle{
 			height: -webkit-fill-available;
+		}
+
+		.page-container{
+			height: calc(100vh - 140px);
+			width: -webkit-fill-available;
 		}
 
 		.form-actions {
@@ -120,8 +125,12 @@
 			border-bottom: 1px solid #c2cad8;
 		}
 
+		.portlet{
+			border-radius: 20px;
+		}
+
 		.portlet.light {
-			box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.5);
+			box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.2);
 		}
 
 		.portlet>.portlet-body p {
@@ -202,12 +211,22 @@
 				--img_path: url("<?= $CONTEX["path"] ?>/imagens/logo_mobile.png");
 			}
 
+			.page-container{
+				height: calc(100vh - 110px);
+			}
+
 			.img-section {
 				width: 100%;
 			}
 
 			.img-section .text-left img {
 				width: 25%;
+			}
+		}
+
+		@media(max-width: 480px){
+			.page-container{
+				height: 100vh;
 			}
 		}
 	</style>

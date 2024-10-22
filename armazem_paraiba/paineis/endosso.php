@@ -4,13 +4,18 @@
         error_reporting(E_ALL);
     //*/
 
+    header("Expires: 01 Jan 2001 00:00:00 GMT");
     header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
     header('Cache-Control: post-check=0, pre-check=0', FALSE);
     header('Pragma: no-cache');
-    header("Expires: 0");
     
     require "../funcoes_ponto.php";
     require_once __DIR__."/funcoes_paineis.php";
+
+    function enviarForm(){
+        $_POST["acao"] = $_POST["campoAcao"];
+        index();
+    }
 
     function carregarJS(array $arquivos){
 
@@ -55,14 +60,20 @@
             $carregarDados .= "carregarDados('".$arquivo."');";
         }
 
-        echo 
-            "<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"])."'>
-                <input type='hidden' name='atualizar' id='atualizar'>
-                <input type='hidden' name='empresa' id='empresa'>
-                <input type='hidden' name='busca_data' id='busca_data'>
+        echo
+        "<form name='myForm' method='post' action='" . htmlspecialchars($_SERVER["PHP_SELF"]) . "'>
+                <input type='hidden' name='acao'>
+                <input type='hidden' name='atualizar'>
+                <input type='hidden' name='campoAcao'>
+                <input type='hidden' name='empresa'>
+                <input type='hidden' name='busca_dataInicio'>
+                <input type='hidden' name='busca_dataFim'>
+                <input type='hidden' name='busca_data'>
             </form>
             <script>
                 function setAndSubmit(empresa){
+                    document.myForm.acao.value = 'enviarForm()';
+                    document.myForm.campoAcao.value = 'buscar';
                     document.myForm.empresa.value = empresa;
                     document.myForm.busca_data.value = document.getElementById('busca_data').value;
                     document.myForm.submit();
@@ -84,7 +95,7 @@
 
                     function carregarDados(urlArquivo){
                         $.ajax({
-                            url: urlArquivo,
+                            url: urlArquivo + '?v=' + new Date().getTime(),
                             dataType: 'json',
                             success: function(data){
                                 var row = {};

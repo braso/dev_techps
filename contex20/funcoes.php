@@ -200,36 +200,47 @@
 		return insertInto($tabela, $campos, $valores);
 	}
 	function insertInto(string $tabela, array $campos, array $valores): array{
+		global $conn;
+
 		if(count($campos) != count($valores)){
-			echo "ERRO Número de campos não confere com número de linhas na função de inserir!";
+			echo "ERRO: Número de campos não confere com número de linhas na função de inserir!";
 			return [];
 		}
 
-		for($f = 0; $f < count($campos); $f++){
-			if(is_int(strpos($campos[$f], "_tx_"))){
-				$valores[$f] = "'".strval($valores[$f])."'";
+		$types = "";
+		foreach($campos as $key => $campo){
+			if(is_int(strpos($campo, "_tx_"))){
+				$types .= "s";
 			}else{
-				$valores[$f] = strval($valores[$f]);
+				$types .= "d";
 			}
+			$novoRegistro[$campo] = $valores[$key];
 		}
-		$valores = implode(",",$valores);
-		$campos  = implode(",",$campos);
 
 		try{
-			query("INSERT INTO $tabela (".$campos.") VALUES(".$valores.");");
-			$sql = query("SELECT LAST_INSERT_ID();");
-			set_status("Registro inserido com sucesso!");
+			$statement = mysqli_prepare(
+				$conn,
+				"INSERT INTO $tabela (".implode(", ", array_keys($novoRegistro)).")"
+				." VALUES (".implode(", ", array_pad([], count($novoRegistro), "?")).");"
+			);
+			mysqli_stmt_bind_param($statement, $types, ...array_values($novoRegistro));
+			$registered = mysqli_stmt_execute($statement);
+			
+			mysqli_stmt_close($statement);
+			if(!$registered){
+				throw new Exception($statement->error);
+			}
+			
 		}catch(Exception $e){
-			set_status("Falha ao registrar.");
+			set_status("ERRO ao registrar.");
 			return [$e];
 		}
 
-		$a = carrega_array($sql);
-		if(is_array($a)){
-			return $a;
-		}else{
-			return [];
-		}
+		$result = mysqli_fetch_assoc(query(
+			"SELECT * FROM $tabela ORDER BY ".substr($tabela, 0, 4)."_nb_id DESC LIMIT 1;"
+		));
+
+		return (is_array($result)? $result: []);
 	}
 
 	function atualizar(string $tabela, array $campos, array $valores, string $id): void{
@@ -440,14 +451,15 @@
 		$_POST['msg_status'] = $msg;
 	}
 
-	function separarPeriodo(string $periodo): array{
-		preg_match_all("/(\d{2}\/\d{2}\/\d{4})+(\d{2}:\d{2}:\d{2})?/", $periodo, $matches);
-		$matches = !empty($matches)? $matches[0]: $matches;
-		foreach($matches as &$match){
-			$match = DateTime::createFromFormat("d/m/Y", $match)->format("Y-m-d");
-		}
-		return $matches;
-	}
+	// Obsoleto
+	// function separarPeriodo(string $periodo): array{
+	// 	preg_match_all("/(\d{2}\/\d{2}\/\d{4})+(\d{2}:\d{2}:\d{2})?/", $periodo, $matches);
+	// 	$matches = !empty($matches)? $matches[0]: $matches;
+	// 	foreach($matches as &$match){
+	// 		$match = DateTime::createFromFormat("d/m/Y", $match)->format("Y-m-d");
+	// 	}
+	// 	return $matches;
+	// }
 
 	function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 		global $CONTEX;
@@ -459,6 +471,7 @@
 		}
 
 		$dataScript = "<script>";
+
 		switch($mascara){
 			case "MASCARA_DATA";
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask({clearIncomplete: false});";
@@ -468,31 +481,20 @@
 				$type = "month";
 			break;
 			case "MASCARA_PERIODO":
-				//Deve receber os valores como ["Y-m-d", "Y-m-d"], mas retornará "d/m/Y - d/m/Y"
-
-				$datas = ["", ""];
+				$datas = [DateTime::createFromFormat("Y-m-d", date("Y-m-01")), DateTime::createFromFormat("Y-m-d", date("Y-m-d"))];
 				if(!empty($modificador)){
-					if(!is_array($modificador)){
-						set_status("ERRO: ".$variavel." deve ser um array.");
-						index();
-						exit;
-					}elseif(count($modificador) != 2){
-						set_status("ERRO: ".$variavel." deve ter 2 valores.");
-						index();
-						exit;
+					if(!is_array($modificador) || count($modificador) != 2){
+						set_status("ERRO: ".$variavel." formatado incorretamente.");
+						return;
 					}
 					$datas = [
-						DateTime::createFromFormat("Y-m-d", $modificador[0])->format("d/m/Y"),
-						DateTime::createFromFormat("Y-m-d", $modificador[1])->format("d/m/Y"),
+						DateTime::createFromFormat("Y-m-d", $modificador[0]),
+						DateTime::createFromFormat("Y-m-d", $modificador[1]),
 					];
-
 					if(in_array(false, $datas)){
 						set_status("ERRO: datas com formatação incorreta.");
-						index();
-						exit;
+						return;
 					}
-
-					$modificador = "";
 				}
 
 				$dataScript = 
@@ -504,8 +506,8 @@
 						$(function() {
 							$('input[name=\"$variavel\"]').daterangepicker({
 								opens: 'left',
-								'startDate': '".(!empty($datas[0])? $datas[0]: date("01/m/Y"))."',
-								'endDate': '".(!empty($datas[1])? $datas[1]: date("d/m/Y"))."',
+								'startDate': '".$datas[0]->format("d/m/Y")."',
+								'endDate': '".$datas[1]->format("d/m/Y")."',
 								'minYear': 2023,
 								'autoApply': true,
 								'locale': {
@@ -525,19 +527,29 @@
 									return (data > Date.now() || data < new Date(2022, 11, 1).valueOf());
 								}
 							}, function(start, end, label) {
-								// console.log(start);
-								// console.log(end);
+								$('input[name=\"".$variavel."[]\"]')[0].value = start.format('YYYY-MM-DD');
+								$('input[name=\"".$variavel."[]\"]')[1].value = end.format('YYYY-MM-DD');
 							});
 
 							$('input[name=\"$variavel\"]').isOverwriteMode = true;
 
 							var date = new Date();
-							$('input[name=\"$variavel\"]').inputmask({mask: ['99/99/9999 - 99/99/9999'], placeholder: '01/01/2023 - 01/01/2023'})
+							$('input[name=\"$variavel\"]').inputmask({mask: ['99/99/9999 - 99/99/9999'], placeholder: '01/01/2023 - 01/01/2023'});
+							$('input[name=\"$variavel\"]').css('min-width', 'max-content');
 
 							// $('input[name=\"$variavel\"]').on('apply.daterangepicker', function(ev, picker) {
 							// 	console.log(picker.startDate.format('YYYY-MM-DD')+' - '+picker.endDate.format('YYYY-MM-DD'));
 							// });
 						});"
+				;
+
+				$campo = 
+					"<div class='col-sm-".$tamanho." margin-bottom-5 campo-fit-content'>
+						<label>".$nome."</label>
+						<input name='".$variavel."' id='".$variavel."' autocomplete='off' type='text' class='".$classe."' ".$extra.">
+						<input name='".$variavel."[]' value='".$datas[0]->format("Y-m-d")."' autocomplete='off' type='hidden' class='".$classe."' ".$extra.">
+						<input name='".$variavel."[]' value='".$datas[1]->format("Y-m-d")."' autocomplete='off' type='hidden' class='".$classe."' ".$extra.">
+					</div>"
 				;
 			break;
 			case "MASCARA_VALOR":
@@ -621,6 +633,10 @@
 						if(!validChar(e, \"[^!-']\")){
 							e.preventDefault();
 						}
+					});
+					field.addEventListener('paste', function(e){
+						e.srcElement.value = e.clipboardData.getData('Text').replaceAll(/[!-\']/g, '');
+						e.preventDefault();
 					});
 				}
 			</script>"
@@ -999,19 +1015,19 @@
 		$arquivo_list = '';
 		if(!empty($arquivos)) {
 			foreach($arquivos as $arquivo){
-				$dataHoraOriginal = $arquivo['doc_tx_dataCadastro'];
+				$dataHoraOriginal = $arquivo['docu_tx_dataCadastro'];
 				$dataHora = new DateTime($dataHoraOriginal);
 				$dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
 				$arquivo_list .= "
 				<tr role='row' class='odd'>
-				<td>$arquivo[doc_tx_nome]</td>
-				<td>$arquivo[doc_tx_descricao]</td>
+				<td>$arquivo[docu_tx_nome]</td>
+				<td>$arquivo[docu_tx_descricao]</td>
 				<td>$dataHoraFormatada</td>
 				<td>
-					<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idParametro,'$arquivo[doc_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
+					<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idParametro,'$arquivo[docu_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
 				</td>
 				<td>
-					<a style='color: red;' onclick=\"javascript:remover_arquivo($idParametro,$arquivo[doc_nb_id],'$arquivo[doc_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
+					<a style='color: red;' onclick=\"javascript:remover_arquivo($idParametro,$arquivo[docu_nb_id],'$arquivo[docu_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
 				</td>";
 			}
 		}
@@ -1111,19 +1127,19 @@
 		$arquivo_list = '';
 		if(!empty($arquivos)) {
 			foreach($arquivos as $arquivo){
-				$dataHoraOriginal = $arquivo['doc_tx_dataCadastro'];
+				$dataHoraOriginal = $arquivo['docu_tx_dataCadastro'];
 				$dataHora = new DateTime($dataHoraOriginal);
 				$dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
 				$arquivo_list .= "
 				<tr role='row' class='odd'>
-				<td>$arquivo[doc_tx_nome]</td>
-				<td>$arquivo[doc_tx_descricao]</td>
+				<td>$arquivo[docu_tx_nome]</td>
+				<td>$arquivo[docu_tx_descricao]</td>
 				<td>$dataHoraFormatada</td>
 				<td>
-					<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idEmpresa,'$arquivo[doc_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
+					<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idEmpresa,'$arquivo[docu_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
 				</td>
 				<td>
-					<a style='color: red;' onclick=\"javascript:remover_arquivo($idEmpresa,$arquivo[doc_nb_id],'$arquivo[doc_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
+					<a style='color: red;' onclick=\"javascript:remover_arquivo($idEmpresa,$arquivo[docu_nb_id],'$arquivo[docu_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
 				</td>";
 			}
 		}

@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 	//*/
@@ -7,165 +7,114 @@
 	include_once 'funcoes_ponto.php';
 
 	function cadastrarAjuste(){
-
-		//Conferir se tem as informações necessárias{
-			$baseErrMsg = "ERRO: Campos obrigatórios não preenchidos: ";
-			$errorMsg = $baseErrMsg;
-			$camposObrig = [
-				"id" => "Motorista",
-				"hora" => "Hora",
-				"idMacro" => "Tipo de Registro",
-				"motivo" => "Motivo",
-			];
-			foreach($camposObrig as $key => $value){
-				if(empty($_POST[$key])){
-					$_POST["errorFields"][] = $key;
-					$errorMsg .= $value.", ";
-				}
-			}
-			if($errorMsg != $baseErrMsg){
-				set_status(substr($errorMsg, 0, -2).".");
-				index();
-				exit;
-			}
-
-			$aMotorista = carregar('entidade',$_POST['id']);
-			$aTipo = carregar('macroponto', $_POST['idMacro']);
-			if(empty($aMotorista)){
-				$_POST["errorFields"][] = "id";
-				set_status("ERRO: Funcionário não encontrado.");
-				index();
-				exit;
-			}
-			if(empty($aTipo)){
-				$_POST["errorFields"][] = "idMacro";
-				set_status("ERRO: Macro não encontrado.");
-				index();
-				exit;
-			}
-		//}
-
-		/*Conferir se tem as informações necessárias 2.0{
-			$camposObrig = [
-				"id" => "Motorista",
-				"hora" => "Hora",
-				"idMacro" => "Tipo de Registro",
-				"motivo" => "Motivo",
-			];
-			$errorMsg = conferirCamposObrig($camposObrig, $_POST);
-			if(!empty($errorMsg)){
-				set_status($errorMsg);
-				index();
-				exit;
-			}
-
-
-			$aMotorista = carregar('entidade',$_POST['id']);
-			if(empty($aMotorista)){
-				set_status("ERRO: Motorista não encontrado.");
-				index();
-				exit;
-			}
-
-			$aTipo = carregar('macroponto', $_POST['idMacro']);
-			if(empty($aTipo)){
-				set_status("ERRO: Tipo de registro não encontrado.");
-				index();
-				exit;
-			}
-		//}*/
-		
 		//Tratamento de erros{
-			$error = false;
-			$errorMsg = 'ERRO: ';
-			$codigosJornada = ['inicio' => 1, 'fim' => 2];
-			//Conferir se há uma jornada aberta{
-				$temJornadaAberta = mysqli_fetch_all(
-					query(
-						"SELECT * FROM ponto 
-							WHERE pont_tx_tipo IN ('".$codigosJornada["inicio"]."', '".$codigosJornada['fim']."')
-								AND pont_tx_status = 'ativo'
-								AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-								AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST["hora"].":59', '%Y-%m-%d %H:%i:%s')
-							ORDER BY pont_tx_data DESC
-							LIMIT 1"
-					),
-					MYSQLI_ASSOC
-				)[0];
-				$temJornadaAberta = (!empty($temJornadaAberta) && intval($temJornadaAberta['pont_tx_tipo']) == $codigosJornada['inicio']);
-
-				if($temJornadaAberta){
-					if(intval($aTipo['macr_tx_codigoInterno']) == $codigosJornada['inicio']){ //Se tem jornada aberta e está tentando cadastrar uma abertura de jornada
-						$error = true;
-						$errorMsg .= 'Não é possível registrar um '.strtolower($aTipo['macr_tx_nome']).' sem fechar o anterior.';
-					}elseif(intval($aTipo['macr_tx_codigoInterno']) == $codigosJornada['fim']){
-						$jornadaFechada = mysqli_fetch_assoc(
-							query(
-								"SELECT * FROM ponto 
-									WHERE pont_tx_tipo IN ('".$codigosJornada['inicio']."', '".$codigosJornada['fim']."')
-										AND pont_tx_status = 'ativo'
-										AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
-										AND pont_tx_data >= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora'].":00', '%Y-%m-%d %H:%i:%s')
-									ORDER BY pont_tx_data ASC
-									LIMIT 1"
-							)
-						);
-						$jornadaFechada = (!empty($jornadaFechada) && $jornadaFechada['pont_tx_tipo'] == $codigosJornada['fim']);
-						if(!empty($jornadaFechada)){
-							$error = true;
-							$errorMsg .= 'Esta jornada já foi fechada neste horário ou após ele.';
-						}
-					}else{
-						$matchedTypes = [
-							'inicios' => [3,5,7,9,11],
-							'fins' => [4,6,8,10,12]
-						];
-
-						$matchedTypes = [
-							'inicios' => mysqli_fetch_all(query("SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_nome LIKE 'Inicio%' AND macr_tx_nome NOT LIKE '%de Jornada'"), MYSQLI_ASSOC),
-							'fins' 	  => mysqli_fetch_all(query("SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_nome LIKE 'Fim%'    AND macr_tx_nome NOT LIKE '%de Jornada'"),    MYSQLI_ASSOC),
-						];
-						for($f = 0; $f < count($matchedTypes['inicios']); $f++){
-							$matchedTypes['inicios'][$f] = intval($matchedTypes['inicios'][$f]['macr_tx_codigoInterno']);
-							$matchedTypes['fins'][$f]    = intval($matchedTypes['fins'][$f]['macr_tx_codigoInterno']);
-						}
-
-						$temPeriodoAberto = mysqli_fetch_assoc(query(
-							"SELECT * FROM ponto"
-								." WHERE pont_tx_status = 'ativo'"
-									." AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'"
-									." AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST['hora'].":59', '%Y-%m-%d %H:%i:%s')"
-								." ORDER BY pont_tx_data DESC, pont_nb_id DESC"
-								." LIMIT 1;"
-						));
-						
-						$temPeriodoAberto['pont_tx_tipo'] = !empty($temPeriodoAberto['pont_tx_tipo'])? intval($temPeriodoAberto['pont_tx_tipo']): $temPeriodoAberto['pont_tx_tipo'];
-						$temPeriodoAberto['macr_tx_codigoInterno'] = !empty($temPeriodoAberto['macr_tx_codigoInterno'])? intval($temPeriodoAberto['macr_tx_codigoInterno']): $temPeriodoAberto['macr_tx_codigoInterno'];
-						
-						$openTypeValue = intval($aTipo['macr_tx_codigoInterno'])-(intval($aTipo['macr_tx_codigoInterno'])%2 == 0? 1: 0); //O código de abertura do tipo que está sendo registrado.
-						$sameType = ($temPeriodoAberto['pont_tx_tipo'] == $openTypeValue || $temPeriodoAberto['pont_tx_tipo'] == $openTypeValue+1); //Se esse período encontrado é do mesmo tipo que está tentando ser cadastrado
-						$temPeriodoAberto = in_array($temPeriodoAberto['pont_tx_tipo'], $matchedTypes['inicios']); //Se encontrou um período aberto
-						
-						if(in_array(intval($aTipo['macr_tx_codigoInterno']), $matchedTypes['inicios'])){ //Se está registrando uma abertura de período
-							if($temPeriodoAberto){
-								$error = true;
-								$errorMsg .= 'Não é possível registrar um '.strtolower($aTipo['macr_tx_nome']).' sem fechar o anterior.';
-							}
-						}elseif(in_array(intval($aTipo['macr_tx_codigoInterno']), $matchedTypes['fins'])){ //Se está registrando um fechamento de período
-							if(!$temPeriodoAberto || !$sameType){ //Se não tem um período aberto ou se o período aberto é de tipo diferente do que está sendo fechado 
-								$error = true;
-								$errorMsg .= 'Não é possível registrar um '.strtolower($aTipo['macr_tx_nome']).' sem abrir um período antes.';
-							}
-						}
+			try{
+				//Conferir se tem as informações necessárias{
+					$camposObrig = [
+						"id" => "Motorista",
+						"hora" => "Hora",
+						"idMacro" => "Tipo de Registro",
+						"motivo" => "Motivo",
+					];
+					$errorMsg = conferirCamposObrig($camposObrig, $_POST);
+					if(!empty($errorMsg)){
+						throw new Exception($errorMsg);
 					}
-				}elseif($aTipo['macr_tx_codigoInterno'] != '1'){
-					$error = true;
-					$errorMsg .= 'Não é possível realizar ajustes sem uma jornada aberta.';
-				}
-			//}
 
-			if($error){
-				set_status($errorMsg);
+					$aMotorista = carregar('entidade', $_POST['id']);
+					if(empty($aMotorista)){
+						$_POST["errorFields"][] = "id";
+						throw new Exception("Funcionário não encontrado.");
+					}
+
+					$aTipo = carregar('macroponto', $_POST['idMacro']);
+					if(empty($aTipo)){
+						$_POST["errorFields"][] = "idMacro";
+						throw new Exception("Macro não encontrado.");
+					}
+				//}
+
+				$codigosJornada = ["inicio" => 1, "fim" => 2];
+				//Conferir se há uma jornada aberta{
+					$temJornadaAberta = mysqli_fetch_all(
+						query(
+							"SELECT * FROM ponto 
+								WHERE pont_tx_tipo IN ('".$codigosJornada["inicio"]."', '".$codigosJornada['fim']."')
+									AND pont_tx_status = 'ativo'
+									AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'
+									AND pont_tx_data <= STR_TO_DATE('".$_POST['data'].' '.$_POST["hora"].":59', '%Y-%m-%d %H:%i:%s')
+								ORDER BY pont_tx_data DESC
+								LIMIT 1"
+						),
+						MYSQLI_ASSOC
+					)[0];
+					$temJornadaAberta = (!empty($temJornadaAberta) && intval($temJornadaAberta["pont_tx_tipo"]) == $codigosJornada["inicio"]);
+
+
+					if($temJornadaAberta){
+						if(intval($aTipo["macr_tx_codigoInterno"]) == $codigosJornada["inicio"]){ //Se tem jornada aberta e está tentando cadastrar uma abertura de jornada
+							throw new Exception("Não é possível registrar um ".strtolower($aTipo["macr_tx_nome"])." sem fechar o anterior.");
+						}elseif(intval($aTipo["macr_tx_codigoInterno"]) == $codigosJornada["fim"]){
+							$jornadaFechada = mysqli_fetch_assoc(
+								query(
+									"SELECT pont_tx_tipo FROM ponto 
+										WHERE pont_tx_tipo IN ('".$codigosJornada["inicio"]."', '".$codigosJornada["fim"]."')
+											AND pont_tx_status = 'ativo'
+											AND pont_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'
+											AND pont_tx_data >= STR_TO_DATE('".$_POST["data"].' '.$_POST["hora"].":00', '%Y-%m-%d %H:%i:%s')
+										ORDER BY pont_tx_data ASC
+										LIMIT 1;"
+								)
+							);
+							$jornadaFechada = (!empty($jornadaFechada) && $jornadaFechada["pont_tx_tipo"] == $codigosJornada["fim"]);
+							if(!empty($jornadaFechada)){
+								throw new Exception("Esta jornada já foi fechada neste horário ou após ele.");
+							}
+						}else{
+							$matchedTypes = [
+								"inicios" => mysqli_fetch_all(query(
+									"SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_nome LIKE 'Inicio%' AND macr_tx_nome NOT LIKE '%de Jornada';"
+								), MYSQLI_NUM),
+								"fins" => mysqli_fetch_all(query(
+									"SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_nome LIKE 'Fim%'    AND macr_tx_nome NOT LIKE '%de Jornada'"
+								), MYSQLI_NUM),
+							];
+
+							$matchedTypes["inicios"] 	= array_map(function($value){return intval($value[0]);}, $matchedTypes["inicios"]);
+							$matchedTypes["fins"] 		= array_map(function($value){return intval($value[0]);}, $matchedTypes["fins"]);
+
+							$temPeriodoAberto = mysqli_fetch_assoc(query(
+								"SELECT * FROM ponto"
+									." WHERE pont_tx_status = 'ativo'"
+										." AND pont_tx_matricula = '".$aMotorista['enti_tx_matricula']."'"
+										." AND pont_tx_data <= STR_TO_DATE('".$_POST["data"]." ".$_POST["hora"].":59', '%Y-%m-%d %H:%i:%s')"
+									." ORDER BY pont_tx_data DESC, pont_nb_id DESC"
+									." LIMIT 1;"
+							));
+							
+							$temPeriodoAberto["pont_tx_tipo"] = !empty($temPeriodoAberto["pont_tx_tipo"])? intval($temPeriodoAberto["pont_tx_tipo"]): 0;
+							$temPeriodoAberto["macr_tx_codigoInterno"] = !empty($temPeriodoAberto["macr_tx_codigoInterno"])? intval($temPeriodoAberto["macr_tx_codigoInterno"]): 0;
+							
+							$tipoMacro = intval($aTipo["macr_tx_codigoInterno"])-(intval($aTipo["macr_tx_codigoInterno"])%2 == 0? 1: 0); //O código de abertura do tipo que está sendo registrado. Se par, é uma abertura, senão, um fechamento.
+							$mesmoTipo = ($temPeriodoAberto["pont_tx_tipo"] == $tipoMacro || $temPeriodoAberto["pont_tx_tipo"] == $tipoMacro+1); //Se esse período encontrado é do mesmo tipo que está tentando ser cadastrado
+							$temPeriodoAberto = in_array($temPeriodoAberto["pont_tx_tipo"], $matchedTypes["inicios"]); //Se encontrou um período aberto
+							
+							if(in_array(intval($aTipo["macr_tx_codigoInterno"]), $matchedTypes["inicios"])){ //Se está registrando uma abertura de período
+								if($temPeriodoAberto){
+									throw new Exception("Não é possível registrar um ".strtolower($aTipo["macr_tx_nome"])." sem fechar o anterior.");
+								}
+							}elseif(in_array(intval($aTipo["macr_tx_codigoInterno"]), $matchedTypes["fins"])){ //Se está registrando um fechamento de período
+								if(!$temPeriodoAberto || !$mesmoTipo){ //Se não tem um período aberto ou se o período aberto é de tipo diferente do que está sendo fechado 
+									throw new Exception("Não é possível registrar um ".strtolower($aTipo["macr_tx_nome"])." sem abrir um período antes.");
+								}
+							}
+						}
+					}elseif($aTipo["macr_tx_codigoInterno"] != "1"){
+						throw new Exception("Não é possível realizar ajustes sem uma jornada aberta.");
+					}
+				//}
+			}catch(Exception $error){
+				set_status("ERRO: ".$error->getMessage());
 				index();
 				exit;
 			}
@@ -193,7 +142,7 @@
 
 		
 		$newPonto = [
-			"pont_nb_user" 			=> $_SESSION["user_nb_id"],
+			"pont_nb_userCadastro"	=> $_SESSION["user_nb_id"],
 			"pont_tx_matricula" 	=> $aMotorista["enti_tx_matricula"],
 			"pont_tx_data" 			=> $data,
 			"pont_tx_tipo" 			=> $aTipo["macr_tx_codigoInterno"],
@@ -239,16 +188,14 @@
 			"ponto.pont_tx_matricula = '".$matricula."'"
 		];
 
-		$abriuJornadaHoje = mysqli_fetch_assoc(
-			query(
-				"SELECT pont_tx_data FROM ponto
-					WHERE ".implode(" AND ", $condicoesPontoBasicas)."
-						AND ponto.pont_tx_tipo = 1
-						AND ponto.pont_tx_data LIKE '%".$_POST['data']."%'
-					ORDER BY ponto.pont_tx_data ASC
-					LIMIT 1;"
-			)
-		);
+		$abriuJornadaHoje = mysqli_fetch_assoc(query(
+			"SELECT pont_tx_data FROM ponto
+				WHERE ".implode(" AND ", $condicoesPontoBasicas)."
+					AND ponto.pont_tx_tipo = 1
+					AND ponto.pont_tx_data LIKE '%".$_POST['data']."%'
+				ORDER BY ponto.pont_tx_data ASC
+				LIMIT 1;"
+		));
 
 		//Definir data de início da query{
 			//Se abriu jornada hoje, considera a partir da data de abertura da jornada.
@@ -329,7 +276,8 @@
 		$sql = 
 			"SELECT DISTINCT pont_nb_id, ".implode(",", $cols)." FROM ponto
 				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
-				JOIN user ON ponto.pont_nb_user = user.user_nb_id
+				JOIN entidade ON ponto.pont_tx_matricula = entidade.enti_tx_matricula
+				JOIN user ON entidade.enti_tx_matricula = user.user_tx_matricula
 				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
 				WHERE ".implode(" AND ", $condicoesPontoBasicas)."
 					AND ponto.pont_tx_data >= STR_TO_DATE('".$sqlDataInicio."', '%Y-%m-%d %H:%i:%s')
@@ -360,6 +308,9 @@
 		}
 		return $cnpjs_formatados;
 	}
+
+
+
 
 	function index(){
 		global $CONTEX;
@@ -414,6 +365,7 @@
 						}
 					</script>';
 
+
 		// Chama a função para carregar os CNPJs formatados
 		$cnpjs = carregarCNPJsFormatados();
 
@@ -432,46 +384,46 @@
 
 		// Construir o botão com o código JavaScript embutido
 		$botaoConsLog = '
-			<button class="btn default" type="button" onclick="consultarLogistica()">Consultar Logística</button>
+		<button class="btn default" type="button" onclick="consultarLogistica()">Consultar Logística</button>
 
-			<script>
-			function consultarLogistica() {
-				// Obter valores do PHP e HTML
-				var matricula = "' . addslashes($matricula) . '";
-				var motorista = "' . addslashes($motorista) . '";
-				var data = document.getElementById("data").value;
+		<script>
+		function consultarLogistica() {
+			// Obter valores do PHP e HTML
+			var matricula = "' . addslashes($matricula) . '";
+			var motorista = "' . addslashes($motorista) . '";
+			var data = document.getElementById("data").value;
 
-				// Obter todos os CNPJs da variável PHP
-				var cnpjs = ' . json_encode($cnpjs) . ';
+			// Obter todos os CNPJs da variável PHP
+			var cnpjs = ' . json_encode($cnpjs) . ';
 
-				// Verificar o conteúdo de cnpjs no console
-				console.log("CNPJs:", cnpjs);
+			// Verificar o conteúdo de cnpjs no console
+			console.log("CNPJs:", cnpjs);
 
-				if (!Array.isArray(cnpjs)) {
-					console.error("CNPJs não é um array:", cnpjs);
-					return;
-				}
-
-				if (cnpjs.length === 0) {
-					console.error("A lista de CNPJs está vazia.");
-					return;
-				}
-
-				// Converte a lista de CNPJs para uma string separada por vírgulas
-				var cnpjString = cnpjs.map(String).join(",");
-
-				// Construir a URL com os parâmetros dinâmicos
-				var url = "' . addslashes($urlLogistica) . '";
-				url += "?motorista=" + encodeURIComponent(motorista) + 
-					"&matricula=" + encodeURIComponent(matricula) + 
-					"&data=" + encodeURIComponent(data) +
-					"&cnpj=" + encodeURIComponent(cnpjString);  // Adicionando todos os CNPJs
-
-				// Abrir a nova página em uma nova aba
-				window.open(url, "_blank");
+			if (!Array.isArray(cnpjs)) {
+				console.error("CNPJs não é um array:", cnpjs);
+				return;
 			}
-			</script>'
-		;
+
+			if (cnpjs.length === 0) {
+				console.error("A lista de CNPJs está vazia.");
+				return;
+			}
+
+			// Converte a lista de CNPJs para uma string separada por vírgulas
+			var cnpjString = cnpjs.map(String).join(",");
+
+			// Construir a URL com os parâmetros dinâmicos
+			var url = "' . addslashes($urlLogistica) . '";
+			url += "?motorista=" + encodeURIComponent(motorista) + 
+				"&matricula=" + encodeURIComponent(matricula) + 
+				"&data=" + encodeURIComponent(data) +
+				"&cnpj=" + encodeURIComponent(cnpjString);  // Adicionando todos os CNPJs
+
+			// Abrir a nova página em uma nova aba
+			window.open(url, "_blank");
+		}
+		</script>
+		';
 
 		if (empty($_POST['status'])) {
 			$_POST['status'] = 'ativo';
@@ -514,7 +466,7 @@
 
 		$botoes[] = $botao_imprimir;
 		$botoes[] = botao("Voltar", "voltar");
-		// $botoes[] = $botaoConsLog; //BOTÃO CONSULTAR LOGISTICA
+		$botoes[] = $botaoConsLog; //BOTÃO CONSULTAR LOGISTICA
 		$botoes[] = status();
 
 

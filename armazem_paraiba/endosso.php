@@ -215,63 +215,63 @@
 			}
 		}
 		//Conferir se os campos do $_POST estão preenchidos{
-		if(!empty($_POST["acao"])){
-			$errorMsg = [];
-			if(empty($_POST["busca_empresa"])){
-				if(empty($_POST["busca_motorista"])){
-					$_POST["busca_empresa"] = "0";
-					$_POST["errorFields"][] = "busca_empresa";
-					$errorMsg[] = "Empresa";
-				}else{
+			if(empty($_POST["busca_data"])){
+				$_POST["busca_data"] = date("Y-m");
+			}
+			if(!empty($_POST["acao"])){
+				$camposObrig = [
+					"busca_empresa" => "Empresa",
+					"busca_motorista" => "Funcionário",
+					"busca_data" => "Data"
+				];
+				if(empty($_POST["busca_empresa"]) && !empty($_POST["busca_motorista"])){
 					$_POST["busca_empresa"] = mysqli_fetch_assoc(query("SELECT enti_nb_empresa FROM entidade WHERE enti_nb_id = ".$_POST["busca_motorista"].";"));
-					$_POST["busca_empresa"] = $_POST["busca_empresa"]["enti_nb_empresa"];
+					$_POST["busca_empresa"] = (int)$_POST["busca_empresa"]["enti_nb_empresa"];
 				}
-			}
-			$_POST["busca_empresa"] = (int)$_POST["busca_empresa"];
 
-			if(!empty($_POST["busca_motorista"])){
-				$extra = " AND enti_nb_id = ".$_POST["busca_motorista"];
-			}
-			
-			$carregando = "";
-			if(!empty($_POST["busca_data"]) && !empty($_POST["busca_empresa"])){
-				$carregando = "Carregando...";
-			}
-
-			if(!empty($_POST["busca_data"])){
-				$date = DateTime::createFromFormat("Y-m-d H:i:s", $_POST["busca_data"]."-01 00:00:00");
-				if($date > new DateTime()){
-					$_POST["errorFields"][] = "busca_data";
-					$errorMsg[] = "<br>Não é possível pesquisar uma data futura.";
+				if(!empty($_POST["busca_motorista"])){
+					$extra = " AND enti_nb_id = ".$_POST["busca_motorista"];
 				}
-			}
-
-			$extraMotorista = "";
-			if(!empty($errorMsg)){
-				set_status("ERRO: Insira os campos para pesquisar: ".implode(", ", $errorMsg).".");
-				unset($_GET["acao"]);
-			}
-
-			$extraMotorista = " AND enti_nb_empresa = ".$_POST["busca_empresa"];
-			if(!empty($_POST["busca_endossado"]) && !empty($_POST["busca_empresa"])){
-				$extra .= " AND enti_nb_id";
-				if($_POST["busca_endossado"] == "naoEndossado"){
-					$extra .= " NOT";
+				
+				$carregando = "";
+				if(!empty($_POST["busca_data"]) && !empty($_POST["busca_empresa"])){
+					$carregando = "Carregando...";
 				}
-				$extra .= " IN (
-						SELECT endo_nb_entidade FROM endosso, entidade" 
-							." WHERE '".$_POST["busca_data"]."-01' BETWEEN endo_tx_de AND endo_tx_ate"
-							." AND enti_nb_empresa = '".$_POST["busca_empresa"]."'"
-							." AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
-					)"
-				;
-			}
-		}
 
-		if(empty($_POST["busca_data"])){
-			$_POST["busca_data"] = date("Y-m");
-		}
+				$errorMsg = conferirCamposObrig($camposObrig, $_POST);
+				if(!empty($errorMsg)){
+					set_status("ERRO: ".$errorMsg);
+					unset($_POST["acao"]);
+					index();
+					exit;
+				}
+
+			}
 		//}
+
+		$date = DateTime::createFromFormat("Y-m-d H:i:s", $_POST["busca_data"]."-01 00:00:00");
+		if($date > new DateTime()){
+			$_POST["errorFields"][] = "busca_data";
+			set_status("ERRO: Não é possível pesquisar uma data futura.");
+			unset($_POST["busca_data"]);
+			index();
+			exit;
+		}
+		
+		$extraMotorista = " AND enti_nb_empresa = ".$_POST["busca_empresa"];
+		if(!empty($_POST["busca_endossado"]) && !empty($_POST["busca_empresa"])){
+			$extra .= " AND enti_nb_id";
+			if($_POST["busca_endossado"] == "naoEndossado"){
+				$extra .= " NOT";
+			}
+			$extra .= " IN (
+					SELECT endo_nb_entidade FROM endosso, entidade" 
+						." WHERE '".$_POST["busca_data"]."-01' BETWEEN endo_tx_de AND endo_tx_ate"
+						." AND enti_nb_empresa = '".$_POST["busca_empresa"]."'"
+						." AND endo_nb_entidade = enti_nb_id AND endo_tx_status = 'ativo'
+				)"
+			;
+		}
 
 		//CAMPOS DE CONSULTA{
 			$fields = [
@@ -459,12 +459,12 @@
 						grid2($cab, $aDia);
 						fecha_form();
 
-						echo "
-						<form name='form_imprimir_relatorio_".$aMotorista["enti_tx_matricula"]."' method='post' target='_blank'>
-							<input type='hidden' name='acao' value=''>
-							<input type='hidden' name='idMotoristaEndossado' value=''>
-							<input type='hidden' name='matriculaMotoristaEndossado' value=''>
-						</form>
+						echo 
+							"<form name='form_imprimir_relatorio_".$aMotorista["enti_tx_matricula"]."' method='post' target='_blank'>
+								<input type='hidden' name='acao' value=''>
+								<input type='hidden' name='idMotoristaEndossado' value=''>
+								<input type='hidden' name='matriculaMotoristaEndossado' value=''>
+							</form>
 							<script>
 								document.addEventListener('DOMContentLoaded', function() {
 									const acao = 'imprimir_relatorio';
@@ -487,8 +487,8 @@
 										console.error('Formulário não encontrado.');
 									}
 								});
-							</script>
-							";
+							</script>"
+						;
 
 						$aSaldo[$aMotorista["enti_tx_matricula"]] = $totalResumo["diffSaldo"];
 					}else{

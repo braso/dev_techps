@@ -39,7 +39,7 @@
 		exit;
 	}
 
-	function enviar_documento() {
+	function enviarDocumento() {
 		global $a_mod;
 
 		if(empty($a_mod)){
@@ -71,10 +71,10 @@
 
 		$novoParametro = [
 			"para_nb_id" => $_POST["idParametro"],
-			"doc_tx_nome" => $_POST["file-name"],
-			"doc_tx_descricao" => $_POST["description-text"],
-			//doc_tx_caminho está mais abaixo
-			"doc_tx_dataCadastro" => date("Y-m-d H:i:s")
+			"docu_tx_nome" => $_POST["file-name"],
+			"docu_tx_descricao" => $_POST["description-text"],
+			//docu_tx_caminho está mais abaixo
+			"docu_tx_dataCadastro" => date("Y-m-d H:i:s")
 		];
 		
 		$arquivo =  $_FILES["file"];
@@ -89,10 +89,10 @@
 	
 			$arquivo_temporario = $arquivo["tmp_name"];
 			$extensao = pathinfo($arquivo["name"], PATHINFO_EXTENSION);
-			$novoParametro["doc_tx_nome"] .= ".".$extensao;
-			$novoParametro["doc_tx_caminho"] = $pasta_parametro.$novoParametro["doc_tx_nome"];
+			$novoParametro["docu_tx_nome"] .= ".".$extensao;
+			$novoParametro["docu_tx_caminho"] = $pasta_parametro.$novoParametro["docu_tx_nome"];
 	
-			if (move_uploaded_file($arquivo_temporario, $novoParametro["doc_tx_caminho"])) {
+			if (move_uploaded_file($arquivo_temporario, $novoParametro["docu_tx_caminho"])) {
 				inserir("documento_parametro", array_keys($novoParametro), array_values($novoParametro));
 			}
 		}
@@ -103,7 +103,7 @@
 	}
 
 	function excluir_documento(){
-		query("DELETE FROM documento_parametro WHERE doc_nb_id = ".$_POST["idArq"].";");
+		query("DELETE FROM documento_parametro WHERE docu_nb_id = ".$_POST["idArq"].";");
 		
 		$_POST["id"] = $_POST["idParametro"];
 		modifica_parametro();

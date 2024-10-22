@@ -1,225 +1,328 @@
-      body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            background-color: rgb(163, 161, 161);
-        }
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    background-color: rgb(163, 161, 161);
+}
 img{
     height:30px;
    width:30px;
 }
-        .card-container {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            justify-content: space-between;
-        }
-
-        .card {
-            flex: 1 1 calc(33.333% - 15px);
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            box-sizing: border-box;
-            margin-bottom: 15px;
-        }
-
-        .card i {
-            font-size: 3rem; /* Tamanho maior dos ícones */
-            margin-bottom: 10px;
-        }
-
-        .card-user i {
-            color: #007bff; /* Cor azul para ícone de usuário */
-        }
-
-        .card-car i {
-            color: #28a745; /* Cor verde para ícone de carro */
-        }
-
-        .card h3 {
-            margin-bottom: 5px;
-            font-size: 1.2rem;
-            color: #343a40;
-        }
-
-        .card p {
-            font-size: 1.5rem;
-            color: #007bff;
-        }
-
-        /* Media Queries para ajustar em telas menores */
-        @media (max-width: 768px) {
-            .card {
-                flex: 1 1 calc(50% - 15px);
-            }
-        }
-
-        @media (max-width: 480px) {
-            .card {
-                flex: 1 1 100%;
-            }
-        }
-
-        .container {
-            margin-top: 20px;
-            padding: 15px;
-        }
-
-        .form-container {
-            padding: 15px;
-            position: fixed;
-            top: 0;
-            right: -700px;
-            width: 400px;
-            overflow-y: auto;
-            height: 100%;
-            background-color: #f8f9fa;
-            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
-            transition: right 0.3s ease;
-            z-index: 1050;
-        }
-
-        .form-container.show {
-            right: 0;
-        }
-
-        .table-container {
-            padding: 15px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-            background-color: transparent;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            background-color: transparent;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            margin: 10px 0;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            font-size: 0.9rem;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            color: #fff;
-        }
-
-        .btn-dark {
-            background-color: #343a40;
-        }
-
-        .btn-primary {
-            background-color: #007bff;
-        }
-
-        .alert {
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-        }
-
-        .alert-danger {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-
-        .alert-success {
-            background-color: #d4edda;
-            color: #155724;
-        }
-
-        .autocomplete-items {
-            border: 1px solid #ddd;
-            background-color: #fff;
-            max-height: 150px;
-            overflow-y: auto;
-            position: absolute;
-            z-index: 1000;
-        }
-
-        .autocomplete-items div {
-            padding: 10px;
-            cursor: pointer;
-        }
-
-        .autocomplete-items div:hover {
-            background-color: #f1f1f1;
-        }
-
-        #label-plate, #label-date {
-            background-color: transparent;
-        }
-
-        .form-container #formContainer label {
-            background-color: transparent;
-        }
-
-        .adjustment-list {
-            margin-top: 20px;
-        }
-
-        .adjustment-list table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .adjustment-list th, .adjustment-list td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-
-        .adjustment-list th {
-            background-color: #f2f2f2;
-        }
-        
-        
-           /* Loading Screen */
-        #loading-screen {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.8);
-            z-index: 9999;
-            text-align: center;
-            padding-top: 20%;
-        }
-
-        #loading-screen i {
-            font-size: 4rem;
-            color: #007bff;
-        }
+       
 
 
 
-        /*ESTILO BOTAÃO CONSULTA*/
+
+.container {
+    width: 1200px;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+}
+
+    .form_title {
+    display: flex;
+    align-items: center; /* Alinha verticalmente ao centro */
+    justify-content: flex-start; /* Alinha horizontalmente ao início */
+    padding: 10px 0;
+    top: 0; /* Define a distância do topo da tela */
+    background-color: #fff; /* Garante que o fundo do elemento não fique transparente */
+    z-index: 1000; /* Garante que o elemento fique acima de outros conteúdos */
+}
+
+#title_forms{
+    background:transparent;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.0);
+     
+}
+#title_forms h2{
+  font-weight:bold;
+  color:#444D58;
+  margin:-10px 0px;
+     
+}
+
+.logo {
+    width: 50px;
+    margin-right: 10px;
+}
+
+h2 {
+    font-size: 36px;
+    color: #444D58;
+    margin-right: 10px; /* Espaço entre o título e o botão */
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.table-container {
+    padding: 15px;
+    text-align: left;
+}
+
+#filterForm {
+    display: flex;
+    gap: 15px;
+    width: 100%;
+}
+
+.form-group {
+    margin-bottom: 15px;
+    background-color: transparent;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #333;
+    background-color: transparent;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.list-group {
+    list-style: none;
+    padding: 0;
+    margin-top: 5px;
+}
+
+.list-group li {
+    background-color: #fff;
+    border: 1px solid #ced4da;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+}
+
+.btn-group {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin: 10px 0;
+}
+
+.btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #fff;
+}
+
+.btn-dark {
+    background-color: #343a40;
+}
+
+.btn-dark:hover {
+    background-color: #23272b;
+}
+
+.consult-btn {
+    width: 100%;
+    height: 50px;
+    background-color: #1e3b25;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.consult-btn:hover {
+    background-color: #218838;
+}
+
+.form-container {
+    padding: 15px;
+    position: fixed;
+    top: 0;
+    right: -400px; /* Ajuste a posição para caber no layout */
+    width: 400px;
+    overflow-y: auto;
+    height: 100%;
+    background-color: #f8f9fa;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+    transition: right 0.3s ease;
+    z-index: 1050;
+}
+
+.form-container.show {
+    right: 0;
+}
+
+.input-group {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.input-group label {
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #333;
+}
+
+.input-group input {
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
 
 
-        #consultarBtn {
+
+
+
+
+
+
+.table {
+    width: 95%;
+    border-collapse: collapse; /* Remove espaços entre células */
+    font-size: 10px; /* Tamanho da fonte menor para compactar o conteúdo */
+    margin: 0 auto; /* Centraliza a tabela horizontalmente */
+}
+
+.table th,
+.table td {
+    padding: 6px; /* Reduz o padding nas células */
+    text-align: center; /* Alinha o texto ao centro */
+}
+
+.table thead th {
+    background-color: #f2f2f2; /* Cor de fundo mais clara para o cabeçalho */
+    font-weight: bold; /* Negrito para o texto do cabeçalho */
+}
+
+.table tbody tr:nth-child(even) {
+    background-color: #f9f9f9; /* Cor de fundo alternada para linhas pares */
+}
+
+.table-bordered {
+   
+}
+
+.table-bordered th,
+.table-bordered td {
+    border: 1px solid #ddd; /* Borda mais leve para células */
+}
+
+
+
+
+
+
+
+
+
+.alert {
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.autocomplete-items {
+    border: 1px solid #ddd;
+    background-color: #fff;
+    max-height: 150px;
+    overflow-y: auto;
+    position: absolute;
+    z-index: 1000;
+}
+
+.autocomplete-items div {
+    padding: 10px;
+    cursor: pointer;
+}
+
+.autocomplete-items div:hover {
+    background-color: #f1f1f1;
+}
+
+#label-plate, #label-date {
+    background-color: transparent;
+}
+
+.form-container #formContainer label {
+    background-color: transparent;
+}
+
+.adjustment-list {
+    margin-top: 20px;
+}
+
+.adjustment-list table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.adjustment-list th, .adjustment-list td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.adjustment-list th {
+    background-color: #f2f2f2;
+}
+
+
+    /* Loading Screen */
+#loading-screen {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 9999;
+    text-align: center;
+    padding-top: 20%;
+}
+
+#loading-screen i {
+    font-size: 4rem;
+    color: #007bff;
+}
+
+
+
+/*ESTILO BOTAÃO CONSULTA*/
+
+
+#consultarBtn {
     background: linear-gradient(to right, #007BFF, #44c1eb); /* Azul para azul claro */
     border: none;
     color: white;
@@ -246,8 +349,8 @@ img{
 
 
 
-    /*ESTILO BOTAÃO AJSUTAR PONTO*/
-       #toggleFormBtn {
+/*ESTILO BOTAÃO AJSUTAR PONTO*/
+#toggleFormBtn {
     background: linear-gradient(to right, #0a6e96, #063747); /* Azul para azul claro */
     border: none;
     color: white;
@@ -265,8 +368,8 @@ img{
 
 
 
-    /*ESTILO BOTAÃO AJSUTAR PONTO*/
-       #addAdjustmentBtn {
+/*ESTILO BOTAÃO AJSUTAR PONTO*/
+#addAdjustmentBtn {
     background: linear-gradient(to right, #0a6e96, #063747); /* Azul para azul claro */
     border: none;
     color: white;
@@ -282,8 +385,8 @@ img{
 }
 
 
-    /*ESTILO BOTAÃO ENVIAR LISTA DE AJUSTE*/
-       #submitAdjustmentsBtn {
+/*ESTILO BOTAÃO ENVIAR LISTA DE AJUSTE*/
+#submitAdjustmentsBtn {
     background: linear-gradient(to right, #0a6e96, #063747); /* Azul para azul claro */
     border: none;
     color: white;
@@ -372,12 +475,12 @@ img{
 
 
 .row div label{
-    
-       margin: 0px 10px;
+    margin: 0px 10px;
     background-color: transparent;
     z-index: 1;
     position: relative;
     padding: 0px 5px;
     border-radius: 10px;
     text-wrap: nowrap;
+    /* min-width: min-content; */
 }

@@ -64,7 +64,7 @@
 
 
 		$novoPonto = [
-			"pont_nb_user" 			=> $_SESSION["user_nb_id"],
+			"pont_nb_userCadastro"	=> $_SESSION["user_nb_id"],
 			"pont_tx_matricula" 	=> $aMotorista["enti_tx_matricula"],
 			"pont_tx_data" 			=> strval($dataHora),
 			"pont_tx_tipo" 			=> $aTipo["macr_tx_codigoInterno"],
@@ -343,6 +343,10 @@
 				$jornada = operarHorarios([$pares["jornada"][$f]["fim"], $pares["jornada"][$f]["inicio"]], "-");
 				$jornadaCompleta = operarHorarios([$jornadaCompleta, $jornada], "+");
 			}
+			// if($f == count($pares["jornada"])-1 && empty($pares["jornada"][$f]["fim"])){
+			// 	$jornada = operarHorarios([$value, $pares["jornada"][$f]["inicio"]], "-");
+			// 	$jornadaCompleta = operarHorarios([$jornadaCompleta, $jornada], "+");
+			// }
 		}
 
 		//Utilizado em batida_ponto_html.php
@@ -367,8 +371,7 @@
 		
 		
 		$jornadaEfetiva = operarHorarios([$pares["refeicao"], $pares["espera"], $pares["descanso"], $pares["repouso"], $pares["repousoEmbarcado"]], "+");
-
-		$jornadaEfetiva = operarHorarios([$pares["jornada"], $jornadaEfetiva], "-");
+		$jornadaEfetiva = operarHorarios([$jornadaCompleta, $jornadaEfetiva], "-");
 
 
 
@@ -415,11 +418,11 @@
 				<label>Hora</label><br>
 				<p class='text-left' id='clock'>Carregando...</p>
 			</div>",
-			campo("Data", "data", data($hoje), 2, "", "readonly=readonly"),
-			"<div class='col-sm-5 margin-bottom-5 margin-top-10	'>"
-				."Matrícula: ".$aMotorista["enti_tx_matricula"]."<br><br>"
-				."CPF: ".$aMotorista["user_tx_cpf"]."<br><br>"
-				."Nome: ".$aMotorista["user_tx_nome"]."<br><br>"
+			"<div class='col-sm-5 margin-bottom-5'>"
+				."<div class='margin-bottom-5'>Data: ".date("d/m")."</div>"
+				."<div class='margin-bottom-5'>Matrícula: ".$aMotorista["enti_tx_matricula"]."</div>"
+				."<div class='margin-bottom-5'>CPF: ".$aMotorista["user_tx_cpf"]."</div>"
+				."<div class='margin-bottom-10'>Nome: ".$aMotorista["user_tx_nome"]."</div>"
 			."</div>",
 		];
 
@@ -443,7 +446,7 @@
 			$fields[] = textarea("Justificativa", "justificativa", ($_POST["justificativa"]?? ""), 5, "style='resize: vertical;' placeholder='Em caso de inconsistência, justificar aqui.'");
 		}
 
-		abre_form("Dados do Registro de Ponto");
+		abre_form();
 		linha_form($fields);
 		fecha_form($botoesVisiveis);
 
