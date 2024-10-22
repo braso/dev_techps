@@ -208,6 +208,10 @@ th.sort-desc::after {
         margin: 1cm;
     }
 
+    #grafico{
+        display: none !important;
+    }
+
     #printTitulo {
         /*font-size: 2px !important;*/
         /*padding-left: 200px;*/
@@ -226,6 +230,10 @@ th.sort-desc::after {
         padding: 88px 20px 15px !important;
     }
 
+    .titulo2{
+        display: none;
+    }
+
     /* .portlet.light>.portlet-title {
         border-bottom: none;
         margin-bottom: 0px;
@@ -238,7 +246,7 @@ th.sort-desc::after {
     }
 
     .emissao {
-        padding-left: 680px !important;
+        padding-left: 140px !important;
     }
 
     .porcentagemEndo {
@@ -287,7 +295,7 @@ th.sort-desc::after {
     #impressao {
         display: block !important;
         position: relative;
-        padding-left: 970px !important;
+        padding-left: 570px !important;
     }
 }
 
