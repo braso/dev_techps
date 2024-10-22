@@ -667,17 +667,17 @@
 	}
 
 	function relatorio_nao_conformidade_juridica() {
-		
-		$periodoInicio = new DateTime($_POST["busca_dataMes"]."-01");
+
+		$periodoInicio = new DateTime($_POST["busca_dataMes"] . "-01");
 		$hoje = new DateTime();
-		
+
 		if ($periodoInicio->format('Y-m') === $hoje->format('Y-m')) {
 			// Se for o mês atual, a data limite é o dia de hoje
 			$periodoFim = $hoje;
-		} else{
+		} else {
 			$periodoFim = new DateTime($periodoInicio->format("Y-m-t"));
 		}
-		
+
 		$empresas = mysqli_fetch_all(
 			query(
 				"SELECT empr_nb_id, empr_tx_nome"
@@ -688,7 +688,7 @@
 		);
 
 		foreach ($empresas as $empresa) {
-			$path = "./arquivos/nao_conformidade_juridica"."/".$periodoInicio->format("Y-m")."/".$empresa["empr_nb_id"];
+			$path = "./arquivos/nao_conformidade_juridica" . "/" . $periodoInicio->format("Y-m") . "/" . $empresa["empr_nb_id"];
 			if (!is_dir($path)) {
 				mkdir($path, 0755, true);
 			}
@@ -697,7 +697,7 @@
 				query(
 					"SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula, enti_tx_ocupacao FROM entidade"
 					. " WHERE enti_tx_status = 'ativo'"
-					. " AND enti_nb_empresa = ".$empresa['empr_nb_id']
+					. " AND enti_nb_empresa = " . $empresa['empr_nb_id']
 					. " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
 					. " ORDER BY enti_tx_nome ASC;"
 				),
@@ -722,11 +722,22 @@
 					"mdc"		 				=> 0,
 					"intersticioInferior" 		=> 0,
 					"intersticioSuperior" 		=> 0,
+
+					"inicioRefeicaoSemRegistro" => 0,
+					"fimRefeicaoSemRegistro" 	=> 0,
+					"refeicao1h" 				=> 0,
+					"refeicao2h" 				=> 0,
+					"jornadaExedida10h" 		=> 0,
+					"jornadaExedida12h" 		=> 0,
+					"mdcDescanso30m" 			=> 0,
+					"mdcDescanso15m" 			=> 0,
+					"mdcDescanso30m5h" 			=> 0,
+
 					"dataInicio"				=> $periodoInicio->format("d/m/Y"),
 					"dataFim"					=> $periodoFim->format("d/m/Y")
 				];
 
-				if($_POST["busca_endossado"] == "endossado") {
+				if ($_POST["busca_endossado"] == "endossado") {
 					$mes = new DateTime($_POST["busca_dataMes"] . "-01");
 					$endossos = mysqli_fetch_all(query(
 						"SELECT * FROM endosso"
@@ -734,148 +745,199 @@
 						. " AND endo_nb_entidade = '" . $motorista["enti_nb_id"] . "'"
 						. " AND ("
 						. "   (endo_tx_de  >= '" . $mes->format("Y-m-01") . "' AND endo_tx_de  <= '" . $mes->format("Y-m-t") . "')"
-							. "OR (endo_tx_ate >= '" . $mes->format("Y-m-01") . "' AND endo_tx_ate <= '" . $mes->format("Y-m-t") . "')"
-							. "OR (endo_tx_de  <= '" . $mes->format("Y-m-01") . "' AND endo_tx_ate >= '" . $mes->format("Y-m-t") . "')"
-							. ")"
-							. " ORDER BY endo_tx_ate;"
+						. "OR (endo_tx_ate >= '" . $mes->format("Y-m-01") . "' AND endo_tx_ate <= '" . $mes->format("Y-m-t") . "')"
+						. "OR (endo_tx_de  <= '" . $mes->format("Y-m-01") . "' AND endo_tx_ate >= '" . $mes->format("Y-m-t") . "')"
+						. ")"
+						. " ORDER BY endo_tx_ate;"
 					), MYSQLI_ASSOC);
 
 					foreach ($endossos as $endosso) {
 						$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
 
-						foreach ($endosso["endo_tx_pontos"] as $ponto){
+						foreach ($endosso["endo_tx_pontos"] as $ponto) {
 							$inicioJornadaWarning = is_int(strpos($ponto["3"], "fa-warning"));
 							$fimJornadaWarning = is_int(strpos($ponto["6"], "fa-warning"));
-		
+
 							// Verificar se o inicio ou fim têm "fa-warning" e incrementar apenas uma vez
 							if ($inicioJornadaWarning || $fimJornadaWarning) {
 								$totalMotorista["jornadaPrevista"] += 1;
 							}
-		
+
 							if (is_int(strpos($ponto[11], "fa-info-circle")) && is_int(strpos($ponto[11], "color:red;"))) {
 								$totalMotorista["jornada"] += 1;
 							}
-		
+
 							if (is_int(strpos($ponto[13], "fa-warning")) && is_int(strpos($ponto[13], "color:orange;"))) {
 								$totalMotorista["jornadaEfetiva"] += 1;
 							}
-		
+
+							if (
+								is_int(strpos($ponto[13], "fa-warning")) && is_int(strpos($ponto[13], "color:orange;"))
+								&& is_int(strpos($ponto[13], "Tempo excedido de 10:00"))
+							) {
+								$totalMotorista["jornadaExedida10h"] += 1;
+							}
+
+							if (
+								is_int(strpos($ponto[13], "fa-warning")) && is_int(strpos($ponto[13], "color:orange;"))
+								&& is_int(strpos($ponto[13], "Tempo excedido de 12:00"))
+							) {
+								$totalMotorista["jornadaExedida12h"] += 1;
+							}
+
 							$inicioRefeicao = is_int(strpos($ponto[4], "fa-warning"));
 							$fimRefeicao = is_int(strpos($ponto[5], "fa-warning"));
-		
+
 							if ($inicioRefeicao || $fimRefeicao) {
 								$totalMotorista["refeicao"] += 1;
 							}
-		
+
 							if (!$inicioRefeicao && !$fimRefeicao && is_int(strpos($ponto[7], "fa-warning"))) {
 								$totalMotorista["refeicao"] += 1;
 							}
-		
+
 							if (is_int(strpos($ponto[7], "fa-info-circle")) && is_int(strpos($ponto[7], "color:orange;"))) {
 								$totalMotorista["refeicao"] += 1;
 							}
-		
+
+							if ($inicioRefeicao) {
+								$totalMotorista["inicioRefeicaoSemRegistro"] += 1;
+							}
+
+							if ($fimRefeicao) {
+								$totalMotorista["inicioRefeicaoSemRegistro"] += 1;
+							}
+
+							if (is_int(strpos($ponto[7], "fa-warning")) && is_int(strpos($ponto[7], "01:00h"))) {
+								$totalMotorista["refeicao1h"] += 1;
+							}
+
+							if (
+								is_int(strpos($ponto[7], "fa-info-circle")) && is_int(strpos($ponto[7], "color:orange;"))
+								&& is_int(strpos($ponto[7], "02:00h"))
+							) {
+								$totalMotorista["refeicao2h"] += 1;
+							}
+
 							if (is_int(strpos($ponto[8], "fa-info-circle")) && is_int(strpos($ponto[8], "color:red;"))) {
 								$totalMotorista["espera"] += 1;
 							}
-		
+
 							if (is_int(strpos($ponto[9], "fa-info-circle")) && is_int(strpos($ponto[9], "color:red;"))) {
 								$totalMotorista["descanso"] += 1;
 							}
-	
+
 							if (is_int(strpos($ponto[10], "fa-info-circle")) && is_int(strpos($ponto[10], "color:red;"))) {
 								$totalMotorista["repouso"] += 1;
 							}
-		
+
 							if (is_int(strpos($ponto[14], "fa-warning")) && is_int(strpos($ponto[14], "color:orange;"))) {
 								$totalMotorista["mdc"] += 1;
 							}
-		
+
+							if (
+								is_int(strpos($ponto[14], "fa-warning")) && is_int(strpos($ponto[14], "color:orange;"))
+								&& is_int(strpos($ponto[14], "digiridos não respeitado"))
+							) {
+								$totalMotorista["mdcDescanso30m5h"] += 1;
+							}
+
+							if (
+								is_int(strpos($ponto[14], "fa-warning")) && is_int(strpos($ponto[14], "color:orange;"))
+								&& is_int(strpos($ponto[14], "00:15 não respeitado"))
+							) {
+								$totalMotorista["mdcDescanso15m"] += 1;
+							}
+
+							if (
+								is_int(strpos($ponto[14], "fa-warning")) && is_int(strpos($ponto[14], "color:orange;"))
+								&& is_int(strpos($ponto[14], "00:30 não respeitado"))
+							) {
+								$totalMotorista["mdcDescanso30m"] += 1;
+							}
+
 							if (is_int(strpos($ponto[15], "faltaram"))) {
 								$totalMotorista["intersticioSuperior"] += 1;
 							}
-		
+
 							if (is_int(strpos($ponto[15], "ininterruptas"))) {
 								$totalMotorista["intersticioInferior"] += 1;
 							}
 						}
 
-						if (!is_dir($path."/endossado/")) {
-							mkdir($path."/endossado/", 0777, true);  // Cria o diretório com permissões adequadas
+						if (!is_dir($path . "/endossado/")) {
+							mkdir($path . "/endossado/", 0777, true);  // Cria o diretório com permissões adequadas
 						}
 
-						file_put_contents($path."/endossado/".$motorista["enti_tx_matricula"].".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+						file_put_contents($path . "/endossado/" . $motorista["enti_tx_matricula"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 					}
 				} else {
 
 					for ($date = clone $periodoInicio; $date <= $periodoFim; $date->modify('+1 day')) {
 						$diaPonto = diaDetalhePonto($motorista['enti_tx_matricula'], $date->format('Y-m-d'));
-	
+
 						$inicioJornadaWarning = is_int(strpos($diaPonto["inicioJornada"], "fa-warning"));
 						$fimJornadaWarning = is_int(strpos($diaPonto["fimJornada"], "fa-warning"));
-	
+
 						// Verificar se o inicio ou fim têm "fa-warning" e incrementar apenas uma vez
 						if ($inicioJornadaWarning || $fimJornadaWarning) {
 							$totalMotorista["jornadaPrevista"] += 1;
 						}
-	
+
 						if (is_int(strpos($diaPonto["diffJornada"], "fa-info-circle")) && is_int(strpos($diaPonto["diffJornada"], "color:red;"))) {
 							$totalMotorista["jornada"] += 1;
 						}
-	
+
 						if (is_int(strpos($diaPonto["diffJornadaEfetiva"], "fa-warning")) && is_int(strpos($diaPonto["diffJornadaEfetiva"], "color:orange;"))) {
 							$totalMotorista["jornadaEfetiva"] += 1;
 						}
-	
+
 						$inicioRefeicao = is_int(strpos($diaPonto["inicioRefeicao"], "fa-warning"));
 						$fimRefeicao = is_int(strpos($diaPonto["fimRefeicao"], "fa-warning"));
-	
+
 						if ($inicioRefeicao || $fimRefeicao) {
 							$totalMotorista["refeicao"] += 1;
 						}
-	
+
 						if (!$inicioRefeicao && !$fimRefeicao && is_int(strpos($diaPonto["diffRefeicao"], "fa-warning"))) {
 							$totalMotorista["refeicao"] += 1;
 						}
-	
-						if(is_int(strpos($diaPonto["diffRefeicao"], "fa-info-circle")) && is_int(strpos($diaPonto["diffRefeicao"], "color:orange;"))){
+
+						if (is_int(strpos($diaPonto["diffRefeicao"], "fa-info-circle")) && is_int(strpos($diaPonto["diffRefeicao"], "color:orange;"))) {
 							$totalMotorista["refeicao"] += 1;
 						}
-	
-						if(is_int(strpos($diaPonto["diffEspera"], "fa-info-circle")) && is_int(strpos($diaPonto["diffEspera"], "color:red;"))){
+
+						if (is_int(strpos($diaPonto["diffEspera"], "fa-info-circle")) && is_int(strpos($diaPonto["diffEspera"], "color:red;"))) {
 							$totalMotorista["espera"] += 1;
 						}
-	
-						if(is_int(strpos($diaPonto["diffDescanso"], "fa-info-circle")) && is_int(strpos($diaPonto["diffDescanso"], "color:red;"))){
+
+						if (is_int(strpos($diaPonto["diffDescanso"], "fa-info-circle")) && is_int(strpos($diaPonto["diffDescanso"], "color:red;"))) {
 							$totalMotorista["descanso"] += 1;
 						}
-						if(is_int(strpos($diaPonto["diffRepouso"], "fa-info-circle")) && is_int(strpos($diaPonto["diffRepouso"], "color:red;"))){
+						if (is_int(strpos($diaPonto["diffRepouso"], "fa-info-circle")) && is_int(strpos($diaPonto["diffRepouso"], "color:red;"))) {
 							$totalMotorista["repouso"] += 1;
 						}
-						
-						if(is_int(strpos($diaPonto["maximoDirecaoContinua"], "fa-warning")) && is_int(strpos($diaPonto["maximoDirecaoContinua"], "color:orange;"))){
+
+						if (is_int(strpos($diaPonto["maximoDirecaoContinua"], "fa-warning")) && is_int(strpos($diaPonto["maximoDirecaoContinua"], "color:orange;"))) {
 							$totalMotorista["mdc"] += 1;
 						}
-	
-						if(is_int(strpos($diaPonto["intersticio"], "faltaram"))){
+
+						if (is_int(strpos($diaPonto["intersticio"], "faltaram"))) {
 							$totalMotorista["intersticioSuperior"] += 1;
 						}
-	
-						if(is_int(strpos($diaPonto["intersticio"], "ininterruptas"))){
+
+						if (is_int(strpos($diaPonto["intersticio"], "ininterruptas"))) {
 							$totalMotorista["intersticioInferior"] += 1;
 						}
-						
 					}
 
 					if (!is_dir($path . "/nao_endossado/")) {
 						mkdir($path . "/nao_endossado/", 0777, true);  // Cria o diretório com permissões adequadas
 					}
-	
-					file_put_contents($path."/nao_endossado/".$motorista["enti_tx_matricula"].".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-				}
 
+					file_put_contents($path . "/nao_endossado/" . $motorista["enti_tx_matricula"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+				}
 			}
-	
 		}
 
 		return;

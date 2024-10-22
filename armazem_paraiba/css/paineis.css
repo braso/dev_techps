@@ -10,6 +10,50 @@ body {
     --var-darkgreen: #29a300;
 }
 
+
+.tituloBaixaGravidade {
+    background-color: var(--var-darkgreen);
+    color: white;
+}
+
+.baixaGravidade {
+    background-color: var(--var-green);
+    color: white;
+    text-align: center;
+}
+
+.TituloMediaGravidade {
+    background-color: var(--var-yellow);
+}
+
+.mediaGravidade {
+    background-color: var(--var-lightyellow);
+    text-align: center;
+}
+
+.tituloAltaGravidade {
+    background-color: var(--var-darkred);
+    color: white;
+}
+
+.altaGravidade {
+    background-color: var(--var-red);
+    color: white;
+    text-align: center;
+}
+
+.total{
+    text-align: center;
+}
+
+h4 {
+    padding: 10px;
+    text-align: center;
+    align-content: center;
+    border-top: 1px solid #c2cad8;
+    border-bottom: 1px solid #c2cad8;
+}
+
 .table-responsive div:first-child{
     display:flex;
 }

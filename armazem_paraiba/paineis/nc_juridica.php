@@ -24,27 +24,29 @@
 
 		$linha = "linha = '<tr>'";
 		if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "naoEndossado") {
-			$linha .= "+'<td>'+row.nome+'</td>'
-						+'<td class=\'refeicao\'>'+ (row.refeicao === 0 ? '' : row.refeicao) +'</td>'
-						+'<td>'+(row.espera === 0 ? '' : row.espera )+'</td>'
-						+'<td>'+(row.descanso === 0 ? '' : row.descanso )+'</td>'
-						+'<td>'+(row.repouso === 0 ? '' : row.repouso )+'</td>'
-						+'<td>'+(row.jornada === 0 ? '' : row.jornada )+'</td>'
-						+'<td>'+(row.jornadaPrevista === 0 ? '' : row.jornadaPrevista )+'</td>'
-						+'<td>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
-						+'<td>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
-						+'<td>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
-						+'<td>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
+			$linha .= "+'<td>'+row.matricula+'</td>'
+						+'<td>'+row.nome+'</td>'
+						+'<td>'+row.ocupacao+'</td>'
+						+'<td class=\'baixaGravidade\'>'+(row.espera === 0 ? '' : row.espera )+'</td>'
+						+'<td class=\'baixaGravidade\'>'+(row.descanso === 0 ? '' : row.descanso )+'</td>'
+						+'<td class=\'baixaGravidade\'>'+(row.repouso === 0 ? '' : row.repouso )+'</td>'
+						+'<td class=\'baixaGravidade\'>'+(row.jornada === 0 ? '' : row.jornada )+'</td>'
+						+'<td class=\'baixaGravidade\'>'+(row.jornadaPrevista === 0 ? '' : row.jornadaPrevista )+'</td>'
+						+'<td class=\'mediaGravidade\'>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
+						+'<td class=\'mediaGravidade\'>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
+						+'<td class=\'altaGravidade\'>'+ (row.refeicao === 0 ? '' : row.refeicao) +'</td>'
+						+'<td class=\'altaGravidade\'>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
+						+'<td class=\'altaGravidade\'>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
 						+'<td>'+(totalNaEndossado)+'</td>'
 					+'</tr>';";
 		} elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
 			$linha .= "+'<td>'+row.nome+'</td>'
-							+'<td class=\'refeicao\'>'+ (row.refeicao === 0 ? '' : row.refeicao) +'</td>'
-							+'<td>'+(row.jornadaPrevista === 0 ? '' : row.jornadaPrevista )+'</td>'
-							+'<td>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
-							+'<td>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
-							+'<td>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
-							+'<td>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
+							+'<td class=\'baixaGravidade\'>'+(row.jornadaPrevista === 0 ? '' : row.jornadaPrevista )+'</td>'
+							+'<td class=\'mediaGravidade\'>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
+							+'<td class=\'mediaGravidade\'>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
+							+'<td class=\'altaGravidade\'>'+ (row.refeicao === 0 ? '' : row.refeicao) +'</td>'
+							+'<td class=\'altaGravidade\'>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
+							+'<td class=\'altaGravidade\'>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
 							+'<td>'+(totalEndossado)+'</td>'
 						+'</tr>';";
 		}
@@ -447,26 +449,35 @@
 				$totalIntersticioSuperior = 0;
 				foreach ($arquivos as &$arquivo) {
 					$arquivo = $path . "/" . $arquivo;
-					if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado"){
-						$json = @json_decode(file_get_contents($arquivo), true);
-						$totalRefeição += $json["refeicao"];
-						$totalJornadaPrevista += $json["jornadaPrevista"];
-						$totalJornadaEfetiva += $json["jornadaEfetiva"];
-						$totalEspera += $json["espera"];
-						$totalDescanso += $json["descanso"];
-						$totalRepouso += $json["repouso"];
-						$totalJornada += $json["jornada"];
-						$totalMdc += $json["mdc"];
-						$totalIntersticioInferior += $json["intersticioInferior"];
-						$totalIntersticioSuperior += $json["intersticioSuperior"];
-					}
+					$json = @json_decode(file_get_contents($arquivo), true);
+					$totalRefeição += $json["refeicao"];
+					$totalJornadaPrevista += $json["jornadaPrevista"];
+					$totalJornadaEfetiva += $json["jornadaEfetiva"];
+					$totalEspera += $json["espera"];
+					$totalDescanso += $json["descanso"];
+					$totalRepouso += $json["repouso"];
+					$totalJornada += $json["jornada"];
+					$totalMdc += $json["mdc"];
+					$totalIntersticioInferior += $json["intersticioInferior"];
+					$totalIntersticioSuperior += $json["intersticioSuperior"];
 				}
 
 				if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado"){
 					$gravidadeAlta = $totalRefeição + $totalIntersticioInferior + $totalIntersticioSuperior;
 					$gravidadeMedia = $totalJornadaEfetiva + $totalMdc;
-					$gravidadeBaixa = $totalJornadaPrevista;	
+					$gravidadeBaixa = $totalJornadaPrevista;
+
+				} else{
+					$gravidadeAlta = $totalRefeição + $totalIntersticioInferior + $totalIntersticioSuperior;
+					$gravidadeMedia = $totalJornadaEfetiva + $totalMdc;
+					$gravidadeBaixa = $totalJornadaPrevista + $totalEspera + $totalDescanso + $totalRepouso + $totalJornada;
 				}
+
+				$totalGeral = $gravidadeAlta + $gravidadeMedia + $gravidadeBaixa;
+
+				$percentualAlta = ($gravidadeAlta / $totalGeral) * 100;
+				$percentualMedia = ($gravidadeMedia / $totalGeral) * 100;
+				$percentualBaixa = ($gravidadeBaixa / $totalGeral) * 100;
 
 
 				if (!empty($arquivo)) {
@@ -489,64 +500,70 @@
 		} 
 
 		if ($encontrado) {
+			$rowGravidade = "<table style='width: 350px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
+								. "<thead>"
+									. "<tr>"
+										. "<td> Nivel de Gravidade</td>"
+										. "<td>TOTAL</td>"
+										. "<td>%</td>"
+									. "</th>"
+								. "</thead>"
+								. "<tbody>"
+									. "<tr>"
+										. "<td class='tituloBaixaGravidade'>Baixa</td>"
+										. "<td class='total'>$gravidadeBaixa</td>"
+										. "<td class='total'>".round($percentualBaixa,2)."%</td>"
+									. "</tr>"
+									. "<tr>"
+										. "<td class='tituloMediaGravidade'>Média</td>"
+										. "<td class='total'>$gravidadeMedia</td>"
+										. "<td class='total'>".round($percentualMedia,2)."%</td>"
+									. "</tr>"
+									. "<tr>"
+										. "<td class='tituloAltaGravidade'>Alta</td>"
+										. "<td class='total'>$gravidadeAlta</td>"
+										. "<td class='total'>". round($percentualAlta,2)."%</td>"
+									. "</tr>"
+								. "</tbody>"
+							. "</table>";
 			
 			$rowTitulos = "<tr id='titulos' >";
 
 			if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "naoEndossado") {
-				
+				$titulo = "Antes do Fechamento";
 				$rowTitulos .=
-					"<th class=''>Motoristas</th>"
-					."<th class=''>Refeição</th>"
-					."<th class=''>Espera</th>"
-					."<th class=''>Descanso</th>"
-					."<th class=''>Repouso</th>"
-					."<th class=''>Jornada</th>"
-					."<th class=''>Jornada Prevista</th>"
-					."<th class=''>Jornada Efetiva</th>"
-					."<th class=''>MDC</th>"
-					."<th class=''>Interstício Inferior</th>"
-					."<th class=''>Interstício Superior</th>"
-					."<th class=''>TOTAL</th>";
+					"<th class=''>Matricula</th>"
+					."<th class=''>Motoristas</th>"
+					."<th class=''>Ocupação</th>"
+					."<th class='tituloBaixaGravidade'>Espera</th>"
+					."<th class='tituloBaixaGravidade'>Descanso</th>"
+					."<th class='tituloBaixaGravidade'>Repouso</th>"
+					."<th class='tituloBaixaGravidade'>Jornada</th>"
+					."<th class='tituloBaixaGravidade'>Jornada Prevista</th>"
+					."<th class='tituloMediaGravidade'>Jornada Efetiva</th>"
+					."<th class='tituloMediaGravidade'>MDC</th>"
+					."<th class='tituloAltaGravidade'>Refeição</th>"
+					."<th class='tituloAltaGravidade'>Interstício Inferior</th>"
+					."<th class='tituloAltaGravidade'>Interstício Superior</th>"
+					."<th class='total'>TOTAL</th>";
 
-					$endossado = false;
+					$endossado = true;
 
 					
 			}  elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
+				$titulo = "Pós-Fechamento";
 				$rowTitulos .=
-					"<th class=''>Motoristas</th>"
-					. "<th class=''>Refeição</th>"
-					. "<th class=''>Jornada Prevista</th>"
-					. "<th class=''>Jornada Efetiva</th>"
-					. "<th class=''>MDC</th>"
-					. "<th class=''>Interstício Inferior</th>"
-					. "<th class=''>Interstício Superior</th>"
-					. "<th class=''>TOTAL</th>";
+					"<th class=''>MATRICULA</th>"
+					."<th class=''>Motoristas</th>"
+					."<th class=''>Ocupação</th>"
+					."<th class='tituloBaixaGravidade'>Refeição</th>"
+					."<th class='tituloBaixaGravidade'>Jornada Prevista</th>"
+					."<th class='tituloMediaGravidade'>Jornada Efetiva</th>"
+					."<th class='tituloMediaGravidade'>MDC</th>"
+					."<th class='tituloAltaGravidade'>Interstício Inferior</th>"
+					."<th class='tituloAltaGravidade'>Interstício Superior</th>"
+					."<th class='total'>TOTAL</th>";
 
-				$rowGravidade = "<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
-					. "<thead>"
-					. "<tr>"
-					. "<td> Nivel de Gravidade</td>"
-					. "<td>%</td>"
-					. "</th>"
-					. "</thead>"
-					. "<tbody>"
-					. "<tr>"
-					. "<td>Baixa</td>"
-					. "<td>$gravidadeBaixa</td>"
-					. "<td></td>"
-					. "</tr>"
-					. "<tr>"
-					. "<td>Média</td>"
-					. "<td>$gravidadeMedia</td>"
-					. "<td>%</td>"
-					. "</tr>"
-					. "<tr>"
-					. "<td>Alta</td>"
-					. "<td>$gravidadeAlta</td>"
-					. "<td>%</td>"
-					. "</tr>"
-					. "</tbody>"
-					. "</table>";
 
 					$endossado = true;
 			}

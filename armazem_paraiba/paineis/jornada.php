@@ -197,6 +197,8 @@
 
     function index() {
 
+        var_dump($_POST);
+
         if (empty($_POST["busca_dataMes"])) {
             $_POST["busca_dataMes"] = date("Y-m");
         }
@@ -269,10 +271,10 @@
         $campos = [
             combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
             // campo("Período*", "busca_periodo", ($_POST["busca_periodo"]?? ""), 3, "MASCARA_PERIODO"),
-            $campoAcao,
+            // $campoAcao,
             campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
-            campo_data("Data Início*", "busca_dataInicio", ($_POST["busca_dataInicio"] ?? ""), 2),
-            campo_data("Data Fim*", "busca_dataFim", ($_POST["busca_dataFim"] ?? ""), 2)
+            // campo_data("Data Início*", "busca_dataInicio", ($_POST["busca_dataInicio"] ?? ""), 2),
+            // campo_data("Data Fim*", "busca_dataFim", ($_POST["busca_dataFim"] ?? ""), 2)
             // $texto,
         ];
 
@@ -336,7 +338,10 @@
 
                     $encontrado = true;
                 } else {
-                    echo "<script>alert('Não tem jornadas abertas.')</script>";
+                    require_once "funcoes_paineis.php";
+                    criar_relatorio_jornada();
+                    $encontrado = true;
+                    // echo "<script>alert('Não tem jornadas abertas.')</script>";
                 }
             } else {
                 $encontrado = false;
