@@ -272,6 +272,10 @@
 		//}
 
 		$condicoesPontoBasicas[0] = "ponto.pont_tx_status = '".$_POST['status']."'";
+		$condicoesPontoBasicas[] = "entidade.enti_tx_status = 'ativo'";
+		$condicoesPontoBasicas[] = "user.user_tx_status = 'ativo'";
+		$condicoesPontoBasicas[] = "macroponto.macr_tx_status = 'ativo'";
+
 		
 		$sql = 
 			"SELECT DISTINCT pont_nb_id, ".implode(",", $cols)." FROM ponto
@@ -284,6 +288,7 @@
 					AND ponto.pont_tx_data <= STR_TO_DATE('".$sqlDataFim."', '%Y-%m-%d %H:%i:%s')
 				ORDER BY pont_tx_data ASC"
 		;
+
 
 		return $sql;
 	}
