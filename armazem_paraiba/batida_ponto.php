@@ -31,7 +31,8 @@
 		$aTipo = mysqli_fetch_all(
 			query(
 				"SELECT macr_tx_codigoInterno, macr_tx_codigoExterno FROM macroponto 
-					WHERE macr_nb_id = '".$_POST["idMacro"]."'"
+					WHERE macr_tx_status = 'ativo' 
+						AND macr_nb_id = '".$_POST["idMacro"]."'"
 			),
 			MYSQLI_ASSOC
 		)[0];
@@ -152,6 +153,8 @@
 		}else{
 			$sqlDataInicio = $abriuJornadaHoje["pont_tx_data"];
 		}
+
+		$condicoesPontoBasicas .= " AND macr_tx_status = 'ativo'";
 		
 		$sql = 
 			"SELECT DISTINCT pont_nb_id, ".implode(", ", $columns)." FROM ponto
