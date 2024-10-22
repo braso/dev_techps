@@ -348,7 +348,7 @@
 
 					
 					$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $dataVez, $motorista["enti_nb_id"])], $aDetalhado));
-					for ($f = 0; $f < sizeof($row) - 1; $f++) {
+					for ($f = 0; $f < count($row)-1; $f++) {
 						if(is_int(strpos($row[$f], "ajusta_ponto("))){
 							$begin = strpos($row[$f], "ajusta_ponto(");
 							$end = strpos($row[$f], ")", $begin);
