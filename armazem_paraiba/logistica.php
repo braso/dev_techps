@@ -8,7 +8,6 @@
 
 session_start();
 
-include_once 'informativos.php';
 include_once 'load_env.php';
 include_once 'funcoes_ponto.php';
 include_once 'conecta.php'; // Incluindo a conexão
