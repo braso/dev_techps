@@ -493,9 +493,15 @@
 
 	function criar_relatorio_jornada() {
 		global $totalResumo;
+		$periodoInicio = new DateTime($_POST["busca_dataMes"] . "-01");
+		$hoje = new DateTime();
 
-		$periodoInicio = new DateTime($_POST["busca_dataInicio"]);
-		$periodoFim = new DateTime($_POST["busca_dataFim"]);
+		if ($periodoInicio->format('Y-m') === $hoje->format('Y-m')) {
+			// Se for o mês atual, a data limite é o dia de hoje
+			$periodoFim = $hoje;
+		} else {
+			$periodoFim = new DateTime($periodoInicio->format("Y-m-t"));
+		}
 
 		$campos = ["fimJornada", "inicioRefeicao", "fimRefeicao"];
 
@@ -553,8 +559,10 @@
 							$refeicao = "*";
 						} elseif ($diffRefeicaoInfo && $diffRefeicaoRed && !$diffRefeicaoWarning) {
 							$refeicao = "*";
-						} else {
-							$refeicao = ""; // Se não atender a nenhuma das condições, manter o valor vazio
+						} elseif ($diaPonto["diffRefeicao"] != "00:00") {
+							 $refeicao = $diaPonto["diffRefeicao"]; // Se não atender a nenhuma das condições, manter o valor vazio
+						} else{
+							$refeicao = "";
 						}
 
 
@@ -567,6 +575,8 @@
 								&& !is_int(strpos($diaPonto["diffDescanso"], "fa fa-warning"))
 							) {
 								$descanso  = "*";
+							} else {
+								$descanso = $diaPonto["diffDescanso"];
 							}
 						}
 
@@ -579,6 +589,8 @@
 								&& !is_int(strpos($diaPonto["diffEspera"], "fa fa-warning"))
 							) {
 								$espera = "*";
+							} else {
+								$espera = $diaPonto["diffEspera"];
 							}
 						}
 
@@ -592,8 +604,11 @@
 							) {
 								$repouso = "*";
 							}
+							else {
+								$repouso = $diaPonto["diffRepouso"];
+							}
 						}
-
+						
 						if (
 							is_int(strpos($diaPonto["diffJornada"], "fa-info-circle"))
 							&& is_int(strpos($diaPonto["diffJornada"], "color:red;"))
@@ -601,22 +616,25 @@
 								strpos($diaPonto["fimJornada"], "fa fa-warning")
 							)
 						) {
-							$jornada = "*";
+							$hora = $diaPonto["inicioJornada"];
+							$horaLimpa = preg_replace('/<strong>.*?<\/strong>/', '', $hora);
+							$horaEspecifica = new DateTime($horaLimpa);
+							$horaAtual = new DateTime();
+							$diferenca = $horaAtual->diff($horaEspecifica);
+
+
+							$jornada = $diferenca->format('%H:%I');
+							// $jornada = '*';
 						} else {
 							$jornada = $diaPonto["diffJornada"];
 						}
 
-						if ($jornada != "00:00") {
-							$jornadaEfetiva = $diaPonto["diffJornadaEfetiva"] == "00:00" ? "*" : $diaPonto["diffJornadaEfetiva"];
-						}
-					}
 
-					if ($jornada == '*') {
-						$campos = !empty(array_filter([$jornada, $descanso, $espera, $refeicao, $repouso]));
-					} else {
-						$campos = !empty(array_filter([$descanso, $espera, $refeicao, $repouso]));
+						// if ($jornada != "00:00") {
+						// 	$jornadaEfetiva = $diaPonto["diffJornadaEfetiva"] == "00:00" ? "*" : $diaPonto["diffJornadaEfetiva"];
+						// }
 					}
-
+					
 					$endossado = mysqli_fetch_all(
 						query(
 							"SELECT * FROM endosso 
@@ -627,33 +645,34 @@
 						),
 						MYSQLI_ASSOC
 					);
-
-					if (count($endossado) > 0) {
-						$dia = $diaPonto["data"] . ' (E)';
-					} else {
-						$dia = $diaPonto["data"];
-						$dataItem = DateTime::createFromFormat('d/m/Y', $diaPonto["data"]);
-						$dataAtual = new DateTime();
-						$diferenca = $dataAtual->diff($dataItem);
-						$diaDiferenca = $diferenca->days;
-					}
-
+					
+					$dia = $diaPonto["data"];
+					$dataItem = DateTime::createFromFormat('d/m/Y', $diaPonto["data"]);
+					$dataAtual = new DateTime();
+					$diferenca = $dataAtual->diff($dataItem);
+					$diaDiferenca = $diferenca->days;
+					
+					$campos = !empty(array_filter([$jornada, $descanso, $espera, $refeicao, $repouso]));
 					if ($campos) {
-						$row[] = [
-							"data" => $dia,
-							"diaDiferenca" => $diaDiferenca,
-							"matricula" => $motorista["enti_tx_matricula"],
-							"nome" => $motorista["enti_tx_nome"],
-							"ocupacao" => $motorista["enti_tx_ocupacao"],
-							"jornada" => strip_tags($jornada),
-							"jornadaEfetiva" => strip_tags($jornadaEfetiva),
-							"refeicao" => strip_tags($refeicao),
-							"espera" => strip_tags($espera),
-							"descanso" => strip_tags($descanso),
-							"repouso" => strip_tags($repouso),
-							"dataInicio" => $periodoInicio->format('d/m/Y'),
-							"dataFim" => $periodoFim->format('d/m/Y')
-						];
+						$inicioJornada = $horaLimpa = preg_replace('/<strong>.*?<\/strong>/', '',  $diaPonto["inicioJornada"]);
+						if (count($endossado) < 1) {
+							$row[] = [
+								"data" => $dia,
+								"inicioJornada" => $inicioJornada,
+								"diaDiferenca" => $diaDiferenca,
+								"matricula" => $motorista["enti_tx_matricula"],
+								"nome" => $motorista["enti_tx_nome"],
+								"ocupacao" => $motorista["enti_tx_ocupacao"],
+								"jornada" => strip_tags($jornada),
+								"jornadaEfetiva" => strip_tags($jornadaEfetiva),
+								"refeicao" => strip_tags($refeicao),
+								"espera" => strip_tags($espera),
+								"descanso" => strip_tags($descanso),
+								"repouso" => strip_tags($repouso),
+								"dataInicio" => $periodoInicio->format('d/m/Y'),
+								"dataFim" => $periodoFim->format('d/m/Y')
+							];
+						}
 					}
 
 					if (!empty($row)) {

@@ -22,8 +22,8 @@
 
 	function carregarJS(array $arquivos) {
 
-		$linha = "linha = '<tr>'";
 		if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "naoEndossado") {
+			$linha = "linha = '<tr>'";
 			$linha .= "+'<td>'+row.matricula+'</td>'
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
@@ -40,6 +40,7 @@
 						+'<td class=\'total\'>'+(totalNaEndossado)+'</td>'
 					+'</tr>';";
 		} elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
+			$linha = "linha = '<tr>'";
 			$linha .= "+'<td>'+row.matricula+'</td>'
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
@@ -122,6 +123,10 @@
 									row[index] = item;
 									});
 
+									var totalNaEndossado = (row.jornadaPrevista || 0) + (row.jornadaEfetiva || 0) + (row.refeicao || 0) 
+									+ (row.espera || 0) + (row.descanso || 0) + (row.repouso || 0) + (row.jornada || 0) 
+									+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
+									
 									var totalEndossado = (row.refeicao || 0) + (row.jornadaPrevista || 0) + (row.jornadaEfetiva || 0) 
 										+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
 									console.log(row);
@@ -136,6 +141,51 @@
 					}
 
 					".$carregarDados. "
+				});
+
+				//Variação dos campos de pesquisa{
+                    var camposAcao = document.getElementsByName('campoAcao');
+                    if (camposAcao[0].checked){
+                        document.getElementById('botaoContexBuscar').innerHTML = 'Buscar';
+                    }
+                    if (camposAcao[1].checked){
+                        document.getElementById('botaoContexBuscar').innerHTML = 'Atualizar';
+                    }
+                    camposAcao[0].addEventListener('change', function() {
+                        if (camposAcao[0].checked){
+                            document.getElementById('botaoContexBuscar').innerHTML = 'Buscar';
+                        }
+                    });
+                    camposAcao[1].addEventListener('change', function() {
+                        if (camposAcao[1].checked){
+                            document.getElementById('botaoContexBuscar').innerHTML = 'Atualizar';
+                        }
+                    });
+                //}
+
+				$(document).ready(function() {
+					// Obtém o botão
+					const button = document.getElementById('botaoContexBuscar');
+
+					// Inicializa o select2 no campo 'empresa'
+					$('#empresa').select2();
+
+					// Verifica se já há uma opção selecionada ao carregar a página
+					if ($('#empresa').val()) {
+						button.removeAttribute('disabled'); // Habilita o botão se houver um valor selecionado
+					} else {
+						button.setAttribute('disabled', true); // Desabilita se não houver
+					}
+
+					// Escuta o evento 'select2:select' para capturar quando uma nova opção é selecionada
+					$('#empresa').on('select2:select', function(e) {
+						button.removeAttribute('disabled'); // Habilita o botão ao selecionar
+					});
+
+					// Escuta o evento 'select2:unselect' para capturar quando uma opção é desmarcada (se múltiplo)
+					$('#empresa').on('select2:unselect', function(e) {
+						button.setAttribute('disabled', true); // Desabilita o botão ao desmarcar
+					});
 				});
 			</script>"
 		;

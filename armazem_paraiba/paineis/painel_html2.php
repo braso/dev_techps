@@ -11,7 +11,9 @@
 	<div class="portlet light ">
 		<div class="table-responsive">
 			<div class='emissao' style="display: block !important;">
-				<h1 class="titulo2">Relatorio <?= $titulo ?></h1>
+				<?php if ($endossado === true) { ?>
+					<h1 class="titulo2">Relatorio <?= $titulo ?></h1>
+				<?php } ?>
 				<span></span>
 				<?= $dataEmissao . "<br>"
 					. "<b>Período do relatório:</b> " . $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"] ?>
