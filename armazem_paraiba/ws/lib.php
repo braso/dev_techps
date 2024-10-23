@@ -84,7 +84,7 @@
     }
 
     function get_user_journeys($userid){
-        $typos = get_data("SELECT * from macroponto");
+        $typos = get_data("SELECT * from macroponto WHERE macr_tx_status = 'ativo';");
 
         $macroNomes = [];
         foreach($typos as $typo){
@@ -100,7 +100,7 @@
 				JOIN macroponto m ON m.macr_tx_codigoInterno = p.pont_tx_tipo
         		JOIN entidade e ON p.pont_tx_matricula=e.enti_tx_matricula
         		JOIN user u ON u.user_nb_entidade = e.enti_nb_id
-        		WHERE p.pont_tx_status = 'ativo'
+        		WHERE p.pont_tx_status = 'ativo' AND m.macr_tx_status = 'ativo'
 					AND u.user_nb_id = ?
                     AND p.pont_tx_data > STR_TO_DATE(?, '%Y-%m-%d %H:%i')
         		ORDER BY pont_tx_data ASC";
