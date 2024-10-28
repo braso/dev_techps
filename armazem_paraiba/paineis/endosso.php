@@ -24,9 +24,9 @@
             $linha .= "+'<td>'+row.matricula+'</td>'
                     +'<td>'+row.nome+'</td>'
                     +'<td>'+(row.ocupacao?? '')+'</td>'
-                    +'<td style=\"background-color:'+(row.statusEndosso === 'E' ? 'var(--var-darkblue)' : (row.statusEndosso === 'EP' ? 'var(--var-darkyellow)' : 'var(--var-darkred)'))
-                    +'; color:white; text-shadow:2px 2px 3px black\"><strong>'
-                    +row.statusEndosso+'</strong></td>'
+                    +'<td class=\"'+(row.statusEndosso === 'E' ? 'endo' : (row.statusEndosso === 'EP' ? 'endo-parc' : 'nao-endo'))+'\">'
+                        +'<strong>'+row.statusEndosso+'</strong>'
+                    +'</td>'
                     +'<td>'+(invalidValues.includes(row.jornadaPrevista) ? '' : row.jornadaPrevista?? '')+'</td>'
                     +'<td>'+(invalidValues.includes(row.jornadaEfetiva) ? '' : row.jornadaEfetiva?? '')+'</td>'
                     +'<td>'+(invalidValues.includes(row.he50APagar) ? '' : row.he50APagar?? '')+'</td>'
@@ -35,7 +35,7 @@
                     +'<td>'+(invalidValues.includes(row.esperaIndenizada) ? '' : row.esperaIndenizada?? '')+'</td>'
                     +'<td>'+(row.saldoAnterior?? '')+'</td>'
                     +'<td>'+(row.saldoPeriodo > '00:00' ? '<strong>' + row.saldoPeriodo + '</strong>' : (row.saldoPeriodo ?? ''))+'</td>'
-                    +'<td style=\"color:'+(row.saldoFinal > '00:00' ? 'green' : (invalidValues.includes(row.saldoFinal)? 'blue': 'red'))+';\">'
+                   +'<td id='+(row.saldoFinal > '00:00' ? 'saldo-final' : (row.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+';\">'
                     +(row.saldoFinal?? '')+'</td>'
                 +'</tr>';";
         }else{
@@ -50,8 +50,8 @@
                     +'<td>'+(invalidValues.includes(row.totais.esperaIndenizada) ? '' : row.totais.esperaIndenizada)+'</td>'
                     +'<td>'+(invalidValues.includes(row.totais.saldoAnterior) ? '' : row.totais.saldoAnterior)+'</td>'
                     +'<td>'+(row.totais.saldoPeriodo > '00:00' ? '<strong>' + row.totais.saldoPeriodo + '</strong>' : (row.totais.saldoPeriodo ?? ''))+'</td>'
-                    +'<td style=\"color:'+(row.totais.saldoFinal > '00:00' ? 'green' : (invalidValues.includes(row.totais.saldoFinal)? 'blue': 'red'))+';\">'
-                    +(row.totais.saldoFinal ?? '')+'</td>'
+                    +'<td id='+(row.saldoFinal > '00:00' ? 'saldo-final' : (row.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+';\">'
+                    +(row.saldoFinal?? '')+'</td>'
                 +'</tr>';";
         }
 

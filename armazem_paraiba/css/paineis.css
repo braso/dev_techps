@@ -194,6 +194,18 @@ th.sort-desc::after {
     display: none;
 }
 
+.saldo-final {
+    color: green;
+}
+
+.saldo-zero {
+    color: blue;
+}
+
+.saldo-negativo {
+    color: red;
+}
+
 @media print {
     body {
         margin: 1cm;
@@ -201,6 +213,7 @@ th.sort-desc::after {
         /* Ajuste o valor conforme necessário para afastar do lado direito */
         transform: scale(0.99);
         transform-origin: top left;
+        -webkit-print-color-adjust: exact;
     }
 
     @page {
@@ -246,19 +259,67 @@ th.sort-desc::after {
     }
 
     .emissao {
-        padding-left: 140px !important;
+        padding-left: 100px !important;
     }
 
     .porcentagemEndo {
         box-shadow: 0 0 0 1000px #66b3ff inset !important;
     }
 
-    .porcentagemNaEndo {
-        box-shadow: 0 0 0 1000px #ff471a inset !important;
+    .porcentagemEndoPc td:first-child{
+        box-shadow: 0 0 0 1000px var(--var-yellow) inset !important;
     }
 
-    .porcentagemEndoPc {
-        box-shadow: 0 0 0 1000px #ffff66 inset !important;
+    .porcentagemEndo td:first-child, .porcentagemMeta td:first-child{
+        box-shadow: 0 0 0 1000px var(--var-blue) inset !important;
+        /* text-shadow: 0 0 0 1000px white inset; */
+    }
+
+    .porcentagemPosi td:first-child{
+        box-shadow: 0 0 0 1000px var(--var-green) inset !important;
+    }
+
+
+    .porcentagemNaEndo td:first-child, .porcentagemNega td:first-child{
+        box-shadow: 0 0 0 1000px var(--var-red) inset !important;
+    }
+
+    .endo{
+        box-shadow: 0 0 0 1000px var(--var-blue) inset !important;
+    }
+    .endo-parc{
+        box-shadow: 0 0 0 1000px var(--var-darkyellow) inset !important;
+        text-shadow: 0 0 0 1000px white inset !important;
+    }
+
+    .nao-endo{
+        box-shadow: 0 0 0 1000px var(--var-red) inset !important;
+    }
+
+    .tituloBaixaGravidade {
+        box-shadow: 0 0 0 1000px var(--var-darkgreen) inset !important;
+    }
+
+    .baixaGravidade {
+        box-shadow: 0 0 0 1000px var(--var-green) inset !important;
+    }
+
+    .TituloMediaGravidade {
+        box-shadow: 0 0 0 1000px var(--var-yellow) inset !important;
+    }
+
+    .mediaGravidade {
+        box-shadow: 0 0 0 1000px var(--var-lightyellow) inset !important;
+        text-align: center;
+    }
+
+    .tituloAltaGravidade {
+        box-shadow: 0 0 0 1000px var(--var-red) inset !important;
+    }
+
+    .altaGravidade {
+        box-shadow: 0 0 0 1000px var(--var-red) inset !important;
+        text-align: center;
     }
 
     thead tr.totais th {
@@ -269,18 +330,6 @@ th.sort-desc::after {
     thead tr.titulos th {
         box-shadow: 0 0 0 1000px #99ccff inset !important;
         /* Cor para impressão */
-    }
-
-    .porcentagemMeta {
-        box-shadow: 0 0 0 1000px #66b3ff inset !important;
-    }
-
-    .porcentagemPosit {
-        box-shadow: 0 0 0 1000px #00b33c inset !important;
-    }
-
-    .porcentagemNegat {
-        box-shadow: 0 0 0 1000px #ff471a inset !important;
     }
 
     .portlet.light {

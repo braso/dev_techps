@@ -922,6 +922,10 @@
 							$totalMotorista["refeicao"] += 1;
 						}
 
+						if (is_int(strpos($diaPonto["diffRefeicao"], "fa-info-circle")) && is_int(strpos($diaPonto["diffRefeicao"], "color:red;"))) {
+							$totalMotorista["refeicao"] += 1;
+						}
+
 						if (is_int(strpos($diaPonto["diffRefeicao"], "fa-info-circle")) && is_int(strpos($diaPonto["diffRefeicao"], "color:orange;"))) {
 							$totalMotorista["refeicao"] += 1;
 						}

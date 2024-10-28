@@ -35,7 +35,7 @@
                     +'<td>'+(row.esperaIndenizada == '00:00' ? '' : row.esperaIndenizada?? '')+'</td>'
                     +'<td>'+(row.saldoAnterior?? '')+'</td>'
                     +'<td>'+(row.saldoPeriodo > '00:00' ? '<strong>' + row.saldoPeriodo + '</strong>' : (row.saldoPeriodo ?? ''))+'</td>'
-                    +'<td style=\"color:'+(row.saldoFinal > '00:00' ? 'green' : (row.saldoFinal === '00:00' ? 'blue' : 'red'))+';\">'
+                    +'<td id='+(row.saldoFinal > '00:00' ? 'saldo-final' : (row.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+';\">'
                     +(row.saldoFinal?? '')+'</td>'
                 +'</tr>';";
         }else{
@@ -50,7 +50,7 @@
                     +'<td>'+(row.totais.esperaIndenizada == '00:00' ? '' : row.totais.esperaIndenizada)+'</td>'
                     +'<td>'+(row.totais.saldoAnterior == '00:00' ? '' : row.totais.saldoAnterior)+'</td>'
                     +'<td>'+(row.totais.saldoPeriodo > '00:00' ? '<strong>' + row.totais.saldoPeriodo + '</strong>' : (row.totais.saldoPeriodo ?? ''))+'</td>'
-                    +'<td style=\"color:'+(row.totais.saldoFinal > '00:00' ? 'green' : (row.totais.saldoFinal === '00:00' ? 'blue' : 'red'))+';\">'
+                    +'<td id='+(row.totais.saldoFinal > '00:00' ? 'saldo-final' : (row.totais.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'>'
                     +(row.totais.saldoFinal ?? '')+'</td>'
                 +'</tr>';";
 
