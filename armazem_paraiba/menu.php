@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
@@ -15,7 +15,14 @@
 
 	function mostrarMenuDoNivel($nivel): string{
 		global $CONTEX;
-
+		
+		$camposOcultosProdução = [];
+		if(strpos($_SERVER["REQUEST_URI"], 'dev') !== false){
+			$camposOcultosProdução = [
+				"/paineis/jornada.php" 	  => "Jornada Aberta",
+				"/paineis/nc_juridica.php"=> "Não Conformidades Juridicas"
+			];
+		}
 		$paginas = [
 			"cadastros" => [
 				"/cadastro_empresa.php" 	=> "Empresa/Filial", 
@@ -36,10 +43,8 @@
 			],
 			"painel" => [
 				"/paineis/saldo.php"	  => "Saldo",
-				"/paineis/endosso.php"	  => "Endosso",
-				// "/paineis/jornada.php" 	  => "Jornada Aberta",
-				// "/paineis/nc_juridica.php"=> "Não Conformidades Juridicas"
-			],
+				"/paineis/endosso.php"	  => "Endosso"
+			] + $camposOcultosProdução,
 			"suporte" => [
 				"/#" 		=> "Perguntas Frequentes", 
 				"/doc.php" 	=> "Ver Documentação"
@@ -65,7 +70,7 @@
 			$menus[$title] .= "</ul></li>";
 		}
 		
-		if(is_bool(strpos($_SERVER["REQUEST_URI"], 'dev_'))){
+		if(is_bool(strpos($_SERVER["REQUEST_URI"], 'dev'))){
 			unset($menus["suporte"]);
 		}
 	
