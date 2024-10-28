@@ -37,8 +37,8 @@
 			"painel" => [
 				"/paineis/saldo.php"	  => "Saldo",
 				"/paineis/endosso.php"	  => "Endosso",
-				"/paineis/jornada.php" 	  => "Jornada Aberta",
-				"/paineis/nc_juridica.php"=> "Não Conformidades Juridicas"
+				// "/paineis/jornada.php" 	  => "Jornada Aberta",
+				// "/paineis/nc_juridica.php"=> "Não Conformidades Juridicas"
 			],
 			"suporte" => [
 				"/#" 		=> "Perguntas Frequentes", 
