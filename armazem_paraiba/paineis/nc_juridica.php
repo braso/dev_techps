@@ -140,8 +140,60 @@
 						});
 					}
 
+					function ordenarTabela(coluna, ordem){
+						var linhas = tabela.find('tr').get();
+						linhas.sort(function(a, b){
+							// Extrai os valores da coluna como números
+							var valorA = parseFloat($(a).children('td').eq(coluna).text());
+							var valorB = parseFloat($(b).children('td').eq(coluna).text());
+
+							// Verifica se os valores são números
+							if (!isNaN(valorA) && !isNaN(valorB)) {
+								// Comparação numérica
+								return ordem === 'asc' ? valorA - valorB : valorB - valorA;
+							} else {
+								// Caso os valores não sejam números, trata como texto
+								valorA = $(a).children('td').eq(coluna).text().toUpperCase();
+								valorB = $(b).children('td').eq(coluna).text().toUpperCase();
+
+								if (valorA < valorB) {
+									return ordem === 'asc' ? -1 : 1;
+								}
+								if (valorA > valorB) {
+									return ordem === 'asc' ? 1 : -1;
+								}
+								return 0;
+							}
+						});
+						
+						$.each(linhas, function(index, row){
+							tabela.append(row);
+						});
+					}
+
+					$('#titulos th').click(function(){
+						var colunaClicada = $(this).attr('class');
+						// console.log(colunaClicada)
+	
+						var coluna = $(this).index();
+						var ordem = $(this).data('order');
+
+						// Redefinir ordem de todas as colunas
+						$('#tabela-empresas th').data('order', 'desc'); 
+						$(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
+
+						// Chama a função de ordenação
+						ordenarTabela(coluna, $(this).data('order'));
+
+						// Ajustar classes para setas de ordenação
+						$('#titulos th').removeClass('sort-asc sort-desc');
+						$(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
+					
+					});
+
 					".$carregarDados. "
 				});
+
 
 				//Variação dos campos de pesquisa{
                     var camposAcao = document.getElementsByName('campoAcao');
@@ -438,14 +490,14 @@
 							</div>
 							</div>";
 			
-			$rowTitulos = "<tr id='titulos' >";
+			$rowTitulos = "<tr id='titulos'>";
 
 			if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "naoEndossado") {
 				$titulo = "Antes do Fechamento";
 				$rowTitulos .=
-					"<th class=''>Matricula</th>"
-					."<th class=''>Funcionário</th>"
-					."<th class=''>Ocupação</th>"
+					"<th class='matricula'>Matricula</th>"
+					."<th class='funcionario'>Funcionário</th>"
+					."<th class='ocupacao'>Ocupação</th>"
 					."<th class='tituloBaixaGravidade'>Espera</th>"
 					."<th class='tituloBaixaGravidade'>Descanso</th>"
 					."<th class='tituloBaixaGravidade'>Repouso</th>"
@@ -456,7 +508,7 @@
 					."<th class='tituloAltaGravidade'>Refeição</th>"
 					."<th class='tituloAltaGravidade'>Interstício Inferior</th>"
 					."<th class='tituloAltaGravidade'>Interstício Superior</th>"
-					."<th>TOTAL</th>";
+					. "<th class='tituloTotal'>TOTAL</th>";
 
 					$endossado = true;
 
@@ -464,16 +516,16 @@
 			}  elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
 				$titulo = "Pós-Fechamento";
 				$rowTitulos .=
-					"<th class=''>MATRICULA</th>"
-					."<th class=''>Funcionário</th>"
-					."<th class=''>Ocupação</th>"
+					"<th class='matricula'>Matricula</th>"
+					."<th class='funcionario'>Funcionário</th>"
+					."<th class='ocupacao'>Ocupação</th>"
 					."<th class='tituloBaixaGravidade'>Jornada Prevista</th>"
 					."<th class='tituloMediaGravidade'>Jornada Efetiva</th>"
 					."<th class='tituloMediaGravidade'>MDC</th>"
 					."<th class='tituloAltaGravidade'>Refeição</th>"
 					."<th class='tituloAltaGravidade'>Interstício Inferior</th>"
 					."<th class='tituloAltaGravidade'>Interstício Superior</th>"
-					."<th>TOTAL</th>";
+					."<th class='tituloTotal'>TOTAL</th>";
 
 
 					$endossado = true;
