@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const formattedDate = formatDate(date); // Se precisar formatar para o formato da API
 
-        axios.post("https://logsync.dev.enabled.app.br/data", {
+        axios.post("https://logistica.logsyncwebservice.techps.com.br/data", {
             plate,
             date: formattedDate,
             speed
