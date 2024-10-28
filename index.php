@@ -4,6 +4,8 @@
 		error_reporting(E_ALL);
 	//*/
 
+	var_dump($_POST);
+
 	include_once("version.php");
 	include_once("dominios.php");
 	$msg = "";
