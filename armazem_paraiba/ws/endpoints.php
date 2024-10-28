@@ -233,7 +233,7 @@
                 $query = 
                     "SELECT * FROM ponto
                         JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
-                        WHERE pont_tx_status = 'ativo'
+                        WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'
                             AND pont_tx_matricula = ".$entity['enti_tx_matricula']."
                             AND pont_nb_id >= ".$_POST['journeyID']."
                             AND pont_tx_data <= STR_TO_DATE('".$_POST['startDateTime'].":59', '%Y-%m-%d %H:%i:%s')
@@ -254,7 +254,7 @@
                 $lastBreakOpening = 
                     "SELECT *, (macr_tx_nome like '%inicio%') as open_break FROM ponto
                         JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
-                        WHERE pont_tx_status = 'ativo'
+                        WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'
                             AND pont_tx_matricula = ".$entity['enti_tx_matricula']."
                             AND pont_tx_data <= STR_TO_DATE('".$_POST['startDateTime'].":59', '%Y-%m-%d %H:%i:%s')
                             AND lower(macr_tx_nome) != 'inicio de jornada'
@@ -274,9 +274,8 @@
             $lastJourney = get_data(
                 "SELECT *, (lower(macr_tx_nome) like '%inicio%') as open_journey FROM ponto
                     JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
-                    WHERE pont_tx_status = 'ativo'
+                    WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'
                         AND pont_tx_matricula = '".$entity["enti_tx_matricula"]."'
-                        AND macr_tx_status = 'ativo'
                         AND macr_tx_nome LIKE '%jornada%'
                         AND pont_tx_data <= STR_TO_DATE('".$_POST["startDateTime"].":59', '%Y-%m-%d %H:%i:%s')
                     ORDER BY pont_tx_data DESC
@@ -438,9 +437,8 @@
             $lastRegister = 
                 "SELECT *, (macr_tx_nome like '%inicio%') as open_break FROM ponto
                     JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
-                    WHERE pont_tx_status = 'ativo'
+                    WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'
                         AND pont_tx_matricula = ".$userEntityRegistry["enti_tx_matricula"]."
-                        AND macr_tx_status = 'ativo'
                         AND pont_tx_data <= STR_TO_DATE('".$requestdata->endDateTime.":59', '%Y-%m-%d %H:%i:%s')
                         ".(
                             ($requestdata->breakType != "jornada")?
@@ -465,9 +463,8 @@
                 $lastPoint = get_data(
                     "SELECT * FROM ponto 
                         JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
-                        WHERE pont_tx_status = 'ativo'
+                        WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'
                             AND pont_tx_matricula = ".$userEntityRegistry["enti_tx_matricula"]."
-                            AND macr_tx_status = 'ativo'
                         ORDER BY pont_tx_data DESC
                         LIMIT 1"
                 );
@@ -497,7 +494,6 @@
             );
             $pontoMesmoMinuto = !empty($pontoMesmoMinuto)? $pontoMesmoMinuto[0]: $pontoMesmoMinuto;
             
-
 
             if(!empty($pontoMesmoMinuto["pont_tx_data"])){
                 if($pontoMesmoMinuto["pont_tx_tipo"] == $macroFechamento["macr_tx_codigoInterno"]){
