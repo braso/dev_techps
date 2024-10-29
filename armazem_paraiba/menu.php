@@ -4,9 +4,11 @@
 		error_reporting(E_ALL);
 	//*/
 
+	include "load_env.php";
+
 	function verificarAtividade($paginasAtivas) {
-		foreach ($paginasAtivas as $pagina) {
-			if (strpos($_SERVER["REQUEST_URI"], $pagina) !== false) {
+		foreach ($paginasAtivas as $pagina){
+			if (is_int(strpos($_SERVER["REQUEST_URI"], $pagina))) {
 				return "active";
 			}
 		}
@@ -17,7 +19,7 @@
 		global $CONTEX;
 		
 		$camposOcultosProdução = [];
-		if(strpos($_SERVER["REQUEST_URI"], 'dev') !== false){
+		if(is_int(strpos($_SERVER["REQUEST_URI"], 'dev'))){
 			$camposOcultosProdução = [
 				"/paineis/jornada.php" 	  => "Jornada Aberta",
 				"/paineis/nc_juridica.php"=> "Não Conformidades Juridicas"
@@ -60,7 +62,7 @@
 	
 		foreach($paginas as $title => $secao){
 			$menus[$title] = "
-				<li class='menu-dropdown classic-menu-dropdown ".verificarAtividade($secao)."'>
+				<li class='menu-dropdown classic-menu-dropdown ".verificarAtividade(array_keys($secao))."'>
 					<a href='javascript:;'>".ucfirst($title)."<span class='arrow'></span></a>
 					<ul class='dropdown-menu pull-left'>"
 			;

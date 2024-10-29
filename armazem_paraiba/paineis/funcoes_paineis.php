@@ -101,11 +101,11 @@
 					$endossos = mysqli_fetch_all(query(
 						"SELECT * FROM endosso"
 							." WHERE endo_tx_status = 'ativo'"
-							." AND endo_nb_entidade = '" . $motorista["enti_nb_id"] . "'"
+							." AND endo_nb_entidade = '".$motorista["enti_nb_id"]."'"
 							." AND ("
-							."   (endo_tx_de  >= '" . $dataMes->format("Y-m-d") . "' AND endo_tx_de  <= '" . $dataFim->format("Y-m-d") . "')"
-							."OR (endo_tx_ate >= '" . $dataMes->format("Y-m-d") . "' AND endo_tx_ate <= '" . $dataFim->format("Y-m-d") . "')"
-							."OR (endo_tx_de  <= '" . $dataMes->format("Y-m-d") . "' AND endo_tx_ate >= '" . $dataFim->format("Y-m-d") . "')"
+							."   (endo_tx_de  >= '".$dataMes->format("Y-m-d")."' AND endo_tx_de  <= '".$dataFim->format("Y-m-d")."')"
+							."OR (endo_tx_ate >= '".$dataMes->format("Y-m-d")."' AND endo_tx_ate <= '".$dataFim->format("Y-m-d")."')"
+							."OR (endo_tx_de  <= '".$dataMes->format("Y-m-d")."' AND endo_tx_ate >= '".$dataFim->format("Y-m-d")."')"
 							.");"
 					), MYSQLI_ASSOC);
 
@@ -123,8 +123,8 @@
 					$saldoAnterior = mysqli_fetch_assoc(query(
 						"SELECT endo_tx_saldo FROM endosso"
 							. " WHERE endo_tx_status = 'ativo'"
-							. " AND endo_tx_ate < '" . $dataMes->format("Y-m-d") . "'"
-							. " AND endo_tx_matricula = '" . $motorista["enti_tx_matricula"] . "'"
+							. " AND endo_tx_ate < '".$dataMes->format("Y-m-d")."'"
+							. " AND endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'"
 							. " ORDER BY endo_tx_ate DESC"
 							. " LIMIT 1;"
 					));
@@ -253,7 +253,7 @@
 		}
 
 		if (empty($_POST["empresa"])) {
-			$path = "./arquivos/saldos" . "/" . $dataMes->format("Y-m");
+			$path = "./arquivos/saldos"."/".$dataMes->format("Y-m");
 			$totaisEmpresas["dataInicio"] = $dataMes->format("Y-m-d");
 			$totaisEmpresas["dataFim"] = $dataFim->format("Y-m-d");
 			file_put_contents($path."/empresas.json", json_encode($totaisEmpresas));
@@ -493,7 +493,7 @@
 
 	function criar_relatorio_jornada() {
 		global $totalResumo;
-		$periodoInicio = new DateTime($_POST["busca_dataMes"] . "-01");
+		$periodoInicio = new DateTime($_POST["busca_dataMes"]."-01");
 		$hoje = new DateTime();
 
 		if ($periodoInicio->format('Y-m') === $hoje->format('Y-m')) {
@@ -519,7 +519,7 @@
 		];
 
 		foreach ($empresas as $empresa) {
-			$path = "./arquivos/jornada" . "/" . $periodoInicio->format("Y-m") . "/" . $empresa["empr_nb_id"];
+			$path = "./arquivos/jornada"."/".$periodoInicio->format("Y-m")."/".$empresa["empr_nb_id"];
 			if (!is_dir($path)) {
 				mkdir($path, 0755, true);
 			}
@@ -527,7 +527,7 @@
 			$motoristas = mysqli_fetch_all(query(
 				"SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_ocupacao FROM entidade"
 				. " WHERE enti_tx_status = 'ativo'"
-				. " AND enti_nb_empresa = " . $empresa["empr_nb_id"]
+				. " AND enti_nb_empresa = ".$empresa["empr_nb_id"]
 				. " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
 				. " ORDER BY enti_tx_nome ASC;"
 			), MYSQLI_ASSOC);
@@ -594,27 +594,24 @@
 							}
 						}
 
-						if ($diaPonto["diffRepouso"] == "00:00") {
-							$repouso = "";
-						} else {
+						if ($diaPonto["diffRepouso"] != "00:00") {
 							if (
 								is_int(strpos($diaPonto["diffRepouso"], "fa-info-circle"))
 								&& is_int(strpos($diaPonto["diffRepouso"], "color:red;"))
 								&& !is_int(strpos($diaPonto["diffRepouso"], "fa fa-warning"))
-							) {
+							){
 								$repouso = "*";
-							}
-							else {
+							}else{
 								$repouso = $diaPonto["diffRepouso"];
 							}
 						}
 						
 						if (
-							is_int(strpos($diaPonto["diffJornada"], "fa-info-circle"))
-							&& is_int(strpos($diaPonto["diffJornada"], "color:red;"))
-							|| is_int(
-								strpos($diaPonto["fimJornada"], "fa fa-warning")
+							(
+								is_int(strpos($diaPonto["diffJornada"], "fa-info-circle"))
+								&& is_int(strpos($diaPonto["diffJornada"], "color:red;"))
 							)
+							|| is_int(strpos($diaPonto["fimJornada"], "fa fa-warning"))
 						) {
 							$hora = $diaPonto["inicioJornada"];
 							$horaLimpa = preg_replace('/<strong>.*?<\/strong>/', '', $hora);
@@ -639,8 +636,8 @@
 						query(
 							"SELECT * FROM endosso 
 							JOIN entidade ON endo_tx_matricula = enti_tx_matricula
-							WHERE '" . $data . "' BETWEEN endo_tx_de AND endo_tx_ate
-							AND enti_nb_id = " . $motorista["enti_nb_id"] . "
+							WHERE '".$data."' BETWEEN endo_tx_de AND endo_tx_ate
+							AND enti_nb_id = ".$motorista["enti_nb_id"]."
 							AND endo_tx_status = 'ativo';"
 						),
 						MYSQLI_ASSOC
@@ -676,8 +673,8 @@
 					}
 
 					if (!empty($row)) {
-						$nomeArquivo = $motorista["enti_tx_matricula"] . ".json";
-						file_put_contents($path . "/" . $nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+						$nomeArquivo = $motorista["enti_tx_matricula"].".json";
+						file_put_contents($path."/".$nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 					}
 				}
 			}
@@ -687,7 +684,7 @@
 
 	function relatorio_nao_conformidade_juridica() {
 
-		$periodoInicio = new DateTime($_POST["busca_dataMes"] . "-01");
+		$periodoInicio = new DateTime($_POST["busca_dataMes"]."-01");
 		$hoje = new DateTime();
 
 		if ($periodoInicio->format('Y-m') === $hoje->format('Y-m')) {
@@ -707,7 +704,7 @@
 		);
 
 		foreach ($empresas as $empresa) {
-			$path = "./arquivos/nao_conformidade_juridica" . "/" . $periodoInicio->format("Y-m") . "/" . $empresa["empr_nb_id"];
+			$path = "./arquivos/nao_conformidade_juridica"."/".$periodoInicio->format("Y-m")."/".$empresa["empr_nb_id"];
 			if (!is_dir($path)) {
 				mkdir($path, 0755, true);
 			}
@@ -716,7 +713,7 @@
 				query(
 					"SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula, enti_tx_ocupacao FROM entidade"
 					. " WHERE enti_tx_status = 'ativo'"
-					. " AND enti_nb_empresa = " . $empresa['empr_nb_id']
+					. " AND enti_nb_empresa = ".$empresa['empr_nb_id']
 					. " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
 					. " ORDER BY enti_tx_nome ASC;"
 				),
@@ -757,15 +754,15 @@
 				];
 
 				if ($_POST["busca_endossado"] == "endossado") {
-					$mes = new DateTime($_POST["busca_dataMes"] . "-01");
+					$mes = new DateTime($_POST["busca_dataMes"]."-01");
 					$endossos = mysqli_fetch_all(query(
 						"SELECT * FROM endosso"
 						. " WHERE endo_tx_status = 'ativo'"
-						. " AND endo_nb_entidade = '" . $motorista["enti_nb_id"] . "'"
+						. " AND endo_nb_entidade = '".$motorista["enti_nb_id"]."'"
 						. " AND ("
-						. "   (endo_tx_de  >= '" . $mes->format("Y-m-01") . "' AND endo_tx_de  <= '" . $mes->format("Y-m-t") . "')"
-						. "OR (endo_tx_ate >= '" . $mes->format("Y-m-01") . "' AND endo_tx_ate <= '" . $mes->format("Y-m-t") . "')"
-						. "OR (endo_tx_de  <= '" . $mes->format("Y-m-01") . "' AND endo_tx_ate >= '" . $mes->format("Y-m-t") . "')"
+						. "   (endo_tx_de  >= '".$mes->format("Y-m-01")."' AND endo_tx_de  <= '".$mes->format("Y-m-t")."')"
+						. "OR (endo_tx_ate >= '".$mes->format("Y-m-01")."' AND endo_tx_ate <= '".$mes->format("Y-m-t")."')"
+						. "OR (endo_tx_de  <= '".$mes->format("Y-m-01")."' AND endo_tx_ate >= '".$mes->format("Y-m-t")."')"
 						. ")"
 						. " ORDER BY endo_tx_ate;"
 					), MYSQLI_ASSOC);
@@ -884,11 +881,11 @@
 							}
 						}
 
-						if (!is_dir($path . "/endossado/")) {
-							mkdir($path . "/endossado/", 0777, true);  // Cria o diretório com permissões adequadas
+						if (!is_dir($path."/endossado/")) {
+							mkdir($path."/endossado/", 0777, true);  // Cria o diretório com permissões adequadas
 						}
 
-						file_put_contents($path . "/endossado/" . $motorista["enti_tx_matricula"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+						file_put_contents($path."/endossado/".$motorista["enti_tx_matricula"].".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 					}
 				} else {
 
@@ -915,50 +912,37 @@
 						$fimRefeicao = is_int(strpos($diaPonto["fimRefeicao"], "fa-warning"));
 
 						if ($inicioRefeicao || $fimRefeicao) {
-							$totalMotorista["refeicao"] += 1;
+							$totalMotorista["refeicao"]++;
 						}
-
 						if (!$inicioRefeicao && !$fimRefeicao && is_int(strpos($diaPonto["diffRefeicao"], "fa-warning"))) {
-							$totalMotorista["refeicao"] += 1;
+							$totalMotorista["refeicao"]++;
 						}
-
-						if (is_int(strpos($diaPonto["diffRefeicao"], "fa-info-circle")) && is_int(strpos($diaPonto["diffRefeicao"], "color:red;"))) {
-							$totalMotorista["refeicao"] += 1;
-						}
-
 						if (is_int(strpos($diaPonto["diffRefeicao"], "fa-info-circle")) && is_int(strpos($diaPonto["diffRefeicao"], "color:orange;"))) {
-							$totalMotorista["refeicao"] += 1;
+							$totalMotorista["refeicao"]++;
 						}
-
-						if (is_int(strpos($diaPonto["diffEspera"], "fa-info-circle")) && is_int(strpos($diaPonto["diffEspera"], "color:red;"))) {
-							$totalMotorista["espera"] += 1;
-						}
-
-						if (is_int(strpos($diaPonto["diffDescanso"], "fa-info-circle")) && is_int(strpos($diaPonto["diffDescanso"], "color:red;"))) {
-							$totalMotorista["descanso"] += 1;
-						}
-						if (is_int(strpos($diaPonto["diffRepouso"], "fa-info-circle")) && is_int(strpos($diaPonto["diffRepouso"], "color:red;"))) {
-							$totalMotorista["repouso"] += 1;
-						}
-
 						if (is_int(strpos($diaPonto["maximoDirecaoContinua"], "fa-warning")) && is_int(strpos($diaPonto["maximoDirecaoContinua"], "color:orange;"))) {
-							$totalMotorista["mdc"] += 1;
+							$totalMotorista["mdc"]++;
+						}
+
+						foreach(["Refeicao", "Espera", "Descanso", "Repouso"] as $campo){
+							if (is_int(strpos($diaPonto["diff".$campo], "fa-info-circle")) && is_int(strpos($diaPonto["diff".$campo], "color:red;"))) {
+								$totalMotorista[strtolower($campo)]++;
+							}
 						}
 
 						if (is_int(strpos($diaPonto["intersticio"], "faltaram"))) {
-							$totalMotorista["intersticioSuperior"] += 1;
+							$totalMotorista["intersticioSuperior"]++;
 						}
-
 						if (is_int(strpos($diaPonto["intersticio"], "ininterruptas"))) {
-							$totalMotorista["intersticioInferior"] += 1;
+							$totalMotorista["intersticioInferior"]++;
 						}
 					}
 
-					if (!is_dir($path . "/nao_endossado/")) {
-						mkdir($path . "/nao_endossado/", 0777, true);  // Cria o diretório com permissões adequadas
+					if (!is_dir($path."/nao_endossado/")) {
+						mkdir($path."/nao_endossado/", 0777, true);  // Cria o diretório com permissões adequadas
 					}
 
-					file_put_contents($path . "/nao_endossado/" . $motorista["enti_tx_matricula"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+					file_put_contents($path."/nao_endossado/".$motorista["enti_tx_matricula"].".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 				}
 			}
 		}
