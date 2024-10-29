@@ -12,8 +12,11 @@ include_once 'load_env.php';
 include_once 'funcoes_ponto.php';
 include_once 'conecta.php'; // Incluindo a conexão
 
-if (isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id'])) {
-	$user_nb_id = $_SESSION['user_nb_id'];
+if(!isset($_SESSION['user_nb_id']) || empty($_SESSION['user_nb_id'])){
+	echo "Você precisa estar logado para acessar esta página.";
+	exit;
+}
+$user_nb_id = $_SESSION['user_nb_id'];
 
 	// Variáveis de erro e sucesso
 	$erro = "";
@@ -331,52 +334,8 @@ if (isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id'])) {
 
 	cabecalho('');
 	?>
-
-
-
-
-
-
-		<script>
-			//CAPTURA OS PARAMETROS DA URL PARA COLCOAR NOS INPUTS VINDO DO AJUSTE DE PONTO
-			document.addEventListener('DOMContentLoaded', function() {
-				function getParameter(theParameter) {
-					var params = window.location.search.substr(1).split('&');
-					for (var i = 0; i < params.length; i++) {
-						var p = params[i].split('=');
-						if (p[0] === theParameter) {
-							return decodeURIComponent(p[1]);
-						}
-					}
-					return false;
-				}
-
-				var matricula = getParameter('matricula');
-				var id = getParameter('id');
-				var data = getParameter('data');
-
-				if (matricula) {
-					var motoristaSelect = document.getElementById('id');
-					for (var i = 0; i < motoristaSelect.options.length; i++) {
-						if (motoristaSelect.options[i].value === matricula) {
-							motoristaSelect.selectedIndex = i;
-							break;
-						}
-					}
-				}
-
-				if (data) {
-					document.getElementById('date').value = data;
-				}
-			});
-		</script>
-
-
-
-
 		<!DOCTYPE html>
 		<html lang="pt-BR">
-
 			<head>
 				<meta charset="UTF-8">
 				<title>Painel de Ajuste e Não Conformidades</title>
@@ -391,18 +350,18 @@ if (isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id'])) {
 
 				<!-- Exibe mensagens de erro ou sucesso -->
 				<?php
-				if ($erro) {
-					echo
-					"<div id='popupErro' class='popup popup-erro'>"
-						. htmlspecialchars($erro)
-						. "</div>";
-				}
-				if ($sucesso) {
-					echo
-					"<div id='popupSucesso' class='popup popup-sucesso'>"
-						. htmlspecialchars($sucesso)
-						. "</div>";
-				}
+					if ($erro) {
+						echo
+						"<div id='popupErro' class='popup popup-erro'>"
+							. htmlspecialchars($erro)
+							. "</div>";
+					}
+					if ($sucesso) {
+						echo
+						"<div id='popupSucesso' class='popup popup-sucesso'>"
+							. htmlspecialchars($sucesso)
+							. "</div>";
+					}
 				?>
 				<div id="loading-screen">
 					<i class="fas fa-spinner fa-spin"></i>
@@ -547,7 +506,7 @@ if (isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id'])) {
 
 						<div class="form-group">
 							<label for="data">Data:</label>
-							<input type="date" class="form-control field-form" id="data" name="data" value="<?php echo date('Y-m-d'); ?>" disabled>
+							<input type="date" class="form-control field-form" id="data" name="data" value="<?= date('Y-m-d') ?>" disabled>
 						</div>
 						<div class="form-group">
 							<label for="hora">Hora Inicio:</label>
@@ -718,70 +677,92 @@ if (isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id'])) {
 						<button type="button" class="btn btn-success" id="submitAdjustmentsBtn">Salvar Ajustes</button>
 					</div>
 				</div>
+				<script>
+					//CAPTURA OS PARAMETROS DA URL PARA COLCOAR NOS INPUTS VINDO DO AJUSTE DE PONTO
+					document.addEventListener('DOMContentLoaded', function() {
+						function getParameter(theParameter) {
+							var params = window.location.search.substr(1).split('&');
+							for (var i = 0; i < params.length; i++) {
+								var p = params[i].split('=');
+								if (p[0] === theParameter) {
+									return decodeURIComponent(p[1]);
+								}
+							}
+							return false;
+						}
+
+						var matricula = getParameter('matricula');
+						var id = getParameter('id');
+						var data = getParameter('data');
+
+						if (matricula) {
+							var motoristaSelect = document.getElementById('id');
+							for (var i = 0; i < motoristaSelect.options.length; i++) {
+								if (motoristaSelect.options[i].value === matricula) {
+									motoristaSelect.selectedIndex = i;
+									break;
+								}
+							}
+						}
+
+						if (data) {
+							document.getElementById('date').value = data;
+						}
+					});
+				</script>
 				<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 				<script src="js/logistica.js"></script>
 				<script src="js/logistica_modal.js"></script>
-			</body>
-		</html>
-	<?php
-}else{
-	echo "Você precisa estar logado para acessar esta página.";
-}
-?>
 
-<script>
-	document.addEventListener('DOMContentLoaded', function() {
-		const searchInput = document.getElementById('plate');
-		const suggestionsList = document.getElementById('plate-suggestions');
+				<script>
+					document.addEventListener('DOMContentLoaded', function() {
+						const searchInput = document.getElementById('plate');
+						const suggestionsList = document.getElementById('plate-suggestions');
 
-		// Array de placas vindo do PHP
-		const plates = <?php echo json_encode($plates); ?>;
+						// Array de placas vindo do PHP
+						const plates = <?= json_encode($plates) ?>;
 
-		// Escuta o evento de input no campo de busca
-		searchInput.addEventListener('input', function() {
-			const filter = searchInput.value.toUpperCase(); // Converte o texto digitado em maiúsculas
-			suggestionsList.innerHTML = ''; // Limpa as sugestões anteriores
+						// Escuta o evento de input no campo de busca
+						searchInput.addEventListener('input', function() {
+							const filter = searchInput.value.toUpperCase(); // Converte o texto digitado em maiúsculas
+							suggestionsList.innerHTML = ''; // Limpa as sugestões anteriores
 
-			if (filter === '') return; // Se o campo de busca estiver vazio, não mostra nada
+							if (filter === '') return; // Se o campo de busca estiver vazio, não mostra nada
 
-			// Filtra as placas com base no que foi digitado
-			const filteredPlates = plates.filter(plate => plate.toUpperCase().includes(filter));
+							// Filtra as placas com base no que foi digitado
+							const filteredPlates = plates.filter(plate => plate.toUpperCase().includes(filter));
 
-			// Exibe as sugestões filtradas
-			filteredPlates.forEach(plate => {
-				const li = document.createElement('li');
-				li.textContent = plate;
-				li.classList.add('list-group-item');
-				suggestionsList.appendChild(li);
+							// Exibe as sugestões filtradas
+							filteredPlates.forEach(plate => {
+								const li = document.createElement('li');
+								li.textContent = plate;
+								li.classList.add('list-group-item');
+								suggestionsList.appendChild(li);
 
-				// Quando uma sugestão for clicada, preenche o campo de texto e limpa as sugestões
-				li.addEventListener('click', function() {
-					searchInput.value = plate;
-					suggestionsList.innerHTML = ''; // Limpa a lista de sugestões
-				});
-			});
-		});
-	});
+								// Quando uma sugestão for clicada, preenche o campo de texto e limpa as sugestões
+								li.addEventListener('click', function() {
+									searchInput.value = plate;
+									suggestionsList.innerHTML = ''; // Limpa a lista de sugestões
+								});
+							});
+						});
+					});
 
 
-	// Função para ocultar as mensagens após 5 segundos
-	function hideMessageAfterDelay(messageId) {
-		var messageElement = document.getElementById(messageId);
-		if (messageElement) {
-			setTimeout(function() {
-				messageElement.style.display = 'none';
-			}, 5000); // 5000 milissegundos = 5 segundos
-		}
-	}
+					// Função para ocultar as mensagens após 5 segundos
+					function hideMessageAfterDelay(messageId) {
+						var messageElement = document.getElementById(messageId);
+						if (messageElement) {
+							setTimeout(function() {
+								messageElement.style.display = 'none';
+							}, 5000); // 5000 milissegundos = 5 segundos
+						}
+					}
 
-	// Chama a função para esconder mensagens de erro e sucesso
-	hideMessageAfterDelay('popupErro');
-	hideMessageAfterDelay('popupSucesso');
-</script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"></script>
-
-<?php
-rodape();
-
-?>
+					// Chama a função para esconder mensagens de erro e sucesso
+					hideMessageAfterDelay('popupErro');
+					hideMessageAfterDelay('popupSucesso');
+				</script>
+				<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+				<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"></script>
+		<?php rodape(); ?>

@@ -3,9 +3,9 @@
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
+		header("Expires: 01 Jan 2001 00:00:00 GMT");
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Pragma: no-cache"); // HTTP 1.0.
-		header("Expires: 0");
 	//*/
 		
 	include "conecta.php";
@@ -136,15 +136,21 @@
 				"nome" => "Nome",
 				"jornadaSemanal" => "Jornada Semanal (Horas/Dia)",
 				"jornadaSabado" => "Jornada Sábado (Horas/Dia)",
-				"tolerancia" => "Tolerância de jornada Saldo diário (Minutos)",
+				// "tolerancia" => "Tolerância de jornada Saldo diário (Minutos)",
 				"percHESemanal" => "Hora Extra Semanal",
 				"percHEEx" => "Hora Extra Extraordinária",
-				"maxHESemanalDiario" => "Máx. de \"H.E. Semanal\" por dia"
+				// "maxHESemanalDiario" => "Máx. de 'H.E. Semanal' por dia"
 			]);
 			
 			$errorMsg = conferirCamposObrig($camposObrig, $_POST);
+			if(empty($_POST["tolerancia"]) && $_POST["tolerancia"] != "0"){
+				$_POST["errorFields"][] = "tolerancia";
+			}
+			if(empty($_POST["maxHESemanalDiario"]) && $_POST["maxHESemanalDiario"] != "00:00"){
+				$_POST["errorFields"][] = "maxHESemanalDiario";
+			}
 			if(!empty($errorMsg)){
-				set_status($errorMsg);
+				set_status("ERRO: ".$errorMsg);
 				layout_parametro();
 				exit;
 			}
@@ -179,7 +185,7 @@
 		}else{
 			$_POST["ignorarCampos"] = null;
 		}
-		
+
 		$novoParametro = [
 			"para_tx_nome" 					=> $_POST["nome"],
 			"para_tx_jornadaSemanal" 		=> $_POST["jornadaSemanal"],
@@ -312,17 +318,17 @@
 				campo_data("Fim do Acordo*", "fimAcordo", ($a_mod["para_tx_fimAcordo"]?? ""), 1)
 			],
 			[
-				checkbox_banco("Utilizar regime de banco de horas?","banco",($a_mod["para_tx_banco"]?? ""),($a_mod["para_nb_qDias"]?? ""), ($a_mod["para_tx_horasLimite"]?? ""),2),
+				checkbox_banco("Utilizar regime de banco de horas?", "banco", ($a_mod["para_tx_banco"]?? ""), ($a_mod["para_nb_qDias"]?? ""), ($a_mod["para_tx_horasLimite"]?? ""),2),
 				ckeditor("Descrição", "Obs", ($a_mod["para_tx_Obs"]?? ""), 12,"maxlength='100' style='min-width:fit-content; max-width: 100%;'"),
 				checkbox(
 					"Ignorar intervalos",
 					"ignorarCampos", (
 						[
-							"repouso" => "Repouso", 
-							"descanso" => "Descanso",
-							"espera" => "Espera",
-							"repousoEmbarcado" => "Repouso Embarcado",
-							"mdc" => "MDC",
+							"repouso" 			=> "Repouso", 
+							"descanso" 			=> "Descanso",
+							"espera" 			=> "Espera",
+							"repousoEmbarcado" 	=> "Repouso Embarcado",
+							"mdc" 				=> "MDC",
 						]
 					),
 					5,

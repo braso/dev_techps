@@ -675,24 +675,38 @@
 	}
 
 	function checkbox_banco($nome, $variavel, $modificadoRadio, $modificadoCampo=0, $modificadoCampo2=0, $tamanho=3){
+		$classeGeral = "col-sm-".$tamanho." margin-bottom-5 campo-fit-content";
+
+		$_POST["errorFields"][] = "banco";
+
+		$errorClasses = [
+			"banco" => "",
+			"quandDias" => "",
+			"quandHoras" => "",
+		];
+		foreach(array_keys($errorClasses) as $key){
+			if(!empty($_POST["errorFields"]) && in_array($key, $_POST["errorFields"])){
+				$errorClasses[$key] = "error-field";
+			}
+		}
 		$campo = 
-			'<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content" style="min-width:fit-content; min-height: 50px;">
-				<label>'.$nome.'</label><br>
-				<label class="radio-inline">
-					<input type="radio" id="sim" name="banco" value="sim"> Sim
+			"<div class='".$classeGeral." ".$errorClasses["banco"]."' style='min-width:fit-content; min-height: 50px;'>
+				<label>".$nome."</label><br>
+				<label class='radio-inline'>
+					<input type='radio' id='sim' name='banco' value='sim'> Sim
 				</label>
-				<label class="radio-inline">
-					<input type="radio" id="nao" name="banco" value="nao"> Não
+				<label class='radio-inline'>
+					<input type='radio' id='nao' name='banco' value='nao'> Não
 				</label>
 			</div>
-			<div id="'.$variavel.'" class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content" style="display: none;">
+			<div id='".$variavel."' class='".$classeGeral."' style='display: none;'>
 					<label>Quantidade de Dias*:</label>
-					<input class="form-control input-sm campo-fit-content" type="number" value="'.$modificadoCampo.'" id="outroCampo" name="quandDias" autocomplete="off">
+					<input class='form-control input-sm campo-fit-content ".$errorClasses["quandDias"]."' type='number' value='".$modificadoCampo."' id='outroCampo' name='quandDias' autocomplete='off'>
 			</div>
-			<div id="limiteHoras" class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content" style="display: none;">
+			<div id='limiteHoras' class='".$classeGeral."' style='display: none;'>
 				<label>Quantidade de Horas Limite*:</label>
-				<input class="form-control input-sm campo-fit-content" type="number" value="'.$modificadoCampo2.'" id="outroCampo" name="quandHoras" autocomplete="off">
-			</div>'
+				<input class='form-control input-sm campo-fit-content ".$errorClasses["quandHoras"]."' type='number' value='".$modificadoCampo2."' id='outroCampo' name='quandHoras' autocomplete='off'>
+			</div>"
 		;
 
 		$data_input = 
