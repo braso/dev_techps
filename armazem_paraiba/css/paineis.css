@@ -23,7 +23,7 @@ body {
     text-align: center;
 }
 
-.TituloMediaGravidade {
+.tituloMediaGravidade {
     background-color: var(--var-yellow);
     cursor: pointer;
 }
@@ -64,7 +64,7 @@ body {
     cursor: pointer;
 }
 
-.TituloMediaGravidade:hover  {
+.tituloMediaGravidade:hover  {
     background-color: var(--var-lightyellow);
     cursor: pointer;
 }
@@ -331,7 +331,7 @@ th.sort-desc::after {
         box-shadow: 0 0 0 1000px var(--var-green) inset !important;
     }
 
-    .TituloMediaGravidade {
+    .tituloMediaGravidade {
         box-shadow: 0 0 0 1000px var(--var-yellow) inset !important;
     }
 

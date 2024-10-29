@@ -45,11 +45,11 @@
 							<td class="baixaGravidade">"Abono (Folgas, Férias ou outros)."</td>
 						</tr>
 						<tr>
-							<td class="TituloMediaGravidade">Jornada Efetiva</td>
+							<td class="tituloMediaGravidade">Jornada Efetiva</td>
 							<td class="mediaGravidade">"Tempo exedido de 10:00h." ou "Tempo exedido de 12:00h."</td>
 						</tr>
 						<tr>
-							<td class="TituloMediaGravidade">MDC - Máximo de Direção Continua</td>
+							<td class="tituloMediaGravidade">MDC - Máximo de Direção Continua</td>
 							<td class="mediaGravidade">"Descanso de 00:30 a cada 05:30 dirigidos não respeitado." ou "Descanso de 00:15 não respeitado." ou "Descanso de 00:30 não respeitado."</td>
 						</tr>
 						<tr>
@@ -86,12 +86,12 @@
 							<td class="total"><?= $percentualJornadaPrevista ?>%</td>
 						</tr>
 						<tr>
-							<td class="TituloMediaGravidade">Jornada Efetiva</td>
+							<td class="tituloMediaGravidade">Jornada Efetiva</td>
 							<td class="total"><?= $totalJornadaEfetiva ?></td>
 							<td class="total"><?= $percentualJornadaEfetiva ?>%</td>
 						</tr>
 						<tr>
-							<td class="TituloMediaGravidade">MDC - Máximo de Direção Continua</td>
+							<td class="tituloMediaGravidade">MDC - Máximo de Direção Continua</td>
 							<td class="total"><?= $totalMdc ?></td>
 							<td class="total"><?= $percentualMDC ?>%</td>
 						</tr>
