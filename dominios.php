@@ -72,7 +72,100 @@
             }
         });
     });
-    </script>";
+    </script>
+    
+    <style>
+		.options {
+			position: absolute;
+			top: 100%;
+			/* Fica logo abaixo do input */
+			left: 0;
+			/* Alinhado à esquerda */
+			width: 100%;
+			/* Largura igual ao input */
+			border: 1px solid #ccc;
+			/* Borda ao redor da lista */
+			background-color: #fff;
+			/* Fundo branco */
+			border-radius: 4px;
+			/* Bordas arredondadas */
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+			/* Sombra para um efeito elevado */
+			max-height: 200px;
+			/* Altura máxima */
+			overflow-y: auto;
+			/* Scroll se necessário */
+			z-index: 1000;
+			/* Para ficar acima de outros elementos */
+			display: none;
+			/* Começa escondido */
+			transition: all 0.3s ease;
+			/* Transição suave */
+			padding: 0;
+			/* Remove o padding padrão */
+		}
+
+		.option {
+			padding: 12px 15px;
+			/* Espaçamento interno */
+			cursor: pointer;
+			/* Cursor de ponteiro */
+			font-size: 14px;
+			/* Tamanho da fonte */
+			color: #333;
+			/* Cor do texto */
+			transition: background-color 0.2s;
+			/* Transição suave de fundo */
+		}
+
+		.option:hover {
+			background-color: #e8f0fe;
+			/* Cor de destaque ao passar o mouse */
+			color: #007bff;
+			/* Cor do texto ao passar o mouse */
+		}
+
+		.search-input {
+			border: 1px solid #ccc;
+			/* Borda padrão */
+			border-radius: 4px;
+			/* Bordas arredondadas */
+			padding: 12px 15px;
+			/* Espaçamento interno */
+			font-size: 14px;
+			/* Tamanho da fonte */
+			color: #555;
+			/* Cor do texto */
+			transition: border-color 0.3s, box-shadow 0.3s;
+			/* Transições suaves */
+		}
+
+		.search-input:focus {
+			border-color: #007bff;
+			/* Cor da borda ao focar */
+			outline: none;
+			/* Remove o contorno padrão */
+			box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+			/* Sombra ao focar */
+		}
+
+		.form-group {
+			position: relative;
+			/* Necessário para a posição absoluta das opções */
+			margin-bottom: 20px;
+			/* Espaçamento inferior */
+		}
+
+		/* Estilo para o rótulo */
+		.control-label {
+			font-weight: bold;
+			/* Negrito */
+			margin-bottom: 5px;
+			/* Espaçamento inferior */
+			color: #333;
+			/* Cor do texto */
+		}
+	</style>";
 
     // $dominiosInput = "<div class='form-group'>
     //     <select class='form-control' name='dominio'>
