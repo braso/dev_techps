@@ -294,6 +294,12 @@
 			$novoMotorista["enti_tx_dataCadastro"] = date("Y-m-d H:i:s");
 			$novoMotorista["enti_tx_ehPadrao"] = $ehPadrao;
 			$id = inserir("entidade", array_keys($novoMotorista), array_values($novoMotorista))[0];
+
+			if(empty($id) || get_class($id[0]) == Exception::class){
+				set_status("ERRO ao cadastrar motorista.");
+				index();
+				exit;
+			}
 			
 			$user_infos = [
 				"user_tx_matricula" 	=> $_POST["postMatricula"], 
@@ -431,7 +437,17 @@
 
 	function excluirMotorista(){
 		remover("entidade", $_POST["id"]);
+		$idUsuario = mysqli_fetch_assoc(query(
+			"SELECT user_nb_id FROM user 
+				JOIN entidade ON user_tx_matricula = enti_tx_matricula
+				WHERE user_tx_status = 'ativo'
+					AND enti_nb_id = ".$_POST["id"]."
+				LIMIT 1;"
+		));
 
+		if(!empty($idUsuario)){
+			remover("user", $idUsuario[0]);
+		}
 		index();
 		exit;
 	}
