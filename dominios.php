@@ -14,7 +14,7 @@
         "pkf_medeiros"			=> "PKF Medeiros",
         "qualy_transportes"		=> "Qualy Transportes",
         "techps"				=> "Techps",
-        "trampolim_gas"			=> "Trampolim Gás",
+        "trampolim_gas"			=> "Trampolim Gás"
     ];
 
     $dominio_array = array_keys($dominios); //Utilizado nos arquivos que importam este.
