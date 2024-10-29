@@ -29,7 +29,7 @@ if (isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id'])) {
 		// Codifica os CNPJs para garantir que estejam no formato correto para a URL
 		$cnpj_encoded = urlencode($cnpjList);
 		// URL da API
-		$url = "https://logsync.dev.enabled.app.br/plates?cnpj={$cnpj_encoded}";
+		$url = "https://logistica.logsyncwebservice.techps.com.br/plates?cnpj={$cnpj_encoded}";
 		// Faz a requisição à API
 		$response = file_get_contents($url);
 		// Decodifica a resposta JSON
@@ -410,7 +410,7 @@ if (isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id'])) {
 				</div>
 				<div class="container">
 					<div id="form_header" class="form_title">
-						<img src="LGC.png" alt="Logo" class="logo">
+						<img src="imagens/LGC.png" alt="Logo" class="logo">
 						<h2 class="title-section">Painel de Não Conformidades Logísticas</h2>
 						<button type="button" class="btn btn-primary" id="toggleFormBtn">Ajustar Ponto</button>
 					</div>
@@ -780,3 +780,8 @@ if (isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id'])) {
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"></script>
+
+<?php
+rodape();
+
+?>
