@@ -24,30 +24,30 @@
 		<meta content="" name="author" />
 		<!-- COMECO GLOBAL MANDATORY STYLES -->
 		<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css" />
-		<link href="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
-		<link href="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet" type="text/css" />
-		<link href="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
-		<link href="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
-		<link href="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet" type="text/css" />
+		<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+		<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet" type="text/css" />
+		<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+		<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
+		<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet" type="text/css" />
 		<!-- FIM GLOBAL MANDATORY STYLES -->
 		<!-- COMECO PLUGINS DE PAGINA -->
-		<link href="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
-		<link href="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet" type="text/css" />
+		<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
+		<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet" type="text/css" />
 		<!-- FIM PLUGINS DE PAGINA -->
 		<!-- COMECO THEME GLOBAL STYLES -->
-		<link href="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components" type="text/css" />
-		<link href="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
+		<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components" type="text/css" />
+		<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
 		<!-- FIM THEME GLOBAL STYLES -->
 		<!-- COMECO PAGE LEVEL STYLES -->
-		<link href="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/pages/css/login.min.css" rel="stylesheet" type="text/css" />
+		<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/pages/css/login.min.css" rel="stylesheet" type="text/css" />
 		<!-- FIM PAGE LEVEL STYLES -->
 		<!-- COMECO THEME LAYOUT STYLES -->
 		<!-- FIM THEME LAYOUT STYLES -->
-		<link rel="apple-touch-icon" sizes="180x180" href="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/img/favicon/apple-touch-icon.png">
-		<link rel="icon" type="image/png" sizes="32x32" href="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/img/favicon/favicon-32x32.png">
-		<link rel="icon" type="image/png" sizes="16x16" href="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/img/favicon/favicon-16x16.png">
-		<link rel="shortcut icon" type="image/x-icon" href="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/img/favicon/favicon-32x32.png?v=2">
-		<link rel="manifest" href="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/img/favicon/site.webmanifest">
+		<link rel="apple-touch-icon" sizes="180x180" href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/img/favicon/apple-touch-icon.png">
+		<link rel="icon" type="image/png" sizes="32x32" href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/img/favicon/favicon-32x32.png">
+		<link rel="icon" type="image/png" sizes="16x16" href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/img/favicon/favicon-16x16.png">
+		<link rel="shortcut icon" type="image/x-icon" href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/img/favicon/favicon-32x32.png?v=2">
+		<link rel="manifest" href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/img/favicon/site.webmanifest">
 		<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 	</head>
 	<!-- FIM HEAD -->
@@ -56,7 +56,7 @@
 		<!-- COMECO LOGO -->
 		<div class="logo">
 			<a href="https://techps.com.br/">
-				<img src="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/img/logo.png" alt="" /> </a>
+				<img src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/img/logo.png" alt="" /> </a>
 		</div>
 		<!-- FIM LOGO -->
 		<!-- COMECO LOGIN -->
@@ -79,7 +79,7 @@
 						autocomplete="off"
 						placeholder="Usuário"
 						name="user"
-						<?= (!empty($_POST["user"]) ? "value=" . $_POST["user"] : "") ?> />
+						<?= (!empty($_POST["user"]) ? "value=".$_POST["user"] : "") ?> />
 				</div>
 				<div class="form-group">
 					<label class="control-label visible-ie8 visible-ie9">Senha</label>
@@ -89,9 +89,9 @@
 						autocomplete="off"
 						placeholder="Senha"
 						name="password" />
-					<a href="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] . "/recupera_senha.php" ?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
+					<a href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]."/recupera_senha.php" ?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
 				</div>
-				<?= (!empty($_POST["sourcePage"]) ? "<input type='hidden' name='sourcePage' value= '" . $_POST["sourcePage"] . "'/>" : "") ?>
+				<?= (!empty($_POST["sourcePage"]) ? "<input type='hidden' name='sourcePage' value= '".$_POST["sourcePage"]."'/>" : "") ?>
 				<?= $msg ?>
 				<div class="form-actions">
 					<input type="submit" class="btn green uppercase" name="botao" value="Entrar"></input>
@@ -110,13 +110,13 @@
 		<!--[if lt IE 9]>
 				<![endif]-->
 		<!-- COMECO PLUGINS PRINCIPAL -->
-		<script src="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
-		<script src="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
-		<script src="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/js.cookie.min.js" type="text/javascript"></script>
-		<script src="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/bootstrap-hover-dropdown/bootstrap-hover-dropdown.min.js" type="text/javascript"></script>
-		<script src="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js" type="text/javascript"></script>
-		<script src="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/jquery.blockui.min.js" type="text/javascript"></script>
-		<script src="<?= $_ENV["URL_BASE"] . $_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
+		<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
+		<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
+		<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/js.cookie.min.js" type="text/javascript"></script>
+		<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/bootstrap-hover-dropdown/bootstrap-hover-dropdown.min.js" type="text/javascript"></script>
+		<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js" type="text/javascript"></script>
+		<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/jquery.blockui.min.js" type="text/javascript"></script>
+		<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
 		<!-- FIM PLUGINS PRINCIPAL -->
 		<!-- COMECO PLUGINS DE PAGINA -->
 		<!-- FIM PLUGINS DE PAGINA -->
