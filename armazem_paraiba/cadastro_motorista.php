@@ -294,8 +294,14 @@
 			$novoMotorista["enti_tx_dataCadastro"] = date("Y-m-d H:i:s");
 			$novoMotorista["enti_tx_ehPadrao"] = $ehPadrao;
 			$id = inserir("entidade", array_keys($novoMotorista), array_values($novoMotorista))[0];
+
+			if(empty($id) || get_class($id[0]) == Exception::class){
+				set_status("ERRO ao cadastrar motorista.");
+				index();
+				exit;
+			}
 			
-			$user_infos = [
+			$newUser = [
 				"user_tx_matricula" 	=> $_POST["postMatricula"], 
 				"user_tx_nome" 			=> $_POST["nome"], 
 				"user_tx_nivel" 		=> $_POST["ocupacao"], 
@@ -313,13 +319,13 @@
 				"user_nb_userCadastro" 	=> $_SESSION["user_nb_id"], 
 				"user_tx_dataCadastro" 	=> date("Y-m-d H:i:s")
 			];
-			foreach($user_infos as $key => $value){
+			foreach($newUser as $key => $value){
 				if(empty($value)){
-					unset($user_infos[$key]);
+					unset($newUser[$key]);
 				}
 			}
 
-			inserir("user", array_keys($user_infos), array_values($user_infos));
+			inserir("user", array_keys($newUser), array_values($newUser));
 		}else{ // Se está editando um motorista existente
 
 			$a_user = carrega_array(query(
@@ -331,7 +337,7 @@
 			$_POST["nivel"] = $_POST["ocupacao"];
 
 			if($a_user["user_nb_id"] > 0){
-				$user_infos = [
+				$newUser = [
 					"user_tx_nome" 			=> $_POST["nome"], 
 					"user_tx_login" 		=> (!empty($_POST["login"])? $_POST["login"]: $_POST["postMatricula"]), 
 					"user_tx_nivel" 		=> $_POST["nivel"],
@@ -347,12 +353,12 @@
 					"user_nb_userAtualiza" 	=> $_SESSION["user_nb_id"], 
 					"user_tx_dataAtualiza" 	=> date("Y-m-d H:i:s")
 				];
-				foreach($user_infos as $key => $value){
+				foreach($newUser as $key => $value){
 					if(empty($value)){
-						unset($user_infos[$key]);
+						unset($newUser[$key]);
 					}
 				}
-				atualizar("user", array_keys($user_infos), array_values($user_infos), $a_user["user_nb_id"]);
+				atualizar("user", array_keys($newUser), array_values($newUser), $a_user["user_nb_id"]);
 			}
 			$aEmpresa = carregar("empresa", $_POST["empresa"]);
 			if ($aEmpresa["empr_nb_parametro"] > 0) {
@@ -431,7 +437,17 @@
 
 	function excluirMotorista(){
 		remover("entidade", $_POST["id"]);
+		$idUsuario = mysqli_fetch_assoc(query(
+			"SELECT user_nb_id FROM user 
+				JOIN entidade ON user_tx_matricula = enti_tx_matricula
+				WHERE user_tx_status = 'ativo'
+					AND enti_nb_id = ".$_POST["id"]."
+				LIMIT 1;"
+		));
 
+		if(!empty($idUsuario)){
+			remover("user", $idUsuario["user_nb_id"]);
+		}
 		index();
 		exit;
 	}

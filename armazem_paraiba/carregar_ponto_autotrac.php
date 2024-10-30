@@ -7,6 +7,15 @@
 
 	
 	include_once "funcoes_ponto.php";
+
+	$dominiosAutotrac = ["/comav"];
+	if(!in_array($_ENV["APP_PATH"], $dominiosAutotrac)){
+		echo "Apenas empresas com Autotrac registrados podem utilizar este serviço.";
+		exit;
+	}
+
+	echo "Em desenvolvimento...<br>";
+	exit;
 	
 	// Função para consumir a API e inserir os dados na tabela
 	function fetchAndInsertMacros($apiUrl, $token) {
@@ -34,19 +43,23 @@
 		curl_close($ch);
 
 		$datas = [];
+		$nomes = [];
 		foreach($pontos as &$ponto){
-			$ponto["position_time"] = substr(DateTime::createFromFormat("d/m/Y H:i:s", $ponto["position_time"])->format("Y-m-d H:i:s"), 0, -3).":00";
+			$ponto["position_time"] = DateTime::createFromFormat("d/m/Y H:i:s", $ponto["position_time"])->format("Y-m-d H:i:s");
 			$datas[] = $ponto["position_time"];
+			$nomes[] = $ponto["driver_name"];
 		}
-		array_multisort($datas, SORT_ASC, $pontos, SORT_ASC);
+		array_multisort($nomes, SORT_ASC, $datas, SORT_ASC, $pontos, SORT_ASC);
 		
 		// Verifica se os dados são válidos
 		if(empty($pontos) || !is_array($pontos)){
 			echo "Nenhum dado válido retornado da API.";
 			return;
 		}
+
 		$f = 0;
 		foreach ($pontos as $ponto) {
+			echo "<br>---------------------------<br>";
 			// Usar a data diretamente da API
 			$newPonto = [
 				"pont_nb_userCadastro"	=> $_SESSION['user_nb_id'],
@@ -60,56 +73,120 @@
 				"pont_tx_status"		=> "ativo"
 			];
 
-			$macroInterno = mysqli_fetch_assoc(query(
-				"SELECT macr_tx_codigoInterno FROM macroponto"
-				." WHERE macr_tx_status = 'ativo'"
-					." AND macr_tx_fonte = 'autotrac'"
-					." AND macr_tx_codigoExterno = '".$ponto["macro_number"]."'"
-				." LIMIT 1;"
-			));
-
-			if(empty($macroInterno)){
-				echo "ERRO: Tipo de ponto não encontrado. (".$ponto["macro_number"].")<br>";
-				continue;
-			}
-			
+			//Conferir se tipo de ponto existe{
+				$macroInterno = mysqli_fetch_assoc(query(
+					"SELECT macr_tx_codigoInterno FROM macroponto"
+					." WHERE macr_tx_status = 'ativo'"
+						." AND macr_tx_fonte = 'autotrac'"
+						." AND macr_tx_codigoExterno = '".$ponto["macro_number"]."'"
+					." LIMIT 1;"
+				));
+	
+				if(empty($macroInterno)){
+					echo "ERRO: Tipo de ponto não encontrado. (".$ponto["macro_number"].")<br>";
+					continue;
+				}
+			//}
 			$newPonto["pont_tx_tipo"] = $macroInterno["macr_tx_codigoInterno"];
-			// Relacionar com a tabela macroponto
 			
-			// Consultar o ID do tipo de ponto baseado no código externo
-			$idMacro = mysqli_fetch_assoc(query(
-				"SELECT macr_nb_id FROM macroponto WHERE macr_tx_codigoExterno = '".$ponto["macro_number"]."'"
+			//Conferir se o macroponto existe{
+				$idMacro = mysqli_fetch_assoc(query(
+					"SELECT macr_nb_id FROM macroponto"
+					." WHERE macr_tx_status = 'ativo'"
+						." AND macr_tx_codigoExterno = '".$ponto["macro_number"]."';"
+				));
+
+				// Se o tipo de ponto for encontrado, inserir os dados
+				if(empty($idMacro)){
+					echo "ERRO: Código externo não encontrado na tabela macroponto: ".$ponto["macro_number"]."<br>";
+					continue;
+				}
+			//}
+
+			$ultimoPonto = mysqli_fetch_assoc(query(
+				"SELECT * FROM ponto"
+				." JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno"
+				." WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'"
+				." AND pont_tx_matricula = '".$newPonto["pont_tx_matricula"]."'"
+				." AND pont_tx_data <= '".$newPonto["pont_tx_data"]."'"
+				."ORDER BY pont_tx_data DESC"
+				." LIMIT 1;"
 			));
 
-			// Se o tipo de ponto for encontrado, inserir os dados
-			if(empty($idMacro)){
-				echo "ERRO: Código externo não encontrado na tabela macroponto: ".$ponto["macro_number"]."<br>";
+			//0 = Conferir se há um intervalo aberto antes para fechar.
+			//"" = Ignorar
+			//inteiro > 0: Conferir se há um intervalo aberto antes para fechar + substituir pela macro de abertura com esse codigoInterno
+
+			$relacaoMacros = [
+				"50" => "1",	//"INICIO DE JORNADA",
+				"51" => "0",	//"INICIO DE VIAGEM",
+				"52" => "",		//"PARADA EVENTUAL",
+				"53" => "0",	//"REINICIO DE VIAGEM",
+				"54" => "",		//"FIM DE VIAGEM",
+				"55" => "",		//"SOL DE DESVIO DE ROTA",
+				"56" => "",		//"SOL DESENGATE/BAU",
+				"57" => "7",	//"MANUTENCAO",
+				"58" => "",		//"ABANDONO DE COMBOIO",
+				"59" => "",		//"MACRO MSG LIVRE",
+				"60" => "",		//"AG DESCARGA",
+				"61" => "",		//"ABASTECIMENTO - ARLA32",
+				"62" => "2",	//"PERNOITE - FIM DE JORNADA",
+				"63" => "3",	//"REFEICAO",
+				"64" => "5",	//"EM ESPERA",
+				"65" => "7",	//"DESCANSO",
+				"66" => "",		//"TROCA DE VEÍCULO",
+				"67" => "0",	//"INICIO DE VIAGEM",
+				"68" => "0",	//"REINICIO DE VIAGEM",
+				"69" => "",		//???
+				"70" => "2"		//"FIM DE JORNADA"
+			];
+
+			if(!in_array($ponto["macro_number"], array_keys($relacaoMacros))){
+				echo "Tipo de ponto não encontrado.";
+				continue;
+			}
+			if($relacaoMacros[$ponto["macro_number"]] == ""){
+				echo "Ponto ignorado por macroponto: ".$ponto["macro_number"].", ".$relacaoMacros[$ponto["macro_number"]];
 				continue;
 			}
 
-			// Consultar se já existe um registro com a mesma data e hora (incluindo segundos), CPF e placa
-			$count = mysqli_fetch_assoc(query(
-				"SELECT COUNT(*) as qtd FROM ponto"
-				." WHERE pont_tx_status = 'ativo'"
-					." AND pont_tx_data = '".$newPonto["pont_tx_data"]."'"
-					." AND pont_tx_matricula = '".$newPonto["pont_tx_matricula"]."'"
-				." LIMIT 1;"
-			));
-			if(!empty($count) && $count["qtd"] != "0"){
-				echo "Registro já existente: ".$newPonto["pont_tx_matricula"].", ".$newPonto["pont_tx_data"]."<br>.";
-				continue; // Pula para o próximo ponto
-			}
+			$newPonto["pont_tx_tipo"] = $relacaoMacros[$ponto["macro_number"]];
 
-			if(++$f > 10){
-				break;
+			if(!empty($ultimoPonto)){
+				// Consultar se já existe um registro com o mesmo horário e matrícula{
+					if($ultimoPonto["pont_tx_tipo"] == $newPonto["pont_tx_tipo"] && $ultimoPonto["pont_tx_data"] == $newPonto["pont_tx_data"]){
+						echo "Ponto já cadastrado.";
+						continue;
+					}
+				// }
+				//Criar um ponto de finalização do último intervalo antes de criar para um novo.{
+					if((int)$ultimoPonto["pont_tx_tipo"] != ((int)$newPonto["pont_tx_tipo"])-1 && !in_array("1", [$ultimoPonto["pont_tx_tipo"], $newPonto["pont_tx_tipo"]])){
+						//Cadastrar final do último ponto
+						dd(["Cadastrar final do último ponto.", (int)$ultimoPonto["pont_tx_tipo"], ((int)$newPonto["pont_tx_tipo"])-1, $ponto["macro_number"]]);
+
+						if($newPonto["pont_tx_tipo"] == "0"){
+							continue;
+						}
+					}
+				//}
+			}elseif($newPonto["pont_tx_tipo"] == "0"){
+				//Não tem um intervalo anterior aberto para fechar.
+				echo "Não tem um intervalo anterior aberto para fechar.";
+				continue;
 			}
-			dd($newPonto, false);
-			/*Registrar ponto{
+			
+			dd(["debug", $ponto["macro_number"], $newPonto], false);
+			//*Registrar ponto{
 				$result = inserir("ponto", array_keys($newPonto), array_values($newPonto));
 				if(gettype($result[0]) == "object" && get_class($result[0]) == "Exception"){
 					echo "ERRO: Ao inserir ponto.";
+					exit;
 				}
+				echo "Ponto cadastrado com sucesso.";
 			//}*/
+			if(++$f > 10){
+				dd("break");
+			}
 		}
 	}
 

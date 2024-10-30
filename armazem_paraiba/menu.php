@@ -4,9 +4,11 @@
 		error_reporting(E_ALL);
 	//*/
 
+	include "load_env.php";
+
 	function verificarAtividade($paginasAtivas) {
-		foreach ($paginasAtivas as $pagina) {
-			if (strpos($_SERVER["REQUEST_URI"], $pagina) !== false) {
+		foreach ($paginasAtivas as $pagina){
+			if (is_int(strpos($_SERVER["REQUEST_URI"], $pagina))) {
 				return "active";
 			}
 		}
@@ -15,7 +17,14 @@
 
 	function mostrarMenuDoNivel($nivel): string{
 		global $CONTEX;
-
+		
+		$camposOcultosProdução = [];
+		if(is_int(strpos($_SERVER["REQUEST_URI"], 'dev'))){
+			$camposOcultosProdução = [
+				"/paineis/jornada.php" 	  => "Jornada Aberta",
+				"/paineis/nc_juridica.php"=> "Não Conformidades Juridicas"
+			];
+		}
 		$paginas = [
 			"cadastros" => [
 				"/cadastro_empresa.php" 	=> "Empresa/Filial", 
@@ -37,11 +46,11 @@
 			"painel" => [
 				"/paineis/saldo.php"	  => "Saldo",
 				"/paineis/endosso.php"	  => "Endosso"
-			],
-			"suporte" => [
-				"/#" 		=> "Perguntas Frequentes", 
-				"/doc.php" 	=> "Ver Documentação"
-			]
+			] + $camposOcultosProdução,
+			// "suporte" => [
+			// 	"/#" 		=> "Perguntas Frequentes", 
+			// 	"/doc.php" 	=> "Ver Documentação"
+			// ]
 		];
 
 		$menus = [
@@ -53,7 +62,7 @@
 	
 		foreach($paginas as $title => $secao){
 			$menus[$title] = "
-				<li class='menu-dropdown classic-menu-dropdown ".verificarAtividade($secao)."'>
+				<li class='menu-dropdown classic-menu-dropdown ".verificarAtividade(array_keys($secao))."'>
 					<a href='javascript:;'>".ucfirst($title)."<span class='arrow'></span></a>
 					<ul class='dropdown-menu pull-left'>"
 			;
@@ -62,8 +71,8 @@
 			}
 			$menus[$title] .= "</ul></li>";
 		}
-	
-		if(is_bool(strpos($_SERVER["REQUEST_URI"], 'dev_'))){
+		
+		if(is_bool(strpos($_SERVER["REQUEST_URI"], 'dev'))){
 			unset($menus["suporte"]);
 		}
 	
