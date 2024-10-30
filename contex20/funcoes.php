@@ -237,10 +237,10 @@
 		}
 
 		$result = mysqli_fetch_assoc(query(
-			"SELECT * FROM $tabela ORDER BY ".substr($tabela, 0, 4)."_nb_id DESC LIMIT 1;"
+			"SELECT ".substr($tabela, 0, 4)."_nb_id FROM $tabela ORDER BY ".substr($tabela, 0, 4)."_nb_id DESC LIMIT 1;"
 		));
 
-		return (is_array($result)? $result: []);
+		return (is_array($result)? [$result[substr($tabela, 0, 4)."_nb_id"]]: []);
 	}
 
 	function atualizar(string $tabela, array $campos, array $valores, string $id): void{
@@ -281,11 +281,11 @@
 	}
 
 	function remover(string $tabela, string $id){
-		inactivateById($tabela,$id);
+		inactivateById($tabela, $id);
 	}
 	function inactivateById(string $tabela, string $id){
-		$tab=substr($tabela,0,4);
-		query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '".$id."' LIMIT 1");
+		$tab = substr($tabela,0,4);
+		query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '".$id."' LIMIT 1;");
 	}
 
 	function remover_ponto(int $id,$just,$atualizar = null){
