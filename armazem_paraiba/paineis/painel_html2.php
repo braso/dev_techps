@@ -39,30 +39,76 @@
 			</div>
 			<div class="portlet-body form">
 				<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
+					<thead>
+						<tr>
+							<td></td>
+							<td></td>
+							<td>Total</td>
+							<td>%</td>
+						</tr>
+					</thead>
 					<tbody>
+						<?php if ($_POST["busca_endossado"] == "naoEndossado") { ?>
+							<tr>
+								<td class="tituloBaixaGravidade">Espera</td>
+								<td class="baixaGravidade">"Inicio ou Fim de espera sem registro"</td>
+								<td class="total"><?= $totalEspera ?></td>
+								<td class="total"><?= $percentualEspera ?>%</td>
+							</tr>
+							<tr>
+								<td class="tituloBaixaGravidade">Descanso</td>
+								<td class="baixaGravidade">"Inicio ou Fim de descanso sem registro"</td>
+								<td class="total"><?= $totalDescanso ?></td>
+								<td class="total"><?= $percentualDescanso ?>%</td>
+							</tr>
+							<tr>
+								<td class="tituloBaixaGravidade">Repouso</td>
+								<td class="baixaGravidade">"Inicio ou Fim de repouso sem registro"</td>
+								<td class="total"><?= $totalRepouso ?></td>
+								<td class="total"><?= $percentualRepouso ?>%</td>
+							</tr>
+							<tr>
+								<td class="tituloBaixaGravidade">Jornada</td>
+								<td class="baixaGravidade">"Inicio ou Fim de Jornada sem registro"</td>
+								<td class="total"><?= $totalJornada ?></td>
+								<td class="total"><?= $percentualJornada ?>%</td>
+							</tr>
+						<?php } ?>
 						<tr>
 							<td class="tituloBaixaGravidade">Jornada Prevista</td>
 							<td class="baixaGravidade">"Abono (Folgas, Férias ou outros)."</td>
+							<td class="total"><?= $totalJornadaPrevista ?></td>
+							<td class="total"><?= $percentualJornadaPrevista ?>%</td>
 						</tr>
 						<tr>
 							<td class="tituloMediaGravidade">Jornada Efetiva</td>
-							<td class="mediaGravidade">"Tempo exedido de 10:00h." ou "Tempo exedido de 12:00h."</td>
+							<td class="mediaGravidade">"Tempo excedido de 10:00h." ou "Tempo excedido de 12:00h."</td>
+							<td class="total"><?= $totalJornadaEfetiva ?></td>
+							<td class="total"><?= $percentualJornadaEfetiva ?>%</td>
 						</tr>
 						<tr>
 							<td class="tituloMediaGravidade">MDC - Máximo de Direção Continua</td>
 							<td class="mediaGravidade">"Descanso de 00:30 a cada 05:30 dirigidos não respeitado." ou "Descanso de 00:15 não respeitado." ou "Descanso de 00:30 não respeitado."</td>
+							<td class="total"><?= $totalMdc ?></td>
+							<td class="total"><?= $percentualMDC ?>%</td>
 						</tr>
 						<tr>
 							<td class="tituloAltaGravidade">Refeição</td>
 							<td class="altaGravidade">"Batida início de refeição não registrada!" ou "Refeição Initerrupita maior do que 01:00h não respeitada" ou "Refeição com Tempo máximo de 02:00h não respeitada."</td>
+							<td class="total"><?= $totalRefeicao ?></td>
+							<td class="total"><?= $percentualRefeicao ?>%</td>
 						</tr>
 						<tr>
 							<td class="tituloAltaGravidade">Interstício Inferior</td>
 							<td class="altaGravidade">"O mínimo de 08:00h ininterruptas no primeiro período não respeitado."</td>
+							<td class="total"><?= $totalIntersticioInferior ?></td>
+							<td class="total"><?= $percentualIntersticioInferior ?>%</td>
 						</tr>
 						<tr>
 							<td class="tituloAltaGravidade">Interstício Superior</td>
 							<td class="altaGravidade">"Interstício Total de 11:00 não respeitado, faltaram 00:32."</td>
+							<td class="total"><?= $totalIntersticioSuperior ?></td>
+							<td class="total"><?= $percentualIntersticioSuperior ?>%</td>
 						</tr>
 					</tbody>
 				</table>
@@ -80,35 +126,71 @@
 						</tr>
 					</thead>
 					<tbody>
+						<?php if ($_POST["busca_endossado"] == "naoEndossado") { ?>
 						<tr>
-							<td class="tituloBaixaGravidade">Jornada Prevista</td>
-							<td class="total"><?= $totalJornadaPrevista ?></td>
-							<td class="total"><?= $percentualJornadaPrevista ?>%</td>
+							<td class="tituloBaixaGravidade">Inicio ou Fim de espera sem registro</td>
+							<td><?= $totalEspera ?></td>
 						</tr>
 						<tr>
-							<td class="tituloMediaGravidade">Jornada Efetiva</td>
-							<td class="total"><?= $totalJornadaEfetiva ?></td>
-							<td class="total"><?= $percentualJornadaEfetiva ?>%</td>
+							<td class="tituloBaixaGravidade">Inicio ou Fim de descanso sem registro</td>
+							<td><?= $totalDescanso ?></td>
 						</tr>
 						<tr>
-							<td class="tituloMediaGravidade">MDC - Máximo de Direção Continua</td>
-							<td class="total"><?= $totalMdc ?></td>
-							<td class="total"><?= $percentualMDC ?>%</td>
+							<td class="tituloBaixaGravidade">Inicio ou Fim de repouso sem registro</td>
+							<td><?= $totalRepouso ?></td>
 						</tr>
 						<tr>
-							<td class="tituloAltaGravidade">Refeição</td>
-							<td class="total"><?= $totalRefeicao ?></td>
-							<td class="total"><?= $percentualRefeicao ?>%</td>
+							<td class="tituloBaixaGravidade">Inicio ou Fim de jornada sem registro</td>
+							<td><?= $totalJornada ?></td>
+						</tr>
+						<?php } ?>
+						<tr>
+							<td class="tituloBaixaGravidade">Abono (Folgas, Férias ou outros)</td>
+							<td><?= $totalJornadaPrevista ?></td>
 						</tr>
 						<tr>
-							<td class="tituloAltaGravidade">Interstício Inferior</td>
-							<td class="total"><?= $totalIntersticioInferior ?></td>
-							<td class="total"><?= $percentualIntersticioInferior ?>%</td>
+							<td class="tituloMediaGravidade">Tempo excedida de 10:00h</td>
+							<td><?= $totalJornadaExcedido10h ?></td>
 						</tr>
 						<tr>
-							<td class="tituloAltaGravidade">Interstício Superior</td>
-							<td class="total"><?= $totalIntersticioSuperior ?></td>
-							<td class="total"><?= $percentualIntersticioSuperior ?>%</td>
+							<td class="tituloMediaGravidade">Tempo excedida de 12:00h</td>
+							<td><?= $totalJornadaExcedido12h ?></td>
+						</tr>
+						<tr>
+							<td class="tituloMediaGravidade">Descanso de 00:30 a cada 05:30 dirigidos não respeitado</td>
+							<td><?= $totalMdcDescanso30m5h ?></td>
+						</tr>
+						<tr>
+							<td class="tituloMediaGravidade">Descanso de 00:30 não respeitado</td>
+							<td><?= $totalMdcDescanso30m ?></td>
+						</tr>
+						<tr>
+							<td class="tituloMediaGravidade">Descanso de 00:15 não respeitado</td>
+							<td><?= $totalMdcDescanso15m ?></td>
+						</tr>
+						<tr>
+							<td class="tituloAltaGravidade">Batida início de refeição não registrado</td>
+							<td><?= $totalInicioRefeicaoSemRegistro ?></td>
+						</tr>
+						<tr>
+							<td class="tituloAltaGravidade">Batida fim de refeição não registrado</td>
+							<td><?= $totalFimRefeicaoSemRegistro ?></td>
+						</tr>
+						<tr>
+							<td class="tituloAltaGravidade">Refeição Initerrupita maior do que 01:00h não respeitada</td>
+							<td><?= $totalRefeicao1h ?></td>
+						</tr>
+						<tr>
+							<td class="tituloAltaGravidade">Refeição com Tempo máximo de 02:00h não respeitada</td>
+							<td><?= $totalRefeicao2h ?></td>
+						</tr>
+						<tr>
+							<td class="tituloAltaGravidade">O mínimo de 08:00h ininterruptas no primeiro período não respeitado</td>
+							<td><?= $totalIntersticioInferior ?></td>
+						</tr>
+						<tr>
+							<td class="tituloAltaGravidade">Interstício Total de 11:00 não respeitado, faltaram 00:32</td>
+							<td><?= $totalIntersticioSuperior ?></td>
 						</tr>
 					</tbody>
 				</table>

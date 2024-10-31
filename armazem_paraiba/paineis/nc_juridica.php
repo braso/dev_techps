@@ -391,6 +391,19 @@
 				$totalMdc = 0; 
 				$totalIntersticioInferior = 0;
 				$totalIntersticioSuperior = 0;
+				$totalEspera = 0;
+				$totalDescanso = 0;
+				$totalRepouso = 0;
+				$totalJornada = 0;
+				$totalJornadaExcedido10h = 0;
+				$totalJornadaExcedido12h = 0;
+				$totalMdcDescanso30m5h = 0;
+				$totalMdcDescanso30m = 0;
+				$totalMdcDescanso15m = 0;
+				$totalInicioRefeicaoSemRegistro = 0;
+				$totalFimRefeicaoSemRegistro = 0;
+				$totalRefeicao1h = 0;
+				$totalRefeicao2h = 0;
 				foreach ($arquivos as &$arquivo) {
 					$arquivo = $path . "/" . $arquivo;
 					$json = json_decode(file_get_contents($arquivo), true);
@@ -404,14 +417,32 @@
 					$totalMdc += $json["mdc"];
 					$totalIntersticioInferior += $json["intersticioInferior"];
 					$totalIntersticioSuperior += $json["intersticioSuperior"];
+
+					$totalJornadaExcedido10h += $json["jornadaExcedido10h"];
+					$totalJornadaExcedido12h += $json["jornadaExcedido12h"];
+					$totalMdcDescanso30m5h += $json["mdcDescanso30m5h"];
+					$totalMdcDescanso30m += $json["mdcDescanso30m"];
+					$totalMdcDescanso15m += $json["mdcDescanso15m"];
+					$totalInicioRefeicaoSemRegistro += $json["inicioRefeicaoSemRegistro"];
+					$totalFimRefeicaoSemRegistro += $json["fimRefeicaoSemRegistro"];
+					$totalRefeicao1h += $json["refeicao1h"];
+					$totalRefeicao2h += $json["refeicao2h"];
 				}
 
+
 				if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado"){
+					$totalNaoconformidade = $totalEspera + $totalDescanso + $totalRepouso + $totalJornada + $totalJornadaExcedido10h 
+					+ $totalJornadaExcedido12h + $totalMdcDescanso30m5h + $totalMdcDescanso30m + $totalMdcDescanso15m + $totalInicioRefeicaoSemRegistro 
+					+ $totalFimRefeicaoSemRegistro + $totalRefeicao1h + $totalRefeicao2h;
+
 					$gravidadeAlta = $totalRefeicao + $totalIntersticioInferior + $totalIntersticioSuperior;
 					$gravidadeMedia = $totalJornadaEfetiva + $totalMdc;
 					$gravidadeBaixa = $totalJornadaPrevista;
 
 				} else{
+					$totalNaoconformidade = $totalJornadaExcedido10h + $totalJornadaExcedido12h + $totalMdcDescanso30m5h + $totalMdcDescanso30m + $totalMdcDescanso15m + $totalInicioRefeicaoSemRegistro 
+					+ $totalFimRefeicaoSemRegistro + $totalRefeicao1h + $totalRefeicao2h;
+					
 					$gravidadeAlta = $totalRefeicao + $totalIntersticioInferior + $totalIntersticioSuperior;
 					$gravidadeMedia = $totalJornadaEfetiva + $totalMdc;
 					$gravidadeBaixa = $totalJornadaPrevista + $totalEspera + $totalDescanso + $totalRepouso + $totalJornada;
@@ -423,16 +454,24 @@
 				$percentualMedia = round(($gravidadeMedia / $totalGeral) * 100, 2);
 				$percentualBaixa = round(($gravidadeBaixa / $totalGeral) * 100, 2);
 
-				$percentualEspera = round(($totalEspera / $totalGeral) * 100, 2);
-				$percentualDescanso = round(($totalDescanso / $totalGeral) * 100, 2);
-				$percentualRepouso = round(($totalRepouso / $totalGeral) * 100, 2);
-				$percentualJornada = round(($totalJornada / $totalGeral) * 100, 2);
-				$percentualJornadaPrevista = round(($totalJornadaPrevista / $totalGeral) * 100, 2);
-				$percentualJornadaEfetiva = round(($totalJornadaEfetiva / $totalGeral) * 100, 2);
-				$percentualMDC = round(($totalMdc / $totalGeral) * 100, 2);
-				$percentualRefeicao = round(($totalRefeicao / $totalGeral) * 100, 2);
-				$percentualIntersticioInferior = round(($totalIntersticioInferior / $totalGeral) * 100, 2);
-				$percentualIntersticioSuperior = round(($totalIntersticioSuperior / $totalGeral) * 100, 2);
+			$totalNaoconformidade = $totalEspera + $totalDescanso + $totalRepouso + $totalJornada + $totalJornadaExcedido10h
+			+ $totalJornadaExcedido12h + $totalMdcDescanso30m5h + $totalMdcDescanso30m + $totalMdcDescanso15m + $totalInicioRefeicaoSemRegistro
+			+ $totalFimRefeicaoSemRegistro + $totalRefeicao1h + $totalRefeicao2h;
+
+				$percentualEspera = round(($totalEspera / $totalNaoconformidade) * 100, 2);
+				$percentualDescanso = round(($totalDescanso / $totalNaoconformidade) * 100, 2);
+				$percentualRepouso = round(($totalRepouso / $totalNaoconformidade) * 100, 2);
+				$percentualJornada = round(($totalJornada / $totalNaoconformidade) * 100, 2);
+				$percentualJornadaExcedido10h = round(($totalJornadaExcedido10h / $totalNaoconformidade) * 100, 2);
+				$percentualJornadaExcedido12h = round(($totalJornadaEfetiva / $totalNaoconformidade) * 100, 2);
+				$percentualMdcDescanso30m5h = round(($totalMdcDescanso30m5h / $totalNaoconformidade) * 100, 2);
+				$percentualMdcDescanso30m = round(($totalMdcDescanso30m / $totalNaoconformidade) * 100, 2);
+				$percentualMdcDescanso15m = round(($totalMdcDescanso15m / $totalNaoconformidade) * 100, 2);
+				$percentualInicioRefeicaoSemRegistro = round(($totalRefeicao / $totalNaoconformidade) * 100, 2);
+				$percentualFimRefeicaoSemRegistro = round(($totalRefeicao / $totalNaoconformidade) * 100, 2);
+				$percentualRefeicao = round(($totalRefeicao / $totalNaoconformidade) * 100, 2);
+				$percentualIntersticioInferior = round(($totalIntersticioInferior / $totalNaoconformidade) * 100, 2);
+				$percentualIntersticioSuperior = round(($totalIntersticioSuperior / $totalNaoconformidade) * 100, 2);
 				
 
 				if (!empty($arquivo)) {

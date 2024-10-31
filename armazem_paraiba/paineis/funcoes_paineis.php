@@ -712,15 +712,15 @@
 					"intersticioInferior" 		=> 0,
 					"intersticioSuperior" 		=> 0,
 
-					// "inicioRefeicaoSemRegistro" => 0,
-					// "fimRefeicaoSemRegistro" 	=> 0,
-					// "refeicao1h" 				=> 0,
-					// "refeicao2h" 				=> 0,
-					// "jornadaExedida10h" 		=> 0,
-					// "jornadaExedida12h" 		=> 0,
-					// "mdcDescanso30m" 			=> 0,
-					// "mdcDescanso15m" 			=> 0,
-					// "mdcDescanso30m5h" 			=> 0,
+					"inicioRefeicaoSemRegistro" => 0,
+					"fimRefeicaoSemRegistro" 	=> 0,
+					"refeicao1h" 				=> 0,
+					"refeicao2h" 				=> 0,
+					"jornadaExcedido10h" 		=> 0,
+					"jornadaExcedido12h" 		=> 0,
+					"mdcDescanso30m" 			=> 0,
+					"mdcDescanso15m" 			=> 0,
+					"mdcDescanso30m5h" 			=> 0,
 
 					"dataInicio"				=> $periodoInicio->format("d/m/Y"),
 					"dataFim"					=> $periodoFim->format("d/m/Y")
@@ -760,19 +760,19 @@
 								$totalMotorista["jornadaEfetiva"] += 1;
 							}
 
-							// if (
-							// 	is_int(strpos($ponto[13], "fa-warning")) && is_int(strpos($ponto[13], "color:orange;"))
-							// 	&& is_int(strpos($ponto[13], "Tempo excedido de 10:00"))
-							// ) {
-							// 	$totalMotorista["jornadaExedida10h"] += 1;
-							// }
+							if (
+								is_int(strpos($ponto[13], "fa-warning")) && is_int(strpos($ponto[13], "color:orange;"))
+								&& is_int(strpos($ponto[13], "Tempo excedido de 10:00"))
+							) {
+								$totalMotorista["jornadaExedida10h"] += 1;
+							}
 
-							// if (
-							// 	is_int(strpos($ponto[13], "fa-warning")) && is_int(strpos($ponto[13], "color:orange;"))
-							// 	&& is_int(strpos($ponto[13], "Tempo excedido de 12:00"))
-							// ) {
-							// 	$totalMotorista["jornadaExedida12h"] += 1;
-							// }
+							if (
+								is_int(strpos($ponto[13], "fa-warning")) && is_int(strpos($ponto[13], "color:orange;"))
+								&& is_int(strpos($ponto[13], "Tempo excedido de 12:00"))
+							) {
+								$totalMotorista["jornadaExedida12h"] += 1;
+							}
 
 							$inicioRefeicao = is_int(strpos($ponto[4], "fa-warning"));
 							$fimRefeicao = is_int(strpos($ponto[5], "fa-warning"));
@@ -789,24 +789,24 @@
 								$totalMotorista["refeicao"] += 1;
 							}
 
-							// if ($inicioRefeicao) {
-							// 	$totalMotorista["inicioRefeicaoSemRegistro"] += 1;
-							// }
+							if ($inicioRefeicao) {
+								$totalMotorista["inicioRefeicaoSemRegistro"] += 1;
+							}
 
-							// if ($fimRefeicao) {
-							// 	$totalMotorista["inicioRefeicaoSemRegistro"] += 1;
-							// }
+							if ($fimRefeicao) {
+								$totalMotorista["fimRefeicaoSemRegistro"] += 1;
+							}
 
-							// if (is_int(strpos($ponto[7], "fa-warning")) && is_int(strpos($ponto[7], "01:00h"))) {
-							// 	$totalMotorista["refeicao1h"] += 1;
-							// }
+							if (is_int(strpos($ponto[7], "fa-warning")) && is_int(strpos($ponto[7], "01:00h"))) {
+								$totalMotorista["refeicao1h"] += 1;
+							}
 
-							// if (
-							// 	is_int(strpos($ponto[7], "fa-info-circle")) && is_int(strpos($ponto[7], "color:orange;"))
-							// 	&& is_int(strpos($ponto[7], "02:00h"))
-							// ) {
-							// 	$totalMotorista["refeicao2h"] += 1;
-							// }
+							if (
+								is_int(strpos($ponto[7], "fa-info-circle")) && is_int(strpos($ponto[7], "color:orange;"))
+								&& is_int(strpos($ponto[7], "02:00h"))
+							) {
+								$totalMotorista["refeicao2h"] += 1;
+							}
 
 							if (is_int(strpos($ponto[8], "fa-info-circle")) && is_int(strpos($ponto[8], "color:red;"))) {
 								$totalMotorista["espera"] += 1;
@@ -824,26 +824,26 @@
 								$totalMotorista["mdc"] += 1;
 							}
 
-							// if (
-							// 	is_int(strpos($ponto[14], "fa-warning")) && is_int(strpos($ponto[14], "color:orange;"))
-							// 	&& is_int(strpos($ponto[14], "digiridos não respeitado"))
-							// ) {
-							// 	$totalMotorista["mdcDescanso30m5h"] += 1;
-							// }
+							if (
+								is_int(strpos($ponto[14], "fa-warning")) && is_int(strpos($ponto[14], "color:orange;"))
+								&& is_int(strpos($ponto[14], "digiridos não respeitado"))
+							) {
+								$totalMotorista["mdcDescanso30m5h"] += 1;
+							}
 
-							// if (
-							// 	is_int(strpos($ponto[14], "fa-warning")) && is_int(strpos($ponto[14], "color:orange;"))
-							// 	&& is_int(strpos($ponto[14], "00:15 não respeitado"))
-							// ) {
-							// 	$totalMotorista["mdcDescanso15m"] += 1;
-							// }
+							if (
+								is_int(strpos($ponto[14], "fa-warning")) && is_int(strpos($ponto[14], "color:orange;"))
+								&& is_int(strpos($ponto[14], "00:15 não respeitado"))
+							) {
+								$totalMotorista["mdcDescanso15m"] += 1;
+							}
 
-							// if (
-							// 	is_int(strpos($ponto[14], "fa-warning")) && is_int(strpos($ponto[14], "color:orange;"))
-							// 	&& is_int(strpos($ponto[14], "00:30 não respeitado"))
-							// ) {
-							// 	$totalMotorista["mdcDescanso30m"] += 1;
-							// }
+							if (
+								is_int(strpos($ponto[14], "fa-warning")) && is_int(strpos($ponto[14], "color:orange;"))
+								&& is_int(strpos($ponto[14], "00:30 não respeitado"))
+							) {
+								$totalMotorista["mdcDescanso30m"] += 1;
+							}
 
 							if (is_int(strpos($ponto[15], "faltaram"))) {
 								$totalMotorista["intersticioSuperior"] += 1;
@@ -881,6 +881,20 @@
 							$totalMotorista["jornadaEfetiva"] += 1;
 						}
 
+						if (
+							is_int(strpos($diaPonto["diffJornadaEfetiva"], "fa-warning")) && is_int(strpos($diaPonto["diffJornadaEfetiva"], "color:orange;"))
+							&& is_int(strpos($diaPonto["diffJornadaEfetiva"], "Tempo excedido de 10:00"))
+						) {
+							$totalMotorista["jornadaExcedido10h"] += 1;
+						}
+
+						if (
+							is_int(strpos($diaPonto["diffJornadaEfetiva"], "fa-warning")) && is_int(strpos($diaPonto["diffJornadaEfetiva"], "color:orange;"))
+							&& is_int(strpos($diaPonto["diffJornadaEfetiva"], "Tempo excedido de 12:00"))
+						) {
+							$totalMotorista["jornadaExcedido12h"] += 1;
+						}
+
 						$inicioRefeicao = is_int(strpos($diaPonto["inicioRefeicao"], "fa-warning"));
 						$fimRefeicao = is_int(strpos($diaPonto["fimRefeicao"], "fa-warning"));
 
@@ -893,8 +907,48 @@
 						if (is_int(strpos($diaPonto["diffRefeicao"], "fa-info-circle")) && is_int(strpos($diaPonto["diffRefeicao"], "color:orange;"))) {
 							$totalMotorista["refeicao"]++;
 						}
+						if ($inicioRefeicao) {
+							$totalMotorista["inicioRefeicaoSemRegistro"] += 1;
+						}
+
+						if ($fimRefeicao) {
+							$totalMotorista["fimRefeicaoSemRegistro"] += 1;
+						}
+
+						if (is_int(strpos($diaPonto["diffRefeicao"], "fa-warning")) && is_int(strpos($diaPonto["diffRefeicao"], "01:00h"))) {
+							$totalMotorista["refeicao1h"] += 1;
+						}
+
+						if (
+							is_int(strpos($diaPonto["diffRefeicao"], "fa-info-circle")) && is_int(strpos($diaPonto["diffRefeicao"], "color:orange;"))
+							&& is_int(strpos($diaPonto["diffRefeicao"], "02:00h"))
+						) {
+							$totalMotorista["refeicao2h"] += 1;
+						}
+
 						if (is_int(strpos($diaPonto["maximoDirecaoContinua"], "fa-warning")) && is_int(strpos($diaPonto["maximoDirecaoContinua"], "color:orange;"))) {
 							$totalMotorista["mdc"]++;
+						}
+
+						if (
+							is_int(strpos($diaPonto["maximoDirecaoContinua"], "fa-warning")) && is_int(strpos($diaPonto["maximoDirecaoContinua"], "color:orange;"))
+							&& is_int(strpos($diaPonto["maximoDirecaoContinua"], "digiridos não respeitado"))
+						) {
+							$totalMotorista["mdcDescanso30m5h"] += 1;
+						}
+
+						if (
+							is_int(strpos($diaPonto["maximoDirecaoContinua"], "fa-warning")) && is_int(strpos($diaPonto["maximoDirecaoContinua"], "color:orange;"))
+							&& is_int(strpos($diaPonto["maximoDirecaoContinua"], "00:15 não respeitado"))
+						) {
+							$totalMotorista["mdcDescanso15m"] += 1;
+						}
+
+						if (
+							is_int(strpos($diaPonto["maximoDirecaoContinua"], "fa-warning")) && is_int(strpos($diaPonto["maximoDirecaoContinua"], "color:orange;"))
+							&& is_int(strpos($diaPonto["maximoDirecaoContinua"], "00:30 não respeitado"))
+						) {
+							$totalMotorista["mdcDescanso30m"] += 1;
 						}
 
 						foreach(["Refeicao", "Espera", "Descanso", "Repouso"] as $campo){
