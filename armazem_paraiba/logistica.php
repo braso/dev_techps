@@ -109,22 +109,6 @@ $user_nb_id = $_SESSION['user_nb_id'];
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	function carregarTipos()
 	{
 		global $conn;
@@ -371,7 +355,7 @@ $user_nb_id = $_SESSION['user_nb_id'];
 					<div id="form_header" class="form_title">
 						<img src="imagens/LGC.png" alt="Logo" class="logo">
 						<h2 class="title-section">Painel de Não Conformidades Logísticas</h2>
-						<button type="button" class="btn btn-primary" id="toggleFormBtn">Ajustar Ponto</button>
+						<button type="button" class="btn btn-primary" id="toggleFormBtn">AJUSTAR PONTO</button>
 					</div>
 
 					<div class="table-container">
@@ -466,17 +450,13 @@ $user_nb_id = $_SESSION['user_nb_id'];
 											</tr>
 										</thead>
 										<tbody>
-											<?php 
-												foreach($pontos as $ponto){
-													echo 
-														"<tr>
-															<td><".htmlspecialchars($ponto["pont_tx_data"])."</td>
-															<td><".htmlspecialchars($ponto["macr_tx_nome"])."</td>
-														</tr>"
-													;
-												}
-											?>
-										</tbody>
+                           				 <?php foreach ($pontos as $ponto): ?>
+                                           <tr>
+                                          <td><?php echo htmlspecialchars($ponto['pont_tx_data']); ?></td>
+                                          <td><?php echo htmlspecialchars($ponto['macr_tx_nome']); ?></td>
+                                       </tr>
+                                   <?php endforeach; ?>
+                        </tbody>
 									</table>
 								</div>
 							</div>
@@ -601,19 +581,23 @@ $user_nb_id = $_SESSION['user_nb_id'];
 						}
 
 						#toggleFormBtn {
-							margin-top: 2.6rem;
-							background: #192942;
-							border-radius: 20px;
-							width: 200px;
-						}
+    position: fixed;
+    bottom: 9rem; /* Ajuste a posição conforme necessário */
+    left: 1rem; /* Ajuste a posição conforme necessário */
+    margin-top: 0; /* Remova o margin-top, pois a posição é fixa */
+    background: #192942;
+    border-radius: 5px;
+    width: 200px;
+    z-index: 1000; /* Garante que fique acima de outros elementos */
+}
 
-						#toggleFormBtn:hover {
-							margin-top: 2.6rem;
-							background: #35A3BC;
-							border-radius: 20px;
-							width: 200px;
-							transition: 5s all-ease;
-						}
+#toggleFormBtn:hover {
+    background: #35A3BC;
+    border-radius: 10px;
+    width: 200px;
+    transition: 0.5s ease; /* Ajustado para uma transição mais rápida e suave */
+}
+
 
 						#consultarBtn:hover {
 							margin-top: 2.6rem;
