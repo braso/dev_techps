@@ -47,10 +47,10 @@
 				"/paineis/saldo.php"	  => "Saldo",
 				"/paineis/endosso.php"	  => "Endosso"
 			] + $camposOcultosProdução,
-			"suporte" => [
-				"/#" 		=> "Perguntas Frequentes", 
-				"/doc.php" 	=> "Ver Documentação"
-			]
+			// "suporte" => [
+			// 	"/#" 		=> "Perguntas Frequentes", 
+			// 	"/doc.php" 	=> "Ver Documentação"
+			// ]
 		];
 
 		$menus = [
