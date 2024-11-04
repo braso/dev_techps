@@ -1,5 +1,5 @@
 <?php
-    /* Modo debug
+    //* Modo debug
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
     //*/
@@ -372,11 +372,37 @@
 
             if(is_dir($path)){
                 $pastaSaldosEmpresa = dir($path);
+                $motoristas = mysqli_fetch_all(query(
+                "SELECT enti_tx_matricula, enti_tx_desligamento FROM entidade"
+                    . " WHERE enti_tx_status != 'ativo'"
+                    . " AND enti_nb_empresa = " . $empresa["empr_nb_id"]
+                    . " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
+                    . " ORDER BY enti_tx_nome ASC;"
+                ), MYSQLI_ASSOC);
+
+                $dataBusca = new DateTime($_POST["busca_data"]);
+                foreach($motoristas as $motorista){
+                    if (!empty($motorista["enti_tx_desligamento"])) {
+                        $dataMotorista = new DateTime($motorista["enti_tx_desligamento"]);
+                        $dataMotorista = $dataMotorista->format("Y-m");
+                        if ($dataBusca > $dataMotorista) {
+                            $matriculasInativas = array_map(fn($matricula) => $matricula . ".json", array_column($motoristas, "enti_tx_matricula"));
+                        }
+                    }
+                }
+
                 while($arquivo = $pastaSaldosEmpresa->read()){
                     if(!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))){
                         $arquivos[] = $arquivo;
+
+                        if (!empty($matriculasInativas) && in_array($arquivo, $matriculasInativas)) {
+                            $arquivos = array_diff($arquivos, [$arquivo]);
+                            // unlink($path."/". $arquivo);
+                        }
+
                     }
                 }
+
                 $pastaSaldosEmpresa->close();
 
                 $dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")); //Utilizado no HTML.

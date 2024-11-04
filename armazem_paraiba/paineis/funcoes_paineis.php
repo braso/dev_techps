@@ -292,11 +292,11 @@
 			}
 			// if(file_exists($path."/empresa_".$empresa["empr_nb_id"].".json")){
 			// 	if(date("Y-m-d", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")) == date("Y-m-d")){
-			// 		// echo 
-			// 		// 	"<script>"
-			// 		// 	."confirm('O relatório de ".$empresa["empr_tx_nome"]." já foi gerado hoje, deseja gerar novamente?');"
-			// 		// 	."</script>"
-			// 		// ;
+			// 		echo 
+			// 			"<script>"
+			// 			."confirm('O relatório de ".$empresa["empr_tx_nome"]." já foi gerado hoje, deseja gerar novamente?');"
+			// 			."</script>"
+			// 		;
 			// 		continue;
 			// 	}
 			// }
@@ -307,7 +307,9 @@
 					. " AND enti_nb_empresa = ".$empresa["empr_nb_id"]
 					. " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
 					. " ORDER BY enti_tx_nome ASC;"
-			), MYSQLI_ASSOC);
+			,1 ), MYSQLI_ASSOC);
+
+			die();
 
 			$rows = [];
 			$statusEndossos = [
@@ -479,6 +481,8 @@
 			$empresa["dataFim"] = $mes->format("Y-m-t");
 			$empresa["percEndossado"] = ($statusEndossos["E"]) / array_sum(array_values($statusEndossos));
 
+			// dd($empresa);
+
 			file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", json_encode($empresa));
 		}
 
@@ -534,8 +538,13 @@
 
 			foreach ($motoristas as $motorista) {
 				$row = [];
+				$diaPonto = [];
 				for ($date = clone $periodoInicio; $date <= $periodoFim; $date->modify('+1 day')) {
-					$diaPonto = diaDetalhePonto($motorista["enti_tx_matricula"], $date->format('Y-m-d'));
+					$diaPonto[] = diaDetalhePonto($motorista["enti_tx_matricula"], $date->format('Y-m-d'));
+				}
+
+				foreach($diaPonto as $dia){
+
 					$data = $date->format('Y-m-d');
 					$descanso = "";
 					$espera = "";
@@ -593,6 +602,8 @@
 						) {
 
 							$hora = preg_replace('/<strong>.*?<\/strong>/', '', $diaPonto["inicioJornada"]);
+							$hora = preg_replace('/[^0-9:]/', '', $hora);
+							$hora = trim($hora);
 							$horaEspecifica = new DateTime($hora);
 							$horaAtual = new DateTime();
 							$jornada = $horaAtual->diff($horaEspecifica)->format('%H:%I');
@@ -624,11 +635,13 @@
 					
 					$campos = !empty(array_filter([$jornada, $descanso, $espera, $refeicao, $repouso]));
 					if ($campos) {
-						$inicioJornada = $horaLimpa = preg_replace('/<strong>.*?<\/strong>/', '',  $diaPonto["inicioJornada"]);
+						$horaLimpa = preg_replace('/<strong>.*?<\/strong>/', '',  $diaPonto["inicioJornada"]);
+						$horaLimpa = preg_replace('/[^0-9:]/', '', $horaLimpa);
+						$horaLimpa = trim($horaLimpa);
 						if (count($endossado) < 1) {
 							$row[] = [
 								"data" => $dia,
-								"inicioJornada" => $inicioJornada,
+								"inicioJornada" => $horaLimpa,
 								"diaDiferenca" => $diaDiferenca,
 								"matricula" => $motorista["enti_tx_matricula"],
 								"nome" => $motorista["enti_tx_nome"],
@@ -644,12 +657,12 @@
 							];
 						}
 					}
+				}
 
 					if (!empty($row)) {
 						$nomeArquivo = $motorista["enti_tx_matricula"].".json";
 						file_put_contents($path."/".$nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 					}
-				}
 			}
 		}
 		return;
