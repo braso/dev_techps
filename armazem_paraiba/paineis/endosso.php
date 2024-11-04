@@ -373,7 +373,7 @@
             if(is_dir($path)){
                 $pastaSaldosEmpresa = dir($path);
                 $motoristas = mysqli_fetch_all(query(
-                "SELECT enti_tx_matricula, enti_tx_desligamento FROM entidade"
+                "SELECT enti_tx_matricula, enti_tx_desligamento, enti_tx_admissao FROM entidade"
                     . " WHERE enti_tx_status != 'ativo'"
                     . " AND enti_nb_empresa = " . $empresa["empr_nb_id"]
                     . " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
@@ -386,6 +386,12 @@
                         $dataMotorista = new DateTime($motorista["enti_tx_desligamento"]);
                         $dataMotorista = $dataMotorista->format("Y-m");
                         if ($dataBusca > $dataMotorista) {
+                            $matriculasInativas = array_map(fn($matricula) => $matricula . ".json", array_column($motoristas, "enti_tx_matricula"));
+                        }
+                    } else {
+                        $dataMotorista = new DateTime($motorista["enti_tx_admissao"]);
+                        $dataMotorista = $dataMotorista->format("Y-m");
+                        if ($dataBusca < $dataMotorista) {
                             $matriculasInativas = array_map(fn($matricula) => $matricula . ".json", array_column($motoristas, "enti_tx_matricula"));
                         }
                     }
