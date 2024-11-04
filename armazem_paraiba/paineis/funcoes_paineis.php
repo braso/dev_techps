@@ -307,9 +307,7 @@
 					. " AND enti_nb_empresa = ".$empresa["empr_nb_id"]
 					. " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
 					. " ORDER BY enti_tx_nome ASC;"
-			,1 ), MYSQLI_ASSOC);
-
-			die();
+			), MYSQLI_ASSOC);
 
 			$rows = [];
 			$statusEndossos = [
