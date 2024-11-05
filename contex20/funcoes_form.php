@@ -125,7 +125,6 @@
 	function rodape(){
 		global $version, $CONTEX;
 		?>
-
 										</div>
 									</div>
 								</div>
@@ -190,24 +189,8 @@
 
 					document.getElementsByClassName('loading')[0].style.display = 'none';
 				</script>
-
 			</body>
-		</html>	
-		<!-- 
-		<script type="text/javascript">
-				// $(document).ajaxStart($.blockUI({});).ajaxStop($.unblockUI);
-
-
-				$(document).ajaxStart(function() {
-					$.blockUI({ 
-						message: '<h1><img src="busy.gif" /> Carregando...</h1>' 
-					});
-				});
-				$(document).ajaxStop(function() {
-					$.unblockUI();
-				});
-		</script>
-		-->
+		</html>
 		<?php
 	}
 
