@@ -22,9 +22,10 @@
 		if(is_int(strpos($_SERVER["REQUEST_URI"], 'dev'))){
 			$camposOcultosProdução = [
 				"/paineis/jornada.php" 	  => "Jornada Aberta",
-				"/paineis/nc_juridica.php"=> "Não Conformidades Juridicas"
+				"/paineis/nc_juridica.php"=> "Não Conformidades Juridicas Atualizado"
 			];
 		}
+		
 		$paginas = [
 			"cadastros" => [
 				"/cadastro_empresa.php" 	=> "Empresa/Filial", 

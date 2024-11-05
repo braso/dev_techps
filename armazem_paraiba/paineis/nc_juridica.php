@@ -140,6 +140,7 @@
 						});
 					}
 
+
 					function ordenarTabela(coluna, ordem){
 						var linhas = tabela.find('tr').get();
 						linhas.sort(function(a, b){
@@ -256,13 +257,13 @@
 				$_POST["errorFields"][] = "busca_dataMes";
 				set_status("ERRO: Não é possível pesquisar após a data atual.");
 			}
-			cabecalho("Relatório de Não Conformidade Juridica");
+			cabecalho("Relatório de Não Conformidade Juridica Atualizado");
 		} elseif (!empty($_POST["acao"]) && $_POST["acao"] == "atualizarPainel") {
 			echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
 			ob_flush();
 			flush();
 
-			cabecalho("Relatório de Não Conformidade Juridica");
+			cabecalho("Relatório de Não Conformidade Juridica Atualizado");
 
 			$err = ($_POST["busca_dataInicio"] > date("Y-m-d"))*1+($_POST["busca_dataFim"] > date("Y-m-d"))*2;
 			if ($err > 0) {
@@ -282,10 +283,14 @@
 				set_status("ERRO: Não é possível atualizar após a data atual.");
 			} else {
 				require_once "funcoes_paineis.php";
+				$tempoInicio = microtime(true);
 				relatorio_nao_conformidade_juridica();
+				$tempoFim = microtime(true);
+				$tempoExecucao = $tempoFim - $tempoInicio;
+				echo "Tempo de execução: " . number_format($tempoExecucao, 4) . " segundos";
 			}
 		} else {
-			cabecalho("Relatório de Não Conformidade Juridica");
+			cabecalho("Relatório de Não Conformidade Juridica Atualizado");
 		}
 
 	// $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
@@ -468,8 +473,14 @@
 				foreach (["espera", "descanso", "repouso", "jornada", "jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao", "intersticioInferior", 
 				"intersticioSuperior"] as $key) {
 					$percentuais["Geral_" . $key] = round(($totalizadores[$key] / $totalGeral) * 100, 2);
+					$graficoAnalitico[] = $totalizadores[$key];
+						// echo "<br>";
+						// var_dump($totalizadores[$key]);
+						// var_dump(($totalizadores[$key] / $totalGeral) * 100);
 				}
-
+	
+				//  print_r(json_encode($graficoAnalitico));
+				//  var_dump($totalGeral);
 				// Percentuais específicos de Não Conformidade (baseado no total de não conformidade)
 				foreach ([
 					"espera", "descanso", "repouso", "jornada", "jornadaExcedido10h", "jornadaExcedido12h", "mdcDescanso30m5h", 
@@ -496,6 +507,15 @@
 				} else {
 					echo "<script>alert('Não tem jornadas abertas.')</script>";
 				}
+
+				$pasta = dir($path);
+                while($arquivoEmpresa = $pasta->read()){
+                    if(!empty($arquivoEmpresa) && !in_array($arquivoEmpresa, [".", ".."]) && !is_bool(strpos($arquivoEmpresa, "empresa_"))){
+                        $arquivoEmpresa = $path."/".$arquivoEmpresa;
+						$totalempre = json_decode(file_get_contents($arquivoEmpresa), true);
+                    }
+                }
+                $pasta->close();
 				
 			} else {
 				$encontrado = false;
@@ -503,6 +523,22 @@
 		} 
 
 		if ($encontrado) {
+			$rowTotal = "<td></td>
+					<td></td>
+					<td>Total</td>
+					<td>".$totalempre["espera"]."</td>
+					<td>".$totalempre["descanso"]."</td>
+					<td>".$totalempre["repouso"]."</td>
+					<td>".$totalempre["jornada"]."</td>
+					<td>".$totalempre["jornadaPrevista"]."</td>
+					<td>".$totalempre["jornadaEfetiva"]."</td>
+					<td>".$totalempre["mdc"]."</td>
+					<td>".$totalempre["refeicao"]."</td>
+					<td>".$totalempre["intersticioInferior"]."</td>
+					<td>".$totalempre["intersticioSuperior"]."</td>
+					<td>$totalGeral</td>
+			";
+
 			$rowGravidade = "
 			<div class='row'>
 				<div class='col-md-3'>

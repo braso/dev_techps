@@ -30,6 +30,9 @@
 				<tbody>
 					<!-- Conteúdo do json empresas será inserido aqui -->
 				</tbody>
+				<thead>
+					<?= $rowTotal ?>
+				</thead>
 			</table>
 		</div>
 
@@ -190,7 +193,7 @@
 						</tr>
 						<tr>
 							<td class="tituloAltaGravidade">Refeição Initerrupita maior do que 01:00h não respeitada</td>
-							<td><?= $totalizadores["refeicao1h"]?></td>
+							<td><?= $totalizadores["refeicao1h"] ?></td>
 							<td><?= $percentuais["Especifico_refeicao1h"] ?>%</td>
 						</tr>
 						<tr>
@@ -223,11 +226,12 @@
 	// const data = {
 	// 	labels: ['Espera', 'Descanso', 'Repouso', 'Jornada', 'Jornada Prevista', 'Jornada Efetiva', 'MDC', 'Refeição', 'Interstício Inferior', 'Interstício Superior'],
 	// 	datasets: [{
-	// 		data: [<?= $percentualEspera ?>, <?= $percentualDescanso ?>, <?= $percentualRepouso ?>, <?= $percentualJornada ?>, <?= $percentualJornadaPrevista ?>, <?= $percentualJornadaEfetiva ?>,
-	// 			<?= $percentualMDC ?>, <?= $percentualRefeicao ?>, <?= $percentualIntersticioInferior ?>, <?= $percentualIntersticioSuperior ?>
-	// 		], // Dados das fatias
+	// 		data: [1, 13, 4, 50, 60, 80, 90, 0, 5, 2], // Dados das fatias <= json_encode($graficoAnalitico) ?>
 	// 		backgroundColor: ['#53d02a', '#53d02a', '#53d02a', '#53d02a', '#53d02a', '#f1c61f', '#f1c61f', '#ec4141', '#ec4141', '#ec4141'], // Cores das fatias
-	// 		hoverOffset: 4
+	// 		hoverOffset: function(context) {
+	// 			const value = context.raw;
+	// 			return value < 1 ? 8 : 4; // Destaca fatias menores que 1%
+	// 		}
 	// 	}]
 	// };
 
@@ -244,13 +248,6 @@
 	// 			title: {
 	// 				display: true,
 	// 				text: 'Gráfico de Não Conformidades'
-	// 			},
-	// 			tooltip: {
-	// 				callbacks: {
-	// 					label: function(tooltipItem) {
-	// 						return tooltipItem.raw + '%'; // Formata o tooltip para mostrar o %
-	// 					}
-	// 				}
 	// 			}
 	// 		}
 	// 	},
