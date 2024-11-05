@@ -2,6 +2,10 @@
 	/* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
+
+		header("Expires: 01 Jan 2001 00:00:00 GMT");
+		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+		header('Cache-Control: post-check=0, pre-check=0', FALSE);
 	//*/
 
 	include_once 'funcoes_ponto.php';
@@ -258,7 +262,7 @@
 							"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 2) as fimJornada FROM ponto
 								WHERE ".implode(" AND ", $condicoesPontoBasicas)."
 									AND ponto.pont_tx_tipo IN (1,2)
-									AND pont_tx_data > STR_TO_DATE('".$_POST['data']." 23:59:59', '%Y-%m-%d %H:%i:%s')
+									AND pont_tx_data >= STR_TO_DATE('".$_POST['data']." 23:59:59', '%Y-%m-%d %H:%i:%s')
 								ORDER BY pont_tx_data ASC
 								LIMIT 1;"
 						)
@@ -281,9 +285,10 @@
 			"SELECT DISTINCT pont_nb_id, ".implode(",", $cols)." FROM ponto
 				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
 				JOIN entidade ON ponto.pont_tx_matricula = entidade.enti_tx_matricula
-				JOIN user ON entidade.enti_tx_matricula = user.user_tx_matricula
+				JOIN user ON entidade.enti_nb_id = user.user_nb_entidade
 				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
 				WHERE ".implode(" AND ", $condicoesPontoBasicas)."
+					AND macr_nb_id < 13
 					AND ponto.pont_tx_data >= STR_TO_DATE('".$sqlDataInicio."', '%Y-%m-%d %H:%i:%s')
 					AND ponto.pont_tx_data <= STR_TO_DATE('".$sqlDataFim."', '%Y-%m-%d %H:%i:%s')
 				ORDER BY pont_tx_data ASC"
@@ -484,19 +489,19 @@
 		
 		abre_form('Dados do Ajuste de Ponto');
 		linha_form($textFields);
-		echo campo_hidden("id", $_POST["id"]);
-		echo campo_hidden("busca_empresa", $_POST["busca_empresa"]);
-		echo campo_hidden("busca_motorista", $_POST["id"]);
-		echo campo_hidden("busca_data", $_POST["data"]);
-		echo campo_hidden("data_de", $_POST["data_de"]);
-		echo campo_hidden("data_ate", $_POST["data_ate"]);
-		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+		echo campo_hidden("id", 				$_POST["id"]);
+		echo campo_hidden("busca_empresa", 		$_POST["busca_empresa"]);
+		echo campo_hidden("busca_motorista", 	$_POST["id"]);
+		echo campo_hidden("busca_data", 		$_POST["data"]);
+		echo campo_hidden("data_de", 			$_POST["data_de"]);
+		echo campo_hidden("data_ate", 			$_POST["data_ate"]);
+		echo campo_hidden("HTTP_REFERER", 		$_POST["HTTP_REFERER"]);
 		linha_form($variableFields);
 		linha_form($campoJust);
 		fecha_form($botoes);
 
 		$sql = pegarSqlDia($aMotorista['enti_tx_matricula'], ["pont_nb_id", "pont_tx_data", "macr_tx_nome", "moti_tx_nome", 
-		"moti_tx_legenda", "pont_tx_justificativa", "user_tx_login", "pont_tx_dataCadastro", "pont_tx_placa",
+		"moti_tx_legenda", "pont_tx_justificativa", "user_tx_login", "pont_nb_userCadastro", "pont_tx_dataCadastro", "pont_tx_placa",
 		"pont_tx_latitude", "pont_tx_longitude","pont_tx_dataAtualiza"]);
 
 
@@ -508,13 +513,13 @@
 			"MOTIVO"											=> "moti_tx_nome",
 			"LEGENDA"											=> "moti_tx_legenda",
 			"JUSTIFICATIVA"										=> "pont_tx_justificativa",
-			"USUÁRIO"											=> "user_tx_login",
+			"USUÁRIO CADASTRO"									=> "pont_nb_userCadastro",
 			"DATA CADASTRO"										=> "data(pont_tx_dataCadastro,1)",
 			"DATA EXCLUSÃO"                                     => "data(pont_tx_dataAtualiza,1)",
 			"LOCALIZAÇÃO"                                       => "map(pont_nb_id)",
 			"<spam class='glyphicon glyphicon-remove'></spam>"	=> $iconeExcluir
 		];
-		
+
 		grid($sql, array_keys($gridFields), array_values($gridFields), '', '12', 1, "desc", -1);
 
 		echo

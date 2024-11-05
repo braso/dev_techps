@@ -265,7 +265,11 @@
 			if(is_int(strpos($campos[$i], "_nb_"))){
 				$inserir .= $valores[$i];
 			}else{
-				$inserir .= "'".$valores[$i]."'";
+				if(empty($valores[$i])){
+					$inserir .= "NULL";
+				}else{
+					$inserir .= "'".$valores[$i]."'";
+				}
 			}
 		}
 		if(strlen($inserir) > 2){
@@ -470,6 +474,8 @@
 			$classe .= " error-field";
 		}
 
+		$regexValidChar = "\"[^!-']\"";
+
 		$dataScript = "<script>";
 
 		switch($mascara){
@@ -621,6 +627,7 @@
 			break;
 			case "MASCARA_SENHA":
 				$type = "password";
+				$regexValidChar = "\"*\"";
 			break;
 			case "MASCARA_PLACA":
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['AAA-9A99', 'AAA-9999']});";
@@ -630,7 +637,7 @@
 				"field = document.querySelector('#".$variavel."');
 				if(typeof field.addEventListener !== 'undefined'){
 					field.addEventListener('keypress', function(e){
-						if(!validChar(e, \"[^!-']\")){
+						if(!validChar(e, ".$regexValidChar.")){
 							e.preventDefault();
 						}
 					});
@@ -983,8 +990,8 @@
 		$tab=substr($tabela,0,4);
 		$c_opcao = '';
 		if($nome[0] == "!"){
-			$c_opcao.="<option value=''></option>";
 			$nome=substr($nome, 1);
+			$c_opcao.="<option value='' hidden></option>";
 		}
 		
 		// if(stripos($extra_bd,"order by") === false){

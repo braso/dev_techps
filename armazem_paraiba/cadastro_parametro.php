@@ -11,7 +11,22 @@
 	include "conecta.php";
 
 	function excluirParametro(){
-		inactivateById("parametro", $_POST["id"]);
+		$usuariosParametro = mysqli_fetch_all(query(
+			"SELECT enti_tx_nome FROM parametro"
+				." JOIN entidade ON para_nb_id = enti_nb_parametro"
+				." WHERE para_nb_id = ".$_POST["id"].";"
+		), MYSQLI_ASSOC);
+
+		if(empty($usuariosParametro)){
+			inactivateById("parametro", $_POST["id"]);
+		}else{
+			$errorMsg = [];
+			foreach($usuariosParametro as $usuarioParametro){
+				$errorMsg[] = $usuarioParametro["enti_tx_nome"];
+			}
+
+			set_status("ERRO: Existem motoristas vinculados a esse parâmetro.<br><div style='text-align:left;'><br>- ".implode(",<br>- ", $errorMsg)."</div>");
+		}
 		index();
 		exit;
 	}

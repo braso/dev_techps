@@ -390,7 +390,12 @@
 			$campo_expiracao = texto("Dt. Expiração", $data_expiracao, 2, "style=''");
 			$campo_senha = campo_senha("Senha*", "senha", "", 2);
 			$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2);
-			$campo_matricula = texto("Matricula", ($a_mod["user_tx_matricula"]?? ""), 2, "");
+			if($editingDriver){
+				$entidade = carregar("entidade", $a_mod["user_nb_entidade"]);
+				$campo_matricula = texto("Matricula", ($entidade["enti_tx_matricula"]?? ""), 2, "");
+			}else{
+				$campo_matricula = "";
+			}
 		}
 
 		if($editPermission){
@@ -561,23 +566,19 @@
 		fecha_form($buttons);
 
 		$sql = 
-			"SELECT user_nb_id, user_tx_nome, user_tx_matricula, user_tx_cpf, user_tx_login, user_tx_nivel, user_tx_email, user_tx_fone, user_tx_status, empresa.empr_tx_nome, entidade.enti_tx_matricula FROM user"
+			"SELECT user_nb_id, user_tx_nome, user_tx_cpf, user_tx_login, user_tx_nivel, user_tx_email, user_tx_fone, user_tx_status, empresa.empr_tx_nome, entidade.enti_tx_matricula FROM user"
 			." LEFT JOIN empresa ON empresa.empr_nb_id = user.user_nb_empresa"
 			." LEFT JOIN entidade ON user_nb_entidade = enti_nb_id"
 			." WHERE 1"
 				." ".$extra.";"
 		;
 
-		$valores = mysqli_fetch_all(
-			query($sql),
-			MYSQLI_ASSOC
-		);
+		$valores = mysqli_fetch_all(query($sql),MYSQLI_ASSOC);
 
 		for($f = 0; $f < count($valores); $f++){
 			$valores[$f] = [
 				"user_nb_id" => $valores[$f]["user_nb_id"],
 				"user_tx_nome" => $valores[$f]["user_tx_nome"],
-				"user_tx_matricula" => $valores[$f]["user_tx_matricula"],
 				"user_tx_cpf" => $valores[$f]["user_tx_cpf"],
 				"user_tx_login" => $valores[$f]["user_tx_login"],
 				"user_tx_nivel" => $valores[$f]["user_tx_nivel"],
@@ -591,11 +592,11 @@
 		}
 
 
-		$cab = ["CÓDIGO", "NOME","MATRICULA", "CPF", "LOGIN", "NÍVEL", "E-MAIL", "TELEFONE", "EMPRESA", "STATUS", "", ""];
+		$cab = ["CÓDIGO", "NOME", "MATRICULA", "CPF", "LOGIN", "NÍVEL", "E-MAIL", "TELEFONE", "EMPRESA", "STATUS", "", ""];
 		$val = [
 			"user_nb_id",
 			"user_tx_nome",
-			"user_tx_matricula",
+			"enti_tx_matricula",
 			"user_tx_cpf",
 			"user_tx_login",
 			"user_tx_nivel",

@@ -102,6 +102,9 @@
 			$_POST["postMatricula"] = substr($_POST["postMatricula"], 1);
 		}
 
+		$_POST["cpf"] = preg_replace("/[^0-9]/is", "", $_POST["cpf"]);
+		$_POST["rg"] = preg_replace("/[^0-9]/is", "", $_POST["rg"]);
+
 		$enti_campos = [
 			"enti_tx_matricula" 				=> "postMatricula", 
 			"enti_tx_nome" 						=> "nome", 
@@ -208,6 +211,9 @@
 					$camposObrig["cnhPrimeiraHabilitacao"]
 				);
 			}
+			if($_POST["status"] == "inativo"){
+				$camposObrig["desligamento"] = "Desligamento";
+			}
 			$errorMsg = conferirCamposObrig($camposObrig, $_POST);
 			if(!empty($errorMsg)){
 				set_status("ERRO: ".$errorMsg);
@@ -231,9 +237,9 @@
 			exit;
 		}
 
-		if(!empty($_POST["postMatricula"]) && strlen($_POST["postMatricula"]) > 10){
+		if(!empty($_POST["postMatricula"]) && strlen($_POST["postMatricula"]) > 11){
 			$_POST["errorFields"][] = "postMatricula";
-			set_status("ERRO: Matrícula com mais de 10 caracteres.");
+			set_status("ERRO: Matrícula com mais de 11 caracteres.");
 			visualizarCadastro();
 			exit;
 		}
@@ -270,9 +276,6 @@
 		for($f = 0; $f < count($postKeys); $f++){
 			$enti_valores[] = !empty($_POST[$postKeys[$f]])? $_POST[$postKeys[$f]]: "";
 		}
-
-		$_POST["cpf"] = preg_replace("/[^0-9]/is", "", $_POST["cpf"]);
-		$_POST["rg"] = preg_replace("/[^0-9]/is", "", $_POST["rg"]);
 		
 		if (empty($_POST["id"])) {//Se está criando um motorista novo
 			$aEmpresa = carregar("empresa", $_POST["empresa"]);
@@ -302,8 +305,7 @@
 			}
 			
 			$newUser = [
-				"user_tx_matricula" 	=> $_POST["postMatricula"], 
-				"user_tx_nome" 			=> $_POST["nome"], 
+				"user_tx_nome" 			=> $_POST["nome"],
 				"user_tx_nivel" 		=> $_POST["ocupacao"], 
 				"user_tx_login" 		=> (!empty($_POST["login"])? $_POST["login"]: $_POST["postMatricula"]), 
 				"user_tx_senha" 		=> md5($_POST["cpf"]), 
@@ -379,10 +381,10 @@
 			$novoMotorista["enti_tx_dataAtualiza"] = date("Y-m-d H:i:s");
 			$novoMotorista["enti_tx_ehPadrao"] = $ehPadrao;
 
-			if (!empty($novoMotorista['enti_tx_status']) && $novoMotorista['enti_tx_status'] === 'inativo') {
-				$novoMotorista['enti_tx_desligamento'] = date("Y-m-d H:i:s");
-			} else {
-				unset($novoMotorista['enti_tx_desligamento']);
+			if($novoMotorista['enti_tx_status'] === 'inativo') {
+				$novoMotorista['enti_tx_desligamento'] = $_POST["desligamento"];
+			}else{
+				$novoMotorista['enti_tx_desligamento'] = NULL;
 			}
 
 			atualizar("entidade", array_keys($novoMotorista), array_values($novoMotorista), $_POST["id"]);
@@ -436,17 +438,18 @@
 	}
 
 	function excluirMotorista(){
-		remover("entidade", $_POST["id"]);
+
+		atualizar("entidade", ["enti_tx_status"], ["inativo"], $_POST["id"]);
 		$idUsuario = mysqli_fetch_assoc(query(
 			"SELECT user_nb_id FROM user 
-				JOIN entidade ON user_tx_matricula = enti_tx_matricula
+				JOIN entidade ON user_nb_entidade = enti_nb_id
 				WHERE user_tx_status = 'ativo'
 					AND enti_nb_id = ".$_POST["id"]."
 				LIMIT 1;"
 		));
 
 		if(!empty($idUsuario)){
-			remover("user", $idUsuario["user_nb_id"]);
+			atualizar("user", ["user_tx_status"], ["inativo"], $idUsuario["user_nb_id"]);
 		}
 		index();
 		exit;
@@ -555,8 +558,8 @@
 
 		$camposPessoais = [
 			((!empty($_POST["id"]))?
-				texto("Matrícula*", $a_mod["enti_tx_matricula"], 2, "tabindex=".sprintf("%02d", $tabIndex++)." maxlength=10"):
-				campo("Matrícula*", "postMatricula", ($a_mod["enti_tx_matricula"]?? ""), 2, "", "tabindex=".sprintf("%02d", $tabIndex++)." maxlength=10")
+				texto("Matrícula*", $a_mod["enti_tx_matricula"], 2, "tabindex=".sprintf("%02d", $tabIndex++)." maxlength=11"):
+				campo("Matrícula*", "postMatricula", ($a_mod["enti_tx_matricula"]?? ""), 2, "", "tabindex=".sprintf("%02d", $tabIndex++)." maxlength=11")
 			)
 		];
 
@@ -628,7 +631,7 @@
 		}
 
 		$cJornada = [
-			combo_bd(	"Parâmetros da Jornada*".($icone_padronizar?? ""), "parametro", ($a_mod["enti_nb_parametro"]?? ""), 6, "parametro", "onfocusout='carregarParametro()' onchange='carregarParametro()' tabindex=".sprintf("%02d", $tabIndex++)),
+			combo_bd(	"!Parâmetros da Jornada*".($icone_padronizar?? ""), "parametro", ($a_mod["enti_nb_parametro"]?? ""), 6, "parametro", "onfocusout='carregarParametro()' onchange='carregarParametro()' tabindex=".sprintf("%02d", $tabIndex++)),
 			"<div class='col-sm-2 margin-bottom-5' style='width:100%; height:25px'></div>",
 			campo_hora(	"Jornada Semanal (Horas/Dia)*", "jornadaSemanal", ($a_mod["enti_tx_jornadaSemanal"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'"),
 			campo_hora(	"Jornada Sábado (Horas/Dia)*", "jornadaSabado", ($a_mod["enti_tx_jornadaSabado"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'"),
@@ -893,15 +896,15 @@
 		$sqlFields = [
 			"enti_nb_id", 
 			"enti_tx_nome", 
-			"enti_tx_matricula", 
-			"enti_tx_cpf", 
-			"empr_tx_nome", 
-			"enti_tx_fone1", 
-			"enti_tx_fone2", 
+			"enti_tx_matricula",
+			"enti_tx_cpf",
+			"empr_tx_nome",
+			"enti_tx_fone1",
+			"enti_tx_fone2",
 			"enti_tx_ocupacao",
 			"enti_tx_dataCadastro",
 			"enti_tx_desligamento",
-			"para_tx_nome", 
+			"para_tx_nome",
 			"enti_tx_ehPadrao",
 			"enti_tx_status"
 		]; 
@@ -909,8 +912,9 @@
 		$sql = ( 
 			"SELECT ".implode(", ", array_values($sqlFields))." FROM entidade"
 				." JOIN empresa ON enti_nb_empresa = empr_nb_id"
-				." JOIN parametro ON enti_nb_parametro = para_nb_id"
-				." WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
+				." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id AND para_tx_status = 'ativo'"
+				." WHERE "
+					." enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
 					.$extraEmpresa." "
 					.$extra.";"
 		);

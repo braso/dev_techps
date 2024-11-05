@@ -10,25 +10,17 @@
 
 	include_once "load_env.php";
 	$error = false;
-	if(isset($_GET["error"])){
-		if(empty($_POST["dominio"])){
-			$msg = 
-				"<div class='alert alert-danger display-block'>
-					<span>Preencha todos os campos para entrar.</span>
-				</div>"
-			;
-		}elseif(!empty($_GET["error"])){
-			$errorMsgs = [
-				"notfound" => "Login ou senha incorretos.",
-				"emptyfields" => "Preencha as informações para entrar.",
-				"notfounddomain" => "Domínio não encontrado."
-			];
-			$msg = 
-				"<div class='alert alert-danger display-block'>
-					<span>".$errorMsgs[$_GET["error"]]."</span>
-				</div>"
-			;
-		}
+	if(!empty($_GET["error"])){
+		$errorMsgs = [
+			"notfound" => "Login ou senha incorretos.",
+			"emptyfields" => "Preencha as informações para entrar.",
+			"notfounddomain" => "Domínio não encontrado."
+		];
+		$msg = 
+			"<div class='alert alert-danger display-block'>
+				<span>".$errorMsgs[$_GET["error"]]."</span>
+			</div>"
+		;
 	}
 
 	if (!empty($_POST["botao"]) && $_POST["botao"] == "Entrar" && !$error){
