@@ -1,16 +1,19 @@
 <?php
     /* Modo Debug{
         ini_set("display_errors", 1);
-        ini_set("display_startup_errors", 1);
         error_reporting(E_ALL);
+
+		header("Expires: 01 Jan 2001 00:00:00 GMT");
+		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+		header("Pragma: no-cache"); // HTTP 1.0.
     //}*/
 
 	
 	include_once "funcoes_ponto.php";
 
 	$dominiosAutotrac = ["/comav"];
-	if(!in_array($_ENV["APP_PATH"], $dominiosAutotrac)){
-		echo "Apenas empresas com Autotrac registrados podem utilizar este serviço.";
+	if(!in_array($_ENV["CONTEX_PATH"], $dominiosAutotrac)){
+		echo "Apenas empresas com Autotrac registrados podem utilizar este serviço.<br>";
 		exit;
 	}
 
@@ -57,7 +60,10 @@
 			return;
 		}
 
-		$f = 0;
+		/*Cadastrar somente do primeiro motorista.{
+			$matriculaInicial = $pontos[0]["driver_cpf"];
+		//}*/
+
 		foreach ($pontos as $ponto) {
 			echo "<br>---------------------------<br>";
 			// Usar a data diretamente da API
@@ -73,11 +79,17 @@
 				"pont_tx_status"		=> "ativo"
 			];
 
+			/*Cadastrar somente do primeiro motorista.{
+				if($newPonto["pont_tx_matricula"] != $matriculaInicial){
+					echo "break";
+					return;
+				}
+			// }*/
+
 			//Conferir se tipo de ponto existe{
 				$macroInterno = mysqli_fetch_assoc(query(
 					"SELECT macr_tx_codigoInterno FROM macroponto"
-					." WHERE macr_tx_status = 'ativo'"
-						." AND macr_tx_fonte = 'autotrac'"
+					." WHERE macr_tx_status = 'ativo' AND macr_tx_fonte = 'autotrac'"
 						." AND macr_tx_codigoExterno = '".$ponto["macro_number"]."'"
 					." LIMIT 1;"
 				));
@@ -87,12 +99,10 @@
 					continue;
 				}
 			//}
-			$newPonto["pont_tx_tipo"] = $macroInterno["macr_tx_codigoInterno"];
-			
 			//Conferir se o macroponto existe{
 				$idMacro = mysqli_fetch_assoc(query(
-					"SELECT macr_nb_id FROM macroponto"
-					." WHERE macr_tx_status = 'ativo'"
+					"SELECT macr_nb_id, macr_tx_nome FROM macroponto"
+					." WHERE macr_tx_status = 'ativo' AND macr_tx_fonte = 'autotrac'"
 						." AND macr_tx_codigoExterno = '".$ponto["macro_number"]."';"
 				));
 
@@ -102,16 +112,6 @@
 					continue;
 				}
 			//}
-
-			$ultimoPonto = mysqli_fetch_assoc(query(
-				"SELECT * FROM ponto"
-				." JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno"
-				." WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'"
-				." AND pont_tx_matricula = '".$newPonto["pont_tx_matricula"]."'"
-				." AND pont_tx_data <= '".$newPonto["pont_tx_data"]."'"
-				."ORDER BY pont_tx_data DESC"
-				." LIMIT 1;"
-			));
 
 			//0 = Conferir se há um intervalo aberto antes para fechar.
 			//"" = Ignorar
@@ -152,41 +152,119 @@
 
 			$newPonto["pont_tx_tipo"] = $relacaoMacros[$ponto["macro_number"]];
 
+			$ultimoPonto = mysqli_fetch_assoc(query(
+				"SELECT * FROM ponto"
+				." JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno"
+				." WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'"
+				." AND pont_tx_matricula = '".$newPonto["pont_tx_matricula"]."'"
+				." AND pont_tx_data < '".$newPonto["pont_tx_data"]."'"
+				."ORDER BY pont_tx_data DESC"
+				." LIMIT 1;"
+			));
+
+
 			if(!empty($ultimoPonto)){
-				// Consultar se já existe um registro com o mesmo horário e matrícula{
-					if($ultimoPonto["pont_tx_tipo"] == $newPonto["pont_tx_tipo"] && $ultimoPonto["pont_tx_data"] == $newPonto["pont_tx_data"]){
-						echo "Ponto já cadastrado.";
+				//Criar um ponto de finalização do último intervalo antes de criar para um novo.{
+					if($newPonto["pont_tx_tipo"] == "0"){
+						if(((int)$ultimoPonto["pont_tx_tipo"]) == 1){
+							echo "Não tem um intervalo anterior aberto para fechar. (".$newPonto["pont_tx_tipo"].")";
+							continue;
+						}
+
+						$newPonto["pont_tx_tipo"] = strval((int)$ultimoPonto["pont_tx_tipo"]+1);
+					}
+
+					if($newPonto["pont_tx_tipo"] == $ultimoPonto["pont_tx_tipo"]){
+						echo "O último ponto é do mesmo tipo. (".$newPonto["pont_tx_tipo"].")";
 						continue;
 					}
-				// }
-				//Criar um ponto de finalização do último intervalo antes de criar para um novo.{
-					if((int)$ultimoPonto["pont_tx_tipo"] != ((int)$newPonto["pont_tx_tipo"])-1 && !in_array("1", [$ultimoPonto["pont_tx_tipo"], $newPonto["pont_tx_tipo"]])){
-						//Cadastrar final do último ponto
-						dd(["Cadastrar final do último ponto.", (int)$ultimoPonto["pont_tx_tipo"], ((int)$newPonto["pont_tx_tipo"])-1, $ponto["macro_number"]]);
 
-						if($newPonto["pont_tx_tipo"] == "0"){
+					/* Manter esse código salvo para caso seja necessário fazer essa conferência no futuro.
+					if(in_array($newPonto["pont_tx_tipo"], ["1", "2"])){
+						$temJornadaAberta = mysqli_fetch_assoc(query(
+							"SELECT pont_nb_id, pont_tx_tipo FROM ponto
+								WHERE pont_tx_status = 'ativo'
+									AND pont_tx_matricula = '".$newPonto["pont_tx_matricula"]."'
+									AND pont_tx_data <= '".$newPonto["pont_tx_data"]."'
+									AND pont_tx_tipo IN ('1', '2')
+								ORDER BY pont_tx_data DESC
+								LIMIT 1;"
+						));
+						if($temJornadaAberta["pont_tx_tipo"] == "1" && $newPonto["pont_tx_tipo"] == "1"){
+							echo "Jornada já aberta anteriormente.";
+							continue;
+						}
+						if($temJornadaAberta["pont_tx_tipo"] == "2" && $newPonto["pont_tx_tipo"] == "2"){
+							remover_ponto($temJornadaAberta["pont_nb_id"], "Há um fechamento de jornada posterior.");
+						}
+
+						$jornadaJaFechada = mysqli_fetch_assoc(query(
+							"SELECT pont_nb_id, pont_tx_tipo FROM ponto
+								WHERE pont_tx_status = 'ativo'
+									AND pont_tx_matricula = '".$newPonto["pont_tx_matricula"]."'
+									AND pont_tx_data >= '".$newPonto["pont_tx_data"]."'
+									AND pont_tx_tipo IN ('1', '2')
+								ORDER BY pont_tx_data DESC
+								LIMIT 1;"
+						));
+
+						if($jornadaJaFechada["pont_tx_tipo"] == "2"){
+							echo "Essa jornada já foi fechada posteriormente.";
 							continue;
 						}
 					}
+					*/
+
+					if(((int)$ultimoPonto["pont_tx_tipo"])%2 == 1 										//o último ponto é uma abertura (tipo = ímpar)
+						&& (int)$ultimoPonto["pont_tx_tipo"] != ((int)$newPonto["pont_tx_tipo"])-1 		//E o último ponto não for a abertura deste
+						&& !in_array("1", [$ultimoPonto["pont_tx_tipo"]])								//E nem o último ponto, nem o ponto atual são aberturas de jornada
+					){
+						//Cadastrar final do último ponto
+						$fechAnterior = $newPonto;
+						$fechAnterior["pont_tx_dataCadastro"] = date("Y-m-d H:i:s");
+						$fechAnterior["pont_tx_data"] = (new DateTime($newPonto["pont_tx_data"]))->modify("-1 second")->format("Y-m-d H:i:s");
+						$fechAnterior["pont_tx_tipo"] = strval((int)$ultimoPonto["pont_tx_tipo"]+1);
+					}
 				//}
-			}elseif($newPonto["pont_tx_tipo"] == "0"){
+			}elseif((int)$newPonto["pont_tx_tipo"]%2 == 0){
 				//Não tem um intervalo anterior aberto para fechar.
-				echo "Não tem um intervalo anterior aberto para fechar.";
+				echo "Não tem um intervalo anterior aberto para fechar. (".$newPonto["pont_tx_tipo"].")";
 				continue;
 			}
+
+			// Consultar se já existe um registro com o mesmo horário e matrícula{
+				$jaCadastrado = !empty(mysqli_fetch_assoc(query(
+					"SELECT pont_nb_id FROM ponto"
+					." WHERE pont_tx_status = 'ativo'"
+					." AND pont_tx_matricula = '".$newPonto["pont_tx_matricula"]."'"
+					." AND pont_tx_data = '".$newPonto["pont_tx_data"]."'"
+					." AND pont_tx_tipo = '".$newPonto["pont_tx_tipo"]."';"
+				)));
+				if($jaCadastrado){
+					echo "Ponto já cadastrado.";
+					continue;
+				}
+			// }
 			
-			dd(["debug", $ponto["macro_number"], $newPonto], false);
 			//*Registrar ponto{
+				if(!empty($fechAnterior)){
+					$result = inserir("ponto", array_keys($fechAnterior), array_values($fechAnterior));
+					if(gettype($result[0]) == "object" && get_class($result[0]) == "Exception"){
+						echo "ERRO: Ao inserir ponto.<br><br>";
+						exit;
+					}
+					dd([$ultimoPonto, $fechAnterior], false);
+					echo "Fechamento cadastrado com sucesso.<br>";
+					unset($fechAnterior);
+				}
 				$result = inserir("ponto", array_keys($newPonto), array_values($newPonto));
 				if(gettype($result[0]) == "object" && get_class($result[0]) == "Exception"){
-					echo "ERRO: Ao inserir ponto.";
+					echo "ERRO: Ao inserir ponto.<br><br>";
 					exit;
 				}
-				echo "Ponto cadastrado com sucesso.";
+				dd($newPonto, false);
+				echo "Ponto cadastrado com sucesso.<br><br>";
 			//}*/
-			if(++$f > 10){
-				dd("break");
-			}
 		}
 	}
 

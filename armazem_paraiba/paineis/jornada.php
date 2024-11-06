@@ -1,5 +1,5 @@
 <?php
-    /* Modo debug
+    //* Modo debug
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
     //*/
@@ -226,7 +226,12 @@
 
         if (!empty($_POST["empresa"]) && !empty($_POST["busca_dataMes"])) {
              require_once "funcoes_paineis.php";
+            //  $tempoInicio = microtime(true);
              criar_relatorio_jornada();
+            //  $tempoFim = microtime(true);
+            //  $tempoExecucao = $tempoFim - $tempoInicio;
+            //  echo "Tempo de execução: " . number_format($tempoExecucao, 4) . " segundos";
+
             $empresa = mysqli_fetch_assoc(query(
                 "SELECT * FROM empresa"
                     . " WHERE empr_tx_status = 'ativo'"
