@@ -1,5 +1,5 @@
 <?php
-    /* Modo debug
+    //* Modo debug
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
     //*/
@@ -24,9 +24,9 @@
             $linha .= "+'<td>'+row.matricula+'</td>'
                     +'<td>'+row.nome+'</td>'
                     +'<td>'+(row.ocupacao?? '')+'</td>'
-                    +'<td style=\"background-color:'+(row.statusEndosso === 'E' ? 'var(--var-darkblue)' : (row.statusEndosso === 'EP' ? 'var(--var-darkyellow)' : 'var(--var-darkred)'))
-                    +'; color:white; text-shadow:2px 2px 3px black\"><strong>'
-                    +row.statusEndosso+'</strong></td>'
+                    +'<td class=\"'+(row.statusEndosso === 'E' ? 'endo' : (row.statusEndosso === 'EP' ? 'endo-parc' : 'nao-endo'))+'\">'
+                        +'<strong>'+row.statusEndosso+'</strong>'
+                    +'</td>'
                     +'<td>'+(invalidValues.includes(row.jornadaPrevista) ? '' : row.jornadaPrevista?? '')+'</td>'
                     +'<td>'+(invalidValues.includes(row.jornadaEfetiva) ? '' : row.jornadaEfetiva?? '')+'</td>'
                     +'<td>'+(invalidValues.includes(row.he50APagar) ? '' : row.he50APagar?? '')+'</td>'
@@ -35,7 +35,7 @@
                     +'<td>'+(invalidValues.includes(row.esperaIndenizada) ? '' : row.esperaIndenizada?? '')+'</td>'
                     +'<td>'+(row.saldoAnterior?? '')+'</td>'
                     +'<td>'+(row.saldoPeriodo > '00:00' ? '<strong>' + row.saldoPeriodo + '</strong>' : (row.saldoPeriodo ?? ''))+'</td>'
-                    +'<td style=\"color:'+(row.saldoFinal > '00:00' ? 'green' : (invalidValues.includes(row.saldoFinal)? 'blue': 'red'))+';\">'
+                   +'<td id='+(row.saldoFinal > '00:00' ? 'saldo-final' : (row.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+';\">'
                     +(row.saldoFinal?? '')+'</td>'
                 +'</tr>';";
         }else{
@@ -50,8 +50,8 @@
                     +'<td>'+(invalidValues.includes(row.totais.esperaIndenizada) ? '' : row.totais.esperaIndenizada)+'</td>'
                     +'<td>'+(invalidValues.includes(row.totais.saldoAnterior) ? '' : row.totais.saldoAnterior)+'</td>'
                     +'<td>'+(row.totais.saldoPeriodo > '00:00' ? '<strong>' + row.totais.saldoPeriodo + '</strong>' : (row.totais.saldoPeriodo ?? ''))+'</td>'
-                    +'<td style=\"color:'+(row.totais.saldoFinal > '00:00' ? 'green' : (invalidValues.includes(row.totais.saldoFinal)? 'blue': 'red'))+';\">'
-                    +(row.totais.saldoFinal ?? '')+'</td>'
+                    +'<td id='+(row.saldoFinal > '00:00' ? 'saldo-final' : (row.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+';\">'
+                    +(row.saldoFinal?? '')+'</td>'
                 +'</tr>';";
         }
 
@@ -372,11 +372,43 @@
 
             if(is_dir($path)){
                 $pastaSaldosEmpresa = dir($path);
+                $motoristas = mysqli_fetch_all(query(
+                "SELECT enti_tx_matricula, enti_tx_desligamento, enti_tx_admissao FROM entidade"
+                    . " WHERE enti_tx_status != 'ativo'"
+                    . " AND enti_nb_empresa = " . $empresa["empr_nb_id"]
+                    . " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
+                    . " ORDER BY enti_tx_nome ASC;"
+                ), MYSQLI_ASSOC);
+
+                $dataBusca = new DateTime($_POST["busca_data"]);
+                foreach($motoristas as $motorista){
+                    if (!empty($motorista["enti_tx_desligamento"])) {
+                        $dataMotorista = new DateTime($motorista["enti_tx_desligamento"]);
+                        $dataMotorista = $dataMotorista->format("Y-m");
+                        if ($dataBusca > $dataMotorista) {
+                            $matriculasInativas = array_map(fn($matricula) => $matricula . ".json", array_column($motoristas, "enti_tx_matricula"));
+                        }
+                    } else {
+                        $dataMotorista = new DateTime($motorista["enti_tx_admissao"]);
+                        $dataMotorista = $dataMotorista->format("Y-m");
+                        if ($dataBusca < $dataMotorista) {
+                            $matriculasInativas = array_map(fn($matricula) => $matricula . ".json", array_column($motoristas, "enti_tx_matricula"));
+                        }
+                    }
+                }
+
                 while($arquivo = $pastaSaldosEmpresa->read()){
                     if(!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))){
                         $arquivos[] = $arquivo;
+
+                        if (!empty($matriculasInativas) && in_array($arquivo, $matriculasInativas)) {
+                            $arquivos = array_diff($arquivos, [$arquivo]);
+                            // unlink($path."/". $arquivo);
+                        }
+
                     }
                 }
+
                 $pastaSaldosEmpresa->close();
 
                 $dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")); //Utilizado no HTML.

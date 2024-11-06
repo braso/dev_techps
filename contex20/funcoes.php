@@ -237,10 +237,10 @@
 		}
 
 		$result = mysqli_fetch_assoc(query(
-			"SELECT * FROM $tabela ORDER BY ".substr($tabela, 0, 4)."_nb_id DESC LIMIT 1;"
+			"SELECT ".substr($tabela, 0, 4)."_nb_id FROM $tabela ORDER BY ".substr($tabela, 0, 4)."_nb_id DESC LIMIT 1;"
 		));
 
-		return (is_array($result)? $result: []);
+		return (is_array($result)? [$result[substr($tabela, 0, 4)."_nb_id"]]: []);
 	}
 
 	function atualizar(string $tabela, array $campos, array $valores, string $id): void{
@@ -265,7 +265,11 @@
 			if(is_int(strpos($campos[$i], "_nb_"))){
 				$inserir .= $valores[$i];
 			}else{
-				$inserir .= "'".$valores[$i]."'";
+				if(empty($valores[$i])){
+					$inserir .= "NULL";
+				}else{
+					$inserir .= "'".$valores[$i]."'";
+				}
 			}
 		}
 		if(strlen($inserir) > 2){
@@ -281,11 +285,11 @@
 	}
 
 	function remover(string $tabela, string $id){
-		inactivateById($tabela,$id);
+		inactivateById($tabela, $id);
 	}
 	function inactivateById(string $tabela, string $id){
-		$tab=substr($tabela,0,4);
-		query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '".$id."' LIMIT 1");
+		$tab = substr($tabela,0,4);
+		query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '".$id."' LIMIT 1;");
 	}
 
 	function remover_ponto(int $id,$just,$atualizar = null){
@@ -470,6 +474,8 @@
 			$classe .= " error-field";
 		}
 
+		$regexValidChar = "\"[^!-']\"";
+
 		$dataScript = "<script>";
 
 		switch($mascara){
@@ -621,6 +627,7 @@
 			break;
 			case "MASCARA_SENHA":
 				$type = "password";
+				$regexValidChar = "\"*\"";
 			break;
 			case "MASCARA_PLACA":
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['AAA-9A99', 'AAA-9999']});";
@@ -630,7 +637,7 @@
 				"field = document.querySelector('#".$variavel."');
 				if(typeof field.addEventListener !== 'undefined'){
 					field.addEventListener('keypress', function(e){
-						if(!validChar(e, \"[^!-']\")){
+						if(!validChar(e, ".$regexValidChar.")){
 							e.preventDefault();
 						}
 					});
@@ -675,24 +682,38 @@
 	}
 
 	function checkbox_banco($nome, $variavel, $modificadoRadio, $modificadoCampo=0, $modificadoCampo2=0, $tamanho=3){
+		$classeGeral = "col-sm-".$tamanho." margin-bottom-5 campo-fit-content";
+
+		$_POST["errorFields"][] = "banco";
+
+		$errorClasses = [
+			"banco" => "",
+			"quandDias" => "",
+			"quandHoras" => "",
+		];
+		foreach(array_keys($errorClasses) as $key){
+			if(!empty($_POST["errorFields"]) && in_array($key, $_POST["errorFields"])){
+				$errorClasses[$key] = "error-field";
+			}
+		}
 		$campo = 
-			'<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content" style="min-width:fit-content; min-height: 50px;">
-				<label>'.$nome.'</label><br>
-				<label class="radio-inline">
-					<input type="radio" id="sim" name="banco" value="sim"> Sim
+			"<div class='".$classeGeral." ".$errorClasses["banco"]."' style='min-width:fit-content; min-height: 50px;'>
+				<label>".$nome."</label><br>
+				<label class='radio-inline'>
+					<input type='radio' id='sim' name='banco' value='sim'> Sim
 				</label>
-				<label class="radio-inline">
-					<input type="radio" id="nao" name="banco" value="nao"> Não
+				<label class='radio-inline'>
+					<input type='radio' id='nao' name='banco' value='nao'> Não
 				</label>
 			</div>
-			<div id="'.$variavel.'" class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content" style="display: none;">
+			<div id='".$variavel."' class='".$classeGeral."' style='display: none;'>
 					<label>Quantidade de Dias*:</label>
-					<input class="form-control input-sm campo-fit-content" type="number" value="'.$modificadoCampo.'" id="outroCampo" name="quandDias" autocomplete="off">
+					<input class='form-control input-sm campo-fit-content ".$errorClasses["quandDias"]."' type='number' value='".$modificadoCampo."' id='outroCampo' name='quandDias' autocomplete='off'>
 			</div>
-			<div id="limiteHoras" class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content" style="display: none;">
+			<div id='limiteHoras' class='".$classeGeral."' style='display: none;'>
 				<label>Quantidade de Horas Limite*:</label>
-				<input class="form-control input-sm campo-fit-content" type="number" value="'.$modificadoCampo2.'" id="outroCampo" name="quandHoras" autocomplete="off">
-			</div>'
+				<input class='form-control input-sm campo-fit-content ".$errorClasses["quandHoras"]."' type='number' value='".$modificadoCampo2."' id='outroCampo' name='quandHoras' autocomplete='off'>
+			</div>"
 		;
 
 		$data_input = 
@@ -969,8 +990,8 @@
 		$tab=substr($tabela,0,4);
 		$c_opcao = '';
 		if($nome[0] == "!"){
-			$c_opcao.="<option value=''></option>";
 			$nome=substr($nome, 1);
+			$c_opcao.="<option value='' hidden></option>";
 		}
 		
 		// if(stripos($extra_bd,"order by") === false){

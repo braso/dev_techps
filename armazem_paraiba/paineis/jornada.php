@@ -1,23 +1,17 @@
 <?php
-/* Modo debug
+    //* Modo debug
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
     //*/
 
+    header("Expires: 01 Jan 2001 00:00:00 GMT");
     header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
     header('Cache-Control: post-check=0, pre-check=0', FALSE);
     header('Pragma: no-cache');
-    header("Expires: 0");
 
     require "../funcoes_ponto.php";
     require_once __DIR__ . "/funcoes_paineis.php";
-    // criar_relatorio_jornada();
-
-    function enviarForm() {
-        $_POST["acao"] = $_POST["campoAcao"];
-        index();
-    }
-
+ 
     function carregarJS(array $arquivos) {
 
         $linha = "linha = '<tr>'";
@@ -67,46 +61,53 @@
 
                         function carregarDados(urlArquivo){
                             $.ajax({
-                                url: urlArquivo,
+                                url: urlArquivo + '?v=' + new Date().getTime(),
                                 dataType: 'json',
                                 success: function(data){
                                     var row = {};
                                     $.each(data, function(index, item){
                                         console.log(item);
 
-                                        function processaCampo(campo,diferencaDias) {
+                                        function processaCampo(campo,diferencaDias, hora) {
                                             // Só aplicar a lógica se a data não for a atual
-                                            if (campo === '*') {
-                                                if(diferencaDias !== 0){
-                                                    return '* D+' + diferencaDias;
-                                                }
-                                                return campo;
+                                            const [horas, minutos] = hora.split(':').map(Number);
+                                            const horaEspecifica = new Date();
+                                            horaEspecifica.setDate(horaEspecifica.getDate() - 1); // Configura para o dia anterior
+                                            horaEspecifica.setHours(horas);
+                                            horaEspecifica.setMinutes(minutos);
+                                            horaEspecifica.setSeconds(0); // Para garantir que os segundos estejam zerados
+
+                                            const horaAtual = new Date(); // Hora atual
+                                            const diferencaMilliseconds = horaAtual - horaEspecifica; // Diferença em milissegundos
+                                            const diferencaHoras = Math.floor(diferencaMilliseconds / (1000 * 60 * 60)); // Converte para horas
+
+                                            // Adiciona a diferença de dias em horas
+                                            const totalHoras = diferencaHoras + (diferencaDias * 24);
+                                            const horasFormatadas = Math.floor(totalHoras);
+                                            const minutosFormatados = Math.round((totalHoras - horasFormatadas) * 60);
+
+                                            const resultadoFormatado = `\${horasFormatadas}:\${String(minutosFormatados).padStart(2, '0')}`;
+
+                                            // console.log(resultadoFormatado);
+                                            if(diferencaDias !== 0){
+                                                return resultadoFormatado+' D+' + diferencaDias;
                                             }
                                             return campo;
                                         }
 
                                         var cor = '';
                                         cor = 'background-color: var(--var-red); color: white;';
+                                        var diferencaDias = item.diaDiferenca;
 
-                                        if(item.data.indexOf('(E)') == -1) {
-                                            var diferencaDias = item.diaDiferenca;
-                                            
-                                            var jornada = processaCampo(item.jornada, diferencaDias);
-                                            var refeicao = processaCampo(item.refeicao, diferencaDias);
-                                            var espera = processaCampo(item.espera, diferencaDias);
-                                            var descanso = processaCampo(item.descanso, diferencaDias);
-                                            var repouso = processaCampo(item.repouso, diferencaDias);
-                                        } else {
-                                            var jornada = item.jornada;
-                                            var refeicao = item.refeicao;
-                                            var espera = item.espera;
-                                            var descanso = item.descanso;
-                                            var repouso = item.repouso;
-                                        }
+                                        var jornada = processaCampo(item.jornada, diferencaDias, item.inicioJornada);
+                                        var refeicao = item.refeicao;
+                                        var espera = item.espera;
+                                        var descanso = item.descanso;
+                                        var repouso = item.repouso;
 
                                     ". $linha . "
                                     tabela.append(linha);
-                    });
+                                    });
                                 },
                                 error: function(){
                                     console.error('Erro ao carregar os dados.');
@@ -161,35 +162,30 @@
 
                         " . $carregarDados . "
                     });
-                    //Variação dos campos de pesquisa{
-                        var camposAcao = document.getElementsByName('campoAcao');
-                        if (camposAcao[0].checked){
-                            document.getElementById('botaoContexBuscar').innerHTML = 'Buscar';
-                            document.getElementById('busca_dataMes').parentElement.style.display = 'block';
-                            document.getElementById('busca_dataInicio').parentElement.style.display = 'none';
-                            document.getElementById('busca_dataFim').parentElement.style.display = 'none';
-                        }
-                        if (camposAcao[1].checked){
-                            document.getElementById('botaoContexBuscar').innerHTML = 'Atualizar';
-                            document.getElementById('busca_dataMes').parentElement.style.display = 'none';
-                            document.getElementById('busca_dataInicio').parentElement.style.display = 'block';
-                            document.getElementById('busca_dataFim').parentElement.style.display = 'block';
-                        }
-                        camposAcao[0].addEventListener('change', function() {
-                            if (camposAcao[0].checked){
-                                document.getElementById('botaoContexBuscar').innerHTML = 'Buscar';
-                                document.getElementById('busca_dataMes').parentElement.style.display = 'block';
-                                document.getElementById('busca_dataInicio').parentElement.style.display = 'none';
-                                document.getElementById('busca_dataFim').parentElement.style.display = 'none';
+
+                       $(document).ready(function() {
+                            // Obtém o botão
+                            const button = document.getElementById('botaoContexBuscar');
+
+                            // Inicializa o select2 no campo 'empresa'
+                            $('#empresa').select2();
+
+                            // Verifica se já há uma opção selecionada ao carregar a página
+                            if ($('#empresa').val()) {
+                                button.removeAttribute('disabled'); // Habilita o botão se houver um valor selecionado
+                            } else {
+                                button.setAttribute('disabled', true); // Desabilita se não houver
                             }
-                        });
-                        camposAcao[1].addEventListener('change', function() {
-                            if (camposAcao[1].checked){
-                                document.getElementById('botaoContexBuscar').innerHTML = 'Atualizar';
-                                document.getElementById('busca_dataMes').parentElement.style.display = 'none';
-                                document.getElementById('busca_dataInicio').parentElement.style.display = 'block';
-                                document.getElementById('busca_dataFim').parentElement.style.display = 'block';
-                            }
+
+                            // Escuta o evento 'select2:select' para capturar quando uma nova opção é selecionada
+                            $('#empresa').on('select2:select', function(e) {
+                                button.removeAttribute('disabled'); // Habilita o botão ao selecionar
+                            });
+
+                            // Escuta o evento 'select2:unselect' para capturar quando uma opção é desmarcada (se múltiplo)
+                            $('#empresa').on('select2:unselect', function(e) {
+                                button.setAttribute('disabled', true); // Desabilita o botão ao desmarcar
+                            });
                         });
                     //}
                 </script>";
@@ -200,96 +196,23 @@
         if (empty($_POST["busca_dataMes"])) {
             $_POST["busca_dataMes"] = date("Y-m");
         }
-        if (empty($_POST["busca_dataInicio"])) {
-            $_POST["busca_dataInicio"] = date("Y-m-01");
-        }
-        if (empty($_POST["busca_dataFim"])) {
-            $_POST["busca_dataFim"] = date("Y-m-d");
-        }
 
-        if (!empty($_POST["acao"]) && $_POST["acao"] == "buscar") {
-            // if(empty($_POST["busca_periodo"])){
-            //     $_POST["busca_periodo"] = date("01/m/Y")." - ".date("d/m/Y");
-            // }
-            // $datas = explode(" - ", $_POST["busca_periodo"]);
-            // $_POST["busca_dataInicio"] = DateTime::createFromFormat("d/m/Y", $datas[0])->format("Y-m-d");
-            // $_POST["busca_dataFim"] = DateTime::createFromFormat("d/m/Y", $datas[1])->format("Y-m-d");
-
-            if ($_POST["busca_dataMes"] > date("Y-m")) {
-                unset($_POST["acao"]);
-                $_POST["errorFields"][] = "busca_dataMes";
-                set_status("ERRO: Não é possível pesquisar após a data atual.");
-            }
-            cabecalho("Relatorio de Jornada Aberta");
-        } elseif (!empty($_POST["acao"]) && $_POST["acao"] == "atualizarPainel") {
-            echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
-            ob_flush();
-            flush();
-
-            cabecalho("Relatorio de Jornada Aberta");
-
-            $err = ($_POST["busca_dataInicio"] > date("Y-m-d")) * 1 + ($_POST["busca_dataFim"] > date("Y-m-d")) * 2;
-            if ($err > 0) {
-                switch ($err) {
-                    case 1:
-                        $_POST["errorFields"][] = "busca_dataInicio";
-                        break;
-                    case 2:
-                        $_POST["errorFields"][] = "busca_dataFim";
-                        break;
-                    case 3:
-                        $_POST["errorFields"][] = "busca_dataInicio";
-                        $_POST["errorFields"][] = "busca_dataFim";
-                        break;
-                }
-                unset($_POST["acao"]);
-                set_status("ERRO: Não é possível atualizar após a data atual.");
-            } else {
-                require_once "funcoes_paineis.php";
-                criar_relatorio_jornada();
-            }
-        } else {
-            cabecalho("Relatorio de Jornada Aberta");
-        }
+        cabecalho("Relatorio de Jornada Aberta");
 
         // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
 
-        $campoAcao =
-            "<div class='col-sm-2 margin-bottom-5' style='min-width:200px;'>
-            <label>" . "Ação" . "</label><br>
-            <label class='radio-inline'>
-            <input type='radio' name='campoAcao' value='buscar' " . ((empty($_POST["campoAcao"]) || $_POST["campoAcao"] == "buscar") ? "checked" : "") . "> Buscar
-            </label>
-            <label class='radio-inline'>
-                    <input type='radio' name='campoAcao' value='atualizarPainel'" . (!empty($_POST["campoAcao"]) && $_POST["campoAcao"] == "atualizarPainel" ? "checked" : "") . "> Atualizar
-            </label>
-        </div>";
-
         $campos = [
             combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
-            // campo("Período*", "busca_periodo", ($_POST["busca_periodo"]?? ""), 3, "MASCARA_PERIODO"),
-            $campoAcao,
             campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
-            campo_data("Data Início*", "busca_dataInicio", ($_POST["busca_dataInicio"] ?? ""), 2),
-            campo_data("Data Fim*", "busca_dataFim", ($_POST["busca_dataFim"] ?? ""), 2)
-            // $texto,
         ];
 
-
-
-        $botao_volta = "";
-        if (!empty($_POST["empresa"])) {
-            $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
-        }
         $botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
 
         $buttons = [
-            botao("Buscar", "enviarForm()", "", "", "", "", "btn btn-info"),
+            botao("Buscar", "", "", "", "", "", "btn btn-info"),
             $botao_imprimir,
-            $botao_volta
         ];
-
 
         abre_form();
         linha_form($campos);
@@ -302,6 +225,12 @@
         $periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
         if (!empty($_POST["empresa"]) && !empty($_POST["busca_dataMes"])) {
+             require_once "funcoes_paineis.php";
+            //  $tempoInicio = microtime(true);
+             criar_relatorio_jornada();
+            //  $tempoFim = microtime(true);
+            //  $tempoExecucao = $tempoFim - $tempoInicio;
+            //  echo "Tempo de execução: " . number_format($tempoExecucao, 4) . " segundos";
 
             $empresa = mysqli_fetch_assoc(query(
                 "SELECT * FROM empresa"
@@ -336,7 +265,10 @@
 
                     $encontrado = true;
                 } else {
-                    echo "<script>alert('Não tem jornadas abertas.')</script>";
+                    require_once "funcoes_paineis.php";
+                    criar_relatorio_jornada();
+                    $encontrado = true;
+                    // echo "<script>alert('Não tem jornadas abertas.')</script>";
                 }
             } else {
                 $encontrado = false;
@@ -358,6 +290,7 @@
                 . "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='descanso'>Descanso</th>"
                 . "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='repouso'>Repouso</th>";
             $rowTitulos .= "</tr>";
+            $titulo = "de Jornada Aberta";
             include_once "painel_html2.php";
         }
 

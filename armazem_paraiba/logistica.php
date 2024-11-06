@@ -523,12 +523,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             </tr>
                         </thead>
                         <tbody>
-                        <?php foreach ($pontos as $ponto): ?>
-                                           <tr>
-                                          <td><?php echo htmlspecialchars($ponto['pont_tx_data']); ?></td>
-                                          <td><?php echo htmlspecialchars($ponto['macr_tx_nome']); ?></td>
-                                       </tr>
-                                   <?php endforeach; ?>
+                            <?php foreach ($pontos as $ponto): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($ponto['pont_tx_data']); ?></td>
+                                    <td><?php echo htmlspecialchars($ponto['macr_tx_nome']); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
