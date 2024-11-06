@@ -420,7 +420,7 @@ cabecalho('');
         <div id="form_header" class="form_title">
 			<img src="imagens/LGC.png" alt="Logo" class="logo">
             <h2 class="title-section">Painel de Não Conformidades Logísticas</h2>
-            <button type="button" class="btn btn-primary" id="toggleFormBtn">✒️<button>
+            <button type="button" class="btn btn-primary" id="toggleFormBtn">✒️</button>
         </div>
   
 
