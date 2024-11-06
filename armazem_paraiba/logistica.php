@@ -2,10 +2,10 @@
 // Ativar relatórios de erros
 
 /*
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-*/
+    ini_set('display_errors', 1);
+    ini_set('display_startup_errors', 1);
+    error_reporting(E_ALL);
+//*/
 
 include_once 'load_env.php';
 include_once 'funcoes_ponto.php';
@@ -82,12 +82,12 @@ function buscarPontos($matricula, $data) {
     $dataFim = $data . ' 23:59:59';
     
     // Prepare a consulta SQL
-    $sql = "SELECT pont_nb_id, pont_tx_data, macr_tx_nome, moti_tx_nome, moti_tx_legenda, pont_tx_justificativa, user_tx_login, pont_tx_dataCadastro, pont_tx_latitude, pont_tx_longitude 
-            FROM ponto
+    $sql = "SELECT pont_nb_id, pont_tx_data, macr_tx_nome, moti_tx_nome, moti_tx_legenda, pont_tx_justificativa, user_tx_login, pont_tx_dataCadastro, pont_tx_latitude, pont_tx_longitude FROM ponto
             JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
             JOIN user ON ponto.pont_nb_userCadastro = user.user_nb_id
             LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
             WHERE ponto.pont_tx_status = 'ativo'
+              AND macroponto.macr_tx_fonte = 'positron'
               AND ponto.pont_tx_matricula = ?
               AND ponto.pont_tx_data BETWEEN ? AND ?
             ORDER BY ponto.pont_tx_data ASC";
@@ -99,6 +99,8 @@ function buscarPontos($matricula, $data) {
     if (!$stmt) {
         die("Erro na preparação da consulta: " . mysqli_error($conn));
     }
+
+    $fonte = "positron";
     
     // Bind dos parâmetros
     mysqli_stmt_bind_param($stmt, 'sss', $matricula, $dataInicio, $dataFim);
@@ -160,7 +162,9 @@ $pontos = buscarPontos($matricula, $data);
   function carregarTipos() {
     global $conn;
     // Atualize a consulta para obter apenas os tipos específicos
-    $sql = "SELECT macr_tx_codigoInterno, macr_tx_nome FROM macroponto WHERE macr_tx_codigoInterno IN (3,5 ,7,9)";
+    $sql = "SELECT macr_tx_codigoInterno, macr_tx_nome FROM macroponto 
+        WHERE macr_tx_codigoInterno IN (3,5 ,7,9) AND macr_tx_fonte = 'positron';"
+    ;
     $result = mysqli_query($conn, $sql);
 
     if (!$result) {
@@ -445,7 +449,7 @@ cabecalho('');
         <div id="form_header" class="form_title">
 			<img src="imagens/LGC.png" alt="Logo" class="logo">
             <h2 class="title-section">Painel de Não Conformidades Logísticas</h2>
-            <button type="button" class="btn btn-primary" id="toggleFormBtn">✒️
+            <button type="button" class="btn btn-primary" id="toggleFormBtn">✒️</button>
         </div>
   
 
