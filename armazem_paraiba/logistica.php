@@ -63,6 +63,7 @@ function buscarPontos($matricula, $data) {
             JOIN user ON ponto.pont_nb_userCadastro = user.user_nb_id
             LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
             WHERE ponto.pont_tx_status = 'ativo'
+              AND macroponto.macr_tx_fonte = ?
               AND ponto.pont_tx_matricula = ?
               AND ponto.pont_tx_data BETWEEN ? AND ?
             ORDER BY ponto.pont_tx_data ASC";
@@ -76,7 +77,7 @@ function buscarPontos($matricula, $data) {
     }
     
     // Bind dos parâmetros
-    mysqli_stmt_bind_param($stmt, 'sss', $matricula, $dataInicio, $dataFim);
+    mysqli_stmt_bind_param($stmt, 'sss', "positron", $matricula, $dataInicio, $dataFim);
     
     // Executar a declaração
     mysqli_stmt_execute($stmt);
@@ -135,7 +136,9 @@ $pontos = buscarPontos($matricula, $data);
   function carregarTipos() {
     global $conn;
     // Atualize a consulta para obter apenas os tipos específicos
-    $sql = "SELECT macr_tx_codigoInterno, macr_tx_nome FROM macroponto WHERE macr_tx_codigoInterno IN (3,5 ,7,9)";
+    $sql = "SELECT macr_tx_codigoInterno, macr_tx_nome FROM macroponto 
+        WHERE macr_tx_codigoInterno IN (3,5 ,7,9) AND macr_tx_fonte = 'positron';"
+    ;
     $result = mysqli_query($conn, $sql);
 
     if (!$result) {
