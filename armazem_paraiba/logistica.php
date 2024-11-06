@@ -420,7 +420,7 @@ cabecalho('');
         <div id="form_header" class="form_title">
 			<img src="imagens/LGC.png" alt="Logo" class="logo">
             <h2 class="title-section">Painel de Não Conformidades Logísticas</h2>
-            <button type="button" class="btn btn-primary" id="toggleFormBtn">AJUSTAR PONTO</button>
+            <button type="button" class="btn btn-primary" id="toggleFormBtn">✒️<button>
         </div>
   
 
@@ -659,17 +659,17 @@ document.addEventListener('DOMContentLoaded', function() {
     #toggleFormBtn {
     position: fixed;
     bottom: 9rem; /* Ajuste a posição conforme necessário */
-    left: 1rem; /* Ajuste a posição conforme necessário */
+    left: 0.5rem; /* Ajuste a posição conforme necessário */
     margin-top: 0; /* Remova o margin-top, pois a posição é fixa */
     background: #192942;
     border-radius: 5px;
-    width: 200px;
+    width: 60px;
     z-index: 1000; /* Garante que fique acima de outros elementos */
 }
 #toggleFormBtn:hover {
     background: #35A3BC;
     border-radius: 10px;
-    width: 200px;
+    width: 60px;
     transition: 0.5s ease; /* Ajustado para uma transição mais rápida e suave */
 }
      #consultarBtn:hover{
