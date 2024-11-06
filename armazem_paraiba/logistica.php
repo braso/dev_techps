@@ -756,7 +756,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 <script>
-    <script>
+
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('plate');
     const suggestionsList = document.getElementById('plate-suggestions');
