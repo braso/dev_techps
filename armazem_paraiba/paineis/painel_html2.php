@@ -1,5 +1,5 @@
 <link rel="stylesheet" href="../css/paineis.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
 <div id="printTitulo">
 	<img style="width: 150px" src="<?= $logoEmpresa ?>" alt="Logo Empresa Esquerda">
 	<h3>Relatorio <?= $titulo ?></h3>
@@ -223,39 +223,87 @@
 	<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . " (UTC-3)" ?>
 </div>
 <script>
-	// const data = {
-	// 	labels: ['Espera', 'Descanso', 'Repouso', 'Jornada', 'Jornada Prevista', 'Jornada Efetiva', 'MDC', 'Refeição', 'Interstício Inferior', 'Interstício Superior'],
-	// 	datasets: [{
-	// 		data: [1, 13, 4, 50, 60, 80, 90, 0, 5, 2], // Dados das fatias <= json_encode($graficoAnalitico) ?>
-	// 		backgroundColor: ['#53d02a', '#53d02a', '#53d02a', '#53d02a', '#53d02a', '#f1c61f', '#f1c61f', '#ec4141', '#ec4141', '#ec4141'], // Cores das fatias
-	// 		hoverOffset: function(context) {
-	// 			const value = context.raw;
-	// 			return value < 1 ? 8 : 4; // Destaca fatias menores que 1%
-	// 		}
-	// 	}]
-	// };
+	document.addEventListener('DOMContentLoaded', function() {
+			// Gráfico sintético
+			const categorias = ['Alta', 'Media', 'Baixa'];
+			const valores = <?= json_encode($graficoSintetico) ?>;
+			const cores = ['#53d02a', '#53d02a', '#ec4141'];
 
-	// const config = {
-	// 	type: 'pie',
-	// 	data: data,
-	// 	options: {
-	// 		responsive: false,
-	// 		plugins: {
-	// 			legend: {
-	// 				display: false,
-	// 				position: 'top',
-	// 			},
-	// 			title: {
-	// 				display: true,
-	// 				text: 'Gráfico de Não Conformidades'
-	// 			}
-	// 		}
-	// 	},
-	// };
+			const dataFormatada = categorias.map((categoria, index) => ({
+				name: categoria,
+				y: valores[index],
+				color: cores[index]
+			}));
 
-	// // Criar e renderizar o gráfico
-	// const myPieChart = new Chart(
-	// 	document.getElementById('myPieChart'),
-	// 	config
-	// );
+			Highcharts.chart('graficoSintetico', {
+				chart: {
+					type: 'pie'
+				},
+				title: {
+					text: 'Gráfico Sintético de Não Conformidades'
+				},
+				tooltip: {
+					pointFormat: '<b>{point.name}</b>: {point.y} ({point.percentage:.2f}%)',
+					style: {
+								fontSize: '16px'
+							}
+				},
+				plotOptions: {
+					pie: {
+						dataLabels: {
+							enabled: true,
+							style: {
+								fontSize: '16px'
+							}
+						},
+						showInLegend: false
+					}
+				},
+				series: [{
+					name: 'Valores',
+					data: dataFormatada
+				}]
+			});
+
+			// Gráfico analítico
+			const categoriasAnalitico = ['Espera', 'Descanso', 'Repouso', 'Jornada', 'Jornada Prevista', 'Jornada Efetiva', 'MDC', 'Refeição', 'Interstício Inferior', 'Interstício Superior'];
+			const valoresAnalitico = <?= json_encode($graficoAnalitico) ?>;
+			const coresAnalitico = ['#53d02a', '#53d02a', '#53d02a', '#53d02a', '#53d02a', '#f1c61f', '#f1c61f', '#ec4141', '#ec4141', '#ec4141'];
+
+			const dataFormatadaAnalitico = categoriasAnalitico.map((categoria2, index) => ({
+				name: categoria2,
+				y: valoresAnalitico[index],
+				color: coresAnalitico[index]
+			}));
+
+			Highcharts.chart('graficoAnalitico', {
+				chart: {
+					type: 'pie'
+				},
+				title: {
+					text: 'Gráfico Analítico de Não Conformidades'
+				},
+				tooltip: {
+					pointFormat: '<b>{point.name}</b>: {point.y} ({point.percentage:.2f}%)',
+					style: {
+								fontSize: '16px'
+							}
+				},
+				plotOptions: {
+					pie: {
+						dataLabels: {
+							enabled: true,
+							style: {
+								fontSize: '16px'
+							}
+						},
+						showInLegend: false
+					}
+				},
+				series: [{
+					name: 'Valores',
+					data: dataFormatadaAnalitico
+				}]
+			});
+	});
 </script>
