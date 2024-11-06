@@ -537,87 +537,88 @@
 
 			$rowGravidade = "
 			<div class='row'>
+				<div class='container' style='display:flex'>
+					<div class='col-md-5'>
+						<div id='graficoSintetico' style='width:100%; height:250px; background-color: lightgray;'>
+							<!-- Conteúdo do gráfico Sintético -->
+						</div>
+					</div>				
+					<div class='col-md-6'>
+						<div id='graficoAnalitico' style='width:100%; height:250px; background-color: lightblue;'>
+						<!-- Conteúdo do gráfico Analítico -->
+						</div>
+					</div>				
+				</div>
+				<div class='col-md-3'>
+				<table style='width: 350px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
+					. "<thead>"
+						. "<tr>"
+							. "<td> Performance </td>"
+						. "</th>"
+					. "</thead>"
+					. "<tbody>"
+						. "<tr>"
+							. "<td class='tituloBaixaGravidade'>Baixa</td>"
+						. "</tr>"
+					. "</tbody>"
+				. "</table>
+				</div>
+				<div class='col-md-3'>
+					<table style='width: 350px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
+						. "<thead>"
+							. "<tr>"
+								. "<td> Quandidade de motoristas por ocupação </td>"
+								. "<td>TOTAL</td>"
+								. "<td>%</td>"
+							. "</th>"
+						. "</thead>"
+							. "<tbody>"
+								. "<tr>"
+									. "<td class='tituloBaixaGravidade'>Baixa</td>"
+									. "<td class='total'>$gravidadeBaixa</td>"
+									. "<td class='total'>".$percentuais["baixa"]."%</td>"
+								. "</tr>"
+								. "<tr>"
+									. "<td class='tituloMediaGravidade'>Média</td>"
+									. "<td class='total'>$gravidadeMedia</td>"
+									. "<td class='total'>".$percentuais["media"]."%</td>"
+								. "</tr>"
+								. "<tr>"
+									. "<td class='tituloAltaGravidade'>Alta</td>"
+									. "<td class='total'>$gravidadeAlta</td>"
+									. "<td class='total'>".$percentuais["alta"]."%</td>"
+								. "</tr>"
+							. "</tbody>"
+						. "</table>
+				</div>
 				<div class='col-md-3'> 
-				<table style='width: 350px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
-								. "<thead>"
-									. "<tr>"
-										. "<td> Performance </td>"
-									. "</th>"
-								. "</thead>"
-								. "<tbody>"
-									. "<tr>"
-										. "<td class='tituloBaixaGravidade'>Baixa</td>"
-									. "</tr>"
-								. "</tbody>"
-							. "</table>
-				<table style='width: 350px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
-								. "<thead>"
-									. "<tr>"
-										. "<td> Nivel de Gravidade</td>"
-										. "<td>TOTAL</td>"
-										. "<td>%</td>"
-									. "</th>"
-								. "</thead>"
-								. "<tbody>"
-									. "<tr>"
-										. "<td class='tituloBaixaGravidade'>Baixa</td>"
-										. "<td class='total'>$gravidadeBaixa</td>"
-										. "<td class='total'>".$percentuais["baixa"]."%</td>"
-									. "</tr>"
-									. "<tr>"
-										. "<td class='tituloMediaGravidade'>Média</td>"
-										. "<td class='total'>$gravidadeMedia</td>"
-										. "<td class='total'>".$percentuais["media"]."%</td>"
-									. "</tr>"
-									. "<tr>"
-										. "<td class='tituloAltaGravidade'>Alta</td>"
-										. "<td class='total'>$gravidadeAlta</td>"
-										. "<td class='total'>".$percentuais["alta"]."%</td>"
-									. "</tr>"
-								. "</tbody>"
-							. "</table>
-							<table style='width: 350px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
-								. "<thead>"
-									. "<tr>"
-										. "<td> Quandidade de motoristas por ocupação </td>"
-										. "<td>TOTAL</td>"
-										. "<td>%</td>"
-									. "</th>"
-								. "</thead>"
-								. "<tbody>"
-									. "<tr>"
-										. "<td class='tituloBaixaGravidade'>Baixa</td>"
-										. "<td class='total'>$gravidadeBaixa</td>"
-										. "<td class='total'>".$percentuais["baixa"]."%</td>"
-									. "</tr>"
-									. "<tr>"
-										. "<td class='tituloMediaGravidade'>Média</td>"
-										. "<td class='total'>$gravidadeMedia</td>"
-										. "<td class='total'>".$percentuais["media"]."%</td>"
-									. "</tr>"
-									. "<tr>"
-										. "<td class='tituloAltaGravidade'>Alta</td>"
-										. "<td class='total'>$gravidadeAlta</td>"
-										. "<td class='total'>".$percentuais["alta"]."%</td>"
-									. "</tr>"
-								. "</tbody>"
-							. "</table>
-							</div>
-							<div class='container' style='display:flex'>
-								
-									<div class='col-md-5'>
-										<div id='graficoSintetico' style='width:100%; height:250px; background-color: lightgray;'>
-											<!-- Conteúdo do gráfico Sintético -->
-										</div>
-									</div>
-									
-									<div class='col-md-6'>
-										<div id='graficoAnalitico' style='width:100%; height:250px; background-color: lightblue;'>
-											<!-- Conteúdo do gráfico Analítico -->
-										</div>
-									</div>
-								
-							</div>
+					<table style='width: 350px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
+						. "<thead>"
+							. "<tr>"
+								. "<td> Nivel de Gravidade</td>"
+								. "<td>TOTAL</td>"
+								. "<td>%</td>"
+							. "</th>"
+						. "</thead>"
+						. "<tbody>"
+							. "<tr>"
+								. "<td class='tituloBaixaGravidade'>Baixa</td>"
+								. "<td class='total'>$gravidadeBaixa</td>"
+								. "<td class='total'>".$percentuais["baixa"]."%</td>"
+							. "</tr>"
+							. "<tr>"
+								. "<td class='tituloMediaGravidade'>Média</td>"
+								. "<td class='total'>$gravidadeMedia</td>"
+								. "<td class='total'>".$percentuais["media"]."%</td>"
+							. "</tr>"
+							. "<tr>"
+								. "<td class='tituloAltaGravidade'>Alta</td>"
+								. "<td class='total'>$gravidadeAlta</td>"
+								. "<td class='total'>".$percentuais["alta"]."%</td>"
+							. "</tr>"
+						. "</tbody>"
+					. "</table>
+				</div>
 			</div>";
 			
 			$rowTitulos = "<tr id='titulos'>";
