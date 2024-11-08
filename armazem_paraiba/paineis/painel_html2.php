@@ -377,7 +377,7 @@
 			tooltip: {
 				// Exibe a quantidade e a porcentagem no tooltip
 				pointFormatter: function() {
-					return `<b>${this.y.toFixed(2)}%</b> (${this.valor} unidades)`;
+					return `<b>${this.y.toFixed(2)}%</b> (${this.valor} Não Conformidades)`;
 				},
 				style: {
 					fontSize: '16px' // Aumenta o tamanho da fonte do tooltip
