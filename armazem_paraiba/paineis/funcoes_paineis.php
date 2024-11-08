@@ -668,7 +668,7 @@
 			$periodoFim = new DateTime($periodoInicio->format("Y-m-t"));
 		}
 
-		if ($_POST["busca_endossado"] == "naoEndossado") {
+		if ($_POST["busca_endossado"] == "endossado") {
 			$mes = new DateTime($_POST["busca_dataMes"] . "-01");
 			$endossos = mysqli_fetch_all(query(
 				"SELECT * FROM endosso"
@@ -753,6 +753,20 @@
 
 							if (is_int(strpos($ponto[13], "fa-warning")) && is_int(strpos($ponto[13], "color:orange;"))) {
 								$totalMotorista["jornadaEfetiva"] += 1;
+							}
+
+							if (
+								$inicioJornadaWarning && strpos($ponto[12], "fa-info-circle") !== false &&
+								strpos($ponto[12], "color:green;") !== false ||
+								$inicioJornadaWarning && strpos($ponto[12], "fa fa-warning") !== false &&
+								strpos($ponto[12], "color:orange;") !== false
+							) {
+								$totalMotorista["faltaJustificada"] += 1;
+							}
+
+							if ($inicioJornadaWarning && strpos($ponto[12], "fa-info-circle") == false && strpos($ponto[12], "color:green;" == false)
+							|| $inicioJornadaWarning && strpos($ponto[12], "fa fa-warning") == false && strpos($ponto[12], "color:orange;" == false)) {
+								$totalMotorista["falta"] += 1;
 							}
 
 							if (
@@ -848,13 +862,15 @@
 								$totalMotorista["intersticioInferior"] += 1;
 							}
 						}
+						$motoristaTotais[] = $totalMotorista;
 
 						if (!is_dir($path . "/endossado/")) {
-							mkdir($path . "/endossado/", 0777, true);  // Cria o diretório com permissões adequadas
+							mkdir($path . "/endossado/", 0755, true);  // Cria o diretório com permissões adequadas
 						}
 
 						file_put_contents($path . "/endossado/" . $motorista["enti_tx_matricula"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 					}
+					
 				}
 			} else {
 
@@ -959,12 +975,11 @@
 			}
 
 			if (!is_dir($path . "/nao_endossado/")) {
-				mkdir($path . "/nao_endossado/", 0777, true);  // Cria o diretório com permissões adequadas
+				mkdir($path . "/nao_endossado/", 0755, true);  // Cria o diretório com permissões adequadas
 			}
 
 			file_put_contents($path . "/nao_endossado/" . $motorista["enti_tx_matricula"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 		}
-
 		$totaisEmpr = [
 			"jornadaPrevista" 			=> 0,
 			"jornadaEfetiva" 			=> 0,

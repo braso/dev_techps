@@ -499,19 +499,64 @@
 					"baixa" => round(($gravidadeBaixa / $totalGeral) * 100, 2)
 				];
 
+				if ($_POST["busca_endossado"] !== "endossado") {
+					// Campos dos graficos {
+					$arrayTitulos = ['Espera', 'Descanso', 'Repouso', 'Jornada', 'Jornada Prevista', 'Jornada Efetiva', 'MDC',
+					'Refeição', 'Interstício Inferior', 'Interstício Superior'];
+
+					$arrayTitulos2 = ['Inicio ou Fim de espera sem registro', 'Inicio ou Fim de descanso sem registro',
+					'Inicio ou Fim de repouso sem registro', 'Inicio ou Fim de jornada sem registro', 'Faltas justificadas', 'Faltas Não justificadas',
+					'Tempo excedida de 10:00h', 'Tempo excedida de 12:00h', 'Descanso de 00:30 a cada 05:30 dirigidos não respeitado',
+					'Descanso de 00:30 não respeitado', 'Descanso de 00:15 não respeitado', 'Batida início de refeição não registrado',
+					'Batida fim de refeição não registrado', 'Refeição Initerrupita maior do que 01:00h não respeitada',
+					'Refeição com Tempo máximo de 02:00h não respeitada', 'O mínimo de 08:00h ininterruptas no primeiro período não respeitado',
+					'Interstício Total de 11:00 não respeitado, faltaram 00:32'
+					];
+
+					$coresGrafico = ['#f1c61f' ,'#f1c61f' ,'#f1c61f','#f1c61f','#f1c61f', '#FFB520', '#FFB520', '#a30000', '#a30000', '#a30000'];
+					$coresGrafico2 = ['#f1c61f', '#f1c61f', '#f1c61f', '#f1c61f', '#f1c61f', '#f1c61f', '#FFB520', '#FFB520', '#FFB520', '#FFB520',
+					'#FFB520', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000'];
+					//}
+					
+					$keys = ["espera", "descanso", "repouso", "jornada", "jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao",
+					"intersticioInferior", "intersticioSuperior"];
+
+					$keys2 = ["espera", "descanso", "repouso", "jornada", "faltaJustificada", "falta","jornadaExcedido10h", "jornadaExcedido12h",
+					"mdcDescanso30m5h", "mdcDescanso30m","mdcDescanso15m", "inicioRefeicaoSemRegistro", "fimRefeicaoSemRegistro" , "refeicao1h",
+					"refeicao2h", "intersticioInferior", "intersticioSuperior"];
+				} else{
+					// Campos dos graficos {
+					$arrayTitulos = ['Jornada Prevista', 'Jornada Efetiva', 'MDC',
+					'Refeição', 'Interstício Inferior', 'Interstício Superior'];
+
+					$arrayTitulos2 = ['Faltas justificadas', 'Faltas Não justificadas',
+					'Tempo excedida de 10:00h', 'Tempo excedida de 12:00h', 'Descanso de 00:30 a cada 05:30 dirigidos não respeitado',
+					'Descanso de 00:30 não respeitado', 'Descanso de 00:15 não respeitado', 'Batida início de refeição não registrado',
+					'Batida fim de refeição não registrado', 'Refeição Initerrupita maior do que 01:00h não respeitada',
+					'Refeição com Tempo máximo de 02:00h não respeitada', 'O mínimo de 08:00h ininterruptas no primeiro período não respeitado',
+					'Interstício Total de 11:00 não respeitado, faltaram 00:32'
+					];
+
+					$coresGrafico = ['#f1c61f', '#FFB520', '#FFB520', '#a30000', '#a30000', '#a30000'];
+					$coresGrafico2 = ['#f1c61f', '#f1c61f', '#FFB520', '#FFB520', '#FFB520', '#FFB520',
+					'#FFB520', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000'];
+					//}
+
+					$keys = ["jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao","intersticioInferior", "intersticioSuperior"];
+
+					$keys2 = ["faltaJustificada", "falta", "jornadaExcedido10h", "jornadaExcedido12h", "mdcDescanso30m5h", "mdcDescanso30m",
+					"mdcDescanso15m", "inicioRefeicaoSemRegistro", "fimRefeicaoSemRegistro" , "refeicao1h", "refeicao2h", "intersticioInferior",
+					"intersticioSuperior"];
+				}
+
 				// Percentuais gerais de Não Conformidade (baseado no total geral)
-				foreach (["espera", "descanso", "repouso", "jornada", "jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao", "intersticioInferior", 
-				"intersticioSuperior"] as $key) {
+				foreach ($keys as $key) {
 					$percentuais["Geral_" . $key] = round(($totalizadores[$key] / $totalGeral) * 100, 2);
 					$graficoAnalitico[] = $totalizadores[$key];
 				}
 	
 				// Percentuais específicos de Não Conformidade (baseado no total de não conformidade)
-				foreach (["espera", "descanso", "repouso", "jornada", "faltaJustificada", "falta",
-					"jornadaExcedido10h", "jornadaExcedido12h", "mdcDescanso30m5h", "mdcDescanso30m",
-					"mdcDescanso15m", "inicioRefeicaoSemRegistro", "fimRefeicaoSemRegistro" ,
-					"refeicao1h", "refeicao2h", "intersticioInferior", "intersticioSuperior"
-				] as $key)  {
+				foreach ($keys2 as $key)  {
 					if ($totalNaoconformidade > 0 && isset($totalizadores[$key])) {
 						$percentuais["Especifico_" . $key] = round(($totalizadores[$key] / $totalNaoconformidade) * 100, 2);
 					} else {
@@ -549,13 +594,17 @@
 		} 
 
 		if ($encontrado) {
+			if ( $_POST["busca_endossado"] !== "endossado") {
+				$totalRow = "<td>" . $totalempre["espera"] . "</td>
+					<td>" . $totalempre["descanso"] . "</td>
+					<td>" . $totalempre["repouso"] . "</td>
+					<td>" . $totalempre["jornada"] . "</td>";
+			}
+			
 			$rowTotal = "<td></td>
 					<td></td>
 					<td>Total</td>
-					<td>".$totalempre["espera"]."</td>
-					<td>".$totalempre["descanso"]."</td>
-					<td>".$totalempre["repouso"]."</td>
-					<td>".$totalempre["jornada"]."</td>
+					$totalRow 
 					<td>".$totalempre["jornadaPrevista"]."</td>
 					<td>".$totalempre["jornadaEfetiva"]."</td>
 					<td>".$totalempre["mdc"]."</td>
@@ -574,7 +623,7 @@
 						</div>
 					</div>				
 					<div class='col-md-6'>
-						<div id='graficoAnalitico' style='width:100%; height:250px; background-color: lightblue;'>
+						<div id='graficoAnalitico' style='width:130%; height:366px; background-color: lightblue;'>
 						<!-- Conteúdo do gráfico Analítico -->
 						</div>
 					</div>				
@@ -603,7 +652,7 @@
 						. "</thead>"
 						. "<tbody>"
 							. "<tr>"
-							. "<td class='tituloBaixaGravidade'>Performance</td>"
+							. "<td class='tituloPerformance'>Performance</td>"
 							. "<td>$totalMotoristasComConformidadesZeradas</td>"
 							. "<td>".$percentuais["performance"]."%</td>"
 							. "</tr>"

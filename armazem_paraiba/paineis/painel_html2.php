@@ -11,9 +11,7 @@
 	<div class="portlet light ">
 		<div class="table-responsive">
 			<div class='emissao' style="display: block !important;">
-				<?php if ($endossado === true) { ?>
-					<h1 class="titulo2">Relatorio <?= $titulo ?></h1>
-				<?php } ?>
+				<h1 class="titulo2">Relatorio Não Conformidade Juridica Atualizado <?= $titulo ?></h1>
 				<span></span>
 				<?= $dataEmissao . "<br>"
 					. "<b>Período do relatório:</b> " . $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"] ?>
@@ -235,7 +233,7 @@
 		// Gráfico sintético
 		const categorias = ['Performance', 'Alta', 'Media', 'Baixa'];
 		const valores = <?= json_encode($graficoSintetico) ?>;
-		const cores = ['#53d02a', '#53d02a', '#53d02a', '#ec4141'];
+		const cores = ['#53d02a', '#a30000', '#FFB520', '#f1c61f'];
 
 		const dataFormatada = categorias.map((categoria, index) => ({
 			name: categoria,
@@ -274,9 +272,9 @@
 		});
 
 		// Gráfico analítico
-		const categoriasAnalitico = ['Espera', 'Descanso', 'Repouso', 'Jornada', 'Jornada Prevista', 'Jornada Efetiva', 'MDC', 'Refeição', 'Interstício Inferior', 'Interstício Superior'];
+		const categoriasAnalitico = <?= json_encode($arrayTitulos) ?>;
 		const valoresAnalitico = <?= json_encode($graficoAnalitico) ?>;
-		const coresAnalitico = ['#53d02a', '#53d02a', '#53d02a', '#53d02a', '#53d02a', '#f1c61f', '#f1c61f', '#ec4141', '#ec4141', '#ec4141'];
+		const coresAnalitico = <?= json_encode($coresGrafico) ?>;
 
 		const dataFormatadaAnalitico = categoriasAnalitico.map((categoria2, index) => ({
 			name: categoria2,
@@ -302,10 +300,12 @@
 					dataLabels: {
 						enabled: true,
 						style: {
-							fontSize: '16px'
-						}
+							fontSize: '13px'
+						},
+						distance: 65
 					},
-					showInLegend: false
+					showInLegend: false,
+					minSize: 5
 				}
 			},
 			series: [{
@@ -314,16 +314,9 @@
 			}]
 		});
 
-		const categoriasDetalhado = ['Inicio ou Fim de espera sem registro', 'Inicio ou Fim de descanso sem registro',
-			'Inicio ou Fim de repouso sem registro', 'Inicio ou Fim de jornada sem registro', 'Faltas justificadas', 'Faltas Não justificadas',
-			'Tempo excedida de 10:00h', 'Tempo excedida de 12:00h', 'Descanso de 00:30 a cada 05:30 dirigidos não respeitado',
-			'Descanso de 00:30 não respeitado', 'Descanso de 00:15 não respeitado', 'Batida início de refeição não registrado',
-			'Batida fim de refeição não registrado', 'Refeição Initerrupita maior do que 01:00h não respeitada',
-			'Refeição com Tempo máximo de 02:00h não respeitada', 'O mínimo de 08:00h ininterruptas no primeiro período não respeitado',
-			'Interstício Total de 11:00 não respeitado, faltaram 00:32'
-		];
+		const categoriasDetalhado = <?= json_encode($arrayTitulos2) ?>;
 		const valoresDetalhado = <?= json_encode($graficoDetalhado) ?>;
-		const coresDetalhado = ['#53d02a', '#53d02a', '#53d02a', '#53d02a', '#53d02a', '#f1c61f', '#f1c61f', '#ec4141', '#ec4141', '#ec4141'];
+		const coresDetalhado = <?= json_encode($coresGrafico2) ?>;
 
 		// Calcula o total para obter as porcentagens
 		const totalDetalhado = valoresDetalhado.reduce((acc, val) => acc + val, 0);
@@ -341,7 +334,7 @@
 				type: 'bar' // Altere o tipo do gráfico para 'bar'
 			},
 			title: {
-				text: 'Gráfico Analítico de Não Conformidades',
+				text: 'Gráfico Detalhado de Não Conformidades',
 				style: {
 					fontSize: '20px' // Aumenta o tamanho do título
 				}
