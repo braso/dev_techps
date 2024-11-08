@@ -112,25 +112,26 @@
 			
 				$(document).ready(function(){
 					var tabela = $('#tabela-empresas tbody');
-
 					function carregarDados(urlArquivo){
 						$.ajax({
 							url: urlArquivo + '?v=' + new Date().getTime(),
 							dataType: 'json',
 							success: function(data){
 								var row = {};
+								var motoristas = 0;
+								var ajudante = 0;
+								var funcionario = 0;
 								$.each(data, function(index, item){
 									row[index] = item;
-									});
+								});
 
-									var totalNaEndossado = (row.jornadaPrevista || 0) + (row.jornadaEfetiva || 0) + (row.refeicao || 0) 
-									+ (row.espera || 0) + (row.descanso || 0) + (row.repouso || 0) + (row.jornada || 0) 
-									+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
+								var totalNaEndossado = (row.jornadaPrevista || 0) + (row.jornadaEfetiva || 0) + (row.refeicao || 0) 
+								+ (row.espera || 0) + (row.descanso || 0) + (row.repouso || 0) + (row.jornada || 0) 
+								+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
 									
-									var totalEndossado = (row.refeicao || 0) + (row.jornadaPrevista || 0) + (row.jornadaEfetiva || 0) 
-										+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
-									console.log(row);
-									"
+								var totalEndossado = (row.refeicao || 0) + (row.jornadaPrevista || 0) + (row.jornadaEfetiva || 0) 
+								+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
+								console.log(row);"
 								.$linha
 								. "tabela.append(linha);
 							},
@@ -405,15 +406,40 @@
 					"inicioRefeicaoSemRegistro" => 0,
 					"fimRefeicaoSemRegistro" => 0,
 					"refeicao1h" => 0,
-					"refeicao2h" => 0
+					"refeicao2h" => 0,
+					"faltaJustificada" => 0,
+					"falta" => 0
 				];
 
+				$todosZerados = true;
+				$totalMotoristasComConformidadesZeradas = 0;
+
+				$motoristas = 0;
 				foreach ($arquivos as &$arquivo) {
 					$arquivo = $path . "/" . $arquivo;
 					$json = json_decode(file_get_contents($arquivo), true);
 					foreach ($totalizadores as $key => &$total) {
+						if (!isset($json[$chave]) || $json[$chave] !== 0) {
+							$todosZerados = false;
+						}
 						$total += $json[$key] ?? 0; // incrementa apenas se o índice existir no JSON
 					}
+					if ($todosZerados) {
+						$totalMotoristasComConformidadesZeradas++;
+					}
+
+					if ($json["ocupacao"] === "Motorista") {
+						$motoristas++;
+					}
+
+					if ($json["ocupacao"] === "Ajudante") {
+						$ajudante++;
+					}
+
+					if ($json["ocupacao"] === "Funcionário") {
+						$funcionario++;
+					}
+
 					unset($total);
 				}
 
@@ -441,6 +467,8 @@
 						$totalizadores["descanso"],
 						$totalizadores["repouso"],
 						$totalizadores["jornada"],
+						$totalizadores["faltaJustificada"],
+						$totalizadores["falta"],
 						$totalizadores["jornadaExcedido10h"],
 						$totalizadores["jornadaExcedido12h"],
 						$totalizadores["mdcDescanso30m5h"],
@@ -448,11 +476,10 @@
 						$totalizadores["mdcDescanso15m"],
 						$totalizadores["inicioRefeicaoSemRegistro"],
 						$totalizadores["fimRefeicaoSemRegistro"],
-						$totalizadores["intersticioInferior"],
-						$totalizadores["intersticioSuperior"],
 						$totalizadores["refeicao1h"],
 						$totalizadores["refeicao2h"],
-						$totalizadores["jornadaPrevista"]
+						$totalizadores["intersticioInferior"],
+						$totalizadores["intersticioSuperior"]
 					]);
 					
 					$gravidadeAlta = $totalizadores["refeicao"] + $totalizadores["intersticioInferior"] + $totalizadores["intersticioSuperior"];
@@ -462,9 +489,11 @@
 				}
 
 				$totalGeral = $gravidadeAlta + $gravidadeMedia + $gravidadeBaixa;
-				$graficoSintetico = [$gravidadeAlta, $gravidadeMedia, $gravidadeBaixa];
+				$graficoSintetico = [$totalMotoristasComConformidadesZeradas ,$gravidadeAlta, 
+				$gravidadeMedia, $gravidadeBaixa];
 
 				$percentuais = [
+					"performance" => round($totalMotoristasComConformidadesZeradas / $totalGeral),
 					"alta" => round(($gravidadeAlta / $totalGeral) * 100, 2),
 					"media" => round(($gravidadeMedia / $totalGeral) * 100, 2),
 					"baixa" => round(($gravidadeBaixa / $totalGeral) * 100, 2)
@@ -478,16 +507,17 @@
 				}
 	
 				// Percentuais específicos de Não Conformidade (baseado no total de não conformidade)
-				foreach ([
-					"espera", "descanso", "repouso", "jornada", "jornadaExcedido10h", "jornadaExcedido12h", "mdcDescanso30m5h", 
-					"mdcDescanso30m", "mdcDescanso15m", "inicioRefeicaoSemRegistro", "fimRefeicaoSemRegistro", "refeicao", 
-					"intersticioInferior", "intersticioSuperior", "refeicao1h", "refeicao2h", "jornadaPrevista"
+				foreach (["espera", "descanso", "repouso", "jornada", "faltaJustificada", "falta",
+					"jornadaExcedido10h", "jornadaExcedido12h", "mdcDescanso30m5h", "mdcDescanso30m",
+					"mdcDescanso15m", "inicioRefeicaoSemRegistro", "fimRefeicaoSemRegistro" ,
+					"refeicao1h", "refeicao2h", "intersticioInferior", "intersticioSuperior"
 				] as $key)  {
 					if ($totalNaoconformidade > 0 && isset($totalizadores[$key])) {
 						$percentuais["Especifico_" . $key] = round(($totalizadores[$key] / $totalNaoconformidade) * 100, 2);
 					} else {
 						$percentuais["Especifico_" . $key] = 0;
 					}
+					$graficoDetalhado[] = $totalizadores[$key];
 				}
 
 				if (!empty($arquivo)) {
@@ -550,21 +580,7 @@
 					</div>				
 				</div>
 				<div class='col-md-3'>
-				<table style='width: 350px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
-					. "<thead>"
-						. "<tr>"
-							. "<td> Performance </td>"
-						. "</th>"
-					. "</thead>"
-					. "<tbody>"
-						. "<tr>"
-							. "<td class='tituloBaixaGravidade'>Baixa</td>"
-						. "</tr>"
-					. "</tbody>"
-				. "</table>
-				</div>
-				<div class='col-md-3'>
-					<table style='width: 350px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
+					<table id='tabela-motorista' style='width: 350px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
 						. "<thead>"
 							. "<tr>"
 								. "<td> Quandidade de motoristas por ocupação </td>"
@@ -573,21 +589,6 @@
 							. "</th>"
 						. "</thead>"
 							. "<tbody>"
-								. "<tr>"
-									. "<td class='tituloBaixaGravidade'>Baixa</td>"
-									. "<td class='total'>$gravidadeBaixa</td>"
-									. "<td class='total'>".$percentuais["baixa"]."%</td>"
-								. "</tr>"
-								. "<tr>"
-									. "<td class='tituloMediaGravidade'>Média</td>"
-									. "<td class='total'>$gravidadeMedia</td>"
-									. "<td class='total'>".$percentuais["media"]."%</td>"
-								. "</tr>"
-								. "<tr>"
-									. "<td class='tituloAltaGravidade'>Alta</td>"
-									. "<td class='total'>$gravidadeAlta</td>"
-									. "<td class='total'>".$percentuais["alta"]."%</td>"
-								. "</tr>"
 							. "</tbody>"
 						. "</table>
 				</div>
@@ -601,6 +602,11 @@
 							. "</th>"
 						. "</thead>"
 						. "<tbody>"
+							. "<tr>"
+							. "<td class='tituloBaixaGravidade'>Performance</td>"
+							. "<td>$totalMotoristasComConformidadesZeradas</td>"
+							. "<td>".$percentuais["performance"]."%</td>"
+							. "</tr>"
 							. "<tr>"
 								. "<td class='tituloBaixaGravidade'>Baixa</td>"
 								. "<td class='total'>$gravidadeBaixa</td>"

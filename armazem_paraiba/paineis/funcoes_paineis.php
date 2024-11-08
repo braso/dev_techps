@@ -726,6 +726,8 @@
 				"mdcDescanso30m" 			=> 0,
 				"mdcDescanso15m" 			=> 0,
 				"mdcDescanso30m5h" 			=> 0,
+				"faltaJustificada"          => 0,
+				"falta"                     => 0,
 
 				"dataInicio"				=> $periodoInicio->format("d/m/Y"),
 				"dataFim"					=> $periodoFim->format("d/m/Y")
@@ -872,6 +874,16 @@
 					if ($inicioJornadaWarning || $fimJornadaWarning) {
 						$totalMotorista["jornadaPrevista"] += 1;
 					}
+
+					if ($inicioJornadaWarning && strpos($dia["jornadaPrevista"], "fa-info-circle") !== false && 
+						strpos($dia["jornadaPrevista"], "color:green;") !== false) {
+						$totalMotorista["faltaJustificada"] += 1;
+					}
+
+					if($inicioJornadaWarning && strpos($dia["jornadaPrevista"], "fa-info-circle") == false && strpos($dia["jornadaPrevista"], "color:green;" == false)){
+						$totalMotorista["falta"] += 1;
+					}
+
 					if (strpos($diffJornada, "fa-info-circle") !== false && strpos($diffJornada, "color:red;") !== false) {
 						$totalMotorista["jornada"] += 1;
 					}

@@ -238,7 +238,7 @@
 					$carregando = "Carregando...";
 				}
 
-				$errorMsg = conferirCamposObrig($camposObrig, $_POST);
+				// $errorMsg = conferirCamposObrig($camposObrig, $_POST);
 				if(!empty($errorMsg)){
 					set_status("ERRO: ".$errorMsg);
 					unset($_POST["acao"]);
