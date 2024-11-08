@@ -2,7 +2,7 @@
 <script src="https://code.highcharts.com/highcharts.js"></script>
 <div id="printTitulo">
 	<img style="width: 150px" src="<?= $logoEmpresa ?>" alt="Logo Empresa Esquerda">
-	<h3>Relatorio <?= $titulo ?></h3>
+	<h3>Relatorio Não Conformidade Juridica Atualizado <?= $titulo ?></h3>
 	<div class="right-logo">
 		<img style="width: 150px" src="<?= $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] ?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 	</div>

@@ -68,14 +68,14 @@ body {
 }
 
 
-/* .tituloBaixaGravidade:hover {
-    background-color: var(--var-green);
+.tituloBaixaGravidade:hover {
+    background-color: var(--var-yellow2);
     color: white;
     cursor: pointer;
 }
 
 .tituloMediaGravidade:hover  {
-    background-color: var(--var-lightyellow);
+    background-color: var(--var-lightorange);
     cursor: pointer;
 }
 
@@ -83,7 +83,7 @@ body {
     background-color: var(--var-red);
     color: white;
     cursor: pointer;
-} */
+}
 
 h4 {
     padding: 10px;
@@ -333,29 +333,33 @@ th.sort-desc::after {
         box-shadow: 0 0 0 1000px var(--var-red) inset !important;
     }
 
-    .tituloBaixaGravidade {
+    .tituloPerformance {
         box-shadow: 0 0 0 1000px var(--var-darkgreen) inset !important;
     }
 
-    .baixaGravidade {
-        box-shadow: 0 0 0 1000px var(--var-green) inset !important;
-    }
-
-    .tituloMediaGravidade {
+    .tituloBaixaGravidade {
         box-shadow: 0 0 0 1000px var(--var-yellow) inset !important;
     }
 
+    .baixaGravidade {
+        box-shadow: 0 0 0 1000px var(--var-yellow2) inset !important;
+    }
+
+    .tituloMediaGravidade {
+        box-shadow: 0 0 0 1000px var(--var-orange) inset !important;
+    }
+
     .mediaGravidade {
-        box-shadow: 0 0 0 1000px var(--var-lightyellow) inset !important;
+        box-shadow: 0 0 0 1000px var(--var-lightorange) inset !important;
         text-align: center;
     }
 
     .tituloAltaGravidade {
-        box-shadow: 0 0 0 1000px var(--var-red) inset !important;
+        box-shadow: 0 0 0 1000px var(--var-darkred) inset !important;
     }
 
     .altaGravidade {
-        box-shadow: 0 0 0 1000px var(--var-red) inset !important;
+        box-shadow: 0 0 0 1000px var(--var-lightred) inset !important;
         text-align: center;
     }
 
