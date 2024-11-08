@@ -618,12 +618,12 @@
 			<div class='row'>
 				<div class='container' style='display:flex'>
 					<div class='col-md-5'>
-						<div id='graficoSintetico' style='width:100%; height:250px; background-color: lightgray;'>
+						<div id='graficoSintetico' style='width:100%; height:390px; background-color: lightgray;'>
 							<!-- Conteúdo do gráfico Sintético -->
 						</div>
 					</div>				
 					<div class='col-md-6'>
-						<div id='graficoAnalitico' style='width:130%; height:366px; background-color: lightblue;'>
+						<div id='graficoAnalitico' style='width:130%; height:390px; background-color: lightblue;'>
 						<!-- Conteúdo do gráfico Analítico -->
 						</div>
 					</div>				

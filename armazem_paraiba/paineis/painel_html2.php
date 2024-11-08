@@ -260,9 +260,11 @@
 						enabled: true,
 						style: {
 							fontSize: '16px'
-						}
+						},
+						distance: 65
 					},
-					showInLegend: false
+					showInLegend: false,
+					minSize: 5
 				}
 			},
 			series: [{
