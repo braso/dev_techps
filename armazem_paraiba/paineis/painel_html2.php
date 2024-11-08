@@ -344,7 +344,7 @@
 			xAxis: {
 				categories: categoriasDetalhado,
 				title: {
-					text: 'Categorias',
+					text: '',
 					style: {
 						fontSize: '16px' // Aumenta o tamanho da fonte do título do eixo X
 					}
