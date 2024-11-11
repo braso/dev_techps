@@ -284,11 +284,11 @@
 				set_status("ERRO: Não é possível atualizar após a data atual.");
 			} else {
 				require_once "funcoes_paineis.php";
-				$tempoInicio = microtime(true);
+				// $tempoInicio = microtime(true);
 				relatorio_nao_conformidade_juridica();
-				$tempoFim = microtime(true);
-				$tempoExecucao = $tempoFim - $tempoInicio;
-				echo "Tempo de execução: " . number_format($tempoExecucao, 4) . " segundos";
+				// $tempoFim = microtime(true);
+				// $tempoExecucao = $tempoFim - $tempoInicio;
+				// echo "Tempo de execução: " . number_format($tempoExecucao, 4) . " segundos";
 			}
 		} else {
 			cabecalho("Relatório de Não Conformidade Juridica Atualizado");

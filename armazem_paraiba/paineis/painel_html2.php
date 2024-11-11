@@ -358,12 +358,12 @@
 			yAxis: {
 				min: 0,
 				max: 100, // Limita o eixo Y a 100%
-				title: {
-					text: 'Porcentagem',
-					style: {
-						fontSize: '16px' // Aumenta o tamanho da fonte do título do eixo Y
-					}
-				},
+				// title: {
+				// 	text: 'Porcentagem',
+				// 	style: {
+				// 		fontSize: '16px'
+				// 	}
+				// },
 				labels: {
 					format: '{value}%', // Exibe as labels do eixo Y como porcentagem
 					style: {
@@ -390,7 +390,7 @@
 						format: '{point.y:.2f}%', // Exibe o valor em porcentagem com duas casas decimais
 						style: {
 							fontSize: '14px' // Aumenta o tamanho da fonte das labels de dados
-						}
+						},
 					}
 				}
 			},
