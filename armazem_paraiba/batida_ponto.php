@@ -429,7 +429,7 @@
 			."</div>",
 		];
 
-		$aEndosso = carrega_array(
+		$aEndosso = mysqli_fetch_array(
 			query(
 				"SELECT user_tx_login, endo_tx_dataCadastro
 					FROM endosso, user
@@ -439,7 +439,7 @@
 						AND endo_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'
 						AND endo_nb_userCadastro = user_nb_id
 					LIMIT 1"
-			)
+			), MYSQLI_BOTH
 		);
 		if (!empty($aEndosso)){
 			$fields[] = texto("Endosso:", "Endossado por " . $aEndosso["user_tx_login"] . " em " . data($aEndosso["endo_tx_dataCadastro"], 1), 6);
