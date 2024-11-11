@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set('display_errors', 1);
 		error_reporting(E_ALL);
 
@@ -178,7 +178,7 @@
 				</style>
 				<div id='statusDiv'>
 					<label id='status-label'>Status:</label>
-					<select name='status' id='status' class='form-control input-sm campo-fit-content' onchange='atualizar_form(".$_POST['id'].", null, \"".$_POST['data_de']."\",  \"".$_POST['data_ate']."\", this.value)'>
+					<select name='status' id='status' class='form-control input-sm campo-fit-content' onchange='atualizar_form(".$_POST['id'].", null, \"".$_POST["busca_periodo"][0]."\",  \"".$_POST["busca_periodo"][1]."\", this.value)'>
 						<option value='ativo'>Ativos</option>
 						<option value='inativo' ".((!empty($_POST['status']) && $_POST['status'] == 'inativo')? 'selected': '').">Inativos</option>
 					</select>
@@ -319,6 +319,10 @@
 		return $cnpjs_formatados;
 	}
 
+	function buscarEspelho(){
+		voltar();	
+	}
+
 
 
 
@@ -326,6 +330,14 @@
 		global $CONTEX;
 		if(empty($_POST['data'])){
 			$_POST['data'] = date("Y-m-d");
+		}
+
+		if(is_string($_POST["busca_periodo"])){
+			[$dataInicio, $dataFim] = explode(" - ", $_POST["busca_periodo"]);
+			$_POST["busca_periodo"] = [
+				DateTime::createFromFormat("d/m/Y H:i:s", $dataInicio." 00:00:00")->format("Y-m-d"),
+				DateTime::createFromFormat("d/m/Y H:i:s", $dataFim." 00:00:00")->format("Y-m-d")
+			];
 		}
 
 		if(empty($_POST['HTTP_REFERER'])){
@@ -347,13 +359,6 @@
 
 		cabecalho('Ajuste de Ponto');
 
-		if(empty($_POST['data_de']) && !empty($_POST['data'])){
-			$_POST['data_de'] = $_POST['data'];
-		}
-		if(empty($_POST['data_ate']) && !empty($_POST['data'])){
-			$_POST['data_ate'] = $_POST['data'];
-		}
-
 		$aMotorista = carregar('entidade', $_POST['id']);
 
 		$sqlCheck = query("SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user 
@@ -364,7 +369,7 @@
 				AND endo_nb_userCadastro = user_nb_id 
 			LIMIT 1"
 		);
-		$aEndosso = carrega_array($sqlCheck);
+		$aEndosso = mysqli_fetch_array($sqlCheck, MYSQLI_BOTH);
 
 		$botao_imprimir =
 			'<button class="btn default" type="button" onclick="imprimir()">Imprimir</button >
@@ -460,13 +465,13 @@
 				"pont_nb_id",
 				"excluir_ponto",
 				"idEntidade",
-				$_POST['data_de'],
-				$_POST['data_ate'],
+				$_POST["busca_periodo"][0],
+				$_POST["busca_periodo"][1],
 				$_POST["id"]
 			];
 
 			$iconeExcluir = "icone_excluir_ajuste(".implode(",", $parametros).")"; //Utilizado em grid()
-			$variableFields[] = campo_data('Data', 'data', ($_POST['data']?? ""), 2, "onfocusout='atualizar_form(".$_POST['id'].", this.value, \"".$_POST['data_de']."\", \"".$_POST['data_ate']."\")', null");
+			$variableFields[] = campo_data('Data', 'data', ($_POST['data']?? ""), 2, "onfocusout='atualizar_form(".$_POST['id'].", this.value, \"".$_POST["busca_periodo"][0]."\", \"".$_POST["busca_periodo"][1]."\")', null");
 			$variableFields[] = campo_hora('Hora','hora',($_POST['hora']?? ""),2);
 			$variableFields[] = combo_bd('Tipo de Registro','idMacro',($_POST['idMacro']?? ""),4,"macroponto","","ORDER BY macr_nb_id");
 			$variableFields[] = combo_bd('Motivo','motivo',($_POST['motivo']?? ""),4,'motivo','',' AND moti_tx_tipo = "Ajuste" ORDER BY moti_tx_nome');
@@ -475,7 +480,7 @@
 		}
 
 		$botoes[] = $botao_imprimir;
-		$botoes[] = botao("Voltar", "voltar");
+		$botoes[] = botao("Voltar", "voltar", "acao", "buscarEspelho");
 		$botoes[] = $botaoConsLog; //BOTÃO CONSULTAR LOGISTICA
 		$botoes[] = status();
 
@@ -493,8 +498,8 @@
 		echo campo_hidden("busca_empresa", 		$_POST["busca_empresa"]);
 		echo campo_hidden("busca_motorista", 	$_POST["id"]);
 		echo campo_hidden("busca_data", 		$_POST["data"]);
-		echo campo_hidden("data_de", 			$_POST["data_de"]);
-		echo campo_hidden("data_ate", 			$_POST["data_ate"]);
+		echo campo_hidden("busca_periodo[]",	$_POST["busca_periodo"][0]);
+		echo campo_hidden("busca_periodo[]",	$_POST["busca_periodo"][1]);
 		echo campo_hidden("HTTP_REFERER", 		$_POST["HTTP_REFERER"]);
 		linha_form($variableFields);
 		linha_form($campoJust);
@@ -582,8 +587,7 @@
 				<input type='hidden' name='busca_motorista'>
 				<input type='hidden' name='data'>
 				<input type='hidden' name='busca_data'>
-				<input type='hidden' name='data_de'>
-				<input type='hidden' name='data_ate'>
+				<input type='hidden' name='busca_periodo[]'>
 				<input type='hidden' name='status'>
 				<input type='hidden' name='HTTP_REFERER'>
 			</form>
@@ -601,8 +605,7 @@
 					if(valorDataInicial != data || valorStatusInicial != status){
 						document.form_ajuste_status.id.value = motorista;
 						document.form_ajuste_status.data.value = data;
-						document.form_ajuste_status.data_de.value = data_de;
-						document.form_ajuste_status.data_ate.value = data_ate;
+						document.form_ajuste_status.busca_periodo.value = [data_de, data_ate];
 						document.form_ajuste_status.status.value = status;
 						document.form_ajuste_status.HTTP_REFERER.value = '".$_POST['HTTP_REFERER']."';
 						document.getElementById('status').value = status;
