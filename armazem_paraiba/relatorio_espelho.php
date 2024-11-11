@@ -22,16 +22,16 @@
 
 <body>    
     <script>
-    function downloadCSV() {
+    function downloadCSV(idMotorista, nomeMotorista) {
         // Caminho do arquivo CSV no servidor
-        var filePath = '<?="./arquivos/endosso_csv/".$aEmpresa["empr_nb_id"]."/".$aMotorista["enti_nb_id"]."/espelho-de-ponto.csv"?>'; // Substitua pelo caminho do seu arquivo
+        var filePath = './arquivos/endosso_csv/'+<?=$aEmpresa["empr_nb_id"]?>+'/'+idMotorista+'/espelho-de-ponto.csv'; // Substitua pelo caminho do seu arquivo
 
         // Cria um link para download
         var link = document.createElement('a');
 
         // Configurações do link
         link.setAttribute('href', filePath);
-        link.setAttribute('download', '<?="espelho-de-ponto-".$aMotorista["enti_tx_nome"].".csv"?>');
+        link.setAttribute('download', 'espelho-de-ponto-'+nomeMotorista+'.csv');
 
         // Adiciona o link ao documento
         document.body.appendChild(link);
@@ -128,7 +128,7 @@
         </tbody>
     </table>
 
-    <div><b>TOTAL: <?=$diasEndossados?> dias</b></div>
+    <div><b>TOTAL: <?=$qtdDiasEndossados?> dias</b></div>
 
 
     <table class="table-bottom">
@@ -289,11 +289,8 @@
             <td id="impressao"><b>Impressão Doc.:</b> <?=date("d/m/Y \T H:i:s") . "(UTC-3)"?></td>
         </tr>
     </table>
-    <div id="exporta">
-        <button id="btnImprimir" class="btn default" type="button" onclick="imprimir()">
-            <img width="20" height="20" src="https://img.icons8.com/android/24/FFFFFF/print.png" alt="print"/> Imprimir</button>
-        <button id="btnCsv" onclick="downloadCSV()">
-            <img width="20" height="20" src="https://img.icons8.com/glyph-neue/64/FFFFFF/csv.png" alt="csv"/> Baixar CSV</button>
+    <div id='exporta'>
+        <?= implode("", $botoes) ?>
     </div>
     <div style="page-break-after: always;"></div>
 </body>
