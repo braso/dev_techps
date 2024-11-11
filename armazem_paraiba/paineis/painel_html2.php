@@ -1,8 +1,8 @@
 <link rel="stylesheet" href="../css/paineis.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
 <div id="printTitulo">
 	<img style="width: 150px" src="<?= $logoEmpresa ?>" alt="Logo Empresa Esquerda">
-	<h3>Relatorio <?= $titulo ?></h3>
+	<h3>Relatorio Não Conformidade Juridica Atualizado <?= $titulo ?></h3>
 	<div class="right-logo">
 		<img style="width: 150px" src="<?= $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] ?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 	</div>
@@ -11,9 +11,7 @@
 	<div class="portlet light ">
 		<div class="table-responsive">
 			<div class='emissao' style="display: block !important;">
-				<?php if ($endossado === true) { ?>
-					<h1 class="titulo2">Relatorio <?= $titulo ?></h1>
-				<?php } ?>
+				<h1 class="titulo2">Relatorio Não Conformidade Juridica Atualizado <?= $titulo ?></h1>
 				<span></span>
 				<?= $dataEmissao . "<br>"
 					. "<b>Período do relatório:</b> " . $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"] ?>
@@ -120,142 +118,319 @@
 				<h4><b>Total de Não conformidade de todos Funcionário</b></h4>
 			</div>
 			<div class="portlet-body form">
-				<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact" style="width: 400px;">
-					<thead>
-						<tr>
-							<td></td>
-							<td>Total</td>
-							<td>%</td>
-						</tr>
-					</thead>
-					<tbody>
-						<?php if ($_POST["busca_endossado"] == "naoEndossado") { ?>
+				<div class='container' style='display:flex'>
+					<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact" style="width: 400px;">
+						<thead>
 							<tr>
-								<td class="tituloBaixaGravidade">Inicio ou Fim de espera sem registro</td>
-								<td><?= $totalizadores["espera"] ?></td>
-								<td><?= $percentuais["Especifico_espera"] ?>%</td>
+								<td></td>
+								<td>Total</td>
+								<td>%</td>
+							</tr>
+						</thead>
+						<tbody>
+							<?php if ($_POST["busca_endossado"] == "naoEndossado") { ?>
+								<tr>
+									<td class="tituloBaixaGravidade">Inicio ou Fim de espera sem registro</td>
+									<td><?= $totalizadores["espera"] ?></td>
+									<td><?= $percentuais["Especifico_espera"] ?>%</td>
+								</tr>
+								<tr>
+									<td class="tituloBaixaGravidade">Inicio ou Fim de descanso sem registro</td>
+									<td><?= $totalizadores["descanso"] ?></td>
+									<td><?= $percentuais["Especifico_descanso"] ?>%</td>
+								</tr>
+								<tr>
+									<td class="tituloBaixaGravidade">Inicio ou Fim de repouso sem registro</td>
+									<td><?= $totalizadores["repouso"] ?></td>
+									<td><?= $percentuais["Especifico_repouso"] ?>%</td>
+								</tr>
+								<tr>
+									<td class="tituloBaixaGravidade">Inicio ou Fim de jornada sem registro</td>
+									<td><?= $totalizadores["jornada"] ?></td>
+									<td><?= $percentuais["Especifico_jornada"] ?>%</td>
+								</tr>
+							<?php } ?>
+							<tr>
+								<td class="tituloBaixaGravidade">Faltas justificadas</td>
+								<td><?= $totalizadores["faltaJustificada"] ?></td>
+								<td><?= $percentuais["Especifico_faltaJustificada"] ?>%</td>
 							</tr>
 							<tr>
-								<td class="tituloBaixaGravidade">Inicio ou Fim de descanso sem registro</td>
-								<td><?= $totalizadores["descanso"] ?></td>
-								<td><?= $percentuais["Especifico_descanso"] ?>%</td>
+								<td class="tituloBaixaGravidade">Faltas não justificadas</td>
+								<td><?= $totalizadores["falta"] ?></td>
+								<td><?= $percentuais["Especifico_falta"] ?>%</td>
 							</tr>
 							<tr>
-								<td class="tituloBaixaGravidade">Inicio ou Fim de repouso sem registro</td>
-								<td><?= $totalizadores["repouso"] ?></td>
-								<td><?= $percentuais["Especifico_repouso"] ?>%</td>
+								<td class="tituloMediaGravidade">Tempo excedida de 10:00h</td>
+								<td><?= $totalizadores["jornadaExcedido10h"] ?></td>
+								<td><?= $percentuais["Especifico_jornadaExcedido10h"] ?>%</td>
 							</tr>
 							<tr>
-								<td class="tituloBaixaGravidade">Inicio ou Fim de jornada sem registro</td>
-								<td><?= $totalizadores["jornada"] ?></td>
-								<td><?= $percentuais["Especifico_jornada"] ?>%</td>
+								<td class="tituloMediaGravidade">Tempo excedida de 12:00h</td>
+								<td><?= $totalizadores["jornadaExcedido12h"] ?></td>
+								<td><?= $percentuais["Especifico_jornadaExcedido12h"] ?>%</td>
 							</tr>
-						<?php } ?>
-						<tr>
-							<td class="tituloBaixaGravidade">Abono (Folgas, Férias ou outros)</td>
-							<td><?= $totalizadores["jornadaPrevista"] ?></td>
-							<td><?= $percentuais["Especifico_jornadaPrevista"] ?>%</td>
-						</tr>
-						<tr>
-							<td class="tituloMediaGravidade">Tempo excedida de 10:00h</td>
-							<td><?= $totalizadores["jornadaExcedido10h"] ?></td>
-							<td><?= $percentuais["Especifico_jornadaExcedido10h"] ?>%</td>
-						</tr>
-						<tr>
-							<td class="tituloMediaGravidade">Tempo excedida de 12:00h</td>
-							<td><?= $totalizadores["jornadaExcedido12h"] ?></td>
-							<td><?= $percentuais["Especifico_jornadaExcedido12h"] ?>%</td>
-						</tr>
-						<tr>
-							<td class="tituloMediaGravidade">Descanso de 00:30 a cada 05:30 dirigidos não respeitado</td>
-							<td><?= $totalizadores["mdcDescanso30m5h"] ?></td>
-							<td><?= $percentuais["Especifico_mdcDescanso30m5h"] ?>%</td>
-						</tr>
-						<tr>
-							<td class="tituloMediaGravidade">Descanso de 00:30 não respeitado</td>
-							<td><?= $totalizadores["mdcDescanso30m"] ?></td>
-							<td><?= $percentuais["Especifico_mdcDescanso30m"] ?>%</td>
-						</tr>
-						<tr>
-							<td class="tituloMediaGravidade">Descanso de 00:15 não respeitado</td>
-							<td><?= $totalizadores["mdcDescanso15m"] ?></td>
-							<td><?= $percentuais["Especifico_mdcDescanso15m"] ?>%</td>
-						</tr>
-						<tr>
-							<td class="tituloAltaGravidade">Batida início de refeição não registrado</td>
-							<td><?= $totalizadores["inicioRefeicaoSemRegistro"] ?></td>
-							<td><?= $percentuais["Especifico_inicioRefeicaoSemRegistro"] ?>%</td>
-						</tr>
-						<tr>
-							<td class="tituloAltaGravidade">Batida fim de refeição não registrado</td>
-							<td><?= $totalizadores["fimRefeicaoSemRegistro"] ?></td>
-							<td><?= $percentuais["Especifico_fimRefeicaoSemRegistro"] ?>%</td>
-						</tr>
-						<tr>
-							<td class="tituloAltaGravidade">Refeição Initerrupita maior do que 01:00h não respeitada</td>
-							<td><?= $totalizadores["refeicao1h"] ?></td>
-							<td><?= $percentuais["Especifico_refeicao1h"] ?>%</td>
-						</tr>
-						<tr>
-							<td class="tituloAltaGravidade">Refeição com Tempo máximo de 02:00h não respeitada</td>
-							<td><?= $totalizadores["refeicao2h"] ?></td>
-							<td><?= $percentuais["Especifico_refeicao2h"] ?>%</td>
-						</tr>
-						<tr>
-							<td class="tituloAltaGravidade">O mínimo de 08:00h ininterruptas no primeiro período não respeitado</td>
-							<td><?= $totalizadores["intersticioInferior"] ?></td>
-							<td><?= $percentuais["Especifico_intersticioInferior"] ?>%</td>
-						</tr>
-						<tr>
-							<td class="tituloAltaGravidade">Interstício Total de 11:00 não respeitado, faltaram 00:32</td>
-							<td><?= $totalizadores["intersticioSuperior"] ?></td>
-							<td><?= $percentuais["Especifico_intersticioSuperior"] ?>%</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
-		<?php } ?>
+							<tr>
+								<td class="tituloMediaGravidade">Descanso de 00:30 a cada 05:30 dirigidos não respeitado</td>
+								<td><?= $totalizadores["mdcDescanso30m5h"] ?></td>
+								<td><?= $percentuais["Especifico_mdcDescanso30m5h"] ?>%</td>
+							</tr>
+							<tr>
+								<td class="tituloMediaGravidade">Descanso de 00:30 não respeitado</td>
+								<td><?= $totalizadores["mdcDescanso30m"] ?></td>
+								<td><?= $percentuais["Especifico_mdcDescanso30m"] ?>%</td>
+							</tr>
+							<tr>
+								<td class="tituloMediaGravidade">Descanso de 00:15 não respeitado</td>
+								<td><?= $totalizadores["mdcDescanso15m"] ?></td>
+								<td><?= $percentuais["Especifico_mdcDescanso15m"] ?>%</td>
+							</tr>
+							<tr>
+								<td class="tituloAltaGravidade">Batida início de refeição não registrado</td>
+								<td><?= $totalizadores["inicioRefeicaoSemRegistro"] ?></td>
+								<td><?= $percentuais["Especifico_inicioRefeicaoSemRegistro"] ?>%</td>
+							</tr>
+							<tr>
+								<td class="tituloAltaGravidade">Batida fim de refeição não registrado</td>
+								<td><?= $totalizadores["fimRefeicaoSemRegistro"] ?></td>
+								<td><?= $percentuais["Especifico_fimRefeicaoSemRegistro"] ?>%</td>
+							</tr>
+							<tr>
+								<td class="tituloAltaGravidade">Refeição Initerrupita maior do que 01:00h não respeitada</td>
+								<td><?= $totalizadores["refeicao1h"] ?></td>
+								<td><?= $percentuais["Especifico_refeicao1h"] ?>%</td>
+							</tr>
+							<tr>
+								<td class="tituloAltaGravidade">Refeição com Tempo máximo de 02:00h não respeitada</td>
+								<td><?= $totalizadores["refeicao2h"] ?></td>
+								<td><?= $percentuais["Especifico_refeicao2h"] ?>%</td>
+							</tr>
+							<tr>
+								<td class="tituloAltaGravidade">O mínimo de 08:00h ininterruptas no primeiro período não respeitado</td>
+								<td><?= $totalizadores["intersticioInferior"] ?></td>
+								<td><?= $percentuais["Especifico_intersticioInferior"] ?>%</td>
+							</tr>
+							<tr>
+								<td class="tituloAltaGravidade">Interstício Total de 11:00 não respeitado, faltaram 00:32</td>
+								<td><?= $totalizadores["intersticioSuperior"] ?></td>
+								<td><?= $percentuais["Especifico_intersticioSuperior"] ?>%</td>
+							</tr>
+						</tbody>
+					</table>
+					<div id='graficoDetalhado' style='width:83%; height:850px; background-color: lightblue;'>
+					</div>
+				</div>
+			<?php } ?>
 
+			</div>
 	</div>
-</div>
 </div>
 <div id="impressao">
 	<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . " (UTC-3)" ?>
 </div>
 <script>
-	// const data = {
-	// 	labels: ['Espera', 'Descanso', 'Repouso', 'Jornada', 'Jornada Prevista', 'Jornada Efetiva', 'MDC', 'Refeição', 'Interstício Inferior', 'Interstício Superior'],
-	// 	datasets: [{
-	// 		data: [1, 13, 4, 50, 60, 80, 90, 0, 5, 2], // Dados das fatias <= json_encode($graficoAnalitico) ?>
-	// 		backgroundColor: ['#53d02a', '#53d02a', '#53d02a', '#53d02a', '#53d02a', '#f1c61f', '#f1c61f', '#ec4141', '#ec4141', '#ec4141'], // Cores das fatias
-	// 		hoverOffset: function(context) {
-	// 			const value = context.raw;
-	// 			return value < 1 ? 8 : 4; // Destaca fatias menores que 1%
-	// 		}
-	// 	}]
-	// };
+	document.addEventListener('DOMContentLoaded', function() {
+		// Gráfico sintético
+		const categorias = ['Performance', 'Alta', 'Media', 'Baixa'];
+		const valores = <?= json_encode($graficoSintetico) ?>;
+		const cores = ['#53d02a', '#a30000', '#FFB520', '#f1c61f'];
 
-	// const config = {
-	// 	type: 'pie',
-	// 	data: data,
-	// 	options: {
-	// 		responsive: false,
-	// 		plugins: {
-	// 			legend: {
-	// 				display: false,
-	// 				position: 'top',
-	// 			},
-	// 			title: {
-	// 				display: true,
-	// 				text: 'Gráfico de Não Conformidades'
-	// 			}
-	// 		}
-	// 	},
-	// };
+		const dataFormatada = categorias.map((categoria, index) => ({
+			name: categoria,
+			y: valores[index],
+			color: cores[index]
+		}));
 
-	// // Criar e renderizar o gráfico
-	// const myPieChart = new Chart(
-	// 	document.getElementById('myPieChart'),
-	// 	config
-	// );
+		Highcharts.chart('graficoSintetico', {
+			chart: {
+				type: 'pie'
+			},
+			title: {
+				text: 'Gráfico Sintético de Não Conformidades'
+			},
+			tooltip: {
+				pointFormat: '<b>{point.name}</b>: {point.y} ({point.percentage:.2f}%)',
+				style: {
+					fontSize: '16px'
+				}
+			},
+			plotOptions: {
+				pie: {
+					dataLabels: {
+						enabled: true,
+						style: {
+							fontSize: '16px'
+						},
+						distance: 65
+					},
+					showInLegend: false,
+					minSize: 5
+				}
+			},
+			series: [{
+				name: 'Valores',
+				data: dataFormatada
+			}]
+		});
+
+		// Gráfico analítico
+		const categoriasAnalitico = <?= json_encode($arrayTitulos) ?>;
+		const valoresAnalitico = <?= json_encode($graficoAnalitico) ?>;
+		const coresAnalitico = <?= json_encode($coresGrafico) ?>;
+
+		const dataFormatadaAnalitico = categoriasAnalitico.map((categoria2, index) => ({
+			name: categoria2,
+			y: valoresAnalitico[index],
+			color: coresAnalitico[index]
+		}));
+
+		Highcharts.chart('graficoAnalitico', {
+			chart: {
+				type: 'pie'
+			},
+			title: {
+				text: 'Gráfico Analítico de Não Conformidades'
+			},
+			tooltip: {
+				pointFormat: '<b>{point.name}</b>: {point.y} ({point.percentage:.2f}%)',
+				style: {
+					fontSize: '16px'
+				}
+			},
+			plotOptions: {
+				pie: {
+					dataLabels: {
+						enabled: true,
+						style: {
+							fontSize: '13px'
+						},
+						distance: 65
+					},
+					showInLegend: false,
+					minSize: 5
+				}
+			},
+			series: [{
+				name: 'Valores',
+				data: dataFormatadaAnalitico
+			}]
+		});
+
+		const categoriasDetalhado = <?= json_encode($arrayTitulos2) ?>;
+		const valoresDetalhado = <?= json_encode($graficoDetalhado) ?>;
+		const coresDetalhado = <?= json_encode($coresGrafico2) ?>;
+
+		// Calcula o total para obter as porcentagens
+		const totalDetalhado = valoresDetalhado.reduce((acc, val) => acc + val, 0);
+
+		// Formata os dados para o gráfico de barras em porcentagem
+		const dataFormatadaDetalhado = categoriasDetalhado.map((categoria3, index) => ({
+			name: categoria3,
+			y: totalDetalhado > 0 ? (valoresDetalhado[index] / totalDetalhado) * 100 : 0, // Valor em porcentagem
+			valor: valoresDetalhado[index], // Valor absoluto
+			color: coresDetalhado[index]
+		}));
+
+		Highcharts.chart('graficoDetalhado', {
+			chart: {
+				type: 'bar' // Altere o tipo do gráfico para 'bar'
+			},
+			title: {
+				text: 'Gráfico Detalhado de Não Conformidades',
+				style: {
+					fontSize: '20px' // Aumenta o tamanho do título
+				}
+			},
+			xAxis: {
+				categories: categoriasDetalhado,
+				title: {
+					text: '',
+					style: {
+						fontSize: '16px' // Aumenta o tamanho da fonte do título do eixo X
+					}
+				},
+				labels: {
+					style: {
+						fontSize: '14px' // Aumenta o tamanho da fonte dos rótulos do eixo X
+					}
+				}
+			},
+			yAxis: {
+				min: 0,
+				max: 100, // Limita o eixo Y a 100%
+				// title: {
+				// 	text: 'Porcentagem',
+				// 	style: {
+				// 		fontSize: '16px'
+				// 	}
+				// },
+				labels: {
+					format: '{value}%', // Exibe as labels do eixo Y como porcentagem
+					style: {
+						fontSize: '11px' // Aumenta o tamanho da fonte dos rótulos do eixo Y
+					}
+				},
+				tickInterval: 5, // Ajusta o intervalo entre os ticks (linhas de grid)
+				gridLineWidth: 0.5 // Reduz a largura das linhas de grid para torná-las mais finas
+
+			},
+			tooltip: {
+				// Exibe a quantidade e a porcentagem no tooltip
+				pointFormatter: function() {
+					return `<b>${this.y.toFixed(2)}%</b> (${this.valor} Não Conformidades)`;
+				},
+				style: {
+					fontSize: '16px' // Aumenta o tamanho da fonte do tooltip
+				}
+			},
+			plotOptions: {
+				bar: { // Altere 'column' para 'bar' aqui também
+					dataLabels: {
+						enabled: true,
+						format: '{point.y:.2f}%', // Exibe o valor em porcentagem com duas casas decimais
+						style: {
+							fontSize: '14px' // Aumenta o tamanho da fonte das labels de dados
+						},
+					}
+				}
+			},
+			series: [{
+				name: 'Valores',
+				data: dataFormatadaDetalhado
+			}]
+
+		});
+
+		var tabelaMotorista = $('#tabela-motorista tbody');
+		let motoristas = <?= $motoristas ?? 0 ?>;
+		let ajudante = <?= $ajudante ?? 0 ?>;
+		let funcionario = <?= $funcionario ?? 0 ?>;
+
+		const totalMotorista = motoristas + ajudante + funcionario;
+
+		let linhaMotorista = '';
+		let totalPorcentagem = 0; // Para somar as porcentagens
+
+		if (motoristas && motoristas > 0) {
+			const percMotoristas = ((motoristas / totalMotorista) * 100).toFixed(2);
+			totalPorcentagem += parseFloat(percMotoristas);
+			linhaMotorista += '<tr><td>Motorista</td><td>' + motoristas + '</td>';
+			linhaMotorista += '<td>' + percMotoristas + '%</td></tr>';
+		}
+		if (ajudante && ajudante > 0) {
+			const percAjudante = ((ajudante / totalMotorista) * 100).toFixed(2);
+			totalPorcentagem += parseFloat(percAjudante);
+			linhaMotorista += '<tr><td>Ajudante</td><td>' + ajudante + '</td>';
+			linhaMotorista += '<td>' + percAjudante + '%</td></tr>';
+		}
+		if (funcionario && funcionario > 0) {
+			const percFuncionario = ((funcionario / totalMotorista) * 100).toFixed(2);
+			totalPorcentagem += parseFloat(percFuncionario);
+			linhaMotorista += '<tr><td>Funcionário</td><td>' + funcionario + '</td>';
+			linhaMotorista += '<td>' + percFuncionario + '%</td></tr>';
+		}
+		linhaMotorista += '<tr><td>Total</td><td>' + totalMotorista + '</td>';
+		linhaMotorista += '<td>' + totalPorcentagem.toFixed(2) + '%</td></tr>';
+		tabelaMotorista.append(linhaMotorista);
+	});
 </script>

@@ -668,7 +668,7 @@
 			$periodoFim = new DateTime($periodoInicio->format("Y-m-t"));
 		}
 
-		if ($_POST["busca_endossado"] == "naoEndossado") {
+		if ($_POST["busca_endossado"] == "endossado") {
 			$mes = new DateTime($_POST["busca_dataMes"] . "-01");
 			$endossos = mysqli_fetch_all(query(
 				"SELECT * FROM endosso"
@@ -726,6 +726,8 @@
 				"mdcDescanso30m" 			=> 0,
 				"mdcDescanso15m" 			=> 0,
 				"mdcDescanso30m5h" 			=> 0,
+				"faltaJustificada"          => 0,
+				"falta"                     => 0,
 
 				"dataInicio"				=> $periodoInicio->format("d/m/Y"),
 				"dataFim"					=> $periodoFim->format("d/m/Y")
@@ -751,6 +753,20 @@
 
 							if (is_int(strpos($ponto[13], "fa-warning")) && is_int(strpos($ponto[13], "color:orange;"))) {
 								$totalMotorista["jornadaEfetiva"] += 1;
+							}
+
+							if (
+								$inicioJornadaWarning && strpos($ponto[12], "fa-info-circle") !== false &&
+								strpos($ponto[12], "color:green;") !== false ||
+								$inicioJornadaWarning && strpos($ponto[12], "fa fa-warning") !== false &&
+								strpos($ponto[12], "color:orange;") !== false
+							) {
+								$totalMotorista["faltaJustificada"] += 1;
+							}
+
+							if ($inicioJornadaWarning && strpos($ponto[12], "fa-info-circle") == false && strpos($ponto[12], "color:green;" == false)
+							|| $inicioJornadaWarning && strpos($ponto[12], "fa fa-warning") == false && strpos($ponto[12], "color:orange;" == false)) {
+								$totalMotorista["falta"] += 1;
 							}
 
 							if (
@@ -846,13 +862,15 @@
 								$totalMotorista["intersticioInferior"] += 1;
 							}
 						}
+						$motoristaTotais[] = $totalMotorista;
 
 						if (!is_dir($path . "/endossado/")) {
-							mkdir($path . "/endossado/", 0777, true);  // Cria o diretório com permissões adequadas
+							mkdir($path . "/endossado/", 0755, true);  // Cria o diretório com permissões adequadas
 						}
 
 						file_put_contents($path . "/endossado/" . $motorista["enti_tx_matricula"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 					}
+					
 				}
 			} else {
 
@@ -872,6 +890,16 @@
 					if ($inicioJornadaWarning || $fimJornadaWarning) {
 						$totalMotorista["jornadaPrevista"] += 1;
 					}
+
+					if ($inicioJornadaWarning && strpos($dia["jornadaPrevista"], "fa-info-circle") !== false && 
+						strpos($dia["jornadaPrevista"], "color:green;") !== false) {
+						$totalMotorista["faltaJustificada"] += 1;
+					}
+
+					if($inicioJornadaWarning && strpos($dia["jornadaPrevista"], "fa-info-circle") === false && strpos($dia["jornadaPrevista"], "color:green;") === false){
+						$totalMotorista["falta"] += 1;
+					}
+
 					if (strpos($diffJornada, "fa-info-circle") !== false && strpos($diffJornada, "color:red;") !== false) {
 						$totalMotorista["jornada"] += 1;
 					}
@@ -947,12 +975,11 @@
 			}
 
 			if (!is_dir($path . "/nao_endossado/")) {
-				mkdir($path . "/nao_endossado/", 0777, true);  // Cria o diretório com permissões adequadas
+				mkdir($path . "/nao_endossado/", 0755, true);  // Cria o diretório com permissões adequadas
 			}
 
 			file_put_contents($path . "/nao_endossado/" . $motorista["enti_tx_matricula"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 		}
-
 		$totaisEmpr = [
 			"jornadaPrevista" 			=> 0,
 			"jornadaEfetiva" 			=> 0,
@@ -992,7 +1019,7 @@
 			file_put_contents($path . "/nao_endossado/empresa_" . $_POST["empresa"] . ".json", json_encode($totaisEmpr, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 		}
 
-		sleep(1);
+		// sleep(1);
 		return;
 	}
 
