@@ -8,7 +8,7 @@
 
 	function verificarAtividade($paginasAtivas) {
 		foreach ($paginasAtivas as $pagina){
-			if (is_int(strpos($_SERVER["REQUEST_URI"], $pagina))) {
+			if (is_int(strpos($_SERVER["REQUEST_URI"], $_ENV["CONTEX_PATH"].$pagina))) {
 				return "active";
 			}
 		}
