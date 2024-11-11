@@ -59,7 +59,7 @@
 				$nomeArquivo = substr($fileList, strpos($fileList, "apontamento".$data->format("dmY")), 25);
 
 				// $fileExists = (
-				// 	num_linhas(query(
+				// 	mysqli_num_rows(query(
 				// 		"SELECT * FROM arquivoponto"
 				// 		." WHERE arqu_tx_status = 'ativo'"
 				// 		." AND arqu_tx_nome = '".$nomeArquivo.$ext."'"
