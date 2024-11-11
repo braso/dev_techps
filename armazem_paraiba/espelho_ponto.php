@@ -36,10 +36,6 @@
 			[$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], $_SESSION["user_nb_empresa"]];
 		}
 
-		if(empty($_POST["busca_periodo"])){
-			$_POST["busca_periodo"][0] = (!empty($_POST["data_de"]))? $_POST["data_de"]: date("Y-m-01");
-			$_POST["busca_periodo"][1] = (!empty($_POST["data_ate"]))? $_POST["data_ate"]: date("Y-m-d");
-		}
 		
 		//Confere se há algum erro na pesquisa{
 			try{
@@ -72,8 +68,7 @@
 				
 				if(!empty($_POST["busca_empresa"]) && !empty($_POST["busca_motorista"])){
 					if($_POST["busca_periodo"][0] > date("Y-m-d") || $_POST["busca_periodo"][1] > date("Y-m-d")){
-						$_POST["errorFields"][] = "busca_dataInicio";
-						$_POST["errorFields"][] = "busca_dataFim";
+						$_POST["errorFields"][] = "busca_periodo";
 						throw new Exception("Data de pesquisa não pode ser após hoje (".date("d/m/Y").").");
 					}else{
 						$motorista = mysqli_fetch_assoc(query(
@@ -97,7 +92,7 @@
 						$dataInicio = new DateTime($_POST["busca_periodo"][0]);
 						$data_cadastro = new DateTime($motorista["enti_tx_admissao"]);
 						if($dataInicio->format("Y-m") < $data_cadastro->format("Y-m")){
-							$_POST["errorFields"][] = "busca_dataInicio";
+							$_POST["errorFields"][] = "busca_periodo";
 							throw new Exception("O mês inicial deve ser posterior ou igual ao mês de admissão do funcionário (".$data_cadastro->format("m/Y").").");
 						}
 					}
@@ -309,8 +304,7 @@
 					<input type='hidden' name='HTTP_REFERER' value=''>
 					<input type='hidden' name='data'>
 					<input type='hidden' name='busca_empresa' value='".$aMotorista['enti_nb_empresa']."'>
-					<input type='hidden' name='data_de' value='".$_POST["busca_periodo"][0]."'>
-					<input type='hidden' name='data_ate' value='".$_POST["busca_periodo"][1]."'>
+					<input type='hidden' name='busca_periodo' value='".$_POST["busca_periodo"]."'>
 				</form>"
 			;
 
