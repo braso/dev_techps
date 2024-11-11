@@ -308,15 +308,15 @@
 		return campo($nome,$variavel,$modificador,$tamanho,"MASCARA_DOMAIN",$extra);
 	}
 
-	function carrega_array($sql, $mode = MYSQLI_BOTH){
-		return mysqli_fetch_array($sql, $mode);
-	}
+	// function carrega_array($sql, $mode = MYSQLI_BOTH){
+	// 	return mysqli_fetch_array($sql, $mode);
+	// }
 
 	function ultimo_reg($tabela){
 		$campo = substr($tabela,0,4)."_nb_id";
 
 		$sql=query("SELECT $campo FROM $tabela ORDER BY $campo DESC LIMIT 1;");
-		return carrega_array($sql)[0];
+		return mysqli_fetch_array($sql, MYSQLI_BOTH)[0];
 	}
 
 	function carregar($tabela, $id="", $campo="", $valor="", $extra="", $exibe=0){

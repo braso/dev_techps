@@ -330,11 +330,11 @@
 			inserir("user", array_keys($newUser), array_values($newUser));
 		}else{ // Se está editando um motorista existente
 
-			$a_user = carrega_array(query(
+			$a_user = mysqli_fetch_array(query(
 				"SELECT * FROM user 
 					WHERE user_nb_entidade = ".$_POST["id"]."
 						AND user_tx_nivel IN ('Motorista', 'Ajudante','Funcionário')"
-			));
+			), MYSQLI_BOTH);
 
 			$_POST["nivel"] = $_POST["ocupacao"];
 

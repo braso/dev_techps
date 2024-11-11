@@ -219,7 +219,7 @@
 				INNER JOIN parametro par ON en.enti_nb_parametro = par.para_nb_id
 				WHERE en.enti_nb_id = '".$idMotorista."'");
 		
-		$toleranciaArray = carrega_array($sqlTolerancia);
+		$toleranciaArray = mysqli_fetch_array($sqlTolerancia, MYSQLI_BOTH);
 
 		$tolerancia = (empty($toleranciaArray["para_tx_tolerancia"]))? 0: $toleranciaArray["para_tx_tolerancia"];
 		$tolerancia = intval($tolerancia);
@@ -682,7 +682,7 @@
 					AND feri_tx_status = 'ativo' ".$extraFeriado
 		);
 		$stringFeriado = "";
-		while ($row = carrega_array($queryFeriado)){
+		while ($row = mysqli_fetch_array($queryFeriado, MYSQLI_BOTH)){
 			$stringFeriado .= $row[0]."\n";
 		}
 
@@ -726,7 +726,7 @@
 					AND pont_tx_data LIKE '".$data."%' 
 				ORDER BY pont_tx_data ASC"
 		);
-		while($ponto = carrega_array($sql)){
+		while($ponto = mysqli_fetch_array($sql, MYSQLI_BOTH)){
 			$pontosDia[] = $ponto;
 		}
 
@@ -888,18 +888,16 @@
 
 		$contagemEspera += count($registros["esperaCompleto"]["pares"]);
 
-		$aAbono = carrega_array(
-			query(
-				"SELECT * FROM abono, motivo, user 
-					WHERE abon_tx_status = 'ativo' 
-						AND abon_nb_userCadastro = user_nb_id 
-						AND abon_tx_matricula = '".$matricula."' 
-						AND abon_tx_data = '".$data."' 
-						AND abon_nb_motivo = moti_nb_id
-					ORDER BY abon_nb_id DESC 
-					LIMIT 1"
-			)
-		);
+		$aAbono = mysqli_fetch_array(query(
+			"SELECT * FROM abono, motivo, user 
+				WHERE abon_tx_status = 'ativo' 
+					AND abon_nb_userCadastro = user_nb_id 
+					AND abon_tx_matricula = '".$matricula."' 
+					AND abon_tx_data = '".$data."' 
+					AND abon_nb_motivo = moti_nb_id
+				ORDER BY abon_nb_id DESC 
+				LIMIT 1"
+		), MYSQLI_BOTH);
 		
 		$aRetorno["diffJornada"] = $registros["jornadaCompleto"]["icone"].$diffJornada;
 
@@ -977,7 +975,7 @@
 		//CÁLCULO DE INSTERTÍCIO{
 			if(isset($registros["inicioJornada"]) && count($registros["inicioJornada"]) > 0){
 
-				$ultimoFimJornada = carrega_array(query(
+				$ultimoFimJornada = mysqli_fetch_array(query(
 					"SELECT pont_tx_data FROM ponto
 						WHERE pont_tx_status = 'ativo'
 							AND pont_tx_tipo = 2
@@ -985,7 +983,7 @@
 							AND pont_tx_data < '".$registros["inicioJornada"][0]."'
 						ORDER BY pont_tx_data DESC
 						LIMIT 1"
-				));
+				), MYSQLI_BOTH);
 				if(!empty($ultimoFimJornada)){
 					$ultimoFimJornada = DateTime::createFromFormat("Y-m-d H:i:s", $ultimoFimJornada[0]);
 					
@@ -1062,12 +1060,12 @@
 		//FIM ADICIONAL NOTURNO
 		
 		//TOLERÂNCIA{
-			$tolerancia = carrega_array(query(
+			$tolerancia = mysqli_fetch_array(query(
 				"SELECT parametro.para_tx_tolerancia FROM entidade 
 					JOIN parametro ON enti_nb_parametro = para_nb_id 
 					WHERE enti_nb_parametro = ".$motorista["enti_nb_parametro"]."
 					LIMIT 1;"
-			))[0];
+			), MYSQLI_BOTH)[0];
 			$tolerancia = intval($tolerancia);
 		
 

@@ -85,12 +85,10 @@
 		//Montando variáveis que serão utilizadas em relatorio_espelho.php{
 			global $CONTEX;
 
-			$aEmpresa = carrega_array(
-				query(
-					"SELECT empresa.*, cidade.cida_tx_nome, cidade.cida_tx_uf FROM empresa JOIN cidade ON empresa.empr_nb_cidade = cidade.cida_nb_id".
-					" WHERE empr_nb_id = ".$_POST["busca_empresa"]
-				)
-			);
+			$aEmpresa = mysqli_fetch_array(query(
+				"SELECT empresa.*, cidade.cida_tx_nome, cidade.cida_tx_uf FROM empresa JOIN cidade ON empresa.empr_nb_cidade = cidade.cida_nb_id".
+				" WHERE empr_nb_id = ".$_POST["busca_empresa"]
+			), MYSQLI_BOTH);
 			$enderecoEmpresa = implode(", ", array_filter([
 				$aEmpresa["empr_tx_endereco"], 
 				$aEmpresa["empr_tx_numero"], 
@@ -324,7 +322,7 @@
 						." ORDER BY enti_tx_nome;"
 				);
 
-				while($aMotorista = carrega_array($sqlMotorista, MYSQLI_ASSOC)){
+				while($aMotorista = mysqli_fetch_array($sqlMotorista, MYSQLI_ASSOC)){
 					$counts["total"]++;
 					if(empty($aMotorista["enti_tx_nome"]) || empty($aMotorista["enti_tx_matricula"])){
 						continue;
