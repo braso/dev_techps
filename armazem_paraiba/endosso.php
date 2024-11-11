@@ -74,29 +74,49 @@
 			$_POST["idMotoristaEndossado"] = $motorista["enti_nb_id"];
 		}
 
-		if (empty($_POST["busca_data"]) || empty($_POST["busca_empresa"]) || empty($_POST["idMotoristaEndossado"])){
+		if (empty($_POST["busca_data"]) || empty($_POST["busca_empresa"])){
 			$_POST["errorFields"][] = "busca_data";
 			$_POST["errorFields"][] = "busca_empresa";
-			set_status("ERRO: Insira data e Funcionário para gerar relatório.");
+			set_status("ERRO: Insira data e empresa para gerar relatório.");
 			index();
 			exit;
 		}
 
-		$sqlMotorista = query(
-			"SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg FROM entidade"
+		//Montando variáveis que serão utilizadas em relatorio_espelho.php{
+			global $CONTEX;
+
+			$aEmpresa = mysqli_fetch_array(query(
+				"SELECT empresa.*, cidade.cida_tx_nome, cidade.cida_tx_uf FROM empresa JOIN cidade ON empresa.empr_nb_cidade = cidade.cida_nb_id".
+				" WHERE empr_nb_id = ".$_POST["busca_empresa"]
+			), MYSQLI_BOTH);
+			$enderecoEmpresa = implode(", ", array_filter([
+				$aEmpresa["empr_tx_endereco"], 
+				$aEmpresa["empr_tx_numero"], 
+				$aEmpresa["empr_tx_bairro"], 
+				$aEmpresa["empr_tx_complemento"], 
+				$aEmpresa["empr_tx_referencia"]
+			]));
+		//}
+
+		$motoristas = mysqli_fetch_all(query(
+			"SELECT entidade.*, endosso.*, parametro.para_tx_pagarHEExComPerNeg FROM entidade"
+				." JOIN endosso ON enti_tx_matricula = endo_tx_matricula"
 				." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
-				." WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário')"
-					."	AND enti_nb_id IN (".$_POST["idMotoristaEndossado"].")"
+				." WHERE enti_tx_status = 'ativo' AND endo_tx_status = 'ativo'"
 					."	AND enti_nb_empresa = ".$_POST["busca_empresa"]
-					."	AND enti_tx_status = 'ativo'"
+					."	AND enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário')"
+					."	AND endo_tx_mes = '".$_POST["busca_data"]."-01'"
 				." ORDER BY enti_tx_nome;"
-		);
+		), MYSQLI_ASSOC);
 		
-		$diasEndossados = 0;
+		$qtdDiasEndossados = 0;
 
 		$date = new DateTime($_POST["busca_data"]);
 
-		while ($aMotorista = carrega_array($sqlMotorista)) {
+		foreach($motoristas as $aMotorista) {
+			$aDia = [];
+			$totalResumo = [];
+
 			//Pegando e formatando registros dos dias{
 				
 				$endossoCompleto = montarEndossoMes($date, $aMotorista);
@@ -114,7 +134,7 @@
 				$totalResumo["saldoFinal"] = operarHorarios([$totalResumo["saldoBruto"], $totalResumo["HESemanalAPagar"], $totalResumo["HEExAPagar"]], "-");
 
 				for ($i = 0; $i < count($endossoCompleto["endo_tx_pontos"]); $i++) {
-					$diasEndossados++;
+					$qtdDiasEndossados++;
 					$aDetalhado = $endossoCompleto["endo_tx_pontos"][$i];
 					array_shift($aDetalhado);
 					array_splice($aDetalhado, 10, 1); //Retira a coluna de "Jornada" que está entre "Repouso" e "Jornada Prevista"
@@ -170,35 +190,22 @@
 					array_splice($aDia[$f], 18, 0, $motivos); // inserir a coluna de motivo, no momento da implementação, estava na coluna 19
 				}
 			//}
-			break; //Adaptar posteriormente para conseguir imprimir mais de um motorista??
+			
+			$botoes = ["<button id='btnCsv' onclick='downloadCSV(\"".$aMotorista["enti_nb_id"]."\", \"".$aMotorista["enti_tx_nome"]."\")'><img width='20' height='20' src='https://img.icons8.com/glyph-neue/64/FFFFFF/csv.png' alt='csv'/> Baixar CSV</button>"];
+			if($aMotorista == $motoristas[count($motoristas)-1]){
+				$botoes[] = "<br><br><br><button id='btnImprimir' class='btn default' type='button' onclick='imprimir()'><img width='20' height='20' src='https://img.icons8.com/android/24/FFFFFF/print.png' alt='print'/> Imprimir</button>";
+			}
+			include "./relatorio_espelho.php";
+			include "./csv_relatorio_espelho.php";
+			echo "<br><br><br><hr>";
 		}
-
-
-		//Montando variáveis que serão utilizadas em relatorio_espelho.php{
-			global $CONTEX;
-
-			$aEmpresa = carrega_array(
-				query(
-					"SELECT empresa.*, cidade.cida_tx_nome, cidade.cida_tx_uf FROM empresa JOIN cidade ON empresa.empr_nb_cidade = cidade.cida_nb_id".
-					" WHERE empr_nb_id = ".$_POST["busca_empresa"]
-				)
-			);
-			$enderecoEmpresa = implode(", ", array_filter([
-				$aEmpresa["empr_tx_endereco"], 
-				$aEmpresa["empr_tx_numero"], 
-				$aEmpresa["empr_tx_bairro"], 
-				$aEmpresa["empr_tx_complemento"], 
-				$aEmpresa["empr_tx_referencia"]
-			]));
-		//}
 		
-		include "./relatorio_espelho.php";
-		include "./csv_relatorio_espelho.php";
 		exit;
 	}
 
 	function index(){
 		global $totalResumo, $CONTEX;
+
 		cabecalho("Buscar Endosso");
 
 		$extra = "";
@@ -221,7 +228,7 @@
 			if(!empty($_POST["acao"])){
 				$camposObrig = [
 					"busca_empresa" => "Empresa",
-					"busca_motorista" => "Funcionário",
+					// "busca_motorista" => "Funcionário",
 					"busca_data" => "Data"
 				];
 				if(empty($_POST["busca_empresa"]) && !empty($_POST["busca_motorista"])){
@@ -242,8 +249,7 @@
 				if(!empty($errorMsg)){
 					set_status("ERRO: ".$errorMsg);
 					unset($_POST["acao"]);
-					index();
-					exit;
+					unset($_GET["acao"]);
 				}
 
 			}
@@ -254,7 +260,7 @@
 			$_POST["errorFields"][] = "busca_data";
 			set_status("ERRO: Não é possível pesquisar uma data futura.");
 			unset($_POST["busca_data"]);
-			index();
+			unset($_GET["acao"]);
 			exit;
 		}
 		
@@ -277,7 +283,7 @@
 			$fields = [
 				combo_net("Funcionário", "busca_motorista", (!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 3, "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')".$extraMotorista.$extraEmpresaMotorista, "enti_tx_matricula"),
 				campo_mes("Data*",      "busca_data",      	(!empty($_POST["busca_data"])?      $_POST["busca_data"]     : ""), 2),
-				combo(	  "Endossado",	"busca_endossado", 	(!empty($_POST["busca_endossado"])? $_POST["busca_endossado"]: ""), 2, ["" => "", "endossado" => "Sim", "naoEndossado" => "Não"])
+				combo(	  "Endossado",	"busca_endossado", 	(!empty($_POST["busca_endossado"])? $_POST["busca_endossado"]: ""), 2, ["endossado" => "Sim", "naoEndossado" => "Não"])
 			];
 
 			if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
@@ -316,7 +322,7 @@
 						." ORDER BY enti_tx_nome;"
 				);
 
-				while($aMotorista = carrega_array($sqlMotorista, MYSQLI_ASSOC)){
+				while($aMotorista = mysqli_fetch_array($sqlMotorista, MYSQLI_ASSOC)){
 					$counts["total"]++;
 					if(empty($aMotorista["enti_tx_nome"]) || empty($aMotorista["enti_tx_matricula"])){
 						continue;
@@ -506,7 +512,7 @@
 				abre_form($motNaoEndossados);
 				fecha_form();
 			}
-			if(empty($_POST["busca_motorista"]) || (!empty($_POST["busca_motorista"]) && $counts["endossados"]["sim"] == 0)){
+			if(!empty($_POST["busca_motorista"]) && $counts["endossados"]["sim"] == 0){
 				echo 
 					"<script>
 						button = document.getElementById('botaoContexCadastrar ImprimirRelatorio');

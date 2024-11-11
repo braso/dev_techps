@@ -1,7 +1,9 @@
 <?php
 
-	// ini_set("display_errors", 1);
-	//         error_reporting(E_ALL);
+	/* Modo debug{
+		ini_set("display_errors", 1);
+		error_reporting(E_ALL);
+	//}*/
 
 	//Funções comuns aos paineis{
 	function calcPercs(array $values): array {

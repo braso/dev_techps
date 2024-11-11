@@ -308,19 +308,15 @@
 		return campo($nome,$variavel,$modificador,$tamanho,"MASCARA_DOMAIN",$extra);
 	}
 
-	function num_linhas($sql){
-		return mysqli_num_rows($sql);
-	}
-
-	function carrega_array($sql, $mode = MYSQLI_BOTH){
-		return mysqli_fetch_array($sql, $mode);
-	}
+	// function carrega_array($sql, $mode = MYSQLI_BOTH){
+	// 	return mysqli_fetch_array($sql, $mode);
+	// }
 
 	function ultimo_reg($tabela){
 		$campo = substr($tabela,0,4)."_nb_id";
 
 		$sql=query("SELECT $campo FROM $tabela ORDER BY $campo DESC LIMIT 1;");
-		return carrega_array($sql)[0];
+		return mysqli_fetch_array($sql, MYSQLI_BOTH)[0];
 	}
 
 	function carregar($tabela, $id="", $campo="", $valor="", $extra="", $exibe=0){
@@ -1417,15 +1413,14 @@
 				if(just !== null && just !== ''){
 					
 					var form = document.getElementById('contex_icone_form');
-					form.id.value=id;
-					form.acao.value=acao;
-					form.data_de.value=data_de;
-					form.data_ate.value=data_ate;
-					form.just.value=just;
-					form.atualiza.value=atualiza;
+					form.id.value = id;
+					form.acao.value = acao;
+					form.busca_periodo.value = busca_periodo;
+					form.just.value = just;
+					form.atualiza.value = atualiza;
 					if(campos){
-						form.hidden.value=valores;
-						form.hidden.name=campos;
+						form.hidden.value = valores;
+						form.hidden.name = campos;
 					}
 					campos = campos.split(',');
 					valores = valores.split(',');
