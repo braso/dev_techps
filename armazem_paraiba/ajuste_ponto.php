@@ -307,7 +307,7 @@
 		$result = mysqli_query($conn, $sql);
 
 		if (!$result) {
-			die("Erro ao consultar CNPJs: " . mysqli_error($conn));
+			die("Erro ao consultar CNPJs: ".mysqli_error($conn));
 		}
 
 		$cnpjs_formatados = [];
@@ -390,7 +390,7 @@
 		$contextPath = $_ENV["CONTEX_PATH"];
 
 		// Monta a URL base para a logística
-		$urlLogistica = $baseUrl . $appPath . $contextPath . "/logistica.php";
+		$urlLogistica = $baseUrl.$appPath.$contextPath."/logistica.php";
 
 		// Assumindo que $aMotorista já tenha os valores definidos
 		$matricula = htmlspecialchars($aMotorista["enti_tx_matricula"]);
@@ -403,12 +403,12 @@
 			<script>
 			function consultarLogistica() {
 				// Obter valores do PHP e HTML
-				var matricula = '" . addslashes($matricula) . "';
-				var motorista = '" . addslashes($motorista) . "';
+				var matricula = '".addslashes($matricula)."';
+				var motorista = '".addslashes($motorista)."';
 				var data = document.getElementById('data').value;
 
 				// Obter todos os CNPJs da variável PHP
-				var cnpjs = ' . json_encode($cnpjs) . ';
+				var cnpjs = '".json_encode($cnpjs)."';
 
 				// Verificar o conteúdo de cnpjs no console
 				console.log('CNPJs:', cnpjs);
@@ -427,11 +427,11 @@
 				var cnpjString = cnpjs.map(String).join(',');
 
 				// Construir a URL com os parâmetros dinâmicos
-				var url = '" . addslashes($urlLogistica) . "';
-				url += '?motorista=' + encodeURIComponent(motorista) + 
-					'&matricula=' + encodeURIComponent(matricula) + 
-					'&data=' + encodeURIComponent(data) +
-					'&cnpj=' + encodeURIComponent(cnpjString);  // Adicionando todos os CNPJs
+				var url = '".addslashes($urlLogistica)."';
+				url += '?motorista='+encodeURIComponent(motorista)+
+					'&matricula='+encodeURIComponent(matricula)+
+					'&data='+encodeURIComponent(data) +
+					'&cnpj='+encodeURIComponent(cnpjString);  // Adicionando todos os CNPJs
 
 				// Abrir a nova página em uma nova aba
 				window.open(url, '_blank');
