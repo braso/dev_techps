@@ -1,16 +1,41 @@
 <?php
 // Ativar relatórios de erros
 
-//*
+/*
     ini_set('display_errors', 1);
     ini_set('display_startup_errors', 1);
     error_reporting(E_ALL);
 //*/
-session_start();
 
 include_once 'load_env.php';
 include_once 'funcoes_ponto.php';
 include_once 'conecta.php'; // Incluindo a conexão
+
+
+
+// Verifica se os parâmetros obrigatórios estão presentes na URL
+if (isset($_GET['motorista'], $_GET['matricula'], $_GET['data'], $_GET['cnpj'])) {
+    // Parâmetros presentes, continue com o processamento
+    $motorista = $_GET['motorista'];
+    $matricula = $_GET['matricula'];
+    $data = $_GET['data'];
+    $cnpj = $_GET['cnpj'];
+    
+    // Aqui você pode colocar o restante do seu código, usando esses valores
+
+} else {
+    // Parâmetros ausentes, exibe uma mensagem de alerta e o botão de voltar
+    echo "<script>
+        alert('Parâmetros obrigatórios estão faltando');
+       
+    </script>";
+
+    $_POST["HTTP_REFERER"]= $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
+    voltar();
+}
+
+
+
 
 if (isset($_SESSION['user_nb_id']) && !empty($_SESSION['user_nb_id'])) {
     $user_nb_id = $_SESSION['user_nb_id'];
