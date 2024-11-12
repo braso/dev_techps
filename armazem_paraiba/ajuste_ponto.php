@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -344,7 +344,7 @@
 		}
 
 		if(empty($_POST["HTTP_REFERER"])){
-			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
+			$_POST["HTTP_REFERER"] = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
 		}
 		
 		if(empty($_POST["id"])){
@@ -370,7 +370,7 @@
 				AND endo_tx_matricula = '".$aMotorista["enti_tx_matricula"]."' 
 				AND endo_tx_status = 'ativo' 
 				AND endo_nb_userCadastro = user_nb_id 
-			LIMIT 1"
+			LIMIT 1;"
 		);
 		$aEndosso = mysqli_fetch_array($sqlCheck, MYSQLI_BOTH);
 
