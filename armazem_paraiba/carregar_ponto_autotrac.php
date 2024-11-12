@@ -1,5 +1,5 @@
 <?php
-    /* Modo Debug{
+    //* Modo Debug{
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
 
@@ -45,14 +45,9 @@
 		// Fecha a requisição cURL
 		curl_close($ch);
 
-		$datas = [];
-		$nomes = [];
 		foreach($pontos as &$ponto){
 			$ponto["position_time"] = DateTime::createFromFormat("d/m/Y H:i:s", $ponto["position_time"])->format("Y-m-d H:i:s");
-			$datas[] = $ponto["position_time"];
-			$nomes[] = $ponto["driver_name"];
 		}
-		array_multisort($nomes, SORT_ASC, $datas, SORT_ASC, $pontos, SORT_ASC);
 		
 		// Verifica se os dados são válidos
 		if(empty($pontos) || !is_array($pontos)){
@@ -64,7 +59,11 @@
 			$matriculaInicial = $pontos[0]["driver_cpf"];
 		//}*/
 
-		foreach ($pontos as $ponto) {
+        $f = 0;
+		foreach($pontos as $ponto) {
+		    if($ponto["position_time"] < "2024-11-06 00:00:00"){
+		        continue;
+		    }
 			echo "<br>---------------------------<br>";
 			// Usar a data diretamente da API
 			$newPonto = [
@@ -157,7 +156,7 @@
 				." JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno"
 				." WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'"
 				." AND pont_tx_matricula = '".$newPonto["pont_tx_matricula"]."'"
-				." AND pont_tx_data < '".$newPonto["pont_tx_data"]."'"
+				." AND pont_tx_data <= '".$newPonto["pont_tx_data"]."'"
 				."ORDER BY pont_tx_data DESC"
 				." LIMIT 1;"
 			));
@@ -165,15 +164,20 @@
 
 			if(!empty($ultimoPonto)){
 				//Criar um ponto de finalização do último intervalo antes de criar para um novo.{
+				    if($newPonto["pont_tx_tipo"] == $ultimoPonto["pont_tx_tipo"]){
+						echo "O último ponto é do mesmo tipo. (".$newPonto["pont_tx_tipo"].")";
+						continue;
+					}
+					
 					if($newPonto["pont_tx_tipo"] == "0"){
 						if(((int)$ultimoPonto["pont_tx_tipo"]) == 1){
-							echo "Não tem um intervalo anterior aberto para fechar. (".$newPonto["pont_tx_tipo"].")";
+							echo "Não tem um intervalo anterior aberto para fechar. (".$ultimoPonto["pont_tx_tipo"].", ".$newPonto["pont_tx_tipo"].")";
 							continue;
 						}
 
 						$newPonto["pont_tx_tipo"] = strval((int)$ultimoPonto["pont_tx_tipo"]+1);
 					}
-
+					
 					if($newPonto["pont_tx_tipo"] == $ultimoPonto["pont_tx_tipo"]){
 						echo "O último ponto é do mesmo tipo. (".$newPonto["pont_tx_tipo"].")";
 						continue;
@@ -246,12 +250,18 @@
 				}
 			// }
 			
-			//*Registrar ponto{
+			dd([$fechAnterior, $newPonto], false);
+			$f++;
+			if($f > 100){
+			    break;
+			}
+			/*Registrar ponto{
 				if(!empty($fechAnterior)){
+				    
 					$result = inserir("ponto", array_keys($fechAnterior), array_values($fechAnterior));
 					if(gettype($result[0]) == "object" && get_class($result[0]) == "Exception"){
-						echo "ERRO: Ao inserir ponto.<br><br>";
-						exit;
+						echo "ERRO: Ao inserir ponto (1).<br><br>";
+						dd($result);
 					}
 					dd([$ultimoPonto, $fechAnterior], false);
 					echo "Fechamento cadastrado com sucesso.<br>";
@@ -259,8 +269,8 @@
 				}
 				$result = inserir("ponto", array_keys($newPonto), array_values($newPonto));
 				if(gettype($result[0]) == "object" && get_class($result[0]) == "Exception"){
-					echo "ERRO: Ao inserir ponto.<br><br>";
-					exit;
+					echo "ERRO: Ao inserir ponto (2).<br><br>";
+					dd($result);
 				}
 				dd($newPonto, false);
 				echo "Ponto cadastrado com sucesso.<br><br>";

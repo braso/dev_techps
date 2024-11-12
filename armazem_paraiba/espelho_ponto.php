@@ -117,7 +117,6 @@
 		$condBuscaMotorista = "";
 		$condBuscaEmpresa = "";
 
-
 		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 			$_POST["busca_motorista"] = $_SESSION["user_nb_entidade"];
 			$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
