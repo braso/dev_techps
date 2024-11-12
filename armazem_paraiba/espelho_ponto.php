@@ -65,6 +65,10 @@
 						throw new Exception($errorMsg);
 					}
 				//}
+
+				if(is_string($_POST["busca_periodo"])){
+					$_POST["busca_periodo"] = explode(" - ", $_POST["busca_periodo"]);
+				}
 				
 				if(!empty($_POST["busca_empresa"]) && !empty($_POST["busca_motorista"])){
 					if($_POST["busca_periodo"][0] > date("Y-m-d") || $_POST["busca_periodo"][1] > date("Y-m-d")){
@@ -307,7 +311,6 @@
 					<input type='hidden' name='busca_periodo' value='".$_POST["busca_periodo"]."'>
 				</form>"
 			;
-
 		}
 		//}
 		

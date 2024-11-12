@@ -328,6 +328,7 @@
 
 	function index(){
 		global $CONTEX;
+
 		if(empty($_POST["data"])){
 			$_POST["data"] = date("Y-m-d");
 		}
@@ -408,10 +409,10 @@
 				var data = document.getElementById('data').value;
 
 				// Obter todos os CNPJs da variável PHP
-				var cnpjs = '".json_encode($cnpjs)."';
+				var cnpjs = ".json_encode($cnpjs).";
 
 				// Verificar o conteúdo de cnpjs no console
-				console.log('CNPJs:', cnpjs);
+				// console.log('CNPJs:', cnpjs);
 
 				if (!Array.isArray(cnpjs)) {
 					console.error('CNPJs não é um array:', cnpjs);
@@ -494,13 +495,12 @@
 		abre_form("Dados do Ajuste de Ponto");
 		linha_form($textFields);
 		
-		//Campos para retornar para a pesquisa do espelho de ponto{
-			// echo campo_hidden("id", 				$_POST["id"]);
+		echo campo_hidden("id", $_POST["id"]);
+		//Campos para retornar para a pesquisa do espelho de ponto ou após um registro de ponto{
 			echo campo_hidden("busca_empresa", 		empty($_POST["busca_empresa"])? "": $_POST["busca_empresa"]);
 			echo campo_hidden("busca_motorista", 	$_POST["id"]);
 			echo campo_hidden("busca_data", 		$_POST["data"]);
-			echo campo_hidden("busca_periodo[]",	$_POST["busca_periodo"][0]);
-			echo campo_hidden("busca_periodo[]",	$_POST["busca_periodo"][1]);
+			echo campo_hidden("busca_periodo",		$_POST["busca_periodo"][0]." - ".$_POST["busca_periodo"][1]);
 			echo campo_hidden("HTTP_REFERER", 		$_POST["HTTP_REFERER"]);
 		//}
 		
