@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -333,11 +333,13 @@
 			$_POST["data"] = date("Y-m-d");
 		}
 
-		if(is_string($_POST["busca_periodo"])){
+		if(empty($_POST["busca_periodo"])){
+			$_POST["busca_periodo"] = ["", ""];
+		}elseif(is_string($_POST["busca_periodo"])){
 			[$dataInicio, $dataFim] = explode(" - ", $_POST["busca_periodo"]);
 			$_POST["busca_periodo"] = [
-				DateTime::createFromFormat("d/m/Y H:i:s", $dataInicio." 00:00:00")->format("Y-m-d"),
-				DateTime::createFromFormat("d/m/Y H:i:s", $dataFim." 00:00:00")->format("Y-m-d")
+				$dataInicio,
+				$dataFim
 			];
 		}
 

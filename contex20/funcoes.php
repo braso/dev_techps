@@ -1415,7 +1415,8 @@
 					var form = document.getElementById('contex_icone_form');
 					form.id.value = id;
 					form.acao.value = acao;
-					form.busca_periodo.value = busca_periodo;
+					form.data_de.value = data_de;
+					form.data_ate.value = data_ate;
 					form.just.value = just;
 					form.atualiza.value = atualiza;
 					if(campos){
