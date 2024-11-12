@@ -4,10 +4,11 @@ body {
     --var-red: #ec4141;
     --var-darkred: #a30000;
     --var-lightred: #C41212;
-    --var-yellow2: #f8d756;
+    --var-yellow2: #FFF260;
+    --var-yellow3: #FFE800;
     --var-yellow: #f1c61f;
-    --var-orange: #FFB520;
-    --var-lightorange: #FFC552;
+    --var-orange: #FF8B00;
+    --var-lightorange: #FF9F2C;
     --var-lightyellow: #ffff75;
     --var-darkyellow: #c1a300;
     --var-green: #53d02a;
@@ -18,12 +19,36 @@ body {
 .tituloPerformance {
     background-color: var(--var-darkgreen);
     color: white;
-    cursor: pointer;
+}
+
+.tituloBaixaGravidade2 {
+    background-color: var(--var-yellow3);
+    /* color: white; */
+}
+
+.tituloMediaGravidade2 {
+    background-color: var(--var-orange);
+}
+
+.tituloAltaGravidade2 {
+    background-color: var(--var-darkred);
+    color: white;
 }
 
 .tituloBaixaGravidade {
-    background-color: var(--var-yellow);
+    background-color: var(--var-yellow3);
     /* color: white; */
+    cursor: pointer;
+}
+
+.tituloMediaGravidade {
+    background-color: var(--var-orange);
+    cursor: pointer;
+}
+
+.tituloAltaGravidade {
+    background-color: var(--var-darkred);
+    color: white;
     cursor: pointer;
 }
 
@@ -33,20 +58,9 @@ body {
     text-align: center;
 }
 
-.tituloMediaGravidade {
-    background-color: var(--var-orange);
-    cursor: pointer;
-}
-
 .mediaGravidade {
     background-color: var(--var-lightorange);
     text-align: center;
-}
-
-.tituloAltaGravidade {
-    background-color: var(--var-darkred);
-    color: white;
-    cursor: pointer;
 }
 
 .altaGravidade {
@@ -69,8 +83,8 @@ body {
 
 
 .tituloBaixaGravidade:hover {
-    background-color: var(--var-yellow2);
-    color: white;
+    background-color: var(--var-lightyellow);
+    /* color: white; */
     cursor: pointer;
 }
 

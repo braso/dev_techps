@@ -34,11 +34,11 @@
 			</table>
 		</div>
 
-		<?php if ($endossado === true) { ?>
-			<div>
-				<h4><b>Legendas</b></h4>
-			</div>
-			<div class="portlet-body form">
+		<!-- <// if ($endossado === true) { ?> -->
+		<div>
+			<h4><b>Legendas</b></h4>
+		</div>
+		<!--<div class="portlet-body form">
 				<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
 					<thead>
 						<tr>
@@ -49,77 +49,77 @@
 						</tr>
 					</thead>
 					<tbody>
-						<?php if ($_POST["busca_endossado"] == "naoEndossado") { ?>
+						< //if ($_POST["busca_endossado"] == "naoEndossado") { ?>
 							<tr>
 								<td class="tituloBaixaGravidade">Espera</td>
 								<td class="baixaGravidade">"Inicio ou Fim de espera sem registro"</td>
-								<td class="total"><?= $totalizadores["espera"] ?></td>
-								<td class="total"><?= $percentuais["Geral_espera"] ?>%</td>
+								<td class="total">< $totalizadores["espera"] ?></td>
+								<td class="total">< $percentuais["Geral_espera"] ?>%</td>
 							</tr>
 							<tr>
 								<td class="tituloBaixaGravidade">Descanso</td>
 								<td class="baixaGravidade">"Inicio ou Fim de descanso sem registro"</td>
-								<td class="total"><?= $totalizadores["descanso"] ?></td>
-								<td class="total"><?= $percentuais["Geral_descanso"] ?>%</td>
+								<td class="total">< $totalizadores["descanso"] ?></td>
+								<td class="total">< $percentuais["Geral_descanso"] ?>%</td>
 							</tr>
 							<tr>
 								<td class="tituloBaixaGravidade">Repouso</td>
 								<td class="baixaGravidade">"Inicio ou Fim de repouso sem registro"</td>
-								<td class="total"><?= $totalizadores["repouso"] ?></td>
-								<td class="total"><?= $percentuais["Geral_repouso"] ?>%</td>
+								<td class="total">< $totalizadores["repouso"] ?></td>
+								<td class="total">< $percentuais["Geral_repouso"] ?>%</td>
 							</tr>
 							<tr>
 								<td class="tituloBaixaGravidade">Jornada</td>
 								<td class="baixaGravidade">"Inicio ou Fim de Jornada sem registro"</td>
-								<td class="total"><?= $totalizadores["jornada"] ?></td>
-								<td class="total"><?= $percentuais["Geral_jornada"] ?>%</td>
+								<td class="total">< $totalizadores["jornada"] ?></td>
+								<td class="total">< $percentuais["Geral_jornada"] ?>%</td>
 							</tr>
-						<?php } ?>
+						< // } ?>
 						<tr>
 							<td class="tituloBaixaGravidade">Jornada Prevista</td>
 							<td class="baixaGravidade">"Abono (Folgas, Férias ou outros)."</td>
-							<td class="total"><?= $totalizadores["jornadaPrevista"] ?></td>
-							<td class="total"><?= $percentuais["Geral_jornadaPrevista"] ?>%</td>
+							<td class="total">< $totalizadores["jornadaPrevista"] ?></td>
+							<td class="total">< $percentuais["Geral_jornadaPrevista"] ?>%</td>
 						</tr>
 						<tr>
 							<td class="tituloMediaGravidade">Jornada Efetiva</td>
 							<td class="mediaGravidade">"Tempo excedido de 10:00h." ou "Tempo excedido de 12:00h."</td>
-							<td class="total"><?= $totalizadores["jornadaEfetiva"] ?></td>
-							<td class="total"><?= $percentuais["Geral_jornadaEfetiva"] ?>%</td>
+							<td class="total">< $totalizadores["jornadaEfetiva"] ?></td>
+							<td class="total">< $percentuais["Geral_jornadaEfetiva"] ?>%</td>
 						</tr>
 						<tr>
 							<td class="tituloMediaGravidade">MDC - Máximo de Direção Continua</td>
 							<td class="mediaGravidade">"Descanso de 00:30 a cada 05:30 dirigidos não respeitado." ou "Descanso de 00:15 não respeitado." ou "Descanso de 00:30 não respeitado."</td>
-							<td class="total"><?= $totalizadores["mdc"] ?></td>
-							<td class="total"><?= $percentuais["Geral_mdc"] ?>%</td>
+							<td class="total">< $totalizadores["mdc"] ?></td>
+							<td class="total">< $percentuais["Geral_mdc"] ?>%</td>
 						</tr>
 						<tr>
 							<td class="tituloAltaGravidade">Refeição</td>
 							<td class="altaGravidade">"Batida início de refeição não registrada!" ou "Refeição Initerrupita maior do que 01:00h não respeitada" ou "Refeição com Tempo máximo de 02:00h não respeitada."</td>
-							<td class="total"><?= $totalizadores["refeicao"] ?></td>
-							<td class="total"><?= $percentuais["Geral_refeicao"] ?>%</td>
+							<td class="total">< $totalizadores["refeicao"] ?></td>
+							<td class="total">< $percentuais["Geral_refeicao"] ?>%</td>
 						</tr>
 						<tr>
 							<td class="tituloAltaGravidade">Interstício Inferior</td>
 							<td class="altaGravidade">"O mínimo de 08:00h ininterruptas no primeiro período não respeitado."</td>
-							<td class="total"><?= $totalizadores["intersticioInferior"] ?></td>
-							<td class="total"><?= $percentuais["Geral_intersticioInferior"] ?>%</td>
+							<td class="total">< $totalizadores["intersticioInferior"] ?></td>
+							<td class="total">< $percentuais["Geral_intersticioInferior"] ?>%</td>
 						</tr>
 						<tr>
 							<td class="tituloAltaGravidade">Interstício Superior</td>
 							<td class="altaGravidade">"Interstício Total de 11:00 não respeitado, faltaram 00:32."</td>
-							<td class="total"><?= $totalizadores["intersticioSuperior"] ?></td>
-							<td class="total"><?= $percentuais["Geral_intersticioSuperior"] ?>%</td>
+							<td class="total">< $totalizadores["intersticioSuperior"] ?></td>
+							<td class="total">< $percentuais["Geral_intersticioSuperior"] ?>%</td>
 						</tr>
 					</tbody>
 				</table>
 			</div>
 			<div>
 				<h4><b>Total de Não conformidade de todos Funcionário</b></h4>
-			</div>
-			<div class="portlet-body form">
-				<div class='container' style='display:flex'>
-					<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact" style="width: 400px;">
+			</div> -->
+		<div class="portlet-body form">
+			<!-- <div class='container' style='display:flex'> -->
+			<!--<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact" style="width: 400px;">
 						<thead>
 							<tr>
 								<td></td>
@@ -128,101 +128,101 @@
 							</tr>
 						</thead>
 						<tbody>
-							<?php if ($_POST["busca_endossado"] == "naoEndossado") { ?>
+							< //if ($_POST["busca_endossado"] == "naoEndossado") { ?>
 								<tr>
 									<td class="tituloBaixaGravidade">Inicio ou Fim de espera sem registro</td>
-									<td><?= $totalizadores["espera"] ?></td>
-									<td><?= $percentuais["Especifico_espera"] ?>%</td>
+									<td>< $totalizadores["espera"] ?></td>
+									<td>< $percentuais["Especifico_espera"] ?>%</td>
 								</tr>
 								<tr>
 									<td class="tituloBaixaGravidade">Inicio ou Fim de descanso sem registro</td>
-									<td><?= $totalizadores["descanso"] ?></td>
-									<td><?= $percentuais["Especifico_descanso"] ?>%</td>
+									<td>< $totalizadores["descanso"] ?></td>
+									<td>< $percentuais["Especifico_descanso"] ?>%</td>
 								</tr>
 								<tr>
 									<td class="tituloBaixaGravidade">Inicio ou Fim de repouso sem registro</td>
-									<td><?= $totalizadores["repouso"] ?></td>
-									<td><?= $percentuais["Especifico_repouso"] ?>%</td>
+									<td>< $totalizadores["repouso"] ?></td>
+									<td>< $percentuais["Especifico_repouso"] ?>%</td>
 								</tr>
 								<tr>
 									<td class="tituloBaixaGravidade">Inicio ou Fim de jornada sem registro</td>
-									<td><?= $totalizadores["jornada"] ?></td>
-									<td><?= $percentuais["Especifico_jornada"] ?>%</td>
+									<td>< $totalizadores["jornada"] ?></td>
+									<td>< $percentuais["Especifico_jornada"] ?>%</td>
 								</tr>
-							<?php } ?>
+							<// } ?>
 							<tr>
 								<td class="tituloBaixaGravidade">Faltas justificadas</td>
-								<td><?= $totalizadores["faltaJustificada"] ?></td>
-								<td><?= $percentuais["Especifico_faltaJustificada"] ?>%</td>
+								<td>< $totalizadores["faltaJustificada"] ?></td>
+								<td>< $percentuais["Especifico_faltaJustificada"] ?>%</td>
 							</tr>
 							<tr>
 								<td class="tituloBaixaGravidade">Faltas não justificadas</td>
-								<td><?= $totalizadores["falta"] ?></td>
-								<td><?= $percentuais["Especifico_falta"] ?>%</td>
+								<td>< $totalizadores["falta"] ?></td>
+								<td>< $percentuais["Especifico_falta"] ?>%</td>
 							</tr>
 							<tr>
 								<td class="tituloMediaGravidade">Tempo excedida de 10:00h</td>
-								<td><?= $totalizadores["jornadaExcedido10h"] ?></td>
-								<td><?= $percentuais["Especifico_jornadaExcedido10h"] ?>%</td>
+								<td>< $totalizadores["jornadaExcedido10h"] ?></td>
+								<td>< $percentuais["Especifico_jornadaExcedido10h"] ?>%</td>
 							</tr>
 							<tr>
 								<td class="tituloMediaGravidade">Tempo excedida de 12:00h</td>
-								<td><?= $totalizadores["jornadaExcedido12h"] ?></td>
-								<td><?= $percentuais["Especifico_jornadaExcedido12h"] ?>%</td>
+								<td>< $totalizadores["jornadaExcedido12h"] ?></td>
+								<td>< $percentuais["Especifico_jornadaExcedido12h"] ?>%</td>
 							</tr>
 							<tr>
 								<td class="tituloMediaGravidade">Descanso de 00:30 a cada 05:30 dirigidos não respeitado</td>
-								<td><?= $totalizadores["mdcDescanso30m5h"] ?></td>
-								<td><?= $percentuais["Especifico_mdcDescanso30m5h"] ?>%</td>
+								<td>< $totalizadores["mdcDescanso30m5h"] ?></td>
+								<td>< $percentuais["Especifico_mdcDescanso30m5h"] ?>%</td>
 							</tr>
 							<tr>
 								<td class="tituloMediaGravidade">Descanso de 00:30 não respeitado</td>
-								<td><?= $totalizadores["mdcDescanso30m"] ?></td>
-								<td><?= $percentuais["Especifico_mdcDescanso30m"] ?>%</td>
+								<td>< $totalizadores["mdcDescanso30m"] ?></td>
+								<td>< $percentuais["Especifico_mdcDescanso30m"] ?>%</td>
 							</tr>
 							<tr>
 								<td class="tituloMediaGravidade">Descanso de 00:15 não respeitado</td>
-								<td><?= $totalizadores["mdcDescanso15m"] ?></td>
-								<td><?= $percentuais["Especifico_mdcDescanso15m"] ?>%</td>
+								<td>< $totalizadores["mdcDescanso15m"] ?></td>
+								<td>< $percentuais["Especifico_mdcDescanso15m"] ?>%</td>
 							</tr>
 							<tr>
 								<td class="tituloAltaGravidade">Batida início de refeição não registrado</td>
-								<td><?= $totalizadores["inicioRefeicaoSemRegistro"] ?></td>
-								<td><?= $percentuais["Especifico_inicioRefeicaoSemRegistro"] ?>%</td>
+								<td>< $totalizadores["inicioRefeicaoSemRegistro"] ?></td>
+								<td>< $percentuais["Especifico_inicioRefeicaoSemRegistro"] ?>%</td>
 							</tr>
 							<tr>
 								<td class="tituloAltaGravidade">Batida fim de refeição não registrado</td>
-								<td><?= $totalizadores["fimRefeicaoSemRegistro"] ?></td>
-								<td><?= $percentuais["Especifico_fimRefeicaoSemRegistro"] ?>%</td>
+								<td>< $totalizadores["fimRefeicaoSemRegistro"] ?></td>
+								<td>< $percentuais["Especifico_fimRefeicaoSemRegistro"] ?>%</td>
 							</tr>
 							<tr>
 								<td class="tituloAltaGravidade">Refeição Initerrupita maior do que 01:00h não respeitada</td>
-								<td><?= $totalizadores["refeicao1h"] ?></td>
-								<td><?= $percentuais["Especifico_refeicao1h"] ?>%</td>
+								<td>< $totalizadores["refeicao1h"] ?></td>
+								<td>< $percentuais["Especifico_refeicao1h"] ?>%</td>
 							</tr>
 							<tr>
 								<td class="tituloAltaGravidade">Refeição com Tempo máximo de 02:00h não respeitada</td>
-								<td><?= $totalizadores["refeicao2h"] ?></td>
-								<td><?= $percentuais["Especifico_refeicao2h"] ?>%</td>
+								<td>< $totalizadores["refeicao2h"] ?></td>
+								<td>< $percentuais["Especifico_refeicao2h"] ?>%</td>
 							</tr>
 							<tr>
 								<td class="tituloAltaGravidade">O mínimo de 08:00h ininterruptas no primeiro período não respeitado</td>
-								<td><?= $totalizadores["intersticioInferior"] ?></td>
-								<td><?= $percentuais["Especifico_intersticioInferior"] ?>%</td>
+								<td>< $totalizadores["intersticioInferior"] ?></td>
+								<td>< $percentuais["Especifico_intersticioInferior"] ?>%</td>
 							</tr>
 							<tr>
 								<td class="tituloAltaGravidade">Interstício Total de 11:00 não respeitado, faltaram 00:32</td>
-								<td><?= $totalizadores["intersticioSuperior"] ?></td>
-								<td><?= $percentuais["Especifico_intersticioSuperior"] ?>%</td>
+								<td>< $totalizadores["intersticioSuperior"] ?></td>
+								<td>< $percentuais["Especifico_intersticioSuperior"] ?>%</td>
 							</tr>
 						</tbody>
-					</table>
-					<div id='graficoDetalhado' style='width:83%; height:850px; background-color: lightblue;'>
-					</div>
-				</div>
-			<?php } ?>
-
+					</table>-->
+			<div id='graficoDetalhado' style='width:100%; height:850px; background-color: lightblue;'>
+				<!-- </div> -->
 			</div>
+			<!-- < //} ?>  -->
+
+		</div>
 	</div>
 </div>
 <div id="impressao">
@@ -233,7 +233,7 @@
 		// Gráfico sintético
 		const categorias = ['Performance', 'Alta', 'Media', 'Baixa'];
 		const valores = <?= json_encode($graficoSintetico) ?>;
-		const cores = ['#53d02a', '#a30000', '#FFB520', '#f1c61f'];
+		const cores = ['#53d02a', '#a30000', '#FF8B00', '#FFE800'];
 
 		const dataFormatada = categorias.map((categoria, index) => ({
 			name: categoria,
@@ -352,26 +352,31 @@
 				labels: {
 					style: {
 						fontSize: '14px' // Aumenta o tamanho da fonte dos rótulos do eixo X
+					},
+					formatter: function() {
+						// Acessa a cor associada à categoria
+						var color = coresDetalhado[this.pos] || '#000'; // Usa a cor da categoria ou preta por padrão
+						return `<span style="color:${color};"><b>${this.value}</b></span>`; // Aplica a cor sem afetar o alinhamento
 					}
 				}
 			},
 			yAxis: {
 				min: 0,
 				max: 100, // Limita o eixo Y a 100%
-				// title: {
-				// 	text: 'Porcentagem',
-				// 	style: {
-				// 		fontSize: '16px'
-				// 	}
-				// },
+				title: {
+					text: 'Porcentagem',
+					style: {
+						fontSize: '16px'
+					}
+				},
 				labels: {
 					format: '{value}%', // Exibe as labels do eixo Y como porcentagem
 					style: {
 						fontSize: '11px' // Aumenta o tamanho da fonte dos rótulos do eixo Y
 					}
 				},
-				tickInterval: 5, // Ajusta o intervalo entre os ticks (linhas de grid)
-				gridLineWidth: 0.5 // Reduz a largura das linhas de grid para torná-las mais finas
+				tickInterval: 2, // Ajusta o intervalo entre os ticks (linhas de grid)
+				gridLineWidth: 1.5 // Reduz a largura das linhas de grid para torná-las mais finas
 
 			},
 			tooltip: {
@@ -390,7 +395,7 @@
 						format: '{point.y:.2f}%', // Exibe o valor em porcentagem com duas casas decimais
 						style: {
 							fontSize: '14px' // Aumenta o tamanho da fonte das labels de dados
-						},
+						}
 					}
 				}
 			},
