@@ -513,9 +513,9 @@
 					'Interstício Total de 11:00 não respeitado, faltaram 00:32'
 					];
 
-					$coresGrafico = ['#f1c61f' ,'#f1c61f' ,'#f1c61f','#f1c61f','#f1c61f', '#FFB520', '#FFB520', '#a30000', '#a30000', '#a30000'];
-					$coresGrafico2 = ['#f1c61f', '#f1c61f', '#f1c61f', '#f1c61f', '#f1c61f', '#f1c61f', '#FFB520', '#FFB520', '#FFB520', '#FFB520',
-					'#FFB520', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000'];
+					$coresGrafico = ['#FFE800' ,'#FFE800' ,'#FFE800','#FFE800','#FFE800', '#FF8B00', '#FF8B00', '#a30000', '#a30000', '#a30000'];
+					$coresGrafico2 = ['#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FF8B00', '#FF8B00', '#FF8B00', '#FF8B00',
+					'#FF8B00', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000'];
 					//}
 					
 					$keys = ["espera", "descanso", "repouso", "jornada", "jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao",
@@ -537,9 +537,9 @@
 					'Interstício Total de 11:00 não respeitado, faltaram 00:32'
 					];
 
-					$coresGrafico = ['#f1c61f', '#FFB520', '#FFB520', '#a30000', '#a30000', '#a30000'];
-					$coresGrafico2 = ['#f1c61f', '#f1c61f', '#FFB520', '#FFB520', '#FFB520', '#FFB520',
-					'#FFB520', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000'];
+					$coresGrafico = ['#FFE800', '#FF8B00', '#FF8B00', '#a30000', '#a30000', '#a30000'];
+					$coresGrafico2 = ['#FFE800', '#FFE800', '#FF8B00', '#FF8B00', '#FF8B00', '#FF8B00',
+					'#FF8B00', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000'];
 					//}
 
 					$keys = ["jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao","intersticioInferior", "intersticioSuperior"];
@@ -657,17 +657,17 @@
 							. "<td>".$percentuais["performance"]."%</td>"
 							. "</tr>"
 							. "<tr>"
-								. "<td class='tituloBaixaGravidade'>Baixa</td>"
+								. "<td class='tituloBaixaGravidade2'>Baixa</td>"
 								. "<td class='total'>$gravidadeBaixa</td>"
 								. "<td class='total'>".$percentuais["baixa"]."%</td>"
 							. "</tr>"
 							. "<tr>"
-								. "<td class='tituloMediaGravidade'>Média</td>"
+								. "<td class='tituloMediaGravidade2'>Média</td>"
 								. "<td class='total'>$gravidadeMedia</td>"
 								. "<td class='total'>".$percentuais["media"]."%</td>"
 							. "</tr>"
 							. "<tr>"
-								. "<td class='tituloAltaGravidade'>Alta</td>"
+								. "<td class='tituloAltaGravidade2'>Alta</td>"
 								. "<td class='total'>$gravidadeAlta</td>"
 								. "<td class='total'>".$percentuais["alta"]."%</td>"
 							. "</tr>"
