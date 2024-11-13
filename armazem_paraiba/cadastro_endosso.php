@@ -242,9 +242,10 @@
 		){
 			diaDetalhePonto($motorista["enti_tx_matricula"], $date->format("Y-m-d"));
 		}
+
 		
 		$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
-		$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], "00:00", ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+		$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], "999:59", ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
 		$totalResumo["saldoAnterior"] = $saldoAnterior;
 		$totalResumo["saldoBruto"] = $saldoBruto;
 		[$totalResumo["he50APagar"], $totalResumo["he100APagar"]] = $aPagar;
@@ -390,18 +391,18 @@
 			}
 				
 			//Calculando datas de início e fim do ciclo{
-				$aEndosso = carrega_array(query(
+				$aEndosso = mysqli_fetch_array(query(
 					"SELECT endo_tx_dataCadastro, endo_tx_ate, endo_tx_max50APagar FROM endosso WHERE endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'"
-				));
+				), MYSQLI_BOTH);
 				
-				$dadosMotorista = carrega_array(query(
+				$dadosMotorista = mysqli_fetch_array(query(
 					"SELECT * FROM entidade".
 						" LEFT JOIN parametro ON enti_nb_parametro = para_nb_id".
 						" WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')".
 						" AND enti_nb_id IN (".$motorista["enti_nb_id"].")".
 						" AND enti_nb_empresa = ".$motorista["enti_nb_empresa"].
 						" ORDER BY enti_tx_nome"
-				));
+				), MYSQLI_BOTH);
 	
 				if(!empty($dadosMotorista["para_nb_qDias"]) && !empty($aEndosso)){
 					$dataCicloProx = strtotime($dadosMotorista["para_tx_inicioAcordo"]);

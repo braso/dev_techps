@@ -226,10 +226,10 @@
 			mysqli_stmt_bind_param($statement, $types, ...array_values($novoRegistro));
 			$registered = mysqli_stmt_execute($statement);
 			
-			mysqli_stmt_close($statement);
 			if(!$registered){
 				throw new Exception($statement->error);
 			}
+			mysqli_stmt_close($statement);
 			
 		}catch(Exception $e){
 			set_status("ERRO ao registrar.");
@@ -308,19 +308,15 @@
 		return campo($nome,$variavel,$modificador,$tamanho,"MASCARA_DOMAIN",$extra);
 	}
 
-	function num_linhas($sql){
-		return mysqli_num_rows($sql);
-	}
-
-	function carrega_array($sql, $mode = MYSQLI_BOTH){
-		return mysqli_fetch_array($sql, $mode);
-	}
+	// function carrega_array($sql, $mode = MYSQLI_BOTH){
+	// 	return mysqli_fetch_array($sql, $mode);
+	// }
 
 	function ultimo_reg($tabela){
 		$campo = substr($tabela,0,4)."_nb_id";
 
 		$sql=query("SELECT $campo FROM $tabela ORDER BY $campo DESC LIMIT 1;");
-		return carrega_array($sql)[0];
+		return mysqli_fetch_array($sql, MYSQLI_BOTH)[0];
 	}
 
 	function carregar($tabela, $id="", $campo="", $valor="", $extra="", $exibe=0){
@@ -498,8 +494,10 @@
 						DateTime::createFromFormat("Y-m-d", $modificador[1]),
 					];
 					if(in_array(false, $datas)){
-						set_status("ERRO: datas com formatação incorreta.");
-						return;
+						$datas = [
+							DateTime::createFromFormat("Y-m-d", date("Y-m-01")),
+							DateTime::createFromFormat("Y-m-d", date("Y-m-d"))
+						];
 					}
 				}
 
@@ -1400,12 +1398,18 @@
 	function icone_excluir_ajuste($id, $acao, $campos='', $data_de='', $data_ate='', $valores='', $target='', $icone='', $msg='Deseja excluir o registro?', $action='', $title=''){
 
 		global $CONTEX;
-		if($icone==''){
+		if(empty($icone)){
 			$icone = 'glyphicon glyphicon-remove';
 		}
-		
-		if($icone == 'glyphicon glyphicon-remove' && $title == '')
+		if($icone == 'glyphicon glyphicon-remove' && empty($title)){
 			$title = 'Excluir';
+		}
+		if(empty($data_de)){
+			$data_de = date("Y-m-01");
+		}
+		if(empty($data_ate)){
+			$data_ate = date("Y-m-d");
+		}
 
 		$icone='class="'.$icone.'"';
 
@@ -1417,15 +1421,15 @@
 				if(just !== null && just !== ''){
 					
 					var form = document.getElementById('contex_icone_form');
-					form.id.value=id;
-					form.acao.value=acao;
-					form.data_de.value=data_de;
-					form.data_ate.value=data_ate;
-					form.just.value=just;
-					form.atualiza.value=atualiza;
+					form.id.value = id;
+					form.acao.value = acao;
+					form.data_de.value = data_de;
+					form.data_ate.value = data_ate;
+					form.just.value = just;
+					form.atualiza.value = atualiza;
 					if(campos){
-						form.hidden.value=valores;
-						form.hidden.name=campos;
+						form.hidden.value = valores;
+						form.hidden.name = campos;
 					}
 					campos = campos.split(',');
 					valores = valores.split(',');

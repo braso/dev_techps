@@ -156,7 +156,7 @@
 				);
 
 
-				while ($aMotorista = carrega_array($sqlMotorista)) {
+				while ($aMotorista = mysqli_fetch_array($sqlMotorista, MYSQLI_BOTH)) {
 					$counts["total"]++;
 					if(empty($aMotorista["enti_tx_nome"]) || empty($aMotorista["enti_tx_matricula"])){
 						continue;
@@ -192,7 +192,7 @@
 					
 					if (count($aDia) > 0) {
 
-						$aEndosso = carrega_array(query(
+						$aEndosso = mysqli_fetch_array(query(
 							"SELECT user_tx_login, endo_tx_dataCadastro, endo_tx_ate 
 								FROM endosso JOIN user ON endo_nb_userCadastro = user_nb_id 
 								WHERE endo_tx_status = 'ativo' 
@@ -200,7 +200,7 @@
 									AND endo_nb_entidade = '".$aMotorista["enti_nb_id"]."'
 									AND endo_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'
 								LIMIT 1"
-						));
+						), MYSQLI_BOTH);
 						if (is_array($aEndosso) && count($aEndosso) > 0) {
 							$counts["endossados"]++;
 							$infoEndosso = " - Endossado por ".$aEndosso["user_tx_login"]." em ".data($aEndosso["endo_tx_dataCadastro"], 1);
@@ -227,12 +227,12 @@
 							}
 						}
 						
-						$dadosParametro = carrega_array(query(
+						$dadosParametro = mysqli_fetch_array(query(
 							"SELECT para_tx_tolerancia, para_tx_dataCadastro, para_nb_qDias FROM parametro 
 								JOIN entidade ON para_nb_id = enti_nb_parametro 
 								WHERE enti_nb_parametro = ".$aMotorista["enti_nb_parametro"]." 
 								LIMIT 1;"
-						));
+						), MYSQLI_BOTH);
 						$dataCicloProx = strtotime($dadosParametro["para_tx_dataCadastro"]);
 						if($dataCicloProx !== false){
 							while(!empty($aEndosso["endo_tx_ate"]) && $dataCicloProx < strtotime($aEndosso["endo_tx_ate"])){

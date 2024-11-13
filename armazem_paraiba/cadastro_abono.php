@@ -11,7 +11,7 @@
 			
 			$camposObrig = [
 				"motorista" => "Funcionário",
-				"busca_periodo" => "Data",
+				"periodo_abono" => "Data",
 				"abono" => "Abono",
 				"motivo" => "Motivo"
 			];
@@ -27,8 +27,8 @@
 
 		$_POST["busca_motorista"] = $_POST["motorista"];
 
-		$aData[0] = $_POST["busca_periodo"][0];
-		$aData[1] = $_POST["busca_periodo"][1];
+		$aData[0] = $_POST["periodo_abono"][0];
+		$aData[1] = $_POST["periodo_abono"][1];
 		//Conferir se há um período entrelaçado com essa data{
 			$endosso = mysqli_fetch_assoc(
 				query(
@@ -50,7 +50,7 @@
 				$endosso["endo_tx_ate"] = explode("-", $endosso["endo_tx_ate"]);
 				$endosso["endo_tx_ate"] = $endosso["endo_tx_ate"][2]."/".$endosso["endo_tx_ate"][1]."/".$endosso["endo_tx_ate"][0];
 
-				$_POST["errorFields"][] = "busca_periodo";
+				$_POST["errorFields"][] = "periodo_abono";
 				set_status("ERRO: Possui um endosso de ".$endosso["endo_tx_de"]." até ".$endosso["endo_tx_ate"].".");
 				layout_abono();
 				exit;
@@ -64,7 +64,7 @@
 		
 		for ($i = $begin; $i <= $end; $i->modify("+1 day")){
 			$sqlRemover = query("SELECT * FROM abono WHERE abon_tx_data = '".$i->format("Y-m-d")."' AND abon_tx_matricula = '".$a["enti_tx_matricula"]."' AND abon_tx_status = 'ativo'");
-			while ($aRemover = carrega_array($sqlRemover)) {
+			while ($aRemover = mysqli_fetch_array($sqlRemover, MYSQLI_BOTH)) {
 				remover("abono", $aRemover["abon_nb_id"]);
 			}
 			$aDetalhado = diaDetalhePonto($a["enti_tx_matricula"], $i->format("Y-m-d"));
@@ -84,9 +84,8 @@
 			inserir("abono", array_keys($novoAbono), array_values($novoAbono));
 		}
 
-
-		$_POST["acao"] = "index";
-
+		$_POST["acao"] = "buscarEspelho";
+		$_POST["busca_periodo"] = json_decode(str_replace("'", "\"", $_POST["busca_periodo"]));
 		voltar();
 		exit;
 	}
@@ -111,13 +110,17 @@
 			" AND enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário')",
 			"enti_tx_matricula"
 		);
-		$campos[0][] = campo("Data(s)*", "busca_periodo", ($_POST["busca_periodo"]?? ""),3, "MASCARA_PERIODO");
+		$campos[0][] = campo("Data(s)*", "periodo_abono", ($_POST["periodo_abono"]?? $_POST["busca_periodo"]?? ""),3, "MASCARA_PERIODO");
 		$campos[0][] = campo("Abono*", "abono", ($_POST["abono"]?? ""), 3, "MASCARA_HORAS");
 		$campos[1][] = combo_bd("Motivo*","motivo", ($_POST["motivo"]?? ""),4,"motivo",""," AND moti_tx_tipo = 'Abono'");
 		$campos[1][] = textarea("Justificativa","descricao", ($_POST["descricao"]?? ""),12);
 		
 		//BOTOES
     	$b[] = botao("Gravar","cadastra_abono", "","","","","btn btn-success");
+
+		if(empty($_POST["HTTP_REFERER"])){
+			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
+		}
 		
 		$voltarInfo = $_POST;
 		unset($voltarInfo["errorFields"]);
@@ -126,14 +129,9 @@
 		$b[] = botao("Voltar", "voltar", implode(",",array_keys($voltarInfo)), implode(",",array_values($voltarInfo))); 
 		abre_form();
 
-		if(empty($_POST["HTTP_REFERER"])){
-			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
-		}
-
-		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		echo campo_hidden("busca_empresa", ($_POST["busca_empresa"]?? ""));
-		echo campo_hidden("busca_dataInicio", ($_POST["busca_dataInicio"]?? ""));
-		echo campo_hidden("busca_dataFim", ($_POST["busca_dataFim"]?? ""));
+		echo campo_hidden("HTTP_REFERER", 	$voltarInfo["HTTP_REFERER"]);
+		echo campo_hidden("busca_empresa", ($voltarInfo["busca_empresa"]?? ""));
+		echo campo_hidden("busca_periodo", (str_replace("\"", "'", $voltarInfo["busca_periodo"])?? ""));
 		
 		linha_form($campos[0]);
 		linha_form($campos[1]);

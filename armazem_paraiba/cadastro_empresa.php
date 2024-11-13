@@ -108,8 +108,6 @@
 
 	function cadastrarEmpresa(){
 
-		$sqlCheckNivel = (!empty($_POST["id"]))? mysqli_fetch_assoc(query("SELECT empr_tx_Ehmatriz FROM empresa WHERE empr_nb_id = ".$_POST["id"]." LIMIT 1;")): ["empr_tx_Ehmatriz" => "nao"];
-		
 		$camposObrig = [
 			"cnpj" => "CNPJ",
 			"nome" => "Nome",
@@ -122,6 +120,29 @@
 			"bairro" => "Bairro"
 		];
 		$errorMsg = conferirCamposObrig($camposObrig, $_POST);
+		if(!empty($errorMsg)){
+			set_status("ERRO: ".$errorMsg);
+			visualizarCadastro();
+			exit;
+		}
+
+		$cnpjMatriz = mysqli_fetch_assoc(query(
+			"SELECT empr_tx_cnpj FROM empresa"
+			." WHERE empr_tx_status = 'ativo'"
+				." AND empr_tx_Ehmatriz = 'sim'"
+			." LIMIT 1;"
+		));
+
+		if(empty($cnpjMatriz)){
+			$errorMsg = "Empresa matriz não encontrada.";
+		}else{
+			$cnpjMatriz = preg_replace('/[^0-9]/', '', $cnpjMatriz["empr_tx_cnpj"]);
+			$_POST["cnpj"] = preg_replace('/[^0-9]/', '', $_POST["cnpj"]);
+			if(substr($cnpjMatriz, 0, 8) != substr($_POST["cnpj"], 0, 8)){
+				$errorMsg = "Os primeiros 8 dígitos do CNPJ devem ser os mesmos da empresa matriz.";
+				$_POST["errorFields"][] = "cnpj";
+			}
+		}
 
 		if(!empty($errorMsg)){
 			set_status("ERRO: ".$errorMsg);
@@ -142,7 +163,6 @@
 			}
 		}
 		if(empty($_POST["id"])){
-
 			$empresa = array_merge($empresa, [
 				"empr_tx_Ehmatriz"		=> $_POST["matriz"],
 				"empr_nb_parametro" 	=> $_POST["parametro"],
@@ -252,12 +272,12 @@
 		if(strlen($cnpj) == 18 || strlen($cnpj) == 14){
 			$cnpj = substr($cnpj, 0, 18);
 
-			$a = carrega_array(query(
+			$a = mysqli_fetch_array(query(
 				"SELECT * FROM empresa"
 					." WHERE empr_tx_cnpj = '".$cnpj."'"
 						." AND empr_nb_id != ".$id
 					." LIMIT 1;"
-			));
+			), MYSQLI_BOTH);
 			
 			if($a["empr_nb_id"] > 0){
 				echo 
@@ -353,16 +373,16 @@
 			$prefix = "";
 
 			$input_values = [
-				"nome" => ($_POST["busca_nome"]?? ""),
-				"fantasia" => ($_POST["busca_fantasia"]?? ""),
-				"cnpj" => ($_POST["busca_cnpj"]?? ""),
-				"uf" => ($_POST["uf"]?? ""),
+				"nome" 				=> (!empty($_POST["busca_nome"])? $_POST["busca_nome"]: ""),
+				"fantasia" 			=> (!empty($_POST["busca_fantasia"])? $_POST["busca_fantasia"]: ""),
+				"cnpj" 				=> (!empty($_POST["busca_cnpj"])? $_POST["busca_cnpj"]: ""),
+				"uf" 				=> (!empty($_POST["uf"])? $_POST["uf"]: ""),
 
-				"ftpServer" => ($_POST["ftpServer"]?? ""),
-				"ftpUsername" => ($_POST["ftpUsername"]?? ""),
-				"ftpUserpass" => ($_POST["ftpUserpass"]?? ""),
-				"cidade" => ($_POST["cidade"]?? ""),
-				"dataRegistroCNPJ" => ($_POST["dataRegistroCNPJ"]?? "")
+				"ftpServer" 		=> (!empty($_POST["ftpServer"])? $_POST["ftpServer"]: ""),
+				"ftpUsername" 		=> (!empty($_POST["ftpUsername"])? $_POST["ftpUsername"]: ""),
+				"ftpUserpass" 		=> (!empty($_POST["ftpUserpass"])? $_POST["ftpUserpass"]: ""),
+				"cidade" 			=> (!empty($_POST["cidade"])? $_POST["cidade"]: ""),
+				"dataRegistroCNPJ" 	=> (!empty($_POST["dataRegistroCNPJ"])? $_POST["dataRegistroCNPJ"]: "")
 			];
 
 			$btn_txt = "Cadastrar";
@@ -398,19 +418,16 @@
 		$input_values["ftpUsername"] = !empty($input_values["ftpUsername"])? $input_values["ftpUsername"]: "";
 
 
-		if(!empty($input_values["logo"])){
-			$iconeExcluirLogo = gerarLogoExcluir($a_mod["empr_nb_id"], "excluirLogo");
-		}else{
-			$iconeExcluirLogo = "";
-		}
+		$iconeExcluirLogo = (!empty($input_values["logo"]))? gerarLogoExcluir($a_mod["empr_nb_id"], "excluirLogo"): "";
 
 		if(is_int(strpos($_SESSION["user_tx_nivel"], "Super Administrador"))){
 			$campo_dominio = campo_domain("Nome do Domínio","nomeDominio",$input_values["domain"]?? "",2,"domain");
-			$campo_EhMatriz = combo("É matriz?","matriz",$input_values["Ehmatriz"]?? "",2,["sim" => "Sim", "nao" => "Não"]);
+			// $campo_EhMatriz = combo("É matriz?","matriz",$input_values["Ehmatriz"]?? "",2,["sim" => "Sim", "nao" => "Não"]);
 		}else{
 			$campo_dominio = texto("Nome do Domínio",$input_values["domain"]?? "",3);
-			$campo_EhMatriz = texto("É matriz?",$input_values["Ehmatriz"]?? "",2);
+			// $campo_EhMatriz = texto("É matriz?",$input_values["Ehmatriz"]?? "",2);
 		}
+		$campo_EhMatriz = campo_hidden("matriz", (!empty($input_values["Ehmatriz"])? $input_values["Ehmatriz"]: "nao")).texto("É matriz?", ucfirst((!empty($input_values["Ehmatriz"])? $input_values["Ehmatriz"]: "Não")),2);
 
 		$cidade = [
 			"cida_tx_uf" => "",
@@ -424,25 +441,25 @@
 		$campo_cidade = texto("Cidade/UF", "[".$cidade["cida_tx_uf"]."] ".$cidade["cida_tx_nome"], 2);
     	if (is_bool(strpos($_SESSION["user_tx_nivel"], "Super Administrador")) && (!empty($input_values["Ehmatriz"]) && $input_values["Ehmatriz"] == "sim")) {
 			$c = [
-				texto("CPF/CNPJ*",$input_values["cnpj"],2),
-				texto("Nome*",$input_values["nome"],4),
-				texto("Nome Fantasia",$input_values["fantasia"],3),
-				texto("Status",$input_values["status"],2),
-				texto("CEP*",$input_values["cep"],2),
-				texto("Endereço*",$input_values["endereco"],4),
-				texto("Número*",$input_values["numero"],2),
-				texto("Bairro*",$input_values["bairro"],3),
-				texto("Complemento",$input_values["complemento"],2),
-				texto("Referência",$input_values["referencia"],4),
+				texto("CPF/CNPJ*",				$input_values["cnpj"],2),
+				texto("Nome*",					$input_values["nome"],4),
+				texto("Nome Fantasia",			$input_values["fantasia"],3),
+				texto("Status",					$input_values["status"],2),
+				texto("CEP*",					$input_values["cep"],2),
+				texto("Endereço*",				$input_values["endereco"],4),
+				texto("Número*",				$input_values["numero"],2),
+				texto("Bairro*",				$input_values["bairro"],3),
+				texto("Complemento",			$input_values["complemento"],2),
+				texto("Referência",				$input_values["referencia"],4),
 				$campo_cidade,
-				texto("Telefone 1",$input_values["fone1"],2),
-				texto("Telefone 2",$input_values["fone2"],2),
-				texto("Contato",$input_values["contato"],3),
-				texto("E-mail*",$input_values["email"],3),
-				texto("Inscrição Estadual",$input_values["inscricaoEstadual"],3),
-				texto("Inscrição Municipal",$input_values["inscricaoMunicipal"],3),
-				texto("Regime Tributário",$input_values["regimeTributario"],3),
-				texto("Data Reg. CNPJ",$input_values["dataRegistroCNPJ"],3),
+				texto("Telefone 1",				$input_values["fone1"],2),
+				texto("Telefone 2",				$input_values["fone2"],2),
+				texto("Contato",				$input_values["contato"],3),
+				texto("E-mail*",				$input_values["email"],3),
+				texto("Inscrição Estadual",		$input_values["inscricaoEstadual"],3),
+				texto("Inscrição Municipal",	$input_values["inscricaoMunicipal"],3),
+				texto("Regime Tributário",		$input_values["regimeTributario"],3),
+				texto("Data Reg. CNPJ",			$input_values["dataRegistroCNPJ"],3),
 				$campo_dominio,
 				$campo_EhMatriz,
 				
@@ -452,25 +469,26 @@
 		
 		}else{
 			$c = [
-				campo("CPF/CNPJ*","cnpj",$input_values["cnpj"],2,"MASCARA_CPF/CNPJ","onkeyup='checarCNPJ(this.value);'"),
-				campo("Nome*","nome",$input_values["nome"],4,"","maxlength='65'"),
-				campo("Nome Fantasia","fantasia",$input_values["fantasia"],4,"","maxlength='65'"),
-				combo("Status","status",$input_values["status"],2,["ativo" => "Ativo", "inativo" => "Inativo"]),
-				campo("CEP*","cep",$input_values["cep"],2,"MASCARA_CEP","onkeyup='carrega_cep(this.value);'"),
-				campo("Endereço*","endereco",$input_values["endereco"],5,"","maxlength='100'"),
-				campo("Número*","numero",$input_values["numero"],2),
-				campo("Bairro*","bairro",$input_values["bairro"],3,"","maxlength='30'"),
-				campo("Complemento","complemento",$input_values["complemento"],3),
-				campo("Referência","referencia",$input_values["referencia"],2),
-				combo_net("Cidade/UF*","cidade",$input_values["cidade"],3,"cidade","","","cida_tx_uf"),
-				campo("Telefone 1","fone1",$input_values["fone1"],2,"MASCARA_FONE"),
-				campo("Telefone 2","fone2",$input_values["fone2"],2,"MASCARA_FONE"),
-				campo("Contato","contato",$input_values["contato"],3),
-				campo("E-mail*","email",$input_values["email"],3),
-				campo("Inscrição Estadual","inscricaoEstadual",$input_values["inscricaoEstadual"],3),
-				campo("Inscrição Municipal","inscricaoMunicipal",$input_values["inscricaoMunicipal"],3),
-				combo("Regime Tributário","regimeTributario",$input_values["regimeTributario"],3,$regimes),
-				campo_data("Data Reg. CNPJ","dataRegistroCNPJ",$input_values["dataRegistroCNPJ"],3),
+				campo("CPF/CNPJ*","cnpj",							$input_values["cnpj"],2,"MASCARA_CPF/CNPJ","onkeyup='checarCNPJ(this.value);'"),
+				campo("Nome*","nome",								$input_values["nome"],4,"","maxlength='65'"),
+				campo("Nome Fantasia","fantasia",					$input_values["fantasia"],4,"","maxlength='65'"),
+				combo("Status","status",							$input_values["status"],2,["ativo" => "Ativo", "inativo" => "Inativo"]),
+				campo("CEP*","cep",									$input_values["cep"],2,"MASCARA_CEP","onkeyup='carrega_cep(this.value);'"),
+				campo("Endereço*","endereco",						$input_values["endereco"],5,"","maxlength='100'"),
+				campo("Número*","numero",							$input_values["numero"],2),
+				campo("Bairro*","bairro",							$input_values["bairro"],3,"","maxlength='30'"),
+				campo("Complemento","complemento",					$input_values["complemento"],3),
+				campo("Referência","referencia",					$input_values["referencia"],2),
+				combo_net("Cidade/UF*","cidade",					$input_values["cidade"],3,"cidade","","","cida_tx_uf"),
+				campo("Telefone 1","fone1",							$input_values["fone1"],2,"MASCARA_FONE"),
+				campo("Telefone 2","fone2",							$input_values["fone2"],2,"MASCARA_FONE"),
+				campo("Contato","contato",							$input_values["contato"],3),
+				campo("E-mail*","email",							$input_values["email"],3),
+				campo("Inscrição Estadual","inscricaoEstadual",		$input_values["inscricaoEstadual"],3),
+				campo("Inscrição Municipal","inscricaoMunicipal",	$input_values["inscricaoMunicipal"],3),
+				combo("Regime Tributário","regimeTributario",		$input_values["regimeTributario"],3,$regimes),
+				campo_data("Data Reg. CNPJ","dataRegistroCNPJ",		$input_values["dataRegistroCNPJ"],3),
+
 				arquivo("Logo (.png, .jpg)".$iconeExcluirLogo,"logo",$input_values["logo"],4),
 				$campo_dominio,
 				$campo_EhMatriz,
