@@ -491,6 +491,7 @@
 			$totaisEmpresas["dataFim"] = $mes->format("Y-m-t");
 			file_put_contents($path."/empresas.json", json_encode($totaisEmpresas));
 		}
+
 		return;
 	}
 
@@ -1026,19 +1027,23 @@
 	}
 
 	function criar_relatorio_ajustes() {
-		// $periodoInicio = $_POST["busca_dataInicio"];
-		// $periodoFim = $_POST["busca_dataFim"];
-		$periodoInicio = "2024-10-01";
-		$periodoFim = "2024-10-23";
+		$periodoInicio = new DateTime("2024-10-01");
+		$hoje = new DateTime("2024-10-10");
+		// $hoje = new DateTime();
 
-		$empresas = mysqli_fetch_all(
-			query(
-				"SELECT empr_nb_id, empr_tx_nome"
-					. " FROM `empresa` WHERE empr_tx_status = 'ativo'"
-					. " ORDER BY empr_tx_nome ASC;"
-			),
-			MYSQLI_ASSOC
-		);
+		// if ($periodoInicio->format('Y-m') === $hoje->format('Y-m')) {
+		// 	// Se for o mês atual, a data limite é o dia de hoje
+		// 	$periodoFim = $hoje;
+		// } else {
+		// 	$periodoFim = new DateTime($periodoInicio->format("Y-m-t"));
+		// }
+
+		$empresas = mysqli_fetch_all(query(
+			"SELECT empr_nb_id, empr_tx_nome FROM empresa"
+				. " WHERE empr_tx_status = 'ativo'"
+				. (!empty($_POST["empresa"]) ? " AND empr_nb_id = ".$_POST["empresa"] : "")
+				. " ORDER BY empr_tx_nome ASC;"
+		), MYSQLI_ASSOC);
 
 		$macros = mysqli_fetch_all(
 			query(
@@ -1048,11 +1053,17 @@
 		);
 
 		$macros = array_column($macros, 'macr_tx_nome');
-		
-		$pontosTipos = [];
-		$totalEmpresa = [];
-
+			
 		foreach ($empresas as $empresa) {
+			$totaisEmpr = []; 
+			$totaisEmpresa = []; 
+			$rows = [];
+			// $totais= [];
+			$path = "./arquivos/ajustes"."/". $periodoInicio->format("Y-m")."/".$empresa["empr_nb_id"];
+			if (!is_dir($path)) {
+				mkdir($path, 0755, true);
+			}
+
 			$motoristas = mysqli_fetch_all(
 				query(
 					"SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula, enti_tx_ocupacao FROM entidade"
@@ -1064,8 +1075,8 @@
 				MYSQLI_ASSOC
 			);
 
-			$totais = [];
 			foreach ($motoristas as $motorista) {
+				$ocorrencias = []; 
 				$totalMotorista = [
 					"matricula" 				=> $motorista["enti_tx_matricula"],
 					"nome" 						=> $motorista["enti_tx_nome"],
@@ -1076,10 +1087,6 @@
 					// "dataFim"					=> $periodoFim->format("d/m/Y")
 				];
 
-				foreach ($macros as $macro) {
-					$total[$macro] = 0; // Define o valor inicial
-				}
-
 				$pontos = mysqli_fetch_all(
 					query(
 					"SELECT ponto.pont_tx_data, ponto.pont_tx_matricula, motivo.moti_tx_nome, macroponto.macr_tx_nome"
@@ -1089,30 +1096,65 @@
 						. " WHERE pont_tx_status = 'ativo'"
 						. " AND pont_tx_matricula = '".$motorista["enti_tx_matricula"] ."'"
 						. " AND pont_nb_arquivoponto IS NULL"
-						. " AND pont_tx_data BETWEEN STR_TO_DATE( '".$periodoInicio." 00:00:00', '%Y-%m-%d %H:%i:%s')"
-						. " AND STR_TO_DATE( '".$periodoFim." 23:59:59', '%Y-%m-%d %H:%i:%s');"
+						. " AND pont_tx_data BETWEEN STR_TO_DATE( '". $periodoInicio->format("Y-m-d") ." 00:00:00', '%Y-%m-%d %H:%i:%s')"
+						. " AND STR_TO_DATE( '". $hoje->format("Y-m-d") ." 23:59:59', '%Y-%m-%d %H:%i:%s');"
 					),
 					MYSQLI_ASSOC
 				);
+
+				foreach ($pontos as $registro) {
+
+					$macr_tx_nome = $registro['macr_tx_nome'];
+
+					if (in_array($macr_tx_nome, $macros)) {
+
+						if (!isset($ocorrencias[$macr_tx_nome])) {
+							$ocorrencias[$macr_tx_nome] = 0;
+						}
+						$ocorrencias[$macr_tx_nome]++;
+					}
+				}
+
+				$totalMotorista = array_merge($totalMotorista, $ocorrencias);
 				
-				foreach ($pontos as $p) {
-					$total[$p["macr_tx_nome"]] += 1;
-				}
-
-				$totalMotorista = array_merge($totalMotorista, $total);
-				$totais [] = $total;
+				$rows[] = $ocorrencias;
+				file_put_contents($path."/". $motorista["enti_tx_matricula"]. ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE));	
 			}
 
-			foreach ($totais as $item) {
-				foreach ($item as $key => $value) {
-					$empresa["totais"][$key] += $value;
+			foreach ($rows as $key => $values) {
+				foreach ($values as $key => $value) {
+					if (!isset($totaisEmpr[$key])) {
+						$totaisEmpr[$key] = 0; // Inicializa a chave com 0, se ainda não existir
+					}
+					$totaisEmpr[$key] += $value;
 				}
 			}
+
+			$totais [] = $totaisEmpr;
+
+			$totaisEmpr["qtdMotoristas"] = count($motoristas);
+			$totaisEmpr["dataInicio"] = $periodoInicio->format("d/m/Y");
+			$totaisEmpr["dataFim"] = $hoje->format("d/m/Y");
+
+			file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", json_encode($totaisEmpr));
 		}
 
+		foreach ($totais as $key => $values) {
+			foreach ($values as $key => $value) {
+				if (!isset($totaisEmpresa[$key])) {
+					$totaisEmpresa[$key] = 0; // Inicializa a chave com 0, se ainda não existir
+				}
+				$totaisEmpresa[$key] += $value;
+			}
+		}
+		
 
-		echo "<br>";
-		echo '<pre>';
-		echo json_encode($total, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-		echo '</pre>';
+		if (empty($_POST["empresa"])) {
+			$path = "./arquivos/ajustes"."/". $periodoInicio->format("Y-m");
+			$totaisEmpresa["dataInicio"] = $periodoInicio->format("d/m/Y");
+			$totaisEmpresa["dataFim"] = $hoje->format("d/m/Y");
+			file_put_contents($path."/empresas.json", json_encode($totaisEmpresa));
+		}
+
+		return;
 	}
