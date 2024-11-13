@@ -255,7 +255,7 @@
 			$content .= "(E)";
 		}
 		$func .= ")";
-		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
+		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 			$func = "";
 		}
 		$content .= "</i>";
