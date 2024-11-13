@@ -217,7 +217,8 @@
 			"SELECT en.enti_nb_parametro, par.para_tx_tolerancia
 				FROM entidade en
 				INNER JOIN parametro par ON en.enti_nb_parametro = par.para_nb_id
-				WHERE en.enti_nb_id = '".$idMotorista."'");
+				WHERE en.enti_nb_id = '".$idMotorista."'"
+		);
 		
 		$toleranciaArray = mysqli_fetch_array($sqlTolerancia, MYSQLI_BOTH);
 
@@ -255,7 +256,7 @@
 			$content .= "(E)";
 		}
 		$func .= ")";
-		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante"])){
+		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 			$func = "";
 		}
 		$content .= "</i>";
