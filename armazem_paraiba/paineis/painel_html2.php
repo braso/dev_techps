@@ -333,20 +333,23 @@
 
 		Highcharts.chart('graficoDetalhado', {
 			chart: {
-				type: 'bar' // Altere o tipo do gráfico para 'bar'
+				type: 'bar', // Altere o tipo do gráfico para 'bar'
+				backgroundColor: '#1c1c1c'
 			},
 			title: {
 				text: 'Gráfico Detalhado de Não Conformidades',
 				style: {
-					fontSize: '20px' // Aumenta o tamanho do título
+					fontSize: '20px', // Aumenta o tamanho do título
+					color: '#ffffff'
 				}
 			},
 			xAxis: {
 				categories: categoriasDetalhado,
 				title: {
-					text: '',
+					text: 'Não Conformidades Juridicas',
 					style: {
-						fontSize: '16px' // Aumenta o tamanho da fonte do título do eixo X
+						fontSize: '16px', // Aumenta o tamanho da fonte do título do eixo X
+						color: '#ffffff'
 					}
 				},
 				labels: {
@@ -366,13 +369,15 @@
 				title: {
 					text: 'Porcentagem',
 					style: {
-						fontSize: '16px'
+						fontSize: '16px',
+						color: '#ffffff'
 					}
 				},
 				labels: {
 					format: '{value}%', // Exibe as labels do eixo Y como porcentagem
 					style: {
-						fontSize: '11px' // Aumenta o tamanho da fonte dos rótulos do eixo Y
+						fontSize: '11px', // Aumenta o tamanho da fonte dos rótulos do eixo Y
+						color: '#ffffff'
 					}
 				},
 				tickInterval: 2, // Ajusta o intervalo entre os ticks (linhas de grid)
