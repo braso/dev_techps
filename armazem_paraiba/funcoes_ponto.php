@@ -32,22 +32,6 @@
 		exit;
 	}
 
-	function excluir_ponto(){
-		if(empty($_POST["id"]) || empty($_POST["just"]) || empty($_POST["atualiza"])){
-			return false;
-		}
-
-		$a=carregar("ponto", (int)$_POST["id"]);
-		remover_ponto((int)$_POST["id"], $_POST["just"], $_POST["atualiza"]);
-		
-		$_POST["id"] = $_POST["idEntidade"];
-		$_POST["data"] = substr($a["pont_tx_data"],0, -9);
-		$_POST["busca_data"] = $a["pont_tx_data"];
-
-		layout_ajuste();
-		exit;
-	}
-
 	function operarHorarios(array $horarios, string $operacao): string{
 		//Horários com formato de rH:i. Ex.: 00:04, 05:13, -01:12.
 		//$Operação
@@ -268,13 +252,12 @@
 	function criarFuncoesDeAjuste(){
 		echo 
 			"<script>
-				function ajusta_ponto(motorista, data, endossado = false){
+				function ajusta_ponto(idMotorista, data, endossado = false){
 					if(endossado == true){
 						alert('Dia já endossado.');
 					}
-					document.form_ajuste_ponto.id.value = motorista;
+					document.form_ajuste_ponto.idMotorista.value = idMotorista;
 					document.form_ajuste_ponto.data.value = data;
-					document.form_ajuste_ponto.HTTP_REFERER.value = '".(!empty($_POST["HTTP_REFERER"])? $_POST["HTTP_REFERER"]: $_SERVER["REQUEST_URI"])."';
 					document.form_ajuste_ponto.submit();
 				}
 			</script>"

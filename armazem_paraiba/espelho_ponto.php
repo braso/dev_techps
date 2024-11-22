@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -299,17 +299,11 @@
 			grid2($cab, $aDia, "Jornada Semanal (Horas): ".$aMotorista["enti_tx_jornadaSemanal"]);
 			fecha_form();
 
-			echo   
-				"<form name='form_ajuste_ponto' method='post'>
-					<input type='hidden' name='acao' value='layout_ajuste'>
-					<input type='hidden' name='busca_empresa' value='".$_POST["busca_empresa"]."'>
-					<input type='hidden' name='id' value='".$aMotorista["enti_nb_id"]."'>
-					<input type='hidden' name='HTTP_REFERER' value=''>
-					<input type='hidden' name='data'>
-					<input type='hidden' name='busca_empresa' value='".$aMotorista['enti_nb_empresa']."'>
-					<input type='hidden' name='busca_periodo' value='".$_POST["busca_periodo"]."'>
-				</form>"
-			;
+			echo criarHiddenForm(
+				"form_ajuste_ponto",
+				["acao", "busca_empresa", "idMotorista", "data", "HTTP_REFERER", "busca_periodo"],
+				["layout_ajuste", $_POST["busca_empresa"], null, null, (!empty($_POST["HTTP_REFERER"])? $_POST["HTTP_REFERER"]: $_SERVER["REQUEST_URI"]), implode(" - ", $_POST["busca_periodo"])]
+			);
 		}
 		//}
 		

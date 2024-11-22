@@ -15,7 +15,7 @@
 			try{
 				//Conferir se tem as informações necessárias{
 					$camposObrig = [
-						"id" => "Motorista",
+						"idMotorista" => "Motorista",
 						"hora" => "Hora",
 						"idMacro" => "Tipo de Registro",
 						"motivo" => "Motivo",
@@ -25,9 +25,9 @@
 						throw new Exception($errorMsg);
 					}
 
-					$aMotorista = carregar("entidade", $_POST["id"]);
+					$aMotorista = carregar("entidade", $_POST["idMotorista"]);
 					if(empty($aMotorista)){
-						$_POST["errorFields"][] = "id";
+						$_POST["errorFields"][] = "idMotorista";
 						throw new Exception("Funcionário não encontrado.");
 					}
 
@@ -160,6 +160,30 @@
 		index();
 		exit;
 	}
+
+	function excluirPonto(){
+		if(empty($_POST["id"]) || empty($_POST["just"]) || empty($_POST["dataAtualiza"])){
+			return false;
+		}
+
+		$ponto = mysqli_fetch_assoc(query(
+			"SELECT * FROM ponto 
+				WHERE pont_nb_id = {$_POST["id"]} 
+				LIMIT 1;"
+		));
+		$ponto["pont_tx_status"] = "inativo";
+		$ponto["pont_tx_justificativa"] = $_POST["just"];
+		$ponto["pont_tx_dataAtualiza"] = $_POST["atualiza"];
+
+		atualizar("ponto", array_keys($ponto), array_values($ponto), $ponto["pont_nb_id"]);
+
+		$_POST["data"] = substr($ponto["pont_tx_data"], 0, -9);
+		$_POST["busca_data"] = $ponto["pont_tx_data"];
+
+		index();
+		exit;
+	}
+
 	
 	function status() {
 		return  
@@ -178,7 +202,7 @@
 				</style>
 				<div id='statusDiv'>
 					<label id='status-label'>Status:</label>
-					<select name='status' id='status' class='form-control input-sm campo-fit-content' onchange='atualizar_form(".$_POST["id"].", null, \"".$_POST["busca_periodo"][0]."\",  \"".$_POST["busca_periodo"][1]."\", this.value)'>
+					<select name='status' id='status' class='form-control input-sm campo-fit-content' onchange='atualizar_form(".$_POST["idMotorista"].", null, \"".$_POST["busca_periodo"][0]."\",  \"".$_POST["busca_periodo"][1]."\", this.value)'>
 						<option value='ativo'>Ativos</option>
 						<option value='inativo' ".((!empty($_POST["status"]) && $_POST["status"] == "inativo")? "selected": "").">Inativos</option>
 					</select>
@@ -299,27 +323,28 @@
 	}
 
 	// Função para carregar os CNPJs formatados da tabela "empresa"
-	function carregarCNPJsFormatados() {
-		global $conn;
-		// Consulta SQL para buscar os CNPJs
-		$sql = "SELECT empr_tx_cnpj FROM empresa";
+	// function carregarCNPJsFormatados() {
+	// 	global $conn;
+	// 	// Consulta SQL para buscar os CNPJs
+	// 	$sql = "SELECT empr_tx_cnpj FROM empresa";
 
-		$result = mysqli_query($conn, $sql);
+	// 	$result = mysqli_query($conn, $sql);
 
-		if (!$result) {
-			die("Erro ao consultar CNPJs: ".mysqli_error($conn));
-		}
+	// 	if (!$result) {
+	// 		die("Erro ao consultar CNPJs: ".mysqli_error($conn));
+	// 	}
 
-		$cnpjs_formatados = [];
-		while ($row = mysqli_fetch_assoc($result)) {
-			// Remove pontos, traços e barras do CNPJ
-			$cnpj_formatado = preg_replace("/[^0-9]/", "", $row["empr_tx_cnpj"]);
-			$cnpjs_formatados[] = $cnpj_formatado;
-		}
-		return $cnpjs_formatados;
-	}
+	// 	$cnpjs_formatados = [];
+	// 	while ($row = mysqli_fetch_assoc($result)) {
+	// 		// Remove pontos, traços e barras do CNPJ
+	// 		$cnpj_formatado = preg_replace("/[^0-9]/", "", $row["empr_tx_cnpj"]);
+	// 		$cnpjs_formatados[] = $cnpj_formatado;
+	// 	}
+	// 	return $cnpjs_formatados;
+	// }
 
-	function buscarEspelho(){
+	function voltarParaEspelho(){
+		$_POST["acao"] = "buscarEspelho()";
 		voltar();
 	}
 
@@ -329,85 +354,80 @@
 	function index(){
 		global $CONTEX;
 
-		if(empty($_POST["data"])){
-			$_POST["data"] = date("Y-m-d");
-		}
+		//Conferir se os campos de $_POST estão vazios{
+			if(empty($_POST["idMotorista"])){
+				echo "<script>alert('ERRO: Deve ser selecionado um funcionário para ajustar.')</script>";
+				
+				$_POST["acao"] = "buscarEspelho()";
+				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
+	
+				voltar();
+				exit;
+			}
 
-		if(empty($_POST["busca_periodo"])){
-			$_POST["busca_periodo"] = ["", ""];
-		}elseif(is_string($_POST["busca_periodo"])){
-			[$dataInicio, $dataFim] = explode(" - ", $_POST["busca_periodo"]);
-			$_POST["busca_periodo"] = [
-				$dataInicio,
-				$dataFim
-			];
-		}
+			if(empty($_POST["data"])){
+				$_POST["data"] = date("Y-m-d");
+			}
+	
+			if(!empty($_POST["busca_periodo"])){
+				if(is_string($_POST["busca_periodo"])){
+					if(preg_match_all("/\d{2}\/\d{2}\/\d{4}/", $_POST["busca_periodo"], $matches)){
+						$_POST["busca_periodo"] = [
+							substr($matches[0][0], 6, 4)."-".substr($matches[0][0], 3, 2)."-".substr($matches[0][0], 0, 2),
+							substr($matches[0][1], 6, 4)."-".substr($matches[0][1], 3, 2)."-".substr($matches[0][1], 0, 2)
+						];
+					}else{
+						$_POST["busca_periodo"] = explode(" - ", $_POST["busca_periodo"]);
+					}
+				}else{
+					for($f = 0; $f < 2; $f++){
+						if(preg_match("/\d{2}\/\d{2}\/\d{4}/", $_POST["busca_periodo"][$f])){
+							$_POST["busca_periodo"][$f] = substr($_POST["busca_periodo"][$f], 6, 4)."-".substr($_POST["busca_periodo"][$f], 3, 2)."-".substr($_POST["busca_periodo"][$f], 0, 2);
+						}
+					}
+				}
+			}
+	
+			if(empty($_POST["HTTP_REFERER"]) || is_int(strpos($_POST["HTTP_REFERER"], "ajuste_ponto.php"))){
+				$_POST["HTTP_REFERER"] = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
+			}
 
-		if(empty($_POST["HTTP_REFERER"])){
-			$_POST["HTTP_REFERER"] = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
-		}
-		
-		if(empty($_POST["id"])){
-			echo "<script>alert('ERRO: Deve ser selecionado um funcionário para ajustar.')</script>";
-			
-			$_POST["acao"] = "buscarEspelho()";
-			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
-
-			voltar();
-			exit;
-		}else{
-			$a_mod["data"] = $_POST["data"];
-			$a_mod["id"] = $_POST["id"];
-		}
+			if (empty($_POST["status"])) {
+				$_POST["status"] = "ativo";
+			}
+		//}
 
 		cabecalho("Ajuste de Ponto");
 
-		$aMotorista = carregar("entidade", $_POST["id"]);
+		$motorista = mysqli_fetch_assoc(query(
+			"SELECT * FROM entidade
+				WHERE enti_tx_status = 'ativo'
+					AND enti_nb_id = {$_POST["idMotorista"]}
+				LIMIT 1;"
+		));
 
-		$sqlCheck = query("SELECT user_tx_login, endo_tx_dataCadastro FROM endosso, user 
-			WHERE '".$_POST["data"]."' BETWEEN endo_tx_de AND endo_tx_ate
-				AND endo_nb_entidade = '".$aMotorista["enti_nb_id"]."'
-				AND endo_tx_matricula = '".$aMotorista["enti_tx_matricula"]."' 
-				AND endo_tx_status = 'ativo' 
-				AND endo_nb_userCadastro = user_nb_id 
-			LIMIT 1;"
-		);
-		$aEndosso = mysqli_fetch_array($sqlCheck, MYSQLI_BOTH);
+		$endosso = mysqli_fetch_array(query(
+			"SELECT user_tx_login as endo_nb_userCadastro, endo_tx_dataCadastro FROM endosso
+				JOIN user ON endo_nb_userCadastro = user_nb_id
+				WHERE endo_tx_status = 'ativo'
+					AND '{$_POST["data"]}' BETWEEN endo_tx_de AND endo_tx_ate
+					AND endo_nb_entidade = '{$motorista["enti_nb_id"]}'
+				LIMIT 1;"
+		), MYSQLI_BOTH);
 
-		$botao_imprimir =
-			"<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button >
-					<script>
-						function imprimir() {
-							// Abrir a caixa de diálogo de impressão
-							window.print();
-						}
-					</script>";
+		$botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
 
+		$cnpjs = mysqli_fetch_all(query("SELECT empr_tx_cnpj FROM empresa"), MYSQLI_ASSOC);
 
-		// Chama a função para carregar os CNPJs formatados
-		$cnpjs = carregarCNPJsFormatados();
-
-		// Variáveis do ambiente carregadas
-		$baseUrl = $_ENV["URL_BASE"];
-		$appPath = $_ENV["APP_PATH"];
-		$contextPath = $_ENV["CONTEX_PATH"];
-
-		// Monta a URL base para a logística
-		$urlLogistica = $baseUrl.$appPath.$contextPath."/logistica.php";
-
-		// Assumindo que $aMotorista já tenha os valores definidos
-		$matricula = htmlspecialchars($aMotorista["enti_tx_matricula"]);
-		$motorista = htmlspecialchars($aMotorista["enti_tx_nome"]);
-		$data = $_POST["data"];  // Data do formulário
-
+		// Assumindo que $motorista já tenha os valores definidos
 		// Construir o botão com o código JavaScript embutido
 		$botaoConsLog = 
 			"<button class='btn default' type='button' onclick='consultarLogistica()'>Consultar Logística</button>
 			<script>
 			function consultarLogistica() {
 				// Obter valores do PHP e HTML
-				var matricula = '".addslashes($matricula)."';
-				var motorista = '".addslashes($motorista)."';
+				var matricula = '{$motorista["enti_tx_matricula"]}';
+				var motorista = '{$motorista["enti_tx_nome"]}';
 				var data = document.getElementById('data').value;
 
 				// Obter todos os CNPJs da variável PHP
@@ -430,7 +450,7 @@
 				var cnpjString = cnpjs.map(String).join(',');
 
 				// Construir a URL com os parâmetros dinâmicos
-				var url = '".addslashes($urlLogistica)."';
+				var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/logistica.php';
 				url += '?motorista='+encodeURIComponent(motorista)+
 					'&matricula='+encodeURIComponent(matricula)+
 					'&data='+encodeURIComponent(data) +
@@ -442,47 +462,36 @@
 			</script>"
 		;
 
-		if (empty($_POST["status"])) {
-			$_POST["status"] = "ativo";
-		}
-
-		$textFields[] = texto("Matrícula",$aMotorista["enti_tx_matricula"],2);
-		$textFields[] = texto($aMotorista["enti_tx_ocupacao"],$aMotorista["enti_tx_nome"],5);
-		$textFields[] = texto("CPF",$aMotorista["enti_tx_cpf"],3);
+		$textFields[] = texto("Matrícula",$motorista["enti_tx_matricula"],2);
+		$textFields[] = texto($motorista["enti_tx_ocupacao"],$motorista["enti_tx_nome"],5);
+		$textFields[] = texto("CPF",$motorista["enti_tx_cpf"],3);
 
 		$_POST["status"] = (!empty($_POST["status"]) && $_POST["status"] != "undefined"? $_POST["status"]: "ativo");
 
 		$variableFields = [];
 		$campoJust = [];
 
-		if(!empty($aEndosso) && count($aEndosso) > 0){
-			$variableFields[] = texto("Endosso","Endossado por ".$aEndosso["user_tx_login"]." em ".data($aEndosso["endo_tx_dataCadastro"],1),6);
-		}else{
-			$_POST["busca_data"] = substr($_POST["data"],0, -3);
-			$botoes[] = botao(
-				"Gravar",
-				"cadastrarAjuste"
-			);
-      		$parametros = [
-				"pont_nb_id",
-				"excluir_ponto",
-				"idEntidade",
-				$_POST["busca_periodo"][0],
-				$_POST["busca_periodo"][1],
-				$_POST["id"]
+		$iconeExcluir = "";
+		if(!empty($endosso)){
+			$variableFields = [
+				texto("Endosso", "Endossado por ".$endosso["endo_nb_userCadastro"]." em ".data($endosso["endo_tx_dataCadastro"], 1), 6)
 			];
+		}else{
+			$botoes[] = botao("Gravar", "cadastrarAjuste");
 
-			$iconeExcluir = "icone_excluir_ajuste(".implode(",", $parametros).")"; //Utilizado em grid()
-			$variableFields[] = campo_data("Data", "data", ($_POST["data"]?? ""), 2, "onfocusout='atualizar_form(".$_POST["id"].", this.value, \"".$_POST["busca_periodo"][0]."\", \"".$_POST["busca_periodo"][1]."\")', null");
-			$variableFields[] = campo_hora("Hora","hora",($_POST["hora"]?? ""),2);
-			$variableFields[] = combo_bd("Tipo de Registro","idMacro",($_POST["idMacro"]?? ""),4,"macroponto","","ORDER BY macr_nb_id");
-			$variableFields[] = combo_bd("Motivo","motivo",($_POST["motivo"]?? ""),4,"motivo",""," AND moti_tx_tipo = 'Ajuste' ORDER BY moti_tx_nome");
-	
-			$campoJust[] = textarea("Justificativa","justificativa",($_POST["justificativa"]?? ""),12);
+			$iconeExcluir = "<center><a title='Excluir' style='color:gray' data-toggle='modal' data-target='#myModal' onclick='excluirPontoJS(pont_nb_id,pont_tx_data)' ><spam class='glyphicon glyphicon-remove'></spam></a></center>";
+			$iconeExcluir = str_replace("'", "\"", $iconeExcluir);
+			$variableFields = [
+				campo_data("Data", "data", ($_POST["data"]?? ""), 2, "onfocusout='atualizar_form({$_POST["idMotorista"]}, this.value, \"{$_POST["busca_periodo"][0]}\", \"{$_POST["busca_periodo"][1]}\")', null"),
+				campo_hora("Hora", "hora", ($_POST["hora"]?? ""), 2),
+				combo_bd("Tipo de Registro", "idMacro", ($_POST["idMacro"]?? ""), 4, "macroponto", "", "ORDER BY macr_nb_id"),
+				combo_bd("Motivo", "motivo", ($_POST["motivo"]?? ""), 4, "motivo", "", " AND moti_tx_tipo = 'Ajuste' ORDER BY moti_tx_nome")
+			];
+			$campoJust[] = textarea("Justificativa", "justificativa", ($_POST["justificativa"]?? ""), 12);
 		}
 
 		$botoes[] = $botao_imprimir;
-		$botoes[] = botao("Voltar", "voltar", "acao", "buscarEspelho");
+		$botoes[] = botao("Voltar", "voltar", "acao", "voltarParaEspelho()");
 		$botoes[] = $botaoConsLog; //BOTÃO CONSULTAR LOGISTICA
 		$botoes[] = status();
 
@@ -500,7 +509,7 @@
 		echo campo_hidden("id", $_POST["id"]);
 		//Campos para retornar para a pesquisa do espelho de ponto ou após um registro de ponto{
 			echo campo_hidden("busca_empresa", 		empty($_POST["busca_empresa"])? "": $_POST["busca_empresa"]);
-			echo campo_hidden("busca_motorista", 	$_POST["id"]);
+			echo campo_hidden("busca_motorista", 	$_POST["idMotorista"]);
 			echo campo_hidden("busca_data", 		$_POST["data"]);
 			echo campo_hidden("busca_periodo",		$_POST["busca_periodo"][0]." - ".$_POST["busca_periodo"][1]);
 			echo campo_hidden("HTTP_REFERER", 		$_POST["HTTP_REFERER"]);
@@ -510,10 +519,12 @@
 		linha_form($campoJust);
 		fecha_form($botoes);
 
-		$sql = pegarSqlDia($aMotorista["enti_tx_matricula"], ["pont_nb_id", "pont_tx_data", "macr_tx_nome", "moti_tx_nome", 
-		"moti_tx_legenda", "pont_tx_justificativa", "user_tx_login", "pont_nb_userCadastro", "pont_tx_dataCadastro", "pont_tx_placa",
-		"pont_tx_latitude", "pont_tx_longitude","pont_tx_dataAtualiza"]);
-
+		$sql = pegarSqlDia(
+			$motorista["enti_tx_matricula"], 
+			["pont_nb_id", "pont_tx_data", "macr_tx_nome", "moti_tx_nome", 
+			"moti_tx_legenda", "pont_tx_justificativa", "user_tx_login", "pont_nb_userCadastro",
+			"pont_tx_dataCadastro", "pont_tx_placa", "pont_tx_latitude", "pont_tx_longitude","pont_tx_dataAtualiza"]
+		);
 
 		$gridFields = [
 			"CÓD"												=> "pont_nb_id",
@@ -529,7 +540,6 @@
 			"LOCALIZAÇÃO"                                       => "map(pont_nb_id)",
 			"<spam class='glyphicon glyphicon-remove'></spam>"	=> $iconeExcluir
 		];
-
 		grid($sql, array_keys($gridFields), array_values($gridFields), "", "12", 1, "desc", -1);
 
 		echo
@@ -588,17 +598,18 @@
 			<form name='form_ajuste_status' action='".$_SERVER["HTTP_ORIGIN"].$CONTEX["path"]."/ajuste_ponto.php' method='post'>
 				<input type='hidden' name='acao' value='index'>
 				<input type='hidden' name='id'>
-				<input type='hidden' name='busca_motorista'>
-				<input type='hidden' name='data'>
-				<input type='hidden' name='busca_data'>
-				<input type='hidden' name='busca_periodo[]'>
-				<input type='hidden' name='status'>
-				<input type='hidden' name='HTTP_REFERER'>
+				<input type='hidden' name='data' value='{$_POST["data"]}'>
 			</form>
 			<script>
+				function imprimir() {
+					// Abrir a caixa de diálogo de impressão
+					window.print();
+				}
+
 				valorDataInicial = document.getElementById('data').value;
 				valorStatusInicial = document.getElementById('status').value;
-				function atualizar_form(motorista, data, data_de, data_ate, status) {
+
+				function atualizar_form(motorista, data){
 					if(data == null){
 						data = document.getElementById('data').value;
 					}
@@ -607,14 +618,24 @@
 					}
 
 					if(valorDataInicial != data || valorStatusInicial != status){
-						document.form_ajuste_status.id.value = motorista;
-						document.form_ajuste_status.data.value = data;
-						document.form_ajuste_status.busca_periodo.value = [data_de, data_ate];
-						document.form_ajuste_status.status.value = status;
-						document.form_ajuste_status.HTTP_REFERER.value = '".$_POST["HTTP_REFERER"]."';
+						var form = document.form_ajuste_status;
+						form.id.value = motorista;
+						form.data.value = data;
+						form.status.value = status;
 						document.getElementById('status').value = status;
-						document.form_ajuste_status.submit();
+						form.submit();
 					}
+				}
+
+				function excluirPontoJS(id, dataAtualiza){
+					alert(id);
+					return;
+					var just = prompt('Qual a justificativa da exclusão do ponto?');
+					var form = document.form_ajuste_status;
+					form.acao.value = 'excluirPonto';
+					form.id.value = id;
+					console.log(form);
+					// form.submit();
 				}
 			</script>"
 		;

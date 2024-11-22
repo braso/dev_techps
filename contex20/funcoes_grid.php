@@ -83,8 +83,7 @@
 							form.action=action;
 							form.id.value=id;
 							form.acao.value=acao;
-							form.data_de.value=data_de;
-							form.data_ate.value=data_ate;
+							document.getElementById('busca_periodo').value = [data_de, data_ate];
 							if(campos){
 								form.hidden.value=valores;
 								form.hidden.name=campos;
@@ -102,8 +101,7 @@
 						form.action=action;
 						form.id.value=id;
 						form.acao.value=acao;
-						form.data_de.value=data_de;
-						form.data_ate.value=data_ate;
+						document.getElementById('busca_periodo').value = [data_de, data_ate];
 						form.just.value=just;
 						if(campos){
 							form.hidden.value=valores;
@@ -147,15 +145,12 @@
 		}
 
 		?>
-
-		<form id='contex_icone_form' method="post" target="" action="">
-			<input type="hidden" name="id" value="0">
-			<input type="hidden" name="acao" value="sem_acao">
-			<input type="hidden" name="data_de" value="">
-			<input type="hidden" name="data_ate" value="">
-			<input type="hidden" name="just" value="">
-			<input type="hidden" name="atualiza" value="">
-			<input type="hidden" id="hidden">
+		<form id='contex_icone_form' method='post' target='' action=''>
+			<input type='hidden' name='id' value='0'>
+			<input type='hidden' name='acao' value='sem_acao'>
+			<input type='hidden' name='just' value=''>
+			<input type='hidden' name='atualiza' value=''>
+			<input type='hidden' id='hidden'>
 		</form>
 		
 		<style type="text/css">
@@ -178,34 +173,32 @@
 				}
 			}
 		</style>
-				<!-- BEGIN EXAMPLE TABLE PORTLET-->
-				<div class="col-md-<?=$col?> col-sm-<?=$col?>">
-					<div class="portlet light ">
-						<?=$label?>
-						<div class="portlet-body">
-							<table id="contex-grid-<?=$rand?>" class="table compact table-striped table-bordered table-hover dt-responsive" width="100%" id="sample_2">
-								<thead>
-									<tr>
-										<?=$cabecalho?>
-									</tr>
-								</thead>
-							</table>
-						</div>
-					</div>
+		<!-- BEGIN EXAMPLE TABLE PORTLET-->
+		<div class="col-md-<?=$col?> col-sm-<?=$col?>">
+			<div class="portlet light ">
+				<?=$label?>
+				<div class="portlet-body">
+					<table id="contex-grid-<?=$rand?>" class="table compact table-striped table-bordered table-hover dt-responsive" width="100%" id="sample_2">
+						<thead>
+							<tr>
+								<?=$cabecalho?>
+							</tr>
+						</thead>
+					</table>
 				</div>
-				<!-- END EXAMPLE TABLE PORTLET-->
+			</div>
+		</div>
+		<!-- END EXAMPLE TABLE PORTLET-->
 
-				<!-- BEGIN PAGE LEVEL PLUGINS -->
-				<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
-				<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
-				<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
-				<!-- END PAGE LEVEL PLUGINS -->
+		<!-- BEGIN PAGE LEVEL PLUGINS -->
+		<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
+		<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
+		<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
+		<!-- END PAGE LEVEL PLUGINS -->
 
-				<!-- BEGIN PAGE LEVEL SCRIPTS -->
-				<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
-				<!-- END PAGE LEVEL SCRIPTS -->
-
-
+		<!-- BEGIN PAGE LEVEL SCRIPTS -->
+		<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
+		<!-- END PAGE LEVEL SCRIPTS -->
 		<?php
 
 		include_once "conecta.php";
@@ -218,6 +211,8 @@
 		}else{
 			$order = $ordenar_coluna;
 		}
+
+		dd($valores);
 
 		echo 
 			"<div id='ajaxCall'>

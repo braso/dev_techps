@@ -292,17 +292,17 @@
 		query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '".$id."' LIMIT 1;");
 	}
 
-	function remover_ponto(int $id,$just,$atualizar = null){
-		$tab = substr("ponto", 0, 4);
+	// function remover_ponto(int $id,$just,$atualizar = null){
+	// 	$tab = substr("ponto", 0, 4);
 
-		$campos = [
-			$tab."_tx_status" 			=> "inativo",
-			$tab."_tx_justificativa" 	=> $just,
-			$tab."_tx_dataAtualiza" 	=> $atualizar
-		];
+	// 	$campos = [
+	// 		$tab."_tx_status" 			=> "inativo",
+	// 		$tab."_tx_justificativa" 	=> $just,
+	// 		$tab."_tx_dataAtualiza" 	=> $atualizar
+	// 	];
 
-		updateById("ponto", array_keys($campos), array_values($campos), $id);
-	}
+	// 	updateById("ponto", array_keys($campos), array_values($campos), $id);
+	// }
 
 	function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara="",$extra=""){
 		return campo($nome,$variavel,$modificador,$tamanho,"MASCARA_DOMAIN",$extra);
@@ -486,8 +486,15 @@
 				$datas = [DateTime::createFromFormat("Y-m-d", date("Y-m-01")), DateTime::createFromFormat("Y-m-d", date("Y-m-d"))];
 				if(!empty($modificador)){
 					if(!is_array($modificador) || count($modificador) != 2){
-						set_status("ERRO: ".$variavel." formatado incorretamente.");
-						return;
+						if(preg_match_all("/\d{4}-\d{2}-\d{2}/", $_POST["busca_periodo"], $matches)){
+							$modificador = [
+								$matches[0][0],
+								$matches[0][1]
+							];
+						}else{
+							set_status("ERRO: ".$variavel." formatado incorretamente.");
+							return;
+						}
 					}
 					$datas = [
 						DateTime::createFromFormat("Y-m-d", $modificador[0]),
@@ -1395,65 +1402,10 @@
 		return "<center><a title='$title' style='color:gray' onclick='javascript:contex_icone(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\",\"$action\");'><spam $icone></spam></a></center>";
 	}
 
-	function icone_excluir_ajuste($id, $acao, $campos='', $data_de='', $data_ate='', $valores='', $target='', $icone='', $msg='Deseja excluir o registro?', $action='', $title=''){
-
-		global $CONTEX;
-		if(empty($icone)){
-			$icone = 'glyphicon glyphicon-remove';
-		}
-		if($icone == 'glyphicon glyphicon-remove' && empty($title)){
-			$title = 'Excluir';
-		}
-		if(empty($data_de)){
-			$data_de = date("Y-m-01");
-		}
-		if(empty($data_ate)){
-			$data_ate = date("Y-m-d");
-		}
-
-		$icone='class="'.$icone.'"';
-
-		$modal = "
-			<script>
-			function solicitarDados(id,acao,data_de,data_ate,campos,valores,atualiza) {
-				// Solicitar ao usuário que insira os dados
-				var just = prompt('Qual a justificativa da exclusão do ponto?');
-				if(just !== null && just !== ''){
-					
-					var form = document.getElementById('contex_icone_form');
-					form.id.value = id;
-					form.acao.value = acao;
-					form.data_de.value = data_de;
-					form.data_ate.value = data_ate;
-					form.just.value = just;
-					form.atualiza.value = atualiza;
-					if(campos){
-						form.hidden.value = valores;
-						form.hidden.name = campos;
-					}
-					campos = campos.split(',');
-					valores = valores.split(',');
-					for(f = 0; f < campos.length; f++){
-						input = document.createElement('input');
-						input.type = 'hidden';
-						input.name = campos[f]
-						input.value = valores[f]
-						form.append(input);
-					}
-					form.submit();
-					
-				}
-			}
-			</script>
-		";
-		// onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\",\"$data_de\",\"$data_ate\");
-		return "<center><a title='".$title."' style='color:gray' data-toggle='modal' data-target='#myModal'onclick='solicitarDados(\"".$id."\",\"".$acao."\",\"".$data_de."\",\"".$data_ate."\",\"".$campos."\",\"".$valores."\",\"".date('Y-m-d H:i:s')."\")' ><spam ".$icone."></spam></a></center>".$modal;
-	}	
-
-	function modal_just($id,$acao,$campos='',$data_de='',$data_ate='',$valores='',$target='',$icone='',$msg='', $action='', $title=''){
-	    global $CONTEX;
-	    include "modal_justificativa.php";
-	}
+	// function modal_just($id,$acao,$campos='',$data_de='',$data_ate='',$valores='',$target='',$icone='',$msg='', $action='', $title=''){
+	//     global $CONTEX;
+	//     include "modal_justificativa.php";
+	// }
 
 	function icone_download($aquivo=''){
 		global $CONTEX;

@@ -199,7 +199,8 @@
 							continue;
 						}
 						if($temJornadaAberta["pont_tx_tipo"] == "2" && $newPonto["pont_tx_tipo"] == "2"){
-							remover_ponto($temJornadaAberta["pont_nb_id"], "Há um fechamento de jornada posterior.");
+							Função obsoleta
+							//remover_ponto($temJornadaAberta["pont_nb_id"], "Há um fechamento de jornada posterior.");
 						}
 
 						$jornadaJaFechada = mysqli_fetch_assoc(query(
