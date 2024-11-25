@@ -1098,7 +1098,7 @@
 						. " AND pont_nb_arquivoponto IS NULL"
 						. " AND pont_tx_data BETWEEN STR_TO_DATE( '". $periodoInicio->format("Y-m-d") ." 00:00:00', '%Y-%m-%d %H:%i:%s')"
 						. " AND STR_TO_DATE( '". $hoje->format("Y-m-d") ." 23:59:59', '%Y-%m-%d %H:%i:%s');"
-					),
+					,1 ),
 					MYSQLI_ASSOC
 				);
 

@@ -102,7 +102,7 @@ function index() {
 			while ($arquivo = $pastaAjuste->read()) {
 				if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))) {
 					$arquivo = $path . $arquivo . "/empresa_" . $arquivo . ".json";
-					// $arquivos[] = $arquivo;
+					$arquivos[] = $arquivo;
 					$json = json_decode(file_get_contents($arquivo), true);
 					$empresas[] = $json;
 				}
@@ -110,8 +110,23 @@ function index() {
 			$pastaAjuste->close();
 		}
 		echo '<br>';
-		var_dump($empresas);
+		var_dump($arquivoGeral);
 		echo '<br>';
+	} else {
+		$encontrado = false;
+	}
+
+	if ($encontrado) {
+		$rowTotais = "<tr class='totais'>";
+		$rowTitulos = "<tr id='titulos' class='titulos'>";
+
+		if (!empty($_POST["empresa"])) {
+			# code...
+		} else {
+			$rowTotais .=
+			"<th colspan='1'></th>"
+			. "<th colspan='1'></th>";
+		}
 	}
 	// carregarJS($arquivos);
 	rodape();
