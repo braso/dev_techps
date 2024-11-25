@@ -78,12 +78,13 @@ function index() {
 	fecha_form($buttons);
 
 	$arquivos = [];
+	$totais = [];
 	$dataEmissao = ""; //Utilizado no HTML
 	$encontrado = true;
 	$path = "./arquivos/ajustes";
 	$periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
-	if (!empty($_POST["empresa"]) && !empty($_POST["busbusca_periodoca_data"])) {
+	if (!empty($_POST["empresa"]) && !empty($_POST["busca_periodo"])) {
 		$path .= "/" . $_POST["busca_data"] . "/" . $_POST["empresa"];
 		// if (is_dir($path)) {
 		// }
@@ -92,11 +93,25 @@ function index() {
 		$periodoFim = new DateTime($_POST["busca_periodo"][1]);
 
 		if ($periodoInicio->format("Y-m") === $periodoFim->format("Y-m")) {
-			// var_dump('ok');
 			$path .= "/" . $periodoInicio->format("Y-m"). "/" ;
 		}
-		// var_dump($path);
-		var_dump(is_dir($path));
+
+		if(is_dir($path) && file_exists($path . "/empresas.json")){
+			$arquivoGeral = json_decode(file_get_contents($path . "/empresas.json"), true);
+			$pastaAjuste = dir($path);
+			while ($arquivo = $pastaAjuste->read()) {
+				if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))) {
+					$arquivo = $path . $arquivo . "/empresa_" . $arquivo . ".json";
+					// $arquivos[] = $arquivo;
+					$json = json_decode(file_get_contents($arquivo), true);
+					$empresas[] = $json;
+				}
+			}
+			$pastaAjuste->close();
+		}
+		echo '<br>';
+		var_dump($empresas);
+		echo '<br>';
 	}
 	// carregarJS($arquivos);
 	rodape();

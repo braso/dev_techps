@@ -1131,12 +1131,14 @@
 			}
 
 			$totais [] = $totaisEmpr;
+			$empresa = array_merge($totaisEmpr, $empresa);
 
-			$totaisEmpr["qtdMotoristas"] = count($motoristas);
-			$totaisEmpr["dataInicio"] = $periodoInicio->format("d/m/Y");
-			$totaisEmpr["dataFim"] = $hoje->format("d/m/Y");
-
-			file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", json_encode($totaisEmpr));
+			
+			$empresa["qtdMotoristas"] = count($motoristas);
+			$empresa["dataInicio"] = $periodoInicio->format("d/m/Y");
+			$empresa["dataFim"] = $hoje->format("d/m/Y");
+			
+			file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", json_encode($empresa));
 		}
 
 		foreach ($totais as $key => $values) {
