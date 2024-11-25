@@ -478,9 +478,9 @@
                     $pastaSaldos->close();
                     
                     foreach($empresas as $empresa){
-                        if($empresa["totais"]["saldoFinal"] === "00:00"){
+                        if($empresa["totais"]["saldoPeriodo"] === "00:00"){
                             $contagemSaldos["meta"]++;
-                        }elseif($empresa["totais"]["saldoFinal"][0] == "-"){
+                        }elseif($empresa["totais"]["saldoPeriodo"][0] == "-"){
                             $contagemSaldos["negativos"]++;
                         }else{
                             $contagemSaldos["positivos"]++;
