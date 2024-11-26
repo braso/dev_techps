@@ -291,6 +291,7 @@
                 . "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='repouso'>Repouso</th>";
             $rowTitulos .= "</tr>";
             $titulo = "de Jornada Aberta";
+            $mostra = false;
             include_once "painel_html2.php";
         }
 

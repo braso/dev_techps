@@ -717,7 +717,7 @@
 					$endossado = true;
 			}
 			$rowTitulos .= "</tr>";
-
+			$mostra = true;
 			include_once "painel_html2.php";
 
 			// if (!empty($_POST["acao"]) && $_POST["acao"] == "buscar") {

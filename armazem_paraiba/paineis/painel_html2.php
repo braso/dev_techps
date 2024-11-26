@@ -16,13 +16,16 @@
 				<?= $dataEmissao . "<br>"
 					. "<b>Período do relatório:</b> " . $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"] ?>
 				<br>
-				<span><b>Empresa:</b> <?= $empresa["empr_tx_nome"] ?></span>
+				<?php if (!empty($empresa["empr_tx_nome"])) { ?>
+					<span><b>Empresa:</b> <?= $empresa["empr_tx_nome"] ?></span>
+				<?php } ?>
 			</div>
 		</div>
 		<div class="portlet-body form">
 			<?= $rowGravidade ?>
 			<table id="tabela-empresas" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
 				<thead>
+					<?= $rowTotais ?>
 					<?= $rowTitulos ?>
 				</thead>
 				<tbody>
@@ -34,11 +37,11 @@
 			</table>
 		</div>
 
-		<!-- <// if ($endossado === true) { ?> -->
-		<div>
-			<h4><b>Legendas</b></h4>
-		</div>
-		<!--<div class="portlet-body form">
+		<?php if ($mostra === true) { ?>
+			<div>
+				<h4><b>Legendas</b></h4>
+			</div>
+			<!--<div class="portlet-body form">
 				<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
 					<thead>
 						<tr>
@@ -117,9 +120,9 @@
 			<div>
 				<h4><b>Total de Não conformidade de todos Funcionário</b></h4>
 			</div> -->
-		<div class="portlet-body form">
-			<!-- <div class='container' style='display:flex'> -->
-			<!--<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact" style="width: 400px;">
+			<div class="portlet-body form">
+				<!-- <div class='container' style='display:flex'> -->
+				<!--<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact" style="width: 400px;">
 						<thead>
 							<tr>
 								<td></td>
@@ -217,230 +220,232 @@
 							</tr>
 						</tbody>
 					</table>-->
-			<div id='graficoDetalhado' style='width:100%; height:850px; background-color: lightblue;'>
-				<!-- </div> -->
-			</div>
-			<!-- < //} ?>  -->
+				<div id='graficoDetalhado' style='width:100%; height:850px; background-color: lightblue;'>
+					<!-- </div> -->
+				</div>
+			<?php } ?>
 
-		</div>
+			</div>
 	</div>
 </div>
 <div id="impressao">
 	<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . " (UTC-3)" ?>
 </div>
-<script>
-	document.addEventListener('DOMContentLoaded', function() {
-		// Gráfico sintético
-		const categorias = ['Performance', 'Alta', 'Media', 'Baixa'];
-		const valores = <?= json_encode($graficoSintetico) ?>;
-		const cores = ['#53d02a', '#a30000', '#FF8B00', '#FFE800'];
+<?php if ($mostra === true) { ?>
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			// Gráfico sintético
+			const categorias = ['Performance', 'Alta', 'Media', 'Baixa'];
+			const valores = <?= json_encode($graficoSintetico) ?>;
+			const cores = ['#53d02a', '#a30000', '#FF8B00', '#FFE800'];
 
-		const dataFormatada = categorias.map((categoria, index) => ({
-			name: categoria,
-			y: valores[index],
-			color: cores[index]
-		}));
+			const dataFormatada = categorias.map((categoria, index) => ({
+				name: categoria,
+				y: valores[index],
+				color: cores[index]
+			}));
 
-		Highcharts.chart('graficoSintetico', {
-			chart: {
-				type: 'pie'
-			},
-			title: {
-				text: 'Gráfico Sintético de Não Conformidades'
-			},
-			tooltip: {
-				pointFormat: '<b>{point.name}</b>: {point.y} ({point.percentage:.2f}%)',
-				style: {
-					fontSize: '16px'
-				}
-			},
-			plotOptions: {
-				pie: {
-					dataLabels: {
-						enabled: true,
-						style: {
-							fontSize: '16px'
-						},
-						distance: 65
-					},
-					showInLegend: false,
-					minSize: 5
-				}
-			},
-			series: [{
-				name: 'Valores',
-				data: dataFormatada
-			}]
-		});
-
-		// Gráfico analítico
-		const categoriasAnalitico = <?= json_encode($arrayTitulos) ?>;
-		const valoresAnalitico = <?= json_encode($graficoAnalitico) ?>;
-		const coresAnalitico = <?= json_encode($coresGrafico) ?>;
-
-		const dataFormatadaAnalitico = categoriasAnalitico.map((categoria2, index) => ({
-			name: categoria2,
-			y: valoresAnalitico[index],
-			color: coresAnalitico[index]
-		}));
-
-		Highcharts.chart('graficoAnalitico', {
-			chart: {
-				type: 'pie'
-			},
-			title: {
-				text: 'Gráfico Analítico de Não Conformidades'
-			},
-			tooltip: {
-				pointFormat: '<b>{point.name}</b>: {point.y} ({point.percentage:.2f}%)',
-				style: {
-					fontSize: '16px'
-				}
-			},
-			plotOptions: {
-				pie: {
-					dataLabels: {
-						enabled: true,
-						style: {
-							fontSize: '13px'
-						},
-						distance: 65
-					},
-					showInLegend: false,
-					minSize: 5
-				}
-			},
-			series: [{
-				name: 'Valores',
-				data: dataFormatadaAnalitico
-			}]
-		});
-
-		const categoriasDetalhado = <?= json_encode($arrayTitulos2) ?>;
-		const valoresDetalhado = <?= json_encode($graficoDetalhado) ?>;
-		const coresDetalhado = <?= json_encode($coresGrafico2) ?>;
-
-		// Calcula o total para obter as porcentagens
-		const totalDetalhado = valoresDetalhado.reduce((acc, val) => acc + val, 0);
-
-		// Formata os dados para o gráfico de barras em porcentagem
-		const dataFormatadaDetalhado = categoriasDetalhado.map((categoria3, index) => ({
-			name: categoria3,
-			y: totalDetalhado > 0 ? (valoresDetalhado[index] / totalDetalhado) * 100 : 0, // Valor em porcentagem
-			valor: valoresDetalhado[index], // Valor absoluto
-			color: coresDetalhado[index]
-		}));
-
-		Highcharts.chart('graficoDetalhado', {
-			chart: {
-				type: 'bar', // Altere o tipo do gráfico para 'bar'
-				backgroundColor: '#1c1c1c'
-			},
-			title: {
-				text: 'Gráfico Detalhado de Não Conformidades',
-				style: {
-					fontSize: '20px', // Aumenta o tamanho do título
-					color: '#ffffff'
-				}
-			},
-			xAxis: {
-				categories: categoriasDetalhado,
+			Highcharts.chart('graficoSintetico', {
+				chart: {
+					type: 'pie'
+				},
 				title: {
-					text: 'Não Conformidades Juridicas',
+					text: 'Gráfico Sintético de Não Conformidades'
+				},
+				tooltip: {
+					pointFormat: '<b>{point.name}</b>: {point.y} ({point.percentage:.2f}%)',
 					style: {
-						fontSize: '16px', // Aumenta o tamanho da fonte do título do eixo X
-						color: '#ffffff'
+						fontSize: '16px'
 					}
 				},
-				labels: {
-					style: {
-						fontSize: '14px' // Aumenta o tamanho da fonte dos rótulos do eixo X
-					},
-					formatter: function() {
-						// Acessa a cor associada à categoria
-						var color = coresDetalhado[this.pos] || '#000'; // Usa a cor da categoria ou preta por padrão
-						return `<span style="color:${color};"><b>${this.value}</b></span>`; // Aplica a cor sem afetar o alinhamento
-					}
-				}
-			},
-			yAxis: {
-				min: 0,
-				max: 100, // Limita o eixo Y a 100%
-				title: {
-					text: 'Porcentagem',
-					style: {
-						fontSize: '16px',
-						color: '#ffffff'
+				plotOptions: {
+					pie: {
+						dataLabels: {
+							enabled: true,
+							style: {
+								fontSize: '16px'
+							},
+							distance: 65
+						},
+						showInLegend: false,
+						minSize: 5
 					}
 				},
-				labels: {
-					format: '{value}%', // Exibe as labels do eixo Y como porcentagem
-					style: {
-						fontSize: '11px', // Aumenta o tamanho da fonte dos rótulos do eixo Y
-						color: '#ffffff'
-					}
-				},
-				tickInterval: 2, // Ajusta o intervalo entre os ticks (linhas de grid)
-				gridLineWidth: 1.5 // Reduz a largura das linhas de grid para torná-las mais finas
+				series: [{
+					name: 'Valores',
+					data: dataFormatada
+				}]
+			});
 
-			},
-			tooltip: {
-				// Exibe a quantidade e a porcentagem no tooltip
-				pointFormatter: function() {
-					return `<b>${this.y.toFixed(2)}%</b> (${this.valor} Não Conformidades)`;
+			// Gráfico analítico
+			const categoriasAnalitico = <?= json_encode($arrayTitulos) ?>;
+			const valoresAnalitico = <?= json_encode($graficoAnalitico) ?>;
+			const coresAnalitico = <?= json_encode($coresGrafico) ?>;
+
+			const dataFormatadaAnalitico = categoriasAnalitico.map((categoria2, index) => ({
+				name: categoria2,
+				y: valoresAnalitico[index],
+				color: coresAnalitico[index]
+			}));
+
+			Highcharts.chart('graficoAnalitico', {
+				chart: {
+					type: 'pie'
 				},
-				style: {
-					fontSize: '16px' // Aumenta o tamanho da fonte do tooltip
-				}
-			},
-			plotOptions: {
-				bar: { // Altere 'column' para 'bar' aqui também
-					dataLabels: {
-						enabled: true,
-						format: '{point.y:.2f}%', // Exibe o valor em porcentagem com duas casas decimais
+				title: {
+					text: 'Gráfico Analítico de Não Conformidades'
+				},
+				tooltip: {
+					pointFormat: '<b>{point.name}</b>: {point.y} ({point.percentage:.2f}%)',
+					style: {
+						fontSize: '16px'
+					}
+				},
+				plotOptions: {
+					pie: {
+						dataLabels: {
+							enabled: true,
+							style: {
+								fontSize: '13px'
+							},
+							distance: 65
+						},
+						showInLegend: false,
+						minSize: 5
+					}
+				},
+				series: [{
+					name: 'Valores',
+					data: dataFormatadaAnalitico
+				}]
+			});
+
+			const categoriasDetalhado = <?= json_encode($arrayTitulos2) ?>;
+			const valoresDetalhado = <?= json_encode($graficoDetalhado) ?>;
+			const coresDetalhado = <?= json_encode($coresGrafico2) ?>;
+
+			// Calcula o total para obter as porcentagens
+			const totalDetalhado = valoresDetalhado.reduce((acc, val) => acc + val, 0);
+
+			// Formata os dados para o gráfico de barras em porcentagem
+			const dataFormatadaDetalhado = categoriasDetalhado.map((categoria3, index) => ({
+				name: categoria3,
+				y: totalDetalhado > 0 ? (valoresDetalhado[index] / totalDetalhado) * 100 : 0, // Valor em porcentagem
+				valor: valoresDetalhado[index], // Valor absoluto
+				color: coresDetalhado[index]
+			}));
+
+			Highcharts.chart('graficoDetalhado', {
+				chart: {
+					type: 'bar', // Altere o tipo do gráfico para 'bar'
+					backgroundColor: '#1c1c1c'
+				},
+				title: {
+					text: 'Gráfico Detalhado de Não Conformidades',
+					style: {
+						fontSize: '20px', // Aumenta o tamanho do título
+						color: '#ffffff'
+					}
+				},
+				xAxis: {
+					categories: categoriasDetalhado,
+					title: {
+						text: 'Não Conformidades Juridicas',
 						style: {
-							fontSize: '14px' // Aumenta o tamanho da fonte das labels de dados
+							fontSize: '16px', // Aumenta o tamanho da fonte do título do eixo X
+							color: '#ffffff'
+						}
+					},
+					labels: {
+						style: {
+							fontSize: '14px' // Aumenta o tamanho da fonte dos rótulos do eixo X
+						},
+						formatter: function() {
+							// Acessa a cor associada à categoria
+							var color = coresDetalhado[this.pos] || '#000'; // Usa a cor da categoria ou preta por padrão
+							return `<span style="color:${color};"><b>${this.value}</b></span>`; // Aplica a cor sem afetar o alinhamento
 						}
 					}
-				}
-			},
-			series: [{
-				name: 'Valores',
-				data: dataFormatadaDetalhado
-			}]
+				},
+				yAxis: {
+					min: 0,
+					max: 100, // Limita o eixo Y a 100%
+					title: {
+						text: 'Porcentagem',
+						style: {
+							fontSize: '16px',
+							color: '#ffffff'
+						}
+					},
+					labels: {
+						format: '{value}%', // Exibe as labels do eixo Y como porcentagem
+						style: {
+							fontSize: '11px', // Aumenta o tamanho da fonte dos rótulos do eixo Y
+							color: '#ffffff'
+						}
+					},
+					tickInterval: 2, // Ajusta o intervalo entre os ticks (linhas de grid)
+					gridLineWidth: 1.5 // Reduz a largura das linhas de grid para torná-las mais finas
 
+				},
+				tooltip: {
+					// Exibe a quantidade e a porcentagem no tooltip
+					pointFormatter: function() {
+						return `<b>${this.y.toFixed(2)}%</b> (${this.valor} Não Conformidades)`;
+					},
+					style: {
+						fontSize: '16px' // Aumenta o tamanho da fonte do tooltip
+					}
+				},
+				plotOptions: {
+					bar: { // Altere 'column' para 'bar' aqui também
+						dataLabels: {
+							enabled: true,
+							format: '{point.y:.2f}%', // Exibe o valor em porcentagem com duas casas decimais
+							style: {
+								fontSize: '14px' // Aumenta o tamanho da fonte das labels de dados
+							}
+						}
+					}
+				},
+				series: [{
+					name: 'Valores',
+					data: dataFormatadaDetalhado
+				}]
+
+			});
+
+			var tabelaMotorista = $('#tabela-motorista tbody');
+			let motoristas = <?= $motoristas ?? 0 ?>;
+			let ajudante = <?= $ajudante ?? 0 ?>;
+			let funcionario = <?= $funcionario ?? 0 ?>;
+
+			const totalMotorista = motoristas + ajudante + funcionario;
+
+			let linhaMotorista = '';
+			let totalPorcentagem = 0; // Para somar as porcentagens
+
+			if (motoristas && motoristas > 0) {
+				const percMotoristas = ((motoristas / totalMotorista) * 100).toFixed(2);
+				totalPorcentagem += parseFloat(percMotoristas);
+				linhaMotorista += '<tr><td>Motorista</td><td>' + motoristas + '</td>';
+				linhaMotorista += '<td>' + percMotoristas + '%</td></tr>';
+			}
+			if (ajudante && ajudante > 0) {
+				const percAjudante = ((ajudante / totalMotorista) * 100).toFixed(2);
+				totalPorcentagem += parseFloat(percAjudante);
+				linhaMotorista += '<tr><td>Ajudante</td><td>' + ajudante + '</td>';
+				linhaMotorista += '<td>' + percAjudante + '%</td></tr>';
+			}
+			if (funcionario && funcionario > 0) {
+				const percFuncionario = ((funcionario / totalMotorista) * 100).toFixed(2);
+				totalPorcentagem += parseFloat(percFuncionario);
+				linhaMotorista += '<tr><td>Funcionário</td><td>' + funcionario + '</td>';
+				linhaMotorista += '<td>' + percFuncionario + '%</td></tr>';
+			}
+			linhaMotorista += '<tr><td>Total</td><td>' + totalMotorista + '</td>';
+			linhaMotorista += '<td>' + totalPorcentagem.toFixed(2) + '%</td></tr>';
+			tabelaMotorista.append(linhaMotorista);
 		});
-
-		var tabelaMotorista = $('#tabela-motorista tbody');
-		let motoristas = <?= $motoristas ?? 0 ?>;
-		let ajudante = <?= $ajudante ?? 0 ?>;
-		let funcionario = <?= $funcionario ?? 0 ?>;
-
-		const totalMotorista = motoristas + ajudante + funcionario;
-
-		let linhaMotorista = '';
-		let totalPorcentagem = 0; // Para somar as porcentagens
-
-		if (motoristas && motoristas > 0) {
-			const percMotoristas = ((motoristas / totalMotorista) * 100).toFixed(2);
-			totalPorcentagem += parseFloat(percMotoristas);
-			linhaMotorista += '<tr><td>Motorista</td><td>' + motoristas + '</td>';
-			linhaMotorista += '<td>' + percMotoristas + '%</td></tr>';
-		}
-		if (ajudante && ajudante > 0) {
-			const percAjudante = ((ajudante / totalMotorista) * 100).toFixed(2);
-			totalPorcentagem += parseFloat(percAjudante);
-			linhaMotorista += '<tr><td>Ajudante</td><td>' + ajudante + '</td>';
-			linhaMotorista += '<td>' + percAjudante + '%</td></tr>';
-		}
-		if (funcionario && funcionario > 0) {
-			const percFuncionario = ((funcionario / totalMotorista) * 100).toFixed(2);
-			totalPorcentagem += parseFloat(percFuncionario);
-			linhaMotorista += '<tr><td>Funcionário</td><td>' + funcionario + '</td>';
-			linhaMotorista += '<td>' + percFuncionario + '%</td></tr>';
-		}
-		linhaMotorista += '<tr><td>Total</td><td>' + totalMotorista + '</td>';
-		linhaMotorista += '<td>' + totalPorcentagem.toFixed(2) + '%</td></tr>';
-		tabelaMotorista.append(linhaMotorista);
-	});
-</script>
+	</script>
+<?php } ?>

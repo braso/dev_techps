@@ -1045,12 +1045,22 @@
 				. " ORDER BY empr_tx_nome ASC;"
 		), MYSQLI_ASSOC);
 
-		$macros = mysqli_fetch_all(
-			query(
-				"SELECT macr_tx_nome FROM macroponto"
-			),
-			MYSQLI_ASSOC
-		);
+		$dominiosAutotrac = ["/comav"];
+		if(!in_array($_SERVER["REQUEST_URI"], $dominiosAutotrac)){
+			$macros = mysqli_fetch_all(
+				query(
+				"SELECT macr_tx_nome FROM macroponto WHERE macr_tx_fonte = 'positron'"
+				),
+				MYSQLI_ASSOC
+			);
+		} else {
+			$macros = mysqli_fetch_all(
+				query(
+				"SELECT macr_tx_nome FROM macroponto WHERE macr_tx_fonte != 'positron'"
+				),
+				MYSQLI_ASSOC
+			);	
+		}
 
 		$macros = array_column($macros, 'macr_tx_nome');
 			
@@ -1076,7 +1086,13 @@
 			);
 
 			foreach ($motoristas as $motorista) {
-				$ocorrencias = []; 
+				$ocorrencias = [];
+
+				foreach($macros as $macro){
+					if (!isset($ocorrencias[$macro])) {
+						$ocorrencias[$macro] = 0;
+					}
+				}
 				$totalMotorista = [
 					"matricula" 				=> $motorista["enti_tx_matricula"],
 					"nome" 						=> $motorista["enti_tx_nome"],
@@ -1098,7 +1114,7 @@
 						. " AND pont_nb_arquivoponto IS NULL"
 						. " AND pont_tx_data BETWEEN STR_TO_DATE( '". $periodoInicio->format("Y-m-d") ." 00:00:00', '%Y-%m-%d %H:%i:%s')"
 						. " AND STR_TO_DATE( '". $hoje->format("Y-m-d") ." 23:59:59', '%Y-%m-%d %H:%i:%s');"
-					,1 ),
+					),
 					MYSQLI_ASSOC
 				);
 
@@ -1107,18 +1123,20 @@
 					$macr_tx_nome = $registro['macr_tx_nome'];
 
 					if (in_array($macr_tx_nome, $macros)) {
-
-						if (!isset($ocorrencias[$macr_tx_nome])) {
-							$ocorrencias[$macr_tx_nome] = 0;
-						}
 						$ocorrencias[$macr_tx_nome]++;
 					}
 				}
 
 				$totalMotorista = array_merge($totalMotorista, $ocorrencias);
+				// Filtrar apenas os campos numéricos que precisam ser verificados
+				$verificaValores = array_filter($totalMotorista, function ($key) {
+						return !in_array($key, ["matricula", "nome", "ocupacao"]);
+					}, ARRAY_FILTER_USE_KEY);
 				
 				$rows[] = $ocorrencias;
-				file_put_contents($path."/". $motorista["enti_tx_matricula"]. ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE));	
+			    if(array_sum($verificaValores) > 0){
+					file_put_contents($path."/". $motorista["enti_tx_matricula"]. ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE));
+				}	
 			}
 
 			foreach ($rows as $key => $values) {
