@@ -39,7 +39,7 @@
 				<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact' id='tabela2'>
 					<thead>
 						<tr>
-							<th style='cursor: pointer;' colspan='1'>SALDO DO PERÍODO</th>
+							<th style='cursor: pointer;' colspan='1'>SALDO FINAL</th>
 							<th colspan='1'>TOTAL</th>
 							<th colspan='1'>%</th>
 						</tr>

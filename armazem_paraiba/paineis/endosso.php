@@ -411,7 +411,24 @@
 
                 $pastaSaldosEmpresa->close();
 
-                $dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")); //Utilizado no HTML.
+                $dataArquivo = date("d/m/Y", filemtime($path . "/empresa_" . $empresa["empr_nb_id"] . ".json"));
+                $horaArquivo = date("H:i", filemtime($path . "/empresa_" . $empresa["empr_nb_id"] . ".json"));
+
+                $dataAtual = date("d/m/Y");
+                $horaAtual = date("H:i");
+                if($dataArquivo != $dataAtual){
+                    $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
+                    <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                } else {
+                    // Datas iguais: compara as horas
+                    // if ($horaArquivo < $horaAtual) {
+                    //     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
+                    // } else {
+                        $alertaEmissao = "<span>";
+                    // }
+                }
+
+                $dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")). "</span>"; //Utilizado no HTML.
                 $periodoRelatorio = json_decode(file_get_contents($path."/empresa_".$empresa["empr_nb_id"].".json"), true);
                 $periodoRelatorio = [
                     "dataInicio" => $periodoRelatorio["dataInicio"],
@@ -464,7 +481,22 @@
 
             
             if(is_dir($path) && file_exists($path."/empresas.json")){
-                $dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresas.json")); //Utilizado no HTML.
+                $dataArquivo = date("d/m/Y H:i", filemtime($path . "/empresas.json"));
+                $horaArquivo = date("H:i", filemtime($path . "/empresas.json"));
+
+                $dataAtual = date("d/m/Y");
+                $horaAtual = date("H:i");
+                if($dataArquivo != $dataAtual){
+                    $alertaEmissao = "<i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                } else {
+                    // Datas iguais: compara as horas
+                    // if ($horaArquivo < $horaAtual) {
+                    //     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
+                    // } else {
+                        $alertaEmissao = "";
+                    // }
+                }
+                $dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresas.json")); //Utilizado no HTML.
                 $arquivoGeral = json_decode(file_get_contents($path."/empresas.json"), true);
 
                 $periodoRelatorio = [
