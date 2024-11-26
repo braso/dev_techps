@@ -142,56 +142,58 @@
 					}
 
 
-					function ordenarTabela(coluna, ordem){
-						var linhas = tabela.find('tr').get();
-						linhas.sort(function(a, b){
-							// Extrai os valores da coluna como números
-							var valorA = parseFloat($(a).children('td').eq(coluna).text());
-							var valorB = parseFloat($(b).children('td').eq(coluna).text());
+					function ordenarTabela(coluna, ordem) {
+					var linhas = tabela.find('tr').get();
 
-							// Verifica se os valores são números
-							if (!isNaN(valorA) && !isNaN(valorB)) {
-								// Comparação numérica
-								return ordem === 'asc' ? valorA - valorB : valorB - valorA;
-							} else {
-								// Caso os valores não sejam números, trata como texto
-								valorA = $(a).children('td').eq(coluna).text().toUpperCase();
-								valorB = $(b).children('td').eq(coluna).text().toUpperCase();
+					linhas.sort(function (a, b) {
+						// Extrai os valores da coluna
+						var valorA = $(a).children('td').eq(coluna).text().trim();
+						var valorB = $(b).children('td').eq(coluna).text().trim();
 
-								if (valorA < valorB) {
-									return ordem === 'asc' ? -1 : 1;
-								}
-								if (valorA > valorB) {
-									return ordem === 'asc' ? 1 : -1;
-								}
-								return 0;
+						// Tenta converter os valores em números
+						var numA = parseFloat(valorA.replace(',', '.'));
+						var numB = parseFloat(valorB.replace(',', '.'));
+
+						if (!isNaN(numA) && !isNaN(numB)) {
+							// Comparação numérica
+							return ordem === 'asc' ? numA - numB : numB - numA;
+						} else {
+							// Caso os valores não sejam números, trata como texto
+							valorA = valorA.toUpperCase();
+							valorB = valorB.toUpperCase();
+
+							if (valorA < valorB) {
+								return ordem === 'asc' ? -1 : 1;
 							}
-						});
-						
-						$.each(linhas, function(index, row){
-							tabela.append(row);
-						});
-					}
-
-					$('#titulos th').click(function(){
-						var colunaClicada = $(this).attr('class');
-						// console.log(colunaClicada)
-	
-						var coluna = $(this).index();
-						var ordem = $(this).data('order');
-
-						// Redefinir ordem de todas as colunas
-						$('#tabela-empresas th').data('order', 'desc'); 
-						$(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
-
-						// Chama a função de ordenação
-						ordenarTabela(coluna, $(this).data('order'));
-
-						// Ajustar classes para setas de ordenação
-						$('#titulos th').removeClass('sort-asc sort-desc');
-						$(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
-					
+							if (valorA > valorB) {
+								return ordem === 'asc' ? 1 : -1;
+							}
+							return 0;
+						}
 					});
+
+					// Reinsere as linhas ordenadas na tabela
+					$.each(linhas, function (index, row) {
+						tabela.append(row);
+					});
+				}
+
+				$('#titulos th').click(function () {
+					var coluna = $(this).index(); // Obtém o índice da coluna clicada
+					var ordem = $(this).data('order'); // Obtém a ordem atual (asc/desc)
+
+					// Redefinir ordem de todas as colunas
+					$('#tabela-empresas th').data('order', 'desc');
+					$(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
+
+					// Chama a função de ordenação
+					ordenarTabela(coluna, $(this).data('order'));
+
+					// Ajustar classes para setas de ordenação
+					$('#titulos th').removeClass('sort-asc sort-desc');
+					$(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
+				});
+
 
 					".$carregarDados. "
 				});
@@ -582,7 +584,7 @@
                             $alertaEmissao = "<span>";
                         // }
                     }
-					$dataEmissao = "Atualizado em: " . date("d/m/Y H:i", filemtime($arquivo)). "</span>"; //Utilizado no HTML.
+					$dataEmissao = $alertaEmissao ."Atualizado em: " . date("d/m/Y H:i", filemtime($arquivo)). "</span>"; //Utilizado no HTML.
 					$arquivoGeral = json_decode(file_get_contents($arquivo), true);
 
 					$periodoRelatorio = [

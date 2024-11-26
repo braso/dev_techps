@@ -141,142 +141,41 @@ function carregarJS(array $arquivos) {
                             }
                         });
                     }
-                    // // Função para conversão de Horas para Minutos
-                    // function horasParaMinutos(horas) {
-                    //     var partes = horas.split(':');
-                    //     var horasNumeros = parseInt(partes[0], 10);  // Horas (pode ser positivo ou negativo)
-                    //     var minutos = parseInt(partes[1], 10);       // Minutos
-
-                    //     // Converte as horas para minutos totais
-                    //     return (horasNumeros * 60) + (horasNumeros < 0 ? -minutos : minutos);
-                    // }
                         
-                    // // Função para ordenar a tabela
-                    // function ordenarTabela(coluna, ordem){
-                    //     var linhas = tabela.find('tr').get();
+                    // Função para ordenar a tabela
+                    function ordenarTabela(coluna, ordem){
+                        var linhas = tabela.find('tr').get();
                         
-                    //     linhas.sort(function(a, b){
-                    //         var valorA = $(a).children('td').eq(coluna).text();
-                    //         var valorB = $(b).children('td').eq(coluna).text();
+                        linhas.sort(function(a, b){
+                            var valorA = $(a).children('td').eq(coluna).text();
+                            var valorB = $(b).children('td').eq(coluna).text();
 
-                    //         // Verifica se os valores estão no formato HHH:mm (inclui 1, 2 ou 3 dígitos nas horas)
-                    //         if (valorA.match(/^-?\d{1,3}:\d{2}$/) && valorB.match(/^-?\d{1,3}:\d{2}$/)) {
-                    //             valorA = horasParaMinutos(valorA);
-                    //             valorB = horasParaMinutos(valorB);
-                    //         }
+                            if(valorA < valorB){
+                                return ordem === 'asc' ? -1 : 1;
+                            }
+                            if(valorA > valorB){
+                                return ordem === 'asc' ? 1 : -1;
+                            }
+                            return 0;
+                        });
 
-                    //         if(valorA < valorB){
-                    //             return ordem === 'asc' ? -1 : 1;
-                    //         }
-                    //         if(valorA > valorB){
-                    //             return ordem === 'asc' ? 1 : -1;
-                    //         }
-                    //         return 0;
-                    //     });
+                        $.each(linhas, function(index, row){
+                            tabela.append(row);
+                        });
+                    }
 
-                    //     $.each(linhas, function(index, row){
-                    //         tabela.append(row);
-                    //     });
-                    // }
+                    // Evento de clique para ordenar a tabela ao clicar no cabeçalho
+                    $('#titulos th').click(function(){
+                        var coluna = $(this).index();
+                        var ordem = $(this).data('order');
+                        $('#tabela-empresas th').data('order', 'desc'); // Redefinir ordem de todas as colunas
+                        $(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
+                        ordenarTabela(coluna, $(this).data('order'));
 
-                    // // Evento de clique para ordenar a tabela ao clicar no cabeçalho
-                    // $('#titulos th').click(function(){
-                    //     var coluna = $(this).index();
-                    //     var ordem = $(this).data('order');
-                    //     $('#tabela-empresas th').data('order', 'desc'); // Redefinir ordem de todas as colunas
-                    //     $(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
-                    //     ordenarTabela(coluna, $(this).data('order'));
-
-                    //     // Ajustar classes para setas de ordenação
-                    //     $('#titulos th').removeClass('sort-asc sort-desc');
-                    //     $(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
-                    // });
-
-                    // $('#tabela1 tbody td').click(function(event) {
-                    //     if ($(this).is(':first-child')) {
-                    //         var textoPrimeiroTd = $(this).text().trim(); // Pega o texto do primeiro <td>
-                    //         var status = '';
-                    //         if(textoPrimeiroTd === 'Não Endossado'){
-                    //             var status = 'N';
-                    //         } else if (textoPrimeiroTd === 'Endo. Parcialmente'){
-                    //             var status = 'EP';
-                    //         } else{
-                    //             var status = 'E'
-                    //         }
-
-                    //         $('#tabela-empresas tbody tr').each(function() {
-                    //             var textoCelula = $(this).find('td').eq(3).text().trim(); // Pegar o texto da primeira célula (coluna 3) de cada linha
-                    //             // Mostrar ou ocultar a linha com base na comparação
-                    //             if (textoCelula === status) {
-                    //                 $(this).show(); // Mostrar linha se o texto da célula corresponder ao valor clicado
-                    //             } else {
-                    //                 $(this).hide(); // Ocultar linha se o texto da célula for diferente
-                    //             }
-                    //         });
-
-            
-                    //     } else {
-                    //         event.stopPropagation(); // Impede que o evento de clique se propague
-                    //     }
-                    // });
-
-                    // $('#tabela1 thead tr th').click(function(event) {
-                    //     if ($(this).is(':first-child')) {
-                    //         var textoPrimeiroTd = $(this).text().trim(); // Pega o texto do primeiro <td>
-                    //         $('#tabela-empresas tbody tr').each(function() {
-                    //             $(this).show(); // Mostrar linha se o texto da célula corresponder ao valor clicado
-                    //         });
-                    //     } else {
-                    //         event.stopPropagation(); // Impede que o evento de clique se propague
-                    //     }
-                    // });
-
-                    // $('#tabela2 tbody td').click(function(event) {
-                    //     if ($(this).is(':first-child')) {
-                    //         var textoPrimeiroTd = $(this).text().trim(); // Pega o texto do primeiro <td>
-
-                    //         // Definindo a condição de filtro com base no texto do primeiro <td>
-                    //         var condicao;
-                    //         if (textoPrimeiroTd === 'Meta') {
-                    //             condicao = function(textoCelula) {
-                    //                 return textoCelula === '00:00'; // Exibir se for igual a 00:00
-                    //             };
-                    //         } else if (textoPrimeiroTd === 'Positivo') {
-                    //             condicao = function(textoCelula) {
-                    //                 return textoCelula > '00:00'; // Exibir se for maior que 00:00
-                    //             };
-                    //         } else {
-                    //             condicao = function(textoCelula) {
-                    //                 return textoCelula < '00:00'; // Exibir se for menor que 00:00
-                    //             };
-                    //         }
-
-                    //         // Percorrendo as linhas da tabela #tabela-empresas
-                    //         $('#tabela-empresas tbody tr').each(function() {
-                    //             var textoCelula = $(this).find('td').eq(12).text().trim(); // Pegar o texto da coluna 13 de cada linha
-                    //             // Mostrar ou ocultar a linha com base na condição definida
-                    //             if (condicao(textoCelula)) {
-                    //                 $(this).show(); // Mostrar linha se a condição for verdadeira
-                    //             } else {
-                    //                 $(this).hide(); // Ocultar linha se a condição for falsa
-                    //             }
-                    //         });
-                    //     } else {
-                    //         event.stopPropagation(); // Impede que o evento de clique se propague
-                    //     }
-                    // });
-
-                    // $('#tabela2 thead tr th').click(function(event) {
-                    //     if ($(this).is(':first-child')) {
-                    //         var textoPrimeiroTd = $(this).text().trim(); // Pega o texto do primeiro <td>
-                    //         $('#tabela-empresas tbody tr').each(function() {
-                    //             $(this).show(); // Mostrar linha se o texto da célula corresponder ao valor clicado
-                    //         });
-                    //     } else {
-                    //         event.stopPropagation(); // Impede que o evento de clique se propague
-                    //     }
-                    // });
-
+                        // Ajustar classes para setas de ordenação
+                        $('#titulos th').removeClass('sort-asc sort-desc');
+                        $(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
+                    });
 
                     " . $carregarDados . "
                 });
@@ -355,7 +254,23 @@ function index() {
 		$periodoInicio = new DateTime($_POST["busca_periodo"][0]);
 		$path .= "/" . $periodoInicio->format("Y-m") . "/" . $_POST["empresa"];
 		if (is_dir($path) && file_exists($path ."/empresa_" . $_POST["empresa"] . ".json")) {
-			$dataEmissao = "Atualizado em: " . date("d/m/Y H:i", filemtime($path . "/empresa_" . $_POST["empresa"] . ".json"));
+			$dataArquivo = date("d/m/Y", filemtime($path . "/empresa_" . $_POST["empresa"] . ".json"));
+			$horaArquivo = date("H:i", filemtime($path . "/empresa_" . $_POST["empresa"] . ".json"));
+
+			$dataAtual = date("d/m/Y");
+			$horaAtual = date("H:i");
+			if ($dataArquivo != $dataAtual) {
+				$alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
+                        <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+			} else {
+				// Datas iguais: compara as horas
+				// if ($horaArquivo < $horaAtual) {
+				//     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
+				// } else {
+				$alertaEmissao = "<span>";
+				// }
+			}
+			$dataEmissao = $alertaEmissao." Atualizado em: " . date("d/m/Y H:i", filemtime($path . "/empresa_" . $_POST["empresa"] . ".json"))."</span>";
 			$arquivoGeral = json_decode(file_get_contents($path . "/empresa_" . $_POST["empresa"]. ".json"), true);
 
 			$periodoRelatorio = [
@@ -383,14 +298,29 @@ function index() {
 		}
 
 		if(is_dir($path) && file_exists($path . "/empresas.json")){
-			$dataEmissao = "Atualizado em: " . date("d/m/Y H:i", filemtime($path . "/empresas.json"));
+			$dataArquivo = date("d/m/Y", filemtime($path . "/empresas.json"));
+			$horaArquivo = date("H:i", filemtime($path . "/empresas.json"));
+
+			$dataAtual = date("d/m/Y");
+			$horaAtual = date("H:i");
+			if ($dataArquivo != $dataAtual) {
+				$alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
+                        <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+			} else {
+				// Datas iguais: compara as horas
+				// if ($horaArquivo < $horaAtual) {
+				//     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
+				// } else {
+				$alertaEmissao = "<span>";
+				// }
+			}
+			$dataEmissao = $alertaEmissao." Atualizado em: " . date("d/m/Y H:i", filemtime($path . "/empresas.json")). "</span>";
 			$arquivoGeral = json_decode(file_get_contents($path . "/empresas.json"), true);
 
 			$periodoRelatorio = [
 				"dataInicio" => $arquivoGeral["dataInicio"],
 				"dataFim" => $arquivoGeral["dataFim"]
 			];
-
 			$pastaAjuste = dir($path);
 			while ($arquivo = $pastaAjuste->read()) {
 				if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))) {
@@ -413,9 +343,7 @@ function index() {
 		if (!empty($_POST["empresa"])) {
 			if (!in_array($_SERVER["REQUEST_URI"], $dominiosAutotrac)) {
 				$rowTotais .=
-					"<th colspan='1'>" . $arquivoGeral["empr_tx_nome"] . "</th>"
-					. "<th colspan='1'></th>"
-					. "<th colspan='1'></th>"
+					"<th colspan='3'>" . $arquivoGeral["empr_tx_nome"] . "</th>"
 					. "<th colspan='1'>" . $arquivoGeral["Inicio de Jornada"] . "</th>"
 					. "<th colspan='1'>" . $arquivoGeral["Fim de Jornada"] . "</th>"
 					. "<th colspan='1'>" . $arquivoGeral["Inicio de Refeição"] . "</th>"
@@ -507,6 +435,8 @@ function index() {
 					. "<th data-column='' data-order='asc'>Abastecimento - Arla32</th>"
 					. "<th data-column='saldoFinal' data-order='asc'>Troca De Veículo</th>";
 			}
+			$mostra = false;
+			include_once "painel_html2.php";
 		} else {
 			if (!in_array($_SERVER["REQUEST_URI"], $dominiosAutotrac)) {
 				$rowTotais .=
@@ -602,12 +532,12 @@ function index() {
 					. "<th data-column='' data-order='asc'>Abastecimento - Arla32</th>"
 					. "<th data-column='saldoFinal' data-order='asc'>Troca De Veículo</th>";
 			}
+			$mostra = false;
+			include_once "painel_html2.php";
 		}
 		$rowTotais .= "</tr>";
 		$rowTitulos .= "</tr>";
 	}
-	$mostra = false;
-	include_once "painel_html2.php";
 	carregarJS($arquivos);
 	rodape();
 }
