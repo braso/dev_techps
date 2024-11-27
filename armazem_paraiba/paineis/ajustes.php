@@ -216,14 +216,14 @@ function index() {
 			flush();
 
 			//Este comando de cabecalho deve ficar entre o alert() e a chamada de criar_relatorio_saldo() para notificar e aparecer o ícone de carregamento antes de começar o processamento
-			cabecalho("Relatório Geral de Saldo");
+			cabecalho("Relatório Geral de Ajustes");
 
 			criar_relatorio_ajustes();
 		} else {
-			cabecalho("Relatório Geral de Saldo");
+			cabecalho("Relatório Geral de Ajustes");
 		}
 	} else {
-		cabecalho("Relatório Geral de Saldo");
+		cabecalho("Relatório Geral de Ajustes");
 	}
 
 	// $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
@@ -458,6 +458,7 @@ function index() {
 					. "<th data-column='saldoFinal' data-order='asc'>Troca De Veículo</th>";
 			}
 			$mostra = false;
+			$titulo = "Geral de Ajustes";
 			include_once "painel_html2.php";
 		} else {
 			if (!in_array($_SERVER["REQUEST_URI"], $dominiosAutotrac)) {
@@ -555,6 +556,7 @@ function index() {
 					. "<th data-column='saldoFinal' data-order='asc'>Troca De Veículo</th>";
 			}
 			$mostra = false;
+			$titulo = "Geral de Ajustes";
 			include_once "painel_html2.php";
 		}
 		$rowTotais .= "</tr>";

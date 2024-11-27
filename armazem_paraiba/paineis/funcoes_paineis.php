@@ -1034,16 +1034,15 @@
 	}
 
 	function criar_relatorio_ajustes() {
-		$periodoInicio = new DateTime("2024-10-01");
-		$hoje = new DateTime("2024-10-10");
-		// $hoje = new DateTime();
+		$periodoInicio = new DateTime($_POST["busca_periodo"][0]);
+		$hoje = new DateTime();
 
-		// if ($periodoInicio->format('Y-m') === $hoje->format('Y-m')) {
-		// 	// Se for o mês atual, a data limite é o dia de hoje
-		// 	$periodoFim = $hoje;
-		// } else {
-		// 	$periodoFim = new DateTime($periodoInicio->format("Y-m-t"));
-		// }
+		if ($periodoInicio->format('Y-m') === $hoje->format('Y-m')) {
+			// Se for o mês atual, a data limite é o dia de hoje
+			$periodoFim = $hoje;
+		} else {
+			$periodoFim = new DateTime($periodoInicio->format("Y-m-t"));
+		}
 
 		$empresas = mysqli_fetch_all(query(
 			"SELECT empr_nb_id, empr_tx_nome FROM empresa"
@@ -1094,6 +1093,7 @@
 
 			foreach ($motoristas as $motorista) {
 				$ocorrencias = [];
+				$verificaValores = []; 
 
 				foreach($macros as $macro){
 					if (!isset($ocorrencias[$macro])) {

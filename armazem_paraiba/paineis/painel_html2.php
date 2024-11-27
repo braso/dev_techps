@@ -11,7 +11,7 @@
 	<div class="portlet light ">
 		<div class="table-responsive">
 			<div class='emissao' style="display: block !important;">
-				<h1 class="titulo2">Relatorio Não Conformidade Juridica Atualizado <?= $titulo ?></h1>
+				<h1 class="titulo2">Relatorio <?= $titulo ?></h1>
 				<span></span>
 				<?= $dataEmissao . "<br>"
 					. "<b>Período do relatório:</b> " . $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"] ?>
