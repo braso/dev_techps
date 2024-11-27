@@ -179,6 +179,26 @@ function carregarJS(array $arquivos) {
 
                     " . $carregarDados . "
                 });
+
+				//Variação dos campos de pesquisa{
+                    var camposAcao = document.getElementsByName('campoAcao');
+                    if (camposAcao[0].checked){
+                        document.getElementById('botaoContexBuscar').innerHTML = 'Buscar';
+                    }
+                    if (camposAcao[1].checked){
+                        document.getElementById('botaoContexBuscar').innerHTML = 'Atualizar';
+                    }
+                    camposAcao[0].addEventListener('change', function() {
+                        if (camposAcao[0].checked){
+                            document.getElementById('botaoContexBuscar').innerHTML = 'Buscar';
+                        }
+                    });
+                    camposAcao[1].addEventListener('change', function() {
+                        if (camposAcao[1].checked){
+                            document.getElementById('botaoContexBuscar').innerHTML = 'Atualizar';
+                        }
+                    });
+                //}
             </script>";
 }
 
@@ -246,7 +266,7 @@ function index() {
 	$arquivos = [];
 	$totais = [];
 	$dataEmissao = ""; //Utilizado no HTML
-	$encontrado = true;
+	$encontrado = false;
 	$path = "./arquivos/ajustes";
 	$periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
@@ -254,6 +274,7 @@ function index() {
 		$periodoInicio = new DateTime($_POST["busca_periodo"][0]);
 		$path .= "/" . $periodoInicio->format("Y-m") . "/" . $_POST["empresa"];
 		if (is_dir($path) && file_exists($path ."/empresa_" . $_POST["empresa"] . ".json")) {
+			$encontrado = true;
 			$dataArquivo = date("d/m/Y", filemtime($path . "/empresa_" . $_POST["empresa"] . ".json"));
 			$horaArquivo = date("H:i", filemtime($path . "/empresa_" . $_POST["empresa"] . ".json"));
 
@@ -298,6 +319,7 @@ function index() {
 		}
 
 		if(is_dir($path) && file_exists($path . "/empresas.json")){
+			$encontrado = true;
 			$dataArquivo = date("d/m/Y", filemtime($path . "/empresas.json"));
 			$horaArquivo = date("H:i", filemtime($path . "/empresas.json"));
 
@@ -537,6 +559,11 @@ function index() {
 		}
 		$rowTotais .= "</tr>";
 		$rowTitulos .= "</tr>";
+	} else {
+		if (!empty($_POST["acao"]) && $_POST["acao"] == "buscar") {
+			set_status("Não Possui dados desse mês");
+			echo "<script>alert('Não Possui dados desse mês')</script>";
+		}
 	}
 	carregarJS($arquivos);
 	rodape();

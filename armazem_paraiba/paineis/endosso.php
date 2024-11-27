@@ -487,16 +487,17 @@
                 $dataAtual = date("d/m/Y");
                 $horaAtual = date("H:i");
                 if($dataArquivo != $dataAtual){
-                    $alertaEmissao = "<i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                    $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
+                    <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
                 } else {
                     // Datas iguais: compara as horas
                     // if ($horaArquivo < $horaAtual) {
                     //     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
                     // } else {
-                        $alertaEmissao = "";
+                        $alertaEmissao = "<span>";
                     // }
                 }
-                $dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresas.json")); //Utilizado no HTML.
+                $dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresas.json"))."</span>"; //Utilizado no HTML.
                 $arquivoGeral = json_decode(file_get_contents($path."/empresas.json"), true);
 
                 $periodoRelatorio = [
