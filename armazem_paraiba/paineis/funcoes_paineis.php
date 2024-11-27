@@ -604,9 +604,7 @@
 							$jornada = $dia["diffJornada"];
 						}
 
-						// if ($jornada != "00:00") {
-						// 	$jornadaEfetiva = $diaPonto["diffJornadaEfetiva"] == "00:00" ? "*" : $diaPonto["diffJornadaEfetiva"];
-						// }
+						$jornadaEfetiva = $dia["diffJornadaEfetiva"] == "00:00" ? "----" : $dia["diffJornadaEfetiva"];
 					}
 					
 					$endossado = mysqli_fetch_all(
@@ -652,8 +650,17 @@
 
 				if (!empty($row)) {
 					$nomeArquivo = $motorista["enti_tx_matricula"].".json";
+					$arquivosMantidos[] = $nomeArquivo;
 					file_put_contents($path."/".$nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 				}
+
+				$pasta = dir($path);
+				while ($arquivo = $pasta->read()) {
+					if (!in_array($arquivo, $arquivosMantidos)) {
+						unlink($arquivo); // Apaga o arquivo
+					}
+				}
+				$pasta->close();
 			}
 		// sleep(1);
 		return;
