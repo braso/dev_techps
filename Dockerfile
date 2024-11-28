@@ -15,7 +15,7 @@ RUN	echo "upload_max_filesize = ${MAX_UPLOAD}" >> /usr/local/etc/php/conf.d/0-up
 
 STOPSIGNAL SIGINT
 
-# Instala dependências para PHP e Composer
+# Instala dependências para PHP, Composer e PHPUnit
 RUN	apk add --no-cache --virtual .build-deps \
     curl \
     postgresql-dev \
@@ -34,6 +34,7 @@ RUN	apk add --no-cache --virtual .build-deps \
 	pdo_odbc \
 	pdo_dblib \
 &&	curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
+&&	composer global require phpunit/phpunit:^9.0 \
 &&	runDeps="$( \
 		scanelf --needed --nobanner --format '%n#p' --recursive /usr/local/lib/php/extensions \
 			| tr ',' '\n' \
