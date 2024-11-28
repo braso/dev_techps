@@ -1,32 +1,29 @@
 FROM php:7.4-alpine
 
-ENV MAX_UPLOAD = "128M"
-ENV MAX_MEM = "1G"
-ENV MAX_TIME = "600"
-ENV MAX_INPUTVARS = "5000"
+# Configurações de ambiente
+ENV MAX_UPLOAD="128M"
+ENV MAX_MEM="1G"
+ENV MAX_TIME="600"
+ENV MAX_INPUTVARS="5000"
 
-RUN	echo "upload_max_filesize = ${MAX_UPLOAD:-'128M'}" >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini \
-&&	echo "post_max_size = ${MAX_UPLOAD:-'128M'}" >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini \
-&&	echo "memory_limit = ${MAX_MEM:-'1G'}" >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini \
-&&	echo "max_execution_time = ${MAX_TIME:-'600'}"   >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini \
-&&	echo "max_input_vars = ${MAX_INPUTVARS:-'5000}" }  >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini
+# Configurações do PHP
+RUN	echo "upload_max_filesize = ${MAX_UPLOAD}" >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini \
+&&	echo "post_max_size = ${MAX_UPLOAD}" >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini \
+&&	echo "memory_limit = ${MAX_MEM}" >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini \
+&&	echo "max_execution_time = ${MAX_TIME}"   >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini \
+&&	echo "max_input_vars = ${MAX_INPUTVARS}" >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini
 
 STOPSIGNAL SIGINT
 
-RUN	addgroup -S adminer \
-&&	adduser -S -G adminer adminer \
-&&	mkdir -p /var/www/html \
-&&	mkdir /var/www/html/plugins-enabled \
-&&	chown -R adminer:adminer /var/www/html
-
-WORKDIR /var/www/html
-
-RUN	set -x \
-&&	apk add --no-cache --virtual .build-deps \
-	postgresql-dev \
-	sqlite-dev \
-	unixodbc-dev \
-	freetds-dev \
+# Instala dependências para PHP e Composer
+RUN	apk add --no-cache --virtual .build-deps \
+    curl \
+    postgresql-dev \
+    sqlite-dev \
+    unixodbc-dev \
+    freetds-dev \
+    git \
+    unzip \
 &&	docker-php-ext-configure pdo_odbc --with-pdo-odbc=unixODBC,/usr \
 &&	docker-php-ext-install \
 	mysqli \
@@ -36,6 +33,7 @@ RUN	set -x \
 	pdo_sqlite \
 	pdo_odbc \
 	pdo_dblib \
+&&	curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
 &&	runDeps="$( \
 		scanelf --needed --nobanner --format '%n#p' --recursive /usr/local/lib/php/extensions \
 			| tr ',' '\n' \
@@ -45,7 +43,18 @@ RUN	set -x \
 &&	apk add --virtual .phpexts-rundeps $runDeps \
 &&	apk del --no-network .build-deps
 
-USER	adminer
-CMD	[ "php", "-S", "[::]:80", "-t", "/var/www/html" ]
+# Configuração do ambiente
+RUN	addgroup -S adminer \
+&&	adduser -S -G adminer adminer \
+&&	mkdir -p /var/www/html \
+&&	mkdir /var/www/html/plugins-enabled \
+&&	chown -R adminer:adminer /var/www/html
 
+WORKDIR /var/www/html
+
+# Definição do usuário padrão e comando inicial
+USER adminer
+CMD [ "php", "-S", "[::]:80", "-t", "/var/www/html" ]
+
+# Exposição da porta
 EXPOSE 80
