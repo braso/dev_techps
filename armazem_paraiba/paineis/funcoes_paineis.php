@@ -74,7 +74,7 @@
 		];
 
 		foreach ($empresas as $empresa) {
-			$path = "./arquivos/saldos"."/".$dataMes->format("Y-m")."/".$_POST["empresa"];
+			$path = "./arquivos/saldos"."/".$dataMes->format("Y-m")."/".$empresa["empr_nb_id"];
 			if (!is_dir($path)) {
 				mkdir($path, 0755, true);
 			}

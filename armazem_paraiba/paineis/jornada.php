@@ -20,12 +20,12 @@
                         +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.nome+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
-                        +'<td style=\'text-align: center;'+ cor +'\'>'+jornada+'</td>'
-                        +'<td style=\'text-align: center;'+ cor +'\'>'+item.jornadaEfetiva+'</td>'
-                        +'<td style=\'text-align: center;'+ cor +'\'>'+(refeicao ? refeicao : '<strong>----</strong>')+'</td>'
-                        +'<td style=\'text-align: center;'+ cor +'\'>'+(espera ? espera : '<strong>----</strong>')+'</td>'
-                        +'<td style=\'text-align: center;'+ cor +'\'>'+(descanso ? descanso : '<strong>----</strong>')+'</td>'
-                        +'<td style=\'text-align: center;'+ cor +'\'>'+(repouso ? repouso : '<strong>----</strong>')+'</td>'
+                        +'<td class =\'jornada\'>'+jornada+'</td>'
+                        +'<td class =\'jornada\'>'+item.jornadaEfetiva+'</td>'
+                        +'<td class =\'jornada\'>'+(refeicao ? refeicao : '<strong>----</strong>')+'</td>'
+                        +'<td class =\'jornada\'>'+(espera ? espera : '<strong>----</strong>')+'</td>'
+                        +'<td class =\'jornada\'>'+(descanso ? descanso : '<strong>----</strong>')+'</td>'
+                        +'<td class =\'jornada\'>'+(repouso ? repouso : '<strong>----</strong>')+'</td>'
                     +'</tr>';";
         }
 
@@ -95,8 +95,6 @@
                                             return campo;
                                         }
 
-                                        var cor = '';
-                                        cor = 'background-color: var(--var-red); color: white;';
                                         var diferencaDias = item.diaDiferenca;
 
                                         var jornada = processaCampo(item.jornada, diferencaDias, item.inicioJornada);

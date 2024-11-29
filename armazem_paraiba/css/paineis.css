@@ -247,16 +247,22 @@ th.sort-desc::after {
     display: none;
 }
 
-.saldo-final {
+#saldo-final {
     color: green;
 }
 
-.saldo-zero {
+#saldo-zero {
     color: blue;
 }
 
-.saldo-negativo {
+#saldo-negativo{
     color: red;
+}
+
+.jornada{
+    background-color: var(--var-red);
+    color: white;
+    text-align: center;
 }
 
 @media print {
@@ -385,6 +391,10 @@ th.sort-desc::after {
     thead tr.titulos th {
         box-shadow: 0 0 0 1000px #99ccff inset !important;
         /* Cor para impressão */
+    }
+
+    .jornada{
+        box-shadow: 0 0 0 1000px var(--var-red) inset !important;
     }
 
     .portlet.light {

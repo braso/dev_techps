@@ -338,7 +338,7 @@
 			Highcharts.chart('graficoDetalhado', {
 				chart: {
 					type: 'bar', // Altere o tipo do gráfico para 'bar'
-					backgroundColor: '#1c1c1c'
+					backgroundColor: '#8F8D8D'
 				},
 				title: {
 					text: 'Gráfico Detalhado de Não Conformidades',
