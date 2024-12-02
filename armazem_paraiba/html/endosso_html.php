@@ -20,27 +20,17 @@
 	<input type="hidden" name="busca_situacao">
 </form>
 
-<form name="form_ajuste_ponto" method="post" target="_blank">
-	<input type="hidden" name="acao" value="layout_ajuste">
-	<input type="hidden" name="id">
-	<input type="hidden" name="data">
-	<input type="hidden" name="HTTP_REFERER">
-	<input type="hidden" name="data_de">
-	<input type="hidden" name="data_ate">
-</form>
-
 <script>
+	var form = document.form_imprimir_relatorio;
 	<?=
-		"document.getElementsByName('idMotoristaEndossado')[0].value 		= '".(!empty($aIdMotoristaEndossado)? implode(",", $aIdMotoristaEndossado) : "")."';
-		document.getElementsByName('matriculaMotoristaEndossado')[0].value 	= '".(!empty($aMatriculaMotoristaEndossado)? implode(",", $aMatriculaMotoristaEndossado): '')."';
-		document.getElementsByName('busca_empresa')[0].value 				= '".(!empty($_POST["busca_empresa"])? $_POST["busca_empresa"]: "")."';
-		document.getElementsByName('busca_data')[0].value 					= '".(!empty($_POST["busca_data"])? $_POST["busca_data"]: "")."';
-		document.getElementsByName('busca_motorista')[0].value 				= '".(!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: "")."';
-		document.getElementsByName('busca_situacao')[0].value 				= '".(!empty($_POST["busca_situacao"])? $_POST["busca_situacao"]: "")."';
-
-		document.getElementsByName('id')[0].value 							= '".(!empty($aMotorista["enti_nb_id"])? $aMotorista["enti_nb_id"]: "")."';
-		
-		let select2URL = '".$select2URL."'"
+		"form.idMotoristaEndossado.value 		= '".(!empty($aIdMotoristaEndossado)? implode(",", $aIdMotoristaEndossado) : "")."';
+		form.matriculaMotoristaEndossado.value 	= '".(!empty($aMatriculaMotoristaEndossado)? implode(",", $aMatriculaMotoristaEndossado): '')."';
+		form.busca_empresa.value 				= '".(!empty($_POST["busca_empresa"])? $_POST["busca_empresa"]: "")."';
+		form.busca_data.value 					= '".(!empty($_POST["busca_data"])? $_POST["busca_data"]: "")."';
+		form.busca_motorista.value 				= '".(!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: "")."';
+		form.busca_situacao.value 				= '".(!empty($_POST["busca_situacao"])? $_POST["busca_situacao"]: "")."';
+		form.id.value 							= '".(!empty($aMotorista["enti_nb_id"])? $aMotorista["enti_nb_id"]: "")."';
+		let select2URL = '{$select2URL}'"
 	?>
 
 	function selecionaMotorista(idEmpresa) {
