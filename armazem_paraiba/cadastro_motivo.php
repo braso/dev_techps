@@ -19,15 +19,13 @@
 	
 	include "conecta.php";
 
-	function exclui_motivo(){
+	function excluirMotivo(){
 		remover("motivo",$_POST["id"]);
 		index();
 		exit;
 	}
-
-	function modifica_motivo(){
-		$_POST = array_merge($_POST, carregar("motivo", $_POST["id"]));
-		
+	function modificarMotivo(){
+		$_POST = array_merge($_POST, carregar("motivo", $_POST["id"]));	
 		layout_motivo();
 		exit;
 	}
@@ -123,14 +121,24 @@
 		linha_form($campos);
 		fecha_form($botoes);
 
-		$sql = "SELECT * FROM motivo WHERE moti_tx_status = 'ativo' ".$extra;
+		$iconeModificar =	criarSQLIconeTabela("moti_nb_id", "modificarMotivo", "Modificar", "glyphicon glyphicon-search");
+		$iconeExcluir = 	criarSQLIconeTabela("moti_nb_id", "excluirMotivo", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?");
+
+		$sql = 
+			"SELECT *, 
+				{$iconeModificar} as iconeModificar,
+				IF(moti_tx_status = 'ativo', {$iconeExcluir}, NULL) as iconeExcluir
+			FROM motivo 
+				WHERE moti_tx_status = 'ativo' 
+					{$extra};"
+		;
 		$gridParams = [
 			"CÓDIGO" => "moti_nb_id",
 			"NOME" => "moti_tx_nome",
 			"TIPO" => "moti_tx_tipo",
 			"LEGENDA" => "moti_tx_legenda",
-			"<spam class='glyphicon glyphicon-search'></spam>" => "icone_modificar(moti_nb_id,modifica_motivo)",
-			"<spam class='glyphicon glyphicon-remove'></spam>" => "icone_excluir(moti_nb_id,exclui_motivo)"
+			"<spam class='glyphicon glyphicon-search'></spam>" => "iconeModificar",
+			"<spam class='glyphicon glyphicon-remove'></spam>" => "iconeExcluir"
 		];
 
 		grid($sql, array_keys($gridParams), array_values($gridParams), "", "12", 1, "desc");
