@@ -117,20 +117,24 @@
 		linha_form($campos);
 		fecha_form($botoes);
 
+		$iconeModificar = criarSQLIconeTabela("feri_nb_id", "modifica_feriado", "Modificar", "glyphicon glyphicon-search");
+		$iconeExcluir =	criarSQLIconeTabela("feri_nb_id", "exclui_feriado", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?");
+
 		$sql = 
-			"SELECT * FROM feriado"
-				." LEFT JOIN cidade ON cida_nb_id = feri_nb_cidade"
-				." WHERE feri_tx_status = 'ativo'"
-				.$extra.";"
+			"SELECT *, {$iconeModificar} as iconeModificar, IF(feri_tx_status = 'ativo', {$iconeExcluir}, NULL) as iconeExcluir FROM feriado
+				 LEFT JOIN cidade ON cida_nb_id = feri_nb_cidade
+				 WHERE feri_tx_status = 'ativo'
+				{$extra};"
 		;
+
 		$gridFields = [
 			"CÓDIGO" 											=> "feri_nb_id",
 			"NOME" 												=> "feri_tx_nome",
 			"DATA" 												=> "data(feri_tx_data)",
 			"ESTADUAL" 											=> "feri_tx_uf",
 			"MUNICIPAL" 										=> "cida_tx_nome",
-			"<spam class='glyphicon glyphicon-search'></spam>" 	=> "icone_modificar(feri_nb_id,modifica_feriado)",
-			"<spam class='glyphicon glyphicon-remove'></spam>" 	=> "icone_excluir(feri_nb_id,exclui_feriado)"
+			"<spam class='glyphicon glyphicon-search'></spam>" 	=> "iconeModificar",
+			"<spam class='glyphicon glyphicon-remove'></spam>" 	=> "iconeExcluir"
 		];
 
 		grid($sql,array_keys($gridFields),array_values($gridFields), "", "", 2, "desc");
