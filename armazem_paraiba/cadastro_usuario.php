@@ -53,7 +53,7 @@
 				$errorMsg = conferirCamposObrig($camposObrig, $_POST);
 
 				if(!empty($errorMsg)){
-					set_status("ERRO: ".$errorMsg);
+					set_status("ERRO: {$errorMsg}");
 					modificarUsuario();
 					exit;
 				}
@@ -117,19 +117,17 @@
 		if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")) && !empty($_POST["nivel"])){
 			$usuario["user_tx_nivel"] = $_POST["nivel"];
 		}
-
-		if (!empty($_POST["nivel"]) && in_array($_POST["nivel"], ["Motorista", "Ajudante","Funcionário"]) && (!isset($_POST["cpf"]) || empty($_POST["cpf"]))) {
-			set_status("ERRO: CPF obrigatório para {$_POST["nivel"]}.");
+		
+		if(!empty($_POST["cpf"]) && !validarCPF($_POST["cpf"])){
+			$_POST["errorFields"][] = "cpf";
+			set_status("CPF inválido.");
 			modificarUsuario();
 			exit;
 		}
 
 		$canUpdateWithoutPassword = (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")) || $_POST["id"] == $_SESSION["user_nb_id"]);
 
-		if(
-			(empty($_POST["senha"]) || empty($_POST["senha2"]))
-			&& !$canUpdateWithoutPassword
-		){
+		if((empty($_POST["senha"]) || empty($_POST["senha2"])) && !$canUpdateWithoutPassword){
 			set_status("ERRO: Preencha o campo senha e confirme-a.");
 			modificarUsuario();
 			exit;
@@ -137,10 +135,10 @@
 
 		$usuarioCadastrado = mysqli_fetch_all(
 			query(
-				"SELECT * FROM user"
-					." WHERE user_tx_status = 'ativo'"
-						." AND user_tx_login = '".($_POST["login"]?? "")."'"
-					." LIMIT 1;"
+				"SELECT * FROM user
+					WHERE user_tx_status = 'ativo'
+						AND user_tx_login = '{$_POST["login"]}'
+					LIMIT 1;"
 			),
 			MYSQLI_ASSOC
 		);
@@ -151,6 +149,7 @@
 			&& isset($_POST["login"])												//E o login foi enviado para atualização
 			&& $usuarioCadastrado[0]["user_nb_id"] != $_POST["id"] 					//E não é o mesmo usuário que está sendo editado
 		){
+			$_POST["errorFields"][] = "login";
 			set_status("ERRO: Login já cadastrado.");
 			modificarUsuario();
 			exit;
@@ -164,7 +163,6 @@
 			$_POST["id"] = ultimo_reg("user");
 			modificarUsuario();
 			exit;
-			
 		}
 
 		//Atualizando usuário existente
@@ -172,17 +170,17 @@
 		atualizarUsuario($usuario);
 		$id = $_POST["id"];
 		
-		$idUserFoto = mysqli_fetch_assoc(query("SELECT user_nb_id FROM user WHERE user_nb_id = '".$id."' LIMIT 1;"));
+		$idUserFoto = mysqli_fetch_assoc(query("SELECT user_nb_id FROM user WHERE user_nb_id = {$id} LIMIT 1;"));
 		$file_type = $_FILES["foto"]["type"]; //returns the mimetype
 
 		$allowed = array("image/jpeg", "image/gif", "image/png");
 		if (in_array($file_type, $allowed) && $_FILES["foto"]["name"] != "" && !empty($_POST["id"])) {
 
-			if (!is_dir("arquivos/user/".$_POST["id"]."/")) {
-				mkdir("arquivos/user/".$_POST["id"]."/", 0777, true);
+			if (!is_dir("arquivos/user/{$_POST["id"]}/")) {
+				mkdir("arquivos/user/{$_POST["id"]}/", 0777, true);
 			}
 
-			$arq = enviar("foto", "arquivos/user/".$_POST["id"]."/", "FOTO_".$id);
+			$arq = enviar("foto", "arquivos/user/{$_POST["id"]}/", "FOTO_{$id}");
 			if($arq){
 				//Atualizando foto
 				atualizar("user", array("user_tx_foto"), array($arq), $idUserFoto["user_nb_id"]);
@@ -217,7 +215,7 @@
 
 		$sqlCheckNivel = null;
 		if(!empty($_POST["id"])){
-			$sqlCheckNivel = mysqli_fetch_assoc(query("SELECT user_tx_nivel FROM user WHERE user_nb_id = '".$_POST["id"]."' LIMIT 1;"));
+			$sqlCheckNivel = mysqli_fetch_assoc(query("SELECT user_tx_nivel FROM user WHERE user_nb_id = '{$_POST["id"]}' LIMIT 1;"));
 		}
 		
 		if (isset($sqlCheckNivel["user_tx_nivel"]) && in_array($sqlCheckNivel["user_tx_nivel"], ["Motorista", "Ajudante","Funcionário"])) {
@@ -263,7 +261,7 @@
 
 		if(!empty($_POST["foto"])){
 			$img = texto(
-				"<a style='color:gray' onclick='javascript:remover_foto(\"".($_POST["id"]?? "")."\",\"excluirFoto\",\"\",\"\",\"\",\"\");' >
+				"<a style='color:gray' onclick='javascript:remover_foto(\"{$_POST["id"]}\",\"excluirFoto\",\"\",\"\",\"\",\"\");' >
 					<spam class='glyphicon glyphicon-remove'></spam>
 					Excluir
 				</a>", 
@@ -281,14 +279,16 @@
 		$campo_foto  = arquivo("Foto (.png, .jpg)", "foto", ($_POST["foto"]?? ""), 4);
 		$campo_login = campo("Login*", "login", ($_POST["login"]?? ($_POST["login"]?? "")), 2,"","maxlength='30'");
 
-		if(!empty($_POST["id"]) &&							//Se está editando um usuário existente e
+		$editPermission = (!empty($_POST["id"]) &&			//Se está editando um usuário existente e
 			!$editingDriver &&								//Este usuário não é motorista e
 			(
 				$loggedUserIsAdmin ||						//O usuário logado é administrador ou
 				$_SESSION["user_nb_id"] == $_POST["id"]		//Editando o próprio usuário
 			)
-		){
-			$editPermission = true;
+			)
+		;
+
+		if($editPermission){
 
 			$campo_nome = campo("Nome*", "nome", ($_POST["nome"]?? ""), 4, "","maxlength='65'");
 			
@@ -346,9 +346,8 @@
 			$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='12'");
 			$campo_matricula = "";
 
-		}else{
-			//Entrará aqui caso (editando e o user_nivel != motorista, ajudante ou funcionário) ou (session_nivel != administrador e não editando próprio usuário)
-			$editPermission = false;
+		}else{	//Entrará aqui caso (editando e o user_nivel != funcionário) ou (session_nivel != administrador e não editando próprio usuário)
+
 			$campo_nome = texto("Nome*", ($_POST["nome"]?? ""), 2, "for='nome'");
 			$campo_nivel = texto("Nível*", ($_POST["nivel"]?? ""), 2);
 			$campo_status = "";

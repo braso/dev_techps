@@ -685,7 +685,7 @@
 			"SET @dataInicioBusca = (
 				SELECT pont_tx_data FROM ponto
 					WHERE pont_tx_status = 'ativo'
-						AND pont_tx_matricula = {$matricula}
+						AND pont_tx_matricula = '{$matricula}'
 						AND pont_tx_data BETWEEN '{$data} 00:00:00' AND '{$data} 23:59:59'
 						AND pont_tx_tipo = '1'
 					ORDER BY pont_tx_data ASC
@@ -708,7 +708,7 @@
 					SELECT pont_tx_data FROM ponto
 						JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
 						WHERE pont_tx_status = 'ativo'
-							AND pont_tx_matricula = {$matricula}
+							AND pont_tx_matricula = '{$matricula}'
 							AND pont_tx_data > '{$data} 23:59:59'
 							AND pont_tx_tipo IN ('1', '2')
 						ORDER BY pont_tx_data ASC
@@ -719,7 +719,7 @@
 				"SELECT macroponto.macr_tx_nome, ponto.* FROM ponto
 					JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
 					WHERE pont_tx_status = 'ativo'
-						AND pont_tx_matricula = {$matricula}
+						AND pont_tx_matricula = '{$matricula}'
 						AND pont_tx_data > '{$data} 23:59:59'
 						AND IF(@dataProxFim IS NOT NULL, pont_tx_data <= @dataProxFim, 0)
 					ORDER BY pont_tx_data ASC;"
