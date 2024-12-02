@@ -62,7 +62,7 @@
         }
 
         echo
-            "<form name='myForm' method='post' action='" . htmlspecialchars($_SERVER["PHP_SELF"]) . "'>
+            "<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"])."'>
                 <input type='hidden' name='acao'>
                 <input type='hidden' name='campoAcao'>
                 <input type='hidden' name='empresa'>
@@ -107,9 +107,9 @@
                                 console.log(row);
                                 if(row.idMotorista != undefined){
                                     delete row.idMotorista;
-                                }"
-                                .$linha
-                                ."tabela.append(linha);
+                                }
+                                {$linha}
+                                tabela.append(linha);
                             },
                             error: function(){
                                 console.log('Erro ao carregar os dados.');
@@ -386,10 +386,10 @@
             if(!empty($_POST["empresa"])){
                 //Painel dos saldos dos motoristas de uma empresa específica
                 $aEmpresa = mysqli_fetch_assoc(query(
-                    "SELECT * FROM empresa"
-                    ." WHERE empr_tx_status = 'ativo'"
-                        ." AND empr_nb_id = ".$_POST["empresa"]
-                    ." LIMIT 1;"
+                    "SELECT * FROM empresa
+                    WHERE empr_tx_status = 'ativo'
+                        AND empr_nb_id = {$_POST["empresa"]}
+                    LIMIT 1;"
                 ));
                 $path .= "/".$aEmpresa["empr_nb_id"];
                 if(is_dir($path)){
@@ -440,10 +440,10 @@
                 //Painel geral das empresas
                 $empresas = [];
                 $logoEmpresa = mysqli_fetch_assoc(query(
-                    "SELECT empr_tx_logo FROM empresa"
-                    ." WHERE empr_tx_status = 'ativo'"
-                        ." AND empr_tx_Ehmatriz = 'sim'"
-                    ." LIMIT 1;"
+                    "SELECT empr_tx_logo FROM empresa
+                    WHERE empr_tx_status = 'ativo'
+                        AND empr_tx_Ehmatriz = 'sim'
+                    LIMIT 1;"
                 ))["empr_tx_logo"];//Utilizado no HTML.
 
                 $logoEmpresa = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$logoEmpresa;
@@ -535,64 +535,73 @@
 
             if(!empty($_POST["empresa"])){
                 $rowTotais .= 
-                    "<th colspan='2'>".$totais["empresaNome"]."</th>"
-                    ."<th colspan='1'></th>"
-                    ."<th colspan='1'></th>"
-                    ."<th colspan='1'>".$totais["jornadaPrevista"]."</th>"
-                    ."<th colspan='1'>".$totais["jornadaEfetiva"]."</th>"
-                    ."<th colspan='1'>".$totais["HESemanal"]."</th>"
-                    ."<th colspan='1'>".$totais["HESabado"]."</th>"
-                    ."<th colspan='1'>".$totais["adicionalNoturno"]."</th>"
-                    ."<th colspan='1'>".$totais["esperaIndenizada"]."</th>"
-                    ."<th colspan='1'>".$totais["saldoAnterior"]."</th>"
-                    ."<th colspan='1'>".$totais["saldoPeriodo"]."</th>"
-                    ."<th colspan='1'>".$totais["saldoFinal"]."</th>";
+                    "<th colspan='2'>{$totais["empresaNome"]}</th>
+                    <th colspan='1'></th>
+                    <th colspan='1'></th>
+                    <th colspan='1'>{$totais["jornadaPrevista"]}</th>
+                    <th colspan='1'>{$totais["jornadaEfetiva"]}</th>
+                    <th colspan='1'>{$totais["HESemanal"]}</th>
+                    <th colspan='1'>{$totais["HESabado"]}</th>
+                    <th colspan='1'>{$totais["adicionalNoturno"]}</th>
+                    <th colspan='1'>{$totais["esperaIndenizada"]}</th>
+                    <th colspan='1'>{$totais["saldoAnterior"]}</th>
+                    <th colspan='1'>{$totais["saldoPeriodo"]}</th>
+                    <th colspan='1'>{$totais["saldoFinal"]}</th>";
                 ;
 
                 $rowTitulos .= 
-                    "<th class='matricula'>Matrícula</th>"
-                    ."<th class='nome'>Nome</th>"
-                    ."<th class='ocupacao'>Ocupação</th>"
-                    ."<th class='status'>Status Endosso</th>"
-                    ."<th class='jornadaPrevista'>Jornada Prevista</th>"
-                    ."<th class='jornadaEfetiva'>Jornada Efetiva</th>"
-                    ."<th class='HESemanal'>H.E. Semanal</th>"
-                    ."<th class='HEEx'>H.E. Ex.</th>"
-                    ."<th class='adicionalNoturno'>Adicional Noturno</th>"
-                    ."<th class='esperaIndenizada'>Espera Indenizada</th>"
-                    ."<th class='saldoAnterior'>Saldo Anterior</th>"
-                    ."<th class='saldoPeriodo'>Saldo Período</th>"
-                    ."<th class='saldoFinal'>Saldo Final</th>"
+                    "<th class='matricula'>Matrícula</th>
+                    <th class='nome'>Nome</th>
+                    <th class='ocupacao'>Ocupação</th>
+                    <th class='status'>Status Endosso</th>
+                    <th class='jornadaPrevista'>Jornada Prevista</th>
+                    <th class='jornadaEfetiva'>Jornada Efetiva</th>
+                    <th class='HESemanal'>H.E. Semanal</th>
+                    <th class='HEEx'>H.E. Ex.</th>
+                    <th class='adicionalNoturno'>Adicional Noturno</th>
+                    <th class='esperaIndenizada'>Espera Indenizada</th>
+                    <th class='saldoAnterior'>Saldo Anterior</th>
+                    <th class='saldoPeriodo'>Saldo Período</th>
+                    <th class='saldoFinal'>Saldo Final</th>"
                 ;
             }else{
+
+                $totais["HESemanal"] = ($totais["HESemanal"] == "00:00")? "": $totais["HESemanal"];
+                $totais["HESabado"] = ($totais["HESabado"] == "00:00")? "": $totais["HESabado"];
+                $totais["adicionalNoturno"] = ($totais["adicionalNoturno"] == "00:00")? "": $totais["adicionalNoturno"];
+                $totais["esperaIndenizada"] = ($totais["esperaIndenizada"] == "00:00")? "": $totais["esperaIndenizada"];
+                $totais["saldoAnterior"] = ($totais["saldoAnterior"] == "00:00")? "": $totais["saldoAnterior"];
+                $totais["saldoPeriodo"] = ($totais["saldoPeriodo"] == "00:00")? "": $totais["saldoPeriodo"];
+                $totais["saldoFinal"] = ($totais["saldoFinal"] == "00:00")? "": $totais["saldoFinal"];
+
                 $rowTotais .= 
-                    "<th colspan='1'></th>"
-                    ."<th colspan='1'></th>"
-                    ."<th colspan='1'></th>"
-                    ."<th colspan='1'>".$totais["jornadaPrevista"]."</th>"
-                    ."<th colspan='1'>".$totais["jornadaEfetiva"]."</th>"
-                    ."<th colspan='1'> ".(($totais["HESemanal"] == "00:00")? '': $totais["HESemanal"])."</th>"
-                    ."<th colspan='1'> ".(($totais["HESabado"] == "00:00")? '': $totais["HESabado"])."</th>"
-                    ."<th colspan='1'> ".(($totais["adicionalNoturno"] == "00:00")? '': $totais["adicionalNoturno"])."</th>"
-                    ."<th colspan='1'> ".(($totais["esperaIndenizada"] == "00:00")? '': $totais["esperaIndenizada"])."</th>"
-                    ."<th colspan='1'> ".(($totais["saldoAnterior"] == "00:00")? '': $totais["saldoAnterior"])."</th>"
-                    ."<th colspan='1'> ".(($totais["saldoPeriodo"] == "00:00")? '': $totais["saldoPeriodo"])."</th>"
-                    ."<th colspan='1'> ".(($totais["saldoFinal"] == "00:00")? '': $totais["saldoFinal"])."</th>"
+                    "<th colspan='1'></th>
+                    <th colspan='1'></th>
+                    <th colspan='1'></th>
+                    <th colspan='1'>{$totais["jornadaPrevista"]}</th>
+                    <th colspan='1'>{$totais["jornadaEfetiva"]}</th>
+                    <th colspan='1'>{$totais["HESemanal"]}</th>
+                    <th colspan='1'>{$totais["HESabado"]}</th>
+                    <th colspan='1'>{$totais["adicionalNoturno"]}</th>
+                    <th colspan='1'>{$totais["esperaIndenizada"]}</th>
+                    <th colspan='1'>{$totais["saldoAnterior"]}</th>
+                    <th colspan='1'>{$totais["saldoPeriodo"]}</th>
+                    <th colspan='1'>{$totais["saldoFinal"]}</th>"
                 ;
 
                 $rowTitulos .= 
-                    "<th data-column='nome' data-order='asc'>Nome da Empresa/Filial</th>"
-                    ."<th data-column='percEndossados' data-order='asc'>% Endossados</th>"
-                    ."<th data-column='qtdMotoristas' data-order='asc'>Qtd. Motoristas</th>"
-                    ."<th data-column='jornadaPrevista' data-order='asc'>Jornada Prevista</th>"
-                    ."<th data-column='JornadaEfetiva' data-order='asc'>Jornada Efetiva</th>"
-                    ."<th data-column='HESemanal' data-order='asc'>H.E. Semanal</th>"
-                    ."<th data-column='HEEx' data-order='asc'>H.E. Ex.</th>"
-                    ."<th data-column='adicionalNoturno' data-order='asc'>Adicional Noturno</th>"
-                    ."<th data-column='esperaIndenizada' data-order='asc'>Espera Indenizada</th>"
-                    ."<th data-column='saldoAnterior' data-order='asc'>Saldo Anterior</th>"
-                    ."<th data-column='saldoPeriodo' data-order='asc'>Saldo Periodo</th>"
-                    ."<th data-column='saldoFinal' data-order='asc'>Saldo Final</th>"
+                    "<th data-column='nome' data-order='asc'>Nome da Empresa/Filial</th>
+                    <th data-column='percEndossados' data-order='asc'>% Endossados</th>
+                    <th data-column='qtdMotoristas' data-order='asc'>Qtd. Motoristas</th>
+                    <th data-column='jornadaPrevista' data-order='asc'>Jornada Prevista</th>
+                    <th data-column='JornadaEfetiva' data-order='asc'>Jornada Efetiva</th>
+                    <th data-column='HESemanal' data-order='asc'>H.E. Semanal</th>
+                    <th data-column='HEEx' data-order='asc'>H.E. Ex.</th>
+                    <th data-column='adicionalNoturno' data-order='asc'>Adicional Noturno</th>
+                    <th data-column='esperaIndenizada' data-order='asc'>Espera Indenizada</th>
+                    <th data-column='saldoAnterior' data-order='asc'>Saldo Anterior</th>
+                    <th data-column='saldoPeriodo' data-order='asc'>Saldo Periodo</th>
+                    <th data-column='saldoFinal' data-order='asc'>Saldo Final</th>"
                 ;
             }
             $rowTotais .= "</tr>";
@@ -601,30 +610,42 @@
             $titulo = "Geral de saldo";
             include_once "painel_html.php";
 
-            echo "<div class='script'>"
-                ."<script>"
-                    .((!empty($_POST["empresa"]))? "document.getElementById('tabela1').style.display = 'table';": "")
-                    // ."console.log(endossos);"
-                    ."document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.E;
-                    document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.EP;
-                    document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.N;
-                    document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.E*10000)/100+'%';
-                    document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.EP*10000)/100+'%';
-                    document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.N*10000)/100+'%';
-                    
-                    document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.positivos;
-                    document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.meta;
-                    document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.negativos;
-                    document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[2].innerHTML = Math.round(saldos.porcentagens.positivos*10000)/100+'%';
-                    document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[2].innerHTML = Math.round(saldos.porcentagens.meta*10000)/100+'%';
-                    document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[2].innerHTML = Math.round(saldos.porcentagens.negativos*10000)/100+'%';
-                    document.getElementsByClassName('script')[0].innerHTML = '';
-                </script>"
+            echo 
+                "<div class='script'>
+                    <script>"
+                        .((!empty($_POST["empresa"]))? "document.getElementById('tabela1').style.display = 'table';": "")
+                        ."var porcentagemEndoTds = document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td');
+                        var porcentagemNaEndoTds = document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td');
+                        var porcentagemEndoPcTds = document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td');
+                        
+                        porcentagemEndoTds[1].innerHTML = endossos.totais.E;
+                        porcentagemEndoPcTds[1].innerHTML = endossos.totais.EP;
+                        porcentagemNaEndoTds[1].innerHTML = endossos.totais.N;
+
+                        porcentagemEndoTds[2].innerHTML = Math.round(endossos.porcentagens.E*10000)/100+'%';
+                        porcentagemEndoPcTds[2].innerHTML = Math.round(endossos.porcentagens.EP*10000)/100+'%';
+                        porcentagemNaEndoTds[2].innerHTML = Math.round(endossos.porcentagens.N*10000)/100+'%';
+                        
+
+                        var porcentagemPosiTds = document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td');
+                        var porcentagemMetaTds = document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td');
+                        var porcentagemNegaTds = document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td');
+
+                        porcentagemPosiTds[1].innerHTML = saldos.totais.positivos;
+                        porcentagemMetaTds[1].innerHTML = saldos.totais.meta;
+                        porcentagemNegaTds[1].innerHTML = saldos.totais.negativos;
+
+                        porcentagemPosiTds[2].innerHTML = Math.round(saldos.porcentagens.positivos*10000)/100+'%';
+                        porcentagemMetaTds[2].innerHTML = Math.round(saldos.porcentagens.meta*10000)/100+'%';
+                        porcentagemNegaTds[2].innerHTML = Math.round(saldos.porcentagens.negativos*10000)/100+'%';
+
+                        document.getElementsByClassName('script')[0].innerHTML = '';
+                    </script>
+                </div>"
             ;
-            echo "</div>";
         }else{
             if(!empty($_POST["acao"]) && $_POST["acao"] == "buscar"){
-                set_status("Não Possui dados desse mês");
+                set_status("Não possui dados desse mês");
                 echo "<script>alert('Não Possui dados desse mês')</script>";
             }
         }
