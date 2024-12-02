@@ -25,11 +25,11 @@
 	function getLastFileDate($dataAtual): string{
 
         $dataUltimoArquivo = mysqli_fetch_assoc(query(
-            "SELECT arqu_tx_data FROM arquivoponto"
-            ." WHERE arqu_tx_status = 'ativo'"
-            ." AND arqu_tx_nome LIKE '%apontamento%'"
-            ." ORDER BY arqu_tx_data DESC"
-            ." LIMIT 1;"
+            "SELECT arqu_tx_data FROM arquivoponto
+				WHERE arqu_tx_status = 'ativo'
+					AND arqu_tx_nome LIKE '%apontamento%'
+				ORDER BY arqu_tx_data DESC
+				LIMIT 1;"
         ));
 		if(empty($dataUltimoArquivo)){
 			return "A data do último arquivo não foi encontrada.";
@@ -45,10 +45,7 @@
 		$msg = "Faz ".$diferenca." dias que o arquivo de ponto no domínio ".$dominio." não é atualizado.";
 
 		/*Enviar emails{
-			$emails = mysqli_fetch_assoc(query(
-			    "SELECT * FROM configuracao_alerta"
-			    ." LIMIT 1"
-			));
+			$emails = mysqli_fetch_assoc(query("SELECT * FROM configuracao_alerta LIMIT 1;"));
 			if((int)$diferenca <= 6){
 				sendEmailAlerta($emails['conf_tx_emailFun'], $emails['conf_tx_emailFun'], $msg);
 			}else{
@@ -308,6 +305,6 @@
 			"<spam class='glyphicon glyphicon-download' style='font-size: 16px;'></spam>" => "icone_download(arqu_tx_nome)"
 		];
 
-		grid($sql, array_keys($gridValues), array_values($gridValues), "", 12, 0, "");
+		grid($sql, array_keys($gridValues), array_values($gridValues), "", 12, 0);
 		rodape();
 	}
