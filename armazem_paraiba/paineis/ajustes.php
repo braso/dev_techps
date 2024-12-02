@@ -95,19 +95,22 @@ function carregarJS(array $arquivos) {
                 <input type='hidden' name='atualizar'>
                 <input type='hidden' name='campoAcao'>
                 <input type='hidden' name='empresa'>
-                <input type='hidden' name='busca_dataInicio'>
-                <input type='hidden' name='busca_dataFim'>
-                <input type='hidden' name='busca_periodo'>
+                <input type='hidden' name='busca_periodo[]' id='busca_inicio'>
+				<input type='hidden' name='busca_periodo[]' id='busca_fim'>
             </form>
             <script>
                 function setAndSubmit(empresa){
                     document.myForm.acao.value = 'enviarForm()';
                     document.myForm.campoAcao.value = 'buscar';
                     document.myForm.empresa.value = empresa;
-                    const buscaPeriodoInput = document.getElementById('busca_periodo').value;
-					const buscaPeriodoArray = buscaPeriodoInput.split(' - ');
-					console.log(buscaPeriodoArray);
-					document.myForm.busca_periodo.value = JSON.stringify(buscaPeriodoArray);
+                    const buscaPeriodoInput = document.getElementById('busca_periodo');
+					const [inicio, fim] = buscaPeriodoInput.value.split(' - '); 
+					 function formatDate(date) {
+						const [day, month, year] = date.split('/');
+						return year + '-' + month + '-' + day;
+					}
+					document.getElementById('busca_inicio').value = formatDate(inicio);
+					document.getElementById('busca_fim').value = formatDate(fim);
                     document.myForm.submit();
                 }
 
@@ -199,7 +202,7 @@ function carregarJS(array $arquivos) {
 }
 
 function index() {
-	var_dump($_POST["busca_periodo"]);
+	var_dump($_POST);
 	$dominiosAutotrac = ["/comav"];
 	if (!empty($_POST["acao"])) {
 		if ($_POST["busca_dataMes"] > date("Y-m")) {
