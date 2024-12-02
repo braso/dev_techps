@@ -258,26 +258,24 @@
 		}
 
 		$tab = substr($tabela,0,4);
-		$inserir = "";
+		$camposString = "";
 		for($i=0;$i<count($campos);$i++){
-			$inserir .= ", ".$campos[$i]." = ";
+			$camposString .= ", ".$campos[$i]." = ";
 
-			if(is_int(strpos($campos[$i], "_nb_"))){
-				$inserir .= $valores[$i];
+			if(is_int(strpos($campos[$i], "_nb_")) && !empty($valores[$i])){
+				$camposString .= $valores[$i];
+			}elseif(empty($valores[$i])){
+				$camposString .= "NULL";
 			}else{
-				if(empty($valores[$i])){
-					$inserir .= "NULL";
-				}else{
-					$inserir .= "'".$valores[$i]."'";
-				}
+				$camposString .= "'".$valores[$i]."'";
 			}
 		}
-		if(strlen($inserir) > 2){
-			$inserir = substr($inserir, 2);
+		if(strlen($camposString) > 2){
+			$camposString = substr($camposString, 2);
 		}
 
 		try{
-			query("UPDATE ".$tabela." SET ".$inserir." WHERE ".$tab."_nb_id = ".$id);
+			query("UPDATE ".$tabela." SET ".$camposString." WHERE ".$tab."_nb_id = ".$id);
 			set_status("Registro atualizado com sucesso!");
 		}catch(Exception $e){
 			set_status("Falha ao atualizar.");
@@ -292,17 +290,17 @@
 		query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '".$id."' LIMIT 1;");
 	}
 
-	function remover_ponto(int $id,$just,$atualizar = null){
-		$tab = substr("ponto", 0, 4);
+	// function remover_ponto(int $id,$just,$atualizar = null){
+	// 	$tab = substr("ponto", 0, 4);
 
-		$campos = [
-			$tab."_tx_status" 			=> "inativo",
-			$tab."_tx_justificativa" 	=> $just,
-			$tab."_tx_dataAtualiza" 	=> $atualizar
-		];
+	// 	$campos = [
+	// 		$tab."_tx_status" 			=> "inativo",
+	// 		$tab."_tx_justificativa" 	=> $just,
+	// 		$tab."_tx_dataAtualiza" 	=> $atualizar
+	// 	];
 
-		updateById("ponto", array_keys($campos), array_values($campos), $id);
-	}
+	// 	updateById("ponto", array_keys($campos), array_values($campos), $id);
+	// }
 
 	function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara="",$extra=""){
 		return campo($nome,$variavel,$modificador,$tamanho,"MASCARA_DOMAIN",$extra);
@@ -328,7 +326,7 @@
 			$a_valor = explode(",", $valor);
 
 			for($i = 0; $i < count($a_campo); $i++) {
-				$ext .= " AND " . str_replace(",", "", $a_campo[$i]) . " = '" . str_replace(",", "", $a_valor[$i]) . "' ";
+				$ext .= " AND ".str_replace(",", "", $a_campo[$i])." = '".str_replace(",", "", $a_valor[$i])."' ";
 			}
 		}
 
@@ -486,8 +484,15 @@
 				$datas = [DateTime::createFromFormat("Y-m-d", date("Y-m-01")), DateTime::createFromFormat("Y-m-d", date("Y-m-d"))];
 				if(!empty($modificador)){
 					if(!is_array($modificador) || count($modificador) != 2){
-						set_status("ERRO: ".$variavel." formatado incorretamente.");
-						return;
+						if(preg_match_all("/\d{4}-\d{2}-\d{2}/", $_POST["busca_periodo"], $matches)){
+							$modificador = [
+								$matches[0][0],
+								$matches[0][1]
+							];
+						}else{
+							set_status("ERRO: ".$variavel." formatado incorretamente.");
+							return;
+						}
 					}
 					$datas = [
 						DateTime::createFromFormat("Y-m-d", $modificador[0]),
@@ -631,6 +636,7 @@
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['AAA-9A99', 'AAA-9999']});";
 			break;
 		}
+		$variavel = str_replace(["[", "]"], ["\\\[", "\\\]"], $variavel);
 		$dataScript .= 
 				"field = document.querySelector('#".$variavel."');
 				if(typeof field.addEventListener !== 'undefined'){
@@ -747,7 +753,7 @@
 		;
 		//  Utiliza regime de banco de horas?
 
-		return $campo . $data_input;
+		return $campo.$data_input;
 	}
 
 	function checkbox(string $titulo, string $variavel, array $opcoes, int $tamanho=3, string $tipo = "checkbox", string $extra='', string $modificadoCampo = ''){
@@ -1272,7 +1278,7 @@
 
 		$target_path = "$diretorio";
 		
-		$extensao = pathinfo($target_path . basename($_FILES[$arquivo]['name'], PATHINFO_EXTENSION));
+		$extensao = pathinfo($target_path.basename($_FILES[$arquivo]['name'], PATHINFO_EXTENSION));
 		// if('.php', '.php3', '.php4', '.phtml', '.pl', '.py', '.jsp', '.asp', '.htm', '.shtml', '.sh', '.cgi')
 
 		if($nome!='') {
@@ -1366,93 +1372,17 @@
 		return $sql;
 	}
 
-	function icone_modificar($id,$acao,$campos='',$valores='',$target='',$icone='glyphicon glyphicon-search',$action='',$msg='',$title=''){
-		if($icone==''){
-			$icone = 'glyphicon glyphicon-search';
-		}
-		
-		if($icone == 'glyphicon glyphicon-search' && $title == ''){
-			$title = 'Modificar';
-		}
-		
-		$icone='class="'.$icone.'"';
-		
-		return "<center><a title=\"$title\" style='color:gray' onclick='javascript:contex_icone(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\",\"$action\");' ><spam $icone></spam></a></center>";
-		
-	}
-
-	function icone_excluir($id,$acao,$campos='',$valores='',$target='',$icone='',$msg='Deseja inativar o registro?', $action='', $title=''){
-		if(empty($icone)){
-			$icone = 'glyphicon glyphicon-remove';
-		}
-		
-		if($icone == 'glyphicon glyphicon-remove' && empty($title)){
-			$title = 'Excluir';
-		}
-
-		$icone='class="'.$icone.'"';
-		
-		return "<center><a title='$title' style='color:gray' onclick='javascript:contex_icone(\"$id\",\"$acao\",\"$campos\",\"$valores\",\"$target\",\"$msg\",\"$action\");'><spam $icone></spam></a></center>";
-	}
-
-	function icone_excluir_ajuste($id, $acao, $campos='', $data_de='', $data_ate='', $valores='', $target='', $icone='', $msg='Deseja excluir o registro?', $action='', $title=''){
-
-		global $CONTEX;
-		if(empty($icone)){
-			$icone = 'glyphicon glyphicon-remove';
-		}
-		if($icone == 'glyphicon glyphicon-remove' && empty($title)){
-			$title = 'Excluir';
-		}
-		if(empty($data_de)){
-			$data_de = date("Y-m-01");
-		}
-		if(empty($data_ate)){
-			$data_ate = date("Y-m-d");
-		}
-
-		$icone='class="'.$icone.'"';
-
-		$modal = "
-			<script>
-			function solicitarDados(id,acao,data_de,data_ate,campos,valores,atualiza) {
-				// Solicitar ao usuário que insira os dados
-				var just = prompt('Qual a justificativa da exclusão do ponto?');
-				if(just !== null && just !== ''){
-					
-					var form = document.getElementById('contex_icone_form');
-					form.id.value = id;
-					form.acao.value = acao;
-					form.data_de.value = data_de;
-					form.data_ate.value = data_ate;
-					form.just.value = just;
-					form.atualiza.value = atualiza;
-					if(campos){
-						form.hidden.value = valores;
-						form.hidden.name = campos;
-					}
-					campos = campos.split(',');
-					valores = valores.split(',');
-					for(f = 0; f < campos.length; f++){
-						input = document.createElement('input');
-						input.type = 'hidden';
-						input.name = campos[f]
-						input.value = valores[f]
-						form.append(input);
-					}
-					form.submit();
-					
-				}
+	//Essa função retornará um ícone que será utilizado no SQL da tabela para retornar uma coluna com o ícone
+	function criarSQLIconeTabela($id, $acao, $title, $icone, $msgConfirm="\'\'", $onClick = ""): string{
+		if(empty($onClick)){
+			if($msgConfirm != "\'\'"){
+				$msgConfirm = "\'{$msgConfirm}\'";
 			}
-			</script>
-		";
-		// onclick='javascript:contex_icone(\"$id\",\"$acao\",\"".$campos."\",\"".$valores."\",\"$target\",\"$msg\",\"$action\",\"$data_de\",\"$data_ate\");
-		return "<center><a title='".$title."' style='color:gray' data-toggle='modal' data-target='#myModal'onclick='solicitarDados(\"".$id."\",\"".$acao."\",\"".$data_de."\",\"".$data_ate."\",\"".$campos."\",\"".$valores."\",\"".date('Y-m-d H:i:s')."\")' ><spam ".$icone."></spam></a></center>".$modal;
-	}	
+			$onClick = "contex_icone(',{$id},',\'{$acao}\',{$msgConfirm})";
+		}
+		//Se $msgConfirm vazio, não precisa de confirmação para executar o comando do ícone.
 
-	function modal_just($id,$acao,$campos='',$data_de='',$data_ate='',$valores='',$target='',$icone='',$msg='', $action='', $title=''){
-	    global $CONTEX;
-	    include "modal_justificativa.php";
+		return "CONCAT('<a title=\"{$title}\" style=\"color:gray; display:block;\" onclick=\"{$onClick}\"><spam class=\"{$icone}\"></spam></a>')";
 	}
 
 	function icone_download($aquivo=''){
