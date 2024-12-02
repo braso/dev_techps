@@ -126,7 +126,6 @@
                                     // Caso em que saldoAnterior é zero e saldoFinal é zero
                                     indicador = ' <i class=\"fa fa-minus\" style=\"color: gray;\"></i>';
                                 }
-                                console.log(indicador);
                                 console.log(row);
                                 if(row.idMotorista != undefined){
                                     delete row.idMotorista;

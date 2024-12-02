@@ -268,6 +268,10 @@ th.sort-desc::after {
 @media print {
     body {
         margin: 1cm;
+        transform: rotate(-90deg);
+        transform-origin: left top;
+        overflow: hidden;
+        position: absolute;
         margin-right: 0cm;
         transform: scale(0.99);
         transform-origin: top left;
