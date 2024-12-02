@@ -10,7 +10,7 @@
     header('Pragma: no-cache');
 
     require "../funcoes_ponto.php";
-    require_once __DIR__ . "/funcoes_paineis.php";
+    require_once __DIR__."/funcoes_paineis.php";
  
     function carregarJS(array $arquivos) {
 
@@ -31,11 +31,11 @@
 
         $carregarDados = "";
         foreach ($arquivos as $arquivo) {
-            $carregarDados .= "carregarDados('" . $arquivo . "');";
+            $carregarDados .= "carregarDados('".$arquivo."');";
         }
 
         echo
-        "<form name='myForm' method='post' action='" . htmlspecialchars($_SERVER["PHP_SELF"]) . "'>
+        "<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"])."'>
                     <input type='hidden' name='acao'>
                     <input type='hidden' name='campoAcao'>
                     <input type='hidden' name='empresa'>
@@ -105,7 +105,7 @@
                                         var descanso = item.descanso;
                                         var repouso = item.repouso;
 
-                                    ". $linha . "
+                                    ". $linha."
                                     tabela.append(linha);
                                     });
                                 },
@@ -160,7 +160,7 @@
                             }
                         });
 
-                        " . $carregarDados . "
+                        ".$carregarDados."
                     });
 
                        $(document).ready(function() {
@@ -230,16 +230,16 @@
              criar_relatorio_jornada();
             //  $tempoFim = microtime(true);
             //  $tempoExecucao = $tempoFim - $tempoInicio;
-            //  echo "Tempo de execução: " . number_format($tempoExecucao, 4) . " segundos";
+            //  echo "Tempo de execução: ".number_format($tempoExecucao, 4)." segundos";
 
             $empresa = mysqli_fetch_assoc(query(
-                "SELECT * FROM empresa"
-                    . " WHERE empr_tx_status = 'ativo'"
-                    . " AND empr_nb_id = " . $_POST["empresa"]
-                    . " LIMIT 1;"
+                "SELECT * FROM empresa
+                    WHERE empr_tx_status = 'ativo'
+                        AND empr_nb_id = {$_POST["empresa"]}
+                    LIMIT 1;"
             ));
 
-            $path .= "/" . $_POST["busca_dataMes"] . "/" . $empresa["empr_nb_id"];
+            $path .= "/".$_POST["busca_dataMes"]."/".$empresa["empr_nb_id"];
 
             if (is_dir($path)) {
                 $pasta = dir($path);
@@ -251,11 +251,11 @@
                 $pasta->close();
 
                 foreach ($arquivos as &$arquivo) {
-                    $arquivo = $path . "/" . $arquivo;
+                    $arquivo = $path."/".$arquivo;
                 }
 
                 if (!empty($arquivo)) {
-                    $dataEmissao = "Atualizado em: " . date("d/m/Y H:i", filemtime($arquivo)); //Utilizado no HTML.
+                    $dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($arquivo)); //Utilizado no HTML.
                     $arquivoGeral = json_decode(file_get_contents($arquivo), true);
 
                     $periodoRelatorio = [
@@ -279,16 +279,16 @@
             // $rowTotais = "<tr class='totais'>";
             $rowTitulos = "<tr id='titulos' class='titulos'>";
             $rowTitulos .=
-                "<th class='data'>Data</th>"
-                . "<th class='matricula'>Matrícula</th>"
-                . "<th class='nome'>Nome</th>"
-                . "<th class='ocupacao'>Ocupação</th>"
-                . "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornada'>Jornada</th>"
-                . "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornadaEfetiva'>Jornada Efetiva</th>"
-                . "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='refeicao'>Refeicao</th>"
-                . "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='espera'>Espera</th>"
-                . "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='descanso'>Descanso</th>"
-                . "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='repouso'>Repouso</th>";
+                "<th class='data'>Data</th>
+                <th class='matricula'>Matrícula</th>
+                <th class='nome'>Nome</th>
+                <th class='ocupacao'>Ocupação</th>
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornada'>Jornada</th>
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornadaEfetiva'>Jornada Efetiva</th>
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='refeicao'>Refeicao</th>
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='espera'>Espera</th>
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='descanso'>Descanso</th>
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='repouso'>Repouso</th>";
             $rowTitulos .= "</tr>";
             $titulo = "de Jornada Aberta";
             include_once "painel_html2.php";
