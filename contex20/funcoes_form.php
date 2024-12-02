@@ -3,201 +3,30 @@
 
 	global $conn, $version;
 
-	function cabecalho($nome_pagina,$foco=0,$relatorio=0){
+	function cabecalho(string $nome_pagina, int $foco=0, int $relatorio=0): void{
 		include $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/loading.html";
 		
+		global $CONTEX, $_SESSION;
 		//As variáveis são utilizadas dentro de cabecalho.php
-		include __DIR__."/cabecalho.php";
+		include __DIR__."/html/cabecalho.php";
 	}
 
-	function cabecaRelatorio($nome_pagina,$foco=0){
-		global $CONTEX;
-		?>
-			<!DOCTYPE html>
-		<!--[if IE 8]> <html lang="pt-br" class="ie8 no-js"> <![endif]-->
-		<!--[if IE 9]> <html lang="pt-br" class="ie9 no-js"> <![endif]-->
-		<!--[if !IE]><!-->
-		<html lang="pt-br">
-			<!--<![endif]-->
-			<!-- INICIO HEAD -->
-
-			<head>
-				<meta charset="utf-8" />
-				<title>CONTAINER Sistemas</title>
-				<meta http-equiv="X-UA-Compatible" content="IE=edge">
-				<meta content="width=device-width, initial-scale=1" name="viewport" />
-				<meta content="" name="description" />
-				<meta content="" name="author" />
-				<!-- INICIO GLOBAL MANDATORY STYLES -->
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
-
-				<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" />
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/select2/js/select2.min.js"></script>
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/select2/js/i18n/pt-BR.js" type="text/javascript"></script>
-
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js" type="text/javascript"></script>
-				<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery-inputmask/maskMoney.js" type="text/javascript"></script>
-				<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css" />
-				<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
-				<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet" type="text/css" />
-				<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
-				<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
-				<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet" type="text/css" />
-				<!-- FIM GLOBAL MANDATORY STYLES -->
-
-				<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/datatables.min.js" rel="stylesheet" type="text/css" />
-				<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" rel="stylesheet" type="text/css" />
-				<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/datatables.min.css" rel="stylesheet" type="text/css" />
-				<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css" rel="stylesheet" type="text/css" />
-
-				<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
-				<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet" type="text/css" />
-
-				<!-- INICIO TEMA GLOBAL STYLES -->
-				<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components" type="text/css" />
-				<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
-				<!-- FIM TEMA GLOBAL STYLES -->
-				<!-- INICIO TEMA LAYOUT STYLES -->
-				<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/css/layout.min.css" rel="stylesheet" type="text/css" />
-				<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/css/themes/default.min.css" rel="stylesheet" type="text/css" id="style_color" />
-				<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/css/custom.min.css" rel="stylesheet" type="text/css" />
-				<!-- FIM TEMA LAYOUT STYLES -->
-				<link rel="shortcut icon" href="favicon.ico" />
-
-				<style>
-					table.table thead tr th{
-						font-size: 10pt;	    	
-					}
-					table.table td{
-						font-size: 8pt;	    	
-					}
-					p.text-left{
-						font-size: 8pt;
-					}
-					label{
-						font-size: 8pt;
-					}
-					@media print{
-						table.table thead tr th{
-							font-size: 8pt;
-						}
-						table.table td{
-							font-size: 6pt;
-						}
-					}
-
-					.page-header .page-header-menu{
-						background-color: white;
-					}
-				</style>
-
-				<script type="text/javascript">
-					function contex_foco(elemento){
-						var campoFoco=document.forms[0].elements[<?= $foco?>];
-						if(campoFoco != null)
-							campoFoco.focus();
-					}
-				</script>
-			</head>
-			<!-- FIM HEAD -->
-
-
-			<body onload="contex_foco()" class="page-container-bg-solid page-boxed">
-				
-				<div class="page-container">
-					<div class="page-content-wrapper">
-						<div class="page-head">
-							<div class="container-fluid">
-								<div class="page-title">
-									<h1><?= $nome_pagina?> </h1>
-								</div>
-							</div>
-						</div>
-						
-						<div class="page-content">
-							<div class="container-fluid">
-								<div class="page-content-inner">
-									<div class="row ">
-										<div class="col-md-12">
-		<?php
-	}
-
-	function rodape(){
+	function rodape(): void{
 		global $version, $CONTEX;
-		?>
-										</div>
-									</div>
-								</div>
-								<!-- FIM PAGE CONTENT INNER -->
-							</div>
-						</div>
-						<!-- FIM PAGE CONTENT BODY -->
 
-
-						<!-- FIM CONTENT BODY -->
-						</div>
-						<!-- FIM CONTENT -->
-						
-					</div>
-					<!-- FIM CONTAINER -->
-
-				<!-- INICIO FOOTER -->
-				<!-- INICIO INNER FOOTER -->
-				<div class="page-footer">
-					<div class="container-fluid"> 
-						<?php date("Y")?> &copy; <a href="https://www.techps.com.br" target="_blank" style="margin-right: 30px">TechPS</a> Versão: <?= $version?>
-					</div>
-				</div>
-				<div class="scroll-to-top">
-					<i class="icon-arrow-up"></i>
-				</div>
-				<!-- FIM INNER FOOTER -->
-				<!-- FIM FOOTER -->
-				<!-- INICIO CORE PLUGINS -->
-
-				<form id="loginTimeoutForm" method="post" target="<?=($_SERVER['DOCUMENT_ROOT']).$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]?>/logout.php" action="logout"></form>
-				
-				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
-				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/js.cookie.min.js" type="text/javascript"></script>
-				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-hover-dropdown/bootstrap-hover-dropdown.min.js" type="text/javascript"></script>
-				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js" type="text/javascript"></script>
-				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
-				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-switch/js/bootstrap-switch.min.js" type="text/javascript"></script>
-				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-tabdrop/js/bootstrap-tabdrop.js" type="text/javascript"></script>
-				<!-- FIM CORE PLUGINS -->
-				<!-- INICIO TEMA GLOBAL SCRIPTS -->
-				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/scripts/app.min.js" type="text/javascript"></script>
-				<!-- FIM TEMA GLOBAL SCRIPTS -->
-				<!-- INICIO TEMA LAYOUT SCRIPTS -->
-				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/scripts/layout.min.js" type="text/javascript"></script>
-				<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/scripts/demo.min.js" type="text/javascript"></script>
-				<!-- FIM TEMA LAYOUT SCRIPTS -->
-
-
-				<script>
-					var timeoutId;
-					function updateTimer(){
-						if(timeoutId){
-							clearTimeout(timeoutId);
-						}
-						timeoutId = setTimeout(function(){
-							let form = document.getElementById('loginTimeoutForm');
-							form.submit();
-							window.location.href = '<?= $CONTEX['path']?>/logout.php';
-						}, 15*60*1000);
-					}
-
-					document.getElementsByClassName('loading')[0].style.display = 'none';
-				</script>
-			</body>
-		</html>
-		<?php
+		include __DIR__."/html/rodape.php";
 	}
 
-	function abre_form($nome_form='',$col='12',$focus='2'){
+	// function cabecaRelatorio($nome_pagina,$foco=0){
+	// 	echo "cabecaRelatorio()";
+	// 	return;
+		
+	// 	global $CONTEX;
+	// 	echo "<!DOCTYPE html><!--[if IE 8]> <html lang='pt-br' class='ie8 no-js'> <![endif]--><!--[if IE 9]> <html lang='pt-br' class='ie9 no-js'> <![endif]--><!--[if !IE]><!--><html lang='pt-br'><!--<![endif]--><!-- INICIO HEAD --><head><meta charset='utf-8' /><title>CONTAINER Sistemas</title><meta http-equiv='X-UA-Compatible' content='IE=edge'><meta content='width=device-width, initial-scale=1' name='viewport' /><meta content='' name='description' /><meta content='' name='author' /><!-- INICIO GLOBAL MANDATORY STYLES --><script src='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/select2/css/select2.min.css' rel='stylesheet' /><script src='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/select2/js/select2.min.js'></script><script src='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/select2/js/i18n/pt-BR.js' type='text/javascript'></script><script src='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js' type='text/javascript'></script><script src='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/jquery-inputmask/maskMoney.js' type='text/javascript'></script><link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/uniform/css/uniform.default.css' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css' rel='stylesheet' type='text/css' /><!-- FIM GLOBAL MANDATORY STYLES --><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/datatables/datatables.min.js' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/datatables/datatables.min.css' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/select2/css/select2.min.css' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css' rel='stylesheet' type='text/css' /><!-- INICIO TEMA GLOBAL STYLES --><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/css/components.min.css' rel='stylesheet' id='style_components' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/css/plugins.min.css' rel='stylesheet' type='text/css' /><!-- FIM TEMA GLOBAL STYLES --><!-- INICIO TEMA LAYOUT STYLES --><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/layout/css/layout.min.css' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/layout/css/themes/default.min.css' rel='stylesheet' type='text/css' id='style_color' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/layout/css/custom.min.css' rel='stylesheet' type='text/css' /><!-- FIM TEMA LAYOUT STYLES --><link rel='shortcut icon' href='favicon.ico' /><style>table.table thead tr th{font-size: 10pt;}table.table td{font-size: 8pt;}p.text-left{font-size: 8pt;}label{font-size: 8pt;}@media print{table.table thead tr th{font-size: 8pt;}table.table td{font-size: 6pt;}}.page-header .page-header-menu{background-color: white;}</style><script type='text/javascript'>function contex_foco(elemento){var campoFoco=document.forms[0].elements[".$foco."];if(campoFoco != null)campoFoco.focus();}</script></head><!-- FIM HEAD --><body onload='contex_foco()' class='page-container-bg-solid page-boxed'><div class='page-container'><div class='page-content-wrapper'><div class='page-head'><div class='container-fluid'><div class='page-title'><h1>".$nome_pagina."</h1></div></div></div><div class='page-content'><div class='container-fluid'><div class='page-content-inner'><div class='row '><div class='col-md-12'>";
+	// }
+
+	function abre_form(string $nome_form="", int $col=12, int $focus=2): void{
 		global $idContexForm;
-
-
 		echo 
 			"<div class='col-md-".$col." col-sm-".$col."'>
 				<div class='portlet light'>"
@@ -220,14 +49,16 @@
 		$idContexForm++;
 	}
 
-	function linha_form($fields, $extraClasse = ""){
+	function linha_form(array $fields, string $classe=""): void{
 		$campo = "";
 		foreach($fields as $field){
 			$campo .= strval($field);
 		}
 
+		$classe = "row ".$classe;
+
 		echo 
-			"<div class='row ".$extraClasse."'>
+			"<div class='".$classe."'>
 				".$campo."
 			</div>"
 		;
@@ -297,4 +128,21 @@
 		}
 
 		return ((empty($errorMsg))? "": $baseErrMsg." ".implode(", ", $errorMsg).".");
+	}
+
+	function criarHiddenForm(string $nome, array $campos, array $valores, string $acao = ""){
+
+		$form = "<form ".(!empty($acao)? "action='{$acao}'": "")." name='{$nome}' method='post'>";
+		foreach($campos as $key => $campo){
+			if(is_array($valores[$key])){
+				foreach($valores[$key] as $val){
+					$form .= "<input type='hidden' name='{$campo}[]' ".(!empty($val)? "value='{$val}'": "").">";
+				}
+			}else{
+				$form .= "<input type='hidden' name='{$campo}' ".(!empty($valores[$key])? "value='{$valores[$key]}'": "").">";
+			}
+		}
+		$form .= "</form>";
+
+		return $form;
 	}
