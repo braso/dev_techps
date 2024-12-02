@@ -3,7 +3,7 @@
 	<img style="width: 150px" src="<?= $logoEmpresa ?>" alt="Logo Empresa Esquerda">
 	<h3>Relatorio <?= $titulo ?></h3>
 	<div class="right-logo">
-		<img style="width: 150px" src="<?= $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] ?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
+		<img style="width: 150px" src="<?= $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"] ?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 	</div>
 </div>
 <div class="col-md-12 col-sm-12" id="pdf2htmldiv">
@@ -63,8 +63,8 @@
 					</tbody>
 				</table>
 				<div class='emissao'>
-					<?= $dataEmissao . "<br>"
-						. "<b>Período do relatório:</b> " . $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"] ?>
+					<?= $dataEmissao."<br>"
+						. "<b>Período do relatório:</b> ".$periodoRelatorio["dataInicio"]." a ".$periodoRelatorio["dataFim"] ?>
 				</div>
 			</div>
 			<div class="portlet-body form">
@@ -82,5 +82,5 @@
 	</div>
 </div>
 <div id="impressao">
-	<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . " (UTC-3)" ?>
+	<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s")." (UTC-3)" ?>
 </div>

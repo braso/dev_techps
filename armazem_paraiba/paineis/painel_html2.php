@@ -4,7 +4,7 @@
 	<img style="width: 150px" src="<?= $logoEmpresa ?>" alt="Logo Empresa Esquerda">
 	<h3>Relatorio <?= $titulo ?></h3>
 	<div class="right-logo">
-		<img style="width: 150px" src="<?= $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] ?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
+		<img style="width: 150px" src="<?= $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"] ?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 	</div>
 </div>
 <div class="col-md-12 col-sm-12" id="pdf2htmldiv">
@@ -13,8 +13,8 @@
 			<div class='emissao' style="display: block !important;">
 				<h1 class="titulo2">Relatorio <?= $titulo ?></h1>
 				<span></span>
-				<?= $dataEmissao . "<br>"
-					. "<b>Período do relatório:</b> " . $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"] ?>
+				<?= $dataEmissao."<br>"
+					. "<b>Período do relatório:</b> ".$periodoRelatorio["dataInicio"]." a ".$periodoRelatorio["dataFim"] ?>
 				<br>
 				<?php if (!empty($empresa["empr_tx_nome"])) { ?>
 					<span><b>Empresa:</b> <?= $empresa["empr_tx_nome"] ?></span>
@@ -229,7 +229,7 @@
 	</div>
 </div>
 <div id="impressao">
-	<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . " (UTC-3)" ?>
+	<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s")." (UTC-3)" ?>
 </div>
 <?php if ($mostra === true) { ?>
 	<script>

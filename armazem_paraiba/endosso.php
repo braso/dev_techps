@@ -203,6 +203,7 @@
 		exit;
 	}
 
+
 	function index(){
 		global $totalResumo, $CONTEX;
 
@@ -462,7 +463,7 @@
 							"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 						];
 
-						grid2($cab, $aDia);
+						echo montarTabelaPonto($cab, $aDia);
 						fecha_form();
 
 						echo 
@@ -506,6 +507,9 @@
 
 					unset($aDia);
 				}
+
+				//Função legado, deve ser mantida para conseguir mostrar a mensagem de "dia endossado" em endossos anteriores.
+				echo "<script>function ajusta_ponto(idMotorista, data, endossado = false){alert('Dia já endossado.');}</script>";
 			}
 
 			if($counts["endossados"]["nao"] > 0){

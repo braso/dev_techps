@@ -1,4 +1,4 @@
-<script>
+<!-- <script>
 	$(document).ready(function(){
 		$("#myModal").modal();
 	});
@@ -23,4 +23,4 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->

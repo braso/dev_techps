@@ -350,11 +350,6 @@
 					
 					$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $dataVez, $motorista["enti_nb_id"])], $aDetalhado));
 					for ($f = 0; $f < count($row)-1; $f++) {
-						if(is_int(strpos($row[$f], "ajusta_ponto("))){
-							$begin = strpos($row[$f], "ajusta_ponto(");
-							$end = strpos($row[$f], ")", $begin);
-							$row[$f] = substr($row[$f], 0, $end).", true".substr($row[$f], $end);
-						}
 						if(is_int(strpos($row[$f], "Ajuste de Ponto"))){
 							$row[$f] = str_replace("Ajuste de Ponto", "Ajuste de Ponto(endossado)", $row[$f]);
 							$row[$f] = str_replace("class='fa fa-circle'>", "class='fa fa-circle'>(E)", $row[$f]);
@@ -365,7 +360,6 @@
 					}
 					$aDia[] = $row;
 				}
-				criarFuncoesDeAjuste();
 			//}
 
 			$ultimoEndosso = mysqli_fetch_assoc(query(

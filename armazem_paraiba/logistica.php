@@ -70,8 +70,8 @@
         global $conn;
         
         // Definir o intervalo de datas para o dia inteiro
-        $dataInicio = $data . ' 00:00:00';
-        $dataFim = $data . ' 23:59:59';
+        $dataInicio = $data.' 00:00:00';
+        $dataFim = $data.' 23:59:59';
         
         // Prepare a consulta SQL
         $sql = "SELECT pont_nb_id, pont_tx_data, macr_tx_nome, moti_tx_nome, moti_tx_legenda, pont_tx_justificativa, user_tx_login, pont_tx_dataCadastro, pont_tx_latitude, pont_tx_longitude,pont_tx_placa FROM ponto
@@ -88,7 +88,7 @@
         $stmt = mysqli_prepare($conn, $sql);
         
         if (!$stmt) {
-            die("Erro na preparação da consulta: " . mysqli_error($conn));
+            die("Erro na preparação da consulta: ".mysqli_error($conn));
         }
 
         // Bind dos parâmetros
@@ -101,7 +101,7 @@
         $result = mysqli_stmt_get_result($stmt);
         
         if (!$result) {
-            die("Erro ao executar a consulta: " . mysqli_error($conn));
+            die("Erro ao executar a consulta: ".mysqli_error($conn));
         }
         
         // Armazenar os resultados
@@ -166,7 +166,7 @@
         $result = mysqli_query($conn, $sql);
 
         if (!$result) {
-            die("Erro ao consultar tipos: " . mysqli_error($conn));
+            die("Erro ao consultar tipos: ".mysqli_error($conn));
         }
 
         $tipos = [];
@@ -188,7 +188,7 @@
         $result = mysqli_query($conn, $sql);
 
         if (!$result) {
-            die("Erro ao consultar motivos: " . mysqli_error($conn));
+            die("Erro ao consultar motivos: ".mysqli_error($conn));
         }
 
         $motivos = [];
@@ -209,7 +209,7 @@
             $result = mysqli_query($conn, $sql);
 
             if (!$result) {
-                die("Erro ao consultar motoristas: " . mysqli_error($conn));
+                die("Erro ao consultar motoristas: ".mysqli_error($conn));
             }
 
             $motoristas = [];
@@ -245,7 +245,7 @@
                 mysqli_stmt_close($stmt);
                 return $ajustes;
             } else {
-                die("Erro na preparação da consulta: " . mysqli_error($conn));
+                die("Erro na preparação da consulta: ".mysqli_error($conn));
             }
         }
 
@@ -256,7 +256,7 @@
             $result = mysqli_query($conn, $sql);
 
             if (!$result) {
-                die("Erro ao contar motoristas: " . mysqli_error($conn));
+                die("Erro ao contar motoristas: ".mysqli_error($conn));
             }
 
             $row = mysqli_fetch_assoc($result);
@@ -286,7 +286,7 @@
                 $longitude = $ajuste['longitude']; // Longitude
 
                 // Verifica se a placa está sendo capturada corretamente
-                error_log("Placa recebida: " . $plate); 
+                error_log("Placa recebida: ".$plate); 
 
                 // Inserir dados na tabela
                 $sql = "INSERT INTO ponto (
@@ -304,7 +304,7 @@
                         ) VALUES (?, ?, ?, ?, ?, ?, ?, 'ativo', NOW(), ?, ?)";
 
                 if ($stmt = mysqli_prepare($conn, $sql)) {
-                    $dataHora = $data . ' ' . $hora;
+                    $dataHora = $data.' '.$hora;
                     mysqli_stmt_bind_param($stmt, 'sssssssss', 
                         $_SESSION['user_nb_id'],  // Tipo s
                         $id,                    // Tipo s
@@ -320,11 +320,11 @@
                     if (mysqli_stmt_execute($stmt)) {
                         $sucesso = "Ajustes enviados com sucesso!";
                     } else {
-                        $erro = "Erro ao registrar ajuste: " . mysqli_error($conn);
+                        $erro = "Erro ao registrar ajuste: ".mysqli_error($conn);
                     }
                     mysqli_stmt_close($stmt);
                 } else {
-                    $erro = "Erro na preparação da consulta: " . mysqli_error($conn);
+                    $erro = "Erro na preparação da consulta: ".mysqli_error($conn);
                 }
             }
             // Recarregar os últimos ajustes após o sucesso

@@ -1,7 +1,3 @@
-<?php
-	global $CONTEX, $_SESSION;
-?>
-
 <!DOCTYPE html>
 <!--[if IE 8]> <html lang="pt-br" class="ie8 no-js"> <![endif]-->
 <!--[if IE 9]> <html lang="pt-br" class="ie9 no-js"> <![endif]-->
@@ -19,54 +15,54 @@
 	<meta content="" name="author" />
 
 	<!-- INICIO GLOBAL MANDATORY STYLES -->
-	<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
+	<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
 
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" />
-	<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/select2/js/select2.min.js"></script>
-	<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/select2/js/i18n/pt-BR.js" type="text/javascript"></script>
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" />
+	<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/select2/js/select2.min.js"></script>
+	<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/select2/js/i18n/pt-BR.js" type="text/javascript"></script>
 
-	<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js" type="text/javascript"></script>
-	<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/jquery-inputmask/inputmask/jquery.inputmask.js" type="text/javascript"></script>
-	<script src="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/jquery-inputmask/maskMoney.js" type="text/javascript"></script>
+	<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js" type="text/javascript"></script>
+	<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery-inputmask/inputmask/jquery.inputmask.js" type="text/javascript"></script>
+	<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery-inputmask/maskMoney.js" type="text/javascript"></script>
 	<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css" />
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet" type="text/css" />
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/uniform/css/uniform.default.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css" rel="stylesheet" type="text/css" />
 	<!-- FIM GLOBAL MANDATORY STYLES -->
 
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/datatables/datatables.min.js" rel="stylesheet" type="text/css" />
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" rel="stylesheet" type="text/css" />
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/datatables/datatables.min.css" rel="stylesheet" type="text/css" />
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/datatables.min.js" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/datatables.min.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css" rel="stylesheet" type="text/css" />
 
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet" type="text/css" />
 
 	<!-- INICIO TEMA GLOBAL STYLES -->
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components" type="text/css" />
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/css/components.min.css" rel="stylesheet" id="style_components" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/css/plugins.min.css" rel="stylesheet" type="text/css" />
 	<!-- FIM TEMA GLOBAL STYLES -->
 	<!-- INICIO TEMA LAYOUT STYLES -->
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/layout/css/layout.min.css" rel="stylesheet" type="text/css" />
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/layout/css/themes/default.min.css" rel="stylesheet" type="text/css" id="style_color" />
-	<link href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/assets/layout/css/custom.min.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/css/layout.min.css" rel="stylesheet" type="text/css" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/css/themes/default.min.css" rel="stylesheet" type="text/css" id="style_color" />
+	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/layout/css/custom.min.css" rel="stylesheet" type="text/css" />
 	<!-- FIM TEMA LAYOUT STYLES -->
-	<link rel="apple-touch-icon" sizes="180x180" href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/img/favicon/apple-touch-icon.png">
-	<link rel="icon" type="image/png" sizes="32x32" href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/img/favicon/favicon-32x32.png">
-	<link rel="icon" type="image/png" sizes="16x16" href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/img/favicon/favicon-16x16.png">
-	<link rel="shortcut icon" type="image/x-icon" href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/img/favicon/favicon-32x32.png?v=2">
-	<link rel="manifest" href="<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/contex20/img/favicon/site.webmanifest">
+	<link rel="apple-touch-icon" sizes="180x180" href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/img/favicon/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/img/favicon/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/img/favicon/favicon-16x16.png">
+	<link rel="shortcut icon" type="image/x-icon" href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/img/favicon/favicon-32x32.png?v=2">
+	<link rel="manifest" href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/img/favicon/site.webmanifest">
 
 	<style>
 
 		*{
 			transition: background-color .3s;
 		}
-		
+
 		body {
-			--img_path: url("<?= $CONTEX["path"] ?>/imagens/logo_topo_cliente.png");
+			--img_path: url("<?=$CONTEX["path"]?>/imagens/logo_topo_cliente.png");
 		}
 
 		.logo-default{
@@ -208,7 +204,7 @@
 
 		@media(max-width: 992px) {
 			body {
-				--img_path: url("<?= $CONTEX["path"] ?>/imagens/logo_mobile.png");
+				--img_path: url("<?=$CONTEX["path"]?>/imagens/logo_mobile.png");
 			}
 
 			.page-container{
@@ -237,7 +233,7 @@
 			return (char.match(pattern));
 		};
 		function contex_foco(elemento){
-			var campoFoco = document.forms[0].elements[<?= $foco ?>];
+			var campoFoco = document.forms[0].elements[<?=$foco?>];
 			if (campoFoco != null){
 				campoFoco.focus();
 			}
@@ -257,7 +253,7 @@
 			<div class="container-fluid">
 				<!-- INICIO LOGO -->
 				<div class="page-logo">
-					<a href="<?= $CONTEX["path"] ?>/index.php">
+					<a href="<?=$CONTEX["path"]?>/index.php">
 						<div class="logo-default"></div>
 					</a>
 				</div>
@@ -272,17 +268,17 @@
 							<!-- INICIO USER LOGIN DROPDOWN -->
 							<li class="dropdown dropdown-user dropdown-dark">
 								<a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
-									<img alt="" class="img-circle" src="<?= (!empty($_SESSION["user_tx_foto"])? $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$_SESSION["user_tx_foto"]: $_ENV["APP_PATH"]."/contex20/img/user.png") ?>">
-									<span class="username username-hide-mobile"><?= $_SESSION["user_tx_login"] ?></span>
+									<img alt="" class="img-circle" src="<?=(!empty($_SESSION["user_tx_foto"])? $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$_SESSION["user_tx_foto"]: $_ENV["APP_PATH"]."/contex20/img/user.png")?>">
+									<span class="username username-hide-mobile"><?=$_SESSION["user_tx_login"]?></span>
 								</a>
 								<ul class="dropdown-menu dropdown-menu-default">
 									<li>
-										<a href="<?= $CONTEX["path"] ?>/cadastro_usuario.php?id=<?= $_SESSION["user_nb_id"] ?>">
+										<a href="<?=$CONTEX["path"]?>/cadastro_usuario.php?id=<?=$_SESSION["user_nb_id"]?>">
 											<i class="icon-user"></i> Perfil </a>
 									</li>
 									<li class="divider"> </li>
 									<li>
-										<a href="<?= $CONTEX["path"] ?>/logout.php">
+										<a href="<?=$CONTEX["path"]?>/logout.php">
 											<i class="icon-key"></i> Sair </a>
 									</li>
 								</ul>
@@ -303,7 +299,7 @@
 			</div>
 		</div>
 		<!-- FIM HEADER TOP -->
-		<?php include($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/menu.php"); ?>
+		<?php include($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/menu.php");?>
 	</div>
 	<!-- FIM HEADER -->
 
@@ -338,7 +334,7 @@
 				<div class="container-fluid">
 					<!-- INICIO PAGE TITLE -->
 					<div class="page-title">
-						<h1><?=$nome_pagina.(is_int(strpos($_SERVER["REQUEST_URI"], "dev")) ? " (Dev)" : "") ?> </h1>
+						<h1><?=$nome_pagina.(is_int(strpos($_SERVER["REQUEST_URI"], "dev")) ? " (Dev)" : "")?> </h1>
 					</div>
 					<!-- FIM PAGE TITLE -->
 				</div>

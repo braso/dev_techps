@@ -50,7 +50,7 @@
 			$_ENV["DB_USER"],
 			$_ENV["DB_PASSWORD"],
 			$_ENV["DB_NAME"]
-		) or die("Connection failed: " . mysqli_connect_error());
+		) or die("Connection failed: ".mysqli_connect_error());
 		$conn->set_charset("utf8");
 	//}
 
