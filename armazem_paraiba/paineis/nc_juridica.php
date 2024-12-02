@@ -288,7 +288,7 @@
 				relatorio_nao_conformidade_juridica();
 				// $tempoFim = microtime(true);
 				// $tempoExecucao = $tempoFim - $tempoInicio;
-				// echo "Tempo de execução: " . number_format($tempoExecucao, 4) . " segundos";
+				// echo "Tempo de execução: ".number_format($tempoExecucao, 4)." segundos";
 			}
 		} else {
 			cabecalho("Relatório de Não Conformidade Juridica Atualizado");
@@ -299,12 +299,12 @@
 
 	$campoAcao =
 	"<div class='col-sm-2 margin-bottom-5' style='min-width: fit-content;'>
-				<label>" . "Ação" . "</label><br>
+				<label>"."Ação"."</label><br>
 				<label class='radio-inline'>
-					<input type='radio' name='campoAcao' value='buscar' " . ((empty($_POST["campoAcao"]) || $_POST["campoAcao"] == "buscar") ? "checked" : "") . "> Buscar
+					<input type='radio' name='campoAcao' value='buscar' ".((empty($_POST["campoAcao"]) || $_POST["campoAcao"] == "buscar") ? "checked" : "")."> Buscar
 				</label>
 				<label class='radio-inline'>
-          			<input type='radio' name='campoAcao' value='atualizarPainel'" . (!empty($_POST["campoAcao"]) && $_POST["campoAcao"] == "atualizarPainel" ? "checked" : "") . "> Atualizar
+          			<input type='radio' name='campoAcao' value='atualizarPainel'".(!empty($_POST["campoAcao"]) && $_POST["campoAcao"] == "atualizarPainel" ? "checked" : "")."> Atualizar
 				</label>
 			</div>";
 
@@ -416,7 +416,7 @@
 
 				$motoristas = 0;
 				foreach ($arquivos as &$arquivo) {
-					$arquivo = $path . "/" . $arquivo;
+					$arquivo = $path."/".$arquivo;
 					$json = json_decode(file_get_contents($arquivo), true);
 					foreach ($totalizadores as $key => &$total) {
 						if (!isset($json[$chave]) || $json[$chave] !== 0) {
@@ -551,22 +551,22 @@
 
 				// Percentuais gerais de Não Conformidade (baseado no total geral)
 				foreach ($keys as $key) {
-					$percentuais["Geral_" . $key] = round(($totalizadores[$key] / $totalGeral) * 100, 2);
+					$percentuais["Geral_".$key] = round(($totalizadores[$key] / $totalGeral) * 100, 2);
 					$graficoAnalitico[] = $totalizadores[$key];
 				}
 	
 				// Percentuais específicos de Não Conformidade (baseado no total de não conformidade)
 				foreach ($keys2 as $key)  {
 					if ($totalNaoconformidade > 0 && isset($totalizadores[$key])) {
-						$percentuais["Especifico_" . $key] = round(($totalizadores[$key] / $totalNaoconformidade) * 100, 2);
+						$percentuais["Especifico_".$key] = round(($totalizadores[$key] / $totalNaoconformidade) * 100, 2);
 					} else {
-						$percentuais["Especifico_" . $key] = 0;
+						$percentuais["Especifico_".$key] = 0;
 					}
 					$graficoDetalhado[] = $totalizadores[$key];
 				}
 
 				if (!empty($arquivo)) {
-					$dataEmissao = "Atualizado em: " . date("d/m/Y H:i", filemtime($arquivo)); //Utilizado no HTML.
+					$dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($arquivo)); //Utilizado no HTML.
 					$arquivoGeral = json_decode(file_get_contents($arquivo), true);
 
 					$periodoRelatorio = [
@@ -595,10 +595,10 @@
 
 		if ($encontrado) {
 			if ( $_POST["busca_endossado"] !== "endossado") {
-				$totalRow = "<td>" . $totalempre["espera"] . "</td>
-					<td>" . $totalempre["descanso"] . "</td>
-					<td>" . $totalempre["repouso"] . "</td>
-					<td>" . $totalempre["jornada"] . "</td>";
+				$totalRow = "<td>".$totalempre["espera"]."</td>
+					<td>".$totalempre["descanso"]."</td>
+					<td>".$totalempre["repouso"]."</td>
+					<td>".$totalempre["jornada"]."</td>";
 			}
 			
 			$rowTotal = "<td></td>
