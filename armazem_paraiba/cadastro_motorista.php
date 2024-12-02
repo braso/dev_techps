@@ -382,7 +382,6 @@
 			$novoMotorista["enti_tx_dataAtualiza"] = date("Y-m-d H:i:s");
 			$novoMotorista["enti_tx_ehPadrao"] = $ehPadrao;
 
-
 			atualizar("entidade", array_keys($novoMotorista), array_values($novoMotorista), $_POST["id"]);
 			$id = $_POST["id"];
 		}
@@ -905,7 +904,6 @@
 					{$extraEmpresa}
 					{$extra};"
 		);
-
 		$gridFields = [
 			"CÓDIGO" 				=> "enti_nb_id", 
 			"NOME" 					=> "enti_tx_nome", 
@@ -925,5 +923,10 @@
 		];
 
 		grid($sql, array_keys($gridFields), array_values($gridFields));
+		echo 
+			"<script>
+				
+			</script>"
+		;
 		rodape();
 	}
