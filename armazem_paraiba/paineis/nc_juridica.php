@@ -142,56 +142,58 @@
 					}
 
 
-					function ordenarTabela(coluna, ordem){
-						var linhas = tabela.find('tr').get();
-						linhas.sort(function(a, b){
-							// Extrai os valores da coluna como números
-							var valorA = parseFloat($(a).children('td').eq(coluna).text());
-							var valorB = parseFloat($(b).children('td').eq(coluna).text());
+					function ordenarTabela(coluna, ordem) {
+					var linhas = tabela.find('tr').get();
 
-							// Verifica se os valores são números
-							if (!isNaN(valorA) && !isNaN(valorB)) {
-								// Comparação numérica
-								return ordem === 'asc' ? valorA - valorB : valorB - valorA;
-							} else {
-								// Caso os valores não sejam números, trata como texto
-								valorA = $(a).children('td').eq(coluna).text().toUpperCase();
-								valorB = $(b).children('td').eq(coluna).text().toUpperCase();
+					linhas.sort(function (a, b) {
+						// Extrai os valores da coluna
+						var valorA = $(a).children('td').eq(coluna).text().trim();
+						var valorB = $(b).children('td').eq(coluna).text().trim();
 
-								if (valorA < valorB) {
-									return ordem === 'asc' ? -1 : 1;
-								}
-								if (valorA > valorB) {
-									return ordem === 'asc' ? 1 : -1;
-								}
-								return 0;
+						// Tenta converter os valores em números
+						var numA = parseFloat(valorA.replace(',', '.'));
+						var numB = parseFloat(valorB.replace(',', '.'));
+
+						if (!isNaN(numA) && !isNaN(numB)) {
+							// Comparação numérica
+							return ordem === 'asc' ? numA - numB : numB - numA;
+						} else {
+							// Caso os valores não sejam números, trata como texto
+							valorA = valorA.toUpperCase();
+							valorB = valorB.toUpperCase();
+
+							if (valorA < valorB) {
+								return ordem === 'asc' ? -1 : 1;
 							}
-						});
-						
-						$.each(linhas, function(index, row){
-							tabela.append(row);
-						});
-					}
-
-					$('#titulos th').click(function(){
-						var colunaClicada = $(this).attr('class');
-						// console.log(colunaClicada)
-	
-						var coluna = $(this).index();
-						var ordem = $(this).data('order');
-
-						// Redefinir ordem de todas as colunas
-						$('#tabela-empresas th').data('order', 'desc'); 
-						$(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
-
-						// Chama a função de ordenação
-						ordenarTabela(coluna, $(this).data('order'));
-
-						// Ajustar classes para setas de ordenação
-						$('#titulos th').removeClass('sort-asc sort-desc');
-						$(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
-					
+							if (valorA > valorB) {
+								return ordem === 'asc' ? 1 : -1;
+							}
+							return 0;
+						}
 					});
+
+					// Reinsere as linhas ordenadas na tabela
+					$.each(linhas, function (index, row) {
+						tabela.append(row);
+					});
+				}
+
+				$('#titulos th').click(function () {
+					var coluna = $(this).index(); // Obtém o índice da coluna clicada
+					var ordem = $(this).data('order'); // Obtém a ordem atual (asc/desc)
+
+					// Redefinir ordem de todas as colunas
+					$('#tabela-empresas th').data('order', 'desc');
+					$(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
+
+					// Chama a função de ordenação
+					ordenarTabela(coluna, $(this).data('order'));
+
+					// Ajustar classes para setas de ordenação
+					$('#titulos th').removeClass('sort-asc sort-desc');
+					$(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
+				});
+
 
 					".$carregarDados. "
 				});
@@ -513,9 +515,9 @@
 					'Interstício Total de 11:00 não respeitado, faltaram 00:32'
 					];
 
-					$coresGrafico = ['#f1c61f' ,'#f1c61f' ,'#f1c61f','#f1c61f','#f1c61f', '#FFB520', '#FFB520', '#a30000', '#a30000', '#a30000'];
-					$coresGrafico2 = ['#f1c61f', '#f1c61f', '#f1c61f', '#f1c61f', '#f1c61f', '#f1c61f', '#FFB520', '#FFB520', '#FFB520', '#FFB520',
-					'#FFB520', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000'];
+					$coresGrafico = ['#FFE800' ,'#FFE800' ,'#FFE800','#FFE800','#FFE800', '#FF8B00', '#FF8B00', '#a30000', '#a30000', '#a30000'];
+					$coresGrafico2 = ['#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FF8B00', '#FF8B00', '#FF8B00', '#FF8B00',
+					'#FF8B00', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000'];
 					//}
 					
 					$keys = ["espera", "descanso", "repouso", "jornada", "jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao",
@@ -537,9 +539,9 @@
 					'Interstício Total de 11:00 não respeitado, faltaram 00:32'
 					];
 
-					$coresGrafico = ['#f1c61f', '#FFB520', '#FFB520', '#a30000', '#a30000', '#a30000'];
-					$coresGrafico2 = ['#f1c61f', '#f1c61f', '#FFB520', '#FFB520', '#FFB520', '#FFB520',
-					'#FFB520', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000'];
+					$coresGrafico = ['#FFE800', '#FF8B00', '#FF8B00', '#a30000', '#a30000', '#a30000'];
+					$coresGrafico2 = ['#FFE800', '#FFE800', '#FF8B00', '#FF8B00', '#FF8B00', '#FF8B00',
+					'#FF8B00', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000'];
 					//}
 
 					$keys = ["jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao","intersticioInferior", "intersticioSuperior"];
@@ -566,7 +568,23 @@
 				}
 
 				if (!empty($arquivo)) {
-					$dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($arquivo)); //Utilizado no HTML.
+					$dataArquivo = date("d/m/Y", filemtime($arquivo));
+                    $horaArquivo = date("H:i", filemtime($arquivo));
+
+                    $dataAtual = date("d/m/Y");
+                    $horaAtual = date("H:i");
+                    if($dataArquivo != $dataAtual){
+                        $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
+                        <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                    } else {
+                        // Datas iguais: compara as horas
+                        // if ($horaArquivo < $horaAtual) {
+                        //     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
+                        // } else {
+                            $alertaEmissao = "<span>";
+                        // }
+                    }
+					$dataEmissao = $alertaEmissao ."Atualizado em: ".date("d/m/Y H:i", filemtime($arquivo))."</span>"; //Utilizado no HTML.
 					$arquivoGeral = json_decode(file_get_contents($arquivo), true);
 
 					$periodoRelatorio = [
@@ -657,17 +675,17 @@
 							. "<td>".$percentuais["performance"]."%</td>"
 							. "</tr>"
 							. "<tr>"
-								. "<td class='tituloBaixaGravidade'>Baixa</td>"
+								. "<td class='tituloBaixaGravidade2'>Baixa</td>"
 								. "<td class='total'>$gravidadeBaixa</td>"
 								. "<td class='total'>".$percentuais["baixa"]."%</td>"
 							. "</tr>"
 							. "<tr>"
-								. "<td class='tituloMediaGravidade'>Média</td>"
+								. "<td class='tituloMediaGravidade2'>Média</td>"
 								. "<td class='total'>$gravidadeMedia</td>"
 								. "<td class='total'>".$percentuais["media"]."%</td>"
 							. "</tr>"
 							. "<tr>"
-								. "<td class='tituloAltaGravidade'>Alta</td>"
+								. "<td class='tituloAltaGravidade2'>Alta</td>"
 								. "<td class='total'>$gravidadeAlta</td>"
 								. "<td class='total'>".$percentuais["alta"]."%</td>"
 							. "</tr>"
@@ -679,7 +697,7 @@
 			$rowTitulos = "<tr id='titulos'>";
 
 			if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "naoEndossado") {
-				$titulo = "Antes do Fechamento";
+				$titulo = "Não Conformidade Juridica Atualizado Antes do Fechamento";
 				$rowTitulos .=
 					"<th class='matricula'>Matricula</th>"
 					."<th class='funcionario'>Funcionário</th>"
@@ -700,7 +718,7 @@
 
 					
 			}  elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
-				$titulo = "Pós-Fechamento";
+				$titulo = "Não Conformidade Juridica Atualizado Pós-Fechamento";
 				$rowTitulos .=
 					"<th class='matricula'>Matricula</th>"
 					."<th class='funcionario'>Funcionário</th>"
@@ -717,7 +735,7 @@
 					$endossado = true;
 			}
 			$rowTitulos .= "</tr>";
-
+			$mostra = true;
 			include_once "painel_html2.php";
 
 			// if (!empty($_POST["acao"]) && $_POST["acao"] == "buscar") {

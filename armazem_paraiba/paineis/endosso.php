@@ -33,10 +33,11 @@
                     +'<td>'+(invalidValues.includes(row.he100APagar) ? '' : row.he100APagar?? '')+'</td>'
                     +'<td>'+(invalidValues.includes(row.adicionalNoturno) ? '' : row.adicionalNoturno?? '')+'</td>'
                     +'<td>'+(invalidValues.includes(row.esperaIndenizada) ? '' : row.esperaIndenizada?? '')+'</td>'
-                    +'<td>'+(row.saldoAnterior?? '')+'</td>'
+                    +'<td id=\"'+(row.saldoAnterior > '00:00' ? 'saldo-final' : (row.saldoAnterior === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
+                    +(row.saldoAnterior?? '')+'</td>'
                     +'<td>'+(row.saldoPeriodo > '00:00' ? '<strong>' + row.saldoPeriodo + '</strong>' : (row.saldoPeriodo ?? ''))+'</td>'
-                   +'<td id='+(row.saldoFinal > '00:00' ? 'saldo-final' : (row.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+';\">'
-                    +(row.saldoFinal?? '')+'</td>'
+                   +'<td id=\"'+(row.saldoFinal > '00:00' ? 'saldo-final' : (row.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\";\">'
+                    +(row.saldoFinal?? '')+indicador+'</td>'
                 +'</tr>';";
         }else{
             $linha .= "+'<td class=\"nomeEmpresa\" style=\"cursor: pointer;\" onclick=\"setAndSubmit(' + row.empr_nb_id + ')\">'+row.empr_tx_nome+'</td>'
@@ -48,10 +49,11 @@
                     +'<td>'+(invalidValues.includes(row.totais.HESabado) ? '' : row.totais.HESabado)+'</td>'
                     +'<td>'+(invalidValues.includes(row.totais.adicionalNoturno) ? '' : row.totais.adicionalNoturno)+'</td>'
                     +'<td>'+(invalidValues.includes(row.totais.esperaIndenizada) ? '' : row.totais.esperaIndenizada)+'</td>'
-                    +'<td>'+(invalidValues.includes(row.totais.saldoAnterior) ? '' : row.totais.saldoAnterior)+'</td>'
+                    +'<td id=\"'+(row.totais.saldoAnterior > '00:00' ? 'saldo-final' : (row.totais.saldoAnterior === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\" >'
+                    +(row.totais.saldoAnterior == '00:00' ? '' : row.totais.saldoAnterior)+'</td>'
                     +'<td>'+(row.totais.saldoPeriodo > '00:00' ? '<strong>' + row.totais.saldoPeriodo + '</strong>' : (row.totais.saldoPeriodo ?? ''))+'</td>'
-                    +'<td id='+(row.saldoFinal > '00:00' ? 'saldo-final' : (row.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+';\">'
-                    +(row.saldoFinal?? '')+'</td>'
+                    +'<td id=\"'+(row.totais.saldoFinal > '00:00' ? 'saldo-final' : (row.totais.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
+                    +(row.totais.saldoFinal?? '')+indicador+'</td>'
                 +'</tr>';";
         }
 
@@ -102,6 +104,25 @@
                                 $.each(data, function(index, item){
                                     row[index] = item;
                                 });
+                                var saldoAnterior = horasParaMinutos(row.saldoAnterior !== undefined ? row.saldoAnterior : row.totais.saldoAnterior);
+                                var saldoFinal = horasParaMinutos(row.saldoFinal !== undefined ? row.saldoFinal : row.totais.saldoFinal);
+                                var indicador = '';
+                                if (saldoAnterior >= 0 && saldoFinal >= 0) {
+                                    // Ambos os saldos são positivos
+                                    indicador = definirIndicador(saldoAnterior, saldoFinal);
+                                } else if (saldoAnterior >= 0 && saldoFinal <= 0) {
+                                    // Saldo anterior positivo e saldo final negativo
+                                    indicador = definirIndicador(saldoAnterior, saldoFinal);
+                                } else if (saldoAnterior <= 0 && saldoFinal >= 0) {
+                                    // Saldo anterior negativo e saldo final positivo
+                                    indicador = definirIndicador(saldoAnterior, saldoFinal);
+                                } else if (saldoAnterior <= 0 && saldoFinal <= 0) {
+                                    // Ambos os saldos são negativos
+                                    indicador = definirIndicador(saldoAnterior, saldoFinal);
+                                } else {
+                                    // Caso em que saldoAnterior é zero e saldoFinal é zero
+                                    indicador = ' <i class=\"fa fa-minus\" style=\"color: gray;\"></i>';
+                                }
                                 if(row.idMotorista != undefined){
                                     // Mostrar painel dos motoristas
                                     delete row.idMotorista;
@@ -134,6 +155,20 @@
                             }
                         });
                     }
+
+                    function definirIndicador(minutosColuna1, minutosColuna3) {
+                        if (minutosColuna1 < minutosColuna3) {
+                            // Se o valor de minutos da coluna 3 for maior (menos negativo ou positivo), é uma melhora.
+                            return ' <i class=\"fa fa-chevron-up\" style=\"color: green;\"></i>';
+                        } else if (minutosColuna1 > minutosColuna3) {
+                            // Se o valor de minutos da coluna 1 for maior (mais longe de zero), é pior.
+                            return ' <i class=\"fa fa-chevron-down\" style=\"color: red;\"></i>';
+                        } else {
+                            // Sem alteração, neutro.
+                            return ' <i class=\"fa fa-minus\" style=\"color: gray;\"></i>';
+                        }
+                    }
+
                     // Função para conversão de Horas para Minutos
                     function horasParaMinutos(horas) {
                         var partes = horas.split(':');
@@ -410,7 +445,24 @@
 
                 $pastaSaldosEmpresa->close();
 
-                $dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")); //Utilizado no HTML.
+                $dataArquivo = date("d/m/Y", filemtime($path . "/empresa_" . $empresa["empr_nb_id"] . ".json"));
+                $horaArquivo = date("H:i", filemtime($path . "/empresa_" . $empresa["empr_nb_id"] . ".json"));
+
+                $dataAtual = date("d/m/Y");
+                $horaAtual = date("H:i");
+                if($dataArquivo != $dataAtual){
+                    $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
+                    <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                } else {
+                    // Datas iguais: compara as horas
+                    // if ($horaArquivo < $horaAtual) {
+                    //     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
+                    // } else {
+                        $alertaEmissao = "<span>";
+                    // }
+                }
+
+                $dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")). "</span>"; //Utilizado no HTML.
                 $periodoRelatorio = json_decode(file_get_contents($path."/empresa_".$empresa["empr_nb_id"].".json"), true);
                 $periodoRelatorio = [
                     "dataInicio" => $periodoRelatorio["dataInicio"],
@@ -463,7 +515,23 @@
 
             
             if(is_dir($path) && file_exists($path."/empresas.json")){
-                $dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresas.json")); //Utilizado no HTML.
+                $dataArquivo = date("d/m/Y H:i", filemtime($path . "/empresas.json"));
+                $horaArquivo = date("H:i", filemtime($path . "/empresas.json"));
+
+                $dataAtual = date("d/m/Y");
+                $horaAtual = date("H:i");
+                if($dataArquivo != $dataAtual){
+                    $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
+                    <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                } else {
+                    // Datas iguais: compara as horas
+                    // if ($horaArquivo < $horaAtual) {
+                    //     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
+                    // } else {
+                        $alertaEmissao = "<span>";
+                    // }
+                }
+                $dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresas.json"))."</span>"; //Utilizado no HTML.
                 $arquivoGeral = json_decode(file_get_contents($path."/empresas.json"), true);
 
                 $periodoRelatorio = [

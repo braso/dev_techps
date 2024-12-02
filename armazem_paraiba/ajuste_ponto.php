@@ -54,7 +54,6 @@
 					)[0];
 					$temJornadaAberta = (!empty($temJornadaAberta) && intval($temJornadaAberta["pont_tx_tipo"]) == $codigosJornada["inicio"]);
 
-
 					if($temJornadaAberta){
 						if(intval($aTipo["macr_tx_codigoInterno"]) == $codigosJornada["inicio"]){ //Se tem jornada aberta e está tentando cadastrar uma abertura de jornada
 							throw new Exception("Não é possível registrar um ".strtolower($aTipo["macr_tx_nome"])." sem fechar o anterior.");
@@ -144,7 +143,6 @@
 		}
 
 
-		
 		$newPonto = [
 			"pont_nb_userCadastro"	=> $_SESSION["user_nb_id"],
 			"pont_tx_matricula" 	=> $aMotorista["enti_tx_matricula"],
@@ -162,29 +160,39 @@
 	}
 
 	function excluirPonto(){
-		if(empty($_POST["id"]) || empty($_POST["just"]) || empty($_POST["dataAtualiza"])){
-			return false;
+
+		if(empty($_POST["idPonto"]) || empty($_POST["justificativa"])){
+			set_status("ERRO: Não foi possível inativar o ponto.");
+			index();
+			exit;
 		}
 
+		if(empty($_POST["dataAtualiza"])){
+			$_POST["dataAtualiza"] = date("Y-m-d H:i:s");
+		}
+		
 		$ponto = mysqli_fetch_assoc(query(
 			"SELECT * FROM ponto 
-				WHERE pont_nb_id = {$_POST["id"]} 
+				WHERE pont_nb_id = {$_POST["idPonto"]} 
 				LIMIT 1;"
 		));
+		if($ponto["pont_tx_status"] == "inativo"){
+			set_status("ERRO: Ponto já inativado.");
+			index();
+			exit;
+		}
 		$ponto["pont_tx_status"] = "inativo";
-		$ponto["pont_tx_justificativa"] = $_POST["just"];
-		$ponto["pont_tx_dataAtualiza"] = $_POST["atualiza"];
-
+		$ponto["pont_tx_justificativa"] = $_POST["justificativa"];
+		$ponto["pont_tx_dataAtualiza"] = $_POST["dataAtualiza"];
+		
 		atualizar("ponto", array_keys($ponto), array_values($ponto), $ponto["pont_nb_id"]);
-
-		$_POST["data"] = substr($ponto["pont_tx_data"], 0, -9);
-		$_POST["busca_data"] = $ponto["pont_tx_data"];
+		
+		$_POST["data"] = explode(" ", $ponto["pont_tx_data"])[0];
 
 		index();
 		exit;
 	}
 
-	
 	function status() {
 		return  
 			"<style>
@@ -202,7 +210,7 @@
 				</style>
 				<div id='statusDiv'>
 					<label id='status-label'>Status:</label>
-					<select name='status' id='status' class='form-control input-sm campo-fit-content' onchange='atualizar_form(".$_POST["idMotorista"].", null, \"".$_POST["busca_periodo"][0]."\",  \"".$_POST["busca_periodo"][1]."\", this.value)'>
+					<select name='status' id='status' class='form-control input-sm campo-fit-content' onchange='atualizar_form({$_POST["idMotorista"]}, \"{$_POST["data"]}\", this.value)'>
 						<option value='ativo'>Ativos</option>
 						<option value='inativo' ".((!empty($_POST["status"]) && $_POST["status"] == "inativo")? "selected": "").">Inativos</option>
 					</select>
@@ -211,14 +219,11 @@
 	}
 
 	function pegarSqlDia(string $matricula, array $cols): string{
-		$condicoesPontoBasicas = [
-			"ponto.pont_tx_status = 'ativo'",
-			"ponto.pont_tx_matricula = '".$matricula."'"
-		];
+		$condicoesPontoBasicas = "ponto.pont_tx_status = 'ativo' AND ponto.pont_tx_matricula = '{$matricula}'";
 
 		$abriuJornadaHoje = mysqli_fetch_assoc(query(
 			"SELECT pont_tx_data FROM ponto
-				WHERE ".implode(" AND ", $condicoesPontoBasicas)."
+				WHERE {$condicoesPontoBasicas}
 					AND ponto.pont_tx_tipo = 1
 					AND ponto.pont_tx_data LIKE '%".$_POST["data"]."%'
 				ORDER BY ponto.pont_tx_data ASC
@@ -228,34 +233,31 @@
 		//Definir data de início da query{
 			//Se abriu jornada hoje, considera a partir da data de abertura da jornada.
 			if(empty($abriuJornadaHoje)){
-				//Se não abriu uma jornada hoje, confere se há uma jornada aberta que veio de antes do dia.
-				$temJornadaAberta = mysqli_fetch_assoc(
-					query(
-						"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 1) as temJornadaAberta FROM ponto
-							WHERE ".implode(" AND ", $condicoesPontoBasicas)."
-								AND ponto.pont_tx_tipo IN (1,2)
-								AND pont_tx_data <= STR_TO_DATE('".$_POST["data"]." 00:00:00', '%Y-%m-%d %H:%i:%s')
-							ORDER BY pont_tx_data DESC
-							LIMIT 1;"
-					)
-				);
 				//Se não tem uma jornada que veio de antes, considera a partir de meia-noite de hoje.
-				$sqlDataInicio = $_POST["data"]." 00:00:00";
+				$sqlDataInicio = "{$_POST["data"]} 00:00:00";
+
+				//Se não abriu uma jornada hoje, confere se há uma jornada aberta que veio de antes do dia.
+				$temJornadaAberta = mysqli_fetch_assoc(query(
+					"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 1) as temJornadaAberta FROM ponto
+						WHERE {$condicoesPontoBasicas}
+							AND ponto.pont_tx_tipo IN (1,2)
+							AND pont_tx_data <= STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')
+						ORDER BY pont_tx_data DESC
+						LIMIT 1;"
+				));
 
 				if(!empty($temJornadaAberta) && intval($temJornadaAberta["temJornadaAberta"])){
-					//Se tem uma jornada que veio de antes do dia, confere se esta foi fechada hoje.
-					$jornadaFechadaHoje = mysqli_fetch_assoc(
-						query(
-							"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 2) as jornadaFechadaHoje FROM ponto
-								WHERE ".implode(" AND ", $condicoesPontoBasicas)."
-									AND ponto.pont_tx_tipo IN (1,2)
-									AND pont_tx_data LIKE '%".$_POST["data"]."%'
-								ORDER BY pont_tx_data ASC
-								LIMIT 1;"
-						)
-					);
 					//Se a jornada aberta antes do dia não foi fechada, pega desde o momento em que a jornada foi aberta.
 					$sqlDataInicio = $temJornadaAberta["pont_tx_data"];
+					//Se tem uma jornada que veio de antes do dia, confere se esta foi fechada hoje.
+					$jornadaFechadaHoje = mysqli_fetch_assoc(query(
+						"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 2) as jornadaFechadaHoje FROM ponto
+							WHERE {$condicoesPontoBasicas}
+								AND ponto.pont_tx_tipo IN (1,2)
+								AND pont_tx_data LIKE '%{$_POST["data"]}%'
+							ORDER BY pont_tx_data ASC
+							LIMIT 1;"
+					));
 					if(!empty($jornadaFechadaHoje) && intval($jornadaFechadaHoje["jornadaFechadaHoje"])){
 						//Se a jornada aberta antes do dia foi fechada, deve considerar apenas após esse fechamento.
 						$sqlDataInicio = $jornadaFechadaHoje["pont_tx_data"];
@@ -272,7 +274,7 @@
 				$deixouJornadaAberta = mysqli_fetch_assoc(
 					query(
 						"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 1) as deixouJornadaAberta FROM ponto
-							WHERE ".implode(" AND ", $condicoesPontoBasicas)."
+							WHERE {$condicoesPontoBasicas}
 								AND ponto.pont_tx_tipo IN (1,2)
 								AND pont_tx_data <= STR_TO_DATE('".$_POST["data"]." 23:59:59', '%Y-%m-%d %H:%i:%s')
 							ORDER BY pont_tx_data DESC
@@ -284,7 +286,7 @@
 					$fimJornada = mysqli_fetch_assoc(
 						query(
 							"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 2) as fimJornada FROM ponto
-								WHERE ".implode(" AND ", $condicoesPontoBasicas)."
+								WHERE {$condicoesPontoBasicas}
 									AND ponto.pont_tx_tipo IN (1,2)
 									AND pont_tx_data >= STR_TO_DATE('".$_POST["data"]." 23:59:59', '%Y-%m-%d %H:%i:%s')
 								ORDER BY pont_tx_data ASC
@@ -299,10 +301,13 @@
 			}
 		//}
 
-		$condicoesPontoBasicas[0] = "ponto.pont_tx_status = '".$_POST["status"]."'";
-		$condicoesPontoBasicas[] = "entidade.enti_tx_status = 'ativo'";
-		$condicoesPontoBasicas[] = "user.user_tx_status = 'ativo'";
-		$condicoesPontoBasicas[] = "macroponto.macr_tx_status = 'ativo'";
+		$condicoesPontoBasicas = 
+			"ponto.pont_tx_status = '{$_POST["status"]}' 
+			AND ponto.pont_tx_matricula = '{$matricula}' 
+			AND entidade.enti_tx_status = 'ativo' 
+			AND user.user_tx_status = 'ativo' 
+			AND macroponto.macr_tx_status = 'ativo'"
+		;
 
 		
 		$sql = 
@@ -311,10 +316,10 @@
 				JOIN entidade ON ponto.pont_tx_matricula = entidade.enti_tx_matricula
 				JOIN user ON entidade.enti_nb_id = user.user_nb_entidade
 				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
-				WHERE ".implode(" AND ", $condicoesPontoBasicas)."
-					AND macr_nb_id < 13
-					AND ponto.pont_tx_data >= STR_TO_DATE('".$sqlDataInicio."', '%Y-%m-%d %H:%i:%s')
-					AND ponto.pont_tx_data <= STR_TO_DATE('".$sqlDataFim."', '%Y-%m-%d %H:%i:%s')
+				WHERE {$condicoesPontoBasicas}
+					AND macr_tx_fonte = 'positron'
+					AND ponto.pont_tx_data >= STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')
+					AND ponto.pont_tx_data <= STR_TO_DATE('{$sqlDataFim}', '%Y-%m-%d %H:%i:%s')
 				ORDER BY pont_tx_data ASC"
 		;
 
@@ -344,48 +349,104 @@
 	// }
 
 	function voltarParaEspelho(){
+		foreach(["hora", "idMacro", "motivo", "justificativa", "status"] as $campo){
+			unset($_POST[$campo]);
+		}
 		$_POST["acao"] = "buscarEspelho()";
 		voltar();
 	}
 
+	function carregarJS(){
 
+		$postValues = $_POST;
+		$postValues["acao"] = '';
+		$postValues["idPonto"] = '';
+		unset($postValues["id"]);
+		unset($postValues["errorFields"]);
+		unset($postValues["msg_status"]);
+		echo 
+			"<script>
+				function imprimir() {
+					// Abrir a caixa de diálogo de impressão
+					window.print();
+				}
+
+				function addPostValuesToForm(form, postValues){
+					input = '';
+					for(key in postValues){
+						input = document.createElement('input');
+						input.type = 'hidden';
+						input.value = postValues[key];
+						input.name = key;
+						if(Array.isArray(postValues[key])){
+							input.name += '[]';
+							for(f2 in postValues[key]){
+								newInput = document.createElement('input');
+								newInput.type = input.type;
+								newInput.name = input.name;
+								newInput.value = postValues[key][f2];
+								form.append(newInput);
+							}
+						}else{
+							form.append(input);
+						}
+					}
+				}
+
+				valorDataInicial = document.getElementById('data').value;
+				valorStatusInicial = document.getElementById('status').value;
+
+				function atualizar_form(motorista, data, status){
+					if(data == null){
+						data = document.getElementById('data').value;
+					}
+					if(status == null){
+						status = document.getElementById('status').value;
+					}
+
+					if(valorDataInicial != data || valorStatusInicial != status){
+						var form = document.form_ajuste_status;
+						addPostValuesToForm(form, ".json_encode($postValues).");
+						form.acao.value = 'index';
+						form.data.value = data;
+						form.status.value = status;
+						form.submit();
+					}
+				}
+
+				function excluirPontoJS(idPonto){
+					var form = document.form_ajuste_status;
+
+					addPostValuesToForm(form, ".json_encode($postValues).");
+
+					form.idPonto.value = idPonto;
+					form.acao.value = 'excluirPonto';
+					var justificativa = document.createElement('input');
+					justificativa.type = 'hidden';
+					justificativa.name = 'justificativa';
+					justificativa.value = prompt('Qual a justificativa da exclusão do ponto?');
+					form.append(justificativa);
+					
+					console.log(form);
+					form.submit();
+				}
+			</script>"
+		;
+	}
 
 
 	function index(){
 		global $CONTEX;
 
 		//Conferir se os campos de $_POST estão vazios{
-			if(empty($_POST["idMotorista"])){
-				echo "<script>alert('ERRO: Deve ser selecionado um funcionário para ajustar.')</script>";
+			if(empty($_POST["idMotorista"]) || empty($_POST["data"])){
+				echo "<script>alert('ERRO: Deve ser selecionado um funcionário e uma data para ajustar.')</script>";
 				
 				$_POST["acao"] = "buscarEspelho()";
 				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
 	
 				voltar();
 				exit;
-			}
-
-			if(empty($_POST["data"])){
-				$_POST["data"] = date("Y-m-d");
-			}
-	
-			if(!empty($_POST["busca_periodo"])){
-				if(is_string($_POST["busca_periodo"])){
-					if(preg_match_all("/\d{2}\/\d{2}\/\d{4}/", $_POST["busca_periodo"], $matches)){
-						$_POST["busca_periodo"] = [
-							substr($matches[0][0], 6, 4)."-".substr($matches[0][0], 3, 2)."-".substr($matches[0][0], 0, 2),
-							substr($matches[0][1], 6, 4)."-".substr($matches[0][1], 3, 2)."-".substr($matches[0][1], 0, 2)
-						];
-					}else{
-						$_POST["busca_periodo"] = explode(" - ", $_POST["busca_periodo"]);
-					}
-				}else{
-					for($f = 0; $f < 2; $f++){
-						if(preg_match("/\d{2}\/\d{2}\/\d{4}/", $_POST["busca_periodo"][$f])){
-							$_POST["busca_periodo"][$f] = substr($_POST["busca_periodo"][$f], 6, 4)."-".substr($_POST["busca_periodo"][$f], 3, 2)."-".substr($_POST["busca_periodo"][$f], 0, 2);
-						}
-					}
-				}
 			}
 	
 			if(empty($_POST["HTTP_REFERER"]) || is_int(strpos($_POST["HTTP_REFERER"], "ajuste_ponto.php"))){
@@ -462,9 +523,9 @@
 			</script>"
 		;
 
-		$textFields[] = texto("Matrícula",$motorista["enti_tx_matricula"],2);
-		$textFields[] = texto($motorista["enti_tx_ocupacao"],$motorista["enti_tx_nome"],5);
-		$textFields[] = texto("CPF",$motorista["enti_tx_cpf"],3);
+		$textFields[] = texto("Matrícula", $motorista["enti_tx_matricula"], 2);
+		$textFields[] = texto($motorista["enti_tx_ocupacao"], $motorista["enti_tx_nome"], 5);
+		$textFields[] = texto("CPF", $motorista["enti_tx_cpf"], 3);
 
 		$_POST["status"] = (!empty($_POST["status"]) && $_POST["status"] != "undefined"? $_POST["status"]: "ativo");
 
@@ -479,15 +540,17 @@
 		}else{
 			$botoes[] = botao("Gravar", "cadastrarAjuste");
 
-			$iconeExcluir = "<center><a title='Excluir' style='color:gray' data-toggle='modal' data-target='#myModal' onclick='excluirPontoJS(pont_nb_id,pont_tx_data)' ><spam class='glyphicon glyphicon-remove'></spam></a></center>";
-			$iconeExcluir = str_replace("'", "\"", $iconeExcluir);
+			//Precisa ser uma função para que o server-side chame e substitua os nomes dos campos pelos valores
+			$iconeExcluir = "pont_nb_id";
+			
+			
 			$variableFields = [
-				campo_data("Data", "data", ($_POST["data"]?? ""), 2, "onfocusout='atualizar_form({$_POST["idMotorista"]}, this.value, \"{$_POST["busca_periodo"][0]}\", \"{$_POST["busca_periodo"][1]}\")', null"),
+				campo_data("Data", "data", ($_POST["data"]?? ""), 2, "onfocusout='atualizar_form({$_POST["idMotorista"]}, this.value, \"{$_POST["status"]}\")'"),
 				campo_hora("Hora", "hora", ($_POST["hora"]?? ""), 2),
 				combo_bd("Tipo de Registro", "idMacro", ($_POST["idMacro"]?? ""), 4, "macroponto", "", "ORDER BY macr_nb_id"),
 				combo_bd("Motivo", "motivo", ($_POST["motivo"]?? ""), 4, "motivo", "", " AND moti_tx_tipo = 'Ajuste' ORDER BY moti_tx_nome")
 			];
-			$campoJust[] = textarea("Justificativa", "justificativa", ($_POST["justificativa"]?? ""), 12);
+			$campoJust[] = textarea("Justificativa", "justificativa", ($_POST["justificativa"]?? ""), 12, 'maxlength=680');
 		}
 
 		$botoes[] = $botao_imprimir;
@@ -506,12 +569,13 @@
 		abre_form("Dados do Ajuste de Ponto");
 		linha_form($textFields);
 		
-		echo campo_hidden("id", $_POST["id"]);
+		echo campo_hidden("idMotorista", $_POST["idMotorista"]);
 		//Campos para retornar para a pesquisa do espelho de ponto ou após um registro de ponto{
 			echo campo_hidden("busca_empresa", 		empty($_POST["busca_empresa"])? "": $_POST["busca_empresa"]);
 			echo campo_hidden("busca_motorista", 	$_POST["idMotorista"]);
 			echo campo_hidden("busca_data", 		$_POST["data"]);
-			echo campo_hidden("busca_periodo",		$_POST["busca_periodo"][0]." - ".$_POST["busca_periodo"][1]);
+			echo campo_hidden("busca_periodo[]",	$_POST["busca_periodo"][0]);
+			echo campo_hidden("busca_periodo[]",	$_POST["busca_periodo"][1]);
 			echo campo_hidden("HTTP_REFERER", 		$_POST["HTTP_REFERER"]);
 		//}
 		
@@ -519,33 +583,51 @@
 		linha_form($campoJust);
 		fecha_form($botoes);
 
+		$iconeExcluir = criarSQLIconeTabela("pont_nb_id", "excluirPonto", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?", "excluirPontoJS(',pont_nb_id,')");
+
 		$sql = pegarSqlDia(
 			$motorista["enti_tx_matricula"], 
-			["pont_nb_id", "pont_tx_data", "macr_tx_nome", "moti_tx_nome", 
-			"moti_tx_legenda", "pont_tx_justificativa", "user_tx_login", "pont_nb_userCadastro",
-			"pont_tx_dataCadastro", "pont_tx_placa", "pont_tx_latitude", "pont_tx_longitude","pont_tx_dataAtualiza"]
+			[
+				"pont_nb_id", 
+				"DATE_FORMAT(pont_tx_data, '%d/%m/%Y (%H:%i:%s)') AS pont_tx_data", 
+				"macr_tx_nome", 
+				"moti_tx_nome", 
+				"moti_tx_legenda", 
+				"pont_tx_justificativa", 
+				"(SELECT user_tx_nome FROM user WHERE user.user_nb_id = pont_nb_userCadastro LIMIT 1) as userCadastro", 
+				"pont_nb_userCadastro",
+				"pont_tx_dataCadastro", 
+				"pont_tx_placa", 
+				"pont_tx_latitude", 
+				"pont_tx_longitude",
+				"pont_tx_dataAtualiza",
+				"IF(pont_tx_status = 'ativo', {$iconeExcluir}, NULL) as iconeExcluir"
+			]
 		);
+
 
 		$gridFields = [
 			"CÓD"												=> "pont_nb_id",
-			"DATA"												=> "data(pont_tx_data, 1)",
+			"DATA"												=> "pont_tx_data",
 			"PLACA"                                             => "pont_tx_placa",
 			"TIPO"												=> "destacarJornadas(macr_tx_nome)",
 			"MOTIVO"											=> "moti_tx_nome",
 			"LEGENDA"											=> "moti_tx_legenda",
 			"JUSTIFICATIVA"										=> "pont_tx_justificativa",
-			"USUÁRIO CADASTRO"									=> "pont_nb_userCadastro",
+			"USUÁRIO CADASTRO"									=> "userCadastro",
 			"DATA CADASTRO"										=> "data(pont_tx_dataCadastro,1)",
 			"DATA EXCLUSÃO"                                     => "data(pont_tx_dataAtualiza,1)",
 			"LOCALIZAÇÃO"                                       => "map(pont_nb_id)",
-			"<spam class='glyphicon glyphicon-remove'></spam>"	=> $iconeExcluir
+			"<spam class='glyphicon glyphicon-remove'></spam>"	=> "iconeExcluir"
 		];
-		grid($sql, array_keys($gridFields), array_values($gridFields), "", "12", 1, "desc", -1);
+		grid($sql, array_keys($gridFields), array_values($gridFields), "", "12", 1, "desc");
 
 		echo
 			"<div id='tituloRelatorio'>
-				<img id='logo' style='width: 150px' src='".$CONTEX["path"]."/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
+				<img id='logo' style='width: 150px' src='{$CONTEX["path"]}/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
 			</div>
+			<form name='form_ajuste_status' action='".$_SERVER["HTTP_ORIGIN"].$CONTEX["path"]."/ajuste_ponto.php' method='post'>
+			</form>
 			<style>
 				@media print {
 					@page {
@@ -594,51 +676,10 @@
 				#tituloRelatorio{
 					display: none;
 				}
-			</style>
-			<form name='form_ajuste_status' action='".$_SERVER["HTTP_ORIGIN"].$CONTEX["path"]."/ajuste_ponto.php' method='post'>
-				<input type='hidden' name='acao' value='index'>
-				<input type='hidden' name='id'>
-				<input type='hidden' name='data' value='{$_POST["data"]}'>
-			</form>
-			<script>
-				function imprimir() {
-					// Abrir a caixa de diálogo de impressão
-					window.print();
-				}
-
-				valorDataInicial = document.getElementById('data').value;
-				valorStatusInicial = document.getElementById('status').value;
-
-				function atualizar_form(motorista, data){
-					if(data == null){
-						data = document.getElementById('data').value;
-					}
-					if(status == null){
-						status = document.getElementById('status').value;
-					}
-
-					if(valorDataInicial != data || valorStatusInicial != status){
-						var form = document.form_ajuste_status;
-						form.id.value = motorista;
-						form.data.value = data;
-						form.status.value = status;
-						document.getElementById('status').value = status;
-						form.submit();
-					}
-				}
-
-				function excluirPontoJS(id, dataAtualiza){
-					alert(id);
-					return;
-					var just = prompt('Qual a justificativa da exclusão do ponto?');
-					var form = document.form_ajuste_status;
-					form.acao.value = 'excluirPonto';
-					form.id.value = id;
-					console.log(form);
-					// form.submit();
-				}
-			</script>"
+			</style>"
 		;
+
+		carregarJS();
 
 		rodape();
 	}
