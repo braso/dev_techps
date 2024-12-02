@@ -12,159 +12,148 @@
 	include_once "funcoes_ponto.php";
 
 	$dominiosAutotrac = ["/comav"];
-	if(!in_array($_ENV["CONTEX_PATH"], $dominiosAutotrac)){
+	if(!in_array($_ENV["CONTEX_PATH"], $dominiosAutotrac) && is_bool(strpos($_SERVER["HTTP_HOST"], "localhost"))){
 		echo "Apenas empresas com Autotrac registrados podem utilizar este serviço.<br>";
 		exit;
 	}
 
 	echo "Em desenvolvimento...<br>";
-	exit;
-	
-	// Função para consumir a API e inserir os dados na tabela
-	function fetchAndInsertMacros($apiUrl, $token) {
+	// exit;
+
+	//Puxar pontos da API{
+		$apiUrl = "https://apimacrocomav.logsyncwebservice.techps.com.br/macros";		//URL da API
+		$token = "0cb538f85dbe5cf630d03b4be8a61b77";									//Token de autenticação Bearer
+		
 		$ch = curl_init();
 		// Configurações do cURL
 		curl_setopt($ch, CURLOPT_URL, $apiUrl);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($ch, CURLOPT_HTTPHEADER, [
-			"Authorization: Bearer $token"
+			"Authorization: Bearer {$token}"
 		]);
 		
-		// Executa a requisição
-		$response = curl_exec($ch);
+		$response = curl_exec($ch);														//Executa a requisição
 		
-		// Verifica se houve erro
-		if (curl_errno($ch)) {
+		if (curl_errno($ch)) {															//Verifica se houve erro
 			echo "Erro ao consumir a API: ".curl_error($ch);
-			return;
+			exit;
 		}
 		
-		// Decodifica o JSON da resposta
-		$pontos = json_decode($response, true);
+		$pontos = json_decode($response, true);											//Decodifica o JSON da resposta
 		
-		// Fecha a requisição cURL
-		curl_close($ch);
-
-		foreach($pontos as &$ponto){
-			$ponto["position_time"] = DateTime::createFromFormat("d/m/Y H:i:s", $ponto["position_time"])->format("Y-m-d H:i:s");
-		}
+		curl_close($ch);																//Fecha a requisição cURL
 		
 		// Verifica se os dados são válidos
 		if(empty($pontos) || !is_array($pontos)){
 			echo "Nenhum dado válido retornado da API.";
-			return;
+			exit;
+		}
+	//}
+
+	//Ordenar os pontos{
+		$dates = [];
+		$matriculas = [];
+		foreach($pontos as $ponto){
+			$dates[] = DateTime::createFromFormat("d/m/Y H:i:s", $ponto["position_time"])->format("Y-m-d H:i:s");
+			$matriculas[] = $ponto["driver_cpf"];
+		}
+		array_multisort($matriculas, SORT_ASC, $dates, SORT_ASC, $pontos);
+	//}
+
+	// /*Cadastrar somente do primeiro motorista.{
+		// $matriculaInicial = $pontos[0]["driver_cpf"];
+	//}*/
+
+	$macros = mysqli_fetch_all(query(
+		"SELECT macr_tx_codigoExterno FROM macroponto
+			WHERE macr_tx_status = 'ativo'
+				AND macr_tx_fonte = 'autotrac'
+			ORDER BY macr_tx_codigoExterno;"
+	), MYSQLI_ASSOC);
+	for($f = 0; $f < count($macros); $f++){
+		$macros[$f] = $macros[$f]["macr_tx_codigoExterno"];
+	}
+
+	//"" = Ignorar
+	//0 = Conferir se há um intervalo aberto antes para fechar.
+	//valor > 0: Conferir se há um intervalo aberto antes para fechar + substituir pela macro de abertura com esse codigoInterno
+	$relacaoMacros = [
+		"50" => "1",	//"INICIO DE JORNADA",
+		"51" => "0",	//"INICIO DE VIAGEM",
+		"52" => "",		//"PARADA EVENTUAL",
+		"53" => "0",	//"REINICIO DE VIAGEM",
+		"54" => "",		//"FIM DE VIAGEM",
+		"55" => "",		//"SOL DE DESVIO DE ROTA",
+		"56" => "",		//"SOL DESENGATE/BAU",
+		"57" => "7",	//"MANUTENCAO",
+		"58" => "",		//"ABANDONO DE COMBOIO",
+		"59" => "",		//"MACRO MSG LIVRE",
+		"60" => "",		//"AG DESCARGA",
+		"61" => "",		//"ABASTECIMENTO - ARLA32",
+		"62" => "2",	//"PERNOITE - FIM DE JORNADA",
+		"63" => "3",	//"REFEICAO",
+		"64" => "5",	//"EM ESPERA",
+		"65" => "7",	//"DESCANSO",
+		"66" => "",		//"TROCA DE VEÍCULO",
+		"67" => "0",	//"INICIO DE VIAGEM",
+		"68" => "0",	//"REINICIO DE VIAGEM",
+		"69" => "",		//???
+		"70" => "2"		//"FIM DE JORNADA"
+	];
+
+	$f = 0;
+	foreach($pontos as $ponto){
+		$newPonto = [
+			"pont_nb_userCadastro"	=> $_SESSION['user_nb_id'],
+			"pont_tx_dataCadastro" 	=> date("Y-m-d H:i:s"),
+			"pont_tx_matricula" 	=> $ponto["driver_cpf"],	// No caso da Comav, a mátricula do motorista é o CPF.
+			"pont_tx_data" 			=> DateTime::createFromFormat("d/m/Y H:i:s", $ponto["position_time"])->format("Y-m-d H:i:s"),
+			// "pont_tx_tipo" é colocado mais abaixo
+			"pont_tx_tipoOriginal" 	=> $ponto["macro_number"],
+			"pont_tx_latitude" 		=> $ponto["latitude"],
+			"pont_tx_longitude" 	=> $ponto["longitude"],
+			"pont_tx_placa" 		=> $ponto["vehicle_name"],
+			"pont_tx_status"		=> "ativo"
+		];
+
+		$f++;
+		echo "<br>---------------------------<br>".$f."<br>";
+		dd($newPonto["pont_tx_data"], false);
+		// if($f > 1000){
+		// 	break;
+		// }
+
+		//Conferir se tipo de ponto existe{
+			if(!in_array($newPonto["pont_tx_tipoOriginal"], $macros)){
+				echo "ERRO: Tipo de ponto não encontrado. ({$newPonto["pont_tx_tipoOriginal"]})<br>";
+				continue;
+			}
+		//}
+
+		if(!in_array($newPonto["pont_tx_tipoOriginal"], array_keys($relacaoMacros))){
+			echo "Tipo de ponto não encontrado.";
+			continue;
+		}elseif($relacaoMacros[$newPonto["pont_tx_tipoOriginal"]] == ""){
+			echo "Ponto ignorado por macroponto: {$newPonto["pont_tx_tipoOriginal"]}, ".$relacaoMacros[$newPonto["pont_tx_tipoOriginal"]];
+			continue;
 		}
 
-		/*Cadastrar somente do primeiro motorista.{
-			$matriculaInicial = $pontos[0]["driver_cpf"];
-		//}*/
+		$newPonto["pont_tx_tipo"] = $relacaoMacros[$newPonto["pont_tx_tipoOriginal"]];
 
-        $f = 0;
-		foreach($pontos as $ponto) {
-		    if($ponto["position_time"] < "2024-11-06 00:00:00"){
-		        continue;
-		    }
-			echo "<br>---------------------------<br>";
-			// Usar a data diretamente da API
-			$newPonto = [
-				"pont_nb_userCadastro"	=> $_SESSION['user_nb_id'],
-				"pont_tx_dataCadastro" 	=> date("Y-m-d H:i:s"),
-				"pont_tx_matricula" 	=> $ponto["driver_cpf"], // CPF do motorista (matrícula)
-				"pont_tx_data" 			=> $ponto["position_time"],
-				// "pont_tx_tipo" é colocado mais abaixo
-				"pont_tx_latitude" 		=> $ponto["latitude"],    // Latitude
-				"pont_tx_longitude" 	=> $ponto["longitude"],  // Longitude
-				"pont_tx_placa" 		=> $ponto["vehicle_name"],   // Placa do veículo
-				"pont_tx_status"		=> "ativo"
-			];
+		$ultimoPonto = mysqli_fetch_assoc(query(
+			"SELECT * FROM ponto
+				JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
+				WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'
+					AND pont_tx_matricula = '{$newPonto["pont_tx_matricula"]}'
+					AND pont_tx_data <= '{$newPonto["pont_tx_data"]}'
+				ORDER BY pont_tx_data DESC
+				LIMIT 1;"
+		));
 
-			/*Cadastrar somente do primeiro motorista.{
-				if($newPonto["pont_tx_matricula"] != $matriculaInicial){
-					echo "break";
-					return;
-				}
-			// }*/
-
-			//Conferir se tipo de ponto existe{
-				$macroInterno = mysqli_fetch_assoc(query(
-					"SELECT macr_tx_codigoInterno FROM macroponto"
-					." WHERE macr_tx_status = 'ativo' AND macr_tx_fonte = 'autotrac'"
-						." AND macr_tx_codigoExterno = '".$ponto["macro_number"]."'"
-					." LIMIT 1;"
-				));
-	
-				if(empty($macroInterno)){
-					echo "ERRO: Tipo de ponto não encontrado. (".$ponto["macro_number"].")<br>";
-					continue;
-				}
-			//}
-			//Conferir se o macroponto existe{
-				$idMacro = mysqli_fetch_assoc(query(
-					"SELECT macr_nb_id, macr_tx_nome FROM macroponto"
-					." WHERE macr_tx_status = 'ativo' AND macr_tx_fonte = 'autotrac'"
-						." AND macr_tx_codigoExterno = '".$ponto["macro_number"]."';"
-				));
-
-				// Se o tipo de ponto for encontrado, inserir os dados
-				if(empty($idMacro)){
-					echo "ERRO: Código externo não encontrado na tabela macroponto: ".$ponto["macro_number"]."<br>";
-					continue;
-				}
-			//}
-
-			//0 = Conferir se há um intervalo aberto antes para fechar.
-			//"" = Ignorar
-			//inteiro > 0: Conferir se há um intervalo aberto antes para fechar + substituir pela macro de abertura com esse codigoInterno
-
-			$relacaoMacros = [
-				"50" => "1",	//"INICIO DE JORNADA",
-				"51" => "0",	//"INICIO DE VIAGEM",
-				"52" => "",		//"PARADA EVENTUAL",
-				"53" => "0",	//"REINICIO DE VIAGEM",
-				"54" => "",		//"FIM DE VIAGEM",
-				"55" => "",		//"SOL DE DESVIO DE ROTA",
-				"56" => "",		//"SOL DESENGATE/BAU",
-				"57" => "7",	//"MANUTENCAO",
-				"58" => "",		//"ABANDONO DE COMBOIO",
-				"59" => "",		//"MACRO MSG LIVRE",
-				"60" => "",		//"AG DESCARGA",
-				"61" => "",		//"ABASTECIMENTO - ARLA32",
-				"62" => "2",	//"PERNOITE - FIM DE JORNADA",
-				"63" => "3",	//"REFEICAO",
-				"64" => "5",	//"EM ESPERA",
-				"65" => "7",	//"DESCANSO",
-				"66" => "",		//"TROCA DE VEÍCULO",
-				"67" => "0",	//"INICIO DE VIAGEM",
-				"68" => "0",	//"REINICIO DE VIAGEM",
-				"69" => "",		//???
-				"70" => "2"		//"FIM DE JORNADA"
-			];
-
-			if(!in_array($ponto["macro_number"], array_keys($relacaoMacros))){
-				echo "Tipo de ponto não encontrado.";
-				continue;
-			}
-			if($relacaoMacros[$ponto["macro_number"]] == ""){
-				echo "Ponto ignorado por macroponto: ".$ponto["macro_number"].", ".$relacaoMacros[$ponto["macro_number"]];
-				continue;
-			}
-
-			$newPonto["pont_tx_tipo"] = $relacaoMacros[$ponto["macro_number"]];
-
-			$ultimoPonto = mysqli_fetch_assoc(query(
-				"SELECT * FROM ponto"
-				." JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno"
-				." WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'"
-				." AND pont_tx_matricula = '".$newPonto["pont_tx_matricula"]."'"
-				." AND pont_tx_data <= '".$newPonto["pont_tx_data"]."'"
-				."ORDER BY pont_tx_data DESC"
-				." LIMIT 1;"
-			));
-
-
-			if(!empty($ultimoPonto)){
-				//Criar um ponto de finalização do último intervalo antes de criar para um novo.{
-				    if($newPonto["pont_tx_tipo"] == $ultimoPonto["pont_tx_tipo"]){
+		if(!empty($ultimoPonto)){
+			//Criar um ponto de finalização do último intervalo antes de criar um novo intervalo.{
+				/*Conferir erros com o cadastro do ponto atual{
+					if($newPonto["pont_tx_tipo"] == $ultimoPonto["pont_tx_tipo"]){
 						echo "O último ponto é do mesmo tipo. (".$newPonto["pont_tx_tipo"].")";
 						continue;
 					}
@@ -174,16 +163,24 @@
 							echo "Não tem um intervalo anterior aberto para fechar. (".$ultimoPonto["pont_tx_tipo"].", ".$newPonto["pont_tx_tipo"].")";
 							continue;
 						}
-
 						$newPonto["pont_tx_tipo"] = strval((int)$ultimoPonto["pont_tx_tipo"]+1);
+						if(intval($newPonto["pont_tx_tipo"]) > 8){
+							dd(["ALERTA ".__LINE__, $newPonto, $ultimoPonto]);
+						}
 					}
-					
+
+					if([$ultimoPonto["pont_tx_matricula"], $ultimoPonto["pont_tx_data"], $ultimoPonto["pont_tx_tipo"]] = [$newPonto["pont_tx_matricula"], $newPonto["pont_tx_data"], $newPonto["pont_tx_tipo"]]){
+						echo "Ponto já cadastrado.";
+						continue;
+					}
 					if($newPonto["pont_tx_tipo"] == $ultimoPonto["pont_tx_tipo"]){
 						echo "O último ponto é do mesmo tipo. (".$newPonto["pont_tx_tipo"].")";
 						continue;
 					}
+				//}*/
 
-					/* Manter esse código salvo para caso seja necessário fazer essa conferência no futuro.
+				//Conferir se há uma jornada aberta no horário para inserir pontos.
+				//* Manter esse código salvo para caso seja necessário fazer essa conferência no futuro.
 					if(in_array($newPonto["pont_tx_tipo"], ["1", "2"])){
 						$temJornadaAberta = mysqli_fetch_assoc(query(
 							"SELECT pont_nb_id, pont_tx_tipo FROM ponto
@@ -199,7 +196,8 @@
 							continue;
 						}
 						if($temJornadaAberta["pont_tx_tipo"] == "2" && $newPonto["pont_tx_tipo"] == "2"){
-							remover_ponto($temJornadaAberta["pont_nb_id"], "Há um fechamento de jornada posterior.");
+							echo "Jornada já fechada neste horário ou após ele.";
+							continue;
 						}
 
 						$jornadaJaFechada = mysqli_fetch_assoc(query(
@@ -217,71 +215,45 @@
 							continue;
 						}
 					}
-					*/
+				//*/
 
-					if(((int)$ultimoPonto["pont_tx_tipo"])%2 == 1 										//o último ponto é uma abertura (tipo = ímpar)
-						&& (int)$ultimoPonto["pont_tx_tipo"] != ((int)$newPonto["pont_tx_tipo"])-1 		//E o último ponto não for a abertura deste
-						&& !in_array("1", [$ultimoPonto["pont_tx_tipo"]])								//E nem o último ponto, nem o ponto atual são aberturas de jornada
-					){
-						//Cadastrar final do último ponto
-						$fechAnterior = $newPonto;
-						$fechAnterior["pont_tx_dataCadastro"] = date("Y-m-d H:i:s");
-						$fechAnterior["pont_tx_data"] = (new DateTime($newPonto["pont_tx_data"]))->modify("-1 second")->format("Y-m-d H:i:s");
-						$fechAnterior["pont_tx_tipo"] = strval((int)$ultimoPonto["pont_tx_tipo"]+1);
+				if(((int)$ultimoPonto["pont_tx_tipo"])%2 == 1 										//O último ponto é uma abertura (tipo = ímpar)
+					&& (int)$ultimoPonto["pont_tx_tipo"] != ((int)$newPonto["pont_tx_tipo"])-1 		//E Este ponto não é o fechamento do intervalo anterior
+					&& (int)$ultimoPonto["pont_tx_tipo"] != 1										//E O último ponto não é uma abertura de jornada
+				){
+					//Cadastrar final do último ponto
+					$fechAnterior = $newPonto;
+					$fechAnterior["pont_tx_dataCadastro"] = date("Y-m-d H:i:s");
+					$fechAnterior["pont_tx_data"] = (new DateTime($newPonto["pont_tx_data"]))->modify("-1 second")->format("Y-m-d H:i:s");
+					$fechAnterior["pont_tx_tipo"] = strval((int)$ultimoPonto["pont_tx_tipo"]+1);
+					if(intval($fechAnterior["pont_tx_tipo"]) > 8){
+						dd(["ALERTA ".__LINE__, $newPonto, $ultimoPonto]);
 					}
-				//}
-			}elseif((int)$newPonto["pont_tx_tipo"]%2 == 0){
-				//Não tem um intervalo anterior aberto para fechar.
-				echo "Não tem um intervalo anterior aberto para fechar. (".$newPonto["pont_tx_tipo"].")";
-				continue;
-			}
+				}
+			//}
 
-			// Consultar se já existe um registro com o mesmo horário e matrícula{
-				$jaCadastrado = !empty(mysqli_fetch_assoc(query(
-					"SELECT pont_nb_id FROM ponto"
-					." WHERE pont_tx_status = 'ativo'"
-					." AND pont_tx_matricula = '".$newPonto["pont_tx_matricula"]."'"
-					." AND pont_tx_data = '".$newPonto["pont_tx_data"]."'"
-					." AND pont_tx_tipo = '".$newPonto["pont_tx_tipo"]."';"
-				)));
-				if($jaCadastrado){
-					echo "Ponto já cadastrado.";
-					continue;
-				}
-			// }
-			
-			dd([$fechAnterior, $newPonto], false);
-			$f++;
-			if($f > 100){
-			    break;
-			}
-			/*Registrar ponto{
-				if(!empty($fechAnterior)){
-				    
-					$result = inserir("ponto", array_keys($fechAnterior), array_values($fechAnterior));
-					if(gettype($result[0]) == "object" && get_class($result[0]) == "Exception"){
-						echo "ERRO: Ao inserir ponto (1).<br><br>";
-						dd($result);
-					}
-					dd([$ultimoPonto, $fechAnterior], false);
-					echo "Fechamento cadastrado com sucesso.<br>";
-					unset($fechAnterior);
-				}
-				$result = inserir("ponto", array_keys($newPonto), array_values($newPonto));
+		}elseif((int)$newPonto["pont_tx_tipo"]%2 == 0){
+			echo "Não tem um intervalo anterior aberto para fechar. (".$newPonto["pont_tx_tipo"].")";
+			continue;
+		}
+		
+		//*Registrar ponto{
+			if(!empty($fechAnterior)){
+				$result = inserir("ponto", array_keys($fechAnterior), array_values($fechAnterior));
 				if(gettype($result[0]) == "object" && get_class($result[0]) == "Exception"){
-					echo "ERRO: Ao inserir ponto (2).<br><br>";
+					echo "ERRO: Ao inserir ponto ".__LINE__.".<br><br>";
 					dd($result);
 				}
-				dd($newPonto, false);
-				echo "Ponto cadastrado com sucesso.<br><br>";
-			//}*/
-		}
+				dd([$ultimoPonto, $fechAnterior], false);
+				echo "Fechamento cadastrado com sucesso.<br>";
+				unset($fechAnterior);
+			}
+			$result = inserir("ponto", array_keys($newPonto), array_values($newPonto));
+			if(gettype($result[0]) == "object" && get_class($result[0]) == "Exception"){
+				echo "ERRO: Ao inserir ponto ".__LINE__.".<br><br>";
+				dd($result);
+			}
+			dd($newPonto, false);
+			echo "Ponto cadastrado com sucesso.<br><br>";
+		//}*/
 	}
-
-	// URL da API
-	$apiUrl = "https://apimacrocomav.logsyncwebservice.techps.com.br/macros";
-	// Token de autenticação Bearer
-	$token = "0cb538f85dbe5cf630d03b4be8a61b77";
-
-	// Chamar a função para buscar e inserir os macros
-	fetchAndInsertMacros($apiUrl, $token);
