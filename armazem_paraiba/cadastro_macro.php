@@ -8,7 +8,7 @@
 		exit;
 
 	}
-	function modifica_macro(){
+	function modificarMacro(){
 		$_POST = array_merge($_POST, carregar("macroponto",$_POST["id"]));
 
 		layout_macro();
@@ -105,16 +105,22 @@
 		linha_form($campos);
 		fecha_form($botoes);
 
-		$sql = "SELECT * FROM macroponto WHERE macr_tx_status = 'ativo' ".$extra;
+		$iconeModificar = criarSQLIconeTabela("macr_nb_id", "modificarMacro", "Modificar", "glyphicon glyphicon-search");
+
+		$sql = 
+			"SELECT *, {$iconeModificar} as iconeModificar FROM macroponto
+				WHERE macr_tx_status = 'ativo' 
+					{$extra};"
+		;
 		$cols = [
 			"CÓDIGO" => "macr_nb_id",
 			"NOME" => "macr_tx_nome",
 			"CÓD. INTERNO" => "macr_tx_codigoInterno",
 			"CÓD. EXTERNO" => "macr_tx_codigoExterno",
-			"<spam class='glyphicon glyphicon-search'></spam>" => "icone_modificar(macr_nb_id,modifica_macro)",
+			"<spam class='glyphicon glyphicon-search'></spam>" => "iconeModificar",
 		];
 
-		grid($sql, array_keys($cols), array_values($cols), "", "", 0, "desc", 10);
+		grid($sql, array_keys($cols), array_values($cols), "", "", 0, "desc");
 
 		rodape();
 
