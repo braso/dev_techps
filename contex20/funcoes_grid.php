@@ -14,106 +14,50 @@
 		return $inp;
 	}
 
-	function conferirParametroPadrao($idEmpresa, $jornadaSemanal, $jornadaSabado, $percHESemanal, $percHEEx){
+	// function conferirParametroPadrao($idEmpresa, $jornadaSemanal, $jornadaSabado, $percHESemanal, $percHEEx){
 
-		echo "<script>
-			function conferirParametroPadrao(jornadaSemanal, jornadaSabado, percHESemanal, percHEEx){
-				var padronizado = (
-					jornadaSemanal == parent.document.contex_form.jornadaSemanal.value &&
-					jornadaSabado == parent.document.contex_form.jornadaSabado.value &&
-					percHESemanal == parent.document.contex_form.percHESemanal.value &&
-					percHEEx == parent.document.contex_form.percHEEx.value
-				);
-				parent.document.getElementsByName('textoParametroPadrao')[0].getElementsByTagName('p')[0].innerText = (padronizado? 'Sim': 'Não');
-			}
-			</script>"
-		;
-	}
+	// 	echo "<script>
+	// 		function conferirParametroPadrao(jornadaSemanal, jornadaSabado, percHESemanal, percHEEx){
+	// 			var padronizado = (
+	// 				jornadaSemanal == parent.document.contex_form.jornadaSemanal.value &&
+	// 				jornadaSabado == parent.document.contex_form.jornadaSabado.value &&
+	// 				percHESemanal == parent.document.contex_form.percHESemanal.value &&
+	// 				percHEEx == parent.document.contex_form.percHEEx.value
+	// 			);
+	// 			parent.document.getElementsByName('textoParametroPadrao')[0].getElementsByTagName('p')[0].innerText = (padronizado? 'Sim': 'Não');
+	// 		}
+	// 		</script>"
+	// 	;
+	// }
 
-	function grid2($cabecalho,$valores){
+	function montarTabelaPonto(array $cabecalho, array $valores): string{
 		// $rand = md5($sql);
-
 		$grid = 
-			"<div class='table-responsive'>"
-			."<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact'"/*.id=$rand*/.">"
+			"<div class='table-responsive'>
+				<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact'"/*.id=$rand*/.">
+					<thead>"
+						.(!empty($cabecalho)?"<tr><th class='th-align'>".implode("</th><th class='th-align'>", $cabecalho)."</th></tr>": "").
+					"</thead>
+					<tbody>"
+						.implode("", array_map(function($valor){return "<tr><td>".implode("</td><td>", $valor)."</td></tr>";}, $valores)).
+					"</tbody>
+				</table>
+				(*): Registros excluídos manualmente.<br>
+				(**): 00:00 Caso esteja dentro da tolerância
+			</div>"
 		;
 
-		if(count($cabecalho)>0){
-
-			$grid .= "<thead><tr>";
-
-			for($i=0;$i<count($cabecalho);$i++){
-				$grid .= "<th class='th-align'>".$cabecalho[$i]."</th>";
-			}
-
-			$grid .= "</thead></tr>";
-		}
-
-		if(count($valores)>0){
-			$grid .= "<tbody>";
-			
-			for($i=0;$i<count($valores);$i++){
-				$grid .= "<tr>";
-				for($j=0;$j<count($valores[$i]);$j++){
-					$grid .= "<td>".$valores[$i][$j]."</td>";
-				}
-				$grid .= "</tr>";
-			}
-
-			$grid .= "</tbody>";
-		}
-
-		$grid .= "</table>"
-			."(*): Registros excluídos manualmente.<br>"
-			."(**): 00:00 Caso esteja dentro da tolerância"
-			."</div>"
-		;
-
-		echo $grid;
+		return $grid;
 	}
 
 	function js_contex_icone(){
 		echo "
 			<script type='text/javascript'>
-				function contex_icone(id,acao,campos='',valores='',target='',msg='',action='',data_de='',data_ate='',just=''){
-					if(msg){
-						if(confirm(msg)){
-							var form = document.getElementById('contex_icone_form'); 
-							form.target=target;
-							form.action=action;
-							form.id.value=id;
-							form.acao.value=acao;
-							form.data_de.value=data_de;
-							form.data_ate.value=data_ate;
-							if(campos){
-								form.hidden.value=valores;
-								form.hidden.name=campos;
-							}
-							campos = campos.split(',');
-							valores = valores.split(',');
-							for(f = 0; f < campos.length; f++){
-								form.append('<input type=\"hidden\" name=\"'+campos[f]+'\" value=\"'+valores[f]+'\" /> ');
-							}
-							form.submit();
-						}
-					}else{
-						var form = document.getElementById('contex_icone_form'); 
-						form.target=target;
-						form.action=action;
-						form.id.value=id;
-						form.acao.value=acao;
-						form.data_de.value=data_de;
-						form.data_ate.value=data_ate;
-						form.just.value=just;
-						if(campos){
-							form.hidden.value=valores;
-							form.hidden.name=campos;
-						}
-						campos = campos.split(',');
-						valores = valores.split(',');
-						for(f = 0; f < campos.length; f++){
-							form.append('<input type=\"hidden\" name=\"'+campos[f]+'\" value=\"'+valores[f]+'\" /> ');
-						}
+				function contex_icone(id, acao, msgConfirm=''){
+					var form = document.getElementById('contex_icone_form'); 
+					form.id.value = id;
+					form.acao.value = acao;
+					if(!msgConfirm || confirm(msgConfirm)){
 						form.submit();
 					}
 				}
@@ -121,16 +65,17 @@
 		";
 	}
 
-	function grid($sql,$cabecalho,$valores=[],$label="",$col="12",$ordenar_coluna=1,$ordenar_sentido="asc",$paginar="10"){
+	function grid($sql, $cabecalho, $valores=[], $label="", $col="12", $numColunaOrdem=1, string $sentidoOrdem = "asc", $paginar="10"){
 		global $CONTEX;
 
 		$sql = urldecode(str_replace(["%0D", "%0A", "%09"], " ", urlencode($sql)));
 
 		$paginar = (empty($paginar))? "10": $paginar;
 		$col = ($col < 1)? "12": $col;
+
 		
 		js_contex_icone();
-
+		
 		$rand = md5($sql);
 
 		$cabecalho = "<th>".implode("</th><th>", $cabecalho)."</th>";
@@ -147,15 +92,12 @@
 		}
 
 		?>
-
-		<form id='contex_icone_form' method="post" target="" action="">
-			<input type="hidden" name="id" value="0">
-			<input type="hidden" name="acao" value="sem_acao">
-			<input type="hidden" name="data_de" value="">
-			<input type="hidden" name="data_ate" value="">
-			<input type="hidden" name="just" value="">
-			<input type="hidden" name="atualiza" value="">
-			<input type="hidden" id="hidden">
+		<form id='contex_icone_form' method='post' target='' action=''>
+			<input type='hidden' name='id' value='0'>
+			<input type='hidden' name='acao' value='sem_acao'>
+			<input type='hidden' name='just' value=''>
+			<input type='hidden' name='atualiza' value=''>
+			<input type='hidden' id='hidden'>
 		</form>
 		
 		<style type="text/css">
@@ -178,67 +120,64 @@
 				}
 			}
 		</style>
-				<!-- BEGIN EXAMPLE TABLE PORTLET-->
-				<div class="col-md-<?=$col?> col-sm-<?=$col?>">
-					<div class="portlet light ">
-						<?=$label?>
-						<div class="portlet-body">
-							<table id="contex-grid-<?=$rand?>" class="table compact table-striped table-bordered table-hover dt-responsive" width="100%" id="sample_2">
-								<thead>
-									<tr>
-										<?=$cabecalho?>
-									</tr>
-								</thead>
-							</table>
-						</div>
-					</div>
+		<!-- BEGIN EXAMPLE TABLE PORTLET-->
+		<div class="col-md-<?=$col?> col-sm-<?=$col?>">
+			<div class="portlet light ">
+				<?=$label?>
+				<div class="portlet-body">
+					<table id="contex-grid-<?=$rand?>" class="table compact table-striped table-bordered table-hover dt-responsive" width="100%" id="sample_2">
+						<thead>
+							<tr>
+								<?=$cabecalho?>
+							</tr>
+						</thead>
+					</table>
 				</div>
-				<!-- END EXAMPLE TABLE PORTLET-->
+			</div>
+		</div>
+		<!-- END EXAMPLE TABLE PORTLET-->
 
-				<!-- BEGIN PAGE LEVEL PLUGINS -->
-				<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
-				<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
-				<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
-				<!-- END PAGE LEVEL PLUGINS -->
+		<!-- BEGIN PAGE LEVEL PLUGINS -->
+		<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
+		<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
+		<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
+		<!-- END PAGE LEVEL PLUGINS -->
 
-				<!-- BEGIN PAGE LEVEL SCRIPTS -->
-				<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
-				<!-- END PAGE LEVEL SCRIPTS -->
-
-
+		<!-- BEGIN PAGE LEVEL SCRIPTS -->
+		<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
+		<!-- END PAGE LEVEL SCRIPTS -->
 		<?php
 
 		include_once "conecta.php";
 
 
-		preg_match('/(.*)\((.*?)\)(.*)/', $ordenar_coluna, $match);
+		preg_match('/(.*)\((.*?)\)(.*)/', $numColunaOrdem, $match);
 		if(isset($match[2])){
 			$parametros = explode(',',$match[2]);
-			$order = $parametros[0];
-		}else{
-			$order = $ordenar_coluna;
+			$numColunaOrdem = $parametros[0];
 		}
+
 
 		echo 
 			"<div id='ajaxCall'>
 				<script type='text/javascript' language='javascript'>
 					$(document).ready(function(){
-						var dataTable = $('#contex-grid-".$rand."').DataTable({
+						var dataTable = $('#contex-grid-{$rand}').DataTable({
 							'processing': true,
 							'serverSide': true,
 							'bFilter': false,
 							'sEcho': true,
-							'lengthMenu': [ [10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos'] ],
-							'pageLength': ".$paginar.",
-							'order': [".$order.", '".$ordenar_sentido."'],
+							'lengthMenu': [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos']],
+							
+							'order': [{$numColunaOrdem}, '{$sentidoOrdem}'],
 							'ajax':{
-								'url' :'".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/server-side.php', // json datasource
-								'type': 'post',  // method  , by default get
+								'url' :'{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/server-side.php', // json datasource
+								'type': 'post',  // method, by default get
 								'data': {
-									'path': '".$CONTEX["path"]."',
-									'arquivo': '".$_SERVER["DOCUMENT_ROOT"].strtok($_SERVER["SCRIPT_NAME"], "?")."',
+									'path': '{$CONTEX["path"]}',
+									'arquivo': '{$_SERVER["DOCUMENT_ROOT"]}".strtok($_SERVER["SCRIPT_NAME"], "?")."',
 									'sql': '".base64_encode($sql)."',
-									'columns': ["."'".implode("','", $valores)."']
+									'columns': ['".implode("','", $valores)."']
 								},
 								error: function (request, error) {
 									console.log(request);
@@ -246,8 +185,8 @@
 								}
 							}
 						});
-						// console.log(dataTable);
 					});
+					
 					document.getElementById('ajaxCall').innerHTML = '';
 				</script>
 			</div>"
