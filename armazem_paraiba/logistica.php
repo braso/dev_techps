@@ -74,7 +74,7 @@
         $dataFim = $data . ' 23:59:59';
         
         // Prepare a consulta SQL
-        $sql = "SELECT pont_nb_id, pont_tx_data, macr_tx_nome, moti_tx_nome, moti_tx_legenda, pont_tx_justificativa, user_tx_login, pont_tx_dataCadastro, pont_tx_latitude, pont_tx_longitude FROM ponto
+        $sql = "SELECT pont_nb_id, pont_tx_data, macr_tx_nome, moti_tx_nome, moti_tx_legenda, pont_tx_justificativa, user_tx_login, pont_tx_dataCadastro, pont_tx_latitude, pont_tx_longitude,pont_tx_placa FROM ponto
                 JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
                 JOIN user ON ponto.pont_nb_userCadastro = user.user_nb_id
                 LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
@@ -542,22 +542,39 @@
                 </h2>
                 <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
                     <div class="accordion-body">
-                        <table class="table table-striped table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>Data</th>
-                                    <th>Tipo</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($pontos as $ponto): ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($ponto['pont_tx_data']); ?></td>
-                                        <td><?php echo htmlspecialchars($ponto['macr_tx_nome']); ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                    <table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th>Data</th>
+            <th>Tipo</th>
+            <th>Placa</th>
+            <th>Legenda</th>
+            <th>Local</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php foreach ($pontos as $ponto): ?>
+            <tr>
+                <td><?php echo htmlspecialchars($ponto['pont_tx_data']); ?></td>
+                <td><?php echo htmlspecialchars($ponto['macr_tx_nome']); ?></td>
+                <td><?php echo htmlspecialchars($ponto['pont_tx_placa']); ?></td>
+                <td><?php echo htmlspecialchars($ponto['pont_tx_legenda']); ?></td>
+                <td>
+                    <?php if (!empty($ponto['pont_tx_latitude']) && !empty($ponto['pont_tx_longitude'])): ?>
+                        <a href="https://www.google.com/maps?q=<?php echo $ponto['pont_tx_latitude'] . ',' . $ponto['pont_tx_longitude']; ?>" 
+                           target="_blank" 
+                           title="Ver no Google Maps">
+                            <i class="fa fa-map" style="color: #183153; font-size: 1.5em;"></i>
+                        </a>
+                    <?php else: ?>
+                        <span>Sem localização</span>
+                    <?php endif; ?>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+    </tbody>
+</table>
+
                     </div>
                 </div>
             </div>
