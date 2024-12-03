@@ -1,5 +1,10 @@
 deployment:
   tasks:
-    - export GITPATH=/home/techpsjornada/repositories/dev_techps/*
-    - export DEPLOYPATH=/home/techpsjornada/public_html/dev/
-    - /bin/cp -R $GITPATH $DEPLOYPATH 
+    - export GENERAL=/home/techpsjornada/repositories/dev/*
+    - export GENERALDEPLOY=/home/techpsjornada/public_html/dev
+    - /bin/cp -R $GENERAL $GENERALDEPLOY
+
+    - export DOMAIN=/home/techpsjornada/repositories/dev/armazem_paraiba/*
+    - export OPAFRUTAS=/home/techpsjornada/public_html/dev/opafrutas
+
+    - /bin/cp -R $DOMAIN $OPAFRUTAS
