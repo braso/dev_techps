@@ -13,8 +13,10 @@
 			<div class='emissao' style="display: block !important;">
 				<h1 class="titulo2">Relatorio <?= $titulo ?></h1>
 				<span></span>
-				<?= $dataEmissao."<br>"
-					. "<b>Período do relatório:</b> ".$periodoRelatorio["dataInicio"]." a ".$periodoRelatorio["dataFim"] ?>
+				<?php $dataEmissao;
+					if(!empty($periodoRelatorio)){
+					"<br> <b>Período do relatório:</b> ".$periodoRelatorio["dataInicio"]." a ".$periodoRelatorio["dataFim"];
+					} ?>
 				<br>
 				<?php if (!empty($empresa["empr_tx_nome"])) { ?>
 					<span><b>Empresa:</b> <?= $empresa["empr_tx_nome"] ?></span>

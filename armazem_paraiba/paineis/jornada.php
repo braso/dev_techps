@@ -11,6 +11,7 @@
 
     require "../funcoes_ponto.php";
     require_once __DIR__."/funcoes_paineis.php";
+    // criar_relatorio_jornada();
  
     function carregarJS(array $arquivos) {
 
@@ -33,9 +34,9 @@
         foreach ($arquivos as $arquivo) {
             $carregarDados .= "carregarDados('".$arquivo."');";
         }
-
+        
         echo
-        "<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"])."'>
+        "<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"]). "'>
                     <input type='hidden' name='acao'>
                     <input type='hidden' name='campoAcao'>
                     <input type='hidden' name='empresa'>
@@ -67,7 +68,7 @@
                                     var row = {};
                                     $.each(data, function(index, item){
                                         console.log(item);
-
+                                        
                                         function processaCampo(campo,diferencaDias, hora) {
                                             // Só aplicar a lógica se a data não for a atual
                                             const [horas, minutos] = hora.split(':').map(Number);
@@ -80,22 +81,44 @@
                                             const horaAtual = new Date(); // Hora atual
                                             const diferencaMilliseconds = horaAtual - horaEspecifica; // Diferença em milissegundos
                                             const diferencaHoras = Math.floor(diferencaMilliseconds / (1000 * 60 * 60)); // Converte para horas
+                                            // Converte a diferença restante para minutos
+                                            const diferencaMinutos = Math.floor((diferencaMilliseconds % (1000 * 60 * 60)) / (1000 * 60));
 
-                                            // Adiciona a diferença de dias em horas
-                                            const totalHoras = diferencaHoras + (diferencaDias * 24);
-                                            const horasFormatadas = Math.floor(totalHoras);
-                                            const minutosFormatados = Math.round((totalHoras - horasFormatadas) * 60);
+                                            // Adiciona a diferença de dias em horas (se necessário)
+                                            const totalHoras = diferencaHoras + (diferencaDias * 24); 
 
-                                            const resultadoFormatado = `\${horasFormatadas}:\${String(minutosFormatados).padStart(2, '0')}`;
+                                            // Formatação de horas e minutos
+                                            const horasFormatadas = totalHoras % 24; // Mantém o formato de 24 horas (0 a 23)
+                                            const minutosFormatados = diferencaMinutos;
+                                            
+                                            const resultadoFormatado = String(horasFormatadas).padStart(2, '0') + ':' + String(minutosFormatados).padStart(2, '0');
 
                                             // console.log(resultadoFormatado);
                                             if(diferencaDias !== 0){
-                                                return resultadoFormatado+' D+' + diferencaDias;
+                                                return ' ( D+' + diferencaDias + ' ) + ' + resultadoFormatado;
                                             }
                                             return campo;
                                         }
 
                                         var diferencaDias = item.diaDiferenca;
+                                        const horaAtual = new Date(); 
+
+                                        const [horasEspecificas, minutosEspecificos] = item.jornadaDia.split(':').map(Number);
+                                        
+                                        const horaEspecifica = new Date(horaAtual);
+                                        horaEspecifica.setHours(horasEspecificas, minutosEspecificos, 0, 0);
+                                        
+                                        const diferencaMilliseconds = horaAtual - horaEspecifica;
+
+                                        const diferencaTotalHoras = diferencaMilliseconds / (1000 * 60 * 60);
+                                        
+                                        const diferencaHoras = Math.floor(diferencaTotalHoras); // Parte inteira das horas
+                                        const diferencaMinutos = Math.round((diferencaTotalHoras - diferencaHoras) * 60)
+                                        const resultadoFormatado = `\${diferencaHoras}:\${String(diferencaMinutos) . padStart(2, '0')}`;
+                                        console.log(`Diferença em horas: \${resultadoFormatado}`);
+
+                                        // if(){
+                                        // }
 
                                         var jornada = processaCampo(item.jornada, diferencaDias, item.inicioJornada);
                                         var refeicao = item.refeicao;
@@ -190,11 +213,6 @@
     }
 
     function index() {
-
-        if (empty($_POST["busca_dataMes"])) {
-            $_POST["busca_dataMes"] = date("Y-m");
-        }
-
         cabecalho("Relatorio de Jornada Aberta");
 
         // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
@@ -202,7 +220,8 @@
 
         $campos = [
             combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
-            campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
+            combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
+            ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
         ];
 
         $botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
@@ -222,7 +241,7 @@
         $path = "./arquivos/jornada";
         $periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
-        if (!empty($_POST["empresa"]) && !empty($_POST["busca_dataMes"])) {
+        if (!empty($_POST["empresa"])) {
              require_once "funcoes_paineis.php";
             //  $tempoInicio = microtime(true);
              criar_relatorio_jornada();
@@ -237,7 +256,7 @@
                     LIMIT 1;"
             ));
 
-            $path .= "/".$_POST["busca_dataMes"]."/".$empresa["empr_nb_id"];
+            $path .= "/".$empresa["empr_nb_id"];
 
             if (is_dir($path)) {
                 $pasta = dir($path);
@@ -255,11 +274,6 @@
                 if (!empty($arquivo)) {
                     $dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($arquivo)); //Utilizado no HTML.
                     $arquivoGeral = json_decode(file_get_contents($arquivo), true);
-
-                    $periodoRelatorio = [
-                        "dataInicio" => $arquivoGeral[0]["dataInicio"],
-                        "dataFim" => $arquivoGeral[0]["dataFim"]
-                    ];
 
                     $encontrado = true;
                 } else {
