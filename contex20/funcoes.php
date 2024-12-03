@@ -227,7 +227,7 @@
 			$registered = mysqli_stmt_execute($statement);
 			
 			if(!$registered){
-				throw new Exception($statement->error);
+				return [new Exception($statement->error)];
 			}
 			mysqli_stmt_close($statement);
 			
@@ -237,7 +237,7 @@
 		}
 
 		$result = mysqli_fetch_assoc(query(
-			"SELECT ".substr($tabela, 0, 4)."_nb_id FROM $tabela ORDER BY ".substr($tabela, 0, 4)."_nb_id DESC LIMIT 1;"
+			"SELECT ".substr($tabela, 0, 4)."_nb_id FROM {$tabela} ORDER BY ".substr($tabela, 0, 4)."_nb_id DESC LIMIT 1;"
 		));
 
 		return (is_array($result)? [$result[substr($tabela, 0, 4)."_nb_id"]]: []);
