@@ -236,11 +236,12 @@
 			return [$e];
 		}
 
+		$tabIdName = substr($tabela, 0, 4)."_nb_id";
 		$result = mysqli_fetch_assoc(query(
-			"SELECT ".substr($tabela, 0, 4)."_nb_id FROM {$tabela} ORDER BY ".substr($tabela, 0, 4)."_nb_id DESC LIMIT 1;"
+			"SELECT {$tabIdName} FROM {$tabela} ORDER BY {$tabIdName} DESC LIMIT 1;"
 		));
 
-		return (is_array($result)? [$result[substr($tabela, 0, 4)."_nb_id"]]: []);
+		return (is_array($result)? [$result[$tabIdName]]: []);
 	}
 
 	function atualizar(string $tabela, array $campos, array $valores, string $id): void{
@@ -311,9 +312,9 @@
 	// }
 
 	function ultimo_reg($tabela){
-		$campo = substr($tabela,0,4)."_nb_id";
+		$tabIdName = substr($tabela,0,4)."_nb_id";
 
-		$sql=query("SELECT $campo FROM $tabela ORDER BY $campo DESC LIMIT 1;");
+		$sql=query("SELECT {$tabIdName} FROM {$tabela} ORDER BY {$tabIdName} DESC LIMIT 1;");
 		return mysqli_fetch_array($sql, MYSQLI_BOTH)[0];
 	}
 

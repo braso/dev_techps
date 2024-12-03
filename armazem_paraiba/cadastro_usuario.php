@@ -160,7 +160,7 @@
 			$usuario["user_tx_dataCadastro"] = date("Y-m-d H:i:s");
 
 			$id = inserir("user", array_keys($usuario), array_values($usuario));
-			$_POST["id"] = ultimo_reg("user");
+			$_POST["id"] = $id;
 			modificarUsuario();
 			exit;
 		}
