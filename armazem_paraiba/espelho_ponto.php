@@ -176,141 +176,143 @@
 
 		$opt = "";
 		//Buscar Espelho{
-		if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
-			global $totalResumo;
+			if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
+				global $totalResumo;
 
-			if(!empty($_POST["busca_motorista"])){
-				$aMotorista = carregar("entidade", $_POST["busca_motorista"]);
-				$aEmpresa = carregar("empresa", $aMotorista["enti_nb_empresa"]);
-			}			
-
-			echo   
-				"<div style='display:none' id='tituloRelatorio'>
-					<h1>Espelho de Ponto</h1>
-					<img id='logo' style='width: 150px' src='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
-				</div>"
-			;
-
-			// Converte as datas para objetos DateTime
-			[$startDate, $endDate] = [new DateTime($_POST["busca_periodo"][0]), new DateTime($_POST["busca_periodo"][1])];
-
-			$aDia = [];
-			// Loop for para percorrer as datas
-			for ($date = $startDate; $date <= $endDate; $date->modify("+1 day")){
-				$dataVez = $date->format("Y-m-d");
-				$aDetalhado = diaDetalhePonto($aMotorista["enti_tx_matricula"], $dataVez);
-				
-				$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $dataVez, $aMotorista["enti_nb_id"])], $aDetalhado));
-				for($f = 0; $f < sizeof($row)-1; $f++){
-					if(in_array($f, [3, 4, 5, 6, 12])){//Se for das colunas de jornada, refeição ou "Jornada Prevista", não apaga
-						continue;
-					}
-					if($row[$f] == "00:00"){
-						$row[$f] = "";
-					}
+				if(!empty($_POST["busca_motorista"])){
+					$aMotorista = carregar("entidade", $_POST["busca_motorista"]);
+					$aEmpresa = carregar("empresa", $aMotorista["enti_nb_empresa"]);
 				}
-				$aDia[] = $row;
-			}
-			criarFuncoesDeAjuste();
 
-
-			$parametroPadrao = "Convenção Não Padronizada, Semanal (".$aMotorista["enti_tx_jornadaSemanal"]."), Sábado (".$aMotorista["enti_tx_jornadaSabado"].")";
-
-			if(!empty($aEmpresa["empr_nb_parametro"])){
-				$parametroEmpresa = mysqli_fetch_assoc(query(
-					"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percHESemanal, para_tx_percHEEx, para_nb_id, para_tx_nome, para_tx_jornadaSemanal, para_tx_jornadaSabado FROM parametro"
-						." WHERE para_tx_status = 'ativo'"
-							." AND para_nb_id = ".$aEmpresa["empr_nb_parametro"]
-						." LIMIT 1;"
-				));
-				if(array_keys(array_intersect($parametroEmpresa, $aMotorista)) == ["para_tx_jornadaSemanal", "para_tx_jornadaSabado", "para_tx_percHESemanal", "para_tx_percHEEx", "para_nb_id"]){
-					$parametroPadrao = "Convenção Padronizada: ".$parametroEmpresa["para_tx_nome"].", Semanal (".$parametroEmpresa["para_tx_jornadaSemanal"]."), Sábado (".$parametroEmpresa["para_tx_jornadaSabado"].")";
-				}
-			}
-
-			$ultimoEndosso = mysqli_fetch_assoc(query(
-					"SELECT endo_tx_filename FROM endosso"
-						." WHERE endo_tx_status = 'ativo'"
-							." AND endo_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'"
-							." AND endo_tx_ate < '".$_POST["busca_periodo"][0]."'"
-						." ORDER BY endo_tx_ate DESC"
-						." LIMIT 1;"
-			));
-
-			
-			
-			$saldoAnterior = "";
-			if(!empty($ultimoEndosso)){
-				$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
-				$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoFinal"];
-			}elseif(!empty($aMotorista["enti_tx_banco"])){
-				$saldoAnterior = $aMotorista["enti_tx_banco"];
-				$saldoAnterior = $saldoAnterior[0] == "0" && strlen($saldoAnterior) > 5? substr($saldoAnterior, 1): $saldoAnterior;
-			}
-
-
-			$saldoFinal = $totalResumo["diffSaldo"];
-			if(!empty($saldoAnterior)){
-				$saldoFinal = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
-			}
-			
-
-			$saldosMotorista = "SALDOS: <br>
-				<div class='table-responsive'>
-					<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
-						<thead>
-							<tr>
-								<th>Anterior:</th>
-								<th>Período:</th>
-								<th>Final:</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr>
-								<td>".($saldoAnterior?? "--:--")."</td>
-								<td>".($totalResumo["diffSaldo"]?? "--:--")."</td>
-								<td>".($saldoFinal?? "--:--")."</td>
-							</tr>
-						</tbody>
-					</table>
+				echo   
+					"<div style='display:none' id='tituloRelatorio'>
+						<h1>Espelho de Ponto</h1>
+						<img id='logo' style='width: 150px' src='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
 					</div>"
-			;
+				;
+
+				// Converte as datas para objetos DateTime
+				[$startDate, $endDate] = [new DateTime($_POST["busca_periodo"][0]), new DateTime($_POST["busca_periodo"][1])];
+
+				$rows = [];
+				// Loop for para percorrer as datas
+				for ($date = $startDate; $date <= $endDate; $date->modify("+1 day")){
+					$dataVez = $date->format("Y-m-d");
+					$aDetalhado = diaDetalhePonto($aMotorista["enti_tx_matricula"], $dataVez);
 					
-			$periodoPesquisa = "De ".date("d/m/Y", strtotime($_POST["busca_periodo"][0]))." até ".date("d/m/Y", strtotime($_POST["busca_periodo"][1]));
-		
-			abre_form(
-				"<div>"
-					.$aEmpresa["empr_tx_nome"]."<br>"
-					."[".$aMotorista["enti_tx_matricula"]."] ".$aMotorista["enti_tx_nome"]."<br>"
-					.$parametroPadrao."<br><br>"
-					.$periodoPesquisa."<br>"
-				."</div>"
-				.$saldosMotorista
-			);
+					$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $dataVez, $aMotorista["enti_nb_id"])], $aDetalhado));
+					for($f = 0; $f < sizeof($row)-1; $f++){
+						if(in_array($f, [3, 4, 5, 6, 12])){//Se for das colunas de jornada, refeição ou "Jornada Prevista", não apaga
+							continue;
+						}
+						if($row[$f] == "00:00"){
+							$row[$f] = "";
+						}
+					}
+					$rows[] = $row;
+				}
 
-			$cab = [
-				"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
-				"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "H.E. ".$aMotorista["enti_tx_percHESemanal"]."%", "H.E. ".$aMotorista["enti_tx_percHEEx"]."%",
-				"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
-			];
-			
-			$aDia[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumo));
-			
-			grid2($cab, $aDia, "Jornada Semanal (Horas): ".$aMotorista["enti_tx_jornadaSemanal"]);
-			fecha_form();
+				$parametroPadrao = "Convenção Não Padronizada, Semanal (".$aMotorista["enti_tx_jornadaSemanal"]."), Sábado (".$aMotorista["enti_tx_jornadaSabado"].")";
 
-			echo   
-				"<form name='form_ajuste_ponto' method='post'>
-					<input type='hidden' name='acao' value='layout_ajuste'>
-					<input type='hidden' name='busca_empresa' value='".$_POST["busca_empresa"]."'>
-					<input type='hidden' name='id' value='".$aMotorista["enti_nb_id"]."'>
-					<input type='hidden' name='HTTP_REFERER' value=''>
-					<input type='hidden' name='data'>
-					<input type='hidden' name='busca_empresa' value='".$aMotorista['enti_nb_empresa']."'>
-					<input type='hidden' name='busca_periodo' value='".$_POST["busca_periodo"]."'>
-				</form>"
-			;
-		}
+				if(!empty($aEmpresa["empr_nb_parametro"])){
+					$parametroEmpresa = mysqli_fetch_assoc(query(
+						"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percHESemanal, para_tx_percHEEx, para_nb_id, para_tx_nome, para_tx_jornadaSemanal, para_tx_jornadaSabado FROM parametro"
+							." WHERE para_tx_status = 'ativo'"
+								." AND para_nb_id = ".$aEmpresa["empr_nb_parametro"]
+							." LIMIT 1;"
+					));
+					if(array_keys(array_intersect($parametroEmpresa, $aMotorista)) == ["para_tx_jornadaSemanal", "para_tx_jornadaSabado", "para_tx_percHESemanal", "para_tx_percHEEx", "para_nb_id"]){
+						$parametroPadrao = "Convenção Padronizada: ".$parametroEmpresa["para_tx_nome"].", Semanal (".$parametroEmpresa["para_tx_jornadaSemanal"]."), Sábado (".$parametroEmpresa["para_tx_jornadaSabado"].")";
+					}
+				}
+
+				$ultimoEndosso = mysqli_fetch_assoc(query(
+						"SELECT endo_tx_filename FROM endosso"
+							." WHERE endo_tx_status = 'ativo'"
+								." AND endo_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'"
+								." AND endo_tx_ate < '".$_POST["busca_periodo"][0]."'"
+							." ORDER BY endo_tx_ate DESC"
+							." LIMIT 1;"
+				));
+
+				
+				
+				$saldoAnterior = "";
+				if(!empty($ultimoEndosso)){
+					$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
+					$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoFinal"];
+				}elseif(!empty($aMotorista["enti_tx_banco"])){
+					$saldoAnterior = $aMotorista["enti_tx_banco"];
+					$saldoAnterior = $saldoAnterior[0] == "0" && strlen($saldoAnterior) > 5? substr($saldoAnterior, 1): $saldoAnterior;
+				}
+
+
+				$saldoFinal = $totalResumo["diffSaldo"];
+				if(!empty($saldoAnterior)){
+					$saldoFinal = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
+				}
+				
+
+				$saldosMotorista = "SALDOS: <br>
+					<div class='table-responsive'>
+						<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
+							<thead>
+								<tr>
+									<th>Anterior:</th>
+									<th>Período:</th>
+									<th>Final:</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td>".($saldoAnterior?? "--:--")."</td>
+									<td>".($totalResumo["diffSaldo"]?? "--:--")."</td>
+									<td>".($saldoFinal?? "--:--")."</td>
+								</tr>
+							</tbody>
+						</table>
+						</div>"
+				;
+						
+				$periodoPesquisa = "De ".date("d/m/Y", strtotime($_POST["busca_periodo"][0]))." até ".date("d/m/Y", strtotime($_POST["busca_periodo"][1]));
+			
+				abre_form(
+					"<div>"
+						.$aEmpresa["empr_tx_nome"]."<br>"
+						."[".$aMotorista["enti_tx_matricula"]."] ".$aMotorista["enti_tx_nome"]."<br>"
+						.$parametroPadrao."<br><br>"
+						.$periodoPesquisa."<br>"
+					."</div>"
+					.$saldosMotorista
+				);
+
+				$cabecalho = [
+					"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
+					"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "H.E. ".$aMotorista["enti_tx_percHESemanal"]."%", "H.E. ".$aMotorista["enti_tx_percHEEx"]."%",
+					"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
+				];
+				
+				$rows[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumo));
+				
+				echo montarTabelaPonto($cabecalho, $rows, "Jornada Semanal (Horas): {$aMotorista["enti_tx_jornadaSemanal"]}");
+				fecha_form();
+
+				unset($_POST["errorFields"]);
+				$params = array_merge($_POST, [
+					"acao" => "index",
+					"idMotorista" => null,
+					"data" => null,
+					"HTTP_REFERER" => (!empty($_POST["HTTP_REFERER"])? $_POST["HTTP_REFERER"]: $_SERVER["REQUEST_URI"])
+				]);
+
+				echo criarHiddenForm(
+					"form_ajuste_ponto",
+					array_keys($params),
+					array_values($params),
+					"ajuste_ponto.php"
+				);
+				unset($params);
+			}
 		//}
 		
 		echo carregarJS($opt);
@@ -323,15 +325,20 @@
 	function carregarJS($opt): string{
 		
 		$select2URL = 
-			$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php"
-			."?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]
+			"{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/select2.php"
+			."?path={$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}"
 			."&tabela=entidade"
 			."&extra_limite=15"
-			."&extra_busca=enti_tx_matricula"
+			."&extra_busca=enti_tx_matricula";
 		;
 
 		return 
 			"<script>
+					function ajustarPonto(idMotorista, data){
+						document.form_ajuste_ponto.idMotorista.value = idMotorista;
+						document.form_ajuste_ponto.data.value = data;
+						document.form_ajuste_ponto.submit();
+					}
 
 				function selecionaMotorista(idEmpresa){
 					let buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")');
@@ -350,7 +357,7 @@
 						placeholder: 'Selecione um item',
 						allowClear: true,
 						ajax: {
-							url: '".$select2URL."'+buscaExtra,
+							url: '{$select2URL}'+buscaExtra,
 							dataType: 'json',
 							delay: 250,
 							processResults: function(data){
@@ -361,18 +368,6 @@
 							cache: true
 						}
 					});
-				}
-
-				function updateValues(){
-					if(".(!empty($_POST["busca_empresa"])? $_POST["busca_empresa"]: 0)." !== 0){
-						empresa = document.getElementById('busca_empresa').value;
-						selecionaMotorista(empresa);
-
-						if(".(!empty($_POST["busca_motorista"])?1:0)."){
-							document.getElementById('busca_motorista').innerHTML = '".$opt."';
-							alert(document.getElementById('busca_motorista').value);
-						}
-					}
 				}
 
 				function imprimir(){

@@ -4,10 +4,11 @@ body {
     --var-red: #ec4141;
     --var-darkred: #a30000;
     --var-lightred: #C41212;
-    --var-yellow2: #f8d756;
+    --var-yellow2: #FFF260;
+    --var-yellow3: #FFE800;
     --var-yellow: #f1c61f;
-    --var-orange: #FFB520;
-    --var-lightorange: #FFC552;
+    --var-orange: #FF8B00;
+    --var-lightorange: #FF9F2C;
     --var-lightyellow: #ffff75;
     --var-darkyellow: #c1a300;
     --var-green: #53d02a;
@@ -18,12 +19,36 @@ body {
 .tituloPerformance {
     background-color: var(--var-darkgreen);
     color: white;
-    cursor: pointer;
+}
+
+.tituloBaixaGravidade2 {
+    background-color: var(--var-yellow3);
+    /* color: white; */
+}
+
+.tituloMediaGravidade2 {
+    background-color: var(--var-orange);
+}
+
+.tituloAltaGravidade2 {
+    background-color: var(--var-darkred);
+    color: white;
 }
 
 .tituloBaixaGravidade {
-    background-color: var(--var-yellow);
+    background-color: var(--var-yellow3);
     /* color: white; */
+    cursor: pointer;
+}
+
+.tituloMediaGravidade {
+    background-color: var(--var-orange);
+    cursor: pointer;
+}
+
+.tituloAltaGravidade {
+    background-color: var(--var-darkred);
+    color: white;
     cursor: pointer;
 }
 
@@ -33,20 +58,9 @@ body {
     text-align: center;
 }
 
-.tituloMediaGravidade {
-    background-color: var(--var-orange);
-    cursor: pointer;
-}
-
 .mediaGravidade {
     background-color: var(--var-lightorange);
     text-align: center;
-}
-
-.tituloAltaGravidade {
-    background-color: var(--var-darkred);
-    color: white;
-    cursor: pointer;
 }
 
 .altaGravidade {
@@ -69,8 +83,8 @@ body {
 
 
 .tituloBaixaGravidade:hover {
-    background-color: var(--var-yellow2);
-    color: white;
+    background-color: var(--var-lightyellow);
+    /* color: white; */
     cursor: pointer;
 }
 
@@ -233,21 +247,31 @@ th.sort-desc::after {
     display: none;
 }
 
-.saldo-final {
+#saldo-final {
     color: green;
 }
 
-.saldo-zero {
+#saldo-zero {
     color: blue;
 }
 
-.saldo-negativo {
+#saldo-negativo{
     color: red;
+}
+
+.jornada{
+    background-color: var(--var-red);
+    color: white;
+    text-align: center;
 }
 
 @media print {
     body {
         margin: 1cm;
+        transform: rotate(-90deg);
+        transform-origin: left top;
+        overflow: hidden;
+        position: absolute;
         margin-right: 0cm;
         transform: scale(0.99);
         transform-origin: top left;
@@ -371,6 +395,10 @@ th.sort-desc::after {
     thead tr.titulos th {
         box-shadow: 0 0 0 1000px #99ccff inset !important;
         /* Cor para impressão */
+    }
+
+    .jornada{
+        box-shadow: 0 0 0 1000px var(--var-red) inset !important;
     }
 
     .portlet.light {

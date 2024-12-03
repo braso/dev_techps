@@ -440,7 +440,7 @@
 				LIMIT 1"
 		), MYSQLI_BOTH);
 		if (!empty($aEndosso)){
-			$fields[] = texto("Endosso:", "Endossado por " . $aEndosso["user_tx_login"] . " em " . data($aEndosso["endo_tx_dataCadastro"], 1), 6);
+			$fields[] = texto("Endosso:", "Endossado por ".$aEndosso["user_tx_login"]." em ".data($aEndosso["endo_tx_dataCadastro"], 1), 6);
 			$botoesVisiveis = [];
 		}else{
 			$fields[] = campo("Placa do Veículo", "placa", ($_POST["placa"]?? ""), 2, "MASCARA_PLACA");
@@ -459,7 +459,7 @@
 			"PLACA"			=> "pont_tx_placa"
 		];
 
-		grid($sql, array_keys($gridFields), array_values($gridFields), "", "", 0, "desc", -1);
+		grid($sql, array_keys($gridFields), array_values($gridFields), "", "", 0, "desc");
 		rodape();
 
 

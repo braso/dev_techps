@@ -12,10 +12,7 @@
 		header("Access-Control-Allow-Methods: POST");
 
 	//Conferir campos obrigatórios{
-		if(
-			empty($_POST) || empty($_POST["path"]) || empty($_POST["columns"])
-			|| empty($_REQUEST)
-		){
+		if(empty($_POST) || empty($_POST["path"]) || empty($_POST["columns"]) || empty($_REQUEST)){
 			echo "Missing information. [".empty($_POST).", ".empty($_POST["path"]).", ".empty($_POST["columns"]).", ".empty($_REQUEST)."]";
 			exit;
 		}
@@ -26,10 +23,7 @@
 	
 	$columns = $_POST["columns"];
 	
-	$totalQuery = !empty($_POST["sql"])?
-		mysqli_fetch_all(query(base64_decode($_POST["sql"])), MYSQLI_ASSOC):
-		[]
-	;
+	$totalQuery = !empty($_POST["sql"])? mysqli_fetch_all(query(base64_decode($_POST["sql"])), MYSQLI_ASSOC): [];
 
 
 	$limit = ['start' => $_REQUEST['start'], 'length' => $_REQUEST['length']];
@@ -43,22 +37,6 @@
 	}else{
 		$limitedQuery = $totalQuery;
 	}
-
-	//EXEMPLO DO PREG_MATCH PARA EXTRAIR FUNCAO E SEUS PARAMETROS
-	// $text = 'This is a line (an example between parenthesis)';
-	// preg_match('/(.*)\((.*?)\)(.*)/', $text, $match);
-	// echo "in parenthesis: " . $match[2] . "<br>";
-	// echo "before and after: " . $match[1] . $match[3] . "<br>";
-
-	$nomeEmpresaMatriz = mysqli_fetch_assoc(
-		query(
-			"SELECT empr_tx_nome FROM empresa"
-			." WHERE empr_tx_status = 'ativo'"
-				." AND empr_tx_Ehmatriz = 'sim'"
-			." LIMIT 1;"
-		)
-	);
-	$nomeEmpresaMatriz = !empty($nomeEmpresaMatriz)? $nomeEmpresaMatriz['empr_tx_nome']: null;
 	
 	$data = [];
 	//Ordenar{
@@ -87,25 +65,18 @@
 		for($i = 0; $i < count($columns); $i++){
 			$row = (array)$row;
 			$text = $columns[$i];
-			preg_match('/(.*)\((.*?)\)(.*)/', $text, $match);
-			$isAFunction = !empty($match[2]);
-			if(!$isAFunction){
+
+			//Pegue se o texto for uma função com seus parâmetros
+			preg_match('/^\w+\((.*)\)$/', $text, $match);
+			
+			if(empty($match)){
 				$nestedData[] = !empty($row[$columns[$i]])? $row[$columns[$i]]: '';
-				if(!empty($nomeEmpresaMatriz)){
-					if($text == 'empr_tx_nome'){
-						$nomeEmpresaComIcone = $nomeEmpresaMatriz.'  <i class="fa fa-star" aria-hidden="true"></i>';
-						if (in_array($nomeEmpresaMatriz, $nestedData)) {
-							$indice = array_search($nomeEmpresaMatriz, $nestedData);
-							$nestedData[$indice] = $nomeEmpresaComIcone;
-						}
-					}
-				}
-			}elseif(!empty($match)){
-				$parametros = explode(',', $match[2]);
+			}else{
+				$parametros = explode(',', $match[1]);
 				$parametros[0] = $row[$parametros[0]];
 				if(!empty($parametros)){
 					try{
-						$result = call_user_func_array($match[1], $parametros);
+						$result = call_user_func_array(explode("(", $match[0])[0], $parametros);
 					}catch(TypeError $e){
 						$result = "";
 					}

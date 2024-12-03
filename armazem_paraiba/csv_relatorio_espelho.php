@@ -62,7 +62,7 @@
     $tabelaInfo3 = ["Espera Indenizada:","$totalResumo[esperaIndenizada]","","T","Outras fontes de marcação","","","","","","","","","","","",""];
     $tabelaInfo4 = ["","","","DSR","Descanso Semanal Remunerado e Abono","","","","","","","","","","","",""];
     $tabelaInfo5 = ["Horas Extras (50%) - a pagar:","$totalResumo[he50]","","*","Registros excluídos manualmente","","","","","","","","","","","",""];
-    $tabelaInfo6 = ["Horas Extras (100%) - a pagar:","$totalResumo[he100]","","D+1","Jornada terminada nos dias seguintes","","","","","","","","","","","","","Impressão Doc.:",date("d/m/Y \T H:i:s") . "(UTC-3)"];
+    $tabelaInfo6 = ["Horas Extras (100%) - a pagar:","$totalResumo[he100]","","D+1","Jornada terminada nos dias seguintes","","","","","","","","","","","","","Impressão Doc.:",date("d/m/Y \T H:i:s")."(UTC-3)"];
 
     fputcsv($arquivo, $espaco, ";");
     fputcsv($arquivo, $totalDias, ";");

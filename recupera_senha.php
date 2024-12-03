@@ -109,9 +109,9 @@
         $visibleLength = $userLength - $obscureLength;
     
         // Cria a parte obscurecida do usuário
-        $obscuredUser = substr($user, 0, $visibleLength) . str_repeat('*', $obscureLength);
+        $obscuredUser = substr($user, 0, $visibleLength).str_repeat('*', $obscureLength);
     
-        return $obscuredUser . '@' . $domain;
+        return $obscuredUser.'@'.$domain;
     }
 
 

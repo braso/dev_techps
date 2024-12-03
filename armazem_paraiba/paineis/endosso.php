@@ -33,10 +33,11 @@
                     +'<td>'+(invalidValues.includes(row.he100APagar) ? '' : row.he100APagar?? '')+'</td>'
                     +'<td>'+(invalidValues.includes(row.adicionalNoturno) ? '' : row.adicionalNoturno?? '')+'</td>'
                     +'<td>'+(invalidValues.includes(row.esperaIndenizada) ? '' : row.esperaIndenizada?? '')+'</td>'
-                    +'<td>'+(row.saldoAnterior?? '')+'</td>'
+                    +'<td id=\"'+(row.saldoAnterior > '00:00' ? 'saldo-final' : (row.saldoAnterior === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
+                    +(row.saldoAnterior?? '')+'</td>'
                     +'<td>'+(row.saldoPeriodo > '00:00' ? '<strong>' + row.saldoPeriodo + '</strong>' : (row.saldoPeriodo ?? ''))+'</td>'
-                   +'<td id='+(row.saldoFinal > '00:00' ? 'saldo-final' : (row.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+';\">'
-                    +(row.saldoFinal?? '')+'</td>'
+                   +'<td id=\"'+(row.saldoFinal > '00:00' ? 'saldo-final' : (row.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\";\">'
+                    +(row.saldoFinal?? '')+indicador+'</td>'
                 +'</tr>';";
         }else{
             $linha .= "+'<td class=\"nomeEmpresa\" style=\"cursor: pointer;\" onclick=\"setAndSubmit(' + row.empr_nb_id + ')\">'+row.empr_tx_nome+'</td>'
@@ -48,10 +49,11 @@
                     +'<td>'+(invalidValues.includes(row.totais.HESabado) ? '' : row.totais.HESabado)+'</td>'
                     +'<td>'+(invalidValues.includes(row.totais.adicionalNoturno) ? '' : row.totais.adicionalNoturno)+'</td>'
                     +'<td>'+(invalidValues.includes(row.totais.esperaIndenizada) ? '' : row.totais.esperaIndenizada)+'</td>'
-                    +'<td>'+(invalidValues.includes(row.totais.saldoAnterior) ? '' : row.totais.saldoAnterior)+'</td>'
+                    +'<td id=\"'+(row.totais.saldoAnterior > '00:00' ? 'saldo-final' : (row.totais.saldoAnterior === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\" >'
+                    +(row.totais.saldoAnterior == '00:00' ? '' : row.totais.saldoAnterior)+'</td>'
                     +'<td>'+(row.totais.saldoPeriodo > '00:00' ? '<strong>' + row.totais.saldoPeriodo + '</strong>' : (row.totais.saldoPeriodo ?? ''))+'</td>'
-                    +'<td id='+(row.saldoFinal > '00:00' ? 'saldo-final' : (row.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+';\">'
-                    +(row.saldoFinal?? '')+'</td>'
+                    +'<td id=\"'+(row.totais.saldoFinal > '00:00' ? 'saldo-final' : (row.totais.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
+                    +(row.totais.saldoFinal?? '')+indicador+'</td>'
                 +'</tr>';";
         }
 
@@ -61,7 +63,7 @@
         }
 
         echo
-        "<form name='myForm' method='post' action='" . htmlspecialchars($_SERVER["PHP_SELF"]) . "'>
+        "<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"])."'>
                 <input type='hidden' name='acao'>
                 <input type='hidden' name='atualizar'>
                 <input type='hidden' name='campoAcao'>
@@ -102,6 +104,25 @@
                                 $.each(data, function(index, item){
                                     row[index] = item;
                                 });
+                                var saldoAnterior = horasParaMinutos(row.saldoAnterior !== undefined ? row.saldoAnterior : row.totais.saldoAnterior);
+                                var saldoFinal = horasParaMinutos(row.saldoFinal !== undefined ? row.saldoFinal : row.totais.saldoFinal);
+                                var indicador = '';
+                                if (saldoAnterior >= 0 && saldoFinal >= 0) {
+                                    // Ambos os saldos são positivos
+                                    indicador = definirIndicador(saldoAnterior, saldoFinal);
+                                } else if (saldoAnterior >= 0 && saldoFinal <= 0) {
+                                    // Saldo anterior positivo e saldo final negativo
+                                    indicador = definirIndicador(saldoAnterior, saldoFinal);
+                                } else if (saldoAnterior <= 0 && saldoFinal >= 0) {
+                                    // Saldo anterior negativo e saldo final positivo
+                                    indicador = definirIndicador(saldoAnterior, saldoFinal);
+                                } else if (saldoAnterior <= 0 && saldoFinal <= 0) {
+                                    // Ambos os saldos são negativos
+                                    indicador = definirIndicador(saldoAnterior, saldoFinal);
+                                } else {
+                                    // Caso em que saldoAnterior é zero e saldoFinal é zero
+                                    indicador = ' <i class=\"fa fa-minus\" style=\"color: gray;\"></i>';
+                                }
                                 if(row.idMotorista != undefined){
                                     // Mostrar painel dos motoristas
                                     delete row.idMotorista;
@@ -126,15 +147,28 @@
                                     }
                                 }
                                 invalidValues = [undefined, '00:00'];
-                                "
-                                .$linha
-                                ."tabela.append(linha);
+                                {$linha}
+                                tabela.append(linha);
                             },
                             error: function(){
                                 console.log('Erro ao carregar os dados.');
                             }
                         });
                     }
+
+                    function definirIndicador(minutosColuna1, minutosColuna3) {
+                        if (minutosColuna1 < minutosColuna3) {
+                            // Se o valor de minutos da coluna 3 for maior (menos negativo ou positivo), é uma melhora.
+                            return ' <i class=\"fa fa-chevron-up\" style=\"color: green;\"></i>';
+                        } else if (minutosColuna1 > minutosColuna3) {
+                            // Se o valor de minutos da coluna 1 for maior (mais longe de zero), é pior.
+                            return ' <i class=\"fa fa-chevron-down\" style=\"color: red;\"></i>';
+                        } else {
+                            // Sem alteração, neutro.
+                            return ' <i class=\"fa fa-minus\" style=\"color: gray;\"></i>';
+                        }
+                    }
+
                     // Função para conversão de Horas para Minutos
                     function horasParaMinutos(horas) {
                         var partes = horas.split(':');
@@ -361,10 +395,10 @@
         if(!empty($_POST["empresa"]) && !empty($_POST["busca_data"])){
             //Painel dos endossos dos motoristas de uma empresa específica
             $empresa = mysqli_fetch_assoc(query(
-                "SELECT * FROM empresa"
-                ." WHERE empr_tx_status = 'ativo'"
-                    ." AND empr_nb_id = ".$_POST["empresa"]
-                ." LIMIT 1;"
+                "SELECT * FROM empresa
+                WHERE empr_tx_status = 'ativo'
+                    AND empr_nb_id = {$_POST["empresa"]}
+                LIMIT 1;"
             ));
             
             
@@ -373,11 +407,11 @@
             if(is_dir($path)){
                 $pastaSaldosEmpresa = dir($path);
                 $motoristas = mysqli_fetch_all(query(
-                "SELECT enti_tx_matricula, enti_tx_desligamento, enti_tx_admissao FROM entidade"
-                    . " WHERE enti_tx_status != 'ativo'"
-                    . " AND enti_nb_empresa = " . $empresa["empr_nb_id"]
-                    . " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
-                    . " ORDER BY enti_tx_nome ASC;"
+                    "SELECT enti_tx_matricula, enti_tx_desligamento, enti_tx_admissao FROM entidade
+                        WHERE enti_tx_status != 'ativo'
+                            AND enti_nb_empresa = {$empresa["empr_nb_id"]}
+                            AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')
+                        ORDER BY enti_tx_nome ASC;"
                 ), MYSQLI_ASSOC);
 
                 $dataBusca = new DateTime($_POST["busca_data"]);
@@ -386,13 +420,13 @@
                         $dataMotorista = new DateTime($motorista["enti_tx_desligamento"]);
                         $dataMotorista = $dataMotorista->format("Y-m");
                         if ($dataBusca > $dataMotorista) {
-                            $matriculasInativas = array_map(fn($matricula) => $matricula . ".json", array_column($motoristas, "enti_tx_matricula"));
+                            $matriculasInativas = array_map(fn($matricula) => $matricula.".json", array_column($motoristas, "enti_tx_matricula"));
                         }
                     } else {
                         $dataMotorista = new DateTime($motorista["enti_tx_admissao"]);
                         $dataMotorista = $dataMotorista->format("Y-m");
                         if ($dataBusca < $dataMotorista) {
-                            $matriculasInativas = array_map(fn($matricula) => $matricula . ".json", array_column($motoristas, "enti_tx_matricula"));
+                            $matriculasInativas = array_map(fn($matricula) => $matricula.".json", array_column($motoristas, "enti_tx_matricula"));
                         }
                     }
                 }
@@ -411,7 +445,24 @@
 
                 $pastaSaldosEmpresa->close();
 
-                $dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")); //Utilizado no HTML.
+                $dataArquivo = date("d/m/Y", filemtime($path . "/empresa_" . $empresa["empr_nb_id"] . ".json"));
+                $horaArquivo = date("H:i", filemtime($path . "/empresa_" . $empresa["empr_nb_id"] . ".json"));
+
+                $dataAtual = date("d/m/Y");
+                $horaAtual = date("H:i");
+                if($dataArquivo != $dataAtual){
+                    $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
+                    <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                } else {
+                    // Datas iguais: compara as horas
+                    // if ($horaArquivo < $horaAtual) {
+                    //     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
+                    // } else {
+                        $alertaEmissao = "<span>";
+                    // }
+                }
+
+                $dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")). "</span>"; //Utilizado no HTML.
                 $periodoRelatorio = json_decode(file_get_contents($path."/empresa_".$empresa["empr_nb_id"].".json"), true);
                 $periodoRelatorio = [
                     "dataInicio" => $periodoRelatorio["dataInicio"],
@@ -451,10 +502,10 @@
             //Painel geral das empresas
             $empresas = [];
             $logoEmpresa = mysqli_fetch_assoc(query(
-                "SELECT empr_tx_logo FROM empresa"
-                ." WHERE empr_tx_status = 'ativo'"
-                    ." AND empr_tx_Ehmatriz = 'sim'"
-                ." LIMIT 1;"
+                "SELECT empr_tx_logo FROM empresa
+                WHERE empr_tx_status = 'ativo'
+                    AND empr_tx_Ehmatriz = 'sim'
+                LIMIT 1;"
             ))["empr_tx_logo"];//Utilizado no HTML.
 
             $logoEmpresa = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$logoEmpresa;
@@ -464,7 +515,23 @@
 
             
             if(is_dir($path) && file_exists($path."/empresas.json")){
-                $dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresas.json")); //Utilizado no HTML.
+                $dataArquivo = date("d/m/Y H:i", filemtime($path . "/empresas.json"));
+                $horaArquivo = date("H:i", filemtime($path . "/empresas.json"));
+
+                $dataAtual = date("d/m/Y");
+                $horaAtual = date("H:i");
+                if($dataArquivo != $dataAtual){
+                    $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
+                    <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                } else {
+                    // Datas iguais: compara as horas
+                    // if ($horaArquivo < $horaAtual) {
+                    //     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
+                    // } else {
+                        $alertaEmissao = "<span>";
+                    // }
+                }
+                $dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresas.json"))."</span>"; //Utilizado no HTML.
                 $arquivoGeral = json_decode(file_get_contents($path."/empresas.json"), true);
 
                 $periodoRelatorio = [
@@ -552,66 +619,74 @@
             $rowTitulos = "<tr id='titulos' class='titulos'>";
 
             if(!empty($_POST["empresa"])){
-                $rowTotais .= 
-                    "<th colspan='2'>".$totais["empresaNome"]."</th>"
-                    ."<th colspan='1'></th>"
-                    ."<th colspan='1'></th>"
-                    ."<th colspan='1'>".$totais["jornadaPrevista"]."</th>"
-                    ."<th colspan='1'>".$totais["jornadaEfetiva"]."</th>"
-                    ."<th colspan='1'>".$totais["he50APagar"]."</th>"
-                    ."<th colspan='1'>".$totais["he100APagar"]."</th>"
-                    ."<th colspan='1'>".$totais["adicionalNoturno"]."</th>"
-                    ."<th colspan='1'>".$totais["esperaIndenizada"]."</th>"
-                    ."<th colspan='1'>".$totais["saldoAnterior"]."</th>"
-                    ."<th colspan='1'>".$totais["saldoPeriodo"]."</th>"
-                    ."<th colspan='1'>".$totais["saldoFinal"]."</th>";
-                ;
+                $rowTotais .= <<<EOD
+                    <th colspan='2'>{$totais["empresaNome"]}</th>
+                    <th colspan='1'></th>
+                    <th colspan='1'></th>
+                    <th colspan='1'>{$totais["jornadaPrevista"]}</th>
+                    <th colspan='1'>{$totais["jornadaEfetiva"]}</th>
+                    <th colspan='1'>{$totais["he50APagar"]}</th>
+                    <th colspan='1'>{$totais["he100APagar"]}</th>
+                    <th colspan='1'>{$totais["adicionalNoturno"]}</th>
+                    <th colspan='1'>{$totais["esperaIndenizada"]}</th>
+                    <th colspan='1'>{$totais["saldoAnterior"]}</th>
+                    <th colspan='1'>{$totais["saldoPeriodo"]}</th>
+                    <th colspan='1'>{$totais["saldoFinal"]}</th>"
+                EOD;
 
-                $rowTitulos .= 
-                    "<th class='matricula'>Matrícula</th>"
-                    ."<th class='nome'>Nome</th>"
-                    ."<th class='ocupacao'>Ocupação</th>"
-                    ."<th class='status'>Status Endosso</th>"
-                    ."<th class='jornadaPrevista'>Jornada Prevista</th>"
-                    ."<th class='jornadaEfetiva'>Jornada Efetiva</th>"
-                    ."<th class='he50APagar'>H.E. Semanal Pago</th>"
-                    ."<th class='he100APagar'>H.E. Ex. Pago</th>"
-                    ."<th class='adicionalNoturno'>Adicional Noturno</th>"
-                    ."<th class='esperaIndenizada'>Espera Indenizada</th>"
-                    ."<th class='saldoAnterior'>Saldo Anterior</th>"
-                    ."<th class='saldoPeriodo'>Saldo Período</th>"
-                    ."<th class='saldoFinal'>Saldo Final</th>"
-                ;
+                $rowTitulos .= <<<EOD
+                    <th class='matricula'>Matrícula</th>
+                    <th class='nome'>Nome</th>
+                    <th class='ocupacao'>Ocupação</th>
+                    <th class='status'>Status Endosso</th>
+                    <th class='jornadaPrevista'>Jornada Prevista</th>
+                    <th class='jornadaEfetiva'>Jornada Efetiva</th>
+                    <th class='he50APagar'>H.E. Semanal Pago</th>
+                    <th class='he100APagar'>H.E. Ex. Pago</th>
+                    <th class='adicionalNoturno'>Adicional Noturno</th>
+                    <th class='esperaIndenizada'>Espera Indenizada</th>
+                    <th class='saldoAnterior'>Saldo Anterior</th>
+                    <th class='saldoPeriodo'>Saldo Período</th>
+                    <th class='saldoFinal'>Saldo Final</th>
+                EOD;
             }else{
-                $rowTotais .= 
-                    "<th colspan='1'></th>"
-                    ."<th colspan='1'></th>"
-                    ."<th colspan='1'></th>"
-                    ."<th colspan='1'>".$totais["jornadaPrevista"]."</th>"
-                    ."<th colspan='1'>".$totais["jornadaEfetiva"]."</th>"
-                    ."<th colspan='1'> ".(($totais["he50APagar"] == "00:00")? "": $totais["he50APagar"])."</th>"
-                    ."<th colspan='1'> ".(($totais["he100APagar"] == "00:00")? "": $totais["he100APagar"])."</th>"
-                    ."<th colspan='1'> ".(($totais["adicionalNoturno"] == "00:00")? "": $totais["adicionalNoturno"])."</th>"
-                    ."<th colspan='1'> ".(($totais["esperaIndenizada"] == "00:00")? "": $totais["esperaIndenizada"])."</th>"
-                    ."<th colspan='1'> ".(($totais["saldoAnterior"] == "00:00")? "": $totais["saldoAnterior"])."</th>"
-                    ."<th colspan='1'> ".(($totais["saldoPeriodo"] == "00:00")? "": $totais["saldoPeriodo"])."</th>"
-                    ."<th colspan='1'> ".(($totais["saldoFinal"] == "00:00")? "": $totais["saldoFinal"])."</th>"
-                ;
+                $totais["he50APagar"] = ($totais["he50APagar"] == "00:00")? "": $totais["he50APagar"];
+                $totais["he100APagar"] = ($totais["he100APagar"] == "00:00")? "": $totais["he100APagar"];
+                $totais["adicionalNoturno"] = ($totais["adicionalNoturno"] == "00:00")? "": $totais["adicionalNoturno"];
+                $totais["esperaIndenizada"] = ($totais["esperaIndenizada"] == "00:00")? "": $totais["esperaIndenizada"];
+                $totais["saldoAnterior"] = ($totais["saldoAnterior"] == "00:00")? "": $totais["saldoAnterior"];
+                $totais["saldoPeriodo"] = ($totais["saldoPeriodo"] == "00:00")? "": $totais["saldoPeriodo"];
+                $totais["saldoFinal"] = ($totais["saldoFinal"] == "00:00")? "": $totais["saldoFinal"];
 
-                $rowTitulos .= 
-                    "<th data-column='nome' data-order='asc'>Nome da Empresa/Filial</th>"
-                    ."<th data-column='percEndossados' data-order='asc'>% Endossados</th>"
-                    ."<th data-column='qtdMotoristas' data-order='asc'>Qtd. Motoristas</th>"
-                    ."<th data-column='jornadaPrevista' data-order='asc'>Jornada Prevista</th>"
-                    ."<th data-column='JornadaEfetiva' data-order='asc'>Jornada Efetiva</th>"
-                    ."<th data-column='he50APagar' data-order='asc'>H.E. Semanal Pago</th>"
-                    ."<th data-column='he100APagar' data-order='asc'>H.E. Ex. Pago</th>"
-                    ."<th data-column='adicionalNoturno' data-order='asc'>Adicional Noturno</th>"
-                    ."<th data-column='esperaIndenizada' data-order='asc'>Espera Indenizada</th>"
-                    ."<th data-column='saldoAnterior' data-order='asc'>Saldo Anterior</th>"
-                    ."<th data-column='saldoPeriodo' data-order='asc'>Saldo Periodo</th>"
-                    ."<th data-column='saldoFinal' data-order='asc'>Saldo Final</th>"
-                ;
+                $rowTotais .= <<<EOD
+                    <th colspan='1'></th>
+                    <th colspan='1'></th>
+                    <th colspan='1'></th>
+                    <th colspan='1'>{$totais["jornadaPrevista"]}</th>
+                    <th colspan='1'>{$totais["jornadaEfetiva"]}</th>
+                    <th colspan='1'>{$totais["he50APagar"]}</th>
+                    <th colspan='1'>{$totais["he100APagar"]}</th>
+                    <th colspan='1'>{$totais["adicionalNoturno"]}</th>
+                    <th colspan='1'>{$totais["esperaIndenizada"]}</th>
+                    <th colspan='1'>{$totais["saldoAnterior"]}</th>
+                    <th colspan='1'>{$totais["saldoPeriodo"]}</th>
+                    <th colspan='1'>{$totais["saldoFinal"]}</th>
+                EOD;
+
+                $rowTitulos .= <<<EOD
+                    "<th data-column='nome' data-order='asc'>Nome da Empresa/Filial</th>
+                    <th data-column='percEndossados' data-order='asc'>% Endossados</th>
+                    <th data-column='qtdMotoristas' data-order='asc'>Qtd. Motoristas</th>
+                    <th data-column='jornadaPrevista' data-order='asc'>Jornada Prevista</th>
+                    <th data-column='JornadaEfetiva' data-order='asc'>Jornada Efetiva</th>
+                    <th data-column='he50APagar' data-order='asc'>H.E. Semanal Pago</th>
+                    <th data-column='he100APagar' data-order='asc'>H.E. Ex. Pago</th>
+                    <th data-column='adicionalNoturno' data-order='asc'>Adicional Noturno</th>
+                    <th data-column='esperaIndenizada' data-order='asc'>Espera Indenizada</th>
+                    <th data-column='saldoAnterior' data-order='asc'>Saldo Anterior</th>
+                    <th data-column='saldoPeriodo' data-order='asc'>Saldo Periodo</th>
+                    <th data-column='saldoFinal' data-order='asc'>Saldo Final</th>
+                EOD;
             }
             $rowTotais .= "</tr>";
             $rowTitulos .= "</tr>";
@@ -619,35 +694,39 @@
             $titulo = "de Endosso"; // usado no html
             include_once "painel_html.php";
 
-            echo "<div class='script'>";
-            echo "<script>";
             echo 
-                "document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.E;
-                document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.EP;
-                document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td')[1].innerHTML = endossos.totais.N;
-                document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.E*10000)/100+'%';
-                document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.EP*10000)/100+'%';
-                document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td')[2].innerHTML = Math.round(endossos.porcentagens.N*10000)/100+'%';
-                
-                document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.positivos;
-                document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.meta;
-                document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[1].innerHTML = saldos.totais.negativos;
-                document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td')[2].innerHTML = Math.round(saldos.porcentagens.positivos*10000)/100+'%';
-                document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td')[2].innerHTML = Math.round(saldos.porcentagens.meta*10000)/100+'%';
-                document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td')[2].innerHTML = Math.round(saldos.porcentagens.negativos*10000)/100+'%';"
-            ;
-            echo 
-                "document.getElementsByClassName('script')[0].innerHTML = '';
-                </script>"
+                "<div class='script'>
+                    <script>
+                        var porcentagemEndoTds = document.getElementsByClassName('porcentagemEndo')[0];
+                        var porcentagemEndoPcTds = document.getElementsByClassName('porcentagemEndoPc')[0];
+                        var porcentagemNaEndoTds = document.getElementsByClassName('porcentagemNaEndo')[0];
+                        porcentagemEndoTds[1].innerHTML = endossos.totais.E;
+                        porcentagemEndoPcTds[1].innerHTML = endossos.totais.EP;
+                        porcentagemNaEndoTds[1].innerHTML = endossos.totais.N;
+                        porcentagemEndoTds[2].innerHTML = Math.round(endossos.porcentagens.E*10000)/100+'%';
+                        porcentagemEndoPcTds[2].innerHTML = Math.round(endossos.porcentagens.EP*10000)/100+'%';
+                        porcentagemNaEndoTds[2].innerHTML = Math.round(endossos.porcentagens.N*10000)/100+'%';
+
+
+                        var porcentagemPosiTds = document.getElementsByClassName('porcentagemPosi')[0].getElementsByTagName('td');
+                        var porcentagemMetaTds = document.getElementsByClassName('porcentagemMeta')[0].getElementsByTagName('td');
+                        var porcentagemNegaTds = document.getElementsByClassName('porcentagemNega')[0].getElementsByTagName('td');
+                        porcentagemPosiTds[1].innerHTML = saldos.totais.positivos;
+                        porcentagemMetaTds[1].innerHTML = saldos.totais.meta;
+                        porcentagemNegaTds[1].innerHTML = saldos.totais.negativos;
+                        porcentagemPosiTds[2].innerHTML = Math.round(saldos.porcentagens.positivos*10000)/100+'%';
+                        porcentagemMetaTds[2].innerHTML = Math.round(saldos.porcentagens.meta*10000)/100+'%';
+                        porcentagemNegaTds[2].innerHTML = Math.round(saldos.porcentagens.negativos*10000)/100+'%';
+
+                        document.getElementsByClassName('script')[0].innerHTML = '';
+                    </script>
+                </div>"
             ;
         }else{
             if(!empty($_POST["acao"])){
                 echo "<script>alert('Não Possui dados desse mês')</script>";
             }
         }
-
-        echo "</div>";
-
         
         carregarJS($arquivos);
         rodape();

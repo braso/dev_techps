@@ -14,7 +14,7 @@
 		if ($aEmpresa["empr_nb_parametro"] > 0) {
 			echo 
 				"<script type='text/javascript'>
-					parent.document.contex_form.parametro.value = '".$aEmpresa["empr_nb_parametro"]."';
+					parent.document.contex_form.parametro.value = '{$aEmpresa["empr_nb_parametro"]}';
 					parent.document.contex_form.parametro.onchange();
 				</script>"
 			;
@@ -35,7 +35,7 @@
 				"SELECT parametro.* FROM empresa
 					JOIN parametro ON empresa.empr_nb_parametro = parametro.para_nb_id
 					WHERE para_tx_status = 'ativo'
-						AND empresa.empr_nb_id = ".$idEmpresa."
+						AND empresa.empr_nb_id = {$idEmpresa}
 					LIMIT 1;"
 			)
 		);
@@ -76,7 +76,7 @@
 					type: 'get',
         			dataType: 'json',
 					success: function(data) {
-						console.log(data.erro);
+						console.log(data);
 						if(data.erro == undefined){
 							parent.document.contex_form.endereco.value = data.logradouro
 							parent.document.contex_form.bairro.value = data.bairro;
@@ -89,6 +89,13 @@
 				});
 			</script>"
     	;
+		exit;
+	}
+
+	function showError(string $msg, array $errorFields){
+		$_POST["errorFields"] = $errorFields;
+		set_status("ERRO: {$msg}");
+		visualizarCadastro();
 		exit;
 	}
 
@@ -161,14 +168,18 @@
 		foreach($enti_campos as $bdKey => $postKey){
 			if(!empty($_POST[$postKey])){
 				$a_mod[$bdKey] = $_POST[$postKey];
-				$novoMotorista[$bdKey] = $a_mod[$bdKey];
+				$novoMotorista[$bdKey] = $_POST[$postKey];
 			}
+		}
+		if(!empty($_POST["desligamento"])){
+			$novoMotorista["enti_tx_desligamento"] = $_POST["desligamento"];
 		}
 		unset($enti_campos);
 
 		if(isset($novoMotorista["enti_nb_salario"])){
 			$novoMotorista["enti_nb_salario"] = str_replace([".", ","], ["", "."], $novoMotorista["enti_nb_salario"]);
 		}
+
 
 		//Conferir se os campos obrigatórios estão preenchidos{
 			$camposObrig = [
@@ -198,7 +209,7 @@
 				"cnhValidade" 				=> "Validade do CNH",
 				"cnhPrimeiraHabilitacao" 	=> "1° Habilitação"
 			];
-			if(empty($a_mod["enti_tx_matricula"])){
+			if(empty($novoMotorista["enti_tx_matricula"])){
 				$camposObrig["postMatricula"] = "Matrícula";
 			}
 			if(in_array($_POST["ocupacao"], ["Ajudante", "Funcionário"])){
@@ -216,81 +227,73 @@
 			}
 			$errorMsg = conferirCamposObrig($camposObrig, $_POST);
 			if(!empty($errorMsg)){
-				set_status("ERRO: ".$errorMsg);
-				visualizarCadastro();
-				exit;
+				showError($errorMsg, $_POST["errorFields"]);
 			}
 			unset($camposObrig);
 		//}
 
-		$matriculaExistente = mysqli_fetch_assoc(query(
-			"SELECT * FROM entidade"
-				." WHERE enti_tx_matricula = '".($_POST["postMatricula"]?? "-1")."'"
-			." LIMIT 1;"
-		));
-		$matriculaExistente = !empty($matriculaExistente);
-
-		if($matriculaExistente && !isset($_POST["id"])){
-			$_POST["errorFields"][] = "postMatricula";
-			set_status("ERRO: Matrícula já cadastrada");
-			visualizarCadastro();
-			exit;
-		}
-
-		if(!empty($_POST["postMatricula"]) && strlen($_POST["postMatricula"]) > 11){
-			$_POST["errorFields"][] = "postMatricula";
-			set_status("ERRO: Matrícula com mais de 11 caracteres.");
-			visualizarCadastro();
-			exit;
-		}
-
-		if(!empty($_POST["login"])){
-			$otherUser = mysqli_fetch_assoc(query(
-				"SELECT user.* FROM user"
-					." JOIN entidade ON user_nb_entidade = enti_nb_id"
-					." WHERE user_tx_status = 'ativo'"
-						." AND user_tx_login = '".$_POST["login"]."'"
-						.(!empty($_POST["id"])? " AND enti_nb_id <> ".$_POST["id"]: "")
+		//Conferir se a matrícula já existe{
+			if(!isset($_POST["id"]) && !empty($_POST["postMatricula"])){
+				$matriculaExistente = !empty(mysqli_fetch_assoc(query(
+					"SELECT * FROM entidade"
+						." WHERE enti_tx_matricula = '".($_POST["postMatricula"]?? "-1")."'"
 					." LIMIT 1;"
-			));
-			if(!empty($otherUser)){
-				$_POST["errorFields"][] = "login";
-				set_status("ERRO: Login já cadastrado.");
-				$a_mod = $_POST;
-				modificarMotorista();
-				exit;
+				)));
+
+				$errorMsg = "";
+				if($matriculaExistente){
+					$errorMsg = "Matrícula já cadastrada.";
+				}
+				if(strlen($_POST["postMatricula"]) > 11){
+					$errorMsg = "Matrícula com mais de 11 caracteres.";
+				}
+
+				if(!empty($errorMsg)){
+					$_POST["errorFields"][] = "postMatricula";
+					showError($errorMsg, ["postMatricula"]);
+				}
 			}
-		}
+		//}
 
-		if(empty($_POST["salario"])){
-			$_POST["salario"] = (float)0.0;
-		}
-		if(!isset($_POST["rgDataEmissao"]) || empty($_POST["rgDataEmissao"])){
-			$_POST["rgDataEmissao"] = "0000-00-00";
-		}
-		if(!isset($_POST["desligamento"]) || empty($_POST["desligamento"])){
-			$_POST["desligamento"] = "0000-00-00";
-		}
+		//Conferir se o login já existe{
+			if(!empty($_POST["login"])){
+				$otherUser = mysqli_fetch_assoc(query(
+					"SELECT user.* FROM user
+						JOIN entidade ON user_nb_entidade = enti_nb_id
+						WHERE user_tx_status = 'ativo'
+							AND user_tx_login = '{$_POST["login"]}'"
+							.(!empty($_POST["id"])? " AND enti_nb_id <> ".$_POST["id"]: "")
+						." LIMIT 1;"
+				));
+				if(!empty($otherUser)){
+					showError("Login já cadastrado.", ["login"]);
+				}
+			}
+		//}
 
-		$enti_valores = [];
-		for($f = 0; $f < count($postKeys); $f++){
-			$enti_valores[] = !empty($_POST[$postKeys[$f]])? $_POST[$postKeys[$f]]: "";
-		}
-		
+		//Conferir se o CPF é válido{
+			if(!validarCPF($novoMotorista["enti_tx_cpf"])){
+				showError("CPF inválido.", ["cpf"]);
+			}
+		//}
+
+		//Conferir se está ativo e a data de demissão é anterior a atual{
+			if(!empty($novoMotorista["enti_tx_desligamento"]) && $novoMotorista["enti_tx_status"] == "ativo" && $novoMotorista["enti_tx_desligamento"] < date("Y-m-d")){
+				showError("Não é possível colocar uma data de desligamento anterior a hoje enquanto o motorista estiver ativo.", ["status", "desligamento"]);
+			}
+		//}
+
 		if (empty($_POST["id"])) {//Se está criando um motorista novo
 			$aEmpresa = carregar("empresa", $_POST["empresa"]);
-			if ($aEmpresa["empr_nb_parametro"] > 0) {
+			if($aEmpresa["empr_nb_parametro"] > 0){
 				$aParametro = carregar("parametro", $aEmpresa["empr_nb_parametro"]);
 				if (
-					$aParametro["para_tx_jornadaSemanal"] != $a_mod["enti_tx_jornadaSemanal"] ||
-					$aParametro["para_tx_jornadaSabado"] != $a_mod["enti_tx_jornadaSabado"] ||
-					$aParametro["para_tx_percHESemanal"] != $a_mod["enti_tx_percHESemanal"] ||
-					$aParametro["para_tx_percHEEx"] != $a_mod["enti_tx_percHEEx"] ||
-					$aParametro["para_nb_id"] != $a_mod["enti_nb_parametro"]
-				) {
-					$ehPadrao = "nao";
-				} else {
+					[$aParametro["para_tx_jornadaSemanal"], $aParametro["para_tx_jornadaSabado"], $aParametro["para_tx_percHESemanal"], $aParametro["para_tx_percHEEx"], $aParametro["para_nb_id"]] ==
+					[$novoMotorista["enti_tx_jornadaSemanal"], $novoMotorista["enti_tx_jornadaSabado"], $novoMotorista["enti_tx_percHESemanal"], $novoMotorista["enti_tx_percHEEx"], $novoMotorista["enti_nb_parametro"]]
+				){
 					$ehPadrao = "sim";
+				}else{
+					$ehPadrao = "nao";
 				}
 			}
 			$novoMotorista["enti_nb_userCadastro"] = $_SESSION["user_nb_id"];
@@ -366,11 +369,11 @@
 			if ($aEmpresa["empr_nb_parametro"] > 0) {
 				$aParametro = carregar("parametro", $aEmpresa["empr_nb_parametro"]);
 				if (
-					$aParametro["para_tx_jornadaSemanal"] != $a_mod["enti_tx_jornadaSemanal"] ||
-					$aParametro["para_tx_jornadaSabado"] != $a_mod["enti_tx_jornadaSabado"] ||
-					$aParametro["para_tx_percHESemanal"] != $a_mod["enti_tx_percHESemanal"] ||
-					$aParametro["para_tx_percHEEx"] != $a_mod["enti_tx_percHEEx"] ||
-					$aParametro["para_nb_id"] != $a_mod["enti_nb_parametro"]
+					$aParametro["para_tx_jornadaSemanal"] != $novoMotorista["enti_tx_jornadaSemanal"] ||
+					$aParametro["para_tx_jornadaSabado"] != $novoMotorista["enti_tx_jornadaSabado"] ||
+					$aParametro["para_tx_percHESemanal"] != $novoMotorista["enti_tx_percHESemanal"] ||
+					$aParametro["para_tx_percHEEx"] != $novoMotorista["enti_tx_percHEEx"] ||
+					$aParametro["para_nb_id"] != $novoMotorista["enti_nb_parametro"]
 				) {
 					$ehPadrao = "nao";
 				} else {
@@ -380,12 +383,6 @@
 			$novoMotorista["enti_nb_userAtualiza"] = $_SESSION["user_nb_id"];
 			$novoMotorista["enti_tx_dataAtualiza"] = date("Y-m-d H:i:s");
 			$novoMotorista["enti_tx_ehPadrao"] = $ehPadrao;
-
-			if($novoMotorista['enti_tx_status'] === 'inativo') {
-				$novoMotorista['enti_tx_desligamento'] = $_POST["desligamento"];
-			}else{
-				$novoMotorista['enti_tx_desligamento'] = NULL;
-			}
 
 			atualizar("entidade", array_keys($novoMotorista), array_values($novoMotorista), $_POST["id"]);
 			$id = $_POST["id"];
@@ -400,7 +397,7 @@
 				mkdir("arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]", 0777, true);
 			}
 
-			$arq = enviar("cnhAnexo", "arquivos/empresa/".$_POST["empresa"]."/motoristas/".$_POST["matricula"]."/", "CNH_" . $id . "_" . $_POST["postMatricula"]);
+			$arq = enviar("cnhAnexo", "arquivos/empresa/".$_POST["empresa"]."/motoristas/".$_POST["matricula"]."/", "CNH_".$id."_".$_POST["postMatricula"]);
 			if ($arq) {
 				atualizar("entidade", ["enti_tx_cnhAnexo"], [$arq], $id);
 			}
@@ -431,22 +428,26 @@
 
 	function modificarMotorista(){
 		global $a_mod;
+		
 		$a_mod = carregar("entidade", $_POST["id"]);
-
 		visualizarCadastro();
 		exit;
 	}
 
 	function excluirMotorista(){
 
-		atualizar("entidade", ["enti_tx_status"], ["inativo"], $_POST["id"]);
-		$idUsuario = mysqli_fetch_assoc(query(
-			"SELECT user_nb_id FROM user 
+		$usuario = mysqli_fetch_assoc(query(
+			"SELECT user.*, enti_tx_desligamento FROM user 
 				JOIN entidade ON user_nb_entidade = enti_nb_id
 				WHERE user_tx_status = 'ativo'
 					AND enti_nb_id = ".$_POST["id"]."
 				LIMIT 1;"
 		));
+		if(empty($usuario["enti_tx_desligamento"]) || $usuario["enti_tx_desligamento"] > date("Y-m-d")){
+			$usuario["enti_tx_desligamento"] = date("Y-m-d");
+		}
+		
+		atualizar("entidade", ["enti_tx_status", "enti_tx_desligamento"], ["inativo", $usuario["enti_tx_desligamento"]], $_POST["id"]);
 
 		if(!empty($idUsuario)){
 			atualizar("user", ["user_tx_status"], ["inativo"], $idUsuario["user_nb_id"]);
@@ -472,6 +473,7 @@
 	function visualizarCadastro(){
 		global $a_mod;
 		
+
 		if(!empty($a_mod["enti_nb_empresa"])){
 			carregarParametroPadrao($a_mod["enti_nb_empresa"]);
 		}
@@ -486,6 +488,7 @@
 			for($f = 0; $f < sizeof($campos); $f++){
 				$campos[$f] = $campos[$f][0];
 			}
+
 			
 			foreach($campos as $campo){
 				if(isset($_POST[$campo]) && !empty($_POST[$campo])){
@@ -493,6 +496,7 @@
 				}
 			}
 		}
+
 
 		if(!empty($a_mod["enti_nb_id"])){
 			$login = mysqli_fetch_all(
@@ -598,7 +602,7 @@
 		}
 		$campoSalario = "";
 		if (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
-			$campoSalario = campo("Salário*", "salario", valor(($a_mod["enti_nb_salario"]?? "0")), 1, "MASCARA_VALOR", "tabindex=".sprintf("%02d", $tabIndex+2));
+			$campoSalario = campo("Salário*", "salario", (!empty($a_mod["enti_nb_salario"])? $a_mod["enti_nb_salario"] : "0"), 1, "MASCARA_VALOR", "tabindex=".sprintf("%02d", $tabIndex+2));
 		}
 
 		$cContratual = [
@@ -618,25 +622,24 @@
 			$icone_padronizar = "<a id='padronizarParametro' style='text-shadow: none; color: #337ab7;' onclick='javascript:padronizarParametro();' > (Padronizar) </a>";
 		}
 
+		$conferirPadraoJS = "";
 		if(!empty($a_mod["parametroPadrao"])){
-			$conferirPadraoJS = "conferirParametroPadrao(
-				'".$a_mod["parametroPadrao"]["para_nb_id"]
-				."', '".$a_mod["parametroPadrao"]["para_tx_jornadaSemanal"]
-				."', '".$a_mod['parametroPadrao']['para_tx_jornadaSabado']
-				."', '".$a_mod['parametroPadrao']['para_tx_percHESemanal']
-				."', '".$a_mod['parametroPadrao']['para_tx_percHEEx']
-			."')";
-		}else{
-			$conferirPadraoJS = "";
+			$conferirPadraoJS = 
+				"conferirParametroPadrao(
+					\"{$a_mod["parametroPadrao"]["para_nb_id"]}\",
+					\"{$a_mod["parametroPadrao"]["para_tx_jornadaSemanal"]}\",
+					\"{$a_mod["parametroPadrao"]["para_tx_jornadaSabado"]}\",
+					\"{$a_mod["parametroPadrao"]["para_tx_percHESemanal"]}\",
+					\"{$a_mod["parametroPadrao"]["para_tx_percHEEx"]}\"
+				);";
 		}
 
 		$cJornada = [
-			combo_bd(	"!Parâmetros da Jornada*".($icone_padronizar?? ""), "parametro", ($a_mod["enti_nb_parametro"]?? ""), 6, "parametro", "onfocusout='carregarParametro()' onchange='carregarParametro()' tabindex=".sprintf("%02d", $tabIndex++)),
-			"<div class='col-sm-2 margin-bottom-5' style='width:100%; height:25px'></div>",
-			campo_hora(	"Jornada Semanal (Horas/Dia)*", "jornadaSemanal", ($a_mod["enti_tx_jornadaSemanal"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'"),
-			campo_hora(	"Jornada Sábado (Horas/Dia)*", "jornadaSabado", ($a_mod["enti_tx_jornadaSabado"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'"),
-			campo(		"H.E. Semanal (%)*", "percHESemanal", ($a_mod["enti_tx_percHESemanal"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'"),
-			campo(		"H.E. Extraordinária (%)*", "percHEEx", ($a_mod["enti_tx_percHEEx"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='".$conferirPadraoJS."'")
+			combo_bd(	"!Parâmetros da Jornada*".($icone_padronizar?? ""), "parametro", ($a_mod["enti_nb_parametro"]?? ""), 6, "parametro", "onfocusout='carregarParametro()' onchange='carregarParametro()' tabindex=".sprintf("%02d", $tabIndex++)), "<div class='col-sm-2 margin-bottom-5' style='width:100%; height:25px'></div>",
+			campo_hora(	"Jornada Semanal (Horas/Dia)*", "jornadaSemanal", ($a_mod["enti_tx_jornadaSemanal"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'"),
+			campo_hora(	"Jornada Sábado (Horas/Dia)*", "jornadaSabado", ($a_mod["enti_tx_jornadaSabado"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'"),
+			campo(		"H.E. Semanal (%)*", "percHESemanal", ($a_mod["enti_tx_percHESemanal"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'"),
+			campo(		"H.E. Extraordinária (%)*", "percHEEx", ($a_mod["enti_tx_percHEEx"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'")
 		];
 		if(!empty($a_mod["enti_nb_empresa"])){
 			$aEmpresa = carregar("empresa", (int)$a_mod["enti_nb_empresa"]);
@@ -645,7 +648,7 @@
 			$padronizado = (
 				$a_mod["enti_tx_jornadaSemanal"] 		== $aParametro["para_tx_jornadaSemanal"] &&
 				$a_mod["enti_tx_jornadaSabado"] 		== $aParametro["para_tx_jornadaSabado"] &&
-				$a_mod["enti_tx_percHESemanal"] 			== $aParametro["para_tx_percHESemanal"] &&
+				$a_mod["enti_tx_percHESemanal"] 		== $aParametro["para_tx_percHESemanal"] &&
 				$a_mod["enti_tx_percHEEx"] 	== $aParametro["para_tx_percHEEx"]
 			);
 			
@@ -667,7 +670,7 @@
 			campo("Permissão", "cnhPermissao", ($a_mod["enti_tx_cnhPermissao"]?? ""), 3,"","maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Pontuação", "cnhPontuacao", ($a_mod["enti_tx_cnhPontuacao"]?? ""), 3,"","maxlength='3' tabindex=".sprintf("%02d", $tabIndex++)),
 			combo("Atividade Remunerada", "cnhAtividadeRemunerada", ($a_mod["enti_tx_cnhAtividadeRemunerada"]?? ""), 3, ["" => "", "sim" => "Sim", "nao" => "Não"], "tabindex=".sprintf("%02d", $tabIndex++)),
-			arquivo("CNH (.png, .jpg, .pdf)" . $iconeExcluirCNH, "cnhAnexo", ($a_mod["enti_tx_cnhAnexo"]?? ""), 4, "tabindex=".sprintf("%02d", $tabIndex++)),
+			arquivo("CNH (.png, .jpg, .pdf)".$iconeExcluirCNH, "cnhAnexo", ($a_mod["enti_tx_cnhAnexo"]?? ""), 4, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Observações", "cnhObs", ($a_mod["enti_tx_cnhObs"]?? ""), 3,"","maxlength='500' tabindex=".sprintf("%02d", $tabIndex++))
 		];
 
@@ -717,11 +720,11 @@
 
 		if (!empty($a_mod["enti_nb_userCadastro"])) {
 			$a_userCadastro = carregar("user", $a_mod["enti_nb_userCadastro"]);
-			$txtCadastro = "Registro inserido por $a_userCadastro[user_tx_login] às " . data($a_mod["enti_tx_dataCadastro"]) . ".";
+			$txtCadastro = "Registro inserido por $a_userCadastro[user_tx_login] às ".data($a_mod["enti_tx_dataCadastro"]).".";
 			$cAtualiza[] = texto("Data de Cadastro", "$txtCadastro", 5);
 			if ($a_mod["enti_nb_userAtualiza"] > 0) {
 				$a_userAtualiza = carregar("user", $a_mod["enti_nb_userAtualiza"]);
-				$txtAtualiza = "Registro atualizado por $a_userAtualiza[user_tx_login] às " . data($a_mod["enti_tx_dataAtualiza"], 1) . ".";
+				$txtAtualiza = "Registro atualizado por $a_userAtualiza[user_tx_login] às ".data($a_mod["enti_tx_dataAtualiza"], 1).".";
 				$cAtualiza[] = texto("Última Atualização", strval($txtAtualiza), 5);
 			}
 			echo "<br>";
@@ -762,7 +765,7 @@
 					parent.document.contex_form.parametro.value 			= '".($a_mod["parametroPadrao"]["para_nb_id"]?? "")."';
 					parent.document.contex_form.jornadaSemanal.value 		= '".($a_mod["parametroPadrao"]["para_tx_jornadaSemanal"]?? "")."';
 					parent.document.contex_form.jornadaSabado.value 		= '".($a_mod["parametroPadrao"]["para_tx_jornadaSabado"]?? "")."';
-					parent.document.contex_form.percHESemanal.value 			= '".($a_mod["parametroPadrao"]["para_tx_percHESemanal"]?? "")."';
+					parent.document.contex_form.percHESemanal.value 		= '".($a_mod["parametroPadrao"]["para_tx_percHESemanal"]?? "")."';
 					parent.document.contex_form.percHEEx.value 	= '".($a_mod["parametroPadrao"]["para_tx_percHEEx"]?? "")."';
 
 					conferirParametroPadrao('".implode("','", $params)."');
@@ -873,10 +876,36 @@
 		linha_form($camposBusca);
 		fecha_form($botoesBusca);
 
-		$icone_modificar = "icone_modificar(enti_nb_id,modificarMotorista)";
 
-		$icone_excluir = (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")))? "icone_excluir(enti_nb_id,excluirMotorista)": "";
+		$iconeModificar = criarSQLIconeTabela("enti_nb_id", 'modificarMotorista', "Modificar", "glyphicon glyphicon-search");
+		$iconeExcluir = (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")))? criarSQLIconeTabela("enti_nb_id", "excluirMotorista", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?"): "";
+		
+		$sqlFields = [
+			"enti_nb_id",
+			"enti_tx_nome",
+			"enti_tx_matricula",
+			"enti_tx_cpf",
+			"empr_tx_nome",
+			"enti_tx_fone1",
+			"enti_tx_fone2",
+			"enti_tx_ocupacao",
+			"DATE_FORMAT(enti_tx_dataCadastro, '%d/%m/%Y') AS enti_tx_dataCadastro",
+			"DATE_FORMAT(enti_tx_desligamento, '%d/%m/%Y') AS enti_tx_desligamento",
+			"para_tx_nome",
+			"enti_tx_ehPadrao",
+			"enti_tx_status",
+			"{$iconeModificar} as iconeModificar",
+			"IF(enti_tx_status = 'ativo', {$iconeExcluir}, NULL) as iconeExcluir"
+		];
 
+		$sql = ( 
+			"SELECT ".implode(", ", $sqlFields)." FROM entidade
+				JOIN empresa ON enti_nb_empresa = empr_nb_id
+				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id AND para_tx_status = 'ativo'
+				WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')
+					{$extraEmpresa}
+					{$extra};"
+		);
 		$gridFields = [
 			"CÓDIGO" 				=> "enti_nb_id", 
 			"NOME" 					=> "enti_tx_nome", 
@@ -886,44 +915,20 @@
 			"FONE 1" 				=> "enti_tx_fone1", 
 			"FONE 2" 				=> "enti_tx_fone2", 
 			"OCUPAÇÃO" 				=> "enti_tx_ocupacao",
-			"DATA CADASTRO" 		=> "data(enti_tx_dataCadastro)",
-			"DATA INATIVAÇÃO"       => "data(enti_tx_desligamento)",
+			"DATA CADASTRO" 		=> "enti_tx_dataCadastro",
+			"DATA INATIVAÇÃO"       => "enti_tx_desligamento",
 			"PARÂMETRO DA JORNADA" 	=> "para_tx_nome", 
 			"CONVENÇÃO PADRÃO" 		=> "enti_tx_ehPadrao",
-			"STATUS" 				=> "enti_tx_status"
+			"STATUS" 				=> "enti_tx_status",
+			"<spam class='glyphicon glyphicon-search'></spam>" => "iconeModificar",
+			"<spam class='glyphicon glyphicon-remove'></spam>" => "iconeExcluir"
 		];
 
-		$sqlFields = [
-			"enti_nb_id", 
-			"enti_tx_nome", 
-			"enti_tx_matricula",
-			"enti_tx_cpf",
-			"empr_tx_nome",
-			"enti_tx_fone1",
-			"enti_tx_fone2",
-			"enti_tx_ocupacao",
-			"enti_tx_dataCadastro",
-			"enti_tx_desligamento",
-			"para_tx_nome",
-			"enti_tx_ehPadrao",
-			"enti_tx_status"
-		]; 
-
-		$sql = ( 
-			"SELECT ".implode(", ", array_values($sqlFields))." FROM entidade"
-				." JOIN empresa ON enti_nb_empresa = empr_nb_id"
-				." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id AND para_tx_status = 'ativo'"
-				." WHERE "
-					." enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
-					.$extraEmpresa." "
-					.$extra.";"
-		);
-
-		$gridFields = array_merge($gridFields, [
-			"<spam class='glyphicon glyphicon-search'></spam>" => $icone_modificar, 
-			"<spam class='glyphicon glyphicon-remove'></spam>" => $icone_excluir
-		]);
-		
 		grid($sql, array_keys($gridFields), array_values($gridFields));
+		echo 
+			"<script>
+				
+			</script>"
+		;
 		rodape();
 	}

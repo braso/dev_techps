@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 		
@@ -25,10 +25,9 @@
 				.campo_hidden("busca_empresa", htmlspecialchars($_POST['busca_empresa']))
 				.campo_hidden("busca_data", htmlspecialchars($_POST['busca_data']))
 				.campo_hidden("HTTP_REFERER", $CONTEX["path"]."/nao_conformidade.php")
-			."</form>";
-		
-		echo "<script>document.getElementById('forms_abono').submit();</script>";
-
+			."</form>
+			<script>document.getElementById('forms_abono').submit();</script>"
+		;
 		exit;
 	}
 
@@ -156,9 +155,11 @@
 				);
 
 
-				while ($aMotorista = mysqli_fetch_array($sqlMotorista, MYSQLI_BOTH)) {
+				$motoristas = mysqli_fetch_all($sqlMotorista, MYSQLI_ASSOC);
+				foreach($motoristas as $aMotorista){
 					$counts["total"]++;
 					if(empty($aMotorista["enti_tx_nome"]) || empty($aMotorista["enti_tx_matricula"])){
+						dd("teste", false);
 						continue;
 					}
 	
@@ -188,10 +189,7 @@
 							$aDia[] = $row;
 						}
 					//}
-					criarFuncoesDeAjuste();
-					
 					if (count($aDia) > 0) {
-
 						$aEndosso = mysqli_fetch_array(query(
 							"SELECT user_tx_login, endo_tx_dataCadastro, endo_tx_ate 
 								FROM endosso JOIN user ON endo_nb_userCadastro = user_nb_id 
@@ -199,7 +197,7 @@
 									AND '".$_POST["busca_data"]."' BETWEEN endo_tx_de AND endo_tx_ate
 									AND endo_nb_entidade = '".$aMotorista["enti_nb_id"]."'
 									AND endo_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'
-								LIMIT 1"
+								LIMIT 1;"
 						), MYSQLI_BOTH);
 						if (is_array($aEndosso) && count($aEndosso) > 0) {
 							$counts["endossados"]++;
@@ -230,7 +228,7 @@
 						$dadosParametro = mysqli_fetch_array(query(
 							"SELECT para_tx_tolerancia, para_tx_dataCadastro, para_nb_qDias FROM parametro 
 								JOIN entidade ON para_nb_id = enti_nb_parametro 
-								WHERE enti_nb_parametro = ".$aMotorista["enti_nb_parametro"]." 
+								WHERE enti_nb_parametro = {$aMotorista["enti_nb_parametro"]} 
 								LIMIT 1;"
 						), MYSQLI_BOTH);
 						$dataCicloProx = strtotime($dadosParametro["para_tx_dataCadastro"]);
@@ -239,7 +237,6 @@
 								$dataCicloProx += intval($dadosParametro["para_nb_qDias"])*60*60*24;
 							}
 						}
-						
 						$saldoAnterior = mysqli_fetch_assoc(
 							query(
 								"SELECT endo_tx_saldo FROM endosso
@@ -343,7 +340,7 @@
 							unset($aDia[$f]["exibir"]);
 						}
 
-						grid2($cab, $aDia);
+						echo montarTabelaPonto($cab, $aDia);
 						fecha_form();
 	
 						$aSaldo[$aMotorista["enti_tx_matricula"]] = $totalResumo["diffSaldo"];

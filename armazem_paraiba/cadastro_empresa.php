@@ -127,15 +127,15 @@
 		}
 
 		$cnpjMatriz = mysqli_fetch_assoc(query(
-			"SELECT empr_tx_cnpj FROM empresa"
-			." WHERE empr_tx_status = 'ativo'"
-				." AND empr_tx_Ehmatriz = 'sim'"
-			." LIMIT 1;"
+			"SELECT empr_tx_cnpj FROM empresa
+				WHERE empr_tx_status = 'ativo'
+					AND empr_tx_Ehmatriz = 'sim'
+				LIMIT 1;"
 		));
 
 		if(empty($cnpjMatriz)){
 			$errorMsg = "Empresa matriz não encontrada.";
-		}else{
+		}elseif($_ENV["CONTEX_PATH"] != "/techps"){
 			$cnpjMatriz = preg_replace('/[^0-9]/', '', $cnpjMatriz["empr_tx_cnpj"]);
 			$_POST["cnpj"] = preg_replace('/[^0-9]/', '', $_POST["cnpj"]);
 			if(substr($cnpjMatriz, 0, 8) != substr($_POST["cnpj"], 0, 8)){
@@ -402,10 +402,10 @@
 		}
 
 		$campos = [
-			"status","cep","endereco","numero","bairro","cnpj",
-			"nome","fantasia","complemento","referencia","fone1",
-			"fone2","contato","email","inscricaoEstadual","inscricaoMunicipal",
-			"regimeTributario","logo","domain", "Ehmatriz",
+			"status", "cep", "endereco", "numero", "bairro", "cnpj",
+			"nome", "fantasia", "complemento", "referencia", "fone1",
+			"fone2", "contato", "email", "inscricaoEstadual", "inscricaoMunicipal",
+			"regimeTributario", "logo", "domain", "Ehmatriz",
 			"ftpServer", "ftpUsername"
 		];
 		foreach($campos as $campo){
@@ -422,12 +422,12 @@
 
 		if(is_int(strpos($_SESSION["user_tx_nivel"], "Super Administrador"))){
 			$campo_dominio = campo_domain("Nome do Domínio","nomeDominio",$input_values["domain"]?? "",2,"domain");
-			// $campo_EhMatriz = combo("É matriz?","matriz",$input_values["Ehmatriz"]?? "",2,["sim" => "Sim", "nao" => "Não"]);
+			// $campo_Ehmatriz = combo("É matriz?","matriz",$input_values["Ehmatriz"]?? "",2,["sim" => "Sim", "nao" => "Não"]);
 		}else{
 			$campo_dominio = texto("Nome do Domínio",$input_values["domain"]?? "",3);
-			// $campo_EhMatriz = texto("É matriz?",$input_values["Ehmatriz"]?? "",2);
+			// $campo_Ehmatriz = texto("É matriz?",$input_values["Ehmatriz"]?? "",2);
 		}
-		$campo_EhMatriz = campo_hidden("matriz", (!empty($input_values["Ehmatriz"])? $input_values["Ehmatriz"]: "nao")).texto("É matriz?", ucfirst((!empty($input_values["Ehmatriz"])? $input_values["Ehmatriz"]: "Não")),2);
+		$campo_Ehmatriz = campo_hidden("matriz", (!empty($input_values["Ehmatriz"])? $input_values["Ehmatriz"]: "nao")).texto("É matriz?", ucfirst((!empty($input_values["Ehmatriz"])? $input_values["Ehmatriz"]: "Não")),2);
 
 		$cidade = [
 			"cida_tx_uf" => "",
@@ -461,7 +461,7 @@
 				texto("Regime Tributário",		$input_values["regimeTributario"],3),
 				texto("Data Reg. CNPJ",			$input_values["dataRegistroCNPJ"],3),
 				$campo_dominio,
-				$campo_EhMatriz,
+				$campo_Ehmatriz,
 				
 				texto("Servidor FTP",$input_values["ftpServer"], 3),
 				texto("Usuário FTP",$input_values["ftpUsername"], 3)
@@ -491,7 +491,7 @@
 
 				arquivo("Logo (.png, .jpg)".$iconeExcluirLogo,"logo",$input_values["logo"],4),
 				$campo_dominio,
-				$campo_EhMatriz,
+				$campo_Ehmatriz,
 				
 				campo("Servidor FTP","ftpServer",$input_values["ftpServer"],3),
 				campo("Usuário FTP","ftpUsername",$input_values["ftpUsername"],3),
@@ -658,12 +658,26 @@
 		linha_form($c);
 		fecha_form($botao);
 
+		$iconeModificar = criarSQLIconeTabela("empr_nb_id", "modificarEmpresa", "Modificar", "glyphicon glyphicon-search");
+		$iconeExcluir = criarSQLIconeTabela("empr_nb_id", "excluirEmpresa", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?");
+
+		$sqlFields = [
+			"empr_nb_id",
+			"IF(empr_tx_Ehmatriz = 'sim', CONCAT('<i class=\"fa fa-star\" aria-hidden=\"true\"></i> ', empr_tx_nome), empr_tx_nome) as empr_tx_nome",
+			"empr_tx_fantasia",
+			"empr_tx_cnpj",
+			"CONCAT('[', cida_tx_uf, '] ', cida_tx_nome) as ufCidade",
+			"empr_tx_status",
+			"{$iconeModificar} as iconeModificar",
+			"IF(empr_tx_status = 'ativo', {$iconeExcluir}, NULL) as iconeExcluir"
+		];
+
 		$sql = 
-			"SELECT *, concat('[', cida_tx_uf, '] ', cida_tx_nome) as ufCidade FROM empresa
+			"SELECT ".implode(", ", $sqlFields)." FROM empresa
 				JOIN cidade ON empr_nb_cidade = cida_nb_id
-				WHERE 1 = 1
-					$extra
-				ORDER BY empr_tx_EhMatriz DESC, empr_nb_id";
+				WHERE 1
+					{$extra}
+				ORDER BY empr_tx_Ehmatriz DESC, empr_nb_id";
 
 		$gridCols = [
 			"CÓDIGO" => "empr_nb_id",
@@ -672,12 +686,11 @@
 			"CPF/CNPJ" => "empr_tx_cnpj",
 			"CIDADE/UF" => "ufCidade",
 			"STATUS" => "empr_tx_status",
-			"<spam class='glyphicon glyphicon-search'></spam>" => "icone_modificar(empr_nb_id,modificarEmpresa)",
-			"<spam class='glyphicon glyphicon-remove'></spam>" => "icone_excluir(empr_nb_id,excluirEmpresa)"
+			"<spam class='glyphicon glyphicon-search'></spam>" => "iconeModificar",
+			"<spam class='glyphicon glyphicon-remove'></spam>" => "iconeExcluir"
 		];
 		
-		grid($sql,array_keys($gridCols),array_values($gridCols),"","12",1,"desc","10");
+		grid($sql, array_keys($gridCols),array_values($gridCols),"","12",1,"desc");
 
 		rodape();
-
 	}

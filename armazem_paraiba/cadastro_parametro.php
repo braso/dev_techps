@@ -37,11 +37,11 @@
 			// Configurar cabeçalhos para forçar o download
 			header("Content-Description: File Transfer");
 			header("Content-Type: application/octet-stream");
-			header("Content-Disposition: attachment; filename=" . basename($_POST["caminho"]));
+			header("Content-Disposition: attachment; filename=".basename($_POST["caminho"]));
 			header("Expires: 0");
 			header("Cache-Control: must-revalidate");
 			header("Pragma: public");
-			header("Content-Length: " . filesize($_POST["caminho"]));
+			header("Content-Length: ".filesize($_POST["caminho"]));
 
 			// Lê o arquivo e o envia para o navegador
 			readfile($_POST["caminho"]);
@@ -50,7 +50,7 @@
 			echo "O arquivo não foi encontrado.";
 		}
 		$_POST["id"] = $_POST["idParametro"];
-		modifica_parametro();
+		modificarParametro();
 		exit;
 	}
 
@@ -113,7 +113,7 @@
 		}
 
 		$_POST["id"] = $novoParametro["para_nb_id"];
-		modifica_parametro();
+		modificarParametro();
 		exit;
 	}
 
@@ -121,18 +121,18 @@
 		query("DELETE FROM documento_parametro WHERE docu_nb_id = ".$_POST["idArq"].";");
 		
 		$_POST["id"] = $_POST["idParametro"];
-		modifica_parametro();
+		modificarParametro();
 		exit;
 	}
 
-	function modifica_parametro(){
+	function modificarParametro(){
 		global $a_mod;
 		$a_mod=carregar("parametro",$_POST["id"]);
 		layout_parametro();
 		exit;
 	}
 
-	function cadastra_parametro(){
+	function cadastrarParametro(){
 
 		//Conferir se os campos obrigatórios estão preenchidos{
 			$camposObrig = [];
@@ -355,7 +355,7 @@
 		];
 		
 		$botoes = [
-			botao("Gravar","cadastra_parametro","id",($_POST["id"]?? ""),"","","btn btn-success"),
+			botao("Gravar","cadastrarParametro","id",($_POST["id"]?? ""),"","","btn btn-success"),
 			botao("Voltar","voltar")
 		];
 
@@ -454,7 +454,7 @@
 		cabecalho("Cadastro de Parâmetros");
 
 		$extra = ((!empty($_POST["busca_codigo"]))? " AND para_nb_id LIKE '%".$_POST["busca_codigo"]."%'" : "")
-		.((!empty($_POST["busca_nome"])) ? " AND para_tx_nome LIKE '%" . $_POST["busca_nome"] . "%'" : "")
+		.((!empty($_POST["busca_nome"])) ? " AND para_tx_nome LIKE '%".$_POST["busca_nome"]."%'" : "")
 		.((!empty($_POST["busca_acordo"]) &&  $_POST["busca_acordo"] != "Todos") ? " AND para_tx_acordo = '".$_POST["busca_acordo"]."'" : "")
 		.((!empty($_POST["busca_banco"]) &&  $_POST["busca_banco"] != "Todos") ? " AND para_tx_banco = '".$_POST["busca_banco"]."'" : "");
 
@@ -475,19 +475,14 @@
 		linha_form($campos);
 		fecha_form($botoes);
 
+		$iconeModificar = 	criarSQLIconeTabela("para_nb_id","modificarParametro","Modificar","glyphicon glyphicon-search");
+		$iconeExcluir = 	criarSQLIconeTabela("para_nb_id","excluirParametro","Excluir","glyphicon glyphicon-remove","Deseja inativar o registro?");
+
 		$sql = 
-			"SELECT * FROM parametro"
-				." WHERE para_tx_status = 'ativo' ".$extra
+			"SELECT *, {$iconeModificar} as iconeModificar, IF(para_tx_status = 'ativo', {$iconeExcluir}, NULL) as iconeExcluir FROM parametro
+				WHERE para_tx_status = 'ativo'
+					{$extra};"
 		;
-		// if (isset($_POST["busca_vencidos"])){
-		// 	$sql = 
-		// 		"SELECT *, DATEDIFF('".date("Y-m-d")."' ,para_tx_setData) AS diferenca_em_dias FROM parametro"
-		// 			." WHERE 1"
-		// 				." AND DATEDIFF('".date("Y-m-d")."',para_tx_setData) ".($_POST["busca_vencidos"] === "sim"? "<": ">")." para_nb_qDias"
-		// 				." OR DATEDIFF('".date("Y-m-d")."',para_tx_setData) IS NULL"
-		// 				." ".$extra.";"
-		// 	;
-		// }
 
 		$gridCols = [
 			"CÓDIGO" 											=> "para_nb_id",
@@ -499,8 +494,8 @@
 			"ACORDO" 											=> "para_tx_acordo",
 			"INÍCIO" 											=> "data(para_tx_inicioAcordo)",
 			"FIM" 												=> "data(para_tx_fimAcordo)",
-			"<spam class='glyphicon glyphicon-search'></spam>" 	=> "icone_modificar(para_nb_id,modifica_parametro)",
-			"<spam class='glyphicon glyphicon-remove'></spam>" 	=> "icone_excluir(para_nb_id,excluirParametro)"
+			"<spam class='glyphicon glyphicon-search'></spam>" 	=> "iconeModificar",
+			"<spam class='glyphicon glyphicon-remove'></spam>" 	=> "iconeExcluir",
 		];
 
 		grid($sql,array_keys($gridCols),array_values($gridCols));

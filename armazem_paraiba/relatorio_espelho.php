@@ -66,7 +66,7 @@
                     <?=date("d/m/Y", strtotime($endossoCompleto['endo_tx_de']))?> -
                     <?=date("d/m/Y", strtotime($endossoCompleto['endo_tx_ate']))?></td>
                 <td style="text-align: left;"><b>Emissão Doc.:</b>
-                    <?=date("d/m/Y H:i:s", strtotime($endossoCompleto['endo_tx_dataCadastro'])) . " (UTC-3)"?> </td>
+                    <?=date("d/m/Y H:i:s", strtotime($endossoCompleto['endo_tx_dataCadastro']))." (UTC-3)"?> </td>
             </tr>
 
             <tr class="employee-info">
@@ -286,7 +286,7 @@
         <tr>
             <td></td>
             <td></td>
-            <td id="impressao"><b>Impressão Doc.:</b> <?=date("d/m/Y \T H:i:s") . "(UTC-3)"?></td>
+            <td id="impressao"><b>Impressão Doc.:</b> <?=date("d/m/Y \T H:i:s")."(UTC-3)"?></td>
         </tr>
     </table>
     <div id='exporta'>

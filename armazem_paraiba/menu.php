@@ -29,7 +29,7 @@
 		$paginas = [
 			"cadastros" => [
 				"/cadastro_empresa.php" 	=> "Empresa/Filial", 
-				"/cadastro_endosso.php" 	=> "Endosso", 
+				"/cadastro_endosso.php" 	=> "Cadastrar Endosso", 
 				"/cadastro_feriado.php" 	=> "Feriado", 
 				"/cadastro_motorista.php" 	=> "Funcionário", 
 				"/cadastro_macro.php" 		=> "Macro",
@@ -38,7 +38,7 @@
 				"/cadastro_usuario.php" 	=> "Usuário" 
 			],
 			"ponto" => [
-				"/endosso.php" 			=> "Endossos", 
+				"/endosso.php" 			=> "Consultar Endossos", 
 				"/espelho_ponto.php" 	=> "Espelhos de Ponto", 
 				"/carregar_ponto.php" 	=> "Integrações de Ponto", 
 				"/nao_conformidade.php" => "Não Conformidades", 
