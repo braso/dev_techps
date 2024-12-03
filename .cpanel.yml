@@ -2,5 +2,5 @@ deployment:
   tasks:
     - export GENERAL=/home/techpsjornada/repositories/dev_techps/*
     - export GENERALDEPLOY=/home/techpsjornada/public_html/dev
-
+    
     - /bin/cp -R $GENERAL $GENERALDEPLOY
