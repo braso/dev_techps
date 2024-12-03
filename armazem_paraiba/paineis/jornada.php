@@ -21,12 +21,12 @@
                         +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.nome+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
-                        +'<td class =\'jornada\'>'+jornada+'</td>'
-                        +'<td class =\'jornada\'>'+item.jornadaEfetiva+'</td>'
-                        +'<td class =\'jornada\'>'+(refeicao ? refeicao : '<strong>----</strong>')+'</td>'
-                        +'<td class =\'jornada\'>'+(espera ? espera : '<strong>----</strong>')+'</td>'
-                        +'<td class =\'jornada\'>'+(descanso ? descanso : '<strong>----</strong>')+'</td>'
-                        +'<td class =\'jornada\'>'+(repouso ? repouso : '<strong>----</strong>')+'</td>'
+                        +'<td class ='+css+'>'+jornada+'</td>'
+                        +'<td class ='+css+'>'+item.jornadaEfetiva+'</td>'
+                        +'<td class ='+css+'>'+(refeicao ? refeicao : '<strong>----</strong>')+'</td>'
+                        +'<td class ='+css+'>'+(espera ? espera : '<strong>----</strong>')+'</td>'
+                        +'<td class ='+css+'>'+(descanso ? descanso : '<strong>----</strong>')+'</td>'
+                        +'<td class ='+css+'>'+(repouso ? repouso : '<strong>----</strong>')+'</td>'
                     +'</tr>';";
         }
 
@@ -115,10 +115,16 @@
                                         const diferencaHoras = Math.floor(diferencaTotalHoras); // Parte inteira das horas
                                         const diferencaMinutos = Math.round((diferencaTotalHoras - diferencaHoras) * 60)
                                         const resultadoFormatado = `\${diferencaHoras}:\${String(diferencaMinutos) . padStart(2, '0')}`;
-                                        console.log(`Diferença em horas: \${resultadoFormatado}`);
 
-                                        // if(){
-                                        // }
+                                        const [horas, minutos] = resultadoFormatado.split(':').map(Number);
+                                        const totalMinutos = horas * 60 + minutos;
+
+                                        var css = '';
+                                        if(totalMinutos > 0 && diferencaDias === 0){
+                                            css = 'jornada';
+                                        } else {
+                                            css = 'jornadaD';
+                                        }
 
                                         var jornada = processaCampo(item.jornada, diferencaDias, item.inicioJornada);
                                         var refeicao = item.refeicao;
@@ -264,6 +270,7 @@
                     if (!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
                         $arquivos[] = $arquivo;
                     }
+                    $quantFun = " - <b>Total de Funcionários:</b> ".count($arquivos);
                 }
                 $pasta->close();
 
@@ -272,7 +279,7 @@
                 }
 
                 if (!empty($arquivo)) {
-                    $dataEmissao = "Atualizado em: ".date("d/m/Y H:i", filemtime($arquivo)); //Utilizado no HTML.
+                    $dataEmissao = "<b>Atualizado em: </b>".date("H:i", filemtime($arquivo)); //Utilizado no HTML.
                     $arquivoGeral = json_decode(file_get_contents($arquivo), true);
 
                     $encontrado = true;

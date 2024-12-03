@@ -260,8 +260,13 @@ th.sort-desc::after {
 }
 
 .jornada{
-    background-color: var(--var-red);
-    color: white;
+    background-color: #172743;
+    color: var(--var-yellow);
+    text-align: center;
+}
+
+.jornadaD{
+    color: var(--var-red);
     text-align: center;
 }
 
