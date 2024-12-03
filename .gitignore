@@ -6,9 +6,10 @@
 .Spotlight-V100
 .Trashes
 .vscode
+.well-known
+.cpanel.yml
 ehthumbs.db
 Thumbs.db
-.well-known
 
 .env
 
