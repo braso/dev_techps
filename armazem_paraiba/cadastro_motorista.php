@@ -76,7 +76,7 @@
 					type: 'get',
         			dataType: 'json',
 					success: function(data) {
-						console.log(data.erro);
+						console.log(data);
 						if(data.erro == undefined){
 							parent.document.contex_form.endereco.value = data.logradouro
 							parent.document.contex_form.bairro.value = data.bairro;
@@ -171,7 +171,9 @@
 				$novoMotorista[$bdKey] = $_POST[$postKey];
 			}
 		}
-		$novoMotorista["enti_tx_desligamento"] = $_POST["desligamento"];
+		if(!empty($_POST["desligamento"])){
+			$novoMotorista["enti_tx_desligamento"] = $_POST["desligamento"];
+		}
 		unset($enti_campos);
 
 		if(isset($novoMotorista["enti_nb_salario"])){

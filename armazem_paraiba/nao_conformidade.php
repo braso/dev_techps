@@ -155,11 +155,12 @@
 				);
 
 
-				while ($aMotorista = mysqli_fetch_all($sqlMotorista, MYSQLI_ASSOC)){
+				$motoristas = mysqli_fetch_all($sqlMotorista, MYSQLI_ASSOC);
+				foreach($motoristas as $aMotorista){
 					$counts["total"]++;
-					if(empty($aMotorista["enti_tx_nome"]) || empty($aMotorista["enti_tx_matricula"])){
-						continue;
-					}
+					// if(empty($aMotorista["enti_tx_nome"]) || empty($aMotorista["enti_tx_matricula"])){
+					// 	continue;
+					// }
 	
 					//Pegando e formatando registros dos dias{
 						$aDia = [];
@@ -223,11 +224,6 @@
 							}
 						}
 						
-						dd($aMotorista);
-						dd("SELECT para_tx_tolerancia, para_tx_dataCadastro, para_nb_qDias FROM parametro 
-								JOIN entidade ON para_nb_id = enti_nb_parametro 
-								WHERE enti_nb_parametro = {$aMotorista["enti_nb_parametro"]} 
-								LIMIT 1;");
 						$dadosParametro = mysqli_fetch_array(query(
 							"SELECT para_tx_tolerancia, para_tx_dataCadastro, para_nb_qDias FROM parametro 
 								JOIN entidade ON para_nb_id = enti_nb_parametro 
