@@ -654,7 +654,7 @@
 				$campos = !empty(array_filter([$jornada, $descanso, $espera, $refeicao, $repouso]));
 				if ($campos) {
 					$parametro = mysqli_fetch_all(query(
-						"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado "
+					"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_tolerancia"
 						. " FROM `parametro`"
 						. " WHERE para_nb_id = " . $motorista["enti_nb_parametro"]
 					), MYSQLI_ASSOC);
@@ -670,7 +670,8 @@
 					$horaLimpa = trim($horaLimpa);
 					$row[] = [
 						"data" => $dia["data"],
-						"jornadaDia" => $jornadaDia ,
+						"jornadaDia" => $jornadaDia,
+						"tolerancia" => $parametro[0]["para_tx_tolerancia"],
 						"inicioJornada" => $horaLimpa,
 						"diaDiferenca" => $diaDiferenca,
 						"matricula" => $motorista["enti_tx_matricula"],

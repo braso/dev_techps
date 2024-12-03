@@ -22,11 +22,11 @@
                         +'<td style=\'text-align: center;\'>'+item.nome+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
                         +'<td class ='+css+'>'+jornada+'</td>'
-                        +'<td class ='+css+'>'+item.jornadaEfetiva+'</td>'
-                        +'<td class ='+css+'>'+(refeicao ? refeicao : '<strong>----</strong>')+'</td>'
-                        +'<td class ='+css+'>'+(espera ? espera : '<strong>----</strong>')+'</td>'
-                        +'<td class ='+css+'>'+(descanso ? descanso : '<strong>----</strong>')+'</td>'
-                        +'<td class ='+css+'>'+(repouso ? repouso : '<strong>----</strong>')+'</td>'
+                        +'<td class ='+jornadaEfetiva+'>'+item.jornadaEfetiva+'</td>'
+                        +'<td>'+(refeicao ? refeicao : '<strong>----</strong>')+'</td>'
+                        +'<td>'+(espera ? espera : '<strong>----</strong>')+'</td>'
+                        +'<td>'+(descanso ? descanso : '<strong>----</strong>')+'</td>'
+                        +'<td>'+(repouso ? repouso : '<strong>----</strong>')+'</td>'
                     +'</tr>';";
         }
 
@@ -95,34 +95,47 @@
 
                                             // console.log(resultadoFormatado);
                                             if(diferencaDias !== 0){
+                                                var css = 'jornada';
                                                 return ' ( D+' + diferencaDias + ' ) + ' + resultadoFormatado;
                                             }
                                             return campo;
                                         }
 
                                         var diferencaDias = item.diaDiferenca;
-                                        const horaAtual = new Date(); 
+                                        function calcularJornadaRestante(horasTrabalhadas, jornadaPadrao, toleranciaMinutos) {
+                                            const [jornadaHoras, jornadaMinutos] = jornadaPadrao.split(':').map(Number);
+                                            const jornadaPadraoMinutos = jornadaHoras * 60 + jornadaMinutos; 
+                                            const tolerancia = toleranciaMinutos; // Tolerância em minutos
 
-                                        const [horasEspecificas, minutosEspecificos] = item.jornadaDia.split(':').map(Number);
-                                        
-                                        const horaEspecifica = new Date(horaAtual);
-                                        horaEspecifica.setHours(horasEspecificas, minutosEspecificos, 0, 0);
-                                        
-                                        const diferencaMilliseconds = horaAtual - horaEspecifica;
+                                            // Converter horas trabalhadas para minutos
+                                            const [horas, minutos] = horasTrabalhadas.split(':').map(Number);
+                                            const minutosTrabalhados = horas * 60 + minutos;
 
-                                        const diferencaTotalHoras = diferencaMilliseconds / (1000 * 60 * 60);
-                                        
-                                        const diferencaHoras = Math.floor(diferencaTotalHoras); // Parte inteira das horas
-                                        const diferencaMinutos = Math.round((diferencaTotalHoras - diferencaHoras) * 60)
-                                        const resultadoFormatado = `\${diferencaHoras}:\${String(diferencaMinutos) . padStart(2, '0')}`;
+                                            let minutosRestantes = jornadaPadraoMinutos - minutosTrabalhados;
 
-                                        const [horas, minutos] = resultadoFormatado.split(':').map(Number);
-                                        const totalMinutos = horas * 60 + minutos;
+                                            let corTexto = '';
+
+                                            if (minutosRestantes <= -tolerancia) {
+                                                return corTexto = 'jornadaRed';
+                                            } else if (minutosRestantes <= 0) {
+                                                return corTexto = 'jornadaGreen' ;
+                                            } else {
+                                                const horasRestantes = Math.floor(minutosRestantes / 60);
+                                                const minutosRestantesFinal = minutosRestantes % 60;
+                                                if (horasRestantes <= 2) {
+                                                    corTexto = 'jornadaYellow'; // Cor amarela quando faltar 3 horas ou menos
+                                                }
+                                                return corTexto;
+                                            }
+                                        }
+                                        
+                                        let jornadaEfetiva = '';
+                                        if(item.jornadaEfetiva != '----'){
+                                            jornadaEfetiva = calcularJornadaRestante(item.jornadaEfetiva, item.jornadaDia, item.tolerancia);
+                                        }
 
                                         var css = '';
-                                        if(totalMinutos > 0 && diferencaDias === 0){
-                                            css = 'jornada';
-                                        } else {
+                                        if(diferencaDias > 0){
                                             css = 'jornadaD';
                                         }
 
@@ -279,7 +292,7 @@
                 }
 
                 if (!empty($arquivo)) {
-                    $dataEmissao = "<b>Atualizado em: </b>".date("H:i", filemtime($arquivo)); //Utilizado no HTML.
+                    $dataEmissao = "<b>Atualizado em: </b>".date("d/m/Y H:i", filemtime($arquivo)); //Utilizado no HTML.
                     $arquivoGeral = json_decode(file_get_contents($arquivo), true);
 
                     $encontrado = true;

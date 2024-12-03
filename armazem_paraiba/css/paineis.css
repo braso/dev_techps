@@ -259,9 +259,17 @@ th.sort-desc::after {
     color: red;
 }
 
-.jornada{
+.jornadaGreen{
+    color: var(--var-green);
+    text-align: center;
+}
+.jornadaYellow{
     background-color: #172743;
     color: var(--var-yellow);
+    text-align: center;
+}
+.jornadaRed{
+    color: var(--var-red);
     text-align: center;
 }
 

@@ -25,11 +25,11 @@
 				<?php } ?>
 				<?= $quantFun ?>
 			</div>
-			<?php if ($quantFun) {?>
-				<caption><b>*</b> - Intervalo em aberto</caption>
+			<?php if ($quantFun) { ?>
+				<caption>Marcações com <b>(*)</b> indicam intervalos em aberto</caption>
 				<br>
-				<caption><b>----</b> - Sem informação</caption>
-			<?php }?>
+				<caption>Marcações com <b>(----)</b> indicam intervalos sem informações</caption>
+			<?php } ?>
 		</div>
 		<div class="portlet-body form">
 			<?= $rowGravidade ?>
