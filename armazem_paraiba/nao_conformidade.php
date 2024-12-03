@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 		
@@ -158,10 +158,9 @@
 				$motoristas = mysqli_fetch_all($sqlMotorista, MYSQLI_ASSOC);
 				foreach($motoristas as $aMotorista){
 					$counts["total"]++;
-					if(empty($aMotorista["enti_tx_nome"]) || empty($aMotorista["enti_tx_matricula"])){
-						dd("teste", false);
-						continue;
-					}
+					// if(empty($aMotorista["enti_tx_nome"]) || empty($aMotorista["enti_tx_matricula"])){
+					// 	continue;
+					// }
 	
 					//Pegando e formatando registros dos dias{
 						$aDia = [];
