@@ -1,5 +1,6 @@
 deployment:
   tasks:
-    - export GITPATH=/home/techpsjornada/repositories/dev_techps/*
-    - export DEPLOYPATH=/home/techpsjornada/public_html/dev/
-    - /bin/cp -R $GITPATH $DEPLOYPATH 
+    - export GENERAL=/home/techpsjornada/repositories/dev_techps/*
+    - export GENERALDEPLOY=/home/techpsjornada/public_html/dev
+    
+    - /bin/cp -R $GENERAL $GENERALDEPLOY
