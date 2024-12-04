@@ -23,10 +23,10 @@
                         +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
                         +'<td class ='+css+'>'+jornada+'</td>'
                         +'<td class ='+jornadaEfetiva+'>'+item.jornadaEfetiva+'</td>'
-                        +'<td>'+(refeicao ? refeicao : '<strong>----</strong>')+'</td>'
-                        +'<td>'+(espera ? espera : '<strong>----</strong>')+'</td>'
-                        +'<td>'+(descanso ? descanso : '<strong>----</strong>')+'</td>'
-                        +'<td>'+(repouso ? repouso : '<strong>----</strong>')+'</td>'
+                        +'<td class = \'jornada\'>'+(refeicao ? refeicao : '<strong>----</strong>')+'</td>'
+                        +'<td class = \'jornada\'>'+(espera ? espera : '<strong>----</strong>')+'</td>'
+                        +'<td class = \'jornada\'>'+(descanso ? descanso : '<strong>----</strong>')+'</td>'
+                        +'<td class = \'jornada\'>'+(repouso ? repouso : '<strong>----</strong>')+'</td>'
                     +'</tr>';";
         }
 
@@ -103,38 +103,44 @@
 
                                         var diferencaDias = item.diaDiferenca;
                                         function calcularJornadaRestante(horasTrabalhadas, jornadaPadrao, toleranciaMinutos) {
+                                            // Converter jornada padrão para minutos
                                             const [jornadaHoras, jornadaMinutos] = jornadaPadrao.split(':').map(Number);
-                                            const jornadaPadraoMinutos = jornadaHoras * 60 + jornadaMinutos; 
-                                            const tolerancia = toleranciaMinutos; // Tolerância em minutos
+                                            const jornadaPadraoMinutos = jornadaHoras * 60 + jornadaMinutos;
 
                                             // Converter horas trabalhadas para minutos
                                             const [horas, minutos] = horasTrabalhadas.split(':').map(Number);
                                             const minutosTrabalhados = horas * 60 + minutos;
 
+                                            // Calcular os minutos excedentes (se houver)
                                             let minutosRestantes = jornadaPadraoMinutos - minutosTrabalhados;
 
-                                            let corTexto = '';
+                                            let corTexto = 'jornada';
 
-                                            if (minutosRestantes <= -tolerancia) {
-                                                return corTexto = 'jornadaRed';
-                                            } else if (minutosRestantes <= 0) {
-                                                return corTexto = 'jornadaGreen' ;
-                                            } else {
-                                                const horasRestantes = Math.floor(minutosRestantes / 60);
-                                                const minutosRestantesFinal = minutosRestantes % 60;
-                                                if (horasRestantes <= 2) {
-                                                    corTexto = 'jornadaYellow'; // Cor amarela quando faltar 3 horas ou menos
-                                                }
-                                                return corTexto;
+                                            // Quando a jornada for superada em pouco tempo (dentro tolerância)
+                                            if (minutosRestantes <= 0 && minutosRestantes >= -toleranciaMinutos) {
+                                                corTexto = 'jornadaGreen';
+                                            } 
+                                            // Quando a jornada for excedida, mas dentro do limite tolerável 
+                                            else if (minutosRestantes < -toleranciaMinutos) {
+                                                corTexto = 'jornadaYellow';
                                             }
+                                            // Se excedeu excessivamente 
+                                            else if (minutosTrabalhados > jornadaPadraoMinutos + toleranciaMinutos) {
+                                                corTexto = 'jornadaRed';
+                                            }
+
+                                            // Fallback
+                                            return corTexto;
                                         }
+
+
                                         
-                                        let jornadaEfetiva = '';
+                                        let jornadaEfetiva = 'jornada';
                                         if(item.jornadaEfetiva != '----'){
                                             jornadaEfetiva = calcularJornadaRestante(item.jornadaEfetiva, item.jornadaDia, item.tolerancia);
                                         }
 
-                                        var css = '';
+                                        var css = 'jornada';
                                         if(diferencaDias > 0){
                                             css = 'jornadaD';
                                         }
@@ -283,7 +289,7 @@
                     if (!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
                         $arquivos[] = $arquivo;
                     }
-                    $quantFun = " - <b>Total de Funcionários:</b> ".count($arquivos);
+                    $quantFun = " - <b>Total de funcionários com jornada:</b> ".count($arquivos);
                 }
                 $pasta->close();
 

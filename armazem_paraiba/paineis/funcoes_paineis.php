@@ -526,17 +526,15 @@
 			. " ORDER BY enti_tx_nome ASC;"
 		), MYSQLI_ASSOC);
 
-		if(empty($motoristas)){
-			$pasta = dir($path);
-			while (($arquivo = $pasta->read()) !== false) {
-				// Ignora os diretórios especiais '.' e '..'
-				if ($arquivo != '.' && $arquivo != '..') {
-					$arquivoPath = $path . DIRECTORY_SEPARATOR . $arquivo;  // Caminho completo do arquivo
-					unlink($arquivoPath);  // Apaga o arquivo
-				}
+		$pasta = dir($path);
+		while (($arquivo = $pasta->read()) !== false) {
+			// Ignora os diretórios especiais '.' e '..'
+			if ($arquivo != '.' && $arquivo != '..') {
+				$arquivoPath = $path . DIRECTORY_SEPARATOR . $arquivo;  // Caminho completo do arquivo
+				unlink($arquivoPath);  // Apaga o arquivo
 			}
-			$pasta->close();
 		}
+		$pasta->close();
 
 		foreach ($motoristas as $motorista) {
 			$row = [];
@@ -662,7 +660,7 @@
 					if(date('l', $dia["data"]) == "Saturday"){
 						$jornadaDia = $parametro[0]["para_tx_jornadaSabado"];
 					} else {
-						$jornadaDia = $parametro[0]["para_tx_jornadaSabado"];
+						$jornadaDia = $parametro[0]["para_tx_jornadaSemanal"];
 					}
 
 					$horaLimpa = preg_replace('/<strong>.*?<\/strong>/', '',  $dia["inicioJornada"]);
