@@ -341,10 +341,8 @@
 		$periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
 		$totais = [
-			"inicioSemRegistro" => 0,
-			"inicioRefeicaoSemRegistro" => 0,
-			"fimRefeicaoSemRegistro" => 0,
-			"fimSemRegistro" => 0,
+			"jornadaSemRegistro" => 0,
+			"refeicaoSemRegistro" => 0,
 			"refeicao1h" => 0,
 			"refeicao2h" => 0,
 			"esperaAberto" => 0,
@@ -405,8 +403,7 @@
 					"mdcDescanso30m5h" => 0,
 					"mdcDescanso30m" => 0,
 					"mdcDescanso15m" => 0,
-					"inicioRefeicaoSemRegistro" => 0,
-					"fimRefeicaoSemRegistro" => 0,
+					"refeicaoSemRegistro" => 0,
 					"refeicao1h" => 0,
 					"refeicao2h" => 0,
 					"faltaJustificada" => 0,
@@ -445,13 +442,14 @@
 					unset($total);
 				}
 
+				// dd($totalizadores);
 				if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado"){
 					$totalNaoconformidade = array_sum([
 						$totalizadores["mdcDescanso30m5h"],
 						$totalizadores["mdcDescanso30m"],
 						$totalizadores["mdcDescanso15m"],
 						$totalizadores["inicioRefeicaoSemRegistro"],
-						$totalizadores["fimRefeicaoSemRegistro"],
+						$totalizadores["refeicaoSemRegistro"],
 						$totalizadores["refeicao1h"],
 						$totalizadores["refeicao2h"],
 						$totalizadores["intersticioInferior"],
@@ -476,8 +474,7 @@
 						$totalizadores["mdcDescanso30m5h"],
 						$totalizadores["mdcDescanso30m"],
 						$totalizadores["mdcDescanso15m"],
-						$totalizadores["inicioRefeicaoSemRegistro"],
-						$totalizadores["fimRefeicaoSemRegistro"],
+						$totalizadores["refeicaoSemRegistro"],
 						$totalizadores["refeicao1h"],
 						$totalizadores["refeicao2h"],
 						$totalizadores["intersticioInferior"],
@@ -506,13 +503,23 @@
 					$arrayTitulos = ['Espera', 'Descanso', 'Repouso', 'Jornada', 'Jornada Prevista', 'Jornada Efetiva', 'MDC',
 					'Refeição', 'Interstício Inferior', 'Interstício Superior'];
 
-					$arrayTitulos2 = ['Inicio ou Fim de espera sem registro', 'Inicio ou Fim de descanso sem registro',
-					'Inicio ou Fim de repouso sem registro', 'Inicio ou Fim de jornada sem registro', 'Faltas justificadas', 'Faltas Não justificadas',
-					'Tempo excedida de 10:00h', 'Tempo excedida de 12:00h', 'Descanso de 00:30 a cada 05:30 dirigidos não respeitado',
-					'Descanso de 00:30 não respeitado', 'Descanso de 00:15 não respeitado', 'Batida início de refeição não registrado',
-					'Batida fim de refeição não registrado', 'Refeição Initerrupita maior do que 01:00h não respeitada',
-					'Refeição com Tempo máximo de 02:00h não respeitada', 'O mínimo de 08:00h ininterruptas no primeiro período não respeitado',
-					'Interstício Total de 11:00 não respeitado, faltaram 00:32'
+					$arrayTitulos2 = [
+					'Início ou Fim de espera sem registro',
+					'Início ou Fim de repouso sem registro',
+					'Inicio ou Fim de repouso sem registro',
+					'Início ou fim de jornada sem registro',
+					'Faltas justificadas',
+					'Faltas não justificadas',
+					'Tempo excedido de 10:00h de jornada efetiva',
+					'Tempo excedido de 12:00h de jornada efetiva',
+					'Descanso de 30 minutos a cada 05:30 de direção não respeitado.',
+					'Descanso de 30 minutos não respeitado',
+					'Descanso de 15 minutos não respeitado',
+					'Batida de início ou fim de refeição não registrada',
+					'Refeição ininterrupta maior que 1 hora não respeitada',
+					'Tempo máximo de 2 horas para a refeição não respeitado',
+					'O mínimo de 8 horas de interstício não foi respeitado',
+					'Interstício total de 11 horas não respeitado'
 					];
 
 					$coresGrafico = ['#FFE800' ,'#FFE800' ,'#FFE800','#FFE800','#FFE800', '#FF8B00', '#FF8B00', '#a30000', '#a30000', '#a30000'];
@@ -524,19 +531,26 @@
 					"intersticioInferior", "intersticioSuperior"];
 
 					$keys2 = ["espera", "descanso", "repouso", "jornada", "faltaJustificada", "falta","jornadaExcedido10h", "jornadaExcedido12h",
-					"mdcDescanso30m5h", "mdcDescanso30m","mdcDescanso15m", "inicioRefeicaoSemRegistro", "fimRefeicaoSemRegistro" , "refeicao1h",
+					"mdcDescanso30m5h", "mdcDescanso30m","mdcDescanso15m", "refeicaoSemRegistro", "refeicao1h",
 					"refeicao2h", "intersticioInferior", "intersticioSuperior"];
 				} else{
 					// Campos dos graficos {
 					$arrayTitulos = ['Jornada Prevista', 'Jornada Efetiva', 'MDC',
 					'Refeição', 'Interstício Inferior', 'Interstício Superior'];
 
-					$arrayTitulos2 = ['Faltas justificadas', 'Faltas Não justificadas',
-					'Tempo excedida de 10:00h', 'Tempo excedida de 12:00h', 'Descanso de 00:30 a cada 05:30 dirigidos não respeitado',
-					'Descanso de 00:30 não respeitado', 'Descanso de 00:15 não respeitado', 'Batida início de refeição não registrado',
-					'Batida fim de refeição não registrado', 'Refeição Initerrupita maior do que 01:00h não respeitada',
-					'Refeição com Tempo máximo de 02:00h não respeitada', 'O mínimo de 08:00h ininterruptas no primeiro período não respeitado',
-					'Interstício Total de 11:00 não respeitado, faltaram 00:32'
+					$arrayTitulos2 = [
+					'Faltas justificadas',
+					'Faltas não justificadas',
+					'Tempo excedido de 10:00h de jornada efetiva',
+					'Tempo excedido de 12:00h de jornada efetiva',
+					'Descanso de 30 minutos a cada 05:30 de direção não respeitado.',
+					'Descanso de 30 minutos não respeitado',
+					'Descanso de 15 minutos não respeitado',
+					'Batida de início ou fim de refeição não registrada',
+					'Refeição ininterrupta maior que 1 hora não respeitada',
+					'Tempo máximo de 2 horas para a refeição não respeitado',
+					'O mínimo de 8 horas de interstício não foi respeitado',
+					'Interstício total de 11 horas não respeitado'
 					];
 
 					$coresGrafico = ['#FFE800', '#FF8B00', '#FF8B00', '#a30000', '#a30000', '#a30000'];
@@ -547,20 +561,20 @@
 					$keys = ["jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao","intersticioInferior", "intersticioSuperior"];
 
 					$keys2 = ["faltaJustificada", "falta", "jornadaExcedido10h", "jornadaExcedido12h", "mdcDescanso30m5h", "mdcDescanso30m",
-					"mdcDescanso15m", "inicioRefeicaoSemRegistro", "fimRefeicaoSemRegistro" , "refeicao1h", "refeicao2h", "intersticioInferior",
+					"mdcDescanso15m", "refeicaoSemRegistro", "refeicao1h", "refeicao2h", "intersticioInferior",
 					"intersticioSuperior"];
 				}
 
 				// Percentuais gerais de Não Conformidade (baseado no total geral)
 				foreach ($keys as $key) {
-					$percentuais["Geral_".$key] = round(($totalizadores[$key] / $totalGeral) * 100, 2);
+					$percentuais["Geral_".$key] = number_format(round(($totalizadores[$key] / $totalGeral) * 100, 2),2);
 					$graficoAnalitico[] = $totalizadores[$key];
 				}
 	
 				// Percentuais específicos de Não Conformidade (baseado no total de não conformidade)
 				foreach ($keys2 as $key)  {
 					if ($totalNaoconformidade > 0 && isset($totalizadores[$key])) {
-						$percentuais["Especifico_".$key] = round(($totalizadores[$key] / $totalNaoconformidade) * 100, 2);
+						$percentuais["Especifico_".$key] =  number_format(round(($totalizadores[$key] / $totalNaoconformidade) * 100, 2),2);
 					} else {
 						$percentuais["Especifico_".$key] = 0;
 					}
@@ -593,9 +607,10 @@
 					];
 
 					$encontrado = true;
-				} else {
-					echo "<script>alert('Não tem jornadas abertas.')</script>";
-				}
+				} 
+				// else {
+				// 	echo "<script>alert('Não tem não conformidades.')</script>";
+				// }
 
 				$pasta = dir($path);
                 while($arquivoEmpresa = $pasta->read()){

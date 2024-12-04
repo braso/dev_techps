@@ -709,6 +709,7 @@
 		$hoje = new DateTime();
 
 		if ($periodoInicio->format('Y-m') === $hoje->format('Y-m')) {
+			$hoje->modify('-1 day');
 			// Se for o mês atual, a data limite é o dia de hoje
 			$periodoFim = $hoje;
 		} else {
@@ -764,8 +765,7 @@
 				"intersticioInferior" 		=> 0,
 				"intersticioSuperior" 		=> 0,
 
-				"inicioRefeicaoSemRegistro" => 0,
-				"fimRefeicaoSemRegistro" 	=> 0,
+				"refeicaoSemRegistro" 		=> 0,
 				"refeicao1h" 				=> 0,
 				"refeicao2h" 				=> 0,
 				"jornadaExcedido10h" 		=> 0,
@@ -845,15 +845,11 @@
 								$totalMotorista["refeicao"] += 1;
 							}
 
-							if ($inicioRefeicao) {
-								$totalMotorista["inicioRefeicaoSemRegistro"] += 1;
+							if ($inicioRefeicao || $fimRefeicao) {
+								$totalMotorista["refeicaoSemRegistro"] += 1;
 							}
 
-							if ($fimRefeicao) {
-								$totalMotorista["fimRefeicaoSemRegistro"] += 1;
-							}
-
-							if (is_int(strpos($ponto[7], "fa-warning")) && is_int(strpos($ponto[7], "01:00h"))) {
+							if ($inicioRefeicao == false && $fimRefeicao == false && is_int(strpos($ponto[7], "fa-warning")) && is_int(strpos($ponto[7], "01:00h"))) {
 								$totalMotorista["refeicao1h"] += 1;
 							}
 
@@ -973,13 +969,10 @@
 					if (strpos($diffRefeicao, "fa-info-circle") !== false && strpos($diffRefeicao, "color:orange;") !== false) {
 						$totalMotorista["refeicao"]++;
 					}
-					if ($inicioRefeicao) {
-						$totalMotorista["inicioRefeicaoSemRegistro"] += 1;
+					if ($inicioRefeicao || $fimRefeicao) {
+						$totalMotorista["refeicaoSemRegistro"] += 1;
 					}
-					if ($fimRefeicao) {
-						$totalMotorista["fimRefeicaoSemRegistro"] += 1;
-					}
-					if (strpos($diffRefeicao, "01:00h") !== false) {
+					if ($inicioRefeicao == false && $fimRefeicao == false && strpos($diffRefeicao, "01:00h") !== false) {
 						$totalMotorista["refeicao1h"] += 1;
 					}
 					if (strpos($diffRefeicao, "02:00h") !== false) {
@@ -1027,6 +1020,7 @@
 
 			file_put_contents($path."/nao_endossado/".$motorista["enti_tx_matricula"].".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 		}
+		
 		$totaisEmpr = [
 			"jornadaPrevista" 			=> 0,
 			"jornadaEfetiva" 			=> 0,
@@ -1039,8 +1033,7 @@
 			"intersticioInferior" 		=> 0,
 			"intersticioSuperior" 		=> 0,
 
-			"inicioRefeicaoSemRegistro" => 0,
-			"fimRefeicaoSemRegistro" 	=> 0,
+			"refeicaoSemRegistro" 		=> 0,
 			"refeicao1h" 				=> 0,
 			"refeicao2h" 				=> 0,
 			"jornadaExcedido10h" 		=> 0,

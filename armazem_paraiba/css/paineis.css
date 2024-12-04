@@ -2,17 +2,17 @@ body {
     --var-blue: #4ea9ff;
     --var-darkblue: #0757a2;
     --var-red: #ec4141;
-    --var-darkred: #a30000;
-    --var-lightred: #C41212;
-    --var-yellow2: #FFF260;
-    --var-yellow3: #FFE800;
+    --var-darkred: #a3000080;
+    --var-lightred: #c4121270;
+    --var-yellow2: #fff26038 ;
+    --var-yellow3: #ffe80063;
     --var-yellow: #f1c61f;
-    --var-orange: #FF8B00;
-    --var-lightorange: #FF9F2C;
+    --var-orange: #ff8b0070;
+    --var-lightorange: #ff9f2c57;
     --var-lightyellow: #ffff75;
     --var-darkyellow: #c1a300;
     --var-green: #53d02a;
-    --var-darkgreen: #29a300;
+    --var-darkgreen: #29a30094;
 }
 
 
@@ -441,3 +441,63 @@ th.sort-desc::after {
     /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
 
 }
+
+ /* Painel nc_juridica */
+  /* Estilo geral do painel */
+  .panel {
+      border-radius: 12px;
+      border: none;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+      transition: box-shadow 0.3s ease-in-out;
+  }
+
+  /* Cabeçalho do painel */
+  .panel-heading {
+      background: linear-gradient(to right, #172743, #36a4bc);
+      color: #fff;
+      border-radius: 12px 12px 0 0;
+      padding: 20px;
+      font-size: 20px;
+      font-weight: bold;
+      position: relative;
+      transition: background-color 0.3s ease;
+  }
+
+  /* Título do Accordion com interação */
+  .panel-title a {
+      color: #fff;
+      text-decoration: none;
+      display: block;
+      position: relative;
+  }
+
+  /* Ícone da seta usando Glyphicons */
+  .panel-title a::after {
+      content: '\e114';
+      /* Seta para baixo (expandido) */
+      font-family: 'Glyphicons Halflings';
+      position: absolute;
+      right: 20px;
+      font-size: 20px;
+      transition: transform 0.3s ease;
+  }
+
+  .panel-title a.collapsed::after {
+      content: '\e113';
+      /* Seta para a direita (fechado) */
+      transform: rotate(0deg);
+  }
+
+  /* Corpo do painel */
+  .panel-body {
+      background-color: #f1f0f04d;
+      padding: 20px;
+      border-radius: 0 0 12px 12px;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+  }
+
+  .panel-body p {
+      margin: 0;
+  }
