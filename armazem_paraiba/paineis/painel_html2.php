@@ -196,7 +196,7 @@
 				<h4><!--<b>Total de Não conformidade de todos Funcionário</b>--></h4>
 			</div>
 			<div class="portlet-body form">
-				<div id='graficoDetalhado' style='width:100%; height:850px; background-color: lightblue;'>
+				<div id='graficoDetalhado' style='width:100%; height:850px;'>
 				</div>
 			<?php } ?>
 
@@ -316,7 +316,7 @@
 			Highcharts.chart('graficoDetalhado', {
 				chart: {
 					type: 'bar', // Altere o tipo do gráfico para 'bar'
-					backgroundColor: '#285b7e'
+					backgroundColor: '#0033337d'
 
 				},
 				title: {
@@ -343,10 +343,13 @@
 							var color = coresDetalhado[this.pos] || '#000';
 							var coresComBordaBranca = ['#ff0000', '#00ff00'];
 
-							var textShadow =
-								`text-shadow: 
-							1px 1px 1px rgba(0, 0, 0, 0.5);`;
-							236, 65, 65
+							var textShadow = '';
+								// `text-shadow:
+								// -1px -1px 1px rgba(0, 0, 0, 0.5), 
+								// 1px -1px 1px rgba(0, 0, 0, 0.5), 
+								// -1px 1px 1px rgba(0, 0, 0, 0.5),  
+								// 1px 1px 1px rgba(0, 0, 0, 0.5);`;
+							// 236, 65, 65
 
 							return `<span style="color:${color}; ${textShadow}"><b>${this.value}</b></span>`;
 						}

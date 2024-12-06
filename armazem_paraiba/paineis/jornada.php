@@ -102,42 +102,37 @@
                                         }
 
                                         var diferencaDias = item.diaDiferenca;
-                                        function calcularJornadaRestante(horasTrabalhadas, jornadaPadrao, toleranciaMinutos) {
-                                            // Converter jornada padrão para minutos
+                                        function calcularJornadaElimite(horasTrabalhadas, jornadaPadrao, limiteExtra) {
+                                            // Converter jornada padrão e limite extra para minutos
                                             const [jornadaHoras, jornadaMinutos] = jornadaPadrao.split(':').map(Number);
                                             const jornadaPadraoMinutos = jornadaHoras * 60 + jornadaMinutos;
+
+                                            const [limiteHoras, limiteMinutos] = limiteExtra.split(':').map(Number);
+                                            const limiteExtraMinutos = limiteHoras * 60 + limiteMinutos;
 
                                             // Converter horas trabalhadas para minutos
                                             const [horas, minutos] = horasTrabalhadas.split(':').map(Number);
                                             const minutosTrabalhados = horas * 60 + minutos;
 
-                                            // Calcular os minutos excedentes (se houver)
-                                            let minutosRestantes = jornadaPadraoMinutos - minutosTrabalhados;
-
                                             let corTexto = 'jornada';
 
-                                            // Quando a jornada for superada em pouco tempo (dentro tolerância)
-                                            if (minutosRestantes <= 0 && minutosRestantes >= -toleranciaMinutos) {
-                                                corTexto = 'jornadaGreen';
-                                            } 
-                                            // Quando a jornada for excedida, mas dentro do limite tolerável 
-                                            else if (minutosRestantes < -toleranciaMinutos) {
-                                                corTexto = 'jornadaYellow';
-                                            }
-                                            // Se excedeu excessivamente 
-                                            else if (minutosTrabalhados > jornadaPadraoMinutos + toleranciaMinutos) {
-                                                corTexto = 'jornadaRed';
+                                            if (minutosTrabalhados < jornadaPadraoMinutos) {
+                                                corTexto = 'jornadaYellow'; // Abaixo do padrão
+                                            } else if (minutosTrabalhados <= jornadaPadraoMinutos + limiteExtraMinutos) {
+                                                corTexto = 'jornadaGreen'; // Dentro do padrão e limite extra
+                                            } else {
+                                                corTexto = 'jornadaRed'; // Excede o limite extra
                                             }
 
-                                            // Fallback
                                             return corTexto;
                                         }
+
 
 
                                         
                                         let jornadaEfetiva = 'jornada';
                                         if(item.jornadaEfetiva != '----'){
-                                            jornadaEfetiva = calcularJornadaRestante(item.jornadaEfetiva, item.jornadaDia, item.tolerancia);
+                                            jornadaEfetiva = calcularJornadaElimite(item.jornadaEfetiva, item.jornadaDia, item.limiteExtras);
                                         }
 
                                         var css = 'jornada';
