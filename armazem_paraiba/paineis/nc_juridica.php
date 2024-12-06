@@ -518,13 +518,13 @@
 					'Batida de início ou fim de refeição não registrada',
 					'Refeição ininterrupta maior que 1 hora não respeitada',
 					'Tempo máximo de 2 horas para a refeição não respeitado',
-					'O mínimo de 8 horas de interstício não foi respeitado',
+					'O mínimo de 11 horas de interstício não foi respeitado',
 					'Interstício total de 11 horas não respeitado'
 					];
 
 					$coresGrafico = ['#FFE800' ,'#FFE800' ,'#FFE800','#FFE800','#FFE800', '#FF8B00', '#FF8B00', '#a30000', '#a30000', '#a30000'];
 					$coresGrafico2 = ['#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FF8B00', '#FF8B00', '#FF8B00', '#FF8B00',
-					'#FF8B00', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000'];
+					'#FF8B00', '#ff3300', '#ff3300', '#ff3300', '#ff3300', '#ff3300', '#ff3300'];
 					//}
 					
 					$keys = ["espera", "descanso", "repouso", "jornada", "jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao",
@@ -549,13 +549,13 @@
 					'Batida de início ou fim de refeição não registrada',
 					'Refeição ininterrupta maior que 1 hora não respeitada',
 					'Tempo máximo de 2 horas para a refeição não respeitado',
-					'O mínimo de 8 horas de interstício não foi respeitado',
+					'O mínimo de 11 horas de interstício não foi respeitado',
 					'Interstício total de 11 horas não respeitado'
 					];
 
 					$coresGrafico = ['#FFE800', '#FF8B00', '#FF8B00', '#a30000', '#a30000', '#a30000'];
 					$coresGrafico2 = ['#FFE800', '#FFE800', '#FF8B00', '#FF8B00', '#FF8B00', '#FF8B00',
-					'#FF8B00', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000'];
+					'#FF8B00', '#ec4141', '#ec4141', '#ec4141', '#ec4141', '#ec4141', '#ec4141'];
 					//}
 
 					$keys = ["jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao","intersticioInferior", "intersticioSuperior"];
@@ -650,10 +650,10 @@
 			$rowGravidade = "
 			<div class='row'>
 				<div class='col-md-3'>
-					<table id='tabela-motorista' style='width: 350px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
+					<table id='tabela-motorista' style='width: 275px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
 						. "<thead>"
 							. "<tr>"
-								. "<td> Quandidade de motoristas por ocupação </td>"
+								. "<td> Quandidade por ocupação </td>"
 								. "<td>TOTAL</td>"
 								. "<td>%</td>"
 							. "</th>"
@@ -661,7 +661,7 @@
 							. "<tbody>"
 							. "</tbody>"
 						. "</table>
-						<table style='width: 350px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
+						<table style='width: 275px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
 						. "<thead>"
 							. "<tr>"
 								. "<td> Nivel de Gravidade</td>"
@@ -696,12 +696,12 @@
 					<div class='col-md-3'>
 					<div class='container' style='display:flex'>
 						<!-- <div class='col-sm-4'>-->
-							<div id='graficoSintetico' style='width:64%; height:390px; background-color: lightgray;'>
+							<div id='graficoSintetico' style='width:64%; background-color: lightgray;'>
 								<!-- Conteúdo do gráfico Sintético -->
 							</div>
 						<!-- </div>	-->			
-						<!-- <div class='col-md-5'>-->
-							<div id='graficoAnalitico' style='width:105%; height:390px; background-color: lightblue;'>
+						<!-- <div class='col-md-4'>-->
+							<div id='graficoAnalitico' style='width:96%; background-color: lightblue;'>
 							<!-- Conteúdo do gráfico Analítico -->
 							</div>
 						<!-- </div>	-->			
@@ -712,7 +712,7 @@
 			$rowTitulos = "<tr id='titulos'>";
 
 			if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "naoEndossado") {
-				$titulo = "Não Conformidade Juridica Atualizado Antes do Fechamento";
+				$titulo = "Não Conformidade Juridica Atualizada";
 				$rowTitulos .=
 					"<th class='matricula'>Matricula</th>"
 					."<th class='funcionario'>Funcionário</th>"
