@@ -482,7 +482,7 @@ th.sort-desc::after {
       background: linear-gradient(to right, #172743, #36a4bc);
       color: #fff;
       border-radius: 12px 12px 0 0;
-      padding: 20px;
+      padding: 6px;
       font-size: 20px;
       font-weight: bold;
       position: relative;
@@ -504,7 +504,7 @@ th.sort-desc::after {
       font-family: 'Glyphicons Halflings';
       position: absolute;
       right: 20px;
-      font-size: 20px;
+      font-size: 15px;
       transition: transform 0.3s ease;
   }
 
@@ -531,4 +531,24 @@ th.sort-desc::after {
       .container {
           width: 860px !important;
       }
+  }
+
+  .highlighted {
+      background-color: lightgreen !important;
+      text-align: center;
+      /* color: black !important; */
+      /* Contraste opcional */
+  }
+
+  .total{
+    text-align: center;
+  }
+
+  .table thead tr th {
+      font-size: 11px;
+      font-weight: 600;
+  }
+  .table td,
+  .table th {
+      font-size: 10px;
   }

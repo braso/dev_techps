@@ -27,17 +27,17 @@
 			$linha .= "+'<td>'+row.matricula+'</td>'
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
-						+'<td class=\'baixaGravidade\'>'+(row.espera === 0 ? '' : row.espera )+'</td>'
-						+'<td class=\'baixaGravidade\'>'+(row.descanso === 0 ? '' : row.descanso )+'</td>'
-						+'<td class=\'baixaGravidade\'>'+(row.repouso === 0 ? '' : row.repouso )+'</td>'
-						+'<td class=\'baixaGravidade\'>'+(row.jornada === 0 ? '' : row.jornada )+'</td>'
-						+'<td class=\'baixaGravidade\'>'+(row.jornadaPrevista === 0 ? '' : row.jornadaPrevista )+'</td>'
-						+'<td class=\'mediaGravidade\'>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
-						+'<td class=\'mediaGravidade\'>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
-						+'<td class=\'altaGravidade\'>'+ (row.refeicao === 0 ? '' : row.refeicao) +'</td>'
-						+'<td class=\'altaGravidade\'>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
-						+'<td class=\'altaGravidade\'>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
-						+'<td class=\'total\'>'+(totalNaEndossado)+'</td>'
+						+'<td class='+class1+'>'+(row.espera === 0 ? '' : row.espera )+'</td>'
+						+'<td class='+class1+'>'+(row.descanso === 0 ? '' : row.descanso )+'</td>'
+						+'<td class='+class1+'>'+(row.repouso === 0 ? '' : row.repouso )+'</td>'
+						+'<td class='+class1+'>'+(row.jornada === 0 ? '' : row.jornada )+'</td>'
+						+'<td class='+class1+'>'+(row.jornadaPrevista === 0 ? '' : row.jornadaPrevista )+'</td>'
+						+'<td class='+class2+'>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
+						+'<td class='+class2+'>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
+						+'<td class='+class3+'>'+ (row.refeicao === 0 ? '' : row.refeicao) +'</td>'
+						+'<td class='+class3+'>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
+						+'<td class='+class3+'>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
+						+'<td class='+class4+'>'+(totalNaEndossado)+'</td>'
 					+'</tr>';";
 		} elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
 			$linha = "linha = '<tr>'";
@@ -56,8 +56,8 @@
 
 		$carregarDados = "";
 		foreach ($arquivos as $arquivo) {
-			$carregarDados .= "carregarDados('".$arquivo."');";
-		}
+			$carregarDados .= "carregarDados('".$arquivo. "');";
+			}
 
 		echo
 			"<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"]). "'>
@@ -121,6 +121,11 @@
 								var motoristas = 0;
 								var ajudante = 0;
 								var funcionario = 0;
+
+								let class1 = '';
+								let class2 = '';
+								let class3 = '';
+								let class4 = '';
 								$.each(data, function(index, item){
 									row[index] = item;
 								});
@@ -131,17 +136,33 @@
 									
 								var totalEndossado = (row.refeicao || 0) + (row.jornadaPrevista || 0) + (row.jornadaEfetiva || 0) 
 								+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
+
+								// console.log(totalEndossado);
+								if (totalNaEndossado === 0) {
+									class1 = 'highlighted';
+									class2 = 'highlighted';
+									class3 = 'highlighted';
+									class4 = 'highlighted';
+								} else{
+									class1 = 'baixaGravidade';
+									class2 = 'mediaGravidade';
+									class3 = 'altaGravidade';
+									class4 = 'total';
+								}
+								
 								console.log(row);"
 								.$linha
-								. "tabela.append(linha);
+								. "
+								var novaLinha = $(linha);
+								tabela.append(linha);
 							},
 							error: function(){
 								console.log('Erro ao carregar os dados.');
 							}
 						});
-					}
+						}
 
-
+						
 					function ordenarTabela(coluna, ordem) {
 					var linhas = tabela.find('tr').get();
 
@@ -410,21 +431,12 @@
 					"falta" => 0
 				];
 
-				$todosZerados = true;
-				$totalMotoristasComConformidadesZeradas = 0;
-
 				$motoristas = 0;
 				foreach ($arquivos as &$arquivo) {
 					$arquivo = $path."/".$arquivo;
 					$json = json_decode(file_get_contents($arquivo), true);
 					foreach ($totalizadores as $key => &$total) {
-						if (!isset($json[$chave]) || $json[$chave] !== 0) {
-							$todosZerados = false;
-						}
 						$total += $json[$key] ?? 0; // incrementa apenas se o índice existir no JSON
-					}
-					if ($todosZerados) {
-						$totalMotoristasComConformidadesZeradas++;
 					}
 
 					if ($json["ocupacao"] === "Motorista") {
@@ -488,8 +500,7 @@
 				}
 
 				$totalGeral = $gravidadeAlta + $gravidadeMedia + $gravidadeBaixa;
-				$graficoSintetico = [$totalMotoristasComConformidadesZeradas ,$gravidadeAlta, 
-				$gravidadeMedia, $gravidadeBaixa];
+				$graficoSintetico = [$gravidadeAlta, $gravidadeMedia, $gravidadeBaixa];
 
 				$percentuais = [
 					"performance" => round($totalMotoristasComConformidadesZeradas / $totalGeral),
@@ -523,8 +534,9 @@
 					];
 
 					$coresGrafico = ['#FFE800' ,'#FFE800' ,'#FFE800','#FFE800','#FFE800', '#FF8B00', '#FF8B00', '#a30000', '#a30000', '#a30000'];
-					$coresGrafico2 = ['#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FF8B00', '#FF8B00', '#FF8B00', '#FF8B00',
-					'#FF8B00', '#ff3300', '#ff3300', '#ff3300', '#ff3300', '#ff3300', '#ff3300'];
+					$coresGrafico2 = [
+					'#FFE000', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FF8B00', '#FF8B00', '#FF8B00', '#FF8B00',
+					'#FF8B00', '#ff0404', '#ff0404', '#ff0404', '#ff0404', '#ff0404', '#ff0404'];
 					//}
 					
 					$keys = ["espera", "descanso", "repouso", "jornada", "jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao",
@@ -638,13 +650,13 @@
 					<td></td>
 					<td>Total</td>
 					$totalRow 
-					<td>".$totalempre["jornadaPrevista"]."</td>
-					<td>".$totalempre["jornadaEfetiva"]."</td>
-					<td>".$totalempre["mdc"]."</td>
-					<td>".$totalempre["refeicao"]."</td>
-					<td>".$totalempre["intersticioInferior"]."</td>
-					<td>".$totalempre["intersticioSuperior"]."</td>
-					<td>$totalGeral</td>
+					<td class='total'>".$totalempre["jornadaPrevista"]."</td>
+					<td class='total'>".$totalempre["jornadaEfetiva"]."</td>
+					<td class='total'>".$totalempre["mdc"]."</td>
+					<td class='total'>".$totalempre["refeicao"]."</td>
+					<td class='total'>".$totalempre["intersticioInferior"]."</td>
+					<td class='total'>".$totalempre["intersticioSuperior"]."</td>
+					<td class='total'>$totalGeral</td>
 			";
 
 			$rowGravidade = "

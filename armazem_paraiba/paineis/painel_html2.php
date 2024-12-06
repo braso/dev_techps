@@ -196,7 +196,7 @@
 				<h4><!--<b>Total de Não conformidade de todos Funcionário</b>--></h4>
 			</div>
 			<div class="portlet-body form">
-				<div id='graficoDetalhado' style='width:100%; height:850px;'>
+				<div id='graficoDetalhado' style='width:100%; height:850px; background-color: lightblue;'>
 				</div>
 			<?php } ?>
 
@@ -210,9 +210,9 @@
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {
 			// Gráfico sintético
-			const categorias = ['Performance', 'Alta', 'Media', 'Baixa'];
+			const categorias = ['Alta', 'Media', 'Baixa'];
 			const valores = <?= json_encode($graficoSintetico) ?>;
-			const cores = ['#53d02a', '#a30000', '#FF8B00', '#FFE800'];
+			const cores = ['#a30000', '#FF8B00', '#FFE800'];
 
 			const dataFormatada = categorias.map((categoria, index) => ({
 				name: categoria,
@@ -316,14 +316,14 @@
 			Highcharts.chart('graficoDetalhado', {
 				chart: {
 					type: 'bar', // Altere o tipo do gráfico para 'bar'
-					backgroundColor: '#0033337d'
+					backgroundColor: '#f9f9f9'
 
 				},
 				title: {
 					text: 'Gráfico Detalhado de Não Conformidades',
 					style: {
 						fontSize: '20px', // Aumenta o tamanho do título
-						color: '#ffffff'
+						// color: '#ffffff'
 					}
 				},
 				xAxis: {
@@ -332,7 +332,7 @@
 						text: 'Não Conformidades Juridicas',
 						style: {
 							fontSize: '16px', // Aumenta o tamanho da fonte do título do eixo X
-							color: '#ffffff'
+							// color: '#ffffff'
 						}
 					},
 					labels: {
@@ -343,15 +343,14 @@
 							var color = coresDetalhado[this.pos] || '#000';
 							var coresComBordaBranca = ['#ff0000', '#00ff00'];
 
-							var textShadow = '';
-								// `text-shadow:
-								// -1px -1px 1px rgba(0, 0, 0, 0.5), 
-								// 1px -1px 1px rgba(0, 0, 0, 0.5), 
-								// -1px 1px 1px rgba(0, 0, 0, 0.5),  
-								// 1px 1px 1px rgba(0, 0, 0, 0.5);`;
-							// 236, 65, 65
+							var textShadow = ""; // `text-shadow:
+							// -1px -1px 1px rgba(0, 0, 0, 0.5), 
+							// 1px -1px 1px rgba(0, 0, 0, 0.5), 
+							// -1px 1px 1px rgba(0, 0, 0, 0.5),  
+							// 1px 1px 1px rgba(0, 0, 0, 0.5);`;
+							236, 65, 65
 
-							return `<span style="color:${color}; ${textShadow}"><b>${this.value}</b></span>`;
+							return `<span style="border-bottom: 1px solid ${color}; ${textShadow}"><b>${this.value}</b></span>`;
 						}
 					}
 				},
@@ -362,14 +361,14 @@
 						text: 'Porcentagem',
 						style: {
 							fontSize: '16px',
-							color: '#ffffff'
+							// color: '#ffffff'
 						}
 					},
 					labels: {
 						format: '{value}%', // Exibe as labels do eixo Y como porcentagem
 						style: {
 							fontSize: '11px', // Aumenta o tamanho da fonte dos rótulos do eixo Y
-							color: '#ffffff'
+							// color: '#ffffff'
 						}
 					},
 					tickInterval: 2, // Ajusta o intervalo entre os ticks (linhas de grid)
