@@ -517,7 +517,6 @@ th.sort-desc::after {
   /* Corpo do painel */
   .panel-body {
       background-color: #f1f0f04d;
-      background-color: #c2c4c55f;
       padding: 20px;
       border-radius: 0 0 12px 12px;
       font-size: 16px;
