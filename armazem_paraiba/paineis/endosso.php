@@ -694,12 +694,12 @@
             $titulo = "de Endosso"; // usado no html
             include_once "painel_html.php";
 
-            echo 
-                "<div class='script'>
+            echo
+        "<div class='script'>
                     <script>
-                        var porcentagemEndoTds = document.getElementsByClassName('porcentagemEndo')[0];
-                        var porcentagemEndoPcTds = document.getElementsByClassName('porcentagemEndoPc')[0];
-                        var porcentagemNaEndoTds = document.getElementsByClassName('porcentagemNaEndo')[0];
+                        var porcentagemEndoTds = document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td');
+                        var porcentagemEndoPcTds = document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td');
+                        var porcentagemNaEndoTds = document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td');
                         porcentagemEndoTds[1].innerHTML = endossos.totais.E;
                         porcentagemEndoPcTds[1].innerHTML = endossos.totais.EP;
                         porcentagemNaEndoTds[1].innerHTML = endossos.totais.N;
