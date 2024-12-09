@@ -669,7 +669,7 @@
 					$horaLimpa = preg_replace('/[^0-9:]/', '', $horaLimpa);
 					$horaLimpa = trim($horaLimpa);
 					$row[] = [
-						"data" => $dia["data"].' '.$dia["inicioJornada"],
+						"data" => $dia["data"],
 						"jornadaDia" => $jornadaDia,
 						"limiteExtras" => $parametro[0]["para_tx_horasLimite"] == 0 ? '00:00' : $parametro[0]["para_tx_horasLimite"],
 						"inicioJornada" => $horaLimpa,
