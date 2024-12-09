@@ -202,7 +202,6 @@ function carregarJS(array $arquivos) {
 }
 
 function index() {
-	var_dump($_POST);
 	$dominiosAutotrac = ["/comav"];
 	if (!empty($_POST["acao"])) {
 		if ($_POST["busca_dataMes"] > date("Y-m")) {
