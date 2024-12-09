@@ -1,5 +1,7 @@
 <link rel="stylesheet" href="../css/paineis.css">
 <script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/highcharts-more.js"></script>
+<script src="https://code.highcharts.com/modules/solid-gauge.js"></script>
 <div id="printTitulo">
 	<img style="width: 150px" src="<?= $logoEmpresa ?>" alt="Logo Empresa Esquerda">
 	<h3>Relatorio <?= $titulo ?></h3>
@@ -192,11 +194,31 @@
 					</div>
 				</div>
 			</div>
-			<div>
-				<h4><!--<b>Total de Não conformidade de todos Funcionário</b>--></h4>
-			</div>
 			<div class="portlet-body form">
-				<div id='graficoDetalhado' style='width:100%; height:850px; background-color: lightblue;'>
+				<div class="panel-group" id="accordion">
+					<!-- Accordion Item -->
+					<div class="panel panel-default">
+						<div class="panel-heading">
+							<h3 class="panel-title">
+								<a
+									data-toggle="collapse"
+									href="#collapse3"
+									aria-expanded="false"
+									aria-controls="collapse3"
+									class="collapsed">
+									<b>
+										Gráfico Detalhado de Não Conformidades
+									</b>
+								</a>
+							</h3>
+						</div>
+						<div id="collapse3" class="panel-collapse collapse">
+							<div class="panel-body">
+								<div id='graficoDetalhado' style='width:100%; height:850px; background-color: lightblue;'>
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
 			<?php } ?>
 
@@ -403,6 +425,7 @@
 			});
 
 			var tabelaMotorista = $('#tabela-motorista tbody');
+			var tabelaMotoristaTotal = $('#tabela-motorista thead tr');
 			let motoristas = <?= $motoristas ?? 0 ?>;
 			let ajudante = <?= $ajudante ?? 0 ?>;
 			let funcionario = <?= $funcionario ?? 0 ?>;
@@ -410,6 +433,7 @@
 			const totalMotorista = motoristas + ajudante + funcionario;
 
 			let linhaMotorista = '';
+			let linhaMotorista2 = '';
 			let totalPorcentagem = 0; // Para somar as porcentagens
 
 			if (motoristas && motoristas > 0) {
@@ -430,9 +454,100 @@
 				linhaMotorista += '<tr><td>Funcionário</td><td>' + funcionario + '</td>';
 				linhaMotorista += '<td>' + percFuncionario + '%</td></tr>';
 			}
-			linhaMotorista += '<tr><td>Total</td><td>' + totalMotorista + '</td>';
-			linhaMotorista += '<td>' + totalPorcentagem.toFixed(2) + '%</td></tr>';
+			linhaMotorista2 += '<td>' + totalMotorista + '</td>';
+			linhaMotorista2 += '<td>' + totalPorcentagem.toFixed(2) + '%</td>';
 			tabelaMotorista.append(linhaMotorista);
+			tabelaMotoristaTotal.append(linhaMotorista2);
+		});
+
+
+		Highcharts.chart('graficoPerformance', {
+			chart: {
+				type: 'gauge',
+				plotBackgroundColor: null,
+				plotBackgroundImage: null,
+				plotBorderWidth: 0,
+				plotShadow: false,
+				height: '80%'
+			},
+			title: {
+				text: 'Performance Atual'
+			},
+			tooltip: {
+				// Customizando o conteúdo do tooltip
+				formatter: function() {
+					var quantidadeDeItens = <?= $totalJsonComTudoZero ?>; // Substitua com o valor real ou uma variável
+					// Exibe o valor e a quantidade de itens
+					return this.series.name + ': ' + this.y + '%<br>Quantidade de Funcionários: ' + quantidadeDeItens;
+				},
+				style: {
+					fontSize: '14px', // Aumenta o tamanho da fonte para 18px
+					fontWeight: 'bold', // Deixa a fonte em negrito
+					color: '#333333' // Cor do texto do tooltip
+				}
+			},
+			pane: {
+				startAngle: -90,
+				endAngle: 90,
+				background: null,
+				center: ['50%', '75%'],
+				size: '130%'
+			},
+			yAxis: {
+				min: 0,
+				max: 100,
+				tickPixelInterval: 60,
+				tickPosition: 'inside',
+				tickColor: Highcharts.defaultOptions.chart.backgroundColor || '#FFFFFF',
+				tickLength: 15,
+				tickWidth: 2,
+				labels: {
+					distance: 20,
+					style: {
+						fontSize: '14px'
+					}
+				},
+				lineWidth: 0,
+				plotBands: [{
+					from: 0,
+					to: 24,
+					color: '#55BF3B', // Verde
+					thickness: 20
+				}, {
+					from: 25,
+					to: 75,
+					color: '#FFE800', // Amarelo
+					thickness: 20
+				}, {
+					from: 75,
+					to: 100,
+					color: '#DF5353', // Vermelho
+					thickness: 20
+				}]
+			},
+			series: [{
+				name: 'Performance',
+				data: [<?= round($porcentagemFun, 2) ?>], // Agora o valor está dentro do intervalo de 0 a 100
+				dataLabels: {
+					format: '{y} %',
+					borderWidth: 0,
+					color: '#333333',
+					style: {
+						fontSize: '16px'
+					}
+				},
+				dial: {
+					radius: '80%',
+					backgroundColor: 'gray',
+					baseWidth: 12,
+					baseLength: '0%',
+					rearLength: '0%'
+				},
+				pivot: {
+					backgroundColor: 'gray',
+					radius: 6
+				}
+			}]
 		});
 	</script>
 <?php } ?>

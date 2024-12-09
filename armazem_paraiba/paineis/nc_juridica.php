@@ -432,11 +432,30 @@
 				];
 
 				$motoristas = 0;
+				$totalJsonComTudoZero = 0;
 				foreach ($arquivos as &$arquivo) {
+					$todosZeros = true;
 					$arquivo = $path."/".$arquivo;
 					$json = json_decode(file_get_contents($arquivo), true);
+
 					foreach ($totalizadores as $key => &$total) {
+						if (!isset($json[$key]) || $json[$key] != 0) {
+							$todosZeros = false; // Algum campo não está zerado
+							// break;
+						}
 						$total += $json[$key] ?? 0; // incrementa apenas se o índice existir no JSON
+					}
+				// PARA CASO PRECISE {
+					// foreach ($totalizadores as $key => &$total) {
+					// 	if (!isset($json[$key]) || $json[$key] != 0) {
+					// 		$todosZeros = false; // Algum campo não está zerado
+					// 		break;
+					// 	}
+					// }
+				// }
+
+					if ($todosZeros) {
+						$totalJsonComTudoZero++; // Incrementa o contador
 					}
 
 					if ($json["ocupacao"] === "Motorista") {
@@ -454,7 +473,6 @@
 					unset($total);
 				}
 
-				// dd($totalizadores);
 				if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado"){
 					$totalNaoconformidade = array_sum([
 						$totalizadores["mdcDescanso30m5h"],
@@ -498,6 +516,8 @@
 					$gravidadeBaixa = $totalizadores["jornadaPrevista"] + $totalizadores["espera"] + $totalizadores["descanso"] +
 					$totalizadores["repouso"] + $totalizadores["jornada"];
 				}
+
+				$porcentagemFun = ($totalJsonComTudoZero / ($motoristas + $ajudante + $funcionario)) * 100;
 
 				$totalGeral = $gravidadeAlta + $gravidadeMedia + $gravidadeBaixa;
 				$graficoSintetico = [$gravidadeAlta, $gravidadeMedia, $gravidadeBaixa];
@@ -662,12 +682,11 @@
 			$rowGravidade = "
 			<div class='row'>
 				<div class='col-md-3'>
-					<table id='tabela-motorista' style='width: 275px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
+					<table id='tabela-motorista' style='width: 275px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>
+					<div id='graficoPerformance' style='width: 250px; height: 195px; margin: 0 auto;'></div>"
 						. "<thead>"
 							. "<tr>"
 								. "<td> Quandidade por ocupação </td>"
-								. "<td>TOTAL</td>"
-								. "<td>%</td>"
 							. "</th>"
 						. "</thead>"
 							. "<tbody>"
@@ -682,11 +701,6 @@
 							. "</th>"
 						. "</thead>"
 						. "<tbody>"
-							. "<tr>"
-							. "<td class='tituloPerformance'>Performance</td>"
-							. "<td>$totalMotoristasComConformidadesZeradas</td>"
-							. "<td>".$percentuais["performance"]."%</td>"
-							. "</tr>"
 							. "<tr>"
 								. "<td class='tituloBaixaGravidade2'>Baixa</td>"
 								. "<td class='total'>$gravidadeBaixa</td>"
