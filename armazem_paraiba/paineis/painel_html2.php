@@ -498,9 +498,14 @@
 				max: 100,
 				tickPixelInterval: 60,
 				tickPosition: 'inside',
-				tickColor: Highcharts.defaultOptions.chart.backgroundColor || '#FFFFFF',
+				tickColor: '#000000',
+				// tickColor: Highcharts.defaultOptions.chart.backgroundColor || '#FFFFFF',
 				tickLength: 15,
-				tickWidth: 2,
+				tickWidth: 1,
+				minorTickInterval: 5, // Adiciona ticks menores a cada 5 unidades
+				minorTickColor: '#555555', // Cor dos ticks menores
+				minorTickLength: 10,
+				minorTickWidth: 1,
 				labels: {
 					distance: 20,
 					style: {
@@ -509,21 +514,30 @@
 				},
 				lineWidth: 0,
 				plotBands: [{
-					from: 0,
-					to: 24,
-					color: '#55BF3B', // Verde
-					thickness: 20
-				}, {
-					from: 25,
-					to: 75,
-					color: '#FFE800', // Amarelo
-					thickness: 20
-				}, {
-					from: 75,
-					to: 100,
-					color: '#DF5353', // Vermelho
-					thickness: 20
-				}]
+						from: 80,
+						to: 100,
+						color: '#55BF3B',
+						thickness: 20
+					}, // Verde 
+					{
+						from: 50,
+						to: 80,
+						color: '#FFE800',
+						thickness: 20
+					}, // Amarelo 
+					{
+						from: 25,
+						to: 50,
+						color: '#FF8B00',
+						thickness: 20
+					},
+					{
+						from: 0,
+						to: 25,
+						color: '#DF5353',
+						thickness: 20
+					} // Vermelho
+				]
 			},
 			series: [{
 				name: 'Performance',
