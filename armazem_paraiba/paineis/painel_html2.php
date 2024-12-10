@@ -471,7 +471,7 @@
 				height: '80%'
 			},
 			title: {
-				text: 'Performance Atual'
+				text: 'Performance'
 			},
 			tooltip: {
 				// Customizando o conteúdo do tooltip

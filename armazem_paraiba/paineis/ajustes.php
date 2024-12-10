@@ -273,7 +273,7 @@ function index() {
 		$periodoInicio = new DateTime($_POST["busca_periodo"][0]);
 		$path .= "/" . $periodoInicio->format("Y-m") . "/" . $_POST["empresa"];
 		if (is_dir($path) && file_exists($path ."/empresa_" . $_POST["empresa"] . ".json")) {
-			$encontrado = true;
+
 			$dataArquivo = date("d/m/Y", filemtime($path . "/empresa_" . $_POST["empresa"] . ".json"));
 			$horaArquivo = date("H:i", filemtime($path . "/empresa_" . $_POST["empresa"] . ".json"));
 
@@ -308,52 +308,57 @@ function index() {
 				}
 			}
 			$pastaAjuste->close();
-		}
-	} elseif(!empty($_POST["busca_periodo"])){
-		$periodoInicio = new DateTime($_POST["busca_periodo"][0]);
-		$periodoFim = new DateTime($_POST["busca_periodo"][1]);
-
-		if ($periodoInicio->format("Y-m") === $periodoFim->format("Y-m")) {
-			$path .= "/" . $periodoInicio->format("Y-m"). "/" ;
-		}
-
-		if(is_dir($path) && file_exists($path . "/empresas.json")){
-			$encontrado = true;
-			$dataArquivo = date("d/m/Y", filemtime($path . "/empresas.json"));
-			$horaArquivo = date("H:i", filemtime($path . "/empresas.json"));
-
-			$dataAtual = date("d/m/Y");
-			$horaAtual = date("H:i");
-			if ($dataArquivo != $dataAtual) {
-				$alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
-                        <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
-			} else {
-				// Datas iguais: compara as horas
-				// if ($horaArquivo < $horaAtual) {
-				//     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
-				// } else {
-				$alertaEmissao = "<span>";
-				// }
+			if(!empty($arquivos)){
+				$encontrado = true;
 			}
-			$dataEmissao = $alertaEmissao." Atualizado em: " . date("d/m/Y H:i", filemtime($path . "/empresas.json")). "</span>";
-			$arquivoGeral = json_decode(file_get_contents($path . "/empresas.json"), true);
-
-			$periodoRelatorio = [
-				"dataInicio" => $arquivoGeral["dataInicio"],
-				"dataFim" => $arquivoGeral["dataFim"]
-			];
-			$pastaAjuste = dir($path);
-			while ($arquivo = $pastaAjuste->read()) {
-				if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))) {
-					$arquivo = $path . $arquivo . "/empresa_" . $arquivo . ".json";
-					$arquivos[] = $arquivo;
-					$json = json_decode(file_get_contents($arquivo), true);
-					$empresas[] = $json;
-				}
-			}
-			$pastaAjuste->close();
 		}
-	} else {
+	} 
+	// elseif(!empty($_POST["busca_periodo"])){
+	// 	$periodoInicio = new DateTime($_POST["busca_periodo"][0]);
+	// 	$periodoFim = new DateTime($_POST["busca_periodo"][1]);
+
+	// 	if ($periodoInicio->format("Y-m") === $periodoFim->format("Y-m")) {
+	// 		$path .= "/" . $periodoInicio->format("Y-m"). "/" ;
+	// 	}
+
+	// 	if(is_dir($path) && file_exists($path . "/empresas.json")){
+	// 		$encontrado = true;
+	// 		$dataArquivo = date("d/m/Y", filemtime($path . "/empresas.json"));
+	// 		$horaArquivo = date("H:i", filemtime($path . "/empresas.json"));
+
+	// 		$dataAtual = date("d/m/Y");
+	// 		$horaAtual = date("H:i");
+	// 		if ($dataArquivo != $dataAtual) {
+	// 			$alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
+    //                     <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+	// 		} else {
+	// 			// Datas iguais: compara as horas
+	// 			// if ($horaArquivo < $horaAtual) {
+	// 			//     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
+	// 			// } else {
+	// 			$alertaEmissao = "<span>";
+	// 			// }
+	// 		}
+	// 		$dataEmissao = $alertaEmissao." Atualizado em: " . date("d/m/Y H:i", filemtime($path . "/empresas.json")). "</span>";
+	// 		$arquivoGeral = json_decode(file_get_contents($path . "/empresas.json"), true);
+
+	// 		$periodoRelatorio = [
+	// 			"dataInicio" => $arquivoGeral["dataInicio"],
+	// 			"dataFim" => $arquivoGeral["dataFim"]
+	// 		];
+	// 		$pastaAjuste = dir($path);
+	// 		while ($arquivo = $pastaAjuste->read()) {
+	// 			if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))) {
+	// 				$arquivo = $path . $arquivo . "/empresa_" . $arquivo . ".json";
+	// 				$arquivos[] = $arquivo;
+	// 				$json = json_decode(file_get_contents($arquivo), true);
+	// 				$empresas[] = $json;
+	// 			}
+	// 		}
+	// 		$pastaAjuste->close();
+	// 	}
+	// } 
+	else {
 		$encontrado = false;
 	}
 
