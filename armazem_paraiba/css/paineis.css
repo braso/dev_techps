@@ -200,7 +200,7 @@ h4 {
 
 
 .emissao {
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     width: -webkit-fill-available;
     align-content: center;
     text-align: center;
@@ -384,11 +384,19 @@ th.sort-desc::after {
         box-shadow: 0 0 0 1000px var(--var-yellow) inset !important;
     }
 
+    .tituloBaixaGravidade2 {
+        box-shadow: 0 0 0 1000px var(--var-yellow) inset !important;
+    }
+
     .baixaGravidade {
         box-shadow: 0 0 0 1000px var(--var-yellow2) inset !important;
     }
 
     .tituloMediaGravidade {
+        box-shadow: 0 0 0 1000px var(--var-orange) inset !important;
+    }
+
+    .tituloMediaGravidade2 {
         box-shadow: 0 0 0 1000px var(--var-orange) inset !important;
     }
 
@@ -398,6 +406,10 @@ th.sort-desc::after {
     }
 
     .tituloAltaGravidade {
+        box-shadow: 0 0 0 1000px var(--var-darkred) inset !important;
+    }
+
+    .tituloAltaGravidade2 {
         box-shadow: 0 0 0 1000px var(--var-darkred) inset !important;
     }
 
@@ -456,6 +468,14 @@ th.sort-desc::after {
     }
     .h4{
         padding: 3px;
+    }
+
+    .row {
+        margin: 0px 0px 0px 0px !important;
+    }
+
+    .table {
+        margin-bottom: 0px !important;
     }
 }
 

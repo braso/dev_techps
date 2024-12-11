@@ -29,9 +29,9 @@
 				<?= $quantFun ?>
 			</div>
 			<?php if ($quantFun) { ?>
-				<caption>Marcações com <b>(*)</b> indicam intervalos em aberto</caption>
+				<span>Marcações com <b>(*)</b> indicam intervalos em aberto</span>
 				<br>
-				<caption>Marcações com <b>(----)</b> indicam intervalos sem informações</caption>
+				<span>Marcações com <b>(----)</b> indicam intervalos sem informações</span>
 			<?php } ?>
 		</div>
 		<div class="portlet-body form">
@@ -219,8 +219,8 @@
 							</div>
 						</div>
 					</div>
+					<?php } ?>
 				</div>
-			<?php } ?>
 
 			</div>
 	</div>
