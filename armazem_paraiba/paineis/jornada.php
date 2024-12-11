@@ -17,16 +17,16 @@
 
         $linha = "linha = '<tr>'";
         if (!empty($_POST["empresa"])) {
-            $linha .= "+'<td style=\'text-align: center;\'>'+item.data+'</td>'
+            $linha .= "+'<td style=\'text-align: center;\'>'+item.data+' '+item.inicioJornada+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.nome+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
                         +'<td class ='+css+'>'+jornada+'</td>'
-                        +'<td class ='+jornadaEfetiva+'>'+item.jornadaEfetiva+'</td>'
-                        +'<td class = \'jornada\'>'+(refeicao ? refeicao : '<strong>----</strong>')+'</td>'
-                        +'<td class = \'jornada\'>'+(espera ? espera : '<strong>----</strong>')+'</td>'
-                        +'<td class = \'jornada\'>'+(descanso ? descanso : '<strong>----</strong>')+'</td>'
-                        +'<td class = \'jornada\'>'+(repouso ? repouso : '<strong>----</strong>')+'</td>'
+                        +'<td class ='+jornadaEfetivaCor+'>'+jornadaEfetiva+'</td>'
+                        +'<td class = \'jornada\'>'+(item.refeicao? item.refeicao: '<strong>----</strong>')+'</td>'
+                        +'<td class = \'jornada\'>'+(item.espera ? item.espera : '<strong>----</strong>')+'</td>'
+                        +'<td class = \'jornada\'>'+(item.descanso ? item.descanso : '<strong>----</strong>')+'</td>'
+                        +'<td class = \'jornada\'>'+(item.repouso ? item.repouso : '<strong>----</strong>')+'</td>'
                     +'</tr>';";
         }
 
@@ -57,6 +57,45 @@
                         window.print();
                     }
 
+                    console.log(new Date());
+
+                    function converterParaMinutos(hora) {
+                        if (!hora) return 0;  // Se o valor for vazio ou nulo, retorna 0
+                        const [horas, minutos] = hora.split(':').map(Number);
+                        return (horas * 60) + minutos;
+                    }
+
+                    function converterMinutosParaHHHMM(minutos) {
+                        const horas = Math.floor(minutos / 60);
+                        const minutosRestantes = minutos % 60;
+                        return `\${horas}:\${String(minutosRestantes) . padStart(2, '0')}`;
+                    }
+
+                    function calcularJornadaElimite(horasTrabalhadas, jornadaPadrao, limiteExtra) {
+                        // Converter jornada padrão e limite extra para minutos
+                        const [jornadaHoras, jornadaMinutos] = jornadaPadrao.split(':').map(Number);
+                        const jornadaPadraoMinutos = jornadaHoras * 60 + jornadaMinutos;
+
+                        const [limiteHoras, limiteMinutos] = limiteExtra.split(':').map(Number);
+                        const limiteExtraMinutos = limiteHoras * 60 + limiteMinutos;
+
+                        // Converter horas trabalhadas para minutos
+                        const [horas, minutos] = horasTrabalhadas.split(':').map(Number);
+                        const minutosTrabalhados = horas * 60 + minutos;
+
+                        let corTexto = 'jornada';
+
+                        if (minutosTrabalhados < jornadaPadraoMinutos) {
+                            corTexto = 'jornadaYellow'; // Abaixo do padrão
+                        } else if (minutosTrabalhados <= jornadaPadraoMinutos + limiteExtraMinutos) {
+                            corTexto = 'jornadaGreen'; // Dentro do padrão e limite extra
+                        } else {
+                            corTexto = 'jornadaRed'; // Excede o limite extra
+                        }
+
+                        return corTexto;
+                    }
+
                     $(document).ready(function(){
                         var tabela = $('#tabela-empresas tbody');
 
@@ -69,82 +108,66 @@
                                     $.each(data, function(index, item){
                                         console.log(item);
                                         
-                                        function processaCampo(campo,diferencaDias, hora) {
-                                            // Só aplicar a lógica se a data não for a atual
-                                            const [horas, minutos] = hora.split(':').map(Number);
-                                            const horaEspecifica = new Date();
-                                            horaEspecifica.setDate(horaEspecifica.getDate() - 1); // Configura para o dia anterior
-                                            horaEspecifica.setHours(horas);
-                                            horaEspecifica.setMinutes(minutos);
-                                            horaEspecifica.setSeconds(0); // Para garantir que os segundos estejam zerados
-
-                                            const horaAtual = new Date(); // Hora atual
-                                            const diferencaMilliseconds = horaAtual - horaEspecifica; // Diferença em milissegundos
-                                            const diferencaHoras = Math.floor(diferencaMilliseconds / (1000 * 60 * 60)); // Converte para horas
-                                            // Converte a diferença restante para minutos
-                                            const diferencaMinutos = Math.floor((diferencaMilliseconds % (1000 * 60 * 60)) / (1000 * 60));
-
-                                            // Adiciona a diferença de dias em horas (se necessário)
-                                            const totalHoras = diferencaHoras + (diferencaDias * 24); 
-
-                                            // Formatação de horas e minutos
-                                            const horasFormatadas = totalHoras % 24; // Mantém o formato de 24 horas (0 a 23)
-                                            const minutosFormatados = diferencaMinutos;
+                                        function calculaDiferencaEmHoras(dataInicio, horaInicio) {
+                                            // Convertendo a data de início no formato adequado (dd/mm/yyyy para yyyy-mm-dd)
+                                            const dataParts = dataInicio.split('/');
+                                            const dataFormatada = `\${dataParts[2]}-\${dataParts[1]}-\${dataParts[0]}`; // Formato: yyyy-mm-dd
                                             
-                                            const resultadoFormatado = String(horasFormatadas).padStart(2, '0') + ':' + String(minutosFormatados).padStart(2, '0');
+                                            // Parsing da hora de início (horas e minutos)
+                                            const [horasInicio, minutosInicio] = horaInicio.split(':').map(Number);
+                                            
+                                            // Criando a data completa de início com a data e hora fornecidas
+                                            const inicio = new Date(dataFormatada);
+                                            inicio.setHours(horasInicio, minutosInicio, 0, 0); // Configura a hora de início corretamente
 
-                                            // console.log(resultadoFormatado);
-                                            if(diferencaDias !== 0){
-                                                var css = 'jornada';
-                                                return ' ( D+' + diferencaDias + ' ) + ' + resultadoFormatado;
-                                            }
-                                            return campo;
+                                            // Obtendo a data e hora atual
+                                            const agora = new Date();
+                                            
+                                            // Calculando a diferença em milissegundos
+                                            const diferencaMilliseconds = agora - inicio;
+
+                                            // Calcular a diferença em dias (convertendo milissegundos para dias)
+                                            const diferencaDias = Math.floor(diferencaMilliseconds / (1000 * 60 * 60 * 24)); // Diferença em dias
+
+                                            // Calcular a diferença de horas restantes (ignorando os dias completos)
+                                            const horasRestantes = Math.floor((diferencaMilliseconds % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+                                            // Calcular a diferença de minutos restantes
+                                            const minutosRestantes = Math.floor((diferencaMilliseconds % (1000 * 60 * 60)) / (1000 * 60));
+
+                                            // Somando 24 horas para cada dia de diferença
+                                            const totalHoras = ((diferencaDias - 1) * 24) + horasRestantes;
+
+                                            // Formatação no formato HHH:mm:00
+                                            const resultadoFormatado = `\${String(totalHoras)}:\${String(minutosRestantes) . padStart(2, '0')}`;
+
+                                            return resultadoFormatado;
                                         }
+
+                                        var jornada = calculaDiferencaEmHoras(item.data, item.inicioJornada);
 
                                         var diferencaDias = item.diaDiferenca;
-                                        function calcularJornadaElimite(horasTrabalhadas, jornadaPadrao, limiteExtra) {
-                                            // Converter jornada padrão e limite extra para minutos
-                                            const [jornadaHoras, jornadaMinutos] = jornadaPadrao.split(':').map(Number);
-                                            const jornadaPadraoMinutos = jornadaHoras * 60 + jornadaMinutos;
 
-                                            const [limiteHoras, limiteMinutos] = limiteExtra.split(':').map(Number);
-                                            const limiteExtraMinutos = limiteHoras * 60 + limiteMinutos;
+                                        const refeicaoMinutos = converterParaMinutos(item.refeicao);
+                                        const esperaMinutos = converterParaMinutos(item.espera);
+                                        const descansoMinutos = converterParaMinutos(item.descanso);
+                                        const repousoMinutos = converterParaMinutos(item.repouso);
+                                        const jornadaMinutos = converterParaMinutos(jornada);
 
-                                            // Converter horas trabalhadas para minutos
-                                            const [horas, minutos] = horasTrabalhadas.split(':').map(Number);
-                                            const minutosTrabalhados = horas * 60 + minutos;
+                                        let jornadaSemIntervalo = jornadaMinutos - (refeicaoMinutos + esperaMinutos + descansoMinutos + repousoMinutos);
+                                        jornadaEfetiva = converterMinutosParaHHHMM(jornadaSemIntervalo);
 
-                                            let corTexto = 'jornada';
-
-                                            if (minutosTrabalhados < jornadaPadraoMinutos) {
-                                                corTexto = 'jornadaYellow'; // Abaixo do padrão
-                                            } else if (minutosTrabalhados <= jornadaPadraoMinutos + limiteExtraMinutos) {
-                                                corTexto = 'jornadaGreen'; // Dentro do padrão e limite extra
-                                            } else {
-                                                corTexto = 'jornadaRed'; // Excede o limite extra
-                                            }
-
-                                            return corTexto;
-                                        }
-
-
-
-                                        
-                                        let jornadaEfetiva = 'jornada';
-                                        if(item.jornadaEfetiva != '----'){
-                                            jornadaEfetiva = calcularJornadaElimite(item.jornadaEfetiva, item.jornadaDia, item.limiteExtras);
-                                        }
+                                        let jornadaEfetivaCor = calcularJornadaElimite(jornadaEfetiva , item.jornadaDia, item.limiteExtras)
 
                                         var css = 'jornada';
-                                        if(diferencaDias > 0){
+                                        const limite = converterParaMinutos('10:00');
+                                        if(jornadaMinutos > limite){
                                             css = 'jornadaD';
                                         }
 
-                                        var jornada = processaCampo(item.jornada, diferencaDias, item.inicioJornada);
-                                        var refeicao = item.refeicao;
-                                        var espera = item.espera;
-                                        var descanso = item.descanso;
-                                        var repouso = item.repouso;
+                                        if (item.diaDiferenca !== 0) {
+                                            jornada = jornada + ' (D+' + item.diaDiferenca + ') ';
+                                        }
 
                                     ". $linha."
                                     tabela.append(linha);

@@ -200,6 +200,7 @@
 		return insertInto($tabela, $campos, $valores);
 	}
 	function insertInto(string $tabela, array $campos, array $valores): array{
+
 		global $conn;
 
 		if(count($campos) != count($valores)){

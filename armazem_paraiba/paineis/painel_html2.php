@@ -514,14 +514,14 @@
 				},
 				lineWidth: 0,
 				plotBands: [{
-						from: 80,
+						from: 75,
 						to: 100,
 						color: '#55BF3B',
 						thickness: 20
 					}, // Verde 
 					{
 						from: 50,
-						to: 80,
+						to: 75,
 						color: '#FFE800',
 						thickness: 20
 					}, // Amarelo 
