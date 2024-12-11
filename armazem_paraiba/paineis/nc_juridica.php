@@ -630,13 +630,15 @@
                             $alertaEmissao = "<span>";
                         // }
                     }
-					$dataEmissao = $alertaEmissao ."Atualizado em: ".date("d/m/Y H:i", filemtime($arquivo))."</span>"; //Utilizado no HTML.
+					$dataEmissao = $alertaEmissao ." Atualizado em: ".date("d/m/Y H:i", filemtime($arquivo))."</span>"; //Utilizado no HTML.
 					$arquivoGeral = json_decode(file_get_contents($arquivo), true);
 
 					$periodoRelatorio = [
 						"dataInicio" => $arquivoGeral["dataInicio"],
 						"dataFim" => $arquivoGeral["dataFim"]
 					];
+
+					// var_dump($periodoRelatorio);
 
 					$encontrado = true;
 				} 
@@ -727,7 +729,7 @@
 							</div>
 						<!-- </div>	-->			
 						<!-- <div class='col-md-4'>-->
-							<div id='graficoAnalitico' style='width:96%; background-color: lightblue;'>
+							<div id='graficoAnalitico' style='width:85%; background-color: lightblue;'>
 							<!-- Conteúdo do gráfico Analítico -->
 							</div>
 						<!-- </div>	-->			

@@ -13,13 +13,13 @@
 	<div class="portlet light ">
 		<div class="table-responsive">
 			<div class='emissao' style="display: block !important;">
-				<h1 class="titulo2">Relatorio <?= $titulo ?></h1>
+				<h1 class="titulo2">Relatório <?= $titulo ?></h1>
 				<span></span>
 				<?= $dataEmissao ?>
 				<br>
 				<?php
-				if (!empty($periodoRelatorio)) {
-					"<br> <b>Período do relatório:</b> " . $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"];
+				if (!empty($periodoRelatorio["dataInicio"])) {
+					echo "<br> <b>Período do relatório:</b> " . $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"];
 				}
 				?>
 				<br>
@@ -37,6 +37,106 @@
 		<div class="portlet-body form">
 			<?= $rowGravidade ?>
 			<?php if ($mostra === true) { ?>
+				<div class="panel-group" id="accordion">
+					<!-- Accordion Item -->
+					<div class="panel panel-default">
+						<div class="panel-heading">
+							<h3 class="panel-title">
+								<a
+									data-toggle="collapse"
+									href="#collapse2"
+									aria-expanded="false"
+									aria-controls="collapse2"
+									class="collapsed">
+									<b>
+										Legendas
+									</b>
+								</a>
+							</h3>
+						</div>
+						<div id="collapse2" class="panel-collapse collapse">
+							<div class="panel-body">
+
+								<div class="portlet-body form">
+									<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
+										<thead>
+											<tr>
+												<td></td>
+												<td></td>
+												<td>Total</td>
+												<td>%</td>
+											</tr>
+										</thead>
+										<tbody>
+											<?php if ($_POST["busca_endossado"] == "naoEndossado") { ?>
+												<tr>
+													<td class="tituloBaixaGravidade2">Espera</td>
+													<td class="baixaGravidade">"Inicio ou Fim de espera sem registro"</td>
+													<td class="total"><?= $totalizadores["espera"] ?></td>
+													<td class="total"><?= $percentuais["Geral_espera"] ?>%</td>
+												</tr>
+												<tr>
+													<td class="tituloBaixaGravidade2">Descanso</td>
+													<td class="baixaGravidade">"Inicio ou Fim de descanso sem registro"</td>
+													<td class="total"><?= $totalizadores["descanso"] ?></td>
+													<td class="total"><?= $percentuais["Geral_descanso"] ?>%</td>
+												</tr>
+												<tr>
+													<td class="tituloBaixaGravidade2">Repouso</td>
+													<td class="baixaGravidade">"Inicio ou Fim de repouso sem registro"</td>
+													<td class="total"><?= $totalizadores["repouso"] ?></td>
+													<td class="total"><?= $percentuais["Geral_repouso"] ?>%</td>
+												</tr>
+												<tr>
+													<td class="tituloBaixaGravidade2">Jornada</td>
+													<td class="baixaGravidade">"Inicio ou Fim de Jornada sem registro"</td>
+													<td class="total"><?= $totalizadores["jornada"] ?></td>
+													<td class="total"><?= $percentuais["Geral_jornada"] ?>%</td>
+												</tr>
+											<?php } ?>
+											<tr>
+												<td class="tituloBaixaGravidade2">Jornada Prevista</td>
+												<td class="baixaGravidade">"Faltas"</td>
+												<td class="total"><?= $totalizadores["jornadaPrevista"] ?></td>
+												<td class="total"><?= $percentuais["Geral_jornadaPrevista"] ?>%</td>
+											</tr>
+											<tr>
+												<td class="tituloMediaGravidade2">Jornada Efetiva</td>
+												<td class="mediaGravidade">"Tempo excedido de 12:00h de jornada efetiva"</td>
+												<td class="total"><?= $totalizadores["jornadaEfetiva"] ?></td>
+												<td class="total"><?= $percentuais["Geral_jornadaEfetiva"] ?>%</td>
+											</tr>
+											<tr>
+												<td class="tituloMediaGravidade2">MDC - Máximo de Direção Continua</td>
+												<td class="mediaGravidade">"Descanso de 30 minutos a cada 05:30 de direção não respeitado." ou "Descanso de 30 minutos não respeitado" ou "Descanso de 15 minutos não respeitado"</td>
+												<td class="total"><?= $totalizadores["mdc"] ?></td>
+												<td class="total"><?= $percentuais["Geral_mdc"] ?>%</td>
+											</tr>
+											<tr>
+												<td class="tituloAltaGravidade2">Refeição</td>
+												<td class="altaGravidade">"Batida de início ou fim de refeição não registrada" ou "Refeição ininterrupta maior que 1 hora não respeitada" ou "Tempo máximo de 2 horas para a refeição não respeitado"</td>
+												<td class="total"><?= $totalizadores["refeicao"] ?></td>
+												<td class="total"><?= $percentuais["Geral_refeicao"] ?>%</td>
+											</tr>
+											<tr>
+												<td class="tituloAltaGravidade2">Interstício Inferior</td>
+												<td class="altaGravidade">"O mínimo de 11 horas de interstício não foi respeitado"</td>
+												<td class="total"><?= $totalizadores["intersticioInferior"] ?></td>
+												<td class="total"><?= $percentuais["Geral_intersticioInferior"] ?>%</td>
+											</tr>
+											<tr>
+												<td class="tituloAltaGravidade2">Interstício Superior</td>
+												<td class="altaGravidade">"Interstício total de 11 horas não respeitado"</td>
+												<td class="total"><?= $totalizadores["intersticioSuperior"] ?></td>
+												<td class="total"><?= $percentuais["Geral_intersticioSuperior"] ?>%</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
 				<div class="panel-group" id="accordion">
 					<!-- Accordion Item -->
 					<div class="panel panel-default">
@@ -90,110 +190,6 @@
 		</div>
 
 		<?php if ($mostra === true) { ?>
-			<!-- <div>
-				<h4><b>Legendas</b></h4>
-			</div> -->
-
-			<div class="panel-group" id="accordion">
-				<!-- Accordion Item -->
-				<div class="panel panel-default">
-					<div class="panel-heading">
-						<h3 class="panel-title">
-							<a
-								data-toggle="collapse"
-								href="#collapse2"
-								aria-expanded="false"
-								aria-controls="collapse2"
-								class="collapsed">
-								<b>
-									Legendas
-								</b>
-							</a>
-						</h3>
-					</div>
-					<div id="collapse2" class="panel-collapse collapse">
-						<div class="panel-body">
-
-							<div class="portlet-body form">
-								<table class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
-									<thead>
-										<tr>
-											<td></td>
-											<td></td>
-											<td>Total</td>
-											<td>%</td>
-										</tr>
-									</thead>
-									<tbody>
-										<?php if ($_POST["busca_endossado"] == "naoEndossado") { ?>
-											<tr>
-												<td class="tituloBaixaGravidade2">Espera</td>
-												<td class="baixaGravidade">"Inicio ou Fim de espera sem registro"</td>
-												<td class="total"><?= $totalizadores["espera"] ?></td>
-												<td class="total"><?= $percentuais["Geral_espera"] ?>%</td>
-											</tr>
-											<tr>
-												<td class="tituloBaixaGravidade2">Descanso</td>
-												<td class="baixaGravidade">"Inicio ou Fim de descanso sem registro"</td>
-												<td class="total"><?= $totalizadores["descanso"] ?></td>
-												<td class="total"><?= $percentuais["Geral_descanso"] ?>%</td>
-											</tr>
-											<tr>
-												<td class="tituloBaixaGravidade2">Repouso</td>
-												<td class="baixaGravidade">"Inicio ou Fim de repouso sem registro"</td>
-												<td class="total"><?= $totalizadores["repouso"] ?></td>
-												<td class="total"><?= $percentuais["Geral_repouso"] ?>%</td>
-											</tr>
-											<tr>
-												<td class="tituloBaixaGravidade2">Jornada</td>
-												<td class="baixaGravidade">"Inicio ou Fim de Jornada sem registro"</td>
-												<td class="total"><?= $totalizadores["jornada"] ?></td>
-												<td class="total"><?= $percentuais["Geral_jornada"] ?>%</td>
-											</tr>
-										<?php } ?>
-										<tr>
-											<td class="tituloBaixaGravidade2">Jornada Prevista</td>
-											<td class="baixaGravidade">"Faltas"</td>
-											<td class="total"><?= $totalizadores["jornadaPrevista"] ?></td>
-											<td class="total"><?= $percentuais["Geral_jornadaPrevista"] ?>%</td>
-										</tr>
-										<tr>
-											<td class="tituloMediaGravidade2">Jornada Efetiva</td>
-											<td class="mediaGravidade">"Tempo excedido de 12:00h de jornada efetiva"</td>
-											<td class="total"><?= $totalizadores["jornadaEfetiva"] ?></td>
-											<td class="total"><?= $percentuais["Geral_jornadaEfetiva"] ?>%</td>
-										</tr>
-										<tr>
-											<td class="tituloMediaGravidade2">MDC - Máximo de Direção Continua</td>
-											<td class="mediaGravidade">"Descanso de 30 minutos a cada 05:30 de direção não respeitado." ou "Descanso de 30 minutos não respeitado" ou "Descanso de 15 minutos não respeitado"</td>
-											<td class="total"><?= $totalizadores["mdc"] ?></td>
-											<td class="total"><?= $percentuais["Geral_mdc"] ?>%</td>
-										</tr>
-										<tr>
-											<td class="tituloAltaGravidade2">Refeição</td>
-											<td class="altaGravidade">"Batida de início ou fim de refeição não registrada" ou "Refeição ininterrupta maior que 1 hora não respeitada" ou "Tempo máximo de 2 horas para a refeição não respeitado"</td>
-											<td class="total"><?= $totalizadores["refeicao"] ?></td>
-											<td class="total"><?= $percentuais["Geral_refeicao"] ?>%</td>
-										</tr>
-										<tr>
-											<td class="tituloAltaGravidade2">Interstício Inferior</td>
-											<td class="altaGravidade">"O mínimo de 11 horas de interstício não foi respeitado"</td>
-											<td class="total"><?= $totalizadores["intersticioInferior"] ?></td>
-											<td class="total"><?= $percentuais["Geral_intersticioInferior"] ?>%</td>
-										</tr>
-										<tr>
-											<td class="tituloAltaGravidade2">Interstício Superior</td>
-											<td class="altaGravidade">"Interstício total de 11 horas não respeitado"</td>
-											<td class="total"><?= $totalizadores["intersticioSuperior"] ?></td>
-											<td class="total"><?= $percentuais["Geral_intersticioSuperior"] ?>%</td>
-										</tr>
-									</tbody>
-								</table>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
 			<div class="portlet-body form">
 				<div class="panel-group" id="accordion">
 					<!-- Accordion Item -->
@@ -219,7 +215,7 @@
 							</div>
 						</div>
 					</div>
-					<?php } ?>
+				<?php } ?>
 				</div>
 
 			</div>
