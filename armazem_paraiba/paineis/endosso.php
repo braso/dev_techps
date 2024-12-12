@@ -452,7 +452,7 @@
                 $horaAtual = date("H:i");
                 if($dataArquivo != $dataAtual){
                     $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
-                    <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                    <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
                 } else {
                     // Datas iguais: compara as horas
                     // if ($horaArquivo < $horaAtual) {

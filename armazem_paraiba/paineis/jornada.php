@@ -256,7 +256,7 @@
     }
 
     function index() {
-        cabecalho("Relatorio de Jornada Aberta");
+        cabecalho("Relatório de Jornada Aberta");
 
         // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
@@ -317,7 +317,7 @@
 
                 if (!empty($arquivo)) {
                     $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
-                        <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                        <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
                     $dataEmissao = $alertaEmissao." Atualizado em: " . date("d/m/Y H:i", filemtime($arquivo)). "</span>"; //Utilizado no HTML.
                     $arquivoGeral = json_decode(file_get_contents($arquivo), true);
 
