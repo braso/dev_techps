@@ -62,7 +62,7 @@
 										<thead>
 											<tr>
 												<td></td>
-												<td></td>
+												<td style="text-align: center;">Descrição</td>
 												<td>Total</td>
 												<td>%</td>
 											</tr>
@@ -96,9 +96,9 @@
 											<?php } ?>
 											<tr>
 												<td class="tituloBaixaGravidade2">Jornada Prevista</td>
-												<td class="baixaGravidade">"Faltas"</td>
-												<td class="total"><?= $totalizadores["jornadaPrevista"] ?></td>
-												<td class="total"><?= $percentuais["Geral_jornadaPrevista"] ?>%</td>
+												<td class="baixaGravidade">"Faltas não justificadas"</td>
+												<td class="total"><?= $totalizadores["falta"] ?></td>
+												<td class="total"><?= $percentuais["Geral_falta"] ?>%</td>
 											</tr>
 											<tr>
 												<td class="tituloMediaGravidade2">Jornada Efetiva</td>
@@ -321,7 +321,7 @@
 
 			// Calcula o total para obter as porcentagens
 			// const totalDetalhado = valoresDetalhado.reduce((acc, val) => acc + val, 0);
-			const totalDetalhado = <?= $totalGeral ?>;
+			const totalDetalhado = <?= $totalGeral + $totalizadores["faltaJustificada"] ?>;
 
 			// Formata os dados para o gráfico de barras em porcentagem
 			const dataFormatadaDetalhado = categoriasDetalhado.map((categoria3, index) => ({

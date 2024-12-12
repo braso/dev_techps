@@ -31,7 +31,7 @@
 						+'<td class='+class1+'>'+(row.descanso === 0 ? '' : row.descanso )+'</td>'
 						+'<td class='+class1+'>'+(row.repouso === 0 ? '' : row.repouso )+'</td>'
 						+'<td class='+class1+'>'+(row.jornada === 0 ? '' : row.jornada )+'</td>'
-						+'<td class='+class1+'>'+(row.jornadaPrevista === 0 ? '' : row.jornadaPrevista )+'</td>'
+						+'<td class='+class1+'>'+(row.falta === 0 ? '' : row.falta )+'</td>'
 						+'<td class='+class2+'>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
 						+'<td class='+class2+'>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
 						+'<td class='+class3+'>'+ (row.refeicao === 0 ? '' : row.refeicao) +'</td>'
@@ -44,7 +44,7 @@
 			$linha .= "+'<td>'+row.matricula+'</td>'
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
-						+'<td class=\'baixaGravidade\'>'+(row.jornadaPrevista === 0 ? '' : row.jornadaPrevista )+'</td>'
+						+'<td class=\'baixaGravidade\'>'+(row.falta === 0 ? '' : row.falta )+'</td>'
 						+'<td class=\'mediaGravidade\'>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
 						+'<td class=\'mediaGravidade\'>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
 						+'<td class=\'altaGravidade\'>'+ (row.refeicao === 0 ? '' : row.refeicao) +'</td>'
@@ -130,11 +130,11 @@
 									row[index] = item;
 								});
 
-								var totalNaEndossado = (row.jornadaPrevista || 0) + (row.jornadaEfetiva || 0) + (row.refeicao || 0) 
+								var totalNaEndossado = (row.falta || 0) + (row.jornadaEfetiva || 0) + (row.refeicao || 0) 
 								+ (row.espera || 0) + (row.descanso || 0) + (row.repouso || 0) + (row.jornada || 0) 
 								+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
 									
-								var totalEndossado = (row.refeicao || 0) + (row.jornadaPrevista || 0) + (row.jornadaEfetiva || 0) 
+								var totalEndossado = (row.refeicao || 0) + (row.falta || 0) + (row.jornadaEfetiva || 0) 
 								+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
 
 								// console.log(totalEndossado);
@@ -410,7 +410,6 @@
 
 				$totalizadores = [
 					"refeicao" => 0,
-					"jornadaPrevista" => 0,
 					"jornadaEfetiva" => 0,
 					"espera" => 0,
 					"descanso" => 0,
@@ -507,7 +506,7 @@
 					
 					$gravidadeAlta = $totalizadores["refeicao"] + $totalizadores["intersticioInferior"] + $totalizadores["intersticioSuperior"];
 					$gravidadeMedia = $totalizadores["jornadaEfetiva"] + $totalizadores["mdc"];
-					$gravidadeBaixa = $totalizadores["jornadaPrevista"] + $totalizadores["espera"] + $totalizadores["descanso"] +
+					$gravidadeBaixa = $totalizadores["falta"] + $totalizadores["espera"] + $totalizadores["descanso"] +
 					$totalizadores["repouso"] + $totalizadores["jornada"];
 				}
 
@@ -538,8 +537,6 @@
 					'Tempo excedido de 10:00h de jornada efetiva',
 					'Tempo excedido de 12:00h de jornada efetiva',
 					'Descanso de 30 minutos a cada 05:30 de direção não respeitado.',
-					'Descanso de 30 minutos não respeitado',
-					'Descanso de 15 minutos não respeitado',
 					'Batida de início ou fim de refeição não registrada',
 					'Refeição ininterrupta maior que 1 hora não respeitada',
 					'Tempo máximo de 2 horas para a refeição não respeitado',
@@ -549,11 +546,11 @@
 
 					$coresGrafico = ['#FFE800' ,'#FFE800' ,'#FFE800','#FFE800','#FFE800', '#FF8B00', '#FF8B00', '#a30000', '#a30000', '#a30000'];
 					$coresGrafico2 = [
-					'#FFE000', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FF8B00', '#FF8B00', '#FF8B00', '#FF8B00',
+					'#FFE000', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FF8B00', '#FF8B00',
 					'#FF8B00', '#ff0404', '#ff0404', '#ff0404', '#ff0404', '#ff0404', '#ff0404'];
 					//}
 					
-					$keys = ["espera", "descanso", "repouso", "jornada", "jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao",
+					$keys = ["espera", "descanso", "repouso", "jornada", "falta", "jornadaEfetiva", "mdc", "refeicao",
 					"intersticioInferior", "intersticioSuperior"];
 
 					$keys2 = ["espera", "descanso", "repouso", "jornada", "faltaJustificada", "falta","jornadaExcedido10h", "jornadaExcedido12h",
@@ -584,7 +581,7 @@
 					'#FF8B00', '#ec4141', '#ec4141', '#ec4141', '#ec4141', '#ec4141', '#ec4141'];
 					//}
 
-					$keys = ["jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao","intersticioInferior", "intersticioSuperior"];
+					$keys = ["jornadaPrevista", "falta", "mdc", "refeicao","intersticioInferior", "intersticioSuperior"];
 
 					$keys2 = ["faltaJustificada", "falta", "jornadaExcedido10h", "jornadaExcedido12h", "mdcDescanso30m5h", "refeicaoSemRegistro", "refeicao1h", "refeicao2h", "intersticioInferior",
 					"intersticioSuperior"];
@@ -665,7 +662,7 @@
 					<td></td>
 					<td>Total</td>
 					$totalRow 
-					<td class='total'>".$totalempre["jornadaPrevista"]."</td>
+					<td class='total'>".$totalempre["falta"]."</td>
 					<td class='total'>".$totalempre["jornadaEfetiva"]."</td>
 					<td class='total'>".$totalempre["mdc"]."</td>
 					<td class='total'>".$totalempre["refeicao"]."</td>

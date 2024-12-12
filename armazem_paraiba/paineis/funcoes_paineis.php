@@ -1010,7 +1010,7 @@
 		}
 		
 		$totaisEmpr = [
-			"jornadaPrevista" 			=> 0,
+			"falta" 			        => 0,
 			"jornadaEfetiva" 			=> 0,
 			"refeicao" 					=> 0,
 			"espera" 					=> 0,
