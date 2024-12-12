@@ -347,7 +347,7 @@
 				xAxis: {
 					categories: categoriasDetalhado,
 					title: {
-						text: 'Não Conformidades Juridicas',
+						text: 'Não Conformidades Jurídicas',
 						style: {
 							fontSize: '16px', // Aumenta o tamanho da fonte do título do eixo X
 							// color: '#ffffff'

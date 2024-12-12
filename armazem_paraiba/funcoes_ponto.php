@@ -959,7 +959,7 @@
 						$icone .= "<a><i style='color:red;' title='Interstício Total de 11:00 não respeitado, faltaram ".$restante."' class='fa fa-warning'></i></a>";
 					}
 					if($minInterDiario < (8*60)){ // < 8 horas
-						$icone .= "<a><i style='color:red;' title='O mínimo de 11:00h ininterruptas no primeiro período, não respeitado.' class='fa fa-warning'></i></a>";
+						$icone .= "<a><i style='color:red;' title='O mínimo de 08:00h ininterruptas no primeiro período, não respeitado.' class='fa fa-warning'></i></a>";
 					}
 
 					$aRetorno["intersticio"] = $icone.$totalIntersticio;

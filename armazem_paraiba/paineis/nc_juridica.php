@@ -281,13 +281,13 @@
 				$_POST["errorFields"][] = "busca_dataMes";
 				set_status("ERRO: Não é possível pesquisar após a data atual.");
 			}
-			cabecalho("Relatório de Não Conformidade Juridica Atualizado");
+			cabecalho("Relatório de Não Conformidade Jurídica Atualizado");
 		} elseif (!empty($_POST["acao"]) && $_POST["acao"] == "atualizarPainel") {
 			echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
 			ob_flush();
 			flush();
 
-			cabecalho("Relatório de Não Conformidade Juridica Atualizado");
+			cabecalho("Relatório de Não Conformidade Jurídica Atualizado");
 
 			$err = ($_POST["busca_dataInicio"] > date("Y-m-d"))*1+($_POST["busca_dataFim"] > date("Y-m-d"))*2;
 			if ($err > 0) {
@@ -314,7 +314,7 @@
 				// echo "Tempo de execução: ".number_format($tempoExecucao, 4)." segundos";
 			}
 		} else {
-			cabecalho("Relatório de Não Conformidade Juridica Atualizado");
+			cabecalho("Relatório de Não Conformidade Jurídica Atualizado");
 		}
 
 	// $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
@@ -422,8 +422,6 @@
 					"jornadaExcedido10h" => 0,
 					"jornadaExcedido12h" => 0,
 					"mdcDescanso30m5h" => 0,
-					"mdcDescanso30m" => 0,
-					"mdcDescanso15m" => 0,
 					"refeicaoSemRegistro" => 0,
 					"refeicao1h" => 0,
 					"refeicao2h" => 0,
@@ -476,8 +474,6 @@
 				if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado"){
 					$totalNaoconformidade = array_sum([
 						$totalizadores["mdcDescanso30m5h"],
-						$totalizadores["mdcDescanso30m"],
-						$totalizadores["mdcDescanso15m"],
 						$totalizadores["inicioRefeicaoSemRegistro"],
 						$totalizadores["refeicaoSemRegistro"],
 						$totalizadores["refeicao1h"],
@@ -502,8 +498,6 @@
 						$totalizadores["jornadaExcedido10h"],
 						$totalizadores["jornadaExcedido12h"],
 						$totalizadores["mdcDescanso30m5h"],
-						$totalizadores["mdcDescanso30m"],
-						$totalizadores["mdcDescanso15m"],
 						$totalizadores["refeicaoSemRegistro"],
 						$totalizadores["refeicao1h"],
 						$totalizadores["refeicao2h"],
@@ -563,7 +557,7 @@
 					"intersticioInferior", "intersticioSuperior"];
 
 					$keys2 = ["espera", "descanso", "repouso", "jornada", "faltaJustificada", "falta","jornadaExcedido10h", "jornadaExcedido12h",
-					"mdcDescanso30m5h", "mdcDescanso30m","mdcDescanso15m", "refeicaoSemRegistro", "refeicao1h",
+					"mdcDescanso30m5h", "refeicaoSemRegistro", "refeicao1h",
 					"refeicao2h", "intersticioInferior", "intersticioSuperior"];
 				} else{
 					// Campos dos graficos {
@@ -592,8 +586,7 @@
 
 					$keys = ["jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao","intersticioInferior", "intersticioSuperior"];
 
-					$keys2 = ["faltaJustificada", "falta", "jornadaExcedido10h", "jornadaExcedido12h", "mdcDescanso30m5h", "mdcDescanso30m",
-					"mdcDescanso15m", "refeicaoSemRegistro", "refeicao1h", "refeicao2h", "intersticioInferior",
+					$keys2 = ["faltaJustificada", "falta", "jornadaExcedido10h", "jornadaExcedido12h", "mdcDescanso30m5h", "refeicaoSemRegistro", "refeicao1h", "refeicao2h", "intersticioInferior",
 					"intersticioSuperior"];
 				}
 
@@ -740,7 +733,7 @@
 			$rowTitulos = "<tr id='titulos'>";
 
 			if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "naoEndossado") {
-				$titulo = "Não Conformidade Juridica Atualizada";
+				$titulo = "Não Conformidade Jurídica Atualizada";
 				$rowTitulos .=
 					"<th class='matricula'>Matricula</th>"
 					."<th class='funcionario'>Funcionário</th>"
@@ -761,7 +754,7 @@
 
 					
 			}  elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
-				$titulo = "Não Conformidade Juridica Atualizado Pós-Fechamento";
+				$titulo = "Não Conformidade Jurídica Atualizado Pós-Fechamento";
 				$rowTitulos .=
 					"<th class='matricula'>Matricula</th>"
 					."<th class='funcionario'>Funcionário</th>"

@@ -885,20 +885,6 @@
 								$totalMotorista["mdcDescanso30m5h"] += 1;
 							}
 
-							if (
-								is_int(strpos($ponto[14], "fa-warning")) && is_int(strpos($ponto[14], "color:orange;"))
-								&& is_int(strpos($ponto[14], "00:15 não respeitado"))
-							) {
-								$totalMotorista["mdcDescanso15m"] += 1;
-							}
-
-							if (
-								is_int(strpos($ponto[14], "fa-warning")) && is_int(strpos($ponto[14], "color:orange;"))
-								&& is_int(strpos($ponto[14], "00:30 não respeitado"))
-							) {
-								$totalMotorista["mdcDescanso30m"] += 1;
-							}
-
 							if (is_int(strpos($ponto[15], "faltaram"))) {
 								$totalMotorista["intersticioSuperior"] += 1;
 							}
