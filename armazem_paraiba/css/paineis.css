@@ -3,7 +3,7 @@ body {
     --var-darkblue: #0757a2;
     --var-red: #ec4141;
     --var-darkred: #a3000080;
-    --var-lightred: #c4121270;
+    --var-lightred: #c4121242;
     --var-yellow2: #fff26038 ;
     --var-yellow3: #ffe80063;
     --var-yellow: #f1c61f;
@@ -65,7 +65,7 @@ body {
 
 .altaGravidade {
     background-color: var(--var-lightred);
-    color: white;
+    /* color: white; */
     text-align: center;
 }
 
@@ -464,7 +464,7 @@ th.sort-desc::after {
       margin-bottom: 0px !important;
     }
     .panel-body {
-        padding: 15px !important;
+        /* padding: 15px !important; */
     }
     .h4{
         padding: 3px;
@@ -477,6 +477,32 @@ th.sort-desc::after {
     .table {
         margin-bottom: 0px !important;
     }
+
+    #accordion{
+        order: 2;
+        break-after: page;
+    }
+
+    #accordion2{
+        order: 1;
+        break-after: page;
+    }
+
+    #resumo{
+        break-after: page;
+    }
+    .panel-heading{
+            padding: 0px !important;
+    }
+
+    #graficoDetalhado{
+        height: 780px !important;
+    }
+
+    .highlighted {
+        box-shadow: 0 0 0 1000px lightgreen inset !important;
+        text-align: center;
+  }
 }
 
 .th-align {

@@ -672,7 +672,7 @@
 			";
 
 			$rowGravidade = "
-			<div class='row'>
+			<div class='row' id='resumo'>
 				<div class='col-md-3'>
 					<table id='tabela-motorista' style='width: 275px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>
 					<div id='graficoPerformance' style='width: 250px; height: 195px; margin: 0 auto;'></div>"

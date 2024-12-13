@@ -4,7 +4,7 @@
 <script src="https://code.highcharts.com/modules/solid-gauge.js"></script>
 <div id="printTitulo">
 	<img style="width: 150px" src="<?= $logoEmpresa ?>" alt="Logo Empresa Esquerda">
-	<h3>Relatorio <?= $titulo ?></h3>
+	<h3>Relatório <?= $titulo ?></h3>
 	<div class="right-logo">
 		<img style="width: 150px" src="<?= $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] ?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 	</div>
@@ -34,7 +34,7 @@
 				<span>Marcações com <b>(----)</b> indicam intervalos sem informações</span>
 			<?php } ?>
 		</div>
-		<div class="portlet-body form">
+		<div class="portlet-body form" style="display: flex; flex-direction: column;">
 			<?= $rowGravidade ?>
 			<?php if ($mostra === true) { ?>
 				<div class="panel-group" id="accordion">
@@ -42,12 +42,7 @@
 					<div class="panel panel-default">
 						<div class="panel-heading">
 							<h3 class="panel-title">
-								<a
-									data-toggle="collapse"
-									href="#collapse2"
-									aria-expanded="false"
-									aria-controls="collapse2"
-									class="collapsed">
+								<a data-toggle="collapse" href="#collapse2" aria-expanded="false" aria-controls="collapse2" class="collapsed">
 									<b>
 										Legendas
 									</b>
@@ -108,7 +103,7 @@
 											</tr>
 											<tr>
 												<td class="tituloMediaGravidade2">MDC - Máximo de Direção Continua</td>
-												<td class="mediaGravidade">"Descanso de 30 minutos a cada 05:30 de direção não respeitado." ou "Descanso de 30 minutos não respeitado" ou "Descanso de 15 minutos não respeitado"</td>
+												<td class="mediaGravidade">"Descanso de 30 minutos a cada 05:30 de direção não respeitado."</td>
 												<td class="total"><?= $totalizadores["mdc"] ?></td>
 												<td class="total"><?= $percentuais["Geral_mdc"] ?>%</td>
 											</tr>
@@ -137,7 +132,7 @@
 						</div>
 					</div>
 				</div>
-				<div class="panel-group" id="accordion">
+				<div class="panel-group" id="accordion2">
 					<!-- Accordion Item -->
 					<div class="panel panel-default">
 						<div class="panel-heading">
@@ -191,7 +186,7 @@
 
 		<?php if ($mostra === true) { ?>
 			<div class="portlet-body form">
-				<div class="panel-group" id="accordion">
+				<div class="panel-group" id="accordion3">
 					<!-- Accordion Item -->
 					<div class="panel panel-default">
 						<div class="panel-heading">
