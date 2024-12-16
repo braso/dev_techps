@@ -24,35 +24,35 @@
             $linha .= "+'<td>'+row.matricula+'</td>'
                     +'<td>'+row.nome+'</td>'
                     +'<td>'+(row.ocupacao?? '')+'</td>'
-                    +'<td class=\"'+(row.statusEndosso === 'E' ? 'endo' : (row.statusEndosso === 'EP' ? 'endo-parc' : 'nao-endo'))+'\">'
+                    +'<td class=\"'+(row.statusEndosso === 'E'? 'endo': (row.statusEndosso === 'EP'? 'endo-parc': 'nao-endo'))+'\">'
                         +'<strong>'+row.statusEndosso+'</strong>'
                     +'</td>'
-                    +'<td>'+(invalidValues.includes(row.jornadaPrevista) ? '' : row.jornadaPrevista?? '')+'</td>'
-                    +'<td>'+(invalidValues.includes(row.jornadaEfetiva) ? '' : row.jornadaEfetiva?? '')+'</td>'
-                    +'<td>'+(invalidValues.includes(row.he50APagar) ? '' : row.he50APagar?? '')+'</td>'
-                    +'<td>'+(invalidValues.includes(row.he100APagar) ? '' : row.he100APagar?? '')+'</td>'
-                    +'<td>'+(invalidValues.includes(row.adicionalNoturno) ? '' : row.adicionalNoturno?? '')+'</td>'
-                    +'<td>'+(invalidValues.includes(row.esperaIndenizada) ? '' : row.esperaIndenizada?? '')+'</td>'
-                    +'<td id=\"'+(row.saldoAnterior > '00:00' ? 'saldo-final' : (row.saldoAnterior === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
+                    +'<td>'+(invalidValues.includes(row.jornadaPrevista)? '': row.jornadaPrevista?? '')+'</td>'
+                    +'<td>'+(invalidValues.includes(row.jornadaEfetiva)? '': row.jornadaEfetiva?? '')+'</td>'
+                    +'<td>'+(invalidValues.includes(row.he50APagar)? '': row.he50APagar?? '')+'</td>'
+                    +'<td>'+(invalidValues.includes(row.he100APagar)? '': row.he100APagar?? '')+'</td>'
+                    +'<td>'+(invalidValues.includes(row.adicionalNoturno)? '': row.adicionalNoturno?? '')+'</td>'
+                    +'<td>'+(invalidValues.includes(row.esperaIndenizada)? '': row.esperaIndenizada?? '')+'</td>'
+                    +'<td id=\"'+(row.saldoAnterior > '00:00'? 'saldo-final': (row.saldoAnterior === '00:00'? 'saldo-zero': 'saldo-negativo'))+'\">'
                     +(row.saldoAnterior?? '')+'</td>'
-                    +'<td>'+(row.saldoPeriodo > '00:00' ? '<strong>' + row.saldoPeriodo + '</strong>' : (row.saldoPeriodo ?? ''))+'</td>'
-                   +'<td id=\"'+(row.saldoFinal > '00:00' ? 'saldo-final' : (row.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\";\">'
+                    +'<td>'+(row.saldoPeriodo > '00:00'? '<strong>' + row.saldoPeriodo + '</strong>': (row.saldoPeriodo?? ''))+'</td>'
+                   +'<td id=\"'+(row.saldoFinal > '00:00'? 'saldo-final': (row.saldoFinal === '00:00'? 'saldo-zero': 'saldo-negativo'))+'\";\">'
                     +(row.saldoFinal?? '')+indicador+'</td>'
                 +'</tr>';";
         }else{
             $linha .= "+'<td class=\"nomeEmpresa\" style=\"cursor: pointer;\" onclick=\"setAndSubmit(' + row.empr_nb_id + ')\">'+row.empr_tx_nome+'</td>'
                     +'<td>'+Math.round(row.percEndossado*10000)/100+'%</td>'
                     +'<td>'+row.qtdMotoristas+'</td>'
-                    +'<td>'+(invalidValues.includes(row.totais.jornadaPrevista) ? '' : row.totais.jornadaPrevista)+'</td>'
-                    +'<td>'+(invalidValues.includes(row.totais.jornadaEfetiva) ? '' : row.totais.jornadaEfetiva)+'</td>'
-                    +'<td>'+(invalidValues.includes(row.totais.HESemanal) ? '' : row.totais.HESemanal)+'</td>'
-                    +'<td>'+(invalidValues.includes(row.totais.HESabado) ? '' : row.totais.HESabado)+'</td>'
-                    +'<td>'+(invalidValues.includes(row.totais.adicionalNoturno) ? '' : row.totais.adicionalNoturno)+'</td>'
-                    +'<td>'+(invalidValues.includes(row.totais.esperaIndenizada) ? '' : row.totais.esperaIndenizada)+'</td>'
-                    +'<td id=\"'+(row.totais.saldoAnterior > '00:00' ? 'saldo-final' : (row.totais.saldoAnterior === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\" >'
-                    +(row.totais.saldoAnterior == '00:00' ? '' : row.totais.saldoAnterior)+'</td>'
-                    +'<td>'+(row.totais.saldoPeriodo > '00:00' ? '<strong>' + row.totais.saldoPeriodo + '</strong>' : (row.totais.saldoPeriodo ?? ''))+'</td>'
-                    +'<td id=\"'+(row.totais.saldoFinal > '00:00' ? 'saldo-final' : (row.totais.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
+                    +'<td>'+(invalidValues.includes(row.totais.jornadaPrevista)? '': row.totais.jornadaPrevista)+'</td>'
+                    +'<td>'+(invalidValues.includes(row.totais.jornadaEfetiva)? '': row.totais.jornadaEfetiva)+'</td>'
+                    +'<td>'+(invalidValues.includes(row.totais.HESemanal)? '': row.totais.HESemanal)+'</td>'
+                    +'<td>'+(invalidValues.includes(row.totais.HESabado)? '': row.totais.HESabado)+'</td>'
+                    +'<td>'+(invalidValues.includes(row.totais.adicionalNoturno)? '': row.totais.adicionalNoturno)+'</td>'
+                    +'<td>'+(invalidValues.includes(row.totais.esperaIndenizada)? '': row.totais.esperaIndenizada)+'</td>'
+                    +'<td id=\"'+(row.totais.saldoAnterior > '00:00'? 'saldo-final': (row.totais.saldoAnterior === '00:00'? 'saldo-zero': 'saldo-negativo'))+'\" >'
+                    +(row.totais.saldoAnterior == '00:00'? '': row.totais.saldoAnterior)+'</td>'
+                    +'<td>'+(row.totais.saldoPeriodo > '00:00'? '<strong>' + row.totais.saldoPeriodo + '</strong>': (row.totais.saldoPeriodo?? ''))+'</td>'
+                    +'<td id=\"'+(row.totais.saldoFinal > '00:00'? 'saldo-final': (row.totais.saldoFinal === '00:00'? 'saldo-zero': 'saldo-negativo'))+'\">'
                     +(row.totais.saldoFinal?? '')+indicador+'</td>'
                 +'</tr>';";
         }
@@ -104,8 +104,8 @@
                                 $.each(data, function(index, item){
                                     row[index] = item;
                                 });
-                                var saldoAnterior = horasParaMinutos(row.saldoAnterior !== undefined ? row.saldoAnterior : row.totais.saldoAnterior);
-                                var saldoFinal = horasParaMinutos(row.saldoFinal !== undefined ? row.saldoFinal : row.totais.saldoFinal);
+                                var saldoAnterior = horasParaMinutos(row.saldoAnterior !== undefined? row.saldoAnterior: row.totais.saldoAnterior);
+                                var saldoFinal = horasParaMinutos(row.saldoFinal !== undefined? row.saldoFinal: row.totais.saldoFinal);
                                 var indicador = '';
                                 if (saldoAnterior >= 0 && saldoFinal >= 0) {
                                     // Ambos os saldos são positivos
@@ -176,7 +176,7 @@
                         var minutos = parseInt(partes[1], 10);       // Minutos
 
                         // Converte as horas para minutos totais
-                        return (horasNumeros * 60) + (horasNumeros < 0 ? -minutos : minutos);
+                        return (horasNumeros * 60) + (horasNumeros < 0? -minutos: minutos);
                     }
                         
                     // Função para ordenar a tabela
@@ -194,10 +194,10 @@
                             }
 
                             if(valorA < valorB){
-                                return ordem === 'asc' ? -1 : 1;
+                                return ordem === 'asc'? -1: 1;
                             }
                             if(valorA > valorB){
-                                return ordem === 'asc' ? 1 : -1;
+                                return ordem === 'asc'? 1: -1;
                             }
                             return 0;
                         });
@@ -212,12 +212,12 @@
                         var coluna = $(this).index();
                         var ordem = $(this).data('order');
                         $('#tabela-empresas th').data('order', 'desc'); // Redefinir ordem de todas as colunas
-                        $(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
+                        $(this).data('order', ordem === 'desc'? 'asc': 'desc');
                         ordenarTabela(coluna, $(this).data('order'));
 
                         // Ajustar classes para setas de ordenação
                         $('#titulos th').removeClass('sort-asc sort-desc');
-                        $(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
+                        $(this).addClass($(this).data('order') === 'asc'? 'sort-asc': 'sort-desc');
                     });
 
                     $('#tabela1 tbody td').click(function(event) {
@@ -334,8 +334,8 @@
         // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
         $fields = [
-            combo_net("Empresa:", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
-            campo_mes("Data", "busca_data", ($_POST["busca_data"] ?? ""), 2, $extraCampoData)
+            combo_net("Empresa:", "empresa", $_POST["empresa"]?? "", 4, "empresa", ""),
+            campo_mes("Data", "busca_data", ($_POST["busca_data"]?? ""), 2, $extraCampoData)
             // $texto,
         ];
         $botao_volta = "";
