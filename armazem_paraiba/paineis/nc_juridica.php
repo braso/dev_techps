@@ -436,7 +436,7 @@
 					$json = json_decode(file_get_contents($arquivo), true);
 
 					foreach ($totalizadores as $key => &$total) {
-						if (!isset($json[$key]) || $json[$key] != 0) {
+						if(!in_array($key, ['faltaJustificada', 'jornadaPrevista']) && !isset($json[$key]) || $json[$key] != 0) {
 							$todosZeros = false; // Algum campo não está zerado
 							// break;
 						}
