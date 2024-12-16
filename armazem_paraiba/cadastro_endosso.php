@@ -206,11 +206,13 @@
 		}
 
 		$motorista = mysqli_fetch_assoc(query(
-			"SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg FROM entidade"
-			." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
-			." WHERE enti_tx_status = 'ativo'"
-				." AND enti_nb_id = ".$_POST["busca_motorista"]
-			." LIMIT 1;"
+			"SELECT * FROM entidade
+			 LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
+			 LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
+			 LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
+			 WHERE enti_tx_status = 'ativo'
+				 AND enti_nb_id = '{$_POST["busca_motorista"]}'
+			 LIMIT 1;"
 		));
 
 		$ultimoEndosso = mysqli_fetch_assoc(query(
@@ -240,7 +242,7 @@
 			date_diff($date, $dataAte)->days >= 0 && !(date_diff($date, $dataAte)->invert);
 			$date = date_add($date, DateInterval::createFromDateString("1 day"))
 		){
-			diaDetalhePonto($motorista["enti_tx_matricula"], $date->format("Y-m-d"));
+			diaDetalhePonto($motorista, $date->format("Y-m-d"));
 		}
 
 		
@@ -306,23 +308,16 @@
 		}
 
 
-		$queryMotoristas = 
-			"SELECT entidade.*, empresa.empr_nb_cidade, cidade.cida_nb_id, cidade.cida_tx_uf, parametro.para_tx_acordo, parametro.para_tx_pagarHEExComPerNeg FROM entidade
-				JOIN empresa ON enti_nb_empresa = empr_nb_id
-				JOIN cidade ON empr_nb_cidade = cida_nb_id
+		$motoristas = mysqli_fetch_all(query(
+			"SELECT * FROM entidade
+				LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
+				LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
 				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
-				WHERE enti_tx_status = 'ativo'";
-
-		if(!isset($_POST["busca_motorista"])){
-			$queryMotoristas .= " AND enti_nb_empresa = ".$_POST["empresa"]."";
-		}else{
-			$queryMotoristas .= " AND enti_nb_id = ".$_POST["busca_motorista"]."";
-		}
-
-		$motoristas = mysqli_fetch_all(
-			query($queryMotoristas),
-			MYSQLI_ASSOC
-		);
+				WHERE enti_tx_status = 'ativo'
+					AND enti_nb_empresa = {$_POST["empresa"]}
+					".((!empty($_POST["busca_motorista"]))? " AND enti_nb_id = {$_POST["busca_motorista"]}": "")."
+				ORDER BY enti_tx_nome ASC;"
+		), MYSQLI_ASSOC);
 
 		$novosEndossos = [];
 
@@ -345,7 +340,7 @@
 				for ($i = 0; $i <= $dateDiff->d; $i++) {
 					$dataVez = strtotime($_POST["data_de"]);
 					$dataVez = date("Y-m-d", $dataVez+($i*60*60*24));
-					$aDetalhado = diaDetalhePonto($motorista["enti_tx_matricula"], $dataVez);
+					$aDetalhado = diaDetalhePonto($motorista, $dataVez);
 
 					
 					$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $dataVez, $motorista["enti_nb_id"])], $aDetalhado));

@@ -620,7 +620,7 @@
 			"LOCALIZAÇÃO"                                       => "map(pont_nb_id)",
 			"<spam class='glyphicon glyphicon-remove'></spam>"	=> "iconeExcluir"
 		];
-		grid($sql, array_keys($gridFields), array_values($gridFields), "", "12", 1, "desc");
+		grid($sql, array_keys($gridFields), array_values($gridFields), "", "12", 1, "desc", -1);
 
 		echo
 			"<div id='tituloRelatorio'>

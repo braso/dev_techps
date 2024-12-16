@@ -392,7 +392,7 @@
 
         $userEntityRegistry = get_data(
             "SELECT entidade.enti_tx_matricula FROM entidade 
-                JOIN user ON user_tx_matricula = enti_tx_matricula
+                JOIN user ON enti_nb_id = user_nb_entidade
                 WHERE user_tx_status = 'ativo'
                     AND user_nb_id = ".$requestdata->userID.""
         )[0];
@@ -527,7 +527,7 @@
             )"
         ;
         
-        $result = insert_data($query,$ponto);
+        $result = insert_data($query, $ponto);
         if($requestdata->type == "break"){
 			$result = "Break finish registered successfully.";
 		}
@@ -538,7 +538,7 @@
     function delLastRegister(int $userId){
         $userEntityRegistry = get_data(
             "SELECT entidade.enti_tx_matricula FROM entidade 
-                JOIN user ON user_tx_matricula = enti_tx_matricula
+                JOIN user ON enti_nb_id = user_nb_entidade
                 WHERE user_tx_status = 'ativo'
                     AND user_nb_id = ".$userId.""
         )[0];

@@ -45,7 +45,7 @@
 
     // Adiciona os dados ao CSV
     foreach ($aDia as $aDiaVez) {
-        $linha =[];
+        $linha = [];
         for ($j = 0; $j < 20; $j++){
             // $conteudo = strip_tags($aDiaVez[$j]);
             // $linha[] = str_replace("&nbsp;",$conteudo,$conteudo);
@@ -56,7 +56,7 @@
     }
 
     $totalDias = ["TOTAL:","$qtdDiasEndossados dias","","","","","","","","","","","","","","",""];
-    $tabelaInfo = ["Carga Horaria Prevista:","$totalResumo[jornadaPrevista]","","Legendas","","Saldo Anterior:","$totalResumo[saldoAnterior]","Saldo Período:","$totalResumo[diffSaldo]","Saldo Bruto:","$totalResumo[saldoBruto]","","","","","",""];
+    $tabelaInfo = ["Carga Horaria Prevista:","{$totalResumo["jornadaPrevista"]}","","Legendas","","Saldo Anterior:","{$totalResumo["saldoAnterior"]}","Saldo Período:","{$totalResumo["diffSaldo"]}","Saldo Bruto:","{$totalResumo["saldoBruto"]}","","","","","",""];
     $tabelaInfo1 = ["Carga Horaria Efetiva Realizada:","$totalResumo[diffJornadaEfetiva]","","I","Incluída Manualmente","","","","","","","","","","","",""];
     $tabelaInfo2 = ["Adicional Noturno:","$totalResumo[adicionalNoturno]","","P","Pré-Assinalada","","","","","","","","","","","",""];
     $tabelaInfo3 = ["Espera Indenizada:","$totalResumo[esperaIndenizada]","","T","Outras fontes de marcação","","","","","","","","","","","",""];

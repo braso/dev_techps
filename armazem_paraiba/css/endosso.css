@@ -2,8 +2,10 @@
     body {
         margin: 1cm;
         margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
-        transform: scale(1.0);
+        transform: scale(1.7);
         transform-origin: top left;
+        padding-right: 660px !important;;
+        /* padding: 300px !important; */
     }
 
     @page {
@@ -12,7 +14,7 @@
     }
 
     .table-resumo {
-        width: 89% !important;
+        width: 100% !important;
         page-break-inside: avoid !important;
         border-collapse: collapse !important;
         border: 0 !important;
@@ -34,6 +36,9 @@
 
     #exporta{
         display: none;
+    }
+    .table-bottom{
+        margin-bottom: 150px !important;
     }
 }
 

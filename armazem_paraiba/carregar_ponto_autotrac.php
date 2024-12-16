@@ -103,6 +103,10 @@
 
 	$f = 0;
 	foreach($pontos as $ponto){
+		if($ponto["driver_cpf"] != "93844204415"){
+			continue;
+		}
+
 		$newPonto = [
 			"pont_nb_userCadastro"	=> $_SESSION['user_nb_id'],
 			"pont_tx_dataCadastro" 	=> date("Y-m-d H:i:s"),
@@ -180,7 +184,7 @@
 				//}*/
 
 				//Conferir se há uma jornada aberta no horário para inserir pontos.
-				//* Manter esse código salvo para caso seja necessário fazer essa conferência no futuro.
+				/* Manter esse código salvo para caso seja necessário fazer essa conferência no futuro.
 					if(in_array($newPonto["pont_tx_tipo"], ["1", "2"])){
 						$temJornadaAberta = mysqli_fetch_assoc(query(
 							"SELECT pont_nb_id, pont_tx_tipo FROM ponto
