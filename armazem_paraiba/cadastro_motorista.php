@@ -925,10 +925,5 @@
 		];
 
 		grid($sql, array_keys($gridFields), array_values($gridFields));
-		echo 
-			"<script>
-				
-			</script>"
-		;
 		rodape();
 	}
