@@ -2,17 +2,17 @@ body {
     --var-blue: #4ea9ff;
     --var-darkblue: #0757a2;
     --var-red: #ec4141;
-    --var-darkred: #a30000;
-    --var-lightred: #C41212;
-    --var-yellow2: #FFF260;
-    --var-yellow3: #FFE800;
+    --var-darkred: #a3000080;
+    --var-lightred: #c4121242;
+    --var-yellow2: #fff26038 ;
+    --var-yellow3: #ffe80063;
     --var-yellow: #f1c61f;
-    --var-orange: #FF8B00;
-    --var-lightorange: #FF9F2C;
+    --var-orange: #ff8b0070;
+    --var-lightorange: #ff9f2c57;
     --var-lightyellow: #ffff75;
     --var-darkyellow: #c1a300;
     --var-green: #53d02a;
-    --var-darkgreen: #29a300;
+    --var-darkgreen: #29a30094;
 }
 
 
@@ -65,7 +65,7 @@ body {
 
 .altaGravidade {
     background-color: var(--var-lightred);
-    color: white;
+    /* color: white; */
     text-align: center;
 }
 
@@ -200,7 +200,7 @@ h4 {
 
 
 .emissao {
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     width: -webkit-fill-available;
     align-content: center;
     text-align: center;
@@ -260,8 +260,25 @@ th.sort-desc::after {
 }
 
 .jornada{
-    background-color: var(--var-red);
-    color: white;
+    text-align: center;
+}
+
+.jornadaGreen{
+    color: var(--var-green);
+    text-align: center;
+}
+.jornadaYellow{
+    /* background-color: #172743; */
+    color: var(--var-yellow);
+    text-align: center;
+}
+.jornadaRed{
+    color: var(--var-red);
+    text-align: center;
+}
+
+.jornadaD{
+    color: var(--var-red);
     text-align: center;
 }
 
@@ -272,14 +289,16 @@ th.sort-desc::after {
         transform-origin: left top;
         overflow: hidden;
         position: absolute;
-        margin-right: 0cm;
-        transform: scale(0.99);
+        transform: scale(1);
         transform-origin: top left;
     }
 
     @page {
         size: A4 landscape;
         margin: 1cm;
+    }
+    .row{
+        display: flex;
     }
 
     #grafico{
@@ -365,11 +384,19 @@ th.sort-desc::after {
         box-shadow: 0 0 0 1000px var(--var-yellow) inset !important;
     }
 
+    .tituloBaixaGravidade2 {
+        box-shadow: 0 0 0 1000px var(--var-yellow) inset !important;
+    }
+
     .baixaGravidade {
         box-shadow: 0 0 0 1000px var(--var-yellow2) inset !important;
     }
 
     .tituloMediaGravidade {
+        box-shadow: 0 0 0 1000px var(--var-orange) inset !important;
+    }
+
+    .tituloMediaGravidade2 {
         box-shadow: 0 0 0 1000px var(--var-orange) inset !important;
     }
 
@@ -379,6 +406,10 @@ th.sort-desc::after {
     }
 
     .tituloAltaGravidade {
+        box-shadow: 0 0 0 1000px var(--var-darkred) inset !important;
+    }
+
+    .tituloAltaGravidade2 {
         box-shadow: 0 0 0 1000px var(--var-darkred) inset !important;
     }
 
@@ -415,6 +446,63 @@ th.sort-desc::after {
         position: relative;
         padding-left: 570px !important;
     }
+    .panel-collapse {
+        display: block !important; /* Força todos os elementos colapsados a ficarem visíveis */
+        height: auto !important;  /* Ajusta a altura para auto, para garantir que o conteúdo apareça completo */
+    }
+    .panel-title a {
+        pointer-events: none; /* Desativa os links durante a impressão para evitar interação */
+        text-decoration: none; /* Remove o sublinhado do link */
+        color: black !important; /* Garante que o título seja legível */
+    }
+
+    #graficoDetalhado{
+        height: 0px;
+    }
+
+    .panel-group {
+      margin-bottom: 0px !important;
+    }
+    .panel-body {
+        /* padding: 15px !important; */
+    }
+    .h4{
+        padding: 3px;
+    }
+
+    .row {
+        margin: 0px 0px 0px 0px !important;
+    }
+
+    .table {
+        margin-bottom: 0px !important;
+    }
+
+    #accordion{
+        order: 2;
+        break-after: page;
+    }
+
+    #accordion2{
+        order: 1;
+        break-after: page;
+    }
+
+    #resumo{
+        break-after: page;
+    }
+    .panel-heading{
+            padding: 0px !important;
+    }
+
+    #graficoDetalhado{
+        height: 780px !important;
+    }
+
+    .highlighted {
+        box-shadow: 0 0 0 1000px lightgreen inset !important;
+        text-align: center;
+  }
 }
 
 .th-align {
@@ -424,3 +512,89 @@ th.sort-desc::after {
     /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */
 
 }
+
+ /* Painel nc_juridica */
+  /* Estilo geral do painel */
+  .panel {
+      border-radius: 12px;
+      border: none;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+      transition: box-shadow 0.3s ease-in-out;
+  }
+
+  /* Cabeçalho do painel */
+  .panel-heading {
+      background: linear-gradient(to right, #172743, #36a4bc);
+      color: #fff;
+      border-radius: 12px 12px 0 0;
+      padding: 6px;
+      font-size: 20px;
+      font-weight: bold;
+      position: relative;
+      transition: background-color 0.3s ease;
+  }
+
+  /* Título do Accordion com interação */
+  .panel-title a {
+      color: #fff;
+      text-decoration: none;
+      display: block;
+      position: relative;
+  }
+
+  /* Ícone da seta usando Glyphicons */
+  .panel-title a::after {
+      content: '\e114';
+      /* Seta para baixo (expandido) */
+      font-family: 'Glyphicons Halflings';
+      position: absolute;
+      right: 20px;
+      font-size: 15px;
+      transition: transform 0.3s ease;
+  }
+
+  .panel-title a.collapsed::after {
+      content: '\e113';
+      /* Seta para a direita (fechado) */
+      transform: rotate(0deg);
+  }
+
+  /* Corpo do painel */
+  .panel-body {
+      background-color: #f1f0f04d;
+      padding: 20px;
+      border-radius: 0 0 12px 12px;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+  }
+
+  .panel-body p {
+      margin: 0;
+  }
+
+  @media (min-width: 1200px) {
+      .container {
+          width: 860px !important;
+      }
+  }
+
+  .highlighted {
+      background-color: lightgreen !important;
+      text-align: center;
+      /* color: black !important; */
+      /* Contraste opcional */
+  }
+
+  .total{
+    text-align: center;
+  }
+
+  .table thead tr th {
+      font-size: 11px;
+      font-weight: 600;
+  }
+  .table td,
+  .table th {
+      font-size: 10px;
+  }

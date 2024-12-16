@@ -452,7 +452,7 @@
                 $horaAtual = date("H:i");
                 if($dataArquivo != $dataAtual){
                     $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
-                    <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                    <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
                 } else {
                     // Datas iguais: compara as horas
                     // if ($horaArquivo < $horaAtual) {
@@ -694,12 +694,12 @@
             $titulo = "de Endosso"; // usado no html
             include_once "painel_html.php";
 
-            echo 
-                "<div class='script'>
+            echo
+        "<div class='script'>
                     <script>
-                        var porcentagemEndoTds = document.getElementsByClassName('porcentagemEndo')[0];
-                        var porcentagemEndoPcTds = document.getElementsByClassName('porcentagemEndoPc')[0];
-                        var porcentagemNaEndoTds = document.getElementsByClassName('porcentagemNaEndo')[0];
+                        var porcentagemEndoTds = document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td');
+                        var porcentagemEndoPcTds = document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td');
+                        var porcentagemNaEndoTds = document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td');
                         porcentagemEndoTds[1].innerHTML = endossos.totais.E;
                         porcentagemEndoPcTds[1].innerHTML = endossos.totais.EP;
                         porcentagemNaEndoTds[1].innerHTML = endossos.totais.N;

@@ -617,254 +617,235 @@
         // Cria a data de início do mês especificado
         $periodoInicio = date($anoMes."-01 00:00:00");
         $periodoFim = date("Y-m-t", mktime(0, 0, 0, $mes, 1, $ano));
-        $dataInicio = new DateTime($periodoInicio);
-        $dataFim = new DateTime($periodoFim);
+        $mes = new DateTime($periodoInicio);
+        $fimMes = new DateTime($periodoFim);
+		
+		$empresas = mysqli_fetch_all(query(
+			"SELECT empr_nb_id, empr_tx_nome FROM empresa"
+				. " WHERE empr_tx_status = 'ativo'"
+				. (!empty($_POST["empresa"]) ? " AND empr_nb_id = ".$_POST["empresa"] : "")
+				. " ORDER BY empr_tx_nome ASC;"
+		), MYSQLI_ASSOC);
 
-        $empresas = mysqli_fetch_all(query(
-            "SELECT empr_nb_id, empr_tx_nome FROM empresa
-            	WHERE empr_tx_status = 'ativo'
-            	ORDER BY empr_tx_nome ASC;"
-        ),MYSQLI_ASSOC);
-        
-        foreach($empresas as $empresa){
+		$totaisEmpresas = [
+			"jornadaPrevista" => "00:00",
+			"jornadaEfetiva" => "00:00",
+			"he50APagar" => "00:00",
+			"he100APagar" => "00:00",
+			"adicionalNoturno" => "00:00",
+			"esperaIndenizada" => "00:00",
+			"saldoAnterior" => "00:00",
+			"saldoPeriodo" => "00:00",
+			"saldoFinal" => "00:00",
+			"qtdMotoristas" => 0
+		];
 
-            $path = "./arquivos"."/".$empresa["empr_nb_id"]."/".$anoMes;
-            if(!file_exists($path."/empresa_".$empresa["empr_nb_id"].".json")){
-                if(!is_dir($path)){
-                    mkdir($path, 0755, true);
-                }
-                file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", "");
-            }
+		foreach ($empresas as $empresa) {
+			$path = "./arquivos/endossos"."/".$mes->format("Y-m")."/".$empresa["empr_nb_id"];
+			if (!is_dir($path)) {
+				mkdir($path, 0755, true);
+			}
+			// if(file_exists($path."/empresa_".$empresa["empr_nb_id"].".json")){
+			// 	if(date("Y-m-d", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")) == date("Y-m-d")){
+			// 		echo 
+			// 			"<script>"
+			// 			."confirm('O relatório de ".$empresa["empr_tx_nome"]." já foi gerado hoje, deseja gerar novamente?');"
+			// 			."</script>"
+			// 		;
+			// 		continue;
+			// 	}
+			// }
 
-            $motoristas = mysqli_fetch_all(query(
-                "SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_banco, enti_nb_parametro FROM entidade
-                WHERE enti_tx_status = 'ativo'
-                    AND enti_nb_empresa = {$empresa["empr_nb_id"]}
-                    AND enti_tx_ocupacao IN ('Motorista', 'Ajudante')
-                ORDER BY enti_tx_nome ASC;"
-            ),MYSQLI_ASSOC);
-            
-            $rows = [];
-            $statusEndossos = [
-                "E" => 0,
-                "EP" => 0,
-                "N" => 0
-            ];
-            foreach($motoristas as $motorista){
+			$motoristas = mysqli_fetch_all(query(
+			"SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_banco, enti_tx_ocupacao, enti_tx_admissao FROM entidade"
+					. " WHERE enti_tx_status = 'ativo'"
+					. " AND enti_nb_empresa = ".$empresa["empr_nb_id"]
+					. " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
+					. " ORDER BY enti_tx_nome ASC;"
+			), MYSQLI_ASSOC);
 
-                //Status Endosso{
-                    $endossos = mysqli_fetch_all(query(
-                        "SELECT endosso.* FROM endosso"
-							." WHERE endo_tx_status = 'ativo'"
-								." AND endo_nb_entidade = '".$motorista["enti_nb_id"]."'"
-								." AND ("
-									."(endo_tx_de  >= '".$periodoInicio."' AND endo_tx_de  <= '".$periodoFim."')"
-									."OR (endo_tx_ate >= '".$periodoInicio."' AND endo_tx_ate <= '".$periodoFim."')"
-									."OR (endo_tx_de  <= '".$periodoInicio."' AND endo_tx_ate >= '".$periodoFim."')"
-								.");"
-                    ), MYSQLI_ASSOC);
-                    
-                    $statusEndosso = "N";
-                    if(count($endossos) >= 1){
-                        $statusEndosso = "E";
-                        if(strtotime($periodoInicio) != strtotime($endossos[0]["endo_tx_de"]) || strtotime($periodoFim) > strtotime($endossos[count($endossos)-1]["endo_tx_ate"])){
-                            $statusEndosso .= "P";
-                        }
-                    }
-                    $statusEndossos[$statusEndosso]++;
-                //}
-                
-                $arquivosEndo = [];
-                foreach($endossos as $arquivo){
-                    $arquivosEndo [] = lerEndossoCSV($arquivo["endo_tx_filename"]);
-                }
-                $endossoCompleto = [];
-
-                $row = [
-                    "jornadaPrevista" => "00:00",
-                    "jornadaEfetiva" => "00:00",
-                    "HESemanal" => "00:00",
-                    "HESabado" => "00:00",
-                    "adicionalNoturno" => "00:00",
-                    "esperaIndenizada" => "00:00",
-                    "saldoPeriodo" => "00:00",
-                    "saldoFinal" => "00:00"
-                ];
-
-				$saldoAnterior = "00:00";
-                if(count($arquivosEndo) > 0){
-                    $endossoCompleto = $arquivosEndo[0];
-                    $saldoAnterior = $endossoCompleto["totalResumo"]["saldoAnterior"];
-                    if(empty($endossoCompleto["endo_tx_max50APagar"]) && !empty($endossoCompleto["endo_tx_horasApagar"])){
-                        $endossoCompleto["endo_tx_max50APagar"] = $endossoCompleto["endo_tx_horasApagar"];
-                    }
-
-                    for ($f = 1; $f < count($arquivosEndo); $f++){ 
-                        if(empty($arquivosEndo[$f]["endo_tx_max50APagar"]) && !empty($arquivosEndo[$f]["endo_tx_horasApagar"])){
-                            $arquivosEndo[$f]["endo_tx_max50APagar"] = $arquivosEndo[$f]["endo_tx_horasApagar"];
-                        }
-
-                        if($endossoCompleto["endo_tx_max50APagar"] != "00:00"){
-                            $endossoCompleto["endo_tx_max50APagar"] = operarHorarios([$endossoCompleto["endo_tx_max50APagar"], $arquivosEndo[$f]["endo_tx_max50APagar"]], "+");	
-                            if(is_int(strpos($endossoCompleto["endo_tx_max50APagar"], "-"))){
-                                $endossoCompleto["endo_tx_max50APagar"] = "00:00";
-                            }
-                        }
-                        foreach($arquivosEndo[$f]["totalResumo"] as $key => $value){
-                            if(in_array($key, ["saldoAnterior"])){
-                                continue;
-                            }
-                            $endossoCompleto["totalResumo"][$key] = operarHorarios([$endossoCompleto["totalResumo"][$key], $value], "+");
-                        }    
-                    }
-
-					$parametro = mysqli_fetch_assoc(query(
-						"SELECT para_tx_pagarHEExComPerNeg FROM parametro"
-							." WHERE para_nb_id = ".$motorista["enti_nb_parametro"]
-							." LIMIT 1;"
+			$rows = [];
+			$statusEndossos = [
+				"E" => 0,
+				"EP" => 0,
+				"N" => 0
+			];
+			foreach ($motoristas as $motorista) {
+				if (substr($motorista["enti_tx_admissao"],0,7) <= $mes->format("Y-m")) {
+					$endossos = mysqli_fetch_all(query(
+						"SELECT * FROM endosso"
+							. " WHERE endo_tx_status = 'ativo'"
+							. " AND endo_nb_entidade = '".$motorista["enti_nb_id"]."'"
+							. " AND ("
+							. "   (endo_tx_de  >= '".$mes->format("Y-m-01")."' AND endo_tx_de  <= '".$mes->format("Y-m-t")."')"
+							. "OR (endo_tx_ate >= '".$mes->format("Y-m-01")."' AND endo_tx_ate <= '".$mes->format("Y-m-t")."')"
+							. "OR (endo_tx_de  <= '".$mes->format("Y-m-01")."' AND endo_tx_ate >= '".$mes->format("Y-m-t")."')"
+							. ")"
+							. " ORDER BY endo_tx_ate;"
+					), MYSQLI_ASSOC);
+	
+					$statusEndosso = "N";
+					if (count($endossos) >= 1) {
+						$statusEndosso = "E";
+						if (strtotime($mes->format("Y-m-01")) != strtotime($endossos[0]["endo_tx_de"]) || strtotime($mes->format("Y-m-t")) > strtotime($endossos[count($endossos) - 1]["endo_tx_ate"])) {
+							$statusEndosso .= "P";
+						}
+					}
+					$statusEndossos[$statusEndosso]++;
+					//}
+	
+					//saldoAnterior{
+					$saldoAnterior = mysqli_fetch_assoc(query(
+						"SELECT endo_tx_saldo FROM endosso"
+							. " WHERE endo_tx_status = 'ativo'"
+							. " AND endo_tx_ate < '".$mes->format("Y-m-01")."'"
+							. " AND endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'"
+							. " ORDER BY endo_tx_ate DESC"
+							. " LIMIT 1;"
 					));
+	
+					if (!empty($saldoAnterior)) {
+						if (!empty($saldoAnterior["endo_tx_saldo"])) {
+							$saldoAnterior = $saldoAnterior["endo_tx_saldo"];
+						} elseif (!empty($motorista["enti_tx_banco"])) {
+							$saldoAnterior = $motorista["enti_tx_banco"];
+						}
+						if (strlen($motorista["enti_tx_banco"]) > 5 && $motorista["enti_tx_banco"][0] == "0") {
+							$saldoAnterior = substr($saldoAnterior, 1);
+						}
+					} else {
+						$saldoAnterior = "00:00";
+					}
+					//}
+	
+					$totaisMot = [
+						"jornadaPrevista" => "",
+						"jornadaEfetiva" => "",
+						"he50APagar" => "",
+						"he100APagar" => "",
+						"adicionalNoturno" => "",
+						"esperaIndenizada" => "",
+						"saldoAnterior" => $saldoAnterior,
+						"saldoPeriodo" => "",
+						"saldoFinal" => ""
+					];
+					if ($statusEndosso != "N") {
+						$totaisMot = [
+							"jornadaPrevista" => "00:00",
+							"jornadaEfetiva" => "00:00",
+							"he50APagar" => "00:00",
+							"he100APagar" => "00:00",
+							"adicionalNoturno" => "00:00",
+							"esperaIndenizada" => "00:00",
+							"saldoPeriodo" => "00:00",
+							"saldoFinal" => "00:00"
+						];
+	
+						foreach ($endossos as $endosso) {
+							$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
+							if (empty($endosso["totalResumo"]["he50APagar"])) {
+								$pago = calcularHorasAPagar(
+									operarHorarios([$endosso["totalResumo"]["saldoAnterior"], $endosso["totalResumo"]["diffSaldo"]], "+"),
+									$endosso["totalResumo"]["he50"],
+									$endosso["totalResumo"]["he100"],
+									$endosso["endo_tx_horasApagar"]
+								);
+								[$endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]] = $pago;
+							}
+							$totaisMot["jornadaPrevista"] 	= operarHorarios([$totaisMot["jornadaPrevista"], $endosso["totalResumo"]["jornadaPrevista"]], "+");
+							$totaisMot["jornadaEfetiva"] 	= operarHorarios([$totaisMot["jornadaEfetiva"], $endosso["totalResumo"]["diffJornadaEfetiva"]], "+");
+							$totaisMot["he50APagar"] 		= operarHorarios([$totaisMot["he50APagar"], $endosso["totalResumo"]["he50APagar"]], "+");
+							$totaisMot["he100APagar"] 		= operarHorarios([$totaisMot["he100APagar"], $endosso["totalResumo"]["he100APagar"]], "+");
+							$totaisMot["adicionalNoturno"] 	= operarHorarios([$totaisMot["adicionalNoturno"], $endosso["totalResumo"]["adicionalNoturno"]], "+");
+							$totaisMot["esperaIndenizada"] 	= operarHorarios([$totaisMot["esperaIndenizada"], $endosso["totalResumo"]["esperaIndenizada"]], "+");
+							if (empty($totaisMot["saldoAnterior"])) {
+								$totaisMot["saldoAnterior"] = $endosso["totalResumo"]["saldoAnterior"];
+							}
+							$totaisMot["saldoPeriodo"] 		= operarHorarios([$totaisMot["saldoPeriodo"], $endosso["totalResumo"]["diffSaldo"]], "+");
+							if (empty($endosso["totalResumo"]["saldoBruto"]) && !empty($endosso["totalResumo"]["saldoAtual"])) {
+								$totaisMot["saldoFinal"] = operarHorarios([$endosso["totalResumo"]["saldoAtual"], $endosso["totalResumo"]["he100"]], "+");
+							} else {
+								$totaisMot["saldoFinal"] = operarHorarios([$endosso["totalResumo"]["saldoAnterior"], $totaisMot["saldoPeriodo"]], "+");
+								$totaisMot["saldoFinal"] = operarHorarios([$totaisMot["saldoFinal"], $endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]], "-");
+							}
+						}
+					}
+	
+					$row = [
+						"idMotorista" => $motorista["enti_nb_id"],
+						"matricula" => $motorista["enti_tx_matricula"],
+						"nome" => $motorista["enti_tx_nome"],
+						"ocupacao" => $motorista["enti_tx_ocupacao"],
+						"statusEndosso" => $statusEndosso,
+						"jornadaPrevista" => $totaisMot["jornadaPrevista"],
+						"jornadaEfetiva" => $totaisMot["jornadaEfetiva"],
+						"he50APagar" => $totaisMot["he50APagar"],
+						"he100APagar" => $totaisMot["he100APagar"],
+						"adicionalNoturno" => $totaisMot["adicionalNoturno"],
+						"esperaIndenizada" => $totaisMot["esperaIndenizada"],
+						"saldoAnterior" => $saldoAnterior,
+						"saldoPeriodo" => $totaisMot["saldoPeriodo"],
+						"saldoFinal" => $totaisMot["saldoFinal"]
+					];
+					$nomeArquivo = $motorista["enti_tx_matricula"].".json";
+					file_put_contents($path."/".$nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE));
+	
+					$rows[] = $row;
+				}
+			}
 
-                    $row["saldoPeriodo"]                            = $endossoCompleto["totalResumo"]["diffSaldo"];
-                    $endossoCompleto["totalResumo"]["saldoBruto"]   = operarHorarios([$saldoAnterior, $row["saldoPeriodo"]], "+");
-                    [$row["HESemanal"], $row["HESabado"]]           = calcularHorasAPagar($endossoCompleto["totalResumo"]["saldoBruto"], $endossoCompleto["totalResumo"]["he50"], $endossoCompleto["totalResumo"]["he100"], $endossoCompleto["endo_tx_max50APagar"], ($parametro["para_tx_pagarHEExComPerNeg"]?? "nao"));
-                    $row["jornadaPrevista"]                         = $endossoCompleto["totalResumo"]["jornadaPrevista"];
-                    $row["jornadaEfetiva"]                          = $endossoCompleto["totalResumo"]["diffJornadaEfetiva"];
-                    $row["adicionalNoturno"]                        = $endossoCompleto["totalResumo"]["adicionalNoturno"];
-                    $row["esperaIndenizada"]                        = $endossoCompleto["totalResumo"]["esperaIndenizada"];
-                    $row["saldoFinal"]                              = operarHorarios([$endossoCompleto["totalResumo"]["saldoBruto"], $endossoCompleto["totalResumo"]["HESemanalAPagar"], $endossoCompleto["totalResumo"]["HEExAPagar"]], "-");
-                }
 
-                $rows[] = [ 
-                    "idMotorista" => $motorista["enti_nb_id"],
-                    "matricula" => $motorista["enti_tx_matricula"],
-                    "nome" => $motorista["enti_tx_nome"],
-                    "statusEndosso" => $statusEndosso,
-                    "jornadaPrevista" => $row["jornadaPrevista"],
-                    "jornadaEfetiva" => $row["jornadaEfetiva"],
-                    "HESemanal" => $row["HESemanal"],
-                    "HESabado" => $row["HESabado"],
-                    "adicionalNoturno" => $row["adicionalNoturno"],
-                    "esperaIndenizada" => $row["esperaIndenizada"],
-                    "saldoAnterior" => $saldoAnterior,
-                    "saldoPeriodo" => $row["saldoPeriodo"],
-                    "saldoFinal" => $row["saldoFinal"]
-                ];
-            }
+			$totaisEmpr = [
+				"jornadaPrevista" => "00:00",
+				"jornadaEfetiva" => "00:00",
+				"he50APagar" => "00:00",
+				"he100APagar" => "00:00",
+				"adicionalNoturno" => "00:00",
+				"esperaIndenizada" => "00:00",
+				"saldoAnterior" => "00:00",
+				"saldoPeriodo" => "00:00",
+				"saldoFinal" => "00:00"
+			];
 
-            [
-                $totalJorPrevResut,
-                $totalJorPrev,
-                $totalJorEfe,
-                $totalHE50,
-                $totalHE100,
-                $totalAdicNot,
-                $totalEspInd,
-                $saldoAnterior,
-                $totalSaldoPeriodo,
-                $saldoFinal
-            ] = array_pad([], 10, "00:00");
+			foreach ($rows as $row) {
+				$totaisEmpr["jornadaPrevista"]  = operarHorarios([$totaisEmpr["jornadaPrevista"], $row["jornadaPrevista"]], "+");
+				$totaisEmpr["jornadaEfetiva"]   = operarHorarios([$totaisEmpr["jornadaEfetiva"], $row["jornadaEfetiva"]], "+");
+				$totaisEmpr["he50APagar"]       = operarHorarios([$totaisEmpr["he50APagar"], $row["he50APagar"]], "+");
+				$totaisEmpr["he100APagar"]      = operarHorarios([$totaisEmpr["he100APagar"], $row["he100APagar"]], "+");
+				$totaisEmpr["adicionalNoturno"] = operarHorarios([$totaisEmpr["adicionalNoturno"], $row["adicionalNoturno"]], "+");
+				$totaisEmpr["esperaIndenizada"] = operarHorarios([$totaisEmpr["esperaIndenizada"], $row["esperaIndenizada"]], "+");
+				$totaisEmpr["saldoAnterior"]    = operarHorarios([$totaisEmpr["saldoAnterior"], $row["saldoAnterior"]], "+");
+				$totaisEmpr["saldoPeriodo"]     = operarHorarios([$totaisEmpr["saldoPeriodo"], $row["saldoPeriodo"]], "+");
+				$totaisEmpr["saldoFinal"]       = operarHorarios([$totaisEmpr["saldoFinal"], $row["saldoFinal"]], "+");
+			}
 
-            foreach ($rows as $row){
-                $totalJorPrev      = somarHorarios([$totalJorPrev, $row["jornadaPrevista"]]);
-                $totalJorEfe       = somarHorarios([$totalJorEfe, $row["jornadaEfetiva"]]);
-                $totalHE50         = somarHorarios([$totalHE50, $row["HESemanal"]]);
-                $totalHE100        = somarHorarios([$totalHE100, $row["HESabado"]]);
-                $totalAdicNot      = somarHorarios([$totalAdicNot, $row["adicionalNoturno"]]);
-                $totalEspInd       = somarHorarios([$totalEspInd, $row["esperaIndenizada"]]);
-                $saldoAnterior     = somarHorarios([$saldoAnterior, $row["saldoAnterior"]]);
-                $totalSaldoPeriodo = somarHorarios([$totalSaldoPeriodo, $row["saldoPeriodo"]]);
-                $saldoFinal        = somarHorarios([$saldoFinal, $row["saldoFinal"]]);
-            }
+			//Adicionar valores da empresa à soma total das empresas{
+			if (empty($_POST["empresa"])) {
+				foreach ($totaisEmpr as $key => $value) {
+					$totaisEmpresas[$key] = operarHorarios([$totaisEmpresas[$key], $value], "+");
+				}
+				$totaisEmpresas["qtdMotoristas"] += count($motoristas);
+			}
+			//}
 
-            $totaisJson = [
-                "empresaId"        => $empresa["empr_nb_id"],
-                "empresaNome"      => $empresa["empr_tx_nome"],
-                "jornadaPrevista"  => $totalJorPrev,
-                "JornadaEfetiva"   => $totalJorEfe,
-                "he50"             => $totalHE50,
-                "he100"            => $totalHE100,
-                "adicionalNoturno" => $totalAdicNot,
-                "esperaIndenizada" => $totalEspInd,
-                "saldoAnterior"    => $saldoAnterior,
-                "saldoPeriodo"     => $totalSaldoPeriodo,
-                "saldoFinal"       => $saldoFinal,
-                "naoEndossados"    => $statusEndossos["N"],
-                "endossados"       => $statusEndossos["E"],
-                "endossoPacial"    => $statusEndossos["EP"],
-                "totalMotorista"   => count($motoristas)
-            ];
+			$empresa["totais"] = $totaisEmpr;
+			$empresa["qtdMotoristas"] = count($motoristas);
+			$empresa["dataInicio"] = $mes->format("Y-m-01");
+			$empresa["dataFim"] = $mes->format("Y-m-t");
+			$empresa["percEndossado"] = ($statusEndossos["E"]) / array_sum(array_values($statusEndossos));
 
-            $totais[] = $totaisJson;
-            
-            if(!is_dir($path)){
-                mkdir($path,0755,true);
-            }
-            $fileName = "totalMotoristas.json";
-            $jsonArquiTotais = json_encode($totaisJson, JSON_UNESCAPED_UNICODE);
-            file_put_contents($path."/".$fileName, $jsonArquiTotais);
-                
-        }
 
-        if(!is_dir("./arquivos/paineis/empresas/".$anoMes."")){
-            mkdir("./arquivos/paineis/empresas/".$anoMes."",0755,true);
-        }
-        $path = "./arquivos/paineis/empresas/".$anoMes;
-        $fileName = "totalEmpresas.json";
-        $jsonArquiTotais = json_encode($totais, JSON_UNESCAPED_UNICODE);
-        file_put_contents($path."/".$fileName, $jsonArquiTotais);
-        
-        [
-            /*$totalJorPrevResut, */$totalJorPrev, $totalJorEfe, $totalHE50, $totalHE100, $totalAdicNot,
-            $totalEspInd, $totalSaldoPeriodo, $toralSaldoAnter, $saldoFinal
-        ] = array_pad([], 9, "00:00");
+			file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", json_encode($empresa));
+		}
 
-        $totalMotorista 	= 0;
-        $totalNaoEndossados = 0;
-        $totalEndossados 	= 0;
-        $totalEndossoPacial = 0;
-        
-        foreach ($totais as $totalEmpresa){
+		if (empty($_POST["empresa"])) {
+			$path = "./arquivos/endossos"."/".$mes->format("Y-m");
+			$totaisEmpresas["dataInicio"] = $mes->format("Y-m-01");
+			$totaisEmpresas["dataFim"] = $mes->format("Y-m-t");
+			file_put_contents($path."/empresas.json", json_encode($totaisEmpresas));
+		}
 
-            $totalMotorista 	+= $totalEmpresa["totalMotorista"];
-            $totalNaoEndossados += $totalEmpresa["naoEndossados"];
-            $totalEndossados 	+= $totalEmpresa["endossados"];
-            $totalEndossoPacial += $totalEmpresa["endossoPacial"];
-            
-            $totalJorPrev           = somarHorarios([$totalEmpresa["jornadaPrevista"],$totalJorPrev]);
-            $totalJorEfe            = somarHorarios([$totalJorEfe, $totalEmpresa["JornadaEfetiva"]]);
-            $totalHE50              = somarHorarios([$totalHE50, $totalEmpresa["he50"]]);
-            $totalHE100             = somarHorarios([$totalHE100, $totalEmpresa["he100"]]);
-            $totalAdicNot           = somarHorarios([$totalAdicNot, $totalEmpresa["adicionalNoturno"]]);
-            $totalEspInd            = somarHorarios([$totalEspInd, $totalEmpresa["esperaIndenizada"]]);
-            $toralSaldoAnter        = somarHorarios([$toralSaldoAnter, $totalEmpresa["saldoAnterior"]]);
-            $totalSaldoPeriodo      = somarHorarios([$totalSaldoPeriodo, $totalEmpresa["saldoPeriodo"]]);
-            $saldoFinal             = somarHorarios([$saldoFinal, $totalEmpresa["saldoFinal"]]);
-        }
-        
-        $jsonTotaisEmpr = [
-            "EmprTotalJorPrev"      => $totalJorPrev,
-            "EmprTotalJorEfe"       => $totalJorEfe,
-            "EmprTotalHE50"         => $totalHE50,
-            "EmprTotalHE100"        => $totalHE100,
-            "EmprTotalAdicNot"      => $totalAdicNot,
-            "EmprTotalEspInd"       => $totalEspInd,
-            "EmprTotalSaldoAnter"   => $toralSaldoAnter,
-            "EmprTotalSaldoPeriodo" => $totalSaldoPeriodo,
-            "EmprTotalSaldoFinal"   => $saldoFinal,
-            "EmprTotalMotorista"    => $totalMotorista,
-            "EmprTotalNaoEnd"       => $totalNaoEndossados,
-            "EmprTotalEnd"          => $totalEndossados,
-            "EmprTotalEndPac"       => $totalEndossoPacial,
-        ];
-        
-
-        $path = "./arquivos/empresas/".$anoMes;
-        if(!is_dir($path)){
-            mkdir($path,0755,true);
-        }
-        $fileName = "empresas.json";
-        file_put_contents($path."/".$fileName, json_encode($jsonTotaisEmpr));
-        return;
+		return;
     }
 
 	function diaDetalhePonto(array $motorista, string $data): array{

@@ -89,21 +89,30 @@ function carregarJS(array $arquivos) {
 		$carregarDados .= "carregarDados('{$arquivo}');";
 	}
 
-	$formFields = ["acao", "atualizar", "campoAcao", "empresa", "busca_dataInicio", "busca_dataFim", "busca_periodo"];
-
-	echo  
-		"<script>".
-			criarHiddenForm("myForm", $formFields, array_pad([], count($formFields), NULL), htmlspecialchars($_SERVER["PHP_SELF"]))."
-			function setAndSubmit(empresa){
-				document.myForm.acao.value = 'enviarForm()';
-				document.myForm.campoAcao.value = 'buscar';
-				document.myForm.empresa.value = empresa;
-				const buscaPeriodoInput = document.getElementById('busca_periodo').value;
-				const buscaPeriodoArray = buscaPeriodoInput.split(' - ');
-				console.log(buscaPeriodoArray);
-				document.myForm.busca_periodo.value = JSON.stringify(buscaPeriodoArray);
-				document.myForm.submit();
-			}
+	echo
+	"<form name='myForm' method='post' action='" . htmlspecialchars($_SERVER["PHP_SELF"]) . "'>
+                <input type='hidden' name='acao'>
+                <input type='hidden' name='atualizar'>
+                <input type='hidden' name='campoAcao'>
+                <input type='hidden' name='empresa'>
+                <input type='hidden' name='busca_periodo[]' id='busca_inicio'>
+				<input type='hidden' name='busca_periodo[]' id='busca_fim'>
+            </form>
+            <script>
+                function setAndSubmit(empresa){
+                    document.myForm.acao.value = 'enviarForm()';
+                    document.myForm.campoAcao.value = 'buscar';
+                    document.myForm.empresa.value = empresa;
+                    const buscaPeriodoInput = document.getElementById('busca_periodo');
+					const [inicio, fim] = buscaPeriodoInput.value.split(' - '); 
+					 function formatDate(date) {
+						const [day, month, year] = date.split('/');
+						return year + '-' + month + '-' + day;
+					}
+					document.getElementById('busca_inicio').value = formatDate(inicio);
+					document.getElementById('busca_fim').value = formatDate(fim);
+                    document.myForm.submit();
+                }
 
 			function imprimir(){
 				window.print();
@@ -192,7 +201,6 @@ function carregarJS(array $arquivos) {
 }
 
 function index() {
-	var_dump($_POST["busca_periodo"]);
 	$dominiosAutotrac = ["/comav"];
 	if (!empty($_POST["acao"])) {
 		if ($_POST["busca_dataMes"] > date("Y-m")) {
@@ -272,7 +280,7 @@ function index() {
 			$horaAtual = date("H:i");
 			if ($dataArquivo != $dataAtual) {
 				$alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
-                        <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                        <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
 			} else {
 				// Datas iguais: compara as horas
 				// if ($horaArquivo < $horaAtual) {
@@ -299,52 +307,57 @@ function index() {
 				}
 			}
 			$pastaAjuste->close();
-		}
-	} elseif(!empty($_POST["busca_periodo"])){
-		$periodoInicio = new DateTime($_POST["busca_periodo"][0]);
-		$periodoFim = new DateTime($_POST["busca_periodo"][1]);
-
-		if ($periodoInicio->format("Y-m") === $periodoFim->format("Y-m")) {
-			$path .= "/".$periodoInicio->format("Y-m"). "/" ;
-		}
-
-		if(is_dir($path) && file_exists($path."/empresas.json")){
-			$encontrado = true;
-			$dataArquivo = date("d/m/Y", filemtime($path."/empresas.json"));
-			$horaArquivo = date("H:i", filemtime($path."/empresas.json"));
-
-			$dataAtual = date("d/m/Y");
-			$horaAtual = date("H:i");
-			if ($dataArquivo != $dataAtual) {
-				$alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
-                        <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
-			} else {
-				// Datas iguais: compara as horas
-				// if ($horaArquivo < $horaAtual) {
-				//     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
-				// } else {
-				$alertaEmissao = "<span>";
-				// }
+			if(!empty($arquivos)){
+				$encontrado = true;
 			}
-			$dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresas.json")). "</span>";
-			$arquivoGeral = json_decode(file_get_contents($path."/empresas.json"), true);
-
-			$periodoRelatorio = [
-				"dataInicio" => $arquivoGeral["dataInicio"],
-				"dataFim" => $arquivoGeral["dataFim"]
-			];
-			$pastaAjuste = dir($path);
-			while ($arquivo = $pastaAjuste->read()) {
-				if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))) {
-					$arquivo = $path.$arquivo."/empresa_".$arquivo.".json";
-					$arquivos[] = $arquivo;
-					$json = json_decode(file_get_contents($arquivo), true);
-					$empresas[] = $json;
-				}
-			}
-			$pastaAjuste->close();
 		}
-	} else {
+	} 
+	// elseif(!empty($_POST["busca_periodo"])){
+	// 	$periodoInicio = new DateTime($_POST["busca_periodo"][0]);
+	// 	$periodoFim = new DateTime($_POST["busca_periodo"][1]);
+
+	// 	if ($periodoInicio->format("Y-m") === $periodoFim->format("Y-m")) {
+	// 		$path .= "/" . $periodoInicio->format("Y-m"). "/" ;
+	// 	}
+
+	// 	if(is_dir($path) && file_exists($path . "/empresas.json")){
+	// 		$encontrado = true;
+	// 		$dataArquivo = date("d/m/Y", filemtime($path . "/empresas.json"));
+	// 		$horaArquivo = date("H:i", filemtime($path . "/empresas.json"));
+
+	// 		$dataAtual = date("d/m/Y");
+	// 		$horaAtual = date("H:i");
+	// 		if ($dataArquivo != $dataAtual) {
+	// 			$alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
+    //                     <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+	// 		} else {
+	// 			// Datas iguais: compara as horas
+	// 			// if ($horaArquivo < $horaAtual) {
+	// 			//     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
+	// 			// } else {
+	// 			$alertaEmissao = "<span>";
+	// 			// }
+	// 		}
+	// 		$dataEmissao = $alertaEmissao." Atualizado em: " . date("d/m/Y H:i", filemtime($path . "/empresas.json")). "</span>";
+	// 		$arquivoGeral = json_decode(file_get_contents($path . "/empresas.json"), true);
+
+	// 		$periodoRelatorio = [
+	// 			"dataInicio" => $arquivoGeral["dataInicio"],
+	// 			"dataFim" => $arquivoGeral["dataFim"]
+	// 		];
+	// 		$pastaAjuste = dir($path);
+	// 		while ($arquivo = $pastaAjuste->read()) {
+	// 			if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))) {
+	// 				$arquivo = $path . $arquivo . "/empresa_" . $arquivo . ".json";
+	// 				$arquivos[] = $arquivo;
+	// 				$json = json_decode(file_get_contents($arquivo), true);
+	// 				$empresas[] = $json;
+	// 			}
+	// 		}
+	// 		$pastaAjuste->close();
+	// 	}
+	// } 
+	else {
 		$encontrado = false;
 	}
 
