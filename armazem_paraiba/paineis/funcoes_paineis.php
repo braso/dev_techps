@@ -85,11 +85,14 @@
 			}
 
 			$motoristas = mysqli_fetch_all(query(
-				"SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_banco, enti_tx_ocupacao FROM entidade"
-					. " WHERE enti_tx_status = 'ativo'"
-					. " AND enti_nb_empresa = ".$empresa["empr_nb_id"]
-					. " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
-					. " ORDER BY enti_tx_nome ASC;"
+				"SELECT * FROM entidade
+					LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
+					LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
+					LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
+					WHERE enti_tx_status = 'ativo'
+						AND enti_nb_empresa = '{$empresa["empr_nb_id"]}'
+						".(!empty($_POST["motorista"])? "AND enti_nb_id = '{$_POST["motorista"]}'": "")."
+					ORDER BY enti_tx_nome ASC;"
 			), MYSQLI_ASSOC);
 
 			$rows = [];
@@ -157,7 +160,7 @@
 				];
 
 				for ($dia = new DateTime($dataMes->format("Y-m-d")); $dia <= $dataFim; $dia->modify("+1 day")) {
-					$diaPonto = diaDetalhePonto($motorista["enti_tx_matricula"], $dia->format("Y-m-d"));
+					$diaPonto = diaDetalhePonto($motorista, $dia->format("Y-m-d"));
 					//Formatando informações{
 						foreach (array_keys($diaPonto) as $f) {
 							if (in_array($f, ["data", "diaSemana"])) {
@@ -512,18 +515,20 @@
 			mkdir($path, 0755, true);
 		}
 
+		$filtroOcupacao = "";
 		if(empty($_POST["busca_ocupacao"])){
-			$filtro = " IN ('Motorista', 'Ajudante', 'Funcionário')";
-		} else {
-			$filtro = " = '".$_POST["busca_ocupacao"]."'";
+			$filtroOcupacao = "AND enti_tx_ocupacao IN ('{$_POST["busca_ocupacao"]}')";
 		}
 
 		$motoristas = mysqli_fetch_all(query(
-			"SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_ocupacao, enti_nb_parametro FROM entidade"
-			. " WHERE enti_tx_status = 'ativo'"
-			. " AND enti_nb_empresa = " . $_POST["empresa"]
-			. " AND enti_tx_ocupacao". $filtro
-			. " ORDER BY enti_tx_nome ASC;"
+			"SELECT * FROM entidade
+				LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
+				LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
+				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
+				WHERE enti_tx_status = 'ativo'
+					AND enti_nb_empresa = {$_POST["empresa"]}
+					{$filtroOcupacao}
+				ORDER BY enti_tx_nome ASC;"
 		), MYSQLI_ASSOC);
 
 		$pasta = dir($path);
@@ -569,12 +574,9 @@
 				}
 			}
 
-
-			foreach ($arrayDias as $dia) {
-				$diaPonto[] = diaDetalhePonto($motorista["enti_tx_matricula"], $dia);
-			}
-
 			foreach ($diaPonto as $dia) {
+
+				$dia = diaDetalhePonto($motorista, $dia);
 
 				$data = $date->format('Y-m-d');
 				$descanso = "";
@@ -737,16 +739,15 @@
 			mkdir($path, 0755, true);
 		}
 
-		$motoristas = mysqli_fetch_all(
-			query(
-				"SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula, enti_tx_ocupacao FROM entidade"
-					. " WHERE enti_tx_status = 'ativo'"
-					. " AND enti_nb_empresa = ".$_POST["empresa"]
-					. " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
-					. " ORDER BY enti_tx_nome ASC;"
-			),
-			MYSQLI_ASSOC
-		);
+		$motoristas = mysqli_fetch_all(query(
+			"SELECT * FROM entidade
+				LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
+				LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
+				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
+				WHERE enti_tx_status = 'ativo'
+					AND enti_nb_empresa = {$_POST["empresa"]}
+				ORDER BY enti_tx_nome ASC;"
+		), MYSQLI_ASSOC);
 
 		$row = [];
 
@@ -907,7 +908,7 @@
 
 				$diaPonto = [];
 				for ($date = clone $periodoInicio; $date <= $periodoFim; $date->modify('+1 day')) {
-					$diaPonto[] = diaDetalhePonto($motorista['enti_tx_matricula'], $date->format('Y-m-d'));
+					$diaPonto[] = diaDetalhePonto($motorista, $date->format('Y-m-d'));
 				}
 
 				foreach ($diaPonto as $dia) {
