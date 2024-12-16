@@ -118,8 +118,7 @@
 	}
 
 	function excluir_documento(){
-		query("DELETE FROM documento_parametro WHERE docu_nb_id = ".$_POST["idArq"].";");
-		
+		remover("documento_parametro", $_POST["idArq"]);
 		$_POST["id"] = $_POST["idParametro"];
 		modificarParametro();
 		exit;
@@ -127,8 +126,8 @@
 
 	function modificarParametro(){
 		global $a_mod;
-		$a_mod=carregar("parametro",$_POST["id"]);
-		layout_parametro();
+		$a_mod = carregar("parametro", $_POST["id"]);
+		mostrarFormParametro();
 		exit;
 	}
 
@@ -164,9 +163,14 @@
 			if(empty($_POST["maxHESemanalDiario"]) && $_POST["maxHESemanalDiario"] != "00:00"){
 				$_POST["errorFields"][] = "maxHESemanalDiario";
 			}
+
+			
+			$_POST["adi5322"] = (empty($_POST["adi5322_sim"]))? "nao": "sim";
+			unset($_POST["adi5322_sim"]);
+			
 			if(!empty($errorMsg)){
 				set_status("ERRO: ".$errorMsg);
-				layout_parametro();
+				mostrarFormParametro();
 				exit;
 			}
 			unset($camposObrig);
@@ -183,7 +187,7 @@
 			}
 			if(!empty($errorMsg)){
 				set_status($errorMsg);
-				layout_parametro();
+				mostrarFormParametro();
 				exit;
 			}
 		//}
@@ -218,11 +222,12 @@
 			"para_tx_diariasCafe" 			=> $_POST["diariasCafe"],
 			"para_tx_diariasAlmoco" 		=> $_POST["diariasAlmoco"],
 			"para_tx_diariasJanta" 			=> $_POST["diariasJanta"],
-			"para_tx_status" 				=> "ativo",
 			"para_tx_banco" 				=> $_POST["banco"],
 			"para_nb_qDias" 				=> $_POST["quandDias"],
 			"para_tx_horasLimite" 			=> $_POST["quandHoras"],
 			"para_tx_Obs" 					=> $_POST["Obs"],
+			"para_tx_adi5322" 				=> $_POST["adi5322"],
+			"para_tx_status" 				=> "ativo",
 		];
 
 		if(!empty($_POST["ignorarCampos"]) || $_POST["ignorarCampos"] == null){
@@ -242,7 +247,7 @@
 
 		$novoParametro["para_nb_userAtualiza"] = $_SESSION["user_nb_id"];
 		$novoParametro["para_tx_dataAtualiza"] = date("Y-m-d H:i:s");
-		
+
 		if(!empty($_POST["id"])){ //Se está editando
 
 			$aParametro = carregar("parametro", $_POST["id"]);
@@ -273,11 +278,11 @@
 			inserir("parametro",array_keys($novoParametro),array_values($novoParametro));
 		}
 
-		layout_parametro();
+		mostrarFormParametro();
 		exit;
 	}
 
-	function layout_parametro(){
+	function mostrarFormParametro(){
 		global $a_mod;
 
 		if(empty($a_mod) && !empty($_POST["id"])){
@@ -285,7 +290,7 @@
 			$campos = [
 				"nome", "jornadaSemanal", "jornadaSabado", "tolerancia", "percHESemanal",
 				"percHEEx", "maxHESemanalDiario", "diariasCafe", "diariasAlmoco", "diariasJanta",
-				"acordo", "inicioAcordo", "fimAcordo", "banco", "Obs"
+				"acordo", "inicioAcordo", "fimAcordo", "banco", "adi5322", "Obs"
 			];
 			foreach($campos as $campo){
 				if(!empty($_POST[$campo])){
@@ -304,11 +309,12 @@
 			if(!empty($_POST["quandHoras"])){
 				$a_mod["para_tx_horasLimite"] = $_POST["quandHoras"];
 			}
+
 			unset($campos);
 		}
 
 		cabecalho("Cadastro de Parâmetros");
-		
+
 		$campos = [
 			[
 				campo("Nome*", "nome", ($a_mod["para_tx_nome"]?? ""), 5),
@@ -334,7 +340,6 @@
 			],
 			[
 				checkbox_banco("Utilizar regime de banco de horas?", "banco", ($a_mod["para_tx_banco"]?? ""), ($a_mod["para_nb_qDias"]?? ""), ($a_mod["para_tx_horasLimite"]?? ""),2),
-				ckeditor("Descrição", "Obs", ($a_mod["para_tx_Obs"]?? ""), 12,"maxlength='100' style='min-width:fit-content; max-width: 100%;'"),
 				checkbox(
 					"Ignorar intervalos",
 					"ignorarCampos", (
@@ -346,14 +351,24 @@
 							"mdc" 				=> "MDC",
 						]
 					),
-					5,
+					12,
 					"checkbox",
 					"",
 					$a_mod["para_tx_ignorarCampos"] ?? ""
-				)
+				),
+				checkbox(
+					"Considerar a <a href='https://portal.trt3.jus.br/internet/jurisprudencia/repercussao-geral-e-controle-concentrado-adi-adc-e-adpf-stf/downloads/adi-5322-acordao.pdf'>ADI 5322</a>?",
+					"adi5322",
+					["sim" => "ADI 5322"],
+					2,
+					"checkbox",
+					"",
+					$a_mod["para_tx_adi5322"]?? "nao"
+				),
+				ckeditor("Descrição", "Obs", ($a_mod["para_tx_Obs"]?? ""), 12,"maxlength='100' style='min-width:fit-content; max-width: 100%;'")
 			],
 		];
-		
+
 		$botoes = [
 			botao("Gravar","cadastrarParametro","id",($_POST["id"]?? ""),"","","btn btn-success"),
 			botao("Voltar","voltar")
@@ -468,7 +483,7 @@
 
 		$botoes = [
 			botao("Buscar", "index"),
-			botao("Inserir", "layout_parametro","","","","","btn btn-success"),
+			botao("Inserir", "mostrarFormParametro","","","","","btn btn-success"),
 		];
 		
 		abre_form();
