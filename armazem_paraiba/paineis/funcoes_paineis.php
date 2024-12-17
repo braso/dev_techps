@@ -543,7 +543,6 @@
 
 		foreach ($motoristas as $motorista) {
 			$row = [];
-			$diaPonto = [];
 			$arrayDias = [];
 			$datasPontosAbertos = mysqli_fetch_all(query(
 				"SELECT p.pont_tx_data FROM ponto p "
@@ -574,7 +573,7 @@
 				}
 			}
 
-			foreach ($diaPonto as $dia) {
+			foreach ($arrayDias as $dia) {
 
 				$dia = diaDetalhePonto($motorista, $dia);
 
