@@ -37,8 +37,8 @@
 	// 	exit();
 	// }
 
-	function buscar(){
-		if(!empty($_POST["acao"]) && $_POST["acao"] == "buscar()"){//Se estiver pesquisando
+	function buscarEspelho(){
+		if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){//Se estiver pesquisando
 			//Conferir se os campos foram inseridos.
 			$baseErrMsg = "ERRO: Campos obrigatórios não preenchidos: ";
 			$errorMsg = $baseErrMsg;
@@ -52,6 +52,8 @@
 					$errorMsg .= $value.", ";
 				}
 			}
+
+			$_POST["busca_data"] = date("Y-m", strtotime($_POST["busca_data"]));
 
 			if($errorMsg != $baseErrMsg){
 				set_status(substr($errorMsg, 0, -2).".");
@@ -118,7 +120,7 @@
 
 		//BOTOES{
 			$b = [
-				botao("Buscar", "buscar", "", "", "", "","btn btn-success"),
+				botao("Buscar", "buscarEspelho", "", "", "", "","btn btn-success"),
 				botao("Cadastrar Abono", "redirParaAbono", "", "", "", 1),
 				$botao_imprimir
 			];
@@ -393,6 +395,19 @@
 		; // Utilizado dentro de endosso_html.php
 		
 		include "html/endosso_html.php";
+
+		$params = array_merge($_POST, [
+					"acao" => "index",
+					"idMotorista" => null,
+					"data" => null,
+					"HTTP_REFERER" => (!empty($_POST["HTTP_REFERER"])? $_POST["HTTP_REFERER"]: $_SERVER["REQUEST_URI"])
+				]);
+		echo criarHiddenForm(
+			"form_ajuste_ponto",
+			array_keys($params),
+			array_values($params),
+			"ajuste_ponto.php"
+		);
 		echo 
 			"<script>
 				window.onload = function() {

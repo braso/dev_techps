@@ -914,8 +914,8 @@
 
 				foreach ($diaPonto as $dia) {
 					// Jornada
-					$inicioJornadaWarning = strpos($dia["inicioJornada"], "fa-warning") !== false;
-					$fimJornadaWarning = strpos($dia["fimJornada"], "fa-warning") !== false;
+					$inicioJornadaWarning = strpos($dia["inicioJornada"], "fa-warning") !== false && strpos($dia["inicioJornada"], "color:red;");
+					$fimJornadaWarning = strpos($dia["fimJornada"], "fa-warning") !== false  && strpos($dia["inicioJornada"], "color:red;");
 					$diffJornada = $dia["diffJornada"];
 					$diffJornadaEfetiva = $dia["diffJornadaEfetiva"];
 
