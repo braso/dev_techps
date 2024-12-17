@@ -516,7 +516,7 @@
 		}
 
 		$filtroOcupacao = "";
-		if(empty($_POST["busca_ocupacao"])){
+		if(!empty($_POST["busca_ocupacao"])){
 			$filtroOcupacao = "AND enti_tx_ocupacao IN ('{$_POST["busca_ocupacao"]}')";
 		}
 
