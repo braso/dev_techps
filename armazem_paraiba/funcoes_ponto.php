@@ -68,8 +68,13 @@
 			}
 		}
 
-		$result = 0;
-		for($f = 0; $f < count($horarios); $f++){
+		$horarios[0] = preg_replace("/([^\-^0-:])+/", "", $horarios[0]);
+		$horarios[0] = explode(":", $horarios[0]);
+		$horarios[0] = intval($horarios[0][0]*60)+(($horarios[0][0][0] == "-")?-1:1)*intval($horarios[0][1]);
+
+		$result = $horarios[0];
+
+		for($f = 1; $f < count($horarios); $f++){
 			if(empty($horarios[$f])){
 				continue;
 			}
