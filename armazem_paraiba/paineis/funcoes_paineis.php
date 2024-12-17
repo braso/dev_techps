@@ -746,7 +746,7 @@
 				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
 				WHERE enti_tx_status = 'ativo'
 					AND enti_nb_empresa = {$_POST["empresa"]}
-					AND enti_tx_dataCadastro <= ".$periodoInicio->format("Y-m-t")."
+					AND enti_tx_dataCadastro <= '".$periodoInicio->format("Y-m-t")."'
 				ORDER BY enti_tx_nome ASC;"
 		), MYSQLI_ASSOC);
 
