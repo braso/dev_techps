@@ -1131,15 +1131,17 @@
 
 				$pontos = mysqli_fetch_all(
 					query(
-					"SELECT ponto.pont_tx_data, ponto.pont_tx_matricula, motivo.moti_tx_nome, macroponto.macr_tx_nome"
-						. " FROM ponto"
-						. " INNER JOIN motivo motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id"
-						. " INNER JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno"
-						. " WHERE pont_tx_status = 'ativo'"
-						. " AND pont_tx_matricula = '{$motorista["enti_tx_matricula"]}'"
-						. " AND pont_nb_arquivoponto IS NULL"
-						. " AND pont_tx_data BETWEEN STR_TO_DATE( '". $periodoInicio->format("Y-m-d") ." 00:00:00', '%Y-%m-%d %H:%i:%s')"
-						. " AND STR_TO_DATE( '". $hoje->format("Y-m-d") ." 23:59:59', '%Y-%m-%d %H:%i:%s');"
+					"SELECT DISTINCT ponto.pont_tx_data,  ponto.pont_tx_matricula, motivo.moti_tx_nome, macroponto.macr_tx_nome, 
+						ponto.pont_tx_status"
+						." FROM ponto"
+						." LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id"
+						." INNER JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno"
+						." AND macroponto.macr_tx_fonte = 'positron'"
+						." WHERE pont_tx_matricula = '1076'"
+						." AND pont_tx_justificativa IS NOT NULL"
+						." AND pont_tx_data BETWEEN STR_TO_DATE('2024-12-01 00:00:00', '%Y-%m-%d %H:%i:%s')"
+						." AND STR_TO_DATE('2024-12-18 23:59:59', '%Y-%m-%d %H:%i:%s')"
+						." ORDER BY ponto.pont_tx_data ASC;"
 					),
 					MYSQLI_ASSOC
 				);
@@ -1154,9 +1156,10 @@
 				}
 
 				$totalMotorista = array_merge($totalMotorista, $ocorrencias);
+				$totalMotorista['pontos'] = $pontos;
 				// Filtrar apenas os campos numéricos que precisam ser verificados
 				$verificaValores = array_filter($totalMotorista, function ($key) {
-						return !in_array($key, ["matricula", "nome", "ocupacao"]);
+						return !in_array($key, ["matricula", "nome", "ocupacao","pontos"]);
 					}, ARRAY_FILTER_USE_KEY);
 				
 				$rows[] = $ocorrencias;
