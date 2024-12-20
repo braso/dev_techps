@@ -268,7 +268,7 @@ th.sort-desc::after {
     text-align: center;
 }
 .jornadaYellow{
-    /* background-color: #172743; */
+    background-color: #9393930d;
     color: var(--var-yellow);
     text-align: center;
 }
