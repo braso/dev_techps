@@ -219,6 +219,19 @@
 <div id="impressao">
 	<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . " (UTC-3)" ?>
 </div>
+<script>
+	function sanitizeJson(jsonString) {
+		// Verifica se o JSON é uma string, se não for, converte para string
+		if (typeof jsonString !== 'string') {
+			jsonString = JSON.stringify(jsonString);
+		}
+
+		// Escapa as aspas simples (caso haja)
+		jsonString = jsonString.replace(/'/g, '\\"');
+
+		return jsonString;
+	}
+</script>
 <?php if ($mostra === true) { ?>
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {

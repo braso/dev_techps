@@ -535,7 +535,7 @@
 		while (($arquivo = $pasta->read()) !== false) {
 			// Ignora os diretórios especiais '.' e '..'
 			if ($arquivo != '.' && $arquivo != '..') {
-				$arquivoPath = $path . DIRECTORY_SEPARATOR . $arquivo;  // Caminho completo do arquivo
+				$arquivoPath = $path .'/'. $arquivo;  // Caminho completo do arquivo
 				unlink($arquivoPath);  // Apaga o arquivo
 			}
 		}
@@ -750,6 +750,22 @@
 		), MYSQLI_ASSOC);
 
 		$row = [];
+
+		if($_POST["busca_endossado"] == "endossado"){
+			$dir = '/endossado';
+		} else {
+			$dir = '/nao_endossado';
+		}
+
+		$pasta = dir($path.$dir);
+		while (($arquivo = $pasta->read()) !== false) {
+			// Ignora os diretórios especiais '.' e '..'
+			if ($arquivo != '.' && $arquivo != '..') {
+				$arquivoPath = $path .'/'.$dir.'/'. $arquivo;  // Caminho completo do arquivo
+				unlink($arquivoPath);  // Apaga o arquivo
+			}
+		}
+		$pasta->close();
 
 		foreach ($motoristas as $motorista) {
 
