@@ -15,6 +15,7 @@ deployment:
     - export QUALY=/home/techpsjornada/public_html/gestaodeponto/qualy_transportes
     - export TECHPS=/home/techpsjornada/public_html/gestaodeponto/techps
     - export TRAMPGAS=/home/techpsjornada/public_html/gestaodeponto/trampolim_gas
+    - export NOVOHORZ=/home/techpsjornada/public_html/gestaodeponto/novo_horizonte
     
     
     - /bin/cp -R $GENERAL $GENERALDEPLOY
@@ -30,3 +31,4 @@ deployment:
     - /bin/cp -R $DOMAIN $QUALY
     - /bin/cp -R $DOMAIN $TECHPS
     - /bin/cp -R $DOMAIN $TRAMPGAS
+    - /bin/cp -R $DOMAIN $NOVOHORZ
