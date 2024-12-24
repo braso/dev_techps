@@ -43,9 +43,11 @@
 			$baseErrMsg = "ERRO: Campos obrigatórios não preenchidos: ";
 			$errorMsg = $baseErrMsg;
 			$camposObrig = [
-				"busca_empresa" => "Empresa",
-				"busca_data" => "Data",
+				"busca_data" => "Data"
 			];
+			if(empty($_POST["busca_motorista"])){
+				$camposObrig["busca_empresa"] = "Empresa";
+			}
 			foreach($camposObrig as $key => $value){
 				if(empty($_POST[$key])){
 					$_POST["errorFields"][] = $key;
@@ -106,7 +108,7 @@
 			];
 
 			if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-				array_unshift($c, combo_net("Empresa*:", "busca_empresa",   (!empty($_POST["busca_empresa"])?   $_POST["busca_empresa"]  : ""), 3, "empresa", "onchange=selecionaMotorista(this.value)", $extraEmpresa));
+				array_unshift($c, combo_net("Empresa:", "busca_empresa",   (!empty($_POST["busca_empresa"])?   $_POST["busca_empresa"]  : ""), 3, "empresa", "onchange=selecionaMotorista(this.value)", $extraEmpresa));
 			}
 		//}
 		$botao_imprimir =
@@ -149,7 +151,16 @@
 				"verificados" => 0,							//countVerificados
 				"endossados" => ["sim" => 0, "nao" => 0],	//countEndossados e $countNaoEndossados
 			];
-			if(!empty($_POST["busca_empresa"])){
+			if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
+				if(empty($_POST["busca_empresa"])){
+					$_POST["busca_empresa"] = mysqli_fetch_assoc(query(
+						"SELECT empr_nb_id FROM empresa 
+							JOIN entidade ON empr_nb_id = enti_nb_empresa
+							WHERE empr_tx_status = 'ativo'
+								AND enti_nb_id = {$_POST["busca_motorista"]}
+							LIMIT 1;"
+					))["empr_nb_id"];
+				}
 				$date = new DateTime($_POST["busca_data"]);
 
 				$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $date->format("m"), $date->format("Y"));
@@ -315,9 +326,10 @@
 									$counts["naoConformidade"] += substr_count($aDia[$f][$key], "fa-warning");
 								}
 								if(is_int(strpos($aDia[$f][$key], "fa-info-circle"))){
-									if(is_int(strpos($aDia[$f][$key], "color:red;")) || is_int(strpos($aDia[$f][$key], "color:orange;"))){
+									$errorCount = substr_count($aDia[$f][$key], "color:red;") + substr_count($aDia[$f][$key], "color:orange;");
+									if($errorCount > 1){
 										$hasUnconformities = true;
-										$counts["naoConformidade"] += substr_count($aDia[$f][$key], "fa-warning");
+										$counts["naoConformidade"] += $errorCount;
 									}
 								}
 							}
