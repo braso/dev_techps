@@ -59,13 +59,8 @@
 			return 0;
 		}
 
-		foreach($horarios as $horario){
-			if(empty($horario)){
-				$horario = "00:00";
-			}
-			if(!preg_match("/^-?\d{2,10}:\d{2}$/", $horario)){
-				echo "<script>console.log('Format error: |".strval($horario)."|')</script>";
-			}
+		if(empty($horarios[0])){
+			$horarios[0] = "00:00";
 		}
 
 		$horarios[0] = preg_replace("/([^\-^0-:])+/", "", $horarios[0]);
@@ -73,26 +68,32 @@
 		$horarios[0] = intval($horarios[0][0]*60)+(($horarios[0][0][0] == "-")?-1:1)*intval($horarios[0][1]);
 
 		$result = $horarios[0];
+		unset($horarios[0]);
 
-		for($f = 1; $f < count($horarios); $f++){
-			if(empty($horarios[$f])){
+		foreach($horarios as $horario){
+			if(empty($horario)){
+				$horario = "00:00";
+			}
+			$match = "";
+			if(!preg_match("/^-?\d{2,10}:\d{2}$/", $horario, $match)){
+				echo "<script>console.log('Format error: |".strval($horario)."|')</script>";
 				continue;
 			}
-			$horarios[$f] = preg_replace("/([^\-^0-:])+/", "", $horarios[$f]);
-			$horarios[$f] = explode(":", $horarios[$f]);
-			$horarios[$f] = intval($horarios[$f][0]*60)+(($horarios[$f][0][0] == "-")?-1:1)*intval($horarios[$f][1]);
+
+			$horario = explode(":", $match[0]);
+			$horario = intval($horario[0]*60)+(($horario[0][0] == "-")?-1:1)*intval($horario[1]);
 			switch($operacao){
 				case "+":
-					$result += $horarios[$f];
+					$result += $horario;
 				break;
 				case "-":
-					$result -= $horarios[$f];
+					$result -= $horario;
 				break;
 				case "*":
-					$result *= $horarios[$f];
+					$result *= $horario;
 				break;
 				case "/":
-					$result /= $horarios[$f];
+					$result /= $horario;
 				break;
 			}
 		}
@@ -883,8 +884,8 @@
 		if(empty($motorista["enti_nb_parametro"])){
 			$motorista["enti_nb_parametro"] = $motorista["empr_nb_parametro"];
 			$parametroEmpresa = mysqli_fetch_assoc(query(
-				"SELECT * FROM parametro 
-					WHERE para_nb_id = {$motorista["empr_nb_parametro"]} 
+				"SELECT * FROM parametro
+					WHERE para_nb_id = {$motorista["empr_nb_parametro"]}
 					LIMIT 1;"
 			));
 			$motorista = array_merge($motorista, $parametroEmpresa);
@@ -944,7 +945,7 @@
 						AND abon_tx_data = '{$data}' 
 						AND abon_nb_motivo = moti_nb_id
 					ORDER BY abon_nb_id DESC 
-					LIMIT 1"
+					LIMIT 1;"
 			), MYSQLI_BOTH);
 
 			//Consultar feriados do dia{
@@ -1079,7 +1080,7 @@
 
 			//Passar esperas > 02:00 para repouso{
 				foreach($registros["esperaCompleto"]["pares"] as $key => $parEspera){
-					if(operarHorarios([$parEspera["intervalo"], "02:01"], "-")[0] != "-"){//Se $intervalo - 02:00 der um valor positivo, significa que $intervalo > 02:00
+					if(operarHorarios([$parEspera["intervalo"], "02:01"], "-")[0] != "-"){//Se $intervalo - 02:01 der um valor positivo, significa que $intervalo > 02:00
 						$repousosPorEspera["pares"][] = $parEspera;
 						unset($registros["esperaCompleto"]["pares"][$key]);
 						$modifyParam = explode(":", $parEspera["intervalo"]);
@@ -1090,31 +1091,30 @@
 			//}
 			
 			if(!empty($repousosPorEspera["pares"])){
+				$totalIntervalo = "00:00";
+				foreach($repousosPorEspera["pares"] as $par){
+					$totalIntervalo = operarHorarios([$totalIntervalo, $par["intervalo"]], "+");
+				}
+				$modifyParam = explode(":", $totalIntervalo);
+				$repousosPorEspera["totalIntervalo"] = $repousosPorEspera["totalIntervalo"]->modify("{$modifyParam[0]} hours {$modifyParam[1]} minutes");
 				$repousosPorEspera["icone"] = montarIconeIntervalo($repousosPorEspera["pares"], "fa fa-info-circle", "#00ff00");
-				//Adicionar em $registros["repousoPorEspera"]
 				$registros["repousoPorEspera"] = $repousosPorEspera;
-
+				
 				//Adicionar os pares em $registros["repousoCompleto"]["pares"]
 				$registros["repousoCompleto"]["pares"] = array_merge($registros["repousoCompleto"]["pares"], $repousosPorEspera["pares"]);
-
+				
 				$inicios = [];
 				foreach($registros["repousoCompleto"]["pares"] as $par){
 					$inicios[] = $par["inicio"];
 				}
 				//Ordenar os pares
 				array_multisort($inicios, SORT_ASC, $registros["repousoCompleto"]["pares"]);
-				
 
 				//Adicionar ícone de repouso por espera no início de $registros["repousoCompleto"]["icone"]
 				$registros["repousoCompleto"]["icone"] = $repousosPorEspera["icone"].$registros["repousoCompleto"]["icone"];
+				
 			}else{
 				$registros["repousoPorEspera"] = organizarIntervalos($data, [], []);
-			}
-		//}
-
-		//Caso esteja considerando a ADI 5322 e a espera ainda não tenha sido ignorada{
-			if($motorista["para_tx_adi5322"] == "sim" && is_bool(strpos($motorista["para_tx_ignorarCampos"], "espera"))){
-				$registros["esperaCompleto"] = organizarIntervalos($data, [], []);
 			}
 		//}
 		
@@ -1134,7 +1134,6 @@
 		$contagemEspera += count($registros["esperaCompleto"]["pares"]);
 
 		//JORNADA EFETIVA{
-
 			if(is_string($registros["jornadaCompleto"]["totalIntervalo"])){
 				$jornadaIntervalo = new DateTime($data." 00:00");
 			}else{
@@ -1156,7 +1155,7 @@
 				}else{
 					$totalNaoJornada = [
 						$registros["refeicaoCompleto"]["totalIntervalo"],
-						$registros["esperaCompleto"]["totalIntervalo"],
+						(($motorista["para_tx_adi5322"] == "nao")? $registros["esperaCompleto"]["totalIntervalo"]: "00:00"),
 						$registros["descansoCompleto"]["totalIntervalo"],
 						$registros["repousoCompleto"]["totalIntervalo"]
 					];
@@ -1168,9 +1167,8 @@
 			if(!empty($registros["inicioJornada"][0])){
 				$value = new DateTime("{$data} 00:00:00");
 				for($f = 0; $f < count($totalNaoJornada); $f++){
-					$times = explode(":", $totalNaoJornada[$f]);
-					$totalNaoJornada[$f] = new DateInterval("P".floor($times[0]/24)."DT".($times[0]%24)."H".$times[1]."M");
-					$value->add($totalNaoJornada[$f]);
+					$modifyParam = explode(":", $totalNaoJornada[$f]);
+					$value = $value->modify("{$modifyParam[0]} hours {$modifyParam[1]} minutes");
 				}
 				$totalNaoJornada = $value;
 			}else{
@@ -1202,25 +1200,31 @@
 					$intersticioDiario = (new DateTime($registros["inicioJornada"][0]))->diff($ultimoFimJornada);
 					
 					// Obter a diferença total em minutos
-					$minInterDiario = (
+					$intersticioDiario = (
 						$intersticioDiario->days*60*24+
 						$intersticioDiario->h*60+
 						$intersticioDiario->i
 					);
 
+					
 					// Calcular as horas e minutos
-
-					$intersticio = sprintf("%02d:%02d", floor($minInterDiario / 60), $minInterDiario % 60); // Formatar a string no formato H:I
-
-					$totalIntersticio = operarHorarios([$intersticio, $totalNaoJornada->format("H:i")], "+");
+					
+					$intersticioDiario = sprintf("%02d:%02d", floor($intersticioDiario / 60), $intersticioDiario % 60); // Formatar a string no formato H:I
+					$totalIntersticio = operarHorarios([$intersticioDiario, $totalNaoJornada->format("H:i")], "+");
 
 					$icone = "";
-					if(operarHorarios([$totalIntersticio, "08:00"], "-")[0] == "-" && $motorista["para_tx_adi5322"] == "nao"){ // < 8 horas e não considerando a ADI 5322
-						$restante = operarHorarios(["08:00", $totalIntersticio], "-");
-						$icone .= "<a><i style='color:red;' title='Interstício Mínimo de 08:00 não respeitado, faltaram {$restante}' class='fa fa-warning'></i></a>";
-					}elseif(operarHorarios([$totalIntersticio, "11:00"], "-")[0] == "-"){ // < 11 horas
-						$restante = operarHorarios(["11:00", $totalIntersticio], "-");
-						$icone .= "<a><i style='color:red;' title='Interstício Mínimo de 11:00 não respeitado, faltaram {$restante}' class='fa fa-warning'></i></a>";
+					$interMinimo = "08:00";
+					if($motorista["para_tx_adi5322"] == "sim" && operarHorarios([$intersticioDiario, "11:00"], "-")[0] == "-"){
+						$interMinimo = "11:00";
+					}
+
+					if(operarHorarios([$intersticioDiario, $interMinimo], "-")[0] == "-"){
+						$restante = operarHorarios([$interMinimo, $intersticioDiario], "-");
+						$title = "Interstício Mínimo de {$interMinimo} não respeitado, faltaram {$restante}.";
+						if(operarHorarios([$totalIntersticio, $interMinimo], "-")[0] != "-"){
+							$title .= "\nInterstício remanescente compensado com intervalos do dia (".$totalNaoJornada->format("H:i").").";
+						}
+						$icone .= "<a><i style='color:red;' title='{$title}' class='fa fa-warning'></i></a>";
 					}
 					unset($restante);
 
@@ -1232,32 +1236,32 @@
 		//}
 
 		//CALCULO SALDO DIÁRIO{
-			$saldoDiario = getSaldoDiario($jornadaPrevista, $jornadaEfetiva);
-			$aRetorno["diffSaldo"] = $saldoDiario;
+			$aRetorno["diffSaldo"] = getSaldoDiario($jornadaPrevista, $jornadaEfetiva);
 		//}
 
 		//CALCULO ESPERA INDENIZADA{
-			if($motorista["para_tx_adi5322"] == "nao"){
+			if($motorista["para_tx_adi5322"] == "sim"){
+				$aRetorno["esperaIndenizada"] = "00:00";
+			}else{
 				$intervaloEsp = somarHorarios([$registros["esperaCompleto"]["totalIntervalo"], $registros["repousoPorEspera"]["totalIntervalo"]]);
-				$indenizarEspera = ($intervaloEsp >= "02:00");
+				$indenizarEspera = operarHorarios([$intervaloEsp, "02:00"], "-")[0] != '-';
 				//Compensar com o intervalo de espera caso o saldo diário esteja negativo{
-					if($saldoDiario[0] == "-"){
-						if($intervaloEsp > substr($saldoDiario, 1)){
-							$transferir = substr($saldoDiario, 1);
+					if($aRetorno["diffSaldo"][0] == "-"){
+						if($intervaloEsp > substr($aRetorno["diffSaldo"], 1)){
+							$transferir = substr($aRetorno["diffSaldo"], 1);
 						}else{
 							$transferir = $intervaloEsp;
 						}	
 						$intervaloEsp = operarHorarios([$intervaloEsp, $transferir], "-");
-						$saldoDiario = operarHorarios([$saldoDiario, $transferir], "+");
-						$aRetorno["diffSaldo"] = $saldoDiario;
+						$aRetorno["diffSaldo"] = operarHorarios([$aRetorno["diffSaldo"], $transferir], "+");
 					}
 				//}
-	
+
 				if($indenizarEspera){
 					$aRetorno["esperaIndenizada"] = $intervaloEsp;
 				}
-			}
 
+			}
 		//}
 
 		//INICIO ADICIONAL NOTURNO
@@ -1268,7 +1272,7 @@
 			$tolerancia = mysqli_fetch_array(query(
 				"SELECT parametro.para_tx_tolerancia FROM entidade 
 					JOIN parametro ON enti_nb_parametro = para_nb_id 
-					WHERE enti_nb_parametro = ".$motorista["enti_nb_parametro"]."
+					WHERE enti_nb_parametro = {$motorista["enti_nb_parametro"]}
 					LIMIT 1;"
 			), MYSQLI_BOTH)[0];
 			$tolerancia = intval($tolerancia);
