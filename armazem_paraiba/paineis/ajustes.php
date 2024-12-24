@@ -20,22 +20,52 @@ function carregarJS(array $arquivos) {
 	$dominiosAutotrac = ["/comav"];
 	$linha = "linha = '<tr>'";
 	if (!empty($_POST["empresa"])) {
-		$linha .= "+'<td>'+row.matricula+'</td>'
-					+'<td>'+row.nome+'</td>'
-					+'<td>'+row.ocupacao+'</td>'
-					+'<td>'+row['Inicio de Jornada']+'</td>'
-					+'<td>'+row['Fim de Jornada']+'</td>'
-					+'<td>'+row['Inicio de Refeição']+'</td>'
-					+'<td>'+row['Fim de Refeição']+'</td>'
-					+'<td>'+row['Inicio de Espera']+'</td>'
-					+'<td>'+row['Fim de Espera']+'</td>'
-					+'<td>'+row['Inicio de Descanso']+'</td>'
-					+'<td>'+row['Fim de Descanso']+'</td>'
-					+'<td>'+row['Inicio de Repouso']+'</td>'
-					+'<td>'+row['Fim de Repouso']+'</td>'
-					+'<td>'+row['Inicio de Repouso Embarcado']+'</td>'
-					+'<td>'+row['Fim de Repouso Embarcado']+'</td>'
-				+'</tr>';";
+		if (!in_array($_SERVER["REQUEST_URI"], $dominiosAutotrac)) {
+			$linha .= "+'<td>'+row.matricula+'</td>'
+						+'<td>'+row.nome+'</td>'
+						+'<td>'+row.ocupacao+'</td>'
+						+'<td onclick=\"createModal(\'' + row.nome + '\', \'' + 'Inicio de Jornada' + '\', \' + row.pontos + '\')\">' + row['Inicio de Jornada'] + '</td>'
+						+'<td onclick=\"createModal(\'' + row.nome + '\', \'Fim de Jornada\')\">'+row['Fim de Jornada']+'</td>'
+						+'<td>'+row['Inicio de Refeição']+'</td>'
+						+'<td>'+row['Fim de Refeição']+'</td>'
+						+'<td>'+row['Inicio de Espera']+'</td>'
+						+'<td>'+row['Fim de Espera']+'</td>'
+						+'<td>'+row['Inicio de Descanso']+'</td>'
+						+'<td>'+row['Fim de Descanso']+'</td>'
+						+'<td>'+row['Inicio de Repouso']+'</td>'
+						+'<td>'+row['Fim de Repouso']+'</td>'
+						+'<td>'+row['Inicio de Repouso Embarcado']+'</td>'
+						+'<td>'+row['Fim de Repouso Embarcado']+'</td>'
+					+'</tr>';";
+		} else {
+			$linha .= "+'<td>'+row['Inicio de Jornada']+'</td>'
+				+'<td>'+row['Fim de Jornada']+'</td>'
+				+'<td>'+row['Inicio de Refeição']+'</td>'
+				+'<td>'+row['Fim de Refeição']+'</td>'
+				+'<td>'+row['Inicio de Espera']+'</td>'
+				+'<td>'+row['Fim de Espera']+'</td>'
+				+'<td>'+row['Inicio de Descanso']+'</td>'
+				+'<td>'+row['Fim de Descanso']+'</td>'
+				+'<td>'+row['Inicio de Repouso']+'</td>'
+				+'<td>'+row['Fim de Repouso']+'</td>'
+				+'<td>'+row['Inicio de Repouso Embarcado']+'</td>'
+				+'<td>'+row['Fim de Repouso Embarcado']+'</td>'
+				+'<td>'+row['Pernoite - Fim De Jornada']+'</td>'
+				+'<td>'+row['Refeicao']+'</td>'
+				+'<td>'+row['Em Espera']+'</td>'
+				+'<td>'+row['Descanso']+'</td>'
+				+'<td>'+row['Reinicio De Viagem']+'</td>'
+				+'<td>'+row['Inicio De Viagem']+'</td>'
+				+'<td>'+row['Fim De Viagem']+'</td>'
+				+'<td>'+row['Parada Eventual']+'</td>'
+				+'<td>'+row['Sol De Desvio De Rota']+'</td>'
+				+'<td>'+row['Sol Desengate/Bau']+'</td>'
+				+'<td>'+row['Manutencao']+'</td>'
+				+'<td>'+row['Macro Msg Livre']+'</td>'
+				+'<td>'+row['Ag Descarga']+'</td>'
+				+'<td>'+row['Abastecimento - Arla32']+'</td>'
+				+'<td>'+row['Troca De Veículo']+'</td>';";
+		}
 	} else {
 		if (!in_array($_SERVER["REQUEST_URI"], $dominiosAutotrac)) {
 			$linha .= "+'<td class=\"nomeEmpresa\" style=\"cursor: pointer;\" onclick=\"setAndSubmit(' + row.empr_nb_id + ')\">'+row.empr_tx_nome+'</td>'
@@ -54,7 +84,9 @@ function carregarJS(array $arquivos) {
 						+'<td>'+row['Fim de Repouso Embarcado']+'</td>'
 					+'</tr>';";
 		} else {
-			$linha .= "+'<td>'+row['Inicio de Jornada']+'</td>'
+			$linha .= "+'<td class=\"nomeEmpresa\" style=\"cursor: pointer;\" onclick=\"setAndSubmit(' + row.empr_nb_id + ')\">'+row.empr_tx_nome+'</td>'
+				+'<td>'+row.qtdMotoristas+'</td>'
+				+'<td>'+row['Inicio de Jornada']+'</td>'
 				+'<td>'+row['Fim de Jornada']+'</td>'
 				+'<td>'+row['Inicio de Refeição']+'</td>'
 				+'<td>'+row['Fim de Refeição']+'</td>'
@@ -196,6 +228,44 @@ function carregarJS(array $arquivos) {
 					}
 				});
 			//}
+
+			function createModal(nomeMotorista, pontoTipo, pontos) {
+				// const parsedPontos = JSON.parse(pontos)
+				console.log(pontos);
+				const modalHtml = 
+					'<div class=\"modal fade\" id=\"dynamicModal\" tabindex=\"-1\" role=\"dialog\" aria-labelledby=\"dynamicModalLabel\">' +
+					'<div class=\"modal-dialog\" role=\"document\">' +
+						'<div class=\"modal-content\">' +
+						'<div class=\"modal-header\">' +
+							'<button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\">' +
+							'<span aria-hidden=\"true\">&times;</span>' +
+							'</button>' +
+							'<h3 class=\"modal-title\" id=\"dynamicModalLabel\">' +
+							'Nome do Funcionário: ' + (nomeMotorista || 'N/A') + ' - Ponto tipo: ' + (pontoTipo || 'N/A') +
+							'</h3>' +
+						'</div>' +
+						'<div class=\"modal-body\">' +
+							'Conteúdo do modal gerado dinamicamente!' +
+						'</div>' +
+						'<div class=\"modal-footer\">' +
+							'<button type=\"button\" class=\"btn btn-default\" data-dismiss=\"modal\">Fechar</button>' +
+						'</div>' +
+						'</div>' +
+					'</div>' +
+					'</div>';
+				
+				// Adicionar o modal ao body
+				$('body').append(modalHtml);
+
+				// Exibir o modal
+				$('#dynamicModal').modal('show');
+
+				// Remover o modal do DOM ao fechar
+				$('#dynamicModal').on('hidden.bs.modal', function () {
+					$(this).remove();
+				});
+				}
+
 		</script>"
 	;
 }

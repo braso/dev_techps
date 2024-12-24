@@ -268,7 +268,7 @@ th.sort-desc::after {
     text-align: center;
 }
 .jornadaYellow{
-    /* background-color: #172743; */
+    background-color: #9393930d;
     color: var(--var-yellow);
     text-align: center;
 }
@@ -297,6 +297,7 @@ th.sort-desc::after {
         size: A4 landscape;
         margin: 1cm;
     }
+
     .row{
         display: flex;
     }
@@ -307,7 +308,7 @@ th.sort-desc::after {
 
     #printTitulo {
         /*font-size: 2px !important;*/
-        /*padding-left: 200px;*/
+        padding-left: 50px;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -428,9 +429,29 @@ th.sort-desc::after {
         /* Cor para impressão */
     }
 
-    .jornada{
-        box-shadow: 0 0 0 1000px var(--var-red) inset !important;
+    .jornadaD{
+        color: red !important;
     }
+
+    .jornadaYellow{
+        background-color: #9393930d !important;
+        color: var(--var-yellow) !important;
+    }
+    .jornadaRed{
+        color: var(--var-red) !important;
+    }
+
+    #pdf2htmldiv > div > div.table-responsive > span:nth-child(3){
+        color: yellow !important;
+    }
+
+    #pdf2htmldiv > div > div.table-responsive > span:nth-child(6) {
+        color: red !important;
+    }
+    
+    /* .jornada{
+        box-shadow: 0 0 0 1000px var(--var-red) inset !important;
+    } */
 
     .portlet.light {
         padding: 75px 20px 15px !important;
@@ -475,22 +496,28 @@ th.sort-desc::after {
     }
 
     .table {
-        margin-bottom: 0px !important;
+        margin-bottom: 15px !important;
     }
 
     #accordion{
-        order: 2;
-        break-after: page;
+        order: 0!important;
+        /* break-after: page; */
+        padding-bottom: 100px!important;
     }
 
     #accordion2{
-        order: 1;
+        order: 3!important;
+        /* break-after: page; */
+    }
+
+    #collapse3{
+        order: 1 !important;
         break-after: page;
     }
 
-    #resumo{
+    /* #resumo{
         break-after: page;
-    }
+    }  */
     .panel-heading{
             padding: 0px !important;
     }
@@ -502,7 +529,18 @@ th.sort-desc::after {
     .highlighted {
         box-shadow: 0 0 0 1000px lightgreen inset !important;
         text-align: center;
-  }
+    }
+
+    #graficoAnalitico{
+        height: 300px !important;
+    }
+
+    #graficoSintetico{
+        height: 300px !important;
+    }
+    .container{
+        width: 1000px;
+    }
 }
 
 .th-align {

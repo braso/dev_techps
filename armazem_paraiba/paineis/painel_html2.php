@@ -10,10 +10,10 @@
 	</div>
 </div>
 <div class="col-md-12 col-sm-12" id="pdf2htmldiv">
-	<div class="portlet light ">
+	<div class="portlet light 2">
 		<div class="table-responsive">
 			<div class='emissao' style="display: block !important;">
-				<h1 class="titulo2">Relatório <?= $titulo ?></h1>
+				<h2 class="titulo2">Relatório <?= $titulo ?></h2>
 				<span></span>
 				<?= $dataEmissao ?>
 				<br>
@@ -30,8 +30,10 @@
 			</div>
 			<?php if ($quantFun) { ?>
 				<span>Marcações com <b>(*)</b> indicam intervalos em aberto</span>
+				<span style="margin-left: 19px;"><i id="iconLegenda" class="fa fa-circle" aria-hidden="true" style="color: yellow; border: 1px solid black; border-radius: 50%;"></i> A cor Indica que o tempo total de jornada excedeu o previsto.</span>
 				<br>
-				<span>Marcações com <b>(----)</b> indicam intervalos sem informações</span>
+				<span>Marcações com <b>(----)</b> indicam intervalos em aberto</span>
+				<span style="margin-left: 10px;"><i id="iconLegenda1" class="fa fa-circle" aria-hidden="true" style="color: red;"></i> A cor Indica que o limite máximo de horas extras permitido foi ultrapassado.  </span>
 			<?php } ?>
 		</div>
 		<div class="portlet-body form" style="display: flex; flex-direction: column;">
@@ -182,10 +184,8 @@
 					</thead>
 				</table>
 			<?php } ?>
-		</div>
 
 		<?php if ($mostra === true) { ?>
-			<div class="portlet-body form">
 				<div class="panel-group" id="accordion3">
 					<!-- Accordion Item -->
 					<div class="panel panel-default">
@@ -209,8 +209,8 @@
 								</div>
 							</div>
 						</div>
-					</div>
 				<?php } ?>
+				</div>
 				</div>
 
 			</div>
@@ -219,6 +219,19 @@
 <div id="impressao">
 	<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . " (UTC-3)" ?>
 </div>
+<script>
+	function sanitizeJson(jsonString) {
+		// Verifica se o JSON é uma string, se não for, converte para string
+		if (typeof jsonString !== 'string') {
+			jsonString = JSON.stringify(jsonString);
+		}
+
+		// Escapa as aspas simples (caso haja)
+		jsonString = jsonString.replace(/'/g, '\\"');
+
+		return jsonString;
+	}
+</script>
 <?php if ($mostra === true) { ?>
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {
