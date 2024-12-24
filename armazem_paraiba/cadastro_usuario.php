@@ -246,7 +246,7 @@
 	function modificarUsuario(){
 
 		if(!empty($_POST["id"])){
-			$usuario = mysqli_fetch_assoc(query("SELECT * FROM user WHERE user_nb_id = {$_POST["id"]};"));
+			$usuario = mysqli_fetch_assoc(query("SELECT * FROM user WHERE user_nb_id = {$_POST["id"][0]};"));
 			foreach($usuario as $key => $value){
 				$key = str_replace(["user_tx_", "user_nb_"], ["", ""], $key);
 				if(empty($_POST[$key])){

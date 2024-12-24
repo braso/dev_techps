@@ -72,6 +72,14 @@
                     }
 
                     function calcularJornadaElimite(horasTrabalhadas, jornadaPadrao, limiteExtra) {
+                        if(jornadaPadrao === '00:00' || limiteExtra === undefined) {
+                            jornadaPadrao = '08:00'
+                        }
+                            
+                        if(limiteExtra === '00:00' || limiteExtra === undefined) {
+                            limiteExtra = '02:00'
+                        }
+
                         // Converter jornada padrão e limite extra para minutos
                         const [jornadaHoras, jornadaMinutos] = jornadaPadrao.split(':').map(Number);
                         const jornadaPadraoMinutos = jornadaHoras * 60 + jornadaMinutos;
@@ -85,10 +93,8 @@
 
                         let corTexto = 'jornada';
 
-                        if (minutosTrabalhados < jornadaPadraoMinutos) {
-                            corTexto = 'jornadaYellow'; // Abaixo do padrão
-                        } else if (minutosTrabalhados <= jornadaPadraoMinutos + limiteExtraMinutos) {
-                            corTexto = 'jornadaGreen'; // Dentro do padrão e limite extra
+                         if (minutosTrabalhados <= jornadaPadraoMinutos + limiteExtraMinutos) {
+                            corTexto = 'jornadaYellow'; // Dentro do padrão e limite extra
                         } else {
                             corTexto = 'jornadaRed'; // Excede o limite extra
                         }

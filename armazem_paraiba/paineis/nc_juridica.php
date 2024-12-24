@@ -335,7 +335,7 @@
 			combo_net("Empresa", "empresa", $_POST["empresa"]?? "", 4, "empresa", ""),
 			$campoAcao,
 			campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
-			combo("Endossado",	"busca_endossado", (!empty($_POST["busca_endossado"]) ? $_POST["busca_endossado"] : ""), 2, ["naoEndossado" => "Não","endossado" => "Sim"])
+			combo("Tipo",	"busca_endossado", (!empty($_POST["busca_endossado"]) ? $_POST["busca_endossado"] : ""), 2, ["naoEndossado" => "Atualizado","endossado" => "Pós-fechamento", "semAjustes"=>"Sem ajuste"])
 		];
 
 		$botao_volta = "";
@@ -436,7 +436,7 @@
 					$json = json_decode(file_get_contents($arquivo), true);
 
 					foreach ($totalizadores as $key => &$total) {
-						if(!in_array($key, ['faltaJustificada', 'jornadaPrevista']) && !isset($json[$key]) || $json[$key] != 0) {
+						if(!in_array($key, ['faltaJustificada', 'jornadaPrevista']) && (!isset($json[$key]) || $json[$key] != 0)) {
 							$todosZeros = false; // Algum campo não está zerado
 							// break;
 						}
@@ -653,9 +653,9 @@
 		if ($encontrado) {
 			if ( $_POST["busca_endossado"] !== "endossado") {
 				$totalRow = "<td>".$totalempre["espera"]."</td>
-					<td>".$totalempre["descanso"]."</td>
-					<td>".$totalempre["repouso"]."</td>
-					<td>".$totalempre["jornada"]."</td>";
+					<td class='total'>".$totalempre["descanso"]."</td>
+					<td class='total'>".$totalempre["repouso"]."</td>
+					<td class='total'>".$totalempre["jornada"]."</td>";
 			}
 			
 			$rowTotal = "<td></td>
@@ -730,7 +730,7 @@
 			$rowTitulos = "<tr id='titulos'>";
 
 			if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "naoEndossado") {
-				$titulo = "Não Conformidade Jurídica Atualizada";
+				$titulo = "Performasse e Não Conformidade";
 				$rowTitulos .=
 					"<th class='matricula'>Matricula</th>"
 					."<th class='funcionario'>Funcionário</th>"
@@ -751,7 +751,7 @@
 
 					
 			}  elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
-				$titulo = "Não Conformidade Jurídica Atualizado Pós-Fechamento";
+				$titulo = "Performasse e Não Conformidade Pós-Fechamento";
 				$rowTitulos .=
 					"<th class='matricula'>Matricula</th>"
 					."<th class='funcionario'>Funcionário</th>"
