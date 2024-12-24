@@ -364,6 +364,7 @@
 		unset($postValues["id"]);
 		unset($postValues["errorFields"]);
 		unset($postValues["msg_status"]);
+		$postValues = json_encode($postValues);
 		echo 
 			"<script>
 				function imprimir() {
@@ -406,7 +407,7 @@
 
 					if(valorDataInicial != data || valorStatusInicial != status){
 						var form = document.form_ajuste_status;
-						addPostValuesToForm(form, ".json_encode($postValues).");
+						addPostValuesToForm(form, {$postValues});
 						form.acao.value = 'index';
 						form.data.value = data;
 						form.status.value = status;
@@ -417,7 +418,7 @@
 				function excluirPontoJS(idPonto){
 					var form = document.form_ajuste_status;
 
-					addPostValuesToForm(form, ".json_encode($postValues).");
+					addPostValuesToForm(form, {$postValues});
 
 					form.idPonto.value = idPonto;
 					form.acao.value = 'excluirPonto';
