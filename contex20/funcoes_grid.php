@@ -168,7 +168,7 @@
 							'bFilter': false,
 							'sEcho': true,
 							'lengthMenu': [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Todos']],
-							
+							'pageLength': {$paginar},
 							'order': [{$numColunaOrdem}, '{$sentidoOrdem}'],
 							'ajax':{
 								'url' :'{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/server-side.php', // json datasource
