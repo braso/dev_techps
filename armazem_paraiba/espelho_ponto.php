@@ -52,6 +52,11 @@
 						$_POST["busca_empresa"] = $idEmpresa["empr_nb_id"];
 					}
 				}
+
+				if(empty($_POST["busca_periodo"]) && !empty($_POST["periodo_abono"])){
+					$_POST["busca_periodo"] = $_POST["periodo_abono"];
+					unset($_POST["periodo_abono"]);
+				}
 	
 				//Conferir campos obrigatórios{
 					$camposObrig = [
