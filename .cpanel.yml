@@ -16,6 +16,8 @@ deployment:
     - export TECHPS=/home/techpsjornada/public_html/gestaodeponto/techps
     - export TRAMPGAS=/home/techpsjornada/public_html/gestaodeponto/trampolim_gas
     - export NOVOHORZ=/home/techpsjornada/public_html/gestaodeponto/novo_horizonte
+    - export JRJ_ORG=/home/techpsjornada/public_html/gestaodeponto/jrj_organizacao
+    - export HN_TRANSP=/home/techpsjornada/public_html/gestaodeponto/hn_transportes
     
     
     - /bin/cp -R $GENERAL $GENERALDEPLOY
@@ -32,3 +34,5 @@ deployment:
     - /bin/cp -R $DOMAIN $TECHPS
     - /bin/cp -R $DOMAIN $TRAMPGAS
     - /bin/cp -R $DOMAIN $NOVOHORZ
+    - /bin/cp -R $DOMAIN JRJ_ORG
+    - /bin/cp -R $DOMAIN HN_TRANSP
