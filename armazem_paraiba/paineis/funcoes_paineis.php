@@ -758,14 +758,16 @@
 		}
 
 		$pasta = dir($path.$dir);
-		while (($arquivo = $pasta->read()) !== false) {
-			// Ignora os diretórios especiais '.' e '..'
-			if ($arquivo != '.' && $arquivo != '..') {
-				$arquivoPath = $path .'/'.$dir.'/'. $arquivo;  // Caminho completo do arquivo
-				unlink($arquivoPath);  // Apaga o arquivo
+		if (is_dir($pasta)) {
+			while (($arquivo = $pasta->read()) !== false) {
+				// Ignora os diretórios especiais '.' e '..'
+				if ($arquivo != '.' && $arquivo != '..') {
+					$arquivoPath = $path .'/'.$dir.'/'. $arquivo;  // Caminho completo do arquivo
+					unlink($arquivoPath);  // Apaga o arquivo
+				}
 			}
+			$pasta->close();
 		}
-		$pasta->close();
 
 		foreach ($motoristas as $motorista) {
 
@@ -968,7 +970,8 @@
 
 					if ($inicioRefeicao || $fimRefeicao) {
 						$totalMotorista["refeicao"]++;
-					} elseif (strpos($diffRefeicao, "fa-warning") !== false) {
+					} 
+					else if (strpos($diffRefeicao, "fa-warning") !== false) {
 						$totalMotorista["refeicao"]++;
 					}
 					if (strpos($diffRefeicao, "fa-info-circle") !== false && strpos($diffRefeicao, "color:orange;") !== false) {
@@ -1000,7 +1003,7 @@
 					}
 
 					// Outros campos de descanso
-					foreach (["Refeicao", "Espera", "Descanso", "Repouso"] as $campo) {
+					foreach (["Espera", "Descanso", "Repouso"] as $campo) {
 						$diffCampo = $dia["diff".$campo];
 						if (strpos($diffCampo, "fa-info-circle") !== false && strpos($diffCampo, "color:red;") !== false) {
 							$totalMotorista[strtolower($campo)]++;
