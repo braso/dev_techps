@@ -4,16 +4,16 @@
 <script src="https://code.highcharts.com/modules/solid-gauge.js"></script>
 <div id="printTitulo">
 	<img style="width: 150px" src="<?= $logoEmpresa ?>" alt="Logo Empresa Esquerda">
-	<h3>Relatório <?= $titulo ?></h3>
+	<h3><?= $titulo ?></h3>
 	<div class="right-logo">
 		<img style="width: 150px" src="<?= $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] ?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 	</div>
 </div>
 <div class="col-md-12 col-sm-12" id="pdf2htmldiv">
-	<div class="portlet light 2">
+	<div class="portlet light">
 		<div class="table-responsive">
 			<div class='emissao' style="display: block !important;">
-				<h2 class="titulo2">Relatório <?= $titulo ?></h2>
+				<h2 class="titulo2"><?= $titulo ?></h2>
 				<span></span>
 				<?= $dataEmissao ?>
 				<br>
@@ -27,6 +27,7 @@
 					<span><b>Empresa:</b> <?= $empresa["empr_tx_nome"] ?></span>
 				<?php } ?>
 				<?= $quantFun ?>
+				<?= $tabelaMotivo ?>
 			</div>
 			<?php if ($quantFun) { ?>
 				<span>Marcações com <b>(*)</b> indicam intervalos em aberto</span>
@@ -171,18 +172,21 @@
 				</div>
 			<?php } ?>
 			<?php if ($mostra === false || empty($mostra)) { ?>
-				<table id="tabela-empresas" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
-					<thead>
-						<?= $rowTotais ?>
-						<?= $rowTitulos ?>
-					</thead>
-					<tbody>
-						<!-- Conteúdo do json empresas será inserido aqui -->
-					</tbody>
-					<thead>
-						<?= $rowTotal ?>
-					</thead>
-				</table>
+				<div class="table-responsive">
+					<table id="tabela-empresas" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
+						<thead>
+							<?= $rowTotais ?>
+							<?= $rowTitulos ?>
+							<?= $rowTitulos2 ?>
+						</thead>
+						<tbody>
+							<!-- Conteúdo do json empresas será inserido aqui -->
+						</tbody>
+						<thead>
+							<?= $rowTotal ?>
+						</thead>
+					</table>
+				</div>
 			<?php } ?>
 
 		<?php if ($mostra === true) { ?>

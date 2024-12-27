@@ -9,6 +9,7 @@
         "comav"					=> "Comav",
         "feijao_turqueza"		=> "Feijão Turqueza",
         "fs_log_transportes"	=> "Fs Log Transportes",
+        "hn_transportes"        => "HN Transportes",
         "jrj_organizacao"	    => "JRJ Organizacao De Eventos",
         "logsync_techps"	    => "Logsync",
         "opafrutas"				=> "Opafrutas",

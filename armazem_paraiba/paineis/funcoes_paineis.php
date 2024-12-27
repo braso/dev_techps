@@ -758,16 +758,16 @@
 		}
 
 		$pasta = dir($path.$dir);
-		if (is_dir($pasta)) {
+		if (is_dir($path.$dir)) {
 			while (($arquivo = $pasta->read()) !== false) {
 				// Ignora os diretórios especiais '.' e '..'
 				if ($arquivo != '.' && $arquivo != '..') {
-					$arquivoPath = $path .'/'.$dir.'/'. $arquivo;  // Caminho completo do arquivo
+					$arquivoPath = $path .'/'.$dir.'/'. $arquivo;  // Caminho completo do 
 					unlink($arquivoPath);  // Apaga o arquivo
 				}
 			}
-			$pasta->close();
 		}
+		$pasta->close();
 
 		foreach ($motoristas as $motorista) {
 
@@ -1056,14 +1056,7 @@
 
 	function criar_relatorio_ajustes() {
 		$periodoInicio = new DateTime($_POST["busca_periodo"][0]);
-		$hoje = new DateTime();
-
-		if ($periodoInicio->format('Y-m') === $hoje->format('Y-m')) {
-			// Se for o mês atual, a data limite é o dia de hoje
-			$periodoFim = $hoje;
-		} else {
-			$periodoFim = new DateTime($periodoInicio->format("Y-m-t"));
-		}
+		$periodoFim = new DateTime($_POST["busca_periodo"][1]);
 
 		$empresas = mysqli_fetch_all(query(
 			"SELECT empr_nb_id, empr_tx_nome FROM empresa"
@@ -1091,7 +1084,7 @@
 
 		$macros = array_column($macros, 'macr_tx_nome');
 			
-		foreach ($empresas as $empresa) {
+		foreach ($empresas as $empresa) {;
 			$totaisEmpr = []; 
 			$totaisEmpresa = []; 
 			$rows = [];
@@ -1112,13 +1105,28 @@
 				MYSQLI_ASSOC
 			);
 
+			$pasta = dir($path);
+			if (is_dir($pasta)) {
+				while (($arquivo = $pasta->read()) !== false) {
+					// Ignora os diretórios especiais '.' e '..'
+					if ($arquivo != '.' && $arquivo != '..') {
+						$arquivoPath = $path .'/'. $arquivo;  // Caminho completo do arquivo
+						unlink($arquivoPath);  // Apaga o arquivo
+					}
+				}
+				$pasta->close();
+			}
+
 			foreach ($motoristas as $motorista) {
 				$ocorrencias = [];
 				$verificaValores = []; 
 
 				foreach($macros as $macro){
 					if (!isset($ocorrencias[$macro])) {
-						$ocorrencias[$macro] = 0;
+						$ocorrencias[$macro] = [
+							'ativo' => 0,
+							'inativo' => 0,
+						];
 					}
 				}
 				$totalMotorista = [
@@ -1130,6 +1138,8 @@
 					// "dataInicio"				=> $periodoInicio->format("d/m/Y"),
 					// "dataFim"					=> $periodoFim->format("d/m/Y")
 				];
+				$diaInicio = $periodoInicio->format('Y-m-d');
+				$diafim = $periodoFim->format('Y-m-d');
 
 				$pontos = mysqli_fetch_all(
 					query(
@@ -1139,21 +1149,26 @@
 						." LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id"
 						." INNER JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno"
 						." AND macroponto.macr_tx_fonte = 'positron'"
-						." WHERE pont_tx_matricula = '1076'"
+						." WHERE pont_tx_matricula = '$motorista[enti_tx_matricula]'"
 						." AND pont_tx_justificativa IS NOT NULL"
-						." AND pont_tx_data BETWEEN STR_TO_DATE('2024-12-01 00:00:00', '%Y-%m-%d %H:%i:%s')"
-						." AND STR_TO_DATE('2024-12-18 23:59:59', '%Y-%m-%d %H:%i:%s')"
+						." AND pont_tx_data BETWEEN STR_TO_DATE('$diaInicio 00:00:00', '%Y-%m-%d %H:%i:%s')"
+						." AND STR_TO_DATE('$diafim 23:59:59', '%Y-%m-%d %H:%i:%s')"
 						." ORDER BY ponto.pont_tx_data ASC;"
 					),
 					MYSQLI_ASSOC
 				);
 
 				foreach ($pontos as $registro) {
-
 					$macr_tx_nome = $registro['macr_tx_nome'];
-
+					$pont_tx_status = $registro['pont_tx_status'];
 					if (in_array($macr_tx_nome, $macros)) {
-						$ocorrencias[$macr_tx_nome]++;
+						// Inicializa como 0 se não existir
+						if (!isset($ocorrencias[$macr_tx_nome][$pont_tx_status])) {
+							$ocorrencias[$macr_tx_nome][$pont_tx_status] = 0;
+						}
+				
+						// Incrementa o contador
+						$ocorrencias[$macr_tx_nome][$pont_tx_status]++;
 					}
 				}
 
@@ -1161,41 +1176,45 @@
 				$totalMotorista['pontos'] = $pontos;
 				// Filtrar apenas os campos numéricos que precisam ser verificados
 				$verificaValores = array_filter($totalMotorista, function ($key) {
-						return !in_array($key, ["matricula", "nome", "ocupacao","pontos"]);
-					}, ARRAY_FILTER_USE_KEY);
+					return !in_array($key, ["matricula", "nome", "ocupacao", "pontos"]);
+				}, ARRAY_FILTER_USE_KEY);
 				
 				$rows[] = $ocorrencias;
-			    if(array_sum($verificaValores) > 0){
+			    if (array_sum(array_map(function($valor) {
+					return array_sum($valor); // Soma os valores de 'ativo' e 'inativo' dentro de cada chave
+				}, $verificaValores)) > 0){
 					file_put_contents($path."/". $motorista["enti_tx_matricula"]. ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE));
 				}	
 			}
 
-			foreach ($rows as $key => $values) {
-				foreach ($values as $key => $value) {
-					if (!isset($totaisEmpr[$key])) {
-						$totaisEmpr[$key] = 0; // Inicializa a chave com 0, se ainda não existir
+			foreach ($rows as $row => $eventos) {
+				foreach ($eventos as $evento => $valores) {
+					if (!isset($totaisEmpr[$evento])) {
+						$totaisEmpr[$evento] = 0; // Inicializa a soma para a chave do evento
 					}
-					$totaisEmpr[$key] += $value;
+			
+					foreach ($valores as $estado => $value) {
+						$totaisEmpr[$evento] += $value; // Incrementa o total para a chave do evento
+					}
 				}
 			}
 
 			$totais [] = $totaisEmpr;
 			$empresa = array_merge($totaisEmpr, $empresa);
-
 			
 			$empresa["qtdMotoristas"] = count($motoristas);
 			$empresa["dataInicio"] = $periodoInicio->format("d/m/Y");
-			$empresa["dataFim"] = $hoje->format("d/m/Y");
+			$empresa["dataFim"] = $periodoFim->format("d/m/Y");
 			
 			file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", json_encode($empresa));
 		}
 
 		foreach ($totais as $key => $values) {
 			foreach ($values as $key => $value) {
-				if (!isset($totaisEmpresa[$key])) {
-					$totaisEmpresa[$key] = 0; // Inicializa a chave com 0, se ainda não existir
+				if (!isset($totaisEmpresa[$key][$value])) {
+					$totaisEmpresa[$key][$value] = 0; // Inicializa a chave com 0, se ainda não existir
 				}
-				$totaisEmpresa[$key] += $value;
+				$totaisEmpresa[$key][$value] += $value;
 			}
 		}
 		
@@ -1203,7 +1222,7 @@
 		if (empty($_POST["empresa"])) {
 			$path = "./arquivos/ajustes"."/". $periodoInicio->format("Y-m");
 			$totaisEmpresa["dataInicio"] = $periodoInicio->format("d/m/Y");
-			$totaisEmpresa["dataFim"] = $hoje->format("d/m/Y");
+			$totaisEmpresa["dataFim"] = $periodoFim->format("d/m/Y");
 			file_put_contents($path."/empresas.json", json_encode($totaisEmpresa));
 		}
 
