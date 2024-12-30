@@ -364,6 +364,7 @@
 		unset($postValues["id"]);
 		unset($postValues["errorFields"]);
 		unset($postValues["msg_status"]);
+		$postValues = json_encode($postValues);
 		echo 
 			"<script>
 				function imprimir() {
@@ -406,7 +407,7 @@
 
 					if(valorDataInicial != data || valorStatusInicial != status){
 						var form = document.form_ajuste_status;
-						addPostValuesToForm(form, ".json_encode($postValues).");
+						addPostValuesToForm(form, {$postValues});
 						form.acao.value = 'index';
 						form.data.value = data;
 						form.status.value = status;
@@ -417,7 +418,7 @@
 				function excluirPontoJS(idPonto){
 					var form = document.form_ajuste_status;
 
-					addPostValuesToForm(form, ".json_encode($postValues).");
+					addPostValuesToForm(form, {$postValues});
 
 					form.idPonto.value = idPonto;
 					form.acao.value = 'excluirPonto';
@@ -566,8 +567,8 @@
 			}
 		}
 		
-		abre_form("Dados do Ajuste de Ponto");
-		linha_form($textFields);
+		echo abre_form("Dados do Ajuste de Ponto");
+		echo linha_form($textFields);
 		
 		echo campo_hidden("idMotorista", $_POST["idMotorista"]);
 		//Campos para retornar para a pesquisa do espelho de ponto ou após um registro de ponto{
@@ -579,9 +580,9 @@
 			echo campo_hidden("HTTP_REFERER", 		$_POST["HTTP_REFERER"]);
 		//}
 		
-		linha_form($variableFields);
-		linha_form($campoJust);
-		fecha_form($botoes);
+		echo linha_form($variableFields);
+		echo linha_form($campoJust);
+		echo fecha_form($botoes);
 
 		$iconeExcluir = criarSQLIconeTabela("pont_nb_id", "excluirPonto", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?", "excluirPontoJS(',pont_nb_id,')");
 
@@ -620,7 +621,7 @@
 			"LOCALIZAÇÃO"                                       => "map(pont_nb_id)",
 			"<spam class='glyphicon glyphicon-remove'></spam>"	=> "iconeExcluir"
 		];
-		grid($sql, array_keys($gridFields), array_values($gridFields), "", "12", 1, "desc");
+		grid($sql, array_keys($gridFields), array_values($gridFields), "", "12", 1, "desc", -1);
 
 		echo
 			"<div id='tituloRelatorio'>

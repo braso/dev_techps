@@ -27,37 +27,37 @@
 			$linha .= "+'<td>'+row.matricula+'</td>'
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
-						+'<td class=\'baixaGravidade\'>'+(row.espera === 0 ? '' : row.espera )+'</td>'
-						+'<td class=\'baixaGravidade\'>'+(row.descanso === 0 ? '' : row.descanso )+'</td>'
-						+'<td class=\'baixaGravidade\'>'+(row.repouso === 0 ? '' : row.repouso )+'</td>'
-						+'<td class=\'baixaGravidade\'>'+(row.jornada === 0 ? '' : row.jornada )+'</td>'
-						+'<td class=\'baixaGravidade\'>'+(row.jornadaPrevista === 0 ? '' : row.jornadaPrevista )+'</td>'
-						+'<td class=\'mediaGravidade\'>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
-						+'<td class=\'mediaGravidade\'>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
-						+'<td class=\'altaGravidade\'>'+ (row.refeicao === 0 ? '' : row.refeicao) +'</td>'
-						+'<td class=\'altaGravidade\'>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
-						+'<td class=\'altaGravidade\'>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
-						+'<td class=\'total\'>'+(totalNaEndossado)+'</td>'
+						+'<td class='+class1+'>'+(row.espera === 0 ? '' : row.espera )+'</td>'
+						+'<td class='+class1+'>'+(row.descanso === 0 ? '' : row.descanso )+'</td>'
+						+'<td class='+class1+'>'+(row.repouso === 0 ? '' : row.repouso )+'</td>'
+						+'<td class='+class1+'>'+(row.jornada === 0 ? '' : row.jornada )+'</td>'
+						+'<td class='+class1+'>'+(row.falta === 0 ? '' : row.falta )+'</td>'
+						+'<td class='+class2+'>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
+						+'<td class='+class2+'>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
+						+'<td class='+class3+'>'+ (row.refeicao === 0 ? '' : row.refeicao) +'</td>'
+						+'<td class='+class3+'>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
+						+'<td class='+class3+'>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
+						+'<td class='+class4+'>'+(totalNaEndossado)+'</td>'
 					+'</tr>';";
 		} elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
 			$linha = "linha = '<tr>'";
 			$linha .= "+'<td>'+row.matricula+'</td>'
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
-						+'<td class=\'baixaGravidade\'>'+(row.jornadaPrevista === 0 ? '' : row.jornadaPrevista )+'</td>'
-						+'<td class=\'mediaGravidade\'>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
-						+'<td class=\'mediaGravidade\'>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
-						+'<td class=\'altaGravidade\'>'+ (row.refeicao === 0 ? '' : row.refeicao) +'</td>'
-						+'<td class=\'altaGravidade\'>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
-						+'<td class=\'altaGravidade\'>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
-						+'<td class=\'total\'>'+(totalEndossado)+'</td>'
+						+'<td class='+class1+'>'+(row.falta === 0 ? '' : row.falta )+'</td>'
+						+'<td class='+class2+'>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
+						+'<td class='+class2+'>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
+						+'<td class='+class3+'>'+ (row.refeicao === 0 ? '' : row.refeicao) +'</td>'
+						+'<td class='+class3+'>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
+						+'<td class='+class3+'>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
+						+'<td class='+class4+'>'+(totalNaEndossado)+'</td>'
 					+'</tr>';";
 		}
 
 		$carregarDados = "";
 		foreach ($arquivos as $arquivo) {
-			$carregarDados .= "carregarDados('".$arquivo."');";
-		}
+			$carregarDados .= "carregarDados('".$arquivo. "');";
+			}
 
 		echo
 			"<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"]). "'>
@@ -121,27 +121,48 @@
 								var motoristas = 0;
 								var ajudante = 0;
 								var funcionario = 0;
+
+								let class1 = '';
+								let class2 = '';
+								let class3 = '';
+								let class4 = '';
 								$.each(data, function(index, item){
 									row[index] = item;
 								});
 
-								var totalNaEndossado = (row.jornadaPrevista || 0) + (row.jornadaEfetiva || 0) + (row.refeicao || 0) 
+								var totalNaEndossado = (row.falta || 0) + (row.jornadaEfetiva || 0) + (row.refeicao || 0) 
 								+ (row.espera || 0) + (row.descanso || 0) + (row.repouso || 0) + (row.jornada || 0) 
 								+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
 									
-								var totalEndossado = (row.refeicao || 0) + (row.jornadaPrevista || 0) + (row.jornadaEfetiva || 0) 
+								var totalEndossado = (row.refeicao || 0) + (row.falta || 0) + (row.jornadaEfetiva || 0) 
 								+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
+
+								// console.log(totalEndossado);
+								if (totalNaEndossado === 0) {
+									class1 = 'highlighted';
+									class2 = 'highlighted';
+									class3 = 'highlighted';
+									class4 = 'highlighted';
+								} else{
+									class1 = 'baixaGravidade';
+									class2 = 'mediaGravidade';
+									class3 = 'altaGravidade';
+									class4 = 'total';
+								}
+								
 								console.log(row);"
 								.$linha
-								. "tabela.append(linha);
+								. "
+								var novaLinha = $(linha);
+								tabela.append(linha);
 							},
 							error: function(){
 								console.log('Erro ao carregar os dados.');
 							}
 						});
-					}
+						}
 
-
+						
 					function ordenarTabela(coluna, ordem) {
 					var linhas = tabela.find('tr').get();
 
@@ -260,13 +281,13 @@
 				$_POST["errorFields"][] = "busca_dataMes";
 				set_status("ERRO: Não é possível pesquisar após a data atual.");
 			}
-			cabecalho("Relatório de Não Conformidade Juridica Atualizado");
+			cabecalho("Relatório de Não Conformidade Jurídica Atualizado");
 		} elseif (!empty($_POST["acao"]) && $_POST["acao"] == "atualizarPainel") {
 			echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
 			ob_flush();
 			flush();
 
-			cabecalho("Relatório de Não Conformidade Juridica Atualizado");
+			cabecalho("Relatório de Não Conformidade Jurídica Atualizado");
 
 			$err = ($_POST["busca_dataInicio"] > date("Y-m-d"))*1+($_POST["busca_dataFim"] > date("Y-m-d"))*2;
 			if ($err > 0) {
@@ -293,7 +314,7 @@
 				// echo "Tempo de execução: ".number_format($tempoExecucao, 4)." segundos";
 			}
 		} else {
-			cabecalho("Relatório de Não Conformidade Juridica Atualizado");
+			cabecalho("Relatório de Não Conformidade Jurídica Atualizado");
 		}
 
 	// $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
@@ -314,7 +335,7 @@
 			combo_net("Empresa", "empresa", $_POST["empresa"]?? "", 4, "empresa", ""),
 			$campoAcao,
 			campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
-			combo("Endossado",	"busca_endossado", (!empty($_POST["busca_endossado"]) ? $_POST["busca_endossado"] : ""), 2, ["naoEndossado" => "Não","endossado" => "Sim"])
+			combo("Tipo",	"busca_endossado", (!empty($_POST["busca_endossado"]) ? $_POST["busca_endossado"] : ""), 2, ["naoEndossado" => "Atualizado","endossado" => "Pós-fechamento", "semAjustes"=>"Sem ajuste"])
 		];
 
 		$botao_volta = "";
@@ -330,9 +351,9 @@
 		];
 
 
-		abre_form();
-		linha_form($campos);
-		fecha_form($buttons);
+		echo abre_form();
+		echo linha_form($campos);
+		echo fecha_form($buttons);
 
 
 		$arquivos = [];
@@ -341,10 +362,8 @@
 		$periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
 		$totais = [
-			"inicioSemRegistro" => 0,
-			"inicioRefeicaoSemRegistro" => 0,
-			"fimRefeicaoSemRegistro" => 0,
-			"fimSemRegistro" => 0,
+			"jornadaSemRegistro" => 0,
+			"refeicaoSemRegistro" => 0,
 			"refeicao1h" => 0,
 			"refeicao2h" => 0,
 			"esperaAberto" => 0,
@@ -391,7 +410,6 @@
 
 				$totalizadores = [
 					"refeicao" => 0,
-					"jornadaPrevista" => 0,
 					"jornadaEfetiva" => 0,
 					"espera" => 0,
 					"descanso" => 0,
@@ -403,31 +421,38 @@
 					"jornadaExcedido10h" => 0,
 					"jornadaExcedido12h" => 0,
 					"mdcDescanso30m5h" => 0,
-					"mdcDescanso30m" => 0,
-					"mdcDescanso15m" => 0,
-					"inicioRefeicaoSemRegistro" => 0,
-					"fimRefeicaoSemRegistro" => 0,
+					"refeicaoSemRegistro" => 0,
 					"refeicao1h" => 0,
 					"refeicao2h" => 0,
 					"faltaJustificada" => 0,
 					"falta" => 0
 				];
 
-				$todosZerados = true;
-				$totalMotoristasComConformidadesZeradas = 0;
-
 				$motoristas = 0;
+				$totalJsonComTudoZero = 0;
 				foreach ($arquivos as &$arquivo) {
+					$todosZeros = true;
 					$arquivo = $path."/".$arquivo;
 					$json = json_decode(file_get_contents($arquivo), true);
+
 					foreach ($totalizadores as $key => &$total) {
-						if (!isset($json[$chave]) || $json[$chave] !== 0) {
-							$todosZerados = false;
+						if(!in_array($key, ['faltaJustificada', 'jornadaPrevista']) && (!isset($json[$key]) || $json[$key] != 0)) {
+							$todosZeros = false; // Algum campo não está zerado
+							// break;
 						}
 						$total += $json[$key] ?? 0; // incrementa apenas se o índice existir no JSON
 					}
-					if ($todosZerados) {
-						$totalMotoristasComConformidadesZeradas++;
+				// PARA CASO PRECISE {
+					// foreach ($totalizadores as $key => &$total) {
+					// 	if (!isset($json[$key]) || $json[$key] != 0) {
+					// 		$todosZeros = false; // Algum campo não está zerado
+					// 		break;
+					// 	}
+					// }
+				// }
+
+					if ($todosZeros) {
+						$totalJsonComTudoZero++; // Incrementa o contador
 					}
 
 					if ($json["ocupacao"] === "Motorista") {
@@ -448,10 +473,8 @@
 				if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado"){
 					$totalNaoconformidade = array_sum([
 						$totalizadores["mdcDescanso30m5h"],
-						$totalizadores["mdcDescanso30m"],
-						$totalizadores["mdcDescanso15m"],
 						$totalizadores["inicioRefeicaoSemRegistro"],
-						$totalizadores["fimRefeicaoSemRegistro"],
+						$totalizadores["refeicaoSemRegistro"],
 						$totalizadores["refeicao1h"],
 						$totalizadores["refeicao2h"],
 						$totalizadores["intersticioInferior"],
@@ -474,10 +497,7 @@
 						$totalizadores["jornadaExcedido10h"],
 						$totalizadores["jornadaExcedido12h"],
 						$totalizadores["mdcDescanso30m5h"],
-						$totalizadores["mdcDescanso30m"],
-						$totalizadores["mdcDescanso15m"],
-						$totalizadores["inicioRefeicaoSemRegistro"],
-						$totalizadores["fimRefeicaoSemRegistro"],
+						$totalizadores["refeicaoSemRegistro"],
 						$totalizadores["refeicao1h"],
 						$totalizadores["refeicao2h"],
 						$totalizadores["intersticioInferior"],
@@ -486,13 +506,14 @@
 					
 					$gravidadeAlta = $totalizadores["refeicao"] + $totalizadores["intersticioInferior"] + $totalizadores["intersticioSuperior"];
 					$gravidadeMedia = $totalizadores["jornadaEfetiva"] + $totalizadores["mdc"];
-					$gravidadeBaixa = $totalizadores["jornadaPrevista"] + $totalizadores["espera"] + $totalizadores["descanso"] +
+					$gravidadeBaixa = $totalizadores["falta"] + $totalizadores["espera"] + $totalizadores["descanso"] +
 					$totalizadores["repouso"] + $totalizadores["jornada"];
 				}
 
+				$porcentagemFun = ($totalJsonComTudoZero / ($motoristas + $ajudante + $funcionario)) * 100;
+
 				$totalGeral = $gravidadeAlta + $gravidadeMedia + $gravidadeBaixa;
-				$graficoSintetico = [$totalMotoristasComConformidadesZeradas ,$gravidadeAlta, 
-				$gravidadeMedia, $gravidadeBaixa];
+				$graficoSintetico = [$gravidadeAlta, $gravidadeMedia, $gravidadeBaixa];
 
 				$percentuais = [
 					"performance" => round($totalMotoristasComConformidadesZeradas / $totalGeral),
@@ -506,61 +527,76 @@
 					$arrayTitulos = ['Espera', 'Descanso', 'Repouso', 'Jornada', 'Jornada Prevista', 'Jornada Efetiva', 'MDC',
 					'Refeição', 'Interstício Inferior', 'Interstício Superior'];
 
-					$arrayTitulos2 = ['Inicio ou Fim de espera sem registro', 'Inicio ou Fim de descanso sem registro',
-					'Inicio ou Fim de repouso sem registro', 'Inicio ou Fim de jornada sem registro', 'Faltas justificadas', 'Faltas Não justificadas',
-					'Tempo excedida de 10:00h', 'Tempo excedida de 12:00h', 'Descanso de 00:30 a cada 05:30 dirigidos não respeitado',
-					'Descanso de 00:30 não respeitado', 'Descanso de 00:15 não respeitado', 'Batida início de refeição não registrado',
-					'Batida fim de refeição não registrado', 'Refeição Initerrupita maior do que 01:00h não respeitada',
-					'Refeição com Tempo máximo de 02:00h não respeitada', 'O mínimo de 08:00h ininterruptas no primeiro período não respeitado',
-					'Interstício Total de 11:00 não respeitado, faltaram 00:32'
+					$arrayTitulos2 = [
+					'Início ou Fim de espera sem registro',
+					'Início ou Fim de repouso sem registro',
+					'Inicio ou Fim de repouso sem registro',
+					'Início ou fim de jornada sem registro',
+					'Faltas justificadas',
+					'Faltas não justificadas',
+					'Tempo excedido de 10:00h de jornada efetiva',
+					'Tempo excedido de 12:00h de jornada efetiva',
+					'Descanso de 30 minutos a cada 05:30 de direção não respeitado.',
+					'Batida de início ou fim de refeição não registrada',
+					'Refeição ininterrupta maior que 1 hora não respeitada',
+					'Tempo máximo de 2 horas para a refeição não respeitado',
+					'O mínimo de 11 horas de interstício não foi respeitado',
+					'Interstício total de 11 horas não respeitado'
 					];
 
 					$coresGrafico = ['#FFE800' ,'#FFE800' ,'#FFE800','#FFE800','#FFE800', '#FF8B00', '#FF8B00', '#a30000', '#a30000', '#a30000'];
-					$coresGrafico2 = ['#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FF8B00', '#FF8B00', '#FF8B00', '#FF8B00',
-					'#FF8B00', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000'];
+					$coresGrafico2 = [
+					'#FFE000', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FF8B00', '#FF8B00',
+					'#FF8B00', '#ff0404', '#ff0404', '#ff0404', '#ff0404', '#ff0404', '#ff0404'];
 					//}
 					
-					$keys = ["espera", "descanso", "repouso", "jornada", "jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao",
+					$keys = ["espera", "descanso", "repouso", "jornada", "falta", "jornadaEfetiva", "mdc", "refeicao",
 					"intersticioInferior", "intersticioSuperior"];
 
 					$keys2 = ["espera", "descanso", "repouso", "jornada", "faltaJustificada", "falta","jornadaExcedido10h", "jornadaExcedido12h",
-					"mdcDescanso30m5h", "mdcDescanso30m","mdcDescanso15m", "inicioRefeicaoSemRegistro", "fimRefeicaoSemRegistro" , "refeicao1h",
+					"mdcDescanso30m5h", "refeicaoSemRegistro", "refeicao1h",
 					"refeicao2h", "intersticioInferior", "intersticioSuperior"];
 				} else{
 					// Campos dos graficos {
 					$arrayTitulos = ['Jornada Prevista', 'Jornada Efetiva', 'MDC',
 					'Refeição', 'Interstício Inferior', 'Interstício Superior'];
 
-					$arrayTitulos2 = ['Faltas justificadas', 'Faltas Não justificadas',
-					'Tempo excedida de 10:00h', 'Tempo excedida de 12:00h', 'Descanso de 00:30 a cada 05:30 dirigidos não respeitado',
-					'Descanso de 00:30 não respeitado', 'Descanso de 00:15 não respeitado', 'Batida início de refeição não registrado',
-					'Batida fim de refeição não registrado', 'Refeição Initerrupita maior do que 01:00h não respeitada',
-					'Refeição com Tempo máximo de 02:00h não respeitada', 'O mínimo de 08:00h ininterruptas no primeiro período não respeitado',
-					'Interstício Total de 11:00 não respeitado, faltaram 00:32'
+					$arrayTitulos2 = [
+					'Faltas justificadas',
+					'Faltas não justificadas',
+					'Tempo excedido de 10:00h de jornada efetiva',
+					'Tempo excedido de 12:00h de jornada efetiva',
+					'Descanso de 30 minutos a cada 05:30 de direção não respeitado.',
+					'Descanso de 30 minutos não respeitado',
+					'Descanso de 15 minutos não respeitado',
+					'Batida de início ou fim de refeição não registrada',
+					'Refeição ininterrupta maior que 1 hora não respeitada',
+					'Tempo máximo de 2 horas para a refeição não respeitado',
+					'O mínimo de 11 horas de interstício não foi respeitado',
+					'Interstício total de 11 horas não respeitado'
 					];
 
 					$coresGrafico = ['#FFE800', '#FF8B00', '#FF8B00', '#a30000', '#a30000', '#a30000'];
 					$coresGrafico2 = ['#FFE800', '#FFE800', '#FF8B00', '#FF8B00', '#FF8B00', '#FF8B00',
-					'#FF8B00', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000', '#a30000'];
+					'#FF8B00', '#ec4141', '#ec4141', '#ec4141', '#ec4141', '#ec4141', '#ec4141'];
 					//}
 
-					$keys = ["jornadaPrevista", "jornadaEfetiva", "mdc", "refeicao","intersticioInferior", "intersticioSuperior"];
+					$keys = ["jornadaPrevista", "falta", "mdc", "refeicao","intersticioInferior", "intersticioSuperior"];
 
-					$keys2 = ["faltaJustificada", "falta", "jornadaExcedido10h", "jornadaExcedido12h", "mdcDescanso30m5h", "mdcDescanso30m",
-					"mdcDescanso15m", "inicioRefeicaoSemRegistro", "fimRefeicaoSemRegistro" , "refeicao1h", "refeicao2h", "intersticioInferior",
+					$keys2 = ["faltaJustificada", "falta", "jornadaExcedido10h", "jornadaExcedido12h", "mdcDescanso30m5h", "refeicaoSemRegistro", "refeicao1h", "refeicao2h", "intersticioInferior",
 					"intersticioSuperior"];
 				}
 
 				// Percentuais gerais de Não Conformidade (baseado no total geral)
 				foreach ($keys as $key) {
-					$percentuais["Geral_".$key] = round(($totalizadores[$key] / $totalGeral) * 100, 2);
+					$percentuais["Geral_".$key] = number_format(round(($totalizadores[$key] / $totalGeral) * 100, 2),2);
 					$graficoAnalitico[] = $totalizadores[$key];
 				}
 	
 				// Percentuais específicos de Não Conformidade (baseado no total de não conformidade)
 				foreach ($keys2 as $key)  {
 					if ($totalNaoconformidade > 0 && isset($totalizadores[$key])) {
-						$percentuais["Especifico_".$key] = round(($totalizadores[$key] / $totalNaoconformidade) * 100, 2);
+						$percentuais["Especifico_".$key] =  number_format(round(($totalizadores[$key] / $totalNaoconformidade) * 100, 2),2);
 					} else {
 						$percentuais["Especifico_".$key] = 0;
 					}
@@ -575,7 +611,7 @@
                     $horaAtual = date("H:i");
                     if($dataArquivo != $dataAtual){
                         $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
-                        <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                        <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
                     } else {
                         // Datas iguais: compara as horas
                         // if ($horaArquivo < $horaAtual) {
@@ -584,7 +620,7 @@
                             $alertaEmissao = "<span>";
                         // }
                     }
-					$dataEmissao = $alertaEmissao ."Atualizado em: ".date("d/m/Y H:i", filemtime($arquivo))."</span>"; //Utilizado no HTML.
+					$dataEmissao = $alertaEmissao ." Atualizado em: ".date("d/m/Y H:i", filemtime($arquivo))."</span>"; //Utilizado no HTML.
 					$arquivoGeral = json_decode(file_get_contents($arquivo), true);
 
 					$periodoRelatorio = [
@@ -592,10 +628,13 @@
 						"dataFim" => $arquivoGeral["dataFim"]
 					];
 
+					// var_dump($periodoRelatorio);
+
 					$encontrado = true;
-				} else {
-					echo "<script>alert('Não tem jornadas abertas.')</script>";
-				}
+				} 
+				// else {
+				// 	echo "<script>alert('Não tem não conformidades.')</script>";
+				// }
 
 				$pasta = dir($path);
                 while($arquivoEmpresa = $pasta->read()){
@@ -614,53 +653,38 @@
 		if ($encontrado) {
 			if ( $_POST["busca_endossado"] !== "endossado") {
 				$totalRow = "<td>".$totalempre["espera"]."</td>
-					<td>".$totalempre["descanso"]."</td>
-					<td>".$totalempre["repouso"]."</td>
-					<td>".$totalempre["jornada"]."</td>";
+					<td class='total'>".$totalempre["descanso"]."</td>
+					<td class='total'>".$totalempre["repouso"]."</td>
+					<td class='total'>".$totalempre["jornada"]."</td>";
 			}
 			
 			$rowTotal = "<td></td>
 					<td></td>
 					<td>Total</td>
 					$totalRow 
-					<td>".$totalempre["jornadaPrevista"]."</td>
-					<td>".$totalempre["jornadaEfetiva"]."</td>
-					<td>".$totalempre["mdc"]."</td>
-					<td>".$totalempre["refeicao"]."</td>
-					<td>".$totalempre["intersticioInferior"]."</td>
-					<td>".$totalempre["intersticioSuperior"]."</td>
-					<td>$totalGeral</td>
+					<td class='total'>".$totalempre["falta"]."</td>
+					<td class='total'>".$totalempre["jornadaEfetiva"]."</td>
+					<td class='total'>".$totalempre["mdc"]."</td>
+					<td class='total'>".$totalempre["refeicao"]."</td>
+					<td class='total'>".$totalempre["intersticioInferior"]."</td>
+					<td class='total'>".$totalempre["intersticioSuperior"]."</td>
+					<td class='total'>$totalGeral</td>
 			";
 
 			$rowGravidade = "
-			<div class='row'>
-				<div class='container' style='display:flex'>
-					<div class='col-md-5'>
-						<div id='graficoSintetico' style='width:100%; height:390px; background-color: lightgray;'>
-							<!-- Conteúdo do gráfico Sintético -->
-						</div>
-					</div>				
-					<div class='col-md-6'>
-						<div id='graficoAnalitico' style='width:130%; height:390px; background-color: lightblue;'>
-						<!-- Conteúdo do gráfico Analítico -->
-						</div>
-					</div>				
-				</div>
+			<div class='row' id='resumo'>
 				<div class='col-md-3'>
-					<table id='tabela-motorista' style='width: 350px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
+					<table id='tabela-motorista' style='width: 275px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>
+					<div id='graficoPerformance' style='width: 250px; height: 195px; margin: 0 auto;'></div>"
 						. "<thead>"
 							. "<tr>"
-								. "<td> Quandidade de motoristas por ocupação </td>"
-								. "<td>TOTAL</td>"
-								. "<td>%</td>"
+								. "<td> Quandidade por ocupação </td>"
 							. "</th>"
 						. "</thead>"
 							. "<tbody>"
 							. "</tbody>"
 						. "</table>
-				</div>
-				<div class='col-md-3'> 
-					<table style='width: 350px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
+						<table style='width: 275px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
 						. "<thead>"
 							. "<tr>"
 								. "<td> Nivel de Gravidade</td>"
@@ -669,11 +693,6 @@
 							. "</th>"
 						. "</thead>"
 						. "<tbody>"
-							. "<tr>"
-							. "<td class='tituloPerformance'>Performance</td>"
-							. "<td>$totalMotoristasComConformidadesZeradas</td>"
-							. "<td>".$percentuais["performance"]."%</td>"
-							. "</tr>"
 							. "<tr>"
 								. "<td class='tituloBaixaGravidade2'>Baixa</td>"
 								. "<td class='total'>$gravidadeBaixa</td>"
@@ -690,14 +709,28 @@
 								. "<td class='total'>".$percentuais["alta"]."%</td>"
 							. "</tr>"
 						. "</tbody>"
-					. "</table>
+					. "</table>			
+					</div>
+					<div class='col-md-3'>
+					<div class='container' style='display:flex'>
+						<!-- <div class='col-sm-4'>-->
+							<div id='graficoSintetico' style='width:64%; background-color: lightgray;'>
+								<!-- Conteúdo do gráfico Sintético -->
+							</div>
+						<!-- </div>	-->			
+						<!-- <div class='col-md-4'>-->
+							<div id='graficoAnalitico' style='width:85%; background-color: lightblue;'>
+							<!-- Conteúdo do gráfico Analítico -->
+							</div>
+						<!-- </div>	-->			
+					</div>	
 				</div>
 			</div>";
 			
 			$rowTitulos = "<tr id='titulos'>";
 
 			if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "naoEndossado") {
-				$titulo = "Não Conformidade Juridica Atualizado Antes do Fechamento";
+				$titulo = "Performance e Não Conformidade";
 				$rowTitulos .=
 					"<th class='matricula'>Matricula</th>"
 					."<th class='funcionario'>Funcionário</th>"
@@ -718,7 +751,7 @@
 
 					
 			}  elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
-				$titulo = "Não Conformidade Juridica Atualizado Pós-Fechamento";
+				$titulo = "Performance e Não Conformidade Pós-Fechamento";
 				$rowTitulos .=
 					"<th class='matricula'>Matricula</th>"
 					."<th class='funcionario'>Funcionário</th>"

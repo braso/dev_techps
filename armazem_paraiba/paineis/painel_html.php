@@ -1,7 +1,7 @@
 <link rel="stylesheet" href="../css/paineis.css">
 <div id="printTitulo">
 	<img style="width: 150px" src="<?= $logoEmpresa ?>" alt="Logo Empresa Esquerda">
-	<h3>Relatorio <?= $titulo ?></h3>
+	<h2>Relatorio <?= $titulo ?></h2>
 	<div class="right-logo">
 		<img style="width: 150px" src="<?= $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"] ?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
 	</div>

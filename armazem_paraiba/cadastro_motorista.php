@@ -694,28 +694,28 @@
 			}
 		}
 
-		abre_form();
+		echo abre_form();
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		fieldset("Dados de Usuário");
-		linha_form($camposUsuario);
+		echo linha_form($camposUsuario);
 		echo "<br>";
 		fieldset("Dados Pessoais");
-		linha_form($camposPessoais);
+		echo linha_form($camposPessoais);
 		echo "<br>";
 		fieldset("Foto");
 		echo "<div class='imageForm'>";
-		linha_form($camposImg);
+		echo linha_form($camposImg);
 		echo "</div>";
 		echo "<br>";
 		fieldset("Dados Contratuais");
-		linha_form($cContratual);
+		echo linha_form($cContratual);
 		echo "<br>";
 		fieldset("CONVENÇÃO SINDICAL - JORNADA PADRÃO DO FUNCIONÁRIO");
-		linha_form($cJornada);
+		echo linha_form($cJornada);
 		echo "<br>";
 		echo "<div class='cnh-row'>";
 			fieldset("CARTEIRA NACIONAL DE HABILITAÇÃO");
-			linha_form($camposCNH);
+			echo linha_form($camposCNH);
 		echo "</div>";
 
 		if (!empty($a_mod["enti_nb_userCadastro"])) {
@@ -728,7 +728,7 @@
 				$cAtualiza[] = texto("Última Atualização", strval($txtAtualiza), 5);
 			}
 			echo "<br>";
-			linha_form($cAtualiza);
+			echo linha_form($cAtualiza);
 		}
 
 		$path_parts = pathinfo(__FILE__);
@@ -795,7 +795,7 @@
 			</script>"
 		;
 
-		fecha_form($botoesCadastro);
+		echo fecha_form($botoesCadastro);
 		rodape();
 		
 		echo 
@@ -872,9 +872,9 @@
 			botao("Inserir", "visualizarCadastro","","","","","btn btn-success")
 		];
 
-		abre_form();
-		linha_form($camposBusca);
-		fecha_form($botoesBusca);
+		echo abre_form();
+		echo linha_form($camposBusca);
+		echo fecha_form($botoesBusca);
 
 
 		$iconeModificar = criarSQLIconeTabela("enti_nb_id", 'modificarMotorista', "Modificar", "glyphicon glyphicon-search");
@@ -925,10 +925,5 @@
 		];
 
 		grid($sql, array_keys($gridFields), array_values($gridFields));
-		echo 
-			"<script>
-				
-			</script>"
-		;
 		rodape();
 	}

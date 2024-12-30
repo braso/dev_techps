@@ -59,17 +59,6 @@
 			die();
 		}
 	}
-	
-	// function diferenca_data(string $data1, string $data2=""){
-	// 	if(empty($data2)){
-	// 		$data2 = date("Y-m-d");
-	// 	}
-		
-	// 	// formato da data yyyy-mm-dd
-	// 	$date = new DateTime($data1);
-	// 	$interval = $date->diff(new DateTime($data2));
-	// 	return $interval->format("%Y-%M-%D");
-	// }
 
 	function validarCPF(string $cpf): bool{
 		// Extrai somente os números
@@ -81,7 +70,6 @@
 
 		$digitosVerificadores = [$cpf[9], $cpf[10]];
 		$verificadores = [0,0];
-
 
 		for($f=0; $f<2; $f++){
 			for($f2 = 0; $f2 < $f+9; $f2++){
@@ -122,11 +110,7 @@
 			$hours += $qtdHours;
 		}
 
-		return 
-			str_pad($hours,   2, "0", STR_PAD_LEFT)
-			.":".str_pad($minutes, 2, "0", STR_PAD_LEFT)
-			.($seconds != 0? ":".str_pad($seconds, 2, "0", STR_PAD_LEFT): "")
-		;
+		return sprintf("%02d:%02d", $hours, $minutes, ($seconds != 0? $seconds: "")).($seconds != 0? ":".sprintf("%02d", $seconds): "");
 	}
 
 	function lerEndossoCSV(string $filename){
@@ -200,6 +184,7 @@
 		return insertInto($tabela, $campos, $valores);
 	}
 	function insertInto(string $tabela, array $campos, array $valores): array{
+
 		global $conn;
 
 		if(count($campos) != count($valores)){
@@ -244,6 +229,17 @@
 		return (is_array($result)? [$result[$tabIdName]]: []);
 	}
 
+	//Insere um valor no meio de um array. Somente para arrays com chaves numéricas.
+	function addToArray(array $array, int $position, $value): array{
+		$array = array_merge(array_slice($array, 0, $position, true), [$value], array_slice($array, $position, count($array)-$position, true));
+		return $array;
+	}
+
+	function remFromArray(array $array, int $position): array{
+		$array = array_merge(array_slice($array, 0, $position, true), array_slice($array, $position+1, count($array)-$position, true));
+		return $array;
+	}
+
 	function atualizar(string $tabela, array $campos, array $valores, string $id): void{
 		updateById($tabela, $campos, $valores, $id);
 	}
@@ -283,12 +279,13 @@
 		}
 	}
 
-	function remover(string $tabela, string $id){
-		inactivateById($tabela, $id);
+	function remover(string $tabela, string $id): int{
+		return inactivateById($tabela, $id);
 	}
-	function inactivateById(string $tabela, string $id){
+	function inactivateById(string $tabela, string $id): int{
 		$tab = substr($tabela,0,4);
-		query("UPDATE $tabela SET ".$tab."_tx_status='inativo' WHERE ".$tab."_nb_id = '".$id."' LIMIT 1;");
+		query("UPDATE {$tabela} SET {$tab}_tx_status = 'inativo' WHERE {$tab}_nb_id = {$id} LIMIT 1;");
+		return $id;
 	}
 
 	// function remover_ponto(int $id,$just,$atualizar = null){
@@ -449,16 +446,6 @@
 		}
 		$_POST['msg_status'] = $msg;
 	}
-
-	// Obsoleto
-	// function separarPeriodo(string $periodo): array{
-	// 	preg_match_all("/(\d{2}\/\d{2}\/\d{4})+(\d{2}:\d{2}:\d{2})?/", $periodo, $matches);
-	// 	$matches = !empty($matches)? $matches[0]: $matches;
-	// 	foreach($matches as &$match){
-	// 		$match = DateTime::createFromFormat("d/m/Y", $match)->format("Y-m-d");
-	// 	}
-	// 	return $matches;
-	// }
 
 	function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 		global $CONTEX;
@@ -722,35 +709,34 @@
 		;
 
 		$data_input = 
-			'<script>
-				const radioSim = document.getElementById("sim");
-				const radioNao = document.getElementById("nao");
-				const campo = document.getElementById("'.$variavel.'");
-				const campo2 = document.getElementById("limiteHoras");
-				if("'.$modificadoRadio.'" === "sim"){
+			"<script>
+				const radioSim = document.getElementById('sim');
+				const radioNao = document.getElementById('nao');
+				const campo = document.getElementById('{$variavel}');
+				const campo2 = document.getElementById('limiteHoras');
+				if('{$modificadoRadio}' === 'sim'){
 					radioSim.checked = true;
-				}
-				else {
+				}else{
 					radioNao.checked = true;
 				}
 				if(radioSim.checked) {
-						campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
-						campo2.style.display = ""; 
+						campo.style.display = ''; // Exibe o campo quando 'Mostrar Campo' é selecionado
+						campo2.style.display = ''; 
 				}
 				// Adicionando um ouvinte de eventos aos elementos de rádio
-				radioSim.addEventListener("change", function() {
+				radioSim.addEventListener('change', function() {
 					if(radioSim.checked) {
-						campo.style.display = ""; // Exibe o campo quando "Mostrar Campo" é selecionado
-						campo2.style.display = ""; 
+						campo.style.display = ''; // Exibe o campo quando 'Mostrar Campo' é selecionado
+						campo2.style.display = '';
 					}
 				});
-				radioNao.addEventListener("change", function() {
+				radioNao.addEventListener('change', function() {
 				if(radioNao.checked) {
-					campo.style.display = "none"; // Oculta o campo quando "Não Mostrar Campo" é selecionado
-					campo2.style.display = "none"; 
+					campo.style.display = 'none'; // Oculta o campo quando 'Não Mostrar Campo' é selecionado
+					campo2.style.display = 'none'; 
 				}
 				});
-			</script>'
+			</script>"
 		;
 		//  Utiliza regime de banco de horas?
 
@@ -758,26 +744,31 @@
 	}
 
 	function checkbox(string $titulo, string $variavel, array $opcoes, int $tamanho=3, string $tipo = "checkbox", string $extra='', string $modificadoCampo = ''){
-
 		$campo = 
-			"<div class='col-sm-".$tamanho." margin-bottom-5 campo-fit-content' style='min-width:200px' id='".$variavel."' ".$extra.">
+			"<div {$extra} class='col-sm-{$tamanho} margin-bottom-5 campo-fit-content' style='min-height: 50px;' id='{$variavel}'>
 			<div class='margin-bottom-5'>
-				".$titulo."
+				{$titulo}
 			</div>"
 		;
 		
-		$valoresMarcados = explode(',', $modificadoCampo);
 		
+		$valoresMarcados = explode(',', $modificadoCampo);
+
 		foreach($opcoes as $key => $value){
+			$name = $variavel."_".$key;
+			if(empty($key)){
+				$name = $variavel;
+			}
+			
 			$campo .=
 				"<label>
 					<input 
-						type='".$tipo."' 
-						id='".$key."' 
-						name='".$variavel."_".$key."' 
-						value='true' ".(in_array($key,$valoresMarcados) && !empty($valoresMarcados) ? 'checked': '')."
+						type='{$tipo}' 
+						id='{$key}' 
+						name='{$name}' 
+						value='true' ".((in_array($key,$valoresMarcados) && !empty($valoresMarcados))? 'checked': '')."
 					>
-					".$value."
+					{$value}
 				</label>"
 			;
 		}
@@ -909,24 +900,28 @@
 
 		if(!empty($modificador)){
 			$tab = substr($tabela,0,4);
-			if($extra_busca != '')
+			if($extra_busca != ''){
 				$extra_campo = ",$extra_busca";
-			else{
+			}else{
 				$extra_campo = '';
 			}
 
 			$queryResult = mysqli_fetch_array(
 				query(
-					"SELECT ".$tab."_tx_nome ".$extra_campo." FROM ".$tabela." 
-						WHERE ".$tab."_nb_id = ".$modificador."
-							AND ".$tab."_tx_status = 'ativo'"
+					"SELECT {$tab}_tx_nome {$extra_campo} FROM {$tabela} 
+						WHERE {$tab}_tx_status = 'ativo'
+							AND {$tab}_nb_id = {$modificador};"
 				)
 			);
 			
 			if($extra_busca != ''){
-				$queryResult[0] = "[".$queryResult[1]."] ".$queryResult[0];
+				$queryResult[0] = "[{$queryResult[1]}] {$queryResult[0]}";
 			}
-			$opt="<option value='$modificador'>$queryResult[0]</option>";
+			if(!empty($queryResult)){
+				$opt = "<option value='{$modificador}'>{$queryResult[0]}</option>";
+			}else{
+				$opt = "";
+			}
 		}else{
 			$opt = "";
 		}

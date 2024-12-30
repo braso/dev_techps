@@ -34,5 +34,5 @@ deployment:
     - /bin/cp -R $DOMAIN $TECHPS
     - /bin/cp -R $DOMAIN $TRAMPGAS
     - /bin/cp -R $DOMAIN $NOVOHORZ
-    - /bin/cp -R $DOMAIN JRJ_ORG
-    - /bin/cp -R $DOMAIN HN_TRANSP
+    - /bin/cp -R $DOMAIN $JRJ_ORG
+    - /bin/cp -R $DOMAIN $HN_TRANSP

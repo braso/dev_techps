@@ -103,10 +103,10 @@
 			}
 		}
 
-		abre_form("Arquivo de Ponto");
-		linha_form($fields);
+		echo abre_form("Arquivo de Ponto");
+		echo linha_form($fields);
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		fecha_form($buttons);
+		echo fecha_form($buttons);
 
 		rodape();
 	}
@@ -282,9 +282,9 @@
 			// botao("Configuração", "layout_notificacao", "", "", "", "", "btn btn-warning")
 		];
 
-		abre_form();
-		linha_form($fields);
-		fecha_form($buttons);
+		echo abre_form();
+		echo linha_form($fields);
+		echo fecha_form($buttons);
 
 		$sql = 
 			"SELECT * FROM arquivoponto

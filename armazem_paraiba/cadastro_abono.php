@@ -60,20 +60,35 @@
 		$begin = new DateTime($aData[0]);
 		$end = new DateTime($aData[1]);
 
-		$a=carregar("entidade",$_POST["motorista"]);
-		
+		$motorista = mysqli_fetch_assoc(query(
+			"SELECT * FROM entidade
+			 LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
+			 LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
+			 LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
+			 WHERE enti_tx_status = 'ativo'
+				 AND enti_nb_id = '{$_POST["motorista"]}'
+			 LIMIT 1;"
+		));
+
 		for ($i = $begin; $i <= $end; $i->modify("+1 day")){
-			$sqlRemover = query("SELECT * FROM abono WHERE abon_tx_data = '".$i->format("Y-m-d")."' AND abon_tx_matricula = '".$a["enti_tx_matricula"]."' AND abon_tx_status = 'ativo'");
+			$sqlRemover = query(
+				"SELECT * FROM abono 
+					WHERE abon_tx_status = 'ativo'
+						AND abon_tx_matricula = '{$motorista["enti_tx_matricula"]}'
+						AND abon_tx_data = '".$i->format("Y-m-d")."';"
+			);
+
 			while ($aRemover = mysqli_fetch_array($sqlRemover, MYSQLI_BOTH)) {
 				remover("abono", $aRemover["abon_nb_id"]);
 			}
-			$aDetalhado = diaDetalhePonto($a["enti_tx_matricula"], $i->format("Y-m-d"));
+			
+			$aDetalhado = diaDetalhePonto($motorista, $i->format("Y-m-d"));
 			$aDetalhado["diffSaldo"] = str_replace(["<b>", "</b>"], ["", ""], $aDetalhado["diffSaldo"]);
 			$abono = calcularAbono($aDetalhado["diffSaldo"], $_POST["abono"]);
 
 			$novoAbono = [
 				"abon_tx_data" 			=> $i->format("Y-m-d"),
-				"abon_tx_matricula" 	=> $a["enti_tx_matricula"],
+				"abon_tx_matricula" 	=> $motorista["enti_tx_matricula"],
 				"abon_tx_abono" 		=> $abono,
 				"abon_nb_motivo" 		=> $_POST["motivo"],
 				"abon_tx_descricao" 	=> $_POST["descricao"],
@@ -127,15 +142,15 @@
 		$voltarInfo["busca_periodo"] = json_encode($voltarInfo["busca_periodo"]);
 
 		$b[] = botao("Voltar", "voltar", implode(",",array_keys($voltarInfo)), implode(",",array_values($voltarInfo))); 
-		abre_form();
+		echo abre_form();
 
 		echo campo_hidden("HTTP_REFERER", 	$voltarInfo["HTTP_REFERER"]);
 		echo campo_hidden("busca_empresa", ($voltarInfo["busca_empresa"]?? ""));
 		echo campo_hidden("busca_periodo", (str_replace("\"", "'", $voltarInfo["busca_periodo"])?? ""));
 		
-		linha_form($campos[0]);
-		linha_form($campos[1]);
-		fecha_form($b);
+		echo linha_form($campos[0]);
+		echo linha_form($campos[1]);
+		echo fecha_form($b);
 
 		rodape();
 	}

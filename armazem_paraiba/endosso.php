@@ -69,11 +69,6 @@
 	function imprimir_relatorio(){
 		global $totalResumo;
 
-		if (!$_POST["idMotoristaEndossado"]) {
-			$motorista = carregar("entidade", $_POST["busca_motorista"]);
-			$_POST["idMotoristaEndossado"] = $motorista["enti_nb_id"];
-		}
-
 		if (empty($_POST["busca_data"]) || empty($_POST["busca_empresa"])){
 			$_POST["errorFields"][] = "busca_data";
 			$_POST["errorFields"][] = "busca_empresa";
@@ -86,8 +81,8 @@
 			global $CONTEX;
 
 			$aEmpresa = mysqli_fetch_array(query(
-				"SELECT empresa.*, cidade.cida_tx_nome, cidade.cida_tx_uf FROM empresa JOIN cidade ON empresa.empr_nb_cidade = cidade.cida_nb_id".
-				" WHERE empr_nb_id = ".$_POST["busca_empresa"]
+				"SELECT empresa.*, cidade.cida_tx_nome, cidade.cida_tx_uf FROM empresa JOIN cidade ON empresa.empr_nb_cidade = cidade.cida_nb_id
+					WHERE empr_nb_id = {$_POST["busca_empresa"]};"
 			), MYSQLI_BOTH);
 			$enderecoEmpresa = implode(", ", array_filter([
 				$aEmpresa["empr_tx_endereco"], 
@@ -99,16 +94,17 @@
 		//}
 
 		$motoristas = mysqli_fetch_all(query(
-			"SELECT entidade.*, endosso.*, parametro.para_tx_pagarHEExComPerNeg FROM entidade"
-				." JOIN endosso ON enti_tx_matricula = endo_tx_matricula"
-				." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
-				." WHERE enti_tx_status = 'ativo' AND endo_tx_status = 'ativo'"
-					."	AND enti_nb_empresa = ".$_POST["busca_empresa"]
-					."	AND enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário')"
-					."	AND endo_tx_mes = '".$_POST["busca_data"]."-01'"
-				." ORDER BY enti_tx_nome;"
+			"SELECT entidade.*, endosso.*, parametro.para_tx_pagarHEExComPerNeg FROM entidade
+				JOIN endosso ON enti_tx_matricula = endo_tx_matricula
+				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
+				WHERE enti_tx_status = 'ativo' AND endo_tx_status = 'ativo'
+					".(!empty($_POST["idMotoristaEndossado"])? "AND enti_nb_id = {$_POST["idMotoristaEndossado"]}": "")."
+					AND enti_nb_empresa = {$_POST["busca_empresa"]}
+					AND enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário')
+					AND endo_tx_mes = '{$_POST["busca_data"]}-01'
+				ORDER BY enti_tx_nome;"
 		), MYSQLI_ASSOC);
-		
+
 		$qtdDiasEndossados = 0;
 
 		$date = new DateTime($_POST["busca_data"]);
@@ -301,9 +297,9 @@
 
 		echo "<style>.row div {min-width: auto;}</style>";
 
-		abre_form();
-		linha_form($fields);
-		fecha_form($buttons, "<span id='dadosResumo' style='height:'><b>".$carregando."</b></span>");
+		echo abre_form();
+		echo linha_form($fields);
+		echo fecha_form($buttons, "<span id='dadosResumo' style='height:'><b>".$carregando."</b></span>");
 
 		$counts = [
 			"total" => 0,								//$countEndosso
@@ -449,7 +445,7 @@
 							; 
 						}
 
-						abre_form(
+						echo abre_form(
 							$aEmpresa["empr_tx_nome"]."<br>"
 							."[".$aMotorista["enti_tx_matricula"]."] ".$aMotorista["enti_tx_nome"]."<br>"
 							."<br>"/*."$parametroPadrao<br><br>"*/
@@ -464,7 +460,7 @@
 						];
 
 						echo montarTabelaPonto($cab, $aDia);
-						fecha_form();
+						echo fecha_form();
 
 						echo 
 							"<form name='form_imprimir_relatorio_".$aMotorista["enti_tx_matricula"]."' method='post' target='_blank'>
@@ -513,8 +509,8 @@
 			}
 
 			if($counts["endossados"]["nao"] > 0){
-				abre_form($motNaoEndossados);
-				fecha_form();
+				echo abre_form($motNaoEndossados);
+				echo fecha_form();
 			}
 			if(!empty($_POST["busca_motorista"]) && $counts["endossados"]["sim"] == 0){
 				echo 

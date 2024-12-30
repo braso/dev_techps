@@ -177,7 +177,7 @@
             $entity = 
                 "SELECT * from entidade e
                     join user u on u.user_nb_entidade = e.enti_nb_id
-                    where u.user_nb_id = ".$_POST["userID"]
+                    where u.user_nb_id = {$_POST["userID"]}"
             ;
             $entity = get_data($entity);
             if(empty($entity)){
@@ -255,15 +255,15 @@
                     "SELECT *, (macr_tx_nome like '%inicio%') as open_break FROM ponto
                         JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                         WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'
-                            AND pont_tx_matricula = ".$entity['enti_tx_matricula']."
-                            AND pont_tx_data <= STR_TO_DATE('".$_POST['startDateTime'].":59', '%Y-%m-%d %H:%i:%s')
+                            AND pont_tx_matricula = '{$entity["enti_tx_matricula"]}'
+                            AND pont_tx_data <= STR_TO_DATE('{$_POST["startDateTime"]}:59', '%Y-%m-%d %H:%i:%s')
                             AND lower(macr_tx_nome) != 'inicio de jornada'
                         ORDER BY pont_tx_data DESC
                         LIMIT 1;"
                 ;
 
                 $lastBreakOpening = get_data($lastBreakOpening)[0];
-                if(empty($lastBreakOpening) || $lastBreakOpening['open_break']){
+                if(!empty($lastBreakOpening) && $lastBreakOpening['open_break']){
                     // header('HTTP/1.0 400 Bad Request');
                     echo "Breakpoint open without closing previous one.";
                     exit;
@@ -392,7 +392,7 @@
 
         $userEntityRegistry = get_data(
             "SELECT entidade.enti_tx_matricula FROM entidade 
-                JOIN user ON user_tx_matricula = enti_tx_matricula
+                JOIN user ON enti_nb_id = user_nb_entidade
                 WHERE user_tx_status = 'ativo'
                     AND user_nb_id = ".$requestdata->userID.""
         )[0];
@@ -527,7 +527,7 @@
             )"
         ;
         
-        $result = insert_data($query,$ponto);
+        $result = insert_data($query, $ponto);
         if($requestdata->type == "break"){
 			$result = "Break finish registered successfully.";
 		}
@@ -538,7 +538,7 @@
     function delLastRegister(int $userId){
         $userEntityRegistry = get_data(
             "SELECT entidade.enti_tx_matricula FROM entidade 
-                JOIN user ON user_tx_matricula = enti_tx_matricula
+                JOIN user ON enti_nb_id = user_nb_entidade
                 WHERE user_tx_status = 'ativo'
                     AND user_nb_id = ".$userId.""
         )[0];

@@ -33,6 +33,12 @@
 		let select2URL = '{$select2URL}'"
 	?>
 
+	function ajustarPonto(idMotorista, data) {
+		document.form_ajuste_ponto.idMotorista.value = idMotorista;
+		document.form_ajuste_ponto.data.value = data;
+		document.form_ajuste_ponto.submit();
+	}
+
 	function selecionaMotorista(idEmpresa) {
 		let buscaExtra = '';
 		if(idEmpresa > 0){

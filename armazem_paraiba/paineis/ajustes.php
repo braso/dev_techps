@@ -20,22 +20,66 @@ function carregarJS(array $arquivos) {
 	$dominiosAutotrac = ["/comav"];
 	$linha = "linha = '<tr>'";
 	if (!empty($_POST["empresa"])) {
-		$linha .= "+'<td>'+row.matricula+'</td>'
-					+'<td>'+row.nome+'</td>'
-					+'<td>'+row.ocupacao+'</td>'
-					+'<td>'+row['Inicio de Jornada']+'</td>'
-					+'<td>'+row['Fim de Jornada']+'</td>'
-					+'<td>'+row['Inicio de Refeição']+'</td>'
-					+'<td>'+row['Fim de Refeição']+'</td>'
-					+'<td>'+row['Inicio de Espera']+'</td>'
-					+'<td>'+row['Fim de Espera']+'</td>'
-					+'<td>'+row['Inicio de Descanso']+'</td>'
-					+'<td>'+row['Fim de Descanso']+'</td>'
-					+'<td>'+row['Inicio de Repouso']+'</td>'
-					+'<td>'+row['Fim de Repouso']+'</td>'
-					+'<td>'+row['Inicio de Repouso Embarcado']+'</td>'
-					+'<td>'+row['Fim de Repouso Embarcado']+'</td>'
-				+'</tr>';";
+		if (!in_array($_SERVER["REQUEST_URI"], $dominiosAutotrac)) {
+			$linha .= "+'<td>'+row.matricula+'</td>'
+						+'<td>'+row.nome+'</td>'
+						+'<td>'+row.ocupacao+'</td>'
+						+'<td>' + row['Inicio de Jornada']['ativo'] +'</td>'
+						+'<td>'+ row['Inicio de Jornada']['inativo'] + '</td>'
+						+'<td>'+row['Fim de Jornada']['ativo'] +'</td>'
+						+'<td>'+row['Fim de Jornada']['inativo']+'</td>'
+						+'<td>'+row['Inicio de Refeição']['ativo']+'</td>'
+						+'<td>'+row['Inicio de Refeição']['inativo']+'</td>'
+						+'<td>'+row['Fim de Refeição']['ativo']+'</td>'
+						+'<td>'+row['Fim de Refeição']['inativo']+'</td>'
+						+'<td>'+row['Inicio de Espera']['ativo']+'</td>'
+						+'<td>'+row['Inicio de Espera']['inativo']+'</td>'
+						+'<td>'+row['Fim de Espera']['ativo']+'</td>'
+						+'<td>'+row['Fim de Espera']['inativo']+'</td>'
+						+'<td>'+row['Inicio de Descanso']['ativo']+'</td>'
+						+'<td>'+row['Inicio de Descanso']['inativo']+'</td>'
+						+'<td>'+row['Fim de Descanso']['ativo']+'</td>'
+						+'<td>'+row['Fim de Descanso']['inativo']+'</td>'
+						+'<td>'+row['Inicio de Repouso']['ativo']+'</td>'
+						+'<td>'+row['Inicio de Repouso']['inativo']+'</td>'
+						+'<td>'+row['Fim de Repouso']['ativo']+'</td>'
+						+'<td>'+row['Fim de Repouso']['inativo']+'</td>'
+						+'<td>'+row['Inicio de Repouso Embarcado']['ativo']+'</td>'
+						+'<td>'+row['Inicio de Repouso Embarcado']['inativo']+'</td>'
+						+'<td>'+row['Fim de Repouso Embarcado']['ativo']+'</td>'
+						+'<td>'+row['Fim de Repouso Embarcado']['inativo']+'</td>'
+						+'<td>'+totalAtivo+'</td>'
+						+'<td>'+totalInativo+'</td>'
+						+'</tr>';";
+		} else {
+			$linha .= "+'<td>'+row['Inicio de Jornada']+'</td>'
+				+'<td>'+row['Fim de Jornada']+'</td>'
+				+'<td>'+row['Inicio de Refeição']+'</td>'
+				+'<td>'+row['Fim de Refeição']+'</td>'
+				+'<td>'+row['Inicio de Espera']+'</td>'
+				+'<td>'+row['Fim de Espera']+'</td>'
+				+'<td>'+row['Inicio de Descanso']+'</td>'
+				+'<td>'+row['Fim de Descanso']+'</td>'
+				+'<td>'+row['Inicio de Repouso']+'</td>'
+				+'<td>'+row['Fim de Repouso']+'</td>'
+				+'<td>'+row['Inicio de Repouso Embarcado']+'</td>'
+				+'<td>'+row['Fim de Repouso Embarcado']+'</td>'
+				+'<td>'+row['Pernoite - Fim De Jornada']+'</td>'
+				+'<td>'+row['Refeicao']+'</td>'
+				+'<td>'+row['Em Espera']+'</td>'
+				+'<td>'+row['Descanso']+'</td>'
+				+'<td>'+row['Reinicio De Viagem']+'</td>'
+				+'<td>'+row['Inicio De Viagem']+'</td>'
+				+'<td>'+row['Fim De Viagem']+'</td>'
+				+'<td>'+row['Parada Eventual']+'</td>'
+				+'<td>'+row['Sol De Desvio De Rota']+'</td>'
+				+'<td>'+row['Sol Desengate/Bau']+'</td>'
+				+'<td>'+row['Manutencao']+'</td>'
+				+'<td>'+row['Macro Msg Livre']+'</td>'
+				+'<td>'+row['Ag Descarga']+'</td>'
+				+'<td>'+row['Abastecimento - Arla32']+'</td>'
+				+'<td>'+row['Troca De Veículo']+'</td>';";
+		}
 	} else {
 		if (!in_array($_SERVER["REQUEST_URI"], $dominiosAutotrac)) {
 			$linha .= "+'<td class=\"nomeEmpresa\" style=\"cursor: pointer;\" onclick=\"setAndSubmit(' + row.empr_nb_id + ')\">'+row.empr_tx_nome+'</td>'
@@ -54,7 +98,9 @@ function carregarJS(array $arquivos) {
 						+'<td>'+row['Fim de Repouso Embarcado']+'</td>'
 					+'</tr>';";
 		} else {
-			$linha .= "+'<td>'+row['Inicio de Jornada']+'</td>'
+			$linha .= "+'<td class=\"nomeEmpresa\" style=\"cursor: pointer;\" onclick=\"setAndSubmit(' + row.empr_nb_id + ')\">'+row.empr_tx_nome+'</td>'
+				+'<td>'+row.qtdMotoristas+'</td>'
+				+'<td>'+row['Inicio de Jornada']+'</td>'
 				+'<td>'+row['Fim de Jornada']+'</td>'
 				+'<td>'+row['Inicio de Refeição']+'</td>'
 				+'<td>'+row['Fim de Refeição']+'</td>'
@@ -86,7 +132,7 @@ function carregarJS(array $arquivos) {
 
 	$carregarDados = "";
 	foreach ($arquivos as $arquivo) {
-		$carregarDados .= "carregarDados('" . $arquivo . "');";
+		$carregarDados .= "carregarDados('{$arquivo}');";
 	}
 
 	echo
@@ -95,117 +141,169 @@ function carregarJS(array $arquivos) {
                 <input type='hidden' name='atualizar'>
                 <input type='hidden' name='campoAcao'>
                 <input type='hidden' name='empresa'>
-                <input type='hidden' name='busca_dataInicio'>
-                <input type='hidden' name='busca_dataFim'>
-                <input type='hidden' name='busca_periodo'>
+                <input type='hidden' name='busca_periodo[]' id='busca_inicio'>
+				<input type='hidden' name='busca_periodo[]' id='busca_fim'>
             </form>
             <script>
                 function setAndSubmit(empresa){
                     document.myForm.acao.value = 'enviarForm()';
                     document.myForm.campoAcao.value = 'buscar';
                     document.myForm.empresa.value = empresa;
-                    const buscaPeriodoInput = document.getElementById('busca_periodo').value;
-					const buscaPeriodoArray = buscaPeriodoInput.split(' - ');
-					console.log(buscaPeriodoArray);
-					document.myForm.busca_periodo.value = JSON.stringify(buscaPeriodoArray);
+                    const buscaPeriodoInput = document.getElementById('busca_periodo');
+					const [inicio, fim] = buscaPeriodoInput.value.split(' - '); 
+					 function formatDate(date) {
+						const [day, month, year] = date.split('/');
+						return year + '-' + month + '-' + day;
+					}
+					document.getElementById('busca_inicio').value = formatDate(inicio);
+					document.getElementById('busca_fim').value = formatDate(fim);
                     document.myForm.submit();
                 }
 
-                function imprimir(){
-                    window.print();
-                }
-            
-                $(document).ready(function(){
-                    var tabela = $('#tabela-empresas tbody');
+			function imprimir(){
+				window.print();
+			}
+		
+			$(document).ready(function(){
+				var tabela = $('#tabela-empresas tbody');
 
-                    function carregarDados(urlArquivo){
-                        $.ajax({
-                            url: urlArquivo + '?v=' + new Date().getTime(),
-                            dataType: 'json',
-                            success: function(data){
-                                var row = {};
-                                $.each(data, function(index, item){
-                                    row[index] = item;
-                                });
-								console.log(row);
-                                "
-								. $linha
-								. "tabela.append(linha);
-                            },
-                            error: function(){
-                                console.log('Erro ao carregar os dados.');
-                            }
-                        });
-                    }
-                        
-                    // Função para ordenar a tabela
-                    function ordenarTabela(coluna, ordem){
-                        var linhas = tabela.find('tr').get();
-                        
-                        linhas.sort(function(a, b){
-                            var valorA = $(a).children('td').eq(coluna).text();
-                            var valorB = $(b).children('td').eq(coluna).text();
+				function carregarDados(urlArquivo){
+					$.ajax({
+						url: urlArquivo + '?v=' + new Date().getTime(),
+						dataType: 'json',
+						success: function(data){
+							var row = {};
+							$.each(data, function(index, item){
+								row[index] = item;
+							});
 
-                            if(valorA < valorB){
-                                return ordem === 'asc' ? -1 : 1;
-                            }
-                            if(valorA > valorB){
-                                return ordem === 'asc' ? 1 : -1;
-                            }
-                            return 0;
-                        });
+						let totalAtivo = row['Inicio de Jornada']['ativo'] + row['Fim de Jornada']['ativo'] + row['Inicio de Refeição']['ativo']
+						+ row['Fim de Refeição']['ativo'] + row['Inicio de Espera']['ativo'] + row['Fim de Espera']['ativo'] + row['Inicio de Descanso']['ativo']
+						+ row['Fim de Descanso']['ativo'] + row['Inicio de Repouso']['ativo'] + row['Fim de Repouso']['ativo']
+						+ row['Inicio de Repouso Embarcado']['ativo'] + row['Fim de Repouso Embarcado']['ativo'];
 
-                        $.each(linhas, function(index, row){
-                            tabela.append(row);
-                        });
-                    }
+						let totalInativo = row['Inicio de Jornada']['inativo'] + row['Fim de Jornada']['inativo'] + row['Inicio de Refeição']['inativo']
+						+ row['Fim de Refeição']['inativo'] + row['Inicio de Espera']['inativo'] + row['Fim de Espera']['inativo']
+						+ row['Inicio de Descanso']['inativo'] + row['Fim de Descanso']['inativo'] + row['Inicio de Repouso']['inativo']
+						+ row['Fim de Repouso']['inativo'] + row['Inicio de Repouso Embarcado']['inativo'] + row['Fim de Repouso Embarcado']['inativo'];
+							console.log(row);
+							{$linha}
+							tabela.append(linha);
+						},
+						error: function(){
+							console.log('Erro ao carregar os dados.');
+						}
+					});
+				}
+					
+				// Função para ordenar a tabela
+				function ordenarTabela(coluna, ordem){
+					var linhas = tabela.find('tr').get();
+					
+					linhas.sort(function(a, b){
+						var valorA = $(a).children('td').eq(coluna).text();
+						var valorB = $(b).children('td').eq(coluna).text();
 
-                    // Evento de clique para ordenar a tabela ao clicar no cabeçalho
-                    $('#titulos th').click(function(){
-                        var coluna = $(this).index();
-                        var ordem = $(this).data('order');
-                        $('#tabela-empresas th').data('order', 'desc'); // Redefinir ordem de todas as colunas
-                        $(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
-                        ordenarTabela(coluna, $(this).data('order'));
+						if(valorA < valorB){
+							return ordem === 'asc' ? -1 : 1;
+						}
+						if(valorA > valorB){
+							return ordem === 'asc' ? 1 : -1;
+						}
+						return 0;
+					});
 
-                        // Ajustar classes para setas de ordenação
-                        $('#titulos th').removeClass('sort-asc sort-desc');
-                        $(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
-                    });
+					$.each(linhas, function(index, row){
+						tabela.append(row);
+					});
+				}
 
-                    " . $carregarDados . "
-                });
+				// Evento de clique para ordenar a tabela ao clicar no cabeçalho
+				$('#titulos th').click(function(){
+					var coluna = $(this).index();
+					var ordem = $(this).data('order');
+					$('#tabela-empresas th').data('order', 'desc'); // Redefinir ordem de todas as colunas
+					$(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
+					ordenarTabela(coluna, $(this).data('order'));
 
-				//Variação dos campos de pesquisa{
-                    var camposAcao = document.getElementsByName('campoAcao');
-                    if (camposAcao[0].checked){
-                        document.getElementById('botaoContexBuscar').innerHTML = 'Buscar';
-                    }
-                    if (camposAcao[1].checked){
-                        document.getElementById('botaoContexBuscar').innerHTML = 'Atualizar';
-                    }
-                    camposAcao[0].addEventListener('change', function() {
-                        if (camposAcao[0].checked){
-                            document.getElementById('botaoContexBuscar').innerHTML = 'Buscar';
-                        }
-                    });
-                    camposAcao[1].addEventListener('change', function() {
-                        if (camposAcao[1].checked){
-                            document.getElementById('botaoContexBuscar').innerHTML = 'Atualizar';
-                        }
-                    });
-                //}
-            </script>";
+					// Ajustar classes para setas de ordenação
+					$('#titulos th').removeClass('sort-asc sort-desc');
+					$(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
+				});
+				{$carregarDados}
+			});
+
+			//Variação dos campos de pesquisa{
+				var camposAcao = document.getElementsByName('campoAcao');
+				if (camposAcao[0].checked){
+					document.getElementById('botaoContexBuscar').innerHTML = 'Buscar';
+				}
+				if (camposAcao[1].checked){
+					document.getElementById('botaoContexBuscar').innerHTML = 'Atualizar';
+				}
+				camposAcao[0].addEventListener('change', function() {
+					if (camposAcao[0].checked){
+						document.getElementById('botaoContexBuscar').innerHTML = 'Buscar';
+					}
+				});
+				camposAcao[1].addEventListener('change', function() {
+					if (camposAcao[1].checked){
+						document.getElementById('botaoContexBuscar').innerHTML = 'Atualizar';
+					}
+				});
+			//}
+
+			function createModal(motivo,pontos) {
+				let modalContent = '<ul>'; // Utilizando uma lista para organizar os itens
+				pontos.sort().forEach(ponto => {
+					modalContent += `<li>\${ponto}</li>`; // Adiciona cada ponto como um item da lista
+				});
+				modalContent += '</ul>';
+				const modalHtml = 
+					'<div class=\"modal fade\" id=\"dynamicModal\" tabindex=\"-1\" role=\"dialog\" aria-labelledby=\"dynamicModalLabel\">' +
+					'<div class=\"modal-dialog\" role=\"document\">' +
+						'<div class=\"modal-content\">' +
+						'<div class=\"modal-header\">' +
+							'<button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\">' +
+							'<span aria-hidden=\"true\">&times;</span>' +
+							'</button>' +
+							'<h3 class=\"modal-title\" id=\"dynamicModalLabel\">' +
+							'Motoristas com o motivo: '+motivo+ 
+							'</h3>' +
+						'</div>' +
+						'<div class=\"modal-body\">' +
+							modalContent +
+						'</div>' +
+						'<div class=\"modal-footer\">' +
+							'<button type=\"button\" class=\"btn btn-default\" data-dismiss=\"modal\">Fechar</button>' +
+						'</div>' +
+						'</div>' +
+					'</div>' +
+					'</div>';
+				
+				// Adicionar o modal ao body
+				$('body').append(modalHtml);
+
+				// Exibir o modal
+				$('#dynamicModal').modal('show');
+
+				// Remover o modal do DOM ao fechar
+				$('#dynamicModal').on('hidden.bs.modal', function () {
+					$(this).remove();
+				});
+				}
+
+		</script>"
+	;
 }
 
 function index() {
-	var_dump($_POST["busca_periodo"]);
 	$dominiosAutotrac = ["/comav"];
 	if (!empty($_POST["acao"])) {
 		if ($_POST["busca_dataMes"] > date("Y-m")) {
 			unset($_POST["acao"]);
 			$_POST["errorFields"][] = "busca_dataMes";
-			set_status("ERRO: Insira um mês menor ou igual ao atual. (" . date("m/Y") . ")");
+			set_status("ERRO: Insira um mês menor ou igual ao atual. (".date("m/Y").")");
 			cabecalho("Relatório Geral de Saldo");
 		} elseif ($_POST["acao"] == "atualizarPainel") {
 			echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
@@ -228,12 +326,12 @@ function index() {
 
 	$campoAcao =
 		"<div class='col-sm-2 margin-bottom-5' style='min-width: fit-content;'>
-				<label>" . "Ação" . "</label><br>
+				<label>Ação</label><br>
 				<label class='radio-inline'>
-					<input type='radio' name='campoAcao' value='buscar' " . ((empty($_POST["campoAcao"]) || $_POST["campoAcao"] == "buscar") ? "checked" : "") . "> Buscar
+					<input type='radio' name='campoAcao' value='buscar' ".((empty($_POST["campoAcao"]) || $_POST["campoAcao"] == "buscar") ? "checked" : "")."> Buscar
 				</label>
 				<label class='radio-inline'>
-          			<input type='radio' name='campoAcao' value='atualizarPainel'" . (!empty($_POST["campoAcao"]) && $_POST["campoAcao"] == "atualizarPainel" ? "checked" : "") . "> Atualizar
+          			<input type='radio' name='campoAcao' value='atualizarPainel'".(!empty($_POST["campoAcao"]) && $_POST["campoAcao"] == "atualizarPainel" ? "checked" : "")."> Atualizar
 				</label>
 			</div>";
 
@@ -256,11 +354,13 @@ function index() {
 		$botao_volta
 	];
 
-	abre_form();
-	linha_form($campos);
-	fecha_form($buttons);
+	echo abre_form();
+	echo linha_form($campos);
+	echo fecha_form($buttons);
 
 	$arquivos = [];
+	$resultado = [];
+	$resultado2 = [];
 	$totais = [];
 	$dataEmissao = ""; //Utilizado no HTML
 	$encontrado = false;
@@ -269,17 +369,17 @@ function index() {
 
 	if (!empty($_POST["empresa"]) && !empty($_POST["busca_periodo"])) {
 		$periodoInicio = new DateTime($_POST["busca_periodo"][0]);
-		$path .= "/" . $periodoInicio->format("Y-m") . "/" . $_POST["empresa"];
-		if (is_dir($path) && file_exists($path ."/empresa_" . $_POST["empresa"] . ".json")) {
+		$path .= "/".$periodoInicio->format("Y-m")."/".$_POST["empresa"];
+		if (is_dir($path) && file_exists($path ."/empresa_".$_POST["empresa"].".json")) {
 			$encontrado = true;
-			$dataArquivo = date("d/m/Y", filemtime($path . "/empresa_" . $_POST["empresa"] . ".json"));
-			$horaArquivo = date("H:i", filemtime($path . "/empresa_" . $_POST["empresa"] . ".json"));
+			$dataArquivo = date("d/m/Y", filemtime($path."/empresa_".$_POST["empresa"].".json"));
+			$horaArquivo = date("H:i", filemtime($path."/empresa_".$_POST["empresa"].".json"));
 
 			$dataAtual = date("d/m/Y");
 			$horaAtual = date("H:i");
 			if ($dataArquivo != $dataAtual) {
 				$alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
-                        <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                        <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
 			} else {
 				// Datas iguais: compara as horas
 				// if ($horaArquivo < $horaAtual) {
@@ -288,8 +388,8 @@ function index() {
 				$alertaEmissao = "<span>";
 				// }
 			}
-			$dataEmissao = $alertaEmissao." Atualizado em: " . date("d/m/Y H:i", filemtime($path . "/empresa_" . $_POST["empresa"] . ".json"))."</span>";
-			$arquivoGeral = json_decode(file_get_contents($path . "/empresa_" . $_POST["empresa"]. ".json"), true);
+			$dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresa_".$_POST["empresa"].".json"))."</span>";
+			$arquivoGeral = json_decode(file_get_contents($path."/empresa_".$_POST["empresa"]. ".json"), true);
 
 			$periodoRelatorio = [
 				"dataInicio" => $arquivoGeral["dataInicio"],
@@ -302,127 +402,163 @@ function index() {
 					$arquivo = $path."/".$arquivo;
 					$arquivos[] = $arquivo;
 					$json = json_decode(file_get_contents($arquivo), true);
+					foreach ($json['pontos'] as $key) {
+						if ($key['moti_tx_nome']=== null) {
+							continue;
+						}
+						if (!isset($resultado[$key['moti_tx_nome']])) {
+							$resultado[$key['moti_tx_nome']] = 0; // Inicializa com 0
+						}
+						$resultado[$key['moti_tx_nome']]++;
+
+						if (!isset($resultado2[$key['moti_tx_nome']])) {
+							$resultado2[$key['moti_tx_nome']] = [];
+						}
+						if (!in_array($json["nome"], $resultado2[$key['moti_tx_nome']])) {
+							$resultado2[$key['moti_tx_nome']][] = $json["nome"];
+						}
+					}
+
 					$empresas[] = $json;
 				}
 			}
 			$pastaAjuste->close();
-		}
-	} elseif(!empty($_POST["busca_periodo"])){
-		$periodoInicio = new DateTime($_POST["busca_periodo"][0]);
-		$periodoFim = new DateTime($_POST["busca_periodo"][1]);
 
-		if ($periodoInicio->format("Y-m") === $periodoFim->format("Y-m")) {
-			$path .= "/" . $periodoInicio->format("Y-m"). "/" ;
-		}
-
-		if(is_dir($path) && file_exists($path . "/empresas.json")){
-			$encontrado = true;
-			$dataArquivo = date("d/m/Y", filemtime($path . "/empresas.json"));
-			$horaArquivo = date("H:i", filemtime($path . "/empresas.json"));
-
-			$dataAtual = date("d/m/Y");
-			$horaAtual = date("H:i");
-			if ($dataArquivo != $dataAtual) {
-				$alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
-                        <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
-			} else {
-				// Datas iguais: compara as horas
-				// if ($horaArquivo < $horaAtual) {
-				//     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
-				// } else {
-				$alertaEmissao = "<span>";
-				// }
+			if(!empty($arquivos)){
+				$encontrado = true;
 			}
-			$dataEmissao = $alertaEmissao." Atualizado em: " . date("d/m/Y H:i", filemtime($path . "/empresas.json")). "</span>";
-			$arquivoGeral = json_decode(file_get_contents($path . "/empresas.json"), true);
-
-			$periodoRelatorio = [
-				"dataInicio" => $arquivoGeral["dataInicio"],
-				"dataFim" => $arquivoGeral["dataFim"]
-			];
-			$pastaAjuste = dir($path);
-			while ($arquivo = $pastaAjuste->read()) {
-				if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))) {
-					$arquivo = $path . $arquivo . "/empresa_" . $arquivo . ".json";
-					$arquivos[] = $arquivo;
-					$json = json_decode(file_get_contents($arquivo), true);
-					$empresas[] = $json;
+			// echo "<pre>";
+			// var_dump($resultado2);
+			// echo "</pre>";
+			
+			$tabelaMotivo ="
+			<div>
+			<table id='tabela-motivo' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>
+				<thead>
+					<tr>
+						<th>Motivo</th>
+						<th>Quantidade</th>
+					</tr>
+				</thead>
+				<tbody>
+				</div>";
+				foreach (array_keys($resultado) as $motivo) {
+					$resultado2Json = json_encode($resultado2[$motivo]);
+					$tabelaMotivo .= "<tr>";
+					$tabelaMotivo .= "<td onclick=\"createModal('$motivo',".htmlspecialchars(json_encode($resultado2[$motivo]), ENT_QUOTES, 'UTF-8').");\">".$motivo."</td>";
+					$tabelaMotivo .= "<td>".$resultado[$motivo]."</td>";
+					$tabelaMotivo .= "</tr>";
 				}
-			}
-			$pastaAjuste->close();
+				$tabelaMotivo .="</tbody>
+			</table>" ;
 		}
-	} else {
+	} 
+	else {
 		$encontrado = false;
 	}
 
 	if ($encontrado) {
 		$rowTotais = "<tr class='totais'>";
 		$rowTitulos = "<tr id='titulos' class='titulos'>";
+		$rowTitulos2 = "<tr id='titulos2' class='titulos2'>";
 
 		if (!empty($_POST["empresa"])) {
 			if (!in_array($_SERVER["REQUEST_URI"], $dominiosAutotrac)) {
 				$rowTotais .=
-					"<th colspan='3'>" . $arquivoGeral["empr_tx_nome"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Inicio de Jornada"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Fim de Jornada"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Inicio de Refeição"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Fim de Refeição"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Inicio de Espera"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Fim de Espera"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Inicio de Descanso"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Fim de Descanso"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Inicio de Repouso"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Fim de Repouso"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Inicio de Repouso Embarcado"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Fim de Repouso Embarcado"] . "</th>";
+					"<th colspan='3'>".$arquivoGeral["empr_tx_nome"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Inicio de Jornada"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Fim de Jornada"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Inicio de Refeição"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Fim de Refeição"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Inicio de Espera"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Fim de Espera"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Inicio de Descanso"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Fim de Descanso"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Inicio de Repouso"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Fim de Repouso"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Inicio de Repouso Embarcado"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Fim de Repouso Embarcado"]."</th>"
+					. "<th colspan='2'></th>";
 
 				$rowTitulos .= 
 					"<th data-column='matricula' data-order='asc'>Matrícula</th>"
-					. "<th data-column='nome' data-order='asc'>Nome da Funcionário</th>"
+					. "<th data-column='nome' data-order='asc'>Nome do Funcionário</th>"
 					. "<th data-column='qtdMotoristas' data-order='asc'>Ocupação</th>"
-					. "<th data-column='percEndossados' data-order='asc'>Inicio de Jornada</th>"
-					. "<th data-column='jornadaPrevista' data-order='asc'>Fim de Jornada</th>"
-					. "<th data-column='JornadaEfetiva' data-order='asc'>Inicio de Refeição</th>"
-					. "<th data-column='he50APagar' data-order='asc'>Fim de Refeição</th>"
-					. "<th data-column='he100APagar' data-order='asc'>Inicio de Espera</th>"
-					. "<th data-column='adicionalNoturno' data-order='asc'>Fim de Espera</th>"
-					. "<th data-column='esperaIndenizada' data-order='asc'>Inicio de Descanso</th>"
-					. "<th data-column='saldoAnterior' data-order='asc'>Fim de Descanso</th>"
-					. "<th data-column='saldoPeriodo' data-order='asc'>Inicio de Repouso</th>"
-					. "<th data-column='saldoPeriodo' data-order='asc'>Fim de Repouso</th>"
-					. "<th data-column='saldoPeriodo' data-order='asc'>Inicio de Repouso Embarcad</th>"
-					. "<th data-column='saldoPeriodo' data-order='asc'>Fim de Repouso Embarcado</th>";
+					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Jornada</th>"
+					. "<th data-column='' data-order='asc' colspan='2'>Fim de Jornada</th>"
+					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Refeição</th>"
+					. "<th data-column='' data-order='asc' colspan='2'>Fim de Refeição</th>"
+					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Espera</th>"
+					. "<th data-column='' data-order='asc' colspan='2'>Fim de Espera</th>"
+					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Descanso</th>"
+					. "<th data-column='r' data-order='asc' colspan='2'>Fim de Descanso</th>"
+					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Repouso</th>"
+					. "<th data-column='' data-order='asc' colspan='2'>Fim de Repouso</th>"
+					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Repouso Embarcad</th>"
+					. "<th data-column='' data-order='asc' colspan='2'>Fim de Repouso Embarcado</th>"
+					. "<th data-column='' data-order='asc' colspan='2'>Total</th>";
+					
+					$rowTitulos2 .= 
+					"<th></th>"
+					. "<th></th>"
+					. "<th></th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>";
 			} else {
 				$rowTotais .=
 					"<th colspan='1'></th>"
-					. "<th colspan='1'></th>"
-					. "<th colspan='1'>" . $arquivoGeral["Inicio de Jornada"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Fim de Jornada"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Inicio de Refeição"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Fim de Refeição"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Inicio de Espera"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Fim de Espera"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Inicio de Descanso"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Fim de Descanso"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Inicio de Repouso"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Fim de Repouso"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Inicio de Repouso Embarcado"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Fim de Repouso Embarcado"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Pernoite - Fim De Jornada"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Refeicao"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Em Espera"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Descanso"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Reinicio De Viagem"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Inicio De Viagem"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Fim De Viagem"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Parada Eventual"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Sol De Desvio De Rota"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Sol Desengate/Bau"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Manutencao"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Macro Msg Livre"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Ag Descarga"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Abastecimento - Arla32"] . "</th>"
-					. "<th colspan='1'>" . $arquivoGeral["Troca De Veículo"] . "</th>";
+					. "<th colspan='2'></th>"
+					. "<th colspan='2'>".$arquivoGeral["Inicio de Jornada"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Fim de Jornada"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Inicio de Refeição"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Fim de Refeição"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Inicio de Espera"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Fim de Espera"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Inicio de Descanso"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Fim de Descanso"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Inicio de Repouso"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Fim de Repouso"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Inicio de Repouso Embarcado"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Fim de Repouso Embarcado"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Pernoite - Fim De Jornada"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Refeicao"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Em Espera"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Descanso"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Reinicio De Viagem"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Inicio De Viagem"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Fim De Viagem"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Parada Eventual"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Sol De Desvio De Rota"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Sol Desengate/Bau"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Manutencao"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Macro Msg Livre"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Ag Descarga"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Abastecimento - Arla32"]."</th>"
+					. "<th colspan='2'>".$arquivoGeral["Troca De Veículo"]."</th>";
 
 				$rowTitulos .=
 				"<th data-column='matricula' data-order='asc'>Matrícula</th>"
@@ -462,18 +598,18 @@ function index() {
 				$rowTotais .=
 				"<th colspan='1'></th>"
 				. "<th colspan='1'></th>"
-				. "<th colspan='1'>" . $arquivoGeral["Inicio de Jornada"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Fim de Jornada"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Inicio de Refeição"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Fim de Refeição"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Inicio de Espera"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Fim de Espera"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Inicio de Descanso"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Fim de Descanso"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Inicio de Repouso"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Fim de Repouso"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Inicio de Repouso Embarcado"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Fim de Repouso Embarcado"] . "</th>";
+				. "<th colspan='1'>".$arquivoGeral["Inicio de Jornada"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Fim de Jornada"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Inicio de Refeição"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Fim de Refeição"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Inicio de Espera"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Fim de Espera"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Inicio de Descanso"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Fim de Descanso"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Inicio de Repouso"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Fim de Repouso"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Inicio de Repouso Embarcado"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Fim de Repouso Embarcado"]."</th>";
 
 				$rowTitulos .=
 				"<th data-column='nome' data-order='asc'>Nome da Empresa/Filial</th>"
@@ -495,33 +631,33 @@ function index() {
 				$rowTotais .=
 				"<th colspan='1'></th>"
 				. "<th colspan='1'></th>"
-				. "<th colspan='1'>" . $arquivoGeral["Inicio de Jornada"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Fim de Jornada"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Inicio de Refeição"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Fim de Refeição"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Inicio de Espera"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Fim de Espera"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Inicio de Descanso"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Fim de Descanso"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Inicio de Repouso"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Fim de Repouso"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Inicio de Repouso Embarcado"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Fim de Repouso Embarcado"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Pernoite - Fim De Jornada"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Refeicao"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Em Espera"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Descanso"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Reinicio De Viagem"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Inicio De Viagem"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Fim De Viagem"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Parada Eventual"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Sol De Desvio De Rota"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Sol Desengate/Bau"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Manutencao"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Macro Msg Livre"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Ag Descarga"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Abastecimento - Arla32"] . "</th>"
-				. "<th colspan='1'>" . $arquivoGeral["Troca De Veículo"] . "</th>";
+				. "<th colspan='1'>".$arquivoGeral["Inicio de Jornada"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Fim de Jornada"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Inicio de Refeição"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Fim de Refeição"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Inicio de Espera"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Fim de Espera"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Inicio de Descanso"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Fim de Descanso"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Inicio de Repouso"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Fim de Repouso"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Inicio de Repouso Embarcado"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Fim de Repouso Embarcado"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Pernoite - Fim De Jornada"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Refeicao"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Em Espera"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Descanso"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Reinicio De Viagem"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Inicio De Viagem"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Fim De Viagem"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Parada Eventual"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Sol De Desvio De Rota"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Sol Desengate/Bau"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Manutencao"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Macro Msg Livre"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Ag Descarga"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Abastecimento - Arla32"]."</th>"
+				. "<th colspan='1'>".$arquivoGeral["Troca De Veículo"]."</th>";
 
 				$rowTitulos .=
 					"<th data-column='nome' data-order='asc'>Nome da Empresa/Filial</th>"
@@ -564,6 +700,6 @@ function index() {
 			echo "<script>alert('Não Possui dados desse mês')</script>";
 		}
 	}
-	carregarJS($arquivos);
+	carregarJS($arquivos, $resultado2);
 	rodape();
 }
