@@ -751,7 +751,7 @@
 
 					
 			}  elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
-				$titulo = "Performasse e Não Conformidade Pós-Fechamento";
+				$titulo = "Performance e Não Conformidade Pós-Fechamento";
 				$rowTitulos .=
 					"<th class='matricula'>Matricula</th>"
 					."<th class='funcionario'>Funcionário</th>"
