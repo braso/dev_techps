@@ -636,3 +636,6 @@ th.sort-desc::after {
   .table th {
       font-size: 10px;
   }
+  #tabela-motivo {
+      width: 300px !important;
+  }

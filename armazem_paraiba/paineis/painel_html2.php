@@ -27,8 +27,8 @@
 					<span><b>Empresa:</b> <?= $empresa["empr_tx_nome"] ?></span>
 				<?php } ?>
 				<?= $quantFun ?>
-				<?= $tabelaMotivo ?>
 			</div>
+			<?= $tabelaMotivo ?>
 			<?php if ($quantFun) { ?>
 				<span style="font-size: 12px;">Marcações com <b>(*)</b> indicam intervalos em aberto</span>
 				<span style="margin-left: 19px; font-size: 12px;"><i id="iconLegenda" class="fa fa-circle" aria-hidden="true" style="color: yellow; border: 1px solid black; border-radius: 50%;"></i> A cor Indica que o tempo total de jornada excedeu o previsto.</span>

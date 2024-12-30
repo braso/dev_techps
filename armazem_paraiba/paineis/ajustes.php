@@ -354,9 +354,9 @@ function index() {
 		$botao_volta
 	];
 
-	abre_form();
-	linha_form($campos);
-	fecha_form($buttons);
+	echo abre_form();
+	echo linha_form($campos);
+	echo fecha_form($buttons);
 
 	$arquivos = [];
 	$resultado = [];
@@ -432,6 +432,7 @@ function index() {
 			// echo "</pre>";
 			
 			$tabelaMotivo ="
+			<div>
 			<table id='tabela-motivo' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>
 				<thead>
 					<tr>
@@ -439,7 +440,8 @@ function index() {
 						<th>Quantidade</th>
 					</tr>
 				</thead>
-				<tbody>";
+				<tbody>
+				</div>";
 				foreach (array_keys($resultado) as $motivo) {
 					$resultado2Json = json_encode($resultado2[$motivo]);
 					$tabelaMotivo .= "<tr>";

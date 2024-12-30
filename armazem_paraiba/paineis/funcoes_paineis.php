@@ -757,8 +757,8 @@
 			$dir = '/nao_endossado';
 		}
 
-		$pasta = dir($path.$dir);
-		if (is_dir($path.$dir)) {
+		if (is_dir($path.$dir) === true) {
+			$pasta = dir($path.$dir);
 			while (($arquivo = $pasta->read()) !== false) {
 				// Ignora os diretórios especiais '.' e '..'
 				if ($arquivo != '.' && $arquivo != '..') {
@@ -766,8 +766,8 @@
 					unlink($arquivoPath);  // Apaga o arquivo
 				}
 			}
+			$pasta->close();
 		}
-		$pasta->close();
 
 		foreach ($motoristas as $motorista) {
 
@@ -1154,7 +1154,7 @@
 						." AND pont_tx_data BETWEEN STR_TO_DATE('$diaInicio 00:00:00', '%Y-%m-%d %H:%i:%s')"
 						." AND STR_TO_DATE('$diafim 23:59:59', '%Y-%m-%d %H:%i:%s')"
 						." ORDER BY ponto.pont_tx_data ASC;"
-					),
+					,1),
 					MYSQLI_ASSOC
 				);
 
