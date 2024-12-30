@@ -631,7 +631,7 @@
                     <th colspan='1'>{$totais["esperaIndenizada"]}</th>
                     <th colspan='1'>{$totais["saldoAnterior"]}</th>
                     <th colspan='1'>{$totais["saldoPeriodo"]}</th>
-                    <th colspan='1'>{$totais["saldoFinal"]}</th>"
+                    <th colspan='1'>{$totais["saldoFinal"]}</th>
                 EOD;
 
                 $rowTitulos .= <<<EOD

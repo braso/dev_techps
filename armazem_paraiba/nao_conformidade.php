@@ -243,6 +243,7 @@
 						$f--;
 						continue;
 					}
+					$_POST["counts"]["total"]++;
 					$_POST["counts"]["naoConformidade"] += $qtdErros;
 
 					if(empty($aDia[$f][$saldoColIndex])){

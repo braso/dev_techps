@@ -432,6 +432,7 @@ function index() {
 			// echo "</pre>";
 			
 			$tabelaMotivo ="
+			<div>
 			<table id='tabela-motivo' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>
 				<thead>
 					<tr>
@@ -439,7 +440,8 @@ function index() {
 						<th>Quantidade</th>
 					</tr>
 				</thead>
-				<tbody>";
+				<tbody>
+				</div>";
 				foreach (array_keys($resultado) as $motivo) {
 					$resultado2Json = json_encode($resultado2[$motivo]);
 					$tabelaMotivo .= "<tr>";
@@ -458,7 +460,7 @@ function index() {
 	if ($encontrado) {
 		$rowTotais = "<tr class='totais'>";
 		$rowTitulos = "<tr id='titulos' class='titulos'>";
-		$rowTitulos2 = "<tr id='titulos' class='titulos'>";
+		$rowTitulos2 = "<tr id='titulos2' class='titulos2'>";
 
 		if (!empty($_POST["empresa"])) {
 			if (!in_array($_SERVER["REQUEST_URI"], $dominiosAutotrac)) {
@@ -500,32 +502,32 @@ function index() {
 					"<th></th>"
 					. "<th></th>"
 					. "<th></th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>";
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>";
 			} else {
 				$rowTotais .=
 					"<th colspan='1'></th>"
