@@ -757,17 +757,17 @@
 			$dir = '/nao_endossado';
 		}
 
-		$pasta = dir($path.$dir);
-		if (is_dir($path.$dir)) {
+		if (is_dir($path.$dir)){
+			$pasta = dir($path.$dir);
 			while (($arquivo = $pasta->read()) !== false) {
 				// Ignora os diretórios especiais '.' e '..'
 				if ($arquivo != '.' && $arquivo != '..') {
-					$arquivoPath = $path .'/'.$dir.'/'. $arquivo;  // Caminho completo do 
+					$arquivoPath = $path.'/'.$dir.'/'.$arquivo;  // Caminho completo do 
 					unlink($arquivoPath);  // Apaga o arquivo
 				}
 			}
+			$pasta->close();
 		}
-		$pasta->close();
 
 		foreach ($motoristas as $motorista) {
 
