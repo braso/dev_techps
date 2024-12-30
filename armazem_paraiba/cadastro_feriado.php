@@ -79,10 +79,10 @@
 			}
 		}
 		
-		abre_form("Dados do Feriado");
+		echo abre_form("Dados do Feriado");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		linha_form($campos);
-		fecha_form($botoes);
+		echo linha_form($campos);
+		echo fecha_form($botoes);
 
 		rodape();
 
@@ -113,9 +113,9 @@
 			botao("Inserir", "layout_feriado", "", "", "", "", "btn btn-success")
 		];
 		
-		abre_form();
-		linha_form($campos);
-		fecha_form($botoes);
+		echo abre_form();
+		echo linha_form($campos);
+		echo fecha_form($botoes);
 
 		$iconeModificar = criarSQLIconeTabela("feri_nb_id", "modifica_feriado", "Modificar", "glyphicon glyphicon-search");
 		$iconeExcluir =	criarSQLIconeTabela("feri_nb_id", "exclui_feriado", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?");
