@@ -283,7 +283,7 @@
 		$campo_login = campo("Login*", "login", ($_POST["login"]?? ($_POST["login"]?? "")), 2,"","maxlength='30'");
 
 		$editPermission = (!empty($_POST["id"]) &&			//Se está editando um usuário existente e
-			!$editingDriver &&								//Este usuário não é motorista e
+			!$editingDriver &&								//O usuário não é motorista e
 			(
 				$loggedUserIsAdmin ||						//O usuário logado é administrador ou
 				$_SESSION["user_nb_id"] == $_POST["id"]		//Editando o próprio usuário
@@ -429,9 +429,9 @@
 			$buttons[] = botao("Voltar", "voltar");
 		}
 
-		abre_form("Dados do Usuário");
+		echo abre_form("Dados do Usuário");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		linha_form($fields);
+		echo linha_form($fields);
 		
 
 		if (!empty($_POST["userCadastro"]) && !empty($_POST["userAtualiza"]) && ($_POST["userCadastro"] > 0 || $_POST["userAtualiza"] > 0)) {
@@ -454,10 +454,10 @@
 				;
 			}
 			echo "<br>";
-			linha_form($cAtualiza);
+			echo linha_form($cAtualiza);
 		}
 
-		fecha_form($buttons);
+		echo fecha_form($buttons);
 		echo "<form name='form_excluir_arquivo' method='post' action='cadastro_usuario.php'>
 				<input type='hidden' name='id' value=''>
 				<input type='hidden' name='nome_arquivo' value=''>
@@ -551,9 +551,9 @@
 			$buttons[] = botao("Inserir", "modificarUsuario","","","","","btn btn-success");
 		}
 
-		abre_form();
-		linha_form($fields);
-		fecha_form($buttons);
+		echo abre_form();
+		echo linha_form($fields);
+		echo fecha_form($buttons);
 
 		$iconeModificar = 	criarSQLIconeTabela("user_nb_id","modificarUsuario","Modificar","glyphicon glyphicon-search");
 		$iconeExcluir = 	criarSQLIconeTabela("user_nb_id","excluirUsuario","Excluir","glyphicon glyphicon-remove","Deseja inativar o registro?");
