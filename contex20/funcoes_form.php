@@ -25,43 +25,82 @@
 	// 	echo "<!DOCTYPE html><!--[if IE 8]> <html lang='pt-br' class='ie8 no-js'> <![endif]--><!--[if IE 9]> <html lang='pt-br' class='ie9 no-js'> <![endif]--><!--[if !IE]><!--><html lang='pt-br'><!--<![endif]--><!-- INICIO HEAD --><head><meta charset='utf-8' /><title>CONTAINER Sistemas</title><meta http-equiv='X-UA-Compatible' content='IE=edge'><meta content='width=device-width, initial-scale=1' name='viewport' /><meta content='' name='description' /><meta content='' name='author' /><!-- INICIO GLOBAL MANDATORY STYLES --><script src='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/select2/css/select2.min.css' rel='stylesheet' /><script src='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/select2/js/select2.min.js'></script><script src='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/select2/js/i18n/pt-BR.js' type='text/javascript'></script><script src='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js' type='text/javascript'></script><script src='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/jquery-inputmask/maskMoney.js' type='text/javascript'></script><link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/uniform/css/uniform.default.css' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css' rel='stylesheet' type='text/css' /><!-- FIM GLOBAL MANDATORY STYLES --><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/datatables/datatables.min.js' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/datatables/datatables.min.css' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/select2/css/select2.min.css' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css' rel='stylesheet' type='text/css' /><!-- INICIO TEMA GLOBAL STYLES --><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/css/components.min.css' rel='stylesheet' id='style_components' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/global/css/plugins.min.css' rel='stylesheet' type='text/css' /><!-- FIM TEMA GLOBAL STYLES --><!-- INICIO TEMA LAYOUT STYLES --><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/layout/css/layout.min.css' rel='stylesheet' type='text/css' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/layout/css/themes/default.min.css' rel='stylesheet' type='text/css' id='style_color' /><link href='".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/assets/layout/css/custom.min.css' rel='stylesheet' type='text/css' /><!-- FIM TEMA LAYOUT STYLES --><link rel='shortcut icon' href='favicon.ico' /><style>table.table thead tr th{font-size: 10pt;}table.table td{font-size: 8pt;}p.text-left{font-size: 8pt;}label{font-size: 8pt;}@media print{table.table thead tr th{font-size: 8pt;}table.table td{font-size: 6pt;}}.page-header .page-header-menu{background-color: white;}</style><script type='text/javascript'>function contex_foco(elemento){var campoFoco=document.forms[0].elements[".$foco."];if(campoFoco != null)campoFoco.focus();}</script></head><!-- FIM HEAD --><body onload='contex_foco()' class='page-container-bg-solid page-boxed'><div class='page-container'><div class='page-content-wrapper'><div class='page-head'><div class='container-fluid'><div class='page-title'><h1>".$nome_pagina."</h1></div></div></div><div class='page-content'><div class='container-fluid'><div class='page-content-inner'><div class='row '><div class='col-md-12'>";
 	// }
 
-	function abre_form(string $nome_form="", int $col=12, int $focus=2): void{
-		global $idContexForm;
-		echo 
-			"<div class='col-md-".$col." col-sm-".$col."'>
-				<div class='portlet light'>"
+	function createForm(string $title="", int $width, string $content, array $buttons, string $extra=""){
+		
+		if(empty($_POST["msg_status"])){
+			$_POST["msg_status"] = "";
+		}
+
+		if(!empty($title)){
+			$title = "<div class='portlet-title'>
+				<div class='caption'>
+					<span class='caption-subject font-dark bold'>{$title}</span>
+				</div>
+			</div>";
+		}
+
+		if(!empty($buttons) || !empty($_POST["msg_status"])){
+			$buttons = 
+				"<div class='form-actions'>
+					<div class='fecha-form-btn'>"
+						.implode("</div><div class='fecha-form-btn'>", $buttons)
+					."</div>
+				</div>
+				<div class='msg-status-text'>
+					{$_POST["msg_status"]}
+				</div>"
+			;
+		}else{
+			$buttons = "";
+		}
+		
+		$result = 
+			"<div class='col-md-{$width}'>
+				<div class='portlet light'>
+					{$title}
+					<div class='portlet-body form'>
+						<form role='form' name='contex_form' method='post' enctype='multipart/form-data'>
+							{$content}
+							{$buttons}
+						</form>
+						{$extra}
+					</div>
+				</div>
+			</div>
+			<!-- FIM FORMULARIO-->"
 		;
 
-		if($nome_form){
-			echo 
+		return $result;
+	}
+
+	function abre_form(string $nome_form="", int $width=12, int $focus=2): string{
+		$result = "<div class='col-md-{$width}'><div class='portlet light'>";
+
+		if(!empty($nome_form)){
+			$result .= 
 				"<div class='portlet-title'>
 					<div class='caption'>
-						<span class='caption-subject font-dark bold'>".$nome_form."</span>
+						<span class='caption-subject font-dark bold'>{$nome_form}</span>
 					</div>
 				</div>"
 			;
 		}
 
-		echo 
+		$result .= 
 			"<div class='portlet-body form'>
-			<form role='form' name='contex_form".$idContexForm."' method='post' enctype='multipart/form-data'>"
+			<form role='form' name='contex_form' method='post' enctype='multipart/form-data'>"
 		;
-		$idContexForm++;
+		
+		return $result;
 	}
 
-	function linha_form(array $fields, string $classe=""): void{
+	function linha_form(array $fields): string{
 		$campo = "";
 		foreach($fields as $field){
 			$campo .= strval($field);
 		}
 
-		$classe = "row ".$classe;
-
-		echo 
-			"<div class='".$classe."'>
-				".$campo."
-			</div>"
-		;
+		return "<div class='row'>{$campo}</div>";
 	}
 
 	function voltar(){
@@ -93,22 +132,23 @@
 		exit;
 	}
 
-	function fecha_form(array $botao = [], string $extra = ""){
-		$botoes = '';
-		if($botao !='' || $_POST['msg_status']){
-			for($i=0;$i<count($botao);$i++){
-				$botoes.="<div class='fecha-form-btn'>".$botao[$i]."</div>";
-			}
-
-			echo 
-				"<div class='form-actions'>
-					".$botoes."
-				</div>
-				<div class='msg-status-text'>".($_POST["msg_status"]?? "")."</div>"
+	function fecha_form(array $botoes = [], string $extra = ""): string{
+		$result = "";
+		if(empty($_POST["msg_status"])){
+			$_POST["msg_status"] = "";
+		}
+		if(!empty($botoes) || !empty($_POST["msg_status"])){
+			$botoes = "<div class='fecha-form-btn'>".implode("</div><div class='fecha-form-btn'>", $botoes)."</div>";
+			
+			$result = 
+				"<div class='form-actions'>{$botoes}</div>
+				<div class='msg-status-text'>{$_POST["msg_status"]}</div>"
 			;
 		}
 
-		echo "</form>".$extra."</div></div></div><!-- FIM FORMULARIO-->";
+		$result .= "</form>{$extra}</div></div></div><!-- FIM FORMULARIO-->";
+
+		return $result;
 	}
 
 	function conferirCamposObrig(array $camposObrig, array $camposEnviados): string{
