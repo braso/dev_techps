@@ -169,7 +169,7 @@
                             var valorA = $(a).children('td').eq(coluna).text();
                             var valorB = $(b).children('td').eq(coluna).text();
 
-                            // Verifica se os valores estão no formato HHH:mm (inclui 1, 2 ou 3 dígitos nas horas)
+                            // Verifica se os valores estão no formato HHH:mm (inclui de 1 a 3 dígitos nas horas)
                             if (valorA.match(/^-?\d{1,3}:\d{2}$/) && valorB.match(/^-?\d{1,3}:\d{2}$/)) {
                                 valorA = horasParaMinutos(valorA);
                                 valorB = horasParaMinutos(valorB);
@@ -377,9 +377,9 @@
         ];
 
 
-        abre_form();
-        linha_form($campos);
-        fecha_form($buttons);
+        echo abre_form();
+        echo linha_form($campos);
+        echo fecha_form($buttons);
 
         
         $arquivos = [];
