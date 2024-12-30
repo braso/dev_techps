@@ -460,7 +460,7 @@ function index() {
 	if ($encontrado) {
 		$rowTotais = "<tr class='totais'>";
 		$rowTitulos = "<tr id='titulos' class='titulos'>";
-		$rowTitulos2 = "<tr id='titulos' class='titulos'>";
+		$rowTitulos2 = "<tr id='titulos2' class='titulos2'>";
 
 		if (!empty($_POST["empresa"])) {
 			if (!in_array($_SERVER["REQUEST_URI"], $dominiosAutotrac)) {
@@ -502,32 +502,32 @@ function index() {
 					"<th></th>"
 					. "<th></th>"
 					. "<th></th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>"
-					. "<th>ativo</th>"
-					. "<th>inativo</th>";
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>"
+					. "<th>Ativo</th>"
+					. "<th>Inativo</th>";
 			} else {
 				$rowTotais .=
 					"<th colspan='1'></th>"

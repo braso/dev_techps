@@ -30,11 +30,11 @@
 			</div>
 			<?= $tabelaMotivo ?>
 			<?php if ($quantFun) { ?>
-				<span style="font-size: 12px;">Marcações com <b>(*)</b> indicam intervalos em aberto</span>
-				<span style="margin-left: 19px; font-size: 12px;"><i id="iconLegenda" class="fa fa-circle" aria-hidden="true" style="color: yellow; border: 1px solid black; border-radius: 50%;"></i> A cor Indica que o tempo total de jornada excedeu o previsto.</span>
+				<span style="font-size: 8px;">Marcações com <b>(*)</b> indicam intervalos em aberto</span>
+				<span style="margin-left: 19px; font-size: 8px;"><i id="iconLegenda" class="fa fa-circle" aria-hidden="true" style="line-height: 7px !important; color: yellow; border: 1px solid black; border-radius: 50%;"></i> A cor Indica que o tempo total de jornada excedeu o previsto.</span>
 				<br>
-				<span style="font-size: 12px;">Marcações com <b>(----)</b> indicam intervalos em aberto</span>
-				<span style="margin-left: 10px; font-size: 12px;"><i id="iconLegenda1" class="fa fa-circle" aria-hidden="true" style="color: red;"></i> A cor Indica que o limite máximo de horas extras permitido foi ultrapassado.  </span>
+				<span style="font-size: 8px;">Marcações com <b>(----)</b> indicam intervalos em aberto</span>
+				<span style="margin-left: 10px; font-size: 8px;"><i id="iconLegenda1" class="fa fa-circle" aria-hidden="true" style="line-height: 7px !important; color: red;"></i> A cor Indica que o limite máximo de horas extras permitido foi ultrapassado.  </span>
 			<?php } ?>
 		</div>
 		<div class="portlet-body form" style="display: flex; flex-direction: column;">
