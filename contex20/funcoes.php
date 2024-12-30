@@ -59,17 +59,6 @@
 			die();
 		}
 	}
-	
-	// function diferenca_data(string $data1, string $data2=""){
-	// 	if(empty($data2)){
-	// 		$data2 = date("Y-m-d");
-	// 	}
-		
-	// 	// formato da data yyyy-mm-dd
-	// 	$date = new DateTime($data1);
-	// 	$interval = $date->diff(new DateTime($data2));
-	// 	return $interval->format("%Y-%M-%D");
-	// }
 
 	function validarCPF(string $cpf): bool{
 		// Extrai somente os números
@@ -244,12 +233,12 @@
 	function addToArray(array $array, int $position, $value): array{
 		$array = array_merge(array_slice($array, 0, $position, true), [$value], array_slice($array, $position, count($array)-$position, true));
 		return $array;
-	};
+	}
 
 	function remFromArray(array $array, int $position): array{
 		$array = array_merge(array_slice($array, 0, $position, true), array_slice($array, $position+1, count($array)-$position, true));
 		return $array;
-	};
+	}
 
 	function atualizar(string $tabela, array $campos, array $valores, string $id): void{
 		updateById($tabela, $campos, $valores, $id);
@@ -457,16 +446,6 @@
 		}
 		$_POST['msg_status'] = $msg;
 	}
-
-	// Obsoleto
-	// function separarPeriodo(string $periodo): array{
-	// 	preg_match_all("/(\d{2}\/\d{2}\/\d{4})+(\d{2}:\d{2}:\d{2})?/", $periodo, $matches);
-	// 	$matches = !empty($matches)? $matches[0]: $matches;
-	// 	foreach($matches as &$match){
-	// 		$match = DateTime::createFromFormat("d/m/Y", $match)->format("Y-m-d");
-	// 	}
-	// 	return $matches;
-	// }
 
 	function campo($nome,$variavel,$modificador,$tamanho,$mascara='',$extra=''){
 		global $CONTEX;

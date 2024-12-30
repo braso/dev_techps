@@ -554,10 +554,10 @@
 			}
 		}
 
-		abre_form();
+		echo abre_form();
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		linha_form($fields);
-		fecha_form($buttons);
+		echo linha_form($fields);
+		echo fecha_form($buttons);
 		
 		rodape();
 

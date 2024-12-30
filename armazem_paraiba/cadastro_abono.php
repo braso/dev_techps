@@ -142,15 +142,15 @@
 		$voltarInfo["busca_periodo"] = json_encode($voltarInfo["busca_periodo"]);
 
 		$b[] = botao("Voltar", "voltar", implode(",",array_keys($voltarInfo)), implode(",",array_values($voltarInfo))); 
-		abre_form();
+		echo abre_form();
 
 		echo campo_hidden("HTTP_REFERER", 	$voltarInfo["HTTP_REFERER"]);
 		echo campo_hidden("busca_empresa", ($voltarInfo["busca_empresa"]?? ""));
 		echo campo_hidden("busca_periodo", (str_replace("\"", "'", $voltarInfo["busca_periodo"])?? ""));
 		
-		linha_form($campos[0]);
-		linha_form($campos[1]);
-		fecha_form($b);
+		echo linha_form($campos[0]);
+		echo linha_form($campos[1]);
+		echo fecha_form($b);
 
 		rodape();
 	}

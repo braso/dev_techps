@@ -87,10 +87,10 @@
 			}
 		}
 
-		abre_form("Dados do Motivo");
+		echo abre_form("Dados do Motivo");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		linha_form($campos);
-		fecha_form($botoes);
+		echo linha_form($campos);
+		echo fecha_form($botoes);
 
 		rodape();
 	}
@@ -117,9 +117,9 @@
 			botao("Inserir","layout_motivo","","","","","btn btn-success")
 		];
 
-		abre_form();
-		linha_form($campos);
-		fecha_form($botoes);
+		echo abre_form();
+		echo linha_form($campos);
+		echo fecha_form($botoes);
 
 		$iconeModificar =	criarSQLIconeTabela("moti_nb_id", "modificarMotivo", "Modificar", "glyphicon glyphicon-search");
 		$iconeExcluir = 	criarSQLIconeTabela("moti_nb_id", "excluirMotivo", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?");
