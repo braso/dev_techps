@@ -354,9 +354,9 @@
         ];
 
 
-        abre_form();
-        linha_form($fields);
-        fecha_form($buttons);
+        echo abre_form();
+        echo linha_form($fields);
+        echo fecha_form($buttons);
 
         
         $arquivos = [];
