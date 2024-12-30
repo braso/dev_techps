@@ -567,8 +567,8 @@
 			}
 		}
 		
-		abre_form("Dados do Ajuste de Ponto");
-		linha_form($textFields);
+		echo abre_form("Dados do Ajuste de Ponto");
+		echo linha_form($textFields);
 		
 		echo campo_hidden("idMotorista", $_POST["idMotorista"]);
 		//Campos para retornar para a pesquisa do espelho de ponto ou após um registro de ponto{
@@ -580,9 +580,9 @@
 			echo campo_hidden("HTTP_REFERER", 		$_POST["HTTP_REFERER"]);
 		//}
 		
-		linha_form($variableFields);
-		linha_form($campoJust);
-		fecha_form($botoes);
+		echo linha_form($variableFields);
+		echo linha_form($campoJust);
+		echo fecha_form($botoes);
 
 		$iconeExcluir = criarSQLIconeTabela("pont_nb_id", "excluirPonto", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?", "excluirPontoJS(',pont_nb_id,')");
 
