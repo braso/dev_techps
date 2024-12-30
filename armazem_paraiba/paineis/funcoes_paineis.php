@@ -758,11 +758,13 @@
 		}
 
 		$pasta = dir($path.$dir);
-		while (($arquivo = $pasta->read()) !== false) {
-			// Ignora os diretórios especiais '.' e '..'
-			if ($arquivo != '.' && $arquivo != '..') {
-				$arquivoPath = $path .'/'.$dir.'/'. $arquivo;  // Caminho completo do arquivo
-				unlink($arquivoPath);  // Apaga o arquivo
+		if (is_dir($path.$dir)) {
+			while (($arquivo = $pasta->read()) !== false) {
+				// Ignora os diretórios especiais '.' e '..'
+				if ($arquivo != '.' && $arquivo != '..') {
+					$arquivoPath = $path .'/'.$dir.'/'. $arquivo;  // Caminho completo do 
+					unlink($arquivoPath);  // Apaga o arquivo
+				}
 			}
 		}
 		$pasta->close();
@@ -805,109 +807,91 @@
 						$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
 
 						foreach ($endosso["endo_tx_pontos"] as $ponto) {
-							$inicioJornadaWarning = is_int(strpos($ponto["3"], "fa-warning"));
-							$fimJornadaWarning = is_int(strpos($ponto["6"], "fa-warning"));
+							$inicioJornadaWarning = strpos($ponto["3"], "fa-warning") !== false && strpos($ponto["3"], "color:red;");
+							$fimJornadaWarning = strpos($ponto["6"], "fa-warning") !== false  && strpos($ponto["6"], "color:red;");
+							$diffJornada = $ponto["11"];
+							$diffJornadaEfetiva = $ponto["13"];
 
-							// Verificar se o inicio ou fim têm "fa-warning" e incrementar apenas uma vez
+							// Verificações jornada
 							if ($inicioJornadaWarning || $fimJornadaWarning) {
-								$totalMotorista["jornadaPrevista"] += 1;
+								$totalMotorista["12"] += 1;
 							}
 
-							if (is_int(strpos($ponto[11], "fa-info-circle")) && is_int(strpos($ponto[11], "color:red;"))) {
-								$totalMotorista["jornada"] += 1;
-							}
-
-							if (is_int(strpos($ponto[13], "fa-warning")) && is_int(strpos($ponto[13], "color:orange;"))) {
-								$totalMotorista["jornadaEfetiva"] += 1;
-							}
-
-							if (
-								$inicioJornadaWarning && strpos($ponto[12], "fa-info-circle") !== false &&
-								strpos($ponto[12], "color:green;") !== false ||
-								$inicioJornadaWarning && strpos($ponto[12], "fa fa-warning") !== false &&
-								strpos($ponto[12], "color:orange;") !== false
-							) {
+							if ($inicioJornadaWarning && strpos($ponto["12"], "fa-info-circle") !== false && 
+								strpos($ponto["12"], "color:green;") !== false) {
 								$totalMotorista["faltaJustificada"] += 1;
 							}
 
-							if ($inicioJornadaWarning && strpos($ponto[12], "fa-info-circle") == false && strpos($ponto[12], "color:green;" == false)
-							|| $inicioJornadaWarning && strpos($ponto[12], "fa fa-warning") == false && strpos($ponto[12], "color:orange;" == false)) {
+							if($inicioJornadaWarning && strpos($ponto["12"], "fa-info-circle") === false && strpos($ponto["12"], "color:green;") === false){
 								$totalMotorista["falta"] += 1;
 							}
 
-							if (
-								is_int(strpos($ponto[13], "fa-warning")) && is_int(strpos($ponto[13], "color:orange;"))
-								&& is_int(strpos($ponto[13], "Tempo excedido de 10:00"))
-							) {
-								$totalMotorista["jornadaExedida10h"] += 1;
+							if (strpos($diffJornada, "fa-info-circle") !== false && strpos($diffJornada, "color:red;") !== false) {
+								$totalMotorista["jornada"] += 1;
+							}
+							if (strpos($diffJornadaEfetiva, "fa-warning") !== false && strpos($diffJornadaEfetiva, "color:orange;") !== false) {
+								$totalMotorista["jornadaEfetiva"] += 1;
+							}
+							if (strpos($diffJornadaEfetiva, "Tempo excedido de 10:00") !== false) {
+								$totalMotorista["jornadaExcedido10h"] += 1;
+							}
+							if (strpos($diffJornadaEfetiva, "Tempo excedido de 12:00") !== false) {
+								$totalMotorista["jornadaExcedido12h"] += 1;
 							}
 
-							if (
-								is_int(strpos($ponto[13], "fa-warning")) && is_int(strpos($ponto[13], "color:orange;"))
-								&& is_int(strpos($ponto[13], "Tempo excedido de 12:00"))
-							) {
-								$totalMotorista["jornadaExedida12h"] += 1;
-							}
-
-							$inicioRefeicao = is_int(strpos($ponto[4], "fa-warning"));
-							$fimRefeicao = is_int(strpos($ponto[5], "fa-warning"));
+							// Refeição
+							$inicioRefeicao = strpos($ponto["4"], "fa-warning") !== false;
+							$fimRefeicao = strpos($ponto["5"], "fa-warning") !== false;
+							$diffRefeicao = $ponto["7"];
 
 							if ($inicioRefeicao || $fimRefeicao) {
-								$totalMotorista["refeicao"] += 1;
+								$totalMotorista["refeicao"]++;
+							} 
+							else if (strpos($diffRefeicao, "fa-warning") !== false) {
+								$totalMotorista["refeicao"]++;
 							}
-
-							if (!$inicioRefeicao && !$fimRefeicao && is_int(strpos($ponto[7], "fa-warning"))) {
-								$totalMotorista["refeicao"] += 1;
+							if (strpos($diffRefeicao, "fa-info-circle") !== false && strpos($diffRefeicao, "color:orange;") !== false) {
+								$totalMotorista["refeicao"]++;
 							}
-
-							if (is_int(strpos($ponto[7], "fa-info-circle")) && is_int(strpos($ponto[7], "color:orange;"))) {
-								$totalMotorista["refeicao"] += 1;
-							}
-
 							if ($inicioRefeicao || $fimRefeicao) {
 								$totalMotorista["refeicaoSemRegistro"] += 1;
 							}
-
-							if ($inicioRefeicao == false && $fimRefeicao == false && is_int(strpos($ponto[7], "fa-warning")) && is_int(strpos($ponto[7], "01:00h"))) {
+							if ($inicioRefeicao == false && $fimRefeicao == false && strpos($diffRefeicao, "01:00h") !== false) {
 								$totalMotorista["refeicao1h"] += 1;
 							}
-
-							if (
-								is_int(strpos($ponto[7], "fa-info-circle")) && is_int(strpos($ponto[7], "color:orange;"))
-								&& is_int(strpos($ponto[7], "02:00h"))
-							) {
+							if (strpos($diffRefeicao, "02:00h") !== false) {
 								$totalMotorista["refeicao2h"] += 1;
 							}
 
-							if (is_int(strpos($ponto[8], "fa-info-circle")) && is_int(strpos($ponto[8], "color:red;"))) {
-								$totalMotorista["espera"] += 1;
+							// Máximo Direção Contínua
+							$maximoDirecaoContinua = $ponto["14"];
+							if (strpos($maximoDirecaoContinua, "fa-warning") !== false && strpos($maximoDirecaoContinua, "color:orange;") !== false) {
+								$totalMotorista["mdc"]++;
 							}
-
-							if (is_int(strpos($ponto[9], "fa-info-circle")) && is_int(strpos($ponto[9], "color:red;"))) {
-								$totalMotorista["descanso"] += 1;
-							}
-
-							if (is_int(strpos($ponto[10], "fa-info-circle")) && is_int(strpos($ponto[10], "color:red;"))) {
-								$totalMotorista["repouso"] += 1;
-							}
-
-							if (is_int(strpos($ponto[14], "fa-warning")) && is_int(strpos($ponto[14], "color:orange;"))) {
-								$totalMotorista["mdc"] += 1;
-							}
-
-							if (
-								is_int(strpos($ponto[14], "fa-warning")) && is_int(strpos($ponto[14], "color:orange;"))
-								&& is_int(strpos($ponto[14], "digiridos não respeitado"))
-							) {
+							if (strpos($maximoDirecaoContinua, "digiridos não respeitado") !== false) {
 								$totalMotorista["mdcDescanso30m5h"] += 1;
 							}
-
-							if (is_int(strpos($ponto[15], "faltaram"))) {
-								$totalMotorista["intersticioSuperior"] += 1;
+							if (strpos($maximoDirecaoContinua, "00:15 não respeitado") !== false) {
+								$totalMotorista["mdcDescanso15m"] += 1;
+							}
+							if (strpos($maximoDirecaoContinua, "00:30 não respeitado") !== false) {
+								$totalMotorista["mdcDescanso30m"] += 1;
 							}
 
-							if (is_int(strpos($ponto[15], "ininterruptas"))) {
-								$totalMotorista["intersticioInferior"] += 1;
+							// Outros campos de descanso
+							foreach (["8", "9", "10"] as $campo) {
+								$diffCampo = $ponto["diff".$campo];
+								if (strpos($diffCampo, "fa-info-circle") !== false && strpos($diffCampo, "color:red;") !== false) {
+									$totalMotorista[strtolower($campo)]++;
+								}
+							}
+
+							// Interstício
+							if (strpos($ponto["15"], "faltaram") !== false) {
+								$totalMotorista["intersticioSuperior"]++;
+							}
+							if (strpos($ponto["15"], "ininterruptas") !== false) {
+								$totalMotorista["intersticioInferior"]++;
 							}
 						}
 						$motoristaTotais[] = $totalMotorista;
@@ -930,7 +914,7 @@
 				foreach ($diaPonto as $dia) {
 					// Jornada
 					$inicioJornadaWarning = strpos($dia["inicioJornada"], "fa-warning") !== false && strpos($dia["inicioJornada"], "color:red;");
-					$fimJornadaWarning = strpos($dia["fimJornada"], "fa-warning") !== false  && strpos($dia["inicioJornada"], "color:red;");
+					$fimJornadaWarning = strpos($dia["fimJornada"], "fa-warning") !== false  && strpos($dia["fimJornada"], "color:red;");
 					$diffJornada = $dia["diffJornada"];
 					$diffJornadaEfetiva = $dia["diffJornadaEfetiva"];
 
@@ -968,7 +952,8 @@
 
 					if ($inicioRefeicao || $fimRefeicao) {
 						$totalMotorista["refeicao"]++;
-					} elseif (strpos($diffRefeicao, "fa-warning") !== false) {
+					} 
+					else if (strpos($diffRefeicao, "fa-warning") !== false) {
 						$totalMotorista["refeicao"]++;
 					}
 					if (strpos($diffRefeicao, "fa-info-circle") !== false && strpos($diffRefeicao, "color:orange;") !== false) {
@@ -1000,7 +985,7 @@
 					}
 
 					// Outros campos de descanso
-					foreach (["Refeicao", "Espera", "Descanso", "Repouso"] as $campo) {
+					foreach (["Espera", "Descanso", "Repouso"] as $campo) {
 						$diffCampo = $dia["diff".$campo];
 						if (strpos($diffCampo, "fa-info-circle") !== false && strpos($diffCampo, "color:red;") !== false) {
 							$totalMotorista[strtolower($campo)]++;
@@ -1017,13 +1002,14 @@
 				}
 
 				$motoristaTotais[] = $totalMotorista;
+
+				if (!is_dir($path."/nao_endossado/")) {
+					mkdir($path."/nao_endossado/", 0755, true);  // Cria o diretório com permissões adequadas
+				}
+	
+				file_put_contents($path."/nao_endossado/".$motorista["enti_tx_matricula"].".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 			}
 
-			if (!is_dir($path."/nao_endossado/")) {
-				mkdir($path."/nao_endossado/", 0755, true);  // Cria o diretório com permissões adequadas
-			}
-
-			file_put_contents($path."/nao_endossado/".$motorista["enti_tx_matricula"].".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 		}
 		
 		$totaisEmpr = [
@@ -1070,14 +1056,7 @@
 
 	function criar_relatorio_ajustes() {
 		$periodoInicio = new DateTime($_POST["busca_periodo"][0]);
-		$hoje = new DateTime();
-
-		if ($periodoInicio->format('Y-m') === $hoje->format('Y-m')) {
-			// Se for o mês atual, a data limite é o dia de hoje
-			$periodoFim = $hoje;
-		} else {
-			$periodoFim = new DateTime($periodoInicio->format("Y-m-t"));
-		}
+		$periodoFim = new DateTime($_POST["busca_periodo"][1]);
 
 		$empresas = mysqli_fetch_all(query(
 			"SELECT empr_nb_id, empr_tx_nome FROM empresa"
@@ -1105,7 +1084,7 @@
 
 		$macros = array_column($macros, 'macr_tx_nome');
 			
-		foreach ($empresas as $empresa) {
+		foreach ($empresas as $empresa) {;
 			$totaisEmpr = []; 
 			$totaisEmpresa = []; 
 			$rows = [];
@@ -1126,13 +1105,28 @@
 				MYSQLI_ASSOC
 			);
 
+			$pasta = dir($path);
+			if (is_dir($pasta)) {
+				while (($arquivo = $pasta->read()) !== false) {
+					// Ignora os diretórios especiais '.' e '..'
+					if ($arquivo != '.' && $arquivo != '..') {
+						$arquivoPath = $path .'/'. $arquivo;  // Caminho completo do arquivo
+						unlink($arquivoPath);  // Apaga o arquivo
+					}
+				}
+				$pasta->close();
+			}
+
 			foreach ($motoristas as $motorista) {
 				$ocorrencias = [];
 				$verificaValores = []; 
 
 				foreach($macros as $macro){
 					if (!isset($ocorrencias[$macro])) {
-						$ocorrencias[$macro] = 0;
+						$ocorrencias[$macro] = [
+							'ativo' => 0,
+							'inativo' => 0,
+						];
 					}
 				}
 				$totalMotorista = [
@@ -1144,6 +1138,8 @@
 					// "dataInicio"				=> $periodoInicio->format("d/m/Y"),
 					// "dataFim"					=> $periodoFim->format("d/m/Y")
 				];
+				$diaInicio = $periodoInicio->format('Y-m-d');
+				$diafim = $periodoFim->format('Y-m-d');
 
 				$pontos = mysqli_fetch_all(
 					query(
@@ -1153,21 +1149,26 @@
 						." LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id"
 						." INNER JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno"
 						." AND macroponto.macr_tx_fonte = 'positron'"
-						." WHERE pont_tx_matricula = '1076'"
+						." WHERE pont_tx_matricula = '$motorista[enti_tx_matricula]'"
 						." AND pont_tx_justificativa IS NOT NULL"
-						." AND pont_tx_data BETWEEN STR_TO_DATE('2024-12-01 00:00:00', '%Y-%m-%d %H:%i:%s')"
-						." AND STR_TO_DATE('2024-12-18 23:59:59', '%Y-%m-%d %H:%i:%s')"
+						." AND pont_tx_data BETWEEN STR_TO_DATE('$diaInicio 00:00:00', '%Y-%m-%d %H:%i:%s')"
+						." AND STR_TO_DATE('$diafim 23:59:59', '%Y-%m-%d %H:%i:%s')"
 						." ORDER BY ponto.pont_tx_data ASC;"
 					),
 					MYSQLI_ASSOC
 				);
 
 				foreach ($pontos as $registro) {
-
 					$macr_tx_nome = $registro['macr_tx_nome'];
-
+					$pont_tx_status = $registro['pont_tx_status'];
 					if (in_array($macr_tx_nome, $macros)) {
-						$ocorrencias[$macr_tx_nome]++;
+						// Inicializa como 0 se não existir
+						if (!isset($ocorrencias[$macr_tx_nome][$pont_tx_status])) {
+							$ocorrencias[$macr_tx_nome][$pont_tx_status] = 0;
+						}
+				
+						// Incrementa o contador
+						$ocorrencias[$macr_tx_nome][$pont_tx_status]++;
 					}
 				}
 
@@ -1175,41 +1176,45 @@
 				$totalMotorista['pontos'] = $pontos;
 				// Filtrar apenas os campos numéricos que precisam ser verificados
 				$verificaValores = array_filter($totalMotorista, function ($key) {
-						return !in_array($key, ["matricula", "nome", "ocupacao","pontos"]);
-					}, ARRAY_FILTER_USE_KEY);
+					return !in_array($key, ["matricula", "nome", "ocupacao", "pontos"]);
+				}, ARRAY_FILTER_USE_KEY);
 				
 				$rows[] = $ocorrencias;
-			    if(array_sum($verificaValores) > 0){
+			    if (array_sum(array_map(function($valor) {
+					return array_sum($valor); // Soma os valores de 'ativo' e 'inativo' dentro de cada chave
+				}, $verificaValores)) > 0){
 					file_put_contents($path."/". $motorista["enti_tx_matricula"]. ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE));
 				}	
 			}
 
-			foreach ($rows as $key => $values) {
-				foreach ($values as $key => $value) {
-					if (!isset($totaisEmpr[$key])) {
-						$totaisEmpr[$key] = 0; // Inicializa a chave com 0, se ainda não existir
+			foreach ($rows as $row => $eventos) {
+				foreach ($eventos as $evento => $valores) {
+					if (!isset($totaisEmpr[$evento])) {
+						$totaisEmpr[$evento] = 0; // Inicializa a soma para a chave do evento
 					}
-					$totaisEmpr[$key] += $value;
+			
+					foreach ($valores as $estado => $value) {
+						$totaisEmpr[$evento] += $value; // Incrementa o total para a chave do evento
+					}
 				}
 			}
 
 			$totais [] = $totaisEmpr;
 			$empresa = array_merge($totaisEmpr, $empresa);
-
 			
 			$empresa["qtdMotoristas"] = count($motoristas);
 			$empresa["dataInicio"] = $periodoInicio->format("d/m/Y");
-			$empresa["dataFim"] = $hoje->format("d/m/Y");
+			$empresa["dataFim"] = $periodoFim->format("d/m/Y");
 			
 			file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", json_encode($empresa));
 		}
 
 		foreach ($totais as $key => $values) {
 			foreach ($values as $key => $value) {
-				if (!isset($totaisEmpresa[$key])) {
-					$totaisEmpresa[$key] = 0; // Inicializa a chave com 0, se ainda não existir
+				if (!isset($totaisEmpresa[$key][$value])) {
+					$totaisEmpresa[$key][$value] = 0; // Inicializa a chave com 0, se ainda não existir
 				}
-				$totaisEmpresa[$key] += $value;
+				$totaisEmpresa[$key][$value] += $value;
 			}
 		}
 		
@@ -1217,7 +1222,7 @@
 		if (empty($_POST["empresa"])) {
 			$path = "./arquivos/ajustes"."/". $periodoInicio->format("Y-m");
 			$totaisEmpresa["dataInicio"] = $periodoInicio->format("d/m/Y");
-			$totaisEmpresa["dataFim"] = $hoje->format("d/m/Y");
+			$totaisEmpresa["dataFim"] = $periodoFim->format("d/m/Y");
 			file_put_contents($path."/empresas.json", json_encode($totaisEmpresa));
 		}
 

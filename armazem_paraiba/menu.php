@@ -21,8 +21,7 @@
 		$camposOcultosProdução = [];
 		if(is_int(strpos($_SERVER["REQUEST_URI"], 'dev'))){
 			$camposOcultosProdução = [
-				"/paineis/jornada.php" 	  => "Jornada Aberta",
-				"/paineis/nc_juridica.php"=> "Não Conformidades Juridicas Atualizado"
+				"/paineis/ajustes.php" 	  => "Ajustes",
 			];
 		}
 		
@@ -45,8 +44,10 @@
 				"/nao_cadastrados.php" 	=> "Não cadastrados"
 			],
 			"painel" => [
+				"/paineis/endosso.php"	  => "Endosso",
 				"/paineis/saldo.php"	  => "Saldo",
-				"/paineis/endosso.php"	  => "Endosso"
+				"/paineis/jornada.php" 	  => "Jornada Aberta",
+				"/paineis/nc_juridica.php"=> "Não Conformidades Juridicas Atualizado"
 			] + $camposOcultosProdução,
 			// "suporte" => [
 			// 	"/#" 		=> "Perguntas Frequentes", 

@@ -354,7 +354,7 @@
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='descanso'>Descanso</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='repouso'>Repouso</th>";
             $rowTitulos .= "</tr>";
-            $titulo = "de Jornada Aberta";
+            $titulo = "Relatório de Jornada Aberta";
             $mostra = false;
             include_once "painel_html2.php";
         }
