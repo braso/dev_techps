@@ -371,7 +371,7 @@
 
 		if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
 			echo implode("", $tabelasPonto);
-			echo "<script>window.onload = function() {document.getElementById('dadosResumo').innerHTML = '<b>Total: {$_POST["counts"]["total"]} | Não Conformidades: {$_POST["counts"]["naoConformidade"]}</b>';};</script>";
+			echo "<script>window.onload = function() {document.getElementById('dadosResumo').innerHTML = '<b>Funcionários: {$_POST["counts"]["total"]} | Não Conformidades: {$_POST["counts"]["naoConformidade"]}</b>';};</script>";
 		}
 		echo "<div class='printable'></div><style>";
 		include "css/nao_conformidade.css";
