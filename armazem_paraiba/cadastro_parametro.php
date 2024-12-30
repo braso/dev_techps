@@ -381,18 +381,18 @@
 			}
 		}
 		
-		abre_form("Dados dos Parâmetros");
+		echo abre_form("Dados dos Parâmetros");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		fieldset("Geral");
-		linha_form($campos[0]);
+		echo linha_form($campos[0]);
 		fieldset("Hora Extra");
-		linha_form($campos[1]);
+		echo linha_form($campos[1]);
 		fieldset("Diárias");
-		linha_form($campos[2]);
+		echo linha_form($campos[2]);
 		fieldset("Acordo Sindical");
-		linha_form($campos[3]);
+		echo linha_form($campos[3]);
 		fieldset("Outros");
-		linha_form($campos[4]);
+		echo linha_form($campos[4]);
 
 		if(!empty($a_mod["para_nb_userCadastro"])){
 			$a_userCadastro = carregar("user", $a_mod["para_nb_userCadastro"]);
@@ -414,11 +414,11 @@
 					);
 				}
 				echo "<br>";
-				linha_form($cAtualiza);
+				echo linha_form($cAtualiza);
 			}
 		}
 
-		fecha_form($botoes);
+		echo fecha_form($botoes);
 
 		if (!empty($a_mod["para_nb_id"])) {
 			$arquivos = mysqli_fetch_all(query(
@@ -486,9 +486,9 @@
 			botao("Inserir", "mostrarFormParametro","","","","","btn btn-success"),
 		];
 		
-		abre_form();
-		linha_form($campos);
-		fecha_form($botoes);
+		echo abre_form();
+		echo linha_form($campos);
+		echo fecha_form($botoes);
 
 		$iconeModificar = 	criarSQLIconeTabela("para_nb_id","modificarParametro","Modificar","glyphicon glyphicon-search");
 		$iconeExcluir = 	criarSQLIconeTabela("para_nb_id","excluirParametro","Excluir","glyphicon glyphicon-remove","Deseja inativar o registro?");

@@ -118,14 +118,16 @@
 		for($f = 0; $f < count($intervalos); $f++){
 			$date = date_add(new DateTime("1970-01-01 00:00:00"), $intervalos[$f][1]);
 			$intervalos[$f][1] = sprintf("%02d:%02d", abs(intval((dateTimeToSecs($date)/60)/60)), abs(intval((dateTimeToSecs($date)/60)%60)));
-			if($intervalos[$f][0] == true && $intervalos[$f][1] > $mdc){
+			if($intervalos[$f][0] == true && $intervalos[$f][1] > $mdc){ //Se o intervalo é de um horário ativo de trabalho E for maior que o MDC atual.
 				$mdc = $intervalos[$f][1];
 			}
 		}
 
+		return $mdc;
+
 		if($mdc > "05:30"){
 			$mdc = "<a style='white-space: nowrap;'>".
-						"<i style='color:orange;' title='".$baseErrMsg."' class='fa fa-warning'></i>".
+						"<i style='color:orange;' title='{$baseErrMsg}' class='fa fa-warning'></i>".
 					"</a>".
 					"&nbsp;".$mdc
 			;
@@ -142,11 +144,6 @@
 			$tempoTrabalho = "05:30";
 			$tempoDescanso = "00:15";
 
-			if($intervalos[$f][0] == false){
-				$intervalos = array_splice($intervalos, $f+1, count($intervalos), []);
-				$f = -1;
-				continue;
-			}
 			for($f2 = 0; $f2 < count($intervalos); $f2++){
 				if($intervalos[$f2][0]){
 					$somaTempoAtivo = operarHorarios([$somaTempoAtivo, $intervalos[$f2][1]], "+");
@@ -175,7 +172,7 @@
 	
 			if($somaTempoAtivo > $tempoTrabalho && $somaTempoDescanso < $tempoDescanso){
 				$mdc = "<a style='white-space: nowrap;'>".
-							"<i style='color:orange;' title='".$baseErrMsg."\n\nDirigido: ".$somaTempoAtivo."\nDescansado: ".$somaTempoDescanso."' class='fa fa-warning'></i>".
+							"<i style='color:orange;' title='{$baseErrMsg}\n\nDirigido: ".$somaTempoAtivo."\nDescansado: ".$somaTempoDescanso."' class='fa fa-warning'></i>".
 						"</a>".
 						"&nbsp;".$mdc
 				;
@@ -592,7 +589,7 @@
 		$params = [$saldoBruto, $he50, $he100, $max50APagar];
 
 		foreach($params as $param){
-			if(!preg_match("/^-?\d{2,4}:\d{2}$/", $param)){
+			if(!preg_match("/^-?\d{2,10}:\d{2}$/", $param)){
 				throw new Exception("Format error: ".$param);
 			}
 		}
@@ -937,7 +934,7 @@
 		), MYSQLI_ASSOC);
 
 		//JORNADA PREVISTA{
-			$abonos = mysqli_fetch_array(query(
+			$abonos = mysqli_fetch_assoc(query(
 				"SELECT * FROM abono, motivo, user 
 					WHERE abon_tx_status = 'ativo' 
 						AND abon_nb_userCadastro = user_nb_id 
@@ -946,7 +943,7 @@
 						AND abon_nb_motivo = moti_nb_id
 					ORDER BY abon_nb_id DESC 
 					LIMIT 1;"
-			), MYSQLI_BOTH);
+			));
 
 			//Consultar feriados do dia{
 				$stringFeriado = getFeriados($motorista, $data);
@@ -978,7 +975,6 @@
 		//CASO NÃO HAJA PONTOS{
 			if(count($pontosDia) == 0){
 				$aRetorno["diffSaldo"] = getSaldoDiario($jornadaPrevista, "00:00");
-
 				if((preg_replace("/([^\-^0-:])+/", "", strip_tags($aRetorno["jornadaPrevista"]))) != "00:00"){
 					$aRetorno["inicioJornada"][] = "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
 				}
@@ -1533,6 +1529,15 @@
 				MYSQLI_ASSOC
 			);
 
+			$legendas = array_map(function($legenda){return $legenda["moti_tx_legenda"];}, $legendas);
+
+			
+			$legendas = array_merge($legendas, [
+				"D+",
+				"*",
+				"<strong>"
+			]);
+
 			$getStringPontosColuna = function (array $pontos, array $legendas){
 				if(count($pontos) == 0 || (count($pontos) == 1 && $pontos[0] == "")){
 					return "";
@@ -1540,13 +1545,16 @@
 				
 				foreach($pontos as &$value){
 					//Formatar datas para H:i
-					if(preg_match("/-?\d{2,4}:\d{2}:\d{2}$/", $value, $matches)){
+					if(preg_match("/-?\d{2,10}:\d{2}:\d{2}$/", $value, $matches)){
 						$value = substr($matches[0], 0, -3);
 					}
 				}
 				$pontos = implode("<br>", $pontos);
+
+				$search = array_map(function($legenda){return "<br>{$legenda}";}, $legendas);
+				$replace = array_map(function($legenda){return " {$legenda}";}, $legendas);
 				
-				$result = str_replace(["<br>D+", "<br>*", "<br><strong>"], [" D+", " *", " <strong>"], $pontos);
+				$result = str_replace($search, $replace, $pontos);
 				return $result;
 			};
 

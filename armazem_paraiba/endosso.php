@@ -297,9 +297,9 @@
 
 		echo "<style>.row div {min-width: auto;}</style>";
 
-		abre_form();
-		linha_form($fields);
-		fecha_form($buttons, "<span id='dadosResumo' style='height:'><b>".$carregando."</b></span>");
+		echo abre_form();
+		echo linha_form($fields);
+		echo fecha_form($buttons, "<span id='dadosResumo' style='height:'><b>".$carregando."</b></span>");
 
 		$counts = [
 			"total" => 0,								//$countEndosso
@@ -445,7 +445,7 @@
 							; 
 						}
 
-						abre_form(
+						echo abre_form(
 							$aEmpresa["empr_tx_nome"]."<br>"
 							."[".$aMotorista["enti_tx_matricula"]."] ".$aMotorista["enti_tx_nome"]."<br>"
 							."<br>"/*."$parametroPadrao<br><br>"*/
@@ -460,7 +460,7 @@
 						];
 
 						echo montarTabelaPonto($cab, $aDia);
-						fecha_form();
+						echo fecha_form();
 
 						echo 
 							"<form name='form_imprimir_relatorio_".$aMotorista["enti_tx_matricula"]."' method='post' target='_blank'>
@@ -509,8 +509,8 @@
 			}
 
 			if($counts["endossados"]["nao"] > 0){
-				abre_form($motNaoEndossados);
-				fecha_form();
+				echo abre_form($motNaoEndossados);
+				echo fecha_form();
 			}
 			if(!empty($_POST["busca_motorista"]) && $counts["endossados"]["sim"] == 0){
 				echo 

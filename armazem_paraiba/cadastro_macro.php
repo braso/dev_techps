@@ -73,10 +73,10 @@
 			}
 		}
 		
-		abre_form("Dados do Macro");
+		echo abre_form("Dados do Macro");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		linha_form($c);
-		fecha_form($botao);
+		echo linha_form($c);
+		echo fecha_form($botao);
 
 		rodape();
 
@@ -101,9 +101,9 @@
 			// botao("Inserir","layout_macro")
 		];
 		
-		abre_form();
-		linha_form($campos);
-		fecha_form($botoes);
+		echo abre_form();
+		echo linha_form($campos);
+		echo fecha_form($botoes);
 
 		$iconeModificar = criarSQLIconeTabela("macr_nb_id", "modificarMacro", "Modificar", "glyphicon glyphicon-search");
 

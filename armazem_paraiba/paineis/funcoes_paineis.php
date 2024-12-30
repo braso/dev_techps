@@ -757,12 +757,12 @@
 			$dir = '/nao_endossado';
 		}
 
-		if (is_dir($path.$dir) === true) {
+		if (is_dir($path.$dir)){
 			$pasta = dir($path.$dir);
 			while (($arquivo = $pasta->read()) !== false) {
 				// Ignora os diretórios especiais '.' e '..'
 				if ($arquivo != '.' && $arquivo != '..') {
-					$arquivoPath = $path .'/'.$dir.'/'. $arquivo;  // Caminho completo do 
+					$arquivoPath = $path.'/'.$dir.'/'.$arquivo;  // Caminho completo do 
 					unlink($arquivoPath);  // Apaga o arquivo
 				}
 			}

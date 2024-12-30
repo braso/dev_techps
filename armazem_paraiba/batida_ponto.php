@@ -447,9 +447,9 @@
 			$fields[] = textarea("Justificativa", "justificativa", ($_POST["justificativa"]?? ""), 5, "style='resize: vertical;' placeholder='Em caso de inconsistência, justificar aqui.'");
 		}
 
-		abre_form();
-		linha_form($fields);
-		fecha_form($botoesVisiveis);
+		echo abre_form();
+		echo linha_form($fields);
+		echo fecha_form($botoesVisiveis);
 
 
 		$gridFields = [

@@ -27,6 +27,7 @@
 					<span><b>Empresa:</b> <?= $empresa["empr_tx_nome"] ?></span>
 				<?php } ?>
 				<?= $quantFun ?>
+				<?= $tabelaMotivo ?>
 			</div>
 			<?= $tabelaMotivo ?>
 			<?php if ($quantFun) { ?>

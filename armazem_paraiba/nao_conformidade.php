@@ -91,6 +91,7 @@
 
 
 		foreach($motoristas as $motorista){
+			$_POST["counts"]["total"]++;
 			// if(empty($motorista["enti_tx_nome"]) || empty($motorista["enti_tx_matricula"])){
 			// 	continue;
 			// }

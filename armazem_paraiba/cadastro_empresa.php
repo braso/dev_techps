@@ -523,9 +523,9 @@
 			}
 		}
 		
-		abre_form("Dados da Empresa/Filial");
+		echo abre_form("Dados da Empresa/Filial");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		linha_form($c);
+		echo linha_form($c);
 		echo "<br>";
 		fieldset("CONVEÇÃO SINDICAL - JORNADA DO FUNCIONÁRIO PADRÃO");
 
@@ -542,9 +542,9 @@
 			}
 		}
 
-		linha_form($cJornada);
+		echo linha_form($cJornada);
 
-		fecha_form($botao);
+		echo fecha_form($botao);
 
 		echo 
 			"<iframe id=frame_parametro style='display: none;'></iframe>
@@ -654,9 +654,9 @@
 			botao("Inserir","visualizarCadastro","","","","","btn btn-success")
 		];
 		
-		abre_form();
-		linha_form($c);
-		fecha_form($botao);
+		echo abre_form();
+		echo linha_form($c);
+		echo fecha_form($botao);
 
 		$iconeModificar = criarSQLIconeTabela("empr_nb_id", "modificarEmpresa", "Modificar", "glyphicon glyphicon-search");
 		$iconeExcluir = criarSQLIconeTabela("empr_nb_id", "excluirEmpresa", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?");
