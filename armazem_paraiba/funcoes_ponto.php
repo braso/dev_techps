@@ -55,14 +55,13 @@
 		//Horários com formato de rH:i. Ex.: 00:04, 05:13, -01:12.
 		//$Operação
 
-		if(count($horarios) == 0 || !in_array($operacao, ["+", "-", "*", "/"])){
+		if(empty($horarios) || !in_array($operacao, ["+", "-", "*", "/"])){
 			return 0;
 		}
 
 		if(empty($horarios[0])){
 			$horarios[0] = "00:00";
 		}
-
 		$horarios[0] = preg_replace("/([^\-^0-:])+/", "", $horarios[0]);
 		$horarios[0] = explode(":", $horarios[0]);
 		$horarios[0] = intval($horarios[0][0]*60)+(($horarios[0][0][0] == "-")?-1:1)*intval($horarios[0][1]);
@@ -73,10 +72,13 @@
 		foreach($horarios as $horario){
 			if(empty($horario)){
 				$horario = "00:00";
+			}else{
+			    $horario = preg_replace("/([^\-^0-:])+/", "", $horario);
 			}
 			$match = "";
+
 			if(!preg_match("/^-?\d{2,10}:\d{2}$/", $horario, $match)){
-				echo "<script>console.log('Format error: |".strval($horario)."|')</script>";
+				echo "<script>console.log('Format error (operarHorarios): |".strval($horario)."|')</script>";
 				continue;
 			}
 
@@ -590,7 +592,7 @@
 
 		foreach($params as $param){
 			if(!preg_match("/^-?\d{2,10}:\d{2}$/", $param)){
-				throw new Exception("Format error: ".$param);
+				throw new Exception("Format error (calcularHorasAPagar): ".$param);
 			}
 		}
 
