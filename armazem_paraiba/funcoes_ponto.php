@@ -1360,17 +1360,17 @@
 					}
 				//}
 
-				if((!isset($registros["inicioRefeicao"][0]) || empty($aRetorno["inicioRefeicao"][0])) && $jornadaEfetiva > "06:00"){
-					$aRetorno["inicioRefeicao"][] = "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>";
-				}else{
-					$aRetorno["inicioRefeicao"][] = $avisoRefeicao;
-				}
+				// if((!isset($registros["inicioRefeicao"][0]) || empty($aRetorno["inicioRefeicao"][0])) && $jornadaEfetiva > "06:00"){
+				// 	$aRetorno["inicioRefeicao"][] = "<a><i style='color:red;' title='Batida início de refeição não registrada!' class='fa fa-warning'></i></a>";
+				// }else{
+				// 	$aRetorno["inicioRefeicao"][] = $avisoRefeicao;
+				// }
 
-				if((!isset($registros["fimRefeicao"][0]) || empty($aRetorno["fimRefeicao"][0])) && ($jornadaEfetiva > "06:00")){
-					$aRetorno["fimRefeicao"][] 	  = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>";
-				}else{
-					$aRetorno["fimRefeicao"][] = $avisoRefeicao;
-				}
+				// if((!isset($registros["fimRefeicao"][0]) || empty($aRetorno["fimRefeicao"][0])) && ($jornadaEfetiva > "06:00")){
+				// 	$aRetorno["fimRefeicao"][] 	  = "<a><i style='color:red;' title='Batida fim de refeição não registrada!' class='fa fa-warning'></i></a>";
+				// }else{
+				// 	$aRetorno["fimRefeicao"][] = $avisoRefeicao;
+				// }
 				if(!empty($avisoRefeicao)){
 					$aRetorno["diffRefeicao"] = $avisoRefeicao." ".$aRetorno["diffRefeicao"];
 				}
