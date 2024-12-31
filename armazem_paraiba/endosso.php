@@ -454,7 +454,7 @@
 						);
 						
 						$cab = [
-							"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
+							"", "DATA", "<div style='margin:11px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 							"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "H.E. ".$aMotorista["enti_tx_percHESemanal"]."%", "H.E. ".$aMotorista["enti_tx_percHEEx"]."%",
 							"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 						];

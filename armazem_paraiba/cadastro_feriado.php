@@ -29,7 +29,10 @@
 		}
 		
 		if (empty($_POST["cidade"])) {
-			$_POST["cidade"] = 0;
+			$_POST["cidade"] = NULL;
+		}
+		if (empty($_POST["uf"])) {
+			$_POST["uf"] = NULL;
 		}
 
 		$novoFeriado = [
