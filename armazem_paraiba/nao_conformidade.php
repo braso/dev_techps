@@ -91,7 +91,6 @@
 
 
 		foreach($motoristas as $motorista){
-			$_POST["counts"]["total"]++;
 			// if(empty($motorista["enti_tx_nome"]) || empty($motorista["enti_tx_matricula"])){
 			// 	continue;
 			// }
@@ -235,6 +234,9 @@
 							+((is_int(strpos($value, "fa-info-circle")))*(substr_count($value, "color:red;") + substr_count($value, "color:orange;")))	//Conta os círculos que sejam vermelhos ou laranjas.
 						;
 					}
+					if(is_int(strpos($aDia[$f][3], "Batida início de jornada não registrada!")) && is_int(strpos($aDia[$f][12], "Abono: "))){ //Se tiver um erro de início de jornada E tiver algum abono
+						$qtdErros = 0;
+					}
 					if($qtdErros == 0){
 						$aDia = remFromArray($aDia, $f);
 						if(empty($aDia)){
@@ -243,7 +245,6 @@
 						$f--;
 						continue;
 					}
-					$_POST["counts"]["total"]++;
 					$_POST["counts"]["naoConformidade"] += $qtdErros;
 
 					if(empty($aDia[$f][$saldoColIndex])){
@@ -263,6 +264,8 @@
 				if(empty($aDia)){
 					continue;
 				}
+
+				$_POST["counts"]["total"]++;
 
 				
 				$aDia[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumo));
