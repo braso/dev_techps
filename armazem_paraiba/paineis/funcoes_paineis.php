@@ -653,7 +653,7 @@
 				$campos = !empty(array_filter([$jornada, $descanso, $espera, $refeicao, $repouso]));
 				if ($campos) {
 					$parametro = mysqli_fetch_all(query(
-					"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_horasLimite"
+					"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_maxHESemanalDiario"
 						. " FROM `parametro`"
 						. " WHERE para_nb_id = " . $motorista["enti_nb_parametro"]
 					), MYSQLI_ASSOC);
@@ -664,15 +664,13 @@
 						$jornadaDia = $parametro[0]["para_tx_jornadaSemanal"];
 					}
 
-					// dd($parametro[0]["para_tx_horasLimite"]);
-
 					$horaLimpa = preg_replace('/<strong>.*?<\/strong>/', '',  $dia["inicioJornada"]);
 					$horaLimpa = preg_replace('/[^0-9:]/', '', $horaLimpa);
 					$horaLimpa = trim($horaLimpa);
 					$row[] = [
 						"data" => $dia["data"],
 						"jornadaDia" => $jornadaDia,
-						"limiteExtras" => $parametro[0]["para_tx_horasLimite"] == 0 ? '00:00' : $parametro[0]["para_tx_horasLimite"],
+						"limiteExtras" => $parametro[0]["para_tx_maxHESemanalDiario"] == 0 ? '00:00' : $parametro[0]["para_tx_maxHESemanalDiario"],
 						"inicioJornada" => $horaLimpa,
 						"diaDiferenca" => $diaDiferenca,
 						"matricula" => $motorista["enti_tx_matricula"],
