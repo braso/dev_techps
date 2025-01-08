@@ -15,7 +15,7 @@ deployment:
     - export QUALY=/home/techpsjornada/public_html/gestaodeponto/qualy_transportes
     - export TECHPS=/home/techpsjornada/public_html/gestaodeponto/techps
     - export TRAMPGAS=/home/techpsjornada/public_html/gestaodeponto/trampolim_gas
-    - export NOVOHORZ=/home/techpsjornada/public_html/gestaodeponto/novo_horizonte
+    - export NH_TRANSP=/home/techpsjornada/public_html/gestaodeponto/nh_transportes
     - export JRJ_ORG=/home/techpsjornada/public_html/gestaodeponto/jrj_organizacao
     - export HN_TRANSP=/home/techpsjornada/public_html/gestaodeponto/hn_transportes
     
@@ -33,6 +33,6 @@ deployment:
     - /bin/cp -R $DOMAIN $QUALY
     - /bin/cp -R $DOMAIN $TECHPS
     - /bin/cp -R $DOMAIN $TRAMPGAS
-    - /bin/cp -R $DOMAIN $NOVOHORZ
+    - /bin/cp -R $DOMAIN $NH_TRANSP
     - /bin/cp -R $DOMAIN $JRJ_ORG
     - /bin/cp -R $DOMAIN $HN_TRANSP
