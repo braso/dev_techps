@@ -13,7 +13,7 @@
     require_once __DIR__."/funcoes_paineis.php";
     // criar_relatorio_jornada();
  
-    function carregarJS(array $arquivos) {
+     function carregarJS(array $arquivos) {
 
         $linha = "linha = '<tr>'";
         if (!empty($_POST["empresa"])) {
@@ -93,10 +93,12 @@
 
                         let corTexto = 'jornada';
 
-                         if (minutosTrabalhados <= jornadaPadraoMinutos + limiteExtraMinutos) {
+                        if (minutosTrabalhados >= jornadaPadraoMinutos && minutosTrabalhados <= jornadaPadraoMinutos + limiteExtraMinutos) {
                             corTexto = 'jornadaYellow'; // Dentro do padrão e limite extra
-                        } else {
+                        } else if (minutosTrabalhados >= jornadaPadraoMinutos) {
                             corTexto = 'jornadaRed'; // Excede o limite extra
+                        } else {
+                            corTexto = 'jornada';
                         }
 
                         return corTexto;
