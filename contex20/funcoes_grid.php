@@ -50,7 +50,7 @@
 				.table-head{
 					background-color: white;
 					position: sticky;
-					top: 0;
+					top: -1px;
 				}
 				// .table-responsive>.table{
 				// 	border-collapse: separate;
