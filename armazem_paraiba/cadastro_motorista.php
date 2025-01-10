@@ -277,6 +277,14 @@
 			}
 		//}
 
+		//Conferir se o RG é válido{
+			$_POST["rg"] = preg_replace( "/[^0-9]/is", "", $_POST["rg"]);
+			if(strlen($_POST["rg"]) < 3){
+				$_POST["errorFields"][] = "rg";
+				showError("RG Parcial.", ["rg"]);
+			}
+		//}
+
 		//Conferir se está ativo e a data de demissão é anterior a atual{
 			if(!empty($novoMotorista["enti_tx_desligamento"]) && $novoMotorista["enti_tx_status"] == "ativo" && $novoMotorista["enti_tx_desligamento"] < date("Y-m-d")){
 				showError("Não é possível colocar uma data de desligamento anterior a hoje enquanto o motorista estiver ativo.", ["status", "desligamento"]);
@@ -443,14 +451,15 @@
 					AND enti_nb_id = ".$_POST["id"]."
 				LIMIT 1;"
 		));
+
 		if(empty($usuario["enti_tx_desligamento"]) || $usuario["enti_tx_desligamento"] > date("Y-m-d")){
 			$usuario["enti_tx_desligamento"] = date("Y-m-d");
 		}
 		
 		atualizar("entidade", ["enti_tx_status", "enti_tx_desligamento"], ["inativo", $usuario["enti_tx_desligamento"]], $_POST["id"]);
-
-		if(!empty($idUsuario)){
-			atualizar("user", ["user_tx_status"], ["inativo"], $idUsuario["user_nb_id"]);
+		
+		if(!empty($usuario)){
+			atualizar("user", ["user_tx_status"], ["inativo"], $usuario["user_nb_id"]);
 		}
 		index();
 		exit;
