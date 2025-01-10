@@ -9,6 +9,25 @@
 	//*/
 	include_once __DIR__."/conecta.php";
 
+	function calcJorPre(string $data, string $jornadaSemanal, string $jornadaSabado, bool $ehFeriado, $abono = null): array{
+
+		if(date("w", strtotime($data)) == "0" || $ehFeriado){ 	//DOMINGOS OU FERIADOS
+			$jornadaPrevista = "00:00";
+		}elseif(date("w", strtotime($data)) == "6"){ 						//SABADOS
+			$jornadaPrevista = $jornadaSabado;
+		}else{															//DIAS DE SEMANA
+			$jornadaPrevista = $jornadaSemanal;
+		}
+
+		$jornadaPrevistaOriginal = $jornadaPrevista;
+		$jornadaPrevista = (new DateTime("{$data} {$jornadaPrevista}"))->format("H:i");
+		if($abono !== null || !$ehFeriado){
+			$jornadaPrevista = (new DateTime("{$data} {$abono}"))->diff(new DateTime("{$data} {$jornadaPrevista}"))->format("%H:%I");
+		}
+
+		return [$jornadaPrevistaOriginal, $jornadaPrevista];
+	}
+
 	function calcularAbono($saldo, $tempoAbono){
 		$saldoPositivo = $saldo;
 
@@ -17,381 +36,6 @@
 		}else{
 			return "00:00";
 		}
-	}
-
-	function getFeriados(array &$motorista, string $data): string{
-		$sqlFeriado = 
-			"SELECT feri_tx_nome FROM feriado 
-				WHERE feri_tx_status = 'ativo'
-					AND feri_tx_data LIKE '{$data}%'"
-		;
-		if(!empty($motorista["cida_nb_id"]) && !empty($motorista["cida_tx_uf"])){
-			$sqlFeriado .= 
-				" AND (
-					feri_nb_cidade = '{$motorista["cida_nb_id"]}'
-					OR (feri_tx_uf = '{$motorista["cida_tx_uf"]}' AND feri_nb_cidade IS NULL)
-					OR (feri_nb_cidade IS NULL AND feri_tx_uf IS NULL)
-				)"
-			;
-		}
-		$feriados = mysqli_fetch_all(query($sqlFeriado), MYSQLI_ASSOC);
-
-		for($f = 0; $f < count($feriados); $f++){
-			$feriados[$f] = $feriados[$f]["feri_tx_nome"];
-		}
-		$stringFeriado = "";
-		if(!empty($feriados)){
-			$stringFeriado = implode(", ", $feriados);
-		}
-		return $stringFeriado;
-	}
-
-	function getSaldoDiario(string $jornadaPrevista, string $jornadaEfetiva): string{
-		$saldoDiario = operarHorarios(["-".$jornadaPrevista, $jornadaEfetiva], "+");
-		return $saldoDiario;
-	}
-
-	function operarHorarios(array $horarios, string $operacao): string{
-		//Horários com formato de rH:i. Ex.: 00:04, 05:13, -01:12.
-		//$Operação
-
-		if(empty($horarios) || !in_array($operacao, ["+", "-", "*", "/"])){
-			return 0;
-		}
-
-		if(empty($horarios[0])){
-			$horarios[0] = "00:00";
-		}
-		$horarios[0] = preg_replace("/([^\-^0-:])+/", "", $horarios[0]);
-		$horarios[0] = explode(":", $horarios[0]);
-		$horarios[0] = intval($horarios[0][0]*60)+(($horarios[0][0][0] == "-")?-1:1)*intval($horarios[0][1]);
-
-		$result = $horarios[0];
-		unset($horarios[0]);
-
-		foreach($horarios as $horario){
-			if(empty($horario)){
-				$horario = "00:00";
-			}else{
-			    $horario = preg_replace("/([^\-^0-:])+/", "", $horario);
-			}
-			$match = "";
-
-			if(!preg_match("/^-?\d{2,10}:\d{2}$/", $horario, $match)){
-				echo "<script>console.log('Format error (operarHorarios): |".strval($horario)."|')</script>";
-				continue;
-			}
-
-			$horario = explode(":", $match[0]);
-			$horario = intval($horario[0]*60)+(($horario[0][0] == "-")?-1:1)*intval($horario[1]);
-			switch($operacao){
-				case "+":
-					$result += $horario;
-				break;
-				case "-":
-					$result -= $horario;
-				break;
-				case "*":
-					$result *= $horario;
-				break;
-				case "/":
-					$result /= $horario;
-				break;
-			}
-		}
-
-		$result = sprintf("%s%02d:%02d", (($result < 0)?"-":""), abs(intval($result/60)), abs(intval($result%60)));
-
-		return $result;
-	}
-
-	function somarHorarios(array $horarios): string{
-		return operarHorarios($horarios, "+");
-	}
-
-	function verificarAlertaMDC(array $intervalos = []): string{
-		$baseErrMsg = "Descanso de 00:30 a cada 05:30 digiridos não respeitado.";
-		$mdc = "00:00";
-		
-		if(empty($intervalos)){
-			return $mdc;
-		}
-
-		for($f = 0; $f < count($intervalos); $f++){
-			$date = date_add(new DateTime("1970-01-01 00:00:00"), $intervalos[$f][1]);
-			$intervalos[$f][1] = sprintf("%02d:%02d", abs(intval((dateTimeToSecs($date)/60)/60)), abs(intval((dateTimeToSecs($date)/60)%60)));
-			if($intervalos[$f][0] == true && $intervalos[$f][1] > $mdc){ //Se o intervalo é de um horário ativo de trabalho E for maior que o MDC atual.
-				$mdc = $intervalos[$f][1];
-			}
-		}
-
-		return $mdc;
-
-		if($mdc > "05:30"){
-			$mdc = "<a style='white-space: nowrap;'>".
-						"<i style='color:orange;' title='{$baseErrMsg}' class='fa fa-warning'></i>".
-					"</a>".
-					"&nbsp;".$mdc
-			;
-			return $mdc;
-		}
-
-		
-		for($f = 0; $f < count($intervalos); $f++){
-			$considerarPosJornada = true;
-			$somaTempoAtivo = "00:00";
-			$somaTempoDescanso = "00:00";
-			$somaTempoTotal = "00:00";
-
-			$tempoTrabalho = "05:30";
-			$tempoDescanso = "00:15";
-
-			for($f2 = 0; $f2 < count($intervalos); $f2++){
-				if($intervalos[$f2][0]){
-					$somaTempoAtivo = operarHorarios([$somaTempoAtivo, $intervalos[$f2][1]], "+");
-				}else{
-					$somaTempoDescanso = operarHorarios([$somaTempoDescanso, $intervalos[$f2][1]], "+");
-				}
-				$somaTempoTotal = operarHorarios([$somaTempoAtivo, $somaTempoDescanso], "+");
-
-				if($somaTempoTotal >= operarHorarios([$tempoTrabalho, $tempoDescanso], "+")){
-					$considerarPosJornada = false;
-					$excedente = operarHorarios([$somaTempoTotal, operarHorarios([$tempoTrabalho, $tempoDescanso], "+")], "-");
-					if($intervalos[$f2][0]){
-						// $somaTempoAtivo = operarHorarios([$somaTempoAtivo, $excedente], "-");
-					}else{
-						$somaTempoDescanso = operarHorarios([$somaTempoDescanso, $excedente], "-");
-					}
-					$f2 = count($intervalos);
-				}
-			}
-			$somaTempoTotal = operarHorarios([$somaTempoAtivo, $somaTempoDescanso], "+");
-
-			if($considerarPosJornada){
-				$excedente = operarHorarios([$somaTempoTotal, operarHorarios([$tempoTrabalho, $tempoDescanso], "+")], "-"); //Dará um número negativo
-				$somaTempoDescanso = operarHorarios([$somaTempoDescanso, $excedente], "-"); //Será somado, pois o excedente é negativo
-			}
-	
-			if($somaTempoAtivo > $tempoTrabalho && $somaTempoDescanso < $tempoDescanso){
-				$mdc = "<a style='white-space: nowrap;'>".
-							"<i style='color:orange;' title='{$baseErrMsg}\n\nDirigido: ".$somaTempoAtivo."\nDescansado: ".$somaTempoDescanso."' class='fa fa-warning'></i>".
-						"</a>".
-						"&nbsp;".$mdc
-				;
-				$f = count($intervalos);
-			}
-		}
-
-		/**
-		 * Percorrer intervalos e separar em intervalos de 6 em 6 horas
-		 * Se houver algum intervalo de 6 horas com menos de 30 minutos de descanso, enviar o alerta.
-		 */
-		
-		return $mdc;
-	}
-
-	function verificaLimiteTempo(string $tempoEfetuado, string $limite){
-		// Verifica se os parâmetros são strings e possuem o formato correto
-		if(!preg_match("/^\d{2}:\d{2}$/", $tempoEfetuado) || !preg_match("/^\d{2}:\d{2}$/", $limite)){
-			return "";
-		}
-		if(intval(explode(":", $tempoEfetuado)[0]) > 23){
-			$vals = explode(":", $tempoEfetuado);
-			$dateInterval = new DateInterval("P".floor($vals[0]/24)."DT".($vals[0]%24)."H".$vals[1]."M");
-			$datetime1 = new DateTime("2000-01-01 00:00");
-			$datetime1->add($dateInterval);
-		}else{
-			$datetime1 = new DateTime("2000-01-01 ".$tempoEfetuado);
-		}
-		$datetime2 = new DateTime("2000-01-01 ".$limite);
-
-		if($datetime1 > $datetime2){
-			return "<a style='white-space: nowrap;'><i style='color:orange;' title='Tempo excedido de ".$limite."' class='fa fa-warning'></i></a>&nbsp;".$tempoEfetuado;
-		}else{
-			return $tempoEfetuado;
-		}
-	}
-
-	function verificaTolerancia($saldoDiario, $data, $idMotorista){
-		$saldoDiario = str_replace(["<b>", "</b>"], ["", ""], $saldoDiario);
-		date_default_timezone_set("America/Recife");
-		$sqlTolerancia = query(
-			"SELECT en.enti_nb_parametro, par.para_tx_tolerancia
-				FROM entidade en
-				INNER JOIN parametro par ON en.enti_nb_parametro = par.para_nb_id
-				WHERE en.enti_nb_id = '".$idMotorista."'"
-		);
-		
-		$toleranciaArray = mysqli_fetch_array($sqlTolerancia, MYSQLI_BOTH);
-
-		$tolerancia = (empty($toleranciaArray["para_tx_tolerancia"]))? 0: $toleranciaArray["para_tx_tolerancia"];
-		$tolerancia = intval($tolerancia);
-
-		$saldoDiario = explode(":", $saldoDiario);
-		$saldoEmMinutos = intval($saldoDiario[0])*60+($saldoDiario[0][0] == "-"? -1: 1)*intval($saldoDiario[1]);
-
-		if($saldoEmMinutos < -($tolerancia)){
-			$cor = "red";
-		}elseif($saldoEmMinutos > $tolerancia){
-			$cor = "green";
-		}else{
-			$cor = "blue";
-		}
-
-		$endossado = mysqli_fetch_all(
-			query(
-				"SELECT * FROM endosso 
-					JOIN entidade ON endo_tx_matricula = enti_tx_matricula
-					WHERE '".$data."' BETWEEN endo_tx_de AND endo_tx_ate
-						AND enti_nb_id = ".$idMotorista."
-						AND endo_tx_status = 'ativo';"
-			),
-			MYSQLI_ASSOC
-		);
-
-		$title = "Ajuste de Ponto";
-		$func = "ajustarPonto({$idMotorista},\"{$data}\"";
-		$content = "<i style='color:".$cor.";' class='fa fa-circle'>";
-		if(count($endossado) > 0){
-			$title .= " (endossado)";
-			$func .= ", true";
-			$content .= "(E)";
-		}
-		$func .= ")";
-		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
-			$func = "";
-		}
-		$content .= "</i>";
-		
-		$retorno = "<a title='".$title."' onclick='".$func."'>".$content."</a>";
-		return $retorno;
-	}
-
-	function montarIconeIntervalo(array $pares, string $classe = "fa fa-info-circle", string $cor = "green"): string{
-		$icone = "";
-		$tooltip = "";
-		for($f = 0; $f < count($pares); $f++){
-			$temp = [
-				(!empty($pares[$f]["inicio"])? DateTime::createFromFormat("Y-m-d H:i:s", $pares[$f]["inicio"])->format("d/m H:i"): ""),
-				(!empty($pares[$f]["fim"])? DateTime::createFromFormat("Y-m-d H:i:s", $pares[$f]["fim"])->format("d/m H:i"): "")
-			];
-			$tooltip .= 
-				"Início: {$temp[0]}\n"
-				."Fim:    {$temp[1]}\n\n";
-		}
-		unset($temp);
-		if(is_int(strpos($tooltip, "Início: \n")) || is_int(strpos($tooltip, "Fim:    \n"))){
-			$cor = "red";
-		}
-
-		$icone = "<a><i title='{$tooltip}' class='{$classe}' style='color:{$cor};'></i></a>";
-
-		return $icone;
-	}
-
-	function organizarIntervalos($data, $inicios, $fins){
-		
-		$totalIntervalo = new DateTime("{$data} 00:00:00");
-		
-		//Resposta padrão{
-			$paresResult = [
-				"pares" => [],
-				"totalIntervalo" => $totalIntervalo,
-				"icone" => ""
-			];
-
-			if(empty($inicios) || empty($fins)){
-				return $paresResult;
-			}
-		//}
-
-		$horariosOrdenados = ordenarHorariosTipo($inicios, $fins);
-		
-		$pares = [];
-		$parAtual = null;
-
-		//Arredonda os minutos, caso haja segundos
-		$getInterval = function (string $inicio, string $fim) {
-			$interval = (new DateTime($inicio))->diff(new DateTime($fim));
-			if($interval->s > 30){
-				$interval->s = 0;
-				$interval->i++;
-			}
-			return $interval;
-		};
-
-		foreach ($horariosOrdenados as $ponto){
-			if($ponto["tipo"] == "inicio"){
-				if(!empty($parAtual["inicio"])){
-					//Significa que tem dois inícios consecutivos
-					$pares[] = $parAtual;
-				}
-				$parAtual = ["inicio" => $ponto["data"], "fim" => null];
-			}elseif($ponto["tipo"] == "fim"){
-				if(empty($parAtual["inicio"])){
-					//Significa que tem dois fins consecutivos
-					$pares[] = $parAtual;
-				}else{
-
-					$parAtual["fim"] = $ponto["data"];
-					$interval = $getInterval($parAtual["inicio"], $parAtual["fim"]);
-
-					$totalIntervalo->add($interval);
-					$parAtual["intervalo"] = formatToTime($interval->h, $interval->i, $interval->s);
-					$pares[] = $parAtual;
-
-					$parAtual = null;
-				}
-			}
-		}
-		if($ponto["tipo"] == "inicio"){
-			$pares[] = ["inicio" => $ponto["data"], "fim" => ""];
-		}
-
-		$paresResult = [
-			"pares" => $pares,
-			"totalIntervalo" => $totalIntervalo
-		];
-
-		$paresResult["icone"] = montarIconeIntervalo($pares);
-		if(count($horariosOrdenados) > 2){
-			$totalInterjornada = new DateTime("{$data} 00:00:00");
-			for ($i = 1; $i < count($horariosOrdenados); $i++){
-				if($horariosOrdenados[$i]["tipo"] == "inicio" && $horariosOrdenados[$i-1]["tipo"] == "fim"){
-					$intervalInterjornada = $getInterval($horariosOrdenados[$i]["data"], $horariosOrdenados[$i-1]["data"]);
-					$totalInterjornada->add($intervalInterjornada);
-				}
-			}
-			$paresResult["interjornada"] = formatToTime(intval($totalInterjornada->format("H")), intval($totalInterjornada->format("i")), intval($totalInterjornada->format("s")));
-		}
-
-		// Retorna o array de horários com suas respectivas origens
-		return $paresResult;
-	}
-	
-	function ordenarHorariosTipo(array $inicios, array $fins, string $tipo = "", int $order = SORT_ASC): array{
-		if(empty($inicios) || empty($fins)){
-			return [];
-		}
-		// Inicializa o array resultante e o array de indicação
-		$horarios = [];
-		$tipos = [];
-
-		$horarios = array_merge($inicios, $fins);
-		$tipos = array_pad([], count($inicios), "inicio".ucfirst($tipo));
-		$tipos = array_pad($tipos, count($tipos)+count($fins), "fim".ucfirst($tipo));
-
-		// Ordena o array de horários
-		array_multisort($horarios, $order, $tipos);
-
-		for($f = 0; $f < count($horarios); $f++){
-			$horarios[$f] = [
-				"data" => $horarios[$f], 
-				"tipo" => $tipos[$f]
-			];
-		}
-
-		return $horarios;
 	}
 
 	function calcularAdicNot(array $registros): string{
@@ -534,56 +178,6 @@
 
 
 		return $adicNot;
-	}
-
-	function dateTimeToSecs(DateTime $dateTime, DateTime $baseDate = null): int{
-		if(empty($baseDate)){
-			$baseDate = DateTime::createFromFormat("Y-m-d H:i:s", "1970-01-01 00:00:00");
-		}
-    	$res = date_diff($dateTime, $baseDate);
-        $res = 
-        	($res->invert? 1:-1)*
-			(
-				$res->days*24*60*60+
-				$res->h*60*60+
-				$res->i*60+
-				$res->s
-			);
-        return $res;
-    }
-
-	function calcJorPre(string $data, string $jornadaSemanal, string $jornadaSabado, bool $ehFeriado, $abono = null): array{
-
-		if(date("w", strtotime($data)) == "0" || $ehFeriado){ 	//DOMINGOS OU FERIADOS
-			$jornadaPrevista = "00:00";
-		}elseif(date("w", strtotime($data)) == "6"){ 						//SABADOS
-			$jornadaPrevista = $jornadaSabado;
-		}else{															//DIAS DE SEMANA
-			$jornadaPrevista = $jornadaSemanal;
-		}
-
-		$jornadaPrevistaOriginal = $jornadaPrevista;
-		$jornadaPrevista = (new DateTime("{$data} {$jornadaPrevista}"))->format("H:i");
-		if($abono !== null || !$ehFeriado){
-			$jornadaPrevista = (new DateTime("{$data} {$abono}"))->diff(new DateTime("{$data} {$jornadaPrevista}"))->format("%H:%I");
-		}
-
-		return [$jornadaPrevistaOriginal, $jornadaPrevista];
-	}
-
-	function pegarDiaSemana($date){
-		$week = [
-			"Sunday" => "Domingo", 
-			"Monday" => "Segunda-Feira",
-			"Tuesday" => "Terca-Feira",
-			"Wednesday" => "Quarta-Feira",
-			"Thursday" => "Quinta-Feira",
-			"Friday" => "Sexta-Feira",
-			"Saturday" => "Sábado"
-		];
-		$response = $week[date("l", strtotime($date))];
-
-		return $response;
 	}
 
 	//@return [he50, he100]
@@ -851,6 +445,22 @@
 		}
 
 		return;
+    }
+
+	function dateTimeToSecs(DateTime $dateTime, DateTime $baseDate = null): int{
+		if(empty($baseDate)){
+			$baseDate = DateTime::createFromFormat("Y-m-d H:i:s", "1970-01-01 00:00:00");
+		}
+    	$res = date_diff($dateTime, $baseDate);
+        $res = 
+        	($res->invert? 1:-1)*
+			(
+				$res->days*24*60*60+
+				$res->h*60*60+
+				$res->i*60+
+				$res->s
+			);
+        return $res;
     }
 
 	function diaDetalhePonto(array $motorista, string $data): array{
@@ -1566,4 +1176,453 @@
 		//}
 		
 		return $aRetorno;
+	}
+
+	function getFeriados(array &$motorista, string $data): string{
+		$sqlFeriado = 
+			"SELECT feri_tx_nome FROM feriado 
+				WHERE feri_tx_status = 'ativo'
+					AND feri_tx_data LIKE '{$data}%'"
+		;
+		if(!empty($motorista["cida_nb_id"]) && !empty($motorista["cida_tx_uf"])){
+			$sqlFeriado .= 
+				" AND (
+					feri_nb_cidade = '{$motorista["cida_nb_id"]}'
+					OR (feri_tx_uf = '{$motorista["cida_tx_uf"]}' AND feri_nb_cidade IS NULL)
+					OR (feri_nb_cidade IS NULL AND feri_tx_uf IS NULL)
+				)"
+			;
+		}
+		$feriados = mysqli_fetch_all(query($sqlFeriado), MYSQLI_ASSOC);
+
+		for($f = 0; $f < count($feriados); $f++){
+			$feriados[$f] = $feriados[$f]["feri_tx_nome"];
+		}
+		$stringFeriado = "";
+		if(!empty($feriados)){
+			$stringFeriado = implode(", ", $feriados);
+		}
+		return $stringFeriado;
+	}
+	
+	function getSaldoDiario(string $jornadaPrevista, string $jornadaEfetiva): string{
+		$saldoDiario = operarHorarios(["-".$jornadaPrevista, $jornadaEfetiva], "+");
+		return $saldoDiario;
+	}
+
+	function montarEndossoMes(DateTime $dateMes, array $aMotorista): array{
+		$month = intval($dateMes->format("m"));
+		$year = intval($dateMes->format("Y"));
+		
+		$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+		$endossos = mysqli_fetch_all(query(
+			"SELECT endo_tx_filename FROM endosso 
+				WHERE endo_tx_status = 'ativo'
+					AND endo_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'
+					AND endo_tx_de >= '".sprintf("%04d-%02d-%02d", $year, $month, "01")."'
+					AND endo_tx_ate <= '".sprintf("%04d-%02d-%02d", $year, $month, $daysInMonth)."'
+				ORDER BY endo_tx_de ASC"
+		),MYSQLI_ASSOC);
+
+		foreach($endossos as &$endosso){
+			$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
+		}
+
+		$endossoCompleto = [];
+
+		if(count($endossos) > 0){
+			$endossoCompleto = $endossos[0];
+			if(empty($endossoCompleto["endo_tx_max50APagar"]) && !empty($endossoCompleto["endo_tx_horasApagar"])){
+				$endossoCompleto["endo_tx_max50APagar"] = $endossoCompleto["endo_tx_horasApagar"];
+			}
+			for($f = 1; $f < count($endossos); $f++){
+				if(empty($endossos[$f]["endo_tx_max50APagar"])){
+					if(!empty($endossos[$f]["endo_tx_horasApagar"])){
+						$endossos[$f]["endo_tx_max50APagar"] = $endossos[$f]["endo_tx_horasApagar"];
+					}else{
+						$endossoCompleto["endo_tx_max50APagar"] = "00:00";
+					}
+				}
+				$endossoCompleto["endo_tx_ate"] = $endossos[$f]["endo_tx_ate"];
+				$endossoCompleto["endo_tx_pontos"] = array_merge($endossoCompleto["endo_tx_pontos"], $endossos[$f]["endo_tx_pontos"]);
+				if($endossoCompleto["endo_tx_max50APagar"] != "00:00"){
+					$endossoCompleto["endo_tx_max50APagar"] = operarHorarios([$endossoCompleto["endo_tx_max50APagar"], $endossos[$f]["endo_tx_max50APagar"]], "+");	
+					if(is_int(strpos($endossoCompleto["endo_tx_max50APagar"], "-"))){
+						$endossoCompleto["endo_tx_max50APagar"] = "00:00";
+					}
+				}
+				foreach($endossos[$f]["totalResumo"] as $key => $value){
+					if(in_array($key, ["saldoAnterior"])){
+						continue;
+					}
+					$endossoCompleto["totalResumo"][$key] = operarHorarios([$endossoCompleto["totalResumo"][$key], $value], "+");
+				}
+
+				
+				// $endossoCompleto["totalResumo"]["diffSaldo"] = $endossos[$f]["totalResumo"]["diffSaldo"];
+				// $endossoCompleto["totalResumo"]["saldoBruto"] = $endossos[$f]["totalResumo"]["saldoBruto"];
+			}
+			$endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$endossoCompleto["totalResumo"]["saldoAnterior"], $endossoCompleto["totalResumo"]["diffSaldo"]], "+");
+		}
+
+
+		return $endossoCompleto;
+	}
+
+	function montarIconeIntervalo(array $pares, string $classe = "fa fa-info-circle", string $cor = "green"): string{
+		$icone = "";
+		$tooltip = "";
+		for($f = 0; $f < count($pares); $f++){
+			$temp = [
+				(!empty($pares[$f]["inicio"])? DateTime::createFromFormat("Y-m-d H:i:s", $pares[$f]["inicio"])->format("d/m H:i"): ""),
+				(!empty($pares[$f]["fim"])? DateTime::createFromFormat("Y-m-d H:i:s", $pares[$f]["fim"])->format("d/m H:i"): "")
+			];
+			$tooltip .= 
+				"Início: {$temp[0]}\n"
+				."Fim:    {$temp[1]}\n\n";
+		}
+		unset($temp);
+		if(is_int(strpos($tooltip, "Início: \n")) || is_int(strpos($tooltip, "Fim:    \n"))){
+			$cor = "red";
+		}
+
+		$icone = "<a><i title='{$tooltip}' class='{$classe}' style='color:{$cor};'></i></a>";
+
+		return $icone;
+	}
+
+	function operarHorarios(array $horarios, string $operacao): string{
+		//Horários com formato de rH:i. Ex.: 00:04, 05:13, -01:12.
+		//$Operação
+
+		if(empty($horarios) || !in_array($operacao, ["+", "-", "*", "/"])){
+			return 0;
+		}
+
+		if(empty($horarios[0])){
+			$horarios[0] = "00:00";
+		}
+		$horarios[0] = preg_replace("/([^\-^0-:])+/", "", $horarios[0]);
+		$horarios[0] = explode(":", $horarios[0]);
+		$horarios[0] = intval($horarios[0][0]*60)+(($horarios[0][0][0] == "-")?-1:1)*intval($horarios[0][1]);
+
+		$result = $horarios[0];
+		unset($horarios[0]);
+
+		foreach($horarios as $horario){
+			if(empty($horario)){
+				$horario = "00:00";
+			}else{
+			    $horario = preg_replace("/([^\-^0-:])+/", "", $horario);
+			}
+			$match = "";
+
+			if(!preg_match("/^-?\d{2,10}:\d{2}$/", $horario, $match)){
+				echo "<script>console.log('Format error (operarHorarios): |".strval($horario)."|')</script>";
+				continue;
+			}
+
+			$horario = explode(":", $match[0]);
+			$horario = intval($horario[0]*60)+(($horario[0][0] == "-")?-1:1)*intval($horario[1]);
+			switch($operacao){
+				case "+":
+					$result += $horario;
+				break;
+				case "-":
+					$result -= $horario;
+				break;
+				case "*":
+					$result *= $horario;
+				break;
+				case "/":
+					$result /= $horario;
+				break;
+			}
+		}
+
+		$result = sprintf("%s%02d:%02d", (($result < 0)?"-":""), abs(intval($result/60)), abs(intval($result%60)));
+
+		return $result;
+	}
+	
+	function ordenarHorariosTipo(array $inicios, array $fins, string $tipo = "", int $order = SORT_ASC): array{
+		if(empty($inicios) || empty($fins)){
+			return [];
+		}
+		// Inicializa o array resultante e o array de indicação
+		$horarios = [];
+		$tipos = [];
+
+		$horarios = array_merge($inicios, $fins);
+		$tipos = array_pad([], count($inicios), "inicio".ucfirst($tipo));
+		$tipos = array_pad($tipos, count($tipos)+count($fins), "fim".ucfirst($tipo));
+
+		// Ordena o array de horários
+		array_multisort($horarios, $order, $tipos);
+
+		for($f = 0; $f < count($horarios); $f++){
+			$horarios[$f] = [
+				"data" => $horarios[$f], 
+				"tipo" => $tipos[$f]
+			];
+		}
+
+		return $horarios;
+	}
+
+	function organizarIntervalos($data, $inicios, $fins){
+		
+		$totalIntervalo = new DateTime("{$data} 00:00:00");
+		
+		//Resposta padrão{
+			$paresResult = [
+				"pares" => [],
+				"totalIntervalo" => $totalIntervalo,
+				"icone" => ""
+			];
+
+			if(empty($inicios) || empty($fins)){
+				return $paresResult;
+			}
+		//}
+
+		$horariosOrdenados = ordenarHorariosTipo($inicios, $fins);
+		
+		$pares = [];
+		$parAtual = null;
+
+		//Arredonda os minutos, caso haja segundos
+		$getInterval = function (string $inicio, string $fim) {
+			$interval = (new DateTime($inicio))->diff(new DateTime($fim));
+			if($interval->s > 30){
+				$interval->s = 0;
+				$interval->i++;
+			}
+			return $interval;
+		};
+
+		foreach ($horariosOrdenados as $ponto){
+			if($ponto["tipo"] == "inicio"){
+				if(!empty($parAtual["inicio"])){
+					//Significa que tem dois inícios consecutivos
+					$pares[] = $parAtual;
+				}
+				$parAtual = ["inicio" => $ponto["data"], "fim" => null];
+			}elseif($ponto["tipo"] == "fim"){
+				if(empty($parAtual["inicio"])){
+					//Significa que tem dois fins consecutivos
+					$pares[] = $parAtual;
+				}else{
+
+					$parAtual["fim"] = $ponto["data"];
+					$interval = $getInterval($parAtual["inicio"], $parAtual["fim"]);
+
+					$totalIntervalo->add($interval);
+					$parAtual["intervalo"] = formatToTime($interval->h, $interval->i, $interval->s);
+					$pares[] = $parAtual;
+
+					$parAtual = null;
+				}
+			}
+		}
+		if($ponto["tipo"] == "inicio"){
+			$pares[] = ["inicio" => $ponto["data"], "fim" => ""];
+		}
+
+		$paresResult = [
+			"pares" => $pares,
+			"totalIntervalo" => $totalIntervalo
+		];
+
+		$paresResult["icone"] = montarIconeIntervalo($pares);
+		if(count($horariosOrdenados) > 2){
+			$totalInterjornada = new DateTime("{$data} 00:00:00");
+			for ($i = 1; $i < count($horariosOrdenados); $i++){
+				if($horariosOrdenados[$i]["tipo"] == "inicio" && $horariosOrdenados[$i-1]["tipo"] == "fim"){
+					$intervalInterjornada = $getInterval($horariosOrdenados[$i]["data"], $horariosOrdenados[$i-1]["data"]);
+					$totalInterjornada->add($intervalInterjornada);
+				}
+			}
+			$paresResult["interjornada"] = formatToTime(intval($totalInterjornada->format("H")), intval($totalInterjornada->format("i")), intval($totalInterjornada->format("s")));
+		}
+
+		// Retorna o array de horários com suas respectivas origens
+		return $paresResult;
+	}
+
+	function pegarDiaSemana($date){
+		$week = [
+			"Sunday" => "Domingo", 
+			"Monday" => "Segunda-Feira",
+			"Tuesday" => "Terca-Feira",
+			"Wednesday" => "Quarta-Feira",
+			"Thursday" => "Quinta-Feira",
+			"Friday" => "Sexta-Feira",
+			"Saturday" => "Sábado"
+		];
+		$response = $week[date("l", strtotime($date))];
+
+		return $response;
+	}
+
+	function somarHorarios(array $horarios): string{
+		return operarHorarios($horarios, "+");
+	}
+
+	function verificaLimiteTempo(string $tempoEfetuado, string $limite){
+		// Verifica se os parâmetros são strings e possuem o formato correto
+		if(!preg_match("/^\d{2}:\d{2}$/", $tempoEfetuado) || !preg_match("/^\d{2}:\d{2}$/", $limite)){
+			return "";
+		}
+		if(intval(explode(":", $tempoEfetuado)[0]) > 23){
+			$vals = explode(":", $tempoEfetuado);
+			$dateInterval = new DateInterval("P".floor($vals[0]/24)."DT".($vals[0]%24)."H".$vals[1]."M");
+			$datetime1 = new DateTime("2000-01-01 00:00");
+			$datetime1->add($dateInterval);
+		}else{
+			$datetime1 = new DateTime("2000-01-01 ".$tempoEfetuado);
+		}
+		$datetime2 = new DateTime("2000-01-01 ".$limite);
+
+		if($datetime1 > $datetime2){
+			return "<a style='white-space: nowrap;'><i style='color:orange;' title='Tempo excedido de ".$limite."' class='fa fa-warning'></i></a>&nbsp;".$tempoEfetuado;
+		}else{
+			return $tempoEfetuado;
+		}
+	}
+
+	function verificarAlertaMDC(array $intervalos = []): string{
+		$baseErrMsg = "Descanso de 00:30 a cada 05:30 digiridos não respeitado.";
+		$mdc = "00:00";
+		
+		if(empty($intervalos)){
+			return $mdc;
+		}
+
+		for($f = 0; $f < count($intervalos); $f++){
+			$date = date_add(new DateTime("1970-01-01 00:00:00"), $intervalos[$f][1]);
+			$intervalos[$f][1] = sprintf("%02d:%02d", abs(intval((dateTimeToSecs($date)/60)/60)), abs(intval((dateTimeToSecs($date)/60)%60)));
+			if($intervalos[$f][0] == true && $intervalos[$f][1] > $mdc){ //Se o intervalo é de um horário ativo de trabalho E for maior que o MDC atual.
+				$mdc = $intervalos[$f][1];
+			}
+		}
+
+		return $mdc;
+
+		if($mdc > "05:30"){
+			$mdc = "<a style='white-space: nowrap;'>".
+						"<i style='color:orange;' title='{$baseErrMsg}' class='fa fa-warning'></i>".
+					"</a>".
+					"&nbsp;".$mdc
+			;
+			return $mdc;
+		}
+
+		
+		for($f = 0; $f < count($intervalos); $f++){
+			$considerarPosJornada = true;
+			$somaTempoAtivo = "00:00";
+			$somaTempoDescanso = "00:00";
+			$somaTempoTotal = "00:00";
+
+			$tempoTrabalho = "05:30";
+			$tempoDescanso = "00:15";
+
+			for($f2 = 0; $f2 < count($intervalos); $f2++){
+				if($intervalos[$f2][0]){
+					$somaTempoAtivo = operarHorarios([$somaTempoAtivo, $intervalos[$f2][1]], "+");
+				}else{
+					$somaTempoDescanso = operarHorarios([$somaTempoDescanso, $intervalos[$f2][1]], "+");
+				}
+				$somaTempoTotal = operarHorarios([$somaTempoAtivo, $somaTempoDescanso], "+");
+
+				if($somaTempoTotal >= operarHorarios([$tempoTrabalho, $tempoDescanso], "+")){
+					$considerarPosJornada = false;
+					$excedente = operarHorarios([$somaTempoTotal, operarHorarios([$tempoTrabalho, $tempoDescanso], "+")], "-");
+					if($intervalos[$f2][0]){
+						// $somaTempoAtivo = operarHorarios([$somaTempoAtivo, $excedente], "-");
+					}else{
+						$somaTempoDescanso = operarHorarios([$somaTempoDescanso, $excedente], "-");
+					}
+					$f2 = count($intervalos);
+				}
+			}
+			$somaTempoTotal = operarHorarios([$somaTempoAtivo, $somaTempoDescanso], "+");
+
+			if($considerarPosJornada){
+				$excedente = operarHorarios([$somaTempoTotal, operarHorarios([$tempoTrabalho, $tempoDescanso], "+")], "-"); //Dará um número negativo
+				$somaTempoDescanso = operarHorarios([$somaTempoDescanso, $excedente], "-"); //Será somado, pois o excedente é negativo
+			}
+	
+			if($somaTempoAtivo > $tempoTrabalho && $somaTempoDescanso < $tempoDescanso){
+				$mdc = "<a style='white-space: nowrap;'>".
+							"<i style='color:orange;' title='{$baseErrMsg}\n\nDirigido: ".$somaTempoAtivo."\nDescansado: ".$somaTempoDescanso."' class='fa fa-warning'></i>".
+						"</a>".
+						"&nbsp;".$mdc
+				;
+				$f = count($intervalos);
+			}
+		}
+
+		/**
+		 * Percorrer intervalos e separar em intervalos de 6 em 6 horas
+		 * Se houver algum intervalo de 6 horas com menos de 30 minutos de descanso, enviar o alerta.
+		 */
+		
+		return $mdc;
+	}
+
+	function verificaTolerancia(string $saldoDiario, string $data, $idMotorista){
+		$saldoDiario = str_replace(["<b>", "</b>"], ["", ""], $saldoDiario);
+		date_default_timezone_set("America/Recife");
+		$sqlTolerancia = query(
+			"SELECT en.enti_nb_parametro, par.para_tx_tolerancia
+				FROM entidade en
+				INNER JOIN parametro par ON en.enti_nb_parametro = par.para_nb_id
+				WHERE en.enti_nb_id = '".$idMotorista."'"
+		);
+		
+		$toleranciaArray = mysqli_fetch_array($sqlTolerancia, MYSQLI_BOTH);
+
+		$tolerancia = (empty($toleranciaArray["para_tx_tolerancia"]))? 0: $toleranciaArray["para_tx_tolerancia"];
+		$tolerancia = intval($tolerancia);
+
+		$saldoDiario = explode(":", $saldoDiario);
+		$saldoEmMinutos = intval($saldoDiario[0])*60+($saldoDiario[0][0] == "-"? -1: 1)*intval($saldoDiario[1]);
+
+		if($saldoEmMinutos < -($tolerancia)){
+			$cor = "red";
+		}elseif($saldoEmMinutos > $tolerancia){
+			$cor = "green";
+		}else{
+			$cor = "blue";
+		}
+
+		$endossado = mysqli_fetch_all(
+			query(
+				"SELECT * FROM endosso 
+					JOIN entidade ON endo_tx_matricula = enti_tx_matricula
+					WHERE '".$data."' BETWEEN endo_tx_de AND endo_tx_ate
+						AND enti_nb_id = ".$idMotorista."
+						AND endo_tx_status = 'ativo';"
+			),
+			MYSQLI_ASSOC
+		);
+
+		$title = "Ajuste de Ponto";
+		$func = "ajustarPonto({$idMotorista},\"{$data}\"";
+		$content = "<i style='color:".$cor.";' class='fa fa-circle'>";
+		if(count($endossado) > 0){
+			$title .= " (endossado)";
+			$func .= ", true";
+			$content .= "(E)";
+		}
+		$func .= ")";
+		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
+			$func = "";
+		}
+		$content .= "</i>";
+		
+		$retorno = "<a title='".$title."' onclick='".$func."'>".$content."</a>";
+		return $retorno;
 	}
