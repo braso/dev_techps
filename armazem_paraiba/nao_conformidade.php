@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 		
@@ -73,9 +73,7 @@
 					LIMIT 1;"
 			))["empr_nb_id"];
 		}
-		$date = new DateTime($_POST["busca_data"]);
-
-		$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $date->format("m"), $date->format("Y"));
+		$monthDate = new DateTime($_POST["busca_data"]);
 
 		$motoristas = mysqli_fetch_all(query(
 			"SELECT * FROM entidade
@@ -85,7 +83,7 @@
 				WHERE enti_tx_status = 'ativo'
 					".((!empty($_POST["busca_motorista"]))? " AND enti_nb_id = {$_POST["busca_motorista"]}": "")."
 					AND enti_nb_empresa = {$_POST["busca_empresa"]}
-					AND (enti_tx_admissao < '".$date->format("Y-m-t")."' OR enti_tx_admissao IS NULL)
+					AND (enti_tx_admissao < '".$monthDate->format("Y-m-t")."' OR enti_tx_admissao IS NULL)
 				ORDER BY enti_tx_nome ASC;"
 		), MYSQLI_ASSOC);
 
@@ -96,7 +94,7 @@
 			// }
 
 			//Pegando e formatando registros dos dias{
-				$aDia = [];
+				$rows = [];
 				$dataAdmissao = new DateTime($motorista["enti_tx_admissao"]);
 
 				if(empty($motorista["enti_nb_parametro"])){
@@ -113,18 +111,45 @@
 					$motorista["enti_tx_percHEEx"] = $motorista["para_tx_percHEEx"];
 				}
 
-				for ($i = 1; $i <= $daysInMonth; $i++) {
-					$dataVez = $date->format("Y-m")."-".str_pad($i, 2, 0, STR_PAD_LEFT);
-					if($date->format("Y-m") < $dataAdmissao->format("Y-m")){
+				$prevEndossoMes = "";
+				for($date = new DateTime($monthDate->format("Y-m-1")); $date->format("Y-m-d") <= $monthDate->format("Y-m-t"); $date->modify("+1 day")){
+					if($monthDate->format("Y-m") < $dataAdmissao->format("Y-m")){
 						continue;
 					}
-					if($dataVez > date("Y-m-d")){
+					if($date->format("Y-m-d") > date("Y-m-d")){
 						break;
 					}
+
 					
-					$aDetalhado = diaDetalhePonto($motorista, $dataVez);
+					//Conferir se o dia já está endossado{
+						$endossoMes = montarEndossoMes($date, $motorista);
+						if($prevEndossoMes != $endossoMes){
+							if(!empty($endossoMes)){
+								$diasEndossados = 0;
+								foreach($endossoMes["endo_tx_pontos"] as $row){
+									$day = DateTime::createFromFormat("d/m/Y", $row[1]);
+									if($day > $date){
+										$diasEndossados++;
+										$rows[] = $row;
+									}
+								}
+								if($diasEndossados > 0){
+									$date->modify("+".($diasEndossados-1)." day");
+									continue;
+								}
+							}
+						}
+					//}
 					
-					$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $dataVez, $motorista["enti_nb_id"])], $aDetalhado));
+					$aDetalhado = diaDetalhePonto($motorista, $date->format("Y-m-d"));
+					if($prevEndossoMes != $endossoMes){
+						foreach($totalResumo as $key => $value){
+							$totalResumo[$key] = operarHorarios([$value, $endossoMes["totalResumo"][$key]], "+");
+						}
+					}
+					$prevEndossoMes = $endossoMes;
+					
+					$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado));
 					for($f = 0; $f < sizeof($row)-1; $f++){
 						if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
 							continue;
@@ -133,10 +158,10 @@
 							$row[$f] = "";
 						}
 					}
-					$aDia[] = $row;
+					$rows[] = $row;
 				}
 			//}
-			if (count($aDia) > 0) {
+			if (count($rows) > 0) {
 				$aEndosso = mysqli_fetch_array(query(
 					"SELECT user_tx_login, endo_tx_dataCadastro, endo_tx_ate 
 						FROM endosso JOIN user ON endo_nb_userCadastro = user_nb_id 
@@ -206,12 +231,13 @@
 		
 
 				$saldosMotorista = 
-					"<div class='table-responsive'>
+					"Saldos:
+					<div class='table-responsive'>
 						<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
 							<thead><tr>
-								<th>Saldo Anterior:</th>
-								<th>Saldo do Período:</th>
-								<th>Saldo Final:</th>
+								<th>Anterior:</th>
+								<th>Período:</th>
+								<th>Final:</th>
 							</thead></tr>
 							<tbody>
 								<tr>
@@ -227,19 +253,24 @@
 				$tolerancia = intval($motorista["para_tx_tolerancia"]);
 				$saldoColIndex = 20;
 				
-				for($f = 0; $f < count($aDia); $f++){
+				for($f = 0; $f < count($rows); $f++){
 					$qtdErros = 0;
-					foreach($aDia[$f] as $key => $value){
+					foreach($rows[$f] as $key => $value){
 						$qtdErros += substr_count($value, "fa-warning") 																				//Conta todos os triângulos, pois todos os triângulos são alertas de não conformidade.
 							+((is_int(strpos($value, "fa-info-circle")))*(substr_count($value, "color:red;") + substr_count($value, "color:orange;")))	//Conta os círculos que sejam vermelhos ou laranjas.
 						;
 					}
-					if(is_int(strpos($aDia[$f][3], "Batida início de jornada não registrada!")) && is_int(strpos($aDia[$f][12], "Abono: "))){ //Se tiver um erro de início de jornada E tiver algum abono
+					if(is_int(strpos($rows[$f][3], "Batida início de jornada não registrada!")) && is_int(strpos($rows[$f][12], "Abono: "))){ //Se tiver um erro de início de jornada E tiver algum abono
 						$qtdErros = 0;
 					}
 					if($qtdErros == 0){
-						$aDia = remFromArray($aDia, $f);
-						if(empty($aDia)){
+						$f2 = 7;
+						foreach($totalResumo as &$total){
+							$total = operarHorarios([$total, strip_tags($rows[$f][$f2])], "-");
+							$f2++;
+						}
+						$rows = remFromArray($rows, $f);
+						if(empty($rows)){
 							break;
 						}
 						$f--;
@@ -247,29 +278,34 @@
 					}
 					$_POST["counts"]["naoConformidade"] += $qtdErros;
 
-					if(empty($aDia[$f][$saldoColIndex])){
-						$aDia[$f][$saldoColIndex] = "00:00";	
+					if(empty($rows[$f][$saldoColIndex])){
+						$rows[$f][$saldoColIndex] = "00:00";	
 					}
 
-					$saldoStr = str_replace("<b>", "", $aDia[$f][$saldoColIndex]);
+					$saldoStr = str_replace("<b>", "", $rows[$f][$saldoColIndex]);
 					$saldoStr = explode(":", $saldoStr);
 					$saldo = intval($saldoStr[0])*60;
 					$saldo += ($saldoStr[0] == "-"? -1: 1)*intval($saldoStr[1]);
 
 					if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
-						$aDia[$f][$saldoColIndex] = "00:00";
+						$rows[$f][$saldoColIndex] = "00:00";
 					}
 				}
 
-				if(empty($aDia)){
+				if(empty($rows)){
 					continue;
 				}
 
 				$_POST["counts"]["total"]++;
 
 				
-				$aDia[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumo));
-				$tabelasPonto[] = createForm("[".$motorista["enti_tx_matricula"]."] ".$motorista["enti_tx_nome"]." | ".$motorista["empr_tx_nome"]." ".$infoEndosso." ".$convencaoPadrao." ".$saldosMotorista, 12, montarTabelaPonto($cab, $aDia), []);
+				$rows[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumo));
+				$tabelasPonto[] = createForm(
+					"[".$motorista["enti_tx_matricula"]."] {$motorista["enti_tx_nome"]} | {$motorista["empr_tx_nome"]} {$infoEndosso} {$convencaoPadrao} <br><br>{$saldosMotorista}",
+					12, 
+					montarTabelaPonto($cab, $rows), 
+					[]
+				);
 				$aSaldo[$motorista["enti_tx_matricula"]] = $totalResumo["diffSaldo"];
 			}
 
@@ -289,7 +325,7 @@
 				"esperaIndenizada" => "00:00",
 				"diffSaldo" => "00:00"
 			];
-			unset($aDia);
+			unset($rows);
 		}
 
 		index();

@@ -35,6 +35,8 @@ table {
     }
 
     #boas-vindas>.table th, #boas-vindas>.table td {
-        word-break: break-word;
+        word-break: keep-all;
     }
+
+
 }

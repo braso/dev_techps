@@ -8,4 +8,7 @@
             putenv("{$attr}={$val}");
             $_ENV[$attr] = $val;
         }
+        $_ENV["URL_BASE"] = "http://{$_SERVER["HTTP_HOST"]}";
     }
+?>
+ 

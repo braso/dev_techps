@@ -11,7 +11,7 @@
 	$started = session_start();
 	
 	include_once "load_env.php";
-	
+
 	if(empty($_POST["getSessionValues"])){
 		echo "<style>";
 		include "css/index.css";

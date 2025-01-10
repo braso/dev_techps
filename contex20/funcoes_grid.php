@@ -33,9 +33,32 @@
 	function montarTabelaPonto(array $cabecalho, array $valores): string{
 		// $rand = md5($sql);
 		$grid = 
-			"<div class='table-responsive'>
+			"
+			<style>
+				// .table-responsive>.table>tbody>tr>td:nth-child(1){
+				// 	background-color: white;
+				// 	left: 0px;
+				// 	position: sticky;
+				// }
+				// 
+				// .table-responsive>.table>tbody>tr>td:nth-child(2){
+				// 	background-color: white;
+				// 	left: 40px;
+				// 	position: sticky;
+				// }
+
+				.table-head{
+					background-color: white;
+					position: sticky;
+					top: -1px;
+				}
+				// .table-responsive>.table{
+				// 	border-collapse: separate;
+				// }
+			</style>
+			<div class='table-responsive' style='max-height: 85vh;'>
 				<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact'"/*.id=$rand*/.">
-					<thead>"
+					<thead class='table-head'>"
 						.(!empty($cabecalho)?"<tr><th class='th-align'>".implode("</th><th class='th-align'>", $cabecalho)."</th></tr>": "").
 					"</thead>
 					<tbody>"
