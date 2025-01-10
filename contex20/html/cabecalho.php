@@ -218,11 +218,19 @@
 			.img-section .text-left img {
 				width: 25%;
 			}
+
+			.row>div, .row>div>div {
+				padding: 0px;
+			}
 		}
 
 		@media(max-width: 480px){
 			.page-container{
 				height: 100vh;
+			}
+
+			.page-footer{
+				display: none;
 			}
 		}
 	</style>
