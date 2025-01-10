@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -208,25 +208,34 @@
 					$aEmpresa = carregar("empresa", $motorista["enti_nb_empresa"]);
 				}
 				// Loop for para percorrer as datas
+				$prevEndossoMes = "";
 				for ($date = $startDate; $date <= $endDate; $date->modify("+1 day")){
 					//Conferir se o dia já está endossado{
 						$endossoMes = montarEndossoMes($date, $motorista);
-						if(!empty($endossoMes)){
-							$diasEndossados = 0;
-							foreach($endossoMes["endo_tx_pontos"] as $row){
-								$day = DateTime::createFromFormat("d/m/Y", $row[1]);
-								if($day > $date){
-									$diasEndossados++;
-									$rows[] = $row;
+						if($prevEndossoMes != $endossoMes){
+							if(!empty($endossoMes)){
+								$diasEndossados = 0;
+								foreach($endossoMes["endo_tx_pontos"] as $row){
+									$day = DateTime::createFromFormat("d/m/Y", $row[1]);
+									if($day > $date){
+										$diasEndossados++;
+										$rows[] = $row;
+									}
 								}
-							}
-							if($diasEndossados > 0){
-								$date->modify("+".($diasEndossados-1)." day");
-								continue;
+								if($diasEndossados > 0){
+									$date->modify("+".($diasEndossados-1)." day");
+									continue;
+								}
 							}
 						}
 					//}
 					$aDetalhado = diaDetalhePonto($motorista, $date->format("Y-m-d"));
+					if($prevEndossoMes != $endossoMes){
+						foreach($totalResumo as $key => $value){
+							$totalResumo[$key] = operarHorarios([$value, $endossoMes["totalResumo"][$key]], "+");
+						}
+					}
+					$prevEndossoMes = $endossoMes;
 					
 					$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado));
 					for($f = 0; $f < sizeof($row)-1; $f++){
