@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 		
@@ -111,6 +111,7 @@
 					$motorista["enti_tx_percHEEx"] = $motorista["para_tx_percHEEx"];
 				}
 
+				$prevEndossoMes = "";
 				for($date = new DateTime($monthDate->format("Y-m-1")); $date->format("Y-m-d") <= $monthDate->format("Y-m-t"); $date->modify("+1 day")){
 					if($monthDate->format("Y-m") < $dataAdmissao->format("Y-m")){
 						continue;
@@ -122,23 +123,31 @@
 					
 					//Conferir se o dia já está endossado{
 						$endossoMes = montarEndossoMes($date, $motorista);
-						if(!empty($endossoMes)){
-							$diasEndossados = 0;
-							foreach($endossoMes["endo_tx_pontos"] as $row){
-								$day = DateTime::createFromFormat("d/m/Y", $row[1]);
-								if($day > $date){
-									$diasEndossados++;
-									$rows[] = $row;
+						if($prevEndossoMes != $endossoMes){
+							if(!empty($endossoMes)){
+								$diasEndossados = 0;
+								foreach($endossoMes["endo_tx_pontos"] as $row){
+									$day = DateTime::createFromFormat("d/m/Y", $row[1]);
+									if($day > $date){
+										$diasEndossados++;
+										$rows[] = $row;
+									}
 								}
-							}
-							if($diasEndossados > 0){
-								$date->modify("+".($diasEndossados-1)." day");
-								continue;
+								if($diasEndossados > 0){
+									$date->modify("+".($diasEndossados-1)." day");
+									continue;
+								}
 							}
 						}
 					//}
-
+					
 					$aDetalhado = diaDetalhePonto($motorista, $date->format("Y-m-d"));
+					if($prevEndossoMes != $endossoMes){
+						foreach($totalResumo as $key => $value){
+							$totalResumo[$key] = operarHorarios([$value, $endossoMes["totalResumo"][$key]], "+");
+						}
+					}
+					$prevEndossoMes = $endossoMes;
 					
 					$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado));
 					for($f = 0; $f < sizeof($row)-1; $f++){
@@ -255,6 +264,11 @@
 						$qtdErros = 0;
 					}
 					if($qtdErros == 0){
+						$f2 = 7;
+						foreach($totalResumo as &$total){
+							$total = operarHorarios([$total, strip_tags($rows[$f][$f2])], "-");
+							$f2++;
+						}
 						$rows = remFromArray($rows, $f);
 						if(empty($rows)){
 							break;
