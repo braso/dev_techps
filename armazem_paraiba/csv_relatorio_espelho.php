@@ -38,10 +38,10 @@
     $arquivo = fopen($nomeArquivoCaminho, "w");
 
     // Adiciona os cabeçalhos
-    fputcsv($arquivo, $cabecalho1, ";");
-    fputcsv($arquivo, $cabecalho2, ";");
-    fputcsv($arquivo, $espaco, ";");
-    fputcsv($arquivo, $cabecalho3, ";");
+    fputcsv($arquivo, $cabecalhos[0], ";");
+    fputcsv($arquivo, $cabecalhos[1], ";");
+    fputcsv($arquivo, $cabecalhos[2], ";");
+    fputcsv($arquivo, $cabecalhos[3], ";");
 
     // Adiciona os dados ao CSV
     foreach ($aDia as $aDiaVez) {
@@ -64,9 +64,7 @@
     $tabelaInfo5 = ["Horas Extras (50%) - a pagar:","$totalResumo[he50]","","*","Registros excluídos manualmente","","","","","","","","","","","",""];
     $tabelaInfo6 = ["Horas Extras (100%) - a pagar:","$totalResumo[he100]","","D+1","Jornada terminada nos dias seguintes","","","","","","","","","","","","","Impressão Doc.:",date("d/m/Y \T H:i:s")."(UTC-3)"];
 
-    fputcsv($arquivo, $espaco, ";");
     fputcsv($arquivo, $totalDias, ";");
-    fputcsv($arquivo, $espaco, ";");
     fputcsv($arquivo, $tabelaInfo, ";");
     fputcsv($arquivo, $tabelaInfo1, ";");
     fputcsv($arquivo, $tabelaInfo2, ";");

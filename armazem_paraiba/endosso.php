@@ -366,6 +366,8 @@
 					$endossoHTML .=  
 						"<form name='form_imprimir_relatorio_".$aMotorista["enti_tx_matricula"]."' method='post' target='_blank'>
 							<input type='hidden' name='acao' value=''>
+							<input type='hidden' name='busca_data' value='{$_POST["busca_data"]}'>
+							<input type='hidden' name='busca_empresa' value='{$_POST["busca_empresa"]}'>
 							<input type='hidden' name='idMotoristaEndossado' value=''>
 							<input type='hidden' name='matriculaMotoristaEndossado' value=''>
 						</form>
