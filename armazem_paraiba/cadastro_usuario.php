@@ -74,8 +74,8 @@
 				}
 			}
 			if(!empty($_POST["rg"])){
-        		$_POST["rg"] = preg_replace( "/[^0-9]/is", "", $_POST["rg"]);
-				if(strlen($_POST["rg"]) != 9){
+				$_POST["rg"] = preg_replace( "/[^0-9]/is", "", $_POST["rg"]);
+				if(strlen($_POST["rg"]) < 3){
 					$_POST["errorFields"][] = "rg";
 					$errorMsg .= "RG parcial, ";
 				}
@@ -200,7 +200,17 @@
 	}
 
 	function excluirUsuario(){
+		$usuario = mysqli_fetch_assoc(query(
+			"SELECT * FROM user
+				LEFT JOIN entidade ON user_nb_entidade = enti_nb_id
+				WHERE user_tx_status = 'ativo'
+					AND user_nb_id = {$_POST["id"]}
+				LIMIT 1;"
+		));
 		remover("user",$_POST["id"]);
+		if(!empty($usuario["enti_nb_id"])){
+			remover("entidade", $usuario["enti_nb_id"]);
+		}
 		index();
 		exit;
 	}
@@ -245,8 +255,10 @@
 
 	function modificarUsuario(){
 
+		dd($_POST, false);
+
 		if(!empty($_POST["id"])){
-      if(is_array($_POST["id"])){
+      		if(is_array($_POST["id"])){
 				$_POST["id"] = $_POST["id"][0];
 			}
 			$usuario = mysqli_fetch_assoc(query("SELECT * FROM user WHERE user_nb_id = {$_POST["id"]};"));
@@ -323,7 +335,7 @@
 
 			$editPermission = true;
 
-			$campo_nome = campo("Nome*", "nome", ($_POST["nome"]?? ""), 2, "","maxlength='65'");
+			$campo_nome = campo("Nome*", "nome", ($_POST["nome"]?? ""), 4, "","maxlength='65'");
 			
 			$niveis = [""];
 			switch($_SESSION["user_tx_nivel"]){
@@ -351,7 +363,7 @@
 
 		}else{	//Entrará aqui caso (editando e o user_nivel != funcionário) ou (session_nivel != administrador e não editando próprio usuário)
 
-			$campo_nome = texto("Nome*", ($_POST["nome"]?? ""), 2, "for='nome'");
+			$campo_nome = texto("Nome*", ($_POST["nome"]?? ""), 4, "for='nome'");
 			$campo_nivel = texto("Nível*", ($_POST["nivel"]?? ""), 2);
 			$campo_status = "";
 			$data_nascimento = ($_POST["nascimento"] != "0000-00-00") ? date("d/m/Y", strtotime($_POST["nascimento"])) : "00/00/0000";
