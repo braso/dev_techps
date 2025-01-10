@@ -209,6 +209,23 @@
 				}
 				// Loop for para percorrer as datas
 				for ($date = $startDate; $date <= $endDate; $date->modify("+1 day")){
+					//Conferir se o dia já está endossado{
+						$endossoMes = montarEndossoMes($date, $motorista);
+						if(!empty($endossoMes)){
+							$diasEndossados = 0;
+							foreach($endossoMes["endo_tx_pontos"] as $row){
+								$day = DateTime::createFromFormat("d/m/Y", $row[1]);
+								if($day > $date){
+									$diasEndossados++;
+									$rows[] = $row;
+								}
+							}
+							if($diasEndossados > 0){
+								$date->modify("+".($diasEndossados-1)." day");
+								continue;
+							}
+						}
+					//}
 					$aDetalhado = diaDetalhePonto($motorista, $date->format("Y-m-d"));
 					
 					$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado));
@@ -342,11 +359,11 @@
 
 		return 
 			"<script>
-					function ajustarPonto(idMotorista, data){
-						document.form_ajuste_ponto.idMotorista.value = idMotorista;
-						document.form_ajuste_ponto.data.value = data;
-						document.form_ajuste_ponto.submit();
-					}
+				function ajustarPonto(idMotorista, data){
+					document.form_ajuste_ponto.idMotorista.value = idMotorista;
+					document.form_ajuste_ponto.data.value = data;
+					document.form_ajuste_ponto.submit();
+				}
 
 				function selecionaMotorista(idEmpresa){
 					let buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")');
@@ -377,6 +394,14 @@
 						}
 					});
 				}
+
+				// $(window).scroll(function(){
+				// 	if ($(this).scrollTop() > 60){
+				// 		$('.table-head').addClass('table-fixed-top');
+				// 	}else{
+				// 		$('.table-head').removeClass('table-fixed-top');  
+				// 	}
+				// });
 
 				function imprimir(){
 					window.print();
