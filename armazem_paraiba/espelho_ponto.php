@@ -208,8 +208,34 @@
 					$aEmpresa = carregar("empresa", $motorista["enti_nb_empresa"]);
 				}
 				// Loop for para percorrer as datas
+				$prevEndossoMes = "";
 				for ($date = $startDate; $date <= $endDate; $date->modify("+1 day")){
+					//Conferir se o dia já está endossado{
+						$endossoMes = montarEndossoMes($date, $motorista);
+						if($prevEndossoMes != $endossoMes){
+							if(!empty($endossoMes)){
+								$diasEndossados = 0;
+								foreach($endossoMes["endo_tx_pontos"] as $row){
+									$day = DateTime::createFromFormat("d/m/Y", $row[1]);
+									if($day > $date){
+										$diasEndossados++;
+										$rows[] = $row;
+									}
+								}
+								if($diasEndossados > 0){
+									$date->modify("+".($diasEndossados-1)." day");
+									continue;
+								}
+							}
+						}
+					//}
 					$aDetalhado = diaDetalhePonto($motorista, $date->format("Y-m-d"));
+					if($prevEndossoMes != $endossoMes){
+						foreach($totalResumo as $key => $value){
+							$totalResumo[$key] = operarHorarios([$value, $endossoMes["totalResumo"][$key]], "+");
+						}
+					}
+					$prevEndossoMes = $endossoMes;
 					
 					$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado));
 					for($f = 0; $f < sizeof($row)-1; $f++){
@@ -287,7 +313,7 @@
 				$periodoPesquisa = "De ".date("d/m/Y", strtotime($_POST["busca_periodo"][0]))." até ".date("d/m/Y", strtotime($_POST["busca_periodo"][1]));
 			
 				$cabecalho = [
-					"", "DATA", "<div style='margin:10px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
+					"", "DATA", "<div style='margin:11px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
 					"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "H.E. ".$motorista["enti_tx_percHESemanal"]."%", "H.E. ".$motorista["enti_tx_percHEEx"]."%",
 					"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 				];
@@ -342,11 +368,11 @@
 
 		return 
 			"<script>
-					function ajustarPonto(idMotorista, data){
-						document.form_ajuste_ponto.idMotorista.value = idMotorista;
-						document.form_ajuste_ponto.data.value = data;
-						document.form_ajuste_ponto.submit();
-					}
+				function ajustarPonto(idMotorista, data){
+					document.form_ajuste_ponto.idMotorista.value = idMotorista;
+					document.form_ajuste_ponto.data.value = data;
+					document.form_ajuste_ponto.submit();
+				}
 
 				function selecionaMotorista(idEmpresa){
 					let buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")');
@@ -377,6 +403,14 @@
 						}
 					});
 				}
+
+				// $(window).scroll(function(){
+				// 	if ($(this).scrollTop() > 60){
+				// 		$('.table-head').addClass('table-fixed-top');
+				// 	}else{
+				// 		$('.table-head').removeClass('table-fixed-top');  
+				// 	}
+				// });
 
 				function imprimir(){
 					window.print();

@@ -628,13 +628,18 @@
 		}
 
 		$extra = 
-			((!empty($_POST["busca_codigo"]))? 		" AND empr_nb_id = ".$_POST["busca_codigo"]: "").
-			((!empty($_POST["busca_nome"]))? 		" AND empr_tx_nome LIKE '%".$_POST["busca_nome"]."%'": "").
-			((!empty($_POST["busca_fantasia"]))? 	" AND empr_tx_fantasia LIKE '%".$_POST["busca_fantasia"]."%'": "").
-			((!empty($_POST["busca_cnpj"]))? 		" AND empr_tx_cnpj = '".$_POST["busca_cnpj"]."'": "").
-			((!empty($_POST["busca_status"]))? 		" AND empr_tx_status = '".$_POST["busca_status"]."'": "").
-			((!empty($_POST["busca_uf"]))? 			" AND cida_tx_uf = '".$_POST["busca_uf"]."'": "")
+			((!empty($_POST["busca_codigo"]))? 		" AND empr_nb_id = {$_POST["busca_codigo"]}'": "").
+			((!empty($_POST["busca_nome"]))? 		" AND empr_tx_nome LIKE '%{$_POST["busca_nome"]}%'": "").
+			((!empty($_POST["busca_fantasia"]))? 	" AND empr_tx_fantasia LIKE '%{$_POST["busca_fantasia"]}'": "").
+			((!empty($_POST["busca_cnpj"]))? 		" AND empr_tx_cnpj = '{$_POST["busca_cnpj"]}'": "").
+			((!empty($_POST["busca_uf"]))? 			" AND cida_tx_uf = '{$_POST["busca_uf"]}'": "")
 		;
+
+		if(!isset($_POST["busca_status"])){
+			$extra .= " AND empr_tx_status = 'ativo'";
+		}elseif($_POST["busca_status"] != ""){
+			$extra .= " AND empr_tx_status = '{$_POST["busca_status"]}'";
+		}
 		
 
 		$uf = ["", "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
@@ -646,7 +651,7 @@
 			campo("Nome Fantasia",	"busca_fantasia",	($_POST["busca_fantasia"]?? ""),	2, "",					"maxlength='65'"),
 			campo("CPF/CNPJ",		"busca_cnpj",		($_POST["busca_cnpj"]?? ""),		2, "MASCARA_CPF/CNPJ"),
 			combo("UF",				"busca_uf",			($_POST["busca_uf"]?? ""),			1, $uf),
-			combo("Status",			"busca_status",		($_POST["busca_status"]?? ""),	2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
+			combo("Status",			"busca_status",		($_POST["busca_status"]?? "ativo"),	2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
 		];
 
 		$botao = [

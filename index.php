@@ -9,6 +9,7 @@
 	$msg = "";
 
 	include_once "load_env.php";
+
 	$error = false;
 	if(!empty($_GET["error"])){
 		$errorMsgs = [
