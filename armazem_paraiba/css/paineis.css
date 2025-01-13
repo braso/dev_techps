@@ -510,13 +510,22 @@ th.sort-desc::after {
     }
 
     #accordion2{
-        order: 3!important;
+        order: 3 !important;
         /* break-after: page; */
     }
 
     #collapse3{
         order: 1 !important;
         break-after: page;
+    }
+
+    #collapse4{
+        order: 0 !important;
+        break-after: page;
+    }
+    #collapse5{
+        order: 1 !important;
+        /* break-after: page; */
     }
 
     /* #resumo{

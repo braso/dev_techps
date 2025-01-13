@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
     /*/    
@@ -157,16 +157,25 @@ function index() {
         [$startDate, $endDate] = [new DateTime($_POST["busca_periodo"][0]), new DateTime($_POST["busca_periodo"][1])];
         $diaInicio = $startDate->format("Y-m-d");
         $diaFim = $endDate->format("Y-m-d");
+        $diaInicioFotmat = $startDate->format("d-m-Y");
+        $diaFimFotmat = $endDate->format("d-m-Y");
 
         $rows = [];
 
         $motorista = mysqli_fetch_assoc(query(
-            "SELECT enti_tx_matricula FROM entidade
+            "SELECT enti_tx_matricula, enti_tx_matricula, enti_tx_nome, enti_tx_cpf, enti_tx_ocupacao FROM entidade
              LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
              LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
              LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
              WHERE enti_tx_status = 'ativo'
                  AND enti_nb_id = '{$_POST["busca_motorista"]}'
+             LIMIT 1;"
+        ));
+
+        $empresa = mysqli_fetch_assoc(query(
+            "SELECT empr_tx_nome FROM empresa
+             WHERE empr_tx_status = 'ativo'
+             AND empr_nb_id = '{$_POST["busca_empresa"]}'
              LIMIT 1;"
         ));
 
@@ -211,14 +220,25 @@ function index() {
                 </div>
                 <div class='col-md-12 col-sm-12' id='pdf2htmldiv'>
                     <div class='portlet light '>
+                        <div class='emissao' style='display: block !important;'>
+				            <h2 class='titulo2'>Relatorio de ajustes de ponto</h2>
+                            <br>
+                            <span><b>Empresa: </b>$empresa[empr_tx_nome]</span>
+                            <br>
+                            <span><b>Período do relatório: </b> $diaInicioFotmat a $diaFimFotmat</span>
+                            <br>
+                            <span><b>Matrícula: </b> $motorista[enti_tx_matricula]</span> -
+                            <span><b>$motorista[enti_tx_ocupacao]: </b> $motorista[enti_tx_nome]</span> -
+                            <span><b>CPF: </b> $motorista[enti_tx_cpf]</span>
+                        </div>
                     <div class='panel panel-default'>
 						<div class='panel-heading'>
 							<h3 class='panel-title'>
 								<a
 									data-toggle='collapse'
-									href='#collapse1'
+									href='#collapse4'
 									aria-expanded='false'
-									aria-controls='collapse1'
+									aria-controls='collapse4'
 									class='collapsed'>
 									<b>
 										Ajustes Ativos
@@ -226,7 +246,7 @@ function index() {
 								</a>
 							</h3>
 						</div>
-						<div id='collapse1' class='panel-collapse collapse'>
+						<div id='collapse4' class='panel-collapse collapse'>
                         <div class='table-responsive'>
                             <div class='portlet-body form'>
                                 <table id='tabela-empresas' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>
@@ -256,9 +276,9 @@ function index() {
 							<h3 class='panel-title'>
 								<a
 									data-toggle='collapse'
-									href='#collapse'
+									href='#collapse5'
 									aria-expanded='false'
-									aria-controls='collapse'
+									aria-controls='collapse5'
 									class='collapsed'>
 									<b>
 										Ajustes Inativos
@@ -266,7 +286,7 @@ function index() {
 								</a>
 							</h3>
 						</div>
-						<div id='collapse' class='panel-collapse collapse'>
+						<div id='collapse5' class='panel-collapse collapse'>
 
                         <div class='table-responsive'>
                             <div class='portlet-body form'>
