@@ -178,7 +178,10 @@
     function delete_last(int $driverRegistration){
         $connect = new PDO("mysql:host=".$_ENV["DB_HOST"].";dbname=".$_ENV["DB_NAME"].";charset=utf8mb4", $_ENV["DB_USER"], $_ENV["DB_PASSWORD"]);
 
-        $lastId = $connect->query("SELECT pont_nb_id FROM ponto WHERE pont_tx_matricula = ".$driverRegistration." ORDER BY pont_nb_id DESC LIMIT 1;")->fetch(MYSQLI_ASSOC)->pont_nb_id;
+        $lastId = $connect->query(
+            "SELECT pont_nb_id FROM ponto 
+                WHERE pont_tx_matricula = '".$driverRegistration."' ORDER BY pont_nb_id DESC LIMIT 1;"
+        )->fetch(MYSQLI_ASSOC)->pont_nb_id;
 
         return ($connect->exec("DELETE FROM ponto WHERE pont_nb_id = ".$lastId)? "deleted": "failed");
     }
