@@ -182,7 +182,7 @@
                 "SELECT * from entidade e
                     join user u on u.user_nb_entidade = e.enti_nb_id
                     where e.enti_tx_status = 'ativo' AND u.user_tx_status = 'ativo'
-                    u.user_nb_id = {$_POST["userID"]}"
+                    AND u.user_nb_id = {$_POST["userID"]}"
             ;
             $entity = get_data($entity);
             if(empty($entity)){
