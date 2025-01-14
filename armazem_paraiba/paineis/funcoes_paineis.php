@@ -1152,7 +1152,7 @@
 						." AND pont_tx_data BETWEEN STR_TO_DATE('$diaInicio 00:00:00', '%Y-%m-%d %H:%i:%s')"
 						." AND STR_TO_DATE('$diafim 23:59:59', '%Y-%m-%d %H:%i:%s')"
 						." ORDER BY ponto.pont_tx_data ASC;"
-					,1),
+					),
 					MYSQLI_ASSOC
 				);
 

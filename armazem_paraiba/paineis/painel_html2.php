@@ -29,7 +29,6 @@
 				<?= $quantFun ?>
 				<?= $tabelaMotivo ?>
 			</div>
-			<?= $tabelaMotivo ?>
 			<?php if ($quantFun) { ?>
 				<span style="font-size: 8px;">Marcações com <b>(*)</b> indicam intervalos em aberto</span>
 				<span style="margin-left: 19px; font-size: 8px;"><i id="iconLegenda" class="fa fa-circle" aria-hidden="true" style="line-height: 7px !important; color: yellow; border: 1px solid black; border-radius: 50%;"></i> A cor Indica que o tempo total de jornada excedeu o previsto.</span>
