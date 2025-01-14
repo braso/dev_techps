@@ -643,7 +643,7 @@
 						$jornada = $dia["diffJornada"];
 					}
 
-					$jornadaEfetiva = $dia["diffJornadaEfetiva"] == "00:00" ? "----" : $dia["diffJornadaEfetiva"];
+					// $jornadaEfetiva = $dia["diffJornadaEfetiva"] == "00:00" ? "----" : $dia["diffJornadaEfetiva"];
 				}
 
 				$dataItem = DateTime::createFromFormat('d/m/Y', $dia["data"]);
