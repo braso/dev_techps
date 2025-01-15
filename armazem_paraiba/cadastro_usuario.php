@@ -255,8 +255,6 @@
 
 	function modificarUsuario(){
 
-		dd($_POST, false);
-
 		if(!empty($_POST["id"])){
       		if(is_array($_POST["id"])){
 				$_POST["id"] = $_POST["id"][0];
