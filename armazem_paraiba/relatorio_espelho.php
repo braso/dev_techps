@@ -278,7 +278,7 @@
                             <p><?=$aMotorista['enti_tx_nome']?></p>
                         </center>
                         <center>
-                            <p><?=$aMotorista['enti_tx_nivel']?></p>
+                            <p><?=$aMotorista['enti_tx_ocupacao']?></p>
                         </center>
                     </div>
                 </td>
