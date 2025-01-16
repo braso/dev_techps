@@ -548,8 +548,112 @@
 				]
 			},
 			series: [{
-				name: 'Performance',
+				name: 'Performance Alta',
 				data: [<?= round($porcentagemFun, 2) ?>], // Agora o valor está dentro do intervalo de 0 a 100
+				dataLabels: {
+					format: '{y} %',
+					borderWidth: 0,
+					color: '#333333',
+					style: {
+						fontSize: '16px'
+					}
+				},
+				dial: {
+					radius: '80%',
+					backgroundColor: 'gray',
+					baseWidth: 12,
+					baseLength: '0%',
+					rearLength: '0%'
+				},
+				pivot: {
+					backgroundColor: 'gray',
+					radius: 6
+				}
+			}]
+		});
+
+		Highcharts.chart('graficoPerformanceBaixa', {
+			chart: {
+				type: 'gauge',
+				plotBackgroundColor: null,
+				plotBackgroundImage: null,
+				plotBorderWidth: 0,
+				plotShadow: false,
+				height: '80%'
+			},
+			title: {
+				text: 'Performance Baixa'
+			},
+			tooltip: {
+				// Customizando o conteúdo do tooltip
+				formatter: function() {
+					var quantidadeDeItens = <?= sizeof($arquivos) - $totalJsonComTudoZero ?>; // Substitua com o valor real ou uma variável
+					var perfomaceTotal= <?= array_sum($porcentagemTotalBaixa) ?>; 
+					// Exibe o valor e a quantidade de itens
+					return this.series.name + ': ' + perfomaceTotal + '%<br>Quantidade de Funcionários: ' + quantidadeDeItens;
+				},
+				style: {
+					fontSize: '14px', // Aumenta o tamanho da fonte para 18px
+					fontWeight: 'bold', // Deixa a fonte em negrito
+					color: '#333333' // Cor do texto do tooltip
+				}
+			},
+			pane: {
+				startAngle: -90,
+				endAngle: 90,
+				background: null,
+				center: ['50%', '75%'],
+				size: '130%'
+			},
+			yAxis: {
+				min: 0,
+				max: 100,
+				tickPixelInterval: 60,
+				tickPosition: 'inside',
+				tickColor: '#000000',
+				// tickColor: Highcharts.defaultOptions.chart.backgroundColor || '#FFFFFF',
+				tickLength: 15,
+				tickWidth: 1,
+				minorTickInterval: 5, // Adiciona ticks menores a cada 5 unidades
+				minorTickColor: '#555555', // Cor dos ticks menores
+				minorTickLength: 10,
+				minorTickWidth: 1,
+				labels: {
+					distance: 20,
+					style: {
+						fontSize: '14px'
+					}
+				},
+				lineWidth: 0,
+				plotBands: [{
+						from: 75,
+						to: 100,
+						color: '#55BF3B',
+						thickness: 20
+					}, // Verde 
+					{
+						from: 50,
+						to: 75,
+						color: '#FFE800',
+						thickness: 20
+					}, // Amarelo 
+					{
+						from: 25,
+						to: 50,
+						color: '#FF8B00',
+						thickness: 20
+					},
+					{
+						from: 0,
+						to: 25,
+						color: '#DF5353',
+						thickness: 20
+					} // Vermelho
+				]
+			},
+			series: [{
+				name: 'Performance Total do funcionário',
+				data: [<?= 100 - array_sum($porcentagemTotalBaixa) ?>], // Agora o valor está dentro do intervalo de 0 a 100
 				dataLabels: {
 					format: '{y} %',
 					borderWidth: 0,
