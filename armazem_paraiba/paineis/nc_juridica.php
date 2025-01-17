@@ -55,7 +55,7 @@
 						+'<td class='+class3+'>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
 						+'<td class='+class3+'>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
 						+'<td class='+class4+'>'+(totalNaEndossado)+'</td>'
-						+'<td style=\"'+corDeFundo+'\">'+(arrayPerformance[row.matricula])+' %</td>'
+						+'<td style=\"'+corDeFundo+'\">'+(100 - arrayPerformance[row.matricula])+' %</td>'
 					+'</tr>';";
 		} elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
 			$linha = "linha = '<tr>'";
@@ -287,6 +287,7 @@
 	function index() {
 		$encontrado = '';
 		$totaisFuncionario= [];
+		$totaisFuncionario2 = [];
 
 		if (empty($_POST["busca_dataMes"])) {
 			$_POST["busca_dataMes"] = date("Y-m");
@@ -449,6 +450,7 @@
 				$motoristas = 0;
 				$totalJsonComTudoZero = 0;
 				$totaisFuncionario = [];
+				$totaisFuncionario2 = [];
 				foreach ($arquivos as &$arquivo) {
 					$todosZeros = true;
 					$arquivo = $path."/".$arquivo;
@@ -460,7 +462,9 @@
 					$dias = $data->format('t');
 					$totalNConformMax = 4 * $dias;
 					$porcentagemFunNCon = round(($totalMotorista *100) / ($totalNConformMax * sizeof($arquivos)), 2);
+					$porcentagemFunNCon2 = round(($totalMotorista *100) / $totalNConformMax, 2);
 					$totaisFuncionario[$json["matricula"]] = $porcentagemFunNCon;
+					$totaisFuncionario2[$json["matricula"]] = $porcentagemFunNCon2;
 
 					foreach ($totalizadores as $key => &$total) {
 						if(!in_array($key, ['faltaJustificada', 'jornadaPrevista']) && (!isset($json[$key]) || $json[$key] != 0)) {
@@ -490,6 +494,7 @@
 				}
 
 				$porcentagemTotalBaixa= (array) $totaisFuncionario;
+				$porcentagemTotalBaixa2= (array) $totaisFuncionario2;
 
 				if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado"){
 					$totalNaoconformidade = array_sum([
@@ -678,6 +683,7 @@
 					<td class='total'>".$totalempre["jornada"]."</td>";
 			}
 			
+			$totalBaixaPerformance = 100 - array_sum($totaisFuncionario);
 			$rowTotal = "<td></td>
 					<td></td>
 					<td>Total</td>
@@ -689,18 +695,31 @@
 					<td class='total'>".$totalempre["intersticioInferior"]."</td>
 					<td class='total'>".$totalempre["intersticioSuperior"]."</td>
 					<td class='total'>$totalGeral</td>
+					<td class='total'>$totalBaixaPerformance</td>
 			";
 
 			$rowGravidade = "
 			<div class='row' id='resumo'>
 			<div class='col-md-4'>
 			<div id='graficoPerformance' style='width: 250px; height: 195px; margin: 0 auto;'></div>
+			<div id='popup-alta' class='popup'>
+			<button class='popup-close'>Fechar</button>
+			<h3>Sobre o Gráfico:</h3>
+			<spam>Este gráfico apresenta a porcentagem de funcionários com nenhuma não conformidade. 
+			Quanto maior o valor, melhor a performance.</spam>
+		</div>
 			</div>
 			<div class='col-md-4'>
 			<div id='graficoPerformanceMedia' style='width: 250px; height: 195px; margin: 0 auto;'></div>
 			</div>
 			<div class='col-md-4'>
 			<div id='graficoPerformanceBaixa' style='width: 250px; height: 195px; margin: 0 auto;'></div>
+			<div id='popup-baixa' class='popup'>
+			<button class='popup-close'>Fechar</button>
+			<h3>Sobre o Gráfico: </h3>
+			<spam>Este gráfico apresenta a porcentagem de não conformidade dos funcionários em relação a quantidade de dias do mês. 
+			Quanto maior o valor, melhor a performance.</spam>
+		</div>
 			</div>
 			<div class='row' id='resumo'>
 			</div>
@@ -808,6 +827,6 @@
 			// }
 		}
 
-	carregarJS($arquivos, $totaisFuncionario);
+	carregarJS($arquivos, $totaisFuncionario2);
 	rodape();
 }

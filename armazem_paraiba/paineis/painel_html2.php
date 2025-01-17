@@ -479,14 +479,20 @@
 				height: '80%'
 			},
 			title: {
-				text: 'Performance'
+				useHTML: true, // Permite adicionar HTML ao título
+				text: `
+					<div style="display: inline-block;">
+						Performance Alta 
+						<span class="popup-title-icon" id="popup-icon">&#9432;</span>
+					</div>
+				`
 			},
 			tooltip: {
 				// Customizando o conteúdo do tooltip
 				formatter: function() {
 					var quantidadeDeItens = <?= $totalJsonComTudoZero ?>; // Substitua com o valor real ou uma variável
 					// Exibe o valor e a quantidade de itens
-					return this.series.name + ': ' + this.y + '%<br>Quantidade de Funcionários: ' + quantidadeDeItens;
+					return this.series.name + ': ' + this.y + '%<br>Quantidade de funcionários sem conformidade: ' + quantidadeDeItens;
 				},
 				style: {
 					fontSize: '14px', // Aumenta o tamanho da fonte para 18px
@@ -548,7 +554,7 @@
 				]
 			},
 			series: [{
-				name: 'Performance Alta',
+				name: 'Performance',
 				data: [<?= round($porcentagemFun, 2) ?>], // Agora o valor está dentro do intervalo de 0 a 100
 				dataLabels: {
 					format: '{y} %',
@@ -569,7 +575,21 @@
 					backgroundColor: 'gray',
 					radius: 6
 				}
-			}]
+			}],
+			events: {
+				load: function () {
+					// Registra evento de clique no ícone do popup
+					$(document).on('click', '#popup-icon', function () {
+						const popup = $('#popup-baixa');
+						popup.toggle(); // Abre ou fecha o popup
+					});
+
+					// Evento para fechar o popup
+					$(document).on('click', '.popup-close', function () {
+						$('#popup-baixa').hide();
+					});
+				}
+			}
 		});
 
 		Highcharts.chart('graficoPerformanceBaixa', {
@@ -582,7 +602,13 @@
 				height: '80%'
 			},
 			title: {
-				text: 'Performance Baixa'
+				useHTML: true, // Permite adicionar HTML ao título
+				text: `
+					<div style="display: inline-block;">
+						Performance Baixa 
+						<span class="popup-title-icon" id="popup-icon2">&#9432;</span>
+					</div>
+				`
 			},
 			tooltip: {
 				// Customizando o conteúdo do tooltip
@@ -590,7 +616,7 @@
 					var quantidadeDeItens = <?= sizeof($arquivos) - $totalJsonComTudoZero ?>; // Substitua com o valor real ou uma variável
 					var perfomaceTotal= <?= array_sum($porcentagemTotalBaixa) ?>; 
 					// Exibe o valor e a quantidade de itens
-					return this.series.name + ': ' + perfomaceTotal + '%<br>Quantidade de Funcionários: ' + quantidadeDeItens;
+					return this.series.name + ': ' + perfomaceTotal + '%<br>Quantidade de funcionários com conformidade: ' + quantidadeDeItens;
 				},
 				style: {
 					fontSize: '14px', // Aumenta o tamanho da fonte para 18px
@@ -652,7 +678,7 @@
 				]
 			},
 			series: [{
-				name: 'Performance Total do funcionário',
+				name: 'Performance: ',
 				data: [<?= 100 - array_sum($porcentagemTotalBaixa) ?>], // Agora o valor está dentro do intervalo de 0 a 100
 				dataLabels: {
 					format: '{y} %',
@@ -675,5 +701,28 @@
 				}
 			}]
 		});
+
+		// Registra evento de clique no ícone do popup após o gráfico ser renderizado
+		$(document).on('click', '#popup-icon2', function () {
+			const popup = $('#popup-baixa');
+			popup.toggle(); // Alterna entre abrir e fechar o popup
+		});
+
+		// Evento para fechar o popup
+		$(document).on('click', '.popup-close', function () {
+			$('#popup-baixa').hide(); // Fecha o popup
+		});
+
+		// Registra evento de clique no ícone do popup após o gráfico ser renderizado
+		$(document).on('click', '#popup-icon', function () {
+			const popup = $('#popup-alta');
+			popup.toggle(); // Alterna entre abrir e fechar o popup
+		});
+
+		// Evento para fechar o popup
+		$(document).on('click', '.popup-close', function () {
+			$('#popup-alta').hide(); // Fecha o popup
+		});
+
 	</script>
 <?php } ?>
