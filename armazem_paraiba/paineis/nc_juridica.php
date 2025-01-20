@@ -493,7 +493,9 @@
 					unset($total);
 				}
 
-				$porcentagemTotalBaixa= (array) $totaisFuncionario;
+				$porcentagemTotalBaixa= array_sum((array) $totaisFuncionario);
+				$totalFun = sizeof($arquivos) - $totalJsonComTudoZero;
+				$porcentagemTotalBaixaG = 100 - $porcentagemTotalBaixa;
 				$porcentagemTotalBaixa2= (array) $totaisFuncionario2;
 
 				if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado"){

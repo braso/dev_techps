@@ -613,10 +613,10 @@
 			tooltip: {
 				// Customizando o conteúdo do tooltip
 				formatter: function() {
-					var quantidadeDeItens = <?= sizeof($arquivos) - $totalJsonComTudoZero ?>; // Substitua com o valor real ou uma variável
-					var perfomaceTotal= <?= array_sum($porcentagemTotalBaixa) ?>; 
+					var quantidadeDeItens = <?= $totalFun  ?>; // Substitua com o valor real ou uma variável
+					var perfomaceTotal= <?= number_format($porcentagemTotalBaixa, 2, '.', '') ?>; 
 					// Exibe o valor e a quantidade de itens
-					return this.series.name + ': ' + perfomaceTotal + '%<br>Quantidade de funcionários com conformidade: ' + quantidadeDeItens;
+					return this.series.name + ':' + perfomaceTotal + '%<br>Quantidade de funcionários com conformidade: ' + quantidadeDeItens;
 				},
 				style: {
 					fontSize: '14px', // Aumenta o tamanho da fonte para 18px
@@ -678,8 +678,8 @@
 				]
 			},
 			series: [{
-				name: 'Performance: ',
-				data: [<?= 100 - array_sum($porcentagemTotalBaixa) ?>], // Agora o valor está dentro do intervalo de 0 a 100
+				name: 'Performance',
+				data: [<?= number_format($porcentagemTotalBaixaG, 2, '.', '') ?>], // Agora o valor está dentro do intervalo de 0 a 100
 				dataLabels: {
 					format: '{y} %',
 					borderWidth: 0,
