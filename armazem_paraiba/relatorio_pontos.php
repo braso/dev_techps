@@ -148,7 +148,7 @@ function index() {
 
         echo   
             "<div style='display:none' id='tituloRelatorio'>
-                <h1>Relatório de ponto</h1>
+                <h1>Relatório de pontoS</h1>
                 <img id='logo' style='width: 150px' src='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
             </div>"
         ;
@@ -213,7 +213,7 @@ function index() {
         echo "<link rel='stylesheet' href='./css/paineis.css'>
                 <div id='printTitulo'>
                     <img style='width: 150px' src='<?= $logoEmpresa ?>' alt='Logo Empresa Esquerda'>
-                    <h2>Relatorio de ponto</h2>
+                    <h2>Relatorio de Pontos</h2>
                     <div class='right-logo'>
                         <img style='width: 150px' src='$_ENV[APP_PATH].$_ENV[CONTEX_PATH]/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
                     </div>
@@ -221,7 +221,7 @@ function index() {
                 <div class='col-md-12 col-sm-12' id='pdf2htmldiv'>
                     <div class='portlet light '>
                         <div class='emissao' style='display: block !important;'>
-				            <h2 class='titulo2'>Relatorio de ponto</h2>
+				            <h2 class='titulo2'>Relatorio de Pontos</h2>
                             <br>
                             <span><b>Empresa: </b>$empresa[empr_tx_nome]</span>
                             <br>
@@ -342,7 +342,7 @@ function carregarJS($opt): string {
                 +'<td>'+item.pont_tx_justificativa+'</td>'
                 +'<td>'+item.user_tx_nome+'</td>'
                 +'<td>'+formatarData(item.pont_tx_dataCadastro)+'</td>'
-                +'<td>'+(item.pont_tx_dataAtualiza === null ? '' : item.pont_tx_dataAtualiza )+'</td>'
+                +'<td>'+(item.pont_tx_dataAtualiza === null ? '' : formatarData(item.pont_tx_dataAtualiza) )+'</td>'
                +'<td><center>'
                 + (item.pont_tx_latitude && item.pont_tx_longitude 
                     ? '<a href=\"https://www.google.com/maps?q=' + item.pont_tx_latitude + ',' + item.pont_tx_longitude + '\" target=\"_blank\">'
