@@ -184,7 +184,9 @@
 				document.addEventListener('DOMContentLoaded', function() {
 					if(!triedLocation){
 						if (navigator.geolocation){
-							navigator.geolocation.getCurrentPosition(locationAllowed, locationDenied);
+							navigator.geolocation.getCurrentPosition(locationAllowed, locationDenied, {
+								enableHighAccuracy: true // Ativa alta precisão
+							});
 						} else {
 							console.log('Geolocalização não é suportada pelo navegador.');
 						}
