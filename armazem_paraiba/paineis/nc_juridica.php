@@ -55,7 +55,7 @@
 						+'<td class='+class3+'>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
 						+'<td class='+class3+'>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
 						+'<td class='+class4+'>'+(totalNaEndossado)+'</td>'
-						+'<td style=\"'+corDeFundo+'\">'+(100 - arrayPerformance[row.matricula])+' %</td>'
+						+'<td style=\"'+corDeFundo+'\">'+(100 - arrayPerformance[row.matricula]).toFixed(2)+' %</td>'
 					+'</tr>';";
 		} elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
 			$linha = "linha = '<tr>'";

@@ -97,7 +97,7 @@ function buscarEspelho(){
 }
 
 function index() {
-    cabecalho("Relatório de ajustes de ponto");
+    cabecalho("Relatório de  Pontos");
 
     $condBuscaMotorista = "";
     $condBuscaEmpresa = "";
@@ -148,7 +148,7 @@ function index() {
 
         echo   
             "<div style='display:none' id='tituloRelatorio'>
-                <h1>Relatório de ajustes de ponto</h1>
+                <h1>Relatório de ponto</h1>
                 <img id='logo' style='width: 150px' src='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
             </div>"
         ;
@@ -157,8 +157,8 @@ function index() {
         [$startDate, $endDate] = [new DateTime($_POST["busca_periodo"][0]), new DateTime($_POST["busca_periodo"][1])];
         $diaInicio = $startDate->format("Y-m-d");
         $diaFim = $endDate->format("Y-m-d");
-        $diaInicioFotmat = $startDate->format("d-m-Y");
-        $diaFimFotmat = $endDate->format("d-m-Y");
+        $diaInicioFotmat = $startDate->format("d/m/Y");
+        $diaFimFotmat = $endDate->format("d/m/Y");
 
         $rows = [];
 
@@ -213,7 +213,7 @@ function index() {
         echo "<link rel='stylesheet' href='./css/paineis.css'>
                 <div id='printTitulo'>
                     <img style='width: 150px' src='<?= $logoEmpresa ?>' alt='Logo Empresa Esquerda'>
-                    <h2>Relatorio de ajustes de ponto</h2>
+                    <h2>Relatorio de ponto</h2>
                     <div class='right-logo'>
                         <img style='width: 150px' src='$_ENV[APP_PATH].$_ENV[CONTEX_PATH]/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
                     </div>
@@ -221,7 +221,7 @@ function index() {
                 <div class='col-md-12 col-sm-12' id='pdf2htmldiv'>
                     <div class='portlet light '>
                         <div class='emissao' style='display: block !important;'>
-				            <h2 class='titulo2'>Relatorio de ajustes de ponto</h2>
+				            <h2 class='titulo2'>Relatorio de ponto</h2>
                             <br>
                             <span><b>Empresa: </b>$empresa[empr_tx_nome]</span>
                             <br>
@@ -241,7 +241,7 @@ function index() {
 									aria-controls='collapse4'
 									class='collapsed'>
 									<b>
-										Ajustes Ativos
+										Pontos Ativos
 									</b>
 								</a>
 							</h3>
@@ -281,7 +281,7 @@ function index() {
 									aria-controls='collapse5'
 									class='collapsed'>
 									<b>
-										Ajustes Inativos
+										Pontos Inativos
 									</b>
 								</a>
 							</h3>
@@ -334,14 +334,14 @@ function carregarJS($opt): string {
 
     $linha = "linha = '<tr>'";
     $linha .= "+'<td>'+item.pont_nb_id+'</td>'
-                +'<td>'+item.pont_tx_data+'</td>'
+                +'<td>'+formatarData(item.pont_tx_data)+'</td>'
                 +'<td>'+(item.pont_tx_placa === null ? '': item.pont_tx_placa)+'</td>'
                 +'<td>'+item.macr_tx_nome+'</td>'
                 +'<td>'+(item.moti_tx_nome === null ? '' : item.moti_tx_nome)+'</td>'
                 +'<td>'+(item.moti_tx_legenda === null ? '' : item.moti_tx_legenda)+'</td>'
                 +'<td>'+item.pont_tx_justificativa+'</td>'
                 +'<td>'+item.user_tx_nome+'</td>'
-                +'<td>'+item.pont_tx_dataCadastro+'</td>'
+                +'<td>'+formatarData(item.pont_tx_dataCadastro)+'</td>'
                 +'<td>'+(item.pont_tx_dataAtualiza === null ? '' : item.pont_tx_dataAtualiza )+'</td>'
                +'<td><center>'
                 + (item.pont_tx_latitude && item.pont_tx_longitude 
@@ -388,6 +388,23 @@ function carregarJS($opt): string {
 				function imprimir(){
 					window.print();
 				}
+
+                function formatarData(data) {
+                    const date = new Date(data);
+
+                    // Extrair partes da data
+                    const dia = String(date.getDate()).padStart(2, '0');
+                    const mes = String(date.getMonth() + 1).padStart(2, '0'); // Mês é baseado em zero
+                    const ano = date.getFullYear();
+
+                    // Extrair partes do horário
+                    const horas = String(date.getHours()).padStart(2, '0');
+                    const minutos = String(date.getMinutes()).padStart(2, '0');
+                    const segundos = String(date.getSeconds()).padStart(2, '0');
+
+                    // Retornar no formato desejado
+                    return `\${dia}/\${mes}/\${ano} \${horas}:\${minutos}:\${segundos}`;
+                }
 
                 $(document).ready(function(){
 					var tabela = $('#tabela-empresas tbody');
