@@ -310,10 +310,10 @@ function index() {
 			ob_flush();
 			flush();
 
+			criar_relatorio_ajustes();
 			//Este comando de cabecalho deve ficar entre o alert() e a chamada de criar_relatorio_saldo() para notificar e aparecer o ícone de carregamento antes de começar o processamento
 			cabecalho("Relatório Geral de Ajustes");
 
-			criar_relatorio_ajustes();
 		} else {
 			cabecalho("Relatório Geral de Ajustes");
 		}
@@ -592,6 +592,13 @@ function index() {
 			}
 			$mostra = false;
 			$titulo = "Geral de Ajustes";
+
+			$empresa = mysqli_fetch_assoc(query(
+                "SELECT * FROM empresa
+                WHERE empr_tx_status = 'ativo'
+                    AND empr_nb_id = {$_POST["empresa"]}
+                LIMIT 1;"
+            ));
 			include_once "painel_html2.php";
 		} else {
 			if (!in_array($_SERVER["REQUEST_URI"], $dominiosAutotrac)) {
