@@ -719,8 +719,8 @@
 			<div id='popup-baixa' class='popup'>
 			<button class='popup-close'>Fechar</button>
 			<h3>Sobre o Gráfico: </h3>
-			<spam>Este gráfico apresenta a porcentagem de não conformidade dos funcionários em relação a quantidade de dias do mês. 
-			Quanto maior o valor, melhor a performance.</spam>
+			<spam>Este gráfico apresenta a porcentagem dos funcionários em relação a quantidade de não conformidade no mês. 
+			Quanto menor a quantidade, melhor a performance.</spam>
 		</div>
 			</div>
 			<div class='row' id='resumo'>
