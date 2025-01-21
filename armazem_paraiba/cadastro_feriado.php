@@ -48,6 +48,7 @@
 		}else{
 			$novoFeriado["feri_nb_userCadastro"] = $_SESSION["user_nb_id"];
 			$novoFeriado["feri_tx_dataCadastro"] = date("Y-m-d H:i:s");
+
 			inserir("feriado", array_keys($novoFeriado), array_values($novoFeriado));
 		}
 

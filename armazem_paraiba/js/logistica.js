@@ -64,30 +64,39 @@ document.addEventListener("DOMContentLoaded", () => {
         const sec = Math.floor(seconds%60);
         return `${hours}h ${minutes}min ${sec}s`;
     }
-    
-    function displayResults(data, plate, formattedDate, speed,motoristaNome) {
+
+
+
+
+
+
+
+
+
+
+
+    function displayResults(data, plate, formattedDate, speed, motoristaNome) {
         resultsDiv.innerHTML = "";
-
+    
         console.log(data);
-
+    
         let totalTrueTime = 0;
         let totalFalseTime = 0;
         let totalStopsIgnitionOn = 0;
         let totalStopsIgnitionOff = 0;
-
+    
         const table = document.createElement("table");
         table.classList.add("table", "table-bordered");
         table.id = "resultsTable"; // Adiciona um ID à tabela para fácil seleção
         table.innerHTML = 
             `<thead class="thead-dark">
                 <tr>
-                <th></th>
+                    <th></th>
                     <th>Início de Parada</th>
                     <th>Fim de Parada</th>
                     <th>Endereço</th>
                     <th>Latitude</th>
                     <th>Longitude</th>
-                    
                     <th>Ignição</th>
                     <th>Total de Parada</th>
                     <th>Mapa</th>
@@ -96,22 +105,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 </tr>
             </thead>
             <tbody>
-            </tbody>`
-        ;
-
+            </tbody>`;
+    
         const tbody = table.querySelector("tbody");
-
+    
         let stopStart = null;
         let stopEnd = null;
         let isStopped = false;
         let currentIgnition = null;
-
+    
         data.forEach((row, index) => {
             if (parseInt(row.speed) <= 5) {
                 if (!isStopped || currentIgnition !== row.ignition) {
                     if (isStopped) {
-                        const totalTime = (stopEnd-stopStart)/1000;
-                        if (totalTime >= 5*60) {
+                        const totalTime = (stopEnd - stopStart) / 1000;
+                        if (totalTime >= 5 * 60) {
                             if (currentIgnition === "true") {
                                 totalTrueTime += totalTime;
                                 totalStopsIgnitionOn++;
@@ -121,7 +129,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             }
                             appendStopRow(
                                 tbody,
-                                data[index-1],
+                                data[index - 1],
                                 stopStart,
                                 stopEnd,
                                 currentIgnition,
@@ -129,20 +137,20 @@ document.addEventListener("DOMContentLoaded", () => {
                             );
                         }
                     }
-                    stopStart = new Date(row.moduleTime);
+                    stopStart = stopEnd ? new Date(stopEnd) : new Date(row.moduleTime);
                     isStopped = true;
                     currentIgnition = row.ignition;
                 }
                 stopEnd = new Date(row.moduleTime);
             } else {
                 if (isStopped && currentIgnition === "true") {
-                    const totalTime = (stopEnd-stopStart)/1000;
-                    if (totalTime >= 5*60) {
+                    const totalTime = (stopEnd - stopStart) / 1000;
+                    if (totalTime >= 5 * 60) {
                         totalTrueTime += totalTime;
                         totalStopsIgnitionOn++;
                         appendStopRow(
                             tbody,
-                            data[index-1],
+                            data[index - 1],
                             stopStart,
                             stopEnd,
                             currentIgnition,
@@ -153,10 +161,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
         });
-
+    
         if (isStopped) {
-            const totalTime = (stopEnd-stopStart)/1000;
-            if (totalTime >= 5*60) {
+            const totalTime = (stopEnd - stopStart) / 1000;
+            if (totalTime >= 5 * 60) {
                 if (currentIgnition === "true") {
                     totalTrueTime += totalTime;
                     totalStopsIgnitionOn++;
@@ -166,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 appendStopRow(
                     tbody,
-                    data[data.length-1],
+                    data[data.length - 1],
                     stopStart,
                     stopEnd,
                     currentIgnition,
@@ -174,8 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 );
             }
         }
-
- 
+    
         const summaryDiv = document.createElement("div");
         summaryDiv.innerHTML = 
             `<h2 class="title-section">Resumo da pesquisa</h2>
@@ -191,7 +198,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <h6><i class="fas fa-power-off" style="color: red;"></i> <b>${formatTime(totalFalseTime)} </b>&nbsp; com ignição desligada. Totalizando  &nbsp; <b>${totalStopsIgnitionOff} </b> &nbsp;  paradas.</h6>
                 </div>
             </div>
-
+    
             <style>
                 .summary {
                     display: flex;
@@ -201,18 +208,15 @@ document.addEventListener("DOMContentLoaded", () => {
                     width: 100%;
                     max-width: 100%;
                 }
-
+    
                 .summary-column {
-
                     padding: 10px;
                     border:none;
                 }
                 .summary-column i {
-
-                color:#35A3BC;
+                    color:#35A3BC;
                 }
-
-
+    
                 .summary-column h6 {
                     font-size: 14px;
                     margin-bottom: 10px;
@@ -220,7 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     align-items: center;
                     border:none;
                 }
-
+    
                 .summary-column i {
                     margin-right: 10px;
                     border:none;
@@ -228,31 +232,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 .fas{
                     color:#35A3BC;
                 }
-            </style>`
-        ;
-        
-        // function getMotoristaNome() {
-        //     const motoristaSelect = document.getElementById("id"); // Obtém o elemento select
-        //     return motoristaSelect.options[motoristaSelect.selectedIndex].text; // Obtém o texto da opção selecionada
-        // }
-       
+            </style>`;
+    
         resultsDiv.appendChild(summaryDiv);
-
+    
         table.style.display = "none";
         resultsDiv.appendChild(table);
-
+    
         const secondTable = document.createElement("table");
         secondTable.classList.add("table", "table-bordered");
         secondTable.innerHTML = 
             `<thead class="thead-dark">
                 <tr> 
-                <th></th>
+                    <th></th>
                     <th>Início de Parada</th>
                     <th>Fim de Parada</th>
                     <th>Endereço</th>
                     <th>Latitude</th>
                     <th>Longitude</th>
-                
                     <th>Ignição</th>
                     <th>Total de Parada</th>
                     <th>Mapa</th>
@@ -261,23 +258,35 @@ document.addEventListener("DOMContentLoaded", () => {
                 </tr>
             </thead>
             <tbody>
-            </tbody>`
-        ;
-
+            </tbody>`;
+    
         const secondTbody = secondTable.querySelector("tbody");
-
+    
         tbody.querySelectorAll("tr").forEach((tr) => {
             if (!tr.classList.contains("speed-5")) {
                 secondTbody.appendChild(tr.cloneNode(true));
             }
         });
-
+    
         secondTable.style.display = "block";
         resultsDiv.appendChild(secondTable);
-
+    
         // Chama a função para adicionar o event listener aos ícones após a tabela ser inserida
         addRowClickListeners();
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // Variáveis para armazenar o estado
     var startTime = null;

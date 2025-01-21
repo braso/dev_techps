@@ -238,14 +238,13 @@
 				inserir("ponto", array_keys($newPonto), array_values($newPonto));
 			}
 
-			foreach($errorMsg as $key => $value){
-				if(is_array($value)){
-					$errorMsg[$key] = implode("<br>	", array_unique($value));
-				}
-			}
-
-			$errorMsg = implode("\n", $errorMsg);
 			if($errorMsg != $baseErrMsg){
+				foreach($errorMsg as $key => $value){
+					if(is_array($value)){
+						$errorMsg[$key] = implode("<br>	", array_unique($value));
+					}
+				}
+				$errorMsg = implode("\n", $errorMsg);
 				set_status(showErrMsg($path."/".$fileInfo["name"]."_log".$ext, $errorMsg));
 			}
 		//}*/

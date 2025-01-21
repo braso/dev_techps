@@ -24,30 +24,30 @@ function carregarJS(array $arquivos) {
 			$linha .= "+'<td>'+row.matricula+'</td>'
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
-						+'<td>' + row['Inicio de Jornada']['ativo'] +'</td>'
-						+'<td>'+ row['Inicio de Jornada']['inativo'] + '</td>'
-						+'<td>'+row['Fim de Jornada']['ativo'] +'</td>'
-						+'<td>'+row['Fim de Jornada']['inativo']+'</td>'
-						+'<td>'+row['Inicio de Refeição']['ativo']+'</td>'
-						+'<td>'+row['Inicio de Refeição']['inativo']+'</td>'
-						+'<td>'+row['Fim de Refeição']['ativo']+'</td>'
-						+'<td>'+row['Fim de Refeição']['inativo']+'</td>'
-						+'<td>'+row['Inicio de Espera']['ativo']+'</td>'
-						+'<td>'+row['Inicio de Espera']['inativo']+'</td>'
-						+'<td>'+row['Fim de Espera']['ativo']+'</td>'
-						+'<td>'+row['Fim de Espera']['inativo']+'</td>'
-						+'<td>'+row['Inicio de Descanso']['ativo']+'</td>'
-						+'<td>'+row['Inicio de Descanso']['inativo']+'</td>'
-						+'<td>'+row['Fim de Descanso']['ativo']+'</td>'
-						+'<td>'+row['Fim de Descanso']['inativo']+'</td>'
-						+'<td>'+row['Inicio de Repouso']['ativo']+'</td>'
-						+'<td>'+row['Inicio de Repouso']['inativo']+'</td>'
-						+'<td>'+row['Fim de Repouso']['ativo']+'</td>'
-						+'<td>'+row['Fim de Repouso']['inativo']+'</td>'
-						+'<td>'+row['Inicio de Repouso Embarcado']['ativo']+'</td>'
-						+'<td>'+row['Inicio de Repouso Embarcado']['inativo']+'</td>'
-						+'<td>'+row['Fim de Repouso Embarcado']['ativo']+'</td>'
-						+'<td>'+row['Fim de Repouso Embarcado']['inativo']+'</td>'
+						+'<td>' +(row['Inicio de Jornada']?.['ativo'] === 0 ? '' : row['Inicio de Jornada']?.['ativo']) +'</td>'
+						+'<td>'+(row['Inicio de Jornada']?.['inativo'] === 0 ? '' : row['Inicio de Jornada']?.['inativo'])+'</td>'
+						+'<td>'+(row['Fim de Jornada']?.['ativo'] === 0 ? '' : row['Fim de Jornada']?.['ativo'])+'</td>'
+						+'<td>'+(row['Fim de Jornada']?.['inativo'] === 0 ? '' : row['Fim de Jornada']?.['inativo'])+'</td>'
+						+'<td>'+(row['Inicio de Refeição']?.['ativo'] === 0 ? '' : row['Inicio de Refeição']?.['ativo'])+'</td>'
+						+'<td>'+(row['Inicio de Refeição']?.['inativo'] === 0 ? '' : row['Inicio de Refeição']?.['inativo'])+'</td>'
+						+'<td>'+(row['Fim de Refeição']?.['ativo'] === 0 ? '' : row['Fim de Refeição']?.['ativo'])+'</td>'
+						+'<td>'+(row['Fim de Refeição']?.['inativo'] === 0 ? '' : row['Fim de Refeição']?.['inativo'])+'</td>'
+						+'<td>'+(row['Inicio de Espera']?.['ativo'] === 0 ? '' : row['Inicio de Espera']?.['ativo'])+'</td>'
+						+'<td>'+(row['Inicio de Espera']?.['inativo'] === 0 ? '' : row['Inicio de Espera']?.['inativo'])+'</td>'
+						+'<td>'+(row['Fim de Espera']?.['ativo'] === 0 ? '' : row['Fim de Espera']?.['ativo'])+'</td>'
+						+'<td>'+(row['Fim de Espera']?.['inativo'] === 0 ? '' : row['Fim de Espera']?.['inativo'])+'</td>'
+						+'<td>'+(row['Inicio de Descanso']?.['ativo'] === 0 ? '' : row['Inicio de Descanso']?.['ativo'])+'</td>'
+						+'<td>'+(row['Inicio de Descanso']?.['inativo'] === 0 ? '' : row['Inicio de Descanso']?.['inativo'])+'</td>'
+						+'<td>'+(row['Fim de Descanso']?.['ativo'] === 0 ? '' : row['Fim de Descanso']?.['ativo'])+'</td>'
+						+'<td>'+(row['Fim de Descanso']?.['inativo'] === 0 ? '' : row['Fim de Descanso']?.['inativo'])+'</td>'
+						+'<td>'+(row['Inicio de Repouso']?.['ativo'] === 0 ? '' : row['Inicio de Repouso']?.['ativo'])+'</td>'
+						+'<td>'+(row['Inicio de Repouso']?.['inativo'] === 0 ? '' : row['Inicio de Repouso']?.['inativo'])+'</td>'
+						+'<td>'+(row['Fim de Repouso']?.['ativo'] === 0 ? '' : row['Fim de Repouso']?.['ativo'])+'</td>'
+						+'<td>'+(row['Fim de Repouso']?.['inativo'] === 0 ? '' : row['Fim de Repouso']?.['inativo'])+'</td>'
+						+'<td>'+(row['Inicio de Repouso Embarcado']?.['ativo'] === 0 ? '' : row['Inicio de Repouso Embarcado']?.['ativo'])+'</td>'
+						+'<td>'+(row['Inicio de Repouso Embarcado']?.['inativo'] === 0 ? '' : row['Inicio de Repouso Embarcado']?.['inativo'])+'</td>'
+						+'<td>'+(row['Fim de Repouso Embarcado']?.['ativo'] === 0 ? '' : row['Fim de Repouso Embarcado']?.['ativo'])+'</td>'
+						+'<td>'+(row['Fim de Repouso Embarcado']?.['inativo'] === 0 ? '' : row['Fim de Repouso Embarcado']?.['inativo'])+'</td>'
 						+'<td>'+totalAtivo+'</td>'
 						+'<td>'+totalInativo+'</td>'
 						+'</tr>';";
@@ -310,10 +310,10 @@ function index() {
 			ob_flush();
 			flush();
 
+			criar_relatorio_ajustes();
 			//Este comando de cabecalho deve ficar entre o alert() e a chamada de criar_relatorio_saldo() para notificar e aparecer o ícone de carregamento antes de começar o processamento
 			cabecalho("Relatório Geral de Ajustes");
 
-			criar_relatorio_ajustes();
 		} else {
 			cabecalho("Relatório Geral de Ajustes");
 		}
@@ -592,6 +592,13 @@ function index() {
 			}
 			$mostra = false;
 			$titulo = "Geral de Ajustes";
+
+			$empresa = mysqli_fetch_assoc(query(
+                "SELECT * FROM empresa
+                WHERE empr_tx_status = 'ativo'
+                    AND empr_nb_id = {$_POST["empresa"]}
+                LIMIT 1;"
+            ));
 			include_once "painel_html2.php";
 		} else {
 			if (!in_array($_SERVER["REQUEST_URI"], $dominiosAutotrac)) {

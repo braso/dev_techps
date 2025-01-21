@@ -48,10 +48,10 @@
 		//Confere se já tem um ponto no mesmo minuto, e adiciona aos segundos como índice de ordenação{
 			if(
 				!empty($ultimoPonto["pont_tx_data"]) && 
-				substr($ultimoPonto["pont_tx_data"], 0, strlen($ultimoPonto["pont_tx_data"])-2) == substr(strval($dataHora), 0, strlen($dataHora)-2)
+				substr($ultimoPonto["pont_tx_data"], 0, -2) == substr(strval($dataHora), 0, -2)
 			){
 				$indiceSeg = intval(substr($ultimoPonto["pont_tx_data"], -2))+1;
-				$dataHora = substr($dataHora, 0, strlen($dataHora)-2).sprintf("%02d", $indiceSeg);
+				$dataHora = substr($dataHora, 0, -2).sprintf("%02d", $indiceSeg);
 			}
 		//}
 
@@ -93,6 +93,85 @@
 			$novoPonto["pont_tx_justificativa"] = $_POST["justificativa"];
 		}
 
+		dd("?");
+		inserir("ponto", array_keys($novoPonto), array_values($novoPonto));
+
+		index();
+		exit;
+	}
+
+	function cadastraPonto(){
+		$hoje = date("Y-m-d");
+		try {
+			$novoPonto = conferirErroPonto($_SESSION["user_tx_matricula"], new DateTime("{$hoje} ".date("H:i:00")), intval($_POST["idMacro"]), (!empty($_POST["motivo"])? $_POST["motivo"]: null), (!empty($_POST["justificativa"])? $_POST["justificativa"]: null));
+		} catch (\Exception $e) {
+			set_status("ERRO: ".$e->getMessage());
+			index();
+			exit;
+		}
+		
+		$novoPonto = array_merge($novoPonto,[
+			"pont_tx_descricao" => "Mobile",
+			"pont_tx_latitude" => !empty($_POST["latitude"])? $_POST["latitude"]: null,
+			"pont_tx_longitude" => !empty($_POST["longitude"])? $_POST["longitude"]: null,
+			"pont_tx_placa" => !empty($_POST["placa"])? $_POST["placa"]: null
+		]);
+
+
+		// if(empty($_POST["placa"])){
+		// 	set_status("ERRO: Insira a placa do veículo para registrar um ponto.");
+		// 	index();
+		// 	exit;
+		// }
+
+		// $ultimoPonto = pegarPontosDia($aMotorista["enti_tx_matricula"], ["pont_tx_tipo", "pont_tx_data", "pont_tx_placa"])[0];
+		// if (!empty($ultimoPonto[count($ultimoPonto)-1] ["pont_tx_placa"]) && $ultimoPonto[count($ultimoPonto)-1] ["pont_tx_placa"] != "Fim de Jornada") {
+		// 	$placa = $ultimoPonto[count($ultimoPonto)-1] ["pont_tx_placa"];
+		// } else {
+		// 	if (!empty($_POST["placa"])) {
+		// 		$placa = str_replace(["_", "-"], ["", ""], $_POST["placa"]);
+		// 	}
+		// }
+		// if(!empty($ultimoPonto)){
+		// 	$ultimoPonto = $ultimoPonto[count($ultimoPonto)-1];
+		// 	$ultimoPonto["sameTypeError"] = ($ultimoPonto["pont_tx_tipo"] == $_POST["idMacro"]);
+		// }
+
+		// $aTipo = mysqli_fetch_all(
+		// 	query(
+		// 		"SELECT macr_tx_codigoInterno, macr_tx_codigoExterno FROM macroponto 
+		// 			WHERE macr_tx_status = 'ativo' 
+		// 				AND macr_nb_id = '".$_POST["idMacro"]."'"
+		// 	),
+		// 	MYSQLI_ASSOC
+		// )[0];
+
+		// $dataHora = $hoje." ".date("H:i").":00";
+
+		// if (!empty($ultimoPonto) && intval($ultimoPonto["sameTypeError"])){
+		// 	set_status("ERRO: Último ponto é do mesmo tipo.");
+		// 	index();
+		// 	exit;
+		// }
+
+		// //Confere se já tem um ponto no mesmo minuto, e adiciona aos segundos como índice de ordenação{
+		// 	if(
+		// 		!empty($ultimoPonto["pont_tx_data"]) && 
+		// 		substr($ultimoPonto["pont_tx_data"], 0, strlen($ultimoPonto["pont_tx_data"])-2) == substr(strval($dataHora), 0, strlen($dataHora)-2)
+		// 	){
+		// 		$indiceSeg = intval(substr($ultimoPonto["pont_tx_data"], -2))+1;
+		// 		$dataHora = substr($dataHora, 0, strlen($dataHora)-2).sprintf("%02d", $indiceSeg);
+		// 	}
+		// //}
+
+		// //Conferir se a placa foi preenchida parcialmente{
+		// 	if(!empty($placa) && strlen($placa) != 7){
+		// 		set_status("ERRO: Placa do veículo parcial.");
+		// 		index();
+		// 		exit;
+		// 	}
+		// //}
+
 		inserir("ponto", array_keys($novoPonto), array_values($novoPonto));
 
 		index();
@@ -103,8 +182,8 @@
 		$hoje = date("Y-m-d");
 		$condicoesPontoBasicas = 
 			"ponto.pont_tx_status = 'ativo'
-			AND ponto.pont_tx_matricula = '".$matricula."'
-			AND ponto.pont_tx_data <= '".$hoje." ".date("H:i:s")."'"
+			AND ponto.pont_tx_matricula = '{$matricula}'
+			AND ponto.pont_tx_data <= '{$hoje} ".date("H:i:s")."'"
 		;
 
 		$abriuJornadaHoje = mysqli_fetch_assoc(
@@ -160,6 +239,7 @@
 			"SELECT DISTINCT pont_nb_id, ".implode(", ", $columns)." FROM ponto
 				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
 				WHERE ".$condicoesPontoBasicas."
+					AND macroponto.macr_tx_fonte = 'positron'
 					AND ponto.pont_tx_data >= '".$sqlDataInicio."'
 				ORDER BY pont_tx_data ASC"
 		;
@@ -184,7 +264,9 @@
 				document.addEventListener('DOMContentLoaded', function() {
 					if(!triedLocation){
 						if (navigator.geolocation){
-							navigator.geolocation.getCurrentPosition(locationAllowed, locationDenied);
+							navigator.geolocation.getCurrentPosition(locationAllowed, locationDenied, {
+								enableHighAccuracy: true // Ativa alta precisão
+							});
 						} else {
 							console.log('Geolocalização não é suportada pelo navegador.');
 						}

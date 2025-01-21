@@ -20,10 +20,27 @@
 		index();
 	}
 
-	function carregarJS(array $arquivos) {
-
+	function carregarJS(array $arquivos, array $perfomance) {
+		$jsonPerfomance = json_encode($perfomance);
 		if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "naoEndossado") {
-			$linha = "linha = '<tr>'";
+			$linha = " 
+					const arrayPerformance = $jsonPerfomance;
+					porcentagem = 100 - arrayPerformance[row.matricula];
+
+					let corDeFundo = '';
+					if(porcentagem >= 75 && porcentagem < 100){
+						corDeFundo = 'background-color: var(--var-lightred);';
+					} else if(porcentagem <= 75 && porcentagem >= 50){
+						corDeFundo = 'background-color: var(--var-lightorange);';
+					} else if(porcentagem <= 50 && porcentagem >= 25){
+						corDeFundo = 'background-color: var(--var-yellow2);';
+					}else{
+						corDeFundo = 'background-color: lightgreen;';
+					}
+								
+			";
+
+			$linha .= " linha = '<tr>'";
 			$linha .= "+'<td>'+row.matricula+'</td>'
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
@@ -38,6 +55,7 @@
 						+'<td class='+class3+'>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
 						+'<td class='+class3+'>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
 						+'<td class='+class4+'>'+(totalNaEndossado)+'</td>'
+						+'<td style=\"'+corDeFundo+'\">'+(100 - arrayPerformance[row.matricula]).toFixed(2)+' %</td>'
 					+'</tr>';";
 		} elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
 			$linha = "linha = '<tr>'";
@@ -108,8 +126,7 @@
 					// Exibe o resultado na tela
 					// $(resultadoId).text('Total: ' + total);
 				}
-
-			
+							
 				$(document).ready(function(){
 					var tabela = $('#tabela-empresas tbody');
 					function carregarDados(urlArquivo){
@@ -133,7 +150,6 @@
 								var totalNaEndossado = (row.falta || 0) + (row.jornadaEfetiva || 0) + (row.refeicao || 0) 
 								+ (row.espera || 0) + (row.descanso || 0) + (row.repouso || 0) + (row.jornada || 0) 
 								+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
-									
 								var totalEndossado = (row.refeicao || 0) + (row.falta || 0) + (row.jornadaEfetiva || 0) 
 								+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
 
@@ -269,6 +285,9 @@
 	}
 
 	function index() {
+		$encontrado = '';
+		$totaisFuncionario= [];
+		$totaisFuncionario2 = [];
 
 		if (empty($_POST["busca_dataMes"])) {
 			$_POST["busca_dataMes"] = date("Y-m");
@@ -430,10 +449,22 @@
 
 				$motoristas = 0;
 				$totalJsonComTudoZero = 0;
+				$totaisFuncionario = [];
+				$totaisFuncionario2 = [];
 				foreach ($arquivos as &$arquivo) {
 					$todosZeros = true;
 					$arquivo = $path."/".$arquivo;
 					$json = json_decode(file_get_contents($arquivo), true);
+
+					$totalMotorista = $json["espera"]+$json["descanso"]+$json["repouso"]+$json["jornada"]+$json["falta"]+$json["jornadaEfetiva"]+$json["mdc"]
+					+$json["refeicao"]+$json["intersticioInferior"]+$json["intersticioSuperior"];
+					$data = new DateTime($json["dataInicio"]);
+					$dias = $data->format('t');
+					$totalNConformMax = 4 * $dias;
+					$porcentagemFunNCon = round(($totalMotorista *100) / ($totalNConformMax * sizeof($arquivos)), 2);
+					$porcentagemFunNCon2 = round(($totalMotorista *100) / $totalNConformMax, 2);
+					$totaisFuncionario[$json["matricula"]] = $porcentagemFunNCon;
+					$totaisFuncionario2[$json["matricula"]] = $porcentagemFunNCon2;
 
 					foreach ($totalizadores as $key => &$total) {
 						if(!in_array($key, ['faltaJustificada', 'jornadaPrevista']) && (!isset($json[$key]) || $json[$key] != 0)) {
@@ -442,14 +473,6 @@
 						}
 						$total += $json[$key] ?? 0; // incrementa apenas se o índice existir no JSON
 					}
-				// PARA CASO PRECISE {
-					// foreach ($totalizadores as $key => &$total) {
-					// 	if (!isset($json[$key]) || $json[$key] != 0) {
-					// 		$todosZeros = false; // Algum campo não está zerado
-					// 		break;
-					// 	}
-					// }
-				// }
 
 					if ($todosZeros) {
 						$totalJsonComTudoZero++; // Incrementa o contador
@@ -469,6 +492,11 @@
 
 					unset($total);
 				}
+
+				$porcentagemTotalBaixa= array_sum((array) $totaisFuncionario);
+				$totalFun = sizeof($arquivos) - $totalJsonComTudoZero;
+				$porcentagemTotalBaixaG = 100 - $porcentagemTotalBaixa;
+				$porcentagemTotalBaixa2= (array) $totaisFuncionario2;
 
 				if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado"){
 					$totalNaoconformidade = array_sum([
@@ -628,7 +656,6 @@
 						"dataFim" => $arquivoGeral["dataFim"]
 					];
 
-					// var_dump($periodoRelatorio);
 
 					$encontrado = true;
 				} 
@@ -658,6 +685,7 @@
 					<td class='total'>".$totalempre["jornada"]."</td>";
 			}
 			
+			$totalBaixaPerformance = 100 - array_sum($totaisFuncionario);
 			$rowTotal = "<td></td>
 					<td></td>
 					<td>Total</td>
@@ -669,13 +697,36 @@
 					<td class='total'>".$totalempre["intersticioInferior"]."</td>
 					<td class='total'>".$totalempre["intersticioSuperior"]."</td>
 					<td class='total'>$totalGeral</td>
+					<td class='total'>$totalBaixaPerformance</td>
 			";
 
 			$rowGravidade = "
 			<div class='row' id='resumo'>
+			<div class='col-md-4'>
+			<div id='graficoPerformance' style='width: 250px; height: 195px; margin: 0 auto;'></div>
+			<div id='popup-alta' class='popup'>
+			<button class='popup-close'>Fechar</button>
+			<h3>Sobre o Gráfico:</h3>
+			<spam>Este gráfico apresenta a porcentagem de funcionários com nenhuma não conformidade. 
+			Quanto maior o valor, melhor a performance.</spam>
+		</div>
+			</div>
+			<div class='col-md-4'>
+			<div id='graficoPerformanceMedia' style='width: 250px; height: 195px; margin: 0 auto;'></div>
+			</div>
+			<div class='col-md-4'>
+			<div id='graficoPerformanceBaixa' style='width: 250px; height: 195px; margin: 0 auto;'></div>
+			<div id='popup-baixa' class='popup'>
+			<button class='popup-close'>Fechar</button>
+			<h3>Sobre o Gráfico: </h3>
+			<spam>Este gráfico apresenta a porcentagem dos funcionários em relação a quantidade de não conformidade no mês. 
+			Quanto menor a quantidade, melhor a performance.</spam>
+		</div>
+			</div>
+			<div class='row' id='resumo'>
+			</div>
 				<div class='col-md-3'>
-					<table id='tabela-motorista' style='width: 275px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>
-					<div id='graficoPerformance' style='width: 250px; height: 195px; margin: 0 auto;'></div>"
+					<table id='tabela-motorista' style='width: 275px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
 						. "<thead>"
 							. "<tr>"
 								. "<td> Quandidade por ocupação </td>"
@@ -745,7 +796,8 @@
 					."<th class='tituloAltaGravidade'>Refeição</th>"
 					."<th class='tituloAltaGravidade'>Interstício Inferior</th>"
 					."<th class='tituloAltaGravidade'>Interstício Superior</th>"
-					. "<th class='tituloTotal'>TOTAL</th>";
+					. "<th class='tituloTotal'>TOTAL</th>"
+					. "<th class='tituloTotal'>Baixa Performace</th>";
 
 					$endossado = true;
 
@@ -777,6 +829,6 @@
 			// }
 		}
 
-	carregarJS($arquivos);
+	carregarJS($arquivos, $totaisFuncionario2);
 	rodape();
 }

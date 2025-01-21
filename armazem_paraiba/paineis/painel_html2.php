@@ -29,7 +29,6 @@
 				<?= $quantFun ?>
 				<?= $tabelaMotivo ?>
 			</div>
-			<?= $tabelaMotivo ?>
 			<?php if ($quantFun) { ?>
 				<span style="font-size: 8px;">Marcações com <b>(*)</b> indicam intervalos em aberto</span>
 				<span style="margin-left: 19px; font-size: 8px;"><i id="iconLegenda" class="fa fa-circle" aria-hidden="true" style="line-height: 7px !important; color: yellow; border: 1px solid black; border-radius: 50%;"></i> A cor Indica que o tempo total de jornada excedeu o previsto.</span>
@@ -480,14 +479,20 @@
 				height: '80%'
 			},
 			title: {
-				text: 'Performance'
+				useHTML: true, // Permite adicionar HTML ao título
+				text: `
+					<div style="display: inline-block;">
+						Performance Alta 
+						<span class="popup-title-icon" id="popup-icon">&#9432;</span>
+					</div>
+				`
 			},
 			tooltip: {
 				// Customizando o conteúdo do tooltip
 				formatter: function() {
 					var quantidadeDeItens = <?= $totalJsonComTudoZero ?>; // Substitua com o valor real ou uma variável
 					// Exibe o valor e a quantidade de itens
-					return this.series.name + ': ' + this.y + '%<br>Quantidade de Funcionários: ' + quantidadeDeItens;
+					return this.series.name + ': ' + this.y + '%<br>Quantidade de funcionários sem conformidade: ' + quantidadeDeItens;
 				},
 				style: {
 					fontSize: '14px', // Aumenta o tamanho da fonte para 18px
@@ -570,7 +575,154 @@
 					backgroundColor: 'gray',
 					radius: 6
 				}
+			}],
+			events: {
+				load: function () {
+					// Registra evento de clique no ícone do popup
+					$(document).on('click', '#popup-icon', function () {
+						const popup = $('#popup-baixa');
+						popup.toggle(); // Abre ou fecha o popup
+					});
+
+					// Evento para fechar o popup
+					$(document).on('click', '.popup-close', function () {
+						$('#popup-baixa').hide();
+					});
+				}
+			}
+		});
+
+		Highcharts.chart('graficoPerformanceBaixa', {
+			chart: {
+				type: 'gauge',
+				plotBackgroundColor: null,
+				plotBackgroundImage: null,
+				plotBorderWidth: 0,
+				plotShadow: false,
+				height: '80%'
+			},
+			title: {
+				useHTML: true, // Permite adicionar HTML ao título
+				text: `
+					<div style="display: inline-block;">
+						Performance Baixa 
+						<span class="popup-title-icon" id="popup-icon2">&#9432;</span>
+					</div>
+				`
+			},
+			tooltip: {
+				// Customizando o conteúdo do tooltip
+				formatter: function() {
+					var quantidadeDeItens = <?= $totalFun  ?>; // Substitua com o valor real ou uma variável
+					var perfomaceTotal= <?= number_format($porcentagemTotalBaixa, 2, '.', '') ?>; 
+					// Exibe o valor e a quantidade de itens
+					return this.series.name + ':' + perfomaceTotal + '%<br>Quantidade de funcionários com conformidade: ' + quantidadeDeItens;
+				},
+				style: {
+					fontSize: '14px', // Aumenta o tamanho da fonte para 18px
+					fontWeight: 'bold', // Deixa a fonte em negrito
+					color: '#333333' // Cor do texto do tooltip
+				}
+			},
+			pane: {
+				startAngle: -90,
+				endAngle: 90,
+				background: null,
+				center: ['50%', '75%'],
+				size: '130%'
+			},
+			yAxis: {
+				min: 0,
+				max: 100,
+				tickPixelInterval: 60,
+				tickPosition: 'inside',
+				tickColor: '#000000',
+				// tickColor: Highcharts.defaultOptions.chart.backgroundColor || '#FFFFFF',
+				tickLength: 15,
+				tickWidth: 1,
+				minorTickInterval: 5, // Adiciona ticks menores a cada 5 unidades
+				minorTickColor: '#555555', // Cor dos ticks menores
+				minorTickLength: 10,
+				minorTickWidth: 1,
+				labels: {
+					distance: 20,
+					style: {
+						fontSize: '14px'
+					}
+				},
+				lineWidth: 0,
+				plotBands: [{
+						from: 75,
+						to: 100,
+						color: '#55BF3B',
+						thickness: 20
+					}, // Verde 
+					{
+						from: 50,
+						to: 75,
+						color: '#FFE800',
+						thickness: 20
+					}, // Amarelo 
+					{
+						from: 25,
+						to: 50,
+						color: '#FF8B00',
+						thickness: 20
+					},
+					{
+						from: 0,
+						to: 25,
+						color: '#DF5353',
+						thickness: 20
+					} // Vermelho
+				]
+			},
+			series: [{
+				name: 'Performance',
+				data: [<?= number_format($porcentagemTotalBaixaG, 2, '.', '') ?>], // Agora o valor está dentro do intervalo de 0 a 100
+				dataLabels: {
+					format: '{y} %',
+					borderWidth: 0,
+					color: '#333333',
+					style: {
+						fontSize: '16px'
+					}
+				},
+				dial: {
+					radius: '80%',
+					backgroundColor: 'gray',
+					baseWidth: 12,
+					baseLength: '0%',
+					rearLength: '0%'
+				},
+				pivot: {
+					backgroundColor: 'gray',
+					radius: 6
+				}
 			}]
 		});
+
+		// Registra evento de clique no ícone do popup após o gráfico ser renderizado
+		$(document).on('click', '#popup-icon2', function () {
+			const popup = $('#popup-baixa');
+			popup.toggle(); // Alterna entre abrir e fechar o popup
+		});
+
+		// Evento para fechar o popup
+		$(document).on('click', '.popup-close', function () {
+			$('#popup-baixa').hide(); // Fecha o popup
+		});
+
+		// Registra evento de clique no ícone do popup após o gráfico ser renderizado
+		$(document).on('click', '#popup-icon', function () {
+			const popup = $('#popup-alta');
+			popup.toggle(); // Alterna entre abrir e fechar o popup
+		});
+
+		// Evento para fechar o popup
+		$(document).on('click', '.popup-close', function () {
+			$('#popup-alta').hide(); // Fecha o popup
+		});
+
 	</script>
 <?php } ?>

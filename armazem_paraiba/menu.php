@@ -49,6 +49,9 @@
 				"/paineis/jornada.php" 	  => "Jornada Aberta",
 				"/paineis/nc_juridica.php"=> "Não Conformidades Juridicas Atualizado"
 			] + $camposOcultosProdução,
+			"relatórios" => [
+					"/relatorio_pontos.php" => "Pontos", 
+			]
 			// "suporte" => [
 			// 	"/#" 		=> "Perguntas Frequentes", 
 			// 	"/doc.php" 	=> "Ver Documentação"
@@ -59,6 +62,7 @@
 			"cadastros" => "",
 			"ponto" => "",
 			"painel" => "",
+			"relatórios" => "",
 			"suporte" => "",
 		];
 	
@@ -75,6 +79,7 @@
 		}
 		
 		if(is_bool(strpos($_SERVER["REQUEST_URI"], 'dev'))){
+			unset($menus["relatórios"]);
 			unset($menus["suporte"]);
 		}
 	
@@ -85,7 +90,7 @@
 		;
 
 		if (is_int(strpos($nivel, "Administrador")) || is_int(strpos($nivel, "Super Administrador"))) {
-			return $menus["cadastros"].$menus["ponto"].$menus["painel"].($menus["suporte"]?? "");
+			return $menus["cadastros"].$menus["ponto"].$menus["painel"].($menus["suporte"]?? "").($menus["relatórios"] ?? "");
 		}
 		// if (is_int(strpos($nivel, "Funcionário"))) {
 		// 	return $menus["cadastros"].$menus["ponto"];
