@@ -1081,8 +1081,22 @@
 		}
 
 		$macros = array_column($macros, 'macr_tx_nome');
+		foreach ($empresas as $empresa) {
+			$path = "./arquivos/ajustes"."/". $periodoInicio->format("Y-m")."/".$empresa["empr_nb_id"];
+			if (is_dir($path)){
+				$pasta = dir($path);
+				while (($arquivo = $pasta->read()) !== false) {
+					// Ignora os diretórios especiais '.' e '..'
+					if ($arquivo != '.' && $arquivo != '..') {
+						$arquivoPath = $path.'/'.$arquivo;  // Caminho completo do 
+						unlink($arquivoPath);  // Apaga o arquivo
+					}
+				}
+				$pasta->close();
+			}
+		}
 			
-		foreach ($empresas as $empresa) {;
+		foreach ($empresas as $empresa) {
 			$totaisEmpr = []; 
 			$totaisEmpresa = []; 
 			$rows = [];
@@ -1139,7 +1153,7 @@
 				$diaInicio = $periodoInicio->format('Y-m-d');
 				$diafim = $periodoFim->format('Y-m-d');
 
-				$pontos = mysqli_fetch_all(
+				$pontosAtivos = mysqli_fetch_all(
 					query(
 					"SELECT DISTINCT ponto.pont_tx_data,  ponto.pont_tx_matricula, motivo.moti_tx_nome, macroponto.macr_tx_nome, 
 						ponto.pont_tx_status"
@@ -1147,8 +1161,9 @@
 						." LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id"
 						." INNER JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno"
 						." AND macroponto.macr_tx_fonte = 'positron'"
+						." LEFT JOIN user ON ponto.pont_nb_userCadastro = user.user_nb_id"
 						." WHERE pont_tx_matricula = '$motorista[enti_tx_matricula]'"
-						." AND pont_tx_justificativa IS NOT NULL"
+						." AND (user.user_tx_matricula <> ponto.pont_tx_matricula OR user.user_tx_matricula IS NULL)"
 						." AND pont_tx_data BETWEEN STR_TO_DATE('$diaInicio 00:00:00', '%Y-%m-%d %H:%i:%s')"
 						." AND STR_TO_DATE('$diafim 23:59:59', '%Y-%m-%d %H:%i:%s')"
 						." ORDER BY ponto.pont_tx_data ASC;"
@@ -1156,22 +1171,49 @@
 					MYSQLI_ASSOC
 				);
 
-				foreach ($pontos as $registro) {
-					$macr_tx_nome = $registro['macr_tx_nome'];
-					$pont_tx_status = $registro['pont_tx_status'];
+				foreach ($pontosAtivos as $registro2) {
+					$macr_tx_nome = $registro2['macr_tx_nome'];
 					if (in_array($macr_tx_nome, $macros)) {
 						// Inicializa como 0 se não existir
-						if (!isset($ocorrencias[$macr_tx_nome][$pont_tx_status])) {
-							$ocorrencias[$macr_tx_nome][$pont_tx_status] = 0;
+						if (!isset($ocorrencias[$macr_tx_nome]["ativo"])) {
+							$ocorrencias[$macr_tx_nome]["ativo"] = 0;
 						}
 				
 						// Incrementa o contador
-						$ocorrencias[$macr_tx_nome][$pont_tx_status]++;
+						$ocorrencias[$macr_tx_nome]["ativo"]++;
+					}
+				}
+
+				$pontosInativos = mysqli_fetch_all(
+					query(
+					"SELECT ponto.pont_tx_data, ponto.pont_tx_matricula, ponto.pont_tx_status, 
+					ponto.pont_tx_tipo, macroponto.macr_tx_nome"
+					." FROM ponto"
+					." INNER JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno"
+					." WHERE pont_tx_matricula = '$motorista[enti_tx_matricula]'"
+					." AND pont_tx_status != 'ativo'"
+					." AND pont_tx_data BETWEEN STR_TO_DATE('$diaInicio 00:00:00', '%Y-%m-%d %H:%i:%s')"
+					." AND STR_TO_DATE('$diafim 23:59:59', '%Y-%m-%d %H:%i:%s')"
+					." ORDER BY ponto.pont_tx_data ASC;"
+					),
+					MYSQLI_ASSOC
+				);
+
+				foreach ($pontosInativos as $registro) {
+					$macr_tx_nome = $registro['macr_tx_nome'];
+					if (in_array($macr_tx_nome, $macros)) {
+						// Inicializa como 0 se não existir
+						if (!isset($ocorrencias[$macr_tx_nome]["inativo"])) {
+							$ocorrencias[$macr_tx_nome]["inativo"] = 0;
+						}
+				
+						// Incrementa o contador
+						$ocorrencias[$macr_tx_nome]["inativo"]++;
 					}
 				}
 
 				$totalMotorista = array_merge($totalMotorista, $ocorrencias);
-				$totalMotorista['pontos'] = $pontos;
+				$totalMotorista['pontos'] = array_merge($pontosAtivos, $pontosInativos);
 				// Filtrar apenas os campos numéricos que precisam ser verificados
 				$verificaValores = array_filter($totalMotorista, function ($key) {
 					return !in_array($key, ["matricula", "nome", "ocupacao", "pontos"]);
