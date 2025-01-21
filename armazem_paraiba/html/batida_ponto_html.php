@@ -123,13 +123,13 @@
 		let confirmButtonText = '';
 		let confirmButtonClass = '';
 		<?=
-			"let ultimoInicioJornada 	= '".($ultimoInicioJornada?? "")."';"
-			."let jornadaEfetiva 		= '".($jornadaEfetiva?? "")."';"
-			."let primeiroPonto 		= '".($pontos["primeiro"]["pont_tx_data"]?? "")."';"
-			."let ultimoPonto 			= '".($pontos["ultimo"]["pont_tx_data"]?? "")."';"
-			."let hoje 					= '".$hoje."';"
-			."let idEntidade 			= '".$_SESSION["user_nb_entidade"]."';"
-			."let idMotivo 				= '".($motivo["moti_nb_id"]?? "")."';"
+			"let ultimoInicioJornada 	= '".($ultimoInicioJornada?? "")."';
+			let jornadaEfetiva 			= '".($jornadaEfetiva?? "")."';
+			let primeiroPonto 			= '".($pontos["primeiro"]["pont_tx_data"]?? "")."';
+			let ultimoPonto 			= '".($pontos["ultimo"]["pont_tx_data"]?? "")."';
+			let hoje 					= '".$hoje."';
+			let idEntidade 				= '".$_SESSION["user_nb_entidade"]."';
+			let idMotivo 				= '".($motivo["moti_nb_id"]?? "")."';"
 		?>
 
 		if (['2'].includes(idMacro)) {
@@ -185,7 +185,7 @@
 		$('#modal-confirm').on('click', function() {
 			$('#myModal').modal('hide');
 
-			document.form_submit.acao.value = 'cadastra_ponto';
+			document.form_submit.acao.value = 'cadastraPonto';
 			document.form_submit.id.value = idEntidade;
 			document.form_submit.data.value = hoje;
 			document.form_submit.placa.value = placa;
