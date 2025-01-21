@@ -142,7 +142,7 @@
 					//}
 					
 					$aDetalhado = diaDetalhePonto($motorista, $date->format("Y-m-d"));
-					if($prevEndossoMes != $endossoMes){
+					if(!empty($endossoMes) && $prevEndossoMes != $endossoMes){
 						foreach($totalResumo as $key => $value){
 							$totalResumo[$key] = operarHorarios([$value, $endossoMes["totalResumo"][$key]], "+");
 						}
@@ -217,7 +217,6 @@
 				}else{
 					$saldoAnterior = "--:--";
 				}
-	
 				$saldoFinal = "--:--";
 				if($saldoAnterior != "--:--"){
 					$saldoFinal = somarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]]);
