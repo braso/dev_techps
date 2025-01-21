@@ -447,7 +447,7 @@
 		return;
     }
 
-	function conferirErroPonto(string $matricula, DateTime $dataPonto, int $idMacro, string $motivo = null, string $justificativa = null): array{
+	function conferirErroPonto(string $matricula, DateTime $dataPonto, int $idMacro, int $motivo = null, string $justificativa = null): array{
 		//Conferir se tem as informações necessárias{
 			if(empty($matricula)){
 				$_POST["errorFields"][] = "motorista";
@@ -455,7 +455,7 @@
 			}
 
 			$macro = mysqli_fetch_assoc(query(
-				"SELECT macr_tx_codigoInterno, macr_tx_nome FROM macroponto
+				"SELECT macr_tx_codigoInterno, macr_tx_codigoExterno, macr_tx_nome FROM macroponto
 					WHERE macr_tx_status = 'ativo'
 						AND macr_nb_id = {$idMacro}
 					LIMIT 1;"
@@ -467,14 +467,16 @@
 		//}
 
 		$newPonto = [
-			"pont_nb_userCadastro"	=> $_SESSION["user_nb_id"],
-			"pont_tx_matricula" 	=> $matricula,
-			"pont_tx_data" 			=> $dataPonto->format("Y-m-d H:i:s"),
-			"pont_tx_tipo" 			=> $macro["macr_tx_codigoInterno"],
-			"pont_tx_status" 		=> "ativo",
-			"pont_tx_dataCadastro" 	=> date("Y-m-d H:i:s"),
 			"pont_nb_motivo" 		=> $motivo,
-			"pont_tx_justificativa" => $justificativa
+			"pont_nb_userCadastro"	=> $_SESSION["user_nb_id"],
+
+			"pont_tx_data" 			=> $dataPonto->format("Y-m-d H:i:s"),
+			"pont_tx_dataCadastro" 	=> date("Y-m-d H:i:s"),
+			"pont_tx_justificativa" => $justificativa,
+			"pont_tx_matricula" 	=> $matricula,
+			"pont_tx_status" 		=> "ativo",
+			"pont_tx_tipo" 			=> $macro["macr_tx_codigoInterno"],
+			"pont_tx_tipoOriginal" 	=> $macro["macr_tx_codigoExterno"]
 		];
 
 		$codigosJornada = ["inicio" => 1, "fim" => 2];
@@ -488,18 +490,31 @@
 				LIMIT 1;"
 		));
 
-		if(in_array(intval($ultimoPonto["pont_tx_tipo"]), $codigosJornada)){
-			$ultPontoJornada = $ultimoPonto;
-		}else{
-			$ultPontoJornada = mysqli_fetch_assoc(query(
-				"SELECT pont_tx_tipo FROM ponto 
-					WHERE pont_tx_tipo IN ('{$codigosJornada["inicio"]}', '{$codigosJornada["fim"]}')
-						AND pont_tx_status = 'ativo'
-						AND pont_tx_matricula = '{$matricula}'
-						AND pont_tx_data <= STR_TO_DATE('{$dataPonto->format("Y-m-d H:i:59")}', '%Y-%m-%d %H:%i:%s')
-					ORDER BY pont_tx_data DESC
-					LIMIT 1;"
-			));
+		//Confere se já tem um ponto no mesmo minuto, e adiciona aos segundos como índice de ordenação{
+			if(
+				!empty($ultimoPonto["pont_tx_data"]) && 
+				substr($ultimoPonto["pont_tx_data"], 0, -2) == substr(strval($newPonto["pont_tx_data"]), 0, -2)
+			){
+				$indiceSeg = intval(substr($ultimoPonto["pont_tx_data"], -2))+1;
+				$newPonto["pont_tx_data"] = substr($newPonto["pont_tx_data"], 0, -2).sprintf("%02d", $indiceSeg);
+			}
+		//}
+
+		$ultPontoJornada = null;
+		if(!empty($ultimoPonto["pont_tx_tipo"])){
+			if(in_array(intval($ultimoPonto["pont_tx_tipo"]), $codigosJornada)){
+				$ultPontoJornada = $ultimoPonto;
+			}else{
+				$ultPontoJornada = mysqli_fetch_assoc(query(
+					"SELECT pont_tx_tipo FROM ponto 
+						WHERE pont_tx_tipo IN ('{$codigosJornada["inicio"]}', '{$codigosJornada["fim"]}')
+							AND pont_tx_status = 'ativo'
+							AND pont_tx_matricula = '{$matricula}'
+							AND pont_tx_data <= STR_TO_DATE('{$dataPonto->format("Y-m-d H:i:59")}', '%Y-%m-%d %H:%i:%s')
+						ORDER BY pont_tx_data DESC
+						LIMIT 1;"
+				));
+			}
 		}
 
 
