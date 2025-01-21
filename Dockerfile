@@ -1,17 +1,20 @@
 FROM php:7.4-alpine
 
 # Configurações de ambiente
-ENV MAX_UPLOAD="128M"
-ENV MAX_MEM="1G"
-ENV MAX_TIME="600"
-ENV MAX_INPUTVARS="5000"
+ENV MAX_UPLOAD="100M"
+ENV MAX_MEM="2048M"
+ENV MAX_TIME="30"
+ENV MAX_INPUTVARS="1000"
+ENV MAX_LIFETIME="3600"
+ENV MAX_INPUT_TIME="60"
 
 # Configurações do PHP
 RUN	echo "upload_max_filesize = ${MAX_UPLOAD}" >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini \
 &&	echo "post_max_size = ${MAX_UPLOAD}" >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini \
 &&	echo "memory_limit = ${MAX_MEM}" >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini \
 &&	echo "max_execution_time = ${MAX_TIME}"   >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini \
-&&	echo "max_input_vars = ${MAX_INPUTVARS}" >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini
+&&	echo "max_input_vars = ${MAX_INPUTVARS}" >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini \
+&&	echo "max_input_time = ${MAX_INPUT_TIME}" >> /usr/local/etc/php/conf.d/0-upload_large_dumps.ini
 
 STOPSIGNAL SIGINT
 
