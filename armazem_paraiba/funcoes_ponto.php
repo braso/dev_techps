@@ -447,6 +447,92 @@
 		return;
     }
 
+	function conferirErroPonto(string $matricula, DateTime $dataPonto, int $idMacro, string $motivo = null, string $justificativa = null): array{
+		//Conferir se tem as informações necessárias{
+			if(empty($matricula)){
+				$_POST["errorFields"][] = "motorista";
+				throw new Exception("Funcionário não encontrado.");
+			}
+
+			$macro = mysqli_fetch_assoc(query(
+				"SELECT macr_tx_codigoInterno, macr_tx_nome FROM macroponto
+					WHERE macr_tx_status = 'ativo'
+						AND macr_nb_id = {$idMacro}
+					LIMIT 1;"
+			));
+			if(empty($macro)){
+				$_POST["errorFields"][] = "idMacro";
+				throw new Exception("Macro não encontrada.");
+			}
+		//}
+
+		$newPonto = [
+			"pont_nb_userCadastro"	=> $_SESSION["user_nb_id"],
+			"pont_tx_matricula" 	=> $matricula,
+			"pont_tx_data" 			=> $dataPonto->format("Y-m-d H:i:s"),
+			"pont_tx_tipo" 			=> $macro["macr_tx_codigoInterno"],
+			"pont_tx_status" 		=> "ativo",
+			"pont_tx_dataCadastro" 	=> date("Y-m-d H:i:s"),
+			"pont_nb_motivo" 		=> $motivo,
+			"pont_tx_justificativa" => $justificativa
+		];
+
+		$codigosJornada = ["inicio" => 1, "fim" => 2];
+
+		$ultimoPonto = mysqli_fetch_assoc(query(
+			"SELECT * FROM ponto
+				WHERE pont_tx_status = 'ativo'
+					AND pont_tx_matricula = '{$matricula}'
+					AND pont_tx_data <= STR_TO_DATE('{$dataPonto->format("Y-m-d H:i:59")}', '%Y-%m-%d %H:%i:%s')
+				ORDER BY pont_tx_data DESC, pont_nb_id DESC
+				LIMIT 1;"
+		));
+
+		if(in_array(intval($ultimoPonto["pont_tx_tipo"]), $codigosJornada)){
+			$ultPontoJornada = $ultimoPonto;
+		}else{
+			$ultPontoJornada = mysqli_fetch_assoc(query(
+				"SELECT pont_tx_tipo FROM ponto 
+					WHERE pont_tx_tipo IN ('{$codigosJornada["inicio"]}', '{$codigosJornada["fim"]}')
+						AND pont_tx_status = 'ativo'
+						AND pont_tx_matricula = '{$matricula}'
+						AND pont_tx_data <= STR_TO_DATE('{$dataPonto->format("Y-m-d H:i:59")}', '%Y-%m-%d %H:%i:%s')
+					ORDER BY pont_tx_data DESC
+					LIMIT 1;"
+			));
+		}
+
+
+		if(empty($ultPontoJornada) || (!empty($ultimoPonto) && $ultimoPonto["pont_tx_tipo"] == $codigosJornada["fim"])){
+			if($newPonto["pont_tx_tipo"] != $codigosJornada["inicio"]){
+				throw new Exception("Jornada aberta não encontrada.");
+			}
+		}else{
+			if($ultimoPonto["pont_tx_tipo"] == $codigosJornada["inicio"]){
+				if($newPonto["pont_tx_tipo"] == $codigosJornada["inicio"]){
+					throw new Exception("Jornada aberta já existente.");
+				}
+				if($newPonto["pont_tx_tipo"]%2 == 0 && ($newPonto["pont_tx_tipo"] != $codigosJornada["fim"])){
+					throw new Exception("Intervalo aberto não encontrado.");
+				}
+			}elseif($ultimoPonto["pont_tx_tipo"]%2 == 1){
+				if($newPonto["pont_tx_tipo"] == $codigosJornada["fim"]){
+					throw new Exception("Não é possível fechar com um intervalo aberto.");
+				}
+				if($newPonto["pont_tx_tipo"]%2 == 1){
+					throw new Exception("Não é possível abrir com outro intervalo aberto.");
+				}
+				if($newPonto["pont_tx_tipo"] != intval($ultimoPonto["pont_tx_tipo"])+1){
+					throw new Exception("Não é possível fechar com outro intervalo aberto.");
+				}
+			}elseif($newPonto["pont_tx_tipo"]%2 == 0 && $newPonto["pont_tx_tipo"] != $codigosJornada["fim"]){
+				throw new Exception("Intervalo aberto não encontrado.");
+			}
+		}
+
+		return $newPonto;
+	}
+
 	function dateTimeToSecs(DateTime $dateTime, DateTime $baseDate = null): int{
 		if(empty($baseDate)){
 			$baseDate = DateTime::createFromFormat("Y-m-d H:i:s", "1970-01-01 00:00:00");
@@ -649,6 +735,7 @@
 			$registros[$tipos[$ponto["pont_tx_tipo"]]][] = $ponto["pont_tx_data"];
 		}
 
+		
 		$registros["jornadaCompleto"] = organizarIntervalos($data, $registros["inicioJornada"], $registros["fimJornada"]);
 
 		if(!empty($registros["inicioJornada"][0])){
@@ -667,12 +754,6 @@
 			foreach(["refeicao", "espera", "descanso", "repouso"] as $campoIgnorado){
 				if(is_bool(strpos($motorista["para_tx_ignorarCampos"], $campoIgnorado))){
 					$registros[$campoIgnorado."Completo"] = organizarIntervalos($data, $registros["inicio".ucfirst($campoIgnorado)], $registros["fim".ucfirst($campoIgnorado)]);
-					if(!empty($registros["inicio".ucfirst($campoIgnorado)][0]) && !empty($data)){
-						$qtdDias = date_diff(DateTime::createFromFormat("Y-m-d H:i:s", $registros["inicio".ucfirst($campoIgnorado)][0]), DateTime::createFromFormat("Y-m-d H:i:s", "{$data} 00:00:00"))->d;
-						if($qtdDias > 0){
-							$registros[$campoIgnorado."Completo"]["totalIntervalo"]->sub(DateInterval::createFromDateString($qtdDias." days"));
-						}
-					}
 				}else{
 					$registros[$campoIgnorado."Completo"] = organizarIntervalos($data, [], []);
 				}
@@ -1317,7 +1398,7 @@
 			}
 			$match = "";
 
-			if(!preg_match("/^-?\d{2,10}:\d{2}$/", $horario, $match)){
+			if(!preg_match("/^-?\d{2,10}:\d{2}(?=:\d{2})?/", $horario, $match)){
 				echo "<script>console.log('Format error (operarHorarios): |".strval($horario)."|')</script>";
 				continue;
 			}
@@ -1370,7 +1451,7 @@
 		return $horarios;
 	}
 
-	function organizarIntervalos($data, $inicios, $fins){
+	function organizarIntervalos(string $data, array $inicios, array $fins): array{
 		
 		$totalIntervalo = new DateTime("{$data} 00:00:00");
 		
@@ -1506,8 +1587,6 @@
 				$mdc = $intervalos[$f][1];
 			}
 		}
-
-		return $mdc;
 
 		if($mdc > "05:30"){
 			$mdc = "<a style='white-space: nowrap;'>".

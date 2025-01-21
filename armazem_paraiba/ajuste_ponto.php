@@ -11,149 +11,37 @@
 	include_once "funcoes_ponto.php";
 
 	function cadastrarAjuste(){
-		//Tratamento de erros{
-			try{
-				//Conferir se tem as informações necessárias{
-					$camposObrig = [
-						"idMotorista" => "Motorista",
-						"hora" => "Hora",
-						"idMacro" => "Tipo de Registro",
-						"motivo" => "Motivo",
-					];
-					$errorMsg = conferirCamposObrig($camposObrig, $_POST);
-					if(!empty($errorMsg)){
-						throw new Exception($errorMsg);
-					}
+		try{
+			$matricula = mysqli_fetch_assoc(query(
+				"SELECT enti_tx_matricula FROM entidade
+					WHERE enti_tx_status = 'ativo'
+						AND enti_nb_id = {$_POST["idMotorista"]}
+					LIMIT 1;"
+			))["enti_tx_matricula"];
+			$newPonto = conferirErroPonto($matricula, new DateTime("{$_POST["data"]} {$_POST["hora"]}"), $_POST["idMacro"], $_POST["motivo"]);
+		}catch(Exception $e){
+			set_status($e->getMessage());
+			index();
+			exit;
+		}
 
-					$aMotorista = carregar("entidade", $_POST["idMotorista"]);
-					if(empty($aMotorista)){
-						$_POST["errorFields"][] = "idMotorista";
-						throw new Exception("Funcionário não encontrado.");
-					}
-
-					$aTipo = carregar("macroponto", $_POST["idMacro"]);
-					if(empty($aTipo)){
-						$_POST["errorFields"][] = "idMacro";
-						throw new Exception("Macro não encontrado.");
-					}
-				//}
-
-				$codigosJornada = ["inicio" => 1, "fim" => 2];
-				//Conferir se há uma jornada aberta{
-					$temJornadaAberta = mysqli_fetch_all(
-						query(
-							"SELECT * FROM ponto 
-								WHERE pont_tx_tipo IN ('".$codigosJornada["inicio"]."', '".$codigosJornada["fim"]."')
-									AND pont_tx_status = 'ativo'
-									AND pont_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'
-									AND pont_tx_data <= STR_TO_DATE('".$_POST["data"].' '.$_POST["hora"].":59', '%Y-%m-%d %H:%i:%s')
-								ORDER BY pont_tx_data DESC
-								LIMIT 1"
-						),
-						MYSQLI_ASSOC
-					)[0];
-					$temJornadaAberta = (!empty($temJornadaAberta) && intval($temJornadaAberta["pont_tx_tipo"]) == $codigosJornada["inicio"]);
-
-					if($temJornadaAberta){
-						if(intval($aTipo["macr_tx_codigoInterno"]) == $codigosJornada["inicio"]){ //Se tem jornada aberta e está tentando cadastrar uma abertura de jornada
-							throw new Exception("Não é possível registrar um ".strtolower($aTipo["macr_tx_nome"])." sem fechar o anterior.");
-						}elseif(intval($aTipo["macr_tx_codigoInterno"]) == $codigosJornada["fim"]){
-							$jornadaFechada = mysqli_fetch_assoc(
-								query(
-									"SELECT pont_tx_tipo FROM ponto 
-										WHERE pont_tx_tipo IN ('".$codigosJornada["inicio"]."', '".$codigosJornada["fim"]."')
-											AND pont_tx_status = 'ativo'
-											AND pont_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'
-											AND pont_tx_data >= STR_TO_DATE('".$_POST["data"].' '.$_POST["hora"].":00', '%Y-%m-%d %H:%i:%s')
-										ORDER BY pont_tx_data ASC
-										LIMIT 1;"
-								)
-							);
-							$jornadaFechada = (!empty($jornadaFechada) && $jornadaFechada["pont_tx_tipo"] == $codigosJornada["fim"]);
-							if(!empty($jornadaFechada)){
-								throw new Exception("Esta jornada já foi fechada neste horário ou após ele.");
-							}
-						}else{
-							$matchedTypes = [
-								"inicios" => mysqli_fetch_all(query(
-									"SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_nome LIKE 'Inicio%' AND macr_tx_nome NOT LIKE '%de Jornada';"
-								), MYSQLI_NUM),
-								"fins" => mysqli_fetch_all(query(
-									"SELECT macr_tx_codigoInterno FROM macroponto WHERE macr_tx_nome LIKE 'Fim%'    AND macr_tx_nome NOT LIKE '%de Jornada'"
-								), MYSQLI_NUM),
-							];
-
-							$matchedTypes["inicios"] 	= array_map(function($value){return intval($value[0]);}, $matchedTypes["inicios"]);
-							$matchedTypes["fins"] 		= array_map(function($value){return intval($value[0]);}, $matchedTypes["fins"]);
-
-							$temPeriodoAberto = mysqli_fetch_assoc(query(
-								"SELECT * FROM ponto"
-									." WHERE pont_tx_status = 'ativo'"
-										." AND pont_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'"
-										." AND pont_tx_data <= STR_TO_DATE('".$_POST["data"]." ".$_POST["hora"].":59', '%Y-%m-%d %H:%i:%s')"
-									." ORDER BY pont_tx_data DESC, pont_nb_id DESC"
-									." LIMIT 1;"
-							));
-							
-							$temPeriodoAberto["pont_tx_tipo"] = !empty($temPeriodoAberto["pont_tx_tipo"])? intval($temPeriodoAberto["pont_tx_tipo"]): 0;
-							$temPeriodoAberto["macr_tx_codigoInterno"] = !empty($temPeriodoAberto["macr_tx_codigoInterno"])? intval($temPeriodoAberto["macr_tx_codigoInterno"]): 0;
-							
-							$tipoMacro = intval($aTipo["macr_tx_codigoInterno"])-(intval($aTipo["macr_tx_codigoInterno"])%2 == 0? 1: 0); //O código de abertura do tipo que está sendo registrado. Se par, é uma abertura, senão, um fechamento.
-							$mesmoTipo = ($temPeriodoAberto["pont_tx_tipo"] == $tipoMacro || $temPeriodoAberto["pont_tx_tipo"] == $tipoMacro+1); //Se esse período encontrado é do mesmo tipo que está tentando ser cadastrado
-							$temPeriodoAberto = in_array($temPeriodoAberto["pont_tx_tipo"], $matchedTypes["inicios"]); //Se encontrou um período aberto
-							
-							if(in_array(intval($aTipo["macr_tx_codigoInterno"]), $matchedTypes["inicios"])){ //Se está registrando uma abertura de período
-								if($temPeriodoAberto){
-									throw new Exception("Não é possível registrar um ".strtolower($aTipo["macr_tx_nome"])." sem fechar o anterior.");
-								}
-							}elseif(in_array(intval($aTipo["macr_tx_codigoInterno"]), $matchedTypes["fins"])){ //Se está registrando um fechamento de período
-								if(!$temPeriodoAberto || !$mesmoTipo){ //Se não tem um período aberto ou se o período aberto é de tipo diferente do que está sendo fechado 
-									throw new Exception("Não é possível registrar um ".strtolower($aTipo["macr_tx_nome"])." sem abrir um período antes.");
-								}
-							}
-						}
-					}elseif($aTipo["macr_tx_codigoInterno"] != "1"){
-						throw new Exception("Não é possível realizar ajustes sem uma jornada aberta.");
-					}
-				//}
-			}catch(Exception $error){
-				set_status("ERRO: ".$error->getMessage());
-				index();
-				exit;
+		//Conferir se já existe um ponto naquele segundo para adicionar o próximo 1 segundo após{
+			$temPonto = mysqli_fetch_assoc(query(
+				"SELECT pont_nb_id, pont_tx_data FROM ponto
+					WHERE pont_tx_status = 'ativo'
+						AND pont_tx_matricula = '{$matricula}'
+						AND STR_TO_DATE(pont_tx_data, '%Y-%m-%d %H:%i') = STR_TO_DATE('".($_POST["data"]." ".$_POST["hora"])."', '%Y-%m-%d %H:%i')
+					ORDER BY pont_tx_data DESC
+					LIMIT 1;"
+			));
+	
+			if(!empty($temPonto["pont_tx_data"])){
+				$seg = explode(":", $temPonto["pont_tx_data"])[2];
+				$seg = intval($seg)+1;
+				$newPonto["pont_tx_data"] = "{$_POST["data"]} {$_POST["hora"]}:".str_pad(strval($seg), 2, "0", STR_PAD_LEFT);
 			}
 		//}
 
-		$temPonto = mysqli_fetch_assoc(query(
-			"SELECT pont_nb_id, pont_tx_data FROM ponto
-				WHERE pont_tx_status = 'ativo'
-					AND pont_tx_matricula = '".$aMotorista["enti_tx_matricula"]."'
-					AND STR_TO_DATE(pont_tx_data, '%Y-%m-%d %H:%i') = STR_TO_DATE('".($_POST["data"]." ".$_POST["hora"])."', '%Y-%m-%d %H:%i')
-				ORDER BY pont_tx_data DESC
-				LIMIT 1"
-		));
-		
-		$data = $_POST["data"]." ".$_POST["hora"];
-
-		if(!empty($temPonto["pont_tx_data"])){
-			$seg = explode(":", $temPonto["pont_tx_data"])[2];
-			$seg = intval($seg)+1;
-			$data = $data.":".str_pad(strval($seg), 2, "0", STR_PAD_LEFT);
-		}else{
-			$data = $data.":00";
-		}
-
-
-		$newPonto = [
-			"pont_nb_userCadastro"	=> $_SESSION["user_nb_id"],
-			"pont_tx_matricula" 	=> $aMotorista["enti_tx_matricula"],
-			"pont_tx_data" 			=> $data,
-			"pont_tx_tipo" 			=> $aTipo["macr_tx_codigoInterno"],
-			"pont_tx_status" 		=> "ativo",
-			"pont_tx_dataCadastro" 	=> date("Y-m-d H:i:s"),
-			"pont_nb_motivo" 		=> $_POST["motivo"],
-			"pont_tx_justificativa" => $_POST["justificativa"]
-		];
-		
 		inserir("ponto", array_keys($newPonto), array_values($newPonto));
 		index();
 		exit;
@@ -200,8 +88,7 @@
 					display: inline-flex;
 				}
 				#status-label{
-				margin-right: 10px; 
-				
+					margin-right: 10px; 
 				}
 				#status {
 					margin-top: -5px;
@@ -218,88 +105,39 @@
 		;
 	}
 
-	function pegarSqlDia(string $matricula, array $cols): string{
+	function pegarSqlDia(string $matricula, DateTime $data, array $cols): string{
+
 		$condicoesPontoBasicas = "ponto.pont_tx_status = 'ativo' AND ponto.pont_tx_matricula = '{$matricula}'";
 
-		$abriuJornadaHoje = mysqli_fetch_assoc(query(
-			"SELECT pont_tx_data FROM ponto
+		$sqlDataInicio = $data->format("Y-m-d 00:00:00");
+		$sqlDataFim = $data->format("Y-m-d 23:59:59");
+
+		$ultJornadaOntem = mysqli_fetch_assoc(query(
+			"SELECT pont_tx_data, (pont_tx_tipo = 1) as jornadaAbertaAntes FROM ponto 
 				WHERE {$condicoesPontoBasicas}
-					AND ponto.pont_tx_tipo = 1
-					AND ponto.pont_tx_data LIKE '%".$_POST["data"]."%'
-				ORDER BY ponto.pont_tx_data ASC
+					AND pont_tx_tipo IN (1,2)
+					AND pont_tx_data < STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')
+				ORDER BY pont_tx_data DESC
 				LIMIT 1;"
 		));
 
-		//Definir data de início da query{
-			//Se abriu jornada hoje, considera a partir da data de abertura da jornada.
-			if(empty($abriuJornadaHoje)){
-				//Se não tem uma jornada que veio de antes, considera a partir de meia-noite de hoje.
-				$sqlDataInicio = "{$_POST["data"]} 00:00:00";
+		$primJornadaAmanha = mysqli_fetch_assoc(query(
+			"SELECT pont_tx_data, (pont_tx_tipo = 2) as jornadaFechadaApos FROM ponto 
+				WHERE {$condicoesPontoBasicas}
+					AND pont_tx_tipo IN (1,2)
+					AND pont_tx_data > STR_TO_DATE('{$sqlDataFim}', '%Y-%m-%d %H:%i:%s')
+				ORDER BY pont_tx_data ASC
+				LIMIT 1;"
+		));
 
-				//Se não abriu uma jornada hoje, confere se há uma jornada aberta que veio de antes do dia.
-				$temJornadaAberta = mysqli_fetch_assoc(query(
-					"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 1) as temJornadaAberta FROM ponto
-						WHERE {$condicoesPontoBasicas}
-							AND ponto.pont_tx_tipo IN (1,2)
-							AND pont_tx_data <= STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')
-						ORDER BY pont_tx_data DESC
-						LIMIT 1;"
-				));
 
-				if(!empty($temJornadaAberta) && intval($temJornadaAberta["temJornadaAberta"])){
-					//Se a jornada aberta antes do dia não foi fechada, pega desde o momento em que a jornada foi aberta.
-					$sqlDataInicio = $temJornadaAberta["pont_tx_data"];
-					//Se tem uma jornada que veio de antes do dia, confere se esta foi fechada hoje.
-					$jornadaFechadaHoje = mysqli_fetch_assoc(query(
-						"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 2) as jornadaFechadaHoje FROM ponto
-							WHERE {$condicoesPontoBasicas}
-								AND ponto.pont_tx_tipo IN (1,2)
-								AND pont_tx_data LIKE '%{$_POST["data"]}%'
-							ORDER BY pont_tx_data ASC
-							LIMIT 1;"
-					));
-					if(!empty($jornadaFechadaHoje) && intval($jornadaFechadaHoje["jornadaFechadaHoje"])){
-						//Se a jornada aberta antes do dia foi fechada, deve considerar apenas após esse fechamento.
-						$sqlDataInicio = $jornadaFechadaHoje["pont_tx_data"];
-					}
-				}
-			}
-		//}
+		if(!empty($ultJornadaOntem) && intval($ultJornadaOntem["jornadaAbertaAntes"])){
+			$sqlDataInicio = $ultJornadaOntem["pont_tx_data"];
+		}
 
-		//Definir data de fim da query{
-			$sqlDataFim = $_POST["data"]." 23:59:59";
-			if(!empty($abriuJornadaHoje)){
-				$sqlDataInicio = $abriuJornadaHoje["pont_tx_data"];
-				//Se abriu jornada hoje, confere se teve uma jornada aberta que seguiu pros dias seguintes
-				$deixouJornadaAberta = mysqli_fetch_assoc(
-					query(
-						"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 1) as deixouJornadaAberta FROM ponto
-							WHERE {$condicoesPontoBasicas}
-								AND ponto.pont_tx_tipo IN (1,2)
-								AND pont_tx_data <= STR_TO_DATE('".$_POST["data"]." 23:59:59', '%Y-%m-%d %H:%i:%s')
-							ORDER BY pont_tx_data DESC
-							LIMIT 1;"
-					)
-				);
-				if(!empty($deixouJornadaAberta) && intval($deixouJornadaAberta["deixouJornadaAberta"])){
-					//Se deixou uma jornada aberta pros dias seguintes, confere se ela terminou.
-					$fimJornada = mysqli_fetch_assoc(
-						query(
-							"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 2) as fimJornada FROM ponto
-								WHERE {$condicoesPontoBasicas}
-									AND ponto.pont_tx_tipo IN (1,2)
-									AND pont_tx_data >= STR_TO_DATE('".$_POST["data"]." 23:59:59', '%Y-%m-%d %H:%i:%s')
-								ORDER BY pont_tx_data ASC
-								LIMIT 1;"
-						)
-					);
-					if(!empty($fimJornada) && intval($fimJornada["fimJornada"])){
-						//Se a jornada deixada aberta já foi finalizada, pega até o fechamento dessa jornada deixada.
-						$sqlDataFim = $fimJornada["pont_tx_data"];
-					}
-				}
-			}
-		//}
+		if(!empty($primJornadaAmanha) && intval($primJornadaAmanha["jornadaFechadaApos"])){
+			$sqlDataFim = $primJornadaAmanha["pont_tx_data"];
+		}
 
 		$condicoesPontoBasicas = 
 			"ponto.pont_tx_status = '{$_POST["status"]}' 
@@ -308,7 +146,6 @@
 			AND user.user_tx_status = 'ativo' 
 			AND macroponto.macr_tx_status = 'ativo'"
 		;
-
 		
 		$sql = 
 			"SELECT DISTINCT pont_nb_id, ".implode(",", $cols)." FROM ponto
@@ -588,6 +425,7 @@
 
 		$sql = pegarSqlDia(
 			$motorista["enti_tx_matricula"], 
+			new DateTime($_POST["data"]." 00:00:00"),
 			[
 				"pont_nb_id", 
 				"DATE_FORMAT(pont_tx_data, '%d/%m/%Y (%H:%i:%s)') AS pont_tx_data", 
