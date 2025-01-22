@@ -611,6 +611,7 @@
 		}
 		$campoSalario = "";
 		if (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
+			$a_mod["enti_nb_salario"] = str_replace(".", ",", $a_mod["enti_nb_salario"]);
 			$campoSalario = campo("Salário*", "salario", (!empty($a_mod["enti_nb_salario"])? $a_mod["enti_nb_salario"] : "0"), 1, "MASCARA_VALOR", "tabindex=".sprintf("%02d", $tabIndex+2));
 		}
 
