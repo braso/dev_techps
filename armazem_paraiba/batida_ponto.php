@@ -8,7 +8,13 @@
 	function cadastraPonto(){
 		$hoje = date("Y-m-d");
 		try {
-			$novoPonto = conferirErroPonto($_SESSION["user_tx_matricula"], new DateTime("{$hoje} ".date("H:i:00")), intval($_POST["idMacro"]), (!empty($_POST["motivo"])? $_POST["motivo"]: null), (!empty($_POST["justificativa"])? $_POST["justificativa"]: null));
+			$motorista = mysqli_fetch_assoc(query(
+				"SELECT enti_tx_matricula FROM entidade 
+					WHERE enti_tx_status = 'ativo' 
+						AND enti_nb_id = {$_SESSION["user_nb_entidade"]}
+					LIMIT 1;"
+			));
+			$novoPonto = conferirErroPonto($motorista["enti_tx_matricula"], new DateTime("{$hoje} ".date("H:i:00")), intval($_POST["idMacro"]), (!empty($_POST["motivo"])? $_POST["motivo"]: null), (!empty($_POST["justificativa"])? $_POST["justificativa"]: null));
 		} catch (\Exception $e) {
 			set_status("ERRO: ".$e->getMessage());
 			index();
