@@ -1442,7 +1442,7 @@
 	}
 	
 	function ordenarHorariosTipo(array $inicios, array $fins, string $tipo = "", int $order = SORT_ASC): array{
-		if(empty($inicios) || empty($fins)){
+		if(empty($inicios) && empty($fins)){
 			return [];
 		}
 		// Inicializa o array resultante e o array de indicação
@@ -1467,7 +1467,7 @@
 	}
 
 	function organizarIntervalos(string $data, array $inicios, array $fins): array{
-		
+
 		$totalIntervalo = new DateTime("{$data} 00:00:00");
 		
 		//Resposta padrão{
@@ -1477,13 +1477,13 @@
 				"icone" => ""
 			];
 
-			if(empty($inicios) || empty($fins)){
+			if(empty($inicios) && empty($fins)){
 				return $paresResult;
 			}
 		//}
 
 		$horariosOrdenados = ordenarHorariosTipo($inicios, $fins);
-		
+
 		$pares = [];
 		$parAtual = null;
 
@@ -1496,6 +1496,7 @@
 			}
 			return $interval;
 		};
+
 
 		foreach ($horariosOrdenados as $ponto){
 			if($ponto["tipo"] == "inicio"){
