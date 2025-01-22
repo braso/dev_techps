@@ -116,72 +116,99 @@ document.addEventListener("DOMContentLoaded", () => {
     
         data.forEach((row, index) => {
             if (parseInt(row.speed) <= 5) {
+                // Quando a velocidade é <= 5, verifica se houve mudança na ignição
                 if (!isStopped || currentIgnition !== row.ignition) {
                     if (isStopped) {
-                        const totalTime = (stopEnd - stopStart) / 1000;
+                        // Calcula o tempo total da parada
+                        const totalTime = (new Date(row.moduleTime) - stopStart) / 1000;
+        
+                        // Registra o grupo de parada se for maior ou igual a 5 minutos
                         if (totalTime >= 5 * 60) {
-                            if (currentIgnition === "true") {
-                                totalTrueTime += totalTime;
-                                totalStopsIgnitionOn++;
-                            } else {
-                                totalFalseTime += totalTime;
-                                totalStopsIgnitionOff++;
-                            }
                             appendStopRow(
                                 tbody,
-                                data[index - 1],
+                                data[index - 1], // Último registro antes da mudança
                                 stopStart,
-                                stopEnd,
+                                new Date(row.moduleTime), // Primeiro registro da ignição diferente
                                 currentIgnition,
                                 totalTime
                             );
+        
+                            // Incrementa o contador de paradas
+                            if (currentIgnition === "true") {
+                                totalStopsIgnitionOn++;
+                                totalTrueTime += totalTime;
+                            } else {
+                                totalStopsIgnitionOff++;
+                                totalFalseTime += totalTime;
+                            }
                         }
                     }
-                    stopStart = stopEnd ? new Date(stopEnd) : new Date(row.moduleTime);
+        
+                    // Reinicia o ciclo da parada
+                    stopStart = new Date(row.moduleTime);
                     isStopped = true;
                     currentIgnition = row.ignition;
                 }
+        
+                // Atualiza o último horário da ignição ativa
                 stopEnd = new Date(row.moduleTime);
             } else {
-                if (isStopped && currentIgnition === "true") {
+                // Quando velocidade > 5, finaliza o grupo de parada atual
+                if (isStopped) {
                     const totalTime = (stopEnd - stopStart) / 1000;
+        
+                    // Registra o grupo de parada se for maior ou igual a 5 minutos
                     if (totalTime >= 5 * 60) {
-                        totalTrueTime += totalTime;
-                        totalStopsIgnitionOn++;
                         appendStopRow(
                             tbody,
-                            data[index - 1],
+                            data[index - 1], // Último registro antes da mudança
                             stopStart,
                             stopEnd,
                             currentIgnition,
                             totalTime
                         );
+        
+                        // Incrementa o contador de paradas
+                        if (currentIgnition === "true") {
+                            totalStopsIgnitionOn++;
+                            totalTrueTime += totalTime;
+                        } else {
+                            totalStopsIgnitionOff++;
+                            totalFalseTime += totalTime;
+                        }
                     }
+        
+                    // Finaliza o estado de parada
                     isStopped = false;
                 }
             }
         });
-    
+        
+        // Verifica se há uma parada pendente no final do loop
         if (isStopped) {
             const totalTime = (stopEnd - stopStart) / 1000;
+        
             if (totalTime >= 5 * 60) {
-                if (currentIgnition === "true") {
-                    totalTrueTime += totalTime;
-                    totalStopsIgnitionOn++;
-                } else {
-                    totalFalseTime += totalTime;
-                    totalStopsIgnitionOff++;
-                }
                 appendStopRow(
                     tbody,
-                    data[data.length - 1],
+                    data[data.length - 1], // Último registro no dataset
                     stopStart,
                     stopEnd,
                     currentIgnition,
                     totalTime
                 );
+        
+                // Incrementa o contador de paradas
+                if (currentIgnition === "true") {
+                    totalStopsIgnitionOn++;
+                    totalTrueTime += totalTime;
+                } else {
+                    totalStopsIgnitionOff++;
+                    totalFalseTime += totalTime;
+                }
             }
         }
+        
     
         const summaryDiv = document.createElement("div");
         summaryDiv.innerHTML = 
