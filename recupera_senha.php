@@ -127,10 +127,10 @@
 
             // Configurações do servidor
             $mail->CharSet = 'UTF-8';
-            $mail->Host = 'gestaodejornada.braso.com.br';
+            $mail->Host = 'smtp.titan.email';
             $mail->SMTPAuth = true;
-            $mail->Username = 'techps@gestaodejornada.braso.com.br';
-            $mail->Password = '3Gra!G@~O9ef';
+            $mail->Username = 'suporte@techps.com.br';
+            $mail->Password = 'gX%]b6qNe=Tg]56';
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
             $mail->Port = 465;
 
