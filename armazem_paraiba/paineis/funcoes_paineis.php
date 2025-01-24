@@ -794,6 +794,7 @@
 				"mdcDescanso30m5h" 			=> 0,
 				"faltaJustificada"          => 0,
 				"falta"                     => 0,
+				"diasConformidade"          => 0,
 
 				"dataInicio"				=> $periodoInicio->format("d/m/Y"),
 				"dataFim"					=> $periodoFim->format("d/m/Y")
@@ -801,40 +802,50 @@
 
 			if ($_POST["busca_endossado"] == "endossado") {
 				foreach ($endossos as $endosso) {
+					$houveInteracao = false;
 					if ($motorista["enti_nb_id"] === $endosso["endo_nb_entidade"]) {
 						$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
 
 						foreach ($endosso["endo_tx_pontos"] as $ponto) {
-							$inicioJornadaWarning = strpos($ponto["3"], "fa-warning") !== false && strpos($ponto["3"], "color:red;");
-							$fimJornadaWarning = strpos($ponto["6"], "fa-warning") !== false  && strpos($ponto["6"], "color:red;");
+							$inicioJornadaWarning = strpos($ponto["3"], "fa-warning") !== false && strpos($ponto["3"], "color:red;")
+							&& strpos($ponto["3"], "fa-info-circle") !==  false && strpos($ponto["3"], "color:green;") !==  false;
+							$fimJornadaWarning = strpos($ponto["6"], "fa-warning") !== false  && strpos($ponto["6"], "color:red;")
+							&& strpos($ponto["6"], "fa-info-circle") !==  false && strpos($ponto["6"], "color:green;") !==  false;
 							$diffJornada = $ponto["11"];
 							$diffJornadaEfetiva = $ponto["13"];
 
 							// Verificações jornada
 							if ($inicioJornadaWarning || $fimJornadaWarning) {
 								$totalMotorista["12"] += 1;
+								$houveInteracao = true;
 							}
 
 							if ($inicioJornadaWarning && strpos($ponto["12"], "fa-info-circle") !== false && 
 								strpos($ponto["12"], "color:green;") !== false) {
 								$totalMotorista["faltaJustificada"] += 1;
+								$houveInteracao = true;
 							}
 
 							if($inicioJornadaWarning && strpos($ponto["12"], "fa-info-circle") === false && strpos($ponto["12"], "color:green;") === false){
 								$totalMotorista["falta"] += 1;
+								$houveInteracao = true;
 							}
 
 							if (strpos($diffJornada, "fa-info-circle") !== false && strpos($diffJornada, "color:red;") !== false) {
 								$totalMotorista["jornada"] += 1;
+								$houveInteracao = true;
 							}
 							if (strpos($diffJornadaEfetiva, "fa-warning") !== false && strpos($diffJornadaEfetiva, "color:orange;") !== false) {
 								$totalMotorista["jornadaEfetiva"] += 1;
+								$houveInteracao = true;
 							}
 							if (strpos($diffJornadaEfetiva, "Tempo excedido de 10:00") !== false) {
 								$totalMotorista["jornadaExcedido10h"] += 1;
+								$houveInteracao = true;
 							}
 							if (strpos($diffJornadaEfetiva, "Tempo excedido de 12:00") !== false) {
 								$totalMotorista["jornadaExcedido12h"] += 1;
+								$houveInteracao = true;
 							}
 
 							// Refeição
@@ -844,36 +855,46 @@
 
 							if ($inicioRefeicao || $fimRefeicao) {
 								$totalMotorista["refeicao"]++;
+								$houveInteracao = true;
 							} 
 							else if (strpos($diffRefeicao, "fa-warning") !== false) {
 								$totalMotorista["refeicao"]++;
+								$houveInteracao = true;
 							}
 							if (strpos($diffRefeicao, "fa-info-circle") !== false && strpos($diffRefeicao, "color:orange;") !== false) {
 								$totalMotorista["refeicao"]++;
+								$houveInteracao = true;
 							}
 							if ($inicioRefeicao || $fimRefeicao) {
 								$totalMotorista["refeicaoSemRegistro"] += 1;
+								$houveInteracao = true;
 							}
 							if ($inicioRefeicao == false && $fimRefeicao == false && strpos($diffRefeicao, "01:00h") !== false) {
 								$totalMotorista["refeicao1h"] += 1;
+								$houveInteracao = true;
 							}
 							if (strpos($diffRefeicao, "02:00h") !== false) {
 								$totalMotorista["refeicao2h"] += 1;
+								$houveInteracao = true;
 							}
 
 							// Máximo Direção Contínua
 							$maximoDirecaoContinua = $ponto["14"];
 							if (strpos($maximoDirecaoContinua, "fa-warning") !== false && strpos($maximoDirecaoContinua, "color:orange;") !== false) {
 								$totalMotorista["mdc"]++;
+								$houveInteracao = true;
 							}
 							if (strpos($maximoDirecaoContinua, "digiridos não respeitado") !== false) {
 								$totalMotorista["mdcDescanso30m5h"] += 1;
+								$houveInteracao = true;
 							}
 							if (strpos($maximoDirecaoContinua, "00:15 não respeitado") !== false) {
 								$totalMotorista["mdcDescanso15m"] += 1;
+								$houveInteracao = true;
 							}
 							if (strpos($maximoDirecaoContinua, "00:30 não respeitado") !== false) {
 								$totalMotorista["mdcDescanso30m"] += 1;
+								$houveInteracao = true;
 							}
 
 							// Outros campos de descanso
@@ -881,15 +902,22 @@
 								$diffCampo = $ponto["diff".$campo];
 								if (strpos($diffCampo, "fa-info-circle") !== false && strpos($diffCampo, "color:red;") !== false) {
 									$totalMotorista[strtolower($campo)]++;
+									$houveInteracao = true;
 								}
 							}
 
 							// Interstício
 							if (strpos($ponto["15"], "faltaram") !== false) {
 								$totalMotorista["intersticioSuperior"]++;
+								$houveInteracao = true;
 							}
 							if (strpos($ponto["15"], "ininterruptas") !== false) {
 								$totalMotorista["intersticioInferior"]++;
+								$houveInteracao = true;
+							}
+
+							if ($houveInteracao) {
+								$totalMotorista["diasConformidade"]++;
 							}
 						}
 						$motoristaTotais[] = $totalMotorista;
@@ -908,39 +936,51 @@
 				for ($date = clone $periodoInicio; $date <= $periodoFim; $date->modify('+1 day')) {
 					$diaPonto[] = diaDetalhePonto($motorista, $date->format('Y-m-d'));
 				}
-
+				
 				foreach ($diaPonto as $dia) {
+					$houveInteracao = false;
 					// Jornada
-					$inicioJornadaWarning = strpos($dia["inicioJornada"], "fa-warning") !== false && strpos($dia["inicioJornada"], "color:red;");
-					$fimJornadaWarning = strpos($dia["fimJornada"], "fa-warning") !== false  && strpos($dia["fimJornada"], "color:red;");
+					$inicioJornadaWarning = strpos($dia["inicioJornada"], "fa-warning") !== false && strpos($dia["inicioJornada"], "color:red;") !== false
+					&& strpos($dia["inicioJornada"], "fa-info-circle") !==  false && strpos($dia["inicioJornada"], "color:green;") !==  false;
+
+					$fimJornadaWarning = strpos($dia["fimJornada"], "fa-warning") == false  && strpos($dia["fimJornada"], "color:red;") !== false
+					&& strpos($dia["fimJornada"], "fa-info-circle") !==  false && strpos($dia["fimJornada"], "color:green;") !==  false;
+
 					$diffJornada = $dia["diffJornada"];
 					$diffJornadaEfetiva = $dia["diffJornadaEfetiva"];
 
 					// Verificações jornada
 					if ($inicioJornadaWarning || $fimJornadaWarning) {
 						$totalMotorista["jornadaPrevista"] += 1;
+						$houveInteracao = true;
 					}
 
 					if ($inicioJornadaWarning && strpos($dia["jornadaPrevista"], "fa-info-circle") !== false && 
 						strpos($dia["jornadaPrevista"], "color:green;") !== false) {
 						$totalMotorista["faltaJustificada"] += 1;
+						$houveInteracao = true;
 					}
 
 					if($inicioJornadaWarning && strpos($dia["jornadaPrevista"], "fa-info-circle") === false && strpos($dia["jornadaPrevista"], "color:green;") === false){
 						$totalMotorista["falta"] += 1;
+						$houveInteracao = true;
 					}
 
 					if (strpos($diffJornada, "fa-info-circle") !== false && strpos($diffJornada, "color:red;") !== false) {
 						$totalMotorista["jornada"] += 1;
+						$houveInteracao = true;
 					}
 					if (strpos($diffJornadaEfetiva, "fa-warning") !== false && strpos($diffJornadaEfetiva, "color:orange;") !== false) {
 						$totalMotorista["jornadaEfetiva"] += 1;
+						$houveInteracao = true;
 					}
 					if (strpos($diffJornadaEfetiva, "Tempo excedido de 10:00") !== false) {
 						$totalMotorista["jornadaExcedido10h"] += 1;
+						$houveInteracao = true;
 					}
 					if (strpos($diffJornadaEfetiva, "Tempo excedido de 12:00") !== false) {
 						$totalMotorista["jornadaExcedido12h"] += 1;
+						$houveInteracao = true;
 					}
 
 					// Refeição
@@ -950,36 +990,46 @@
 
 					if ($inicioRefeicao || $fimRefeicao) {
 						$totalMotorista["refeicao"]++;
+						$houveInteracao = true;
 					} 
 					else if (strpos($diffRefeicao, "fa-warning") !== false) {
 						$totalMotorista["refeicao"]++;
+						$houveInteracao = true;
 					}
 					if (strpos($diffRefeicao, "fa-info-circle") !== false && strpos($diffRefeicao, "color:orange;") !== false) {
 						$totalMotorista["refeicao"]++;
+						$houveInteracao = true;
 					}
 					if ($inicioRefeicao || $fimRefeicao) {
 						$totalMotorista["refeicaoSemRegistro"] += 1;
+						$houveInteracao = true;
 					}
 					if ($inicioRefeicao == false && $fimRefeicao == false && strpos($diffRefeicao, "01:00h") !== false) {
 						$totalMotorista["refeicao1h"] += 1;
+						$houveInteracao = true;
 					}
 					if (strpos($diffRefeicao, "02:00h") !== false) {
 						$totalMotorista["refeicao2h"] += 1;
+						$houveInteracao = true;
 					}
 
 					// Máximo Direção Contínua
 					$maximoDirecaoContinua = $dia["maximoDirecaoContinua"];
 					if (strpos($maximoDirecaoContinua, "fa-warning") !== false && strpos($maximoDirecaoContinua, "color:orange;") !== false) {
 						$totalMotorista["mdc"]++;
+						$houveInteracao = true;
 					}
 					if (strpos($maximoDirecaoContinua, "digiridos não respeitado") !== false) {
 						$totalMotorista["mdcDescanso30m5h"] += 1;
+						$houveInteracao = true;
 					}
 					if (strpos($maximoDirecaoContinua, "00:15 não respeitado") !== false) {
 						$totalMotorista["mdcDescanso15m"] += 1;
+						$houveInteracao = true;
 					}
 					if (strpos($maximoDirecaoContinua, "00:30 não respeitado") !== false) {
 						$totalMotorista["mdcDescanso30m"] += 1;
+						$houveInteracao = true;
 					}
 
 					// Outros campos de descanso
@@ -987,15 +1037,22 @@
 						$diffCampo = $dia["diff".$campo];
 						if (strpos($diffCampo, "fa-info-circle") !== false && strpos($diffCampo, "color:red;") !== false) {
 							$totalMotorista[strtolower($campo)]++;
+							$houveInteracao = true;
 						}
 					}
 
 					// Interstício
 					if (strpos($dia["intersticio"], "faltaram") !== false) {
 						$totalMotorista["intersticioSuperior"]++;
+						$houveInteracao = true;
 					}
 					if (strpos($dia["intersticio"], "ininterruptas") !== false) {
 						$totalMotorista["intersticioInferior"]++;
+						$houveInteracao = true;
+					}
+
+					if ($houveInteracao) {
+						$totalMotorista["diasConformidade"]++;
 					}
 				}
 
