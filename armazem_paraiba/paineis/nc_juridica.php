@@ -737,37 +737,44 @@
 
 			$rowGravidade = "
 			<div class='row' id='resumo'>
-			<div class='col-md-4'>
-			<div id='graficoPerformance' style='width: 250px; height: 195px; margin: 0 auto;'></div>
-			<div id='popup-alta' class='popup'>
-			<button class='popup-close'>Fechar</button>
-			<h3>Sobre o Gráfico:</h3>
-			<spam>Este gráfico apresenta a porcentagem de funcionários com nenhuma não conformidade. 
-			Quanto maior o valor, melhor a performance.</spam>
-			</div>
-			</div>
-			<div class='col-md-3'>
-			<div id='graficoPerformanceMedia' style='width: 250px; height: 195px; margin: 0 auto;'></div>
+				<div class='col-md-4'>
+					<div id='graficoPerformance' style='width: 250px; height: 195px; margin: 0 auto;'></div>
+					<div id='popup-alta' class='popup'>
+						<button class='popup-close'>Fechar</button>
+						<h3>Sobre o Gráfico:</h3>
+						<span>
+							Este gráfico apresenta a porcentagem de funcionários com nenhuma não conformidade. 
+							Quanto maior o valor, melhor a performance.
+						</span>
+					</div>
+				</div>
 
-			<div id='popup-media' class='popup'>
-			<button class='popup-close'>Fechar</button>
-			<h3>Sobre o Gráfico: </h3>
-			<spam>Este gráfico apresenta a porcentagem de não conformidade dos funcionários em
-			relação a quantidade de dias do mês. Quanto maior o valor, melhor a performance.</spam>
+				<div class='col-md-3'>
+					<div id='graficoPerformanceMedia' style='width: 250px; height: 195px; margin: 0 auto;'></div>
+					<div id='popup-media' class='popup'>
+						<button class='popup-close'>Fechar</button>
+						<h3>Sobre o Gráfico:</h3>
+						<span>
+							Este gráfico apresenta a porcentagem de não conformidade dos funcionários em relação 
+							à quantidade de dias do mês. Quanto maior o valor, melhor a performance.
+						</span>
+					</div>
+				</div>
 
+				<div class='col-md-4'>
+					<div id='graficoPerformanceBaixa' style='width: 250px; height: 195px; margin: 0 auto;'></div>
+					<div id='popup-baixa' class='popup'>
+						<button class='popup-close'>Fechar</button>
+						<h3>Sobre o Gráfico:</h3>
+						<span>
+							Este gráfico apresenta a porcentagem dos funcionários em relação à quantidade de não 
+							conformidades no mês. Quanto menor a quantidade, melhor a performance.
+						</span>
+					</div>
+				</div>
 			</div>
-			</div>
-			<div class='col-md-4'>
-			<div id='graficoPerformanceBaixa' style='width: 250px; height: 195px; margin: 0 auto;'></div>
-			<div id='popup-baixa' class='popup'>
-			<button class='popup-close'>Fechar</button>
-			<h3>Sobre o Gráfico: </h3>
-			<spam>Este gráfico apresenta a porcentagem dos funcionários em relação a quantidade de não conformidade no mês. 
-			Quanto menor a quantidade, melhor a performance.</spam>
-		</div>
-			</div>
-			<div class='row' id='resumo'>
-			</div>
+
+			<div class='row' id='resumo2'>
 				<div class='col-md-3'>
 					<table id='tabela-motorista' style='width: 275px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
 						. "<thead>"
@@ -808,16 +815,17 @@
 					<div class='col-md-3'>
 					<div class='container' style='display:flex'>
 						<!-- <div class='col-sm-4'>-->
-							<div id='graficoSintetico' style='width:64%; background-color: lightgray;'>
+							<div id='graficoSintetico' style='width:64%;'>
 								<!-- Conteúdo do gráfico Sintético -->
 							</div>
 						<!-- </div>	-->			
 						<!-- <div class='col-md-4'>-->
-							<div id='graficoAnalitico' style='width:85%; background-color: lightblue;'>
+							<div id='graficoAnalitico' style='width:85%;'>
 							<!-- Conteúdo do gráfico Analítico -->
 							</div>
 						<!-- </div>	-->			
 					</div>	
+				</div>
 				</div>
 			</div>";
 			

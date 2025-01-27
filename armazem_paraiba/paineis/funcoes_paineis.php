@@ -549,13 +549,13 @@
 				. "JOIN (
 						SELECT DATE(pont_tx_data) AS data_simples
 						FROM ponto
-						WHERE pont_tx_matricula = '" . $motorista["enti_tx_matricula"] . "'
+						WHERE pont_tx_matricula = '{$motorista["enti_tx_matricula"]}'
 						GROUP BY DATE(pont_tx_data)
 						HAVING 
 							SUM(CASE WHEN pont_tx_tipo = 1 THEN 1 ELSE 0 END) > 0
 							AND SUM(CASE WHEN pont_tx_tipo = 2 THEN 1 ELSE 0 END) = 0
 					) AS sub ON DATE(p.pont_tx_data) = sub.data_simples"
-				. " WHERE p.pont_tx_matricula = '" . $motorista["enti_tx_matricula"] . "'"
+				. " WHERE p.pont_tx_matricula = '{$motorista["enti_tx_matricula"]}'"
 					. " AND p.pont_tx_tipo = 1"
 					. " AND p.pont_tx_status = 'ativo';"
 			), MYSQLI_ASSOC);
@@ -564,8 +564,8 @@
 				$endossos = mysqli_fetch_all(query(
 					"SELECT endo_tx_de, endo_tx_ate"
 					. " FROM `endosso`"
-					. " where endo_tx_matricula = '" . $motorista["enti_tx_matricula"] . "'"
-						. " AND '" . $datas["pont_tx_data"] . "' BETWEEN endo_tx_de AND endo_tx_ate"
+					. " where endo_tx_matricula = '{$motorista["enti_tx_matricula"]}'"
+					. " AND '{$datas["pont_tx_data"]}' BETWEEN endo_tx_de AND endo_tx_ate"
 				), MYSQLI_ASSOC);
 				if (empty($endossos)) {
 					$date = DateTime::createFromFormat('Y-m-d H:i:s', $datas["pont_tx_data"]);
@@ -721,9 +721,9 @@
 				"SELECT * FROM endosso"
 					. " WHERE endo_tx_status = 'ativo'"
 					. " AND ("
-					. "   (endo_tx_de  >= '".$mes->format("Y-m-01")."' AND endo_tx_de  <= '".$mes->format("Y-m-t")."')"
-					. "OR (endo_tx_ate >= '".$mes->format("Y-m-01")."' AND endo_tx_ate <= '".$mes->format("Y-m-t")."')"
-					. "OR (endo_tx_de  <= '".$mes->format("Y-m-01")."' AND endo_tx_ate >= '".$mes->format("Y-m-t")."')"
+					. "   (endo_tx_de  >= '{$mes->format("Y-m-01")}' AND endo_tx_de  <= '{$mes->format("Y-m-t")}')"
+					. "OR (endo_tx_ate >= '{$mes->format("Y-m-01")}' AND endo_tx_ate <= '{$mes->format("Y-m-t")}')"
+					. "OR (endo_tx_de  <= '{$mes->format("Y-m-01")}' AND endo_tx_ate >= '{$mes->format("Y-m-t")}')"
 					. ")"
 					. " ORDER BY endo_tx_ate;"
 			), MYSQLI_ASSOC);
@@ -741,7 +741,7 @@
 				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
 				WHERE enti_tx_status = 'ativo'
 					AND enti_nb_empresa = {$_POST["empresa"]}
-					AND enti_tx_dataCadastro <= '".$periodoInicio->format("Y-m-t")."'
+					AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-t")}'
 				ORDER BY enti_tx_nome ASC;"
 		), MYSQLI_ASSOC);
 
@@ -1094,8 +1094,6 @@
 				}
 			}
 		}
-
-		// var_dump($totaisEmpr);
 
 		if ($_POST["busca_endossado"] == "endossado") {
 			file_put_contents($path."/endossado/empresa_".$_POST["empresa"].".json", json_encode($totaisEmpr, JSON_UNESCAPED_UNICODE));

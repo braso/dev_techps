@@ -40,7 +40,7 @@
 		<div class="portlet-body form" style="display: flex; flex-direction: column;">
 			<?= $rowGravidade ?>
 			<?php if ($mostra === true) { ?>
-				<div class="panel-group" id="accordion">
+				<div class="panel-group group1" id="accordion">
 					<!-- Accordion Item -->
 					<div class="panel panel-default">
 						<div class="panel-heading">
@@ -135,7 +135,7 @@
 						</div>
 					</div>
 				</div>
-				<div class="panel-group" id="accordion2">
+				<div class="panel-group group2" id="accordion2">
 					<!-- Accordion Item -->
 					<div class="panel panel-default">
 						<div class="panel-heading">
@@ -190,7 +190,7 @@
 			<?php } ?>
 
 		<?php if ($mostra === true) { ?>
-				<div class="panel-group" id="accordion3">
+				<div class="panel-group group3" id="accordion3">
 					<!-- Accordion Item -->
 					<div class="panel panel-default">
 						<div class="panel-heading">
@@ -213,16 +213,17 @@
 								</div>
 							</div>
 						</div>
-				<?php } ?>
+					</div>
 				</div>
-				</div>
-
 			</div>
+		</div>
+				<?php } ?>
+
+	<div id="impressao">
+		<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . " (UTC-3)" ?>
 	</div>
 </div>
-<div id="impressao">
-	<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . " (UTC-3)" ?>
-</div>
+
 <script>
 	function sanitizeJson(jsonString) {
 		// Verifica se o JSON é uma string, se não for, converte para string
@@ -252,7 +253,8 @@
 
 			Highcharts.chart('graficoSintetico', {
 				chart: {
-					type: 'pie'
+					type: 'pie',
+					height: '80%'  
 				},
 				title: {
 					text: 'Gráfico Sintético de Não Conformidades'
@@ -295,7 +297,8 @@
 
 			Highcharts.chart('graficoAnalitico', {
 				chart: {
-					type: 'pie'
+					type: 'pie',
+					height: '65%' 
 				},
 				title: {
 					text: 'Gráfico Analítico de Não Conformidades'
