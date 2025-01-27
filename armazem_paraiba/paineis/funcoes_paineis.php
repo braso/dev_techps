@@ -806,9 +806,9 @@
 
 						foreach ($endosso["endo_tx_pontos"] as $ponto) {
 							$inicioJornadaWarning = strpos($ponto["3"], "fa-warning") !== false && strpos($ponto["3"], "color:red;")
-							&& strpos($ponto["3"], "fa-info-circle") !==  false && strpos($ponto["3"], "color:green;") !==  false;
+							&& strpos($ponto["3"], "fa-info-circle") ===  false && strpos($ponto["3"], "color:green;") ===  false;
 							$fimJornadaWarning = strpos($ponto["6"], "fa-warning") !== false  && strpos($ponto["6"], "color:red;")
-							&& strpos($ponto["6"], "fa-info-circle") !==  false && strpos($ponto["6"], "color:green;") !==  false;
+							&& strpos($ponto["6"], "fa-info-circle") ===  false && strpos($ponto["6"], "color:green;") ===  false;
 							$diffJornada = $ponto["11"];
 							$diffJornadaEfetiva = $ponto["13"];
 
@@ -824,7 +824,7 @@
 								$houveInteracao = true;
 							}
 
-							if($inicioJornadaWarning && strpos($ponto["12"], "fa-info-circle") === false && strpos($ponto["12"], "color:green;") === false){
+							if($inicioJornadaWarning){
 								$totalMotorista["falta"] += 1;
 								$houveInteracao = true;
 							}
