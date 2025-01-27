@@ -934,6 +934,10 @@
 				for ($date = clone $periodoInicio; $date <= $periodoFim; $date->modify('+1 day')) {
 					$diaPonto[] = diaDetalhePonto($motorista, $date->format('Y-m-d'));
 				}
+
+				if (!is_dir($path."/nao_endossado/")) {
+					mkdir($path."/nao_endossado/", 0755, true);  // Cria o diretório com permissões adequadas
+				}
 				
 				foreach ($diaPonto as $dia) {
 					$houveInteracao = false;
@@ -1055,12 +1059,8 @@
 				}
 
 				$motoristaTotais[] = $totalMotorista;
-
-				if (!is_dir($path."/nao_endossado/")) {
-					mkdir($path."/nao_endossado/", 0755, true);  // Cria o diretório com permissões adequadas
-				}
 	
-				file_put_contents($path."/nao_endossado/".$motorista["enti_tx_matricula"].".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+				file_put_contents($path."/nao_endossado/".$motorista["enti_tx_matricula"].".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE));
 			}
 
 		}
@@ -1098,12 +1098,12 @@
 		// var_dump($totaisEmpr);
 
 		if ($_POST["busca_endossado"] == "endossado") {
-			file_put_contents($path."/endossado/empresa_".$_POST["empresa"].".json", json_encode($totaisEmpr, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+			file_put_contents($path."/endossado/empresa_".$_POST["empresa"].".json", json_encode($totaisEmpr, JSON_UNESCAPED_UNICODE));
 		} else {
-			file_put_contents($path."/nao_endossado/empresa_".$_POST["empresa"].".json", json_encode($totaisEmpr, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+			file_put_contents($path."/nao_endossado/empresa_".$_POST["empresa"].".json", json_encode($totaisEmpr, JSON_UNESCAPED_UNICODE));
 		}
 
-		// sleep(1);
+		sleep(1);
 		return;
 	}
 
