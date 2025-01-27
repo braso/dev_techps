@@ -1103,7 +1103,7 @@
 			file_put_contents($path."/nao_endossado/empresa_".$_POST["empresa"].".json", json_encode($totaisEmpr, JSON_UNESCAPED_UNICODE));
 		}
 
-		sleep(1);
+		// sleep(1);
 		return;
 	}
 
