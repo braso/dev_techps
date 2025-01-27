@@ -585,9 +585,7 @@
 				$refeicao = "";
 				$repouso = "";
 
-				if (
-					!is_int(strpos($dia["inicioJornada"], "fa fa-warning")) && is_int(strpos($dia["fimJornada"], "fa fa-warning"))
-				) {
+				if (!is_int(strpos($dia["inicioJornada"], "fa fa-warning")) && is_int(strpos($dia["fimJornada"], "fa fa-warning"))) {
 					// Verificação da refeição
 					$inicioRefeicaoWarning = is_int(strpos($dia["inicioRefeicao"], "fa-warning"));
 					$fimRefeicaoWarning = is_int(strpos($dia["fimRefeicao"], "fa-warning"));
@@ -941,10 +939,10 @@
 					$houveInteracao = false;
 					// Jornada
 					$inicioJornadaWarning = strpos($dia["inicioJornada"], "fa-warning") !== false && strpos($dia["inicioJornada"], "color:red;") !== false
-					&& strpos($dia["inicioJornada"], "fa-info-circle") !==  false && strpos($dia["inicioJornada"], "color:green;") !==  false;
+					&& strpos($dia["inicioJornada"], "fa-info-circle") ===  false && strpos($dia["inicioJornada"], "color:green;") ===  false;
 
 					$fimJornadaWarning = strpos($dia["fimJornada"], "fa-warning") == false  && strpos($dia["fimJornada"], "color:red;") !== false
-					&& strpos($dia["fimJornada"], "fa-info-circle") !==  false && strpos($dia["fimJornada"], "color:green;") !==  false;
+					&& strpos($dia["fimJornada"], "fa-info-circle") ===  false && strpos($dia["fimJornada"], "color:green;") ===  false;
 
 					$diffJornada = $dia["diffJornada"];
 					$diffJornadaEfetiva = $dia["diffJornadaEfetiva"];
@@ -961,7 +959,7 @@
 						$houveInteracao = true;
 					}
 
-					if($inicioJornadaWarning && strpos($dia["jornadaPrevista"], "fa-info-circle") === false && strpos($dia["jornadaPrevista"], "color:green;") === false){
+					if($inicioJornadaWarning){
 						$totalMotorista["falta"] += 1;
 						$houveInteracao = true;
 					}

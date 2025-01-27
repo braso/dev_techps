@@ -485,7 +485,7 @@
 					
 					$mediaPerfTotal = round(($totalDiasNaoCFuncionario/ ($dias * sizeof($arquivos)) * 100), 2);
 
-					$mediaPerfFuncionario = round(($json["diasConformidade"]/ ($dias * sizeof($arquivos))) * 100, 2);
+					$mediaPerfFuncionario = round(($json["diasConformidade"]/ $dias) * 100, 2);
 					$totaisMediaFuncionario[$json["matricula"]] = $mediaPerfFuncionario;
 
 					$totalNConformMax = 4 * $dias;
