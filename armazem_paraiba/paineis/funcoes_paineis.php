@@ -687,7 +687,7 @@
 			if (!empty($row)) {
 				$nomeArquivo = $motorista["enti_tx_matricula"] . ".json";
 				$arquivosMantidos[] = $nomeArquivo;
-				file_put_contents($path . "/" . $nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+				file_put_contents($path . "/" . $nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE));
 			}
 
 			$pasta = dir($path);
@@ -698,7 +698,7 @@
 			}
 			$pasta->close();
 		}
-		// sleep(1);
+		sleep(1);
 		return;
 	}
 

@@ -294,11 +294,12 @@
 
         if (!empty($_POST["empresa"])) {
              require_once "funcoes_paineis.php";
-            //  $tempoInicio = microtime(true);
+             $tempoInicio = microtime(true);
              criar_relatorio_jornada();
-            //  $tempoFim = microtime(true);
-            //  $tempoExecucao = $tempoFim - $tempoInicio;
-            //  echo "Tempo de execução: ".number_format($tempoExecucao, 4)." segundos";
+             $tempoFim = microtime(true);
+             $tempoExecucao = $tempoFim - $tempoInicio;
+             $tempoExecucaoMinutos = $tempoExecucao / 60;
+             echo "Tempo de execução: " . number_format($tempoExecucaoMinutos, 4) . " minutos";
 
             $empresa = mysqli_fetch_assoc(query(
                 "SELECT * FROM empresa
