@@ -736,13 +736,10 @@
 
 		$motoristas = mysqli_fetch_all(query(
 			"SELECT * FROM entidade
-				LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
-				LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
-				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
-				WHERE enti_tx_status = 'ativo'
-					AND enti_nb_empresa = {$_POST["empresa"]}
-					AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-t")}'
-				ORDER BY enti_tx_nome ASC;"
+			WHERE enti_tx_status = 'ativo'
+				AND enti_nb_empresa = {$_POST["empresa"]}
+				AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-t")}'
+			ORDER BY enti_tx_nome ASC;"
 		), MYSQLI_ASSOC);
 
 		$row = [];

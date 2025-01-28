@@ -343,12 +343,12 @@
 				set_status("ERRO: Não é possível atualizar após a data atual.");
 			} else {
 				require_once "funcoes_paineis.php";
-				// $tempoInicio = microtime(true);
+				$tempoInicio = microtime(true);
 				relatorio_nao_conformidade_juridica();
-				// $tempoFim = microtime(true);
-				// $tempoExecucao = $tempoFim - $tempoInicio;
-				// $tempoExecucaoMinutos = $tempoExecucao / 60;
-				// echo "Tempo de execução: " . number_format($tempoExecucaoMinutos, 4) . " minutos";
+				$tempoFim = microtime(true);
+				$tempoExecucao = $tempoFim - $tempoInicio;
+				$tempoExecucaoMinutos = $tempoExecucao / 60;
+				echo "Tempo de execução: " . number_format($tempoExecucaoMinutos, 4) . " minutos";
 			}
 		} else {
 			cabecalho("Relatório de Não Conformidade Jurídica Atualizado");
