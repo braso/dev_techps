@@ -501,6 +501,8 @@
 	function criar_relatorio_jornada() {
 		global $totalResumo;
 
+		$dataAtual = new DateTime();
+
 		$campos = ["fimJornada", "inicioRefeicao", "fimRefeicao"];
 
 		$totaisEmpresas = [
@@ -577,7 +579,6 @@
 
 				$dia = diaDetalhePonto($motorista, $dia);
 
-				$data = $date->format('Y-m-d');
 				$descanso = "";
 				$espera = "";
 				$jornada = "";
@@ -585,7 +586,11 @@
 				$refeicao = "";
 				$repouso = "";
 
-				if (!is_int(strpos($dia["inicioJornada"], "fa fa-warning")) && is_int(strpos($dia["fimJornada"], "fa fa-warning"))) {
+				$dataItem = DateTime::createFromFormat('d/m/Y', $dia["data"]);
+				$diferenca = $dataAtual->diff($dataItem);
+				$diaDiferenca = $diferenca->days;
+
+				if (strpos($dia["inicioJornada"], "fa fa-warning") == false && strpos($dia["fimJornada"], "fa fa-warning") == true) {
 					// Verificação da refeição
 					$inicioRefeicaoWarning = is_int(strpos($dia["inicioRefeicao"], "fa-warning"));
 					$fimRefeicaoWarning = is_int(strpos($dia["fimRefeicao"], "fa-warning"));
@@ -644,10 +649,7 @@
 					// $jornadaEfetiva = $dia["diffJornadaEfetiva"] == "00:00" ? "----" : $dia["diffJornadaEfetiva"];
 				}
 
-				$dataItem = DateTime::createFromFormat('d/m/Y', $dia["data"]);
-				$dataAtual = new DateTime();
-				$diferenca = $dataAtual->diff($dataItem);
-				$diaDiferenca = $diferenca->days;
+				
 				$campos = !empty(array_filter([$jornada, $descanso, $espera, $refeicao, $repouso]));
 				if ($campos) {
 					$parametro = mysqli_fetch_all(query(
@@ -698,7 +700,7 @@
 			}
 			$pasta->close();
 		}
-		sleep(1);
+		// sleep(1);
 		return;
 	}
 
