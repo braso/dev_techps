@@ -9,53 +9,41 @@
 	//*/
 
 	include "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
-	
-	function cadastro_abono(){
-		unset($_POST["acao"]);
-		$form = "<form id='cadastrarAbono' action='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_abono.php' method='post'>";
-		foreach($_POST as $key => $value){
-			if(is_array($value)){
-				foreach($value as $val){
-					$form .= "<input name='".$key."[]' value='".$val."'/>";
-				}
-			}else{
-				$form .= "<input name='".$key."' value='".$value."'/>";
-			}
-		}
-		$form .= "</form>";
 
-		echo $form.
-			"<script>document.getElementById('cadastrarAbono').submit();</script>"
-		;
+	
+	function redirParaAbono(){
+		unset($_POST["acao"]);
+		if(empty($_POST['busca_motorista'])){
+			header("Location: {$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}/cadastro_abono.php");
+			exit;
+		}
+
+		echo criarHiddenForm(
+			"form_abono",
+			array_keys($_POST), 
+			array_values($_POST), 
+			"layout_abono"
+		);
+		echo "<script>document.getElementsByName('form_abono')[0].submit();</script>";
 		exit;
 	}
 
 	function buscarEspelho(){
-
 		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 			[$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], $_SESSION["user_nb_empresa"]];
 		}
-
 		
 		//Confere se há algum erro na pesquisa{
 			try{
-				if(empty($_POST["busca_empresa"])){
-					if(empty($_POST["busca_motorista"])){
-						$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
-					}else{
-						$idEmpresa = mysqli_fetch_assoc(query(
-							"SELECT empr_nb_id FROM entidade
-								JOIN empresa ON enti_nb_empresa = empr_nb_id
-								WHERE enti_tx_status = 'ativo'
-									AND enti_nb_id = ".$_POST["busca_motorista"].";"
-						));
-						$_POST["busca_empresa"] = $idEmpresa["empr_nb_id"];
-					}
-				}
 
 				if(empty($_POST["busca_periodo"]) && !empty($_POST["periodo_abono"])){
 					$_POST["busca_periodo"] = $_POST["periodo_abono"];
 					unset($_POST["periodo_abono"]);
+				}
+				if(!empty($_POST["busca_motorista"]) && empty($_POST["busca_empresa"])){
+					$_POST["busca_empresa"] = mysqli_fetch_assoc(query(
+						"SELECT enti_nb_empresa FROM entidade WHERE enti_nb_id = {$_POST["busca_motorista"]} LIMIT 1;"
+					))["enti_nb_empresa"];
 				}
 	
 				//Conferir campos obrigatórios{
@@ -74,28 +62,26 @@
 				if(is_string($_POST["busca_periodo"])){
 					$_POST["busca_periodo"] = explode(" - ", $_POST["busca_periodo"]);
 				}
-				
-				if(!empty($_POST["busca_empresa"]) && !empty($_POST["busca_motorista"])){
-					if($_POST["busca_periodo"][0] > date("Y-m-d") || $_POST["busca_periodo"][1] > date("Y-m-d")){
-						$_POST["errorFields"][] = "busca_periodo";
-						throw new Exception("Data de pesquisa não pode ser após hoje (".date("d/m/Y").").");
-					}else{
-						$motorista = mysqli_fetch_assoc(query(
-							"SELECT enti_nb_id, enti_tx_nome, enti_tx_admissao FROM entidade"
-								." WHERE enti_tx_status = 'ativo'"
-									." AND enti_nb_empresa = ".$_POST["busca_empresa"]
-									." AND enti_nb_id = ".$_POST["busca_motorista"]
-								." LIMIT 1;"
-						));
-		
-						if(empty($motorista)){
-							$_POST["errorFields"][] = "busca_motorista";
-							throw new Exception("Este funcionário não pertence a esta empresa.");
-						}
+
+				if($_POST["busca_periodo"][0] > date("Y-m-d") || $_POST["busca_periodo"][1] > date("Y-m-d")){
+					$_POST["errorFields"][] = "busca_periodo";
+					throw new Exception("Data de pesquisa não pode ser após hoje (".date("d/m/Y").").");
+				}else{
+					$motorista = mysqli_fetch_assoc(query(
+						"SELECT enti_tx_admissao FROM entidade"
+							." WHERE enti_tx_status = 'ativo'"
+								." AND enti_nb_empresa = {$_POST["busca_empresa"]}"
+								." AND enti_nb_id = {$_POST["busca_motorista"]}"
+							." LIMIT 1;"
+					));
+	
+					if(empty($motorista)){
+						$_POST["errorFields"][] = "busca_motorista";
+						throw new Exception("Este funcionário não pertence a esta empresa.");
 					}
 				}
-	
-	
+
+
 				//Conferir se a data de início da pesquisa está antes do cadastro do motorista{
 					if(!empty($motorista)){
 						$dataInicio = new DateTime($_POST["busca_periodo"][0]);
@@ -117,14 +103,13 @@
 	}
 
 	function index(){
-		cabecalho("Buscar Espelho de Ponto");
+		cabecalho(empty($_POST["title"])? "Buscar Espelho de Ponto": $_POST["title"]);
 
 		$condBuscaMotorista = "";
 		$condBuscaEmpresa = "";
 
 		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
-			$_POST["busca_motorista"] = $_SESSION["user_nb_entidade"];
-			$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
+			[$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], $_SESSION["user_nb_empresa"]];
 			$condBuscaMotorista = " AND enti_nb_id = '".$_SESSION["user_nb_entidade"]."'";
 		}
 
@@ -168,7 +153,7 @@
 				botao("Buscar", "buscarEspelho()", "", "", "", "", "btn btn-success"),
 			];
 			if(!in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
-				$b[] = botao("Cadastrar Abono", "cadastro_abono", "", "", "btn btn-secondary");
+				$b[] = botao("Cadastrar Abono", "redirParaAbono", "", "", "btn btn-secondary");
 			}
 
 			$botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
@@ -208,7 +193,7 @@
 					$aEmpresa = carregar("empresa", $motorista["enti_nb_empresa"]);
 				}
 				// Loop for para percorrer as datas
-				$prevEndossoMes = "";
+				$prevEndossoMes = [];
 				for ($date = $startDate; $date <= $endDate; $date->modify("+1 day")){
 					//Conferir se o dia já está endossado{
 						$endossoMes = montarEndossoMes($date, $motorista);
@@ -230,6 +215,25 @@
 						}
 					//}
 					$aDetalhado = diaDetalhePonto($motorista, $date->format("Y-m-d"));
+					if(!empty($_POST["naoConformidade"])){
+						$rowString = implode(", ", array_values($aDetalhado));
+						$qtdErros =
+							(
+								substr_count($rowString, "fa-warning") 																				//Conta todos os triângulos, pois todos os triângulos são alertas de não conformidade.
+								+((is_int(strpos($rowString, "fa-info-circle")))*(substr_count($rowString, "color:red;") + substr_count($rowString, "color:orange;")))	//Conta os círculos que sejam vermelhos ou laranjas.
+							)
+							*!(is_int(strpos($rowString, "Batida início de jornada não registrada!")) && is_int(strpos($rowString, "Abono: ")))
+						;
+						if($qtdErros == 0){
+							$f2 = 6;
+							foreach($totalResumo as &$total){
+								$total = operarHorarios([$total, strip_tags(array_values($aDetalhado)[$f2])], "-");
+								$f2++;
+							}
+							continue;
+						}
+					}
+
 					if($prevEndossoMes != $endossoMes){
 						foreach($totalResumo as $key => $value){
 							$totalResumo[$key] = operarHorarios([$value, $endossoMes["totalResumo"][$key]], "+");
