@@ -7,7 +7,14 @@
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
 	//*/
-	
+
+	// $_POST["title"] = "Não Conformidades";
+	// $_POST["naoConformidade"] = true;
+	// include "espelho_ponto.php";
+	// index();
+	// exit;
+
+
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto	
 
 	function redirParaAbono(){
@@ -34,27 +41,28 @@
 		global $totalResumo, $tabelasPonto;
 
 		if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){//Se estiver pesquisando
-			//Conferir se os campos foram inseridos.
-			$baseErrMsg = "ERRO: Campos obrigatórios não preenchidos: ";
-			$errorMsg = $baseErrMsg;
-			$camposObrig = [
-				"busca_data" => "Data"
-			];
-			if(empty($_POST["busca_motorista"])){
-				$camposObrig["busca_empresa"] = "Empresa";
-			}
-			foreach($camposObrig as $key => $value){
-				if(empty($_POST[$key])){
-					$_POST["errorFields"][] = $key;
-					$errorMsg .= $value.", ";
+			//Conferir campos obrigatórios{
+				$baseErrMsg = "ERRO: Campos obrigatórios não preenchidos: ";
+				$errorMsg = $baseErrMsg;
+				$camposObrig = [
+					"busca_data" => "Data"
+				];
+				if(empty($_POST["busca_motorista"])){
+					$camposObrig["busca_empresa"] = "Empresa";
 				}
-			}
+				foreach($camposObrig as $key => $value){
+					if(empty($_POST[$key])){
+						$_POST["errorFields"][] = $key;
+						$errorMsg .= $value.", ";
+					}
+				}
 
-			$_POST["busca_data"] = date("Y-m", strtotime($_POST["busca_data"]));
+				$_POST["busca_data"] = date("Y-m", strtotime($_POST["busca_data"]));
 
-			if($errorMsg != $baseErrMsg){
-				set_status(substr($errorMsg, 0, -2).".");
-			}
+				if($errorMsg != $baseErrMsg){
+					set_status(substr($errorMsg, 0, -2).".");
+				}
+			//}
 		}
 
 		$_POST["counts"] = [
@@ -71,7 +79,14 @@
 					WHERE empr_tx_status = 'ativo'
 						AND enti_nb_id = {$_POST["busca_motorista"]}
 					LIMIT 1;"
-			))["empr_nb_id"];
+			));
+			if(empty($_POST["busca_empresa"])){
+				set_status("ERRO: Empresa ativa não encontrada");
+				index();
+				exit;
+			}else{
+				$_POST["busca_empresa"] = $_POST["busca_empresa"]["empr_nb_id"];
+			}
 		}
 		$monthDate = new DateTime($_POST["busca_data"]);
 
@@ -112,6 +127,7 @@
 				}
 
 				$prevEndossoMes = "";
+				// for($date = new DateTime($monthDate->format("Y-m-1")); $date->format("Y-m-d") <= $monthDate->format("Y-m-t"); $date->modify("+1 day")){
 				for($date = new DateTime($monthDate->format("Y-m-1")); $date->format("Y-m-d") <= $monthDate->format("Y-m-t"); $date->modify("+1 day")){
 					if($monthDate->format("Y-m") < $dataAdmissao->format("Y-m")){
 						continue;
@@ -148,7 +164,7 @@
 						}
 					}
 					$prevEndossoMes = $endossoMes;
-					
+
 					$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado));
 					for($f = 0; $f < sizeof($row)-1; $f++){
 						if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
@@ -198,16 +214,14 @@
 						$dataCicloProx += intval($motorista["para_nb_qDias"])*60*60*24;
 					}
 				}
-				$saldoAnterior = mysqli_fetch_assoc(
-					query(
-						"SELECT endo_tx_saldo FROM endosso
-							WHERE endo_tx_matricula = '{$motorista["enti_tx_matricula"]}'
-								AND endo_tx_ate < '{$_POST["busca_data"]}'
-								AND endo_tx_status = 'ativo'
-							ORDER BY endo_tx_ate DESC
-							LIMIT 1;"
-					)
-				);
+				$saldoAnterior = mysqli_fetch_assoc(query(
+					"SELECT endo_tx_saldo FROM endosso
+						WHERE endo_tx_matricula = '{$motorista["enti_tx_matricula"]}'
+							AND endo_tx_ate < '{$_POST["busca_data"]}'
+							AND endo_tx_status = 'ativo'
+						ORDER BY endo_tx_ate DESC
+						LIMIT 1;"
+				));
 				
 				if(isset($saldoAnterior["endo_tx_saldo"])){
 					$saldoAnterior = $saldoAnterior["endo_tx_saldo"];
@@ -255,9 +269,12 @@
 				for($f = 0; $f < count($rows); $f++){
 					$qtdErros = 0;
 					foreach($rows[$f] as $key => $value){
-						$qtdErros += substr_count($value, "fa-warning") 																				//Conta todos os triângulos, pois todos os triângulos são alertas de não conformidade.
-							+((is_int(strpos($value, "fa-info-circle")))*(substr_count($value, "color:red;") + substr_count($value, "color:orange;")))	//Conta os círculos que sejam vermelhos ou laranjas.
-						;
+						preg_match_all("/(?<=<)([^(\/|<|>)])+(?=>)/", $value, $tags);
+						array_walk_recursive($tags[0], function($tag, $key) use (&$qtdErros){
+							$qtdErros += substr_count($tag, "fa-warning")*(substr_count($tag, "color:red;") || substr_count($tag, "color:orange;"))		//Conta todos os triângulos, pois todos os triângulos são alertas de não conformidade.
+								+((is_int(strpos($tag, "fa-info-circle")))*(substr_count($tag, "color:red;") || substr_count($tag, "color:orange;")))	//Conta os círculos que sejam vermelhos ou laranjas.
+							;
+						}, $qtdErros);
 					}
 					if(is_int(strpos($rows[$f][3], "Batida início de jornada não registrada!")) && is_int(strpos($rows[$f][12], "Abono: "))){ //Se tiver um erro de início de jornada E tiver algum abono
 						$qtdErros = 0;
@@ -283,8 +300,7 @@
 
 					$saldoStr = str_replace("<b>", "", $rows[$f][$saldoColIndex]);
 					$saldoStr = explode(":", $saldoStr);
-					$saldo = intval($saldoStr[0])*60;
-					$saldo += ($saldoStr[0] == "-"? -1: 1)*intval($saldoStr[1]);
+					$saldo = intval($saldoStr[0])*60 + ($saldoStr[0][0] == "-"? -1: 1)*intval($saldoStr[1]);
 
 					if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
 						$rows[$f][$saldoColIndex] = "00:00";
@@ -441,3 +457,4 @@
 			"ajuste_ponto.php"
 		);
 	}
+//*/
