@@ -499,18 +499,10 @@
 	}
 
 	function criar_relatorio_jornada() {
-		global $totalResumo;
 
 		$dataAtual = new DateTime();
 
 		$campos = ["fimJornada", "inicioRefeicao", "fimRefeicao"];
-
-		$totaisEmpresas = [
-			"fimJornada" => 0,
-			"inicioRefeicao" => 0,
-			"fimRefeicao" => 0,
-			"qtdMotoristas" => 0
-		];
 
 		$path = "./arquivos/jornada" . "/" . $_POST["empresa"];
 		if (!is_dir($path)) {
@@ -524,9 +516,6 @@
 
 		$motoristas = mysqli_fetch_all(query(
 			"SELECT * FROM entidade
-				LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
-				LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
-				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
 				WHERE enti_tx_status = 'ativo'
 					AND enti_nb_empresa = {$_POST["empresa"]}
 					{$filtroOcupacao}
@@ -700,7 +689,7 @@
 			}
 			$pasta->close();
 		}
-		// sleep(1);
+		sleep(1);
 		return;
 	}
 

@@ -33,24 +33,24 @@
 
 					let corDeFundo = '';
 					if(porcentagemBaixa >= 75 && porcentagemBaixa < 100){
-						corDeFundo = 'background-color: var(--var-lightred);';
-					} else if(porcentagemBaixa <= 75 && porcentagemBaixa >= 50){
-						corDeFundo = 'background-color: var(--var-lightorange);';
-					} else if(porcentagemBaixa <= 50 && porcentagemBaixa >= 25){
-						corDeFundo = 'background-color: var(--var-yellow2);';
-					}else{
 						corDeFundo = 'background-color: lightgreen;';
+					} else if(porcentagemBaixa <= 75 && porcentagemBaixa >= 50){
+						corDeFundo = 'background-color: var(--var-yellow2);';
+					} else if(porcentagemBaixa <= 50 && porcentagemBaixa >= 25){
+						corDeFundo = 'background-color: var(--var-lightorange);';
+					}else{
+						corDeFundo = 'background-color: var(--var-lightred);';
 					}
 
 					let corDeFundo2 = '';
 					if(porcentagemMedia >= 75 && porcentagemMedia < 100){
-						corDeFundo2 = 'background-color: var(--var-lightred);';
-					} else if(porcentagemMedia <= 75 && porcentagemMedia >= 50){
-						corDeFundo2 = 'background-color: var(--var-lightorange);';
-					} else if(porcentagemMedia <= 50 && porcentagemMedia >= 25){
-						corDeFundo2 = 'background-color: var(--var-yellow2);';
-					}else{
 						corDeFundo2 = 'background-color: lightgreen;';
+					} else if(porcentagemMedia <= 75 && porcentagemMedia >= 50){
+						corDeFundo2 = 'background-color: var(--var-yellow2);';
+					} else if(porcentagemMedia <= 50 && porcentagemMedia >= 25){
+						corDeFundo2 = 'background-color: var(--var-lightorange);';
+					}else{
+						corDeFundo2 = 'background-color: var(--var-lightred);';
 					}
 								
 			";
@@ -344,7 +344,7 @@
 			} else {
 				require_once "funcoes_paineis.php";
 				// $tempoInicio = microtime(true);
-				// relatorio_nao_conformidade_juridica();
+				relatorio_nao_conformidade_juridica();
 				// $tempoFim = microtime(true);
 				// $tempoExecucao = $tempoFim - $tempoInicio;
 				// $tempoExecucaoMinutos = $tempoExecucao / 60;
@@ -478,7 +478,8 @@
 
 					$totalMotorista = $json["espera"]+$json["descanso"]+$json["repouso"]+$json["jornada"]+$json["falta"]+$json["jornadaEfetiva"]+$json["mdc"]
 					+$json["refeicao"]+$json["intersticioInferior"]+$json["intersticioSuperior"];
-
+					var_dump($arquivo);
+					var_dump($json["diasConformidade"]);
 					$totalDiasNaoCFuncionario += $json["diasConformidade"];
 
 					$data = new DateTime($json["dataInicio"]);
@@ -487,6 +488,7 @@
 					$mediaPerfTotal = round(($totalDiasNaoCFuncionario/ ($dias * sizeof($arquivos)) * 100), 2);
 
 					$mediaPerfFuncionario = round(($json["diasConformidade"]/ $dias) * 100, 2);
+
 					$totaisMediaFuncionario[$json["matricula"]] = $mediaPerfFuncionario;
 
 					$totalNConformMax = 4 * $dias;
@@ -848,8 +850,8 @@
 					."<th class='tituloAltaGravidade'>Interstício Inferior</th>"
 					."<th class='tituloAltaGravidade'>Interstício Superior</th>"
 					. "<th class='tituloTotal'>TOTAL</th>"
-					. "<th class='tituloTotal'>Média Performace</th>"
-					. "<th class='tituloTotal'>Baixa Performace</th>";
+					. "<th class='tituloTotal'>Performance Média</th>"
+					. "<th class='tituloTotal'>Performance Baixa</th>";
 
 					$endossado = true;
 
