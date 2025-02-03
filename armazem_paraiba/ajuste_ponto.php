@@ -444,6 +444,8 @@
 			]
 		);
 
+		dd($sql);
+
 
 		$gridFields = [
 			"CÓD"												=> "pont_nb_id",

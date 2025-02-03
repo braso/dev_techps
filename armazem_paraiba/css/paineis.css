@@ -471,6 +471,16 @@ th.sort-desc::after {
         position: relative;
         padding-left: 570px !important;
     }
+
+    #resumo > div:nth-child(1).col-md-4 {
+        margin-left: 100px !important;
+        margin-right: 80px !important;
+    }
+
+    #resumo > div:nth-child(3).col-md-4 {
+        margin-left: 80px !important;
+    }
+
     .panel-collapse {
         display: block !important; /* Força todos os elementos colapsados a ficarem visíveis */
         height: auto !important;  /* Ajusta a altura para auto, para garantir que o conteúdo apareça completo */
@@ -503,34 +513,39 @@ th.sort-desc::after {
         margin-bottom: 15px !important;
     }
 
+    #pdf2htmldiv > div{
+        display: grid;
+    }
+    #pdf2htmldiv > div > div.portlet-body.form{
+        break-after: page;
+    }
+
     #accordion{
         order: 0!important;
-        /* break-after: page; */
-        padding-bottom: 100px!important;
+        break-after: page;
+        /* padding-bottom: 100px!important; */
     }
 
     #accordion2{
-        order: 3 !important;
+        order: 2 !important;
         /* break-after: page; */
     }
 
-    #collapse3{
+    #accordion3{
         order: 1 !important;
         break-after: page;
     }
 
-    #collapse4{
+    /* #collapse4{
         order: 0 !important;
         break-after: page;
     }
+
     #collapse5{
         order: 1 !important;
-        /* break-after: page; */
-    }
+        break-after: page; 
+    } */
 
-    /* #resumo{
-        break-after: page;
-    }  */
     .panel-heading{
             padding: 0px !important;
     }

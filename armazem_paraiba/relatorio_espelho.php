@@ -70,14 +70,14 @@
                 </tr>
 
                 <tr class="employee-info">
-                    <td style="padding-left: 12px; text-align: left;"><b>Nome:</b> <?=$aMotorista['enti_tx_nome']?>
+                    <td style="padding-left: 12px; text-align: left;"><b>Nome:</b> <?=$motorista['enti_tx_nome']?>
                     </td>
-                    <td style="text-align: left;"><b>Função:</b> <?=$aMotorista['enti_tx_ocupacao']?></td>
-                    <td style="text-align: left;"><b>CPF:</b> <?=$aMotorista['enti_tx_cpf']?></td>
-                    <td style="text-align: left;"><b>Turno:</b> D.SEM/H: <?=$aMotorista['enti_tx_jornadaSemanal']?> FDS/H:
-                        <?=$aMotorista['enti_tx_jornadaSabado']?> </td>
-                    <td style="text-align: left;"><b>Matrícula:</b> <?=$aMotorista['enti_tx_matricula']?></td>
-                    <td style="text-align: left;"><b>Admissão:</b> <?=data($aMotorista['enti_tx_admissao'])?></td>
+                    <td style="text-align: left;"><b>Função:</b> <?=$motorista['enti_tx_ocupacao']?></td>
+                    <td style="text-align: left;"><b>CPF:</b> <?=$motorista['enti_tx_cpf']?></td>
+                    <td style="text-align: left;"><b>Turno:</b> D.SEM/H: <?=$motorista['enti_tx_jornadaSemanal']?> FDS/H:
+                        <?=$motorista['enti_tx_jornadaSabado']?> </td>
+                    <td style="text-align: left;"><b>Matrícula:</b> <?=$motorista['enti_tx_matricula']?></td>
+                    <td style="text-align: left;"><b>Admissão:</b> <?=data($motorista['enti_tx_admissao'])?></td>
                 </tr>
             </table>
         </div>
@@ -106,8 +106,8 @@
                     <th>EFETIVA</th>
                     <th>MDC</th>
                     <th>INTERSTÍCIO</th>
-                    <th>HE <?=$aMotorista["enti_tx_percHESemanal"]?>%</th>
-                    <th>HE&nbsp;<?=$aMotorista["enti_tx_percHEEx"]?>%</th>
+                    <th>HE <?=$motorista["enti_tx_percHESemanal"]?>%</th>
+                    <th>HE&nbsp;<?=$motorista["enti_tx_percHEEx"]?>%</th>
                     <th>ADICIONAL NOT.</th>
                     <th>ESPERA IND.</th>
                     <th>MOTIVO</th>
@@ -163,13 +163,13 @@
 
                     <table class="table-info2">
                         <tr>
-                            <td>Horas Extras (<?=$aMotorista["enti_tx_percHESemanal"]?>%) - a pagar:</td>
+                            <td>Horas Extras (<?=$motorista["enti_tx_percHESemanal"]?>%) - a pagar:</td>
                             <td>
                                 <center><?=$totalResumo["HESemanalAPagar"]?></center>
                             </td>
                         </tr>
                         <tr>
-                            <td>Horas Extras (<?=$aMotorista["enti_tx_percHEEx"]?>%) - a pagar:</td>
+                            <td>Horas Extras (<?=$motorista["enti_tx_percHEEx"]?>%) - a pagar:</td>
                             <td>
                                 <center><?=$totalResumo["HEExAPagar"]?></center>
                             </td>
@@ -275,10 +275,10 @@
                             <p>___________________________________________________________</p>
                         </center>
                         <center>
-                            <p><?=$aMotorista['enti_tx_nome']?></p>
+                            <p><?=$motorista['enti_tx_nome']?></p>
                         </center>
                         <center>
-                            <p><?=$aMotorista['enti_tx_ocupacao']?></p>
+                            <p><?=$motorista['enti_tx_ocupacao']?></p>
                         </center>
                     </div>
                 </td>
