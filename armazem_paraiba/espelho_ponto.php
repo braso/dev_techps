@@ -18,13 +18,14 @@
 			exit;
 		}
 
+		$_POST["acao"] = "index";
 		echo criarHiddenForm(
 			"form_abono",
-			array_keys($_POST), 
-			array_values($_POST), 
-			"layout_abono"
+			array_keys($_POST),
+			array_values($_POST),
+			"cadastro_abono.php"
 		);
-		echo "<script>document.getElementsByName('form_abono')[0].submit();</script>";
+		echo "<script>document.form_abono.submit();</script>";
 		exit;
 	}
 

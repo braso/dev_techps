@@ -40,6 +40,8 @@ let consultarRegistros = function(){
     conditions = '';
     data = {};
 
+    $('.table-loading-icon')[0].innerHTML = "<div class='loading-icon' style='margin:10px'></div>";
+
     $('form[name=\"contex_form\"] :input').each(function(key, tag){
         if(searchFields[tag.name] != undefined){
             data[searchFields[tag.name]] = this.value;
@@ -138,6 +140,7 @@ let consultarRegistros = function(){
             $('#result thead')[0].innerHTML = header.join('');
             $('#result tbody')[0].innerHTML = response.rows;
             $('.grid-footer .tab-pagination')[0].innerHTML = footer;
+            $('.table-loading-icon')[0].innerHTML = "";
 
 
             definirFuncoesInternas();

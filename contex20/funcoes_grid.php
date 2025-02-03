@@ -222,6 +222,9 @@
 			<div class='col-md-{$width}'>
 				<div class='portlet light'>
 					<div class='' style='margin-top: 8px;overflow-x: auto; border-radius: 10px; max-height: 80vh;'>
+						<div class='table-loading-icon' style='place-items: center'>
+							<div class='loading-icon' style='margin:10px'></div>
+						</div>
 						<table name='{$nomeTabela}' id='result' class='table table-bordered grid-dinamico' id='sample_2'>
 							<thead class='table-head'>
 							</thead>
