@@ -40,7 +40,7 @@ let consultarRegistros = function(){
     conditions = '';
     data = {};
 
-    $('.table-loading-icon')[0].innerHTML = "<div class='loading-icon' style='margin:10px'></div>";
+    $('.table-loading-icon')[0].innerHTML = "<div class='loading-icon' style='margin:10px;background-color: #ffffff;'>";
 
     $('form[name=\"contex_form\"] :input').each(function(key, tag){
         if(searchFields[tag.name] != undefined){
