@@ -478,8 +478,7 @@
 
 					$totalMotorista = $json["espera"]+$json["descanso"]+$json["repouso"]+$json["jornada"]+$json["falta"]+$json["jornadaEfetiva"]+$json["mdc"]
 					+$json["refeicao"]+$json["intersticioInferior"]+$json["intersticioSuperior"];
-					var_dump($arquivo);
-					var_dump($json["diasConformidade"]);
+					
 					$totalDiasNaoCFuncionario += $json["diasConformidade"];
 
 					$data = new DateTime($json["dataInicio"]);
