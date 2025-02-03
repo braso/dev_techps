@@ -436,7 +436,7 @@
 
 	function modificarMotorista(){
 		global $a_mod;
-		
+
 		$a_mod = carregar("entidade", $_POST["id"]);
 		visualizarCadastro();
 		exit;
@@ -854,31 +854,31 @@
 			$_POST["busca_cpf"] = preg_replace( "/[^0-9]/is", "", $_POST["busca_cpf"]);
 		}
 
-		$extra =
-			((!empty($_POST["busca_codigo"]))? 		" AND enti_nb_id LIKE '%".$_POST["busca_codigo"]."%'": "").
-			((!empty($_POST["busca_matricula"]))? 	" AND enti_tx_matricula LIKE '%".$_POST["busca_matricula"]."%'": "").
-			((!empty($_POST["busca_empresa"]))? 	" AND enti_nb_empresa = '".$_POST["busca_empresa"]."'": "").
-			((!empty($_POST["busca_nome"]))? 		" AND enti_tx_nome LIKE '%".$_POST["busca_nome"]."%'": "").
-			((!empty($_POST["busca_cpf"]))? 		" AND enti_tx_cpf LIKE '%".$_POST["busca_cpf"]."%'": "").
-			((!empty($_POST["busca_ocupacao"]))? 	" AND enti_tx_ocupacao = '".$_POST["busca_ocupacao"]."'": "").
-			((!empty($_POST["busca_parametro"]))? 	" AND enti_nb_parametro = '".$_POST["busca_parametro"]."'": "").
-			(!empty($_POST["busca_status"])?		" AND enti_tx_status = '".strtolower($_POST["busca_status"])."'": "").
-			(!empty($_POST["busca_padrao"])?		" AND enti_tx_ehPadrao = '".$_POST["busca_padrao"]."'": "");
+		// $extra =
+		// 	((!empty($_POST["busca_codigo"]))? 		" AND enti_nb_id LIKE '%".$_POST["busca_codigo"]."%'": "").
+		// 	((!empty($_POST["busca_matricula"]))? 	" AND enti_tx_matricula LIKE '%".$_POST["busca_matricula"]."%'": "").
+		// 	((!empty($_POST["busca_empresa"]))? 	" AND enti_nb_empresa = '".$_POST["busca_empresa"]."'": "").
+		// 	((!empty($_POST["busca_nome"]))? 		" AND enti_tx_nome LIKE '%".$_POST["busca_nome"]."%'": "").
+		// 	((!empty($_POST["busca_cpf"]))? 		" AND enti_tx_cpf LIKE '%".$_POST["busca_cpf"]."%'": "").
+		// 	((!empty($_POST["busca_ocupacao"]))? 	" AND enti_tx_ocupacao = '".$_POST["busca_ocupacao"]."'": "").
+		// 	((!empty($_POST["busca_parametro"]))? 	" AND enti_nb_parametro = '".$_POST["busca_parametro"]."'": "").
+		// 	(!empty($_POST["busca_status"])?		" AND enti_tx_status = '".strtolower($_POST["busca_status"])."'": "").
+		// 	(!empty($_POST["busca_padrao"])?		" AND enti_tx_ehPadrao = '".$_POST["busca_padrao"]."'": "");
 
-			$camposBusca = [ 
-				campo("Código", "busca_codigo", ($_POST["busca_codigo"]?? ""), 1,"","maxlength='6'"),
-				campo("Nome", "busca_nome", ($_POST["busca_nome"]?? ""), 2,"","maxlength='65'"),
-				campo("Matrícula", "busca_matricula", ($_POST["busca_matricula"]?? ""), 1,"","maxlength='6'"),
-				campo("CPF", "busca_cpf", ($_POST["busca_cpf"]?? ""), 2, "MASCARA_CPF"),
-				combo_bd("!Empresa", "busca_empresa", ($_POST["busca_empresa"]?? ""), 2, "empresa", "", $extraEmpresa),
-				combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"]?? ""), 2, ["", "Motorista", "Ajudante", "Funcionário"]),
-				combo("Convenção Padrão", "busca_padrao", ($_POST["busca_padrao"]?? ""), 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
-				combo_bd("!Parâmetros da Jornada", "busca_parametro", ($_POST["busca_parametro"]?? ""), 6, "parametro"),
-				combo("Status", "busca_status", ($_POST["busca_status"]?? ""), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
-			];
+		$camposBusca = [ 
+			campo("Código",						"busca_codigo",			(!empty($_POST["busca_codigo"])? $_POST["busca_codigo"]: ""), 1,"","maxlength='6'"),
+			campo("Nome",						"busca_nome_like",		(!empty($_POST["busca_nome"])? $_POST["busca_nome"]: ""), 2,"","maxlength='65'"),
+			campo("Matrícula",					"busca_matricula_like",	(!empty($_POST["busca_matricula"])? $_POST["busca_matricula"]: ""), 1,"","maxlength='6'"),
+			campo("CPF",						"busca_cpf",			(!empty($_POST["busca_cpf"])? $_POST["busca_cpf"]: ""), 2, "MASCARA_CPF"),
+			combo_bd("!Empresa",				"busca_empresa",		(isset($_POST["busca_empresa"])? $_POST["busca_empresa"]: ""), 2, "empresa", "", $extraEmpresa),
+			combo("Ocupação",					"busca_ocupacao",		(isset($_POST["busca_ocupacao"])? $_POST["busca_ocupacao"]: ""), 2, ["", "Motorista", "Ajudante", "Funcionário"]),
+			combo("Convenção Padrão",			"busca_padrao",			(isset($_POST["busca_padrao"])? $_POST["busca_padrao"]: ""), 2, ["" => "", "sim" => "Sim", "nao" => "Não"]),
+			combo_bd("!Parâmetros da Jornada", 	"busca_parametro",		(isset($_POST["busca_parametro"])? $_POST["busca_parametro"]: ""), 6, "parametro"),
+			combo("Status",						"busca_status",			(isset($_POST["busca_status"])? $_POST["busca_status"]: "ativo"), 2, ["" => "", "ativo" => "Ativo", "inativo" => "Inativo"])
+		];
 
 		$botoesBusca = [
-			botao("Buscar", "index"),
+			"<button action='consultarRegistros()' class='btn btn-secondary'>Buscar</button>",
 			botao("Inserir", "visualizarCadastro","","","","","btn btn-success")
 		];
 
@@ -887,35 +887,57 @@
 		echo fecha_form($botoesBusca);
 
 
-		$iconeModificar = criarSQLIconeTabela("enti_nb_id", 'modificarMotorista', "Modificar", "glyphicon glyphicon-search");
-		$iconeExcluir = (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")))? criarSQLIconeTabela("enti_nb_id", "excluirMotorista", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?"): "";
-		
-		$sqlFields = [
-			"enti_nb_id",
-			"enti_tx_nome",
-			"enti_tx_matricula",
-			"enti_tx_cpf",
-			"empr_tx_nome",
-			"enti_tx_fone1",
-			"enti_tx_fone2",
-			"enti_tx_ocupacao",
-			"DATE_FORMAT(enti_tx_dataCadastro, '%d/%m/%Y') AS enti_tx_dataCadastro",
-			"DATE_FORMAT(enti_tx_desligamento, '%d/%m/%Y') AS enti_tx_desligamento",
-			"para_tx_nome",
-			"enti_tx_ehPadrao",
-			"enti_tx_status",
-			"{$iconeModificar} as iconeModificar",
-			"IF(enti_tx_status = 'ativo', {$iconeExcluir}, NULL) as iconeExcluir"
-		];
+		/*
+			$iconeModificar = criarSQLIconeTabela("enti_nb_id", 'modificarMotorista', "Modificar", "glyphicon glyphicon-search");
+			$iconeExcluir = (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")))? criarSQLIconeTabela("enti_nb_id", "excluirMotorista", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?"): "";
+			
+			$sqlFields = [
+				"enti_nb_id",
+				"enti_tx_nome",
+				"enti_tx_matricula",
+				"enti_tx_cpf",
+				"empr_tx_nome",
+				"enti_tx_fone1",
+				"enti_tx_fone2",
+				"enti_tx_ocupacao",
+				"DATE_FORMAT(enti_tx_dataCadastro, '%d/%m/%Y') AS enti_tx_dataCadastro",
+				"DATE_FORMAT(enti_tx_desligamento, '%d/%m/%Y') AS enti_tx_desligamento",
+				"para_tx_nome",
+				"enti_tx_ehPadrao",
+				"enti_tx_status",
+				"{$iconeModificar} as iconeModificar",
+				"IF(enti_tx_status = 'ativo', {$iconeExcluir}, NULL) as iconeExcluir"
+			];
 
-		$sql = ( 
-			"SELECT ".implode(", ", $sqlFields)." FROM entidade
-				JOIN empresa ON enti_nb_empresa = empr_nb_id
-				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id AND para_tx_status = 'ativo'
-				WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')
-					{$extraEmpresa}
-					{$extra};"
-		);
+			$sql = ( 
+				"SELECT ".implode(", ", $sqlFields)." FROM entidade
+					JOIN empresa ON enti_nb_empresa = empr_nb_id
+					LEFT JOIN parametro ON enti_nb_parametro = para_nb_id AND para_tx_status = 'ativo'
+					WHERE enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')
+						{$extraEmpresa}
+						{$extra};"
+			);
+			$gridFields = [
+				"CÓDIGO" 				=> "enti_nb_id", 
+				"NOME" 					=> "enti_tx_nome", 
+				"MATRÍCULA" 			=> "enti_tx_matricula", 
+				"CPF" 					=> "enti_tx_cpf", 
+				"EMPRESA" 				=> "empr_tx_nome", 
+				"FONE 1" 				=> "enti_tx_fone1", 
+				"FONE 2" 				=> "enti_tx_fone2", 
+				"OCUPAÇÃO" 				=> "enti_tx_ocupacao",
+				"DATA CADASTRO" 		=> "enti_tx_dataCadastro",
+				"DATA INATIVAÇÃO"       => "enti_tx_desligamento",
+				"PARÂMETRO DA JORNADA" 	=> "para_tx_nome", 
+				"CONVENÇÃO PADRÃO" 		=> "enti_tx_ehPadrao",
+				"STATUS" 				=> "enti_tx_status",
+				"<spam class='glyphicon glyphicon-search'></spam>" => "iconeModificar",
+				"<spam class='glyphicon glyphicon-remove'></spam>" => "iconeExcluir"
+			];
+
+			grid($sql, array_keys($gridFields), array_values($gridFields));
+		*/
+
 		$gridFields = [
 			"CÓDIGO" 				=> "enti_nb_id", 
 			"NOME" 					=> "enti_tx_nome", 
@@ -923,17 +945,45 @@
 			"CPF" 					=> "enti_tx_cpf", 
 			"EMPRESA" 				=> "empr_tx_nome", 
 			"FONE 1" 				=> "enti_tx_fone1", 
-			"FONE 2" 				=> "enti_tx_fone2", 
 			"OCUPAÇÃO" 				=> "enti_tx_ocupacao",
-			"DATA CADASTRO" 		=> "enti_tx_dataCadastro",
-			"DATA INATIVAÇÃO"       => "enti_tx_desligamento",
+			"DATA CADASTRO" 		=> "DATE_FORMAT(enti_tx_dataCadastro, \"%d/%m/%Y\") AS enti_tx_dataCadastro",
 			"PARÂMETRO DA JORNADA" 	=> "para_tx_nome", 
 			"CONVENÇÃO PADRÃO" 		=> "enti_tx_ehPadrao",
-			"STATUS" 				=> "enti_tx_status",
-			"<spam class='glyphicon glyphicon-search'></spam>" => "iconeModificar",
-			"<spam class='glyphicon glyphicon-remove'></spam>" => "iconeExcluir"
+			"STATUS" 				=> "enti_tx_status"
 		];
 
-		grid($sql, array_keys($gridFields), array_values($gridFields));
+		$camposBusca = [
+			"busca_codigo" 			=> "enti_nb_id",
+			"busca_nome_like" 		=> "enti_tx_nome",
+			"busca_matricula_like" 	=> "enti_tx_matricula",
+			"busca_cpf" 			=> "enti_tx_cpf",
+			"busca_empresa" 		=> "enti_nb_empresa",
+			"busca_ocupacao" 		=> "enti_tx_ocupacao",
+			"busca_padrao" 			=> "enti_tx_ehPadrao",
+			"busca_parametro" 		=> "enti_nb_parametro",
+			"busca_status" 			=> "enti_tx_status"
+		];
+
+		$queryBase = ( 
+			"SELECT ".implode(", ", array_values($gridFields))." FROM entidade"
+				." JOIN empresa ON enti_nb_empresa = empr_nb_id"
+				." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
+		);
+
+		$actions = criarIconesGrid(
+			["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"], 
+			["cadastro_motorista.php", "cadastro_motorista.php"], 
+			["modificarMotorista()", "excluirMotorista()"]
+		);
+
+		$gridFields["actions"] = $actions["tags"];
+
+		$jsFunctions =
+			"const funcoesInternas = function(){
+				".implode(" ", $actions["functions"])."
+			}"
+		;
+
+		echo gridDinamico("tabelaMotoristas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
 		rodape();
 	}

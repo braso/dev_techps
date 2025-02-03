@@ -73,7 +73,7 @@
 		return $result;
 	}
 
-	function abre_form(string $nome_form="", int $width=12, int $focus=2): string{
+	function abre_form(string $nome_form="", int $width=12): string{
 		$result = "<div class='col-md-{$width}'><div class='portlet light'>";
 
 		if(!empty($nome_form)){

@@ -1,0 +1,89 @@
+.grid-dinamico{
+    border: none;
+    width: 100%;
+}
+
+.table{
+    margin: 0px;
+}
+
+.table-head{
+    position: sticky;
+    top: -1px;
+}
+
+th.table-col-head:hover{
+    background-color: #000000;
+    cursor: pointer;
+}
+
+.grid-dinamico>thead>tr>th.table-col-head{
+    vertical-align: middle;
+    text-align: center;
+}
+
+th.table-col-head, .page-selected{
+    background-color: #444d58;
+    color: white;
+    text-wrap-mode: nowrap;
+}
+
+.grid-dinamico tbody tr{
+    height: 10px;
+}
+
+.grid-dinamico tbody tr td{
+    align-content: center;
+    /* vertical-align: middle; */
+}
+
+tbody tr:nth-child(even){
+    background-color: #ebf0f5;
+}
+
+.grid-footer{
+    display: flex;
+    justify-content: space-between;
+}
+
+.table>tbody>tr>td.tab-action{
+    align-content: center;
+    text-align: center;
+    padding: 0;
+    height: inherit;
+}
+
+.table>tbody>tr>td.tab-action>*{
+    min-width: 30px;
+    height: 100%;
+    align-content: center;
+}
+
+.tab-action:hover{
+    background-color: rgb(197, 197, 197);
+    cursor: pointer;
+}
+
+
+.tab-pagination{
+    width: min-content;
+    display: flex;
+    height: auto;
+    align-items: center;
+}
+
+.tab-pagination div{
+    width: 30px;
+    height: 30px;
+    margin-left: 2px;
+    margin-right: 2px;
+    border: 1px solid #c2cad8;
+    text-align: center;
+    place-content: center;
+    border-radius: 3px;
+}
+
+.tab-pagination div:hover{
+    background-color: rgb(197, 197, 197);
+    cursor: pointer;
+}

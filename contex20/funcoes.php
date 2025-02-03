@@ -988,10 +988,10 @@
 	function combo_bd($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra_bd=''){
 
 		$tab=substr($tabela,0,4);
-		$c_opcao = '';
+		$htmlOpcoes = '';
 		if($nome[0] == "!"){
 			$nome=substr($nome, 1);
-			$c_opcao.="<option value='' hidden></option>";
+			$htmlOpcoes.="<option value=''></option>";
 		}
 		
 		// if(stripos($extra_bd,"order by") === false){
@@ -1011,7 +1011,7 @@
 			}else{
 				$selected='';
 			}
-			$c_opcao .= '<option value="'.$a[0].'" '.$selected.'>'.$a[1].'</option>';
+			$htmlOpcoes .= '<option value="'.$a[0].'" '.$selected.'>'.$a[1].'</option>';
 		}
 
 		$classe = "form-control input-sm campo-fit-content";
@@ -1023,7 +1023,7 @@
 			'<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content">
 				<label>'.$nome.'</label>
 				<select name="'.$variavel.'" id="'.$variavel.'" class="'.$classe.'" '.$extra.'>
-					'.$c_opcao.'
+					'.$htmlOpcoes.'
 				</select>
 			</div>'
 		;
