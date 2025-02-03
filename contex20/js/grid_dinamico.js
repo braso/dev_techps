@@ -18,8 +18,8 @@ let definirFuncoesInternas = function(){
     //Ordenações{
         $('.table-col-head').click(function(event){
             campo = camposBd[parseInt($(event.target)[0].attributes.value.value)];
-            if(campo.indexOf(" as ") >= 0){
-                campo = campo.split(" as ")[1];
+            if(campo.toLowerCase().indexOf(" as ") >= 0){
+                campo = campo.toLowerCase().split(" as ")[1];
             }
             if(orderCol.indexOf(campo+' ASC') >= 0){
                 orderCol = campo+' DESC';
