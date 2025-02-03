@@ -44,7 +44,9 @@ document.addEventListener('DOMContentLoaded', function() {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="css/logistica_modal.css">
     <script src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js" type="module"></script>
-
+<!-- Adicione isso ao head do seu HTML -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js" nomodule></script>
 </head>
 
@@ -58,6 +60,14 @@ document.addEventListener('DOMContentLoaded', function() {
         <i class="fas fa-spinner fa-spin"></i>
         <p>Buscando dados, por favor, aguarde...</p>
     </div>
+
+
+<!-- Adicione isso ao final do seu body -->
+<button id="mapButton" style="display:none; position:fixed; bottom:150px; left:5px; z-index:1000; background-color:#004173; color:white; border:none; padding:10px 20px; border-radius:5px;">📍</button>
+<div id="mapPopup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:80%; height:80%; background-color:white; border:1px solid #ccc; z-index:1001;">
+    <div id="map" style="width:100%; height:100%; position:relative; z-index:1;"></div>
+    <button id="closeMapButton" style="position:absolute; top:2px; right:-30px; background-color:#004173; color:white; border:none; padding:5px 10px; border-radius:5px; z-index:1002;">X</button>
+</div>
 
 
 
