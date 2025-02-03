@@ -495,7 +495,7 @@
 				formatter: function() {
 					var quantidadeDeItens = <?= $totalJsonComTudoZero ?>; // Substitua com o valor real ou uma variável
 					// Exibe o valor e a quantidade de itens
-					return this.series.name + ': ' + this.y + '%<br>Quantidade de funcionários sem conformidade: ' + quantidadeDeItens;
+					return this.series.name + ': ' + this.y + '%<br>Quantidade de funcionários sem não conformidade: ' + quantidadeDeItens;
 				},
 				style: {
 					fontSize: '14px', // Aumenta o tamanho da fonte para 18px
@@ -619,7 +619,7 @@
 					var quantidadeDeItens = <?= $totalFun  ?>; // Substitua com o valor real ou uma variável
 					var perfomaceTotal= <?= number_format($mediaPerfTotal, 2, '.', '') ?>; 
 					// Exibe o valor e a quantidade de itens
-					return this.series.name + ': ' + perfomaceTotal + '%<br>Quantidade de funcionários com conformidade: ' + quantidadeDeItens;
+					return this.series.name + ': ' + this.point.y + '%<br>Quantidade de funcionários com não conformidade: ' + quantidadeDeItens;
 				},
 				style: {
 					fontSize: '14px', // Aumenta o tamanho da fonte para 18px
@@ -729,7 +729,7 @@
 					var quantidadeDeItens = <?= $totalFun  ?>; // Substitua com o valor real ou uma variável
 					var perfomaceTotal= <?= number_format($porcentagemTotalBaixa, 2, '.', '') ?>; 
 					// Exibe o valor e a quantidade de itens
-					return this.series.name + ': ' + perfomaceTotal + '%<br>Quantidade de funcionários com conformidade: ' + quantidadeDeItens;
+					return this.series.name + ': ' + this.point.y + '%<br>Quantidade de funcionários com não conformidade: ' + quantidadeDeItens;
 				},
 				style: {
 					fontSize: '14px', // Aumenta o tamanho da fonte para 18px
