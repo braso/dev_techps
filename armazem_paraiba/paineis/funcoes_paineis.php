@@ -794,9 +794,9 @@
 
 						foreach ($endosso["endo_tx_pontos"] as $ponto) {
 							$inicioJornadaWarning = strpos($ponto["3"], "fa-warning") !== false && strpos($ponto["3"], "color:red;")
-							&& strpos($ponto["3"], "fa-info-circle") ===  false && strpos($ponto["3"], "color:green;") ===  false;
+							&& strpos($ponto["12"], "fa-info-circle") ===  false && strpos($ponto["12"], "color:green;") ===  false;
 							$fimJornadaWarning = strpos($ponto["6"], "fa-warning") !== false  && strpos($ponto["6"], "color:red;")
-							&& strpos($ponto["6"], "fa-info-circle") ===  false && strpos($ponto["6"], "color:green;") ===  false;
+							&& strpos($ponto["12"], "fa-info-circle") ===  false && strpos($ponto["12"], "color:green;") ===  false;
 							$diffJornada = $ponto["11"];
 							$diffJornadaEfetiva = $ponto["13"];
 
@@ -931,10 +931,10 @@
 					$houveInteracao = false;
 					// Jornada
 					$inicioJornadaWarning = strpos($dia["inicioJornada"], "fa-warning") !== false && strpos($dia["inicioJornada"], "color:red;") !== false
-					&& strpos($dia["inicioJornada"], "fa-info-circle") ===  false && strpos($dia["inicioJornada"], "color:green;") ===  false;
+					&& strpos($dia["jornadaPrevista"], "fa-info-circle") ===  false && strpos($dia["jornadaPrevista"], "color:green;") ===  false;
 
 					$fimJornadaWarning = strpos($dia["fimJornada"], "fa-warning") == false  && strpos($dia["fimJornada"], "color:red;") !== false
-					&& strpos($dia["fimJornada"], "fa-info-circle") ===  false && strpos($dia["fimJornada"], "color:green;") ===  false;
+					&& strpos($dia["jornadaPrevista"], "fa-info-circle") ===  false && strpos($dia["jornadaPrevista"], "color:green;") ===  false;
 
 					$diffJornada = $dia["diffJornada"];
 					$diffJornadaEfetiva = $dia["diffJornadaEfetiva"];
