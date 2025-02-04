@@ -106,19 +106,19 @@
 	function index(){
 		cabecalho(empty($_POST["title"])? "Buscar Espelho de Ponto": $_POST["title"]);
 
-		$condBuscaMotorista = "";
-		$condBuscaEmpresa = "";
-
-		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
-			[$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], $_SESSION["user_nb_empresa"]];
-			$condBuscaMotorista = " AND enti_nb_id = '".$_SESSION["user_nb_entidade"]."'";
-		}
-
-		if(!empty($_SESSION["user_nb_empresa"]) && $_SESSION["user_tx_nivel"] != "Administrador" && $_SESSION["user_tx_nivel"] != "Super Administrador"){
-			$condBuscaEmpresa .= " AND enti_nb_empresa = ".$_SESSION["user_nb_empresa"];
-		}
-
 		//CAMPOS DE CONSULTA{
+			$condBuscaMotorista = "";
+			$condBuscaEmpresa = "";
+
+			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
+				[$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], $_SESSION["user_nb_empresa"]];
+				$condBuscaMotorista = " AND enti_nb_id = '".$_SESSION["user_nb_entidade"]."'";
+			}
+
+			if(!empty($_SESSION["user_nb_empresa"]) && $_SESSION["user_tx_nivel"] != "Administrador" && $_SESSION["user_tx_nivel"] != "Super Administrador"){
+				$condBuscaEmpresa .= " AND enti_nb_empresa = ".$_SESSION["user_nb_empresa"];
+			}
+
 			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 				$nomeEmpresa = mysqli_fetch_assoc(query("SELECT empr_tx_nome FROM empresa WHERE empr_nb_id = ".$_SESSION["user_nb_empresa"]));
 				$searchFields = [
@@ -179,8 +179,8 @@
 
 				// Converte as datas para objetos DateTime
 				[$startDate, $endDate] = [new DateTime($_POST["busca_periodo"][0]), new DateTime($_POST["busca_periodo"][1])];
-
 				$rows = [];
+
 				$motorista = mysqli_fetch_assoc(query(
 					"SELECT * FROM entidade
 					 LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
@@ -191,30 +191,35 @@
 					 LIMIT 1;"
 				));
 				if(!empty($_POST["busca_motorista"])){
-					$aEmpresa = carregar("empresa", $motorista["enti_nb_empresa"]);
+					$aEmpresa = [
+						"empr_nb_parametro" => $motorista["empr_nb_parametro"],
+						"empr_tx_nome" => $motorista["empr_tx_nome"]
+					];
 				}
-				// Loop for para percorrer as datas
-				$prevEndossoMes = [];
-				for ($date = $startDate; $date <= $endDate; $date->modify("+1 day")){
-					//Conferir se o dia já está endossado{
-						$endossoMes = montarEndossoMes($date, $motorista);
-						if($prevEndossoMes != $endossoMes){
-							if(!empty($endossoMes)){
-								$diasEndossados = 0;
-								foreach($endossoMes["endo_tx_pontos"] as $row){
-									$day = DateTime::createFromFormat("d/m/Y", $row[1]);
-									if($day > $date){
-										$diasEndossados++;
-										$rows[] = $row;
-									}
-								}
-								if($diasEndossados > 0){
-									$date->modify("+".($diasEndossados-1)." day");
-									continue;
-								}
+				
+				//Conferir se há dias do mês já endossados{
+					$endossoMes = montarEndossoMes($startDate, $motorista);
+					if(!empty($endossoMes)){
+						$diasEndossados = 0;
+						foreach($endossoMes["endo_tx_pontos"] as $row){
+							$day = DateTime::createFromFormat("d/m/Y", $row[1]);
+							$rows[] = $row;
+							if($day >= $startDate){
+								$diasEndossados++;
 							}
 						}
-					//}
+						foreach($endossoMes["totalResumo"] as $key => $value){
+							$totalResumo[$key] = operarHorarios([(!empty($totalResumo[$key])? $totalResumo[$key]: "00:00"), $value], "+");
+						}
+						$totalResumo["saldoFinal"] = $endossoMes["totalResumo"]["saldoFinal"];
+						if($diasEndossados > 0){
+							$startDate->modify("+{$diasEndossados} day");
+						}
+					}
+				//}
+
+				// Loop for para percorrer as datas
+				for ($date = $startDate; $date <= $endDate; $date->modify("+1 day")){
 					$aDetalhado = diaDetalhePonto($motorista, $date->format("Y-m-d"));
 					if(!empty($_POST["naoConformidade"])){
 						$rowString = implode(", ", array_values($aDetalhado));
@@ -234,13 +239,6 @@
 							continue;
 						}
 					}
-
-					if($prevEndossoMes != $endossoMes){
-						foreach($totalResumo as $key => $value){
-							$totalResumo[$key] = operarHorarios([$value, $endossoMes["totalResumo"][$key]], "+");
-						}
-					}
-					$prevEndossoMes = $endossoMes;
 					
 					$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado));
 					for($f = 0; $f < sizeof($row)-1; $f++){
@@ -268,20 +266,18 @@
 					}
 				}
 
-				$ultimoEndosso = mysqli_fetch_assoc(query(
-						"SELECT endo_tx_filename FROM endosso"
-							." WHERE endo_tx_status = 'ativo'"
-								." AND endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'"
-								." AND endo_tx_ate < '".$_POST["busca_periodo"][0]."'"
-							." ORDER BY endo_tx_ate DESC"
-							." LIMIT 1;"
-				));
-
 				
 				
 				$saldoAnterior = "";
 				if(!empty($ultimoEndosso)){
 					$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
+					if(empty($totalResumo)){
+						$totalResumo = $ultimoEndosso["totalResumo"];
+					}else{
+						foreach($ultimoEndosso["totalResumo"] as $key => $value){
+							$totalResumo[$key] = operarHorarios([$totalResumo[$key], $value], "+");
+						}
+					}
 					$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoFinal"];
 				}elseif(!empty($motorista["enti_tx_banco"])){
 					$saldoAnterior = $motorista["enti_tx_banco"];
@@ -322,6 +318,13 @@
 					"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO", "H.E. ".$motorista["enti_tx_percHESemanal"]."%", "H.E. ".$motorista["enti_tx_percHEEx"]."%",
 					"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
 				];
+				unset(
+					$totalResumo["saldoAnterior"],
+					$totalResumo["saldoBruto"],
+					$totalResumo["he50APagar"],
+					$totalResumo["he100APagar"],
+					$totalResumo["saldoFinal"],
+				);
 				$rows[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumo));
 
 				echo abre_form(

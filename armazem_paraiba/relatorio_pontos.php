@@ -10,7 +10,7 @@
 
 include "funcoes_ponto.php";
 
-function pegarSqlDia(string $matricula, DateTime $dataInicio, DateTime $dataFim, array $cols): string{
+function pegarSqlDiaPonto(string $matricula, DateTime $dataInicio, DateTime $dataFim, array $cols): string{
 
     $condicoesPontoBasicas = " ponto.pont_tx_matricula = '{$matricula}'";
 
@@ -235,7 +235,7 @@ function index() {
              LIMIT 1;"
         ));
         
-        $sql = pegarSqlDia(
+        $sql = pegarSqlDiaPonto(
 			$motorista["enti_tx_matricula"], $startDate, $endDate,
 			[
 				"pont_nb_id", 

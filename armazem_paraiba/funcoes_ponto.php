@@ -1347,19 +1347,15 @@
 					}
 				}
 				foreach($endossos[$f]["totalResumo"] as $key => $value){
-					if(in_array($key, ["saldoAnterior"])){
+					if(in_array($key, ["saldoAnterior", "saldoBruto", "saldoFinal"])){
 						continue;
 					}
 					$endossoCompleto["totalResumo"][$key] = operarHorarios([$endossoCompleto["totalResumo"][$key], $value], "+");
 				}
-
-				
-				// $endossoCompleto["totalResumo"]["diffSaldo"] = $endossos[$f]["totalResumo"]["diffSaldo"];
-				// $endossoCompleto["totalResumo"]["saldoBruto"] = $endossos[$f]["totalResumo"]["saldoBruto"];
 			}
 			$endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$endossoCompleto["totalResumo"]["saldoAnterior"], $endossoCompleto["totalResumo"]["diffSaldo"]], "+");
+			$endossoCompleto["totalResumo"]["saldoFinal"] = $endossos[count($endossos)-1]["totalResumo"]["saldoFinal"];
 		}
-
 
 		return $endossoCompleto;
 	}
