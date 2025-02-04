@@ -50,6 +50,7 @@ function carregarJS(array $arquivos) {
 						+'<td>'+(row['Fim de Repouso Embarcado']?.['inativo'] === 0 ? '' : row['Fim de Repouso Embarcado']?.['inativo'])+'</td>'
 						+'<td>'+totalAtivo+'</td>'
 						+'<td>'+totalInativo+'</td>'
+						+'<td>'+(totalInativo+totalAtivo)+'</td>'
 						+'</tr>';";
 		} else {
 			$linha .= "+'<td>'+row['Inicio de Jornada']+'</td>'
@@ -195,41 +196,62 @@ function carregarJS(array $arquivos) {
 						}
 					});
 				}
-					
 				// Função para ordenar a tabela
-				function ordenarTabela(coluna, ordem){
-					var linhas = tabela.find('tr').get();
-					
-					linhas.sort(function(a, b){
-						var valorA = $(a).children('td').eq(coluna).text();
-						var valorB = $(b).children('td').eq(coluna).text();
+				function ordenarTabela(coluna, ordem) {
+					var linhas = tabela.find('tr:not(.titulos, .titulos2)').get(); // Ignorar cabeçalhos na ordenação
 
-						if(valorA < valorB){
+					linhas.sort(function (a, b) {
+						var valorA = $(a).children('td').eq(coluna).text().trim() || '0'; // Substituir vazio por '0'
+						var valorB = $(b).children('td').eq(coluna).text().trim() || '0'; // Substituir vazio por '0'
+
+						// Tentar converter para número
+						var numA = parseFloat(valorA);
+						var numB = parseFloat(valorB);
+
+						// Comparação numérica
+						if (!isNaN(numA) && !isNaN(numB)) {
+							return ordem === 'asc' ? numA - numB : numB - numA;
+						}
+
+						// Comparação alfabética como fallback
+						if (valorA < valorB) {
 							return ordem === 'asc' ? -1 : 1;
 						}
-						if(valorA > valorB){
+						if (valorA > valorB) {
 							return ordem === 'asc' ? 1 : -1;
 						}
 						return 0;
 					});
 
-					$.each(linhas, function(index, row){
+					$.each(linhas, function (index, row) {
 						tabela.append(row);
 					});
 				}
 
-				// Evento de clique para ordenar a tabela ao clicar no cabeçalho
-				$('#titulos th').click(function(){
-					var coluna = $(this).index();
-					var ordem = $(this).data('order');
-					$('#tabela-empresas th').data('order', 'desc'); // Redefinir ordem de todas as colunas
+				// Evento de clique para ordenar ao clicar nos cabeçalhos do #titulos
+				$('#titulos th').click(function () {
+					var colunaIndex = $(this).index(); // Índice visual da coluna
+					var colspan = parseInt($(this).attr('colspan')) || 1; // Colspan, padrão é 1
+					var coluna = 0;
+
+					// Calcular o índice da coluna correspondente
+					$('#titulos th').each(function (index) {
+						if (index < colunaIndex) {
+							coluna += parseInt($(this).attr('colspan')) || 1;
+						}
+					});
+
+					// Atualizar a ordem de todas as colunas
+					var ordem = $(this).data('order') || 'asc';
 					$(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
+
 					ordenarTabela(coluna, $(this).data('order'));
 
-					// Ajustar classes para setas de ordenação
+					// Atualizar classes de setas para ordenação visual
 					$('#titulos th').removeClass('sort-asc sort-desc');
 					$(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
 				});
+
 				{$carregarDados}
 			});
 
@@ -478,6 +500,7 @@ function index() {
 					. "<th colspan='2'>".$arquivoGeral["Fim de Repouso"]."</th>"
 					. "<th colspan='2'>".$arquivoGeral["Inicio de Repouso Embarcado"]."</th>"
 					. "<th colspan='2'>".$arquivoGeral["Fim de Repouso Embarcado"]."</th>"
+					. "<th colspan='2'></th>"
 					. "<th colspan='2'></th>";
 
 				$rowTitulos .= 
@@ -491,12 +514,13 @@ function index() {
 					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Espera</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Fim de Espera</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Descanso</th>"
-					. "<th data-column='r' data-order='asc' colspan='2'>Fim de Descanso</th>"
+					. "<th data-column='' data-order='asc' colspan='2'>Fim de Descanso</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Repouso</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Fim de Repouso</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Repouso Embarcad</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Fim de Repouso Embarcado</th>"
-					. "<th data-column='' data-order='asc' colspan='2'>Total</th>";
+					. "<th data-column='' data-order='asc' colspan='2'>Total</th>"
+					. "<th data-column='' data-order='asc' colspan='2'>Total Geral</th>";
 					
 					$rowTitulos2 .= 
 					"<th></th>"
@@ -527,7 +551,8 @@ function index() {
 					. "<th>Ativo</th>"
 					. "<th>Inativo</th>"
 					. "<th>Ativo</th>"
-					. "<th>Inativo</th>";
+					. "<th>Inativo</th>"
+					. "<th></th>";
 			} else {
 				$rowTotais .=
 					"<th colspan='1'></th>"

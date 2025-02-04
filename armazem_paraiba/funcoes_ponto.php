@@ -13,15 +13,15 @@
 
 		if(date("w", strtotime($data)) == "0" || $ehFeriado){ 	//DOMINGOS OU FERIADOS
 			$jornadaPrevista = "00:00";
-		}elseif(date("w", strtotime($data)) == "6"){ 						//SABADOS
+		}elseif(date("w", strtotime($data)) == "6"){ 			//SABADOS
 			$jornadaPrevista = $jornadaSabado;
-		}else{															//DIAS DE SEMANA
+		}else{													//DIAS DE SEMANA
 			$jornadaPrevista = $jornadaSemanal;
 		}
 
 		$jornadaPrevistaOriginal = $jornadaPrevista;
 		$jornadaPrevista = (new DateTime("{$data} {$jornadaPrevista}"))->format("H:i");
-		if($abono !== null || !$ehFeriado){
+		if(!empty($abono)){
 			$jornadaPrevista = (new DateTime("{$data} {$abono}"))->diff(new DateTime("{$data} {$jornadaPrevista}"))->format("%H:%I");
 		}
 
@@ -647,30 +647,28 @@
 		), MYSQLI_ASSOC);
 
 		//JORNADA PREVISTA{
+			//Consultar feriados do dia{
+				$stringFeriado = getFeriados($motorista, $data);
+				if(!empty($stringFeriado)){
+					$iconeFeriado = " <a><i style='color:green;' title='{$stringFeriado}' class='fa fa-info-circle'></i></a>";
+					$aRetorno["diaSemana"] .= $iconeFeriado;
+				}
+			//}
+
 			$abonos = mysqli_fetch_assoc(query(
-				"SELECT * FROM abono, motivo, user 
-					WHERE abon_tx_status = 'ativo' 
-						AND abon_nb_userCadastro = user_nb_id 
-						AND abon_tx_matricula = '{$motorista["enti_tx_matricula"]}' 
-						AND abon_tx_data = '{$data}' 
+				"SELECT * FROM abono, motivo, user
+					WHERE abon_tx_status = 'ativo'
+						AND abon_nb_userCadastro = user_nb_id
+						AND abon_tx_matricula = '{$motorista["enti_tx_matricula"]}'
+						AND abon_tx_data = '{$data}'
 						AND abon_nb_motivo = moti_nb_id
-					ORDER BY abon_nb_id DESC 
+					ORDER BY abon_nb_id DESC
 					LIMIT 1;"
 			));
 
-			//Consultar feriados do dia{
-				$stringFeriado = getFeriados($motorista, $data);
-			//}
-
 			[$jornadaPrevistaOriginal, $jornadaPrevista] = calcJorPre($data, $motorista["enti_tx_jornadaSemanal"], $motorista["enti_tx_jornadaSabado"], !empty($stringFeriado), ($abonos["abon_tx_abono"]?? null));
-
 			$aRetorno["jornadaPrevista"] = $jornadaPrevista;
-			if(!empty($stringFeriado)){
-				$iconeFeriado = " <a><i style='color:green;' title='{$stringFeriado}' class='fa fa-info-circle'></i></a>";
-				$aRetorno["diaSemana"] .= $iconeFeriado;
-			}
-
-			if(is_array($abonos) && count($abonos) > 0){
+			if(!empty($abonos)){
 				$warning = 
 					"<a><i style='color:green;' title="
 							."'Jornada Original: ".sprintf("%02d:%02d", $jornadaPrevistaOriginal, "00")."\n"
@@ -1270,7 +1268,7 @@
 				$aRetorno[$tipo] = $getStringPontosColuna($aRetorno[$tipo], $legendas);
 			}
 		//}
-		
+
 		return $aRetorno;
 	}
 
@@ -1280,25 +1278,26 @@
 				WHERE feri_tx_status = 'ativo'
 					AND feri_tx_data LIKE '{$data}%'"
 		;
-		if(!empty($motorista["cida_nb_id"]) && !empty($motorista["cida_tx_uf"])){
-			$sqlFeriado .= 
+		$extra = "";
+		if(!empty($motorista["cida_tx_uf"])){
+			$extra = 
 				" AND (
-					feri_nb_cidade = '{$motorista["cida_nb_id"]}'
-					OR (feri_tx_uf = '{$motorista["cida_tx_uf"]}' AND feri_nb_cidade IS NULL)
-					OR (feri_nb_cidade IS NULL AND feri_tx_uf IS NULL)
-				)"
+					(feri_nb_cidade IS NULL AND feri_tx_uf IS NULL)
+					OR (feri_tx_uf = '{$motorista["cida_tx_uf"]}' AND feri_nb_cidade IS NULL)"
+					.(!empty($motorista["cida_nb_id"])? " OR feri_nb_cidade = '{$motorista["cida_nb_id"]}'": "")
+				.")"
 			;
 		}
-		$feriados = mysqli_fetch_all(query($sqlFeriado), MYSQLI_ASSOC);
+		$feriados = mysqli_fetch_all(query($sqlFeriado.$extra), MYSQLI_ASSOC);
 
-		for($f = 0; $f < count($feriados); $f++){
-			$feriados[$f] = $feriados[$f]["feri_tx_nome"];
-		}
-		$stringFeriado = "";
+		$result = "";
 		if(!empty($feriados)){
-			$stringFeriado = implode(", ", $feriados);
+			$result = $feriados[0]["feri_tx_nome"];
+			for($f = 1; $f < count($feriados); $f++){
+				$result .= ", {$feriados[$f]["feri_tx_nome"]}";
+			}
 		}
-		return $stringFeriado;
+		return $result;
 	}
 	
 	function getSaldoDiario(string $jornadaPrevista, string $jornadaEfetiva): string{
@@ -1310,7 +1309,7 @@
 		$month = intval($dateMes->format("m"));
 		$year = intval($dateMes->format("Y"));
 		
-		$daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+		$daysInMonth = date('t', mktime(0, 0, 0, $month, 1, $year));
 		$endossos = mysqli_fetch_all(query(
 			"SELECT endo_tx_filename FROM endosso 
 				WHERE endo_tx_status = 'ativo'
@@ -1348,19 +1347,15 @@
 					}
 				}
 				foreach($endossos[$f]["totalResumo"] as $key => $value){
-					if(in_array($key, ["saldoAnterior"])){
+					if(in_array($key, ["saldoAnterior", "saldoBruto", "saldoFinal"])){
 						continue;
 					}
 					$endossoCompleto["totalResumo"][$key] = operarHorarios([$endossoCompleto["totalResumo"][$key], $value], "+");
 				}
-
-				
-				// $endossoCompleto["totalResumo"]["diffSaldo"] = $endossos[$f]["totalResumo"]["diffSaldo"];
-				// $endossoCompleto["totalResumo"]["saldoBruto"] = $endossos[$f]["totalResumo"]["saldoBruto"];
 			}
 			$endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$endossoCompleto["totalResumo"]["saldoAnterior"], $endossoCompleto["totalResumo"]["diffSaldo"]], "+");
+			$endossoCompleto["totalResumo"]["saldoFinal"] = $endossos[count($endossos)-1]["totalResumo"]["saldoFinal"];
 		}
-
 
 		return $endossoCompleto;
 	}
@@ -1389,51 +1384,36 @@
 
 	function operarHorarios(array $horarios, string $operacao): string{
 		//Horários com formato de rH:i. Ex.: 00:04, 05:13, -01:12.
-		//$Operação
+		//$operação
 
 		if(empty($horarios) || !in_array($operacao, ["+", "-", "*", "/"])){
-			return 0;
+			echo "<script>console.log('Operação não encontrada (operarHorarios): |{$operacao}|')</script>";
+			return "00:00";
+		}
+		if(preg_match_all("/-?\d{2,10}:\d{2}(?=:\d{2})?/", implode(" ", $horarios)) != count($horarios)){
+			echo "<script>console.log('Format error (operarHorarios): |".implode(", ", $horarios)."|')</script>";
+			return "00:00";
+		}
+		if(count($horarios) == 1){
+			return $horarios[0];
 		}
 
-		if(empty($horarios[0])){
-			$horarios[0] = "00:00";
-		}
-		$horarios[0] = preg_replace("/([^\-^0-:])+/", "", $horarios[0]);
-		$horarios[0] = explode(":", $horarios[0]);
-		$horarios[0] = intval($horarios[0][0]*60)+(($horarios[0][0][0] == "-")?-1:1)*intval($horarios[0][1]);
-
-		$result = $horarios[0];
-		unset($horarios[0]);
-
+		$horarios = preg_replace("/([^\-^0-:])+/", "", $horarios);
+		preg_match_all("/-?\d{2,10}:\d{2}(?=:\d{2})?/", implode(",", $horarios), $horarios);
+		$horarios = $horarios[0];
+		
+		$result = array_shift($horarios);
+		$result = explode(":", $result);
+		$result = intval($result[0]*60)+(($result[0][0] == "-")?-1:1)*intval($result[1]);
+		
 		foreach($horarios as $horario){
 			if(empty($horario)){
-				$horario = "00:00";
-			}else{
-			    $horario = preg_replace("/([^\-^0-:])+/", "", $horario);
-			}
-			$match = "";
-
-			if(!preg_match("/^-?\d{2,10}:\d{2}(?=:\d{2})?/", $horario, $match)){
-				echo "<script>console.log('Format error (operarHorarios): |".strval($horario)."|')</script>";
 				continue;
 			}
-
-			$horario = explode(":", $match[0]);
+			$horario = explode(":", $horario);
 			$horario = intval($horario[0]*60)+(($horario[0][0] == "-")?-1:1)*intval($horario[1]);
-			switch($operacao){
-				case "+":
-					$result += $horario;
-				break;
-				case "-":
-					$result -= $horario;
-				break;
-				case "*":
-					$result *= $horario;
-				break;
-				case "/":
-					$result /= $horario;
-				break;
-			}
+
+			eval("\$result {$operacao}= {$horario};");
 		}
 
 		$result = sprintf("%s%02d:%02d", (($result < 0)?"-":""), abs(intval($result/60)), abs(intval($result%60)));
@@ -1523,7 +1503,7 @@
 			}
 		}
 		if($ponto["tipo"] == "inicio"){
-			$pares[] = ["inicio" => $ponto["data"], "fim" => ""];
+			$pares[] = ["inicio" => $ponto["data"], "fim" => "", "intervalo" => "00:00"];
 		}
 
 		$paresResult = [
@@ -1560,6 +1540,65 @@
 		$response = $week[date("l", strtotime($date))];
 
 		return $response;
+	}
+
+	function pegarSqlDia(string $matricula, DateTime $data, array $cols): string{
+
+		$condicoesPontoBasicas = "ponto.pont_tx_status = 'ativo' AND ponto.pont_tx_matricula = '{$matricula}'";
+
+		$sqlDataInicio = $data->format("Y-m-d 00:00:00");
+		$sqlDataFim = $data->format("Y-m-d 23:59:59");
+
+		$ultJornadaOntem = mysqli_fetch_assoc(query(
+			"SELECT pont_tx_data, (pont_tx_tipo = 1) as jornadaAbertaAntes FROM ponto 
+				WHERE {$condicoesPontoBasicas}
+					AND pont_tx_tipo IN (1,2)
+					AND pont_tx_data < STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')
+				ORDER BY pont_tx_data DESC
+				LIMIT 1;"
+		));
+
+		$primJornadaAmanha = mysqli_fetch_assoc(query(
+			"SELECT pont_tx_data, (pont_tx_tipo = 2) as jornadaFechadaApos FROM ponto 
+				WHERE {$condicoesPontoBasicas}
+					AND pont_tx_tipo IN (1,2)
+					AND pont_tx_data > STR_TO_DATE('{$sqlDataFim}', '%Y-%m-%d %H:%i:%s')
+				ORDER BY pont_tx_data ASC
+				LIMIT 1;"
+		));
+
+
+		if(!empty($ultJornadaOntem) && intval($ultJornadaOntem["jornadaAbertaAntes"])){
+			$sqlDataInicio = $ultJornadaOntem["pont_tx_data"];
+		}
+
+		if(!empty($primJornadaAmanha) && intval($primJornadaAmanha["jornadaFechadaApos"])){
+			$sqlDataFim = $primJornadaAmanha["pont_tx_data"];
+		}
+
+		$condicoesPontoBasicas = 
+			"ponto.pont_tx_status = '{$_POST["status"]}' 
+			AND ponto.pont_tx_matricula = '{$matricula}' 
+			AND entidade.enti_tx_status = 'ativo' 
+			AND user.user_tx_status = 'ativo' 
+			AND macroponto.macr_tx_status = 'ativo'"
+		;
+		
+		$sql = 
+			"SELECT DISTINCT pont_nb_id, ".implode(",", $cols)." FROM ponto
+				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
+				JOIN entidade ON ponto.pont_tx_matricula = entidade.enti_tx_matricula
+				JOIN user ON entidade.enti_nb_id = user.user_nb_entidade
+				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
+				WHERE {$condicoesPontoBasicas}
+					AND macr_tx_fonte = 'positron'
+					AND ponto.pont_tx_data >= STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')
+					AND ponto.pont_tx_data <= STR_TO_DATE('{$sqlDataFim}', '%Y-%m-%d %H:%i:%s')
+				ORDER BY pont_tx_data ASC"
+		;
+
+
+		return $sql;
 	}
 
 	function somarHorarios(array $horarios): string{
@@ -1670,16 +1709,15 @@
 	function verificaTolerancia(string $saldoDiario, string $data, $idMotorista){
 		$saldoDiario = str_replace(["<b>", "</b>"], ["", ""], $saldoDiario);
 		date_default_timezone_set("America/Recife");
-		$sqlTolerancia = query(
-			"SELECT en.enti_nb_parametro, par.para_tx_tolerancia
+		
+		$tolerancia = mysqli_fetch_assoc(query(
+			"SELECT par.para_tx_tolerancia
 				FROM entidade en
 				INNER JOIN parametro par ON en.enti_nb_parametro = par.para_nb_id
-				WHERE en.enti_nb_id = '".$idMotorista."'"
-		);
-		
-		$toleranciaArray = mysqli_fetch_array($sqlTolerancia, MYSQLI_BOTH);
+				WHERE en.enti_nb_id = '{$idMotorista}'"
+		));
 
-		$tolerancia = (empty($toleranciaArray["para_tx_tolerancia"]))? 0: $toleranciaArray["para_tx_tolerancia"];
+		$tolerancia = (empty($tolerancia["para_tx_tolerancia"]))? 0: $tolerancia["para_tx_tolerancia"];
 		$tolerancia = intval($tolerancia);
 
 		$saldoDiario = explode(":", $saldoDiario);
@@ -1698,7 +1736,7 @@
 				"SELECT * FROM endosso 
 					JOIN entidade ON endo_tx_matricula = enti_tx_matricula
 					WHERE '".$data."' BETWEEN endo_tx_de AND endo_tx_ate
-						AND enti_nb_id = ".$idMotorista."
+						AND enti_nb_id = {$idMotorista}
 						AND endo_tx_status = 'ativo';"
 			),
 			MYSQLI_ASSOC
@@ -1706,7 +1744,7 @@
 
 		$title = "Ajuste de Ponto";
 		$func = "ajustarPonto({$idMotorista},\"{$data}\"";
-		$content = "<i style='color:".$cor.";' class='fa fa-circle'>";
+		$content = "<i style='color:{$cor};' class='fa fa-circle'>";
 		if(count($endossado) > 0){
 			$title .= " (endossado)";
 			$func .= ", true";
@@ -1718,6 +1756,6 @@
 		}
 		$content .= "</i>";
 		
-		$retorno = "<a title='".$title."' onclick='".$func."'>".$content."</a>";
+		$retorno = "<a title='".$title."' onclick='{$func}'>{$content}</a>";
 		return $retorno;
 	}

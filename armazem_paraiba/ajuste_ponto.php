@@ -18,7 +18,7 @@
 						AND enti_nb_id = {$_POST["idMotorista"]}
 					LIMIT 1;"
 			))["enti_tx_matricula"];
-			$newPonto = conferirErroPonto($matricula, new DateTime("{$_POST["data"]} {$_POST["hora"]}"), $_POST["idMacro"], $_POST["motivo"]);
+			$newPonto = conferirErroPonto($matricula, new DateTime("{$_POST["data"]} {$_POST["hora"]}"), $_POST["idMacro"], $_POST["motivo"], $_POST["justificativa"]);
 		}catch(Exception $e){
 			set_status($e->getMessage());
 			index();
@@ -103,65 +103,6 @@
 					</select>
 				</div>"
 		;
-	}
-
-	function pegarSqlDia(string $matricula, DateTime $data, array $cols): string{
-
-		$condicoesPontoBasicas = "ponto.pont_tx_status = 'ativo' AND ponto.pont_tx_matricula = '{$matricula}'";
-
-		$sqlDataInicio = $data->format("Y-m-d 00:00:00");
-		$sqlDataFim = $data->format("Y-m-d 23:59:59");
-
-		$ultJornadaOntem = mysqli_fetch_assoc(query(
-			"SELECT pont_tx_data, (pont_tx_tipo = 1) as jornadaAbertaAntes FROM ponto 
-				WHERE {$condicoesPontoBasicas}
-					AND pont_tx_tipo IN (1,2)
-					AND pont_tx_data < STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')
-				ORDER BY pont_tx_data DESC
-				LIMIT 1;"
-		));
-
-		$primJornadaAmanha = mysqli_fetch_assoc(query(
-			"SELECT pont_tx_data, (pont_tx_tipo = 2) as jornadaFechadaApos FROM ponto 
-				WHERE {$condicoesPontoBasicas}
-					AND pont_tx_tipo IN (1,2)
-					AND pont_tx_data > STR_TO_DATE('{$sqlDataFim}', '%Y-%m-%d %H:%i:%s')
-				ORDER BY pont_tx_data ASC
-				LIMIT 1;"
-		));
-
-
-		if(!empty($ultJornadaOntem) && intval($ultJornadaOntem["jornadaAbertaAntes"])){
-			$sqlDataInicio = $ultJornadaOntem["pont_tx_data"];
-		}
-
-		if(!empty($primJornadaAmanha) && intval($primJornadaAmanha["jornadaFechadaApos"])){
-			$sqlDataFim = $primJornadaAmanha["pont_tx_data"];
-		}
-
-		$condicoesPontoBasicas = 
-			"ponto.pont_tx_status = '{$_POST["status"]}' 
-			AND ponto.pont_tx_matricula = '{$matricula}' 
-			AND entidade.enti_tx_status = 'ativo' 
-			AND user.user_tx_status = 'ativo' 
-			AND macroponto.macr_tx_status = 'ativo'"
-		;
-		
-		$sql = 
-			"SELECT DISTINCT pont_nb_id, ".implode(",", $cols)." FROM ponto
-				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
-				JOIN entidade ON ponto.pont_tx_matricula = entidade.enti_tx_matricula
-				JOIN user ON entidade.enti_nb_id = user.user_nb_entidade
-				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
-				WHERE {$condicoesPontoBasicas}
-					AND macr_tx_fonte = 'positron'
-					AND ponto.pont_tx_data >= STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')
-					AND ponto.pont_tx_data <= STR_TO_DATE('{$sqlDataFim}', '%Y-%m-%d %H:%i:%s')
-				ORDER BY pont_tx_data ASC"
-		;
-
-
-		return $sql;
 	}
 
 	// Função para carregar os CNPJs formatados da tabela "empresa"
@@ -443,6 +384,8 @@
 				"IF(pont_tx_status = 'ativo', {$iconeExcluir}, NULL) as iconeExcluir"
 			]
 		);
+
+		dd($sql);
 
 
 		$gridFields = [

@@ -10,6 +10,64 @@
 
 include "funcoes_ponto.php";
 
+function pegarSqlDiaPonto(string $matricula, DateTime $dataInicio, DateTime $dataFim, array $cols): string{
+
+    $condicoesPontoBasicas = " ponto.pont_tx_matricula = '{$matricula}'";
+
+    $sqlDataInicio = $dataInicio->format("Y-m-d 00:00:00");
+    $sqlDataFim = $dataFim->format("Y-m-d 23:59:59");
+
+    $ultJornadaOntem = mysqli_fetch_assoc(query(
+        "SELECT pont_tx_data, (pont_tx_tipo = 1) as jornadaAbertaAntes FROM ponto 
+            WHERE {$condicoesPontoBasicas}
+                AND pont_tx_tipo IN (1,2)
+                AND pont_tx_data < STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')
+            ORDER BY pont_tx_data DESC
+            LIMIT 1;"
+    ));
+
+    $primJornadaAmanha = mysqli_fetch_assoc(query(
+        "SELECT pont_tx_data, (pont_tx_tipo = 2) as jornadaFechadaApos FROM ponto 
+            WHERE {$condicoesPontoBasicas}
+                AND pont_tx_tipo IN (1,2)
+                AND pont_tx_data > STR_TO_DATE('{$sqlDataFim}', '%Y-%m-%d %H:%i:%s')
+            ORDER BY pont_tx_data ASC
+            LIMIT 1;"
+    ));
+
+
+    if(!empty($ultJornadaOntem) && intval($ultJornadaOntem["jornadaAbertaAntes"])){
+        $sqlDataInicio = $ultJornadaOntem["pont_tx_data"];
+    }
+
+    if(!empty($primJornadaAmanha) && intval($primJornadaAmanha["jornadaFechadaApos"])){
+        $sqlDataFim = $primJornadaAmanha["pont_tx_data"];
+    }
+
+    $condicoesPontoBasicas = 
+        "ponto.pont_tx_matricula = '{$matricula}' 
+        AND entidade.enti_tx_status = 'ativo' 
+        AND user.user_tx_status = 'ativo' 
+        AND macroponto.macr_tx_status = 'ativo'"
+    ;
+    
+    $sql = 
+        "SELECT DISTINCT pont_nb_id, ".implode(",", $cols)." FROM ponto
+            JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
+            JOIN entidade ON ponto.pont_tx_matricula = entidade.enti_tx_matricula
+            JOIN user ON entidade.enti_nb_id = user.user_nb_entidade
+            LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
+            WHERE {$condicoesPontoBasicas}
+                AND macr_tx_fonte = 'positron'
+                AND ponto.pont_tx_data >= STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')
+                AND ponto.pont_tx_data <= STR_TO_DATE('{$sqlDataFim}', '%Y-%m-%d %H:%i:%s')
+            ORDER BY pont_tx_data ASC"
+    ;
+
+
+    return $sql;
+}
+
 function buscarEspelho(){
 
     if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
@@ -155,15 +213,13 @@ function index() {
 
         // Converte as datas para objetos DateTime
         [$startDate, $endDate] = [new DateTime($_POST["busca_periodo"][0]), new DateTime($_POST["busca_periodo"][1])];
-        $diaInicio = $startDate->format("Y-m-d");
-        $diaFim = $endDate->format("Y-m-d");
         $diaInicioFotmat = $startDate->format("d/m/Y");
         $diaFimFotmat = $endDate->format("d/m/Y");
 
         $rows = [];
 
         $motorista = mysqli_fetch_assoc(query(
-            "SELECT enti_tx_matricula, enti_tx_matricula, enti_tx_nome, enti_tx_cpf, enti_tx_ocupacao FROM entidade
+            "SELECT enti_tx_matricula, enti_tx_nome, enti_tx_cpf, enti_tx_ocupacao FROM entidade
              LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
              LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
              LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
@@ -178,26 +234,28 @@ function index() {
              AND empr_nb_id = '{$_POST["busca_empresa"]}'
              LIMIT 1;"
         ));
+        
+        $sql = pegarSqlDiaPonto(
+			$motorista["enti_tx_matricula"], $startDate, $endDate,
+			[
+				"pont_nb_id", 
+				"pont_tx_data", 
+				"macr_tx_nome", 
+				"moti_tx_nome", 
+				"moti_tx_legenda", 
+				"pont_tx_justificativa", 
+				"(SELECT user_tx_nome FROM user WHERE user.user_nb_id = pont_nb_userCadastro LIMIT 1) as userCadastro", 
+				"pont_nb_userCadastro",
+				"pont_tx_dataCadastro", 
+				"pont_tx_placa", 
+				"pont_tx_latitude", 
+				"pont_tx_longitude",
+				"pont_tx_dataAtualiza",
+                "pont_tx_status"
+			]
+		);
 
-        $pontos = mysqli_fetch_all(
-            query(
-            "SELECT DISTINCT ponto.pont_nb_id, ponto.pont_tx_descricao, ponto.pont_tx_data,
-            ponto.pont_tx_latitude, ponto.pont_tx_longitude, ponto.pont_tx_justificativa,
-            ponto.pont_tx_placa, ponto.pont_tx_dataAtualiza, ponto.pont_tx_dataCadastro,
-            ponto.pont_tx_status, motivo.moti_tx_nome, macroponto.macr_tx_nome, motivo.moti_tx_legenda,user.user_tx_nome"
-                ." FROM ponto"
-                ." LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id"
-                ." LEFT JOIN user ON ponto.pont_nb_userCadastro = user.user_nb_id"
-                ." INNER JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno"
-                ." AND macroponto.macr_tx_fonte = 'positron'"
-                ." WHERE pont_tx_matricula = '$motorista[enti_tx_matricula]'"
-                ." AND pont_tx_justificativa IS NOT NULL"
-                ." AND pont_tx_data BETWEEN STR_TO_DATE('$diaInicio 00:00:00', '%Y-%m-%d %H:%i:%s')"
-                ." AND STR_TO_DATE('$diaFim 23:59:59', '%Y-%m-%d %H:%i:%s')"
-                ." ORDER BY ponto.pont_tx_data ASC;"
-            ),
-            MYSQLI_ASSOC
-        );
+        $pontos = mysqli_fetch_all(query($sql),MYSQLI_ASSOC);
 
         $logoEmpresa = mysqli_fetch_assoc(query(
             "SELECT empr_tx_logo FROM empresa
@@ -336,11 +394,13 @@ function carregarJS($opt): string {
     $linha .= "+'<td>'+item.pont_nb_id+'</td>'
                 +'<td>'+formatarData(item.pont_tx_data)+'</td>'
                 +'<td>'+(item.pont_tx_placa === null ? '': item.pont_tx_placa)+'</td>'
-                +'<td>'+item.macr_tx_nome+'</td>'
+                +'<td>'+(item.macr_tx_nome === 'Inicio de Jornada' || item.macr_tx_nome === 'Fim de Jornada' 
+                ? '<strong>' + item.macr_tx_nome + '</strong>' 
+                : item.macr_tx_nome) +'</td>'
                 +'<td>'+(item.moti_tx_nome === null ? '' : item.moti_tx_nome)+'</td>'
                 +'<td>'+(item.moti_tx_legenda === null ? '' : item.moti_tx_legenda)+'</td>'
-                +'<td>'+item.pont_tx_justificativa+'</td>'
-                +'<td>'+item.user_tx_nome+'</td>'
+                +'<td>'+(item.pont_tx_justificativa === null ? '' : item.pont_tx_justificativa)+'</td>'
+                +'<td>'+item.userCadastro+'</td>'
                 +'<td>'+formatarData(item.pont_tx_dataCadastro)+'</td>'
                 +'<td>'+(item.pont_tx_dataAtualiza === null ? '' : formatarData(item.pont_tx_dataAtualiza) )+'</td>'
                +'<td><center>'

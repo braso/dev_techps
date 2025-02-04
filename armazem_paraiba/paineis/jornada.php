@@ -156,10 +156,10 @@
 
                                         var diferencaDias = item.diaDiferenca;
 
-                                        const refeicaoMinutos = converterParaMinutos(item.refeicao);
-                                        const esperaMinutos = converterParaMinutos(item.espera);
-                                        const descansoMinutos = converterParaMinutos(item.descanso);
-                                        const repousoMinutos = converterParaMinutos(item.repouso);
+                                        const refeicaoMinutos = converterParaMinutos(item.refeicao === '*' ? '00:00' : item.refeicao);
+                                        const esperaMinutos = converterParaMinutos(item.espera === '*' ? '00:00' : item.espera);
+                                        const descansoMinutos = converterParaMinutos(item.descanso === '*' ? '00:00' : item.descanso);
+                                        const repousoMinutos = converterParaMinutos(item.repouso === '*' ? '00:00' : item.repouso);
                                         const jornadaMinutos = converterParaMinutos(jornada);
 
                                         let jornadaSemIntervalo = jornadaMinutos - (refeicaoMinutos + esperaMinutos + descansoMinutos + repousoMinutos);
@@ -298,7 +298,8 @@
              criar_relatorio_jornada();
             //  $tempoFim = microtime(true);
             //  $tempoExecucao = $tempoFim - $tempoInicio;
-            //  echo "Tempo de execução: ".number_format($tempoExecucao, 4)." segundos";
+            //  $tempoExecucaoMinutos = $tempoExecucao / 60;
+            //  echo "Tempo de execução: " . number_format($tempoExecucaoMinutos, 4) . " minutos";
 
             $empresa = mysqli_fetch_assoc(query(
                 "SELECT * FROM empresa

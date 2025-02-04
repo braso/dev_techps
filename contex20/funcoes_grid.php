@@ -215,3 +215,90 @@
 			</div>"
 		;
 	}
+
+	function gridDinamico(string $nomeTabela, array $campos, array $camposBusca, string $queryBase, string $jsFunctions = "", int $width = 12, $tabIndex = -1){
+		$result = 
+			"<link href='{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/css/grid_dinamico.css' rel='stylesheet' type='text/css' />
+			<div class='col-md-{$width}'>
+				<div class='portlet light'>
+					<div class='' style='margin-top: 8px;overflow-x: auto; border-radius: 10px; max-height: 80vh;'>
+						<div class='table-loading-icon' style='place-items: center;position: absolute;width: 89vw;z-index: 2;top: 50px;'>
+						</div>
+						<div class='table-loading-icon' style='place-items: center'></div>
+						<table name='{$nomeTabela}' id='result' class='table table-bordered grid-dinamico' id='sample_2'>
+							<thead class='table-head'>
+							</thead>
+							<tbody>
+							</tbody>
+						</table>
+					</div>
+					<div class='grid-footer'>
+						<div class='col-sm-1 margin-bottom-5' style='width: min-content;'>
+							<label>Qtd. Registros</label>
+							<input name='limit' id='limit' value='10' autocomplete='off' type='number' class='form-control input-sm' min='1' max='99' ".($tabIndex>0? "tabindex='".$tabIndex."'": "").">
+						</div>
+						<div class='tab-pagination'>
+						</div>
+					</div>
+				</div>
+			</div>"
+		;
+		
+		if(!empty($campos["actions"])){
+			$campos["actions"] = json_encode($campos["actions"]);
+		}
+
+		$result .=
+			"<script>urlTableInfo = '{$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}/getTableInfo.php';</script>
+			<script>
+				const searchFields = ".json_encode($camposBusca).";
+				const fields = ".json_encode($campos).";
+				const queryBase = '{$queryBase} WHERE 1';
+				{$jsFunctions}
+			</script>
+			<script src='{$_ENV["APP_PATH"]}/contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
+			<script src='{$_ENV["APP_PATH"]}/contex20/js/grid_dinamico.js'></script>"
+		;
+
+		return $result;
+	}
+
+	function criarIconesGrid(array $classNames, array $actionFiles, array $actionFuncs){
+		if(count($classNames) != count($actionFiles) || count($classNames) != count($actionFuncs)){
+			throw new Exception("Os argumentos não possuem o mesmo tamanho.");
+		}
+		$result = [
+			"tags" => [],
+			"functions" => []
+		];
+
+		for($f = 0; $f < count($classNames); $f++){
+			$result["tags"][] = "<spam class='{$classNames[$f]}'></spam>";
+		}
+
+		for($f = 0; $f < count($actionFuncs); $f++){
+			$result["functions"][] = 
+				"$('[class=\"{$classNames[$f]}\"]').click(function(event){
+					form = document.createElement('form');
+					form.setAttribute('method', 'post');
+					form.setAttribute('action', '{$actionFiles[$f]}');
+					
+					console.log($(event.target).parent().parent().children()[0].innerHTML);
+					idInput = document.createElement('input');
+					idInput.setAttribute('name', 'id');
+					idInput.setAttribute('value', $(event.target).parent().parent().children()[0].innerHTML);
+					form.appendChild(idInput);
+					
+					actionInput = document.createElement('input');
+					actionInput.setAttribute('name', 'acao');
+					actionInput.setAttribute('value', '{$actionFuncs[$f]}');
+					form.appendChild(actionInput);
+					
+					document.getElementsByTagName('body')[0].appendChild(form);
+					form.submit();
+				});"
+			;
+		}
+
+		return $result;
+	}
