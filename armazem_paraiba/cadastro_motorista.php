@@ -867,8 +867,8 @@
 
 		$camposBusca = [ 
 			campo("Código",						"busca_codigo",			(!empty($_POST["busca_codigo"])? $_POST["busca_codigo"]: ""), 1,"","maxlength='6'"),
-			campo("Nome",						"busca_nome_like",		(!empty($_POST["busca_nome"])? $_POST["busca_nome"]: ""), 2,"","maxlength='65'"),
-			campo("Matrícula",					"busca_matricula_like",	(!empty($_POST["busca_matricula"])? $_POST["busca_matricula"]: ""), 1,"","maxlength='6'"),
+			campo("Nome",						"busca_nome_like",		(!empty($_POST["busca_nome_like"])? $_POST["busca_nome_like"]: ""), 2,"","maxlength='65'"),
+			campo("Matrícula",					"busca_matricula_like",	(!empty($_POST["busca_matricula_like"])? $_POST["busca_matricula_like"]: ""), 1,"","maxlength='6'"),
 			campo("CPF",						"busca_cpf",			(!empty($_POST["busca_cpf"])? $_POST["busca_cpf"]: ""), 2, "MASCARA_CPF"),
 			combo_bd("!Empresa",				"busca_empresa",		(isset($_POST["busca_empresa"])? $_POST["busca_empresa"]: ""), 2, "empresa", "", $extraEmpresa),
 			combo("Ocupação",					"busca_ocupacao",		(isset($_POST["busca_ocupacao"])? $_POST["busca_ocupacao"]: ""), 2, ["", "Motorista", "Ajudante", "Funcionário"]),

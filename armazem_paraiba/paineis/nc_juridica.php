@@ -32,7 +32,7 @@
 					porcentagemMedia = 100 - arrayPerformanceMedia[row.matricula];
 
 					let corDeFundo = '';
-					if(porcentagemBaixa >= 75 && porcentagemBaixa < 100){
+					if(porcentagemBaixa >= 75 && porcentagemBaixa <= 100){
 						corDeFundo = 'background-color: lightgreen;';
 					} else if(porcentagemBaixa <= 75 && porcentagemBaixa >= 50){
 						corDeFundo = 'background-color: var(--var-yellow2);';
@@ -43,7 +43,7 @@
 					}
 
 					let corDeFundo2 = '';
-					if(porcentagemMedia >= 75 && porcentagemMedia < 100){
+					if(porcentagemMedia >= 75 && porcentagemMedia <= 100){
 						corDeFundo2 = 'background-color: lightgreen;';
 					} else if(porcentagemMedia <= 75 && porcentagemMedia >= 50){
 						corDeFundo2 = 'background-color: var(--var-yellow2);';
