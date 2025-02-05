@@ -727,6 +727,7 @@
 
 		$motoristas = mysqli_fetch_all(query(
 			"SELECT * FROM entidade
+			LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
 			WHERE enti_tx_status = 'ativo'
 				AND enti_nb_empresa = {$_POST["empresa"]}
 				AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-t")}'
