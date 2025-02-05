@@ -642,7 +642,7 @@
 				$campos = !empty(array_filter([$jornada, $descanso, $espera, $refeicao, $repouso]));
 				if ($campos) {
 					$parametro = mysqli_fetch_all(query(
-					"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_maxHESemanalDiario"
+					"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_maxHESemanalDiario, para_tx_adi5322"
 						. " FROM `parametro`"
 						. " WHERE para_nb_id = " . $motorista["enti_nb_parametro"]
 					), MYSQLI_ASSOC);
@@ -660,6 +660,7 @@
 						"data" => $dia["data"],
 						"jornadaDia" => $jornadaDia,
 						"limiteExtras" => $parametro[0]["para_tx_maxHESemanalDiario"] == 0 ? '00:00' : $parametro[0]["para_tx_maxHESemanalDiario"],
+						"adi5322" => $parametro[0]["para_tx_adi5322"],
 						"inicioJornada" => $horaLimpa,
 						"diaDiferenca" => $diaDiferenca,
 						"matricula" => $motorista["enti_tx_matricula"],
@@ -689,7 +690,7 @@
 			}
 			$pasta->close();
 		}
-		sleep(1);
+		// sleep(1);
 		return;
 	}
 

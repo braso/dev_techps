@@ -162,8 +162,14 @@
                                         const repousoMinutos = converterParaMinutos(item.repouso === '*' ? '00:00' : item.repouso);
                                         const jornadaMinutos = converterParaMinutos(jornada);
 
-                                        let jornadaSemIntervalo = jornadaMinutos - (refeicaoMinutos + esperaMinutos + descansoMinutos + repousoMinutos);
-                                        jornadaEfetiva = converterMinutosParaHHHMM(jornadaSemIntervalo);
+                                        if(item.adi5322 === 'sim'){
+                                            let jornadaSemIntervalo = jornadaMinutos - (refeicaoMinutos + descansoMinutos + repousoMinutos);
+                                                jornadaEfetiva = converterMinutosParaHHHMM(jornadaSemIntervalo);
+                                        } else {
+                                            let jornadaSemIntervalo = jornadaMinutos - (refeicaoMinutos + esperaMinutos + descansoMinutos + repousoMinutos);
+                                            jornadaEfetiva = converterMinutosParaHHHMM(jornadaSemIntervalo);
+                                        }
+
 
                                         let jornadaEfetivaCor = calcularJornadaElimite(jornadaEfetiva , item.jornadaDia, item.limiteExtras)
 
