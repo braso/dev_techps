@@ -32,26 +32,38 @@
 					porcentagemMedia = 100 - arrayPerformanceMedia[row.matricula];
 
 					let corDeFundo = '';
+					let classeImpressao = '';
 					if(porcentagemBaixa >= 75 && porcentagemBaixa <= 100){
 						corDeFundo = 'background-color: lightgreen;';
+						classeImpressao = 'impressao-verde';
 					} else if(porcentagemBaixa <= 75 && porcentagemBaixa >= 50){
 						corDeFundo = 'background-color: var(--var-yellow2);';
+						classeImpressao = 'impressao-amarelo';
 					} else if(porcentagemBaixa <= 50 && porcentagemBaixa >= 25){
 						corDeFundo = 'background-color: var(--var-lightorange);';
+						classeImpressao = 'impressao-laranja';
 					}else{
 						corDeFundo = 'background-color: var(--var-lightred);';
+						classeImpressao = 'impressao-vermelho';
 					}
 
 					let corDeFundo2 = '';
-					if(porcentagemMedia >= 75 && porcentagemMedia <= 100){
+					let classeImpressao2 = '';
+
+					if (porcentagemMedia >= 75 && porcentagemMedia <= 100) {
 						corDeFundo2 = 'background-color: lightgreen;';
-					} else if(porcentagemMedia <= 75 && porcentagemMedia >= 50){
+						classeImpressao2 = 'impressao-verde';
+					} else if (porcentagemMedia < 75 && porcentagemMedia >= 50) {
 						corDeFundo2 = 'background-color: var(--var-yellow2);';
-					} else if(porcentagemMedia <= 50 && porcentagemMedia >= 25){
+						classeImpressao2 = 'impressao-amarelo';
+					} else if (porcentagemMedia < 50 && porcentagemMedia >= 25) {
 						corDeFundo2 = 'background-color: var(--var-lightorange);';
-					}else{
+						classeImpressao2 = 'impressao-laranja';
+					} else {
 						corDeFundo2 = 'background-color: var(--var-lightred);';
+						classeImpressao2 = 'impressao-vermelho';
 					}
+
 								
 			";
 
@@ -70,8 +82,8 @@
 						+'<td class='+class3+'>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
 						+'<td class='+class3+'>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
 						+'<td class='+class4+'>'+(totalNaEndossado)+'</td>'
-						+'<td style=\"'+corDeFundo2+'\">'+(100 - arrayPerformanceMedia[row.matricula]).toFixed(2)+' %</td>'
-						+'<td style=\"'+corDeFundo+'\">'+(100 - arrayPerformanceBaixa[row.matricula]).toFixed(2)+' %</td>'
+						+'<td class='+classeImpressao2+' style=\"'+corDeFundo2+'\">'+(100 - arrayPerformanceMedia[row.matricula]).toFixed(2)+' %</td>'
+						+'<td class='+classeImpressao+' style=\"'+corDeFundo+'\">'+(100 - arrayPerformanceBaixa[row.matricula]).toFixed(2)+' %</td>'
 					+'</tr>';";
 		} elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
 			$linha = "linha = '<tr>'";
@@ -780,7 +792,7 @@
 					<table id='tabela-motorista' style='width: 275px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
 						. "<thead>"
 							. "<tr>"
-								. "<td> Quandidade por ocupação </td>"
+								. "<td> Quantidade por ocupação </td>"
 							. "</th>"
 						. "</thead>"
 							. "<tbody>"
