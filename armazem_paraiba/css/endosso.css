@@ -1,17 +1,16 @@
 @media print {
     body {
         margin: 1cm;
-        margin-right: 0cm; /* Ajuste o valor conforme necessário para afastar do lado direito */
-        transform: scale(1.7);
-        transform-origin: top left;
-        padding-right: 660px !important;
-        /* padding: 300px !important; */
+        transform-origin: left top;
+        /* overflow: hidden;
+        position: absolute; */
+        transform: scale(0.96);
     }
-
+    
     @page {
-        size: A4 landscape;
+        size: A4 landscape !important;
         margin: 1cm;
-    }
+      }
 
     .table-resumo {
         width: 100% !important;
