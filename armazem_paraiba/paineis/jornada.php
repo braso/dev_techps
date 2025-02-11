@@ -13,7 +13,7 @@
     require_once __DIR__."/funcoes_paineis.php";
     // criar_relatorio_jornada();
  
-     function carregarJS(array $arquivos) {
+    function carregarJS(array $arquivos) {
 
         $linha = "linha = '<tr>'";
         if (!empty($_POST["empresa"])) {

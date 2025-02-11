@@ -6,10 +6,6 @@
 	require_once __DIR__."/funcoes_paineis.php";
 	require __DIR__."/../funcoes_ponto.php";
 
-// $_POST["busca_endossado"] = "naoEndossado";
-// $_POST["busca_dataMes"] = "2024-05";
-// relatorio_nao_conformidade_juridica();
-
 	header("Expires: 01 Jan 2001 00:00:00 GMT");
 	header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 	header('Cache-Control: post-check=0, pre-check=0', FALSE);

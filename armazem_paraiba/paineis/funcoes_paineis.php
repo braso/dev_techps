@@ -1311,3 +1311,71 @@
 
 		return;
 	}
+
+	function logisticas() {
+		$_POST['empresa'] = 1;
+		$_POST['busca_dataMes'] = '2025-01';
+		$path = "./arquivos/nc_logistica" . "/" . $_POST["empresa"];
+		$motoristasLivres = [];
+		$totalMotoristasLivres = 0;
+		if (!is_dir($path)) {
+			mkdir($path, 0755, true);
+		}
+		
+		$periodoInicio = new DateTime($_POST["busca_dataMes"]."-01");
+		$hoje = new DateTime();
+
+		if ($periodoInicio->format('Y-m') === $hoje->format('Y-m')) {
+			$hoje->modify('-1 day');
+			// Se for o mês atual, a data limite é o dia de hoje
+			$periodoFim = $hoje;
+		} else {
+			$periodoFim = new DateTime($periodoInicio->format("Y-m-t"));
+		}
+
+		if(!empty($_POST["busca_ocupacao"])){
+			$filtroOcupacao = "AND enti_tx_ocupacao IN ('{$_POST["busca_ocupacao"]}')";
+		}
+
+		$motoristas = mysqli_fetch_all(query(
+			"SELECT * FROM entidade
+			LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
+			WHERE enti_tx_status = 'ativo'
+				AND enti_nb_empresa = {$_POST["empresa"]}
+				AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-01")}'
+				{$filtroOcupacao}
+			ORDER BY enti_tx_nome ASC;"
+		), MYSQLI_ASSOC);
+
+		foreach($motoristas as $motorista) {
+			$diaPonto = [];
+			for ($date = clone $periodoFim; ; $date->modify('-1 day')) { // Loop infinito
+				$diaPonto = diaDetalhePonto($motorista, $date->format('Y-m-d'));
+			
+				if (!empty($diaPonto) && !empty($diaPonto['inicioJornada']) && !empty($diaPonto['fimJornada'])) {
+					break;
+				}
+			}
+
+			if(strpos($diaPonto["fimJornada"], "fa fa-warning") == false && strpos($diaPonto["inicioJornada"], "fa fa-warning") == false){
+				$totalMotoristasLivres += 1;
+				$dataFormatada = DateTime::createFromFormat('d/m/Y H:i', $diaPonto['data'] . ' ' . $diaPonto['fimJornada']);
+				$dataMais11Horas = clone $dataFormatada;
+				$dataMais11Horas->modify('+11 hours');
+
+				$motoristasLivres [] = [
+					'matricula' => $motorista['enti_tx_matricula'],
+					'Nome' => $motorista['enti_tx_nome'],
+					'ocupacao' => $motorista['enti_tx_ocupacao'],
+					'Apos11' => $dataMais11Horas->format('d/m/Y H:i'),
+				];
+			}
+		}
+
+		$motoristasLivres ['total'] = [
+			'totalMotoristasJornada' => count($motoristas) - $totalMotoristasLivres,
+			'totalMotoristasLivres' => $totalMotoristasLivres
+		];
+
+		file_put_contents($path."/nc_logistica.json", json_encode($motoristasLivres, JSON_UNESCAPED_UNICODE));
+	}
