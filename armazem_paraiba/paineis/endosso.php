@@ -1,5 +1,5 @@
 <?php
-    //* Modo debug
+    /* Modo debug
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
     //*/
@@ -77,7 +77,7 @@
                     document.myForm.acao.value = 'enviarForm()';
                     document.myForm.campoAcao.value = 'buscar';
                     document.myForm.empresa.value = empresa;
-                    document.myForm.busca_ocupacao.value = document.getElementById('busca_ocupacao').value;
+                    document.myForm.busca_ocupacao.value = document.querySelector('[name=\"busca_ocupacao\"]').value;
                     document.myForm.busca_data.value = document.getElementById('busca_data').value;
                     document.myForm.submit();
                 }

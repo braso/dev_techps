@@ -78,10 +78,27 @@
 			if (!is_dir($path)) {
 				mkdir($path, 0755, true);
 			}
+
+			if (is_dir($path)){
+				$pasta = dir($path);
+				while (($arquivo = $pasta->read()) !== false) {
+					// Ignora os diretórios especiais '.' e '..'
+					if ($arquivo != '.' && $arquivo != '..') {
+						$arquivoPath = $path.'/'.$arquivo;  // Caminho completo do 
+						unlink($arquivoPath);  // Apaga o arquivo
+					}
+				}
+				$pasta->close();
+			}
+
 			if(file_exists($path."/empresa_".$empresa["empr_nb_id"].".json")){
 				if(date("Y-m-d", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")) == date("Y-m-d")){
 					// continue;
 				}
+			}
+
+			if(!empty($_POST["busca_ocupacao"])){
+				$filtroOcupacao = "AND enti_tx_ocupacao IN ('{$_POST["busca_ocupacao"]}')";
 			}
 
 			$motoristas = mysqli_fetch_all(query(
@@ -92,6 +109,7 @@
 					WHERE enti_tx_status = 'ativo'
 						AND enti_nb_empresa = '{$empresa["empr_nb_id"]}'
 						".(!empty($_POST["motorista"])? "AND enti_nb_id = '{$_POST["motorista"]}'": "")."
+						{$filtroOcupacao}
 					ORDER BY enti_tx_nome ASC;"
 			), MYSQLI_ASSOC);
 
