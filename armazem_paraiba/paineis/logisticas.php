@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
@@ -18,7 +18,7 @@
             $linha .= " +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.Nome+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
-                        +'<td class =>'+item.Apos11+'</td>'
+                        +'<td style=\'text-align: center;\' class =>'+item.Apos11+'</td>'
                     +'</tr>';";
         }
 
@@ -36,6 +36,8 @@
 
                     $(document).ready(function(){
                         var tabela = $('#tabela-empresas tbody');
+                        var campo = $('.total-jornada');
+                        var campo2 = $('.total-sem-jornada');
 
                         function carregarDados(urlArquivo){
                             $.ajax({
@@ -49,6 +51,9 @@
                                         if(!isNaN(index) && typeof item === 'object'){
                                             ". $linha."
                                             tabela.append(linha);
+                                        }else{
+                                            campo.html('<b>- Funcionários em jornada: </b>'+item.totalMotoristasJornada);
+                                            campo2.html('<b>Funcionários disponíveis após 11 horas de interstício para iniciar uma jornada: </b>'+item.totalMotoristasLivres);
                                         }
                                     });
                                 },
@@ -167,7 +172,7 @@
                 <th class='matricula'>Matrícula</th>
                 <th class='nome'>Nome</th>
                 <th class='ocupacao'>Ocupação</th>
-                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornada'>Quando vai pode inicia um nova jornada</th>";
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornada'> Quando poderá iniciar uma nova jornada</th>";
                 $rowTitulos .= "</tr>";
                 include_once "painel_html2.php";
             }
