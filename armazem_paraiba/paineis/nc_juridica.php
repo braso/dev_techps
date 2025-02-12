@@ -109,6 +109,7 @@
 				<input type='hidden' name='busca_dataMes'>
 				<input type='hidden' name='busca_dataInicio'>
 				<input type='hidden' name='busca_dataFim'>
+				<input type='hidden' name='busca_ocupacao'>
 				<input type='hidden' name='busca_data'>
 			</form>
 			<script>
@@ -117,6 +118,7 @@
 					document.myForm.campoAcao.value = 'buscar';
 					document.myForm.empresa.value = empresa;
 					document.myForm.busca_dataMes.value = document.getElementById('busca_dataMes').value;
+					document.myForm.busca_ocupacao.value = document.querySelector('[name=\"busca_ocupacao\"]').value;
 					document.myForm.submit();
 				}
 
@@ -124,6 +126,7 @@
 					console.info(document.getElementById('busca_data').value);
 					document.myForm.empresa.value = document.getElementById('empresa').value;
 					document.myForm.busca_data.value = document.getElementById('busca_data').value;
+					document.myForm.busca_ocupacao.value = document.querySelector('[name=\"busca_ocupacao\"]').value;
 					document.myForm.acao.value = 'atualizar';
 					document.myForm.submit();
 				}
@@ -380,6 +383,8 @@
 			combo_net("Empresa", "empresa", $_POST["empresa"]?? "", 4, "empresa", ""),
 			$campoAcao,
 			campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
+			combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
+            ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
 			combo("Tipo",	"busca_endossado", (!empty($_POST["busca_endossado"]) ? $_POST["busca_endossado"] : ""), 2, ["naoEndossado" => "Atualizado","endossado" => "Pós-fechamento", "semAjustes"=>"Sem ajuste"])
 		];
 
