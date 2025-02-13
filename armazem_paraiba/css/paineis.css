@@ -595,6 +595,10 @@ th.sort-desc::after {
   div:nth-child(11) > div.portlet.light {
     display: none !important;
   }
+
+  div:nth-child(6) > div.portlet.light {
+    display: none !important;
+  }
 }
 
 .th-align {
