@@ -139,7 +139,7 @@
         if (!empty($_POST["empresa"])) {
             $path = "./arquivos/nc_logistica/".$_POST["empresa"];
             $encontrado = false;
-            // logisticas();
+            logisticas();
 
             if (is_dir($path)) {
                 $pasta = dir($path);
