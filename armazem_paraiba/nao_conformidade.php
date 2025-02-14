@@ -447,7 +447,7 @@
 		$params = array_merge($_POST, [
 			"acao" => "index",
 			"idMotorista" => null,
-			"data" => null,
+			"data_like" => null,
 			"HTTP_REFERER" => (!empty($_POST["HTTP_REFERER"])? $_POST["HTTP_REFERER"]: $_SERVER["REQUEST_URI"])
 		]);
 		echo criarHiddenForm(

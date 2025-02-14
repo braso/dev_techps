@@ -36,6 +36,18 @@ let definirFuncoesInternas = function(){
     //}
 }
 
+function esconderInativar(classeInativar, statusColIndex){
+    for(f = 0; f < $('[class=\"'+classeInativar+'\"]').length; f++){
+        let rowElements = $('[class=\"'+classeInativar+'\"]')[f].parentElement.parentElement.children;
+        let status = rowElements[statusColIndex].innerHTML;
+        console.log(status);
+        if(status == 'inativo'){
+            $('[class=\"'+classeInativar+'\"]')[f].parentElement.remove();
+            f--;
+        }
+    }
+}
+
 let consultarRegistros = function(){
     conditions = '';
     data = {};

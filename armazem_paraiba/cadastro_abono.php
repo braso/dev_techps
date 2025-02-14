@@ -139,9 +139,9 @@
 		
 		$voltarInfo = $_POST;
 		unset($voltarInfo["errorFields"]);
-		$voltarInfo["busca_periodo"] = !empty($voltarInfo["busca_periodo"])? json_encode($voltarInfo["busca_periodo"]): null;
-
-		$b[] = botao("Voltar", "voltar", implode(",",array_keys($voltarInfo)), implode(",",array_values($voltarInfo))); 
+		$voltarInfo["busca_periodo"] = !empty($voltarInfo["busca_periodo"])? implode(" - ", $voltarInfo["busca_periodo"]): null;
+		
+		$b[] = botao("Voltar", "voltar", implode(",", array_keys($voltarInfo)), implode(",",array_values($voltarInfo))); 
 		echo abre_form();
 
 		echo campo_hidden("HTTP_REFERER", 	$voltarInfo["HTTP_REFERER"]);
