@@ -15,9 +15,12 @@
 
         $linha = "linha = '<tr>'";
         if (!empty($_POST["empresa"])) {
-            $linha .= " +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
+            $linha .= " +'<td style=\'text-align: center;'+ css +'\'>'+item.ocupacao+'</td>'
+                        +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.Nome+'</td>'
-                        +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
+                        +'<td style=\'text-align: center;\'>'+item.ultimaJornada+'</td>'
+                        +'<td style=\'text-align: center;\'>'+item.consulta+'</td>'
+                        +'<td style=\'text-align: center;\'>'+item.repouso+'</td>'
                         +'<td style=\'text-align: center;\' class =>'+item.Apos11+'</td>'
                     +'</tr>';";
         }
@@ -47,15 +50,22 @@
                                     var row = {};
                                     $.each(data, function(index, item){
                                         console.log(item);
-                                        console.log(index);
-                                        if(!isNaN(index) && typeof item === 'object'){
-                                            ". $linha."
-                                            tabela.append(linha);
-                                        }else{
-                                            campo.html('<b>- Funcionários em jornada: </b>'+item.totalMotoristasJornada);
-                                            campo2.html('<b>Funcionários disponíveis após 11 horas de interstício para iniciar uma jornada: </b>'+item.totalMotoristasLivres);
+                                        if (Array.isArray(item)) {
+                                            // Itera sobre o array de motoristas
+                                            $.each(item, function(index, item) {
+                                                var css = '';
+                                                if(index == 'disponivel'){
+                                                    css = 'background-color:rgb(15, 164, 25);';
+                                                }
+                                                console.log(index);
+
+                                                ". $linha."
+                                                tabela.append(linha);
+                                            });
                                         }
                                     });
+                                    campo.html('<b>- Funcionários em jornada: </b>'+data.total.totalMotoristasJornada);
+                                    campo2.html('<b>Funcionários disponíveis após 11 horas de interstício para iniciar uma jornada: </b>'+data.total.totalMotoristasLivres)
                                 },
                                 error: function(){
                                     console.error('Erro ao carregar os dados.');
@@ -114,7 +124,7 @@
     }
     
     function index() {
-        cabecalho("Relatório de Jornada Aberta");
+        cabecalho("Relatório de disponibilidade");
 
         // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
@@ -123,6 +133,8 @@
             combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
             combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
             ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
+            campo_dataHora("Dispobilidade","busca_periodo",(!empty($_POST["busca_periodo"])? $_POST["busca_periodo"]:  date("Y-m-d H:i")),
+            2)
         ];
 
         $botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
@@ -165,15 +177,19 @@
             }
 
             if ($encontrado) {
-                $titulo = "Relatório de Logísticas";
-                $mostra = false;
+                $titulo = "Relatório de disponibilidade";
+                // $mostra = false;
                 $rowTitulos = "<tr id='titulos' class='titulos'>";
                 $rowTitulos .= "
+                <th class='ocupacao'>Ocupação</th>
                 <th class='matricula'>Matrícula</th>
                 <th class='nome'>Nome</th>
-                <th class='ocupacao'>Ocupação</th>
-                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornada'> Quando poderá iniciar uma nova jornada</th>";
+                <th class='jornada'>Último Fechamento de jornada</th>
+                <th class='jornada'>Última Consulta</th>
+                <th class='jornada'>Tempo de Repouso</th>
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornada'> Data disponível</th>";
                 $rowTitulos .= "</tr>";
+                $painelDisp = true;
                 include_once "painel_html2.php";
             }
 

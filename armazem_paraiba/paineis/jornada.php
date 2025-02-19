@@ -17,7 +17,7 @@
 
         $linha = "linha = '<tr>'";
         if (!empty($_POST["empresa"])) {
-            $linha .= "+'<td style=\'text-align: center;\'>'+item.data+' '+item.inicioJornada+'</td>'
+            $linha .= "+'<td style=\'text-align: center;\'>'+item.data+' '+ultimoValor+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.nome+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
@@ -115,6 +115,13 @@
                                     var row = {};
                                     $.each(data, function(index, item){
                                         console.log(item);
+                                        var ultimoValor = '';
+                                        if (item.inicioJornada.includes(' ')) {
+                                            const partes = item.inicioJornada.split(' '); 
+                                            ultimoValor = partes.pop(); 
+                                        } else {
+                                            ultimoValor = item.inicioJornada;
+                                        }
                                         
                                         function calculaDiferencaEmHoras(dataInicio, horaInicio) {
                                             // Convertendo a data de início no formato adequado (dd/mm/yyyy para yyyy-mm-dd)
@@ -152,7 +159,7 @@
                                             return resultadoFormatado;
                                         }
 
-                                        var jornada = calculaDiferencaEmHoras(item.data, item.inicioJornada);
+                                        var jornada = calculaDiferencaEmHoras(item.data, ultimoValor);
 
                                         var diferencaDias = item.diaDiferenca;
 
