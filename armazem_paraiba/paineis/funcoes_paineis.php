@@ -1493,42 +1493,51 @@
 				$dataFormatada = DateTime::createFromFormat('d/m/Y H:i', $dataString);
 
 				$dataMais11Horas = clone $dataFormatada;
-
-				$dataMais11Horas->modify('+11 hours');
+				$dataMais11Horas->modify('+11 hours'); // Adiciona as 11 horas
 
 				$dataReferenciaStr = $_POST['busca_periodo'] ?? null;
-
 				$dataReferencia = DateTime::createFromFormat('d/m/Y H:i', $dataReferenciaStr);
-
 
 				// Calcula a diferença entre as datas
 				$diferenca = $dataFormatada->diff($dataReferencia);
 
-				// Verifica se a diferença é negativa
-				$signo = ($dataFormatada > $dataReferencia ) ? '-' : '';  // Se a primeira data for maior, a diferença é negativa
+				// Total de horas e minutos considerando o valor absoluto da diferença
+				$totalHoras = ($diferenca->days * 24) + $diferenca->h;  // Total de horas
+				$totalMinutos = ($totalHoras * 60) + $diferenca->i; // Total em minutos
 
-				// Subtrai 11 horas da diferença
-				$horaSubtraida = ($diferenca->days * 24 + $diferenca->h) - 11; // Subtrai 11 horas da diferença total
-				$minutosTotais = ($horaSubtraida * 60) + $diferenca->i;
-				// Converte a diferença para horas e minutos
-				$horas = str_pad($horaSubtraida, 2, '0', STR_PAD_LEFT);
-				$minutos = str_pad($diferenca->i, 2, '0', STR_PAD_LEFT);
+				// Ajusta o total de minutos para considerar as 11 horas de subtração
+				$minutosTotais = $totalMinutos - (11 * 60);
+
+				// Se a diferença for negativa, isso significa que a dataFormatada é posterior à dataReferencia
+				if ($minutosTotais < 0) {
+					// Ajusta a lógica para garantir que a diferença seja negativa apenas se necessário
+					$horasTotais = floor($minutosTotais / 60);  // Horas totais
+					$minutosRestantes = abs($minutosTotais % 60); // Minutos restantes
+				} else {
+					// Caso contrário, faz o cálculo para a diferença positiva
+					$horasTotais = floor($minutosTotais / 60);
+					$minutosRestantes = $minutosTotais % 60;
+				}
+
 
 				$dadosMotorista = [
 					'matricula' => $motorista['enti_tx_matricula'],
 					'Nome' => $motorista['enti_tx_nome'],
 					'ocupacao' => $motorista['enti_tx_ocupacao'],
 					'ultimaJornada' => $dataFormatada->format('d/m/Y H:i'),
-					'repouso' => "$signo$horas:$minutos",
+					'repouso' => "". str_pad($horasTotais, 2, '0', STR_PAD_LEFT) . ":". str_pad($minutosRestantes, 2, '0', STR_PAD_LEFT),
 					'Apos11' => $dataMais11Horas->format('d/m/Y H:i'),
 					'consulta' => $dataReferenciaStr
 				];
 
-				if ($minutosTotais < (8 * 60)) {
+				if ($minutosTotais < (-8 * 60)) {
+					// Caso o motorista ainda precise de mais de 8 horas (falta mais que 8h)
 					$motoristasLivres['naoPermitido'][] = $dadosMotorista;
-				} elseif ($minutosTotais >= (8 * 60) && $minutosTotais < (11 * 60)) {
+				} elseif ($minutosTotais >= (-8 * 60) && $minutosTotais < (0)) {
+					// Caso o motorista tenha completado mais de 8 horas, mas ainda falta para completar 11 horas
 					$motoristasLivres['parcial'][] = $dadosMotorista;
 				} else {
+					// Caso o motorista tenha completado as 11 horas
 					$motoristasLivres['disponivel'][] = $dadosMotorista;
 				}
 
