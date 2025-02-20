@@ -12,29 +12,6 @@
 		}
 		$dataHora = DateTime::createFromFormat("Y-m-d H:i", date("Y-m-d H:i"));
 
-		// if (!empty($modificador)) {
-		// 	// Tenta criar o objeto DateTime com o formato 'DD/MM/YYYY HH:mm'
-		// 	$dataHora = DateTime::createFromFormat('d/m/Y H:i', $modificador);
-		
-		// 	// Se falhar, tenta criar com o formato 'YYYY-MM-DD HH:mm'
-		// 	if ($dataHora === false) {
-		// 		$dataHora = DateTime::createFromFormat('Y-m-d H:i', $modificador);
-		// 	}
-		
-		// 	// Se ambos os formatos falharem, exibe um erro e retorna
-		// 	if ($dataHora === false) {
-		// 		set_status("ERRO: " . $variavel . " deve estar no formato 'DD/MM/YYYY HH:mm' ou 'YYYY-MM-DD HH:mm'.");
-		// 		return;
-		// 	}
-		
-		// 	// Valida se o mês está dentro do intervalo correto (1 a 12)
-		// 	$mes = (int) $dataHora->format('m');
-		// 	if ($mes < 1 || $mes > 12) {
-		// 		set_status("ERRO: " . $variavel . " possui um mês inválido.");
-		// 		return;
-		// 	}
-		// }
-
 		$dataScript =
 			"<script type='text/javascript' src='" . $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] . "/js/moment.min.js'></script>
 		<script type='text/javascript' src='" . $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] . "/js/daterangepicker.min.js'></script>
@@ -59,20 +36,7 @@
 						monthNames: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
 						firstDay: 1
 					},
-					isInvalidDate: function(date) {
-						// Garante que 'date' é um objeto moment válido
-						if (!date.isValid()) {
-							return true; // Se não for válido, bloqueia a seleção
-						}
-
-						// Obtém timestamp da data selecionada
-						let dataSelecionada = date.valueOf();
-						let dataAtual = Date.now();
-						let dataMinima = new Date(2022, 10, 1).valueOf(); // Novembro de 2022 (Mês começa do 0 no JS)
-
-						// Retorna verdadeiro se a data for futura ou menor que o limite
-						return (dataSelecionada > dataAtual || dataSelecionada < dataMinima);
-					}
+					minDate: moment().startOf('minute'),
 				}, function(start, end, label) {
 					// Atualiza o campo oculto com a data e hora selecionadas
 					$('input[name=\"" . $variavel . "\"]').val(start.format('DD/MM/YYYY HH:mm'));
