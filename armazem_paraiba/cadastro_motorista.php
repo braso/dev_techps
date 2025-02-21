@@ -105,8 +105,10 @@
 		if(!empty($_POST["matricula"])){
 			$_POST["postMatricula"] = $_POST["matricula"];
 		}
-		while($_POST["postMatricula"][0] == "0"){
-			$_POST["postMatricula"] = substr($_POST["postMatricula"], 1);
+		if(!in_array($_ENV["CONTEX_PATH"], ["/comav"])){
+			while($_POST["postMatricula"][0] == "0"){
+				$_POST["postMatricula"] = substr($_POST["postMatricula"], 1);
+			}
 		}
 
 		$_POST["cpf"] = preg_replace("/[^0-9]/is", "", $_POST["cpf"]);
@@ -184,7 +186,7 @@
 		//Conferir se os campos obrigatórios estão preenchidos{
 			$camposObrig = [
 				"nome" 						=> "Nome", 
-				"nascimento" 				=> "Dt. Nascimento",
+				"nascimento" 				=> "Nascido em",
 				"cpf" 						=> "CPF",
 				"rg" 						=> "RG",
 				"bairro" 					=> "Bairro",
@@ -583,7 +585,7 @@
 
 		$camposPessoais = array_merge($camposPessoais, [
 			campo(	  	"Nome*", 				"nome", 			($a_mod["enti_tx_nome"]?? ""),			4, "",					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
-			campo_data(	"Dt. Nascimento*", 		"nascimento", 		($a_mod["enti_tx_nascimento"]?? ""),	2, 						"tabindex=".sprintf("%02d", $tabIndex++)),
+			campo_data(	"Nascido em*",	 		"nascimento", 		($a_mod["enti_tx_nascimento"]?? ""),	2, 						"tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"CPF*", 				"cpf", 				($a_mod["enti_tx_cpf"]?? ""),			2, "MASCARA_CPF", 		"tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"RG*", 					"rg", 				($a_mod["enti_tx_rg"]?? ""),			2, "MASCARA_RG", 		"tabindex=".+sprintf("%02d", $tabIndex++).", maxlength=11"),
 			combo(		"Estado Civil", 		"civil", 			($a_mod["enti_tx_civil"]?? ""),			2, $estadoCivilOpt, 	"tabindex=".sprintf("%02d", $tabIndex++)),
@@ -872,13 +874,12 @@
 		];
 
 		$botoesBusca = [
-			"<button action='consultarRegistros()' class='btn btn-secondary'>Buscar</button>",
-			botao("Inserir", "visualizarCadastro","","","","","btn btn-success")
+			botao("<spam class='glyphicon glyphicon-plus'></spam>", "visualizarCadastro","","","","","btn btn-success")
 		];
 
 		echo abre_form();
 		echo linha_form($camposBusca);
-		echo fecha_form($botoesBusca);
+		echo fecha_form([], "<hr>".implode(" ", $botoesBusca));
 
 		//Configuração da tabela dinâmica{
 			$gridFields = [
@@ -892,7 +893,7 @@
 				"OCUPAÇÃO" 				=> "enti_tx_ocupacao",
 				"DATA CADASTRO" 		=> "DATE_FORMAT(enti_tx_dataCadastro, \"%d/%m/%Y\") AS enti_tx_dataCadastro",
 				"PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
-				"CONVENÇÃO PADRÃO" 		=> "enti_tx_ehPadrao",
+				"CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
 				"STATUS" 				=> "enti_tx_status"
 			];
 	
