@@ -318,18 +318,18 @@
 
 
 		$botoes = [
-			"inicioJornada" 			=> criaBotaoRegistro("btn green", 1,  "Iniciar Jornada", "fa fa-car fa-6"),
-			"inicioRefeicao" 			=> criaBotaoRegistro("btn green", 3,  "Iniciar Refeição", "fa fa-cutlery fa-6"),
-			"inicioEspera" 				=> criaBotaoRegistro("btn green", 5,  "Iniciar Espera", "fa fa-clock-o fa-6"),
-			"inicioDescanso" 			=> criaBotaoRegistro("btn green", 7,  "Iniciar Descanso", "fa fa-hourglass-start fa-6"),
-			"inicioRepouso" 			=> criaBotaoRegistro("btn green", 9,  "Iniciar Repouso", "fa fa-bed fa-6"),
+			"inicioJornada" 			=> criaBotaoRegistro("btn green", 1,  "JORNADA", "fa fa-car fa-6"),
+			"inicioRefeicao" 			=> criaBotaoRegistro("btn green", 3,  "REFEIÇÃO", "fa fa-cutlery fa-6"),
+			"inicioEspera" 				=> criaBotaoRegistro("btn green", 5,  "ESPERA", "fa fa-clock-o fa-6"),
+			"inicioDescanso" 			=> criaBotaoRegistro("btn green", 7,  "DESCANSO", "fa fa-hourglass-start fa-6"),
+			"inicioRepouso" 			=> criaBotaoRegistro("btn green", 9,  "REPOUSO", "fa fa-bed fa-6"),
 			// "inicioRepousoEmbarcado"	=> criaBotaoRegistro("btn green", 11, "Iniciar Repouso Embarcado", "fa fa-bed fa-6"),
 
-			"fimJornada" 				=> criaBotaoRegistro("btn red", 2,  "Encerrar Jornada", "fa fa-car fa-6"),
-			"fimRefeicao" 				=> criaBotaoRegistro("btn red", 4,  "Encerrar Refeição", "fa fa-cutlery fa-6"),
-			"fimEspera" 				=> criaBotaoRegistro("btn red", 6,  "Encerrar Espera", "fa fa-clock-o fa-6"),
-			"fimDescanso" 				=> criaBotaoRegistro("btn red", 8,  "Encerrar Descanso", "fa fa-hourglass-end fa-6"),
-			"fimRepouso" 				=> criaBotaoRegistro("btn red", 10, "Encerrar Repouso", "fa fa-bed fa-6"),
+			"fimJornada" 				=> criaBotaoRegistro("btn red", 2,  "FIM JORNADA", "fa fa-car fa-6"),
+			"fimRefeicao" 				=> criaBotaoRegistro("btn red", 4,  "FIM REFEIÇÃO", "fa fa-cutlery fa-6"),
+			"fimEspera" 				=> criaBotaoRegistro("btn red", 6,  "FIM ESPERA", "fa fa-clock-o fa-6"),
+			"fimDescanso" 				=> criaBotaoRegistro("btn red", 8,  "FIM DESCANSO", "fa fa-hourglass-end fa-6"),
+			"fimRepouso" 				=> criaBotaoRegistro("btn red", 10, "FIM REPOUSO", "fa fa-bed fa-6"),
 			// "fimRepousoEmbarcado" 		=> criaBotaoRegistro("btn red", 12, "Encerrar Repouso Embarcado", "fa fa-bed fa-6"),
 		];
 

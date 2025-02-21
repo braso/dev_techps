@@ -179,6 +179,11 @@
 			text-align: -moz-center;
 		}
 
+		.portlet-body button .glyphicon{
+			top: 0px;
+			width: calc(100% - 2px);
+		}
+
 		#botaoContexVoltar:focus,
 		#botaoContexVoltar:hover {
 			background-color: darkgray;

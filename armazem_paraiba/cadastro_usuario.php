@@ -317,14 +317,14 @@
 			$campo_nivel = combo("Nível*", "nivel", $_POST["nivel"], 2, $niveis, "");
 			$campo_status = combo("Status", "status", $_POST["status"], 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
 
-			$campo_nascimento = campo_data("Dt. Nascimento*", "nascimento", ($_POST["nascimento"]?? ($_POST["nascimento"]?? "")), 2);
+			$campo_nascimento = campo_data("Nascido em*", "nascimento", ($_POST["nascimento"]?? ($_POST["nascimento"]?? "")), 2);
 			$campo_cpf = campo("CPF", "cpf", $_POST["cpf"], 2, "MASCARA_CPF");
 			$campo_rg = campo("RG", "rg", $_POST["rg"], 2, "MASCARA_RG", "maxlength='15'");
 			$campo_cidade = combo_net("Cidade/UF", "cidade", $_POST["cidade"], 2, "cidade", "", "", "cida_tx_uf");
 			$campo_email = campo("E-mail*", "email", $_POST["email"], 2);
 			$campo_telefone = campo("Telefone", "telefone", $_POST["fone"], 2,"MASCARA_FONE");
 			$campo_empresa = combo_bd("!Empresa*", "empresa", $_POST["empresa"], 2, "empresa", "onchange='carrega_empresa(this.value)'");
-			$campo_expiracao = campo_data("Dt. Expiração", "expiracao", $_POST["expiracao"], 2);
+			$campo_expiracao = campo_data("Expira em", "expiracao", $_POST["expiracao"], 2);
 			$campo_senha = campo_senha("Senha*", "senha", "", 2, "maxlength='50'");
 			$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='12'");
 			$campo_matricula = "";
@@ -347,14 +347,14 @@
 			$campo_nivel = combo("Nível*", "nivel", ($_POST["nivel"]?? $niveis), 2, $niveis, "");
 			$campo_status = combo("Status", "status", ($_POST["status"]?? "ativo"), 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
 
-			$campo_nascimento = campo_data("Dt. Nascimento*", "nascimento", ($_POST["nascimento"]?? ""), 2);
+			$campo_nascimento = campo_data("Nascido em*", "nascimento", ($_POST["nascimento"]?? ""), 2);
 			$campo_cpf = campo("CPF", "cpf", ($_POST["cpf"]?? ""), 2, "MASCARA_CPF");
 			$campo_rg = campo("RG", "rg", ($_POST["rg"]?? ""), 2, "MASCARA_RG", "maxlength='15'");
 			$campo_cidade = combo_net("Cidade/UF", "cidade", ($_POST["cidade"]?? ""), 2, "cidade", "", "", "cida_tx_uf");
 			$campo_email = campo("E-mail*", "email", ($_POST["email"]?? ""), 2);
 			$campo_telefone = campo("Telefone", "telefone", ($_POST["telefone"]?? ""), 2,"MASCARA_FONE");
 			$campo_empresa = combo_bd("!Empresa*", "empresa", ($_POST["empresa"]?? ""), 2, "empresa", "onchange='carrega_empresa(this.value)'");
-			$campo_expiracao = campo_data("Dt. Expiração", "expiracao", ($_POST["expiracao"]?? ""), 2);
+			$campo_expiracao = campo_data("Expira em", "expiracao", ($_POST["expiracao"]?? ""), 2);
 			$campo_senha = campo_senha("Senha*", "senha", "", 2,"maxlength='12'");
 			$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='12'");
 			$campo_matricula = "";
@@ -365,7 +365,7 @@
 			$campo_nivel = texto("Nível*", ($_POST["nivel"]?? ""), 2);
 			$campo_status = "";
 			$data_nascimento = ($_POST["nascimento"] != "0000-00-00") ? date("d/m/Y", strtotime($_POST["nascimento"])) : "00/00/0000";
-			$campo_nascimento = texto("Dt. Nascimento*", $data_nascimento, 2, "");
+			$campo_nascimento = texto("Nascido em*", $data_nascimento, 2, "");
 			$campo_cpf = texto("CPF", ($_POST["cpf"]?? ""), 2, "style=''");
 			$campo_rg = texto("RG", ($_POST["rg"]?? ""), 2, "style=''");
 			
@@ -387,7 +387,7 @@
 
 			$campo_empresa = texto("Empresa*", (!empty($empresa["empr_tx_nome"])? $empresa["empr_tx_nome"]: ""), 3, "style=''");
 			$data_expiracao  = ($_POST["expiracao"] != "0000-00-00") ? date("d/m/Y", strtotime($_POST["expiracao"])) : "00/00/0000";
-			$campo_expiracao = texto("Dt. Expiração", $data_expiracao, 2, "style=''");
+			$campo_expiracao = texto("Expira em", $data_expiracao, 2, "style=''");
 			$campo_senha = campo_senha("Senha*", "senha", "", 2);
 			$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2);
 			if($editingDriver){

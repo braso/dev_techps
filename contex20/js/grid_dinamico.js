@@ -36,7 +36,18 @@ let definirFuncoesInternas = function(){
     //}
 }
 
-let consultarRegistros = function(){
+function esconderInativar(classeInativar, statusColIndex){
+    for(f = 0; f < $('[class=\"'+classeInativar+'\"]').length; f++){
+        let rowElements = $('[class=\"'+classeInativar+'\"]')[f].parentElement.parentElement.children;
+        let status = rowElements[statusColIndex].innerHTML;
+        if(status == 'inativo'){
+            $('[class=\"'+classeInativar+'\"]')[f].parentElement.remove();
+            f--;
+        }
+    }
+}
+
+const consultarRegistros = function(){
     conditions = '';
     data = {};
 
@@ -72,13 +83,13 @@ let consultarRegistros = function(){
         url: urlTableInfo,
         method: 'POST',
         data: {
-            'query': [btoa(queryBase), btoa(encodeURI(conditions)), btoa(limit), btoa((pageNumber-1)*limit)]
+            'query': [queryBase, btoa(encodeURI(conditions)), btoa(limit), btoa((pageNumber-1)*limit)]
         },
         dataType: 'json',
         success: function(response) {
 
             total = response.total;
-            qtdPaginas = Math.ceil((total/limit)+1)
+            qtdPaginas = Math.ceil((total/limit))
             statusCol = -1;
 
             if(fields["actions"] != null){
@@ -125,14 +136,15 @@ let consultarRegistros = function(){
                 if(pageNumber > 2 && qtdPaginas > 3){
                     footer += '<div value="1"><<</div>'
                 }
-                for(f = ((pageNumber-1)<1?1:(pageNumber-1)-(pageNumber==qtdPaginas)); f < qtdPaginas+1 && f < pageNumber+2+(pageNumber == 1); f++){
+                console.log(pageNumber, qtdPaginas);
+                for(f = ((pageNumber-1)<=1? 1: (pageNumber-1)-(pageNumber==qtdPaginas)); f < qtdPaginas+1 && f < pageNumber+2+(pageNumber == 1); f++){
                     if(f == pageNumber){
                         footer += '<div class="page-selected" value="'+f+'">'+f+'</div>'
                     }else{
                         footer += '<div value="'+f+'">'+f+'</div>'
                     }
                 }
-                if(pageNumber < qtdPaginas-1 && qtdPaginas > 3){
+                if(pageNumber < qtdPaginas-2 && qtdPaginas > 3){
                     footer += '<div value="'+(qtdPaginas)+'">>></div>'
                 }
             //}
@@ -145,8 +157,8 @@ let consultarRegistros = function(){
 
             definirFuncoesInternas();
         },
-        error: function(error) {
-            console.error('Erro na consulta:', error);
+        error: function(errMsg) {
+            console.error('Erro na consulta:', errMsg);
         }
     });
 };

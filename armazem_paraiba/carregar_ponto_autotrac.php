@@ -1,5 +1,5 @@
 <?php
-    //* Modo Debug{
+    /* Modo Debug{
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
 
@@ -54,7 +54,18 @@
 		$dates = [];
 		$matriculas = [];
 		foreach($pontos as $ponto){
-			$dates[] = DateTime::createFromFormat("d/m/Y H:i:s", $ponto["position_time"])->format("Y-m-d H:i:s");
+			$datetime = DateTime::createFromFormat("d/m/Y H:i:s", $ponto["position_time"]);
+
+			if(!empty($datetime)){
+				$dates[] = $datetime->format("Y-m-d H:i:s");
+			} else {
+				$datetime = DateTime::createFromFormat("Y-m-d\TH:i:s.v\Z", $ponto["position_time"]);
+				if(!empty($datetime)){
+					$dates[] = $datetime->format("Y-m-d H:i:s");
+				}else{
+					error_log("Erro ao converter data: " . $ponto["position_time"]);
+				}
+			}
 			$matriculas[] = $ponto["driver_cpf"];
 		}
 		array_multisort($matriculas, SORT_ASC, $dates, SORT_ASC, $pontos);
@@ -82,7 +93,7 @@
 		"51" => "0",	//"INICIO DE VIAGEM",
 		"52" => "",		//"PARADA EVENTUAL",
 		"53" => "0",	//"REINICIO DE VIAGEM",
-		"54" => "",		//"FIM DE VIAGEM",
+		"54" => "0",	//"FIM DE VIAGEM",
 		"55" => "",		//"SOL DE DESVIO DE ROTA",
 		"56" => "",		//"SOL DESENGATE/BAU",
 		"57" => "7",	//"MANUTENCAO",
@@ -103,20 +114,17 @@
 
 	$f = 0;
 	foreach($pontos as $ponto){
-		if($ponto["driver_cpf"] != "93844204415"){
-			continue;
-		}
-
+		
 		$newPonto = [
 			"pont_nb_userCadastro"	=> $_SESSION['user_nb_id'],
 			"pont_tx_dataCadastro" 	=> date("Y-m-d H:i:s"),
 			"pont_tx_matricula" 	=> $ponto["driver_cpf"],	// No caso da Comav, a mátricula do motorista é o CPF.
-			"pont_tx_data" 			=> DateTime::createFromFormat("d/m/Y H:i:s", $ponto["position_time"])->format("Y-m-d H:i:s"),
+			"pont_tx_data" 			=> $dates[$f],
 			// "pont_tx_tipo" é colocado mais abaixo
 			"pont_tx_tipoOriginal" 	=> $ponto["macro_number"],
 			"pont_tx_latitude" 		=> $ponto["latitude"],
 			"pont_tx_longitude" 	=> $ponto["longitude"],
-			"pont_tx_placa" 		=> $ponto["vehicle_name"],
+			"pont_tx_placa" 		=> ($ponto["vehicle_name"] != "desativado")? $ponto["vehicle_name"]: NULL,
 			"pont_tx_status"		=> "ativo"
 		];
 
@@ -173,10 +181,6 @@
 						}
 					}
 
-					if([$ultimoPonto["pont_tx_matricula"], $ultimoPonto["pont_tx_data"], $ultimoPonto["pont_tx_tipo"]] = [$newPonto["pont_tx_matricula"], $newPonto["pont_tx_data"], $newPonto["pont_tx_tipo"]]){
-						echo "Ponto já cadastrado.";
-						continue;
-					}
 					if($newPonto["pont_tx_tipo"] == $ultimoPonto["pont_tx_tipo"]){
 						echo "O último ponto é do mesmo tipo. (".$newPonto["pont_tx_tipo"].")";
 						continue;
@@ -220,6 +224,11 @@
 						}
 					}
 				//*/
+
+				if([$ultimoPonto["pont_tx_matricula"], $ultimoPonto["pont_tx_data"], $ultimoPonto["pont_tx_tipo"]] == [$newPonto["pont_tx_matricula"], $newPonto["pont_tx_data"], $newPonto["pont_tx_tipo"]]){
+					echo "Ponto já cadastrado.";
+					continue;
+				}
 
 				if(((int)$ultimoPonto["pont_tx_tipo"])%2 == 1 										//O último ponto é uma abertura (tipo = ímpar)
 					&& (int)$ultimoPonto["pont_tx_tipo"] != ((int)$newPonto["pont_tx_tipo"])-1 		//E Este ponto não é o fechamento do intervalo anterior
