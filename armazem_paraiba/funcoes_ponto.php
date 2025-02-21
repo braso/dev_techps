@@ -681,12 +681,13 @@
 				;
 				$aRetorno["jornadaPrevista"] = $warning.$aRetorno["jornadaPrevista"];
 			}
+
 		//}
 
 		//CASO NÃO HAJA PONTOS{
 			if(count($pontosDia) == 0){
 				$aRetorno["diffSaldo"] = getSaldoDiario($jornadaPrevista, "00:00");
-				if((preg_replace("/([^\-^0-:])+/", "", strip_tags($aRetorno["jornadaPrevista"]))) != "00:00"){
+				if((preg_replace("/([^\-^0-:])+/", "", strip_tags($aRetorno["jornadaPrevista"]))) != "00:00" && strpos($aRetorno["jornadaPrevista"], "Abono:") == false){
 					$aRetorno["inicioJornada"][] = "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
 				}
 
@@ -1585,7 +1586,7 @@
 		;
 		
 		$sql = 
-			"SELECT pont_nb_id, ".implode(",", $cols)." FROM ponto"
+			"SELECT DISTINCT pont_nb_id, ".implode(",", $cols)." FROM ponto"
 				." JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno"
 				." JOIN entidade ON ponto.pont_tx_matricula = entidade.enti_tx_matricula"
 				." JOIN user ON entidade.enti_nb_id = user.user_nb_entidade"
@@ -1596,8 +1597,6 @@
 					." AND ponto.pont_tx_data >= STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')"
 					." AND ponto.pont_tx_data <= STR_TO_DATE('{$sqlDataFim}', '%Y-%m-%d %H:%i:%s')"
 		;
-
-		
 
 
 		return $sql;
@@ -1630,7 +1629,7 @@
 	}
 
 	function verificarAlertaMDC(array $intervalos = []): string{
-		$baseErrMsg = "Descanso de 00:30 a cada 05:30 digiridos não respeitado.";
+		$baseErrMsg = "Descanso de 00:15 a cada 05:30 digiridos não respeitado.";
 		$mdc = "00:00";
 		
 		if(empty($intervalos)){
