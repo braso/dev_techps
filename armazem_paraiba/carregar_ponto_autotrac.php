@@ -124,7 +124,7 @@
 			"pont_tx_tipoOriginal" 	=> $ponto["macro_number"],
 			"pont_tx_latitude" 		=> $ponto["latitude"],
 			"pont_tx_longitude" 	=> $ponto["longitude"],
-			"pont_tx_placa" 		=> $ponto["vehicle_name"],
+			"pont_tx_placa" 		=> ($ponto["vehicle_name"] != "desativado")? $ponto["vehicle_name"]: NULL,
 			"pont_tx_status"		=> "ativo"
 		];
 
