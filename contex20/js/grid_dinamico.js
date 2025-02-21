@@ -78,6 +78,9 @@ const consultarRegistros = function(){
     if(orderCol != ''){
         conditions += ' ORDER BY '+orderCol;
     }
+    if(pageNumber < 1){
+        pageNumber = 1;
+    }
 
     $.ajax({
         url: urlTableInfo,
@@ -136,7 +139,6 @@ const consultarRegistros = function(){
                 if(pageNumber > 2 && qtdPaginas > 3){
                     footer += '<div value="1"><<</div>'
                 }
-                console.log(pageNumber, qtdPaginas);
                 for(f = ((pageNumber-1)<=1? 1: (pageNumber-1)-(pageNumber==qtdPaginas)); f < qtdPaginas+1 && f < pageNumber+2+(pageNumber == 1); f++){
                     if(f == pageNumber){
                         footer += '<div class="page-selected" value="'+f+'">'+f+'</div>'
