@@ -35,7 +35,7 @@
 
 	function ajustarPonto(idMotorista, data) {
 		document.form_ajuste_ponto.idMotorista.value = idMotorista;
-		document.form_ajuste_ponto.data_like.value = data;
+		document.form_ajuste_ponto.data.value = data;
 		document.form_ajuste_ponto.submit();
 	}
 
