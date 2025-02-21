@@ -879,7 +879,8 @@
 
 		echo abre_form();
 		echo linha_form($camposBusca);
-		echo fecha_form([], "<hr>".implode(" ", $botoesBusca));
+		echo fecha_form([], "<hr><form>".implode(" ", $botoesBusca)."</form>");
+		
 
 		//Configuração da tabela dinâmica{
 			$gridFields = [
