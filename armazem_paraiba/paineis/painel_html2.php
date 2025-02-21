@@ -26,8 +26,11 @@
 				<?php if (!empty($empresa["empr_tx_nome"])) { ?>
 					<span><b>Empresa:</b> <?= $empresa["empr_tx_nome"] ?></span>
 				<?php } ?>
+				<span class="total-sem-jornada"></span>
+				<span class="total-jornada"> </span>
 				<?= $quantFun ?>
 				<?= $tabelaMotivo ?>
+
 			</div>
 			<?php if ($quantFun) { ?>
 				<span style="font-size: 8px;">Marcações com <b>(*)</b> indicam intervalos em aberto</span>

@@ -13,11 +13,11 @@
     require_once __DIR__."/funcoes_paineis.php";
     // criar_relatorio_jornada();
  
-     function carregarJS(array $arquivos) {
+    function carregarJS(array $arquivos) {
 
         $linha = "linha = '<tr>'";
         if (!empty($_POST["empresa"])) {
-            $linha .= "+'<td style=\'text-align: center;\'>'+item.data+' '+item.inicioJornada+'</td>'
+            $linha .= "+'<td style=\'text-align: center;\'>'+item.data+' '+ultimoValor+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.nome+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
@@ -115,6 +115,13 @@
                                     var row = {};
                                     $.each(data, function(index, item){
                                         console.log(item);
+                                        var ultimoValor = '';
+                                        if (item.inicioJornada.includes(' ')) {
+                                            const partes = item.inicioJornada.split(' '); 
+                                            ultimoValor = partes.pop(); 
+                                        } else {
+                                            ultimoValor = item.inicioJornada;
+                                        }
                                         
                                         function calculaDiferencaEmHoras(dataInicio, horaInicio) {
                                             // Convertendo a data de início no formato adequado (dd/mm/yyyy para yyyy-mm-dd)
@@ -152,7 +159,7 @@
                                             return resultadoFormatado;
                                         }
 
-                                        var jornada = calculaDiferencaEmHoras(item.data, item.inicioJornada);
+                                        var jornada = calculaDiferencaEmHoras(item.data, ultimoValor);
 
                                         var diferencaDias = item.diaDiferenca;
 
@@ -162,8 +169,14 @@
                                         const repousoMinutos = converterParaMinutos(item.repouso === '*' ? '00:00' : item.repouso);
                                         const jornadaMinutos = converterParaMinutos(jornada);
 
-                                        let jornadaSemIntervalo = jornadaMinutos - (refeicaoMinutos + esperaMinutos + descansoMinutos + repousoMinutos);
-                                        jornadaEfetiva = converterMinutosParaHHHMM(jornadaSemIntervalo);
+                                        if(item.adi5322 === 'sim'){
+                                            let jornadaSemIntervalo = jornadaMinutos - (refeicaoMinutos + descansoMinutos + repousoMinutos);
+                                                jornadaEfetiva = converterMinutosParaHHHMM(jornadaSemIntervalo);
+                                        } else {
+                                            let jornadaSemIntervalo = jornadaMinutos - (refeicaoMinutos + esperaMinutos + descansoMinutos + repousoMinutos);
+                                            jornadaEfetiva = converterMinutosParaHHHMM(jornadaSemIntervalo);
+                                        }
+
 
                                         let jornadaEfetivaCor = calcularJornadaElimite(jornadaEfetiva , item.jornadaDia, item.limiteExtras)
 

@@ -15,7 +15,9 @@
     <script>
     function imprimir() {
         // Abrir a caixa de diálogo de impressão
-        window.print();
+        setTimeout(() => {
+            window.print();
+        }, 500);
     }
     </script>
 </head>
@@ -133,7 +135,7 @@
 
         <table class="table-bottom">
             <tr>
-                <td rowspan="2" style="width: 150px;">
+                <td rowspan="2" style="width: 175px;">
                     <table class="table-info">
                         <tr>
                             <td>Carga Horaria Prevista:</td>
@@ -245,7 +247,7 @@
                     <table class="table-resumo">
                         <tr>
                             <td>Saldo Anterior</td>
-                            <td><?=$totalResumo['saldoAnterior']?></td>
+                            <td>00:00</td>
                             <td class="empty"></td>
                             <td>Saldo Período</td>
                             <td><?=$totalResumo['diffSaldo']?></td>

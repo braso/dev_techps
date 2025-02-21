@@ -22,6 +22,7 @@
 		if(is_int(strpos($_SERVER["REQUEST_URI"], 'dev'))){
 			$camposOcultosProdução = [
 				"/paineis/ajustes.php" 	  => "Ajustes",
+				"/paineis/disponibilidade.php" 	  => "Disponibilidade",
 			];
 		}
 		
