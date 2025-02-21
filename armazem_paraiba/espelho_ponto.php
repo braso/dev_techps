@@ -239,7 +239,6 @@
 							continue;
 						}
 					}
-					
 					$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado));
 					for($f = 0; $f < sizeof($row)-1; $f++){
 						if(in_array($f, [3, 4, 5, 6, 12])){//Se for das colunas de jornada, refeição ou "Jornada Prevista", não apaga
@@ -289,7 +288,13 @@
 						$totalResumo = $ultimoEndosso["totalResumo"];
 					}else{
 						foreach(["saldoAnterior", "saldoFinal"] as $key){
-							$totalResumo[$key] = operarHorarios([$totalResumo[$key], $ultimoEndosso["totalResumo"][$key]], "+");
+							$totalResumo[$key] = operarHorarios(
+								[
+									(!empty($totalResumo[$key])? $totalResumo[$key]: "00:00"),
+									(!empty($ultimoEndosso["totalResumo"][$key])? $ultimoEndosso["totalResumo"][$key]: "00:00")
+								], 
+								"+"
+							);
 						}
 					}
 					$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoFinal"];
@@ -357,7 +362,7 @@
 				$params = array_merge($_POST, [
 					"acao" => "index",
 					"idMotorista" => null,
-					"data_like" => null,
+					"data" => null,
 					"HTTP_REFERER" => (!empty($_POST["HTTP_REFERER"])? $_POST["HTTP_REFERER"]: $_SERVER["REQUEST_URI"])
 				]);
 
@@ -392,7 +397,7 @@
 			"<script>
 				function ajustarPonto(idMotorista, data){
 					document.form_ajuste_ponto.idMotorista.value = idMotorista;
-					document.form_ajuste_ponto.data_like.value = data;
+					document.form_ajuste_ponto.data.value = data;
 					document.form_ajuste_ponto.submit();
 				}
 
