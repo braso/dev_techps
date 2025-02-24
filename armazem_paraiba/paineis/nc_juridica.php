@@ -6,10 +6,6 @@
 	require_once __DIR__."/funcoes_paineis.php";
 	require __DIR__."/../funcoes_ponto.php";
 
-// $_POST["busca_endossado"] = "naoEndossado";
-// $_POST["busca_dataMes"] = "2024-05";
-// relatorio_nao_conformidade_juridica();
-
 	header("Expires: 01 Jan 2001 00:00:00 GMT");
 	header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 	header('Cache-Control: post-check=0, pre-check=0', FALSE);
@@ -32,26 +28,38 @@
 					porcentagemMedia = 100 - arrayPerformanceMedia[row.matricula];
 
 					let corDeFundo = '';
+					let classeImpressao = '';
 					if(porcentagemBaixa >= 75 && porcentagemBaixa <= 100){
 						corDeFundo = 'background-color: lightgreen;';
+						classeImpressao = 'impressao-verde';
 					} else if(porcentagemBaixa <= 75 && porcentagemBaixa >= 50){
 						corDeFundo = 'background-color: var(--var-yellow2);';
+						classeImpressao = 'impressao-amarelo';
 					} else if(porcentagemBaixa <= 50 && porcentagemBaixa >= 25){
 						corDeFundo = 'background-color: var(--var-lightorange);';
+						classeImpressao = 'impressao-laranja';
 					}else{
 						corDeFundo = 'background-color: var(--var-lightred);';
+						classeImpressao = 'impressao-vermelho';
 					}
 
 					let corDeFundo2 = '';
-					if(porcentagemMedia >= 75 && porcentagemMedia <= 100){
+					let classeImpressao2 = '';
+
+					if (porcentagemMedia >= 75 && porcentagemMedia <= 100) {
 						corDeFundo2 = 'background-color: lightgreen;';
-					} else if(porcentagemMedia <= 75 && porcentagemMedia >= 50){
+						classeImpressao2 = 'impressao-verde';
+					} else if (porcentagemMedia < 75 && porcentagemMedia >= 50) {
 						corDeFundo2 = 'background-color: var(--var-yellow2);';
-					} else if(porcentagemMedia <= 50 && porcentagemMedia >= 25){
+						classeImpressao2 = 'impressao-amarelo';
+					} else if (porcentagemMedia < 50 && porcentagemMedia >= 25) {
 						corDeFundo2 = 'background-color: var(--var-lightorange);';
-					}else{
+						classeImpressao2 = 'impressao-laranja';
+					} else {
 						corDeFundo2 = 'background-color: var(--var-lightred);';
+						classeImpressao2 = 'impressao-vermelho';
 					}
+
 								
 			";
 
@@ -70,8 +78,8 @@
 						+'<td class='+class3+'>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
 						+'<td class='+class3+'>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
 						+'<td class='+class4+'>'+(totalNaEndossado)+'</td>'
-						+'<td style=\"'+corDeFundo2+'\">'+(100 - arrayPerformanceMedia[row.matricula]).toFixed(2)+' %</td>'
-						+'<td style=\"'+corDeFundo+'\">'+(100 - arrayPerformanceBaixa[row.matricula]).toFixed(2)+' %</td>'
+						+'<td class='+classeImpressao2+' style=\"'+corDeFundo2+'\">'+(100 - arrayPerformanceMedia[row.matricula]).toFixed(2)+' %</td>'
+						+'<td class='+classeImpressao+' style=\"'+corDeFundo+'\">'+(100 - arrayPerformanceBaixa[row.matricula]).toFixed(2)+' %</td>'
 					+'</tr>';";
 		} elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
 			$linha = "linha = '<tr>'";
@@ -101,6 +109,7 @@
 				<input type='hidden' name='busca_dataMes'>
 				<input type='hidden' name='busca_dataInicio'>
 				<input type='hidden' name='busca_dataFim'>
+				<input type='hidden' name='busca_ocupacao'>
 				<input type='hidden' name='busca_data'>
 			</form>
 			<script>
@@ -109,6 +118,7 @@
 					document.myForm.campoAcao.value = 'buscar';
 					document.myForm.empresa.value = empresa;
 					document.myForm.busca_dataMes.value = document.getElementById('busca_dataMes').value;
+					document.myForm.busca_ocupacao.value = document.querySelector('[name=\"busca_ocupacao\"]').value;
 					document.myForm.submit();
 				}
 
@@ -116,6 +126,7 @@
 					console.info(document.getElementById('busca_data').value);
 					document.myForm.empresa.value = document.getElementById('empresa').value;
 					document.myForm.busca_data.value = document.getElementById('busca_data').value;
+					document.myForm.busca_ocupacao.value = document.querySelector('[name=\"busca_ocupacao\"]').value;
 					document.myForm.acao.value = 'atualizar';
 					document.myForm.submit();
 				}
@@ -372,6 +383,8 @@
 			combo_net("Empresa", "empresa", $_POST["empresa"]?? "", 4, "empresa", ""),
 			$campoAcao,
 			campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
+			combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
+            ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
 			combo("Tipo",	"busca_endossado", (!empty($_POST["busca_endossado"]) ? $_POST["busca_endossado"] : ""), 2, ["naoEndossado" => "Atualizado","endossado" => "Pós-fechamento", "semAjustes"=>"Sem ajuste"])
 		];
 
@@ -780,7 +793,7 @@
 					<table id='tabela-motorista' style='width: 275px;' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>"
 						. "<thead>"
 							. "<tr>"
-								. "<td> Quandidade por ocupação </td>"
+								. "<td> Quantidade por ocupação </td>"
 							. "</th>"
 						. "</thead>"
 							. "<tbody>"

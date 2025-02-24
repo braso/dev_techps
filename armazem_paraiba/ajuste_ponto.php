@@ -240,7 +240,7 @@
 		cabecalho("Ajuste de Ponto");
 
 		$motorista = mysqli_fetch_assoc(query(
-			"SELECT * FROM entidade
+			"SELECT enti_nb_id, enti_tx_matricula, enti_tx_nome, enti_tx_ocupacao, enti_tx_cpf FROM entidade
 				WHERE enti_tx_status = 'ativo'
 					AND enti_nb_id = {$_POST["idMotorista"]}
 				LIMIT 1;"
@@ -368,8 +368,8 @@
 			$motorista["enti_tx_matricula"], 
 			new DateTime($_POST["data"]." 00:00:00"),
 			[
-				"pont_nb_id", 
-				"DATE_FORMAT(pont_tx_data, '%d/%m/%Y (%H:%i:%s)') AS pont_tx_data", 
+				"pont_tx_data", 
+				"(SELECT endo_tx_status FROM endosso WHERE endo_tx_status = 'ativo' AND endo_tx_matricula = '{$motorista["enti_tx_matricula"]}' AND '{$_POST["data"]}' BETWEEN endo_tx_de AND endo_tx_ate LIMIT 1) as endo_tx_status",
 				"macr_tx_nome", 
 				"moti_tx_nome", 
 				"moti_tx_legenda", 
@@ -381,14 +381,14 @@
 				"pont_tx_latitude", 
 				"pont_tx_longitude",
 				"pont_tx_dataAtualiza",
-				"IF(pont_tx_status = 'ativo', {$iconeExcluir}, NULL) as iconeExcluir"
+				"IF(pont_tx_status = 'ativo' AND endo_tx_status IS NULL, {$iconeExcluir}, NULL) as iconeExcluir"
 			]
 		);
 
 
 		$gridFields = [
 			"CÓD"												=> "pont_nb_id",
-			"DATA"												=> "pont_tx_data",
+			"DATA"												=> "data(pont_tx_data,1)",
 			"PLACA"                                             => "pont_tx_placa",
 			"TIPO"												=> "destacarJornadas(macr_tx_nome)",
 			"MOTIVO"											=> "moti_tx_nome",

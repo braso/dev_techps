@@ -681,12 +681,13 @@
 				;
 				$aRetorno["jornadaPrevista"] = $warning.$aRetorno["jornadaPrevista"];
 			}
+
 		//}
 
 		//CASO NÃO HAJA PONTOS{
 			if(count($pontosDia) == 0){
 				$aRetorno["diffSaldo"] = getSaldoDiario($jornadaPrevista, "00:00");
-				if((preg_replace("/([^\-^0-:])+/", "", strip_tags($aRetorno["jornadaPrevista"]))) != "00:00"){
+				if((preg_replace("/([^\-^0-:])+/", "", strip_tags($aRetorno["jornadaPrevista"]))) != "00:00" && strpos($aRetorno["jornadaPrevista"], "Abono:") == false){
 					$aRetorno["inicioJornada"][] = "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
 				}
 
@@ -1219,7 +1220,7 @@
 					if(!is_bool($qttDias)){
 						$qttDias = intval($qttDias->format("%d"));
 						if($qttDias > 0){
-							array_splice($aRetorno[$tipo], $ponto["key"]+1, 0, "D+".$qttDias);
+							array_splice($aRetorno[$tipo], array_search($ponto["value"], $aRetorno[$tipo])+1, 0, "D+".$qttDias);
 						}
 					}
 				}
@@ -1550,21 +1551,21 @@
 		$sqlDataFim = $data->format("Y-m-d 23:59:59");
 
 		$ultJornadaOntem = mysqli_fetch_assoc(query(
-			"SELECT pont_tx_data, (pont_tx_tipo = 1) as jornadaAbertaAntes FROM ponto 
-				WHERE {$condicoesPontoBasicas}
-					AND pont_tx_tipo IN (1,2)
-					AND pont_tx_data < STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')
-				ORDER BY pont_tx_data DESC
-				LIMIT 1;"
+			"SELECT pont_tx_data, (pont_tx_tipo = 1) as jornadaAbertaAntes FROM ponto "
+				." WHERE {$condicoesPontoBasicas}"
+					." AND pont_tx_tipo IN (1,2)"
+					." AND pont_tx_data < STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')"
+				." ORDER BY pont_tx_data DESC"
+				." LIMIT 1;"
 		));
 
 		$primJornadaAmanha = mysqli_fetch_assoc(query(
-			"SELECT pont_tx_data, (pont_tx_tipo = 2) as jornadaFechadaApos FROM ponto 
-				WHERE {$condicoesPontoBasicas}
-					AND pont_tx_tipo IN (1,2)
-					AND pont_tx_data > STR_TO_DATE('{$sqlDataFim}', '%Y-%m-%d %H:%i:%s')
-				ORDER BY pont_tx_data ASC
-				LIMIT 1;"
+			"SELECT pont_tx_data, (pont_tx_tipo = 2) as jornadaFechadaApos FROM ponto "
+				." WHERE {$condicoesPontoBasicas}"
+					." AND pont_tx_tipo IN (1,2)"
+					." AND pont_tx_data > STR_TO_DATE('{$sqlDataFim}', '%Y-%m-%d %H:%i:%s')"
+				." ORDER BY pont_tx_data ASC"
+				." LIMIT 1;"
 		));
 
 
@@ -1577,24 +1578,24 @@
 		}
 
 		$condicoesPontoBasicas = 
-			"ponto.pont_tx_status = '{$_POST["status"]}' 
-			AND ponto.pont_tx_matricula = '{$matricula}' 
-			AND entidade.enti_tx_status = 'ativo' 
-			AND user.user_tx_status = 'ativo' 
-			AND macroponto.macr_tx_status = 'ativo'"
+			"ponto.pont_tx_status = '{$_POST["status"]}'"
+			." AND ponto.pont_tx_matricula = '{$matricula}'"
+			." AND entidade.enti_tx_status = 'ativo'"
+			." AND user.user_tx_status = 'ativo'"
+			." AND macroponto.macr_tx_status = 'ativo'"
 		;
 		
 		$sql = 
-			"SELECT DISTINCT pont_nb_id, ".implode(",", $cols)." FROM ponto
-				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
-				JOIN entidade ON ponto.pont_tx_matricula = entidade.enti_tx_matricula
-				JOIN user ON entidade.enti_nb_id = user.user_nb_entidade
-				LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
-				WHERE {$condicoesPontoBasicas}
-					AND macr_tx_fonte = 'positron'
-					AND ponto.pont_tx_data >= STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')
-					AND ponto.pont_tx_data <= STR_TO_DATE('{$sqlDataFim}', '%Y-%m-%d %H:%i:%s')
-				ORDER BY pont_tx_data ASC"
+			"SELECT DISTINCT pont_nb_id, ".implode(",", $cols)." FROM ponto"
+				." JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno"
+				." JOIN entidade ON ponto.pont_tx_matricula = entidade.enti_tx_matricula"
+				." JOIN user ON entidade.enti_nb_id = user.user_nb_entidade"
+				." LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id"
+				." LEFT JOIN endosso ON ponto.pont_tx_matricula = endosso.endo_tx_matricula"
+				." WHERE {$condicoesPontoBasicas}"
+					." AND macr_tx_fonte = 'positron'"
+					." AND ponto.pont_tx_data >= STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')"
+					." AND ponto.pont_tx_data <= STR_TO_DATE('{$sqlDataFim}', '%Y-%m-%d %H:%i:%s')"
 		;
 
 
@@ -1628,7 +1629,7 @@
 	}
 
 	function verificarAlertaMDC(array $intervalos = []): string{
-		$baseErrMsg = "Descanso de 00:30 a cada 05:30 digiridos não respeitado.";
+		$baseErrMsg = "Descanso de 00:15 a cada 05:30 digiridos não respeitado.";
 		$mdc = "00:00";
 		
 		if(empty($intervalos)){

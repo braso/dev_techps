@@ -9,8 +9,8 @@
     header('Cache-Control: post-check=0, pre-check=0', FALSE);
     header('Pragma: no-cache');
     
-    require "../funcoes_ponto.php";
     require_once __DIR__."/funcoes_paineis.php";
+	require __DIR__."/../funcoes_ponto.php";
 
     function enviarForm(){
         $_POST["acao"] = $_POST["campoAcao"];
@@ -68,7 +68,7 @@
                 <input type='hidden' name='atualizar'>
                 <input type='hidden' name='campoAcao'>
                 <input type='hidden' name='empresa'>
-                <input type='hidden' name='busca_dataInicio'>
+                <input type='hidden' name='busca_ocupacao'>
                 <input type='hidden' name='busca_dataFim'>
                 <input type='hidden' name='busca_data'>
             </form>
@@ -77,6 +77,7 @@
                     document.myForm.acao.value = 'enviarForm()';
                     document.myForm.campoAcao.value = 'buscar';
                     document.myForm.empresa.value = empresa;
+                    document.myForm.busca_ocupacao.value = document.querySelector('[name=\"busca_ocupacao\"]').value;
                     document.myForm.busca_data.value = document.getElementById('busca_data').value;
                     document.myForm.submit();
                 }
@@ -85,6 +86,7 @@
                     document.myForm.empresa.value = document.getElementById('empresa').value;
                     document.myForm.busca_data.value = document.getElementById('busca_data').value;
                     document.myForm.atualizar.value = 'atualizar';
+                    document.myForm.busca_ocupacao.value = document.querySelector('[name=\"busca_ocupacao\"]').value;
                     document.myForm.submit();
                 }
 
@@ -314,7 +316,7 @@
 
     function index(){
         require_once __DIR__."/funcoes_paineis.php";
-
+        // $_POST['busca_ocupacao'] = 'foi';
         
         if(!empty($_POST["atualizar"])){
             echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
@@ -335,9 +337,11 @@
         //position: absolute; top: 101px; left: 420px;
         $fields = [
             combo_net("Empresa:", "empresa", $_POST["empresa"]?? "", 4, "empresa", ""),
-            campo_mes("Data", "busca_data", ($_POST["busca_data"]?? ""), 2, $extraCampoData)
-            // $texto,
+            combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
+            ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
+            campo_mes("Data", "busca_data", ($_POST["busca_data"]?? ""), 2, $extraCampoData),
         ];
+        
         $botao_volta = "";
         if(!empty($_POST["empresa"])){
             $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
@@ -580,8 +584,6 @@
                 $encontrado = false;
             }
         }
-        $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataInicio"])->format("d/m");
-        $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataFim"])->format("d/m");
 
         [$percEndosso["E"], $percEndosso["EP"], $percEndosso["N"]] = calcPercs(array_values($contagemEndossos));
         [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));

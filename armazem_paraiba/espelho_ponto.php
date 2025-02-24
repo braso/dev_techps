@@ -239,7 +239,6 @@
 							continue;
 						}
 					}
-					
 					$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado));
 					for($f = 0; $f < sizeof($row)-1; $f++){
 						if(in_array($f, [3, 4, 5, 6, 12])){//Se for das colunas de jornada, refeição ou "Jornada Prevista", não apaga
@@ -256,17 +255,31 @@
 
 				if(!empty($aEmpresa["empr_nb_parametro"])){
 					$parametroEmpresa = mysqli_fetch_assoc(query(
-						"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percHESemanal, para_tx_percHEEx, para_nb_id, para_tx_nome, para_tx_jornadaSemanal, para_tx_jornadaSabado FROM parametro"
+						"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percHESemanal, para_tx_percHEEx, para_nb_id, para_tx_nome FROM parametro"
 							." WHERE para_tx_status = 'ativo'"
 								." AND para_nb_id = ".$aEmpresa["empr_nb_parametro"]
 							." LIMIT 1;"
 					));
-					if(array_keys(array_intersect($parametroEmpresa, $motorista)) == ["para_tx_jornadaSemanal", "para_tx_jornadaSabado", "para_tx_percHESemanal", "para_tx_percHEEx", "para_nb_id"]){
+
+					$keys = array_keys(array_intersect($parametroEmpresa, $motorista));
+					
+					if(in_array("para_tx_jornadaSemanal", $keys)
+					 	&& in_array("para_tx_jornadaSabado", $keys)
+					 	&& in_array("para_tx_percHESemanal", $keys)
+					 	&& in_array("para_tx_percHEEx", $keys)
+					){
 						$parametroPadrao = "Convenção Padronizada: ".$parametroEmpresa["para_tx_nome"].", Semanal (".$parametroEmpresa["para_tx_jornadaSemanal"]."), Sábado (".$parametroEmpresa["para_tx_jornadaSabado"].")";
 					}
 				}
 
-				
+				$ultimoEndosso = mysqli_fetch_assoc(query(
+					"SELECT endo_tx_filename FROM endosso"
+						." WHERE endo_tx_status = 'ativo'"
+							." AND endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'"
+							." AND endo_tx_ate < '".$_POST["busca_periodo"][0]."'"
+						." ORDER BY endo_tx_ate DESC"
+						." LIMIT 1;"
+				));
 				
 				$saldoAnterior = "";
 				if(!empty($ultimoEndosso)){
@@ -274,8 +287,14 @@
 					if(empty($totalResumo)){
 						$totalResumo = $ultimoEndosso["totalResumo"];
 					}else{
-						foreach($ultimoEndosso["totalResumo"] as $key => $value){
-							$totalResumo[$key] = operarHorarios([$totalResumo[$key], $value], "+");
+						foreach(["saldoAnterior", "saldoFinal"] as $key){
+							$totalResumo[$key] = operarHorarios(
+								[
+									(!empty($totalResumo[$key])? $totalResumo[$key]: "00:00"),
+									(!empty($ultimoEndosso["totalResumo"][$key])? $ultimoEndosso["totalResumo"][$key]: "00:00")
+								], 
+								"+"
+							);
 						}
 					}
 					$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoFinal"];
@@ -323,7 +342,7 @@
 					$totalResumo["saldoBruto"],
 					$totalResumo["he50APagar"],
 					$totalResumo["he100APagar"],
-					$totalResumo["saldoFinal"],
+					$totalResumo["saldoFinal"]
 				);
 				$rows[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumo));
 

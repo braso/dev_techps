@@ -134,7 +134,7 @@
 				form > div:nth-child(2) > div:nth-child(6),
 				form > div:nth-child(3) > div,
 				form > div.form-actions
-				<?=", #contex-grid-".$rand."_length, #contex-grid-".$rand."_info"?>
+				<?=", #contex-grid-{$rand}_length, #contex-grid-{$rand}_info"?>
 				body > div.scroll-to-top > i{
 					display: none;
 				}
@@ -144,7 +144,7 @@
 			}
 		</style>
 		<!-- BEGIN EXAMPLE TABLE PORTLET-->
-		<div class="col-md-<?=$col?> col-sm-<?=$col?>">
+		<div class="<?="col-md-{$col}?> col-sm-{$col}"?>">
 			<div class="portlet light ">
 				<?=$label?>
 				<div class="portlet-body">
@@ -253,7 +253,7 @@
 			<script>
 				const searchFields = ".json_encode($camposBusca).";
 				const fields = ".json_encode($campos).";
-				const queryBase = '{$queryBase} WHERE 1';
+				const queryBase = '".base64_encode($queryBase." WHERE 1")."';
 				{$jsFunctions}
 			</script>
 			<script src='{$_ENV["APP_PATH"]}/contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
