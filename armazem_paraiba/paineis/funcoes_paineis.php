@@ -1469,31 +1469,49 @@
 			$maxTentativas = 30; // Define um limite de 30 dias
 			$tentativas = 0;
 			
-			for ($date = clone $periodoFim; $tentativas < $maxTentativas; $date->modify('-1 day'), $tentativas++) {
+			for ($date = clone $periodoFim; ; $date->modify('-1 day'), $tentativas++) {
 				$diaPonto = diaDetalhePonto($motorista, $date->format('Y-m-d'));
 			
 				if (strpos($diaPonto["inicioJornada"], "fa-warning") === false && !empty($diaPonto["inicioJornada"]) 
 				|| strpos($diaPonto["jornadaPrevista"], "fa-info-circle") !==  false 
-				&& strpos($diaPonto["jornadaPrevista"], "Abono: 00:00:00") === false) {
+				&& strpos($diaPonto["jornadaPrevista"], "Abono: 00:00:00") === false 
+				|| strpos($diaPonto["jornadaPrevista"], "fa-info-circle") !==  false 
+				&& strpos($diaPonto["jornadaPrevista"], "color:red;") === false) {
 					break;
 				}
 			}
+
 			if (strpos($diaPonto["fimJornada"], "fa fa-warning") === false && !empty($diaPonto["fimJornada"]) 
 			|| strpos($diaPonto["jornadaPrevista"], "fa-info-circle") !==  false 
-			&& strpos($diaPonto["jornadaPrevista"], "Abono: 00:00:00") === false) {
+			&& strpos($diaPonto["jornadaPrevista"], "Abono: 00:00:00") === false
+			|| strpos($diaPonto["jornadaPrevista"], "fa-info-circle") !==  false 
+				&& strpos($diaPonto["jornadaPrevista"], "color:red;") === false) {
 				$totalMotoristasLivres += 1;
 				if(strpos($diaPonto["jornadaPrevista"], "fa-info-circle") !==  false 
 				&& strpos($diaPonto["jornadaPrevista"], "Abono: 00:00:00") === false){
 					$dataString = $diaPonto['data'] . ' 00:00';
 				} else {
+					if(strpos($diaPonto["fimJornada"], "D+") !==  false){
+						if (preg_match('/D\+(\d+)/', $diaPonto["fimJornada"], $matches) === 1) {
+							$dias = $matches[1]; // Captura o número após "D+"
+							$dataFim = DateTime::createFromFormat('d/m/Y', $diaPonto['data']);
+							$dataFim->modify("+$dias days");
+							$dataPonto = $dataFim->format('d/m/Y');
+						} 
+					} else{
+						$dataPonto = $diaPonto['data'];
+					}
 					$horaString = preg_replace('/^(\d{2}:\d{2}).*/', '$1', $diaPonto['fimJornada']);
-					$dataString = $diaPonto['data'] . ' ' . $horaString;
+					$dataString = $dataPonto . ' ' . $horaString;
 				}
 
 				$dataFormatada = DateTime::createFromFormat('d/m/Y H:i', $dataString);
 
 				$dataMais11Horas = clone $dataFormatada;
 				$dataMais11Horas->modify('+11 hours'); // Adiciona as 11 horas
+
+				$dataMais8Horas = clone $dataFormatada;
+				$dataMais8Horas->modify('+8 hours');
 
 				$dataReferenciaStr = $_POST['busca_periodo'] ?? null;
 				$dataReferencia = DateTime::createFromFormat('d/m/Y H:i', $dataReferenciaStr);
@@ -1527,6 +1545,7 @@
 					'ultimaJornada' => $dataFormatada->format('d/m/Y H:i'),
 					'repouso' => "". str_pad($horasTotais, 2, '0', STR_PAD_LEFT) . ":". str_pad($minutosRestantes, 2, '0', STR_PAD_LEFT),
 					'Apos11' => $dataMais11Horas->format('d/m/Y H:i'),
+					'Apos8' => $dataMais8Horas->format('d/m/Y H:i'),
 					'consulta' => $dataReferenciaStr
 				];
 
@@ -1541,6 +1560,67 @@
 					$motoristasLivres['disponivel'][] = $dadosMotorista;
 				}
 
+			} else{
+				// Data base
+				$dataJornada = $diaPonto['data'].' '.$diaPonto['inicioJornada'];
+				$dataBase = DateTime::createFromFormat('d/m/Y H:i',$dataJornada);
+				$intersticio = preg_replace('/<a.*?>.*?<\/a>/s', '', $diaPonto['intersticio']);
+				$intersticio = preg_replace('/<i.*?>.*?<\/i>/s', '', $intersticio);
+
+				$refeicao = preg_replace('/<a.*?>.*?<\/a>/s', '', $diaPonto['diffRefeicao']);
+				$refeicao = preg_replace('/<i.*?>.*?<\/i>/s', '', $refeicao);
+
+				$espera = preg_replace('/<a.*?>.*?<\/a>/s', '', $diaPonto['diffEspera']);
+				$espera = preg_replace('/<i.*?>.*?<\/i>/s', '', $espera);
+
+				$descanso = preg_replace('/<a.*?>.*?<\/a>/s', '', $diaPonto['diffDescanso']);
+				$descanso = preg_replace('/<i.*?>.*?<\/i>/s', '', $descanso);
+
+				$repouso = preg_replace('/<a.*?>.*?<\/a>/s', '', $diaPonto['diffRepouso']);
+				$repouso = preg_replace('/<i.*?>.*?<\/i>/s', '', $repouso);
+				
+				// Separa as duas strings em horas e minutos
+				list($h1, $m1) = explode(':', $intersticio); // INTERSTÍCIO
+				list($h2, $m2) = explode(':', $refeicao); // REFEIÇÃO
+				list($h3, $m3) = explode(':', $espera); // ESPERA
+				list($h4, $m4) = explode(':', $descanso); // DESCANSO
+				list($h5, $m5) = explode(':', $repouso); // REPOUSO
+
+				// Converte ambos para minutos
+				$totalMinutos1 = ($h1 * 60) + $m1;
+				$totalMinutos2 = ($h2 * 60) + $m2;
+				$totalMinutos3 = ($h3 * 60) + $m3;
+				$totalMinutos4 = ($h4 * 60) + $m4;
+				$totalMinutos5 = ($h5* 60) + $m5;
+
+				// Calcula a diferença
+				$diferencaMinutos = $totalMinutos1 - $totalMinutos2 - $totalMinutos3 - $totalMinutos4 - $totalMinutos5;
+				// Converte a diferença de volta para horas e minutos
+				$horas = floor($diferencaMinutos / 60);  // 988 / 60 = 16
+				$minutos = $diferencaMinutos % 60;         // 988 % 60 = 28
+				
+				// Cria o intervalo com o resultado (16:28)
+				$intervalo = new DateInterval("PT{$horas}H{$minutos}M");
+
+				// Subtrai o intervalo calculado da data base
+				$dataBase->sub($intervalo);
+				
+				// Exibe o resultado final
+				$dataBase->format('d/m/Y H:i'); // Resultado: 19/02/2025 13:40
+
+				$dadosMotorista = [
+					'matricula' => $motorista['enti_tx_matricula'],
+					'Nome' => $motorista['enti_tx_nome'],
+					'ocupacao' => $motorista['enti_tx_ocupacao'],
+					'ultimaJornada' => $dataBase->format('d/m/Y H:i'),
+					'jornadaAtual' => $dataJornada,
+					'repouso' => $intersticio,
+					'Apos11' => '00/00/00 00:00',
+					'Apos8' => '00/00/00 00:00',
+					'consulta' => $_POST['busca_periodo'] ?? null
+				];
+
+				$motoristasLivres['EmJornada'][] = $dadosMotorista;
 			}
 		}
 

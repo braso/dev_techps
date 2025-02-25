@@ -236,6 +236,36 @@ h4 {
   background-color: var(--var-blue);
 }
 
+.titulos3 {
+  background-color:  #444d58;
+  color: white;
+}
+
+.titulos3 th {
+  text-align: center;
+  align-content: center;
+}
+
+.titulos3 th:hover {
+  background-color: #000000;
+  cursor: pointer;
+}
+
+.titulos4 {
+  background-color:  #444d58;
+  color: white;
+}
+
+.titulos4 th {
+  text-align: center;
+  align-content: center;
+}
+
+.titulos4 th:hover {
+  background-color: #000000;
+  cursor: pointer;
+}
+
 .titulos th {
   text-align: center;
   align-content: center;
