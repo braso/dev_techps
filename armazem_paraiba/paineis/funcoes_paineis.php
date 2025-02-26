@@ -1541,13 +1541,14 @@
 					$minutosRestantes = $minutosTotais % 60;
 				}
 
+				$aviso = ($totalMinutos >= (11 * 60)) ? '11:00 + ' : '';
 
 				$dadosMotorista = [
 					'matricula' => $motorista['enti_tx_matricula'],
 					'Nome' => $motorista['enti_tx_nome'],
 					'ocupacao' => $motorista['enti_tx_ocupacao'],
 					'ultimaJornada' => $dataFormatada->format('d/m/Y H:i'),
-					'repouso' => "". str_pad($horasTotais, 2, '0', STR_PAD_LEFT) . ":". str_pad($minutosRestantes, 2, '0', STR_PAD_LEFT),
+					'repouso' => $aviso."". str_pad($horasTotais, 2, '0', STR_PAD_LEFT) . ":". str_pad($minutosRestantes, 2, '0', STR_PAD_LEFT),
 					'Apos11' => $dataMais11Horas->format('d/m/Y H:i'),
 					'Apos8' => $dataMais8Horas->format('d/m/Y H:i'),
 					'consulta' => $dataReferenciaStr
