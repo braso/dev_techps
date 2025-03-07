@@ -19,23 +19,26 @@
 	}
 
 	function downloadArquivo() {
-		// Verificar se o arquivo existe
-		if (file_exists($_POST["caminho"])) {
-			// Configurar cabeçalhos para forçar o download
-			header("Content-Description: File Transfer");
-			header("Content-Type: application/octet-stream");
-			header("Content-Disposition: attachment; filename=".basename($_POST["caminho"]));
-			header("Expires: 0");
-			header("Cache-Control: must-revalidate");
-			header("Pragma: public");
-			header("Content-Length: ".filesize($_POST["caminho"]));
+		dd("downloadArquivo");
 
-			// Lê o arquivo e o envia para o navegador
-			readfile($_POST["caminho"]);
-			exit;
-		} else {
-			set_status("O arquivo não foi encontrado.");
-		}
+		// // Verificar se o arquivo existe
+		// if (file_exists($_POST["caminho"])) {
+		// 	// Configurar cabeçalhos para forçar o download
+		// 	header("Content-Description: File Transfer");
+		// 	header("Content-Type: application/octet-stream");
+		// 	header("Content-Disposition: attachment; filename=".basename($_POST["caminho"]));
+		// 	header("Expires: 0");
+		// 	header("Cache-Control: must-revalidate");
+		// 	header("Pragma: public");
+		// 	header("Content-Length: ".filesize($_POST["caminho"]));
+
+		// 	// Lê o arquivo e o envia para o navegador
+		// 	readfile($_POST["caminho"]);
+		// 	exit;
+		// } else {
+		// 	set_status("O arquivo não foi encontrado.");
+		// }
+		
 		$_POST["id"] = $_POST["idEmpresa"];
 		modificarEmpresa();
 		exit;
@@ -100,7 +103,7 @@
 	function modificarEmpresa(){
 		global $a_mod;
 
-		$a_mod=carregar("empresa",$_POST["id"]);
+		$a_mod=carregar("empresa", $_POST["id"]);
 
 		visualizarCadastro();
 		exit;
@@ -253,7 +256,6 @@
 					type: 'get',
         			dataType: 'json',
 					success: function(data) {
-						console.log(data.erro);
 						if(data.erro == undefined){
 							parent.document.contex_form.endereco.value = data.logradouro
 							parent.document.contex_form.bairro.value = data.bairro;
@@ -333,7 +335,6 @@
 							data: { cnpj: cnpj },
 							dataType: 'json',
 							success: function(response) {
-								console.log(response);
 								$('#nome').val(response[0].empr_tx_nome);
 								$('#fantasia').val(response[0].empr_tx_fantasia);
 								$('#status').val(response[0].empr_tx_status);
@@ -373,8 +374,8 @@
 			$prefix = "";
 
 			$input_values = [
-				"nome" 				=> (!empty($_POST["busca_nome"])? $_POST["busca_nome"]: ""),
-				"fantasia" 			=> (!empty($_POST["busca_fantasia"])? $_POST["busca_fantasia"]: ""),
+				"nome" 				=> (!empty($_POST["busca_nome_like"])? $_POST["busca_nome_like"]: ""),
+				"fantasia" 			=> (!empty($_POST["busca_fantasia_like"])? $_POST["busca_fantasia_like"]: ""),
 				"cnpj" 				=> (!empty($_POST["busca_cnpj"])? $_POST["busca_cnpj"]: ""),
 				"uf" 				=> (!empty($_POST["uf"])? $_POST["uf"]: ""),
 
@@ -513,18 +514,10 @@
 
 		$botao = [
 			botao($btn_txt,"cadastrarEmpresa","id",($_POST["id"]?? ""),"","","btn btn-success"),
-			botao("Voltar","voltar")
+			criarBotaoVoltar("cadastro_empresa.php")
 		];
-
-		if(empty($_POST["HTTP_REFERER"])){
-			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
-			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_empresa.php"))){
-				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_empresa.php";
-			}
-		}
 		
 		echo abre_form("Dados da Empresa/Filial");
-		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		echo linha_form($c);
 		echo "<br>";
 		fieldset("CONVEÇÃO SINDICAL - JORNADA DO FUNCIONÁRIO PADRÃO");
@@ -620,19 +613,14 @@
 	}
 
 	function index(){
-
 		cabecalho("Cadastro Empresa/Filial");
 
-		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
-			$extraEmpresa = " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
-		}
-
 		$extra = 
-			((!empty($_POST["busca_codigo"]))? 		" AND empr_nb_id = {$_POST["busca_codigo"]}'": "").
-			((!empty($_POST["busca_nome"]))? 		" AND empr_tx_nome LIKE '%{$_POST["busca_nome"]}%'": "").
-			((!empty($_POST["busca_fantasia"]))? 	" AND empr_tx_fantasia LIKE '%{$_POST["busca_fantasia"]}'": "").
-			((!empty($_POST["busca_cnpj"]))? 		" AND empr_tx_cnpj = '{$_POST["busca_cnpj"]}'": "").
-			((!empty($_POST["busca_uf"]))? 			" AND cida_tx_uf = '{$_POST["busca_uf"]}'": "")
+			((!empty($_POST["busca_codigo"]))? 			" AND empr_nb_id = {$_POST["busca_codigo"]}'": "").
+			((!empty($_POST["busca_nome_like"]))? 		" AND empr_tx_nome LIKE '%{$_POST["busca_nome_like"]}%'": "").
+			((!empty($_POST["busca_fantasia_like"]))? 	" AND empr_tx_fantasia LIKE '%{$_POST["busca_fantasia_like"]}'": "").
+			((!empty($_POST["busca_cnpj"]))? 			" AND empr_tx_cnpj = '{$_POST["busca_cnpj"]}'": "").
+			((!empty($_POST["busca_uf"]))? 				" AND cida_tx_uf = '{$_POST["busca_uf"]}'": "")
 		;
 
 		if(!isset($_POST["busca_status"])){
@@ -646,12 +634,12 @@
 		
 
 		$c = [
-			campo("Código",			"busca_codigo",		($_POST["busca_codigo"]?? ""),		2, "MASCARA_NUMERO",	"maxlength='6'"),
-			campo("Nome",			"busca_nome",		($_POST["busca_nome"]?? ""),		3, "",					"maxlength='65'"),
-			campo("Nome Fantasia",	"busca_fantasia",	($_POST["busca_fantasia"]?? ""),	2, "",					"maxlength='65'"),
-			campo("CPF/CNPJ",		"busca_cnpj",		($_POST["busca_cnpj"]?? ""),		2, "MASCARA_CPF/CNPJ"),
-			combo("UF",				"busca_uf",			($_POST["busca_uf"]?? ""),			1, $uf),
-			combo("Status",			"busca_status",		($_POST["busca_status"]?? "ativo"),	2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
+			campo("Código",			"busca_codigo",			($_POST["busca_codigo"]?? ""),			2, "MASCARA_NUMERO",	"maxlength='6'"),
+			campo("Nome",			"busca_nome_like",		($_POST["busca_nome_like"]?? ""),		3, "",					"maxlength='65'"),
+			campo("Nome Fantasia",	"busca_fantasia_like",	($_POST["busca_fantasia_like"]?? ""),	2, "",					"maxlength='65'"),
+			campo("CPF/CNPJ",		"busca_cnpj",			($_POST["busca_cnpj"]?? ""),			2, "MASCARA_CPF/CNPJ"),
+			combo("UF",				"busca_uf",				($_POST["busca_uf"]?? ""),				1, $uf),
+			combo("Status",			"busca_status",			($_POST["busca_status"]?? "ativo"),		2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
 		];
 
 		$botao = [
@@ -663,39 +651,46 @@
 		echo linha_form($c);
 		echo fecha_form($botao);
 
-		$iconeModificar = criarSQLIconeTabela("empr_nb_id", "modificarEmpresa", "Modificar", "glyphicon glyphicon-search");
-		$iconeExcluir = criarSQLIconeTabela("empr_nb_id", "excluirEmpresa", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?");
+		//Configuração da tabela dinâmica{
+			$gridFields = [
+				"CÓDIGO" 		=> "empr_nb_id",
+				"NOME" 			=> "IF(empr_tx_Ehmatriz = 'sim', CONCAT('<i class=\"fa fa-star\" aria-hidden=\"true\"></i> ', empr_tx_nome), empr_tx_nome) as empr_tx_nome",
+				"FANTASIA" 		=> "empr_tx_fantasia",
+				"CPF/CNPJ" 		=> "empr_tx_cnpj",
+				"CIDADE/UF" 	=> "CONCAT('[', cida_tx_uf, '] ', cida_tx_nome) as ufCidade",
+				"STATUS" 		=> "empr_tx_status"
+			];
+			$camposBusca = [
+				"busca_codigo" 			=> "empr_nb_id",
+				"busca_nome_like"		=> "empr_tx_nome",
+				"busca_fantasia_like" 	=> "empr_tx_fantasia",
+				"busca_cnpj" 			=> "empr_tx_cnpj",
+				"busca_uf" 				=> "cida_tx_uf",
+				"busca_status" 			=> "empr_tx_status"
+			];
+			$queryBase = (
+				"SELECT ".implode(", ", array_values($gridFields))." FROM empresa
+					JOIN cidade ON empr_nb_cidade = cida_nb_id"
+			);
 
-		$sqlFields = [
-			"empr_nb_id",
-			"IF(empr_tx_Ehmatriz = 'sim', CONCAT('<i class=\"fa fa-star\" aria-hidden=\"true\"></i> ', empr_tx_nome), empr_tx_nome) as empr_tx_nome",
-			"empr_tx_fantasia",
-			"empr_tx_cnpj",
-			"CONCAT('[', cida_tx_uf, '] ', cida_tx_nome) as ufCidade",
-			"empr_tx_status",
-			"{$iconeModificar} as iconeModificar",
-			"IF(empr_tx_status = 'ativo', {$iconeExcluir}, NULL) as iconeExcluir"
-		];
 
-		$sql = 
-			"SELECT ".implode(", ", $sqlFields)." FROM empresa
-				JOIN cidade ON empr_nb_cidade = cida_nb_id
-				WHERE 1
-					{$extra}
-				ORDER BY empr_tx_Ehmatriz DESC, empr_nb_id";
+			$actions = criarIconesGrid(
+				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
+				["cadastro_empresa.php", "cadastro_empresa.php"],
+				["modificarEmpresa()", "excluirEmpresa()"]
+			);
+			$actions["functions"][1] .= "esconderInativar('glyphicon glyphicon-remove search-remove', 5);";
 
-		$gridCols = [
-			"CÓDIGO" => "empr_nb_id",
-			"NOME" => "empr_tx_nome",
-			"FANTASIA" => "empr_tx_fantasia",
-			"CPF/CNPJ" => "empr_tx_cnpj",
-			"CIDADE/UF" => "ufCidade",
-			"STATUS" => "empr_tx_status",
-			"<spam class='glyphicon glyphicon-search'></spam>" => "iconeModificar",
-			"<spam class='glyphicon glyphicon-remove'></spam>" => "iconeExcluir"
-		];
-		
-		grid($sql, array_keys($gridCols),array_values($gridCols),"","12",1,"desc");
+			$gridFields["actions"] = $actions["tags"];
+
+			$jsFunctions =
+				"const funcoesInternas = function(){
+					".implode(" ", $actions["functions"])."
+				}"
+			;
+
+			echo gridDinamico("tabelaEmpresas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+		//}
 
 		rodape();
 	}

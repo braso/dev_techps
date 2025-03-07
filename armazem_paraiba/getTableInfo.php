@@ -38,7 +38,11 @@
         foreach ($queryResult as $row) {
             $tabelaRow = [];
             foreach ($row as $key => $data){
-                $tabelaRow[] = $data;
+                preg_match('/^.*\((.*?)\)$/', $data, $match);
+                if(isset($match[1])){
+                    $data = eval("return {$match[0]};");
+                }
+                $tabelaRow[$key] = $data;
             }
 
             $tabela["rows"][] = $tabelaRow;

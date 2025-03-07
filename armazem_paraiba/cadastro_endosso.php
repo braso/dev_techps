@@ -544,18 +544,7 @@
 			botao("Cadastrar Endosso", "cadastrar", "", "", "", "", "btn btn-success")
 		];
 
-		if(empty($_POST["HTTP_REFERER"])){
-			if(empty($_SERVER["HTTP_REFERER"])){
-				$_SERVER["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/endosso.php";
-			}
-			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
-			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_endosso.php"))){
-				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/endosso.php";
-			}
-		}
-
 		echo abre_form();
-		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		echo linha_form($fields);
 		echo fecha_form($buttons);
 		

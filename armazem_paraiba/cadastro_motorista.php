@@ -22,23 +22,22 @@
 		exit;
 	}
 
-	function carregarParametroPadrao(int $idEmpresa = null){
+	function carregarParametroPadrao(int $idEmpresa = 0){
 		global $a_mod;
+
 		if(!empty($idEmpresa) && !empty($a_mod["enti_nb_empresa"])){
 			$idEmpresa = intval($a_mod["enti_nb_empresa"]);
 		}else{
 			$idEmpresa = -1;
 		}
 
-		$a_mod["parametroPadrao"] = mysqli_fetch_assoc(
-			query(
-				"SELECT parametro.* FROM empresa
-					JOIN parametro ON empresa.empr_nb_parametro = parametro.para_nb_id
-					WHERE para_tx_status = 'ativo'
-						AND empresa.empr_nb_id = {$idEmpresa}
-					LIMIT 1;"
-			)
-		);
+		$a_mod["parametroPadrao"] = mysqli_fetch_assoc(query(
+			"SELECT parametro.* FROM empresa
+				JOIN parametro ON empresa.empr_nb_parametro = parametro.para_nb_id
+				WHERE para_tx_status = 'ativo'
+					AND empresa.empr_nb_id = {$idEmpresa}
+				LIMIT 1;"
+		));
 	}
 
 	function carregarParametro(){
@@ -702,14 +701,7 @@
 			"btn btn-success"
 		);
 
-		$botoesCadastro[] = botao("Voltar", "voltar", "", "", "tabindex=54");
-
-		if(empty($_POST["HTTP_REFERER"])){
-			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
-			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_motorista.php"))){
-				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_motorista.php";
-			}
-		}
+		$botoesCadastro[] = criarBotaoVoltar(null, null, "tabindex=54");
 
 		echo abre_form();
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
@@ -892,7 +884,7 @@
 				"EMPRESA" 				=> "empr_tx_nome",
 				"FONE 1" 				=> "enti_tx_fone1",
 				"OCUPAÇÃO" 				=> "enti_tx_ocupacao",
-				"DATA CADASTRO" 		=> "DATE_FORMAT(enti_tx_dataCadastro, \"%d/%m/%Y\") AS enti_tx_dataCadastro",
+				"DATA CADASTRO" 		=> "CONCAT('data(\"', enti_tx_dataCadastro, '\")') AS enti_tx_dataCadastro",
 				"PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
 				"CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
 				"STATUS" 				=> "enti_tx_status"

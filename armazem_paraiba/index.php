@@ -140,6 +140,9 @@
 	}
 
 	$_POST["HTTP_REFERER"] = $_ENV["APP_PATH"]."/index.php?error=".$error;
+	$_POST["returnValues"] = json_encode([
+		"HTTP_REFERER" => $_POST["HTTP_REFERER"]
+	]);
 
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
 	voltar();
