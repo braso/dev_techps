@@ -19,21 +19,29 @@
 
 	function redirParaAbono(){
 		global $CONTEX;
+
 		if(empty($_POST['busca_motorista'])){
 			header("Location: {$CONTEX["path"]}/cadastro_abono.php");
 			exit;
 		}
 	
+		if(!empty($_POST["busca_data"])){
+			$_POST["busca_periodo"] = [
+				$_POST["busca_data"]."-01",
+				((new DateTime())->format("Y-m") == $_POST["busca_data"])? (new DateTime())->format("Y-m-d"): (DateTime::createFromFormat("Y-m", $_POST["busca_data"]))->format("Y-m-t")
+			];
+		}
 		// Gerar o HTML do formulário e a página de redirecionamento
+		$_POST["acao"] = "layout_abono";
+		$_POST["HTTP_REFERER"] = "{$CONTEX["path"]}/nao_conformidade.php";
 
 		echo criarHiddenForm(
 			"forms_abono",
-			["acao", "busca_motorista", "busca_empresa", "busca_data", "HTTP_REFERER"],
-			["layout_abono", htmlspecialchars($_POST["busca_motorista"]), htmlspecialchars($_POST["busca_empresa"]), htmlspecialchars($_POST["busca_data"]), "{$CONTEX["path"]}/nao_conformidade.php"],
+			array_keys($_POST),
+			array_values($_POST),
 			"{$CONTEX["path"]}/cadastro_abono.php"
 		);
-		echo "<script>document.forms_abono.submit();</script>"
-		;
+		echo "<script>document.forms_abono.submit();</script>";
 		exit;
 	}
 
@@ -269,7 +277,7 @@
 				for($f = 0; $f < count($rows); $f++){
 					$qtdErros = 0;
 					foreach($rows[$f] as $key => $value){
-						preg_match_all("/(?<=<)([^(\/|<|>)])+(?=>)/", $value, $tags);
+						preg_match_all("/(?<=<)([^(<|>)])+(?=>)/", $value, $tags);
 						array_walk_recursive($tags[0], function($tag, $key) use (&$qtdErros){
 							$qtdErros += substr_count($tag, "fa-warning")*(substr_count($tag, "color:red;") || substr_count($tag, "color:orange;"))		//Conta todos os triângulos, pois todos os triângulos são alertas de não conformidade.
 								+((is_int(strpos($tag, "fa-info-circle")))*(substr_count($tag, "color:red;") || substr_count($tag, "color:orange;")))	//Conta os círculos que sejam vermelhos ou laranjas.
@@ -359,11 +367,9 @@
 			$extraEmpresaMotorista = " AND enti_nb_empresa = '".$_SESSION["user_nb_empresa"]."'";
 		}
 
-		$carregando = "";
+		$carregando = (!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()")? "Carregando...": "";
 		$extraMotorista = "";
-		if(!empty($_POST["busca_data"]) && !empty($_POST["busca_empresa"])){
-			$carregando = "Carregando...";
-		}
+		
 		if(empty($_POST["acao"]) && empty($_POST["busca_data"])){
 			$_POST["busca_data"] = date("Y-m");
 		}
@@ -403,7 +409,7 @@
 		//BOTOES{
 			$b = [
 				botao("Buscar", "buscarEspelho", "", "", "", "","btn btn-success"),
-				botao("Cadastrar Abono", "redirParaAbono", "", "", "", 1),
+				botao("Cadastrar Abono", "redirParaAbono", "acaoPrevia", $_POST["acao"], "", 1),
 				$botao_imprimir
 			];
 		//}
@@ -446,6 +452,7 @@
 
 		$params = array_merge($_POST, [
 			"acao" => "index",
+			"acaoPrevia" => $_POST["acao"],
 			"idMotorista" => null,
 			"data" => null,
 			"HTTP_REFERER" => (!empty($_POST["HTTP_REFERER"])? $_POST["HTTP_REFERER"]: $_SERVER["REQUEST_URI"])
