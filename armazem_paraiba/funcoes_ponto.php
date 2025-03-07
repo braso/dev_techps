@@ -1584,14 +1584,13 @@
 			." AND user.user_tx_status = 'ativo'"
 			." AND macroponto.macr_tx_status = 'ativo'"
 		;
-		
 		$sql = 
 			"SELECT DISTINCT pont_nb_id, ".implode(",", $cols)." FROM ponto"
 				." JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno"
 				." JOIN entidade ON ponto.pont_tx_matricula = entidade.enti_tx_matricula"
 				." JOIN user ON entidade.enti_nb_id = user.user_nb_entidade"
 				." LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id"
-				." LEFT JOIN endosso ON ponto.pont_tx_matricula = endosso.endo_tx_matricula"
+				." LEFT JOIN endosso ON ponto.pont_tx_matricula = endosso.endo_tx_matricula AND endo_tx_status = 'ativo' AND endo_tx_matricula = '{$matricula}' AND '{$data->format("Y-m-d")}' BETWEEN endo_tx_de AND endo_tx_ate"
 				." WHERE {$condicoesPontoBasicas}"
 					." AND macr_tx_fonte = 'positron'"
 					." AND ponto.pont_tx_data >= STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')"
