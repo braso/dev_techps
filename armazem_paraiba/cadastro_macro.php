@@ -63,15 +63,8 @@
 
 		$botao = [
 			// botao("Gravar","cadastra_macro","id",$_POST["id"],"","","btn btn-success"),
-			botao("Voltar","index")
+			criarBotaoVoltar()
 		];
-
-		if(empty($_POST["HTTP_REFERER"])){
-			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
-			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_macro.php"))){
-				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_macro.php";
-			}
-		}
 		
 		echo abre_form("Dados do Macro");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
@@ -105,22 +98,40 @@
 		echo linha_form($campos);
 		echo fecha_form($botoes);
 
-		$iconeModificar = criarSQLIconeTabela("macr_nb_id", "modificarMacro", "Modificar", "glyphicon glyphicon-search");
+		//Grid dinâmico{
+			$gridFields = [
+				"CÓDIGO" => "macr_nb_id",
+				"NOME" => "macr_tx_nome",
+				"CÓD. INTERNO" => "macr_tx_codigoInterno",
+				"CÓD. EXTERNO" => "macr_tx_codigoExterno",
+			];
 
-		$sql = 
-			"SELECT *, {$iconeModificar} as iconeModificar FROM macroponto
-				WHERE macr_tx_status = 'ativo' 
-					{$extra};"
-		;
-		$cols = [
-			"CÓDIGO" => "macr_nb_id",
-			"NOME" => "macr_tx_nome",
-			"CÓD. INTERNO" => "macr_tx_codigoInterno",
-			"CÓD. EXTERNO" => "macr_tx_codigoExterno",
-			"<spam class='glyphicon glyphicon-search'></spam>" => "iconeModificar",
-		];
+			$camposBusca = [
+				"busca_codigo" 	=> "macr_nb_id",
+				"busca_nome" 	=> "macr_tx_nome"
+			];
 
-		grid($sql, array_keys($cols), array_values($cols), "", "", 0, "desc");
+			$queryBase = (
+				"SELECT ".implode(", ", array_values($gridFields))." FROM macroponto"
+			);
+
+			$actions = criarIconesGrid(
+				["glyphicon glyphicon-search search-button"],
+				["cadastro_macro.php"],
+				["modificarMacro()"]
+			);
+			$gridFields["actions"] = $actions["tags"];
+
+			$jsFunctions =
+				"const funcoesInternas = function(){
+					".implode(" ", $actions["functions"])."
+				}"
+			;
+
+			echo gridDinamico("tabelaFeriados", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+		//}*/
+
+
 
 		rodape();
 

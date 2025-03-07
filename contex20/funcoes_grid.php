@@ -114,62 +114,62 @@
 			;
 		}
 
-		?>
-		<form id='contex_icone_form' method='post' target='' action=''>
-			<input type='hidden' name='id' value='0'>
-			<input type='hidden' name='acao' value='sem_acao'>
-			<input type='hidden' name='just' value=''>
-			<input type='hidden' name='atualiza' value=''>
-			<input type='hidden' id='hidden'>
-		</form>
-		
-		<style type="text/css">
-			th { font-size: 10px !important; }
-			td { font-size: 10px !important; }
+		echo 
+			"<form id='contex_icone_form' method='post' target='' action=''>
+				<input type='hidden' name='id' value='0'>
+				<input type='hidden' name='acao' value='sem_acao'>
+				<input type='hidden' name='just' value=''>
+				<input type='hidden' name='atualiza' value=''>
+				<input type='hidden' id='hidden'>
+			</form>
+			
+			<style type='text/css'>
+				th { font-size: 10px !important; }
+				td { font-size: 10px !important; }
 
-			@media print{
-				form > div:nth-child(2) > div:nth-child(1),
-				form > div:nth-child(2) > div:nth-child(3),
-				form > div:nth-child(2) > div:nth-child(5),
-				form > div:nth-child(2) > div:nth-child(6),
-				form > div:nth-child(3) > div,
-				form > div.form-actions
-				<?=", #contex-grid-{$rand}_length, #contex-grid-{$rand}_info"?>
-				body > div.scroll-to-top > i{
-					display: none;
+				@media print{
+					form > div:nth-child(2) > div:nth-child(1),
+					form > div:nth-child(2) > div:nth-child(3),
+					form > div:nth-child(2) > div:nth-child(5),
+					form > div:nth-child(2) > div:nth-child(6),
+					form > div:nth-child(3) > div,
+					form > div.form-actions, 
+					#contex-grid-{$rand}_length, #contex-grid-{$rand}_info
+					body > div.scroll-to-top > i{
+						display: none;
+					}
+					@page{
+						size: landscape;
+					}
 				}
-				@page{
-					size: landscape;
-				}
-			}
-		</style>
-		<!-- BEGIN EXAMPLE TABLE PORTLET-->
-		<div class="<?="col-md-{$col}?> col-sm-{$col}"?>">
-			<div class="portlet light ">
-				<?=$label?>
-				<div class="portlet-body">
-					<table id="contex-grid-<?=$rand?>" class="table compact table-striped table-bordered table-hover dt-responsive" width="100%" id="sample_2">
-						<thead>
-							<tr>
-								<?=$cabecalho?>
-							</tr>
-						</thead>
-					</table>
+			</style>
+			<!-- BEGIN EXAMPLE TABLE PORTLET-->
+			<div class='col-md-{$col} col-sm-{$col}'>
+				<div class='portlet light'>
+					{$label}
+					<div class='portlet-body'>
+						<table id='contex-grid-{$rand}' class='table compact table-striped table-bordered table-hover dt-responsive' width='100%' id='sample_2'>
+							<thead>
+								<tr>
+									{$cabecalho}
+								</tr>
+							</thead>
+						</table>
+					</div>
 				</div>
 			</div>
-		</div>
-		<!-- END EXAMPLE TABLE PORTLET-->
+			<!-- END EXAMPLE TABLE PORTLET-->
 
-		<!-- BEGIN PAGE LEVEL PLUGINS -->
-		<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/scripts/datatable.js" type="text/javascript"></script>
-		<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/datatables.min.js" type="text/javascript"></script>
-		<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js" type="text/javascript"></script>
-		<!-- END PAGE LEVEL PLUGINS -->
+			<!-- BEGIN PAGE LEVEL PLUGINS -->
+			<script src='{$_ENV["APP_PATH"]}/contex20/assets/global/scripts/datatable.js' type='text/javascript'></script>
+			<script src='{$_ENV["APP_PATH"]}/contex20/assets/global/plugins/datatables/datatables.min.js' type='text/javascript'></script>
+			<script src='{$_ENV["APP_PATH"]}/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js' type='text/javascript'></script>
+			<!-- END PAGE LEVEL PLUGINS -->
 
-		<!-- BEGIN PAGE LEVEL SCRIPTS -->
-		<script src="<?=$_ENV["APP_PATH"]?>/contex20/assets/scripts/table-datatables-responsive.min.js" type="text/javascript"></script>
-		<!-- END PAGE LEVEL SCRIPTS -->
-		<?php
+			<!-- BEGIN PAGE LEVEL SCRIPTS -->
+			<script src='{$_ENV["APP_PATH"]}/contex20/assets/scripts/table-datatables-responsive.min.js' type='text/javascript'></script>
+			<!-- END PAGE LEVEL SCRIPTS -->"
+		;
 
 		include_once "conecta.php";
 
@@ -221,7 +221,7 @@
 			"<link href='{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/css/grid_dinamico.css' rel='stylesheet' type='text/css' />
 			<div class='col-md-{$width}'>
 				<div class='portlet light'>
-					<div class='' style='margin-top: 8px;overflow-x: auto; border-radius: 10px; max-height: 80vh;'>
+					<div class='table-div' style='margin-top: 8px;overflow-x: auto; border-radius: 10px; max-height: 87vh;'>
 						<div class='table-loading-icon' style='place-items: center;position: absolute;width: 89vw;z-index: 2;top: 50px;'>
 						</div>
 						<div class='table-loading-icon' style='place-items: center'></div>
@@ -283,7 +283,6 @@
 					form.setAttribute('method', 'post');
 					form.setAttribute('action', '{$actionFiles[$f]}');
 					
-					console.log($(event.target).parent().parent().children()[0].innerHTML);
 					idInput = document.createElement('input');
 					idInput.setAttribute('name', 'id');
 					idInput.setAttribute('value', $(event.target).parent().parent().children()[0].innerHTML);
@@ -293,7 +292,25 @@
 					actionInput.setAttribute('name', 'acao');
 					actionInput.setAttribute('value', '{$actionFuncs[$f]}');
 					form.appendChild(actionInput);
-					
+
+					inputs = document.contex_form.getElementsByTagName('input');
+					selects = document.contex_form.getElementsByTagName('select');
+
+					if(inputs != undefined){
+						for(key in inputs){
+							if(inputs[key].value != undefined && inputs[key].value != ''){
+								form.appendChild(inputs[key].cloneNode(true));
+							}
+						}
+					}
+					if(selects != undefined){
+						for(key in selects){
+							if(selects[key].value != undefined && selects[key].value != ''){
+								form.appendChild(selects[key].cloneNode(true));
+							}
+						}
+					}
+
 					document.getElementsByTagName('body')[0].appendChild(form);
 					form.submit();
 				});"
@@ -301,4 +318,26 @@
 		}
 
 		return $result;
+	}
+
+	function downloadArquivo() {
+		// Verificar se o arquivo existe
+		if(file_exists($_POST["caminho"])){
+			// Configurar cabeçalhos para forçar o download
+			header("Content-Description: File Transfer");
+			header("Content-Type: application/octet-stream");
+			header("Content-Disposition: attachment; filename=".basename($_POST["caminho"]));
+			header("Expires: 0");
+			header("Cache-Control: must-revalidate");
+			header("Pragma: public");
+			header("Content-Length: ".filesize($_POST["caminho"]));
+
+			// Lê o arquivo e o envia para o navegador
+			readfile($_POST["caminho"]);
+		}else{
+			set_status("O arquivo não foi encontrado.");
+		}
+
+		index();
+		exit;
 	}

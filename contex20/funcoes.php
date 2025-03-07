@@ -1294,7 +1294,7 @@
 
 	}
 
-	function botao($nome, $acao, $campos='', $valores='', $extra='', bool $salvar = false, $botaoCor='btn btn-secondary'){
+	function botao($nome, $acao, $campos='', $valores='', $extra='', bool $salvar = false, $botaoCor='btn btn-secondary'): string{
 		global $idsBotaoContex;
 		$hidden = '';
 		$funcaoOnClick = '';
@@ -1303,11 +1303,11 @@
 			$a_valores=explode(',',$valores);
 			for($i=0; $i<count($a_campos); $i++){
 				$hidden .= "
-					var input".$i." = document.createElement('input');
-					input".$i.".type = 'hidden';
-					input".$i.".name = '".$a_campos[$i]."';
-					input".$i.".value = '".$a_valores[$i]."';
-					document.forms[0].appendChild(input".$i.");
+					var input{$i} = document.createElement('input');
+					input{$i}.type = 'hidden';
+					input{$i}.name = '".$a_campos[$i]."';
+					input{$i}.value = '".$a_valores[$i]."';
+					document.forms[0].appendChild(input{$i});
 					"
 				;
 			}
