@@ -69,7 +69,7 @@ const consultarRegistros = function(){
 
 
     for(f = 0; f < keys.length; f++){
-        if(data[keys[f]] != '' && inputs[f].name){
+        if(data[keys[f]] != '' && inputs[f] != undefined){
             if(inputs[f].name.indexOf('_like') > 0){
                 conditions += ' AND '+keys[f]+' LIKE \"%'+data[keys[f]]+'%\"';
             }else if((inputs[f].name.indexOf('_g') > 0)){
