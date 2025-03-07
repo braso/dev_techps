@@ -25,7 +25,7 @@ th.table-col-head:hover{
 th.table-col-head, .page-selected{
     background-color: #444d58;
     color: white;
-    text-wrap-mode: nowrap;
+    /* text-wrap-mode: nowrap; */
 }
 
 .grid-dinamico tbody tr{
@@ -34,6 +34,10 @@ th.table-col-head, .page-selected{
 
 .grid-dinamico tbody tr td{
     align-content: center;
+    width: min-content;
+    max-width:300px;
+    /* overflow: hidden; */
+    /* text-wrap-mode: nowrap; */
     /* vertical-align: middle; */
 }
 
@@ -56,6 +60,7 @@ tbody tr:nth-child(even){
 .table>tbody>tr>td.tab-action>*{
     min-width: 30px;
     height: 100%;
+    width: 100%;
     align-content: center;
 }
 
@@ -86,4 +91,22 @@ tbody tr:nth-child(even){
 .tab-pagination div:hover{
     background-color: rgb(197, 197, 197);
     cursor: pointer;
+}
+
+th { font-size: 10px !important; }
+td { font-size: 10px !important; }
+
+@media print{
+    .row > div > div:first-child, .grid-footer{
+        display: none;
+    }
+    .table-div{
+        max-height: initial !important;
+    }
+    .table-col-head{
+        border: 1px solid black !important;
+    }
+    @page{
+        size: landscape;
+    }
 }
