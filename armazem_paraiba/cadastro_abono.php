@@ -99,9 +99,8 @@
 			inserir("abono", array_keys($novoAbono), array_values($novoAbono));
 		}
 
-		$_POST["acao"] = "buscarEspelho";
-		$_POST["busca_periodo"] = json_decode(str_replace("'", "\"", $_POST["busca_periodo"]));
-		voltar();
+		set_status("Registro inserido com sucesso.");
+		index();
 		exit;
 	}
 
@@ -122,35 +121,27 @@
 			4,
 			"entidade",
 			"",
-			" AND enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário')",
+			" AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')",
 			"enti_tx_matricula"
 		);
 		$campos[0][] = campo("Data(s)*", "periodo_abono", ($_POST["periodo_abono"]?? $_POST["busca_periodo"]?? ""),3, "MASCARA_PERIODO");
 		$campos[0][] = campo("Abono*", "abono", ($_POST["abono"]?? ""), 3, "MASCARA_HORAS");
 		$campos[1][] = combo_bd("Motivo*","motivo", ($_POST["motivo"]?? ""),4,"motivo",""," AND moti_tx_tipo = 'Abono'");
 		$campos[1][] = textarea("Justificativa","descricao", ($_POST["descricao"]?? ""),12);
-		
-		//BOTOES
-    	$b[] = botao("Gravar","cadastra_abono", "","","","","btn btn-success");
 
-		if(empty($_POST["HTTP_REFERER"])){
-			$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
-		}
-		
-		$voltarInfo = $_POST;
-		unset($voltarInfo["errorFields"]);
-		$voltarInfo["busca_periodo"] = !empty($voltarInfo["busca_periodo"])? implode(" - ", $voltarInfo["busca_periodo"]): null;
-		
-		$b[] = botao("Voltar", "voltar", implode(",", array_keys($voltarInfo)), implode(",",array_values($voltarInfo))); 
 		echo abre_form();
-
-		echo campo_hidden("HTTP_REFERER", 	$voltarInfo["HTTP_REFERER"]);
-		echo campo_hidden("busca_empresa", ($voltarInfo["busca_empresa"]?? ""));
-		echo campo_hidden("busca_periodo", (str_replace("\"", "'", $voltarInfo["busca_periodo"])?? ""));
-		
 		echo linha_form($campos[0]);
 		echo linha_form($campos[1]);
+
+
+		//BOTOES{
+    		$b[] = botao("Gravar", "cadastra_abono", "", "", "", "", "btn btn-success");
+			unset($_POST["errorFields"]);
+			$_POST["busca_periodo"] = !empty($_POST["busca_periodo"])? implode(" - ", $_POST["busca_periodo"]): null;
+			$b[] = criarBotaoVoltar("espelho_ponto.php");
+		//}
 		echo fecha_form($b);
 
+		
 		rodape();
 	}
