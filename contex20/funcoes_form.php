@@ -103,20 +103,54 @@
 		return "<div class='row'>{$campo}</div>";
 	}
 
-	function voltar(){
-
+	//$telaPadrao: A tela para qual será retornada caso o HTTP_REFERER esteja querendo voltar para a mesma tela que já está
+	function criarBotaoVoltar($telaPadrao = null, $acaoPadrao = null, $extra = ""): string{
 		if(empty($_POST["HTTP_REFERER"])){
+			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
+			if(is_int(strpos($_SERVER["HTTP_REFERER"], $_SERVER["REQUEST_URI"]))){
+				if(empty($telaPadrao)){
+					$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_SERVER["REQUEST_URI"];
+				}else{
+					$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$telaPadrao;
+				}
+			}
+		}
+		if(empty($_POST["acaoPrevia"])){
+			if(empty($acaoPadrao)){
+				$_POST["acaoPrevia"] = "index";
+			}else{
+				$_POST["acaoPrevia"] = $acaoPadrao;
+			}
+		}
+
+		if(empty($_POST["returnValues"])){
+			$_POST["returnValues"] = json_encode($_POST);
+		}
+
+		return botao("Voltar", "voltar")."<input type='hidden' name='returnValues' value='{$_POST["returnValues"]}' {$extra}/>";
+	}
+
+	function voltar(){
+		
+		$returnValues = json_decode($_POST["returnValues"]);
+
+		if(empty($returnValues->HTTP_REFERER)){
 			set_status("Tela de origem indefinida.");
 			index();
 			exit;
 		}
-		
-		if(empty($_POST['acao']) || $_POST["acao"] == "voltar()"){
-			$_POST['acao'] = "index";
+
+		if(!empty($returnValues->acaoPrevia)){
+			$returnValues->acao = $returnValues->acaoPrevia;
+			unset($returnValues->acaoPrevia);
 		}
 		
-		$formVoltar = "<form action='".str_replace($_ENV["URL_BASE"], "", $_POST["HTTP_REFERER"])."' name='form_voltar' method='post'>";
-		foreach($_POST as $key => $value){
+		if(empty($returnValues->acao) || $returnValues->acao == "voltar()"){
+			$returnValues->acao = "index";
+		}
+		
+		$formVoltar = "<form action='".str_replace($_ENV["URL_BASE"], "", $returnValues->HTTP_REFERER)."' name='form_voltar' method='post'>";
+		foreach($returnValues as $key => $value){
 			if(is_array($value)){
 				foreach($value as $val){
 					$formVoltar .= "<input type='hidden' name='".$key."[]' value='".$val."'>";
