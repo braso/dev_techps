@@ -60,17 +60,28 @@ const consultarRegistros = function(){
     });
 
     limit = parseInt($('input[name=\"limit\"')[0].value);
-    delete data['limit'];
+    if(limit < 1){
+        limit = 1;
+    }
 
-    keys = Object.keys(data);
+    keys = Object.values(searchFields);
     inputs = $('form[name=\"contex_form\"] :input');
+
 
     for(f = 0; f < keys.length; f++){
         if(data[keys[f]] != ''){
-            if(inputs[f].name.indexOf('_like') == -1){
-                conditions += ' AND '+keys[f]+' = \"'+data[keys[f]]+'\"';
-            }else{
+            if(inputs[f].name.indexOf('_like') > 0){
                 conditions += ' AND '+keys[f]+' LIKE \"%'+data[keys[f]]+'%\"';
+            }else if((inputs[f].name.indexOf('_g') > 0)){
+                conditions += ' AND '+keys[f]+' > \"'+data[keys[f]]+'\"';
+            }else if((inputs[f].name.indexOf('_ge') > 0)){
+                conditions += ' AND '+keys[f]+' >= \"'+data[keys[f]]+'\"';
+            }else if((inputs[f].name.indexOf('_l') > 0)){
+                conditions += ' AND '+keys[f]+' < \"'+data[keys[f]]+'\"';
+            }else if((inputs[f].name.indexOf('_le') > 0)){
+                conditions += ' AND '+keys[f]+' <= \"'+data[keys[f]]+'\"';
+            }else{
+                conditions += ' AND '+keys[f]+' = \"'+data[keys[f]]+'\"';
             }
         }
     }
@@ -91,6 +102,7 @@ const consultarRegistros = function(){
         dataType: 'json',
         success: function(response) {
 
+
             total = response.total;
             qtdPaginas = Math.ceil((total/limit))
             statusCol = -1;
@@ -106,6 +118,11 @@ const consultarRegistros = function(){
                     if(camposBd[key] != null && camposBd[key].indexOf('status') >= 0){
                         statusCol = key;
                     }
+                    camposBd[key] = camposBd[key].toLowerCase().indexOf(" as ") >= 0? 
+                        camposBd[key].substring(camposBd[key].toLowerCase().indexOf(" as ")+4).toLowerCase(): 
+                        camposBd[key]
+                    ;
+                    
                     header[key] =
                         '<th colspan=\"1\" rowspan=\"1\" class=\"table-col-head\" value=\"'+key+'\">'
                             +(orderCol.indexOf(camposBd[key]) >= 0? (orderCol.indexOf(' ASC') >= 0? '<spam class=\"glyphicon glyphicon-menu-down\"></spam>&emsp;': '<spam class=\"glyphicon glyphicon-menu-up\"></spam>&emsp;'): '')
@@ -116,8 +133,14 @@ const consultarRegistros = function(){
 
             //Formatando informações das linhas{
                 
-                response.rows.forEach(function(dataArray, key){
-                    row = '<td>'+dataArray.join('</td><td>')+'</td>';
+                response.rows.forEach(function(dataArray, rowKey){
+                    // row = '<td>'+dataArray.join('</td><td>')+'</td>';
+                    row = "";
+                    Object.keys(dataArray).forEach(function(key){
+                        if(camposBd.indexOf(key) >= 0){
+                            row += '<td>'+dataArray[key]+'</td>';
+                        }
+                    });
                     
                     try {
                         actions.forEach(function(actionTag, key){
@@ -126,7 +149,7 @@ const consultarRegistros = function(){
                     }catch(error){
                         console.log("actions not defined");
                     }
-                    response.rows[key] = '<tr>'+row+'</tr>';
+                    response.rows[rowKey] = '<tr>'+row+'</tr>';
                 });
                 response.rows = response.rows.join('');
             //}
@@ -146,7 +169,7 @@ const consultarRegistros = function(){
                         footer += '<div value="'+f+'">'+f+'</div>'
                     }
                 }
-                if(pageNumber < qtdPaginas-2 && qtdPaginas > 3){
+                if(qtdPaginas > 3 && pageNumber < qtdPaginas-1){
                     footer += '<div value="'+(qtdPaginas)+'">>></div>'
                 }
             //}
