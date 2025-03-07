@@ -877,7 +877,6 @@
 		//Configuração da tabela dinâmica{
 			$gridFields = [
 				"CÓDIGO" 				=> "enti_nb_id",
-				"USUÁRIO" 				=> "user_nb_id",
 				"NOME" 					=> "enti_tx_nome",
 				"MATRÍCULA" 			=> "enti_tx_matricula",
 				"CPF" 					=> "enti_tx_cpf",
