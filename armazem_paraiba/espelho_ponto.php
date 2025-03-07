@@ -154,16 +154,23 @@
 				botao("Buscar", "buscarEspelho()", "", "", "", "", "btn btn-success"),
 			];
 			if(!in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
-				$b[] = botao("Cadastrar Abono", "redirParaAbono", "", "", "btn btn-secondary");
+				$b[] = botao("Cadastrar Abono", "redirParaAbono", "acaoPrevia", "{$_POST["acao"]}", "btn btn-secondary");
 			}
-
-			$botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
-			$b[] = $botao_imprimir;
+			if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
+				$b[] = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
+			}
 		//}
 		
 		echo abre_form();
 		echo linha_form($searchFields);
 		echo fecha_form($b);
+		// if(!in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
+		// 	echo botao("Cadastrar Abono", "redirParaAbono", "", "", "btn btn-secondary");
+		// }
+		// if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
+		// 	echo "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
+		// }
+
 
 		$opt = "";
 		//Buscar Espelho{
@@ -359,8 +366,11 @@
 				echo fecha_form();
 
 				unset($_POST["errorFields"]);
+
+				
 				$params = array_merge($_POST, [
 					"acao" => "index",
+					"acaoPrevia" => $_POST["acao"],
 					"idMotorista" => null,
 					"data" => null,
 					"HTTP_REFERER" => (!empty($_POST["HTTP_REFERER"])? $_POST["HTTP_REFERER"]: $_SERVER["REQUEST_URI"])
