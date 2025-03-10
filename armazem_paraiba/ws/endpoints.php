@@ -74,12 +74,14 @@
                 user_tx_email                                           as email,
                 user_tx_nivel                                           as role,
                 user_tx_foto                                            as avatar,
-                user_tx_nascimento                                      as birthdate 
+                user_tx_nascimento                                      as birthdate,
+                cida_tx_nome                                            as city
             from user u
                 left join entidade enti on u.user_nb_entidade = enti.enti_nb_id 
                     and u.user_nb_entidade is not null
                 left join empresa e on enti_nb_empresa = e.empr_nb_id 
                     and u.user_nb_entidade is not null
+                left join cidade on user_nb_cidade = cida_nb_id
                 where u.user_tx_status = 'ativo' 
                 AND u.user_nb_id = ".$userid
         ;
