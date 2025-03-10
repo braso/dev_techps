@@ -44,7 +44,7 @@
                 }
                 $tabelaRow[$key] = $data;
             }
-
+            
             $tabela["rows"][] = $tabelaRow;
         }
     }

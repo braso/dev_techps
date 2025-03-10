@@ -891,7 +891,6 @@
 	
 			$camposBusca = [
 				"busca_codigo" 			=> "enti_nb_id",
-				"busca_usuario" 		=> "user_nb_id",
 				"busca_nome_like" 		=> "enti_tx_nome",
 				"busca_matricula_like" 	=> "enti_tx_matricula",
 				"busca_cpf" 			=> "enti_tx_cpf",

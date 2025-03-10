@@ -31,32 +31,6 @@
 		exit;
 	}
 
-	function downloadArquivo() {
-		dd("downloadArquivo");
-		
-		// // Verificar se o arquivo existe
-		// if(file_exists($_POST["caminho"])){
-		// 	// Configurar cabeçalhos para forçar o download
-		// 	header("Content-Description: File Transfer");
-		// 	header("Content-Type: application/octet-stream");
-		// 	header("Content-Disposition: attachment; filename=".basename($_POST["caminho"]));
-		// 	header("Expires: 0");
-		// 	header("Cache-Control: must-revalidate");
-		// 	header("Pragma: public");
-		// 	header("Content-Length: ".filesize($_POST["caminho"]));
-
-		// 	// Lê o arquivo e o envia para o navegador
-		// 	readfile($_POST["caminho"]);
-		// 	exit;
-		// }else{
-		// 	echo "O arquivo não foi encontrado.";
-		// }
-		
-		$_POST["id"] = $_POST["idParametro"];
-		modificarParametro();
-		exit;
-	}
-
 	function enviarDocumento() {
 		global $a_mod;
 

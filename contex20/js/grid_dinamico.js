@@ -18,8 +18,8 @@ let definirFuncoesInternas = function(){
     //Ordenações{
         $('.table-col-head').click(function(event){
             campo = camposBd[parseInt($(event.target)[0].attributes.value.value)];
-            if(campo.toLowerCase().indexOf(" as ") >= 0){
-                campo = campo.toLowerCase().split(" as ")[1];
+            if(campo.indexOf(" AS ") >= 0){
+                campo = campo.split(" AS ")[1];
             }
             if(orderCol.indexOf(campo+' ASC') >= 0){
                 orderCol = campo+' DESC';
@@ -69,7 +69,7 @@ const consultarRegistros = function(){
 
 
     for(f = 0; f < keys.length; f++){
-        if(data[keys[f]] != '' && inputs[f] != undefined){
+        if(data[keys[f]] != ''){
             if(inputs[f].name.indexOf('_like') > 0){
                 conditions += ' AND '+keys[f]+' LIKE \"%'+data[keys[f]]+'%\"';
             }else if((inputs[f].name.indexOf('_g') > 0)){
@@ -102,7 +102,6 @@ const consultarRegistros = function(){
         dataType: 'json',
         success: function(response) {
 
-
             total = response.total;
             qtdPaginas = Math.ceil((total/limit))
             statusCol = -1;
@@ -118,8 +117,8 @@ const consultarRegistros = function(){
                     if(camposBd[key] != null && camposBd[key].indexOf('status') >= 0){
                         statusCol = key;
                     }
-                    camposBd[key] = camposBd[key].toLowerCase().indexOf(" as ") >= 0? 
-                        camposBd[key].substring(camposBd[key].toLowerCase().indexOf(" as ")+4).toLowerCase(): 
+                    camposBd[key] = camposBd[key].indexOf(" AS ") >= 0? 
+                        camposBd[key].substring(camposBd[key].indexOf(" AS ")+4):
                         camposBd[key]
                     ;
                     
@@ -132,13 +131,12 @@ const consultarRegistros = function(){
             //}
 
             //Formatando informações das linhas{
-                
                 response.rows.forEach(function(dataArray, rowKey){
                     // row = '<td>'+dataArray.join('</td><td>')+'</td>';
                     row = "";
                     Object.keys(dataArray).forEach(function(key){
                         if(camposBd.indexOf(key) >= 0){
-                            row += '<td>'+dataArray[key]+'</td>';
+                            row += '<td>'+(dataArray[key] != null? dataArray[key]: "")+'</td>';
                         }
                     });
                     

@@ -18,32 +18,6 @@
 		exit;
 	}
 
-	function downloadArquivo() {
-		dd("downloadArquivo");
-
-		// // Verificar se o arquivo existe
-		// if (file_exists($_POST["caminho"])) {
-		// 	// Configurar cabeçalhos para forçar o download
-		// 	header("Content-Description: File Transfer");
-		// 	header("Content-Type: application/octet-stream");
-		// 	header("Content-Disposition: attachment; filename=".basename($_POST["caminho"]));
-		// 	header("Expires: 0");
-		// 	header("Cache-Control: must-revalidate");
-		// 	header("Pragma: public");
-		// 	header("Content-Length: ".filesize($_POST["caminho"]));
-
-		// 	// Lê o arquivo e o envia para o navegador
-		// 	readfile($_POST["caminho"]);
-		// 	exit;
-		// } else {
-		// 	set_status("O arquivo não foi encontrado.");
-		// }
-		
-		$_POST["id"] = $_POST["idEmpresa"];
-		modificarEmpresa();
-		exit;
-	}
-
 	function enviarDocumento() {
 		// global $a_mod;
 
@@ -654,10 +628,10 @@
 		//Configuração da tabela dinâmica{
 			$gridFields = [
 				"CÓDIGO" 		=> "empr_nb_id",
-				"NOME" 			=> "IF(empr_tx_Ehmatriz = 'sim', CONCAT('<i class=\"fa fa-star\" aria-hidden=\"true\"></i> ', empr_tx_nome), empr_tx_nome) as empr_tx_nome",
+				"NOME" 			=> "IF(empr_tx_Ehmatriz = 'sim', CONCAT('<i class=\"fa fa-star\" aria-hidden=\"true\"></i> ', empr_tx_nome), empr_tx_nome) AS empr_tx_nome",
 				"FANTASIA" 		=> "empr_tx_fantasia",
 				"CPF/CNPJ" 		=> "empr_tx_cnpj",
-				"CIDADE/UF" 	=> "CONCAT('[', cida_tx_uf, '] ', cida_tx_nome) as ufCidade",
+				"CIDADE/UF" 	=> "CONCAT('[', cida_tx_uf, '] ', cida_tx_nome) AS ufCidade",
 				"STATUS" 		=> "empr_tx_status"
 			];
 			$camposBusca = [
