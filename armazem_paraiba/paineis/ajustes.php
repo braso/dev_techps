@@ -276,10 +276,11 @@ function carregarJS(array $arquivos) {
 			//}
 
 			function createModal(motivo,pontos) {
-				let modalContent = '<ul>'; // Utilizando uma lista para organizar os itens
-				pontos.sort().forEach(ponto => {
-					modalContent += `<li>\${ponto}</li>`; // Adiciona cada ponto como um item da lista
+				let modalContent = '<ul>';
+				Object.keys(pontos).sort((a, b) => pontos[b] - pontos[a]).forEach(nome => {
+					modalContent += `<li style = 'margin-bottom: 5px;'><b>\${nome}</b> - Quantidade Ajustes: \${pontos[nome]}</li>`;
 				});
+
 				modalContent += '</ul>';
 				const modalHtml = 
 					'<div class=\"modal fade\" id=\"dynamicModal\" tabindex=\"-1\" role=\"dialog\" aria-labelledby=\"dynamicModalLabel\">' +
@@ -290,13 +291,14 @@ function carregarJS(array $arquivos) {
 							'<span aria-hidden=\"true\">&times;</span>' +
 							'</button>' +
 							'<h3 class=\"modal-title\" id=\"dynamicModalLabel\">' +
-							'Motoristas com o motivo: '+motivo+ 
+							'Funcionários com o motivo: '+motivo+ 
 							'</h3>' +
 						'</div>' +
 						'<div class=\"modal-body\">' +
 							modalContent +
 						'</div>' +
 						'<div class=\"modal-footer\">' +
+							'<button type=\"button\" class=\"btn btn-primary\" id=\"generatePDF\">Imprimir</button>' +
 							'<button type=\"button\" class=\"btn btn-default\" data-dismiss=\"modal\">Fechar</button>' +
 						'</div>' +
 						'</div>' +
@@ -313,7 +315,110 @@ function carregarJS(array $arquivos) {
 				$('#dynamicModal').on('hidden.bs.modal', function () {
 					$(this).remove();
 				});
+
+				$('#generatePDF').click(function () {
+					$.ajax({
+						url: 'pdf_ajustes.php', // O arquivo PHP que vai gerar o PDF
+						type: 'POST',
+						contentType: 'application/json',
+						data: JSON.stringify({
+							motivo: motivo,
+							pontos: pontos
+						}),
+						success: function (response) {
+							var json = JSON.parse(response);
+							if (json.file) {
+								// Abrir o PDF em uma nova aba
+								window.open( json.file, '_blank');
+							} else {
+								alert('Erro ao gerar PDF');
+							}
+						},
+						error: function () {
+							alert('Erro ao se comunicar com o servidor');
+						}
+					});
+				});
+
+
+			}
+
+			function createModal2(motivos) {
+				let modalContent = ''; // Contém o conteúdo de todos os motivos
+
+				// Percorre cada motivo no array de motivos
+				for (let motivo in motivos) {
+					let pontos = motivos[motivo];
+					modalContent += `<h4>Funcionários com o motivo: \${motivo}</h4><ul>`;
+
+					// Ordena os dados de forma decrescente pela quantidade
+					Object.keys(pontos).sort((a, b) => pontos[b] - pontos[a]).forEach(nome => {
+						modalContent += `<li style='margin-bottom: 5px;'><b>\${nome}</b> - Quantidade Ajustes: \${pontos[nome]}</li>`;
+					});
+
+					modalContent += '</ul>';
 				}
+
+				// Estrutura do modal
+				const modalHtml = 
+					'<div class=\"modal fade\" id=\"dynamicModal\" tabindex=\"-1\" role=\"dialog\" aria-labelledby=\"dynamicModalLabel\">' +
+					'<div class=\"modal-dialog\" role=\"document\">' +
+						'<div class=\"modal-content\">' +
+							'<div class=\"modal-header\">' +
+								'<button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\">' +
+									'<span aria-hidden=\"true\">&times;</span>' +
+								'</button>' +
+								'<h3 class=\"modal-title\" id=\"dynamicModalLabel\">' +
+									'Resumo de Ajustes de Ponto' + 
+								'</h3>' +
+							'</div>' +
+							'<div class=\"modal-body\">' +
+								modalContent +
+							'</div>' +
+							'<div class=\"modal-footer\">' +
+								'<button type=\"button\" class=\"btn btn-primary\" id=\"generatePDF\">Imprimir</button>' +
+								'<button type=\"button\" class=\"btn btn-default\" data-dismiss=\"modal\">Fechar</button>' +
+							'</div>' +
+						'</div>' +
+					'</div>' +
+					'</div>';
+
+				// Adicionar o modal ao body
+				$('body').append(modalHtml);
+
+				// Exibir o modal
+				$('#dynamicModal').modal('show');
+
+				// Remover o modal do DOM ao fechar
+				$('#dynamicModal').on('hidden.bs.modal', function () {
+					$(this).remove();
+				});
+				// Ao clicar no botão 'Gerar PDF', enviar os dados ao servidor
+				$('#generatePDF').click(function () {
+				$.ajax({
+					url: 'pdf_ajustes.php',
+					type: 'POST',
+					contentType: 'application/json',
+					data: JSON.stringify({
+						motivos: motivos // Aqui estamos enviando a estrutura correta dos motivos
+					}),
+					success: function (response) {
+						var json = JSON.parse(response);
+						if (json.file) {
+							// Abrir o PDF em uma nova aba
+							window.open(json.file, '_blank');
+						} else {
+							alert('Erro ao gerar PDF');
+						}
+					},
+					error: function () {
+						alert('Erro ao se comunicar com o servidor');
+					}
+				});
+			});
+
+
+			}	
 
 		</script>"
 	;
@@ -433,12 +538,21 @@ function index() {
 						}
 						$resultado[$key['moti_tx_nome']]++;
 
-						if (!isset($resultado2[$key['moti_tx_nome']])) {
-							$resultado2[$key['moti_tx_nome']] = [];
+						$motivo = $key['moti_tx_nome'];
+						$nome = $json["nome"];
+
+						// Inicializa o array do motivo se ainda não existir
+						if (!isset($resultado2[$motivo])) {
+							$resultado2[$motivo] = [];
 						}
-						if (!in_array($json["nome"], $resultado2[$key['moti_tx_nome']])) {
-							$resultado2[$key['moti_tx_nome']][] = $json["nome"];
+
+						// Inicializa a contagem do nome dentro do motivo
+						if (!isset($resultado2[$motivo][$nome])) {
+							$resultado2[$motivo][$nome] = 0;
 						}
+
+						// Incrementa a contagem do nome dentro do motivo
+						$resultado2[$motivo][$nome]++;
 					}
 
 					$empresas[] = $json;
@@ -449,26 +563,32 @@ function index() {
 			if(!empty($arquivos)){
 				$encontrado = true;
 			}
-			// echo "<pre>";
-			// var_dump($resultado2);
-			// echo "</pre>";
-			
+
 			$tabelaMotivo ="
 			<div>
 			<table id='tabela-motivo' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>
 				<thead>
 					<tr>
+						<th colspan='4' style='text-align: center;'><b>Ajustes Ativos</b></th>
+				</thead>
+				<thead>
+					<tr>
 						<th>Motivo</th>
 						<th>Quantidade</th>
+						<th>Funcionários</th>
+						<th style='text-align: center;'><button class='btn btn-default btn-sm' onclick=\"createModal2(".htmlspecialchars(json_encode($resultado2), ENT_QUOTES, 'UTF-8').");\")'>Visualizar Todos</button></th>
 					</tr>
 				</thead>
 				<tbody>
 				</div>";
+				arsort($resultado);
 				foreach (array_keys($resultado) as $motivo) {
 					$resultado2Json = json_encode($resultado2[$motivo]);
 					$tabelaMotivo .= "<tr>";
-					$tabelaMotivo .= "<td onclick=\"createModal('$motivo',".htmlspecialchars(json_encode($resultado2[$motivo]), ENT_QUOTES, 'UTF-8').");\">".$motivo."</td>";
+					$tabelaMotivo .= "<td>".$motivo."</td>";
 					$tabelaMotivo .= "<td>".$resultado[$motivo]."</td>";
+					$tabelaMotivo .= "<td>".sizeof($resultado2[$motivo])."</td>";
+					$tabelaMotivo .= "<td style='text-align: center;'><button class='btn btn-default btn-sm' onclick=\"createModal('$motivo',".htmlspecialchars(json_encode($resultado2[$motivo]), ENT_QUOTES, 'UTF-8').");\">Visualizar</button></td>";
 					$tabelaMotivo .= "</tr>";
 				}
 				$tabelaMotivo .="</tbody>
@@ -478,6 +598,8 @@ function index() {
 	else {
 		$encontrado = false;
 	}
+
+	$totalEmpresa = $arquivoGeral['totais']['ativo'] + $arquivoGeral['totais']['inativo'];
 
 	if ($encontrado) {
 		$rowTotais = "<tr class='totais'>";
@@ -500,8 +622,9 @@ function index() {
 					. "<th colspan='2'>".$arquivoGeral["Fim de Repouso"]."</th>"
 					. "<th colspan='2'>".$arquivoGeral["Inicio de Repouso Embarcado"]."</th>"
 					. "<th colspan='2'>".$arquivoGeral["Fim de Repouso Embarcado"]."</th>"
-					. "<th colspan='2'></th>"
-					. "<th colspan='2'></th>";
+					. "<th colspan='1'>".$arquivoGeral['totais']['ativo'] ."</th>"
+					. "<th colspan='1'>".$arquivoGeral['totais']['inativo']."</th>"
+					. "<th colspan='2'>".$totalEmpresa."</th>";
 
 				$rowTitulos .= 
 					"<th data-column='matricula' data-order='asc'>Matrícula</th>"
@@ -599,7 +722,7 @@ function index() {
 					. "<th data-column='saldoAnterior' data-order='asc'>Fim de Descanso</th>"
 					. "<th data-column='' data-order='asc'>Inicio de Repouso</th>"
 					. "<th data-column='' data-order='asc'>Fim de Repouso</th>"
-					. "<th data-column='' data-order='asc'>Inicio de Repouso Embarcad</th>"
+					. "<th data-column='' data-order='asc'>Inicio de Repouso Embarcado</th>"
 					. "<th data-column='' data-order='asc'>Fim de Repouso Embarcado</th>"
 					. "<th data-column='' data-order='asc'>Pernoite - Fim De Jornad</th>"
 					. "<th data-column='' data-order='asc'>Refeicao</th>"

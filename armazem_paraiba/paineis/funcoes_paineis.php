@@ -1399,6 +1399,14 @@
 					foreach ($valores as $estado => $value) {
 						$totaisEmpr[$evento] += $value; // Incrementa o total para a chave do evento
 					}
+
+					foreach ($valores as $estado => $value) {
+						if ($estado === 'ativo') {
+							$totaisEmpr['totais']['ativo'] += $value; // Soma para os ativos
+						} elseif ($estado === 'inativo') {
+							$totaisEmpr['totais']['inativo'] += $value; // Soma para os inativos
+						}
+					}
 				}
 			}
 
@@ -1420,7 +1428,6 @@
 				$totaisEmpresa[$key][$value] += $value;
 			}
 		}
-
 
 		if (empty($_POST["empresa"])) {
 			$path = "./arquivos/ajustes" . "/" . $periodoInicio->format("Y-m");
