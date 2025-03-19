@@ -298,7 +298,8 @@ function carregarJS(array $arquivos) {
 							modalContent +
 						'</div>' +
 						'<div class=\"modal-footer\">' +
-							'<button type=\"button\" class=\"btn btn-primary\" id=\"generatePDF\">Imprimir</button>' +
+							'<button type=\"button\" class=\"btn btn-primary\" id=\"generatePDF\">Imprimir PDF</button>' +
+                        	'<button type=\"button\" class=\"btn btn-success\" id=\"generateCSV\">Exportar CSV</button>' +
 							'<button type=\"button\" class=\"btn btn-default\" data-dismiss=\"modal\">Fechar</button>' +
 						'</div>' +
 						'</div>' +
@@ -316,31 +317,8 @@ function carregarJS(array $arquivos) {
 					$(this).remove();
 				});
 
-				$('#generatePDF').click(function () {
-					$.ajax({
-						url: 'pdf_ajustes.php', // O arquivo PHP que vai gerar o PDF
-						type: 'POST',
-						contentType: 'application/json',
-						data: JSON.stringify({
-							motivo: motivo,
-							pontos: pontos
-						}),
-						success: function (response) {
-							var json = JSON.parse(response);
-							if (json.file) {
-								// Abrir o PDF em uma nova aba
-								window.open( json.file, '_blank');
-							} else {
-								alert('Erro ao gerar PDF');
-							}
-						},
-						error: function () {
-							alert('Erro ao se comunicar com o servidor');
-						}
-					});
-				});
-
-
+				$('#generatePDF').click(() => gerarArquivo('pdf', { motivos }));
+    			$('#generateCSV').click(() => gerarArquivo('csv', { motivos }));
 			}
 
 			function createModal2(motivos) {
@@ -376,7 +354,8 @@ function carregarJS(array $arquivos) {
 								modalContent +
 							'</div>' +
 							'<div class=\"modal-footer\">' +
-								'<button type=\"button\" class=\"btn btn-primary\" id=\"generatePDF\">Imprimir</button>' +
+								'<button type=\"button\" class=\"btn btn-primary\" id=\"generatePDF\">Imprimir PDF</button>' +
+                        		'<button type=\"button\" class=\"btn btn-success\" id=\"generateCSV\">Exportar CSV</button>' +
 								'<button type=\"button\" class=\"btn btn-default\" data-dismiss=\"modal\">Fechar</button>' +
 							'</div>' +
 						'</div>' +
@@ -393,32 +372,31 @@ function carregarJS(array $arquivos) {
 				$('#dynamicModal').on('hidden.bs.modal', function () {
 					$(this).remove();
 				});
-				// Ao clicar no botão 'Gerar PDF', enviar os dados ao servidor
-				$('#generatePDF').click(function () {
+
+				$('#generatePDF').click(() => gerarArquivo('pdf', { motivos }));
+    			$('#generateCSV').click(() => gerarArquivo('csv', { motivos }));
+
+			}
+
+			function gerarArquivo(tipo, dados) {
 				$.ajax({
-					url: 'pdf_ajustes.php',
+					url: `ajustes_export.php?tipo=\${tipo}`,
 					type: 'POST',
 					contentType: 'application/json',
-					data: JSON.stringify({
-						motivos: motivos // Aqui estamos enviando a estrutura correta dos motivos
-					}),
+					data: JSON.stringify(dados),
 					success: function (response) {
 						var json = JSON.parse(response);
 						if (json.file) {
-							// Abrir o PDF em uma nova aba
 							window.open(json.file, '_blank');
 						} else {
-							alert('Erro ao gerar PDF');
+							alert(`Erro ao gerar \${tipo.toUpperCase()}`);
 						}
 					},
 					error: function () {
 						alert('Erro ao se comunicar com o servidor');
 					}
 				});
-			});
-
-
-			}	
+			}
 
 		</script>"
 	;
