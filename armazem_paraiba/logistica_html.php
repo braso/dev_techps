@@ -48,6 +48,15 @@ document.addEventListener('DOMContentLoaded', function() {
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js" nomodule></script>
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<!-- Leaflet Routing Machine CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<!-- Leaflet Routing Machine JS -->
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 </head>
 
 <body>
@@ -61,15 +70,24 @@ document.addEventListener('DOMContentLoaded', function() {
         <p>Buscando dados, por favor, aguarde...</p>
     </div>
 
-
 <!-- Adicione isso ao final do seu body -->
-<button id="mapButton" style="display:none; position:fixed; bottom:150px; left:5px; z-index:1000; background-color:#004173; color:white; border:none; padding:10px 20px; border-radius:5px;">📍</button>
+<!--<button  id="novoBotao" style="position:fixed; bottom:200px; left:5px; z-index:1000; background-color:#004173; color:white; border:none; padding:10px 5px; border-radius:5px;">Map Grafico 🗺️</button>-->
+<button id="mapButton" style="display:none; position:fixed; bottom:150px; left:5px; z-index:1000; background-color:#004173; color:white; border:none; padding:10px 5px; border-radius:5px;">Posiçóes 📍</button>
 <div id="mapPopup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:80%; height:80%; background-color:white; border:1px solid #ccc; z-index:1001;">
     <div id="map" style="width:100%; height:100%; position:relative; z-index:1;"></div>
-    <button id="closeMapButton" style="position:absolute; top:2px; right:-30px; background-color:#004173; color:white; border:none; padding:5px 10px; border-radius:5px; z-index:1002;">X</button>
+    <button id="closeMapButton" style="position:absolute; top:2px; left:-42px; background-color:#004173; color:white; border:none; padding:10px 20px; border-radius:5px; z-index:1002;">X</button>
 </div>
 
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+    const novoBotao = document.getElementById("novoBotao");
 
+    novoBotao.addEventListener("click", function() {
+        // Abre a página teste.html em uma nova guia
+        window.open("teste.html", "_blank");
+    });
+});
+</script>
 
 
 
@@ -155,6 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     <div id="messageDiv"></div>
+
     <div class="container">
         <div class="accordion" id="accordionExample">
             <!-- Accordion -->
@@ -268,7 +287,100 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="resumo" id="resumoContainer">
 
         </div>
-        <style>
+        
+        <!-- Lista de Ajustes -->
+        <div class="adjustment-list">
+            <h3>Lista de Ajustes</h3>
+            <table id="adjustmentTable">
+                <thead>
+                    <tr>
+                        <th>Motorista</th>
+
+                        <th>Data</th>
+                        <th>Hora</th>
+                        <th>Lat</th>
+                        <th>Long</th>
+                        <th>Tipo de Registro</th>
+                        <th>Motivo</th>
+                        <th>Justificativa</th>
+                        <th>Placa</th>
+                        <th>Excluir</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+            <button type="button" class="btn btn-success" id="submitAdjustmentsBtn">Salvar Ajustes</button>
+        </div>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="js/logistica.js"></script>
+    <script src="js/logistica_modal.js"></script>
+
+</body>
+
+</html>
+
+</style>
+</style>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('plate');
+    const suggestionsList = document.getElementById('plate-suggestions');
+
+    // Array de placas vindo do PHP
+    const plates = <?=json_encode($plates)?>;
+
+    // Escuta o evento de input no campo de busca
+    searchInput.addEventListener('input', function() {
+        const filter = searchInput.value.toUpperCase(); // Converte o texto digitado em maiúsculas
+        suggestionsList.innerHTML = ''; // Limpa as sugestões anteriores
+
+        if (filter === '') return; // Se o campo de busca estiver vazio, não mostra nada
+
+        // Filtra as placas com base no que foi digitado
+        const filteredPlates = plates.filter(plate => plate.toUpperCase().includes(filter));
+
+        // Exibe as sugestões filtradas
+        filteredPlates.forEach(plate => {
+            const li = document.createElement('li');
+            li.textContent = plate;
+            li.classList.add('list-group-item');
+            suggestionsList.appendChild(li);
+
+            // Quando uma sugestão for clicada, preenche o campo de texto e limpa as sugestões
+            li.addEventListener('click', function() {
+                searchInput.value = plate;
+                suggestionsList.innerHTML = ''; // Limpa a lista de sugestões
+            });
+        });
+    });
+});
+
+
+// Função para ocultar as mensagens após 5 segundos
+function hideMessageAfterDelay(messageId) {
+    var messageElement = document.getElementById(messageId);
+    if (messageElement) {
+        setTimeout(function() {
+            messageElement.style.display = 'none';
+        }, 5000); // 5000 milissegundos = 5 segundos
+    }
+}
+// Chama a função para esconder mensagens de erro e sucesso
+hideMessageAfterDelay('popupErro');
+hideMessageAfterDelay('popupSucesso');
+</script>
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"></script>
+
+
+<style>
         #adjustmentTable {
             display: none;
         }
@@ -370,95 +482,3 @@ document.addEventListener('DOMContentLoaded', function() {
             font-size: 20px;
         }
         </style>
-        <!-- Lista de Ajustes -->
-        <div class="adjustment-list">
-            <h3>Lista de Ajustes</h3>
-            <table id="adjustmentTable">
-                <thead>
-                    <tr>
-                        <th>Motorista</th>
-
-                        <th>Data</th>
-                        <th>Hora</th>
-                        <th>Lat</th>
-                        <th>Long</th>
-                        <th>Tipo de Registro</th>
-                        <th>Motivo</th>
-                        <th>Justificativa</th>
-                        <th>Placa</th>
-                        <th>Excluir</th>
-                    </tr>
-                </thead>
-                <tbody>
-                </tbody>
-            </table>
-            <button type="button" class="btn btn-success" id="submitAdjustmentsBtn">Salvar Ajustes</button>
-        </div>
-    </div>
-
-
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="js/logistica.js"></script>
-    <script src="js/logistica_modal.js"></script>
-
-</body>
-
-</html>
-
-</style>
-</style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('plate');
-    const suggestionsList = document.getElementById('plate-suggestions');
-
-    // Array de placas vindo do PHP
-    const plates = <?=json_encode($plates)?>;
-
-    // Escuta o evento de input no campo de busca
-    searchInput.addEventListener('input', function() {
-        const filter = searchInput.value.toUpperCase(); // Converte o texto digitado em maiúsculas
-        suggestionsList.innerHTML = ''; // Limpa as sugestões anteriores
-
-        if (filter === '') return; // Se o campo de busca estiver vazio, não mostra nada
-
-        // Filtra as placas com base no que foi digitado
-        const filteredPlates = plates.filter(plate => plate.toUpperCase().includes(filter));
-
-        // Exibe as sugestões filtradas
-        filteredPlates.forEach(plate => {
-            const li = document.createElement('li');
-            li.textContent = plate;
-            li.classList.add('list-group-item');
-            suggestionsList.appendChild(li);
-
-            // Quando uma sugestão for clicada, preenche o campo de texto e limpa as sugestões
-            li.addEventListener('click', function() {
-                searchInput.value = plate;
-                suggestionsList.innerHTML = ''; // Limpa a lista de sugestões
-            });
-        });
-    });
-});
-
-
-
-
-// Função para ocultar as mensagens após 5 segundos
-function hideMessageAfterDelay(messageId) {
-    var messageElement = document.getElementById(messageId);
-    if (messageElement) {
-        setTimeout(function() {
-            messageElement.style.display = 'none';
-        }, 5000); // 5000 milissegundos = 5 segundos
-    }
-}
-
-// Chama a função para esconder mensagens de erro e sucesso
-hideMessageAfterDelay('popupErro');
-hideMessageAfterDelay('popupSucesso');
-</script>
-</script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"></script>

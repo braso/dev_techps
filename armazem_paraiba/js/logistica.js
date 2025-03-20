@@ -73,13 +73,59 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-
-
     function displayResults(data, plate, formattedDate, speed, motoristaNome) {
         resultsDiv.innerHTML = "";
-    
+      
         console.log(data);
-    
+      
+        function extrairCoordenadasParaArray(data) {
+          const coordenadas = [];
+          data.forEach(item => {
+            const latitude = parseFloat(item.latitude);
+            const longitude = parseFloat(item.longitude);
+      
+            if (!isNaN(latitude) && !isNaN(longitude)) {
+              coordenadas.push([latitude, longitude]);
+            } else {
+              console.warn("Coordenadas inválidas encontradas:", item);
+            }
+          });
+          return coordenadas;
+        }
+      
+        const coordenadasArray = extrairCoordenadasParaArray(data);
+        console.log("Array de Coordenadas:", coordenadasArray);
+      
+        // *** GERANDO O LINK DO GOOGLE MAPS ***
+        let googleMapsLink = "https://www.google.com/maps/dir/";
+      
+        if (coordenadasArray.length > 0) {
+          // Adiciona o ponto de partida (primeira coordenada)
+          googleMapsLink += `${coordenadasArray[0][0]},${coordenadasArray[0][1]}/`;
+      
+          // Adiciona os pontos de passagem (coordenadas intermediárias)
+          for (let i = 1; i < coordenadasArray.length - 1; i++) {
+            googleMapsLink += `${coordenadasArray[i][0]},${coordenadasArray[i][1]}/`;
+          }
+      
+          // Adiciona o ponto de destino (última coordenada)
+          if (coordenadasArray.length > 1) { // Garante que há pelo menos dois pontos
+            googleMapsLink += `${coordenadasArray[coordenadasArray.length - 1][0]},${coordenadasArray[coordenadasArray.length - 1][1]}`;
+          } else {
+            // Se houver apenas um ponto, usa como ponto de partida e destino (mostra a localização)
+            googleMapsLink = `https://www.google.com/maps/place/${coordenadasArray[0][0]},${coordenadasArray[0][1]}`;
+          }
+      
+      
+        } else {
+          googleMapsLink = "#"; // Link vazio se não houver coordenadas
+        }
+      
+
+
+
+
+
         let totalTrueTime = 0;
         let totalFalseTime = 0;
         let totalStopsIgnitionOn = 0;
@@ -216,7 +262,8 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="summary">
                 <div class="summary-column">
                     <h6><i class="fas fa-user"></i> <b>Nome Funcionário:&nbsp; </b> ${motoristaNome}</h6>
-                    <h6><i class="fas fa-search"></i> <b>Data de Consulta:&nbsp; </b> ${getCurrentDateTime()}</h6>
+                    <h6><i class="fas fa-search"></i> <b>Data de Consulta:&nbsp; </b> ${getCurrentDateTime()}</h6> 
+                    <h6><i class="fas fa-search"></i> <b>Data escolhida para a busca:&nbsp; </b> ${formatDateBR(date.value)}</h6> 
                     <h6><i class="fas fa-id-card"></i> <b>Placa:&nbsp; </b> ${plate}</h6>
                     <h6><i class="fas fa-calendar"></i> <b>Período de Consulta:&nbsp; </b> 24H </h6>
                 </div>
@@ -390,6 +437,7 @@ var coordinates = []; // Para armazenar as coordenadas das linhas selecionadas
                     row.style.color = "black";
                     this.src = "imagens/LGC.png"; // Altera a logo para colorido
                     console.log("Hora de início capturada:", startTime);
+                    console.log("data:", formatDateBR(date.value));
 
                     // Adiciona a linha selecionada ao array
                     selectedRows.push(row);
@@ -503,59 +551,117 @@ var coordinates = []; // Para armazenar as coordenadas das linhas selecionadas
 
 
 
-
-
-
-
     var map; // Variável global para o mapa
 
     // Função para abrir o popup do mapa
     function openMapPopup() {
         document.getElementById("mapPopup").style.display = "block";
-
+    
         // Verifica se o mapa já foi inicializado e remove-o se necessário
         if (map) {
             map.remove();
+            map = null; // Importante: Defina map como null após remover
         }
-
+    
+        // Configurações iniciais do mapa (centralização e zoom)
+        const initialCenter = [-23.5505, -46.6333]; // Exemplo: São Paulo
+        const initialZoom = 12; // Zoom inicial
+    
         // Inicializa o mapa
-        map = L.map('map').setView([0, 0], 2);
-
-        // Adiciona o tile layer padrão ao mapa
-        var streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        map = L.map('map', {
+            center: initialCenter,
+            zoom: initialZoom
         });
-
-        // Adiciona o tile layer de satélite ao mapa
-        var satelliteLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+    
+        const defaultLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        })
+    
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '© Esri',
+            maxZoom: 19
+        });
+    
+        const hybridLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
             maxZoom: 20,
-            subdomains:['mt0','mt1','mt2','mt3'],
-            attribution: '&copy; <a href="https://www.google.com/maps">Google Maps</a>'
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: '© Google'
         }).addTo(map);
-
-        // Adiciona controle de camadas para alternar entre a visão padrão e a visão de satélite
-        var baseMaps = {
-            "Rua": streetLayer,
-            "Satélite": satelliteLayer
+    
+        const terrainLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            maxZoom: 17,
+            attribution: '© OpenTopoMap'
+        });
+        // Define as camadas base para o controle de camadas
+        const baseMaps = {
+            "Híbrido": hybridLayer,
+            "OpenStreetMap": defaultLayer,
+            "Satélite": satelliteLayer,
+            "Terreno": terrainLayer
         };
+        // Adiciona o controle de camadas ao mapa
         L.control.layers(baseMaps).addTo(map);
-
-    // Adiciona os marcadores ao mapa
-    coordinates.forEach(function (coord) {
-        if (!isNaN(coord.latitude) && !isNaN(coord.longitude)) {
-            L.marker([coord.latitude, coord.longitude]).addTo(map)
-                .bindPopup(`<div style="font-size: 16px;"><strong>Hora de Início:</strong> ${coord.startTime}<br><strong>Hora de Fim:</strong> ${coord.endTime}<br><strong>Endereço:</strong> ${coord.address}</div>`)
-                .openPopup();
+    
+        // *** GERANDO O LINK DO GOOGLE MAPS (MOVI PARA CÁ) ***
+        let googleMapsLink = "https://www.google.com/maps/dir/?api=1&travelmode=driving"; //api para modo driving
+    
+        if (coordinates.length > 0) {
+            // Adiciona o ponto de partida (primeira coordenada)
+            googleMapsLink += `&origin=${coordinates[0].latitude},${coordinates[0].longitude}`;
+    
+            // Adiciona o ponto de destino (última coordenada)
+            if (coordinates.length > 1) { // Garante que há pelo menos dois pontos
+                googleMapsLink += `&destination=${coordinates[coordinates.length - 1].latitude},${coordinates[coordinates.length - 1].longitude}`;
+            } else {
+                // Se houver apenas um ponto, usa como ponto de partida e destino (mostra a localização)
+                googleMapsLink = `https://www.google.com/maps/place/${coordinates[0].latitude},${coordinates[0].longitude}`;
+            }
+        } else {
+            googleMapsLink = "#"; // Link vazio se não houver coordenadas
         }
-    });
+    
+    
+        // Adiciona os marcadores ao mapa
+        coordinates.forEach(function (coord) {
+            if (!isNaN(coord.latitude) && !isNaN(coord.longitude)) {
+                let popupContent = `<div style="font-size: 16px;">
+                    <div style="display: flex; align-items: center;  margin-bottom: 5px;">
+                        <ion-icon name="calendar-outline" style="color: #007bff; margin-right: 5px;"></ion-icon>
+                        <strong>Data Consultada:</strong> ${formatDateBR(date.value)}
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <ion-icon name="time-outline" style="color: #28a745; margin-right: 5px;"></ion-icon>
+                        <strong>Hora de Início:</strong> ${coord.startTime}
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <ion-icon name="time-outline" style="color: #dc3545; margin-right: 5px;"></ion-icon>
+                        <strong>Hora de Fim:</strong> ${coord.endTime}
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <ion-icon name="location-outline" style="color: #6c757d; margin-right: 5px;"></ion-icon>
+                        <strong>Endereço:</strong> ${coord.address}
+                    </div>
 
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <ion-icon name="${coord.ignition === 'true' ? 'power-outline' : 'power-off-outline'}" style="color: ${coord.ignition === 'true' ? 'green' : 'red'}; margin-right: 5px;"></ion-icon>
+                        <strong>Ignição:</strong> ${coord.ignition === 'true' ? 'Ligada' : 'Desligada'}
+                    </div>
+                    <p><a href="${googleMapsLink}" target="_blank">Ver Rota no Google Maps</a></p>
+                </div>`;
+        
+                L.marker([coord.latitude, coord.longitude]).addTo(map)
+                    .bindPopup(popupContent)
+                    .openPopup();
+            }
+        });
+    
         // Ajusta a visualização do mapa para mostrar todos os marcadores
         var group = new L.featureGroup(coordinates.map(function (coord) {
             return L.marker([coord.latitude, coord.longitude]);
         }));
         map.fitBounds(group.getBounds());
     }
-
+    
     // Função para resetar a seleção das linhas
     function resetSelection() {
         var allRows = document.querySelectorAll("table tr");
@@ -566,7 +672,7 @@ var coordinates = []; // Para armazenar as coordenadas das linhas selecionadas
             var img = row.querySelector(".row-img");
             if (img) img.src = "imagens/LGS.png";
         });
-
+    
         // Limpa o array de linhas selecionadas e coordenadas
         selectedRows = [];
         coordinates = [];
@@ -574,29 +680,29 @@ var coordinates = []; // Para armazenar as coordenadas das linhas selecionadas
         startRow = null;
         logoState = false;
     }
-
+    
     // Adiciona o listener de clique ao botão flutuante
     document.getElementById("mapButton").addEventListener("click", openMapPopup);
-
+    
     // Função para fechar o popup do mapa
     function closeMapPopup() {
         document.getElementById("mapPopup").style.display = "none";
-        resetSelection(); // Reseta a seleção das linhas quando o popup é fechado
+        //resetSelection(); // Reseta a seleção das linhas quando o popup é fechado
     }
-
+    
     // Adiciona o listener de clique ao botão de fechar o popup
     document.getElementById("closeMapButton").addEventListener("click", closeMapPopup);
-
-
-
-
-
-
-
-
-
-
-
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     // Função para formatar quilômetros
     function formatKilometers(kilometers) {
         return kilometers.toLocaleString("pt-BR", {
@@ -604,26 +710,26 @@ var coordinates = []; // Para armazenar as coordenadas das linhas selecionadas
             maximumFractionDigits: 2,
         });
     }
-
+    
     // Função para adicionar uma linha à tabela
     function appendRow(tbody, row) {
         const tr = document.createElement("tr");
-
+    
         // Convertendo o tempo do módulo para uma data e hora legível
         const moduleDateTime = new Date(row.moduleTime);
         const moduleDate = moduleDateTime.toLocaleDateString();
         const moduleTime = moduleDateTime.toLocaleTimeString();
-
+    
         // Calculando a diferença do hodômetro
         let currentHodometro = row.hodometro;
         let hodometroDifference = currentHodometro - previousHodometro;
-
+    
         // Formatando os quilômetros
         let formattedCurrentHodometro = formatKilometers(currentHodometro);
         let formattedHodometroDifference = formatKilometers(hodometroDifference);
-
+    
         // Inserindo os dados na tabela
-        tr.innerHTML = 
+        tr.innerHTML =
             `<td><img src="imagens/LGS.png" alt="Ícone"  class="row-img" /></td>
             <td>${moduleDate}</td>
             <td>${moduleTime}</td>
@@ -635,76 +741,76 @@ var coordinates = []; // Para armazenar as coordenadas das linhas selecionadas
             <td><a href="https://www.google.com/maps/place/${row.latitude},${row.longitude}" target="_blank"><ion-icon name="map-outline"></ion-icon></a></td>
             <td>${formattedCurrentHodometro}</td>
             <td>${formattedHodometroDifference}</td>`;
-
+    
         tbody.appendChild(tr);
-
+    
         // Atualizando o hodômetro anterior para o próximo loop
         previousHodometro = currentHodometro;
     }
-
+    
     // Função para formatar a distância
     function formatDistance(distance) {
         // Converte a distância em metros
         const meters = parseFloat(distance);
-
+    
         // Calcula a quantidade de quilômetros e metros
-        const km = Math.floor(meters/1000);
-        const m = Math.floor(meters%1000);
-
+        const km = Math.floor(meters / 1000);
+        const m = Math.floor(meters % 1000);
+    
         // Retorna a string formatada
         return `${km} km ${m} m Percorrido`;
     }
-
+    
     let previousHodometro = null; // Inicialmente, o valor anterior é nulo
-
+    
     // Função para adicionar uma linha de parada à tabela
     function appendStopRow(tbody, row, stopStart, stopEnd, ignition, totalTime) {
         const totalTimeSeconds = (stopEnd - stopStart) / 1000; // Diferença em segundos
         const totalTimeMinutes = totalTimeSeconds / 60; // Diferença em minutos
-
+    
         if (totalTimeMinutes < 2) {
             return; // Não adiciona a linha se o tempo de parada for menor que 2 minutos
         }
-
+    
         const tr = document.createElement("tr");
-
+    
         // Verifica as condições e adiciona as classes apropriadas
         if (parseInt(row.speed) <= 5) {
-            if(row.ignition === "true"){
+            if (row.ignition === "true") {
                 tr.classList.add("high-speed");
-            }else{
+            } else {
                 tr.classList.add("low-speed");
             }
         } else {
             tr.classList.add("speed-5");
         }
-
+    
         // Calcula a diferença de hodômetro
         let hodometroDifference = previousHodometro !== null ? formatDistance((row.hodometro - previousHodometro).toFixed(2)) : "<--"; // Se previousHodometro for null, a diferença não é aplicável
-
-        tr.innerHTML = 
+    
+        tr.innerHTML =
             `<td><img src="imagens/LGS.png" alt="Ícone"  class="row-img" /></td>
             <td>${stopStart.toLocaleTimeString()}</td>
             <td>${stopEnd.toLocaleTimeString()}</td>
             <td>${row.endereco}</td>
             <td>${row.latitude}</td>
             <td>${row.longitude}</td>
-            <td>${ `<i class="fas fa-power-off" style="color: ` + (ignition === "true" ? `green` : `red`) + `;"></i>` }</td>
+            <td>${`<i class="fas fa-power-off" style="color: ` + (ignition === "true" ? `green` : `red`) + `;"></i>`}</td>
             <td>${calculateTotalTime(stopStart, stopEnd)}</td>
             <td><a href="https://www.google.com/maps/place/${row.latitude},${row.longitude}" target="_blank"><ion-icon name="map-outline"></ion-icon></a></td>
             <td>${formatDistance(row.hodometro)}</td> <!-- Formatando a distância do hodômetro -->
             <td>${hodometroDifference}</td> <!-- Exibe a diferença de hodômetro -->`;
-
+    
         tbody.appendChild(tr);
-
+    
         // Atualizando o hodômetro anterior para o próximo loop
         previousHodometro = row.hodometro;
     }
-
+    
     // Função para calcular o tempo total
     function calculateTotalTime(start, end) {
         const totalTimeSeconds = (end - start) / 1000; // Diferença em segundos
-
+    
         if (totalTimeSeconds < 3600) {
             const minutes = Math.floor(totalTimeSeconds / 60);
             const seconds = (totalTimeSeconds % 60).toFixed(1).replace(/\.0$/, ""); // Remove .0 se não há decimais
@@ -716,13 +822,13 @@ var coordinates = []; // Para armazenar as coordenadas das linhas selecionadas
             return `${hours}h ${minutes}min ${seconds}s`;
         }
     }
-
+    
     // Adiciona os listeners de clique ao carregar a página
     document.addEventListener("DOMContentLoaded", addRowClickListeners);
-
+    
     // Adiciona o listener de clique ao botão flutuante
     document.getElementById("mapButton").addEventListener("click", openMapPopup);
-
+    
     // Adiciona o listener de clique ao botão de fechar o popup
     document.getElementById("closeMapButton").addEventListener("click", closeMapPopup);
 });
