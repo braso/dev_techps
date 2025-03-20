@@ -16,7 +16,7 @@
         $offset = $offset-$limit;
     }
 
-    $query .= " LIMIT ".$limit." OFFSET ".$offset.";";
+    $query .= " LIMIT {$limit} OFFSET {$offset};";
 
     try {
         $queryResult = mysqli_fetch_all(query($query), MYSQLI_ASSOC);
@@ -24,6 +24,7 @@
         echo json_encode($e->getMessage());
         exit;
     }
+
 
     $tabela = [
         "header" => [],
@@ -34,13 +35,15 @@
     if(!empty($queryResult)){
         $headers = array_keys($queryResult[0]);
         $tabela["header"] = $headers;
-    
+        
         foreach ($queryResult as $row) {
             $tabelaRow = [];
             foreach ($row as $key => $data){
-                preg_match('/^.*\((.*?)\)$/', $data, $match);
+                preg_match('/^((.+[^\n ])*)\((.*)\)$/', $data, $match);
                 if(isset($match[1])){
-                    $data = eval("return {$match[0]};");
+                    try{
+                        $data = eval("return {$match[0]};");
+                    }catch(Exception $e){}
                 }
                 $tabelaRow[$key] = $data;
             }

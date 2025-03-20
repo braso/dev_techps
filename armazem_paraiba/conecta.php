@@ -53,7 +53,6 @@
 		) or die("Connection failed: ".mysqli_connect_error());
 		$conn->set_charset("utf8");
 	//}
-
 	
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_grid.php";
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";

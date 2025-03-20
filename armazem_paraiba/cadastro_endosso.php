@@ -495,6 +495,14 @@
 	}
 
 	function index(){
+		if(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
+			// dd("teste");
+			$_POST["returnValues"] = json_encode([
+				"HTTP_REFERER" => $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php"
+			]);
+			voltar();
+		}
+		
 		global $CONTEX;
 
 		cabecalho("Cadastro de Endosso");
