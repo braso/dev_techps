@@ -18,8 +18,8 @@ let definirFuncoesInternas = function(){
     //Ordenações{
         $('.table-col-head').click(function(event){
             campo = camposBd[parseInt($(event.target)[0].attributes.value.value)];
-            if(campo.indexOf(" AS ") >= 0){
-                campo = campo.split(" AS ")[1];
+            if(campo.indexOf(' AS ') >= 0){
+                campo = campo.split(' AS ')[1];
             }
             if(orderCol.indexOf(campo+' ASC') >= 0){
                 orderCol = campo+' DESC';
@@ -51,7 +51,7 @@ const consultarRegistros = function(){
     conditions = '';
     data = {};
 
-    $('.table-loading-icon')[0].innerHTML = "<div class='loading-icon' style='margin:10px;background-color: #ffffff;'>";
+    $('.table-loading-icon')[0].innerHTML = '<div class=\"loading-icon\" style=\"margin:10px;background-color: #ffffff;\">';
 
     $('form[name=\"contex_form\"] :input').each(function(key, tag){
         if(searchFields[tag.name] != undefined){
@@ -106,9 +106,9 @@ const consultarRegistros = function(){
             qtdPaginas = Math.ceil((total/limit))
             statusCol = -1;
 
-            if(fields["actions"] != null){
-                actions = JSON.parse(fields["actions"]);
-                delete fields["actions"];
+            if(fields['actions'] != null){
+                actions = JSON.parse(fields['actions']);
+                delete fields['actions'];
             }
 
             //Formatando informações do header{
@@ -117,8 +117,8 @@ const consultarRegistros = function(){
                     if(camposBd[key] != null && camposBd[key].indexOf('status') >= 0){
                         statusCol = key;
                     }
-                    camposBd[key] = camposBd[key].indexOf(" AS ") >= 0? 
-                        camposBd[key].substring(camposBd[key].indexOf(" AS ")+4):
+                    camposBd[key] = camposBd[key].indexOf(' AS ') >= 0? 
+                        camposBd[key].substring(camposBd[key].indexOf(' AS ')+4):
                         camposBd[key]
                     ;
                     
@@ -133,19 +133,19 @@ const consultarRegistros = function(){
             //Formatando informações das linhas{
                 response.rows.forEach(function(dataArray, rowKey){
                     // row = '<td>'+dataArray.join('</td><td>')+'</td>';
-                    row = "";
+                    row = '';
                     Object.keys(dataArray).forEach(function(key){
                         if(camposBd.indexOf(key) >= 0){
-                            row += '<td>'+(dataArray[key] != null? dataArray[key]: "")+'</td>';
+                            row += '<td>'+(dataArray[key] != null? dataArray[key]: '')+'</td>';
                         }
                     });
                     
                     try {
                         actions.forEach(function(actionTag, key){
-                            row += '<td class="tab-action">'+actionTag+'</td>';
+                            row += '<td class=\"tab-action\">'+actionTag+'</td>';
                         });
                     }catch(error){
-                        console.log("actions not defined");
+                        console.log('actions not defined');
                     }
                     response.rows[rowKey] = '<tr>'+row+'</tr>';
                 });
@@ -158,24 +158,24 @@ const consultarRegistros = function(){
                 }
                 footer = '';
                 if(pageNumber > 2 && qtdPaginas > 3){
-                    footer += '<div value="1"><<</div>'
+                    footer += '<div value=\"1\"><<</div>'
                 }
                 for(f = ((pageNumber-1)<=1? 1: (pageNumber-1)-(pageNumber==qtdPaginas)); f < qtdPaginas+1 && f < pageNumber+2+(pageNumber == 1); f++){
                     if(f == pageNumber){
-                        footer += '<div class="page-selected" value="'+f+'">'+f+'</div>'
+                        footer += '<div class=\"page-selected\" value=\"'+f+'\">'+f+'</div>'
                     }else{
-                        footer += '<div value="'+f+'">'+f+'</div>'
+                        footer += '<div value=\"'+f+'\">'+f+'</div>'
                     }
                 }
                 if(qtdPaginas > 3 && pageNumber < qtdPaginas-1){
-                    footer += '<div value="'+(qtdPaginas)+'">>></div>'
+                    footer += '<div value=\"'+(qtdPaginas)+'\">>></div>'
                 }
             //}
 
             $('#result thead')[0].innerHTML = header.join('');
             $('#result tbody')[0].innerHTML = response.rows;
             $('.grid-footer .tab-pagination')[0].innerHTML = footer;
-            $('.table-loading-icon')[0].innerHTML = "";
+            $('.table-loading-icon')[0].innerHTML = '';
 
 
             definirFuncoesInternas();

@@ -106,6 +106,10 @@
 	function index(){
 		cabecalho(empty($_POST["title"])? "Buscar Espelho de Ponto": $_POST["title"]);
 
+		echo "<style>";
+		include "css/espelho_ponto.css";
+		echo "</style>";
+
 		//CAMPOS DE CONSULTA{
 			$condBuscaMotorista = "";
 			$condBuscaEmpresa = "";
@@ -387,9 +391,6 @@
 		//}
 		
 		echo carregarJS($opt);
-		echo "<style>";
-		include "css/espelho_ponto.css";
-		echo "</style>";
 		rodape();
 	}
 

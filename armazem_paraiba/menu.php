@@ -108,6 +108,7 @@
 			}
 		</style>"
 	;
+
 	echo 
 		"<!-- INICIO HEADER MENU -->"
 			."<div class='page-header-menu'>"

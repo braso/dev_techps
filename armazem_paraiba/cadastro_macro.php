@@ -8,47 +8,47 @@
 		exit;
 
 	}
-	function modificarMacro(){
+	function verMacro(){
 		$_POST = array_merge($_POST, carregar("macroponto",$_POST["id"]));
 
 		layout_macro();
 		exit;
 	}
 
-	function cadastra_macro(){
+	// function cadastra_macro(){
 
-		$camposObrig = [
-			"nome" => "Nome", 
-			"codigoInterno" => "Código Interno", 
-			"codigoExterno" => "Código Externo",
-			"fonte" => "Fonte",
-			"status" => "Status"
-		];
-		$errorMsg = conferirCamposObrig($camposObrig, $_POST);
-		if(!empty($errorMsg)){
-			set_status("ERRO: ".$errorMsg);
-			layout_macro();
-			exit;
-		}
+	// 	$camposObrig = [
+	// 		"nome" => "Nome", 
+	// 		"codigoInterno" => "Código Interno", 
+	// 		"codigoExterno" => "Código Externo",
+	// 		"fonte" => "Fonte",
+	// 		"status" => "Status"
+	// 	];
+	// 	$errorMsg = conferirCamposObrig($camposObrig, $_POST);
+	// 	if(!empty($errorMsg)){
+	// 		set_status("ERRO: ".$errorMsg);
+	// 		layout_macro();
+	// 		exit;
+	// 	}
 
-		$novaMacro = [
-			"macr_tx_nome" => $_POST["nome"],
-			"macr_tx_codigoInterno" => $_POST["codigoInterno"],
-			"macr_tx_codigoExterno" => $_POST["codigoExterno"],
-			"macr_nb_user" => $_SESSION["user_nb_id"],
-			"macr_tx_data" => date("Y-m-d"),
-			"macr_tx_status" => "ativo"
-		];
+	// 	$novaMacro = [
+	// 		"macr_tx_nome" => $_POST["nome"],
+	// 		"macr_tx_codigoInterno" => $_POST["codigoInterno"],
+	// 		"macr_tx_codigoExterno" => $_POST["codigoExterno"],
+	// 		"macr_nb_user" => $_SESSION["user_nb_id"],
+	// 		"macr_tx_data" => date("Y-m-d"),
+	// 		"macr_tx_status" => "ativo"
+	// 	];
 
-		if(!empty($_POST["id"])){
-			atualizar("macroponto",array_keys($novaMacro), array_values($novaMacro),$_POST["id"]);
-		}else{
-			inserir("macroponto",array_keys($novaMacro), array_values($novaMacro));
-		}
+	// 	if(!empty($_POST["id"])){
+	// 		atualizar("macroponto",array_keys($novaMacro), array_values($novaMacro),$_POST["id"]);
+	// 	}else{
+	// 		inserir("macroponto",array_keys($novaMacro), array_values($novaMacro));
+	// 	}
 
-		index();
-		exit;
-	}
+	// 	index();
+	// 	exit;
+	// }
 
 
 	function layout_macro(){
@@ -56,9 +56,9 @@
 		cabecalho("Cadastro Macro");
 
 		$c = [
-			campo("Nome*","nome",($_POST["macr_tx_nome"]?? ""),6,"","readonly=readonly"),
-			campo("Código Interno*","codigoInterno",($_POST["macr_tx_codigoInterno"]?? ""),3,"","readonly=readonly"),
-			campo("Código Externo*","codigoExterno",($_POST["macr_tx_codigoExterno"]?? ""),3)
+			texto("Nome*",($_POST["macr_tx_nome"]?? ""),5),
+			texto("Código Interno*",($_POST["macr_tx_codigoInterno"]?? ""),3),
+			texto("Código Externo*",($_POST["macr_tx_codigoExterno"]?? ""),3)
 		];
 
 		$botao = [
@@ -72,21 +72,15 @@
 		echo fecha_form($botao);
 
 		rodape();
-
 	}
 
 	function index(){
 
 		cabecalho("Cadastro Macro");
 		
-		$extra = 
-			(($_POST["busca_codigo"])? " AND macr_nb_id = ".$_POST["busca_codigo"]: "")
-			.(($_POST["busca_nome"])? " AND macr_tx_nome LIKE '%".$_POST["busca_nome"]."%'": "")
-		;
-
 		$campos = [
 			campo("Código","busca_codigo",$_POST["busca_codigo"],2,"MASCARA_NUMERO"),
-			campo("Nome","busca_nome",$_POST["busca_nome"],10)
+			campo("Nome","busca_nome_like",$_POST["busca_nome_like"],10)
 		];
 
 		$botoes = [
@@ -108,7 +102,7 @@
 
 			$camposBusca = [
 				"busca_codigo" 	=> "macr_nb_id",
-				"busca_nome" 	=> "macr_tx_nome"
+				"busca_nome_like" 	=> "macr_tx_nome"
 			];
 
 			$queryBase = (
@@ -118,7 +112,7 @@
 			$actions = criarIconesGrid(
 				["glyphicon glyphicon-search search-button"],
 				["cadastro_macro.php"],
-				["modificarMacro()"]
+				["verMacro()"]
 			);
 			$gridFields["actions"] = $actions["tags"];
 
@@ -128,7 +122,7 @@
 				}"
 			;
 
-			echo gridDinamico("tabelaFeriados", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+			echo gridDinamico("tabelaMacros", $gridFields, $camposBusca, $queryBase, $jsFunctions);
 		//}*/
 
 
