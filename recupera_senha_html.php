@@ -92,7 +92,7 @@
 				<div id="no-domain-selected" hidden>
 					<h3 class="form-title font-green"></h3>
 						<p style="text-align:justify">Um link de redefinição de senha será enviado para o seu endereço de e-mail.</p>
-						<?=$dominiosInput?>
+						<?=$empresasInput?>
 						<div class="form-group">
 							<label class="control-label visible-ie8 visible-ie9">Login</label>
 							<input focus autofocus class="form-control form-control-solid placeholder-no-fix" type="text" autocomplete="off" placeholder="Login" name="login" />
