@@ -14,7 +14,7 @@ document.getElementById("consultarBtn").addEventListener("click", function () {
         document.getElementById("loading-screen").style.display = "none";
         // Mostra o botão de alternar formulário após o carregamento
         document.getElementById("toggleFormBtn").style.display = "block";
-    }, 10000); // 5000 milissegundos = 5 segundos
+    }, 1); // 5000 milissegundos = 5 segundos
 });
 
 // Adiciona um evento ao botão de alternar o formulário

@@ -59,9 +59,9 @@
 			$temJornadaAberta = mysqli_fetch_assoc(
 				query(
 					"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 1) as temJornadaAberta FROM ponto
-						WHERE ".$condicoesPontoBasicas."
+						WHERE {$condicoesPontoBasicas}
 							AND ponto.pont_tx_tipo IN (1,2)
-							AND pont_tx_data <= '".$hoje." 00:00:00'
+							AND pont_tx_data <= '{$hoje} 00:00:00'
 						ORDER BY pont_tx_data DESC
 						LIMIT 1;"
 				)
@@ -71,9 +71,9 @@
 				$jornadaFechadaHoje = mysqli_fetch_assoc(
 					query(
 						"SELECT ponto.pont_tx_data, (ponto.pont_tx_tipo = 2) as jornadaFechadaHoje FROM ponto
-							WHERE ".$condicoesPontoBasicas."
+							WHERE {$condicoesPontoBasicas}
 								AND ponto.pont_tx_tipo IN (1,2)
-								AND pont_tx_data LIKE '%".$hoje."%'
+								AND pont_tx_data LIKE '%{$hoje}%'
 							ORDER BY pont_tx_data ASC
 							LIMIT 1;"
 					)
@@ -95,9 +95,9 @@
 		$sql = 
 			"SELECT DISTINCT pont_nb_id, ".implode(", ", $columns)." FROM ponto
 				JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno
-				WHERE ".$condicoesPontoBasicas."
+				WHERE {$condicoesPontoBasicas}
 					AND macroponto.macr_tx_fonte = 'positron'
-					AND ponto.pont_tx_data >= '".$sqlDataInicio."'
+					AND ponto.pont_tx_data >= '{$sqlDataInicio}'
 				ORDER BY pont_tx_data ASC"
 		;
 
@@ -108,12 +108,12 @@
 
 	function criaBotaoRegistro(string $classe, int $tipoRegistro, string $nome, string $iconClass){
 		return 
-			"<button type='button'class='".$classe."' onclick='carregar_submit(\"".strval($tipoRegistro)."\",\" Tem certeza que deseja ".$nome."?\");'>
+			"<button type='button'class='{$classe}' onclick='carregar_submit(\"".strval($tipoRegistro)."\",\" Tem certeza que deseja {$nome}?\");'>
 				<div class='button-icon'>
-				    <i style='min-height: var(--icon-size); line-height: var(--icon-size);' class='".$iconClass."'></i>
+				    <i style='min-height: var(--icon-size); line-height: var(--icon-size);' class='{$iconClass}'></i>
 				</div>
 				<div class='button-title'>
-				    ".$nome."
+				    {$nome}
 				</div>
 			</button>
 			<script>
@@ -158,7 +158,7 @@
 		
 		if(empty($_SESSION["user_nb_entidade"])){
 			echo 
-				"<form name='goToIndexForm' action='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php'></form>"
+				"<form name='goToIndexForm' action='{$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}/index.php'></form>"
 				."<script>"
 					."alert('Funcionário não localizado. Tente fazer o login novamente.');"
 					."document.goToIndexForm.submit();"
@@ -360,11 +360,11 @@
 				<label>Hora</label><br>
 				<p class='text-left' id='clock'>Carregando...</p>
 			</div>",
-			"<div class='col-sm-5 margin-bottom-5'>"
-				."<div class='margin-bottom-5'>Data: ".date("d/m")."</div>"
-				."<div class='margin-bottom-5'>Matrícula: ".$aMotorista["enti_tx_matricula"]."</div>"
-				."<div class='margin-bottom-5'>CPF: ".$aMotorista["user_tx_cpf"]."</div>"
-				."<div class='margin-bottom-10'>Nome: ".$aMotorista["user_tx_nome"]."</div>"
+			"<div class='col-sm-5 margin-bottom-5 info-grid'>"
+				."<div class='margin-bottom-5'><b>Data:</b> ".date("d/m")."</div>"
+				."<div class='margin-bottom-5'><b>Matrícula:</b> ".$aMotorista["enti_tx_matricula"]."</div>"
+				."<div class='margin-bottom-5'><b>CPF:</b> ".$aMotorista["user_tx_cpf"]."</div>"
+				."<div class='margin-bottom-10'><b>Nome:</b> ".$aMotorista["user_tx_nome"]."</div>"
 			."</div>",
 		];
 
@@ -382,7 +382,7 @@
 			$fields[] = texto("Endosso:", "Endossado por ".$aEndosso["user_tx_login"]." em ".data($aEndosso["endo_tx_dataCadastro"], 1), 6);
 			$botoesVisiveis = [];
 		}else{
-			$fields[] = campo("Placa do Veículo", "placa", ($_POST["placa"]?? ""), 2, "MASCARA_PLACA");
+			$fields[] = campo("Placa do Veículo", "placa", ($_POST["placa"]?? ""), 2, "MASCARA_PLACA", "");
 			$fields[] = textarea("Justificativa", "justificativa", ($_POST["justificativa"]?? ""), 5, "style='resize: vertical;' placeholder='Em caso de inconsistência, justificar aqui.'");
 		}
 

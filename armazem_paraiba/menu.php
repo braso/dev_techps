@@ -21,7 +21,7 @@
 		$camposOcultosProdução = [];
 		if(is_int(strpos($_SERVER["REQUEST_URI"], 'dev'))){
 			$camposOcultosProdução = [
-				"/paineis/ajustes.php" 	  => "Ajustes",
+				
 				"/paineis/disponibilidade.php" 	  => "Disponibilidade",
 			];
 		}
@@ -48,7 +48,8 @@
 				"/paineis/endosso.php"	  => "Endosso",
 				"/paineis/saldo.php"	  => "Saldo",
 				"/paineis/jornada.php" 	  => "Jornada Aberta",
-				"/paineis/nc_juridica.php"=> "Não Conformidades Juridicas Atualizado"
+				"/paineis/nc_juridica.php"=> "Não Conformidades Juridicas Atualizado",
+				"/paineis/ajustes.php" 	  => "Ajustes",
 			] + $camposOcultosProdução,
 			"relatórios" => [
 					"/relatorio_pontos.php" => "Pontos", 
@@ -108,6 +109,7 @@
 			}
 		</style>"
 	;
+
 	echo 
 		"<!-- INICIO HEADER MENU -->"
 			."<div class='page-header-menu'>"
