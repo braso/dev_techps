@@ -5,7 +5,7 @@
     $empresas = [
         "ARMAZEMPARAIBA"		=> "armazem_paraiba",
         "BRASO"					=> "braso",
-        "CARAUTRANSPORTE"		=> "carau_transporte",
+        "CARAU"		            => "carau_transporte",
         "COMAV"					=> "comav",
         "FEIJAOTURQUEZA"		=> "feijao_turqueza",
         "FSLOG"	                => "fs_log_transportes",
