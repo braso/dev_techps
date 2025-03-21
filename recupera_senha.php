@@ -180,7 +180,7 @@
                 document.getElementsByClassName('form-title font-green')[0].innerHTML = 'Redefinir Senha';
             }else{
                 document.getElementById('domain-selected').hidden = false;
-                document.getElementsByClassName('form-title font-green')[1].innerHTML = 'Redefinição de Senha - ".$dominios[$_GET["dominio"]]."';
+                document.getElementsByClassName('form-title font-green')[1].innerHTML = 'Redefinição de Senha - {$_GET["dominio"]}';
             }
         </script>"
     ;
