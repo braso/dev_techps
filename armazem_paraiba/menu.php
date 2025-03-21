@@ -100,6 +100,8 @@
 		if(in_array($nivel, ["Motorista", "Ajudante", "Funcionário"])){
 			return $menuMotorista;
 		}
+
+		return "";
 	}
 
 	echo 
