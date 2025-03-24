@@ -762,7 +762,7 @@
 							. " WHERE para_nb_id = " . $motorista["enti_nb_parametro"]
 					), MYSQLI_ASSOC);
 
-					if (date('l', $dia["data"]) == "Saturday") {
+					if (date('l', strtotime($dia["data"])) == "Saturday") {
 						$jornadaDia = $parametro[0]["para_tx_jornadaSabado"];
 					} else {
 						$jornadaDia = $parametro[0]["para_tx_jornadaSemanal"];
@@ -798,12 +798,14 @@
 			}
 
 			$pasta = dir($path);
-			while ($arquivo = $pasta->read()) {
-				if (!in_array($arquivo, $arquivosMantidos)) {
-					unlink($arquivo); // Apaga o arquivo
+			if($arquivosMantidos != null){
+				while ($arquivo = $pasta->read()) {
+					if (!in_array($arquivo, $arquivosMantidos)) {
+						unlink($arquivo); // Apaga o arquivo
+					}
 				}
+				$pasta->close();
 			}
-			$pasta->close();
 		}
 		// sleep(1);
 		return;
