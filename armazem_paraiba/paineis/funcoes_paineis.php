@@ -324,7 +324,11 @@
 			$empresa["qtdMotoristas"] = count($motoristas);
 			$empresa["dataInicio"] = $dataMes->format("Y-m-d");
 			$empresa["dataFim"] = $dataFim->format("Y-m-d");
-			$empresa["percEndossado"] = ($statusEndossos["E"]) / array_sum(array_values($statusEndossos));
+			if (array_sum(array_values($statusEndossos)) != 0) {
+			    $empresa["percEndossado"] = ($statusEndossos["E"]) / array_sum(array_values($statusEndossos));
+			} else {
+			    $empresa["percEndossado"] = 0;
+			}
 
 			file_put_contents($path . "/empresa_" . $empresa["empr_nb_id"] . ".json", json_encode($empresa));
 		}
@@ -1281,7 +1285,7 @@
 			);
 
 			$pasta = dir($path);
-			if (is_dir($pasta)) {
+			if (is_dir($path)) {
 				while (($arquivo = $pasta->read()) !== false) {
 					// Ignora os diretórios especiais '.' e '..'
 					if ($arquivo != '.' && $arquivo != '..') {
@@ -1399,14 +1403,6 @@
 					foreach ($valores as $estado => $value) {
 						$totaisEmpr[$evento] += $value; // Incrementa o total para a chave do evento
 					}
-
-					foreach ($valores as $estado => $value) {
-						if ($estado === 'ativo') {
-							$totaisEmpr['totais']['ativo'] += $value; // Soma para os ativos
-						} elseif ($estado === 'inativo') {
-							$totaisEmpr['totais']['inativo'] += $value; // Soma para os inativos
-						}
-					}
 				}
 			}
 
@@ -1420,14 +1416,19 @@
 			file_put_contents($path . "/empresa_" . $empresa["empr_nb_id"] . ".json", json_encode($empresa));
 		}
 
-		foreach ($totais as $key => $values) {
-			foreach ($values as $key => $value) {
-				if (!isset($totaisEmpresa[$key][$value])) {
-					$totaisEmpresa[$key][$value] = 0; // Inicializa a chave com 0, se ainda não existir
-				}
-				$totaisEmpresa[$key][$value] += $value;
-			}
-		}
+		foreach ($totais as $empresaKey => $values) {
+            foreach ($values as $categoriaKey => $value) {
+                if (!is_numeric($value)) {
+                    continue; // Ignora valores que não são números
+                }
+        
+                if (!isset($totaisEmpresa[$empresaKey][$categoriaKey])) {
+                    $totaisEmpresa[$empresaKey][$categoriaKey] = 0;
+                }
+        
+                $totaisEmpresa[$empresaKey][$categoriaKey] += $value;
+            }
+        }
 
 		if (empty($_POST["empresa"])) {
 			$path = "./arquivos/ajustes" . "/" . $periodoInicio->format("Y-m");
