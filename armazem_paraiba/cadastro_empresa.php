@@ -173,11 +173,11 @@
 			$allowed = array("image/jpeg", "image/gif", "image/png");
 			if (in_array($file_type, $allowed) && $_FILES["logo"]["name"] != "") {
 
-				if (!is_dir("arquivos/empresa/$id_empresa/")) {
-					mkdir("arquivos/empresa/$id_empresa/");
+				if (!is_dir("arquivos/empresa/{$id_empresa}/")) {
+					mkdir("arquivos/empresa/{$id_empresa}/");
 				}
 
-				$arq = enviar("logo", "arquivos/empresa/$id_empresa/", $id_empresa);
+				$arq = enviar("logo", "arquivos/empresa/{$id_empresa}/", $id_empresa);
 				if ($arq) {
 					atualizar("empresa", ["empr_tx_logo"], [$arq], $id_empresa);
 				}
@@ -199,12 +199,12 @@
 			$allowed = array("image/jpeg", "image/gif", "image/png");
 			if (in_array($file_type, $allowed) && $_FILES["logo"]["name"] != "") {
 
-				if (!is_dir("arquivos/empresa/".$id_empresa)) {
-					mkdir("arquivos/empresa/".$id_empresa);
+				if (!is_dir("arquivos/empresa/{$id_empresa}")) {
+					mkdir("arquivos/empresa/{$id_empresa}");
 				}
 
 
-				$arq = enviar("logo", "arquivos/empresa/".$id_empresa."/", $id_empresa);
+				$arq = enviar("logo", "arquivos/empresa/{$id_empresa}/", $id_empresa);
 				if ($arq) {
 					atualizar("empresa", ["empr_tx_logo"], [$arq], $id_empresa);
 				}
@@ -219,10 +219,10 @@
 	function carregarEndereco(){
 		global $CONTEX;
 		echo 
-			"<script src='".$CONTEX["path"]."/../contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
-			<script src='".$CONTEX["path"]."/../contex20/assets/global/plugins/select2/js/select2.min.js'></script>
-			<script src='".$CONTEX["path"]."/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js' type='text/javascript'></script>
-			<script src='".$CONTEX["path"]."/../contex20/assets/global/plugins/jquery-inputmask/maskMoney.js' type='text/javascript'></script>
+			"<script src='{$CONTEX["path"]}/../contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
+			<script src='{$CONTEX["path"]}/../contex20/assets/global/plugins/select2/js/select2.min.js'></script>
+			<script src='{$CONTEX["path"]}/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js' type='text/javascript'></script>
+			<script src='{$CONTEX["path"]}/../contex20/assets/global/plugins/jquery-inputmask/maskMoney.js' type='text/javascript'></script>
 
 			<script>
 				jQuery.ajax({
@@ -250,8 +250,8 @@
 
 			$a = mysqli_fetch_array(query(
 				"SELECT * FROM empresa"
-					." WHERE empr_tx_cnpj = '".$cnpj."'"
-						." AND empr_nb_id != ".$id
+					." WHERE empr_tx_cnpj = '{$cnpj}'"
+						." AND empr_nb_id != {$id}"
 					." LIMIT 1;"
 			), MYSQLI_BOTH);
 			
@@ -259,7 +259,7 @@
 				echo 
 					"<script type='text/javascript'>
 						if(confirm('CPF/CNPJ já cadastrado, deseja atualizar o registro?')){
-							parent.document.form_modifica.id.value='".$a["empr_nb_id"]."';
+							parent.document.form_modifica.id.value='{$a["empr_nb_id"]}';
 							parent.document.form_modifica.submit();
 						}else{
 							parent.document.contex_form.cnpj.value = '';
@@ -290,13 +290,13 @@
 				function carrega_cep(cep) {
 					var num = cep.replace(/[^0-9]/g, '');
 					if (num.length == '8') {
-						document.getElementById('frame_cep').src = '".$path_parts["basename"]."?acao=carregarEndereco()&cep='+num;
+						document.getElementById('frame_cep').src = '{$path_parts["basename"]}?acao=carregarEndereco()&cep='+num;
 					}
 				}
 				
 				function checarCNPJ(cnpj){
 					if(cnpj.length == '18' || cnpj.length == '14'){
-						document.getElementById('frame_cep').src='".$path_parts["basename"]."?acao=checarCNPJ&cnpj='+cnpj+'&id=".$a_mod["empr_nb_id"]."'
+						document.getElementById('frame_cep').src='{$path_parts["basename"]}?acao=checarCNPJ&cnpj='+cnpj+'&id={$a_mod["empr_nb_id"]}'
 					}
 				}
 				$(document).ready(function(){
@@ -464,7 +464,7 @@
 				combo("Regime Tributário","regimeTributario",		$input_values["regimeTributario"],3,$regimes),
 				campo_data("Data Reg. CNPJ","dataRegistroCNPJ",		$input_values["dataRegistroCNPJ"],3),
 
-				arquivo("Logo (.png, .jpg)".$iconeExcluirLogo,"logo",$input_values["logo"],4),
+				arquivo("Logo (.png, .jpeg)".$iconeExcluirLogo,"logo",$input_values["logo"],4),
 				$campo_dominio,
 				$campo_Ehmatriz,
 				
@@ -587,6 +587,14 @@
 	}
 
 	function index(){
+		if(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
+			// dd("teste");
+			$_POST["returnValues"] = json_encode([
+				"HTTP_REFERER" => $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php"
+			]);
+			voltar();
+		}
+		
 		cabecalho("Cadastro Empresa/Filial");
 
 		$extra = 

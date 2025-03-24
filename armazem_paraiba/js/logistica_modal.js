@@ -14,14 +14,14 @@ document.getElementById("consultarBtn").addEventListener("click", function () {
         document.getElementById("loading-screen").style.display = "none";
         // Mostra o botão de alternar formulário após o carregamento
         document.getElementById("toggleFormBtn").style.display = "block";
-    }, 10000); // 5000 milissegundos = 5 segundos
+    }, 1); // 5000 milissegundos = 5 segundos
 });
 
 // Adiciona um evento ao botão de alternar o formulário
 document.getElementById("toggleFormBtn").addEventListener("click", function () {
     var formContainer = document.getElementById("formContainer");
     var motoristaSelect = document.getElementById("id"); // Campo de seleção do motorista
-    var dataInput = document.getElementById("date"); // Campo de seleção de data
+    var dataInput = document.getElementById("date_start"); // Campo de seleção de data
 
     // Alterna a visibilidade do formulário
     if (formContainer.classList.contains("show")) {
@@ -33,7 +33,8 @@ document.getElementById("toggleFormBtn").addEventListener("click", function () {
 
         // Preenche o campo de data no formulário de ajuste com a data selecionada
         var dataValue = dataInput.value; // Obtém o valor selecionado
-        document.getElementById("data").value = dataValue; // Define o valor no formulário de ajuste
+        var formattedDate = dataValue.split('T')[0]; // Formata a data para "yyyy-MM-dd"
+        document.getElementById("data").value = formattedDate; // Define o valor no formulário de ajuste
 
         formContainer.classList.add("show");
     }

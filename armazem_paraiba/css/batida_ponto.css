@@ -81,6 +81,11 @@ form .row{
     form .row div:nth-child(2){
         text-align: center;
     }
+
+    form .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
 }
 
 @media(max-width:768px){

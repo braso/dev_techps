@@ -29,8 +29,7 @@
 	}
 
 	function calcularAbono($saldo, $tempoAbono){
-		$saldoPositivo = $saldo;
-
+		
 		if($saldo[0] == "-"){
 			return ((substr($saldo, 1) >= $tempoAbono)? $tempoAbono: substr($saldo, 1));
 		}else{
@@ -46,7 +45,7 @@
 		foreach($chavesInvalidas as $key){
 			unset($registros[$key]);
 		}
-		if(!isset($registros["inicioJornada"]) || (isset($registros["inicioJornada"]) && empty($registros["inicioJornada"]))){
+		if(!isset($registros["inicioJornada"]) || empty($registros["inicioJornada"])){
 			return "00:00";
 		}
 
@@ -565,7 +564,7 @@
     }
 
 	function diaDetalhePonto(array $motorista, string $data): array{
-		global $totalResumo, $contagemEspera;
+		global $totalResumo;
 		setlocale(LC_ALL, "pt_BR.utf8");
 
 		$aRetorno = [
@@ -605,7 +604,7 @@
 			$motorista["enti_tx_percHEEx"] = $motorista["para_tx_percHEEx"];
 		}
 		
-
+		
 		//Organizar array com tipos de ponto{
 			$registros = [
 				null,
@@ -834,8 +833,6 @@
 		$aRetorno["diffDescanso"] = $registros["descansoCompleto"]["icone"].$registros["descansoCompleto"]["totalIntervalo"];
 		$aRetorno["diffRepouso"]  = $registros["repousoCompleto"]["icone"].$registros["repousoCompleto"]["totalIntervalo"];
 
-		$contagemEspera += count($registros["esperaCompleto"]["pares"]);
-
 		//JORNADA EFETIVA{
 			if(is_string($registros["jornadaCompleto"]["totalIntervalo"])){
 				$jornadaIntervalo = new DateTime($data." 00:00");
@@ -865,8 +862,7 @@
 				}
 			//}
 			
-			//SOMATORIO DE TODAS AS ESPERAS
-
+			
 			if(!empty($registros["inicioJornada"][0])){
 				$value = new DateTime("{$data} 00:00:00");
 				for($f = 0; $f < count($totalNaoJornada); $f++){
@@ -954,7 +950,7 @@
 							$transferir = substr($aRetorno["diffSaldo"], 1);
 						}else{
 							$transferir = $intervaloEsp;
-						}	
+						}
 						$intervaloEsp = operarHorarios([$intervaloEsp, $transferir], "-");
 						$aRetorno["diffSaldo"] = operarHorarios([$aRetorno["diffSaldo"], $transferir], "+");
 					}
@@ -963,23 +959,15 @@
 				if($indenizarEspera){
 					$aRetorno["esperaIndenizada"] = $intervaloEsp;
 				}
-
 			}
 		//}
 
-		//INICIO ADICIONAL NOTURNO
+		//INICIO ADICIONAL NOTURNO{
 			$aRetorno["adicionalNoturno"] = calcularAdicNot($registros);
-		//FIM ADICIONAL NOTURNO
+		//}
 		
 		//TOLERÂNCIA{
-			$tolerancia = mysqli_fetch_array(query(
-				"SELECT parametro.para_tx_tolerancia FROM entidade 
-					JOIN parametro ON enti_nb_parametro = para_nb_id 
-					WHERE enti_nb_parametro = {$motorista["enti_nb_parametro"]}
-					LIMIT 1;"
-			), MYSQLI_BOTH)[0];
-			$tolerancia = intval($tolerancia);
-		
+			$tolerancia = !empty($motorista["para_tx_tolerancia"])? intval($motorista["para_tx_tolerancia"]): 0;
 
 			$saldo = explode(":", $aRetorno["diffSaldo"]);
 			$saldo = intval($saldo[0])*60 + ($saldo[0][0] == "-"? -1: 1)*intval($saldo[1]);
@@ -1464,6 +1452,8 @@
 		//}
 
 		$horariosOrdenados = ordenarHorariosTipo($inicios, $fins);
+		unset($inicios);
+		unset($fins);
 
 		$pares = [];
 		$parAtual = null;
