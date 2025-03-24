@@ -49,7 +49,7 @@
         }else{
             $msg = 
                 "<div class='alert alert-danger display-block'>
-                    <span> Selecione um domínio </span>
+                    <span> Informe a sua empresa </span>
                 </div>"
             ;
         }
