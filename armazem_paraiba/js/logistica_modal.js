@@ -21,7 +21,7 @@ document.getElementById("consultarBtn").addEventListener("click", function () {
 document.getElementById("toggleFormBtn").addEventListener("click", function () {
     var formContainer = document.getElementById("formContainer");
     var motoristaSelect = document.getElementById("id"); // Campo de seleção do motorista
-    var dataInput = document.getElementById("date"); // Campo de seleção de data
+    var dataInput = document.getElementById("date_start"); // Campo de seleção de data
 
     // Alterna a visibilidade do formulário
     if (formContainer.classList.contains("show")) {
@@ -33,7 +33,8 @@ document.getElementById("toggleFormBtn").addEventListener("click", function () {
 
         // Preenche o campo de data no formulário de ajuste com a data selecionada
         var dataValue = dataInput.value; // Obtém o valor selecionado
-        document.getElementById("data").value = dataValue; // Define o valor no formulário de ajuste
+        var formattedDate = dataValue.split('T')[0]; // Formata a data para "yyyy-MM-dd"
+        document.getElementById("data").value = formattedDate; // Define o valor no formulário de ajuste
 
         formContainer.classList.add("show");
     }
