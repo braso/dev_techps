@@ -1,5 +1,4 @@
 <script>
-//CAPTURA OS PARAMETROS DA URL PARA COLCOAR NOS INPUTS VINDO DO AJUSTE DE PONTO
 document.addEventListener('DOMContentLoaded', function() {
     function getParameter(theParameter) {
         var params = window.location.search.substr(1).split('&');
@@ -26,12 +25,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    if (data) {
-        document.getElementById('date').value = data;
+   if (data) {
+        // Formata a data da URL para "YYYY-MM-DD"
+        var formattedDate = data;
+
+        // Define a data e hora de início como 00:00:00
+        var dateStart = formattedDate + "T00:00";
+
+        // Define a data e hora de fim como 23:59
+        var dateEnd = formattedDate + "T23:59";
+        
+        document.getElementById('date_start').value = dateStart;
+        document.getElementById('date_end').value = dateEnd;
     }
 });
 </script>
-
 
 
 
@@ -57,6 +65,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <!-- Leaflet Routing Machine JS -->
 <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+
+
 </head>
 
 <body>
@@ -90,89 +101,83 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 
+<div class="container">
+    <div id="form_header" class="form_title">
+        <img src="imagens/LGC.png" alt="Logo" class="logo">
+        <h2 class="title-section">Painel de Não Conformidades Logísticas</h2>
+        <button type="button" class="btn btn-primary" id="toggleFormBtn">✒️</button>
+    </div>
 
-    <div class="container">
-        <div id="form_header" class="form_title">
-            <img src="imagens/LGC.png" alt="Logo" class="logo">
-            <h2 class="title-section">Painel de Não Conformidades Logísticas</h2>
-            <button type="button" class="btn btn-primary" id="toggleFormBtn">✒️</button>
-        </div>
+    <div class="table-container">
+        <form id="filterForm" method="post">
+            <div class="form-group">
+                <label class="label-form" for="id">Motorista:</label>
+                <select class="form-control field-form" id="id" name="id" disabled>
+                    <?=$htmls["motoristas"]?>
+                </select>
+            </div>
 
+            <div class="form-group">
+                <label for="plate-search">Placa:</label>
+                <input type="text" id="plate" name="plate" class="form-control field-form"
+                       placeholder="Digite a placa" maxlength="7">
+                <ul id="plate-suggestions" class="list-group"></ul>
+            </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const searchInput = document.getElementById('plate');
+                    const suggestionsList = document.getElementById('plate-suggestions');
 
+                    const plates = <?=json_encode($plates);?>;
 
+                    searchInput.addEventListener('input', function() {
+                        const filter = searchInput.value.toUpperCase();
+                        suggestionsList.innerHTML = '';
 
-        <div class="table-container">
-            <form id="filterForm" method="post">
-                <div class="form-group">
-                    <label class="label-form" for="id">Motorista:</label>
-                    <select class="form-control field-form" id="id" name="id" disabled>
-                        <?=$htmls["motoristas"]?>
-                    </select>
-                </div>
+                        if (filter === '') return;
 
+                        const filteredPlates = plates.filter(plate => plate.toUpperCase().includes(filter));
 
-                <div class="form-group">
-                    <label for="plate-search">Buscar Placa:</label>
-                    <input type="text" id="plate" name="plate" class="form-control field-form"
-                        placeholder="Digite a placa">
-                    <ul id="plate-suggestions" class="list-group"></ul>
-                </div>
-                <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                        const searchInput = document.getElementById('plate');
-                        const suggestionsList = document.getElementById('plate-suggestions');
+                        filteredPlates.forEach(plate => {
+                            const li = document.createElement('li');
+                            li.textContent = plate;
+                            li.classList.add('list-group-item');
+                            suggestionsList.appendChild(li);
 
-                        // Array de placas vindo do PHP
-                        const plates = <?=json_encode($plates);?>;
-
-                        // Escuta o evento de input no campo de busca
-                        searchInput.addEventListener('input', function() {
-                            const filter = searchInput.value
-                        .toUpperCase(); // Converte o texto digitado em maiúsculas
-                            suggestionsList.innerHTML = ''; // Limpa as sugestões anteriores
-
-                            if (filter === '') return; // Se o campo de busca estiver vazio, não mostra nada
-
-                            // Filtra as placas com base no que foi digitado
-                            const filteredPlates = plates.filter(plate => plate.toUpperCase().includes(
-                                filter));
-
-                            // Exibe as sugestões filtradas
-                            filteredPlates.forEach(plate => {
-                                const li = document.createElement('li');
-                                li.textContent = plate;
-                                li.classList.add('list-group-item');
-                                suggestionsList.appendChild(li);
-
-                                // Quando uma sugestão for clicada, preenche o campo de texto e limpa as sugestões
-                                li.addEventListener('click', function() {
-                                    searchInput.value = plate;
-                                    suggestionsList.innerHTML =
-                                    ''; // Limpa a lista de sugestões
-                                });
+                            li.addEventListener('click', function() {
+                                searchInput.value = plate;
+                                suggestionsList.innerHTML = '';
                             });
                         });
                     });
-                </script>
-                <div class="form-group">
-                    <label class="label-form" for="date">Período a consultar</label>
-                    <input type="date" class="form-control field-form" id="date" name="date">
-                </div>
+                });
+            </script>
 
-                <div class="form-group text-end button-search">
-                    <div class="btn-group">
-                        <button type="submit" id="consultarBtn" class="btn btn-dark button-consulta">Consultar</button>
+<div class="form-group">
+    <label class="label-form" for="date_start">Data e Hora Início:</label>
+    <input type="datetime-local" class="form-control field-form" id="date_start" name="date_start">
+</div>
 
-                    </div>
+<div class="form-group">
+    <label class="label-form" for="date_end">Data e Hora Fim:</label>
+    <input type="datetime-local" class="form-control field-form" id="date_end" name="date_end">
+</div>
+
+            <div class="form-group text-end button-search">
+                <div class="btn-group">
+                    <button type="submit" id="consultarBtn" class="btn btn-dark button-consulta">Consultar</button>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
-
+</div>
 
 
 
     <div id="messageDiv"></div>
+
+
+
 
     <div class="container">
         <div class="accordion" id="accordionExample">
@@ -214,6 +219,8 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 
 
+
+ 
 
 
 
@@ -374,6 +381,23 @@ function hideMessageAfterDelay(messageId) {
 // Chama a função para esconder mensagens de erro e sucesso
 hideMessageAfterDelay('popupErro');
 hideMessageAfterDelay('popupSucesso');
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Exemplo de dados, substitua pelos dados reais
+    const kmPercorrida = 120; // km
+    const velocidadeMaxima = 80; // km/h
+    const velocidadeMedia = 60; // km/h
+    const tempoPercorrido = 2; // horas
+
+    // Atualiza os valores dos cards
+    document.getElementById('kmPercorrida').innerText = `${kmPercorrida} km`;
+    document.getElementById('velocidadeMaxima').innerText = `${velocidadeMaxima} km/h`;
+    document.getElementById('velocidadeMedia').innerText = `${velocidadeMedia} km/h`;
+    document.getElementById('tempoPercorrido').innerText = `${tempoPercorrido} h`;
+});
+
+
 </script>
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
@@ -381,13 +405,17 @@ hideMessageAfterDelay('popupSucesso');
 
 
 <style>
+
+#plate {
+        width: 150px; /* Ajuste este valor conforme necessário */
+    }
         #adjustmentTable {
             display: none;
         }
 
         .field-form {
             border: 1px solid #35A3BC;
-            border-radius: 20px;
+            border-radius: 10px;
             padding: 1rem;
             width: 250px;
             height: 40px;
@@ -414,8 +442,9 @@ hideMessageAfterDelay('popupSucesso');
         #consultarBtn {
             margin-top: 2.6rem;
             background: #35A3BC;
-            border-radius: 20px;
-            width: 200px;
+            border-radius: 10px;
+            width: 100px;
+            text-alight: center;
         }
 
         #toggleFormBtn {
@@ -444,8 +473,9 @@ hideMessageAfterDelay('popupSucesso');
         #consultarBtn:hover {
             margin-top: 2.6rem;
             background: #35A3BC;
-            border-radius: 20px;
-            width: 200px;
+            border-radius: 10px;
+            width: 100px;
+            text-alight: center;
 
 
 
@@ -481,4 +511,8 @@ hideMessageAfterDelay('popupSucesso');
             border-radius: 50px;
             font-size: 20px;
         }
+
+
+ 
+
         </style>
