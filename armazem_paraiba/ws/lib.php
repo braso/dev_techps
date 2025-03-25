@@ -110,6 +110,7 @@
         $currentJourney = (object)[];
         $currentBreak = [];
         $journeysArray = [];
+
 		foreach($data as $ponto){
 			if(is_int(strpos(strtolower($ponto["macr_tx_nome"]), "inicio"))){
 				if(strtolower($ponto["macr_tx_nome"]) == "inicio de jornada"){
@@ -147,7 +148,7 @@
 					$currentJourney = (object)[];
 				}else{
 					$tipo = $ponto['macr_nb_id'];
-					if($currentBreak[$tipo]){
+					if(!empty($currentBreak[$tipo])){
 						$currentBreak[$tipo]->finalDateTime = $ponto["pont_tx_data"];
 						$currentJourney->breaks[] = $currentBreak[$tipo];
 						$currentBreak[$tipo] = null;
@@ -160,7 +161,7 @@
 						trim(str_replace("fim de ", "", strtolower($macroNomes[$tipo])))
 					);
 					$currentBreak[$tipo]->startDateTime = null;
-					$currentJourney->breaks = array_merge($currentJourney->breaks,array_values($currentBreak));
+					$currentJourney->breaks = array_merge(($currentJourney->breaks?? []),array_values($currentBreak));
 					$currentBreak = [];
 				}
 			}
