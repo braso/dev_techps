@@ -318,7 +318,6 @@ function index() {
                                         <th class='justificativa'>JUSTIFICATIVA</th>
                                         <th class='usuario'>USUÁRIO CADASTRO</th>
                                         <th class='dataCadastro'>DATA CADASTRO</th>
-                                        <th class='dataCadastro'>DATA EXCLUSÃO</th>
                                         <th class='localizacao'>LOCALIZAÇÃO</th>
                                     </thead>
                                     <tbody>
@@ -400,9 +399,9 @@ function carregarJS($opt): string {
                 +'<td>'+(item.moti_tx_nome === null ? '' : item.moti_tx_nome)+'</td>'
                 +'<td>'+(item.moti_tx_legenda === null ? '' : item.moti_tx_legenda)+'</td>'
                 +'<td>'+(item.pont_tx_justificativa === null ? '' : item.pont_tx_justificativa)+'</td>'
-                +'<td>'+item.userCadastro+'</td>'
+                +'<td>'+(item.userCadastro === null ? '' : item.userCadastro)+'</td>'
                 +'<td>'+formatarData(item.pont_tx_dataCadastro)+'</td>'
-                +'<td>'+(item.pont_tx_dataAtualiza === null ? '' : formatarData(item.pont_tx_dataAtualiza) )+'</td>'
+                +'<td'+ (item.pont_tx_dataAtualiza === null ? 'display: none;' : '') +'>'+(item.pont_tx_dataAtualiza === null ? '' : formatarData(item.pont_tx_dataAtualiza))+'</td>'
                +'<td><center>'
                 + (item.pont_tx_latitude && item.pont_tx_longitude 
                     ? '<a href=\"https://www.google.com/maps?q=' + item.pont_tx_latitude + ',' + item.pont_tx_longitude + '\" target=\"_blank\">'

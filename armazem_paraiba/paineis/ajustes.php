@@ -544,7 +544,7 @@ function index() {
 
 			$tabelaMotivo ="
 			<div>
-			<table id='tabela-motivo' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>
+			<table id='tabela-motivo' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact' style='width: 470px !important;'>
 				<thead>
 					<tr>
 						<th colspan='4' style='text-align: center;'><b>Ajustes Ativos</b></th>
