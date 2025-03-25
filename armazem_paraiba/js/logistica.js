@@ -24,12 +24,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const formattedDateStart = formatDate(dateStart);
         const formattedDateEnd = formatDate(dateEnd);
 
-        axios.post("https://logistica.logsyncwebservice.techps.com.br/data1", {
-            plate,
-            date_start: formattedDateStart,
-            date_end: formattedDateEnd,
-            speed
-        }).then((response) => {
+     // Update the API request section:
+axios.post("https://logistica.logsyncwebservice.techps.com.br/data1", {
+    plate,
+    date_start: formattedDateStart.includes(' ') ? formattedDateStart : formattedDateStart + ' 00:00:00',
+    date_end: formattedDateEnd.includes(' ') ? formattedDateEnd : formattedDateEnd + ' 23:59:59',
+    speed
+}).then((response) => {
             const resultData = response.data;
             console.log("Resposta da API:", resultData); // <--- ADICIONE ESTE LOG
             if (resultData.length === 0) {
@@ -46,9 +47,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-
-    function formatDate(dateString) {
-        const [year, month, day] = dateString.split("-");
+    function formatDate(dateTimeString) {
+        // Check if the dateTimeString contains a 'T' (datetime-local format)
+        if (dateTimeString.includes('T')) {
+            // Return the full date-time string without modification
+            return dateTimeString.replace('T', ' ');
+        }
+    
+        // If it's just a date, add the time component
+        const [year, month, day] = dateTimeString.split("-");
         return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
     }
 
@@ -625,22 +632,31 @@ document.addEventListener("DOMContentLoaded", addRowClickListeners);
         L.control.layers(baseMaps).addTo(map);
     
         // *** GERANDO O LINK DO GOOGLE MAPS (MOVI PARA CÁ) ***
-        let googleMapsLink = "https://www.google.com/maps/dir/?api=1&travelmode=driving"; //api para modo driving
-    
-        if (coordinates.length > 0) {
-            // Adiciona o ponto de partida (primeira coordenada)
-            googleMapsLink += `&origin=${coordinates[0].latitude},${coordinates[0].longitude}`;
-    
-            // Adiciona o ponto de destino (última coordenada)
-            if (coordinates.length > 1) { // Garante que há pelo menos dois pontos
-                googleMapsLink += `&destination=${coordinates[coordinates.length - 1].latitude},${coordinates[coordinates.length - 1].longitude}`;
-            } else {
-                // Se houver apenas um ponto, usa como ponto de partida e destino (mostra a localização)
-                googleMapsLink = `https://www.google.com/maps/place/${coordinates[0].latitude},${coordinates[0].longitude}`;
-            }
-        } else {
-            googleMapsLink = "#"; // Link vazio se não houver coordenadas
+      // Modifica a geração do link do Google Maps para incluir waypoints
+    let googleMapsLink = "https://www.google.com/maps/dir/?api=1&travelmode=driving";
+
+    if (coordinates.length > 0) {
+        // Adiciona o ponto de partida (primeira coordenada)
+        googleMapsLink += `&origin=${coordinates[0].latitude},${coordinates[0].longitude}`;
+
+        // Adiciona waypoints (pontos intermediários)
+        if (coordinates.length > 2) {
+            const waypoints = coordinates.slice(1, -1)
+                .map(coord => `${coord.latitude},${coord.longitude}`)
+                .join('|');
+            googleMapsLink += `&waypoints=${waypoints}`;
         }
+
+        // Adiciona o ponto de destino (última coordenada)
+        if (coordinates.length > 1) {
+            const lastCoord = coordinates[coordinates.length - 1];
+            googleMapsLink += `&destination=${lastCoord.latitude},${lastCoord.longitude}`;
+        } else {
+            googleMapsLink = `https://www.google.com/maps/place/${coordinates[0].latitude},${coordinates[0].longitude}`;
+        }
+    } else {
+        googleMapsLink = "#";
+    }
     
  
       // Adiciona os marcadores ao mapa
