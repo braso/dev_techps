@@ -138,6 +138,9 @@ if (isset($_POST['cadastrar'])) {
     }
 }
 
+
+
+
 function listar_placas() {
     global $conn;
     $sql = "SELECT p.placa, p.modelo, e.empr_tx_nome AS nome_empresa, e.empr_tx_cnpj AS cnpj_empresa,  p.id
