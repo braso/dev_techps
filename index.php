@@ -15,7 +15,7 @@
 		$errorMsgs = [
 			"notfound" => "Login ou senha incorretos.",
 			"emptyfields" => "Preencha as informações para entrar.",
-			"notfounddomain" => "Domínio não encontrado."
+			"nullcompany" => "Empresa não encontrada."
 		];
 		$msg = 
 			"<div class='alert alert-danger display-block'>
@@ -38,7 +38,7 @@
 			$formAction = $_ENV["URL_BASE"].$_ENV["APP_PATH"]."/".$empresas[$_POST["empresa"]];
 			$formName = "formTelaPrincipal";
 		}else{
-			$formAction = "index.php?error=notfounddomain";
+			$formAction = "index.php?error=nullcompany";
 			$formName = "formLogin";
 		}
 
