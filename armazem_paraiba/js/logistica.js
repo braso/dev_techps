@@ -132,6 +132,8 @@ document.addEventListener("DOMContentLoaded", () => {
                           <th>Ignição</th>
                           <th>Total de Parada</th>
                           <th>Mapa</th>
+                          <th>KM</th>
+                          <th>Diferença KM</th>
                      
                       </tr>
                   </thead>
@@ -303,6 +305,8 @@ document.addEventListener("DOMContentLoaded", () => {
                           <th>Ignição</th>
                           <th>Total de Parada</th>
                           <th>Mapa</th>
+                           <th>KM</th>
+                            <th>Diferença KM</th>
                          
                       </tr>
                   </thead>
@@ -543,7 +547,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
             modal.innerHTML = `<p> 🛑 Tempo Total da Parada: <b>${totalParadaFormatado}</b> <br>
                                     ⚠️ Válido para seleção de paradas no mesmo lugar ⚠️</p>
-                                 📍 Distância Percorrida: <b>${distanciaPercorrida} km</b> <br>
+                                 ⬆️ Distância Percorrida: <b>${distanciaPercorrida} km</b> <br>
                                  ⚠️ Distância estimada de deslocamento entre primeira e ultima posição , use está informação para verificar se houve deslocamento entre posições ⚠️</p>`;
         } else {
             modal.innerHTML = `<p> 🛑 Total da Parada: <b>${totalParadaFormatado}</b> <br>
@@ -764,7 +768,9 @@ document.addEventListener("DOMContentLoaded", () => {
               <td>${row.ignition}</td>
               <td></td>
               <td><a href="https://www.google.com/maps/place/${row.latitude},${row.longitude}" target="_blank"><ion-icon name="map-outline"></ion-icon></a></td>
-             `;
+                 <td>${formattedCurrentHodometro}</td>
+                <td>${formattedHodometroDifference}</td>
+              `;
     
       tbody.appendChild(tr);
     
@@ -802,31 +808,27 @@ document.addEventListener("DOMContentLoaded", () => {
         tr.classList.add("speed-5");
       }
     
-      let hodometroDifference =
-        previousHodometro !== null ? formatDistance((row.hodometro - previousHodometro).toFixed(2)) : "<--";
-      const ignitionName = ignition === "true" ? "Ligada" : "Desligada";
-      tr.innerHTML = `<td><img src="imagens/LGS.png" alt="Ícone"  class="row-img" /></td>
-              <td>${stopStart.toLocaleTimeString()}</td>
-              <td>${stopEnd.toLocaleTimeString()}</td>
-              <td>${row.endereco}</td>
-              <td>${row.latitude}</td>
-              <td>${row.longitude}</td>
-              <td>
-     ${
-       ignitionName === "Ligada"
-         ? '<i class="fas fa-power-off" style="color: green;"></i> <br>Ligada'
-         : '<i class="fas fa-power-off" style="color: red;"></i> Desligada'
-     }
-    </td>
-    
-              <td>${calculateTotalTime(stopStart, stopEnd)}</td>
-              <td><a href="https://www.google.com/maps/place/${row.latitude},${row.longitude}" target="_blank"><ion-icon name="map-outline"></ion-icon></a></td>
-              `;
-    
-      tbody.appendChild(tr);
-    
-      previousHodometro = row.hodometro;
-    }
+          // Calcula a diferença de hodômetro
+    let hodometroDifference = previousHodometro !== null ? formatDistance((row.hodometro - previousHodometro).toFixed(2)) : "<--"; // Se previousHodometro for null, a diferença não é aplicável
+
+    tr.innerHTML = 
+        `<td><img src="imagens/LGS.png" alt="Ícone"  class="row-img" /></td>
+        <td>${stopStart.toLocaleTimeString()}</td>
+        <td>${stopEnd.toLocaleTimeString()}</td>
+        <td>${row.endereco}</td>
+        <td>${row.latitude}</td>
+        <td>${row.longitude}</td>
+        <td>${ `<i class="fas fa-power-off" style="color: ` + (ignition === "true" ? `green` : `red`) + `;"></i>` }</td>
+        <td>${calculateTotalTime(stopStart, stopEnd)}</td>
+        <td><a href="https://www.google.com/maps/place/${row.latitude},${row.longitude}" target="_blank"><ion-icon name="map-outline"></ion-icon></a></td>
+        <td>${formatDistance(row.hodometro)}</td> <!-- Formatando a distância do hodômetro -->
+        <td>${hodometroDifference}</td> <!-- Exibe a diferença de hodômetro -->`;
+
+    tbody.appendChild(tr);
+
+    // Atualizando o hodômetro anterior para o próximo loop
+    previousHodometro = row.hodometro;
+}
     
     function calculateTotalTime(start, end) {
       const totalTimeSeconds = (end - start) / 1000;
