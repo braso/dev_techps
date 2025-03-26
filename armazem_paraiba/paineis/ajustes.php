@@ -17,6 +17,7 @@ function enviarForm() {
 }
 
 function carregarJS(array $arquivos) {
+	// $periodoInicio = new DateTime($_POST["busca_periodo"][0]);
 	$dominiosAutotrac = ["/comav"];
 	$linha = "linha = '<tr>'";
 	if (!empty($_POST["empresa"])) {
@@ -187,7 +188,7 @@ function carregarJS(array $arquivos) {
 						+ row['Fim de Refeição']['inativo'] + row['Inicio de Espera']['inativo'] + row['Fim de Espera']['inativo']
 						+ row['Inicio de Descanso']['inativo'] + row['Fim de Descanso']['inativo'] + row['Inicio de Repouso']['inativo']
 						+ row['Fim de Repouso']['inativo'] + row['Inicio de Repouso Embarcado']['inativo'] + row['Fim de Repouso Embarcado']['inativo'];
-							console.log(row);
+							// console.log(row);
 							{$linha}
 							tabela.append(linha);
 						},
@@ -276,12 +277,49 @@ function carregarJS(array $arquivos) {
 			//}
 
 			function createModal(motivo,pontos) {
-				let modalContent = '<ul>';
-				Object.keys(pontos).sort((a, b) => pontos[b] - pontos[a]).forEach(nome => {
-					modalContent += `<li style = 'margin-bottom: 5px;'><b>\${nome}</b> - Quantidade Ajustes: \${pontos[nome]}</li>`;
-				});
 
-				modalContent += '</ul>';
+				// Calcular totais
+				const totalFuncionarios = Object.keys(pontos).length;
+				const totalOcorrencias = Object.values(pontos).reduce((sum, ponto) => sum + ponto.quantidade, 0);
+
+				let modalContent = `
+				<div class=\"table-responsive\">
+					<table class=\"table table-bordered table-hover\">
+						<thead>
+						<tr>
+							<td><strong>Total Funcionários:</strong></td>
+							<td>\${totalFuncionarios}</td>
+							<td><strong>Total Ocorrências:</strong></td>
+							<td>\${totalOcorrencias}</td>
+						</tr>
+							<tr>
+								<th>matrícula</th>
+								<th>Ocupação</th>
+								<th>Funcionário</th>
+								<th>Quantidade</th>
+							</tr>
+						</thead>
+						<tbody>`;
+				   Object.keys(pontos).sort((a, b) => {
+						const nomeA = pontos[a].funcionario.nome || '';
+						const nomeB = pontos[b].funcionario.nome || '';
+						return nomeA.localeCompare(nomeB);
+					}).forEach(id => {
+						const ponto = pontos[id];
+						modalContent += `
+							<tr>
+								<td>\${ponto.funcionario.matricula}</td>
+								<td>\${ponto.funcionario.ocupacao}</td>
+								<td>\${ponto.funcionario.nome || 'N/A'}</td>
+								<td>\${ponto.quantidade}</td>
+							</tr>`;
+					});
+
+				modalContent += `
+									</tbody>
+								</table>
+							</div>`;
+
 				const modalHtml = 
 					'<div class=\"modal fade\" id=\"dynamicModal\" tabindex=\"-1\" role=\"dialog\" aria-labelledby=\"dynamicModalLabel\">' +
 					'<div class=\"modal-dialog\" role=\"document\">' +
@@ -291,15 +329,15 @@ function carregarJS(array $arquivos) {
 							'<span aria-hidden=\"true\">&times;</span>' +
 							'</button>' +
 							'<h3 class=\"modal-title\" id=\"dynamicModalLabel\">' +
-							'Funcionários com o motivo: '+motivo+ 
+							'Funcionários com o motivo de ajustes ativos: '+motivo+ 
 							'</h3>' +
 						'</div>' +
 						'<div class=\"modal-body\">' +
 							modalContent +
 						'</div>' +
 						'<div class=\"modal-footer\">' +
-							'<button type=\"button\" class=\"btn btn-primary\" id=\"generatePDF\">Imprimir PDF</button>' +
-                        	'<button type=\"button\" class=\"btn btn-success\" id=\"generateCSV\">Exportar CSV</button>' +
+							'<button type=\"button\" class=\"btn btn-primary\" onclick=\"enviarDados(\''+motivo+'\')\">Imprimir PDF</button>' +
+                        	'<button type=\"button\" class=\"btn btn-success\" onclick=\"enviarDados(\''+motivo+'\', \'csv\')\">Exportar CSV</button>' +
 							'<button type=\"button\" class=\"btn btn-default\" data-dismiss=\"modal\">Fechar</button>' +
 						'</div>' +
 						'</div>' +
@@ -316,52 +354,92 @@ function carregarJS(array $arquivos) {
 				$('#dynamicModal').on('hidden.bs.modal', function () {
 					$(this).remove();
 				});
-
-				$('#generatePDF').click(() => gerarArquivo('pdf', { motivos }));
-    			$('#generateCSV').click(() => gerarArquivo('csv', { motivos }));
 			}
 
 			function createModal2(motivos) {
-				let modalContent = ''; // Contém o conteúdo de todos os motivos
-
-				// Percorre cada motivo no array de motivos
+				// Cria o conteúdo principal do modal
+				let modalContent = '';
+				
+				// Para cada motivo no objeto
 				for (let motivo in motivos) {
-					let pontos = motivos[motivo];
-					modalContent += `<h4>Funcionários com o motivo: \${motivo}</h4><ul>`;
+					const pontos = motivos[motivo];
+					
+					// Calcular totais para este motivo
+					const totalFuncionarios = Object.keys(pontos).length;
+					const totalOcorrencias = Object.values(pontos).reduce((sum, ponto) => sum + ponto.quantidade, 0);
 
-					// Ordena os dados de forma decrescente pela quantidade
-					Object.keys(pontos).sort((a, b) => pontos[b] - pontos[a]).forEach(nome => {
-						modalContent += `<li style='margin-bottom: 5px;'><b>\${nome}</b> - Quantidade Ajustes: \${pontos[nome]}</li>`;
+					// Adiciona título do motivo
+					modalContent += `
+					<div class=\"table-responsive\">
+						<table class=\"table table-bordered table-hover\">
+							<thead>
+							<tr>
+								<th colspan=\"4\" style=\"font-size: 1.1em; padding: 10px;\">
+									Motivo: \${motivo}
+								</th>
+							</tr>
+							<tr>
+								<td><strong>Total Funcionários:</strong></td>
+								<td>\${totalFuncionarios}</td>
+								<td><strong>Total Ocorrências:</strong></td>
+								<td>\${totalOcorrencias}</td>
+							</tr>
+								<tr>
+									<th>Matrícula</th>
+									<th>Ocupação</th>
+									<th>Funcionário</th>
+									<th>Quantidade</th>
+								</tr>
+							</thead>
+							<tbody>`;
+					
+					// Ordena por nome do funcionário e adiciona linhas
+					Object.keys(pontos).sort((a, b) => {
+						const nomeA = pontos[a].funcionario.nome || '';
+						const nomeB = pontos[b].funcionario.nome || '';
+						return nomeA.localeCompare(nomeB);
+					}).forEach(id => {
+						const ponto = pontos[id];
+						modalContent += `
+							<tr>
+								<td>\${ponto.funcionario.matricula}</td>
+								<td>\${ponto.funcionario.ocupacao}</td>
+								<td>\${ponto.funcionario.nome || 'N/A'}</td>
+								<td>\${ponto.quantidade}</td>
+							</tr>`;
 					});
 
-					modalContent += '</ul>';
+					modalContent += `
+									</tbody>
+								</table>
+							</div>`;
 				}
 
 				// Estrutura do modal
 				const modalHtml = 
 					'<div class=\"modal fade\" id=\"dynamicModal\" tabindex=\"-1\" role=\"dialog\" aria-labelledby=\"dynamicModalLabel\">' +
-					'<div class=\"modal-dialog\" role=\"document\">' +
+					'<div class=\"modal-dialog modal-lg\" role=\"document\">' +
 						'<div class=\"modal-content\">' +
-							'<div class=\"modal-header\">' +
-								'<button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\">' +
-									'<span aria-hidden=\"true\">&times;</span>' +
-								'</button>' +
-								'<h3 class=\"modal-title\" id=\"dynamicModalLabel\">' +
-									'Resumo de Ajustes de Ponto' + 
-								'</h3>' +
-							'</div>' +
-							'<div class=\"modal-body\">' +
-								modalContent +
-							'</div>' +
-							'<div class=\"modal-footer\">' +
-								'<button type=\"button\" class=\"btn btn-primary\" id=\"generatePDF\">Imprimir PDF</button>' +
-                        		'<button type=\"button\" class=\"btn btn-success\" id=\"generateCSV\">Exportar CSV</button>' +
-								'<button type=\"button\" class=\"btn btn-default\" data-dismiss=\"modal\">Fechar</button>' +
-							'</div>' +
+						'<div class=\"modal-header\">' +
+							'<button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\">' +
+							'<span aria-hidden=\"true\">&times;</span>' +
+							'</button>' +
+							'<h3 class=\"modal-title\" id=\"dynamicModalLabel\">' +
+							'Relatório Completo de Ajustes de Ponto Ativos' + 
+							'</h3>' +
+						'</div>' +
+						'<div class=\"modal-body\" style=\"max-height: 70vh; overflow-y: auto;\">' +
+							modalContent +
+						'</div>' +
+						'<div class=\"modal-footer\">' +
+							'<button type=\"button\" class=\"btn btn-primary\" onclick=\"enviarDados(null)\">Imprimir PDF</button>' +
+							'<button type=\"button\" class=\"btn btn-success\" onclick=\"enviarDados(null, \'csv\')\">Exportar CSV</button>' +
+							'<button type=\"button\" class=\"btn btn-default\" data-dismiss=\"modal\">Fechar</button>' +
+						'</div>' +
 						'</div>' +
 					'</div>' +
 					'</div>';
-
+				
 				// Adicionar o modal ao body
 				$('body').append(modalHtml);
 
@@ -372,30 +450,46 @@ function carregarJS(array $arquivos) {
 				$('#dynamicModal').on('hidden.bs.modal', function () {
 					$(this).remove();
 				});
-
-				$('#generatePDF').click(() => gerarArquivo('pdf', { motivos }));
-    			$('#generateCSV').click(() => gerarArquivo('csv', { motivos }));
-
 			}
 
-			function gerarArquivo(tipo, dados) {
-				$.ajax({
-					url: `ajustes_export.php?tipo=\${tipo}`,
-					type: 'POST',
-					contentType: 'application/json',
-					data: JSON.stringify(dados),
-					success: function (response) {
-						var json = JSON.parse(response);
-						if (json.file) {
-							window.open(json.file, '_blank');
-						} else {
-							alert(`Erro ao gerar \${tipo.toUpperCase()}`);
-						}
-					},
-					error: function () {
-						alert('Erro ao se comunicar com o servidor');
-					}
-				});
+			function enviarDados(motivo,tipo) {
+				var data = '".json_encode($_POST["busca_periodo"])."'
+				var form = document.createElement('form');
+				form.method = 'POST';
+				form.action = 'ajustes_export.php'; // Página que receberá os dados
+				form.target = '_blank'; // Abre em nova aba
+
+				// Criando campo 1
+				var input1 = document.createElement('input');
+				input1.type = 'hidden';
+				input1.name = 'empresa';
+				input1.value = $_POST[empresa]; // Valor do primeiro campo
+				form.appendChild(input1);
+
+				// Criando campo 2
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'busca_periodo';
+				input2.value = data; // Valor do segundo campo
+				form.appendChild(input2);
+
+				// Criando campo 3
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'motivo';
+				input2.value = motivo; // Valor do segundo campo
+				form.appendChild(input2);
+
+				// Criando campo 3
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'export';
+				input2.value = tipo; // Valor do segundo campo
+				form.appendChild(input2);
+
+				document.body.appendChild(form);
+				form.submit();
+				document.body.removeChild(form);
 			}
 
 		</script>"
@@ -517,20 +611,25 @@ function index() {
 						$resultado[$key['moti_tx_nome']]++;
 
 						$motivo = $key['moti_tx_nome'];
-						$nome = $json["nome"];
-
-						// Inicializa o array do motivo se ainda não existir
 						if (!isset($resultado2[$motivo])) {
 							$resultado2[$motivo] = [];
 						}
-
-						// Inicializa a contagem do nome dentro do motivo
-						if (!isset($resultado2[$motivo][$nome])) {
-							$resultado2[$motivo][$nome] = 0;
+			
+						$dadosFunc = [
+							"matricula" => $json["matricula"] ?? 'SEM_MATRICULA',
+							"nome" => $json["nome"] ?? 'NOME_NAO_INFORMADO',
+							"ocupacao" => $json["ocupacao"] ?? 'OCUPACAO_NAO_INFORMADA'
+						];
+			
+						$funcionarioKey = $dadosFunc['matricula'] ?? md5($dadosFunc['nome']);
+						
+						if (!isset($resultado2[$motivo][$funcionarioKey])) {
+							$resultado2[$motivo][$funcionarioKey] = [
+								'funcionario' => $dadosFunc,
+								'quantidade' => 0
+							];
 						}
-
-						// Incrementa a contagem do nome dentro do motivo
-						$resultado2[$motivo][$nome]++;
+						$resultado2[$motivo][$funcionarioKey]['quantidade']++;
 					}
 
 					$empresas[] = $json;

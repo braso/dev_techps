@@ -1310,6 +1310,7 @@
 						];
 					}
 				}
+
 				$totalMotorista = [
 					"matricula" 				=> $motorista["enti_tx_matricula"],
 					"nome" 						=> $motorista["enti_tx_nome"],
@@ -1404,6 +1405,14 @@
 
 					foreach ($valores as $estado => $value) {
 						$totaisEmpr[$evento] += $value; // Incrementa o total para a chave do evento
+					}
+
+					foreach ($valores as $estado => $value) {
+						if ($estado === 'ativo') {
+							$totaisEmpr['totais']['ativo'] += $value; // Soma para os ativos
+						} elseif ($estado === 'inativo') {
+							$totaisEmpr['totais']['inativo'] += $value; // Soma para os inativos
+						}
 					}
 				}
 			}
