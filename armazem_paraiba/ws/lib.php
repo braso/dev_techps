@@ -135,7 +135,7 @@
 						$currentJourney->startDateTime = null;
 					}
 
-					$currentJourney->breaks = array_merge($currentJourney->breaks,array_values($currentBreak));
+					$currentJourney->breaks = array_merge(($currentJourney->breaks?? []),array_values($currentBreak));
 					$currentJourney->finalDateTime = $ponto["pont_tx_data"];
 					$currentJourney->finalPoint = [
 						"id" => $ponto["pont_nb_id"],
@@ -169,7 +169,7 @@
 		
         if(!empty($currentJourney) && $currentJourney != (object)[]){
 			if(!empty($currentBreak)){
-				$currentJourney->breaks = array_merge($currentJourney->breaks,array_values($currentBreak));	
+				$currentJourney->breaks = array_merge(($currentJourney->breaks?? []),array_values($currentBreak));	
 			}
             $journeysArray[] = $currentJourney;
         }
