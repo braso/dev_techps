@@ -324,7 +324,11 @@
 			$empresa["qtdMotoristas"] = count($motoristas);
 			$empresa["dataInicio"] = $dataMes->format("Y-m-d");
 			$empresa["dataFim"] = $dataFim->format("Y-m-d");
-			$empresa["percEndossado"] = ($statusEndossos["E"]) / array_sum(array_values($statusEndossos));
+			if (array_sum(array_values($statusEndossos)) != 0) {
+			    $empresa["percEndossado"] = ($statusEndossos["E"]) / array_sum(array_values($statusEndossos));
+			} else {
+			    $empresa["percEndossado"] = 0;
+			}
 
 			file_put_contents($path . "/empresa_" . $empresa["empr_nb_id"] . ".json", json_encode($empresa));
 		}
@@ -758,7 +762,7 @@
 							. " WHERE para_nb_id = " . $motorista["enti_nb_parametro"]
 					), MYSQLI_ASSOC);
 
-					if (date('l', $dia["data"]) == "Saturday") {
+					if (date('l', strtotime($dia["data"])) == "Saturday") {
 						$jornadaDia = $parametro[0]["para_tx_jornadaSabado"];
 					} else {
 						$jornadaDia = $parametro[0]["para_tx_jornadaSemanal"];
@@ -794,12 +798,14 @@
 			}
 
 			$pasta = dir($path);
-			while ($arquivo = $pasta->read()) {
-				if (!in_array($arquivo, $arquivosMantidos)) {
-					unlink($arquivo); // Apaga o arquivo
+			if($arquivosMantidos != null){
+				while ($arquivo = $pasta->read()) {
+					if (!in_array($arquivo, $arquivosMantidos)) {
+						unlink($arquivo); // Apaga o arquivo
+					}
 				}
+				$pasta->close();
 			}
-			$pasta->close();
 		}
 		// sleep(1);
 		return;
@@ -1281,7 +1287,7 @@
 			);
 
 			$pasta = dir($path);
-			if (is_dir($pasta)) {
+			if (is_dir($path)) {
 				while (($arquivo = $pasta->read()) !== false) {
 					// Ignora os diretórios especiais '.' e '..'
 					if ($arquivo != '.' && $arquivo != '..') {
@@ -1304,6 +1310,7 @@
 						];
 					}
 				}
+
 				$totalMotorista = [
 					"matricula" 				=> $motorista["enti_tx_matricula"],
 					"nome" 						=> $motorista["enti_tx_nome"],
@@ -1420,14 +1427,19 @@
 			file_put_contents($path . "/empresa_" . $empresa["empr_nb_id"] . ".json", json_encode($empresa));
 		}
 
-		foreach ($totais as $key => $values) {
-			foreach ($values as $key => $value) {
-				if (!isset($totaisEmpresa[$key][$value])) {
-					$totaisEmpresa[$key][$value] = 0; // Inicializa a chave com 0, se ainda não existir
-				}
-				$totaisEmpresa[$key][$value] += $value;
-			}
-		}
+		foreach ($totais as $empresaKey => $values) {
+            foreach ($values as $categoriaKey => $value) {
+                if (!is_numeric($value)) {
+                    continue; // Ignora valores que não são números
+                }
+        
+                if (!isset($totaisEmpresa[$empresaKey][$categoriaKey])) {
+                    $totaisEmpresa[$empresaKey][$categoriaKey] = 0;
+                }
+        
+                $totaisEmpresa[$empresaKey][$categoriaKey] += $value;
+            }
+        }
 
 		if (empty($_POST["empresa"])) {
 			$path = "./arquivos/ajustes" . "/" . $periodoInicio->format("Y-m");

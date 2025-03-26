@@ -82,7 +82,7 @@
 		}
 		
 		if(is_bool(strpos($_SERVER["REQUEST_URI"], 'dev'))){
-			unset($menus["relatórios"]);
+			// unset($menus["relatórios"]);
 			unset($menus["suporte"]);
 		}
 	
