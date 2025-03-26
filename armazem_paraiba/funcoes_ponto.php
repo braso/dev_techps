@@ -670,7 +670,7 @@
 			if(!empty($abonos)){
 				$warning = 
 					"<a><i style='color:green;' title="
-							."'Jornada Original: ".sprintf("%02d:%02d", $jornadaPrevistaOriginal, "00")."\n"
+							."'Jornada Original: ".$jornadaPrevistaOriginal."\n"
 							."Abono: {$abonos["abon_tx_abono"]}\n"
 							."Motivo: {$abonos["moti_tx_nome"]}\n"
 							."Justificativa: {$abonos["abon_tx_descricao"]}\n\n"
