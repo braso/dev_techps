@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -116,6 +116,7 @@
 			));
 	
 			if(!empty($usuario)){ //Se encontrou um usuário
+
 				$dataHoje = strtotime(date("Y-m-d")); // Transforma a data de hoje em timestamp
 				$dataVerificarObj = strtotime($usuario["user_tx_expiracao"]);
 				if ($dataVerificarObj >= $dataHoje && !empty($usuario["user_tx_expiracao"]) && $usuario["user_tx_expiracao"] != "0000-00-00"){
@@ -156,16 +157,20 @@
 				exit;
 			}
 		}
+		var_dump("2");
+
+		$error = "notfound";
+		$_POST["HTTP_REFERER"] = $_ENV["APP_PATH"]."/index.php?error=".$error;
+		$_POST["returnValues"] = json_encode([
+			"HTTP_REFERER" => $_POST["HTTP_REFERER"],
+			"empresa" => $_POST["empresa"],
+			"user" => $_POST["user"],
+			"password" => $_POST["password"]
+		]);
+
+		include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
+		voltar();
+		exit;
 	}
 
 	logar();
-
-	$error = "notfound";
-	$_POST["HTTP_REFERER"] = $_ENV["APP_PATH"]."/index.php?error=".$error;
-	$_POST["returnValues"] = json_encode([
-		"HTTP_REFERER" => $_POST["HTTP_REFERER"]
-	]);
-
-	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
-	voltar();
-	exit;

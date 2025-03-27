@@ -4,8 +4,8 @@
 		error_reporting(E_ALL);
 	//*/
 
-	include_once("version.php");
-	include_once("dominios.php");
+	include_once "version.php";
+	include_once "empresas.php";
 	$msg = "";
 
 	include_once "load_env.php";
@@ -19,20 +19,23 @@
 		];
 		$msg = 
 			"<div class='alert alert-danger display-block'>
-				<span>".$errorMsgs[$_GET["error"]]."</span>
+				<span>{$errorMsgs[$_GET["error"]]}</span>
 			</div>"
 		;
 	}
 
 	if (!empty($_POST["botao"]) && $_POST["botao"] == "Entrar" && !$error){
+		if(!empty($_POST["empresa"])){
+			$_POST["empresa"] = strtoupper($_POST["empresa"]);
+		}
 		if(!empty($_POST["password"])){
 			$_POST["password"] = md5($_POST["password"]);
 		}
 		
-		$file = $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_POST["dominio"];
+		$file = $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/".$empresas[$_POST["empresa"]];
 
-		if(is_int(strpos($dominiosInput, $_POST["dominio"])) && file_exists($file)){
-			$formAction = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_POST["dominio"];
+		if(!empty($empresas[$_POST["empresa"]]) && file_exists($file)){
+			$formAction = $_ENV["URL_BASE"].$_ENV["APP_PATH"]."/".$empresas[$_POST["empresa"]];
 			$formName = "formTelaPrincipal";
 		}else{
 			$formAction = "index.php?error=notfounddomain";
@@ -40,16 +43,38 @@
 		}
 
 		echo 
-			"<form action='".$formAction."' name='".$formName."' method='post'>"
-				."<input type='hidden' name='dominio' value='".($_POST["dominio"]?? '')."'>"
-				."<input type='hidden' name='user' value='".($_POST["user"]?? '')."'>"
-				."<input type='hidden' name='password' value='".($_POST["password"]?? '')."'>"
-				.(!empty($_POST["sourcePage"])? "<input type='hidden' name='sourcePage' value='".($_POST["sourcePage"]?? '')."'>": "")
+			"<form action='{$formAction}' name='{$formName}' method='post'>"
+				."<input type='hidden' name='empresa' value='".($_POST["empresa"]?? "")."'>"
+				."<input type='hidden' name='user' value='".($_POST["user"]?? "")."'>"
+				."<input type='hidden' name='password' value='".($_POST["password"]?? "")."'>"
+				.(!empty($_POST["sourcePage"])? "<input type='hidden' name='sourcePage' value='".($_POST["sourcePage"]?? "")."'>": "")
 			."</form>"
 		;
-		echo "<script>document.".$formName.".submit();</script>";
+		echo "<script>document.{$formName}.submit();</script>";
 		
 		exit;
 	}
+
+	$regexValidChar = "\"[A-Z]|[a-z]\"";
+	$dataScript = 
+		"<script>
+			function validChar(e, pattern = {$regexValidChar}){
+				char = String.fromCharCode(e.keyCode);
+				return (char.match(pattern));
+			};
+			field = document.getElementsByName('empresa')[0];
+			if(typeof field.addEventListener !== 'undefined'){
+				field.addEventListener('keypress', function(e){
+					if(!validChar(e, {$regexValidChar})){
+						e.preventDefault();
+					}
+				});
+				field.addEventListener('paste', function(e){
+					e.srcElement.value = e.clipboardData.getData('Text').replaceAll(/[!-\']/g, '');
+					e.preventDefault();
+				});
+			}
+		</script>"
+	;
 
 	include "login.php";
