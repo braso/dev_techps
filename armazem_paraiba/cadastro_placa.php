@@ -34,7 +34,7 @@ function cadastro_placa() {
                     <input type="text" id="placa" name="placa" required maxlength="8" pattern="[A-Za-z]{3}[0-9][A-Za-z0-9]{3}|[A-Za-z]{3}[0-9]{4}" placeholder="Ex: ABC1234">
                 </div>
                 <div class="form-group col-md-6">
-                    <label for="modelo">Modelo do Veículo:</label>
+                    <label for="modelo">Nome do Veículo:</label>
                     <input type="text" id="modelo" name="modelo" required placeholder="Modelo do veículo">
                 </div>
             </div>
