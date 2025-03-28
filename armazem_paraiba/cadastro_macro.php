@@ -1,13 +1,13 @@
 <?php
 	include "conecta.php";
 
-	function exclui_macro(){
+	// function exclui_macro(){
 
-		remover("macroponto",$_POST["id"]);
-		index();
-		exit;
+	// 	remover("macroponto",$_POST["id"]);
+	// 	index();
+	// 	exit;
 
-	}
+	// }
 	function verMacro(){
 		$_POST = array_merge($_POST, carregar("macroponto",$_POST["id"]));
 
