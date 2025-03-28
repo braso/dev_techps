@@ -1334,6 +1334,7 @@
 							. " LEFT JOIN user ON ponto.pont_nb_userCadastro = user.user_nb_id"
 							. " WHERE pont_tx_matricula = '$motorista[enti_tx_matricula]'"
 							. " AND (user.user_tx_matricula <> ponto.pont_tx_matricula OR user.user_tx_matricula IS NULL)"
+							. " AND pont_tx_status != 'inativo'"
 							. " AND pont_tx_data BETWEEN STR_TO_DATE('$diaInicio 00:00:00', '%Y-%m-%d %H:%i:%s')"
 							. " AND STR_TO_DATE('$diafim 23:59:59', '%Y-%m-%d %H:%i:%s')"
 							. " ORDER BY ponto.pont_tx_data ASC;"
@@ -1381,7 +1382,6 @@
 						$ocorrencias[$macr_tx_nome]["inativo"]++;
 					}
 				}
-
 				$totalMotorista = array_merge($totalMotorista, $ocorrencias);
 				$totalMotorista['pontos'] = array_merge($pontosAtivos, $pontosInativos);
 				// Filtrar apenas os campos numéricos que precisam ser verificados

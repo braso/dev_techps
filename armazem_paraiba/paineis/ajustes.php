@@ -602,25 +602,32 @@ function index() {
 					$arquivos[] = $arquivo;
 					$json = json_decode(file_get_contents($arquivo), true);
 					foreach ($json['pontos'] as $key) {
-						if ($key['moti_tx_nome']=== null) {
-							continue;
+						// Filtra apenas pontos com status "ativo" (case-insensitive)
+						if (strtolower($key['pont_tx_status'] ?? '') !== 'ativo') {
+							continue; // Pula se não for "ativo"
 						}
-						if (!isset($resultado[$key['moti_tx_nome']])) {
-							$resultado[$key['moti_tx_nome']] = 0; // Inicializa com 0
+					
+						// Define o motivo (considera null como válido)
+						$motivo = $key['moti_tx_nome'] ?? 'MOTIVO_NAO_INFORMADO'; // Opção 1: Substitui null
+						// $motivo = $key['moti_tx_nome']; // Opção 2: Mantém null (se preferir)
+					
+						// Contagem geral por motivo
+						if (!isset($resultado[$motivo])) {
+							$resultado[$motivo] = 0;
 						}
-						$resultado[$key['moti_tx_nome']]++;
-
-						$motivo = $key['moti_tx_nome'];
+						$resultado[$motivo]++;
+					
+						// Agrupamento por motivo e funcionário
 						if (!isset($resultado2[$motivo])) {
 							$resultado2[$motivo] = [];
 						}
-			
+					
 						$dadosFunc = [
 							"matricula" => $json["matricula"] ?? 'SEM_MATRICULA',
 							"nome" => $json["nome"] ?? 'NOME_NAO_INFORMADO',
 							"ocupacao" => $json["ocupacao"] ?? 'OCUPACAO_NAO_INFORMADA'
 						];
-			
+						
 						$funcionarioKey = $dadosFunc['matricula'] ?? md5($dadosFunc['nome']);
 						
 						if (!isset($resultado2[$motivo][$funcionarioKey])) {
