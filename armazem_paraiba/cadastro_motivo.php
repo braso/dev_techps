@@ -90,7 +90,6 @@
 
 	function index(){
 		if(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-			// dd("teste");
 			$_POST["returnValues"] = json_encode([
 				"HTTP_REFERER" => $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php"
 			]);
@@ -101,17 +100,11 @@
 
 		cabecalho("Cadastro de Motivo");
 
-		$extra = 
-			(!empty($_POST["busca_codigo"])? 	" AND moti_nb_id = ".$_POST["busca_codigo"]."": "")
-			.(!empty($_POST["busca_nome_like"])? 	" AND moti_tx_nome LIKE '%".$_POST["busca_nome_like"]."%'": "")
-			.(!empty($_POST["busca_tipo"])? 	" AND moti_tx_tipo LIKE '%".$_POST["busca_tipo"]."%'": "")
-			.(!empty($_POST["busca_legenda"])? 	" AND moti_tx_legenda LIKE '%".$legendas[$_POST["busca_legenda"]]."%'": "");
-
 		$campos = [
-			campo("Código", "busca_codigo", (!empty($_POST["busca_codigo"])? $_POST["busca_codigo"]: ""), 2, "MASCARA_NUMERO", "maxlength='6'"),
-			campo("Nome", "busca_nome_like", (!empty($_POST["busca_nome_like"])? $_POST["busca_nome_like"]: ""), 5, "", "maxlength='65'"),
-			combo("Tipo", "busca_tipo", (!empty($_POST["busca_tipo"])? $_POST["busca_tipo"]: ""), 2, ["", "Ajuste", "Abono"]),
-			combo("Legenda", "busca_legenda", (!empty($_POST["busca_legenda"])? $_POST["busca_legenda"]: ""), 3, $legendas)
+			campo("Código",		"busca_codigo",		(!empty($_POST["busca_codigo"])? 	$_POST["busca_codigo"]: ""), 2, "MASCARA_NUMERO", "maxlength='6'"),
+			campo("Nome",		"busca_nome_like",	(!empty($_POST["busca_nome_like"])? $_POST["busca_nome_like"]: ""), 5, "", "maxlength='65'"),
+			combo("Tipo",		"busca_tipo",		(!empty($_POST["busca_tipo"])? 		$_POST["busca_tipo"]: ""), 2, ["", "Ajuste", "Abono"]),
+			combo("Legenda",	"busca_legenda",	(!empty($_POST["busca_legenda"])? 	$_POST["busca_legenda"]: ""), 3, $legendas)
 		];
 		$botoes = [
 			botao("Buscar","index"),
