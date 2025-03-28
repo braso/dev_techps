@@ -188,7 +188,7 @@ function carregarJS(array $arquivos) {
 						+ row['Fim de Refeição']['inativo'] + row['Inicio de Espera']['inativo'] + row['Fim de Espera']['inativo']
 						+ row['Inicio de Descanso']['inativo'] + row['Fim de Descanso']['inativo'] + row['Inicio de Repouso']['inativo']
 						+ row['Fim de Repouso']['inativo'] + row['Inicio de Repouso Embarcado']['inativo'] + row['Fim de Repouso Embarcado']['inativo'];
-							// console.log(row);
+							// console.log(totalInativo);
 							{$linha}
 							tabela.append(linha);
 						},
@@ -596,11 +596,35 @@ function index() {
 			];
 
 			$pastaAjuste = dir($path);
+			$totais = []; // Inicializa vazio, será preenchido dinamicamente
+
+			// Chaves que devem ser ignoradas
+			$chavesIgnorar = ["matricula", "nome", "ocupacao", "pontos"];
 			while ($arquivo = $pastaAjuste->read()) {
 				if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
 					$arquivo = $path."/".$arquivo;
 					$arquivos[] = $arquivo;
 					$json = json_decode(file_get_contents($arquivo), true);
+
+					// Processa cada chave do JSON
+					foreach ($json as $chave => $valor) {
+						// Ignora as chaves especificadas
+						if (in_array($chave, $chavesIgnorar)) {
+							continue;
+						}
+						
+						// Verifica se é um tipo de ponto válido
+						if (is_array($valor) && isset($valor['ativo']) && isset($valor['inativo'])) {
+							// Inicializa a chave no array de totais se não existir
+							if (!isset($totais[$chave])) {
+								$totais[$chave] = ['ativo' => 0, 'inativo' => 0];
+							}
+							
+							// Soma os valores (com conversão para inteiro para segurança)
+							$totais[$chave]['ativo'] += (int)$valor['ativo'];
+							$totais[$chave]['inativo'] += (int)$valor['inativo'];
+						}
+					}
 					foreach ($json['pontos'] as $key) {
 						// Filtra apenas pontos com status "ativo" (case-insensitive)
 						if (strtolower($key['pont_tx_status'] ?? '') !== 'ativo') {
@@ -692,6 +716,36 @@ function index() {
 
 		if (!empty($_POST["empresa"])) {
 			if (!in_array($_SERVER["REQUEST_URI"], $dominiosAutotrac)) {
+
+				$rowTotal = "<td></td>
+					<td></td>
+					<td><b>Total</b></td>
+					<td class='total'><b>".$totais["Inicio de Jornada"]["ativo"]."</b></td>
+					<td class='total'><b>".$totais["Inicio de Jornada"]["inativo"]."</b></td> 
+					<td class='total'><b>".$totais["Fim de Jornada"]["ativo"]."</b></td> 
+					<td class='total'><b>".$totais["Fim de Jornada"]["inativo"]."</b></td> 
+					<td class='total'><b>".$totais["Inicio de Refeição"]["ativo"]."</td>
+					<td class='total'><b>".$totais["Inicio de Refeição"]["inativo"]."</td>
+					<td class='total'><b>".$totais["Fim de Refeição"]["ativo"]."</b></td> 
+					<td class='total'><b>".$totais["Fim de Refeição"]["inativo"]."</b></td> 
+					<td class='total'><b>".$totais["Inicio de Espera"]["ativo"]."</b></td> 
+					<td class='total'><b>".$totais["Inicio de Espera"]["inativo"]."</b></td> 
+					<td class='total'><b>".$totais["Fim de Espera"]["ativo"]."</b></td> 
+					<td class='total'><b>".$totais["Fim de Espera"]["inativo"]."</b></td> 
+					<td class='total'><b>".$totais["Inicio de Descanso"]["ativo"]."</b></td> 
+					<td class='total'><b>".$totais["Inicio de Descanso"]["inativo"]."</b></td> 
+					<td class='total'><b>".$totais["Fim de Descanso"]["ativo"]."</b></td> 
+					<td class='total'><b>".$totais["Fim de Descanso"]["inativo"]."</b></td> 
+					<td class='total'><b>".$totais["Inicio de Repouso"]["ativo"]."</b></td> 
+					<td class='total'><b>".$totais["Inicio de Repouso"]["inativo"]."</b></td> 
+					<td class='total'><b>".$totais["Fim de Repouso"]["ativo"]."</b></td> 
+					<td class='total'><b>".$totais["Fim de Repouso"]["inativo"]."</b></td> 
+					<td class='total'><b>".$totais["Inicio de Repouso Embarcado"]["ativo"]."</b></td> 
+					<td class='total'><b>".$totais["Inicio de Repouso Embarcado"]["inativo"]."</b></td> 
+					<td class='total'><b>".$totais["Fim de Repouso Embarcado"]["ativo"]."</b></td> 
+					<td class='total'><b>".$totais["Fim de Repouso Embarcado"]["inativo"]."</b></td> 
+				";
+
 				$rowTotais .=
 					"<th colspan='3'>".$arquivoGeral["empr_tx_nome"]."</th>"
 					. "<th colspan='2'>".$arquivoGeral["Inicio de Jornada"]."</th>"
