@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <head>
     <meta charset="UTF-8">
-    <title>Painel de Ajuste e Não Conformidades</title>
+    <title>Painel de Ajuste e Não Conformidades.</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="css/logistica_modal.css">
     <script src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js" type="module"></script>
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="container">
     <div id="form_header" class="form_title">
         <img src="imagens/LGC.png" alt="Logo" class="logo">
-        <h2 class="title-section">Painel de Não Conformidades Logísticas</h2>
+        <h2 class="title-section">Painel de Não Conformidades Logísticas.</h2>
         <button type="button" class="btn btn-primary" id="toggleFormBtn">✒️</button>
     </div>
 

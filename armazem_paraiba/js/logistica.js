@@ -656,7 +656,72 @@ document.addEventListener("DOMContentLoaded", addRowClickListeners);
         }
     } else {
         googleMapsLink = "#";
-    }
+
+      }
+    
+      coordinates.forEach(function (coord, index) {
+        if (!isNaN(coord.latitude) && !isNaN(coord.longitude)) {
+          let popupContent = `<div style="font-size: 16px;">
+                   <div style="font-size: 16px;">
+                    <strong>Parada #${index + 1}</strong><br>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <i class="fas fa-clock" style="color: #28a745; margin-right: 5px;"></i>
+                        <strong>Hora de Início:</strong> ${coord.startTime}
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <i class="fas fa-clock" style="color: #dc3545; margin-right: 5px;"></i>
+                        <strong>Hora de Fim:</strong>  ${coord.endTime}
+                    </div>
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <i class="fas fa-map-marker-alt" style="color: #6c757d; margin-right: 5px;"></i>
+                        <strong>Endereço:</strong> ${coord.address}
+                    </div>
+    
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <i class="fas fa-power-off" style="color: ${
+                          coord.ignition === "Ligada" ? "green" : "red"
+                        }; margin-right: 5px;"></i>
+                        <strong>Ignição:</strong> ${coord.ignition}
+                    </div>
+                    <p><a href="${googleMapsLink}" target="_blank">Ver Rota no Google Maps</a></p>
+                  </div>`;
+    
+          let icon;
+          if (index === 0) {
+            // Primeiro marcador: verde
+            icon = L.icon({
+              iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+              shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+              iconSize: [25, 41],
+              iconAnchor: [12, 41],
+              popupAnchor: [1, -34],
+              shadowSize: [41, 41]
+            });
+          } else if (index === coordinates.length - 1) {
+            // Último marcador: emoji de bandeira de chegada
+            icon = L.divIcon({
+              className: 'custom-emoji-icon',
+              html: '<div style="font-size: 24px;">🏁</div>', // Use um emoji como marcador
+              iconSize: [25, 41],
+              iconAnchor: [12, 41],
+              popupAnchor: [1, -34]
+            });
+          } else {
+            // Marcadores intermediários: amarelo
+            icon = L.icon({
+              iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png',
+              shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+              iconSize: [25, 41],
+              iconAnchor: [12, 41],
+              popupAnchor: [1, -34],
+              shadowSize: [41, 41]
+            });
+          }
+    
+          const marker = L.marker([coord.latitude, coord.longitude], { icon: icon })
+            .addTo(map)
+            .bindPopup(popupContent);
+
     
  
       // Adiciona os marcadores ao mapa
