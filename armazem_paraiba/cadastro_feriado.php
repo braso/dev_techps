@@ -91,17 +91,16 @@
 		$extra = "";
 
 		$extra .= (($_POST["busca_codigo"])? " AND feri_nb_id LIKE '%".$_POST["busca_codigo"]."%'": "")
-			.(($_POST["busca_nome"])?" AND feri_tx_nome LIKE '%".$_POST["busca_nome"]."%'": "")
-			.(($_POST["busca_uf"])? " AND feri_tx_uf = '".$_POST["busca_uf"]."'": "")
-			.(($_POST["busca_cidade"])? " AND feri_nb_cidade = '".$_POST["busca_cidade"]."'": "")
+			.(($_POST["busca_nome_like"])?" AND feri_tx_nome LIKE '%".$_POST["busca_nome_like"]."%'": "")
+			.(($_POST["busca_uf_like"])? " AND feri_tx_uf = '".$_POST["busca_uf_like"]."'": "")
+			.(($_POST["busca_cidade_like"])? " AND feri_nb_cidade = '".$_POST["busca_cidade_like"]."'": "")
 		;
-		$ufs = ["", "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MS", "MT", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
 
 		$campos = [ 
 			campo("Código", "busca_codigo", $_POST["busca_codigo"], 2, "MASCARA_NUMERO", "maxlength='6'"),
-			campo("Nome", "busca_nome", $_POST["busca_nome"], 4, "", "maxlength='65'"),
-			combo("Estado", "busca_uf", $_POST["busca_uf"], 2, $ufs),
-			combo_net("Município", "busca_cidade", $_POST["busca_cidade"], 4, "cidade", "", "", "cida_tx_uf")
+			campo("Nome", "busca_nome_like", $_POST["busca_nome_like"], 4, "", "maxlength='65'"),
+			campo("Estado", "busca_uf_like", $_POST["busca_uf_like"], 2),
+			campo("Município", "busca_cidade_like", $_POST["busca_cidade_like"], 2)
 		];
 
 		$botoes = [ 
@@ -124,9 +123,9 @@
 
 			$camposBusca = [
 				"busca_codigo" 	=> "feri_nb_id",
-				"busca_nome" 	=> "feri_tx_nome",
-				"busca_uf" 		=> "feri_tx_uf",
-				"busca_cidade" 	=> "cida_tx_nome"
+				"busca_nome_like" 	=> "feri_tx_nome",
+				"busca_uf_like" 		=> "feri_tx_uf",
+				"busca_cidade_like" 	=> "cida_tx_nome"
 			];
 
 			$queryBase = (

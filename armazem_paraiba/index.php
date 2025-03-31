@@ -24,10 +24,11 @@
 	function index(){
 		global $turnoAtual;
 
-		if(array_intersect(array_keys($_SESSION), ["user_tx_nome", "user_tx_login", "user_tx_nivel", "horaEntrada"]) != ["user_tx_nome", "user_tx_login", "user_tx_nivel", "horaEntrada"]){
+		
+		if(array_values(array_intersect(array_keys($_SESSION), ["user_tx_nome", "user_tx_login", "user_tx_nivel", "horaEntrada"])) != ["user_tx_login", "user_tx_nome", "user_tx_nivel", "horaEntrada"]){
 			logar();
 		}
-		
+
 		include_once "conecta.php";
 		cabecalho("");
 		showWelcome($_SESSION["user_tx_nome"],$turnoAtual,$_SESSION["horaEntrada"]);
@@ -116,6 +117,7 @@
 			));
 	
 			if(!empty($usuario)){ //Se encontrou um usuário
+
 				$dataHoje = strtotime(date("Y-m-d")); // Transforma a data de hoje em timestamp
 				$dataVerificarObj = strtotime($usuario["user_tx_expiracao"]);
 				if ($dataVerificarObj >= $dataHoje && !empty($usuario["user_tx_expiracao"]) && $usuario["user_tx_expiracao"] != "0000-00-00"){
@@ -156,16 +158,19 @@
 				exit;
 			}
 		}
+
+		$error = "notfound";
+		$_POST["HTTP_REFERER"] = $_ENV["APP_PATH"]."/index.php?error=".$error;
+		$_POST["returnValues"] = json_encode([
+			"HTTP_REFERER" => $_POST["HTTP_REFERER"],
+			"empresa" => $_POST["empresa"],
+			"user" => $_POST["user"],
+			"password" => $_POST["password"]
+		]);
+
+		include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
+		voltar();
+		exit;
 	}
 
 	logar();
-
-	$error = "notfound";
-	$_POST["HTTP_REFERER"] = $_ENV["APP_PATH"]."/index.php?error=".$error;
-	$_POST["returnValues"] = json_encode([
-		"HTTP_REFERER" => $_POST["HTTP_REFERER"]
-	]);
-
-	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
-	voltar();
-	exit;

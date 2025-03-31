@@ -11,7 +11,7 @@
     include_once "./PHPMailer/src/PHPMailer.php";
     include_once "./PHPMailer/src/SMTP.php";
     include_once "load_env.php";
-    include_once 'dominios.php';
+    include_once 'empresas.php';
 
     use PHPMailer\PHPMailer\PHPMailer;
     use PHPMailer\PHPMailer\Exception;
@@ -19,18 +19,18 @@
 // $_POST['botao'] = '';
 // $msg = '';
 
-    function extrairDominio($url, $dominio_array) {
+    function extrairDominio($url, $empresa_array) {
         $parsed_url = parse_url($url);
         $path_segments = explode('/', $parsed_url['path']);
 
         $dominio = $path_segments[1] ?? '';
 
-        return in_array($dominio, $dominio_array) ? $dominio : null;
+        return in_array($dominio, $empresa_array) ? $dominio : null;
     }
 
     if ($_POST['botao'] == 'ENVIAR') {
         $dominio_url = $_POST['dominio'];
-        $dominio = extrairDominio($dominio_url, $dominio_array);
+        $dominio = extrairDominio($dominio_url, $empresa_array);
         $login = $_POST['login'];
         
         if(!empty($dominio)){
@@ -49,7 +49,7 @@
         }else{
             $msg = 
                 "<div class='alert alert-danger display-block'>
-                    <span> Selecione um domínio </span>
+                    <span> Informe a sua empresa </span>
                 </div>"
             ;
         }
@@ -180,7 +180,7 @@
                 document.getElementsByClassName('form-title font-green')[0].innerHTML = 'Redefinir Senha';
             }else{
                 document.getElementById('domain-selected').hidden = false;
-                document.getElementsByClassName('form-title font-green')[1].innerHTML = 'Redefinição de Senha - ".$dominios[$_GET["dominio"]]."';
+                document.getElementsByClassName('form-title font-green')[1].innerHTML = 'Redefinição de Senha - {$_GET["dominio"]}';
             }
         </script>"
     ;

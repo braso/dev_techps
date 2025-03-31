@@ -190,6 +190,12 @@
 			exit;	
 		}
 
+		if(empty($_POST["busca_motorista"])){
+			set_status("ERRO: Insira o motorista para consultar seu saldo.");
+			index();
+			exit;
+		}
+
 		$err = conferirErros(1, $_POST["busca_motorista"]);
 		if(!empty($err)){
 			set_status("ERRO: ".$err);

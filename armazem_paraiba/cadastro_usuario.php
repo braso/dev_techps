@@ -170,10 +170,12 @@
 		atualizarUsuario($usuario);
 		$id = $_POST["id"];
 		
-		$idUserFoto = mysqli_fetch_assoc(query("SELECT user_nb_id FROM user WHERE user_nb_id = {$id} LIMIT 1;"));
+		$idUserFoto = mysqli_fetch_assoc(query(
+			"SELECT user_nb_id FROM user WHERE user_nb_id = {$id} LIMIT 1;"
+		));
 		$file_type = $_FILES["foto"]["type"]; //returns the mimetype
 
-		$allowed = array("image/jpeg", "image/gif", "image/png");
+		$allowed = array("image/jpeg", "image/png", "image/jpg");
 		if (in_array($file_type, $allowed) && $_FILES["foto"]["name"] != "" && !empty($_POST["id"])) {
 
 			if (!is_dir("arquivos/user/{$_POST["id"]}/")) {

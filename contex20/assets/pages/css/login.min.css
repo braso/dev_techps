@@ -57,15 +57,24 @@ html {
 .login .content .forget-form,
 .login .content .login-form {
 	padding: 0;
-	margin: 0
+	margin: 0;
 }
 
 .login .content .form-control {
 	background-color: #dde3ec;
 	height: 43px;
-	color: #8290a3;
-	border: 1px solid #dde3ec
+	color: #414852;
+	padding-left: 15px;
+	padding-right: 15px;
+	/* border: 1px solid #dde3ec; */
+	border-radius: 7px;	
 }
+
+.login .content .form-group .input-empresas {
+	text-transform: uppercase;
+	/* text-align: center; */
+}
+
 
 .login .content .form-control:active,
 .login .content .form-control:focus {
@@ -167,12 +176,19 @@ html {
 .login .content .forget-password {
 	font-size: 12px;
 	display: inline-block;
+	width: 100%;
+	text-align: right;
 }
 
 .form-group a.forget-password {
     width: -webkit-fill-available;
     width: -moz-available;
     text-align: right;
+}
+
+.form-group {
+	box-shadow: 2px 2px 5px -3px black;
+	border-radius: 7px;
 }
 
 .login .content .check {

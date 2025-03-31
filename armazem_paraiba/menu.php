@@ -35,7 +35,8 @@
 				"/cadastro_macro.php" 		=> "Macro",
 				"/cadastro_motivo.php" 		=> "Motivo", 
 				"/cadastro_parametro.php" 	=> "Parâmetro", 
-				"/cadastro_usuario.php" 	=> "Usuário" 
+				"/cadastro_usuario.php" 	=> "Usuário",
+				"/cadastro_placa.php" 	=> "Placas" 
 			],
 			"ponto" => [
 				"/endosso.php" 			=> "Consultar Endossos", 
@@ -100,6 +101,8 @@
 		if(in_array($nivel, ["Motorista", "Ajudante", "Funcionário"])){
 			return $menuMotorista;
 		}
+
+		return "";
 	}
 
 	echo 
