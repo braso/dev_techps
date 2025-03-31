@@ -155,12 +155,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <div class="form-group">
     <label class="label-form" for="date_start">Data e Hora Início:</label>
-    <input type="datetime-local" class="form-control field-form" id="date_start" name="date_start" step="1">
+    <input type="datetime-local" class="form-control field-form" id="date_start" name="date_start">
 </div>
 
 <div class="form-group">
     <label class="label-form" for="date_end">Data e Hora Fim:</label>
-    <input type="datetime-local" class="form-control field-form" id="date_end" name="date_end" step="1">
+    <input type="datetime-local" class="form-control field-form" id="date_end" name="date_end">
 </div>
 
             <div class="form-group text-end button-search">
