@@ -647,7 +647,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
                     <div style="display: flex; align-items: center; margin-bottom: 5px;">
                         <i class="fas fa-clock" style="color: #dc3545; margin-right: 5px;"></i>
-                        <strong>Hora de Fim:</strong> ${coord.endTime}
+                        <strong>Hora de Fim:</strong>  ${coord.endTime}
                     </div>
                     <div style="display: flex; align-items: center; margin-bottom: 5px;">
                         <i class="fas fa-map-marker-alt" style="color: #6c757d; margin-right: 5px;"></i>

@@ -320,7 +320,7 @@
                     if (mysqli_stmt_execute($stmt)) {
                         $sucesso = "Ajustes enviados com sucesso!";
                     } else {
-                        $erro = "Erro ao registrar ajuste: ".mysqli_error($conn);
+                        $erro = "Erro ao registrar ajuste : ".mysqli_error($conn);
                     }
                     mysqli_stmt_close($stmt);
                 } else {

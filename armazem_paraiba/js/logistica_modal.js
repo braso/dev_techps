@@ -296,7 +296,7 @@ document.getElementById("submitAdjustmentsBtn").addEventListener("click", functi
 
 // Oculta as mensagens de popup após 5 segundos
 setTimeout(function () {
-    console.log('5 segundos se passaram, ocultando mensagens e redirecionando.');
+    console.log('5 segundos se passaram, ocultando mensagens e redirecionando..');
 
     var messages = document.querySelectorAll(".alert");
     messages.forEach(function (message) {
