@@ -16,6 +16,147 @@ function enviarForm() {
 	index();
 }
 
+function carregarGraficos($periodoInicio) {
+	$path = "./arquivos/ajustes";
+	$mesAnterior = clone $periodoInicio; // Clona o objeto original
+	$mesAnterior->modify("-1 month");    // Modifica apenas a cópia
+
+	$mesAnteanterior = clone $periodoInicio;
+	$mesAnteanterior->modify("-2 months");
+
+	$pathMesAtual = $path ."/" . $periodoInicio->format("Y-m") . "/" . $_POST["empresa"] . "/empresa_" . $_POST["empresa"] . ".json"; // mês atual
+	$pathMesAnterior = $path ."/" . $mesAnterior->format("Y-m") . "/" . $_POST["empresa"] . "/empresa_" . $_POST["empresa"] . ".json"; // mês anterior
+	$pathMesAnteanterior = $path ."/" . $mesAnteanterior->format("Y-m") . "/" . $_POST["empresa"] . "/empresa_" . $_POST["empresa"] . ".json"; // mês anterior do anterior
+
+	if (file_exists($pathMesAtual)) {
+		$jsonMesAtual = json_decode(file_get_contents($pathMesAtual), true);
+	}
+
+	if (file_exists($pathMesAnterior)) {
+		$jsonMesAnterior = json_decode(file_get_contents($pathMesAnterior), true);
+	} else {
+		$jsonMesAnterior = [
+			"totais" => [
+				"ativo" => 0,
+				"inativo" => 0
+			]
+		];
+		// $jsonMesAnteanterior = json_encode($jsonMesAnterior);
+	};
+
+	if (file_exists($pathMesAnteanterior)) {
+		$jsonMesAnteanterior = json_decode(file_get_contents($pathMesAnteanterior), true);
+	} else {
+		$jsonMesAnteanterior = [
+			"totais" => [
+				"ativo" => 0,
+				"inativo" => 0
+			]
+		];
+		// $jsonMesAnteanterior = json_encode($jsonMesAnteanterior);
+	}
+
+	echo "
+	<script>
+		const mesesPTBR = {
+            '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr', 
+            '05': 'Mai', '06': 'Jun', '07': 'Jul', '08': 'Ago', 
+            '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez'
+        };
+
+		const meses = [
+            '".$mesAnteanterior->format("Y-m")."',
+			'".$mesAnterior->format("Y-m")."', 
+            '".$periodoInicio->format("Y-m")."', 
+        ];
+
+		const totaisPorMes = {
+			'".$mesAnteanterior->format("Y-m")."':{
+				ativo:".$jsonMesAnteanterior["totais"]["ativo"].",
+				inativo:".$jsonMesAnteanterior["totais"]["inativo"]."
+			},
+			'".$mesAnterior->format("Y-m")."':{
+				ativo:".$jsonMesAnterior["totais"]["ativo"].",
+				inativo:".$jsonMesAnterior["totais"]["inativo"]."
+			},
+			'".$periodoInicio->format("Y-m")."':{
+				ativo:".$jsonMesAtual["totais"]["ativo"].",
+				inativo:".$jsonMesAtual["totais"]["inativo"]."
+			}
+		};
+
+		const mesesFormatados = meses.map(mes => {
+            const [ano, mesNum] = mes.split('-');
+            return `\${mesesPTBR[mesNum]}/\${ano}`;
+        });
+
+		const commonOptions = {
+            chart: { type: 'line',
+			style: {
+                    fontFamily: 'Arial',
+                    fontSize: '12px'
+                }
+			},
+            xAxis: {
+                categories: mesesFormatados, // Usa os meses formatados
+                title: { text: 'Mês' }
+            },
+            yAxis: { 
+                title: { text: 'Quantidade' },
+                min: 0
+            },
+            legend: { enabled: false },
+            tooltip: {
+                formatter: function() {
+                    const mesOriginal = meses[this.point.index];
+                    const [ano, mesNum] = mesOriginal.split('-');
+                    const mesExtenso = [
+                        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+                    ][parseInt(mesNum)-1];
+                    return `<b>\${mesExtenso} \${ano}</b><br/>\${this.series.name}: <b>\${this.y}</b> ajustes`;
+                }
+            },
+            plotOptions: {
+                line: {
+                    dataLabels: { 
+                        enabled: true,
+                        formatter: function() {
+                            return this.y; // Mostra apenas o número
+                        }
+                    },
+                    marker: { enabled: true }
+                }
+            }
+        };
+
+		Highcharts.chart('chart-ativos', {
+            ...commonOptions,
+            title: { text: 'Ajustes Ativos - Últimos 3 Meses' },
+            series: [{
+                name: 'Ativos',
+                data: meses.map(mes => totaisPorMes[mes]?.ativo || 0),
+                color: '#4CAF50',
+                marker: { symbol: 'circle' }
+            }]
+        });
+
+		Highcharts.chart('chart-inativos', {
+            ...commonOptions,
+            title: { text: 'Ajustes Inativos - Últimos 3 Meses' },
+            series: [{
+                name: 'Inativos',
+                data: meses.map(mes => totaisPorMes[mes]?.inativo || 0),
+                color: '#FF4D4D',
+                marker: { symbol: 'circle' }
+            }]
+        });
+
+	</script>
+	"
+	;
+}
+
 function carregarJS(array $arquivos) {
 	// $periodoInicio = new DateTime($_POST["busca_periodo"][0]);
 	$dominiosAutotrac = ["/comav"];
@@ -674,22 +815,27 @@ function index() {
 			}
 
 			$tabelaMotivo = "
-			<div>
-			<table id='tabela-motivo' class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact' style='width: 470px !important;'>
-				<thead>
-					<tr>
-						<th colspan='4' style='text-align: center;'><b>Ajustes Ativos</b></th>
-				</thead>
-				<thead>
-					<tr>
-						<th>Motivo</th>
-						<th>Quantidade</th>
-						<th>Funcionários</th>
-						<th style='text-align: center;'><button class='btn btn-default btn-sm' onclick=\"createModal2(" . htmlspecialchars(json_encode($resultado2), ENT_QUOTES, 'UTF-8') . ");\")'>Visualizar Todos</button></th>
-					</tr>
-				</thead>
-				<tbody>
-				</div>";
+			<div style='display: flex; flex-direction: column;'>
+				<div class='row' id='resumo'>
+					<div class='col-md-4.5'>
+						<table id='tabela-motivo'
+							class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'
+							style='width: 500px !important;'>
+							<thead>
+								<tr>
+									<th colspan='4' style='text-align: center;'><b>Ajustes Ativos</b></th>
+							</thead>
+							<thead>
+								<tr>
+									<th>Motivo</th>
+									<th>Quantidade</th>
+									<th>Funcionários</th>
+									<th style='text-align: center;'><button class='btn btn-default btn-sm' onclick=\"createModal2("
+											. htmlspecialchars(json_encode($resultado2), ENT_QUOTES, 'UTF-8' ) . ");\" )'>Visualizar
+											Todos</button></th>
+								</tr>
+							</thead>
+							<tbody>";
 			arsort($resultado);
 			foreach (array_keys($resultado) as $motivo) {
 				$resultado2Json = json_encode($resultado2[$motivo]);
@@ -697,11 +843,28 @@ function index() {
 				$tabelaMotivo .= "<td>" . $motivo . "</td>";
 				$tabelaMotivo .= "<td>" . $resultado[$motivo] . "</td>";
 				$tabelaMotivo .= "<td>" . sizeof($resultado2[$motivo]) . "</td>";
-				$tabelaMotivo .= "<td style='text-align: center;'><button class='btn btn-default btn-sm' onclick=\"createModal('$motivo'," . htmlspecialchars(json_encode($resultado2[$motivo]), ENT_QUOTES, 'UTF-8') . ");\">Visualizar</button></td>";
+				$tabelaMotivo .= "<td style='text-align: center;'><button style='height: 22px; padding: 0px 10px;' class='btn btn-default btn-sm' onclick=\"createModal('$motivo'," . htmlspecialchars(json_encode($resultado2[$motivo]), ENT_QUOTES, 'UTF-8') . ");\">Visualizar</button></td>";
 				$tabelaMotivo .= "</tr>";
 			}
 			$tabelaMotivo .= "</tbody>
-			</table>";
+			</table>
+			</div>
+				<div class='col-md-3.5' style='padding-left: 3px !important; width: 315px;'>
+					<!-- <div class='container' style='display:flex'> -->
+						<div id='chart-ativos' style='width:100%; background: green; height: 232px;'>
+							<!-- Conteúdo do gráfico Sintético -->
+						<!-- </div> -->
+					</div>
+				</div>
+				<div class='col-md-3.5' style='width: 315px;'>
+					<!-- <div class='container' style='display:flex'> -->
+						<div id='chart-inativos' style='width:100%; background: green; height: 232px;'>
+							<!-- Conteúdo do gráfico Sintético -->
+						</div>
+					<!-- </div>-->
+				</div>
+			</div>
+			";
 		}
 	} else {
 		$encontrado = false;
@@ -992,6 +1155,7 @@ function index() {
 			echo "<script>alert('Não Possui dados desse mês')</script>";
 		}
 	}
-	carregarJS($arquivos, $resultado2);
+	carregarJS($arquivos);
+	carregarGraficos($periodoInicio);
 	rodape();
 }
