@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -24,10 +24,11 @@
 	function index(){
 		global $turnoAtual;
 
-		if(array_intersect(array_keys($_SESSION), ["user_tx_nome", "user_tx_login", "user_tx_nivel", "horaEntrada"]) != ["user_tx_nome", "user_tx_login", "user_tx_nivel", "horaEntrada"]){
+		
+		if(array_values(array_intersect(array_keys($_SESSION), ["user_tx_nome", "user_tx_login", "user_tx_nivel", "horaEntrada"])) != ["user_tx_login", "user_tx_nome", "user_tx_nivel", "horaEntrada"]){
 			logar();
 		}
-		
+
 		include_once "conecta.php";
 		cabecalho("");
 		showWelcome($_SESSION["user_tx_nome"],$turnoAtual,$_SESSION["horaEntrada"]);
@@ -157,7 +158,6 @@
 				exit;
 			}
 		}
-		var_dump("2");
 
 		$error = "notfound";
 		$_POST["HTTP_REFERER"] = $_ENV["APP_PATH"]."/index.php?error=".$error;

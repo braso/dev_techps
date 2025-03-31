@@ -402,28 +402,28 @@
 		$allowed = ["image/jpeg", "image/gif", "image/png", "application/pdf"];
 		if (in_array($file_type, $allowed) && $_FILES["cnhAnexo"]["name"] != "") {
 
-			if (!is_dir("arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]")) {
-				mkdir("arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]", 0777, true);
+			if (!is_dir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}")) {
+				mkdir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}", 0777, true);
 			}
 
-			$arq = enviar("cnhAnexo", "arquivos/empresa/".$_POST["empresa"]."/motoristas/".$_POST["matricula"]."/", "CNH_".$id."_".$_POST["postMatricula"]);
+			$arq = enviar("cnhAnexo", "arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}/", "CNH_{$id}_{$_POST["postMatricula"]}");
 			if ($arq) {
 				atualizar("entidade", ["enti_tx_cnhAnexo"], [$arq], $id);
 			}
 		}
 		
 		
-		$idUserFoto = mysqli_fetch_assoc(query("SELECT user_nb_id FROM user WHERE user_nb_entidade = '".$id."' LIMIT 1;"));
+		$idUserFoto = mysqli_fetch_assoc(query("SELECT user_nb_id FROM user WHERE user_nb_entidade = '{$id}' LIMIT 1;"));
 		$file_type = $_FILES["foto"]["type"]; //returns the mimetype
 
 		$allowed = ["image/jpeg", "image/gif", "image/png"];
 		if (in_array($file_type, $allowed) && $_FILES["foto"]["name"] != "") {
 
-			if (!is_dir("arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]")) {
-				mkdir("arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]", 0777, true);
+			if (!is_dir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}")) {
+				mkdir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}", 0777, true);
 			}
 
-			$arq = enviar("foto", "arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]/", "FOTO_".$id."_".$_POST["postMatricula"]);
+			$arq = enviar("foto", "arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}/", "FOTO_{$id}_{$_POST["postMatricula"]}");
 			if($arq){
 				atualizar("entidade", ["enti_tx_foto"], [$arq], $id);
 				atualizar("user", ["user_tx_foto"], [$arq], $idUserFoto["user_nb_id"]);

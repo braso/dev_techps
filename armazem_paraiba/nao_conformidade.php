@@ -277,7 +277,7 @@
 				for($f = 0; $f < count($rows); $f++){
 					$qtdErros = 0;
 					foreach($rows[$f] as $key => $value){
-						preg_match_all("/(?<=<)([^(<|>)])+(?=>)/", $value, $tags);
+						preg_match_all("/(?<=<)([^<|>])+(?=>)/", $value, $tags);
 						array_walk_recursive($tags[0], function($tag, $key) use (&$qtdErros){
 							$qtdErros += substr_count($tag, "fa-warning")*(substr_count($tag, "color:red;") || substr_count($tag, "color:orange;"))		//Conta todos os triângulos, pois todos os triângulos são alertas de não conformidade.
 								+((is_int(strpos($tag, "fa-info-circle")))*(substr_count($tag, "color:red;") || substr_count($tag, "color:orange;")))	//Conta os círculos que sejam vermelhos ou laranjas.

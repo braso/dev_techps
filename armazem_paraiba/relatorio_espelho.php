@@ -247,7 +247,7 @@
                     <table class="table-resumo">
                         <tr>
                             <td>Saldo Anterior</td>
-                            <td>00:00</td>
+                            <td><?=$totalResumo['saldoAnterior']?></td>
                             <td class="empty"></td>
                             <td>Saldo Período</td>
                             <td><?=$totalResumo['diffSaldo']?></td>

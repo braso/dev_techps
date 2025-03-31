@@ -110,6 +110,7 @@
 							}
 						?>
 						<div class="form-actions">
+							<a href="index.php" style="align-content: center; padding-right: 20px;">Voltar</a>
 							<input type="submit" class="btn green uppercase" name="botao" value="ENVIAR">
 						</div>
 				</div>
