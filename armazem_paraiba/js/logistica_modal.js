@@ -108,17 +108,33 @@ function atualizarResumo() {
         }
     }
 }
-
-
-// Função para excluir uma linha da tabela
 function excluirLinha(button) {
-    // Remove o parágrafo (resumo) que contém o botão de excluir
-    var resumo = button.parentElement;
-    resumo.remove();
+    var resumo = button.closest("p"); // Encontra o parágrafo mais próximo
+    if (resumo) {
+        resumo.remove();
+    }
 
-    // Aqui você pode também remover a linha correspondente na tabela, se necessário.
-    // Exemplo: encontrar a linha correspondente na tabela e removê-la.
+    // Pega a hora de início do resumo para encontrar a linha correspondente na tabela
+    var horaInicioResumo = resumo.textContent.match(/Hora Início: (\d{2}:\d{2})/);
+    if (!horaInicioResumo) return; // Se não encontrar, sai da função
+
+    var horaInicio = horaInicioResumo[1]; // Obtém a hora extraída do resumo
+
+    // Encontra e remove a linha correspondente na tabela
+    var table = document.getElementById("adjustmentTable").getElementsByTagName("tbody")[0];
+    var rows = table.getElementsByTagName("tr");
+
+    for (var i = rows.length - 1; i >= 0; i--) { // Percorre de trás para frente para evitar problemas com índices
+        var cells = rows[i].getElementsByTagName("td");
+        if (cells.length > 2 && cells[2].textContent.trim() === horaInicio) {
+            table.deleteRow(i);
+        }
+    }
+
+    // Atualiza o resumo após a remoção
+    atualizarResumo();
 }
+
 
 
 
