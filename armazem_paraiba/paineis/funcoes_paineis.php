@@ -1275,13 +1275,18 @@
 				mkdir($path, 0755, true);
 			}
 
+			if (!empty($_POST["busca_ocupacao"])) {
+				$filtroOcupacao = "AND enti_tx_ocupacao IN ('{$_POST["busca_ocupacao"]}')";
+			}
+
 			$motoristas = mysqli_fetch_all(
 				query(
-					"SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula, enti_tx_ocupacao FROM entidade"
-						. " WHERE enti_tx_status = 'ativo'"
-						. " AND enti_nb_empresa = " . $empresa['empr_nb_id']
-						. " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
-						. " ORDER BY enti_tx_nome ASC;"
+					"SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula, enti_tx_ocupacao FROM entidade
+					 WHERE enti_tx_status = 'ativo'
+					 AND enti_nb_empresa = {$empresa['empr_nb_id']}
+					 AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')
+					 {$filtroOcupacao}
+					 ORDER BY enti_tx_nome ASC;"
 				),
 				MYSQLI_ASSOC
 			);
@@ -1334,6 +1339,7 @@
 							. " LEFT JOIN user ON ponto.pont_nb_userCadastro = user.user_nb_id"
 							. " WHERE pont_tx_matricula = '$motorista[enti_tx_matricula]'"
 							. " AND (user.user_tx_matricula <> ponto.pont_tx_matricula OR user.user_tx_matricula IS NULL)"
+							. " AND pont_tx_status != 'inativo'"
 							. " AND pont_tx_data BETWEEN STR_TO_DATE('$diaInicio 00:00:00', '%Y-%m-%d %H:%i:%s')"
 							. " AND STR_TO_DATE('$diafim 23:59:59', '%Y-%m-%d %H:%i:%s')"
 							. " ORDER BY ponto.pont_tx_data ASC;"
@@ -1381,7 +1387,6 @@
 						$ocorrencias[$macr_tx_nome]["inativo"]++;
 					}
 				}
-
 				$totalMotorista = array_merge($totalMotorista, $ocorrencias);
 				$totalMotorista['pontos'] = array_merge($pontosAtivos, $pontosInativos);
 				// Filtrar apenas os campos numéricos que precisam ser verificados

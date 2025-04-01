@@ -134,25 +134,6 @@
 				function imprimir(){
 					window.print();
 				}
-
-				function calcularTotalColuna(tabelaId, colunaClasse, resultadoId) {
-					var total = 0;  // Inicializa a variável para acumular o total
-
-					// Itera por todas as células da coluna especificada (células com a classe fornecida)
-					$(tabelaId + ' tbody tr').each(function() {
-						var valor = parseFloat($(this).find(colunaClasse).text());  // Pega o valor da célula
-
-						// Verifica se o valor é numérico antes de somar
-						if (!isNaN(valor)) {
-							total += valor;
-						}
-					});
-
-					console.log(total);
-
-					// Exibe o resultado na tela
-					// $(resultadoId).text('Total: ' + total);
-				}
 							
 				$(document).ready(function(){
 					var tabela = $('#tabela-empresas tbody');

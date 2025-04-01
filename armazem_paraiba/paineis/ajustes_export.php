@@ -86,7 +86,7 @@ class CustomPDF extends TCPDF {
         $this->SetY(-15);
         $this->Line(10, $this->GetY(), $this->GetPageWidth() - 10, $this->GetY());
         $this->SetFont('helvetica', 'B', 9);
-        $this->Cell(90, 0, 'TECHP®', 0, 0, 'L');
+        $this->Cell(90, 0, 'TECHPS®', 0, 0, 'L');
         $this->SetFont('helvetica', 'I', 8);
         $this->Cell(1, 0, 'Gerado em: ' . date('d/m/Y H:i'), 0, 0, 'C');
         parent::Footer();
