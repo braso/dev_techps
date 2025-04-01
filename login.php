@@ -62,12 +62,15 @@
 			<form class="login-form" method="post">
 				<h3 class="form-title font-green">Login <?=(is_int(strpos($_SERVER["REQUEST_URI"], "dev"))? "(Dev)": "")?></h3>
 				
-				<!--Vem do arquivo empresas.php -->
-				<?=$empresasInput?>
+				<!--Vem do arquivo dominios.php -->
+				<?=$dominiosInput?>
 
 				<div class="form-group">
 					<!--ie8, ie9 does not support html5 placeholder, so we just show field title for that-->
+					<label class="control-label visible-ie8 visible-ie9">Usuário</label>
 					<input 
+						focus 
+						autofocus 
 						class="form-control form-control-solid placeholder-no-fix" 
 						type="text"
 						autocomplete="off" 
@@ -77,6 +80,7 @@
 					/>
 				</div>
 				<div class="form-group">
+					<label class="control-label visible-ie8 visible-ie9">Senha</label>
 					<input 
 						class="form-control form-control-solid placeholder-no-fix" 
 						type="password" 
@@ -84,8 +88,8 @@
 						placeholder="Senha" 
 						name="password"
 					/>
+					<a href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
 				</div>
-				<a href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
 				<?=(!empty($_POST["sourcePage"])? "<input type='hidden' name='sourcePage' value= '".$_POST["sourcePage"]."'/>": "")?>
 				<?= $msg ?>
 				<div class="form-actions">
@@ -112,8 +116,6 @@
 		<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js" type="text/javascript"></script>
 		<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery.blockui.min.js" type="text/javascript"></script>
 		<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
-
-		<?=$dataScript?>
 		<!-- FIM PLUGINS PRINCIPAL -->
 		<!-- COMECO PLUGINS DE PAGINA -->
 		<!-- FIM PLUGINS DE PAGINA -->
