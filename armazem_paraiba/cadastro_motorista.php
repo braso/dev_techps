@@ -310,7 +310,7 @@
 			$novoMotorista["enti_tx_ehPadrao"] = $ehPadrao;
 			$id = inserir("entidade", array_keys($novoMotorista), array_values($novoMotorista))[0];
 
-			if(empty($id) || get_class($id[0]) == Exception::class){
+			if(empty($id) || (is_array($id) && get_class($id[0]) == Exception::class)){
 				set_status("ERRO ao cadastrar motorista.");
 				index();
 				exit;
