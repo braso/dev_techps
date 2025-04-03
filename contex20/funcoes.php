@@ -121,6 +121,17 @@
 		}
 
 		$endosso = fopen($_SERVER["DOCUMENT_ROOT"].$CONTEX["path"]."/arquivos/endosso/".$filename, "r");
+
+		if($endosso == false){
+			set_status("ERRO: Endosso não encontrado.");
+			$_POST["returnValues"] = json_encode([
+				"HTTP_REFERER" => $_SERVER["HTTP_REFERER"],
+				"msg_status" => $_POST["msg_status"]
+			]);
+			voltar();
+			exit;
+		}
+
 		$keys = fgetcsv($endosso);
 		$values = fgetcsv($endosso);
 		$endosso = [];
