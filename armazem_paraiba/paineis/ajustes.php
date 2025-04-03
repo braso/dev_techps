@@ -1156,6 +1156,8 @@ function index() {
 		}
 	}
 	carregarJS($arquivos);
-	carregarGraficos($periodoInicio);
+	if(!empty($periodoInicio)){
+		carregarGraficos($periodoInicio);
+	}
 	rodape();
 }
