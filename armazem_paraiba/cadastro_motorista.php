@@ -915,7 +915,7 @@
 			);
 	
 			$actions["functions"][1] .= 
-				"esconderInativar('glyphicon glyphicon-remove search-remove', 11);"
+				"esconderInativar('glyphicon glyphicon-remove search-remove', 10);"
 			;
 	
 			$gridFields["actions"] = $actions["tags"];
