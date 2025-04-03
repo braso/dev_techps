@@ -88,7 +88,7 @@
 	}
 
 	function logar(){
-
+	    
 		global $turnoAtual;
 		if(empty($_POST["user"]) && !empty($_POST["username"])){
 			$_POST["user"] = $_POST["username"];
@@ -97,7 +97,6 @@
 		$error = "emptyfields";
 	
 		if(!empty($_POST["user"]) && !empty($_POST["password"])){//Tentando logar
-	
 			if(!empty($_SESSION["user_tx_login"]) && $_SESSION["user_tx_login"] != $_POST["user"]){ //Se já há um usuário logado
 				$_SESSION = [];
 				session_destroy();
@@ -115,7 +114,7 @@
 						." AND user_tx_login = '".$_POST["user"]."'"
 						." AND user_tx_senha = '".$_POST["password"]."';"
 			));
-	
+			
 			if(!empty($usuario)){ //Se encontrou um usuário
 
 				$dataHoje = strtotime(date("Y-m-d")); // Transforma a data de hoje em timestamp
@@ -158,7 +157,7 @@
 				exit;
 			}
 		}
-
+        
 		$error = "notfound";
 		$_POST["HTTP_REFERER"] = $_ENV["APP_PATH"]."/index.php?error=".$error;
 		$_POST["returnValues"] = json_encode([

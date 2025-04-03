@@ -157,8 +157,8 @@
 		<script>
 			function redirectIndex() {
 				<?php
-			$dominio = $_GET['dominio'];
-			include $dominio."/conecta.php";
+			$empresa = $_GET['empresa'];
+			include $empresa."/conecta.php";
 			global $CONTEX;?>
 				window.location.href = "<?= $_ENV["URL_BASE"].$_ENV["APP_PATH"] ?>/index.php";
 			}

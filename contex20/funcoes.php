@@ -301,7 +301,7 @@
 	// }
 
 	function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara="",$extra=""){
-		return campo($nome,$variavel,$modificador,$tamanho,"MASCARA_DOMAIN",$extra);
+		return campo($nome,$variavel,$modificador,$tamanho,"MASCARA_COMPANY",$extra);
 	}
 
 	// function carrega_array($sql, $mode = MYSQLI_BOTH){
@@ -591,9 +591,9 @@
 			case "MASCARA_HORA":
 				$type = "time";
 			break;
-			case "MASCARA_DOMAIN":
+			case "MASCARA_COMPANY":
 				$dataScript .= "$(document).ready(function() {
-						var inputField = $('#nomeDominio');
+						var inputField = $('#nomeEmpresa');
 						var domainPrefix = '".$_SERVER['HTTP_ORIGIN'].(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? '/dev_techps/': '/techps/')."';
 
 						function updateDisplayedText() {

@@ -32,10 +32,10 @@
 			$_POST["password"] = md5($_POST["password"]);
 		}
 
-		$file = $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/".$empresas[$_POST["empresa"]];
+		$file = $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/".$empresas[$_POST["empresa"]]."/index.php";
 
 		if(!empty($empresas[$_POST["empresa"]]) && file_exists($file)){
-			$formAction = $_ENV["URL_BASE"].$_ENV["APP_PATH"]."/".$empresas[$_POST["empresa"]];
+			$formAction = $_ENV["URL_BASE"].$_ENV["APP_PATH"]."/".$empresas[$_POST["empresa"]]."/index.php";
 			$formName = "formTelaPrincipal";
 		}else{
 			$formAction = "index.php?error=nullcompany";

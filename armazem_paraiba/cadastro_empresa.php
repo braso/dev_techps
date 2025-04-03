@@ -396,10 +396,10 @@
 		$iconeExcluirLogo = (!empty($input_values["logo"]))? gerarLogoExcluir($a_mod["empr_nb_id"], "excluirLogo"): "";
 
 		if(is_int(strpos($_SESSION["user_tx_nivel"], "Super Administrador"))){
-			$campo_dominio = campo_domain("Nome do Domínio","nomeDominio",$input_values["domain"]?? "",2,"domain");
+			$campo_dominio = campo_domain("Nome","nomeDominio",$input_values["domain"]?? "",2,"domain");
 			// $campo_Ehmatriz = combo("É matriz?","matriz",$input_values["Ehmatriz"]?? "",2,["sim" => "Sim", "nao" => "Não"]);
 		}else{
-			$campo_dominio = texto("Nome do Domínio",$input_values["domain"]?? "",3);
+			$campo_dominio = texto("Nome",$input_values["domain"]?? "",3);
 			// $campo_Ehmatriz = texto("É matriz?",$input_values["Ehmatriz"]?? "",2);
 		}
 		$campo_Ehmatriz = campo_hidden("matriz", (!empty($input_values["Ehmatriz"])? $input_values["Ehmatriz"]: "nao")).texto("É matriz?", ucfirst((!empty($input_values["Ehmatriz"])? $input_values["Ehmatriz"]: "Não")),2);

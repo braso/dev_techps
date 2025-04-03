@@ -19,26 +19,26 @@
 // $_POST['botao'] = '';
 // $msg = '';
 
-    function extrairDominio($url, $empresa_array) {
+    function extrairEmpresa($url, $empresa_array) {
         $parsed_url = parse_url($url);
         $path_segments = explode('/', $parsed_url['path']);
 
-        $dominio = $path_segments[1] ?? '';
+        $empresa = $path_segments[1] ?? '';
 
-        return in_array($dominio, $empresa_array) ? $dominio : null;
+        return in_array($empresa, $empresa_array) ? $empresa : null;
     }
 
     if ($_POST['botao'] == 'ENVIAR') {
-        $dominio_url = $_POST['dominio'];
-        $dominio = extrairDominio($dominio_url, $empresa_array);
+        $empresa_url = $_POST['empresa'];
+        $empresa = extrairEmpresa($empresa_url, $empresa_array);
         $login = $_POST['login'];
         
-        if(!empty($dominio)){
-            include __DIR__.'/'.$dominio."/conecta.php";
+        if(!empty($empresa)){
+            include __DIR__.'/'.$empresa."/conecta.php";
             
             global $CONTEX;
             if (!empty($login)){
-                $msg = tokenGenerate($login, $dominio);
+                $msg = tokenGenerate($login, $empresa);
             }else{ 
                 $msg = 
                     "<div class='alert alert-danger display-block'>
@@ -57,8 +57,8 @@
     }
 
     if ($_POST['botao'] == 'Redefinir senha') {
-        $dominio = $_GET['dominio'];
-        include $dominio."/conecta.php";
+        $empresa = $_GET['empresa'];
+        include $empresa."/conecta.php";
         
         $token = $_GET['token'];
         $checkTokenSql = query("SELECT user_nb_id FROM user WHERE user_tx_token = '$_GET[token]'");
@@ -145,7 +145,7 @@
             $mail->isHTML(true);
             $mail->Subject = 'Redefinição de Senha';
             $mail->Body = '<b>Redefinição de Senha</b><br>
-            Por favor, <a href="'.$_ENV["URL_BASE"].'/'.basename($caminho).'/recupera_senha.php?dominio='.$domain.'&token='.$token.'">clique aqui</a> para resetar sua senha.<br>
+            Por favor, <a href="'.$_ENV["URL_BASE"].'/'.basename($caminho).'/recupera_senha.php?empresa='.$domain.'&token='.$token.'">clique aqui</a> para resetar sua senha.<br>
             Caso você não tenha solicitado este e-mail de redefinição de senha, por favor, <a href="mailto:suporte@techps.com.br ">entre em contato</a> para que possamos resolver o problema.';
             $mail->Encoding = 'base64';
             $mail->AltBody = "Link para recupera senha: ".$_ENV["URL_BASE"].'/'.basename($caminho)."/recupera_senha.php?token=".$token;
@@ -180,7 +180,7 @@
                 document.getElementsByClassName('form-title font-green')[0].innerHTML = 'Redefinir Senha';
             }else{
                 document.getElementById('domain-selected').hidden = false;
-                document.getElementsByClassName('form-title font-green')[1].innerHTML = 'Redefinição de Senha - {$_GET["dominio"]}';
+                document.getElementsByClassName('form-title font-green')[1].innerHTML = 'Redefinição de Senha - {$_GET["empresa"]}';
             }
         </script>"
     ;

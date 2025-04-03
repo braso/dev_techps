@@ -6,7 +6,7 @@
     RewriteRule ^(.*)$ $1.php
 
     RewriteCond %{REQUEST_FILENAME} -d
-    RewriteRule ^(.*)$ %{DOCUMENT_ROOT}
+    RewriteRule ^(.*)$ %{REQUEST_FILENAME}/index.php
   
 </IfModule>
 
