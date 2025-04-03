@@ -35,7 +35,7 @@ function cadastro_placa() {
                 </div>
                 <div class="form-group col-md-6">
                     <label for="modelo">Nome do Veículo:</label>
-                    <input type="text" id="modelo" name="modelo" required placeholder="Modelo do veículo">
+                    <input type="text" id="modelo" name="modelo" required placeholder="Nome do veículo">
                 </div>
             </div>
             <div class="form-group">

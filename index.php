@@ -51,7 +51,6 @@
 			."</form>"
 		;
 		echo "<script>document.{$formName}.submit();</script>";
-
 		exit;
 	}
 
