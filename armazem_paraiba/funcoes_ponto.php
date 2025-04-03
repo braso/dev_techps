@@ -20,9 +20,21 @@
 		}
 
 		$jornadaPrevistaOriginal = $jornadaPrevista;
-		$jornadaPrevista = (new DateTime("{$data} {$jornadaPrevista}"))->format("H:i");
+		$jornadaPrevista = (new DateTime("{$data} {$jornadaPrevista}"));
 		if(!empty($abono)){
-			$jornadaPrevista = (new DateTime("{$data} {$abono}"))->diff(new DateTime("{$data} {$jornadaPrevista}"))->format("%H:%I");
+		    $abono = explode(":", $abono);
+		    if(intval($abono[0]) > 23){
+		        $abono = ["23", "59", "00"];
+		    }
+		    $abono[1] = intval($abono[1]) > 59?"59" : $abono[1];
+		    $abono = new DateTime("{$data} ".implode(":", $abono)."");
+		    if($abono > $jornadaPrevista){
+		        $jornadaPrevista = "00:00";
+		    }else{
+			    $jornadaPrevista = ($abono)->diff($jornadaPrevista)->format("%H:%I");
+		    }
+		}else{
+		    $jornadaPrevista = $jornadaPrevista->format("H:i");
 		}
 
 		return [$jornadaPrevistaOriginal, $jornadaPrevista];
