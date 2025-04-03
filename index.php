@@ -31,7 +31,7 @@
 		if(!empty($_POST["password"])){
 			$_POST["password"] = md5($_POST["password"]);
 		}
-		
+
 		$file = $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/".$empresas[$_POST["empresa"]];
 
 		if(!empty($empresas[$_POST["empresa"]]) && file_exists($file)){
@@ -51,7 +51,6 @@
 			."</form>"
 		;
 		echo "<script>document.{$formName}.submit();</script>";
-		
 		exit;
 	}
 

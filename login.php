@@ -61,7 +61,6 @@
 			<!-- COMECO LOGIN FORM -->
 			<form class="login-form" method="post">
 				<h3 class="form-title font-green">Login <?=(is_int(strpos($_SERVER["REQUEST_URI"], "dev"))? "(Dev)": "")?></h3>
-				
 				<!--Vem do arquivo empresas.php -->
 				<?=$empresasInput?>
 
@@ -124,4 +123,3 @@
 		<!-- COMECO THEME LAYOUT SCRIPTS -->
 		<!-- FIM THEME LAYOUT SCRIPTS -->
 	</body>
-</html>
