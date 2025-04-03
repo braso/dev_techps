@@ -1334,6 +1334,16 @@
 				$diaInicio = $periodoInicio->format('Y-m-d');
 				$diafim = $periodoFim->format('Y-m-d');
 
+				$userID = mysqli_fetch_all(
+					query(
+						"SELECT user_nb_id FROM user"
+						. " WHERE user_nb_entidade = '{$motorista['enti_nb_id']}'"
+					),
+					MYSQLI_ASSOC
+				);
+
+				$idUser = $userID[0]['user_nb_id'];
+
 				$pontosAtivos = mysqli_fetch_all(
 					query(
 						"SELECT DISTINCT ponto.pont_tx_data,  ponto.pont_tx_matricula, motivo.moti_tx_nome, macroponto.macr_tx_nome, 
@@ -1344,6 +1354,7 @@
 							. " AND macroponto.macr_tx_fonte = 'positron'"
 							. " LEFT JOIN user ON ponto.pont_nb_userCadastro = user.user_nb_id"
 							. " WHERE pont_tx_matricula = '$motorista[enti_tx_matricula]'"
+							. " AND pont_nb_userCadastro != '$idUser'"
 							. " AND (user.user_tx_matricula <> ponto.pont_tx_matricula OR user.user_tx_matricula IS NULL)"
 							. " AND pont_tx_status != 'inativo'"
 							. " AND pont_tx_data BETWEEN STR_TO_DATE('$diaInicio 00:00:00', '%Y-%m-%d %H:%i:%s')"
