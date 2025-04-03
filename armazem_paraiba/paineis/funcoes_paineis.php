@@ -485,6 +485,9 @@
 						];
 
 						foreach ($endossos as $endosso) {
+							if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"])){
+								continue;
+							}
 							$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
 							if (empty($endosso["totalResumo"]["he50APagar"])) {
 								$pago = calcularHorasAPagar(
@@ -912,6 +915,9 @@
 
 			if ($_POST["busca_endossado"] == "endossado") {
 				foreach ($endossos as $endosso) {
+					if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"])){
+						continue;
+					}
 					$houveInteracao = false;
 					if ($motorista["enti_nb_id"] === $endosso["endo_nb_entidade"]) {
 						$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);

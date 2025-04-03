@@ -231,7 +231,7 @@
 		));
 
 		
-		if(!empty($ultimoEndosso["endo_tx_filename"])){
+		if(!empty($ultimoEndosso["endo_tx_filename"]) && file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$ultimoEndosso["endo_tx_filename"])){
 			$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
 			$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoFinal"];
 
@@ -380,7 +380,7 @@
 				}
 			}
 			$saldoAnterior = "00:00";
-			if(!empty($ultimoEndosso["endo_tx_filename"])){
+			if(!empty($ultimoEndosso["endo_tx_filename"]) && file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$ultimoEndosso["endo_tx_filename"])){
 				$ultimoEndossoCSV = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
 				$saldoAnterior = $ultimoEndossoCSV["totalResumo"]["saldoFinal"];
 			}

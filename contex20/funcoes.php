@@ -114,13 +114,12 @@
 	}
 
 	function lerEndossoCSV(string $filename){
-		global $CONTEX;
 		
 		if(substr($filename, -4) != ".csv"){
 			$filename .= ".csv";
 		}
 
-		$endosso = fopen($_SERVER["DOCUMENT_ROOT"].$CONTEX["path"]."/arquivos/endosso/".$filename, "r");
+		$endosso = fopen($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$filename, "r");
 
 		if($endosso == false){
 			set_status("ERRO: Endosso não encontrado.");

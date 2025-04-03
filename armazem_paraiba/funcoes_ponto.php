@@ -352,6 +352,9 @@
 						];
 	
 						foreach ($endossos as $endosso) {
+							if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"])){
+								continue;
+							}
 							$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
 							if (empty($endosso["totalResumo"]["he50APagar"])) {
 								$pago = calcularHorasAPagar(
@@ -1321,6 +1324,9 @@
 		),MYSQLI_ASSOC);
 
 		foreach($endossos as &$endosso){
+			if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"])){
+				continue;
+			}
 			$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
 		}
 
