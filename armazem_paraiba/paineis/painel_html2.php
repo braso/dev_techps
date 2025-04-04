@@ -193,24 +193,6 @@
 					</table>
 				</div>
 			<?php } ?>
-			<?php if ($painelDisp === true) {?>
-				<div>
-				<h4><b>Em jornada</b></h4>
-				<div class="table-responsive">
-					<table id="tabela-emJornada" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
-						<thead>
-							<?= $rowTitulos3 ?>
-						</thead>
-						<tbody>
-							<!-- Conteúdo do json empresas será inserido aqui -->
-						</tbody>
-						<thead>
-							<?= $rowTotal ?>
-						</thead>
-					</table>
-				</div>
-				</div>
-			<?php } ?>
 
 		<?php if ($mostra === true) { ?>
 				<div class="panel-group group3" id="accordion3">

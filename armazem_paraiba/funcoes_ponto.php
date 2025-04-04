@@ -1323,8 +1323,10 @@
 				ORDER BY endo_tx_de ASC"
 		),MYSQLI_ASSOC);
 
+		
 		foreach($endossos as &$endosso){
-			if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"])){
+			// dd($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"].".csv");
+			if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"].".csv")){
 				continue;
 			}
 			$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);

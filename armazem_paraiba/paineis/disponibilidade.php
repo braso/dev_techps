@@ -243,7 +243,7 @@
     }
     
     function index() {
-        cabecalho("Relatório de disponibilidade");
+        cabecalho("Painel de disponibilidade para uma nova jornada");
 
         // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
@@ -298,7 +298,7 @@
             }
 
             if ($encontrado) {
-                $titulo = "Relatório de disponibilidade";
+                $titulo = "Painel de disponibilidade para uma nova jornada";
                 // $mostra = false;
                 $rowTitulos = "<tr id='titulos3' class='titulos3'>";
                 $rowTitulos .= "
