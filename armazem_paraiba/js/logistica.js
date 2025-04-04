@@ -328,174 +328,175 @@ document.addEventListener("DOMContentLoaded", () => {
       addRowClickListeners();
     };
   
+
+
+
+
     let startTime = null;
     let startRow = null;
     let logoState = false;
     let selectedRows = [];
     let coordinates = [];
-
-
     
-  
     function addRowClickListeners() {
-      const images = document.getElementsByClassName("row-img");
-  
-      for (let i = 0; i < images.length; i++) {
-        images[i].addEventListener("click", function () {
-          const row = this.parentNode.parentNode;
-          const cells = row.getElementsByTagName("td");
-  
-          const date = cells[0].innerText.trim();
-          const start = cells[1].innerText.trim();
-          const end = cells[2].innerText.trim();
-          const address = cells[3].innerText.trim();
-          const latitude = cells[4].innerText.trim();
-          const longitude = cells[5].innerText.trim();
-          const ignition = cells[6].innerText.trim();
-  
-          const plate = document.getElementById("plate").value.trim();
-          const comment = document.getElementById("coment").value.trim();
-  
-          const formatTime = (timeString) => {
-            if (!timeString || timeString === "undefined" || timeString.split(":").length < 2) {
-              return "";
-            }
-            const [hours, minutes] = timeString.split(":");
-            if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-              return `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`;
-            }
-            return "";
-          };
-  
-          const timeToMinutes = (timeString) => {
-            const [hours, minutes] = timeString.split(":");
-            return parseInt(hours) * 60 + parseInt(minutes);
-          };
-  
-          if (startTime === null) {
-            startTime = start;
-            startRow = row;
-            logoState = true;
-  
-            const allRows = document.querySelectorAll("table tr");
-            allRows.forEach((row) => {
-              row.style.backgroundColor = "";
-              row.style.color = "";
-              const img = row.querySelector(".row-img");
-              if (img) img.src = "imagens/LGS.png";
+        const images = document.getElementsByClassName("row-img");
+    
+        for (let i = 0; i < images.length; i++) {
+            images[i].addEventListener("click", function () {
+                const row = this.parentNode.parentNode;
+                const cells = row.getElementsByTagName("td");
+    
+                const date = cells[0].innerText.trim();
+                const start = cells[1].innerText.trim();
+                const end = cells[2].innerText.trim();
+                const address = cells[3].innerText.trim();
+                const latitude = cells[4].innerText.trim();
+                const longitude = cells[5].innerText.trim();
+                const ignition = cells[6].innerText.trim();
+    
+                const plate = document.getElementById("plate").value.trim();
+                const comment = document.getElementById("coment").value.trim();
+    
+                const formatTime = (timeString) => {
+                    if (!timeString || timeString === "undefined" || timeString.split(":").length < 2) {
+                        return "";
+                    }
+                    const [hours, minutes] = timeString.split(":");
+                    if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+                        return `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`;
+                    }
+                    return "";
+                };
+    
+                const timeToMinutes = (timeString) => {
+                    const [hours, minutes] = timeString.split(":");
+                    return parseInt(hours) * 60 + parseInt(minutes);
+                };
+    
+                // Função para resetar os estilos das linhas, exceto a primeira selecionada
+                function resetRowStyles() {
+                    const allRows = document.querySelectorAll("table tr");
+                    allRows.forEach(function (row) {
+                        row.style.backgroundColor = "";
+                        row.style.color = "";
+                        const img = row.querySelector(".row-img");
+                        if (img) img.src = "imagens/LGS.png";
+                    });
+                }
+    
+                if (startTime === null) {
+                    // Primeira seleção (início)
+                    startTime = start;
+                    startRow = row;
+                    logoState = true;
+    
+                    resetRowStyles();
+    
+                    row.style.backgroundColor = "#dde8cb";
+                    row.style.color = "black";
+                    this.src = "imagens/LGC.png";
+    
+                    selectedRows.push(row);
+                    coordinates.push({
+                        ignition,
+                        latitude: parseFloat(latitude),
+                        longitude: parseFloat(longitude),
+                        startTime: start,
+                        endTime: end,
+                        address,
+                    });
+                } else if (logoState) {
+                    // Segunda seleção (fim)
+                    const endTime = end;
+    
+                    if (timeToMinutes(endTime) <= timeToMinutes(startTime)) {
+                        alert("A hora de fim deve ser maior que a hora de início.");
+                        return;
+                    }
+    
+                    const allRows = document.querySelectorAll("table tr");
+                    const startIndex = Math.min(Array.from(allRows).indexOf(startRow), Array.from(allRows).indexOf(row));
+                    const endIndex = Math.max(Array.from(allRows).indexOf(startRow), Array.from(allRows).indexOf(row));
+    
+                    selectedRows = [];
+                    coordinates = [];
+    
+                    resetRowStyles();
+                    startRow.style.backgroundColor = "#dde8cb"; // Mantém a primeira linha verde
+                    startRow.style.color = "black";
+                    startRow.querySelector(".row-img").src = "imagens/LGC.png";
+    
+                    for (let i = startIndex; i <= endIndex; i++) {
+                        const currentRow = allRows[i];
+                        if (currentRow !== startRow) { // Não pinta a primeira linha de vermelho
+                            currentRow.style.backgroundColor = "#fcc7c7";
+                            currentRow.style.color = "black";
+                            const img = currentRow.querySelector(".row-img");
+                            if (img) img.src = "imagens/LGC.png";
+    
+                            selectedRows.push(currentRow);
+                        }
+                        const currentCells = currentRow.getElementsByTagName("td");
+                        const currentLatitude = parseFloat(currentCells[4].innerText.trim());
+                        const currentLongitude = parseFloat(currentCells[5].innerText.trim());
+                        const currentStartTime = currentCells[1].innerText.trim();
+                        const currentEndTime = currentCells[2].innerText.trim();
+                        const currentAddress = currentCells[3].innerText.trim();
+                        const currentIgnition = currentCells[6].innerText.trim();
+    
+                        coordinates.push({
+                            ignition: currentIgnition,
+                            latitude: currentLatitude,
+                            longitude: currentLongitude,
+                            startTime: currentStartTime,
+                            endTime: currentEndTime,
+                            address: currentAddress,
+                        });
+                    }
+    
+                    document.getElementById("hora").value = formatTime(startTime);
+                    document.getElementById("horaFim").value = formatTime(endTime);
+    
+                    document.getElementById(
+                        "descricao"
+                    ).innerHTML = `Registro de parada identificada no histórico de posição do sistema de rastreamento instalado no veículo, local: ${address} | Placa: ${plate} | Latitude: ${latitude} | Longitude: ${longitude} | ${comment}`;
+    
+                    const motoristaSelect = document.getElementById("motorista");
+                    for (let j = 0; j < motoristaSelect.options.length; j++) {
+                        if (motoristaSelect.options[j].value === plate) {
+                            motoristaSelect.selectedIndex = j;
+                            break;
+                        }
+                    }
+    
+                    document.getElementById("latitude").value = latitude;
+                    document.getElementById("longitude").value = longitude;
+    
+                    logoState = false;
+    
+                    document.getElementById("mapButton").style.display = "block";
+    
+                    openModal(totalParada);
+                } else {
+                    startTime = null;
+                    startRow = null;
+    
+                    resetRowStyles();
+    
+                    logoState = true;
+    
+                    document.getElementById("mapButton").style.display = "none";
+    
+                    selectedRows = [];
+                    coordinates = [];
+    
+                    closeModal();
+                }
             });
-  
-            row.style.backgroundColor = "#dde8cb";
-            row.style.color = "black";
-            this.src = "imagens/LGC.png";
-  
-            selectedRows.push(row);
-            coordinates.push({
-              ignition,
-              latitude: parseFloat(latitude),
-              longitude: parseFloat(longitude),
-              startTime: start,
-              endTime: end,
-              address,
-            });
-          } else if (logoState) {
-            const endTime = end;
-  
-            if (timeToMinutes(endTime) <= timeToMinutes(startTime)) {
-              alert("A hora de fim deve ser maior que a hora de início.");
-              return;
-            }
-  
-            const allRows = document.querySelectorAll("table tr");
-            const startIndex = Math.min(Array.from(allRows).indexOf(startRow), Array.from(allRows).indexOf(row));
-            const endIndex = Math.max(Array.from(allRows).indexOf(startRow), Array.from(allRows).indexOf(row));
-  
-            selectedRows = [];
-            coordinates = [];
-  
-            for (let i = startIndex; i <= endIndex; i++) {
-              const currentRow = allRows[i];
-              currentRow.style.backgroundColor = "#fcc7c7";
-              currentRow.style.color = "black";
-              const img = currentRow.querySelector(".row-img");
-              if (img) img.src = "imagens/LGC.png";
-  
-              selectedRows.push(currentRow);
-              const currentCells = currentRow.getElementsByTagName("td");
-              const currentLatitude = parseFloat(currentCells[4].innerText.trim());
-              const currentLongitude = parseFloat(currentCells[5].innerText.trim());
-              const currentStartTime = currentCells[1].innerText.trim();
-              const currentEndTime = currentCells[2].innerText.trim();
-              const currentAddress = currentCells[3].innerText.trim();
-              const currentIgnition = currentCells[6].innerText.trim();
-  
-              coordinates.push({
-                ignition: currentIgnition,
-                latitude: currentLatitude,
-                longitude: currentLongitude,
-                startTime: currentStartTime,
-                endTime: currentEndTime,
-                address: currentAddress,
-              });
-            }
-  
-            const firstStartTime = selectedRows[0].getElementsByTagName("td")[1].innerText.trim();
-            const lastEndTime = selectedRows[selectedRows.length - 1].getElementsByTagName("td")[2].innerText.trim();
-  
-            const totalParada = timeToMinutes(lastEndTime) - timeToMinutes(firstStartTime);
-  
-            row.style.backgroundColor = "#fcc7c7";
-            row.style.color = "black";
-  
-            document.getElementById("hora").value = formatTime(startTime);
-            document.getElementById("horaFim").value = formatTime(endTime);
-  
-            document.getElementById(
-              "descricao"
-            ).innerHTML = `Registro de parada identificada no histórico de posição do sistema de rastreamento instalado no veículo, local: ${address} | Placa: ${plate} | Latitude: ${latitude} | Longitude: ${longitude} | ${comment}`;
-  
-            const motoristaSelect = document.getElementById("motorista");
-            for (let j = 0; j < motoristaSelect.options.length; j++) {
-              if (motoristaSelect.options[j].value === plate) {
-                motoristaSelect.selectedIndex = j;
-                break;
-              }
-            }
-  
-            document.getElementById("latitude").value = latitude;
-            document.getElementById("longitude").value = longitude;
-  
-            logoState = false;
-  
-            document.getElementById("mapButton").style.display = "block";
-  
-            openModal(totalParada);
-          } else {
-            startTime = null;
-            startRow = null;
-  
-            const allRows = document.querySelectorAll("table tr");
-            allRows.forEach((row) => {
-              row.style.backgroundColor = "";
-              row.style.color = "";
-              const img = row.querySelector(".row-img");
-              if (img) img.src = "imagens/LGS.png";
-            });
-  
-            logoState = true;
-  
-            document.getElementById("mapButton").style.display = "none";
-  
-            selectedRows = [];
-            coordinates = [];
-  
-            closeModal();
-          }
-        });
-      }
+        }
     }
-  
-    document.addEventListener("DOMContentLoaded", addRowClickListeners);
+    
+    document.addEventListener("DOMContentLoaded", addRowClickListeners);  
   
     function calcularDistancia(lat1, lon1, lat2, lon2) {
         const R = 6371; // Raio da Terra em km
@@ -564,6 +565,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   
+
+
 
 
 
@@ -667,35 +670,36 @@ document.addEventListener("DOMContentLoaded", () => {
                     <p><a href="${googleMapsLink}" target="_blank">Ver Rota no Google Maps</a></p>
                   </div>`;
     
-          let icon;
+         let icon;
           if (index === 0) {
-            // Primeiro marcador: verde
-            icon = L.icon({
-              iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-              shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-              iconSize: [25, 41],
-              iconAnchor: [12, 41],
-              popupAnchor: [1, -34],
-              shadowSize: [41, 41]
+            // Primeiro marcador: verde com label (destaque)
+            icon = L.divIcon({
+              className: 'custom-marker-icon',
+              html: `<img src='https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png' style='width: 30px; height: 48px; position: relative; z-index: 1;'>
+                       <div style="position: absolute; top: 0px; left: 50%; transform: translateX(-50%); font-size: 14px; font-weight: bold; color: black; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; z-index: 2; width: 36px; text-align: center;">1º</div>`,
+              iconSize: [30, 48],  // Slightly larger
+              iconAnchor: [15, 48], // Adjust anchor
+              popupAnchor: [0, -48]
             });
           } else if (index === coordinates.length - 1) {
-            // Último marcador: emoji de bandeira de chegada
+            // Último marcador: vermelho com label
             icon = L.divIcon({
-              className: 'custom-emoji-icon',
-              html: '<div style="font-size: 24px;">🏁</div>', // Use um emoji como marcador
+              className: 'custom-marker-icon',
+              html: `<img src='https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png' style='width: 25px; height: 41px; position: relative; z-index: 1;'>
+                       <div style="position: absolute; top: 0px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: bold; color: black; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; z-index: 2; width: 30px; text-align: center;">${index + 1}º</div>`,
               iconSize: [25, 41],
               iconAnchor: [12, 41],
-              popupAnchor: [1, -34]
+              popupAnchor: [0, -42]
             });
           } else {
-            // Marcadores intermediários: amarelo
-            icon = L.icon({
-              iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png',
-              shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+            // Marcadores intermediários: amarelo com label
+            icon = L.divIcon({
+              className: 'custom-marker-icon',
+              html: `<img src='https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png' style='width: 25px; height: 41px; position: relative; z-index: 1;'>
+                       <div style="position: absolute; top: 0px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: bold; color: black; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; z-index: 2; width: 30px; text-align: center;">${index + 1}º</div>`,
               iconSize: [25, 41],
               iconAnchor: [12, 41],
-              popupAnchor: [1, -34],
-              shadowSize: [41, 41]
+              popupAnchor: [0, -42]
             });
           }
     
@@ -706,6 +710,8 @@ document.addEventListener("DOMContentLoaded", () => {
           // Não abre o popup automaticamente
         }
       });
+
+      
     
       var group = new L.featureGroup(
         coordinates.map(function (coord) {
@@ -714,7 +720,6 @@ document.addEventListener("DOMContentLoaded", () => {
       );
       map.fitBounds(group.getBounds());
     }
-    
     function resetSelection() {
       var allRows = document.querySelectorAll("table tr");
       allRows.forEach(function (row) {
@@ -818,8 +823,10 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${row.endereco}</td>
         <td>${row.latitude}</td>
         <td>${row.longitude}</td>
-        <td>${ `<i class="fas fa-power-off" style="color: ` + (ignition === "true" ? `green` : `red`) + `;"></i>` }</td>
-        <td>${calculateTotalTime(stopStart, stopEnd)}</td>
+        <td>
+      <i class="fas fa-power-off" style="color: ${ignition === "true" ? "green" : "red"};"></i><br>
+    <span>${ignition === "true" ? "Ligada" : "Desligado"}</span>
+</td>        <td>${calculateTotalTime(stopStart, stopEnd)}</td>
         <td><a href="https://www.google.com/maps/place/${row.latitude},${row.longitude}" target="_blank"><ion-icon name="map-outline"></ion-icon></a></td>
         <td>${formatDistance(row.hodometro)}</td> <!-- Formatando a distância do hodômetro -->
         <td>${hodometroDifference}</td> <!-- Exibe a diferença de hodômetro -->`;
