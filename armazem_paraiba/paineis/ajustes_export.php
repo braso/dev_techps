@@ -262,6 +262,7 @@ function gerarRelatorio($tipo = 'pdf') {
             $pdf->Cell($larguras[0] + $larguras[1], 7, 'TOTAL', 1, 0, 'C');
             $pdf->SetFont('helvetica', '', 10);
             $pdf->Cell($larguras[2], 7, $totalFuncionarios . ' funcionários', 1, 0, 'C');
+            $pdf->Cell($larguras[3], 7, '', 1, 0, 'C');
             $pdf->Cell($larguras[3], 7, $totalQuantidade . ' ocorrências', 1, 1, 'C');
 
             $pdf->SetFont('helvetica', 'B', 10);
@@ -275,25 +276,37 @@ function gerarRelatorio($tipo = 'pdf') {
             foreach ($funcionarios as $dados) {
                 $tiposTexto = '';
                 if (!empty($dados['tipos'])) {
-                    $tiposArray = array_map(
-                        fn($tipo, $qtd) => "$tipo: $qtd",
+                    $tiposTexto = implode(' | ', array_map(
+                        function($tipo, $qtd) {
+                            return "$tipo: $qtd";
+                        },
                         array_keys($dados['tipos']),
                         $dados['tipos']
-                    );
-                    $tiposTexto = implode(', ', $tiposArray);
+                    ));
                 }
 
+                // Altura baseada no conteúdo de "Tipos"
+                $alturaLinha = max(7, $pdf->GetStringHeight($larguras[4], $tiposTexto));
+                    
+                // Verifica se há espaço suficiente na página
+                $espacoRestante = $pdf->GetPageHeight() - $pdf->GetY() - $pdf->getFooterMargin();
+                if ($alturaLinha > $espacoRestante) {
+                    $pdf->AddPage();
+                }
+                
+                $pdf->Cell($larguras[0], $alturaLinha, $dados['funcionario']['matricula'], 1, 0);
+                $pdf->Cell($larguras[1], $alturaLinha, $dados['funcionario']['ocupacao'], 1, 0);
+                $pdf->Cell($larguras[2], $alturaLinha, $dados['funcionario']['nome'], 1, 0);
+
+                // $pdf->setCellPaddings(0, 1, 0, 1);
                 $y = $pdf->GetY();
-
-                $pdf->Cell($larguras[0], 7, $dados['funcionario']['matricula'], 1, 0);
-                $pdf->Cell($larguras[1], 7, $dados['funcionario']['ocupacao'], 1, 0);
-                $pdf->Cell($larguras[2], 7, $dados['funcionario']['nome'], 1, 0);
-
                 $xTipos = $pdf->GetX();
-                $pdf->MultiCell($larguras[4], 7, $tiposTexto, 1, 'L', false, 0, $xTipos, $y);
 
+                $pdf->MultiCell($larguras[4], $alturaLinha, $tiposTexto, 1, 'L', false, 0, $xTipos, $y);
+            
                 $pdf->SetXY($xTipos + $larguras[4], $y);
-                $pdf->Cell($larguras[3], 7, $dados['quantidade'], 1, 1, 'C');
+                $pdf->setCellPaddings(0, 0, 0, 0);
+                $pdf->Cell($larguras[3], $alturaLinha, $dados['quantidade'], 1, 1, 'C');
             }
         } else {
             foreach ($resultado2 as $motivo => $funcionarios) {
@@ -322,12 +335,13 @@ function gerarRelatorio($tipo = 'pdf') {
                     foreach ($funcionarios as $dados) {
                         $tiposTexto = '';
                         if (!empty($dados['tipos'])) {
-                            $tiposArray = array_map(
-                                fn($tipo, $qtd) => "$tipo: $qtd",
+                            $tiposTexto = implode(' | ', array_map(
+                                function($tipo, $qtd) {
+                                    return "$tipo: $qtd";
+                                },
                                 array_keys($dados['tipos']),
                                 $dados['tipos']
-                            );
-                            $tiposTexto = implode(', ', $tiposArray);
+                            ));
                         }
                     
                         // Altura baseada no conteúdo de "Tipos"
