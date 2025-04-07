@@ -29,37 +29,76 @@ $pastaAjuste = dir($path);
 while ($arquivo = $pastaAjuste->read()) {
     if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
         $arquivo = $path . "/" . $arquivo;
+        $arquivos[] = $arquivo;
         $json = json_decode(file_get_contents($arquivo), true);
-        foreach ($json['pontos'] as $key) {
-            if ($key['moti_tx_nome'] === null) {
-                continue;
-            }
-            
-            if ($motivoFiltro && $key['moti_tx_nome'] != $motivoFiltro) {
+
+        // Processa cada chave do JSON
+        foreach ($json as $chave => $valor) {
+            // Ignora as chaves especificadas
+            if (in_array($chave, $chavesIgnorar)) {
                 continue;
             }
 
-            $motivo = $key['moti_tx_nome'];
+            // Verifica se é um tipo de ponto válido
+            if (is_array($valor) && isset($valor['ativo']) && isset($valor['inativo'])) {
+                // Inicializa a chave no array de totais se não existir
+                if (!isset($totais[$chave])) {
+                    $totais[$chave] = ['ativo' => 0, 'inativo' => 0];
+                }
+
+                // Soma os valores (com conversão para inteiro para segurança)
+                $totais[$chave]['ativo'] += (int)$valor['ativo'];
+                $totais[$chave]['inativo'] += (int)$valor['inativo'];
+            }
+        }
+        foreach ($json['pontos'] as $key) {
+            // Filtra apenas pontos com status "ativo" (case-insensitive)
+            if (strtolower($key['pont_tx_status'] ?? '') !== 'ativo') {
+                continue; // Pula se não for "ativo"
+            }
+        
+            // Define o motivo
+            $motivo = $key['moti_tx_nome'] ?? 'MOTIVO_NAO_INFORMADO';
+        
+            // Contagem geral por motivo
+            if (!isset($resultado[$motivo])) {
+                $resultado[$motivo] = 0;
+            }
+            $resultado[$motivo]++;
+        
+            // Agrupamento por motivo e funcionário
             if (!isset($resultado2[$motivo])) {
                 $resultado2[$motivo] = [];
             }
-
+        
             $dadosFunc = [
                 "matricula" => $json["matricula"] ?? 'SEM_MATRICULA',
                 "nome" => $json["nome"] ?? 'NOME_NAO_INFORMADO',
                 "ocupacao" => $json["ocupacao"] ?? 'OCUPACAO_NAO_INFORMADA'
             ];
-
+        
             $funcionarioKey = $dadosFunc['matricula'] ?? md5($dadosFunc['nome']);
-            
+        
             if (!isset($resultado2[$motivo][$funcionarioKey])) {
                 $resultado2[$motivo][$funcionarioKey] = [
                     'funcionario' => $dadosFunc,
-                    'quantidade' => 0
+                    'quantidade' => 0,
+                    'tipos' => [] // ← adiciona array para tipos
                 ];
             }
+        
+            // Incrementa quantidade
             $resultado2[$motivo][$funcionarioKey]['quantidade']++;
+        
+            // Armazena tipo do campo macr_tx_nome
+            $tipo = $key['macr_tx_nome'] ?? 'TIPO_NAO_INFORMADO';
+        
+            if (!isset($resultado2[$motivo][$funcionarioKey]['tipos'][$tipo])) {
+                $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo] = 0;
+            }
+            $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo]++;
         }
+        $empresas[] = $json;
     }
 }
 $pastaAjuste->close();
@@ -75,10 +114,10 @@ class CustomPDF extends TCPDF {
     public function Header() {
         $imgWidth = 50;
         $imgHeight = 15;
-        $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth, $imgHeight);
-        $this->Image(__DIR__ ."/../".self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
+        // $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth, $imgHeight);
+        // $this->Image(__DIR__ ."/../".self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
         $this->SetFont('helvetica', 'B', 12);
-        $this->Cell(0, 15, 'Relatório Ajustes de Pontos Ativos', 0, 1, 'C');
+        $this->Cell(0, 15, 'Relatório Ajustes de Pontos Inseridos', 0, 1, 'C');
         $this->Ln(15);
     }
 
@@ -98,66 +137,96 @@ function gerarRelatorio($tipo = 'pdf') {
     
     if ($tipo === 'csv') {
         // Gera CSV com mesmo conteúdo do PDF
+        $nomeArquivo = 'ajustes_pontos_ativos_' . date('d-m-Y_H-i-s') . '.csv'; // Corrigido para evitar ":" no nome
+
         header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename=ajustes_pontos_ativos_' . date('d/m/Y_H:i:s') . '.csv');
-        
+        header('Content-Disposition: attachment; filename="' . $nomeArquivo . '"');
+
+        // Abre output com codificação UTF-8 (adiciona BOM para Excel)
         $output = fopen('php://output', 'w');
-        
+        fputs($output, chr(0xEF).chr(0xBB).chr(0xBF)); // Adiciona BOM UTF-8
+
         // Cabeçalho do CSV
-        fputcsv($output, ['Relatório Ajustes de Pontos Ativos']);
-        fputcsv($output, ['Período: ' . $periodoInicio->format("d/m/Y") . ' a ' . $periodoFim->format("d/m/Y")]);
-        fputcsv($output, ['Empresa: ' . $empresa['empr_tx_nome']]);
-        fputcsv($output, []); // Linha vazia
-        
+        fputcsv($output, ['Relatório Ajustes de Pontos Inseridos'], ';');
+        fputcsv($output, ['Período: ' . $periodoInicio->format("d/m/Y") . ' a ' . $periodoFim->format("d/m/Y")], ';');
+        fputcsv($output, ['Empresa: ' . $empresa['empr_tx_nome']], ';');
+        fputcsv($output, [], ';'); // Linha vazia
+
         if ($motivoFiltro && isset($resultado2[$motivoFiltro])) {
             $funcionarios = $resultado2[$motivoFiltro];
             $totalQuantidade = array_sum(array_column($funcionarios, 'quantidade'));
             $totalFuncionarios = count($funcionarios);
-            
-            fputcsv($output, ['Motivo: ' . $motivoFiltro]);
-            fputcsv($output, ['TOTAL', $totalFuncionarios . ' funcionários', $totalQuantidade . ' ocorrências']);
-            fputcsv($output, ['Matrícula', 'Ocupação', 'Nome', 'Quantidade']);
-            
+
+            fputcsv($output, ['Motivo: ' . $motivoFiltro], ';');
+            fputcsv($output, ['TOTAL', $totalFuncionarios . ' funcionários', $totalQuantidade . ' ocorrências'], ';');
+            fputcsv($output, ['Matrícula', 'Ocupação', 'Nome', 'Tipos', 'Quantidade'], ';');
+
             foreach ($funcionarios as $dados) {
+                $tiposTexto = '';
+                if (!empty($dados['tipos'])) {
+                    $tiposTexto = implode(' | ', array_map(
+                        function($tipo, $qtd) {
+                            return "$tipo: $qtd";
+                        },
+                        array_keys($dados['tipos']),
+                        $dados['tipos']
+                    ));
+                }
+
                 fputcsv($output, [
                     $dados['funcionario']['matricula'],
                     $dados['funcionario']['ocupacao'],
                     $dados['funcionario']['nome'],
+                    $tiposTexto,
                     $dados['quantidade']
-                ]);
+                ], ';');
             }
+
         } else {
             foreach ($resultado2 as $motivo => $funcionarios) {
                 if (!empty($funcionarios)) {
                     $totalQuantidade = array_sum(array_column($funcionarios, 'quantidade'));
                     $totalFuncionarios = count($funcionarios);
-                    
-                    fputcsv($output, ['Motivo: ' . $motivo]);
-                    fputcsv($output, ['TOTAL', $totalFuncionarios . ' funcionários', $totalQuantidade . ' ocorrências']);
-                    fputcsv($output, ['Matrícula', 'Ocupação', 'Nome', 'Quantidade']);
-                    
+
+                    fputcsv($output, ['Motivo: ' . $motivo], ';');
+                    fputcsv($output, ['TOTAL', $totalFuncionarios . ' funcionários', $totalQuantidade . ' ocorrências'], ';');
+                    fputcsv($output, ['Matrícula', 'Ocupação', 'Nome', 'Tipos', 'Quantidade'], ';');
+
                     foreach ($funcionarios as $dados) {
+                        $tiposTexto = '';
+                        if (!empty($dados['tipos'])) {
+                            $tiposTexto = implode(' | ', array_map(
+                                function($tipo, $qtd) {
+                                    return "$tipo: $qtd";
+                                },
+                                array_keys($dados['tipos']),
+                                $dados['tipos']
+                            ));
+                        }
+
                         fputcsv($output, [
                             $dados['funcionario']['matricula'],
                             $dados['funcionario']['ocupacao'],
                             $dados['funcionario']['nome'],
+                            $tiposTexto,
                             $dados['quantidade']
-                        ]);
+                        ], ';');
                     }
-                    
-                    fputcsv($output, []); // Linha vazia entre motivos
+
+                    fputcsv($output, [], ';'); // Linha vazia entre motivos
                 }
             }
         }
-        
+
         fclose($output);
         exit;
+
     } else {
         // Gera PDF
-        $pdf = new CustomPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+        $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
         $pdf->SetCreator('TechPS');
         $pdf->SetAuthor('TechPS');
-        $pdf->SetTitle('Relatório Ajustes de Pontos Ativos');
+        $pdf->SetTitle('Relatório Ajustes de Pontos Inseridos');
         $pdf->SetMargins(10, 25, 10);
         $pdf->SetHeaderMargin(10);
         $pdf->SetFooterMargin(10);
@@ -178,7 +247,7 @@ function gerarRelatorio($tipo = 'pdf') {
         $pdf->Ln(5);
 
         // Configuração das colunas
-        $larguras = [20, 20, 100, 30];
+        $larguras = [20, 25, 100, 70, 70];
 
         // Processa os dados conforme o filtro
         if ($motivoFiltro && isset($resultado2[$motivoFiltro])) {
@@ -199,13 +268,31 @@ function gerarRelatorio($tipo = 'pdf') {
             $pdf->Cell($larguras[0], 7, 'Matrícula', 1, 0, 'C');
             $pdf->Cell($larguras[1], 7, 'Ocupação', 1, 0, 'C');
             $pdf->Cell($larguras[2], 7, 'Nome', 1, 0, 'C');
+            $pdf->Cell($larguras[4], 7, 'Tipos', 1, 0, 'C');
             $pdf->Cell($larguras[3], 7, 'Quantidade', 1, 1, 'C');
 
             $pdf->SetFont('helvetica', '', 10);
             foreach ($funcionarios as $dados) {
-                $pdf->Cell($larguras[0], 7, $dados['funcionario']['matricula'], 1);
-                $pdf->Cell($larguras[1], 7, $dados['funcionario']['ocupacao'], 1);
-                $pdf->Cell($larguras[2], 7, $dados['funcionario']['nome'], 1);
+                $tiposTexto = '';
+                if (!empty($dados['tipos'])) {
+                    $tiposArray = array_map(
+                        fn($tipo, $qtd) => "$tipo: $qtd",
+                        array_keys($dados['tipos']),
+                        $dados['tipos']
+                    );
+                    $tiposTexto = implode(', ', $tiposArray);
+                }
+
+                $y = $pdf->GetY();
+
+                $pdf->Cell($larguras[0], 7, $dados['funcionario']['matricula'], 1, 0);
+                $pdf->Cell($larguras[1], 7, $dados['funcionario']['ocupacao'], 1, 0);
+                $pdf->Cell($larguras[2], 7, $dados['funcionario']['nome'], 1, 0);
+
+                $xTipos = $pdf->GetX();
+                $pdf->MultiCell($larguras[4], 7, $tiposTexto, 1, 'L', false, 0, $xTipos, $y);
+
+                $pdf->SetXY($xTipos + $larguras[4], $y);
                 $pdf->Cell($larguras[3], 7, $dados['quantidade'], 1, 1, 'C');
             }
         } else {
@@ -221,30 +308,62 @@ function gerarRelatorio($tipo = 'pdf') {
                     $pdf->Cell($larguras[0] + $larguras[1], 7, 'TOTAL', 1, 0, 'C');
                     $pdf->SetFont('helvetica', '', 10);
                     $pdf->Cell($larguras[2], 7, $totalFuncionarios . ' funcionários', 1, 0, 'C');
+                    $pdf->Cell($larguras[3], 7, ' ', 1, 0, 'C');
                     $pdf->Cell($larguras[3], 7, $totalQuantidade . ' ocorrências', 1, 1, 'C');
 
                     $pdf->SetFont('helvetica', 'B', 10);
                     $pdf->Cell($larguras[0], 7, 'Matrícula', 1, 0, 'C');
                     $pdf->Cell($larguras[1], 7, 'Ocupação', 1, 0, 'C');
                     $pdf->Cell($larguras[2], 7, 'Nome', 1, 0, 'C');
+                    $pdf->Cell($larguras[4], 7, 'Tipos', 1, 0, 'C');
                     $pdf->Cell($larguras[3], 7, 'Quantidade', 1, 1, 'C');
 
                     $pdf->SetFont('helvetica', '', 10);
                     foreach ($funcionarios as $dados) {
-                        $pdf->Cell($larguras[0], 7, $dados['funcionario']['matricula'], 1);
-                        $pdf->Cell($larguras[1], 7, $dados['funcionario']['ocupacao'], 1);
-                        $pdf->Cell($larguras[2], 7, $dados['funcionario']['nome'], 1);
-                        $pdf->Cell($larguras[3], 7, $dados['quantidade'], 1, 1, 'C');
+                        $tiposTexto = '';
+                        if (!empty($dados['tipos'])) {
+                            $tiposArray = array_map(
+                                fn($tipo, $qtd) => "$tipo: $qtd",
+                                array_keys($dados['tipos']),
+                                $dados['tipos']
+                            );
+                            $tiposTexto = implode(', ', $tiposArray);
+                        }
+                    
+                        // Altura baseada no conteúdo de "Tipos"
+                        $alturaLinha = max(7, $pdf->GetStringHeight($larguras[4], $tiposTexto));
+                    
+                        // Verifica se há espaço suficiente na página
+                        $espacoRestante = $pdf->GetPageHeight() - $pdf->GetY() - $pdf->getFooterMargin();
+                        if ($alturaLinha > $espacoRestante) {
+                            $pdf->AddPage();
+                        }
+                        
+                        $pdf->Cell($larguras[0], $alturaLinha, $dados['funcionario']['matricula'], 1, 0);
+                        $pdf->Cell($larguras[1], $alturaLinha, $dados['funcionario']['ocupacao'], 1, 0);
+                        $pdf->Cell($larguras[2], $alturaLinha, $dados['funcionario']['nome'], 1, 0);
+
+                        // $pdf->setCellPaddings(0, 1, 0, 1);
+                        $y = $pdf->GetY();
+                        $xTipos = $pdf->GetX();
+
+                        $pdf->MultiCell($larguras[4], $alturaLinha, $tiposTexto, 1, 'L', false, 0, $xTipos, $y);
+                    
+                        $pdf->SetXY($xTipos + $larguras[4], $y);
+                        $pdf->setCellPaddings(0, 0, 0, 0);
+                        $pdf->Cell($larguras[3], $alturaLinha, $dados['quantidade'], 1, 1, 'C');
                     }
 
                     end($resultado2);
                     if ($motivo !== key($resultado2)) {
                         $pdf->AddPage();
                     }
+
+                    $pdf->Ln(5);
                 }
-                $pdf->Ln(5);
             }
         }
+
 
         $nomeArquivo = $motivoFiltro
             ? 'ajustes_de_pontos_' . strtolower(str_replace(' ', '_', $motivoFiltro)) . '.pdf'

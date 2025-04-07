@@ -432,29 +432,38 @@ function carregarJS(array $arquivos) {
 							<td>\${totalFuncionarios}</td>
 							<td><strong>Total Ocorrências:</strong></td>
 							<td>\${totalOcorrencias}</td>
+							<td></td>
 						</tr>
 							<tr>
 								<th>matrícula</th>
 								<th>Ocupação</th>
 								<th>Funcionário</th>
+								<th>Tipos</th>
 								<th>Quantidade</th>
 							</tr>
 						</thead>
 						<tbody>`;
-				   Object.keys(pontos).sort((a, b) => {
-						const nomeA = pontos[a].funcionario.nome || '';
-						const nomeB = pontos[b].funcionario.nome || '';
-						return nomeA.localeCompare(nomeB);
-					}).forEach(id => {
-						const ponto = pontos[id];
-						modalContent += `
-							<tr>
-								<td>\${ponto.funcionario.matricula}</td>
-								<td>\${ponto.funcionario.ocupacao}</td>
-								<td>\${ponto.funcionario.nome || 'N/A'}</td>
-								<td>\${ponto.quantidade}</td>
-							</tr>`;
-					});
+					Object.keys(pontos).sort((a, b) => {
+							const nomeA = pontos[a].funcionario.nome || '';
+							const nomeB = pontos[b].funcionario.nome || '';
+							return nomeA.localeCompare(nomeB);
+						}).forEach(id => {
+							const ponto = pontos[id];
+
+							// Constrói os tipos e quantidades
+							const tiposHTML = Object.entries(ponto.tipos || {})
+								.map(([tipo, qtd]) => `\${tipo}: \${qtd}`)
+								.join('<br>');
+
+							modalContent += `
+								<tr>
+									<td>\${ponto.funcionario.matricula}</td>
+									<td>\${ponto.funcionario.ocupacao}</td>
+									<td>\${ponto.funcionario.nome || 'N/A'}</td>
+									<td>\${tiposHTML}</td>
+									<td>\${ponto.quantidade}</td>
+								</tr>`;
+						});
 
 				modalContent += `
 									</tbody>
@@ -470,7 +479,7 @@ function carregarJS(array $arquivos) {
 							'<span aria-hidden=\"true\">&times;</span>' +
 							'</button>' +
 							'<h3 class=\"modal-title\" id=\"dynamicModalLabel\">' +
-							'Funcionários com o motivo de ajustes ativos: '+motivo+ 
+							'Funcionários com o motivo de ajustes Inseridos: '+motivo+ 
 							'</h3>' +
 						'</div>' +
 						'<div class=\"modal-body\">' +
@@ -515,20 +524,22 @@ function carregarJS(array $arquivos) {
 						<table class=\"table table-bordered table-hover\">
 							<thead>
 							<tr>
-								<th colspan=\"4\" style=\"font-size: 1.1em; padding: 10px;\">
+								<th colspan=\"5\" style=\"font-size: 1.1em; padding: 10px; \">
 									Motivo: \${motivo}
 								</th>
 							</tr>
 							<tr>
-								<td><strong>Total Funcionários:</strong></td>
+								<td style=\"width: 113px;\"><strong>Total Funcionários:</strong></td>
 								<td>\${totalFuncionarios}</td>
 								<td><strong>Total Ocorrências:</strong></td>
 								<td>\${totalOcorrencias}</td>
+								<td></td>
 							</tr>
 								<tr>
 									<th>Matrícula</th>
 									<th>Ocupação</th>
 									<th>Funcionário</th>
+									<th>Tipos/th>
 									<th>Quantidade</th>
 								</tr>
 							</thead>
@@ -541,11 +552,18 @@ function carregarJS(array $arquivos) {
 						return nomeA.localeCompare(nomeB);
 					}).forEach(id => {
 						const ponto = pontos[id];
+
+						// Constrói os tipos e quantidades
+						const tiposHTML = Object.entries(ponto.tipos || {})
+							.map(([tipo, qtd]) => `\${tipo}: \${qtd}`)
+							.join('<br>');
+
 						modalContent += `
 							<tr>
 								<td>\${ponto.funcionario.matricula}</td>
 								<td>\${ponto.funcionario.ocupacao}</td>
 								<td>\${ponto.funcionario.nome || 'N/A'}</td>
+								<td>\${tiposHTML}</td>
 								<td>\${ponto.quantidade}</td>
 							</tr>`;
 					});
@@ -566,7 +584,7 @@ function carregarJS(array $arquivos) {
 							'<span aria-hidden=\"true\">&times;</span>' +
 							'</button>' +
 							'<h3 class=\"modal-title\" id=\"dynamicModalLabel\">' +
-							'Relatório Completo de Ajustes de Ponto Ativos' + 
+							'Relatório Completo de Ajustes de Ponto Inseridos' + 
 							'</h3>' +
 						'</div>' +
 						'<div class=\"modal-body\" style=\"max-height: 70vh; overflow-y: auto;\">' +
@@ -772,39 +790,48 @@ function index() {
 						if (strtolower($key['pont_tx_status'] ?? '') !== 'ativo') {
 							continue; // Pula se não for "ativo"
 						}
-
-						// Define o motivo (considera null como válido)
-						$motivo = $key['moti_tx_nome'] ?? 'MOTIVO_NAO_INFORMADO'; // Opção 1: Substitui null
-						// $motivo = $key['moti_tx_nome']; // Opção 2: Mantém null (se preferir)
-
+					
+						// Define o motivo
+						$motivo = $key['moti_tx_nome'] ?? 'MOTIVO_NAO_INFORMADO';
+					
 						// Contagem geral por motivo
 						if (!isset($resultado[$motivo])) {
 							$resultado[$motivo] = 0;
 						}
 						$resultado[$motivo]++;
-
+					
 						// Agrupamento por motivo e funcionário
 						if (!isset($resultado2[$motivo])) {
 							$resultado2[$motivo] = [];
 						}
-
+					
 						$dadosFunc = [
 							"matricula" => $json["matricula"] ?? 'SEM_MATRICULA',
 							"nome" => $json["nome"] ?? 'NOME_NAO_INFORMADO',
 							"ocupacao" => $json["ocupacao"] ?? 'OCUPACAO_NAO_INFORMADA'
 						];
-
+					
 						$funcionarioKey = $dadosFunc['matricula'] ?? md5($dadosFunc['nome']);
-
+					
 						if (!isset($resultado2[$motivo][$funcionarioKey])) {
 							$resultado2[$motivo][$funcionarioKey] = [
 								'funcionario' => $dadosFunc,
-								'quantidade' => 0
+								'quantidade' => 0,
+								'tipos' => [] // ← adiciona array para tipos
 							];
 						}
+					
+						// Incrementa quantidade
 						$resultado2[$motivo][$funcionarioKey]['quantidade']++;
+					
+						// Armazena tipo do campo macr_tx_nome
+						$tipo = $key['macr_tx_nome'] ?? 'TIPO_NAO_INFORMADO';
+					
+						if (!isset($resultado2[$motivo][$funcionarioKey]['tipos'][$tipo])) {
+							$resultado2[$motivo][$funcionarioKey]['tipos'][$tipo] = 0;
+						}
+						$resultado2[$motivo][$funcionarioKey]['tipos'][$tipo]++;
 					}
-
 					$empresas[] = $json;
 				}
 			}
@@ -823,7 +850,7 @@ function index() {
 							style='width: 500px !important;'>
 							<thead>
 								<tr>
-									<th colspan='4' style='text-align: center;'><b>Ajustes Ativos</b></th>
+									<th colspan='4' style='text-align: center;'><b>Ajustes Inseridos</b></th>
 							</thead>
 							<thead>
 								<tr>
@@ -950,32 +977,32 @@ function index() {
 					"<th></th>"
 					. "<th></th>"
 					. "<th></th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
 					. "<th></th>";
 			} else {
 				$rowTotais .=

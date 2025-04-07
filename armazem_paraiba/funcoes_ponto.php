@@ -1325,8 +1325,7 @@
 
 		
 		foreach($endossos as &$endosso){
-			// dd($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"].".csv");
-			if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"].".csv")){
+			if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"])){
 				continue;
 			}
 			$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
