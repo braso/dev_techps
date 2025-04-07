@@ -1085,10 +1085,6 @@
 						$totalMotorista["refeicao"]++;
 						$houveInteracao = true;
 					}
-					if (strpos($diffRefeicao, "fa-info-circle") !== false && strpos($diffRefeicao, "color:red;") !== false) {
-						$totalMotorista["refeicao"]++;
-						$houveInteracao = true;
-					}
 					if ($inicioRefeicao || $fimRefeicao) {
 						$totalMotorista["refeicaoSemRegistro"] += 1;
 						$houveInteracao = true;
