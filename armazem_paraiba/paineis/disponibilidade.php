@@ -15,7 +15,6 @@
         $filtro = $_POST["busca_Dispobilidade"];
 
         $linha = "linha = '<tr>'";
-        $linha2 = "linha = '<tr>'";
         if (!empty($_POST["empresa"])) {
             $linha .= " +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
@@ -27,16 +26,6 @@
                         +'<td style=\'text-align: center;\'>'+item.Apos11+'</td>'
                         +'<td style=\'text-align: center;\'>'+status+'</td>'
                     +'</tr>';";
-
-            $linha2 .= " +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
-                    +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
-                    +'<td style=\'text-align: center;\'>'+item.Nome+'</td>'
-                    +'<td style=\'text-align: center;\'>'+item.ultimaJornada+'</td>'
-                    +'<td style=\'text-align: center;\'>'+item.jornadaAtual+'</td>'
-                    +'<td style=\'text-align: center;\'>'+item.consulta+'</td>'
-                    +'<td style=\'text-align: center;\'>'+item.repouso+'</td>'
-                    +'<td style=\'text-align: center;\'>'+status+'</td>'
-                +'</tr>';";
         }
 
         $carregarDados = "";
@@ -53,9 +42,6 @@
 
                     $(document).ready(function(){
                         var tabela = $('#tabela-empresas tbody');
-                        var tabela2 = $('#tabela-emJornada tbody');
-                        var campo = $('.total-jornada');
-                        var campo2 = $('.total-sem-jornada');
                         var filtro = '".$filtro ."';
                         console.log(filtro);
 
@@ -66,21 +52,19 @@
                                 success: function(data){
                                     var row = {};
                                     $.each(data, function(index, item){
-                                        // console.log(index);
-                                        console.log(item);
+                                        console.log(index);
+                                        // console.log(item);
                                         var css = '';
                                         var status = '';
                                         if(index == 'disponivel'){
                                             css = 'background-color: lightgreen;';
                                             status = 'Disponivel';
-                                        } else if(index == 'naoPermitido'){
-                                            css = 'background-color: var(--var-lightred);';
-                                            status = 'Não Disponivel';
-                                        } if(index == 'parcial') {
+                                        } else if(index == 'parcial') {
                                             css = 'background-color: var(--var-lightorange);';
                                             status = 'Parcialmente Disponivel';
-                                        } else {
-                                            status = 'Em jornada';
+                                        } else if(index == 'naoPermitido') {
+                                            css = 'background-color: var(--var-darkred); color: white;';
+                                            status = 'Indisponível';
                                         }
 
                                         if (filtro !== '' && index !== filtro) {
@@ -95,19 +79,28 @@
                                                     tabela.append(linha);
                                                 });
                                             }
-                                        } else {
-                                            if (Array.isArray(item)) {
-                                                // Itera sobre o array de motoristas
-                                                $.each(item, function(index, item) {
-                                                    ". $linha2."
-                                                    tabela2.append(linha);
-                                                });
-                                            }
-                                        }
-                                        
+                                        }   
                                     });
-                                    campo.html('<b>- Funcionários em jornada: </b>'+data.total.totalMotoristasJornada);
-                                    campo2.html('<b>Funcionários disponíveis após 11 horas de interstício para iniciar uma jornada: </b>'+data.total.totalMotoristasLivres)
+
+                                    var tabela_funcionarios = $('#tabela-funcionarios thead');
+
+                                    var totais = `<tr>
+                                                    <th>
+                                                        <b>Funcionários disponíveis para 11 horas ou parametrizados</b>
+                                                    </th>
+                                                    <td style=\"text-align: center;\">
+                                                        \${data.total.totalMotoristasLivres}
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th>
+                                                        <b>Funcionários em jornada</b>
+                                                    </th>
+                                                    <td style=\"text-align: center;\">
+                                                        \${data.total.totalMotoristasJornada}
+                                                    </td>
+                                                </tr>`;
+                                    tabela_funcionarios.append(totais);
                                 },
                                 error: function(){
                                     console.error('Erro ao carregar os dados.');
@@ -252,9 +245,9 @@
             combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
             combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
             ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
-            campo_dataHora("Dispobilidade","busca_periodo",(!empty($_POST["busca_periodo"])? $_POST["busca_periodo"]:  date("Y-m-d H:i")),
+            campo_dataHora("Data/Hora da nova jornada","busca_periodo",(!empty($_POST["busca_periodo"])? $_POST["busca_periodo"] :  date("Y-m-d H:i")),
             2),
-            combo("Status Dispobilidade", "busca_Dispobilidade", ($_POST["busca_Dispobilidade"] ?? ""), 2, 
+            combo("Status", "busca_Dispobilidade", ($_POST["busca_Dispobilidade"] ?? ""), 2, 
             ["" => "Todos", "disponivel" => "Disponives", "naoPermitido" => "Indisponives", "parcial" => "Parcialmente disponível"]),
         ];
 
@@ -288,9 +281,10 @@
                 }
 
                 if (!empty($arquivo)){
-                    $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
-                        <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
-                    $dataEmissao = $alertaEmissao." Atualizado em: " . date("d/m/Y H:i", filemtime($arquivo)). "</span>";
+                    // $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
+                        // <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                    // $dataEmissao = $alertaEmissao." Atualizado em: " . date("d/m/Y H:i", filemtime($arquivo)). "</span>";
+                    $dataEmissao = "Atualizado em: " . date("d/m/Y H:i", filemtime($arquivo)). "</span>";
                     $encontrado = true;
                 }
             }else {
@@ -306,24 +300,22 @@
                 <th class='matricula'>Matrícula</th>
                 <th class='nome'>Nome</th>
                 <th class='jornada'>Fim de jornada</th>
-                <th class='consulta'>Tempo agora</th>
-                <th class='repouso'>Tempo de Repouso</th>
-                <th class='disponível8'>Previsão de Disponibilidade Parcial</th>
-                <th class='disponível11'>Previsão de Disponibilidade Total</th>
-                <th class=''>Disponibilidade</th>";
+                <th class='consulta'>Última Consulta</th>
+                <th class='repouso'>Tempo em Repouso</th>
+                <th class='disponível8'>Disponibilidade Parcial (8h)</th>
+                <th class='disponível11'>Disponibilidade Total (11h)</th>
+                <th class=''>Status</th>";
                 $rowTitulos .= "</tr>";
 
-                $rowTitulos3 = "<tr id='titulos4' class='titulos4'>";
-                $rowTitulos3 .= "
-                <th class='ocupacao2'>Ocupação</th>
-                <th class='matricula2'>Matrícula</th>
-                <th class='nome2'>Nome</th>
-                <th class='jornada2'>Fim de jornada</th>
-                <th class='jornada2'>Inicio de jornada</th>
-                <th class='consulta2'>Tempo agora</th>
-                <th class='repouso2'>Tempo de Repouso</th>
-                <th class=''>Disponibilidade</th>";
-                $rowTitulos3 .= "</tr>";
+                $tabelaMotivo = "
+			    <div style='display: flex; flex-direction: column;'>
+				<div class='row' id='resumo'>
+					<div class='col-md-4.5'>
+						<table id='tabela-funcionarios'
+							class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>
+							<thead>
+							</thead>
+                        </table>";
 
                 $painelDisp = true;
                 include_once "painel_html2.php";

@@ -28,8 +28,6 @@
 					<br>
 					<br>
 				<?php } ?>
-				<span class="total-sem-jornada"></span>
-				<span class="total-jornada"> </span>
 				<?= $quantFun ?>
 				<?= $tabelaMotivo ?>
 

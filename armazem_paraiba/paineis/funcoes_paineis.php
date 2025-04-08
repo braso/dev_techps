@@ -10,7 +10,15 @@
 		if (!empty($_POST["errorFields"]) && in_array($variavel, $_POST["errorFields"])) {
 			$classe .= " error-field";
 		}
-		$dataHora = DateTime::createFromFormat("Y-m-d H:i", date("Y-m-d H:i"));
+
+		if (empty($modificador)) {
+			$dataHora = DateTime::createFromFormat("Y-m-d H:i", date("Y-m-d H:i"));
+		} else {
+			// converte de d/m/Y H:i para Y-m-d H:i
+			$tempData = DateTime::createFromFormat("d/m/Y H:i", $modificador);
+			$dataHora = DateTime::createFromFormat("Y-m-d H:i", $tempData->format("Y-m-d H:i"));
+		}
+		// $dataHora = DateTime::createFromFormat("Y-m-d H:i", date("Y-m-d H:i"));
 
 		$dataScript =
 			"<script type='text/javascript' src='" . $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] . "/js/moment.min.js'></script>
@@ -1511,55 +1519,69 @@
 				// Calcula datas de referência (8h e 11h após a última jornada)
 				$dataMais8Horas = clone $dataFormatada;
 				$dataMais8Horas->modify('+8 hours');
-	
+
 				$dataMais11Horas = clone $dataFormatada;
 				$dataMais11Horas->modify('+11 hours');
-	
+
 				$dataReferenciaStr = $_POST['busca_periodo'] ?? null;
 				$dataReferencia = DateTime::createFromFormat('d/m/Y H:i', $dataReferenciaStr);
-	
+
 				// Calcula diferença em minutos desde a última jornada
 				$diferenca = $dataFormatada->diff($dataReferencia);
 				$totalMinutos = ($diferenca->days * 24 * 60) + ($diferenca->h * 60) + $diferenca->i;
-	
+
 				// Verifica se a ADI 5322 está ativa
-				$considerarADI = isset($parametro[0]['para_tx_adi5322']) && $parametro[0]['para_tx_adi5322'] == 'sim';
-	
-				// Define o interstício máximo (8h com ADI, 11h sem ADI)
-				$intersticioMaximo = ($considerarADI) ? 8 * 60 : 11 * 60;
-	
-				// Calcula a diferença entre o tempo de repouso atual e o máximo permitido
-				$difRepouso = $totalMinutos - $intersticioMaximo;
-	
-				// Calcula o aviso de repouso
-				$avisoRepouso = str_pad(floor($difRepouso / 60), 2, '0', STR_PAD_LEFT) . ":" . 
-								str_pad($difRepouso % 60, 2, '0', STR_PAD_LEFT);
-	
-				// 'Apos8' só aparece se ADI estiver ativa (mostra quando completa 8h)
-				$exibirApos8 = ($considerarADI) ? $dataMais8Horas->format('d/m/Y H:i') : '';
-	
-				// 'Apos11' SEMPRE aparece (mostra quando completa 11h, independente do tempo)
+				// Se ativa, significa que o repouso ideal é de 11h (mas o mínimo absoluto para iniciar pode ser considerado 8h para efeito de aviso parcial)
+				$considerarADI = isset($parametro[0]['para_tx_adi5322']) && $parametro[0]['para_tx_adi5322'] === 'sim';
+
+				// Para exibição, o campo "ADI_5322" indica qual o repouso mínimo esperado:
+				// - Se ADI ativa: "Sim (11h mín.)"
+				// - Se não: "Não (8h mín.)"
+				$infoADI = $considerarADI ? 'Sim' : 'Não';
+
+				// Define os limites:
+				$minimoAbsoluto = 8 * 60;   // 480 minutos
+				$minimoCompleto = 11 * 60;   // 660 minutos
+
+				// Calcula o aviso de repouso, mostrando a diferença em relação ao repouso completo (11h)
+				$difRepouso = $totalMinutos - $minimoCompleto;
+				$horas = floor(abs($difRepouso) / 60);
+				$minutos = abs($difRepouso) % 60;
+				$sinal = ($difRepouso < 0) ? '-' : '';
+
+				$avisoRepouso = $sinal . str_pad($horas, 2, '0', STR_PAD_LEFT) . ":" . 
+										str_pad($minutos, 2, '0', STR_PAD_LEFT);
+
+				// Para o campo 'Apos8': exibe a data de +8h apenas se a ADI não estiver ativa e se o repouso for inferior a 11h
+				$exibirApos8 = (!$considerarADI && $totalMinutos < $minimoCompleto) ? $dataMais8Horas->format('d/m/Y H:i') : '';
+
+				// O campo 'Apos11' exibe sempre a data de +11h
 				$exibirApos11 = $dataMais11Horas->format('d/m/Y H:i');
-	
+
+				// Dados do motorista
 				$dadosMotorista = [
-					'matricula' => $motorista['enti_tx_matricula'],
-					'Nome' => $motorista['enti_tx_nome'],
-					'ocupacao' => $motorista['enti_tx_ocupacao'],
-					'ultimaJornada' => $dataFormatada->format('d/m/Y H:i'),
-					'repouso' => $avisoRepouso,
-					'Apos8' => $exibirApos8,   // Só aparece se ADI ativa (mostra +8h)
-					'Apos11' => $exibirApos11, // SEMPRE aparece (mostra +11h)
-					'consulta' => $dataReferenciaStr,
-					'ADI_5322' => $considerarADI ? 'Sim (8h mín.)' : 'Não (11h obrig.)'
+					'matricula'       => $motorista['enti_tx_matricula'],
+					'Nome'            => $motorista['enti_tx_nome'],
+					'ocupacao'        => $motorista['enti_tx_ocupacao'],
+					'ultimaJornada'   => $dataFormatada->format('d/m/Y H:i'),
+					'repouso'         => $avisoRepouso,
+					'Apos8'           => $exibirApos8,   // Exibe +8h, conforme condição
+					'Apos11'          => $exibirApos11,  // Exibe +11h sempre
+					'consulta'        => $dataReferenciaStr,
+					'ADI_5322'        => $infoADI
 				];
-	
+
 				// Categorização:
-				if ($totalMinutos < $intersticioMaximo) {
-					$motoristasLivres['naoPermitido'][] = $dadosMotorista; // Não cumpriu o máximo
-				} elseif ($totalMinutos >= $intersticioMaximo && $totalMinutos < (11 * 60)) {
-					$motoristasLivres['parcial'][] = $dadosMotorista; // Cumpriu máximo, mas não 11h
+				// Para ambos os casos (ADI ativa ou não), usamos os dois limites:
+				// - "naoPermitido": repouso < 8h
+				// - "parcial": repouso entre 8h e 11h (por exemplo, -03:00 indica repouso parcial se faltar 3h para completar 11h)
+				// - "disponivel": repouso >= 11h
+				if ($totalMinutos < $minimoAbsoluto) {
+					$motoristasLivres['naoPermitido'][] = $dadosMotorista;
+				} elseif ($totalMinutos >= $minimoAbsoluto && $totalMinutos < $minimoCompleto) {
+					$motoristasLivres['parcial'][] = $dadosMotorista;
 				} else {
-					$motoristasLivres['disponivel'][] = $dadosMotorista; // Descanso completo (11h+)
+					$motoristasLivres['disponivel'][] = $dadosMotorista;
 				}
 				
 			}
@@ -1571,7 +1593,5 @@
 			'totalMotoristasLivres' => $totalMotoristasLivres
 		];
 
-		dd($motoristasLivres);
-
-		// file_put_contents($path . "/nc_logistica.json", json_encode($motoristasLivres, JSON_UNESCAPED_UNICODE));
+		file_put_contents($path . "/nc_logistica.json", json_encode($motoristasLivres, JSON_UNESCAPED_UNICODE));
 	}
