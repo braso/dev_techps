@@ -50,7 +50,6 @@
 				"/paineis/saldo.php"	  => "Saldo",
 				"/paineis/jornada.php" 	  => "Jornada Aberta",
 				"/paineis/nc_juridica.php"=> "Não Conformidades Juridicas Atualizado",
-				"/paineis/disponibilidade.php" 	  => "Disponibilidade",
 			] + $camposOcultosProdução,
 			"relatórios" => [
 					"/relatorio_pontos.php" => "Pontos", 
