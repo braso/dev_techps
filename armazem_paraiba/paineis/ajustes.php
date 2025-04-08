@@ -18,141 +18,104 @@ function enviarForm() {
 
 function carregarGraficos($periodoInicio) {
 	$path = "./arquivos/ajustes";
-	$mesAnterior = clone $periodoInicio; // Clona o objeto original
-	$mesAnterior->modify("-1 month");    // Modifica apenas a cópia
+	$empresaId = $_POST["empresa"];
 
-	$mesAnteanterior = clone $periodoInicio;
-	$mesAnteanterior->modify("-2 months");
+	$totaisPorMes = [];
+	$mesesJS = [];
+	$mesesFormatadosJS = [];
 
-	$pathMesAtual = $path ."/" . $periodoInicio->format("Y-m") . "/" . $_POST["empresa"] . "/empresa_" . $_POST["empresa"] . ".json"; // mês atual
-	$pathMesAnterior = $path ."/" . $mesAnterior->format("Y-m") . "/" . $_POST["empresa"] . "/empresa_" . $_POST["empresa"] . ".json"; // mês anterior
-	$pathMesAnteanterior = $path ."/" . $mesAnteanterior->format("Y-m") . "/" . $_POST["empresa"] . "/empresa_" . $_POST["empresa"] . ".json"; // mês anterior do anterior
+	// Vamos voltar até 2 meses antes do período atual (ou o quanto for necessário)
+	for ($i = 2; $i >= 0; $i--) {
+		$data = clone $periodoInicio;
+		$data->modify("-$i months");
+		$mesKey = $data->format('Y-m');
+		$mesNumerico = $data->format('m');
 
-	if (file_exists($pathMesAtual)) {
-		$jsonMesAtual = json_decode(file_get_contents($pathMesAtual), true);
+		$caminho = "$path/$mesKey/$empresaId/empresa_$empresaId.json";
+
+		if (file_exists($caminho)) {
+			$json = json_decode(file_get_contents($caminho), true);
+			$ativo = $json['totais']['ativo'] ?? 0;
+			$inativo = $json['totais']['inativo'] ?? 0;
+
+			$totaisPorMes[$mesKey] = [
+				'ativo' => $ativo,
+				'inativo' => $inativo
+			];
+
+			$mesesJS[] = $mesKey;
+			$mesesFormatadosJS[] = $mesNumerico;
+		}
 	}
 
-	if (file_exists($pathMesAnterior)) {
-		$jsonMesAnterior = json_decode(file_get_contents($pathMesAnterior), true);
-	} else {
-		$jsonMesAnterior = [
-			"totais" => [
-				"ativo" => 0,
-				"inativo" => 0
-			]
-		];
-		// $jsonMesAnteanterior = json_encode($jsonMesAnterior);
-	};
-
-	if (file_exists($pathMesAnteanterior)) {
-		$jsonMesAnteanterior = json_decode(file_get_contents($pathMesAnteanterior), true);
-	} else {
-		$jsonMesAnteanterior = [
-			"totais" => [
-				"ativo" => 0,
-				"inativo" => 0
-			]
-		];
-		// $jsonMesAnteanterior = json_encode($jsonMesAnteanterior);
-	}
+	$totaisPorMesJS = json_encode($totaisPorMes);
+	$mesesJS = json_encode($mesesJS);
+	$mesesFormatadosJS = json_encode(array_map(function($mes) {
+		return [
+			'01' => 'Jan', '02' => 'Fev', '03' => 'Mar', '04' => 'Abr',
+			'05' => 'Mai', '06' => 'Jun', '07' => 'Jul', '08' => 'Ago',
+			'09' => 'Set', '10' => 'Out', '11' => 'Nov', '12' => 'Dez'
+		][$mes];
+	}, $mesesFormatadosJS));
 
 	echo "
-	<script>
-		const mesesPTBR = {
-            '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr', 
-            '05': 'Mai', '06': 'Jun', '07': 'Jul', '08': 'Ago', 
-            '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez'
-        };
+		<script>
+		const meses = $mesesJS;
+		const mesesFormatados = $mesesFormatadosJS;
+		const totaisPorMes = $totaisPorMesJS;
 
-		const meses = [
-            '".$mesAnteanterior->format("Y-m")."',
-			'".$mesAnterior->format("Y-m")."', 
-            '".$periodoInicio->format("Y-m")."', 
-        ];
-
-		const totaisPorMes = {
-			'".$mesAnteanterior->format("Y-m")."':{
-				ativo:".$jsonMesAnteanterior["totais"]["ativo"].",
-				inativo:".$jsonMesAnteanterior["totais"]["inativo"]."
+		Highcharts.chart('chart-unificado', {
+			chart: {
+				type: 'line',
+				style: {
+					fontFamily: 'Arial',
+					fontSize: '12px'
+				}
 			},
-			'".$mesAnterior->format("Y-m")."':{
-				ativo:".$jsonMesAnterior["totais"]["ativo"].",
-				inativo:".$jsonMesAnterior["totais"]["inativo"]."
+			title: { text: 'Ajustes Ativos e Inativos - Ano Corrente' },
+			xAxis: {
+				categories: mesesFormatados,
+				title: { text: 'Mês' }
 			},
-			'".$periodoInicio->format("Y-m")."':{
-				ativo:".$jsonMesAtual["totais"]["ativo"].",
-				inativo:".$jsonMesAtual["totais"]["inativo"]."
-			}
-		};
-
-		const mesesFormatados = meses.map(mes => {
-            const [ano, mesNum] = mes.split('-');
-            return `\${mesesPTBR[mesNum]}/\${ano}`;
-        });
-
-		const commonOptions = {
-            chart: { type: 'line',
-			style: {
-                    fontFamily: 'Arial',
-                    fontSize: '12px'
-                }
+			yAxis: {
+				title: { text: 'Quantidade' },
+				min: 0
 			},
-            xAxis: {
-                categories: mesesFormatados, // Usa os meses formatados
-                title: { text: 'Mês' }
-            },
-            yAxis: { 
-                title: { text: 'Quantidade' },
-                min: 0
-            },
-            legend: { enabled: false },
-            tooltip: {
-                formatter: function() {
-                    const mesOriginal = meses[this.point.index];
-                    const [ano, mesNum] = mesOriginal.split('-');
-                    const mesExtenso = [
-                        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-                        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-                    ][parseInt(mesNum)-1];
-                    return `<b>\${mesExtenso} \${ano}</b><br/>\${this.series.name}: <b>\${this.y}</b> ajustes`;
-                }
-            },
-            plotOptions: {
-                line: {
-                    dataLabels: { 
-                        enabled: true,
-                        formatter: function() {
-                            return this.y; // Mostra apenas o número
-                        }
-                    },
-                    marker: { enabled: true }
-                }
-            }
-        };
-
-		Highcharts.chart('chart-ativos', {
-            ...commonOptions,
-            title: { text: 'Ajustes Ativos - Últimos 3 Meses' },
-            series: [{
-                name: 'Ativos',
-                data: meses.map(mes => totaisPorMes[mes]?.ativo || 0),
-                color: '#4CAF50',
-                marker: { symbol: 'circle' }
-            }]
-        });
-
-		Highcharts.chart('chart-inativos', {
-            ...commonOptions,
-            title: { text: 'Ajustes Inativos - Últimos 3 Meses' },
-            series: [{
-                name: 'Inativos',
-                data: meses.map(mes => totaisPorMes[mes]?.inativo || 0),
-                color: '#FF4D4D',
-                marker: { symbol: 'circle' }
-            }]
-        });
-
+			tooltip: {
+				formatter: function() {
+					const mesOriginal = meses[this.point.index];
+					const [ano, mesNum] = mesOriginal.split('-');
+					const mesExtenso = [
+						'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+						'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+					][parseInt(mesNum) - 1];
+					return `<b>\${mesExtenso}</b><br/>\${this.series.name}: <b>\${this.y}</b> ajustes`;
+				}
+			},
+			plotOptions: {
+				line: {
+					dataLabels: { enabled: true },
+					marker: { enabled: true }
+				}
+			},
+			series: [
+				{
+					name: 'Ativos',
+					data: meses.map(mes => totaisPorMes[mes].ativo),
+					color: '#4CAF50',
+					marker: { symbol: 'circle' }
+				},
+				{
+					name: 'Inativos',
+					data: meses.map(mes => totaisPorMes[mes].inativo),
+					color: '#FF4D4D',
+					marker: { symbol: 'diamond' }
+				}
+			],
+			legend: { enabled: true }
+		});
 	</script>
+
 	"
 	;
 }
@@ -432,29 +395,38 @@ function carregarJS(array $arquivos) {
 							<td>\${totalFuncionarios}</td>
 							<td><strong>Total Ocorrências:</strong></td>
 							<td>\${totalOcorrencias}</td>
+							<td></td>
 						</tr>
 							<tr>
 								<th>matrícula</th>
 								<th>Ocupação</th>
 								<th>Funcionário</th>
+								<th>Tipos</th>
 								<th>Quantidade</th>
 							</tr>
 						</thead>
 						<tbody>`;
-				   Object.keys(pontos).sort((a, b) => {
-						const nomeA = pontos[a].funcionario.nome || '';
-						const nomeB = pontos[b].funcionario.nome || '';
-						return nomeA.localeCompare(nomeB);
-					}).forEach(id => {
-						const ponto = pontos[id];
-						modalContent += `
-							<tr>
-								<td>\${ponto.funcionario.matricula}</td>
-								<td>\${ponto.funcionario.ocupacao}</td>
-								<td>\${ponto.funcionario.nome || 'N/A'}</td>
-								<td>\${ponto.quantidade}</td>
-							</tr>`;
-					});
+					Object.keys(pontos).sort((a, b) => {
+							const nomeA = pontos[a].funcionario.nome || '';
+							const nomeB = pontos[b].funcionario.nome || '';
+							return nomeA.localeCompare(nomeB);
+						}).forEach(id => {
+							const ponto = pontos[id];
+
+							// Constrói os tipos e quantidades
+							const tiposHTML = Object.entries(ponto.tipos || {})
+								.map(([tipo, qtd]) => `\${tipo}: \${qtd}`)
+								.join('<br>');
+
+							modalContent += `
+								<tr>
+									<td>\${ponto.funcionario.matricula}</td>
+									<td>\${ponto.funcionario.ocupacao}</td>
+									<td>\${ponto.funcionario.nome || 'N/A'}</td>
+									<td>\${tiposHTML}</td>
+									<td>\${ponto.quantidade}</td>
+								</tr>`;
+						});
 
 				modalContent += `
 									</tbody>
@@ -470,7 +442,7 @@ function carregarJS(array $arquivos) {
 							'<span aria-hidden=\"true\">&times;</span>' +
 							'</button>' +
 							'<h3 class=\"modal-title\" id=\"dynamicModalLabel\">' +
-							'Funcionários com o motivo de ajustes ativos: '+motivo+ 
+							'Funcionários com o motivo de ajustes Inseridos: '+motivo+ 
 							'</h3>' +
 						'</div>' +
 						'<div class=\"modal-body\">' +
@@ -515,20 +487,22 @@ function carregarJS(array $arquivos) {
 						<table class=\"table table-bordered table-hover\">
 							<thead>
 							<tr>
-								<th colspan=\"4\" style=\"font-size: 1.1em; padding: 10px;\">
+								<th colspan=\"5\" style=\"font-size: 1.1em; padding: 10px; \">
 									Motivo: \${motivo}
 								</th>
 							</tr>
 							<tr>
-								<td><strong>Total Funcionários:</strong></td>
+								<td style=\"width: 113px;\"><strong>Total Funcionários:</strong></td>
 								<td>\${totalFuncionarios}</td>
 								<td><strong>Total Ocorrências:</strong></td>
 								<td>\${totalOcorrencias}</td>
+								<td></td>
 							</tr>
 								<tr>
 									<th>Matrícula</th>
 									<th>Ocupação</th>
 									<th>Funcionário</th>
+									<th>Tipos/th>
 									<th>Quantidade</th>
 								</tr>
 							</thead>
@@ -541,11 +515,18 @@ function carregarJS(array $arquivos) {
 						return nomeA.localeCompare(nomeB);
 					}).forEach(id => {
 						const ponto = pontos[id];
+
+						// Constrói os tipos e quantidades
+						const tiposHTML = Object.entries(ponto.tipos || {})
+							.map(([tipo, qtd]) => `\${tipo}: \${qtd}`)
+							.join('<br>');
+
 						modalContent += `
 							<tr>
 								<td>\${ponto.funcionario.matricula}</td>
 								<td>\${ponto.funcionario.ocupacao}</td>
 								<td>\${ponto.funcionario.nome || 'N/A'}</td>
+								<td>\${tiposHTML}</td>
 								<td>\${ponto.quantidade}</td>
 							</tr>`;
 					});
@@ -566,7 +547,7 @@ function carregarJS(array $arquivos) {
 							'<span aria-hidden=\"true\">&times;</span>' +
 							'</button>' +
 							'<h3 class=\"modal-title\" id=\"dynamicModalLabel\">' +
-							'Relatório Completo de Ajustes de Ponto Ativos' + 
+							'Relatório Completo de Ajustes de Ponto Inseridos' + 
 							'</h3>' +
 						'</div>' +
 						'<div class=\"modal-body\" style=\"max-height: 70vh; overflow-y: auto;\">' +
@@ -772,39 +753,48 @@ function index() {
 						if (strtolower($key['pont_tx_status'] ?? '') !== 'ativo') {
 							continue; // Pula se não for "ativo"
 						}
-
-						// Define o motivo (considera null como válido)
-						$motivo = $key['moti_tx_nome'] ?? 'MOTIVO_NAO_INFORMADO'; // Opção 1: Substitui null
-						// $motivo = $key['moti_tx_nome']; // Opção 2: Mantém null (se preferir)
-
+					
+						// Define o motivo
+						$motivo = $key['moti_tx_nome'] ?? 'MOTIVO_NAO_INFORMADO';
+					
 						// Contagem geral por motivo
 						if (!isset($resultado[$motivo])) {
 							$resultado[$motivo] = 0;
 						}
 						$resultado[$motivo]++;
-
+					
 						// Agrupamento por motivo e funcionário
 						if (!isset($resultado2[$motivo])) {
 							$resultado2[$motivo] = [];
 						}
-
+					
 						$dadosFunc = [
 							"matricula" => $json["matricula"] ?? 'SEM_MATRICULA',
 							"nome" => $json["nome"] ?? 'NOME_NAO_INFORMADO',
 							"ocupacao" => $json["ocupacao"] ?? 'OCUPACAO_NAO_INFORMADA'
 						];
-
+					
 						$funcionarioKey = $dadosFunc['matricula'] ?? md5($dadosFunc['nome']);
-
+					
 						if (!isset($resultado2[$motivo][$funcionarioKey])) {
 							$resultado2[$motivo][$funcionarioKey] = [
 								'funcionario' => $dadosFunc,
-								'quantidade' => 0
+								'quantidade' => 0,
+								'tipos' => [] // ← adiciona array para tipos
 							];
 						}
+					
+						// Incrementa quantidade
 						$resultado2[$motivo][$funcionarioKey]['quantidade']++;
+					
+						// Armazena tipo do campo macr_tx_nome
+						$tipo = $key['macr_tx_nome'] ?? 'TIPO_NAO_INFORMADO';
+					
+						if (!isset($resultado2[$motivo][$funcionarioKey]['tipos'][$tipo])) {
+							$resultado2[$motivo][$funcionarioKey]['tipos'][$tipo] = 0;
+						}
+						$resultado2[$motivo][$funcionarioKey]['tipos'][$tipo]++;
 					}
-
 					$empresas[] = $json;
 				}
 			}
@@ -823,7 +813,7 @@ function index() {
 							style='width: 500px !important;'>
 							<thead>
 								<tr>
-									<th colspan='4' style='text-align: center;'><b>Ajustes Ativos</b></th>
+									<th colspan='4' style='text-align: center;'><b>Ajustes Inseridos</b></th>
 							</thead>
 							<thead>
 								<tr>
@@ -849,19 +839,12 @@ function index() {
 			$tabelaMotivo .= "</tbody>
 			</table>
 			</div>
-				<div class='col-md-3.5' style='padding-left: 3px !important; width: 315px;'>
+				<div class='col-md-6'>
 					<!-- <div class='container' style='display:flex'> -->
-						<div id='chart-ativos' style='width:100%; background: green; height: 232px;'>
+						<div id='chart-unificado' style='width:100%; background: green; height: 232px;'>
 							<!-- Conteúdo do gráfico Sintético -->
 						<!-- </div> -->
 					</div>
-				</div>
-				<div class='col-md-3.5' style='width: 315px;'>
-					<!-- <div class='container' style='display:flex'> -->
-						<div id='chart-inativos' style='width:100%; background: green; height: 232px;'>
-							<!-- Conteúdo do gráfico Sintético -->
-						</div>
-					<!-- </div>-->
 				</div>
 			</div>
 			";
@@ -950,32 +933,32 @@ function index() {
 					"<th></th>"
 					. "<th></th>"
 					. "<th></th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
-					. "<th>Ativo</th>"
-					. "<th>Inativo</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
+					. "<th>Inserido</th>"
+					. "<th>Excluído</th>"
 					. "<th></th>";
 			} else {
 				$rowTotais .=
