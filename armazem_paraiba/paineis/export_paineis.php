@@ -25,9 +25,10 @@ class CustomPDF extends TCPDF {
     }
 
     public function Header() {
-        $imgWidth = 50;
+        $imgWidth = 20;
         $imgHeight = 15;
-        $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth, $imgHeight);
+        $imgHeight2 = 10;
+        $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth, $imgHeight2);
         $this->Image(__DIR__ ."/../".self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
         $this->SetFont('helvetica', 'B', 12);
         $this->Cell(0, 15, $this->tituloPersonalizado, 0, 1, 'C');
@@ -224,8 +225,6 @@ function gerarPainelEndosso() {
         }
         $pastaEndossos->close();
 
-        // dd($empresas);
-
         foreach ($empresas as $empresa) {
             if ($empresa["percEndossado"] < 1) {
                 $empresa["totais"] = [
@@ -395,51 +394,60 @@ function gerarPainelEndosso() {
 
     if (!empty($_POST["empresa"]) && !empty($_POST["busca_data"])) {
         $pdf->SetFont('helvetica', 'B', 6);
-
-        // Salva a posição atual
+        $pdf->SetFillColor(78, 169, 255);  // azul
+        
         $x = $pdf->GetX();
         $y = $pdf->GetY();
-
-        $pdf->SetFillColor(78, 169, 255);  // azul
-
-        // Primeira célula
-        $pdf->Cell($larguras[0], 7, 'MATRICULA', 1, 'C', false, true, $x, $y);
-        $x += $larguras[true];
-
-        $pdf->Cell($larguras[2], 7, 'NOME', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[0], 7, 'MATRICULA', 1, 0, 'C', true);
+        $x += $larguras[0];
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[2], 7, 'NOME', 1, 0, 'C', true);
         $x += $larguras[2];
-
-        $pdf->Cell($larguras[1], 7, 'Ocupação', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Ocupação', 1, 0, 'C', true);
+        $x += $larguras[1];
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Status Endosso', 1, 0, 'C', true);
+        $x += $larguras[1];
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Jornada Prevista', 1, 0, 'C', true);
+        $x += $larguras[1];
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Jornada Efetiva', 1, 0, 'C', true);
         $x += $larguras[1];
 
-        $pdf->Cell($larguras[1], 7, 'Status Endosso', 1, 'C', false, true, $x, $y);
+        $pdf->Cell($larguras[1], 7, 'H.E. Semanal Pago', 1, 0, 'C', true);
         $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'Jornada Prevista', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'H.E. Ex. Pago', 1, 0, 'C', true);
         $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'Jornada Efetiva', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Adicional Noturno', 1, 0, 'C', true);
         $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'H.E. Semanal Pago', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Espera Indenizada', 1, 0, 'C', true);
         $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'H.E. Ex. Pago', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Saldo Anterior', 1, 0, 'C', true);
         $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'Adicional Noturno', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Saldo Período', 1, 0, 'C', true);
         $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'Espera Indenizada', 1, 'C', false, true, $x, $y);
-        $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'Saldo Anterior', 1, 'C', false, true, $x, $y);
-        $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'Saldo Período', 1, 'C', false, true, $x, $y);
-        $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'Saldo Final', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Saldo Final', 1, 0, 'C', true);
 
         $pdf->Ln(7);
 
@@ -496,49 +504,61 @@ function gerarPainelEndosso() {
 
         $pdf->SetFont('helvetica', 'B', 6);
 
-        // Salva a posição atual
+        // Salva a posição inicial
         $x = $pdf->GetX();
         $y = $pdf->GetY();
-
+        
         $pdf->SetFillColor(78, 169, 255);  // azul
-
-        // Primeira célula
-        $pdf->Cell($larguras[2], 7, 'Nome da Empresa/Filial', 1, 'C', false, true, $x, $y);
-        $x += $larguras[true];
-
-        $pdf->Cell($larguras[0], 7, '% Endossados', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[2], 7, 'Nome da Empresa/Filial', 1, 0, 'C', true);
         $x += $larguras[2];
-
-        $pdf->Cell($larguras[1], 7, 'Qtd. Motoristas', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[0], 7, '% Endossados', 1, 0, 'C', true);
+        $x += $larguras[0];
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Qtd. Motoristas', 1, 0, 'C', true);
         $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'Jornada Prevista', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Jornada Prevista', 1, 0, 'C', true);
         $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'Jornada Efetiva', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Jornada Efetiva', 1, 0, 'C', true);
         $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'H.E. Semanal Pago', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'H.E. Semanal Pago', 1, 0, 'C', true);
         $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'H.E. Ex. Pago', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'H.E. Ex. Pago', 1, 0, 'C', true);
         $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'Adicional Noturno', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Adicional Noturno', 1, 0, 'C', true);
         $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'Espera Indenizada', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Espera Indenizada', 1, 0, 'C', true);
         $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'Saldo Anterior', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Saldo Anterior', 1, 0, 'C', true);
         $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'Saldo Período', 1, 'C', false, true, $x, $y);
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Saldo Período', 1, 0, 'C', true);
         $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'Saldo Final', 1, 'C', false, true, $x, $y);
-
+        
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($larguras[1], 7, 'Saldo Final', 1, 0, 'C', true);
+        
         $pdf->Ln(7);
+
 
         $pdf->SetFont('helvetica', 'B', 6);
         foreach ($empresas as $empresa) {
