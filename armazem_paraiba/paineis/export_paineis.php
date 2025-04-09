@@ -394,6 +394,7 @@ function gerarPainelEndosso() {
 
     if (!empty($_POST["empresa"]) && !empty($_POST["busca_data"])) {
         $pdf->SetFont('helvetica', 'B', 6);
+
         $pdf->SetFillColor(78, 169, 255);  // azul
         
         $x = $pdf->GetX();
@@ -558,7 +559,6 @@ function gerarPainelEndosso() {
         $pdf->Cell($larguras[1], 7, 'Saldo Final', 1, 0, 'C', true);
         
         $pdf->Ln(7);
-
 
         $pdf->SetFont('helvetica', 'B', 6);
         foreach ($empresas as $empresa) {
