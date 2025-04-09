@@ -126,14 +126,6 @@
 	// 	return $cnpjs_formatados;
 	// }
 
-	function voltarParaEspelho(){
-		foreach(["hora", "idMacro", "motivo", "justificativa", "status"] as $campo){
-			unset($_POST[$campo]);
-		}
-		$_POST["acao"] = "buscarEspelho()";
-		voltar();
-	}
-
 	function carregarJS(){
 
 		$postValues = $_POST;
@@ -215,23 +207,28 @@
 
 
 	function index(){
+		if(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
+			// dd("teste");
+			$_POST["returnValues"] = json_encode([
+				"HTTP_REFERER" => $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php"
+			]);
+			voltar();
+		}
+		
 		global $CONTEX;
 
 		//Conferir se os campos de $_POST estão vazios{
 			if(empty($_POST["idMotorista"]) || empty($_POST["data"])){
 				echo "<script>alert('ERRO: Deve ser selecionado um funcionário e uma data para ajustar.')</script>";
 				
-				$_POST["acao"] = "buscarEspelho()";
 				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
-	
+				if(empty($_POST["returnValues"])){
+					$_POST["returnValues"] = json_encode($_POST);
+				}
 				voltar();
 				exit;
 			}
 	
-			if(empty($_POST["HTTP_REFERER"]) || is_int(strpos($_POST["HTTP_REFERER"], "ajuste_ponto.php"))){
-				$_POST["HTTP_REFERER"] = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
-			}
-
 			if (empty($_POST["status"])) {
 				$_POST["status"] = "ativo";
 			}
@@ -333,17 +330,9 @@
 		}
 
 		$botoes[] = $botao_imprimir;
-		$botoes[] = botao("Voltar", "voltar", "acao", "voltarParaEspelho()");
+		$botoes[] = criarBotaoVoltar("espelho_ponto.php");
 		$botoes[] = $botaoConsLog; //BOTÃO CONSULTAR LOGISTICA
 		$botoes[] = status();
-
-
-		if(empty($_POST["HTTP_REFERER"])){
-			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
-			if(is_int(strpos($_SERVER["HTTP_REFERER"], "ajuste_ponto.php"))){
-				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/espelho_ponto.php";
-			}
-		}
 		
 		echo abre_form("Dados do Ajuste de Ponto");
 		echo linha_form($textFields);
@@ -355,7 +344,6 @@
 			echo campo_hidden("busca_data", 		$_POST["data"]);
 			echo campo_hidden("busca_periodo[]",	$_POST["busca_periodo"][0]);
 			echo campo_hidden("busca_periodo[]",	$_POST["busca_periodo"][1]);
-			echo campo_hidden("HTTP_REFERER", 		$_POST["HTTP_REFERER"]);
 		//}
 		
 		echo linha_form($variableFields);
@@ -369,7 +357,7 @@
 			new DateTime($_POST["data"]." 00:00:00"),
 			[
 				"pont_tx_data", 
-				"(SELECT endo_tx_status FROM endosso WHERE endo_tx_status = 'ativo' AND endo_tx_matricula = '{$motorista["enti_tx_matricula"]}' AND '{$_POST["data"]}' BETWEEN endo_tx_de AND endo_tx_ate LIMIT 1) as endo_tx_status",
+				"endo_tx_status",
 				"macr_tx_nome", 
 				"moti_tx_nome", 
 				"moti_tx_legenda", 

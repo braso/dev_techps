@@ -35,7 +35,8 @@
 				"/cadastro_macro.php" 		=> "Macro",
 				"/cadastro_motivo.php" 		=> "Motivo", 
 				"/cadastro_parametro.php" 	=> "Parâmetro", 
-				"/cadastro_usuario.php" 	=> "Usuário" 
+				"/cadastro_usuario.php" 	=> "Usuário",
+				"/cadastro_placa.php" 	=> "Placas" 
 			],
 			"ponto" => [
 				"/endosso.php" 			=> "Consultar Endossos", 
@@ -48,7 +49,7 @@
 				"/paineis/endosso.php"	  => "Endosso",
 				"/paineis/saldo.php"	  => "Saldo",
 				"/paineis/jornada.php" 	  => "Jornada Aberta",
-				"/paineis/nc_juridica.php"=> "Não Conformidades Juridicas Atualizado"
+				"/paineis/nc_juridica.php"=> "Não Conformidades Juridicas Atualizado",
 			] + $camposOcultosProdução,
 			"relatórios" => [
 					"/relatorio_pontos.php" => "Pontos", 
@@ -80,7 +81,7 @@
 		}
 		
 		if(is_bool(strpos($_SERVER["REQUEST_URI"], 'dev'))){
-			unset($menus["relatórios"]);
+			// unset($menus["relatórios"]);
 			unset($menus["suporte"]);
 		}
 	
@@ -99,6 +100,8 @@
 		if(in_array($nivel, ["Motorista", "Ajudante", "Funcionário"])){
 			return $menuMotorista;
 		}
+
+		return "";
 	}
 
 	echo 
@@ -108,6 +111,7 @@
 			}
 		</style>"
 	;
+
 	echo 
 		"<!-- INICIO HEADER MENU -->"
 			."<div class='page-header-menu'>"

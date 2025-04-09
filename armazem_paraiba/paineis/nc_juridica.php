@@ -134,25 +134,6 @@
 				function imprimir(){
 					window.print();
 				}
-
-				function calcularTotalColuna(tabelaId, colunaClasse, resultadoId) {
-					var total = 0;  // Inicializa a variável para acumular o total
-
-					// Itera por todas as células da coluna especificada (células com a classe fornecida)
-					$(tabelaId + ' tbody tr').each(function() {
-						var valor = parseFloat($(this).find(colunaClasse).text());  // Pega o valor da célula
-
-						// Verifica se o valor é numérico antes de somar
-						if (!isNaN(valor)) {
-							total += valor;
-						}
-					});
-
-					console.log(total);
-
-					// Exibe o resultado na tela
-					// $(resultadoId).text('Total: ' + total);
-				}
 							
 				$(document).ready(function(){
 					var tabela = $('#tabela-empresas tbody');
@@ -591,10 +572,10 @@
 				$graficoSintetico = [$gravidadeAlta, $gravidadeMedia, $gravidadeBaixa];
 
 				$percentuais = [
-					"performance" => round($totalMotoristasComConformidadesZeradas / $totalGeral),
-					"alta" => round(($gravidadeAlta / $totalGeral) * 100, 2),
-					"media" => round(($gravidadeMedia / $totalGeral) * 100, 2),
-					"baixa" => round(($gravidadeBaixa / $totalGeral) * 100, 2)
+					"performance" => $totalGeral > 0 ? round($totalMotoristasComConformidadesZeradas / $totalGeral) : 0,
+					"alta" => $totalGeral > 0 ? round(($gravidadeAlta / $totalGeral) * 100, 2) : 0,
+					"media" => $totalGeral > 0 ? round(($gravidadeMedia / $totalGeral) * 100, 2) : 0,
+					"baixa" => $totalGeral > 0 ? round(($gravidadeBaixa / $totalGeral) * 100, 2) : 0
 				];
 
 				if ($_POST["busca_endossado"] !== "endossado") {
@@ -664,7 +645,10 @@
 
 				// Percentuais gerais de Não Conformidade (baseado no total geral)
 				foreach ($keys as $key) {
-					$percentuais["Geral_".$key] = number_format(round(($totalizadores[$key] / $totalGeral) * 100, 2),2);
+					$percentuais["Geral_".$key] = $totalGeral > 0 
+						? number_format(round(($totalizadores[$key] / $totalGeral) * 100, 2), 2) 
+						: "0.00";
+					
 					$graficoAnalitico[] = $totalizadores[$key];
 				}
 	

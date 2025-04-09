@@ -20,17 +20,28 @@
 		}
 
 		$jornadaPrevistaOriginal = $jornadaPrevista;
-		$jornadaPrevista = (new DateTime("{$data} {$jornadaPrevista}"))->format("H:i");
+		$jornadaPrevista = (new DateTime("{$data} {$jornadaPrevista}"));
 		if(!empty($abono)){
-			$jornadaPrevista = (new DateTime("{$data} {$abono}"))->diff(new DateTime("{$data} {$jornadaPrevista}"))->format("%H:%I");
+		    $abono = explode(":", $abono);
+		    if(intval($abono[0]) > 23){
+		        $abono = ["23", "59", "00"];
+		    }
+		    $abono[1] = intval($abono[1]) > 59?"59" : $abono[1];
+		    $abono = new DateTime("{$data} ".implode(":", $abono)."");
+		    if($abono > $jornadaPrevista){
+		        $jornadaPrevista = "00:00";
+		    }else{
+			    $jornadaPrevista = ($abono)->diff($jornadaPrevista)->format("%H:%I");
+		    }
+		}else{
+		    $jornadaPrevista = $jornadaPrevista->format("H:i");
 		}
 
 		return [$jornadaPrevistaOriginal, $jornadaPrevista];
 	}
 
 	function calcularAbono($saldo, $tempoAbono){
-		$saldoPositivo = $saldo;
-
+		
 		if($saldo[0] == "-"){
 			return ((substr($saldo, 1) >= $tempoAbono)? $tempoAbono: substr($saldo, 1));
 		}else{
@@ -46,7 +57,7 @@
 		foreach($chavesInvalidas as $key){
 			unset($registros[$key]);
 		}
-		if(!isset($registros["inicioJornada"]) || (isset($registros["inicioJornada"]) && empty($registros["inicioJornada"]))){
+		if(!isset($registros["inicioJornada"]) || empty($registros["inicioJornada"])){
 			return "00:00";
 		}
 
@@ -294,8 +305,8 @@
 					//}
 	
 					//saldoAnterior{
-					$saldoAnterior = mysqli_fetch_assoc(query(
-						"SELECT endo_tx_saldo FROM endosso"
+					$ultimoEndosso = mysqli_fetch_assoc(query(
+						"SELECT endo_tx_filename FROM endosso"
 							. " WHERE endo_tx_status = 'ativo'"
 							. " AND endo_tx_ate < '".$mes->format("Y-m-01")."'"
 							. " AND endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'"
@@ -303,9 +314,11 @@
 							. " LIMIT 1;"
 					));
 	
-					if (!empty($saldoAnterior)) {
-						if (!empty($saldoAnterior["endo_tx_saldo"])) {
-							$saldoAnterior = $saldoAnterior["endo_tx_saldo"];
+					if (!empty($ultimoEndosso)) {
+						$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
+						
+						if (!empty($ultimoEndosso["totalResumo"])) {
+							$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoFinal"]?? $ultimoEndosso["totalResumo"]["saldoBruto"];
 						} elseif (!empty($motorista["enti_tx_banco"])) {
 							$saldoAnterior = $motorista["enti_tx_banco"];
 						}
@@ -341,6 +354,9 @@
 						];
 	
 						foreach ($endossos as $endosso) {
+							if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"].".csv")){
+								continue;
+							}
 							$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
 							if (empty($endosso["totalResumo"]["he50APagar"])) {
 								$pago = calcularHorasAPagar(
@@ -565,7 +581,7 @@
     }
 
 	function diaDetalhePonto(array $motorista, string $data): array{
-		global $totalResumo, $contagemEspera;
+		global $totalResumo;
 		setlocale(LC_ALL, "pt_BR.utf8");
 
 		$aRetorno = [
@@ -605,7 +621,7 @@
 			$motorista["enti_tx_percHEEx"] = $motorista["para_tx_percHEEx"];
 		}
 		
-
+		
 		//Organizar array com tipos de ponto{
 			$registros = [
 				null,
@@ -671,7 +687,7 @@
 			if(!empty($abonos)){
 				$warning = 
 					"<a><i style='color:green;' title="
-							."'Jornada Original: ".sprintf("%02d:%02d", $jornadaPrevistaOriginal, "00")."\n"
+							."'Jornada Original: ".$jornadaPrevistaOriginal."\n"
 							."Abono: {$abonos["abon_tx_abono"]}\n"
 							."Motivo: {$abonos["moti_tx_nome"]}\n"
 							."Justificativa: {$abonos["abon_tx_descricao"]}\n\n"
@@ -834,8 +850,6 @@
 		$aRetorno["diffDescanso"] = $registros["descansoCompleto"]["icone"].$registros["descansoCompleto"]["totalIntervalo"];
 		$aRetorno["diffRepouso"]  = $registros["repousoCompleto"]["icone"].$registros["repousoCompleto"]["totalIntervalo"];
 
-		$contagemEspera += count($registros["esperaCompleto"]["pares"]);
-
 		//JORNADA EFETIVA{
 			if(is_string($registros["jornadaCompleto"]["totalIntervalo"])){
 				$jornadaIntervalo = new DateTime($data." 00:00");
@@ -865,8 +879,7 @@
 				}
 			//}
 			
-			//SOMATORIO DE TODAS AS ESPERAS
-
+			
 			if(!empty($registros["inicioJornada"][0])){
 				$value = new DateTime("{$data} 00:00:00");
 				for($f = 0; $f < count($totalNaoJornada); $f++){
@@ -954,7 +967,7 @@
 							$transferir = substr($aRetorno["diffSaldo"], 1);
 						}else{
 							$transferir = $intervaloEsp;
-						}	
+						}
 						$intervaloEsp = operarHorarios([$intervaloEsp, $transferir], "-");
 						$aRetorno["diffSaldo"] = operarHorarios([$aRetorno["diffSaldo"], $transferir], "+");
 					}
@@ -963,23 +976,15 @@
 				if($indenizarEspera){
 					$aRetorno["esperaIndenizada"] = $intervaloEsp;
 				}
-
 			}
 		//}
 
-		//INICIO ADICIONAL NOTURNO
+		//INICIO ADICIONAL NOTURNO{
 			$aRetorno["adicionalNoturno"] = calcularAdicNot($registros);
-		//FIM ADICIONAL NOTURNO
+		//}
 		
 		//TOLERÂNCIA{
-			$tolerancia = mysqli_fetch_array(query(
-				"SELECT parametro.para_tx_tolerancia FROM entidade 
-					JOIN parametro ON enti_nb_parametro = para_nb_id 
-					WHERE enti_nb_parametro = {$motorista["enti_nb_parametro"]}
-					LIMIT 1;"
-			), MYSQLI_BOTH)[0];
-			$tolerancia = intval($tolerancia);
-		
+			$tolerancia = !empty($motorista["para_tx_tolerancia"])? intval($motorista["para_tx_tolerancia"]): 0;
 
 			$saldo = explode(":", $aRetorno["diffSaldo"]);
 			$saldo = intval($saldo[0])*60 + ($saldo[0][0] == "-"? -1: 1)*intval($saldo[1]);
@@ -1320,11 +1325,15 @@
 				ORDER BY endo_tx_de ASC"
 		),MYSQLI_ASSOC);
 
+		
 		foreach($endossos as &$endosso){
+			if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"].".csv")){
+				continue;
+			}
 			$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
 		}
-
 		$endossoCompleto = [];
+
 
 		if(count($endossos) > 0){
 			$endossoCompleto = $endossos[0];
@@ -1464,6 +1473,8 @@
 		//}
 
 		$horariosOrdenados = ordenarHorariosTipo($inicios, $fins);
+		unset($inicios);
+		unset($fins);
 
 		$pares = [];
 		$parAtual = null;
@@ -1584,14 +1595,13 @@
 			." AND user.user_tx_status = 'ativo'"
 			." AND macroponto.macr_tx_status = 'ativo'"
 		;
-		
 		$sql = 
 			"SELECT DISTINCT pont_nb_id, ".implode(",", $cols)." FROM ponto"
 				." JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_tx_codigoInterno"
 				." JOIN entidade ON ponto.pont_tx_matricula = entidade.enti_tx_matricula"
 				." JOIN user ON entidade.enti_nb_id = user.user_nb_entidade"
 				." LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id"
-				." LEFT JOIN endosso ON ponto.pont_tx_matricula = endosso.endo_tx_matricula"
+				." LEFT JOIN endosso ON ponto.pont_tx_matricula = endosso.endo_tx_matricula AND endo_tx_status = 'ativo' AND endo_tx_matricula = '{$matricula}' AND '{$data->format("Y-m-d")}' BETWEEN endo_tx_de AND endo_tx_ate"
 				." WHERE {$condicoesPontoBasicas}"
 					." AND macr_tx_fonte = 'positron'"
 					." AND ponto.pont_tx_data >= STR_TO_DATE('{$sqlDataInicio}', '%Y-%m-%d %H:%i:%s')"

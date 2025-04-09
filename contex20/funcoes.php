@@ -114,13 +114,23 @@
 	}
 
 	function lerEndossoCSV(string $filename){
-		global $CONTEX;
 		
 		if(substr($filename, -4) != ".csv"){
 			$filename .= ".csv";
 		}
 
-		$endosso = fopen($_SERVER["DOCUMENT_ROOT"].$CONTEX["path"]."/arquivos/endosso/".$filename, "r");
+		$endosso = fopen($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$filename, "r");
+
+		if($endosso == false){
+			set_status("ERRO: Endosso não encontrado.");
+			$_POST["returnValues"] = json_encode([
+				"HTTP_REFERER" => $_SERVER["HTTP_REFERER"],
+				"msg_status" => $_POST["msg_status"]
+			]);
+			voltar();
+			exit;
+		}
+
 		$keys = fgetcsv($endosso);
 		$values = fgetcsv($endosso);
 		$endosso = [];
@@ -301,7 +311,7 @@
 	// }
 
 	function campo_domain($nome,$variavel,$modificador,$tamanho,$mascara="",$extra=""){
-		return campo($nome,$variavel,$modificador,$tamanho,"MASCARA_DOMAIN",$extra);
+		return campo($nome,$variavel,$modificador,$tamanho,"MASCARA_COMPANY",$extra);
 	}
 
 	// function carrega_array($sql, $mode = MYSQLI_BOTH){
@@ -591,9 +601,9 @@
 			case "MASCARA_HORA":
 				$type = "time";
 			break;
-			case "MASCARA_DOMAIN":
+			case "MASCARA_COMPANY":
 				$dataScript .= "$(document).ready(function() {
-						var inputField = $('#nomeDominio');
+						var inputField = $('#nomeEmpresa');
 						var domainPrefix = '".$_SERVER['HTTP_ORIGIN'].(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? '/dev_techps/': '/techps/')."';
 
 						function updateDisplayedText() {
@@ -896,7 +906,7 @@
 	// }
 
 	function combo_net($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra_bd='',$extra_busca='',$extra_ordem='',$extra_limite='15'){
-		global $CONTEX,$conn;
+		global $CONTEX, $conn;
 
 		if(!empty($modificador)){
 			$tab = substr($tabela,0,4);
@@ -965,18 +975,18 @@
 		}
 
 		echo "
-			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
-			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/select2/js/select2.min.js'></script>
-			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js' type='text/javascript'></script>
-			<script src='".$CONTEX['path']."/../contex20/assets/global/plugins/jquery-inputmask/maskMoney.js' type='text/javascript'></script>
+			<script src='{$CONTEX["path"]}/../contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
+			<script src='{$CONTEX["path"]}/../contex20/assets/global/plugins/select2/js/select2.min.js'></script>
+			<script src='{$CONTEX["path"]}/../contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js' type='text/javascript'></script>
+			<script src='{$CONTEX["path"]}/../contex20/assets/global/plugins/jquery-inputmask/maskMoney.js' type='text/javascript'></script>
 			<script type=\"text/javascript\" language=\"javascript\">
 				$.fn.select2.defaults.set(\"theme\", \"bootstrap\");
 				$(window).bind(\"load\", function() {
-					var res = $('.".$variavel."').select2({
+					var res = $('.{$variavel}').select2({
 						language: 'pt-BR',
 						placeholder: 'Selecione um item',
 						allowClear: true,
-						ajax: ".$ajax."
+						ajax: {$ajax}
 					});
 				});
 			</script>
@@ -1294,7 +1304,7 @@
 
 	}
 
-	function botao($nome, $acao, $campos='', $valores='', $extra='', bool $salvar = false, $botaoCor='btn btn-secondary'){
+	function botao($nome, $acao, $campos='', $valores='', $extra='', bool $salvar = false, $botaoCor='btn btn-secondary'): string{
 		global $idsBotaoContex;
 		$hidden = '';
 		$funcaoOnClick = '';
@@ -1303,11 +1313,11 @@
 			$a_valores=explode(',',$valores);
 			for($i=0; $i<count($a_campos); $i++){
 				$hidden .= "
-					var input".$i." = document.createElement('input');
-					input".$i.".type = 'hidden';
-					input".$i.".name = '".$a_campos[$i]."';
-					input".$i.".value = '".$a_valores[$i]."';
-					document.forms[0].appendChild(input".$i.");
+					var input{$i} = document.createElement('input');
+					input{$i}.type = 'hidden';
+					input{$i}.name = '".$a_campos[$i]."';
+					input{$i}.value = '".$a_valores[$i]."';
+					document.forms[0].appendChild(input{$i});
 					"
 				;
 			}

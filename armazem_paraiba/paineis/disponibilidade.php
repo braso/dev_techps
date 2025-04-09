@@ -16,13 +16,15 @@
 
         $linha = "linha = '<tr>'";
         if (!empty($_POST["empresa"])) {
-            $linha .= " +'<td style=\'text-align: center;'+ css +'\'>'+item.ocupacao+'</td>'
-                        +'<td style=\'text-align: center;'+ css +'\'>'+item.matricula+'</td>'
-                        +'<td style=\'text-align: center;'+ css +'\'>'+item.Nome+'</td>'
-                        +'<td style=\'text-align: center;'+ css +'\'>'+item.ultimaJornada+'</td>'
-                        +'<td style=\'text-align: center;'+ css +'\'>'+item.consulta+'</td>'
+            $linha .= " +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
+                        +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
+                        +'<td style=\'text-align: center;\'>'+item.Nome+'</td>'
+                        +'<td style=\'text-align: center;\'>'+item.ultimaJornada+'</td>'
+                        +'<td style=\'text-align: center;\'>'+item.consulta+'</td>'
                         +'<td style=\'text-align: center;'+ css +'\'>'+item.repouso+'</td>'
-                        +'<td style=\'text-align: center;'+ css +'\' class =>'+item.Apos11+'</td>'
+                        +'<td style=\'text-align: center;\'>'+item.Apos8+'</td>'
+                        +'<td style=\'text-align: center;\'>'+item.Apos11+'</td>'
+                        +'<td style=\'text-align: center;\'>'+status+'</td>'
                     +'</tr>';";
         }
 
@@ -40,8 +42,6 @@
 
                     $(document).ready(function(){
                         var tabela = $('#tabela-empresas tbody');
-                        var campo = $('.total-jornada');
-                        var campo2 = $('.total-sem-jornada');
                         var filtro = '".$filtro ."';
                         console.log(filtro);
 
@@ -52,33 +52,55 @@
                                 success: function(data){
                                     var row = {};
                                     $.each(data, function(index, item){
-                                        // console.log(index);
+                                        console.log(index);
                                         // console.log(item);
                                         var css = '';
+                                        var status = '';
                                         if(index == 'disponivel'){
                                             css = 'background-color: lightgreen;';
-                                        } else if(index == 'naoPermitido'){
-                                            css = 'background-color: var(--var-lightred);';
-                                        } else {
+                                            status = 'Disponivel';
+                                        } else if(index == 'parcial') {
                                             css = 'background-color: var(--var-lightorange);';
+                                            status = 'Parcialmente Disponivel';
+                                        } else if(index == 'naoPermitido') {
+                                            css = 'background-color: var(--var-darkred); color: white;';
+                                            status = 'Indisponível';
                                         }
 
                                         if (filtro !== '' && index !== filtro) {
                                             return;
                                         }
-                                        
-                                        if (Array.isArray(item)) {
-                                            // Itera sobre o array de motoristas
-                                            $.each(item, function(index, item) {
-                                                ". $linha."
-                                                tabela.append(linha);
-                                            });
-                                        }
-                                        
-                                        
+
+                                        if(index != 'EmJornada'){
+                                            if (Array.isArray(item)) {
+                                                // Itera sobre o array de motoristas
+                                                $.each(item, function(index, item) {
+                                                    ". $linha."
+                                                    tabela.append(linha);
+                                                });
+                                            }
+                                        }   
                                     });
-                                    campo.html('<b>- Funcionários em jornada: </b>'+data.total.totalMotoristasJornada);
-                                    campo2.html('<b>Funcionários disponíveis após 11 horas de interstício para iniciar uma jornada: </b>'+data.total.totalMotoristasLivres)
+
+                                    var tabela_funcionarios = $('#tabela-funcionarios thead');
+
+                                    var totais = `<tr>
+                                                    <th>
+                                                        <b>Funcionários disponíveis para 11 horas ou parametrizados</b>
+                                                    </th>
+                                                    <td style=\"text-align: center;\">
+                                                        \${data.total.totalMotoristasLivres}
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th>
+                                                        <b>Funcionários em jornada</b>
+                                                    </th>
+                                                    <td style=\"text-align: center;\">
+                                                        \${data.total.totalMotoristasJornada}
+                                                    </td>
+                                                </tr>`;
+                                    tabela_funcionarios.append(totais);
                                 },
                                 error: function(){
                                     console.error('Erro ao carregar os dados.');
@@ -90,7 +112,7 @@
                             valor = valor.trim(); // Remove espaços extras
 
                             // Se for uma data no formato 'DD/MM/YYYY HH:mm', converte para timestamp
-                            if (['jornada', 'consulta', 'disponível'].includes(coluna)) {
+                            if (['jornada', 'consulta', 'disponível8', 'disponível11'].includes(coluna)) {
                                 var dataMoment = moment(valor, 'DD/MM/YYYY HH:mm', true);
                                 if (dataMoment.isValid()) {
                                     return dataMoment.valueOf(); // Retorna timestamp para ordenação correta
@@ -135,10 +157,32 @@
                             });
                         }
 
-                        var colunasPermitidas = ['ocupacao', 'matricula', 'nome', 'jornada', 'consulta', 'repouso', 'disponível'];
+                        function ordenarTabela2(coluna, ordem) {
+                            var linhas = tabela2.find('tr').get();
+                            
+                            linhas.sort(function(a, b) {
+                                var valorA = converterValor($(a).children('td').eq(coluna).text(), colunasPermitidas2[coluna]);
+                                var valorB = converterValor($(b).children('td').eq(coluna).text(), colunasPermitidas2[coluna]);
+
+                                if (valorA < valorB) {
+                                    return ordem === 'asc' ? -1 : 1;
+                                }
+                                if (valorA > valorB) {
+                                    return ordem === 'asc' ? 1 : -1;
+                                }
+                                return 0;
+                            });
+
+                            $.each(linhas, function(index, row) {
+                                tabela2.append(row);
+                            });
+                        }
+
+                        var colunasPermitidas = ['ocupacao', 'matricula', 'nome', 'jornada', 'consulta', 'repouso', 'disponível8', 'disponível11'];
+                        var colunasPermitidas2 = ['ocupacao2', 'matricula2', 'nome2', 'jornada2', 'consulta2', 'repouso2', 'disponível82', 'disponível112'];
 
                         // Evento de clique para ordenar a tabela ao clicar no cabeçalho
-                        $('#titulos th').click(function() {
+                        $('#titulos3 th').click(function() {
                             var colunaClicada = $(this).attr('class');
 
                             var classePermitida = colunasPermitidas.some(function(coluna) {
@@ -150,19 +194,41 @@
                                 var ordem = $(this).data('order');
 
                                 // Redefinir ordem de todas as colunas
-                                $('#titulos th').data('order', 'desc');
+                                $('#titulos3 th').data('order', 'desc');
                                 $(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
 
                                 // Chama a função de ordenação
                                 ordenarTabela(coluna, $(this).data('order'));
 
                                 // Ajustar classes para setas de ordenação
-                                $('#titulos th').removeClass('sort-asc sort-desc');
+                                $('#titulos3 th').removeClass('sort-asc sort-desc');
                                 $(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
                             }
                         });
 
+                         $('#titulos4 th').click(function() {
+                            var colunaClicada = $(this).attr('class');
 
+                            var classePermitida = colunasPermitidas2.some(function(coluna) {
+                                return colunaClicada.includes(coluna);
+                            });
+
+                            if (classePermitida) {
+                                var coluna = $(this).index();
+                                var ordem = $(this).data('order');
+
+                                // Redefinir ordem de todas as colunas
+                                $('#titulos4 th').data('order', 'desc');
+                                $(this).data('order', ordem === 'desc' ? 'asc' : 'desc');
+
+                                // Chama a função de ordenação
+                                ordenarTabela2(coluna, $(this).data('order'));
+
+                                // Ajustar classes para setas de ordenação
+                                $('#titulos4 th').removeClass('sort-asc sort-desc');
+                                $(this).addClass($(this).data('order') === 'asc' ? 'sort-asc' : 'sort-desc');
+                            }
+                        });
 
                         ".$carregarDados."
                     });
@@ -170,7 +236,7 @@
     }
     
     function index() {
-        cabecalho("Relatório de disponibilidade");
+        cabecalho("Painel de disponibilidade para uma nova jornada");
 
         // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
@@ -179,9 +245,9 @@
             combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
             combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
             ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
-            campo_dataHora("Dispobilidade","busca_periodo",(!empty($_POST["busca_periodo"])? $_POST["busca_periodo"]:  date("Y-m-d H:i")),
+            campo_dataHora("Data/Hora da nova jornada","busca_periodo",(!empty($_POST["busca_periodo"])? $_POST["busca_periodo"] :  date("Y-m-d H:i")),
             2),
-            combo("Status Dispobilidade", "busca_Dispobilidade", ($_POST["busca_Dispobilidade"] ?? ""), 2, 
+            combo("Status", "busca_Dispobilidade", ($_POST["busca_Dispobilidade"] ?? ""), 2, 
             ["" => "Todos", "disponivel" => "Disponives", "naoPermitido" => "Indisponives", "parcial" => "Parcialmente disponível"]),
         ];
 
@@ -215,9 +281,10 @@
                 }
 
                 if (!empty($arquivo)){
-                    $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
-                        <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
-                    $dataEmissao = $alertaEmissao." Atualizado em: " . date("d/m/Y H:i", filemtime($arquivo)). "</span>";
+                    // $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
+                        // <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                    // $dataEmissao = $alertaEmissao." Atualizado em: " . date("d/m/Y H:i", filemtime($arquivo)). "</span>";
+                    $dataEmissao = "Atualizado em: " . date("d/m/Y H:i", filemtime($arquivo)). "</span>";
                     $encontrado = true;
                 }
             }else {
@@ -225,18 +292,31 @@
             }
 
             if ($encontrado) {
-                $titulo = "Relatório de disponibilidade";
+                $titulo = "Painel de disponibilidade para uma nova jornada";
                 // $mostra = false;
-                $rowTitulos = "<tr id='titulos' class='titulos'>";
+                $rowTitulos = "<tr id='titulos3' class='titulos3'>";
                 $rowTitulos .= "
                 <th class='ocupacao'>Ocupação</th>
                 <th class='matricula'>Matrícula</th>
                 <th class='nome'>Nome</th>
-                <th class='jornada'>Último Fechamento de jornada</th>
+                <th class='jornada'>Fim de jornada</th>
                 <th class='consulta'>Última Consulta</th>
-                <th class='repouso'>Tempo de Repouso</th>
-                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='disponível'> Data disponível</th>";
+                <th class='repouso'>Tempo em Repouso</th>
+                <th class='disponível8'>Disponibilidade Parcial (8h)</th>
+                <th class='disponível11'>Disponibilidade Total (11h)</th>
+                <th class=''>Status</th>";
                 $rowTitulos .= "</tr>";
+
+                $tabelaMotivo = "
+			    <div style='display: flex; flex-direction: column;'>
+				<div class='row' id='resumo'>
+					<div class='col-md-4.5'>
+						<table id='tabela-funcionarios'
+							class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>
+							<thead>
+							</thead>
+                        </table>";
+
                 $painelDisp = true;
                 include_once "painel_html2.php";
             }

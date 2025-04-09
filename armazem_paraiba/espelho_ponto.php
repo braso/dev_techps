@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -106,6 +106,10 @@
 	function index(){
 		cabecalho(empty($_POST["title"])? "Buscar Espelho de Ponto": $_POST["title"]);
 
+		echo "<style>";
+		include "css/espelho_ponto.css";
+		echo "</style>";
+
 		//CAMPOS DE CONSULTA{
 			$condBuscaMotorista = "";
 			$condBuscaEmpresa = "";
@@ -154,16 +158,23 @@
 				botao("Buscar", "buscarEspelho()", "", "", "", "", "btn btn-success"),
 			];
 			if(!in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
-				$b[] = botao("Cadastrar Abono", "redirParaAbono", "", "", "btn btn-secondary");
+				$b[] = botao("Cadastrar Abono", "redirParaAbono", "acaoPrevia", $_POST["acao"]??"", "btn btn-secondary");
 			}
-
-			$botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
-			$b[] = $botao_imprimir;
+			if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
+				$b[] = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
+			}
 		//}
 		
 		echo abre_form();
 		echo linha_form($searchFields);
 		echo fecha_form($b);
+		// if(!in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
+		// 	echo botao("Cadastrar Abono", "redirParaAbono", "", "", "btn btn-secondary");
+		// }
+		// if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
+		// 	echo "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
+		// }
+
 
 		$opt = "";
 		//Buscar Espelho{
@@ -266,7 +277,6 @@
 					if(in_array("para_tx_jornadaSemanal", $keys)
 					 	&& in_array("para_tx_jornadaSabado", $keys)
 					 	&& in_array("para_tx_percHESemanal", $keys)
-					 	&& in_array("para_tx_percHEEx", $keys)
 					){
 						$parametroPadrao = "Convenção Padronizada: ".$parametroEmpresa["para_tx_nome"].", Semanal (".$parametroEmpresa["para_tx_jornadaSemanal"]."), Sábado (".$parametroEmpresa["para_tx_jornadaSabado"].")";
 					}
@@ -282,7 +292,7 @@
 				));
 				
 				$saldoAnterior = "";
-				if(!empty($ultimoEndosso)){
+				if(!empty($ultimoEndosso) && file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso".$ultimoEndosso["endo_tx_filename"].".csv")){
 					$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
 					if(empty($totalResumo)){
 						$totalResumo = $ultimoEndosso["totalResumo"];
@@ -359,8 +369,11 @@
 				echo fecha_form();
 
 				unset($_POST["errorFields"]);
+
+				
 				$params = array_merge($_POST, [
 					"acao" => "index",
+					"acaoPrevia" => $_POST["acao"],
 					"idMotorista" => null,
 					"data" => null,
 					"HTTP_REFERER" => (!empty($_POST["HTTP_REFERER"])? $_POST["HTTP_REFERER"]: $_SERVER["REQUEST_URI"])
@@ -377,9 +390,6 @@
 		//}
 		
 		echo carregarJS($opt);
-		echo "<style>";
-		include "css/espelho_ponto.css";
-		echo "</style>";
 		rodape();
 	}
 

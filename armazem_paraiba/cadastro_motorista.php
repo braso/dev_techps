@@ -22,23 +22,22 @@
 		exit;
 	}
 
-	function carregarParametroPadrao(int $idEmpresa = null){
+	function carregarParametroPadrao(int $idEmpresa = 0){
 		global $a_mod;
+
 		if(!empty($idEmpresa) && !empty($a_mod["enti_nb_empresa"])){
 			$idEmpresa = intval($a_mod["enti_nb_empresa"]);
 		}else{
 			$idEmpresa = -1;
 		}
 
-		$a_mod["parametroPadrao"] = mysqli_fetch_assoc(
-			query(
-				"SELECT parametro.* FROM empresa
-					JOIN parametro ON empresa.empr_nb_parametro = parametro.para_nb_id
-					WHERE para_tx_status = 'ativo'
-						AND empresa.empr_nb_id = {$idEmpresa}
-					LIMIT 1;"
-			)
-		);
+		$a_mod["parametroPadrao"] = mysqli_fetch_assoc(query(
+			"SELECT parametro.* FROM empresa
+				JOIN parametro ON empresa.empr_nb_parametro = parametro.para_nb_id
+				WHERE para_tx_status = 'ativo'
+					AND empresa.empr_nb_id = {$idEmpresa}
+				LIMIT 1;"
+		));
 	}
 
 	function carregarParametro(){
@@ -311,7 +310,7 @@
 			$novoMotorista["enti_tx_ehPadrao"] = $ehPadrao;
 			$id = inserir("entidade", array_keys($novoMotorista), array_values($novoMotorista))[0];
 
-			if(empty($id) || get_class($id[0]) == Exception::class){
+			if(empty($id) || (is_array($id) && get_class($id[0]) == Exception::class)){
 				set_status("ERRO ao cadastrar motorista.");
 				index();
 				exit;
@@ -403,28 +402,28 @@
 		$allowed = ["image/jpeg", "image/gif", "image/png", "application/pdf"];
 		if (in_array($file_type, $allowed) && $_FILES["cnhAnexo"]["name"] != "") {
 
-			if (!is_dir("arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]")) {
-				mkdir("arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]", 0777, true);
+			if (!is_dir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}")) {
+				mkdir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}", 0777, true);
 			}
 
-			$arq = enviar("cnhAnexo", "arquivos/empresa/".$_POST["empresa"]."/motoristas/".$_POST["matricula"]."/", "CNH_".$id."_".$_POST["postMatricula"]);
+			$arq = enviar("cnhAnexo", "arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}/", "CNH_{$id}_{$_POST["postMatricula"]}");
 			if ($arq) {
 				atualizar("entidade", ["enti_tx_cnhAnexo"], [$arq], $id);
 			}
 		}
 		
 		
-		$idUserFoto = mysqli_fetch_assoc(query("SELECT user_nb_id FROM user WHERE user_nb_entidade = '".$id."' LIMIT 1;"));
+		$idUserFoto = mysqli_fetch_assoc(query("SELECT user_nb_id FROM user WHERE user_nb_entidade = '{$id}' LIMIT 1;"));
 		$file_type = $_FILES["foto"]["type"]; //returns the mimetype
 
 		$allowed = ["image/jpeg", "image/gif", "image/png"];
 		if (in_array($file_type, $allowed) && $_FILES["foto"]["name"] != "") {
 
-			if (!is_dir("arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]")) {
-				mkdir("arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]", 0777, true);
+			if (!is_dir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}")) {
+				mkdir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}", 0777, true);
 			}
 
-			$arq = enviar("foto", "arquivos/empresa/$_POST[empresa]/motoristas/$_POST[matricula]/", "FOTO_".$id."_".$_POST["postMatricula"]);
+			$arq = enviar("foto", "arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}/", "FOTO_{$id}_{$_POST["postMatricula"]}");
 			if($arq){
 				atualizar("entidade", ["enti_tx_foto"], [$arq], $id);
 				atualizar("user", ["user_tx_foto"], [$arq], $idUserFoto["user_nb_id"]);
@@ -702,14 +701,7 @@
 			"btn btn-success"
 		);
 
-		$botoesCadastro[] = botao("Voltar", "voltar", "", "", "tabindex=54");
-
-		if(empty($_POST["HTTP_REFERER"])){
-			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
-			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_motorista.php"))){
-				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_motorista.php";
-			}
-		}
+		$botoesCadastro[] = criarBotaoVoltar(null, null, "tabindex=54");
 
 		echo abre_form();
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
@@ -885,14 +877,13 @@
 		//Configuração da tabela dinâmica{
 			$gridFields = [
 				"CÓDIGO" 				=> "enti_nb_id",
-				"USUÁRIO" 				=> "user_nb_id",
 				"NOME" 					=> "enti_tx_nome",
 				"MATRÍCULA" 			=> "enti_tx_matricula",
 				"CPF" 					=> "enti_tx_cpf",
 				"EMPRESA" 				=> "empr_tx_nome",
 				"FONE 1" 				=> "enti_tx_fone1",
 				"OCUPAÇÃO" 				=> "enti_tx_ocupacao",
-				"DATA CADASTRO" 		=> "DATE_FORMAT(enti_tx_dataCadastro, \"%d/%m/%Y\") AS enti_tx_dataCadastro",
+				"DATA CADASTRO" 		=> "CONCAT('data(\"', enti_tx_dataCadastro, '\")') AS enti_tx_dataCadastro",
 				"PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
 				"CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
 				"STATUS" 				=> "enti_tx_status"
@@ -900,7 +891,6 @@
 	
 			$camposBusca = [
 				"busca_codigo" 			=> "enti_nb_id",
-				"busca_usuario" 		=> "user_nb_id",
 				"busca_nome_like" 		=> "enti_tx_nome",
 				"busca_matricula_like" 	=> "enti_tx_matricula",
 				"busca_cpf" 			=> "enti_tx_cpf",
@@ -925,7 +915,7 @@
 			);
 	
 			$actions["functions"][1] .= 
-				"esconderInativar('glyphicon glyphicon-remove search-remove', 11);"
+				"esconderInativar('glyphicon glyphicon-remove search-remove', 10);"
 			;
 	
 			$gridFields["actions"] = $actions["tags"];

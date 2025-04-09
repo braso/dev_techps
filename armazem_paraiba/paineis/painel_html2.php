@@ -25,9 +25,9 @@
 				<br>
 				<?php if (!empty($empresa["empr_tx_nome"])) { ?>
 					<span><b>Empresa:</b> <?= $empresa["empr_tx_nome"] ?></span>
+					<br>
+					<br>
 				<?php } ?>
-				<span class="total-sem-jornada"></span>
-				<span class="total-jornada"> </span>
 				<?= $quantFun ?>
 				<?= $tabelaMotivo ?>
 

@@ -190,6 +190,12 @@
 			exit;	
 		}
 
+		if(empty($_POST["busca_motorista"])){
+			set_status("ERRO: Insira o motorista para consultar seu saldo.");
+			index();
+			exit;
+		}
+
 		$err = conferirErros(1, $_POST["busca_motorista"]);
 		if(!empty($err)){
 			set_status("ERRO: ".$err);
@@ -225,7 +231,7 @@
 		));
 
 		
-		if(!empty($ultimoEndosso["endo_tx_filename"])){
+		if(!empty($ultimoEndosso["endo_tx_filename"]) && file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$ultimoEndosso["endo_tx_filename"].".csv")){
 			$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
 			$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoFinal"];
 
@@ -248,9 +254,11 @@
 		
 		$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
 		$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], "999:59", ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+		[$totalResumo["he50APagar"], $totalResumo["he100APagar"]] = $aPagar;
+
 		$totalResumo["saldoAnterior"] = $saldoAnterior;
 		$totalResumo["saldoBruto"] = $saldoBruto;
-		[$totalResumo["he50APagar"], $totalResumo["he100APagar"]] = $aPagar;
+		
 		$_POST["quantHoras"] = operarHorarios([$totalResumo["saldoBruto"], $totalResumo["he100APagar"]], "-");
 		if($_POST["quantHoras"][0] == "-"){
 			$_POST["quantHoras"] = "00:00";
@@ -374,7 +382,7 @@
 				}
 			}
 			$saldoAnterior = "00:00";
-			if(!empty($ultimoEndosso["endo_tx_filename"])){
+			if(!empty($ultimoEndosso["endo_tx_filename"]) && file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$ultimoEndosso["endo_tx_filename"].".csv")){
 				$ultimoEndossoCSV = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
 				$saldoAnterior = $ultimoEndossoCSV["totalResumo"]["saldoFinal"];
 			}
@@ -411,10 +419,11 @@
 
 			$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
 			$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], (!empty($_POST["quantHoras"])? $_POST["quantHoras"]: "00:00"), ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
-			$saldoBruto = operarHorarios([$saldoBruto, $aPagar[0], $aPagar[1]], "-");
+			$saldoFinal = operarHorarios([$saldoBruto, $aPagar[0], $aPagar[1]], "-");
 			
 			$totalResumo["saldoAnterior"] = $saldoAnterior;
 			$totalResumo["saldoBruto"] = $saldoBruto;
+			$totalResumo["saldoFinal"] = $saldoFinal;
 			$totalResumo["he50APagar"] = $aPagar[0];
 			$totalResumo["he100APagar"] = $aPagar[1];
 
@@ -423,7 +432,6 @@
 				"endo_tx_nome" 			  => $motorista["enti_tx_nome"],
 				"endo_tx_matricula" 	  => $motorista["enti_tx_matricula"],
 				"endo_tx_mes" 			  => substr($_POST["data_de"], 0, 8)."01",
-				"endo_tx_saldo" 		  => $totalResumo["saldoBruto"],
 				"endo_tx_de" 			  => $_POST["data_de"],
 				"endo_tx_ate" 			  => $_POST["data_ate"],
 				"endo_tx_dataCadastro" 	  => date("Y-m-d h:i:s"),
@@ -495,6 +503,14 @@
 	}
 
 	function index(){
+		if(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
+			// dd("teste");
+			$_POST["returnValues"] = json_encode([
+				"HTTP_REFERER" => $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php"
+			]);
+			voltar();
+		}
+		
 		global $CONTEX;
 
 		cabecalho("Cadastro de Endosso");
@@ -544,18 +560,7 @@
 			botao("Cadastrar Endosso", "cadastrar", "", "", "", "", "btn btn-success")
 		];
 
-		if(empty($_POST["HTTP_REFERER"])){
-			if(empty($_SERVER["HTTP_REFERER"])){
-				$_SERVER["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/endosso.php";
-			}
-			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
-			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_endosso.php"))){
-				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/endosso.php";
-			}
-		}
-
 		echo abre_form();
-		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		echo linha_form($fields);
 		echo fecha_form($buttons);
 		

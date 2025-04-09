@@ -49,7 +49,7 @@
 			exit;
 		}
 	//}
-
+		
 	//Ordenar os pontos{
 		$dates = [];
 		$matriculas = [];

@@ -71,7 +71,7 @@
 				$nomeArquivo  .= "_".$f;
 				$arquivo["name"] = $nomeArquivo.$ext;
 				$local_file = $path.$arquivo["name"];
-				for(; file_exists($path.$nomeArquivo); $f++){
+				for(; file_exists($path.$nomeArquivo.$ext); $f++){
 					$arquivo["name"] = substr($nomeArquivo , 0, strlen($nomeArquivo )-2)."_".$f;
 					$local_file = $path.$arquivo["name"];
 				}
@@ -94,7 +94,7 @@
 		];
 
 		$buttons[] = botao("Enviar", "insertFile","","","","","btn btn-success");
-		$buttons[] = botao("Voltar", "voltar");
+		$buttons[] = criarBotaoVoltar();
 
 		if(empty($_POST["HTTP_REFERER"])){
 			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
@@ -259,18 +259,11 @@
 		}
 		
 		cabecalho("Carregar Ponto", 1);
-
-		$extra = 
-			((!empty($_POST["busca_inicio"]))? " AND arqu_tx_data >= '".$_POST["busca_inicio"]."'": "")
-			.((!empty($_POST["busca_fim"]))? " AND arqu_tx_data <= '".$_POST["busca_fim"]."'": "")
-			.((!empty($_POST["busca_codigo"]))? " AND arqu_nb_id = ".$_POST["busca_codigo"]: "")
-		;
 		
 		//CONSULTA
 		$fields = [
 			campo("Código", "busca_codigo", ($_POST["busca_codigo"]?? ""), 2),
-			campo("Data Início", "busca_inicio", ($_POST["busca_inicio"]?? ""), 2, "MASCARA_DATA"),
-			campo("Data Fim", "busca_fim", ($_POST["busca_fim"]?? ""), 2, "MASCARA_DATA")
+			campo("Data Início", "busca_inicio_ge", ($_POST["busca_inicio_ge"]?? ""), 2, "MASCARA_DATA"),
 		];
 
 		//BOTOES
@@ -285,25 +278,108 @@
 		echo linha_form($fields);
 		echo fecha_form($buttons);
 
-		$sql = 
-			"SELECT * FROM arquivoponto
-				JOIN user ON arqu_nb_user = user_nb_id 
-				WHERE arqu_tx_status = 'ativo'
-					".$extra."
-					ORDER BY arqu_tx_data DESC
-				LIMIT 400;"
-		;
+		/*/ Grid{
+			$extra = 
+				((!empty($_POST["busca_codigo"]))? " AND arqu_nb_id = ".$_POST["busca_codigo"]: "")
+				.((!empty($_POST["busca_inicio_ge"]))? " AND arqu_tx_data >= '".$_POST["busca_inicio_ge"]."'": "")
+			;
+			
+			$sql = 
+				"SELECT * FROM arquivoponto
+					JOIN user ON arqu_nb_user = user_nb_id 
+					WHERE arqu_tx_status = 'ativo'
+						".$extra."
+						ORDER BY arqu_tx_data DESC
+					LIMIT 400;"
+			;
 
 
-		$gridValues = [
-			"CÓD" => "arqu_nb_id",
-			"ARQUIVO" => "arqu_tx_nome",
-			"USUÁRIO" => "user_tx_nome",
-			"DATA" => "data(arqu_tx_data,1)",
-			"SITUAÇÃO" => "ucfirst(arqu_tx_status)",
-			"<spam class='glyphicon glyphicon-download' style='font-size: 16px;'></spam>" => "icone_download(arqu_tx_nome)"
-		];
+			$gridValues = [
+				"CÓD" => "arqu_nb_id",
+				"ARQUIVO" => "arqu_tx_nome",
+				"USUÁRIO" => "user_tx_nome",
+				"DATA" => "data(arqu_tx_data,1)",
+				"SITUAÇÃO" => "ucfirst(arqu_tx_status)",
+				"<spam class='glyphicon glyphicon-download' style='font-size: 16px;'></spam>" => "icone_download(arqu_tx_nome)"
+			];
 
-		grid($sql, array_keys($gridValues), array_values($gridValues), "", 12, 0);
+			grid($sql, array_keys($gridValues), array_values($gridValues), "", 12, 0);
+		// }*/
+
+		// Grid dinâmico{
+			$gridFields = [
+				"CÓD" 		=> "arqu_nb_id",
+				"ARQUIVO" 	=> "arqu_tx_nome",
+				"USUÁRIO" 	=> "user_tx_nome",
+				"DATA" 		=> "CONCAT('data(\"', arqu_tx_data, '\", 1)') as arqu_tx_data",
+				"SITUAÇÃO" 	=> "arqu_tx_status"
+			];
+
+			$camposBusca = [
+				"busca_codigo" 		=> "arqu_nb_id",
+				"busca_inicio_ge"	=> "arqu_tx_data",
+			];
+
+			$queryBase = (
+				"SELECT ".implode(", ", array_values($gridFields)).", arqu_tx_data AS arqu_tx_de, arqu_tx_data AS arqu_tx_ate FROM arquivoponto"
+				." JOIN user ON arqu_nb_user = user_nb_id"
+			);
+
+			$actions = criarIconesGrid(
+				["glyphicon glyphicon-download glyphicon-clickable"],
+				["carregar_ponto.php"],
+				["downloadArquivo()"]
+			);
+
+			$gridFields["actions"] = $actions["tags"];
+	
+			$actions["functions"] = [
+				"$('[class=\"glyphicon glyphicon-download glyphicon-clickable\"]').click(function(event){
+					form = document.createElement('form');
+					form.setAttribute('method', 'post');
+					form.setAttribute('action', 'carregar_ponto.php');
+					
+					fileNameInput = document.createElement('input');
+					fileNameInput.setAttribute('name', 'caminho');
+					fileNameInput.setAttribute('value', './arquivos/pontos/' + $(event.target).parent().parent().children()[1].innerHTML);
+					form.appendChild(fileNameInput);
+					
+					actionInput = document.createElement('input');
+					actionInput.setAttribute('name', 'acao');
+					actionInput.setAttribute('value', 'downloadArquivo()');
+					form.appendChild(actionInput);
+
+					inputs = document.contex_form.getElementsByTagName('input');
+					selects = document.contex_form.getElementsByTagName('select');
+
+					if(inputs != undefined){
+						for(key in inputs){
+							if(inputs[key].value != undefined && inputs[key].value != ''){
+								form.appendChild(inputs[key].cloneNode(true));
+							}
+						}
+					}
+					if(selects != undefined){
+						for(key in selects){
+							if(selects[key].value != undefined && selects[key].value != ''){
+								form.appendChild(selects[key].cloneNode(true));
+							}
+						}
+					}
+
+					document.getElementsByTagName('body')[0].appendChild(form);
+					form.submit();
+				});"
+			];
+
+	
+			$jsFunctions =
+				"const funcoesInternas = function(){
+					".implode(" ", $actions["functions"])."
+				}"
+			;
+
+			echo gridDinamico("tabelaArquivos", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+		// }
 		rodape();
 	}

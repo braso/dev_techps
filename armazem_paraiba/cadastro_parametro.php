@@ -31,29 +31,6 @@
 		exit;
 	}
 
-	function downloadArquivo() {
-		// Verificar se o arquivo existe
-		if(file_exists($_POST["caminho"])){
-			// Configurar cabeçalhos para forçar o download
-			header("Content-Description: File Transfer");
-			header("Content-Type: application/octet-stream");
-			header("Content-Disposition: attachment; filename=".basename($_POST["caminho"]));
-			header("Expires: 0");
-			header("Cache-Control: must-revalidate");
-			header("Pragma: public");
-			header("Content-Length: ".filesize($_POST["caminho"]));
-
-			// Lê o arquivo e o envia para o navegador
-			readfile($_POST["caminho"]);
-			exit;
-		}else{
-			echo "O arquivo não foi encontrado.";
-		}
-		$_POST["id"] = $_POST["idParametro"];
-		modificarParametro();
-		exit;
-	}
-
 	function enviarDocumento() {
 		global $a_mod;
 
@@ -112,6 +89,7 @@
 			}
 		}
 
+		set_status("Registro inserido com sucesso.");
 		$_POST["id"] = $novoParametro["para_nb_id"];
 		modificarParametro();
 		exit;
@@ -274,8 +252,11 @@
 					);
 				}
 			}
+
+			set_status("Registro atualizado com sucesso.");
 		} else {
 			inserir("parametro",array_keys($novoParametro),array_values($novoParametro));
+			set_status("Registro inserido com sucesso.");
 		}
 
 		mostrarFormParametro();
@@ -371,15 +352,8 @@
 
 		$botoes = [
 			botao("Gravar","cadastrarParametro","id",($_POST["id"]?? ""),"","","btn btn-success"),
-			botao("Voltar","voltar")
+			criarBotaoVoltar()
 		];
-
-		if(empty($_POST["HTTP_REFERER"])){
-			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
-			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_parametro.php"))){
-				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_parametro.php";
-			}
-		}
 		
 		echo abre_form("Dados dos Parâmetros");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
@@ -468,14 +442,9 @@
 
 		cabecalho("Cadastro de Parâmetros");
 
-		$extra = ((!empty($_POST["busca_codigo"]))? " AND para_nb_id LIKE '%".$_POST["busca_codigo"]."%'" : "")
-		.((!empty($_POST["busca_nome"])) ? " AND para_tx_nome LIKE '%".$_POST["busca_nome"]."%'" : "")
-		.((!empty($_POST["busca_acordo"]) &&  $_POST["busca_acordo"] != "Todos") ? " AND para_tx_acordo = '".$_POST["busca_acordo"]."'" : "")
-		.((!empty($_POST["busca_banco"]) &&  $_POST["busca_banco"] != "Todos") ? " AND para_tx_banco = '".$_POST["busca_banco"]."'" : "");
-
 		$campos = [
 			campo("Código", "busca_codigo", $_POST["busca_codigo"]?? "", 2, "MASCARA_NUMERO", "maxlength='6'"),
-			campo("Nome", "busca_nome", $_POST["busca_nome"]?? "", 4, "", "maxlength='65'"),
+			campo("Nome", 	"busca_nome_like", $_POST["busca_nome_like"]?? "", 4, "", "maxlength='65'"),
       		combo("Acordo", "busca_acordo", $_POST["busca_acordo"]?? "", 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
 			combo("Banco de Horas", "busca_banco", $_POST["busca_banco"]?? "", 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
 			// combo("Vencidos", "busca_vencidos", $_POST["busca_vencidos"]?? "", 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"])
@@ -490,30 +459,49 @@
 		echo linha_form($campos);
 		echo fecha_form($botoes);
 
-		$iconeModificar = 	criarSQLIconeTabela("para_nb_id","modificarParametro","Modificar","glyphicon glyphicon-search");
-		$iconeExcluir = 	criarSQLIconeTabela("para_nb_id","excluirParametro","Excluir","glyphicon glyphicon-remove","Deseja inativar o registro?");
+		//Grid dinâmico{
+			$gridFields = [
+				"CÓDIGO" 				=> "para_nb_id",
+				"NOME" 					=> "para_tx_nome",
+				"JORNADA SEMANAL/DIA" 	=> "para_tx_jornadaSemanal",
+				"JORNADA SÁBADO" 		=> "para_tx_jornadaSabado",
+				"H.E. SEMANAL" 			=> "CONCAT(para_tx_percHESemanal, '%') AS para_tx_percHESemanal",
+				"H.E. EX." 				=> "CONCAT(para_tx_percHEEx, '%') AS para_tx_percHEEx",
+				"ACORDO" 				=> "para_tx_acordo",
+				"INÍCIO" 				=> "CONCAT('data(\"', para_tx_inicioAcordo, '\")') AS para_tx_inicioAcordo",
+				"FIM" 					=> "CONCAT('data(\"', para_tx_fimAcordo, '\")') AS para_tx_fimAcordo",
+				"STATUS" 				=> "para_tx_status"
+			];
 
-		$sql = 
-			"SELECT *, {$iconeModificar} as iconeModificar, IF(para_tx_status = 'ativo', {$iconeExcluir}, NULL) as iconeExcluir FROM parametro
-				WHERE para_tx_status = 'ativo'
-					{$extra};"
-		;
+			$camposBusca = [
+				"busca_codigo"		=> "para_nb_id",
+				"busca_nome_like"	=> "para_tx_nome",
+				"busca_acordo"		=> "para_tx_acordo",
+				"busca_banco"		=> "para_tx_banco"
+			];
 
-		$gridCols = [
-			"CÓDIGO" 											=> "para_nb_id",
-			"NOME" 												=> "para_tx_nome",
-			"JORNADA SEMANAL/DIA" 								=> "para_tx_jornadaSemanal",
-			"JORNADA SÁBADO" 									=> "para_tx_jornadaSabado",
-			"H.E. SEMANAL" 										=> "formatPerc(para_tx_percHESemanal)",
-			"H.E. EX." 											=> "formatPerc(para_tx_percHEEx)",
-			"ACORDO" 											=> "para_tx_acordo",
-			"INÍCIO" 											=> "data(para_tx_inicioAcordo)",
-			"FIM" 												=> "data(para_tx_fimAcordo)",
-			"<spam class='glyphicon glyphicon-search'></spam>" 	=> "iconeModificar",
-			"<spam class='glyphicon glyphicon-remove'></spam>" 	=> "iconeExcluir",
-		];
+			$queryBase = "SELECT ".implode(", ", array_values($gridFields))." FROM parametro";
 
-		grid($sql,array_keys($gridCols),array_values($gridCols));
+			$actions = criarIconesGrid(
+				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
+				["cadastro_parametro.php", "cadastro_parametro.php"],
+				["modificarParametro()", "excluirParametro()"]
+			);
+	
+			$actions["functions"][1] .= 
+				"esconderInativar('glyphicon glyphicon-remove search-remove', 9);"
+			;
+	
+			$gridFields["actions"] = $actions["tags"];
+	
+			$jsFunctions =
+				"const funcoesInternas = function(){
+					".implode(" ", $actions["functions"])."
+				}"
+			;
+
+			echo gridDinamico("tabelaParametros", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+		//}
 
 		rodape();
 

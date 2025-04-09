@@ -64,24 +64,26 @@
         
         $query = 
             "SELECT 
-                distinct user_nb_id                                     as id, 
-                coalesce(user_tx_nome,enti_tx_nome)                     as name,
-                enti_tx_matricula                                       as registration,
-                coalesce(e.empr_tx_nome)                                as company,
-                coalesce(user_tx_cpf,enti.enti_tx_cpf)  				as cpf,
-                coalesce(user_tx_rg)                                    as rg,
-                enti.enti_tx_cnhRegistro                                as cnh,
-                user_tx_email                                           as email,
-                user_tx_nivel                                           as role,
-                user_tx_foto                                            as avatar,
-                user_tx_nascimento                                      as birthdate 
-            from user u
-                left join entidade enti on u.user_nb_entidade = enti.enti_nb_id 
-                    and u.user_nb_entidade is not null
-                left join empresa e on enti_nb_empresa = e.empr_nb_id 
-                    and u.user_nb_entidade is not null
-                where u.user_tx_status = 'ativo' 
-                AND u.user_nb_id = ".$userid
+                DISTINCT user_nb_id						AS id, 
+                COALESCE(user_tx_nome,enti_tx_nome)		AS name,
+                enti_tx_matricula						AS registration,
+                COALESCE(e.empr_tx_nome)				AS company,
+                COALESCE(user_tx_cpf,enti_tx_cpf)		AS cpf,
+                COALESCE(user_tx_rg)					AS rg,
+                enti_tx_cnhRegistro						AS cnh,
+                user_tx_email							AS email,
+                user_tx_nivel							AS role,
+                user_tx_foto							AS avatar,
+                user_tx_nascimento						AS birthdate,
+                cida_tx_nome							AS city
+            FROM user u
+                LEFT JOIN entidade enti ON u.user_nb_entidade = enti.enti_nb_id
+                    AND u.user_nb_entidade IS NOT NULL
+                LEFT JOIN empresa e ON enti_nb_empresa = e.empr_nb_id
+                    AND u.user_nb_entidade IS NOT NULL
+                LEFT JOIN cidade ON user_nb_cidade = cida_nb_id
+                WHERE u.user_tx_status = 'ativo'
+                	AND u.user_nb_id = {$userid}"
         ;
 
         $data = get_data($query);

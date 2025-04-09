@@ -25,7 +25,7 @@
 		exit;
 	}
 	function modificarMotivo(){
-		$_POST = array_merge($_POST, carregar("motivo", $_POST["id"]));	
+		$_POST = array_merge($_POST, mysqli_fetch_assoc(query("SELECT * FROM motivo WHERE moti_nb_id = {$_POST["id"]};")));	
 		layout_motivo();
 		exit;
 	}
@@ -77,15 +77,8 @@
 
 		$botoes = [
 			botao("Gravar", "cadastra_motivo", "id", (!empty($_POST["id"])? $_POST["id"]: NULL), "", "", "btn btn-success"),
-			botao("Voltar", "voltar")
+			criarBotaoVoltar()
 		];
-
-		if(empty($_POST["HTTP_REFERER"])){
-			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
-			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_motivo.php"))){
-				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_motivo.php";
-			}
-		}
 
 		echo abre_form("Dados do Motivo");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
@@ -96,21 +89,22 @@
 	}
 
 	function index(){
+		if(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
+			$_POST["returnValues"] = json_encode([
+				"HTTP_REFERER" => $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php"
+			]);
+			voltar();
+		}
+		
 		global $legendas;
 
 		cabecalho("Cadastro de Motivo");
 
-		$extra = 
-			(!empty($_POST["busca_codigo"])? 	" AND moti_nb_id = ".$_POST["busca_codigo"]."": "")
-			.(!empty($_POST["busca_nome"])? 	" AND moti_tx_nome LIKE '%".$_POST["busca_nome"]."%'": "")
-			.(!empty($_POST["busca_tipo"])? 	" AND moti_tx_tipo LIKE '%".$_POST["busca_tipo"]."%'": "")
-			.(!empty($_POST["busca_legenda"])? 	" AND moti_tx_legenda LIKE '%".$legendas[$_POST["busca_legenda"]]."%'": "");
-
 		$campos = [
-			campo("Código", "busca_codigo", (!empty($_POST["busca_codigo"])? $_POST["busca_codigo"]: ""), 2, "MASCARA_NUMERO", "maxlength='6'"),
-			campo("Nome", "busca_nome", (!empty($_POST["busca_nome"])? $_POST["busca_nome"]: ""), 5, "", "maxlength='65'"),
-			combo("Tipo", "busca_tipo", (!empty($_POST["busca_tipo"])? $_POST["busca_tipo"]: ""), 2, ["", "Ajuste", "Abono"]),
-			combo("Legenda", "busca_legenda", (!empty($_POST["busca_legenda"])? $_POST["busca_legenda"]: ""), 3, $legendas)
+			campo("Código",		"busca_codigo",		(!empty($_POST["busca_codigo"])? 	$_POST["busca_codigo"]: ""), 2, "MASCARA_NUMERO", "maxlength='6'"),
+			campo("Nome",		"busca_nome_like",	(!empty($_POST["busca_nome_like"])? $_POST["busca_nome_like"]: ""), 5, "", "maxlength='65'"),
+			combo("Tipo",		"busca_tipo",		(!empty($_POST["busca_tipo"])? 		$_POST["busca_tipo"]: ""), 2, ["", "Ajuste", "Abono"]),
+			combo("Legenda",	"busca_legenda",	(!empty($_POST["busca_legenda"])? 	$_POST["busca_legenda"]: ""), 3, $legendas)
 		];
 		$botoes = [
 			botao("Buscar","index"),
@@ -121,27 +115,38 @@
 		echo linha_form($campos);
 		echo fecha_form($botoes);
 
-		$iconeModificar =	criarSQLIconeTabela("moti_nb_id", "modificarMotivo", "Modificar", "glyphicon glyphicon-search");
-		$iconeExcluir = 	criarSQLIconeTabela("moti_nb_id", "excluirMotivo", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?");
+		//Grid dinâmico{
+			$gridFields = [
+				"CÓDIGO" => "moti_nb_id",
+				"NOME" => "moti_tx_nome",
+				"TIPO" => "moti_tx_tipo",
+				"LEGENDA" => "moti_tx_legenda",
+			];
 
-		$sql = 
-			"SELECT *, 
-				{$iconeModificar} as iconeModificar,
-				IF(moti_tx_status = 'ativo', {$iconeExcluir}, NULL) as iconeExcluir
-			FROM motivo 
-				WHERE moti_tx_status = 'ativo' 
-					{$extra};"
-		;
-		$gridParams = [
-			"CÓDIGO" => "moti_nb_id",
-			"NOME" => "moti_tx_nome",
-			"TIPO" => "moti_tx_tipo",
-			"LEGENDA" => "moti_tx_legenda",
-			"<spam class='glyphicon glyphicon-search'></spam>" => "iconeModificar",
-			"<spam class='glyphicon glyphicon-remove'></spam>" => "iconeExcluir"
-		];
+			$camposBusca = [
+				"busca_codigo"		=> "moti_nb_id",
+				"busca_nome_like"	=> "moti_tx_nome",
+				"busca_tipo"		=> "moti_tx_tipo",
+				"busca_legenda"		=> "moti_tx_legenda"
+			];
 
-		grid($sql, array_keys($gridParams), array_values($gridParams), "", "12", 1, "desc");
+			$queryBase = ("SELECT ".implode(", ", array_values($gridFields))." FROM motivo");
+
+			$actions = criarIconesGrid(
+				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
+				["cadastro_motivo.php", "cadastro_motivo.php"],
+				["modificarMotivo()", "excluirMotivo()"]
+			);
+			$gridFields["actions"] = $actions["tags"];
+
+			$jsFunctions =
+				"const funcoesInternas = function(){
+					".implode(" ", $actions["functions"])."
+				}"
+			;
+
+			echo gridDinamico("tabelaFeriados", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+		//}*/
 
 		rodape();
 	}
