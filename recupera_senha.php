@@ -106,9 +106,10 @@
 
         include "empresas.php";
 
-        if(!empty($_GET["empresa"])){
+        if(!empty($_GET["empresa"]) || !empty($_POST["empresa"])){
+            $empresa = !empty($_GET["empresa"])? $_GET["empresa"]: $empresas[$_POST["empresa"]];
             $interno = true; //Utilizado em conecta.php;
-            include __DIR__."/{$_GET["empresa"]}/conecta.php";
+            include __DIR__."/{$empresa}/conecta.php";
         }
 
         if (!empty($_POST["botao"])){
@@ -158,11 +159,11 @@
                 
                 if(!empty($_POST["senha"]) && !empty($_POST["senha2"]) && $_POST["senha"] == $_POST["senha2"]){
                         atualizar("user", ["user_tx_senha", "user_tx_token"], [md5($_POST["senha"]), "-"], $user["user_nb_id"]);
-                        $msg = 
-                            "<div id='redefinido' style='background-color:rgb(0, 125, 21); padding: 1px; text-align: center;'>
-                                <h4 style = 'color: #fff !important;'>Senha Redefinida. Voltando para o login...</h4>
-                            </div>"
+                        echo 
+                            "<script>alert('Senha redefinida. Voltando para o login...')</script>
+                            <meta http-equiv='refresh' content='0; url={$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/index.php' />"
                         ;
+                        exit;
                 }else{
                     $msg = 
                         "<div id='erro' style='background-color: red; padding: 1px; text-align: center;'>
