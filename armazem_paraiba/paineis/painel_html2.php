@@ -28,8 +28,6 @@
 					<br>
 					<br>
 				<?php } ?>
-				<span class="total-sem-jornada"></span>
-				<span class="total-jornada"> </span>
 				<?= $quantFun ?>
 				<?= $tabelaMotivo ?>
 
@@ -191,24 +189,6 @@
 							<?= $rowTotal ?>
 						</thead>
 					</table>
-				</div>
-			<?php } ?>
-			<?php if ($painelDisp === true) {?>
-				<div>
-				<h4><b>Em jornada</b></h4>
-				<div class="table-responsive">
-					<table id="tabela-emJornada" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
-						<thead>
-							<?= $rowTitulos3 ?>
-						</thead>
-						<tbody>
-							<!-- Conteúdo do json empresas será inserido aqui -->
-						</tbody>
-						<thead>
-							<?= $rowTotal ?>
-						</thead>
-					</table>
-				</div>
 				</div>
 			<?php } ?>
 
