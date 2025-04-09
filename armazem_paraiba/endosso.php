@@ -49,13 +49,22 @@
 
 		$date = new DateTime($_POST["busca_data"]);
 
-		foreach($motoristas as $motorista) {
+		for($f = 0; $f < count($motoristas); $f++){
 			$aDia = [];
 			$totalResumo = [];
 
 			//Pegando e formatando registros dos dias{
 				
-				$endossoCompleto = montarEndossoMes($date, $motorista);
+				$endossoCompleto = montarEndossoMes($date, $motoristas[$f]);
+
+
+				while($f < count($motoristas) && $motoristas[$f]["enti_tx_nome"] == $motoristas[$f+1]["enti_tx_nome"]){
+					unset($motoristas[$f+1]);
+					$motoristas = [...$motoristas];
+				}
+
+
+				// while($motoristas[$f+1])
 
 				$totalResumo = $endossoCompleto["totalResumo"];
 				$max50APagar = $endossoCompleto["endo_tx_max50APagar"];
@@ -63,7 +72,7 @@
 				    $max50APagar = "00:00";
 				}
 
-				$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $max50APagar, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+				$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $max50APagar, ($motoristas[$f]["para_tx_pagarHEExComPerNeg"]?? "nao"));
 
 				$totalResumo["HESemanalAPagar"] = $aPagar[0];
 				$totalResumo["HEExAPagar"] = $aPagar[1];
@@ -80,28 +89,29 @@
 
 			//Inserir coluna de motivos{
 				for($f = 0; $f < count($aDia); $f++){
-					$data = explode("/", $aDia[$f][0]);
-					$data = $data[2]."-".$data[1]."-".$data[0];
+					$data = implode("-", array_reverse(explode("/", $aDia[$f][0])));
+
 					
 					$bdMotivos = mysqli_fetch_all(
 						query(
 							"SELECT * FROM ponto 
 								JOIN motivo ON pont_nb_motivo = moti_nb_id
-								WHERE pont_tx_matricula = '".$endossoCompleto["endo_tx_matricula"]."' 
-									AND pont_tx_data LIKE '".$data."%'
-									AND pont_tx_tipo IN (1,2,3,4)
-									AND pont_tx_status = 'ativo'"
+								WHERE pont_tx_status = 'ativo'
+									AND pont_tx_matricula = '{$endossoCompleto["endo_tx_matricula"]}' 
+									AND pont_tx_data LIKE '{$data}%'
+									AND pont_tx_tipo IN (1,2,3,4);"
 						), 
 						MYSQLI_ASSOC
 					);
 
-					$bdAbonos = mysqli_fetch_all(
-						query("SELECT motivo.moti_tx_nome FROM  abono
-								JOIN motivo ON abon_nb_motivo = moti_nb_id
-								WHERE abon_tx_matricula = '".$endossoCompleto["endo_tx_matricula"]."' 
-								AND abon_tx_data LIKE '".$data."%' Limit 1"
-							),
-						MYSQLI_ASSOC
+					$bdAbonos = mysqli_fetch_all(query(
+						"SELECT motivo.moti_tx_nome FROM abono
+							JOIN motivo ON abon_nb_motivo = moti_nb_id
+							WHERE abon_tx_status = 'ativo' 
+								AND abon_tx_matricula = '{$endossoCompleto["endo_tx_matricula"]}' 
+								AND abon_tx_data LIKE '{$data}%' 
+							LIMIT 1;"
+						),MYSQLI_ASSOC
 					);
 
 					$motivos = "";
@@ -127,8 +137,8 @@
 				}
 			//}
 			
-			$botoes = ["<button id='btnCsv' onclick='downloadCSV(\"".$motorista["enti_nb_id"]."\", \"".$motorista["enti_tx_nome"]."\")'><img width='20' height='20' src='https://img.icons8.com/glyph-neue/64/FFFFFF/csv.png' alt='csv'/> Baixar CSV</button>"];
-			if($motorista == $motoristas[count($motoristas)-1]){
+			$botoes = ["<button id='btnCsv' onclick='downloadCSV(\"".$motoristas[$f]["enti_nb_id"]."\", \"".$motoristas[$f]["enti_tx_nome"]."\")'><img width='20' height='20' src='https://img.icons8.com/glyph-neue/64/FFFFFF/csv.png' alt='csv'/> Baixar CSV</button>"];
+			if($f == count($motoristas)-1){
 				$botoes[] = "<br><br><br><button id='btnImprimir' class='btn default' type='button' onclick='imprimir()'><img width='20' height='20' src='https://img.icons8.com/android/24/FFFFFF/print.png' alt='print'/> Imprimir</button>";
 			}
 			include "./relatorio_espelho.php";
@@ -197,11 +207,9 @@
 		$_POST["extraMotorista"] = " AND enti_nb_empresa = {$_POST["busca_empresa"]}";
 		if(!empty($_POST["busca_endossado"]) && !empty($_POST["busca_empresa"])){
 			$extra .= " AND enti_nb_id".(($_POST["busca_endossado"] == "naoEndossado")? " NOT": "")." IN (
-					SELECT endo_nb_entidade FROM endosso, entidade
+					SELECT endo_nb_entidade FROM endosso
 						WHERE endo_tx_status = 'ativo'
 							AND endo_tx_mes = '{$_POST["busca_data"]}-01'
-							AND enti_nb_empresa = '{$_POST["busca_empresa"]}'
-							AND endo_nb_entidade = enti_nb_id
 				)"
 			;
 		}
@@ -216,13 +224,15 @@
 				." ORDER BY enti_tx_nome;";
 
 		$motoristas = mysqli_fetch_all(query($sqlMotorista), MYSQLI_ASSOC);
+
 		foreach($motoristas as $motorista){
 			$counts["total"]++;
 			if(empty($motorista["enti_tx_nome"]) || empty($motorista["enti_tx_matricula"])){
 				continue;
 			}
-
+			
 			//Pegando e formatando registros dos dias{
+				
 				$date = new DateTime($_POST["busca_data"]);
 
 				$endossoCompleto = montarEndossoMes($date, $motorista);

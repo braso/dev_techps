@@ -71,7 +71,7 @@
 				$nomeArquivo  .= "_".$f;
 				$arquivo["name"] = $nomeArquivo.$ext;
 				$local_file = $path.$arquivo["name"];
-				for(; file_exists($path.$nomeArquivo); $f++){
+				for(; file_exists($path.$nomeArquivo.$ext); $f++){
 					$arquivo["name"] = substr($nomeArquivo , 0, strlen($nomeArquivo )-2)."_".$f;
 					$local_file = $path.$arquivo["name"];
 				}

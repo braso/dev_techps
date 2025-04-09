@@ -222,17 +222,20 @@
 						$dataCicloProx += intval($motorista["para_nb_qDias"])*60*60*24;
 					}
 				}
-				$saldoAnterior = mysqli_fetch_assoc(query(
-					"SELECT endo_tx_saldo FROM endosso
+				$ultimoEndosso = mysqli_fetch_assoc(query(
+					"SELECT endo_tx_filename FROM endosso
 						WHERE endo_tx_matricula = '{$motorista["enti_tx_matricula"]}'
 							AND endo_tx_ate < '{$_POST["busca_data"]}'
 							AND endo_tx_status = 'ativo'
 						ORDER BY endo_tx_ate DESC
 						LIMIT 1;"
 				));
+
+
 				
-				if(isset($saldoAnterior["endo_tx_saldo"])){
-					$saldoAnterior = $saldoAnterior["endo_tx_saldo"];
+				if(!empty($ultimoEndosso)){
+					$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
+					$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoAnterior"];
 				}elseif(!empty($motorista["enti_tx_banco"])){
 					$saldoAnterior = $motorista["enti_tx_banco"];
 					$saldoAnterior = $saldoAnterior[0] == "0" && strlen($saldoAnterior) > 5? substr($saldoAnterior, 1): $saldoAnterior;

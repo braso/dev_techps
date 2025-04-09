@@ -70,11 +70,13 @@ html {
 	border-radius: 7px;	
 }
 
-.login .content .form-group .input-empresas {
-	text-transform: uppercase;
-	/* text-align: center; */
+.login .content .form-control:focus {
+    background-color: #d4dae2;
 }
 
+.login .content .form-group .input-empresas {
+	/* text-transform: uppercase; */
+}
 
 .login .content .form-control:active,
 .login .content .form-control:focus {

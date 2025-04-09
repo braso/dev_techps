@@ -305,8 +305,8 @@
 					//}
 	
 					//saldoAnterior{
-					$saldoAnterior = mysqli_fetch_assoc(query(
-						"SELECT endo_tx_saldo FROM endosso"
+					$ultimoEndosso = mysqli_fetch_assoc(query(
+						"SELECT endo_tx_filename FROM endosso"
 							. " WHERE endo_tx_status = 'ativo'"
 							. " AND endo_tx_ate < '".$mes->format("Y-m-01")."'"
 							. " AND endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'"
@@ -314,9 +314,11 @@
 							. " LIMIT 1;"
 					));
 	
-					if (!empty($saldoAnterior)) {
-						if (!empty($saldoAnterior["endo_tx_saldo"])) {
-							$saldoAnterior = $saldoAnterior["endo_tx_saldo"];
+					if (!empty($ultimoEndosso)) {
+						$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
+						
+						if (!empty($ultimoEndosso["totalResumo"])) {
+							$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoFinal"]?? $ultimoEndosso["totalResumo"]["saldoBruto"];
 						} elseif (!empty($motorista["enti_tx_banco"])) {
 							$saldoAnterior = $motorista["enti_tx_banco"];
 						}
@@ -352,7 +354,7 @@
 						];
 	
 						foreach ($endossos as $endosso) {
-							if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"])){
+							if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"].".csv")){
 								continue;
 							}
 							$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
@@ -1325,13 +1327,13 @@
 
 		
 		foreach($endossos as &$endosso){
-			if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"])){
+			if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"].".csv")){
 				continue;
 			}
 			$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
 		}
-
 		$endossoCompleto = [];
+
 
 		if(count($endossos) > 0){
 			$endossoCompleto = $endossos[0];

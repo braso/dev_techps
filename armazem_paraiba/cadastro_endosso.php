@@ -231,7 +231,7 @@
 		));
 
 		
-		if(!empty($ultimoEndosso["endo_tx_filename"]) && file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$ultimoEndosso["endo_tx_filename"])){
+		if(!empty($ultimoEndosso["endo_tx_filename"]) && file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$ultimoEndosso["endo_tx_filename"].".csv")){
 			$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
 			$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoFinal"];
 
@@ -254,9 +254,11 @@
 		
 		$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
 		$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], "999:59", ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+		[$totalResumo["he50APagar"], $totalResumo["he100APagar"]] = $aPagar;
+
 		$totalResumo["saldoAnterior"] = $saldoAnterior;
 		$totalResumo["saldoBruto"] = $saldoBruto;
-		[$totalResumo["he50APagar"], $totalResumo["he100APagar"]] = $aPagar;
+		
 		$_POST["quantHoras"] = operarHorarios([$totalResumo["saldoBruto"], $totalResumo["he100APagar"]], "-");
 		if($_POST["quantHoras"][0] == "-"){
 			$_POST["quantHoras"] = "00:00";
@@ -380,7 +382,7 @@
 				}
 			}
 			$saldoAnterior = "00:00";
-			if(!empty($ultimoEndosso["endo_tx_filename"]) && file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$ultimoEndosso["endo_tx_filename"])){
+			if(!empty($ultimoEndosso["endo_tx_filename"]) && file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$ultimoEndosso["endo_tx_filename"].".csv")){
 				$ultimoEndossoCSV = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
 				$saldoAnterior = $ultimoEndossoCSV["totalResumo"]["saldoFinal"];
 			}
@@ -417,10 +419,11 @@
 
 			$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
 			$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], (!empty($_POST["quantHoras"])? $_POST["quantHoras"]: "00:00"), ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
-			$saldoBruto = operarHorarios([$saldoBruto, $aPagar[0], $aPagar[1]], "-");
+			$saldoFinal = operarHorarios([$saldoBruto, $aPagar[0], $aPagar[1]], "-");
 			
 			$totalResumo["saldoAnterior"] = $saldoAnterior;
 			$totalResumo["saldoBruto"] = $saldoBruto;
+			$totalResumo["saldoFinal"] = $saldoFinal;
 			$totalResumo["he50APagar"] = $aPagar[0];
 			$totalResumo["he100APagar"] = $aPagar[1];
 
@@ -429,7 +432,6 @@
 				"endo_tx_nome" 			  => $motorista["enti_tx_nome"],
 				"endo_tx_matricula" 	  => $motorista["enti_tx_matricula"],
 				"endo_tx_mes" 			  => substr($_POST["data_de"], 0, 8)."01",
-				"endo_tx_saldo" 		  => $totalResumo["saldoBruto"],
 				"endo_tx_de" 			  => $_POST["data_de"],
 				"endo_tx_ate" 			  => $_POST["data_ate"],
 				"endo_tx_dataCadastro" 	  => date("Y-m-d h:i:s"),
