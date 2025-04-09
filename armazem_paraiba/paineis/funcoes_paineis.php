@@ -485,7 +485,7 @@
 						];
 
 						foreach ($endossos as $endosso) {
-							if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"])){
+							if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"].".csv")){
 								continue;
 							}
 							$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
@@ -915,7 +915,7 @@
 
 			if ($_POST["busca_endossado"] == "endossado") {
 				foreach ($endossos as $endosso) {
-					if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"])){
+					if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"].".csv")){
 						continue;
 					}
 					$houveInteracao = false;
