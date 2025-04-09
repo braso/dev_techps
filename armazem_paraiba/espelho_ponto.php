@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -158,7 +158,7 @@
 				botao("Buscar", "buscarEspelho()", "", "", "", "", "btn btn-success"),
 			];
 			if(!in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
-				$b[] = botao("Cadastrar Abono", "redirParaAbono", "acaoPrevia", "{$_POST["acao"]}", "btn btn-secondary");
+				$b[] = botao("Cadastrar Abono", "redirParaAbono", "acaoPrevia", $_POST["acao"]??"", "btn btn-secondary");
 			}
 			if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
 				$b[] = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
@@ -277,7 +277,6 @@
 					if(in_array("para_tx_jornadaSemanal", $keys)
 					 	&& in_array("para_tx_jornadaSabado", $keys)
 					 	&& in_array("para_tx_percHESemanal", $keys)
-					 	&& in_array("para_tx_percHEEx", $keys)
 					){
 						$parametroPadrao = "Convenção Padronizada: ".$parametroEmpresa["para_tx_nome"].", Semanal (".$parametroEmpresa["para_tx_jornadaSemanal"]."), Sábado (".$parametroEmpresa["para_tx_jornadaSabado"].")";
 					}
