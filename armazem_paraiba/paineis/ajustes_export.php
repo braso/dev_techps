@@ -114,8 +114,8 @@ class CustomPDF extends TCPDF {
     public function Header() {
         $imgWidth = 50;
         $imgHeight = 15;
-        // $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth, $imgHeight);
-        // $this->Image(__DIR__ ."/../".self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
+        $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth, $imgHeight);
+        $this->Image(__DIR__ ."/../".self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
         $this->SetFont('helvetica', 'B', 12);
         $this->Cell(0, 15, 'Relatório Ajustes de Pontos Inseridos', 0, 1, 'C');
         $this->Ln(15);
