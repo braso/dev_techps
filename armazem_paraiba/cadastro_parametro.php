@@ -89,6 +89,7 @@
 			}
 		}
 
+		set_status("Registro inserido com sucesso.");
 		$_POST["id"] = $novoParametro["para_nb_id"];
 		modificarParametro();
 		exit;
@@ -251,8 +252,11 @@
 					);
 				}
 			}
+
+			set_status("Registro atualizado com sucesso.");
 		} else {
 			inserir("parametro",array_keys($novoParametro),array_values($novoParametro));
+			set_status("Registro inserido com sucesso.");
 		}
 
 		mostrarFormParametro();
