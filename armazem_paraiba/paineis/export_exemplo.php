@@ -2,6 +2,7 @@
 require_once __DIR__ . "/../tcpdf/tcpdf.php";
 require __DIR__."/../funcoes_ponto.php";
 
+
 // Recebe os parâmetros do formulário
 $periodo = trim($_POST['busca_periodo'], '[]"');
 $datas = explode(',', $periodo);

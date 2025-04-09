@@ -45,8 +45,8 @@
                     +'<td>'+row.qtdMotoristas+'</td>'
                     +'<td>'+(invalidValues.includes(row.totais.jornadaPrevista)? '': row.totais.jornadaPrevista)+'</td>'
                     +'<td>'+(invalidValues.includes(row.totais.jornadaEfetiva)? '': row.totais.jornadaEfetiva)+'</td>'
-                    +'<td>'+(invalidValues.includes(row.totais.HESemanal)? '': row.totais.HESemanal)+'</td>'
-                    +'<td>'+(invalidValues.includes(row.totais.HESabado)? '': row.totais.HESabado)+'</td>'
+                    +'<td>'+(invalidValues.includes(row.totais.he50APagar)? '': row.totais.he50APagar)+'</td>'
+                    +'<td>'+(invalidValues.includes(row.totais.he100APagar)? '': row.totais.he100APagar)+'</td>'
                     +'<td>'+(invalidValues.includes(row.totais.adicionalNoturno)? '': row.totais.adicionalNoturno)+'</td>'
                     +'<td>'+(invalidValues.includes(row.totais.esperaIndenizada)? '': row.totais.esperaIndenizada)+'</td>'
                     +'<td id=\"'+(row.totais.saldoAnterior > '00:00'? 'saldo-final': (row.totais.saldoAnterior === '00:00'? 'saldo-zero': 'saldo-negativo'))+'\" >'
@@ -141,8 +141,7 @@
                                 }else{
                                     // Mostrar painel geral das empresas.
                                 
-                                    console.log(row['totais']);
-                                    if(row.percEndossado < 1){
+                                    if(Math.round(row.percEndossado*10000)/100 < 1){
                                         row.totais = {
                                             'saldoAnterior': row.totais.saldoAnterior
                                         };
@@ -346,7 +345,34 @@
         if(!empty($_POST["empresa"])){
             $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
         }
-        $botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
+        $botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados()'>Imprimir</button>
+        <script>
+        function enviarDados() {
+				var data = '" . $_POST["busca_data"] . "'
+				var form = document.createElement('form');
+				form.method = 'POST';
+				form.action = 'export_paineis.php'; // Página que receberá os dados
+				form.target = '_blank'; // Abre em nova aba
+
+				// Criando campo 1
+				var input1 = document.createElement('input');
+				input1.type = 'hidden';
+				input1.name = 'empresa';
+				input1.value = " . (!empty($_POST['empresa']) ? $_POST['empresa'] : 'null'). "; // Valor do primeiro campo
+				form.appendChild(input1);
+
+				// Criando campo 2
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'busca_data';
+				input2.value = data; // Valor do segundo campo
+				form.appendChild(input2);
+
+				document.body.appendChild(form);
+				form.submit();
+				document.body.removeChild(form);
+			}
+        </script>";
         if(!empty($_SESSION["user_tx_nivel"]) && is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
             $botaoAtualizarPainel = "<a class='btn btn-warning' onclick='atualizarPainel()'> Atualizar Painel</a>";
         }
@@ -424,13 +450,17 @@
                         $dataMotorista = new DateTime($motorista["enti_tx_desligamento"]);
                         $dataMotorista = $dataMotorista->format("Y-m");
                         if ($dataBusca > $dataMotorista) {
-                            $matriculasInativas = array_map(fn($matricula) => $matricula.".json", array_column($motoristas, "enti_tx_matricula"));
+                            $matriculasInativas = array_map(function($matricula) {
+                                return $matricula . ".json";
+                            }, array_column($motoristas, "enti_tx_matricula"));
                         }
                     } else {
                         $dataMotorista = new DateTime($motorista["enti_tx_admissao"]);
                         $dataMotorista = $dataMotorista->format("Y-m");
                         if ($dataBusca < $dataMotorista) {
-                            $matriculasInativas = array_map(fn($matricula) => $matricula.".json", array_column($motoristas, "enti_tx_matricula"));
+                            $matriculasInativas = array_map(function($matricula) {
+                                return $matricula . ".json";
+                            }, array_column($motoristas, "enti_tx_matricula"));
                         }
                     }
                 }
@@ -458,12 +488,7 @@
                     $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
                     <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
                 } else {
-                    // Datas iguais: compara as horas
-                    // if ($horaArquivo < $horaAtual) {
-                    //     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
-                    // } else {
-                        $alertaEmissao = "<span>";
-                    // }
+                    $alertaEmissao = "<span>";
                 }
 
                 $dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")). "</span>"; //Utilizado no HTML.
@@ -478,7 +503,10 @@
                     $json = json_decode(file_get_contents($path."/".$arquivo), true);
                     $json["dataAtualizacao"] = date("d/m/Y H:i", filemtime($path."/".$arquivo));
                     foreach($totais as $key => $value){
-                        $totais[$key] = operarHorarios([$totais[$key], $json[$key]], "+");
+                        $totais[$key] = operarHorarios([
+                            !empty($totais[$key]) ? $totais[$key] : "00:00",
+                            !empty($json[$key]) ? $json[$key] : "00:00"
+                        ], "+");
                     }
                     $motoristas[] = $json;
                 }
@@ -528,12 +556,7 @@
                     $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
                     <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
                 } else {
-                    // Datas iguais: compara as horas
-                    // if ($horaArquivo < $horaAtual) {
-                    //     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
-                    // } else {
-                        $alertaEmissao = "<span>";
-                    // }
+                    $alertaEmissao = "<span>";
                 }
                 $dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresas.json"))."</span>"; //Utilizado no HTML.
                 $arquivoGeral = json_decode(file_get_contents($path."/empresas.json"), true);
@@ -550,7 +573,10 @@
                         $arquivos[] = $arquivo;
                         $json = json_decode(file_get_contents($arquivo), true);
                         foreach($totais as $key => $value){
-                            $totais[$key] = operarHorarios([$totais[$key], $json["totais"][$key]], "+");
+                            $totais[$key] = operarHorarios([
+                                !empty($totais[$key]) ? $totais[$key] : "00:00",
+                                !empty($json["totais"][$key]) ? $json["totais"][$key] : "00:00"
+                            ], "+");
                         }
                         $empresas[] = $json;
 
