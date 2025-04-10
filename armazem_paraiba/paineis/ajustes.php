@@ -20,31 +20,35 @@ function carregarGraficos($periodoInicio) {
 	$path = "./arquivos/ajustes";
 	$empresaId = $_POST["empresa"];
 
+	$anoAtual = (int) date('Y');
+	$mesAtual = (int) date('m');
+
 	$totaisPorMes = [];
 	$mesesJS = [];
 	$mesesFormatadosJS = [];
 
-	// Vamos voltar até 2 meses antes do período atual (ou o quanto for necessário)
-	for ($i = 2; $i >= 0; $i--) {
-		$data = clone $periodoInicio;
-		$data->modify("-$i months");
-		$mesKey = $data->format('Y-m');
-		$mesNumerico = $data->format('m');
-
+	for ($mes = 1; $mes <= $mesAtual; $mes++) {
+		$mesPadded = str_pad($mes, 2, '0', STR_PAD_LEFT);
+		$mesKey = "$anoAtual-$mesPadded";
 		$caminho = "$path/$mesKey/$empresaId/empresa_$empresaId.json";
 
 		if (file_exists($caminho)) {
 			$json = json_decode(file_get_contents($caminho), true);
 			$ativo = $json['totais']['ativo'] ?? 0;
 			$inativo = $json['totais']['inativo'] ?? 0;
+		} else {
+			$ativo = 0;
+			$inativo = 0;
+		}
 
+		// Só adiciona o mês se tiver valores ou se for anterior ao mês atual
+		if ($ativo > 0 || $inativo > 0 || $mes < $mesAtual) {
 			$totaisPorMes[$mesKey] = [
 				'ativo' => $ativo,
 				'inativo' => $inativo
 			];
-
 			$mesesJS[] = $mesKey;
-			$mesesFormatadosJS[] = $mesNumerico;
+			$mesesFormatadosJS[] = $mesPadded;
 		}
 	}
 
@@ -115,7 +119,6 @@ function carregarGraficos($periodoInicio) {
 			legend: { enabled: true }
 		});
 	</script>
-
 	"
 	;
 }

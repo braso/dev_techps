@@ -245,7 +245,7 @@
             combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
             combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
             ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
-            campo_dataHora("Data/Hora da nova jornada","busca_periodo",(!empty($_POST["busca_periodo"])? $_POST["busca_periodo"] :  date("Y-m-d H:i")),
+            campo_dataHora("Data/Hora da nova jornada","busca_periodo",(!empty($_POST["busca_periodo"])? $_POST["busca_periodo"] : ''),
             2),
             combo("Status", "busca_Dispobilidade", ($_POST["busca_Dispobilidade"] ?? ""), 2, 
             ["" => "Todos", "disponivel" => "Disponives", "naoPermitido" => "Indisponives", "parcial" => "Parcialmente disponível"]),
