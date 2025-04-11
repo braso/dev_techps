@@ -34,10 +34,6 @@ while ($arquivo = $pastaAjuste->read()) {
 
         // Processa cada chave do JSON
         foreach ($json as $chave => $valor) {
-            // Ignora as chaves especificadas
-            if (in_array($chave, $chavesIgnorar)) {
-                continue;
-            }
 
             // Verifica se é um tipo de ponto válido
             if (is_array($valor) && isset($valor['ativo']) && isset($valor['inativo'])) {

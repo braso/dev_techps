@@ -7,6 +7,7 @@
         "BRASO"					=> "braso",
         "CARAU"		            => "carau_transporte",
         "COMAV"					=> "comav",
+        "DEMO"                  => "techps_demo",
         "FEIJAOTURQUEZA"		=> "feijao_turqueza",
         "FSLOG"	                => "fs_log_transportes",
         "HN"                    => "hn_transportes",
