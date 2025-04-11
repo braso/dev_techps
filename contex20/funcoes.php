@@ -51,8 +51,10 @@
 		if($die){
 			echo 
 				"<script>
-					if(document.getElementsByClassName('loading')[0].style.display != 'none'){
-						document.getElementsByClassName('loading')[0].style.display = 'none';
+					if(document.getElementsByClassName('loading')[0] != undefined){
+						if(document.getElementsByClassName('loading')[0].style.display != 'none'){
+							document.getElementsByClassName('loading')[0].style.display = 'none';
+						}
 					}
 				</script>"
 			;
