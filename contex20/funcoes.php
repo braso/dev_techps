@@ -46,7 +46,7 @@
 	 */
 	function dd($variavel, bool $die = true){
 		echo "<pre>";
-		var_dump($variavel);
+		//var_dump($variavel);
 		echo "</pre>";
 		if($die){
 			echo 
