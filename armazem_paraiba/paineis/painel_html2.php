@@ -2,6 +2,7 @@
 <script src="https://code.highcharts.com/highcharts.js"></script>
 <script src="https://code.highcharts.com/highcharts-more.js"></script>
 <script src="https://code.highcharts.com/modules/solid-gauge.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <div id="printTitulo">
 	<img style="width: 150px" src="<?= $logoEmpresa ?>" alt="Logo Empresa Esquerda">
 	<h3><?= $titulo ?></h3>
@@ -242,6 +243,58 @@
 </script>
 <?php if ($mostra === true) { ?>
 	<script>
+		// Função modificada para enviar o gráfico incluindo o ID
+		async function enviarGraficoServidor(chart) {
+			const elementId = chart.renderTo.id;
+			const userEntrada = '<?= $_SESSION['horaEntrada'] ?? '0' ?>';
+			const dataGrafc = '<?= isset($_POST["busca_dataMes"]) ? $_POST["busca_dataMes"] : '' ?>';
+
+			const el = document.getElementById(elementId);
+			if (!el) {
+				console.error('Elemento não encontrado para o ID:', elementId);
+				return;
+			}
+
+			try {
+				const canvas = await html2canvas(el, {
+					scale: 2,
+					useCORS: true,
+					backgroundColor: null
+				});
+
+				const imageData = canvas.toDataURL('image/png');
+				
+				if (!imageData.startsWith('data:image/png;base64,')) {
+					throw new Error('Imagem gerada não é válida');
+				}
+
+				const response = await fetch('salvar_grafico_painel.php', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded',
+					},
+					body: new URLSearchParams({
+						grafico: imageData,
+						elementId,
+						userEntrada,
+						dataGrafc
+					}).toString()
+				});
+
+				const data = await response.json();
+
+				if (data.status === 'success') {
+					console.log('Gráfico salvo com sucesso:', data.fileName);
+				} else {
+					console.error('Erro ao salvar gráfico:', data.message);
+				}
+
+			} catch (error) {
+				console.error('Erro ao processar o gráfico:', error);
+			}
+		}
+
+
 		document.addEventListener('DOMContentLoaded', function() {
 			// Gráfico sintético
 			const categorias = ['Alta', 'Media', 'Baixa'];
@@ -257,7 +310,13 @@
 			Highcharts.chart('graficoSintetico', {
 				chart: {
 					type: 'pie',
-					height: '80%'  
+					height: '80%',
+					events: {
+						load: function () {
+							const chart = this; // <-- o gráfico instanciado
+							setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
+						}
+					}
 				},
 				title: {
 					text: 'Gráfico Sintético de Não Conformidades'
@@ -301,7 +360,13 @@
 			Highcharts.chart('graficoAnalitico', {
 				chart: {
 					type: 'pie',
-					height: '65%' 
+					height: '65%',
+					events: {
+						load: function () {
+							const chart = this; // <-- o gráfico instanciado
+							setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
+						}
+					}
 				},
 				title: {
 					text: 'Gráfico Analítico de Não Conformidades'
@@ -351,15 +416,32 @@
 
 			Highcharts.chart('graficoDetalhado', {
 				chart: {
-					type: 'bar', // Altere o tipo do gráfico para 'bar'
-					backgroundColor: '#f9f9f9'
+					type: 'bar',
+					backgroundColor: '#f9f9f9',
+					events: {
+						load: function () {
+							const chart = this;
 
+							// Espera um pouco para garantir que tudo foi renderizado
+							setTimeout(() => {
+								chart.reflow(); // Força o redesenho
+								
+								// Garante que o container existe antes de enviar
+								const elementId = chart.renderTo.id;
+								const el = document.getElementById(elementId);
+								if (el) {
+									enviarGraficoServidor(chart);
+								} else {
+									console.error(`Elemento ${elementId} não encontrado`);
+								}
+							}, 3000);
+						}
+					}
 				},
 				title: {
 					text: 'Gráfico Detalhado de Não Conformidades',
 					style: {
-						fontSize: '20px', // Aumenta o tamanho do título
-						// color: '#ffffff'
+						fontSize: '20px'
 					}
 				},
 				xAxis: {
@@ -367,24 +449,16 @@
 					title: {
 						text: 'Não Conformidades Jurídicas',
 						style: {
-							fontSize: '16px', // Aumenta o tamanho da fonte do título do eixo X
-							// color: '#ffffff'
+							fontSize: '16px'
 						}
 					},
 					labels: {
 						style: {
-							fontSize: '14px' // Aumenta o tamanho da fonte dos rótulos do eixo X
+							fontSize: '14px'
 						},
-						formatter: function() {
+						formatter: function () {
 							var color = coresDetalhado[this.pos] || '#000';
-							var coresComBordaBranca = ['#ff0000', '#00ff00'];
-
-							var textShadow = ""; // `text-shadow:
-							// -1px -1px 1px rgba(0, 0, 0, 0.5), 
-							// 1px -1px 1px rgba(0, 0, 0, 0.5), 
-							// -1px 1px 1px rgba(0, 0, 0, 0.5),  
-							// 1px 1px 1px rgba(0, 0, 0, 0.5);`;
-							236, 65, 65
+							var textShadow = ''; // Placeholder para sombra se quiser aplicar depois
 
 							return `<span style="border-bottom: 1px solid ${color}; ${textShadow}"><b>${this.value}</b></span>`;
 						}
@@ -392,41 +466,37 @@
 				},
 				yAxis: {
 					min: 0,
-					max: 100, // Limita o eixo Y a 100%
+					max: 100,
 					title: {
 						text: 'Porcentagem',
 						style: {
-							fontSize: '16px',
-							// color: '#ffffff'
+							fontSize: '16px'
 						}
 					},
 					labels: {
-						format: '{value}%', // Exibe as labels do eixo Y como porcentagem
+						format: '{value}%',
 						style: {
-							fontSize: '11px', // Aumenta o tamanho da fonte dos rótulos do eixo Y
-							// color: '#ffffff'
+							fontSize: '11px'
 						}
 					},
-					tickInterval: 2, // Ajusta o intervalo entre os ticks (linhas de grid)
-					gridLineWidth: 0 // Reduz a largura das linhas de grid para torná-las mais finas
-
+					tickInterval: 2,
+					gridLineWidth: 0
 				},
 				tooltip: {
-					// Exibe a quantidade e a porcentagem no tooltip
-					pointFormatter: function() {
+					pointFormatter: function () {
 						return `<b>${this.y.toFixed(2)}%</b> (${this.valor} Não Conformidades)`;
 					},
 					style: {
-						fontSize: '16px' // Aumenta o tamanho da fonte do tooltip
+						fontSize: '16px'
 					}
 				},
 				plotOptions: {
-					bar: { // Altere 'column' para 'bar' aqui também
+					bar: {
 						dataLabels: {
 							enabled: true,
-							format: '{point.y:.2f}%', // Exibe o valor em porcentagem com duas casas decimais
+							format: '{point.y:.2f}%',
 							style: {
-								fontSize: '14px' // Aumenta o tamanho da fonte das labels de dados
+								fontSize: '14px'
 							}
 						}
 					}
@@ -435,8 +505,8 @@
 					name: 'Valores',
 					data: dataFormatadaDetalhado
 				}]
-
 			});
+
 
 			var tabelaMotorista = $('#tabela-motorista tbody');
 			var tabelaMotoristaTotal = $('#tabela-motorista thead tr');
@@ -474,7 +544,7 @@
 			tabelaMotoristaTotal.append(linhaMotorista2);
 		});
 
-
+		var contadorLoad = 0;
 		Highcharts.chart('graficoPerformance', {
 			chart: {
 				type: 'gauge',
@@ -482,7 +552,13 @@
 				plotBackgroundImage: null,
 				plotBorderWidth: 0,
 				plotShadow: false,
-				height: '80%'
+				height: '80%',
+				events: {
+						load: function () {
+							const chart = this; // <-- o gráfico instanciado
+							setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
+						}
+					}
 			},
 			title: {
 				useHTML: true, // Permite adicionar HTML ao título
@@ -605,7 +681,13 @@
 				plotBackgroundImage: null,
 				plotBorderWidth: 0,
 				plotShadow: false,
-				height: '80%'
+				height: '80%',
+				events: {
+						load: function () {
+							const chart = this; // <-- o gráfico instanciado
+							setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
+						}
+					}
 			},
 			title: {
 				useHTML: true, // Permite adicionar HTML ao título
@@ -715,7 +797,13 @@
 				plotBackgroundImage: null,
 				plotBorderWidth: 0,
 				plotShadow: false,
-				height: '80%'
+				height: '80%',
+				events: {
+						load: function () {
+							const chart = this; // <-- o gráfico instanciado
+							setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
+						}
+					}
 			},
 			title: {
 				useHTML: true, // Permite adicionar HTML ao título

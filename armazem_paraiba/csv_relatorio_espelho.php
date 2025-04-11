@@ -5,11 +5,11 @@
 	//*/
 		
     // Nome do arquivo CSV
-    if (!is_dir($_SERVER["DOCUMENT_ROOT"].$CONTEX["path"]."/arquivos/endosso_csv/".$aEmpresa["empr_nb_id"]."/".$aMotorista["enti_nb_id"])) {
-        mkdir($_SERVER["DOCUMENT_ROOT"].$CONTEX["path"]."/arquivos/endosso_csv/".$aEmpresa["empr_nb_id"]."/".$aMotorista["enti_nb_id"], 0755, true);
+    if (!is_dir($_SERVER["DOCUMENT_ROOT"].$CONTEX["path"]."/arquivos/endosso_csv/".$aEmpresa["empr_nb_id"]."/".$motorista["enti_nb_id"])) {
+        mkdir($_SERVER["DOCUMENT_ROOT"].$CONTEX["path"]."/arquivos/endosso_csv/".$aEmpresa["empr_nb_id"]."/".$motorista["enti_nb_id"], 0755, true);
     }
 
-    $nomeArquivoCaminho = $_SERVER["DOCUMENT_ROOT"].$CONTEX["path"]."/arquivos/endosso_csv/".$aEmpresa["empr_nb_id"]."/".$aMotorista["enti_nb_id"]."/espelho-de-ponto.csv";
+    $nomeArquivoCaminho = $_SERVER["DOCUMENT_ROOT"].$CONTEX["path"]."/arquivos/endosso_csv/".$aEmpresa["empr_nb_id"]."/".$motorista["enti_nb_id"]."/espelho-de-ponto.csv";
 
     // Cabeçalhos
     $cabecalhos = [
@@ -20,11 +20,11 @@
             "Período:",date("d/m/Y", strtotime($endossoCompleto["endo_tx_de"])).date("d/m/Y", strtotime($endossoCompleto["endo_tx_ate"])),""
             ,"Emissão Doc.:",date("d/m/Y H:i:s", strtotime($endossoCompleto["endo_tx_dataCadastro"])). " (UTC-3)"
         ],
-        ["Nome:",$aMotorista["enti_tx_nome"],"",
-        "Função:",$aMotorista["enti_tx_ocupacao"],"",
-        "Turno:","D.SEM/H: ".$aMotorista["enti_tx_jornadaSemanal"],"",
-        "Matrícula:",$aMotorista["enti_tx_matricula"],"",
-        "Admissão:",data($aMotorista["enti_tx_admissao"])],
+        ["Nome:",$motorista["enti_tx_nome"],"",
+        "Função:",$motorista["enti_tx_ocupacao"],"",
+        "Turno:","D.SEM/H: ".$motorista["enti_tx_jornadaSemanal"],"",
+        "Matrícula:",$motorista["enti_tx_matricula"],"",
+        "Admissão:",data($motorista["enti_tx_admissao"])],
         ["","","",
         "","","",
         "","","",
@@ -46,7 +46,7 @@
     // Adiciona os dados ao CSV
     foreach ($aDia as $aDiaVez) {
         $linha = [];
-        for ($j = 0; $j < 20; $j++){
+        for ($j = 0; $j < count($aDiaVez); $j++){
             // $conteudo = strip_tags($aDiaVez[$j]);
             // $linha[] = str_replace("&nbsp;",$conteudo,$conteudo);
             $linha[] = strip_tags(html_entity_decode($aDiaVez[$j],ENT_QUOTES | ENT_HTML5,"UTF-8"));
