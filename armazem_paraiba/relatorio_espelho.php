@@ -120,7 +120,7 @@
                 <?php
                     foreach ($aDia as $aDiaVez) {
                         echo '<tr>';
-                        for ($j = 0; $j < 20; $j++){
+                        for ($j = 0; $j < count($aDiaVez); $j++){
                             echo '<td>'.$aDiaVez[$j].'</td>';
                         }
                         echo '</tr>';

@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
@@ -64,8 +64,6 @@
 				}
 
 
-				// while($motoristas[$f+1])
-
 				$totalResumo = $endossoCompleto["totalResumo"];
 				$max50APagar = $endossoCompleto["endo_tx_max50APagar"];
 				if(empty($max50APagar)){
@@ -78,9 +76,9 @@
 				$totalResumo["HEExAPagar"] = $aPagar[1];
 				$totalResumo["saldoFinal"] = operarHorarios([$totalResumo["saldoBruto"], $totalResumo["HESemanalAPagar"], $totalResumo["HEExAPagar"]], "-");
 
-				for ($i = 0; $i < count($endossoCompleto["endo_tx_pontos"]); $i++) {
+				for ($f2 = 0; $f2 < count($endossoCompleto["endo_tx_pontos"]); $f2++) {
 					$qtdDiasEndossados++;
-					$aDetalhado = $endossoCompleto["endo_tx_pontos"][$i];
+					$aDetalhado = $endossoCompleto["endo_tx_pontos"][$f2];
 					array_shift($aDetalhado);
 					array_splice($aDetalhado, 10, 1); //Retira a coluna de "Jornada" que está entre "Repouso" e "Jornada Prevista"
 					$aDia[] = $aDetalhado;
@@ -88,8 +86,8 @@
 			//}
 
 			//Inserir coluna de motivos{
-				for($f = 0; $f < count($aDia); $f++){
-					$data = implode("-", array_reverse(explode("/", $aDia[$f][0])));
+				for($f2 = 0; $f2 < count($aDia); $f2++){
+					$data = implode("-", array_reverse(explode("/", $aDia[$f2][0])));
 
 					
 					$bdMotivos = mysqli_fetch_all(
@@ -119,7 +117,7 @@
 						$motivos .= $bdAbonos[0]["moti_tx_nome"]."<br>";
 					}
 
-					for($f2 = 0; $f2 < count($bdMotivos); $f2++){
+					for($f3 = 0; $f3 < count($bdMotivos); $f3++){
 						$legendas = [
 							"" => "",
 							"I" => "(I - Incluída Manualmente)",
@@ -127,7 +125,7 @@
 							"T" => "(T - Outras fontes de marcação)",
 							"DSR" => "(DSR - Descanso Semanal Remunerado e Abono)"
 						];
-						$motivo = isset($legendas[$bdMotivos[$f2]["moti_tx_legenda"]])? $bdMotivos[$f2]["moti_tx_nome"]: "";
+						$motivo = isset($legendas[$bdMotivos[$f3]["moti_tx_legenda"]])? $bdMotivos[$f3]["moti_tx_nome"]: "";
 						if(!empty($motivo) && is_bool(strpos($motivos, $motivo))){
 							$motivos .= $motivo."<br>";
 						}
@@ -141,6 +139,8 @@
 			if($f == count($motoristas)-1){
 				$botoes[] = "<br><br><br><button id='btnImprimir' class='btn default' type='button' onclick='imprimir()'><img width='20' height='20' src='https://img.icons8.com/android/24/FFFFFF/print.png' alt='print'/> Imprimir</button>";
 			}
+
+			$motorista = $motoristas[$f];
 			include "./relatorio_espelho.php";
 			include "./csv_relatorio_espelho.php";
 			echo "<br><br><br><hr>";
