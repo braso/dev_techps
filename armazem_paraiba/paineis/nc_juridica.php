@@ -373,7 +373,50 @@
 		if (!empty($_POST["empresa"])) {
 			$botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
 		}
-		$botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
+		// $botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
+		$botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados()'>Imprimir</button>
+        <script>
+        function enviarDados() {
+				var data = '" . $_POST["busca_dataMes"] . "'
+				var form = document.createElement('form');
+				form.method = 'POST';
+				form.action = 'export_paineis.php'; // Página que receberá os dados
+				form.target = '_blank'; // Abre em nova aba
+
+				// Criando campo 1
+				var input1 = document.createElement('input');
+				input1.type = 'hidden';
+				input1.name = 'empresa';
+				input1.value = " . (!empty($_POST['empresa']) ? $_POST['empresa'] : 'null'). "; // Valor do primeiro campo
+				form.appendChild(input1);
+
+				// Criando campo 2
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'busca_data';
+				input2.value = data; // Valor do segundo campo
+				form.appendChild(input2);
+
+                // Criando campo 2
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'relatorio';
+				input2.value = 'nc_juridica'; // Valor do segundo campo
+				form.appendChild(input2);
+
+				// Criando campo 3
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'busca_endossado';
+				input2.value = '".$_POST["busca_endossado"]."' ; // Valor do segundo campo
+				form.appendChild(input2);
+
+
+				document.body.appendChild(form);
+				form.submit();
+				document.body.removeChild(form);
+			}
+        </script>";
 
 		$buttons = [
 			botao("Buscar", "enviarForm()", "", "", "", "", "btn btn-info"),

@@ -255,15 +255,30 @@
 				return;
 			}
 
+			const width = el.offsetWidth;
+			const height = el.offsetHeight;
+
+			console.log(`📏 Dimensões do elemento antes da captura: ${width}x${height}`);
+			if (width === 0 || height === 0) {
+				console.error("❌ Elemento não tem tamanho válido para captura");
+				return;
+			}
+
 			try {
+				console.log('Iniciando captura do gráfico com html2canvas...');
+
 				const canvas = await html2canvas(el, {
 					scale: 2,
 					useCORS: true,
-					backgroundColor: null
+					allowTaint: false,
+					backgroundColor: '#ffffff' // ⚠️ Cor de fundo obrigatória!
 				});
 
 				const imageData = canvas.toDataURL('image/png');
-				
+
+				// Debug
+				console.log('imageData (início):', imageData.substring(0, 100));
+
 				if (!imageData.startsWith('data:image/png;base64,')) {
 					throw new Error('Imagem gerada não é válida');
 				}
@@ -284,16 +299,15 @@
 				const data = await response.json();
 
 				if (data.status === 'success') {
-					console.log('Gráfico salvo com sucesso:', data.fileName);
+					console.log('✅ Gráfico salvo com sucesso:', data.fileName);
 				} else {
-					console.error('Erro ao salvar gráfico:', data.message);
+					console.error('❌ Erro ao salvar gráfico:', data.message);
 				}
 
 			} catch (error) {
-				console.error('Erro ao processar o gráfico:', error);
+				console.error('❌ Erro ao processar o gráfico:', error);
 			}
 		}
-
 
 		document.addEventListener('DOMContentLoaded', function() {
 			// Gráfico sintético
@@ -422,17 +436,29 @@
 						load: function () {
 							const chart = this;
 
-							// Espera um pouco para garantir que tudo foi renderizado
+							const panel = $('#collapse3');
+							if (!panel.hasClass('in')) {
+								console.log('🔓 Abrindo accordion...');
+								panel.collapse('show');
+							}
+
 							setTimeout(() => {
-								chart.reflow(); // Força o redesenho
-								
-								// Garante que o container existe antes de enviar
+								chart.reflow();
+
 								const elementId = chart.renderTo.id;
 								const el = document.getElementById(elementId);
-								if (el) {
-									enviarGraficoServidor(chart);
+
+								if (el && el.offsetWidth > 0 && el.offsetHeight > 0) {
+									console.log('🎯 Elemento visível, enviando...');
+
+									enviarGraficoServidor(chart).then(() => {
+										console.log('✅ Imagem capturada. Fechando accordion...');
+										panel.collapse('hide');
+									}).catch((error) => {
+										console.error('❌ Erro ao capturar imagem:', error);
+									});
 								} else {
-									console.error(`Elemento ${elementId} não encontrado`);
+									console.warn('⛔ Elemento ainda invisível, tente aumentar o delay');
 								}
 							}, 3000);
 						}
