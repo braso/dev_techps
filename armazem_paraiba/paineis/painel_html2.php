@@ -213,7 +213,7 @@
 						</div>
 						<div id="collapse3" class="panel-collapse collapse">
 							<div class="panel-body">
-								<div id='graficoDetalhado' style='width:100%; height:850px; background-color: lightblue;'>
+								<div id='graficoDetalhado' style='width:100%; height:850px;'>
 								</div>
 							</div>
 						</div>

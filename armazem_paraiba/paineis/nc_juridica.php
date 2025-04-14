@@ -583,7 +583,7 @@
 
 					$gravidadeAlta = $totalizadores["refeicao"] + $totalizadores["intersticioInferior"] + $totalizadores["intersticioSuperior"];
 					$gravidadeMedia = $totalizadores["jornadaEfetiva"] + $totalizadores["mdc"];
-					$gravidadeBaixa = $totalizadores["jornadaPrevista"];
+					$gravidadeBaixa = $totalizadores["falta"];
 
 				} else{
 					$totalNaoconformidade = array_sum([

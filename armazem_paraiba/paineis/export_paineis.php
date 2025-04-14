@@ -36,10 +36,10 @@ class CustomPDF extends TCPDF {
         $imgWidth = 20;
         $imgHeight = 15;
         $imgHeight2 = 10;
-        // $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth, $imgHeight2);
-        // $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
-        $this->Image('logo_esquerda.png', 10, 10, $imgWidth, $imgHeight);
-        $this->Image('logo_direita.png', $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
+        $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth, $imgHeight2);
+        $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
+        // $this->Image('logo_esquerda.png', 10, 10, $imgWidth, $imgHeight);
+        // $this->Image('logo_direita.png', $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
         $this->SetFont('helvetica', 'B', 12);
         $this->Cell(0, 15, $this->tituloPersonalizado, 0, 1, 'C');
         $this->Ln(15);
@@ -1274,7 +1274,7 @@ function gerarPainelNc() {
 
                 $gravidadeAlta = $totalizadores["refeicao"] + $totalizadores["intersticioInferior"] + $totalizadores["intersticioSuperior"];
                 $gravidadeMedia = $totalizadores["jornadaEfetiva"] + $totalizadores["mdc"];
-                $gravidadeBaixa = $totalizadores["jornadaPrevista"];
+                $gravidadeBaixa = $totalizadores["falta"];
             } else {
                 $totalNaoconformidade = array_sum([
                     $totalizadores["espera"],
@@ -1299,7 +1299,10 @@ function gerarPainelNc() {
                     $totalizadores["repouso"] + $totalizadores["jornada"];
             }
 
-            $porcentagemFun = ($totalJsonComTudoZero / ($motoristas + $ajudante + $funcionario)) * 100;
+            $totalColaboradores = $motoristas + $ajudante + $funcionario;
+            $porcentagemFun = $totalColaboradores != 0
+                ? ($totalJsonComTudoZero / $totalColaboradores) * 100
+                : 0;
 
             $totalGeral = $gravidadeAlta + $gravidadeMedia + $gravidadeBaixa;
             $graficoSintetico = [$gravidadeAlta, $gravidadeMedia, $gravidadeBaixa];
@@ -1444,21 +1447,22 @@ function gerarPainelNc() {
     $pdf->MultiCell($larguraPagina, 10, $textoCabecalho, 0, 'C'); // alinhamento 'C' = centro
     $pdf->Ln(5); 
 
-    // $pdf->Image('./arquivos/graficos/grafico_graficoPerformance_'.'-'.'.png', 15, 20, 60);
-    // $pdf->Image('./arquivos/grafico_graficoPerformanceMedia_'.'-'.'.png', 75, 20, 60);
-    // $pdf->Image('./arquivos/grafico_graficoPerformanceBaixa_'.'-'.'.png', 135, 20, 60);
+    $userEntrada = preg_replace('/[^a-zA-Z0-9_-]/', '', $_SESSION['horaEntrada']);
+    $pdf->Image('./arquivos/graficos/grafico_graficoPerformance_'.$_POST["busca_data"].'_'.$userEntrada.'.png', 10, 50, 60);
+    $pdf->Image('./arquivos/graficos/grafico_graficoPerformanceMedia_'.$_POST["busca_data"].'_'.$userEntrada.'.png', 122, 50, 60);
+    $pdf->Image('./arquivos/graficos/grafico_graficoPerformanceBaixa_'.$_POST["busca_data"].'_'.$userEntrada.'.png', 230, 50, 60);
 
     // Simula "Performance Alta"
-    $pdf->Rect(55, 50, 60, 40, 'DF'); // x, y, w, h, D=Draw, F=Fill
-    $pdf->SetXY(15, 40);
+    // $pdf->Rect(55, 50, 60, 40, 'DF'); // x, y, w, h, D=Draw, F=Fill
+    // $pdf->SetXY(15, 40);
 
-    // Simula "Performance Média"
-    $pdf->Rect(125, 50, 60, 40, 'DF');
-    $pdf->SetXY(75, 40);
+    // // Simula "Performance Média"
+    // $pdf->Rect(125, 50, 60, 40, 'DF');
+    // $pdf->SetXY(75, 40);
 
-    // Simula "Performance Baixa"
-    $pdf->Rect(195, 50, 60, 40, 'DF');
-    $pdf->SetXY(135, 40);
+    // // Simula "Performance Baixa"
+    // $pdf->Rect(195, 50, 60, 40, 'DF');
+    // $pdf->SetXY(135, 40);
 
     // === Espaço após os gráficos ===
     $pdf->Ln(60);
@@ -1513,18 +1517,24 @@ function gerarPainelNc() {
     $pdf->Cell(20, 6, number_format($percentuais["alta"],2,',','.').'%', 1, 1);
 
     // --- GRÁFICOS ABAIXO DAS TABELAS ---
+    
     $alturaTabelas = 20 + (6 * 3) + 2; // Calcula altura total das tabelas
-    $posYGraficos = 40 + $alturaTabelas + 15; // 15mm de espaçamento
+    $posYGraficos = 40 + $alturaTabelas + 30; // 15mm de espaçamento
 
     // Gráfico Sintético (Esquerda)
-    $pdf->SetY($posYGraficos - 10); // Ajuste para o título
-    $pdf->SetFont('helvetica', 'B', 12);
-    $pdf->Rect(90, $posYGraficos, 90, 70, 'DF');
-
+    $pdf->Image('./arquivos/graficos/grafico_graficoSintetico_'.$_POST["busca_data"].'_'.$userEntrada.'.png', 95, $posYGraficos, 80);
     // Gráfico Analítico (Direita)
-    $pdf->SetY($posYGraficos - 10); // Mesma altura do título esquerdo
-    $pdf->SetX(140);
-    $pdf->Rect(200, $posYGraficos, 90, 70, 'DF');
+    $pdf->Image('./arquivos/graficos/grafico_graficoAnalitico_'.$_POST["busca_data"].'_'.$userEntrada.'.png', 185, $posYGraficos, 100);
+
+    // // Gráfico Sintético (Esquerda)
+    // $pdf->SetY($posYGraficos - 10); // Ajuste para o título
+    // $pdf->SetFont('helvetica', 'B', 12);
+    // $pdf->Rect(90, $posYGraficos, 90, 70, 'DF');
+
+    // // Gráfico Analítico (Direita)
+    // $pdf->SetY($posYGraficos - 10); // Mesma altura do título esquerdo
+    // $pdf->SetX(140);
+    // $pdf->Rect(200, $posYGraficos, 90, 70, 'DF');
 
     $pdf->addPage();
 
@@ -1536,10 +1546,12 @@ function gerarPainelNc() {
     $y = $margins['top'];  // Começa após o cabeçalho (25mm conforme seu SetMargins)
     $width = $pdf->getPageWidth() - $margins['left'] - $margins['right'];
     $height = $pdf->getPageHeight() - $margins['top'] - $margins['bottom'];
+    
+    $pdf->Image('./arquivos/graficos/grafico_graficoDetalhado_'.$_POST["busca_data"].'_'.$userEntrada.'.png', $x, $y, $width, $height);
 
-    $pdf->SetFillColor(240, 240, 240);
+    // $pdf->SetFillColor(240, 240, 240);
     // Adicionar retângulo que preenche a área útil da página
-    $pdf->Rect($x, $y, $width, $height, 'F'); // 'F' para preenchimento
+    // $pdf->Rect($x, $y, $width, $height, 'F'); // 'F' para preenchimento
 
     $pdf->addPage();
 
