@@ -49,26 +49,14 @@
     $empresasInput = 
         "<div class='form-group'>
             <select name='empresa' class='input-empresas form-control form-control-solid placeholder-no-fix' autofocus>
-                <option value='' hidden>Empresa</option>
-                <option value='ARMAZEMPARAIBA'>Armazem Paraíba</option>
-                <option value='BRASO'>Braso</option>
-                <option value='CARAU'>Caraú Transportes</option>
-                <option value='COMAV'>COMAV</option>
-                <option value='FEIJAOTURQUEZA'>Feijão Turqueza</option>
-                <option value='FSLOG'>FS Log Transportes</option>
-                <option value='HN'>HN Transportes</option>
-                <option value='JRJ'>JRJ Organização</option>
-                <option value='LOGSYNC'>Logsync - TechPS</option>
-                <option value='NH'>NH Transportes</option>
-                <option value='OPAFRUTAS'>Opafrutas</option>
-                <option value='PKFMEDEIROS'>PKF Medeiros</option>
-                <option value='QUALY'>Qualy Transportes</option>
-                <option value='TECHPS'>TechPS</option>
-                <option value='TECHPSDEMO'>TechPS (Demo)</option>
-                <option value='TRAMPOLIMGAS'>Trampolim Gás</option>
-            </select>
-        </div>"
+                <option value='' hidden>Empresa</option>"
     ;
+    foreach($empresas as $key => $value){
+        if(dir(__DIR__."/".$value)){
+            $empresasInput .= "<option ".($_POST["empresa"] == $key? "selected": "")." value='{$key}'>{$empresasNomes[$value]}</option>";
+        }
+    }
+    $empresasInput .= "</select></div>";
 
     // $empresasInput = 
     //     "<div class='form-group'>
