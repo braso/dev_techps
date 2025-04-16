@@ -17,6 +17,7 @@
         "PKFMEDEIROS"			=> "pkf_medeiros",
         "QUALY"		            => "qualy_transportes",
         "TECHPS"				=> "techps",
+        "TECHPSDEMO"			=> "techps_demo",
         "TRAMPOLIMGAS"			=> "trampolim_gas"
     ];
 
@@ -35,6 +36,7 @@
         "pkf_medeiros" 		=> "PKF Medeiros",
         "qualy_transportes" => "Qualy Transportes",
         "techps" 			=> "TechPS",
+        "techps_demo" 		=> "TechPS (Demo)",
         "trampolim_gas" 	=> "Trampolim Gás"
     ];
 
@@ -62,6 +64,7 @@
                 <option value='PKFMEDEIROS'>PKF Medeiros</option>
                 <option value='QUALY'>Qualy Transportes</option>
                 <option value='TECHPS'>TechPS</option>
+                <option value='TECHPSDEMO'>TechPS (Demo)</option>
                 <option value='TRAMPOLIMGAS'>Trampolim Gás</option>
             </select>
         </div>"
