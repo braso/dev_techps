@@ -188,9 +188,9 @@
 						. " WHERE endo_tx_status = 'ativo'"
 						. " AND endo_nb_entidade = '" . $motorista["enti_nb_id"] . "'"
 						. " AND ("
-						. "   (endo_tx_de  >= '" . $dataMes->format("Y-m-d") . "' AND endo_tx_de  <= '" . $dataFim->format("Y-m-d") . "')"
-						. "OR (endo_tx_ate >= '" . $dataMes->format("Y-m-d") . "' AND endo_tx_ate <= '" . $dataFim->format("Y-m-d") . "')"
-						. "OR (endo_tx_de  <= '" . $dataMes->format("Y-m-d") . "' AND endo_tx_ate >= '" . $dataFim->format("Y-m-d") . "')"
+							. "   (endo_tx_de  >= '" . $dataMes->format("Y-m-d") . "' AND endo_tx_de  <= '" . $dataFim->format("Y-m-d") . "')"
+							. "OR (endo_tx_ate >= '" . $dataMes->format("Y-m-d") . "' AND endo_tx_ate <= '" . $dataFim->format("Y-m-d") . "')"
+							. "OR (endo_tx_de  <= '" . $dataMes->format("Y-m-d") . "' AND endo_tx_ate >= '" . $dataFim->format("Y-m-d") . "')"
 						. ");"
 				), MYSQLI_ASSOC);
 
@@ -208,26 +208,22 @@
 					// $endossoCompleto = montarEndossoMes($dataMes, $motorista);
 
 					// $saldoAnterior = $endossoCompleto["totalResumo"]["saldoAnterior"];
-				$saldoAnterior = mysqli_fetch_assoc(query(
-					"SELECT endo_tx_saldo FROM endosso"
-						. " WHERE endo_tx_status = 'ativo'"
-						. " AND endo_tx_ate < '" . $dataMes->format("Y-m-d") . "'"
-						. " AND endo_tx_matricula = '" . $motorista["enti_tx_matricula"] . "'"
-						. " ORDER BY endo_tx_ate DESC"
-						. " LIMIT 1;"
+				$ultimoEndosso = mysqli_fetch_assoc(query(
+					"SELECT endo_tx_filename FROM endosso
+						WHERE endo_tx_status = 'ativo'
+							AND endo_tx_ate < '".$dataMes->format("Y-m-d")."'
+							AND endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'
+						ORDER BY endo_tx_ate DESC
+						LIMIT 1;"
 				));
 
-				if (!empty($saldoAnterior)) {
-					if (!empty($saldoAnterior["endo_tx_saldo"])) {
-						$saldoAnterior = $saldoAnterior["endo_tx_saldo"];
-					} elseif (!empty($motorista["enti_tx_banco"])) {
-						$saldoAnterior = $motorista["enti_tx_banco"];
-					}
-					if (strlen($motorista["enti_tx_banco"]) > 5 && $motorista["enti_tx_banco"][0] == "0") {
-						$saldoAnterior = substr($saldoAnterior, 1);
-					}
-				} else {
-					$saldoAnterior = "00:00";
+				if(!empty($ultimoEndosso)){
+					$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
+					$saldoAnterior = operarHorarios([$ultimoEndosso["totalResumo"]["saldoBruto"], $ultimoEndosso["totalResumo"]["he50APagar"], $ultimoEndosso["totalResumo"]["he100APagar"]], "-");
+				}elseif(!empty($motorista["enti_tx_banco"])){
+					$saldoAnterior = $motorista["enti_tx_banco"];
+				}else{
+					$saldoAnterior = "--:--";
 				}
 				//}
 
@@ -272,6 +268,9 @@
 					$totaisMot["esperaIndenizada"] = somarHorarios([$totaisMot["esperaIndenizada"], $diaPonto["esperaIndenizada"]]);
 					$totaisMot["saldoPeriodo"]     = somarHorarios([$totaisMot["saldoPeriodo"],     $diaPonto["diffSaldo"]]);
 					$totaisMot["saldoFinal"]       = somarHorarios([$saldoAnterior,                 $totaisMot["saldoPeriodo"]]);
+					if(!empty($ultimoEndosso)){
+						$totaisMot["saldoFinal"] = operarHorarios([$totaisMot["saldoFinal"], $ultimoEndosso["totalResumo"]["he50APagar"], $ultimoEndosso["totalResumo"]["he100APagar"]], "-");
+				    }
 				}
 
 				$row = [
