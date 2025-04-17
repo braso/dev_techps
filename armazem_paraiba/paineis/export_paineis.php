@@ -7,7 +7,6 @@ require_once __DIR__ . "/funcoes_paineis.php";
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
     //*/
-
 if (!empty($_POST["empresa"])) {
     $empresa = mysqli_fetch_assoc(query(
         "SELECT * FROM empresa
@@ -34,9 +33,10 @@ class CustomPDF extends TCPDF {
 
     public function Header() {
         $imgWidth = 20;
+        $imgWidth2 = 30;
         $imgHeight = 15;
         $imgHeight2 = 10;
-        $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth, $imgHeight2);
+        $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth2, $imgHeight2);
         $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
         // $this->Image('logo_esquerda.png', 10, 10, $imgWidth, $imgHeight);
         // $this->Image('logo_direita.png', $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
@@ -149,14 +149,8 @@ function gerarPainelEndosso() {
 
             $dataAtual = date("d/m/Y");
             $horaAtual = date("H:i");
-            if ($dataArquivo != $dataAtual) {
-                $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
-                    <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
-            } else {
-                $alertaEmissao = "<span>";
-            }
 
-            $dataEmissao = $alertaEmissao . " Atualizado em: " . date("d/m/Y H:i", filemtime($path . "/empresa_" . $empresa["empr_nb_id"] . ".json")) . "</span>"; //Utilizado no HTML.
+            $dataEmissao = date("d/m/Y H:i", filemtime($path . "/empresa_" . $empresa["empr_nb_id"] . ".json")) . "</span>"; //Utilizado no HTML.
             $periodoRelatorio = json_decode(file_get_contents($path . "/empresa_" . $empresa["empr_nb_id"] . ".json"), true);
             $periodoRelatorio = [
                 "dataInicio" => $periodoRelatorio["dataInicio"],
@@ -165,7 +159,7 @@ function gerarPainelEndosso() {
 
             $motoristas = [];
             foreach ($arquivos as $arquivo) {
-                $json = json_decode(file_get_contents($path . "/" . $arquivo), true);
+                $dados = json_decode(file_get_contents($path . "/" . $arquivo), true);
                 $json["dataAtualizacao"] = date("d/m/Y H:i", filemtime($path . "/" . $arquivo));
                 foreach ($totais as $key => $value) {
                     $totais[$key] = operarHorarios([
@@ -355,14 +349,28 @@ function gerarPainelEndosso() {
     // Define posição lateral ao topo da tabela
     $pdf->SetXY($posX_inicial + $totalTabela + 10, $posY_inicial);
 
-    // Texto "Atualizado em"
-    $pdf->SetFont('', '', 9);
-    $pdf->Cell(60, 6, 'Atualizado em: ' . date("d/m/Y H:i", filemtime($path . "/empresa_" . $empresa["empr_nb_id"] . ".json")), 0, 2, 'L');
+    // --- ATUALIZADO EM (alinhado à esquerda com formatação) ---
+    $textoAtualizado = 'Atualizado em: ';
+    $dataAtualizacao = date("d/m/Y H:i", filemtime($path . "/empresa_" . $empresa["empr_nb_id"] . ".json"));
 
-    // Texto "Período"
     $pdf->SetFont('helvetica', 'B', 10);
-    $pdf->Cell(60, 6, 'Período do relatório: ' . $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"], 0, 1, 'L');
+    $pdf->Write(6, $textoAtualizado);
+    $pdf->SetFont('helvetica', '', 10);
+    $pdf->Write(6, $dataAtualizacao);
+    $pdf->Ln(5); // espaço abaixo
 
+    // --- PERÍODO (alinhado à esquerda com formatação) ---
+    $pdf->SetX(215);
+    $textoPeriodo = 'Período do relatório: ';
+    $valorPeriodo = $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"];
+
+    $pdf->SetFont('helvetica', 'B', 10);
+    $pdf->Write(7, $textoPeriodo);
+    $pdf->SetFont('helvetica', '', 10);
+    $pdf->Write(7, $valorPeriodo);
+
+    $pdf->Ln(10);
+    
     // Tabela FRUTICANA + 9 colunas
     $pdf->SetFont('helvetica', '', 6);
     $pdf->SetY(60);
@@ -781,10 +789,10 @@ function gerarPainelSaldo() {
     [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
 
     $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
-    $pdf->tituloPersonalizado = 'Relatório de Saldo';
+    $pdf->tituloPersonalizado = 'Relatório Geral de Saldo';
     $pdf->SetCreator('TechPS');
     $pdf->SetAuthor('TechPS');
-    $pdf->SetTitle('Relatório de Saldo');
+    $pdf->SetTitle('Relatório Geral de Saldo');
     $pdf->SetMargins(2, 25, 2);
     $pdf->SetHeaderMargin(10);
     $pdf->SetFooterMargin(10);
@@ -874,12 +882,25 @@ function gerarPainelSaldo() {
     $pdf->SetXY($posX_inicial + $totalTabela + 10, $posY_inicial);
 
     // Texto "Atualizado em"
-    $pdf->SetFont('', '', 9);
-    $pdf->Cell(60, 6, 'Atualizado em: ' . date("d/m/Y H:i", filemtime($path . "/empresa_" . $empresa["empr_nb_id"] . ".json")), 0, 2, 'L');
+    // --- ATUALIZADO EM (alinhado à esquerda com formatação) ---
+    $textoAtualizado = 'Atualizado em: ';
+    $dataAtualizacao = date("d/m/Y H:i", filemtime($path . "/empresa_" . $empresa["empr_nb_id"] . ".json"));
 
-    // Texto "Período"
     $pdf->SetFont('helvetica', 'B', 10);
-    $pdf->Cell(60, 6, 'Período do relatório: ' . $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"], 0, 1, 'L');
+    $pdf->Write(6, $textoAtualizado);
+    $pdf->SetFont('helvetica', '', 10);
+    $pdf->Write(6, $dataAtualizacao);
+    $pdf->Ln(5); // espaço abaixo
+
+    // --- PERÍODO (alinhado à esquerda com formatação) ---
+    $pdf->SetX(215);
+    $textoPeriodo = 'Período do relatório: ';
+    $valorPeriodo = $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"];
+
+    $pdf->SetFont('helvetica', 'B', 10);
+    $pdf->Write(7, $textoPeriodo);
+    $pdf->SetFont('helvetica', '', 10);
+    $pdf->Write(7, $valorPeriodo);
 
     // Tabela FRUTICANA + 9 colunas
     $pdf->SetFont('helvetica', '', 6);
@@ -1120,7 +1141,7 @@ function gerarPainelSaldo() {
     }
 
     // Gera o PDF
-    $nomeArquivo = 'relatorio_endossos.pdf';
+    $nomeArquivo = 'Relatorio_Saldo.pdf';
     $pdf->Output($nomeArquivo, 'I');
 }
 
@@ -1385,7 +1406,7 @@ function gerarPainelNc() {
 
                 $dataAtual = date("d/m/Y");
                 $horaAtual = date("H:i");
-                $dataEmissao =  " Atualizado em: " . date("d/m/Y H:i", filemtime($arquivo)) . "</span>"; //Utilizado no HTML.
+                $dataEmissao = date("d/m/Y H:i", filemtime($arquivo)); //Utilizado no HTML.
                 $arquivoGeral = json_decode(file_get_contents($arquivo), true);
 
                 $periodoRelatorio = [
@@ -1424,10 +1445,10 @@ function gerarPainelNc() {
     }
 
     $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
-    $pdf->tituloPersonalizado = 'Relatório de Saldo';
+    $pdf->tituloPersonalizado = 'Relatório de Não Conformidade Jurídica';
     $pdf->SetCreator('TechPS');
     $pdf->SetAuthor('TechPS');
-    $pdf->SetTitle('Relatório de Saldo');
+    $pdf->SetTitle('Relatório de Não Conformidade Jurídica');
     $pdf->SetMargins(2, 25, 2);
     $pdf->SetHeaderMargin(10);
     $pdf->SetFooterMargin(10);
@@ -1437,14 +1458,52 @@ function gerarPainelNc() {
     $pdf->SetFont('helvetica', '', 11);
     $pdf->SetTextColor(0, 0, 0);
 
-    $textoCabecalho = "Período do relatório: 01/04/2025 a 09/04/2025\nEmpresa: FRUTICANA PRODUCAO, COMERCIO, IMPORTACAO E EXPORTACAO LTDA";
-
     // Largura total da página útil
     $larguraPagina = $pdf->getPageWidth() - $pdf->getMargins()['left'] - $pdf->getMargins()['right'];
 
-    $pdf->Ln(5); // Espaço antes
-    $pdf->MultiCell($larguraPagina, 10, $textoCabecalho, 0, 'C'); // alinhamento 'C' = centro
-    $pdf->Ln(5);
+    $pdf->Ln(3); // Espaço antes
+
+    // Define fonte padrão
+    $pdf->SetFont('helvetica', '', 10);
+
+    // --- PERÍODO ---
+    $textoPeriodo = 'Período: ';
+    $valorPeriodo = $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"];
+    $larguraTexto = $pdf->GetStringWidth($textoPeriodo . $valorPeriodo);
+
+    // Centraliza manualmente
+    $posicaoX = ($larguraPagina - $larguraTexto) / 2;
+    $pdf->SetX($posicaoX);
+
+    $pdf->SetFont('helvetica', 'B', 10);
+    $pdf->Write(7, " Atualizado em: ");
+    $pdf->SetFont('helvetica', '', 10);
+    $pdf->Write(7, $dataEmissao);
+    $pdf->Ln();
+
+    $posicaoX = ($larguraPagina - $larguraTexto) / 2;
+    $pdf->SetX($posicaoX);
+
+    // Escreve com negrito e normal intercalados
+    $pdf->SetFont('helvetica', 'B', 10);
+    $pdf->Write(7, $textoPeriodo);
+    $pdf->SetFont('helvetica', '', 10);
+    $pdf->Write(7, $valorPeriodo);
+    $pdf->Ln(); // nova linha
+
+    // --- EMPRESA ---
+    $textoEmpresa = 'Empresa: ';
+    $valorEmpresa = $empresa['empr_tx_nome'];
+    $larguraTexto = $pdf->GetStringWidth($textoEmpresa . $valorEmpresa);
+
+    $posicaoX = ($larguraPagina - $larguraTexto) / 2;
+    $pdf->SetX($posicaoX);
+
+    $pdf->SetFont('helvetica', 'B', 10);
+    $pdf->Write(7, $textoEmpresa);
+    $pdf->SetFont('helvetica', '', 10);
+    $pdf->Write(7, $valorEmpresa);
+    $pdf->Ln(10);
 
     $userEntrada = preg_replace('/[^a-zA-Z0-9_-]/', '', $_SESSION['horaEntrada']);
     $pdf->Image('./arquivos/graficos/grafico_graficoPerformance_' . $_POST["busca_data"] . '_' . $userEntrada . '.png', 10, 50, 60);
@@ -1561,6 +1620,7 @@ function gerarPainelNc() {
     $pdf->SetFont('helvetica', 'B', 10);
     $pdf->Cell(70, 7, '', 1, 0, 'C');
     $pdf->Cell(180, 7, 'Descrição', 1, 0, 'C');
+    $pdf->SetTextColor(0, 0, 0);
     $pdf->Cell(10, 7, 'Total', 1, 0, 'C');
     $pdf->Cell(20, 7, '%', 1, 1, 'C');
 
@@ -1570,37 +1630,51 @@ function gerarPainelNc() {
     if ($_POST["busca_endossado"] == "naoEndossado") {
         $pdf->Cell(70, 7, 'Espera', 1, 0, 'C', true);
         $pdf->Cell(180, 7, '"Inicio ou Fim de espera sem registro"', 1, 0, 'C', true);
+        $pdf->SetFillColor(255, 255, 255);
+        $pdf->SetTextColor(0, 0, 0);
         $pdf->Cell(10, 7, $totalizadores["espera"], 1, 0, 'C', true);
         $pdf->Cell(20, 7, $percentuais["Geral_espera"] . '%', 1, 1, 'C', true);
 
+        $pdf->SetFillColor(255, 242, 96);
         $pdf->Cell(70, 7, 'Descanso', 1, 0, 'C', true);
         $pdf->Cell(180, 7, '"Inicio ou Fim de descanso sem registro"', 1, 0, 'C', true);
+        $pdf->SetFillColor(255, 255, 255);
+        $pdf->SetTextColor(0, 0, 0);
         $pdf->Cell(10, 7, $totalizadores["descanso"], 1, 0, 'C', true);
         $pdf->Cell(20, 7, $percentuais["Geral_descanso"] . '%', 1, 1, 'C', true);
 
+        $pdf->SetFillColor(255, 242, 96);
         $pdf->Cell(70, 7, 'Repouso', 1, 0, 'C', true);
         $pdf->Cell(180, 7, '"Inicio ou Fim de repouso sem registro"', 1, 0, 'C', true);
+        $pdf->SetFillColor(255, 255, 255);
         $pdf->Cell(10, 7, $totalizadores["repouso"], 1, 0, 'C', true);
         $pdf->Cell(20, 7, $percentuais["Geral_repouso"] . '%', 1, 1, 'C', true);
 
+        $pdf->SetFillColor(255, 242, 96);
         $pdf->Cell(70, 7, 'Jornada', 1, 0, 'C', true);
         $pdf->Cell(180, 7, '"Inicio ou Fim de Jornada sem registro"', 1, 0, 'C', true);
+        $pdf->SetFillColor(255, 255, 255);
         $pdf->Cell(10, 7, $totalizadores["jornada"], 1, 0, 'C', true);
         $pdf->Cell(20, 7, $percentuais["Geral_jornada"] . '%', 1, 1, 'C', true);
     }
+    $pdf->SetFillColor(255, 242, 96);
     $pdf->Cell(70, 7, 'Jornada Prevista', 1, 0, 'C', true);
     $pdf->Cell(180, 7, '"Faltas não justificadas"', 1, 0, 'C', true);
+    $pdf->SetFillColor(255, 255, 255);
     $pdf->Cell(10, 7, $totalizadores["falta"], 1, 0, 'C', true);
     $pdf->Cell(20, 7, $percentuais["Geral_falta"] . '%', 1, 1, 'C', true);
     $pdf->SetFillColor(255, 139, 0);  // laranja
 
     $pdf->Cell(70, 7, 'Jornada Efetiva', 1, 0, 'C', true);
     $pdf->Cell(180, 7, '"Tempo excedido de 12:00h de jornada efetiva"', 1, 0, 'C', true);
+    $pdf->SetFillColor(255, 255, 255);
     $pdf->Cell(10, 7, $totalizadores["jornadaEfetiva"], 1, 0, 'C', true);
     $pdf->Cell(20, 7, $percentuais["Geral_jornadaEfetiva"] . '%', 1, 1, 'C', true);
 
+    $pdf->SetFillColor(255, 139, 0);
     $pdf->Cell(70, 7, 'MDC - Máximo de Direção Continua', 1, 0, 'C', true);
     $pdf->Cell(180, 7, '"Descanso de 30 minutos a cada 05:30 de direção não respeitado."', 1, 0, 'C', true);
+    $pdf->SetFillColor(255, 255, 255);
     $pdf->Cell(10, 7, $totalizadores["mdc"], 1, 0, 'C', true);
     $pdf->Cell(20, 7, $percentuais["Geral_mdc"] . '%', 1, 1, 'C', true);
 
@@ -1622,17 +1696,27 @@ function gerarPainelNc() {
     );
 
     // Posiciona as próximas células ao lado da MultiCell
+    $pdf->SetFillColor(255, 255, 255);
     $pdf->SetXY($x + 180, $y);
+    $pdf->SetTextColor(0, 0, 0);
     $pdf->Cell(10, 14, $totalizadores["refeicao"], 1, 0, 'C', true);
     $pdf->Cell(20, 14, $percentuais["Geral_refeicao"] . '%', 1, 1, 'C', true);
 
+    $pdf->SetFillColor(236, 65, 65);  // vermelho
+    $pdf->SetTextColor(255, 255, 255); // branco
     $pdf->Cell(70, 7, 'Interstício Inferior', 1, 0, 'C', true);
     $pdf->Cell(180, 7, '"O mínimo de 11 horas de interstício não foi respeitado"', 1, 0, 'C', true);
+    $pdf->SetFillColor(255, 255, 255);
+    $pdf->SetTextColor(0, 0, 0);
     $pdf->Cell(10, 7, $totalizadores["intersticioInferior"], 1, 0, 'C', true);
     $pdf->Cell(20, 7, $percentuais["Geral_intersticioInferior"] . '%', 1, 1, 'C', true);
 
+    $pdf->SetFillColor(236, 65, 65);  // vermelho
+    $pdf->SetTextColor(255, 255, 255); // branco
     $pdf->Cell(70, 7, 'Interstício Superior', 1, 0, 'C', true);
     $pdf->Cell(180, 7, '"Interstício total de 11 horas não respeitado"', 1, 0, 'C', true);
+    $pdf->SetFillColor(255, 255, 255);
+    
     $pdf->Cell(10, 7, $totalizadores["intersticioSuperior"], 1, 0, 'C', true);
     $pdf->Cell(20, 7, $percentuais["Geral_intersticioSuperior"] . '%', 1, 1, 'C', true);
     $pdf->SetTextColor(0, 0, 0); // branco
@@ -1759,7 +1843,447 @@ function gerarPainelNc() {
 
 
     // Gera o PDF
-    $nomeArquivo = 'relatorio_endossos.pdf';
+    $nomeArquivo = 'relatorio_nc_juridica.pdf';
+    $pdf->Output($nomeArquivo, 'I');
+}
+
+function gerarPainelAjustes() {
+    $arquivos = [];
+    $resultado = [];
+    $resultado2 = [];
+    $totais = [];
+    $dataEmissao = ""; //Utilizado no HTML
+    $buscar_data = json_decode($_POST["busca_data"]);
+    $path = "./arquivos/ajustes";
+    $periodoInicio = new DateTime($buscar_data[0]);
+    $path .= "/" . $periodoInicio->format("Y-m") . "/" . $_POST["empresa"];
+
+    $empresa = mysqli_fetch_assoc(query(
+        "SELECT * FROM empresa
+            WHERE empr_tx_status = 'ativo'
+                AND empr_nb_id = {$_POST["empresa"]}
+            LIMIT 1;"
+    ));
+
+    if (is_dir($path) && file_exists($path . "/empresa_" . $_POST["empresa"] . ".json")) {
+
+        $dataArquivo = date("d/m/Y", filemtime($path . "/empresa_" . $_POST["empresa"] . ".json"));
+        $horaArquivo = date("H:i", filemtime($path . "/empresa_" . $_POST["empresa"] . ".json"));
+
+        $dataAtual = date("d/m/Y");
+        $horaAtual = date("H:i");
+
+        $dataEmissao = " Atualizado em: " . date("d/m/Y H:i", filemtime($path . "/empresa_" . $_POST["empresa"] . ".json")) . "</span>";
+        $arquivoGeral = json_decode(file_get_contents($path . "/empresa_" . $_POST["empresa"] . ".json"), true);
+
+        $periodoRelatorio = [
+            "dataInicio" => $arquivoGeral["dataInicio"],
+            "dataFim" => $arquivoGeral["dataFim"]
+        ];
+
+        $pastaAjuste = dir($path);
+        $totais = []; // Inicializa vazio, será preenchido dinamicamente
+
+        // Chaves que devem ser ignoradas
+        $chavesIgnorar = ["matricula", "nome", "ocupacao", "pontos"];
+        while ($arquivo = $pastaAjuste->read()) {
+            if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
+                $arquivo = $path . "/" . $arquivo;
+                $arquivos[] = $arquivo;
+                $json = json_decode(file_get_contents($arquivo), true);
+
+                // Processa cada chave do JSON
+                foreach ($json as $chave => $valor) {
+                    // Ignora as chaves especificadas
+                    if (in_array($chave, $chavesIgnorar)) {
+                        continue;
+                    }
+
+                    // Verifica se é um tipo de ponto válido
+                    if (is_array($valor) && isset($valor['ativo']) && isset($valor['inativo'])) {
+                        // Inicializa a chave no array de totais se não existir
+                        if (!isset($totais[$chave])) {
+                            $totais[$chave] = ['ativo' => 0, 'inativo' => 0];
+                        }
+
+                        // Soma os valores (com conversão para inteiro para segurança)
+                        $totais[$chave]['ativo'] += (int)$valor['ativo'];
+                        $totais[$chave]['inativo'] += (int)$valor['inativo'];
+                    }
+                }
+                foreach ($json['pontos'] as $key) {
+                    // Filtra apenas pontos com status "ativo" (case-insensitive)
+                    if (strtolower($key['pont_tx_status'] ?? '') !== 'ativo') {
+                        continue; // Pula se não for "ativo"
+                    }
+
+                    // Define o motivo
+                    $motivo = $key['moti_tx_nome'] ?? 'MOTIVO_NAO_INFORMADO';
+
+                    // Contagem geral por motivo
+                    if (!isset($resultado[$motivo])) {
+                        $resultado[$motivo] = 0;
+                    }
+                    $resultado[$motivo]++;
+
+                    // Agrupamento por motivo e funcionário
+                    if (!isset($resultado2[$motivo])) {
+                        $resultado2[$motivo] = [];
+                    }
+
+                    $dadosFunc = [
+                        "matricula" => $json["matricula"] ?? 'SEM_MATRICULA',
+                        "nome" => $json["nome"] ?? 'NOME_NAO_INFORMADO',
+                        "ocupacao" => $json["ocupacao"] ?? 'OCUPACAO_NAO_INFORMADA'
+                    ];
+
+                    $funcionarioKey = $dadosFunc['matricula'] ?? md5($dadosFunc['nome']);
+
+                    if (!isset($resultado2[$motivo][$funcionarioKey])) {
+                        $resultado2[$motivo][$funcionarioKey] = [
+                            'funcionario' => $dadosFunc,
+                            'quantidade' => 0,
+                            'tipos' => [] // ← adiciona array para tipos
+                        ];
+                    }
+
+                    // Incrementa quantidade
+                    $resultado2[$motivo][$funcionarioKey]['quantidade']++;
+
+                    // Armazena tipo do campo macr_tx_nome
+                    $tipo = $key['macr_tx_nome'] ?? 'TIPO_NAO_INFORMADO';
+
+                    if (!isset($resultado2[$motivo][$funcionarioKey]['tipos'][$tipo])) {
+                        $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo] = 0;
+                    }
+                    $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo]++;
+                }
+                $jsons[] = $json;
+            }
+        }
+        $pastaAjuste->close();
+    }
+
+    $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf->tituloPersonalizado = 'Relatório de Ajustes';
+    $pdf->SetCreator('TechPS');
+    $pdf->SetAuthor('TechPS');
+    $pdf->SetTitle('Relatório de Ajustes');
+    $pdf->SetMargins(2, 25, 2);
+    $pdf->SetHeaderMargin(10);
+    $pdf->SetFooterMargin(10);
+    $pdf->SetAutoPageBreak(true, PDF_MARGIN_BOTTOM);
+    $pdf->AddPage();
+
+    $pdf->SetFont('helvetica', '', 11);
+    $pdf->SetTextColor(0, 0, 0);
+
+    // --- ATUALIZADO EM (alinhado à esquerda com formatação) ---
+    $pdf->SetX(120);
+    $textoAtualizado = 'Atualizado em: ';
+    $dataAtualizacao = date("d/m/Y H:i", filemtime($path . "/empresa_" . $empresa["empr_nb_id"] . ".json"));
+
+    $pdf->SetFont('helvetica', 'B', 9);
+    $pdf->Write(6, $textoAtualizado);
+    $pdf->SetFont('helvetica', '', 9);
+    $pdf->Write(6, $dataAtualizacao);
+    $pdf->Ln(5); // espaço abaixo
+
+    // --- PERÍODO (alinhado à esquerda com formatação) ---
+    $pdf->SetX(110);
+    $textoPeriodo = 'Período do relatório: ';
+    $valorPeriodo = $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"];
+
+    $pdf->SetFont('helvetica', 'B', 10);
+    $pdf->Write(7, $textoPeriodo);
+    $pdf->SetFont('helvetica', '', 10);
+    $pdf->Write(7, $valorPeriodo);
+    $pdf->Ln();
+
+    $pdf->SetX(90);
+    $pdf->SetFont('helvetica', 'B', 10);
+    $pdf->Write(7, 'Empresa: ');
+    $pdf->SetFont('helvetica', '', 10);
+    $pdf->Write(7, $empresa['empr_tx_nome'] . "\n");
+
+    $pdf->Ln(5);
+
+    $userEntrada = preg_replace('/[^a-zA-Z0-9_-]/', '', $_SESSION['horaEntrada']);
+
+    // === Tabela: ajustes inseridos===
+    $pdf->SetFont('helvetica', 'B', 7);
+    $pdf->Cell(84, 7, 'Quantidade por ocupação', 1, 1, 'C');
+    $pdf->Cell(50, 7, 'Motivo', 1, 0, 'C');
+    $pdf->Cell(16, 7, 'Quantidade', 1, 0, 'C');
+    $pdf->Cell(18, 7, 'Funcionários', 1, 1, 'C');
+
+    $pdf->SetFont('helvetica', '', 7);
+    arsort($resultado);
+    foreach (array_keys($resultado) as $motivo) {
+        $pdf->Cell(50, 7, $motivo, 1, 0, 'C');
+        $pdf->Cell(16, 7, $resultado[$motivo] , 1, 0, 'C');
+        $pdf->Cell(18, 7, sizeof($resultado2[$motivo]), 1, 1, 'C');
+    }
+    // --- GRÁFICOS ABAIXO DAS TABELAS ---
+
+    $alturaTabelas = 20 + (6 * 3) + 2; // Calcula altura total das tabelas
+    $posYGraficos = 5 + $alturaTabelas; // 15mm de espaçamento
+
+    // // Gráfico (Esquerda)
+    // dd('./arquivos/graficos/grafico_chart-unificado_' . $periodoInicio->format("Y-m")  . '_' . $userEntrada . '.png');
+    $pdf->Image('./arquivos/graficos/grafico_chart-unificado_' . $periodoInicio->format("Y-m")  . '_' . $userEntrada . '.png', 95, $posYGraficos, 150);
+
+    // Gráfico Sintético (Esquerda)
+    // $pdf->SetY($posYGraficos - 10); // Ajuste para o título
+    // $pdf->Rect(100, $posYGraficos, 170, 49, 'DF');
+
+    // === Espaço antes da próxima tabela ===
+    $pdf->Ln(50);
+
+    // === Tabela: Ajustes por funcionário ===
+    $pdf->SetFillColor(241, 198, 31); 
+    $pdf->SetFont('helvetica', 'B', 7, true);
+    $pdf->MultiCell(54, 7, $arquivoGeral["empr_tx_nome"], 1, 'C', 1, 0, '', '', true, 0, false, true, 7, 'M');
+    $pdf->SetFont('helvetica', '', 7);
+    $pdf->Cell(17, 7, $arquivoGeral["Inicio de Jornada"], 1, 0, 'C', true);
+    $pdf->Cell(17, 7, $arquivoGeral["Fim de Jornada"], 1, 0, 'C', true);
+    $pdf->Cell(17, 7, $arquivoGeral["Inicio de Refeição"], 1, 0, 'C', true);
+    $pdf->Cell(17, 7, $arquivoGeral["Fim de Refeição"], 1, 0, 'C', true);
+    $pdf->Cell(17, 7, $arquivoGeral["Inicio de Espera"], 1, 0, 'C', true);
+    $pdf->Cell(17, 7, $arquivoGeral["Fim de Espera"], 1, 0, 'C', true);
+    $pdf->Cell(17, 7, $arquivoGeral["Inicio de Descanso"], 1, 0, 'C', true);
+    $pdf->Cell(17, 7, $arquivoGeral["Fim de Descanso"], 1, 0, 'C', true);
+    $pdf->Cell(17, 7, $arquivoGeral["Inicio de Repouso"], 1, 0, 'C', true);
+    $pdf->Cell(17, 7, $arquivoGeral["Fim de Repouso"], 1, 0, 'C', true);
+    $pdf->Cell(17, 7, $arquivoGeral["Inicio de Repouso Embarcado"], 1, 0, 'C', true);
+    $pdf->Cell(17, 7, $arquivoGeral["Fim de Repouso Embarcado"], 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, $arquivoGeral['totais']['ativo'], 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, $arquivoGeral['totais']['inativo'], 1, 0, 'C', true);
+    $totalEmpresa = $arquivoGeral['totais']['ativo'] + $arquivoGeral['totais']['inativo'];
+    $pdf->Cell(17, 7, $totalEmpresa, 1, 1, 'C', true);
+
+    // === Espaço antes da próxima tabela ===
+    $pdf->Ln(2);
+
+    $pdf->SetFillColor(78, 169, 255);
+    $pdf->SetFont('helvetica', 'B', 5.2);
+    $pdf->Cell(14, 9, 'Matrícula', 1, 0, 'C', true);
+    $pdf->MultiCell(26, 9, 'Nome do Funcionário', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+    $pdf->Cell(14, 9, 'Ocupação', 1, 0, 'C', true);
+    $pdf->MultiCell(17, 9, 'Inicio de Jornada', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+    $pdf->MultiCell(17, 9, 'Fim de Jornada', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+    $pdf->MultiCell(17, 9, 'Inicio de Refeição', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+    $pdf->MultiCell(17, 9, 'Fim de Refeição', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+    $pdf->MultiCell(17, 9, 'Inicio de Espera', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+    $pdf->MultiCell(17, 9, 'Fim de Espera', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+    $pdf->MultiCell(17, 9, 'Inicio de Descanso', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+    $pdf->MultiCell(17, 9, 'Fim de Descanso', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+    $pdf->MultiCell(17, 9, 'Inicio de Repouso', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+    $pdf->MultiCell(17, 9, 'Fim de Repouso', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+    $pdf->MultiCell(17, 9, 'Inicio de Repouso Embarcado', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+    $pdf->MultiCell(17, 9, 'Fim de Repouso Embarcado', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+    $pdf->MultiCell(17, 9, 'Total', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+    $pdf->MultiCell(17, 9, 'Total Geral', 1, 'C', true, 1, '', '', true, 0, false, true, 7, 'M');
+
+    $pdf->SetFillColor(78, 169, 255);
+    $pdf->Cell(14, 7, '', 1, 0, 'C', true);
+    $pdf->Cell(26, 7, '', 1, 0, 'C', true);
+    $pdf->Cell(14, 7, '', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+    $pdf->Cell(17, 7, '', 1, 1, 'C', true);
+    
+    // dd($json);
+    usort($jsons, function ($a, $b) {
+        return strcmp($a['nome'], $b['nome']);
+    });
+
+    foreach ($jsons as $dados) {
+        $pdf->Cell(14, 7, $dados["matricula"], 1, 0, 'C');
+        $pdf->MultiCell(26, 7, $dados["nome"], 1, 'C', false, 0, '', '', true, 0, false, true, 7, 'M');
+        $pdf->Cell(14, 7, $dados["ocupacao"], 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Inicio de Jornada"]["ativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Inicio de Jornada"]["inativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Fim de Jornada"]["ativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Fim de Jornada"]["inativo"] ?: '', 1, 0, 'C');
+        
+        $pdf->Cell(8.5, 7, $dados["Inicio de Refeição"]["ativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Inicio de Refeição"]["inativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Fim de Refeição"]["ativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Fim de Refeição"]["inativo"] ?: '', 1, 0, 'C');
+        
+        $pdf->Cell(8.5, 7, $dados["Inicio de Espera"]["ativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Inicio de Espera"]["inativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Fim de Espera"]["ativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Fim de Espera"]["inativo"] ?: '', 1, 0, 'C');
+        
+        $pdf->Cell(8.5, 7, $dados["Inicio de Descanso"]["ativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Inicio de Descanso"]["inativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Fim de Descanso"]["ativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Fim de Descanso"]["inativo"] ?: '', 1, 0, 'C');
+        
+        $pdf->Cell(8.5, 7, $dados["Inicio de Repouso"]["ativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Inicio de Repouso"]["inativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Fim de Repouso"]["ativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Fim de Repouso"]["inativo"] ?: '', 1, 0, 'C');
+        
+        $pdf->Cell(8.5, 7, $dados["Inicio de Repouso Embarcado"]["ativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Inicio de Repouso Embarcado"]["inativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Fim de Repouso Embarcado"]["ativo"] ?: '', 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $dados["Fim de Repouso Embarcado"]["inativo"] ?: '', 1, 0, 'C');
+
+        $totalAtivo = 0;
+        $totalInativo = 0;
+        $chaves = [
+            "Inicio de Jornada", "Fim de Jornada",
+            "Inicio de Refeição", "Fim de Refeição",
+            "Inicio de Espera", "Fim de Espera",
+            "Inicio de Descanso", "Fim de Descanso",
+            "Inicio de Repouso", "Fim de Repouso",
+            "Inicio de Repouso Embarcado", "Fim de Repouso Embarcado"
+        ];
+
+        foreach ($chaves as $chave) {
+            $totalAtivo += $dados[$chave]["ativo"];
+        }
+
+        foreach ($chaves as $chave) {
+            $totalInativo += $dados[$chave]["inativo"];
+        }
+
+
+        $total = $totalInativo + $totalAtivo;
+        $pdf->Cell(8.5, 7, $totalAtivo, 1, 0, 'C');
+        $pdf->Cell(8.5, 7, $totalInativo, 1, 0, 'C');
+        $pdf->Cell(17, 7, $total, 1, 1, 'C');
+    }
+
+    $pdf->Cell(14, 7, '', 1, 0, 'C');
+    $pdf->Cell(26, 7, '', 1, 0, 'C');
+    $pdf->Cell(14, 7, 'Total', 1, 0, 'C');
+
+    // Inicializa os acumuladores
+    $inicioJornadaAtivos = 0;
+    $inicioJornadaInativo = 0;
+    $fimJornadaAtivos = 0;
+    $fimJornadaInativo = 0;
+
+    $inicioRefeicaoAtivos = 0;
+    $inicioRefeicaoInativo = 0;
+    $fimRefeicaoAtivos = 0;
+    $fimRefeicaoInativo = 0;
+
+    $inicioEsperaAtivos = 0;
+    $inicioEsperaInativo = 0;
+    $fimEsperaAtivos = 0;
+    $fimEsperaInativo = 0;
+
+    $inicioDescansoAtivos = 0;
+    $inicioDescansoInativo = 0;
+    $fimDescansoAtivos = 0;
+    $fimDescansoInativo = 0;
+
+    $inicioRepousoAtivos = 0;
+    $inicioRepousoInativo = 0;
+    $fimRepousoAtivos = 0;
+    $fimRepousoInativo = 0;
+
+    $inicioRepousoEmbarcadoAtivos = 0;
+    $inicioRepousoEmbarcadoInativo = 0;
+    $fimRepousoEmbarcadoAtivos = 0;
+    $fimRepousoEmbarcadoInativo = 0;
+
+    foreach ($jsons as $dados) {
+        $inicioJornadaAtivos += $dados["Inicio de Jornada"]["ativo"];
+        $inicioJornadaInativo += $dados["Inicio de Jornada"]["inativo"];
+        $fimJornadaAtivos += $dados["Fim de Jornada"]["ativo"];
+        $fimJornadaInativo += $dados["Fim de Jornada"]["inativo"];
+
+        $inicioRefeicaoAtivos += $dados["Inicio de Refeição"]["ativo"];
+        $inicioRefeicaoInativo += $dados["Inicio de Refeição"]["inativo"];
+        $fimRefeicaoAtivos += $dados["Fim de Refeição"]["ativo"];
+        $fimRefeicaoInativo += $dados["Fim de Refeição"]["inativo"];
+
+        $inicioEsperaAtivos += $dados["Inicio de Espera"]["ativo"];
+        $inicioEsperaInativo += $dados["Inicio de Espera"]["inativo"];
+        $fimEsperaAtivos += $dados["Fim de Espera"]["ativo"];
+        $fimEsperaInativo += $dados["Fim de Espera"]["inativo"];
+
+        $inicioDescansoAtivos += $dados["Inicio de Descanso"]["ativo"];
+        $inicioDescansoInativo += $dados["Inicio de Descanso"]["inativo"];
+        $fimDescansoAtivos += $dados["Fim de Descanso"]["ativo"];
+        $fimDescansoInativo += $dados["Fim de Descanso"]["inativo"];
+
+        $inicioRepousoAtivos += $dados["Inicio de Repouso"]["ativo"];
+        $inicioRepousoInativo += $dados["Inicio de Repouso"]["inativo"];
+        $fimRepousoAtivos += $dados["Fim de Repouso"]["ativo"];
+        $fimRepousoInativo += $dados["Fim de Repouso"]["inativo"];
+
+        $inicioRepousoEmbarcadoAtivos += $dados["Inicio de Repouso Embarcado"]["ativo"];
+        $inicioRepousoEmbarcadoInativo += $dados["Inicio de Repouso Embarcado"]["inativo"];
+        $fimRepousoEmbarcadoAtivos += $dados["Fim de Repouso Embarcado"]["ativo"];
+        $fimRepousoEmbarcadoInativo += $dados["Fim de Repouso Embarcado"]["inativo"];
+    }
+
+
+    $pdf->Cell(8.5, 7, $inicioJornadaAtivos, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $inicioJornadaInativo, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $fimJornadaAtivos, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $fimJornadaInativo, 1, 0, 'C');
+
+    $pdf->Cell(8.5, 7, $inicioRefeicaoAtivos, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $inicioRefeicaoInativo, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $fimRefeicaoAtivos, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $fimRefeicaoInativo, 1, 0, 'C');
+
+    $pdf->Cell(8.5, 7, $inicioEsperaAtivos, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $inicioEsperaInativo, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $fimEsperaAtivos, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $fimEsperaInativo, 1, 0, 'C');
+
+    $pdf->Cell(8.5, 7, $inicioDescansoAtivos, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $inicioDescansoInativo, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $fimDescansoAtivos, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $fimDescansoInativo, 1, 0, 'C');
+
+    $pdf->Cell(8.5, 7, $inicioRepousoAtivos, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $inicioRepousoInativo, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $fimRepousoAtivos, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $fimRepousoInativo, 1, 0, 'C');
+
+    $pdf->Cell(8.5, 7, $inicioRepousoEmbarcadoAtivos, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $inicioRepousoEmbarcadoInativo, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $fimRepousoEmbarcadoAtivos, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $fimRepousoEmbarcadoInativo, 1, 0, 'C');
+
+    $pdf->Cell(17, 7, '', 1, 0, 'C');
+    $pdf->Cell(17, 7, '', 1, 1, 'C');
+    // Gera o PDF
+    $nomeArquivo = 'relatorio_ajustes.pdf';
     $pdf->Output($nomeArquivo, 'I');
 }
 
@@ -1771,4 +2295,6 @@ if (!empty($_POST['relatorio']) && $_POST['relatorio'] == 'endosso') {
     gerarPainelSaldo();
 } else if (!empty($_POST['relatorio']) && $_POST['relatorio'] == 'nc_juridica') {
     gerarPainelNc();
+} else if (!empty($_POST['relatorio']) && $_POST['relatorio'] == 'ajustes') {
+    gerarPainelAjustes();
 }
