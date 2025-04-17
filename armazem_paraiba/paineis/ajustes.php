@@ -152,7 +152,7 @@ function carregarGraficos($periodoInicio) {
 					}
 				}
 			},
-			title: { text: 'Ajustes Ativos e Inativos - Ano Corrente' },
+			title: { text: 'Ajustes Inserido e Excluído - Ano Corrente' },
 			xAxis: {
 				categories: mesesFormatados,
 				title: { text: 'Mês' }
@@ -180,13 +180,13 @@ function carregarGraficos($periodoInicio) {
 			},
 			series: [
 				{
-					name: 'Ativos',
+					name: 'Inserido',
 					data: meses.map(mes => totaisPorMes[mes].ativo),
 					color: '#4CAF50',
 					marker: { symbol: 'circle' }
 				},
 				{
-					name: 'Inativos',
+					name: 'Excluído',
 					data: meses.map(mes => totaisPorMes[mes].inativo),
 					color: '#FF4D4D',
 					marker: { symbol: 'diamond' }
