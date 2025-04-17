@@ -465,6 +465,9 @@ function carregarJS(array $arquivos) {
 				const totalFuncionarios = Object.keys(pontos).length;
 				const totalOcorrencias = Object.values(pontos).reduce((sum, ponto) => sum + ponto.quantidade, 0);
 
+				let p = '\'' + motivo + '\'';
+							console.log(p);
+
 				let modalContent = `
 				<div class=\"table-responsive\">
 					<table class=\"table table-bordered table-hover\">
@@ -504,6 +507,8 @@ function carregarJS(array $arquivos) {
 									<td>\${ponto.funcionario.nome || 'N/A'}</td>
 									<td>\${tiposHTML}</td>
 									<td>\${ponto.quantidade}</td>
+									<td> <button type=\"button\" class=\"btn btn-primary\" onclick=\"enviarDados2(\${p},null,\${ponto.funcionario.matricula})\">
+								Imprimir</button>
 								</tr>`;
 						});
 
@@ -607,6 +612,9 @@ function carregarJS(array $arquivos) {
 								<td>\${ponto.funcionario.nome || 'N/A'}</td>
 								<td>\${tiposHTML}</td>
 								<td>\${ponto.quantidade}</td>
+								<td> <button type=\"button\" class=\"btn btn-primary\" onclick=\"enviarDados2('\${motivo}',null,\${ponto.funcionario.matricula})\">
+								Imprimir</button>
+								</td>
 							</tr>`;
 					});
 
@@ -686,6 +694,53 @@ function carregarJS(array $arquivos) {
 				input2.type = 'hidden';
 				input2.name = 'export';
 				input2.value = tipo; // Valor do segundo campo
+				form.appendChild(input2);
+
+				document.body.appendChild(form);
+				form.submit();
+				document.body.removeChild(form);
+			}
+
+			function enviarDados2(motivo,tipo, matricula) {
+				var data = '" . json_encode($_POST["busca_periodo"]) . "'
+				var form = document.createElement('form');
+				form.method = 'POST';
+				form.action = 'ajustes_export.php'; // Página que receberá os dados
+				form.target = '_blank'; // Abre em nova aba
+
+				// Criando campo 1
+				var input1 = document.createElement('input');
+				input1.type = 'hidden';
+				input1.name = 'empresa';
+				input1.value = $_POST[empresa]; // Valor do primeiro campo
+				form.appendChild(input1);
+
+				// Criando campo 2
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'busca_periodo';
+				input2.value = data; // Valor do segundo campo
+				form.appendChild(input2);
+
+				// Criando campo 3
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'motivo';
+				input2.value = motivo; // Valor do segundo campo
+				form.appendChild(input2);
+
+				// Criando campo 3
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'export';
+				input2.value = tipo; // Valor do segundo campo
+				form.appendChild(input2);
+
+				// Criando campo 4
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'matricula';
+				input2.value = matricula; // Valor do segundo campo
 				form.appendChild(input2);
 
 				document.body.appendChild(form);
