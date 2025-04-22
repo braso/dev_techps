@@ -57,8 +57,7 @@
 				
 				$endossoCompleto = montarEndossoMes($date, $motoristas[$f]);
 
-
-				while($f < count($motoristas) && $motoristas[$f]["enti_tx_nome"] == $motoristas[$f+1]["enti_tx_nome"]){
+				while(!empty($motoristas[$f+1]) && $f < count($motoristas) && $motoristas[$f]["enti_tx_nome"] == $motoristas[$f+1]["enti_tx_nome"]){
 					unset($motoristas[$f+1]);
 					$motoristas = [...$motoristas];
 				}
@@ -130,8 +129,8 @@
 							$motivos .= $motivo."<br>";
 						}
 					}
-					
-					array_splice($aDia[$f], 18, 0, $motivos); // inserir a coluna de motivo, no momento da implementação, estava na coluna 19
+
+					array_splice($aDia[$f2], 18, 0, $motivos); // inserir a coluna de motivo, no momento da implementação, estava na coluna 19
 				}
 			//}
 			
