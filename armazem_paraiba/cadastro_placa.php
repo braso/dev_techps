@@ -1,387 +1,234 @@
 <?php
+
+// Incluindo arquivos de configuração
 include_once "load_env.php";
-include_once "funcoes_ponto.php";
-include_once "conecta.php"; // Incluindo a conexão
+include_once "conecta.php";
 
-cabecalho('Cadastro de Placas'); // Passando o título
+// Ativa o buffer de saída no início do script
+ob_start();
 
-// Função para carregar as empresas do banco de dados
+// Função de cabeçalho HTML (retorna a string, não imprime)
+cabecalho('Cadastro de Placas');
+
+// Função para carregar empresas
 function carregaEmpresa() {
     global $conn;
     $sql = "SELECT empr_nb_id, empr_tx_nome FROM empresa";
     $result = mysqli_query($conn, $sql);
-
     if (!$result) {
-        die("Erro ao consultar empresas: " . mysqli_error($conn));
+        die("Erro ao consultar empresas: " . mysqli_error($conn)); // Melhor tratamento de erro
     }
-
-    return mysqli_fetch_all($result, MYSQLI_ASSOC); // Retorna todas as empresas de uma vez
+    return mysqli_fetch_all($result, MYSQLI_ASSOC);
 }
 
-// Função para exibir o formulário de cadastro de placas
-function cadastro_placa() {
-    global $conn; // Disponibilize a conexão dentro da função
-    $empresas = carregaEmpresa();
+// Processamento do formulário (separado para melhor organização)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cadastrar'])) {
+    $placa = strtoupper(trim($_POST['placa']));
+    $modelo = trim($_POST['modelo']);
+    $empresa = (int)$_POST['empresa'];
 
-    // Exibir formulário
+    // Validação (essencial para segurança)
+    if (empty($placa) || empty($modelo) || $empresa <= 0) {
+        $error = "Por favor, preencha todos os campos corretamente.";
+        header("Location: ".$_SERVER['PHP_SELF']."?error=".urlencode($error));
+        exit;
+    }
+
+    if (isset($_POST['editar_id']) && $_POST['editar_id'] != '') {
+        // Atualizar placa
+        $editar_id = (int)$_POST['editar_id'];
+        $sql = "UPDATE placa SET placa = ?, modelo = ?, placa_id_empresa = ? WHERE id = ?";
+        $stmt = mysqli_prepare($conn, $sql);
+        mysqli_stmt_bind_param($stmt, "ssii", $placa, $modelo, $empresa, $editar_id);
+        $acao = 'editado';
+    } else {
+        // Inserir nova placa
+        $sql = "INSERT INTO placa (placa, modelo, placa_id_empresa) VALUES (?, ?, ?)";
+        $stmt = mysqli_prepare($conn, $sql);
+        mysqli_stmt_bind_param($stmt, "ssi", $placa, $modelo, $empresa);
+        $acao = 'cadastrado';
+    }
+
+    if (mysqli_stmt_execute($stmt)) {
+        // Redirecionar em caso de sucesso
+        $success = ($acao == 'cadastrado') ? "Placa cadastrada com sucesso!" : "Placa editada com sucesso!";
+        header("Location: ".$_SERVER['PHP_SELF']."?success=".urlencode($success));
+        exit;
+    } else {
+        // Redirecionar em caso de erro
+        $error = "Erro ao " . ($acao == 'cadastrado' ? 'cadastrar' : 'editar') . " a placa: " . mysqli_error($conn);
+        header("Location: ".$_SERVER['PHP_SELF']."?error=".urlencode($error));
+        exit;
+    }
+    mysqli_stmt_close($stmt); // Fechar a declaração preparada
+}
+
+// Função para exibir o formulário de cadastro
+function cadastro_placa($editar = null) {
+    global $conn;
+    $empresas = carregaEmpresa();
+    $placa = '';
+    $modelo = '';
+    $empresa = '';
+    $editar_id = '';
+
+    if ($editar) {
+        $sql = "SELECT * FROM placa WHERE id = ?";
+        $stmt = mysqli_prepare($conn, $sql);
+        mysqli_stmt_bind_param($stmt, "i", $editar);
+        mysqli_stmt_execute($stmt);
+        $res = mysqli_stmt_get_result($stmt);
+
+        if ($res && $row = mysqli_fetch_assoc($res)) { // Verificação se $res é válido
+            $placa = $row['placa'];
+            $modelo = $row['modelo'];
+            $empresa = $row['placa_id_empresa'];
+            $editar_id = $row['id'];
+        } else {
+            echo "<p class='alert alert-danger'>Placa não encontrada.</p>";
+            return;
+        }
+        mysqli_stmt_close($stmt);
+    }
+
     echo '
     <div class="container">
-        <h1>Cadastro de Placas</h1>
-        <form id="cadastroPlaca" method="post" action="">
-            <div class="form-row">
-                <div class="form-group col-md-6">
-                    <label for="placa">Placa:</label>
-                    <input type="text" id="placa" name="placa" required maxlength="8" pattern="[A-Za-z]{3}[0-9][A-Za-z0-9]{3}|[A-Za-z]{3}[0-9]{4}" placeholder="Ex: ABC1234">
-                </div>
-                <div class="form-group col-md-6">
-                    <label for="modelo">Nome do Veículo:</label>
-                    <input type="text" id="modelo" name="modelo" required placeholder="Nome do veículo">
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="empresa">Empresa:</label>
-                <select id="empresa" name="empresa" required>
-                    <option value="">Selecione uma empresa</option>';
-
-                    foreach ($empresas as $empresa) {
-                        echo '<option value="'.$empresa['empr_nb_id'].'">'.$empresa['empr_tx_nome'].'</option>';
-                    }
-                    echo '
-                </select>
-            </div>
-            <button type="submit" name="cadastrar">Cadastrar</button>
-        </form>
-    </div>';
-}
-
-// Estilos CSS para o formulário
-echo '<style>
-    .container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        width: 100%;
-        max-width: 800px; /* Aumente a largura máxima para acomodar os campos lado a lado */
-        margin: 20px auto;
-    }
-    h1 {
-        text-align: center;
-        color: #333;
-    }
-    .form-group {
-        margin-bottom: 15px;
-    }
-    /* Estilo para alinhar os campos lado a lado */
-    .form-row {
-        display: flex;
-        align-items:center; /* Alinha verticalmente os campos */
-        justify-content:center; /* Espaço entre os campos */
-        width: 100%; /* Garante que a linha ocupe toda a largura do container */
-    }
-    .form-row .form-group {
-        width: 88%; /* Ajuste a largura para que os campos fiquem lado a lado com um pequeno espaço */
-    }
-    label {
-        display: block;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-    input, select {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        font-size: 16px;
-        box-sizing: border-box; /* Garante que o padding não aumente a largura total */
-    }
-    button {
-        width: 100%;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        padding: 10px;
-        font-size: 16px;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-    button:hover {
-        background-color: #0056b3;
-    }
-</style>';
-
-// Processar o formulário APÓS exibir
-if (isset($_POST['cadastrar'])) {
-    global $conn;  // Adicione global $conn;
-    $placa = mysqli_real_escape_string($conn, $_POST["placa"]);
-    $modelo = mysqli_real_escape_string($conn, $_POST["modelo"]);
-    $empresa_id = mysqli_real_escape_string($conn, $_POST["empresa"]);  // Corrigido: Use o ID da empresa vindo do select.
-
-    $sql = "INSERT INTO placa (placa, modelo, placa_id_empresa) VALUES ('$placa', '$modelo', '$empresa_id')";
-
-    if ($conn->query($sql) === TRUE) {
-        echo "<script>
-                setTimeout(function() {
-                    swal('Sucesso!', 'Cadastro realizado com sucesso!', 'success');
-                }, 200); // Exibe o popup após um pequeno atraso para garantir que o DOM esteja carregado
-              </script>";
-    } else {
-        echo "<script>
-                setTimeout(function() {
-                    swal('Erro!', 'Erro ao cadastrar: " . $conn->error . "', 'error');
-                }, 200); // Exibe o popup após um pequeno atraso para garantir que o DOM esteja carregado
-              </script>";
-    }
-}
-
-
-
-
-function listar_placas() {
-    global $conn;
-    $sql = "SELECT p.placa, p.modelo, e.empr_tx_nome AS nome_empresa, e.empr_tx_cnpj AS cnpj_empresa,  p.id
-            FROM placa p
-            JOIN empresa e ON p.placa_id_empresa = e.empr_nb_id";
-
-    $result = $conn->query($sql);
-
-    if ($result === FALSE) {
-        echo "<p style='color:red;'>Erro na consulta SQL: " . $conn->error . "</p>";
-        return; // Parar a função se houver um erro
-    }
-
-    if ($result->num_rows > 0) {
-        echo "<h2>Placas Cadastradas</h2>";
-        echo '<style>
-            .table-container {
-                width: 100%;
-                overflow-x: auto; /* Habilita a rolagem horizontal em telas menores */
-            }
-            table {
-                border-collapse: collapse;
-                width: 100%;
-                margin-bottom: 20px;
-                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-                border-radius: 8px;
-                overflow: hidden; /* Garante que a borda arredondada funcione */
-            }
-            th, td {
-                padding: 12px 15px;
-                text-align: left;
-                border-bottom: 1px solid #ddd;
-            }
-            th {
-                background-color: #007bff;
-                color: white;
-                font-weight: bold;
-                text-transform: uppercase;
-            }
-            tbody tr:nth-child(even) {
-                background-color: #f2f2f2;
-            }
-            tbody tr:hover {
-                background-color: #ddd;
-            }
-            .acoes {
-                white-space: nowrap; /* Impede quebras de linha */
-            }
-            .acoes a {
-                display: inline-block;
-                padding: 8px 12px;
-                margin: 5px;
-                border-radius: 5px;
-                text-decoration: none;
-                color: #007bff;
-                border: 1px solid #007bff;
-                transition: background-color 0.3s, color 0.3s;
-            }
-            .acoes a:hover {
-                background-color: #007bff;
-                color: white;
-            }
-        </style>';
-
-        echo '<div class="table-container">';
-        echo "<table class='table table-striped'>";
-        echo "<thead>
-                    <tr>
-                        <th>Placa</th>
-                        <th>Modelo</th>
-                        <th>Empresa</th>
-                        <th>CNPJ</th>
-             
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>";
-
-        while($row = $result->fetch_assoc()) {
-            echo "<tr>
-                    <td>".$row["placa"]."</td>
-                    <td>".$row["modelo"]."</td>
-                    <td>".$row["nome_empresa"]."</td>
-                    <td>".$row["cnpj_empresa"]."</td>
-                  
-                    <td class='acoes'>
+        <div class="panel panel-default">
+            <div class="panel-heading">' . ($editar ? 'Editar Placa' : 'Cadastro de Placas') . '</div>
+            <div class="panel-body">
+                <form method="post" action="" class="form-horizontal">
+                    <input type="hidden" name="editar_id"  value="' . htmlspecialchars($editar_id) . '">
+                    
+                    <div class="form-group" style="display: flex; gap: 20px; align-items: flex-end; margin-bottom: 20px;">
+                        <div style="flex: 1;">
+                            <label for="placa" class="form-label"><B>PLACA</B>:</label>
+                            <input type="text" id="placa" name="placa" placeholder="INFORME A PLACA" class="form-control" required maxlength="8" pattern="[A-Za-z]{3}[0-9][A-Za-z0-9]{3}|[A-Za-z]{3}[0-9]{4}" value="' . htmlspecialchars($placa) . '">
+                        </div>
                         
-                        <a href='#' onclick='excluirPlaca(".$row["id"].")'>Excluir</a>
-                    </td>
-                  </tr>";
-        }
-        echo "</tbody></table>";
-        echo '</div>'; // Fecha o table-container
+                        <div style="flex: 1;">
+                            <label for="modelo" class="form-label"><B>NOME DO VEÍCULO:</B></label>
+                            <input type="text" id="modelo" name="modelo" placeholder="INFORME O NOME DO VEÍCULO" class="form-control" value="' . htmlspecialchars($modelo) . '">
+                        </div>
+
+                        <div style="flex: 1;">
+                            <label for="empresa" class="form-label"><B>EMPRESA:</B></label>
+                            <select id="empresa" name="empresa" placeholder="INFORME A EMPRESA" class="form-control" required>
+                                <option value="">Selecione uma empresa</option>';
+                                foreach ($empresas as $emp) {
+                                    $selected = ($empresa == $emp['empr_nb_id']) ? 'selected' : '';
+                                    echo '<option value="' . htmlspecialchars($emp['empr_nb_id']) . '" ' . $selected . '>' . htmlspecialchars($emp['empr_tx_nome']) . '</option>';
+                                }
+                        echo '
+                            </select>
+                        </div>
+                    </div>
+
+                 <div class="form-group" style="text-align: center;">
+    <button type="submit" name="cadastrar" class="btn btn-primary">' . ($editar ? 'Atualizar' : 'Cadastrar') . '</button>
+</div>
+
+                </form>
+            </div>
+        </div>
+    </div>';
+
+            }
+
+
+
+
+
+
+
+// Excluir placa (separado do processamento do formulário)
+if (isset($_GET['excluir'])) {
+    $idExcluir = (int)$_GET['excluir'];
+    $sql = "DELETE FROM placa WHERE id = ?";
+    $stmt = mysqli_prepare($conn, $sql);
+    mysqli_stmt_bind_param($stmt, "i", $idExcluir);
+
+    if (mysqli_stmt_execute($stmt)) {
+        $success = "Placa excluída com sucesso!";
+        header("Location: ".$_SERVER['PHP_SELF']."?success=".urlencode($success));
+        exit;
     } else {
-        echo "<p>Nenhuma placa cadastrada.</p>";
+        $error = "Erro ao excluir placa: " . mysqli_error($conn);
+        header("Location: ".$_SERVER['PHP_SELF']."?error=".urlencode($error));
+        exit;
     }
+    mysqli_stmt_close($stmt);
 }
 
-// Chame a função cadastro_placa() para exibir o formulário
-cadastro_placa();
+// Função para listar as placas
+function listarPlacas() {
+    global $conn;
+    $sql = "SELECT p.*, e.empr_tx_nome FROM placa p JOIN empresa e ON p.placa_id_empresa = e.empr_nb_id ORDER BY p.id DESC";
+    $res = mysqli_query($conn, $sql);
 
-// Chame a função listar_placas() para exibir a lista de placas
-listar_placas();
-
-rodape('cadastro_placa');
-
-// Modal de Edição
-echo '
-<div class="modal fade" id="editarModal" tabindex="-1" role="dialog" aria-labelledby="editarModalLabel" aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="editarModalLabel">Editar Placa</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">×</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <form id="editarPlacaForm" method="post" action="">
-           <input type="hidden" name="placa_id" id="placa_id">
-          <div class="form-group">
-             <label for="editar_placa">Placa:</label>
-              <input type="text" class="form-control" id="editar_placa" name="editar_placa" required>
-           </div>
-           <div class="form-group">
-              <label for="editar_modelo">Modelo:</label>
-              <input type="text" class="form-control" id="editar_modelo" name="editar_modelo" required>
-          </div>
-            <div class="form-group">
-                <label for="editar_empresa">Empresa:</label>
-                <select id="editar_empresa" name="editar_empresa" required>
-                    <option value="">Selecione uma empresa</option>';
-                    $empresas = carregaEmpresa(); // Recarregue as empresas para o modal de edição
-                    foreach ($empresas as $empresa) {
-                      echo '<option value="'.$empresa['empr_nb_id'].'">'.$empresa['empr_tx_nome'].'</option>';
-                    }
-
-               echo '
-                   </select> </div>
-          <button type="submit" name="atualizarPlaca" class="btn btn-primary">Salvar Alterações</button>
-       </form>
-      </div>
+    if (!$res) {
+        echo "<p class='alert alert-danger'>Erro na consulta SQL: " . mysqli_error($conn) . "</p>";
+        return;
+    }
+    echo '<div class="container mt-4">
+    <div style="background: white; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.1); padding: 20px;">
+        <table class="table table-striped table-hover">
+            <thead class="thead-dark">
+                <tr>
+                    <th scope="col">PLACA</th>
+                    <th scope="col">NOME DO VEÍUCLO</th>
+                    <th scope="col">EMPRESA</th>
+                    <th scope="col" class="acoes text-center">AÇÕES</th>
+                </tr>
+            </thead>
+            <tbody>';
+        while ($row = mysqli_fetch_assoc($res)) {
+            echo '<tr>
+                <td>' . htmlspecialchars($row['placa']) . '</td>
+                <td>' . htmlspecialchars($row['modelo']) . '</td>
+                <td>' . htmlspecialchars($row['empr_tx_nome']) . '</td>
+                <td class="acoes text-center">
+                    <a href="?editar=' . htmlspecialchars($row['id']) . '" class="btn btn-warning btn-sm mx-1">Editar</a>
+                    <a href="?excluir=' . htmlspecialchars($row['id']) . '" onclick="return confirm(\'Tem certeza que deseja excluir?\')" class="btn btn-danger btn-sm mx-1">Excluir</a>
+                </td>
+            </tr>';
+        }
+        echo '</tbody>
+        </table>
     </div>
-  </div>
 </div>';
-
-// Processar a atualização da placa
-if (isset($_POST['atualizarPlaca'])) {
-    global $conn;
-    $placa_id = mysqli_real_escape_string($conn, $_POST['placa_id']);
-    $placa = mysqli_real_escape_string($conn, $_POST["editar_placa"]);
-    $modelo = mysqli_real_escape_string($conn, $_POST["editar_modelo"]);
-    $empresa_id = mysqli_real_escape_string($conn, $_POST["editar_empresa"]);
-
-    $sql = "UPDATE placa SET placa='$placa', modelo='$modelo', placa_id_empresa='$empresa_id' WHERE id = '$placa_id'";
-
-    if ($conn->query($sql) === TRUE) {
-        echo "<script>
-                swal('Sucesso!', 'Placa atualizada com sucesso!', 'success')
-                .then(() => {
-                    window.location.href = 'cadastro_placa.php'; // Recarrega a página
-                });
-              </script>";
-    } else {
-        echo "<script>swal('Erro!', 'Erro ao atualizar placa: " . $conn->error . "', 'error');</script>";
-    }
+}
+// Mensagens de sucesso e erro (exibidas antes do conteúdo principal)
+if (isset($_GET['success'])) {
+    $success_message = htmlspecialchars($_GET['success']);
+    echo "<script>
+        Swal.fire({
+            icon: 'success',
+            title: '$success_message',
+            showConfirmButton: false,
+            timer: 2000
+        });
+    </script>";
 }
 
-// Processar a exclusão da placa
-echo "<script>
-function excluirPlaca(id) {
-    swal({
-        title: 'Tem certeza?',
-        text: 'Deseja realmente excluir esta placa?',
-        icon: 'warning',
-        buttons: true,
-        dangerMode: true,
-    }).then((willDelete) => {
-        if (willDelete) {
-            // Enviar uma requisição POST para excluir a placa
-            $.ajax({
-                url: 'cadastro_placa.php', // Envia para a mesma página
-                type: 'POST',
-                data: { excluir_placa_id: id },
-                success: function(response) {
-                    swal('Sucesso!', 'Placa excluída com sucesso!', 'success')
-                    .then(() => {
-                        window.location.href = 'cadastro_placa.php'; // Recarrega a página
-                    });
-                },
-                error: function(xhr, status, error) {
-                    swal('Erro!', 'Erro ao excluir placa: ' + error, 'error');
-                }
-            });
-        }
-    });
+if (isset($_GET['error'])) {
+    $error_message = htmlspecialchars($_GET['error']);
+    echo "<script>
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro!',
+            text: '$error_message'
+        });
+    </script>";
 }
-</script>";
 
-if (isset($_POST['excluir_placa_id'])) {
-    global $conn;
-    $excluir_placa_id = mysqli_real_escape_string($conn, $_POST['excluir_placa_id']);
+// Se estiver editando
+$editar = isset($_GET['editar']) ? (int)$_GET['editar'] : null;
+cadastro_placa($editar);
+listarPlacas();
 
-    $sql = "DELETE FROM placa WHERE id = '$excluir_placa_id'";
+rodape();
 
-    if ($conn->query($sql) === TRUE) {
-        echo "<script>
-                swal('Sucesso!', 'Placa excluída com sucesso!', 'success')
-                .then(() => {
-                    window.location.href = 'cadastro_placa.php'; // Recarrega a página
-                });
-              </script>";
-    } else {
-        echo "<script>swal('Erro!', 'Erro ao excluir placa: " . $conn->error . "', 'error');</script>";
-    }
-}
+// Envia o buffer de saída para o navegador
+ob_end_flush();
 
 ?>
-<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script> <!-- Inclua a biblioteca SweetAlert -->
-
-<script>
-    //Para o modal
-    function editarPlaca(id) {
-        $.ajax({
-            url: 'buscar_placa.php', // Crie este arquivo
-            type: 'GET',
-            data: { id: id },
-            dataType: 'json',
-            success: function(data) {
-                $('#placa_id').val(data.id);
-                $('#editar_placa').val(data.placa);
-                $('#editar_modelo').val(data.modelo);
-                $('#editar_empresa').val(data.placa_id_empresa);
-                $('#editarModal').modal('show');
-            },
-            error: function(error) {
-              console.error('Erro ao buscar placa:', error);
-              swal("Erro", "Erro ao buscar placa para edição. Detalhes no console.", "error");
-            }
-          });
-    }
-
-
-</script>
