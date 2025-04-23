@@ -82,7 +82,50 @@
 						+'<td class='+classeImpressao+' style=\"'+corDeFundo+'\">'+(100 - arrayPerformanceBaixa[row.matricula]).toFixed(2)+' %</td>'
 					+'</tr>';";
 		} elseif (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
-			$linha = "linha = '<tr>'";
+			$linha = " 
+					const arrayPerformanceBaixa = $jsonPerfomanceBaixa;
+					const arrayPerformanceMedia = $jsonPerfomanceMedia;
+					console.log(100 - arrayPerformanceMedia[row.matricula]);
+					porcentagemBaixa = 100 - arrayPerformanceBaixa[row.matricula];
+					porcentagemMedia = 100 - arrayPerformanceMedia[row.matricula];
+
+					let corDeFundo = '';
+					let classeImpressao = '';
+					if(porcentagemBaixa >= 75 && porcentagemBaixa <= 100){
+						corDeFundo = 'background-color: lightgreen;';
+						classeImpressao = 'impressao-verde';
+					} else if(porcentagemBaixa <= 75 && porcentagemBaixa >= 50){
+						corDeFundo = 'background-color: var(--var-yellow2);';
+						classeImpressao = 'impressao-amarelo';
+					} else if(porcentagemBaixa <= 50 && porcentagemBaixa >= 25){
+						corDeFundo = 'background-color: var(--var-lightorange);';
+						classeImpressao = 'impressao-laranja';
+					}else{
+						corDeFundo = 'background-color: var(--var-lightred);';
+						classeImpressao = 'impressao-vermelho';
+					}
+
+					let corDeFundo2 = '';
+					let classeImpressao2 = '';
+
+					if (porcentagemMedia >= 75 && porcentagemMedia <= 100) {
+						corDeFundo2 = 'background-color: lightgreen;';
+						classeImpressao2 = 'impressao-verde';
+					} else if (porcentagemMedia < 75 && porcentagemMedia >= 50) {
+						corDeFundo2 = 'background-color: var(--var-yellow2);';
+						classeImpressao2 = 'impressao-amarelo';
+					} else if (porcentagemMedia < 50 && porcentagemMedia >= 25) {
+						corDeFundo2 = 'background-color: var(--var-lightorange);';
+						classeImpressao2 = 'impressao-laranja';
+					} else {
+						corDeFundo2 = 'background-color: var(--var-lightred);';
+						classeImpressao2 = 'impressao-vermelho';
+					}
+
+								
+			";
+			
+			$linha .= "linha = '<tr>'";
 			$linha .= "+'<td>'+row.matricula+'</td>'
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
@@ -93,6 +136,8 @@
 						+'<td class='+class3+'>'+(row.intersticioInferior === 0 ? '' : row.intersticioInferior )+'</td>'
 						+'<td class='+class3+'>'+(row.intersticioSuperior === 0 ? '' : row.intersticioSuperior )+'</td>'
 						+'<td class='+class4+'>'+(totalNaEndossado)+'</td>'
+						+'<td class='+classeImpressao2+' style=\"'+corDeFundo2+'\">'+(100 - arrayPerformanceMedia[row.matricula]).toFixed(2)+' %</td>'
+						+'<td class='+classeImpressao+' style=\"'+corDeFundo+'\">'+(100 - arrayPerformanceBaixa[row.matricula]).toFixed(2)+' %</td>'
 					+'</tr>';";
 		}
 
@@ -373,7 +418,50 @@
 		if (!empty($_POST["empresa"])) {
 			$botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
 		}
-		$botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
+		// $botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
+		$botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados()'>Imprimir</button>
+        <script>
+        function enviarDados() {
+				var data = '" . $_POST["busca_dataMes"] . "'
+				var form = document.createElement('form');
+				form.method = 'POST';
+				form.action = 'export_paineis.php'; // Página que receberá os dados
+				form.target = '_blank'; // Abre em nova aba
+
+				// Criando campo 1
+				var input1 = document.createElement('input');
+				input1.type = 'hidden';
+				input1.name = 'empresa';
+				input1.value = " . (!empty($_POST['empresa']) ? $_POST['empresa'] : 'null'). "; // Valor do primeiro campo
+				form.appendChild(input1);
+
+				// Criando campo 2
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'busca_data';
+				input2.value = data; // Valor do segundo campo
+				form.appendChild(input2);
+
+                // Criando campo 2
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'relatorio';
+				input2.value = 'nc_juridica'; // Valor do segundo campo
+				form.appendChild(input2);
+
+				// Criando campo 3
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'busca_endossado';
+				input2.value = '".$_POST["busca_endossado"]."' ; // Valor do segundo campo
+				form.appendChild(input2);
+
+
+				document.body.appendChild(form);
+				form.submit();
+				document.body.removeChild(form);
+			}
+        </script>";
 
 		$buttons = [
 			botao("Buscar", "enviarForm()", "", "", "", "", "btn btn-info"),
@@ -540,7 +628,7 @@
 
 					$gravidadeAlta = $totalizadores["refeicao"] + $totalizadores["intersticioInferior"] + $totalizadores["intersticioSuperior"];
 					$gravidadeMedia = $totalizadores["jornadaEfetiva"] + $totalizadores["mdc"];
-					$gravidadeBaixa = $totalizadores["jornadaPrevista"];
+					$gravidadeBaixa = $totalizadores["falta"];
 
 				} else{
 					$totalNaoconformidade = array_sum([

@@ -27,17 +27,13 @@ $empresa = mysqli_fetch_assoc(query(
 // Processa os arquivos de ajuste
 $pastaAjuste = dir($path);
 while ($arquivo = $pastaAjuste->read()) {
-    if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
+    if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && $arquivo === $_POST['matricula'] . ".json") {
         $arquivo = $path . "/" . $arquivo;
         $arquivos[] = $arquivo;
         $json = json_decode(file_get_contents($arquivo), true);
 
         // Processa cada chave do JSON
         foreach ($json as $chave => $valor) {
-            // Ignora as chaves especificadas
-            if (in_array($chave, $chavesIgnorar)) {
-                continue;
-            }
 
             // Verifica se é um tipo de ponto válido
             if (is_array($valor) && isset($valor['ativo']) && isset($valor['inativo'])) {
@@ -99,6 +95,77 @@ while ($arquivo = $pastaAjuste->read()) {
             $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo]++;
         }
         $empresas[] = $json;
+        break;
+    }  
+     else if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
+        $arquivo = $path . "/" . $arquivo;
+        $arquivos[] = $arquivo;
+        $json = json_decode(file_get_contents($arquivo), true);
+
+        // Processa cada chave do JSON
+        foreach ($json as $chave => $valor) {
+
+            // Verifica se é um tipo de ponto válido
+            if (is_array($valor) && isset($valor['ativo']) && isset($valor['inativo'])) {
+                // Inicializa a chave no array de totais se não existir
+                if (!isset($totais[$chave])) {
+                    $totais[$chave] = ['ativo' => 0, 'inativo' => 0];
+                }
+
+                // Soma os valores (com conversão para inteiro para segurança)
+                $totais[$chave]['ativo'] += (int)$valor['ativo'];
+                $totais[$chave]['inativo'] += (int)$valor['inativo'];
+            }
+        }
+        foreach ($json['pontos'] as $key) {
+            // Filtra apenas pontos com status "ativo" (case-insensitive)
+            if (strtolower($key['pont_tx_status'] ?? '') !== 'ativo') {
+                continue; // Pula se não for "ativo"
+            }
+        
+            // Define o motivo
+            $motivo = $key['moti_tx_nome'] ?? 'MOTIVO_NAO_INFORMADO';
+        
+            // Contagem geral por motivo
+            if (!isset($resultado[$motivo])) {
+                $resultado[$motivo] = 0;
+            }
+            $resultado[$motivo]++;
+        
+            // Agrupamento por motivo e funcionário
+            if (!isset($resultado2[$motivo])) {
+                $resultado2[$motivo] = [];
+            }
+        
+            $dadosFunc = [
+                "matricula" => $json["matricula"] ?? 'SEM_MATRICULA',
+                "nome" => $json["nome"] ?? 'NOME_NAO_INFORMADO',
+                "ocupacao" => $json["ocupacao"] ?? 'OCUPACAO_NAO_INFORMADA'
+            ];
+        
+            $funcionarioKey = $dadosFunc['matricula'] ?? md5($dadosFunc['nome']);
+        
+            if (!isset($resultado2[$motivo][$funcionarioKey])) {
+                $resultado2[$motivo][$funcionarioKey] = [
+                    'funcionario' => $dadosFunc,
+                    'quantidade' => 0,
+                    'tipos' => [] // ← adiciona array para tipos
+                ];
+            }
+        
+            // Incrementa quantidade
+            $resultado2[$motivo][$funcionarioKey]['quantidade']++;
+        
+            // Armazena tipo do campo macr_tx_nome
+            $tipo = $key['macr_tx_nome'] ?? 'TIPO_NAO_INFORMADO';
+        
+            if (!isset($resultado2[$motivo][$funcionarioKey]['tipos'][$tipo])) {
+                $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo] = 0;
+            }
+            $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo]++;
+        }
+        $empresas[] = $json;
+        break;
     }
 }
 $pastaAjuste->close();

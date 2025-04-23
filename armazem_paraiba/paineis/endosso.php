@@ -368,6 +368,13 @@
 				input2.value = data; // Valor do segundo campo
 				form.appendChild(input2);
 
+                // Criando campo 2
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'relatorio';
+				input2.value = 'endosso'; // Valor do segundo campo
+				form.appendChild(input2);
+
 				document.body.appendChild(form);
 				form.submit();
 				document.body.removeChild(form);
