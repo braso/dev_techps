@@ -11,7 +11,6 @@
 ehthumbs.db
 Thumbs.db
 
-.cpanel.yml
 .env
 
 .vscode
@@ -19,3 +18,4 @@ brasomo_dev_techps_sistema.sql
 
 
 .contex20/backup
+.cpanel.yml

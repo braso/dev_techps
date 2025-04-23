@@ -18,8 +18,8 @@ deployment:
     - export NH_TRANSP=/home/techpsjornada/public_html/gestaodeponto/nh_transportes
     - export JRJ_ORG=/home/techpsjornada/public_html/gestaodeponto/jrj_organizacao
     - export HN_TRANSP=/home/techpsjornada/public_html/gestaodeponto/hn_transportes
-    
-    
+
+
     - /bin/cp -R $GENERAL $GENERALDEPLOY
     
     - /bin/cp -R $DOMAIN $BRASO
