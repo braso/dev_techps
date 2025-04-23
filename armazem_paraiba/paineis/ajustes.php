@@ -62,8 +62,78 @@ function carregarGraficos($periodoInicio) {
 		][$mes];
 	}, $mesesFormatadosJS));
 
+	$session = $_SESSION['horaEntrada'] ?? '0';
+	$date = new DateTime( $_POST["busca_periodo"][0]);
+	$data = $date->format('Y-m');
+
 	echo "
 		<script>
+
+		async function enviarGraficoServidor(chart) {
+			const elementId = chart.renderTo.id;
+			const userEntrada = '$session';
+			const dataGrafc = '$data';
+
+			const el = document.getElementById(elementId);
+			if (!el) {
+				console.error('Elemento não encontrado para o ID:', elementId);
+				return;
+			}
+
+			const width = el.offsetWidth;
+			const height = el.offsetHeight;
+
+			console.log(`📏 Dimensões do elemento antes da captura: \${width}x\${height}`);
+			if (width === 0 || height === 0) {
+				console.error('❌ Elemento não tem tamanho válido para captura');
+				return;
+			}
+
+			try {
+				console.log('Iniciando captura do gráfico com html2canvas...');
+
+				const canvas = await html2canvas(el, {
+					scale: 2,
+					useCORS: true,
+					allowTaint: false,
+					backgroundColor: '#ffffff' // ⚠️ Cor de fundo obrigatória!
+				});
+
+				const imageData = canvas.toDataURL('image/png');
+
+				// Debug
+				console.log('imageData (início):', imageData.substring(0, 100));
+
+				if (!imageData.startsWith('data:image/png;base64,')) {
+					throw new Error('Imagem gerada não é válida');
+				}
+
+				const response = await fetch('salvar_grafico_painel.php', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded',
+					},
+					body: new URLSearchParams({
+						grafico: imageData,
+						elementId,
+						userEntrada,
+						dataGrafc
+					}).toString()
+				});
+
+				const data = await response.json();
+
+				if (data.status === 'success') {
+					console.log('✅ Gráfico salvo com sucesso:', data.fileName);
+				} else {
+					console.error('❌ Erro ao salvar gráfico:', data.message);
+				}
+
+			} catch (error) {
+				console.error('❌ Erro ao processar o gráfico:', error);
+			}
+		}
+
 		const meses = $mesesJS;
 		const mesesFormatados = $mesesFormatadosJS;
 		const totaisPorMes = $totaisPorMesJS;
@@ -74,9 +144,15 @@ function carregarGraficos($periodoInicio) {
 				style: {
 					fontFamily: 'Arial',
 					fontSize: '12px'
+				},
+				events: {
+					load: function () {
+						const chart = this; // <-- o gráfico instanciado
+						setTimeout(() => enviarGraficoServidor(chart), 2000); // <-- passa o gráfico como parâmetro
+					}
 				}
 			},
-			title: { text: 'Ajustes Ativos e Inativos - Ano Corrente' },
+			title: { text: 'Ajustes Inserido e Excluído - Ano Corrente' },
 			xAxis: {
 				categories: mesesFormatados,
 				title: { text: 'Mês' }
@@ -104,13 +180,13 @@ function carregarGraficos($periodoInicio) {
 			},
 			series: [
 				{
-					name: 'Ativos',
+					name: 'Inserido',
 					data: meses.map(mes => totaisPorMes[mes].ativo),
 					color: '#4CAF50',
 					marker: { symbol: 'circle' }
 				},
 				{
-					name: 'Inativos',
+					name: 'Excluído',
 					data: meses.map(mes => totaisPorMes[mes].inativo),
 					color: '#FF4D4D',
 					marker: { symbol: 'diamond' }
@@ -389,6 +465,9 @@ function carregarJS(array $arquivos) {
 				const totalFuncionarios = Object.keys(pontos).length;
 				const totalOcorrencias = Object.values(pontos).reduce((sum, ponto) => sum + ponto.quantidade, 0);
 
+				let p = '\'' + motivo + '\'';
+							console.log(p);
+
 				let modalContent = `
 				<div class=\"table-responsive\">
 					<table class=\"table table-bordered table-hover\">
@@ -428,6 +507,8 @@ function carregarJS(array $arquivos) {
 									<td>\${ponto.funcionario.nome || 'N/A'}</td>
 									<td>\${tiposHTML}</td>
 									<td>\${ponto.quantidade}</td>
+									<td> <button type=\"button\" class=\"btn btn-primary\" onclick=\"enviarDados2(\${p},null,\${ponto.funcionario.matricula})\">
+								Imprimir</button>
 								</tr>`;
 						});
 
@@ -531,6 +612,9 @@ function carregarJS(array $arquivos) {
 								<td>\${ponto.funcionario.nome || 'N/A'}</td>
 								<td>\${tiposHTML}</td>
 								<td>\${ponto.quantidade}</td>
+								<td> <button type=\"button\" class=\"btn btn-primary\" onclick=\"enviarDados2('\${motivo}',null,\${ponto.funcionario.matricula})\">
+								Imprimir</button>
+								</td>
 							</tr>`;
 					});
 
@@ -617,6 +701,53 @@ function carregarJS(array $arquivos) {
 				document.body.removeChild(form);
 			}
 
+			function enviarDados2(motivo,tipo, matricula) {
+				var data = '" . json_encode($_POST["busca_periodo"]) . "'
+				var form = document.createElement('form');
+				form.method = 'POST';
+				form.action = 'ajustes_export.php'; // Página que receberá os dados
+				form.target = '_blank'; // Abre em nova aba
+
+				// Criando campo 1
+				var input1 = document.createElement('input');
+				input1.type = 'hidden';
+				input1.name = 'empresa';
+				input1.value = $_POST[empresa]; // Valor do primeiro campo
+				form.appendChild(input1);
+
+				// Criando campo 2
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'busca_periodo';
+				input2.value = data; // Valor do segundo campo
+				form.appendChild(input2);
+
+				// Criando campo 3
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'motivo';
+				input2.value = motivo; // Valor do segundo campo
+				form.appendChild(input2);
+
+				// Criando campo 3
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'export';
+				input2.value = tipo; // Valor do segundo campo
+				form.appendChild(input2);
+
+				// Criando campo 4
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'matricula';
+				input2.value = matricula; // Valor do segundo campo
+				form.appendChild(input2);
+
+				document.body.appendChild(form);
+				form.submit();
+				document.body.removeChild(form);
+			}
+
 		</script>";
 }
 
@@ -671,7 +802,50 @@ function index() {
 	if (!empty($_POST["empresa"])) {
 		$botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
 	}
-	$botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
+	// $botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
+	$botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados2()'>Imprimir</button>
+        <script>
+        function enviarDados2() {
+				var data = '" . json_encode($_POST["busca_periodo"]) . "'
+				var form = document.createElement('form');
+				form.method = 'POST';
+				form.action = 'export_paineis.php'; // Página que receberá os dados
+				form.target = '_blank'; // Abre em nova aba
+
+				// Criando campo 1
+				var input1 = document.createElement('input');
+				input1.type = 'hidden';
+				input1.name = 'empresa';
+				input1.value = " . (!empty($_POST['empresa']) ? $_POST['empresa'] : 'null'). "; // Valor do primeiro campo
+				form.appendChild(input1);
+
+				// Criando campo 2
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'busca_data';
+				input2.value = data; // Valor do segundo campo
+				form.appendChild(input2);
+
+                // Criando campo 2
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'relatorio';
+				input2.value = 'ajustes'; // Valor do segundo campo
+				form.appendChild(input2);
+
+				// Criando campo 3
+				// var input2 = document.createElement('input');
+				// input2.type = 'hidden';
+				// input2.name = 'busca_endossado';
+				// input2.value = '".json_encode($_POST["busca_periodo"])."' ; // Valor do segundo campo
+				// form.appendChild(input2);
+
+
+				document.body.appendChild(form);
+				form.submit();
+				document.body.removeChild(form);
+			}
+        </script>";
 
 	$buttons = [
 		botao("Buscar", "enviarForm()", "", "", "", "", "btn btn-info"),
@@ -810,20 +984,20 @@ function index() {
 			$tabelaMotivo = "
 			<div style='display: flex; flex-direction: column;'>
 				<div class='row' id='resumo'>
-					<div class='col-md-4.5'>
+					<div class='col-md-5'>
 						<table id='tabela-motivo'
 							class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'
-							style='width: 500px !important;'>
+							style='width: 500px !important; padding: 2px 4px; line-height: 1.2; height: 28px;'>
 							<thead>
 								<tr>
-									<th colspan='4' style='text-align: center;'><b>Ajustes Inseridos</b></th>
-							</thead>
-							<thead>
+									<th colspan='4' style='text-align: center;'><b>Ajustes Inseridos</b>
+								</th>
 								<tr>
 									<th>Motivo</th>
 									<th>Quantidade</th>
 									<th>Funcionários</th>
-									<th style='text-align: center;'><button class='btn btn-default btn-sm' onclick=\"createModal2("
+									<th style='text-align: center;'><button class='btn btn-default btn-sm' 
+									onclick=\"createModal2("
 											. htmlspecialchars(json_encode($resultado2), ENT_QUOTES, 'UTF-8' ) . ");\" )'>Visualizar
 											Todos</button></th>
 								</tr>
@@ -832,11 +1006,15 @@ function index() {
 			arsort($resultado);
 			foreach (array_keys($resultado) as $motivo) {
 				$resultado2Json = json_encode($resultado2[$motivo]);
+				$json = json_encode($resultado2[$motivo], JSON_UNESCAPED_UNICODE);
+				$json = preg_replace('/\s+/', '', $json); // remove espaços e quebras
 				$tabelaMotivo .= "<tr>";
 				$tabelaMotivo .= "<td>" . $motivo . "</td>";
 				$tabelaMotivo .= "<td>" . $resultado[$motivo] . "</td>";
 				$tabelaMotivo .= "<td>" . sizeof($resultado2[$motivo]) . "</td>";
-				$tabelaMotivo .= "<td style='text-align: center;'><button style='height: 22px; padding: 0px 10px;' class='btn btn-default btn-sm' onclick=\"createModal('$motivo'," . htmlspecialchars(json_encode($resultado2[$motivo]), ENT_QUOTES, 'UTF-8') . ");\">Visualizar</button></td>";
+				$tabelaMotivo .= "<td style='text-align: center;'><button style='height: 22px; padding: 0px 10px;' 
+				class='btn btn-default btn-sm' onclick=\"createModal('$motivo'," . htmlspecialchars(json_encode($resultado2[$motivo]), ENT_QUOTES, 'UTF-8') . ");\">
+				Visualizar</button></td>";
 				$tabelaMotivo .= "</tr>";
 			}
 			$tabelaMotivo .= "</tbody>
@@ -844,12 +1022,11 @@ function index() {
 			</div>
 				<div class='col-md-6'>
 					<!-- <div class='container' style='display:flex'> -->
-						<div id='chart-unificado' style='width:100%; background: green; height: 232px;'>
+						<div id='chart-unificado' style='width:100%; height: 232px;'>
 							<!-- Conteúdo do gráfico Sintético -->
 						<!-- </div> -->
 					</div>
 				</div>
-			</div>
 			";
 		}
 	} else {
@@ -927,7 +1104,7 @@ function index() {
 					. "<th data-column='' data-order='asc' colspan='2'>Fim de Descanso</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Repouso</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Fim de Repouso</th>"
-					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Repouso Embarcad</th>"
+					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Repouso Embarcado</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Fim de Repouso Embarcado</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Total</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Total Geral</th>";
