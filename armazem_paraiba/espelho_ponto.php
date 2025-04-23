@@ -292,7 +292,7 @@
 				));
 				
 				$saldoAnterior = "";
-				if(!empty($ultimoEndosso) && file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso".$ultimoEndosso["endo_tx_filename"].".csv")){
+				if(!empty($ultimoEndosso) && file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$ultimoEndosso["endo_tx_filename"].".csv")){
 					$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
 					if(empty($totalResumo)){
 						$totalResumo = $ultimoEndosso["totalResumo"];

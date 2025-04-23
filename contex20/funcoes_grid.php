@@ -234,8 +234,10 @@
 					</div>
 					<div class='grid-footer'>
 						<div class='col-sm-1 margin-bottom-5' style='width: min-content;'>
-							<label>Qtd. Registros</label>
+							<label>Regs. por página</label>
 							<input name='limit' id='limit' value='10' autocomplete='off' type='number' class='form-control input-sm' min='1' max='99' ".($tabIndex>0? "tabindex='".$tabIndex."'": "").">
+						</div>
+						<div class='total-registros'>
 						</div>
 						<div class='tab-pagination'>
 						</div>

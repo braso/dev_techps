@@ -1334,7 +1334,6 @@
 		}
 		$endossoCompleto = [];
 
-
 		if(count($endossos) > 0){
 			$endossoCompleto = $endossos[0];
 			if(empty($endossoCompleto["endo_tx_max50APagar"]) && !empty($endossoCompleto["endo_tx_horasApagar"])){
@@ -1363,8 +1362,10 @@
 					$endossoCompleto["totalResumo"][$key] = operarHorarios([$endossoCompleto["totalResumo"][$key], $value], "+");
 				}
 			}
-			$endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$endossoCompleto["totalResumo"]["saldoAnterior"], $endossoCompleto["totalResumo"]["diffSaldo"]], "+");
-			$endossoCompleto["totalResumo"]["saldoFinal"] = $endossos[count($endossos)-1]["totalResumo"]["saldoFinal"];
+			if(count($endossos) > 1){
+			    $endossoCompleto["totalResumo"]["saldoBruto"] = operarHorarios([$endossoCompleto["totalResumo"]["saldoAnterior"], $endossoCompleto["totalResumo"]["diffSaldo"]], "+");
+			    $endossoCompleto["totalResumo"]["saldoFinal"] = $endossos[count($endossos)-1]["totalResumo"]["saldoFinal"];
+			}
 		}
 
 		return $endossoCompleto;

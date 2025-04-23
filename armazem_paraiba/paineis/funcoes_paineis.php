@@ -419,14 +419,14 @@ function criar_relatorio_endosso() {
 			if (substr($motorista["enti_tx_admissao"], 0, 7) <= $mes->format("Y-m")) {
 				$endossos = mysqli_fetch_all(query(
 					"SELECT * FROM endosso"
-						. " WHERE endo_tx_status = 'ativo'"
-						. " AND endo_nb_entidade = '" . $motorista["enti_nb_id"] . "'"
-						. " AND ("
-						. "   (endo_tx_de  >= '" . $mes->format("Y-m-01") . "' AND endo_tx_de  <= '" . $mes->format("Y-m-t") . "')"
-						. "OR (endo_tx_ate >= '" . $mes->format("Y-m-01") . "' AND endo_tx_ate <= '" . $mes->format("Y-m-t") . "')"
-						. "OR (endo_tx_de  <= '" . $mes->format("Y-m-01") . "' AND endo_tx_ate >= '" . $mes->format("Y-m-t") . "')"
-						. ")"
-						. " ORDER BY endo_tx_ate;"
+						." WHERE endo_tx_status = 'ativo'"
+						." AND endo_nb_entidade = '{$motorista["enti_nb_id"]}'"
+						." AND ("
+						."   (endo_tx_de  >= '".$mes->format("Y-m-01")."' AND endo_tx_de  <= '".$mes->format("Y-m-t")."')"
+						."OR (endo_tx_ate >= '".$mes->format("Y-m-01")."' AND endo_tx_ate <= '".$mes->format("Y-m-t")."')"
+						."OR (endo_tx_de  <= '".$mes->format("Y-m-01")."' AND endo_tx_ate >= '".$mes->format("Y-m-t")."')"
+						.")"
+						." ORDER BY endo_tx_ate;"
 				), MYSQLI_ASSOC);
 
 				$statusEndosso = "N";
@@ -440,8 +440,26 @@ function criar_relatorio_endosso() {
 				//}
 
 				//saldoAnterior{
-				$endossoCompleto = montarEndossoMes($mes, $motorista);
-				$saldoAnterior = $endossoCompleto["totalResumo"]["saldoAnterior"] ?? "00:00";
+				// $endossoCompleto = montarEndossoMes($dataMes, $motorista);
+
+				// $saldoAnterior = $endossoCompleto["totalResumo"]["saldoAnterior"];
+				$ultimoEndosso = mysqli_fetch_assoc(query(
+					"SELECT endo_tx_filename FROM endosso
+						WHERE endo_tx_status = 'ativo'
+							AND endo_tx_ate < '".$dataMes->format("Y-m-d")."'
+							AND endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'
+						ORDER BY endo_tx_ate DESC
+						LIMIT 1;"
+				));
+
+				if(!empty($ultimoEndosso)){
+					$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
+					$saldoAnterior = operarHorarios([$ultimoEndosso["totalResumo"]["saldoBruto"], $ultimoEndosso["totalResumo"]["he50APagar"], $ultimoEndosso["totalResumo"]["he100APagar"]], "-");
+				}elseif(!empty($motorista["enti_tx_banco"])){
+					$saldoAnterior = $motorista["enti_tx_banco"];
+				}else{
+					$saldoAnterior = "--:--";
+				}
 				//}
 
 				$totaisMot = [
@@ -469,15 +487,21 @@ function criar_relatorio_endosso() {
 						$endossoCompleto["endo_tx_max50APagar"] = "00:00";
 					}
 
-					$aPagar2 = calcularHorasAPagar(
-						$endossoCompleto["totalResumo"]["saldoBruto"] ?? "00:00",
-						$endossoCompleto["totalResumo"]["he50"] ?? "00:00",
-						$endossoCompleto["totalResumo"]["he100"] ?? "00:00",
-						$endossoCompleto["endo_tx_max50APagar"] ?? "00:00",
-						($motorista["para_tx_pagarHEExComPerNeg"] ?? "nao")
-					);
-					$aPagar2 = operarHorarios($aPagar2, "+");
-					$totaisMot["saldoFinal"]        = operarHorarios([$endossoCompleto["totalResumo"]["saldoBruto"], $aPagar2], "-");
+
+					$diaPonto["he50"]              = !empty($diaPonto["he50"]) ? $diaPonto["he50"] : "00:00";
+					$diaPonto["he100"]             = !empty($diaPonto["he100"]) ? $diaPonto["he100"] : "00:00";
+
+					$totaisMot["jornadaPrevista"]  = somarHorarios([$totaisMot["jornadaPrevista"],  $diaPonto["jornadaPrevista"]]);
+					$totaisMot["jornadaEfetiva"]   = somarHorarios([$totaisMot["jornadaEfetiva"],   $diaPonto["diffJornadaEfetiva"]]);
+					$totaisMot["HESemanal"]        = somarHorarios([$totaisMot["HESemanal"],        $diaPonto["he50"]]);
+					$totaisMot["HESabado"]         = somarHorarios([$totaisMot["HESabado"],         $diaPonto["he100"]]);
+					$totaisMot["adicionalNoturno"] = somarHorarios([$totaisMot["adicionalNoturno"], $diaPonto["adicionalNoturno"]]);
+					$totaisMot["esperaIndenizada"] = somarHorarios([$totaisMot["esperaIndenizada"], $diaPonto["esperaIndenizada"]]);
+					$totaisMot["saldoPeriodo"]     = somarHorarios([$totaisMot["saldoPeriodo"],     $diaPonto["diffSaldo"]]);
+					$totaisMot["saldoFinal"]       = somarHorarios([$saldoAnterior,                 $totaisMot["saldoPeriodo"]]);
+					if(!empty($ultimoEndosso)){
+						$totaisMot["saldoFinal"] = operarHorarios([$totaisMot["saldoFinal"], $ultimoEndosso["totalResumo"]["he50APagar"], $ultimoEndosso["totalResumo"]["he100APagar"]], "-");
+				    }
 				}
 
 				$row = [

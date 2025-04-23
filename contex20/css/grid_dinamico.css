@@ -69,6 +69,14 @@ tbody tr:nth-child(even){
     cursor: pointer;
 }
 
+.total-registros {
+    width: -webkit-fill-available;
+    text-align: right;
+    align-content: center;
+    padding-right: 20px;
+    font-weight: bold;
+}
+
 
 .tab-pagination{
     width: min-content;
