@@ -7,6 +7,7 @@
         "BRASO"					=> "braso",
         "CARAU"		            => "carau_transporte",
         "COMAV"					=> "comav",
+        "DEMO"			        => "techps_demo",
         "FEIJAOTURQUEZA"		=> "feijao_turqueza",
         "FSLOG"	                => "fs_log_transportes",
         "HN"                    => "hn_transportes",
@@ -17,7 +18,6 @@
         "PKFMEDEIROS"			=> "pkf_medeiros",
         "QUALY"		            => "qualy_transportes",
         "TECHPS"				=> "techps",
-        "TECHPSDEMO"			=> "techps_demo",
         "TRAMPOLIMGAS"			=> "trampolim_gas"
     ];
 
