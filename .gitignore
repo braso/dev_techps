@@ -7,7 +7,6 @@
 .Trashes
 .vscode
 .well-known
-.cpanel.yml
 ehthumbs.db
 Thumbs.db
 
@@ -18,4 +17,4 @@ brasomo_dev_techps_sistema.sql
 
 
 .contex20/backup
-".cpanel.yml"
+.cpanel.yml
