@@ -460,11 +460,17 @@
                             $matriculasInativas = array_map(function($matricula) {
                                 return $matricula . ".json";
                             }, array_column($motoristas, "enti_tx_matricula"));
+                            $matriculasInativas = array_map(function($matricula) {
+                                return $matricula . ".json";
+                            }, array_column($motoristas, "enti_tx_matricula"));
                         }
                     } else {
                         $dataMotorista = new DateTime($motorista["enti_tx_admissao"]);
                         $dataMotorista = $dataMotorista->format("Y-m");
                         if ($dataBusca < $dataMotorista) {
+                            $matriculasInativas = array_map(function($matricula) {
+                                return $matricula . ".json";
+                            }, array_column($motoristas, "enti_tx_matricula"));
                             $matriculasInativas = array_map(function($matricula) {
                                 return $matricula . ".json";
                             }, array_column($motoristas, "enti_tx_matricula"));
@@ -496,6 +502,7 @@
                     <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
                 } else {
                     $alertaEmissao = "<span>";
+                    $alertaEmissao = "<span>";
                 }
 
                 $dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresa_".$empresa["empr_nb_id"].".json")). "</span>"; //Utilizado no HTML.
@@ -509,18 +516,19 @@
                 foreach($arquivos as $arquivo){
                     $json = json_decode(file_get_contents($path."/".$arquivo), true);
                     $json["dataAtualizacao"] = date("d/m/Y H:i", filemtime($path."/".$arquivo));
-                    foreach($totais as $key => $value){
-                        $totais[$key] = operarHorarios([
-                            !empty($totais[$key]) ? $totais[$key] : "00:00",
-                            !empty($json[$key]) ? $json[$key] : "00:00"
-                        ], "+");
-                    }
                     $motoristas[] = $json;
                 }
                 foreach($arquivos as &$arquivo){
                     $arquivo = $path."/".$arquivo;
                 }
                 $totais["empresaNome"] = $empresa["empr_tx_nome"];
+
+                $caminho = $path . '/empresa_'.$empresa["empr_nb_id"].'.json';
+
+                if (file_exists($caminho)) {
+                    $TotaisJson = json_decode(file_get_contents($caminho), true);
+                    // agora $conteudo tem os dados do arquivo
+                }
 
                 foreach($motoristas as $saldosMotorista){
                     $contagemEndossos[$saldosMotorista["statusEndosso"]]++;
@@ -564,6 +572,7 @@
                     <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
                 } else {
                     $alertaEmissao = "<span>";
+                    $alertaEmissao = "<span>";
                 }
                 $dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresas.json"))."</span>"; //Utilizado no HTML.
                 $arquivoGeral = json_decode(file_get_contents($path."/empresas.json"), true);
@@ -580,6 +589,10 @@
                         $arquivos[] = $arquivo;
                         $json = json_decode(file_get_contents($arquivo), true);
                         foreach($totais as $key => $value){
+                            $totais[$key] = operarHorarios([
+                                !empty($totais[$key]) ? $totais[$key] : "00:00",
+                                !empty($json["totais"][$key]) ? $json["totais"][$key] : "00:00"
+                            ], "+");
                             $totais[$key] = operarHorarios([
                                 !empty($totais[$key]) ? $totais[$key] : "00:00",
                                 !empty($json["totais"][$key]) ? $json["totais"][$key] : "00:00"
@@ -658,15 +671,15 @@
                     <th colspan='2'>{$totais["empresaNome"]}</th>
                     <th colspan='1'></th>
                     <th colspan='1'></th>
-                    <th colspan='1'>{$totais["jornadaPrevista"]}</th>
-                    <th colspan='1'>{$totais["jornadaEfetiva"]}</th>
-                    <th colspan='1'>{$totais["he50APagar"]}</th>
-                    <th colspan='1'>{$totais["he100APagar"]}</th>
-                    <th colspan='1'>{$totais["adicionalNoturno"]}</th>
-                    <th colspan='1'>{$totais["esperaIndenizada"]}</th>
-                    <th colspan='1'>{$totais["saldoAnterior"]}</th>
-                    <th colspan='1'>{$totais["saldoPeriodo"]}</th>
-                    <th colspan='1'>{$totais["saldoFinal"]}</th>
+                    <th colspan='1'>{$TotaisJson["totais"]["jornadaPrevista"]}</th>
+                    <th colspan='1'>{$TotaisJson["totais"]["jornadaEfetiva"]}</th>
+                    <th colspan='1'>{$TotaisJson["totais"]["he50APagar"]}</th>
+                    <th colspan='1'>{$TotaisJson["totais"]["he100APagar"]}</th>
+                    <th colspan='1'>{$TotaisJson["totais"]["adicionalNoturno"]}</th>
+                    <th colspan='1'>{$TotaisJson["totais"]["esperaIndenizada"]}</th>
+                    <th colspan='1'>{$TotaisJson["totais"]["saldoAnterior"]}</th>
+                    <th colspan='1'>{$TotaisJson["totais"]["saldoPeriodo"]}</th>
+                    <th colspan='1'>{$TotaisJson["totais"]["saldoFinal"]}</th>
                 EOD;
 
                 $rowTitulos .= <<<EOD
