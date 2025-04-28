@@ -7,6 +7,9 @@ require_once __DIR__ . "/funcoes_paineis.php";
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
     //*/
+
+    define('TCPDF_LOGS', true);
+
 if (!empty($_POST["empresa"])) {
     $empresa = mysqli_fetch_assoc(query(
         "SELECT * FROM empresa
@@ -49,7 +52,7 @@ class CustomPDF extends TCPDF {
         $this->SetY(-15);
         $this->Line(10, $this->GetY(), $this->GetPageWidth() - 10, $this->GetY());
         $this->SetFont('helvetica', 'B', 9);
-        $this->Cell(90, 0, 'TECHP®', 0, 0, 'L');
+        $this->Cell(90, 0, 'TECHPS®', 0, 0, 'L');
         $this->SetFont('helvetica', 'I', 8);
         $this->Cell(1, 0, 'Gerado em: ' . date('d/m/Y H:i'), 0, 0, 'C');
         parent::Footer();
@@ -161,18 +164,19 @@ function gerarPainelEndosso() {
             foreach ($arquivos as $arquivo) {
                 $dados = json_decode(file_get_contents($path . "/" . $arquivo), true);
                 $json["dataAtualizacao"] = date("d/m/Y H:i", filemtime($path . "/" . $arquivo));
-                foreach ($totais as $key => $value) {
-                    $totais[$key] = operarHorarios([
-                        !empty($totais[$key]) ? $totais[$key] : "00:00",
-                        !empty($json[$key]) ? $json[$key] : "00:00"
-                    ], "+");
-                }
-                $motoristas[] = $json;
+                $motoristas[] = $dados;
             }
             foreach ($arquivos as &$arquivo) {
                 $arquivo = $path . "/" . $arquivo;
             }
             $totais["empresaNome"] = $empresa["empr_tx_nome"];
+
+            $caminho = $path . '/empresa_'.$empresa["empr_nb_id"].'.json';
+
+            if (file_exists($caminho)) {
+                $TotaisJson = json_decode(file_get_contents($caminho), true);
+                // agora $conteudo tem os dados do arquivo
+            }
 
             foreach ($motoristas as $saldosMotorista) {
                 $contagemEndossos[$saldosMotorista["statusEndosso"]]++;
@@ -383,231 +387,55 @@ function gerarPainelEndosso() {
     $altura = 7;
     $larguraCell = round($larguraTotal / 12, 2);
 
+    // Ajuste das larguras conforme necessidade
     $larguras = [
-        15, // célula 1
-        21, // célula 2
-        45, // célula 1
+        10,  // célula 1 (Matrícula)
+        36,  // célula 2 (Nome) - Aumentada para 45mm
+        21.5,  // célula 3 (Ocupação)
+        22.8,  // Status
+        22.3,  // Jornada Prevista
+        22.6,  // Jornada Efetiva
+        22.6,  // H.E. Semanal
+        22.6,  // H.E. Extra
+        22.6,  // Ad. Noturno
+        22.6,  // Espera Ind.
+        22.6,  // Saldo Anterior
+        22.4   // Saldo Período/Final
     ];
 
     $pdf->SetFillColor(241, 198, 31);  // amarelo
 
-    $pdf->MultiCell($larguraCell * 3.3, $altura, $totais["empresaNome"], 1, 'C', true);
-    $pdf->SetXY($x + ($larguraCell * 3.3), $y);
+    // Célula combinada para o nome da empresa (3 primeiras colunas)
+    $pdf->MultiCell($larguras[0] + $larguras[1] + $larguras[2], $altura, $totais["empresaNome"], 1, 'C', true);
+    $pdf->SetXY($x + $larguras[0] + $larguras[1] + $larguras[2], $y);
 
-    $pdf->Cell($larguras[1], $altura, '', 1, 0, 'C', true);
-    $pdf->Cell($larguras[1], $altura, '', 1, 0, 'C', true);
-    $pdf->Cell($larguras[1], $altura, $totais["jornadaPrevista"], 1, 0, 'C', true);
-    $pdf->Cell($larguras[1], $altura, $totais["jornadaEfetiva"], 1, 0, 'C', true);
-    $pdf->Cell($larguras[1], $altura, $totais["he50APagar"], 1, 0, 'C', true);
-    $pdf->Cell($larguras[1], $altura, $totais["he100APagar"], 1, 0, 'C', true);
-    $pdf->Cell($larguras[1], $altura, $totais["adicionalNoturno"], 1, 0, 'C', true);
-    $pdf->Cell($larguras[1], $altura, $totais["esperaIndenizada"], 1, 0, 'C', true);
-    $pdf->Cell($larguras[1], $altura, $totais["saldoAnterior"], 1, 0, 'C', true);
-    $pdf->Cell($larguras[1], $altura, $totais["saldoPeriodo"], 1, 0, 'C', true);
-    $pdf->Cell($larguras[1], $altura, $totais["saldoFinal"], 1, 0, 'C', true);
+    // Células vazias (2 primeiras após o nome)
+    $pdf->Cell($larguras[3], $altura, '', 1, 0, 'C', true);
+
+    // Células com dados
+    $pdf->Cell($larguras[4], $altura, $TotaisJson["totais"]["jornadaPrevista"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[5], $altura, $TotaisJson["totais"]["jornadaEfetiva"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[6], $altura, $TotaisJson["totais"]["he50APagar"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[7], $altura, $TotaisJson["totais"]["he100APagar"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[8], $altura, $TotaisJson["totais"]["adicionalNoturno"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[9], $altura, $TotaisJson["totais"]["esperaIndenizada"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[10], $altura, $TotaisJson["totais"]["saldoAnterior"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[11], $altura, $TotaisJson["totais"]["saldoPeriodo"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[11], $altura, $TotaisJson["totais"]["saldoFinal"], 1, 0, 'C', true);
 
     $pdf->Ln(7);
+    
+    // No seu PHP, divida o HTML em partes menores
+    // Recebe e trata o HTML
+    $htmlTabela = $_POST['htmlTabela'] ?? '';
+    // dd($htmlTabela );
+    
+    // Limpeza adicional do HTML
+    $htmlTabela = preg_replace('/<i[^>]*>(.*?)<\/i>/', '', $htmlTabela); // Remove ícones
+    $htmlTabela = str_replace(';""', '', $htmlTabela); // Corrige atributos malformados
 
-    $dadosOrdenados = [];
-
-    if (!empty($_POST["empresa"]) && !empty($_POST["busca_data"])) {
-        $pdf->SetFont('helvetica', 'B', 6);
-
-        $pdf->SetFillColor(78, 169, 255);  // azul
-
-        $x = $pdf->GetX();
-        $y = $pdf->GetY();
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[0], 7, 'MATRICULA', 1, 0, 'C', true);
-        $x += $larguras[0];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[2], 7, 'NOME', 1, 0, 'C', true);
-        $x += $larguras[2];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Ocupação', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Status Endosso', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Jornada Prevista', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Jornada Efetiva', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->Cell($larguras[1], 7, 'H.E. Semanal Pago', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'H.E. Ex. Pago', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Adicional Noturno', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Espera Indenizada', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Saldo Anterior', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Saldo Período', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Saldo Final', 1, 0, 'C', true);
-
-        $pdf->Ln(7);
-
-        $pdf->SetFont('helvetica', 'B', 6);
-
-        foreach ($arquivos as $caminho) {
-            if (file_exists($caminho)) {
-                $conteudo = file_get_contents($caminho);
-                $dados = json_decode($conteudo, true);
-
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    $dadosOrdenados[] = $dados;
-                }
-            }
-        }
-
-        // Ordenar pelo campo 'nome' (ordem alfabética)
-        usort($dadosOrdenados, function ($a, $b) {
-            return strcmp(mb_strtoupper($a['nome']), mb_strtoupper($b['nome']));
-        });
-
-        // Agora imprime os dados no PDF
-        foreach ($dadosOrdenados as $dados) {
-            if ($dados['statusEndosso'] == 'E') {
-                $pdf->SetFillColor(78, 169, 255);  // azul
-            } else if ($dados['statusEndosso'] == 'EP') {
-                $pdf->SetFillColor(241, 198, 31);  // amarelo
-            } else {
-                $pdf->SetFillColor(236, 65, 65);   // vermelho
-            }
-
-            $pdf->Cell($larguras[0], 7, $dados['matricula'], 1, 0, 'C');
-            $pdf->Cell($larguras[2], 7, $dados['nome'], 1, 0, 'C');
-            $pdf->Cell($larguras[1], 7, $dados['ocupacao'], 1, 0, 'C');
-            $pdf->Cell($larguras[1], 7, $dados['statusEndosso'], 1, 0, 'C', true);
-            $pdf->Cell($larguras[1], 7, $dados['jornadaPrevista'], 1, 0, 'C');
-            $pdf->Cell($larguras[1], 7, $dados['jornadaEfetiva'], 1, 0, 'C');
-            $pdf->Cell($larguras[1], 7, $dados['he50APagar'], 1, 0, 'C');
-            $pdf->Cell($larguras[1], 7, $dados['he100APagar'], 1, 0, 'C');
-            $pdf->Cell($larguras[1], 7, $dados['adicionalNoturno'], 1, 0, 'C');
-            $pdf->Cell($larguras[1], 7, $dados['esperaIndenizada'], 1, 0, 'C');
-            $pdf->Cell($larguras[1], 7, $dados['saldoAnterior'], 1, 0, 'C');
-            $pdf->Cell($larguras[1], 7, $dados['saldoPeriodo'], 1, 0, 'C');
-            $pdf->Cell($larguras[1], 7, $dados['saldoFinal'], 1, 0, 'C');
-            $pdf->Ln();
-        }
-    } elseif (!empty($_POST["busca_data"])) {
-
-        $larguras = [
-            20.9, // célula 1
-            21, // célula 2
-            60, // célula 1
-        ];
-
-        $pdf->SetFont('helvetica', 'B', 6);
-
-        // Salva a posição inicial
-        $x = $pdf->GetX();
-        $y = $pdf->GetY();
-
-        $pdf->SetFillColor(78, 169, 255);  // azul
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[2], 7, 'Nome da Empresa/Filial', 1, 0, 'C', true);
-        $x += $larguras[2];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[0], 7, '% Endossados', 1, 0, 'C', true);
-        $x += $larguras[0];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Qtd. Motoristas', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Jornada Prevista', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Jornada Efetiva', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'H.E. Semanal Pago', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'H.E. Ex. Pago', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Adicional Noturno', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Espera Indenizada', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Saldo Anterior', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Saldo Período', 1, 0, 'C', true);
-        $x += $larguras[1];
-
-        $pdf->SetXY($x, $y);
-        $pdf->Cell($larguras[1], 7, 'Saldo Final', 1, 0, 'C', true);
-
-        $pdf->Ln(7);
-
-        $pdf->SetFont('helvetica', 'B', 6);
-        foreach ($empresas as $empresa) {
-            $linhaAltura = 7;
-            $larguraNome = $larguras[2];
-
-            // Salva a posição atual
-            $x = $pdf->GetX();
-            $y = $pdf->GetY();
-
-            // MultiCell para o nome da empresa
-            $pdf->MultiCell($larguraNome, $linhaAltura, $empresa['empr_tx_nome'], 1, 'C', false, 0);
-
-            // Ajusta o Y da linha mais alta, caso MultiCell aumente
-            $pdf->SetXY($x + $larguraNome, $y);
-
-            // Células restantes
-            $pdf->Cell($larguras[0], $linhaAltura, number_format(($empresa['percEndossado'] * 10000) / 100, 2) . '%', 1, 0, 'C');
-            $pdf->Cell($larguras[1], $linhaAltura, $empresa['qtdMotoristas'], 1, 0, 'C');
-            $pdf->Cell($larguras[1], $linhaAltura, $empresa['totais']["jornadaPrevista"], 1, 0, 'C');
-            $pdf->Cell($larguras[1], $linhaAltura, $empresa['totais']["jornadaEfetiva"], 1, 0, 'C');
-            $pdf->Cell($larguras[1], $linhaAltura, $empresa['totais']["he50APagar"], 1, 0, 'C');
-            $pdf->Cell($larguras[1], $linhaAltura, $empresa['totais']["he100APagar"], 1, 0, 'C');
-            $pdf->Cell($larguras[1], $linhaAltura, $empresa['totais']["adicionalNoturno"], 1, 0, 'C');
-            $pdf->Cell($larguras[1], $linhaAltura, $empresa['totais']["esperaIndenizada"], 1, 0, 'C');
-            $pdf->Cell($larguras[1], $linhaAltura, $empresa['totais']["saldoAnterior"], 1, 0, 'C');
-            $pdf->Cell($larguras[1], $linhaAltura, $empresa['totais']["saldoPeriodo"], 1, 0, 'C');
-            $pdf->Cell($larguras[1], $linhaAltura, $empresa['totais']["saldoFinal"], 1, 0, 'C');
-            $pdf->Ln();
-        }
-    }
+    // Escreve o HTML no PDF
+    $pdf->writeHTML($htmlTabela, true, false, true, false, '');
 
     // Gera o PDF
     $nomeArquivo = 'relatorio_endossos.pdf';
