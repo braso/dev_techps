@@ -8,4 +8,4 @@ deployment:
     
     - /bin/cp -R $GENERAL $GENERALDEPLOY
 
-    - /bin/cp -R $DOMAIN $OPAFRUTAS
+    - /bin/cp -R $DOMAIN $OPAFRUTAS 
