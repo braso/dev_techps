@@ -186,9 +186,9 @@
 						<tbody>
 							<!-- Conteúdo do json empresas será inserido aqui -->
 						</tbody>
-						<thead>
+						<tfoot>
 							<?= $rowTotal ?>
-						</thead>
+						</tfoot>
 					</table>
 				</div>
 			<?php } ?>
@@ -242,7 +242,42 @@
 	}
 </script>
 <?php if ($mostra === true) { ?>
+	<div id="loader-overlay" style="
+		display: none;
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.7);
+		z-index: 9999;
+		justify-content: center;
+		align-items: center;
+		color: white;
+		font-family: Arial;
+	">
+		<div style="text-align: center;">
+			<div class="spinner" style="
+				border: 5px solid rgba(255, 255, 255, 0.3);
+				border-radius: 50%;
+				border-top: 5px solid #4ea9ff;
+				width: 50px;
+				height: 50px;
+				animation: spin 1s linear infinite;
+				margin: 0 auto 15px;
+			"></div>
+			<p>Gerando gráfico e exportando dados...</p>
+		</div>
+	</div>
+
+	<style>
+		@keyframes spin {
+			0% { transform: rotate(0deg); }
+			100% { transform: rotate(360deg); }
+		}
+	</style>
 	<script>
+
 		// Função modificada para enviar o gráfico incluindo o ID
 		async function enviarGraficoServidor(chart) {
 			const elementId = chart.renderTo.id;
@@ -302,6 +337,7 @@
 					console.log('✅ Gráfico salvo com sucesso:', data.fileName);
 				} else {
 					console.error('❌ Erro ao salvar gráfico:', data.message);
+					throw new Error(data.message);
 				}
 
 			} catch (error) {
@@ -309,7 +345,7 @@
 			}
 		}
 
-		document.addEventListener('DOMContentLoaded', function() {
+		// document.addEventListener('DOMContentLoaded', function() {
 			// Gráfico sintético
 			const categorias = ['Alta', 'Media', 'Baixa'];
 			const valores = <?= json_encode($graficoSintetico) ?>;
@@ -321,16 +357,16 @@
 				color: cores[index]
 			}));
 
-			Highcharts.chart('graficoSintetico', {
+			const graficoSintetico = Highcharts.chart('graficoSintetico', {
 				chart: {
 					type: 'pie',
 					height: '80%',
-					events: {
-						load: function () {
-							const chart = this; // <-- o gráfico instanciado
-							setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
-						}
-					}
+					// events: {
+					// 	load: function () {
+					// 		const chart = this; // <-- o gráfico instanciado
+					// 		setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
+					// 	}
+					// }
 				},
 				title: {
 					text: 'Gráfico Sintético de Não Conformidades'
@@ -371,16 +407,16 @@
 				color: coresAnalitico[index]
 			}));
 
-			Highcharts.chart('graficoAnalitico', {
+			const graficoAnalitico = Highcharts.chart('graficoAnalitico', {
 				chart: {
 					type: 'pie',
 					height: '65%',
-					events: {
-						load: function () {
-							const chart = this; // <-- o gráfico instanciado
-							setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
-						}
-					}
+					// events: {
+					// 	load: function () {
+					// 		const chart = this; // <-- o gráfico instanciado
+					// 		setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
+					// 	}
+					// }
 				},
 				title: {
 					text: 'Gráfico Analítico de Não Conformidades'
@@ -428,41 +464,41 @@
 				color: coresDetalhado[index]
 			}));
 
-			Highcharts.chart('graficoDetalhado', {
+			const graficoDetalhado = Highcharts.chart('graficoDetalhado', {
 				chart: {
 					type: 'bar',
 					backgroundColor: '#f9f9f9',
-					events: {
-						load: function () {
-							const chart = this;
+					// events: {
+					// 	load: function () {
+					// 		const chart = this;
 
-							const panel = $('#collapse3');
-							if (!panel.hasClass('in')) {
-								console.log('🔓 Abrindo accordion...');
-								panel.collapse('show');
-							}
+					// 		const panel = $('#collapse3');
+					// 		if (!panel.hasClass('in')) {
+					// 			console.log('🔓 Abrindo accordion...');
+					// 			panel.collapse('show');
+					// 		}
 
-							setTimeout(() => {
-								chart.reflow();
+					// 		setTimeout(() => {
+					// 			chart.reflow();
 
-								const elementId = chart.renderTo.id;
-								const el = document.getElementById(elementId);
+					// 			const elementId = chart.renderTo.id;
+					// 			const el = document.getElementById(elementId);
 
-								if (el && el.offsetWidth > 0 && el.offsetHeight > 0) {
-									console.log('🎯 Elemento visível, enviando...');
+					// 			if (el && el.offsetWidth > 0 && el.offsetHeight > 0) {
+					// 				console.log('🎯 Elemento visível, enviando...');
 
-									enviarGraficoServidor(chart).then(() => {
-										console.log('✅ Imagem capturada. Fechando accordion...');
-										panel.collapse('hide');
-									}).catch((error) => {
-										console.error('❌ Erro ao capturar imagem:', error);
-									});
-								} else {
-									console.warn('⛔ Elemento ainda invisível, tente aumentar o delay');
-								}
-							}, 3000);
-						}
-					}
+					// 				enviarGraficoServidor(chart).then(() => {
+					// 					console.log('✅ Imagem capturada. Fechando accordion...');
+					// 					panel.collapse('hide');
+					// 				}).catch((error) => {
+					// 					console.error('❌ Erro ao capturar imagem:', error);
+					// 				});
+					// 			} else {
+					// 				console.warn('⛔ Elemento ainda invisível, tente aumentar o delay');
+					// 			}
+					// 		}, 3000);
+					// 	}
+					// }
 				},
 				title: {
 					text: 'Gráfico Detalhado de Não Conformidades',
@@ -568,10 +604,10 @@
 			linhaMotorista2 += '<td>' + totalPorcentagem.toFixed(2) + '%</td>';
 			tabelaMotorista.append(linhaMotorista);
 			tabelaMotoristaTotal.append(linhaMotorista2);
-		});
+		// });
 
 		var contadorLoad = 0;
-		Highcharts.chart('graficoPerformance', {
+		const chartPerformance = Highcharts.chart('graficoPerformance', {
 			chart: {
 				type: 'gauge',
 				plotBackgroundColor: null,
@@ -579,12 +615,12 @@
 				plotBorderWidth: 0,
 				plotShadow: false,
 				height: '80%',
-				events: {
-						load: function () {
-							const chart = this; // <-- o gráfico instanciado
-							setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
-						}
-					}
+				// events: {
+				// 		load: function () {
+				// 			const chart = this; // <-- o gráfico instanciado
+				// 			setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
+				// 		}
+				// 	}
 			},
 			title: {
 				useHTML: true, // Permite adicionar HTML ao título
@@ -700,7 +736,7 @@
 			}
 		});
 
-		Highcharts.chart('graficoPerformanceMedia', {
+		const graficoPerformanceMedia = Highcharts.chart('graficoPerformanceMedia', {
 			chart: {
 				type: 'gauge',
 				plotBackgroundColor: null,
@@ -708,12 +744,12 @@
 				plotBorderWidth: 0,
 				plotShadow: false,
 				height: '80%',
-				events: {
-						load: function () {
-							const chart = this; // <-- o gráfico instanciado
-							setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
-						}
-					}
+				// events: {
+				// 		load: function () {
+				// 			const chart = this; // <-- o gráfico instanciado
+				// 			setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
+				// 		}
+				// 	}
 			},
 			title: {
 				useHTML: true, // Permite adicionar HTML ao título
@@ -816,7 +852,7 @@
 			}]
 		});
 
-		Highcharts.chart('graficoPerformanceBaixa', {
+		const graficoPerformanceBaixa = Highcharts.chart('graficoPerformanceBaixa', {
 			chart: {
 				type: 'gauge',
 				plotBackgroundColor: null,
@@ -824,12 +860,12 @@
 				plotBorderWidth: 0,
 				plotShadow: false,
 				height: '80%',
-				events: {
-						load: function () {
-							const chart = this; // <-- o gráfico instanciado
-							setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
-						}
-					}
+				// events: {
+				// 		load: function () {
+				// 			const chart = this; // <-- o gráfico instanciado
+				// 			setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
+				// 		}
+				// 	}
 			},
 			title: {
 				useHTML: true, // Permite adicionar HTML ao título
@@ -931,6 +967,223 @@
 				}
 			}]
 		});
+
+		async function enviarDados() {
+			const loader = document.getElementById('loader-overlay');
+			
+			try {
+				// Mostra o loader
+				loader.style.display = 'flex';
+
+				// 1. Processa todos os gráficos
+				await processarGraficos();
+
+				// 2. Prepara e envia o formulário
+				await enviarFormulario();
+
+			} catch (error) {
+				console.error("Erro durante a exportação:", error);
+				loader.innerHTML = `
+					<div style="text-align: center; color: #ff6b6b;">
+						<p>❌ Falha ao exportar. Recarregue a página e tente novamente.</p>
+						<button onclick="location.reload()" style="margin-top: 10px; padding: 5px 10px;">Recarregar</button>
+					</div>
+				`;
+			} finally {
+				setTimeout(() => loader.style.display = 'none', 2000);
+			}
+		}
+
+		async function processarGraficos() {
+			try {
+				// Processa gráficos normais em paralelo
+				await Promise.all([
+					enviarGraficoServidor(chartPerformance),
+					enviarGraficoServidor(graficoPerformanceMedia),
+					enviarGraficoServidor(graficoPerformanceBaixa),
+					enviarGraficoServidor(graficoSintetico),
+					enviarGraficoServidor(graficoAnalitico)
+				]);
+
+				// Processa gráfico detalhado com tratamento especial
+				await processarGraficoDetalhado();
+				
+			} catch (error) {
+				console.error("Erro ao processar gráficos:", error);
+				throw error; // Re-lança o erro para ser capturado no escopo superior
+			}
+		}
+
+		async function processarGraficoDetalhado() {
+			const panel = $('#collapse3');
+			const wasClosed = !panel.hasClass('show');
+			
+			try {
+				if (wasClosed) {
+					console.log('🔓 Abrindo accordion para gráfico detalhado...');
+					panel.collapse('show');
+					await new Promise(resolve => setTimeout(resolve, 800)); // Tempo maior para garantir abertura
+				}
+
+				graficoDetalhado.reflow();
+				await new Promise(resolve => setTimeout(resolve, 500)); // Tempo para renderização
+
+				console.log('📸 Capturando gráfico detalhado...');
+				await enviarGraficoServidor(graficoDetalhado);
+				
+			} finally {
+				if (wasClosed) {
+					panel.collapse('hide');
+				}
+			}
+		}
+
+		async function enviarFormulario() {
+			return new Promise(async (resolve) => {
+				// Criação do formulário
+				var data = "<?= $_POST['busca_dataMes'] ?>";
+				var form = document.createElement('form');
+				form.method = 'POST';
+				form.action = 'export_paineis.php';
+				form.target = '_blank';
+
+				// Adiciona campos básicos
+				['empresa', 'busca_data', 'relatorio'].forEach(function(name) {
+					var input = document.createElement('input');
+					input.type = 'hidden';
+					input.name = name;
+					input.value = name === 'empresa' 
+						? "<?= !empty($_POST['empresa']) ? $_POST['empresa'] : 'null' ?>" 
+						: (name === 'busca_data' ? data : 'nc_juridica');
+					form.appendChild(input);
+				});
+
+				// Processamento da tabela (se necessário)
+				var tabelaOriginal = document.querySelector('#tabela-empresas');
+				if (tabelaOriginal) {
+					var tabelaClone = tabelaOriginal.cloneNode(true);
+					tabelaClone.querySelectorAll('i.fa, script, style, link').forEach(el => el.remove());
+
+					var coresStatus = {
+						'endo': '#4ea9ff',
+						'endo-parc': '#ffe80063',
+						'nao-endo': '#ec4141'
+					};
+
+					var htmlSimplificado = '<table style="width:100%;border-collapse:collapse;font-family:helvetica;font-size:7pt">';
+					// Processa o thead principal (primeiro thead)
+					var mainThead = tabelaClone.querySelector('thead:first-of-type');
+					if (mainThead) {
+						htmlSimplificado += '<thead>';
+						mainThead.querySelectorAll('tr').forEach(tr => {
+							if (tr.classList.contains('totais')) return;
+							htmlSimplificado += '<tr>';
+							tr.querySelectorAll('th').forEach(th => {
+								htmlSimplificado += '<th style="border:0.5px solid #000;padding:2px;text-align:center;font-weight:bold;background-color:#4ea9ff">';
+								htmlSimplificado += th.innerHTML;
+								htmlSimplificado += '</th>';
+							});
+							htmlSimplificado += '</tr>';
+						});
+						htmlSimplificado += '</thead>';
+					}
+
+					var tbody = tabelaClone.querySelector('tbody');
+					if (tbody) {
+						htmlSimplificado += '<tbody>';
+						tbody.querySelectorAll('tr').forEach(tr => {
+							htmlSimplificado += '<tr>';
+							tr.querySelectorAll('td').forEach((td, colIndex) => {
+								var estiloBase = 'border:0.5px solid #000;padding:2px;font-size:6.8pt;';
+								if (colIndex === 1) {
+									estiloBase += 'text-align:left;white-space:nowrap;overflow:hidden;max-width:90px;';
+								} else {
+									estiloBase += 'text-align:center;';
+								}
+
+								if (colIndex === 3) {
+									if (td.classList.contains('endo')) {
+										estiloBase += 'background-color:' + coresStatus['endo'] + ';';
+									} else if (td.classList.contains('endo-parc')) {
+										estiloBase += 'background-color:' + coresStatus['endo-parc'] + ';';
+									} else if (td.classList.contains('nao-endo')) {
+										estiloBase += 'background-color:' + coresStatus['nao-endo'] + ';';
+									}
+								}
+
+								if (colIndex === 10 || colIndex === 12) {
+									if (td.id === 'saldo-zero') {
+										estiloBase += 'color:blue;';
+									} else if (td.id === 'saldo-final') {
+										estiloBase += 'color:green;';
+									} else if (td.id === 'saldo-negativo') {
+										estiloBase += 'color:red;';
+									}
+								}
+
+								htmlSimplificado += '<td style="' + estiloBase + '">';
+								htmlSimplificado += td.innerHTML;
+								htmlSimplificado += '</td>';
+							});
+							htmlSimplificado += '</tr>';
+						});
+						htmlSimplificado += '</tbody>';
+					}
+
+					var totalThead = tabelaClone.querySelector('tbody + thead');
+					if (totalThead) {
+						// Remove qualquer outro thead que não seja o de totais
+						tabelaClone.querySelectorAll('thead').forEach(thead => {
+							if (thead !== mainThead && thead !== totalThead) {
+								thead.remove();
+							}
+						});
+
+						htmlSimplificado += '<tfoot>';  // ⭐ Usando tfoot para os totais (mais semântico)
+						totalThead.querySelectorAll('tr').forEach(tr => {
+							htmlSimplificado += '<tr>';
+							tr.querySelectorAll('td').forEach(td => {
+								var estilo = 'border:0.5px solid #000;padding:2px;font-size:7pt;text-align:center;';
+								if (td.classList.contains('total')) {
+									estilo += 'font-weight:bold;background-color:#f2f2f2;';
+								}
+								htmlSimplificado += '<td style="' + estilo + '">' + td.innerHTML + '</td>';
+							});
+							htmlSimplificado += '</tr>';
+						});
+						htmlSimplificado += '</tfoot>';
+					}
+
+					htmlSimplificado += '</table>';
+
+					var inputTabela = document.createElement('input');
+					inputTabela.type = 'hidden';
+					inputTabela.name = 'htmlTabela';
+					inputTabela.value = htmlSimplificado;
+					form.appendChild(inputTabela);
+
+					// Criando campo 3
+					var input2 = document.createElement('input');
+					input2.type = 'hidden';
+					input2.name = 'busca_endossado';
+					input2.value = '<?= $_POST["busca_endossado"]?>' ; // Valor do segundo campo
+					form.appendChild(input2);
+				}
+
+				// Adiciona o formulário ao DOM
+				document.body.appendChild(form);
+
+				// Envia o formulário
+				form.submit();
+
+				// Remove depois
+				setTimeout(() => {
+					document.body.removeChild(form);
+					resolve();
+				}, 1000);
+			});
+		}
+
 
 		// Registra evento de clique no ícone do popup após o gráfico ser renderizado
 		$(document).on('click', '#popup-icon3', function () {

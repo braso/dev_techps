@@ -10,22 +10,6 @@ require_once __DIR__ . "/funcoes_paineis.php";
 
     define('TCPDF_LOGS', true);
 
-if (!empty($_POST["empresa"])) {
-    $empresa = mysqli_fetch_assoc(query(
-        "SELECT * FROM empresa
-            WHERE empr_tx_status = 'ativo'
-                AND empr_nb_id = {$_POST["empresa"]}
-            LIMIT 1;"
-    ));
-} else {
-    $empresa = mysqli_fetch_assoc(query(
-        "SELECT * FROM empresa
-            WHERE empr_tx_status = 'ativo'
-                AND empr_tx_Ehmatriz = 'sim'
-            LIMIT 1;"
-    ));
-}
-
 class CustomPDF extends TCPDF {
     public $tituloPersonalizado = 'Relatório Sem titulo';
     protected static $empresaData;
@@ -621,6 +605,7 @@ function gerarPainelSaldo() {
     $pdf->SetMargins(2, 25, 2);
     $pdf->SetHeaderMargin(10);
     $pdf->SetFooterMargin(10);
+    $pdf->setFontSubsetting(true);
     $pdf->SetAutoPageBreak(true, PDF_MARGIN_BOTTOM);
     $pdf->AddPage();
 
@@ -736,7 +721,6 @@ function gerarPainelSaldo() {
 
     $larguraTotal = 218;
     $altura = 7;
-    $larguraCell = round($larguraTotal / 12, 2);
 
     // Ajuste das larguras conforme necessidade
     $larguras = [
@@ -973,7 +957,6 @@ function gerarPainelNc() {
                 : 0;
 
             $totalGeral = $gravidadeAlta + $gravidadeMedia + $gravidadeBaixa;
-            $graficoSintetico = [$gravidadeAlta, $gravidadeMedia, $gravidadeBaixa];
 
             $percentuais = [
                 "performance" => $totalGeral > 0 ? round(($totalJsonComTudoZero ?? 0) / $totalGeral) : 0,
@@ -1062,7 +1045,6 @@ function gerarPainelNc() {
                 ];
 
 
-                $encontrado = true;
             }
 
             $pasta = dir($path);
@@ -1157,18 +1139,6 @@ function gerarPainelNc() {
     $pdf->Image('./arquivos/graficos/grafico_graficoPerformanceMedia_' . $_POST["busca_data"] . '_' . $userEntrada . '.png', 122, 50, 60);
     $pdf->Image('./arquivos/graficos/grafico_graficoPerformanceBaixa_' . $_POST["busca_data"] . '_' . $userEntrada . '.png', 230, 50, 60);
 
-    // Simula "Performance Alta"
-    // $pdf->Rect(55, 50, 60, 40, 'DF'); // x, y, w, h, D=Draw, F=Fill
-    // $pdf->SetXY(15, 40);
-
-    // // Simula "Performance Média"
-    // $pdf->Rect(125, 50, 60, 40, 'DF');
-    // $pdf->SetXY(75, 40);
-
-    // // Simula "Performance Baixa"
-    // $pdf->Rect(195, 50, 60, 40, 'DF');
-    // $pdf->SetXY(135, 40);
-
     // === Espaço após os gráficos ===
     $pdf->Ln(60);
 
@@ -1231,16 +1201,6 @@ function gerarPainelNc() {
     // Gráfico Analítico (Direita)
     $pdf->Image('./arquivos/graficos/grafico_graficoAnalitico_' . $_POST["busca_data"] . '_' . $userEntrada . '.png', 185, $posYGraficos, 100);
 
-    // // Gráfico Sintético (Esquerda)
-    // $pdf->SetY($posYGraficos - 10); // Ajuste para o título
-    // $pdf->SetFont('helvetica', 'B', 12);
-    // $pdf->Rect(90, $posYGraficos, 90, 70, 'DF');
-
-    // // Gráfico Analítico (Direita)
-    // $pdf->SetY($posYGraficos - 10); // Mesma altura do título esquerdo
-    // $pdf->SetX(140);
-    // $pdf->Rect(200, $posYGraficos, 90, 70, 'DF');
-
     $pdf->addPage();
 
     // Obter as margens atuais
@@ -1253,10 +1213,6 @@ function gerarPainelNc() {
     $height = $pdf->getPageHeight() - $margins['top'] - $margins['bottom'];
 
     $pdf->Image('./arquivos/graficos/grafico_graficoDetalhado_' . $_POST["busca_data"] . '_' . $userEntrada . '.png', $x, $y, $width, $height);
-
-    // $pdf->SetFillColor(240, 240, 240);
-    // Adicionar retângulo que preenche a área útil da página
-    // $pdf->Rect($x, $y, $width, $height, 'F'); // 'F' para preenchimento
 
     $pdf->addPage();
 
@@ -1363,7 +1319,7 @@ function gerarPainelNc() {
     $pdf->Cell(70, 7, 'Interstício Superior', 1, 0, 'C', true);
     $pdf->Cell(180, 7, '"Interstício total de 11 horas não respeitado"', 1, 0, 'C', true);
     $pdf->SetFillColor(255, 255, 255);
-    
+    $pdf->SetTextColor(0, 0, 0);
     $pdf->Cell(10, 7, $totalizadores["intersticioSuperior"], 1, 0, 'C', true);
     $pdf->Cell(20, 7, $percentuais["Geral_intersticioSuperior"] . '%', 1, 1, 'C', true);
     $pdf->SetTextColor(0, 0, 0); // branco
@@ -1374,120 +1330,16 @@ function gerarPainelNc() {
     $pdf->Cell(0, 7, 'Tabela detalhada de não conformidade', 0, 1, 'L');
     $pdf->Ln(5);
 
-    $pdf->SetFont('helvetica', 'B', 7);
+    // Recebe e trata o HTML
+    $htmlTabela = $_POST['htmlTabela'] ?? '';
+    // dd($htmlTabela );
+    
+    // Limpeza adicional do HTML
+    $htmlTabela = preg_replace('/<i[^>]*>(.*?)<\/i>/', '', $htmlTabela); // Remove ícones
+    $htmlTabela = str_replace(';""', '', $htmlTabela); // Corrige atributos malformados
 
-    // Cabeçalho
-    $pdf->Cell(13, 7, 'Matricula', 1, 0, 'C');
-    $pdf->Cell(52, 7, 'Funcionário', 1, 0, 'C');
-    $pdf->Cell(13, 7, 'Ocupação', 1, 0, 'C');
-
-    $pdf->SetFillColor(255, 242, 96);  // amarelo
-    if ($_POST["busca_endossado"] == "naoEndossado") {
-        $pdf->Cell(12, 7, 'Espera', 1, 0, 'C', true);
-        $pdf->Cell(13, 7, 'Descanso', 1, 0, 'C', true);
-        $pdf->Cell(12, 7, 'Repouso', 1, 0, 'C', true);
-        $pdf->Cell(12, 7, 'Jornada', 1, 0, 'C', true);
-    }
-    $pdf->Cell(21, 7, 'Jornada Prevista', 1, 0, 'C', true);
-
-    $pdf->SetFillColor(255, 139, 0);  // laranja
-    $pdf->Cell(21, 7, 'Jornada Efetiva', 1, 0, 'C', true);
-    $pdf->Cell(8, 7, 'MDC', 1, 0, 'C', true);
-
-    $pdf->SetFillColor(236, 65, 65);
-    $pdf->Cell(12, 7, 'Refeição', 1, 0, 'C', true);
-    $pdf->Cell(23, 7, 'Interstício Inferior', 1, 0, 'C', true);
-    $pdf->Cell(23, 7, 'Interstício Superior', 1, 0, 'C', true);
-
-    $pdf->Cell(11, 7, 'TOTAL', 1, 0, 'C');
-    $pdf->Cell(24, 7, 'Performance Média', 1, 0, 'C');
-    $pdf->Cell(24, 7, 'Performance Baixa', 1, 1, 'C');
-
-    $pdf->SetFont('helvetica', '', 7);
-
-    // Conteúdo
-    foreach ($dadosOrdenados as $dados) {
-        $total = $dados['espera'] + $dados['descanso'] + $dados['repouso'] + $dados['jornada']
-            + $dados['falta'] + $dados['jornadaEfetiva'] + $dados['mdc']
-            + $dados['refeicao'] + $dados['intersticioInferior'] + $dados['intersticioSuperior'];
-
-        $pdf->Cell(13, 7, $dados['matricula'], 1, 0, 'C');
-        $pdf->Cell(52, 7, $dados['nome'], 1, 0, 'L');
-        $pdf->Cell(13, 7, $dados['ocupacao'], 1, 0, 'L');
-
-        $pdf->SetFillColor(255, 242, 96);  // amarelo
-        if ($_POST["busca_endossado"] == "naoEndossado") {
-            $pdf->Cell(12, 7, $dados['espera'] != 0 ? $dados['espera'] : '', 1, 0, 'C', true);
-            $pdf->Cell(13, 7, $dados['descanso'] != 0 ? $dados['descanso'] : '', 1, 0, 'C', true);
-            $pdf->Cell(12, 7, $dados['repouso'] != 0 ? $dados['repouso'] : '', 1, 0, 'C', true);
-            $pdf->Cell(12, 7, $dados['jornada'] != 0 ? $dados['jornada'] : '', 1, 0, 'C', true);
-        }
-        $pdf->Cell(21, 7, $dados['falta'] != 0 ? $dados['falta'] : '', 1, 0, 'C', true);
-
-        $pdf->SetFillColor(255, 139, 0);  // laranja
-        $pdf->Cell(21, 7, $dados['jornadaEfetiva'] != 0 ? $dados['jornadaEfetiva'] : '', 1, 0, 'C', true);
-        $pdf->Cell(8, 7, $dados['mdc'] != 0 ? $dados['mdc'] : '', 1, 0, 'C', true);
-
-        $pdf->SetFillColor(236, 65, 65);
-        $pdf->Cell(12, 7, $dados['refeicao'] != 0 ? $dados['refeicao'] : '', 1, 0, 'C', true);
-        $pdf->Cell(23, 7, $dados['intersticioInferior'] != 0 ? $dados['intersticioInferior'] : '', 1, 0, 'C', true);
-        $pdf->Cell(23, 7, $dados['intersticioSuperior'] != 0 ? $dados['intersticioSuperior'] : '', 1, 0, 'C', true);
-
-        $pdf->Cell(11, 7, $total, 1, 0, 'C');
-
-        if ((100 - $totaisMediaFuncionario[$dados['matricula']]) >= 75 && (100 - $totaisMediaFuncionario[$dados['matricula']]) <= 100) {
-            $pdf->SetFillColor(144, 238, 144);  // verde
-        } else if ((100 - $totaisMediaFuncionario[$dados['matricula']]) <= 75 && (100 - $totaisMediaFuncionario[$dados['matricula']]) >= 50) {
-            $pdf->SetFillColor(255, 242, 96);  // amarelo
-        } else if ((100 - $totaisMediaFuncionario[$dados['matricula']]) <= 50 && (100 - $totaisMediaFuncionario[$dados['matricula']]) >= 25) {
-            $pdf->SetFillColor(255, 159, 44);  // laranja
-        } else {
-            $pdf->SetFillColor(196, 18, 18);  // vermelho
-        }
-
-        $porcent1 = isset($totaisMediaFuncionario[$dados['matricula']])
-            ? number_format(100 - $totaisMediaFuncionario[$dados['matricula']], 2, ',', '.')
-            : '0,00';
-        $pdf->Cell(24, 7, $porcent1 . '%', 1, 0, 'C', true);
-
-        if ((100 - $totaisFuncionario2[$dados['matricula']]) >= 75 && (100 - $totaisFuncionario2[$dados['matricula']]) <= 100) {
-            $pdf->SetFillColor(144, 238, 144);  // verde
-        } else if ((100 - $totaisFuncionario2[$dados['matricula']]) <= 75 && (100 - $totaisFuncionario2[$dados['matricula']]) >= 50) {
-            $pdf->SetFillColor(255, 242, 96);  // amarelo
-        } else if ((100 - $totaisFuncionario2[$dados['matricula']]) <= 50 && (100 - $totaisFuncionario2[$dados['matricula']]) >= 25) {
-            $pdf->SetFillColor(255, 159, 44);  // laranja
-        } else {
-            $pdf->SetFillColor(196, 18, 18);  // vermelho
-        }
-        $porcent2 = isset($totaisFuncionario2[$dados['matricula']])
-            ? number_format(100 - $totaisFuncionario2[$dados['matricula']], 2, ',', '.')
-            : '0,00';
-        $pdf->Cell(24, 7, $porcent2 . '%', 1, 1, 'C', true);
-    }
-    $totalBaixaPerformance = number_format(100 - array_sum($totaisFuncionario), 2, ',', '.');
-    $totalMediaPerformance = number_format(100 - $mediaPerfTotal, 2, ',', '.');
-    $pdf->Cell(13, 7, '', 1, 0, 'C');
-    $pdf->Cell(52, 7, '', 1, 0, 'C');
-    $pdf->Cell(13, 7, 'Total', 1, 0, 'C');
-    if ($_POST["busca_endossado"] !== "endossado") {
-        $pdf->Cell(12, 7, $totalempre["espera"], 1, 0, 'C');
-        $pdf->Cell(13, 7, $totalempre["descanso"], 1, 0, 'C');
-        $pdf->Cell(12, 7, $totalempre["repouso"], 1, 0, 'C');
-        $pdf->Cell(12, 7, $totalempre["jornada"], 1, 0, 'C');
-    }
-    $pdf->Cell(21, 7, $totalempre["falta"], 1, 0, 'C');
-    $pdf->Cell(21, 7, $totalempre["jornadaEfetiva"], 1, 0, 'C');
-    $pdf->Cell(8, 7, $totalempre["mdc"], 1, 0, 'C');
-    $pdf->Cell(12, 7, $totalempre["refeicao"], 1, 0, 'C');
-    $pdf->Cell(23, 7, $totalempre["intersticioInferior"], 1, 0, 'C');
-    $pdf->Cell(23, 7, $totalempre["intersticioSuperior"], 1, 0, 'C');
-    $pdf->Cell(11, 7, $totalGeral, 1, 0, 'C');
-
-    $pdf->Cell(24, 7, $totalMediaPerformance . '%', 1, 0, 'C');
-    $pdf->Cell(24, 7, $totalBaixaPerformance . '%', 1, 1, 'C');
-
-    // dd($dadosOrdenados);
-
+    // Escreve o HTML no PDF
+    $pdf->writeHTML($htmlTabela, true, false, true, false, '');
 
     // Gera o PDF
     $nomeArquivo = 'relatorio_nc_juridica.pdf';
