@@ -1076,10 +1076,53 @@
 					if (mainThead) {
 						htmlSimplificado += '<thead>';
 						mainThead.querySelectorAll('tr').forEach(tr => {
-							if (tr.classList.contains('totais')) return;
 							htmlSimplificado += '<tr>';
-							tr.querySelectorAll('th').forEach(th => {
-								htmlSimplificado += '<th style="border:0.5px solid #000;padding:2px;text-align:center;font-weight:bold;background-color:#4ea9ff">';
+							tr.querySelectorAll('th').forEach((th, colIndex) => {
+								<?php if($_POST['busca_endossado'] !== "endossado") { ?>
+									// Cores fixas por coluna (mesmas do corpo da tabela)
+									var coresColunas = {
+										3: '#ffe800',  
+										4: '#ffe800', 
+										5: '#ffe800',  
+										6: '#ffe800',  
+										7: '#ff8b00', 
+										8: '#ff8b00', 
+										9: '#ff8b00', 
+										10: '#a30000', 
+										11: '#a30000', 
+										12: '#a30000'  
+									};
+								<?php } else { ?>
+									// Cores fixas por coluna (mesmas do corpo da tabela)
+									var coresColunas = {
+										3: '#ffe800',  
+										4: '#ff8b00',  
+										5: '#ff8b00',   
+										6: '#ff8b00',  
+										7: '#a30000', 
+										8: '#a30000',   
+									};
+								<?php } ?>
+
+								var estiloTh = 'border:0.5px solid #000;padding:2px;text-align:center;font-weight:bold;';
+								
+								// Aplica a cor se existir para esta coluna
+								if (coresColunas[colIndex]) {
+									estiloTh += 'background-color:' + coresColunas[colIndex] + ';';
+								}
+
+								<?php if($_POST['busca_endossado'] !== "endossado") { ?>
+									if (colIndex === 10 || colIndex === 11 || colIndex === 12) {
+										estiloTh += 'color:white;';
+									} 
+								<?php } else { ?>
+									if (colIndex === 7 || colIndex === 8) {
+										estiloTh += 'color:white;';
+									}
+								<?php } ?>
+
+
+								htmlSimplificado += '<th style="' + estiloTh + '">';
 								htmlSimplificado += th.innerHTML;
 								htmlSimplificado += '</th>';
 							});
@@ -1092,34 +1135,90 @@
 					if (tbody) {
 						htmlSimplificado += '<tbody>';
 						tbody.querySelectorAll('tr').forEach(tr => {
+							// Verifica se a linha está totalmente zerada/vazia
+							var linhaZerada = true;
+							var celulas = tr.querySelectorAll('td');
+							
+							// Verifica cada célula (exceto as colunas 0, 1 e 2 - Matrícula, Funcionário, Ocupação)
+							for (var i = 3; i < celulas.length - 3; i++) {
+								var valor = celulas[i].textContent.trim();
+								if (valor !== "" && valor !== "0") {
+									linhaZerada = false;
+									break;
+								}
+							}
 							htmlSimplificado += '<tr>';
 							tr.querySelectorAll('td').forEach((td, colIndex) => {
 								var estiloBase = 'border:0.5px solid #000;padding:2px;font-size:6.8pt;';
-								if (colIndex === 1) {
+								
+								// Alinhamento do texto
+								if (colIndex === 1) { // Coluna "Funcionário"
 									estiloBase += 'text-align:left;white-space:nowrap;overflow:hidden;max-width:90px;';
 								} else {
 									estiloBase += 'text-align:center;';
 								}
 
-								if (colIndex === 3) {
-									if (td.classList.contains('endo')) {
-										estiloBase += 'background-color:' + coresStatus['endo'] + ';';
-									} else if (td.classList.contains('endo-parc')) {
-										estiloBase += 'background-color:' + coresStatus['endo-parc'] + ';';
-									} else if (td.classList.contains('nao-endo')) {
-										estiloBase += 'background-color:' + coresStatus['nao-endo'] + ';';
+								<?php if($_POST['busca_endossado'] !== "endossado") { ?>
+									// Cores fixas por coluna
+									var coresColunas = {
+										3: '#FFFACD',  
+										4: '#FFFACD',  
+										5: '#FFFACD',  
+										6: '#FFFACD',  
+										7: '#FFDAB9',  
+										8: '#FFDAB9',   
+										9: '#FFDAB9',  
+										10: '#FFCCCB', 
+										11: '#FFCCCB',  
+										12: '#FFCCCB'   
+									};
+								<?php } else { ?>
+									// Cores fixas por coluna (mesmas do corpo da tabela)
+									var coresColunas = {
+										3: '#FFFACD',  
+										4: '#FFDAB9',  
+										5: '#FFDAB9',   
+										6: '#FFDAB9',  
+										7: '#FFCCCB', 
+										8: '#FFCCCB',  
+									};
+								<?php } ?>
+
+								// Lógica para as 2 últimas colunas
+								if (colIndex >= celulas.length - 2) { // Penúltima e última coluna
+									var valor = td.textContent.trim();
+									var porcentagem = parseFloat(valor) || 0;
+									
+									if (colIndex === celulas.length - 2) { // Penúltima coluna
+										if (porcentagem >= 75) {
+											estiloBase += 'background-color:lightgreen;';
+										} else if (porcentagem >= 50) {
+											estiloBase += 'background-color:#FFFACD;'; // Amarelo
+										} else if (porcentagem >= 25) {
+											estiloBase += 'background-color:#FFDAB9;'; // Laranja
+										} else {
+											estiloBase += 'background-color:#FFCCCB;'; // Vermelho
+										}
+									} 
+									else { // Última coluna
+										if (porcentagem >= 75) {
+											estiloBase += 'background-color:lightgreen;';
+										} else if (porcentagem >= 50) {
+											estiloBase += 'background-color:#FFFACD;'; // Amarelo
+										} else if (porcentagem >= 25) {
+											estiloBase += 'background-color:#FFDAB9;'; // Laranja
+										} else {
+											estiloBase += 'background-color:#FFCCCB;'; // Vermelho
+										}
 									}
 								}
 
-								if (colIndex === 10 || colIndex === 12) {
-									if (td.id === 'saldo-zero') {
-										estiloBase += 'color:blue;';
-									} else if (td.id === 'saldo-final') {
-										estiloBase += 'color:green;';
-									} else if (td.id === 'saldo-negativo') {
-										estiloBase += 'color:red;';
-									}
-								}
+								 // Se a linha estiver zerada, aplica cor verde
+								 if (linhaZerada && colIndex > 2) { // Não aplica nas colunas 0, 1 e 2
+									estiloBase += 'background-color:#90EE90;'; // Verde claro
+								 } else if (coresColunas[colIndex]) {
+									estiloBase += 'background-color:' + coresColunas[colIndex] + ';';
+								 }
 
 								htmlSimplificado += '<td style="' + estiloBase + '">';
 								htmlSimplificado += td.innerHTML;
@@ -1145,7 +1244,7 @@
 							tr.querySelectorAll('td').forEach(td => {
 								var estilo = 'border:0.5px solid #000;padding:2px;font-size:7pt;text-align:center;';
 								if (td.classList.contains('total')) {
-									estilo += 'font-weight:bold;background-color:#f2f2f2;';
+									estilo += 'font-weight:bold;';
 								}
 								htmlSimplificado += '<td style="' + estilo + '">' + td.innerHTML + '</td>';
 							});
