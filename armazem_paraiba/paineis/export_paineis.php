@@ -245,6 +245,7 @@ function gerarPainelEndosso() {
     [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
 
     $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf->setEmpresaData($empresa);
     $pdf->tituloPersonalizado = 'Relatório de Endossos';
     $pdf->SetCreator('TechPS');
     $pdf->SetAuthor('TechPS');
@@ -598,6 +599,7 @@ function gerarPainelSaldo() {
     [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
 
     $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf->setEmpresaData($empresa);
     $pdf->tituloPersonalizado = 'Relatório Geral de Saldo';
     $pdf->SetCreator('TechPS');
     $pdf->SetAuthor('TechPS');
@@ -1074,6 +1076,7 @@ function gerarPainelNc() {
     }
 
     $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf->setEmpresaData($empresa);
     $pdf->tituloPersonalizado = 'Relatório de Não Conformidade Jurídica';
     $pdf->SetCreator('TechPS');
     $pdf->SetAuthor('TechPS');
@@ -1464,6 +1467,7 @@ function gerarPainelAjustes() {
     }
 
     $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf->setEmpresaData($empresa);
     $pdf->tituloPersonalizado = 'Relatório de Ajustes';
     $pdf->SetCreator('TechPS');
     $pdf->SetAuthor('TechPS');
@@ -1529,12 +1533,8 @@ function gerarPainelAjustes() {
     $posYGraficos = 5 + $alturaTabelas; // 15mm de espaçamento
 
     // // Gráfico (Esquerda)
-    // dd('./arquivos/graficos/grafico_chart-unificado_' . $periodoInicio->format("Y-m")  . '_' . $userEntrada . '.png');
     $pdf->Image('./arquivos/graficos/grafico_chart-unificado_' . $periodoInicio->format("Y-m")  . '_' . $userEntrada . '.png', 95, $posYGraficos, 150);
 
-    // Gráfico Sintético (Esquerda)
-    // $pdf->SetY($posYGraficos - 10); // Ajuste para o título
-    // $pdf->Rect(100, $posYGraficos, 170, 49, 'DF');
 
     // === Espaço antes da próxima tabela ===
     $pdf->Ln(50);
@@ -1786,7 +1786,6 @@ function gerarPainelAjustes() {
     $pdf->Output($nomeArquivo, 'I');
 }
 
-CustomPDF::setEmpresaData($empresa);
 
 if (!empty($_POST['relatorio']) && $_POST['relatorio'] == 'endosso') {
     gerarPainelEndosso();
@@ -1797,3 +1796,6 @@ if (!empty($_POST['relatorio']) && $_POST['relatorio'] == 'endosso') {
 } else if (!empty($_POST['relatorio']) && $_POST['relatorio'] == 'ajustes') {
     gerarPainelAjustes();
 }
+
+// dd($empresa);
+// CustomPDF::setEmpresaData($empresa);

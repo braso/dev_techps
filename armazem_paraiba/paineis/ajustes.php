@@ -138,19 +138,19 @@ function carregarGraficos($periodoInicio) {
 		const mesesFormatados = $mesesFormatadosJS;
 		const totaisPorMes = $totaisPorMesJS;
 
-		Highcharts.chart('chart-unificado', {
+		const chart_unificado = Highcharts.chart('chart-unificado', {
 			chart: {
 				type: 'line',
 				style: {
 					fontFamily: 'Arial',
 					fontSize: '12px'
 				},
-				events: {
-					load: function () {
-						const chart = this; // <-- o gráfico instanciado
-						setTimeout(() => enviarGraficoServidor(chart), 2000); // <-- passa o gráfico como parâmetro
-					}
-				}
+				// events: {
+				// 	load: function () {
+				// 		const chart = this; // <-- o gráfico instanciado
+				// 		setTimeout(() => enviarGraficoServidor(chart), 2000); // <-- passa o gráfico como parâmetro
+				// 	}
+				// }
 			},
 			title: { text: 'Ajustes Inserido e Excluído - Ano Corrente' },
 			xAxis: {
@@ -195,6 +195,41 @@ function carregarGraficos($periodoInicio) {
 			legend: { enabled: true }
 		});
 	</script>
+
+	<div id=\"loader-overlay\" style=\"
+		display: none;
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.7);
+		z-index: 9999;
+		justify-content: center;
+		align-items: center;
+		color: white;
+		font-family: Arial;
+	\">
+		<div style=\"text-align: center;\">
+			<div class=\"spinner\" style=\"
+				border: 5px solid rgba(255, 255, 255, 0.3);
+				border-radius: 50%;
+				border-top: 5px solid #4ea9ff;
+				width: 50px;
+				height: 50px;
+				animation: spin 1s linear infinite;
+				margin: 0 auto 15px;
+			\"></div>
+			<p>Gerando gráfico e exportando dados...</p>
+		</div>
+	</div>
+
+	<style>
+		@keyframes spin {
+			0% { transform: rotate(0deg); }
+			100% { transform: rotate(360deg); }
+		}
+	</style>
 	"
 	;
 }
@@ -802,10 +837,49 @@ function index() {
 	if (!empty($_POST["empresa"])) {
 		$botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
 	}
-	// $botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
-	$botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados2()'>Imprimir</button>
-        <script>
-        function enviarDados2() {
+
+	$botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados3()'>Imprimir</button>
+	<script>
+			async function enviarDados3() {
+				const loader = document.getElementById('loader-overlay');
+				
+				try {
+					// Mostra o loader
+					loader.style.display = 'flex';
+
+					// 1. Processa todos os gráficos
+					await processarGraficos();
+
+					// 2. Prepara e envia o formulário
+					await enviarFormulario();
+
+				} catch (error) {
+					console.error(\"Erro durante a exportação:\", error);
+					loader.innerHTML = `
+						<div style=\"text-align: center; color: #ff6b6b;\">
+							<p>❌ Falha ao exportar. Recarregue a página e tente novamente.</p>
+							<button onclick=location.reload() style=margin-top: 10px; padding: 5px 10px;>Recarregar</button>
+						</div>
+					`;
+				} finally {
+					setTimeout(() => loader.style.display = 'none', 2000);
+				}
+			}
+
+						async function processarGraficos() {
+				try {
+					// Processa gráficos normais em paralelo
+					await Promise.all([
+						enviarGraficoServidor(chart_unificado)
+					]);
+					
+				} catch (error) {
+					console.error(\"Erro ao processar gráficos:\", error);
+					throw error; // Re-lança o erro para ser capturado no escopo superior
+				}
+			}
+			
+			async function enviarFormulario() {
 				var data = '" . json_encode($_POST["busca_periodo"]) . "'
 				var form = document.createElement('form');
 				form.method = 'POST';
@@ -845,7 +919,8 @@ function index() {
 				form.submit();
 				document.body.removeChild(form);
 			}
-        </script>";
+
+	</script>";
 
 	$buttons = [
 		botao("Buscar", "enviarForm()", "", "", "", "", "btn btn-info"),
