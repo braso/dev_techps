@@ -227,6 +227,56 @@
 		<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . " (UTC-3)" ?>
 	</div>
 </div>
+</div>
+</div>
+
+<div id="loader-overlay" style="
+		display: none;
+		display: flex;
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.7);
+		z-index: 9999;
+		justify-content: center;
+		align-items: center;
+		color: white;
+		font-family: Arial, sans-serif;
+	">
+	<div style="text-align: center;">
+		<div class="printer-loader" style="
+			width: 80px;
+			height: 80px;
+			background: #fff;
+			border-radius: 5px;
+			position: relative;
+			margin: 0 auto 15px;
+			box-shadow: 0 0 10px rgba(0,0,0,0.5);
+		">
+			<div class="paper" style="
+				width: 60px;
+				height: 80px;
+				background: #f1f1f1;
+				position: absolute;
+				top: -80px;
+				left: 10px;
+				animation: print 2s infinite;
+				border-radius: 2px;
+			"></div>
+		</div>
+		<p><strong>Aguarde:</strong> gerando o documento...</p>
+	</div>
+</div>
+
+<style>
+@keyframes print {
+	0% { top: -80px; opacity: 0; }
+	30% { opacity: 1; }
+	100% { top: 0; opacity: 1; }
+}
+</style>
 
 <script>
 	function sanitizeJson(jsonString) {
@@ -242,40 +292,6 @@
 	}
 </script>
 <?php if ($mostra === true) { ?>
-	<div id="loader-overlay" style="
-		display: none;
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background: rgba(0, 0, 0, 0.7);
-		z-index: 9999;
-		justify-content: center;
-		align-items: center;
-		color: white;
-		font-family: Arial;
-	">
-		<div style="text-align: center;">
-			<div class="spinner" style="
-				border: 5px solid rgba(255, 255, 255, 0.3);
-				border-radius: 50%;
-				border-top: 5px solid #4ea9ff;
-				width: 50px;
-				height: 50px;
-				animation: spin 1s linear infinite;
-				margin: 0 auto 15px;
-			"></div>
-			<p>Gerando gráfico e exportando dados...</p>
-		</div>
-	</div>
-
-	<style>
-		@keyframes spin {
-			0% { transform: rotate(0deg); }
-			100% { transform: rotate(360deg); }
-		}
-	</style>
 	<script>
 
 		// Função modificada para enviar o gráfico incluindo o ID
@@ -974,6 +990,7 @@
 			try {
 				// Mostra o loader
 				loader.style.display = 'flex';
+				await new Promise(requestAnimationFrame);
 
 				// 1. Processa todos os gráficos
 				await processarGraficos();
