@@ -634,7 +634,7 @@
 				"busca_login_like" 	=> "user_tx_login",
 				"busca_nivel" 		=> "user_tx_nivel",
 				"busca_status" 		=> "user_tx_status",
-				"busca_empresa" 	=> "empr_tx_nome"
+				"busca_empresa" 	=> "empr_nb_id"
 			];
 
 			$queryBase = 
