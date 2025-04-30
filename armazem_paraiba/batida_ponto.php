@@ -158,7 +158,7 @@
 		
 		if(empty($_SESSION["user_nb_entidade"])){
 			echo 
-				"<form name='goToIndexForm' action='{$_ENV["APP_PATH"]}/index.php'></form>"
+				"<form name='goToIndexForm' action='{$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}/logout.php'></form>"
 				."<script>"
 					."alert('Funcionário não localizado. Tente fazer o login novamente.');"
 					."document.goToIndexForm.submit();"
