@@ -161,6 +161,7 @@
 
 			$id = inserir("user", array_keys($usuario), array_values($usuario));
 			$_POST["id"] = $id;
+			set_status("Cadastro inserido com sucesso!");
 			modificarUsuario();
 			exit;
 		}
@@ -186,6 +187,7 @@
 			if($arq){
 				//Atualizando foto
 				atualizar("user", array("user_tx_foto"), array($arq), $idUserFoto["user_nb_id"]);
+				set_status("Cadastro atualizado com sucesso!");
 			}
 
 			$usuario["user_tx_foto"] = $arq;
@@ -246,6 +248,7 @@
 		}
 		
 		atualizar("user", array_keys($usuario), array_values($usuario), $_POST["id"]);
+		set_status("Cadastro atualizado com sucesso!");
 	}
 
 	function excluirFoto(){
@@ -363,13 +366,13 @@
 
 		}else{
 
-			$campo_nome = texto("Nome*", ($_POST["nome"]?? ""), 4, "for='nome'");
-			$campo_nivel = texto("Nível*", ($_POST["nivel"]?? ""), 2);
+			$campo_nome = texto("Nome*", ($_POST["nome"]?? "-"), 4, "for='nome'");
+			$campo_nivel = texto("Nível*", ($_POST["nivel"]?? "-"), 2);
 			$campo_status = "";
 			$data_nascimento = ($_POST["nascimento"] != "0000-00-00") ? date("d/m/Y", strtotime($_POST["nascimento"])) : "00/00/0000";
 			$campo_nascimento = texto("Nascido em*", $data_nascimento, 2, "");
-			$campo_cpf = texto("CPF", ($_POST["cpf"]?? ""), 2, "style=''");
-			$campo_rg = texto("RG", ($_POST["rg"]?? ""), 2, "style=''");
+			$campo_cpf = texto("CPF", ($_POST["cpf"]?? "-"), 2, "style=''");
+			$campo_rg = texto("RG", ($_POST["rg"]?? "-"), 2, "style=''");
 			
 			if(!empty($_POST["cidade"])){
 				$cidade_query = query("SELECT * FROM cidade WHERE cida_tx_status = 'ativo' AND cida_nb_id = ".$_POST["cidade"]."");
@@ -377,25 +380,29 @@
 			}else{
 				$cidade = ["cida_tx_nome" => ""];
 			}
-			$campo_cidade = texto("Cidade/UF", (!empty($cidade["cida_tx_nome"])? "[".$cidade["cida_tx_uf"]."] ".$cidade["cida_tx_nome"]: ""), 2, "style=''");
+			$campo_cidade = texto("Cidade/UF", (!empty($cidade["cida_tx_nome"])? "[".$cidade["cida_tx_uf"]."] ".$cidade["cida_tx_nome"]: "-"), 2, "style=''");
 			
-			$campo_email = texto("E-mail*", ($_POST["email"]?? ""), 2, "style=''");
-			$campo_telefone = texto("Telefone", ($_POST["fone"]?? ""), 2, "style=''");
+			$campo_email = texto("E-mail*", ($_POST["email"]?? "-"), 2, "style=''");
+			$campo_telefone = texto("Telefone", ($_POST["fone"]?? "-"), 2, "style=''");
 			
 			if(!empty($_POST["empresa"])){
 				$empresa_query = query("SELECT * FROM empresa WHERE empr_tx_status = 'ativo' AND empr_nb_id = ".$_POST["empresa"]."");
 				$empresa = mysqli_fetch_array($empresa_query);
 			}
 
-			$campo_empresa = texto("Empresa*", (!empty($empresa["empr_tx_nome"])? $empresa["empr_tx_nome"]: ""), 3, "style=''");
+			$campo_empresa = texto("Empresa*", (!empty($empresa["empr_tx_nome"])? $empresa["empr_tx_nome"]: "-"), 3, "style=''");
 			$data_expiracao  = ($_POST["expiracao"] != "0000-00-00") ? date("d/m/Y", strtotime($_POST["expiracao"])) : "00/00/0000";
 			$campo_expiracao = texto("Expira em", $data_expiracao, 2, "style=''");
-			$campo_login = texto("Login", ($_POST["login"]?? ($_POST["login"]?? "")), 2);
+			$campo_login = texto("Login", ($_POST["login"]?? ($_POST["login"]?? "-")), 2);
 			$campo_senha = "";
 			$campo_confirma = "";
+			if($loggedUserIsAdmin){
+				$campo_senha = campo_senha("Senha*", "senha", "", 2,"maxlength='12'");
+				$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='12'");
+			}
 			if($editingDriver){
 				$entidade = carregar("entidade", $_POST["entidade"]);
-				$campo_matricula = texto("Matricula", ($entidade["enti_tx_matricula"]?? ""), 2, "");
+				$campo_matricula = texto("Matricula", ($entidade["enti_tx_matricula"]?? "-"), 2, "");
 			}else{
 				$campo_matricula = "";
 			}
@@ -524,8 +531,8 @@
 
 		$extra = 
 			(!empty($_POST["busca_codigo"])? 								" AND user_nb_id = ".$_POST['busca_codigo']: "").
-			(!empty($_POST["busca_nome_like"])? 									" AND user_tx_nome LIKE '%".$_POST["busca_nome_like"]."%'": "").
-			(!empty($_POST["busca_login_like"])? 								" AND user_tx_login LIKE '%".$_POST["busca_login_like"]."%'": "").
+			(!empty($_POST["busca_nome_like"])? 							" AND user_tx_nome LIKE '%".$_POST["busca_nome_like"]."%'": "").
+			(!empty($_POST["busca_login_like"])? 							" AND user_tx_login LIKE '%".$_POST["busca_login_like"]."%'": "").
 			(!empty($_POST["busca_nivel"])? 								" AND user_tx_nivel = '".$_POST["busca_nivel"]."'": "").
 			(!empty($_POST["busca_cpf"])? 									" AND user_tx_cpf = '".$_POST["busca_cpf"]."'": "").
 			(!empty($_POST["busca_empresa"])? 								" AND user_nb_empresa = ".$_POST["busca_empresa"]: "").
