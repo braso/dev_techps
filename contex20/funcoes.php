@@ -163,7 +163,7 @@
 				$endosso["totalResumo"]["saldoFinal"] = operarHorarios([$endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]], "-");
 			break;
 			default:
-				echo implode(", ", array_keys($endosso["totalResumo"]));
+				// echo implode(", ", array_keys($endosso["totalResumo"]));
 			break;
 		}
 		
