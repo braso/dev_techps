@@ -232,7 +232,6 @@
 
 <div id="loader-overlay" style="
 		display: none;
-		display: flex;
 		position: fixed;
 		top: 0;
 		left: 0;
