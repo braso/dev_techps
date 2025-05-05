@@ -952,7 +952,9 @@
 					."<th class='tituloAltaGravidade'>Refeição</th>"
 					."<th class='tituloAltaGravidade'>Interstício Inferior</th>"
 					."<th class='tituloAltaGravidade'>Interstício Superior</th>"
-					."<th class='tituloTotal'>TOTAL</th>";
+					."<th class='tituloTotal'>TOTAL</th>"
+					."<th class='tituloTotal'>Performance Média</th>"
+					."<th class='tituloTotal'>Performance Baixa</th>";
 
 
 					$endossado = true;
