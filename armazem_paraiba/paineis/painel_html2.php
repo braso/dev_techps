@@ -186,9 +186,9 @@
 						<tbody>
 							<!-- Conteúdo do json empresas será inserido aqui -->
 						</tbody>
-						<thead>
+						<tfoot>
 							<?= $rowTotal ?>
-						</thead>
+						</tfoot>
 					</table>
 				</div>
 			<?php } ?>
@@ -227,6 +227,56 @@
 		<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . " (UTC-3)" ?>
 	</div>
 </div>
+</div>
+</div>
+
+<div id="loader-overlay" style="
+		display: none;
+		display: flex;
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.7);
+		z-index: 9999;
+		justify-content: center;
+		align-items: center;
+		color: white;
+		font-family: Arial, sans-serif;
+	">
+	<div style="text-align: center;">
+		<div class="printer-loader" style="
+			width: 80px;
+			height: 80px;
+			background: #fff;
+			border-radius: 5px;
+			position: relative;
+			margin: 0 auto 15px;
+			box-shadow: 0 0 10px rgba(0,0,0,0.5);
+		">
+			<div class="paper" style="
+				width: 60px;
+				height: 80px;
+				background: #f1f1f1;
+				position: absolute;
+				top: -80px;
+				left: 10px;
+				animation: print 2s infinite;
+				border-radius: 2px;
+			"></div>
+		</div>
+		<p><strong>Aguarde:</strong> gerando o documento...</p>
+	</div>
+</div>
+
+<style>
+@keyframes print {
+	0% { top: -80px; opacity: 0; }
+	30% { opacity: 1; }
+	100% { top: 0; opacity: 1; }
+}
+</style>
 
 <script>
 	function sanitizeJson(jsonString) {
@@ -243,6 +293,7 @@
 </script>
 <?php if ($mostra === true) { ?>
 	<script>
+
 		// Função modificada para enviar o gráfico incluindo o ID
 		async function enviarGraficoServidor(chart) {
 			const elementId = chart.renderTo.id;
@@ -302,6 +353,7 @@
 					console.log('✅ Gráfico salvo com sucesso:', data.fileName);
 				} else {
 					console.error('❌ Erro ao salvar gráfico:', data.message);
+					throw new Error(data.message);
 				}
 
 			} catch (error) {
@@ -309,7 +361,7 @@
 			}
 		}
 
-		document.addEventListener('DOMContentLoaded', function() {
+		// document.addEventListener('DOMContentLoaded', function() {
 			// Gráfico sintético
 			const categorias = ['Alta', 'Media', 'Baixa'];
 			const valores = <?= json_encode($graficoSintetico) ?>;
@@ -321,16 +373,16 @@
 				color: cores[index]
 			}));
 
-			Highcharts.chart('graficoSintetico', {
+			const graficoSintetico = Highcharts.chart('graficoSintetico', {
 				chart: {
 					type: 'pie',
 					height: '80%',
-					events: {
-						load: function () {
-							const chart = this; // <-- o gráfico instanciado
-							setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
-						}
-					}
+					// events: {
+					// 	load: function () {
+					// 		const chart = this; // <-- o gráfico instanciado
+					// 		setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
+					// 	}
+					// }
 				},
 				title: {
 					text: 'Gráfico Sintético de Não Conformidades'
@@ -371,16 +423,16 @@
 				color: coresAnalitico[index]
 			}));
 
-			Highcharts.chart('graficoAnalitico', {
+			const graficoAnalitico = Highcharts.chart('graficoAnalitico', {
 				chart: {
 					type: 'pie',
 					height: '65%',
-					events: {
-						load: function () {
-							const chart = this; // <-- o gráfico instanciado
-							setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
-						}
-					}
+					// events: {
+					// 	load: function () {
+					// 		const chart = this; // <-- o gráfico instanciado
+					// 		setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
+					// 	}
+					// }
 				},
 				title: {
 					text: 'Gráfico Analítico de Não Conformidades'
@@ -428,41 +480,41 @@
 				color: coresDetalhado[index]
 			}));
 
-			Highcharts.chart('graficoDetalhado', {
+			const graficoDetalhado = Highcharts.chart('graficoDetalhado', {
 				chart: {
 					type: 'bar',
 					backgroundColor: '#f9f9f9',
-					events: {
-						load: function () {
-							const chart = this;
+					// events: {
+					// 	load: function () {
+					// 		const chart = this;
 
-							const panel = $('#collapse3');
-							if (!panel.hasClass('in')) {
-								console.log('🔓 Abrindo accordion...');
-								panel.collapse('show');
-							}
+					// 		const panel = $('#collapse3');
+					// 		if (!panel.hasClass('in')) {
+					// 			console.log('🔓 Abrindo accordion...');
+					// 			panel.collapse('show');
+					// 		}
 
-							setTimeout(() => {
-								chart.reflow();
+					// 		setTimeout(() => {
+					// 			chart.reflow();
 
-								const elementId = chart.renderTo.id;
-								const el = document.getElementById(elementId);
+					// 			const elementId = chart.renderTo.id;
+					// 			const el = document.getElementById(elementId);
 
-								if (el && el.offsetWidth > 0 && el.offsetHeight > 0) {
-									console.log('🎯 Elemento visível, enviando...');
+					// 			if (el && el.offsetWidth > 0 && el.offsetHeight > 0) {
+					// 				console.log('🎯 Elemento visível, enviando...');
 
-									enviarGraficoServidor(chart).then(() => {
-										console.log('✅ Imagem capturada. Fechando accordion...');
-										panel.collapse('hide');
-									}).catch((error) => {
-										console.error('❌ Erro ao capturar imagem:', error);
-									});
-								} else {
-									console.warn('⛔ Elemento ainda invisível, tente aumentar o delay');
-								}
-							}, 3000);
-						}
-					}
+					// 				enviarGraficoServidor(chart).then(() => {
+					// 					console.log('✅ Imagem capturada. Fechando accordion...');
+					// 					panel.collapse('hide');
+					// 				}).catch((error) => {
+					// 					console.error('❌ Erro ao capturar imagem:', error);
+					// 				});
+					// 			} else {
+					// 				console.warn('⛔ Elemento ainda invisível, tente aumentar o delay');
+					// 			}
+					// 		}, 3000);
+					// 	}
+					// }
 				},
 				title: {
 					text: 'Gráfico Detalhado de Não Conformidades',
@@ -568,10 +620,10 @@
 			linhaMotorista2 += '<td>' + totalPorcentagem.toFixed(2) + '%</td>';
 			tabelaMotorista.append(linhaMotorista);
 			tabelaMotoristaTotal.append(linhaMotorista2);
-		});
+		// });
 
 		var contadorLoad = 0;
-		Highcharts.chart('graficoPerformance', {
+		const chartPerformance = Highcharts.chart('graficoPerformance', {
 			chart: {
 				type: 'gauge',
 				plotBackgroundColor: null,
@@ -579,12 +631,12 @@
 				plotBorderWidth: 0,
 				plotShadow: false,
 				height: '80%',
-				events: {
-						load: function () {
-							const chart = this; // <-- o gráfico instanciado
-							setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
-						}
-					}
+				// events: {
+				// 		load: function () {
+				// 			const chart = this; // <-- o gráfico instanciado
+				// 			setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
+				// 		}
+				// 	}
 			},
 			title: {
 				useHTML: true, // Permite adicionar HTML ao título
@@ -700,7 +752,7 @@
 			}
 		});
 
-		Highcharts.chart('graficoPerformanceMedia', {
+		const graficoPerformanceMedia = Highcharts.chart('graficoPerformanceMedia', {
 			chart: {
 				type: 'gauge',
 				plotBackgroundColor: null,
@@ -708,12 +760,12 @@
 				plotBorderWidth: 0,
 				plotShadow: false,
 				height: '80%',
-				events: {
-						load: function () {
-							const chart = this; // <-- o gráfico instanciado
-							setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
-						}
-					}
+				// events: {
+				// 		load: function () {
+				// 			const chart = this; // <-- o gráfico instanciado
+				// 			setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
+				// 		}
+				// 	}
 			},
 			title: {
 				useHTML: true, // Permite adicionar HTML ao título
@@ -816,7 +868,7 @@
 			}]
 		});
 
-		Highcharts.chart('graficoPerformanceBaixa', {
+		const graficoPerformanceBaixa = Highcharts.chart('graficoPerformanceBaixa', {
 			chart: {
 				type: 'gauge',
 				plotBackgroundColor: null,
@@ -824,12 +876,12 @@
 				plotBorderWidth: 0,
 				plotShadow: false,
 				height: '80%',
-				events: {
-						load: function () {
-							const chart = this; // <-- o gráfico instanciado
-							setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
-						}
-					}
+				// events: {
+				// 		load: function () {
+				// 			const chart = this; // <-- o gráfico instanciado
+				// 			setTimeout(() => enviarGraficoServidor(chart), 3000); // <-- passa o gráfico como parâmetro
+				// 		}
+				// 	}
 			},
 			title: {
 				useHTML: true, // Permite adicionar HTML ao título
@@ -931,6 +983,323 @@
 				}
 			}]
 		});
+
+		async function enviarDados() {
+			const loader = document.getElementById('loader-overlay');
+			
+			try {
+				// Mostra o loader
+				loader.style.display = 'flex';
+				await new Promise(requestAnimationFrame);
+
+				// 1. Processa todos os gráficos
+				await processarGraficos();
+
+				// 2. Prepara e envia o formulário
+				await enviarFormulario();
+
+			} catch (error) {
+				console.error("Erro durante a exportação:", error);
+				loader.innerHTML = `
+					<div style="text-align: center; color: #ff6b6b;">
+						<p>❌ Falha ao exportar. Recarregue a página e tente novamente.</p>
+						<button onclick="location.reload()" style="margin-top: 10px; padding: 5px 10px;">Recarregar</button>
+					</div>
+				`;
+			} finally {
+				setTimeout(() => loader.style.display = 'none', 2000);
+			}
+		}
+
+		async function processarGraficos() {
+			try {
+				// Processa gráficos normais em paralelo
+				await Promise.all([
+					enviarGraficoServidor(chartPerformance),
+					enviarGraficoServidor(graficoPerformanceMedia),
+					enviarGraficoServidor(graficoPerformanceBaixa),
+					enviarGraficoServidor(graficoSintetico),
+					enviarGraficoServidor(graficoAnalitico)
+				]);
+
+				// Processa gráfico detalhado com tratamento especial
+				await processarGraficoDetalhado();
+				
+			} catch (error) {
+				console.error("Erro ao processar gráficos:", error);
+				throw error; // Re-lança o erro para ser capturado no escopo superior
+			}
+		}
+
+		async function processarGraficoDetalhado() {
+			const panel = $('#collapse3');
+			const wasClosed = !panel.hasClass('show');
+			
+			try {
+				if (wasClosed) {
+					console.log('🔓 Abrindo accordion para gráfico detalhado...');
+					panel.collapse('show');
+					await new Promise(resolve => setTimeout(resolve, 800)); // Tempo maior para garantir abertura
+				}
+
+				graficoDetalhado.reflow();
+				await new Promise(resolve => setTimeout(resolve, 500)); // Tempo para renderização
+
+				console.log('📸 Capturando gráfico detalhado...');
+				await enviarGraficoServidor(graficoDetalhado);
+				
+			} finally {
+				if (wasClosed) {
+					panel.collapse('hide');
+				}
+			}
+		}
+
+		async function enviarFormulario() {
+			return new Promise(async (resolve) => {
+				// Criação do formulário
+				var data = "<?= $_POST['busca_dataMes'] ?>";
+				var form = document.createElement('form');
+				form.method = 'POST';
+				form.action = 'export_paineis.php';
+				form.target = '_blank';
+
+				// Adiciona campos básicos
+				['empresa', 'busca_data', 'relatorio'].forEach(function(name) {
+					var input = document.createElement('input');
+					input.type = 'hidden';
+					input.name = name;
+					input.value = name === 'empresa' 
+						? "<?= !empty($_POST['empresa']) ? $_POST['empresa'] : 'null' ?>" 
+						: (name === 'busca_data' ? data : 'nc_juridica');
+					form.appendChild(input);
+				});
+
+				// Processamento da tabela (se necessário)
+				var tabelaOriginal = document.querySelector('#tabela-empresas');
+				if (tabelaOriginal) {
+					var tabelaClone = tabelaOriginal.cloneNode(true);
+					tabelaClone.querySelectorAll('i.fa, script, style, link').forEach(el => el.remove());
+
+					var coresStatus = {
+						'endo': '#4ea9ff',
+						'endo-parc': '#ffe80063',
+						'nao-endo': '#ec4141'
+					};
+
+					var htmlSimplificado = '<table style="width:100%;border-collapse:collapse;font-family:helvetica;font-size:7pt">';
+					// Processa o thead principal (primeiro thead)
+					var mainThead = tabelaClone.querySelector('thead:first-of-type');
+					if (mainThead) {
+						htmlSimplificado += '<thead>';
+						mainThead.querySelectorAll('tr').forEach(tr => {
+							htmlSimplificado += '<tr>';
+							tr.querySelectorAll('th').forEach((th, colIndex) => {
+								<?php if($_POST['busca_endossado'] !== "endossado") { ?>
+									// Cores fixas por coluna (mesmas do corpo da tabela)
+									var coresColunas = {
+										3: '#ffe800',  
+										4: '#ffe800', 
+										5: '#ffe800',  
+										6: '#ffe800',  
+										7: '#ff8b00', 
+										8: '#ff8b00', 
+										9: '#ff8b00', 
+										10: '#a30000', 
+										11: '#a30000', 
+										12: '#a30000'  
+									};
+								<?php } else { ?>
+									// Cores fixas por coluna (mesmas do corpo da tabela)
+									var coresColunas = {
+										3: '#ffe800',  
+										4: '#ff8b00',  
+										5: '#ff8b00',   
+										6: '#ff8b00',  
+										7: '#a30000', 
+										8: '#a30000',   
+									};
+								<?php } ?>
+
+								var estiloTh = 'border:0.5px solid #000;padding:2px;text-align:center;font-weight:bold;';
+								
+								// Aplica a cor se existir para esta coluna
+								if (coresColunas[colIndex]) {
+									estiloTh += 'background-color:' + coresColunas[colIndex] + ';';
+								}
+
+								<?php if($_POST['busca_endossado'] !== "endossado") { ?>
+									if (colIndex === 10 || colIndex === 11 || colIndex === 12) {
+										estiloTh += 'color:white;';
+									} 
+								<?php } else { ?>
+									if (colIndex === 7 || colIndex === 8) {
+										estiloTh += 'color:white;';
+									}
+								<?php } ?>
+
+
+								htmlSimplificado += '<th style="' + estiloTh + '">';
+								htmlSimplificado += th.innerHTML;
+								htmlSimplificado += '</th>';
+							});
+							htmlSimplificado += '</tr>';
+						});
+						htmlSimplificado += '</thead>';
+					}
+
+					var tbody = tabelaClone.querySelector('tbody');
+					if (tbody) {
+						htmlSimplificado += '<tbody>';
+						tbody.querySelectorAll('tr').forEach(tr => {
+							// Verifica se a linha está totalmente zerada/vazia
+							var linhaZerada = true;
+							var celulas = tr.querySelectorAll('td');
+							
+							// Verifica cada célula (exceto as colunas 0, 1 e 2 - Matrícula, Funcionário, Ocupação)
+							for (var i = 3; i < celulas.length - 3; i++) {
+								var valor = celulas[i].textContent.trim();
+								if (valor !== "" && valor !== "0") {
+									linhaZerada = false;
+									break;
+								}
+							}
+							htmlSimplificado += '<tr>';
+							tr.querySelectorAll('td').forEach((td, colIndex) => {
+								var estiloBase = 'border:0.5px solid #000;padding:2px;font-size:6.8pt;';
+								
+								// Alinhamento do texto
+								if (colIndex === 1) { // Coluna "Funcionário"
+									estiloBase += 'text-align:left;white-space:nowrap;overflow:hidden;max-width:90px;';
+								} else {
+									estiloBase += 'text-align:center;';
+								}
+
+								<?php if($_POST['busca_endossado'] !== "endossado") { ?>
+									// Cores fixas por coluna
+									var coresColunas = {
+										3: '#FFFACD',  
+										4: '#FFFACD',  
+										5: '#FFFACD',  
+										6: '#FFFACD',  
+										7: '#FFDAB9',  
+										8: '#FFDAB9',   
+										9: '#FFDAB9',  
+										10: '#FFCCCB', 
+										11: '#FFCCCB',  
+										12: '#FFCCCB'   
+									};
+								<?php } else { ?>
+									// Cores fixas por coluna (mesmas do corpo da tabela)
+									var coresColunas = {
+										3: '#FFFACD',  
+										4: '#FFDAB9',  
+										5: '#FFDAB9',   
+										6: '#FFDAB9',  
+										7: '#FFCCCB', 
+										8: '#FFCCCB',  
+									};
+								<?php } ?>
+
+								// Lógica para as 2 últimas colunas
+								if (colIndex >= celulas.length - 2) { // Penúltima e última coluna
+									var valor = td.textContent.trim();
+									var porcentagem = parseFloat(valor) || 0;
+									
+									if (colIndex === celulas.length - 2) { // Penúltima coluna
+										if (porcentagem >= 75) {
+											estiloBase += 'background-color:lightgreen;';
+										} else if (porcentagem >= 50) {
+											estiloBase += 'background-color:#FFFACD;'; // Amarelo
+										} else if (porcentagem >= 25) {
+											estiloBase += 'background-color:#FFDAB9;'; // Laranja
+										} else {
+											estiloBase += 'background-color:#FFCCCB;'; // Vermelho
+										}
+									} 
+									else { // Última coluna
+										if (porcentagem >= 75) {
+											estiloBase += 'background-color:lightgreen;';
+										} else if (porcentagem >= 50) {
+											estiloBase += 'background-color:#FFFACD;'; // Amarelo
+										} else if (porcentagem >= 25) {
+											estiloBase += 'background-color:#FFDAB9;'; // Laranja
+										} else {
+											estiloBase += 'background-color:#FFCCCB;'; // Vermelho
+										}
+									}
+								}
+
+								 // Se a linha estiver zerada, aplica cor verde
+								 if (linhaZerada && colIndex > 2) { // Não aplica nas colunas 0, 1 e 2
+									estiloBase += 'background-color:#90EE90;'; // Verde claro
+								 } else if (coresColunas[colIndex]) {
+									estiloBase += 'background-color:' + coresColunas[colIndex] + ';';
+								 }
+
+								htmlSimplificado += '<td style="' + estiloBase + '">';
+								htmlSimplificado += td.innerHTML;
+								htmlSimplificado += '</td>';
+							});
+							htmlSimplificado += '</tr>';
+						});
+						htmlSimplificado += '</tbody>';
+					}
+
+					var totalThead = tabelaClone.querySelector('tbody + thead');
+					if (totalThead) {
+						// Remove qualquer outro thead que não seja o de totais
+						tabelaClone.querySelectorAll('thead').forEach(thead => {
+							if (thead !== mainThead && thead !== totalThead) {
+								thead.remove();
+							}
+						});
+
+						htmlSimplificado += '<tfoot>';  // ⭐ Usando tfoot para os totais (mais semântico)
+						totalThead.querySelectorAll('tr').forEach(tr => {
+							htmlSimplificado += '<tr>';
+							tr.querySelectorAll('td').forEach(td => {
+								var estilo = 'border:0.5px solid #000;padding:2px;font-size:7pt;text-align:center;';
+								if (td.classList.contains('total')) {
+									estilo += 'font-weight:bold;';
+								}
+								htmlSimplificado += '<td style="' + estilo + '">' + td.innerHTML + '</td>';
+							});
+							htmlSimplificado += '</tr>';
+						});
+						htmlSimplificado += '</tfoot>';
+					}
+
+					htmlSimplificado += '</table>';
+
+					var inputTabela = document.createElement('input');
+					inputTabela.type = 'hidden';
+					inputTabela.name = 'htmlTabela';
+					inputTabela.value = htmlSimplificado;
+					form.appendChild(inputTabela);
+
+					// Criando campo 3
+					var input2 = document.createElement('input');
+					input2.type = 'hidden';
+					input2.name = 'busca_endossado';
+					input2.value = '<?= $_POST["busca_endossado"]?>' ; // Valor do segundo campo
+					form.appendChild(input2);
+				}
+
+				// Adiciona o formulário ao DOM
+				document.body.appendChild(form);
+
+				// Envia o formulário
+				form.submit();
+
+				// Remove depois
+				setTimeout(() => {
+					document.body.removeChild(form);
+					resolve();
+				}, 1000);
+			});
+		}
+
 
 		// Registra evento de clique no ícone do popup após o gráfico ser renderizado
 		$(document).on('click', '#popup-icon3', function () {
