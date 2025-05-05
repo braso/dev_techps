@@ -80,6 +80,8 @@ const consultarRegistros = function(){
                 conditions += ' AND '+keys[f]+' < \"'+data[keys[f]]+'\"';
             }else if((inputs[f].name.indexOf('_le') > 0)){
                 conditions += ' AND '+keys[f]+' <= \"'+data[keys[f]]+'\"';
+            }else if((inputs[f].name.indexOf('_cpf') > 0)){
+                conditions += ' AND '+keys[f]+' = \"'+data[keys[f]].replace(/[^0-9]/g, "")+'\"';
             }else{
                 conditions += ' AND '+keys[f]+' = \"'+data[keys[f]]+'\"';
             }
