@@ -326,7 +326,7 @@
 								<tr>
 									<th>Anterior:</th>
 									<th>Período:</th>
-									<th>Final:</th>
+									<th>Bruto:</th>
 								</tr>
 							</thead>
 							<tbody>

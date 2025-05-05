@@ -163,7 +163,7 @@
 				$endosso["totalResumo"]["saldoFinal"] = operarHorarios([$endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]], "-");
 			break;
 			default:
-				echo implode(", ", array_keys($endosso["totalResumo"]));
+				// echo implode(", ", array_keys($endosso["totalResumo"]));
 			break;
 		}
 		
@@ -850,7 +850,7 @@
 
 	function texto($nome,$modificador,$tamanho='',$extra=''){//Campo de texto que não pode ser editado
 		$campo =
-			'<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content" '.$extra.'>
+			'<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content text-field" '.$extra.'>
 				<label>'.$nome.'</label><br>
 				<p class="text-left">'.$modificador.'</p>
 			</div>';

@@ -29,7 +29,7 @@
 		form.busca_data.value 					= '".(!empty($_POST["busca_data"])? $_POST["busca_data"]: "")."';
 		form.busca_motorista.value 				= '".(!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: "")."';
 		form.busca_situacao.value 				= '".(!empty($_POST["busca_situacao"])? $_POST["busca_situacao"]: "")."';
-		form.id.value 							= '".(!empty($aMotorista["enti_nb_id"])? $aMotorista["enti_nb_id"]: "")."';
+		form.id.value 							= '".(!empty($motorista["enti_nb_id"])? $motorista["enti_nb_id"]: "")."';
 		let select2URL = '{$select2URL}'"
 	?>
 
