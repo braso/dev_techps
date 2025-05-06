@@ -294,71 +294,7 @@
 	<script>
 
 		// Função modificada para enviar o gráfico incluindo o ID
-		async function enviarGraficoServidor(chart) {
-			const elementId = chart.renderTo.id;
-			const userEntrada = '<?= $_SESSION['horaEntrada'] ?? '0' ?>';
-			const dataGrafc = '<?= isset($_POST["busca_dataMes"]) ? $_POST["busca_dataMes"] : '' ?>';
-
-			const el = document.getElementById(elementId);
-			if (!el) {
-				console.error('Elemento não encontrado para o ID:', elementId);
-				return;
-			}
-
-			const width = el.offsetWidth;
-			const height = el.offsetHeight;
-
-			console.log(`📏 Dimensões do elemento antes da captura: ${width}x${height}`);
-			if (width === 0 || height === 0) {
-				console.error("❌ Elemento não tem tamanho válido para captura");
-				return;
-			}
-
-			try {
-				console.log('Iniciando captura do gráfico com html2canvas...');
-
-				const canvas = await html2canvas(el, {
-					scale: 2,
-					useCORS: true,
-					allowTaint: false,
-					backgroundColor: '#ffffff' // ⚠️ Cor de fundo obrigatória!
-				});
-
-				const imageData = canvas.toDataURL('image/png');
-
-				// Debug
-				console.log('imageData (início):', imageData.substring(0, 100));
-
-				if (!imageData.startsWith('data:image/png;base64,')) {
-					throw new Error('Imagem gerada não é válida');
-				}
-
-				const response = await fetch('salvar_grafico_painel.php', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/x-www-form-urlencoded',
-					},
-					body: new URLSearchParams({
-						grafico: imageData,
-						elementId,
-						userEntrada,
-						dataGrafc
-					}).toString()
-				});
-
-				const data = await response.json();
-
-				if (data.status === 'success') {
-					console.log('✅ Gráfico salvo com sucesso:', data.fileName);
-				} else {
-					console.error('❌ Erro ao salvar gráfico:', data.message);
-					throw new Error(data.message);
-				}
-
-			} catch (error) {
-				console.error('❌ Erro ao processar o gráfico:', error);
-			}
-		}
+		
 
 		// document.addEventListener('DOMContentLoaded', function() {
 			// Gráfico sintético
@@ -983,33 +919,233 @@
 			}]
 		});
 
-		async function enviarDados() {
-			const loader = document.getElementById('loader-overlay');
-			
+		async function enviarGraficoServidor(chart) {
+			const elementId = chart?.renderTo?.id;
+			if (!elementId) {
+				console.error('❌ ID do elemento do gráfico não encontrado.');
+				return;
+			}
+
+			const userEntrada = '<?= $_SESSION['horaEntrada'] ?? '0' ?>';
+			const dataGrafc = '<?= isset($_POST["busca_dataMes"]) ? $_POST["busca_dataMes"] : '' ?>';
+
+			const el = document.getElementById(elementId);
+			if (!el) {
+				console.error('❌ Elemento não encontrado para o ID:', elementId);
+				return;
+			}
+
+			const width = el.offsetWidth;
+			const height = el.offsetHeight;
+
+			if (width === 0 || height === 0) {
+				console.error("❌ Elemento não tem tamanho válido para captura");
+				return;
+			}
+
 			try {
-				// Mostra o loader
-				loader.style.display = 'flex';
-				await new Promise(requestAnimationFrame);
+				console.log('⌛ Aguardando navegador estar ocioso...');
+				await new Promise(resolve => requestIdleCallback(resolve));
 
-				// 1. Processa todos os gráficos
-				await processarGraficos();
+				console.log('📸 Iniciando captura com html2canvas...');
 
-				// 2. Prepara e envia o formulário
-				await enviarFormulario();
+				if (typeof html2canvas !== 'function') {
+					throw new Error("❌ html2canvas não está carregado.");
+				}
+
+				const canvas = await html2canvas(el, {
+					scale: 2,
+					useCORS: true,
+					allowTaint: false,
+					backgroundColor: '#ffffff'
+				});
+
+				const imageData = canvas.toDataURL('image/png');
+
+				if (!imageData.startsWith('data:image/png;base64,')) {
+					throw new Error('❌ Imagem gerada inválida');
+				}
+
+				const response = await fetch('salvar_grafico_painel.php', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded',
+						'Accept': 'application/json',
+        				'X-Requested-With': 'XMLHttpRequest',
+					},
+					body: new URLSearchParams({
+						grafico: imageData,
+						elementId,
+						userEntrada,
+						dataGrafc
+					}).toString()
+				});
+
+				const data = await response.json();
+
+				if (data.status === 'success') {
+					console.log('✅ Gráfico salvo com sucesso:', data.fileName);
+				} else {
+					throw new Error(data.message || 'Erro desconhecido ao salvar gráfico');
+				}
 
 			} catch (error) {
-				console.error("Erro durante a exportação:", error);
-				loader.innerHTML = `
-					<div style="text-align: center; color: #ff6b6b;">
-						<p>❌ Falha ao exportar. Recarregue a página e tente novamente.</p>
-						<button onclick="location.reload()" style="margin-top: 10px; padding: 5px 10px;">Recarregar</button>
-					</div>
-				`;
-			} finally {
-				setTimeout(() => loader.style.display = 'none', 2000);
+				console.error('❌ Erro ao processar o gráfico:', error);
 			}
 		}
 
+		async function enviarDados() {
+			const loader = document.getElementById('loader-overlay');
+			let loaderFechado = false;
+			let processoCompleto = false;
+			let novaJanela = null;
+
+			const fecharLoaderSeguro = () => {
+				if (loaderFechado || !loader) return;
+				try {
+					loader.style.display = 'none';
+					loaderFechado = true;
+				} catch (e) {
+					console.error("Erro ao fechar loader:", e);
+					setTimeout(fecharLoaderSeguro, 500);
+				}
+			};
+
+			const gerenciarJanela = async () => {
+				const MAX_TENTATIVAS = 2;
+				let tentativas = 0;
+
+				// Função auxiliar para detectar navegador
+				const getBrowserInfo = () => {
+					const ua = navigator.userAgent;
+					return {
+						isChrome: /Chrome|CriOS/.test(ua),
+						isFirefox: /Firefox|FxiOS/.test(ua),
+						isSafari: /Safari/.test(ua) && !/Chrome/.test(ua),
+						isEdge: /Edg/.test(ua)
+					};
+				};
+
+				const getBrowserInstructions = () => {
+					const { isChrome, isFirefox } = getBrowserInfo();
+					
+					if (isChrome) {
+						return [
+							"1. Clique no ícone de cadeado (🔒) à esquerda da URL",
+							"2. Selecione 'Configurações do site'",
+							"3. Encontre 'Pop-ups e redirecionamentos'",
+							"4. Mude para 'Permitir'"
+						].join('\n');
+					} else if (isFirefox) {
+						return [
+							"1. Clique no ícone de escudo (🛡️) na barra de endereço",
+							"2. Selecione 'Gerenciar Permissões'",
+							"3. Ative 'Pop-ups'"
+						].join('\n');
+					} else {
+						return [
+							"1. Acesse as configurações de privacidade do navegador",
+							"2. Encontre 'Configurações de conteúdo'",
+							"3. Permita pop-ups para este site"
+						].join('\n');
+					}
+				};
+
+				const mostrarSolucaoCompleta = () => {
+					const browserMsg = getBrowserInstructions();
+					const mensagem = [
+						"Primeiro tente:",
+						"1. Recarregar (F5)",
+						"2. Iniciar novamente",
+						"",
+						"Se continuar bloqueado:",
+						browserMsg,
+						"",
+						"Após configurar, atualize a página"
+					].join('\n');
+
+					alert(mensagem);
+					throw new Error('Pop-ups bloqueados - Siga as instruções exibidas');
+				};
+
+				while (tentativas < MAX_TENTATIVAS) {
+					try {
+						if (!novaJanela || novaJanela.closed) {
+							if (tentativas > 0) {
+								mostrarSolucaoCompleta();
+							}
+
+							novaJanela = window.open('', 'janelaExportacao', 'width=1000,height=600');
+							
+							if (!novaJanela) {
+								tentativas++;
+								continue;
+							}
+						}
+
+						// Verificação de segurança
+						try {
+							if (novaJanela.document) return novaJanela;
+						} catch (e) {
+							return novaJanela; // Permite cross-origin
+						}
+
+					} catch (error) {
+						tentativas++;
+						if (tentativas >= MAX_TENTATIVAS) {
+							throw error;
+						}
+					}
+				}
+			};
+
+			try {
+				loader.style.display = 'flex';
+				
+				// 1. Abrir janela
+				novaJanela = window.open('', 'janelaExportacao');
+				gerenciarJanela();
+
+				// 2. Processar gráficos
+				await processarGraficos();
+				gerenciarJanela();
+
+				// 3. Enviar formulário com timeout de segurança
+				await Promise.race([
+					enviarFormulario(novaJanela),
+					new Promise((_, reject) => setTimeout(() => reject(new Error('Tempo excedido no envio do formulário')), 500))
+				]);
+
+				// 4. Verificação final
+				if (novaJanela.closed) {
+					throw new Error('Janela fechada durante o processo');
+				}
+
+				// 5. Tempo mínimo de exibição do loader
+				await new Promise(resolve => setTimeout(resolve, 2000));
+				processoCompleto = true;
+
+			} catch (error) {
+				console.error("Erro na exportação:", error);
+				if (loader && !loaderFechado) {
+					loader.innerHTML = `
+						<div style="text-align: center; color: #ff6b6b;">
+							<p>❌ ${error.message}</p>
+							<button onclick="location.reload()" 
+									style="margin-top: 10px; padding: 5px 10px;">
+								Tentar novamente
+							</button>
+						</div>
+					`;
+				}
+				throw error; // Re-lança o erro para quem chamou a função
+			} finally {
+				// Garantia de fechamento do loader
+				fecharLoaderSeguro();
+				setTimeout(fecharLoaderSeguro, 1000);
+			}
+		}
+	
 		async function processarGraficos() {
 			try {
 				// Processa gráficos normais em paralelo
@@ -1054,14 +1190,14 @@
 			}
 		}
 
-		async function enviarFormulario() {
-			return new Promise(async (resolve) => {
+		async function enviarFormulario(novaJanela) {
+			return new Promise((resolve) => {
 				// Criação do formulário
 				var data = "<?= $_POST['busca_dataMes'] ?>";
 				var form = document.createElement('form');
 				form.method = 'POST';
 				form.action = 'export_paineis.php';
-				form.target = '_blank';
+				form.target = 'janelaExportacao';
 
 				// Adiciona campos básicos
 				['empresa', 'busca_data', 'relatorio'].forEach(function(name) {
@@ -1285,17 +1421,23 @@
 					form.appendChild(input2);
 				}
 
+				const checkComplete = () => {
+					// Verifica periodicamente se a janela terminou de carregar
+					if (novaJanela.document.readyState === 'complete') {
+						resolve();
+					} else {
+						setTimeout(checkComplete, 100);
+					}
+				};
+
 				// Adiciona o formulário ao DOM
 				document.body.appendChild(form);
 
 				// Envia o formulário
 				form.submit();
+				form.remove();
 
-				// Remove depois
-				setTimeout(() => {
-					document.body.removeChild(form);
-					resolve();
-				}, 1000);
+				setTimeout(checkComplete, 500);
 			});
 		}
 
