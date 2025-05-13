@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cadastrar'])) {
     $empresa = (int)$_POST['empresa'];
 
     // Validação (essencial para segurança)
-    if (empty($placa) || empty($modelo) || $empresa <= 0) {
+    if (empty($placa)  || $empresa <= 0) {
         $error = "Por favor, preencha todos os campos corretamente.";
         header("Location: ".$_SERVER['PHP_SELF']."?error=".urlencode($error));
         exit;
