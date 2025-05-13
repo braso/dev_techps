@@ -42,19 +42,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
   
- const formatDate = (dateTimeString) => {
-  // dateTimeString pode vir como '2025-04-15T00:00' ou '2025-04-15'
-  const dateObj = new Date(dateTimeString);
-  const year = dateObj.getFullYear();
-  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
-  const day = String(dateObj.getDate()).padStart(2, "0");
-  const hours = String(dateObj.getHours()).padStart(2, "0");
-  const minutes = String(dateObj.getMinutes()).padStart(2, "0");
-  const seconds = "00"; // assume sempre segundos como 00
-
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-};
-
+    const formatDate = (dateTimeString) =>
+      dateTimeString.includes("T")
+        ? dateTimeString.replace("T", " ")
+        : dateTimeString.split("-").join("-");
+  
     const formatDateBR = (dateString) => {
       const [year, month, day] = dateString.split("-");
       return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
