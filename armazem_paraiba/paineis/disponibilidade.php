@@ -242,7 +242,7 @@
         //position: absolute; top: 101px; left: 420px;
 
         $campos = [
-            combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
+            combo_net("Empresa", "empresa", $_POST["empresa"]?? $_SESSION["user_nb_empresa"], 4, "empresa", ""),
             combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
             ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
             campo_dataHora("Data/Hora da nova jornada","busca_periodo",(!empty($_POST["busca_periodo"])? $_POST["busca_periodo"] : ''),

@@ -186,6 +186,13 @@
 				." LIMIT 1;"
 			));
 
+			$userId = mysqli_fetch_assoc(query(
+				"SELECT user_nb_id FROM user 
+					JOIN entidade ON user_nb_entidade = enti_nb_id
+					WHERE user_tx_status = 'ativo' AND user_tx_matricula = '{$matricula}'
+					LIMIT 1;"
+			));
+
 			if(empty($macroPonto)){
 				if(empty($errorMsg["notRecognized"])){
 					$errorMsg["notRecognized"][] = "Tipo de ponto não reconhecido: ";
@@ -195,7 +202,7 @@
 			}
 
 			$newPonto = [
-				"pont_nb_userCadastro"	=> $_SESSION["user_nb_id"],
+				"pont_nb_userCadastro"	=> $userId,
 				"pont_nb_arquivoponto"	=> null,						//Será definido após inserir o arquivo de ponto.
 				"pont_tx_matricula"		=> strval($matricula),
 				"pont_tx_data"			=> $data." ".$hora,

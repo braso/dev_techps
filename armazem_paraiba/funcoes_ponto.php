@@ -780,14 +780,15 @@
 		}
 		$aRetorno["diffJornada"] = $registros["jornadaCompleto"]["icone"].$diffJornada;
 
-		//IGNORAR CAMPOS{
-			foreach(["refeicao", "espera", "descanso", "repouso"] as $campoIgnorado){
-				if(is_bool(strpos($motorista["para_tx_ignorarCampos"], $campoIgnorado))){
-					$registros[$campoIgnorado."Completo"] = organizarIntervalos($data, $registros["inicio".ucfirst($campoIgnorado)], $registros["fim".ucfirst($campoIgnorado)]);
+		//IGNORAR INTERVALOS E CAMPOS{
+			foreach(["refeicao", "espera", "descanso", "repouso"] as $campo){
+				if(empty($motorista["para_tx_ignorarCampos"]) || is_bool(strpos($motorista["para_tx_ignorarCampos"], $campo))){
+					$registros[$campo."Completo"] = organizarIntervalos($data, $registros["inicio".ucfirst($campo)], $registros["fim".ucfirst($campo)]);
 				}else{
-					$registros[$campoIgnorado."Completo"] = organizarIntervalos($data, [], []);
+					$registros[$campo."Completo"] = organizarIntervalos($data, [], []);
 				}
 			}
+
 		//}
 		
 		//REPOUSO POR ESPERA{
@@ -1018,7 +1019,7 @@
 		
 
 		//MÁXIMA DIREÇÃO CONTÍNUA{
-			if(is_bool(strpos($motorista["para_tx_ignorarCampos"], "mdc"))){
+			if(empty($motorista["para_tx_ignorarCampos"]) || is_bool(strpos($motorista["para_tx_ignorarCampos"], "mdc"))){
 				$intervalos = [];
 				$interAtivo = null;
 				foreach($pontosDia as $ponto){

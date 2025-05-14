@@ -552,7 +552,7 @@
 			$camposHE
 		];
 		if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-			array_unshift($fields, combo_net("Empresa*","empresa", $_POST["empresa"]?? "",4,"empresa", "onchange='selecionaMotorista(this.value)'"));
+			array_unshift($fields, combo_net("Empresa*","empresa", !empty($_POST["empresa"])? $_POST["empresa"]: $_SESSION["user_nb_empresa"],4,"empresa", "onchange='selecionaMotorista(this.value)'"));
 		}else{
 			array_unshift($fields, campo_hidden("empresa", $_SESSION["user_nb_empresa"]));
 		}
