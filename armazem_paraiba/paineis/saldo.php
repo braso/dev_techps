@@ -376,37 +376,136 @@
         $botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados()'>Imprimir</button>
         <script>
         function enviarDados() {
-				var data = '" . $_POST["busca_dataMes"] . "'
-				var form = document.createElement('form');
-				form.method = 'POST';
-				form.action = 'export_paineis.php'; // Página que receberá os dados
-				form.target = '_blank'; // Abre em nova aba
+            var data = '" . $_POST["busca_dataMes"] . "';
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'export_paineis.php';
+            form.target = '_blank';
 
-				// Criando campo 1
-				var input1 = document.createElement('input');
-				input1.type = 'hidden';
-				input1.name = 'empresa';
-				input1.value = " . (!empty($_POST['empresa']) ? $_POST['empresa'] : 'null'). "; // Valor do primeiro campo
-				form.appendChild(input1);
+            // Adiciona campos básicos
+            ['empresa', 'busca_data', 'relatorio'].forEach(function(name) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = name === 'empresa' ? (" . (!empty($_POST['empresa']) ? $_POST['empresa'] : 'null') . ") : 
+                            (name === 'busca_data' ? data : 'saldo');
+                form.appendChild(input);
+            });
 
-				// Criando campo 2
-				var input2 = document.createElement('input');
-				input2.type = 'hidden';
-				input2.name = 'busca_data';
-				input2.value = data; // Valor do segundo campo
-				form.appendChild(input2);
+            // Processamento otimizado da tabela
+            var tabelaOriginal = document.querySelector('#tabela-empresas');
+            if (tabelaOriginal) {
+                // Cria uma cópia limpa da tabela
+                var tabelaClone = tabelaOriginal.cloneNode(true);
+                
+                // Remove elementos problemáticos (mantém as classes de status)
+                tabelaClone.querySelectorAll('i.fa, script, style, link').forEach(el => el.remove());
+                
+                // Cores fixas para substituir as variáveis CSS
+                var coresStatus = {
+                    'endo': '#4ea9ff',       // azul claro (substitui var(--var-blue))
+                    'endo-parc': '#ffe80063',  // amarelo claro (substitui var(--var-darkyellow))
+                    'nao-endo': '#ec4141'    // vermelho claro (substitui var(--var-red))
+                };
+                
+                // Cria um novo HTML simplificado
+                var htmlSimplificado = '<table style=\"width:100%;border-collapse:collapse;font-family:helvetica;font-size:7pt\">';
+                
+                // Processa o cabeçalho - REMOVENDO a linha 'totais'
+                var thead = tabelaClone.querySelector('thead');
+                if (thead) {
+                    htmlSimplificado += '<thead>';
+                    thead.querySelectorAll('tr').forEach(tr => {
+                        if (tr.classList.contains('totais')) {
+                            return;
+                        }
+                        
+                        htmlSimplificado += '<tr>';
+                        tr.querySelectorAll('th').forEach(th => {
+                            htmlSimplificado += '<th style=\"border:0.5px solid #000;padding:2px;text-align:center;font-weight:bold;background-color:#4ea9ff\">';
+                            htmlSimplificado += th.innerHTML;
+                            htmlSimplificado += '</th>';
+                        });
+                        htmlSimplificado += '</tr>';
+                    });
+                    htmlSimplificado += '</thead>';
+                }
+                
+                // Processa o corpo com estilos condicionais
+                var tbody = tabelaClone.querySelector('tbody');
+                if (tbody) {
+                    htmlSimplificado += '<tbody>';
+                    tbody.querySelectorAll('tr').forEach(tr => {
+                        htmlSimplificado += '<tr>';
+                        tr.querySelectorAll('td').forEach((td, colIndex) => {
+                            // Estilo base para todas as células
+                            var estiloBase = 'border:0.5px solid #000;padding:2px;font-size:7pt;';
+                            
+                            // Estilo especial para coluna de nomes (segunda coluna)
+                            if (colIndex === 1) {
+                                estiloBase += 'text-align:left;white-space:nowrap;overflow:hidden;max-width:90px;';
+                            } else {
+                                estiloBase += 'text-align:center;';
+                            }
+                            
+                            // Estilo condicional para coluna de status (assumindo que é a 4ª coluna - índice 3)
+                            if (colIndex === 3) {
+                                var statusClass = '';
+                                if (td.classList.contains('endo')) {
+                                    estiloBase += 'background-color:' + coresStatus['endo'] + ';';
+                                } else if (td.classList.contains('endo-parc')) {
+                                    estiloBase += 'background-color:' + coresStatus['endo-parc'] + ';';
+                                } else if (td.classList.contains('nao-endo')) {
+                                    estiloBase += 'background-color:' + coresStatus['nao-endo'] + ';';
+                                }
+                            }
 
-                // Criando campo 2
-				var input2 = document.createElement('input');
-				input2.type = 'hidden';
-				input2.name = 'relatorio';
-				input2.value = 'saldo'; // Valor do segundo campo
-				form.appendChild(input2);
+                            if (colIndex === 10) {
+                                // console.log(td.id);
+                                if (td.id === 'saldo-zero') {
+                                    estiloBase += 'color:blue;';
+                                } else if (td.id === 'saldo-final') {
+                                    estiloBase += 'color:green;';
+                                } else if (td.id === 'saldo-negativo') {
+                                    estiloBase += 'color:red;';
+                                }
+                            }
 
-				document.body.appendChild(form);
-				form.submit();
-				document.body.removeChild(form);
-			}
+                            if (colIndex === 12) {
+                                // console.log(td.id);
+                                if (td.id === 'saldo-zero') {
+                                    estiloBase += 'color:blue;';
+                                } else if (td.id === 'saldo-final') {
+                                    estiloBase += 'color:green;';
+                                } else if (td.id === 'saldo-negativo') {
+                                    estiloBase += 'color:red;';
+                                }
+                            }
+                            
+                            htmlSimplificado += '<td style=\"' + estiloBase + '\">';
+                            htmlSimplificado += td.innerHTML;
+                            htmlSimplificado += '</td>';
+                        });
+                        htmlSimplificado += '</tr>';
+                    });
+                    htmlSimplificado += '</tbody>';
+                }
+                
+                htmlSimplificado += '</table>';
+                
+                // Adiciona ao formulário
+                var inputTabela = document.createElement('input');
+                inputTabela.type = 'hidden';
+                inputTabela.name = 'htmlTabela';
+                inputTabela.value = htmlSimplificado;
+                form.appendChild(inputTabela);
+            }
+
+            // Envia o formulário
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+        }
         </script>";
 
         $buttons = [
