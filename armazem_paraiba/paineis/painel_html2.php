@@ -17,6 +17,8 @@
 				<h2 class="titulo2"><?= $titulo ?></h2>
 				<span></span>
 				<?= $dataEmissao ?>
+				<div id="consulta">
+				</div>
 				<br>
 				<?php
 				if (!empty($periodoRelatorio["dataInicio"])) {
@@ -223,9 +225,9 @@
 		</div>
 				<?php } ?>
 
-	<div id="impressao">
+	<!-- <div id="impressao">
 		<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . " (UTC-3)" ?>
-	</div>
+	</div> -->
 </div>
 </div>
 </div>

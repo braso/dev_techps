@@ -1557,7 +1557,8 @@ function logisticas() {
 
 	$motoristasLivres['total'] = [
 		'totalMotoristasJornada' => count($motoristas) - $totalMotoristasLivres,
-		'totalMotoristasLivres' => $totalMotoristasLivres
+		'totalMotoristasLivres' => $totalMotoristasLivres,
+		'consulta'        => $dataReferenciaStr,
 	];
 
 	file_put_contents($path . "/nc_logistica.json", json_encode($motoristasLivres, JSON_UNESCAPED_UNICODE));

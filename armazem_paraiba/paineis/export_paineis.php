@@ -1786,6 +1786,118 @@ function gerarPainelAjustes() {
     $pdf->Output($nomeArquivo, 'I');
 }
 
+function gerarPainelDisponibilidade() {
+    $path = "./arquivos/nc_logistica/".$_POST["empresa"];
+
+    $empresa = mysqli_fetch_assoc(query(
+            "SELECT * FROM empresa
+                WHERE empr_tx_status = 'ativo'
+                    AND empr_nb_id = {$_POST["empresa"]}
+                LIMIT 1;"
+        ));
+    
+    if (is_dir($path)) {
+        $pasta = dir($path);
+        while ($arquivo = $pasta->read()) {
+            if (!in_array($arquivo, [".", ".."])) {
+                $arquivos[] = $arquivo;
+            }
+        }
+        $pasta->close();
+    }
+
+    $arquivoLogis = json_decode(file_get_contents($path . "/".$arquivos[0]), true);
+
+    $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf->setEmpresaData($empresa);
+    $pdf->tituloPersonalizado = '';
+    $pdf->SetCreator('TechPS');
+    $pdf->SetAuthor('TechPS');
+    $pdf->SetTitle('Painel Progressão de Disponibilidade');
+    $pdf->SetMargins(2, 25, 2);
+    $pdf->SetHeaderMargin(10);
+    $pdf->SetFooterMargin(10);
+    $pdf->setFontSubsetting(true);
+    $pdf->SetAutoPageBreak(true, PDF_MARGIN_BOTTOM);
+    $pdf->AddPage();
+
+    $pdf->SetFont('helvetica', '', 11);
+    $pdf->SetTextColor(0, 0, 0);
+
+    // --- ATUALIZADO EM (alinhado à esquerda com formatação) ---
+    $pdf->SetX(120);
+    $textoAtualizado = 'Atualizado em: ';
+    $dataAtualizacao = date("d/m/Y H:i", filemtime($path . "/".$arquivos[0]));
+
+    $pdf->SetFont('helvetica', 'B', 9);
+    $pdf->Write(6, $textoAtualizado);
+    $pdf->SetFont('helvetica', '', 9);
+    $pdf->Write(6, $dataAtualizacao);
+    $pdf->Ln(5); // espaço abaixo
+
+    $pdf->SetX(110);
+    $pdf->SetFont('helvetica', 'B', 9);
+    $pdf->SetTextColor(255, 0, 0);
+    $pdf->Write(6, 'Projeção de Disponibilidade para: ');
+    $pdf->SetTextColor(0, 0, 0);
+    $pdf->SetFont('helvetica', '', 9);
+    $pdf->Write(6, $arquivoLogis["total"]["consulta"]);
+    $pdf->Ln(20); // espaço abaixo
+
+    $pdf->SetFont('helvetica', '', 9);
+
+    // Tabela: Funcionários disponíveis e em jornada
+    $pdf->Cell(90, 6, 'Funcionários disponíveis para 11 horas ou parametrizados', 1, 0, 'L');
+    $pdf->Cell(20, 6,  $arquivoLogis["total"]["totalMotoristasLivres"], 1, 1, 'C');
+
+    $pdf->Cell(90, 6, 'Funcionários em jornada', 1, 0, 'L');
+    $pdf->Cell(20, 6, $arquivoLogis["total"]["totalMotoristasJornada"], 1, 1, 'C');
+
+    $pdf->Ln(5); // Espaçamento
+
+    // 2. Blocos coloridos alinhados horizontalmente
+    $start_x = 122; // Posição inicial X para os blocos
+    $block_width = 30;
+    $block_height = 12;
+
+    // Bloco Verde (Disponível)
+    $pdf->SetXY($start_x, 56);
+    $pdf->SetFillColor(144, 238, 144); // lightgreen
+    $pdf->SetTextColor(0);
+    $pdf->Cell($block_width, $block_height, 'Disponível: 3', 1, 1, 'L', 1, '', 0, false, 'C', 'C');
+
+    // Bloco Laranja (Parcialmente Disponível)
+    $pdf->SetXY($start_x + 40, 56);
+    $pdf->SetFillColor(255, 159, 44); // #ff9f2c
+    $pdf->Cell($block_width, $block_height, 'Parc. Disponível: 0', 1, 1, 'L', 1, '', 0, false, 'C', 'C');
+
+    // Bloco Vermelho (Indisponível)
+    $pdf->SetXY($start_x + 80, 56);
+    $pdf->SetFillColor(163, 0, 0); // #a30000
+    $pdf->SetTextColor(255, 255, 255);
+    $pdf->Cell($block_width, $block_height, 'Indisponível: 0', 1, 1, 'L', 1, '', 0, false, 'C', 'C');
+    $pdf->SetTextColor(0, 0, 0);
+
+    // Ajusta o espaçamento entre os blocos
+    $pdf->setCellHeightRatio(1.5);
+
+    $pdf->Ln(10); 
+
+
+    // Recebe e trata o HTML
+    $htmlTabela = $_POST['htmlTabela'] ?? '';
+    
+    // Limpeza adicional do HTML
+    $htmlTabela = preg_replace('/<i[^>]*>(.*?)<\/i>/', '', $htmlTabela); // Remove ícones
+    $htmlTabela = str_replace(';""', '', $htmlTabela); // Corrige atributos malformados
+
+    // Escreve o HTML no PDF
+    $pdf->writeHTML($htmlTabela, true, false, true, false, '');
+
+    // Gera o PDF
+    $nomeArquivo = 'Relatorio_Saldo.pdf';
+    $pdf->Output($nomeArquivo, 'I');
+}
 
 if (!empty($_POST['relatorio']) && $_POST['relatorio'] == 'endosso') {
     gerarPainelEndosso();
@@ -1795,6 +1907,8 @@ if (!empty($_POST['relatorio']) && $_POST['relatorio'] == 'endosso') {
     gerarPainelNc();
 } else if (!empty($_POST['relatorio']) && $_POST['relatorio'] == 'ajustes') {
     gerarPainelAjustes();
+} else if(!empty($_POST['relatorio']) && $_POST['relatorio'] == 'disponibilidade'){
+    gerarPainelDisponibilidade();
 }
 
 // dd($empresa);
