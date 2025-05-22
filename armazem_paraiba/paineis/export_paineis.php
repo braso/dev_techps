@@ -1808,6 +1808,12 @@ function gerarPainelDisponibilidade() {
 
     $arquivoLogis = json_decode(file_get_contents($path . "/".$arquivos[0]), true);
 
+    $ocupacaoJson = $_POST["ocupacao"];
+    $ocupacoes = json_decode($ocupacaoJson, true);
+
+    // Calcula total antes
+    $total = array_sum($ocupacoes);
+
     $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
     $pdf->setEmpresaData($empresa);
     $pdf->tituloPersonalizado = '';
@@ -1835,30 +1841,40 @@ function gerarPainelDisponibilidade() {
     $pdf->Write(6, $dataAtualizacao);
     $pdf->Ln(5); // espaço abaixo
 
-    $pdf->SetX(110);
+    $pdf->SetX(105);
     $pdf->SetFont('helvetica', 'B', 9);
     $pdf->SetTextColor(255, 0, 0);
     $pdf->Write(6, 'Projeção de Disponibilidade para: ');
     $pdf->SetTextColor(0, 0, 0);
     $pdf->SetFont('helvetica', '', 9);
     $pdf->Write(6, $arquivoLogis["total"]["consulta"]);
+    $pdf->Ln(5); // espaço abaixo
+
+    $pdf->SetX(125);
+    $pdf->SetFont('helvetica', 'B', 9);
+    $pdf->Write(6, 'Ocupação: ');
+    $pdf->SetTextColor(0, 0, 0);
+    $pdf->SetFont('helvetica', '', 9);
+    $pdf->Write(6, empty($_POST["consultaOcupacao"]) ? 'Todos' : $_POST["consultaOcupacao"]);
     $pdf->Ln(20); // espaço abaixo
 
     $pdf->SetFont('helvetica', '', 9);
 
-    // Tabela: Funcionários disponíveis e em jornada
-    $pdf->Cell(90, 6, 'Funcionários disponíveis para 11 horas ou parametrizados', 1, 0, 'L');
-    $pdf->Cell(20, 6,  $arquivoLogis["total"]["totalMotoristasLivres"], 1, 1, 'C');
+    // Linha total na primeira linha
+    $pdf->Cell(35, 10, 'Total de Ocupações', 1, 0, 'R');
+    $pdf->Cell(10, 10, $total, 1, 1, 'C');
 
-    $pdf->Cell(90, 6, 'Funcionários em jornada', 1, 0, 'L');
-    $pdf->Cell(20, 6, $arquivoLogis["total"]["totalMotoristasJornada"], 1, 1, 'C');
+    foreach ($ocupacoes as $ocupacao => $quantidade) {
+        $pdf->Cell(35, 8, $ocupacao, 1, 0, 'C');
+        $pdf->Cell(10, 8, $quantidade, 1, 1, 'C');
+    }
 
-    $pdf->Ln(5); // Espaçamento
+    $pdf->Ln(20); // Espaçamento
 
     $pdf->SetFont('helvetica', 'B', 11);
 
     // 2. Blocos coloridos alinhados horizontalmente
-    $start_x = 132;
+    $start_x = 82;
     $block_width = 40;
     $block_height = 12;
     $radius = 2;
@@ -1869,23 +1885,27 @@ function gerarPainelDisponibilidade() {
         $pdf->SetDrawColor(0, 0, 0); // Borda preta
         $pdf->RoundedRect($x, $y, $width, $height, $radius, '1111', 'DF');
 
-        $pdf->SetTextColor(255, 255, 255);
+        // $pdf->SetTextColor(255, 255, 255);
         // Centralização vertical ajustada com margem superior (aprox. 3.5 dá boa centralização)
         $pdf->SetXY($x, $y + 3.5);
         $pdf->Cell($width, 5, $text, 0, 1, 'C', 0);
     }
 
     // Y fixo
-    $y = 50;
+    $y = 60;
 
     // Bloco Verde
-    drawRoundedBlock($pdf, $start_x, $y, $block_width, $block_height, $radius, [144, 238, 144], 'Disponível: 3');
+    drawRoundedBlock($pdf, $start_x, $y, $block_width, $block_height, $radius, [144, 238, 144], 'Disponível: '. $_POST["disponivel"]);
 
     // Bloco Laranja
-    drawRoundedBlock($pdf, $start_x + 50, $y, $block_width, $block_height, $radius, [255, 159, 44], 'Parc. Disponível: 0');
+    drawRoundedBlock($pdf, $start_x + 50, $y, $block_width, $block_height, $radius, [255, 159, 44], 'Parc. Disponível: '. $_POST["parcial"]);
 
     // Bloco Vermelho
-    drawRoundedBlock($pdf, $start_x + 100, $y, $block_width, $block_height, $radius, [163, 0, 0], 'Indisponível: 0');
+    $pdf->SetTextColor(255, 255, 255);
+    drawRoundedBlock($pdf, $start_x + 100, $y, $block_width, $block_height, $radius, [163, 0, 0], 'Indisponível: '. $_POST["indisponível"]);
+
+    $pdf->SetTextColor(255, 255, 255);
+    drawRoundedBlock($pdf, $start_x + 150, $y, $block_width, $block_height, $radius, [0, 0, 0], 'Em Jornada: '. $_POST["EmJornada"]);
 
     // Reset cor do texto
     $pdf->SetTextColor(0, 0, 0);
@@ -1897,7 +1917,7 @@ function gerarPainelDisponibilidade() {
     // Ajusta o espaçamento entre os blocos
     $pdf->setCellHeightRatio(1.5);
 
-    $pdf->Ln(10); 
+    $pdf->Ln(20); 
 
 
     // Recebe e trata o HTML
