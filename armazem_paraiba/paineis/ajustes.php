@@ -152,7 +152,10 @@ function carregarGraficos($periodoInicio) {
 				// 	}
 				// }
 			},
-			title: { text: 'Ajustes Inserido e Excluído - Ano Corrente' },
+			title: { 
+			useHTML: true,
+			text: 'Ajustes Inserido e Excluído - Ano Corrente <i class=\"fa fa-question-circle\" data-toggle=\"tooltip\" data-trigger=\"click\" data-placement=\"top\" title=\"Mostra o total da empresa ao filtrar por ocupação.\" style=\"color: blue; t-size: 15px;\"></i>',
+			},
 			xAxis: {
 				categories: mesesFormatados,
 				title: { text: 'Mês' }
@@ -193,6 +196,10 @@ function carregarGraficos($periodoInicio) {
 				}
 			],
 			legend: { enabled: true }
+		});
+
+		$(function () {
+			$('[data-toggle=\"tooltip\"]').tooltip({ trigger: 'click' });
 		});
 		</script>
 	"
@@ -351,6 +358,7 @@ function carregarJS(array $arquivos) {
 		
 			$(document).ready(function(){
 				var tabela = $('#tabela-empresas tbody');
+				var ocupacoesPermitidas = '".$_POST["busca_ocupacao"]."';
 
 				function carregarDados(urlArquivo){
 					$.ajax({
@@ -361,6 +369,10 @@ function carregarJS(array $arquivos) {
 							$.each(data, function(index, item){
 								row[index] = item;
 							});
+
+							if (ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) {
+								return; // pula esta linha se ocupação não for permitida
+							}
 
 						let totalAtivo = row['Inicio de Jornada']['ativo'] + row['Fim de Jornada']['ativo'] + row['Inicio de Refeição']['ativo']
 						+ row['Fim de Refeição']['ativo'] + row['Inicio de Espera']['ativo'] + row['Fim de Espera']['ativo'] + row['Inicio de Descanso']['ativo']
@@ -938,6 +950,7 @@ function index() {
 			$pastaAjuste = dir($path);
 			$totais = []; // Inicializa vazio, será preenchido dinamicamente
 
+			$ocupacoesPermitidas = $_POST['busca_ocupacao'];
 			// Chaves que devem ser ignoradas
 			$chavesIgnorar = ["matricula", "nome", "ocupacao", "pontos"];
 			while ($arquivo = $pastaAjuste->read()) {
@@ -945,6 +958,11 @@ function index() {
 					$arquivo = $path . "/" . $arquivo;
 					$arquivos[] = $arquivo;
 					$json = json_decode(file_get_contents($arquivo), true);
+
+					$ocupacaoJson = $json['ocupacao'] ?? '';
+					if (!empty($ocupacoesPermitidas) && $ocupacaoJson !== $ocupacoesPermitidas) {
+						continue;
+					}
 
 					// Processa cada chave do JSON
 					foreach ($json as $chave => $valor) {
@@ -965,6 +983,13 @@ function index() {
 							$totais[$chave]['inativo'] += (int)$valor['inativo'];
 						}
 					}
+					$totalGeral = ['ativo' => 0, 'inativo' => 0];
+
+					foreach ($totais as $dados) {
+						$totalGeral['ativo'] += $dados['ativo'];
+						$totalGeral['inativo'] += $dados['inativo'];
+					}
+
 					foreach ($json['pontos'] as $key) {
 						// Filtra apenas pontos com status "ativo" (case-insensitive)
 						if (strtolower($key['pont_tx_status'] ?? '') !== 'ativo') {
@@ -1110,10 +1135,14 @@ function index() {
 					<td class='total'><b>" . $totais["Inicio de Repouso Embarcado"]["inativo"] . "</b></td> 
 					<td class='total'><b>" . $totais["Fim de Repouso Embarcado"]["ativo"] . "</b></td> 
 					<td class='total'><b>" . $totais["Fim de Repouso Embarcado"]["inativo"] . "</b></td> 
+					<td class='total'><b>" . $totalGeral['ativo'] . "</b></td> 
+					<td class='total'><b>" . $totalGeral["inativo"] . "</b></td> 
+					<td class='total'><b>" . $totalGeral['ativo'] + $totalGeral["inativo"] . "</b></td> 
 				";
 
 				$rowTotais .=
-					"<th colspan='3'>" . $arquivoGeral["empr_tx_nome"] . "</th>"
+					"<th colspan='3'>" . $arquivoGeral["empr_tx_nome"] . "
+					 <i class='fa fa-question-circle' data-toggle='tooltip' data-trigger='click' data-placement='top' title='Mostra o total da empresa ao filtrar por ocupação.' style='color: blue; font-size: 15px;'></i></th>"
 					. "<th colspan='2'>" . $arquivoGeral["Inicio de Jornada"] . "</th>"
 					. "<th colspan='2'>" . $arquivoGeral["Fim de Jornada"] . "</th>"
 					. "<th colspan='2'>" . $arquivoGeral["Inicio de Refeição"] . "</th>"

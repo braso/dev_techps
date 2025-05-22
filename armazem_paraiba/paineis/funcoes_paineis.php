@@ -159,10 +159,6 @@ function criar_relatorio_saldo() {
 			}
 		}
 
-		if (!empty($_POST["busca_ocupacao"])) {
-			$filtroOcupacao = "AND enti_tx_ocupacao IN ('{$_POST["busca_ocupacao"]}')";
-		}
-
 		$motoristas = mysqli_fetch_all(query(
 			"SELECT * FROM entidade
 						LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
@@ -171,7 +167,6 @@ function criar_relatorio_saldo() {
 						WHERE enti_tx_status = 'ativo'
 							AND enti_nb_empresa = '{$empresa["empr_nb_id"]}'
 							" . (!empty($_POST["motorista"]) ? "AND enti_nb_id = '{$_POST["motorista"]}'" : "") . "
-							{$filtroOcupacao}
 						ORDER BY enti_tx_nome ASC;"
 		), MYSQLI_ASSOC);
 
@@ -208,26 +203,35 @@ function criar_relatorio_saldo() {
 			// $endossoCompleto = montarEndossoMes($dataMes, $motorista);
 
 			// $saldoAnterior = $endossoCompleto["totalResumo"]["saldoAnterior"];
-			$saldoAnterior = mysqli_fetch_assoc(query(
-				"SELECT endo_tx_saldo FROM endosso"
-					. " WHERE endo_tx_status = 'ativo'"
-					. " AND endo_tx_ate < '" . $dataMes->format("Y-m-d") . "'"
-					. " AND endo_tx_matricula = '" . $motorista["enti_tx_matricula"] . "'"
-					. " ORDER BY endo_tx_ate DESC"
-					. " LIMIT 1;"
+			$ultimoEndosso = mysqli_fetch_assoc(query(
+				"SELECT endo_tx_filename FROM endosso"
+					." WHERE endo_tx_status = 'ativo'"
+						." AND endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'"
+						." AND endo_tx_ate < '".$dataMes->format("Y-m-d")."'"
+					." ORDER BY endo_tx_ate DESC"
+					." LIMIT 1;"
 			));
-
-			if (!empty($saldoAnterior)) {
-				if (!empty($saldoAnterior["endo_tx_saldo"])) {
-					$saldoAnterior = $saldoAnterior["endo_tx_saldo"];
-				} elseif (!empty($motorista["enti_tx_banco"])) {
-					$saldoAnterior = $motorista["enti_tx_banco"];
+			
+			$saldoAnterior = "";
+			if(!empty($ultimoEndosso) && file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$ultimoEndosso["endo_tx_filename"].".csv")){
+				$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
+				if(empty($totalResumo)){
+					$totalResumo = $ultimoEndosso["totalResumo"];
+				}else{
+					foreach(["saldoAnterior", "saldoFinal"] as $key){
+						$totalResumo[$key] = operarHorarios(
+							[
+								(!empty($totalResumo[$key])? $totalResumo[$key]: "00:00"),
+								(!empty($ultimoEndosso["totalResumo"][$key])? $ultimoEndosso["totalResumo"][$key]: "00:00")
+							], 
+							"+"
+						);
+					}
 				}
-				if (strlen($motorista["enti_tx_banco"]) > 5 && $motorista["enti_tx_banco"][0] == "0") {
-					$saldoAnterior = substr($saldoAnterior, 1);
-				}
-			} else {
-				$saldoAnterior = "00:00";
+				$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoFinal"];
+			}elseif(!empty($motorista["enti_tx_banco"])){
+				$saldoAnterior = $motorista["enti_tx_banco"];
+				$saldoAnterior = $saldoAnterior[0] == "0" && strlen($saldoAnterior) > 5? substr($saldoAnterior, 1): $saldoAnterior;
 			}
 			//}
 
@@ -394,11 +398,8 @@ function criar_relatorio_endosso() {
 			}
 			$pasta->close();
 		}
-		if (!empty($_POST["busca_ocupacao"])) {
-			$filtroOcupacao = "AND enti_tx_ocupacao IN ('{$_POST["busca_ocupacao"]}')";
-		} else {
-			$filtroOcupacao = " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')";
-		}
+
+		$filtroOcupacao = " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')";
 
 		$motoristas = mysqli_fetch_all(query(
 			"SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg, parametro.para_tx_inicioAcordo, parametro.para_nb_qDias, parametro.para_nb_qDias FROM entidade"
@@ -802,7 +803,6 @@ function relatorio_nao_conformidade_juridica() {
 				WHERE enti_tx_status = 'ativo'
 					AND enti_nb_empresa = {$_POST["empresa"]}
 					AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-t")}'
-					{$filtroOcupacao}
 				ORDER BY enti_tx_nome ASC;"
 	), MYSQLI_ASSOC);
 
@@ -1217,17 +1217,12 @@ function criar_relatorio_ajustes() {
 			mkdir($path, 0755, true);
 		}
 
-		if (!empty($_POST["busca_ocupacao"])) {
-			$filtroOcupacao = "AND enti_tx_ocupacao IN ('{$_POST["busca_ocupacao"]}')";
-		}
-
 		$motoristas = mysqli_fetch_all(
 			query(
 				"SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula, enti_tx_ocupacao FROM entidade
 					 WHERE enti_tx_status = 'ativo'
 					 AND enti_nb_empresa = {$empresa['empr_nb_id']}
 					 AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')
-					 {$filtroOcupacao}
 					 ORDER BY enti_tx_nome ASC;"
 			),
 			MYSQLI_ASSOC
