@@ -24,7 +24,7 @@ class CustomPDF extends TCPDF {
         $imgHeight = 15;
         $imgHeight2 = 10;
         $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth2, $imgHeight2);
-        $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
+        $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 25, 10, $imgWidth, $imgHeight);
         // $this->Image('logo_esquerda.png', 10, 10, $imgWidth, $imgHeight);
         // $this->Image('logo_direita.png', $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
         $this->SetFont('helvetica', 'B', 12);
@@ -1814,7 +1814,7 @@ function gerarPainelDisponibilidade() {
     $pdf->SetCreator('TechPS');
     $pdf->SetAuthor('TechPS');
     $pdf->SetTitle('Painel Progressão de Disponibilidade');
-    $pdf->SetMargins(2, 25, 2);
+    $pdf->SetMargins(10, 25, 2);
     $pdf->SetHeaderMargin(10);
     $pdf->SetFooterMargin(10);
     $pdf->setFontSubsetting(true);
@@ -1855,27 +1855,43 @@ function gerarPainelDisponibilidade() {
 
     $pdf->Ln(5); // Espaçamento
 
+    $pdf->SetFont('helvetica', 'B', 11);
+
     // 2. Blocos coloridos alinhados horizontalmente
-    $start_x = 122; // Posição inicial X para os blocos
-    $block_width = 30;
+    $start_x = 132;
+    $block_width = 40;
     $block_height = 12;
+    $radius = 2;
 
-    // Bloco Verde (Disponível)
-    $pdf->SetXY($start_x, 56);
-    $pdf->SetFillColor(144, 238, 144); // lightgreen
-    $pdf->SetTextColor(0);
-    $pdf->Cell($block_width, $block_height, 'Disponível: 3', 1, 1, 'L', 1, '', 0, false, 'C', 'C');
+    // Função auxiliar para centralizar texto dentro de blocos com RoundedRect
+    function drawRoundedBlock($pdf, $x, $y, $width, $height, $radius, $fillColor, $text) {
+        $pdf->SetFillColor($fillColor[0], $fillColor[1], $fillColor[2]);
+        $pdf->SetDrawColor(0, 0, 0); // Borda preta
+        $pdf->RoundedRect($x, $y, $width, $height, $radius, '1111', 'DF');
 
-    // Bloco Laranja (Parcialmente Disponível)
-    $pdf->SetXY($start_x + 40, 56);
-    $pdf->SetFillColor(255, 159, 44); // #ff9f2c
-    $pdf->Cell($block_width, $block_height, 'Parc. Disponível: 0', 1, 1, 'L', 1, '', 0, false, 'C', 'C');
+        $pdf->SetTextColor(255, 255, 255);
+        // Centralização vertical ajustada com margem superior (aprox. 3.5 dá boa centralização)
+        $pdf->SetXY($x, $y + 3.5);
+        $pdf->Cell($width, 5, $text, 0, 1, 'C', 0);
+    }
 
-    // Bloco Vermelho (Indisponível)
-    $pdf->SetXY($start_x + 80, 56);
-    $pdf->SetFillColor(163, 0, 0); // #a30000
-    $pdf->SetTextColor(255, 255, 255);
-    $pdf->Cell($block_width, $block_height, 'Indisponível: 0', 1, 1, 'L', 1, '', 0, false, 'C', 'C');
+    // Y fixo
+    $y = 50;
+
+    // Bloco Verde
+    drawRoundedBlock($pdf, $start_x, $y, $block_width, $block_height, $radius, [144, 238, 144], 'Disponível: 3');
+
+    // Bloco Laranja
+    drawRoundedBlock($pdf, $start_x + 50, $y, $block_width, $block_height, $radius, [255, 159, 44], 'Parc. Disponível: 0');
+
+    // Bloco Vermelho
+    drawRoundedBlock($pdf, $start_x + 100, $y, $block_width, $block_height, $radius, [163, 0, 0], 'Indisponível: 0');
+
+    // Reset cor do texto
+    $pdf->SetTextColor(0, 0, 0);
+
+
+    // Reset da cor do texto
     $pdf->SetTextColor(0, 0, 0);
 
     // Ajusta o espaçamento entre os blocos
@@ -1886,6 +1902,7 @@ function gerarPainelDisponibilidade() {
 
     // Recebe e trata o HTML
     $htmlTabela = $_POST['htmlTabela'] ?? '';
+    // dd($htmlTabela);
     
     // Limpeza adicional do HTML
     $htmlTabela = preg_replace('/<i[^>]*>(.*?)<\/i>/', '', $htmlTabela); // Remove ícones
@@ -1895,7 +1912,7 @@ function gerarPainelDisponibilidade() {
     $pdf->writeHTML($htmlTabela, true, false, true, false, '');
 
     // Gera o PDF
-    $nomeArquivo = 'Relatorio_Saldo.pdf';
+    $nomeArquivo = 'projeção_de_disponibilidade.pdf';
     $pdf->Output($nomeArquivo, 'I');
 }
 

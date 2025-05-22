@@ -20,7 +20,7 @@
                         +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.Nome+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ultimaJornada+'</td>'
-                        +'<td style=\'text-align: center;'+ css +'\'>'+item.repouso+'</td>'
+                        +'<td style=\'text-align: center;'+ css +' color: white; text-shadow: 2px 2px 3px black;\'><strong>'+item.repouso+'</strong></td>'
                         +'<td style=\'text-align: center;\'>'+item.Apos8+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.Apos11+'</td>'
                         +'<td style=\'text-align: center;\'>'+status+'</td>'
@@ -94,7 +94,7 @@
                                     
                                     var consulta = $('#consulta');
 
-                                    var consultas = `<span style=\"color: red;\"><b>Projeção de Disponibilidade para:&nbsp;</b></span><spam> \${data.total.consulta}</span>`;
+                                    var consultas = `<span style=\"color: red;\"><b>Projeção de Disponibilidade de Jornada para:&nbsp;</b></span><spam> \${data.total.consulta}</span>`;
 
                                     consulta.append(consultas);
 
@@ -124,10 +124,10 @@
 
                                     var linha_disponivel = `
                                         <tr>
-                                            <td style=\"background-color: lightgreen; height: 54px; vertical-align: middle;\">
+                                            <td style=\"background-color: lightgreen; height: 54px; vertical-align: middle; font-size: 13px; padding: 10px;\">
                                                 <div style=\"display: flex; justify-content: space-between; align-items: center;\">
-                                                    <b>Disponível:</b>
-                                                    <span style=\"font-size: 11px; margin-left: 10px;\"><b>\${contagemStatus.disponivel}</b></span>
+                                                    <strong>Disponível:</strong>
+                                                    <span style=\"margin-left: 10px;\"><strong>\${contagemStatus.disponivel}</strong></span>
                                                 </div>
                                             </td>
                                         </tr>`;
@@ -135,10 +135,10 @@
 
                                     var linha_parcial = `
                                         <tr>
-                                            <td style=\"background-color: #ff9f2c; height: 54px; vertical-align: middle;\">
+                                            <td style=\"background-color: var(--var-lightorange); height: 54px; vertical-align: middle; font-size: 13px; padding: 10px;\">
                                                 <div style=\"display: flex; justify-content: space-between; align-items: center;\">
-                                                    <b>Parcialmente Disponível:</b>
-                                                    <span style=\"font-size: 11px; margin-left: 10px;\"><b>\${contagemStatus.parcial}</b></span>
+                                                    <strong>Parcialmente Disponível:</strong>
+                                                    <span style=\"margin-left: 10px;\"><strong>\${contagemStatus.parcial}</strong></span>
                                                 </div>
                                             </td>
                                         </tr>`;
@@ -146,10 +146,10 @@
 
                                     var linha_indisponivel = `
                                         <tr>
-                                            <td style=\"background-color: #a30000; color: white; padding: 5px 10px; height: 54px; vertical-align: middle;\">
+                                            <td style=\"background-color: #a30000; color: white; padding: 5px 10px; height: 54px; vertical-align: middle; font-size: 13px; padding: 10px;\">
                                                 <div style=\"display: flex; justify-content: space-between; align-items: center;\">
-                                                    <b>Indisponível:</b>
-                                                    <span style=\"font-size: 11px; margin-left: 10px;\"><b>\${contagemStatus.naoPermitido}</b></span>
+                                                    <strong>Indisponível:</strong>
+                                                    <span style=\"margin-left: 10px;\"><strong>\${contagemStatus.naoPermitido}</strong></span>
                                                 </div>
                                             </td>
                                         </tr>`;
@@ -290,7 +290,7 @@
     }
     
     function index() {
-        cabecalho("Painel Disponibilidade de Jornada");
+        cabecalho("Painel de Disponibilidade de Jornada");
 
         // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
@@ -346,9 +346,18 @@
             if (thead) {
                 htmlSimplificado += '<thead>';
                 thead.querySelectorAll('tr').forEach(tr => {
-                    htmlSimplificado += '<tr>';
-                    tr.querySelectorAll('th').forEach(th => {
-                        htmlSimplificado += '<th style=\"border:0.5px solid #000;padding:2px;text-align:center;font-weight:bold;background-color:#444d58; color:white;\">';
+                    
+                htmlSimplificado += '<tr>';
+                tr.querySelectorAll('th').forEach((th, index)=> {
+                    let largura = '80px'; // valor padrão
+                    if (index === 0) largura = '40px';
+                    else if (index === 1) largura = '40px';
+                    else if (index === 2) largura = '222px';
+                    else if (index === 3) largura = '80px';
+                    else if (index === 4) largura = '100px';
+                    else if (index === 5) largura = '100px';
+
+                    htmlSimplificado += '<th style=\"border:0.5px solid #000;padding:2px;text-align:center;font-weight:bold;background-color:#444d58; color:white; width:' + largura + '\">';
                         htmlSimplificado += th.innerText.trim();
                         htmlSimplificado += '</th>';
                     });
@@ -365,7 +374,15 @@
                 tbody.querySelectorAll('tr').forEach(tr => {
                     htmlSimplificado += '<tr>';
                     tr.querySelectorAll('td').forEach((td, colIndex) => {
-                        let estiloBase = 'border:0.5px solid #000;padding:2px;font-size:7pt;';
+                        let largura = '80px'; // valor padrão
+                        if (colIndex === 0) largura = '40px';
+                        else if (colIndex === 1) largura = '40px';
+                        else if (colIndex === 2) largura = '222px';
+                        else if (colIndex === 3) largura = '80px';
+                        else if (colIndex === 4) largura = '100px';
+                        else if (colIndex === 5) largura = '100px';
+
+                        let estiloBase = 'border:0.5px solid #000;padding:2px;font-size:7pt;width:' + largura + ';';
                         estiloBase += (colIndex === 2)
                             ? 'text-align:left;white-space:nowrap;overflow:hidden;max-width:90px;'
                             : 'text-align:center;';
@@ -384,7 +401,7 @@
                             } else if (estiloInline.includes('var(--var-lightorange)')) {
                                 css = 'background-color: var(--var-lightorange);';
                             } else if (estiloInline.includes('var(--var-darkred)')) {
-                                css = 'background-color: var(--var-darkred); color: white;';
+                                css = 'background-color: var(--var-darkred);';
                             }
 
                             estiloBase += css;
@@ -470,7 +487,7 @@
             }
 
             if ($encontrado) {
-                $titulo = "Painel Disponibilidade de Jornada";
+                $titulo = "Painel de Disponibilidade de Jornada";
                 // $mostra = false;
                 $rowTitulos = "<tr id='titulos3' class='titulos3'>";
                 $rowTitulos .= "
@@ -496,22 +513,25 @@
                     </div>
                     <div style=\"padding-left: 50px;\">
                         <table id=\"tabela-disponivel\"
-                            class=\"table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact\"
-                            style=\"margin-bottom: 15px;\">
+                            class=\"table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact \"
+                            style=\"margin-bottom: 15px; border-radius: 15px; overflow: hidden;
+                            color: white; text-shadow: 2px 2px 3px black; \">
                             <thead></thead>
                         </table>
                     </div>
                     <div style=\"padding-left: 30px;\">
                         <table id=\"tabela-parcial\"
                             class=\"table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact\"
-                            style=\"margin-bottom: 15px;\">
+                            style=\"margin-bottom: 15px; border-radius: 15px; overflow: hidden;
+                            color: white; text-shadow: 2px 2px 3px black; \">
                             <thead></thead>
                         </table>
                     </div>
                     <div style=\"padding-left: 30px;\">
                         <table id=\"tabela-indisponivel\"
                             class=\"table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact\"
-                            style=\"margin-bottom: 15px;\">
+                            style=\"margin-bottom: 15px; border-radius: 15px; overflow: hidden;
+                            color: white; text-shadow: 2px 2px 3px black; \">
                             <thead></thead>
                         </table>
                     </div>

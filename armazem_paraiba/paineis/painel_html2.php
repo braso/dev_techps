@@ -17,7 +17,9 @@
 				<h2 class="titulo2"><?= $titulo ?></h2>
 				<span></span>
 				<?= $dataEmissao ?>
-				<div id="consulta">
+				<br>
+				<div id="consulta" style="color: red; border: 2px solid; padding: 2px; border-radius: 4px; display: inline-block;">
+					<i style="color:red; margin-right: 5px;" title="Aqui apresenta a data da projeção de jornada consultada" class="fa fa-warning"></i>
 				</div>
 				<br>
 				<?php
