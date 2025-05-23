@@ -1515,6 +1515,7 @@ function logisticas() {
 
 			$avisoRepouso = $sinal . str_pad($horas, 2, '0', STR_PAD_LEFT) . ":" .
 				str_pad($minutos, 2, '0', STR_PAD_LEFT);
+			$avisoRepouso .= " (D+".$diferenca->days .")";
 
 			// Para o campo 'Apos8': exibe a data de +8h apenas se a ADI não estiver ativa e se o repouso for inferior a 11h
 			$exibirApos8 = (!$considerarADI && $totalMinutos < $minimoCompleto) ? $dataMais8Horas->format('d/m/Y H:i') : '';
