@@ -122,6 +122,9 @@
                                     }
                                     consulta.after('<br><strong>Ocupação:&nbsp</strong> <span>'+ocupacaoData+'</span>');
 
+                                    var resumo = $('#resumo');
+                                    resumo.after('<br><span style=\"font-size: 10px; text-align: justify;\"><i class=\"fa fa-info-circle\" aria-hidden=\"true\" style=\"font-size: 14px;\"></i> Funcionários com jornada aberta não aparecem neste painel.</span>');
+
                                     var tabela_funcionarios = $('#tabela-funcionarios thead');
 
                                     var ocupacoesHTML = '';
@@ -208,6 +211,7 @@
                                 }
                             });
                         }
+
                         // Função para converter valores para comparação
                         function converterValor(valor, coluna) {
                             valor = valor.trim(); // Remove espaços extras

@@ -54,16 +54,25 @@ function carregarGraficos($periodoInicio) {
 
 	$totaisPorMesJS = json_encode($totaisPorMes);
 	$mesesJS = json_encode($mesesJS);
-	$mesesFormatadosJS = json_encode(array_map(function($mes) {
+	$mesesFormatadosJS = json_encode(array_map(function ($mes) {
 		return [
-			'01' => 'Jan', '02' => 'Fev', '03' => 'Mar', '04' => 'Abr',
-			'05' => 'Mai', '06' => 'Jun', '07' => 'Jul', '08' => 'Ago',
-			'09' => 'Set', '10' => 'Out', '11' => 'Nov', '12' => 'Dez'
+			'01' => 'Jan',
+			'02' => 'Fev',
+			'03' => 'Mar',
+			'04' => 'Abr',
+			'05' => 'Mai',
+			'06' => 'Jun',
+			'07' => 'Jul',
+			'08' => 'Ago',
+			'09' => 'Set',
+			'10' => 'Out',
+			'11' => 'Nov',
+			'12' => 'Dez'
 		][$mes];
 	}, $mesesFormatadosJS));
 
 	$session = $_SESSION['horaEntrada'] ?? '0';
-	$date = new DateTime( $_POST["busca_periodo"][0]);
+	$date = new DateTime($_POST["busca_periodo"][0]);
 	$data = $date->format('Y-m');
 
 	echo "
@@ -202,8 +211,7 @@ function carregarGraficos($periodoInicio) {
 			$('[data-toggle=\"tooltip\"]').tooltip({ trigger: 'click' });
 		});
 		</script>
-	"
-	;
+	";
 }
 
 function carregarJS(array $arquivos) {
@@ -358,7 +366,7 @@ function carregarJS(array $arquivos) {
 		
 			$(document).ready(function(){
 				var tabela = $('#tabela-empresas tbody');
-				var ocupacoesPermitidas = '".$_POST["busca_ocupacao"]."';
+				var ocupacoesPermitidas = '" . $_POST["busca_ocupacao"] . "';
 
 				function carregarDados(urlArquivo){
 					$.ajax({
@@ -803,11 +811,20 @@ function index() {
 	$campos = [
 		combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
 		$campoAcao,
-		campo("Período", "busca_periodo",
+		campo(
+			"Período",
+			"busca_periodo",
 			(!empty($_POST["busca_periodo"]) ? $_POST["busca_periodo"] : [date("Y-m-01"), date("Y-m-d")]),
-			2, "MASCARA_PERIODO"),
-		combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2,
-		["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
+			2,
+			"MASCARA_PERIODO"
+		),
+		combo(
+			"Ocupação",
+			"busca_ocupacao",
+			($_POST["busca_ocupacao"] ?? ""),
+			2,
+			["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]
+		),
 	];
 
 	$botao_volta = "";
@@ -867,7 +884,7 @@ function index() {
 				var input1 = document.createElement('input');
 				input1.type = 'hidden';
 				input1.name = 'empresa';
-				input1.value = " . (!empty($_POST['empresa']) ? $_POST['empresa'] : 'null'). "; // Valor do primeiro campo
+				input1.value = " . (!empty($_POST['empresa']) ? $_POST['empresa'] : 'null') . "; // Valor do primeiro campo
 				form.appendChild(input1);
 
 				// Criando campo 2
@@ -888,7 +905,7 @@ function index() {
 				// var input2 = document.createElement('input');
 				// input2.type = 'hidden';
 				// input2.name = 'busca_endossado';
-				// input2.value = '".json_encode($_POST["busca_periodo"])."' ; // Valor do segundo campo
+				// input2.value = '" . json_encode($_POST["busca_periodo"]) . "' ; // Valor do segundo campo
 				// form.appendChild(input2);
 
 
@@ -995,29 +1012,29 @@ function index() {
 						if (strtolower($key['pont_tx_status'] ?? '') !== 'ativo') {
 							continue; // Pula se não for "ativo"
 						}
-					
+
 						// Define o motivo
 						$motivo = $key['moti_tx_nome'] ?? 'MOTIVO_NAO_INFORMADO';
-					
+
 						// Contagem geral por motivo
 						if (!isset($resultado[$motivo])) {
 							$resultado[$motivo] = 0;
 						}
 						$resultado[$motivo]++;
-					
+
 						// Agrupamento por motivo e funcionário
 						if (!isset($resultado2[$motivo])) {
 							$resultado2[$motivo] = [];
 						}
-					
+
 						$dadosFunc = [
 							"matricula" => $json["matricula"] ?? 'SEM_MATRICULA',
 							"nome" => $json["nome"] ?? 'NOME_NAO_INFORMADO',
 							"ocupacao" => $json["ocupacao"] ?? 'OCUPACAO_NAO_INFORMADA'
 						];
-					
+
 						$funcionarioKey = $dadosFunc['matricula'] ?? md5($dadosFunc['nome']);
-					
+
 						if (!isset($resultado2[$motivo][$funcionarioKey])) {
 							$resultado2[$motivo][$funcionarioKey] = [
 								'funcionario' => $dadosFunc,
@@ -1025,13 +1042,13 @@ function index() {
 								'tipos' => [] // ← adiciona array para tipos
 							];
 						}
-					
+
 						// Incrementa quantidade
 						$resultado2[$motivo][$funcionarioKey]['quantidade']++;
-					
+
 						// Armazena tipo do campo macr_tx_nome
 						$tipo = $key['macr_tx_nome'] ?? 'TIPO_NAO_INFORMADO';
-					
+
 						if (!isset($resultado2[$motivo][$funcionarioKey]['tipos'][$tipo])) {
 							$resultado2[$motivo][$funcionarioKey]['tipos'][$tipo] = 0;
 						}
@@ -1063,7 +1080,7 @@ function index() {
 									<th>Funcionários</th>
 									<th style='text-align: center;'><button class='btn btn-default btn-sm' 
 									onclick=\"createModal2("
-											. htmlspecialchars(json_encode($resultado2), ENT_QUOTES, 'UTF-8' ) . ");\" )'>Visualizar
+				. htmlspecialchars(json_encode($resultado2), ENT_QUOTES, 'UTF-8') . ");\" )'>Visualizar
 											Todos</button></th>
 								</tr>
 							</thead>
@@ -1388,7 +1405,7 @@ function index() {
 		}
 	}
 	carregarJS($arquivos);
-	if(!empty($periodoInicio)){
+	if (!empty($periodoInicio)) {
 		carregarGraficos($periodoInicio);
 	}
 	rodape();
