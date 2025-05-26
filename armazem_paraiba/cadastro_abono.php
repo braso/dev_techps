@@ -125,7 +125,7 @@
 			"enti_tx_matricula"
 		);
 		$campos[0][] = campo("Data(s)*", "periodo_abono", ($_POST["periodo_abono"]?? $_POST["busca_periodo"]?? ""),3, "MASCARA_PERIODO");
-		$campos[0][] = campo("Abono*", "abono", ($_POST["abono"]?? ""), 3, "MASCARA_HORAS");
+		$campos[0][] = campo("Tempo a abonar*", "abono", ($_POST["abono"]?? ""), 3, "MASCARA_HORAS");
 		$campos[1][] = combo_bd("Motivo*","motivo", ($_POST["motivo"]?? ""),4,"motivo",""," AND moti_tx_tipo = 'Abono'");
 		$campos[1][] = textarea("Justificativa","descricao", ($_POST["descricao"]?? ""),12);
 
