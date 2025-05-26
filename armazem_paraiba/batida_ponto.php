@@ -364,10 +364,13 @@
 		$aMotorista["user_tx_cpf"] = str_split($aMotorista["user_tx_cpf"], 3);
 		$aMotorista["user_tx_cpf"] = $aMotorista["user_tx_cpf"][0].".".$aMotorista["user_tx_cpf"][1].".".$aMotorista["user_tx_cpf"][2]."-".$aMotorista["user_tx_cpf"][3];
 
+		$logoutTime = 30; //Utilizado em batida_ponto_html.php
+
 		$fields = [
 			"<div id='clockParent' class='col-sm-5 margin-bottom-5' >
 				<label>Hora</label><br>
 				<p class='text-left' id='clock'>Carregando...</p>
+				<div id='timeout' value='0'>Inatividade: --:--</div>
 			</div>",
 			"<div class='col-sm-5 margin-bottom-5 info-grid'>"
 				."<div class='margin-bottom-5'><b>Data:</b> ".date("d/m")."</div>"
@@ -409,7 +412,6 @@
 
 		grid($sql, array_keys($gridFields), array_values($gridFields), "", "", 0, "desc");
 		rodape();
-
 
 		include "html/batida_ponto_html.php";
 	}
