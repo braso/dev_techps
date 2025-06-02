@@ -8,6 +8,14 @@
     margin-bottom: 10px;
 }
 
+div#timeout{
+    text-align: center;
+    /* color: red; */
+    /* text-shadow: 0px 1px 0px black; */
+    font-weight: bold;
+    display: fixed;
+}
+
 /* #clockParent{
 } */
 

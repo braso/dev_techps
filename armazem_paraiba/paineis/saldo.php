@@ -367,7 +367,7 @@
         ;
         
         $campos = [
-            combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
+            combo_net("Empresa", "empresa", $_POST["empresa"]?? $_SESSION["user_nb_empresa"], 4, "empresa", ""),
             $campoAcao,
             combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
             ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),

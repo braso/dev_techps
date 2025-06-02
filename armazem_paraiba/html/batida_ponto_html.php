@@ -31,6 +31,8 @@
 		</div>
 	</div>
 </div>
+<form id="loginTimeoutForm" method="post" target="<?=($_SERVER['DOCUMENT_ROOT']).$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]?>/logout.php" action="logout"></form>
+
 <script>
 
 	function operarHorarios(horarios = [], operacao){
@@ -204,7 +206,7 @@
 
 
 
-	function updateClock() {
+	function updateClock(){
 		const now = new Date();
 		const hours = String(now.getHours()).padStart(2, '0');
 		const minutes = String(now.getMinutes()).padStart(2, '0');
@@ -213,6 +215,38 @@
 		document.getElementById('clock').textContent = timeString;
 	}
 
+	function leftPad(number, width, pad = '0') {
+		return number.toString().padStart(width, pad);
+	}
+
+	function updateTimeout(){
+		var time = parseInt(document.getElementById('timeout').getAttribute('value'));
+		time += 1;
+		const timeString = "Inatividade: "+leftPad(Math.round((time/60-0.5)), 2)+':'+leftPad((time%60), 2);
+
+		document.getElementById('timeout').innerHTML = timeString;
+		document.getElementById('timeout').setAttribute('value', time);
+
+		if(time >= <?=$logoutTime?>-10){
+			document.getElementById('timeout').setAttribute('style', 'color: red;');
+		}
+
+		if(time >= <?=$logoutTime?>){
+			let form = document.getElementById('loginTimeoutForm');
+			form.submit();
+			window.location.href = '<?= $CONTEX['path']?>/logout.php';
+		}
+	}
+
+	function updateTimer(){
+		document.getElementById('timeout').setAttribute('value', 0);
+	}
+	
 	updateClock(); // Atualizar imediatamente
 	setInterval(updateClock, 1000); // Atualizar a cada segundo
+
+	updateTimeout(); // Atualizar imediatamente
+	setInterval(updateTimeout, 1000); // Atualizar a cada segundo
+
+	
 </script>

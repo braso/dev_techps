@@ -27,21 +27,22 @@
 		
 		$paginas = [
 			"cadastros" => [
-				"/cadastro_empresa.php" 	=> "Empresa/Filial", 
-				"/cadastro_endosso.php" 	=> "Endosso", 
-				"/cadastro_feriado.php" 	=> "Feriado", 
-				"/cadastro_motorista.php" 	=> "Funcionário", 
+				"/cadastro_empresa.php" 	=> "Empresa/Filial",
+				"/cadastro_endosso.php" 	=> "Endosso",
+				"/cadastro_ferias.php" 		=> "Férias",
+				"/cadastro_feriado.php" 	=> "Feriado",
+				"/cadastro_motorista.php" 	=> "Funcionário",
 				"/cadastro_macro.php" 		=> "Macro",
-				"/cadastro_motivo.php" 		=> "Motivo", 
-				"/cadastro_parametro.php" 	=> "Parâmetro", 
+				"/cadastro_motivo.php" 		=> "Motivo",
+				"/cadastro_parametro.php" 	=> "Parâmetro",
 				"/cadastro_usuario.php" 	=> "Usuário",
-				"/cadastro_placa.php" 	=> "Placas" 
+				"/cadastro_placa.php" 		=> "Placas"
 			],
 			"ponto" => [
-				"/endosso.php" 			=> "Consultar Endossos", 
-				"/espelho_ponto.php" 	=> "Espelhos de Ponto", 
-				"/carregar_ponto.php" 	=> "Integrações de Ponto", 
-				"/nao_conformidade.php" => "Não Conformidades", 
+				"/endosso.php" 			=> "Consultar Endossos",
+				"/espelho_ponto.php" 	=> "Espelhos de Ponto",
+				"/carregar_ponto.php" 	=> "Integrações de Ponto",
+				"/nao_conformidade.php" => "Não Conformidades",
 				"/nao_cadastrados.php" 	=> "Não cadastrados"
 			],
 			"painel" => [

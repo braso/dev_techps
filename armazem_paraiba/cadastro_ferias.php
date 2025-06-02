@@ -1,19 +1,17 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
 
 	include "funcoes_ponto.php";
 
-	function cadastra_abono(){
+	function cadastra_ferias(){
 		// Conferir se os campos obrigatórios estão preenchidos{
 			
 			$camposObrig = [
 				"motorista" => "Funcionário",
-				"periodo_abono" => "Data",
-				"abono" => "Abono",
-				"motivo" => "Motivo"
+				"periodo_ferias" => "Data"
 			];
 
 			$errorMsg = conferirCamposObrig($camposObrig, $_POST);
@@ -27,8 +25,8 @@
 
 		$_POST["busca_motorista"] = $_POST["motorista"];
 
-		$aData[0] = $_POST["periodo_abono"][0];
-		$aData[1] = $_POST["periodo_abono"][1];
+		$aData[0] = $_POST["periodo_ferias"][0];
+		$aData[1] = $_POST["periodo_ferias"][1];
 		//Conferir se há um período entrelaçado com essa data{
 			$endosso = mysqli_fetch_assoc(
 				query(
@@ -50,7 +48,7 @@
 				$endosso["endo_tx_ate"] = explode("-", $endosso["endo_tx_ate"]);
 				$endosso["endo_tx_ate"] = $endosso["endo_tx_ate"][2]."/".$endosso["endo_tx_ate"][1]."/".$endosso["endo_tx_ate"][0];
 
-				$_POST["errorFields"][] = "periodo_abono";
+				$_POST["errorFields"][] = "periodo_ferias";
 				set_status("ERRO: Possui um endosso de ".$endosso["endo_tx_de"]." até ".$endosso["endo_tx_ate"].".");
 				layout_abono();
 				exit;
@@ -70,6 +68,19 @@
 			 LIMIT 1;"
 		));
 
+		$idFerias = mysqli_fetch_assoc(query(
+			"SELECT moti_nb_id FROM motivo 
+				WHERE moti_tx_status = 'ativo'
+					AND moti_tx_nome = 'Férias' 
+					AND moti_tx_tipo = 'Afastamento'
+			LIMIT 1;"
+		));
+
+		if(empty($idFerias)){
+			set_status("ERRO: cadastre um motivo de afastamento com o nome 'Férias' para cadastrar férias.");
+			index();
+		}
+
 		for ($i = $begin; $i <= $end; $i->modify("+1 day")){
 			$sqlRemover = query(
 				"SELECT * FROM abono 
@@ -82,16 +93,13 @@
 				remover("abono", $aRemover["abon_nb_id"]);
 			}
 			
-			$aDetalhado = diaDetalhePonto($motorista, $i->format("Y-m-d"));
-			$aDetalhado["diffSaldo"] = str_replace(["<b>", "</b>"], ["", ""], $aDetalhado["diffSaldo"]);
-			$abono = calcularAbono($aDetalhado["diffSaldo"], $_POST["abono"]);
+			$abono = $motorista["para_tx_jornadaSemanal"];
 
 			$novoAbono = [
 				"abon_tx_data" 			=> $i->format("Y-m-d"),
 				"abon_tx_matricula" 	=> $motorista["enti_tx_matricula"],
 				"abon_tx_abono" 		=> $abono,
-				"abon_nb_motivo" 		=> $_POST["motivo"],
-				"abon_tx_descricao" 	=> $_POST["descricao"],
+				"abon_nb_motivo" 		=> $idFerias["moti_nb_id"],
 				"abon_nb_userCadastro" 	=> $_SESSION["user_nb_id"],
 				"abon_tx_dataCadastro" 	=> date("Y-m-d H:i:s"),
 				"abon_tx_status" 		=> "ativo"
@@ -112,7 +120,7 @@
 	}
 	
 	function index(){
-		cabecalho("Cadastro Abono");
+		cabecalho("Cadastro de Férias");
 
 		$campos[0][] = combo_net(
 			"Funcionário*",
@@ -124,18 +132,14 @@
 			" AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')",
 			"enti_tx_matricula"
 		);
-		$campos[0][] = campo("Data(s)*", "periodo_abono", ($_POST["periodo_abono"]?? $_POST["busca_periodo"]?? ""),3, "MASCARA_PERIODO");
-		$campos[0][] = campo("Tempo a abonar*", "abono", ($_POST["abono"]?? ""), 3, "MASCARA_HORAS");
-		$campos[1][] = combo_bd("Motivo*","motivo", ($_POST["motivo"]?? ""),4,"motivo",""," AND moti_tx_tipo = 'Abono'");
-		$campos[1][] = textarea("Justificativa","descricao", ($_POST["descricao"]?? ""), 12);
+		$campos[0][] = campo("Período*", "periodo_ferias", ($_POST["periodo_ferias"]?? $_POST["busca_periodo"]?? ""),3, "MASCARA_PERIODO_SEM_LIMITE");
 
 		echo abre_form();
 		echo linha_form($campos[0]);
-		echo linha_form($campos[1]);
 
 
 		//BOTOES{
-    		$b[] = botao("Gravar", "cadastra_abono", "", "", "", "", "btn btn-success");
+    		$b[] = botao("Gravar", "cadastra_ferias", "", "", "", "", "btn btn-success");
 			unset($_POST["errorFields"]);
 			$_POST["busca_periodo"] = !empty($_POST["busca_periodo"])? implode(" - ", $_POST["busca_periodo"]): null;
 			$b[] = criarBotaoVoltar("espelho_ponto.php");

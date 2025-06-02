@@ -10,11 +10,17 @@
 	
 	global $legendas;
 	$legendas = [
-		"" => "",
+		"DSR" => "Descanso Semanal Remunerado e Abono",
 		"I" => "Incluída Manualmente",
 		"P" => "Pré-Assinalada",
-		"T" => "Outras fontes de marcação",
-		"DSR" => "Descanso Semanal Remunerado e Abono"
+		"T" => "Outras fontes de marcação"
+	];
+
+	global $tiposMotivo;
+	$tiposMotivo = [
+		"Abono",
+		"Afastamento",
+		"Ajuste"
 	];
 	
 	include "conecta.php";
@@ -64,15 +70,19 @@
 	}
 
 	function layout_motivo(){
-		global $legendas;
-
-		$_POST["moti_tx_legenda"] = "I";
+		
 		cabecalho("Cadastro de Motivo");
-
+		
+		if(empty($_POST["moti_tx_legenda"]) && !empty($_POST["legenda"])){
+			$_POST["moti_tx_legenda"] = $_POST["legenda"];
+		}
+		
+		global $legendas;
+		global $tiposMotivo;
 		$campos = [
 			campo("Nome*", "nome", (!empty($_POST["moti_tx_nome"])? $_POST["moti_tx_nome"]: (!empty($_POST["nome"])? $_POST["nome"]: "")), 6),
-			combo("Tipo*", "tipo", (!empty($_POST["moti_tx_tipo"])? $_POST["moti_tx_tipo"]: (!empty($_POST["tipo"])? $_POST["tipo"]: "")), 2, ["Ajuste","Abono"]),
-			combo("Legenda de Marcação*", "legenda", !empty($_POST["moti_tx_legenda"])? array_key_exists($_POST["moti_tx_legenda"], $legendas): (!empty($_POST["legenda"])? array_search($_POST["legenda"], $legendas): ""), 4, $legendas)
+			combo("Tipo*", "tipo", (!empty($_POST["moti_tx_tipo"])? $_POST["moti_tx_tipo"]: (!empty($_POST["tipo"])? $_POST["tipo"]: "")), 2, $tiposMotivo),
+			combo("Legenda de Marcação*", "legenda", (!empty($_POST["moti_tx_legenda"]) && array_key_exists($_POST["moti_tx_legenda"], $legendas))? $_POST["moti_tx_legenda"]: "I", 4, $legendas)
 		];
 
 		$botoes = [
@@ -96,16 +106,19 @@
 			voltar();
 		}
 		
-		global $legendas;
-
 		cabecalho("Cadastro de Motivo");
-
+		
+		
+		global $legendas;
+		global $tiposMotivo;
 		$campos = [
 			campo("Código",		"busca_codigo",		(!empty($_POST["busca_codigo"])? 	$_POST["busca_codigo"]: ""), 2, "MASCARA_NUMERO", "maxlength='6'"),
 			campo("Nome",		"busca_nome_like",	(!empty($_POST["busca_nome_like"])? $_POST["busca_nome_like"]: ""), 5, "", "maxlength='65'"),
-			combo("Tipo",		"busca_tipo",		(!empty($_POST["busca_tipo"])? 		$_POST["busca_tipo"]: ""), 2, ["", "Ajuste", "Abono"]),
-			combo("Legenda",	"busca_legenda",	(!empty($_POST["busca_legenda"])? 	$_POST["busca_legenda"]: ""), 3, $legendas)
+			combo("Tipo",		"busca_tipo",		(!empty($_POST["busca_tipo"])? 		$_POST["busca_tipo"]: ""), 2, array_merge(["" => ""], $tiposMotivo)),
+			combo("Legenda",	"busca_legenda",	(!empty($_POST["busca_legenda"])? 	$_POST["busca_legenda"]: ""), 3, array_merge(["" => ""], $legendas)),
+			campo_hidden("busca_status", "ativo")
 		];
+
 		$botoes = [
 			botao("Buscar","index"),
 			botao("Inserir","layout_motivo","","","","","btn btn-success")
@@ -127,7 +140,8 @@
 				"busca_codigo"		=> "moti_nb_id",
 				"busca_nome_like"	=> "moti_tx_nome",
 				"busca_tipo"		=> "moti_tx_tipo",
-				"busca_legenda"		=> "moti_tx_legenda"
+				"busca_legenda"		=> "moti_tx_legenda",
+				"busca_status"		=> "moti_tx_status"
 			];
 
 			$queryBase = ("SELECT ".implode(", ", array_values($gridFields))." FROM motivo");

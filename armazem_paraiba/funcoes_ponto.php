@@ -280,6 +280,19 @@
 				"EP" => 0,
 				"N" => 0
 			];
+
+			if(empty($motoristas)){
+				echo 
+					"<script>
+						alert('Não foram encontrados funcionários para atualizar o ponto.')
+					</script>"
+				;
+				$_POST["returnValues"] = json_encode([
+					"HTTP_REFERER" => $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/carregar_ponto.php"
+				]);
+				voltar();
+			}
+
 			foreach ($motoristas as $motorista) {
 				if (substr($motorista["enti_tx_admissao"],0,7) <= $mes->format("Y-m")) {
 					$endossos = mysqli_fetch_all(query(
@@ -687,8 +700,8 @@
 			if(!empty($abonos)){
 				$warning = 
 					"<a><i style='color:green;' title="
-							."'Jornada Original: ".$jornadaPrevistaOriginal."\n"
-							."Abono: {$abonos["abon_tx_abono"]}\n"
+							."'Jornada Original: {$jornadaPrevistaOriginal}\n"
+							."{$abonos["moti_tx_tipo"]}: {$abonos["abon_tx_abono"]}\n"
 							."Motivo: {$abonos["moti_tx_nome"]}\n"
 							."Justificativa: {$abonos["abon_tx_descricao"]}\n\n"
 							."Registro efetuado por {$abonos["user_tx_login"]} em ".data($abonos["abon_tx_dataCadastro"], 1)."'"
@@ -700,6 +713,14 @@
 
 		//}
 
+		$legendas = mysqli_fetch_all(query(
+			"SELECT DISTINCT moti_tx_legenda FROM motivo 
+				WHERE moti_tx_status = 'ativo'
+					AND moti_tx_legenda IS NOT NULL;"
+			), 
+			MYSQLI_ASSOC
+		);
+
 		//CASO NÃO HAJA PONTOS{
 			if(count($pontosDia) == 0){
 				$aRetorno["diffSaldo"] = getSaldoDiario($jornadaPrevista, "00:00");
@@ -708,12 +729,6 @@
 				}
 
 				//Converter array em string{
-					$legendas = mysqli_fetch_all(query(
-						"SELECT DISTINCT moti_tx_legenda FROM motivo 
-							WHERE moti_tx_legenda IS NOT NULL;"
-						), 
-						MYSQLI_ASSOC
-					);
 		
 					foreach(["inicioJornada", "fimJornada", "inicioRefeicao", "fimRefeicao"] as $tipo){
 						$aRetorno[$tipo] = implode("", $aRetorno[$tipo]);
@@ -780,14 +795,15 @@
 		}
 		$aRetorno["diffJornada"] = $registros["jornadaCompleto"]["icone"].$diffJornada;
 
-		//IGNORAR CAMPOS{
-			foreach(["refeicao", "espera", "descanso", "repouso"] as $campoIgnorado){
-				if(is_bool(strpos($motorista["para_tx_ignorarCampos"], $campoIgnorado))){
-					$registros[$campoIgnorado."Completo"] = organizarIntervalos($data, $registros["inicio".ucfirst($campoIgnorado)], $registros["fim".ucfirst($campoIgnorado)]);
+		//IGNORAR INTERVALOS E CAMPOS{
+			foreach(["refeicao", "espera", "descanso", "repouso"] as $campo){
+				if(empty($motorista["para_tx_ignorarCampos"]) || is_bool(strpos($motorista["para_tx_ignorarCampos"], $campo))){
+					$registros[$campo."Completo"] = organizarIntervalos($data, $registros["inicio".ucfirst($campo)], $registros["fim".ucfirst($campo)]);
 				}else{
-					$registros[$campoIgnorado."Completo"] = organizarIntervalos($data, [], []);
+					$registros[$campo."Completo"] = organizarIntervalos($data, [], []);
 				}
 			}
+
 		//}
 		
 		//REPOUSO POR ESPERA{
@@ -1018,7 +1034,7 @@
 		
 
 		//MÁXIMA DIREÇÃO CONTÍNUA{
-			if(is_bool(strpos($motorista["para_tx_ignorarCampos"], "mdc"))){
+			if(empty($motorista["para_tx_ignorarCampos"]) || is_bool(strpos($motorista["para_tx_ignorarCampos"], "mdc"))){
 				$intervalos = [];
 				$interAtivo = null;
 				foreach($pontosDia as $ponto){
@@ -1114,7 +1130,7 @@
 					.(!empty($registros["fimJornada"])? ", '".implode("', '", $registros["fimJornada"])."')": ")")
 				;
 
-				$legendas = mysqli_fetch_all(query(
+				$legendasDiaMotorista = mysqli_fetch_all(query(
 					"SELECT moti_tx_legenda, macr_tx_nome FROM ponto
 						JOIN macroponto ON ponto.pont_tx_tipo = macroponto.macr_nb_id
 						LEFT JOIN motivo ON ponto.pont_nb_motivo = motivo.moti_nb_id
@@ -1137,7 +1153,7 @@
 					"fimRefeicao" => $tipos,
 				];
 				
-				foreach ($legendas as $value){
+				foreach ($legendasDiaMotorista as $value){
 					$legenda = $value["moti_tx_legenda"];
 				
 					switch ($value["macr_tx_nome"]){
@@ -1234,15 +1250,7 @@
 
 
 		//Converter array em string{
-			$legendas = mysqli_fetch_all(query(
-				"SELECT DISTINCT moti_tx_legenda FROM motivo 
-					WHERE moti_tx_legenda IS NOT NULL;"
-				), 
-				MYSQLI_ASSOC
-			);
-
 			$legendas = array_map(function($legenda){return $legenda["moti_tx_legenda"];}, $legendas);
-
 			
 			$legendas = array_merge($legendas, [
 				"D+",
@@ -1747,7 +1755,7 @@
 			query(
 				"SELECT * FROM endosso 
 					JOIN entidade ON endo_tx_matricula = enti_tx_matricula
-					WHERE '".$data."' BETWEEN endo_tx_de AND endo_tx_ate
+					WHERE '{$data}' BETWEEN endo_tx_de AND endo_tx_ate
 						AND enti_nb_id = {$idMotorista}
 						AND endo_tx_status = 'ativo';"
 			),
@@ -1763,9 +1771,23 @@
 			$content .= "(E)";
 		}
 		$func .= ")";
-		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
+
+		$funcionarioAfastado = !empty(mysqli_fetch_assoc(query(
+			"SELECT abon_nb_id FROM abono
+				JOIN entidade ON abon_tx_matricula = enti_tx_matricula
+				JOIN motivo ON abon_nb_motivo = moti_nb_id
+				WHERE abon_tx_status = 'ativo'
+					AND enti_nb_id = {$idMotorista}
+					AND abon_tx_data = '{$data}'
+					AND moti_tx_tipo = 'Afastamento'
+			LIMIT 1;"
+		)));
+
+		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"]) || $funcionarioAfastado){
+			$title .= " (afastado)";
 			$func = "";
 		}
+
 		$content .= "</i>";
 		
 		$retorno = "<a title='".$title."' onclick='{$func}'>{$content}</a>";

@@ -809,7 +809,7 @@ function index() {
 			</div>";
 
 	$campos = [
-		combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 4, "empresa", ""),
+		combo_net("Empresa", "empresa", $_POST["empresa"]?? $_SESSION["user_nb_empresa"], 4, "empresa", ""),
 		$campoAcao,
 		campo(
 			"Período",

@@ -46,12 +46,17 @@
 			." ORDER BY arqu_tx_data DESC"
 			." LIMIT 1;"
 		));
-		$lastFile["nameDate"] = str_replace(["apontamento", ".txt"], ["", ""], $lastFile["arqu_tx_nome"]);
-		$lastFile["nameDate"] = substr($lastFile["nameDate"], 4, 4)."-".substr($lastFile["nameDate"], 2, 2)."-".substr($lastFile["nameDate"], 0, 2);
+		if(!empty($lastFile)){
+		    $lastFile["nameDate"] = str_replace(["apontamento", ".txt"], ["", ""], $lastFile["arqu_tx_nome"]);
+		    $lastFile["nameDate"] = substr($lastFile["nameDate"], 4, 4)."-".substr($lastFile["nameDate"], 2, 2)."-".substr($lastFile["nameDate"], 0, 2);
+		    $dataInicial = (new DateTime($lastFile["nameDate"]))->modify("+1 day");
+		}else{
+		    $dataInicial = new DateTime();
+		}
 
 		$fileList = ftp_nlist($ftp_conn, ".");
 		$fileList = implode(", ", $fileList);
-		for($data = (new DateTime($lastFile["nameDate"]))->modify("+1 day"); $data->format("Y-m-d") <= date("Y-m-d"); $data->modify("+1 day")){
+		for($data = $dataInicial; $data->format("Y-m-d") <= date("Y-m-d"); $data->modify("+1 day")){
 			if(is_int(strpos($fileList, "apontamento".$data->format("dmY")))){
 
 				$ext = ".txt";
@@ -77,12 +82,14 @@
 				
 				if(!ftp_get($ftp_conn, $caminhoCompleto, $nomeArqRemoto)){
 					set_status("ERRO: Houve um problema ao salvar o arquivo.");
+					index();
 					exit;
 				}
 
 				saveRegisterFile(["tmp_name" => $caminhoCompleto, "name" => $nomeArquivo.$ext], $caminhoCompleto);
 			}
 		}
+
 		ftp_close($ftp_conn);
 		
 		criar_relatorio(date("Y-m"));
