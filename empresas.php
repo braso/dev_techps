@@ -4,10 +4,10 @@
 
     $empresas = [
         "ARMAZEMPARAIBA"		=> "armazem_paraiba",
+        "BLUEROAD"			    => "blueroad",
         "BRASO"					=> "braso",
         "CARAU"		            => "carau_transporte",
         "COMAV"					=> "comav",
-        "DEMO"			        => "techps_demo",
         "FEIJAOTURQUEZA"		=> "feijao_turqueza",
         "FSLOG"	                => "fs_log_transportes",
         "HN"                    => "hn_transportes",
@@ -18,12 +18,14 @@
         "PKFMEDEIROS"			=> "pkf_medeiros",
         "QUALY"		            => "qualy_transportes",
         "TECHPS"				=> "techps",
+        "DEMO"			        => "techps_demo",
         "TRAMPOLIMGAS"			=> "trampolim_gas",
-        "BLUEROAD"			    => "blueroad"
+        "TRANSCOPEL"			=> "transcopel"
     ];
 
     $empresasNomes = [
         "armazem_paraiba" 	=> "Armazem Paraíba",
+        "blueroad"      	=> "Blue Road",
         "braso" 			=> "Braso",
         "carau_transporte" 	=> "Caraú Transportes",
         "comav" 			=> "COMAV",
@@ -39,7 +41,7 @@
         "techps" 			=> "TechPS",
         "techps_demo" 		=> "TechPS (Demo)",
         "trampolim_gas" 	=> "Trampolim Gás",
-        "blueroad"      	=> "Blue Road"
+        "transcopel" 	    => "Transcopel"
     ];
 
     $empresa_array = array_values($empresas); //Utilizado nos arquivos que importam este.
