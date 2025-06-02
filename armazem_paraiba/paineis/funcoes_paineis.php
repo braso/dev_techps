@@ -642,12 +642,13 @@ function criar_relatorio_jornada() {
 				$horaInicio = preg_replace('/<strong>.*?<\/strong>/', '', $dia["inicioJornada"]);
 				$horaFim = preg_replace('/<strong>.*?<\/strong>/', '', $dia["fimJornada"]);
 				$horaRemoverExtraI = preg_replace('/[^0-9:]/', ' ', $horaInicio);
-				$horaRemoverExtraF = preg_replace('/[^0-9:]/', ' ', $horaFim);
+				$horaRemoverExtraF = preg_replace('/\s*D\+\d+/', '', $horaFim);
+				$horaRemoverHtmlF = str_replace(['<br>', '<br/>', '<br />'], ' ', $horaRemoverExtraF);
 				$inicio = explode(' ', $horaRemoverExtraI);
-				$fim = explode(' ', $horaRemoverExtraF);
+				$fim = explode(' ', $horaRemoverHtmlF);
 				$filtraInicio = array_filter($inicio);
 				$filtraFim = array_filter($fim);
-				if (sizeof($filtraInicio) == sizeof($filtraFim)) {
+				if (sizeof($filtraInicio) == sizeof($filtraFim) || sizeof($filtraInicio) < sizeof($filtraFim)) {
 					$fimJornada = false;
 				} else {
 					$fimJornada = true;
