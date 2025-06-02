@@ -280,6 +280,19 @@
 				"EP" => 0,
 				"N" => 0
 			];
+
+			if(empty($motoristas)){
+				echo 
+					"<script>
+						alert('Não foram encontrados funcionários para atualizar o ponto.')
+					</script>"
+				;
+				$_POST["returnValues"] = json_encode([
+					"HTTP_REFERER" => $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/carregar_ponto.php"
+				]);
+				voltar();
+			}
+
 			foreach ($motoristas as $motorista) {
 				if (substr($motorista["enti_tx_admissao"],0,7) <= $mes->format("Y-m")) {
 					$endossos = mysqli_fetch_all(query(
@@ -688,7 +701,7 @@
 				$warning = 
 					"<a><i style='color:green;' title="
 							."'Jornada Original: {$jornadaPrevistaOriginal}\n"
-							."Abono: {$abonos["abon_tx_abono"]}\n"
+							."{$abonos["moti_tx_tipo"]}: {$abonos["abon_tx_abono"]}\n"
 							."Motivo: {$abonos["moti_tx_nome"]}\n"
 							."Justificativa: {$abonos["abon_tx_descricao"]}\n\n"
 							."Registro efetuado por {$abonos["user_tx_login"]} em ".data($abonos["abon_tx_dataCadastro"], 1)."'"
@@ -1742,7 +1755,7 @@
 			query(
 				"SELECT * FROM endosso 
 					JOIN entidade ON endo_tx_matricula = enti_tx_matricula
-					WHERE '".$data."' BETWEEN endo_tx_de AND endo_tx_ate
+					WHERE '{$data}' BETWEEN endo_tx_de AND endo_tx_ate
 						AND enti_nb_id = {$idMotorista}
 						AND endo_tx_status = 'ativo';"
 			),
@@ -1765,11 +1778,13 @@
 				JOIN motivo ON abon_nb_motivo = moti_nb_id
 				WHERE abon_tx_status = 'ativo'
 					AND enti_nb_id = {$idMotorista}
-					AND abon_tx_data = {$data}
+					AND abon_tx_data = '{$data}'
 					AND moti_tx_tipo = 'Afastamento'
 			LIMIT 1;"
 		)));
+
 		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"]) || $funcionarioAfastado){
+			$title .= " (afastado)";
 			$func = "";
 		}
 
