@@ -182,6 +182,8 @@
 							
 				$(document).ready(function(){
 					var tabela = $('#tabela-empresas tbody');
+					var ocupacoesPermitidas = '".$_POST["busca_ocupacao"]."';
+
 					function carregarDados(urlArquivo){
 						$.ajax({
 							url: urlArquivo + '?v=' + new Date().getTime(),
@@ -199,6 +201,10 @@
 								$.each(data, function(index, item){
 									row[index] = item;
 								});
+
+								if (ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) {
+									return; // pula esta linha se ocupação não for permitida
+								}
 
 								var totalNaEndossado = (row.falta || 0) + (row.jornadaEfetiva || 0) + (row.refeicao || 0) 
 								+ (row.espera || 0) + (row.descanso || 0) + (row.repouso || 0) + (row.jornada || 0) 
@@ -511,10 +517,17 @@
 				$totaisFuncionario = [];
 				$totaisFuncionario2 = [];
 				$totaisMediaFuncionario = [];
+				$ocupacoesPermitidas = $_POST['busca_ocupacao'];
+				// dd( $ocupacoesPermitidas,false);
 				foreach ($arquivos as &$arquivo) {
 					$todosZeros = true;
 					$arquivo = $path."/".$arquivo;
 					$json = json_decode(file_get_contents($arquivo), true);
+
+					$ocupacaoJson = $json['ocupacao'] ?? '';
+					if (!empty($ocupacoesPermitidas) && $ocupacaoJson !== $ocupacoesPermitidas) {
+						continue;
+					}
 
 					$totalMotorista = $json["espera"]+$json["descanso"]+$json["repouso"]+$json["jornada"]+$json["falta"]+$json["jornadaEfetiva"]+$json["mdc"]
 					+$json["refeicao"]+$json["intersticioInferior"]+$json["intersticioSuperior"];
@@ -788,7 +801,7 @@
 						<h3>Sobre o Gráfico:</h3>
 						<span>
 							Este gráfico apresenta a porcentagem de funcionários com nenhuma não conformidade. 
-							Quanto maior o valor, melhor a performance.
+							Quanto maior o valor, melhor a performance. Mostra o total da empresa ao filtrar por ocupação
 						</span>
 					</div>
 				</div>
@@ -800,7 +813,7 @@
 						<h3>Sobre o Gráfico:</h3>
 						<span>
 							Este gráfico apresenta a porcentagem de não conformidade dos funcionários em relação 
-							à quantidade de dias do mês. Quanto maior o valor, melhor a performance.
+							à quantidade de dias do mês. Quanto maior o valor, melhor a performance. Mostra o total da empresa ao filtrar por ocupação
 						</span>
 					</div>
 				</div>
@@ -812,7 +825,7 @@
 						<h3>Sobre o Gráfico:</h3>
 						<span>
 							Este gráfico apresenta a porcentagem dos funcionários em relação à quantidade de não 
-							conformidades no mês. Quanto menor a quantidade, melhor a performance.
+							conformidades no mês. Quanto menor a quantidade, melhor a performance. Mostra o total da empresa ao filtrar por ocupação
 						</span>
 					</div>
 				</div>
