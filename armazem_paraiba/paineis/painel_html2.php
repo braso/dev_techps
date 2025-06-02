@@ -18,6 +18,9 @@
 				<span></span>
 				<?= $dataEmissao ?>
 				<br>
+				<div id="consulta">
+				</div>
+				<br>
 				<?php
 				if (!empty($periodoRelatorio["dataInicio"])) {
 					echo "<br> <b>Período do relatório:</b> " . $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"];
@@ -223,9 +226,9 @@
 		</div>
 				<?php } ?>
 
-	<div id="impressao">
+	<!-- <div id="impressao">
 		<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . " (UTC-3)" ?>
-	</div>
+	</div> -->
 </div>
 </div>
 </div>

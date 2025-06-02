@@ -99,7 +99,9 @@
 
                 $(document).ready(function(){
                     var tabela = $('#tabela-empresas tbody');
+                    var ocupacoesPermitidas = '".$_POST["busca_ocupacao"]."';
 
+                    console.log(ocupacoesPermitidas);
                     function carregarDados(urlArquivo){
                         $.ajax({
                             url: urlArquivo + '?v=' + new Date().getTime(),
@@ -110,6 +112,11 @@
                                     row[index] = item;
                                 });
                                 console.log(row.saldoAnterior);
+
+                                if (ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) {
+                                    return; // pula esta linha se ocupação não for permitida
+                                }
+
                                 var saldoAnterior = horasParaMinutos(row.saldoAnterior !== undefined ? row.saldoAnterior : row.totais.saldoAnterior);
                                 var saldoFinal = horasParaMinutos(row.saldoFinal !== undefined ? row.saldoFinal : row.totais.saldoFinal);
                                 var indicador = '';
