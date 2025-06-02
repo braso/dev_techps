@@ -110,10 +110,11 @@
 		
 		
 		global $legendas;
+		global $tiposMotivo;
 		$campos = [
 			campo("Código",		"busca_codigo",		(!empty($_POST["busca_codigo"])? 	$_POST["busca_codigo"]: ""), 2, "MASCARA_NUMERO", "maxlength='6'"),
 			campo("Nome",		"busca_nome_like",	(!empty($_POST["busca_nome_like"])? $_POST["busca_nome_like"]: ""), 5, "", "maxlength='65'"),
-			combo("Tipo",		"busca_tipo",		(!empty($_POST["busca_tipo"])? 		$_POST["busca_tipo"]: ""), 2, ["", "Ajuste", "Abono"]),
+			combo("Tipo",		"busca_tipo",		(!empty($_POST["busca_tipo"])? 		$_POST["busca_tipo"]: ""), 2, array_merge(["" => ""], $tiposMotivo)),
 			combo("Legenda",	"busca_legenda",	(!empty($_POST["busca_legenda"])? 	$_POST["busca_legenda"]: ""), 3, array_merge(["" => ""], $legendas)),
 			campo_hidden("busca_status", "ativo")
 		];
