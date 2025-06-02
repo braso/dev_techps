@@ -474,14 +474,21 @@
 
 		switch($mascara){
 			case "MASCARA_DATA";
-				$dataScript .= "$('[name=\"$variavel\"]').inputmask({clearIncomplete: false});";
+				$dataScript .= "$('[name=\"{$variavel}\"]').inputmask({clearIncomplete: false});";
 				$type = "date";
 			break;
 			case "MASCARA_MES":
 				$type = "month";
 			break;
+			case "MASCARA_PERIODO_SEM_LIMITE":
+				$limite = 'data+1';
 			case "MASCARA_PERIODO":
 				$datas = [DateTime::createFromFormat("Y-m-d", date("Y-m-01")), DateTime::createFromFormat("Y-m-d", date("Y-m-d"))];
+
+				if(empty($limite)){
+					$limite = 'Date.now()';
+				}
+
 				if(!empty($modificador)){
 					if(!is_array($modificador) || count($modificador) != 2){
 						if(preg_match_all("/\d{4}-\d{2}-\d{2}/", $_POST["busca_periodo"], $matches)){
@@ -533,7 +540,7 @@
 								},
 								'isInvalidDate': function(date){
 									data = new Date(date._i[0], date._i[1], date._i[2]).valueOf();
-									return (data > Date.now() || data < new Date(2022, 11, 1).valueOf());
+									return (data > {$limite} || data < new Date(2022, 11, 1).getTime());
 								}
 							}, function(start, end, label) {
 								$('input[name=\"".$variavel."[]\"]')[0].value = start.format('YYYY-MM-DD');
