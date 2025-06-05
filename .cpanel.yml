@@ -19,6 +19,8 @@ deployment:
     - export TECHPS=/home/techpsjornada/public_html/gestaodeponto/techps
     - export TECHPSDEMO=/home/techpsjornada/public_html/gestaodeponto/techps_demo
     - export TRAMPGAS=/home/techpsjornada/public_html/gestaodeponto/trampolim_gas
+    - export TRANSCOPEL=/home/techpsjornada/public_html/gestaodeponto/transcopel
+    - export BLUEROAD=/home/techpsjornada/public_html/gestaodeponto/blueroad
 
 
     - /bin/cp -R $GENERAL $GENERALDEPLOY
@@ -38,3 +40,5 @@ deployment:
     - /bin/cp -R $DOMAIN $TECHPS
     - /bin/cp -R $DOMAIN $TECHPSDEMO
     - /bin/cp -R $DOMAIN $TRAMPGAS
+    - /bin/cp -R $DOMAIN $TRANSCOPEL
+    - /bin/cp -R $DOMAIN $BLUEROAD
