@@ -1,7 +1,7 @@
 <?php
 	/* Modo debug
 		ini_set("display_errors", 1);
-		error_reporting(E_ALL);c
+		error_reporting(E_ALL);
 	//*/
 	function mysql_escape_mimic($inp) {
 		if(is_array($inp))

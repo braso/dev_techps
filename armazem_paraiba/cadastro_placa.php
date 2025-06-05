@@ -7,7 +7,6 @@ ob_start();
 echo'<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>';
 echo'<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">';
 // Função de cabeçalho HTML (retorna a string, não imprime)
-cabecalho('Cadastro de Placas');
 
 // Função para carregar empresas
 function carregaEmpresa() {
@@ -188,11 +187,11 @@ if (isset($_GET['excluir'])) {
 // Função para listar as placas
 function listarPlacas() {
     global $conn;
-    $sql = "SELECT p.*, e.empr_tx_nome, f.enti_tx_nome AS funcionario_nome
-            FROM placa p
-            JOIN empresa e ON p.placa_id_empresa = e.empr_nb_id
-            LEFT JOIN entidade f ON p.funcionario_id = f.enti_nb_id
-            ORDER BY p.id DESC";
+    $sql = "SELECT p.*, e.empr_tx_nome
+    FROM placa p
+    JOIN empresa e ON p.placa_id_empresa = e.empr_nb_id
+    ORDER BY p.id DESC
+    ";
     $res = mysqli_query($conn, $sql);
 
     if (!$res) {
@@ -263,6 +262,7 @@ if (isset($_GET['error'])) {
 
 // Se estiver editando
 $editar = isset($_GET['editar']) ? (int)$_GET['editar'] : null;
+cabecalho('Cadastro de Placas');
 cadastro_placa($editar);
 listarPlacas();
 
