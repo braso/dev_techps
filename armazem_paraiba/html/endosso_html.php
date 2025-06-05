@@ -8,6 +8,18 @@
 		margin-top: 9px !important;
 		text-align: center;
 	}
+
+	#saldo > thead > tr > th {
+		text-align: center;
+	}
+
+	.caption{
+		width: 100%;
+	}
+
+	div.portlet-title > div > span > div.table-responsive{
+		max-width: 50%;
+	}
 </style>
 
 <form name="form_imprimir_relatorio" method="post" target="_blank">
