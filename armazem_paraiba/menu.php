@@ -29,7 +29,7 @@
 			"cadastros" => [
 				"/cadastro_empresa.php" 	=> "Empresa/Filial",
 				"/cadastro_endosso.php" 	=> "Endosso",
-				"/cadastro_ferias.php" 		=> "Férias",
+				// "/cadastro_ferias.php" 		=> "Férias",
 				"/cadastro_feriado.php" 	=> "Feriado",
 				"/cadastro_motorista.php" 	=> "Funcionário",
 				"/cadastro_macro.php" 		=> "Macro",
