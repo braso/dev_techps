@@ -69,6 +69,9 @@
 
 				if($errorMsg != $baseErrMsg){
 					set_status(substr($errorMsg, 0, -2).".");
+					unset($_POST["acao"]);
+					index();
+					exit;
 				}
 			//}
 		}
@@ -80,7 +83,7 @@
 			"endossados" => ["sim" => 0, "nao" => 0],	//countEndossados e $countNaoEndossados
 		];
 
-		if(empty($_POST["busca_empresa"])){
+		if(empty($_POST["busca_empresa"]) && !empty($_POST["busca_motorista"])){
 			$_POST["busca_empresa"] = mysqli_fetch_assoc(query(
 				"SELECT empr_nb_id FROM empresa 
 					JOIN entidade ON empr_nb_id = enti_nb_empresa
@@ -400,7 +403,10 @@
 		if(!empty($_POST["busca_empresa"])){
 			$_POST["busca_empresa"] = (int)$_POST["busca_empresa"];
 			$extraMotorista = " AND enti_nb_empresa = {$_POST["busca_empresa"]}";
+		}else{
+			$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
 		}
+
 		if(empty($_POST["busca_motorista"])){
 			$_POST["busca_motorista"] = "";
 		}
@@ -418,7 +424,7 @@
 			];
 
 			if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-				array_unshift($c, combo_net("Empresa:", "busca_empresa",   (!empty($_POST["busca_empresa"])?   $_POST["busca_empresa"]  : ""), 3, "empresa", "onchange=selecionaMotorista(this.value)", $extraEmpresa));
+				array_unshift($c, combo_net("Empresa*:", "busca_empresa",   (!empty($_POST["busca_empresa"])?   $_POST["busca_empresa"]  : ""), 3, "empresa", "onchange=selecionaMotorista(this.value)", $extraEmpresa));
 			}
 		//}
 		$botao_imprimir =
@@ -433,7 +439,7 @@
 		//BOTOES{
 			$b = [
 				botao("Buscar", "buscarEspelho", "", "", "", "","btn btn-success"),
-				botao("Cadastrar Abono", "redirParaAbono", "acaoPrevia", $_POST["acao"], "", 1),
+				botao("Cadastrar Abono", "redirParaAbono", "acaoPrevia", $_POST["acao"]?? "", "", 1),
 				$botao_imprimir
 			];
 		//}
