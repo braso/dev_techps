@@ -1336,10 +1336,14 @@
 		
 		foreach($endossos as &$endosso){
 			if(!file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$endosso["endo_tx_filename"].".csv")){
+				$endosso = null;
 				continue;
 			}
 			$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
 		}
+		$endossos = array_filter($endossos,function($var){
+			return $var != null;
+		});
 		$endossoCompleto = [];
 
 		if(count($endossos) > 0){
