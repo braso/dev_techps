@@ -18,6 +18,7 @@
 		
 		if(empty($ftpInfos["empr_tx_ftpServer"]) || empty($ftpInfos["empr_tx_ftpUserpass"]) || empty($ftpInfos["empr_tx_ftpUserpass"])){
 			set_status("ERRO: Não foi possível encontrar o servidor FTP.");
+			index();
 			exit;
 		}
 
