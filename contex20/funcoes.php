@@ -124,7 +124,7 @@
 		$endosso = fopen($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$filename, "r");
 
 		if($endosso == false){
-			set_status("ERRO: Endosso não encontrado.");
+			set_status("ERRO: Endosso não encontrado. ({$filename})");
 			$_POST["returnValues"] = json_encode([
 				"HTTP_REFERER" => $_SERVER["HTTP_REFERER"],
 				"msg_status" => $_POST["msg_status"]
