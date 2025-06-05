@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
@@ -33,12 +33,13 @@
 			]));
 		//}
 
+
 		$motoristas = mysqli_fetch_all(query(
 			"SELECT entidade.*, endosso.*, parametro.para_tx_pagarHEExComPerNeg FROM entidade
 				JOIN endosso ON enti_tx_matricula = endo_tx_matricula
 				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
 				WHERE enti_tx_status = 'ativo' AND endo_tx_status = 'ativo'
-					".(!empty($_POST["idMotoristaEndossado"])? "AND enti_nb_id = {$_POST["idMotoristaEndossado"]}": "")."
+					".(!empty($_POST["busca_motorista"])? "AND enti_nb_id = {$_POST["busca_motorista"]}": "")."
 					AND enti_nb_empresa = {$_POST["busca_empresa"]}
 					AND enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário')
 					AND endo_tx_mes = '{$_POST["busca_data"]}-01'
@@ -313,20 +314,20 @@
 						<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
 							<thead>
 								<tr>
-									<th>Anterior:</th>
-									<th>Período:</th>
-									<th>Bruto:</th>
-									<th>Pago:</th>
-									<th>Final:</th>
+									<th>Anterior</th>
+									<th>Período</th>
+									<th>Bruto</th>
+									<th>Pago</th>
+									<th>Final</th>
 								</tr>
 							</thead>
 							<tbody>
 								<tr>
-									<td>".$totalResumo["saldoAnterior"]."</td>
-									<td>".$totalResumo["diffSaldo"]."</td>
-									<td>".$totalResumo["saldoBruto"]."</td>
-									<td>".$aPagar."</td>
-									<td>".$saldoFinal."</td>
+									<td>{$totalResumo["saldoAnterior"]}</td>
+									<td>{$totalResumo["diffSaldo"]}</td>
+									<td>{$totalResumo["saldoBruto"]}</td>
+									<td>{$aPagar}</td>
+									<td>{$saldoFinal}</td>
 								</tr>
 							</tbody>
 						</table>
@@ -334,16 +335,16 @@
 				;
 				
 				$aEmpresa = carregar("empresa", $motorista["enti_nb_empresa"]);
-				$buttonInprimir = "";
+				$buttonImprimir = "";
 				if (empty($_POST["busca_motorista"])){
-					$buttonInprimir = 
+					$buttonImprimir = 
 						"<button"
 							." name='acao'"
 							." id='botaoContexCadastrar ImprimirRelatorio_".$motorista["enti_tx_matricula"]."'"
 							." value='impressao_relatorio'"
 							." type='button'"
 							." class='btn btn-default'"
-							." style='position: absolute; top: 20px; left: 420px;'"
+							." style=''"
 							// ." disabled"
 						.">"
 							."Imprimir Relatório"
@@ -351,13 +352,20 @@
 					; 
 				}
 
-				$endossoHTML .=  abre_form(
-					$aEmpresa["empr_tx_nome"]."<br>"
-					."[".$motorista["enti_tx_matricula"]."] ".$motorista["enti_tx_nome"]."<br>"
-					."<br>"/*."$parametroPadrao<br><br>"*/
-					.$saldosMotorista.
-					$buttonInprimir
-				);
+				$cabecalhoForm = 
+					"<div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;'>
+						<div>
+							{$aEmpresa["empr_tx_nome"]}<br>
+							[{$motorista["enti_tx_matricula"]}] {$motorista["enti_tx_nome"]}
+						</div>
+						<div>
+							{$buttonImprimir}
+						</div>
+					</div>
+					{$saldosMotorista}"
+				;
+
+				$endossoHTML .=  abre_form($cabecalhoForm);
 				
 				$cab = [
 					"", "DATA", "<div style='margin:11px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
@@ -373,7 +381,7 @@
 						<input type='hidden' name='acao' value=''>
 						<input type='hidden' name='busca_data' value='{$_POST["busca_data"]}'>
 						<input type='hidden' name='busca_empresa' value='{$_POST["busca_empresa"]}'>
-						<input type='hidden' name='idMotoristaEndossado' value=''>
+						<input type='hidden' name='busca_motorista' value=''>
 						<input type='hidden' name='matriculaMotoristaEndossado' value=''>
 					</form>
 					<script>
@@ -387,7 +395,7 @@
 							if (form) {
 								// Atualiza os valores dos campos ocultos
 								form.elements['acao'].value = acao;
-								form.elements['idMotoristaEndossado'].value = idMotorista;
+								form.elements['busca_motorista'].value = idMotorista;
 								form.elements['matriculaMotoristaEndossado'].value = matricula;
 
 								// Adiciona o evento de clique ao botão para submeter o formulário
