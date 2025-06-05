@@ -24,7 +24,7 @@ class CustomPDF extends TCPDF {
         $imgHeight = 15;
         $imgHeight2 = 10;
         $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth2, $imgHeight2);
-        $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
+        $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 25, 10, $imgWidth, $imgHeight);
         // $this->Image('logo_esquerda.png', 10, 10, $imgWidth, $imgHeight);
         // $this->Image('logo_direita.png', $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
         $this->SetFont('helvetica', 'B', 12);
@@ -1786,6 +1786,155 @@ function gerarPainelAjustes() {
     $pdf->Output($nomeArquivo, 'I');
 }
 
+function gerarPainelDisponibilidade() {
+    $path = "./arquivos/nc_logistica/".$_POST["empresa"];
+
+    $empresa = mysqli_fetch_assoc(query(
+            "SELECT * FROM empresa
+                WHERE empr_tx_status = 'ativo'
+                    AND empr_nb_id = {$_POST["empresa"]}
+                LIMIT 1;"
+        ));
+    
+    if (is_dir($path)) {
+        $pasta = dir($path);
+        while ($arquivo = $pasta->read()) {
+            if (!in_array($arquivo, [".", ".."])) {
+                $arquivos[] = $arquivo;
+            }
+        }
+        $pasta->close();
+    }
+
+    $arquivoLogis = json_decode(file_get_contents($path . "/".$arquivos[0]), true);
+
+    $ocupacaoJson = $_POST["ocupacao"];
+    $ocupacoes = json_decode($ocupacaoJson, true);
+
+    // Calcula total antes
+    $total = array_sum($ocupacoes);
+
+    $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf->setEmpresaData($empresa);
+    $pdf->tituloPersonalizado = '';
+    $pdf->SetCreator('TechPS');
+    $pdf->SetAuthor('TechPS');
+    $pdf->SetTitle('Painel Progressão de Disponibilidade');
+    $pdf->SetMargins(10, 25, 2);
+    $pdf->SetHeaderMargin(10);
+    $pdf->SetFooterMargin(10);
+    $pdf->setFontSubsetting(true);
+    $pdf->SetAutoPageBreak(true, PDF_MARGIN_BOTTOM);
+    $pdf->AddPage();
+
+    $pdf->SetFont('helvetica', '', 11);
+    $pdf->SetTextColor(0, 0, 0);
+
+    // --- ATUALIZADO EM (alinhado à esquerda com formatação) ---
+    $pdf->SetX(120);
+    $textoAtualizado = 'Atualizado em: ';
+    $dataAtualizacao = date("d/m/Y H:i", filemtime($path . "/".$arquivos[0]));
+
+    $pdf->SetFont('helvetica', 'B', 9);
+    $pdf->Write(6, $textoAtualizado);
+    $pdf->SetFont('helvetica', '', 9);
+    $pdf->Write(6, $dataAtualizacao);
+    $pdf->Ln(5); // espaço abaixo
+
+    $pdf->SetX(105);
+    $pdf->SetFont('helvetica', 'B', 9);
+    $pdf->SetTextColor(255, 0, 0);
+    $pdf->Write(6, 'Projeção de Disponibilidade para: ');
+    $pdf->SetTextColor(0, 0, 0);
+    $pdf->SetFont('helvetica', '', 9);
+    $pdf->Write(6, $arquivoLogis["total"]["consulta"]);
+    $pdf->Ln(5); // espaço abaixo
+
+    $pdf->SetX(125);
+    $pdf->SetFont('helvetica', 'B', 9);
+    $pdf->Write(6, 'Ocupação: ');
+    $pdf->SetTextColor(0, 0, 0);
+    $pdf->SetFont('helvetica', '', 9);
+    $pdf->Write(6, empty($_POST["consultaOcupacao"]) ? 'Todos' : $_POST["consultaOcupacao"]);
+    $pdf->Ln(20); // espaço abaixo
+
+    $pdf->SetFont('helvetica', '', 9);
+
+    // Linha total na primeira linha
+    $pdf->Cell(35, 10, 'Total de Ocupações', 1, 0, 'R');
+    $pdf->Cell(10, 10, $total, 1, 1, 'C');
+
+    foreach ($ocupacoes as $ocupacao => $quantidade) {
+        $pdf->Cell(35, 8, $ocupacao, 1, 0, 'C');
+        $pdf->Cell(10, 8, $quantidade, 1, 1, 'C');
+    }
+
+    $pdf->Ln(20); // Espaçamento
+
+    $pdf->SetFont('helvetica', 'B', 11);
+
+    // 2. Blocos coloridos alinhados horizontalmente
+    $start_x = 82;
+    $block_width = 40;
+    $block_height = 12;
+    $radius = 2;
+
+    // Função auxiliar para centralizar texto dentro de blocos com RoundedRect
+    function drawRoundedBlock($pdf, $x, $y, $width, $height, $radius, $fillColor, $text) {
+        $pdf->SetFillColor($fillColor[0], $fillColor[1], $fillColor[2]);
+        $pdf->SetDrawColor(0, 0, 0); // Borda preta
+        $pdf->RoundedRect($x, $y, $width, $height, $radius, '1111', 'DF');
+
+        // $pdf->SetTextColor(255, 255, 255);
+        // Centralização vertical ajustada com margem superior (aprox. 3.5 dá boa centralização)
+        $pdf->SetXY($x, $y + 3.5);
+        $pdf->Cell($width, 5, $text, 0, 1, 'C', 0);
+    }
+
+    // Y fixo
+    $y = 60;
+
+    // Bloco Verde
+    drawRoundedBlock($pdf, $start_x, $y, $block_width, $block_height, $radius, [144, 238, 144], 'Disponível: '. $_POST["disponivel"]);
+
+    // Bloco Laranja
+    drawRoundedBlock($pdf, $start_x + 50, $y, $block_width, $block_height, $radius, [255, 159, 44], 'Parc. Disponível: '. $_POST["parcial"]);
+
+    // Bloco Vermelho
+    $pdf->SetTextColor(255, 255, 255);
+    drawRoundedBlock($pdf, $start_x + 100, $y, $block_width, $block_height, $radius, [163, 0, 0], 'Indisponível: '. $_POST["indisponível"]);
+
+    $pdf->SetTextColor(255, 255, 255);
+    drawRoundedBlock($pdf, $start_x + 150, $y, $block_width, $block_height, $radius, [0, 0, 0], 'Em Jornada: '. $_POST["EmJornada"]);
+
+    // Reset cor do texto
+    $pdf->SetTextColor(0, 0, 0);
+
+
+    // Reset da cor do texto
+    $pdf->SetTextColor(0, 0, 0);
+
+    // Ajusta o espaçamento entre os blocos
+    $pdf->setCellHeightRatio(1.5);
+
+    $pdf->Ln(20); 
+
+
+    // Recebe e trata o HTML
+    $htmlTabela = $_POST['htmlTabela'] ?? '';
+    // dd($htmlTabela);
+    
+    // Limpeza adicional do HTML
+    $htmlTabela = preg_replace('/<i[^>]*>(.*?)<\/i>/', '', $htmlTabela); // Remove ícones
+    $htmlTabela = str_replace(';""', '', $htmlTabela); // Corrige atributos malformados
+
+    // Escreve o HTML no PDF
+    $pdf->writeHTML($htmlTabela, true, false, true, false, '');
+
+    // Gera o PDF
+    $nomeArquivo = 'projeção_de_disponibilidade.pdf';
+    $pdf->Output($nomeArquivo, 'I');
+}
 
 if (!empty($_POST['relatorio']) && $_POST['relatorio'] == 'endosso') {
     gerarPainelEndosso();
@@ -1795,6 +1944,8 @@ if (!empty($_POST['relatorio']) && $_POST['relatorio'] == 'endosso') {
     gerarPainelNc();
 } else if (!empty($_POST['relatorio']) && $_POST['relatorio'] == 'ajustes') {
     gerarPainelAjustes();
+} else if(!empty($_POST['relatorio']) && $_POST['relatorio'] == 'disponibilidade'){
+    gerarPainelDisponibilidade();
 }
 
 // dd($empresa);

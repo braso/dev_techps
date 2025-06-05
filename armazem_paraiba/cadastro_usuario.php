@@ -298,12 +298,11 @@
 		$campo_login = campo("Login*", "login", ($_POST["login"]?? ($_POST["login"]?? "")), 2,"","maxlength='30'");
 
 		$editPermission = (!empty($_POST["id"]) &&			//Se está editando um usuário existente e
-			!$editingDriver &&								//O usuário não é motorista e
+			$_SESSION["user_nb_id"] == $_POST["id"] || //Editando o próprio usuário
 			(
-				$loggedUserIsAdmin ||						//O usuário logado é administrador ou
-				$_SESSION["user_nb_id"] == $_POST["id"]		//Editando o próprio usuário
-			)
-			)
+				!$editingDriver &&						//O usuário não é motorista e
+				$loggedUserIsAdmin						//O usuário logado é administrador ou
+			))
 		;
 
 		if($editPermission){
@@ -319,6 +318,10 @@
 				case "Embarcador":
 					$niveis[] = "Embarcador";
 			}
+
+			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Funcionário"])){
+				$niveis = [$_SESSION["user_tx_nivel"]];
+			}
 			$campo_nivel = combo("Nível*", "nivel", $_POST["nivel"], 2, $niveis, "");
 			$campo_status = combo("Status", "status", $_POST["status"], 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
 
@@ -328,7 +331,7 @@
 			$campo_cidade = combo_net("Cidade/UF", "cidade", $_POST["cidade"], 2, "cidade", "", "", "cida_tx_uf");
 			$campo_email = campo("E-mail*", "email", $_POST["email"], 2);
 			$campo_telefone = campo("Telefone", "telefone", $_POST["fone"], 2,"MASCARA_FONE");
-			$campo_empresa = combo_bd("!Empresa*", "empresa", $_POST["empresa"], 2, "empresa", "onchange='carrega_empresa(this.value)'");
+			$campo_empresa = combo_bd("!Empresa*", "empresa", $_POST["empresa"]?? $_SESSION["user_nb_empresa"], 2, "empresa", "onchange='carrega_empresa(this.value)'");
 			$campo_expiracao = campo_data("Expira em", "expiracao", $_POST["expiracao"], 2);
 			$campo_senha = campo_senha("Senha*", "senha", "", 2, "maxlength='50'");
 			$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='12'");
@@ -358,7 +361,7 @@
 			$campo_cidade = combo_net("Cidade/UF", "cidade", ($_POST["cidade"]?? ""), 2, "cidade", "", "", "cida_tx_uf");
 			$campo_email = campo("E-mail*", "email", ($_POST["email"]?? ""), 2);
 			$campo_telefone = campo("Telefone", "telefone", ($_POST["telefone"]?? ""), 2,"MASCARA_FONE");
-			$campo_empresa = combo_bd("!Empresa*", "empresa", ($_POST["empresa"]?? ""), 2, "empresa", "onchange='carrega_empresa(this.value)'");
+			$campo_empresa = combo_bd("!Empresa*", "empresa", ($_POST["empresa"]?? $_SESSION["user_nb_empresa"]), 2, "empresa", "onchange='carrega_empresa(this.value)'");
 			$campo_expiracao = campo_data("Expira em", "expiracao", ($_POST["expiracao"]?? ""), 2);
 			$campo_senha = campo_senha("Senha*", "senha", "", 2,"maxlength='12'");
 			$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='12'");
@@ -562,7 +565,7 @@
 			campo("Login", 			"busca_login_like", 		($_POST["busca_login_like"]?? ""), 	3, "", "maxlength='30'"),
 			combo("Nível", 			"busca_nivel", 		($_POST["busca_nivel"]?? ""), 	2, $niveis),
 			combo("Status", 		"busca_status", 	($_POST["busca_status"]?? ""), 	2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
-			combo_bd("!Empresa", 	"busca_empresa", 	($_POST["busca_empresa"]?? ""), 3, "empresa", "onchange='carrega_empresa(this.value)'", $extraEmpresa)
+			combo_bd("!Empresa", 	"busca_empresa", 	($_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"]), 3, "empresa", "onchange='carrega_empresa(this.value)'", $extraEmpresa)
 		];
 
 		$buttons[] = botao("Buscar", "index");

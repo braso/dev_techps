@@ -105,7 +105,7 @@
 		"63" => "3",	//"REFEICAO",
 		"64" => "5",	//"EM ESPERA",
 		"65" => "7",	//"DESCANSO",
-		"66" => "",		//"TROCA DE VEÍCULO",
+		"66" => "2",	//"TROCA DE VEÍCULO",
 		"67" => "0",	//"INICIO DE VIAGEM",
 		"68" => "0",	//"REINICIO DE VIAGEM",
 		"69" => "",		//???

@@ -182,6 +182,8 @@
 							
 				$(document).ready(function(){
 					var tabela = $('#tabela-empresas tbody');
+					var ocupacoesPermitidas = '".$_POST["busca_ocupacao"]."';
+
 					function carregarDados(urlArquivo){
 						$.ajax({
 							url: urlArquivo + '?v=' + new Date().getTime(),
@@ -199,6 +201,10 @@
 								$.each(data, function(index, item){
 									row[index] = item;
 								});
+
+								if (ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) {
+									return; // pula esta linha se ocupação não for permitida
+								}
 
 								var totalNaEndossado = (row.falta || 0) + (row.jornadaEfetiva || 0) + (row.refeicao || 0) 
 								+ (row.espera || 0) + (row.descanso || 0) + (row.repouso || 0) + (row.jornada || 0) 
@@ -406,7 +412,7 @@
 			</div>";
 
 		$campos = [
-			combo_net("Empresa", "empresa", $_POST["empresa"]?? "", 4, "empresa", ""),
+			combo_net("Empresa", "empresa", $_POST["empresa"]?? $_SESSION["user_nb_empresa"], 4, "empresa", ""),
 			$campoAcao,
 			campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
 			combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
@@ -419,49 +425,7 @@
 			$botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
 		}
 		// $botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
-		$botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados()'>Imprimir</button>
-        <script>
-        function enviarDados() {
-				var data = '" . $_POST["busca_dataMes"] . "'
-				var form = document.createElement('form');
-				form.method = 'POST';
-				form.action = 'export_paineis.php'; // Página que receberá os dados
-				form.target = '_blank'; // Abre em nova aba
-
-				// Criando campo 1
-				var input1 = document.createElement('input');
-				input1.type = 'hidden';
-				input1.name = 'empresa';
-				input1.value = " . (!empty($_POST['empresa']) ? $_POST['empresa'] : 'null'). "; // Valor do primeiro campo
-				form.appendChild(input1);
-
-				// Criando campo 2
-				var input2 = document.createElement('input');
-				input2.type = 'hidden';
-				input2.name = 'busca_data';
-				input2.value = data; // Valor do segundo campo
-				form.appendChild(input2);
-
-                // Criando campo 2
-				var input2 = document.createElement('input');
-				input2.type = 'hidden';
-				input2.name = 'relatorio';
-				input2.value = 'nc_juridica'; // Valor do segundo campo
-				form.appendChild(input2);
-
-				// Criando campo 3
-				var input2 = document.createElement('input');
-				input2.type = 'hidden';
-				input2.name = 'busca_endossado';
-				input2.value = '".$_POST["busca_endossado"]."' ; // Valor do segundo campo
-				form.appendChild(input2);
-
-
-				document.body.appendChild(form);
-				form.submit();
-				document.body.removeChild(form);
-			}
-        </script>";
+		$botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados()'>Imprimir</button>";
 
 		$buttons = [
 			botao("Buscar", "enviarForm()", "", "", "", "", "btn btn-info"),
@@ -553,10 +517,17 @@
 				$totaisFuncionario = [];
 				$totaisFuncionario2 = [];
 				$totaisMediaFuncionario = [];
+				$ocupacoesPermitidas = $_POST['busca_ocupacao'];
+				// dd( $ocupacoesPermitidas,false);
 				foreach ($arquivos as &$arquivo) {
 					$todosZeros = true;
 					$arquivo = $path."/".$arquivo;
 					$json = json_decode(file_get_contents($arquivo), true);
+
+					$ocupacaoJson = $json['ocupacao'] ?? '';
+					if (!empty($ocupacoesPermitidas) && $ocupacaoJson !== $ocupacoesPermitidas) {
+						continue;
+					}
 
 					$totalMotorista = $json["espera"]+$json["descanso"]+$json["repouso"]+$json["jornada"]+$json["falta"]+$json["jornadaEfetiva"]+$json["mdc"]
 					+$json["refeicao"]+$json["intersticioInferior"]+$json["intersticioSuperior"];
@@ -830,7 +801,7 @@
 						<h3>Sobre o Gráfico:</h3>
 						<span>
 							Este gráfico apresenta a porcentagem de funcionários com nenhuma não conformidade. 
-							Quanto maior o valor, melhor a performance.
+							Quanto maior o valor, melhor a performance. Mostra o total da empresa ao filtrar por ocupação
 						</span>
 					</div>
 				</div>
@@ -842,7 +813,7 @@
 						<h3>Sobre o Gráfico:</h3>
 						<span>
 							Este gráfico apresenta a porcentagem de não conformidade dos funcionários em relação 
-							à quantidade de dias do mês. Quanto maior o valor, melhor a performance.
+							à quantidade de dias do mês. Quanto maior o valor, melhor a performance. Mostra o total da empresa ao filtrar por ocupação
 						</span>
 					</div>
 				</div>
@@ -854,7 +825,7 @@
 						<h3>Sobre o Gráfico:</h3>
 						<span>
 							Este gráfico apresenta a porcentagem dos funcionários em relação à quantidade de não 
-							conformidades no mês. Quanto menor a quantidade, melhor a performance.
+							conformidades no mês. Quanto menor a quantidade, melhor a performance. Mostra o total da empresa ao filtrar por ocupação
 						</span>
 					</div>
 				</div>

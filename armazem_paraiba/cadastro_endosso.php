@@ -504,7 +504,6 @@
 
 	function index(){
 		if(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-			// dd("teste");
 			$_POST["returnValues"] = json_encode([
 				"HTTP_REFERER" => $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php"
 			]);
@@ -552,7 +551,7 @@
 			$camposHE
 		];
 		if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-			array_unshift($fields, combo_net("Empresa*","empresa", $_POST["empresa"]?? "",4,"empresa", "onchange='selecionaMotorista(this.value)'"));
+			array_unshift($fields, combo_net("Empresa*","empresa", !empty($_POST["empresa"])? $_POST["empresa"]: $_SESSION["user_nb_empresa"],4,"empresa", "onchange='selecionaMotorista(this.value)'"));
 		}else{
 			array_unshift($fields, campo_hidden("empresa", $_SESSION["user_nb_empresa"]));
 		}

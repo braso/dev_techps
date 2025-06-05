@@ -62,19 +62,19 @@
 		$arquivo = $_FILES["arquivo"];
 
 		if(isset($arquivo["error"]) && $arquivo["error"] === 0){
-			$local_file = $path.$arquivo["name"];
 			$ext = substr($arquivo["name"], strrpos($arquivo["name"], "."));
 			$nomeArquivo = str_replace($ext, "", $arquivo["name"]);
+			$local_file = $path."/".$nomeArquivo.$ext;
 
-			if(file_exists($path.$arquivo["name"])){
+			if(file_exists($local_file)){
 				$f = 2;
 				$nomeArquivo  .= "_".$f;
 				$arquivo["name"] = $nomeArquivo.$ext;
-				$local_file = $path.$arquivo["name"];
 				for(; file_exists($path.$nomeArquivo.$ext); $f++){
-					$arquivo["name"] = substr($nomeArquivo , 0, strlen($nomeArquivo )-2)."_".$f;
-					$local_file = $path.$arquivo["name"];
+					$nomeArquivo = substr($nomeArquivo , 0, strlen($nomeArquivo )-2)."_".$f;
 				}
+				$arquivo["name"] = $nomeArquivo;
+				$local_file = $path."/".$arquivo["name"].$ext;
 			}
      		saveRegisterFile($arquivo, $local_file);
 
@@ -118,7 +118,7 @@
 		$newPontos = [];
 		$baseErrMsg = [
 			"ERROS:",
-			"camposObrigatorios" => ["Campos obrigatórios não preenchidos: "],
+			"camposObrigatorios" => [],
 			"registerNotFound" => [],
 			"notRecognized" => [],
 		];
@@ -133,12 +133,12 @@
 			}
 		//}
 
-		if($errorMsg["camposObrigatorios"] != $baseErrMsg["camposObrigatorios"]){
-			set_status($errorMsg[0]." ".implode("<br>	", $errorMsg["camposObrigatorios"]));
+		if(!empty($errorMsg["camposObrigatorios"])){
+			set_status($errorMsg[0]." Campos obrigatórios não preenchidos: ".implode("<br>	", $errorMsg["camposObrigatorios"]));
 			exit;
 		}
 
-		$ext = substr($fileInfo["name"], strrpos($fileInfo["name"], "."));
+		$ext = substr($fileInfo["full_path"], strrpos($fileInfo["full_path"], "."));
 
 		$newArquivoPonto = [
 			"arqu_tx_nome" 		=> $fileInfo["name"],
@@ -186,6 +186,13 @@
 				." LIMIT 1;"
 			));
 
+			$userId = mysqli_fetch_assoc(query(
+				"SELECT user_nb_id FROM user 
+					JOIN entidade ON user_nb_entidade = enti_nb_id
+					WHERE user_tx_status = 'ativo' AND user_tx_matricula = '{$matricula}'
+					LIMIT 1;"
+			));
+
 			if(empty($macroPonto)){
 				if(empty($errorMsg["notRecognized"])){
 					$errorMsg["notRecognized"][] = "Tipo de ponto não reconhecido: ";
@@ -195,7 +202,7 @@
 			}
 
 			$newPonto = [
-				"pont_nb_userCadastro"	=> $_SESSION["user_nb_id"],
+				"pont_nb_userCadastro"	=> $userId,
 				"pont_nb_arquivoponto"	=> null,						//Será definido após inserir o arquivo de ponto.
 				"pont_tx_matricula"		=> strval($matricula),
 				"pont_tx_data"			=> $data." ".$hora,
@@ -308,11 +315,11 @@
 
 		// Grid dinâmico{
 			$gridFields = [
-				"CÓD" 		=> "arqu_nb_id",
-				"ARQUIVO" 	=> "arqu_tx_nome",
-				"USUÁRIO" 	=> "user_tx_nome",
-				"DATA" 		=> "CONCAT('data(\"', arqu_tx_data, '\", 1)') as arqu_tx_data",
-				"SITUAÇÃO" 	=> "arqu_tx_status"
+				"CÓD" 				=> "arqu_nb_id",
+				"ARQUIVO" 			=> "arqu_tx_nome",
+				"USUÁRIO" 			=> "user_tx_nome",
+				"CARREGADO EM" 		=> "CONCAT('data(\"', arqu_tx_data, '\")') AS arqu_tx_data",
+				"STATUS" 			=> "arqu_tx_status"
 			];
 
 			$camposBusca = [
@@ -321,7 +328,7 @@
 			];
 
 			$queryBase = (
-				"SELECT ".implode(", ", array_values($gridFields)).", arqu_tx_data AS arqu_tx_de, arqu_tx_data AS arqu_tx_ate FROM arquivoponto"
+				"SELECT ".implode(", ", array_values($gridFields))." FROM arquivoponto"
 				." JOIN user ON arqu_nb_user = user_nb_id"
 			);
 
@@ -376,7 +383,8 @@
 			$jsFunctions =
 				"const funcoesInternas = function(){
 					".implode(" ", $actions["functions"])."
-				}"
+				}
+				orderCol = 'arqu_nb_id DESC';"
 			;
 
 			echo gridDinamico("tabelaArquivos", $gridFields, $camposBusca, $queryBase, $jsFunctions);

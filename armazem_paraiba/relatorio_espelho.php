@@ -13,12 +13,12 @@
     <link rel="stylesheet" href="./css/endosso.css">
 
     <script>
-    function imprimir() {
-        // Abrir a caixa de diálogo de impressão
-        setTimeout(() => {
-            window.print();
-        }, 500);
-    }
+        function imprimir() {
+            // Abrir a caixa de diálogo de impressão
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
     </script>
 </head>
 
@@ -67,8 +67,6 @@
                     <td style="text-align: left;"><b>Período:</b>
                         <?=date("d/m/Y", strtotime($endossoCompleto['endo_tx_de']))?> -
                         <?=date("d/m/Y", strtotime($endossoCompleto['endo_tx_ate']))?></td>
-                    <td style="text-align: left;"><b>Emissão Doc.:</b>
-                        <?=date("d/m/Y H:i:s", strtotime($endossoCompleto['endo_tx_dataCadastro']))." (UTC-3)"?> </td>
                 </tr>
 
                 <tr class="employee-info">
@@ -133,163 +131,215 @@
         <div><b>TOTAL: <?=$qtdDiasEndossados?> dias</b></div>
 
 
-        <table class="table-bottom">
-            <tr>
-                <td rowspan="2" style="width: 175px;">
-                    <table class="table-info">
-                        <tr>
-                            <td>Carga Horaria Prevista:</td>
-                            <td>
-                                <center><?=$totalResumo['jornadaPrevista']?></center>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Carga Horaria Efetiva Realizada:</td>
-                            <td>
-                                <center><?=$totalResumo['diffJornadaEfetiva']?></center>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Adicional Noturno:</td>
-                            <td>
-                                <center><?=$totalResumo['adicionalNoturno']?></center>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Espera Indenizada:</td>
-                            <td>
-                                <center><?=$totalResumo['esperaIndenizada']?></center>
-                            </td>
-                        </tr>
-                    </table>
+        <table class="table-bottom-new">
+            <thead>
+                <tr>
+                    <th  style="width: 240px"></th>
+                    <th></th>
+                    <th class="space"></th>
+                    <th colspan="2" class="bordered">Legendas</th>
+                    <th class="space"></th>
+                    <th style="width: 250px"></th>
+                    <th style="width: 75px"></th>
+                    <th class="space"></th>
+                    <th style="width: 250px"></th>
+                    <th style="width: 75px"></th>
+                    <th class="space"></th>
+                    <th style="width: 250px"></th>
+                    <th style="width: 75px"></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="bordered">Carga Horaria Prevista:</td>
+                    <td class="bordered">
+                        <center><?=$totalResumo['jornadaPrevista']?></center>
+                    </td>
+                    <td></td>
+                    <td class="bordered">
+                        <center><b>I</b></center>
+                    </td>
+                    <td class="bordered">
+                        <center>Incluída Manualmente</center>
+                    </td>
+                    <td></td>
+                    <td class="bordered">Saldo Anterior</td>
+                    <td class="bordered"><?=$totalResumo['saldoAnterior']?></td>
+                    <td></td>
+                    <td class="bordered">Saldo Período</td>
+                    <td class="bordered"><?=$totalResumo['diffSaldo']?></td>
+                    <td></td>
+                    <td class="bordered">Saldo Bruto</td>
+                    <td class="bordered"><?=$totalResumo['saldoBruto']?></td>
+                </tr>
 
-                    <table class="table-info2">
-                        <tr>
-                            <td>Horas Extras (<?=$motorista["enti_tx_percHESemanal"]?>%) - a pagar:</td>
-                            <td>
-                                <center><?=$totalResumo["HESemanalAPagar"]?></center>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Horas Extras (<?=$motorista["enti_tx_percHEEx"]?>%) - a pagar:</td>
-                            <td>
-                                <center><?=$totalResumo["HEExAPagar"]?></center>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Saldo Final (após pagamentos):</td>
-                            <td>
-                                <center><?=$totalResumo["saldoFinal"]?></center>
-                            </td>
-                        </tr>
-                    </table>
+                <tr>
+                    <td class="bordered">Carga Horaria Efetiva Realizada:</td>
+                    <td class="bordered">
+                        <center><?=$totalResumo['diffJornadaEfetiva']?></center>
+                    </td>
+                    <td></td>
+                    <td class="bordered">
+                        <center><b>P</b></center>
+                    </td>
+                    <td class="bordered">
+                        <center>Pré-Assinalada</center>
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
 
-                <td rowspan="2" style="width: 150px;">
-                    <table class="table-legenda">
-                        <tr>
-                            <th colspan="2" style="text-align: center;">
-                                <b>Legendas</b>
-                            </th>
-                        </tr>
-                        <tr>
-                            <td>
-                                <center><b>I</b></center>
-                            </td>
-                            <td>
-                                <center>Incluída Manualmente</center>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <center><b>P</b></center>
-                            </td>
-                            <td>
-                                <center>Pré-Assinalada</center>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <center><b>T</b></center>
-                            </td>
-                            <td>
-                                <center>Outras fontes de marcação</center>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <center><b>DSR</b></center>
-                            </td>
-                            <td>
-                                <center>Descanso Semanal Remunerado e Abono </center>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <center><b>*</b></center>
-                            </td>
-                            <td>
-                                <center>Registros excluídos manualmente </center>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <center><b>D+</b></center>
-                            </td>
-                            <td>
-                                <center>Jornada terminada nos dias seguintes</center>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-                </td>
+                <tr>
+                    <td class="bordered">Adicional Noturno:</td>
+                    <td class="bordered">
+                        <center><?=$totalResumo['adicionalNoturno']?></center>
+                    </td>
+                    <td></td>
+                    <td class="bordered">
+                        <center><b>T</b></center>
+                    </td>
+                    <td class="bordered">
+                        <center>Outras fontes de marcação</center>
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
 
-                <td>
-                    <table class="table-resumo">
-                        <tr>
-                            <td>Saldo Anterior</td>
-                            <td><?=$totalResumo['saldoAnterior']?></td>
-                            <td class="empty"></td>
-                            <td>Saldo Período</td>
-                            <td><?=$totalResumo['diffSaldo']?></td>
-                            <td class="empty"></td>
-                            <td>Saldo Bruto</td>
-                            <td><?=$totalResumo['saldoBruto']?></td>
-                        </tr>
-                    </table>
-                </td>
+                <tr>
+                    <td class="bordered">Espera Indenizada:</td>
+                    <td class="bordered">
+                        <center><?=$totalResumo['esperaIndenizada']?></center>
+                    </td>
+                    <td></td>
+                    <td class="bordered">
+                        <center><b>DSR</b></center>
+                    </td>
+                    <td class="bordered">
+                        <center>Descanso Semanal Remunerado e Abono </center>
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
 
-            </tr>
-            <tr>
-                <td>
-                    <div class="signature-block">
-                        <center>
-                            <p>___________________________________________________________</p>
-                        </center>
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td class="bordered">
+                        <center><b>*</b></center>
+                    </td>
+                    <td class="bordered">
+                        <center>Registros excluídos manualmente </center>
+                    </td>
+                    <td></td>
+                    <td colspan="2">
+                        <hr/>
+                    </td>
+                    <td></td>
+                    <td colspan="2">
+                        <hr/>
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+
+                <tr>
+                    <td class="bordered">
+                        Horas Extras (<?=$motorista["enti_tx_percHESemanal"]?>%) - a pagar:
+                    </td>
+                    <td class="bordered">
+                        <center><?=$totalResumo["HESemanalAPagar"]?></center>
+                    </td>
+                    <td></td>
+                    <td class="bordered">
+                        <center><b>D+</b></center>
+                    </td>
+                    <td class="bordered">
+                        <center>Jornada terminada nos dias seguintes</center>
+                    </td>
+                    <td></td>
+                    <td colspan="2">
                         <center>
                             <p>Responsável</p>
                         </center>
-                        <center>
-                            <p>Cargo</p>
-                        </center>
-                    </div>
-                    <div class="signature-block">
-                        <center>
-                            <p>___________________________________________________________</p>
-                        </center>
+                    </td>
+                    <td></td>
+                    <td colspan="2">
                         <center>
                             <p><?=$motorista['enti_tx_nome']?></p>
                         </center>
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+
+                <tr>
+                    <td class="bordered">
+                        Horas Extras (<?=$motorista["enti_tx_percHEEx"]?>%) - a pagar:
+                    </td>
+                    <td class="bordered">
+                        <center><?=$totalResumo["HEExAPagar"]?></center>
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td colspan="2">
                         <center>
                             <p><?=$motorista['enti_tx_ocupacao']?></p>
                         </center>
-                    </div>
-                </td>
-            </tr>
-            <tr>
-                <td></td>
-                <td></td>
-                <td id="impressao"><b>Impressão Doc.:</b> <?=date("d/m/Y \T H:i:s")."(UTC-3)"?></td>
-            </tr>
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+
+                <tr>
+                    <td class="bordered">
+                        Saldo Final (após pagamentos):
+                    </td>
+                    <td class="bordered">
+                        <center><?=$totalResumo["saldoFinal"]?></center>
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td colspan="3" id="impressao"><b>Emissão Doc.:</b> <?=date("d/m/Y H:i:s", strtotime($endossoCompleto['endo_tx_dataCadastro']))." (UTC-3)"?></td>
+                </tr>
+
+            </tbody>
         </table>
         <div id='exporta'>
             <?= implode("", $botoes) ?>

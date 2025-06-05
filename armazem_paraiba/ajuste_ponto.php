@@ -207,8 +207,8 @@
 
 
 	function index(){
+
 		if(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-			// dd("teste");
 			$_POST["returnValues"] = json_encode([
 				"HTTP_REFERER" => $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php"
 			]);
@@ -235,6 +235,7 @@
 		//}
 
 		cabecalho("Ajuste de Ponto");
+
 
 		$motorista = mysqli_fetch_assoc(query(
 			"SELECT enti_nb_id, enti_tx_matricula, enti_tx_nome, enti_tx_ocupacao, enti_tx_cpf FROM entidade
@@ -308,11 +309,26 @@
 		$variableFields = [];
 		$campoJust = [];
 
+		$afastamento = mysqli_fetch_assoc(query(
+			"SELECT abono.*, motivo.* FROM abono
+				JOIN entidade ON abon_tx_matricula = enti_tx_matricula
+				JOIN motivo ON abon_nb_motivo = moti_nb_id
+				WHERE abon_tx_status = 'ativo'
+					AND enti_nb_id = {$_POST["idMotorista"]}
+					AND abon_tx_data = '{$_POST["data"]}'
+					AND moti_tx_tipo = 'Afastamento'
+			LIMIT 1;"
+		));
+
+
 		$iconeExcluir = "";
+		$variableFields = [
+			campo_data("Data", "data", ($_POST["data"]?? ""), 2, "onfocusout='atualizar_form({$_POST["idMotorista"]}, this.value, \"{$_POST["status"]}\")'")
+		];
 		if(!empty($endosso)){
-			$variableFields = [
-				texto("Endosso", "Endossado por ".$endosso["endo_nb_userCadastro"]." em ".data($endosso["endo_tx_dataCadastro"], 1), 6)
-			];
+			$variableFields = array_merge($variableFields, [texto("Endosso", "Endossado por ".$endosso["endo_nb_userCadastro"]." em ".data($endosso["endo_tx_dataCadastro"], 1), 8)]);
+		}elseif(!empty($afastamento)){
+			$variableFields = array_merge($variableFields, [texto("Afastamento", "Afastado por motivo de {$afastamento["moti_tx_nome"]}", 8)]);
 		}else{
 			$botoes[] = botao("Gravar", "cadastrarAjuste");
 
@@ -320,19 +336,20 @@
 			$iconeExcluir = "pont_nb_id";
 			
 			
-			$variableFields = [
-				campo_data("Data", "data", ($_POST["data"]?? ""), 2, "onfocusout='atualizar_form({$_POST["idMotorista"]}, this.value, \"{$_POST["status"]}\")'"),
+			$variableFields = array_merge($variableFields, [
 				campo_hora("Hora", "hora", ($_POST["hora"]?? ""), 2),
 				combo_bd("Tipo de Registro", "idMacro", ($_POST["idMacro"]?? ""), 4, "macroponto", "", "ORDER BY macr_nb_id"),
 				combo_bd("Motivo", "motivo", ($_POST["motivo"]?? ""), 4, "motivo", "", " AND moti_tx_tipo = 'Ajuste' ORDER BY moti_tx_nome")
-			];
+			]);
 			$campoJust[] = textarea("Justificativa", "justificativa", ($_POST["justificativa"]?? ""), 12, 'maxlength=680');
 		}
+
 
 		$botoes[] = $botao_imprimir;
 		$botoes[] = criarBotaoVoltar("espelho_ponto.php");
 		$botoes[] = $botaoConsLog; //BOTÃO CONSULTAR LOGISTICA
 		$botoes[] = status();
+
 		
 		echo abre_form("Dados do Ajuste de Ponto");
 		echo linha_form($textFields);
@@ -351,6 +368,7 @@
 		echo fecha_form($botoes);
 
 		$iconeExcluir = criarSQLIconeTabela("pont_nb_id", "excluirPonto", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?", "excluirPontoJS(',pont_nb_id,')");
+
 
 		$sql = pegarSqlDia(
 			$motorista["enti_tx_matricula"], 
@@ -388,6 +406,7 @@
 			"LOCALIZAÇÃO"                                       => "map(pont_nb_id)",
 			"<spam class='glyphicon glyphicon-remove'></spam>"	=> "iconeExcluir"
 		];
+
 		grid($sql, array_keys($gridFields), array_values($gridFields), "", "12", 1, "desc", -1);
 
 		echo

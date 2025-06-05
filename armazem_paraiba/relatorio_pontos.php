@@ -162,7 +162,7 @@ function index() {
 
     //CAMPOS DE CONSULTA{
     $searchFields = [
-        combo_net("Empresa*", "busca_empresa", ($_POST["busca_empresa"] ?? ""), 3, "empresa", "onchange=selecionaMotorista(this.value) ", $condBuscaEmpresa),
+        combo_net("Empresa*", "busca_empresa", ($_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"]), 3, "empresa", "onchange=selecionaMotorista(this.value) ", $condBuscaEmpresa),
         combo_net(
             "Funcionário*",
             "busca_motorista",
