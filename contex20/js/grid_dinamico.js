@@ -10,7 +10,9 @@ queryBase;
 pageNumber = 1;
 total = -1;
 limit = 10;
-orderCol = '';
+if(!orderCol){
+    orderCol = '';
+}
 
 const camposBd = Object.values(fields);
 
