@@ -1481,9 +1481,6 @@ function logisticas() {
 
 		for ($date = $periodoFim;; $date->modify('-1 day'), $tentativas++) {
 			$diaPonto = diaDetalhePonto($motorista, $date->format('Y-m-d'));
-			// var_dump(strpos($diaPonto["inicioJornada"], "fa-warning"));
-			// var_dump(!empty($diaPonto["inicioJornada"]));
-			// var_dump(strpos($diaPonto["jornadaPrevista"], "color:red;"));
 
 			if (
 				!empty($diaPonto["inicioJornada"]) && strpos($diaPonto["inicioJornada"], "fa-warning") === false
@@ -1545,7 +1542,11 @@ function logisticas() {
 
 			$avisoRepouso = $sinal . str_pad($horas, 2, '0', STR_PAD_LEFT) . ":" .
 				str_pad($minutos, 2, '0', STR_PAD_LEFT);
-			$avisoRepouso .= " (D+".$diferenca->days .")";
+			
+			if ($horas >= 24 && $sinal !== '-') {
+				$diasExtras = floor($horas / 24);
+				$avisoRepouso .= " (D+" . $diasExtras . ")";
+			}
 
 			// Para o campo 'Apos8': exibe a data de +8h apenas se a ADI não estiver ativa e se o repouso for inferior a 11h
 			$exibirApos8 = (!$considerarADI && $totalMinutos < $minimoCompleto) ? $dataMais8Horas->format('d/m/Y H:i') : '';
