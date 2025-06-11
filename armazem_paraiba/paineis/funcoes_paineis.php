@@ -1489,6 +1489,12 @@ function logisticas() {
 			}
 		}
 
+		if (empty($_POST["busca_periodo"])) {
+			$periodoFim = $hoje;
+		} else {
+			$periodoFim = DateTime::createFromFormat('d/m/Y H:i', $_POST["busca_periodo"]);
+		}
+
 		if (!empty($diaPonto["fimJornada"]) && strpos($diaPonto["fimJornada"], "fa-warning") === false) {
 			$totalMotoristasLivres += 1;
 
