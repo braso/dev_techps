@@ -128,7 +128,11 @@
             </tbody>
         </table>
 
-        <div><b>TOTAL: <?=$qtdDiasEndossados?> dias</b></div>
+        <div style="display: flex; justify-content: space-between;">
+            <div><b>TOTAL: <?=$qtdDiasEndossados?> dias</b></div>
+            <div><b>Criação Doc.:</b> <?=date("d/m/Y H:i:s", strtotime($endossoCompleto['endo_tx_dataCadastro']))?> (UTC-3)</div>
+        </div>
+
 
 
         <table class="table-bottom-new">
@@ -336,7 +340,7 @@
                     <td></td>
                     <td></td>
                     <td></td>
-                    <td colspan="3" id="impressao"><b>Emissão Doc.:</b> <?=date("d/m/Y H:i:s", strtotime($endossoCompleto['endo_tx_dataCadastro']))." (UTC-3)"?></td>
+                    <td colspan="3" id="impressao"><b>Emissão Doc.:</b> <?=date("d/m/Y H:i:s")." (UTC-3)"?></td>
                 </tr>
 
             </tbody>

@@ -72,56 +72,55 @@
 				WHERE empr_tx_Ehmatriz != 'sim';"
 			), MYSQLI_ASSOC);
 		$empresas = count($filiais);
+		if(is_int(strpos($_SERVER["REQUEST_URI"], 'dev'))){
+			echo "
+				<div class='container'>
+					<div class='row'>
 
-		echo "
-			<div class='container'>
-				<div class='row'>
-
-					<div class='col-sm-2'>
-						<div class='panel panel-primary' style='border-radius: 10px; overflow: hidden; height: 130px;'>
-							<div class='panel-heading text-center style='height: 45px; display: flex; align-items: center; justify-content: center;''>
-								<h3 class='panel-title' >
-									<span class='glyphicon glyphicon-user'></span> Funcionários Ativos
-								</h3>
-							</div>
-							<div class='panel-body text-center' style='display: flex; align-items: center; justify-content: center; height: 70px;'>
-								<h1 style='font-size: 28px; margin: 0;'>$ativos</h1>
+						<div class='col-sm-2'>
+							<div class='panel panel-primary' style='border-radius: 10px; overflow: hidden; height: 130px;'>
+								<div class='panel-heading text-center style='height: 45px; display: flex; align-items: center; justify-content: center;''>
+									<h3 class='panel-title' >
+										<span class='glyphicon glyphicon-user'></span> Funcionários Ativos
+									</h3>
+								</div>
+								<div class='panel-body text-center' style='display: flex; align-items: center; justify-content: center; height: 70px;'>
+									<h1 style='font-size: 28px; margin: 0;'>$ativos</h1>
+								</div>
 							</div>
 						</div>
-					</div>
 
-					<div class='col-sm-2'>
-						<div class='panel panel-info' style='border-radius: 10px; overflow: hidden; height: 130px;'>
-							<div class='panel-heading text-center' style='height: 45px; display: flex; align-items: center; justify-content: center;'>
-								<h3 class='panel-title'>
-									<span class='glyphicon glyphicon-user'></span> Funcionários Inativos
-								</h3>
-							</div>
-							<div class='panel-body text-center' style='display: flex; align-items: center; justify-content: center; height: 70px;'>
-								<h1 style='font-size: 28px; margin: 0;'>$inativos</h1>
+						<div class='col-sm-2'>
+							<div class='panel panel-info' style='border-radius: 10px; overflow: hidden; height: 130px;'>
+								<div class='panel-heading text-center' style='height: 45px; display: flex; align-items: center; justify-content: center;'>
+									<h3 class='panel-title'>
+										<span class='glyphicon glyphicon-user'></span> Funcionários Inativos
+									</h3>
+								</div>
+								<div class='panel-body text-center' style='display: flex; align-items: center; justify-content: center; height: 70px;'>
+									<h1 style='font-size: 28px; margin: 0;'>$inativos</h1>
+								</div>
 							</div>
 						</div>
-					</div>
 
-					<div class='col-sm-2'>
-						<div class='panel panel-success' style='border-radius: 10px; overflow: hidden; height: 130px;'>
-							<div class='panel-heading text-center' style='height: 45px; display: flex; align-items: center; justify-content: center;'>
-								<h3 class='panel-title'>
-									<span class='glyphicon glyphicon-briefcase'></span> Filiais
-								</h3>
-							</div>
-							<div class='panel-body text-center' style='display: flex; align-items: center; justify-content: center; height: 70px;'>
-								<h1 style='font-size: 28px; margin: 0;'>$empresas</h1>
+						<div class='col-sm-2'>
+							<div class='panel panel-success' style='border-radius: 10px; overflow: hidden; height: 130px;'>
+								<div class='panel-heading text-center' style='height: 45px; display: flex; align-items: center; justify-content: center;'>
+									<h3 class='panel-title'>
+										<span class='glyphicon glyphicon-briefcase'></span> Filiais
+									</h3>
+								</div>
+								<div class='panel-body text-center' style='display: flex; align-items: center; justify-content: center; height: 70px;'>
+									<h1 style='font-size: 28px; margin: 0;'>$empresas</h1>
+								</div>
 							</div>
 						</div>
-					</div>
 
+					</div>
 				</div>
-			</div>
-			";
-
-
-        
+				";
+		}
+     
         echo 
 			"<div id='boas-vindas' class='portlet light'>"
 				."<div style='text-align: center; align-content: center; height: 5em;'>"

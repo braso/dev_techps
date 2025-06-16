@@ -7,6 +7,7 @@
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
 	//*/
+	date_default_timezone_set('America/Sao_Paulo');
 
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
 
@@ -434,7 +435,7 @@
 				"endo_tx_mes" 			  => substr($_POST["data_de"], 0, 8)."01",
 				"endo_tx_de" 			  => $_POST["data_de"],
 				"endo_tx_ate" 			  => $_POST["data_ate"],
-				"endo_tx_dataCadastro" 	  => date("Y-m-d h:i:s"),
+				"endo_tx_dataCadastro" 	  => date("Y-m-d H:i:s"),
 				"endo_nb_userCadastro" 	  => $_SESSION["user_nb_id"],
 				"endo_tx_status" 		  => "ativo",
 				"endo_tx_max50APagar" 	  => $_POST["quantHoras"],
