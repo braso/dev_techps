@@ -116,7 +116,11 @@
             </thead>
             <tbody>
                 <?php
+                        // dd( $aDia,false);
                     foreach ($aDia as $aDiaVez) {
+                        if(strpos($aDiaVez[10], "00:00") !== false){
+                            $aDiaVez[10] = "";
+                        }
                         echo '<tr>';
                         for ($j = 0; $j < count($aDiaVez); $j++){
                             echo '<td>'.$aDiaVez[$j].'</td>';
