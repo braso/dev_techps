@@ -1810,6 +1810,10 @@ function gerarPainelAjustes() {
         $fimRepousoEmbarcadoInativo += $dados["Fim de Repouso Embarcado"]["inativo"];
     }
 
+    $totalAtivo = $inicioJornadaAtivos + $inicioRefeicaoAtivos + $inicioEsperaAtivos + $inicioDescansoAtivos + $inicioRepousoAtivos + $inicioRepousoEmbarcadoAtivos
+    + $fimJornadaAtivos + $fimRefeicaoAtivos + $fimEsperaAtivos + $fimDescansoAtivos + $fimRepousoAtivos + $fimRepousoEmbarcadoAtivos;
+    $totalInativo = $inicioJornadaInativo + $inicioRefeicaoInativo + $inicioEsperaInativo + $inicioDescansoInativo + $inicioRepousoInativo + $inicioRepousoEmbarcadoInativo
+    + $fimJornadaInativo + $fimRefeicaoInativo + $fimEsperaInativo + $fimDescansoInativo + $fimRepousoInativo + $fimRepousoEmbarcadoInativo;
 
     $pdf->Cell(8.5, 7, $inicioJornadaAtivos, 1, 0, 'C');
     $pdf->Cell(8.5, 7, $inicioJornadaInativo, 1, 0, 'C');
@@ -1841,8 +1845,9 @@ function gerarPainelAjustes() {
     $pdf->Cell(8.5, 7, $fimRepousoEmbarcadoAtivos, 1, 0, 'C');
     $pdf->Cell(8.5, 7, $fimRepousoEmbarcadoInativo, 1, 0, 'C');
 
-    $pdf->Cell(17, 7, '', 1, 0, 'C');
-    $pdf->Cell(17, 7, '', 1, 1, 'C');
+    $pdf->Cell(8.5, 7, $totalAtivo, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $totalInativo, 1, 0, 'C');
+    $pdf->Cell(17, 7, $totalInativo + $totalAtivo, 1, 1, 'C');
     // Gera o PDF
     $nomeArquivo = 'relatorio_ajustes.pdf';
     $pdf->Output($nomeArquivo, 'I');
