@@ -1304,7 +1304,7 @@
 							}
 							htmlSimplificado += '<tr>';
 							tr.querySelectorAll('td').forEach((td, colIndex) => {
-								var estiloBase = 'border:0.5px solid #000;padding:2px;font-size:6.8pt;';
+								var estiloBase = 'border:0.5px solid #000; font-size:6.8pt;';
 								
 								// Alinhamento do texto
 								if (colIndex === 1) { // Coluna "Funcionário"
@@ -1376,7 +1376,7 @@
 								 }
 
 								htmlSimplificado += '<td style="' + estiloBase + '">';
-								htmlSimplificado += td.innerHTML;
+								htmlSimplificado +=  td.innerHTML.trim();
 								htmlSimplificado += '</td>';
 							});
 							htmlSimplificado += '</tr>';

@@ -527,8 +527,8 @@ function carregarJS(array $arquivos) {
 									<td>\${ponto.funcionario.nome || 'N/A'}</td>
 									<td>\${tiposHTML}</td>
 									<td>\${ponto.quantidade}</td>
-									<td> <button type=\"button\" class=\"btn btn-primary\" onclick=\"enviarDados2(\${p},null,\${ponto.funcionario.matricula})\">
-								Imprimir</button>
+									<td> <button type=\"button\" class=\"btn btn-primary\" onclick=\"enviarDados2(\${p},null,'\${ponto.funcionario.matricula}')\">
+									Imprimir</button>
 								</tr>`;
 						});
 
@@ -632,7 +632,7 @@ function carregarJS(array $arquivos) {
 								<td>\${ponto.funcionario.nome || 'N/A'}</td>
 								<td>\${tiposHTML}</td>
 								<td>\${ponto.quantidade}</td>
-								<td> <button type=\"button\" class=\"btn btn-primary\" onclick=\"enviarDados2('\${motivo}',null,\${ponto.funcionario.matricula})\">
+								<td> <button type=\"button\" class=\"btn btn-primary\" onclick=\"enviarDados2('\${motivo}',null,'\${ponto.funcionario.matricula}')\">
 								Imprimir</button>
 								</td>
 							</tr>`;
