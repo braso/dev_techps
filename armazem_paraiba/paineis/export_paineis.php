@@ -1335,12 +1335,11 @@ function gerarPainelNc() {
 
     // Recebe e trata o HTML
     $htmlTabela = $_POST['htmlTabela'] ?? '';
-    // dd($htmlTabela );
+    // dd($htmlTabela);
     
     // Limpeza adicional do HTML
     $htmlTabela = preg_replace('/<i[^>]*>(.*?)<\/i>/', '', $htmlTabela); // Remove ícones
     $htmlTabela = str_replace(';""', '', $htmlTabela); // Corrige atributos malformados
-    // dd($htmlTabela);
 
     // Escreve o HTML no PDF
     $pdf->writeHTML($htmlTabela, true, false, true, false, '');
