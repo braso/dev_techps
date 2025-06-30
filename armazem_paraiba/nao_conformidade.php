@@ -428,11 +428,11 @@
 			}
 		//}
 		$botao_imprimir =
-			"<button name='imprimir' class='btn default' type='button' onclick='imprimir()'>Imprimir</button>
+			"<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>
 			<script>
     			function imprimir() {
-    			// Abrir a caixa de diálogo de impressãof
-    			window.print();
+					// Abrir a caixa de diálogo de impressãof
+					window.print();
     			}
 			</script>";
 
@@ -448,11 +448,19 @@
 		echo linha_form($c);
 		echo fecha_form($b, "<span id=dadosResumo><b>{$carregando}</b></span>");
 		
+		$logoEmpresa = mysqli_fetch_assoc(query(
+            "SELECT empr_tx_logo FROM empresa
+                    WHERE empr_tx_status = 'ativo'
+                        AND empr_tx_Ehmatriz = 'sim'
+                    LIMIT 1;"
+        ))["empr_tx_logo"];
+		
 		echo 
 			"<div id='tituloRelatorio'>
-				<h1>Não Conformidade</h1>
-				<img id='logo' style='width: 150px' src='{$CONTEX["path"]}/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
-			</div>
+                    <img style='width: 190px; height: 40px;' src='./imagens/logo_topo_cliente.png' alt='Logo Empresa Esquerda'>
+					<h1>Não Conformidades</h1>
+                    <img style='width: 180px; height: 80px;' src='./$logoEmpresa' alt='Logo Empresa Direita'>
+            </div>
 			<style>
 				#tituloRelatorio{
 					display: none;
