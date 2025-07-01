@@ -11,22 +11,22 @@
 		margin: 1cm;
 	}
 	 #tituloRelatorio {
-    display: flex;
-    align-items: center;       /* Alinha verticalmente */
-    justify-content: space-between; /* Espaça os elementos nas extremidades */
-    gap: 1em;                  /* Espaço entre elementos, se quiser */
-  }
+		display: flex;
+		align-items: center;       /* Alinha verticalmente */
+		justify-content: space-between; /* Espaça os elementos nas extremidades */
+		gap: 1em;                  /* Espaço entre elementos, se quiser */
+	}
 
-  #tituloRelatorio h1 {
-    margin: 0;
-    font-size: 1.5em;          /* Ajuste o tamanho conforme necessário */
-    flex-grow: 1;
-    text-align: center;
-  }
+	#tituloRelatorio h1 {
+		margin: 0;
+		font-size: 1.5em;          /* Ajuste o tamanho conforme necessário */
+		flex-grow: 1;
+		text-align: center;
+	}
 
-  #tituloRelatorio img {
-    display: block;
-  }
+	#tituloRelatorio img {
+		display: block;
+	}
 
 	body > div.scroll-to-top{
 		display: none !important;

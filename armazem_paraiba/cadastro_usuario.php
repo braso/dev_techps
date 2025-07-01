@@ -260,6 +260,21 @@
 
 	function modificarUsuario(){
 
+		echo '<style>
+		@media print{
+			div.col-sm-4.margin-bottom-5.campo-fit-content > input,
+			div.col-sm-4.margin-bottom-5.campo-fit-content > label,
+			form > div:nth-child(3) > div:nth-child(6),
+			form > div:nth-child(3) > div:nth-child(4),
+			form > div.form-actions
+			{
+				display: none;
+			}
+			@page{
+				size: landscape;
+			}
+		}
+		</style>';
 		if(!empty($_POST["id"])){
       		if(is_array($_POST["id"])){
 				$_POST["id"] = $_POST["id"][0];
@@ -451,6 +466,7 @@
 		if(!empty($_POST["HTTP_REFERER"])){
 			$buttons[] = criarBotaoVoltar();
 		}
+		$buttons[] = '<button class="btn default" type="button" onclick="imprimir()">Imprimir</button>';
 
 		echo abre_form("Dados do Usuário");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
@@ -494,6 +510,11 @@
 							document.form_excluir_arquivo.acao.value = acao;
 							document.form_excluir_arquivo.submit();
 						}
+			}
+
+			function imprimir() {
+				// Abrir a caixa de diálogo de impressão
+				window.print();
 			}
 			</script>";
 
@@ -574,9 +595,24 @@
 			$buttons[] = botao("Inserir", "modificarUsuario","","","","","btn btn-success");
 		}
 
+		$buttons[] = '<button class="btn default" type="button" onclick="imprimirTabelaCompleta()">Imprimir</button>';
+
 		echo abre_form();
 		echo linha_form($fields);
 		echo fecha_form($buttons);
+
+		$logoEmpresa = mysqli_fetch_assoc(query(
+            "SELECT empr_tx_logo FROM empresa
+                    WHERE empr_tx_status = 'ativo'
+                        AND empr_tx_Ehmatriz = 'sim'
+                    LIMIT 1;"
+        ))["empr_tx_logo"];
+
+		echo "<div id='tituloRelatorio' style='display: none;'>
+                    <img style='width: 190px; height: 40px;' src='./imagens/logo_topo_cliente.png' alt='Logo Empresa Esquerda'>
+					<h1>Cadastro de Usuário</h1>
+                    <img style='width: 180px; height: 80px;' src='./$logoEmpresa' alt='Logo Empresa Direita'>
+            </div>";
 
 		/*/Grid{
 			$iconeModificar = 	criarSQLIconeTabela("user_nb_id","modificarUsuario","Modificar","glyphicon glyphicon-search");
