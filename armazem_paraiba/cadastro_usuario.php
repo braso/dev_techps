@@ -466,7 +466,10 @@
 		if(!empty($_POST["HTTP_REFERER"])){
 			$buttons[] = criarBotaoVoltar();
 		}
-		$buttons[] = '<button class="btn default" type="button" onclick="imprimir()">Imprimir</button>';
+
+		if (!empty($_POST["id"])) {
+			$buttons[] = '<button class="btn default" type="button" onclick="imprimir()">Imprimir</button>';
+		}
 
 		echo abre_form("Dados do Usuário");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);

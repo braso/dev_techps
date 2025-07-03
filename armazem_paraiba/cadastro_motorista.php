@@ -487,7 +487,137 @@
 
 	function visualizarCadastro(){
 		global $a_mod;
-		
+
+		echo '<style>
+		@media print{
+			input, select, textarea {
+				background: transparent !important;
+				box-shadow: none !important;
+				color: black !important;
+				font-size: 10pt !important;
+				// margin: 0 !important;
+				width: 100% !important;
+			}
+
+			 label, .form-label {
+				font-weight: bold !important;
+				color: #000 !important;
+				padding-bottom: 10px !important;
+			}
+
+			.form-group,
+			.row,
+			.linha-campos,
+			.form-row,
+			.form-section {
+				display: flex !important;
+				flex-wrap: wrap !important;
+				// gap: 10px !important;
+				width: 100% !important;
+			}
+			
+			#email, #nome{
+				width: 240px !important;
+			}
+			
+			select {
+				appearance: none !important;        /* Padrão moderno */
+				-webkit-appearance: none !important; /* Safari/Chrome */
+				-moz-appearance: none !important;    /* Firefox */
+			}
+
+			input[type="date"]::-webkit-calendar-picker-indicator {
+				display: none !important;
+				-webkit-appearance: none !important;
+			}
+
+			.select2-selection__clear,
+			div.col-sm-4.margin-bottom-5.campo-fit-content,
+			form > div.form-actions,
+			span.select2-selection__arrow,
+			form > div.msg-status-text,
+			#padronizarParametro,
+			.scroll-to-top {
+				display: none !important;
+			}
+			
+			.portlet.light{
+			    padding: 12px 0px 0px !important;
+			}
+			
+			.portlet{
+				margin-bottom: 0px !important;
+			}
+			form > div.cnh-row > div.row,
+			form > div:nth-child(21),
+			form > div:nth-child(25){
+			    margin: 0px 0px 0px 0px !important;
+			}
+
+			div.col-sm-2.margin-bottom-5.campo-fit-content.text-field > p > img{
+				width: 350px !important;
+			}
+			
+			form > div:nth-child(11),
+			form > div:nth-child(19){
+				margin-top: 100px;
+			}
+
+			div.imageForm > div > div.col-sm-2.margin-bottom-5.campo-fit-content.text-field{
+				padding-left: 350px !important;
+			}
+
+			// div:nth-child(20) > label{
+			// 	padding-bottom: 10px;
+			// }
+			
+			.form-group > div,
+			.form-row > div,
+			div > .campo-fit-content {
+				// width: 240px !important;  /* largura fixa para todos os campos */
+				box-sizing: border-box;
+				margin-right: 10px; /* espaçamento lateral */
+			}
+
+			.container,
+			.card,
+			.card-body,
+			.section-wrapper {
+				width: 100% !important;
+				margin: 0 !important;
+				padding: 0 !important;
+			}
+
+			/* Oculta elementos desnecessários na impressão */
+			.no-print,
+			.btn,
+			nav,
+			footer {
+				display: none !important;
+			}
+
+			.container-fluid
+			{
+			    padding-left: 0px !important;
+        		padding-right: 0px !important;
+			}
+			.page-content{
+				min-height: 0px !important;
+			}
+			
+			form > div:nth-child(25) > div:nth-child(1),
+			form > div:nth-child(9) > div.col-sm-2.margin-bottom-5.campo-fit-content.text-field{
+			    margin-right: 17px;
+			}
+			
+			
+
+			@page{
+				size: A4 landscape;
+				// margin: 1cm;
+			}
+		}
+		</style>';
 
 		if(!empty($a_mod["enti_nb_empresa"])){
 			carregarParametroPadrao($a_mod["enti_nb_empresa"]);
@@ -703,6 +833,10 @@
 
 		$botoesCadastro[] = criarBotaoVoltar(null, null, "tabindex=54");
 
+		if (!empty($_POST["id"])) {
+			$botoesCadastro[] = '<button class="btn default" type="button" onclick="imprimir()">Imprimir</button>';
+		}
+
 		echo abre_form();
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		fieldset("Dados de Usuário");
@@ -800,6 +934,10 @@
 					}else{
 						document.getElementsByClassName('cnh-row')[0].setAttribute('style', '')
 					}
+				}
+				function imprimir() {
+					// Abrir a caixa de diálogo de impressão
+					window.print();
 				}
 			</script>"
 		;
