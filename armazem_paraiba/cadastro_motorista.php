@@ -1004,12 +1004,27 @@
 		];
 
 		$botoesBusca = [
-			botao("<spam class='glyphicon glyphicon-plus'></spam>", "visualizarCadastro","","","","","btn btn-success")
+			botao("<spam class='glyphicon glyphicon-plus'></spam>", "visualizarCadastro","","","","","btn btn-success"),
+			'<button class="btn default" type="button" onclick="imprimirTabelaCompleta()">Imprimir</button>'
 		];
 
 		echo abre_form();
 		echo linha_form($camposBusca);
 		echo fecha_form([], "<hr><form>".implode(" ", $botoesBusca)."</form>");
+
+		$logoEmpresa = mysqli_fetch_assoc(query(
+            "SELECT empr_tx_logo FROM empresa
+                    WHERE empr_tx_status = 'ativo'
+                        AND empr_tx_Ehmatriz = 'sim'
+                    LIMIT 1;"
+        ))["empr_tx_logo"];
+
+
+		echo "<div id='tituloRelatorio' style='display: none;'>
+                    <img style='width: 190px; height: 40px;' src='./imagens/logo_topo_cliente.png' alt='Logo Empresa Esquerda'>
+					<h1>Cadastro de Funcionários</h1>
+                    <img style='width: 180px; height: 80px;' src='./$logoEmpresa' alt='Logo Empresa Direita'>
+            </div>";
 		
 
 		//Configuração da tabela dinâmica{

@@ -139,7 +139,7 @@
 						display: none;
 					}
 					@page{
-						size: landscape;
+						size: A4 landscape;
 					}
 				}
 			</style>
