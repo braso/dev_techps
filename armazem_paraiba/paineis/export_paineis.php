@@ -19,14 +19,20 @@ class CustomPDF extends TCPDF {
     }
 
     public function Header() {
-        $imgWidth = 20;
-        $imgWidth2 = 30;
-        $imgHeight = 15;
-        $imgHeight2 = 10;
+        $imgWidth = 65;
+        $imgWidth2 = 65;
+        $imgHeight = 30;
+        $imgHeight2 = 25;
         $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth2, $imgHeight2);
         $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 25, 10, $imgWidth, $imgHeight);
         // $this->Image('logo_esquerda.png', 10, 10, $imgWidth, $imgHeight);
         // $this->Image('logo_direita.png', $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
+
+        // $this->SetFillColor(255, 0, 0);
+
+        // // Desenha o retângulo colorido atrás da imagem
+        // $this->Rect($this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight, 'F');
+        
         $this->SetFont('helvetica', 'B', 12);
         $this->Cell(0, 15, $this->tituloPersonalizado, 0, 1, 'C');
         $this->Ln(15);

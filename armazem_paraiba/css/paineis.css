@@ -338,11 +338,6 @@ th.sort-desc::after {
     transform-origin: top left;
   }
 
-  @page {
-    size: A4 landscape;
-    margin: 1cm;
-  }
-
   .row {
     display: flex;
   }
@@ -628,6 +623,11 @@ th.sort-desc::after {
 
   div:nth-child(6) > div.portlet.light {
     display: none !important;
+  }
+
+  @page {
+    size: A4 landscape;
+    margin: 1cm;
   }
 }
 
