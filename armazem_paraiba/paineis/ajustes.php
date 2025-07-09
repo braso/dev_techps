@@ -486,7 +486,6 @@ function carregarJS(array $arquivos) {
 				const totalOcorrencias = Object.values(pontos).reduce((sum, ponto) => sum + ponto.quantidade, 0);
 
 				let p = '\'' + motivo + '\'';
-							console.log(p);
 
 				let modalContent = `
 				<div class=\"table-responsive\">
@@ -527,7 +526,7 @@ function carregarJS(array $arquivos) {
 									<td>\${ponto.funcionario.nome || 'N/A'}</td>
 									<td>\${tiposHTML}</td>
 									<td>\${ponto.quantidade}</td>
-									<td> <button type=\"button\" class=\"btn btn-primary\" onclick=\"enviarDados2(\${p},null,'\${ponto.funcionario.matricula}')\">
+									<td> <button type=\"button\" class=\"btn btn-primary\" onclick=\"enviarDados2(\${p},null,'\${ponto.funcionario.matricula}', '\${ponto.funcionario.id}')\">
 									Imprimir</button>
 								</tr>`;
 						});
@@ -632,7 +631,7 @@ function carregarJS(array $arquivos) {
 								<td>\${ponto.funcionario.nome || 'N/A'}</td>
 								<td>\${tiposHTML}</td>
 								<td>\${ponto.quantidade}</td>
-								<td> <button type=\"button\" class=\"btn btn-primary\" onclick=\"enviarDados2('\${motivo}',null,'\${ponto.funcionario.matricula}')\">
+								<td> <button type=\"button\" class=\"btn btn-primary\" onclick=\"enviarDados2('\${motivo}',null,'\${ponto.funcionario.matricula}', '\${ponto.funcionario.id}')\">
 								Imprimir</button>
 								</td>
 							</tr>`;
@@ -721,7 +720,7 @@ function carregarJS(array $arquivos) {
 				document.body.removeChild(form);
 			}
 
-			function enviarDados2(motivo,tipo, matricula) {
+			function enviarDados2(motivo,tipo, matricula, id) {
 				var data = '" . json_encode($_POST["busca_periodo"]) . "'
 				var form = document.createElement('form');
 				form.method = 'POST';
@@ -761,6 +760,12 @@ function carregarJS(array $arquivos) {
 				input2.type = 'hidden';
 				input2.name = 'matricula';
 				input2.value = matricula; // Valor do segundo campo
+				form.appendChild(input2);
+
+				var input2 = document.createElement('input');
+				input2.type = 'hidden';
+				input2.name = 'Id';
+				input2.value = id; // Valor do segundo campo
 				form.appendChild(input2);
 
 				document.body.appendChild(form);
@@ -1028,6 +1033,7 @@ function index() {
 						}
 
 						$dadosFunc = [
+							"id" => $json["id"] ?? 'SEM_ID',
 							"matricula" => $json["matricula"] ?? 'SEM_MATRICULA',
 							"nome" => $json["nome"] ?? 'NOME_NAO_INFORMADO',
 							"ocupacao" => $json["ocupacao"] ?? 'OCUPACAO_NAO_INFORMADA'

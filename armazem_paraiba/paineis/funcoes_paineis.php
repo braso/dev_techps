@@ -1284,6 +1284,7 @@ function criar_relatorio_ajustes() {
 			}
 
 			$totalMotorista = [
+				"id" 						=> $motorista["enti_nb_id"],
 				"matricula" 				=> $motorista["enti_tx_matricula"],
 				"nome" 						=> $motorista["enti_tx_nome"],
 				"ocupacao" 					=> $motorista["enti_tx_ocupacao"],
@@ -1369,7 +1370,7 @@ function criar_relatorio_ajustes() {
 			$totalMotorista['pontos'] = array_merge($pontosAtivos, $pontosInativos);
 			// Filtrar apenas os campos numéricos que precisam ser verificados
 			$verificaValores = array_filter($totalMotorista, function ($key) {
-				return !in_array($key, ["matricula", "nome", "ocupacao", "pontos"]);
+				return !in_array($key, ["id","matricula", "nome", "ocupacao", "pontos"]);
 			}, ARRAY_FILTER_USE_KEY);
 
 			$rows[] = $ocorrencias;
