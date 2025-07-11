@@ -344,6 +344,7 @@
 								</tr>
 							</tbody>
 							</table>
+							<button type='button' onclick='imprimirIndividual(this)'>🖨️ Imprimir</button>
 					</div>"
 				;
 				//------------------------------------------------------------------------------------------------
@@ -475,6 +476,56 @@
 		echo "<div class='printable'></div><style>";
 		include "css/nao_conformidade.css";
 		echo "</style>";
+
+		echo "
+		<script>
+		function imprimirIndividual(botao) {
+			const conteudo = botao.closest('.conteudo-individual');
+			if (!conteudo) {
+				alert('Conteúdo não encontrado.');
+				return;
+			}
+
+			const win = window.open('', '_blank');
+
+			// Copia os estilos existentes
+			let estilos = '';
+			document.querySelectorAll('link[rel=\"stylesheet\"], style').forEach(el => {
+				estilos += el.outerHTML;
+			});
+
+			win.document.write(`
+				<html>
+					<head>
+						<title>Impressão</title>
+						\${estilos}
+						<style>
+							body {
+								font-family: Arial, sans-serif;
+								margin: 20px;
+							}
+							@media print {
+								button { display: none; }
+							}
+						</style>
+					</head>
+					<body>
+						\${conteudo.outerHTML}
+					</body>
+				</html>
+			`);
+
+			win.document.close();
+
+			win.onload = function () {
+				win.focus();
+				win.print();
+				win.close();
+			};
+		}
+		</script>
+		";
+
 
 		rodape();
 

@@ -300,7 +300,7 @@ function criar_relatorio_saldo() {
 				"saldoPeriodo" 		=> $totaisMot["saldoPeriodo"],
 				"saldoFinal" 		=> $totaisMot["saldoFinal"]
 			];
-			$nomeArquivo = $motorista["enti_tx_matricula"] . ".json";
+			$nomeArquivo = $motorista["enti_nb_id"] . ".json";
 			file_put_contents($path . "/" . $nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE));
 
 			$rows[] = $row;
@@ -501,7 +501,7 @@ function criar_relatorio_endosso() {
 				];
 
 				// dd($row);
-				$nomeArquivo = $motorista["enti_tx_matricula"] . ".json";
+				$nomeArquivo = $motorista["enti_nb_id"] . ".json";
 				file_put_contents($path . "/" . $nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE));
 
 				$rows[] = $row;
@@ -763,7 +763,7 @@ function criar_relatorio_jornada() {
 		}
 
 		if (!empty($row)) {
-			$nomeArquivo = $motorista["enti_tx_matricula"] . ".json";
+			$nomeArquivo = $motorista["enti_nb_id"] . ".json";
 			$arquivosMantidos[] = $nomeArquivo;
 			file_put_contents($path . "/" . $nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE));
 		}
@@ -997,7 +997,7 @@ function relatorio_nao_conformidade_juridica() {
 					mkdir($path . "/endossado/", 0755, true);  // Cria o diretório com permissões adequadas
 				}
 	
-				file_put_contents($path . "/endossado/" . $motorista["enti_tx_matricula"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+				file_put_contents($path . "/endossado/" . $motorista["enti_nb_id"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 			}
 		} else {
 			$diaPonto = [];
@@ -1149,7 +1149,7 @@ function relatorio_nao_conformidade_juridica() {
 
 			$motoristaTotais[] = $totalMotorista;
 
-			file_put_contents($path . "/nao_endossado/" . $motorista["enti_tx_matricula"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE));
+			file_put_contents($path . "/nao_endossado/" . $motorista["enti_nb_id"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE));
 		}
 	}
 
@@ -1377,7 +1377,7 @@ function criar_relatorio_ajustes() {
 			if (array_sum(array_map(function ($valor) {
 				return array_sum($valor); // Soma os valores de 'ativo' e 'inativo' dentro de cada chave
 			}, $verificaValores)) > 0) {
-				file_put_contents($path . "/" . $motorista["enti_tx_matricula"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE));
+				file_put_contents($path . "/" . $motorista["enti_nb_id"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE));
 			}
 		}
 
@@ -1529,31 +1529,38 @@ function logisticas() {
 			$totalMinutos = ($diferenca->days * 24 * 60) + ($diferenca->h * 60) + $diferenca->i;
 
 			// Verifica se a ADI 5322 está ativa
-			// Se ativa, significa que o repouso ideal é de 11h (mas o mínimo absoluto para iniciar pode ser considerado 8h para efeito de aviso parcial)
 			$considerarADI = isset($parametro[0]['para_tx_adi5322']) && $parametro[0]['para_tx_adi5322'] === 'sim';
 
 			// Para exibição, o campo "ADI_5322" indica qual o repouso mínimo esperado:
-			// - Se ADI ativa: "Sim (11h mín.)"
-			// - Se não: "Não (8h mín.)"
 			$infoADI = $considerarADI ? 'Sim' : 'Não';
 
 			// Define os limites:
 			$minimoAbsoluto = 8 * 60;   // 480 minutos
-			$minimoCompleto = 11 * 60;   // 660 minutos
+			$minimoCompleto = 11 * 60;  // 660 minutos
 
 			// Calcula o aviso de repouso, mostrando a diferença em relação ao repouso completo (11h)
 			$difRepouso = $totalMinutos - $minimoCompleto;
-			$horas = floor(abs($difRepouso) / 60);
-			$minutos = abs($difRepouso) % 60;
+			$totalMinutosAbs = abs($difRepouso);
 			$sinal = ($difRepouso < 0) ? '-' : '';
+
+			$diasExtras = 0;
+			if ($totalMinutosAbs >= 1440 && $sinal !== '-') {
+				$diasExtras = floor($totalMinutosAbs / 1440); // número de dias completos acima de 24h
+				$restoMinutos = $totalMinutosAbs % 1440; // minutos restantes além dos dias completos
+			} else {
+				$restoMinutos = $totalMinutosAbs;
+			}
+
+			$horas = floor($restoMinutos / 60);
+			$minutos = $restoMinutos % 60;
 
 			$avisoRepouso = $sinal . str_pad($horas, 2, '0', STR_PAD_LEFT) . ":" .
 				str_pad($minutos, 2, '0', STR_PAD_LEFT);
-			
-			if ($horas >= 24 && $sinal !== '-') {
-				$diasExtras = floor($horas / 24);
+
+			if ($diasExtras > 0 && $sinal !== '-') {
 				$avisoRepouso .= " (D+" . $diasExtras . ")";
 			}
+
 
 			// Para o campo 'Apos8': exibe a data de +8h apenas se a ADI não estiver ativa e se o repouso for inferior a 11h
 			$exibirApos8 = (!$considerarADI && $totalMinutos < $minimoCompleto) ? $dataMais8Horas->format('d/m/Y H:i') : '';

@@ -4,11 +4,9 @@
 <script src="https://code.highcharts.com/modules/solid-gauge.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <div id="printTitulo">
-	<img style="width: 150px" src="<?= $logoEmpresa ?>" alt="Logo Empresa Esquerda">
+	<img style='width: 190px; height: 40px;' src='../imagens/logo_topo_cliente.png' alt='Logo Empresa Esquerda'>
 	<h3><?= $titulo ?></h3>
-	<div class="right-logo">
-		<img style="width: 150px" src="<?= $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] ?>/imagens/logo_topo_cliente.png" alt="Logo Empresa Direita">
-	</div>
+	<img style='width: 180px; height: 80px;' src='../<?= $logoEmpresa ?>' alt='Logo Empresa Direita'>
 </div>
 <div class="col-md-12 col-sm-12" id="pdf2htmldiv">
 	<div class="portlet light">

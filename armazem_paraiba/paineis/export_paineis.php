@@ -22,7 +22,7 @@ class CustomPDF extends TCPDF {
         $imgWidth = 65;
         $imgWidth2 = 65;
         $imgHeight = 30;
-        $imgHeight2 = 25;
+        $imgHeight2 = 15;
         $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth2, $imgHeight2);
         $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 25, 10, $imgWidth, $imgHeight);
         // $this->Image('logo_esquerda.png', 10, 10, $imgWidth, $imgHeight);
@@ -1580,6 +1580,7 @@ function gerarPainelAjustes() {
         $alturaLinha = 7;
         if ($pdf->getY() + $alturaLinha > $pdf->getPageHeight() - $pdf->getBreakMargin()) {
             $pdf->AddPage();
+            $pdf->SetY(45);
             $paginaAnterior = $pdf->getPage();
             $pdf->SetFillColor(78, 169, 255);
             $pdf->SetFont('helvetica', 'B', 5.2);

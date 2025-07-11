@@ -10,7 +10,7 @@
 		size: A4 landscape;
 		margin: 1cm;
 	}
-	 #tituloRelatorio {
+	#tituloRelatorio {
 		display: flex;
 		align-items: center;       /* Alinha verticalmente */
 		justify-content: space-between; /* Espaça os elementos nas extremidades */

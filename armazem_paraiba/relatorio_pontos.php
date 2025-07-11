@@ -361,7 +361,14 @@ function index() {
 				</div>
                 <div id='impressao'>
                     <b>Impressão Doc.:</b> $diaImpresao
-                </div>";
+                </div>
+                <div class='comentario-impressao'>
+                    <strong>Observações:</strong>
+                    <div class='linha-comentario'></div>
+                    <div class='linha-comentario'></div>
+                    <div class='linha-comentario'></div>
+                </div>
+                ";
     }
 
     echo carregarJS($pontos);

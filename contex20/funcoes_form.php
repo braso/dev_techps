@@ -57,6 +57,7 @@
 		$result = 
 			"<div class='col-md-{$width}'>
 				<div class='portlet light'>
+					<div class='conteudo-individual'>
 					{$title}
 					<div class='portlet-body form'>
 						<form role='form' name='contex_form' method='post' enctype='multipart/form-data'>
@@ -64,6 +65,7 @@
 							{$buttons}
 						</form>
 						{$extra}
+					</div>
 					</div>
 				</div>
 			</div>

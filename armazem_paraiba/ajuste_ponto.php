@@ -423,11 +423,51 @@
             </div>
 			<form name='form_ajuste_status' action='".$_SERVER["HTTP_ORIGIN"].$CONTEX["path"]."/ajuste_ponto.php' method='post'>
 			</form>
+			<div class='comentario-impressao'>
+				<strong>Observações:</strong>
+				<div class='linha-comentario'></div>
+				<div class='linha-comentario'></div>
+				<div class='linha-comentario'></div>
+			</div>
 			<style>
+				.comentario-impressao {
+					display: none;
+				}
 				@media print {
 					@page {
 						size: A4 landscape;
 						margin: 1cm;
+					}
+					
+					#tituloRelatorio {
+						display: flex !important;
+						align-items: center;       /* Alinha verticalmente */
+						justify-content: space-between; /* Espaça os elementos nas extremidades */
+						gap: 1em;                  /* Espaço entre elementos, se quiser */
+					}
+
+					#tituloRelatorio h1 {
+						margin: 0;
+						font-size: 1.5em;          /* Ajuste o tamanho conforme necessário */
+						flex-grow: 1;
+						text-align: center;
+					}
+
+					#tituloRelatorio img {
+						display: block;
+					}
+					.comentario-impressao {
+						display: block;
+						margin-top: 30px;
+						font-size: 14px;
+						color: #000;
+					}
+
+					.linha-comentario {
+						border-bottom: 1px solid #000;
+						margin-bottom: 20px;
+						height: 30px;
+						width: 100%;
 					}
 					body {
 						margin: 1cm;
