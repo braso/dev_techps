@@ -534,10 +534,8 @@
 					
 					$totalDiasNaoCFuncionario += $json["diasConformidade"];
 
-					$data = new DateTime($json["dataInicio"]);
+					$data = DateTime::createFromFormat('d/m/Y', $json["dataInicio"]);
 					$dias = $data->format('t');
-					
-					$mediaPerfTotal = round(($totalDiasNaoCFuncionario/ ($dias * sizeof($arquivos)) * 100), 2);
 
 					$mediaPerfFuncionario = round(($json["diasConformidade"]/ $dias) * 100, 2);
 
@@ -582,7 +580,6 @@
 				$porcentagemTotalBaixa= array_sum((array) $totaisFuncionario);
 				$totalFun = sizeof($arquivos) - $totalJsonComTudoZero;
 				$porcentagemTotalBaixaG = 100 - $porcentagemTotalBaixa;
-				$porcentagemTotalMedia = 100 - $mediaPerfTotal;
 				$porcentagemTotalBaixa2= (array) $totaisFuncionario2;
 
 				if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado"){
@@ -761,6 +758,13 @@
                     }
                 }
                 $pasta->close();
+
+				$percentual = ($totalempre ["diasConformidade"] / $dias) * 100;
+				$percentualConformidade = 100 - $percentual;
+				$porcentagemTotalMedia = round($percentualConformidade, 2);
+
+				// $data = DateTime::createFromFormat('d/m/Y', $json["dataInicio"]);
+				// $dias = $data->format('t');
 				
 			} else {
 				$encontrado = false;

@@ -839,6 +839,8 @@ function relatorio_nao_conformidade_juridica() {
 		$pasta->close();
 	}
 
+	$diasComProblema = [];
+
 	foreach ($motoristas as $motorista) {
 
 		$totalMotorista = [
@@ -873,10 +875,10 @@ function relatorio_nao_conformidade_juridica() {
 		];
 		
 		if ($_POST["busca_endossado"] == "endossado") {
-			$houveInteracao = false;
 			$endossoCompleto = montarEndossoMes($periodoInicio, $motorista);
 			if(!empty($endossoCompleto["endo_tx_pontos"]))  {
 				foreach ($endossoCompleto["endo_tx_pontos"] as $ponto) {
+					$houveInteracao = false;
 					$inicioJornadaWarning = strpos($ponto["3"], "fa-warning") !== false && strpos($ponto["3"], "color:red;")
 						&& strpos($ponto["12"], "fa-info-circle") ===  false && strpos($ponto["12"], "color:green;") ===  false;
 					$fimJornadaWarning = strpos($ponto["6"], "fa-warning") !== false  && strpos($ponto["6"], "color:red;")
@@ -1087,10 +1089,12 @@ function relatorio_nao_conformidade_juridica() {
 					$totalMotorista["refeicao"]++;
 					$houveInteracao = true;
 				}
-				if (strpos($diffRefeicao, "fa-info-circle") !== false && strpos($diffRefeicao, "color:red;") !== false) {
-					$totalMotorista["refeicao"]++;
-					$houveInteracao = true;
-				}
+				// if (strpos($diffRefeicao, "fa-info-circle") !== false && strpos($diffRefeicao, "color:red;") !== false) {
+				// 	dd($motorista["enti_tx_nome"], false);
+				// 	dd($dia, false);
+				// 	$totalMotorista["refeicao"]++;
+				// 	$houveInteracao = true;
+				// }
 				if ($inicioRefeicao || $fimRefeicao) {
 					$totalMotorista["refeicaoSemRegistro"] += 1;
 					$houveInteracao = true;
@@ -1142,10 +1146,13 @@ function relatorio_nao_conformidade_juridica() {
 					$houveInteracao = true;
 				}
 
-				if ($houveInteracao) {
-					$totalMotorista["diasConformidade"]++;
+				if ($houveInteracao && !empty($dia["data"])) { // certifique-se de que "data" existe
+					$data = substr($dia["data"], 0, 10); // YYYY-MM-DD
+					$diasComProblema[$data] = true;
 				}
 			}
+
+			// $totalMotorista["diasConformidade"] = count($diasComProblema);
 
 			$motoristaTotais[] = $totalMotorista;
 
@@ -1173,7 +1180,10 @@ function relatorio_nao_conformidade_juridica() {
 		"mdcDescanso30m" 			=> 0,
 		"mdcDescanso15m" 			=> 0,
 		"mdcDescanso30m5h" 			=> 0,
+		"dataInicio"				=> $periodoInicio2->format("d/m/Y"),
 	];
+
+	$totaisEmpr["diasConformidade"] = count($diasComProblema);
 
 	foreach ($motoristaTotais as $motorista) {
 		foreach ($totaisEmpr as $key => $value) {
