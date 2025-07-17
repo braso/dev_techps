@@ -334,6 +334,8 @@
 					$niveis[] = "Administrador";
 				case "Embarcador":
 					$niveis[] = "Embarcador";
+				case "Supervisão":
+					$niveis[] = "Supervisão";
 			}
 
 			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Funcionário"])){
