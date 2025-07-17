@@ -53,7 +53,8 @@
 			"moti_tx_nome" => $_POST["nome"],
 			"moti_tx_tipo" => $_POST["tipo"],
 			"moti_tx_legenda" => $_POST["legenda"],
-			"moti_tx_status" => "ativo"
+			"moti_tx_status" => "ativo",
+			"moti_tx_advertencia" => $_POST["advertencia"]
 		];
 		
 
@@ -79,10 +80,24 @@
 		
 		global $legendas;
 		global $tiposMotivo;
+
+		$campoAdvertencia = 
+            "<div class='col-sm-2 margin-bottom-5' style='min-width: fit-content;'>
+				<label>Passivo Advertências?</label><br>
+				<label class='radio-inline'>
+					<input type='radio' name='advertencia' value='sim' ".((empty($_POST["moti_tx_advertencia"]) || $_POST["moti_tx_advertencia"] == "sim")? "checked": "")."> Sim
+				</label>
+				<label class='radio-inline'>
+          			<input type='radio' name='advertencia' value='nao'".(!empty($_POST["moti_tx_advertencia"]) && $_POST["moti_tx_advertencia"] == "nao"? "checked": "")."> Não
+				</label>
+			</div>"
+        ;
+
 		$campos = [
-			campo("Nome*", "nome", (!empty($_POST["moti_tx_nome"])? $_POST["moti_tx_nome"]: (!empty($_POST["nome"])? $_POST["nome"]: "")), 6),
+			campo("Nome*", "nome", (!empty($_POST["moti_tx_nome"])? $_POST["moti_tx_nome"]: (!empty($_POST["nome"])? $_POST["nome"]: "")), 3),
 			combo("Tipo*", "tipo", (!empty($_POST["moti_tx_tipo"])? $_POST["moti_tx_tipo"]: (!empty($_POST["tipo"])? $_POST["tipo"]: "")), 2, $tiposMotivo),
-			combo("Legenda de Marcação*", "legenda", (!empty($_POST["moti_tx_legenda"]) && array_key_exists($_POST["moti_tx_legenda"], $legendas))? $_POST["moti_tx_legenda"]: "I", 4, $legendas)
+			combo("Legenda de Marcação*", "legenda", (!empty($_POST["moti_tx_legenda"]) && array_key_exists($_POST["moti_tx_legenda"], $legendas))? $_POST["moti_tx_legenda"]: "I", 4, $legendas),
+			$campoAdvertencia
 		];
 
 		$botoes = [
