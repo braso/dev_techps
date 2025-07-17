@@ -108,6 +108,9 @@
 				$usuario[$campo[0]] = $_POST[$campo[1]];
 			}
 		}
+		if (empty($_POST["expiracao"])) {
+			$usuario["user_tx_expiracao"] = null;
+		}
 		if(!empty($_POST["senha"])){
 			$usuario["user_tx_senha"] = md5($_POST["senha"]);
 		}
@@ -167,7 +170,6 @@
 		}
 
 		//Atualizando usuário existente
-
 		atualizarUsuario($usuario);
 		$id = $_POST["id"];
 		
@@ -556,16 +558,16 @@
 			$_POST["busca_status"] = "ativo";
 		}
 
-		$extra = 
-			(!empty($_POST["busca_codigo"])? 								" AND user_nb_id = ".$_POST['busca_codigo']: "").
-			(!empty($_POST["busca_nome_like"])? 							" AND user_tx_nome LIKE '%".$_POST["busca_nome_like"]."%'": "").
-			(!empty($_POST["busca_login_like"])? 							" AND user_tx_login LIKE '%".$_POST["busca_login_like"]."%'": "").
-			(!empty($_POST["busca_nivel"])? 								" AND user_tx_nivel = '".$_POST["busca_nivel"]."'": "").
-			(!empty($_POST["busca_cpf"])? 									" AND user_tx_cpf = '".$_POST["busca_cpf"]."'": "").
-			(!empty($_POST["busca_empresa"])? 								" AND user_nb_empresa = ".$_POST["busca_empresa"]: "").
-			(!empty($_POST["busca_status"])? 								" AND user_tx_status = '".strtolower($_POST["busca_status"])."'": "").
-			(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))? 	" AND user_tx_nivel NOT LIKE '%Administrador%'": "")
-		;
+		// $extra = 
+		// 	(!empty($_POST["busca_codigo"])? 								" AND user_nb_id = ".$_POST['busca_codigo']: "").
+		// 	(!empty($_POST["busca_nome_like"])? 							" AND user_tx_nome LIKE '%".$_POST["busca_nome_like"]."%'": "").
+		// 	(!empty($_POST["busca_login_like"])? 							" AND user_tx_login LIKE '%".$_POST["busca_login_like"]."%'": "").
+		// 	(!empty($_POST["busca_nivel"])? 								" AND user_tx_nivel = '".$_POST["busca_nivel"]."'": "").
+		// 	(!empty($_POST["busca_cpf"])? 									" AND user_tx_cpf = '".$_POST["busca_cpf"]."'": "").
+		// 	(!empty($_POST["busca_empresa"])? 								" AND user_nb_empresa = ".$_POST["busca_empresa"]: "").
+		// 	(!empty($_POST["busca_status"])? 								" AND user_tx_status = '".strtolower($_POST["busca_status"])."'": "").
+		// 	(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))? 	" AND user_tx_nivel NOT LIKE '%Administrador%'": "")
+		// ;
 
 
 		$niveis = [""];
@@ -709,7 +711,6 @@
 					".implode(" ", $actions["functions"])."
 				}"
 			;
-
 			echo gridDinamico("tabelaMotoristas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
 		//}
 

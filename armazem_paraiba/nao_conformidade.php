@@ -344,15 +344,30 @@
 								</tr>
 							</tbody>
 							</table>
-							<button type='button' onclick='imprimirIndividual(this)'>🖨️ Imprimir</button>
 					</div>"
 				;
 				//------------------------------------------------------------------------------------------------
 
-				
+				if (empty($_POST["busca_motorista"])){
+					$buttonImprimir = 
+						"<button type='button' class='btn btn-default' onclick='imprimirIndividual(this)'>Imprimir Relatório</button>"
+					; 
+				}
+
+				$cabecalhoForm = 
+					"<div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;'>
+						<div>
+							[{$motorista["enti_tx_matricula"]}] {$motorista["enti_tx_nome"]} | {$motorista["empr_tx_nome"]} {$infoEndosso} {$convencaoPadrao}
+						</div>
+						<div>
+							 $buttonImprimir
+						</div>
+					</div>"
+				;
+
 				$rows[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumo));
 				$tabelasPonto[] = createForm(
-					"[".$motorista["enti_tx_matricula"]."] {$motorista["enti_tx_nome"]} | {$motorista["empr_tx_nome"]} {$infoEndosso} {$convencaoPadrao} <br><br>{$saldosMotorista}",
+					"$cabecalhoForm <br><br>{$saldosMotorista}",
 					12, 
 					montarTabelaPonto($cab, $rows), 
 					[]
@@ -479,51 +494,175 @@
 
 		echo "
 		<script>
-		function imprimirIndividual(botao) {
-			const conteudo = botao.closest('.conteudo-individual');
-			if (!conteudo) {
-				alert('Conteúdo não encontrado.');
-				return;
-			}
+			function imprimirIndividual(botao) {
+				const bloco = botao.closest('.col-md-12');
+				if (!bloco) {
+					alert('Bloco não encontrado.');
+					return;
+				}
 
-			const win = window.open('', '_blank');
+				const conteudo = bloco.cloneNode(true);
 
-			// Copia os estilos existentes
-			let estilos = '';
-			document.querySelectorAll('link[rel=\"stylesheet\"], style').forEach(el => {
-				estilos += el.outerHTML;
-			});
+				// Remove botões de impressão internos
+				conteudo.querySelectorAll('button[onclick*=\"imprimirIndividual\"]').forEach(btn => btn.remove());
 
-			win.document.write(`
-				<html>
+				const cssImpressao = `
+					@media print {
+						body {
+							margin: 1cm;
+							transform: scale(1.0);
+							transform-origin: top left;
+						}
+
+						@page {
+							size: A4 landscape;
+							margin: 1cm;
+						}
+
+						div.portlet-title > div > span > div.table-responsive {
+							max-width: 50% !important;
+						}
+
+						#saldo {
+							margin-top: 9px !important;
+							text-align: center;
+							width: 50% !important;
+						}
+
+						.portlet.light {
+							padding: 12px 20px 15px !important;
+						}
+
+						.portlet {
+							border-radius: 20px !important;
+							margin-top: 0 !important;
+							margin-bottom: 25px !important;
+						}
+
+						#tituloRelatorio {
+							display: flex;
+							align-items: center;
+							justify-content: space-between;
+							gap: 1em;
+						}
+
+						#tituloRelatorio h1 {
+							margin: 0;
+							font-size: 1.5em;
+							flex-grow: 1;
+							text-align: center;
+						}
+
+						#tituloRelatorio img {
+							display: block;
+						}
+
+						body > div.scroll-to-top {
+							display: none !important;
+						}
+
+						div:nth-child(12) > .portlet.light {
+							display: none !important;
+						}
+
+						#logo {
+							display: flex;
+							position: absolute;
+							top: 5px;
+							right: 50px;
+						}
+
+						.portlet-body.form .table-responsive,
+						.table-responsive {
+							overflow: visible !important;
+							max-width: none !important;
+							max-height: none !important;
+							width: auto !important;
+						}
+
+						table {
+							width: 100% !important;
+							table-layout: auto !important;
+						}
+
+						.portlet.light > .portlet-title {
+							border-bottom: none;
+							margin-bottom: 0px;
+						}
+
+						.caption {
+							padding-top: 0px;
+							margin-left: -50px !important;
+							padding-bottom: 0px;
+						}
+
+						.portlet-body form{
+							margin-left: -50px !important;
+						}
+					}
+				`;
+
+				const tituloRelatorio = `
+					<div id='tituloRelatorio'>				
+						<h1>Não Conformidades</h1>
+            		</div>`;
+
+				const janela = window.open('', '_blank');
+
+				janela.document.write(`
+					<html>
 					<head>
 						<title>Impressão</title>
-						\${estilos}
+						<meta charset='utf-8'>
+						<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'>
 						<style>
-							body {
-								font-family: Arial, sans-serif;
-								margin: 20px;
-							}
-							@media print {
-								button { display: none; }
-							}
+							body { font-family: Arial, sans-serif; margin: 20px; }
+							table { width: 100%; border-collapse: collapse; }
+							th, td { border: 1px solid #ccc; padding: 5px; font-size: 12px; }
+							\${cssImpressao}
 						</style>
 					</head>
 					<body>
+						\${tituloRelatorio}
 						\${conteudo.outerHTML}
 					</body>
-				</html>
-			`);
+					</html>
+				`);
 
-			win.document.close();
+				janela.document.close();
 
-			win.onload = function () {
-				win.focus();
-				win.print();
-				win.close();
-			};
-		}
+				janela.onload = function () {
+					const imgs = janela.document.images;
+					if (imgs.length === 0) {
+						janela.print();
+						janela.close();
+						return;
+					}
+
+					let carregadas = 0;
+					for (let img of imgs) {
+						if (img.complete) {
+							carregadas++;
+						} else {
+							img.onload = img.onerror = () => {
+								carregadas++;
+								if (carregadas === imgs.length) {
+									janela.print();
+									janela.close();
+								}
+							};
+						}
+					}
+
+					// Caso todas já estejam carregadas
+					if (carregadas === imgs.length) {
+						janela.print();
+						janela.close();
+					}
+				};
+			}
 		</script>
+
 		";
 
 

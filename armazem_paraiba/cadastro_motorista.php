@@ -1036,6 +1036,7 @@
 				"EMPRESA" 				=> "empr_tx_nome",
 				"FONE 1" 				=> "enti_tx_fone1",
 				"OCUPAÇÃO" 				=> "enti_tx_ocupacao",
+				"Tipo de Operação" 		=> "enti_tx_tipoOperacao",
 				"DATA CADASTRO" 		=> "CONCAT('data(\"', enti_tx_dataCadastro, '\")') AS enti_tx_dataCadastro",
 				"PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
 				"CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",

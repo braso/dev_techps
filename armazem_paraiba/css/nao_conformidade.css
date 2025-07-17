@@ -6,10 +6,14 @@
 		transform-origin: top left;
 	}
 
+	.table-head {
+		position: static !important;
+	}
+	
 	@page {
 		size: A4 landscape;
-		margin: 1cm;
 	}
+
 	#tituloRelatorio {
 		display: flex;
 		align-items: center;       /* Alinha verticalmente */
@@ -56,6 +60,7 @@
 		padding-bottom: 0px;
 	}
 }
+
 #saldo {
 	width: 50% !important;
 	margin-top: 9px !important;
@@ -70,6 +75,7 @@ table td:nth-child(7),
 table td:nth-child(11) {
 	border-right: 3px solid #d8e4ef !important;
 }
+
 .th-align {
 	text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
 	vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */

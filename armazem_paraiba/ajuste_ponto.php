@@ -391,7 +391,6 @@
 			]
 		);
 
-
 		$gridFields = [
 			"CÓD"												=> "pont_nb_id",
 			"DATA"												=> "data(pont_tx_data,1)",
@@ -400,7 +399,7 @@
 			"MOTIVO"											=> "moti_tx_nome",
 			"LEGENDA"											=> "moti_tx_legenda",
 			"JUSTIFICATIVA"										=> "pont_tx_justificativa",
-			"USUÁRIO CADASTRO"									=> "userCadastro",
+			"USUÁRIO CADASTRO"									=> "userCadastro(pont_nb_userCadastro)",
 			"DATA CADASTRO"										=> "data(pont_tx_dataCadastro,1)",
 			"DATA EXCLUSÃO"                                     => "data(pont_tx_dataAtualiza,1)",
 			"LOCALIZAÇÃO"                                       => "map(pont_nb_id)",
