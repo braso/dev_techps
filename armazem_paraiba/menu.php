@@ -36,7 +36,8 @@
 				"/cadastro_motivo.php" 		=> "Motivo",
 				"/cadastro_parametro.php" 	=> "Parâmetro",
 				"/cadastro_usuario.php" 	=> "Usuário",
-				"/cadastro_placa.php" 		=> "Placas"
+				"/cadastro_placa.php" 		=> "Placas",
+				"/cadastro_celular.php" 		=> "Celular"
 			],
 			"ponto" => [
 				"/endosso.php" 			=> "Consultar Endossos",
@@ -96,9 +97,9 @@
 		if (is_int(strpos($nivel, "Administrador")) || is_int(strpos($nivel, "Super Administrador"))) {
 			return $menus["cadastros"].$menus["ponto"].$menus["painel"].($menus["suporte"]?? "").($menus["relatórios"] ?? "");
 		}
-		// if (is_int(strpos($nivel, "Funcionário"))) {
-		// 	return $menus["cadastros"].$menus["ponto"];
-		// }
+		if (is_int(strpos($nivel, "Supervisão"))) {
+			return $menus["cadastros"].$menus["ponto"];
+		}
 		if(in_array($nivel, ["Motorista", "Ajudante", "Funcionário"])){
 			return $menuMotorista;
 		}

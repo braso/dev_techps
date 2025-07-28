@@ -411,6 +411,15 @@
 			return "";
 	}
 
+	function userCadastro($idUser){
+		$userCadastro = mysqli_fetch_all(query(
+			"SELECT user_tx_nome FROM `user`"
+			." WHERE user_nb_id = ".$idUser.";"
+		), MYSQLI_ASSOC);
+		
+		return $userCadastro[0]["user_tx_nome"];
+	}
+
 	function map($idPonto){
 		$location = mysqli_fetch_all(query(
 			"SELECT pont_tx_latitude, pont_tx_longitude FROM ponto"

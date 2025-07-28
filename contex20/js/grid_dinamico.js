@@ -206,3 +206,117 @@ $('.grid-footer .tab-pagination').click(function(event) {
         consultarRegistros();
     }
 });
+
+function imprimirTabelaCompleta() {
+    // Salva valores atuais
+    const limitOriginal = parseInt($('input[name="limit"]')[0].value);
+    const paginaOriginal = pageNumber;
+
+    // Altera o limit para um número bem alto
+    $('input[name="limit"]')[0].value = 999999;
+    pageNumber = 1;
+
+    // Monta condições de filtro com base no formulário
+    let data = {};
+    $('form[name="contex_form"] :input').each(function(_, tag) {
+        if (searchFields[tag.name] !== undefined) {
+            data[searchFields[tag.name]] = tag.value;
+        }
+    });
+
+    let condicoesImpressao = '';
+    const keys = Object.values(searchFields);
+    const inputs = $('form[name="contex_form"] :input');
+
+    for (let f = 0; f < keys.length; f++) {
+        if (data[keys[f]] !== '') {
+            if (inputs[f].name.indexOf('_like') > 0) {
+                condicoesImpressao += ' AND ' + keys[f] + ' LIKE "%' + data[keys[f]] + '%"';
+            } else if (inputs[f].name.indexOf('_g') > 0) {
+                condicoesImpressao += ' AND ' + keys[f] + ' > "' + data[keys[f]] + '"';
+            } else if (inputs[f].name.indexOf('_ge') > 0) {
+                condicoesImpressao += ' AND ' + keys[f] + ' >= "' + data[keys[f]] + '"';
+            } else if (inputs[f].name.indexOf('_l') > 0) {
+                condicoesImpressao += ' AND ' + keys[f] + ' < "' + data[keys[f]] + '"';
+            } else if (inputs[f].name.indexOf('_le') > 0) {
+                condicoesImpressao += ' AND ' + keys[f] + ' <= "' + data[keys[f]] + '"';
+            } else if (inputs[f].name.indexOf('_cpf') > 0) {
+                condicoesImpressao += ' AND ' + keys[f] + ' = "' + data[keys[f]].replace(/[^0-9]/g, '') + '"';
+            } else {
+                condicoesImpressao += ' AND ' + keys[f] + ' = "' + data[keys[f]] + '"';
+            }
+        }
+    }
+
+    if (orderCol !== '') {
+        condicoesImpressao += ' ORDER BY ' + orderCol;
+    }
+
+    // Faz nova requisição AJAX com todos os dados
+    $.ajax({
+        url: urlTableInfo,
+        method: 'POST',
+        data: {
+            'query': [
+                queryBase,
+                btoa(encodeURI(condicoesImpressao)),
+                btoa(999999), // limit
+                btoa(0)       // offset
+            ]
+        },
+        dataType: 'json',
+        success: function(response) {
+            // Gera cabeçalho
+            const header = [...Object.keys(fields)];
+            let statusCol = -1;
+
+            header.forEach(function(value, key) {
+                if (camposBd[key] != null && camposBd[key].indexOf('status') >= 0) {
+                    statusCol = key;
+                }
+                camposBd[key] = camposBd[key].indexOf(' AS ') >= 0 ?
+                    camposBd[key].substring(camposBd[key].indexOf(' AS ') + 4) :
+                    camposBd[key];
+
+                header[key] =
+                    '<th colspan="1" rowspan="1" class="table-col-head" value="' + key + '">'
+                    + value + '</th>';
+            });
+
+            response.rows.forEach(function(dataArray, rowKey) {
+                let row = '';
+                Object.keys(dataArray).forEach(function(key) {
+                    if (camposBd.indexOf(key) >= 0) {
+                        row += '<td>' + (dataArray[key] != null ? dataArray[key] : '') + '</td>';
+                    }
+                });
+                try {
+                    if (typeof actions !== 'undefined') {
+                        actions.forEach(function(actionTag) {
+                            row += '<td class="tab-action">' + actionTag + '</td>';
+                        });
+                    }
+                } catch (e) {}
+
+                response.rows[rowKey] = '<tr>' + row + '</tr>';
+            });
+
+            // Renderiza tudo
+            $('#result thead')[0].innerHTML = header.join('');
+            $('#result tbody')[0].innerHTML = response.rows.join('');
+
+            // Aguarda DOM atualizar e imprime
+            setTimeout(() => {
+                window.print();
+
+                // Restaura valores e recarrega a versão paginada
+                $('input[name="limit"]')[0].value = limitOriginal;
+                pageNumber = paginaOriginal;
+                consultarRegistros();
+            }, 500);
+        },
+        error: function(err) {
+            console.error('Erro ao carregar todos os dados:', err);
+        }
+    });
+}

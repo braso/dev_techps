@@ -135,7 +135,9 @@
 			$motorista = $motoristas[$f];
 			include "./relatorio_espelho.php";
 			include "./csv_relatorio_espelho.php";
-			echo "<br><br><br><hr>";
+			if(count($motoristas) > 1){
+				echo "<hr>";
+			}
 		}
 		
 		exit;

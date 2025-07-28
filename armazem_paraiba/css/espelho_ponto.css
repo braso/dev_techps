@@ -10,11 +10,6 @@
 		transform-origin: top left;
 	}
 
-	@page {
-		size: A4 landscape;
-		margin: 1cm;
-	}
-
 	#tituloRelatorio {
 		display: block; /* Torna visível apenas ao imprimir */
 		font-size: 12px;
@@ -35,7 +30,8 @@
 	body > div.page-container > div > div.page-content > div > div > div > div > div:nth-child(3) {
 		display: none;
 	}
-
+	
+	div:nth-child(12) > div,
 	div:nth-child(11) > .portlet.light {
 		display: none !important;
 	}
@@ -60,6 +56,11 @@
 		padding-bottom: 0px;
 		width: 75%;
 		/* line-height: 15px !important; */
+	}
+
+	@page {
+		size: A4 landscape;
+		margin: 1cm;
 	}
 }
 

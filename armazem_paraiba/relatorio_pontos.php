@@ -204,13 +204,6 @@ function index() {
     if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
         global $totalResumo;
 
-        echo   
-            "<div style='display:none' id='tituloRelatorio'>
-                <h1>Relatório de pontoS</h1>
-                <img id='logo' style='width: 150px' src='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
-            </div>"
-        ;
-
         // Converte as datas para objetos DateTime
         [$startDate, $endDate] = [new DateTime($_POST["busca_periodo"][0]), new DateTime($_POST["busca_periodo"][1])];
         $diaInicioFotmat = $startDate->format("d/m/Y");
@@ -264,17 +257,14 @@ function index() {
             LIMIT 1;"
         ))["empr_tx_logo"];//Utilizado no HTML.
 
-        $logoEmpresa = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$logoEmpresa;
 
         $diaImpresao = date('d/m/Y \T H:i:s').' (UTC-3)';
 
         echo "<link rel='stylesheet' href='./css/paineis.css'>
                 <div id='printTitulo'>
-                    <img style='width: 150px' src='<?= $logoEmpresa ?>' alt='Logo Empresa Esquerda'>
-                    <h2>Relatorio de Pontos</h2>
-                    <div class='right-logo'>
-                        <img style='width: 150px' src='$_ENV[APP_PATH].$_ENV[CONTEX_PATH]/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
-                    </div>
+                    <img style='width: 190px; height: 40px;' src='./imagens/logo_topo_cliente.png' alt='Logo Empresa Esquerda'>
+					<h1>Relatorio de Pontos</h1>
+                    <img style='width: 180px; height: 80px;' src='./$logoEmpresa' alt='Logo Empresa Direita'>
                 </div>
                 <div class='col-md-12 col-sm-12' id='pdf2htmldiv'>
                     <div class='portlet light '>
@@ -371,7 +361,14 @@ function index() {
 				</div>
                 <div id='impressao'>
                     <b>Impressão Doc.:</b> $diaImpresao
-                </div>";
+                </div>
+                <div class='comentario-impressao'>
+                    <strong>Observações:</strong>
+                    <div class='linha-comentario'></div>
+                    <div class='linha-comentario'></div>
+                    <div class='linha-comentario'></div>
+                </div>
+                ";
     }
 
     echo carregarJS($pontos);

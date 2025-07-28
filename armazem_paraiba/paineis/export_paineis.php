@@ -19,14 +19,20 @@ class CustomPDF extends TCPDF {
     }
 
     public function Header() {
-        $imgWidth = 20;
-        $imgWidth2 = 30;
-        $imgHeight = 15;
-        $imgHeight2 = 10;
+        $imgWidth = 65;
+        $imgWidth2 = 65;
+        $imgHeight = 30;
+        $imgHeight2 = 15;
         $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth2, $imgHeight2);
         $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 25, 10, $imgWidth, $imgHeight);
         // $this->Image('logo_esquerda.png', 10, 10, $imgWidth, $imgHeight);
         // $this->Image('logo_direita.png', $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
+
+        // $this->SetFillColor(255, 0, 0);
+
+        // // Desenha o retângulo colorido atrás da imagem
+        // $this->Rect($this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight, 'F');
+        
         $this->SetFont('helvetica', 'B', 12);
         $this->Cell(0, 15, $this->tituloPersonalizado, 0, 1, 'C');
         $this->Ln(15);
@@ -807,10 +813,10 @@ function gerarPainelNc() {
     if (!empty($_POST["empresa"]) && !empty($_POST["busca_data"])) {
         //Painel dos endossos dos motoristas de uma empresa específica
         $empresa = mysqli_fetch_assoc(query(
-            "SELECT * FROM empresa"
-                . " WHERE empr_tx_status = 'ativo'"
-                . " AND empr_nb_id = " . $_POST["empresa"]
-                . " LIMIT 1;"
+            "SELECT * FROM empresa
+                WHERE empr_tx_status = 'ativo'
+                    AND empr_nb_id = {$_POST["empresa"]}
+                LIMIT 1;"
         ));
 
         if ($_POST["busca_endossado"] === "naoEndossado") {
@@ -1335,7 +1341,7 @@ function gerarPainelNc() {
 
     // Recebe e trata o HTML
     $htmlTabela = $_POST['htmlTabela'] ?? '';
-    // dd($htmlTabela );
+    // dd($htmlTabela);
     
     // Limpeza adicional do HTML
     $htmlTabela = preg_replace('/<i[^>]*>(.*?)<\/i>/', '', $htmlTabela); // Remove ícones
@@ -1537,7 +1543,7 @@ function gerarPainelAjustes() {
 
 
     // === Espaço antes da próxima tabela ===
-    $pdf->Ln(50);
+    $pdf->Ln(10);
 
     // === Tabela: Ajustes por funcionário ===
     $pdf->SetFillColor(241, 198, 31); 
@@ -1563,65 +1569,127 @@ function gerarPainelAjustes() {
 
     // === Espaço antes da próxima tabela ===
     $pdf->Ln(2);
-
-    $pdf->SetFillColor(78, 169, 255);
-    $pdf->SetFont('helvetica', 'B', 5.2);
-    $pdf->Cell(14, 9, 'Matrícula', 1, 0, 'C', true);
-    $pdf->MultiCell(26, 9, 'Nome do Funcionário', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
-    $pdf->Cell(14, 9, 'Ocupação', 1, 0, 'C', true);
-    $pdf->MultiCell(17, 9, 'Inicio de Jornada', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
-    $pdf->MultiCell(17, 9, 'Fim de Jornada', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
-    $pdf->MultiCell(17, 9, 'Inicio de Refeição', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
-    $pdf->MultiCell(17, 9, 'Fim de Refeição', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
-    $pdf->MultiCell(17, 9, 'Inicio de Espera', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
-    $pdf->MultiCell(17, 9, 'Fim de Espera', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
-    $pdf->MultiCell(17, 9, 'Inicio de Descanso', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
-    $pdf->MultiCell(17, 9, 'Fim de Descanso', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
-    $pdf->MultiCell(17, 9, 'Inicio de Repouso', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
-    $pdf->MultiCell(17, 9, 'Fim de Repouso', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
-    $pdf->MultiCell(17, 9, 'Inicio de Repouso Embarcado', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
-    $pdf->MultiCell(17, 9, 'Fim de Repouso Embarcado', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
-    $pdf->MultiCell(17, 9, 'Total', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
-    $pdf->MultiCell(17, 9, 'Total Geral', 1, 'C', true, 1, '', '', true, 0, false, true, 7, 'M');
-
-    $pdf->SetFillColor(78, 169, 255);
-    $pdf->Cell(14, 7, '', 1, 0, 'C', true);
-    $pdf->Cell(26, 7, '', 1, 0, 'C', true);
-    $pdf->Cell(14, 7, '', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
-    $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
-    $pdf->Cell(17, 7, '', 1, 1, 'C', true);
     
     // dd($json);
     usort($jsons, function ($a, $b) {
         return strcmp($a['nome'], $b['nome']);
     });
 
+    // $paginaAnterior = $pdf->getPage();
     foreach ($jsons as $dados) {
+        $alturaLinha = 7;
+        if ($pdf->getY() + $alturaLinha > $pdf->getPageHeight() - $pdf->getBreakMargin()) {
+            $pdf->AddPage();
+            $pdf->SetY(45);
+            $paginaAnterior = $pdf->getPage();
+            $pdf->SetFillColor(78, 169, 255);
+            $pdf->SetFont('helvetica', 'B', 5.2);
+            $pdf->Cell(14, 9, 'Matrícula', 1, 0, 'C', true);
+            $pdf->MultiCell(26, 9, 'Nome do Funcionário', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->Cell(14, 9, 'Ocupação', 1, 0, 'C', true);
+            $pdf->MultiCell(17, 9, 'Inicio de Jornada', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Fim de Jornada', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Inicio de Refeição', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Fim de Refeição', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Inicio de Espera', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Fim de Espera', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Inicio de Descanso', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Fim de Descanso', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Inicio de Repouso', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Fim de Repouso', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Inicio de Repouso Embarcado', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Fim de Repouso Embarcado', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Total', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Total Geral', 1, 'C', true, 1, '', '', true, 0, false, true, 7, 'M');
+    
+            $pdf->SetFillColor(78, 169, 255);
+            $pdf->Cell(14, 7, '', 1, 0, 'C', true);
+            $pdf->Cell(26, 7, '', 1, 0, 'C', true);
+            $pdf->Cell(14, 7, '', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(17, 7, '', 1, 1, 'C', true);
+        }
+       
+        $paginaAtual = $pdf->getPage();
+        if ($paginaAtual != $paginaAnterior) {
+            $paginaAnterior = $paginaAtual;
+            $pdf->SetFillColor(78, 169, 255);
+            $pdf->SetFont('helvetica', 'B', 5.2);
+            $pdf->Cell(14, 9, 'Matrícula', 1, 0, 'C', true);
+            $pdf->MultiCell(26, 9, 'Nome do Funcionário', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->Cell(14, 9, 'Ocupação', 1, 0, 'C', true);
+            $pdf->MultiCell(17, 9, 'Inicio de Jornada', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Fim de Jornada', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Inicio de Refeição', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Fim de Refeição', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Inicio de Espera', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Fim de Espera', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Inicio de Descanso', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Fim de Descanso', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Inicio de Repouso', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Fim de Repouso', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Inicio de Repouso Embarcado', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Fim de Repouso Embarcado', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Total', 1, 'C', true, 0, '', '', true, 0, false, true, 7, 'M');
+            $pdf->MultiCell(17, 9, 'Total Geral', 1, 'C', true, 1, '', '', true, 0, false, true, 7, 'M');
+    
+            $pdf->SetFillColor(78, 169, 255);
+            $pdf->Cell(14, 7, '', 1, 0, 'C', true);
+            $pdf->Cell(26, 7, '', 1, 0, 'C', true);
+            $pdf->Cell(14, 7, '', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'INS', 1, 0, 'C', true);
+            $pdf->Cell(8.5, 7, 'EXC', 1, 0, 'C', true);
+            $pdf->Cell(17, 7, '', 1, 1, 'C', true);
+        }
         $pdf->Cell(14, 7, $dados["matricula"], 1, 0, 'C');
         $pdf->MultiCell(26, 7, $dados["nome"], 1, 'C', false, 0, '', '', true, 0, false, true, 7, 'M');
         $pdf->Cell(14, 7, $dados["ocupacao"], 1, 0, 'C');
@@ -1748,6 +1816,10 @@ function gerarPainelAjustes() {
         $fimRepousoEmbarcadoInativo += $dados["Fim de Repouso Embarcado"]["inativo"];
     }
 
+    $totalAtivo = $inicioJornadaAtivos + $inicioRefeicaoAtivos + $inicioEsperaAtivos + $inicioDescansoAtivos + $inicioRepousoAtivos + $inicioRepousoEmbarcadoAtivos
+    + $fimJornadaAtivos + $fimRefeicaoAtivos + $fimEsperaAtivos + $fimDescansoAtivos + $fimRepousoAtivos + $fimRepousoEmbarcadoAtivos;
+    $totalInativo = $inicioJornadaInativo + $inicioRefeicaoInativo + $inicioEsperaInativo + $inicioDescansoInativo + $inicioRepousoInativo + $inicioRepousoEmbarcadoInativo
+    + $fimJornadaInativo + $fimRefeicaoInativo + $fimEsperaInativo + $fimDescansoInativo + $fimRepousoInativo + $fimRepousoEmbarcadoInativo;
 
     $pdf->Cell(8.5, 7, $inicioJornadaAtivos, 1, 0, 'C');
     $pdf->Cell(8.5, 7, $inicioJornadaInativo, 1, 0, 'C');
@@ -1779,8 +1851,9 @@ function gerarPainelAjustes() {
     $pdf->Cell(8.5, 7, $fimRepousoEmbarcadoAtivos, 1, 0, 'C');
     $pdf->Cell(8.5, 7, $fimRepousoEmbarcadoInativo, 1, 0, 'C');
 
-    $pdf->Cell(17, 7, '', 1, 0, 'C');
-    $pdf->Cell(17, 7, '', 1, 1, 'C');
+    $pdf->Cell(8.5, 7, $totalAtivo, 1, 0, 'C');
+    $pdf->Cell(8.5, 7, $totalInativo, 1, 0, 'C');
+    $pdf->Cell(17, 7, $totalInativo + $totalAtivo, 1, 1, 'C');
     // Gera o PDF
     $nomeArquivo = 'relatorio_ajustes.pdf';
     $pdf->Output($nomeArquivo, 'I');
