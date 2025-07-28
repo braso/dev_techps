@@ -147,26 +147,68 @@
 		$versoesEndosso = [
 			["diffRefeicao", "diffEspera", "diffDescanso", "diffRepouso", "diffJornada", "jornadaPrevista", "diffJornadaEfetiva", "maximoDirecaoContinua", "intersticio", "he50", "he100", "adicionalNoturno", "esperaIndenizada", "diffSaldo", "saldoAnterior", "saldoAtual"],
 			["diffRefeicao", "diffEspera", "diffDescanso", "diffRepouso", "diffJornada", "jornadaPrevista", "diffJornadaEfetiva", "maximoDirecaoContinua", "intersticio", "he50", "he100", "adicionalNoturno", "esperaIndenizada", "diffSaldo", "saldoAnterior", "saldoAtual", "he50APagar", "he100APagar"],
-			["diffRefeicao", "diffEspera", "diffDescanso", "diffRepouso", "diffJornada", "jornadaPrevista", "diffJornadaEfetiva", "maximoDirecaoContinua", "intersticio", "he50", "he100", "adicionalNoturno", "esperaIndenizada", "diffSaldo", "saldoAnterior", "saldoBruto", "he50APagar", "he100APagar"]
+			["diffRefeicao", "diffEspera", "diffDescanso", "diffRepouso", "diffJornada", "jornadaPrevista", "diffJornadaEfetiva", "maximoDirecaoContinua", "intersticio", "he50", "he100", "adicionalNoturno", "esperaIndenizada", "diffSaldo", "saldoAnterior", "saldoBruto", "he50APagar", "he100APagar"],
+			["diffRefeicao", "diffEspera", "diffDescanso", "diffRepouso", "diffJornada", "jornadaPrevista", "diffJornadaEfetiva", "maximoDirecaoContinua", "intersticio", "he50", "he100", "adicionalNoturno", "esperaIndenizada", "diffSaldo", "saldoAnterior", "saldoBruto", "saldoFinal", "he50APagar", "he100APagar"],
+			["diffRefeicao", "diffEspera", "diffDescanso", "diffRepouso", "diffJornada", "jornadaPrevista", "diffJornadaEfetiva", "maximoDirecaoContinua", "intersticio", "he50", "he100", "adicionalNoturno", "esperaIndenizada", "diffSaldo", "desconto_manual", "desconto_faltas_nao_justificadas", "saldoAnterior", "saldoBruto", "saldoFinal", "he50APagar", "he100APagar"],
 		];
 
 		switch(array_keys($endosso["totalResumo"])){
 			case $versoesEndosso[0]:
 			case $versoesEndosso[1]:
+				$endosso["totalResumo"]["desconto_manual"] = "00:00";
+				$endosso["totalResumo"]["desconto_faltas_nao_justificadas"] = "00:00";
+
 				$endosso["totalResumo"]["saldoBruto"] = $endosso["totalResumo"]["saldoAtual"];
 				unset($endosso["totalResumo"]["saldoAtual"]);
 				[$endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]] = calcularHorasAPagar($endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50"], $endosso["totalResumo"]["he100"], (!empty($endosso["endo_tx_max50APagar"])? $endosso["endo_tx_max50APagar"]: "00:00"), ($endosso["totalResumo"]["para_tx_pagarHEExComPerNeg"]?? "nao"));
 				$endosso["totalResumo"]["saldoFinal"] = operarHorarios([$endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]], "-");
 			break;
 			case $versoesEndosso[2]:
-				//Versão atual
 				$endosso["totalResumo"]["saldoFinal"] = operarHorarios([$endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]], "-");
+			case $versoesEndosso[3]:
+				$endosso["totalResumo"]["desconto_manual"] = "00:00";
+				$endosso["totalResumo"]["desconto_faltas_nao_justificadas"] = "00:00";
+			break;
+			case $versoesEndosso[4]:
+					//Versão atual
 			break;
 			default:
 				// echo implode(", ", array_keys($endosso["totalResumo"]));
 			break;
 		}
-		
+
+		if(is_array($endosso["endo_tx_pontos"][0])){
+			$keys = array_merge([
+				"",
+				"data",
+				"diaSemana",
+				"inicioJornada",
+				"inicioRefeicao",
+				"fimRefeicao",
+				"fimJornada"
+			], array_keys($endosso["totalResumo"]));
+
+			foreach($endosso["endo_tx_pontos"] as &$row){
+				if(is_object($row)){
+					$row = (array)$row;
+				}else{
+					$newRow = [];
+					for($f = 0; $f < count($row); $f++){
+						if($keys[$f] == ""){
+							$keys[$f] = 0;
+						}
+						$newRow[$keys[$f]] = $row[$f];
+					}
+					$row = (array)$newRow;
+				}
+			}
+		}else{
+			if(is_object($endosso["endo_tx_pontos"][0])){
+				foreach($endosso["endo_tx_pontos"] as &$row){
+					$row = (array)$row;
+				}
+			}
+		}
 		return $endosso;
 	}
 
@@ -708,29 +750,29 @@
 			}
 		}
 		$campo = 
-			"<div class='".$classeGeral." ".$errorClasses["banco"]."' style='min-width:fit-content; min-height: 50px;'>
-				<label>".$nome."</label><br>
+			"<div class='{$classeGeral} {$errorClasses["banco"]}' style='min-width:fit-content; min-height: 50px;'>
+				<label>{$nome}</label><br>
 				<label class='radio-inline'>
-					<input type='radio' id='sim' name='banco' value='sim'> Sim
+					<input type='radio' name='banco' value='sim'> Sim
 				</label>
 				<label class='radio-inline'>
-					<input type='radio' id='nao' name='banco' value='nao'> Não
+					<input type='radio' name='banco' value='nao'> Não
 				</label>
 			</div>
-			<div id='".$variavel."' class='".$classeGeral."' style='display: none;'>
+			<div id='{$variavel}' class='{$classeGeral}' style='display: none;'>
 					<label>Quantidade de Dias*:</label>
-					<input class='form-control input-sm campo-fit-content ".$errorClasses["quandDias"]."' type='number' value='".$modificadoCampo."' id='outroCampo' name='quandDias' autocomplete='off'>
+					<input class='form-control input-sm campo-fit-content {$errorClasses["quandDias"]}' type='number' value='{$modificadoCampo}' id='outroCampo' name='quandDias' autocomplete='off'>
 			</div>
-			<div id='limiteHoras' class='".$classeGeral."' style='display: none;'>
+			<div id='limiteHoras' class='{$classeGeral}' style='display: none;'>
 				<label>Quantidade de Horas Limite*:</label>
-				<input class='form-control input-sm campo-fit-content ".$errorClasses["quandHoras"]."' type='number' value='".$modificadoCampo2."' id='outroCampo' name='quandHoras' autocomplete='off'>
+				<input class='form-control input-sm campo-fit-content {$errorClasses["quandHoras"]}' type='number' value='{$modificadoCampo2}' id='outroCampo' name='quandHoras' autocomplete='off'>
 			</div>"
 		;
 
 		$data_input = 
 			"<script>
-				const radioSim = document.getElementById('sim');
-				const radioNao = document.getElementById('nao');
+				const radioSim = document.getElementsByName('banco')[0];
+				const radioNao = document.getElementsByName('banco')[1];
 				const campo = document.getElementById('{$variavel}');
 				const campo2 = document.getElementById('limiteHoras');
 				if('{$modificadoRadio}' === 'sim'){
@@ -769,10 +811,14 @@
 				{$titulo}
 			</div>"
 		;
-		
-		
-		$valoresMarcados = explode(',', $modificadoCampo);
 
+		if(substr($modificadoCampo, 0, 1) == "[" && substr($modificadoCampo, strlen($modificadoCampo)-1, 1) == "]"
+			|| substr($modificadoCampo, 0, 1) == "{" && substr($modificadoCampo, strlen($modificadoCampo)-1, 1) == "}"){
+			$valoresMarcados = json_decode($modificadoCampo);
+		}else{
+			$valoresMarcados = explode(',', $modificadoCampo);
+		}
+		
 		foreach($opcoes as $key => $value){
 			$name = $variavel."_".$key;
 			if(empty($key)){
@@ -1440,4 +1486,62 @@
 		</script>";
 
 		return $style."<spam class='glyphicon glyphicon-download glyphicon-clickable' onclick=\"download('$aquivo')\"></spam>".$script;
+	}
+
+	function formatarTipo(string $tipo){
+		$tipos = [
+			"horas_por_dia" => "Horas/Dia",
+			"escala" => "Escala"
+		];
+
+		return $tipos[$tipo];
+	}
+
+	function formatarColunaJornada(string $tipo, string $time1, string $time2, string $dias = ""){
+		if($tipo == "escala"){
+			$nomeDias = [
+				"",
+				"Domingo",
+				"Segunda",
+				"Terça",
+				"Quarta",
+				"Quinta",
+				"Sexta",
+				"Sábado"
+			];
+
+			$dias = json_decode($dias);
+			$diasString = "";
+			foreach($dias as $dia){
+				$diasString .= $nomeDias[$dia].", ";
+			}
+			$diasString = substr($diasString, 0, strlen($diasString)-2).".";
+
+			$retorno = "Início: {$time1}, Fim: {$time2}<br>Nos dias: {$diasString}";
+		}
+		if($tipo == "horas_por_dia"){
+			$retorno = "{$time1} Semanal, {$time2} Sábado";
+		}
+
+		return $retorno;
+	}
+
+	function reordenarArrayPorChaves(array $arrayOriginal, array $ordemDesejada): array {
+		$arrayReordenado = [];
+
+		
+		foreach ($ordemDesejada as $chave) {
+			if (array_key_exists($chave, $arrayOriginal)) {
+				$arrayReordenado[$chave] = $arrayOriginal[$chave];
+			}
+		}
+
+		// Se quiser manter as chaves extras que não estão na ordem desejada, descomente abaixo:
+		// foreach ($arrayOriginal as $chave => $valor) {
+		//     if (!array_key_exists($chave, $arrayReordenado)) {
+		//         $arrayReordenado[$chave] = $valor;
+		//     }
+		// }
+
+		return $arrayReordenado;
 	}
