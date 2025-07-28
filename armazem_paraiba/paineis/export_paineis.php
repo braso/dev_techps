@@ -416,7 +416,6 @@ function gerarPainelEndosso() {
     
     // Recebe e trata o HTML
     $htmlTabela = $_POST['htmlTabela'] ?? '';
-    // dd($htmlTabela );
     
     // Limpeza adicional do HTML
     $htmlTabela = preg_replace('/<i[^>]*>(.*?)<\/i>/', '', $htmlTabela); // Remove ícones
@@ -770,7 +769,6 @@ function gerarPainelSaldo() {
 
     // Recebe e trata o HTML
     $htmlTabela = $_POST['htmlTabela'] ?? '';
-    // dd($htmlTabela );
     
     // Limpeza adicional do HTML
     $htmlTabela = preg_replace('/<i[^>]*>(.*?)<\/i>/', '', $htmlTabela); // Remove ícones
@@ -1341,7 +1339,6 @@ function gerarPainelNc() {
 
     // Recebe e trata o HTML
     $htmlTabela = $_POST['htmlTabela'] ?? '';
-    // dd($htmlTabela);
     
     // Limpeza adicional do HTML
     $htmlTabela = preg_replace('/<i[^>]*>(.*?)<\/i>/', '', $htmlTabela); // Remove ícones
@@ -1570,7 +1567,6 @@ function gerarPainelAjustes() {
     // === Espaço antes da próxima tabela ===
     $pdf->Ln(2);
     
-    // dd($json);
     usort($jsons, function ($a, $b) {
         return strcmp($a['nome'], $b['nome']);
     });
@@ -1995,7 +1991,6 @@ function gerarPainelDisponibilidade() {
 
     // Recebe e trata o HTML
     $htmlTabela = $_POST['htmlTabela'] ?? '';
-    // dd($htmlTabela);
     
     // Limpeza adicional do HTML
     $htmlTabela = preg_replace('/<i[^>]*>(.*?)<\/i>/', '', $htmlTabela); // Remove ícones
@@ -2021,5 +2016,4 @@ if (!empty($_POST['relatorio']) && $_POST['relatorio'] == 'endosso') {
     gerarPainelDisponibilidade();
 }
 
-// dd($empresa);
 // CustomPDF::setEmpresaData($empresa);

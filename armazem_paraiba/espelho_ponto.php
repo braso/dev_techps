@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -277,7 +277,6 @@
 					$row = array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado);
 					$rows[] = $row;
 				}
-				dd($totalResumo);
 
 				$descFaltasNaoJustificadas = "00:00";
 				$qtdDiasNaoJustificados = 0;
