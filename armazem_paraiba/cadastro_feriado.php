@@ -43,6 +43,22 @@
 			"feri_tx_status" => "ativo"
 		];
 
+
+		// Conferir se já existe um feriado nessa data{
+			$feriadoCadastrado = mysqli_fetch_assoc(query(
+				"SELECT * FROM feriado 
+					WHERE feri_tx_status = 'ativo'
+						AND feri_tx_data = '{$novoFeriado["feri_tx_data"]}'
+						".((!empty($_POST["id"]))? "AND feri_nb_id != {$_POST["id"]}": "").";"
+			));
+
+			if(!empty($feriadoCadastrado)){
+				set_status("ERRO: Já existe um feriado nesta data.");
+				layout_feriado();
+				exit;
+			}
+		//}
+
 		if(!empty($_POST["id"])){
 			atualizar("feriado", array_keys($novoFeriado), array_values($novoFeriado), $_POST["id"]);
 		}else{
@@ -117,7 +133,7 @@
 
 		$botoes = [ 
 			botao("Buscar", "index"),
-			botao("Inserir", "layout_feriado", "", "", "", "", "btn btn-success")
+			botao("Inserir", "layout_feriado", "", "", "", "", "btn btn-success"),
 		];
 		
 		echo abre_form();

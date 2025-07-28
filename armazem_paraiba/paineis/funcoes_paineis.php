@@ -211,7 +211,7 @@ function criar_relatorio_saldo() {
 			$ultimoEndosso = mysqli_fetch_assoc(query(
 				"SELECT endo_tx_filename FROM endosso"
 					." WHERE endo_tx_status = 'ativo'"
-						." AND endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'"
+						." AND endo_nb_entidade = '".$motorista["enti_nb_id"]."'"
 						." AND endo_tx_ate < '".$dataMes->format("Y-m-d")."'"
 					." ORDER BY endo_tx_ate DESC"
 					." LIMIT 1;"
@@ -613,7 +613,7 @@ function criar_relatorio_jornada() {
 			$endossos = mysqli_fetch_all(query(
 				"SELECT endo_tx_de, endo_tx_ate"
 					. " FROM `endosso`"
-					. " where endo_tx_matricula = '{$motorista["enti_tx_matricula"]}'"
+					. " where endo_nb_entidade = '{$motorista["enti_nb_id"]}'"
 					. " AND '{$datas["pont_tx_data"]}' BETWEEN endo_tx_de AND endo_tx_ate"
 			), MYSQLI_ASSOC);
 			if (empty($endossos)) {
@@ -1327,7 +1327,6 @@ function criar_relatorio_ajustes() {
 						. " LEFT JOIN user ON ponto.pont_nb_userCadastro = user.user_nb_id"
 						. " WHERE pont_tx_matricula = '$motorista[enti_tx_matricula]'"
 						. " AND pont_nb_userCadastro != '$idUser'"
-						. " AND (user.user_tx_matricula <> ponto.pont_tx_matricula OR user.user_tx_matricula IS NULL)"
 						. " AND pont_tx_status != 'inativo'"
 						. " AND pont_tx_data BETWEEN STR_TO_DATE('$diaInicio 00:00:00', '%Y-%m-%d %H:%i:%s')"
 						. " AND STR_TO_DATE('$diafim 23:59:59', '%Y-%m-%d %H:%i:%s')"
@@ -1380,7 +1379,7 @@ function criar_relatorio_ajustes() {
 			$totalMotorista['pontos'] = array_merge($pontosAtivos, $pontosInativos);
 			// Filtrar apenas os campos numéricos que precisam ser verificados
 			$verificaValores = array_filter($totalMotorista, function ($key) {
-				return !in_array($key, ["id","matricula", "nome", "ocupacao", "pontos"]);
+				return !in_array($key, ["id", "matricula", "nome", "ocupacao", "pontos"]);
 			}, ARRAY_FILTER_USE_KEY);
 
 			$rows[] = $ocorrencias;

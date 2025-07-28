@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 		
@@ -155,7 +155,7 @@
 
 							$diasEndossados = 0;
 							foreach($endossoMes["endo_tx_pontos"] as $row){
-								$day = DateTime::createFromFormat("d/m/Y", $row[1]);
+								$day = DateTime::createFromFormat("d/m/Y", $row["data"]);
 								if($day > $date){
 									$diasEndossados++;
 									$rows[] = $row;
@@ -170,16 +170,17 @@
 					
 					$aDetalhado = diaDetalhePonto($motorista, $date->format("Y-m-d"));
 					$prevEndossoMes = $endossoMes;
-					
-					$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado));
-					for($f = 0; $f < sizeof($row)-1; $f++){
-						if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
+				
+					$colunasAManterZeros = ["inicioJornada", "inicioRefeicao", "fimRefeicao", "fimJornada", "jornadaPrevista", "diffSaldo"];
+					foreach($aDetalhado as $key => $value){
+						if(in_array($key, $colunasAManterZeros)){//Se for das colunas de início de jornada, refeição ou "Jornada Prevista", mantém os valores zerados.
 							continue;
 						}
-						if($row[$f] == "00:00"){
-							$row[$f] = "";
+						if($aDetalhado[$key] == "00:00"){
+							$aDetalhado[$key] = "";
 						}
 					}
+					$row = array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado);
 					$rows[] = $row;
 				}
 			//}
@@ -190,7 +191,6 @@
 						WHERE endo_tx_status = 'ativo' 
 							AND '{$_POST["busca_data"]}' BETWEEN endo_tx_de AND endo_tx_ate
 							AND endo_nb_entidade = '{$motorista["enti_nb_id"]}'
-							AND endo_tx_matricula = '{$motorista["enti_tx_matricula"]}'
 						LIMIT 1;"
 				), MYSQLI_BOTH);
 				if (is_array($aEndosso) && count($aEndosso) > 0) {
@@ -222,24 +222,28 @@
 				// }
 
 				$tolerancia = intval($motorista["para_tx_tolerancia"]);
-				$saldoColIndex = 20;
 
 				$totalResumo = [
 					"diffRefeicao" => "00:00",
-					"diffEspera" => "00:00",
 					"diffDescanso" => "00:00",
-					"diffRepouso" => "00:00",
 					"diffJornada" => "00:00",
 					"jornadaPrevista" => "00:00",
 					"diffJornadaEfetiva" => "00:00",
-					"maximoDirecaoContinua" => "",
 					"intersticio" => "00:00",
 					"he50" => "00:00",
 					"he100" => "00:00",
 					"adicionalNoturno" => "00:00",
-					"esperaIndenizada" => "00:00",
 					"diffSaldo" => "00:00"
 				];
+
+				if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
+					$totalResumo = array_merge($totalResumo, [
+						"diffEspera" => "00:00",
+						"diffRepouso" => "00:00",
+						"maximoDirecaoContinua" => "",
+						"esperaIndenizada" => "00:00"
+					]);
+				}
 
 				for($f = 0; $f < count($rows); $f++){
 					$qtdErros = 0;
@@ -251,7 +255,7 @@
 							;
 						}, $qtdErros);
 					}
-					if(is_int(strpos($rows[$f][3], "Batida início de jornada não registrada!")) && is_int(strpos($rows[$f][12], "Abono: "))){ //Se tiver um erro de início de jornada E tiver algum abono
+					if(is_int(strpos($rows[$f]["inicioJornada"], "Batida início de jornada não registrada!")) && is_int(strpos($rows[$f]["jornadaPrevista"], "Abono: "))){ //Se tiver um erro de início de jornada E tiver algum abono
 						$qtdErros = 0;
 					}
 					if($qtdErros == 0){
@@ -272,20 +276,20 @@
 					}
 					$_POST["counts"]["naoConformidade"] += $qtdErros;
 
-					if(empty($rows[$f][$saldoColIndex])){
-						$rows[$f][$saldoColIndex] = "00:00";
+					if(empty($rows[$f]["diffSaldo"])){
+						$rows[$f]["diffSaldo"] = "00:00";
 					}
 
-					$saldoStr = str_replace("<b>", "", $rows[$f][$saldoColIndex]);
+					$saldoStr = str_replace("<b>", "", $rows[$f]["diffSaldo"]);
 					$saldoStr = explode(":", $saldoStr);
 					$saldo = intval($saldoStr[0])*60 + ($saldoStr[0][0] == "-"? -1: 1)*intval($saldoStr[1]);
 
 					if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
-						$rows[$f][$saldoColIndex] = "00:00";
+						$rows[$f]["diffSaldo"] = "00:00";
 					}
 
-					for($f2 = 7; $f2 < count($rows[$f]); $f2++){
-						$totalResumo[array_keys($totalResumo)[$f2-7]] = operarHorarios([$totalResumo[array_keys($totalResumo)[$f2-7]], strip_tags($rows[$f][$f2])], "+");
+					foreach($totalResumo as $key => $value){
+						$totalResumo[$key] = operarHorarios([$totalResumo[$key], (!empty($row[$key])? $row[$key]: "00:00")], "+");
 					}
 				}
 
@@ -298,7 +302,7 @@
 				//------------------------------------------------------------------------------------------------
 				$ultimoEndosso = mysqli_fetch_assoc(query(
 					"SELECT endo_tx_filename FROM endosso
-						WHERE endo_tx_matricula = '{$motorista["enti_tx_matricula"]}'
+						WHERE endo_nb_entidade = '{$motorista["enti_nb_id"]}'
 							AND endo_tx_ate < '{$_POST["busca_data"]}'
 							AND endo_tx_status = 'ativo'
 						ORDER BY endo_tx_ate DESC
@@ -320,32 +324,47 @@
 					$saldoFinal = somarHorarios([$saldoAnterior, ($totalResumo["diffSaldo"]?? "00:00")]);
 				}
 
-				$cab = [
-					"", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
-					"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "H.E. ".$motorista["enti_tx_percHESemanal"]."%", "H.E. ".$motorista["enti_tx_percHEEx"]."%",
-					"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
+				$cabecalho = [
+					"", "DATA", "<div style='margin:11px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
+					"REFEIÇÃO"/*, ESPERA*/, "DESCANSO"/*, "REPOUSO"*/, "JORNADA", 
+					"JORNADA PREVISTA", "JORNADA EFETIVA"/*, "MDC"*/, "INTERSTÍCIO", "H.E. {$motorista["enti_tx_percHESemanal"]}%", "H.E. {$motorista["enti_tx_percHEEx"]}%",
+					"ADICIONAL NOT."/*, "ESPERA INDENIZADA"*/, "SALDO DIÁRIO(**)"
 				];
-		
 
-				$saldosMotorista = 
-					"Saldos:
-					<div class='table-responsive'>
-						<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
-							<thead><tr>
-								<th>Anterior:</th>
-								<th>Período:</th>
-								<th>Final:</th>
-							</thead></tr>
-							<tbody>
-								<tr>
-								<td>".$saldoAnterior."</td>
-								<td>".$totalResumo["diffSaldo"]."</td>
-								<td>".$saldoFinal."</td>
-								</tr>
-							</tbody>
-							</table>
-					</div>"
-				;
+				if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
+					$cabecalho = array_merge(
+						array_slice($cabecalho, 0, 8), 
+						["ESPERA"], 
+						array_slice($cabecalho, 8, 1), 
+						["REPOUSO"], 
+						array_slice($cabecalho, 9, 3), 
+						["MDC"], 
+						array_slice($cabecalho, 12, 4), 
+						["ESPERA INDENIZADA"], 
+						array_slice($cabecalho, 16, count($cabecalho))
+					);
+				}
+
+				// $saldosMotorista = 
+				// 	"Saldos:
+				// 	<div class='table-responsive'>
+				// 		<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
+				// 			<thead><tr>
+				// 				<th>Anterior:</th>
+				// 				<th>Período:</th>
+				// 				<th>Final:</th>
+				// 			</thead></tr>
+				// 			<tbody>
+				// 				<tr>
+				// 				<td>".$saldoAnterior."</td>
+				// 				<td>".$totalResumo["diffSaldo"]."</td>
+				// 				<td>".$saldoFinal."</td>
+				// 				</tr>
+				// 			</tbody>
+				// 			</table>
+				// 	</div>"
+				// ;
+				$saldosMotorista = "";
 				//------------------------------------------------------------------------------------------------
 
 				if (empty($_POST["busca_motorista"])){
@@ -367,9 +386,9 @@
 
 				$rows[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumo));
 				$tabelasPonto[] = createForm(
-					"$cabecalhoForm <br><br>{$saldosMotorista}",
+					"{$cabecalhoForm} <br><br>{$saldosMotorista}",
 					12, 
-					montarTabelaPonto($cab, $rows), 
+					montarTabelaPonto($cabecalho, $rows), 
 					[]
 				);
 				$aSaldo[$motorista["enti_tx_matricula"]] = $totalResumo["diffSaldo"];

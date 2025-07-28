@@ -107,22 +107,25 @@
 
 	//$telaPadrao: A tela para qual será retornada caso o HTTP_REFERER esteja querendo voltar para a mesma tela que já está
 	function criarBotaoVoltar($telaPadrao = null, $acaoPadrao = null, $extra = ""): string{
-		if(empty($_POST["HTTP_REFERER"]) && !empty($_SERVER["HTTP_REFERER"])){
-			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
-			if(is_int(strpos($_SERVER["HTTP_REFERER"], $_SERVER["REQUEST_URI"]))){
+		if(empty($_POST["HTTP_REFERER"])){
+			if(!empty($_SERVER["HTTP_REFERER"])){
+				$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
+				if(is_int(strpos($_SERVER["HTTP_REFERER"], $_SERVER["REQUEST_URI"]))){
+					if(empty($telaPadrao)){
+						$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_SERVER["REQUEST_URI"];
+					}else{
+						$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$telaPadrao;
+					}
+				}
+			}else{
 				if(empty($telaPadrao)){
 					$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_SERVER["REQUEST_URI"];
 				}else{
 					$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$telaPadrao;
 				}
 			}
-		}else{
-			if(empty($telaPadrao)){
-				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_SERVER["REQUEST_URI"];
-			}else{
-				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$telaPadrao;
-			}
 		}
+		
 		if(empty($_POST["acaoPrevia"])){
 			if(empty($acaoPadrao)){
 				$_POST["acaoPrevia"] = "index";

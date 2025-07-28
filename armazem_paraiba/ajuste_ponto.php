@@ -344,7 +344,6 @@
 			$campoJust[] = textarea("Justificativa", "justificativa", ($_POST["justificativa"]?? ""), 12, 'maxlength=680');
 		}
 
-
 		$botoes[] = $botao_imprimir;
 		$botoes[] = criarBotaoVoltar("espelho_ponto.php");
 		$botoes[] = $botaoConsLog; //BOTÃO CONSULTAR LOGISTICA

@@ -46,31 +46,31 @@
     // Adiciona os dados ao CSV
     foreach ($aDia as $aDiaVez) {
         $linha = [];
-        for ($j = 0; $j < count($aDiaVez); $j++){
+        foreach($aDiaVez as $col){
             // $conteudo = strip_tags($aDiaVez[$j]);
             // $linha[] = str_replace("&nbsp;",$conteudo,$conteudo);
-            $linha[] = strip_tags(html_entity_decode($aDiaVez[$j],ENT_QUOTES | ENT_HTML5,"UTF-8"));
+            $linha[] = strip_tags(html_entity_decode($col,ENT_QUOTES | ENT_HTML5,"UTF-8"));
         }
 
         fputcsv($arquivo, $linha,";");
     }
 
     $totalDias = ["TOTAL:","$qtdDiasEndossados dias","","","","","","","","","","","","","","",""];
-    $tabelaInfo = ["Carga Horaria Prevista:","{$totalResumo["jornadaPrevista"]}","","Legendas","","Saldo Anterior:","{$totalResumo["saldoAnterior"]}","Saldo Período:","{$totalResumo["diffSaldo"]}","Saldo Bruto:","{$totalResumo["saldoBruto"]}","","","","","",""];
-    $tabelaInfo1 = ["Carga Horaria Efetiva Realizada:","$totalResumo[diffJornadaEfetiva]","","I","Incluída Manualmente","","","","","","","","","","","",""];
-    $tabelaInfo2 = ["Adicional Noturno:","$totalResumo[adicionalNoturno]","","P","Pré-Assinalada","","","","","","","","","","","",""];
-    $tabelaInfo3 = ["Espera Indenizada:","$totalResumo[esperaIndenizada]","","T","Outras fontes de marcação","","","","","","","","","","","",""];
-    $tabelaInfo4 = ["","","","DSR","Descanso Semanal Remunerado e Abono","","","","","","","","","","","",""];
-    $tabelaInfo5 = ["Horas Extras (50%) - a pagar:","$totalResumo[he50]","","*","Registros excluídos manualmente","","","","","","","","","","","",""];
-    $tabelaInfo6 = ["Horas Extras (100%) - a pagar:","$totalResumo[he100]","","D+1","Jornada terminada nos dias seguintes","","","","","","","","","","","","","Impressão Doc.:",date("d/m/Y \T H:i:s")."(UTC-3)"];
+    $tabelaInfo = [
+        ["Carga Horaria Prevista:","{$totalResumo["jornadaPrevista"]}","","Legendas","","Saldo Anterior:","{$totalResumo["saldoAnterior"]}","Saldo Período:","{$totalResumo["diffSaldo"]}","Saldo Bruto:","{$totalResumo["saldoBruto"]}","","","","","",""],
+        ["Carga Horaria Efetiva Realizada:","$totalResumo[diffJornadaEfetiva]","","I","Incluída Manualmente","","","","","","","","","","","",""],
+        ["Adicional Noturno:","$totalResumo[adicionalNoturno]","","P","Pré-Assinalada","","","","","","","","","","","",""],
+        ["Espera Indenizada:","$totalResumo[esperaIndenizada]","","T","Outras fontes de marcação","","","","","","","","","","","",""],
+        ["","","","DSR","Descanso Semanal Remunerado e Abono","","","","","","","","","","","",""],
+        ["Horas Extras (50%) - a pagar:","$totalResumo[he50]","","*","Registros excluídos manualmente","","","","","","","","","","","",""],
+        ["Horas descontadas manualmente:",$totalResumo["desconto_manual"],"","D+1","Jornada terminada nos dias seguintes","","","","","","","","","","","","","Impressão Doc.:",date("d/m/Y \T H:i:s")."(UTC-3)"],
+        ["Horas descontadas por faltas N.J.:",$totalResumo["desconto_faltas_nao_justificadas"],"","","","","","","","","","","","","","","","",""],
+        ["Horas Extras (100%) - a pagar:","$totalResumo[he100]","","","","","","","","","","","","","","","","",""]
+    ];
 
     fputcsv($arquivo, $totalDias, ";");
-    fputcsv($arquivo, $tabelaInfo, ";");
-    fputcsv($arquivo, $tabelaInfo1, ";");
-    fputcsv($arquivo, $tabelaInfo2, ";");
-    fputcsv($arquivo, $tabelaInfo3, ";");
-    fputcsv($arquivo, $tabelaInfo4, ";");
-    fputcsv($arquivo, $tabelaInfo5, ";");
-    fputcsv($arquivo, $tabelaInfo6, ";");
+    foreach($tabelaInfo as $info){
+        fputcsv($arquivo, $info, ";");
+    }
     // Fecha o arquivo
     fclose($arquivo);

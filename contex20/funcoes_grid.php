@@ -3,7 +3,7 @@
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
-	function mysql_escape_mimic($inp) {
+	function mysql_escape_mimic($inp){
 		if(is_array($inp))
 			return array_map(__METHOD__, $inp);
 
