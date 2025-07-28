@@ -100,14 +100,15 @@
 			["user_nb_cidade", "cidade"],
 			["user_tx_email","email"],
 			["user_tx_fone","telefone"],
-			["user_nb_empresa","empresa"],
-			["user_tx_expiracao", "expiracao"]
+			["user_nb_empresa","empresa"]
 		];
 		foreach($campos_variaveis as $campo){
 			if(isset($_POST[$campo[1]]) && !empty($_POST[$campo[1]])){
 				$usuario[$campo[0]] = $_POST[$campo[1]];
 			}
 		}
+		$usuario["user_tx_expiracao"] = !empty($_POST["expiracao"])? $_POST["expiracao"]: null;
+
 		if(!empty($_POST["senha"])){
 			$usuario["user_tx_senha"] = md5($_POST["senha"]);
 		}
@@ -246,6 +247,7 @@
 		if(!empty($_POST["senha"]) && !empty($_POST["senha2"])){
 			$usuario["user_tx_senha"] = md5($_POST["senha"]);
 		}
+
 		
 		atualizar("user", array_keys($usuario), array_values($usuario), $_POST["id"]);
 		set_status("Cadastro atualizado com sucesso!");
@@ -298,7 +300,7 @@
 		$campo_login = campo("Login*", "login", ($_POST["login"]?? ($_POST["login"]?? "")), 2,"","maxlength='30'");
 
 		$editPermission = (!empty($_POST["id"]) &&			//Se está editando um usuário existente e
-			$_SESSION["user_nb_id"] == $_POST["id"] || //Editando o próprio usuário
+			// $_SESSION["user_nb_id"] == $_POST["id"] || //Editando o próprio usuário
 			(
 				!$editingDriver &&						//O usuário não é motorista e
 				$loggedUserIsAdmin						//O usuário logado é administrador ou
