@@ -518,7 +518,6 @@
 				$totaisFuncionario2 = [];
 				$totaisMediaFuncionario = [];
 				$ocupacoesPermitidas = $_POST['busca_ocupacao'];
-				// dd( $ocupacoesPermitidas,false);
 				foreach ($arquivos as &$arquivo) {
 					$todosZeros = true;
 					$arquivo = $path."/".$arquivo;

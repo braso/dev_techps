@@ -1401,7 +1401,6 @@
 			for($f = 1; $f < count($endossos); $f++){
 				// Corrigir caso em que as chaves da linha de pontos está vindo como número, não como texto com o nome da coluna.
 				// if($endossos[$f]["endo_tx_pontos"][1]){
-				// 	dd($endossos[$f]["endo_tx_pontos"]);
 				// }
 				if(empty($endossos[$f]["endo_tx_max50APagar"])){
 					if(!empty($endossos[$f]["endo_tx_horasApagar"])){

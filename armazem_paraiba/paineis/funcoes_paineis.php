@@ -500,7 +500,6 @@ function criar_relatorio_endosso() {
 					"saldoFinal" => $totaisMot["saldoFinal"]
 				];
 
-				// dd($row);
 				$nomeArquivo = $motorista["enti_nb_id"] . ".json";
 				file_put_contents($path . "/" . $nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE));
 
@@ -1010,8 +1009,6 @@ function relatorio_nao_conformidade_juridica() {
 
 			$periodoInicio = new DateTime($_POST["busca_dataMes"] . "-01");
 
-			// dd($motorista["enti_tx_nome"], false);
-			// dd($diaPonto, false);
 
 			if (!is_dir($path . "/nao_endossado/")) {
 				mkdir($path . "/nao_endossado/", 0755, true);  // Cria o diretório com permissões adequadas
@@ -1035,8 +1032,6 @@ function relatorio_nao_conformidade_juridica() {
 					$houveInteracao = true;
 				}
 
-				// dd(strpos($dia["fimJornada"], "fa-warning") !== false, false);
-				// dd(strpos($dia["fimJornada"], "color:red;") !== false, false);
 
 				if (strpos($dia["fimJornada"], "fa-warning") !== false  && strpos($dia["fimJornada"], "color:red;") !== false) {
 					$totalMotorista["jornada"] += 1;
@@ -1090,8 +1085,6 @@ function relatorio_nao_conformidade_juridica() {
 					$houveInteracao = true;
 				}
 				// if (strpos($diffRefeicao, "fa-info-circle") !== false && strpos($diffRefeicao, "color:red;") !== false) {
-				// 	dd($motorista["enti_tx_nome"], false);
-				// 	dd($dia, false);
 				// 	$totalMotorista["refeicao"]++;
 				// 	$houveInteracao = true;
 				// }
