@@ -1,4 +1,8 @@
 <?php
+    if(empty($CONTEX)){
+        //Funciona enquanto relatorio_espelho.php estiver na mesma pasta de conecta.php
+        include_once "./conecta.php";
+    }
 	include_once $_SERVER['DOCUMENT_ROOT'].($CONTEX['path'])."/conecta.php";
 	include $_SERVER['DOCUMENT_ROOT'].($CONTEX['path'])."/csv_relatorio_espelho.php";
 ?>
@@ -118,8 +122,8 @@
                 <?php
                     foreach ($aDia as $aDiaVez) {
                         echo '<tr>';
-                        for ($j = 0; $j < count($aDiaVez); $j++){
-                            echo '<td>'.$aDiaVez[$j].'</td>';
+                        foreach($aDiaVez as $cel){
+                            echo '<td>'.$cel.'</td>';
                         }
                         echo '</tr>';
                     }
@@ -320,6 +324,42 @@
                     <td></td>
                 </tr>
 
+                <tr>
+                    <td class="bordered">
+                        Descontos inseridos manualmente:
+                    </td>
+                    <td class="bordered">
+                        <center><?=$totalResumo["desconto_manual"]?></center>
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="bordered">
+                        Descontos por falta não justificada:
+                    </td>
+                    <td class="bordered">
+                        <center><?=$totalResumo["desconto_faltas_nao_justificadas"]?></center>
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
                 <tr>
                     <td class="bordered">
                         Saldo Final (após pagamentos):
