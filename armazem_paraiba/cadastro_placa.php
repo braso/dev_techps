@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cadastrar'])) {
    $modelo = !empty($_POST['modelo']) ? trim($_POST['modelo']) : null;
 
     $empresa = (int)$_POST['empresa'];
-$funcionario = isset($_POST['funcionario']) && $_POST['funcionario'] !== '' ? (int)$_POST['funcionario'] : null;
+$funcionario = isset($_POST['funcionario']) && is_numeric($_POST['funcionario']) ? (int)$_POST['funcionario'] : null;
     $editar_id = isset($_POST['editar_id']) ? (int)$_POST['editar_id'] : null;
 
     // Validação dos campos
