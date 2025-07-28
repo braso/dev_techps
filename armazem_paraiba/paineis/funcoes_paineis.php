@@ -1480,6 +1480,12 @@ function logisticas() {
 	), MYSQLI_ASSOC);
 
 	foreach ($motoristas as $motorista) {
+		if (empty($_POST["busca_periodo"])) {
+			$periodoFim = $hoje;
+		} else {
+			$periodoFim = DateTime::createFromFormat('d/m/Y H:i', $_POST["busca_periodo"]);
+		}
+
 		$parametro = mysqli_fetch_all(query(
 			"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_maxHESemanalDiario, para_tx_adi5322"
 				. " FROM `parametro`"
@@ -1492,7 +1498,6 @@ function logisticas() {
 
 		for ($date = $periodoFim;; $date->modify('-1 day'), $tentativas++) {
 			$diaPonto = diaDetalhePonto($motorista, $date->format('Y-m-d'));
-
 			if (
 				!empty($diaPonto["inicioJornada"]) && strpos($diaPonto["inicioJornada"], "fa-warning") === false
 			) {
@@ -1521,7 +1526,6 @@ function logisticas() {
 			}
 			$horaString = preg_replace('/^(\d{2}:\d{2}).*/', '$1', $diaPonto['fimJornada']);
 			$dataString = $dataPonto . ' ' . $horaString;
-
 			$dataFormatada = DateTime::createFromFormat('d/m/Y H:i', $dataString);
 
 			// Calcula datas de referência (8h e 11h após a última jornada)
@@ -1533,10 +1537,6 @@ function logisticas() {
 
 			$dataReferenciaStr = $_POST['busca_periodo'] ?? null;
 			$dataReferencia = DateTime::createFromFormat('d/m/Y H:i', $dataReferenciaStr);
-
-			// Calcula diferença em minutos desde a última jornada
-			$diferenca = $dataFormatada->diff($dataReferencia);
-			$totalMinutos = ($diferenca->days * 24 * 60) + ($diferenca->h * 60) + $diferenca->i;
 
 			// Verifica se a ADI 5322 está ativa
 			$considerarADI = isset($parametro[0]['para_tx_adi5322']) && $parametro[0]['para_tx_adi5322'] === 'sim';
