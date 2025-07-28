@@ -58,12 +58,13 @@
 		padding-top: 0px;
 		margin-left: -50px !important;
 		padding-bottom: 0px;
+		width: 75%;
 		/* line-height: 15px !important; */
 	}
 }
 
 #saldo {
-	width: 50% !important;
+	width: 300px !important;
 	margin-top: 9px !important;
 	text-align: center;
 }
@@ -88,4 +89,8 @@ table td:nth-child(11) {
 
 .row div {
 	min-width: auto;
+}
+
+.caption {
+	width: 100%;
 }
