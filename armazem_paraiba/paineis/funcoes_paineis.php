@@ -1469,6 +1469,12 @@ function logisticas() {
 	), MYSQLI_ASSOC);
 
 	foreach ($motoristas as $motorista) {
+		if (empty($_POST["busca_periodo"])) {
+			$periodoFim = $hoje;
+		} else {
+			$periodoFim = DateTime::createFromFormat('d/m/Y H:i', $_POST["busca_periodo"]);
+		}
+
 		$parametro = mysqli_fetch_all(query(
 			"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_maxHESemanalDiario, para_tx_adi5322"
 				. " FROM `parametro`"
@@ -1481,7 +1487,6 @@ function logisticas() {
 
 		for ($date = $periodoFim;; $date->modify('-1 day'), $tentativas++) {
 			$diaPonto = diaDetalhePonto($motorista, $date->format('Y-m-d'));
-
 			if (
 				!empty($diaPonto["inicioJornada"]) && strpos($diaPonto["inicioJornada"], "fa-warning") === false
 			) {
@@ -1510,7 +1515,6 @@ function logisticas() {
 			}
 			$horaString = preg_replace('/^(\d{2}:\d{2}).*/', '$1', $diaPonto['fimJornada']);
 			$dataString = $dataPonto . ' ' . $horaString;
-
 			$dataFormatada = DateTime::createFromFormat('d/m/Y H:i', $dataString);
 
 			// Calcula datas de referência (8h e 11h após a última jornada)
@@ -1523,36 +1527,45 @@ function logisticas() {
 			$dataReferenciaStr = $_POST['busca_periodo'] ?? null;
 			$dataReferencia = DateTime::createFromFormat('d/m/Y H:i', $dataReferenciaStr);
 
-			// Calcula diferença em minutos desde a última jornada
-			$diferenca = $dataFormatada->diff($dataReferencia);
-			$totalMinutos = ($diferenca->days * 24 * 60) + ($diferenca->h * 60) + $diferenca->i;
-
 			// Verifica se a ADI 5322 está ativa
-			// Se ativa, significa que o repouso ideal é de 11h (mas o mínimo absoluto para iniciar pode ser considerado 8h para efeito de aviso parcial)
 			$considerarADI = isset($parametro[0]['para_tx_adi5322']) && $parametro[0]['para_tx_adi5322'] === 'sim';
-
-			// Para exibição, o campo "ADI_5322" indica qual o repouso mínimo esperado:
-			// - Se ADI ativa: "Sim (11h mín.)"
-			// - Se não: "Não (8h mín.)"
 			$infoADI = $considerarADI ? 'Sim' : 'Não';
 
-			// Define os limites:
-			$minimoAbsoluto = 8 * 60;   // 480 minutos
-			$minimoCompleto = 11 * 60;   // 660 minutos
+			// Define os limites
+			$minimoAbsoluto = 8 * 60;                      // 480 minutos
+			$minimoCompleto = $considerarADI ? 660 : 480;  // 11h ou 8h dependendo da ADI
 
-			// Calcula o aviso de repouso, mostrando a diferença em relação ao repouso completo (11h)
-			$difRepouso = $totalMinutos - $minimoCompleto;
-			$horas = floor(abs($difRepouso) / 60);
-			$minutos = abs($difRepouso) % 60;
-			$sinal = ($difRepouso < 0) ? '-' : '';
+			if ($dataReferencia && $dataFormatada) {
+				// Total de minutos reais entre as datas
+				$totalMinutos = round(($dataReferencia->getTimestamp() - $dataFormatada->getTimestamp()) / 60);
 
-			$avisoRepouso = $sinal . str_pad($horas, 2, '0', STR_PAD_LEFT) . ":" .
-				str_pad($minutos, 2, '0', STR_PAD_LEFT);
-			
-			if ($horas >= 24 && $sinal !== '-') {
-				$diasExtras = floor($horas / 24);
-				$avisoRepouso .= " (D+" . $diasExtras . ")";
+				// Dias completos (D+N)
+				$diasExtras = floor($totalMinutos / 1440); // 1440 minutos = 1 dia
+
+				if ($diasExtras >= 1) {
+					// ✅ Quando for D+1 ou mais, exibir repouso total bruto (sem subtrair 11h)
+					$horasTotal = floor($totalMinutos / 60);
+					$minutosTotal = $totalMinutos % 60;
+
+					$avisoRepouso = str_pad($horasTotal, 2, '0', STR_PAD_LEFT) . ':' .
+									str_pad($minutosTotal, 2, '0', STR_PAD_LEFT) .
+									" (D+{$diasExtras})";
+				} else {
+					// Caso padrão: exibir diferença em relação ao repouso completo (11h ou 8h)
+					$difRepouso = $totalMinutos - $minimoCompleto;
+					$sinal = ($difRepouso < 0) ? '-' : '';
+
+					$horas = floor(abs($difRepouso) / 60);
+					$minutos = abs($difRepouso) % 60;
+
+					$avisoRepouso = $sinal . str_pad($horas, 2, '0', STR_PAD_LEFT) . ':' .
+									str_pad($minutos, 2, '0', STR_PAD_LEFT);
+				}
+			} else {
+				$avisoRepouso = 'Data inválida';
 			}
+
+
 
 			// Para o campo 'Apos8': exibe a data de +8h apenas se a ADI não estiver ativa e se o repouso for inferior a 11h
 			$exibirApos8 = (!$considerarADI && $totalMinutos < $minimoCompleto) ? $dataMais8Horas->format('d/m/Y H:i') : '';
