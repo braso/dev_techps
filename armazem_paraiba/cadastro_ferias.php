@@ -18,7 +18,7 @@
 
 			if(!empty($errorMsg)){
 				set_status("ERRO: ".$errorMsg);
-				layout_abono();
+				layout_ferias();
 				exit;
 			}
 		// }
@@ -27,7 +27,7 @@
 
 		$aData[0] = $_POST["periodo_ferias"][0];
 		$aData[1] = $_POST["periodo_ferias"][1];
-		//Conferir se há um período entrelaçado com essa data{
+		//Conferir se há um endosso entrelaçado com essa data{
 			$endosso = mysqli_fetch_assoc(
 				query(
 					"SELECT endo_tx_de, endo_tx_ate FROM endosso
@@ -50,7 +50,7 @@
 
 				$_POST["errorFields"][] = "periodo_ferias";
 				set_status("ERRO: Possui um endosso de ".$endosso["endo_tx_de"]." até ".$endosso["endo_tx_ate"].".");
-				layout_abono();
+				layout_ferias();
 				exit;
 			}
 		//}
@@ -112,7 +112,7 @@
 		exit;
 	}
 
-	function layout_abono(){
+	function layout_ferias(){
     	unset($_POST["acao"]);
 		
 		index();
