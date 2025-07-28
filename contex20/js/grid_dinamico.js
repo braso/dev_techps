@@ -10,7 +10,7 @@ queryBase;
 pageNumber = 1;
 total = -1;
 limit = 10;
-if(!orderCol){
+if(typeof orderCol === 'undefined'){
     orderCol = '';
 }
 
@@ -33,7 +33,9 @@ let definirFuncoesInternas = function(){
 
         try{
             funcoesInternas();
-        }catch(error){}
+        }catch(error){
+            console.log(error);
+        }
         
     //}
 }
@@ -105,7 +107,6 @@ const consultarRegistros = function(){
         },
         dataType: 'json',
         success: function(response) {
-
             total = response.total;
             qtdPaginas = Math.ceil((total/limit))
             statusCol = -1;
