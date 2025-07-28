@@ -211,7 +211,7 @@ function criar_relatorio_saldo() {
 			$ultimoEndosso = mysqli_fetch_assoc(query(
 				"SELECT endo_tx_filename FROM endosso"
 					." WHERE endo_tx_status = 'ativo'"
-						." AND endo_tx_matricula = '".$motorista["enti_tx_matricula"]."'"
+						." AND endo_nb_entidade = '".$motorista["enti_nb_id"]."'"
 						." AND endo_tx_ate < '".$dataMes->format("Y-m-d")."'"
 					." ORDER BY endo_tx_ate DESC"
 					." LIMIT 1;"
@@ -300,7 +300,7 @@ function criar_relatorio_saldo() {
 				"saldoPeriodo" 		=> $totaisMot["saldoPeriodo"],
 				"saldoFinal" 		=> $totaisMot["saldoFinal"]
 			];
-			$nomeArquivo = $motorista["enti_tx_matricula"] . ".json";
+			$nomeArquivo = $motorista["enti_nb_id"] . ".json";
 			file_put_contents($path . "/" . $nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE));
 
 			$rows[] = $row;
@@ -501,7 +501,7 @@ function criar_relatorio_endosso() {
 				];
 
 				// dd($row);
-				$nomeArquivo = $motorista["enti_tx_matricula"] . ".json";
+				$nomeArquivo = $motorista["enti_nb_id"] . ".json";
 				file_put_contents($path . "/" . $nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE));
 
 				$rows[] = $row;
@@ -613,7 +613,7 @@ function criar_relatorio_jornada() {
 			$endossos = mysqli_fetch_all(query(
 				"SELECT endo_tx_de, endo_tx_ate"
 					. " FROM `endosso`"
-					. " where endo_tx_matricula = '{$motorista["enti_tx_matricula"]}'"
+					. " where endo_nb_entidade = '{$motorista["enti_nb_id"]}'"
 					. " AND '{$datas["pont_tx_data"]}' BETWEEN endo_tx_de AND endo_tx_ate"
 			), MYSQLI_ASSOC);
 			if (empty($endossos)) {
@@ -763,7 +763,7 @@ function criar_relatorio_jornada() {
 		}
 
 		if (!empty($row)) {
-			$nomeArquivo = $motorista["enti_tx_matricula"] . ".json";
+			$nomeArquivo = $motorista["enti_nb_id"] . ".json";
 			$arquivosMantidos[] = $nomeArquivo;
 			file_put_contents($path . "/" . $nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE));
 		}
@@ -997,7 +997,7 @@ function relatorio_nao_conformidade_juridica() {
 					mkdir($path . "/endossado/", 0755, true);  // Cria o diretório com permissões adequadas
 				}
 	
-				file_put_contents($path . "/endossado/" . $motorista["enti_tx_matricula"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+				file_put_contents($path . "/endossado/" . $motorista["enti_nd_id"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 			}
 		} else {
 			$diaPonto = [];
@@ -1149,7 +1149,7 @@ function relatorio_nao_conformidade_juridica() {
 
 			$motoristaTotais[] = $totalMotorista;
 
-			file_put_contents($path . "/nao_endossado/" . $motorista["enti_tx_matricula"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE));
+			file_put_contents($path . "/nao_endossado/" . $motorista["enti_nb_id"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE));
 		}
 	}
 
@@ -1284,6 +1284,7 @@ function criar_relatorio_ajustes() {
 			}
 
 			$totalMotorista = [
+				"id" 						=> $motorista["enti_nb_id"],
 				"matricula" 				=> $motorista["enti_tx_matricula"],
 				"nome" 						=> $motorista["enti_tx_nome"],
 				"ocupacao" 					=> $motorista["enti_tx_ocupacao"],
@@ -1316,7 +1317,6 @@ function criar_relatorio_ajustes() {
 						. " LEFT JOIN user ON ponto.pont_nb_userCadastro = user.user_nb_id"
 						. " WHERE pont_tx_matricula = '$motorista[enti_tx_matricula]'"
 						. " AND pont_nb_userCadastro != '$idUser'"
-						. " AND (user.user_tx_matricula <> ponto.pont_tx_matricula OR user.user_tx_matricula IS NULL)"
 						. " AND pont_tx_status != 'inativo'"
 						. " AND pont_tx_data BETWEEN STR_TO_DATE('$diaInicio 00:00:00', '%Y-%m-%d %H:%i:%s')"
 						. " AND STR_TO_DATE('$diafim 23:59:59', '%Y-%m-%d %H:%i:%s')"
@@ -1369,14 +1369,14 @@ function criar_relatorio_ajustes() {
 			$totalMotorista['pontos'] = array_merge($pontosAtivos, $pontosInativos);
 			// Filtrar apenas os campos numéricos que precisam ser verificados
 			$verificaValores = array_filter($totalMotorista, function ($key) {
-				return !in_array($key, ["matricula", "nome", "ocupacao", "pontos"]);
+				return !in_array($key, ["id", "matricula", "nome", "ocupacao", "pontos"]);
 			}, ARRAY_FILTER_USE_KEY);
 
 			$rows[] = $ocorrencias;
 			if (array_sum(array_map(function ($valor) {
 				return array_sum($valor); // Soma os valores de 'ativo' e 'inativo' dentro de cada chave
 			}, $verificaValores)) > 0) {
-				file_put_contents($path . "/" . $motorista["enti_tx_matricula"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE));
+				file_put_contents($path . "/" . $motorista["enti_nb_id"] . ".json", json_encode($totalMotorista, JSON_UNESCAPED_UNICODE));
 			}
 		}
 
@@ -1481,15 +1481,18 @@ function logisticas() {
 
 		for ($date = $periodoFim;; $date->modify('-1 day'), $tentativas++) {
 			$diaPonto = diaDetalhePonto($motorista, $date->format('Y-m-d'));
-			// var_dump(strpos($diaPonto["inicioJornada"], "fa-warning"));
-			// var_dump(!empty($diaPonto["inicioJornada"]));
-			// var_dump(strpos($diaPonto["jornadaPrevista"], "color:red;"));
 
 			if (
 				!empty($diaPonto["inicioJornada"]) && strpos($diaPonto["inicioJornada"], "fa-warning") === false
 			) {
 				break;
 			}
+		}
+
+		if (empty($_POST["busca_periodo"])) {
+			$periodoFim = $hoje;
+		} else {
+			$periodoFim = DateTime::createFromFormat('d/m/Y H:i', $_POST["busca_periodo"]);
 		}
 
 		if (!empty($diaPonto["fimJornada"]) && strpos($diaPonto["fimJornada"], "fa-warning") === false) {
@@ -1545,7 +1548,11 @@ function logisticas() {
 
 			$avisoRepouso = $sinal . str_pad($horas, 2, '0', STR_PAD_LEFT) . ":" .
 				str_pad($minutos, 2, '0', STR_PAD_LEFT);
-			$avisoRepouso .= " (D+".$diferenca->days .")";
+			
+			if ($horas >= 24 && $sinal !== '-') {
+				$diasExtras = floor($horas / 24);
+				$avisoRepouso .= " (D+" . $diasExtras . ")";
+			}
 
 			// Para o campo 'Apos8': exibe a data de +8h apenas se a ADI não estiver ativa e se o repouso for inferior a 11h
 			$exibirApos8 = (!$considerarADI && $totalMinutos < $minimoCompleto) ? $dataMais8Horas->format('d/m/Y H:i') : '';
