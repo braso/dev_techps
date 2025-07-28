@@ -108,6 +108,9 @@
 				$usuario[$campo[0]] = $_POST[$campo[1]];
 			}
 		}
+		if (empty($_POST["expiracao"])) {
+			$usuario["user_tx_expiracao"] = null;
+		}
 		if(!empty($_POST["senha"])){
 			$usuario["user_tx_senha"] = md5($_POST["senha"]);
 		}
@@ -167,7 +170,6 @@
 		}
 
 		//Atualizando usuário existente
-
 		atualizarUsuario($usuario);
 		$id = $_POST["id"];
 		
@@ -260,6 +262,21 @@
 
 	function modificarUsuario(){
 
+		echo '<style>
+		@media print{
+			div.col-sm-4.margin-bottom-5.campo-fit-content > input,
+			div.col-sm-4.margin-bottom-5.campo-fit-content > label,
+			form > div:nth-child(3) > div:nth-child(6),
+			form > div:nth-child(3) > div:nth-child(4),
+			form > div.form-actions
+			{
+				display: none;
+			}
+			@page{
+				size: landscape;
+			}
+		}
+		</style>';
 		if(!empty($_POST["id"])){
       		if(is_array($_POST["id"])){
 				$_POST["id"] = $_POST["id"][0];
@@ -317,6 +334,8 @@
 					$niveis[] = "Administrador";
 				case "Embarcador":
 					$niveis[] = "Embarcador";
+				case "Supervisão":
+					$niveis[] = "Supervisão";
 			}
 
 			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Funcionário"])){
@@ -452,6 +471,10 @@
 			$buttons[] = criarBotaoVoltar();
 		}
 
+		if (!empty($_POST["id"])) {
+			$buttons[] = '<button class="btn default" type="button" onclick="imprimir()">Imprimir</button>';
+		}
+
 		echo abre_form("Dados do Usuário");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		echo linha_form($fields);
@@ -495,6 +518,11 @@
 							document.form_excluir_arquivo.submit();
 						}
 			}
+
+			function imprimir() {
+				// Abrir a caixa de diálogo de impressão
+				window.print();
+			}
 			</script>";
 
 		rodape();
@@ -532,16 +560,16 @@
 			$_POST["busca_status"] = "ativo";
 		}
 
-		$extra = 
-			(!empty($_POST["busca_codigo"])? 								" AND user_nb_id = ".$_POST['busca_codigo']: "").
-			(!empty($_POST["busca_nome_like"])? 							" AND user_tx_nome LIKE '%".$_POST["busca_nome_like"]."%'": "").
-			(!empty($_POST["busca_login_like"])? 							" AND user_tx_login LIKE '%".$_POST["busca_login_like"]."%'": "").
-			(!empty($_POST["busca_nivel"])? 								" AND user_tx_nivel = '".$_POST["busca_nivel"]."'": "").
-			(!empty($_POST["busca_cpf"])? 									" AND user_tx_cpf = '".$_POST["busca_cpf"]."'": "").
-			(!empty($_POST["busca_empresa"])? 								" AND user_nb_empresa = ".$_POST["busca_empresa"]: "").
-			(!empty($_POST["busca_status"])? 								" AND user_tx_status = '".strtolower($_POST["busca_status"])."'": "").
-			(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))? 	" AND user_tx_nivel NOT LIKE '%Administrador%'": "")
-		;
+		// $extra = 
+		// 	(!empty($_POST["busca_codigo"])? 								" AND user_nb_id = ".$_POST['busca_codigo']: "").
+		// 	(!empty($_POST["busca_nome_like"])? 							" AND user_tx_nome LIKE '%".$_POST["busca_nome_like"]."%'": "").
+		// 	(!empty($_POST["busca_login_like"])? 							" AND user_tx_login LIKE '%".$_POST["busca_login_like"]."%'": "").
+		// 	(!empty($_POST["busca_nivel"])? 								" AND user_tx_nivel = '".$_POST["busca_nivel"]."'": "").
+		// 	(!empty($_POST["busca_cpf"])? 									" AND user_tx_cpf = '".$_POST["busca_cpf"]."'": "").
+		// 	(!empty($_POST["busca_empresa"])? 								" AND user_nb_empresa = ".$_POST["busca_empresa"]: "").
+		// 	(!empty($_POST["busca_status"])? 								" AND user_tx_status = '".strtolower($_POST["busca_status"])."'": "").
+		// 	(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))? 	" AND user_tx_nivel NOT LIKE '%Administrador%'": "")
+		// ;
 
 
 		$niveis = [""];
@@ -574,9 +602,24 @@
 			$buttons[] = botao("Inserir", "modificarUsuario","","","","","btn btn-success");
 		}
 
+		$buttons[] = '<button class="btn default" type="button" onclick="imprimirTabelaCompleta()">Imprimir</button>';
+
 		echo abre_form();
 		echo linha_form($fields);
 		echo fecha_form($buttons);
+
+		$logoEmpresa = mysqli_fetch_assoc(query(
+            "SELECT empr_tx_logo FROM empresa
+                    WHERE empr_tx_status = 'ativo'
+                        AND empr_tx_Ehmatriz = 'sim'
+                    LIMIT 1;"
+        ))["empr_tx_logo"];
+
+		echo "<div id='tituloRelatorio' style='display: none;'>
+                    <img style='width: 190px; height: 40px;' src='./imagens/logo_topo_cliente.png' alt='Logo Empresa Esquerda'>
+					<h1>Cadastro de Usuário</h1>
+                    <img style='width: 180px; height: 80px;' src='./$logoEmpresa' alt='Logo Empresa Direita'>
+            </div>";
 
 		/*/Grid{
 			$iconeModificar = 	criarSQLIconeTabela("user_nb_id","modificarUsuario","Modificar","glyphicon glyphicon-search");
@@ -670,7 +713,6 @@
 					".implode(" ", $actions["functions"])."
 				}"
 			;
-
 			echo gridDinamico("tabelaMotoristas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
 		//}
 

@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . "/../tcpdf/tcpdf.php";
-require __DIR__."/../funcoes_ponto.php";
+require __DIR__ . "/../funcoes_ponto.php";
 
 // Recebe os parâmetros do formulário
 $periodo = trim($_POST['busca_periodo'], '[]"');
@@ -9,13 +9,13 @@ $motivoFiltro = $_POST['motivo'] ?? null;
 
 // Processa as datas
 $data_inicio = trim($datas[0], '"');
-$data_fim = trim($datas[1], '"');   
+$data_fim = trim($datas[1], '"');
 $periodoInicio = new DateTime($data_inicio);
 $periodoFim = new DateTime($data_fim);
 
 // Configura caminhos e busca dados da empresa
 $path = "./arquivos/ajustes";
-$path .= "/".$periodoInicio->format("Y-m")."/".$_POST["empresa"];
+$path .= "/" . $periodoInicio->format("Y-m") . "/" . $_POST["empresa"];
 
 $empresa = mysqli_fetch_assoc(query(
     "SELECT * FROM empresa
@@ -26,164 +26,249 @@ $empresa = mysqli_fetch_assoc(query(
 
 // Processa os arquivos de ajuste
 $pastaAjuste = dir($path);
-while ($arquivo = $pastaAjuste->read()) {
-    if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && $arquivo === $_POST['matricula'] . ".json") {
-        $arquivo = $path . "/" . $arquivo;
-        $arquivos[] = $arquivo;
-        $json = json_decode(file_get_contents($arquivo), true);
 
-        // Processa cada chave do JSON
-        foreach ($json as $chave => $valor) {
+if ((isset($_POST['matricula']) && $_POST['matricula'] !== null && $_POST['matricula'] !== '') || (isset($_POST['Id']) && $_POST['Id'] !== null && $_POST['Id'] !== '') ) {
+    while ($arquivo = $pastaAjuste->read()) {
+        if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && $arquivo === $_POST['Id'] . ".json") {
+            $arquivo = $path . "/" . $arquivo;
+            $arquivos[] = $arquivo;
+            $json = json_decode(file_get_contents($arquivo), true);
+            // Processa cada chave do JSON
+            foreach ($json as $chave => $valor) {
 
-            // Verifica se é um tipo de ponto válido
-            if (is_array($valor) && isset($valor['ativo']) && isset($valor['inativo'])) {
-                // Inicializa a chave no array de totais se não existir
-                if (!isset($totais[$chave])) {
-                    $totais[$chave] = ['ativo' => 0, 'inativo' => 0];
+                // Verifica se é um tipo de ponto válido
+                if (is_array($valor) && isset($valor['ativo']) && isset($valor['inativo'])) {
+                    // Inicializa a chave no array de totais se não existir
+                    if (!isset($totais[$chave])) {
+                        $totais[$chave] = ['ativo' => 0, 'inativo' => 0];
+                    }
+
+                    // Soma os valores (com conversão para inteiro para segurança)
+                    $totais[$chave]['ativo'] += (int)$valor['ativo'];
+                    $totais[$chave]['inativo'] += (int)$valor['inativo'];
+                }
+            }
+            foreach ($json['pontos'] as $key) {
+                // Filtra apenas pontos com status "ativo" (case-insensitive)
+                $status = strtolower(trim($key['pont_tx_status'] ?? ''));
+                if ($status !== 'ativo') {
+                    continue;
                 }
 
-                // Soma os valores (com conversão para inteiro para segurança)
-                $totais[$chave]['ativo'] += (int)$valor['ativo'];
-                $totais[$chave]['inativo'] += (int)$valor['inativo'];
-            }
-        }
-        foreach ($json['pontos'] as $key) {
-            // Filtra apenas pontos com status "ativo" (case-insensitive)
-            if (strtolower($key['pont_tx_status'] ?? '') !== 'ativo') {
-                continue; // Pula se não for "ativo"
-            }
-        
-            // Define o motivo
-            $motivo = $key['moti_tx_nome'] ?? 'MOTIVO_NAO_INFORMADO';
-        
-            // Contagem geral por motivo
-            if (!isset($resultado[$motivo])) {
-                $resultado[$motivo] = 0;
-            }
-            $resultado[$motivo]++;
-        
-            // Agrupamento por motivo e funcionário
-            if (!isset($resultado2[$motivo])) {
-                $resultado2[$motivo] = [];
-            }
-        
-            $dadosFunc = [
-                "matricula" => $json["matricula"] ?? 'SEM_MATRICULA',
-                "nome" => $json["nome"] ?? 'NOME_NAO_INFORMADO',
-                "ocupacao" => $json["ocupacao"] ?? 'OCUPACAO_NAO_INFORMADA'
-            ];
-        
-            $funcionarioKey = $dadosFunc['matricula'] ?? md5($dadosFunc['nome']);
-        
-            if (!isset($resultado2[$motivo][$funcionarioKey])) {
-                $resultado2[$motivo][$funcionarioKey] = [
-                    'funcionario' => $dadosFunc,
-                    'quantidade' => 0,
-                    'tipos' => [] // ← adiciona array para tipos
-                ];
-            }
-        
-            // Incrementa quantidade
-            $resultado2[$motivo][$funcionarioKey]['quantidade']++;
-        
-            // Armazena tipo do campo macr_tx_nome
-            $tipo = $key['macr_tx_nome'] ?? 'TIPO_NAO_INFORMADO';
-        
-            if (!isset($resultado2[$motivo][$funcionarioKey]['tipos'][$tipo])) {
-                $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo] = 0;
-            }
-            $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo]++;
-        }
-        $empresas[] = $json;
-        break;
-    }  
-     else if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
-        $arquivo = $path . "/" . $arquivo;
-        $arquivos[] = $arquivo;
-        $json = json_decode(file_get_contents($arquivo), true);
-
-        // Processa cada chave do JSON
-        foreach ($json as $chave => $valor) {
-
-            // Verifica se é um tipo de ponto válido
-            if (is_array($valor) && isset($valor['ativo']) && isset($valor['inativo'])) {
-                // Inicializa a chave no array de totais se não existir
-                if (!isset($totais[$chave])) {
-                    $totais[$chave] = ['ativo' => 0, 'inativo' => 0];
+                // Define o motivo
+                $motivo = $motivoFiltro ?? 'MOTIVO_NAO_INFORMADO';
+                $motivoJson = $key['moti_tx_nome'] ?? 'MOTIVO_NAO_INFORMADO';
+                if ($motivoJson !== $motivoFiltro) {
+                    continue;
                 }
 
-                // Soma os valores (com conversão para inteiro para segurança)
-                $totais[$chave]['ativo'] += (int)$valor['ativo'];
-                $totais[$chave]['inativo'] += (int)$valor['inativo'];
-            }
-        }
-        foreach ($json['pontos'] as $key) {
-            // Filtra apenas pontos com status "ativo" (case-insensitive)
-            if (strtolower($key['pont_tx_status'] ?? '') !== 'ativo') {
-                continue; // Pula se não for "ativo"
-            }
-        
-            // Define o motivo
-            $motivo = $key['moti_tx_nome'] ?? 'MOTIVO_NAO_INFORMADO';
-        
-            // Contagem geral por motivo
-            if (!isset($resultado[$motivo])) {
-                $resultado[$motivo] = 0;
-            }
-            $resultado[$motivo]++;
-        
-            // Agrupamento por motivo e funcionário
-            if (!isset($resultado2[$motivo])) {
-                $resultado2[$motivo] = [];
-            }
-        
-            $dadosFunc = [
-                "matricula" => $json["matricula"] ?? 'SEM_MATRICULA',
-                "nome" => $json["nome"] ?? 'NOME_NAO_INFORMADO',
-                "ocupacao" => $json["ocupacao"] ?? 'OCUPACAO_NAO_INFORMADA'
-            ];
-        
-            $funcionarioKey = $dadosFunc['matricula'] ?? md5($dadosFunc['nome']);
-        
-            if (!isset($resultado2[$motivo][$funcionarioKey])) {
-                $resultado2[$motivo][$funcionarioKey] = [
-                    'funcionario' => $dadosFunc,
-                    'quantidade' => 0,
-                    'tipos' => [] // ← adiciona array para tipos
+                // Contagem geral por motivo
+                if (!isset($resultado[$motivo])) {
+                    $resultado[$motivo] = 0;
+                }
+                $resultado[$motivo]++;
+
+                // Agrupamento por motivo e funcionário
+                if (!isset($resultado2[$motivo])) {
+                    $resultado2[$motivo] = [];
+                }
+
+                $dadosFunc = [
+                    "matricula" => $json["matricula"] ?? 'SEM_MATRICULA',
+                    "nome" => $json["nome"] ?? 'NOME_NAO_INFORMADO',
+                    "ocupacao" => $json["ocupacao"] ?? 'OCUPACAO_NAO_INFORMADA'
                 ];
+
+                $funcionarioKey = $dadosFunc['matricula'] ?? md5($dadosFunc['nome']);
+
+                if (!isset($resultado2[$motivo][$funcionarioKey])) {
+                    $resultado2[$motivo][$funcionarioKey] = [
+                        'funcionario' => $dadosFunc,
+                        'quantidade' => 0,
+                        'tipos' => [] // ← adiciona array para tipos
+                    ];
+                }
+
+                // Incrementa quantidade
+                $resultado2[$motivo][$funcionarioKey]['quantidade']++;
+
+                // Armazena tipo do campo macr_tx_nome
+                $tipo = $key['macr_tx_nome'] ?? 'TIPO_NAO_INFORMADO';
+
+                if (!isset($resultado2[$motivo][$funcionarioKey]['tipos'][$tipo])) {
+                    $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo] = 0;
+                }
+
+                $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo]++;
             }
-        
-            // Incrementa quantidade
-            $resultado2[$motivo][$funcionarioKey]['quantidade']++;
-        
-            // Armazena tipo do campo macr_tx_nome
-            $tipo = $key['macr_tx_nome'] ?? 'TIPO_NAO_INFORMADO';
-        
-            if (!isset($resultado2[$motivo][$funcionarioKey]['tipos'][$tipo])) {
-                $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo] = 0;
-            }
-            $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo]++;
+            $empresas[] = $json;
+            break;
         }
-        $empresas[] = $json;
-        break;
+        elseif (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && $arquivo === $_POST['matricula'] . ".json") {
+            $arquivo = $path . "/" . $arquivo;
+            $arquivos[] = $arquivo;
+            $json = json_decode(file_get_contents($arquivo), true);
+            // Processa cada chave do JSON
+            foreach ($json as $chave => $valor) {
+
+                // Verifica se é um tipo de ponto válido
+                if (is_array($valor) && isset($valor['ativo']) && isset($valor['inativo'])) {
+                    // Inicializa a chave no array de totais se não existir
+                    if (!isset($totais[$chave])) {
+                        $totais[$chave] = ['ativo' => 0, 'inativo' => 0];
+                    }
+
+                    // Soma os valores (com conversão para inteiro para segurança)
+                    $totais[$chave]['ativo'] += (int)$valor['ativo'];
+                    $totais[$chave]['inativo'] += (int)$valor['inativo'];
+                }
+            }
+            foreach ($json['pontos'] as $key) {
+                // Filtra apenas pontos com status "ativo" (case-insensitive)
+                $status = strtolower(trim($key['pont_tx_status'] ?? ''));
+                if ($status !== 'ativo') {
+                    continue;
+                }
+
+                // Define o motivo
+                $motivo = $motivoFiltro ?? 'MOTIVO_NAO_INFORMADO';
+                $motivoJson = $key['moti_tx_nome'] ?? 'MOTIVO_NAO_INFORMADO';
+                if ($motivoJson !== $motivoFiltro) {
+                    continue;
+                }
+
+                // Contagem geral por motivo
+                if (!isset($resultado[$motivo])) {
+                    $resultado[$motivo] = 0;
+                }
+                $resultado[$motivo]++;
+
+                // Agrupamento por motivo e funcionário
+                if (!isset($resultado2[$motivo])) {
+                    $resultado2[$motivo] = [];
+                }
+
+                $dadosFunc = [
+                    "matricula" => $json["matricula"] ?? 'SEM_MATRICULA',
+                    "nome" => $json["nome"] ?? 'NOME_NAO_INFORMADO',
+                    "ocupacao" => $json["ocupacao"] ?? 'OCUPACAO_NAO_INFORMADA'
+                ];
+
+                $funcionarioKey = $dadosFunc['matricula'] ?? md5($dadosFunc['nome']);
+
+                if (!isset($resultado2[$motivo][$funcionarioKey])) {
+                    $resultado2[$motivo][$funcionarioKey] = [
+                        'funcionario' => $dadosFunc,
+                        'quantidade' => 0,
+                        'tipos' => [] // ← adiciona array para tipos
+                    ];
+                }
+
+                // Incrementa quantidade
+                $resultado2[$motivo][$funcionarioKey]['quantidade']++;
+
+                // Armazena tipo do campo macr_tx_nome
+                $tipo = $key['macr_tx_nome'] ?? 'TIPO_NAO_INFORMADO';
+
+                if (!isset($resultado2[$motivo][$funcionarioKey]['tipos'][$tipo])) {
+                    $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo] = 0;
+                }
+
+                $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo]++;
+            }
+            $empresas[] = $json;
+            break;
+        }
+    }
+} else {
+    while ($arquivo = $pastaAjuste->read()) {
+        if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
+            $arquivo = $path . "/" . $arquivo;
+            $arquivos[] = $arquivo;
+            $json = json_decode(file_get_contents($arquivo), true);
+
+            // Processa cada chave do JSON
+            foreach ($json as $chave => $valor) {
+
+                // Verifica se é um tipo de ponto válido
+                if (is_array($valor) && isset($valor['ativo']) && isset($valor['inativo'])) {
+                    // Inicializa a chave no array de totais se não existir
+                    if (!isset($totais[$chave])) {
+                        $totais[$chave] = ['ativo' => 0, 'inativo' => 0];
+                    }
+
+                    // Soma os valores (com conversão para inteiro para segurança)
+                    $totais[$chave]['ativo'] += (int)$valor['ativo'];
+                    $totais[$chave]['inativo'] += (int)$valor['inativo'];
+                }
+            }
+            foreach ($json['pontos'] as $key) {
+                // Filtra apenas pontos com status "ativo" (case-insensitive)
+                if (strtolower($key['pont_tx_status'] ?? '') !== 'ativo') {
+                    continue; // Pula se não for "ativo"
+                }
+
+                // Define o motivo
+                $motivo = $key['moti_tx_nome'] ?? 'MOTIVO_NAO_INFORMADO';
+
+                // Contagem geral por motivo
+                if (!isset($resultado[$motivo])) {
+                    $resultado[$motivo] = 0;
+                }
+                $resultado[$motivo]++;
+
+                // Agrupamento por motivo e funcionário
+                if (!isset($resultado2[$motivo])) {
+                    $resultado2[$motivo] = [];
+                }
+
+                $dadosFunc = [
+                    "matricula" => $json["matricula"] ?? 'SEM_MATRICULA',
+                    "nome" => $json["nome"] ?? 'NOME_NAO_INFORMADO',
+                    "ocupacao" => $json["ocupacao"] ?? 'OCUPACAO_NAO_INFORMADA'
+                ];
+
+                $funcionarioKey = $dadosFunc['matricula'] ?? md5($dadosFunc['nome']);
+
+                if (!isset($resultado2[$motivo][$funcionarioKey])) {
+                    $resultado2[$motivo][$funcionarioKey] = [
+                        'funcionario' => $dadosFunc,
+                        'quantidade' => 0,
+                        'tipos' => [] // ← adiciona array para tipos
+                    ];
+                }
+
+                // Incrementa quantidade
+                $resultado2[$motivo][$funcionarioKey]['quantidade']++;
+
+                // Armazena tipo do campo macr_tx_nome
+                $tipo = $key['macr_tx_nome'] ?? 'TIPO_NAO_INFORMADO';
+
+                if (!isset($resultado2[$motivo][$funcionarioKey]['tipos'][$tipo])) {
+                    $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo] = 0;
+                }
+                $resultado2[$motivo][$funcionarioKey]['tipos'][$tipo]++;
+            }
+            $empresas[] = $json;
+        }
     }
 }
+
 $pastaAjuste->close();
-// dd(__DIR__ ."/../".$empresa["empr_tx_logo"]);
 
 class CustomPDF extends TCPDF {
     protected static $empresaData;
-    
+
     public static function setEmpresaData($data) {
         self::$empresaData = $data;
     }
-    
+
     public function Header() {
         $imgWidth = 20;
         $imgHeight = 15;
         $imgHeight2 = 10;
         $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth, $imgHeight2);
-        $this->Image(__DIR__ ."/../".self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
+        $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
         $this->SetFont('helvetica', 'B', 12);
         $this->Cell(0, 15, 'Relatório Ajustes de Pontos Inseridos', 0, 1, 'C');
         $this->Ln(15);
@@ -202,7 +287,7 @@ class CustomPDF extends TCPDF {
 
 function gerarRelatorio($tipo = 'pdf') {
     global $resultado2, $motivoFiltro, $periodoInicio, $periodoFim, $empresa;
-    
+
     if ($tipo === 'csv') {
         // Gera CSV com mesmo conteúdo do PDF
         $nomeArquivo = 'ajustes_pontos_ativos_' . date('d-m-Y_H-i-s') . '.csv'; // Corrigido para evitar ":" no nome
@@ -212,7 +297,7 @@ function gerarRelatorio($tipo = 'pdf') {
 
         // Abre output com codificação UTF-8 (adiciona BOM para Excel)
         $output = fopen('php://output', 'w');
-        fputs($output, chr(0xEF).chr(0xBB).chr(0xBF)); // Adiciona BOM UTF-8
+        fputs($output, chr(0xEF) . chr(0xBB) . chr(0xBF)); // Adiciona BOM UTF-8
 
         // Cabeçalho do CSV
         fputcsv($output, ['Relatório Ajustes de Pontos Inseridos'], ';');
@@ -233,7 +318,7 @@ function gerarRelatorio($tipo = 'pdf') {
                 $tiposTexto = '';
                 if (!empty($dados['tipos'])) {
                     $tiposTexto = implode(' | ', array_map(
-                        function($tipo, $qtd) {
+                        function ($tipo, $qtd) {
                             return "$tipo: $qtd";
                         },
                         array_keys($dados['tipos']),
@@ -249,7 +334,6 @@ function gerarRelatorio($tipo = 'pdf') {
                     $dados['quantidade']
                 ], ';');
             }
-
         } else {
             foreach ($resultado2 as $motivo => $funcionarios) {
                 if (!empty($funcionarios)) {
@@ -264,7 +348,7 @@ function gerarRelatorio($tipo = 'pdf') {
                         $tiposTexto = '';
                         if (!empty($dados['tipos'])) {
                             $tiposTexto = implode(' | ', array_map(
-                                function($tipo, $qtd) {
+                                function ($tipo, $qtd) {
                                     return "$tipo: $qtd";
                                 },
                                 array_keys($dados['tipos']),
@@ -288,7 +372,6 @@ function gerarRelatorio($tipo = 'pdf') {
 
         fclose($output);
         exit;
-
     } else {
         // Gera PDF
         $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
@@ -345,7 +428,7 @@ function gerarRelatorio($tipo = 'pdf') {
                 $tiposTexto = '';
                 if (!empty($dados['tipos'])) {
                     $tiposTexto = implode(' | ', array_map(
-                        function($tipo, $qtd) {
+                        function ($tipo, $qtd) {
                             return "$tipo: $qtd";
                         },
                         array_keys($dados['tipos']),
@@ -355,13 +438,13 @@ function gerarRelatorio($tipo = 'pdf') {
 
                 // Altura baseada no conteúdo de "Tipos"
                 $alturaLinha = max(7, $pdf->GetStringHeight($larguras[4], $tiposTexto));
-                    
+
                 // Verifica se há espaço suficiente na página
                 $espacoRestante = $pdf->GetPageHeight() - $pdf->GetY() - $pdf->getFooterMargin();
                 if ($alturaLinha > $espacoRestante) {
                     $pdf->AddPage();
                 }
-                
+
                 $pdf->Cell($larguras[0], $alturaLinha, $dados['funcionario']['matricula'], 1, 0);
                 $pdf->Cell($larguras[1], $alturaLinha, $dados['funcionario']['ocupacao'], 1, 0);
                 $pdf->Cell($larguras[2], $alturaLinha, $dados['funcionario']['nome'], 1, 0);
@@ -371,7 +454,7 @@ function gerarRelatorio($tipo = 'pdf') {
                 $xTipos = $pdf->GetX();
 
                 $pdf->MultiCell($larguras[4], $alturaLinha, $tiposTexto, 1, 'L', false, 0, $xTipos, $y);
-            
+
                 $pdf->SetXY($xTipos + $larguras[4], $y);
                 $pdf->setCellPaddings(0, 0, 0, 0);
                 $pdf->Cell($larguras[3], $alturaLinha, $dados['quantidade'], 1, 1, 'C');
@@ -404,23 +487,23 @@ function gerarRelatorio($tipo = 'pdf') {
                         $tiposTexto = '';
                         if (!empty($dados['tipos'])) {
                             $tiposTexto = implode(' | ', array_map(
-                                function($tipo, $qtd) {
+                                function ($tipo, $qtd) {
                                     return "$tipo: $qtd";
                                 },
                                 array_keys($dados['tipos']),
                                 $dados['tipos']
                             ));
                         }
-                    
+
                         // Altura baseada no conteúdo de "Tipos"
                         $alturaLinha = max(7, $pdf->GetStringHeight($larguras[4], $tiposTexto));
-                    
+
                         // Verifica se há espaço suficiente na página
                         $espacoRestante = $pdf->GetPageHeight() - $pdf->GetY() - $pdf->getFooterMargin();
                         if ($alturaLinha > $espacoRestante) {
                             $pdf->AddPage();
                         }
-                        
+
                         $pdf->Cell($larguras[0], $alturaLinha, $dados['funcionario']['matricula'], 1, 0);
                         $pdf->Cell($larguras[1], $alturaLinha, $dados['funcionario']['ocupacao'], 1, 0);
                         $pdf->Cell($larguras[2], $alturaLinha, $dados['funcionario']['nome'], 1, 0);
@@ -430,7 +513,7 @@ function gerarRelatorio($tipo = 'pdf') {
                         $xTipos = $pdf->GetX();
 
                         $pdf->MultiCell($larguras[4], $alturaLinha, $tiposTexto, 1, 'L', false, 0, $xTipos, $y);
-                    
+
                         $pdf->SetXY($xTipos + $larguras[4], $y);
                         $pdf->setCellPaddings(0, 0, 0, 0);
                         $pdf->Cell($larguras[3], $alturaLinha, $dados['quantidade'], 1, 1, 'C');

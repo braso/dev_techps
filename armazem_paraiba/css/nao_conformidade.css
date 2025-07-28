@@ -6,15 +6,32 @@
 		transform-origin: top left;
 	}
 
+	.table-head {
+		position: static !important;
+	}
+	
 	@page {
 		size: A4 landscape;
-		margin: 1cm;
 	}
-	#tituloRelatorio{
-		display: block; /* Torna visível apenas ao imprimir */
-		font-size: 12px;
-		padding-left: 500px;
+
+	#tituloRelatorio {
+		display: flex;
+		align-items: center;       /* Alinha verticalmente */
+		justify-content: space-between; /* Espaça os elementos nas extremidades */
+		gap: 1em;                  /* Espaço entre elementos, se quiser */
 	}
+
+	#tituloRelatorio h1 {
+		margin: 0;
+		font-size: 1.5em;          /* Ajuste o tamanho conforme necessário */
+		flex-grow: 1;
+		text-align: center;
+	}
+
+	#tituloRelatorio img {
+		display: block;
+	}
+
 	body > div.scroll-to-top{
 		display: none !important;
 	}
@@ -43,6 +60,7 @@
 		padding-bottom: 0px;
 	}
 }
+
 #saldo {
 	width: 50% !important;
 	margin-top: 9px !important;
@@ -57,6 +75,7 @@ table td:nth-child(7),
 table td:nth-child(11) {
 	border-right: 3px solid #d8e4ef !important;
 }
+
 .th-align {
 	text-align: center; /* Define o alinhamento horizontal desejado, pode ser center, left ou right */
 	vertical-align: middle !important; /* Define o alinhamento vertical desejado, pode ser top, middle ou bottom */

@@ -327,20 +327,31 @@ th.sort-desc::after {
   text-align: center;
 }
 
+.comentario-impressao {
+  display: none;
+}
+
 @media print {
+  .comentario-impressao {
+    display: block;
+    margin-top: 30px;
+    font-size: 14px;
+    color: #000;
+  }
+
+  .linha-comentario {
+    border-bottom: 1px solid #000;
+    margin-bottom: 20px;
+    height: 30px;
+    width: 100%;
+  }
   body {
-    margin: 1cm;
+    margin: 1cm; 
     transform: rotate(-90deg);
-    transform-origin: left top;
     overflow: hidden;
     position: absolute;
     transform: scale(1);
     transform-origin: top left;
-  }
-
-  @page {
-    size: A4 landscape;
-    margin: 1cm;
   }
 
   .row {
@@ -628,6 +639,11 @@ th.sort-desc::after {
 
   div:nth-child(6) > div.portlet.light {
     display: none !important;
+  }
+
+  @page {
+    size: A4 landscape;
+    margin: 1cm;
   }
 }
 

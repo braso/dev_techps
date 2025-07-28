@@ -1,53 +1,57 @@
 {
-    "name": "tecnickcom/tcpdf",
-    "type": "library",
-    "description": "TCPDF is a PHP class for generating PDF documents and barcodes.",
-    "keywords": [
-        "PDF",
-        "tcpdf",
-        "PDFD32000-2008",
-        "qrcode",
-        "datamatrix",
-        "pdf417",
-        "barcodes"
-    ],
-    "homepage": "http://www.tcpdf.org/",
-    "version": "6.8.2",
-    "license": "LGPL-3.0-or-later",
-    "authors": [
-        {
-            "name": "Nicola Asuni",
-            "email": "info@tecnick.com",
-            "role": "lead"
-        }
-    ],
-    "require": {
-        "php": ">=7.1.0",
-        "ext-curl": "*"
-    },
-    "autoload": {
-        "classmap": [
-            "config",
-            "include",
-            "tcpdf.php",
-            "tcpdf_parser.php",
-            "tcpdf_import.php",
-            "tcpdf_barcodes_1d.php",
-            "tcpdf_barcodes_2d.php",
-            "include/tcpdf_colors.php",
-            "include/tcpdf_filters.php",
-            "include/tcpdf_font_data.php",
-            "include/tcpdf_fonts.php",
-            "include/tcpdf_images.php",
-            "include/tcpdf_static.php",
-            "include/barcodes/datamatrix.php",
-            "include/barcodes/pdf417.php",
-            "include/barcodes/qrcode.php"
-        ]
-    },
-    "archive": {
-        "exclude": [
-            "/examples"
-        ]
+  "name": "tecnickcom/tc-lib-pdf",
+  "description": "PHP PDF Library",
+  "type": "library",
+  "homepage": "http://www.tecnick.com",
+  "license": "LGPL-3.0-or-later",
+  "keywords": [
+    "tc-lib-pdf",
+    "TCPDF",
+    "PDF",
+    "PDFD32000-2008",
+    "document"
+  ],
+  "authors": [
+    {
+      "name": "Nicola Asuni",
+      "email": "info@tecnick.com",
+      "role": "lead"
     }
+  ],
+  "require": {
+    "php": ">=8.1",
+    "ext-date": "*",
+    "ext-pcre": "*",
+    "tecnickcom/tc-lib-barcode": "^2.4",
+    "tecnickcom/tc-lib-color": "^2.2",
+    "tecnickcom/tc-lib-pdf-image": "^2.1",
+    "tecnickcom/tc-lib-pdf-font": "^2.6",
+    "tecnickcom/tc-lib-file": "^2.2",
+    "tecnickcom/tc-lib-pdf-encrypt": "^2.1",
+    "tecnickcom/tc-lib-unicode-data": "^2.0",
+    "tecnickcom/tc-lib-unicode": "^2.0",
+    "tecnickcom/tc-lib-pdf-page": "^4.2",
+    "tecnickcom/tc-lib-pdf-graph": "^2.3"
+  },
+  "require-dev": {
+    "pdepend/pdepend": "2.16.2",
+    "phpmd/phpmd": "2.15.0",
+    "phpunit/phpunit": "12.2.0 || 11.5.7 || 10.5.40",
+    "squizlabs/php_codesniffer": "3.13.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Com\\Tecnick\\Pdf\\": "src"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Test\\": "test"
+    }
+  },
+  "archive": {
+    "exclude": [
+      "/example"
+    ]
+  }
 }

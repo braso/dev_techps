@@ -238,7 +238,7 @@
 
 
 		$motorista = mysqli_fetch_assoc(query(
-			"SELECT enti_nb_id, enti_tx_matricula, enti_tx_nome, enti_tx_ocupacao, enti_tx_cpf FROM entidade
+			"SELECT enti_nb_id, enti_tx_matricula, enti_tx_nome, enti_tx_ocupacao, enti_tx_cpf, enti_nb_empresa FROM entidade
 				WHERE enti_tx_status = 'ativo'
 					AND enti_nb_id = {$_POST["idMotorista"]}
 				LIMIT 1;"
@@ -391,7 +391,6 @@
 			]
 		);
 
-
 		$gridFields = [
 			"CÓD"												=> "pont_nb_id",
 			"DATA"												=> "data(pont_tx_data,1)",
@@ -400,7 +399,7 @@
 			"MOTIVO"											=> "moti_tx_nome",
 			"LEGENDA"											=> "moti_tx_legenda",
 			"JUSTIFICATIVA"										=> "pont_tx_justificativa",
-			"USUÁRIO CADASTRO"									=> "userCadastro",
+			"USUÁRIO CADASTRO"									=> "userCadastro(pont_nb_userCadastro)",
 			"DATA CADASTRO"										=> "data(pont_tx_dataCadastro,1)",
 			"DATA EXCLUSÃO"                                     => "data(pont_tx_dataAtualiza,1)",
 			"LOCALIZAÇÃO"                                       => "map(pont_nb_id)",
@@ -409,17 +408,65 @@
 
 		grid($sql, array_keys($gridFields), array_values($gridFields), "", "12", 1, "desc", -1);
 
+		$logoEmpresa = mysqli_fetch_assoc(query(
+            "SELECT empr_tx_logo FROM empresa
+                    WHERE empr_tx_status = 'ativo'
+                        AND empr_tx_Ehmatriz = 'sim'
+                    LIMIT 1;"
+        ))["empr_tx_logo"];
+
 		echo
 			"<div id='tituloRelatorio'>
-				<img id='logo' style='width: 150px' src='{$CONTEX["path"]}/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
-			</div>
+                    <img style='width: 190px; height: 40px;' src='./imagens/logo_topo_cliente.png' alt='Logo Empresa Esquerda'>
+                    <img style='width: 180px; height: 80px; margin-left: 850px;' src='./$logoEmpresa' alt='Logo Empresa Direita'>
+            </div>
 			<form name='form_ajuste_status' action='".$_SERVER["HTTP_ORIGIN"].$CONTEX["path"]."/ajuste_ponto.php' method='post'>
 			</form>
+			<div class='comentario-impressao'>
+				<strong>Observações:</strong>
+				<div class='linha-comentario'></div>
+				<div class='linha-comentario'></div>
+				<div class='linha-comentario'></div>
+			</div>
 			<style>
+				.comentario-impressao {
+					display: none;
+				}
 				@media print {
 					@page {
 						size: A4 landscape;
 						margin: 1cm;
+					}
+					
+					#tituloRelatorio {
+						display: flex !important;
+						align-items: center;       /* Alinha verticalmente */
+						justify-content: space-between; /* Espaça os elementos nas extremidades */
+						gap: 1em;                  /* Espaço entre elementos, se quiser */
+					}
+
+					#tituloRelatorio h1 {
+						margin: 0;
+						font-size: 1.5em;          /* Ajuste o tamanho conforme necessário */
+						flex-grow: 1;
+						text-align: center;
+					}
+
+					#tituloRelatorio img {
+						display: block;
+					}
+					.comentario-impressao {
+						display: block;
+						margin-top: 30px;
+						font-size: 14px;
+						color: #000;
+					}
+
+					.linha-comentario {
+						border-bottom: 1px solid #000;
+						margin-bottom: 20px;
+						height: 30px;
+						width: 100%;
 					}
 					body {
 						margin: 1cm;
@@ -431,14 +478,34 @@
 						display: flex !important;
 						position: absolute;
 						top: 5px;
-						right: 20px;
 					}
 						
 					form > .row
 					{
 						display: none;
 					}
+					
+					form > div:nth-child(1) {
+						flex-wrap: nowrap !important;
+					}
 
+					.row {
+						margin: 0px 0px 0px 0px !important;
+					}
+					
+					[id^=\"contex-grid-\"] > thead > tr > th:nth-child(12),
+					[id^=\"contex-grid-\"] > tbody > tr > td:nth-child(12),
+					.scroll-to-top {
+						display: none !important;
+					}
+
+					.portlet>.portlet-body p {
+						margin-top: 0 !important;
+					}
+					div.page-content > div > div > div > div
+					{
+						padding-top: 9em;
+					}
 					.portlet.light {
 						padding: 0px 10px !important; /* Reduzindo o padding */
 						font-size: 10px !important; /* Reduzindo o tamanho da fonte */
