@@ -313,7 +313,7 @@
 			"SELECT abono.*, motivo.* FROM abono
 				JOIN entidade ON abon_tx_matricula = enti_tx_matricula
 				JOIN motivo ON abon_nb_motivo = moti_nb_id
-				WHERE abon_tx_status = 'ativo'
+				WHERE abon_tx_status = 'ativo' AND enti_tx_status = 'ativo' AND moti_tx_status = 'ativo'
 					AND enti_nb_id = {$_POST["idMotorista"]}
 					AND abon_tx_data = '{$_POST["data"]}'
 					AND moti_tx_tipo = 'Afastamento'
