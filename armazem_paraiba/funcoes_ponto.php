@@ -592,8 +592,6 @@
     }
 
 	function diaDetalhePonto(array $motorista, string $data, array $pontosDia = [], $jornadaPrevista = "", $stringFeriado = ""): array{
-		global $totalResumo;
-
 
 		//Variáveis necessárias
 		query(
@@ -620,6 +618,24 @@
 		}
 
 		global $totalResumo;
+		if(empty($totalResumo)){
+			$totalResumo = [
+				"diffRefeicao" => "00:00", 
+				"diffEspera" => "00:00", 
+				"diffDescanso" => "00:00", 
+				"diffRepouso" => "00:00", 
+				"diffJornada" => "00:00", 
+				"jornadaPrevista" => "00:00", 
+				"diffJornadaEfetiva" => "00:00", 
+				"maximoDirecaoContinua" => "00:00",
+				"intersticio" => "00:00", 
+				"he50" => "00:00", 
+				"he100" => "00:00", 
+				"adicionalNoturno" => "00:00", 
+				"esperaIndenizada" => "00:00", 
+				"diffSaldo" => "00:00"
+			];
+		}
 		setlocale(LC_ALL, "pt_BR.utf8");
 
 		$aRetorno = [
@@ -761,9 +777,9 @@
 				//}
 
 				//SOMANDO TOTAIS{
-					foreach(array_slice(array_keys($aRetorno), array_search("diffRefeicao", array_keys($aRetorno))) as $campo){
-						$totalResumo[$campo] = operarHorarios([((empty($totalResumo[$campo]))? "00:00": $totalResumo[$campo]), strip_tags(urldecode($aRetorno[$campo]))], "+");
-					}
+					// foreach(array_slice(array_keys($aRetorno), array_search("diffRefeicao", array_keys($aRetorno))) as $campo){
+					// 	$totalResumo[$campo] = operarHorarios([((empty($totalResumo[$campo]))? "00:00": $totalResumo[$campo]), strip_tags(urldecode($aRetorno[$campo]))], "+");
+					// }
 				//}
 				return $aRetorno;
 			}
@@ -1256,9 +1272,9 @@
 		//}
 
 		//SOMANDO TOTAIS{
-			foreach(array_slice(array_keys($aRetorno), array_search("diffRefeicao", array_keys($aRetorno))) as $campo){
-				$totalResumo[$campo] = operarHorarios([((empty($totalResumo[$campo]))? "00:00": $totalResumo[$campo]), preg_replace("/([^\-^0-:])+/", "", strip_tags($aRetorno[$campo]))], "+");
-			}
+			// foreach(array_slice(array_keys($aRetorno), array_search("diffRefeicao", array_keys($aRetorno))) as $campo){
+			// 	$totalResumo[$campo] = operarHorarios([((empty($totalResumo[$campo]))? "00:00": $totalResumo[$campo]), preg_replace("/([^\-^0-:])+/", "", strip_tags($aRetorno[$campo]))], "+");
+			// }
 		//}
 
 		if($saldo > 0){
