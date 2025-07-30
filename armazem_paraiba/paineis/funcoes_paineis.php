@@ -177,11 +177,14 @@ function criar_relatorio_saldo() {
 			"EP" 	=> 0,
 			"N" 	=> 0
 		];
+
 		foreach ($motoristas as $motorista) {
 
-			if($motorista["enti_tx_admissao"] > $dataMes->format("Y-m-d")){
+			$admissao = new DateTime($motorista["enti_tx_admissao"]);
+			if($admissao->format("Y-m") > $dataMes->format("Y-m")){
 				continue;
 			}
+
 			//Status Endosso{
 			$endossos = mysqli_fetch_all(query(
 				"SELECT * FROM endosso"
@@ -235,7 +238,7 @@ function criar_relatorio_saldo() {
 				}
 				$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoFinal"];
 			}elseif(!empty($motorista["enti_tx_banco"])){
-				$saldoAnterior = $motorista["enti_tx_banco"];
+				$saldoAnterior = !empty($motorista["enti_tx_banco"]) ? $motorista["enti_tx_banco"] : '00:00';
 				$saldoAnterior = $saldoAnterior[0] == "0" && strlen($saldoAnterior) > 5? substr($saldoAnterior, 1): $saldoAnterior;
 			}
 			//}
@@ -410,7 +413,7 @@ function criar_relatorio_endosso() {
 			"SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg, parametro.para_tx_inicioAcordo, parametro.para_nb_qDias, parametro.para_nb_qDias FROM entidade"
 				. " LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
 				. " WHERE enti_tx_status = 'ativo'"
-				// . " AND DATE_FORMAT(enti_tx_dataCadastro, '%Y-%m') <= '{$mes->format("Y-m")}'"
+				. " AND DATE_FORMAT(enti_tx_dataCadastro, '%Y-%m') <= '{$mes->format("Y-m")}'"
 				. " AND enti_nb_empresa = " . $empresa["empr_nb_id"]
 				. " " . $filtroOcupacao
 				. " ORDER BY enti_tx_nome ASC;"
