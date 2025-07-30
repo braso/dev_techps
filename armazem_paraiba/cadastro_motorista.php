@@ -72,6 +72,8 @@
 					}
 				}
 
+				checkOcupation(document.getElementsByName('ocupacao')[0].value);
+
 				function remover_foto(id, acao, arquivo) {
 					if (confirm('Deseja realmente excluir o arquivo '+arquivo+'?')) {
 						document.form_excluir_arquivo.idEntidade.value = id;
@@ -153,10 +155,10 @@
 				var jornadaSemanal = {display: 'block', value: document.getElementById('jornadaSemanal')? document.getElementById('jornadaSemanal').value: ''};
 				var jornadaSabado = {display: 'block', value: document.getElementById('jornadaSabado')? document.getElementById('jornadaSabado').value: ''};
 				
-				if('{$parametro["para_tx_tipo"]}' == 'escala'){
+				if(".(($parametro["para_tx_tipo"] == "escala")?'true': 'false')."){
 
 					escala.display = 'block';
-					({$parametro["esca_tx_dias"]}).forEach(function (numeroDia){
+					(".(!empty($parametro["esca_tx_dias"])? $parametro["esca_tx_dias"]: "{}").").forEach(function (numeroDia){
 						const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 						if (numeroDia < 1 || numeroDia > 7) {
 							console.log('Número da semana inválido: ', numeroDia);
