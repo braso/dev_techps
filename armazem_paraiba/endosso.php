@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
@@ -52,7 +52,6 @@
 
 		for($f = 0; $f < count($motoristas); $f++){
 			$aDia = [];
-			$totalResumo = [];
 
 			//Pegando e formatando registros dos dias{
 				
@@ -439,7 +438,22 @@
 				$motNaoEndossados .= "- [".$motorista["enti_tx_matricula"]."] ".$motorista["enti_tx_nome"]."<br>";
 			}
 
-			$totalResumo = ["diffRefeicao" => "00:00", "diffEspera" => "00:00", "diffDescanso" => "00:00", "diffRepouso" => "00:00", "diffJornada" => "00:00", "jornadaPrevista" => "00:00", "diffJornadaEfetiva" => "00:00", "maximoDirecaoContinua" => "", "intersticio" => "00:00", "he50" => "00:00", "he100" => "00:00", "adicionalNoturno" => "00:00", "esperaIndenizada" => "00:00", "diffSaldo" => "00:00"];
+			$totalResumo = [
+				"diffRefeicao" => "00:00", 
+				"diffEspera" => "00:00", 
+				"diffDescanso" => "00:00", 
+				"diffRepouso" => "00:00", 
+				"diffJornada" => "00:00", 
+				"jornadaPrevista" => "00:00", 
+				"diffJornadaEfetiva" => "00:00", 
+				"maximoDirecaoContinua" => "", 
+				"intersticio" => "00:00", 
+				"he50" => "00:00", 
+				"he100" => "00:00", 
+				"adicionalNoturno" => "00:00", 
+				"esperaIndenizada" => "00:00", 
+				"diffSaldo" => "00:00"
+			];
 
 			unset($aDia);
 		}
