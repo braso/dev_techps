@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -220,10 +220,6 @@
 								$rows[] = $row;
 							}
 						}
-						foreach($endossoMes["totalResumo"] as $key => $value){
-							$totalResumo[$key] = operarHorarios([(!empty($totalResumo[$key])? $totalResumo[$key]: "00:00"), $value], "+");
-						}
-						$totalResumo["saldoFinal"] = $endossoMes["totalResumo"]["saldoFinal"];
 						if($diasEndossados > 0){
 							$startDate->modify("+{$diasEndossados} day");
 						}
@@ -234,44 +230,45 @@
 				for ($date = $startDate; $date <= $endDate; $date->modify("+1 day")){
 					$aDetalhado = diaDetalhePonto($motorista, $date->format("Y-m-d"));
 					
-					// Descomentar ao conseguir adaptar a lógica da página de nao_conformidade para espelho_ponto
-					// if(!empty($_POST["naoConformidade"])){
-					// 	$rowString = implode(", ", array_values($aDetalhado));
-					// 	$qtdErros = (
-					// 			substr_count($rowString, "fa-warning") 																				//Conta todos os triângulos, pois todos os triângulos são alertas de não conformidade.
-					// 			+((is_int(strpos($rowString, "fa-info-circle")))*(substr_count($rowString, "color:red;") + substr_count($rowString, "color:orange;")))	//Conta os círculos que sejam vermelhos ou laranjas.
-					// 		)
-					// 		*!(is_int(strpos($rowString, "Batida início de jornada não registrada!")) && is_int(strpos($rowString, "Abono: ")))
-					// 	;
-					
-					// 	if($qtdErros == 0){
-					// 		$keyPrimColunaTotal = array_search("diffRefeicao", array_keys($aDetalhado));
-					// 		for($f2 = $keyPrimColunaTotal; $f2 < count($aDetalhado); $f2++){
-					// 			$totalResumo[$f2-$keyPrimColunaTotal] = operarHorarios([$totalResumo[$f2-$keyPrimColunaTotal], strip_tags(array_values($aDetalhado)[$f2])], "-");
-					// 		}
-					// 		continue;
-					// 	}
-					// }
+					/* Descomentar ao conseguir adaptar a lógica da página de nao_conformidade para espelho_ponto
+						if(!empty($_POST["naoConformidade"])){
+							$rowString = implode(", ", array_values($aDetalhado));
+							$qtdErros = (
+									substr_count($rowString, "fa-warning") 																				//Conta todos os triângulos, pois todos os triângulos são alertas de não conformidade.
+									+((is_int(strpos($rowString, "fa-info-circle")))*(substr_count($rowString, "color:red;") + substr_count($rowString, "color:orange;")))	//Conta os círculos que sejam vermelhos ou laranjas.
+								)
+								*!(is_int(strpos($rowString, "Batida início de jornada não registrada!")) && is_int(strpos($rowString, "Abono: ")))
+							;
+						
+							if($qtdErros == 0){
+								$keyPrimColunaTotal = array_search("diffRefeicao", array_keys($aDetalhado));
+								for($f2 = $keyPrimColunaTotal; $f2 < count($aDetalhado); $f2++){
+									$totalResumo[$f2-$keyPrimColunaTotal] = operarHorarios([$totalResumo[$f2-$keyPrimColunaTotal], strip_tags(array_values($aDetalhado)[$f2])], "-");
+								}
+								continue;
+							}
+						}
 
 
-					// $row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado));
-					// for($f = 0; $f < sizeof($row)-1; $f++){
-					// 	if(in_array($f, [3, 4, 5, 6, 12])){//Se for das colunas de início de jornada, refeição ou "Jornada Prevista", não apaga
-					// 		continue;
-					// 	}
-					// 	if($row[$f] == "00:00"){
-					// 		$row[$f] = "";
-					// 	}
-					// }
-					// $rows[] = $row;
+						$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado));
+						for($f = 0; $f < sizeof($row)-1; $f++){
+							if(in_array($f, [3, 4, 5, 6, 12])){//Se for das colunas de início de jornada, refeição ou "Jornada Prevista", não apaga
+								continue;
+							}
+							if($row[$f] == "00:00"){
+								$row[$f] = "";
+							}
+						}
+						$rows[] = $row;
+					//*/
 
 					$colunasAManterZeros = ["inicioJornada", "inicioRefeicao", "fimRefeicao", "fimJornada", "jornadaPrevista", "diffSaldo"];
-					foreach($aDetalhado as $key => $value){
+					foreach($aDetalhado as $key => &$value){
 						if(in_array($key, $colunasAManterZeros)){//Se for das colunas de início de jornada, refeição ou "Jornada Prevista", mantém os valores zerados.
 							continue;
 						}
-						if($aDetalhado[$key] == "00:00"){
-							$aDetalhado[$key] = "";
+						if($value == "00:00"){
+							$value = "";
 						}
 					}
 					$row = array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado);
@@ -281,6 +278,12 @@
 				$descFaltasNaoJustificadas = "00:00";
 				$qtdDiasNaoJustificados = 0;
 				foreach($rows as $row){
+					$colunasASomar = array_keys(array_slice($row, 7));
+					foreach($colunasASomar as $col){
+						if(!empty($row[$col])){
+							$totalResumo[$col] = operarHorarios([$totalResumo[$col], strip_tags($row[$col])], "+");
+						}
+					}
 					if(is_bool(strpos($row[0], "(E)")) && is_int(strpos($row["inicioJornada"], "Batida início de jornada não registrada!"))){
 						$descFaltasNaoJustificadas = operarHorarios([$descFaltasNaoJustificadas, $row["jornadaPrevista"]], "+");
 						$qtdDiasNaoJustificados++;
@@ -320,19 +323,6 @@
 				$saldoAnterior = "00:00";
 				if(!empty($ultimoEndosso) && file_exists("{$_SERVER["DOCUMENT_ROOT"]}{$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}/arquivos/endosso/{$ultimoEndosso["endo_tx_filename"]}.csv")){
 					$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
-					// if(empty($totalResumo)){
-					// 	$totalResumo = $ultimoEndosso["totalResumo"];
-					// }else{
-					// 	foreach(["saldoFinal"] as $key){
-					// 		$totalResumo[$key] = operarHorarios(
-					// 			[
-					// 				(!empty($totalResumo[$key])? $totalResumo[$key]: "00:00"),
-					// 				(!empty($ultimoEndosso["totalResumo"][$key])? $ultimoEndosso["totalResumo"][$key]: "00:00")
-					// 			], 
-					// 			"+"
-					// 		);
-					// 	}
-					// }
 					$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoFinal"]?? "--:--";
 				}elseif(!empty($motorista["enti_tx_banco"])){
 					$saldoAnterior = $motorista["enti_tx_banco"];
@@ -361,7 +351,7 @@
 							</tbody>
 						</table>
 						<div style='font-weight: 600;'>
-							".(($descFaltasNaoJustificadas != "00:00")? "Serão descontadas {$descFaltasNaoJustificadas} horas por {$qtdDiasNaoJustificados} faltas não justificadas.":"")."
+							".(($motorista["para_tx_descFaltas"] == "sim" && $descFaltasNaoJustificadas != "00:00")? "Serão descontadas {$descFaltasNaoJustificadas} horas por {$qtdDiasNaoJustificados} faltas não justificadas.":"")."
 						</div>
 					</div>"
 				;
