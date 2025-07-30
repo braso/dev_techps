@@ -121,8 +121,8 @@
             <tbody>
                 <?php
                     foreach ($aDia as $aDiaVez) {
-                        if(strpos($aDiaVez[10], "00:00") !== false){
-                            $aDiaVez[10] = "";
+                        if(strpos($aDiaVez["jornadaPrevista"], "00:00") !== false){
+                            $aDiaVez["jornadaPrevista"] = "";
                         }
                         echo '<tr>';
                         foreach($aDiaVez as $cel){
