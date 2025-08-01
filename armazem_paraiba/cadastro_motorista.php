@@ -89,6 +89,25 @@
 						document.form_excluir_arquivo.submit();
 					}
 				}
+				function imprimir() {
+					// Abrir a caixa de diálogo de impressão
+					// window.print();
+					const id = '$_POST[id]';
+					var form = document.createElement('form');
+					form.method = 'POST';
+					form.action = 'ficha_funcionario.php';
+					form.target = '_blank';
+
+					var inputId = document.createElement('input');
+					inputId.type = 'hidden';
+					inputId.name = 'id';
+					inputId.value = id;
+					form.appendChild(inputId);
+
+					document.body.appendChild(form);
+					form.submit();
+					document.body.removeChild(form);
+				}
 			</script>"
 		;
 
