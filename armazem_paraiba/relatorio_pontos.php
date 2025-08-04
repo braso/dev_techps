@@ -202,8 +202,6 @@ function index() {
 
     $pontos = [];
     if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
-        global $totalResumo;
-
         // Converte as datas para objetos DateTime
         [$startDate, $endDate] = [new DateTime($_POST["busca_periodo"][0]), new DateTime($_POST["busca_periodo"][1])];
         $diaInicioFotmat = $startDate->format("d/m/Y");
