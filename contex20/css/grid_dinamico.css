@@ -114,6 +114,34 @@ td { font-size: 10px !important; }
     .table-col-head{
         border: 1px solid black !important;
     }
+
+    td.tab-action, 
+    .tab-action {
+        display: none !important;
+    }
+
+     #tituloRelatorio {
+		display: flex !important;
+		align-items: center;       /* Alinha verticalmente */
+		justify-content: space-between; /* Espaça os elementos nas extremidades */
+		gap: 1em;                  /* Espaço entre elementos, se quiser */
+	}
+
+	#tituloRelatorio h1 {
+		margin: 0;
+		font-size: 1.5em;          /* Ajuste o tamanho conforme necessário */
+		flex-grow: 1;
+		text-align: center;
+	}
+
+	#tituloRelatorio img {
+		display: block !important;
+	}
+
+    body > div.scroll-to-top{
+		display: none !important;
+	}
+
     @page{
         size: landscape;
     }

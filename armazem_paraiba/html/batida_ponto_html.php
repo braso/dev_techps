@@ -170,7 +170,7 @@
 		} else {													//Se está iniciando algum intervalo
 			confirmButtonText = 'INICIAR';
 			confirmButtonClass = 'btn-primary';
-			if (placa === "") {
+			if (placa === "" && "<?=$_SESSION["user_tx_nivel"]?>" == "Motorista"){
 				msg += "<br><br><span style='color: red;' class='fa fa-warning'></span>Placa do veículo vazia";
 			}
 		}
@@ -205,6 +205,7 @@
 	}
 
 
+	var logoutTimeLimit = 15;
 
 	function updateClock(){
 		const now = new Date();
@@ -221,17 +222,19 @@
 
 	function updateTimeout(){
 		var time = parseInt(document.getElementById('timeout').getAttribute('value'));
-		time += 1;
+		time -= 1;
 		const timeString = "Inatividade: "+leftPad(Math.round((time/60-0.5)), 2)+':'+leftPad((time%60), 2);
 
 		document.getElementById('timeout').innerHTML = timeString;
 		document.getElementById('timeout').setAttribute('value', time);
 
-		if(time >= <?=$logoutTime?>-10){
+		if(time <= 5){
 			document.getElementById('timeout').setAttribute('style', 'color: red;');
+		}else{
+			document.getElementById('timeout').setAttribute('style', 'color: black;');
 		}
 
-		if(time >= <?=$logoutTime?>){
+		if(time < 0){
 			let form = document.getElementById('loginTimeoutForm');
 			form.submit();
 			window.location.href = '<?= $CONTEX['path']?>/logout.php';
@@ -239,7 +242,7 @@
 	}
 
 	function updateTimer(){
-		document.getElementById('timeout').setAttribute('value', 0);
+		document.getElementById('timeout').setAttribute('value', logoutTimeLimit);
 	}
 	
 	updateClock(); // Atualizar imediatamente

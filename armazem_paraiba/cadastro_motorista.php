@@ -9,6 +9,94 @@
 	//*/
 	include "conecta.php";
 
+	function carregarJS(){
+		global $a_mod;
+
+		$path_parts = pathinfo(__FILE__);
+
+		$params = [
+			$a_mod["parametroPadrao"]["para_nb_id"],
+			$a_mod["parametroPadrao"]["para_tx_jornadaSemanal"],
+			$a_mod["parametroPadrao"]["para_tx_jornadaSabado"],
+			$a_mod["parametroPadrao"]["para_tx_percHESemanal"],
+			$a_mod["parametroPadrao"]["para_tx_percHEEx"]
+		];
+
+
+		echo 
+			"<script>
+				function buscarCEP(cep) {
+					var num = cep.replace(/[^0-9]/g, '');
+					if (num.length == '8') {
+						document.getElementById('frame_parametro').src = '".$path_parts["basename"]."?acao=carregarEndereco&cep='+num;
+					}
+				}
+
+				function carregarEmpresa(id) {
+					document.getElementById('frame_parametro').src = 'cadastro_motorista.php?acao=carregarEmpresa&emp='+id;
+					var empresaSelecionada = id;
+				}
+
+				function carregarParametro() {
+					id = document.getElementById('parametro').value;
+					document.getElementById('frame_parametro').src = 'cadastro_motorista.php?acao=carregarParametro&parametro='+id;"
+					.((!empty($a_mod["parametroPadrao"]))? "conferirParametroPadrao('".implode("','", $params)."');":"")."
+				}
+				function padronizarParametro() {
+					parent.document.contex_form.parametro.value 			= '".($a_mod["parametroPadrao"]["para_nb_id"]?? "")."';
+					parent.document.contex_form.jornadaSemanal.value 		= '".($a_mod["parametroPadrao"]["para_tx_jornadaSemanal"]?? "")."';
+					parent.document.contex_form.jornadaSabado.value 		= '".($a_mod["parametroPadrao"]["para_tx_jornadaSabado"]?? "")."';
+					parent.document.contex_form.percHESemanal.value 		= '".($a_mod["parametroPadrao"]["para_tx_percHESemanal"]?? "")."';
+					parent.document.contex_form.percHEEx.value 				= '".($a_mod["parametroPadrao"]["para_tx_percHEEx"]?? "")."';
+
+					conferirParametroPadrao('".implode("','", $params)."');
+				}
+
+				function conferirParametroPadrao(idParametro, jornadaSemanal, jornadaSabado, percHESemanal, percHEEx){
+
+					var padronizado = (
+						idParametro == parent.document.contex_form.parametro.value &&
+						jornadaSemanal == parent.document.contex_form.jornadaSemanal.value &&
+						jornadaSabado == parent.document.contex_form.jornadaSabado.value &&
+						percHESemanal == parent.document.contex_form.percHESemanal.value &&
+						percHEEx == parent.document.contex_form.percHEEx.value
+					);
+					parent.document.getElementsByName('textoParametroPadrao')[0].getElementsByTagName('p')[0].innerText = (padronizado? 'Sim': 'Não');
+				}
+
+				function checkOcupation(ocupation){
+					if(ocupation == 'Ajudante' || ocupation == 'Funcionário'){
+						document.getElementsByClassName('cnh-row')[0].setAttribute('style', 'display:none')
+					}else{
+						document.getElementsByClassName('cnh-row')[0].setAttribute('style', '')
+					}
+				}
+
+				checkOcupation(document.getElementsByName('ocupacao')[0].value);
+
+				function remover_foto(id, acao, arquivo) {
+					if (confirm('Deseja realmente excluir o arquivo '+arquivo+'?')) {
+						document.form_excluir_arquivo.idEntidade.value = id;
+						document.form_excluir_arquivo.nome_arquivo.value = arquivo;
+						document.form_excluir_arquivo.acao.value = acao;
+						document.form_excluir_arquivo.submit();
+					}
+				}
+
+				function remover_cnh(id, acao, arquivo) {
+					if (confirm('Deseja realmente excluir o arquivo CNH '+arquivo+'?')) {
+						document.form_excluir_arquivo.idEntidade.value = id;
+						document.form_excluir_arquivo.nome_arquivo.value = arquivo;
+						document.form_excluir_arquivo.acao.value = acao;
+						document.form_excluir_arquivo.submit();
+					}
+				}
+			</script>"
+		;
+
+		return;
+	}
+
 	function carregarEmpresa(){
 		$aEmpresa = carregar("empresa", (int)$_GET["emp"]);
 		if ($aEmpresa["empr_nb_parametro"] > 0) {
@@ -44,18 +132,59 @@
 		if(empty($_GET["parametro"])){
 			exit;
 		}
-		
+
 		$parametro = carregar("parametro", (int)$_GET["parametro"]);
+		$parametro = mysqli_fetch_assoc(query(
+			"SELECT * FROM parametro
+				LEFT JOIN escala ON para_nb_id = esca_nb_parametro
+				WHERE para_nb_id = {$_GET["parametro"]}
+			LIMIT 1;"
+		));
 		
 		if(empty($parametro)){
 			exit;
 		}
-		echo 
+
+		echo
 			"<script type='text/javascript'>
 				parent.document.contex_form.jornadaSemanal.value = '".$parametro["para_tx_jornadaSemanal"]."';
 				parent.document.contex_form.jornadaSabado.value = '".$parametro["para_tx_jornadaSabado"]."';
 				parent.document.contex_form.percHESemanal.value = '".$parametro["para_tx_percHESemanal"]."';
 				parent.document.contex_form.percHEEx.value = '".$parametro["para_tx_percHEEx"]."';
+				var escala = {display: 'none', value: ''};
+				var jornadaSemanal = {display: 'block', value: document.getElementById('jornadaSemanal')? document.getElementById('jornadaSemanal').value: ''};
+				var jornadaSabado = {display: 'block', value: document.getElementById('jornadaSabado')? document.getElementById('jornadaSabado').value: ''};
+				
+				if(".(($parametro["para_tx_tipo"] == "escala")?'true': 'false')."){
+
+					escala.display = 'block';
+					(".(!empty($parametro["esca_tx_dias"])? $parametro["esca_tx_dias"]: "{}").").forEach(function (numeroDia){
+						const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+						if (numeroDia < 1 || numeroDia > 7) {
+							console.log('Número da semana inválido: ', numeroDia);
+							escala.value += '???, ';
+						}else{
+							escala.value += dias[numeroDia - 1]+', ';
+						}
+					})
+					escala.value += '<br>das {$parametro["esca_tx_horaInicio"]} às {$parametro["esca_tx_horaFim"]}.';
+
+					jornadaSemanal.display = 'none';
+					jornadaSemanal.value = '';
+
+					jornadaSabado.display = 'none';
+					jornadaSabado.value = '';
+				}
+				console.log(jornadaSemanal);
+
+				document.getElementsByName('textoEscala')[0].getElementsByTagName('p')[0].innerHTML = escala.value;
+				document.getElementsByName('textoEscala')[0].style.display = escala.display;
+
+				document.getElementById('jornadaSemanal').parentElement.style.display = jornadaSemanal.display;
+				document.getElementById('jornadaSemanal').value = jornadaSemanal.value;
+
+				document.getElementById('jornadaSabado').parentElement.style.display = jornadaSabado.display;
+				document.getElementById('jornadaSabado').value = jornadaSabado.value;
 			</script>"
 		;
 		exit;
@@ -75,7 +204,6 @@
 					type: 'get',
         			dataType: 'json',
 					success: function(data) {
-						console.log(data);
 						if(data.erro == undefined){
 							parent.document.contex_form.endereco.value = data.logradouro
 							parent.document.contex_form.bairro.value = data.bairro;
@@ -487,7 +615,137 @@
 
 	function visualizarCadastro(){
 		global $a_mod;
-		
+
+		echo '<style>
+		@media print{
+			input, select, textarea {
+				background: transparent !important;
+				box-shadow: none !important;
+				color: black !important;
+				font-size: 10pt !important;
+				// margin: 0 !important;
+				width: 100% !important;
+			}
+
+			 label, .form-label {
+				font-weight: bold !important;
+				color: #000 !important;
+				padding-bottom: 10px !important;
+			}
+
+			.form-group,
+			.row,
+			.linha-campos,
+			.form-row,
+			.form-section {
+				display: flex !important;
+				flex-wrap: wrap !important;
+				// gap: 10px !important;
+				width: 100% !important;
+			}
+			
+			#email, #nome{
+				width: 240px !important;
+			}
+			
+			select {
+				appearance: none !important;        /* Padrão moderno */
+				-webkit-appearance: none !important; /* Safari/Chrome */
+				-moz-appearance: none !important;    /* Firefox */
+			}
+
+			input[type="date"]::-webkit-calendar-picker-indicator {
+				display: none !important;
+				-webkit-appearance: none !important;
+			}
+
+			.select2-selection__clear,
+			div.col-sm-4.margin-bottom-5.campo-fit-content,
+			form > div.form-actions,
+			span.select2-selection__arrow,
+			form > div.msg-status-text,
+			#padronizarParametro,
+			.scroll-to-top {
+				display: none !important;
+			}
+			
+			.portlet.light{
+			    padding: 12px 0px 0px !important;
+			}
+			
+			.portlet{
+				margin-bottom: 0px !important;
+			}
+			form > div.cnh-row > div.row,
+			form > div:nth-child(21),
+			form > div:nth-child(25){
+			    margin: 0px 0px 0px 0px !important;
+			}
+
+			div.col-sm-2.margin-bottom-5.campo-fit-content.text-field > p > img{
+				width: 350px !important;
+			}
+			
+			form > div:nth-child(11),
+			form > div:nth-child(19){
+				margin-top: 100px;
+			}
+
+			div.imageForm > div > div.col-sm-2.margin-bottom-5.campo-fit-content.text-field{
+				padding-left: 350px !important;
+			}
+
+			// div:nth-child(20) > label{
+			// 	padding-bottom: 10px;
+			// }
+			
+			.form-group > div,
+			.form-row > div,
+			div > .campo-fit-content {
+				// width: 240px !important;  /* largura fixa para todos os campos */
+				box-sizing: border-box;
+				margin-right: 10px; /* espaçamento lateral */
+			}
+
+			.container,
+			.card,
+			.card-body,
+			.section-wrapper {
+				width: 100% !important;
+				margin: 0 !important;
+				padding: 0 !important;
+			}
+
+			/* Oculta elementos desnecessários na impressão */
+			.no-print,
+			.btn,
+			nav,
+			footer {
+				display: none !important;
+			}
+
+			.container-fluid
+			{
+			    padding-left: 0px !important;
+        		padding-right: 0px !important;
+			}
+			.page-content{
+				min-height: 0px !important;
+			}
+			
+			form > div:nth-child(25) > div:nth-child(1),
+			form > div:nth-child(9) > div.col-sm-2.margin-bottom-5.campo-fit-content.text-field{
+			    margin-right: 17px;
+			}
+			
+			
+
+			@page{
+				size: A4 landscape;
+				// margin: 1cm;
+			}
+		}
+		</style>';
 
 		if(!empty($a_mod["enti_nb_empresa"])){
 			carregarParametroPadrao($a_mod["enti_nb_empresa"]);
@@ -635,7 +893,7 @@
 		]);
 
 		if (!empty($a_mod["enti_nb_empresa"])){
-			$icone_padronizar = "<a id='padronizarParametro' style='text-shadow: none; color: #337ab7;' onclick='javascript:padronizarParametro();' > (Padronizar) </a>";
+			$icone_padronizar = "<a id='padronizarParametro' style='text-shadow: none; color: #337ab7;' onclick='javascript:padronizarParametro();' title='Utilizar parâmetro padrão da empresa.' > (Padronizar) </a>";
 		}
 
 		$conferirPadraoJS = "";
@@ -652,8 +910,9 @@
 
 		$cJornada = [
 			combo_bd(	"!Parâmetros da Jornada*".($icone_padronizar?? ""), "parametro", ($a_mod["enti_nb_parametro"]?? ""), 6, "parametro", "onfocusout='carregarParametro()' onchange='carregarParametro()' tabindex=".sprintf("%02d", $tabIndex++)), "<div class='col-sm-2 margin-bottom-5' style='width:100%; height:25px'></div>",
-			campo_hora(	"Jornada Semanal (Horas/Dia)*", "jornadaSemanal", ($a_mod["enti_tx_jornadaSemanal"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'"),
-			campo_hora(	"Jornada Sábado (Horas/Dia)*", "jornadaSabado", ($a_mod["enti_tx_jornadaSabado"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'"),
+			texto(		"Escala", ($a_mod["textoEscala"]?? ""), 4, "name='textoEscala' style='display:none;'"),
+			campo_hora(	"Jornada Dias Úteis (Hr/dia)*", "jornadaSemanal", ($a_mod["enti_tx_jornadaSemanal"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'"),
+			campo_hora(	"Jornada Sábado*", "jornadaSabado", ($a_mod["enti_tx_jornadaSabado"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'"),
 			campo(		"H.E. Semanal (%)*", "percHESemanal", ($a_mod["enti_tx_percHESemanal"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'"),
 			campo(		"H.E. Extraordinária (%)*", "percHEEx", ($a_mod["enti_tx_percHEEx"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'")
 		];
@@ -703,6 +962,10 @@
 
 		$botoesCadastro[] = criarBotaoVoltar(null, null, "tabindex=54");
 
+		if (!empty($_POST["id"])) {
+			$botoesCadastro[] = '<button class="btn default" type="button" onclick="imprimir()">Imprimir</button>';
+		}
+
 		echo abre_form();
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		fieldset("Dados de Usuário");
@@ -740,69 +1003,7 @@
 			echo linha_form($cAtualiza);
 		}
 
-		$path_parts = pathinfo(__FILE__);
-
-		$params = [
-			$a_mod["parametroPadrao"]["para_nb_id"],
-			$a_mod["parametroPadrao"]["para_tx_jornadaSemanal"],
-			$a_mod["parametroPadrao"]["para_tx_jornadaSabado"],
-			$a_mod["parametroPadrao"]["para_tx_percHESemanal"],
-			$a_mod["parametroPadrao"]["para_tx_percHEEx"]
-		];
-
-		echo 
-			"<iframe id=frame_parametro style='display: none;'></iframe>
-			<script>
-				function buscarCEP(cep) {
-					var num = cep.replace(/[^0-9]/g, '');
-					if (num.length == '8') {
-						document.getElementById('frame_parametro').src = '".$path_parts["basename"]."?acao=carregarEndereco&cep='+num;
-					}
-				}
-
-				function carregarEmpresa(id) {
-					document.getElementById('frame_parametro').src = 'cadastro_motorista.php?acao=carregarEmpresa&emp='+id;
-					var empresaSelecionada = id;
-				}
-
-				function carregarParametro() {
-					id = document.getElementById('parametro').value;
-					document.getElementById('frame_parametro').src = 'cadastro_motorista.php?acao=carregarParametro&parametro='+id;"
-					.((!empty($a_mod["parametroPadrao"]))? "conferirParametroPadrao('".implode("','", $params)."');":"")."
-				}
-				function padronizarParametro() {
-					parent.document.contex_form.parametro.value 			= '".($a_mod["parametroPadrao"]["para_nb_id"]?? "")."';
-					parent.document.contex_form.jornadaSemanal.value 		= '".($a_mod["parametroPadrao"]["para_tx_jornadaSemanal"]?? "")."';
-					parent.document.contex_form.jornadaSabado.value 		= '".($a_mod["parametroPadrao"]["para_tx_jornadaSabado"]?? "")."';
-					parent.document.contex_form.percHESemanal.value 		= '".($a_mod["parametroPadrao"]["para_tx_percHESemanal"]?? "")."';
-					parent.document.contex_form.percHEEx.value 	= '".($a_mod["parametroPadrao"]["para_tx_percHEEx"]?? "")."';
-
-					conferirParametroPadrao('".implode("','", $params)."');
-				}
-
-				function conferirParametroPadrao(idParametro, jornadaSemanal, jornadaSabado, percHESemanal, percHEEx){
-
-					var padronizado = (
-						idParametro == parent.document.contex_form.parametro.value &&
-						jornadaSemanal == parent.document.contex_form.jornadaSemanal.value &&
-						jornadaSabado == parent.document.contex_form.jornadaSabado.value &&
-						percHESemanal == parent.document.contex_form.percHESemanal.value &&
-						percHEEx == parent.document.contex_form.percHEEx.value
-					);
-					console.log([idParametro, jornadaSemanal, jornadaSabado, percHESemanal, percHEEx]);
-					parent.document.getElementsByName('textoParametroPadrao')[0].getElementsByTagName('p')[0].innerText = (padronizado? 'Sim': 'Não');
-				}
-
-				function checkOcupation(ocupation){
-					console.log(ocupation);
-					if(ocupation == 'Ajudante' || ocupation == 'Funcionário'){
-						document.getElementsByClassName('cnh-row')[0].setAttribute('style', 'display:none')
-					}else{
-						document.getElementsByClassName('cnh-row')[0].setAttribute('style', '')
-					}
-				}
-			</script>"
-		;
+		echo "<iframe id=frame_parametro style='display: none;'></iframe>";
 
 		echo fecha_form($botoesCadastro);
 		rodape();
@@ -817,28 +1018,10 @@
 				<input type='hidden' name='idEntidade' value=''>
 				<input type='hidden' name='nome_arquivo' value=''>
 				<input type='hidden' name='acao' value=''>
-			</form>
-
-			<script type='text/javascript'>
-				function remover_foto(id, acao, arquivo) {
-					if (confirm('Deseja realmente excluir o arquivo '+arquivo+'?')) {
-						document.form_excluir_arquivo.idEntidade.value = id;
-						document.form_excluir_arquivo.nome_arquivo.value = arquivo;
-						document.form_excluir_arquivo.acao.value = acao;
-						document.form_excluir_arquivo.submit();
-					}
-				}
-
-				function remover_cnh(id, acao, arquivo) {
-					if (confirm('Deseja realmente excluir o arquivo CNH '+arquivo+'?')) {
-						document.form_excluir_arquivo.idEntidade.value = id;
-						document.form_excluir_arquivo.nome_arquivo.value = arquivo;
-						document.form_excluir_arquivo.acao.value = acao;
-						document.form_excluir_arquivo.submit();
-					}
-				}
-			</script>"
+			</form>"
 		;
+
+		carregarJS();
 	}
 
 	function index(){
@@ -866,12 +1049,27 @@
 		];
 
 		$botoesBusca = [
-			botao("<spam class='glyphicon glyphicon-plus'></spam>", "visualizarCadastro","","","","","btn btn-success")
+			botao("<spam class='glyphicon glyphicon-plus'></spam>", "visualizarCadastro","","","","","btn btn-success"),
+			'<button class="btn default" type="button" onclick="imprimirTabelaCompleta()">Imprimir</button>'
 		];
 
 		echo abre_form();
 		echo linha_form($camposBusca);
 		echo fecha_form([], "<hr><form>".implode(" ", $botoesBusca)."</form>");
+
+		$logoEmpresa = mysqli_fetch_assoc(query(
+            "SELECT empr_tx_logo FROM empresa
+                    WHERE empr_tx_status = 'ativo'
+                        AND empr_tx_Ehmatriz = 'sim'
+                    LIMIT 1;"
+        ))["empr_tx_logo"];
+
+
+		echo "<div id='tituloRelatorio' style='display: none;'>
+                    <img style='width: 190px; height: 40px;' src='./imagens/logo_topo_cliente.png' alt='Logo Empresa Esquerda'>
+					<h1>Cadastro de Funcionários</h1>
+                    <img style='width: 180px; height: 80px;' src='./$logoEmpresa' alt='Logo Empresa Direita'>
+            </div>";
 		
 
 		//Configuração da tabela dinâmica{
@@ -883,6 +1081,7 @@
 				"EMPRESA" 				=> "empr_tx_nome",
 				"FONE 1" 				=> "enti_tx_fone1",
 				"OCUPAÇÃO" 				=> "enti_tx_ocupacao",
+				"Tipo de Operação" 		=> "enti_tx_tipoOperacao",
 				"DATA CADASTRO" 		=> "CONCAT('data(\"', enti_tx_dataCadastro, '\")') AS enti_tx_dataCadastro",
 				"PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
 				"CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",

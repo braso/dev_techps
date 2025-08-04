@@ -43,6 +43,22 @@
 			"feri_tx_status" => "ativo"
 		];
 
+
+		// Conferir se já existe um feriado nessa data{
+			$feriadoCadastrado = mysqli_fetch_assoc(query(
+				"SELECT * FROM feriado 
+					WHERE feri_tx_status = 'ativo'
+						AND feri_tx_data = '{$novoFeriado["feri_tx_data"]}'
+						".((!empty($_POST["id"]))? "AND feri_nb_id != {$_POST["id"]}": "").";"
+			));
+
+			if(!empty($feriadoCadastrado)){
+				set_status("ERRO: Já existe um feriado nesta data.");
+				layout_feriado();
+				exit;
+			}
+		//}
+
 		if(!empty($_POST["id"])){
 			atualizar("feriado", array_keys($novoFeriado), array_values($novoFeriado), $_POST["id"]);
 		}else{
@@ -88,6 +104,17 @@
 	function index(){
 
 		cabecalho("Cadastro de Feriado");
+
+		echo "<style>
+		form > div.row > div:nth-child(9){
+		    display: none;
+		}
+		</style>";
+
+		if(!isset($_POST["busca_status"])){
+			$_POST["busca_status"] = "ativo";
+		}
+
 		$extra = "";
 
 		$extra .= (($_POST["busca_codigo"])? " AND feri_nb_id LIKE '%".$_POST["busca_codigo"]."%'": "")
@@ -100,12 +127,13 @@
 			campo("Código", "busca_codigo", $_POST["busca_codigo"], 2, "MASCARA_NUMERO", "maxlength='6'"),
 			campo("Nome", "busca_nome_like", $_POST["busca_nome_like"], 4, "", "maxlength='65'"),
 			campo("Estado", "busca_uf_like", $_POST["busca_uf_like"], 2),
-			campo("Município", "busca_cidade_like", $_POST["busca_cidade_like"], 2)
+			campo("Município", "busca_cidade_like", $_POST["busca_cidade_like"], 2),
+			combo("Status", 		"busca_status", 	($_POST["busca_status"]?? ""), 	2, ["ativo" => "Ativo"])
 		];
 
 		$botoes = [ 
 			botao("Buscar", "index"),
-			botao("Inserir", "layout_feriado", "", "", "", "", "btn btn-success")
+			botao("Inserir", "layout_feriado", "", "", "", "", "btn btn-success"),
 		];
 		
 		echo abre_form();
@@ -118,14 +146,16 @@
 				"NOME" 		=> "feri_tx_nome",
 				"DATA" 		=> "CONCAT('data(\"', feri_tx_data, '\")') AS feri_tx_data",
 				"ESTADUAL" 	=> "feri_tx_uf",
-				"MUNICIPAL" => "cida_tx_nome"
+				"MUNICIPAL" => "cida_tx_nome",
+				// "STATUS" 	=> "feri_tx_status"
 			];
 
 			$camposBusca = [
 				"busca_codigo" 	=> "feri_nb_id",
 				"busca_nome_like" 	=> "feri_tx_nome",
 				"busca_uf_like" 		=> "feri_tx_uf",
-				"busca_cidade_like" 	=> "cida_tx_nome"
+				"busca_cidade_like" 	=> "cida_tx_nome",
+				"busca_status" 		=> "feri_tx_status",
 			];
 
 			$queryBase = (

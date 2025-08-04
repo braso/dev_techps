@@ -11,8 +11,10 @@
         "FEIJAOTURQUEZA"		=> "feijao_turqueza",
         "FSLOG"	                => "fs_log_transportes",
         "HN"                    => "hn_transportes",
+        "IFRN"                  => "ifrn",
         "JRJ"	                => "jrj_organizacao",
         "LOGSYNC"	            => "logsync_techps",
+        "LEMON"                 => 'lemon',
         "NH"	                => "nh_transportes",
         "OPAFRUTAS"				=> "opafrutas",
         "PKFMEDEIROS"			=> "pkf_medeiros",
@@ -32,8 +34,10 @@
         "feijao_turqueza" 	=> "Feijão Turqueza",
         "fs_log_transportes"=> "FS Log Transportes",
         "hn_transportes" 	=> "HN Transportes",
+        "ifrn"              => "IFRN",
         "jrj_organizacao" 	=> "JRJ Organização",
         "logsync_techps" 	=> "Logsync - TechPS",
+        "lemon"             => "Lemon",
         "nh_transportes" 	=> "NH Transportes",
         "opafrutas" 		=> "Opafrutas",
         "pkf_medeiros" 		=> "PKF Medeiros",
@@ -56,7 +60,7 @@
                 <option value='' hidden>Empresa</option>"
     ;
     foreach($empresas as $key => $value){
-        if(dir(__DIR__."/".$value)){
+        if(!empty(dir(__DIR__."/".$value))){
             $empresasInput .= "<option ".($_POST["empresa"] == $key? "selected": "")." value='{$key}'>{$empresasNomes[$value]}</option>";
         }
     }

@@ -452,9 +452,9 @@
                             if (estiloInline.includes('lightgreen')) {
                                 css = 'background-color: lightgreen;';
                             } else if (estiloInline.includes('var(--var-lightorange)')) {
-                                css = 'background-color: var(--var-lightorange);';
+                                css = 'background-color: #ffc680;';
                             } else if (estiloInline.includes('var(--var-darkred)')) {
-                                css = 'background-color: var(--var-darkred);';
+                                css = 'background-color: #ff4d4d;';
                             }
 
                             estiloBase += css;

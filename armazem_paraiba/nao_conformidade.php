@@ -46,7 +46,7 @@
 	}
 
 	function buscarEspelho(){
-		global $totalResumo, $tabelasPonto;
+		global $tabelasPonto;
 
 		if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){//Se estiver pesquisando
 			//Conferir campos obrigatórios{
@@ -119,6 +119,8 @@
 			// 	continue;
 			// }
 
+
+
 			//Pegando e formatando registros dos dias{
 				$rows = [];
 
@@ -155,7 +157,7 @@
 
 							$diasEndossados = 0;
 							foreach($endossoMes["endo_tx_pontos"] as $row){
-								$day = DateTime::createFromFormat("d/m/Y", $row[1]);
+								$day = DateTime::createFromFormat("d/m/Y", $row["data"]);
 								if($day > $date){
 									$diasEndossados++;
 									$rows[] = $row;
@@ -170,16 +172,17 @@
 					
 					$aDetalhado = diaDetalhePonto($motorista, $date->format("Y-m-d"));
 					$prevEndossoMes = $endossoMes;
-					
-					$row = array_values(array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado));
-					for($f = 0; $f < sizeof($row)-1; $f++){
-						if($f == 13){//Se for da coluna "Jornada Prevista", não apaga
+				
+					$colunasAManterZeros = ["inicioJornada", "inicioRefeicao", "fimRefeicao", "fimJornada", "jornadaPrevista", "diffSaldo"];
+					foreach($aDetalhado as $key => $value){
+						if(in_array($key, $colunasAManterZeros)){//Se for das colunas de início de jornada, refeição ou "Jornada Prevista", mantém os valores zerados.
 							continue;
 						}
-						if($row[$f] == "00:00"){
-							$row[$f] = "";
+						if($aDetalhado[$key] == "00:00"){
+							$aDetalhado[$key] = "";
 						}
 					}
+					$row = array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado);
 					$rows[] = $row;
 				}
 			//}
@@ -190,7 +193,6 @@
 						WHERE endo_tx_status = 'ativo' 
 							AND '{$_POST["busca_data"]}' BETWEEN endo_tx_de AND endo_tx_ate
 							AND endo_nb_entidade = '{$motorista["enti_nb_id"]}'
-							AND endo_tx_matricula = '{$motorista["enti_tx_matricula"]}'
 						LIMIT 1;"
 				), MYSQLI_BOTH);
 				if (is_array($aEndosso) && count($aEndosso) > 0) {
@@ -222,24 +224,8 @@
 				// }
 
 				$tolerancia = intval($motorista["para_tx_tolerancia"]);
-				$saldoColIndex = 20;
 
-				$totalResumo = [
-					"diffRefeicao" => "00:00",
-					"diffEspera" => "00:00",
-					"diffDescanso" => "00:00",
-					"diffRepouso" => "00:00",
-					"diffJornada" => "00:00",
-					"jornadaPrevista" => "00:00",
-					"diffJornadaEfetiva" => "00:00",
-					"maximoDirecaoContinua" => "",
-					"intersticio" => "00:00",
-					"he50" => "00:00",
-					"he100" => "00:00",
-					"adicionalNoturno" => "00:00",
-					"esperaIndenizada" => "00:00",
-					"diffSaldo" => "00:00"
-				];
+				$totalResumo = setTotalResumo(array_slice(array_keys($rows[0]), 7));
 
 				for($f = 0; $f < count($rows); $f++){
 					$qtdErros = 0;
@@ -251,18 +237,10 @@
 							;
 						}, $qtdErros);
 					}
-					if(is_int(strpos($rows[$f][3], "Batida início de jornada não registrada!")) && is_int(strpos($rows[$f][12], "Abono: "))){ //Se tiver um erro de início de jornada E tiver algum abono
+					if(is_int(strpos($rows[$f]["inicioJornada"], "Batida início de jornada não registrada!")) && is_int(strpos($rows[$f]["jornadaPrevista"], "Abono: "))){ //Se tiver um erro de início de jornada E tiver algum abono
 						$qtdErros = 0;
 					}
 					if($qtdErros == 0){
-						// $f2 = 7;
-						// foreach($totalResumo as &$total){
-						// 	if(empty($rows[$f][$f2])){
-						// 		break;
-						// 	}
-						// 	$total = operarHorarios([$total, strip_tags($rows[$f][$f2])], "-");
-						// 	$f2++;
-						// }
 						$rows = remFromArray($rows, $f);
 						if(empty($rows)){
 							break;
@@ -272,33 +250,31 @@
 					}
 					$_POST["counts"]["naoConformidade"] += $qtdErros;
 
-					if(empty($rows[$f][$saldoColIndex])){
-						$rows[$f][$saldoColIndex] = "00:00";
+					if(empty($rows[$f]["diffSaldo"])){
+						$rows[$f]["diffSaldo"] = "00:00";
 					}
 
-					$saldoStr = str_replace("<b>", "", $rows[$f][$saldoColIndex]);
+					$saldoStr = str_replace("<b>", "", $rows[$f]["diffSaldo"]);
 					$saldoStr = explode(":", $saldoStr);
 					$saldo = intval($saldoStr[0])*60 + ($saldoStr[0][0] == "-"? -1: 1)*intval($saldoStr[1]);
 
 					if($saldo >= -($tolerancia) && $saldo <= $tolerancia){
-						$rows[$f][$saldoColIndex] = "00:00";
+						$rows[$f]["diffSaldo"] = "00:00";
 					}
 
-					for($f2 = 7; $f2 < count($rows[$f]); $f2++){
-						$totalResumo[array_keys($totalResumo)[$f2-7]] = operarHorarios([$totalResumo[array_keys($totalResumo)[$f2-7]], strip_tags($rows[$f][$f2])], "+");
-					}
 				}
-
 				if(empty($rows)){
 					continue;
 				}
+				somarTotais($totalResumo, $rows);
+
 
 				$_POST["counts"]["total"]++;
 
 				//------------------------------------------------------------------------------------------------
 				$ultimoEndosso = mysqli_fetch_assoc(query(
 					"SELECT endo_tx_filename FROM endosso
-						WHERE endo_tx_matricula = '{$motorista["enti_tx_matricula"]}'
+						WHERE endo_nb_entidade = '{$motorista["enti_nb_id"]}'
 							AND endo_tx_ate < '{$_POST["busca_data"]}'
 							AND endo_tx_status = 'ativo'
 						ORDER BY endo_tx_ate DESC
@@ -307,75 +283,57 @@
 
 				if(!empty($ultimoEndosso)){
 					$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
-					$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoAnterior"];
-				}elseif(!empty($motorista["enti_tx_banco"])){
-					$saldoAnterior = $motorista["enti_tx_banco"];
-					$saldoAnterior = $saldoAnterior[0] == "0" && strlen($saldoAnterior) > 5? substr($saldoAnterior, 1): $saldoAnterior;
-				}else{
-					$saldoAnterior = "--:--";
-				}
-				$saldoFinal = "--:--";
-
-				if($saldoAnterior != "--:--"){
-					$saldoFinal = somarHorarios([$saldoAnterior, ($totalResumo["diffSaldo"]?? "00:00")]);
 				}
 
-				$cab = [
-					"", "DATA", "DIA", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
-					"REFEIÇÃO", "ESPERA", "DESCANSO", "REPOUSO", "JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "MDC", "INTERSTÍCIO DIÁRIO / SEMANAL", "H.E. ".$motorista["enti_tx_percHESemanal"]."%", "H.E. ".$motorista["enti_tx_percHEEx"]."%",
-					"ADICIONAL NOT.", "ESPERA INDENIZADA", "SALDO DIÁRIO(**)"
+				$cabecalho = [
+					"", "DATA", "<div style='margin:11px'>DIA</div>", "INÍCIO JORNADA", "INÍCIO REFEIÇÃO", "FIM REFEIÇÃO", "FIM JORNADA",
+					"REFEIÇÃO"/*, ESPERA*/, "DESCANSO"/*, "REPOUSO"*/, "JORNADA", 
+					"JORNADA PREVISTA", "JORNADA EFETIVA"/*, "MDC"*/, "INTERSTÍCIO", "H.E. {$motorista["enti_tx_percHESemanal"]}%", "H.E. {$motorista["enti_tx_percHEEx"]}%",
+					"ADICIONAL NOT."/*, "ESPERA INDENIZADA"*/, "SALDO DIÁRIO(**)"
 				];
-		
 
-				$saldosMotorista = 
-					"Saldos:
-					<div class='table-responsive'>
-						<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
-							<thead><tr>
-								<th>Anterior:</th>
-								<th>Período:</th>
-								<th>Final:</th>
-							</thead></tr>
-							<tbody>
-								<tr>
-								<td>".$saldoAnterior."</td>
-								<td>".$totalResumo["diffSaldo"]."</td>
-								<td>".$saldoFinal."</td>
-								</tr>
-							</tbody>
-							</table>
-					</div>"
-				;
+				if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
+					$cabecalho = array_merge(
+						array_slice($cabecalho, 0, 8), 
+						["ESPERA"], 
+						array_slice($cabecalho, 8, 1), 
+						["REPOUSO"], 
+						array_slice($cabecalho, 9, 3), 
+						["MDC"], 
+						array_slice($cabecalho, 12, 4), 
+						["ESPERA INDENIZADA"], 
+						array_slice($cabecalho, 16, count($cabecalho))
+					);
+				}
+
+				$saldosMotorista = "";
 				//------------------------------------------------------------------------------------------------
 
-				
+				if (empty($_POST["busca_motorista"])){
+					$buttonImprimir = 
+						"<button type='button' class='btn btn-default' onclick='imprimirIndividual(this)'>Imprimir Relatório</button>"
+					; 
+				}
+
+				$cabecalhoForm = 
+					"<div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;'>
+						<div>
+							[{$motorista["enti_tx_matricula"]}] {$motorista["enti_tx_nome"]} | {$motorista["empr_tx_nome"]} {$infoEndosso} {$convencaoPadrao}
+						</div>
+						<div>
+							 $buttonImprimir
+						</div>
+					</div>"
+				;
+
 				$rows[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumo));
 				$tabelasPonto[] = createForm(
-					"[".$motorista["enti_tx_matricula"]."] {$motorista["enti_tx_nome"]} | {$motorista["empr_tx_nome"]} {$infoEndosso} {$convencaoPadrao} <br><br>{$saldosMotorista}",
+					"{$cabecalhoForm} <br><br>{$saldosMotorista}",
 					12, 
-					montarTabelaPonto($cab, $rows), 
+					montarTabelaPonto($cabecalho, $rows), 
 					[]
 				);
-				$aSaldo[$motorista["enti_tx_matricula"]] = $totalResumo["diffSaldo"];
 			}
-
-			$totalResumo = [
-				"diffRefeicao" => "00:00",
-				"diffEspera" => "00:00",
-				"diffDescanso" => "00:00",
-				"diffRepouso" => "00:00",
-				"diffJornada" => "00:00",
-				"jornadaPrevista" => "00:00",
-				"diffJornadaEfetiva" => "00:00",
-				"maximoDirecaoContinua" => "",
-				"intersticio" => "00:00",
-				"he50" => "00:00",
-				"he100" => "00:00",
-				"adicionalNoturno" => "00:00",
-				"esperaIndenizada" => "00:00",
-				"diffSaldo" => "00:00"
-			];
-			unset($rows);
 		}
 
 		index();
@@ -427,14 +385,7 @@
 				array_unshift($c, combo_net("Empresa*:", "busca_empresa",   (!empty($_POST["busca_empresa"])?   $_POST["busca_empresa"]  : ""), 3, "empresa", "onchange=selecionaMotorista(this.value)", $extraEmpresa));
 			}
 		//}
-		$botao_imprimir =
-			"<button name='imprimir' class='btn default' type='button' onclick='imprimir()'>Imprimir</button>
-			<script>
-    			function imprimir() {
-    			// Abrir a caixa de diálogo de impressãof
-    			window.print();
-    			}
-			</script>";
+		$botao_imprimir ="<button class='btn default' type='button' onclick='window.print()'>Imprimir</button>";
 
 		//BOTOES{
 			$b = [
@@ -448,11 +399,19 @@
 		echo linha_form($c);
 		echo fecha_form($b, "<span id=dadosResumo><b>{$carregando}</b></span>");
 		
+		$logoEmpresa = mysqli_fetch_assoc(query(
+            "SELECT empr_tx_logo FROM empresa
+                    WHERE empr_tx_status = 'ativo'
+                        AND empr_tx_Ehmatriz = 'sim'
+                    LIMIT 1;"
+        ))["empr_tx_logo"];
+		
 		echo 
 			"<div id='tituloRelatorio'>
-				<h1>Não Conformidade</h1>
-				<img id='logo' style='width: 150px' src='{$CONTEX["path"]}/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
-			</div>
+                    <img style='width: 190px; height: 40px;' src='./imagens/logo_topo_cliente.png' alt='Logo Empresa Esquerda'>
+					<h1>Não Conformidades</h1>
+                    <img style='width: 180px; height: 80px;' src='./$logoEmpresa' alt='Logo Empresa Direita'>
+            </div>
 			<style>
 				#tituloRelatorio{
 					display: none;
@@ -467,6 +426,180 @@
 		echo "<div class='printable'></div><style>";
 		include "css/nao_conformidade.css";
 		echo "</style>";
+
+		echo "
+		<script>
+			function imprimirIndividual(botao) {
+				const bloco = botao.closest('.col-md-12');
+				if (!bloco) {
+					alert('Bloco não encontrado.');
+					return;
+				}
+
+				const conteudo = bloco.cloneNode(true);
+
+				// Remove botões de impressão internos
+				conteudo.querySelectorAll('button[onclick*=\"imprimirIndividual\"]').forEach(btn => btn.remove());
+
+				const cssImpressao = `
+					@media print {
+						body {
+							margin: 1cm;
+							transform: scale(1.0);
+							transform-origin: top left;
+						}
+
+						@page {
+							size: A4 landscape;
+							margin: 1cm;
+						}
+
+						div.portlet-title > div > span > div.table-responsive {
+							max-width: 50% !important;
+						}
+
+						#saldo {
+							margin-top: 9px !important;
+							text-align: center;
+							width: 50% !important;
+						}
+
+						.portlet.light {
+							padding: 12px 20px 15px !important;
+						}
+
+						.portlet {
+							border-radius: 20px !important;
+							margin-top: 0 !important;
+							margin-bottom: 25px !important;
+						}
+
+						#tituloRelatorio {
+							display: flex;
+							align-items: center;
+							justify-content: space-between;
+							gap: 1em;
+						}
+
+						#tituloRelatorio h1 {
+							margin: 0;
+							font-size: 1.5em;
+							flex-grow: 1;
+							text-align: center;
+						}
+
+						#tituloRelatorio img {
+							display: block;
+						}
+
+						body > div.scroll-to-top {
+							display: none !important;
+						}
+
+						div:nth-child(12) > .portlet.light {
+							display: none !important;
+						}
+
+						#logo {
+							display: flex;
+							position: absolute;
+							top: 5px;
+							right: 50px;
+						}
+
+						.portlet-body.form .table-responsive,
+						.table-responsive {
+							overflow: visible !important;
+							max-width: none !important;
+							max-height: none !important;
+							width: auto !important;
+						}
+
+						table {
+							width: 100% !important;
+							table-layout: auto !important;
+						}
+
+						.portlet.light > .portlet-title {
+							border-bottom: none;
+							margin-bottom: 0px;
+						}
+
+						.caption {
+							padding-top: 0px;
+							margin-left: -50px !important;
+							padding-bottom: 0px;
+						}
+
+						.portlet-body form{
+							margin-left: -50px !important;
+						}
+					}
+				`;
+
+				const tituloRelatorio = `
+					<div id='tituloRelatorio'>				
+						<h1>Não Conformidades</h1>
+            		</div>`;
+
+				const janela = window.open('', '_blank');
+
+				janela.document.write(`
+					<html>
+					<head>
+						<title>Impressão</title>
+						<meta charset='utf-8'>
+						<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'>
+						<style>
+							body { font-family: Arial, sans-serif; margin: 20px; }
+							table { width: 100%; border-collapse: collapse; }
+							th, td { border: 1px solid #ccc; padding: 5px; font-size: 12px; }
+							\${cssImpressao}
+						</style>
+					</head>
+					<body>
+						\${tituloRelatorio}
+						\${conteudo.outerHTML}
+					</body>
+					</html>
+				`);
+
+				janela.document.close();
+
+				janela.onload = function () {
+					const imgs = janela.document.images;
+					if (imgs.length === 0) {
+						janela.print();
+						janela.close();
+						return;
+					}
+
+					let carregadas = 0;
+					for (let img of imgs) {
+						if (img.complete) {
+							carregadas++;
+						} else {
+							img.onload = img.onerror = () => {
+								carregadas++;
+								if (carregadas === imgs.length) {
+									janela.print();
+									janela.close();
+								}
+							};
+						}
+					}
+
+					// Caso todas já estejam carregadas
+					if (carregadas === imgs.length) {
+						janela.print();
+						janela.close();
+					}
+				};
+			}
+		</script>
+
+		";
+
 
 		rodape();
 

@@ -12,6 +12,7 @@
 	$path = "arquivos/pontos";
 
     include_once "carregar_ftp.php";
+	unset($interno);
 	include_once "funcoes_ponto.php";
 
 	function showErrMsg(string $caminhoCompleto, string $errorMsg): string{
@@ -70,7 +71,7 @@
 				$f = 2;
 				$nomeArquivo  .= "_".$f;
 				$arquivo["name"] = $nomeArquivo.$ext;
-				for(; file_exists($path.$nomeArquivo.$ext); $f++){
+				for(; file_exists($path."/".$nomeArquivo.$ext); $f++){
 					$nomeArquivo = substr($nomeArquivo , 0, strlen($nomeArquivo )-2)."_".$f;
 				}
 				$arquivo["name"] = $nomeArquivo;
@@ -141,7 +142,7 @@
 		$ext = substr($fileInfo["full_path"], strrpos($fileInfo["full_path"], "."));
 
 		$newArquivoPonto = [
-			"arqu_tx_nome" 		=> $fileInfo["name"],
+			"arqu_tx_nome" 		=> $fileInfo["name"].$ext,
 			"arqu_tx_data" 		=> date("Y-m-d H:i:s"),
 			"arqu_nb_user" 		=> $_SESSION["user_nb_id"],
 			"arqu_tx_status" 	=> "ativo"
@@ -164,9 +165,10 @@
 				}
 				$matriculaExiste = mysqli_fetch_assoc(query(
 					"SELECT enti_tx_matricula FROM entidade 
-						WHERE enti_tx_matricula = '".$matricula."'
-						LIMIT 1"
+						WHERE enti_tx_matricula = '{$matricula}'
+						LIMIT 1;"
 				));
+
 				if(empty($matriculaExiste) || count($matriculaExiste) == 0){
 					if(empty($errorMsg["registerNotFound"])){
 						$errorMsg["registerNotFound"][] = "Matrículas não encontradas:";
@@ -189,7 +191,7 @@
 			$userId = mysqli_fetch_assoc(query(
 				"SELECT user_nb_id FROM user 
 					JOIN entidade ON user_nb_entidade = enti_nb_id
-					WHERE user_tx_status = 'ativo' AND user_tx_matricula = '{$matricula}'
+					WHERE user_tx_status = 'ativo' AND enti_tx_matricula = '{$matricula}'
 					LIMIT 1;"
 			));
 

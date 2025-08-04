@@ -1,9 +1,9 @@
 <?php
 	/* Modo debug
 		ini_set("display_errors", 1);
-		error_reporting(E_ALL);c
+		error_reporting(E_ALL);
 	//*/
-	function mysql_escape_mimic($inp) {
+	function mysql_escape_mimic($inp){
 		if(is_array($inp))
 			return array_map(__METHOD__, $inp);
 
@@ -32,38 +32,32 @@
 
 	function montarTabelaPonto(array $cabecalho, array $valores): string{
 		// $rand = md5($sql);
+
+		$bodyContent = "";
+		foreach($valores as $row){
+			$bodyContent .= "<tr>";
+			foreach($row as $key => $value){
+				$bodyContent .= "<td class='{$key}'>".(is_array($value)? implode("<br>", $value): $value)."</td>";
+			}
+			$bodyContent .= "</tr>";
+		}
 		$grid = 
 			"
 			<style>
-				// .table-responsive>.table>tbody>tr>td:nth-child(1){
-				// 	background-color: white;
-				// 	left: 0px;
-				// 	position: sticky;
-				// }
-				// 
-				// .table-responsive>.table>tbody>tr>td:nth-child(2){
-				// 	background-color: white;
-				// 	left: 40px;
-				// 	position: sticky;
-				// }
-
 				.table-head{
 					background-color: white;
 					position: sticky;
 					top: -1px;
 				}
-				// .table-responsive>.table{
-				// 	border-collapse: separate;
-				// }
 			</style>
 			<div class='table-responsive' style='max-height: 85vh;'>
 				<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact'"/*.id=$rand*/.">
 					<thead class='table-head'>"
 						.(!empty($cabecalho)?"<tr><th class='th-align'>".implode("</th><th class='th-align'>", $cabecalho)."</th></tr>": "").
 					"</thead>
-					<tbody>"
-						.implode("", array_map(function($valor){return "<tr><td>".implode("</td><td>", $valor)."</td></tr>";}, $valores)).
-					"</tbody>
+					<tbody>
+						{$bodyContent}
+					</tbody>
 				</table>
 				(*): Registros excluídos manualmente.<br>
 				(**): 00:00 Caso esteja dentro da tolerância
@@ -139,7 +133,7 @@
 						display: none;
 					}
 					@page{
-						size: landscape;
+						size: A4 landscape;
 					}
 				}
 			</style>

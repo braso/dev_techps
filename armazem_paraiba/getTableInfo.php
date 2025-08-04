@@ -39,11 +39,13 @@
         foreach ($queryResult as $row) {
             $tabelaRow = [];
             foreach ($row as $key => $data){
-                preg_match('/^((.+[^\n ])*)\((.*)\)$/', $data, $match);
-                if(isset($match[1])){
-                    try{
+                try{
+                    preg_match('/^((.[^ ])*)\((.*)\)$/', $data, $match);
+                    if(isset($match[1])){
                         $data = eval("return {$match[0]};");
-                    }catch(Exception $e){}
+                    }
+                }catch(Exception $e){
+                    $data = "return '".__LINE__." error'";
                 }
                 $tabelaRow[$key] = $data;
             }

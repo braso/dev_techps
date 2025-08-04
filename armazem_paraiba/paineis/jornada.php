@@ -356,6 +356,12 @@
         }
 
         if ($encontrado) {
+            $logoEmpresa = mysqli_fetch_assoc(query(
+            "SELECT empr_tx_logo FROM empresa
+                WHERE empr_tx_status = 'ativo'
+                    AND empr_tx_Ehmatriz = 'sim'
+                LIMIT 1;"
+            ))["empr_tx_logo"];
             // $rowTotais = "<tr class='totais'>";
             $rowTitulos = "<tr id='titulos' class='titulos'>";
             $rowTitulos .=
@@ -373,6 +379,26 @@
             $titulo = "Relatório de Jornada Aberta";
             $mostra = false;
             include_once "painel_html2.php";
+            echo "
+            <style>
+            @media print{
+                .container, .container-fluid {
+                    margin-right: unset;
+                }
+                body {
+                    margin: 0 !important;
+                    overflow: visible !important;
+                    position: static !important;
+                }
+
+                .row {
+                    display: contents !important;
+                }
+                table, h2, h3, p, div {
+                    page-break-inside: avoid;
+                }
+            }   
+            </style>";
         }
 
         carregarJS($arquivos);

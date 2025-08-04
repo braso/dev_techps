@@ -1,4 +1,8 @@
 <?php
+    if(empty($CONTEX)){
+        //Funciona enquanto relatorio_espelho.php estiver na mesma pasta de conecta.php
+        include_once "./conecta.php";
+    }
 	include_once $_SERVER['DOCUMENT_ROOT'].($CONTEX['path'])."/conecta.php";
 	include $_SERVER['DOCUMENT_ROOT'].($CONTEX['path'])."/csv_relatorio_espelho.php";
 ?>
@@ -117,9 +121,12 @@
             <tbody>
                 <?php
                     foreach ($aDia as $aDiaVez) {
+                        if(strpos($aDiaVez["jornadaPrevista"], "00:00") !== false){
+                            $aDiaVez["jornadaPrevista"] = "";
+                        }
                         echo '<tr>';
-                        for ($j = 0; $j < count($aDiaVez); $j++){
-                            echo '<td>'.$aDiaVez[$j].'</td>';
+                        foreach($aDiaVez as $cel){
+                            echo '<td>'.$cel.'</td>';
                         }
                         echo '</tr>';
                     }
@@ -128,7 +135,11 @@
             </tbody>
         </table>
 
-        <div><b>TOTAL: <?=$qtdDiasEndossados?> dias</b></div>
+        <div style="display: flex; justify-content: space-between;">
+            <div><b>TOTAL: <?=$qtdDiasEndossados?> dias</b></div>
+            <div><b>Criação Doc.:</b> <?=date("d/m/Y H:i:s", strtotime($endossoCompleto['endo_tx_dataCadastro']))?> (UTC-3)</div>
+        </div>
+
 
 
         <table class="table-bottom-new">
@@ -322,6 +333,42 @@
 
                 <tr>
                     <td class="bordered">
+                        Descontos inseridos manualmente:
+                    </td>
+                    <td class="bordered">
+                        <center><?=$totalResumo["desconto_manual"]?></center>
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="bordered">
+                        Descontos por falta não justificada:
+                    </td>
+                    <td class="bordered">
+                        <center><?=$totalResumo["desconto_faltas_nao_justificadas"]?></center>
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td class="bordered">
                         Saldo Final (após pagamentos):
                     </td>
                     <td class="bordered">
@@ -336,7 +383,7 @@
                     <td></td>
                     <td></td>
                     <td></td>
-                    <td colspan="3" id="impressao"><b>Emissão Doc.:</b> <?=date("d/m/Y H:i:s", strtotime($endossoCompleto['endo_tx_dataCadastro']))." (UTC-3)"?></td>
+                    <td colspan="3" id="impressao"><b>Emissão Doc.:</b> <?=date("d/m/Y H:i:s")." (UTC-3)"?></td>
                 </tr>
 
             </tbody>
