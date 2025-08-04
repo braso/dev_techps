@@ -83,7 +83,8 @@ body {
   text-align: center !important;
   cursor: pointer !important;
   background-color: #b5b8bb !important;
-  color: #fff !important; /* Exemplo de mudança na cor do texto */
+  color: #fff !important;
+  /* Exemplo de mudança na cor do texto */
 }
 
 .tituloBaixaGravidade:hover {
@@ -148,6 +149,7 @@ h4 {
 .endo {
   background-color: var(--var-blue);
 }
+
 .endo-parc {
   background-color: var(--var-darkyellow);
 }
@@ -237,7 +239,7 @@ h4 {
 }
 
 .titulos3 {
-  background-color:  #444d58;
+  background-color: #444d58;
   color: white;
 }
 
@@ -252,7 +254,7 @@ h4 {
 }
 
 .titulos4 {
-  background-color:  #444d58;
+  background-color: #444d58;
   color: white;
 }
 
@@ -312,11 +314,13 @@ th.sort-desc::after {
   color: var(--var-green);
   text-align: center;
 }
+
 .jornadaYellow {
   background-color: #9393930d;
   color: var(--var-yellow);
   text-align: center;
 }
+
 .jornadaRed {
   color: var(--var-red);
   text-align: center;
@@ -345,8 +349,9 @@ th.sort-desc::after {
     height: 30px;
     width: 100%;
   }
+
   body {
-    margin: 1cm; 
+    margin: 1cm;
     transform: rotate(-90deg);
     overflow: hidden;
     position: absolute;
@@ -371,12 +376,12 @@ th.sort-desc::after {
     margin-bottom: -50px !important;
   }
 
-  div:nth-child(6) > div.portlet.light,
+  div:nth-child(6)>div.portlet.light,
   .scroll-to-top {
     display: none !important;
   }
 
-  #pdf2htmldiv > div {
+  #pdf2htmldiv>div {
     padding: 88px 20px 15px !important;
   }
 
@@ -425,6 +430,7 @@ th.sort-desc::after {
   .endo {
     box-shadow: 0 0 0 1000px var(--var-blue) inset !important;
   }
+
   .endo-parc {
     box-shadow: 0 0 0 1000px var(--var-darkyellow) inset !important;
     text-shadow: 0 0 0 1000px white inset !important;
@@ -478,13 +484,16 @@ th.sort-desc::after {
 
   .impressao-verde {
     box-shadow: 0 0 0 1000px lightgreen inset !important;
-  } 
+  }
+
   .impressao-amarelo {
     box-shadow: 0 0 0 1000px var(--var-yellow2)inset !important;
-  } 
+  }
+
   .impressao-laranja {
     box-shadow: 0 0 0 1000px var(--var-lightorange) inset !important;
-  } 
+  }
+
   .impressao-vermelho {
     box-shadow: 0 0 0 1000px var(--var-lightred) inset !important;
   }
@@ -507,15 +516,16 @@ th.sort-desc::after {
     background-color: #9393930d !important;
     color: var(--var-yellow) !important;
   }
+
   .jornadaRed {
     color: var(--var-red) !important;
   }
 
-  #pdf2htmldiv > div > div.table-responsive > span:nth-child(3) {
+  #pdf2htmldiv>div>div.table-responsive>span:nth-child(3) {
     color: yellow !important;
   }
 
-  #pdf2htmldiv > div > div.table-responsive > span:nth-child(6) {
+  #pdf2htmldiv>div>div.table-responsive>span:nth-child(6) {
     color: red !important;
   }
 
@@ -538,23 +548,29 @@ th.sort-desc::after {
     padding-left: 570px !important;
   }
 
-  #resumo > div:nth-child(1).col-md-4 {
+  #resumo>div:nth-child(1).col-md-4 {
     margin-left: 100px !important;
     margin-right: 80px !important;
   }
 
-  #resumo > div:nth-child(3).col-md-4 {
+  #resumo>div:nth-child(3).col-md-4 {
     margin-left: 80px !important;
   }
 
   .panel-collapse {
-    display: block !important; /* Força todos os elementos colapsados a ficarem visíveis */
-    height: auto !important; /* Ajusta a altura para auto, para garantir que o conteúdo apareça completo */
+    display: block !important;
+    /* Força todos os elementos colapsados a ficarem visíveis */
+    height: auto !important;
+    /* Ajusta a altura para auto, para garantir que o conteúdo apareça completo */
   }
+
   .panel-title a {
-    pointer-events: none; /* Desativa os links durante a impressão para evitar interação */
-    text-decoration: none; /* Remove o sublinhado do link */
-    color: black !important; /* Garante que o título seja legível */
+    pointer-events: none;
+    /* Desativa os links durante a impressão para evitar interação */
+    text-decoration: none;
+    /* Remove o sublinhado do link */
+    color: black !important;
+    /* Garante que o título seja legível */
   }
 
   #graficoDetalhado {
@@ -564,6 +580,7 @@ th.sort-desc::after {
   .panel-group {
     margin-bottom: 0px !important;
   }
+
   .h4 {
     padding: 3px;
   }
@@ -576,10 +593,11 @@ th.sort-desc::after {
     margin-bottom: 15px !important;
   }
 
-  #pdf2htmldiv > div {
+  #pdf2htmldiv>div {
     display: grid;
   }
-  #pdf2htmldiv > div > div.portlet-body.form {
+
+  #pdf2htmldiv>div>div.portlet-body.form {
     break-after: page;
   }
 
@@ -629,15 +647,16 @@ th.sort-desc::after {
   #graficoSintetico {
     height: 300px !important;
   }
+
   .container {
     width: 1000px;
   }
 
-  div:nth-child(11) > div.portlet.light {
+  div:nth-child(11)>div.portlet.light {
     display: none !important;
   }
 
-  div:nth-child(6) > div.portlet.light {
+  div:nth-child(6)>div.portlet.light {
     display: none !important;
   }
 
@@ -659,9 +678,12 @@ th.sort-desc::after {
 .panel {
   border-radius: 12px;
   border: none;
-  margin-bottom: 20px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
   transition: box-shadow 0.3s ease-in-out;
+
+  border-radius: 10px;
+  overflow: hidden;
+  min-height: 130px;
 }
 
 /* Cabeçalho do painel */
@@ -735,10 +757,12 @@ th.sort-desc::after {
   font-size: 11px;
   font-weight: 600;
 }
+
 .table td,
 .table th {
   font-size: 10px;
 }
+
 #tabela-motivo {
   width: 300px !important;
 }
@@ -751,9 +775,11 @@ th.sort-desc::after {
   font-size: 16px;
   color: #007bff;
 }
+
 .popup-title-icon:hover {
   text-decoration: underline;
 }
+
 .popup {
   display: none;
   position: absolute;
@@ -763,9 +789,12 @@ th.sort-desc::after {
   padding: 15px;
   width: 300px;
   z-index: 1000;
-  top: 40px; /* Ajuste vertical */
-  right: 0; /* Alinha à direita do gráfico */
+  top: 40px;
+  /* Ajuste vertical */
+  right: 0;
+  /* Alinha à direita do gráfico */
 }
+
 .popup-close {
   background: red;
   color: white;

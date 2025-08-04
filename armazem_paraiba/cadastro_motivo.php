@@ -162,10 +162,11 @@
 			$queryBase = ("SELECT ".implode(", ", array_values($gridFields))." FROM motivo");
 
 			$actions = criarIconesGrid(
-				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-				["cadastro_motivo.php", "cadastro_motivo.php"],
-				["modificarMotivo()", "excluirMotivo()"]
+				["glyphicon glyphicon-search search-button"],
+				["cadastro_motivo.php"],
+				["modificarMotivo()"]
 			);
+
 			$gridFields["actions"] = $actions["tags"];
 
 			$jsFunctions =

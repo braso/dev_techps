@@ -186,8 +186,6 @@
 	}
 
 	function pegarSaldoPeriodoNegativo(){
-		global $totalResumo;
-
 		$err = conferirErros();
 		if(!empty($err)){
 			set_status($err);
@@ -244,7 +242,6 @@
 	}
 
 	function pegarSaldoTotal(){
-		global $totalResumo;
 
 		$err = conferirErros();
 		if(!empty($err)){
@@ -306,13 +303,16 @@
 		}
 		$dataAte = new DateTime($_POST["data_ate"]);
 		
+		$rows = [];
 		for(
 			$date = $dataDe;
 			date_diff($date, $dataAte)->days >= 0 && !(date_diff($date, $dataAte)->invert);
 			$date = date_add($date, DateInterval::createFromDateString("1 day"))
 		){
-			diaDetalhePonto($motorista, $date->format("Y-m-d"));
+			$rows[] = diaDetalhePonto($motorista, $date->format("Y-m-d"));
 		}
+		$totalResumo = setTotalResumo(array_slice(array_keys($rows[0]), 7));
+		somarTotais($totalResumo, $rows);
 
 		
 		$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
@@ -334,7 +334,7 @@
 
 	function cadastrar(){
 
-		global $totalResumo, $CONTEX;
+		global $CONTEX;
 		
 		$err = conferirErros();
 		if(!empty($err)){
@@ -417,9 +417,7 @@
 				continue;
 			}
 
-			if($motorista["para_tx_descFaltas"] == "sim"){
-				$descFaltasNaoJustificadas = "00:00";
-			}
+			$descFaltasNaoJustificadas = "00:00";
 			//Pegar dados dos dias{
 				$rows = [];
 				$dateDiff = date_diff(DateTime::createFromFormat("Y-m-d", $_POST["data_ate"]), DateTime::createFromFormat("Y-m-d", $_POST["data_de"]));
@@ -435,7 +433,7 @@
 					}
 					if(is_int(strpos($row[0], "Ajuste de Ponto"))){
 						$row[0] = str_replace("Ajuste de Ponto", "Ajuste de Ponto(endossado)", $row[0]);
-						$row[0] = str_replace("class='fa fa-circle'>", "class='fa fa-circle'>(E)", $row[0]);
+						$row[0] = str_replace("class='glyphicon glyphicon-pencil'>", "class='glyphicon glyphicon-pencil'>(E)", $row[0]);
 					}
 					foreach($row as $key => &$value){
 						if($key == "diffSaldo"){
@@ -447,7 +445,8 @@
 					}
 					$rows[] = $row;
 				}
-			
+				$totalResumo = setTotalResumo(array_slice(array_keys($rows[0]), 7));
+				somarTotais($totalResumo, $rows);
 			//}
 			
 
@@ -461,7 +460,7 @@
 			));
 
 			if(empty($ultimoEndosso)){
-				if(isset($motorista["enti_tx_banco"])){
+				if(!empty($motorista["enti_tx_banco"])){
 					$ultimoEndosso["endo_tx_saldo"] = $motorista["enti_tx_banco"];
 				}else{
 					$ultimoEndosso["endo_tx_saldo"] = "00:00";
@@ -496,9 +495,25 @@
 
 			$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
 			$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], (!empty($_POST["extraPago"])? $_POST["extraPago"]: "00:00"), ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
-			$totalResumo["desconto_manual"] = ($_POST["descontar_horas"] == "sim")? $_POST["horas_a_descontar"]: "00:00";
+			
+			if($totalResumo["diffSaldo"][0] == "-"){
+				$saldoPossivelDescontar = operarHorarios([$totalResumo["diffSaldo"], $descFaltasNaoJustificadas], "+");
+				$saldoPossivelDescontar = operarHorarios([$saldoPossivelDescontar, "-00:01"], "*");
+			}else{
+				$saldoPossivelDescontar = "00:00";
+			}
+			
+			if($saldoPossivelDescontar != "00:00" && $_POST["descontar_horas"] == "sim"){
+				$totalResumo["desconto_manual"] = (operarHorarios([$_POST["horas_a_descontar"], $saldoPossivelDescontar], "-")[0] == "-")?
+					$_POST["horas_a_descontar"]:
+					$saldoPossivelDescontar
+				;
+			}else{
+				$totalResumo["desconto_manual"] = "00:00";
+			}
+
 			$totalResumo["desconto_faltas_nao_justificadas"] = $descFaltasNaoJustificadas;
-			$saldoFinal = operarHorarios([$saldoBruto, $aPagar[0], $aPagar[1], "-".$totalResumo["desconto_manual"], "-".$totalResumo["desconto_faltas_nao_justificadas"]], "+");
+			$saldoFinal = operarHorarios([$saldoBruto, "-".$aPagar[0], "-".$aPagar[1], $totalResumo["desconto_manual"], $totalResumo["desconto_faltas_nao_justificadas"]], "+");
 
 			$totalResumo["saldoAnterior"] 	= $saldoAnterior;
 			$totalResumo["saldoBruto"] 		= $saldoBruto;
@@ -526,9 +541,6 @@
 			$novoEndosso["endo_tx_pontos"] = str_replace("<\/", "</", $novoEndosso["endo_tx_pontos"]);
 
 			$novosEndossos[] = $novoEndosso;
-			foreach($totalResumo as $key => $value){
-				$totalResumo[$key] = "00:00";
-			}
 		}
 
 		$baseErrMsg = "<br><br>ERRO(S):<br>";
@@ -542,7 +554,6 @@
 				$errorMsg .= $novoEndosso["errorMsg"]."<br>";
 				continue;
 			}
-			
 			$successMsg .= "- [".$novoEndosso["endo_tx_matricula"]."] ".$novoEndosso["endo_tx_nome"].": ".$novoEndosso["totalResumo"]["he50APagar"]."<br>";
 			//* Salvando arquivo e cadastrando no banco de dados
 

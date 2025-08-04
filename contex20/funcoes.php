@@ -411,13 +411,17 @@
 			return "";
 	}
 
-	function userCadastro($idUser){
-		$userCadastro = mysqli_fetch_all(query(
-			"SELECT user_tx_nome FROM `user`"
-			." WHERE user_nb_id = ".$idUser.";"
-		), MYSQLI_ASSOC);
-		
-		return $userCadastro[0]["user_tx_nome"];
+	function userCadastro($idUser = null){
+		if(!empty($idUser)){
+			$userCadastro = mysqli_fetch_all(query(
+				"SELECT user_tx_nome FROM `user`"
+				." WHERE user_nb_id = ".$idUser.";"
+			), MYSQLI_ASSOC);
+			
+			return $userCadastro[0]["user_tx_nome"];
+		}
+
+		return null;
 	}
 
 	function map($idPonto){

@@ -46,7 +46,7 @@
 	}
 
 	function buscarEspelho(){
-		global $totalResumo, $tabelasPonto;
+		global $tabelasPonto;
 
 		if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){//Se estiver pesquisando
 			//Conferir campos obrigatórios{
@@ -118,6 +118,8 @@
 			// if(empty($motorista["enti_tx_nome"]) || empty($motorista["enti_tx_matricula"])){
 			// 	continue;
 			// }
+
+
 
 			//Pegando e formatando registros dos dias{
 				$rows = [];
@@ -223,27 +225,7 @@
 
 				$tolerancia = intval($motorista["para_tx_tolerancia"]);
 
-				$totalResumo = [
-					"diffRefeicao" => "00:00",
-					"diffDescanso" => "00:00",
-					"diffJornada" => "00:00",
-					"jornadaPrevista" => "00:00",
-					"diffJornadaEfetiva" => "00:00",
-					"intersticio" => "00:00",
-					"he50" => "00:00",
-					"he100" => "00:00",
-					"adicionalNoturno" => "00:00",
-					"diffSaldo" => "00:00"
-				];
-
-				if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
-					$totalResumo = array_merge($totalResumo, [
-						"diffEspera" => "00:00",
-						"diffRepouso" => "00:00",
-						"maximoDirecaoContinua" => "",
-						"esperaIndenizada" => "00:00"
-					]);
-				}
+				$totalResumo = setTotalResumo(array_slice(array_keys($rows[0]), 7));
 
 				for($f = 0; $f < count($rows); $f++){
 					$qtdErros = 0;
@@ -259,14 +241,6 @@
 						$qtdErros = 0;
 					}
 					if($qtdErros == 0){
-						// $f2 = 7;
-						// foreach($totalResumo as &$total){
-						// 	if(empty($rows[$f][$f2])){
-						// 		break;
-						// 	}
-						// 	$total = operarHorarios([$total, strip_tags($rows[$f][$f2])], "-");
-						// 	$f2++;
-						// }
 						$rows = remFromArray($rows, $f);
 						if(empty($rows)){
 							break;
@@ -288,14 +262,12 @@
 						$rows[$f]["diffSaldo"] = "00:00";
 					}
 
-					foreach($totalResumo as $key => $value){
-						$totalResumo[$key] = operarHorarios([$totalResumo[$key], (!empty($row[$key])? $row[$key]: "00:00")], "+");
-					}
 				}
-
 				if(empty($rows)){
 					continue;
 				}
+				somarTotais($totalResumo, $rows);
+
 
 				$_POST["counts"]["total"]++;
 
@@ -311,17 +283,6 @@
 
 				if(!empty($ultimoEndosso)){
 					$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
-					$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoAnterior"];
-				}elseif(!empty($motorista["enti_tx_banco"])){
-					$saldoAnterior = $motorista["enti_tx_banco"];
-					$saldoAnterior = $saldoAnterior[0] == "0" && strlen($saldoAnterior) > 5? substr($saldoAnterior, 1): $saldoAnterior;
-				}else{
-					$saldoAnterior = "--:--";
-				}
-				$saldoFinal = "--:--";
-
-				if($saldoAnterior != "--:--"){
-					$saldoFinal = somarHorarios([$saldoAnterior, ($totalResumo["diffSaldo"]?? "00:00")]);
 				}
 
 				$cabecalho = [
@@ -345,25 +306,6 @@
 					);
 				}
 
-				// $saldosMotorista = 
-				// 	"Saldos:
-				// 	<div class='table-responsive'>
-				// 		<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
-				// 			<thead><tr>
-				// 				<th>Anterior:</th>
-				// 				<th>Período:</th>
-				// 				<th>Final:</th>
-				// 			</thead></tr>
-				// 			<tbody>
-				// 				<tr>
-				// 				<td>".$saldoAnterior."</td>
-				// 				<td>".$totalResumo["diffSaldo"]."</td>
-				// 				<td>".$saldoFinal."</td>
-				// 				</tr>
-				// 			</tbody>
-				// 			</table>
-				// 	</div>"
-				// ;
 				$saldosMotorista = "";
 				//------------------------------------------------------------------------------------------------
 
@@ -391,26 +333,7 @@
 					montarTabelaPonto($cabecalho, $rows), 
 					[]
 				);
-				$aSaldo[$motorista["enti_tx_matricula"]] = $totalResumo["diffSaldo"];
 			}
-
-			$totalResumo = [
-				"diffRefeicao" => "00:00",
-				"diffEspera" => "00:00",
-				"diffDescanso" => "00:00",
-				"diffRepouso" => "00:00",
-				"diffJornada" => "00:00",
-				"jornadaPrevista" => "00:00",
-				"diffJornadaEfetiva" => "00:00",
-				"maximoDirecaoContinua" => "",
-				"intersticio" => "00:00",
-				"he50" => "00:00",
-				"he100" => "00:00",
-				"adicionalNoturno" => "00:00",
-				"esperaIndenizada" => "00:00",
-				"diffSaldo" => "00:00"
-			];
-			unset($rows);
 		}
 
 		index();
@@ -462,14 +385,7 @@
 				array_unshift($c, combo_net("Empresa*:", "busca_empresa",   (!empty($_POST["busca_empresa"])?   $_POST["busca_empresa"]  : ""), 3, "empresa", "onchange=selecionaMotorista(this.value)", $extraEmpresa));
 			}
 		//}
-		$botao_imprimir =
-			"<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>
-			<script>
-    			function imprimir() {
-					// Abrir a caixa de diálogo de impressãof
-					window.print();
-    			}
-			</script>";
+		$botao_imprimir ="<button class='btn default' type='button' onclick='window.print()'>Imprimir</button>";
 
 		//BOTOES{
 			$b = [

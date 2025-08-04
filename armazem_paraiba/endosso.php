@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
@@ -7,8 +7,6 @@
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
 
 	function imprimir_relatorio(){
-		global $totalResumo;
-
 		if (empty($_POST["busca_data"]) || empty($_POST["busca_empresa"])){
 			$_POST["errorFields"][] = "busca_data";
 			$_POST["errorFields"][] = "busca_empresa";
@@ -51,8 +49,7 @@
 		$date = new DateTime($_POST["busca_data"]);
 
 		for($f = 0; $f < count($motoristas); $f++){
-			$aDia = [];
-			$totalResumo = [];
+			$rows = [];
 
 			//Pegando e formatando registros dos dias{
 				
@@ -71,7 +68,7 @@
 					$aDetalhado = $endossoCompleto["endo_tx_pontos"][$f2];
 					array_shift($aDetalhado);
 					array_splice($aDetalhado, 10, 1); //Retira a coluna de "Jornada" que está entre "Repouso" e "Jornada Prevista"
-					$aDia[] = $aDetalhado;
+					$rows[] = $aDetalhado;
 				}
 			//}
 
@@ -83,8 +80,8 @@
 					"T" => "(T - Outras fontes de marcação)",
 					"DSR" => "(DSR - Descanso Semanal Remunerado e Abono)"
 				];
-				for($f2 = 0; $f2 < count($aDia); $f2++){
-					$data = implode("-", array_reverse(explode("/", $aDia[$f2]["data"])));
+				for($f2 = 0; $f2 < count($rows); $f2++){
+					$data = implode("-", array_reverse(explode("/", $rows[$f2]["data"])));
 
 					
 					$bdMotivos = mysqli_fetch_all(
@@ -123,7 +120,7 @@
 						}
 					}
 
-					array_splice($aDia[$f2], 18, 0, $motivos); // inserir a coluna de motivo, no momento da implementação, estava na coluna 19
+					array_splice($rows[$f2], 18, 0, $motivos); // inserir a coluna de motivo, no momento da implementação, estava na coluna 19
 				}
 			//}
 			
@@ -144,8 +141,6 @@
 	}
 
 	function buscarEndosso(){
-		global $totalResumo;
-
 		$counts = [
 			"total" => 0,								//$countEndosso
 			"naoConformidade" => 0,						//$countNaoConformidade
@@ -224,7 +219,8 @@
 			if(empty($motorista["enti_tx_nome"]) || empty($motorista["enti_tx_matricula"])){
 				continue;
 			}
-			
+
+			$rows = [];
 			//Pegando e formatando registros dos dias{
 				
 				$date = new DateTime($_POST["busca_data"]);
@@ -235,15 +231,14 @@
 					$counts["endossados"]["nao"]++;
 					$motNaoEndossados .= "- [".$motorista["enti_tx_matricula"]."] ".$motorista["enti_tx_nome"]."<br>";
 					continue;
-				}else{
-					$counts["naoConformidade"] += substr_count(json_encode($endossoCompleto["endo_tx_pontos"]), "fa-warning");
 				}
-
+				
+				$counts["naoConformidade"] += substr_count(json_encode($endossoCompleto["endo_tx_pontos"]), "fa-warning");
 				$totalResumo = $endossoCompleto["totalResumo"];
 
 				for ($i = 0; $i < count($endossoCompleto["endo_tx_pontos"]); $i++) {
 					$aDetalhado = $endossoCompleto["endo_tx_pontos"][$i];
-					$aDia[] = $aDetalhado;
+					$rows[] = $aDetalhado;
 				}
 				$totalResumoGrid = $totalResumo;
 
@@ -260,13 +255,13 @@
 					unset($totalResumoGrid[$unsetKey]);
 				}
 
-				if(count($aDia) > 0){
-					$aDia[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumoGrid));
+				if(count($rows) > 0){
+					$rows[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumoGrid));
 				}
 				unset($totalResumoGrid);
 			//}
 
-			if (count($aDia) > 0) {
+			if (count($rows) > 0) {
 				$counts["endossados"]["sim"]++;
 
 				$dataCicloProx = strtotime($motorista["para_tx_inicioAcordo"]." 00:00:00");
@@ -383,7 +378,7 @@
 					"ADICIONAL NOT."/*, "ESPERA INDENIZADA"*/, "SALDO DIÁRIO(**)"
 				];
 
-				if($motorista["enti_tx_ocupacao"] != "Funcionário"){
+				if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
 					$cabecalho = array_merge(
 						array_slice($cabecalho, 0, 8), 
 						["ESPERA"], 
@@ -397,7 +392,7 @@
 					);
 				}
 
-				$endossoHTML .=  montarTabelaPonto($cabecalho, $aDia);
+				$endossoHTML .=  montarTabelaPonto($cabecalho, $rows);
 				$endossoHTML .=  fecha_form();
 
 				$endossoHTML .=  
@@ -432,16 +427,10 @@
 						});
 					</script>"
 				;
-
-				$aSaldo[$motorista["enti_tx_matricula"]] = $totalResumo["diffSaldo"];
 			}else{
 				$counts["endossados"]["nao"]++;
 				$motNaoEndossados .= "- [".$motorista["enti_tx_matricula"]."] ".$motorista["enti_tx_nome"]."<br>";
 			}
-
-			$totalResumo = ["diffRefeicao" => "00:00", "diffEspera" => "00:00", "diffDescanso" => "00:00", "diffRepouso" => "00:00", "diffJornada" => "00:00", "jornadaPrevista" => "00:00", "diffJornadaEfetiva" => "00:00", "maximoDirecaoContinua" => "", "intersticio" => "00:00", "he50" => "00:00", "he100" => "00:00", "adicionalNoturno" => "00:00", "esperaIndenizada" => "00:00", "diffSaldo" => "00:00"];
-
-			unset($aDia);
 		}
 
 		//Função legado, deve ser mantida para conseguir mostrar a mensagem de "dia endossado" em endossos anteriores.

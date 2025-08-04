@@ -332,35 +332,35 @@
 			// "fimRepousoEmbarcado" 	=> criaBotaoRegistro("btn red", 12, "Encerrar Repouso Embarcado", "fa fa-bed fa-6"),
 		];
 
-		if($_SESSION["user_tx_nivel"] == "Motorista"){
+		if($_SESSION["user_tx_nivel"] != "Funcionário"){
 			$botoes["inicioEspera"] = criaBotaoRegistro("btn green", 5,  "ESPERA", "fa fa-clock-o fa-6");
 			$botoes["fimEspera"] = criaBotaoRegistro("btn red", 6,  "FIM ESPERA", "fa fa-clock-o fa-6");
 			
 			$botoes["inicioRepouso"] = criaBotaoRegistro("btn green", 9,  "REPOUSO", "fa fa-bed fa-6");
 			$botoes["fimRepouso"] = criaBotaoRegistro("btn red", 10, "FIM REPOUSO", "fa fa-bed fa-6");
-		}else{
-			$botoes["inicioEspera"] = null;
-			$botoes["fimEspera"] 	= null;
-			
-			$botoes["inicioRepouso"] 	= null;
-			$botoes["fimRepouso"] 		= null;
 		}
 
 		
-
 		$botoesVisiveis = [];
 
 		if (empty($pontos["ultimo"]["pont_tx_tipo"]) || intval($pontos["ultimo"]["pont_tx_tipo"]) == 2) {
 			$botoesVisiveis = [$botoes["inicioJornada"]];
 		} elseif ($pontos["ultimo"]["pont_tx_tipo"] == 1 || in_array($pontos["ultimo"]["pont_tx_tipo"], array_keys($fins))){
-			$botoesVisiveis = [
-				$botoes["inicioRepouso"],
-				$botoes["inicioDescanso"], 
-				$botoes["inicioEspera"], 
-				$botoes["inicioRefeicao"], 
-				$botoes["fimJornada"]
-				// $botoes["inicioRepousoEmbarcado"]
-			];
+			if($_SESSION["user_tx_nivel"] != "Funcionário"){
+				$botoesVisiveis = [
+					$botoes["inicioRepouso"],
+					$botoes["inicioDescanso"], 
+					$botoes["inicioEspera"], 
+					$botoes["inicioRefeicao"], 
+					$botoes["fimJornada"]
+				];
+			}else{
+				$botoesVisiveis = [
+					$botoes["inicioDescanso"], 
+					$botoes["inicioRefeicao"], 
+					$botoes["fimJornada"]
+				];
+			}
 		}elseif(in_array($pontos["ultimo"]["pont_tx_tipo"], array_keys($inicios))){
 			$botoesVisiveis = [
 				$botoes[$fins[$pontos["ultimo"]["pont_tx_tipo"]+1]]
@@ -410,11 +410,11 @@
 		if (!empty($aEndosso)){
 			$fields[] = texto("Endosso:", "Endossado por ".$aEndosso["user_tx_login"]." em ".data($aEndosso["endo_tx_dataCadastro"], 1), 6);
 			$botoesVisiveis = [];
-			$logoutTime = 300;
+			$logoutTime = 300; //Utilizado em batida_ponto_html.php
 		}else if(!empty($afastamento)){
 			$fields[] = texto("Afastamento:", "Afastado por motivo de {$afastamento["moti_tx_nome"]}<br> por ".$afastamento["user_tx_login"]." em ".data($afastamento["abon_tx_dataCadastro"], 1), 6);
 			$botoesVisiveis = [];
-			$logoutTime = 300;
+			$logoutTime = 300; //Utilizado em batida_ponto_html.php
 		}else{
 			if($aMotorista["enti_tx_ocupacao"] == "Motorista"){
 				$fields[] = campo("Placa do Veículo", "placa", ($_POST["placa"]?? ""), 2, "MASCARA_PLACA", "");
