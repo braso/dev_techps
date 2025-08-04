@@ -82,7 +82,6 @@
 					}
 				}
 
-
 				//Conferir se a data de início da pesquisa está antes do cadastro do motorista{
 					if(!empty($motorista)){
 						$dataInicio = new DateTime($_POST["busca_periodo"][0]);
@@ -179,8 +178,6 @@
 		$opt = "";
 		//Buscar Espelho{
 			if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
-				global $totalResumo;
-
 				echo   
 					"<div style='display:none' id='tituloRelatorio'>
 						<h1>Espelho de Ponto</h1>
@@ -215,7 +212,7 @@
 						$diasEndossados = 0;
 						foreach($endossoMes["endo_tx_pontos"] as $row){
 							$day = DateTime::createFromFormat("d/m/Y", $row["data"]);
-							if($day >= $startDate){
+							if($day >= $startDate && $day <= $endDate){
 								$diasEndossados++;
 								$rows[] = $row;
 							}
@@ -225,11 +222,13 @@
 						}
 					}
 				//}
+
 				
 				// Loop for para percorrer as datas
+				$descFaltasNaoJustificadas = "00:00";
+				$qtdDiasNaoJustificados = 0;
 				for ($date = $startDate; $date <= $endDate; $date->modify("+1 day")){
 					$aDetalhado = diaDetalhePonto($motorista, $date->format("Y-m-d"));
-					
 					/* Descomentar ao conseguir adaptar a lógica da página de nao_conformidade para espelho_ponto
 						if(!empty($_POST["naoConformidade"])){
 							$rowString = implode(", ", array_values($aDetalhado));
@@ -271,24 +270,16 @@
 							$value = "";
 						}
 					}
+					
 					$row = array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado);
+					$descFaltasNaoJustificadas = operarHorarios([$descFaltasNaoJustificadas, $row["jornadaPrevista"]], "+");
+					$qtdDiasNaoJustificados++;
+
 					$rows[] = $row;
 				}
 
-				$descFaltasNaoJustificadas = "00:00";
-				$qtdDiasNaoJustificados = 0;
-				foreach($rows as $row){
-					$colunasASomar = array_keys(array_slice($row, 7));
-					foreach($colunasASomar as $col){
-						if(!empty($row[$col])){
-							$totalResumo[$col] = operarHorarios([$totalResumo[$col], strip_tags($row[$col])], "+");
-						}
-					}
-					if(is_bool(strpos($row[0], "(E)")) && is_int(strpos($row["inicioJornada"], "Batida início de jornada não registrada!"))){
-						$descFaltasNaoJustificadas = operarHorarios([$descFaltasNaoJustificadas, $row["jornadaPrevista"]], "+");
-						$qtdDiasNaoJustificados++;
-					}
-				}
+				$totalResumo = setTotalResumo(array_slice(array_keys($rows[0]), 7));
+				somarTotais($totalResumo, $rows);
 
 				$parametroPadrao = "Convenção Não Padronizada, Semanal (".$motorista["enti_tx_jornadaSemanal"]."), Sábado (".$motorista["enti_tx_jornadaSabado"].")";
 
@@ -365,7 +356,7 @@
 					"ADICIONAL NOT."/*, "ESPERA INDENIZADA"*/, "SALDO DIÁRIO(**)"
 				];
 
-				if($motorista["enti_tx_ocupacao"] != "Funcionário"){
+				if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
 					$cabecalho = array_merge(
 						array_slice($cabecalho, 0, 8), 
 						["ESPERA"], 
@@ -377,13 +368,6 @@
 						["ESPERA INDENIZADA"], 
 						array_slice($cabecalho, 16, count($cabecalho))
 					);
-				}else{
-					unset(
-						$totalResumo["diffEspera"],
-						$totalResumo["diffRepouso"],
-						$totalResumo["maximoDirecaoContinua"],
-						$totalResumo["esperaIndenizada"]
-					);	
 				}
 
 				unset(
@@ -407,7 +391,7 @@
 					."</div>"
 					.$saldosMotorista
 				);
-				echo montarTabelaPonto($cabecalho, $rows, "Jornada Semanal (Horas): {$motorista["enti_tx_jornadaSemanal"]}");
+				echo montarTabelaPonto($cabecalho, $rows);
 				echo fecha_form();
 
 				unset($_POST["errorFields"]);
