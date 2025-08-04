@@ -97,9 +97,6 @@ function salvarArquivo(string $path, string $fileName, string $data) {
 
 //Funções de criação de cada painel{
 function criar_relatorio_saldo() {
-
-	global $totalResumo;
-
 	//Conferir se os campos POST estão preenchidos{
 	$camposObrig = ["busca_dataMes" => "Mês"];
 	$errorMsg = conferirCamposObrig($camposObrig, $_POST);
@@ -220,19 +217,6 @@ function criar_relatorio_saldo() {
 			$saldoAnterior = "";
 			if(!empty($ultimoEndosso) && file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$ultimoEndosso["endo_tx_filename"].".csv")){
 				$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
-				if(empty($totalResumo)){
-					$totalResumo = $ultimoEndosso["totalResumo"];
-				}else{
-					foreach(["saldoAnterior", "saldoFinal"] as $key){
-						$totalResumo[$key] = operarHorarios(
-							[
-								(!empty($totalResumo[$key])? $totalResumo[$key]: "00:00"),
-								(!empty($ultimoEndosso["totalResumo"][$key])? $ultimoEndosso["totalResumo"][$key]: "00:00")
-							], 
-							"+"
-						);
-					}
-				}
 				$saldoAnterior = $ultimoEndosso["totalResumo"]["saldoFinal"];
 			}elseif(!empty($motorista["enti_tx_banco"])){
 				$saldoAnterior = $motorista["enti_tx_banco"];
