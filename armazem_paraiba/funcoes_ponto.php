@@ -9,35 +9,31 @@
 	//*/
 	include_once __DIR__."/conecta.php";
 
-	function calcJorPre(string $data, string $jornadaSemanal, string $jornadaSabado, bool $ehFeriado, $abono = null): array{
+	function calcJorPre(string &$data, string $jornadaPrevistaOriginal, bool $ehFeriado, $abono = null): string{
 
 		if(date("w", strtotime($data)) == "0" || $ehFeriado){ 	//DOMINGOS OU FERIADOS
 			$jornadaPrevista = "00:00";
-		}elseif(date("w", strtotime($data)) == "6"){ 			//SABADOS
-			$jornadaPrevista = $jornadaSabado;
 		}else{													//DIAS DE SEMANA
-			$jornadaPrevista = $jornadaSemanal;
+			$jornadaPrevista = $jornadaPrevistaOriginal;
 		}
 
-		$jornadaPrevistaOriginal = $jornadaPrevista;
-		$jornadaPrevista = (new DateTime("{$data} {$jornadaPrevista}"));
+		// $feriasExistente = mysqli_fetch_assoc(query(
+		// 	"SELECT * FROM ferias 
+		// 		WHERE feri_tx_status = 'ativo'
+		// 			"
+		// ));
+
 		if(!empty($abono)){
 		    $abono = explode(":", $abono);
-		    if(intval($abono[0]) > 23){
-		        $abono = ["23", "59", "00"];
-		    }
-		    $abono[1] = intval($abono[1]) > 59?"59" : $abono[1];
-		    $abono = new DateTime("{$data} ".implode(":", $abono)."");
+			$abono = "{$abono[0]}:{$abono[1]}";
 		    if($abono > $jornadaPrevista){
 		        $jornadaPrevista = "00:00";
 		    }else{
-			    $jornadaPrevista = ($abono)->diff($jornadaPrevista)->format("%H:%I");
+			    $jornadaPrevista = operarHorarios([$jornadaPrevista, $abono], "-");
 		    }
-		}else{
-		    $jornadaPrevista = $jornadaPrevista->format("H:i");
 		}
 
-		return [$jornadaPrevistaOriginal, $jornadaPrevista];
+		return $jornadaPrevista;
 	}
 
 	function calcularAbono($saldo, $tempoAbono){
@@ -613,28 +609,9 @@
 						AND pont_tx_matricula = '{$motorista["enti_tx_matricula"]}'
 						AND pont_tx_data < '{$data} 23:59:59' 
 						AND IF(@dataInicioBusca IS NOT NULL, pont_tx_data >= @dataInicioBusca, 0)
-					ORDER BY pont_tx_data ASC;"
-			), MYSQLI_ASSOC);
-		}
+					ORDER BY pont_tx_data ASC, pont_nb_id ASC;"
 
-		global $totalResumo;
-		if(empty($totalResumo)){
-			$totalResumo = [
-				"diffRefeicao" => "00:00", 
-				"diffEspera" => "00:00", 
-				"diffDescanso" => "00:00", 
-				"diffRepouso" => "00:00", 
-				"diffJornada" => "00:00", 
-				"jornadaPrevista" => "00:00", 
-				"diffJornadaEfetiva" => "00:00", 
-				"maximoDirecaoContinua" => "00:00",
-				"intersticio" => "00:00", 
-				"he50" => "00:00", 
-				"he100" => "00:00", 
-				"adicionalNoturno" => "00:00", 
-				"esperaIndenizada" => "00:00", 
-				"diffSaldo" => "00:00"
-			];
+			), MYSQLI_ASSOC);
 		}
 		setlocale(LC_ALL, "pt_BR.utf8");
 
@@ -688,7 +665,6 @@
 				"diffSaldo"
 			]);
 		}
-
 		if(empty($motorista["enti_nb_parametro"])){
 			$motorista["enti_nb_parametro"] = $motorista["empr_nb_parametro"];
 			$parametroEmpresa = mysqli_fetch_assoc(query(
@@ -702,7 +678,6 @@
 			$motorista["enti_tx_percHESemanal"] = $motorista["para_tx_percHESemanal"];
 			$motorista["enti_tx_percHEEx"] = $motorista["para_tx_percHEEx"];
 		}
-		
 		
 		//Organizar array com tipos de ponto{
 			$registros = [
@@ -743,8 +718,14 @@
 					LIMIT 1;"
 			));
 
-
-			[$jornadaPrevistaOriginal, $jornadaPrevista] = calcJorPre($data, $motorista["enti_tx_jornadaSemanal"], $motorista["enti_tx_jornadaSabado"], !empty($stringFeriado), ($abonos["abon_tx_abono"]?? null));
+			if(date("w", strtotime($data)) == "6"){
+				$jornadaPrevistaOriginal = $motorista["enti_tx_jornadaSabado"];
+			}elseif(date("w", strtotime($data)) == "0"){
+				$jornadaPrevistaOriginal = "00:00";
+			}else{
+				$jornadaPrevistaOriginal = $motorista["enti_tx_jornadaSemanal"];
+			}
+			$jornadaPrevista = calcJorPre($data, $jornadaPrevistaOriginal, !empty($stringFeriado), ($abonos["abon_tx_abono"]?? null));
 			$aRetorno["jornadaPrevista"] = $jornadaPrevista;
 			if(!empty($abonos)){
 				$warning = 
@@ -762,11 +743,10 @@
 
 
 		//}
-
 		//CASO NÃO HAJA PONTOS{
 			if(count($pontosDia) == 0){
 				$aRetorno["diffSaldo"] = getSaldoDiario($jornadaPrevista, "00:00");
-				if((preg_replace("/([^\-^0-:])+/", "", strip_tags($aRetorno["jornadaPrevista"]))) != "00:00" && strpos($aRetorno["jornadaPrevista"], "Abono:") === false){
+				if(strip_tags($aRetorno["jornadaPrevista"]) != "00:00"){
 					$aRetorno["inicioJornada"][] = "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
 				}
 
@@ -776,11 +756,6 @@
 					}
 				//}
 
-				//SOMANDO TOTAIS{
-					// foreach(array_slice(array_keys($aRetorno), array_search("diffRefeicao", array_keys($aRetorno))) as $campo){
-					// 	$totalResumo[$campo] = operarHorarios([((empty($totalResumo[$campo]))? "00:00": $totalResumo[$campo]), strip_tags(urldecode($aRetorno[$campo]))], "+");
-					// }
-				//}
 				return $aRetorno;
 			}
 		//}
@@ -850,7 +825,7 @@
 		//}
 		
 		//REPOUSO POR ESPERA{
-			if($motorista["enti_tx_ocupacao"] != "Funcionário"){
+			if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
 				$repousosPorEspera = [
 					"pares" => [],
 					"totalIntervalo" => new DateTime("{$data} 00:00:00"),
@@ -912,7 +887,7 @@
 		$aRetorno["diffRefeicao"] = $registros["refeicaoCompleto"]["icone"].$registros["refeicaoCompleto"]["totalIntervalo"];
 		$aRetorno["diffDescanso"] = $registros["descansoCompleto"]["icone"].$registros["descansoCompleto"]["totalIntervalo"];
 		
-		if($motorista["enti_tx_ocupacao"] != "Funcionário"){
+		if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
 			$aRetorno["diffEspera"]   = $registros["esperaCompleto"]["icone"].$registros["esperaCompleto"]["totalIntervalo"];
 			$aRetorno["diffRepouso"]  = $registros["repousoCompleto"]["icone"].$registros["repousoCompleto"]["totalIntervalo"];
 		}
@@ -1002,7 +977,7 @@
 
 					if(operarHorarios([$intersticioDiario, $interMinimo], "-")[0] == "-"){
 						$restante = operarHorarios([$interMinimo, $intersticioDiario], "-");
-						$title = "Interstício Mínimo de {$interMinimo} não respeitado, faltaram {$restante}.";
+						$title = "Interstício Mínimo de {$interMinimo} ininterruptos não respeitado, faltaram {$restante}.";
 						if(operarHorarios([$totalIntersticio, $interMinimo], "-")[0] != "-"){
 							$title .= "\nInterstício remanescente compensado com intervalos do dia (".$totalNaoJornada->format("H:i").").";
 						}
@@ -1022,7 +997,7 @@
 		//}
 
 		//CALCULO ESPERA INDENIZADA{
-			if($motorista["enti_tx_ocupacao"] != "Funcionário"){
+			if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
 				if($motorista["para_tx_adi5322"] == "sim"){
 					$aRetorno["esperaIndenizada"] = "00:00";
 				}else{
@@ -1094,8 +1069,9 @@
 						continue;
 					}
 					
+					$iniciandoTrabalho = ($tipos[$ponto["pont_tx_tipo"]] == "inicioJornada" || (is_int(strpos($tipos[$ponto["pont_tx_tipo"]], "fim")) && $tipos[$ponto["pont_tx_tipo"]] != "fimJornada"));
 					$intervalos[] = [
-						!($tipos[$ponto["pont_tx_tipo"]] == "inicioJornada" || (is_int(strpos($tipos[$ponto["pont_tx_tipo"]], "fim")) && $tipos[$ponto["pont_tx_tipo"]] != "fimJornada")), 
+						!($iniciandoTrabalho), 
 						date_diff($interAtivo, new DateTime($ponto["pont_tx_data"]))
 					];
 					$interAtivo = new DateTime($ponto["pont_tx_data"]);
@@ -1113,7 +1089,7 @@
 		//FIM JORNADA MÍNIMA
 
 		//ALERTAS{
-			if((!isset($registros["inicioJornada"][0]) || $registros["inicioJornada"][0] == "") && $aRetorno["jornadaPrevista"] != "00:00"){
+			if(empty($registros["inicioJornada"][0]) && $aRetorno["jornadaPrevista"] != "00:00"){
 				$aRetorno["inicioJornada"][] 	= "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
 			}
 			if($fezJorMinima || count($registros["inicioJornada"]) > 0){
@@ -1165,7 +1141,7 @@
 		if(count($registros["inicioDescanso"]) > 0 && count($registros["fimDescanso"]) > 0){
 			$aRetorno["diffDescanso"] = $registros["descansoCompleto"]["icone"].$registros["descansoCompleto"]["totalIntervalo"];
 		}
-		if($motorista["enti_tx_ocupacao"] != "Funcionário"){
+		if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
 			if(count($registros["inicioEspera"]) > 0 && count($registros["fimEspera"]) > 0){
 				$aRetorno["diffEspera"]   = $registros["esperaCompleto"]["icone"].$registros["esperaCompleto"]["totalIntervalo"];
 			}
@@ -1271,12 +1247,6 @@
 			}
 		//}
 
-		//SOMANDO TOTAIS{
-			// foreach(array_slice(array_keys($aRetorno), array_search("diffRefeicao", array_keys($aRetorno))) as $campo){
-			// 	$totalResumo[$campo] = operarHorarios([((empty($totalResumo[$campo]))? "00:00": $totalResumo[$campo]), preg_replace("/([^\-^0-:])+/", "", strip_tags($aRetorno[$campo]))], "+");
-			// }
-		//}
-
 		if($saldo > 0){
 			$aRetorno["diffSaldo"] = "<b>{$aRetorno["diffSaldo"]}</b>";
 		}
@@ -1372,6 +1342,20 @@
 			$result = $feriados[0]["feri_tx_nome"];
 			for($f = 1; $f < count($feriados); $f++){
 				$result .= ", {$feriados[$f]["feri_tx_nome"]}";
+			}
+		}else{
+			$ferias = mysqli_fetch_assoc(query(
+				"SELECT * FROM ferias
+					WHERE feri_tx_status = 'ativo'
+						AND feri_nb_entidade = '{$motorista["enti_nb_id"]}'
+						AND '{$data}' BETWEEN feri_tx_dataInicio AND feri_tx_dataFim
+					LIMIT 1;"
+			));
+
+			if(!empty($ferias)){
+				$ferias["feri_tx_dataInicio"] = DateTime::createFromFormat("Y-m-d", $ferias["feri_tx_dataInicio"])->format("d/m/Y");
+				$ferias["feri_tx_dataFim"] = DateTime::createFromFormat("Y-m-d", $ferias["feri_tx_dataFim"])->format("d/m/Y");
+				$result = "Férias de ({$ferias["feri_tx_dataInicio"]} a {$ferias["feri_tx_dataFim"]})";
 			}
 		}
 		return $result;
@@ -1837,7 +1821,7 @@
 
 		$title = "Ajuste de Ponto";
 		$func = "ajustarPonto({$idMotorista},\"{$data}\"";
-		$content = "<i style='color:{$cor};' class='fa fa-circle'>";
+		$content = "<i style='color:{$cor};' class='glyphicon glyphicon-pencil'>";
 		if(count($endossado) > 0){
 			$title .= " (endossado)";
 			$func .= ", true";
@@ -1865,4 +1849,27 @@
 		
 		$retorno = "<a title='".$title."' onclick='{$func}'>{$content}</a>";
 		return $retorno;
+	}
+
+	function setTotalResumo(array $keys): array{
+		$totalResumo = [];
+		foreach($keys as $key){
+			$totalResumo[$key] = "00:00";
+		}
+		return $totalResumo;
+	}
+
+	function somarTotais(array &$totalResumo, array &$rows){
+		$colunasASomar = array_keys(array_slice($rows[0], 7));
+		foreach($rows as $row){
+			foreach($colunasASomar as $col){
+				if(!empty($row[$col])){
+					$totalResumo[$col] = operarHorarios([$totalResumo[$col], strip_tags($row[$col])], "+");
+				}
+			}
+		}
+
+		if($totalResumo["diffSaldo"][0] != "-" && $totalResumo["diffSaldo"] != "00:00"){
+			$totalResumo["diffSaldo"] = "<b>{$totalResumo["diffSaldo"]}</b>";
+		}
 	}
