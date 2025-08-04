@@ -1,7 +1,3 @@
-#tituloRelatorio{
-	display: none;
-}
-
 @media print {
 	body {
 		margin: 1cm;
@@ -11,7 +7,7 @@
 	}
 
 	#tituloRelatorio {
-		display: block; /* Torna visível apenas ao imprimir */
+		display: none; /* Torna visível apenas ao imprimir */
 		font-size: 12px;
 		padding-left: 555px;
 	}
@@ -47,15 +43,23 @@
 	}
 
 	.row div {
-		min-width: fit-content !important;
+		/* min-width: fit-content !important; */
 	}
 
 	.caption {
 		padding-top: 0px;
-		margin-left: -50px !important;
+		/* margin-left: -50px !important; */
 		padding-bottom: 0px;
 		width: 75%;
 		/* line-height: 15px !important; */
+	}
+
+	.col-md-12, .container-fluid{
+		padding-left: 0px !important;
+	}
+
+	.table-head{
+		background-color: #fff;
 	}
 
 	@page {
@@ -94,4 +98,8 @@ table td:nth-child(11) {
 
 .caption {
 	width: 100%;
+}
+
+.table>tbody>tr>td:first-child, .table>tbody>tr>td.data, .table>tbody>tr>td.diaSemana {
+    vertical-align: middle;
 }
