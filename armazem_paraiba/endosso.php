@@ -130,6 +130,47 @@
 			}
 
 			$motorista = $motoristas[$f];
+
+			$colspanTitulos = [2,4,2,2,4,2]; //Utilizado em relatorio_espelho.php
+			$cabecalho = [
+				"DATA",
+				"DIA",
+				"INÍCIO",
+				"INÍCIO REF.",
+				"FIM REF.",
+				"FIM",
+				"REFEIÇÃO",
+				// "ESPERA",
+				"DESCANSO",
+				// "REPOUSO",
+				"PREVISTA",
+				"EFETIVA",
+				// "MDC",
+				"INTERSTÍCIO",
+				"HE {$motorista["enti_tx_percHESemanal"]}%",
+				"HE&nbsp;{$motorista["enti_tx_percHEEx"]}%",
+				"ADICIONAL NOT.",
+				// "ESPERA IND.",
+				"MOTIVO",
+				"SALDO",
+			];
+
+			if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
+				$colspanTitulos = [2,4,4,3,5,2];
+				$cabecalho = array_merge(
+					array_slice($cabecalho, 0, 7),
+					["ESPERA"],
+					array_slice($cabecalho, 7, 1),
+					["REPOUSO"],
+					array_slice($cabecalho, 8, 2),
+					["MDC"],
+					array_slice($cabecalho, 10, 4),
+					["ESPERA INDENIZADA"],
+					array_slice($cabecalho, 14, count($cabecalho))
+				);
+			}
+
+
 			include "./relatorio_espelho.php";
 			include "./csv_relatorio_espelho.php";
 			if(count($motoristas) > 1){
