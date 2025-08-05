@@ -124,7 +124,9 @@ function formCelular($editar = null) {
                             <label><b>Responsável</b>:</label>
                             <select name="funcionario_id" class="form-control">
                                 <option value="">-- Selecione --</option>';
-                                $sqlFunc = "SELECT enti_nb_id, enti_tx_nome FROM entidade ORDER BY enti_tx_nome";
+                                $sqlFunc = "SELECT enti_nb_id, enti_tx_nome FROM entidade
+                                WHERE enti_tx_tipo = 'Motorista' AND enti_tx_status = 'ativo'
+                                ORDER BY enti_tx_nome";
                                 $resFunc = mysqli_query($conn, $sqlFunc);
                                 while ($func = mysqli_fetch_assoc($resFunc)) {
                                     $selected = ($dados['funcionario_id'] == $func['enti_nb_id']) ? 'selected' : '';

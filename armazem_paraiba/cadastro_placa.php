@@ -17,15 +17,21 @@ function carregaEmpresa() {
     return mysqli_fetch_all($result, MYSQLI_ASSOC);
 }
 
-// Função para carregar motoristas
 function carregaFuncionario() {
     global $conn;
-    $sql = "SELECT enti_nb_id, enti_tx_nome FROM entidade 
-            WHERE enti_tx_ocupacao = 'Motorista' AND enti_tx_status = 'ativo'
-            ORDER BY enti_tx_nome";
+    $sql = "SELECT enti_nb_id, enti_tx_nome FROM entidade
+WHERE enti_tx_tipo = 'Motorista' AND enti_tx_status = 'ativo'
+ORDER BY enti_tx_nome;
+";
     $result = mysqli_query($conn, $sql);
     if (!$result) die('Erro ao consultar motoristas: ' . mysqli_error($conn));
-    return mysqli_fetch_all($result, MYSQLI_ASSOC);
+    
+    $dados = mysqli_fetch_all($result, MYSQLI_ASSOC);
+    
+    // Debug: imprime os dados para verificar os motoristas retornados
+ ;
+    
+    return $dados;
 }
 
 // Processamento do formulário
@@ -116,7 +122,7 @@ function cadastro_placa($editar = null) {
         }
         mysqli_stmt_close($stmt);
     }
-    echo '
+  echo '
     <div class="container" style="width: 100%; max-width: 1500px; margin-top: 20px;">
         <div class="panel panel-default">
             <div class="panel-heading">' . ($editar ? 'Editar Placa' : 'Cadastro de Placas') . '</div>
@@ -136,23 +142,28 @@ function cadastro_placa($editar = null) {
                             <label for="funcionario" class="form-label"><b>MOTORISTA</b>:</label>
                             <select id="funcionario" name="funcionario" class="form-control">
                                 <option value="">Selecione um motorista</option>';
-                                foreach ($funcionarios as $func) {
-                                    $selected = ($funcionario == $func['enti_nb_id']) ? 'selected' : '';
-                                    echo '<option value="' . htmlspecialchars($func['enti_nb_id']) . '" ' . $selected . '>' 
-                                         . htmlspecialchars($func['enti_tx_nome']) . '</option>';
-                                }
-                        echo '
+                                
+// Fecha o echo para inserir PHP puro
+foreach ($funcionarios as $func) {
+    $selected = ($funcionario == $func['enti_nb_id']) ? 'selected' : '';
+    echo '<option value="' . htmlspecialchars($func['enti_nb_id']) . '" ' . $selected . '>' 
+         . htmlspecialchars($func['enti_tx_nome']) . '</option>';
+}
+
+echo '
                             </select>
                         </div>
                         <div style="flex: 1;">
                             <label for="empresa" class="form-label"><B>EMPRESA:</B></label>
                             <select id="empresa" name="empresa" placeholder="INFORME A EMPRESA" class="form-control" required>
                                 <option value="">Selecione uma empresa</option>';
-                                foreach ($empresas as $emp) {
-                                    $selected = ($empresa == $emp['empr_nb_id']) ? 'selected' : '';
-                                    echo '<option value="' . htmlspecialchars($emp['empr_nb_id']) . '" ' . $selected . '>' . htmlspecialchars($emp['empr_tx_nome']) . '</option>';
-                                }
-                        echo '
+
+foreach ($empresas as $emp) {
+    $selected = ($empresa == $emp['empr_nb_id']) ? 'selected' : '';
+    echo '<option value="' . htmlspecialchars($emp['empr_nb_id']) . '" ' . $selected . '>' . htmlspecialchars($emp['empr_tx_nome']) . '</option>';
+}
+
+echo '
                             </select>
                         </div>
                     </div>
@@ -163,6 +174,7 @@ function cadastro_placa($editar = null) {
             </div>
         </div>
     </div>';
+
 }
 
 // Excluir placa
@@ -187,11 +199,12 @@ if (isset($_GET['excluir'])) {
 // Função para listar as placas
 function listarPlacas() {
     global $conn;
-    $sql = "SELECT p.*, e.empr_tx_nome
-    FROM placa p
-    JOIN empresa e ON p.placa_id_empresa = e.empr_nb_id
-    ORDER BY p.id DESC
-    ";
+    $sql = "SELECT p.*, e.empr_tx_nome, en.enti_tx_nome AS funcionario_nome
+        FROM placa p
+        JOIN empresa e ON p.placa_id_empresa = e.empr_nb_id
+        LEFT JOIN entidade en ON p.funcionario_id = en.enti_nb_id
+        ORDER BY p.id DESC";
+    
     $res = mysqli_query($conn, $sql);
 
     if (!$res) {
