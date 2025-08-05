@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -291,13 +291,15 @@
 							." LIMIT 1;"
 					));
 
-					$keys = array_keys(array_intersect($parametroEmpresa, $motorista));
-					
-					if(in_array("para_tx_jornadaSemanal", $keys)
-					 	&& in_array("para_tx_jornadaSabado", $keys)
-					 	&& in_array("para_tx_percHESemanal", $keys)
-					){
-						$parametroPadrao = "Convenção Padronizada: ".$parametroEmpresa["para_tx_nome"].", Semanal (".$parametroEmpresa["para_tx_jornadaSemanal"]."), Sábado (".$parametroEmpresa["para_tx_jornadaSabado"].")";
+					if(!empty($parametroEmpresa)){
+						$keys = array_keys(array_intersect($parametroEmpresa, $motorista));
+						
+						if(in_array("para_tx_jornadaSemanal", $keys)
+							 && in_array("para_tx_jornadaSabado", $keys)
+							 && in_array("para_tx_percHESemanal", $keys)
+						){
+							$parametroPadrao = "Convenção Padronizada: ".$parametroEmpresa["para_tx_nome"].", Semanal (".$parametroEmpresa["para_tx_jornadaSemanal"]."), Sábado (".$parametroEmpresa["para_tx_jornadaSabado"].")";
+						}
 					}
 				}
 

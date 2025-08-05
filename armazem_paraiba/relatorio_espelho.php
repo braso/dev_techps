@@ -88,47 +88,32 @@
         <table class="table" border="1">
             <thead>
                 <tr>
-                    <th colspan="2">PERÍODO</th>
-                    <th colspan="4">REGISTROS DE JORNADA</th>
-                    <th colspan="4">INTERVALOS</th>
-                    <th colspan="3">JORNADA</th>
-                    <th colspan="5">APURAÇÃO DO CONTROLE DA JORNADA</th>
+                    <th colspan="<?=$colspanTitulos[0]?>">PERÍODO</th>
+                    <th colspan="<?=$colspanTitulos[1]?>">REGISTROS DE JORNADA</th>
+                    <th colspan="<?=$colspanTitulos[2]?>">INTERVALOS</th>
+                    <th colspan="<?=$colspanTitulos[3]?>">JORNADA</th>
+                    <th colspan="<?=$colspanTitulos[4]?>">APURAÇÃO DO CONTROLE DA JORNADA</th>
                     <!-- <th>TRATAMENTO</th> -->
                 </tr>
                 <tr>
-                    <th>DATA</th>
-                    <th>DIA</th>
-                    <th>INÍCIO</th>
-                    <th>INÍCIO REF.</th>
-                    <th>FIM REF.</th>
-                    <th>FIM</th>
-                    <th>REFEIÇÃO</th>
-                    <th>ESPERA</th>
-                    <th>DESCANSO</th>
-                    <th>REPOUSO</th>
-                    <th>PREVISTA</th>
-                    <th>EFETIVA</th>
-                    <th>MDC</th>
-                    <th>INTERSTÍCIO</th>
-                    <th>HE <?=$motorista["enti_tx_percHESemanal"]?>%</th>
-                    <th>HE&nbsp;<?=$motorista["enti_tx_percHEEx"]?>%</th>
-                    <th>ADICIONAL NOT.</th>
-                    <th>ESPERA IND.</th>
-                    <th>MOTIVO</th>
-                    <th>SALDO</th>
+                    <?php
+                        foreach($cabecalho as $cab){
+                            echo "<th>{$cab}</th>";
+                        }
+                    ?>
                 </tr>
             </thead>
             <tbody>
                 <?php
-                    foreach ($aDia as $aDiaVez) {
-                        if(strpos($aDiaVez["jornadaPrevista"], "00:00") !== false){
-                            $aDiaVez["jornadaPrevista"] = "";
+                    foreach ($rows as $row) {
+                        if(strpos($row["jornadaPrevista"], "00:00") !== false){
+                            $row["jornadaPrevista"] = "";
                         }
-                        echo '<tr>';
-                        foreach($aDiaVez as $cel){
-                            echo '<td>'.$cel.'</td>';
+                        echo "<tr>";
+                        foreach($row as $cel){
+                            echo "<td>{$cel}</td>";
                         }
-                        echo '</tr>';
+                        echo "</tr>";
                     }
                 ?>
 
