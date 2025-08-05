@@ -37,7 +37,8 @@
 				"/cadastro_parametro.php" 	=> "Parâmetro",
 				"/cadastro_usuario.php" 	=> "Usuário",
 				"/cadastro_placa.php" 		=> "Placas",
-				"/cadastro_celular.php" 		=> "Celular"
+				"/cadastro_celular.php" 	=> "Celular",
+				"/cadastro_operacao.php" 	=> "Operação"
 			],
 			"ponto" => [
 				"/endosso.php" 			=> "Consultar Endossos",

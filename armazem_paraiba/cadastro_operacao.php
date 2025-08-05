@@ -9,32 +9,65 @@
 	//*/
 	include "conecta.php";
 
+	function excluirOperacao(){
+		remover("operacao",$_POST["id"]);
+		index();
+		exit;
+
+	}
+	function modificarOperacao(){
+		$a_mod = carregar("operacao", $_POST["id"]);
+		[$_POST["id"], $_POST["nome"], $_POST["status"]] = [$a_mod["oper_nb_id"], $a_mod["oper_tx_nome"], $a_mod["oper_tx_status"]];
+		
+		layout_operacao();
+		exit;
+	}
+
+	function cadastra_operacao() {
+		$novoFeriado = [
+			"oper_tx_nome" => $_POST["nome"],
+			"oper_tx_status" => "ativo"
+		];
+
+		if(!empty($_POST["id"])){
+			atualizar("operacao", array_keys($novoFeriado), array_values($novoFeriado), $_POST["id"]);
+		}else{
+			$novoFeriado["oper_nb_userCadastro"] = $_SESSION["user_nb_id"];
+			$novoFeriado["oper_tx_dataCadastro"] = date("Y-m-d H:i:s");
+
+			inserir("operacao", array_keys($novoFeriado), array_values($novoFeriado));
+		}
+
+		index();
+		exit;
+	}
+
+	function layout_operacao() {
+		global $a_mod;
+
+		cabecalho("Cadastro de Feriado");
+
+		$campos = [
+			campo("Nome*", "nome", $_POST["nome"], 4),
+		];
+
+		$botoes = [
+			botao("Gravar", "cadastra_operacao", "id", $_POST["id"], "", "", "btn btn-success"),
+			criarBotaoVoltar()
+		];
+		
+		echo abre_form("Dados do Operação");
+		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
+		echo linha_form($campos);
+		echo fecha_form($botoes);
+
+		rodape();
+	}
+
     function index() {
 		global $CONTEX;
-		
-		if (!empty($_GET["id"])){
-			if ($_GET["id"] != $_SESSION["user_nb_id"]) {
-				echo "ERRO: Usuário não autorizado!";
-				echo "<script>window.location.replace('".$CONTEX["path"]."/index.php');</script>";
-				exit;
-			}
-			$_POST["id"] = $_GET["id"];
-			modificarUsuario();
-			exit;
-		}
 
-		if (in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])) {
-			$_POST["id"] = $_SESSION["user_nb_id"];
-			modificarUsuario();
-			exit;
-		}
-		$extraEmpresa = " AND empr_tx_situacao = 'ativo' ORDER BY empr_tx_nome";
-
-		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
-			$extraEmpresa .= " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
-		}
-
-		cabecalho("Cadastro de Usuário");
+		cabecalho("Cadastro de Tipos de Operação");
 
 		if(!isset($_POST["busca_status"])){
 			$_POST["busca_status"] = "ativo";
@@ -43,12 +76,14 @@
 		$fields = [
 			campo("Código", 		"busca_codigo", 	($_POST["busca_codigo"]?? ""), 	1, "", "maxlength='6'"),
 			campo("Nome", 			"busca_nome_like", 		($_POST["busca_nome_like"]?? ""), 	3, "", "maxlength='65'"),
+			combo("Status", 		"busca_status", 	($_POST["busca_status"]?? ""), 	2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
+			combo_net("Funcionário", "busca_usuario", $_POST["busca_usuario"]?? "", 4, "entidade", "", "", "enti_tx_matricula"),
 		];
 
 		$buttons[] = botao("Buscar", "index");
 
 		if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-			$buttons[] = botao("Inserir", "modificarUsuario","","","","","btn btn-success");
+			$buttons[] = botao("Inserir", "layout_operacao","","","","","btn btn-success");
 		}
 
 		$buttons[] = '<button class="btn default" type="button" onclick="imprimirTabelaCompleta()">Imprimir</button>';
@@ -57,98 +92,42 @@
 		echo linha_form($fields);
 		echo fecha_form($buttons);
 
-		$logoEmpresa = mysqli_fetch_assoc(query(
-            "SELECT empr_tx_logo FROM empresa
-                    WHERE empr_tx_status = 'ativo'
-                        AND empr_tx_Ehmatriz = 'sim'
-                    LIMIT 1;"
-        ))["empr_tx_logo"];
+		// $logoEmpresa = mysqli_fetch_assoc(query(
+        //     "SELECT empr_tx_logo FROM empresa
+        //             WHERE empr_tx_status = 'ativo'
+        //                 AND empr_tx_Ehmatriz = 'sim'
+        //             LIMIT 1;"
+        // ))["empr_tx_logo"];
 
-		echo "<div id='tituloRelatorio' style='display: none;'>
-                    <img style='width: 190px; height: 40px;' src='./imagens/logo_topo_cliente.png' alt='Logo Empresa Esquerda'>
-					<h1>Cadastro de Usuário</h1>
-                    <img style='width: 180px; height: 80px;' src='./$logoEmpresa' alt='Logo Empresa Direita'>
-            </div>";
-
-		/*/Grid{
-			$iconeModificar = 	criarSQLIconeTabela("user_nb_id","modificarUsuario","Modificar","glyphicon glyphicon-search");
-			$iconeExcluir = 	criarSQLIconeTabela("user_nb_id","excluirUsuario","Excluir","glyphicon glyphicon-remove","Deseja inativar o registro?");
-
-			$sqlFields = [
-				"user_nb_id",
-				"user_tx_nome",
-				"enti_tx_matricula",
-				"user_tx_cpf",
-				"user_tx_login",
-				"user_tx_nivel",
-				"user_tx_email",
-				"user_tx_fone",
-				"empr_tx_nome",
-				"user_tx_status"
-			];
-
-			$sql = 
-				"SELECT ".implode(", ", $sqlFields).",
-					{$iconeModificar} as iconeModificar,
-					IF(user_tx_status = 'ativo', {$iconeExcluir}, NULL) as iconeExcluir
-				FROM user
-					LEFT JOIN empresa ON empresa.empr_nb_id = user.user_nb_empresa
-					LEFT JOIN entidade ON user_nb_entidade = enti_nb_id
-					WHERE 1 {$extra};"
-			;
-
-			$gridFields = [
-				"CÓDIGO" => "user_nb_id",
-				"NOME" => "user_tx_nome",
-				"MATRICULA" => "enti_tx_matricula",
-				"CPF" => "user_tx_cpf",
-				"LOGIN" => "user_tx_login",
-				"NÍVEL" => "user_tx_nivel",
-				"E-MAIL" => "user_tx_email",
-				"TELEFONE" => "user_tx_fone",
-				"EMPRESA" => "empr_tx_nome",
-				"STATUS" => "user_tx_status",
-				"<spam class='glyphicon glyphicon-search'></spam>" => "iconeModificar",
-				"<spam class='glyphicon glyphicon-remove'></spam>" => "iconeExcluir"
-			];
-			
-			grid($sql, array_keys($gridFields), array_values($gridFields));
-		//}*/
+		// echo "<div id='tituloRelatorio' style='display: none;'>
+        //             <img style='width: 190px; height: 40px;' src='./imagens/logo_topo_cliente.png' alt='Logo Empresa Esquerda'>
+		// 			<h1>Cadastro de Usuário</h1>
+        //             <img style='width: 180px; height: 80px;' src='./$logoEmpresa' alt='Logo Empresa Direita'>
+        //     </div>";
 
 		//Grid dinâmico{
 			$gridFields = [
-				"CÓDIGO" 		=> "user_nb_id",
-				"NOME" 			=> "user_tx_nome",
-				"MATRICULA" 	=> "enti_tx_matricula",
-				"CPF" 			=> "user_tx_cpf",
-				"LOGIN" 		=> "user_tx_login",
-				"NÍVEL" 		=> "user_tx_nivel",
-				"E-MAIL" 		=> "user_tx_email",
-				"TELEFONE" 		=> "user_tx_fone",
-				"EMPRESA" 		=> "empr_tx_nome",
-				"STATUS" 		=> "user_tx_status"
+				"CÓDIGO" 		=> "oper_nb_id",
+				"NOME" 			=> "oper_tx_nome",
+				// "USUÁRIO CADASTRO" 	=> "userCadastro(oper_nb_userCadastro)",
+				"STATUS" 		=> "oper_tx_status"
 			];
 
 			$camposBusca = [
-				"busca_codigo" 		=> "user_nb_id",
-				"busca_nome_like" 	=> "user_tx_nome",
-				"busca_cpf" 		=> "user_tx_cpf",
-				"busca_login_like" 	=> "user_tx_login",
-				"busca_nivel" 		=> "user_tx_nivel",
-				"busca_status" 		=> "user_tx_status",
-				"busca_empresa" 	=> "empr_nb_id"
+				"busca_codigo" 		=> "oper_nb_id",
+				"busca_nome_like" 	=> "oper_tx_nome",
+				"busca_usuario" 	=> "oper_nb_userCadastro",
+				"busca_status" 		=> "oper_tx_status",
 			];
 
 			$queryBase = 
-				"SELECT ".implode(", ", array_values($gridFields))." FROM user"
-				." LEFT JOIN empresa ON empresa.empr_nb_id = user.user_nb_empresa"
-				." LEFT JOIN entidade ON user_nb_entidade = enti_nb_id"
+				"SELECT ".implode(", ", array_values($gridFields))." FROM operacao"
 			;
 
 			$actions = criarIconesGrid(
 				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-				["cadastro_usuario.php", "cadastro_usuario.php"],
-				["modificarUsuario()", "excluirUsuario()"]
+				["cadastro_operacao.php", "cadastro_operacao.php"],
+				["modificarOperacao()", "excluirOperacao()"]
 			);
 	
 			$actions["functions"][1] .= 
@@ -162,7 +141,7 @@
 					".implode(" ", $actions["functions"])."
 				}"
 			;
-			echo gridDinamico("tabelaMotoristas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+			echo gridDinamico("tabelaOperacao", $gridFields, $camposBusca, $queryBase, $jsFunctions);
 		//}
 
 

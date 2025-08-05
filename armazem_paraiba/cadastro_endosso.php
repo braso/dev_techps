@@ -1,5 +1,5 @@
 	<?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -333,7 +333,6 @@
 	}
 
 	function cadastrar(){
-
 		global $CONTEX;
 		
 		$err = conferirErros();
