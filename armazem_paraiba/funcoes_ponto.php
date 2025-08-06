@@ -1824,7 +1824,7 @@
 
 		$title = "Ajuste de Ponto";
 		$func = "ajustarPonto({$idMotorista},\"{$data}\"";
-		$content = "<i style='color:{$cor};' class='fa fa-circle'>";
+		$content = "<i style='color:{$cor};' class='fa fa-circle $classe'>";
 		if(count($endossado) > 0){
 			$title .= " (endossado)";
 			$func .= ", true";

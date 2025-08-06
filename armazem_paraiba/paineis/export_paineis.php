@@ -20,8 +20,8 @@ class CustomPDF extends TCPDF {
 
     public function Header() {
         $imgWidth = 65;
-        $imgWidth2 = 65;
-        $imgHeight = 30;
+        $imgWidth2 = 45;
+        $imgHeight = 20;
         $imgHeight2 = 15;
         $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth2, $imgHeight2);
         $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 25, 10, $imgWidth, $imgHeight);
@@ -1512,7 +1512,7 @@ function gerarPainelAjustes() {
     $pdf->SetFont('helvetica', '', 10);
     $pdf->Write(7, $empresa['empr_tx_nome'] . "\n");
 
-    $pdf->Ln(5);
+    $pdf->Ln(20);
 
     $userEntrada = preg_replace('/[^a-zA-Z0-9_-]/', '', $_SESSION['horaEntrada']);
 
@@ -1540,7 +1540,7 @@ function gerarPainelAjustes() {
 
 
     // === Espaço antes da próxima tabela ===
-    $pdf->Ln(10);
+    $pdf->Ln(15);
 
     // === Tabela: Ajustes por funcionário ===
     $pdf->SetFillColor(241, 198, 31); 
