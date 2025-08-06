@@ -746,7 +746,7 @@
 		//CASO NÃO HAJA PONTOS{
 			if(count($pontosDia) == 0){
 				$aRetorno["diffSaldo"] = getSaldoDiario($jornadaPrevista, "00:00");
-				if(strip_tags($aRetorno["jornadaPrevista"]) != "00:00"){
+				if(strip_tags($aRetorno["jornadaPrevista"]) != "00:00" && empty($abonos)){
 					$aRetorno["inicioJornada"][] = "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
 				}
 
