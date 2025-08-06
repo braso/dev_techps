@@ -497,7 +497,7 @@
 
 			$_POST["nivel"] = $_POST["ocupacao"];
 
-			if($a_user["user_nb_id"] > 0){
+			if(!empty($a_user["user_nb_id"])){
 				$newUser = [
 					"user_tx_nome" 			=> $_POST["nome"], 
 					"user_tx_login" 		=> (!empty($_POST["login"])? $_POST["login"]: $_POST["postMatricula"]), 
