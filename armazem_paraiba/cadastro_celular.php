@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cadastrar'])) {
     $cimie = trim($_POST['cimie']);
     $so = trim($_POST['sistema_operacional']);
     $marca_modelo = trim($_POST['marca_modelo']);
-    $funcionario_id = isset($_POST['funcionario_id']) ? (int) $_POST['funcionario_id'] : null;
+    $entidade_id = isset($_POST['entidade_id']) ? (int) $_POST['entidade_id'] : null;
     $editar_id = isset($_POST['editar_id']) ? (int)$_POST['editar_id'] : null;
 
     if (empty($nome) || empty($imei) || empty($numero)) {
@@ -45,14 +45,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cadastrar'])) {
     mysqli_stmt_close($stmtCheck);
 
     if ($editar_id) {
-        $sql = "UPDATE celular SET nome=?, imei=?, numero=?, operadora=?, cimie=?, sistema_operacional=?, marca_modelo=?, funcionario_id=?, data_alteracao=NOW() WHERE id=?";
+        $sql = "UPDATE celular SET nome=?, imei=?, numero=?, operadora=?, cimie=?, sistema_operacional=?, marca_modelo=?, entidade_id=?, data_alteracao=NOW() WHERE id=?";
         $stmt = mysqli_prepare($conn, $sql);
-        mysqli_stmt_bind_param($stmt, "sssssssii", $nome, $imei, $numero, $operadora, $cimie, $so, $marca_modelo, $funcionario_id, $editar_id);
+        mysqli_stmt_bind_param($stmt, "sssssssii", $nome, $imei, $numero, $operadora, $cimie, $so, $marca_modelo, $entidade_id, $editar_id);
         $acao = 'atualizado';
     } else {
-        $sql = "INSERT INTO celular (nome, imei, numero, operadora, cimie, sistema_operacional, marca_modelo, funcionario_id, data_cadastro) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+        $sql = "INSERT INTO celular (nome, imei, numero, operadora, cimie, sistema_operacional, marca_modelo, entidade_id, data_cadastro) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())";
         $stmt = mysqli_prepare($conn, $sql);
-        mysqli_stmt_bind_param($stmt, "sssssssi", $nome, $imei, $numero, $operadora, $cimie, $so, $marca_modelo, $funcionario_id);
+        mysqli_stmt_bind_param($stmt, "sssssssi", $nome, $imei, $numero, $operadora, $cimie, $so, $marca_modelo, $entidade_id);
         $acao = 'cadastrado';
     }
 
@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cadastrar'])) {
 
 function formCelular($editar = null) {
     global $conn;
-    $dados = ['nome'=>'','imei'=>'','numero'=>'','operadora'=>'','cimie'=>'','sistema_operacional'=>'','marca_modelo'=>'','funcionario_id'=>'','id'=>''];
+    $dados = ['nome'=>'','imei'=>'','numero'=>'','operadora'=>'','cimie'=>'','sistema_operacional'=>'','marca_modelo'=>'','entidade_id'=>'','id'=>''];
 
     if ($editar) {
         $sql = "SELECT * FROM celular WHERE id = ?";
@@ -122,14 +122,14 @@ function formCelular($editar = null) {
                         </div>
                         <div style="flex: 1;">
                             <label><b>Responsável</b>:</label>
-                            <select name="funcionario_id" class="form-control">
+                            <select name="entidade_id" class="form-control">
                                 <option value="">-- Selecione --</option>';
                                 $sqlFunc = "SELECT enti_nb_id, enti_tx_nome FROM entidade
                                 WHERE enti_tx_tipo = 'Motorista' AND enti_tx_status = 'ativo'
                                 ORDER BY enti_tx_nome";
                                 $resFunc = mysqli_query($conn, $sqlFunc);
                                 while ($func = mysqli_fetch_assoc($resFunc)) {
-                                    $selected = ($dados['funcionario_id'] == $func['enti_nb_id']) ? 'selected' : '';
+                                    $selected = ($dados['entidade_id'] == $func['enti_nb_id']) ? 'selected' : '';
                                     echo '<option value="' . $func['enti_nb_id'] . '" ' . $selected . '>' . htmlspecialchars($func['enti_tx_nome']) . '</option>';
                                 }
                             echo '
@@ -149,7 +149,7 @@ function listarCelulares() {
     global $conn;
     $sql = "SELECT c.*, e.enti_tx_nome AS funcionario_nome
             FROM celular c
-            LEFT JOIN entidade e ON c.funcionario_id = e.enti_nb_id
+            LEFT JOIN entidade e ON c.entidade_id = e.enti_nb_id
             ORDER BY c.id DESC";
     $res = mysqli_query($conn, $sql);
     if (!$res) {
