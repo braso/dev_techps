@@ -74,12 +74,12 @@ $funcionario = isset($_POST['funcionario']) && is_numeric($_POST['funcionario'])
 
     // Atualizar ou inserir
 if ($editar_id) {
-    $sql = "UPDATE placa SET placa = ?, modelo = ?, placa_id_empresa = ?, funcionario_id = ?, data_alteracao = NOW() WHERE id = ?";
+    $sql = "UPDATE placa SET placa = ?, modelo = ?, placa_id_empresa = ?, entidade_id = ?, data_alteracao = NOW() WHERE id = ?";
     $stmt = mysqli_prepare($conn, $sql);
     mysqli_stmt_bind_param($stmt, "ssiii", $placa, $modelo, $empresa, $funcionario, $editar_id);
     $acao = 'editada';
 } else {
-    $sql = "INSERT INTO placa (placa, modelo, placa_id_empresa, funcionario_id, data_cadastro) VALUES (?, ?, ?, ?, NOW())";
+    $sql = "INSERT INTO placa (placa, modelo, placa_id_empresa, entidade_id, data_cadastro) VALUES (?, ?, ?, ?, NOW())";
     $stmt = mysqli_prepare($conn, $sql);
     mysqli_stmt_bind_param($stmt, "ssii", $placa, $modelo, $empresa, $funcionario);
     $acao = 'cadastrada';
@@ -114,7 +114,7 @@ function cadastro_placa($editar = null) {
             $placa = $row['placa'];
             $modelo = $row['modelo'];
             $empresa = $row['placa_id_empresa'];
-            $funcionario = $row['funcionario_id'];
+            $funcionario = $row['entidade_id'];
             $editar_id = $row['id'];
         } else {
             echo "<p class='alert alert-danger'>Placa não encontrada.</p>";
@@ -202,7 +202,7 @@ function listarPlacas() {
     $sql = "SELECT p.*, e.empr_tx_nome, en.enti_tx_nome AS funcionario_nome
         FROM placa p
         JOIN empresa e ON p.placa_id_empresa = e.empr_nb_id
-        LEFT JOIN entidade en ON p.funcionario_id = en.enti_nb_id
+        LEFT JOIN entidade en ON p.entidade_id = en.enti_nb_id
         ORDER BY p.id DESC";
     
     $res = mysqli_query($conn, $sql);

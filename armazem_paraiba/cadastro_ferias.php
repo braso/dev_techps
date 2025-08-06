@@ -109,16 +109,6 @@
 				LIMIT 1;"
 		));
 
-		if(!empty($feriasExistente)){
-			$inicio = DateTime::createFromFormat("Y-m-d", $feriasExistente["feri_tx_dataInicio"])->format("d/m/Y");
-			$fim = DateTime::createFromFormat("Y-m-d", $feriasExistente["feri_tx_dataFim"])->format("d/m/Y");
-
-			$_POST["errorFields"][] = "periodo_ferias";
-			set_status("ERRO: Já existe férias cadastradas de {$inicio} a {$fim}.");
-			layout_ferias();
-			exit;
-		}
-
 		$novasFerias = [
 			"feri_nb_entidade" 		=> $_POST["motorista"],
 			"feri_tx_dataInicio" 	=> $begin,
@@ -126,10 +116,41 @@
 			"feri_tx_status" 		=> "ativo"
 		];
 
-		inserir("ferias", array_keys($novasFerias), array_values($novasFerias));
+		if(!empty($feriasExistente) && empty($_POST["id"])){//Tentando cadastrar novas férias em datas com férias já existentes
+			$inicio = DateTime::createFromFormat("Y-m-d", $feriasExistente["feri_tx_dataInicio"])->format("d/m/Y");
+			$fim = DateTime::createFromFormat("Y-m-d", $feriasExistente["feri_tx_dataFim"])->format("d/m/Y");
 
-		set_status("Registro inserido com sucesso.");
+			$_POST["errorFields"][] = "periodo_ferias";
+			set_status("ERRO: Já existe férias cadastradas de {$inicio} a {$fim}.");
+			layout_ferias();
+		}elseif(!empty($_POST["id"])){//Modificando férias já existentes
+			atualizar("ferias", array_keys($novasFerias), array_values($novasFerias), $_POST["id"]);
+			set_status("Registro atualizado com sucesso.");
+		}else{//Cadastrando novas férias
+			inserir("ferias", array_keys($novasFerias), array_values($novasFerias));
+			set_status("Registro inserido com sucesso.");
+		}
+
 		index();
+		exit;
+	}
+
+	function modificarFerias(){
+		$ferias = mysqli_fetch_assoc(query(
+			"SELECT * from ferias 
+				WHERE feri_tx_status = 'ativo'
+					AND feri_nb_id = '{$_POST["id"]}'
+			LIMIT 1;"
+		));
+
+		if(!empty($ferias)){
+			$_POST = array_merge($_POST, $ferias);
+
+			$_POST["motorista"] = $_POST["feri_nb_entidade"];
+			$_POST["periodo_ferias"] = [$_POST["feri_tx_dataInicio"], $_POST["feri_tx_dataFim"]];
+		}
+
+		layout_ferias();
 		exit;
 	}
 
@@ -151,17 +172,20 @@
     	
 		cabecalho("Cadastro de Férias");
 
-		$campos[0][] = combo_net(
-			"Funcionário*",
-			"motorista",
-			(!empty($_POST["motorista"])? $_POST["motorista"]: $_POST["busca_motorista"]?? ""),
-			4,
-			"entidade",
-			"",
-			" AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')",
-			"enti_tx_matricula"
-		);
-		$campos[0][] = campo("Período*", "periodo_ferias", ($_POST["periodo_ferias"]?? $_POST["busca_periodo"]?? ""),3, "MASCARA_PERIODO_SEM_LIMITE");
+		$campos[0] = [
+			combo_net(
+				"Funcionário*",
+				"motorista",
+				(!empty($_POST["motorista"])? $_POST["motorista"]: $_POST["busca_motorista"]?? ""),
+				4,
+				"entidade",
+				"",
+				" AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')",
+				"enti_tx_matricula"
+			),
+			campo("Período*", "periodo_ferias", ($_POST["periodo_ferias"]?? ""),3, "MASCARA_PERIODO_SEM_LIMITE"),
+			campo_hidden("id", ($_POST["id"]?? "")),
+		];
 
 		echo abre_form();
 		echo linha_form($campos[0]);
