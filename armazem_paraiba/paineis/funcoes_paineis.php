@@ -1129,7 +1129,7 @@ function relatorio_nao_conformidade_juridica() {
 				}
 			}
 
-			// $totalMotorista["diasConformidade"] = count($diasComProblema);
+			$totalMotorista["diasConformidade"] = count($diasComProblema);
 
 			$motoristaTotais[] = $totalMotorista;
 
