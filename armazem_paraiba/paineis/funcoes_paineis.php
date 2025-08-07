@@ -825,9 +825,9 @@ function relatorio_nao_conformidade_juridica() {
 		$pasta->close();
 	}
 
-	$diasComProblema = [];
-
+	$totalEmpresa = 0;
 	foreach ($motoristas as $motorista) {
+		$diasComProblema = [];
 
 		$totalMotorista = [
 			"matricula" 				=> $motorista["enti_tx_matricula"],
@@ -1133,6 +1133,7 @@ function relatorio_nao_conformidade_juridica() {
 			}
 
 			$totalMotorista["diasConformidade"] = count($diasComProblema);
+			$totalEmpresa += count($diasComProblema);
 
 			$motoristaTotais[] = $totalMotorista;
 
@@ -1151,7 +1152,7 @@ function relatorio_nao_conformidade_juridica() {
 		"mdc"		 				=> 0,
 		"intersticioInferior" 		=> 0,
 		"intersticioSuperior" 		=> 0,
-
+		"diasConformidade"			=> 0,
 		"refeicaoSemRegistro" 		=> 0,
 		"refeicao1h" 				=> 0,
 		"refeicao2h" 				=> 0,
@@ -1163,11 +1164,11 @@ function relatorio_nao_conformidade_juridica() {
 		"dataInicio"				=> $periodoInicio2->format("d/m/Y"),
 	];
 
-	$totaisEmpr["diasConformidade"] = count($diasComProblema);
+	$totaisEmpr["diasConformidade"] = $totalEmpresa;
 
 	foreach ($motoristaTotais as $motorista) {
 		foreach ($totaisEmpr as $key => $value) {
-			if (isset($motorista[$key]) && is_numeric($motorista[$key])) {
+			if (isset($motorista[$key]) && is_numeric($motorista[$key] && $key != "diasConformidade")) {
 				$totaisEmpr[$key] += $motorista[$key];
 			}
 		}
