@@ -237,44 +237,46 @@ function desenharLinhaDeCamposFlex(TCPDF $pdf, array $campos, float $espacoEntre
     $xInicial = $pdf->GetX();
 
     foreach ($campos as $index => $campo) {
-        // Define as larguras do rótulo e do valor
-        $larguraLabel = $campo['larguraLabel'] ?? 0;
-        $larguraValor = $campo['larguraValor'] ?? 0;
+        $larguraTotal = $campo['largura'] ?? 0;
         
-        // A largura total do campo é a soma das larguras de label e valor
-        $larguraTotal = $larguraLabel + $larguraValor;
-        if ($larguraTotal === 0) {
-            // Se as larguras não forem definidas, usa a largura total do campo
-            $larguraTotal = $campo['largura'];
-            $larguraLabel = $larguraTotal * 0.35; // Padrão
-            $larguraValor = $larguraTotal * 0.65; // Padrão
-        }
+        $larguraLabel = $campo['larguraLabel'] ?? ($larguraTotal * 0.35);
+        $larguraValor = $campo['larguraValor'] ?? ($larguraTotal - $larguraLabel);
 
-        // Largura total do campo (label + valor) + espaçamento
-        $larguraCampoTotal = $larguraTotal;
+        $larguraCampoTotal = $larguraLabel + $larguraValor;
         if ($index < count($campos) - 1) {
             $larguraCampoTotal += $espacoEntreCampos;
         }
 
-        // Verifica se o campo cabe na linha atual
         if ($pdf->GetX() + $larguraCampoTotal > $larguraPagina + $pdf->getMargins()['left']) {
             $pdf->Ln(10);
             $pdf->SetX($xInicial);
         }
-
-        // Prepara o valor para a célula, truncando-o se for muito longo
-        $valor = $campo['value'] ?? '';
         
+        // --- LÓGICA DE DESENHO DO CAMPO ---
+
         // Label
         $pdf->SetFont('helvetica', 'B', 9);
         $pdf->SetFillColor(240, 240, 240);
         $pdf->Cell($larguraLabel, 7, ' ' . $campo['label'], 0, 0, 'L', true);
-
+        
         // Valor
         $pdf->SetFont('helvetica', '', 9);
-        $pdf->Cell($larguraValor, 7, ' ' . $valor, 'B', 0, 'L');
         
-        // Espaço entre os campos (exceto para o último)
+        // Se a chave 'multiLine' estiver definida, usa MultiCell
+        if (isset($campo['multiLine']) && $campo['multiLine'] === true) {
+            $valor = $campo['value'] ?? '';
+            // Usa MultiCell para permitir a quebra de linha do texto dentro da célula
+            $pdf->MultiCell($larguraValor, 7, ' ' . $valor, 'B', 'L', false, 0);
+        } else {
+            // Caso contrário, usa a lógica de truncamento de texto
+            $valor = $campo['value'] ?? '';
+            $maxCaracteres = floor($larguraValor / 1.7);
+            if (strlen($valor) > $maxCaracteres) {
+                $valor = substr($valor, 0, $maxCaracteres - 3) . '...';
+            }
+            $pdf->Cell($larguraValor, 7, ' ' . $valor, 'B', 0, 'L');
+        }
+        
         if ($index < count($campos) - 1) {
             $pdf->Cell($espacoEntreCampos, 7, '');
         }
@@ -283,7 +285,6 @@ function desenharLinhaDeCamposFlex(TCPDF $pdf, array $campos, float $espacoEntre
     $pdf->Ln();
     $pdf->Ln(1.5);
 }
-
 // =============================================================================
 // INICIALIZAÇÃO E GERAÇÃO DO PDF
 // =============================================================================
@@ -357,7 +358,7 @@ desenharLinhaDeCamposFlex($pdf, [['label' => 'Nome do Cônjuge:', 'value' => $mo
 // // --- SEÇÃO: DADOS CONTRATUAIS---
 desenharTituloSecao($pdf, 'Dados Contratuais');
 desenharLinhaDeCamposFlex($pdf, [
-    ['label' => 'Empresa:', 'value' => obterDado($empresa, "empr_tx_nome"), 'larguraLabel' => 18, 'larguraValor' => 117],
+    ['label' => 'Empresa:', 'value' => obterDado($empresa, "empr_tx_nome"), 'larguraLabel' => 18, 'larguraValor' => 117, 'multiLine' => true],
     ['label' => 'Salário:', 'value' => formatarMoeda($motorista["enti_nb_salario"] ?? ''), 'larguraLabel' => 15, 'larguraValor' => 28],
 ]);
 desenharLinhaDeCamposFlex($pdf, [
@@ -368,7 +369,7 @@ desenharLinhaDeCamposFlex($pdf, [
 
 // --- SEÇÃO: CONVENÇÃO SINDICAL - JORNADA PADRÃO DO FUNCIONÁRIO ---
 desenharTituloSecao($pdf, 'Jornada Padrão do Funcionário');
-desenharLinhaDeCamposFlex($pdf, [['label' => 'Parâmetros da Jornada:', 'value' => $parametroJornada["para_tx_nome"], 'larguraLabel' => 40, 'larguraValor' => 140]]);
+desenharLinhaDeCamposFlex($pdf, [['label' => 'Parâmetros da Jornada:', 'value' => $parametroJornada["para_tx_nome"], 'larguraLabel' => 40, 'larguraValor' => 140, 'multiLine' => true]]);
 desenharLinhaDeCamposFlex($pdf, [
     ['label' => 'Jornada Dias Úteis (Hr/dia):', 'value' => $parametroJornada["para_tx_jornadaSemanal"], 'larguraLabel' => 45, 'larguraValor' => 13],
     ['label' => 'Jornada Sábado:', 'value' => $parametroJornada["para_tx_jornadaSabado"] ?? '', 'larguraLabel' => 30, 'larguraValor' => 13],
