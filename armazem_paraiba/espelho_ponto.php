@@ -652,37 +652,37 @@
 							<meta charset='utf-8'>
 							<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'>
 
-							<link href='http://localhost/braso/contex20/assets/global/plugins/select2/css/select2.min.css' rel='stylesheet'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/select2/css/select2.min.css' rel='stylesheet'>
 							<link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&amp;subset=all' rel='stylesheet' type='text/css'>
-							<link href='http://localhost/braso/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css' rel='stylesheet' type='text/css'>
-							<link href='http://localhost/braso/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css' rel='stylesheet' type='text/css'>
-							<link href='http://localhost/braso/contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css' rel='stylesheet' type='text/css'>
-							<link href='http://localhost/braso/contex20/assets/global/plugins/uniform/css/uniform.default.css' rel='stylesheet' type='text/css'>
-							<link href='http://localhost/braso/contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/uniform/css/uniform.default.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css' rel='stylesheet' type='text/css'>
 							<!-- FIM GLOBAL MANDATORY STYLES -->
 
-							<link href='http://localhost/braso/contex20/assets/global/plugins/datatables/datatables.min.js' rel='stylesheet' type='text/css'>
-							<link href='http://localhost/braso/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js' rel='stylesheet' type='text/css'>
-							<link href='http://localhost/braso/contex20/assets/global/plugins/datatables/datatables.min.css' rel='stylesheet' type='text/css'>
-							<link href='http://localhost/braso/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/datatables/datatables.min.js' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/datatables/datatables.min.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css' rel='stylesheet' type='text/css'>
 
-							<link href='http://localhost/braso/contex20/assets/global/plugins/select2/css/select2.min.css' rel='stylesheet' type='text/css'>
-							<link href='http://localhost/braso/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/select2/css/select2.min.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css' rel='stylesheet' type='text/css'>
 
 							<!-- INICIO TEMA GLOBAL STYLES -->
-							<link href='http://localhost/braso/contex20/assets/global/css/components.min.css' rel='stylesheet' id='style_components' type='text/css'>
-							<link href='http://localhost/braso/contex20/assets/global/css/plugins.min.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/css/components.min.css' rel='stylesheet' id='style_components' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/css/plugins.min.css' rel='stylesheet' type='text/css'>
 							<!-- FIM TEMA GLOBAL STYLES -->
 							<!-- INICIO TEMA LAYOUT STYLES -->
-							<link href='http://localhost/braso/contex20/assets/layout/css/layout.min.css' rel='stylesheet' type='text/css'>
-							<link href='http://localhost/braso/contex20/assets/layout/css/themes/default.min.css' rel='stylesheet' type='text/css' id='style_color'>
-							<link href='http://localhost/braso/contex20/assets/layout/css/custom.min.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/layout/css/layout.min.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/layout/css/themes/default.min.css' rel='stylesheet' type='text/css' id='style_color'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/layout/css/custom.min.css' rel='stylesheet' type='text/css'>
 							<!-- FIM TEMA LAYOUT STYLES -->
-							<link rel='apple-touch-icon' sizes='180x180' href='http://localhost/braso/contex20/img/favicon/apple-touch-icon.png'>
-							<link rel='icon' type='image/png' sizes='32x32' href='http://localhost/braso/contex20/img/favicon/favicon-32x32.png'>
-							<link rel='icon' type='image/png' sizes='16x16' href='http://localhost/braso/contex20/img/favicon/favicon-16x16.png'>
-							<link rel='shortcut icon' type='image/x-icon' href='http://localhost/braso/contex20/img/favicon/favicon-32x32.png?v=2'>
-							<link rel='manifest' href='http://localhost/braso/contex20/img/favicon/site.webmanifest'>
+							<link rel='apple-touch-icon' sizes='180x180' href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/img/favicon/apple-touch-icon.png'>
+							<link rel='icon' type='image/png' sizes='32x32' href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/img/favicon/favicon-32x32.png'>
+							<link rel='icon' type='image/png' sizes='16x16' href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/img/favicon/favicon-16x16.png'>
+							<link rel='shortcut icon' type='image/x-icon' href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/img/favicon/favicon-32x32.png?v=2'>
+							<link rel='manifest' href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/img/favicon/site.webmanifest'>
 							<style>
 								body { font-family: Arial, sans-serif; margin: 20px; }
 								table { width: 100%; border-collapse: collapse; }
