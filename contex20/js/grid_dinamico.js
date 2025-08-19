@@ -252,7 +252,7 @@ function imprimirTabelaCompleta() {
         condicoesImpressao += ' ORDER BY ' + orderCol;
     }
 
-    // Faz nova requisição AJAX com todos os dados
+    // Faz a requisição AJAX para buscar todos os dados
     $.ajax({
         url: urlTableInfo,
         method: 'POST',
@@ -266,54 +266,95 @@ function imprimirTabelaCompleta() {
         },
         dataType: 'json',
         success: function(response) {
-            // Gera cabeçalho
-            const header = [...Object.keys(fields)];
-            let statusCol = -1;
-
-            header.forEach(function(value, key) {
-                if (camposBd[key] != null && camposBd[key].indexOf('status') >= 0) {
-                    statusCol = key;
-                }
-                camposBd[key] = camposBd[key].indexOf(' AS ') >= 0 ?
-                    camposBd[key].substring(camposBd[key].indexOf(' AS ') + 4) :
-                    camposBd[key];
-
-                header[key] =
-                    '<th colspan="1" rowspan="1" class="table-col-head" value="' + key + '">'
-                    + value + '</th>';
-            });
-
-            response.rows.forEach(function(dataArray, rowKey) {
+            // Gera o HTML da tabela
+            const headerHtml = Object.keys(fields).map((value) => {
+                return `<th class="header-cell">${value}</th>`;
+            }).join('');
+            
+            const tableRowsHtml = response.rows.map((dataArray) => {
                 let row = '';
-                Object.keys(dataArray).forEach(function(key) {
+                Object.keys(dataArray).forEach((key) => {
                     if (camposBd.indexOf(key) >= 0) {
-                        row += '<td>' + (dataArray[key] != null ? dataArray[key] : '') + '</td>';
+                        row += `<td class="data-cell">${dataArray[key] !== null ? dataArray[key] : ''}</td>`;
                     }
                 });
-                try {
-                    if (typeof actions !== 'undefined') {
-                        actions.forEach(function(actionTag) {
-                            row += '<td class="tab-action">' + actionTag + '</td>';
-                        });
+                return `<tr>${row}</tr>`;
+            }).join('');
+
+            const tabelaCompleta = `
+                <style>
+                    /* Estilos para o TCPDF */
+                    body { font-family: Arial, sans-serif; font-size: 8pt; }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
                     }
-                } catch (e) {}
+                    th, td {
+                        border: 1px solid #000;
+                        padding: 3px; /* Reduz o padding para 3px */
+                        text-align: left;
+                    }
+                    .header-cell {
+                        font-weight: bold;
+                        background-color: #f2f2f2;
+                        font-size: 8pt; /* Reduz a fonte para 8pt */
+                        white-space: nowrap; /* Evita quebra de linha no cabeçalho */
+                    }
+                    .data-cell {
+                        font-size: 7pt; /* Reduz a fonte da célula para 7pt */
+                    }
+                </style>
+                <table>
+                    <thead>
+                        <tr>${headerHtml}</tr>
+                    </thead>
+                    <tbody>
+                        ${tableRowsHtml}
+                    </tbody>
+                </table>
+            `;
 
-                response.rows[rowKey] = '<tr>' + row + '</tr>';
-            });
+            // Cria e submete o formulário para a página que gera o PDF
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = './impressao/grid.php'; 
+            form.target = '_blank';
 
-            // Renderiza tudo
-            $('#result thead')[0].innerHTML = header.join('');
-            $('#result tbody')[0].innerHTML = response.rows.join('');
+            var inputTabela = document.createElement('input');
+            inputTabela.type = 'hidden';
+            inputTabela.name = 'tabela_html';
+            inputTabela.value = tabelaCompleta;
+            form.appendChild(inputTabela);
+            
+            const selectIdEmpresa = document.getElementById('busca_empresa');
+            const id = selectIdEmpresa.value;
 
-            // Aguarda DOM atualizar e imprime
-            setTimeout(() => {
-                window.print();
+            var IdEmpresa = document.createElement('input');
+            IdEmpresa.type = 'hidden';
+            IdEmpresa.name = 'IdEmpresa';
+            IdEmpresa.value = id;
+            form.appendChild(IdEmpresa);
 
-                // Restaura valores e recarrega a versão paginada
-                $('input[name="limit"]')[0].value = limitOriginal;
-                pageNumber = paginaOriginal;
-                consultarRegistros();
-            }, 500);
+            const divElemento = document.querySelector('.page-title');
+            const titulo = divElemento.innerText.trim();
+            const palavras = titulo.split(' ');
+            const pagina = palavras[2];
+
+
+            var paginaTitulo = document.createElement('input');
+            paginaTitulo.type = 'hidden';
+            paginaTitulo.name = 'paginaTitulo';
+            paginaTitulo.value = pagina;
+            form.appendChild(paginaTitulo);
+            
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+
+            // Restaura os valores originais da paginação após a requisição
+            $('input[name="limit"]')[0].value = limitOriginal;
+            pageNumber = paginaOriginal;
+            consultarRegistros();
         },
         error: function(err) {
             console.error('Erro ao carregar todos os dados:', err);

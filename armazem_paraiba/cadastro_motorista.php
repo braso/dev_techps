@@ -97,7 +97,7 @@
 					const id = '$_POST[id]';
 					var form = document.createElement('form');
 					form.method = 'POST';
-					form.action = 'ficha_funcionario.php';
+					form.action = './impressao/ficha_funcionario.php';
 					form.target = '_blank';
 
 					var inputId = document.createElement('input');

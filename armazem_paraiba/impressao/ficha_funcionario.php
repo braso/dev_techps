@@ -9,8 +9,8 @@ ini_set("display_errors", 1);
 error_reporting(E_ALL);
 //*/
 
-require_once __DIR__ . "/tcpdf/tcpdf.php";
-require_once __DIR__ . "/funcoes_ponto.php"; // Supondo que as funções carregar() e query() estão aqui.
+require_once __DIR__ . "./../tcpdf/tcpdf.php";
+require_once __DIR__ . "./../funcoes_ponto.php";
 
 // =============================================================================
 // FUNÇÕES AUXILIARES (mantidas do código original)
@@ -189,7 +189,7 @@ class CustomPDF extends TCPDF {
         // Título - Usando SetY para garantir a posição correta
         $this->SetY(25); // Posiociona o cursor abaixo da linha azul
         $this->SetFont('helvetica', 'B', 14);
-        $this->Cell(0, 10, strtoupper($this->tituloPersonalizado), 0, 1, 'C', false, '', 0, false, 'T', 'M');
+        $this->Cell(0, 10, mb_strtoupper($this->tituloPersonalizado), 0, 1, 'C', false, '', 0, false, 'T', 'M');
     }
 
      public function Footer() {
@@ -290,7 +290,7 @@ function desenharLinhaDeCamposFlex(TCPDF $pdf, array $campos, float $espacoEntre
 // =============================================================================
 
 // --- INICIALIZAÇÃO DO DOCUMENTO ---
-$pdf = new CustomPDF($empresa, 'Ficha de Cadastro do Colaborador '.$motorista['enti_tx_nome']);
+$pdf = new CustomPDF($empresa, 'Ficha de Cadastro do Colaborador');
 $pdf->AddPage();
 
 // --- CAMPO PARA FOTO 3X4 ---

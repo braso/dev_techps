@@ -487,9 +487,9 @@
 				// function imprimir(){
 				// 	window.print();
 				// }
-
+				
 				function imprimir(botao) {
-					const alvo = document.querySelector('div:nth-child(14) > div > div.portlet-title');
+					const alvo = document.querySelector('div > div.portlet-title');
 					if (!alvo) {
 						alert('Conteúdo para impressão não encontrado.');
 						return;

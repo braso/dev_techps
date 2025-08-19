@@ -249,8 +249,8 @@ function gerarPainelEndosso() {
 
     [$percEndosso["E"], $percEndosso["EP"], $percEndosso["N"]] = calcPercs(array_values($contagemEndossos));
     [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
-
-    $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf = new CustomPDF([],'',PDF_PAGE_ORIENTATION, 'mm', 'A4', true, 'UTF-8', false);
+    $pdf->SetPageOrientation('L');
     $pdf->setEmpresaData($empresa);
     $pdf->tituloPersonalizado = 'Relatório de Endossos';
     $pdf->SetCreator('TechPS');
@@ -603,7 +603,7 @@ function gerarPainelSaldo() {
     [$percEndosso["E"], $percEndosso["EP"], $percEndosso["N"]] = calcPercs(array_values($contagemEndossos));
     [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
 
-    $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf = new CustomPDF([],'','L', 'mm', 'A4', true, 'UTF-8', false);
     $pdf->setEmpresaData($empresa);
     $pdf->tituloPersonalizado = 'Relatório Geral de Saldo';
     $pdf->SetCreator('TechPS');
@@ -1079,7 +1079,7 @@ function gerarPainelNc() {
         }
     }
 
-    $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf = new CustomPDF([],'','L', 'mm', 'A4', true, 'UTF-8', false);
     $pdf->setEmpresaData($empresa);
     $pdf->tituloPersonalizado = 'Relatório de Não Conformidade Jurídica';
     $pdf->SetCreator('TechPS');
@@ -1469,7 +1469,7 @@ function gerarPainelAjustes() {
         $pastaAjuste->close();
     }
 
-    $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf = new CustomPDF([],'','L', 'mm', 'A4', true, 'UTF-8', false);
     $pdf->setEmpresaData($empresa);
     $pdf->tituloPersonalizado = 'Relatório de Ajustes';
     $pdf->SetCreator('TechPS');
@@ -1883,7 +1883,7 @@ function gerarPainelDisponibilidade() {
     // Calcula total antes
     $total = array_sum($ocupacoes);
 
-    $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf = new CustomPDF([],'','L', 'mm', 'A4', true, 'UTF-8', false);
     $pdf->setEmpresaData($empresa);
     $pdf->tituloPersonalizado = '';
     $pdf->SetCreator('TechPS');
