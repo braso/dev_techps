@@ -534,6 +534,22 @@
 						.portlet-body form{
 							margin-left: -50px !important;
 						}
+						
+						.color_red:before {
+							color: red !important;
+						}
+						.color_green:before {
+							color: green !important;
+						}
+						.color_blue:before {
+							color: blue !important;
+						}
+						.color_greenLight:before {
+							color: #00ff00 !important;
+						}
+						.color_orange:before {
+							color: orange !important;
+						}
 					}
 				`;
 

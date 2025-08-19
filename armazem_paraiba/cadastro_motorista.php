@@ -93,6 +93,27 @@
 
 				document.getElementById('jornadaSemanal').parentElement.style.display = '{$displayCamposJornada}';
 				document.getElementById('jornadaSabado').parentElement.style.display = '{$displayCamposJornada}';
+
+				
+				function imprimir() {
+					// Abrir a caixa de diálogo de impressão
+					// window.print();
+					const id = '$_POST[id]';
+					var form = document.createElement('form');
+					form.method = 'POST';
+					form.action = './impressao/ficha_funcionario.php';
+					form.target = '_blank';
+
+					var inputId = document.createElement('input');
+					inputId.type = 'hidden';
+					inputId.name = 'id';
+					inputId.value = id;
+					form.appendChild(inputId);
+
+					document.body.appendChild(form);
+					form.submit();
+					document.body.removeChild(form);
+				}
 			</script>"
 		;
 
@@ -853,7 +874,8 @@
 			campo(	  	"Filiação Pai", 		"pai", 				($a_mod["enti_tx_pai"]?? ""),			3, "", 					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"Filiação Mãe", 		"mae", 				($a_mod["enti_tx_mae"]?? ""),			3, "", 					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"Nome do Cônjuge",	 	"conjugue", 		($a_mod["enti_tx_conjugue"]?? ""),		3, "", 					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
-			campo(	  	"Tipo de Operação", 	"tipoOperacao", 	($a_mod["enti_tx_tipoOperacao"]?? ""),	3, "", 					"maxlength='40' tabindex=".sprintf("%02d", $tabIndex++)),
+			// campo(	  	"Tipo de Operação", 	"tipoOperacao", 	($a_mod["enti_tx_tipoOperacao"]?? ""),	3, "", 					"maxlength='40' tabindex=".sprintf("%02d", $tabIndex++)),
+			combo_bd( "!Tipo de Operação", 	"tipoOperacao",		(isset($_POST["enti_tx_tipoOperacao"])? $_POST["enti_tx_tipoOperacao"]: ""), 3, "operacao"),
 
 			textarea(	"Observações:", "obs", ($a_mod["enti_tx_obs"]?? ""), 12, "tabindex=".sprintf("%02d", $tabIndex++))
 		]);

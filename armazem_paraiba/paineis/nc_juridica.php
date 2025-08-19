@@ -518,6 +518,7 @@
 				$totaisFuncionario2 = [];
 				$totaisMediaFuncionario = [];
 				$ocupacoesPermitidas = $_POST['busca_ocupacao'];
+				$mediaPerfTotal = 0;
 				foreach ($arquivos as &$arquivo) {
 					$todosZeros = true;
 					$arquivo = $path."/".$arquivo;
@@ -535,8 +536,12 @@
 
 					$data = DateTime::createFromFormat('d/m/Y', $json["dataInicio"]);
 					$dias = $data->format('t');
-
+					
 					$mediaPerfFuncionario = round(($json["diasConformidade"]/ $dias) * 100, 2);
+					
+					$mediaPerfTotal = round(($totalDiasNaoCFuncionario/ ($dias * sizeof($arquivos)) * 100), 2);
+
+					$mediaPerfTotal= 100 - $mediaPerfTotal;
 
 					$totaisMediaFuncionario[$json["matricula"]] = $mediaPerfFuncionario;
 
@@ -758,7 +763,7 @@
                 }
                 $pasta->close();
 
-				$percentual = ($totalempre ["diasConformidade"] / $dias) * 100;
+				$percentual = ($totalempre ["diasConformidade"] / ($dias * sizeof($arquivos))) * 100;
 				$percentualConformidade = 100 - $percentual;
 				$porcentagemTotalMedia = round($percentualConformidade, 2);
 
@@ -779,7 +784,7 @@
 			}
 			
 			$totalBaixaPerformance = 100 - array_sum($totaisFuncionario);
-			$totalMediaPerformance = 100 - $mediaPerfTotal;
+			$totalMediaPerformance = $mediaPerfTotal;
 			$rowTotal = "<td></td>
 					<td></td>
 					<td>Total</td>
