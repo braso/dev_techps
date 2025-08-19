@@ -61,7 +61,7 @@
     ;
     foreach($empresas as $key => $value){
         if(!empty(dir(__DIR__."/".$value))){
-            $empresasInput .= "<option ".($_POST["empresa"] == $key? "selected": "")." value='{$key}'>{$empresasNomes[$value]}</option>";
+            $empresasInput .= "<option ".((!empty($_POST["empresa"]) && $_POST["empresa"] == $key)? "selected": "")." value='{$key}'>{$empresasNomes[$value]}</option>";
         }
     }
     $empresasInput .= "</select></div>";
