@@ -9,9 +9,9 @@
 	//*/
 	include_once __DIR__."/conecta.php";
 
-	function calcJorPre(string &$data, string $jornadaPrevistaOriginal, bool $ehFeriado, $abono = null): string{
+	function calcJorPre(string $jornadaPrevistaOriginal, bool $ehFeriado, $abono = null): string{
 
-		if(date("w", strtotime($data)) == "0" || $ehFeriado){ 	//DOMINGOS OU FERIADOS
+		if($ehFeriado){ 										//FERIADOS
 			$jornadaPrevista = "00:00";
 		}else{													//DIAS DE SEMANA
 			$jornadaPrevista = $jornadaPrevistaOriginal;
@@ -101,6 +101,7 @@
 			}
 			return $qtdDias;
 		});
+		
 
 		for($f = 0; $f < count($horarios); $f++){
 			$horario = new DateTime($horarios[$f]);
@@ -112,7 +113,7 @@
 			}elseif(!$valsEstaTrabalhando[$f] && !empty($hInicio)){
 				$hFim = $horario;
 				$valAtual = new DateInterval("P0D");
-				
+
 				if($hInicio >= $periodosAdicNot["inicios"][0] && $hInicio < $periodosAdicNot["fins"][0]){
 					if($hFim <= $periodosAdicNot["fins"][0]){
 						//$hFim - $hInicio
@@ -160,6 +161,8 @@
 							$qtdDias = $avancarDias($hInicio, $hFim, $periodosAdicNot);
 							$f--;
 							continue;
+						}else{
+							$valAtual = date_diff($periodosAdicNot["fins"][1], $hInicio);
 						}
 					}
 				}else{
@@ -171,7 +174,6 @@
 					}
 				}
 
-				
 				
 				$valAtual = formatToTime(($valAtual->d+($qtdDias?? 0))*7+$valAtual->h, $valAtual->i, ceil($valAtual->s/60)*60);
 				$adicNot = operarHorarios([$adicNot, $valAtual], "+");
@@ -669,6 +671,7 @@
 			$motorista["enti_nb_parametro"] = $motorista["empr_nb_parametro"];
 			$parametroEmpresa = mysqli_fetch_assoc(query(
 				"SELECT * FROM parametro
+					LEFT JOIN escala ON para_nb_id = esca_nb_parametro
 					WHERE para_nb_id = {$motorista["empr_nb_parametro"]}
 					LIMIT 1;"
 			));
@@ -678,6 +681,20 @@
 			$motorista["enti_tx_percHESemanal"] = $motorista["para_tx_percHESemanal"];
 			$motorista["enti_tx_percHEEx"] = $motorista["para_tx_percHEEx"];
 		}
+
+		$parametro = mysqli_fetch_assoc(query(
+			"SELECT * FROM parametro
+				LEFT JOIN escala ON para_nb_id = esca_nb_parametro
+				WHERE para_nb_id = {$motorista["enti_nb_parametro"]}
+				LIMIT 1;"
+		));
+		if($parametro["para_tx_tipo"] == "escala"){
+			$parametro["diasEscala"] = mysqli_fetch_all(query(
+				"SELECT * FROM escala_dia 
+					WHERE esca_nb_escala = '{$parametro["esca_nb_id"]}';"
+			), MYSQLI_ASSOC);
+		}
+		$motorista = array_merge($motorista, $parametro);
 		
 		//Organizar array com tipos de ponto{
 			$registros = [
@@ -718,28 +735,44 @@
 					LIMIT 1;"
 			));
 
-			if(date("w", strtotime($data)) == "6"){
-				$jornadaPrevistaOriginal = $motorista["enti_tx_jornadaSabado"];
-			}elseif(date("w", strtotime($data)) == "0"){
-				$jornadaPrevistaOriginal = "00:00";
-			}else{
-				$jornadaPrevistaOriginal = $motorista["enti_tx_jornadaSemanal"];
+			if($motorista["para_tx_tipo"] == "horas_por_dia"){
+				if(date("w", strtotime($data)) == "6"){
+					$jornadaPrevistaOriginal = $motorista["enti_tx_jornadaSabado"];
+				}elseif(date("w", strtotime($data)) == "0"){
+					$jornadaPrevistaOriginal = "00:00";
+				}else{
+					$jornadaPrevistaOriginal = $motorista["enti_tx_jornadaSemanal"];
+				}
+			}elseif($motorista["para_tx_tipo"] == "escala"){
+				$diferenca = (new DateTime($motorista["esca_tx_dataInicio"]))->diff(new DateTime($data));
+				if($diferenca->invert){
+					$diff = ($diferenca->d*($diferenca->invert? -1: 1))%intval($motorista["esca_nb_periodicidade"]);
+					$diaDoCiclo = $motorista["esca_nb_periodicidade"]*(ceil(-$diff/$motorista["esca_nb_periodicidade"]))+$diff+1;
+				}else{
+					$diaDoCiclo = ($diferenca->d)%intval($motorista["esca_nb_periodicidade"])+1;
+				}
+				$jornadaPrevistaOriginal = operarHorarios([
+					$motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaFim"]?? "00:00",
+					$motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaInicio"]?? "00:00",
+					$motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_intervaloInterno"]?? "00:00"
+				], "-");
 			}
-			$jornadaPrevista = calcJorPre($data, $jornadaPrevistaOriginal, !empty($stringFeriado), ($abonos["abon_tx_abono"]?? null));
-			$aRetorno["jornadaPrevista"] = $jornadaPrevista;
-			if(!empty($abonos)){
-				$warning = 
-					"<a><i style='color:green;' title="
-							."'Jornada Original: {$jornadaPrevistaOriginal}\n"
-							."{$abonos["moti_tx_tipo"]}: {$abonos["abon_tx_abono"]}\n"
-							."Motivo: {$abonos["moti_tx_nome"]}\n"
-							."Justificativa: {$abonos["abon_tx_descricao"]}\n\n"
-							."Registro efetuado por {$abonos["user_tx_login"]} em ".data($abonos["abon_tx_dataCadastro"], 1)."'"
-						." class='fa fa-info-circle'></i>"
-					."</a>&nbsp;"
-				;
-				$aRetorno["jornadaPrevista"] = $warning.$aRetorno["jornadaPrevista"];
-			}
+
+			$jornadaPrevista = calcJorPre($jornadaPrevistaOriginal, !empty($stringFeriado), ($abonos["abon_tx_abono"]?? null));
+				$aRetorno["jornadaPrevista"] = $jornadaPrevista;
+				if(!empty($abonos)){
+					$warning = 
+						"<a><i style='color:green;' title="
+								."'Jornada Original: {$jornadaPrevistaOriginal}\n"
+								."{$abonos["moti_tx_tipo"]}: {$abonos["abon_tx_abono"]}\n"
+								."Motivo: {$abonos["moti_tx_nome"]}\n"
+								."Justificativa: {$abonos["abon_tx_descricao"]}\n\n"
+								."Registro efetuado por {$abonos["user_tx_login"]} em ".data($abonos["abon_tx_dataCadastro"], 1)."'"
+							." class='fa fa-info-circle'></i>"
+						."</a>&nbsp;"
+					;
+					$aRetorno["jornadaPrevista"] = $warning.$aRetorno["jornadaPrevista"];
+				}
 
 
 		//}
@@ -1829,7 +1862,7 @@
 		}
 		$func .= ")";
 
-		$funcionarioAfastado = !empty(mysqli_fetch_assoc(query(
+		$afastado = !empty(mysqli_fetch_assoc(query(
 			"SELECT abon_nb_id FROM abono
 				JOIN entidade ON abon_tx_matricula = enti_tx_matricula
 				JOIN motivo ON abon_nb_motivo = moti_nb_id
@@ -1840,9 +1873,21 @@
 			LIMIT 1;"
 		)));
 
-		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"]) || $funcionarioAfastado){
+		$deFerias = !empty(mysqli_fetch_assoc(query(
+			"SELECT * FROM ferias
+				WHERE feri_tx_status = 'ativo'
+					AND feri_nb_entidade = '{$idMotorista}'
+					AND '{$data}' BETWEEN feri_tx_dataInicio AND feri_tx_dataFim
+				LIMIT 1;"
+		)));
+
+		if($afastado){
 			$title .= " (afastado)";
 			$func = "";
+		}elseif($deFerias){
+			$title .= " (de férias)";
+			$func = "";
+			
 		}
 
 		$content .= "</i>";
