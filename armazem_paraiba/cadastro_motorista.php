@@ -14,13 +14,13 @@
 
 		$path_parts = pathinfo(__FILE__);
 
-		$params = [
-			$a_mod["parametroPadrao"]["para_nb_id"],
-			$a_mod["parametroPadrao"]["para_tx_jornadaSemanal"],
-			$a_mod["parametroPadrao"]["para_tx_jornadaSabado"],
-			$a_mod["parametroPadrao"]["para_tx_percHESemanal"],
-			$a_mod["parametroPadrao"]["para_tx_percHEEx"]
-		];
+		$parametroPadrao = $a_mod["parametroPadrao"];
+
+		if(!empty($a_mod["enti_nb_parametro"])){
+			$displayCamposJornada = mysqli_fetch_assoc(query("SELECT para_tx_tipo FROM parametro WHERE para_nb_id = {$a_mod["enti_nb_parametro"]}"))["para_tx_tipo"] == "horas_por_dia"? "block": "none";
+		}else{
+			$displayCamposJornada = "block";
+		}
 
 
 		echo 
@@ -40,26 +40,25 @@
 				function carregarParametro() {
 					id = document.getElementById('parametro').value;
 					document.getElementById('frame_parametro').src = 'cadastro_motorista.php?acao=carregarParametro&parametro='+id;"
-					.((!empty($a_mod["parametroPadrao"]))? "conferirParametroPadrao('".implode("','", $params)."');":"")."
+					.((!empty($a_mod["parametroPadrao"]))? "conferirParametroPadrao(".json_encode($parametroPadrao).")": "")."
 				}
 				function padronizarParametro() {
-					parent.document.contex_form.parametro.value 			= '".($a_mod["parametroPadrao"]["para_nb_id"]?? "")."';
-					parent.document.contex_form.jornadaSemanal.value 		= '".($a_mod["parametroPadrao"]["para_tx_jornadaSemanal"]?? "")."';
-					parent.document.contex_form.jornadaSabado.value 		= '".($a_mod["parametroPadrao"]["para_tx_jornadaSabado"]?? "")."';
-					parent.document.contex_form.percHESemanal.value 		= '".($a_mod["parametroPadrao"]["para_tx_percHESemanal"]?? "")."';
-					parent.document.contex_form.percHEEx.value 				= '".($a_mod["parametroPadrao"]["para_tx_percHEEx"]?? "")."';
+					parent.document.contex_form.parametro.value 		= '{$parametroPadrao["para_nb_id"]}';
+					parent.document.contex_form.jornadaSemanal.value 	= '{$parametroPadrao["para_tx_jornadaSemanal"]}';
+					parent.document.contex_form.jornadaSabado.value 	= '{$parametroPadrao["para_tx_jornadaSabado"]}';
+					parent.document.contex_form.percHESemanal.value 	= '{$parametroPadrao["para_tx_percHESemanal"]}';
+					parent.document.contex_form.percHEEx.value 			= '{$parametroPadrao["para_tx_percHEEx"]}';
 
-					conferirParametroPadrao('".implode("','", $params)."');
+					conferirParametroPadrao('".json_encode($parametroPadrao)."');
 				}
 
-				function conferirParametroPadrao(idParametro, jornadaSemanal, jornadaSabado, percHESemanal, percHEEx){
-
+				function conferirParametroPadrao(parametroPadrao){
 					var padronizado = (
-						idParametro == parent.document.contex_form.parametro.value &&
-						jornadaSemanal == parent.document.contex_form.jornadaSemanal.value &&
-						jornadaSabado == parent.document.contex_form.jornadaSabado.value &&
-						percHESemanal == parent.document.contex_form.percHESemanal.value &&
-						percHEEx == parent.document.contex_form.percHEEx.value
+						parametroPadrao.para_nb_id == parent.document.contex_form.parametro.value &&
+						parametroPadrao.para_tx_jornadaSemanal == parent.document.contex_form.jornadaSemanal.value &&
+						parametroPadrao.para_tx_jornadaSabado == parent.document.contex_form.jornadaSabado.value &&
+						parametroPadrao.para_tx_percHESemanal == parent.document.contex_form.percHESemanal.value &&
+						parametroPadrao.para_tx_percHEEx == parent.document.contex_form.percHEEx.value
 					);
 					parent.document.getElementsByName('textoParametroPadrao')[0].getElementsByTagName('p')[0].innerText = (padronizado? 'Sim': 'Não');
 				}
@@ -91,6 +90,9 @@
 						document.form_excluir_arquivo.submit();
 					}
 				}
+
+				document.getElementById('jornadaSemanal').parentElement.style.display = '{$displayCamposJornada}';
+				document.getElementById('jornadaSabado').parentElement.style.display = '{$displayCamposJornada}';
 			</script>"
 		;
 
@@ -133,7 +135,6 @@
 			exit;
 		}
 
-		$parametro = carregar("parametro", (int)$_GET["parametro"]);
 		$parametro = mysqli_fetch_assoc(query(
 			"SELECT * FROM parametro
 				LEFT JOIN escala ON para_nb_id = esca_nb_parametro
@@ -147,44 +148,22 @@
 
 		echo
 			"<script type='text/javascript'>
-				parent.document.contex_form.jornadaSemanal.value = '".$parametro["para_tx_jornadaSemanal"]."';
-				parent.document.contex_form.jornadaSabado.value = '".$parametro["para_tx_jornadaSabado"]."';
-				parent.document.contex_form.percHESemanal.value = '".$parametro["para_tx_percHESemanal"]."';
-				parent.document.contex_form.percHEEx.value = '".$parametro["para_tx_percHEEx"]."';
-				var escala = {display: 'none', value: ''};
+				var idParametro = {display: 'block', value: document.getElementById('parametro')? document.getElementById('parametro').value: ''};
 				var jornadaSemanal = {display: 'block', value: document.getElementById('jornadaSemanal')? document.getElementById('jornadaSemanal').value: ''};
 				var jornadaSabado = {display: 'block', value: document.getElementById('jornadaSabado')? document.getElementById('jornadaSabado').value: ''};
-				
+
 				if(".(($parametro["para_tx_tipo"] == "escala")?'true': 'false')."){
-
-					escala.display = 'block';
-					(".(!empty($parametro["esca_tx_dias"])? $parametro["esca_tx_dias"]: "{}").").forEach(function (numeroDia){
-						const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-						if (numeroDia < 1 || numeroDia > 7) {
-							console.log('Número da semana inválido: ', numeroDia);
-							escala.value += '???, ';
-						}else{
-							escala.value += dias[numeroDia - 1]+', ';
-						}
-					})
-					escala.value += '<br>das {$parametro["esca_tx_horaInicio"]} às {$parametro["esca_tx_horaFim"]}.';
-
-					jornadaSemanal.display = 'none';
-					jornadaSemanal.value = '';
-
-					jornadaSabado.display = 'none';
-					jornadaSabado.value = '';
+					jornadaSemanal = {display: 'none', value: ''};
+					jornadaSabado = {display: 'none', value: ''};
 				}
-				console.log(jornadaSemanal);
 
-				document.getElementsByName('textoEscala')[0].getElementsByTagName('p')[0].innerHTML = escala.value;
-				document.getElementsByName('textoEscala')[0].style.display = escala.display;
-
-				document.getElementById('jornadaSemanal').parentElement.style.display = jornadaSemanal.display;
-				document.getElementById('jornadaSemanal').value = jornadaSemanal.value;
-
-				document.getElementById('jornadaSabado').parentElement.style.display = jornadaSabado.display;
-				document.getElementById('jornadaSabado').value = jornadaSabado.value;
+				parent.document.contex_form.jornadaSemanal.value = jornadaSemanal.value;
+				parent.document.contex_form.jornadaSemanal.parentElement.style.display = jornadaSemanal.display;
+				parent.document.contex_form.jornadaSabado.value = jornadaSabado.value;
+				parent.document.contex_form.jornadaSabado.parentElement.style.display = jornadaSabado.display;
+				parent.document.contex_form.percHESemanal.value = '{$parametro["para_tx_percHESemanal"]}';
+				parent.document.contex_form.percHEEx.value = '{$parametro["para_tx_percHEEx"]}';
+				
 			</script>"
 		;
 		exit;
@@ -327,8 +306,8 @@
 				"ocupacao" 					=> "Ocupação",
 				"admissao" 					=> "Dt Admissão",
 				"parametro" 				=> "Parâmetro",
-				"jornadaSemanal" 			=> "Jornada Semanal",
-				"jornadaSabado" 			=> "Jornada Sábado",
+				// "jornadaSemanal" 			=> "Jornada Semanal",
+				// "jornadaSabado" 			=> "Jornada Sábado",
 				"percHESemanal" 			=> "H.E. Semanal",
 				"percHEEx" 					=> "H.E. Extraordinária",
 				"cnhRegistro" 				=> "N° Registro da CNH",
@@ -354,6 +333,16 @@
 			if($_POST["status"] == "inativo"){
 				$camposObrig["desligamento"] = "Desligamento";
 			}
+
+			if(!empty($_POST["parametro"])){
+				$parametro = mysqli_fetch_assoc(query("SELECT para_tx_tipo FROM parametro WHERE para_nb_id = {$_POST["parametro"]}"));
+
+				if($parametro["para_tx_tipo"] == "horas_por_dia"){
+					$camposObrig["jornadaSemanal"] = "Jornada Semanal";
+					$camposObrig["jornadaSabado"] = "Jornada Sábado";
+				}
+			}
+
 			$errorMsg = conferirCamposObrig($camposObrig, $_POST);
 			if(!empty($errorMsg)){
 				showError($errorMsg, $_POST["errorFields"]);
@@ -876,7 +865,7 @@
 		$campoSalario = "";
 		if (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
 			$a_mod["enti_nb_salario"] = str_replace(".", ",", $a_mod["enti_nb_salario"]);
-			$campoSalario = campo("Salário*", "salario", (!empty($a_mod["enti_nb_salario"])? $a_mod["enti_nb_salario"] : "0"), 1, "MASCARA_VALOR", "tabindex=".sprintf("%02d", $tabIndex+2));
+			$campoSalario = campo("Salário*", "salario", (!empty($a_mod["enti_nb_salario"])? $a_mod["enti_nb_salario"] : "0"), 1, "MASCARA_DINHEIRO", "tabindex=".sprintf("%02d", $tabIndex+2));
 		}
 
 		$cContratual = [
@@ -898,15 +887,9 @@
 
 		$conferirPadraoJS = "";
 		if(!empty($a_mod["parametroPadrao"])){
-			$conferirPadraoJS = 
-				"conferirParametroPadrao(
-					\"{$a_mod["parametroPadrao"]["para_nb_id"]}\",
-					\"{$a_mod["parametroPadrao"]["para_tx_jornadaSemanal"]}\",
-					\"{$a_mod["parametroPadrao"]["para_tx_jornadaSabado"]}\",
-					\"{$a_mod["parametroPadrao"]["para_tx_percHESemanal"]}\",
-					\"{$a_mod["parametroPadrao"]["para_tx_percHEEx"]}\"
-				);";
+			$conferirPadraoJS = "conferirParametroPadrao(".json_encode($a_mod["parametroPadrao"]).");";
 		}
+
 
 		$cJornada = [
 			combo_bd(	"!Parâmetros da Jornada*".($icone_padronizar?? ""), "parametro", ($a_mod["enti_nb_parametro"]?? ""), 6, "parametro", "onfocusout='carregarParametro()' onchange='carregarParametro()' tabindex=".sprintf("%02d", $tabIndex++)), "<div class='col-sm-2 margin-bottom-5' style='width:100%; height:25px'></div>",
@@ -917,15 +900,17 @@
 			campo(		"H.E. Extraordinária (%)*", "percHEEx", ($a_mod["enti_tx_percHEEx"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'")
 		];
 		if(!empty($a_mod["enti_nb_empresa"])){
-			$aEmpresa = carregar("empresa", (int)$a_mod["enti_nb_empresa"]);
-			$aParametro = carregar("parametro", $aEmpresa["empr_nb_parametro"]);
-
-			$padronizado = (
-				$a_mod["enti_tx_jornadaSemanal"] 		== $aParametro["para_tx_jornadaSemanal"] &&
-				$a_mod["enti_tx_jornadaSabado"] 		== $aParametro["para_tx_jornadaSabado"] &&
-				$a_mod["enti_tx_percHESemanal"] 		== $aParametro["para_tx_percHESemanal"] &&
-				$a_mod["enti_tx_percHEEx"] 	== $aParametro["para_tx_percHEEx"]
-			);
+			$padronizado = !empty(mysqli_fetch_assoc(query(
+				"SELECT para_nb_id FROM parametro
+					JOIN empresa ON para_nb_id = empr_nb_parametro
+					WHERE empr_tx_status = 'ativo' AND para_tx_status = 'ativo'
+						AND empr_nb_id = {$a_mod["enti_nb_empresa"]}
+						AND para_tx_jornadaSemanal = '{$a_mod["para_tx_jornadaSemanal"]}'
+						AND para_tx_jornadaSabado = '{$a_mod["para_tx_jornadaSabado"]}'
+						AND para_tx_percHESemanal = '{$a_mod["para_tx_percHESemanal"]}'
+						AND para_tx_percHEEx = '{$a_mod["para_tx_percHEEx"]}'
+					LIMIT 1;"
+			)));
 			
 			$cJornada[]=texto("Convenção Padrão?", ($padronizado? "Sim": "Não"), 2, "name='textoParametroPadrao'");
 		}
