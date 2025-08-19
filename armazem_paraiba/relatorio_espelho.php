@@ -97,7 +97,7 @@
                 </tr>
                 <tr>
                     <?php
-                        foreach($cabecalho as $cab){
+                        foreach($cabecalho as $key => $cab){
                             echo "<th>{$cab}</th>";
                         }
                     ?>
@@ -110,8 +110,8 @@
                             $row["jornadaPrevista"] = "";
                         }
                         echo "<tr>";
-                        foreach($row as $cel){
-                            echo "<td>{$cel}</td>";
+                        foreach($cabecalho as $key => $cab){
+                            echo "<td>{$row[$key]}</td>";
                         }
                         echo "</tr>";
                     }
