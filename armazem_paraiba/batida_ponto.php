@@ -167,13 +167,13 @@
 			exit;
 		}
 
-		$aMotorista = mysqli_fetch_assoc(query(
+		$motorista = mysqli_fetch_assoc(query(
 			"SELECT * FROM entidade"
 			." JOIN user ON enti_nb_id = user_nb_entidade"
 			." WHERE enti_nb_id = ".$_SESSION["user_nb_entidade"].";"
 		));
 
-		[$pontosCompleto, $sql] = pegarPontosDia($aMotorista["enti_tx_matricula"], ["pont_tx_data", "pont_tx_tipo", "pont_tx_dataCadastro", "macr_tx_nome"]);
+		[$pontosCompleto, $sql] = pegarPontosDia($motorista["enti_tx_matricula"], ["pont_tx_data", "pont_tx_tipo", "pont_tx_dataCadastro", "macr_tx_nome"]);
 
 		if(!empty($pontosCompleto)){
 			$pontos = [
@@ -367,8 +367,8 @@
 			];
 		}
 
-		$aMotorista["user_tx_cpf"] = str_split($aMotorista["user_tx_cpf"], 3);
-		$aMotorista["user_tx_cpf"] = $aMotorista["user_tx_cpf"][0].".".$aMotorista["user_tx_cpf"][1].".".$aMotorista["user_tx_cpf"][2]."-".$aMotorista["user_tx_cpf"][3];
+		$motorista["user_tx_cpf"] = str_split($motorista["user_tx_cpf"], 3);
+		$motorista["user_tx_cpf"] = $motorista["user_tx_cpf"][0].".".$motorista["user_tx_cpf"][1].".".$motorista["user_tx_cpf"][2]."-".$motorista["user_tx_cpf"][3];
 
 		$fields = [
 			"<div id='clockParent' class='col-sm-5 margin-bottom-5' >
@@ -378,9 +378,9 @@
 			</div>",
 			"<div class='col-sm-5 margin-bottom-5 info-grid'>"
 				."<div class='margin-bottom-5'><b>Data:</b> ".date("d/m")."</div>"
-				."<div class='margin-bottom-5'><b>Matrícula:</b> ".$aMotorista["enti_tx_matricula"]."</div>"
-				."<div class='margin-bottom-5'><b>CPF:</b> ".$aMotorista["user_tx_cpf"]."</div>"
-				."<div class='margin-bottom-10'><b>Nome:</b> ".$aMotorista["user_tx_nome"]."</div>"
+				."<div class='margin-bottom-5'><b>Matrícula:</b> ".$motorista["enti_tx_matricula"]."</div>"
+				."<div class='margin-bottom-5'><b>CPF:</b> ".$motorista["user_tx_cpf"]."</div>"
+				."<div class='margin-bottom-10'><b>Nome:</b> ".$motorista["user_tx_nome"]."</div>"
 			."</div>",
 		];
 
@@ -391,7 +391,7 @@
 				FROM endosso, user
 				WHERE endo_tx_status = 'ativo'
 					AND '{$hoje}' BETWEEN endo_tx_de AND endo_tx_ate
-					AND endo_nb_entidade = '{$aMotorista["enti_nb_id"]}'
+					AND endo_nb_entidade = '{$motorista["enti_nb_id"]}'
 					AND endo_nb_userCadastro = user_nb_id
 				LIMIT 1"
 		), MYSQLI_BOTH);
@@ -401,26 +401,39 @@
 				JOIN motivo ON abon_nb_motivo = moti_nb_id
 				JOIN user ON abon_nb_userCadastro = user_nb_id
 				WHERE abon_tx_status = 'ativo'
-					AND abon_tx_matricula = '{$aMotorista["enti_tx_matricula"]}'
+					AND abon_tx_matricula = '{$motorista["enti_tx_matricula"]}'
 					AND moti_tx_tipo = 'Afastamento'
 					AND abon_tx_data = '".date("Y-m-d")."'
 				LIMIT 1;"
 		));
 
-		if (!empty($aEndosso)){
-			$fields[] = texto("Endosso:", "Endossado por ".$aEndosso["user_tx_login"]." em ".data($aEndosso["endo_tx_dataCadastro"], 1), 6);
+		$ferias = mysqli_fetch_assoc(query(
+			"SELECT * FROM ferias
+				WHERE feri_tx_status = 'ativo'
+					AND feri_nb_entidade = '{$motorista["enti_nb_id"]}'
+					AND '{$hoje}' BETWEEN feri_tx_dataInicio AND feri_tx_dataFim
+				LIMIT 1;"
+		));
+
+		if(!empty($aEndosso) || !empty($afastamento) || !empty($ferias)){
 			$botoesVisiveis = [];
 			$logoutTime = 300; //Utilizado em batida_ponto_html.php
-		}else if(!empty($afastamento)){
-			$fields[] = texto("Afastamento:", "Afastado por motivo de {$afastamento["moti_tx_nome"]}<br> por ".$afastamento["user_tx_login"]." em ".data($afastamento["abon_tx_dataCadastro"], 1), 6);
-			$botoesVisiveis = [];
-			$logoutTime = 300; //Utilizado em batida_ponto_html.php
+
+			if (!empty($aEndosso)){
+				$fields[] = texto("Endosso:", "Endossado por ".$aEndosso["user_tx_login"]." em ".data($aEndosso["endo_tx_dataCadastro"], 1), 6);
+			}elseif(!empty($afastamento)){
+				$fields[] = texto("Afastamento:", "Afastado por motivo de {$afastamento["moti_tx_nome"]}<br> por ".$afastamento["user_tx_login"]." em ".data($afastamento["abon_tx_dataCadastro"], 1), 6);
+			}elseif(!empty($ferias)){
+				$fields[] = texto("Férias:", "Férias de ({$ferias["feri_tx_dataInicio"]} a {$ferias["feri_tx_dataFim"]})", 6);
+			}
 		}else{
-			if($aMotorista["enti_tx_ocupacao"] == "Motorista"){
+			if($motorista["enti_tx_ocupacao"] == "Motorista"){
 				$fields[] = campo("Placa do Veículo", "placa", ($_POST["placa"]?? ""), 2, "MASCARA_PLACA", "");
 			}
 			$fields[] = textarea("Justificativa", "justificativa", ($_POST["justificativa"]?? ""), 5, "style='resize: vertical;' placeholder='Em caso de inconsistência, justificar aqui.'");
 		}
+			
+
 
 		echo abre_form();
 		echo linha_form($fields);
