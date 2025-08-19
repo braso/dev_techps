@@ -519,8 +519,20 @@
 			}
 
 			function imprimir() {
-				// Abrir a caixa de diálogo de impressão
-				window.print();
+				const form = document.createElement('form');
+				form.method = 'POST';
+				form.action = './impressao/ficha_usurario.php';
+				form.target = '_blank';
+
+				const inputID = document.createElement('input');
+				inputID.type = 'hidden';
+				inputID.name = 'id_usuario';
+				inputID.value = ".$_POST["id"].";
+				form.appendChild(inputID);
+				
+				document.body.appendChild(form);
+				form.submit();
+				document.body.removeChild(form);
 			}
 			</script>";
 

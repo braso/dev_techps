@@ -333,7 +333,7 @@
 	}
 
 	function cadastrar(){
-
+		
 		global $CONTEX;
 		
 		$err = conferirErros();

@@ -160,7 +160,7 @@
 				$b[] = botao("Cadastrar Abono", "redirParaAbono", "acaoPrevia", $_POST["acao"]??"", "btn btn-secondary");
 			}
 			if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
-				$b[] = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
+				$b[] = "<button class='btn default' type='button' onclick='imprimir(this)'>Imprimir</button>";
 			}
 		//}
 		
@@ -431,6 +431,13 @@
 			."&extra_busca=enti_tx_matricula";
 		;
 
+		$logoEmpresa = mysqli_fetch_assoc(query(
+            "SELECT empr_tx_logo FROM empresa
+                    WHERE empr_tx_status = 'ativo'
+                        AND empr_tx_Ehmatriz = 'sim'
+                    LIMIT 1;"
+        ))["empr_tx_logo"];
+
 		return 
 			"<script>
 				function ajustarPonto(idMotorista, data){
@@ -477,9 +484,222 @@
 				// 	}
 				// });
 
-				function imprimir(){
-					window.print();
+				// function imprimir(){
+				// 	window.print();
+				// }
+				
+				function imprimir(botao) {
+					const alvo = document.querySelector('div > div.portlet-title');
+					if (!alvo) {
+						alert('Conteúdo para impressão não encontrado.');
+						return;
+					}
+
+					const conteudo = alvo.closest('.portlet') || alvo.parentElement;
+					const cloneConteudo = conteudo.cloneNode(true);
+
+					const cssImpressao = `
+						div.portlet-title > div > span > div.table-responsive {
+							max-width: 50% !important;
+						}
+						.portlet.light {
+							padding: 12px 20px 15px !important;
+						}
+
+						.portlet {
+							border-radius: 20px !important;
+							margin-top: 0 !important;
+							margin-bottom: 25px !important;
+						}
+
+						body > div.scroll-to-top {
+							display: none !important;
+						}
+
+						.portlet-body.form .table-responsive,
+						.table-responsive {
+							overflow: visible !important;
+							max-width: none !important;
+							max-height: none !important;
+							width: auto !important;
+						}
+
+						.table-head {
+							position: static !important;
+						}
+
+						.portlet.light {
+							padding: 12px 0px 15px !important;
+						}
+						
+						#tituloRelatorio {
+							display: flex;
+							align-items: center;
+							justify-content: space-between;
+							gap: 1em;
+						}
+
+						#tituloRelatorio h1 {
+							margin: 0;
+							font-size: 1.5em;
+							flex-grow: 1;
+							text-align: center;
+						}
+
+						#tituloRelatorio img,
+						#impressao {
+							display: block !important;
+						}
+
+						@media print {
+							body {
+								margin: 0.3cm;
+								transform: scale(1.0);
+								transform-origin: top left;
+							}
+
+							@page {
+								size: A4 landscape;
+								margin: 1cm;
+							}
+							div.portlet-title > div > span > div.table-responsive {
+								max-width: 50% !important;
+							}
+							.portlet.light {
+								padding: 12px 20px 15px !important;
+							}
+
+							.portlet {
+								border-radius: 20px !important;
+								margin-top: 0 !important;
+								margin-bottom: 25px !important;
+							}
+
+							body > div.scroll-to-top {
+								display: none !important;
+							}
+
+							.portlet-body.form .table-responsive,
+							.table-responsive {
+								overflow: visible !important;
+								max-width: none !important;
+								max-height: none !important;
+								width: auto !important;
+							}
+
+							.table-head {
+								position: static !important;
+							}
+							
+							.portlet.light {
+								padding: 12px 0px 15px !important;
+							}
+
+							.color_red:before {
+								color: red !important;
+							}
+							.color_green:before {
+								color: green !important;
+							}
+							.color_blue:before {
+								color: blue !important;
+							}
+							.color_greenLight:before {
+								color: #00ff00 !important;
+							}
+							.color_orange:before {
+								color: orange !important;
+							}
+
+							#tituloRelatorio {
+								display: flex;
+								align-items: center;
+								justify-content: space-between;
+								gap: 1em;
+							}
+
+							#tituloRelatorio h1 {
+								margin: 0;
+								font-size: 1.5em;
+								flex-grow: 1;
+								text-align: center;
+							}
+
+							#tituloRelatorio img,
+							#impressao {
+								display: block;
+							}
+							
+							button.btn.btn-primary.imprimir {
+								display: none !important;
+							}
+						}
+					`; // CSS 
+					const tituloRelatorio = `
+						<div id='tituloRelatorio'>
+								<img style='width: 190px; height: 40px;' src='./imagens/logo_topo_cliente.png' alt='Logo Empresa Esquerda'>
+								<h1>Espelho de Ponto</h1>
+								<img style='width: 180px; height: 80px;' src='./$logoEmpresa' alt='Logo Empresa Direita'>
+						</div>
+						<button onclick=\"window.print()\" style=\"margin-top:10px;\" class=\"btn btn-primary imprimir\">Imprimir</button>`;
+
+					const janela = window.open('', '_blank');
+
+					janela.document.write(`
+						<html>
+						<head>
+							<title>Impressão</title>
+							<meta charset='utf-8'>
+							<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'>
+
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/select2/css/select2.min.css' rel='stylesheet'>
+							<link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&amp;subset=all' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/bootstrap/css/bootstrap.min.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/uniform/css/uniform.default.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css' rel='stylesheet' type='text/css'>
+							<!-- FIM GLOBAL MANDATORY STYLES -->
+
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/datatables/datatables.min.js' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.js' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/datatables/datatables.min.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css' rel='stylesheet' type='text/css'>
+
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/select2/css/select2.min.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css' rel='stylesheet' type='text/css'>
+
+							<!-- INICIO TEMA GLOBAL STYLES -->
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/css/components.min.css' rel='stylesheet' id='style_components' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/global/css/plugins.min.css' rel='stylesheet' type='text/css'>
+							<!-- FIM TEMA GLOBAL STYLES -->
+							<!-- INICIO TEMA LAYOUT STYLES -->
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/layout/css/layout.min.css' rel='stylesheet' type='text/css'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/layout/css/themes/default.min.css' rel='stylesheet' type='text/css' id='style_color'>
+							<link href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/assets/layout/css/custom.min.css' rel='stylesheet' type='text/css'>
+							<!-- FIM TEMA LAYOUT STYLES -->
+							<link rel='apple-touch-icon' sizes='180x180' href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/img/favicon/apple-touch-icon.png'>
+							<link rel='icon' type='image/png' sizes='32x32' href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/img/favicon/favicon-32x32.png'>
+							<link rel='icon' type='image/png' sizes='16x16' href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/img/favicon/favicon-16x16.png'>
+							<link rel='shortcut icon' type='image/x-icon' href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/img/favicon/favicon-32x32.png?v=2'>
+							<link rel='manifest' href='$_ENV[URL_BASE]$_ENV[APP_PATH]/contex20/img/favicon/site.webmanifest'>
+							<style>
+								body { font-family: Arial, sans-serif; margin: 20px; }
+								table { width: 100%; border-collapse: collapse; }
+								th, td { border: 1px solid #ccc; padding: 5px; font-size: 12px; }
+								\${cssImpressao}
+							</style>
+						</head>
+						<body>
+							\${tituloRelatorio}
+							\${cloneConteudo.outerHTML}
+						</body>
+						</html>
+					`);
+
+					janela.document.close();
 				}
+
 			</script>"
 		;
 	}

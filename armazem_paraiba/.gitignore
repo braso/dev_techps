@@ -4,5 +4,3 @@ arquivos/*
 paineis/arquivos/*
 paineis_old/*
 diaDetalhePonto.php
-!arquivos/.gitkeep
-!paineis/arquivos/.gitkeep

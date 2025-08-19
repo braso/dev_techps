@@ -31,6 +31,7 @@
 	// }
 
 	function montarTabelaPonto(array $cabecalho, array $valores): string{
+		$dataEmissao = date("d/m/Y H:i:s");
 		// $rand = md5($sql);
 
 		$bodyContent = "";
@@ -61,6 +62,7 @@
 				</table>
 				(*): Registros excluídos manualmente.<br>
 				(**): 00:00 Caso esteja dentro da tolerância
+				<div colspan='3' id='impressao' style='padding-left: 1250px; margin-top: -40px !important; display: none; text-align: left; margin-top: 10px;'><b>Emissão Doc.:</b> $dataEmissao (UTC-3)</div>
 			</div>"
 		;
 

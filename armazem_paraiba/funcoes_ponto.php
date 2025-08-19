@@ -702,7 +702,7 @@
 			//Consultar feriados do dia{
 				$stringFeriado = getFeriados($motorista, $data);
 				if(!empty($stringFeriado)){
-					$iconeFeriado = " <a><i style='color:green;' title='{$stringFeriado}' class='fa fa-info-circle'></i></a>";
+					$iconeFeriado = " <a><i style='color:green;' title='{$stringFeriado}' class='fa fa-info-circle color_green'></i></a>";
 					$aRetorno["diaSemana"] .= $iconeFeriado;
 				}
 			//}
@@ -735,7 +735,7 @@
 							."Motivo: {$abonos["moti_tx_nome"]}\n"
 							."Justificativa: {$abonos["abon_tx_descricao"]}\n\n"
 							."Registro efetuado por {$abonos["user_tx_login"]} em ".data($abonos["abon_tx_dataCadastro"], 1)."'"
-						." class='fa fa-info-circle'></i>"
+						." class='fa fa-info-circle color_green'></i>"
 					."</a>&nbsp;"
 				;
 				$aRetorno["jornadaPrevista"] = $warning.$aRetorno["jornadaPrevista"];
@@ -851,7 +851,7 @@
 					}
 					$modifyParam = explode(":", $totalIntervalo);
 					$repousosPorEspera["totalIntervalo"] = $repousosPorEspera["totalIntervalo"]->modify("{$modifyParam[0]} hours {$modifyParam[1]} minutes");
-					$repousosPorEspera["icone"] = montarIconeIntervalo($repousosPorEspera["pares"], "fa fa-info-circle", "#00ff00");
+					$repousosPorEspera["icone"] = montarIconeIntervalo($repousosPorEspera["pares"], "fa fa-info-circle color_greenLight", "#00ff00");
 					$registros["repousoPorEspera"] = $repousosPorEspera;
 					
 					//Adicionar os pares em $registros["repousoCompleto"]["pares"]
@@ -981,7 +981,7 @@
 						if(operarHorarios([$totalIntersticio, $interMinimo], "-")[0] != "-"){
 							$title .= "\nInterstício remanescente compensado com intervalos do dia (".$totalNaoJornada->format("H:i").").";
 						}
-						$icone .= "<a><i style='color:red;' title='{$title}' class='fa fa-warning'></i></a>";
+						$icone .= "<a><i style='color:red;' title='{$title}' class='fa fa-warning color_red'></i></a>";
 					}
 					unset($restante);
 
@@ -1094,7 +1094,7 @@
 			}
 			if($fezJorMinima || count($registros["inicioJornada"]) > 0){
 				if(!isset($registros["fimJornada"][0]) || $registros["fimJornada"][0] == ""){
-					$aRetorno["fimJornada"][] 	  = "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning'></i></a>";
+					$aRetorno["fimJornada"][] 	  = "<a><i style='color:red;' title='Batida fim de jornada não registrada!' class='fa fa-warning color_red'></i></a>";
 				}
 
 				//01:00 DE REFEICAO{
@@ -1109,9 +1109,9 @@
 
 					$avisoRefeicao = "";
 					if($maiorRefeicao > "02:00"){
-						$avisoRefeicao = "<a><i style='color:orange;' title='Refeição com tempo máximo de 02:00h não respeitado.' class='fa fa-info-circle'></i></a>";
+						$avisoRefeicao = "<a><i style='color:orange;' title='Refeição com tempo máximo de 02:00h não respeitado.' class='fa fa-info-circle color_orange'></i></a>";
 					}elseif($dtJornada > $dtJornadaMinima && $maiorRefeicao < '01:00'){
-						$avisoRefeicao = "<a><i style='color:red;' title='Refeição ininterrupta maior do que 01:00h não respeitado.' class='fa fa-warning'></i></a>";
+						$avisoRefeicao = "<a><i style='color:red;' title='Refeição ininterrupta maior do que 01:00h não respeitado.' class='fa fa-warning color_red'></i></a>";
 					}
 				//}
 
@@ -1433,7 +1433,7 @@
 		return $endossoCompleto;
 	}
 
-	function montarIconeIntervalo(array $pares, string $classe = "fa fa-info-circle", string $cor = "green"): string{
+	function montarIconeIntervalo(array $pares, string $classe = "fa fa-info-circle color_green", string $cor = "green"): string{
 		$icone = "";
 		$tooltip = "";
 		for($f = 0; $f < count($pares); $f++){
@@ -1695,7 +1695,7 @@
 		$datetime2 = new DateTime("2000-01-01 ".$limite);
 
 		if($datetime1 > $datetime2){
-			return "<a style='white-space: nowrap;'><i style='color:orange;' title='Tempo excedido de ".$limite."' class='fa fa-warning'></i></a>&nbsp;".$tempoEfetuado;
+			return "<a style='white-space: nowrap;'><i style='color:orange;' title='Tempo excedido de ".$limite."' class='fa fa-warning color_orange'></i></a>&nbsp;".$tempoEfetuado;
 		}else{
 			return $tempoEfetuado;
 		}
@@ -1719,7 +1719,7 @@
 
 		if($mdc > "05:30"){
 			$mdc = "<a style='white-space: nowrap;'>".
-						"<i style='color:orange;' title='{$baseErrMsg}' class='fa fa-warning'></i>".
+						"<i style='color:orange;' title='{$baseErrMsg}' class='fa fa-warning color_orange'></i>".
 					"</a>".
 					"&nbsp;".$mdc
 			;
@@ -1764,7 +1764,7 @@
 	
 			if($somaTempoAtivo > $tempoTrabalho && $somaTempoDescanso < $tempoDescanso){
 				$mdc = "<a style='white-space: nowrap;'>".
-							"<i style='color:orange;' title='{$baseErrMsg}\n\nDirigido: ".$somaTempoAtivo."\nDescansado: ".$somaTempoDescanso."' class='fa fa-warning'></i>".
+							"<i style='color:orange;' title='{$baseErrMsg}\n\nDirigido: ".$somaTempoAtivo."\nDescansado: ".$somaTempoDescanso."' class='fa fa-warning color_orange'></i>".
 						"</a>".
 						"&nbsp;".$mdc
 				;
@@ -1802,10 +1802,13 @@
 
 		if($saldoEmMinutos < -($tolerancia)){
 			$cor = "red";
+			$classe = "color_red";
 		}elseif($saldoEmMinutos > $tolerancia){
 			$cor = "green";
+			$classe = "color_green";
 		}else{
 			$cor = "blue";
+			$classe = "color_blue";
 		}
 
 		$endossado = mysqli_fetch_all(
@@ -1821,7 +1824,7 @@
 
 		$title = "Ajuste de Ponto";
 		$func = "ajustarPonto({$idMotorista},\"{$data}\"";
-		$content = "<i style='color:{$cor};' class='glyphicon glyphicon-pencil'>";
+		$content = "<i style='color:{$cor};' class='glyphicon glyphicon-pencil $classe'>";
 		if(count($endossado) > 0){
 			$title .= " (endossado)";
 			$func .= ", true";
