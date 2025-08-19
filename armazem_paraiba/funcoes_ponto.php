@@ -1089,7 +1089,7 @@
 		//FIM JORNADA MÍNIMA
 
 		//ALERTAS{
-			if((!isset($registros["inicioJornada"][0]) || $registros["inicioJornada"][0] == "") && $aRetorno["jornadaPrevista"] != "00:00"){
+			if(empty($registros["inicioJornada"][0]) && $aRetorno["jornadaPrevista"] != "00:00"){
 				$aRetorno["inicioJornada"][] 	= "<a><i style='color:red;' title='Batida início de jornada não registrada!' class='fa fa-warning'></i></a>";
 			}
 			if($fezJorMinima || count($registros["inicioJornada"]) > 0){
@@ -1824,7 +1824,7 @@
 
 		$title = "Ajuste de Ponto";
 		$func = "ajustarPonto({$idMotorista},\"{$data}\"";
-		$content = "<i style='color:{$cor};' class='fa fa-circle $classe'>";
+		$content = "<i style='color:{$cor};' class='glyphicon glyphicon-pencil $classe'>";
 		if(count($endossado) > 0){
 			$title .= " (endossado)";
 			$func .= ", true";

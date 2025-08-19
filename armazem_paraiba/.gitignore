@@ -4,10 +4,3 @@ arquivos/*
 paineis/arquivos/*
 paineis_old/*
 diaDetalhePonto.php
-!arquivos/.gitkeep
-!paineis/arquivos/.gitkeep
-
-# ignora arquivos com calculo antigo no paineis nc_juridica
-# no computador de wallase
-funcoes_paineis copy.php
-nc_juridica copy.php
