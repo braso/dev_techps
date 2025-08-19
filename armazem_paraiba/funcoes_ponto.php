@@ -759,20 +759,20 @@
 			}
 
 			$jornadaPrevista = calcJorPre($jornadaPrevistaOriginal, !empty($stringFeriado), ($abonos["abon_tx_abono"]?? null));
-				$aRetorno["jornadaPrevista"] = $jornadaPrevista;
-				if(!empty($abonos)){
-					$warning = 
-						"<a><i style='color:green;' title="
-								."'Jornada Original: {$jornadaPrevistaOriginal}\n"
-								."{$abonos["moti_tx_tipo"]}: {$abonos["abon_tx_abono"]}\n"
-								."Motivo: {$abonos["moti_tx_nome"]}\n"
-								."Justificativa: {$abonos["abon_tx_descricao"]}\n\n"
-								."Registro efetuado por {$abonos["user_tx_login"]} em ".data($abonos["abon_tx_dataCadastro"], 1)."'"
-							." class='fa fa-info-circle'></i>"
-						."</a>&nbsp;"
-					;
-					$aRetorno["jornadaPrevista"] = $warning.$aRetorno["jornadaPrevista"];
-				}
+			$aRetorno["jornadaPrevista"] = $jornadaPrevista;
+			if(!empty($abonos)){
+				$warning = 
+					"<a><i style='color:green;' title="
+							."'Jornada Original: {$jornadaPrevistaOriginal}\n"
+							."{$abonos["moti_tx_tipo"]}: {$abonos["abon_tx_abono"]}\n"
+							."Motivo: {$abonos["moti_tx_nome"]}\n"
+							."Justificativa: {$abonos["abon_tx_descricao"]}\n\n"
+							."Registro efetuado por {$abonos["user_tx_login"]} em ".data($abonos["abon_tx_dataCadastro"], 1)."'"
+						." class='fa fa-info-circle'></i>"
+					."</a>&nbsp;"
+				;
+				$aRetorno["jornadaPrevista"] = $warning.$aRetorno["jornadaPrevista"];
+			}
 
 
 		//}
