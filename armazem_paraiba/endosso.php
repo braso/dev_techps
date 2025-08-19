@@ -133,39 +133,39 @@
 
 			$colspanTitulos = [2,4,2,2,4,2]; //Utilizado em relatorio_espelho.php
 			$cabecalho = [
-				"DATA",
-				"DIA",
-				"INÍCIO",
-				"INÍCIO REF.",
-				"FIM REF.",
-				"FIM",
-				"REFEIÇÃO",
-				// "ESPERA",
-				"DESCANSO",
-				// "REPOUSO",
-				"PREVISTA",
-				"EFETIVA",
-				// "MDC",
-				"INTERSTÍCIO",
-				"HE {$motorista["enti_tx_percHESemanal"]}%",
-				"HE&nbsp;{$motorista["enti_tx_percHEEx"]}%",
-				"ADICIONAL NOT.",
-				// "ESPERA IND.",
-				"MOTIVO",
-				"SALDO",
+				"data" => "DATA",
+				"diaSemana" => "DIA",
+				"inicioJornada" => "INÍCIO",
+				"inicioRefeicao" => "INÍCIO REF.",
+				"fimRefeicao" => "FIM REF.",
+				"fimJornada" => "FIM",
+				"diffRefeicao" => "REFEIÇÃO",
+				//"diffEspera" =>  "ESPERA",
+				"diffDescanso" => "DESCANSO",
+				//"diffRepouso" =>  "REPOUSO",
+				"jornadaPrevista" => "PREVISTA",
+				"diffJornadaEfetiva" => "EFETIVA",
+				//"maximoDirecaoContinua" =>  "MDC",
+				"intersticio" => "INTERSTÍCIO",
+				"he50" => "HE {$motorista["enti_tx_percHESemanal"]}%",
+				"he100" => "HE&nbsp;{$motorista["enti_tx_percHEEx"]}%",
+				"adicionalNoturno" => "ADICIONAL NOT.",
+				//"esperaIndenizada" =>  "ESPERA IND.",
+				"0" => "MOTIVO",
+				"diffSaldo" => "SALDO",
 			];
 
 			if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
 				$colspanTitulos = [2,4,4,3,5,2];
 				$cabecalho = array_merge(
 					array_slice($cabecalho, 0, 7),
-					["ESPERA"],
+					["diffEspera" => "ESPERA"],
 					array_slice($cabecalho, 7, 1),
-					["REPOUSO"],
+					["diffRepouso" => "REPOUSO"],
 					array_slice($cabecalho, 8, 2),
-					["MDC"],
+					["maximoDirecaoContinua" => "MDC"],
 					array_slice($cabecalho, 10, 4),
-					["ESPERA INDENIZADA"],
+					["esperaIndenizada" => "ESPERA INDENIZADA"],
 					array_slice($cabecalho, 14, count($cabecalho))
 				);
 			}
