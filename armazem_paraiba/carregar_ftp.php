@@ -86,14 +86,13 @@
 					index();
 					exit;
 				}
-
 				saveRegisterFile(["tmp_name" => $caminhoCompleto, "name" => $nomeArquivo.$ext], $caminhoCompleto);
 			}
 		}
 
 		ftp_close($ftp_conn);
 		
-		criar_relatorio(date("Y-m"));
+		// criar_relatorio(date("Y-m"));
 		if(is_int(strpos($_SERVER["REQUEST_URI"], "carregar_ponto"))){
 			index();
 		}else{
