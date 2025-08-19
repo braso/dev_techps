@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug{
+	//* Modo debug{
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 		
@@ -11,8 +11,10 @@
 	global $path;
 	$path = "arquivos/pontos";
 
-    include_once "carregar_ftp.php";
-	unset($interno);
+	if(is_bool(strpos($_SERVER["REQUEST_URI"], "carregar_ftp"))){
+		include_once "carregar_ftp.php";
+		unset($interno);
+	}
 	include_once "funcoes_ponto.php";
 
 	function showErrMsg(string $caminhoCompleto, string $errorMsg): string{
@@ -139,7 +141,7 @@
 			exit;
 		}
 
-		$ext = substr($fileInfo["full_path"], strrpos($fileInfo["full_path"], "."));
+		$ext = substr($fileInfo["name"], strrpos($fileInfo["name"], "."));
 
 		$newArquivoPonto = [
 			"arqu_tx_nome" 		=> $fileInfo["name"].$ext,
@@ -204,7 +206,7 @@
 			}
 
 			$newPonto = [
-				"pont_nb_userCadastro"	=> $userId,
+				"pont_nb_userCadastro"	=> $userId["user_nb_id"],
 				"pont_nb_arquivoponto"	=> null,						//Será definido após inserir o arquivo de ponto.
 				"pont_tx_matricula"		=> strval($matricula),
 				"pont_tx_data"			=> $data." ".$hora,
