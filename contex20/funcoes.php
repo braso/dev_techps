@@ -632,6 +632,8 @@
 			break;
 			case "MASCARA_NUMERO":
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask(\"numeric\", {rightAlign: false});";
+				$type = "number";
+				$regexValidChar = "";
 			break;
 			case "MASCARA_CEP":
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: '99999-999', placeholder: \"00000-000\" });";
@@ -648,13 +650,15 @@
 			case "MASCARA_RG":
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999.999.999'], numericInput: true, rightAlign: false});";
 			break;
-			case "MASCARA_DINHERO":
+			case "MASCARA_DINHEIRO":
 				$dataScript .= 
 					"$(function(){
 						$('[name=\"$variavel\"]').maskMoney({
 						allowNegative: true,
 						thousands: '.',
-						decimal: ','
+						decimal: ',',
+						prefix: 'R$',
+						affixesStay: false
 						});
 					});"
 				;
@@ -699,7 +703,8 @@
 			break;
 		}
 		$variavel = str_replace(["[", "]"], ["\\\[", "\\\]"], $variavel);
-		$dataScript .= 
+		if(!empty($regexValidChar)){
+			$dataScript .= 
 				"field = document.querySelector('#".$variavel."');
 				if(typeof field.addEventListener !== 'undefined'){
 					field.addEventListener('keypress', function(e){
@@ -711,9 +716,10 @@
 						e.srcElement.value = e.clipboardData.getData('Text').replaceAll(/[!-\']/g, '');
 						e.preventDefault();
 					});
-				}
-			</script>"
-		;
+				}"
+			;
+		}
+		$dataScript .= "</script>";
 
 		if(empty($type)){
 			$type = "text";
@@ -896,22 +902,6 @@
 		;
 
 		return $campo;
-	}
-
-	function ckeditor($nome,$variavel,$modificador,$tamanho,$extra=''){//Obsoleto
-		$campo=
-			'<script src="/ckeditor/ckeditor.js"></script>
-			<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content">
-				<label>'.$nome.'</label>
-				<textarea id="'.$variavel.'" name="'.$variavel.'" class="form-control input-sm campo-fit-content" '.$extra.'>'.$modificador.'</textarea>
-			</div>
-			<script>
-				CKEDITOR.replace( "'.$variavel.'" );
-			</script>'
-		;
-
-		return $campo;
-
 	}
 
 	function texto($nome,$modificador,$tamanho='',$extra=''){//Campo de texto que não pode ser editado
