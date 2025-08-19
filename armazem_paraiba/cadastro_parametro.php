@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -10,6 +10,95 @@
 
 	
 	include "conecta.php";
+
+
+	function carregarJSFormParametro(){
+		global $a_mod;
+
+		$camposHora = [
+			campo("Inicio", "horaInicio", "", 1, "MASCARA_HORA", "maxlength='4'"),
+			campo("Fim", "horaFim", "", 1, "MASCARA_HORA", "maxlength='4'"),
+			campo("Intervalos", "intervaloInterno", "", 1, "MASCARA_HORA", "maxlength='4'"),
+		];
+
+		echo 
+			"<script>
+				camposHora = ".json_encode($camposHora).";
+				diasEscala = ".json_encode($a_mod["diasEscala"]?? []).";
+
+				function atualizarLinhasEscala(qtdLinhas){
+					if(document.getElementsByClassName('linhaDiaEscala').length > qtdLinhas){
+						for(i = document.getElementsByClassName('linhaDiaEscala').length; i > qtdLinhas ; i--){
+							document.getElementById('linhaDiaEscala_'+i).remove();
+						}
+					}
+
+					for(i = 1; i <= qtdLinhas; i++){
+						if(document.getElementById('linhaDiaEscala_'+i) != null){
+							continue;
+						}
+						
+						var linha = document.createElement('div');
+						linha.className = 'linhaDiaEscala';
+						linha.id = 'linhaDiaEscala_'+i;
+						linha.innerHTML = '<div class=\"labelDiaEscala\">Dia '+i+'</div>'+camposHora[0] + camposHora[1] + camposHora[2];
+						document.getElementById('divHorasEscala').innerHTML += linha.outerHTML;
+					}
+
+					linhasDiaEscala = document.getElementsByClassName('linhaDiaEscala');
+					for(i = 1; i <= linhasDiaEscala.length; i++){
+						linhasDiaEscala[i-1].getElementsByTagName('input')[0].name = 'horaInicio_'+i;
+						linhasDiaEscala[i-1].getElementsByTagName('input')[1].name = 'horaFim_'+i;
+						linhasDiaEscala[i-1].getElementsByTagName('input')[2].name = 'intervaloInterno_'+i;
+
+						if(diasEscala[i-1] != undefined){
+							linhasDiaEscala[i-1].getElementsByTagName('input')[0].value = diasEscala[i-1].esca_tx_horaInicio ?? diasEscala[i-1][0] ?? '';
+							linhasDiaEscala[i-1].getElementsByTagName('input')[1].value = diasEscala[i-1].esca_tx_horaFim ?? diasEscala[i-1][1] ?? '';
+							linhasDiaEscala[i-1].getElementsByTagName('input')[2].value = diasEscala[i-1].esca_tx_intervaloInterno ?? diasEscala[i-1][2] ?? '';
+						}
+					}
+				}
+
+				function camposEscala(campoSelecionado){
+					if(campoSelecionado == 'escala'){
+						document.getElementById('jornadaSemanal').parentElement.hidden = true;
+
+						document.getElementById('jornadaSabado').parentElement.hidden = true;
+
+						document.getElementById('periodicidade').parentElement.hidden = false;
+
+						atualizarLinhasEscala(document.getElementById('periodicidade').value);
+					}else if(campoSelecionado == 'horas_por_dia'){
+						document.getElementById('periodicidade').parentElement.hidden = true;
+						document.getElementById('dataInicio').parentElement.hidden = true;
+
+						document.getElementById('jornadaSemanal').parentElement.hidden = false;
+						document.getElementById('jornadaSabado').parentElement.hidden = false;
+
+						document.getElementById('divHorasEscala').innerHTML = '';
+					}
+				}
+
+				".(empty($a_mod["para_tx_tipo"])? "camposEscala('horas_por_dia')": "camposEscala('{$a_mod["para_tx_tipo"]}')").";
+
+				function remover_arquivo(id, idArq, arquivo, acao ){
+					if (confirm('Deseja realmente excluir o arquivo '+arquivo+'?')){
+						document.form_excluir_arquivo.idParametro.value = id;
+						document.form_excluir_arquivo.idArq.value = idArq;
+						document.form_excluir_arquivo.acao.value = acao;
+						document.form_excluir_arquivo.submit();
+					}
+				}
+
+				function downloadArquivo(id, caminho, acao){
+					document.form_download_arquivo.idParametro.value = id;
+					document.form_download_arquivo.caminho.value = caminho;
+					document.form_download_arquivo.acao.value = acao;
+					document.form_download_arquivo.submit();
+				}
+			</script>"
+		;
+	}
 	
 	function excluirParametro(){
 		$usuariosParametro = mysqli_fetch_all(query(
@@ -103,6 +192,79 @@
 		exit;
 	}
 
+	function cadastrarEscala($idParametro){
+		$escalaExistente = mysqli_fetch_assoc(query(
+			"SELECT * FROM escala WHERE esca_nb_parametro = {$idParametro};"
+		));
+
+		$novaEscala = [
+			"esca_nb_parametro" => $idParametro,
+			"esca_tx_dataInicio" => $_POST["dataInicio"],
+			"esca_nb_periodicidade" => $_POST["periodicidade"]
+		];
+
+		if(!empty($escalaExistente)){
+			$diasEscala = mysqli_fetch_all(query(
+				"SELECT * FROM escala_dia WHERE esca_nb_escala = {$escalaExistente["esca_nb_id"]};"
+			), MYSQLI_ASSOC);
+			
+			if(count($_POST["diasEscala"]) > count($diasEscala)){ //Inserir os dias que ainda não existem
+				for($f = count($diasEscala); $f < count($_POST["diasEscala"]); $f++){
+					$diaEscala = [
+						"esca_nb_escala" => $escalaExistente["esca_nb_id"],
+						"esca_nb_numeroDia" => $f+1,
+						"esca_tx_horaInicio" => $_POST["diasEscala"][$f][0],
+						"esca_tx_horaFim" => $_POST["diasEscala"][$f][1],
+						"esca_tx_intervaloInterno" => $_POST["diasEscala"][$f][2],
+					];
+					
+					$idDia = inserir("escala_dia", array_keys($diaEscala), array_values($diaEscala));
+
+					$diaEscala["esca_nb_id"] = $idDia[0];
+					$diasEscala[] = $diaEscala;
+				}
+			}elseif(count($_POST["diasEscala"]) < count($diasEscala)){// Remover os dias que não serão mais utilizados
+				$primDiaExcluir = count($_POST["diasEscala"])+1;
+				for($f = $primDiaExcluir; $f <= count($diasEscala); $f++){
+					query(
+						"DELETE FROM escala_dia 
+							WHERE esca_nb_numeroDia = {$f} 
+								AND esca_nb_escala = {$escalaExistente["esca_nb_id"]};"
+					);
+				}
+			}
+
+
+			atualizar("escala", array_keys($novaEscala), array_values($novaEscala), $escalaExistente["esca_nb_id"]);
+
+			for($f = 0; $f < count($_POST["diasEscala"]); $f++){
+				$diaEscala = [
+					"esca_nb_escala" => $escalaExistente["esca_nb_id"],
+					"esca_nb_numeroDia" => strval($f+1),
+					"esca_tx_horaInicio" => $_POST["diasEscala"][$f][0],
+					"esca_tx_horaFim" => $_POST["diasEscala"][$f][1],
+					"esca_tx_intervaloInterno" => $_POST["diasEscala"][$f][2],
+				];
+
+				atualizar("escala_dia", array_keys($diaEscala), array_values($diaEscala), $diasEscala[$f]["esca_nb_id"]);
+			}
+		}else{
+			$idEscala = inserir("escala", array_keys($novaEscala), array_values($novaEscala));
+			
+			$f = 1;
+			foreach($_POST["diasEscala"] as $dia){
+				$diaEscala = [
+					"esca_nb_escala" => $idEscala[0],
+					"esca_nb_numeroDia" => strval($f++),
+					"esca_tx_horaInicio" => $dia[0],
+					"esca_tx_horaFim" => $dia[1],
+					"esca_tx_intervaloInterno" => $dia[2],
+				];
+				inserir("escala_dia", array_keys($diaEscala), array_values($diaEscala));
+			}
+		}
+	}
+
 	function modificarParametro(){
 		global $a_mod;
 		$a_mod = carregar("parametro", $_POST["id"]);
@@ -114,6 +276,14 @@
 
 		//Conferir se os campos obrigatórios estão preenchidos{
 			$camposObrig = [];
+			$camposObrig = array_merge($camposObrig, [
+				"nome" => "Nome",
+				"tipo" => "Tipo",
+				// "tolerancia" => "Tolerância de atraso (Minutos)",
+				"percHESemanal" => "Hora Extra Semanal",
+				"percHEEx" => "Hora Extra Extraordinária",
+				// "maxHESemanalDiario" => "Máx. de 'H.E. Semanal' por dia"
+			]);
 
 			if(!empty($_POST["acordo"]) && $_POST["acordo"] == "sim"){
 				$camposObrig["inicioAcordo"] = "Início do Acordo";
@@ -127,39 +297,21 @@
 
 			if(!empty($_POST["tipo"])){
 				if($_POST["tipo"] == "escala"){
-					$camposObrig["horaInicio"] = "Jornada Dias Úteis (Hr/dia)";
-					$camposObrig["horaFim"] = "Jornada Sábado";
+					$camposObrig["periodicidade"] = "Periodicidade (em dias)";
+					$camposObrig["dataInicio"] = "Dia 1";
+					$camposObrig["diasEscala"] = "Horários de trabalho";
 
-					$_POST["dias"] = array_filter([
-						null,
-						$_POST["dias_1"]?? null,
-						$_POST["dias_2"]?? null,
-						$_POST["dias_3"]?? null,
-						$_POST["dias_4"]?? null,
-						$_POST["dias_5"]?? null,
-						$_POST["dias_6"]?? null,
-						$_POST["dias_7"]?? null
-					], function ($valor){
-						return $valor != null;
-					});
-
-
-					
-					$_POST["dias"] = json_encode(array_keys($_POST["dias"]));
-
+					$diasEscala = [];
+					for($f = 1; $f <= intval($_POST["periodicidade"]); $f++){
+						$diasEscala[] = [$_POST["horaInicio_".$f], $_POST["horaFim_".$f], $_POST["intervaloInterno_".$f]];
+					}
+					$_POST["diasEscala"] = $diasEscala;
 				}elseif($_POST["tipo"] == "horas_por_dia"){
 					$camposObrig["jornadaSemanal"] = "Jornada Dias Úteis (Hr/dia)";
 					$camposObrig["jornadaSabado"] = "Jornada Sábado";
 				}
 			}
 
-			$camposObrig = array_merge($camposObrig, [
-				"nome" => "Nome",
-				// "tolerancia" => "Tolerância de atraso (Minutos)",
-				"percHESemanal" => "Hora Extra Semanal",
-				"percHEEx" => "Hora Extra Extraordinária",
-				// "maxHESemanalDiario" => "Máx. de 'H.E. Semanal' por dia"
-			]);
 			
 			$errorMsg = conferirCamposObrig($camposObrig, $_POST);
 			if(empty($_POST["tolerancia"]) && $_POST["tolerancia"] != "0"){
@@ -212,6 +364,7 @@
 		}
 
 		$novoParametro = [
+			"para_tx_tipo" 					=> $_POST["tipo"],
 			"para_tx_nome" 					=> $_POST["nome"],
 			"para_tx_jornadaSemanal" 		=> $_POST["jornadaSemanal"],
 			"para_tx_jornadaSabado" 		=> $_POST["jornadaSabado"],
@@ -255,42 +408,28 @@
 
 		if(!empty($_POST["id"])){ //Se está editando
 
-			$aParametro = carregar("parametro", $_POST["id"]);
+			if($novoParametro["para_tx_tipo"] == "escala"){
+				$novoParametro["para_tx_jornadaSemanal"] = NULL;
+				$novoParametro["para_tx_jornadaSabado"] = NULL;
+			}
 
+			atualizar("parametro", array_keys($novoParametro),array_values($novoParametro),$_POST["id"]);
+			
+			if($novoParametro["para_tx_tipo"] == "escala"){
+				cadastrarEscala($_POST["id"]);
+			}else{
+				query("DELETE FROM escala WHERE esca_nb_parametro = {$_POST["id"]};");
+			}
+			
+			
 			$motoristasNoParametro = mysqli_fetch_all(query(
 				"SELECT * FROM entidade 
 					WHERE enti_tx_status = 'ativo'
 						AND enti_nb_parametro = '{$_POST["id"]}'"
 			),MYSQLI_ASSOC);
-
-			atualizar("parametro",array_keys($novoParametro),array_values($novoParametro),$_POST["id"]);
-
-			if($_POST["tipo"] == "escala"){
-				$escalaParametro = mysqli_fetch_assoc(query(
-					"SELECT * FROM escala WHERE esca_nb_parametro = {$_POST["id"]};"
-				));
-
-				if(!empty($escalaParametro)){
-					$escalaParametro = [
-						"esca_nb_id" => $escalaParametro["esca_nb_id"],
-						"esca_tx_horaInicio" => $_POST["horaInicio"],
-						"esca_tx_horaFim" => $_POST["horaFim"],
-						"esca_tx_dias" => $_POST["dias"]
-					];
-
-					atualizar("escala",array_keys($escalaParametro),array_values($escalaParametro), $escalaParametro["esca_nb_id"]);
-				}else{
-					$novaEscala = [
-						"esca_nb_parametro" => $_POST["id"],
-						"esca_tx_horaInicio" => $_POST["horaInicio"],
-						"esca_tx_horaFim" => $_POST["horaFim"],
-						"esca_tx_dias" => $_POST["dias"]
-					];
-
-					inserir("escala",array_keys($novaEscala),array_values($novaEscala));
-				}
-			}
 			
+			$aParametro = carregar("parametro", $_POST["id"]);
+
 			foreach($motoristasNoParametro as $motorista){
 				// Se o motorista estava dentro do padrão do parâmetro antes da atualização, atualiza os parâmetros do motorista junto.
 				if($aParametro["para_nb_id"] == $motorista["enti_nb_parametro"]){
@@ -302,23 +441,17 @@
 					);
 				}
 			}
-
 			set_status("Registro atualizado com sucesso.");
+			
 		} else {
 			$novoParametro["para_tx_dataCadastro"] = date("Y-m-d");
 			$novoParametro["para_nb_userCadastro"] = $_SESSION["user_nb_id"];
 
+			
 			$id = inserir("parametro",array_keys($novoParametro),array_values($novoParametro));
-
-			if($_POST["tipo"] == "escala"){
-				$novaEscala = [
-					"esca_nb_parametro" => $id[0],
-					"esca_tx_horaInicio" => $_POST["horaInicio"],
-					"esca_tx_horaFim" => $_POST["horaFim"],
-					"esca_tx_dias" => $_POST["dias"]
-				];
-
-				inserir("escala",array_keys($novaEscala),array_values($novaEscala));
+			
+			if($novoParametro["para_tx_tipo"] == "escala"){
+				cadastrarEscala($id[0]);
 			}
 
 			set_status("Registro inserido com sucesso.");
@@ -334,14 +467,14 @@
 		if(empty($a_mod) && !empty($_POST["id"])){
 			$a_mod = carregar("parametro", $_POST["id"]);
 			$campos = [
-				"nome", "jornadaSemanal", "jornadaSabado", "tolerancia", "percHESemanal",
+				"tipo", 
+				"nome", "tolerancia", "jornadaSemanal", "jornadaSabado", "percHESemanal",
 				"percHEEx", "maxHESemanalDiario", "diariasCafe", "diariasAlmoco", "diariasJanta",
 				"acordo", "inicioAcordo", "fimAcordo", "banco", "adi5322", "Obs"
 			];
 			foreach($campos as $campo){
 				if(!empty($_POST[$campo])){
 					$a_mod["para_tx_".$campo] = $_POST[$campo];
-					
 				}
 			}
 			if(!empty($a_mod["para_tx_ignorarCampos"])){
@@ -355,19 +488,32 @@
 			if(!empty($_POST["quandHoras"])){
 				$a_mod["para_tx_horasLimite"] = $_POST["quandHoras"];
 			}
-
+			
 			unset($campos);
+		}
+		
+		if(!empty($a_mod["para_tx_tipo"]) && $a_mod["para_tx_tipo"] == "escala"){
+			if(!empty($_POST["periodicidade"])){
+				$a_mod["esca_nb_periodicidade"] = $_POST["periodicidade"];
+				$a_mod["esca_tx_dataInicio"] = $_POST["dataInicio"];
+				$a_mod["diasEscala"] = $_POST["diasEscala"];
+			}else{
+				$escala = mysqli_fetch_assoc(query(
+					"SELECT * FROM escala WHERE esca_nb_parametro = {$a_mod["para_nb_id"]};"
+				));
+	
+				$diasEscala = mysqli_fetch_all(query(
+					"SELECT * FROM escala_dia WHERE esca_nb_escala = {$escala["esca_nb_id"]};"
+				), MYSQLI_ASSOC);
+	
+
+				$a_mod = array_merge($a_mod, $escala);
+				$a_mod["diasEscala"] = $diasEscala;
+			}
 		}
 
 		cabecalho("Cadastro de Parâmetros");
 
-		if(!empty($a_mod["para_tx_tipo"]) && $a_mod["para_tx_tipo"] == "escala"){
-			$escala = mysqli_fetch_assoc(query(
-				"SELECT * FROM escala WHERE esca_nb_parametro = {$a_mod["para_nb_id"]};"
-			));
-
-			$a_mod = array_merge($a_mod, $escala);
-		}
 
 		$campos = [
 			[
@@ -375,40 +521,25 @@
 					<div class='margin-bottom-5'>
 						Tipo
 					</div>"
-					// ."<label>
-					// 	<input type='radio' name='tipo' value='escala' ".((!empty($a_mod["para_tx_tipo"]) && $a_mod["para_tx_tipo"] == "escala")? "checked": "")." onchange='camposEscala(\"escala\")'>
-					// 	Escala
-					// </label>"
+					."<label>
+						<input type='radio' name='tipo' value='escala' ".((!empty($a_mod["para_tx_tipo"]) && $a_mod["para_tx_tipo"] == "escala")? "checked": "")." onchange='camposEscala(\"escala\")'>
+						Escala
+					</label>"
 					."<label>
 						<input type='radio' name='tipo' value='horas_por_dia' ".((empty($a_mod["para_tx_tipo"]) || $a_mod["para_tx_tipo"] == "horas_por_dia")? "checked": "")." onchange='camposEscala(\"horas_por_dia\")'>
 						Horas/Dia
 					</label>
 				</div>",
 				campo("Nome*", "nome", ($a_mod["para_tx_nome"]?? ""), 5),
-				campo("Tolerância de atraso (Minutos)*", "tolerancia", ($a_mod["para_tx_tolerancia"]?? ""), 2,"MASCARA_NUMERO","maxlength='3'"),
+				campo("Tolerância de atraso (Minutos)*", "tolerancia", ($a_mod["para_tx_tolerancia"]?? ""), 2,"MASCARA_NUMERO", "maxlength='3'"),
 				campo_hora("Jornada Dias Úteis (Hr/dia)*", "jornadaSemanal", ($a_mod["para_tx_jornadaSemanal"]?? ""), 2),
 				campo_hora("Jornada Sábado*", "jornadaSabado", ($a_mod["para_tx_jornadaSabado"]?? ""), 2),
-
-				campo_hora("Horário de início*", "horaInicio", ($a_mod["esca_tx_horaInicio"]?? ""), 2),
-				campo_hora("Horário de Fim*", "horaFim", ($a_mod["esca_tx_horaFim"]?? ""), 2),
-				checkbox(
-					"Dias escalados",
-					"dias", (
-						[
-							"1"		=> "Domingo",
-							"2" 	=> "Segunda", 
-							"3" 	=> "Terça",
-							"4" 	=> "Quarta",
-							"5" 	=> "Quinta",
-							"6"		=> "Sexta",
-							"7"		=> "Sábado"
-						]
-					),
-					12,
-					"checkbox",
-					"",
-					$a_mod["esca_tx_dias"] ?? ""
-				),
+				"<div class='col-sm-2 margin-bottom-5 campo-fit-content'>
+					<label>Periodicidade (em dias)*</label>
+					<input name='periodicidade' id='periodicidade' value='".($a_mod["esca_nb_periodicidade"]?? "1")."' autocomplete='off' type='number' class='form-control input-sm campo-fit-content' max='31' min='1' onchange='atualizarLinhasEscala(this.value)'>
+				</div>",
+				campo_data("Dia 1*", "dataInicio", ($a_mod["esca_tx_dataInicio"]?? ""), 2),
+				"<div id='divHorasEscala' class='col-sm-2 margin-bottom-5 campo-fit-content'></div>"
 			],
 			[
 				campo("Hora Extra Semanal (%)*", "percHESemanal", ($a_mod["para_tx_percHESemanal"]?? ""), 3, "MASCARA_NUMERO", "maxlength='3'"),
@@ -426,9 +557,9 @@
 				</div>"
 			],
 			[
-				campo("Diária Café da Manhã(R$)", "diariasCafe", ($a_mod["para_tx_diariasCafe"]?? ""), 2, "MASCARA_DINHERO"),
-				campo("Diária Almoço(R$)", "diariasAlmoco", ($a_mod["para_tx_diariasAlmoco"]?? ""), 2, "MASCARA_DINHERO"),
-				campo("Diária Jantar(R$)", "diariasJanta", ($a_mod["para_tx_diariasJanta"]?? ""), 2, "MASCARA_DINHERO")
+				campo("Café da Manhã", "diariasCafe", ($a_mod["para_tx_diariasCafe"]?? ""), 2, "MASCARA_DINHEIRO"),
+				campo("Almoço", "diariasAlmoco", ($a_mod["para_tx_diariasAlmoco"]?? ""), 2, "MASCARA_DINHEIRO"),
+				campo("Jantar", "diariasJanta", ($a_mod["para_tx_diariasJanta"]?? ""), 2, "MASCARA_DINHEIRO")
 			],
 			[
 				combo("Acordo Sindical", "acordo", ($a_mod["para_tx_acordo"]?? ""), 1, ["sim" => "Sim", "nao" => "Não"]),
@@ -462,7 +593,7 @@
 					"",
 					$a_mod["para_tx_adi5322"]?? "nao"
 				),
-				ckeditor("Descrição", "Obs", ($a_mod["para_tx_Obs"]?? ""), 12,"maxlength='100' style='min-width:fit-content; max-width: 100%;'")
+				textarea("Descrição", "Obs", ($a_mod["para_tx_Obs"]?? ""), 12,"maxlength='100' style='min-width:fit-content; max-width: 100%;'")
 			],
 		];
 
@@ -534,54 +665,42 @@
 		;
 
 		echo 
-			"<script type='text/javascript'>
-
-				function camposEscala(campoSelecionado){
-					if(campoSelecionado == 'escala'){
-						document.getElementById('jornadaSemanal').parentElement.hidden = true;
-						document.getElementById('jornadaSemanal').value = null;
-
-						document.getElementById('jornadaSabado').parentElement.hidden = true;
-						document.getElementById('jornadaSabado').value = null;
-
-						document.getElementById('horaInicio').parentElement.hidden = false;
-						document.getElementById('horaFim').parentElement.hidden = false;
-						document.getElementById('dias').hidden = false;
-
-					}else if(campoSelecionado == 'horas_por_dia'){
-						document.getElementById('horaInicio').parentElement.hidden = true;
-						document.getElementById('horaInicio').value = null;
-						
-						document.getElementById('horaFim').parentElement.hidden = true;
-						document.getElementById('horaFim').value = null;
-						
-						document.getElementById('dias').hidden = true;
-						document.getElementById('dias').value = null;
-
-						document.getElementById('jornadaSemanal').parentElement.hidden = false;
-						document.getElementById('jornadaSabado').parentElement.hidden = false;
-					}
+			"<style>
+				div#divHorasEscala {
+					padding-top: 30px;
+					width: 100%;
+					display: flex;
+					justify-content: flex-start;
+					flex-wrap: wrap;
 				}
 
-				".(empty($a_mod["para_tx_tipo"])? "camposEscala('horas_por_dia');": "camposEscala('{$a_mod["para_tx_tipo"]}')")."
-
-				function remover_arquivo(id, idArq, arquivo, acao ){
-					if (confirm('Deseja realmente excluir o arquivo '+arquivo+'?')){
-						document.form_excluir_arquivo.idParametro.value = id;
-						document.form_excluir_arquivo.idArq.value = idArq;
-						document.form_excluir_arquivo.acao.value = acao;
-						document.form_excluir_arquivo.submit();
-					}
+				.linhaDiaEscala {
+					padding: 0px 5px 0px 5px;
+					margin: 5px 5px 5px 5px;
+					overflow: hidden;
+					border: 1px solid rgb(194, 202, 216);
+					border-radius: 3px;
 				}
 
-				function downloadArquivo(id, caminho, acao){
-					document.form_download_arquivo.idParametro.value = id;
-					document.form_download_arquivo.caminho.value = caminho;
-					document.form_download_arquivo.acao.value = acao;
-					document.form_download_arquivo.submit();
+				.linhaDiaEscala>.labelDiaEscala {
+
 				}
-			</script>"
+
+				#horaInicio::-webkit-calendar-picker-indicator, #horaFim::-webkit-calendar-picker-indicator, #intervaloInterno::-webkit-calendar-picker-indicator{
+					display: none;
+				}
+
+				.linhaDiaEscala>.col-sm-1{
+					padding: 0;
+				}
+
+				input#horaInicio, input#horaFim, input#intervaloInterno {
+					text-align: center;
+				}
+			</style>"
 		;
+
+		carregarJSFormParametro();
 	}
 
 	function index(){
@@ -610,9 +729,6 @@
 				"CÓDIGO" 				=> "para_nb_id",
 				"NOME" 					=> "para_tx_nome",
 				"TIPO" 					=> "CONCAT('formatarTipo(\"', para_tx_tipo, '\")') AS para_tx_tipo",
-				"JORNADA" 				=> "IF(para_tx_tipo = 'horas_por_dia', 
-					CONCAT('formatarColunaJornada(\"',para_tx_tipo,'\",\"',para_tx_jornadaSemanal,'\",\"',para_tx_jornadaSabado,'\")'),
-					CONCAT('formatarColunaJornada(\"',para_tx_tipo,'\",\"',esca_tx_horaInicio,'\",\"',esca_tx_horaFim,'\",\"',esca_tx_dias,'\")')) AS para_tx_jornada",
 				"H.E. SEMANAL" 			=> "CONCAT(para_tx_percHESemanal, '%') AS para_tx_percHESemanal",
 				"H.E. EX." 				=> "CONCAT(para_tx_percHEEx, '%') AS para_tx_percHEEx",
 				"ACORDO" 				=> "para_tx_acordo",
@@ -640,7 +756,7 @@
 			);
 	
 			$actions["functions"][1] .= 
-				"esconderInativar('glyphicon glyphicon-remove search-remove', 9);"
+				"esconderInativar('glyphicon glyphicon-remove search-remove', 8);"
 			;
 	
 			$gridFields["actions"] = $actions["tags"];
