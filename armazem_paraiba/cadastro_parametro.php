@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -501,8 +501,22 @@
 				$a_mod["esca_tx_dataInicio"] = $_POST["dataInicio"];
 				$a_mod["diasEscala"] = $_POST["diasEscala"];
 			}else{
-				$a_mod = array_merge($a_mod, ["periodicidade" => $_POST["periodicidade"], "dataInicio" => $_POST["dataInicio"]]);
-				$a_mod["diasEscala"] = $_POST["diasEscala"];
+				if(!empty($_POST["id"])){
+					$escalaExistente = mysqli_fetch_assoc(query(
+						"SELECT * FROM escala WHERE esca_nb_parametro = {$_POST["id"]};"
+					));
+
+					$escalaExistente["diasEscala"] = mysqli_fetch_all(query(
+						"SELECT * FROM escala_dia WHERE esca_nb_escala = {$escalaExistente["esca_nb_id"]};"
+					), MYSQLI_ASSOC);
+
+					$diasEscala = [];
+					foreach($escalaExistente["diasEscala"] as $diaEscala){
+						$diasEscala[] = [$diaEscala["esca_tx_horaInicio"], $diaEscala["esca_tx_horaFim"], $diaEscala["esca_tx_intervaloInterno"]];
+					}
+					$a_mod = array_merge($a_mod, $escalaExistente);
+					$a_mod["diasEscala"] = $diasEscala;	
+				}
 			}
 		}
 
