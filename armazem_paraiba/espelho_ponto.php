@@ -45,9 +45,9 @@
 					);
 				}
 
-				if($padronizado){
-					$mensagemParametro = "{$parametroEmpresa["para_tx_nome"]}<br> Semanal ({$parametroEmpresa["para_tx_jornadaSemanal"]}), Sábado ({$parametroEmpresa["para_tx_jornadaSabado"]})";
-				}
+				$mensagemParametro = (!$padronizado? "Não ": "")."Padronizado.<br>";
+				$mensagemParametro .= "{$parametroEmpresa["para_tx_nome"]}<br> Semanal ({$parametroEmpresa["para_tx_jornadaSemanal"]}), Sábado ({$parametroEmpresa["para_tx_jornadaSabado"]})";;
+
 			}
 		}
 		return $mensagemParametro;
