@@ -445,7 +445,7 @@
 			
 			$id = inserir("parametro",array_keys($novoParametro),array_values($novoParametro));
 
-			$_POST["id"] = $id;
+			$_POST["id"] = $id[0];
 			
 			if($novoParametro["para_tx_tipo"] == "escala"){
 				cadastrarEscala($id[0]);
