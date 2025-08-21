@@ -325,8 +325,10 @@
 					}
 					
 					$row = array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado);
-					$descFaltasNaoJustificadas = operarHorarios([$descFaltasNaoJustificadas, $row["jornadaPrevista"]], "+");
-					$qtdDiasNaoJustificados++;
+					if(strpos($row["inicioJornada"], "Batida início de jornada não registrada!") !== false){
+						$descFaltasNaoJustificadas = operarHorarios([$descFaltasNaoJustificadas, $row["jornadaPrevista"]], "+");
+						$qtdDiasNaoJustificados++;
+					}
 
 					$rows[] = $row;
 				}
