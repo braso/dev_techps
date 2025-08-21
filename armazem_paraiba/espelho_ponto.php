@@ -17,35 +17,7 @@
 			$mensagemParametro .= " Semanal (".$motorista["enti_tx_jornadaSemanal"]."), Sábado (".$motorista["enti_tx_jornadaSabado"].")";
 		}elseif(($motorista["para_tx_tipo"] == "escala")){
 			$escala = mysqli_fetch_assoc(query("SELECT * FROM escala WHERE esca_nb_parametro = {$motorista["enti_nb_parametro"]}"));
-			$diasEscala = mysqli_fetch_all(query("SELECT * FROM escala_dia WHERE esca_nb_escala = {$escala["esca_nb_id"]}"), MYSQLI_ASSOC);
 			$mensagemParametro .= "<br>Dia 1: ".(new DateTime($escala["esca_tx_dataInicio"]))->format("d/m/Y");
-			// $tableHeader = "";
-			// $tableBody = "";
-			// $f = 1;
-			// foreach($diasEscala as $dia){
-			// 	$tableHeader .= "<th>Dia ".$f++."</th>";
-			// 	if(!empty($dia["esca_tx_horaInicio"])){
-			// 		$tableBody .= "<td>{$dia["esca_tx_horaInicio"]}, {$dia["esca_tx_horaFim"]} ({$dia["esca_tx_intervaloInterno"]})</td>";
-			// 	}else{
-			// 		$tableBody .= "<td></td>";
-			// 	}
-			// }
-			// $mensagemParametro .= 
-			// 	"<div class='table-responsive' style='display: flex; justify-content: space-between; align-items: center;'>
-			// 		<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' id='tableParametro'>
-			// 			<thead>
-			// 				<tr>
-			// 					{$tableHeader}
-			// 				</tr>
-			// 			</thead>
-			// 			<tbody>
-			// 				<tr>
-			// 					{$tableBody}
-			// 				</tr>
-			// 			</tbody>
-			// 		</table>
-			// 	</div>"
-			// ;
 		}
 
 		if(!empty($motorista["empr_nb_parametro"])){
@@ -59,10 +31,22 @@
 			if(!empty($parametroEmpresa)){
 				$keys = array_keys(array_intersect($parametroEmpresa, $motorista));
 
-				$keysToFind = ["para_tx_jornadaSemanal", "para_tx_jornadaSabado", "para_tx_percHESemanal"];
-				
-				if(array_intersect($keysToFind, $keys) == $keysToFind){
-					$mensagemParametro = "Convenção Padronizada: ".$parametroEmpresa["para_tx_nome"].", Semanal (".$parametroEmpresa["para_tx_jornadaSemanal"]."), Sábado (".$parametroEmpresa["para_tx_jornadaSabado"].")";
+				if($parametroEmpresa["para_tx_tipo"] == "horas_por_dia"){
+					$padronizado = (
+						[$motorista["para_tx_jornadaSemanal"], $motorista["para_tx_jornadaSabado"], $motorista["para_tx_percHESemanal"], $motorista["para_tx_percHEEx"]]
+						==
+						[$parametroEmpresa["para_tx_jornadaSemanal"], $parametroEmpresa["para_tx_jornadaSabado"], $parametroEmpresa["para_tx_percHESemanal"], $parametroEmpresa["para_tx_percHEEx"]]
+					);
+				}else{
+					$padronizado = (
+						[$motorista["para_tx_percHESemanal"], $motorista["para_tx_percHEEx"]]
+						==
+						[$parametroEmpresa["para_tx_percHESemanal"], $parametroEmpresa["para_tx_percHEEx"]]
+					);
+				}
+
+				if($padronizado){
+					$mensagemParametro = "{$parametroEmpresa["para_tx_nome"]}<br> Semanal ({$parametroEmpresa["para_tx_jornadaSemanal"]}), Sábado ({$parametroEmpresa["para_tx_jornadaSabado"]})";
 				}
 			}
 		}
