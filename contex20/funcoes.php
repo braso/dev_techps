@@ -369,7 +369,7 @@
 		return mysqli_fetch_array($sql, MYSQLI_BOTH)[0];
 	}
 
-	function carregar($tabela, $id="", $campo="", $valor="", $extra="", $exibe=0){
+	function carregar($tabela, string $id="", $campo="", $valor="", $extra="", $exibe=0){
 		$ext = "";
 		$extra_id = (!empty($id))? " AND ".substr($tabela,0,4)."_nb_id"." = ".$id: "";
 
