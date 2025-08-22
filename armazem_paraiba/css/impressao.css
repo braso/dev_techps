@@ -1,0 +1,159 @@
+/* --- ESTILOS GERAIS PARA A PÁGINA (VISUALIZAÇÃO E IMPRESSÃO) --- */
+
+/* Remove a barra de rolagem dos containers para a impressão */
+.portlet-body.form .table-responsive,
+.table-responsive {
+    overflow: visible !important;
+    max-width: none !important;
+    max-height: none !important;
+    width: auto !important;
+}
+
+/* Garante que o cabeçalho da tabela não seja fixo na tela, para fluir na impressão */
+.table-head {
+    position: static !important;
+}
+
+/* Ajustes gerais de espaçamento e borda para os 'portlets' */
+.portlet.light {
+    padding: 12px 20px 15px !important;
+}
+
+.portlet {
+    border-radius: 20px !important;
+    margin-top: 0 !important;
+    margin-bottom: 25px !important;
+}
+
+div.portlet-title > div > span > div.table-responsive {
+    max-width: 30% !important;
+}
+
+
+/* --- 🎯 REGRAS APLICADAS APENAS NA IMPRESSÃO --- */
+@media print {
+
+    /* --- Configuração da Página --- */
+    @page {
+        size: A4 landscape; /* Orientação paisagem */
+        margin: 1cm;       /* Margem da impressora */
+    }
+
+    /* --- Estrutura do Corpo do Documento --- */
+    body {
+        margin: 0; /* Remove margens do navegador para usar a da @page */
+        /* Adiciona espaço para o cabeçalho e rodapé fixos em CADA PÁGINA */
+        padding-top: 100px;
+        padding-bottom: 40px;
+    }
+
+    /* --- Estilos para CABEÇALHO FIXO --- */
+    #print-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 85px; /* Altura fixa do cabeçalho */
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1em;
+        padding: 0 1cm; /* Alinha o conteúdo com a margem da página */
+        background: #fff; /* Fundo branco para não ficar transparente */
+        border-bottom: 1px solid #ccc;
+    }
+
+    #print-header h1 {
+        margin: 0;
+        font-size: 1.2em;
+        flex-grow: 1;
+        text-align: center;
+    }
+
+    #print-header img {
+        display: block !important;
+    }
+
+    /* --- Estilos para RODAPÉ FIXO --- */
+    #print-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 30px; /* Altura fixa do rodapé */
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 1cm; /* Alinha o conteúdo com a margem da página */
+        background: #fff;
+        border-top: 1px solid #ccc;
+        font-size: 0.8em;
+    }
+
+    /* --- AJUSTES PARA TABELA LARGA NA IMPRESSÃO --- */
+
+    /* Remove o scale para evitar quebras no layout fixo do cabeçalho e rodapé */
+    .conteudo-impressao {
+        padding: 0 1cm; /* Adiciona padding para alinhar o conteúdo com as margens */
+    }
+
+    /* Força a tabela a se ajustar à largura do container */
+    .conteudo-impressao .table {
+        width: 100% !important;
+        table-layout: auto;
+    }
+    
+    /* Garante que o cabeçalho da tabela se repita em cada página */
+    .conteudo-impressao .table thead {
+        display: table-header-group !important;
+    }
+
+    /* Reduz o tamanho da fonte e o espaçamento das células */
+    .conteudo-impressao .table th,
+    .conteudo-impressao .table td {
+        font-size: 7pt !important;
+        padding: 2px 1px !important; /* Diminui o espaçamento interno para caber mais conteúdo */
+        text-align: center;
+        vertical-align: middle;
+        white-space: nowrap; /* Impede a quebra de linha nos títulos */
+    }
+
+    .portlet-title .caption .caption-subject,
+    .portlet-title .caption .caption-subject > div {
+        font-size: 8pt !important;
+    }
+
+    .table-responsive{
+        font-size: 8pt !important;
+    }
+
+    /* Reduz o espaçamento entre as linhas */
+    .portlet-title .caption .caption-subject br {
+        content: ""; /* Impede a quebra de linha padrão */
+        display: block;
+        margin-bottom: 0 !important;
+    }
+
+    /* --- SEUS ESTILOS ESPECÍFICOS E MELHORIAS --- */
+    
+    /* Melhora a quebra de página, evitando cortar seções ao meio */
+    .portlet {
+        page-break-inside: avoid;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    /* Oculta elementos desnecessários na impressão */
+    body > div.scroll-to-top,
+    button.btn.btn-primary.imprimir,
+    #impressao {
+        display: none !important;
+    }
+
+    /* Estilos de cores que você já tinha */
+    .color_red:before { color: red !important; }
+    .color_green:before { color: green !important; }
+    .color_blue:before { color: blue !important; }
+    .color_greenLight:before { color: #00ff00 !important; }
+    .color_orange:before { color: orange !important; }
+}

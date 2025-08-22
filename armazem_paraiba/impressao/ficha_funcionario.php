@@ -57,6 +57,15 @@ if (!$motorista) {
     die("Funcionário com o ID {$funcionarioId} não encontrado.");
 }
 
+$login = mysqli_fetch_all(
+    query(
+        "SELECT user_tx_login FROM user 
+            WHERE ".$motorista["enti_nb_id"]." = user_nb_entidade 
+            LIMIT 1"
+    ),
+    MYSQLI_ASSOC
+)[0];
+
 // 3. Carregar dados relacionados (Empresa, Parâmetro, Cidade da CNH)
 
 // ATENÇÃO: A função `query()` como usada no código original é vulnerável a SQL Injection.
@@ -141,7 +150,7 @@ if (!empty($empresa)) {
 // =============================================================================
 
 class CustomPDF extends TCPDF {
-    public string $tituloPersonalizado;
+    public $tituloPersonalizado;
     protected static $empresaData;
 
     public static function setEmpresaData($data) {
@@ -285,6 +294,23 @@ function desenharLinhaDeCamposFlex(TCPDF $pdf, array $campos, float $espacoEntre
     $pdf->Ln();
     $pdf->Ln(1.5);
 }
+
+function desenharCampoObservacao(TCPDF $pdf, string $label, string $texto, float $alturaLinha = 6) {
+    $larguraPagina = $pdf->getPageWidth() - $pdf->getMargins()['left'] - $pdf->getMargins()['right'];
+
+    // --- Label ---
+    $pdf->SetFont('helvetica', 'B', 9);
+    $pdf->SetFillColor(240, 240, 240);
+    $pdf->Cell($larguraPagina, $alturaLinha, ' ' . $label, 0, 1, 'L', true);
+
+    // --- Texto (MultiCell para permitir várias linhas) ---
+    $pdf->SetFont('helvetica', '', 9);
+    $pdf->MultiCell($larguraPagina, $alturaLinha, ' ' . $texto, 'B', 'L', false, 1);
+
+    // Espaçamento após o campo
+    $pdf->Ln(2);
+}
+
 // =============================================================================
 // INICIALIZAÇÃO E GERAÇÃO DO PDF
 // =============================================================================
@@ -294,8 +320,8 @@ $pdf = new CustomPDF($empresa, 'Ficha de Cadastro do Colaborador');
 $pdf->AddPage();
 
 // --- CAMPO PARA FOTO 3X4 ---
-$fotoPath    = $motorista["enti_tx_foto"] ?? null;
-$larguraFoto = 30;
+$fotoPath    = "../".$motorista["enti_tx_foto"] ?? null;
+$larguraFoto = 40;
 $alturaFoto  = 40;
 // Posição alinhada à margem direita
 $posXFoto    = $pdf->GetPageWidth() - $pdf->getMargins()['right'] - $larguraFoto;
@@ -322,51 +348,57 @@ desenharLinhaDeCamposFlex($pdf, [
     ['label' => 'Nome completo:', 'value' => $motorista['enti_tx_nome'] ?? '', 'larguraLabel' => 28, 'larguraValor' => 106]
 ]);
 desenharLinhaDeCamposFlex($pdf, [
-    ['label' => 'Nascimento:', 'value' => formatarData($motorista["enti_tx_nascimento"] ?? ''), 'larguraLabel' => 23, 'larguraValor' => 25],
-    ['label' => 'CPF:', 'value' => formatarCPF($motorista["enti_tx_cpf"] ?? ''), 'larguraLabel' => 11, 'larguraValor' => 30],
-    ['label' => 'RG:', 'value' => $motorista["enti_tx_rg"] ?? '', 'larguraLabel' => 10, 'larguraValor' => 20],
-    ['label' => 'Estado Civil:', 'value' => $motorista["enti_tx_civil"] ?? '', 'larguraLabel' => 23, 'larguraValor' => 32],
+    ['label' => 'E-MAIL:', 'value' => $motorista["enti_tx_email"] ?? '', 'larguraLabel' => 15, 'larguraValor' => 75],
+    ['label' => 'Nascimento:', 'value' => formatarData($motorista["enti_tx_nascimento"] ?? ''), 'larguraLabel' => 22, 'larguraValor' => 30],
+    ['label' => 'RG:', 'value' => $motorista["enti_tx_rg"] ?? '', 'larguraLabel' => 9, 'larguraValor' => 24],
 ]);
 desenharLinhaDeCamposFlex($pdf, [
-    ['label' => 'Sexo:', 'value' => $motorista["enti_tx_sexo"] ?? '', 'larguraLabel' => 13, 'larguraValor' => 42],
-    ['label' => 'Emissão RG:', 'value' => formatarData($motorista["enti_tx_rgDataEmissao"] ?? ''),'larguraLabel' => 24, 'larguraValor' => 32],
-    ['label' => 'UF RG:', 'value' => $motorista["enti_tx_rgUf"] ?? '', 'larguraLabel' => 15, 'larguraValor' => 12],
+    ['label' => 'CPF:', 'value' => formatarCPF($motorista["enti_tx_cpf"] ?? ''), 'larguraLabel' => 11, 'larguraValor' => 27],
+    ['label' => 'Estado Civil:', 'value' => $motorista["enti_tx_civil"] ?? '', 'larguraLabel' => 23, 'larguraValor' => 20],
+    ['label' => 'Sexo:', 'value' => $motorista["enti_tx_sexo"] ?? '', 'larguraLabel' => 12, 'larguraValor' => 24],
+    ['label' => 'Emissão RG:', 'value' => formatarData($motorista["enti_tx_rgDataEmissao"] ?? ''),'larguraLabel' => 23, 'larguraValor' => 32],
+    ['label' => 'UF RG:', 'value' => $motorista["enti_tx_rgUf"] ?? '', 'larguraLabel' => 15, 'larguraValor' => 13],
     ['label' => 'CEP:', 'value' => $motorista["enti_tx_cep"] ?? '', 'larguraLabel' => 11, 'larguraValor' => 25],
+    ['label' => 'Endereço:', 'value' => $motorista["enti_tx_endereco"] ?? '', 'larguraLabel' => 19, 'larguraValor' => 65],
+    ['label' => 'Nº:', 'value' => $motorista["enti_tx_numero"] ?? '', 'larguraLabel' => 9, 'larguraValor' => 15],
 ]);
 desenharLinhaDeCamposFlex($pdf, [
-    ['label' => 'Endereço:', 'value' => $motorista["enti_tx_endereco"] ?? '', 'larguraLabel' => 20, 'larguraValor' => 65],
-    ['label' => 'Nº:', 'value' => $motorista["enti_tx_numero"] ?? '', 'larguraLabel' => 9, 'larguraValor' => 13],
-    ['label' => 'Bairro:', 'value' => $motorista["enti_tx_bairro"] ?? '', 'larguraLabel' => 14, 'larguraValor' => 55],
+    ['label' => 'Bairro:', 'value' => $motorista["enti_tx_bairro"] ?? '', 'larguraLabel' => 14, 'larguraValor' => 71],
+    ['label' => 'Município:', 'value' => $cidade["cida_tx_nome"] ?? '', 'larguraLabel' => 20, 'larguraValor' => 71],
 ]);
 desenharLinhaDeCamposFlex($pdf, [
-    ['label' => 'Município:', 'value' => $cidade["cida_tx_nome"] ?? '', 'larguraLabel' => 20, 'larguraValor' => 65],
-    ['label' => 'UF:', 'value' => $cidade["cida_tx_uf"] ?? '', 'larguraLabel' => 9, 'larguraValor' => 13],
-    ['label' => 'Complemento:', 'value' => $motorista["enti_tx_complemento"] ?? '', 'larguraLabel' => 27, 'larguraValor' => 42],
+    ['label' => 'UF:', 'value' => $cidade["cida_tx_uf"] ?? '', 'larguraLabel' => 9, 'larguraValor' => 30],
+    ['label' => 'Complemento:', 'value' => $motorista["enti_tx_complemento"] ?? '', 'larguraLabel' => 27, 'larguraValor' => 55],
+    ['label' => 'Telefone 1:', 'value' => $motorista['enti_tx_fone1'] ?? '', 'larguraLabel' => 20, 'larguraValor' => 33],
 ]);
 desenharLinhaDeCamposFlex($pdf, [
+    ['label' => 'Telefone 2:', 'value' => $motorista['enti_tx_fone2'] ?? '', 'larguraLabel' => 20, 'larguraValor' => 60],
+    ['label' => 'Tipo de Operação:', 'value' => $motorista["enti_tx_tipoOperacao"] ?? '', 'larguraLabel' => 32, 'larguraValor' => 64],
     ['label' => 'Ponto de Referência:', 'value' => $motorista["enti_tx_referencia"] ?? '', 'larguraLabel' => 35, 'larguraValor' => 145],
 ]);
-desenharLinhaDeCamposFlex($pdf, [
-    ['label' => 'Telefone 1:', 'value' => $motorista['enti_tx_fone1'] ?? '', 'larguraLabel' => 20, 'larguraValor' => 28],
-    ['label' => 'Telefone 2:', 'value' => $motorista['enti_tx_fone2'] ?? '', 'larguraLabel' => 20, 'larguraValor' => 28],
-    ['label' => 'Tipo de Operação:', 'value' => $motorista["enti_tx_tipoOperacao"] ?? '', 'larguraLabel' => 34, 'larguraValor' => 46]
-]);
+
+
 desenharLinhaDeCamposFlex($pdf, [['label' => 'Nome do pai:', 'value' => $motorista["enti_tx_pai"] ?? '', 'larguraLabel' => 23, 'larguraValor' => 157]]);
 desenharLinhaDeCamposFlex($pdf, [['label' => 'Nome da mãe:', 'value' => $motorista["enti_tx_mae"] ?? '', 'larguraLabel' => 25, 'larguraValor' => 155]]);
 desenharLinhaDeCamposFlex($pdf, [['label' => 'Nome do Cônjuge:', 'value' => $motorista["enti_tx_conjugue"] ?? '', 'larguraLabel' => 32, 'larguraValor' => 148]]);
+desenharCampoObservacao($pdf, "Observações", $motorista["enti_tx_obs"] ?? '');
 
 // // --- SEÇÃO: DADOS CONTRATUAIS---
+// dd($motorista);
 desenharTituloSecao($pdf, 'Dados Contratuais');
 desenharLinhaDeCamposFlex($pdf, [
     ['label' => 'Empresa:', 'value' => obterDado($empresa, "empr_tx_nome"), 'larguraLabel' => 18, 'larguraValor' => 117, 'multiLine' => true],
     ['label' => 'Salário:', 'value' => formatarMoeda($motorista["enti_nb_salario"] ?? ''), 'larguraLabel' => 15, 'larguraValor' => 28],
 ]);
 desenharLinhaDeCamposFlex($pdf, [
-    ['label' => 'Ocupação:', 'value' => $motorista["enti_tx_ocupacao"] ?? '', 'larguraLabel' => 20, 'larguraValor' => 33],
+    ['label' => 'Ocupação:', 'value' => $motorista["enti_tx_ocupacao"] ?? '', 'larguraLabel' => 20, 'larguraValor' => 35],
+    ['label' => 'Saldo Inicial:', 'value' => $motorista["enti_tx_banco"] ?? '', 'larguraLabel' => 23, 'larguraValor' => 35],
+    ['label' => 'Subcontratado:', 'value' => $motorista["enti_tx_subcontratado"] ?? '', 'larguraLabel' => 25, 'larguraValor' => 35],
     ['label' => 'Dt. Admissão:', 'value' => formatarData($motorista["enti_tx_admissao"] ?? ''), 'larguraLabel' => 25, 'larguraValor' => 33],
     ['label' => 'Dt. Desligamento:', 'value' => formatarData($motorista["enti_tx_desligamento"] ?? ''), 'larguraLabel' => 32, 'larguraValor' => 33],
 ]);
 
+$pdf->AddPage();
 // --- SEÇÃO: CONVENÇÃO SINDICAL - JORNADA PADRÃO DO FUNCIONÁRIO ---
 desenharTituloSecao($pdf, 'Jornada Padrão do Funcionário');
 desenharLinhaDeCamposFlex($pdf, [['label' => 'Parâmetros da Jornada:', 'value' => $parametroJornada["para_tx_nome"], 'larguraLabel' => 40, 'larguraValor' => 140, 'multiLine' => true]]);
@@ -380,7 +412,6 @@ desenharLinhaDeCamposFlex($pdf, [
     ['label' => 'H.E. Extraordinária (%):', 'value' => $parametroJornada["para_tx_percHEEx"] ?? '', 'larguraLabel' => 40, 'larguraValor' => 54],
 ]);
 
-$pdf->AddPage();
 // --- SEÇÃO: CARTEIRA NACIONAL DE HABILITAÇÃO ---
 desenharTituloSecao($pdf, 'Carteira Nacional de Habilitação');
 desenharLinhaDeCamposFlex($pdf, [
@@ -397,9 +428,14 @@ desenharLinhaDeCamposFlex($pdf, [
 desenharLinhaDeCamposFlex($pdf, [
     ['label' => 'Cidade/UF Emissão:', 'value' => "[".$cidadeCNH ["cida_tx_uf"] ."] ".$cidadeCNH ["cida_tx_nome"] ?? '', 'larguraLabel' => 35, 'larguraValor' => 145],
 ]);
+desenharCampoObservacao($pdf, "Observações", $motorista["enti_tx_cnhObs"] ?? '');
 
 // --- SEÇÃO: DADOS DO SISTEMA ---
 desenharTituloSecao($pdf, 'Dados do Sistema');
+desenharLinhaDeCamposFlex($pdf, [
+    ['label' => 'Login:', 'value' => $login ["user_tx_login"] ?? '', 'larguraLabel' => 14, 'larguraValor' => 75],
+    ['label' => 'Status:', 'value' => $motorista["enti_tx_status"] ?? '', 'larguraLabel' => 14, 'larguraValor' => 75],
+]);
 desenharLinhaDeCamposFlex($pdf, [
     ['label' => 'Data de Cadastro:', 'value' => formatarData($motorista["enti_tx_dataCadastro"] ?? ''), 'larguraLabel' => 32, 'larguraValor' => 53],
     ['label' => 'Última Atualização por:', 'value' => formatarData($motorista["enti_nb_userAtualiza"] ?? ''), 'larguraLabel' => 40, 'larguraValor' => 53],

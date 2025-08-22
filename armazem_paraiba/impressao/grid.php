@@ -14,7 +14,7 @@ require_once __DIR__ . "./../funcoes_ponto.php";
 $empresa = carregar("empresa", $_POST['IdEmpresa']);
 
 class CustomPDF extends TCPDF {
-    public string $tituloPersonalizado;
+    public $tituloPersonalizado;
     protected static $empresaData;
 
     public static function setEmpresaData($data) {
