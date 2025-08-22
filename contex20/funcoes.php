@@ -370,7 +370,7 @@
 	}
 
 	function carregar($tabela, string $id="", $campo="", $valor="", $extra="", $exibe=0){
-		$ext = "";
+		$extraCondicoes = "";
 		$extra_id = (!empty($id))? " AND ".substr($tabela,0,4)."_nb_id"." = ".$id: "";
 
 		if(!empty($campo[0])) {
@@ -378,17 +378,17 @@
 			$a_valor = explode(",", $valor);
 
 			for($i = 0; $i < count($a_campo); $i++) {
-				$ext .= " AND ".str_replace(",", "", $a_campo[$i])." = '".str_replace(",", "", $a_valor[$i])."' ";
+				$extraCondicoes .= " AND ".str_replace(",", "", $a_campo[$i])." = '".str_replace(",", "", $a_valor[$i])."' ";
 			}
 		}
 
-		$query = "SELECT * FROM ".$tabela." WHERE 1 ".$extra_id." ".$ext." ".$extra." LIMIT 1;";
+		$query = "SELECT * FROM ".$tabela." WHERE 1 ".$extra_id." ".$extraCondicoes." ".$extra." LIMIT 1;";
 
 		if($exibe == 1){
 			echo $query;
 		}
 		
-		if(empty($extra_id) && empty($ext) && empty($extra)){
+		if(empty($extra_id) && empty($extraCondicoes) && empty($extra)){
 			return [];
 		}else{
 			return mysqli_fetch_array(query($query));
@@ -940,6 +940,21 @@
 
 		return $campo;
 
+	}
+
+	function combo_radio($nome, $variavel, $modificador, $tamanho, array $opcoes, $extra = ""): string{
+		$combo = "<div class='col-sm-{$tamanho} margin-bottom-5 campo-fit-content ".(!empty($_POST["errorFields"]) && in_array($variavel, $_POST["errorFields"]))."' style='min-width:fit-content; min-height: 50px;' {$extra}>
+			<label>{$nome}</label><br>";
+
+		foreach($opcoes as $opcao){
+			$combo .=
+				"<label class='radio-inline'>
+					<input type='radio' name='{$variavel}' value='{$opcao["key"]}' ".(($modificador == $opcao["key"])? "checked": "")."> {$opcao["value"]}
+				</label>";
+		}
+		$combo .= "</div>";
+
+		return $combo;
 	}
 
 	// function combo_2($nome, $variavel, $modificador, $tamanho, array $opcoes, $extra = ''){
