@@ -533,13 +533,27 @@
 							\${rodapeHTML}
 							
 							<script>
-								// Chama a janela de impressão quando a página estiver carregada
+								// Executa após o conteúdo ser carregado na nova janela
 								window.onload = function() {
+									const tabela = document.querySelector('.conteudo-impressao .table');
+									
+									if (tabela) {
+										// Calcula a largura da página em pixels (considerando A4 paisagem a 96dpi)
+										const larguraPagina = 1122; // Aprox. largura A4 paisagem em px
+										const larguraTabela = tabela.offsetWidth;
+
+										// Se a tabela for mais larga que a página, aplica o scale
+										if (larguraTabela > larguraPagina) {
+											const scale = larguraPagina / larguraTabela;
+											tabela.style.transform = 'scale(' + scale + ')';
+											tabela.style.transformOrigin = 'top left';
+										}
+									}
+									
 									window.print();
 								};
 
 								// Fecha a aba quando o evento 'afterprint' é disparado
-								// Isso acontece quando a caixa de diálogo de impressão é fechada
 								window.addEventListener('afterprint', () => {
 									window.close();
 								});

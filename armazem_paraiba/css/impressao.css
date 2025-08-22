@@ -36,15 +36,14 @@ div.portlet-title > div > span > div.table-responsive {
     /* --- Configuração da Página --- */
     @page {
         size: A4 landscape; /* Orientação paisagem */
-        margin: 1cm;       /* Margem da impressora */
+        margin: 0.5cm;     /* Reduz a margem para dar mais espaço */
     }
 
     /* --- Estrutura do Corpo do Documento --- */
     body {
-        margin: 0; /* Remove margens do navegador para usar a da @page */
-        /* Adiciona espaço para o cabeçalho e rodapé fixos em CADA PÁGINA */
-        padding-top: 100px;
-        padding-bottom: 40px;
+        margin: 0;
+        padding-top: 40px;  /* Reduzido para dar mais espaço */
+        padding-bottom: 30px; /* Reduzido para dar mais espaço */
     }
 
     /* --- Estilos para CABEÇALHO FIXO --- */
@@ -53,25 +52,26 @@ div.portlet-title > div > span > div.table-responsive {
         top: 0;
         left: 0;
         right: 0;
-        height: 85px; /* Altura fixa do cabeçalho */
+        height: 50px; /* Altura reduzida */
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 1em;
-        padding: 0 1cm; /* Alinha o conteúdo com a margem da página */
-        background: #fff; /* Fundo branco para não ficar transparente */
+        padding: 0 0.5cm; /* Alinha com a nova margem da @page */
+        background: #fff;
         border-bottom: 1px solid #ccc;
     }
 
     #print-header h1 {
         margin: 0;
-        font-size: 1.2em;
+        font-size: 1em; /* Fonte ligeiramente menor */
         flex-grow: 1;
         text-align: center;
     }
 
     #print-header img {
         display: block !important;
+        max-height: 40px; /* Impede que a imagem transborde */
     }
 
     /* --- Estilos para RODAPÉ FIXO --- */
@@ -80,29 +80,27 @@ div.portlet-title > div > span > div.table-responsive {
         bottom: 0;
         left: 0;
         right: 0;
-        height: 30px; /* Altura fixa do rodapé */
+        height: 25px; /* Altura reduzida */
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 1cm; /* Alinha o conteúdo com a margem da página */
+        padding: 0 0.5cm; /* Alinha com a nova margem da @page */
         background: #fff;
         border-top: 1px solid #ccc;
-        font-size: 0.8em;
+        font-size: 0.7em; /* Fonte ligeiramente menor */
     }
 
     /* --- AJUSTES PARA TABELA LARGA NA IMPRESSÃO --- */
 
-    /* Remove o scale para evitar quebras no layout fixo do cabeçalho e rodapé */
     .conteudo-impressao {
-        padding: 0 1cm; /* Adiciona padding para alinhar o conteúdo com as margens */
+        padding: 0 0.5cm; /* Alinha o conteúdo com as margens */
     }
 
-    /* Força a tabela a se ajustar à largura do container */
     .conteudo-impressao .table {
         width: 100% !important;
         table-layout: auto;
     }
-    
+
     /* Garante que o cabeçalho da tabela se repita em cada página */
     .conteudo-impressao .table thead {
         display: table-header-group !important;
@@ -111,32 +109,31 @@ div.portlet-title > div > span > div.table-responsive {
     /* Reduz o tamanho da fonte e o espaçamento das células */
     .conteudo-impressao .table th,
     .conteudo-impressao .table td {
-        font-size: 7pt !important;
-        padding: 2px 1px !important; /* Diminui o espaçamento interno para caber mais conteúdo */
+        font-size: 5pt !important; /* Fonte ainda menor */
+        padding: 1px !important;   /* Padding mínimo */
         text-align: center;
         vertical-align: middle;
-        white-space: nowrap; /* Impede a quebra de linha nos títulos */
+        white-space: nowrap;
     }
-
+    
     .portlet-title .caption .caption-subject,
     .portlet-title .caption .caption-subject > div {
-        font-size: 8pt !important;
+        font-size: 7pt !important; /* Fonte do cabeçalho também menor */
     }
 
     .table-responsive{
-        font-size: 8pt !important;
+        font-size: 7pt !important;
     }
 
     /* Reduz o espaçamento entre as linhas */
     .portlet-title .caption .caption-subject br {
-        content: ""; /* Impede a quebra de linha padrão */
+        content: "";
         display: block;
         margin-bottom: 0 !important;
     }
 
     /* --- SEUS ESTILOS ESPECÍFICOS E MELHORIAS --- */
     
-    /* Melhora a quebra de página, evitando cortar seções ao meio */
     .portlet {
         page-break-inside: avoid;
         border: none !important;
