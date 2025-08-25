@@ -433,10 +433,10 @@
 
 		$logoEmpresa = mysqli_fetch_assoc(query(
             "SELECT empr_tx_logo FROM empresa
-                    WHERE empr_tx_status = 'ativo'
-                        AND empr_tx_Ehmatriz = 'sim'
-                    LIMIT 1;"
-        ))["empr_tx_logo"];
+                WHERE empr_tx_status = 'ativo'
+                    AND empr_nb_id = '{$_POST["busca_empresa"]}'
+				LIMIT 1;"
+			))["empr_tx_logo"];
 
 		return 
 			"<script>
@@ -500,16 +500,16 @@
 					// Cabeçalho para a impressão
 					const cabecalhoHTML = `
 						<header id='print-header'>
-							<img style='width: 190px; height: 40px;' src='./imagens/logo_topo_cliente.png' alt='Logo Esquerda'>
-							<h1 style='margin:0; font-size:18px;'>Espelho de Ponto</h1>
-							<img style='width: 180px; height: 80px;' src='./$logoEmpresa' alt='Logo Direita'>
+							<img src='./imagens/logo_topo_cliente.png' alt='Logo Esquerda'>
+							<h1>Espelho de Ponto</h1>
+							<img src='./$logoEmpresa' alt='Logo Direita'>
 						</header>`;
 
 					// Rodapé para a impressão
 					const rodapeHTML = `
 						<footer id='print-footer'>
 							<div><strong>TECHPS®</strong></div>
-							<div><em>\${dataAtual}</em></div>
+							<div><em>Gerado em: \${dataAtual}</em></div>
 						</footer>`;
 
 					// Abre janela de impressão
@@ -521,7 +521,7 @@
 							<meta charset='utf-8'>
 							<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'>
 							<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'>
-							<link rel='stylesheet' href='./css/impressao.css'>
+							<link rel='stylesheet' href='./css/impressao_espelho.css'>
 						</head>
 						<body>
 							\${cabecalhoHTML}
@@ -535,21 +535,6 @@
 							<script>
 								// Executa após o conteúdo ser carregado na nova janela
 								window.onload = function() {
-									const tabela = document.querySelector('.conteudo-impressao .table');
-									
-									if (tabela) {
-										// Calcula a largura da página em pixels (considerando A4 paisagem a 96dpi)
-										const larguraPagina = 1122; // Aprox. largura A4 paisagem em px
-										const larguraTabela = tabela.offsetWidth;
-
-										// Se a tabela for mais larga que a página, aplica o scale
-										if (larguraTabela > larguraPagina) {
-											const scale = larguraPagina / larguraTabela;
-											tabela.style.transform = 'scale(' + scale + ')';
-											tabela.style.transformOrigin = 'top left';
-										}
-									}
-									
 									window.print();
 								};
 

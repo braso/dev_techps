@@ -249,7 +249,7 @@ function gerarPainelEndosso() {
 
     [$percEndosso["E"], $percEndosso["EP"], $percEndosso["N"]] = calcPercs(array_values($contagemEndossos));
     [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
-    $pdf = new CustomPDF([],'',PDF_PAGE_ORIENTATION, 'mm', 'A4', true, 'UTF-8', false);
+    $pdf = new CustomPDF([],'','p', 'mm', 'A4', true, 'UTF-8', false);
     $pdf->SetPageOrientation('L');
     $pdf->setEmpresaData($empresa);
     $pdf->tituloPersonalizado = 'Relatório de Endossos';
@@ -1469,7 +1469,7 @@ function gerarPainelAjustes() {
         $pastaAjuste->close();
     }
 
-    $pdf = new CustomPDF([],'','L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
     $pdf->setEmpresaData($empresa);
     $pdf->tituloPersonalizado = 'Relatório de Ajustes';
     $pdf->SetCreator('TechPS');
