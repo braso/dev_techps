@@ -19,12 +19,12 @@ class CustomPDF extends TCPDF {
     }
 
     public function Header() {
-        $imgWidth = 65;
-        $imgWidth2 = 45;
-        $imgHeight = 20;
-        $imgHeight2 = 15;
-        $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth2, $imgHeight2);
-        $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 25, 10, $imgWidth, $imgHeight);
+        $imgWidth = 35;
+        $imgWidth2 = 35;
+        $imgHeight = 15;
+        $imgHeight2 = 10;
+        $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 3, $imgWidth2, $imgHeight2);
+        $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 25, 3, $imgWidth, $imgHeight);
         // $this->Image('logo_esquerda.png', 10, 10, $imgWidth, $imgHeight);
         // $this->Image('logo_direita.png', $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
 
@@ -249,7 +249,7 @@ function gerarPainelEndosso() {
 
     [$percEndosso["E"], $percEndosso["EP"], $percEndosso["N"]] = calcPercs(array_values($contagemEndossos));
     [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
-    $pdf = new CustomPDF([],'','p', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf = new CustomPDF('p', 'mm', 'A4', true, 'UTF-8', false);
     $pdf->SetPageOrientation('L');
     $pdf->setEmpresaData($empresa);
     $pdf->tituloPersonalizado = 'Relatório de Endossos';
@@ -524,14 +524,14 @@ function gerarPainelSaldo() {
     } else {
         //Painel geral das empresas
         $empresas = [];
-        $logoEmpresa = mysqli_fetch_assoc(query(
+        $aEmpresa = mysqli_fetch_assoc(query(
             "SELECT empr_tx_logo FROM empresa
                     WHERE empr_tx_status = 'ativo'
                         AND empr_tx_Ehmatriz = 'sim'
                     LIMIT 1;"
         ))["empr_tx_logo"]; //Utilizado no HTML.
 
-        $logoEmpresa = $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] . "/" . $logoEmpresa;
+        $aEmpresa = $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] . "/" . $aEmpresa;
 
 
         if (is_dir($path) && is_file($path . "/empresas.json")) {
@@ -603,8 +603,8 @@ function gerarPainelSaldo() {
     [$percEndosso["E"], $percEndosso["EP"], $percEndosso["N"]] = calcPercs(array_values($contagemEndossos));
     [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
 
-    $pdf = new CustomPDF([],'','L', 'mm', 'A4', true, 'UTF-8', false);
-    $pdf->setEmpresaData($empresa);
+    $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf->setEmpresaData($aEmpresa);
     $pdf->tituloPersonalizado = 'Relatório Geral de Saldo';
     $pdf->SetCreator('TechPS');
     $pdf->SetAuthor('TechPS');
@@ -1079,7 +1079,7 @@ function gerarPainelNc() {
         }
     }
 
-    $pdf = new CustomPDF([],'','L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
     $pdf->setEmpresaData($empresa);
     $pdf->tituloPersonalizado = 'Relatório de Não Conformidade Jurídica';
     $pdf->SetCreator('TechPS');
@@ -1883,7 +1883,7 @@ function gerarPainelDisponibilidade() {
     // Calcula total antes
     $total = array_sum($ocupacoes);
 
-    $pdf = new CustomPDF([],'','L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
     $pdf->setEmpresaData($empresa);
     $pdf->tituloPersonalizado = '';
     $pdf->SetCreator('TechPS');
