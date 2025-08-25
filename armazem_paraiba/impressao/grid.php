@@ -14,7 +14,7 @@ require_once __DIR__ . "./../funcoes_ponto.php";
 $empresa = carregar("empresa", $_POST['IdEmpresa']);
 
 class CustomPDF extends TCPDF {
-    public string $tituloPersonalizado;
+    public $tituloPersonalizado;
     protected static $empresaData;
 
     public static function setEmpresaData($data) {
@@ -49,20 +49,24 @@ class CustomPDF extends TCPDF {
     }
 
     public function Header() {
-        // Logo Cliente
-        $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, 40, 10);
+        // Logo Cliente      
+        $this->Image("./../imagens/logo_topo_cliente.png", 10, 10, 40, 10);
 
         // Logo Empresa (alinhado à direita)
-        $logoEmpresa = __DIR__ .'/../'.($this->empresaData["empr_tx_logo"] ?? 'default_logo.png');
+        $logoEmpresa = "./../" . ($this->empresaData["empr_tx_logo"] ?? 'default_logo.png');
         if (file_exists($logoEmpresa)) {
             $this->Image($logoEmpresa, $this->GetPageWidth() - 45, 10, 30, 15);
         }
 
 
         // Título - Usando SetY para garantir a posição correta
-        $this->SetY(15); // Posiociona o cursor abaixo da linha azul
+        $this->SetY(23); // Posiociona o cursor abaixo da linha azul
         $this->SetFont('helvetica', 'B', 14);
         $this->Cell(0, 10, mb_strtoupper($this->tituloPersonalizado), 0, 1, 'C', false, '', 0, false, 'T', 'M');
+        // Define a cor da linha para preto
+        $this->SetDrawColor(0, 0, 0); 
+        // Adiciona uma linha horizontal 
+        $this->Line(2, $this->GetY() - 2, $this->GetPageWidth() - 2, $this->GetY() - 2);
     }
 
      public function Footer() {

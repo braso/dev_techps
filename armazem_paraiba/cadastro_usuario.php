@@ -521,7 +521,7 @@
 			function imprimir() {
 				const form = document.createElement('form');
 				form.method = 'POST';
-				form.action = './impressao/ficha_usurario.php';
+				form.action = './impressao/ficha_usuario.php';
 				form.target = '_blank';
 
 				const inputID = document.createElement('input');
