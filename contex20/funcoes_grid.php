@@ -52,7 +52,7 @@
 				}
 			</style>
 			<div class='table-responsive' style='max-height: 85vh;'>
-				<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact'"/*.id=$rand*/.">
+				<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact tabela-espelho-ponto'"/*.id=$rand*/.">
 					<thead class='table-head'>"
 						.(!empty($cabecalho)?"<tr><th class='th-align'>".implode("</th><th class='th-align'>", $cabecalho)."</th></tr>": "").
 					"</thead>

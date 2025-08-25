@@ -9,6 +9,7 @@
 	//}*/
 
 	function updateFTP($path){
+
 		// connect and login to FTP server
 		$ftpInfos = mysqli_fetch_assoc(query(
 			"SELECT empr_tx_ftpServer, empr_tx_ftpUsername, empr_tx_ftpUserpass FROM empresa"
@@ -47,6 +48,7 @@
 			." ORDER BY arqu_tx_data DESC"
 			." LIMIT 1;"
 		));
+
 		if(!empty($lastFile)){
 		    $lastFile["nameDate"] = str_replace(["apontamento", ".txt"], ["", ""], $lastFile["arqu_tx_nome"]);
 		    $lastFile["nameDate"] = substr($lastFile["nameDate"], 4, 4)."-".substr($lastFile["nameDate"], 2, 2)."-".substr($lastFile["nameDate"], 0, 2);
@@ -61,32 +63,17 @@
 			if(is_int(strpos($fileList, "apontamento".$data->format("dmY")))){
 
 				$ext = ".txt";
-				$nomeArqRemoto = substr($fileList, strpos($fileList, "apontamento".$data->format("dmY")), 25).$ext;
-				$nomeArquivo = substr($fileList, strpos($fileList, "apontamento".$data->format("dmY")), 25);
+				$nomeArquivo = substr($fileList, strpos($fileList, "apontamento".$data->format("dmY")), 25).$ext;
 
-				// $fileExists = (
-				// 	mysqli_num_rows(query(
-				// 		"SELECT * FROM arquivoponto"
-				// 		." WHERE arqu_tx_status = 'ativo'"
-				// 		." AND arqu_tx_nome = '".$nomeArquivo.$ext."'"
-				// 		." LIMIT 1"
-				// 	)) > 0
-				// );
-				// if($fileExists){
-					// $f = 2;
-					// $nomeArquivo  .= "_".$f;
-					// for(; file_exists($path.$nomeArquivo.$ext); $f++){
-					// 	$nomeArquivo = substr($nomeArquivo , 0, strlen($nomeArquivo)-2)."_".$f;
-					// }
-				// }
-				$caminhoCompleto = $path."/".$nomeArquivo.$ext;
-				
-				if(!ftp_get($ftp_conn, $caminhoCompleto, $nomeArqRemoto)){
-					set_status("ERRO: Houve um problema ao salvar o arquivo.");
-					index();
-					exit;
-				}
-				saveRegisterFile(["tmp_name" => $caminhoCompleto, "name" => $nomeArquivo.$ext], $caminhoCompleto);
+				$caminhoCompleto = $path."/".$nomeArquivo;
+				//*Salvar arquivo de ponto{
+					if(!ftp_get($ftp_conn, $caminhoCompleto, $nomeArquivo)){
+						set_status("ERRO: Houve um problema ao salvar o arquivo.");
+						index();
+						exit;
+					}
+					salvarArquivoPonto($nomeArquivo, $caminhoCompleto);
+				//*/}
 			}
 		}
 

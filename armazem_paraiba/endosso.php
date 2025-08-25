@@ -319,23 +319,6 @@
 
 				$aEmpresa = carregar("empresa", $motorista["enti_nb_empresa"]);
 
-				/*
-				if (!empty($aEmpresa["empr_nb_parametro"])) {
-					$aParametro = carregar("parametro", $aEmpresa["empr_nb_parametro"]);
-					if (
-						$aParametro["para_tx_jornadaSemanal"] != $motorista["enti_tx_jornadaSemanal"] ||
-						$aParametro["para_tx_jornadaSabado"] != $motorista["enti_tx_jornadaSabado"] ||
-						$aParametro["para_tx_percHESemanal"] != $motorista["enti_tx_percHESemanal"] ||
-						$aParametro["para_tx_percHEEx"] != $motorista["enti_tx_percHEEx"] ||
-						$aParametro["para_nb_id"] != $motorista["enti_nb_parametro"]
-					) {
-						$parametroPadrao = "Convenção Não Padronizada, Semanal (".$motorista["enti_tx_jornadaSemanal"]."), Sábado (".$motorista["enti_tx_jornadaSabado"].")";
-					} else {
-						$parametroPadrao = "Convenção Padronizada: ".$aParametro["para_tx_nome"].", Semanal (".$aParametro["para_tx_jornadaSemanal"]."), Sábado (".$aParametro["para_tx_jornadaSabado"].")";
-					}
-				}
-				*/
-
 				$aPagar = "--:--";
 
 				if(empty($endossoCompleto["endo_tx_max50APagar"])){

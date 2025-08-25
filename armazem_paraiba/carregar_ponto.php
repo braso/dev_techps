@@ -65,21 +65,21 @@
 		$arquivo = $_FILES["arquivo"];
 
 		if(isset($arquivo["error"]) && $arquivo["error"] === 0){
+			$local_file = $path."/".$arquivo["name"];
+
 			$ext = substr($arquivo["name"], strrpos($arquivo["name"], "."));
-			$nomeArquivo = str_replace($ext, "", $arquivo["name"]);
-			$local_file = $path."/".$nomeArquivo.$ext;
+			$baseNomeArquivo = str_replace($ext, "", $arquivo["name"]);
 
 			if(file_exists($local_file)){
 				$f = 2;
-				$nomeArquivo  .= "_".$f;
-				$arquivo["name"] = $nomeArquivo.$ext;
-				for(; file_exists($path."/".$nomeArquivo.$ext); $f++){
-					$nomeArquivo = substr($nomeArquivo , 0, strlen($nomeArquivo )-2)."_".$f;
+				$baseNomeArquivo  .= "_".$f;
+				for(; file_exists($path."/".$baseNomeArquivo.$ext); $f++){
+					$baseNomeArquivo = substr($baseNomeArquivo , 0, strlen($baseNomeArquivo)-2)."_".$f;
 				}
-				$arquivo["name"] = $nomeArquivo;
+				$arquivo["name"] = $baseNomeArquivo;
 				$local_file = $path."/".$arquivo["name"].$ext;
 			}
-     		saveRegisterFile($arquivo, $local_file);
+     		salvarArquivoPonto($arquivo, $local_file);
 
 		}else{
 			set_status("ERRO: Ocorreu um problema ao gravar o arquivo.");
@@ -114,7 +114,7 @@
 		rodape();
 	}
 
-	function saveRegisterFile(array $fileInfo, string $caminhoCompleto){
+	function salvarArquivoPonto(string $nomeArquivo, string $caminhoCompleto){
 		global $path;
 
 		//$local_file = $path."/".$nomeArquivo;
@@ -128,10 +128,10 @@
 		$errorMsg = $baseErrMsg;
 
 		//Conferir se as informações necessárias estão preenchidas{
-			if(empty($fileInfo["tmp_name"])){
-				$errorMsg["camposObrigatorios"][] = "Nome temporário.";
+			if(empty($caminhoCompleto)){
+				$errorMsg["camposObrigatorios"][] = "Caminho do arquivo.";
 			}
-			if(empty($fileInfo["name"])){
+			if(empty($nomeArquivo)){
 				$errorMsg["camposObrigatorios"][] = "Nome do arquivo.";
 			}
 		//}
@@ -141,23 +141,24 @@
 			exit;
 		}
 
-		$ext = substr($fileInfo["name"], strrpos($fileInfo["name"], "."));
+		$ext = substr($nomeArquivo, strrpos($nomeArquivo, "."));
+		$baseNomeArquivo = str_replace($ext, "", $nomeArquivo);
 
 		$newArquivoPonto = [
-			"arqu_tx_nome" 		=> $fileInfo["name"].$ext,
+			"arqu_tx_nome" 		=> $nomeArquivo,
 			"arqu_tx_data" 		=> date("Y-m-d H:i:s"),
 			"arqu_nb_user" 		=> $_SESSION["user_nb_id"],
 			"arqu_tx_status" 	=> "ativo"
 		];
 		
-		foreach(file($fileInfo["tmp_name"]) as $line){
+		foreach(file($caminhoCompleto) as $line){
 		
 			//matricula dmYhi 999 macroponto.codigoExterno
 			//Obs.: A matrícula deve ter 10 dígitos, então se tiver menos, adicione zeros à esquerda.
 			//Ex.: 0000005913 22012024 0919 999 11
 			$line = trim($line);
 			if(empty($line)){
-				continue; // Pula para a próxima iteração
+				continue; // Pula para a próxima linha
 			}
 			[$matricula, $data, $hora, $codigoExterno] = [substr($line, 0, 10), substr($line, 10, 8), substr($line, 18, 4), substr($line,25, 2)];
 
@@ -241,7 +242,7 @@
 		}
 
 		//*Salvar registros e arquivo{
-			move_uploaded_file($fileInfo["tmp_name"],$caminhoCompleto);
+			move_uploaded_file($caminhoCompleto, $caminhoCompleto);
 			
 			$arquivoPontoId = inserir("arquivoponto", array_keys($newArquivoPonto), array_values($newArquivoPonto));
 			foreach($newPontos as $newPonto){
@@ -256,7 +257,7 @@
 					}
 				}
 				$errorMsg = implode("\n", $errorMsg);
-				set_status(showErrMsg($path."/".$fileInfo["name"]."_log".$ext, $errorMsg));
+				set_status(showErrMsg($path."/".$baseNomeArquivo."_log".$ext, $errorMsg));
 			}
 		//}*/
 	}

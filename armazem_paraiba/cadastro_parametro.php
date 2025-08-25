@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -60,23 +60,18 @@
 				}
 
 				function camposEscala(campoSelecionado){
+					tipo = (campoSelecionado == 'escala')+(campoSelecionado == 'horas_por_dia')*2;
+					
 					if(campoSelecionado == 'escala'){
-						document.getElementById('jornadaSemanal').parentElement.hidden = true;
-
-						document.getElementById('jornadaSabado').parentElement.hidden = true;
-
-						document.getElementById('periodicidade').parentElement.hidden = false;
-
 						atualizarLinhasEscala(document.getElementById('periodicidade').value);
 					}else if(campoSelecionado == 'horas_por_dia'){
-						document.getElementById('periodicidade').parentElement.hidden = true;
-						document.getElementById('dataInicio').parentElement.hidden = true;
-
-						document.getElementById('jornadaSemanal').parentElement.hidden = false;
-						document.getElementById('jornadaSabado').parentElement.hidden = false;
-
 						document.getElementById('divHorasEscala').innerHTML = '';
 					}
+
+					document.getElementById('periodicidade').parentElement.hidden 	= !(tipo == 1);
+					document.getElementById('dataInicio').parentElement.hidden 		= !(tipo == 1);
+					document.getElementById('jornadaSemanal').parentElement.hidden 	= !(tipo == 2);
+					document.getElementById('jornadaSabado').parentElement.hidden 	= !(tipo == 2);
 				}
 
 				".(empty($a_mod["para_tx_tipo"])? "camposEscala('horas_por_dia')": "camposEscala('{$a_mod["para_tx_tipo"]}')").";
@@ -449,6 +444,8 @@
 
 			
 			$id = inserir("parametro",array_keys($novoParametro),array_values($novoParametro));
+
+			$_POST["id"] = $id[0];
 			
 			if($novoParametro["para_tx_tipo"] == "escala"){
 				cadastrarEscala($id[0]);
@@ -464,12 +461,14 @@
 	function mostrarFormParametro(){
 		global $a_mod;
 
-		if(empty($a_mod) && !empty($_POST["id"])){
-			$a_mod = carregar("parametro", $_POST["id"]);
+		if(empty($a_mod) && !empty($_POST)){
+			if(!empty($_POST["id"])){
+				$a_mod = carregar("parametro", $_POST["id"]);
+			}
 			$campos = [
 				"tipo", 
-				"nome", "tolerancia", "jornadaSemanal", "jornadaSabado", "percHESemanal",
-				"percHEEx", "maxHESemanalDiario", "diariasCafe", "diariasAlmoco", "diariasJanta",
+				"nome", "tolerancia", "jornadaSemanal", "jornadaSabado",
+				"percHESemanal", "percHEEx", "maxHESemanalDiario", "diariasCafe", "diariasAlmoco", "diariasJanta",
 				"acordo", "inicioAcordo", "fimAcordo", "banco", "adi5322", "Obs"
 			];
 			foreach($campos as $campo){
@@ -477,6 +476,10 @@
 					$a_mod["para_tx_".$campo] = $_POST[$campo];
 				}
 			}
+
+			$a_mod["esca_nb_periodicidade"] = $_POST["periodicidade"]?? null;
+			$a_mod["esca_tx_dataInicio"] = $_POST["dataInicio"]?? null;
+
 			if(!empty($a_mod["para_tx_ignorarCampos"])){
 				foreach(explode(",", $a_mod["para_tx_ignorarCampos"]) as $campo){
 					$_POST["ignorarCampos_".$campo] = true;
@@ -498,17 +501,22 @@
 				$a_mod["esca_tx_dataInicio"] = $_POST["dataInicio"];
 				$a_mod["diasEscala"] = $_POST["diasEscala"];
 			}else{
-				$escala = mysqli_fetch_assoc(query(
-					"SELECT * FROM escala WHERE esca_nb_parametro = {$a_mod["para_nb_id"]};"
-				));
-	
-				$diasEscala = mysqli_fetch_all(query(
-					"SELECT * FROM escala_dia WHERE esca_nb_escala = {$escala["esca_nb_id"]};"
-				), MYSQLI_ASSOC);
-	
+				if(!empty($_POST["id"])){
+					$escalaExistente = mysqli_fetch_assoc(query(
+						"SELECT * FROM escala WHERE esca_nb_parametro = {$_POST["id"]};"
+					));
 
-				$a_mod = array_merge($a_mod, $escala);
-				$a_mod["diasEscala"] = $diasEscala;
+					$escalaExistente["diasEscala"] = mysqli_fetch_all(query(
+						"SELECT * FROM escala_dia WHERE esca_nb_escala = {$escalaExistente["esca_nb_id"]};"
+					), MYSQLI_ASSOC);
+
+					$diasEscala = [];
+					foreach($escalaExistente["diasEscala"] as $diaEscala){
+						$diasEscala[] = [$diaEscala["esca_tx_horaInicio"], $diaEscala["esca_tx_horaFim"], $diaEscala["esca_tx_intervaloInterno"]];
+					}
+					$a_mod = array_merge($a_mod, $escalaExistente);
+					$a_mod["diasEscala"] = $diasEscala;	
+				}
 			}
 		}
 
@@ -534,9 +542,10 @@
 				campo("Tolerância de atraso (Minutos)*", "tolerancia", ($a_mod["para_tx_tolerancia"]?? ""), 2,"MASCARA_NUMERO", "maxlength='3'"),
 				campo_hora("Jornada Dias Úteis (Hr/dia)*", "jornadaSemanal", ($a_mod["para_tx_jornadaSemanal"]?? ""), 2),
 				campo_hora("Jornada Sábado*", "jornadaSabado", ($a_mod["para_tx_jornadaSabado"]?? ""), 2),
+				// campo("Periodicidade (em dias)*", "periodicidade", ($a_mod["esca_nb_periodicidade"]?? "1"), 2, "MASCARA_NUMERO", "max='31' min='1' onchange='atualizarLinhasEscala(this.value)"),
 				"<div class='col-sm-2 margin-bottom-5 campo-fit-content'>
 					<label>Periodicidade (em dias)*</label>
-					<input name='periodicidade' id='periodicidade' value='".($a_mod["esca_nb_periodicidade"]?? "1")."' autocomplete='off' type='number' class='form-control input-sm campo-fit-content' max='31' min='1' onchange='atualizarLinhasEscala(this.value)'>
+					<input name='periodicidade' id='periodicidade' value='".($a_mod["esca_nb_periodicidade"]?? "1")."' autocomplete='off' type='number' class='form-control input-sm campo-fit-content ".((!empty($_POST["errorFields"]) && in_array("periodicidade", $_POST["errorFields"]))? "error-field": "")."' max='31' min='1' onchange='atualizarLinhasEscala(this.value)'>
 				</div>",
 				campo_data("Dia 1*", "dataInicio", ($a_mod["esca_tx_dataInicio"]?? ""), 2),
 				"<div id='divHorasEscala' class='col-sm-2 margin-bottom-5 campo-fit-content'></div>"

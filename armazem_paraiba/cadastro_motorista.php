@@ -34,15 +34,18 @@
 
 				function carregarEmpresa(id) {
 					document.getElementById('frame_parametro').src = 'cadastro_motorista.php?acao=carregarEmpresa&emp='+id;
-					var empresaSelecionada = id;
 				}
 
 				function carregarParametro() {
 					id = document.getElementById('parametro').value;
-					document.getElementById('frame_parametro').src = 'cadastro_motorista.php?acao=carregarParametro&parametro='+id;"
-					.((!empty($a_mod["parametroPadrao"]))? "conferirParametroPadrao(".json_encode($parametroPadrao).")": "")."
+					document.getElementById('frame_parametro').src = 'cadastro_motorista.php?acao=carregarParametro&parametro='+id;
+					".((!empty($a_mod["parametroPadrao"]))? "conferirParametroPadrao(".json_encode($parametroPadrao).")": "")."
 				}
 				function padronizarParametro() {
+					var displayJornada = ('{$parametroPadrao["para_tx_tipo"]}' == 'escala')? 'none': 'block';
+					parent.document.contex_form.jornadaSemanal.parentElement.style.display = displayJornada;
+					parent.document.contex_form.jornadaSabado.parentElement.style.display = displayJornada;
+					
 					parent.document.contex_form.parametro.value 		= '{$parametroPadrao["para_nb_id"]}';
 					parent.document.contex_form.jornadaSemanal.value 	= '{$parametroPadrao["para_tx_jornadaSemanal"]}';
 					parent.document.contex_form.jornadaSabado.value 	= '{$parametroPadrao["para_tx_jornadaSabado"]}';
@@ -125,7 +128,9 @@
 		if ($aEmpresa["empr_nb_parametro"] > 0) {
 			echo 
 				"<script type='text/javascript'>
-					parent.document.contex_form.parametro.value = '{$aEmpresa["empr_nb_parametro"]}';
+					var parametroEmpresa = '{$aEmpresa["empr_nb_parametro"]}';
+
+					parent.document.contex_form.parametro.value = parametroEmpresa;
 					parent.document.contex_form.parametro.onchange();
 				</script>"
 			;
@@ -169,22 +174,15 @@
 
 		echo
 			"<script type='text/javascript'>
-				var idParametro = {display: 'block', value: document.getElementById('parametro')? document.getElementById('parametro').value: ''};
-				var jornadaSemanal = {display: 'block', value: document.getElementById('jornadaSemanal')? document.getElementById('jornadaSemanal').value: ''};
-				var jornadaSabado = {display: 'block', value: document.getElementById('jornadaSabado')? document.getElementById('jornadaSabado').value: ''};
+				var parametroCarregado = ".json_encode($parametro).";
 
-				if(".(($parametro["para_tx_tipo"] == "escala")?'true': 'false')."){
-					jornadaSemanal = {display: 'none', value: ''};
-					jornadaSabado = {display: 'none', value: ''};
-				}
-
-				parent.document.contex_form.jornadaSemanal.value = jornadaSemanal.value;
-				parent.document.contex_form.jornadaSemanal.parentElement.style.display = jornadaSemanal.display;
-				parent.document.contex_form.jornadaSabado.value = jornadaSabado.value;
-				parent.document.contex_form.jornadaSabado.parentElement.style.display = jornadaSabado.display;
-				parent.document.contex_form.percHESemanal.value = '{$parametro["para_tx_percHESemanal"]}';
-				parent.document.contex_form.percHEEx.value = '{$parametro["para_tx_percHEEx"]}';
+				parent.document.contex_form.jornadaSemanal.parentElement.style.display	= ((parametroCarregado.para_tx_tipo == 'escala')? 'none': 'block');
+				parent.document.contex_form.jornadaSabado.parentElement.style.display	= ((parametroCarregado.para_tx_tipo == 'escala')? 'none': 'block');
 				
+				parent.document.contex_form.jornadaSemanal.value						= parametroCarregado.para_tx_jornadaSemanal;
+				parent.document.contex_form.jornadaSabado.value							= parametroCarregado.para_tx_jornadaSabado;
+				parent.document.contex_form.percHESemanal.value							= parametroCarregado.para_tx_percHESemanal;
+				parent.document.contex_form.percHEEx.value								= parametroCarregado.para_tx_percHEEx;
 			</script>"
 		;
 		exit;
@@ -914,7 +912,7 @@
 
 
 		$cJornada = [
-			combo_bd(	"!Parâmetros da Jornada*".($icone_padronizar?? ""), "parametro", ($a_mod["enti_nb_parametro"]?? ""), 6, "parametro", "onfocusout='carregarParametro()' onchange='carregarParametro()' tabindex=".sprintf("%02d", $tabIndex++)), "<div class='col-sm-2 margin-bottom-5' style='width:100%; height:25px'></div>",
+			combo_bd(	"!Parâmetros da Jornada*".($icone_padronizar?? ""), "parametro", ($a_mod["enti_nb_parametro"]?? ""), 6, "parametro", "onchange='carregarParametro()' tabindex=".sprintf("%02d", $tabIndex++)), "<div class='col-sm-2 margin-bottom-5' style='width:100%; height:25px'></div>",
 			texto(		"Escala", ($a_mod["textoEscala"]?? ""), 4, "name='textoEscala' style='display:none;'"),
 			campo_hora(	"Jornada Dias Úteis (Hr/dia)*", "jornadaSemanal", ($a_mod["enti_tx_jornadaSemanal"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'"),
 			campo_hora(	"Jornada Sábado*", "jornadaSabado", ($a_mod["enti_tx_jornadaSabado"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'"),

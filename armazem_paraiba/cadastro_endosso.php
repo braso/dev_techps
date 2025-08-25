@@ -1,4 +1,4 @@
-	<?php
+<?php
 	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
@@ -226,7 +226,7 @@
 				$saldoRestante = operarHorarios([$saldoRestante, $row["diffSaldo"]], "+");
 			}
 		}
-
+		
 		if($saldoRestante[0] == "-"){
 			$_POST["horas_a_descontar"] = $saldoRestante;
 		}else{
@@ -333,7 +333,7 @@
 	}
 
 	function cadastrar(){
-		
+
 		global $CONTEX;
 		
 		$err = conferirErros();
@@ -495,6 +495,8 @@
 
 			$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
 			$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], (!empty($_POST["extraPago"])? $_POST["extraPago"]: "00:00"), ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+
+			$saldoFinal = operarHorarios([$saldoBruto, "-".$aPagar[0], "-".$aPagar[1]], "+");
 			
 			if($totalResumo["diffSaldo"][0] == "-"){
 				$saldoPossivelDescontar = operarHorarios([$totalResumo["diffSaldo"], $descFaltasNaoJustificadas], "+");
@@ -508,13 +510,15 @@
 					$_POST["horas_a_descontar"]:
 					$saldoPossivelDescontar
 				;
+
+				$saldoFinal = operarHorarios([$saldoFinal, $aPagar[1]], "+");
 			}else{
 				$totalResumo["desconto_manual"] = "00:00";
 			}
 
-			$totalResumo["desconto_faltas_nao_justificadas"] = $descFaltasNaoJustificadas;
-			$saldoFinal = operarHorarios([$saldoBruto, "-".$aPagar[0], "-".$aPagar[1], $totalResumo["desconto_manual"], $totalResumo["desconto_faltas_nao_justificadas"]], "+");
+			$saldoFinal = operarHorarios([$saldoFinal, $totalResumo["desconto_manual"], $descFaltasNaoJustificadas], "+");
 
+			$totalResumo["desconto_faltas_nao_justificadas"] = $descFaltasNaoJustificadas;
 			$totalResumo["saldoAnterior"] 	= $saldoAnterior;
 			$totalResumo["saldoBruto"] 		= $saldoBruto;
 			$totalResumo["saldoFinal"] 		= $saldoFinal;
@@ -537,7 +541,6 @@
 			];
 
 			$novoEndosso["endo_tx_pontos"] = json_encode($novoEndosso["endo_tx_pontos"]);
-			
 			$novoEndosso["endo_tx_pontos"] = str_replace("<\/", "</", $novoEndosso["endo_tx_pontos"]);
 
 			$novosEndossos[] = $novoEndosso;
@@ -546,7 +549,25 @@
 		$baseErrMsg = "<br><br>ERRO(S):<br>";
 		$errorMsg = $baseErrMsg;
 
-		$baseSucMsg = "<br><br>Registro(s) inserido(s) com sucesso!<br><br>H.E. Semanal a pagar:<br>";
+		$baseSucMsg = ["Registros inseridos com sucesso.<br><br><br>
+		<div class='table-responsive' style='justify-items: center'>
+			<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' style='width: fit-content;'>
+				<thead>
+					<tr>
+						<th>Matrícula</th>
+						<th>Nome</th>
+						<th>Anterior</th>
+						<th>Período</th>
+						<th>Bruto</th>
+						<th>Pago</th>
+						<th>Descontado</th>
+						<th>Final</th>
+					</tr>
+				</thead>
+				<tbody>", 
+				"", 
+				"</tbody></table></div>"
+		];
 		$successMsg = $baseSucMsg;
 
 		foreach($novosEndossos as $novoEndosso){
@@ -554,7 +575,18 @@
 				$errorMsg .= $novoEndosso["errorMsg"]."<br>";
 				continue;
 			}
-			$successMsg .= "- [".$novoEndosso["endo_tx_matricula"]."] ".$novoEndosso["endo_tx_nome"].": ".$novoEndosso["totalResumo"]["he50APagar"]."<br>";
+			$successMsg[1] .= 
+				"<tr>
+					<td>{$novoEndosso["endo_tx_matricula"]}</td>
+					<td>{$novoEndosso["endo_tx_nome"]}</td>
+					<td>{$novoEndosso["totalResumo"]["saldoAnterior"]}</td>
+					<td>{$novoEndosso["totalResumo"]["diffSaldo"]}</td>
+					<td>{$novoEndosso["totalResumo"]["saldoBruto"]}</td>
+					<td>".operarHorarios([$novoEndosso["totalResumo"]["he50APagar"], $novoEndosso["totalResumo"]["he100APagar"]], "+")."</td>
+					<td>".operarHorarios([$novoEndosso["totalResumo"]["desconto_manual"], $novoEndosso["totalResumo"]["desconto_faltas_nao_justificadas"]], "+")."</td>
+					<td>{$novoEndosso["totalResumo"]["saldoFinal"]}</td>
+				</tr>"
+			;
 			//* Salvando arquivo e cadastrando no banco de dados
 
 				$filename = md5($novoEndosso["endo_nb_entidade"].$novoEndosso["endo_tx_mes"]);
@@ -585,7 +617,7 @@
 			//*/
 		}
 
-		$statusMsg = ($successMsg != $baseSucMsg? $successMsg: "").($errorMsg != $baseErrMsg? $errorMsg: "");
+		$statusMsg = ($successMsg != $baseSucMsg? implode("", $successMsg): "").($errorMsg != $baseErrMsg? $errorMsg: "");
 		set_status($statusMsg);
 
 		index();

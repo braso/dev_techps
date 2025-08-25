@@ -10,6 +10,49 @@
 
 	include "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
 
+
+	function montarMensagemParametro(array &$motorista): string{
+		$mensagemParametro = $motorista["para_tx_nome"];
+		if($motorista["para_tx_tipo"] == "horas_por_dia"){
+			$mensagemParametro .= " Semanal (".$motorista["enti_tx_jornadaSemanal"]."), Sábado (".$motorista["enti_tx_jornadaSabado"].")";
+		}elseif(($motorista["para_tx_tipo"] == "escala")){
+			$escala = mysqli_fetch_assoc(query("SELECT * FROM escala WHERE esca_nb_parametro = {$motorista["enti_nb_parametro"]}"));
+			$mensagemParametro .= "<br>Dia 1: ".(new DateTime($escala["esca_tx_dataInicio"]))->format("d/m/Y");
+		}
+
+		if(!empty($motorista["empr_nb_parametro"])){
+			$parametroEmpresa = mysqli_fetch_assoc(query(
+				"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percHESemanal, para_tx_percHEEx, para_nb_id, para_tx_nome FROM parametro"
+					." WHERE para_tx_status = 'ativo'"
+						." AND para_nb_id = ".$motorista["empr_nb_parametro"]
+					." LIMIT 1;"
+			));
+
+			if(!empty($parametroEmpresa)){
+				$keys = array_keys(array_intersect($parametroEmpresa, $motorista));
+
+				if($parametroEmpresa["para_tx_tipo"] == "horas_por_dia"){
+					$padronizado = (
+						[$motorista["para_tx_jornadaSemanal"], $motorista["para_tx_jornadaSabado"], $motorista["para_tx_percHESemanal"], $motorista["para_tx_percHEEx"]]
+						==
+						[$parametroEmpresa["para_tx_jornadaSemanal"], $parametroEmpresa["para_tx_jornadaSabado"], $parametroEmpresa["para_tx_percHESemanal"], $parametroEmpresa["para_tx_percHEEx"]]
+					);
+				}else{
+					$padronizado = (
+						[$motorista["para_tx_percHESemanal"], $motorista["para_tx_percHEEx"]]
+						==
+						[$parametroEmpresa["para_tx_percHESemanal"], $parametroEmpresa["para_tx_percHEEx"]]
+					);
+				}
+
+				$mensagemParametro = (!$padronizado? "Não ": "")."Padronizado.<br>";
+				$mensagemParametro .= "{$parametroEmpresa["para_tx_nome"]}<br> Semanal ({$parametroEmpresa["para_tx_jornadaSemanal"]}), Sábado ({$parametroEmpresa["para_tx_jornadaSabado"]})";;
+
+			}
+		}
+		return $mensagemParametro;
+	}
+
 	
 	function redirParaAbono(){
 		unset($_POST["acao"]);
@@ -198,12 +241,6 @@
 						 AND enti_nb_id = '{$_POST["busca_motorista"]}'
 					 LIMIT 1;"
 				));
-				if(!empty($_POST["busca_motorista"])){
-					$aEmpresa = [
-						"empr_nb_parametro" => $motorista["empr_nb_parametro"],
-						"empr_tx_nome" => $motorista["empr_tx_nome"]
-					];
-				}
 				
 				//Conferir se há dias do mês já endossados{
 					$endossoMes = montarEndossoMes($startDate, $motorista);
@@ -272,8 +309,10 @@
 					}
 					
 					$row = array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado);
-					$descFaltasNaoJustificadas = operarHorarios([$descFaltasNaoJustificadas, $row["jornadaPrevista"]], "+");
-					$qtdDiasNaoJustificados++;
+					if(strpos($row["inicioJornada"], "Batida início de jornada não registrada!") !== false){
+						$descFaltasNaoJustificadas = operarHorarios([$descFaltasNaoJustificadas, $row["jornadaPrevista"]], "+");
+						$qtdDiasNaoJustificados++;
+					}
 
 					$rows[] = $row;
 				}
@@ -281,27 +320,9 @@
 				$totalResumo = setTotalResumo(array_slice(array_keys($rows[0]), 7));
 				somarTotais($totalResumo, $rows);
 
-				$parametroPadrao = "Convenção Não Padronizada, Semanal (".$motorista["enti_tx_jornadaSemanal"]."), Sábado (".$motorista["enti_tx_jornadaSabado"].")";
 
-				if(!empty($aEmpresa["empr_nb_parametro"])){
-					$parametroEmpresa = mysqli_fetch_assoc(query(
-						"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percHESemanal, para_tx_percHEEx, para_nb_id, para_tx_nome FROM parametro"
-							." WHERE para_tx_status = 'ativo'"
-								." AND para_nb_id = ".$aEmpresa["empr_nb_parametro"]
-							." LIMIT 1;"
-					));
+				$mensagemParametro = montarMensagemParametro($motorista);
 
-					if(!empty($parametroEmpresa)){
-						$keys = array_keys(array_intersect($parametroEmpresa, $motorista));
-						
-						if(in_array("para_tx_jornadaSemanal", $keys)
-							 && in_array("para_tx_jornadaSabado", $keys)
-							 && in_array("para_tx_percHESemanal", $keys)
-						){
-							$parametroPadrao = "Convenção Padronizada: ".$parametroEmpresa["para_tx_nome"].", Semanal (".$parametroEmpresa["para_tx_jornadaSemanal"]."), Sábado (".$parametroEmpresa["para_tx_jornadaSabado"].")";
-						}
-					}
-				}
 
 				$ultimoEndosso = mysqli_fetch_assoc(query(
 					"SELECT endo_tx_filename FROM endosso"
@@ -385,13 +406,22 @@
 				$rows[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumo));
 
 				echo abre_form(
-					"<div>"
-						.$aEmpresa["empr_tx_nome"]."<br>"
-						."[".$motorista["enti_tx_matricula"]."] ".$motorista["enti_tx_nome"]."<br>"
-						.$parametroPadrao."<br><br>"
-						.$periodoPesquisa."<br>"
-					."</div>"
-					.$saldosMotorista
+					"<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact espelho-cabecalho-info'>
+						<thead>
+							<tr>
+								<th>Empresa</th>
+								<th>Funcionário</th>
+								<th>Parâmetro</th>
+							</tr>
+						<tbody>
+							<tr>
+								<td>{$motorista["empr_tx_nome"]}</td>
+								<td>[{$motorista["enti_tx_matricula"]}] {$motorista["enti_tx_nome"]}</td>
+								<td>{$mensagemParametro}</td>
+						</tbody>
+					</table>
+					{$periodoPesquisa}<br>
+					{$saldosMotorista}"
 				);
 				echo montarTabelaPonto($cabecalho, $rows);
 				echo fecha_form();
