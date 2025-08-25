@@ -1,13 +1,26 @@
 <?php
 
+/*
+ * MODO DEBUG
+ * Em um ambiente de produção, é recomendado controlar isso através de uma variável de ambiente.
+ */
+/*
+ini_set("display_errors", 1);
+error_reporting(E_ALL);
+//*/
+
 // Requerimentos essenciais
 require_once __DIR__ . "./../tcpdf/tcpdf.php";
 require_once __DIR__ . "./../funcoes_ponto.php";
 
 // Carrega os dados da empresa e do usuário
 $usuario = carregar("user", $_POST['id_usuario']);
-$empresa = carregar("empresa", $usuario['user_nb_empresa']);
-$cidade = carregar("cidade", $usuario['user_nb_cidade']);
+
+$id_empresa = $usuario['user_nb_empresa'] ?? null;
+$id_cidade = $usuario['user_nb_cidade'] ?? null;
+
+$empresa = $id_empresa ? carregar("empresa", $id_empresa) : null;
+$cidade = $id_cidade ? carregar("cidade", $id_cidade) : null;
 
 // Checa se os dados foram encontrados
 if (!$empresa || !$usuario) {
@@ -34,7 +47,7 @@ function formatarCPF(?string $cpf): string {
  * Mantém o cabeçalho e rodapé personalizados.
  */
 class CustomPDF extends TCPDF {
-    public string $tituloPersonalizado;
+    public $tituloPersonalizado;
     protected $empresaData;
 
     public function __construct(array $empresaData, string $titulo = 'Relatório Sem Título', string $orientation = 'L', string $unit = 'mm', string $format = 'A4') {
@@ -52,14 +65,21 @@ class CustomPDF extends TCPDF {
     }
 
     public function Header() {
-        $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, 40, 10);
-        $logoEmpresa = __DIR__ .'/../'.($this->empresaData["empr_tx_logo"] ?? 'default_logo.png');
+        // Logo Cliente      
+        $this->Image("./../imagens/logo_topo_cliente.png", 10, 10, 40, 10);
+
+        // Logo Empresa (alinhado à direita)
+        $logoEmpresa = "./../" . ($this->empresaData["empr_tx_logo"] ?? 'default_logo.png');
         if (file_exists($logoEmpresa)) {
             $this->Image($logoEmpresa, $this->GetPageWidth() - 45, 10, 30, 15);
         }
-        $this->SetY(15);
+        $this->SetY(22);
         $this->SetFont('helvetica', 'B', 14);
         $this->Cell(0, 10, mb_strtoupper($this->tituloPersonalizado), 0, 1, 'C', false, '', 0, false, 'T', 'M');
+        // Define a cor da linha para preto
+        $this->SetDrawColor(0, 0, 0); 
+        // Adiciona uma linha horizontal 
+        $this->Line(2, $this->GetY() - 2, $this->GetPageWidth() - 2, $this->GetY() - 2);
     }
 
     public function Footer() {
@@ -190,7 +210,7 @@ $pdf->Ln($line_height + $small_space);
 
 // Linha 5: Cidade/UF e E-mail
 $pdf->SetX($x_col1_start);
-createField($pdf, 'Cidade/UF', $cidade["cida_tx_nome"]." [".$cidade["cida_tx_uf"]."]", $col_data_width);
+createField($pdf, 'Cidade/UF', $cidade["cida_tx_nome"]??""." [".$cidade["cida_tx_uf"]??""."]", $col_data_width);
 $pdf->SetX($x_col2_start);
 createField($pdf, 'E-mail*', $usuario['user_tx_email'], $col_data_width);
 $pdf->Ln($line_height + $small_space);
