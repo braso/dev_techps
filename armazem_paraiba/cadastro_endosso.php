@@ -549,7 +549,25 @@
 		$baseErrMsg = "<br><br>ERRO(S):<br>";
 		$errorMsg = $baseErrMsg;
 
-		$baseSucMsg = "<br><br>Registro(s) inserido(s) com sucesso!<br><br>H.E. Semanal a pagar:<br>";
+		$baseSucMsg = ["Registros inseridos com sucesso.<br><br><br>
+		<div class='table-responsive' style='justify-items: center'>
+			<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' style='width: fit-content;'>
+				<thead>
+					<tr>
+						<th>Matrícula</th>
+						<th>Nome</th>
+						<th>Anterior</th>
+						<th>Período</th>
+						<th>Bruto</th>
+						<th>Pago</th>
+						<th>Descontado</th>
+						<th>Final</th>
+					</tr>
+				</thead>
+				<tbody>", 
+				"", 
+				"</tbody></table></div>"
+		];
 		$successMsg = $baseSucMsg;
 
 		foreach($novosEndossos as $novoEndosso){
@@ -557,7 +575,18 @@
 				$errorMsg .= $novoEndosso["errorMsg"]."<br>";
 				continue;
 			}
-			$successMsg .= "- [".$novoEndosso["endo_tx_matricula"]."] ".$novoEndosso["endo_tx_nome"].": ".$novoEndosso["totalResumo"]["he50APagar"]."<br>";
+			$successMsg[1] .= 
+				"<tr>
+					<td>{$novoEndosso["endo_tx_matricula"]}</td>
+					<td>{$novoEndosso["endo_tx_nome"]}</td>
+					<td>{$novoEndosso["totalResumo"]["saldoAnterior"]}</td>
+					<td>{$novoEndosso["totalResumo"]["diffSaldo"]}</td>
+					<td>{$novoEndosso["totalResumo"]["saldoBruto"]}</td>
+					<td>".operarHorarios([$novoEndosso["totalResumo"]["he50APagar"], $novoEndosso["totalResumo"]["he100APagar"]], "+")."</td>
+					<td>".operarHorarios([$novoEndosso["totalResumo"]["desconto_manual"], $novoEndosso["totalResumo"]["desconto_faltas_nao_justificadas"]], "+")."</td>
+					<td>{$novoEndosso["totalResumo"]["saldoFinal"]}</td>
+				</tr>"
+			;
 			//* Salvando arquivo e cadastrando no banco de dados
 
 				$filename = md5($novoEndosso["endo_nb_entidade"].$novoEndosso["endo_tx_mes"]);
@@ -588,7 +617,7 @@
 			//*/
 		}
 
-		$statusMsg = ($successMsg != $baseSucMsg? $successMsg: "").($errorMsg != $baseErrMsg? $errorMsg: "");
+		$statusMsg = ($successMsg != $baseSucMsg? implode("", $successMsg): "").($errorMsg != $baseErrMsg? $errorMsg: "");
 		set_status($statusMsg);
 
 		index();
