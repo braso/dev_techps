@@ -264,13 +264,18 @@ class CustomPDF extends TCPDF {
     }
 
     public function Header() {
-        $imgWidth = 20;
+        $imgWidth = 35;
+        $imgWidth2 = 35;
         $imgHeight = 15;
         $imgHeight2 = 10;
-        $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth, $imgHeight2);
-        $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
+        $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 3, $imgWidth2, $imgHeight2);
+        $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 25, 3, $imgWidth, $imgHeight);
         $this->SetFont('helvetica', 'B', 12);
         $this->Cell(0, 15, 'Relatório Ajustes de Pontos Inseridos', 0, 1, 'C');
+        // Define a cor da linha para preto
+        $this->SetDrawColor(0, 0, 0); 
+        // Adiciona uma linha horizontal 
+        $this->Line(2, $this->GetY() - 2, $this->GetPageWidth() - 2, $this->GetY() - 2);
         $this->Ln(15);
     }
 

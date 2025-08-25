@@ -385,7 +385,7 @@
 				array_unshift($c, combo_net("Empresa*:", "busca_empresa",   (!empty($_POST["busca_empresa"])?   $_POST["busca_empresa"]  : ""), 3, "empresa", "onchange=selecionaMotorista(this.value)", $extraEmpresa));
 			}
 		//}
-		$botao_imprimir ="<button class='btn default' type='button' onclick='window.print()'>Imprimir</button>";
+		$botao_imprimir ="<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
 
 		//BOTOES{
 			$b = [
@@ -398,26 +398,6 @@
 		echo abre_form();
 		echo linha_form($c);
 		echo fecha_form($b, "<span id=dadosResumo><b>{$carregando}</b></span>");
-		
-		$logoEmpresa = mysqli_fetch_assoc(query(
-            "SELECT empr_tx_logo FROM empresa
-                    WHERE empr_tx_status = 'ativo'
-                        AND empr_tx_Ehmatriz = 'sim'
-                    LIMIT 1;"
-        ))["empr_tx_logo"];
-		
-		echo 
-			"<div id='tituloRelatorio'>
-                    <img style='width: 190px; height: 40px;' src='./imagens/logo_topo_cliente.png' alt='Logo Empresa Esquerda'>
-					<h1>Não Conformidades</h1>
-                    <img style='width: 180px; height: 80px;' src='./$logoEmpresa' alt='Logo Empresa Direita'>
-            </div>
-			<style>
-				#tituloRelatorio{
-					display: none;
-				}
-			</style>"
-		;
 
 		if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
 			echo (!empty($tabelasPonto)? implode("", $tabelasPonto): "");
@@ -427,190 +407,202 @@
 		include "css/nao_conformidade.css";
 		echo "</style>";
 
+		$logoEmpresa = mysqli_fetch_assoc(query(
+            "SELECT empr_tx_logo FROM empresa
+                WHERE empr_tx_status = 'ativo'
+                    AND empr_nb_id = '{$_POST["busca_empresa"]}'
+				LIMIT 1;"
+			))["empr_tx_logo"];
+
 		echo "
 		<script>
+			function imprimir() {
+				const conteudosIndividuais = document.querySelectorAll('.conteudo-individual');
+				if (conteudosIndividuais.length === 0) {
+					alert('Nenhum conteúdo para impressão encontrado.');
+					return;
+				}
+
+				// Guarda a data/hora atual
+				const dataAtual = new Date().toLocaleString();
+
+				// Cabeçalho para a impressão
+				const cabecalhoHTML = `
+					<header id='print-header'>
+						<img src='./imagens/logo_topo_cliente.png' alt='Logo Esquerda'>
+						<h1>Não Conformidade</h1>
+						<img src='./$logoEmpresa' alt='Logo Direita'>
+					</header>`;
+
+				// Rodapé para a impressão
+				const rodapeHTML = `
+					<footer id='print-footer'>
+						<div><strong>TECHPS®</strong></div>
+						<div><em>Gerado em: \${dataAtual}</em></div>
+					</footer>`;
+
+				// Crie um contêiner para todo o conteúdo clonado
+				const mainContentContainer = document.createElement('main');
+				mainContentContainer.className = 'conteudo-impressao';
+
+				// Itera sobre cada bloco de conteúdo e o envolve em uma estrutura de tabela
+				conteudosIndividuais.forEach((conteudo) => {
+					const blocoTabela = `
+						<table class='print-table'>
+							<thead>
+								<tr>
+									<td>
+										<div class='header-space'></div>
+									</td>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td>
+										\${conteudo.outerHTML}
+									</td>
+								</tr>
+							</tbody>
+							<tfoot>
+								<tr>
+									<td>
+										<div class='footer-space'></div>
+									</td>
+								</tr>
+							</tfoot>
+						</table>
+					`;
+					mainContentContainer.innerHTML += blocoTabela;
+				});
+
+				// Abre janela de impressão
+				const janela = window.open('', '_blank');
+				janela.document.write(`
+					<html>
+					<head>
+						<title>Impressão - Espelho de Ponto</title>
+						<meta charset='utf-8'>
+						<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'>
+						<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'>
+						<link rel='stylesheet' href='./css/impressao_Nconformidade.css'>
+					</head>
+					<body>
+						\${cabecalhoHTML}
+						\${rodapeHTML}
+						\${mainContentContainer.outerHTML}
+						
+						<script>
+							// Executa após o conteúdo ser carregado na nova janela
+							window.onload = function() {
+								window.print();
+							};
+
+							// Fecha a aba quando o evento 'afterprint' é disparado
+							window.addEventListener('afterprint', () => {
+								window.close();
+							});
+						<\\/script>
+					</body>
+					</html>
+				`);
+				janela.document.close();
+			}
+
 			function imprimirIndividual(botao) {
+				// A função agora recebe o botão como argumento
+				// Isso permite que o script encontre o bloco de conteúdo pai
 				const bloco = botao.closest('.col-md-12');
+				
 				if (!bloco) {
 					alert('Bloco não encontrado.');
 					return;
 				}
 
-				const conteudo = bloco.cloneNode(true);
+				const conteudosIndividuais = [bloco]; // Cria um array com apenas o bloco selecionado
 
-				// Remove botões de impressão internos
-				conteudo.querySelectorAll('button[onclick*=\"imprimirIndividual\"]').forEach(btn => btn.remove());
+				// Guarda a data/hora atual
+				const dataAtual = new Date().toLocaleString();
 
-				const cssImpressao = `
-					@media print {
-						body {
-							margin: 1cm;
-							transform: scale(1.0);
-							transform-origin: top left;
-						}
-
-						@page {
-							size: A4 landscape;
-							margin: 1cm;
-						}
-
-						div.portlet-title > div > span > div.table-responsive {
-							max-width: 50% !important;
-						}
-
-						#saldo {
-							margin-top: 9px !important;
-							text-align: center;
-							width: 50% !important;
-						}
-
-						.portlet.light {
-							padding: 12px 20px 15px !important;
-						}
-
-						.portlet {
-							border-radius: 20px !important;
-							margin-top: 0 !important;
-							margin-bottom: 25px !important;
-						}
-
-						#tituloRelatorio {
-							display: flex;
-							align-items: center;
-							justify-content: space-between;
-							gap: 1em;
-						}
-
-						#tituloRelatorio h1 {
-							margin: 0;
-							font-size: 1.5em;
-							flex-grow: 1;
-							text-align: center;
-						}
-
-						#tituloRelatorio img {
-							display: block;
-						}
-
-						body > div.scroll-to-top {
-							display: none !important;
-						}
-
-						div:nth-child(12) > .portlet.light {
-							display: none !important;
-						}
-
-						#logo {
-							display: flex;
-							position: absolute;
-							top: 5px;
-							right: 50px;
-						}
-
-						.portlet-body.form .table-responsive,
-						.table-responsive {
-							overflow: visible !important;
-							max-width: none !important;
-							max-height: none !important;
-							width: auto !important;
-						}
-
-						table {
-							width: 100% !important;
-							table-layout: auto !important;
-						}
-
-						.portlet.light > .portlet-title {
-							border-bottom: none;
-							margin-bottom: 0px;
-						}
-
-						.caption {
-							padding-top: 0px;
-							margin-left: -50px !important;
-							padding-bottom: 0px;
-						}
-
-						.portlet-body form{
-							margin-left: -50px !important;
-						}
-						
-						.color_red:before {
-							color: red !important;
-						}
-						.color_green:before {
-							color: green !important;
-						}
-						.color_blue:before {
-							color: blue !important;
-						}
-						.color_greenLight:before {
-							color: #00ff00 !important;
-						}
-						.color_orange:before {
-							color: orange !important;
-						}
-					}
-				`;
-
-				const tituloRelatorio = `
-					<div id='tituloRelatorio'>				
+				// Cabeçalho para a impressão
+				const cabecalhoHTML = `
+					<header id='print-header'>
+						<img src='./imagens/logo_topo_cliente.png' alt='Logo Esquerda'>
 						<h1>Não Conformidades</h1>
-            		</div>`;
+						<img src='./$logoEmpresa' alt='Logo Direita'>
+					</header>`;
 
+				// Rodapé para a impressão
+				const rodapeHTML = `
+					<footer id='print-footer'>
+						<div><strong>TECHPS®</strong></div>
+						<div><em>Gerado em: \${dataAtual}</em></div>
+					</footer>`;
+
+				// Crie um contêiner para todo o conteúdo clonado
+				const mainContentContainer = document.createElement('main');
+				mainContentContainer.className = 'conteudo-impressao';
+
+				// Itera sobre o único bloco de conteúdo e o envolve em uma estrutura de tabela
+				conteudosIndividuais.forEach((conteudo) => {
+					const blocoTabela = `
+						<table class='print-table'>
+							<thead>
+								<tr>
+									<td>
+										<div class='header-space'></div>
+									</td>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td>
+										\${conteudo.outerHTML}
+									</td>
+								</tr>
+							</tbody>
+							<tfoot>
+								<tr>
+									<td>
+										<div class='footer-space'></div>
+									</td>
+								</tr>
+							</tfoot>
+						</table>
+					`;
+					mainContentContainer.innerHTML += blocoTabela;
+				});
+
+				// Abre janela de impressão
 				const janela = window.open('', '_blank');
-
 				janela.document.write(`
 					<html>
 					<head>
-						<title>Impressão</title>
+						<title>Impressão - Espelho de Ponto</title>
 						<meta charset='utf-8'>
 						<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'>
-						<style>
-							body { font-family: Arial, sans-serif; margin: 20px; }
-							table { width: 100%; border-collapse: collapse; }
-							th, td { border: 1px solid #ccc; padding: 5px; font-size: 12px; }
-							\${cssImpressao}
-						</style>
+						<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'>
+						<link rel='stylesheet' href='./css/impressao_Nconformidade.css'>
 					</head>
 					<body>
-						\${tituloRelatorio}
-						\${conteudo.outerHTML}
+						\${cabecalhoHTML}
+						\${rodapeHTML}
+						\${mainContentContainer.outerHTML}
+						
+						<script>
+							// Executa após o conteúdo ser carregado na nova janela
+							window.onload = function() {
+								window.print();
+							};
+
+							// Fecha a aba quando o evento 'afterprint' é disparado
+							window.addEventListener('afterprint', () => {
+								window.close();
+							});
+						<\\/script>
 					</body>
 					</html>
 				`);
-
 				janela.document.close();
-
-				janela.onload = function () {
-					const imgs = janela.document.images;
-					if (imgs.length === 0) {
-						janela.print();
-						janela.close();
-						return;
-					}
-
-					let carregadas = 0;
-					for (let img of imgs) {
-						if (img.complete) {
-							carregadas++;
-						} else {
-							img.onload = img.onerror = () => {
-								carregadas++;
-								if (carregadas === imgs.length) {
-									janela.print();
-									janela.close();
-								}
-							};
-						}
-					}
-
-					// Caso todas já estejam carregadas
-					if (carregadas === imgs.length) {
-						janela.print();
-						janela.close();
-					}
-				};
 			}
 		</script>
 

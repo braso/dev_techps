@@ -89,7 +89,7 @@ $pastaAjuste->close();
     }
 
     // Cria o PDF
-    $pdf = new CustomPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf = new CustomPDF([],'','P', 'mm', 'A4', true, 'UTF-8', false);
     $pdf->SetCreator('TechPS');
     $pdf->SetAuthor('TechPS');
     $pdf->SetTitle('Relatório Ajustes de Pontos Ativos');
