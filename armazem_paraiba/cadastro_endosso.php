@@ -640,6 +640,8 @@
 		if($_SESSION["user_tx_nivel"] != "Super Administrador"){
 			$extra_bd_motorista .= " AND enti_nb_empresa = ".$_SESSION["user_tx_emprCnpj"];
 		}
+
+		$_POST["empresa"] = $_POST["empresa"]?? $_SESSION["user_nb_empresa"];
 		if(!empty($_POST["empresa"])){
 			$extra_bd_motorista .= " AND enti_nb_empresa = ".$_POST["empresa"];
 		}

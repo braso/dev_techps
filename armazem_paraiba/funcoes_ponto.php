@@ -746,8 +746,8 @@
 			}elseif($motorista["para_tx_tipo"] == "escala"){
 				$diferenca = (new DateTime($motorista["esca_tx_dataInicio"]))->diff(new DateTime($data));
 				$diferenca = $diferenca->d*($diferenca->invert? -1: 1);
-				$diaDoCiclo = $motorista["esca_nb_periodicidade"]*(($diferenca)/($motorista["esca_nb_periodicidade"])-floor($diferenca/$motorista["esca_nb_periodicidade"]))+1;
-				
+				$diaDoCiclo = round($motorista["esca_nb_periodicidade"]*(($diferenca)/($motorista["esca_nb_periodicidade"])-floor($diferenca/$motorista["esca_nb_periodicidade"]))+1);
+
 				$jornadaPrevistaOriginal = operarHorarios([
 					$motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaFim"]?? "00:00",
 					$motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaInicio"]?? "00:00",

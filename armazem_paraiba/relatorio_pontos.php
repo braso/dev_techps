@@ -161,8 +161,9 @@ function index() {
     $condBuscaEmpresa = "";
 
     //CAMPOS DE CONSULTA{
+    $_POST["busca_empresa"] = $_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"];
     $searchFields = [
-        combo_net("Empresa*", "busca_empresa", ($_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"]), 3, "empresa", "onchange=selecionaMotorista(this.value) ", $condBuscaEmpresa),
+        combo_net("Empresa*", "busca_empresa", $_POST["busca_empresa"], 3, "empresa", "onchange=selecionaMotorista(this.value) ", $condBuscaEmpresa),
         combo_net(
             "Funcionário*",
             "busca_motorista",
@@ -170,7 +171,7 @@ function index() {
             4,
             "entidade",
             "",
-            (!empty($_POST["busca_empresa"]) ? " AND enti_nb_empresa = " . $_POST["busca_empresa"] : "") . " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') " . $condBuscaEmpresa . " " . $condBuscaMotorista,
+            (!empty($_POST["busca_empresa"]) ? " AND enti_nb_empresa = {$_POST["busca_empresa"]}": "") . " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') {$condBuscaEmpresa} {$condBuscaMotorista}",
             "enti_tx_matricula"
         )
     ];
