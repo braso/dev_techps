@@ -430,7 +430,7 @@
 				const cabecalhoHTML = `
 					<header id='print-header'>
 						<img src='./imagens/logo_topo_cliente.png' alt='Logo Esquerda'>
-						<h1>Espelho de Ponto</h1>
+						<h1>Não Conformidade</h1>
 						<img src='./$logoEmpresa' alt='Logo Direita'>
 					</header>`;
 
@@ -527,7 +527,7 @@
 				const cabecalhoHTML = `
 					<header id='print-header'>
 						<img src='./imagens/logo_topo_cliente.png' alt='Logo Esquerda'>
-						<h1>Espelho de Ponto</h1>
+						<h1>Não Conformidades</h1>
 						<img src='./$logoEmpresa' alt='Logo Direita'>
 					</header>`;
 
