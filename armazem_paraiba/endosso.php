@@ -497,11 +497,23 @@
 			}
 
 			$fields = [];
+			$_POST["busca_empresa"] = $_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"];
 			if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-				$fields[] = combo_net("Empresa*", "busca_empresa", (!empty($_POST["busca_empresa"])? $_POST["busca_empresa"] : $_SESSION["user_nb_empresa"]), 3, "empresa", "onchange=selecionaMotorista(this.value)", ($extraEmpresa?? ""));
+				$fields[] = combo_net("Empresa*", "busca_empresa", $_POST["busca_empresa"], 3, "empresa", "onchange=selecionaMotorista(this.value)", ($extraEmpresa?? ""));
 			}
 			$fields = array_merge($fields, [
-				combo_net("Funcionário", "busca_motorista", (!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 3, "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')".($_POST["extraMotorista"]?? "").($extraEmpresaMotorista?? ""), "enti_tx_matricula"),
+				combo_net(
+					"Funcionário", 
+					"busca_motorista", 
+					(!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 
+					3, 
+					"entidade", 
+					"", 
+					(!empty($_POST["busca_empresa"])?" AND enti_nb_empresa = {$_POST["busca_empresa"]}":"")
+					." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
+					.($_POST["extraMotorista"]?? "").($extraEmpresaMotorista?? ""), 
+					"enti_tx_matricula"
+				),
 				campo_mes("Data*",      "busca_data",      	(!empty($_POST["busca_data"])?      $_POST["busca_data"]     : ""), 2),
 				combo(	  "Endossado",	"busca_endossado", 	(!empty($_POST["busca_endossado"])? $_POST["busca_endossado"]: ""), 2, ["endossado" => "Sim", "naoEndossado" => "Não"])
 			]);
