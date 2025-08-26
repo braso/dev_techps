@@ -1,0 +1,162 @@
+/* --- ESTILOS GERAIS PARA A PÁGINA (VISUALIZAÇÃO E IMPRESSÃO) --- */
+
+/* Remove a barra de rolagem dos containers para a impressão */
+.portlet-body.form .table-responsive,
+.table-responsive {
+    overflow: visible !important;
+    max-width: none !important;
+    max-height: none !important;
+    width: auto !important;
+}
+
+/* Garante que o cabeçalho da tabela não seja fixo na tela, para fluir na impressão */
+.table-head {
+    position: static !important;
+}
+
+/* Ajustes gerais de espaçamento e borda para os 'portlets' */
+.portlet.light {
+    padding: 12px 20px 15px !important;
+}
+
+.portlet {
+    border-radius: 20px !important;
+    margin-top: 0 !important;
+    margin-bottom: 25px !important;
+}
+
+div.portlet-title > div > span > div.table-responsive {
+    max-width: 30% !important;
+}
+
+div:nth-child(2) > button{
+    display: none !important;
+}
+
+/* --- 🎯 REGRAS APLICADAS APENAS NA IMPRESSÃO --- */
+@media print {
+
+    /* --- Configuração da Página --- */
+    @page {
+        size: A4 landscape; /* Orientação paisagem */
+        margin: 0.5cm;     /* Reduz a margem para dar mais espaço */
+    }
+
+    /* Oculta os placeholders da tabela e posiciona o conteúdo fixo */
+    .header-space, .footer-space {
+        visibility: hidden;
+        /* Adiciona um espaço explícito para empurrar o conteúdo */
+        height: 90px !important;
+    }
+
+    .footer-space {
+        height: 30px !important;
+    }
+
+    #print-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 85px; /* Altura do cabeçalho */
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1em;
+        padding: 0 0.5cm;
+        background: #fff;
+        border-bottom: 1px solid #ccc;
+    }
+
+    #print-header h1 {
+        margin: 0;
+        font-size: 1em;
+        flex-grow: 1;
+        text-align: center;
+    }
+
+    #print-header img {
+        display: block !important;
+        max-height: 40px;
+    }
+
+    #print-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 30px; /* Altura do rodapé */
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 0.5cm;
+        background: #fff;
+        border-top: 1px solid #ccc;
+        font-size: 0.7em;
+    }
+
+    /* Garante a quebra de página por tabela */
+    .print-table {
+        page-break-after: always;
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0;
+        padding: 0;
+    }
+
+    .print-table:last-child {
+        page-break-after: avoid;
+    }
+    
+    .print-table thead, .print-table tfoot {
+        display: table-header-group;
+    }
+
+    /* --- AJUSTES PARA TABELA LARGA NA IMPRESSÃO --- */
+    .conteudo-impressao .table {
+        width: 100% !important;
+        table-layout: auto;
+    }
+
+    .conteudo-impressao .table thead {
+        display: table-header-group !important;
+    }
+
+    .conteudo-impressao .table th,
+    .conteudo-impressao .table td {
+        font-size: 5pt !important;
+        padding: 1px !important;
+        text-align: center;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+    
+    .portlet-title .caption .caption-subject,
+    .portlet-title .caption .caption-subject > div {
+        font-size: 7pt !important;
+    }
+
+    .table-responsive{
+        font-size: 7pt !important;
+    }
+
+    .portlet {
+        page-break-inside: avoid;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    /* Oculta elementos desnecessários na impressão */
+    body > div.scroll-to-top,
+    button.btn.btn-primary.imprimir,
+    #impressao {
+        display: none !important;
+    }
+
+    /* Estilos de cores */
+    .color_red:before { color: red !important; }
+    .color_green:before { color: green !important; }
+    .color_blue:before { color: blue !important; }
+    .color_greenLight:before { color: #00ff00 !important; }
+    .color_orange:before { color: orange !important; }
+}

@@ -100,6 +100,17 @@ table td:nth-child(11) {
 	width: 100%;
 }
 
-.table>tbody>tr>td:first-child, .table>tbody>tr>td.data, .table>tbody>tr>td.diaSemana {
+.tabela-espelho-ponto>tbody>tr>td:first-child, .table>tbody>tr>td.data, .table>tbody>tr>td.diaSemana {
     vertical-align: middle;
+}
+
+.espelho-cabecalho-info{
+	font-size: 16px;
+	font-weight: bold;
+	margin-bottom: 20px;
+	width: fit-content;
+}
+
+.espelho-cabecalho-info td{
+	padding: 5px;
 }

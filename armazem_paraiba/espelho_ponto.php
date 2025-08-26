@@ -10,6 +10,49 @@
 
 	include "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
 
+
+	function montarMensagemParametro(array &$motorista): string{
+		$mensagemParametro = $motorista["para_tx_nome"];
+		if($motorista["para_tx_tipo"] == "horas_por_dia"){
+			$mensagemParametro .= " Semanal (".$motorista["enti_tx_jornadaSemanal"]."), Sábado (".$motorista["enti_tx_jornadaSabado"].")";
+		}elseif(($motorista["para_tx_tipo"] == "escala")){
+			$escala = mysqli_fetch_assoc(query("SELECT * FROM escala WHERE esca_nb_parametro = {$motorista["enti_nb_parametro"]}"));
+			$mensagemParametro .= "<br>Dia 1: ".(new DateTime($escala["esca_tx_dataInicio"]))->format("d/m/Y");
+		}
+
+		if(!empty($motorista["empr_nb_parametro"])){
+			$parametroEmpresa = mysqli_fetch_assoc(query(
+				"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percHESemanal, para_tx_percHEEx, para_nb_id, para_tx_nome FROM parametro"
+					." WHERE para_tx_status = 'ativo'"
+						." AND para_nb_id = ".$motorista["empr_nb_parametro"]
+					." LIMIT 1;"
+			));
+
+			if(!empty($parametroEmpresa)){
+				if($parametroEmpresa["para_tx_tipo"] == "horas_por_dia"){
+					$padronizado = (
+						[$motorista["para_nb_id"], $motorista["para_tx_jornadaSemanal"], $motorista["para_tx_jornadaSabado"], $motorista["para_tx_percHESemanal"], $motorista["para_tx_percHEEx"]]
+						==
+						[$parametroEmpresa["para_nb_id"], $parametroEmpresa["para_tx_jornadaSemanal"], $parametroEmpresa["para_tx_jornadaSabado"], $parametroEmpresa["para_tx_percHESemanal"], $parametroEmpresa["para_tx_percHEEx"]]
+					);
+				}else{
+					$padronizado = (
+						[$motorista["para_nb_id"], $motorista["para_tx_percHESemanal"], $motorista["para_tx_percHEEx"]]
+						==
+						[$parametroEmpresa["para_nb_id"], $parametroEmpresa["para_tx_percHESemanal"], $parametroEmpresa["para_tx_percHEEx"]]
+					);
+				}
+
+				$mensagemParametro = (!$padronizado? "Não ": "")."Padronizado.<br>";
+				$mensagemParametro .= "{$motorista["para_tx_nome"]}";
+				if(!empty($motorista["para_tx_jornadaSemanal"]) && !empty($motorista["para_tx_jornadaSabado"])){
+					$mensagemParametro .= "<br>Semanal ({$motorista["para_tx_jornadaSemanal"]}), Sábado ({$motorista["para_tx_jornadaSabado"]})";
+				}
+			}
+		}
+		return $mensagemParametro;
+	}
+
 	
 	function redirParaAbono(){
 		unset($_POST["acao"]);
@@ -129,8 +172,9 @@
 					texto("Funcionário*", $_SESSION["user_tx_nome"], 3),
 				];
 			}else{
+				$_POST["busca_empresa"] = $_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"];
 				$searchFields = [
-					combo_net("Empresa*", "busca_empresa", ($_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"]), 3, "empresa", "onchange=selecionaMotorista(this.value) ", $condBuscaEmpresa),
+					combo_net("Empresa*", "busca_empresa", $_POST["busca_empresa"], 3, "empresa", "onchange=selecionaMotorista(this.value) ", $condBuscaEmpresa),
 					combo_net(
 						"Funcionário*",
 						"busca_motorista",
@@ -138,7 +182,7 @@
 						4, 
 						"entidade", 
 						"", 
-						(!empty($_POST["busca_empresa"])?" AND enti_nb_empresa = ".$_POST["busca_empresa"]:"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') ".$condBuscaEmpresa." ".$condBuscaMotorista, 
+						(!empty($_POST["busca_empresa"])?" AND enti_nb_empresa = {$_POST["busca_empresa"]}":"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') {$condBuscaEmpresa} {$condBuscaMotorista}", 
 						"enti_tx_matricula"
 					)
 				];
@@ -160,7 +204,7 @@
 				$b[] = botao("Cadastrar Abono", "redirParaAbono", "acaoPrevia", $_POST["acao"]??"", "btn btn-secondary");
 			}
 			if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
-				$b[] = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
+				$b[] = "<button class='btn default' type='button' onclick='imprimir(this)'>Imprimir</button>";
 			}
 		//}
 		
@@ -198,12 +242,6 @@
 						 AND enti_nb_id = '{$_POST["busca_motorista"]}'
 					 LIMIT 1;"
 				));
-				if(!empty($_POST["busca_motorista"])){
-					$aEmpresa = [
-						"empr_nb_parametro" => $motorista["empr_nb_parametro"],
-						"empr_tx_nome" => $motorista["empr_tx_nome"]
-					];
-				}
 				
 				//Conferir se há dias do mês já endossados{
 					$endossoMes = montarEndossoMes($startDate, $motorista);
@@ -272,8 +310,10 @@
 					}
 					
 					$row = array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado);
-					$descFaltasNaoJustificadas = operarHorarios([$descFaltasNaoJustificadas, $row["jornadaPrevista"]], "+");
-					$qtdDiasNaoJustificados++;
+					if(strpos($row["inicioJornada"], "Batida início de jornada não registrada!") !== false){
+						$descFaltasNaoJustificadas = operarHorarios([$descFaltasNaoJustificadas, $row["jornadaPrevista"]], "+");
+						$qtdDiasNaoJustificados++;
+					}
 
 					$rows[] = $row;
 				}
@@ -281,27 +321,9 @@
 				$totalResumo = setTotalResumo(array_slice(array_keys($rows[0]), 7));
 				somarTotais($totalResumo, $rows);
 
-				$parametroPadrao = "Convenção Não Padronizada, Semanal (".$motorista["enti_tx_jornadaSemanal"]."), Sábado (".$motorista["enti_tx_jornadaSabado"].")";
 
-				if(!empty($aEmpresa["empr_nb_parametro"])){
-					$parametroEmpresa = mysqli_fetch_assoc(query(
-						"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percHESemanal, para_tx_percHEEx, para_nb_id, para_tx_nome FROM parametro"
-							." WHERE para_tx_status = 'ativo'"
-								." AND para_nb_id = ".$aEmpresa["empr_nb_parametro"]
-							." LIMIT 1;"
-					));
+				$mensagemParametro = montarMensagemParametro($motorista);
 
-					if(!empty($parametroEmpresa)){
-						$keys = array_keys(array_intersect($parametroEmpresa, $motorista));
-						
-						if(in_array("para_tx_jornadaSemanal", $keys)
-							 && in_array("para_tx_jornadaSabado", $keys)
-							 && in_array("para_tx_percHESemanal", $keys)
-						){
-							$parametroPadrao = "Convenção Padronizada: ".$parametroEmpresa["para_tx_nome"].", Semanal (".$parametroEmpresa["para_tx_jornadaSemanal"]."), Sábado (".$parametroEmpresa["para_tx_jornadaSabado"].")";
-						}
-					}
-				}
 
 				$ultimoEndosso = mysqli_fetch_assoc(query(
 					"SELECT endo_tx_filename FROM endosso"
@@ -385,13 +407,22 @@
 				$rows[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumo));
 
 				echo abre_form(
-					"<div>"
-						.$aEmpresa["empr_tx_nome"]."<br>"
-						."[".$motorista["enti_tx_matricula"]."] ".$motorista["enti_tx_nome"]."<br>"
-						.$parametroPadrao."<br><br>"
-						.$periodoPesquisa."<br>"
-					."</div>"
-					.$saldosMotorista
+					"<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact espelho-cabecalho-info'>
+						<thead>
+							<tr>
+								<th>Empresa</th>
+								<th>Funcionário</th>
+								<th>Parâmetro</th>
+							</tr>
+						<tbody>
+							<tr>
+								<td>{$motorista["empr_tx_nome"]}</td>
+								<td>[{$motorista["enti_tx_matricula"]}] {$motorista["enti_tx_nome"]}</td>
+								<td>{$mensagemParametro}</td>
+						</tbody>
+					</table>
+					{$periodoPesquisa}<br>
+					{$saldosMotorista}"
 				);
 				echo montarTabelaPonto($cabecalho, $rows);
 				echo fecha_form();
@@ -431,6 +462,13 @@
 			."&extra_busca=enti_tx_matricula";
 		;
 
+		$logoEmpresa = mysqli_fetch_assoc(query(
+            "SELECT empr_tx_logo FROM empresa
+                WHERE empr_tx_status = 'ativo'
+                    AND empr_nb_id = '{$_POST["busca_empresa"]}'
+				LIMIT 1;"
+			))["empr_tx_logo"];
+
 		return 
 			"<script>
 				function ajustarPonto(idMotorista, data){
@@ -469,16 +507,69 @@
 					});
 				}
 
-				// $(window).scroll(function(){
-				// 	if ($(this).scrollTop() > 60){
-				// 		$('.table-head').addClass('table-fixed-top');
-				// 	}else{
-				// 		$('.table-head').removeClass('table-fixed-top');  
-				// 	}
-				// });
+				function imprimir() {
+					const alvo = document.querySelector('div > div.portlet-title');
+					if (!alvo) {
+						alert('Conteúdo para impressão não encontrado.');
+						return;
+					}
 
-				function imprimir(){
-					window.print();
+					const conteudo = alvo.closest('.portlet') || alvo.parentElement;
+					const cloneConteudo = conteudo.cloneNode(true);
+
+					// Guarda a data/hora atual
+					const dataAtual = new Date().toLocaleString();
+
+					// Cabeçalho para a impressão
+					const cabecalhoHTML = `
+						<header id='print-header'>
+							<img src='./imagens/logo_topo_cliente.png' alt='Logo Esquerda'>
+							<h1>Espelho de Ponto</h1>
+							<img src='./$logoEmpresa' alt='Logo Direita'>
+						</header>`;
+
+					// Rodapé para a impressão
+					const rodapeHTML = `
+						<footer id='print-footer'>
+							<div><strong>TECHPS®</strong></div>
+							<div><em>Gerado em: \${dataAtual}</em></div>
+						</footer>`;
+
+					// Abre janela de impressão
+					const janela = window.open('', '_blank');
+					janela.document.write(`
+						<html>
+						<head>
+							<title>Impressão - Espelho de Ponto</title>
+							<meta charset='utf-8'>
+							<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'>
+							<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'>
+							<link rel='stylesheet' href='./css/impressao_espelho.css'>
+						</head>
+						<body>
+							\${cabecalhoHTML}
+							
+							<main class='conteudo-impressao'>
+								\${cloneConteudo.outerHTML}
+							</main>
+
+							\${rodapeHTML}
+							
+							<script>
+								// Executa após o conteúdo ser carregado na nova janela
+								window.onload = function() {
+									window.print();
+								};
+
+								// Fecha a aba quando o evento 'afterprint' é disparado
+								window.addEventListener('afterprint', () => {
+									window.close();
+								});
+							<\\/script>
+						</body>
+						</html>
+					`);
+					janela.document.close();
 				}
 			</script>"
 		;

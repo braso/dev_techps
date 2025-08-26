@@ -19,12 +19,12 @@ class CustomPDF extends TCPDF {
     }
 
     public function Header() {
-        $imgWidth = 65;
-        $imgWidth2 = 65;
-        $imgHeight = 30;
-        $imgHeight2 = 15;
-        $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 10, $imgWidth2, $imgHeight2);
-        $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 25, 10, $imgWidth, $imgHeight);
+        $imgWidth = 35;
+        $imgWidth2 = 35;
+        $imgHeight = 15;
+        $imgHeight2 = 10;
+        $this->Image(__DIR__ . "/../imagens/logo_topo_cliente.png", 10, 3, $imgWidth2, $imgHeight2);
+        $this->Image(__DIR__ . "/../" . self::$empresaData["empr_tx_logo"], $this->GetPageWidth() - $imgWidth - 25, 3, $imgWidth, $imgHeight);
         // $this->Image('logo_esquerda.png', 10, 10, $imgWidth, $imgHeight);
         // $this->Image('logo_direita.png', $this->GetPageWidth() - $imgWidth - 10, 10, $imgWidth, $imgHeight);
 
@@ -35,6 +35,10 @@ class CustomPDF extends TCPDF {
         
         $this->SetFont('helvetica', 'B', 12);
         $this->Cell(0, 15, $this->tituloPersonalizado, 0, 1, 'C');
+        // Define a cor da linha para preto
+        $this->SetDrawColor(0, 0, 0); 
+        // Adiciona uma linha horizontal 
+        $this->Line(2, $this->GetY() - 2, $this->GetPageWidth() - 2, $this->GetY() - 2);
         $this->Ln(15);
     }
 
@@ -249,8 +253,8 @@ function gerarPainelEndosso() {
 
     [$percEndosso["E"], $percEndosso["EP"], $percEndosso["N"]] = calcPercs(array_values($contagemEndossos));
     [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
-
-    $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf = new CustomPDF('p', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf->SetPageOrientation('L');
     $pdf->setEmpresaData($empresa);
     $pdf->tituloPersonalizado = 'Relatório de Endossos';
     $pdf->SetCreator('TechPS');
@@ -524,14 +528,14 @@ function gerarPainelSaldo() {
     } else {
         //Painel geral das empresas
         $empresas = [];
-        $logoEmpresa = mysqli_fetch_assoc(query(
+        $aEmpresa = mysqli_fetch_assoc(query(
             "SELECT empr_tx_logo FROM empresa
                     WHERE empr_tx_status = 'ativo'
                         AND empr_tx_Ehmatriz = 'sim'
                     LIMIT 1;"
         ))["empr_tx_logo"]; //Utilizado no HTML.
 
-        $logoEmpresa = $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] . "/" . $logoEmpresa;
+        $aEmpresa = $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] . "/" . $aEmpresa;
 
 
         if (is_dir($path) && is_file($path . "/empresas.json")) {
@@ -604,7 +608,7 @@ function gerarPainelSaldo() {
     [$performance["positivos"], $performance["meta"], $performance["negativos"]] = calcPercs(array_values($contagemSaldos));
 
     $pdf = new CustomPDF('L', 'mm', 'A4', true, 'UTF-8', false);
-    $pdf->setEmpresaData($empresa);
+    $pdf->setEmpresaData($aEmpresa);
     $pdf->tituloPersonalizado = 'Relatório Geral de Saldo';
     $pdf->SetCreator('TechPS');
     $pdf->SetAuthor('TechPS');
@@ -1512,7 +1516,7 @@ function gerarPainelAjustes() {
     $pdf->SetFont('helvetica', '', 10);
     $pdf->Write(7, $empresa['empr_tx_nome'] . "\n");
 
-    $pdf->Ln(5);
+    $pdf->Ln(20);
 
     $userEntrada = preg_replace('/[^a-zA-Z0-9_-]/', '', $_SESSION['horaEntrada']);
 
@@ -1540,7 +1544,7 @@ function gerarPainelAjustes() {
 
 
     // === Espaço antes da próxima tabela ===
-    $pdf->Ln(10);
+    $pdf->Ln(15);
 
     // === Tabela: Ajustes por funcionário ===
     $pdf->SetFillColor(241, 198, 31); 

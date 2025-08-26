@@ -320,6 +320,13 @@
 			LIMIT 1;"
 		));
 
+		$ferias = mysqli_fetch_assoc(query(
+			"SELECT * FROM ferias
+				WHERE feri_tx_status = 'ativo'
+					AND feri_nb_entidade = '{$motorista["enti_nb_id"]}'
+					AND '".date("Y-m-d")."' BETWEEN feri_tx_dataInicio AND feri_tx_dataFim
+				LIMIT 1;"
+		));
 
 		$iconeExcluir = "";
 		$variableFields = [
@@ -329,6 +336,8 @@
 			$variableFields = array_merge($variableFields, [texto("Endosso", "Endossado por ".$endosso["endo_nb_userCadastro"]." em ".data($endosso["endo_tx_dataCadastro"], 1), 8)]);
 		}elseif(!empty($afastamento)){
 			$variableFields = array_merge($variableFields, [texto("Afastamento", "Afastado por motivo de {$afastamento["moti_tx_nome"]}", 8)]);
+		}elseif(!empty($ferias)){
+			$variableFields = array_merge($variableFields, [texto("Férias:", "Férias de ({$ferias["feri_tx_dataInicio"]} a {$ferias["feri_tx_dataFim"]})", 6)]);
 		}else{
 			$botoes[] = botao("Gravar", "cadastrarAjuste");
 

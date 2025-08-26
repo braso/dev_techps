@@ -31,6 +31,7 @@
 	// }
 
 	function montarTabelaPonto(array $cabecalho, array $valores): string{
+		$dataEmissao = date("d/m/Y H:i:s");
 		// $rand = md5($sql);
 
 		$bodyContent = "";
@@ -51,7 +52,7 @@
 				}
 			</style>
 			<div class='table-responsive' style='max-height: 85vh;'>
-				<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact'"/*.id=$rand*/.">
+				<table class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content table-hover compact tabela-espelho-ponto'"/*.id=$rand*/.">
 					<thead class='table-head'>"
 						.(!empty($cabecalho)?"<tr><th class='th-align'>".implode("</th><th class='th-align'>", $cabecalho)."</th></tr>": "").
 					"</thead>
@@ -61,6 +62,7 @@
 				</table>
 				(*): Registros excluídos manualmente.<br>
 				(**): 00:00 Caso esteja dentro da tolerância
+				<div colspan='3' id='impressao' style='padding-left: 1250px; margin-top: -40px !important; display: none; text-align: left; margin-top: 10px;'><b>Emissão Doc.:</b> $dataEmissao (UTC-3)</div>
 			</div>"
 		;
 

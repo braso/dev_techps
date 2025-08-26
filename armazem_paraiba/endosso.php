@@ -52,7 +52,6 @@
 			$rows = [];
 
 			//Pegando e formatando registros dos dias{
-				
 				$endossoCompleto = montarEndossoMes($date, $motoristas[$f]);
 				$totalResumo = $endossoCompleto["totalResumo"];
 
@@ -133,39 +132,39 @@
 
 			$colspanTitulos = [2,4,2,2,4,2]; //Utilizado em relatorio_espelho.php
 			$cabecalho = [
-				"DATA",
-				"DIA",
-				"INÍCIO",
-				"INÍCIO REF.",
-				"FIM REF.",
-				"FIM",
-				"REFEIÇÃO",
-				// "ESPERA",
-				"DESCANSO",
-				// "REPOUSO",
-				"PREVISTA",
-				"EFETIVA",
-				// "MDC",
-				"INTERSTÍCIO",
-				"HE {$motorista["enti_tx_percHESemanal"]}%",
-				"HE&nbsp;{$motorista["enti_tx_percHEEx"]}%",
-				"ADICIONAL NOT.",
-				// "ESPERA IND.",
-				"MOTIVO",
-				"SALDO",
+				"data" => "DATA",
+				"diaSemana" => "DIA",
+				"inicioJornada" => "INÍCIO",
+				"inicioRefeicao" => "INÍCIO REF.",
+				"fimRefeicao" => "FIM REF.",
+				"fimJornada" => "FIM",
+				"diffRefeicao" => "REFEIÇÃO",
+				//"diffEspera" =>  "ESPERA",
+				"diffDescanso" => "DESCANSO",
+				//"diffRepouso" =>  "REPOUSO",
+				"jornadaPrevista" => "PREVISTA",
+				"diffJornadaEfetiva" => "EFETIVA",
+				//"maximoDirecaoContinua" =>  "MDC",
+				"intersticio" => "INTERSTÍCIO",
+				"he50" => "HE {$motorista["enti_tx_percHESemanal"]}%",
+				"he100" => "HE&nbsp;{$motorista["enti_tx_percHEEx"]}%",
+				"adicionalNoturno" => "ADICIONAL NOT.",
+				//"esperaIndenizada" =>  "ESPERA IND.",
+				"0" => "MOTIVO",
+				"diffSaldo" => "SALDO",
 			];
 
 			if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
-				$colspanTitulos = [2,4,4,3,5,2];
+				$colspanTitulos = [2,4,4,3,5,2]; //Utilizado em relatorio_espelho.php
 				$cabecalho = array_merge(
 					array_slice($cabecalho, 0, 7),
-					["ESPERA"],
+					["diffEspera" => "ESPERA"],
 					array_slice($cabecalho, 7, 1),
-					["REPOUSO"],
+					["diffRepouso" => "REPOUSO"],
 					array_slice($cabecalho, 8, 2),
-					["MDC"],
+					["maximoDirecaoContinua" => "MDC"],
 					array_slice($cabecalho, 10, 4),
-					["ESPERA INDENIZADA"],
+					["esperaIndenizada" => "ESPERA INDENIZADA"],
 					array_slice($cabecalho, 14, count($cabecalho))
 				);
 			}
@@ -318,23 +317,6 @@
 				$infoEndosso = " - Endossado por ".$userCadastro["user_tx_login"]." em ".data($endossoCompleto["endo_tx_dataCadastro"], 1);
 
 				$aEmpresa = carregar("empresa", $motorista["enti_nb_empresa"]);
-
-				/*
-				if (!empty($aEmpresa["empr_nb_parametro"])) {
-					$aParametro = carregar("parametro", $aEmpresa["empr_nb_parametro"]);
-					if (
-						$aParametro["para_tx_jornadaSemanal"] != $motorista["enti_tx_jornadaSemanal"] ||
-						$aParametro["para_tx_jornadaSabado"] != $motorista["enti_tx_jornadaSabado"] ||
-						$aParametro["para_tx_percHESemanal"] != $motorista["enti_tx_percHESemanal"] ||
-						$aParametro["para_tx_percHEEx"] != $motorista["enti_tx_percHEEx"] ||
-						$aParametro["para_nb_id"] != $motorista["enti_nb_parametro"]
-					) {
-						$parametroPadrao = "Convenção Não Padronizada, Semanal (".$motorista["enti_tx_jornadaSemanal"]."), Sábado (".$motorista["enti_tx_jornadaSabado"].")";
-					} else {
-						$parametroPadrao = "Convenção Padronizada: ".$aParametro["para_tx_nome"].", Semanal (".$aParametro["para_tx_jornadaSemanal"]."), Sábado (".$aParametro["para_tx_jornadaSabado"].")";
-					}
-				}
-				*/
 
 				$aPagar = "--:--";
 
@@ -514,11 +496,23 @@
 			}
 
 			$fields = [];
+			$_POST["busca_empresa"] = $_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"];
 			if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-				$fields[] = combo_net("Empresa*", "busca_empresa", (!empty($_POST["busca_empresa"])? $_POST["busca_empresa"] : $_SESSION["user_nb_empresa"]), 3, "empresa", "onchange=selecionaMotorista(this.value)", ($extraEmpresa?? ""));
+				$fields[] = combo_net("Empresa*", "busca_empresa", $_POST["busca_empresa"], 3, "empresa", "onchange=selecionaMotorista(this.value)", ($extraEmpresa?? ""));
 			}
 			$fields = array_merge($fields, [
-				combo_net("Funcionário", "busca_motorista", (!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 3, "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')".($_POST["extraMotorista"]?? "").($extraEmpresaMotorista?? ""), "enti_tx_matricula"),
+				combo_net(
+					"Funcionário", 
+					"busca_motorista", 
+					(!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 
+					3, 
+					"entidade", 
+					"", 
+					(!empty($_POST["busca_empresa"])?" AND enti_nb_empresa = {$_POST["busca_empresa"]}":"")
+					." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
+					.($_POST["extraMotorista"]?? "").($extraEmpresaMotorista?? ""), 
+					"enti_tx_matricula"
+				),
 				campo_mes("Data*",      "busca_data",      	(!empty($_POST["busca_data"])?      $_POST["busca_data"]     : ""), 2),
 				combo(	  "Endossado",	"busca_endossado", 	(!empty($_POST["busca_endossado"])? $_POST["busca_endossado"]: ""), 2, ["endossado" => "Sim", "naoEndossado" => "Não"])
 			]);

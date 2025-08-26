@@ -110,14 +110,11 @@
             $empresa = !empty($_GET["empresa"])? $_GET["empresa"]: $empresas[$_POST["empresa"]];
             $interno = true; //Utilizado em conecta.php;
             include __DIR__."/{$empresa}/conecta.php";
-        }
 
-        if (!empty($_POST["botao"])){
-            $empresa = extrairEmpresa($_POST["empresa"], $empresas);
-            
-            
-            if($_POST["botao"] == "ENVIAR"){
-                if(!empty($empresa)){
+            if (!empty($_POST["botao"])){
+                $empresa = extrairEmpresa($empresa, $empresas);
+                
+                if($_POST["botao"] == "ENVIAR"){
                     if (!empty($_POST["login"])){
                         $token = bin2hex(random_bytes(16));
     
@@ -126,7 +123,7 @@
                                 WHERE user_tx_status = 'ativo'
                                     AND user_tx_login = '{$_POST["login"]}';"
                         ));
-    
+
                         if(!empty($user)){
                             atualizar("user", ["user_tx_token"], [$token], $user["user_nb_id"]);
                             $msg = sendEmail($user["user_tx_email"], $token, $user["user_tx_nome"], $empresa);
@@ -139,40 +136,41 @@
                     }else{ 
                         $msg = 
                             "<div class='alert alert-danger display-block'>
-                                <span> Campo E-mail ou Login não foi preenchido </span>
+                                <span> Campo Login não preenchido. </span>
                             </div>"
                         ;
                     }
-                }else{
-                    $msg = 
-                        "<div class='alert alert-danger display-block'>
-                            <span> Informe a sua empresa </span>
-                        </div>"
-                    ;
-                }
-            }elseif($_POST["botao"] == "Redefinir senha"){
-                $user = mysqli_fetch_assoc(query(
-                    "SELECT user_nb_id FROM user 
-                        WHERE user_tx_status = 'ativo' 
-                            AND user_tx_token = '{$_GET["token"]}';"
-                ));
-                
-                if(!empty($_POST["senha"]) && !empty($_POST["senha2"]) && $_POST["senha"] == $_POST["senha2"]){
-                        atualizar("user", ["user_tx_senha", "user_tx_token"], [md5($_POST["senha"]), "-"], $user["user_nb_id"]);
-                        echo 
-                            "<script>alert('Senha redefinida. Voltando para o login...')</script>
-                            <meta http-equiv='refresh' content='0; url={$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/index.php' />"
+                }elseif($_POST["botao"] == "Redefinir senha"){
+                    $user = mysqli_fetch_assoc(query(
+                        "SELECT user_nb_id FROM user 
+                            WHERE user_tx_status = 'ativo' 
+                                AND user_tx_token = '{$_GET["token"]}';"
+                    ));
+                    
+                    if(!empty($_POST["senha"]) && !empty($_POST["senha2"]) && $_POST["senha"] == $_POST["senha2"]){
+                            atualizar("user", ["user_tx_senha", "user_tx_token"], [md5($_POST["senha"]), "-"], $user["user_nb_id"]);
+                            echo 
+                                "<script>alert('Senha redefinida. Voltando para o login...')</script>
+                                <meta http-equiv='refresh' content='0; url={$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/index.php' />"
+                            ;
+                            exit;
+                    }else{
+                        $msg = 
+                            "<div id='erro' style='background-color: red; padding: 1px; text-align: center;'>
+                                <h4>Confirmação de senha incorreta</h4>
+                            </div>"
                         ;
-                        exit;
-                }else{
-                    $msg = 
-                        "<div id='erro' style='background-color: red; padding: 1px; text-align: center;'>
-                            <h4>Confirmação de senha incorreta</h4>
-                        </div>"
-                    ;
+                    }
                 }
             }
+        }else{
+            $msg = 
+                "<div class='alert alert-danger display-block'>
+                    <span> Informe a sua empresa </span>
+                </div>"
+            ;
         }
+
         
 
         if(!empty($_POST["appRequest"])){
