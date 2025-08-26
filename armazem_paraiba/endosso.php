@@ -52,7 +52,6 @@
 			$rows = [];
 
 			//Pegando e formatando registros dos dias{
-				
 				$endossoCompleto = montarEndossoMes($date, $motoristas[$f]);
 				$totalResumo = $endossoCompleto["totalResumo"];
 
@@ -156,7 +155,7 @@
 			];
 
 			if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
-				$colspanTitulos = [2,4,4,3,5,2];
+				$colspanTitulos = [2,4,4,3,5,2]; //Utilizado em relatorio_espelho.php
 				$cabecalho = array_merge(
 					array_slice($cabecalho, 0, 7),
 					["diffEspera" => "ESPERA"],
