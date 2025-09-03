@@ -1442,13 +1442,17 @@
 		return $funcaoJs.'<button '.$funcaoOnClick.' name="acao" id="botaoContex'.$nome.'" value="'.$acao.'"  type="submit" '.$extra.'  class="'.$botaoCor.'">'.$nome.'</button>';
 	}
 
-	function query($query,$debug=''){
+	function query($query, $types = '', array $vars = []){
 		global $conn;
-		$sql = mysqli_query($conn,$query) or die(mysqli_error($conn));
-		if($debug=='1'){
-			echo $query;
+		if(empty($types) || empty($vars)){
+			$result = mysqli_query($conn,$query) or mysqli_error($conn);
+		}else{
+			$stmt = mysqli_prepare($conn, $query);
+			mysqli_stmt_bind_param($stmt, $types, ...$vars);
+			mysqli_stmt_execute($stmt);
+            $result = mysqli_stmt_get_result($stmt);
 		}
-		return $sql;
+		return $result;
 	}
 
 	//Essa função retornará um ícone que será utilizado no SQL da tabela para retornar uma coluna com o ícone
