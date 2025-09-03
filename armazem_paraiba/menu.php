@@ -27,6 +27,7 @@
 		
 		$paginas = [
 			"cadastros" => [
+				"/cadastro_celular.php" 	=> "Celular",
 				"/cadastro_empresa.php" 	=> "Empresa/Filial",
 				"/cadastro_endosso.php" 	=> "Endosso",
 				"/cadastro_feriado.php" 	=> "Feriado",
@@ -34,29 +35,28 @@
 				"/cadastro_motorista.php" 	=> "Funcionário",
 				"/cadastro_macro.php" 		=> "Macro",
 				"/cadastro_motivo.php" 		=> "Motivo",
+				"/cadastro_operacao.php" 	=> "Operação",
 				"/cadastro_parametro.php" 	=> "Parâmetro",
-				"/cadastro_usuario.php" 	=> "Usuário",
 				"/cadastro_placa.php" 		=> "Placas",
-				"/cadastro_celular.php" 	=> "Celular",
-				"/cadastro_operacao.php" 	=> "Operação"
+				"/cadastro_usuario.php" 	=> "Usuário"
 			],
 			"ponto" => [
 				"/endosso.php" 			=> "Consultar Endossos",
 				"/espelho_ponto.php" 	=> "Espelhos de Ponto",
 				"/carregar_ponto.php" 	=> "Integrações de Ponto",
-				"/nao_conformidade.php" => "Não Conformidades",
-				"/nao_cadastrados.php" 	=> "Não cadastrados"
+				"/nao_cadastrados.php" 	=> "Não Cadastrados",
+				"/nao_conformidade.php" => "Não Conformidades"
 			],
 			"painel" => [
-				"/paineis/endosso.php"	  => "Endosso",
-				"/paineis/saldo.php"	  => "Saldo",
-				"/paineis/jornada.php" 	  => "Jornada Aberta",
-				"/paineis/nc_juridica.php"=> "Não Conformidades Juridicas Atualizado",
-				"/paineis/ajustes.php" 	  => "Ajustes",
-				"/paineis/disponibilidade.php" 	  => "Disponibilidade",
+				"/paineis/ajustes.php"			=> "Ajustes",
+				"/paineis/disponibilidade.php"	=> "Disponibilidade",
+				"/paineis/endosso.php"			=> "Endosso",
+				"/paineis/jornada.php"			=> "Jornada Aberta",
+				"/paineis/nc_juridica.php"		=> "Não Conformidades Juridicas Atualizado",
+				"/paineis/saldo.php"			=> "Saldo"
 			] + $camposOcultosProdução,
 			"relatórios" => [
-					"/relatorio_pontos.php" => "Pontos", 
+					"/relatorio_pontos.php" => "Pontos"
 			]
 			// "suporte" => [
 			// 	"/#" 		=> "Perguntas Frequentes", 
