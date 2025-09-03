@@ -390,8 +390,7 @@
 			$campo_nome = texto("Nome*", ($_POST["nome"]?? "-"), 4, "for='nome'");
 			$campo_nivel = texto("Nível*", ($_POST["nivel"]?? "-"), 2);
 			$campo_status = "";
-			$data_nascimento = ($_POST["nascimento"] != "0000-00-00") ? date("d/m/Y", strtotime($_POST["nascimento"])) : "00/00/0000";
-			$campo_nascimento = texto("Nascido em*", $data_nascimento, 2, "");
+			$campo_nascimento = texto("Nascido em*", !empty($_POST["nascimento"])? date("d/m/Y", strtotime($_POST["nascimento"])): "", 2, "");
 			$campo_cpf = texto("CPF", ($_POST["cpf"]?? "-"), 2, "style=''");
 			$campo_rg = texto("RG", ($_POST["rg"]?? "-"), 2, "style=''");
 			
@@ -412,8 +411,7 @@
 			}
 
 			$campo_empresa = texto("Empresa*", (!empty($empresa["empr_tx_nome"])? $empresa["empr_tx_nome"]: "-"), 3, "style=''");
-			$data_expiracao  = ($_POST["expiracao"] != "0000-00-00") ? date("d/m/Y", strtotime($_POST["expiracao"])) : "00/00/0000";
-			$campo_expiracao = texto("Expira em", $data_expiracao, 2, "style=''");
+			$campo_expiracao = texto("Expira em", (!empty($_POST["expiracao"])? date("d/m/Y", strtotime($_POST["expiracao"])): "--/--/----"), 2, "style=''");
 			$campo_login = texto("Login", ($_POST["login"]?? ($_POST["login"]?? "-")), 2);
 			$campo_senha = "";
 			$campo_confirma = "";

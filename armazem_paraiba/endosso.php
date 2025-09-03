@@ -52,7 +52,6 @@
 			$rows = [];
 
 			//Pegando e formatando registros dos dias{
-				
 				$endossoCompleto = montarEndossoMes($date, $motoristas[$f]);
 				$totalResumo = $endossoCompleto["totalResumo"];
 
@@ -156,7 +155,7 @@
 			];
 
 			if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
-				$colspanTitulos = [2,4,4,3,5,2];
+				$colspanTitulos = [2,4,4,3,5,2]; //Utilizado em relatorio_espelho.php
 				$cabecalho = array_merge(
 					array_slice($cabecalho, 0, 7),
 					["diffEspera" => "ESPERA"],
@@ -497,11 +496,23 @@
 			}
 
 			$fields = [];
+			$_POST["busca_empresa"] = $_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"];
 			if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-				$fields[] = combo_net("Empresa*", "busca_empresa", (!empty($_POST["busca_empresa"])? $_POST["busca_empresa"] : $_SESSION["user_nb_empresa"]), 3, "empresa", "onchange=selecionaMotorista(this.value)", ($extraEmpresa?? ""));
+				$fields[] = combo_net("Empresa*", "busca_empresa", $_POST["busca_empresa"], 3, "empresa", "onchange=selecionaMotorista(this.value)", ($extraEmpresa?? ""));
 			}
 			$fields = array_merge($fields, [
-				combo_net("Funcionário", "busca_motorista", (!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 3, "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')".($_POST["extraMotorista"]?? "").($extraEmpresaMotorista?? ""), "enti_tx_matricula"),
+				combo_net(
+					"Funcionário", 
+					"busca_motorista", 
+					(!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 
+					3, 
+					"entidade", 
+					"", 
+					(!empty($_POST["busca_empresa"])?" AND enti_nb_empresa = {$_POST["busca_empresa"]}":"")
+					." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
+					.($_POST["extraMotorista"]?? "").($extraEmpresaMotorista?? ""), 
+					"enti_tx_matricula"
+				),
 				campo_mes("Data*",      "busca_data",      	(!empty($_POST["busca_data"])?      $_POST["busca_data"]     : ""), 2),
 				combo(	  "Endossado",	"busca_endossado", 	(!empty($_POST["busca_endossado"])? $_POST["busca_endossado"]: ""), 2, ["endossado" => "Sim", "naoEndossado" => "Não"])
 			]);

@@ -181,9 +181,7 @@
 			
 			if(!empty($usuario)){ //Se encontrou um usuário
 
-				$dataHoje = strtotime(date("Y-m-d")); // Transforma a data de hoje em timestamp
-				$dataVerificarObj = strtotime($usuario["user_tx_expiracao"]);
-				if (!empty($usuario["user_tx_expiracao"]) && $dataVerificarObj >= $dataHoje && $usuario["user_tx_expiracao"] != "0000-00-00"){
+				if (!empty($usuario["user_tx_expiracao"]) && strtotime($usuario["user_tx_expiracao"]) < strtotime(date("Y-m-d"))){
 					echo 
 						"<div class='alert alert-danger display-block'>
 							<span> Usuário expirado. </span>

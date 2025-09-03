@@ -29,25 +29,25 @@
 			));
 
 			if(!empty($parametroEmpresa)){
-				$keys = array_keys(array_intersect($parametroEmpresa, $motorista));
-
 				if($parametroEmpresa["para_tx_tipo"] == "horas_por_dia"){
 					$padronizado = (
-						[$motorista["para_tx_jornadaSemanal"], $motorista["para_tx_jornadaSabado"], $motorista["para_tx_percHESemanal"], $motorista["para_tx_percHEEx"]]
+						[$motorista["para_nb_id"], $motorista["para_tx_jornadaSemanal"], $motorista["para_tx_jornadaSabado"], $motorista["para_tx_percHESemanal"], $motorista["para_tx_percHEEx"]]
 						==
-						[$parametroEmpresa["para_tx_jornadaSemanal"], $parametroEmpresa["para_tx_jornadaSabado"], $parametroEmpresa["para_tx_percHESemanal"], $parametroEmpresa["para_tx_percHEEx"]]
+						[$parametroEmpresa["para_nb_id"], $parametroEmpresa["para_tx_jornadaSemanal"], $parametroEmpresa["para_tx_jornadaSabado"], $parametroEmpresa["para_tx_percHESemanal"], $parametroEmpresa["para_tx_percHEEx"]]
 					);
 				}else{
 					$padronizado = (
-						[$motorista["para_tx_percHESemanal"], $motorista["para_tx_percHEEx"]]
+						[$motorista["para_nb_id"], $motorista["para_tx_percHESemanal"], $motorista["para_tx_percHEEx"]]
 						==
-						[$parametroEmpresa["para_tx_percHESemanal"], $parametroEmpresa["para_tx_percHEEx"]]
+						[$parametroEmpresa["para_nb_id"], $parametroEmpresa["para_tx_percHESemanal"], $parametroEmpresa["para_tx_percHEEx"]]
 					);
 				}
 
 				$mensagemParametro = (!$padronizado? "Não ": "")."Padronizado.<br>";
-				$mensagemParametro .= "{$parametroEmpresa["para_tx_nome"]}<br> Semanal ({$parametroEmpresa["para_tx_jornadaSemanal"]}), Sábado ({$parametroEmpresa["para_tx_jornadaSabado"]})";;
-
+				$mensagemParametro .= "{$motorista["para_tx_nome"]}";
+				if(!empty($motorista["para_tx_jornadaSemanal"]) && !empty($motorista["para_tx_jornadaSabado"])){
+					$mensagemParametro .= "<br>Semanal ({$motorista["para_tx_jornadaSemanal"]}), Sábado ({$motorista["para_tx_jornadaSabado"]})";
+				}
 			}
 		}
 		return $mensagemParametro;
@@ -172,8 +172,9 @@
 					texto("Funcionário*", $_SESSION["user_tx_nome"], 3),
 				];
 			}else{
+				$_POST["busca_empresa"] = $_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"];
 				$searchFields = [
-					combo_net("Empresa*", "busca_empresa", ($_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"]), 3, "empresa", "onchange=selecionaMotorista(this.value) ", $condBuscaEmpresa),
+					combo_net("Empresa*", "busca_empresa", $_POST["busca_empresa"], 3, "empresa", "onchange=selecionaMotorista(this.value) ", $condBuscaEmpresa),
 					combo_net(
 						"Funcionário*",
 						"busca_motorista",
@@ -181,7 +182,7 @@
 						4, 
 						"entidade", 
 						"", 
-						(!empty($_POST["busca_empresa"])?" AND enti_nb_empresa = ".$_POST["busca_empresa"]:"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') ".$condBuscaEmpresa." ".$condBuscaMotorista, 
+						(!empty($_POST["busca_empresa"])?" AND enti_nb_empresa = {$_POST["busca_empresa"]}":"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') {$condBuscaEmpresa} {$condBuscaMotorista}", 
 						"enti_tx_matricula"
 					)
 				];
@@ -506,14 +507,6 @@
 					});
 				}
 
-				// $(window).scroll(function(){
-				// 	if ($(this).scrollTop() > 60){
-				// 		$('.table-head').addClass('table-fixed-top');
-				// 	}else{
-				// 		$('.table-head').removeClass('table-fixed-top');  
-				// 	}
-				// });
-				
 				function imprimir() {
 					const alvo = document.querySelector('div > div.portlet-title');
 					if (!alvo) {
