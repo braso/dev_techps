@@ -254,7 +254,6 @@
 				const queryBase = '".base64_encode($queryBase." WHERE 1")."';
 				{$jsFunctions}
 			</script>
-			<script src='{$_ENV["APP_PATH"]}/contex20/assets/global/plugins/jquery.min.js' type='text/javascript'></script>
 			<script src='{$_ENV["APP_PATH"]}/contex20/js/grid_dinamico.js'></script>"
 		;
 

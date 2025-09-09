@@ -24,6 +24,9 @@
 	<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery-inputmask/jquery.inputmask.bundle.min.js" type="text/javascript"></script>
 	<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery-inputmask/inputmask/jquery.inputmask.js" type="text/javascript"></script>
 	<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery-inputmask/maskMoney.js" type="text/javascript"></script>
+
+	<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
+
 	<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css" />
 	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
 	<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet" type="text/css" />
@@ -252,12 +255,13 @@
 			}
 		}
 	</script>
+
 </head>
 <!-- FIM HEAD -->
 
 <!-- <body style="zoom:100%;" class="page-container-bg-solid page-boxed"> -->
 
-<body onload="contex_foco()" onclick="updateTimer()" style="zoom:100%;" class="page-container-bg-solid page-boxed">
+<body onload="contex_foco()" onclick="updateTimer()" style="zoom:100%; margin-bottom:45px;" class="page-container-bg-solid page-boxed">
 	
 	<!-- INICIO HEADER -->
 	<div class="page-header">
