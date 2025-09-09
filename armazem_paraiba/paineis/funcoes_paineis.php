@@ -1142,37 +1142,48 @@ function relatorio_nao_conformidade_juridica() {
 	}
 
 	$totaisEmpr = [
-		"falta" 			        => 0,
-		"jornadaEfetiva" 			=> 0,
-		"refeicao" 					=> 0,
-		"espera" 					=> 0,
-		"descanso" 					=> 0,
-		"repouso" 					=> 0,
-		"jornada" 					=> 0,
-		"mdc"		 				=> 0,
-		"intersticioInferior" 		=> 0,
-		"intersticioSuperior" 		=> 0,
-		"diasConformidade"			=> 0,
-		"refeicaoSemRegistro" 		=> 0,
-		"refeicao1h" 				=> 0,
-		"refeicao2h" 				=> 0,
-		"jornadaExcedido10h" 		=> 0,
-		"jornadaExcedido12h" 		=> 0,
-		"mdcDescanso30m" 			=> 0,
-		"mdcDescanso15m" 			=> 0,
-		"mdcDescanso30m5h" 			=> 0,
-		"dataInicio"				=> $periodoInicio2->format("d/m/Y"),
+		"falta"                 => 0,
+		"jornadaEfetiva"        => 0,
+		"refeicao"              => 0,
+		"espera"                => 0,
+		"descanso"              => 0,
+		"repouso"               => 0,
+		"jornada"               => 0,
+		"mdc"                   => 0,
+		"intersticioInferior"   => 0,
+		"intersticioSuperior"   => 0,
+		"diasConformidade"      => 0,
+		"refeicaoSemRegistro"   => 0,
+		"refeicao1h"            => 0,
+		"refeicao2h"            => 0,
+		"jornadaExcedido10h"    => 0,
+		"jornadaExcedido12h"    => 0,
+		"mdcDescanso30m"        => 0,
+		"mdcDescanso15m"        => 0,
+		"mdcDescanso30m5h"      => 0,
+		"dataInicio"            => $periodoInicio2->format("d/m/Y"),
 	];
 
 	$totaisEmpr["diasConformidade"] = $totalEmpresa;
 
+	// 🔹 Normaliza: se não for array de arrays, transforma em array de 1 motorista
+	if (isset($motoristaTotais["matricula"])) {
+		$motoristaTotais = [$motoristaTotais];
+	}
+
 	foreach ($motoristaTotais as $motorista) {
 		foreach ($totaisEmpr as $key => $value) {
-			if (isset($motorista[$key]) && is_numeric($motorista[$key] && $key != "diasConformidade")) {
+			if (
+				isset($motorista[$key])
+				&& $key !== "diasConformidade"
+				&& is_numeric($motorista[$key])
+			) {
 				$totaisEmpr[$key] += $motorista[$key];
 			}
 		}
 	}
+
+	// dd($totaisEmpr);
 
 	if ($_POST["busca_endossado"] == "endossado") {
 		file_put_contents($path . "/endossado/empresa_" . $_POST["empresa"] . ".json", json_encode($totaisEmpr, JSON_UNESCAPED_UNICODE));
