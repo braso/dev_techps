@@ -230,7 +230,7 @@
 				;
 
 				// Converte as datas para objetos DateTime
-				[$startDate, $endDate] = [new DateTime($_POST["busca_periodo"][0]), new DateTime($_POST["busca_periodo"][1])];
+				[$startDate, $endDate] = [new DateTime($_POST["busca_periodo"][0]), new DateTime($_POST["busca_periodo"][1]." 23:59:59")];
 				$rows = [];
 				
 				$motorista = mysqli_fetch_assoc(query(
