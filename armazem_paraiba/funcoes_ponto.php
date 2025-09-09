@@ -749,9 +749,9 @@
 				$diaDoCiclo = round($motorista["esca_nb_periodicidade"]*(($diferenca)/($motorista["esca_nb_periodicidade"])-floor($diferenca/$motorista["esca_nb_periodicidade"]))+1);
 				
 				$jornadaPrevistaOriginal = operarHorarios([
-					$motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaFim"]?? "00:00",
-					$motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaInicio"]?? "00:00",
-					$motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_intervaloInterno"]?? "00:00"
+					!empty($motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaFim"])? $motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaFim"]: "00:00",
+					!empty($motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaInicio"])? $motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaInicio"]: "00:00",
+					!empty($motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_intervaloInterno"])? $motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_intervaloInterno"]: "00:00"
 				], "-");
 			}
 
