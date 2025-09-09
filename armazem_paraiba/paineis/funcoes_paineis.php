@@ -799,13 +799,13 @@ function relatorio_nao_conformidade_juridica() {
 			LEFT JOIN cidade ON empresa.empr_nb_cidade = cidade.cida_nb_id
 			LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
 			WHERE enti_nb_empresa = {$_POST["empresa"]}
-			AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-t")}'
-			AND (
-					enti_tx_status = 'ativo'
+				AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-t")}'
+				AND (
+					enti_tx_status = 'ativo
 					OR enti_tx_desligamento > '{$periodoInicio->format("Y-m-t")}'
 				)
 			ORDER BY enti_tx_nome ASC;"
-		), MYSQLI_ASSOC);
+	), MYSQLI_ASSOC);
 
 	$row = [];
 
@@ -1144,37 +1144,48 @@ function relatorio_nao_conformidade_juridica() {
 	}
 
 	$totaisEmpr = [
-		"falta" 			        => 0,
-		"jornadaEfetiva" 			=> 0,
-		"refeicao" 					=> 0,
-		"espera" 					=> 0,
-		"descanso" 					=> 0,
-		"repouso" 					=> 0,
-		"jornada" 					=> 0,
-		"mdc"		 				=> 0,
-		"intersticioInferior" 		=> 0,
-		"intersticioSuperior" 		=> 0,
-		"diasConformidade"			=> 0,
-		"refeicaoSemRegistro" 		=> 0,
-		"refeicao1h" 				=> 0,
-		"refeicao2h" 				=> 0,
-		"jornadaExcedido10h" 		=> 0,
-		"jornadaExcedido12h" 		=> 0,
-		"mdcDescanso30m" 			=> 0,
-		"mdcDescanso15m" 			=> 0,
-		"mdcDescanso30m5h" 			=> 0,
-		"dataInicio"				=> $periodoInicio2->format("d/m/Y"),
+		"falta"                 => 0,
+		"jornadaEfetiva"        => 0,
+		"refeicao"              => 0,
+		"espera"                => 0,
+		"descanso"              => 0,
+		"repouso"               => 0,
+		"jornada"               => 0,
+		"mdc"                   => 0,
+		"intersticioInferior"   => 0,
+		"intersticioSuperior"   => 0,
+		"diasConformidade"      => 0,
+		"refeicaoSemRegistro"   => 0,
+		"refeicao1h"            => 0,
+		"refeicao2h"            => 0,
+		"jornadaExcedido10h"    => 0,
+		"jornadaExcedido12h"    => 0,
+		"mdcDescanso30m"        => 0,
+		"mdcDescanso15m"        => 0,
+		"mdcDescanso30m5h"      => 0,
+		"dataInicio"            => $periodoInicio2->format("d/m/Y"),
 	];
 
 	$totaisEmpr["diasConformidade"] = $totalEmpresa;
 
+	// 🔹 Normaliza: se não for array de arrays, transforma em array de 1 motorista
+	if (isset($motoristaTotais["matricula"])) {
+		$motoristaTotais = [$motoristaTotais];
+	}
+
 	foreach ($motoristaTotais as $motorista) {
 		foreach ($totaisEmpr as $key => $value) {
-			if (isset($motorista[$key]) && is_numeric($motorista[$key] && $key != "diasConformidade")) {
+			if (
+				isset($motorista[$key])
+				&& $key !== "diasConformidade"
+				&& is_numeric($motorista[$key])
+			) {
 				$totaisEmpr[$key] += $motorista[$key];
 			}
 		}
 	}
+
+	// dd($totaisEmpr);
 
 	if ($_POST["busca_endossado"] == "endossado") {
 		file_put_contents($path . "/endossado/empresa_" . $_POST["empresa"] . ".json", json_encode($totaisEmpr, JSON_UNESCAPED_UNICODE));
