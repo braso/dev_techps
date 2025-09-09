@@ -72,7 +72,7 @@
 						index();
 						exit;
 					}
-					salvarArquivoPonto($nomeArquivo, $caminhoCompleto);
+					salvarArquivoPonto($_FILES["arquivo"], $caminhoCompleto);
 				//*/}
 			}
 		}

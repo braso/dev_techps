@@ -79,7 +79,8 @@
 				$arquivo["name"] = $baseNomeArquivo;
 				$local_file = $path."/".$arquivo["name"].$ext;
 			}
-     		salvarArquivoPonto($arquivo, $local_file);
+
+			salvarArquivoPonto($arquivo, $local_file);
 
 		}else{
 			set_status("ERRO: Ocorreu um problema ao gravar o arquivo.");
@@ -114,10 +115,10 @@
 		rodape();
 	}
 
-	function salvarArquivoPonto(string $nomeArquivo, string $caminhoCompleto){
+	function salvarArquivoPonto(array $arquivo, string $caminhoCompleto){
 		global $path;
 
-		//$local_file = $path."/".$nomeArquivo;
+		//$local_file = $path."/".$arquivo["name"];
 		$newPontos = [];
 		$baseErrMsg = [
 			"ERROS:",
@@ -128,10 +129,13 @@
 		$errorMsg = $baseErrMsg;
 
 		//Conferir se as informações necessárias estão preenchidas{
+			if(empty($arquivo["tmp_name"])){
+				$errorMsg["camposObrigatorios"][] = "Caminho temporário do arquivo.";
+			}
 			if(empty($caminhoCompleto)){
 				$errorMsg["camposObrigatorios"][] = "Caminho do arquivo.";
 			}
-			if(empty($nomeArquivo)){
+			if(empty($arquivo["name"])){
 				$errorMsg["camposObrigatorios"][] = "Nome do arquivo.";
 			}
 		//}
@@ -141,17 +145,17 @@
 			exit;
 		}
 
-		$ext = substr($nomeArquivo, strrpos($nomeArquivo, "."));
-		$baseNomeArquivo = str_replace($ext, "", $nomeArquivo);
+		$ext = substr($arquivo["name"], strrpos($arquivo["name"], "."));
+		$baseNomeArquivo = str_replace($ext, "", $arquivo["name"]);
 
 		$newArquivoPonto = [
-			"arqu_tx_nome" 		=> $nomeArquivo,
+			"arqu_tx_nome" 		=> $arquivo["name"],
 			"arqu_tx_data" 		=> date("Y-m-d H:i:s"),
 			"arqu_nb_user" 		=> $_SESSION["user_nb_id"],
 			"arqu_tx_status" 	=> "ativo"
 		];
-		
-		foreach(file($caminhoCompleto) as $line){
+
+		foreach(file($arquivo["tmp_name"]) as $line){
 		
 			//matricula dmYhi 999 macroponto.codigoExterno
 			//Obs.: A matrícula deve ter 10 dígitos, então se tiver menos, adicione zeros à esquerda.
@@ -242,7 +246,7 @@
 		}
 
 		//*Salvar registros e arquivo{
-			move_uploaded_file($caminhoCompleto, $caminhoCompleto);
+			move_uploaded_file($arquivo["tmp_name"], $caminhoCompleto);
 			
 			$arquivoPontoId = inserir("arquivoponto", array_keys($newArquivoPonto), array_values($newArquivoPonto));
 			foreach($newPontos as $newPonto){
