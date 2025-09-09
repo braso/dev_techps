@@ -1070,7 +1070,7 @@
 
 		//HORAS EXTRAS{
 			if($aRetorno["diffSaldo"][0] != "-"){ 	//Se o saldo for positivo
-				if(!empty($stringFeriado) || (new DateTime("{$data} 00:00:00"))->format("D") == "Sun"){
+				if($aRetorno["jornadaPrevista"] == "00:00"){
 					$aRetorno["he100"] = $aRetorno["diffSaldo"];
 					$aRetorno["he50"] = "00:00";
 				}else{
