@@ -17,26 +17,26 @@
             $celular = mysqli_fetch_assoc(query(
                 "SELECT * FROM celular WHERE celu_nb_id = {$_POST["id"]};"
             ));
-            $_POST["nome"] 					= !empty($_POST["nome"])? 				$_POST["nome"]:  				$celular["celu_tx_nome"];
+            $_POST["nome_like"] 			= !empty($_POST["nome_like"])? 			$_POST["nome_like"]:  			$celular["celu_tx_nome"];
             $_POST["imei"] 					= !empty($_POST["imei"])? 				$_POST["imei"]:  				$celular["celu_tx_imei"];
             $_POST["numero"] 				= !empty($_POST["numero"])? 			$_POST["numero"]:  				$celular["celu_tx_numero"];
             $_POST["operadora"] 			= !empty($_POST["operadora"])? 			$_POST["operadora"]:  			$celular["celu_tx_operadora"];
             $_POST["cimie"] 				= !empty($_POST["cimie"])? 				$_POST["cimie"]:  				$celular["celu_tx_cimie"];
             $_POST["sistemaOperacional"] 	= !empty($_POST["sistemaOperacional"])? $_POST["sistemaOperacional"]:  	$celular["celu_tx_sistemaOperacional"];
-            $_POST["marcaModelo"] 			= !empty($_POST["marcaModelo"])? 		$_POST["marcaModelo"]:  		$celular["celu_tx_marcaModelo"];
+            $_POST["marcaModelo_like"] 		= !empty($_POST["marcaModelo_like"])? 	$_POST["marcaModelo_like"]:  	$celular["celu_tx_marcaModelo"];
             $_POST["entidade"] 				= !empty($_POST["entidade"])? 			$_POST["entidade"]:  			$celular["celu_nb_entidade"];
         }
 
         echo abre_form();
         echo linha_form([
             campo_hidden("id", (!empty($_POST["id"])? $_POST["id"]: "")),
-            campo("Nome", "nome", (!empty($_POST["nome"])? $_POST["nome"]: ""), 4, "", "required"),
+            campo("nome_like", "nome_like", (!empty($_POST["nome_like"])? $_POST["nome_like"]: ""), 4, "", "required"),
             campo("IMEI", "imei", (!empty($_POST["imei"])? $_POST["imei"]: ""), 2, "", "required"),
             campo("Número", "numero", (!empty($_POST["numero"])? $_POST["numero"]: ""), 2, "", "required"),
             campo("Operadora", "operadora", (!empty($_POST["operadora"])? $_POST["operadora"]: ""), 2),
             campo("CIMIE", "cimie", (!empty($_POST["cimie"])? $_POST["cimie"]: ""), 2),
             campo("Sistema Operacional", "sistemaOperacional", (!empty($_POST["sistemaOperacional"])? $_POST["sistemaOperacional"]: ""), 3),
-            campo("Marca e Modelo", "marcaModelo", (!empty($_POST["marcaModelo"])? $_POST["marcaModelo"]: ""), 2),
+            campo("Marca e Modelo", "marcaModelo_like", (!empty($_POST["marcaModelo_like"])? $_POST["marcaModelo_like"]: ""), 2),
             combo_net("Responsável", "entidade", (!empty($_POST["entidade"])? $_POST["entidade"]: ""), 3, "entidade")
         ]);
         $botoes = 
@@ -66,13 +66,13 @@
         ];
 
         $camposBusca = [
-            "nome"               => "celu_tx_nome",
+            "nome_like"               => "celu_tx_nome",
             "imei"               => "celu_tx_imei",
             "numero"             => "celu_tx_numero",
             "operadora"          => "celu_tx_operadora",
             "cimie"              => "celu_tx_cimie",
             "sistemaOperacional" => "celu_tx_sistemaOperacional",
-            "marcaModelo"        => "celu_tx_marcaModelo",
+            "marcaModelo_like"        => "celu_tx_marcaModelo",
         ];
 
         $queryBase = "SELECT ".implode(", ", array_values($gridFields))." FROM celular
@@ -96,12 +96,12 @@
     }
 
     function cadastrarCelular(){
-        $fields = ["nome", "imei", "numero", "operadora", "cimie", "sistemaOperacional", "marcaModelo"];
+        $fields = ["nome_like", "imei", "numero", "operadora", "cimie", "sistemaOperacional", "marcaModelo_like"];
         foreach($fields as $field){
             $_POST[$field] = trim($_POST[$field]);
         }
 
-        conferirCamposObrig(["nome" => "Nome", "imei" => "IMEI", "numero" => "Número"], $_POST);
+        conferirCamposObrig(["nome_like" => "Nome", "imei" => "IMEI", "numero" => "Número"], $_POST);
         
         if(!empty($errorMsg)){
             set_status("ERRO: ".$errorMsg);
@@ -123,13 +123,13 @@
         }
 
         $novoCelular = [
-            "celu_tx_nome" => $_POST["nome"],
+            "celu_tx_nome" => $_POST["nome_like"],
             "celu_tx_imei" => $_POST["imei"],
             "celu_tx_numero" => $_POST["numero"],
             "celu_tx_operadora" => $_POST["operadora"],
             "celu_tx_cimie" => $_POST["cimie"],
             "celu_tx_sistemaOperacional" => $_POST["sistemaOperacional"],
-            "celu_tx_marcaModelo" => $_POST["marcaModelo"],
+            "celu_tx_marcaModelo" => $_POST["marcaModelo_like"],
             "celu_nb_entidade" => $_POST["entidade"],
             "celu_tx_dataAtualiza" => date("Y-m-d H:i:s")
         ];
