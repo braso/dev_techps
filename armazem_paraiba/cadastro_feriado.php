@@ -171,7 +171,8 @@
 			$gridFields["actions"] = $actions["tags"];
 
 			$jsFunctions =
-				"const funcoesInternas = function(){
+				"orderCol = 'feri_tx_data DESC';
+				const funcoesInternas = function(){
 					".implode(" ", $actions["functions"])."
 				}"
 			;
