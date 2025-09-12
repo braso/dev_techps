@@ -1346,11 +1346,15 @@
 				$dataHoraOriginal = $arquivo['docu_tx_dataCadastro'];
 				$dataHora = new DateTime($dataHoraOriginal);
 				$dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
+				$dataHoraOriginalVencimento = $arquivo['docu_tx_dataVencimento'];
+				$dataHoraVencimento = new DateTime($dataHoraOriginalVencimento);
+				$dataHoraFormatadaVencimento = $dataHoraVencimento->format('d/m/Y');
 				$arquivo_list .= "
 				<tr role='row' class='odd'>
 				<td>$arquivo[docu_tx_nome]</td>
 				<td>$arquivo[docu_tx_descricao]</td>
 				<td>$dataHoraFormatada</td>
+				<td>$dataHoraFormatadaVencimento</td>
 				<td>
 					<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idFuncionario,'$arquivo[docu_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
 				</td>
@@ -1396,6 +1400,9 @@
 								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
 									aria-label="DATA CADASTRO: activate to sort column ascending" style="width: 40px;">
 									DATA CADASTRO</th>
+								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
+									aria-label="DATA VENCIMENTO: activate to sort column ascending" style="width: 40px;">
+									DATA VENCIMENTO</th>
 								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
 									aria-label="DOWNLOAD: activate to sort column ascending" style="width: 40px;"><i
 										class="glyphicon glyphicon-cloud-download"></i></th>
