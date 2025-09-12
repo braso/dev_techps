@@ -1072,8 +1072,6 @@
 
 		echo fecha_form($botoesCadastro);
 
-		dd($a_mod, false);
-
 		if (!empty($a_mod["enti_nb_id"])) {
 			$arquivos = mysqli_fetch_all(query(
 				"SELECT * FROM documento_funcionario"
