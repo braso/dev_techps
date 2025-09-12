@@ -1072,12 +1072,14 @@
 
 		echo fecha_form($botoesCadastro);
 
-		if (!empty($a_mod["docu_nb_entidade"])) {
+		dd($a_mod, false);
+
+		if (!empty($a_mod["enti_nb_id"])) {
 			$arquivos = mysqli_fetch_all(query(
 				"SELECT * FROM documento_funcionario"
-					." WHERE docu_nb_entidade = ".$a_mod["docu_nb_entidade"]
+					." WHERE docu_nb_entidade = ".$a_mod["enti_nb_id"]
 			),MYSQLI_ASSOC);
-			echo "</div><div class='col-md-12'><div class='col-md-12 col-sm-12'>".arquivosFuncionario("Documentos", $a_mod["docu_nb_entidade"], $arquivos);
+			echo "</div><div class='col-md-12'><div class='col-md-12 col-sm-12'>".arquivosFuncionario("Documentos", $a_mod["enti_nb_id"], $arquivos);
 		}
 		rodape();
 		
