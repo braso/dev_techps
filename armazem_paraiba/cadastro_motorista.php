@@ -663,7 +663,7 @@
 		// }
 
 		$novoArquivo = [
-			"enti_nb_id" => $_POST["idFuncionario"],
+			"docu_nb_entidade" => $_POST["idFuncionario"],
 			"docu_tx_nome" => $_POST["file-name"],
 			"docu_tx_descricao" => $_POST["description-text"],
 			"docu_tx_dataCadastro" => date("Y-m-d H:i:s"),
@@ -676,7 +676,7 @@
 		$formatos = ["image/jpeg", "image/png", "application/msword", "application/pdf"];
 
 		if (in_array($arquivo["type"], $formatos) && $arquivo["name"] != "") {
-			$pasta_funcionario = "arquivos/Funcionarios/".$novoArquivo["enti_nb_id"]."/";
+			$pasta_funcionario = "arquivos/Funcionarios/".$novoArquivo["docu_nb_entidade"]."/";
 	
 			if (!is_dir($pasta_funcionario)) {
 				mkdir($pasta_funcionario, 0777, true);
@@ -694,7 +694,7 @@
 		}
 
 		set_status("Registro inserido com sucesso.");
-		$_POST["id"] = $novoArquivo["enti_nb_id"];
+		$_POST["id"] = $novoArquivo["docu_nb_entidade"];
 		visualizarCadastro();
 		exit;
 	}
