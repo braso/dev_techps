@@ -1,14 +1,14 @@
 deployment:
   tasks:
-    - export GENERAL=/home/techpsjornada/repositories/dev_techps/*
-    - export DOMAIN=/home/techpsjornada/repositories/dev_techps/armazem_paraiba/*
-    - export GENERALDEPLOY=/home/techpsjornada/public_html/dev
+    - export GENERAL=/home/devtechpsgj/repositories/dev_techps/*
+    - export DOMAIN=/home/devtechpsgj/repositories/dev_techps/armazem_paraiba/*
+    - export GENERALDEPLOY=/home/devtechpsgj/public_html/dev
 
-    - export IFRN=/home/techpsjornada/public_html/dev/ifrn
-    - export LEMON=/home/techpsjornada/public_html/dev/lemon
-    - export NH_TRANSPORTES=/home/techpsjornada/public_html/dev/nh_transportes
-    - export OPAFRUTAS=/home/techpsjornada/public_html/dev/opafrutas
-    - export TRANSCOPEL=/home/techpsjornada/public_html/dev/transcopel
+    - export IFRN=/home/devtechpsgj/public_html/dev/ifrn
+    - export LEMON=/home/devtechpsgj/public_html/dev/lemon
+    - export NH_TRANSPORTES=/home/devtechpsgj/public_html/dev/nh_transportes
+    - export OPAFRUTAS=/home/devtechpsgj/public_html/dev/opafrutas
+    - export TRANSCOPEL=/home/devtechpsgj/public_html/dev/transcopel
     
     - /bin/cp -R $GENERAL $GENERALDEPLOY
 
