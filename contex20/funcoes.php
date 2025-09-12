@@ -1365,11 +1365,11 @@
 		}
 
 		$tipo_documento =  mysqli_fetch_all(query(
-			"SELECT tipo_nb_id,tipo_tx_nome FROM tipo_documentos"
+			"SELECT tipo_nb_id, tipo_tx_nome FROM tipos_documentos"
 		), MYSQLI_ASSOC);
 
 		$tipo_documento = mysqli_fetch_all(query(
-			"SELECT tipo_nb_id, tipo_tx_nome FROM tipo_documentos ORDER BY grupo_nb_id, tipo_tx_nome"
+			"SELECT tipo_nb_id, tipo_tx_nome FROM tipos_documentos ORDER BY tipo_nb_grupo, tipo_tx_nome"
 		), MYSQLI_ASSOC);
 
 		// Montar o HTML do dropdown
