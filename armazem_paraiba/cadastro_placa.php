@@ -16,9 +16,7 @@
     function cadastrar(){
         $camposObrig = [
             "placa_like" => "Placa",
-            "veiculo_like" => "Veículo/Frota",
-            "empresa" => "Empresa",
-            "motorista" => "Motorista"
+            "empresa" => "Empresa"
         ];
         $errorMsg = conferirCamposObrig($camposObrig, $_POST);
         if(!empty($errorMsg)){
@@ -39,7 +37,7 @@
                     ;"
             ));
             if(!empty($empresaPlacaExistente)){
-                set_status("ERRO: Já existe uma placa cadastrada para a empresa \"{$empresaPlacaExistente["empr_tx_nome"]}\"!");
+                set_status("ERRO: Esta placa já está vinculada à empresa \"{$empresaPlacaExistente["empr_tx_nome"]}\"!");
                 index();
                 exit;
             }
@@ -55,12 +53,12 @@
 
         
         if(!empty($_POST["id"])){
-            atualizar("placa_like", array_keys($novaPlaca), array_values($novaPlaca), $_POST["id"]);
+            atualizar("placa", array_keys($novaPlaca), array_values($novaPlaca), $_POST["id"]);
             set_status("<script>Swal.fire('Sucesso!', 'Placa atualizada com sucesso.', 'success');</script>");
         }else{
             $novaPlaca["plac_tx_dataCadastro"] = date("Y-m-d H:i:s");
 
-            inserir("placa_like", array_keys($novaPlaca), array_values($novaPlaca));
+            inserir("placa", array_keys($novaPlaca), array_values($novaPlaca));
             set_status("<script>Swal.fire('Sucesso!', 'Placa inserida com sucesso.', 'success');</script>");
         }
 
@@ -99,9 +97,9 @@
         $campos = [
             campo_hidden("id", (!empty($_POST["id"])? $_POST["id"]: "")),
             campo("Placa*", "placa_like", !empty($placa["plac_tx_placa"])? $placa["plac_tx_placa"]: "", 1, "MASCARA_PLACA", "required"),
-            campo("Veículo/Frota*", "veiculo_like", !empty($placa["plac_tx_modelo"])? $placa["plac_tx_modelo"]: "", 1, "", "required"),
+            campo("Veículo/Frota", "veiculo_like", !empty($placa["plac_tx_modelo"])? $placa["plac_tx_modelo"]: "", 1, "", ""),
             combo_net("Empresa*", "empresa", !empty($placa["plac_nb_empresa"])? $placa["plac_nb_empresa"]: "", 3, 'empresa', "required"),
-            combo_net("Motorista*", "motorista", !empty($placa["plac_nb_entidade"])? $placa["plac_nb_entidade"]: "", 3, 'entidade', "required")
+            combo_net("Motorista", "motorista", !empty($placa["plac_nb_entidade"])? $placa["plac_nb_entidade"]: "", 3, 'entidade', "")
         ];
 
         $botoes = 
@@ -124,8 +122,8 @@
             "ID" => "plac_nb_id",
             "PLACA" => "plac_tx_placa",
             "VEÍCULO" => "plac_tx_modelo",
-            "MOTORISTA" => "plac_nb_entidade",
-            "EMPRESA" => "plac_nb_empresa",
+            "MOTORISTA" => "enti_tx_nome",
+            "EMPRESA" => "empr_tx_nome",
             "DATA DE CADASTRO" => "plac_tx_dataCadastro",
             "DATA DE ALTERAÇÃO" => "plac_tx_dataAtualiza"
         ];
@@ -139,7 +137,7 @@
 
         $queryBase = 
             "SELECT ".implode(", ", array_values($gridFields))." FROM placa
-                JOIN entidade ON plac_nb_entidade = enti_nb_id
+                LEFT JOIN entidade ON plac_nb_entidade = enti_nb_id
                 JOIN empresa ON plac_nb_empresa = empr_nb_id"
         ;
 
