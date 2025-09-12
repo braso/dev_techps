@@ -1338,6 +1338,147 @@
 
 	}
 
+	function arquivosFuncionario($nome,$idFuncionario,$arquivos){
+
+		$arquivo_list = '';
+		if(!empty($arquivos)) {
+			foreach($arquivos as $arquivo){
+				$dataHoraOriginal = $arquivo['docu_tx_dataCadastro'];
+				$dataHora = new DateTime($dataHoraOriginal);
+				$dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
+				$arquivo_list .= "
+				<tr role='row' class='odd'>
+				<td>$arquivo[docu_tx_nome]</td>
+				<td>$arquivo[docu_tx_descricao]</td>
+				<td>$dataHoraFormatada</td>
+				<td>
+					<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idFuncionario,'$arquivo[docu_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
+				</td>
+				<td>
+					<a style='color: red;' onclick=\"javascript:remover_arquivo($idFuncionario,$arquivo[docu_nb_id],'$arquivo[docu_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
+				</td>";
+			}
+		}
+
+		$tipo_documento =  mysqli_fetch_all(query(
+			"SELECT tipos_nb_id,tipos_tx_nome FROM tipos_documentos"
+		), MYSQLI_ASSOC);
+
+		$tipo_documento = mysqli_fetch_all(query(
+			"SELECT tipos_nb_id, tipos_tx_nome FROM tipos_documentos ORDER BY grupo_nb_id, tipos_tx_nome"
+		), MYSQLI_ASSOC);
+
+		// Montar o HTML do dropdown
+		$list_tipos = "";
+		foreach($tipo_documento as $tipo){
+			$list_tipos .= "<option value='{$tipo['tipos_nb_id']}'>{$tipo['tipos_tx_nome']}</option>";
+		}
+
+		// dd($tipo_documento , false);
+
+		$tabela='
+			<div class="portlet light ">
+				<div class="portlet-title">
+				<div class="caption">
+					<span class="caption-subject font-dark bold uppercase">'.$nome.'</span>
+				</div>
+				</div>
+				<div class="portlet-body">
+					<table id="contex-grid" class="table compact table-striped table-bordered table-hover dt-responsive"
+						width="100%" id="sample_2">
+						<thead>
+							<tr role="row">
+								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
+									aria-label="NOME: activate to sort column ascending" style="width: 40px;">NOME</th>
+								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
+									aria-label="DESCRIÇÃO: activate to sort column ascending" style="width: 40px;">
+									DESCRIÇÃO</th>
+								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
+									aria-label="DATA CADASTRO: activate to sort column ascending" style="width: 40px;">
+									DATA CADASTRO</th>
+								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
+									aria-label="DOWNLOAD: activate to sort column ascending" style="width: 40px;"><i
+										class="glyphicon glyphicon-cloud-download"></i></th>
+								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
+									aria-label="DOWNLOAD: activate to sort column ascending" style="width: 40px;"><i
+										class="glyphicon glyphicon-trash"></i></th>
+							</tr>
+						</thead>
+						<thbody>
+						'.$arquivo_list.'
+						<tr role="row" class="even">
+						<td>
+						<a href="#" data-toggle="modal" data-target="#myModal">
+						<i class="glyphicon glyphicon-plus-sign"></i>
+						</a>
+						</td>
+						</thbody>
+						</table>
+		';
+
+		$modal = "
+		<div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
+			<div class='modal-dialog' role='document'>
+				<div class='modal-content'>
+					<div class='modal-header'>
+					<button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>
+					<h4 class='modal-title' id='myModalLabel'>Upload Arquivo</h4>
+					</div>
+					<div class='modal-body'>
+					<form name='form_enviar_arquivo2' method='post' action='cadastro_motorista.php' enctype='multipart/form-data'>
+						<div class='form-group'>
+							<label for='file-name' class='control-label'>Nome do arquivo:</label>
+							<input type='text' class='form-control' name='file-name'>
+						</div>
+						<div class='form-group'>
+							<label for='description-text' class='control-label'>Descrição:</label>
+							<textarea class='form-control' name='description-text'></textarea>
+						</div>
+						<div class='form-group'>
+							<label for='file' class='control-label'>Arquivo:</label>
+							<input type='file' class='form-control' name='file'>
+						</div>
+
+						<div class='form-group'>
+							<label for='tipo_documento' class='control-label'>Tipo de Documento:</label>
+							<select class='form-control' name='tipo_documento' id='tipo_documento'>
+								$list_tipos
+							</select>
+						</div>
+
+						<div class='form-group'>
+							<label for='data_vencimento' class='control-label'>Data de Vencimento:</label>
+							<input type='date' class='form-control' name='data_vencimento' id='data_vencimento'>
+						</div>
+
+						<input type='hidden' name='acao' value='enviarDocumento'>
+						
+						<input type='hidden' name='idFuncionario' value='$idFuncionario'>
+
+						<input type='hidden' name='idUserCadastro' value='$_SESSION[user_nb_id]'>
+					</form>
+					</div>
+					<div class='modal-footer'>
+						<button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
+						<button type='button' class='btn btn-primary' data-dismiss='modal' 
+						onclick=\"javascript:enviar_arquivo();\">Salvar arquivo</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<script type='text/javascript'>
+		function enviar_arquivo() {
+			document.form_enviar_arquivo2.submit();
+		}
+		
+		</script>
+		";
+
+			return $tabela.$modal;
+
+	}
+
 	function arquivo($nome,$variavel,$modificador = '',$tamanho=4, $extra=''){
 		global $CONTEX;
 		$ver = '';

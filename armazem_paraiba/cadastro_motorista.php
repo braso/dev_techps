@@ -1,5 +1,5 @@
 <?php
-    /* Modo debug
+    //* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -632,6 +632,73 @@
 		exit;
 	}
 
+		function enviarDocumento() {
+		global $a_mod;
+
+		// if(empty($a_mod)){
+		// 	$a_mod = carregar("parametro", $_POST["id"]);
+		// 	$campos = [
+		// 		"nome",
+		// 		"jornadaSemanal",
+		// 		"jornadaSabado",
+		// 		"tolerancia",
+		// 		"percHESemanal",
+		// 		"percHEEx",
+		// 		"maxHESemanalDiario",
+		// 		"diariasCafe",
+		// 		"diariasAlmoco",
+		// 		"diariasJanta",
+		// 		"acordo",
+		// 		"inicioAcordo",
+		// 		"fimAcordo",
+		// 		"banco",
+		// 		"Obs"
+		// 	];
+		// 	foreach($campos as $campo){
+		// 		$a_mod["para_tx_".$campo] = $_POST[$campo];
+		// 	}
+		// 	$a_mod["para_nb_qDias"] = $_POST["para_nb_Qdias"];
+		// 	$a_mod["para_tx_horasLimite"] = $_POST["para_tx_horasLimite"];
+		// 	unset($campos);
+		// }
+
+		$novoArquivo = [
+			"enti_nb_id" => $_POST["idFuncionario"],
+			"docu_tx_nome" => $_POST["file-name"],
+			"docu_tx_descricao" => $_POST["description-text"],
+			"docu_tx_dataCadastro" => date("Y-m-d H:i:s"),
+			"docu_tx_dataVencimento" => $_POST["data_vencimento"],
+			"docu_tx_tipo" => $_POST["tipo_documento"],
+			'docu_tx_usuarioCadastro' => $_POST["idUserCadastro"]
+		];
+		
+		$arquivo =  $_FILES["file"];
+		$formatos = ["image/jpeg", "image/png", "application/msword", "application/pdf"];
+
+		if (in_array($arquivo["type"], $formatos) && $arquivo["name"] != "") {
+			$pasta_funcionario = "arquivos/Funcionarios/".$novoArquivo["enti_nb_id"]."/";
+	
+			if (!is_dir($pasta_funcionario)) {
+				mkdir($pasta_funcionario, 0777, true);
+			}
+	
+			$arquivo_temporario = $arquivo["tmp_name"];
+			$extensao = pathinfo($arquivo["name"], PATHINFO_EXTENSION);
+			$novoArquivo["docu_tx_nome"] .= ".".$extensao;
+			$novoArquivo["docu_tx_caminho"] = $pasta_funcionario.$novoArquivo["docu_tx_nome"];
+	
+			if (move_uploaded_file($arquivo_temporario, $novoArquivo["docu_tx_caminho"])) {
+				dd($novoArquivo, false);
+				inserir("documento_funcionario", array_keys($novoArquivo), array_values($novoArquivo));
+			}
+		}
+
+		set_status("Registro inserido com sucesso.");
+		$_POST["id"] = $novoArquivo["enti_nb_id"];
+		visualizarCadastro();
+		exit;
+	}
+
 	function visualizarCadastro(){
 		global $a_mod;
 
@@ -1004,6 +1071,14 @@
 		echo "<iframe id=frame_parametro style='display: none;'></iframe>";
 
 		echo fecha_form($botoesCadastro);
+
+		if (!empty($a_mod["enti_nb_id"])) {
+			$arquivos = mysqli_fetch_all(query(
+				"SELECT * FROM documento_funcionario"
+					." WHERE enti_nb_id = ".$a_mod["enti_nb_id"]
+			),MYSQLI_ASSOC);
+			echo "</div><div class='col-md-12'><div class='col-md-12 col-sm-12'>".arquivosFuncionario("Documentos", $a_mod["enti_nb_id"], $arquivos);
+		}
 		rodape();
 		
 		echo 
