@@ -1365,17 +1365,17 @@
 		}
 
 		$tipo_documento =  mysqli_fetch_all(query(
-			"SELECT tipos_nb_id,tipos_tx_nome FROM tipos_documentos"
+			"SELECT tipo_nb_id,tipo_tx_nome FROM tipo_documentos"
 		), MYSQLI_ASSOC);
 
 		$tipo_documento = mysqli_fetch_all(query(
-			"SELECT tipos_nb_id, tipos_tx_nome FROM tipos_documentos ORDER BY grupo_nb_id, tipos_tx_nome"
+			"SELECT tipo_nb_id, tipo_tx_nome FROM tipo_documentos ORDER BY grupo_nb_id, tipo_tx_nome"
 		), MYSQLI_ASSOC);
 
 		// Montar o HTML do dropdown
 		$list_tipos = "";
 		foreach($tipo_documento as $tipo){
-			$list_tipos .= "<option value='{$tipo['tipos_nb_id']}'>{$tipo['tipos_tx_nome']}</option>";
+			$list_tipos .= "<option value='{$tipo['tipo_nb_id']}'>{$tipo['tipo_tx_nome']}</option>";
 		}
 
 		// dd($tipo_documento , false);
