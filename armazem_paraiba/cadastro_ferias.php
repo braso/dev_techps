@@ -227,7 +227,8 @@
 				"Funcionário" 			=> "enti_tx_nome",
 				"Início" 				=> "CONCAT('data(\"', feri_tx_dataInicio, '\")') AS feri_tx_dataInicio",
 				"Fim" 					=> "CONCAT('data(\"', feri_tx_dataFim, '\")') AS feri_tx_dataFim",
-				"STATUS" 				=> "feri_tx_status"
+				"Qtd. Dias" 			=> "DATEDIFF(feri_tx_dataFim, feri_tx_dataInicio) AS qtdDias",
+				"STATUS" 				=> "feri_tx_status",
 			];
 	
 			$camposBusca = [
@@ -245,7 +246,7 @@
 			);
 	
 			$actions["functions"][1] .= 
-				"esconderInativar('glyphicon glyphicon-remove search-remove', 4);"
+				"esconderInativar('glyphicon glyphicon-remove search-remove', ".array_search("STATUS", array_keys($gridFields)).");"
 			;
 	
 			$gridFields["actions"] = $actions["tags"];

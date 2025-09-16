@@ -26,6 +26,26 @@
 				camposHora = ".json_encode($camposHora).";
 				diasEscala = ".json_encode($a_mod["diasEscala"]?? []).";
 
+				semana = ['(Dom)', '(Seg)', '(Ter)', '(Qua)', '(Qui)', '(Sex)', '(Sab)'];
+
+				function atualizarDiaSemana(){
+					qtdLinhas = document.getElementById('periodicidade').value;
+
+					dataSelecionada = document.getElementById('dataInicio').value.split('-');
+					dataSelecionada = new Date(dataSelecionada[0], parseInt(dataSelecionada[1])-1, dataSelecionada[2]);
+					if(qtdLinhas == 7){
+						semanaInvertida = (semana.slice(dataSelecionada.getDay())).concat(semana.slice(0, dataSelecionada.getDay()));
+						console.log(semanaInvertida);
+					}else{
+						semanaInvertida = ['', '', '', '', '', '', ''];
+					}
+					
+					for(f = 0; f < document.getElementsByClassName('diaSemana').length && f < 7; f++){
+						document.getElementsByClassName('diaSemana')[f].innerHTML = semanaInvertida[f];
+					}
+					
+				}
+
 				function atualizarLinhasEscala(qtdLinhas){
 					if(document.getElementsByClassName('linhaDiaEscala').length > qtdLinhas){
 						for(i = document.getElementsByClassName('linhaDiaEscala').length; i > qtdLinhas ; i--){
@@ -41,9 +61,11 @@
 						var linha = document.createElement('div');
 						linha.className = 'linhaDiaEscala';
 						linha.id = 'linhaDiaEscala_'+i;
-						linha.innerHTML = '<div class=\"labelDiaEscala\">Dia '+i+'</div>'+camposHora[0] + camposHora[1] + camposHora[2];
+						linha.innerHTML = '<div class=\"labelDiaEscala\">Dia '+i+'<div class=\"diaSemana\"></div></div>'+camposHora[0] + camposHora[1] + camposHora[2];
 						document.getElementById('divHorasEscala').innerHTML += linha.outerHTML;
 					}
+					
+					atualizarDiaSemana();
 
 					linhasDiaEscala = document.getElementsByClassName('linhaDiaEscala');
 					for(i = 1; i <= linhasDiaEscala.length; i++){
@@ -206,11 +228,11 @@
 			if(count($_POST["diasEscala"]) > count($diasEscala)){ //Inserir os dias que ainda não existem
 				for($f = count($diasEscala); $f < count($_POST["diasEscala"]); $f++){
 					$diaEscala = [
-						"esca_nb_escala" => $escalaExistente["esca_nb_id"],
-						"esca_nb_numeroDia" => $f+1,
-						"esca_tx_horaInicio" => $_POST["diasEscala"][$f][0],
-						"esca_tx_horaFim" => $_POST["diasEscala"][$f][1],
-						"esca_tx_intervaloInterno" => $_POST["diasEscala"][$f][2],
+						"esca_nb_escala" 			=> $escalaExistente["esca_nb_id"],
+						"esca_nb_numeroDia" 		=> $f+1,
+						"esca_tx_horaInicio" 		=> !empty($_POST["diasEscala"][$f][0])? $_POST["diasEscala"][$f][0]: NULL,
+						"esca_tx_horaFim" 			=> !empty($_POST["diasEscala"][$f][1])? $_POST["diasEscala"][$f][1]: NULL,
+						"esca_tx_intervaloInterno" 	=> !empty($_POST["diasEscala"][$f][2])? $_POST["diasEscala"][$f][2]: NULL,
 					];
 					
 					$idDia = inserir("escala_dia", array_keys($diaEscala), array_values($diaEscala));
@@ -236,9 +258,9 @@
 				$diaEscala = [
 					"esca_nb_escala" => $escalaExistente["esca_nb_id"],
 					"esca_nb_numeroDia" => strval($f+1),
-					"esca_tx_horaInicio" => $_POST["diasEscala"][$f][0],
-					"esca_tx_horaFim" => $_POST["diasEscala"][$f][1],
-					"esca_tx_intervaloInterno" => $_POST["diasEscala"][$f][2],
+					"esca_tx_horaInicio" => !empty($_POST["diasEscala"][$f][0])? $_POST["diasEscala"][$f][0]: NULL,
+					"esca_tx_horaFim" => !empty($_POST["diasEscala"][$f][1])? $_POST["diasEscala"][$f][1]: NULL,
+					"esca_tx_intervaloInterno" => !empty($_POST["diasEscala"][$f][2])? $_POST["diasEscala"][$f][2]: NULL,
 				];
 
 				atualizar("escala_dia", array_keys($diaEscala), array_values($diaEscala), $diasEscala[$f]["esca_nb_id"]);
@@ -251,9 +273,9 @@
 				$diaEscala = [
 					"esca_nb_escala" => $idEscala[0],
 					"esca_nb_numeroDia" => strval($f++),
-					"esca_tx_horaInicio" => $dia[0],
-					"esca_tx_horaFim" => $dia[1],
-					"esca_tx_intervaloInterno" => $dia[2],
+					"esca_tx_horaInicio" => !empty($dia[0])? $dia[0]: NULL,
+					"esca_tx_horaFim" => !empty($dia[1])? $dia[1]: NULL,
+					"esca_tx_intervaloInterno" => !empty($dia[2])? $dia[2]: NULL,
 				];
 				inserir("escala_dia", array_keys($diaEscala), array_values($diaEscala));
 			}
@@ -547,7 +569,7 @@
 					<label>Periodicidade (em dias)*</label>
 					<input name='periodicidade' id='periodicidade' value='".($a_mod["esca_nb_periodicidade"]?? "1")."' autocomplete='off' type='number' class='form-control input-sm campo-fit-content ".((!empty($_POST["errorFields"]) && in_array("periodicidade", $_POST["errorFields"]))? "error-field": "")."' max='31' min='1' onchange='atualizarLinhasEscala(this.value)'>
 				</div>",
-				campo_data("Dia 1*", "dataInicio", ($a_mod["esca_tx_dataInicio"]?? ""), 2),
+				campo_data("Dia 1*", "dataInicio", ($a_mod["esca_tx_dataInicio"]?? ""), 2, "onchange='atualizarDiaSemana()'"),
 				"<div id='divHorasEscala' class='col-sm-2 margin-bottom-5 campo-fit-content'></div>"
 			],
 			[
@@ -692,7 +714,12 @@
 				}
 
 				.linhaDiaEscala>.labelDiaEscala {
+					display: flex;
+				}
 
+				.diaSemana{
+					width: min-content;
+					margin-left: 15px;
 				}
 
 				#horaInicio::-webkit-calendar-picker-indicator, #horaFim::-webkit-calendar-picker-indicator, #intervaloInterno::-webkit-calendar-picker-indicator{

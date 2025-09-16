@@ -388,7 +388,6 @@ desenharLinhaDeCamposFlex($pdf, [['label' => 'Nome do Cônjuge:', 'value' => $mo
 desenharCampoObservacao($pdf, "Observações", $motorista["enti_tx_obs"] ?? '');
 
 // // --- SEÇÃO: DADOS CONTRATUAIS---
-// dd($motorista);
 desenharTituloSecao($pdf, 'Dados Contratuais');
 desenharLinhaDeCamposFlex($pdf, [
     ['label' => 'Empresa:', 'value' => obterDado($empresa, "empr_tx_nome"), 'larguraLabel' => 18, 'larguraValor' => 117, 'multiLine' => true],

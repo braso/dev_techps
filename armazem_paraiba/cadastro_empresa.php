@@ -615,7 +615,7 @@
 		
 
 		$c = [
-			campo("Código",			"busca_codigo",			($_POST["busca_codigo"]?? ""),			2, "MASCARA_NUMERO",	"maxlength='6'"),
+			campo("Código",			"busca_codigo",			($_POST["busca_codigo"]?? ""),			2, "MASCARA_NUMERO",	"maxlength='6' min='0'"),
 			campo("Nome",			"busca_nome_like",		($_POST["busca_nome_like"]?? ""),		3, "",					"maxlength='65'"),
 			campo("Nome Fantasia",	"busca_fantasia_like",	($_POST["busca_fantasia_like"]?? ""),	2, "",					"maxlength='65'"),
 			campo("CPF/CNPJ",		"busca_cnpj",			($_POST["busca_cnpj"]?? ""),			2, "MASCARA_CPF/CNPJ"),

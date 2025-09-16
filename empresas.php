@@ -60,7 +60,7 @@
                 <option value='' hidden>Empresa</option>"
     ;
     foreach($empresas as $key => $value){
-        if(!empty(dir(__DIR__."/".$value))){
+        if(file_exists(__DIR__."/".$value)){
             $empresasInput .= "<option ".((!empty($_POST["empresa"]) && $_POST["empresa"] == $key)? "selected": "")." value='{$key}'>{$empresasNomes[$value]}</option>";
         }
     }

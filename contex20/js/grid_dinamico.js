@@ -72,8 +72,9 @@ const consultarRegistros = function(){
     inputs = $('form[name=\"contex_form\"] :input');
 
 
+    
     for(f = 0; f < keys.length; f++){
-        if(data[keys[f]] != ''){
+        if(data[keys[f]] != '' && data[keys[f]] != undefined){
             if(inputs[f].name.indexOf('_like') > 0){
                 conditions += ' AND '+keys[f]+' LIKE \"%'+data[keys[f]]+'%\"';
             }else if((inputs[f].name.indexOf('_g') > 0)){
@@ -98,6 +99,7 @@ const consultarRegistros = function(){
     if(pageNumber < 1){
         pageNumber = 1;
     }
+
 
     $.ajax({
         url: urlTableInfo,

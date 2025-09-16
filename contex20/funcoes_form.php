@@ -211,7 +211,6 @@
 				$errorMsg[] = $value;
 			}
 		}
-
 		return ((empty($errorMsg))? "": $baseErrMsg." ".implode(", ", $errorMsg).".");
 	}
 
