@@ -864,7 +864,7 @@
 
 				//Passar esperas > 02:00 para repouso{
 					foreach($registros["esperaCompleto"]["pares"] as $key => $parEspera){
-						if(operarHorarios([$parEspera["intervalo"], "02:01"], "-")[0] != "-"){//Se $intervalo - 02:01 der um valor positivo, significa que $intervalo > 02:00
+						if(!empty($parEspera["intervalo"]) && operarHorarios([$parEspera["intervalo"], "02:01"], "-")[0] != "-"){//Se $intervalo - 02:01 der um valor positivo, significa que $intervalo > 02:00
 							$repousosPorEspera["pares"][] = $parEspera;
 							unset($registros["esperaCompleto"]["pares"][$key]);
 							$modifyParam = explode(":", $parEspera["intervalo"]);
