@@ -330,7 +330,7 @@
 
 		$iconeExcluir = "";
 		$variableFields = [
-			campo_data("Data*", "data", ($_POST["data"]?? ""), 2, "required onfocusout='atualizar_form({$_POST["idMotorista"]}, this.value, \"{$_POST["status"]}\")'")
+			campo_data("Data*", "data", ($_POST["data"]?? ""), 2, "onfocusout='atualizar_form({$_POST["idMotorista"]}, this.value, \"{$_POST["status"]}\")'")
 		];
 		if(!empty($endosso)){
 			$variableFields = array_merge($variableFields, [texto("Endosso", "Endossado por ".$endosso["endo_nb_userCadastro"]." em ".data($endosso["endo_tx_dataCadastro"], 1), 8)]);
@@ -346,9 +346,9 @@
 			
 			
 			$variableFields = array_merge($variableFields, [
-				campo_hora("Hora*", "hora", ($_POST["hora"]?? ""), 2, "required"),
-				combo_bd("Tipo de Registro*", "idMacro", ($_POST["idMacro"]?? ""), 4, "macroponto", "required", "ORDER BY macr_nb_id"),
-				combo_bd("Motivo*", "motivo", ($_POST["motivo"]?? ""), 4, "motivo", "required", " AND moti_tx_tipo = 'Ajuste' ORDER BY moti_tx_nome")
+				campo_hora("Hora*", "hora", ($_POST["hora"]?? ""), 2, ""),
+				combo_bd("Tipo de Registro*", "idMacro", ($_POST["idMacro"]?? ""), 4, "macroponto", "", "ORDER BY macr_nb_id"),
+				combo_bd("Motivo*", "motivo", ($_POST["motivo"]?? ""), 4, "motivo", "", " AND moti_tx_tipo = 'Ajuste' ORDER BY moti_tx_nome")
 			]);
 			$campoJust[] = textarea("Justificativa", "justificativa", ($_POST["justificativa"]?? ""), 12, 'maxlength=680');
 		}
