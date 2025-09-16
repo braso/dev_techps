@@ -1,7 +1,7 @@
 deployment:
   tasks:
-    - export GENERAL=/home/tech1694/repositories/gestaodeponto/*
-    - export DOMAIN=/home/tech1694/repositories/gestaodeponto/armazem_paraiba/*
+    - export GENERAL=/home/tech1694/repositories/dev_techps/*
+    - export DOMAIN=/home/tech1694/repositories/dev_techps/armazem_paraiba/*
 
     - export GENERALDEPLOY=/home/tech1694/public_html/gestaodeponto
     - export BLUEROAD=/home/tech1694/public_html/gestaodeponto/blueroad
