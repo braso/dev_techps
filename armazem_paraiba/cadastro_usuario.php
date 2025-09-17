@@ -352,7 +352,7 @@
 			$campo_empresa = combo_bd("!Empresa*", "empresa", $_POST["empresa"]?? $_SESSION["user_nb_empresa"], 2, "empresa", "onchange='carrega_empresa(this.value)'");
 			$campo_expiracao = campo_data("Expira em", "expiracao", $_POST["expiracao"], 2);
 			$campo_senha = campo_senha("Senha*", "senha", "", 2, "maxlength='50'");
-			$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='12'");
+			$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='50'");
 			$campo_matricula = "";
 
 		}elseif(empty($_POST["id"])){//Se está criando um usuário novo.
@@ -381,8 +381,8 @@
 			$campo_telefone = campo("Telefone", "telefone", ($_POST["telefone"]?? ""), 2,"MASCARA_FONE");
 			$campo_empresa = combo_bd("!Empresa*", "empresa", ($_POST["empresa"]?? $_SESSION["user_nb_empresa"]), 2, "empresa", "onchange='carrega_empresa(this.value)'");
 			$campo_expiracao = campo_data("Expira em", "expiracao", ($_POST["expiracao"]?? ""), 2);
-			$campo_senha = campo_senha("Senha*", "senha", "", 2,"maxlength='12'");
-			$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='12'");
+			$campo_senha = campo_senha("Senha*", "senha", "", 2,"maxlength='50'");
+			$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='50'");
 			$campo_matricula = "";
 
 		}else{
@@ -416,8 +416,8 @@
 			$campo_senha = "";
 			$campo_confirma = "";
 			if($loggedUserIsAdmin){
-				$campo_senha = campo_senha("Senha*", "senha", "", 2,"maxlength='12'");
-				$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='12'");
+				$campo_senha = campo_senha("Senha*", "senha", "", 2,"maxlength='50'");
+				$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='50'");
 			}
 			if($editingDriver){
 				$entidade = carregar("entidade", $_POST["entidade"]);
