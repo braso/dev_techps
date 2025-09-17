@@ -801,7 +801,7 @@ function relatorio_nao_conformidade_juridica() {
 			WHERE enti_nb_empresa = {$_POST["empresa"]}
 				AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-t")}'
 				AND (
-					enti_tx_status = 'ativo
+					enti_tx_status = 'ativo'
 					OR enti_tx_desligamento > '{$periodoInicio->format("Y-m-t")}'
 				)
 			ORDER BY enti_tx_nome ASC;"
