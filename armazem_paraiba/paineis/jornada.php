@@ -327,8 +327,6 @@
 
             $path .= "/".$empresa["empr_nb_id"];
 
-            dd($path, false);
-
             if (is_dir($path)) {
                 $pasta = dir($path);
                 while ($arquivo = $pasta->read()) {
@@ -339,7 +337,6 @@
                 }
                 $pasta->close();
 
-                 dd($arquivos, false);
 
                 foreach ($arquivos as &$arquivo) {
                     $arquivo = $path."/".$arquivo;
