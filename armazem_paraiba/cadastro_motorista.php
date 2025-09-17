@@ -27,7 +27,37 @@
 		}
 
 		echo 
-			"<script>
+			"
+			<form name='form_excluir_arquivo' method='post' action='cadastro_motorista.php'>
+				<input type='hidden' name='idEntidade' value=''>
+				<input type='hidden' name='idArq' value=''>
+				<input type='hidden' name='acao' value=''>
+			</form>
+
+			<form name='form_download_arquivo' method='post' action='cadastro_motorista.php'>
+				<input type='hidden' name='idEntidade' value=''>
+				<input type='hidden' name='caminho' value=''>
+				<input type='hidden' name='acao' value=''>
+			</form>
+
+			<script>
+
+				function downloadArquivo(id, caminho, acao) {
+					document.form_download_arquivo.idEntidade.value = id;
+					document.form_download_arquivo.caminho.value = caminho;
+					document.form_download_arquivo.acao.value = acao;
+					document.form_download_arquivo.submit();
+				}
+
+				function remover_arquivo(id, idArq, arquivo, acao ) {
+					if (confirm('Deseja realmente excluir o arquivo '+arquivo+'?')) {
+						document.form_excluir_arquivo.idEntidade.value = id;
+						document.form_excluir_arquivo.idArq.value = idArq;
+						document.form_excluir_arquivo.acao.value = acao;
+						document.form_excluir_arquivo.submit();
+					}
+				}
+
 				function buscarCEP(cep) {
 					var num = cep.replace(/[^0-9]/g, '');
 					if (num.length == '8') {
@@ -618,6 +648,15 @@
 		exit;
 	}
 
+	function excluir_documento() {
+
+		query("DELETE FROM documento_funcionario WHERE docu_nb_id = $_POST[idArq]");
+		
+		$_POST["id"] = $_POST["idEntidade"];
+		enviarDocumento();
+		exit;
+	}
+
 	function excluirFoto(){
 		atualizar("entidade", ["enti_tx_foto"], [""], $_POST["idEntidade"]);
 		$_POST["id"] = $_POST["idEntidade"];
@@ -632,35 +671,14 @@
 		exit;
 	}
 
-		function enviarDocumento() {
+	function enviarDocumento() {
 		global $a_mod;
 
-		// if(empty($a_mod)){
-		// 	$a_mod = carregar("parametro", $_POST["id"]);
-		// 	$campos = [
-		// 		"nome",
-		// 		"jornadaSemanal",
-		// 		"jornadaSabado",
-		// 		"tolerancia",
-		// 		"percHESemanal",
-		// 		"percHEEx",
-		// 		"maxHESemanalDiario",
-		// 		"diariasCafe",
-		// 		"diariasAlmoco",
-		// 		"diariasJanta",
-		// 		"acordo",
-		// 		"inicioAcordo",
-		// 		"fimAcordo",
-		// 		"banco",
-		// 		"Obs"
-		// 	];
-		// 	foreach($campos as $campo){
-		// 		$a_mod["para_tx_".$campo] = $_POST[$campo];
-		// 	}
-		// 	$a_mod["para_nb_qDias"] = $_POST["para_nb_Qdias"];
-		// 	$a_mod["para_tx_horasLimite"] = $_POST["para_tx_horasLimite"];
-		// 	unset($campos);
-		// }
+		if(empty($a_mod)){
+			if(isset($_POST["id"])){
+				$a_mod = carregar("entidade", $_POST["id"]);
+			}
+		}
 
 		$novoArquivo = [
 			"docu_nb_entidade" => $_POST["idFuncionario"],
@@ -688,7 +706,6 @@
 			$novoArquivo["docu_tx_caminho"] = $pasta_funcionario.$novoArquivo["docu_tx_nome"];
 	
 			if (move_uploaded_file($arquivo_temporario, $novoArquivo["docu_tx_caminho"])) {
-				dd($novoArquivo, false);
 				inserir("documento_funcionario", array_keys($novoArquivo), array_values($novoArquivo));
 			}
 		}
@@ -1085,12 +1102,6 @@
 			"<form method='post' name='form_modifica' id='form_modifica'>
 				<input type='hidden' name='id' value=''>
 				<input type='hidden' name='acao' value='modificarMotorista'>
-			</form>
-
-			<form name='form_excluir_arquivo' method='post' action='cadastro_motorista.php'>
-				<input type='hidden' name='idEntidade' value=''>
-				<input type='hidden' name='nome_arquivo' value=''>
-				<input type='hidden' name='acao' value=''>
 			</form>"
 		;
 
