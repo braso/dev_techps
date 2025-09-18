@@ -171,6 +171,7 @@
 			
 			$interno = true; //Utilizado em conecta.php;
 			include_once "conecta.php";
+			include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
 			
 			$usuario = mysqli_fetch_assoc(query(
 				"SELECT * FROM user"
@@ -182,11 +183,15 @@
 			if(!empty($usuario)){ //Se encontrou um usuário
 
 				if (!empty($usuario["user_tx_expiracao"]) && strtotime($usuario["user_tx_expiracao"]) < strtotime(date("Y-m-d"))){
-					echo 
-						"<div class='alert alert-danger display-block'>
-							<span> Usuário expirado. </span>
-						</div>"
-					;
+					$error = "expireduser";
+					$_POST["HTTP_REFERER"] = $_ENV["APP_PATH"]."/index.php?error=".$error;
+					$_POST["returnValues"] = json_encode([
+						"HTTP_REFERER" => $_POST["HTTP_REFERER"],
+						"empresa" => $_POST["empresa"],
+						"user" => $_POST["user"],
+						"password" => $_POST["password"]
+					]);
+					voltar();
 					exit;
 				}
 	
@@ -229,7 +234,6 @@
 			"password" => $_POST["password"]
 		]);
 
-		include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
 		voltar();
 		exit;
 	}

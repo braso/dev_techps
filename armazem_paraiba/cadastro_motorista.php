@@ -976,7 +976,7 @@
 			campo_data(	"Dt Admissão*", 	"admissao", 		(!empty($a_mod["enti_tx_admissao"])? $a_mod["enti_tx_admissao"]		 		:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data(	"Dt. Desligamento", "desligamento", 	(!empty($a_mod["enti_tx_desligamento"])? $a_mod["enti_tx_desligamento"] 	:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(		"Saldo de Horas", 	"setBanco", 		(!empty($a_mod["enti_tx_banco"])? $a_mod["enti_tx_banco"] 					:"00:00"), 	1, "MASCARA_HORAS", "placeholder='HH:mm' tabindex=".sprintf("%02d", $tabIndex++)),
-			combo(		"Subcontratado", 	"subcontratado", 	(!empty($a_mod["enti_tx_subcontratado"])? $a_mod["enti_tx_subcontratado"] 	:""), 		2, ["" => "", "sim" => "Sim", "nao" => "Não"], "tabindex=".sprintf("%02d", $tabIndex++)),
+			combo(		"Subcontratado", 	"subcontratado", 	(!empty($a_mod["enti_tx_subcontratado"])? $a_mod["enti_tx_subcontratado"] 	:""), 		2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"], "tabindex=".sprintf("%02d", $tabIndex++)),
 		]);
 
 		$conferirPadraoJS = "";
@@ -1009,7 +1009,7 @@
 			campo_data("1º Habilitação*", "cnhPrimeiraHabilitacao", ($a_mod["enti_tx_cnhPrimeiraHabilitacao"]?? ""), 3, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Permissão", "cnhPermissao", ($a_mod["enti_tx_cnhPermissao"]?? ""), 3,"","maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Pontuação", "cnhPontuacao", ($a_mod["enti_tx_cnhPontuacao"]?? ""), 3,"","maxlength='3' tabindex=".sprintf("%02d", $tabIndex++)),
-			combo("Atividade Remunerada", "cnhAtividadeRemunerada", ($a_mod["enti_tx_cnhAtividadeRemunerada"]?? ""), 3, ["" => "", "sim" => "Sim", "nao" => "Não"], "tabindex=".sprintf("%02d", $tabIndex++)),
+			combo("Atividade Remunerada", "cnhAtividadeRemunerada", ($a_mod["enti_tx_cnhAtividadeRemunerada"]?? ""), 3, ["" => "Todos", "sim" => "Sim", "nao" => "Não"], "tabindex=".sprintf("%02d", $tabIndex++)),
 			arquivo("CNH (.png, .jpg, .pdf)".$iconeExcluirCNH, "cnhAnexo", ($a_mod["enti_tx_cnhAnexo"]?? ""), 4, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Observações", "cnhObs", ($a_mod["enti_tx_cnhObs"]?? ""), 3,"","maxlength='500' tabindex=".sprintf("%02d", $tabIndex++))
 		];
@@ -1114,11 +1114,11 @@
 			campo("Nome",						"busca_nome_like",		(!empty($_POST["busca_nome_like"])? $_POST["busca_nome_like"]: ""), 2,"","maxlength='65'"),
 			campo("Matrícula",					"busca_matricula_like",	(!empty($_POST["busca_matricula_like"])? $_POST["busca_matricula_like"]: ""), 1,"","maxlength='6'"),
 			campo("CPF",						"busca_cpf",			(!empty($_POST["busca_cpf"])? $_POST["busca_cpf"]: ""), 2, "MASCARA_CPF"),
-			combo_bd("!Empresa",				"busca_empresa",		(isset($_POST["busca_empresa"])? $_POST["busca_empresa"]: $_SESSION["user_nb_empresa"]), 2, "empresa", "", $extraEmpresa),
-			combo("Ocupação",					"busca_ocupacao",		(isset($_POST["busca_ocupacao"])? $_POST["busca_ocupacao"]: ""), 2, ["", "Motorista", "Ajudante", "Funcionário"]),
-			combo("Convenção Padrão",			"busca_padrao",			(isset($_POST["busca_padrao"])? $_POST["busca_padrao"]: ""), 2, ["" => "", "sim" => "Sim", "nao" => "Não"]),
+			combo_bd("!Empresa",				"busca_empresa",		(isset($_POST["busca_empresa"])? $_POST["busca_empresa"]: ""), 2, "empresa", "", $extraEmpresa),
+			combo("Ocupação",					"busca_ocupacao",		(isset($_POST["busca_ocupacao"])? $_POST["busca_ocupacao"]: ""), 2, ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
+			combo("Convenção Padrão",			"busca_padrao",			(isset($_POST["busca_padrao"])? $_POST["busca_padrao"]: ""), 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
 			combo_bd("!Parâmetros da Jornada", 	"busca_parametro",		(isset($_POST["busca_parametro"])? $_POST["busca_parametro"]: ""), 6, "parametro"),
-			combo("Status",						"busca_status",			(isset($_POST["busca_status"])? $_POST["busca_status"]: "ativo"), 2, ["" => "", "ativo" => "Ativo", "inativo" => "Inativo"])
+			combo("Status",						"busca_status",			(isset($_POST["busca_status"])? $_POST["busca_status"]: "ativo"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
 		];
 
 		$botoesBusca = [
@@ -1154,7 +1154,7 @@
 				"EMPRESA" 				=> "empr_tx_nome",
 				"FONE 1" 				=> "enti_tx_fone1",
 				"OCUPAÇÃO" 				=> "enti_tx_ocupacao",
-				"Tipo de Operação" 		=> "enti_tx_tipoOperacao",
+				"TIPO DE OPERAÇÃO" 		=> "oper_tx_nome",
 				"DATA CADASTRO" 		=> "CONCAT('data(\"', enti_tx_dataCadastro, '\")') AS enti_tx_dataCadastro",
 				"PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
 				"CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
@@ -1178,6 +1178,7 @@
 					." LEFT JOIN user ON enti_nb_id = user_nb_entidade"
 					." JOIN empresa ON enti_nb_empresa = empr_nb_id"
 					." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
+					." LEFT JOIN operacao ON enti_tx_tipoOperacao = oper_nb_id"
 			);
 	
 			$actions = criarIconesGrid(
@@ -1193,7 +1194,8 @@
 			$gridFields["actions"] = $actions["tags"];
 	
 			$jsFunctions =
-				"const funcoesInternas = function(){
+				"orderCol = 'enti_tx_nome ASC'
+				const funcoesInternas = function(){
 					".implode(" ", $actions["functions"])."
 				}"
 			;
