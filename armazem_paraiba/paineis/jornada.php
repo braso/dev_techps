@@ -177,8 +177,12 @@
                                             jornadaEfetiva = converterMinutosParaHHHMM(jornadaSemIntervalo);
                                         }
 
+                                        console.log();
 
-                                        let jornadaEfetivaCor = calcularJornadaElimite(jornadaEfetiva , item.jornadaDia, item.limiteExtras)
+                                        let jornadaEfetivaCor = 'jornada';
+                                        if(item.jornadaDia != undefined && item.jornadaDia != null){
+                                            jornadaEfetivaCor = calcularJornadaElimite(jornadaEfetiva , item.jornadaDia, item.limiteExtras)
+                                        }
 
                                         var css = 'jornada';
                                         const limite = converterParaMinutos('10:00');
@@ -332,6 +336,7 @@
                     $quantFun = " - <b>Total de funcionários com jornada:</b> ".count($arquivos);
                 }
                 $pasta->close();
+
 
                 foreach ($arquivos as &$arquivo) {
                     $arquivo = $path."/".$arquivo;
