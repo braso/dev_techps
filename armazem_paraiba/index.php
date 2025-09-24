@@ -104,7 +104,7 @@
 
 					<div class='col-sm-2'>
 						<div class='panel panel-success'>
-							<div class='panel-heading text-center' style='display: flex; align-items: center; justify-content: center;'>
+							<div class='panel-heading text-center' style='display: flex; align-items: center; justify-content: center; min-height: 56px;'>
 								<h3 class='panel-title'>
 									<span class='glyphicon glyphicon-briefcase'></span> Filiais
 								</h3>
