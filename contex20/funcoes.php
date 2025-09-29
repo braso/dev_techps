@@ -31,7 +31,7 @@
 				echo "ERRO: função mal formatada: ".$_POST["acao"];
 			}
 		}else{
-			echo "ERRO: Função '".$nomeFuncao."' não existe!";
+			echo "ERRO: Função '{$nomeFuncao}' não existe!";
 		}
 		exit;
 	}
@@ -981,6 +981,8 @@
 	function combo_net($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra_bd='',$extra_busca='',$extra_ordem='',$extra_limite='15'){
 		global $CONTEX, $conn;
 
+		$opt = "";
+
 		if(!empty($modificador)){
 			$tab = substr($tabela,0,4);
 			if($extra_busca != ''){
@@ -1002,14 +1004,10 @@
 			}
 			if(!empty($queryResult)){
 				$opt = "<option value='{$modificador}'>{$queryResult[0]}</option>";
-			}else{
-				$opt = "";
 			}
-		}else{
-			$opt = "";
 		}
 		
-		$classe = 'col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content';
+		$classe = "col-sm-{$tamanho} margin-bottom-5 campo-fit-content";
 		if(!empty($_POST["errorFields"]) && in_array($variavel, $_POST["errorFields"])){
 			$classe .= " select-error-field";
 		}
@@ -1082,7 +1080,7 @@
 		// }
 
 		if($extra_bd == ''){
-			$extra_bd = " ORDER BY ".$tab."_tx_nome ASC";
+			$extra_bd = " ORDER BY {$tab}_tx_nome ASC";
 		}
 
 		
@@ -1432,7 +1430,7 @@
 					<h4 class='modal-title' id='myModalLabel'>Upload Arquivo</h4>
 					</div>
 					<div class='modal-body'>
-					<form name='form_enviar_arquivo2' method='post' action='cadastro_motorista.php' enctype='multipart/form-data'>
+					<form name='form_enviar_arquivo2' method='post' action='cadastro_funcionario.php' enctype='multipart/form-data'>
 						<div class='form-group'>
 							<label for='file-name' class='control-label'>Nome do arquivo:</label>
 							<input type='text' class='form-control' name='file-name'>
