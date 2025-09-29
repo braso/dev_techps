@@ -312,6 +312,7 @@
 
 		$campo_foto  = arquivo("Foto (.png, .jpg)", "foto", ($_POST["foto"]?? ""), 4);
 		$campo_login = campo("Login*", "login", ($_POST["login"]?? ($_POST["login"]?? "")), 2,"","maxlength='30'");
+		$campo_expiracao = campo_data("Expira em", "expiracao", ($_POST["expiracao"]?? ""), 2);
 
 		$editPermission = (!empty($_POST["id"]) &&			//Se está editando um usuário existente e
 			// $_SESSION["user_nb_id"] == $_POST["id"] || //Editando o próprio usuário
@@ -350,7 +351,6 @@
 			$campo_email = campo("E-mail*", "email", $_POST["email"], 2);
 			$campo_telefone = campo("Telefone", "telefone", $_POST["fone"], 2,"MASCARA_FONE");
 			$campo_empresa = combo_bd("!Empresa*", "empresa", $_POST["empresa"]?? $_SESSION["user_nb_empresa"], 2, "empresa", "onchange='carrega_empresa(this.value)'");
-			$campo_expiracao = campo_data("Expira em", "expiracao", $_POST["expiracao"], 2);
 			$campo_senha = campo_senha("Senha*", "senha", "", 2, "maxlength='50'");
 			$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='50'");
 			$campo_matricula = "";
@@ -380,7 +380,6 @@
 			$campo_email = campo("E-mail*", "email", ($_POST["email"]?? ""), 2);
 			$campo_telefone = campo("Telefone", "telefone", ($_POST["telefone"]?? ""), 2,"MASCARA_FONE");
 			$campo_empresa = combo_bd("!Empresa*", "empresa", ($_POST["empresa"]?? $_SESSION["user_nb_empresa"]), 2, "empresa", "onchange='carrega_empresa(this.value)'");
-			$campo_expiracao = campo_data("Expira em", "expiracao", ($_POST["expiracao"]?? ""), 2);
 			$campo_senha = campo_senha("Senha*", "senha", "", 2,"maxlength='50'");
 			$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='50'");
 			$campo_matricula = "";
@@ -411,7 +410,6 @@
 			}
 
 			$campo_empresa = texto("Empresa*", (!empty($empresa["empr_tx_nome"])? $empresa["empr_tx_nome"]: "-"), 3, "style=''");
-			$campo_expiracao = texto("Expira em", (!empty($_POST["expiracao"])? date("d/m/Y", strtotime($_POST["expiracao"])): "--/--/----"), 2, "style=''");
 			$campo_login = texto("Login", ($_POST["login"]?? ($_POST["login"]?? "-")), 2);
 			$campo_senha = "";
 			$campo_confirma = "";

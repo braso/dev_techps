@@ -517,7 +517,7 @@
 			"<iframe id=frame_parametro style='display: none;'></iframe>
 			<script>
 				function carregarParametro(id){
-					document.getElementById('frame_parametro').src='cadastro_motorista.php?acao=carregarParametro&parametro='+id;
+					document.getElementById('frame_parametro').src='cadastro_funcionario.php?acao=carregarParametro&parametro='+id;
 				}
 			</script>"
 		;

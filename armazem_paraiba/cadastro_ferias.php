@@ -210,7 +210,7 @@
 		$camposBusca = [
 			campo("Código",	"busca_codigo",	(!empty($_POST["busca_codigo"])? $_POST["busca_codigo"]: ""), 1,"","maxlength='6'"),
 			campo("Nome do Funcionário", "busca_nome_like", ($a_mod["enti_tx_nome"]?? ""), 4, "", "maxlength='65'"),
-			combo("Status",	"busca_status",	(isset($_POST["busca_status"])? $_POST["busca_status"]: "ativo"), 2, ["" => "", "ativo" => "Ativo", "inativo" => "Inativo"])
+			combo("Status",	"busca_status",	(isset($_POST["busca_status"])? $_POST["busca_status"]: "ativo"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
 		];
 
 		$botoesBusca = [
@@ -252,7 +252,8 @@
 			$gridFields["actions"] = $actions["tags"];
 	
 			$jsFunctions =
-				"const funcoesInternas = function(){
+				"orderCol = 'feri_tx_dataInicio DESC';
+				const funcoesInternas = function(){
 					".implode(" ", $actions["functions"])."
 				}"
 			;

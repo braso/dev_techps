@@ -81,7 +81,7 @@
 		$ufs = ["", "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MS", "MT", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
 		
 		$campos = [
-			campo("Nome*", "nome", $_POST["nome"], 4),
+			campo("Nome*", "nome", $_POST["nome"], 4, "", "maxlength='65'"),
 			campo_data("Data*", "data", $_POST["data"], 2),
 			combo("Estado", "uf", $_POST["uf"], 2, $ufs),
 			combo_net("Município", "cidade", $_POST["cidade"], 4, "cidade", "", "", "cida_tx_uf")
@@ -124,11 +124,11 @@
 		;
 
 		$campos = [ 
-			campo("Código", "busca_codigo", $_POST["busca_codigo"], 2, "MASCARA_NUMERO", "maxlength='6'"),
+			campo("Código", "busca_codigo", $_POST["busca_codigo"], 2, "MASCARA_NUMERO", "maxlength='6' min='0'"),
 			campo("Nome", "busca_nome_like", $_POST["busca_nome_like"], 4, "", "maxlength='65'"),
-			campo("Estado", "busca_uf_like", $_POST["busca_uf_like"], 2),
-			campo("Município", "busca_cidade_like", $_POST["busca_cidade_like"], 2),
-			combo("Status", 		"busca_status", 	($_POST["busca_status"]?? ""), 	2, ["ativo" => "Ativo"])
+			campo("Estado", "busca_uf_like", $_POST["busca_uf_like"], 2, "", "maxlength='2'"),
+			campo("Município", "busca_cidade_like", $_POST["busca_cidade_like"], 2, "", "maxlength='20'"),
+			combo("Status", "busca_status", ($_POST["busca_status"]?? ""), 	2, ["ativo" => "Ativo"])
 		];
 
 		$botoes = [ 

@@ -32,7 +32,7 @@
 				"/cadastro_endosso.php" 	=> "Endosso",
 				"/cadastro_feriado.php" 	=> "Feriado",
 				"/cadastro_ferias.php" 		=> "Férias",
-				"/cadastro_motorista.php" 	=> "Funcionário",
+				"/cadastro_funcionario.php" 	=> "Funcionário",
 				"/cadastro_macro.php" 		=> "Macro",
 				"/cadastro_motivo.php" 		=> "Motivo",
 				"/cadastro_operacao.php" 	=> "Operação",
