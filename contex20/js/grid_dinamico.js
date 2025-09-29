@@ -181,7 +181,7 @@ const consultarRegistros = function(){
 
             $('#result thead')[0].innerHTML = header.join('');
             $('#result tbody')[0].innerHTML = response.rows;
-            $('.grid-footer .total-registros')[0].innerHTML = '<div>Total:'+total+'</div>';
+            $('.grid-footer .total-registros')[0].innerHTML = '<div>Total: '+total+'</div>';
             $('.grid-footer .tab-pagination')[0].innerHTML = footer;
             $('.table-loading-icon')[0].innerHTML = '';
 
