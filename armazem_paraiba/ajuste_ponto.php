@@ -57,6 +57,7 @@
 
 		if(empty($_POST["dataAtualiza"])){
 			$_POST["dataAtualiza"] = date("Y-m-d H:i:s");
+			$_POST["userAtualiza"] = $_SESSION["user_nb_id"];
 		}
 		
 		$ponto = mysqli_fetch_assoc(query(
@@ -72,6 +73,7 @@
 		$ponto["pont_tx_status"] = "inativo";
 		$ponto["pont_tx_justificativa"] = $_POST["justificativa"];
 		$ponto["pont_tx_dataAtualiza"] = $_POST["dataAtualiza"];
+		$ponto["pont_nb_userAtualiza"] = $_POST["userAtualiza"];
 		
 		atualizar("ponto", array_keys($ponto), array_values($ponto), $ponto["pont_nb_id"]);
 		
