@@ -141,6 +141,8 @@
 				//}
 			}
 
+			
+
 			if(empty($motErrMsg)){
 				//Conferir se tem espaço entre o último endosso e o endosso atual{
 					$ultimoEndosso = mysqli_fetch_all(
@@ -160,7 +162,7 @@
 						$ultimoEndosso["endo_tx_ate"] = DateTime::createFromFormat("Y-m-d", $ultimoEndosso["endo_tx_ate"]);
 						$dataDe = DateTime::createFromFormat("Y-m-d", $_POST["data_de"]);
 						$qtdDias = date_diff($ultimoEndosso["endo_tx_ate"], $dataDe);
-						if($qtdDias->d > 1){
+						if($qtdDias->days > 1){
 							$motErrMsg = "Há um tempo não endossado entre ".$ultimoEndosso["endo_tx_ate"]->format("d/m/Y")." e ".$dataDe->format("d/m/Y").".  ";
 							$_POST["errorFields"][] = "data_de";
 						}
@@ -243,13 +245,7 @@
 
 	function pegarSaldoTotal(){
 
-		$err = conferirErros();
-		if(!empty($err)){
-			set_status($err);
-			index();
-			exit;	
-		}
-
+		
 		if(empty($_POST["busca_motorista"])){
 			set_status("ERRO: Insira o motorista para consultar seu saldo.");
 			index();
@@ -257,6 +253,7 @@
 		}
 
 		$err = conferirErros(1, $_POST["busca_motorista"]);
+
 		if(!empty($err)){
 			set_status("ERRO: ".$err);
 			index();
@@ -271,6 +268,7 @@
 			exit;
 		}
 
+
 		$motorista = mysqli_fetch_assoc(query(
 			"SELECT * FROM entidade
 			 LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
@@ -280,6 +278,7 @@
 				 AND enti_nb_id = '{$_POST["busca_motorista"]}'
 			 LIMIT 1;"
 		));
+
 
 		$ultimoEndosso = mysqli_fetch_assoc(query(
 			"SELECT enti_tx_matricula, endo_tx_filename FROM endosso "
@@ -304,6 +303,7 @@
 		$dataAte = new DateTime($_POST["data_ate"]);
 		
 		$rows = [];
+
 		for(
 			$date = $dataDe;
 			date_diff($date, $dataAte)->days >= 0 && !(date_diff($date, $dataAte)->invert);
@@ -311,6 +311,9 @@
 		){
 			$rows[] = diaDetalhePonto($motorista, $date->format("Y-m-d"));
 		}
+
+		
+
 		$totalResumo = setTotalResumo(array_slice(array_keys($rows[0]), 7));
 		somarTotais($totalResumo, $rows);
 
