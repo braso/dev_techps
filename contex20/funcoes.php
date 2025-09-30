@@ -1345,8 +1345,12 @@
 				$dataHora = new DateTime($dataHoraOriginal);
 				$dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
 				$dataHoraOriginalVencimento = $arquivo['docu_tx_dataVencimento'];
-				$dataHoraVencimento = new DateTime($dataHoraOriginalVencimento);
-				$dataHoraFormatadaVencimento = $dataHoraVencimento->format('d/m/Y');
+				if(empty($dataHoraOriginalVencimento) || $dataHoraOriginalVencimento == "0000-00-00 00:00:00"){
+					$dataHoraFormatadaVencimento = "";
+				} else {
+					$dataHoraVencimento = new DateTime($dataHoraOriginalVencimento);
+					$dataHoraFormatadaVencimento = $dataHoraVencimento->format('d/m/Y');
+				}
 				$arquivo_list .= "
 				<tr role='row' class='odd'>
 				<td>$arquivo[docu_tx_nome]</td>
@@ -1371,7 +1375,7 @@
 		), MYSQLI_ASSOC);
 
 		// Montar o HTML do dropdown
-		$list_tipos = "";
+		$list_tipos = "<option value=''></option>";
 		foreach($tipo_documento as $tipo){
 			$list_tipos .= "<option value='{$tipo['tipo_nb_id']}'>{$tipo['tipo_tx_nome']}</option>";
 		}
