@@ -566,10 +566,10 @@
                         if ($dataBusca > $dataMotorista) {
                             $matriculasInativas = array_map(function($matricula) {
                                 return $matricula . ".json";
-                            }, array_column($motoristas, "enti_tx_matricula"));
+                            }, array_column($motoristas, "enti_nb_id"));
                             $matriculasInativas = array_map(function($matricula) {
                                 return $matricula . ".json";
-                            }, array_column($motoristas, "enti_tx_matricula"));
+                            }, array_column($motoristas, "enti_nb_id"));
                         }
                     } else {
                         $dataMotorista = new DateTime($motorista["enti_tx_admissao"]);
@@ -577,10 +577,10 @@
                         if ($dataBusca < $dataMotorista) {
                             $matriculasInativas = array_map(function($matricula) {
                                 return $matricula . ".json";
-                            }, array_column($motoristas, "enti_tx_matricula"));
+                            }, array_column($motoristas, "enti_nb_id"));
                             $matriculasInativas = array_map(function($matricula) {
                                 return $matricula . ".json";
-                            }, array_column($motoristas, "enti_tx_matricula"));
+                            }, array_column($motoristas, "enti_nb_id"));
                         }
                     }
                 }
