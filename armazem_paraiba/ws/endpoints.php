@@ -25,9 +25,10 @@
 
         //Check if user exists{
             $data = get_data(
-                "SELECT user_tx_senha, user_nb_id FROM user 
+                "SELECT user_tx_senha, user_nb_id, user_tx_nome FROM user 
                     WHERE user_tx_status = 'ativo'
-                        AND user_tx_login = '".$_POST["username"]."';"
+                        AND user_tx_login = ?;",
+                [$_POST["username"]]
             );
 
             if(empty($data)){
@@ -241,14 +242,18 @@
                     "SELECT * FROM ponto
                         JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                         WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'
-                            AND pont_tx_matricula = ".$entity['enti_tx_matricula']."
-                            AND pont_nb_id >= ".$_POST['journeyID']."
-                            AND pont_tx_data <= STR_TO_DATE('".$_POST['startDateTime'].":59', '%Y-%m-%d %H:%i:%s')
+                            AND pont_tx_matricula = ?
+                            AND pont_nb_id >= ?
+                            AND pont_tx_data <= STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')
                             AND lower(macr_tx_nome) LIKE '%jornada%'
                         ORDER BY pont_tx_data DESC
                         LIMIT 1;"
                 ;
-                $openJourney = get_data($query);
+                $openJourney = get_data($query, [
+                    $entity['enti_tx_matricula'],
+                    $_POST['journeyID'],
+                    $_POST['startDateTime'].":59"
+                ]);
                 $openJourney = !empty($openJourney)? $openJourney[0]: $openJourney;
                 if(empty($openJourney) || is_numeric(strpos(strtolower($openJourney['macr_tx_nome']), 'fim'))){
                     // header('HTTP/1.0 400 Bad Request');
@@ -258,18 +263,21 @@
             //}
 
             //Check if there is an open break before trying to insert another opening{
-                $lastBreakOpening = 
+                $lastBreakOpeningQuery = 
                     "SELECT *, (macr_tx_nome like '%inicio%') as open_break FROM ponto
                         JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                         WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'
-                            AND pont_tx_matricula = '{$entity["enti_tx_matricula"]}'
-                            AND pont_tx_data <= STR_TO_DATE('{$_POST["startDateTime"]}:59', '%Y-%m-%d %H:%i:%s')
+                            AND pont_tx_matricula = ?
+                            AND pont_tx_data <= STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')
                             AND lower(macr_tx_nome) != 'inicio de jornada'
                         ORDER BY pont_tx_data DESC
                         LIMIT 1;"
                 ;
 
-                $lastBreakOpening = get_data($lastBreakOpening)[0];
+                $lastBreakOpening = get_data($lastBreakOpeningQuery, [
+                    $entity["enti_tx_matricula"],
+                    $_POST["startDateTime"].":59"
+                ])[0];
                 if(!empty($lastBreakOpening) && $lastBreakOpening['open_break']){
                     // header('HTTP/1.0 400 Bad Request');
                     echo "Breakpoint open without closing previous one.";
@@ -282,11 +290,12 @@
                 "SELECT *, (lower(macr_tx_nome) like '%inicio%') as open_journey FROM ponto
                     JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                     WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'
-                        AND pont_tx_matricula = '".$entity["enti_tx_matricula"]."'
+                        AND pont_tx_matricula = ?
                         AND macr_tx_nome LIKE '%jornada%'
-                        AND pont_tx_data <= STR_TO_DATE('".$_POST["startDateTime"].":59', '%Y-%m-%d %H:%i:%s')
+                        AND pont_tx_data <= STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')
                     ORDER BY pont_tx_data DESC
-                    LIMIT 1;"
+                    LIMIT 1;",
+                [$entity["enti_tx_matricula"], $_POST["startDateTime"].":59"]
             );
 
             if($lastJourney[0]['open_journey']){
@@ -309,10 +318,11 @@
             $pontoMesmoMinuto = get_data(
                 "SELECT * FROM ponto 
                     WHERE pont_tx_status = 'ativo'
-                        AND pont_tx_matricula = ".$entity['enti_tx_matricula']."
-                        AND pont_tx_data LIKE '%".$_POST["startDateTime"]."%'
+                        AND pont_tx_matricula = ?
+                        AND pont_tx_data LIKE ?
                     ORDER BY pont_tx_data DESC
-                    LIMIT 1;"
+                    LIMIT 1;",
+                [$entity['enti_tx_matricula'], "%".$_POST["startDateTime"]."%"]
             );
             $pontoMesmoMinuto = !empty($pontoMesmoMinuto)? $pontoMesmoMinuto[0]: $pontoMesmoMinuto;
 
@@ -401,18 +411,22 @@
             "SELECT entidade.enti_tx_matricula FROM entidade 
                 JOIN user ON enti_nb_id = user_nb_entidade
                 WHERE user_tx_status = 'ativo'
-                    AND user_nb_id = ".$requestdata->userID.""
+                    AND user_nb_id = ?",
+            [$requestdata->userID]
         )[0];
         
         //Check if there's an open journey{
             $query = 
                 "SELECT * from ponto
                     where pont_tx_status = 'ativo'
-                        AND pont_tx_matricula = ".$userEntityRegistry["enti_tx_matricula"]."
-                        AND pont_tx_data <= STR_TO_DATE('".$requestdata->endDateTime.":59', '%Y-%m-%d %H:%i:%s')
-                        AND pont_nb_id = ".($requestdata->journeyID?? -1)
-            ;
-            $jornadaAberta = get_data($query);
+                        AND pont_tx_matricula = ?
+                        AND pont_tx_data <= STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')
+                        AND pont_nb_id = ?";
+            $jornadaAberta = get_data($query, [
+                $userEntityRegistry["enti_tx_matricula"],
+                $requestdata->endDateTime.":59",
+                ($requestdata->journeyID?? -1)
+            ]);
             
             if(empty($jornadaAberta)){
                 // header('HTTP/1.0 400 Bad Request');
@@ -432,21 +446,23 @@
         $macroAbertura = get_data(
             "SELECT * FROM macroponto 
                 WHERE macr_tx_status = 'ativo'
-                    AND lower(macr_tx_nome) LIKE '%inicio%".$requestdata->breakType."'"
+                    AND lower(macr_tx_nome) LIKE CONCAT('%inicio%', ?)",
+            [strtolower($requestdata->breakType)]
         )[0];
         $macroFechamento = get_data(
             "SELECT * FROM macroponto 
                 WHERE macr_tx_status = 'ativo'
-                    AND lower(macr_tx_nome) LIKE '%fim%".$requestdata->breakType."'"
+                    AND lower(macr_tx_nome) LIKE CONCAT('%fim%', ?)",
+            [strtolower($requestdata->breakType)]
         )[0];
 
         //Check if there's an open interval before trying to close{
-            $lastRegister = 
+            $lastRegisterQuery = 
                 "SELECT *, (macr_tx_nome like '%inicio%') as open_break FROM ponto
                     JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                     WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'
-                        AND pont_tx_matricula = ".$userEntityRegistry["enti_tx_matricula"]."
-                        AND pont_tx_data <= STR_TO_DATE('".$requestdata->endDateTime.":59', '%Y-%m-%d %H:%i:%s')
+                        AND pont_tx_matricula = ?
+                        AND pont_tx_data <= STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')
                         ".(
                             ($requestdata->breakType != "jornada")?
                                 "AND lower(macr_tx_nome) != 'inicio de jornada'": 
@@ -456,7 +472,10 @@
                     LIMIT 1;"
             ;
 
-            $lastRegister = get_data($lastRegister);
+            $lastRegister = get_data($lastRegisterQuery, [
+                $userEntityRegistry["enti_tx_matricula"],
+                $requestdata->endDateTime.":59"
+            ]);
             $lastRegister = $lastRegister[0];
 
             $msg = '';
@@ -471,9 +490,10 @@
                     "SELECT * FROM ponto 
                         JOIN macroponto ON pont_tx_tipo = macr_tx_codigoInterno
                         WHERE pont_tx_status = 'ativo' AND macr_tx_status = 'ativo'
-                            AND pont_tx_matricula = ".$userEntityRegistry["enti_tx_matricula"]."
+                            AND pont_tx_matricula = ?
                         ORDER BY pont_tx_data DESC
-                        LIMIT 1"
+                        LIMIT 1",
+                    [$userEntityRegistry["enti_tx_matricula"]]
                 );
                 $lastPoint = !empty($lastPoint)? $lastPoint[0]: null;
                 if(!empty($lastPoint) && is_numeric(strpos(strtolower($lastPoint['macr_tx_nome']), 'inicio')) && strtolower($lastPoint['pont_tx_tipo']) != $macroAbertura['macr_tx_codigoInterno']){
@@ -494,10 +514,11 @@
             $pontoMesmoMinuto = get_data(
                 "SELECT * FROM ponto 
                     WHERE pont_tx_status = 'ativo'
-                        AND pont_tx_matricula = ".$userEntityRegistry["enti_tx_matricula"]."
-                        AND pont_tx_data LIKE '%".$requestdata->endDateTime."%'
+                        AND pont_tx_matricula = ?
+                        AND pont_tx_data LIKE ?
                     ORDER BY pont_tx_data DESC
-                    LIMIT 1;"
+                    LIMIT 1;",
+                [$userEntityRegistry["enti_tx_matricula"], "%".$requestdata->endDateTime."%"]
             );
             $pontoMesmoMinuto = !empty($pontoMesmoMinuto)? $pontoMesmoMinuto[0]: $pontoMesmoMinuto;
             
@@ -547,7 +568,8 @@
             "SELECT entidade.enti_tx_matricula FROM entidade 
                 JOIN user ON enti_nb_id = user_nb_entidade
                 WHERE user_tx_status = 'ativo'
-                    AND user_nb_id = ".$userId.""
+                    AND user_nb_id = ?",
+            [$userId]
         )[0];
         return delete_last($userEntityRegistry["enti_tx_matricula"]);
     }
