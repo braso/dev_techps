@@ -31,6 +31,7 @@
 			"image/jpeg",
 			"image/png",
 			"application/msword",
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 			"application/pdf",
 			"application/vnd.android.package-archive",
 			"application/zip",
@@ -586,6 +587,17 @@
 		}
 	}
 
+    // Ação para limpar filtros e recarregar a listagem
+    function limpar(){
+        $_POST["busca_codigo"] = "";
+        $_POST["busca_nome_like"] = "";
+        $_POST["busca_fantasia_like"] = "";
+        $_POST["busca_cnpj"] = "";
+        $_POST["busca_uf"] = "";
+        $_POST["busca_status"] = "";
+        index();
+    }
+
 	function index(){
 		if(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
 			$_POST["returnValues"] = json_encode([
@@ -593,6 +605,7 @@
 			]);
 			voltar();
 		}
+
 		
 		cabecalho("Cadastro Empresa/Filial");
 
@@ -615,7 +628,7 @@
 		
 
 		$c = [
-			campo("Código",			"busca_codigo",			($_POST["busca_codigo"]?? ""),			2, "MASCARA_NUMERO",	"maxlength='6' min='0'"),
+			campo("Código",			"busca_codigo",			($_POST["busca_codigo"]?? ""),			2, "MASCARA_NUMERO",	"maxlength='6' min='0'", ),
 			campo("Nome",			"busca_nome_like",		($_POST["busca_nome_like"]?? ""),		3, "",					"maxlength='65'"),
 			campo("Nome Fantasia",	"busca_fantasia_like",	($_POST["busca_fantasia_like"]?? ""),	2, "",					"maxlength='65'"),
 			campo("CPF/CNPJ",		"busca_cnpj",			($_POST["busca_cnpj"]?? ""),			2, "MASCARA_CPF/CNPJ"),
@@ -625,6 +638,7 @@
 
 		$botao = [
 			botao("Buscar","index"),
+			botao("Limpar Filtro","limpar"),
 			botao("Inserir","visualizarCadastro","","","","","btn btn-success")
 		];
 		

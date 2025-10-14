@@ -101,6 +101,15 @@
 
 	}
 
+		function limpar(){
+			$_POST["busca_codigo"] = "";
+			$_POST["busca_nome_like"] = "";
+			$_POST["busca_uf_like"] = "";
+			$_POST["busca_cidade_like"] = "";
+			$_POST["busca_status"] = "";
+			index();	
+		}
+
 	function index(){
 
 		cabecalho("Cadastro de Feriado");
@@ -125,7 +134,7 @@
 
 		$campos = [ 
 			campo("Código", "busca_codigo", $_POST["busca_codigo"], 2, "MASCARA_NUMERO", "maxlength='6' min='0'"),
-			campo("Nome", "busca_nome_like", $_POST["busca_nome_like"], 4, "", "maxlength='65'"),
+			campo("Nome", "busca_nome_like", $_POST["busca_nome_like"], 4, "", "maxlength='45'"),
 			campo("Estado", "busca_uf_like", $_POST["busca_uf_like"], 2, "", "maxlength='2'"),
 			campo("Município", "busca_cidade_like", $_POST["busca_cidade_like"], 2, "", "maxlength='20'"),
 			combo("Status", "busca_status", ($_POST["busca_status"]?? ""), 	2, ["ativo" => "Ativo"])
@@ -133,6 +142,7 @@
 
 		$botoes = [ 
 			botao("Buscar", "index"),
+			botao("Limpar Filtro", "limpar"),
 			botao("Inserir", "layout_feriado", "", "", "", "", "btn btn-success"),
 		];
 		

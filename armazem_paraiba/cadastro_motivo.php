@@ -18,6 +18,7 @@
 
 	global $tiposMotivo;
 	$tiposMotivo = [
+		
 		"Abono",
 		"Afastamento",
 		"Ajuste"
@@ -95,7 +96,7 @@
 
 		$campos = [
 			campo("Nome*", "nome", (!empty($_POST["moti_tx_nome"])? $_POST["moti_tx_nome"]: (!empty($_POST["nome"])? $_POST["nome"]: "")), 3),
-			combo("Tipo*", "tipo", (!empty($_POST["moti_tx_tipo"])? $_POST["moti_tx_tipo"]: (!empty($_POST["tipo"])? $_POST["tipo"]: "")), 2, $tiposMotivo),
+			combo("Tipo*", "tipo", (!empty($_POST["moti_tx_tipo"])? $_POST["moti_tx_tipo"]: (!empty($_POST["tipo"])? $_POST["tipo"]: "")), 2,"Todos", $tiposMotivo),
 			combo("Legenda de Marcação*", "legenda", (!empty($_POST["moti_tx_legenda"]) && array_key_exists($_POST["moti_tx_legenda"], $legendas))? $_POST["moti_tx_legenda"]: "I", 4, $legendas),
 			$campoAdvertencia
 		];
@@ -129,8 +130,8 @@
 		$campos = [
 			campo("Código",		"busca_codigo",		(!empty($_POST["busca_codigo"])? 	$_POST["busca_codigo"]: ""), 2, "MASCARA_NUMERO", "maxlength='6'"),
 			campo("Nome",		"busca_nome_like",	(!empty($_POST["busca_nome_like"])? $_POST["busca_nome_like"]: ""), 5, "", "maxlength='65'"),
-			combo("Tipo",		"busca_tipo",		(!empty($_POST["busca_tipo"])? 		$_POST["busca_tipo"]: ""), 2, array_merge(["" => ""], $tiposMotivo)),
-			combo("Legenda",	"busca_legenda",	(!empty($_POST["busca_legenda"])? 	$_POST["busca_legenda"]: ""), 3, array_merge(["" => ""], $legendas)),
+			combo("Tipo",		"busca_tipo",		(!empty($_POST["busca_tipo"])? 		$_POST["busca_tipo"]: ""), 2, array_merge(["" => "Todos"], $tiposMotivo)),
+			combo("Legenda",	"busca_legenda",	(!empty($_POST["busca_legenda"])? 	$_POST["busca_legenda"]: ""), 3, array_merge(["" => "Todos"], $legendas)),
 			campo_hidden("busca_status", "ativo")
 		];
 

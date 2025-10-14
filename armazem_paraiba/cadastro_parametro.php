@@ -177,9 +177,23 @@
 		];
 		
 		$arquivo =  $_FILES["file"];
-		$formatosImg = ["image/jpeg", "image/png", "application/msword", "application/pdf"];
+		$mimeType = function_exists('mime_content_type') ? mime_content_type($arquivo["tmp_name"]) : $arquivo["type"];
+		$formatosImg = [
+			"image/jpeg",
+			"image/png",
+			"application/msword", // .doc
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+			"application/pdf"
+		];
 
-		if (in_array($arquivo["type"], $formatosImg) && $arquivo["name"] != "") {
+		if ($arquivo["error"] !== UPLOAD_ERR_OK) {
+			set_status("Erro no upload: ".$arquivo["error"]);
+			$_POST["id"] = $novoParametro["para_nb_id"];
+			modificarParametro();
+			exit;
+		}
+
+		if (in_array($mimeType, $formatosImg) && $arquivo["name"] != "") {
 			$pasta_parametro = "arquivos/parametro/".$novoParametro["para_nb_id"]."/";
 	
 			if (!is_dir($pasta_parametro)) {

@@ -576,7 +576,7 @@
 
 		$file_type = $_FILES["cnhAnexo"]["type"]; //returns the mimetype
 
-		$allowed = ["image/jpeg", "image/gif", "image/png", "application/pdf"];
+		$allowed = ["image/jpeg", "image/gif", "image/png",  "application/pdf"];
 		if (in_array($file_type, $allowed) && $_FILES["cnhAnexo"]["name"] != "") {
 
 			if (!is_dir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}")) {
@@ -652,8 +652,9 @@
 
 		query("DELETE FROM documento_funcionario WHERE docu_nb_id = $_POST[idArq]");
 		
+		// Após excluir, apenas recarrega a tela do funcionário
 		$_POST["id"] = $_POST["idEntidade"];
-		enviarDocumento();
+		modificarMotorista();
 		exit;
 	}
 
@@ -691,9 +692,26 @@
 		];
 		
 		$arquivo =  $_FILES["file"];
-		$formatos = ["image/jpeg", "image/png", "application/msword", "application/pdf"];
+		// Detecta MIME com maior confiabilidade e permite .doc e .docx
+		$mimeType = function_exists('mime_content_type') ? mime_content_type($arquivo["tmp_name"]) : $arquivo["type"]; 
+		$formatos = [
+			"image/jpeg",
+			"image/png",
+			"application/msword", // .doc
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+			"application/pdf"
+		];
+		$extensao = strtolower(pathinfo($arquivo["name"], PATHINFO_EXTENSION));
+		$extPermitidas = ["jpg","jpeg","png","pdf","doc","docx"];
 
-		if (in_array($arquivo["type"], $formatos) && $arquivo["name"] != "") {
+		if ($arquivo["error"] !== UPLOAD_ERR_OK) {
+			set_status("Erro no upload: ".$arquivo["error"]);
+			$_POST["id"] = $novoArquivo["docu_nb_entidade"]; 
+			visualizarCadastro();
+			exit;
+		}
+
+		if ($arquivo["name"] != "" && (in_array($mimeType, $formatos) || in_array($extensao, $extPermitidas))) {
 			$pasta_funcionario = "arquivos/Funcionarios/".$novoArquivo["docu_nb_entidade"]."/";
 	
 			if (!is_dir($pasta_funcionario)) {
@@ -702,15 +720,22 @@
 	
 			$arquivo_temporario = $arquivo["tmp_name"];
 			$extensao = pathinfo($arquivo["name"], PATHINFO_EXTENSION);
+			// Se o nome do arquivo está vazio, usa o nome original (sem extensão)
+			if(empty($novoArquivo["docu_tx_nome"])){
+				$novoArquivo["docu_tx_nome"] = pathinfo($arquivo["name"], PATHINFO_FILENAME);
+			}
 			$novoArquivo["docu_tx_nome"] .= ".".$extensao;
 			$novoArquivo["docu_tx_caminho"] = $pasta_funcionario.$novoArquivo["docu_tx_nome"];
 	
 			if (move_uploaded_file($arquivo_temporario, $novoArquivo["docu_tx_caminho"])) {
 				inserir("documento_funcionario", array_keys($novoArquivo), array_values($novoArquivo));
+				set_status("Documento enviado com sucesso.");
+			} else {
+				set_status("Falha ao salvar o arquivo no servidor.");
 			}
+		} else {
+			set_status("Formato de arquivo não permitido. Use PDF, DOC ou DOCX.");
 		}
-
-		set_status("Registro inserido com sucesso.");
 		$_POST["id"] = $novoArquivo["docu_nb_entidade"];
 		visualizarCadastro();
 		exit;
@@ -898,7 +923,7 @@
 		}
 		
 
-		$UFs = ["", "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
+		$UFs = ["Selecione", "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
 		
 		if(!empty($a_mod["enti_tx_foto"])){
 			$img = texto(
@@ -925,8 +950,8 @@
 		];
 
 		$statusOpt = ["ativo" => "Ativo", "inativo" => "Inativo"];
-		$estadoCivilOpt = ["", "Casado(a)", "Solteiro(a)", "Divorciado(a)", "Viúvo(a)"];
-		$sexoOpt = ["", "Feminino", "Masculino"];
+		$estadoCivilOpt = ["Selecione", "Casado(a)", "Solteiro(a)", "Divorciado(a)", "Viúvo(a)"];
+		$sexoOpt = ["Selecione", "Feminino", "Masculino"];
 
 		$camposUsuario = [
 			campo("E-mail*", 				"email", 			($a_mod["enti_tx_email"]?? ""),			2, "", 					"tabindex=".sprintf("%02d", $tabIndex++)),
@@ -967,7 +992,6 @@
 			campo(	  	"Filiação Pai", 		"pai", 				($a_mod["enti_tx_pai"]?? ""),			3, "", 					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"Filiação Mãe", 		"mae", 				($a_mod["enti_tx_mae"]?? ""),			3, "", 					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"Nome do Cônjuge",	 	"conjugue", 		($a_mod["enti_tx_conjugue"]?? ""),		3, "", 					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
-			// campo(	  	"Tipo de Operação", 	"tipoOperacao", 	($a_mod["enti_tx_tipoOperacao"]?? ""),	3, "", 					"maxlength='40' tabindex=".sprintf("%02d", $tabIndex++)),
 			combo_bd( "!Tipo de Operação", 	"tipoOperacao",		(isset($_POST["enti_tx_tipoOperacao"])? $_POST["enti_tx_tipoOperacao"]: ""), 3, "operacao"),
 
 			textarea(	"Observações:", "obs", ($a_mod["enti_tx_obs"]?? ""), 12, "tabindex=".sprintf("%02d", $tabIndex++))
@@ -989,11 +1013,11 @@
 		];
 		$tabIndex++;
 		$cContratual = array_merge($cContratual, [
-			combo(		"Ocupação*", 		"ocupacao", 		(!empty($a_mod["enti_tx_ocupacao"])? $a_mod["enti_tx_ocupacao"]		 		:""), 		2, ["Motorista", "Ajudante", "Funcionário"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
+			combo(		"Ocupação*", 		"ocupacao", 		(!empty($a_mod["enti_tx_ocupacao"])? $a_mod["enti_tx_ocupacao"]		 		:""), 		2, ["Selecione","Motorista", "Ajudante", "Funcionário"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
 			campo_data(	"Dt Admissão*", 	"admissao", 		(!empty($a_mod["enti_tx_admissao"])? $a_mod["enti_tx_admissao"]		 		:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data(	"Dt. Desligamento", "desligamento", 	(!empty($a_mod["enti_tx_desligamento"])? $a_mod["enti_tx_desligamento"] 	:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(		"Saldo de Horas", 	"setBanco", 		(!empty($a_mod["enti_tx_banco"])? $a_mod["enti_tx_banco"] 					:"00:00"), 	1, "MASCARA_HORAS", "placeholder='HH:mm' tabindex=".sprintf("%02d", $tabIndex++)),
-			combo(		"Subcontratado", 	"subcontratado", 	(!empty($a_mod["enti_tx_subcontratado"])? $a_mod["enti_tx_subcontratado"] 	:""), 		2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"], "tabindex=".sprintf("%02d", $tabIndex++)),
+			combo(		"Subcontratado", 	"subcontratado", 	(!empty($a_mod["enti_tx_subcontratado"])? $a_mod["enti_tx_subcontratado"] 	:""), 		2, ["" => "Selecione", "sim" => "Sim", "nao" => "Não"], "tabindex=".sprintf("%02d", $tabIndex++)),
 		]);
 
 		$conferirPadraoJS = "";
@@ -1026,7 +1050,7 @@
 			campo_data("1º Habilitação*", "cnhPrimeiraHabilitacao", ($a_mod["enti_tx_cnhPrimeiraHabilitacao"]?? ""), 3, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Permissão", "cnhPermissao", ($a_mod["enti_tx_cnhPermissao"]?? ""), 3,"","maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Pontuação", "cnhPontuacao", ($a_mod["enti_tx_cnhPontuacao"]?? ""), 3,"","maxlength='3' tabindex=".sprintf("%02d", $tabIndex++)),
-			combo("Atividade Remunerada", "cnhAtividadeRemunerada", ($a_mod["enti_tx_cnhAtividadeRemunerada"]?? ""), 3, ["" => "Todos", "sim" => "Sim", "nao" => "Não"], "tabindex=".sprintf("%02d", $tabIndex++)),
+			combo("Atividade Remunerada", "cnhAtividadeRemunerada", ($a_mod["enti_tx_cnhAtividadeRemunerada"]?? ""), 3, ["" => "Selecione", "sim" => "Sim", "nao" => "Não"], "tabindex=".sprintf("%02d", $tabIndex++)),
 			arquivo("CNH (.png, .jpg, .pdf)".$iconeExcluirCNH, "cnhAnexo", ($a_mod["enti_tx_cnhAnexo"]?? ""), 4, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Observações", "cnhObs", ($a_mod["enti_tx_cnhObs"]?? ""), 3,"","maxlength='500' tabindex=".sprintf("%02d", $tabIndex++))
 		];
@@ -1108,6 +1132,13 @@
 		carregarJS();
 	}
 
+
+	function limparFiltros(){
+		$_POST = [];
+		index();
+		exit;
+	}
+
 	function index(){
 		cabecalho("Cadastro de Funcionário");
 
@@ -1123,18 +1154,21 @@
 		$camposBusca = [
 			campo("Código",						"busca_codigo",			(!empty($_POST["busca_codigo"])? $_POST["busca_codigo"]: ""), 1,"","maxlength='6'"),
 			campo("Nome",						"busca_nome_like",		(!empty($_POST["busca_nome_like"])? $_POST["busca_nome_like"]: ""), 2,"","maxlength='65'"),
-			campo("Matrícula",					"busca_matricula_like",	(!empty($_POST["busca_matricula_like"])? $_POST["busca_matricula_like"]: ""), 1,"","maxlength='6'"),
+			campo("Matrícula",					"busca_matricula_like",	(!empty($_POST["busca_matricula_like"])? $_POST["busca_matricula_like"]: ""), 1,"","maxlength='20'" ,"minlength='11'"),
 			campo("CPF",						"busca_cpf",			(!empty($_POST["busca_cpf"])? $_POST["busca_cpf"]: ""), 2, "MASCARA_CPF"),
 			combo_bd("!Empresa",				"busca_empresa",		(isset($_POST["busca_empresa"])? $_POST["busca_empresa"]: ""), 2, "empresa", "", $extraEmpresa),
 			combo("Ocupação",					"busca_ocupacao",		(isset($_POST["busca_ocupacao"])? $_POST["busca_ocupacao"]: ""), 2, ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
 			combo("Convenção Padrão",			"busca_padrao",			(isset($_POST["busca_padrao"])? $_POST["busca_padrao"]: ""), 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
-			combo_bd("!Parâmetros da Jornada", 	"busca_parametro",		(isset($_POST["busca_parametro"])? $_POST["busca_parametro"]: ""), 6, "parametro"),
-			combo("Status",						"busca_status",			(isset($_POST["busca_status"])? $_POST["busca_status"]: "ativo"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
+			combo_bd("!Parâmetros da Jornada", 	"busca_parametro",		(isset($_POST["busca_parametro"])? $_POST["busca_parametro"]: ""), 4, "parametro"),
+			combo("Status",						"busca_status",			(isset($_POST["busca_status"])? $_POST["busca_status"]: "Todos"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
+			combo_bd("!Tipo de Operação", 				"busca_operacao",		(isset($_POST["busca_operacao"])? $_POST["busca_operacao"]: ""), 2, "operacao"),
+				
 		];
 
 		$botoesBusca = [
-			botao("<spam class='glyphicon glyphicon-plus'></spam>", "visualizarCadastro","","","","","btn btn-success"),
-			'<button class="btn default" type="button" onclick="imprimirTabelaCompleta()">Imprimir</button>'
+			botao("Inserir", "visualizarCadastro","","","","","btn btn-success"),
+			'<button class="btn default" type="button" onclick="imprimirTabelaCompleta()">Imprimir</button>',
+			botao("Limpar Filtros", "limparFiltros")
 		];
 
 		echo abre_form();
@@ -1181,7 +1215,8 @@
 				"busca_ocupacao" 		=> "enti_tx_ocupacao",
 				"busca_padrao" 			=> "enti_tx_ehPadrao",
 				"busca_parametro" 		=> "enti_nb_parametro",
-				"busca_status" 			=> "enti_tx_status"
+				"busca_status" 			=> "enti_tx_status",
+				"busca_operacao" 		=> "enti_tx_tipoOperacao"
 			];
 	
 			$queryBase = (
