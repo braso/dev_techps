@@ -304,12 +304,20 @@
 		
 		$rows = [];
 
+
+		$descFaltasNaoJustificadas = "00:00";
+
 		for(
 			$date = $dataDe;
 			date_diff($date, $dataAte)->days >= 0 && !(date_diff($date, $dataAte)->invert);
 			$date = date_add($date, DateInterval::createFromDateString("1 day"))
 		){
-			$rows[] = diaDetalhePonto($motorista, $date->format("Y-m-d"));
+			$row = diaDetalhePonto($motorista, $date->format("Y-m-d"));
+			if($motorista["para_tx_descFaltas"] == "sim" && strpos($row["inicioJornada"], "Batida início de jornada não registrada!")){
+				$descFaltasNaoJustificadas = operarHorarios([$descFaltasNaoJustificadas, $row["jornadaPrevista"]], "+");
+			}
+
+			$rows[] = $row;
 		}
 
 		
@@ -319,13 +327,12 @@
 
 		
 		$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
-		$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], "999:59", ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
-		[$totalResumo["he50APagar"], $totalResumo["he100APagar"]] = $aPagar;
+		[$totalResumo["he50APagar"], $totalResumo["he100APagar"]] = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], "999:59", ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
 
 		$totalResumo["saldoAnterior"] = $saldoAnterior;
 		$totalResumo["saldoBruto"] = $saldoBruto;
 		
-		$_POST["extraPago"] = operarHorarios([$totalResumo["saldoBruto"], $totalResumo["he100APagar"]], "-");
+		$_POST["extraPago"] = operarHorarios([$totalResumo["saldoBruto"], $descFaltasNaoJustificadas], "-");
 		if($_POST["extraPago"][0] == "-"){
 			$_POST["extraPago"] = "00:00";
 		}
@@ -498,7 +505,6 @@
 
 			$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
 			$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], (!empty($_POST["extraPago"])? $_POST["extraPago"]: "00:00"), ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
-
 			$saldoFinal = operarHorarios([$saldoBruto, "-".$aPagar[0], "-".$aPagar[1]], "+");
 			
 			if($totalResumo["diffSaldo"][0] == "-"){
@@ -519,7 +525,11 @@
 				$totalResumo["desconto_manual"] = "00:00";
 			}
 
-			$saldoFinal = operarHorarios([$saldoFinal, $totalResumo["desconto_manual"], $descFaltasNaoJustificadas], "+");
+			$saldoFinal = operarHorarios([$saldoFinal, $totalResumo["desconto_manual"]], "+");
+			if($_POST["zerarSaldoNegativo"] == "sim" && $saldoFinal[0] == "-"){
+				$saldoFinal = "00:00";
+			}
+
 
 			$totalResumo["desconto_faltas_nao_justificadas"] = $descFaltasNaoJustificadas;
 			$totalResumo["saldoAnterior"] 	= $saldoAnterior;
@@ -590,6 +600,7 @@
 					<td>{$novoEndosso["totalResumo"]["saldoFinal"]}</td>
 				</tr>"
 			;
+
 			//* Salvando arquivo e cadastrando no banco de dados
 
 				$filename = md5($novoEndosso["endo_nb_entidade"].$novoEndosso["endo_tx_mes"]);
@@ -671,14 +682,25 @@
 
 		$_POST["horas_a_descontar"] = (!empty($_POST["horas_a_descontar"])? ($_POST["horas_a_descontar"][0] == "-"? substr($_POST["horas_a_descontar"], 1): $_POST["horas_a_descontar"]):"");
 		$camposDesconto = 
-			"<div class='col-sm-3 margin-bottom-5' style='min-width:200px; width:100%'>
-				<label>"."Descontar atrasos?"."</label><br>
-				<label class='radio-inline'>
-					<input type='radio' id='descSim' name='descontar_horas' value='sim' ".(!empty($_POST["descontar_horas"]) && $_POST["descontar_horas"] == "sim"? "checked": "")."> Sim
-				</label>
-				<label class='radio-inline'>
-          			<input type='radio' id='descNao' name='descontar_horas' value='nao'".((empty($_POST["descontar_horas"]) || $_POST["descontar_horas"] == "nao")? "checked": "")."> Não
-				</label>
+			"<div class='col-sm-3 margin-bottom-5' style='min-width:200px;width:100%;display: flex;'>
+				<div>
+					<label>"."Descontar atrasos?"."</label><br>
+					<label class='radio-inline'>
+						<input type='radio' id='descSim' name='descontar_horas' value='sim' ".(!empty($_POST["descontar_horas"]) && $_POST["descontar_horas"] == "sim"? "checked": "")."> Sim
+					</label>
+					<label class='radio-inline'>
+						<input type='radio' id='descNao' name='descontar_horas' value='nao'".((empty($_POST["descontar_horas"]) || $_POST["descontar_horas"] == "nao")? "checked": "")."> Não
+					</label>
+				</div>
+				<div>
+					<label>"."Zerar saldos negativos?"."</label><br>
+					<label class='radio-inline'>
+						<input type='radio' name='zerarSaldoNegativo' value='sim' ".(!empty($_POST["zerarSaldoNegativo"]) && $_POST["zerarSaldoNegativo"] == "sim"? "checked": "")."> Sim
+					</label>
+					<label class='radio-inline'>
+						<input type='radio' name='zerarSaldoNegativo' value='nao'".((empty($_POST["zerarSaldoNegativo"]) || $_POST["zerarSaldoNegativo"] == "nao")? "checked": "")."> Não
+					</label>
+				</div>
 			</div>
 			<div id='descEmFolha' class='col-sm-3 margin-bottom-20' style='display: ".(!empty($_POST["descontar_horas"]) && $_POST["descontar_horas"] == "sim"? "block": "none").";'>
 				<div>

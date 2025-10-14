@@ -1082,10 +1082,10 @@
 		if($extra_bd == ''){
 			$extra_bd = " ORDER BY {$tab}_tx_nome ASC";
 		}
-
+		
 		
 		$sql=query("SELECT ".$tab."_nb_id, ".$tab."_tx_nome FROM $tabela WHERE ".$tab."_tx_status = 'ativo' $extra_bd");
-		while($a=mysqli_fetch_array($sql)){
+		while($a = mysqli_fetch_array($sql)){
 
 			if($a[0] == $modificador || $a[1] == $modificador){
 				$selected="selected";

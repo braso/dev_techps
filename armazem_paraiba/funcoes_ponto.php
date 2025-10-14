@@ -189,7 +189,7 @@
 		return $adicNot;
 	}
 
-	//@return [he50, he100]
+	//@return [he50APagar, he100APagar]
 	function calcularHorasAPagar(string $saldoBruto, string $he50, string $he100, string $max50APagar, string $pagarHEExComPerNeg = "nao"): array{
 		$params = [$saldoBruto, $he50, $he100, $max50APagar];
 

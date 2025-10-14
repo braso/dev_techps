@@ -53,7 +53,7 @@
 		return $mensagemParametro;
 	}
 
-	
+
 	function redirParaAbono(){
 		unset($_POST["acao"]);
 		if(empty($_POST['busca_motorista'])){
