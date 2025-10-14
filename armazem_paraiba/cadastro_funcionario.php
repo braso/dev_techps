@@ -28,6 +28,10 @@
 
 		echo 
 			"
+
+
+
+			
 			<form name='form_excluir_arquivo' method='post' action='cadastro_funcionario.php'>
 				<input type='hidden' name='idEntidade' value=''>
 				<input type='hidden' name='idArq' value=''>
@@ -154,7 +158,43 @@
 					form.submit();
 					document.body.removeChild(form);
 				}
-			</script>"
+
+
+				
+			</script>
+			
+			
+		<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('select').forEach(function (select) {
+    const first = select.options[0];
+    if (!first) return;
+
+   
+    const isPlaceholder =
+      first.value === '' ||
+      /selecion(e|e um item)/i.test(first.textContent.trim());
+
+    if (isPlaceholder) {
+      // Torna a primeira opção desabilitada
+      first.disabled = true;
+
+      // Define a primeira opção como selecionada (placeholder visível)
+      select.selectedIndex = 0;
+
+      // Se estiver usando Select2, força a atualização visual
+      if (window.jQuery && jQuery(select).data('select2')) {
+        jQuery(select).val('').trigger('change');
+      }
+    }
+  });
+});
+</script>
+"
+
+
+
+			
 		;
 
 		return;
