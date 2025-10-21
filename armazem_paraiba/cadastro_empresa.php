@@ -23,7 +23,7 @@
 
 		$idEmpresa = $_POST["idEmpresa"];
 		$arquivos =  $_FILES["file"];
-		$novo_nome = $_POST["file-name"];
+		$novo_nome = str_replace(["/", "."], ["_", "_"], $_POST["file-name"]);
 		$descricao = $_POST["description-text"];
 		$mimeType = mime_content_type($arquivos["tmp_name"]);
 
@@ -44,19 +44,25 @@
 		}
 
 		if (in_array($mimeType, $allowed) && $arquivos["name"] != "") {
-				$pasta_empresa = "arquivos/docu_empresa/$idEmpresa/";
+				$pasta_empresa = "arquivos/docu_empresa/{$idEmpresa}/";
 		
 				if (!is_dir($pasta_empresa)) {
 					mkdir($pasta_empresa, 0755, true);
 				}
-		
+
 				$arquivo_temporario = $arquivos["tmp_name"];
 				$extensao = pathinfo($arquivos["name"], PATHINFO_EXTENSION); 
-				$novo_nome_com_extensao = $novo_nome.".".$extensao;
-				$caminho_destino = $pasta_empresa.$novo_nome_com_extensao;
+				
+				$novoDocumentoEmpresa = [
+					"empr_nb_id" => $idEmpresa,
+					"docu_tx_nome" => "{$novo_nome}.{$extensao}",
+					"docu_tx_descricao" => $descricao,
+					"docu_tx_caminho" => "{$pasta_empresa}{$novo_nome}.{$extensao}",
+					"docu_tx_dataCadastro" =>date("Y-m-d H:i:s")
+				];
 		
-				if (move_uploaded_file($arquivo_temporario, $caminho_destino)) {
-					inserir("documento_empresa", ["empr_nb_id","docu_tx_nome","docu_tx_descricao","docu_tx_caminho","docu_tx_dataCadastro"],[$idEmpresa,$novo_nome_com_extensao,$descricao,$caminho_destino,date("Y-m-d H:i:s")]);
+				if (move_uploaded_file($arquivo_temporario, $novoDocumentoEmpresa["docu_tx_caminho"])) {
+					inserir("documento_empresa", array_keys($novoDocumentoEmpresa), array_values($novoDocumentoEmpresa));
 				}
 		}
 
@@ -295,6 +301,7 @@
 				}
 				
 				function checarCNPJ(cnpj){
+					// cnpj = cnpj.replace(/[^0-9]/g, '');
 					if(cnpj.length == '18' || cnpj.length == '14'){
 						document.getElementById('frame_cep').src='{$path_parts["basename"]}?acao=checarCNPJ&cnpj='+cnpj+'&id={$a_mod["empr_nb_id"]}'
 					}
