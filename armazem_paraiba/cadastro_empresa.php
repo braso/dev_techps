@@ -31,6 +31,7 @@
 			"image/jpeg",
 			"image/png",
 			"application/msword",
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 			"application/pdf",
 			"application/vnd.android.package-archive",
 			"application/zip",
@@ -600,6 +601,7 @@
 			]);
 			voltar();
 		}
+
 		
 		cabecalho("Cadastro Empresa/Filial");
 
@@ -632,6 +634,7 @@
 
 		$botao = [
 			botao("Buscar","index"),
+			botao("Limpar Filtro","limparFiltros"),
 			botao("Inserir","visualizarCadastro","","","","","btn btn-success")
 		];
 		

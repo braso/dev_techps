@@ -214,7 +214,8 @@
 		];
 
 		$botoesBusca = [
-			botao("<spam class='glyphicon glyphicon-plus'></spam>", "layout_ferias","","","","","btn btn-success")
+			botao("Inserir", "layout_ferias","","","","","btn btn-success"),
+			botao("Limpar Filtros", "limparFiltros")
 		];
 
 		echo abre_form();
