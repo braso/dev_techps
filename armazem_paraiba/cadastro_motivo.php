@@ -18,7 +18,6 @@
 
 	global $tiposMotivo;
 	$tiposMotivo = [
-		
 		"Abono",
 		"Afastamento",
 		"Ajuste"
@@ -96,7 +95,7 @@
 
 		$campos = [
 			campo("Nome*", "nome", (!empty($_POST["moti_tx_nome"])? $_POST["moti_tx_nome"]: (!empty($_POST["nome"])? $_POST["nome"]: "")), 3),
-			combo("Tipo*", "tipo", (!empty($_POST["moti_tx_tipo"])? $_POST["moti_tx_tipo"]: (!empty($_POST["tipo"])? $_POST["tipo"]: "")), 2,"Todos", $tiposMotivo),
+			combo("Tipo*", "tipo", (!empty($_POST["moti_tx_tipo"])? $_POST["moti_tx_tipo"]: (!empty($_POST["tipo"])? $_POST["tipo"]: "")), 2, $tiposMotivo),
 			combo("Legenda de Marcação*", "legenda", (!empty($_POST["moti_tx_legenda"]) && array_key_exists($_POST["moti_tx_legenda"], $legendas))? $_POST["moti_tx_legenda"]: "I", 4, $legendas),
 			$campoAdvertencia
 		];

@@ -101,15 +101,6 @@
 
 	}
 
-		function limpar(){
-			$_POST["busca_codigo"] = "";
-			$_POST["busca_nome_like"] = "";
-			$_POST["busca_uf_like"] = "";
-			$_POST["busca_cidade_like"] = "";
-			$_POST["busca_status"] = "";
-			index();	
-		}
-
 	function index(){
 
 		cabecalho("Cadastro de Feriado");
@@ -142,7 +133,7 @@
 
 		$botoes = [ 
 			botao("Buscar", "index"),
-			botao("Limpar Filtro", "limpar"),
+			botao("Limpar Filtro", "limparFiltros"),
 			botao("Inserir", "layout_feriado", "", "", "", "", "btn btn-success"),
 		];
 		

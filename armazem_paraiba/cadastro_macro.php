@@ -56,7 +56,7 @@
 		cabecalho("Cadastro Macro");
 
 		$c = [
-			texto("Nome*",($_POST["macr_tx_nome"]?? ""),5, ),
+			texto("Nome*",($_POST["macr_tx_nome"]?? ""),5),
 			texto("Código Interno*",($_POST["macr_tx_codigoInterno"]?? ""),3),
 			texto("Código Externo*",($_POST["macr_tx_codigoExterno"]?? ""),3)
 		];
@@ -74,12 +74,6 @@
 		rodape();
 	}
 
-	function limpar(){
-		$_POST = [];
-		index();
-		exit;
-	}
-
 	function index(){
 
 		cabecalho("Cadastro Macro");
@@ -92,7 +86,7 @@
 
 		$botoes = [
 			botao("Buscar","index"),
-			botao("Limpar Filtro","limpar"),
+			botao("Limpar Filtro","limparFiltros"),
 			// botao("Inserir","layout_macro")
 		];
 		

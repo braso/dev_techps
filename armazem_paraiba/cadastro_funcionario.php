@@ -616,7 +616,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		$file_type = $_FILES["cnhAnexo"]["type"]; //returns the mimetype
 
-		$allowed = ["image/jpeg", "image/gif", "image/png",  "application/pdf"];
+		$allowed = ["image/jpeg", "image/gif", "image/png", "application/pdf"];
 		if (in_array($file_type, $allowed) && $_FILES["cnhAnexo"]["name"] != "") {
 
 			if (!is_dir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}")) {
@@ -963,7 +963,10 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 		
 
-		$UFs = ["Selecione", "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
+		$UFs = ["" => "Selecione"];
+		foreach(["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"] as $estado){
+			$UFs[$estado] = $estado;
+		}
 		
 		if(!empty($a_mod["enti_tx_foto"])){
 			$img = texto(
@@ -990,8 +993,15 @@ document.addEventListener('DOMContentLoaded', function () {
 		];
 
 		$statusOpt = ["ativo" => "Ativo", "inativo" => "Inativo"];
-		$estadoCivilOpt = ["Selecione", "Casado(a)", "Solteiro(a)", "Divorciado(a)", "Viúvo(a)"];
-		$sexoOpt = ["Selecione", "Feminino", "Masculino"];
+		$estadoCivilOpt = [
+			"" => "Selecione", 
+			"Casado(a)" => "Casado(a)", 
+			"Solteiro(a)" => "Solteiro(a)", 
+			"Divorciado(a)" => "Divorciado(a)", 
+			"Viúvo(a)" => "Viúvo(a)"
+		];
+
+		$sexoOpt = ["" => "Selecione", "Feminino" => "Feminino", "Masculino" => "Masculino"];
 
 		$camposUsuario = [
 			campo("E-mail*", 				"email", 			($a_mod["enti_tx_email"]?? ""),			2, "", 					"tabindex=".sprintf("%02d", $tabIndex++)),
@@ -1053,7 +1063,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		];
 		$tabIndex++;
 		$cContratual = array_merge($cContratual, [
-			combo(		"Ocupação*", 		"ocupacao", 		(!empty($a_mod["enti_tx_ocupacao"])? $a_mod["enti_tx_ocupacao"]		 		:""), 		2, ["Selecione","Motorista", "Ajudante", "Funcionário"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
+			combo(		"Ocupação*", 		"ocupacao", 		(!empty($a_mod["enti_tx_ocupacao"])? $a_mod["enti_tx_ocupacao"]		 		:""), 		2, ["" => "Selecione", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
 			campo_data(	"Dt Admissão*", 	"admissao", 		(!empty($a_mod["enti_tx_admissao"])? $a_mod["enti_tx_admissao"]		 		:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data(	"Dt. Desligamento", "desligamento", 	(!empty($a_mod["enti_tx_desligamento"])? $a_mod["enti_tx_desligamento"] 	:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(		"Saldo de Horas", 	"setBanco", 		(!empty($a_mod["enti_tx_banco"])? $a_mod["enti_tx_banco"] 					:"00:00"), 	1, "MASCARA_HORAS", "placeholder='HH:mm' tabindex=".sprintf("%02d", $tabIndex++)),
@@ -1172,13 +1182,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		carregarJS();
 	}
 
-
-	function limparFiltros(){
-		$_POST = [];
-		index();
-		exit;
-	}
-
 	function index(){
 		cabecalho("Cadastro de Funcionário");
 
@@ -1194,15 +1197,14 @@ document.addEventListener('DOMContentLoaded', function () {
 		$camposBusca = [
 			campo("Código",						"busca_codigo",			(!empty($_POST["busca_codigo"])? $_POST["busca_codigo"]: ""), 1,"","maxlength='6'"),
 			campo("Nome",						"busca_nome_like",		(!empty($_POST["busca_nome_like"])? $_POST["busca_nome_like"]: ""), 2,"","maxlength='65'"),
-			campo("Matrícula",					"busca_matricula_like",	(!empty($_POST["busca_matricula_like"])? $_POST["busca_matricula_like"]: ""), 1,"","maxlength='20'" ,"minlength='11'"),
+			campo("Matrícula",					"busca_matricula_like",	(!empty($_POST["busca_matricula_like"])? $_POST["busca_matricula_like"]: ""), 1,"","maxlength='20'"),
 			campo("CPF",						"busca_cpf",			(!empty($_POST["busca_cpf"])? $_POST["busca_cpf"]: ""), 2, "MASCARA_CPF"),
-			combo_bd("!Empresa",				"busca_empresa",		(isset($_POST["busca_empresa"])? $_POST["busca_empresa"]: ""), 2, "empresa", "", $extraEmpresa),
-			combo("Ocupação",					"busca_ocupacao",		(isset($_POST["busca_ocupacao"])? $_POST["busca_ocupacao"]: ""), 2, ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
-			combo("Convenção Padrão",			"busca_padrao",			(isset($_POST["busca_padrao"])? $_POST["busca_padrao"]: ""), 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
-			combo_bd("!Parâmetros da Jornada", 	"busca_parametro",		(isset($_POST["busca_parametro"])? $_POST["busca_parametro"]: ""), 4, "parametro"),
-			combo("Status",						"busca_status",			(isset($_POST["busca_status"])? $_POST["busca_status"]: "Todos"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
-			combo_bd("!Tipo de Operação", 				"busca_operacao",		(isset($_POST["busca_operacao"])? $_POST["busca_operacao"]: ""), 2, "operacao"),
-				
+			combo_bd("!Empresa",				"busca_empresa",		(!empty($_POST["busca_empresa"])? $_POST["busca_empresa"]: ""), 2, "empresa", "", $extraEmpresa),
+			combo("Ocupação",					"busca_ocupacao",		(!empty($_POST["busca_ocupacao"])? $_POST["busca_ocupacao"]: ""), 2, ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
+			combo("Convenção Padrão",			"busca_padrao",			(!empty($_POST["busca_padrao"])? $_POST["busca_padrao"]: ""), 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
+			combo_bd("!Parâmetros da Jornada", 	"busca_parametro",		(!empty($_POST["busca_parametro"])? $_POST["busca_parametro"]: ""), 4, "parametro"),
+			combo("Status",						"busca_status",			(!empty($_POST["busca_status"])? $_POST["busca_status"]: "Todos"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
+			combo_bd("!Tipo de Operação", 		"busca_operacao",		(!empty($_POST["busca_operacao"])? $_POST["busca_operacao"]: ""), 2, "operacao")
 		];
 
 		$botoesBusca = [

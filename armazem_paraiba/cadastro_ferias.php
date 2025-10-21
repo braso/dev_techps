@@ -202,12 +202,6 @@
 		rodape();
 		exit;
 	}
-	    function limpar(){
-		$_POST['busca_codigo'] = "";
-        $_POST["busca_nome_like"] = "";
-        $_POST["busca_status"] = "";
-        index();
-    }
 	
 	function index(){
 		
@@ -221,7 +215,7 @@
 
 		$botoesBusca = [
 			botao("Inserir", "layout_ferias","","","","","btn btn-success"),
-			botao("Limpar Filtros", "limpar")
+			botao("Limpar Filtros", "limparFiltros")
 		];
 
 		echo abre_form();

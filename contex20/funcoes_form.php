@@ -230,3 +230,9 @@
 
 		return $form;
 	}
+
+	function limparFiltros(){
+		unset($_POST);
+		index();
+		exit;
+	}
