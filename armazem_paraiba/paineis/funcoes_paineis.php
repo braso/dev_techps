@@ -532,7 +532,11 @@ function criar_relatorio_endosso() {
 			$empresa["qtdMotoristas"] = count($motoristas);
 			$empresa["dataInicio"] = $mes->format("01/m/Y");
 			$empresa["dataFim"] = $mes->format("t/m/Y");
-			$empresa["percEndossado"] = ($statusEndossos["E"]) / array_sum(array_values($statusEndossos));
+			if(array_sum(array_values($statusEndossos)) == 0){
+			    $empresa["percEndossado"] = 0;
+			}else{
+			    $empresa["percEndossado"] = ($statusEndossos["E"]) / array_sum(array_values($statusEndossos));
+			}
 
 
 		file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", json_encode($empresa));
