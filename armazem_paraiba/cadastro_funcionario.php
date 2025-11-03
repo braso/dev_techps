@@ -1004,6 +1004,15 @@
 			)
 		];
 
+		$estados = mysqli_fetch_all(query(
+			"SELECT DISTINCT cida_tx_uf FROM cidade ORDER BY cida_tx_uf;"
+		), MYSQLI_ASSOC);
+		$aux = ["" => ""];
+		foreach($estados as $estado){
+			$aux[$estado["cida_tx_uf"]] = $estado["cida_tx_uf"];
+		}
+		$estados = $aux;
+
 		$camposPessoais = array_merge($camposPessoais, [
 			campo(	  	"Nome*", 				"nome", 			($a_mod["enti_tx_nome"]?? ""),			4, "",					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data(	"Nascido em*",	 		"nascimento", 		($a_mod["enti_tx_nascimento"]?? ""),	2, 						"tabindex=".sprintf("%02d", $tabIndex++)),
