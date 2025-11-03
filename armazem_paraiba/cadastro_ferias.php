@@ -10,7 +10,7 @@
 		echo 
 			"<script>
 					function selecionaMotorista(idEmpresa) {
-					let buscaExtra = encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")' +
+					let condicoes = encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")' +
 						(idEmpresa > 0 ? ' AND enti_nb_empresa = \"' + idEmpresa + '\"' : '')
 					);
 
@@ -26,7 +26,7 @@
 						placeholder: 'Selecione um item',
 						allowClear: true,
 						ajax: {
-							url: appPath + '/contex20/select2.php?path=' + contexPath + '&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=' + buscaExtra + '&extra_busca=enti_tx_matricula',
+							url: appPath + '/contex20/select2.php?path=' + contexPath + '&tabela=entidade&ordem=&limite=15&condicoes=' + condicoes + '&colunas=enti_tx_matricula',
 							dataType: 'json',
 							delay: 250,
 							processResults: function (data) {
