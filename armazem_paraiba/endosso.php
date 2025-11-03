@@ -498,7 +498,15 @@
 			$fields = [];
 			$_POST["busca_empresa"] = $_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"];
 			if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-				$fields[] = combo_net("Empresa*", "busca_empresa", $_POST["busca_empresa"], 3, "empresa", "onchange=selecionaMotorista(this.value)", ($extraEmpresa?? ""));
+				$fields[] = combo_net(
+					"Empresa*", 
+					"busca_empresa", 
+					$_POST["busca_empresa"], 
+					3, 
+					"empresa", 
+					"onchange=selecionaMotorista(this.value)", 
+					"AND empr_tx_status = 'ativo' ".($extraEmpresa?? "")
+				);
 			}
 			$fields = array_merge($fields, [
 				combo_net(
@@ -549,8 +557,8 @@
 			$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php"
 			."?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]
 			."&tabela=entidade"
-			."&extra_limite=15"
-			."&extra_busca=enti_tx_matricula"
+			."&colunas=enti_tx_matricula"
+			."&limite=15"
 		; // Utilizado dentro de endosso_html.php
 
 		include_once "html/endosso_html.php";
