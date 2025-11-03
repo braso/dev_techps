@@ -1,12 +1,63 @@
 <?php
+	/* Modo debug
+		ini_set("display_errors", 1);
+		error_reporting(E_ALL);
+	//*/
 	include "conecta.php";
+
+
+	function carregaJS(){
+
+		$nomeCampoCidade = "busca_cidade";
+		if(!empty($_POST["acao"]) && $_POST["acao"] == "layout_feriado()"){
+			$nomeCampoCidade = "cidade";
+		}
+
+		return 
+			"<script>
+				function selecionaMunicipio(estado){
+					let select3URL = 
+						'{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/select3.php?'
+						+'path={$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}'
+						+'&colunas='		+'".base64_encode("cida_nb_id AS id, CONCAT('[', cida_tx_uf, '] ', cida_tx_nome) AS text")."'
+						+'&tabela='			+'".base64_encode("cidade")."'
+						+'&condicoes='		+encodeURI('cida_tx_status = \"ativo\"'+ (estado!=''? ' AND cida_tx_uf = \"'+estado+'\"': ''))
+						+'&ordem='			+'".base64_encode("cida_tx_uf ASC, cida_tx_nome ASC")."'
+					;
+
+					if(estado != ''){
+						$('.{$nomeCampoCidade}').innerHTML = null;
+					}
+
+					$.fn.select2.defaults.set('theme', 'bootstrap');
+					$('.{$nomeCampoCidade}').select2({
+						language: 'pt-BR',
+						placeholder: 'Selecione um item',
+						allowClear: true,
+						ajax: {
+							url: select3URL,
+							dataType: 'json',
+							delay: 250,
+							processResults: function(data){
+								return {
+									results: data
+								};
+							},
+							cache: true
+						}
+					});
+				}
+				selecionaMunicipio('');
+			</script>"
+		;
+	}
 
 	function excluirFeriado(){
 		remover("feriado",$_POST["id"]);
 		index();
 		exit;
-
 	}
+
 	function modificarFeriado(){
 		$a_mod = carregar("feriado", $_POST["id"]);
 		
@@ -46,7 +97,7 @@
 
 		// Conferir se já existe um feriado nessa data{
 			$feriadoCadastrado = mysqli_fetch_assoc(query(
-				"SELECT * FROM feriado 
+				"SELECT * FROM feriado
 					WHERE feri_tx_status = 'ativo'
 						AND feri_tx_data = '{$novoFeriado["feri_tx_data"]}'
 						".((!empty($_POST["id"]))? "AND feri_nb_id != {$_POST["id"]}": "").";"
@@ -79,19 +130,10 @@
 		cabecalho("Cadastro de Feriado");
 
 
-		$estados = mysqli_fetch_all(query(
-			"SELECT DISTINCT cida_tx_uf FROM cidade ORDER BY cida_tx_uf;"
-		), MYSQLI_ASSOC);
-		$aux = ["" => ""];
-		foreach($estados as $estado){
-			$aux[$estado["cida_tx_uf"]] = $estado["cida_tx_uf"];
-		}
-		$estados = $aux;
-		
 		$campos = [
 			campo("Nome*", "nome", $_POST["nome"], 4, "", "maxlength='65'"),
 			campo_data("Data*", "data", $_POST["data"], 2),
-			combo("Estado", "uf", $_POST["uf"], 2, $estados),
+			combo("Estado", "uf", $_POST["uf"], 2, getUFs(), "onchange=selecionaMunicipio(this.value)"),
 			combo_net("Município", "cidade", $_POST["cidade"], 4, "cidade", "", "", "cida_tx_uf")
 		];
 
@@ -106,6 +148,8 @@
 		echo fecha_form($botoes);
 
 		rodape();
+
+		carregaJS();
 	}
 
 	function index(){
@@ -124,25 +168,37 @@
 
 		$extra = "";
 
-		$extra .= (($_POST["busca_codigo"])? " AND feri_nb_id LIKE '%".$_POST["busca_codigo"]."%'": "")
-			.(($_POST["busca_nome_like"])?" AND feri_tx_nome LIKE '%".$_POST["busca_nome_like"]."%'": "")
-			.(($_POST["busca_uf_like"])? " AND feri_tx_uf = '".$_POST["busca_uf_like"]."'": "")
-			.(($_POST["busca_cidade_like"])? " AND feri_nb_cidade = '".$_POST["busca_cidade_like"]."'": "")
+		$extra .= 
+			 (!empty($_POST["busca_codigo"])? 		" AND feri_nb_id LIKE '%{$_POST["busca_codigo"]}%'": "")
+			.(!empty($_POST["busca_nome_like"])?	" AND feri_tx_nome LIKE '%{$_POST["busca_nome_like"]}%'": "")
+			.(!empty($_POST["busca_uf"])? 			" AND feri_tx_uf = '{$_POST["busca_uf"]}'": "")
+			.(!empty($_POST["busca_cidade"])? 		" AND feri_nb_cidade = '{$_POST["busca_cidade"]}'": "")
 		;
 
+		$estados = getUFs();
+		$estados[""] = "Todos";
+
+		// $cidades = mysqli_fetch_all(query(
+		// 	"SELECT cida_nb_id, cida_tx_nome FROM cidade ORDER BY cida_tx_nome ASC;"
+		// ), MYSQLI_ASSOC);
+		// $aux = ["" => "Todos"];
+		// foreach($cidades as $cidade){
+		// 	$aux[$cidade["cida_nb_id"]] = $cidade["cida_tx_nome"];
+		// }
+		// $cidades = $aux;
+
 		$campos = [ 
-			campo("Código", "busca_codigo", $_POST["busca_codigo"], 2, "MASCARA_NUMERO", "maxlength='6' min='0'"),
-			campo("Nome", "busca_nome_like", $_POST["busca_nome_like"], 4, "", "maxlength='45'"),
-			campo("Estado", "busca_uf_like", $_POST["busca_uf_like"], 2, "", "maxlength='2'"),
-			campo("Município", "busca_cidade_like", $_POST["busca_cidade_like"], 2, "", "maxlength='20'"),
-			combo("Status", "busca_status", ($_POST["busca_status"]?? ""), 	2, ["ativo" => "Ativo"])
+			campo("Código", "busca_codigo", (empty($_POST["busca_codigo"])? "": $_POST["busca_codigo"]), 2, "MASCARA_NUMERO", "maxlength='6' min='0'"),
+			campo("Nome", "busca_nome_like", (empty($_POST["busca_nome_like"])? "": $_POST["busca_nome_like"]), 4, "", "maxlength='45'"),
+			combo("Estado", "busca_uf", (empty($_POST["busca_uf"])? "": $_POST["busca_uf"]), 2, $estados, "onchange=selecionaMunicipio(this.value)"),
+			combo_net("Município", "busca_cidade", (empty($_POST["busca_cidade"])? "": $_POST["busca_cidade"]), 4, "cidade"),
+			combo("Status", "busca_status", (empty($_POST["busca_status"])? "": $_POST["busca_status"]), 	2, ["ativo" => "Ativo"])
 		];
 
 		$botoes = [ 
 			botao("Buscar", "index"),
 			botao("Limpar Filtro", "limparFiltros"),
-			botao("Inserir", "layout_feriado", "", "", "", "", "btn btn-success"),
-			botao("Limpar Filtro", "limparFiltro()"),
+			botao("Inserir", "layout_feriado", "", "", "", "", "btn btn-success")
 		];
 		
 		echo abre_form();
@@ -160,10 +216,10 @@
 			];
 
 			$camposBusca = [
-				"busca_codigo" 	=> "feri_nb_id",
+				"busca_codigo" 		=> "feri_nb_id",
 				"busca_nome_like" 	=> "feri_tx_nome",
-				"busca_uf_like" 		=> "feri_tx_uf",
-				"busca_cidade_like" 	=> "cida_tx_nome",
+				"busca_uf" 			=> "feri_tx_uf",
+				"busca_cidade" 		=> "cida_nb_id",
 				"busca_status" 		=> "feri_tx_status",
 			];
 
@@ -188,6 +244,9 @@
 
 			echo gridDinamico("tabelaFeriados", $gridFields, $camposBusca, $queryBase, $jsFunctions);
 		//}
+
+
+		echo carregaJS();
 
 		rodape();
 	}
