@@ -18,9 +18,10 @@
 
 	global $tiposMotivo;
 	$tiposMotivo = [
-		"Abono",
-		"Afastamento",
-		"Ajuste"
+		"" => "",
+		"Abono" => "Abono",
+		"Afastamento" => "Afastamento",
+		"Ajuste" => "Ajuste"
 	];
 	
 	include "conecta.php";

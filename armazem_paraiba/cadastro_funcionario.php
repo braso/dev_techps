@@ -74,7 +74,7 @@
 				}
 
 				function carregarParametro() {
-					id = document.getElementById('parametro').value;
+					id = document.getElementsByName('parametro')[0].value;
 					document.getElementById('frame_parametro').src = 'cadastro_funcionario.php?acao=carregarParametro&parametro='+id;
 					conferirParametroPadrao();
 				}
@@ -82,8 +82,7 @@
 				var parametroPadrao = ".json_encode($parametroPadrao).";
 				function padronizarParametro() {
 					var padraoDisplayJornada = (parametroPadrao.para_tx_tipo == 'escala')? 'none': 'block';
-					parent.document.contex_form.jornadaSemanal.parentElement.style.display = padraoDisplayJornada;
-					parent.document.contex_form.jornadaSabado.parentElement.style.display = padraoDisplayJornada;
+					parent.document.getElementsByName('divJornada')[0].style.display = padraoDisplayJornada;
 					
 					parent.document.contex_form.parametro.value 		= parametroPadrao.para_nb_id;
 					parent.document.contex_form.jornadaSemanal.value 	= parametroPadrao.para_tx_jornadaSemanal;
@@ -108,10 +107,11 @@
 
 
 				function checkOcupation(ocupation){
-					if(ocupation == 'Ajudante' || ocupation == 'Funcionário'){
-						document.getElementsByClassName('cnh-row')[0].setAttribute('style', 'display:none')
-					}else{
+					console.log(ocupation);
+					if(ocupation == 'Motorista'){
 						document.getElementsByClassName('cnh-row')[0].setAttribute('style', '')
+					}else{
+						document.getElementsByClassName('cnh-row')[0].setAttribute('style', 'display:none')
 					}
 				}
 
@@ -135,8 +135,7 @@
 					}
 				}
 
-				document.getElementById('jornadaSemanal').parentElement.style.display = '{$displayCamposJornada}';
-				document.getElementById('jornadaSabado').parentElement.style.display = '{$displayCamposJornada}';
+				parent.document.getElementsByName('divJornada')[0].style.display = '{$displayCamposJornada}';
 
 				
 				function imprimir() {
@@ -162,39 +161,31 @@
 
 				
 			</script>
-			
-			
-		<script>
-document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('select').forEach(function (select) {
-    const first = select.options[0];
-    if (!first) return;
+				
+			<script>
+				document.addEventListener('DOMContentLoaded', function () {
+				document.querySelectorAll('select').forEach(function (select) {
+					const first = select.options[0];
+					if (!first) return;
 
-   
-    const isPlaceholder =
-      first.value === '' ||
-      /selecion(e|e um item)/i.test(first.textContent.trim());
+				
+					const isPlaceholder = (first.value === '' || /selecion(e|e um item)/i.test(first.textContent.trim()));
 
-    if (isPlaceholder) {
-      // Torna a primeira opção desabilitada
-      first.disabled = true;
+					if (isPlaceholder) {
+					// Torna a primeira opção desabilitada
+					first.disabled = true;
 
-      // Define a primeira opção como selecionada (placeholder visível)
-      select.selectedIndex = 0;
+					// Define a primeira opção como selecionada (placeholder visível)
+					//   select.selectedIndex = 0;
 
-      // Se estiver usando Select2, força a atualização visual
-      if (window.jQuery && jQuery(select).data('select2')) {
-        jQuery(select).val('').trigger('change');
-      }
-    }
-  });
-});
-</script>
-"
-
-
-
-			
+					// Se estiver usando Select2, força a atualização visual
+					if (window.jQuery && jQuery(select).data('select2')) {
+						jQuery(select).val('').trigger('change');
+					}
+					}
+				});
+				});
+			</script>"
 		;
 
 		return;
@@ -257,8 +248,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 				console.log(parametroCarregado);
 
-				parent.document.contex_form.jornadaSemanal.parentElement.style.display	= ((parametroCarregado.para_tx_tipo == 'escala')? 'none': 'block');
-				parent.document.contex_form.jornadaSabado.parentElement.style.display	= ((parametroCarregado.para_tx_tipo == 'escala')? 'none': 'block');
+				console.log(document.getElementsByName('divJornada'));
+				parent.document.getElementsByName('divJornada')[0].style.display	= ((parametroCarregado.para_tx_tipo == 'escala')? 'none': 'block');
 				
 				parent.document.contex_form.jornadaSemanal.value						= parametroCarregado.para_tx_jornadaSemanal;
 				parent.document.contex_form.jornadaSabado.value							= parametroCarregado.para_tx_jornadaSabado;
@@ -407,7 +398,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				"admissao" 					=> "Dt Admissão",
 				"parametro" 				=> "Parâmetro",
 				// "jornadaSemanal" 			=> "Jornada Semanal",
-				// "jornadaSabado" 			=> "Jornada Sábado",
+				// "jornadaSabado" 			=> "Sábado",
 				"percHESemanal" 			=> "H.E. Semanal",
 				"percHEEx" 					=> "H.E. Extraordinária",
 				"cnhRegistro" 				=> "N° Registro da CNH",
@@ -439,7 +430,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 				if($parametro["para_tx_tipo"] == "horas_por_dia"){
 					$camposObrig["jornadaSemanal"] = "Jornada Semanal";
-					$camposObrig["jornadaSabado"] = "Jornada Sábado";
+					$camposObrig["jornadaSabado"] = "Sábado";
 				}
 			}
 
@@ -962,11 +953,6 @@ document.addEventListener('DOMContentLoaded', function () {
 			$idade = "{$intervalo->y} anos, {$intervalo->m} meses e {$intervalo->d} dias";
 		}
 		
-
-		$UFs = ["" => "Selecione"];
-		foreach(["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"] as $estado){
-			$UFs[$estado] = $estado;
-		}
 		
 		if(!empty($a_mod["enti_tx_foto"])){
 			$img = texto(
@@ -1027,7 +1013,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			combo(		"Sexo", 				"sexo", 			($a_mod["enti_tx_sexo"]?? ""),			2, $sexoOpt, 			"tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"Emissor RG", 			"rgOrgao", 			($a_mod["enti_tx_rgOrgao"]?? ""),		3, "",					"maxlength='6' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data(	"Data Emissão RG", 		"rgDataEmissao", 	($a_mod["enti_tx_rgDataEmissao"]?? ""),	2, 						"tabindex=".sprintf("%02d", $tabIndex++)),
-			combo(		"UF RG", 				"rgUf", 			($a_mod["enti_tx_rgUf"]?? ""),			2, $UFs, 				"tabindex=".sprintf("%02d", $tabIndex++)),
+			combo(		"UF RG", 				"rgUf", 			($a_mod["enti_tx_rgUf"]?? ""),			2, getUFs(), 			"tabindex=".sprintf("%02d", $tabIndex++)),
 			"<div class='col-sm-2 margin-bottom-5' style='width:100%; height:25px'></div>",
 
 			campo(	  	"CEP*", 				"cep", 				($a_mod["enti_tx_cep"]?? ""),			2, "MASCARA_CEP", 		"onfocusout='buscarCEP(this.value);' tabindex=".sprintf("%02d", $tabIndex++)),
@@ -1053,8 +1039,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 		$campoSalario = "";
 		if (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
-			$a_mod["enti_nb_salario"] = str_replace(".", ",", $a_mod["enti_nb_salario"]);
-			$campoSalario = campo("Salário*", "salario", (!empty($a_mod["enti_nb_salario"])? $a_mod["enti_nb_salario"] : "0"), 1, "MASCARA_DINHEIRO", "tabindex=".sprintf("%02d", $tabIndex+2));
+			$a_mod["enti_nb_salario"] = str_replace(".", ",", (!empty($a_mod["enti_nb_salario"])? $a_mod["enti_nb_salario"] : ""));
+			$campoSalario = campo("Salário*", "salario", $a_mod["enti_nb_salario"], 1, "MASCARA_DINHEIRO", "tabindex=".sprintf("%02d", $tabIndex+2));
 		}
 
 		$cContratual = [
@@ -1062,8 +1048,9 @@ document.addEventListener('DOMContentLoaded', function () {
 			$campoSalario
 		];
 		$tabIndex++;
+
 		$cContratual = array_merge($cContratual, [
-			combo(		"Ocupação*", 		"ocupacao", 		(!empty($a_mod["enti_tx_ocupacao"])? $a_mod["enti_tx_ocupacao"]		 		:""), 		2, ["" => "Selecione", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
+			combo(		"Ocupação*", 		"ocupacao", 		(!empty($a_mod["enti_tx_ocupacao"])? $a_mod["enti_tx_ocupacao"]	:""), 		2, ["" => "Selecione", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
 			campo_data(	"Dt Admissão*", 	"admissao", 		(!empty($a_mod["enti_tx_admissao"])? $a_mod["enti_tx_admissao"]		 		:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data(	"Dt. Desligamento", "desligamento", 	(!empty($a_mod["enti_tx_desligamento"])? $a_mod["enti_tx_desligamento"] 	:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(		"Saldo de Horas", 	"setBanco", 		(!empty($a_mod["enti_tx_banco"])? $a_mod["enti_tx_banco"] 					:"00:00"), 	1, "MASCARA_HORAS", "placeholder='HH:mm' tabindex=".sprintf("%02d", $tabIndex++)),
@@ -1076,11 +1063,42 @@ document.addEventListener('DOMContentLoaded', function () {
 			$conferirPadraoJS = "conferirParametroPadrao();";
 		}
 
+		$parametros = mysqli_fetch_all(query(
+			"SELECT para_nb_id, para_tx_nome FROM parametro WHERE para_tx_status = 'ativo';"
+		), MYSQLI_ASSOC);
+
+		$aux = ["" => "Selecione"];
+		foreach($parametros as $parametro){
+			$aux[strval($parametro["para_nb_id"])] = $parametro["para_tx_nome"];
+		}
+		$parametros = $aux;
+
+
+		// NÃO ESTÁ CONSEGUINDO ATUALIZAR COM A FUNÇÃO carregarParametro()
 		$cJornada = [
-			combo_bd(	"!Parâmetros da Jornada*".($icone_padronizar?? ""), "parametro", ($a_mod["enti_nb_parametro"]?? ""), 6, "parametro", "onchange='carregarParametro()' placeholder='Todos' tabindex=".sprintf("%02d", $tabIndex++)), "<div class='col-sm-2 margin-bottom-5' style='width:100%; height:25px'></div>",
+			"<div style='overflow: hidden;'>"
+				.combo("Parâmetros da Jornada".($icone_padronizar?? ""), "parametro", ($a_mod["enti_nb_parametro"]?? ""), 6, $parametros, "onchange='carregarParametro()' tabindex=".sprintf("%02d", $tabIndex++))
+			."</div>",
+			// combo_bd(	"!Parâmetros da Jornada*".($icone_padronizar?? ""), "parametro", ($a_mod["enti_nb_parametro"]?? ""), 6, "parametro", "onchange='carregarParametro()' tabindex=".sprintf("%02d", $tabIndex++)), 
+			
+			// combo_bd2(
+			// 	"Parâmetros da Jornada*".($icone_padronizar?? ""), 
+			// 	"parametro", 
+			// 	($a_mod["enti_nb_parametro"]?? ""), 
+			// 	"SELECT para_nb_id as 'value', para_tx_nome as 'text' FROM parametro WHERE para_tx_status = 'ativo'", 
+			// 	"col-sm-6 margin-bottom-5 campo-fit-content",
+			// 	"form-control input-sm campo-fit-content", 
+			// 	"onchange='carregarParametro()' tabindex=".sprintf("%02d", $tabIndex++),
+			// 	[
+			// 		["value" => "", "text" => "Selecione", "props" => "disabled"]
+			// 	]
+			// ),
 			texto(		"Escala", ($a_mod["textoEscala"]?? ""), 4, "name='textoEscala' style='display:none;'"),
-			campo_hora(	"Jornada Dias Úteis (Hr/dia)*", "jornadaSemanal", ($a_mod["enti_tx_jornadaSemanal"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'"),
-			campo_hora(	"Jornada Sábado*", "jornadaSabado", ($a_mod["enti_tx_jornadaSabado"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'"),
+			"<div name='divJornada' style='margin: 15px; width: fit-content; overflow: hidden;'>"
+				."<div style='font-weight: bold;'>Jornada</div>"
+				.campo_hora(	"Dias Úteis (Hr/dia)*", "jornadaSemanal", ($a_mod["enti_tx_jornadaSemanal"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'")
+				.campo_hora(	"Sábado*", "jornadaSabado", ($a_mod["enti_tx_jornadaSabado"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'")
+			."</div>",
 			campo(		"H.E. Semanal (%)*", "percHESemanal", ($a_mod["enti_tx_percHESemanal"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'"),
 			campo(		"H.E. Extraordinária (%)*", "percHEEx", ($a_mod["enti_tx_percHEEx"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'")
 		];
@@ -1111,12 +1129,12 @@ document.addEventListener('DOMContentLoaded', function () {
 			"cadastrarMotorista", 
 			((empty($_POST["id"]) || empty($a_mod["enti_tx_matricula"]))? "": "id,matricula"),
 			((empty($_POST["id"]) || empty($a_mod["enti_tx_matricula"]))? "": $_POST["id"].",".$a_mod["enti_tx_matricula"]),
-			"tabindex=53",
+			"tabindex=".sprintf("%02d", $tabIndex++),
 			"",
 			"btn btn-success"
 		);
 
-		$botoesCadastro[] = criarBotaoVoltar(null, null, "tabindex=54");
+		$botoesCadastro[] = criarBotaoVoltar(null, null, "tabindex=".sprintf("%02d", $tabIndex++));
 
 		if (!empty($_POST["id"])) {
 			$botoesCadastro[] = '<button class="btn default" type="button" onclick="imprimir()">Imprimir</button>';

@@ -78,12 +78,20 @@
 
 		cabecalho("Cadastro de Feriado");
 
-		$ufs = ["", "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MS", "MT", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
+
+		$estados = mysqli_fetch_all(query(
+			"SELECT DISTINCT cida_tx_uf FROM cidade ORDER BY cida_tx_uf;"
+		), MYSQLI_ASSOC);
+		$aux = ["" => ""];
+		foreach($estados as $estado){
+			$aux[$estado["cida_tx_uf"]] = $estado["cida_tx_uf"];
+		}
+		$estados = $aux;
 		
 		$campos = [
 			campo("Nome*", "nome", $_POST["nome"], 4, "", "maxlength='65'"),
 			campo_data("Data*", "data", $_POST["data"], 2),
-			combo("Estado", "uf", $_POST["uf"], 2, $ufs),
+			combo("Estado", "uf", $_POST["uf"], 2, $estados),
 			combo_net("Município", "cidade", $_POST["cidade"], 4, "cidade", "", "", "cida_tx_uf")
 		];
 
@@ -98,7 +106,6 @@
 		echo fecha_form($botoes);
 
 		rodape();
-
 	}
 
 	function index(){
@@ -135,6 +142,7 @@
 			botao("Buscar", "index"),
 			botao("Limpar Filtro", "limparFiltros"),
 			botao("Inserir", "layout_feriado", "", "", "", "", "btn btn-success"),
+			botao("Limpar Filtro", "limparFiltro()"),
 		];
 		
 		echo abre_form();

@@ -531,15 +531,12 @@
 		echo linha_form($fields);
 		echo fecha_form($buttons, "<span id='dadosResumo' style='height:'><b>".((!empty($_POST["busca_data"]) && !empty($_POST["busca_empresa"]))? "Carregando...": "")."</b></span>");
 
-		//function buscar_endosso(){
-			if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEndosso()"){
-				echo $endossoHTML;
-			}
-		//}*/
+		if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEndosso()"){
+			echo $endossoHTML;
+		}
 		echo "<div class='printable'></div>";
 
 		rodape();
-
 
 
 		if(!empty($counts)){

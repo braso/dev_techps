@@ -349,7 +349,12 @@
 
 		cabecalho("Cadastro Empresa/Filial");
 
-		$regimes = ["", "Simples Nacional", "Lucro Presumido", "Lucro Real"];
+		$regimes = [
+			"" => "Selecione",
+			"Simples Nacional" => "Simples Nacional",
+			"Lucro Presumido" => "Lucro Presumido",
+			"Lucro Real" => "Lucro Real"
+		];
 
 		if(empty($a_mod)){  //Não tem os dados de atualização, então está cadastrando
 			$values = $_POST;
@@ -613,22 +618,18 @@
 			((!empty($_POST["busca_uf"]))? 				" AND cida_tx_uf = '{$_POST["busca_uf"]}'": "")
 		;
 
-		if(!isset($_POST["busca_status"])){
+		if(empty($_POST["busca_status"])){
 			$extra .= " AND empr_tx_status = 'ativo'";
-		}elseif($_POST["busca_status"] != ""){
+		}elseif(!empty($_POST["busca_status"])){
 			$extra .= " AND empr_tx_status = '{$_POST["busca_status"]}'";
 		}
-		
-
-		$uf = ["", "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
-		
 
 		$c = [
 			campo("Código",			"busca_codigo",			($_POST["busca_codigo"]?? ""),			2, "MASCARA_NUMERO",	"maxlength='6' min='0'"),
 			campo("Nome",			"busca_nome_like",		($_POST["busca_nome_like"]?? ""),		3, "",					"maxlength='65'"),
 			campo("Nome Fantasia",	"busca_fantasia_like",	($_POST["busca_fantasia_like"]?? ""),	2, "",					"maxlength='65'"),
 			campo("CPF/CNPJ",		"busca_cnpj",			($_POST["busca_cnpj"]?? ""),			2, "MASCARA_CPF/CNPJ"),
-			combo("UF",				"busca_uf",				($_POST["busca_uf"]?? ""),				1, $uf),
+			combo("UF",				"busca_uf",				($_POST["busca_uf"]?? ""),				1, getUFs()),
 			combo("Status",			"busca_status",			($_POST["busca_status"]?? "ativo"),		2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
 		];
 
