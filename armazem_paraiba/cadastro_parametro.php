@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -204,7 +204,7 @@
 	}
 
 	function excluir_documento(){
-		remover("documento_parametro", $_POST["idArq"]);
+		query("DELETE FROM documento_parametro WHERE docu_nb_id = $_POST[idArq]");
 		$_POST["id"] = $_POST["idParametro"];
 		modificarParametro();
 		exit;
