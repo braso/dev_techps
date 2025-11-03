@@ -322,25 +322,26 @@
 			))
 		;
 
+		$niveis = ["" => ""];
+		switch($_SESSION["user_tx_nivel"]){
+			case "Super Administrador":
+				$niveis["Super Administrador"] = "Super Administrador";
+			case "Administrador":
+				$niveis["Administrador"] = "Administrador";
+			case "Embarcador":
+				$niveis["Embarcador"] = "Embarcador";
+			// case "Supervisão":
+			// 	$niveis["Supervisão"] = "Supervisão";
+		}
+
+		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Funcionário"])){
+			$niveis = [$_SESSION["user_tx_nivel"] => $_SESSION["user_tx_nivel"]];
+		}
+
 		if($editPermission){
 
 			$campo_nome = campo("Nome*", "nome", ($_POST["nome"]?? ""), 4, "","maxlength='65'");
-			
-			$niveis = [""];
-			switch($_SESSION["user_tx_nivel"]){
-				case "Super Administrador":
-					$niveis[] = "Super Administrador";
-				case "Administrador":
-					$niveis[] = "Administrador";
-				case "Embarcador":
-					$niveis[] = "Embarcador";
-				case "Supervisão":
-					$niveis[] = "Supervisão";
-			}
 
-			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Funcionário"])){
-				$niveis = [$_SESSION["user_tx_nivel"]];
-			}
 			$campo_nivel = combo("Nível*", "nivel", $_POST["nivel"], 2, $niveis, "");
 			$campo_status = combo("Status", "status", $_POST["status"], 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
 
@@ -361,15 +362,6 @@
 
 			$campo_nome = campo("Nome*", "nome", ($_POST["nome"]?? ""), 4, "","maxlength='65'");
 			
-			$niveis = [""];
-			switch($_SESSION["user_tx_nivel"]){
-				case "Super Administrador":
-					$niveis[] = "Super Administrador";
-				case "Administrador":
-					$niveis[] = "Administrador";
-				case "Embarcador":
-					$niveis[] = "Embarcador";
-			}
 			$campo_nivel = combo("Nível*", "nivel", ($_POST["nivel"]?? $niveis), 2, $niveis, "");
 			$campo_status = combo("Status", "status", ($_POST["status"]?? "ativo"), 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
 
@@ -579,17 +571,17 @@
 		// ;
 
 
-		$niveis = [""];
+		$niveis = ["" => ""];
 		switch($_SESSION["user_tx_nivel"]){
 			case "Super Administrador":
-				$niveis[] = "Super Administrador";
+				$niveis["Super Administrador"] = "Super Administrador";
 			case "Administrador":
-				$niveis[] = "Administrador";
+				$niveis["Administrador"] = "Administrador";
 			case "Funcionário":
-				$niveis[] = "Funcionário";
+				$niveis["Funcionário"] = "Funcionário";
 			default;
-				$niveis[] = "Motorista";
-				$niveis[] = "Ajudante";
+				$niveis["Motorista"] = "Motorista";
+				$niveis["Ajudante"] = "Ajudante";
 			break;
 		}
 

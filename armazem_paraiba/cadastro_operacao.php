@@ -75,9 +75,9 @@
 
 		$fields = [
 			campo("Código", 		"busca_codigo", 	($_POST["busca_codigo"]?? ""), 	1, "", "maxlength='6'"),
-			campo("Nome", 			"busca_nome_like", 		($_POST["busca_nome_like"]?? ""), 	3, "", "maxlength='65'"),
+			campo("Nome", 			"busca_nome_like", 		($_POST["busca_nome_like"]?? ""), 	8, "", "maxlength='65'"),
 			combo("Status", 		"busca_status", 	($_POST["busca_status"]?? ""), 	2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
-			combo_net("Funcionário", "busca_usuario", $_POST["busca_usuario"]?? "", 4, "entidade", "", "", "enti_tx_matricula"),
+			//combo_net("Funcionário", "busca_usuario", $_POST["busca_usuario"]?? "", 4, "entidade", "", "", "enti_tx_matricula"),
 		];
 
 		$buttons[] = botao("Buscar", "index");

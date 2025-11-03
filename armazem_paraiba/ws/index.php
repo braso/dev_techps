@@ -10,7 +10,6 @@
         echo "not found";
         exit;
     }
-    
     switch($elements[1]){
         case 'login':
             make_login();
