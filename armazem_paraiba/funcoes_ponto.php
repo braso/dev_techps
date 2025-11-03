@@ -1097,10 +1097,12 @@
 					$aRetorno["he50"] = "00:00";
 					if($ehDomingoFeriadoFacultativo){
 						$aRetorno["diffSaldo"] = "00:00";
-						if(operarHorarios([$aRetorno["he100"], $aRetorno["jornadaPrevista"]], "-")[0]){
+						$he100 = operarHorarios([$aRetorno["he100"], $aRetorno["jornadaPrevista"]], "-");
+						if($he100[0] == "-" || $he100 == "00:00"){
 							$aRetorno["he100"] = "00:00";
 						}else{
 							$aRetorno["he100"] = operarHorarios([$aRetorno["he100"], $aRetorno["jornadaPrevista"]], "-");
+							$aRetorno["diffSaldo"] = $aRetorno["he100"];
 						}
 					}
 				}else{
