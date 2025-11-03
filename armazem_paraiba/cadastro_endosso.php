@@ -650,14 +650,14 @@
 
 		cabecalho("Cadastro de Endosso");
 
-		$extra_bd_motorista = " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')";
+		$condicoes_motorista = " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')";
 		if($_SESSION["user_tx_nivel"] != "Super Administrador"){
-			$extra_bd_motorista .= " AND enti_nb_empresa = ".$_SESSION["user_tx_emprCnpj"];
+			$condicoes_motorista .= " AND enti_nb_empresa = ".$_SESSION["user_tx_emprCnpj"];
 		}
 
 		$_POST["empresa"] = $_POST["empresa"]?? $_SESSION["user_nb_empresa"];
 		if(!empty($_POST["empresa"])){
-			$extra_bd_motorista .= " AND enti_nb_empresa = ".$_POST["empresa"];
+			$condicoes_motorista .= " AND enti_nb_empresa = ".$_POST["empresa"];
 		}
 
 		$camposHE = 
@@ -712,7 +712,7 @@
 		;
 
 		$fields = [
-			combo_net("Funcionário", "busca_motorista", $_POST["busca_motorista"]?? "", 4, "entidade", "", $extra_bd_motorista, "enti_tx_matricula"),
+			combo_net("Funcionário", "busca_motorista", $_POST["busca_motorista"]?? "", 4, "entidade", "", $condicoes_motorista, "enti_tx_matricula"),
 			campo_data("De*", "data_de", ($_POST["data_de"]?? ""), 2),
 			campo_data("Ate*", "data_ate", ($_POST["data_ate"]?? ""), 2),
 			$camposHE,
