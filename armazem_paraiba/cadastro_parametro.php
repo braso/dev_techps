@@ -140,9 +140,10 @@
 
 	function enviarDocumento() {
 		global $a_mod;
+		// dd($_POST);
 
 		if(empty($a_mod)){
-			$a_mod = carregar("parametro", $_POST["id"]);
+			$a_mod = carregar("parametro", $_POST["idParametro"]);
 			$campos = [
 				"nome",
 				"jornadaSemanal",
