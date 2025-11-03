@@ -922,12 +922,17 @@
 		}
 
 		$htmlOpcoes = "";
+
+
 		foreach($opcoes as $key => $value){
 			// Correção da chave para os casos em que a variável $campos é um array comum, e não um dicionário. Retirar quando for necessário utilizar um dicionário com chaves numerais
 			// $key = is_int($key)? $value: $key;
 
-			$selected = ($key != $modificador)? "": "selected";
+			$selected = ($key == $modificador)? "selected": "";
 			$htmlOpcoes .= "<option value='{$key}' {$selected}>{$value}</option>";
+		}
+
+		if($variavel == "ocupacao"){
 		}
 
 		$campo =
@@ -1026,11 +1031,9 @@
 			."&tabela=".$tabela
 			."&colunas=".urlencode($colunas)
 			."&condicoes=".urlencode($condicoes)
-			."&ordem=".$ordem
-			."&limite=".$limite
+			."&ordem=".urlencode($ordem)
+			."&limite=".urlencode($limite)
 		;
-
-		dd($select2URL, false);
 
 		$ajax = "{}";
 		if(is_bool(strpos($selectProps, "startEmpty"))){
