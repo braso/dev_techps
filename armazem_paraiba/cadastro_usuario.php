@@ -524,6 +524,14 @@
 			}
 			</script>";
 
+			if (!empty($_POST["entidade"])) {
+				$arquivos = mysqli_fetch_all(query(
+					"SELECT * FROM documento_funcionario"
+						." WHERE docu_nb_entidade = ".$_POST["entidade"]
+				),MYSQLI_ASSOC);
+				echo "</div><div class='col-md-12'><div class='col-md-12 col-sm-12'>".arquivosFuncionario("Documentos", $_POST["entidade"], $arquivos);
+			}
+
 		rodape();
 	}
 
