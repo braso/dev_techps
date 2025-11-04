@@ -138,7 +138,7 @@
 			$_POST["returnValues"] = json_encode($_POST);
 		}
 
-		return botao("Voltar", "voltar")."<input type='hidden' name='returnValues' value='{$_POST["returnValues"]}' {$extra}/>";
+		return botao("Voltar", "voltar", "", "", $extra)."<input type='hidden' name='returnValues' value='{$_POST["returnValues"]}' />";
 	}
 
 	function voltar(){
@@ -229,4 +229,23 @@
 		$form .= "</form>";
 
 		return $form;
+	}
+
+	function limparFiltros(){
+		unset($_POST);
+		index();
+		exit;
+	}
+
+	function getUFs(): array{
+		$estados = mysqli_fetch_all(query(
+			"SELECT DISTINCT cida_tx_uf FROM cidade ORDER BY cida_tx_uf;"
+		), MYSQLI_ASSOC);
+		$aux = ["" => ""];
+		foreach($estados as $estado){
+			$aux[$estado["cida_tx_uf"]] = $estado["cida_tx_uf"];
+		}
+		$estados = $aux;
+
+		return $estados;
 	}

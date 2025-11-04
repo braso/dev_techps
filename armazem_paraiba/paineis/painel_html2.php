@@ -19,11 +19,7 @@
 				<div id="consulta">
 				</div>
 				<br>
-				<?php
-				if (!empty($periodoRelatorio["dataInicio"])) {
-					echo "<br> <b>Período do relatório:</b> " . $periodoRelatorio["dataInicio"] . " a " . $periodoRelatorio["dataFim"];
-				}
-				?>
+				<?="<br> <b>Período do relatório:</b> ".(!empty($periodoRelatorio["dataInicio"])? "{$periodoRelatorio["dataInicio"]} a {$periodoRelatorio["dataFim"]}": "--/--/----")?>
 				<br>
 				<?php if (!empty($empresa["empr_tx_nome"])) { ?>
 					<span><b>Empresa:</b> <?= $empresa["empr_tx_nome"] ?></span>
@@ -225,7 +221,7 @@
 				<?php } ?>
 
 	<!-- <div id="impressao">
-		<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s") . " (UTC-3)" ?>
+		<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s")." (UTC-3)" ?>
 	</div> -->
 </div>
 </div>

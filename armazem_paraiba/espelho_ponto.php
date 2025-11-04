@@ -22,12 +22,12 @@
 
 		if(!empty($motorista["empr_nb_parametro"])){
 			$parametroEmpresa = mysqli_fetch_assoc(query(
-				"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percHESemanal, para_tx_percHEEx, para_nb_id, para_tx_nome FROM parametro"
+				"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percHESemanal, para_tx_percHEEx, para_nb_id, para_tx_nome, para_tx_tipo FROM parametro"
 					." WHERE para_tx_status = 'ativo'"
 						." AND para_nb_id = ".$motorista["empr_nb_parametro"]
 					." LIMIT 1;"
 			));
-
+			
 			if(!empty($parametroEmpresa)){
 				if($parametroEmpresa["para_tx_tipo"] == "horas_por_dia"){
 					$padronizado = (
@@ -53,7 +53,7 @@
 		return $mensagemParametro;
 	}
 
-	
+
 	function redirParaAbono(){
 		unset($_POST["acao"]);
 		if(empty($_POST['busca_motorista'])){
@@ -153,12 +153,12 @@
 		echo "</style>";
 
 		//CAMPOS DE CONSULTA{
-			$condBuscaMotorista = "";
-			$condBuscaEmpresa = "";
+			$condBuscaMotorista = "AND enti_tx_status = 'ativo'";
+			$condBuscaEmpresa = "AND empr_tx_status = 'ativo'";
 
 			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 				[$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], $_SESSION["user_nb_empresa"]];
-				$condBuscaMotorista = " AND enti_nb_id = '".$_SESSION["user_nb_entidade"]."'";
+				$condBuscaMotorista .= " AND enti_nb_id = '".$_SESSION["user_nb_entidade"]."'";
 			}
 
 			if(!empty($_SESSION["user_nb_empresa"]) && $_SESSION["user_tx_nivel"] != "Administrador" && $_SESSION["user_tx_nivel"] != "Super Administrador"){
@@ -180,9 +180,9 @@
 						"busca_motorista",
 						(!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""),
 						4, 
-						"entidade", 
+						"entidade JOIN empresa ON enti_nb_empresa = empr_nb_id", 
 						"", 
-						(!empty($_POST["busca_empresa"])?" AND enti_nb_empresa = {$_POST["busca_empresa"]}":"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') {$condBuscaEmpresa} {$condBuscaMotorista}", 
+						(!empty($_POST["busca_empresa"])?" AND enti_nb_empresa = {$_POST["busca_empresa"]}":"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') {$condBuscaEmpresa} {$condBuscaMotorista}",
 						"enti_tx_matricula"
 					)
 				];
@@ -319,6 +319,7 @@
 				}
 
 				$totalResumo = setTotalResumo(array_slice(array_keys($rows[0]), 7));
+				
 				somarTotais($totalResumo, $rows);
 
 
@@ -453,13 +454,14 @@
 	}
 
 	function carregarJS($opt): string{
+
 		
 		$select2URL = 
 			"{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/select2.php"
 			."?path={$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}"
 			."&tabela=entidade"
-			."&extra_limite=15"
-			."&extra_busca=enti_tx_matricula";
+			."&colunas=enti_tx_matricula"
+			."&limite=15"
 		;
 
 		$logoEmpresa = mysqli_fetch_assoc(query(
@@ -477,10 +479,11 @@
 					document.form_ajuste_ponto.submit();
 				}
 
+				
 				function selecionaMotorista(idEmpresa){
-					let buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")');
+					let condicoes = '&condicoes='+encodeURI('enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")');
 					if(idEmpresa > 0){
-						buscaExtra += encodeURI(' AND enti_nb_empresa = '+idEmpresa);
+						condicoes += encodeURI(' AND enti_nb_empresa = '+idEmpresa);
 						$('.busca_motorista')[0].innerHTML = null;
 					}
 
@@ -494,7 +497,7 @@
 						placeholder: 'Selecione um item',
 						allowClear: true,
 						ajax: {
-							url: '{$select2URL}'+buscaExtra,
+							url: '{$select2URL}'+condicoes,
 							dataType: 'json',
 							delay: 250,
 							processResults: function(data){

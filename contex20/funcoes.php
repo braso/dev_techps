@@ -921,25 +921,29 @@
 			$classe .= " error-field";
 		}
 
-		$res = "";
-		foreach($opcoes as $key => $value){
-			//Correção da chave para os casos em que a variável $campos é um array comum, e não um dicionário. Retirar quando for necessário utilizar um dicionário com chaves numerais
-			$key = is_int($key)? $value: $key;
+		$htmlOpcoes = "";
 
-			$selected = ($key != $modificador)? '': 'selected';
-			$res .= '<option value="'.$key.'" '.$selected.'>'.$value.'</option>';
+
+		foreach($opcoes as $key => $value){
+			// Correção da chave para os casos em que a variável $campos é um array comum, e não um dicionário. Retirar quando for necessário utilizar um dicionário com chaves numerais
+			// $key = is_int($key)? $value: $key;
+
+			$selected = ($key == $modificador)? "selected": "";
+			$htmlOpcoes .= "<option value='{$key}' {$selected}>{$value}</option>";
 		}
 
-		$campo=
-			'<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content">
-				<label>'.$nome.'</label>
-				<select name="'.$variavel.'" class="'.$classe.'" '.$extra.'>
-					'.$res.'
+		if($variavel == "ocupacao"){
+		}
+
+		$campo =
+			"<div class='col-sm-{$tamanho} margin-bottom-5 campo-fit-content'>
+				<label>{$nome}</label>
+				<select name='{$variavel}' class='{$classe}' {$extra}>
+					{$htmlOpcoes}
 				</select>
-			</div>';
+			</div>";
 
 		return $campo;
-
 	}
 
 	function combo_radio($nome, $variavel, $modificador, $tamanho, array $opcoes, $extra = ""): string{
@@ -979,28 +983,28 @@
 		// return $campo;
 	// }
 
-	function combo_net($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra_bd='',$extra_busca='',$extra_ordem='',$extra_limite='15'){
+	function combo_net($nome,$variavel,$modificador,$tamanho,$tabela,$selectProps='',$condicoes='',$colunas='',$ordem='',$limite='15'){
 		global $CONTEX, $conn;
 
 		$opt = "";
 
 		if(!empty($modificador)){
 			$tab = substr($tabela,0,4);
-			if($extra_busca != ''){
-				$extra_campo = ",$extra_busca";
+			if($colunas != ''){
+				$extra_campo = ",$colunas";
 			}else{
 				$extra_campo = '';
 			}
 
 			$queryResult = mysqli_fetch_array(
 				query(
-					"SELECT {$tab}_tx_nome {$extra_campo} FROM {$tabela} 
+					"SELECT {$tab}_tx_nome {$extra_campo} FROM {$tabela}
 						WHERE {$tab}_tx_status = 'ativo'
 							AND {$tab}_nb_id = {$modificador};"
 				)
 			);
 			
-			if($extra_busca != ''){
+			if($colunas != ''){
 				$queryResult[0] = "[{$queryResult[1]}] {$queryResult[0]}";
 			}
 			if(!empty($queryResult)){
@@ -1015,7 +1019,7 @@
 		$campo =
 			'<div class="'.$classe.'">
 				<label>'.$nome.'</label>
-				<select class="'.$variavel.' form-control input-sm campo-fit-content" id="'.$variavel.'" style="width:100%" '.$extra.' name="'.$variavel.'">
+				<select class="'.$variavel.' form-control input-sm campo-fit-content" id="'.$variavel.'" style="width:100%" '.$selectProps.' name="'.$variavel.'">
 				'.$opt.'
 				</select>
 			</div>'
@@ -1024,15 +1028,16 @@
 		
 		$select2URL = 
 			$_ENV['URL_BASE'].$_ENV['APP_PATH']."/contex20/select2.php"
-			."?path=".$CONTEX['path']
+			."?path=".urlencode($CONTEX['path'])
 			."&tabela=".$tabela
-			."&extra_ordem=".$extra_ordem
-			."&extra_limite=".$extra_limite
-			."&extra_bd=".urlencode($extra_bd)
-			."&extra_busca=".urlencode($extra_busca);
+			."&colunas=".urlencode($colunas)
+			."&condicoes=".urlencode($condicoes)
+			."&ordem=".urlencode($ordem)
+			."&limite=".urlencode($limite)
+		;
 
 		$ajax = "{}";
-		if(is_bool(strpos($extra, "startEmpty"))){
+		if(is_bool(strpos($selectProps, "startEmpty"))){
 			$ajax = "{
 				url: '".$select2URL."',
 				dataType: 'json',
@@ -1067,25 +1072,26 @@
 		return $campo;
 	}
 
-	function combo_bd($nome,$variavel,$modificador,$tamanho,$tabela,$extra='',$extra_bd=''){
+	function combo_bd($nome,$variavel,$modificador,$tamanho,$tabela,$extra="",$condicoes=""){
 
 		$tab=substr($tabela,0,4);
-		$htmlOpcoes = '';
+		$htmlOpcoes = "";
 		if($nome[0] == "!"){
 			$nome=substr($nome, 1);
 			$htmlOpcoes.="<option value=''></option>";
 		}
 		
-		// if(stripos($extra_bd,"order by") === false){
-		// 	$extra_bd=" ORDER BY ".$tab."_tx_nome ASC";
+		// if(stripos($condicoes,"order by") === false){
+		// 	$condicoes=" ORDER BY ".$tab."_tx_nome ASC";
 		// }
 
-		if($extra_bd == ''){
-			$extra_bd = " ORDER BY {$tab}_tx_nome ASC";
+		if(empty($condicoes)){
+			$condicoes = " ORDER BY {$tab}_tx_nome ASC";
 		}
-
 		
-		$sql=query("SELECT ".$tab."_nb_id, ".$tab."_tx_nome FROM $tabela WHERE ".$tab."_tx_status = 'ativo' $extra_bd");
+		
+		$sql=query("SELECT {$tab}_nb_id, {$tab}_tx_nome FROM {$tabela} WHERE {$tab}_tx_status = 'ativo' {$condicoes}");
+
 		while($a=mysqli_fetch_array($sql)){
 
 			if($a[0] == $modificador || $a[1] == $modificador){
@@ -1102,15 +1108,48 @@
 		}
 
 		$campo=
-			'<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content">
-				<label>'.$nome.'</label>
-				<select name="'.$variavel.'" id="'.$variavel.'" class="'.$classe.'" '.$extra.'>
-					'.$htmlOpcoes.'
+			"<div class='col-sm-{$tamanho} margin-bottom-5 campo-fit-content'>
+				<label>{$nome}</label>
+				<select name='{$variavel}' id='{$variavel}' class='{$classe}' {$extra}>
+					{$htmlOpcoes}
 				</select>
-			</div>'
+			</div>"
 		;
 
 		return $campo;
+	}
+
+	//Desenvolver funcionalidade e aplicar nas telas para substituir o combo_bd()
+	function combo_bd2(
+		string $nome,
+		string $variavel,
+		string $modificador,
+		string $sql,
+		string $divClasse = "col-sm-2 margin-bottom-5 campo-fit-content",
+		string $selectClasse = "form-control input-sm campo-fit-content",
+		string $selectProps = "",
+		array $opcoes = []
+	): string{
+
+		$rows = mysqli_fetch_all(query($sql), MYSQLI_ASSOC);
+		$campo = [
+			"<div class='{$divClasse}'>
+				<label>{$nome}</label>
+				<select name='{$variavel}' id='{$variavel}' class='{$selectClasse}' {$selectProps}>"
+		];
+		
+		$rows = array_merge($opcoes, $rows);
+
+		foreach($rows as $row){
+			$campo[] =
+				"<option value='{$row["value"]}' ".($row["value"] == $modificador? "selected": "")." {$row["props"]}>
+					{$row["text"]}
+				</option>";
+		}
+
+		$campo[] = "</select>
+			</div>";
+		return implode("", $campo);
 	}
 
 	function arquivosParametro($nome,$idParametro,$arquivos){

@@ -406,7 +406,7 @@ $pdf->AddPage();
 desenharTituloSecao($pdf, 'Jornada Padrão do Funcionário');
 desenharLinhaDeCamposFlex($pdf, [['label' => 'Parâmetros da Jornada:', 'value' => $parametroJornada["para_tx_nome"], 'larguraLabel' => 40, 'larguraValor' => 140, 'multiLine' => true]]);
 desenharLinhaDeCamposFlex($pdf, [
-    ['label' => 'Jornada Dias Úteis (Hr/dia):', 'value' => $parametroJornada["para_tx_jornadaSemanal"], 'larguraLabel' => 45, 'larguraValor' => 13],
+    ['label' => 'Dias Úteis (Hr/dia):', 'value' => $parametroJornada["para_tx_jornadaSemanal"], 'larguraLabel' => 45, 'larguraValor' => 13],
     ['label' => 'Jornada Sábado:', 'value' => $parametroJornada["para_tx_jornadaSabado"] ?? '', 'larguraLabel' => 30, 'larguraValor' => 13],
     ['label' => 'Convenção Padrão:', 'value' => $padronizado, 'larguraLabel' => 35, 'larguraValor' => 40],
 ]);

@@ -18,7 +18,7 @@
         <!-- INICIO INNER FOOTER -->
         <div class="page-footer">
             <div class="container-fluid"> 
-                <?php date("Y")?> &copy; <a href="https://www.techps.com.br" target="_blank" style="margin-right: 30px">TechPS</a> Versão: <?= $version?>
+                <?= date("Y")." &copy; <a href='https://www.techps.com.br' target='_blank' style='margin-right: 30px'>TechPS</a> Versão: {$version}"?>
             </div>
         </div>
         <div class="scroll-to-top">

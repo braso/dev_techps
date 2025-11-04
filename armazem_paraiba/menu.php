@@ -54,7 +54,7 @@
 				"/paineis/disponibilidade.php"	=> "Disponibilidade",
 				"/paineis/endosso.php"			=> "Endosso",
 				"/paineis/jornada.php"			=> "Jornada Aberta",
-				"/paineis/nc_juridica.php"		=> "Não Conformidades Juridicas Atualizado",
+				"/paineis/nc_juridica.php"		=> "Não Conformidades Jurídicas",
 				"/paineis/saldo.php"			=> "Saldo"
 			] + $camposOcultosProdução,
 			"relatórios" => [
