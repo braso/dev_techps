@@ -27,7 +27,41 @@
 		}
 
 		echo 
-			"<script>
+			"
+
+
+
+			
+			<form name='form_excluir_arquivo' method='post' action='cadastro_funcionario.php'>
+				<input type='hidden' name='idEntidade' value=''>
+				<input type='hidden' name='idArq' value=''>
+				<input type='hidden' name='acao' value=''>
+			</form>
+
+			<form name='form_download_arquivo' method='post' action='cadastro_funcionario.php'>
+				<input type='hidden' name='idEntidade' value=''>
+				<input type='hidden' name='caminho' value=''>
+				<input type='hidden' name='acao' value=''>
+			</form>
+
+			<script>
+
+				function downloadArquivo(id, caminho, acao) {
+					document.form_download_arquivo.idEntidade.value = id;
+					document.form_download_arquivo.caminho.value = caminho;
+					document.form_download_arquivo.acao.value = acao;
+					document.form_download_arquivo.submit();
+				}
+
+				function remover_arquivo(id, idArq, arquivo, acao ) {
+					if (confirm('Deseja realmente excluir o arquivo '+arquivo+'?')) {
+						document.form_excluir_arquivo.idEntidade.value = id;
+						document.form_excluir_arquivo.idArq.value = idArq;
+						document.form_excluir_arquivo.acao.value = acao;
+						document.form_excluir_arquivo.submit();
+					}
+				}
+
 				function buscarCEP(cep) {
 					var num = cep.replace(/[^0-9]/g, '');
 					if (num.length == '8') {
@@ -36,20 +70,19 @@
 				}
 
 				function carregarEmpresa(id) {
-					document.getElementById('frame_parametro').src = 'cadastro_motorista.php?acao=carregarEmpresa&emp='+id;
+					document.getElementById('frame_parametro').src = 'cadastro_funcionario.php?acao=carregarEmpresa&emp='+id;
 				}
 
 				function carregarParametro() {
-					id = document.getElementById('parametro').value;
-					document.getElementById('frame_parametro').src = 'cadastro_motorista.php?acao=carregarParametro&parametro='+id;
+					id = document.getElementsByName('parametro')[0].value;
+					document.getElementById('frame_parametro').src = 'cadastro_funcionario.php?acao=carregarParametro&parametro='+id;
 					conferirParametroPadrao();
 				}
 
 				var parametroPadrao = ".json_encode($parametroPadrao).";
 				function padronizarParametro() {
 					var padraoDisplayJornada = (parametroPadrao.para_tx_tipo == 'escala')? 'none': 'block';
-					parent.document.contex_form.jornadaSemanal.parentElement.style.display = padraoDisplayJornada;
-					parent.document.contex_form.jornadaSabado.parentElement.style.display = padraoDisplayJornada;
+					parent.document.getElementsByName('divJornada')[0].style.display = padraoDisplayJornada;
 					
 					parent.document.contex_form.parametro.value 		= parametroPadrao.para_nb_id;
 					parent.document.contex_form.jornadaSemanal.value 	= parametroPadrao.para_tx_jornadaSemanal;
@@ -74,10 +107,11 @@
 
 
 				function checkOcupation(ocupation){
-					if(ocupation == 'Ajudante' || ocupation == 'Funcionário'){
-						document.getElementsByClassName('cnh-row')[0].setAttribute('style', 'display:none')
-					}else{
+					console.log(ocupation);
+					if(ocupation == 'Motorista'){
 						document.getElementsByClassName('cnh-row')[0].setAttribute('style', '')
+					}else{
+						document.getElementsByClassName('cnh-row')[0].setAttribute('style', 'display:none')
 					}
 				}
 
@@ -101,8 +135,7 @@
 					}
 				}
 
-				document.getElementById('jornadaSemanal').parentElement.style.display = '{$displayCamposJornada}';
-				document.getElementById('jornadaSabado').parentElement.style.display = '{$displayCamposJornada}';
+				parent.document.getElementsByName('divJornada')[0].style.display = '{$displayCamposJornada}';
 
 				
 				function imprimir() {
@@ -124,6 +157,34 @@
 					form.submit();
 					document.body.removeChild(form);
 				}
+
+
+				
+			</script>
+				
+			<script>
+				document.addEventListener('DOMContentLoaded', function () {
+				document.querySelectorAll('select').forEach(function (select) {
+					const first = select.options[0];
+					if (!first) return;
+
+				
+					const isPlaceholder = (first.value === '' || /selecion(e|e um item)/i.test(first.textContent.trim()));
+
+					if (isPlaceholder) {
+					// Torna a primeira opção desabilitada
+					first.disabled = true;
+
+					// Define a primeira opção como selecionada (placeholder visível)
+					//   select.selectedIndex = 0;
+
+					// Se estiver usando Select2, força a atualização visual
+					if (window.jQuery && jQuery(select).data('select2')) {
+						jQuery(select).val('').trigger('change');
+					}
+					}
+				});
+				});
 			</script>"
 		;
 
@@ -187,8 +248,8 @@
 
 				console.log(parametroCarregado);
 
-				parent.document.contex_form.jornadaSemanal.parentElement.style.display	= ((parametroCarregado.para_tx_tipo == 'escala')? 'none': 'block');
-				parent.document.contex_form.jornadaSabado.parentElement.style.display	= ((parametroCarregado.para_tx_tipo == 'escala')? 'none': 'block');
+				console.log(document.getElementsByName('divJornada'));
+				parent.document.getElementsByName('divJornada')[0].style.display	= ((parametroCarregado.para_tx_tipo == 'escala')? 'none': 'block');
 				
 				parent.document.contex_form.jornadaSemanal.value						= parametroCarregado.para_tx_jornadaSemanal;
 				parent.document.contex_form.jornadaSabado.value							= parametroCarregado.para_tx_jornadaSabado;
@@ -337,7 +398,7 @@
 				"admissao" 					=> "Dt Admissão",
 				"parametro" 				=> "Parâmetro",
 				// "jornadaSemanal" 			=> "Jornada Semanal",
-				// "jornadaSabado" 			=> "Jornada Sábado",
+				// "jornadaSabado" 			=> "Sábado",
 				"percHESemanal" 			=> "H.E. Semanal",
 				"percHEEx" 					=> "H.E. Extraordinária",
 				"cnhRegistro" 				=> "N° Registro da CNH",
@@ -369,7 +430,7 @@
 
 				if($parametro["para_tx_tipo"] == "horas_por_dia"){
 					$camposObrig["jornadaSemanal"] = "Jornada Semanal";
-					$camposObrig["jornadaSabado"] = "Jornada Sábado";
+					$camposObrig["jornadaSabado"] = "Sábado";
 				}
 			}
 
@@ -618,6 +679,16 @@
 		exit;
 	}
 
+	function excluir_documento() {
+
+		query("DELETE FROM documento_funcionario WHERE docu_nb_id = $_POST[idArq]");
+		
+		// Após excluir, apenas recarrega a tela do funcionário
+		$_POST["id"] = $_POST["idEntidade"];
+		modificarMotorista();
+		exit;
+	}
+
 	function excluirFoto(){
 		atualizar("entidade", ["enti_tx_foto"], [""], $_POST["idEntidade"]);
 		$_POST["id"] = $_POST["idEntidade"];
@@ -632,35 +703,14 @@
 		exit;
 	}
 
-		function enviarDocumento() {
+	function enviarDocumento() {
 		global $a_mod;
 
-		// if(empty($a_mod)){
-		// 	$a_mod = carregar("parametro", $_POST["id"]);
-		// 	$campos = [
-		// 		"nome",
-		// 		"jornadaSemanal",
-		// 		"jornadaSabado",
-		// 		"tolerancia",
-		// 		"percHESemanal",
-		// 		"percHEEx",
-		// 		"maxHESemanalDiario",
-		// 		"diariasCafe",
-		// 		"diariasAlmoco",
-		// 		"diariasJanta",
-		// 		"acordo",
-		// 		"inicioAcordo",
-		// 		"fimAcordo",
-		// 		"banco",
-		// 		"Obs"
-		// 	];
-		// 	foreach($campos as $campo){
-		// 		$a_mod["para_tx_".$campo] = $_POST[$campo];
-		// 	}
-		// 	$a_mod["para_nb_qDias"] = $_POST["para_nb_Qdias"];
-		// 	$a_mod["para_tx_horasLimite"] = $_POST["para_tx_horasLimite"];
-		// 	unset($campos);
-		// }
+		if(empty($a_mod)){
+			if(isset($_POST["id"])){
+				$a_mod = carregar("entidade", $_POST["id"]);
+			}
+		}
 
 		$novoArquivo = [
 			"docu_nb_entidade" => $_POST["idFuncionario"],
@@ -673,9 +723,26 @@
 		];
 		
 		$arquivo =  $_FILES["file"];
-		$formatos = ["image/jpeg", "image/png", "application/msword", "application/pdf"];
+		// Detecta MIME com maior confiabilidade e permite .doc e .docx
+		$mimeType = function_exists('mime_content_type') ? mime_content_type($arquivo["tmp_name"]) : $arquivo["type"]; 
+		$formatos = [
+			"image/jpeg",
+			"image/png",
+			"application/msword", // .doc
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+			"application/pdf"
+		];
+		$extensao = strtolower(pathinfo($arquivo["name"], PATHINFO_EXTENSION));
+		$extPermitidas = ["jpg","jpeg","png","pdf","doc","docx"];
 
-		if (in_array($arquivo["type"], $formatos) && $arquivo["name"] != "") {
+		if ($arquivo["error"] !== UPLOAD_ERR_OK) {
+			set_status("Erro no upload: ".$arquivo["error"]);
+			$_POST["id"] = $novoArquivo["docu_nb_entidade"]; 
+			visualizarCadastro();
+			exit;
+		}
+
+		if ($arquivo["name"] != "" && (in_array($mimeType, $formatos) || in_array($extensao, $extPermitidas))) {
 			$pasta_funcionario = "arquivos/Funcionarios/".$novoArquivo["docu_nb_entidade"]."/";
 	
 			if (!is_dir($pasta_funcionario)) {
@@ -684,16 +751,22 @@
 	
 			$arquivo_temporario = $arquivo["tmp_name"];
 			$extensao = pathinfo($arquivo["name"], PATHINFO_EXTENSION);
+			// Se o nome do arquivo está vazio, usa o nome original (sem extensão)
+			if(empty($novoArquivo["docu_tx_nome"])){
+				$novoArquivo["docu_tx_nome"] = pathinfo($arquivo["name"], PATHINFO_FILENAME);
+			}
 			$novoArquivo["docu_tx_nome"] .= ".".$extensao;
 			$novoArquivo["docu_tx_caminho"] = $pasta_funcionario.$novoArquivo["docu_tx_nome"];
 	
 			if (move_uploaded_file($arquivo_temporario, $novoArquivo["docu_tx_caminho"])) {
-				dd($novoArquivo, false);
 				inserir("documento_funcionario", array_keys($novoArquivo), array_values($novoArquivo));
+				set_status("Documento enviado com sucesso.");
+			} else {
+				set_status("Falha ao salvar o arquivo no servidor.");
 			}
+		} else {
+			set_status("Formato de arquivo não permitido. Use PDF, DOC ou DOCX.");
 		}
-
-		set_status("Registro inserido com sucesso.");
 		$_POST["id"] = $novoArquivo["docu_nb_entidade"];
 		visualizarCadastro();
 		exit;
@@ -880,8 +953,6 @@
 			$idade = "{$intervalo->y} anos, {$intervalo->m} meses e {$intervalo->d} dias";
 		}
 		
-
-		$UFs = ["", "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
 		
 		if(!empty($a_mod["enti_tx_foto"])){
 			$img = texto(
@@ -908,8 +979,15 @@
 		];
 
 		$statusOpt = ["ativo" => "Ativo", "inativo" => "Inativo"];
-		$estadoCivilOpt = ["", "Casado(a)", "Solteiro(a)", "Divorciado(a)", "Viúvo(a)"];
-		$sexoOpt = ["", "Feminino", "Masculino"];
+		$estadoCivilOpt = [
+			"" => "Selecione", 
+			"Casado(a)" => "Casado(a)", 
+			"Solteiro(a)" => "Solteiro(a)", 
+			"Divorciado(a)" => "Divorciado(a)", 
+			"Viúvo(a)" => "Viúvo(a)"
+		];
+
+		$sexoOpt = ["" => "Selecione", "Feminino" => "Feminino", "Masculino" => "Masculino"];
 
 		$camposUsuario = [
 			campo("E-mail*", 				"email", 			($a_mod["enti_tx_email"]?? ""),			2, "", 					"tabindex=".sprintf("%02d", $tabIndex++)),
@@ -926,6 +1004,15 @@
 			)
 		];
 
+		$estados = mysqli_fetch_all(query(
+			"SELECT DISTINCT cida_tx_uf FROM cidade ORDER BY cida_tx_uf;"
+		), MYSQLI_ASSOC);
+		$aux = ["" => ""];
+		foreach($estados as $estado){
+			$aux[$estado["cida_tx_uf"]] = $estado["cida_tx_uf"];
+		}
+		$estados = $aux;
+
 		$camposPessoais = array_merge($camposPessoais, [
 			campo(	  	"Nome*", 				"nome", 			($a_mod["enti_tx_nome"]?? ""),			4, "",					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data(	"Nascido em*",	 		"nascimento", 		($a_mod["enti_tx_nascimento"]?? ""),	2, 						"tabindex=".sprintf("%02d", $tabIndex++)),
@@ -935,7 +1022,7 @@
 			combo(		"Sexo", 				"sexo", 			($a_mod["enti_tx_sexo"]?? ""),			2, $sexoOpt, 			"tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"Emissor RG", 			"rgOrgao", 			($a_mod["enti_tx_rgOrgao"]?? ""),		3, "",					"maxlength='6' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data(	"Data Emissão RG", 		"rgDataEmissao", 	($a_mod["enti_tx_rgDataEmissao"]?? ""),	2, 						"tabindex=".sprintf("%02d", $tabIndex++)),
-			combo(		"UF RG", 				"rgUf", 			($a_mod["enti_tx_rgUf"]?? ""),			2, $UFs, 				"tabindex=".sprintf("%02d", $tabIndex++)),
+			combo(		"UF RG", 				"rgUf", 			($a_mod["enti_tx_rgUf"]?? ""),			2, getUFs(), 			"tabindex=".sprintf("%02d", $tabIndex++)),
 			"<div class='col-sm-2 margin-bottom-5' style='width:100%; height:25px'></div>",
 
 			campo(	  	"CEP*", 				"cep", 				($a_mod["enti_tx_cep"]?? ""),			2, "MASCARA_CEP", 		"onfocusout='buscarCEP(this.value);' tabindex=".sprintf("%02d", $tabIndex++)),
@@ -950,7 +1037,6 @@
 			campo(	  	"Filiação Pai", 		"pai", 				($a_mod["enti_tx_pai"]?? ""),			3, "", 					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"Filiação Mãe", 		"mae", 				($a_mod["enti_tx_mae"]?? ""),			3, "", 					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"Nome do Cônjuge",	 	"conjugue", 		($a_mod["enti_tx_conjugue"]?? ""),		3, "", 					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
-			// campo(	  	"Tipo de Operação", 	"tipoOperacao", 	($a_mod["enti_tx_tipoOperacao"]?? ""),	3, "", 					"maxlength='40' tabindex=".sprintf("%02d", $tabIndex++)),
 			combo_bd( "!Tipo de Operação", 	"tipoOperacao",		(isset($_POST["enti_tx_tipoOperacao"])? $_POST["enti_tx_tipoOperacao"]: ""), 3, "operacao"),
 
 			textarea(	"Observações:", "obs", ($a_mod["enti_tx_obs"]?? ""), 12, "tabindex=".sprintf("%02d", $tabIndex++))
@@ -962,8 +1048,8 @@
 		}
 		$campoSalario = "";
 		if (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
-			$a_mod["enti_nb_salario"] = str_replace(".", ",", $a_mod["enti_nb_salario"]);
-			$campoSalario = campo("Salário*", "salario", (!empty($a_mod["enti_nb_salario"])? $a_mod["enti_nb_salario"] : "0"), 1, "MASCARA_DINHEIRO", "tabindex=".sprintf("%02d", $tabIndex+2));
+			$a_mod["enti_nb_salario"] = str_replace(".", ",", (!empty($a_mod["enti_nb_salario"])? $a_mod["enti_nb_salario"] : ""));
+			$campoSalario = campo("Salário*", "salario", $a_mod["enti_nb_salario"], 1, "MASCARA_DINHEIRO", "tabindex=".sprintf("%02d", $tabIndex+2));
 		}
 
 		$cContratual = [
@@ -971,12 +1057,13 @@
 			$campoSalario
 		];
 		$tabIndex++;
+
 		$cContratual = array_merge($cContratual, [
-			combo(		"Ocupação*", 		"ocupacao", 		(!empty($a_mod["enti_tx_ocupacao"])? $a_mod["enti_tx_ocupacao"]		 		:""), 		2, ["Motorista", "Ajudante", "Funcionário"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
+			combo(		"Ocupação*", 		"ocupacao", 		(!empty($a_mod["enti_tx_ocupacao"])? $a_mod["enti_tx_ocupacao"]	:""), 		2, ["" => "Selecione", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
 			campo_data(	"Dt Admissão*", 	"admissao", 		(!empty($a_mod["enti_tx_admissao"])? $a_mod["enti_tx_admissao"]		 		:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data(	"Dt. Desligamento", "desligamento", 	(!empty($a_mod["enti_tx_desligamento"])? $a_mod["enti_tx_desligamento"] 	:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(		"Saldo de Horas", 	"setBanco", 		(!empty($a_mod["enti_tx_banco"])? $a_mod["enti_tx_banco"] 					:"00:00"), 	1, "MASCARA_HORAS", "placeholder='HH:mm' tabindex=".sprintf("%02d", $tabIndex++)),
-			combo(		"Subcontratado", 	"subcontratado", 	(!empty($a_mod["enti_tx_subcontratado"])? $a_mod["enti_tx_subcontratado"] 	:""), 		2, ["" => "", "sim" => "Sim", "nao" => "Não"], "tabindex=".sprintf("%02d", $tabIndex++)),
+			combo(		"Subcontratado", 	"subcontratado", 	(!empty($a_mod["enti_tx_subcontratado"])? $a_mod["enti_tx_subcontratado"] 	:""), 		2, ["" => "Selecione", "sim" => "Sim", "nao" => "Não"], "tabindex=".sprintf("%02d", $tabIndex++)),
 		]);
 
 		$conferirPadraoJS = "";
@@ -985,11 +1072,42 @@
 			$conferirPadraoJS = "conferirParametroPadrao();";
 		}
 
+		$parametros = mysqli_fetch_all(query(
+			"SELECT para_nb_id, para_tx_nome FROM parametro WHERE para_tx_status = 'ativo';"
+		), MYSQLI_ASSOC);
+
+		$aux = ["" => "Selecione"];
+		foreach($parametros as $parametro){
+			$aux[strval($parametro["para_nb_id"])] = $parametro["para_tx_nome"];
+		}
+		$parametros = $aux;
+
+
+		// NÃO ESTÁ CONSEGUINDO ATUALIZAR COM A FUNÇÃO carregarParametro()
 		$cJornada = [
-			combo_bd(	"!Parâmetros da Jornada*".($icone_padronizar?? ""), "parametro", ($a_mod["enti_nb_parametro"]?? ""), 6, "parametro", "onchange='carregarParametro()' tabindex=".sprintf("%02d", $tabIndex++)), "<div class='col-sm-2 margin-bottom-5' style='width:100%; height:25px'></div>",
+			"<div style='overflow: hidden;'>"
+				.combo("Parâmetros da Jornada".($icone_padronizar?? ""), "parametro", ($a_mod["enti_nb_parametro"]?? ""), 6, $parametros, "onchange='carregarParametro()' tabindex=".sprintf("%02d", $tabIndex++))
+			."</div>",
+			// combo_bd(	"!Parâmetros da Jornada*".($icone_padronizar?? ""), "parametro", ($a_mod["enti_nb_parametro"]?? ""), 6, "parametro", "onchange='carregarParametro()' tabindex=".sprintf("%02d", $tabIndex++)), 
+			
+			// combo_bd2(
+			// 	"Parâmetros da Jornada*".($icone_padronizar?? ""), 
+			// 	"parametro", 
+			// 	($a_mod["enti_nb_parametro"]?? ""), 
+			// 	"SELECT para_nb_id as 'value', para_tx_nome as 'text' FROM parametro WHERE para_tx_status = 'ativo'", 
+			// 	"col-sm-6 margin-bottom-5 campo-fit-content",
+			// 	"form-control input-sm campo-fit-content", 
+			// 	"onchange='carregarParametro()' tabindex=".sprintf("%02d", $tabIndex++),
+			// 	[
+			// 		["value" => "", "text" => "Selecione", "props" => "disabled"]
+			// 	]
+			// ),
 			texto(		"Escala", ($a_mod["textoEscala"]?? ""), 4, "name='textoEscala' style='display:none;'"),
-			campo_hora(	"Jornada Dias Úteis (Hr/dia)*", "jornadaSemanal", ($a_mod["enti_tx_jornadaSemanal"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'"),
-			campo_hora(	"Jornada Sábado*", "jornadaSabado", ($a_mod["enti_tx_jornadaSabado"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'"),
+			"<div name='divJornada' style='margin: 15px; width: fit-content; overflow: hidden;'>"
+				."<div style='font-weight: bold;'>Jornada</div>"
+				.campo_hora(	"Dias Úteis (Hr/dia)*", "jornadaSemanal", ($a_mod["enti_tx_jornadaSemanal"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'")
+				.campo_hora(	"Sábado*", "jornadaSabado", ($a_mod["enti_tx_jornadaSabado"]?? ""), 2, "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'")
+			."</div>",
 			campo(		"H.E. Semanal (%)*", "percHESemanal", ($a_mod["enti_tx_percHESemanal"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'"),
 			campo(		"H.E. Extraordinária (%)*", "percHEEx", ($a_mod["enti_tx_percHEEx"]?? ""), 2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)." onchange='{$conferirPadraoJS}'")
 		];
@@ -1009,7 +1127,7 @@
 			campo_data("1º Habilitação*", "cnhPrimeiraHabilitacao", ($a_mod["enti_tx_cnhPrimeiraHabilitacao"]?? ""), 3, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Permissão", "cnhPermissao", ($a_mod["enti_tx_cnhPermissao"]?? ""), 3,"","maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Pontuação", "cnhPontuacao", ($a_mod["enti_tx_cnhPontuacao"]?? ""), 3,"","maxlength='3' tabindex=".sprintf("%02d", $tabIndex++)),
-			combo("Atividade Remunerada", "cnhAtividadeRemunerada", ($a_mod["enti_tx_cnhAtividadeRemunerada"]?? ""), 3, ["" => "", "sim" => "Sim", "nao" => "Não"], "tabindex=".sprintf("%02d", $tabIndex++)),
+			combo("Atividade Remunerada", "cnhAtividadeRemunerada", ($a_mod["enti_tx_cnhAtividadeRemunerada"]?? ""), 3, ["" => "Selecione", "sim" => "Sim", "nao" => "Não"], "tabindex=".sprintf("%02d", $tabIndex++)),
 			arquivo("CNH (.png, .jpg, .pdf)".$iconeExcluirCNH, "cnhAnexo", ($a_mod["enti_tx_cnhAnexo"]?? ""), 4, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Observações", "cnhObs", ($a_mod["enti_tx_cnhObs"]?? ""), 3,"","maxlength='500' tabindex=".sprintf("%02d", $tabIndex++))
 		];
@@ -1020,12 +1138,12 @@
 			"cadastrarMotorista", 
 			((empty($_POST["id"]) || empty($a_mod["enti_tx_matricula"]))? "": "id,matricula"),
 			((empty($_POST["id"]) || empty($a_mod["enti_tx_matricula"]))? "": $_POST["id"].",".$a_mod["enti_tx_matricula"]),
-			"tabindex=53",
+			"tabindex=".sprintf("%02d", $tabIndex++),
 			"",
 			"btn btn-success"
 		);
 
-		$botoesCadastro[] = criarBotaoVoltar(null, null, "tabindex=54");
+		$botoesCadastro[] = criarBotaoVoltar(null, null, "tabindex=".sprintf("%02d", $tabIndex++));
 
 		if (!empty($_POST["id"])) {
 			$botoesCadastro[] = '<button class="btn default" type="button" onclick="imprimir()">Imprimir</button>';
@@ -1085,12 +1203,6 @@
 			"<form method='post' name='form_modifica' id='form_modifica'>
 				<input type='hidden' name='id' value=''>
 				<input type='hidden' name='acao' value='modificarMotorista'>
-			</form>
-
-			<form name='form_excluir_arquivo' method='post' action='cadastro_motorista.php'>
-				<input type='hidden' name='idEntidade' value=''>
-				<input type='hidden' name='nome_arquivo' value=''>
-				<input type='hidden' name='acao' value=''>
 			</form>"
 		;
 
@@ -1112,18 +1224,20 @@
 		$camposBusca = [
 			campo("Código",						"busca_codigo",			(!empty($_POST["busca_codigo"])? $_POST["busca_codigo"]: ""), 1,"","maxlength='6'"),
 			campo("Nome",						"busca_nome_like",		(!empty($_POST["busca_nome_like"])? $_POST["busca_nome_like"]: ""), 2,"","maxlength='65'"),
-			campo("Matrícula",					"busca_matricula_like",	(!empty($_POST["busca_matricula_like"])? $_POST["busca_matricula_like"]: ""), 1,"","maxlength='6'"),
+			campo("Matrícula",					"busca_matricula_like",	(!empty($_POST["busca_matricula_like"])? $_POST["busca_matricula_like"]: ""), 1,"","maxlength='20'"),
 			campo("CPF",						"busca_cpf",			(!empty($_POST["busca_cpf"])? $_POST["busca_cpf"]: ""), 2, "MASCARA_CPF"),
-			combo_bd("!Empresa",				"busca_empresa",		(isset($_POST["busca_empresa"])? $_POST["busca_empresa"]: $_SESSION["user_nb_empresa"]), 2, "empresa", "", $extraEmpresa),
-			combo("Ocupação",					"busca_ocupacao",		(isset($_POST["busca_ocupacao"])? $_POST["busca_ocupacao"]: ""), 2, ["", "Motorista", "Ajudante", "Funcionário"]),
-			combo("Convenção Padrão",			"busca_padrao",			(isset($_POST["busca_padrao"])? $_POST["busca_padrao"]: ""), 2, ["" => "", "sim" => "Sim", "nao" => "Não"]),
-			combo_bd("!Parâmetros da Jornada", 	"busca_parametro",		(isset($_POST["busca_parametro"])? $_POST["busca_parametro"]: ""), 6, "parametro"),
-			combo("Status",						"busca_status",			(isset($_POST["busca_status"])? $_POST["busca_status"]: "ativo"), 2, ["" => "", "ativo" => "Ativo", "inativo" => "Inativo"])
+			combo_bd("!Empresa",				"busca_empresa",		(!empty($_POST["busca_empresa"])? $_POST["busca_empresa"]: ""), 2, "empresa", "", $extraEmpresa),
+			combo("Ocupação",					"busca_ocupacao",		(!empty($_POST["busca_ocupacao"])? $_POST["busca_ocupacao"]: ""), 2, ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
+			combo("Convenção Padrão",			"busca_padrao",			(!empty($_POST["busca_padrao"])? $_POST["busca_padrao"]: ""), 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
+			combo_bd("!Parâmetros da Jornada", 	"busca_parametro",		(!empty($_POST["busca_parametro"])? $_POST["busca_parametro"]: ""), 4, "parametro"),
+			combo("Status",						"busca_status",			(!empty($_POST["busca_status"])? $_POST["busca_status"]: "Todos"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
+			combo_bd("!Tipo de Operação", 		"busca_operacao",		(!empty($_POST["busca_operacao"])? $_POST["busca_operacao"]: ""), 2, "operacao")
 		];
 
 		$botoesBusca = [
-			botao("<spam class='glyphicon glyphicon-plus'></spam>", "visualizarCadastro","","","","","btn btn-success"),
-			'<button class="btn default" type="button" onclick="imprimirTabelaCompleta()">Imprimir</button>'
+			botao("Inserir", "visualizarCadastro","","","","","btn btn-success"),
+			'<button class="btn default" type="button" onclick="imprimirTabelaCompleta()">Imprimir</button>',
+			botao("Limpar Filtros", "limparFiltros")
 		];
 
 		echo abre_form();
@@ -1154,7 +1268,7 @@
 				"EMPRESA" 				=> "empr_tx_nome",
 				"FONE 1" 				=> "enti_tx_fone1",
 				"OCUPAÇÃO" 				=> "enti_tx_ocupacao",
-				"Tipo de Operação" 		=> "enti_tx_tipoOperacao",
+				"TIPO DE OPERAÇÃO" 		=> "oper_tx_nome",
 				"DATA CADASTRO" 		=> "CONCAT('data(\"', enti_tx_dataCadastro, '\")') AS enti_tx_dataCadastro",
 				"PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
 				"CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
@@ -1170,7 +1284,8 @@
 				"busca_ocupacao" 		=> "enti_tx_ocupacao",
 				"busca_padrao" 			=> "enti_tx_ehPadrao",
 				"busca_parametro" 		=> "enti_nb_parametro",
-				"busca_status" 			=> "enti_tx_status"
+				"busca_status" 			=> "enti_tx_status",
+				"busca_operacao" 		=> "enti_tx_tipoOperacao"
 			];
 	
 			$queryBase = (
@@ -1178,11 +1293,12 @@
 					." LEFT JOIN user ON enti_nb_id = user_nb_entidade"
 					." JOIN empresa ON enti_nb_empresa = empr_nb_id"
 					." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
+					." LEFT JOIN operacao ON enti_tx_tipoOperacao = oper_nb_id"
 			);
 	
 			$actions = criarIconesGrid(
 				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-				["cadastro_motorista.php", "cadastro_motorista.php"],
+				["cadastro_funcionario.php", "cadastro_funcionario.php"],
 				["modificarMotorista()", "excluirMotorista()"]
 			);
 	
@@ -1193,7 +1309,8 @@
 			$gridFields["actions"] = $actions["tags"];
 	
 			$jsFunctions =
-				"const funcoesInternas = function(){
+				"orderCol = 'enti_tx_nome ASC'
+				const funcoesInternas = function(){
 					".implode(" ", $actions["functions"])."
 				}"
 			;

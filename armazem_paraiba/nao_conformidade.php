@@ -615,8 +615,8 @@
 			$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php"
 			."?path=".$CONTEX["path"]
 			."&tabela=entidade"
-			."&extra_limite=15"
-			."&extra_busca=enti_tx_matricula"
+			."&colunas=enti_tx_matricula"
+			."&limite=15"
 		; // Utilizado dentro de endosso_html.php
 		
 		include "html/endosso_html.php";

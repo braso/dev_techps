@@ -9,33 +9,27 @@
 
 	GLOBAL $conn;
 	
-	$tabela 	  = $_GET["tabela"];
-	$tab 		  = substr($_GET["tabela"],0,4);
-	$extra_bd 	  = urldecode($_GET["extra_bd"]);
-	$extra_busca  = urldecode($_GET["extra_busca"]);
-	
-	$extra = " AND (".$tab."_tx_nome LIKE '%".$_GET["q"]."%'";
-	$extra_campo = "";
-	if(!empty($extra_busca)){
-		$extra_campo = ",".$extra_busca;
-		$extra .= " OR ".$extra_busca." LIKE '%".$_GET["q"]."%'";
-	}
-	$extra .= ")";
-	
-	$sql = "SELECT ".$tab."_nb_id";
-	if($tabela == 'servico' && $_GET["path"] == '/imagem'){
-		$sql .= ", CONCAT(".$tab."_tx_nome,' | ',".$tab."_tx_tipo) AS ".$tab."_tx_nome FROM ".$tabela." WHERE ".$tab."_tx_nome LIKE '%".$_GET["q"]."%'"; 
-	}else{
-		$sql .= ", ".$tab."_tx_nome ".(!empty($extra_busca)? ",".$extra_busca: "")." FROM ".$tabela." WHERE 1 ".$extra;
+	$tabela		= $_GET["tabela"];
+	$tab		= substr($_GET["tabela"],0,4);
+	$condicoes	= urldecode($_GET["condicoes"]);
+	$colunas  	= urldecode($_GET["colunas"]);
+	$ordem 		= !empty($_GET["ordem"])? "ORDER BY ".urldecode($_GET["ordem"]): "";
+	$limite 	= !empty($_GET["limite"])? "LIMIT ".urldecode($_GET["limite"]): "";
+
+	if(strpos($condicoes, "AND") < 6){
+		$condicoes = substr($condicoes, strpos($condicoes, "AND")+3);
 	}
 
-	$sql .= " AND ".$tab."_tx_status = 'ativo'"
-		." ".$extra_bd
-		." ".(!empty(urldecode($_GET["extra_ordem"]))? urldecode($_GET["extra_ordem"]): " ORDER BY ".$tab."_tx_nome ASC")
-		." ".(!empty(urldecode($_GET["extra_limite"]))? "LIMIT ".urldecode($_GET["extra_limite"]): "").";"
-	;
-
 	
+	$sql = 
+		"SELECT 
+			{$tab}_nb_id as 'id', {$tab}_tx_nome as 'text' ".(!empty($colunas)? ",".$colunas: "")
+			." FROM {$tabela}"
+			." WHERE 1".(!empty($condicoes)? " AND {$condicoes}": "")
+				.(!empty($_GET["q"])? " AND {$tab}_tx_nome LIKE '%{$_GET["q"]}%'": "")
+			." {$ordem}"
+			." {$limite}";
+
 	$result = mysqli_fetch_all(
 		query($sql),
 		MYSQLI_ASSOC
@@ -44,10 +38,10 @@
 	$json = [];
 	foreach($result as $row){
 		$extra_exibe = "";
-		if($extra_busca != ''){
-			$extra_exibe = "[".$row[$extra_busca]."]";
+		if($colunas != ''){
+			$row['text'] = "[".$row[$colunas]."]".$row['text'];
 		}
-		$json[] = ["id"=>$row[$tab.'_nb_id'], 'text'=>$extra_exibe.$row[$tab.'_tx_nome']];
+		$json[] = $row;
 	}
 
 	echo json_encode($json);

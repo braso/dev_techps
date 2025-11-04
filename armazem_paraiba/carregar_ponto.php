@@ -155,8 +155,10 @@
 			"arqu_tx_status" 	=> "ativo"
 		];
 
-		foreach(file($arquivo["tmp_name"]) as $line){
 		
+
+		foreach(file($caminhoCompleto) as $line){
+			
 			//matricula dmYhi 999 macroponto.codigoExterno
 			//Obs.: A matrícula deve ter 10 dígitos, então se tiver menos, adicione zeros à esquerda.
 			//Ex.: 0000005913 22012024 0919 999 11
@@ -220,7 +222,6 @@
 				"pont_tx_dataCadastro"	=> date("Y-m-d H:i:s")
 			];
 
-			
 			$pontoExistente = mysqli_fetch_assoc(query(
 				"SELECT pont_nb_id, pont_tx_matricula, pont_tx_data, pont_tx_tipo FROM ponto 
 					WHERE 1"
@@ -246,12 +247,18 @@
 		}
 
 		//*Salvar registros e arquivo{
-			move_uploaded_file($arquivo["tmp_name"], $caminhoCompleto);
-			
-			$arquivoPontoId = inserir("arquivoponto", array_keys($newArquivoPonto), array_values($newArquivoPonto));
-			foreach($newPontos as $newPonto){
-				$newPonto["pont_nb_arquivoponto"] = intval($arquivoPontoId[0]);
-				inserir("ponto", array_keys($newPonto), array_values($newPonto));
+			query("START TRANSACTION;");
+			try {
+				$arquivoPontoId = inserir("arquivoponto", array_keys($newArquivoPonto), array_values($newArquivoPonto));
+				foreach($newPontos as $newPonto){
+					$newPonto["pont_nb_arquivoponto"] = intval($arquivoPontoId[0]);
+					inserir("ponto", array_keys($newPonto), array_values($newPonto));
+				}
+				query("COMMIT;");
+			} catch (Exception $e) {
+				query("ROLLBACK;");
+				set_status("Erro ao salvar pontos.");
+				return;
 			}
 
 			if($errorMsg != $baseErrMsg){
@@ -285,7 +292,7 @@
 		//BOTOES
 		$buttons = [
 			botao("Buscar", "index"),
-			botao("Inserir manualmente", "viewManualInsert", "", "", "", "", "btn btn-success"),
+			botao("Inserir novo arquivo", "viewManualInsert", "", "", "", "", "btn btn-success"),
 			botao("Atualizar FTP", "updateFTP('".$path."')", "path", $path, "", "", "btn btn-primary"),
 			// botao("Configuração", "layout_notificacao", "", "", "", "", "btn btn-warning")
 		];
@@ -293,34 +300,6 @@
 		echo abre_form();
 		echo linha_form($fields);
 		echo fecha_form($buttons);
-
-		/*/ Grid{
-			$extra = 
-				((!empty($_POST["busca_codigo"]))? " AND arqu_nb_id = ".$_POST["busca_codigo"]: "")
-				.((!empty($_POST["busca_inicio_ge"]))? " AND arqu_tx_data >= '".$_POST["busca_inicio_ge"]."'": "")
-			;
-			
-			$sql = 
-				"SELECT * FROM arquivoponto
-					JOIN user ON arqu_nb_user = user_nb_id 
-					WHERE arqu_tx_status = 'ativo'
-						".$extra."
-						ORDER BY arqu_tx_data DESC
-					LIMIT 400;"
-			;
-
-
-			$gridValues = [
-				"CÓD" => "arqu_nb_id",
-				"ARQUIVO" => "arqu_tx_nome",
-				"USUÁRIO" => "user_tx_nome",
-				"DATA" => "data(arqu_tx_data,1)",
-				"SITUAÇÃO" => "ucfirst(arqu_tx_status)",
-				"<spam class='glyphicon glyphicon-download' style='font-size: 16px;'></spam>" => "icone_download(arqu_tx_nome)"
-			];
-
-			grid($sql, array_keys($gridValues), array_values($gridValues), "", 12, 0);
-		// }*/
 
 		// Grid dinâmico{
 			$gridFields = [

@@ -114,3 +114,14 @@ table td:nth-child(11) {
 .espelho-cabecalho-info td{
 	padding: 5px;
 }
+
+
+.color_green{
+	color: green;
+}
+.color_red{
+	color: red;
+}
+.color_blue{
+	color: blue;
+}

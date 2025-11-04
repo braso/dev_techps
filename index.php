@@ -15,7 +15,8 @@
 		$errorMsgs = [
 			"notfound" => "Login ou senha incorretos.",
 			"emptyfields" => "Preencha as informações para entrar.",
-			"nullcompany" => "Empresa não encontrada."
+			"nullcompany" => "Empresa não encontrada.",
+			"expireduser" => "Usuário expirado."
 		];
 		$msg = 
 			"<div class='alert alert-danger display-block'>

@@ -10,7 +10,7 @@
 		echo 
 			"<script>
 					function selecionaMotorista(idEmpresa) {
-					let buscaExtra = encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")' +
+					let condicoes = encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")' +
 						(idEmpresa > 0 ? ' AND enti_nb_empresa = \"' + idEmpresa + '\"' : '')
 					);
 
@@ -26,7 +26,7 @@
 						placeholder: 'Selecione um item',
 						allowClear: true,
 						ajax: {
-							url: appPath + '/contex20/select2.php?path=' + contexPath + '&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=' + buscaExtra + '&extra_busca=enti_tx_matricula',
+							url: appPath + '/contex20/select2.php?path=' + contexPath + '&tabela=entidade&ordem=&limite=15&condicoes=' + condicoes + '&colunas=enti_tx_matricula',
 							dataType: 'json',
 							delay: 250,
 							processResults: function (data) {
@@ -210,11 +210,12 @@
 		$camposBusca = [
 			campo("Código",	"busca_codigo",	(!empty($_POST["busca_codigo"])? $_POST["busca_codigo"]: ""), 1,"","maxlength='6'"),
 			campo("Nome do Funcionário", "busca_nome_like", ($a_mod["enti_tx_nome"]?? ""), 4, "", "maxlength='65'"),
-			combo("Status",	"busca_status",	(isset($_POST["busca_status"])? $_POST["busca_status"]: "ativo"), 2, ["" => "", "ativo" => "Ativo", "inativo" => "Inativo"])
+			combo("Status",	"busca_status",	(isset($_POST["busca_status"])? $_POST["busca_status"]: "ativo"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
 		];
 
 		$botoesBusca = [
-			botao("<spam class='glyphicon glyphicon-plus'></spam>", "layout_ferias","","","","","btn btn-success")
+			botao("Inserir", "layout_ferias","","","","","btn btn-success"),
+			botao("Limpar Filtros", "limparFiltros")
 		];
 
 		echo abre_form();
@@ -252,7 +253,8 @@
 			$gridFields["actions"] = $actions["tags"];
 	
 			$jsFunctions =
-				"const funcoesInternas = function(){
+				"orderCol = 'feri_tx_dataInicio DESC';
+				const funcoesInternas = function(){
 					".implode(" ", $actions["functions"])."
 				}"
 			;

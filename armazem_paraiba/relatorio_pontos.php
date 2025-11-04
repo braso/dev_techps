@@ -380,10 +380,11 @@ function carregarJS($opt): string {
 
     $select2URL =
         "{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/select2.php"
-        . "?path={$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}"
-        . "&tabela=entidade"
-        . "&extra_limite=15"
-        . "&extra_busca=enti_tx_matricula";;
+        ."?path={$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}"
+        ."&tabela=entidade"
+        ."&colunas=enti_tx_matricula"
+        ."&limite=15"
+    ;
 
     $linha = "linha = '<tr>'";
     $linha .= "+'<td>'+item.pont_nb_id+'</td>'
@@ -411,9 +412,9 @@ function carregarJS($opt): string {
         "<script>
 
 				function selecionaMotorista(idEmpresa){
-					let buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")');
+					let condicoes = '&condicoes='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")');
 					if(idEmpresa > 0){
-						buscaExtra += encodeURI(' AND enti_nb_empresa = '+idEmpresa);
+						condicoes += encodeURI(' AND enti_nb_empresa = '+idEmpresa);
 						$('.busca_motorista')[0].innerHTML = null;
 					}
 
@@ -427,7 +428,7 @@ function carregarJS($opt): string {
 						placeholder: 'Selecione um item',
 						allowClear: true,
 						ajax: {
-							url: '{$select2URL}'+buscaExtra,
+							url: '{$select2URL}'+condicoes,
 							dataType: 'json',
 							delay: 250,
 							processResults: function(data){

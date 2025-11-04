@@ -312,6 +312,7 @@
 
 		$campo_foto  = arquivo("Foto (.png, .jpg)", "foto", ($_POST["foto"]?? ""), 4);
 		$campo_login = campo("Login*", "login", ($_POST["login"]?? ($_POST["login"]?? "")), 2,"","maxlength='30'");
+		$campo_expiracao = campo_data("Expira em", "expiracao", ($_POST["expiracao"]?? ""), 2);
 
 		$editPermission = (!empty($_POST["id"]) &&			//Se está editando um usuário existente e
 			// $_SESSION["user_nb_id"] == $_POST["id"] || //Editando o próprio usuário
@@ -321,25 +322,26 @@
 			))
 		;
 
+		$niveis = ["" => ""];
+		switch($_SESSION["user_tx_nivel"]){
+			case "Super Administrador":
+				$niveis["Super Administrador"] = "Super Administrador";
+			case "Administrador":
+				$niveis["Administrador"] = "Administrador";
+			case "Embarcador":
+				$niveis["Embarcador"] = "Embarcador";
+			// case "Supervisão":
+			// 	$niveis["Supervisão"] = "Supervisão";
+		}
+
+		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Funcionário"])){
+			$niveis = [$_SESSION["user_tx_nivel"] => $_SESSION["user_tx_nivel"]];
+		}
+
 		if($editPermission){
 
 			$campo_nome = campo("Nome*", "nome", ($_POST["nome"]?? ""), 4, "","maxlength='65'");
-			
-			$niveis = [""];
-			switch($_SESSION["user_tx_nivel"]){
-				case "Super Administrador":
-					$niveis[] = "Super Administrador";
-				case "Administrador":
-					$niveis[] = "Administrador";
-				case "Embarcador":
-					$niveis[] = "Embarcador";
-				case "Supervisão":
-					$niveis[] = "Supervisão";
-			}
 
-			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Funcionário"])){
-				$niveis = [$_SESSION["user_tx_nivel"]];
-			}
 			$campo_nivel = combo("Nível*", "nivel", $_POST["nivel"], 2, $niveis, "");
 			$campo_status = combo("Status", "status", $_POST["status"], 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
 
@@ -350,7 +352,6 @@
 			$campo_email = campo("E-mail*", "email", $_POST["email"], 2);
 			$campo_telefone = campo("Telefone", "telefone", $_POST["fone"], 2,"MASCARA_FONE");
 			$campo_empresa = combo_bd("!Empresa*", "empresa", $_POST["empresa"]?? $_SESSION["user_nb_empresa"], 2, "empresa", "onchange='carrega_empresa(this.value)'");
-			$campo_expiracao = campo_data("Expira em", "expiracao", $_POST["expiracao"], 2);
 			$campo_senha = campo_senha("Senha*", "senha", "", 2, "maxlength='50'");
 			$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='50'");
 			$campo_matricula = "";
@@ -361,15 +362,6 @@
 
 			$campo_nome = campo("Nome*", "nome", ($_POST["nome"]?? ""), 4, "","maxlength='65'");
 			
-			$niveis = [""];
-			switch($_SESSION["user_tx_nivel"]){
-				case "Super Administrador":
-					$niveis[] = "Super Administrador";
-				case "Administrador":
-					$niveis[] = "Administrador";
-				case "Embarcador":
-					$niveis[] = "Embarcador";
-			}
 			$campo_nivel = combo("Nível*", "nivel", ($_POST["nivel"]?? $niveis), 2, $niveis, "");
 			$campo_status = combo("Status", "status", ($_POST["status"]?? "ativo"), 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
 
@@ -380,7 +372,6 @@
 			$campo_email = campo("E-mail*", "email", ($_POST["email"]?? ""), 2);
 			$campo_telefone = campo("Telefone", "telefone", ($_POST["telefone"]?? ""), 2,"MASCARA_FONE");
 			$campo_empresa = combo_bd("!Empresa*", "empresa", ($_POST["empresa"]?? $_SESSION["user_nb_empresa"]), 2, "empresa", "onchange='carrega_empresa(this.value)'");
-			$campo_expiracao = campo_data("Expira em", "expiracao", ($_POST["expiracao"]?? ""), 2);
 			$campo_senha = campo_senha("Senha*", "senha", "", 2,"maxlength='50'");
 			$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='50'");
 			$campo_matricula = "";
@@ -411,7 +402,6 @@
 			}
 
 			$campo_empresa = texto("Empresa*", (!empty($empresa["empr_tx_nome"])? $empresa["empr_tx_nome"]: "-"), 3, "style=''");
-			$campo_expiracao = texto("Expira em", (!empty($_POST["expiracao"])? date("d/m/Y", strtotime($_POST["expiracao"])): "--/--/----"), 2, "style=''");
 			$campo_login = texto("Login", ($_POST["login"]?? ($_POST["login"]?? "-")), 2);
 			$campo_senha = "";
 			$campo_confirma = "";
@@ -581,17 +571,17 @@
 		// ;
 
 
-		$niveis = [""];
+		$niveis = ["" => ""];
 		switch($_SESSION["user_tx_nivel"]){
 			case "Super Administrador":
-				$niveis[] = "Super Administrador";
+				$niveis["Super Administrador"] = "Super Administrador";
 			case "Administrador":
-				$niveis[] = "Administrador";
+				$niveis["Administrador"] = "Administrador";
 			case "Funcionário":
-				$niveis[] = "Funcionário";
+				$niveis["Funcionário"] = "Funcionário";
 			default;
-				$niveis[] = "Motorista";
-				$niveis[] = "Ajudante";
+				$niveis["Motorista"] = "Motorista";
+				$niveis["Ajudante"] = "Ajudante";
 			break;
 		}
 

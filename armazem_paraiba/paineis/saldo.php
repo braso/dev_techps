@@ -777,7 +777,7 @@
                     <th class='esperaIndenizada'>Espera Indenizada</th>
                     <th class='saldoAnterior'>Saldo Anterior</th>
                     <th class='saldoPeriodo'>Saldo Período</th>
-                    <th class='saldoFinal'>Saldo Final</th>
+                    <th class='saldoFinal'>Saldo Bruto</th>
                     "
                 ;
 

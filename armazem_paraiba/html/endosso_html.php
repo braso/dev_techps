@@ -52,12 +52,12 @@
 	}
 
 	function selecionaMotorista(idEmpresa) {
-		let buscaExtra = '';
+		let condicoes = '&condicoes='+encodeURI('enti_tx_status = \"ativo\"');
 		if(idEmpresa > 0){
-			buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN ("Motorista", "Ajudante", "Funcionário") AND enti_nb_empresa = "'+idEmpresa+'"');
+			condicoes += encodeURI(' AND enti_tx_ocupacao IN ("Motorista", "Ajudante", "Funcionário") AND enti_nb_empresa = "'+idEmpresa+'"');
 			$('.busca_motorista')[0].innerHTML = null;
 		}else{
-			buscaExtra = '&extra_bd='+encodeURI('AND enti_tx_ocupacao IN ("Motorista", "Ajudante", "Funcionário")');
+			condicoes += '&condicoes='+encodeURI(' AND enti_tx_ocupacao IN ("Motorista", "Ajudante", "Funcionário")');
 		}
 
 		// Verifique se o elemento está usando Select2 antes de destruí-lo
@@ -71,7 +71,7 @@
 			placeholder: 'Selecione um item',
 			allowClear: true,
 			ajax: {
-				url: select2URL+buscaExtra,
+				url: select2URL+condicoes,
 				dataType: 'json',
 				delay: 250,
 				processResults: function(data) {

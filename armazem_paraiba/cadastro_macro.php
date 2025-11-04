@@ -80,11 +80,13 @@
 		
 		$campos = [
 			campo("Código","busca_codigo",$_POST["busca_codigo"],2,"MASCARA_NUMERO"),
-			campo("Nome","busca_nome_like",$_POST["busca_nome_like"],10)
+			campo("Nome","busca_nome_like",$_POST["busca_nome_like"],10,"", "maxlength='25'"),  
+			
 		];
 
 		$botoes = [
 			botao("Buscar","index"),
+			botao("Limpar Filtro","limparFiltros"),
 			// botao("Inserir","layout_macro")
 		];
 		

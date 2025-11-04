@@ -30,7 +30,7 @@
         echo abre_form();
         echo linha_form([
             campo_hidden("id", (!empty($_POST["id"])? $_POST["id"]: "")),
-            campo("nome_like", "nome_like", (!empty($_POST["nome_like"])? $_POST["nome_like"]: ""), 4, "", "required"),
+            campo("Nome", "nome_like", (!empty($_POST["nome_like"])? $_POST["nome_like"]: ""), 4, "", "required"),
             campo("IMEI", "imei", (!empty($_POST["imei"])? $_POST["imei"]: ""), 2, "", "required"),
             campo("Número", "numero", (!empty($_POST["numero"])? $_POST["numero"]: ""), 2, "", "required"),
             campo("Operadora", "operadora", (!empty($_POST["operadora"])? $_POST["operadora"]: ""), 2),
@@ -66,13 +66,13 @@
         ];
 
         $camposBusca = [
-            "nome_like"               => "celu_tx_nome",
+            "nome_like"          => "celu_tx_nome",
             "imei"               => "celu_tx_imei",
             "numero"             => "celu_tx_numero",
             "operadora"          => "celu_tx_operadora",
             "cimie"              => "celu_tx_cimie",
             "sistemaOperacional" => "celu_tx_sistemaOperacional",
-            "marcaModelo_like"        => "celu_tx_marcaModelo",
+            "marcaModelo_like"   => "celu_tx_marcaModelo",
         ];
 
         $queryBase = "SELECT ".implode(", ", array_values($gridFields))." FROM celular

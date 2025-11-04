@@ -59,20 +59,31 @@
 
 		$fileList = ftp_nlist($ftp_conn, ".");
 		$fileList = implode(", ", $fileList);
+
 		for($data = $dataInicial; $data->format("Y-m-d") <= date("Y-m-d"); $data->modify("+1 day")){
 			if(is_int(strpos($fileList, "apontamento".$data->format("dmY")))){
 
 				$ext = ".txt";
 				$nomeArquivo = substr($fileList, strpos($fileList, "apontamento".$data->format("dmY")), 25).$ext;
 
+				
 				$caminhoCompleto = $path."/".$nomeArquivo;
 				//*Salvar arquivo de ponto{
-					if(!ftp_get($ftp_conn, $caminhoCompleto, $nomeArquivo)){
-						set_status("ERRO: Houve um problema ao salvar o arquivo.");
-						index();
-						exit;
+					if(!file_exists($caminhoCompleto)){
+						$arquivoFoiSalvo = ftp_get($ftp_conn, $caminhoCompleto, $nomeArquivo);
+						if(!$arquivoFoiSalvo){
+							set_status("ERRO: Houve um problema ao salvar o arquivo.");
+							index();
+							exit;
+						}
+					}else{
+						continue;
 					}
-					salvarArquivoPonto($_FILES["arquivo"], $caminhoCompleto);
+					$arquivo = [
+						"tmp_name" => $nomeArquivo,
+						"name" => $nomeArquivo
+					];
+					salvarArquivoPonto($arquivo, $caminhoCompleto);
 				//*/}
 			}
 		}

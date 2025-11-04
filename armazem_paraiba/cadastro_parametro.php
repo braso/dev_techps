@@ -92,8 +92,7 @@
 
 					document.getElementById('periodicidade').parentElement.hidden 	= !(tipo == 1);
 					document.getElementById('dataInicio').parentElement.hidden 		= !(tipo == 1);
-					document.getElementById('jornadaSemanal').parentElement.hidden 	= !(tipo == 2);
-					document.getElementById('jornadaSabado').parentElement.hidden 	= !(tipo == 2);
+					document.getElementsByName('divJornada')[0].hidden 	= !(tipo == 2);
 				}
 
 				".(empty($a_mod["para_tx_tipo"])? "camposEscala('horas_por_dia')": "camposEscala('{$a_mod["para_tx_tipo"]}')").";
@@ -177,9 +176,23 @@
 		];
 		
 		$arquivo =  $_FILES["file"];
-		$formatosImg = ["image/jpeg", "image/png", "application/msword", "application/pdf"];
+		$mimeType = function_exists('mime_content_type') ? mime_content_type($arquivo["tmp_name"]) : $arquivo["type"];
+		$formatosImg = [
+			"image/jpeg",
+			"image/png",
+			"application/msword", // .doc
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+			"application/pdf"
+		];
 
-		if (in_array($arquivo["type"], $formatosImg) && $arquivo["name"] != "") {
+		if ($arquivo["error"] !== UPLOAD_ERR_OK) {
+			set_status("Erro no upload: ".$arquivo["error"]);
+			$_POST["id"] = $novoParametro["para_nb_id"];
+			modificarParametro();
+			exit;
+		}
+
+		if (in_array($mimeType, $formatosImg) && $arquivo["name"] != "") {
 			$pasta_parametro = "arquivos/parametro/".$novoParametro["para_nb_id"]."/";
 	
 			if (!is_dir($pasta_parametro)) {
@@ -324,8 +337,8 @@
 					}
 					$_POST["diasEscala"] = $diasEscala;
 				}elseif($_POST["tipo"] == "horas_por_dia"){
-					$camposObrig["jornadaSemanal"] = "Jornada Dias Úteis (Hr/dia)";
-					$camposObrig["jornadaSabado"] = "Jornada Sábado";
+					$camposObrig["jornadaSemanal"] = "Dias Úteis (Hr/dia)";
+					$camposObrig["jornadaSabado"] = "Sábado";
 				}
 			}
 
@@ -381,28 +394,29 @@
 		}
 
 		$novoParametro = [
-			"para_tx_tipo" 					=> $_POST["tipo"],
-			"para_tx_nome" 					=> $_POST["nome"],
-			"para_tx_jornadaSemanal" 		=> $_POST["jornadaSemanal"],
-			"para_tx_jornadaSabado" 		=> $_POST["jornadaSabado"],
-			"para_tx_percHESemanal" 		=> $_POST["percHESemanal"],
-			"para_tx_percHEEx" 				=> $_POST["percHEEx"],
-			"para_tx_maxHESemanalDiario" 	=> $_POST["maxHESemanalDiario"],
-			"para_tx_pagarHEExComPerNeg"    => $_POST["pagarHEExComPerNeg"],
-			"para_tx_tolerancia" 			=> $_POST["tolerancia"],
-			"para_tx_descFaltas" 			=> $_POST["descFaltas"],
-			"para_tx_acordo" 				=> $_POST["acordo"],
-			"para_tx_inicioAcordo" 			=> $_POST["inicioAcordo"],
-			"para_tx_fimAcordo" 			=> $_POST["fimAcordo"],
-			"para_tx_diariasCafe" 			=> $_POST["diariasCafe"],
-			"para_tx_diariasAlmoco" 		=> $_POST["diariasAlmoco"],
-			"para_tx_diariasJanta" 			=> $_POST["diariasJanta"],
-			"para_tx_banco" 				=> $_POST["banco"],
-			"para_nb_qDias" 				=> $_POST["quandDias"],
-			"para_tx_horasLimite" 			=> $_POST["quandHoras"],
-			"para_tx_Obs" 					=> $_POST["Obs"],
-			"para_tx_adi5322" 				=> $_POST["adi5322"],
-			"para_tx_status" 				=> "ativo",
+			"para_tx_tipo" 						=> $_POST["tipo"],
+			"para_tx_nome" 						=> $_POST["nome"],
+			"para_tx_jornadaSemanal" 			=> $_POST["jornadaSemanal"],
+			"para_tx_jornadaSabado" 			=> $_POST["jornadaSabado"],
+			"para_tx_jornadaDomingoFacultativo" => (!empty($_POST["jornadaDomingoFacultativo"])? $_POST["jornadaDomingoFacultativo"]: null),
+			"para_tx_percHESemanal" 			=> $_POST["percHESemanal"],
+			"para_tx_percHEEx" 					=> $_POST["percHEEx"],
+			"para_tx_maxHESemanalDiario" 		=> $_POST["maxHESemanalDiario"],
+			"para_tx_pagarHEExComPerNeg"    	=> $_POST["pagarHEExComPerNeg"],
+			"para_tx_tolerancia" 				=> $_POST["tolerancia"],
+			"para_tx_descFaltas" 				=> $_POST["descFaltas"],
+			"para_tx_acordo" 					=> $_POST["acordo"],
+			"para_tx_inicioAcordo" 				=> $_POST["inicioAcordo"],
+			"para_tx_fimAcordo" 				=> $_POST["fimAcordo"],
+			"para_tx_diariasCafe" 				=> $_POST["diariasCafe"],
+			"para_tx_diariasAlmoco" 			=> $_POST["diariasAlmoco"],
+			"para_tx_diariasJanta" 				=> $_POST["diariasJanta"],
+			"para_tx_banco" 					=> $_POST["banco"],
+			"para_nb_qDias" 					=> $_POST["quandDias"],
+			"para_tx_horasLimite" 				=> $_POST["quandHoras"],
+			"para_tx_Obs" 						=> $_POST["Obs"],
+			"para_tx_adi5322" 					=> $_POST["adi5322"],
+			"para_tx_status" 					=> "ativo",
 		];
 
 		if(!empty($_POST["ignorarCampos"]) || $_POST["ignorarCampos"] == null){
@@ -420,10 +434,10 @@
 		}
 		
 
-		$novoParametro["para_nb_userAtualiza"] = $_SESSION["user_nb_id"];
-		$novoParametro["para_tx_dataAtualiza"] = date("Y-m-d H:i:s");
-
+		
 		if(!empty($_POST["id"])){ //Se está editando
+			$novoParametro["para_nb_userAtualiza"] = $_SESSION["user_nb_id"];
+			$novoParametro["para_tx_dataAtualiza"] = date("Y-m-d H:i:s");
 
 			if($novoParametro["para_tx_tipo"] == "escala"){
 				$novoParametro["para_tx_jornadaSemanal"] = NULL;
@@ -443,7 +457,7 @@
 				"SELECT * FROM entidade 
 					WHERE enti_tx_status = 'ativo'
 						AND enti_nb_parametro = '{$_POST["id"]}'"
-			),MYSQLI_ASSOC);
+			), MYSQLI_ASSOC);
 			
 			$aParametro = carregar("parametro", $_POST["id"]);
 
@@ -465,7 +479,7 @@
 			$novoParametro["para_nb_userCadastro"] = $_SESSION["user_nb_id"];
 
 			
-			$id = inserir("parametro",array_keys($novoParametro),array_values($novoParametro));
+			$id = inserir("parametro", array_keys($novoParametro), array_values($novoParametro));
 
 			$_POST["id"] = $id[0];
 			
@@ -544,6 +558,12 @@
 
 		cabecalho("Cadastro de Parâmetros");
 
+		$aparecerDomingoFacultativo = (
+			$_ENV["URL_BASE"] == "http://localhost:8000" 
+			|| $_ENV["APP_PATH"] == "/dev"
+			|| ($_ENV["APP_PATH"] == "/gestaodeponto" && $_ENV["CONTEX_PATH"] == "/opafrutas")
+		);
+		$campoDomingoFacultativo = $aparecerDomingoFacultativo? campo_hora("Domingo/Feriado (facultativo)", "jornadaDomingoFacultativo", ($a_mod["para_tx_jornadaDomingoFacultativo"]?? ""), 2): "";
 
 		$campos = [
 			[
@@ -560,10 +580,16 @@
 						Horas/Dia
 					</label>
 				</div>",
-				campo("Nome*", "nome", ($a_mod["para_tx_nome"]?? ""), 5),
-				campo("Tolerância de atraso (Minutos)*", "tolerancia", ($a_mod["para_tx_tolerancia"]?? ""), 2,"MASCARA_NUMERO", "maxlength='3'"),
-				campo_hora("Jornada Dias Úteis (Hr/dia)*", "jornadaSemanal", ($a_mod["para_tx_jornadaSemanal"]?? ""), 2),
-				campo_hora("Jornada Sábado*", "jornadaSabado", ($a_mod["para_tx_jornadaSabado"]?? ""), 2),
+				"<div style='overflow: hidden;width: 100%;'>"
+					.campo("Nome*", "nome", ($a_mod["para_tx_nome"]?? ""), 5)
+					.campo("Tolerância de atraso (Minutos)*", "tolerancia", ($a_mod["para_tx_tolerancia"]?? ""), 2,"MASCARA_NUMERO", "maxlength='3'")
+				."</div>",
+				"<div name='divJornada' style='margin-left: 15px; margin-right: 15px; width: fit-content; overflow: hidden;'>"
+					."<div style='font-weight: bold;'>Jornada</div>"
+					.campo_hora("Dias Úteis (Hr/dia)*", "jornadaSemanal", ($a_mod["para_tx_jornadaSemanal"]?? ""), 2)
+					.campo_hora("Sábado*", "jornadaSabado", ($a_mod["para_tx_jornadaSabado"]?? ""), 2)
+					.$campoDomingoFacultativo
+				."</div>",
 				// campo("Periodicidade (em dias)*", "periodicidade", ($a_mod["esca_nb_periodicidade"]?? "1"), 2, "MASCARA_NUMERO", "max='31' min='1' onchange='atualizarLinhasEscala(this.value)"),
 				"<div class='col-sm-2 margin-bottom-5 campo-fit-content'>
 					<label>Periodicidade (em dias)*</label>

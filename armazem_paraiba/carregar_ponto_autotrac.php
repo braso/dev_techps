@@ -17,7 +17,7 @@
 		exit;
 	}
 
-	echo "Em desenvolvimento...<br>";
+	// echo "Em desenvolvimento...<br>";
 	// exit;
 
 	//Puxar pontos da API{

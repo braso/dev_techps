@@ -32,7 +32,7 @@
 				"/cadastro_endosso.php" 	=> "Endosso",
 				"/cadastro_feriado.php" 	=> "Feriado",
 				"/cadastro_ferias.php" 		=> "Férias",
-				"/cadastro_motorista.php" 	=> "Funcionário",
+				"/cadastro_funcionario.php" 	=> "Funcionário",
 				"/cadastro_macro.php" 		=> "Macro",
 				"/cadastro_motivo.php" 		=> "Motivo",
 				"/cadastro_operacao.php" 	=> "Operação",
@@ -52,7 +52,7 @@
 				"/paineis/disponibilidade.php"	=> "Disponibilidade",
 				"/paineis/endosso.php"			=> "Endosso",
 				"/paineis/jornada.php"			=> "Jornada Aberta",
-				"/paineis/nc_juridica.php"		=> "Não Conformidades Juridicas Atualizado",
+				"/paineis/nc_juridica.php"		=> "Não Conformidades Jurídicas",
 				"/paineis/saldo.php"			=> "Saldo"
 			] + $camposOcultosProdução,
 			"relatórios" => [
