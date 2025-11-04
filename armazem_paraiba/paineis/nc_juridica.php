@@ -12,6 +12,10 @@
 	header("Pragma: no-cache");
 
 	function buscar() {
+		echo "<script>alert('Em manutenção');</script>";
+	    unset($_POST);
+	    index();
+	    exit;
 		if(empty($_POST["busca_dataMes"])){
 			$_POST["errorFields"][] = "busca_dataMes";
 			set_status("ERRO: Preencha o mês para buscar.");
