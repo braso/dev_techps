@@ -950,12 +950,12 @@
 		$combo = "<div class='col-sm-{$tamanho} margin-bottom-5 campo-fit-content ".(!empty($_POST["errorFields"]) && in_array($variavel, $_POST["errorFields"]))."' style='min-width:fit-content; min-height: 50px;' {$extra}>
 			<label>{$nome}</label><br>";
 			
-		foreach ($opcoes as $key => $value) {
-			$checked = ($modificador === $key) ? "checked" : "";
-			$combo .= "
-				<label class='radio-inline'>
-					<input type='radio' name='{$variavel}' value='{$key}' {$checked}> {$value}
-				</label>";
+		foreach ($opcoes as $value => $text) {
+			$combo .= 
+				"<label class='radio-inline'>
+					<input type='radio' name='{$variavel}' value='{$value}' ".(($modificador === $value)? "checked" :"")."> {$text}
+				</label>"
+			;
 		}
 		$combo .= "</div>";
 

@@ -217,7 +217,7 @@
 	}
 
 	function excluir_documento(){
-		query("DELETE FROM documento_parametro WHERE docu_nb_id = $_POST[idArq]");
+		query("DELETE FROM documento_parametro WHERE docu_nb_id = {$_POST["idArq"]}");
 		$_POST["id"] = $_POST["idParametro"];
 		modificarParametro();
 		exit;
