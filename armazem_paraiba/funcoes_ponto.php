@@ -9,7 +9,7 @@
 	//*/
 	include_once __DIR__."/conecta.php";
 
-	function calcJorPre(string $jornadaPrevistaOriginal, bool $ehFeriado, $abono = null): string{
+	function calcularJornadaPrevista(string $jornadaPrevistaOriginal, bool $ehFeriado, $abono = null): string{
 
 		if($ehFeriado){ 										//FERIADOS
 			$jornadaPrevista = "00:00";
@@ -722,6 +722,8 @@
 					$iconeFeriado = " <a><i style='color:green;' title='{$stringFeriado}' class='color_green fa fa-info-circle'></i></a>";
 					$aRetorno["diaSemana"] .= $iconeFeriado;
 				}
+
+				$ehDomingoFeriadoFacultativo = (!empty($motorista["para_tx_jornadaDomingoFacultativo"]) && (date("w", strtotime($data)) == "0" || !empty($stringFeriado)));
 			//}
 
 			$abonos = mysqli_fetch_assoc(query(
@@ -739,6 +741,10 @@
 				if(date("w", strtotime($data)) == "6"){
 					$jornadaPrevistaOriginal = $motorista["enti_tx_jornadaSabado"];
 				}elseif(date("w", strtotime($data)) == "0"){
+					// if($ehDomingoFeriadoFacultativo){
+					// 	$jornadaPrevistaOriginal = $motorista["para_tx_jornadaDomingoFacultativo"];
+					// }else{
+					// }
 					$jornadaPrevistaOriginal = "00:00";
 				}else{
 					$jornadaPrevistaOriginal = $motorista["enti_tx_jornadaSemanal"];
@@ -755,7 +761,7 @@
 				], "-");
 			}
 
-			$jornadaPrevista = calcJorPre($jornadaPrevistaOriginal, !empty($stringFeriado), ($abonos["abon_tx_abono"]?? null));
+			$jornadaPrevista = calcularJornadaPrevista($jornadaPrevistaOriginal, !empty($stringFeriado), ($abonos["abon_tx_abono"]?? null));
 			$aRetorno["jornadaPrevista"] = $jornadaPrevista;
 			if(!empty($abonos)){
 				$warning = 
@@ -771,8 +777,9 @@
 				$aRetorno["jornadaPrevista"] = $warning." ".$aRetorno["jornadaPrevista"];
 			}
 
-			$ehDomingoFeriadoFacultativo = (!empty($motorista["para_tx_jornadaDomingoFacultativo"]) && (date("w", strtotime($data)) == "0" || !empty($stringFeriado)));
 		//}
+
+
 		//CASO NÃO HAJA PONTOS{
 			if(empty($pontosDia)){
 				$aRetorno["diffSaldo"] = getSaldoDiario($jornadaPrevista, "00:00");
@@ -1075,6 +1082,10 @@
 		//}
 
 		//INICIO ADICIONAL NOTURNO{
+			// if($ehDomingoFeriadoFacultativo){
+			// 	$aRetorno["adicionalNoturno"] = "00:00";
+			// }else{
+			// }
 			$aRetorno["adicionalNoturno"] = calcularAdicNot($registros);
 		//}
 		
@@ -1382,45 +1393,45 @@
 	}
 
 	function getFeriados(array &$motorista, string $data): string{
-		$sqlFeriado = 
-			"SELECT feri_tx_nome FROM feriado 
-				WHERE feri_tx_status = 'ativo'
-					AND feri_tx_data LIKE '{$data}%'"
-		;
-		$extra = "";
-		if(!empty($motorista["cida_tx_uf"])){
-			$extra = 
-				" AND (
-					(feri_nb_cidade IS NULL AND feri_tx_uf IS NULL)
-					OR (feri_tx_uf = '{$motorista["cida_tx_uf"]}' AND feri_nb_cidade IS NULL)"
-					.(!empty($motorista["cida_nb_id"])? " OR feri_nb_cidade = '{$motorista["cida_nb_id"]}'": "")
+		$sqlFeriado = "SELECT feri_tx_nome FROM feriado WHERE 1";
+		$condicoes = " AND feri_tx_status = 'ativo' 
+			AND feri_tx_data LIKE '{$data}%'"
+			.(!empty($motorista["cida_tx_uf"])? 
+				" AND ((feri_nb_cidade IS NULL AND feri_tx_uf IS NULL) OR (feri_tx_uf = '{$motorista["cida_tx_uf"]}' AND feri_nb_cidade IS NULL)"
+				.(!empty($motorista["cida_nb_id"])? 
+					" OR feri_nb_cidade = '{$motorista["cida_nb_id"]}'"
+					: ""
+				)
 				.")"
-			;
-		}
-		$feriados = mysqli_fetch_all(query($sqlFeriado.$extra), MYSQLI_ASSOC);
+				: ""
+			)
+		;
 
-		$result = "";
+		$result = [];
+		
+		$feriados = mysqli_fetch_all(query($sqlFeriado.$condicoes), MYSQLI_ASSOC);
 		if(!empty($feriados)){
-			$result = $feriados[0]["feri_tx_nome"];
-			for($f = 1; $f < count($feriados); $f++){
-				$result .= ", {$feriados[$f]["feri_tx_nome"]}";
+			foreach($feriados as $feriado){
+				$result[] = $feriado["feri_tx_nome"];
 			}
-		}else{
-			$ferias = mysqli_fetch_assoc(query(
-				"SELECT * FROM ferias
-					WHERE feri_tx_status = 'ativo'
-						AND feri_nb_entidade = '{$motorista["enti_nb_id"]}'
-						AND '{$data}' BETWEEN feri_tx_dataInicio AND feri_tx_dataFim
-					LIMIT 1;"
-			));
-
-			if(!empty($ferias)){
-				$ferias["feri_tx_dataInicio"] = DateTime::createFromFormat("Y-m-d", $ferias["feri_tx_dataInicio"])->format("d/m/Y");
-				$ferias["feri_tx_dataFim"] = DateTime::createFromFormat("Y-m-d", $ferias["feri_tx_dataFim"])->format("d/m/Y");
-				$result = "Férias de ({$ferias["feri_tx_dataInicio"]} a {$ferias["feri_tx_dataFim"]})";
-			}
+			$result = [implode(", ", $result)];
 		}
-		return $result;
+
+		$ferias = mysqli_fetch_assoc(query(
+			"SELECT * FROM ferias
+				WHERE feri_tx_status = 'ativo'
+					AND feri_nb_entidade = '{$motorista["enti_nb_id"]}'
+					AND '{$data}' BETWEEN feri_tx_dataInicio AND feri_tx_dataFim
+				LIMIT 1;"
+		));
+
+		if(!empty($ferias)){
+			$ferias["feri_tx_dataInicio"] = DateTime::createFromFormat("Y-m-d", $ferias["feri_tx_dataInicio"])->format("d/m/Y");
+			$ferias["feri_tx_dataFim"] = DateTime::createFromFormat("Y-m-d", $ferias["feri_tx_dataFim"])->format("d/m/Y");
+			$result[] = "Férias de ({$ferias["feri_tx_dataInicio"]} a {$ferias["feri_tx_dataFim"]})";
+		}
+
+		return implode("<br>", $result);
 	}
 	
 	function getSaldoDiario(string $jornadaPrevista, string $jornadaEfetiva): string{
