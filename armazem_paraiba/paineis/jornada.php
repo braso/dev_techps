@@ -327,6 +327,7 @@
 
             $path .= "/".$empresa["empr_nb_id"];
 
+            $quantFun = ""; //Utilizado em painel_html2.php
             if (is_dir($path)) {
                 $pasta = dir($path);
                 while ($arquivo = $pasta->read()) {

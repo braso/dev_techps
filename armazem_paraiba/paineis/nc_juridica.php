@@ -368,7 +368,7 @@
 
 			cabecalho("Relatório de Não Conformidade Jurídica Atualizado");
 
-			$err = ($_POST["busca_dataInicio"] > date("Y-m-d"))*1+($_POST["busca_dataFim"] > date("Y-m-d"))*2;
+			$err = (!empty($_POST["busca_dataInicio"]) && $_POST["busca_dataInicio"] > date("Y-m-d"))*1+(!empty($_POST["busca_dataFim"]) && $_POST["busca_dataFim"] > date("Y-m-d"))*2;
 			if ($err > 0) {
 				switch ($err) {
 					case 1:
@@ -387,7 +387,7 @@
 			} else {
 				require_once "funcoes_paineis.php";
 				// $tempoInicio = microtime(true);
-				relatorio_nao_conformidade_juridica();
+				relatorio_nao_conformidade_juridica($_POST["empresa"]);
 				// $tempoFim = microtime(true);
 				// $tempoExecucao = $tempoFim - $tempoInicio;
 				// $tempoExecucaoMinutos = $tempoExecucao / 60;
@@ -512,6 +512,8 @@
 				];
 
 				$motoristas = 0;
+				$ajudante = 0;
+				$funcionario = 0;
 				$totalJsonComTudoZero = 0;
 				$totalDiasNaoCFuncionario = 0;
 				$totaisFuncionario = [];
@@ -632,7 +634,7 @@
 				$graficoSintetico = [$gravidadeAlta, $gravidadeMedia, $gravidadeBaixa];
 
 				$percentuais = [
-					"performance" => $totalGeral > 0 ? round($totalMotoristasComConformidadesZeradas / $totalGeral) : 0,
+					"performance" => $totalGeral > 0 ? round($totalJsonComTudoZero / $totalGeral) : 0,
 					"alta" => $totalGeral > 0 ? round(($gravidadeAlta / $totalGeral) * 100, 2) : 0,
 					"media" => $totalGeral > 0 ? round(($gravidadeMedia / $totalGeral) * 100, 2) : 0,
 					"baixa" => $totalGeral > 0 ? round(($gravidadeBaixa / $totalGeral) * 100, 2) : 0
