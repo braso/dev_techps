@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -139,9 +139,10 @@
 
 	function enviarDocumento() {
 		global $a_mod;
+		// dd($_POST);
 
 		if(empty($a_mod)){
-			$a_mod = carregar("parametro", $_POST["id"]);
+			$a_mod = carregar("parametro", $_POST["idParametro"]);
 			$campos = [
 				"nome",
 				"jornadaSemanal",
@@ -216,7 +217,7 @@
 	}
 
 	function excluir_documento(){
-		remover("documento_parametro", $_POST["idArq"]);
+		query("DELETE FROM documento_parametro WHERE docu_nb_id = {$_POST["idArq"]}");
 		$_POST["id"] = $_POST["idParametro"];
 		modificarParametro();
 		exit;

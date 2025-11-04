@@ -949,12 +949,13 @@
 	function combo_radio($nome, $variavel, $modificador, $tamanho, array $opcoes, $extra = ""): string{
 		$combo = "<div class='col-sm-{$tamanho} margin-bottom-5 campo-fit-content ".(!empty($_POST["errorFields"]) && in_array($variavel, $_POST["errorFields"]))."' style='min-width:fit-content; min-height: 50px;' {$extra}>
 			<label>{$nome}</label><br>";
-
-		foreach($opcoes as $opcao){
-			$combo .=
+			
+		foreach ($opcoes as $value => $text) {
+			$combo .= 
 				"<label class='radio-inline'>
-					<input type='radio' name='{$variavel}' value='{$opcao["key"]}' ".(($modificador == $opcao["key"])? "checked": "")."> {$opcao["value"]}
-				</label>";
+					<input type='radio' name='{$variavel}' value='{$value}' ".(($modificador === $value)? "checked" :"")."> {$text}
+				</label>"
+			;
 		}
 		$combo .= "</div>";
 
@@ -1159,19 +1160,139 @@
 				$dataHoraOriginal = $arquivo['docu_tx_dataCadastro'];
 				$dataHora = new DateTime($dataHoraOriginal);
 				$dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
+				$dataHoraOriginalVencimento = $arquivo['docu_tx_dataVencimento'];
+				if(empty($dataHoraOriginalVencimento) || $dataHoraOriginalVencimento == "0000-00-00 00:00:00"){
+					$dataHoraFormatadaVencimento = "";
+				} else {
+					$dataHoraVencimento = new DateTime($dataHoraOriginalVencimento);
+					$dataHoraFormatadaVencimento = $dataHoraVencimento->format('d/m/Y');
+				}
+
+				$formatosSuportados = [
+					'application/pdf',
+					'image/jpeg',
+					'image/png',
+					'image/gif',
+					'image/webp',
+					'text/plain',
+					'text/html'
+				];
+
+				$iconePreview = '<i class="fa-regular fa-eye-slash" title="Preview "</i>';
+				$iconeDownload = '';
+				$IconeAssinatura = '';
+				$iconeExcluir = '';
+				
+				if (file_exists($arquivo["docu_tx_caminho"])) {
+					$finfo = finfo_open(FILEINFO_MIME_TYPE);
+					if($finfo) {
+						$mime_type_arquivo = finfo_file($finfo, $arquivo["docu_tx_caminho"]);
+						finfo_close($finfo);
+					}
+				}
+
+				if (in_array($mime_type_arquivo, $formatosSuportados)) {
+					// Usa o caminho direto (sem preview.php)
+					$urlPreview = $arquivo['docu_tx_caminho'];
+					$iconePreview = "
+						&nbsp;
+						<a style='color: steelblue;'
+						onclick=\"abrirPreview('$urlPreview', '$mime_type_arquivo', '$arquivo[docu_tx_nome]')\">
+						<i class='far fa-eye' title='Visualizar Documento'></i>
+						</a>";
+				}
+
+				$iconeDownload = "<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idParametro,'$arquivo[docu_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download' title='Download'></i></a>";
+				$IconeAssinatura = " &nbsp;<i class='fa-solid fa-file-signature' title='Documento não assinado' style='color:red'></i>";
+				if($arquivo["docu_tx_assinado"] == "sim") {
+					$IconeAssinatura = "&nbsp;
+					<i class='fa-solid fa-file-contract' title='Documento assinado digitalmente' style='color:green'></i>";
+				}
+				$iconeExcluir = "&nbsp;<a style='color: red;' onclick=\"javascript:remover_arquivo($idParametro,$arquivo[docu_nb_id],'$arquivo[docu_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash' title='Excluir'></i></a>";
+
 				$arquivo_list .= "
 				<tr role='row' class='odd'>
 				<td>$arquivo[docu_tx_nome]</td>
 				<td>$arquivo[docu_tx_descricao]</td>
 				<td>$dataHoraFormatada</td>
 				<td>
-					<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idParametro,'$arquivo[docu_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
+					$iconeDownload
+					$IconeAssinatura
+					$iconePreview
+					$iconeExcluir
 				</td>
-				<td>
-					<a style='color: red;' onclick=\"javascript:remover_arquivo($idParametro,$arquivo[docu_nb_id],'$arquivo[docu_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
-				</td>";
+				<!-- Modal -->
+				<div id=\"previewModal\" class=\"modal fade\" tabindex=\"-1\" role=\"dialog\">
+				<div class=\"modal-dialog modal-lg\" role=\"document\">
+					<div class=\"modal-content\">
+
+					<div class=\"modal-header\">
+						<button type=\"button\" class=\"close\" data-dismiss=\"modal\">&times;</button>
+						<h4 class=\"modal-title\" id=\"previewTitle\">Pré-visualização do Documento</h4>
+					</div>
+
+					<div class=\"modal-body\" id=\"previewContent\" style=\"text-align:center; min-height:400px;\">
+					</div>
+
+					<div class=\"modal-footer\">
+						<button type=\"button\" class=\"btn btn-default\" data-dismiss=\"modal\">Fechar</button>
+					</div>
+
+					</div>
+				</div>
+				</div>
+
+				<script>
+				function abrirPreview(caminho, tipo, nomeArquivo) {
+				var content = '';
+
+				if (tipo === 'application/pdf') {
+					content = '<iframe src=\"' + caminho + '\" width=\"100%\" height=\"500px\" style=\"border:none;\"></iframe>';
+				} else if (tipo === 'image/jpeg' || tipo === 'image/png' || tipo === 'image/gif' || tipo === 'image/webp') {
+					content = '<img src=\"' + caminho + '\" style=\"max-width:100%; max-height:500px; border:1px solid #ddd; border-radius:4px;\">';
+				} else if (tipo === 'text/plain') {
+					content = '<iframe src=\"' + caminho + '\" width=\"100%\" height=\"500px\" style=\"border:none;\"></iframe>';
+				} else {
+					content = '<p>Visualização não disponível para este tipo de arquivo.</p>';
+				}
+
+				// Atualiza o título com o nome do arquivo
+				document.getElementById('previewTitle').innerText = 'Pré-visualização: ' + nomeArquivo;
+
+				// Insere o conteúdo no corpo do modal
+				document.getElementById('previewContent').innerHTML = content;
+
+				// Exibe o modal
+				$('#previewModal').modal('show');
+				}
+				</script>
+				";
 			}
 		}
+
+
+		$tipo_documento =  mysqli_fetch_all(query(
+			"SELECT tipo_nb_id, tipo_tx_nome FROM tipos_documentos"
+		), MYSQLI_ASSOC);
+
+		$tipo_documento = mysqli_fetch_all(query(
+			"SELECT tipo_nb_id, tipo_tx_nome,tipo_tx_vencimento  FROM tipos_documentos ORDER BY tipo_nb_grupo, tipo_tx_nome"
+		), MYSQLI_ASSOC);
+
+		// Montar o HTML do dropdown
+		$list_tipos = "<option value=''></option>";
+		foreach($tipo_documento as $tipo){
+			$list_tipos .= "<option value='{$tipo['tipo_nb_id']}' data-vencimento='{$tipo['tipo_tx_vencimento']}'>{$tipo['tipo_tx_nome']}</option>";
+		}
+
+		// dd($tipo_documento , false);
+		$AbriAdicionarArquivo = '<td>
+		<a href="#" data-toggle="modal" data-target="#myModal">
+		<i class="glyphicon glyphicon-plus-sign"></i>
+		</a>
+		</td>';
+		$IconeAssinaturaTitulo = '&nbsp;<i class="fas fa-file-signature" title="Status da Assinatura"></i>';
+		$iconeExcluirTitulo = '&nbsp;<i class="glyphicon glyphicon-trash" title="Excluir"></i>';
 
 
 		$tabela='
@@ -1196,20 +1317,18 @@
 									DATA CADASTRO</th>
 								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
 									aria-label="DOWNLOAD: activate to sort column ascending" style="width: 40px;"><i
-										class="glyphicon glyphicon-cloud-download"></i></th>
-								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
-									aria-label="DOWNLOAD: activate to sort column ascending" style="width: 40px;"><i
-										class="glyphicon glyphicon-trash"></i></th>
+										class="glyphicon glyphicon-cloud-download"></i>
+										'.$IconeAssinaturaTitulo.'
+										&nbsp;<i class="far fa-eye" title="Visualizar documento"></i>
+										'.$iconeExcluirTitulo.'
+								</th>
 							</tr>
 						</thead>
 						<thbody>
 						'.$arquivo_list.'
 						<tr role="row" class="even">
-						<td>
-						<a href="#" data-toggle="modal" data-target="#myModal">
-						<i class="glyphicon glyphicon-plus-sign"></i>
-						</a>
-						</td>
+						'.$AbriAdicionarArquivo.'
+						</tr>
 						</thbody>
 						</table>
 		';
@@ -1223,7 +1342,7 @@
 					<h4 class='modal-title' id='myModalLabel'>Upload Arquivo</h4>
 					</div>
 					<div class='modal-body'>
-					<form name='form_enviar_arquivo' method='post' action='cadastro_parametro.php' enctype='multipart/form-data'>
+					<form name='form_enviar_arquivo2' method='post' action='cadastro_parametro.php' enctype='multipart/form-data'>
 						<div class='form-group'>
 							<label for='file-name' class='control-label'>Nome do arquivo:</label>
 							<input type='text' class='form-control' name='file-name'>
@@ -1236,10 +1355,33 @@
 							<label for='file' class='control-label'>Arquivo:</label>
 							<input type='file' class='form-control' name='file'>
 						</div>
-						
+
+						<div class='form-group'>
+							<label for='tipo_documento' class='control-label'>Tipo de Documento:</label>
+							<select class='form-control' name='tipo_documento' id='tipo_documento'>
+								$list_tipos
+							</select>
+						</div>
+
+						<div class='form-group'>
+							<label for='visibilidade' class='control-label'>Visível ao funcionário:</label>
+							<select class='form-control' name='visibilidade' id='visibilidade'>
+								<option value=''></option>
+								<option value='sim'>Sim</option>
+								<option value='nao'>Não</option>
+							</select>
+						</div>
+
+						<div class='form-group' id='campo_vencimento' style='display:none; margin-top:10px;'>
+							<label for='data_vencimento' class='control-label'>Data de Vencimento:</label>
+							<input type='date' class='form-control' name='data_vencimento' id='data_vencimento'>
+						</div>
+
 						<input type='hidden' name='acao' value='enviarDocumento'>
 						
 						<input type='hidden' name='idParametro' value='$idParametro'>
+
+						<input type='hidden' name='idUserCadastro' value='$_SESSION[user_nb_id]'>
 					</form>
 					</div>
 					<div class='modal-footer'>
@@ -1253,8 +1395,18 @@
 		
 		<script type='text/javascript'>
 		function enviar_arquivo() {
-			document.form_enviar_arquivo.submit();
+			document.form_enviar_arquivo2.submit();
 		}
+
+		$('#tipo_documento').on('change', function() {
+			const vencimento = $(this).find(':selected').data('vencimento');
+			
+			if (vencimento === 'sim') {
+				$('#campo_vencimento').slideDown();
+			} else {
+				$('#campo_vencimento').slideUp();
+			}
+		});
 		
 		</script>
 		";
@@ -1390,6 +1542,73 @@
 					$dataHoraVencimento = new DateTime($dataHoraOriginalVencimento);
 					$dataHoraFormatadaVencimento = $dataHoraVencimento->format('d/m/Y');
 				}
+
+				$formatosSuportados = [
+					'application/pdf',
+					'image/jpeg',
+					'image/png',
+					'image/gif',
+					'image/webp',
+					'text/plain',
+					'text/html'
+				];
+
+				$iconePreview = '<i class="fa-regular fa-eye-slash" title="Preview "</i>';
+				$iconeDownload = '';
+				$IconeAssinatura = '';
+				$iconeExcluir = '';
+
+				if($arquivo["docu_tx_visivel"] == 'sim' && $_SESSION['user_tx_nivel'] == 'Funcionário') {
+					if (file_exists($arquivo["docu_tx_caminho"])) {
+						$finfo = finfo_open(FILEINFO_MIME_TYPE);
+						if($finfo) {
+							$mime_type_arquivo = finfo_file($finfo, $arquivo["docu_tx_caminho"]);
+							finfo_close($finfo);
+						}
+					}
+	
+					if (in_array($mime_type_arquivo, $formatosSuportados)) {
+						// Usa o caminho direto (sem preview.php)
+						$urlPreview = $arquivo['docu_tx_caminho'];
+						$iconePreview = "
+							&nbsp;
+							<a style='color: steelblue;'
+							onclick=\"abrirPreview('$urlPreview', '$mime_type_arquivo', '$arquivo[docu_tx_nome]')\">
+							<i class='far fa-eye'></i>
+							</a>";
+					}
+	
+					$iconeDownload = "<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idFuncionario,'$arquivo[docu_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>";
+				} else if($_SESSION['user_tx_nivel'] != 'Funcionário')  {
+					if (file_exists($arquivo["docu_tx_caminho"])) {
+						$finfo = finfo_open(FILEINFO_MIME_TYPE);
+						if($finfo) {
+							$mime_type_arquivo = finfo_file($finfo, $arquivo["docu_tx_caminho"]);
+							finfo_close($finfo);
+						}
+					}
+	
+					if (in_array($mime_type_arquivo, $formatosSuportados)) {
+						// Usa o caminho direto (sem preview.php)
+						$urlPreview = $arquivo['docu_tx_caminho'];
+						$iconePreview = "
+							&nbsp;
+							<a style='color: steelblue;'
+							onclick=\"abrirPreview('$urlPreview', '$mime_type_arquivo', '$arquivo[docu_tx_nome]')\">
+							<i class='far fa-eye' title='Visualizar Documento'></i>
+							</a>";
+					}
+	
+					$iconeDownload = "<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idFuncionario,'$arquivo[docu_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download' title='Download'></i></a>";
+					$IconeAssinatura = " &nbsp;<i class='fa-solid fa-file-signature' title='Documento não assinado' style='color:red'></i>";
+					if($arquivo["docu_tx_assinado"] == "sim") {
+						$IconeAssinatura = "&nbsp;
+						<i class='fa-solid fa-file-contract' title='Documento assinado digitalmente' style='color:green'></i>";
+					}
+					$iconeExcluir = "&nbsp;<a style='color: red;' onclick=\"javascript:remover_arquivo($idFuncionario,$arquivo[docu_nb_id],'$arquivo[docu_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash' title='Excluir'></i></a>";
+				}
+				
+
 				$arquivo_list .= "
 				<tr role='row' class='odd'>
 				<td>$arquivo[docu_tx_nome]</td>
@@ -1397,11 +1616,57 @@
 				<td>$dataHoraFormatada</td>
 				<td>$dataHoraFormatadaVencimento</td>
 				<td>
-					<a style='color: steelblue;' onclick=\"javascript:downloadArquivo($idFuncionario,'$arquivo[docu_tx_caminho]','downloadArquivo');\"><i class='glyphicon glyphicon-cloud-download'></i></a>
+					$iconeDownload
+					$IconeAssinatura
+					$iconePreview
+					$iconeExcluir
 				</td>
-				<td>
-					<a style='color: red;' onclick=\"javascript:remover_arquivo($idFuncionario,$arquivo[docu_nb_id],'$arquivo[docu_tx_nome]','excluir_documento');\"><i class='glyphicon glyphicon-trash'></i></a>
-				</td>";
+				<!-- Modal -->
+				<div id=\"previewModal\" class=\"modal fade\" tabindex=\"-1\" role=\"dialog\">
+				<div class=\"modal-dialog modal-lg\" role=\"document\">
+					<div class=\"modal-content\">
+
+					<div class=\"modal-header\">
+						<button type=\"button\" class=\"close\" data-dismiss=\"modal\">&times;</button>
+						<h4 class=\"modal-title\" id=\"previewTitle\">Pré-visualização do Documento</h4>
+					</div>
+
+					<div class=\"modal-body\" id=\"previewContent\" style=\"text-align:center; min-height:400px;\">
+					</div>
+
+					<div class=\"modal-footer\">
+						<button type=\"button\" class=\"btn btn-default\" data-dismiss=\"modal\">Fechar</button>
+					</div>
+
+					</div>
+				</div>
+				</div>
+
+				<script>
+				function abrirPreview(caminho, tipo, nomeArquivo) {
+				var content = '';
+
+				if (tipo === 'application/pdf') {
+					content = '<iframe src=\"' + caminho + '\" width=\"100%\" height=\"500px\" style=\"border:none;\"></iframe>';
+				} else if (tipo === 'image/jpeg' || tipo === 'image/png' || tipo === 'image/gif' || tipo === 'image/webp') {
+					content = '<img src=\"' + caminho + '\" style=\"max-width:100%; max-height:500px; border:1px solid #ddd; border-radius:4px;\">';
+				} else if (tipo === 'text/plain') {
+					content = '<iframe src=\"' + caminho + '\" width=\"100%\" height=\"500px\" style=\"border:none;\"></iframe>';
+				} else {
+					content = '<p>Visualização não disponível para este tipo de arquivo.</p>';
+				}
+
+				// Atualiza o título com o nome do arquivo
+				document.getElementById('previewTitle').innerText = 'Pré-visualização: ' + nomeArquivo;
+
+				// Insere o conteúdo no corpo do modal
+				document.getElementById('previewContent').innerHTML = content;
+
+				// Exibe o modal
+				$('#previewModal').modal('show');
+				}
+				</script>
+				";
 			}
 		}
 
@@ -1410,16 +1675,27 @@
 		), MYSQLI_ASSOC);
 
 		$tipo_documento = mysqli_fetch_all(query(
-			"SELECT tipo_nb_id, tipo_tx_nome FROM tipos_documentos ORDER BY tipo_nb_grupo, tipo_tx_nome"
+			"SELECT tipo_nb_id, tipo_tx_nome,tipo_tx_vencimento  FROM tipos_documentos ORDER BY tipo_nb_grupo, tipo_tx_nome"
 		), MYSQLI_ASSOC);
 
 		// Montar o HTML do dropdown
 		$list_tipos = "<option value=''></option>";
 		foreach($tipo_documento as $tipo){
-			$list_tipos .= "<option value='{$tipo['tipo_nb_id']}'>{$tipo['tipo_tx_nome']}</option>";
+			$list_tipos .= "<option value='{$tipo['tipo_nb_id']}' data-vencimento='{$tipo['tipo_tx_vencimento']}'>{$tipo['tipo_tx_nome']}</option>";
 		}
 
 		// dd($tipo_documento , false);
+		if($_SESSION['user_tx_nivel'] != 'Funcionário'){
+			$AbriAdicionarArquivo = '<td>
+			<a href="#" data-toggle="modal" data-target="#myModal">
+			<i class="glyphicon glyphicon-plus-sign"></i>
+			</a>
+			</td>';
+			$IconeAssinaturaTitulo = '&nbsp;<i class="fas fa-file-signature" title="Status da Assinatura"></i>';
+			$iconeExcluirTitulo = '&nbsp;<i class="glyphicon glyphicon-trash" title="Excluir"></i>';
+		}
+
+
 
 		$tabela='
 			<div class="portlet light ">
@@ -1446,20 +1722,18 @@
 									DATA VENCIMENTO</th>
 								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
 									aria-label="DOWNLOAD: activate to sort column ascending" style="width: 40px;"><i
-										class="glyphicon glyphicon-cloud-download"></i></th>
-								<th class="sorting" tabindex="0" aria-controls="contex-grid" rowspan="1" colspan="1"
-									aria-label="DOWNLOAD: activate to sort column ascending" style="width: 40px;"><i
-										class="glyphicon glyphicon-trash"></i></th>
+										class="glyphicon glyphicon-cloud-download"></i>
+										'.$IconeAssinaturaTitulo.'
+										&nbsp;<i class="far fa-eye" title="Visualizar documento"></i>
+										'.$iconeExcluirTitulo.'
+								</th>
 							</tr>
 						</thead>
 						<thbody>
 						'.$arquivo_list.'
 						<tr role="row" class="even">
-						<td>
-						<a href="#" data-toggle="modal" data-target="#myModal">
-						<i class="glyphicon glyphicon-plus-sign"></i>
-						</a>
-						</td>
+						'.$AbriAdicionarArquivo.'
+						</tr>
 						</thbody>
 						</table>
 		';
@@ -1495,6 +1769,15 @@
 						</div>
 
 						<div class='form-group'>
+							<label for='visibilidade' class='control-label'>Visível ao funcionário:</label>
+							<select class='form-control' name='visibilidade' id='visibilidade'>
+								<option value=''></option>
+								<option value='sim'>Sim</option>
+								<option value='nao'>Não</option>
+							</select>
+						</div>
+
+						<div class='form-group' id='campo_vencimento' style='display:none; margin-top:10px;'>
 							<label for='data_vencimento' class='control-label'>Data de Vencimento:</label>
 							<input type='date' class='form-control' name='data_vencimento' id='data_vencimento'>
 						</div>
@@ -1519,6 +1802,16 @@
 		function enviar_arquivo() {
 			document.form_enviar_arquivo2.submit();
 		}
+
+		$('#tipo_documento').on('change', function() {
+			const vencimento = $(this).find(':selected').data('vencimento');
+			
+			if (vencimento === 'sim') {
+				$('#campo_vencimento').slideDown();
+			} else {
+				$('#campo_vencimento').slideUp();
+			}
+		});
 		
 		</script>
 		";

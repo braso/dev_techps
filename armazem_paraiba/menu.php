@@ -32,13 +32,15 @@
 				"/cadastro_endosso.php" 	=> "Endosso",
 				"/cadastro_feriado.php" 	=> "Feriado",
 				"/cadastro_ferias.php" 		=> "Férias",
-				"/cadastro_funcionario.php" 	=> "Funcionário",
+				"/cadastro_funcionario.php"	=> "Funcionário",
 				"/cadastro_macro.php" 		=> "Macro",
 				"/cadastro_motivo.php" 		=> "Motivo",
 				"/cadastro_operacao.php" 	=> "Operação",
 				"/cadastro_parametro.php" 	=> "Parâmetro",
 				"/cadastro_placa.php" 		=> "Placas",
-				"/cadastro_usuario.php" 	=> "Usuário"
+				"/cadastro_setor.php" 		=> "Setor",
+				"/cadastro_tipo_doc.php" 	=> "Tipo de Documento",
+				"/cadastro_usuario.php" 	=> "Usuário",
 			],
 			"ponto" => [
 				"/endosso.php" 			=> "Consultar Endossos",
@@ -57,7 +59,7 @@
 			] + $camposOcultosProdução,
 			"relatórios" => [
 					"/relatorio_pontos.php" => "Pontos"
-			]
+			],
 			// "suporte" => [
 			// 	"/#" 		=> "Perguntas Frequentes", 
 			// 	"/doc.php" 	=> "Ver Documentação"

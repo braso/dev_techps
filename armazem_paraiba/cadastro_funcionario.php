@@ -703,70 +703,100 @@
 		exit;
 	}
 
+	function temAssinaturaRapido($filePath) {
+		if (!file_exists($filePath)) {
+			return false;
+		}
+
+		$conteudo = file_get_contents($filePath);
+		
+		// Procura por duas chaves que são obrigatórias em PDFs assinados.
+		if (strpos($conteudo, '/AcroForm') !== false && strpos($conteudo, '/Sig') !== false) {
+			return true;
+		}
+		
+		return false;
+	}
+
 	function enviarDocumento() {
 		global $a_mod;
 
-		if(empty($a_mod)){
-			if(isset($_POST["id"])){
-				$a_mod = carregar("entidade", $_POST["id"]);
-			}
+		if (empty($a_mod) && isset($_POST["id"])) {
+			$a_mod = carregar("entidade", $_POST["id"]);
 		}
 
 		$novoArquivo = [
-			"docu_nb_entidade" => $_POST["idFuncionario"],
-			"docu_tx_nome" => $_POST["file-name"],
-			"docu_tx_descricao" => $_POST["description-text"],
+			"docu_nb_entidade" => (int) $_POST["idFuncionario"],
+			"docu_tx_nome" => $_POST["file-name"] ?? '',
+			"docu_tx_descricao" => $_POST["description-text"] ?? '',
 			"docu_tx_dataCadastro" => date("Y-m-d H:i:s"),
-			"docu_tx_dataVencimento" => $_POST["data_vencimento"],
-			"docu_tx_tipo" => $_POST["tipo_documento"],
-			'docu_tx_usuarioCadastro' => $_POST["idUserCadastro"]
+			"docu_tx_dataVencimento" => $_POST["data_vencimento"] ?? null,
+			"docu_tx_tipo" => $_POST["tipo_documento"] ?? '',
+			"docu_tx_usuarioCadastro" => (int) $_POST["idUserCadastro"],
+			"docu_tx_assinado" => "nao",
+			"docu_tx_visivel" => $_POST["visibilidade"] ?? 'nao'
 		];
-		
-		$arquivo =  $_FILES["file"];
-		// Detecta MIME com maior confiabilidade e permite .doc e .docx
-		$mimeType = function_exists('mime_content_type') ? mime_content_type($arquivo["tmp_name"]) : $arquivo["type"]; 
-		$formatos = [
-			"image/jpeg",
-			"image/png",
-			"application/msword", // .doc
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
-			"application/pdf"
-		];
-		$extensao = strtolower(pathinfo($arquivo["name"], PATHINFO_EXTENSION));
-		$extPermitidas = ["jpg","jpeg","png","pdf","doc","docx"];
 
-		if ($arquivo["error"] !== UPLOAD_ERR_OK) {
-			set_status("Erro no upload: ".$arquivo["error"]);
-			$_POST["id"] = $novoArquivo["docu_nb_entidade"]; 
+		$arquivo = $_FILES["file"] ?? null;
+		if (!$arquivo || $arquivo["error"] !== UPLOAD_ERR_OK) {
+			set_status("Erro no upload do arquivo.");
 			visualizarCadastro();
 			exit;
 		}
 
-		if ($arquivo["name"] != "" && (in_array($mimeType, $formatos) || in_array($extensao, $extPermitidas))) {
-			$pasta_funcionario = "arquivos/Funcionarios/".$novoArquivo["docu_nb_entidade"]."/";
-	
-			if (!is_dir($pasta_funcionario)) {
-				mkdir($pasta_funcionario, 0777, true);
-			}
-	
-			$arquivo_temporario = $arquivo["tmp_name"];
-			$extensao = pathinfo($arquivo["name"], PATHINFO_EXTENSION);
-			// Se o nome do arquivo está vazio, usa o nome original (sem extensão)
-			if(empty($novoArquivo["docu_tx_nome"])){
-				$novoArquivo["docu_tx_nome"] = pathinfo($arquivo["name"], PATHINFO_FILENAME);
-			}
-			$novoArquivo["docu_tx_nome"] .= ".".$extensao;
-			$novoArquivo["docu_tx_caminho"] = $pasta_funcionario.$novoArquivo["docu_tx_nome"];
-	
-			if (move_uploaded_file($arquivo_temporario, $novoArquivo["docu_tx_caminho"])) {
-				inserir("documento_funcionario", array_keys($novoArquivo), array_values($novoArquivo));
-				set_status("Documento enviado com sucesso.");
-			} else {
-				set_status("Falha ao salvar o arquivo no servidor.");
-			}
-		} else {
-			set_status("Formato de arquivo não permitido. Use PDF, DOC ou DOCX.");
+		// Tipos de arquivo permitidos
+		$formatos = [
+			"image/jpeg" => "jpg",
+			"image/png" => "png",
+			"application/msword" => "doc",
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "docx",
+			"application/pdf" => "pdf"
+		];
+
+		// Valida tipo real do arquivo (mais seguro que apenas $_FILES["type"])
+		$tipo = mime_content_type($arquivo["tmp_name"]);
+		if (!array_key_exists($tipo, $formatos)) {
+			set_status("Tipo de arquivo não permitido.");
+			visualizarCadastro();
+			exit;
 		}
+
+		// Usa o nome original do arquivo (mas sanitiza para evitar caracteres perigosos)
+		$nomeOriginal = basename($arquivo["name"]); // remove possíveis caminhos
+		$nomeSeguro = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', $nomeOriginal); // mantém letras, números, espaço, ponto, traço e underscore
+
+		$pasta_funcionario = "arquivos/Funcionarios/" . $novoArquivo["docu_nb_entidade"] . "/";
+		if (!is_dir($pasta_funcionario)) {
+			mkdir($pasta_funcionario, 0777, true);
+		}
+
+		// Caminho físico usa o nome original (sanitizado)
+		$novoArquivo["docu_tx_caminho"] = $pasta_funcionario . $nomeSeguro;
+
+		// Se for PDF, verifica assinatura
+		if ($tipo === "application/pdf" && function_exists("temAssinaturaRapido")) {
+			if (temAssinaturaRapido($arquivo["tmp_name"])) {
+				$novoArquivo["docu_tx_assinado"] = "sim";
+			}
+		}
+
+		// Evita sobrescrever arquivos já existentes
+		if (file_exists($novoArquivo["docu_tx_caminho"])) {
+			$info = pathinfo($nomeSeguro);
+			$base = $info["filename"];
+			$ext = isset($info["extension"]) ? '.' . $info["extension"] : '';
+			$nomeSeguro = $base . '_' . time() . $ext;
+			$novoArquivo["docu_tx_caminho"] = $pasta_funcionario . $nomeSeguro;
+		}
+
+		// Move o arquivo e salva no banco
+		if (move_uploaded_file($arquivo["tmp_name"], $novoArquivo["docu_tx_caminho"])) {
+			inserir("documento_funcionario", array_keys($novoArquivo), array_values($novoArquivo));
+			set_status("Registro inserido com sucesso.");
+		} else {
+			set_status("Falha ao mover o arquivo para o diretório de destino.");
+		}
+
 		$_POST["id"] = $novoArquivo["docu_nb_entidade"];
 		visualizarCadastro();
 		exit;
