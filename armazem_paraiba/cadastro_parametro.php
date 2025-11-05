@@ -143,71 +143,79 @@
 
 		if(empty($a_mod)){
 			$a_mod = carregar("parametro", $_POST["idParametro"]);
-			$campos = [
-				"nome",
-				"jornadaSemanal",
-				"jornadaSabado",
-				"tolerancia",
-				"percHESemanal",
-				"percHEEx",
-				"maxHESemanalDiario",
-				"diariasCafe",
-				"diariasAlmoco",
-				"diariasJanta",
-				"acordo",
-				"inicioAcordo",
-				"fimAcordo",
-				"banco",
-				"Obs"
-			];
-			foreach($campos as $campo){
-				$a_mod["para_tx_".$campo] = $_POST[$campo];
-			}
-			$a_mod["para_nb_qDias"] = $_POST["para_nb_Qdias"];
-			$a_mod["para_tx_horasLimite"] = $_POST["para_tx_horasLimite"];
-			unset($campos);
 		}
 
+
 		$novoParametro = [
-			"para_nb_id" => $_POST["idParametro"],
-			"docu_tx_nome" => $_POST["file-name"],
-			"docu_tx_descricao" => $_POST["description-text"],
-			//docu_tx_caminho está mais abaixo
-			"docu_tx_dataCadastro" => date("Y-m-d H:i:s")
+			"para_nb_id" => (int) $_POST["idParametro"],
+			"docu_tx_nome" => $_POST["file-name"] ?? '',
+			"docu_tx_descricao" => $_POST["description-text"] ?? '',
+			"docu_tx_dataCadastro" => date("Y-m-d H:i:s"),
+			"docu_tx_datavencimento" => $_POST["data_vencimento"] ?? null,
+			"docu_tx_tipo" => $_POST["tipo_documento"] ?? '',
+			"docu_tx_usuarioCadastro" => (int) $_POST["idUserCadastro"],
+			"docu_tx_assinado" => "nao",
+			"docu_tx_visivel" => $_POST["visibilidade"] ?? 'nao'
 		];
 		
-		$arquivo =  $_FILES["file"];
-		$mimeType = function_exists('mime_content_type') ? mime_content_type($arquivo["tmp_name"]) : $arquivo["type"];
-		$formatosImg = [
-			"image/jpeg",
-			"image/png",
-			"application/msword", // .doc
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
-			"application/pdf"
-		];
-
-		if ($arquivo["error"] !== UPLOAD_ERR_OK) {
-			set_status("Erro no upload: ".$arquivo["error"]);
-			$_POST["id"] = $novoParametro["para_nb_id"];
-			modificarParametro();
+		$arquivo = $_FILES["file"] ?? null;
+		if (!$arquivo || $arquivo["error"] !== UPLOAD_ERR_OK) {
+			set_status("Erro no upload do arquivo.");
+			visualizarCadastro();
 			exit;
 		}
 
-		if (in_array($mimeType, $formatosImg) && $arquivo["name"] != "") {
-			$pasta_parametro = "arquivos/parametro/".$novoParametro["para_nb_id"]."/";
-	
-			if (!is_dir($pasta_parametro)) {
-				mkdir($pasta_parametro, 0777, true);
+		// Tipos de arquivo permitidos
+		$formatos = [
+			"image/jpeg" => "jpg",
+			"image/png" => "png",
+			"application/msword" => "doc",
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "docx",
+			"application/pdf" => "pdf"
+		];
+
+		// Valida tipo real do arquivo (mais seguro que apenas $_FILES["type"])
+		$tipo = mime_content_type($arquivo["tmp_name"]);
+		if (!array_key_exists($tipo, $formatos)) {
+			set_status("Tipo de arquivo não permitido.");
+			visualizarCadastro();
+			exit;
+		}
+
+		// Usa o nome original do arquivo (mas sanitiza para evitar caracteres perigosos)
+		$nomeOriginal = basename($arquivo["name"]); // remove possíveis caminhos
+		$nomeSeguro = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', $nomeOriginal); // mantém letras, números, espaço, ponto, traço e underscore
+
+		$pasta_funcionario = "arquivos/parametro/" . $novoParametro["para_nb_id"] . "/";
+		if (!is_dir($pasta_funcionario)) {
+			mkdir($pasta_funcionario, 0777, true);
+		}
+
+		// Caminho físico usa o nome original (sanitizado)
+		$novoParametro["docu_tx_caminho"] = $pasta_funcionario . $nomeSeguro;
+
+		// Se for PDF, verifica assinatura
+		if ($tipo === "application/pdf" && function_exists("temAssinaturaRapido")) {
+			if (temAssinaturaRapido($arquivo["tmp_name"])) {
+				$novoParametro["docu_tx_assinado"] = "sim";
 			}
-	
-			$arquivo_temporario = $arquivo["tmp_name"];
-			$extensao = pathinfo($arquivo["name"], PATHINFO_EXTENSION);
-			$novoParametro["docu_tx_nome"] .= ".".$extensao;
-			$novoParametro["docu_tx_caminho"] = $pasta_parametro.$novoParametro["docu_tx_nome"];
-	
-			if (move_uploaded_file($arquivo_temporario, $novoParametro["docu_tx_caminho"])) {
-				inserir("documento_parametro", array_keys($novoParametro), array_values($novoParametro));
-			}
+		}
+
+		// Evita sobrescrever arquivos já existentes
+		if (file_exists($novoParametro["docu_tx_caminho"])) {
+			$info = pathinfo($nomeSeguro);
+			$base = $info["filename"];
+			$ext = isset($info["extension"]) ? '.' . $info["extension"] : '';
+			$nomeSeguro = $base . '_' . time() . $ext;
+			$novoParametro["docu_tx_caminho"] = $pasta_funcionario . $nomeSeguro;
+		}
+
+		// Move o arquivo e salva no banco
+		if (move_uploaded_file($arquivo["tmp_name"], $novoParametro["docu_tx_caminho"])) {
+			inserir("documento_parametro", array_keys($novoParametro), array_values($novoParametro));
+			set_status("Registro inserido com sucesso.");
+		} else {
+			set_status("Falha ao mover o arquivo para o diretório de destino.");
 		}
 
 		set_status("Registro inserido com sucesso.");
@@ -701,8 +709,23 @@
 
 		if (!empty($a_mod["para_nb_id"])) {
 			$arquivos = mysqli_fetch_all(query(
-				"SELECT * FROM documento_parametro"
-					." WHERE para_nb_id = ".$a_mod["para_nb_id"]
+				"SELECT 
+				documento_empresa.empr_nb_id,
+				documento_empresa.docu_tx_dataCadastro,
+				documento_empresa.docu_tx_dataVencimento,
+				documento_empresa.docu_tx_caminho,
+				documento_empresa.docu_tx_descricao,
+				documento_empresa.docu_tx_nome,
+				documento_empresa.docu_tx_visivel,
+				documento_empresa.docu_tx_assinado,
+				t.tipo_tx_nome,
+				gd.grup_tx_nome
+				FROM documento_empresa
+				LEFT JOIN tipos_documentos t 
+				ON documento_empresa.docu_tx_tipo = t.tipo_nb_id
+				LEFT JOIN grupos_documentos gd 
+				ON t.tipo_nb_grupo = gd.grup_nb_id
+				WHERE documento_empresa.empr_nb_id = ".$a_mod["para_nb_id"]
 			),MYSQLI_ASSOC);
 			echo "</div><div class='col-md-12'><div class='col-md-12 col-sm-12'>".arquivosParametro("Documentos", $a_mod["para_nb_id"], $arquivos);
 		}
