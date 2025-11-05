@@ -443,8 +443,9 @@
 					}
 					if(is_int(strpos($row[0], "Ajuste de Ponto"))){
 						$row[0] = str_replace("Ajuste de Ponto", "Ajuste de Ponto(endossado)", $row[0]);
-						$row[0] = str_replace("class='glyphicon glyphicon-pencil'>", "class='glyphicon glyphicon-pencil'>(E)", $row[0]);
+						$row[0] = str_replace("glyphicon glyphicon-pencil'>", "glyphicon glyphicon-pencil'>(E)", $row[0]);
 					}
+
 					foreach($row as $key => &$value){
 						if($key == "diffSaldo"){
 							continue;
