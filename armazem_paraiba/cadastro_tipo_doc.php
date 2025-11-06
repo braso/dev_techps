@@ -82,6 +82,7 @@
         $fields = [
 			campo("Código", 		"busca_codigo", 	($_POST["busca_codigo"]?? ""), 	1, "", "maxlength='6'"),
 			campo("Nome", 			"busca_nome_like", 		($_POST["busca_nome_like"]?? ""), 	3, "", "maxlength='65'"),
+			combo_bd("!Setor", 		"busca_setor",		(!empty($_POST["busca_setor"])? $_POST["busca_setor"]: ""), 4, "grupos_documentos"),
             combo("Status", 		"busca_status", 	($_POST["busca_status"]?? ""), 	2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
 		];
 
@@ -108,6 +109,7 @@
             "busca_codigo" 		=> "tipo_nb_id",
             "busca_nome_like" 	=> "tipo_tx_nome",
             "busca_status" 		=> "tipo_tx_status",
+            "busca_setor" 		=> "tipo_nb_grupo",
         ];
 
         $queryBase = 
