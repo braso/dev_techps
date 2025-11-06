@@ -1453,6 +1453,35 @@
 		';
 
 		$modal = "
+
+		<style>
+		.dropzone {
+			position: relative; /* ADICIONE ESTA LINHA */
+			border: 2px dashed #ccc;
+			border-radius: 6px;
+			padding: 20px;
+			text-align: center;
+			cursor: pointer;
+			transition: background-color 0.2s ease;
+		}
+
+		.dropzone.dragover {
+			background-color: #f5f5f5;
+			border-color: #3c8dbc;
+		}
+
+		.dropzone input {
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			opacity: 0;
+			width: 100%;
+			height: 100%;
+			cursor: pointer;
+		}
+		</style>
 		<div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
 			<div class='modal-dialog' role='document'>
 				<div class='modal-content'>
@@ -1472,7 +1501,10 @@
 							</div>
 							<div class='form-group'>
 								<label>Arquivo:</label>
-								<input type='file' class='form-control' name='file'>
+								<div class='dropzone' id='dropzone'>
+									<p>Arraste o arquivo aqui ou clique para selecionar</p>
+									<input type='file' name='file' id='fileInput'>
+								</div>
 							</div>
 							<div class='form-group'>
 								<label>Tipo de Documento:</label>
@@ -1523,6 +1555,46 @@
 				$('#campo_grupo').slideUp();
 			}
 		});
+
+		$(document).on('shown.bs.modal', '#myModal', function() {
+			const dropzone = document.getElementById('dropzone');
+			const fileInput = document.getElementById('fileInput');
+			const message = dropzone.querySelector('p');
+
+			// Clicar na área abre o seletor de arquivo
+			dropzone.addEventListener('click', () => fileInput.click());
+
+			// Quando o arquivo é selecionado
+			fileInput.addEventListener('change', () => {
+				if (fileInput.files.length > 0) {
+					message.textContent = fileInput.files[0].name;
+				} else {
+					message.textContent = 'Arraste o arquivo aqui ou clique para selecionar';
+				}
+			});
+
+			// Arrastar e soltar
+			dropzone.addEventListener('dragover', (e) => {
+				e.preventDefault();
+				dropzone.classList.add('dragover');
+			});
+
+			dropzone.addEventListener('dragleave', () => {
+				dropzone.classList.remove('dragover');
+			});
+
+			dropzone.addEventListener('drop', (e) => {
+				e.preventDefault();
+				dropzone.classList.remove('dragover');
+
+				const file = e.dataTransfer.files[0];
+				if (file) {
+					fileInput.files = e.dataTransfer.files;
+					message.textContent = file.name;
+				}
+			});
+		});
+
 		</script>";
 
 		return $tabela . $modal;
@@ -1878,6 +1950,34 @@
 		';
 
 		$modal = "
+		<style>
+		.dropzone {
+			position: relative; /* ADICIONE ESTA LINHA */
+			border: 2px dashed #ccc;
+			border-radius: 6px;
+			padding: 20px;
+			text-align: center;
+			cursor: pointer;
+			transition: background-color 0.2s ease;
+		}
+
+		.dropzone.dragover {
+			background-color: #f5f5f5;
+			border-color: #3c8dbc;
+		}
+
+		.dropzone input {
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			opacity: 0;
+			width: 100%;
+			height: 100%;
+			cursor: pointer;
+		}
+		</style>
 		<div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
 			<div class='modal-dialog' role='document'>
 				<div class='modal-content'>
@@ -1897,7 +1997,10 @@
 							</div>
 							<div class='form-group'>
 								<label>Arquivo:</label>
-								<input type='file' class='form-control' name='file'>
+								<div class='dropzone' id='dropzone'>
+									<p>Arraste o arquivo aqui ou clique para selecionar</p>
+									<input type='file' name='file' id='fileInput'>
+								</div>
 							</div>
 							<div class='form-group'>
 								<label>Tipo de Documento:</label>
@@ -1947,6 +2050,44 @@
 				$('#grupo_nome').val('');
 				$('#campo_grupo').slideUp();
 			}
+		});
+		$(document).on('shown.bs.modal', '#myModal', function() {
+			const dropzone = document.getElementById('dropzone');
+			const fileInput = document.getElementById('fileInput');
+			const message = dropzone.querySelector('p');
+
+			// Clicar na área abre o seletor de arquivo
+			dropzone.addEventListener('click', () => fileInput.click());
+
+			// Quando o arquivo é selecionado
+			fileInput.addEventListener('change', () => {
+				if (fileInput.files.length > 0) {
+					message.textContent = fileInput.files[0].name;
+				} else {
+					message.textContent = 'Arraste o arquivo aqui ou clique para selecionar';
+				}
+			});
+
+			// Arrastar e soltar
+			dropzone.addEventListener('dragover', (e) => {
+				e.preventDefault();
+				dropzone.classList.add('dragover');
+			});
+
+			dropzone.addEventListener('dragleave', () => {
+				dropzone.classList.remove('dragover');
+			});
+
+			dropzone.addEventListener('drop', (e) => {
+				e.preventDefault();
+				dropzone.classList.remove('dragover');
+
+				const file = e.dataTransfer.files[0];
+				if (file) {
+					fileInput.files = e.dataTransfer.files;
+					message.textContent = file.name;
+				}
+			});
 		});
 		</script>";
 
@@ -2257,6 +2398,34 @@
 		$modal = "";
 		if ($_SESSION['user_tx_nivel'] != 'Funcionário') {
 			$modal = "
+			<style>
+			.dropzone {
+				position: relative; /* ADICIONE ESTA LINHA */
+				border: 2px dashed #ccc;
+				border-radius: 6px;
+				padding: 20px;
+				text-align: center;
+				cursor: pointer;
+				transition: background-color 0.2s ease;
+			}
+
+			.dropzone.dragover {
+				background-color: #f5f5f5;
+				border-color: #3c8dbc;
+			}
+
+			.dropzone input {
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				opacity: 0;
+				width: 100%;
+				height: 100%;
+				cursor: pointer;
+			}
+			</style>
 			<div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
 				<div class='modal-dialog' role='document'>
 					<div class='modal-content'>
@@ -2276,7 +2445,10 @@
 								</div>
 								<div class='form-group'>
 									<label>Arquivo:</label>
-									<input type='file' class='form-control' name='file'>
+									<div class='dropzone' id='dropzone'>
+										<p>Arraste o arquivo aqui ou clique para selecionar</p>
+										<input type='file' name='file' id='fileInput'>
+									</div>
 								</div>
 								<div class='form-group'>
 									<label>Tipo de Documento:</label>
@@ -2324,6 +2496,45 @@
 					$('#grupo_nome').val('');
 					$('#campo_grupo').slideUp();
 				}
+			});
+
+			$(document).on('shown.bs.modal', '#myModal', function() {
+				const dropzone = document.getElementById('dropzone');
+				const fileInput = document.getElementById('fileInput');
+				const message = dropzone.querySelector('p');
+
+				// Clicar na área abre o seletor de arquivo
+				dropzone.addEventListener('click', () => fileInput.click());
+
+				// Quando o arquivo é selecionado
+				fileInput.addEventListener('change', () => {
+					if (fileInput.files.length > 0) {
+						message.textContent = fileInput.files[0].name;
+					} else {
+						message.textContent = 'Arraste o arquivo aqui ou clique para selecionar';
+					}
+				});
+
+				// Arrastar e soltar
+				dropzone.addEventListener('dragover', (e) => {
+					e.preventDefault();
+					dropzone.classList.add('dragover');
+				});
+
+				dropzone.addEventListener('dragleave', () => {
+					dropzone.classList.remove('dragover');
+				});
+
+				dropzone.addEventListener('drop', (e) => {
+					e.preventDefault();
+					dropzone.classList.remove('dragover');
+
+					const file = e.dataTransfer.files[0];
+					if (file) {
+						fileInput.files = e.dataTransfer.files;
+						message.textContent = file.name;
+					}
+				});
 			});
 			</script>";
 		}

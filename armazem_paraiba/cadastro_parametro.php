@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -726,23 +726,23 @@
 		if (!empty($a_mod["para_nb_id"])) {
 			$arquivos = mysqli_fetch_all(query(
 				"SELECT 
-				documento_empresa.docu_nb_id,
-				documento_empresa.empr_nb_id,
-				documento_empresa.docu_tx_dataCadastro,
-				documento_empresa.docu_tx_dataVencimento,
-				documento_empresa.docu_tx_caminho,
-				documento_empresa.docu_tx_descricao,
-				documento_empresa.docu_tx_nome,
-				documento_empresa.docu_tx_visivel,
-				documento_empresa.docu_tx_assinado,
+				documento_parametro.docu_nb_id,
+				documento_parametro.para_nb_id,
+				documento_parametro.docu_tx_dataCadastro,
+				documento_parametro.docu_tx_dataVencimento,
+				documento_parametro.docu_tx_caminho,
+				documento_parametro.docu_tx_descricao,
+				documento_parametro.docu_tx_nome,
+				documento_parametro.docu_tx_visivel,
+				documento_parametro.docu_tx_assinado,
 				t.tipo_tx_nome,
 				gd.grup_tx_nome
-				FROM documento_empresa
+				FROM documento_parametro
 				LEFT JOIN tipos_documentos t 
-				ON documento_empresa.docu_tx_tipo = t.tipo_nb_id
+				ON documento_parametro.docu_tx_tipo = t.tipo_nb_id
 				LEFT JOIN grupos_documentos gd 
 				ON t.tipo_nb_grupo = gd.grup_nb_id
-				WHERE documento_empresa.empr_nb_id = ".$a_mod["para_nb_id"]
+				WHERE documento_parametro.para_nb_id = ".$a_mod["para_nb_id"]
 			),MYSQLI_ASSOC);
 			echo "</div><div class='col-md-12'><div class='col-md-12 col-sm-12'>".arquivosParametro("Documentos", $a_mod["para_nb_id"], $arquivos);
 		}
