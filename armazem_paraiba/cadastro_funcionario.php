@@ -725,6 +725,23 @@
 			$a_mod = carregar("entidade", $_POST["id"]);
 		}
 
+		$errorMsg = "";
+		if(empty($_POST['data_vencimento'])){
+			$obgVencimento = mysqli_fetch_all(query("SELECT tipo_tx_vencimento FROM `tipos_documentos` 
+			WHERE tipo_nb_id = {$_POST["tipo_documento"]}"), MYSQLI_ASSOC);
+
+			if($obgVencimento[0]['tipo_tx_vencimento'] == 'sim'){
+				$errorMsg = "Campo obrigatório não preenchidos: Data de Vencimento";
+			}
+		}
+
+		if(!empty($errorMsg)){
+			set_status("ERRO: ".$errorMsg);
+			$_POST["id"] = $_POST["idFuncionario"];
+			visualizarCadastro();
+			exit;
+		}
+
 		$novoArquivo = [
 			"docu_nb_entidade" => (int) $_POST["idFuncionario"],
 			"docu_tx_nome" => $_POST["file-name"] ?? '',
@@ -1223,6 +1240,7 @@
 		if (!empty($a_mod["enti_nb_id"])) {
 			$arquivos = mysqli_fetch_all(query(
 				"SELECT 
+				documento_funcionario.docu_nb_id,
 				documento_funcionario.docu_nb_entidade,
 				documento_funcionario.docu_tx_dataCadastro,
 				documento_funcionario.docu_tx_dataVencimento,

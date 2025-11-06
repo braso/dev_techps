@@ -44,8 +44,13 @@
 
 		cabecalho("Cadastro de Setor");
 
+		if (!empty($_POST["id"])) {
+			$campoStatus = combo("Status", "busca_banco", $_POST["busca_banco"]?? "", 2, [ "ativo" => "Ativo", "inativo" => "Inativo"]);
+		}
+
 		$campos = [
 			campo("Nome*", "nome", $_POST["nome"], 4),
+			$campoStatus
 		];
 
 		$botoes = [

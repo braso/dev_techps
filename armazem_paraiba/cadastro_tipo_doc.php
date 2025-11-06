@@ -46,6 +46,10 @@
 
 		cabecalho("Cadastro de Tipo de Documento");
 
+		if (!empty($_POST["id"])) {
+			$campoStatus = combo("Status", "busca_banco", $_POST["busca_banco"]?? "", 2, [ "ativo" => "Ativo", "inativo" => "Inativo"]);
+		}
+		
 		if (empty($_POST["vencimento"])) {
 			$_POST["vencimento"] = "nao";
 		}
@@ -53,6 +57,7 @@
 		$campos = [
 			campo("Nome*", "nome", $_POST["nome"], 4),
             combo_bd("!Setor*", "setor", $_POST["setor"], 2, "grupos_documentos"),
+			$campoStatus,
             combo_radio("Passivel de vencimento", "vencimento", $_POST["vencimento"],3,["sim" => "Sim", "nao" => "Não"]),
 		];
 

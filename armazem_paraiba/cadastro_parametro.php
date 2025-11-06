@@ -139,10 +139,26 @@
 
 	function enviarDocumento() {
 		global $a_mod;
-		// dd($_POST);
 
 		if(empty($a_mod)){
 			$a_mod = carregar("parametro", $_POST["idParametro"]);
+		}
+
+		$errorMsg = "";
+		if(empty($_POST['data_vencimento'])){
+			$obgVencimento = mysqli_fetch_all(query("SELECT tipo_tx_vencimento FROM `tipos_documentos` 
+			WHERE tipo_nb_id = {$_POST["tipo_documento"]}"), MYSQLI_ASSOC);
+
+			if($obgVencimento[0]['tipo_tx_vencimento'] == 'sim'){
+				$errorMsg = "Campo obrigatório não preenchidos: Data de Vencimento";
+			}
+		}
+
+		if(!empty($errorMsg)){
+			set_status("ERRO: ".$errorMsg);
+			$_POST["id"] = $_POST["idParametro"];
+			modificarParametro();
+			exit;
 		}
 
 
@@ -710,6 +726,7 @@
 		if (!empty($a_mod["para_nb_id"])) {
 			$arquivos = mysqli_fetch_all(query(
 				"SELECT 
+				documento_empresa.docu_nb_id,
 				documento_empresa.empr_nb_id,
 				documento_empresa.docu_tx_dataCadastro,
 				documento_empresa.docu_tx_dataVencimento,

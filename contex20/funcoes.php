@@ -1228,15 +1228,27 @@
 		}
 
 		$tipo_documento = mysqli_fetch_all(query(
-			"SELECT t.tipo_nb_id, t.tipo_tx_nome, t.tipo_tx_vencimento, gd.grup_tx_nome FROM tipos_documentos t
-			LEFT JOIN grupos_documentos gd 
-  			ON t.tipo_nb_grupo = gd.grup_nb_id
-			ORDER BY tipo_nb_grupo, tipo_tx_nome"
+			"SELECT t.tipo_nb_id, t.tipo_tx_nome, t.tipo_tx_vencimento, gd.grup_tx_nome 
+			FROM tipos_documentos t
+			LEFT JOIN grupos_documentos gd ON t.tipo_nb_grupo = gd.grup_nb_id
+			ORDER BY t.tipo_tx_nome ASC"
 		), MYSQLI_ASSOC);
 
+		$setor_documento = mysqli_fetch_all(query(
+			"SELECT grup_tx_nome 
+				FROM grupos_documentos ORDER BY grup_tx_nome ASC"
+		), MYSQLI_ASSOC);
+
+		$list_setor = "";
+		foreach ($setor_documento as $setor) {
+			$list_setor .= "<option value='{$setor['grup_tx_nome']}'>{$setor['grup_tx_nome']}</option>";
+		}
+
 		$list_tipos = "<option value=''></option>";
+		$list_tipos2 = "";
 		foreach ($tipo_documento as $tipo) {
 			$list_tipos .= "<option value='{$tipo['tipo_nb_id']}' data-vencimento='{$tipo['tipo_tx_vencimento']}' data-grupo='{$tipo['grup_tx_nome']}'>{$tipo['tipo_tx_nome']}</option>";
+			$list_tipos2 .= "<option value='{$tipo['tipo_tx_nome']}'>{$tipo['tipo_tx_nome']}</option>";
 		}
 
 		$AbriAdicionarArquivo = '<td class="text-center"><a href="#" data-toggle="modal" data-target="#myModal"><i class="glyphicon glyphicon-plus-sign"></i></a></td>';
@@ -1249,29 +1261,69 @@
 				</div>
 			</div>
 
-			<div class="portlet-body table-responsive">
-				<table id="contex-grid" class="table table-striped table-bordered table-hover dt-responsive" width="100%">
-					<thead>
-						<tr>
-							<th style="width:25%">NOME</th>
-							<th style="width:35%">DESCRIÇÃO</th>
-							<th style="width:20%">DATA CADASTRO</th>
-							<th style="width:20%">DATA VENCIMENTO</th>
-							<th style="width:20%">TIPO</th>
-							<th style="width:20%">SETOR</th>
-							<th style="width:20%; text-align:center; white-space:nowrap;">
-								<i class="glyphicon glyphicon-cloud-download"></i>
-								&nbsp;<i class="fas fa-file-signature"></i>
-								&nbsp;<i class="far fa-eye"></i>
-								&nbsp;<i class="glyphicon glyphicon-trash"></i>
-							</th>
-						</tr>
-					</thead>
-					<tbody>
-						' . $arquivo_list . '
-						<tr>' . $AbriAdicionarArquivo . '</tr>
-					</tbody>
-				</table>
+			<div class="portlet-body">
+				<!-- Campos de busca -->
+				<div class="form-inline" style="margin-bottom:15px;">
+					<div class="form-group">
+						<label for="filtroNome">Nome:</label>
+						<input type="text" id="filtroNome" class="form-control" placeholder="Digite o nome">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroCadastro">Data Cadastro:</label>
+						<input type="date" id="filtroCadastro" class="form-control">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroVencimento">Data Vencimento:</label>
+						<input type="date" id="filtroVencimento" class="form-control">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroTipo">Tipo:</label>
+						<select id="filtroTipo" class="form-control">
+							<option value="">Todos</option>
+							'.$list_tipos2.'
+						</select>
+					</div>
+
+					<div class="form-group" style="margin-top:10px;">
+						<label for="filtroSetor">Setor:</label>
+						<select id="filtroSetor" class="form-control">
+							<option value="">Todos</option>
+							'.$list_setor.'
+						</select>
+					</div>
+
+					<button id="limparFiltros" class="btn btn-default" style="margin-left:10px;">
+						Limpar
+					</button>
+				</div>
+
+				<div class="table-responsive">
+					<table id="contex-grid" class="table table-striped table-bordered table-hover dt-responsive" width="100%">
+						<thead>
+							<tr>
+								<th style="width:25%">NOME</th>
+								<th style="width:35%">DESCRIÇÃO</th>
+								<th style="width:20%">DATA CADASTRO</th>
+								<th style="width:20%">DATA VENCIMENTO</th>
+								<th style="width:20%">TIPO</th>
+								<th style="width:20%">SETOR</th>
+								<th style="width:20%; text-align:center; white-space:nowrap;">
+									<i class="glyphicon glyphicon-cloud-download"></i>
+									&nbsp;<i class="fas fa-file-signature"></i>
+									&nbsp;<i class="far fa-eye"></i>
+									&nbsp;<i class="glyphicon glyphicon-trash"></i>
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							' . $arquivo_list . '
+							<tr>' . $AbriAdicionarArquivo . '</tr>
+						</tbody>
+					</table>
+				</div>
 			</div>
 		</div>
 
@@ -1307,6 +1359,73 @@
 			document.getElementById("previewContent").innerHTML = content;
 			$("#previewModal").modal("show");
 		}
+		
+		document.addEventListener("DOMContentLoaded", function() {
+			const filtroNome = document.getElementById("filtroNome");
+			const filtroCadastro = document.getElementById("filtroCadastro");
+			const filtroVencimento = document.getElementById("filtroVencimento");
+			const filtroTipo = document.getElementById("filtroTipo");
+			const filtroSetor = document.getElementById("filtroSetor");
+			const limparBtn = document.getElementById("limparFiltros");
+			const tabela = document.getElementById("contex-grid");
+			const linhas = tabela.getElementsByTagName("tr");
+
+			function formatarDataParaComparar(dataBr) {
+				// remove hora e converte dd/mm/yyyy → yyyy-mm-dd
+				if (!dataBr) return "";
+				const partes = dataBr.trim().split(" ")[0].split("/");
+				if (partes.length === 3) {
+					return `${partes[2]}-${partes[1]}-${partes[0]}`;
+				}
+				return "";
+			}
+
+			function filtrarTabela() {
+				const nomeValor = filtroNome.value.toLowerCase();
+				const cadastroValor = filtroCadastro.value;
+				const vencimentoValor = filtroVencimento.value;
+				const tipoValor = filtroTipo.value.toLowerCase();
+				const setorValor = filtroSetor.value.toLowerCase();
+
+				for (let i = 1; i < linhas.length; i++) {
+					const celulas = linhas[i].getElementsByTagName("td");
+					if (celulas.length < 6) continue; // ignora linhas sem dados
+
+					const nome = celulas[0].textContent.toLowerCase();
+					const cadastro = celulas[2].textContent.trim();
+					const vencimento = celulas[3].textContent.trim();
+					const tipo = celulas[4].textContent.toLowerCase();
+					const setor = celulas[5].textContent.toLowerCase();
+
+					let exibir = true;
+
+					if (nomeValor && !nome.includes(nomeValor)) exibir = false;
+					if (cadastroValor && formatarDataParaComparar(cadastro) !== cadastroValor) exibir = false;
+					if (vencimentoValor && formatarDataParaComparar(vencimento) !== vencimentoValor) exibir = false;
+					if (tipoValor && tipo !== tipoValor) exibir = false;
+					if (setorValor && setor !== setorValor) exibir = false;
+
+					linhas[i].style.display = exibir ? "" : "none";
+				}
+			}
+
+			// Eventos de filtro
+			filtroNome.addEventListener("input", filtrarTabela);
+			filtroCadastro.addEventListener("change", filtrarTabela);
+			filtroVencimento.addEventListener("change", filtrarTabela);
+			filtroTipo.addEventListener("change", filtrarTabela);
+			filtroSetor.addEventListener("change", filtrarTabela);
+
+			// Botão de limpar filtros
+			limparBtn.addEventListener("click", function() {
+				filtroNome.value = "";
+				filtroCadastro.value = "";
+				filtroVencimento.value = "";
+				filtroTipo.selectedIndex = 0;
+				filtroSetor.selectedIndex = 0;
+				filtrarTabela();
+			});
+		});
 		</script>
 
 		<style>
@@ -1487,12 +1606,24 @@
 			"SELECT t.tipo_nb_id, t.tipo_tx_nome, t.tipo_tx_vencimento, gd.grup_tx_nome FROM tipos_documentos t
 			LEFT JOIN grupos_documentos gd 
   			ON t.tipo_nb_grupo = gd.grup_nb_id
-			ORDER BY tipo_nb_grupo, tipo_tx_nome"
+			ORDER BY t.tipo_tx_nome ASC"
 		), MYSQLI_ASSOC);
 
+		$setor_documento = mysqli_fetch_all(query(
+			"SELECT grup_tx_nome 
+				FROM grupos_documentos ORDER BY grup_tx_nome ASC"
+		), MYSQLI_ASSOC);
+
+		$list_setor = "";
+		foreach ($setor_documento as $setor) {
+			$list_setor .= "<option value='{$setor['grup_tx_nome']}'>{$setor['grup_tx_nome']}</option>";
+		}
+
 		$list_tipos = "<option value=''></option>";
+		$list_tipos2 = "";
 		foreach ($tipo_documento as $tipo) {
 			$list_tipos .= "<option value='{$tipo['tipo_nb_id']}' data-vencimento='{$tipo['tipo_tx_vencimento']}' data-grupo='{$tipo['grup_tx_nome']}'>{$tipo['tipo_tx_nome']}</option>";
+			$list_tipos2 .= "<option value='{$tipo['tipo_tx_nome']}'>{$tipo['tipo_tx_nome']}</option>";
 		}
 
 		$AbriAdicionarArquivo = '<td class="text-center"><a href="#" data-toggle="modal" data-target="#myModal"><i class="glyphicon glyphicon-plus-sign"></i></a></td>';
@@ -1501,11 +1632,50 @@
 		<div class="portlet light">
 			<div class="portlet-title">
 				<div class="caption">
-					<span class="caption-subject font-dark bold uppercase">' . $nome . '</span>
+					<span class="caption-subject font-dark bold uppercase">'. $nome .'</span>
 				</div>
 			</div>
 
 			<div class="portlet-body">
+				<!-- Campos de busca -->
+				<div class="form-inline" style="margin-bottom:15px;">
+					<div class="form-group">
+						<label for="filtroNome">Nome:</label>
+						<input type="text" id="filtroNome" class="form-control" placeholder="Digite o nome">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroCadastro">Data Cadastro:</label>
+						<input type="date" id="filtroCadastro" class="form-control">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroVencimento">Data Vencimento:</label>
+						<input type="date" id="filtroVencimento" class="form-control">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroTipo">Tipo:</label>
+						<select id="filtroTipo" class="form-control">
+							<option value="">Todos</option>
+							'.$list_tipos2.'
+						</select>
+					</div>
+
+					<div class="form-group" style="margin-top:10px;">
+						<label for="filtroSetor">Setor:</label>
+						<select id="filtroSetor" class="form-control">
+							<option value="">Todos</option>
+							'.$list_setor.'
+						</select>
+					</div>
+
+					<button id="limparFiltros" class="btn btn-default" style="margin-left:10px;">
+						Limpar
+					</button>
+				</div>
+
+				<!-- Tabela -->
 				<div class="table-responsive">
 					<table id="contex-grid" class="table table-striped table-bordered table-hover dt-responsive" width="100%">
 						<thead>
@@ -1525,8 +1695,8 @@
 							</tr>
 						</thead>
 						<tbody>
-							' . $arquivo_list . '
-							<tr>' . $AbriAdicionarArquivo . '</tr>
+							'.$arquivo_list.'
+							<tr>'.$AbriAdicionarArquivo.'</tr>
 						</tbody>
 					</table>
 				</div>
@@ -1565,6 +1735,73 @@
 			document.getElementById("previewContent").innerHTML = content;
 			$("#previewModal").modal("show");
 		}
+
+		document.addEventListener("DOMContentLoaded", function() {
+			const filtroNome = document.getElementById("filtroNome");
+			const filtroCadastro = document.getElementById("filtroCadastro");
+			const filtroVencimento = document.getElementById("filtroVencimento");
+			const filtroTipo = document.getElementById("filtroTipo");
+			const filtroSetor = document.getElementById("filtroSetor");
+			const limparBtn = document.getElementById("limparFiltros");
+			const tabela = document.getElementById("contex-grid");
+			const linhas = tabela.getElementsByTagName("tr");
+
+			function formatarDataParaComparar(dataBr) {
+				// remove hora e converte dd/mm/yyyy → yyyy-mm-dd
+				if (!dataBr) return "";
+				const partes = dataBr.trim().split(" ")[0].split("/");
+				if (partes.length === 3) {
+					return `${partes[2]}-${partes[1]}-${partes[0]}`;
+				}
+				return "";
+			}
+
+			function filtrarTabela() {
+				const nomeValor = filtroNome.value.toLowerCase();
+				const cadastroValor = filtroCadastro.value;
+				const vencimentoValor = filtroVencimento.value;
+				const tipoValor = filtroTipo.value.toLowerCase();
+				const setorValor = filtroSetor.value.toLowerCase();
+
+				for (let i = 1; i < linhas.length; i++) {
+					const celulas = linhas[i].getElementsByTagName("td");
+					if (celulas.length < 6) continue; // ignora linhas sem dados
+
+					const nome = celulas[0].textContent.toLowerCase();
+					const cadastro = celulas[2].textContent.trim();
+					const vencimento = celulas[3].textContent.trim();
+					const tipo = celulas[4].textContent.toLowerCase();
+					const setor = celulas[5].textContent.toLowerCase();
+
+					let exibir = true;
+
+					if (nomeValor && !nome.includes(nomeValor)) exibir = false;
+					if (cadastroValor && formatarDataParaComparar(cadastro) !== cadastroValor) exibir = false;
+					if (vencimentoValor && formatarDataParaComparar(vencimento) !== vencimentoValor) exibir = false;
+					if (tipoValor && tipo !== tipoValor) exibir = false;
+					if (setorValor && setor !== setorValor) exibir = false;
+
+					linhas[i].style.display = exibir ? "" : "none";
+				}
+			}
+
+			// Eventos de filtro
+			filtroNome.addEventListener("input", filtrarTabela);
+			filtroCadastro.addEventListener("change", filtrarTabela);
+			filtroVencimento.addEventListener("change", filtrarTabela);
+			filtroTipo.addEventListener("change", filtrarTabela);
+			filtroSetor.addEventListener("change", filtrarTabela);
+
+			// Botão de limpar filtros
+			limparBtn.addEventListener("click", function() {
+				filtroNome.value = "";
+				filtroCadastro.value = "";
+				filtroVencimento.value = "";
+				filtroTipo.selectedIndex = 0;
+				filtroSetor.selectedIndex = 0;
+				filtrarTabela();
+			});
+		});
 		</script>
 
 		<style>
@@ -1749,7 +1986,7 @@
 				];
 
 				$iconePreview = '<i class="fa-regular fa-eye-slash" title="Preview indisponível"></i>';
-				if($_SESSION['user_tx_nivel'] != 'Funcionário') {
+				if($arquivo['docu_tx_visivel'] != 'nao') {
 					if (in_array($mime_type_arquivo, $formatosSuportados)) {
 						$urlPreview = $arquivo['docu_tx_caminho'];
 						$iconePreview = "
@@ -1798,12 +2035,27 @@
 			"SELECT t.tipo_nb_id, t.tipo_tx_nome, t.tipo_tx_vencimento, gd.grup_tx_nome 
 			FROM tipos_documentos t
 			LEFT JOIN grupos_documentos gd ON t.tipo_nb_grupo = gd.grup_nb_id
-			ORDER BY tipo_nb_grupo, tipo_tx_nome"
+			ORDER BY t.tipo_tx_nome ASC"
 		), MYSQLI_ASSOC);
 
+		$setor_documento = mysqli_fetch_all(query(
+			"SELECT grup_tx_nome 
+				FROM grupos_documentos ORDER BY grup_tx_nome ASC"
+		), MYSQLI_ASSOC);
+
+		$list_setor = "";
+		foreach ($setor_documento as $setor) {
+			$list_setor .= "<option value='{$setor['grup_tx_nome']}'>{$setor['grup_tx_nome']}</option>";
+		}
+
+
 		$list_tipos = "<option value=''></option>";
+		$list_tipos2 = "";
 		foreach ($tipo_documento as $tipo) {
+			
 			$list_tipos .= "<option value='{$tipo['tipo_nb_id']}' data-vencimento='{$tipo['tipo_tx_vencimento']}' data-grupo='{$tipo['grup_tx_nome']}'>{$tipo['tipo_tx_nome']}</option>";
+			
+			$list_tipos2 .= "<option value='{$tipo['tipo_tx_nome']}'>{$tipo['tipo_tx_nome']}</option>";
 		}
 
 		$AbriAdicionarArquivo = ($_SESSION['user_tx_nivel'] != 'Funcionário')
@@ -1818,29 +2070,70 @@
 				</div>
 			</div>
 
-			<div class="portlet-body table-responsive">
-				<table id="contex-grid" class="table table-striped table-bordered table-hover dt-responsive" width="100%">
-					<thead>
-						<tr>
-							<th>NOME</th>
-							<th>DESCRIÇÃO</th>
-							<th>DATA CADASTRO</th>
-							<th>DATA VENCIMENTO</th>
-							<th>TIPO</th>
-							<th>SETOR</th>
-							<th style="text-align:center; white-space:nowrap;">
-								<i class="glyphicon glyphicon-cloud-download"></i>
-								&nbsp;<i class="fas fa-file-signature"></i>
-								&nbsp;<i class="far fa-eye"></i>
-								&nbsp;<i class="glyphicon glyphicon-trash"></i>
-							</th>
-						</tr>
-					</thead>
-					<tbody>
-						' . $arquivo_list . '
-						<tr>' . $AbriAdicionarArquivo . '</tr>
-					</tbody>
-				</table>
+			<div class="portlet-body">
+				<!-- Campos de busca -->
+				<div class="form-inline" style="margin-bottom:15px;">
+					<div class="form-group">
+						<label for="filtroNome">Nome:</label>
+						<input type="text" id="filtroNome" class="form-control" placeholder="Digite o nome">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroCadastro">Data Cadastro:</label>
+						<input type="date" id="filtroCadastro" class="form-control">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroVencimento">Data Vencimento:</label>
+						<input type="date" id="filtroVencimento" class="form-control">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroTipo">Tipo:</label>
+						<select id="filtroTipo" class="form-control">
+							<option value="">Todos</option>
+							'.$list_tipos2.'
+						</select>
+					</div>
+
+					<div class="form-group" style="margin-top:10px;">
+						<label for="filtroSetor">Setor:</label>
+						<select id="filtroSetor" class="form-control">
+							<option value="">Todos</option>
+							'.$list_setor.'
+						</select>
+					</div>
+
+					<button id="limparFiltros" class="btn btn-default" style="margin-left:10px;">
+						Limpar
+					</button>
+				</div>
+
+
+				<div class="table-responsive">
+					<table id="contex-grid" class="table table-striped table-bordered table-hover dt-responsive" width="100%">
+						<thead>
+							<tr>
+								<th>NOME</th>
+								<th>DESCRIÇÃO</th>
+								<th>DATA CADASTRO</th>
+								<th>DATA VENCIMENTO</th>
+								<th>TIPO</th>
+								<th>SETOR</th>
+								<th style="text-align:center; white-space:nowrap;">
+									<i class="glyphicon glyphicon-cloud-download"></i>
+									&nbsp;<i class="fas fa-file-signature"></i>
+									&nbsp;<i class="far fa-eye"></i>
+									&nbsp;<i class="glyphicon glyphicon-trash"></i>
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							' . $arquivo_list . '
+							<tr>' . $AbriAdicionarArquivo . '</tr>
+						</tbody>
+					</table>
+				</div>
 			</div>
 		</div>
 
@@ -1876,6 +2169,73 @@
 			document.getElementById("previewContent").innerHTML = content;
 			$("#previewModal").modal("show");
 		}
+
+		document.addEventListener("DOMContentLoaded", function() {
+			const filtroNome = document.getElementById("filtroNome");
+			const filtroCadastro = document.getElementById("filtroCadastro");
+			const filtroVencimento = document.getElementById("filtroVencimento");
+			const filtroTipo = document.getElementById("filtroTipo");
+			const filtroSetor = document.getElementById("filtroSetor");
+			const limparBtn = document.getElementById("limparFiltros");
+			const tabela = document.getElementById("contex-grid");
+			const linhas = tabela.getElementsByTagName("tr");
+
+			function formatarDataParaComparar(dataBr) {
+				// remove hora e converte dd/mm/yyyy → yyyy-mm-dd
+				if (!dataBr) return "";
+				const partes = dataBr.trim().split(" ")[0].split("/");
+				if (partes.length === 3) {
+					return `${partes[2]}-${partes[1]}-${partes[0]}`;
+				}
+				return "";
+			}
+
+			function filtrarTabela() {
+				const nomeValor = filtroNome.value.toLowerCase();
+				const cadastroValor = filtroCadastro.value;
+				const vencimentoValor = filtroVencimento.value;
+				const tipoValor = filtroTipo.value.toLowerCase();
+				const setorValor = filtroSetor.value.toLowerCase();
+
+				for (let i = 1; i < linhas.length; i++) {
+					const celulas = linhas[i].getElementsByTagName("td");
+					if (celulas.length < 6) continue; // ignora linhas sem dados
+
+					const nome = celulas[0].textContent.toLowerCase();
+					const cadastro = celulas[2].textContent.trim();
+					const vencimento = celulas[3].textContent.trim();
+					const tipo = celulas[4].textContent.toLowerCase();
+					const setor = celulas[5].textContent.toLowerCase();
+
+					let exibir = true;
+
+					if (nomeValor && !nome.includes(nomeValor)) exibir = false;
+					if (cadastroValor && formatarDataParaComparar(cadastro) !== cadastroValor) exibir = false;
+					if (vencimentoValor && formatarDataParaComparar(vencimento) !== vencimentoValor) exibir = false;
+					if (tipoValor && tipo !== tipoValor) exibir = false;
+					if (setorValor && setor !== setorValor) exibir = false;
+
+					linhas[i].style.display = exibir ? "" : "none";
+				}
+			}
+
+			// Eventos de filtro
+			filtroNome.addEventListener("input", filtrarTabela);
+			filtroCadastro.addEventListener("change", filtrarTabela);
+			filtroVencimento.addEventListener("change", filtrarTabela);
+			filtroTipo.addEventListener("change", filtrarTabela);
+			filtroSetor.addEventListener("change", filtrarTabela);
+
+			// Botão de limpar filtros
+			limparBtn.addEventListener("click", function() {
+				filtroNome.value = "";
+				filtroCadastro.value = "";
+				filtroVencimento.value = "";
+				filtroTipo.selectedIndex = 0;
+				filtroSetor.selectedIndex = 0;
+				filtrarTabela();
+			});
+		});
 		</script>
 
 		<style>
