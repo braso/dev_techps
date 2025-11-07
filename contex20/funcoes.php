@@ -1532,24 +1532,43 @@
 					</div>
 					<div class='modal-footer'>
 						<button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
-						<button type='button' class='btn btn-primary' onclick='document.form_enviar_arquivo2.submit();'>Salvar arquivo</button>
+						<button type='button' class='btn btn-primary' onclick='validarEnvio()'>Salvar arquivo</button>
 					</div>
 				</div>
 			</div>
 		</div>
 
 		<script>
-		$('#tipo_documento').on('change', function() {
-			const vencimento = $(this).find(':selected').data('vencimento');
-			if (vencimento === 'sim') $('#campo_vencimento').slideDown();
-			else $('#campo_vencimento').slideUp();
-		});
+		function validarEnvio() {
+			const vencimento = $('#tipo_documento').find(':selected').data('vencimento');
+			const dataVenc = $('#data_vencimento').val();
 
-		$('#tipo_documento').on('change', function(){
-			var grupo = $(this).find(':selected').data('grupo');
-			if(grupo && grupo.trim() !== ''){
+			if (vencimento === 'sim' && !dataVenc) {
+				alert('Por favor, preencha a data de vencimento.');
+				$('#data_vencimento').focus();
+				return false;
+			}
+
+			document.form_enviar_arquivo2.submit();
+		}
+		$('#tipo_documento').on('change', function() {
+			const selecionado = $(this).find(':selected');
+			const vencimento = selecionado.data('vencimento');
+			const grupo = selecionado.data('grupo');
+
+			// Mostra/oculta campo de vencimento e controla 'required'
+			if (vencimento === 'sim') {
+				$('#campo_vencimento').slideDown();
+				$('#data_vencimento').attr('required', true);
+			} else {
+				$('#campo_vencimento').slideUp();
+				$('#data_vencimento').removeAttr('required').val('');
+			}
+
+			// Mostra/oculta campo de grupo
+			if (grupo && grupo.trim() !== '') {
 				$('#grupo_nome').val(grupo);
-				$('#campo_grupo').slideDown(); // animação suave
+				$('#campo_grupo').slideDown();
 			} else {
 				$('#grupo_nome').val('');
 				$('#campo_grupo').slideUp();
@@ -2028,24 +2047,43 @@
 					</div>
 					<div class='modal-footer'>
 						<button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
-						<button type='button' class='btn btn-primary' onclick='document.form_enviar_arquivo2.submit();'>Salvar arquivo</button>
+						<button type='button' class='btn btn-primary' onclick='validarEnvio()'>Salvar arquivo</button>
 					</div>
 				</div>
 			</div>
 		</div>
 
 		<script>
-		$('#tipo_documento').on('change', function() {
-			const vencimento = $(this).find(':selected').data('vencimento');
-			if (vencimento === 'sim') $('#campo_vencimento').slideDown();
-			else $('#campo_vencimento').slideUp();
-		});
+		function validarEnvio() {
+			const vencimento = $('#tipo_documento').find(':selected').data('vencimento');
+			const dataVenc = $('#data_vencimento').val();
 
-		$('#tipo_documento').on('change', function(){
-			var grupo = $(this).find(':selected').data('grupo');
-			if(grupo && grupo.trim() !== ''){
+			if (vencimento === 'sim' && !dataVenc) {
+				alert('Por favor, preencha a data de vencimento.');
+				$('#data_vencimento').focus();
+				return false;
+			}
+
+			document.form_enviar_arquivo2.submit();
+		}
+		$('#tipo_documento').on('change', function() {
+			const selecionado = $(this).find(':selected');
+			const vencimento = selecionado.data('vencimento');
+			const grupo = selecionado.data('grupo');
+
+			// Mostra/oculta campo de vencimento e controla 'required'
+			if (vencimento === 'sim') {
+				$('#campo_vencimento').slideDown();
+				$('#data_vencimento').attr('required', true);
+			} else {
+				$('#campo_vencimento').slideUp();
+				$('#data_vencimento').removeAttr('required').val('');
+			}
+
+			// Mostra/oculta campo de grupo
+			if (grupo && grupo.trim() !== '') {
 				$('#grupo_nome').val(grupo);
-				$('#campo_grupo').slideDown(); // animação suave
+				$('#campo_grupo').slideDown();
 			} else {
 				$('#grupo_nome').val('');
 				$('#campo_grupo').slideUp();
@@ -2476,20 +2514,41 @@
 						</div>
 						<div class='modal-footer'>
 							<button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
-							<button type='button' class='btn btn-primary' onclick='document.form_enviar_arquivo2.submit();'>Salvar arquivo</button>
+							<button type='button' class='btn btn-primary' onclick='validarEnvio()'>Salvar arquivo</button>
 						</div>
 					</div>
 				</div>
 			</div>
 
 			<script>
-			$('#tipo_documento').on('change', function() {
-				const vencimento = $(this).find(':selected').data('vencimento');
-				if (vencimento === 'sim') $('#campo_vencimento').slideDown();
-				else $('#campo_vencimento').slideUp();
+			function validarEnvio() {
+				const vencimento = $('#tipo_documento').find(':selected').data('vencimento');
+				const dataVenc = $('#data_vencimento').val();
 
-				var grupo = $(this).find(':selected').data('grupo');
-				if(grupo && grupo.trim() !== ''){
+				if (vencimento === 'sim' && !dataVenc) {
+					alert('Por favor, preencha a data de vencimento.');
+					$('#data_vencimento').focus();
+					return false;
+				}
+
+				document.form_enviar_arquivo2.submit();
+			}
+			$('#tipo_documento').on('change', function() {
+				const selecionado = $(this).find(':selected');
+				const vencimento = selecionado.data('vencimento');
+				const grupo = selecionado.data('grupo');
+
+				// Mostra/oculta campo de vencimento e controla 'required'
+				if (vencimento === 'sim') {
+					$('#campo_vencimento').slideDown();
+					$('#data_vencimento').attr('required', true);
+				} else {
+					$('#campo_vencimento').slideUp();
+					$('#data_vencimento').removeAttr('required').val('');
+				}
+
+				// Mostra/oculta campo de grupo
+				if (grupo && grupo.trim() !== '') {
 					$('#grupo_nome').val(grupo);
 					$('#campo_grupo').slideDown();
 				} else {
