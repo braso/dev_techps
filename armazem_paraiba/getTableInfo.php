@@ -40,9 +40,11 @@
             $tabelaRow = [];
             foreach ($row as $key => $data){
                 try{
-                    preg_match('/^((.[^ ])*)\((.*)\)$/', $data, $match);
-                    if(isset($match[1])){
-                        $data = eval("return {$match[0]};");
+                    if(!empty($data)){
+                        preg_match('/^((.[^ ])*)\((.*)\)$/', $data, $match);
+                        if(isset($match[1])){
+                            $data = eval("return {$match[0]};");
+                        }
                     }
                 }catch(Exception $e){
                     $data = "return '".__LINE__." error'";
