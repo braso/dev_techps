@@ -160,7 +160,7 @@
 
 				$endosso["totalResumo"]["saldoBruto"] = $endosso["totalResumo"]["saldoAtual"];
 				unset($endosso["totalResumo"]["saldoAtual"]);
-				[$endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]] = calcularHorasAPagar($endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50"], $endosso["totalResumo"]["he100"], (!empty($endosso["endo_tx_max50APagar"])? $endosso["endo_tx_max50APagar"]: "00:00"), ($endosso["totalResumo"]["para_tx_pagarHEExComPerNeg"]?? "nao"));
+				[$endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]] = calcularHorasAPagar(strip_tags($endosso["totalResumo"]["diffSaldo"]), $endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50"], $endosso["totalResumo"]["he100"], (!empty($endosso["endo_tx_max50APagar"])? $endosso["endo_tx_max50APagar"]: "00:00"), ($endosso["totalResumo"]["para_tx_pagarHEExComPerNeg"]?? "nao"));
 				$endosso["totalResumo"]["saldoFinal"] = operarHorarios([$endosso["totalResumo"]["saldoBruto"], $endosso["totalResumo"]["he50APagar"], $endosso["totalResumo"]["he100APagar"]], "-");
 			break;
 			case $versoesEndosso[2]:
@@ -1675,7 +1675,7 @@
 		), MYSQLI_ASSOC);
 
 		$tipo_documento = mysqli_fetch_all(query(
-			"SELECT tipo_nb_id, tipo_tx_nome,tipo_tx_vencimento  FROM tipos_documentos ORDER BY tipo_nb_grupo, tipo_tx_nome"
+			"SELECT tipo_nb_id, tipo_tx_nome, tipo_tx_vencimento FROM tipos_documentos ORDER BY tipo_nb_grupo, tipo_tx_nome"
 		), MYSQLI_ASSOC);
 
 		// Montar o HTML do dropdown
