@@ -190,8 +190,8 @@
 	}
 
 	//@return [he50APagar, he100APagar]
-	function calcularHorasAPagar(string $saldoBruto, string $he50, string $he100, string $max50APagar, string $pagarHEExComPerNeg = "nao"): array{
-		$params = [$saldoBruto, $he50, $he100, $max50APagar];
+	function calcularHorasAPagar(string $saldoPeriodo, string $saldoBruto, string $he50, string $he100, string $max50APagar, string $pagarHEExComPerNeg = "nao"): array{
+		$params = [$saldoPeriodo, $saldoBruto, $he50, $he100, $max50APagar];
 
 		foreach($params as $param){
 			if(!preg_match("/^-?\d{2,10}:\d{2}$/", $param)){
@@ -199,19 +199,18 @@
 			}
 		}
 
-		if($saldoBruto[0] == "-"){
+		if($saldoPeriodo[0] == "-"){
 			if($pagarHEExComPerNeg == "sim"){
 				return ["00:00", $he100];
 			}
-
 			return ["00:00", "00:00"];
-		}
-		if(operarHorarios([$he100, $saldoBruto], "-")[0] != "-"){
-			return ["00:00", $saldoBruto];
+
+		}elseif(operarHorarios([$he100, $saldoPeriodo], "-")[0] != "-"){		//$he100 > $saldoPeriodo
+			return ["00:00", $saldoPeriodo];
 		}
 		
 		$excedente = operarHorarios([$saldoBruto, $he100], "-");
-		if(operarHorarios([$max50APagar, $excedente], "-")[0] != "-"){
+		if(operarHorarios([$max50APagar, $excedente], "-")[0] != "-"){			//$max50APagar > $excedente
 			return [$excedente, $he100];
 		}
 
@@ -371,6 +370,7 @@
 							$endosso = lerEndossoCSV($endosso["endo_tx_filename"]);
 							if (empty($endosso["totalResumo"]["he50APagar"])) {
 								$pago = calcularHorasAPagar(
+									strip_tags($endosso["totalResumo"]["diffSaldo"]),
 									operarHorarios([$endosso["totalResumo"]["saldoAnterior"], $endosso["totalResumo"]["diffSaldo"]], "+"),
 									$endosso["totalResumo"]["he50"],
 									$endosso["totalResumo"]["he100"],

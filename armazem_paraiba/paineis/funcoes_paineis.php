@@ -463,7 +463,7 @@ function criar_relatorio_endosso() {
 							$endossoCompleto["endo_tx_max50APagar"] = "00:00";
 						}
 
-						$aPagar2 = calcularHorasAPagar($endossoCompleto["totalResumo"]["saldoBruto"] ?? "00:00", $endossoCompleto["totalResumo"]["he50"] ?? "00:00", 
+						$aPagar2 = calcularHorasAPagar(strip_tags($endossoCompleto["totalResumo"]["diffSaldo"]), $endossoCompleto["totalResumo"]["saldoBruto"] ?? "00:00", $endossoCompleto["totalResumo"]["he50"] ?? "00:00", 
 						$endossoCompleto["totalResumo"]["he100"]?? "00:00", $endossoCompleto["endo_tx_max50APagar"]?? "00:00", 
 						($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
 						$aPagar2 = operarHorarios($aPagar2, "+");

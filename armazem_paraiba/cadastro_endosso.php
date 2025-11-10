@@ -327,7 +327,7 @@
 
 		
 		$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
-		[$totalResumo["he50APagar"], $totalResumo["he100APagar"]] = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], "999:59", ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+		[$totalResumo["he50APagar"], $totalResumo["he100APagar"]] = calcularHorasAPagar(strip_tags($totalResumo["diffSaldo"]), $saldoBruto, $totalResumo["he50"], $totalResumo["he100"], "999:59", ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
 
 		$totalResumo["saldoAnterior"] = $saldoAnterior;
 		$totalResumo["saldoBruto"] = $saldoBruto;
@@ -447,10 +447,7 @@
 					}
 
 					foreach($row as $key => &$value){
-						if($key == "diffSaldo"){
-							continue;
-						}
-						if ($value == "00:00") {
+						if ($value == "00:00" && $key != "diffSaldo"){
 							$value = "";
 						}
 					}
@@ -505,7 +502,7 @@
 			//}
 
 			$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
-			$aPagar = calcularHorasAPagar($saldoBruto, $totalResumo["he50"], $totalResumo["he100"], (!empty($_POST["extraPago"])? $_POST["extraPago"]: "00:00"), ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+			$aPagar = calcularHorasAPagar(strip_tags($totalResumo["diffSaldo"]), $saldoBruto, $totalResumo["he50"], $totalResumo["he100"], (!empty($_POST["extraPago"])? $_POST["extraPago"]: "00:00"), ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
 			$saldoFinal = operarHorarios([$saldoBruto, "-".$aPagar[0], "-".$aPagar[1]], "+");
 			
 			if($totalResumo["diffSaldo"][0] == "-"){
@@ -611,6 +608,7 @@
 				if(!is_dir($path)){
 					mkdir($path);
 				}
+
 				if(file_exists($path."/".$filename.".csv")){
 					$version = 2;
 					while(file_exists($path."/".$filename."_".strval($version).".csv")){
@@ -618,6 +616,7 @@
 					}
 					$filename = $filename."_".strval($version);
 				}
+
 				$novoEndosso["endo_tx_filename"] = $filename;
 				$file = fopen($path."/".$filename.".csv", "w");
 				fputcsv($file, array_keys($novoEndosso));
@@ -651,7 +650,7 @@
 
 		cabecalho("Cadastro de Endosso");
 
-		$condicoes_motorista = " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')";
+		$condicoes_motorista = "AND enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')";
 		if($_SESSION["user_tx_nivel"] != "Super Administrador"){
 			$condicoes_motorista .= " AND enti_nb_empresa = ".$_SESSION["user_tx_emprCnpj"];
 		}

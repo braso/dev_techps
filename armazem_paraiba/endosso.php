@@ -3,7 +3,7 @@
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
-	
+
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
 
 	function imprimir_relatorio(){
@@ -324,7 +324,7 @@
 					$endossoCompleto["endo_tx_max50APagar"] = "00:00";
 				}
 
-				$aPagar = calcularHorasAPagar($totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $endossoCompleto["endo_tx_max50APagar"], ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+				$aPagar = calcularHorasAPagar(strip_tags($totalResumo["diffSaldo"]), $totalResumo["saldoBruto"], $totalResumo["he50"], $totalResumo["he100"], $endossoCompleto["endo_tx_max50APagar"], ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
 				$aPagar = operarHorarios($aPagar, "+");
 				$saldoFinal = (!empty($totalResumo["saldoFinal"])? $totalResumo["saldoFinal"]: operarHorarios([$totalResumo["saldoBruto"], $aPagar], "-"));
 
