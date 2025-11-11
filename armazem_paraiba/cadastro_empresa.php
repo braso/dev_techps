@@ -548,12 +548,15 @@
 			documento_empresa.docu_tx_visivel,
 			documento_empresa.docu_tx_assinado,
 			t.tipo_tx_nome,
-			gd.grup_tx_nome
+			gd.grup_tx_nome,
+			subg.sbgr_tx_nome
 			FROM documento_empresa
 			LEFT JOIN tipos_documentos t 
 			ON documento_empresa.docu_tx_tipo = t.tipo_nb_id
 			LEFT JOIN grupos_documentos gd 
 			ON t.tipo_nb_grupo = gd.grup_nb_id
+			LEFT JOIN sbgrupos_documentos subg
+			ON t.tipo_nb_sbgrupo = subg.sbgr_nb_id
 			WHERE documento_empresa.empr_nb_id = ".$a_mod["empr_nb_id"]);
 			$arquivos = mysqli_fetch_all($sqlArquivos, MYSQLI_ASSOC);
 		}

@@ -1250,12 +1250,15 @@
 				documento_funcionario.docu_tx_visivel,
 				documento_funcionario.docu_tx_assinado,
 				t.tipo_tx_nome,
-				gd.grup_tx_nome
+				gd.grup_tx_nome,
+				subg.sbgr_tx_nome
 				FROM documento_funcionario
 				LEFT JOIN tipos_documentos t 
 				ON documento_funcionario.docu_tx_tipo = t.tipo_nb_id
 				LEFT JOIN grupos_documentos gd 
 				ON t.tipo_nb_grupo = gd.grup_nb_id
+				LEFT JOIN sbgrupos_documentos subg
+				ON t.tipo_nb_sbgrupo = subg.sbgr_nb_id
 				WHERE documento_funcionario.docu_nb_entidade = ".$a_mod["enti_nb_id"]
 			),MYSQLI_ASSOC);
 			echo "</div><div class='col-md-12'><div class='col-md-12 col-sm-12'>".arquivosFuncionario("Documentos", $a_mod["enti_nb_id"], $arquivos);

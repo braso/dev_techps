@@ -1152,12 +1152,1826 @@
 	}
 
 	function arquivosParametro($nome,$idParametro,$arquivos){
+
+		$arquivo_list = '';
+
+		if (!empty($arquivos)) {
+			foreach ($arquivos as $arquivo) {
+				$dataHora = new DateTime($arquivo['docu_tx_dataCadastro']);
+				$dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
+
+				$dataHoraFormatadaVencimento = '';
+				if (!empty($arquivo['docu_tx_datavencimento']) && $arquivo['docu_tx_datavencimento'] != "0000-00-00 00:00:00") {
+					$dataHoraVencimento = new DateTime($arquivo['docu_tx_datavencimento']);
+					$dataHoraFormatadaVencimento = $dataHoraVencimento->format('d/m/Y');
+				}
+
+				$mime_type_arquivo = '';
+				if (file_exists($arquivo["docu_tx_caminho"])) {
+					$finfo = finfo_open(FILEINFO_MIME_TYPE);
+					$mime_type_arquivo = finfo_file($finfo, $arquivo["docu_tx_caminho"]);
+					finfo_close($finfo);
+				}
+
+				$formatosSuportados = [
+					'application/pdf',
+					'image/jpeg',
+					'image/png',
+					'image/gif',
+					'image/webp',
+					'text/plain',
+					'text/html'
+				];
+
+				$iconePreview = '<i class="fa-regular fa-eye-slash" title="Preview indisponível"></i>';
+				if (in_array($mime_type_arquivo, $formatosSuportados)) {
+					$urlPreview = $arquivo['docu_tx_caminho'];
+					$iconePreview = "
+						<a class='text-info' style='cursor:pointer;' 
+						onclick=\"abrirPreview('$urlPreview', '$mime_type_arquivo', '$arquivo[docu_tx_nome]')\">
+							<i class='far fa-eye' title='Visualizar Documento'></i>
+						</a>";
+				}
+
+				$iconeDownload = "
+					<a class='text-info' style='cursor:pointer;' 
+					onclick=\"downloadArquivo($idParametro, '$arquivo[docu_tx_caminho]', 'downloadArquivo');\">
+						<i class='glyphicon glyphicon-cloud-download' title='Download'></i>
+					</a>";
+
+				$IconeAssinatura = ($arquivo["docu_tx_assinado"] == "sim")
+					? "&nbsp;<i class='fa-solid fa-file-contract text-success' title='Documento assinado digitalmente'></i>"
+					: "&nbsp;<i class='fa-solid fa-file-signature text-danger' title='Documento não assinado'></i>";
+
+				$iconeExcluir = "
+					<a class='text-danger' style='cursor:pointer;' 
+					onclick=\"remover_arquivo($idParametro, $arquivo[docu_nb_id], '$arquivo[docu_tx_nome]', 'excluir_documento');\">
+						<i class='glyphicon glyphicon-trash' title='Excluir'></i>
+					</a>";
+
+				$arquivo_list .= "
+				<tr>
+					<td>$arquivo[docu_tx_nome]</td>
+					<td>$arquivo[docu_tx_descricao]</td>
+					<td>$dataHoraFormatada</td>
+					<td>$dataHoraFormatadaVencimento</td>
+					<td>$arquivo[tipo_tx_nome]</td>
+					<td>$arquivo[grup_tx_nome]</td>
+					<td>$arquivo[sbgr_tx_nome]</td>
+					<td class='text-center action-icons' style='white-space:nowrap;'>
+						$iconeDownload
+						$IconeAssinatura
+						$iconePreview
+						$iconeExcluir
+					</td>
+				</tr>";
+			}
+		}
+
+		$tipo_documento = mysqli_fetch_all(query(
+			"SELECT tipo_nb_id, tipo_tx_nome, tipo_tx_vencimento, tipo_nb_grupo, tipo_nb_sbgrupo
+			 FROM tipos_documentos
+			 ORDER BY tipo_tx_nome ASC"
+		), MYSQLI_ASSOC);
+
+
+		$setor_documento = mysqli_fetch_all(query(
+			"SELECT *
+				FROM grupos_documentos ORDER BY grup_tx_nome ASC"
+		), MYSQLI_ASSOC);
+
+		$sbsetor_documento = mysqli_fetch_all(query(
+			"SELECT sbgr_nb_id,sbgr_nb_idgrup, sbgr_tx_nome, sbgr_tx_status FROM sbgrupos_documentos ORDER BY sbgr_tx_nome ASC"
+		), MYSQLI_ASSOC);
+
+		$list_tipos = "";
+		foreach ($tipo_documento as $tipo) {
+			$list_tipos .= "<option value='{$tipo['tipo_nb_id']}'>{$tipo['tipo_tx_nome']}</option>";
+			// $list_tipos2 .= "<option value='{$tipo['tipo_nb_id']}'>{$tipo['tipo_tx_nome']}</option>";
+		}
+
+		// dd($setor_documento);
+		$list_setor = "<option value=''></option>";
+		$list_setor2 = "";
+		foreach ($setor_documento as $setor) {
+			$list_setor .= "<option value='{$setor['grup_nb_id']}'  data-idSetor='{$setor['grup_nb_id']}'>{$setor['grup_tx_nome']}</option>";
+			$list_setor2 .= "<option value='{$setor['grup_nb_id']}'>{$setor['grup_tx_nome']}</option>";
+		}
+
+		$AbriAdicionarArquivo = '<td class="text-center"><a href="#" data-toggle="modal" data-target="#myModal"><i class="glyphicon glyphicon-plus-sign"></i></a></td>';
+
+		$tabela = '
+		<div class="portlet light">
+			<div class="portlet-title">
+				<div class="caption">
+					<span class="caption-subject font-dark bold uppercase">' . $nome . '</span>
+				</div>
+			</div>
+
+			<div class="portlet-body">
+				<!-- Campos de busca -->
+				<div class="form-inline" style="margin-bottom:15px;">
+					<div class="form-group">
+						<label for="filtroNome">Nome:</label>
+						<input type="text" id="filtroNome" class="form-control" placeholder="Digite o nome">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroCadastro">Data Cadastro:</label>
+						<input type="date" id="filtroCadastro" class="form-control">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroVencimento">Data Vencimento:</label>
+						<input type="date" id="filtroVencimento" class="form-control">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroTipo">Tipo:</label>
+						<select id="filtroTipo" class="form-control">
+							<option value="">Todos</option>
+							'.$list_tipos.'
+						</select>
+					</div>
+
+					<div class="form-group" style="margin-top:10px;">
+						<label for="filtroSetor">Setor:</label>
+						<select id="filtroSetor" class="form-control">
+							<option value="">Todos</option>
+							'.$list_setor2.'
+						</select>
+					</div>
+
+					<button id="limparFiltros" class="btn btn-default" style="margin-left:10px;">
+						Limpar
+					</button>
+				</div>
+
+				<div class="table-responsive">
+					<table id="contex-grid" class="table table-striped table-bordered table-hover dt-responsive" width="100%">
+						<thead>
+							<tr>
+								<th style="width:25%">NOME</th>
+								<th style="width:35%">DESCRIÇÃO</th>
+								<th style="width:15%">DATA CADASTRO</th>
+								<th style="width:15%">DATA VENCIMENTO</th>
+								<th style="width:20%">TIPO</th>
+								<th style="width:20%">SETOR</th>
+								<th style="width:20%">SUB-SETOR</th>
+								<th style="width:20%; text-align:center; white-space:nowrap;">
+									<i class="glyphicon glyphicon-cloud-download"></i>
+									&nbsp;<i class="fas fa-file-signature"></i>
+									&nbsp;<i class="far fa-eye"></i>
+									&nbsp;<i class="glyphicon glyphicon-trash"></i>
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							' . $arquivo_list . '
+							<tr>' . $AbriAdicionarArquivo . '</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<!-- Modal de Preview -->
+		<div id="previewModal" class="modal fade" tabindex="-1" role="dialog">
+			<div class="modal-dialog modal-lg" role="document">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal">&times;</button>
+						<h4 class="modal-title" id="previewTitle">Pré-visualização do Documento</h4>
+					</div>
+					<div class="modal-body" id="previewContent" style="text-align:center; min-height:400px;"></div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-default" data-dismiss="modal">Fechar</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+		function abrirPreview(caminho, tipo, nomeArquivo) {
+			let content = "";
+
+			if (tipo === "application/pdf" || tipo === "text/plain") {
+				content = "<iframe src=\'" + caminho + "\' width=\'100%\' height=\'500px\' style=\'border:none;\'></iframe>";
+			} else if (tipo.match(/^image\\//)) {
+				content = "<img src=\'" + caminho + "\' style=\'max-width:100%; max-height:500px; border:1px solid #ddd; border-radius:4px;\'>";
+			} else {
+				content = "<p>Visualização não disponível para este tipo de arquivo.</p>";
+			}
+
+			document.getElementById("previewTitle").innerText = "Pré-visualização: " + nomeArquivo;
+			document.getElementById("previewContent").innerHTML = content;
+			$("#previewModal").modal("show");
+		}
+		
+		document.addEventListener("DOMContentLoaded", function() {
+			const filtroNome = document.getElementById("filtroNome");
+			const filtroCadastro = document.getElementById("filtroCadastro");
+			const filtroVencimento = document.getElementById("filtroVencimento");
+			const filtroTipo = document.getElementById("filtroTipo");
+			const filtroSetor = document.getElementById("filtroSetor");
+			const limparBtn = document.getElementById("limparFiltros");
+			const tabela = document.getElementById("contex-grid");
+			const linhas = tabela.getElementsByTagName("tr");
+
+			function formatarDataParaComparar(dataBr) {
+				// remove hora e converte dd/mm/yyyy → yyyy-mm-dd
+				if (!dataBr) return "";
+				const partes = dataBr.trim().split(" ")[0].split("/");
+				if (partes.length === 3) {
+					return `${partes[2]}-${partes[1]}-${partes[0]}`;
+				}
+				return "";
+			}
+
+			function filtrarTabela() {
+				const nomeValor = filtroNome.value.toLowerCase();
+				const cadastroValor = filtroCadastro.value;
+				const vencimentoValor = filtroVencimento.value;
+				const tipoValor = filtroTipo.value.toLowerCase();
+				const setorValor = filtroSetor.value.toLowerCase();
+
+				for (let i = 1; i < linhas.length; i++) {
+					const celulas = linhas[i].getElementsByTagName("td");
+					if (celulas.length < 6) continue; // ignora linhas sem dados
+
+					const nome = celulas[0].textContent.toLowerCase();
+					const cadastro = celulas[2].textContent.trim();
+					const vencimento = celulas[3].textContent.trim();
+					const tipo = celulas[4].textContent.toLowerCase();
+					const setor = celulas[5].textContent.toLowerCase();
+
+					let exibir = true;
+
+					if (nomeValor && !nome.includes(nomeValor)) exibir = false;
+					if (cadastroValor && formatarDataParaComparar(cadastro) !== cadastroValor) exibir = false;
+					if (vencimentoValor && formatarDataParaComparar(vencimento) !== vencimentoValor) exibir = false;
+					if (tipoValor && tipo !== tipoValor) exibir = false;
+					if (setorValor && setor !== setorValor) exibir = false;
+
+					linhas[i].style.display = exibir ? "" : "none";
+				}
+			}
+
+			// Eventos de filtro
+			filtroNome.addEventListener("input", filtrarTabela);
+			filtroCadastro.addEventListener("change", filtrarTabela);
+			filtroVencimento.addEventListener("change", filtrarTabela);
+			filtroTipo.addEventListener("change", filtrarTabela);
+			filtroSetor.addEventListener("change", filtrarTabela);
+
+			// Botão de limpar filtros
+			limparBtn.addEventListener("click", function() {
+				filtroNome.value = "";
+				filtroCadastro.value = "";
+				filtroVencimento.value = "";
+				filtroTipo.selectedIndex = 0;
+				filtroSetor.selectedIndex = 0;
+				filtrarTabela();
+			});
+		});
+		</script>
+
+		<style>
+			#contex-grid td, #contex-grid th {
+				vertical-align: middle !important;
+			}
+			#contex-grid .action-icons i {
+				margin: 0 5px;
+				font-size: 15px;
+				vertical-align: middle;
+			}
+			#contex-grid .action-icons a {
+				text-decoration: none;
+			}
+			@media (max-width: 768px) {
+				#contex-grid th:last-child, #contex-grid td:last-child {
+					white-space: nowrap;
+				}
+				#contex-grid .action-icons i {
+					font-size: 13px;
+					margin: 0 3px;
+				}
+			}
+		</style>
+		';
+
+		$modal = "
+
+		<style>
+			.dropzone {
+				position: relative; /* ADICIONE ESTA LINHA */
+				border: 2px dashed #ccc;
+				border-radius: 6px;
+				padding: 20px;
+				text-align: center;
+				cursor: pointer;
+				transition: background-color 0.2s ease;
+			}
+
+			.dropzone.dragover {
+				background-color: #f5f5f5;
+				border-color: #3c8dbc;
+			}
+
+			.dropzone input {
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				opacity: 0;
+				width: 100%;
+				height: 100%;
+				cursor: pointer;
+			}
+		</style>
+		<div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
+			<div class='modal-dialog' role='document'>
+				<div class='modal-content'>
+					<div class='modal-header'>
+						<button type='button' class='close' data-dismiss='modal'>&times;</button>
+						<h4 class='modal-title' id='myModalLabel'>Upload Arquivo</h4>
+					</div>
+					<div class='modal-body'>
+						<form name='form_enviar_arquivo2' method='post' action='cadastro_parametro.php' enctype='multipart/form-data'>
+							<div class='form-group'>
+								<label>Nome do arquivo:</label>
+								<input type='text' class='form-control' name='file-name'>
+							</div>
+							<div class='form-group'>
+								<label>Descrição:</label>
+								<textarea class='form-control' name='description-text'></textarea>
+							</div>
+							<div class='form-group'>
+								<label>Arquivo:</label>
+								<div class='dropzone' id='dropzone'>
+									<p>Arraste o arquivo aqui ou clique para selecionar</p>
+									<input type='file' name='file' id='fileInput'>
+								</div>
+							</div>
+							<div class='form-group' id='campo_grupo'>
+								<label>Setor:</label>
+								<select class='form-control' name='setor' id='setor'>$list_setor</select>
+							</div>
+							<div class='form-group' id='campo_grupo'>
+								<label>Sub-setor:</label>
+								<select name='sub-setor' id='sub-setor' class='form-control'>
+									<option value=''>Selecione um setor primeiro</option>
+								</select>
+							</div>
+							<div class='form-group'>
+								<label>Tipo de Documento:</label>
+								<select class='form-control' name='tipo_documento' id='tipo_documento'></select>
+							</div>
+							<div class='form-group'>
+								<label>Visível ao funcionário:</label>
+								<select class='form-control' name='visibilidade' id='visibilidade'>
+									<option value='sim'>Sim</option>
+									<option value='nao' selected>Não</option>
+								</select>
+							</div>
+							<div class='form-group' id='campo_vencimento' style='display:none;'>
+								<label>Data de Vencimento:</label>
+								<input type='date' class='form-control' name='data_vencimento' id='data_vencimento'>
+							</div>
+							<input type='hidden' name='acao' value='enviarDocumento'>
+							<input type='hidden' name='idParametro' value='$idParametro'>
+							<input type='hidden' name='idUserCadastro' value='{$_SESSION['user_nb_id']}'>
+						</form>
+					</div>
+					<div class='modal-footer'>
+						<button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
+						<button type='button' class='btn btn-primary' onclick='validarEnvio()'>Salvar arquivo</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+		function validarEnvio() {
+			const vencimento = $('#tipo_documento').find(':selected').data('vencimento');
+			const dataVenc = $('#data_vencimento').val();
+
+			if (vencimento === 'sim' && !dataVenc) {
+				alert('Por favor, preencha a data de vencimento.');
+				$('#data_vencimento').focus();
+				return false;
+			}
+
+			document.form_enviar_arquivo2.submit();
+		}
+		$('#tipo_documento').on('change', function() {
+			const selecionado = $(this).find(':selected');
+			const vencimento = selecionado.data('vencimento');
+			const grupo = selecionado.data('grupo');
+
+			// Mostra/oculta campo de vencimento e controla 'required'
+			if (vencimento === 'sim') {
+				$('#campo_vencimento').slideDown();
+				$('#data_vencimento').attr('required', true);
+			} else {
+				$('#campo_vencimento').slideUp();
+				$('#data_vencimento').removeAttr('required').val('');
+			}
+		});
+
+		$(document).on('shown.bs.modal', '#myModal', function() {
+			const dropzone = document.getElementById('dropzone');
+			const fileInput = document.getElementById('fileInput');
+			const message = dropzone.querySelector('p');
+
+			// Clicar na área abre o seletor de arquivo
+			dropzone.addEventListener('click', () => fileInput.click());
+
+			// Quando o arquivo é selecionado
+			fileInput.addEventListener('change', () => {
+				if (fileInput.files.length > 0) {
+					message.textContent = fileInput.files[0].name;
+				} else {
+					message.textContent = 'Arraste o arquivo aqui ou clique para selecionar';
+				}
+			});
+
+			// Arrastar e soltar
+			dropzone.addEventListener('dragover', (e) => {
+				e.preventDefault();
+				dropzone.classList.add('dragover');
+			});
+
+			dropzone.addEventListener('dragleave', () => {
+				dropzone.classList.remove('dragover');
+			});
+
+			dropzone.addEventListener('drop', (e) => {
+				e.preventDefault();
+				dropzone.classList.remove('dragover');
+
+				const file = e.dataTransfer.files[0];
+				if (file) {
+					fileInput.files = e.dataTransfer.files;
+					message.textContent = file.name;
+				}
+			});
+		});
+
+		// Dados dos sub-setores
+		const seusDados = ". json_encode($sbsetor_documento) . ";
+		const todosTipos = ". json_encode($tipo_documento) . ";
+
+		// Inicializar filtro do setor
+		$('#setor').on('change', function() {
+			const selecionado = $(this).find('option:selected');
+			const setorId = selecionado.data('idsetor');
+			console.log('Setor selecionado:', setorId);
+			
+			if (setorId) {
+				carregarSubSetores(setorId);
+			} else {
+				// Limpar sub-setor e tipos
+				$('#sub-setor').html('<option value=\"\">Selecione um setor primeiro</option>');
+				$('#tipo_documento').html('<option value=\"\">Selecione um sub-setor primeiro</option>');
+			}
+		});
+
+		// Inicializar filtro do sub-setor
+		$('#sub-setor').on('change', function() {
+			const subSetorId = $(this).val();
+			console.log('Sub-setor selecionado:', subSetorId);
+			
+			if (subSetorId) {
+				carregarTiposDocumento(subSetorId);
+			} else {
+				$('#tipo_documento').html('<option value=\"\">Selecione um sub-setor primeiro</option>');
+			}
+		});
+
+		function carregarSubSetores(setorId, subSetorSelecionado = null) {
+			const selectSubSetor = document.getElementById('sub-setor');
+			selectSubSetor.innerHTML = '<option value=\"\">Selecione um sub-setor</option>';
+			
+			// Converter setorId para string para comparação
+			const setorIdStr = String(setorId);
+			
+			const subSetoresFiltrados = seusDados.filter(subSetor => 
+				String(subSetor.sbgr_nb_idgrup) === setorIdStr
+			);
+
+			console.log('Sub-setores para o setor', setorIdStr + ':', subSetoresFiltrados);
+			
+			subSetoresFiltrados.forEach(subSetor => {
+				const option = document.createElement('option');
+				option.value = subSetor.sbgr_nb_id;
+				option.textContent = subSetor.sbgr_tx_nome;
+				
+				// Marcar como selecionado se for o sub-setor que deve estar selecionado
+				if (subSetorSelecionado && subSetorSelecionado == subSetor.sbgr_nb_id) {
+					option.selected = true;
+				}
+				
+				selectSubSetor.appendChild(option);
+			});
+			
+			if (subSetoresFiltrados.length === 0) {
+				selectSubSetor.innerHTML = '<option value=\"\">Nenhum sub-setor disponível</option>';
+			}
+			
+			// Limpar tipos de documento quando mudar o setor
+			$('#tipo_documento').html('<option value=\"\">Selecione um sub-setor primeiro</option>');
+		}
+
+		function carregarTiposDocumento(subSetorId, tipoSelecionado = null) {
+			const selectTipoDocumento = document.getElementById('tipo_documento');
+			selectTipoDocumento.innerHTML = '<option value=\"\">Selecione um tipo</option>';
+			
+			if (!subSetorId) {
+				selectTipoDocumento.innerHTML = '<option value=\"\">Selecione um sub-setor primeiro</option>';
+				return;
+			}
+			
+			// Converter subSetorId para string para comparação
+			const subSetorIdStr = String(subSetorId);
+			
+			// Buscar o setor selecionado atual
+			const setorSelecionado = $('#setor').find('option:selected').data('idsetor');
+			const setorIdStr = String(setorSelecionado);
+			
+			// Filtrar tipos que pertencem ao setor E sub-setor selecionados
+			const tiposFiltrados = todosTipos.filter(tipo => {
+				const tipoSetor = tipo.tipo_nb_grupo ? String(tipo.tipo_nb_grupo) : null;
+				const tipoSubSetor = tipo.tipo_nb_sbgrupo ? String(tipo.tipo_nb_sbgrupo) : null;
+				
+				// Se o tipo tem sub-setor específico, verifica se coincide
+				if (tipoSubSetor) {
+					return tipoSubSetor === subSetorIdStr;
+				}
+				// Se o tipo não tem sub-setor específico, verifica apenas o setor
+				else {
+					return tipoSetor === setorIdStr;
+				}
+			});
+
+			console.log('Tipos filtrados para setor', setorIdStr, 'e sub-setor', subSetorIdStr + ':', tiposFiltrados);
+			
+			if (tiposFiltrados.length === 0) {
+				selectTipoDocumento.innerHTML = '<option value=\"\">Nenhum tipo disponível para este sub-setor</option>';
+				return;
+			}
+			
+			// Adicionar os tipos filtrados
+			tiposFiltrados.forEach(tipo => {
+				const option = document.createElement('option');
+				option.value = tipo.tipo_nb_id;
+				option.textContent = tipo.tipo_tx_nome;
+				option.setAttribute('data-vencimento', tipo.tipo_tx_vencimento || 'nao');
+				
+				// Marcar como selecionado se for o tipo que deve estar selecionado
+				if (tipoSelecionado && tipoSelecionado == tipo.tipo_nb_id) {
+					option.selected = true;
+				}
+				
+				selectTipoDocumento.appendChild(option);
+			});
+			
+			console.log('Tipos carregados:', selectTipoDocumento.options.length - 1);
+		}
+		</script>";
+
+		return $tabela . $modal;
 	}
 
 	function arquivosEmpresa($nome, $idEmpresa, $arquivos) {
+		$arquivo_list = '';
+
+		if (!empty($arquivos)) {
+			foreach ($arquivos as $arquivo) {
+				$dataHora = new DateTime($arquivo['docu_tx_dataCadastro']);
+				$dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
+
+				$dataHoraFormatadaVencimento = '';
+				if (!empty($arquivo['docu_tx_dataVencimento']) && $arquivo['docu_tx_dataVencimento'] != "0000-00-00 00:00:00") {
+					$dataHoraVencimento = new DateTime($arquivo['docu_tx_dataVencimento']);
+					$dataHoraFormatadaVencimento = $dataHoraVencimento->format('d/m/Y');
+				}
+
+				$mime_type_arquivo = '';
+				if (file_exists($arquivo["docu_tx_caminho"])) {
+					$finfo = finfo_open(FILEINFO_MIME_TYPE);
+					$mime_type_arquivo = finfo_file($finfo, $arquivo["docu_tx_caminho"]);
+					finfo_close($finfo);
+				}
+
+				$formatosSuportados = [
+					'application/pdf',
+					'image/jpeg',
+					'image/png',
+					'image/gif',
+					'image/webp',
+					'text/plain',
+					'text/html'
+				];
+
+				$iconePreview = '<i class="fa-regular fa-eye-slash" title="Preview indisponível"></i>';
+				if (in_array($mime_type_arquivo, $formatosSuportados)) {
+					$urlPreview = $arquivo['docu_tx_caminho'];
+					$iconePreview = "
+						<a class='text-info' style='cursor:pointer;' 
+						onclick=\"abrirPreview('$urlPreview', '$mime_type_arquivo', '$arquivo[docu_tx_nome]')\">
+							<i class='far fa-eye' title='Visualizar Documento'></i>
+						</a>";
+				}
+
+				$iconeDownload = "
+					<a class='text-info' style='cursor:pointer;'
+					onclick=\"downloadArquivo($idEmpresa,'$arquivo[docu_tx_caminho]','downloadArquivo');\">
+					<i class='glyphicon glyphicon-cloud-download' title='Download'></i></a>";
+
+				$IconeAssinatura = ($arquivo["docu_tx_assinado"] == "sim")
+					? "&nbsp;<i class='fa-solid fa-file-contract text-success' title='Documento assinado digitalmente'></i>"
+					: "&nbsp;<i class='fa-solid fa-file-signature text-danger' title='Documento não assinado'></i>";
+
+				$iconeExcluir = "
+					&nbsp;<a class='text-danger' style='cursor:pointer;'
+					onclick=\"remover_arquivo($idEmpresa,$arquivo[docu_nb_id],'$arquivo[docu_tx_nome]','excluir_documento');\">
+					<i class='glyphicon glyphicon-trash' title='Excluir'></i></a>";
+
+				$arquivo_list .= "
+				<tr>
+					<td>$arquivo[docu_tx_nome]</td>
+					<td>$arquivo[docu_tx_descricao]</td>
+					<td>$dataHoraFormatada</td>
+					<td>$dataHoraFormatadaVencimento</td>
+					<td>$arquivo[tipo_tx_nome]</td>
+					<td>$arquivo[grup_tx_nome]</td>
+					<td>$arquivo[sbgr_tx_nome]</td>
+					<td class='text-center action-icons'>
+						$iconeDownload
+						$IconeAssinatura
+						$iconePreview
+						$iconeExcluir
+					</td>
+				</tr>";
+			}
+		}
+
+		$tipo_documento = mysqli_fetch_all(query(
+			"SELECT tipo_nb_id, tipo_tx_nome, tipo_tx_vencimento, tipo_nb_grupo, tipo_nb_sbgrupo
+			 FROM tipos_documentos
+			 ORDER BY tipo_tx_nome ASC"
+		), MYSQLI_ASSOC);
+
+
+		$setor_documento = mysqli_fetch_all(query(
+			"SELECT *
+				FROM grupos_documentos ORDER BY grup_tx_nome ASC"
+		), MYSQLI_ASSOC);
+
+		$sbsetor_documento = mysqli_fetch_all(query(
+			"SELECT sbgr_nb_id,sbgr_nb_idgrup, sbgr_tx_nome, sbgr_tx_status FROM sbgrupos_documentos ORDER BY sbgr_tx_nome ASC"
+		), MYSQLI_ASSOC);
+
+		$list_tipos = "";
+		foreach ($tipo_documento as $tipo) {
+			$list_tipos .= "<option value='{$tipo['tipo_nb_id']}'>{$tipo['tipo_tx_nome']}</option>";
+			// $list_tipos2 .= "<option value='{$tipo['tipo_nb_id']}'>{$tipo['tipo_tx_nome']}</option>";
+		}
+
+		// dd($setor_documento);
+		$list_setor = "<option value=''></option>";
+		$list_setor2 = "";
+		foreach ($setor_documento as $setor) {
+			$list_setor .= "<option value='{$setor['grup_nb_id']}'  data-idSetor='{$setor['grup_nb_id']}'>{$setor['grup_tx_nome']}</option>";
+			$list_setor2 .= "<option value='{$setor['grup_nb_id']}'>{$setor['grup_tx_nome']}</option>";
+		}
+
+		$AbriAdicionarArquivo = '<td class="text-center"><a href="#" data-toggle="modal" data-target="#myModal"><i class="glyphicon glyphicon-plus-sign"></i></a></td>';
+
+		$tabela = '
+		<div class="portlet light">
+			<div class="portlet-title">
+				<div class="caption">
+					<span class="caption-subject font-dark bold uppercase">'. $nome .'</span>
+				</div>
+			</div>
+
+			<div class="portlet-body">
+				<!-- Campos de busca -->
+				<div class="form-inline" style="margin-bottom:15px;">
+					<div class="form-group">
+						<label for="filtroNome">Nome:</label>
+						<input type="text" id="filtroNome" class="form-control" placeholder="Digite o nome">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroCadastro">Data Cadastro:</label>
+						<input type="date" id="filtroCadastro" class="form-control">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroVencimento">Data Vencimento:</label>
+						<input type="date" id="filtroVencimento" class="form-control">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroTipo">Tipo:</label>
+						<select id="filtroTipo" class="form-control">
+							<option value="">Todos</option>
+							'.$list_tipos.'
+						</select>
+					</div>
+
+					<div class="form-group" style="margin-top:10px;">
+						<label for="filtroSetor">Setor:</label>
+						<select id="filtroSetor" class="form-control">
+							<option value="">Todos</option>
+							'.$list_setor2.'
+						</select>
+					</div>
+
+					<button id="limparFiltros" class="btn btn-default" style="margin-left:10px;">
+						Limpar
+					</button>
+				</div>
+
+				<!-- Tabela -->
+				<div class="table-responsive">
+					<table id="contex-grid" class="table table-striped table-bordered table-hover dt-responsive" width="100%">
+						<thead>
+							<tr>
+								<th>NOME</th>
+								<th>DESCRIÇÃO</th>
+								<th>DATA CADASTRO</th>
+								<th>DATA VENCIMENTO</th>
+								<th>TIPO</th>
+								<th>SETOR</th>
+								<th>SUB-SETOR</th>
+								<th class="text-center" style="white-space:nowrap;">
+									<i class="glyphicon glyphicon-cloud-download"></i>
+									&nbsp;<i class="fas fa-file-signature"></i>
+									&nbsp;<i class="far fa-eye"></i>
+									&nbsp;<i class="glyphicon glyphicon-trash"></i>
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							'.$arquivo_list.'
+							<tr>'.$AbriAdicionarArquivo.'</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<!-- Modal de Preview -->
+		<div id="previewModal" class="modal fade" tabindex="-1" role="dialog">
+			<div class="modal-dialog modal-lg" role="document">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal">&times;</button>
+						<h4 class="modal-title" id="previewTitle">Pré-visualização do Documento</h4>
+					</div>
+					<div class="modal-body" id="previewContent" style="text-align:center; min-height:400px;"></div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-default" data-dismiss="modal">Fechar</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+		function abrirPreview(caminho, tipo, nomeArquivo) {
+			let content = "";
+
+			if (tipo === "application/pdf" || tipo === "text/plain") {
+				content = "<iframe src=\'" + caminho + "\' width=\'100%\' height=\'500px\' style=\'border:none;\'></iframe>";
+			} else if (tipo.match(/^image\\//)) {
+				content = "<img src=\'" + caminho + "\' style=\'max-width:100%; max-height:500px; border:1px solid #ddd; border-radius:4px;\'>";
+			} else {
+				content = "<p>Visualização não disponível para este tipo de arquivo.</p>";
+			}
+
+			document.getElementById("previewTitle").innerText = "Pré-visualização: " + nomeArquivo;
+			document.getElementById("previewContent").innerHTML = content;
+			$("#previewModal").modal("show");
+		}
+
+		document.addEventListener("DOMContentLoaded", function() {
+			const filtroNome = document.getElementById("filtroNome");
+			const filtroCadastro = document.getElementById("filtroCadastro");
+			const filtroVencimento = document.getElementById("filtroVencimento");
+			const filtroTipo = document.getElementById("filtroTipo");
+			const filtroSetor = document.getElementById("filtroSetor");
+			const limparBtn = document.getElementById("limparFiltros");
+			const tabela = document.getElementById("contex-grid");
+			const linhas = tabela.getElementsByTagName("tr");
+
+			function formatarDataParaComparar(dataBr) {
+				// remove hora e converte dd/mm/yyyy → yyyy-mm-dd
+				if (!dataBr) return "";
+				const partes = dataBr.trim().split(" ")[0].split("/");
+				if (partes.length === 3) {
+					return `${partes[2]}-${partes[1]}-${partes[0]}`;
+				}
+				return "";
+			}
+
+			function filtrarTabela() {
+				const nomeValor = filtroNome.value.toLowerCase();
+				const cadastroValor = filtroCadastro.value;
+				const vencimentoValor = filtroVencimento.value;
+				const tipoValor = filtroTipo.value.toLowerCase();
+				const setorValor = filtroSetor.value.toLowerCase();
+
+				for (let i = 1; i < linhas.length; i++) {
+					const celulas = linhas[i].getElementsByTagName("td");
+					if (celulas.length < 6) continue; // ignora linhas sem dados
+
+					const nome = celulas[0].textContent.toLowerCase();
+					const cadastro = celulas[2].textContent.trim();
+					const vencimento = celulas[3].textContent.trim();
+					const tipo = celulas[4].textContent.toLowerCase();
+					const setor = celulas[5].textContent.toLowerCase();
+
+					let exibir = true;
+
+					if (nomeValor && !nome.includes(nomeValor)) exibir = false;
+					if (cadastroValor && formatarDataParaComparar(cadastro) !== cadastroValor) exibir = false;
+					if (vencimentoValor && formatarDataParaComparar(vencimento) !== vencimentoValor) exibir = false;
+					if (tipoValor && tipo !== tipoValor) exibir = false;
+					if (setorValor && setor !== setorValor) exibir = false;
+
+					linhas[i].style.display = exibir ? "" : "none";
+				}
+			}
+
+			// Eventos de filtro
+			filtroNome.addEventListener("input", filtrarTabela);
+			filtroCadastro.addEventListener("change", filtrarTabela);
+			filtroVencimento.addEventListener("change", filtrarTabela);
+			filtroTipo.addEventListener("change", filtrarTabela);
+			filtroSetor.addEventListener("change", filtrarTabela);
+
+			// Botão de limpar filtros
+			limparBtn.addEventListener("click", function() {
+				filtroNome.value = "";
+				filtroCadastro.value = "";
+				filtroVencimento.value = "";
+				filtroTipo.selectedIndex = 0;
+				filtroSetor.selectedIndex = 0;
+				filtrarTabela();
+			});
+		});
+		</script>
+
+		<style>
+			#contex-grid {
+				width: 100%;
+				border-collapse: collapse;
+			}
+			#contex-grid th, #contex-grid td {
+				vertical-align: middle !important;
+				text-align: left;
+				padding: 8px;
+			}
+			#contex-grid th:last-child, #contex-grid td:last-child {
+				text-align: center;
+				white-space: nowrap;
+			}
+			#contex-grid .action-icons i {
+				margin-right: 6px;
+				font-size: 15px;
+			}
+			#contex-grid tr:hover {
+				background-color: #f9f9f9;
+			}
+
+			/* Responsividade */
+			@media (max-width: 992px) {
+				#contex-grid th, #contex-grid td {
+					font-size: 13px;
+					padding: 6px;
+				}
+				#contex-grid .action-icons i {
+					font-size: 14px;
+					margin-right: 4px;
+				}
+			}
+			@media (max-width: 768px) {
+				#contex-grid thead {
+					display: none;
+				}
+				#contex-grid, #contex-grid tbody, #contex-grid tr, #contex-grid td {
+					display: block;
+					width: 100%;
+				}
+				#contex-grid tr {
+					margin-bottom: 10px;
+					border: 1px solid #ddd;
+					border-radius: 6px;
+					padding: 8px;
+					box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+				}
+				#contex-grid td {
+					text-align: right;
+					padding-left: 50%;
+					position: relative;
+				}
+				#contex-grid td::before {
+					content: attr(data-label);
+					position: absolute;
+					left: 10px;
+					width: 45%;
+					white-space: nowrap;
+					font-weight: bold;
+					text-align: left;
+				}
+				#contex-grid .action-icons {
+					text-align: center;
+					padding-left: 0;
+				}
+				#contex-grid .action-icons i {
+					font-size: 16px;
+				}
+			}
+		</style>
+		';
+
+		$modal = "
+		<style>
+		.dropzone {
+			position: relative; /* ADICIONE ESTA LINHA */
+			border: 2px dashed #ccc;
+			border-radius: 6px;
+			padding: 20px;
+			text-align: center;
+			cursor: pointer;
+			transition: background-color 0.2s ease;
+		}
+
+		.dropzone.dragover {
+			background-color: #f5f5f5;
+			border-color: #3c8dbc;
+		}
+
+		.dropzone input {
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			opacity: 0;
+			width: 100%;
+			height: 100%;
+			cursor: pointer;
+		}
+		</style>
+		<div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
+			<div class='modal-dialog' role='document'>
+				<div class='modal-content'>
+					<div class='modal-header'>
+						<button type='button' class='close' data-dismiss='modal'>&times;</button>
+						<h4 class='modal-title' id='myModalLabel'>Upload Arquivo</h4>
+					</div>
+					<div class='modal-body'>
+						<form name='form_enviar_arquivo2' method='post' action='cadastro_empresa.php' enctype='multipart/form-data'>
+							<div class='form-group'>
+								<label>Nome do arquivo:</label>
+								<input type='text' class='form-control' name='file-name'>
+							</div>
+							<div class='form-group'>
+								<label>Descrição:</label>
+								<textarea class='form-control' name='description-text'></textarea>
+							</div>
+							<div class='form-group'>
+								<label>Arquivo:</label>
+								<div class='dropzone' id='dropzone'>
+									<p>Arraste o arquivo aqui ou clique para selecionar</p>
+									<input type='file' name='file' id='fileInput'>
+								</div>
+							</div>
+							<div class='form-group' id='campo_grupo'>
+								<label>Setor:</label>
+								<select class='form-control' name='setor' id='setor'>$list_setor</select>
+							</div>
+							<div class='form-group' id='campo_grupo'>
+								<label>Sub-setor:</label>
+								<select name='sub-setor' id='sub-setor' class='form-control'>
+									<option value=''>Selecione um setor primeiro</option>
+								</select>
+							</div>
+							<div class='form-group'>
+								<label>Tipo de Documento:</label>
+								<select class='form-control' name='tipo_documento' id='tipo_documento'></select>
+							</div>
+							<div class='form-group'>
+								<label>Visível ao funcionário:</label>
+								<select class='form-control' name='visibilidade' id='visibilidade'>
+									<option value='sim'>Sim</option>
+									<option value='nao' selected>Não</option>
+								</select>
+							</div>
+							<div class='form-group' id='campo_vencimento' style='display:none;'>
+								<label>Data de Vencimento:</label>
+								<input type='date' class='form-control' name='data_vencimento' id='data_vencimento'>
+							</div>
+							<input type='hidden' name='acao' value='enviarDocumento'>
+							<input type='hidden' name='idEmpresa' value='$idEmpresa'>
+							<input type='hidden' name='idUserCadastro' value='{$_SESSION['user_nb_id']}'>
+						</form>
+					</div>
+					<div class='modal-footer'>
+						<button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
+						<button type='button' class='btn btn-primary' onclick='validarEnvio()'>Salvar arquivo</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+		function validarEnvio() {
+			const vencimento = $('#tipo_documento').find(':selected').data('vencimento');
+			const dataVenc = $('#data_vencimento').val();
+
+			if (vencimento === 'sim' && !dataVenc) {
+				alert('Por favor, preencha a data de vencimento.');
+				$('#data_vencimento').focus();
+				return false;
+			}
+
+			document.form_enviar_arquivo2.submit();
+		}
+		$('#tipo_documento').on('change', function() {
+			const selecionado = $(this).find(':selected');
+			const vencimento = selecionado.data('vencimento');
+			const grupo = selecionado.data('grupo');
+
+			// Mostra/oculta campo de vencimento e controla 'required'
+			if (vencimento === 'sim') {
+				$('#campo_vencimento').slideDown();
+				$('#data_vencimento').attr('required', true);
+			} else {
+				$('#campo_vencimento').slideUp();
+				$('#data_vencimento').removeAttr('required').val('');
+			}
+		});
+		$(document).on('shown.bs.modal', '#myModal', function() {
+			const dropzone = document.getElementById('dropzone');
+			const fileInput = document.getElementById('fileInput');
+			const message = dropzone.querySelector('p');
+
+			// Clicar na área abre o seletor de arquivo
+			dropzone.addEventListener('click', () => fileInput.click());
+
+			// Quando o arquivo é selecionado
+			fileInput.addEventListener('change', () => {
+				if (fileInput.files.length > 0) {
+					message.textContent = fileInput.files[0].name;
+				} else {
+					message.textContent = 'Arraste o arquivo aqui ou clique para selecionar';
+				}
+			});
+
+			// Arrastar e soltar
+			dropzone.addEventListener('dragover', (e) => {
+				e.preventDefault();
+				dropzone.classList.add('dragover');
+			});
+
+			dropzone.addEventListener('dragleave', () => {
+				dropzone.classList.remove('dragover');
+			});
+
+			dropzone.addEventListener('drop', (e) => {
+				e.preventDefault();
+				dropzone.classList.remove('dragover');
+
+				const file = e.dataTransfer.files[0];
+				if (file) {
+					fileInput.files = e.dataTransfer.files;
+					message.textContent = file.name;
+				}
+			});
+		});
+
+		// Dados dos sub-setores
+		const seusDados = ". json_encode($sbsetor_documento) . ";
+		const todosTipos = ". json_encode($tipo_documento) . ";
+
+		// Inicializar filtro do setor
+		$('#setor').on('change', function() {
+			const selecionado = $(this).find('option:selected');
+			const setorId = selecionado.data('idsetor');
+			console.log('Setor selecionado:', setorId);
+			
+			if (setorId) {
+				carregarSubSetores(setorId);
+			} else {
+				// Limpar sub-setor e tipos
+				$('#sub-setor').html('<option value=\"\">Selecione um setor primeiro</option>');
+				$('#tipo_documento').html('<option value=\"\">Selecione um sub-setor primeiro</option>');
+			}
+		});
+
+		// Inicializar filtro do sub-setor
+		$('#sub-setor').on('change', function() {
+			const subSetorId = $(this).val();
+			console.log('Sub-setor selecionado:', subSetorId);
+			
+			if (subSetorId) {
+				carregarTiposDocumento(subSetorId);
+			} else {
+				$('#tipo_documento').html('<option value=\"\">Selecione um sub-setor primeiro</option>');
+			}
+		});
+
+		function carregarSubSetores(setorId, subSetorSelecionado = null) {
+			const selectSubSetor = document.getElementById('sub-setor');
+			selectSubSetor.innerHTML = '<option value=\"\">Selecione um sub-setor</option>';
+			
+			// Converter setorId para string para comparação
+			const setorIdStr = String(setorId);
+			
+			const subSetoresFiltrados = seusDados.filter(subSetor => 
+				String(subSetor.sbgr_nb_idgrup) === setorIdStr
+			);
+
+			console.log('Sub-setores para o setor', setorIdStr + ':', subSetoresFiltrados);
+			
+			subSetoresFiltrados.forEach(subSetor => {
+				const option = document.createElement('option');
+				option.value = subSetor.sbgr_nb_id;
+				option.textContent = subSetor.sbgr_tx_nome;
+				
+				// Marcar como selecionado se for o sub-setor que deve estar selecionado
+				if (subSetorSelecionado && subSetorSelecionado == subSetor.sbgr_nb_id) {
+					option.selected = true;
+				}
+				
+				selectSubSetor.appendChild(option);
+			});
+			
+			if (subSetoresFiltrados.length === 0) {
+				selectSubSetor.innerHTML = '<option value=\"\">Nenhum sub-setor disponível</option>';
+			}
+			
+			// Limpar tipos de documento quando mudar o setor
+			$('#tipo_documento').html('<option value=\"\">Selecione um sub-setor primeiro</option>');
+		}
+
+		function carregarTiposDocumento(subSetorId, tipoSelecionado = null) {
+			const selectTipoDocumento = document.getElementById('tipo_documento');
+			selectTipoDocumento.innerHTML = '<option value=\"\">Selecione um tipo</option>';
+			
+			if (!subSetorId) {
+				selectTipoDocumento.innerHTML = '<option value=\"\">Selecione um sub-setor primeiro</option>';
+				return;
+			}
+			
+			// Converter subSetorId para string para comparação
+			const subSetorIdStr = String(subSetorId);
+			
+			// Buscar o setor selecionado atual
+			const setorSelecionado = $('#setor').find('option:selected').data('idsetor');
+			const setorIdStr = String(setorSelecionado);
+			
+			// Filtrar tipos que pertencem ao setor E sub-setor selecionados
+			const tiposFiltrados = todosTipos.filter(tipo => {
+				const tipoSetor = tipo.tipo_nb_grupo ? String(tipo.tipo_nb_grupo) : null;
+				const tipoSubSetor = tipo.tipo_nb_sbgrupo ? String(tipo.tipo_nb_sbgrupo) : null;
+				
+				// Se o tipo tem sub-setor específico, verifica se coincide
+				if (tipoSubSetor) {
+					return tipoSubSetor === subSetorIdStr;
+				}
+				// Se o tipo não tem sub-setor específico, verifica apenas o setor
+				else {
+					return tipoSetor === setorIdStr;
+				}
+			});
+
+			console.log('Tipos filtrados para setor', setorIdStr, 'e sub-setor', subSetorIdStr + ':', tiposFiltrados);
+			
+			if (tiposFiltrados.length === 0) {
+				selectTipoDocumento.innerHTML = '<option value=\"\">Nenhum tipo disponível para este sub-setor</option>';
+				return;
+			}
+			
+			// Adicionar os tipos filtrados
+			tiposFiltrados.forEach(tipo => {
+				const option = document.createElement('option');
+				option.value = tipo.tipo_nb_id;
+				option.textContent = tipo.tipo_tx_nome;
+				option.setAttribute('data-vencimento', tipo.tipo_tx_vencimento || 'nao');
+				
+				// Marcar como selecionado se for o tipo que deve estar selecionado
+				if (tipoSelecionado && tipoSelecionado == tipo.tipo_nb_id) {
+					option.selected = true;
+				}
+				
+				selectTipoDocumento.appendChild(option);
+			});
+			
+			console.log('Tipos carregados:', selectTipoDocumento.options.length - 1);
+		}
+		</script>";
+
+		return $tabela . $modal;
 	}
 
 	function arquivosFuncionario($nome, $idFuncionario, $arquivos) {
+		$arquivo_list = '';
+
+		if (!empty($arquivos)) {
+			foreach ($arquivos as $arquivo) {
+				$dataHora = new DateTime($arquivo['docu_tx_dataCadastro']);
+				$dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
+
+				$dataHoraFormatadaVencimento = '';
+				if (!empty($arquivo['docu_tx_dataVencimento']) && $arquivo['docu_tx_dataVencimento'] != "0000-00-00 00:00:00") {
+					$dataHoraVencimento = new DateTime($arquivo['docu_tx_dataVencimento']);
+					$dataHoraFormatadaVencimento = $dataHoraVencimento->format('d/m/Y');
+				}
+
+				$mime_type_arquivo = '';
+				if (file_exists($arquivo["docu_tx_caminho"])) {
+					$finfo = finfo_open(FILEINFO_MIME_TYPE);
+					$mime_type_arquivo = finfo_file($finfo, $arquivo["docu_tx_caminho"]);
+					finfo_close($finfo);
+				}
+
+				$formatosSuportados = [
+					'application/pdf',
+					'image/jpeg',
+					'image/png',
+					'image/gif',
+					'image/webp',
+					'text/plain',
+					'text/html'
+				];
+
+				$iconePreview = '<i class="fa-regular fa-eye-slash" title="Preview indisponível"></i>';
+				if($arquivo['docu_tx_visivel'] != 'nao' || $_SESSION['user_tx_nivel'] != 'Funcionário') {
+					if (in_array($mime_type_arquivo, $formatosSuportados)) {
+						$urlPreview = $arquivo['docu_tx_caminho'];
+						$iconePreview = "
+							<a class='text-info' style='cursor:pointer;' 
+							onclick=\"abrirPreview('$urlPreview', '$mime_type_arquivo', '$arquivo[docu_tx_nome]')\">
+								<i class='far fa-eye' title='Visualizar Documento'></i>
+							</a>";
+					}
+	
+					$iconeDownload = "<a class='text-info' style='cursor:pointer;' 
+						onclick=\"downloadArquivo($idFuncionario, '$arquivo[docu_tx_caminho]', 'downloadArquivo');\">
+						<i class='glyphicon glyphicon-cloud-download' title='Download'></i>
+					</a>";
+				}
+
+				$IconeAssinatura = ($arquivo["docu_tx_assinado"] == "sim")
+					? "&nbsp;<i class='fa-solid fa-file-contract text-success' title='Documento assinado digitalmente'></i>"
+					: "&nbsp;<i class='fa-solid fa-file-signature text-danger' title='Documento não assinado'></i>";
+
+				$iconeExcluir = ($_SESSION['user_tx_nivel'] != 'Funcionário')
+					? "<a class='text-danger' style='cursor:pointer;' 
+						onclick=\"remover_arquivo($idFuncionario, $arquivo[docu_nb_id], '$arquivo[docu_tx_nome]', 'excluir_documento');\">
+						<i class='glyphicon glyphicon-trash' title='Excluir'></i>
+					</a>"
+					: "";
+
+					$arquivo_list .= "
+					<tr>
+						<td>$arquivo[docu_tx_nome]</td>
+						<td>$arquivo[docu_tx_descricao]</td>
+						<td>$dataHoraFormatada</td>
+						<td>$dataHoraFormatadaVencimento</td>
+						<td>$arquivo[tipo_tx_nome]</td>
+						<td>$arquivo[grup_tx_nome]</td>
+						<td>$arquivo[sbgr_tx_nome]</td>
+						<td class='text-center action-icons' style='white-space:nowrap;'>
+							$iconeDownload
+							$IconeAssinatura
+							$iconePreview
+							$iconeExcluir
+						</td>
+					</tr>";
+			}
+		}
+
+		$tipo_documento = mysqli_fetch_all(query(
+			"SELECT tipo_nb_id, tipo_tx_nome, tipo_tx_vencimento, tipo_nb_grupo, tipo_nb_sbgrupo
+			 FROM tipos_documentos
+			 ORDER BY tipo_tx_nome ASC"
+		), MYSQLI_ASSOC);
+
+
+		$setor_documento = mysqli_fetch_all(query(
+			"SELECT *
+				FROM grupos_documentos ORDER BY grup_tx_nome ASC"
+		), MYSQLI_ASSOC);
+
+		$sbsetor_documento = mysqli_fetch_all(query(
+			"SELECT sbgr_nb_id,sbgr_nb_idgrup, sbgr_tx_nome, sbgr_tx_status FROM sbgrupos_documentos ORDER BY sbgr_tx_nome ASC"
+		), MYSQLI_ASSOC);
+
+		$list_tipos = "";
+		foreach ($tipo_documento as $tipo) {
+			$list_tipos .= "<option value='{$tipo['tipo_nb_id']}'>{$tipo['tipo_tx_nome']}</option>";
+			// $list_tipos2 .= "<option value='{$tipo['tipo_nb_id']}'>{$tipo['tipo_tx_nome']}</option>";
+		}
+
+		// dd($setor_documento);
+		$list_setor = "<option value=''></option>";
+		$list_setor2 = "";
+		foreach ($setor_documento as $setor) {
+			$list_setor .= "<option value='{$setor['grup_nb_id']}'  data-idSetor='{$setor['grup_nb_id']}'>{$setor['grup_tx_nome']}</option>";
+			$list_setor2 .= "<option value='{$setor['grup_nb_id']}'>{$setor['grup_tx_nome']}</option>";
+		}
+
+		$AbriAdicionarArquivo = ($_SESSION['user_tx_nivel'] != 'Funcionário')
+			? '<td class="text-center"><a href="#" data-toggle="modal" data-target="#myModal"><i class="glyphicon glyphicon-plus-sign"></i></a></td>'
+			: '';
+
+		$tabela = '
+		<div class="portlet light">
+			<div class="portlet-title">
+				<div class="caption">
+					<span class="caption-subject font-dark bold uppercase">' . $nome . '</span>
+				</div>
+			</div>
+
+			<div class="portlet-body">
+				<!-- Campos de busca -->
+				<div class="form-inline" style="margin-bottom:15px;">
+					<div class="form-group">
+						<label for="filtroNome">Nome:</label>
+						<input type="text" id="filtroNome" class="form-control" placeholder="Digite o nome">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroCadastro">Data Cadastro:</label>
+						<input type="date" id="filtroCadastro" class="form-control">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroVencimento">Data Vencimento:</label>
+						<input type="date" id="filtroVencimento" class="form-control">
+					</div>
+
+					<div class="form-group" style="margin-left:10px;">
+						<label for="filtroTipo">Tipo:</label>
+						<select id="filtroTipo" class="form-control">
+							<option value="">Todos</option>
+							'.$list_tipos.'
+						</select>
+					</div>
+
+					<div class="form-group" style="margin-top:10px;">
+						<label for="filtroSetor">Setor:</label>
+						<select id="filtroSetor" class="form-control">
+							<option value="">Todos</option>
+							'.$list_setor2.'
+						</select>
+					</div>
+
+					<button id="limparFiltros" class="btn btn-default" style="margin-left:10px;">
+						Limpar
+					</button>
+				</div>
+
+
+				<div class="table-responsive">
+					<table id="contex-grid" class="table table-striped table-bordered table-hover dt-responsive" width="100%">
+						<thead>
+							<tr>
+								<th>NOME</th>
+								<th>DESCRIÇÃO</th>
+								<th>DATA CADASTRO</th>
+								<th>DATA VENCIMENTO</th>
+								<th>TIPO</th>
+								<th>SETOR</th>
+								<th>SUB-SETOR</th>
+								<th style="text-align:center; white-space:nowrap;">
+									<i class="glyphicon glyphicon-cloud-download"></i>
+									&nbsp;<i class="fas fa-file-signature"></i>
+									&nbsp;<i class="far fa-eye"></i>
+									&nbsp;<i class="glyphicon glyphicon-trash"></i>
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							' . $arquivo_list . '
+							<tr>' . $AbriAdicionarArquivo . '</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<!-- Modal de Preview -->
+		<div id="previewModal" class="modal fade" tabindex="-1" role="dialog">
+			<div class="modal-dialog modal-lg" role="document">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal">&times;</button>
+						<h4 class="modal-title" id="previewTitle">Pré-visualização do Documento</h4>
+					</div>
+					<div class="modal-body" id="previewContent" style="text-align:center; min-height:400px;"></div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-default" data-dismiss="modal">Fechar</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+		function abrirPreview(caminho, tipo, nomeArquivo) {
+			let content = "";
+
+			if (tipo === "application/pdf" || tipo === "text/plain") {
+				content = "<iframe src=\'" + caminho + "\' width=\'100%\' height=\'500px\' style=\'border:none;\'></iframe>";
+			} else if (tipo.match(/^image\\//)) {
+				content = "<img src=\'" + caminho + "\' style=\'max-width:100%; max-height:500px; border:1px solid #ddd; border-radius:4px;\'>";
+			} else {
+				content = "<p>Visualização não disponível para este tipo de arquivo.</p>";
+			}
+
+			document.getElementById("previewTitle").innerText = "Pré-visualização: " + nomeArquivo;
+			document.getElementById("previewContent").innerHTML = content;
+			$("#previewModal").modal("show");
+		}
+
+		document.addEventListener("DOMContentLoaded", function() {
+			const filtroNome = document.getElementById("filtroNome");
+			const filtroCadastro = document.getElementById("filtroCadastro");
+			const filtroVencimento = document.getElementById("filtroVencimento");
+			const filtroTipo = document.getElementById("filtroTipo");
+			const filtroSetor = document.getElementById("filtroSetor");
+			const limparBtn = document.getElementById("limparFiltros");
+			const tabela = document.getElementById("contex-grid");
+			const linhas = tabela.getElementsByTagName("tr");
+
+			function formatarDataParaComparar(dataBr) {
+				// remove hora e converte dd/mm/yyyy → yyyy-mm-dd
+				if (!dataBr) return "";
+				const partes = dataBr.trim().split(" ")[0].split("/");
+				if (partes.length === 3) {
+					return `${partes[2]}-${partes[1]}-${partes[0]}`;
+				}
+				return "";
+			}
+
+			function filtrarTabela() {
+				const nomeValor = filtroNome.value.toLowerCase();
+				const cadastroValor = filtroCadastro.value;
+				const vencimentoValor = filtroVencimento.value;
+				const tipoValor = filtroTipo.value.toLowerCase();
+				const setorValor = filtroSetor.value.toLowerCase();
+
+				for (let i = 1; i < linhas.length; i++) {
+					const celulas = linhas[i].getElementsByTagName("td");
+					if (celulas.length < 6) continue; // ignora linhas sem dados
+
+					const nome = celulas[0].textContent.toLowerCase();
+					const cadastro = celulas[2].textContent.trim();
+					const vencimento = celulas[3].textContent.trim();
+					const tipo = celulas[4].textContent.toLowerCase();
+					const setor = celulas[5].textContent.toLowerCase();
+
+					let exibir = true;
+
+					if (nomeValor && !nome.includes(nomeValor)) exibir = false;
+					if (cadastroValor && formatarDataParaComparar(cadastro) !== cadastroValor) exibir = false;
+					if (vencimentoValor && formatarDataParaComparar(vencimento) !== vencimentoValor) exibir = false;
+					if (tipoValor && tipo !== tipoValor) exibir = false;
+					if (setorValor && setor !== setorValor) exibir = false;
+
+					linhas[i].style.display = exibir ? "" : "none";
+				}
+			}
+
+			// Eventos de filtro
+			filtroNome.addEventListener("input", filtrarTabela);
+			filtroCadastro.addEventListener("change", filtrarTabela);
+			filtroVencimento.addEventListener("change", filtrarTabela);
+			filtroTipo.addEventListener("change", filtrarTabela);
+			filtroSetor.addEventListener("change", filtrarTabela);
+
+			// Botão de limpar filtros
+			limparBtn.addEventListener("click", function() {
+				filtroNome.value = "";
+				filtroCadastro.value = "";
+				filtroVencimento.value = "";
+				filtroTipo.selectedIndex = 0;
+				filtroSetor.selectedIndex = 0;
+				filtrarTabela();
+			});
+		});
+		</script>
+
+		<style>
+			#contex-grid td, #contex-grid th {
+				vertical-align: middle !important;
+			}
+			#contex-grid .action-icons i {
+				margin: 0 5px;
+				font-size: 15px;
+				vertical-align: middle;
+			}
+			#contex-grid .action-icons a {
+				text-decoration: none;
+			}
+		</style>
+		';
+
+		// Modal de Upload (somente para gestores/admin)
+		$modal = "";
+		if ($_SESSION['user_tx_nivel'] != 'Funcionário') {
+			$modal = "
+			<style>
+			.dropzone {
+				position: relative; /* ADICIONE ESTA LINHA */
+				border: 2px dashed #ccc;
+				border-radius: 6px;
+				padding: 20px;
+				text-align: center;
+				cursor: pointer;
+				transition: background-color 0.2s ease;
+			}
+
+			.dropzone.dragover {
+				background-color: #f5f5f5;
+				border-color: #3c8dbc;
+			}
+
+			.dropzone input {
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				opacity: 0;
+				width: 100%;
+				height: 100%;
+				cursor: pointer;
+			}
+			</style>
+			<div class='modal fade' id='myModal' tabindex='-1' role='dialog' aria-labelledby='myModalLabel'>
+				<div class='modal-dialog' role='document'>
+					<div class='modal-content'>
+						<div class='modal-header'>
+							<button type='button' class='close' data-dismiss='modal'>&times;</button>
+							<h4 class='modal-title' id='myModalLabel'>Upload Arquivo</h4>
+						</div>
+						<div class='modal-body'>
+							<form name='form_enviar_arquivo2' method='post' action='cadastro_funcionario.php' enctype='multipart/form-data'>
+								<div class='form-group'>
+									<label>Nome do arquivo:</label>
+									<input type='text' class='form-control' name='file-name'>
+								</div>
+								<div class='form-group'>
+									<label>Descrição:</label>
+									<textarea class='form-control' name='description-text'></textarea>
+								</div>
+								<div class='form-group'>
+									<label>Arquivo:</label>
+									<div class='dropzone' id='dropzone'>
+										<p>Arraste o arquivo aqui ou clique para selecionar</p>
+										<input type='file' name='file' id='fileInput'>
+									</div>
+								</div>
+								<div class='form-group' id='campo_grupo'>
+									<label>Setor:</label>
+									<select class='form-control' name='setor' id='setor'>$list_setor</select>
+								</div>
+								<div class='form-group' id='campo_grupo'>
+									<label>Sub-setor:</label>
+									<select name='sub-setor' id='sub-setor' class='form-control'>
+										<option value=''>Selecione um setor primeiro</option>
+									</select>
+								</div>
+								<div class='form-group'>
+									<label>Tipo de Documento:</label>
+									<select class='form-control' name='tipo_documento' id='tipo_documento'></select>
+								</div>
+								<div class='form-group'>
+									<label>Visível ao funcionário:</label>
+									<select class='form-control' name='visibilidade'>
+										<option value='sim'>Sim</option>
+										<option value='nao' selected>Não</option>
+									</select>
+								</div>
+								<div class='form-group' id='campo_vencimento' style='display:none;'>
+									<label>Data de Vencimento:</label>
+									<input type='date' class='form-control' name='data_vencimento' id='data_vencimento'>
+								</div>
+								<input type='hidden' name='acao' value='enviarDocumento'>
+								<input type='hidden' name='idFuncionario' value='$idFuncionario'>
+								<input type='hidden' name='idUserCadastro' value='{$_SESSION['user_nb_id']}'>
+							</form>
+						</div>
+						<div class='modal-footer'>
+							<button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
+							<button type='button' class='btn btn-primary' onclick='validarEnvio()'>Salvar arquivo</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<script>
+			function validarEnvio() {
+				const vencimento = $('#tipo_documento').find(':selected').data('vencimento');
+				const dataVenc = $('#data_vencimento').val();
+
+				if (vencimento === 'sim' && !dataVenc) {
+					alert('Por favor, preencha a data de vencimento.');
+					$('#data_vencimento').focus();
+					return false;
+				}
+
+				document.form_enviar_arquivo2.submit();
+			}
+			$('#tipo_documento').on('change', function() {
+				const selecionado = $(this).find(':selected');
+				const vencimento = selecionado.data('vencimento');
+				const grupo = selecionado.data('grupo');
+
+				// Mostra/oculta campo de vencimento e controla 'required'
+				if (vencimento === 'sim') {
+					$('#campo_vencimento').slideDown();
+					$('#data_vencimento').attr('required', true);
+				} else {
+					$('#campo_vencimento').slideUp();
+					$('#data_vencimento').removeAttr('required').val('');
+				}
+
+			});
+
+			$(document).on('shown.bs.modal', '#myModal', function() {
+				const dropzone = document.getElementById('dropzone');
+				const fileInput = document.getElementById('fileInput');
+				const message = dropzone.querySelector('p');
+
+				// Clicar na área abre o seletor de arquivo
+				dropzone.addEventListener('click', () => fileInput.click());
+
+				// Quando o arquivo é selecionado
+				fileInput.addEventListener('change', () => {
+					if (fileInput.files.length > 0) {
+						message.textContent = fileInput.files[0].name;
+					} else {
+						message.textContent = 'Arraste o arquivo aqui ou clique para selecionar';
+					}
+				});
+
+				// Arrastar e soltar
+				dropzone.addEventListener('dragover', (e) => {
+					e.preventDefault();
+					dropzone.classList.add('dragover');
+				});
+
+				dropzone.addEventListener('dragleave', () => {
+					dropzone.classList.remove('dragover');
+				});
+
+				dropzone.addEventListener('drop', (e) => {
+					e.preventDefault();
+					dropzone.classList.remove('dragover');
+
+					const file = e.dataTransfer.files[0];
+					if (file) {
+						fileInput.files = e.dataTransfer.files;
+						message.textContent = file.name;
+					}
+				});
+			});
+
+			// Dados dos sub-setores
+			const seusDados = ". json_encode($sbsetor_documento) . ";
+			const todosTipos = ". json_encode($tipo_documento) . ";
+
+			// Inicializar filtro do setor
+			$('#setor').on('change', function() {
+				const selecionado = $(this).find('option:selected');
+				const setorId = selecionado.data('idsetor');
+				console.log('Setor selecionado:', setorId);
+				
+				if (setorId) {
+					carregarSubSetores(setorId);
+				} else {
+					// Limpar sub-setor e tipos
+					$('#sub-setor').html('<option value=\"\">Selecione um setor primeiro</option>');
+					$('#tipo_documento').html('<option value=\"\">Selecione um sub-setor primeiro</option>');
+				}
+			});
+
+			// Inicializar filtro do sub-setor
+			$('#sub-setor').on('change', function() {
+				const subSetorId = $(this).val();
+				console.log('Sub-setor selecionado:', subSetorId);
+				
+				if (subSetorId) {
+					carregarTiposDocumento(subSetorId);
+				} else {
+					$('#tipo_documento').html('<option value=\"\">Selecione um sub-setor primeiro</option>');
+				}
+			});
+
+			function carregarSubSetores(setorId, subSetorSelecionado = null) {
+				const selectSubSetor = document.getElementById('sub-setor');
+				selectSubSetor.innerHTML = '<option value=\"\">Selecione um sub-setor</option>';
+				
+				// Converter setorId para string para comparação
+				const setorIdStr = String(setorId);
+				
+				const subSetoresFiltrados = seusDados.filter(subSetor => 
+					String(subSetor.sbgr_nb_idgrup) === setorIdStr
+				);
+
+				console.log('Sub-setores para o setor', setorIdStr + ':', subSetoresFiltrados);
+				
+				subSetoresFiltrados.forEach(subSetor => {
+					const option = document.createElement('option');
+					option.value = subSetor.sbgr_nb_id;
+					option.textContent = subSetor.sbgr_tx_nome;
+					
+					// Marcar como selecionado se for o sub-setor que deve estar selecionado
+					if (subSetorSelecionado && subSetorSelecionado == subSetor.sbgr_nb_id) {
+						option.selected = true;
+					}
+					
+					selectSubSetor.appendChild(option);
+				});
+				
+				if (subSetoresFiltrados.length === 0) {
+					selectSubSetor.innerHTML = '<option value=\"\">Nenhum sub-setor disponível</option>';
+				}
+				
+				// Limpar tipos de documento quando mudar o setor
+				$('#tipo_documento').html('<option value=\"\">Selecione um sub-setor primeiro</option>');
+			}
+
+			function carregarTiposDocumento(subSetorId, tipoSelecionado = null) {
+				const selectTipoDocumento = document.getElementById('tipo_documento');
+				selectTipoDocumento.innerHTML = '<option value=\"\">Selecione um tipo</option>';
+				
+				if (!subSetorId) {
+					selectTipoDocumento.innerHTML = '<option value=\"\">Selecione um sub-setor primeiro</option>';
+					return;
+				}
+				
+				// Converter subSetorId para string para comparação
+				const subSetorIdStr = String(subSetorId);
+				
+				// Buscar o setor selecionado atual
+				const setorSelecionado = $('#setor').find('option:selected').data('idsetor');
+				const setorIdStr = String(setorSelecionado);
+				
+				// Filtrar tipos que pertencem ao setor E sub-setor selecionados
+				const tiposFiltrados = todosTipos.filter(tipo => {
+					const tipoSetor = tipo.tipo_nb_grupo ? String(tipo.tipo_nb_grupo) : null;
+					const tipoSubSetor = tipo.tipo_nb_sbgrupo ? String(tipo.tipo_nb_sbgrupo) : null;
+					
+					// Se o tipo tem sub-setor específico, verifica se coincide
+					if (tipoSubSetor) {
+						return tipoSubSetor === subSetorIdStr;
+					}
+					// Se o tipo não tem sub-setor específico, verifica apenas o setor
+					else {
+						return tipoSetor === setorIdStr;
+					}
+				});
+
+				console.log('Tipos filtrados para setor', setorIdStr, 'e sub-setor', subSetorIdStr + ':', tiposFiltrados);
+				
+				if (tiposFiltrados.length === 0) {
+					selectTipoDocumento.innerHTML = '<option value=\"\">Nenhum tipo disponível para este sub-setor</option>';
+					return;
+				}
+				
+				// Adicionar os tipos filtrados
+				tiposFiltrados.forEach(tipo => {
+					const option = document.createElement('option');
+					option.value = tipo.tipo_nb_id;
+					option.textContent = tipo.tipo_tx_nome;
+					option.setAttribute('data-vencimento', tipo.tipo_tx_vencimento || 'nao');
+					
+					// Marcar como selecionado se for o tipo que deve estar selecionado
+					if (tipoSelecionado && tipoSelecionado == tipo.tipo_nb_id) {
+						option.selected = true;
+					}
+					
+					selectTipoDocumento.appendChild(option);
+				});
+				
+				console.log('Tipos carregados:', selectTipoDocumento.options.length - 1);
+			}
+			</script>";
+		}
+
+		return $tabela . $modal;
 	}
 
 	function arquivo($nome,$variavel,$modificador = '',$tamanho=4, $extra=''){

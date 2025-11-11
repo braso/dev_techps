@@ -14,8 +14,7 @@
 
     function modificarTipoDoc(){
 		$a_mod = carregar("tipos_documentos", $_POST["id"]);
-		[$_POST["id"], $_POST["nome"], $_POST["setor"], $_POST["vencimento"]] = [$a_mod["tipo_nb_id"], $a_mod["tipo_tx_nome"], $a_mod["tipo_nb_grupo"],$a_mod["tipo_tx_vencimento"], $a_mod["tipo_tx_status"]];
-		
+		[$_POST["id"], $_POST["nome"], $_POST["setor"], $_POST["vencimento"], $_POST["sub-setor"]] = [$a_mod["tipo_nb_id"], $a_mod["tipo_tx_nome"], $a_mod["tipo_nb_grupo"],$a_mod["tipo_tx_vencimento"], $a_mod["tipo_nb_sbgrupo"], $a_mod["tipo_tx_status"]];
 		layout_tipo_doc();
 		exit;
 	}
@@ -24,6 +23,7 @@
 		$novoTipo= [
 			"tipo_tx_nome" => $_POST["nome"],
 			"tipo_nb_grupo" => $_POST["setor"],
+			"tipo_nb_sbgrupo" => $_POST["sub-setor"],
 			"tipo_tx_vencimento" => $_POST["vencimento"],
 			"tipo_tx_status" => "ativo"
 		];
@@ -31,14 +31,77 @@
 		if(!empty($_POST["id"])){
 			atualizar("tipos_documentos", array_keys($novoTipo), array_values($novoTipo), $_POST["id"]);
 		}else{
-			// $novoTipo["oper_nb_userCadastro"] = $_SESSION["user_nb_id"];
-			// $novoTipo["oper_tx_dataCadastro"] = date("Y-m-d H:i:s");
 
 			inserir("tipos_documentos", array_keys($novoTipo), array_values($novoTipo));
 		}
 
 		index();
 		exit;
+	}
+
+	function criaSectionSubSetor($subSetores, $subSetorSelecionado = null, $tamanho) {
+		$js = "
+		<script>
+		// Dados dos sub-setores
+		const seusDados = ". json_encode($subSetores) . ";
+
+		function carregarSubSetores(setorId, subSetorSelecionado = null) {
+			const selectSubSetor = document.getElementById('sub-setor');
+			selectSubSetor.innerHTML = '<option value=\"\">Selecione um sub-setor</option>';
+			
+			const subSetoresFiltrados = seusDados.filter(subSetor => 
+				subSetor.sbgr_nb_idgrup === setorId
+			);
+			
+			subSetoresFiltrados.forEach(subSetor => {
+				const option = document.createElement('option');
+				option.value = subSetor.sbgr_nb_id;
+				option.textContent = subSetor.sbgr_tx_nome;
+				
+				// Marcar como selecionado se for o sub-setor que deve estar selecionado
+				if (subSetorSelecionado && subSetorSelecionado === subSetor.sbgr_nb_id) {
+					option.selected = true;
+				}
+				
+				selectSubSetor.appendChild(option);
+			});
+			
+			if (subSetoresFiltrados.length === 0) {
+				selectSubSetor.innerHTML = '<option value=\"\">Nenhum sub-setor disponível</option>';
+			}
+		}
+
+		// Event listener
+		document.getElementById('setor').addEventListener('change', function() {
+			const setorSelecionado = this.value;
+			if (setorSelecionado) {
+				carregarSubSetores(setorSelecionado);
+			} else {
+				document.getElementById('sub-setor').innerHTML = '<option value=\"\">Selecione um setor primeiro</option>';
+			}
+		});
+
+		// Inicializar
+		document.addEventListener('DOMContentLoaded', function() {
+			const setorInicial = document.getElementById('setor').value;
+			const subSetorInicial = '" . ($subSetorSelecionado ?: '') . "';
+			
+			if (setorInicial) {
+				carregarSubSetores(setorInicial, subSetorInicial);
+			}
+		});
+		</script>
+		";
+
+		$html = '
+		<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content">
+			<label for="sub-setor">Sub-setor:</label>
+			<select name="sub-setor" id="sub-setor" class="form-control input-sm campo-fit-content">
+				<option value="">Selecione um setor primeiro</option>
+			</select>
+		</div>';
+
+		return $js . $html;
 	}
 
     function layout_tipo_doc() {
@@ -54,9 +117,14 @@
 			$_POST["vencimento"] = "nao";
 		}
 
+		$sbsetor_documento = mysqli_fetch_all(query(
+			"SELECT sbgr_nb_id,sbgr_nb_idgrup, sbgr_tx_nome, sbgr_tx_status FROM sbgrupos_documentos ORDER BY sbgr_tx_nome ASC"
+		), MYSQLI_ASSOC);
+
 		$campos = [
 			campo("Nome*", "nome", $_POST["nome"], 4),
             combo_bd("!Setor*", "setor", $_POST["setor"], 2, "grupos_documentos"),
+			criaSectionSubSetor($sbsetor_documento, $_POST["sub-setor"], 2),
 			$campoStatus,
             combo_radio("Passivel de vencimento", "vencimento", $_POST["vencimento"],3,["sim" => "Sim", "nao" => "Não"]),
 		];
