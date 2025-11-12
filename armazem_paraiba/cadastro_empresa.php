@@ -33,18 +33,19 @@
 
 		if(!empty($errorMsg)){
 			set_status("ERRO: ".$errorMsg);
-			$_POST["id"] = $_POST["idEmpresa"];
+			$_POST["id"] = $_POST["idRelacionado"];
 			modificarEmpresa();
 			exit;
 		}
 
 		$novoParametro = [
-			"empr_nb_id" => (int) $_POST["idEmpresa"],
+			"empr_nb_id" => (int) $_POST["idRelacionado"],
 			"docu_tx_nome" => $_POST["file-name"] ?? '',
 			"docu_tx_descricao" => $_POST["description-text"] ?? '',
 			"docu_tx_dataCadastro" => date("Y-m-d H:i:s"),
 			"docu_tx_datavencimento" => $_POST["data_vencimento"] ?? null,
 			"docu_tx_tipo" => $_POST["tipo_documento"] ?? '',
+			"docu_nb_sbgrupo" => (int) $_POST["sub-setor"] ?? null,
 			"docu_tx_usuarioCadastro" => (int) $_POST["idUserCadastro"],
 			"docu_tx_assinado" => "nao",
 			"docu_tx_visivel" => $_POST["visibilidade"] ?? 'nao'
@@ -118,7 +119,7 @@
 
 		query("DELETE FROM documento_empresa WHERE docu_nb_id = $_POST[idArq]");
 		
-		$_POST["id"] = $_POST["idEmpresa"];
+		$_POST["id"] = $_POST["idRelacionado"];
 		modificarEmpresa();
 		exit;
 	}
@@ -556,7 +557,7 @@
 			LEFT JOIN grupos_documentos gd 
 			ON t.tipo_nb_grupo = gd.grup_nb_id
 			LEFT JOIN sbgrupos_documentos subg
-			ON t.tipo_nb_sbgrupo = subg.sbgr_nb_id
+			ON subg.sbgr_nb_id = documento_parametro.docu_nb_sbgrupo
 			WHERE documento_empresa.empr_nb_id = ".$a_mod["empr_nb_id"]);
 			$arquivos = mysqli_fetch_all($sqlArquivos, MYSQLI_ASSOC);
 		}

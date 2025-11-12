@@ -721,12 +721,12 @@
 	function enviarDocumento() {
 		global $a_mod;
 
-		if (empty($a_mod) && isset($_POST["id"])) {
-			$a_mod = carregar("entidade", $_POST["id"]);
+		if (empty($a_mod) && isset($_POST["idRelacionado"])) {
+			$a_mod = carregar("entidade", $_POST["idRelacionado"]);
 		}
 
 		$errorMsg = "";
-		if(empty($_POST['data_vencimento'])){
+		if(isset($_POST["tipo_documento"]) && !empty($_POST["tipo_documento"])){
 			$obgVencimento = mysqli_fetch_all(query("SELECT tipo_tx_vencimento FROM `tipos_documentos` 
 			WHERE tipo_nb_id = {$_POST["tipo_documento"]}"), MYSQLI_ASSOC);
 
@@ -737,18 +737,19 @@
 
 		if(!empty($errorMsg)){
 			set_status("ERRO: ".$errorMsg);
-			$_POST["id"] = $_POST["idFuncionario"];
+			$_POST["id"] = $_POST["idRelacionado"];
 			visualizarCadastro();
 			exit;
 		}
 
 		$novoArquivo = [
-			"docu_nb_entidade" => (int) $_POST["idFuncionario"],
+			"docu_nb_entidade" => (int) $_POST["idRelacionado"],
 			"docu_tx_nome" => $_POST["file-name"] ?? '',
 			"docu_tx_descricao" => $_POST["description-text"] ?? '',
 			"docu_tx_dataCadastro" => date("Y-m-d H:i:s"),
 			"docu_tx_dataVencimento" => $_POST["data_vencimento"] ?? null,
 			"docu_tx_tipo" => $_POST["tipo_documento"] ?? '',
+			"docu_nb_sbgrupo" => (int) $_POST["sub-setor"] ?? null,
 			"docu_tx_usuarioCadastro" => (int) $_POST["idUserCadastro"],
 			"docu_tx_assinado" => "nao",
 			"docu_tx_visivel" => $_POST["visibilidade"] ?? 'nao'
@@ -1258,7 +1259,7 @@
 				LEFT JOIN grupos_documentos gd 
 				ON t.tipo_nb_grupo = gd.grup_nb_id
 				LEFT JOIN sbgrupos_documentos subg
-				ON t.tipo_nb_sbgrupo = subg.sbgr_nb_id
+				ON subg.sbgr_nb_id = documento_parametro.docu_nb_sbgrupo
 				WHERE documento_funcionario.docu_nb_entidade = ".$a_mod["enti_nb_id"]
 			),MYSQLI_ASSOC);
 			echo "</div><div class='col-md-12'><div class='col-md-12 col-sm-12'>".arquivosFuncionario("Documentos", $a_mod["enti_nb_id"], $arquivos);

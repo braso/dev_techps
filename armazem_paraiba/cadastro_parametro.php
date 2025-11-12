@@ -1,5 +1,5 @@
 <?php
-	//* Modo debug
+	/* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -141,16 +141,21 @@
 		global $a_mod;
 
 		if(empty($a_mod)){
-			$a_mod = carregar("parametro", $_POST["idParametro"]);
+			$a_mod = carregar("parametro", $_POST["idRelacionado"]);
 		}
 
 		$errorMsg = "";
-		if(empty($_POST['data_vencimento'])){
-			$obgVencimento = mysqli_fetch_all(query("SELECT tipo_tx_vencimento FROM `tipos_documentos` 
-			WHERE tipo_nb_id = {$_POST["tipo_documento"]}"), MYSQLI_ASSOC);
+		if (isset($_POST["tipo_documento"]) && !empty($_POST["tipo_documento"])) {
+			$obgVencimento = mysqli_fetch_all(query("
+				SELECT tipo_tx_vencimento 
+				FROM tipos_documentos 
+				WHERE tipo_nb_id = " . intval($_POST["tipo_documento"])
+			), MYSQLI_ASSOC);
 
-			if($obgVencimento[0]['tipo_tx_vencimento'] == 'sim'){
-				$errorMsg = "Campo obrigatório não preenchidos: Data de Vencimento";
+			if (!empty($obgVencimento) && $obgVencimento[0]['tipo_tx_vencimento'] === 'sim') {
+				if (empty($_POST['data_vencimento'])) {
+					$errorMsg = "Campo obrigatório não preenchido: Data de Vencimento";
+				}
 			}
 		}
 
@@ -163,12 +168,13 @@
 
 
 		$novoParametro = [
-			"para_nb_id" => (int) $_POST["idParametro"],
+			"para_nb_id" => (int) $_POST["idRelacionado"],
 			"docu_tx_nome" => $_POST["file-name"] ?? '',
 			"docu_tx_descricao" => $_POST["description-text"] ?? '',
 			"docu_tx_dataCadastro" => date("Y-m-d H:i:s"),
 			"docu_tx_datavencimento" => $_POST["data_vencimento"] ?? null,
 			"docu_tx_tipo" => $_POST["tipo_documento"] ?? '',
+			"docu_nb_sbgrupo" => (int) $_POST["sub-setor"] ?? null,
 			"docu_tx_usuarioCadastro" => (int) $_POST["idUserCadastro"],
 			"docu_tx_assinado" => "nao",
 			"docu_tx_visivel" => $_POST["visibilidade"] ?? 'nao'
@@ -744,7 +750,7 @@
 				LEFT JOIN grupos_documentos gd 
 				ON t.tipo_nb_grupo = gd.grup_nb_id
 				LEFT JOIN sbgrupos_documentos subg
-				ON t.tipo_nb_sbgrupo = subg.sbgr_nb_id
+				ON subg.sbgr_nb_id = documento_parametro.docu_nb_sbgrupo
 				WHERE documento_parametro.para_nb_id = ".$a_mod["para_nb_id"]
 			),MYSQLI_ASSOC);
 			echo "</div><div class='col-md-12'><div class='col-md-12 col-sm-12'>".arquivosParametro("Documentos", $a_mod["para_nb_id"], $arquivos);

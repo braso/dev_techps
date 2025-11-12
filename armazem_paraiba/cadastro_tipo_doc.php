@@ -145,7 +145,7 @@
     function index() {
         global $CONTEX;
 
-        cabecalho("Cadastro de Operação");
+        cabecalho("Cadastro Tipo de Documento");
 
         $fields = [
 			campo("Código", 		"busca_codigo", 	($_POST["busca_codigo"]?? ""), 	1, "", "maxlength='6'"),
