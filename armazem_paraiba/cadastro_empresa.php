@@ -1,5 +1,5 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
@@ -26,7 +26,7 @@
 			$obgVencimento = mysqli_fetch_all(query("SELECT tipo_tx_vencimento FROM `tipos_documentos` 
 			WHERE tipo_nb_id = {$_POST["tipo_documento"]}"), MYSQLI_ASSOC);
 
-			if($obgVencimento[0]['tipo_tx_vencimento'] == 'sim'){
+			if($obgVencimento[0]['tipo_tx_vencimento'] == 'sim' && (empty($_POST["data_vencimento"]) || $_POST["data_vencimento"] == "0000-00-00")){
 				$errorMsg = "Campo obrigatório não preenchidos: Data de Vencimento";
 			}
 		}
@@ -557,7 +557,7 @@
 			LEFT JOIN grupos_documentos gd 
 			ON t.tipo_nb_grupo = gd.grup_nb_id
 			LEFT JOIN sbgrupos_documentos subg
-			ON subg.sbgr_nb_id = documento_parametro.docu_nb_sbgrupo
+			ON subg.sbgr_nb_id = documento_empresa.docu_nb_sbgrupo
 			WHERE documento_empresa.empr_nb_id = ".$a_mod["empr_nb_id"]);
 			$arquivos = mysqli_fetch_all($sqlArquivos, MYSQLI_ASSOC);
 		}

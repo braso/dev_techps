@@ -152,7 +152,7 @@
 				WHERE tipo_nb_id = " . intval($_POST["tipo_documento"])
 			), MYSQLI_ASSOC);
 
-			if (!empty($obgVencimento) && $obgVencimento[0]['tipo_tx_vencimento'] === 'sim') {
+			if($obgVencimento[0]['tipo_tx_vencimento'] == 'sim' && (empty($_POST["data_vencimento"]) || $_POST["data_vencimento"] == "0000-00-00")) {
 				if (empty($_POST['data_vencimento'])) {
 					$errorMsg = "Campo obrigatório não preenchido: Data de Vencimento";
 				}

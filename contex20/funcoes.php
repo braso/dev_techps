@@ -669,25 +669,29 @@
 			case "MASCARA_HORA":
 				$type = "time";
 			break;
+			// MASCARA COMPANY Tem que ser corrigido domainPrefix no if esta ficnado undefined
+
 			case "MASCARA_COMPANY":
-				$dataScript .= "$(document).ready(function() {
-						var inputField = $('#nomeEmpresa');
-						var domainPrefix = '".$_SERVER['HTTP_ORIGIN'].(is_int(strpos($_SERVER["REQUEST_URI"], 'dev_'))? '/dev_techps/': '/techps/')."';
-						function updateDisplayedText() {
-							var inputValue = inputField.val();
+				$dataScript .= '$(document).ready(function() {
+					var inputField = $("#nomeEmpresa");
+					var domainPrefix = "' . $_SERVER['HTTP_ORIGIN'] . (strpos($_SERVER["REQUEST_URI"], "dev_") !== false ? '/dev_techps/' : '/techps/') . '";
 
-							if(inputValue.startsWith(domainPrefix)) {
-								var displayedText = inputValue.substring(domainPrefix.length);
-								inputField.val(displayedText);
-							}
+					function updateDisplayedText() {
+						var inputValue = inputField.val() || ""; // garante string
+
+						if (inputValue.startsWith(domainPrefix)) {
+							var displayedText = inputValue.substring(domainPrefix.length);
+							inputField.val(displayedText);
 						}
+					}
 
-						// Executar a função de atualização quando o campo for modificado
-						inputField.on('input', updateDisplayedText);
-
-						// Inicializar o campo com o valor correto
+					if (inputField.length) { // garante que o campo existe
+						inputField.on("input", updateDisplayedText);
 						updateDisplayedText();
-					});";
+					} else {
+						console.warn("#nomeEmpresa não encontrado.");
+					}
+				});';
 			break;
 			case "MASCARA_HIDDEN":
 				$type = "hidden";
@@ -1151,7 +1155,7 @@
 		return implode("", $campo);
 	}
 
-	function gerarHTMLArquivos($nome, $idRelacionado, $arquivos, $nivelUsuario = 'Admin') {
+	function gerarHTMLArquivos($nome, $destino, $idRelacionado, $arquivos, $nivelUsuario = 'Admin') {
 			// --- 1. Lógica de Geração da Lista de Arquivos (Tabela) ---
 			$arquivo_list = '';
 
@@ -1419,9 +1423,9 @@
 			$modal_upload = "";
 			$action_file = '';
 
-			if ($nome === 'Arquivos do Funcionário') {
+			if ($destino === 'Funcionário') {
 				$action_file = 'cadastro_funcionario.php';
-			} elseif ($nome === 'Arquivos da Empresa') {
+			} elseif ($destino === 'Empresa') {
 				$action_file = 'cadastro_empresa.php';
 			} else {
 				$action_file = 'cadastro_parametro.php';
@@ -1810,7 +1814,7 @@
 					if (!dataBr) return '';
 					const partes = dataBr.trim().split(' ')[0].split('/');
 					if (partes.length === 3) {
-						return `${partes[2]}-${partes[1]}-${partes[0]}`;
+						return `\${partes[2]}-\${partes[1]}-\${partes[0]}`;
 					}
 					return '';
 				}
@@ -1936,15 +1940,15 @@
 
 	function arquivosParametro($nome, $idParametro, $arquivos) {
 		// Supondo que $_SESSION['user_tx_nivel'] exista e contenha o nível do usuário
-		return gerarHTMLArquivos($nome, $idParametro, $arquivos, $_SESSION['user_tx_nivel'] ?? 'Admin');
+		return gerarHTMLArquivos($nome, '',$idParametro, $arquivos, $_SESSION['user_tx_nivel'] ?? 'Admin');
 	}
 
 	function arquivosEmpresa($nome, $idEmpresa, $arquivos) {
-		return gerarHTMLArquivos($nome, $idEmpresa, $arquivos, $_SESSION['user_tx_nivel'] ?? 'Admin');
+		return gerarHTMLArquivos($nome, 'Empresa',$idEmpresa, $arquivos, $_SESSION['user_tx_nivel'] ?? 'Admin');
 	}
 
 	function arquivosFuncionario($nome, $idFuncionario, $arquivos) {
-		return gerarHTMLArquivos($nome, $idFuncionario, $arquivos, $_SESSION['user_tx_nivel'] ?? 'Funcionário');
+		return gerarHTMLArquivos($nome, 'Funcionário',$idFuncionario, $arquivos, $_SESSION['user_tx_nivel'] ?? 'Funcionário');
 	}
 
 	function arquivo($nome,$variavel,$modificador = '',$tamanho=4, $extra=''){

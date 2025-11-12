@@ -721,6 +721,8 @@
 	function enviarDocumento() {
 		global $a_mod;
 
+		// dd($_POST);
+
 		if (empty($a_mod) && isset($_POST["idRelacionado"])) {
 			$a_mod = carregar("entidade", $_POST["idRelacionado"]);
 		}
@@ -730,7 +732,7 @@
 			$obgVencimento = mysqli_fetch_all(query("SELECT tipo_tx_vencimento FROM `tipos_documentos` 
 			WHERE tipo_nb_id = {$_POST["tipo_documento"]}"), MYSQLI_ASSOC);
 
-			if($obgVencimento[0]['tipo_tx_vencimento'] == 'sim'){
+			if($obgVencimento[0]['tipo_tx_vencimento'] == 'sim' && (empty($_POST["data_vencimento"]) || $_POST["data_vencimento"] == "0000-00-00")){
 				$errorMsg = "Campo obrigatório não preenchidos: Data de Vencimento";
 			}
 		}
@@ -1259,7 +1261,7 @@
 				LEFT JOIN grupos_documentos gd 
 				ON t.tipo_nb_grupo = gd.grup_nb_id
 				LEFT JOIN sbgrupos_documentos subg
-				ON subg.sbgr_nb_id = documento_parametro.docu_nb_sbgrupo
+				ON subg.sbgr_nb_id = documento_funcionario.docu_nb_sbgrupo
 				WHERE documento_funcionario.docu_nb_entidade = ".$a_mod["enti_nb_id"]
 			),MYSQLI_ASSOC);
 			echo "</div><div class='col-md-12'><div class='col-md-12 col-sm-12'>".arquivosFuncionario("Documentos", $a_mod["enti_nb_id"], $arquivos);
