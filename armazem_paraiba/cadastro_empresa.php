@@ -18,8 +18,18 @@
 		exit;
 	}
 
+	function normalizar($texto) {
+		$texto = preg_replace('/[áàãâä]/ui', 'a', $texto);
+		$texto = preg_replace('/[éèêë]/ui', 'e', $texto);
+		$texto = preg_replace('/[íìîï]/ui', 'i', $texto);
+		$texto = preg_replace('/[óòõôö]/ui', 'o', $texto);
+		$texto = preg_replace('/[úùûü]/ui', 'u', $texto);
+		$texto = preg_replace('/[ç]/ui', 'c', $texto);
+		return strtolower(trim(preg_replace('/\s+/', ' ', $texto)));
+	}	
+
 	function enviarDocumento() {
-		// global $a_mod;
+		global $a_mod;
 
 		$errorMsg = "";
 		if(empty($_POST['data_vencimento'])){
@@ -29,6 +39,47 @@
 			if($obgVencimento[0]['tipo_tx_vencimento'] == 'sim' && (empty($_POST["data_vencimento"]) || $_POST["data_vencimento"] == "0000-00-00")){
 				$errorMsg = "Campo obrigatório não preenchidos: Data de Vencimento";
 			}
+		}
+
+		if(!empty($_POST["tipo_documento"]) && !empty($_POST["sub-setor"])) {
+
+			$nomes_documentos_subsetor = mysqli_fetch_all(query(
+				"SELECT docu_tx_nome
+				FROM documento_empresa
+				WHERE docu_tx_tipo = {$_POST["tipo_documento"]} AND docu_nb_sbgrupo = {$_POST["sub-setor"]}" 
+			), MYSQLI_ASSOC);
+
+			$buscaNormalizada = normalizar($_POST["file-name"]);
+
+			$encontrado = array_filter(
+				array_column($nomes_documentos_subsetor, 'docu_tx_nome'),
+				fn($nome) => normalizar($nome) === $buscaNormalizada
+			);
+
+			if (!empty($encontrado)) {
+				$errorMsg = "Já existe um documento com esse nome para o tipo selecionado.";
+			} 
+
+		} else if(!empty($_POST["tipo_documento"])){
+
+			$nomes_documentos_setor = mysqli_fetch_all(query(
+				"SELECT docu_tx_nome
+				FROM documento_empresa
+				WHERE docu_tx_tipo = {$_POST["tipo_documento"]}
+				AND (docu_nb_sbgrupo IS NULL OR docu_nb_sbgrupo = 0)"
+			), MYSQLI_ASSOC);
+
+			$buscaNormalizada = normalizar($_POST["file-name"]);
+
+			$encontrado = array_filter(
+				array_column($nomes_documentos_setor, 'docu_tx_nome'),
+				fn($nome) => normalizar($nome) === $buscaNormalizada
+			);
+
+			if (!empty($encontrado)) {
+				$errorMsg = "Já existe um documento com esse nome para o tipo selecionado.";
+			} 
+
 		}
 
 		if(!empty($errorMsg)){
@@ -110,7 +161,7 @@
 			set_status("Falha ao mover o arquivo para o diretório de destino.");
 		}
 
-		$_POST["id"] = $_POST["idEmpresa"];
+		$_POST["id"] = $_POST["idRelacionado"];
 		modificarEmpresa();
 		exit;
 	}

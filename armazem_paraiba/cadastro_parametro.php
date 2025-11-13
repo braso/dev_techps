@@ -159,6 +159,47 @@
 			}
 		}
 
+		if(!empty($_POST["tipo_documento"]) && !empty($_POST["sub-setor"])) {
+
+			$nomes_documentos_subsetor = mysqli_fetch_all(query(
+				"SELECT docu_tx_nome
+				FROM documento_parametro
+				WHERE docu_tx_tipo = {$_POST["tipo_documento"]} AND docu_nb_sbgrupo = {$_POST["sub-setor"]}" 
+			), MYSQLI_ASSOC);
+
+			$buscaNormalizada = normalizar($_POST["file-name"]);
+
+			$encontrado = array_filter(
+				array_column($nomes_documentos_subsetor, 'docu_tx_nome'),
+				fn($nome) => normalizar($nome) === $buscaNormalizada
+			);
+
+			if (!empty($encontrado)) {
+				$errorMsg = "Já existe um documento com esse nome para o tipo selecionado.";
+			} 
+
+		} else if(!empty($_POST["tipo_documento"])){
+
+			$nomes_documentos_setor = mysqli_fetch_all(query(
+				"SELECT docu_tx_nome
+				FROM documento_parametro
+				WHERE docu_tx_tipo = {$_POST["tipo_documento"]}
+				AND (docu_nb_sbgrupo IS NULL OR docu_nb_sbgrupo = 0)"
+			), MYSQLI_ASSOC);
+
+			$buscaNormalizada = normalizar($_POST["file-name"]);
+
+			$encontrado = array_filter(
+				array_column($nomes_documentos_setor, 'docu_tx_nome'),
+				fn($nome) => normalizar($nome) === $buscaNormalizada
+			);
+
+			if (!empty($encontrado)) {
+				$errorMsg = "Já existe um documento com esse nome para o tipo selecionado.";
+			} 
+
+		}
+
 		if(!empty($errorMsg)){
 			set_status("ERRO: ".$errorMsg);
 			$_POST["id"] = $_POST["idParametro"];
