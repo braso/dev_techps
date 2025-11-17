@@ -24,6 +24,7 @@
             $linha .= "+'<td>'+row.matricula+'</td>'
                     +'<td>'+row.nome+'</td>'
                     +'<td>'+(row.ocupacao?? '')+'</td>'
+                    +'<td>'+(row.tipoOperacaoNome?? '')+'</td>'
                     +'<td class=\"'+(row.statusEndosso === 'E'? 'endo': (row.statusEndosso === 'EP'? 'endo-parc': 'nao-endo'))+'\">'
                         +'<strong>'+row.statusEndosso+'</strong>'
                     +'</td>'
@@ -99,6 +100,7 @@
                 $(document).ready(function(){
                     var tabela = $('#tabela-empresas tbody');
                     var ocupacoesPermitidas = '".$_POST["busca_ocupacao"]."';
+                    var operacaoPermitidas = '".$_POST["operacao"]."';
 
                     function carregarDados(urlArquivo){
                         $.ajax({
@@ -110,8 +112,12 @@
                                     row[index] = item;
                                 });
 
-                                if (ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) {
+                                if((ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) && (operacaoPermitidas.length > 0 && !operacaoPermitidas.includes(row.tipoOperacao))){
+                                    return; // pula esta linha se ocupação e operação não forem permitidas
+                                } else if (ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) {
                                     return; // pula esta linha se ocupação não for permitida
+                                } else if (operacaoPermitidas.length > 0 && !operacaoPermitidas.includes(row.tipoOperacao)) {
+                                    return; // pula esta linha se operação não for permitida
                                 }
 
                                 var saldoAnterior = horasParaMinutos(row.saldoAnterior !== undefined? row.saldoAnterior: row.totais.saldoAnterior);
@@ -345,6 +351,7 @@
             combo_net("Empresa:", "empresa", $_POST["empresa"]?? "", 4, "empresa", ""),
             combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
             ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
+            combo_bd("!Operação", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
             campo_mes("Data", "busca_data", ($_POST["busca_data"]?? ""), 2, $extraCampoData),
         ];
         
@@ -777,6 +784,7 @@
                     <th colspan='2'>{$totais["empresaNome"]}</th>
                     <th colspan='1'></th>
                     <th colspan='1'></th>
+                    <th colspan='1'></th>
                     <th colspan='1'>{$TotaisJson["totais"]["jornadaPrevista"]}</th>
                     <th colspan='1'>{$TotaisJson["totais"]["jornadaEfetiva"]}</th>
                     <th colspan='1'>{$TotaisJson["totais"]["he50APagar"]}</th>
@@ -792,6 +800,7 @@
                     <th class='matricula'>Matrícula</th>
                     <th class='nome'>Nome</th>
                     <th class='ocupacao'>Ocupação</th>
+                    <th class='operacao'>Operação</th>
                     <th class='status'>Status Endosso</th>
                     <th class='jornadaPrevista'>Jornada Prevista</th>
                     <th class='jornadaEfetiva'>Jornada Efetiva</th>
@@ -848,6 +857,7 @@
                 $totais["saldoFinal"] = ($totais["saldoFinal"] == "00:00")? "": $totais["saldoFinal"];
 
                 $rowTotais .= <<<EOD
+                    <th colspan='1'></th>
                     <th colspan='1'></th>
                     <th colspan='1'></th>
                     <th colspan='1'></th>

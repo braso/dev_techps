@@ -223,6 +223,7 @@ function carregarJS(array $arquivos) {
 			$linha .= "+'<td>'+row.matricula+'</td>'
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
+						+'<td>'+row.tipoOperacaoNome+'</td>'
 						+'<td>' +(row['Inicio de Jornada']?.['ativo'] === 0 ? '' : row['Inicio de Jornada']?.['ativo']) +'</td>'
 						+'<td>'+(row['Inicio de Jornada']?.['inativo'] === 0 ? '' : row['Inicio de Jornada']?.['inativo'])+'</td>'
 						+'<td>'+(row['Fim de Jornada']?.['ativo'] === 0 ? '' : row['Fim de Jornada']?.['ativo'])+'</td>'
@@ -284,6 +285,7 @@ function carregarJS(array $arquivos) {
 		if (!in_array($_SERVER["REQUEST_URI"], $dominiosAutotrac)) {
 			$linha .= "+'<td class=\"nomeEmpresa\" style=\"cursor: pointer;\" onclick=\"setAndSubmit(' + row.empr_nb_id + ')\">'+row.empr_tx_nome+'</td>'
 						+'<td>'+row.qtdMotoristas+'</td>'
+						+'<td>'+row.tipoOperacaoNome+'</td>'
 						+'<td>'+row['Inicio de Jornada']+'</td>'
 						+'<td>'+row['Fim de Jornada']+'</td>'
 						+'<td>'+row['Inicio de Refeição']+'</td>'
@@ -367,6 +369,7 @@ function carregarJS(array $arquivos) {
 			$(document).ready(function(){
 				var tabela = $('#tabela-empresas tbody');
 				var ocupacoesPermitidas = '" . $_POST["busca_ocupacao"] . "';
+				var operacaoPermitidas = '".$_POST["operacao"]."';
 
 				function carregarDados(urlArquivo){
 					$.ajax({
@@ -378,9 +381,15 @@ function carregarJS(array $arquivos) {
 								row[index] = item;
 							});
 
-							if (ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) {
+							if((ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) && (operacaoPermitidas.length > 0 && !operacaoPermitidas.includes(row.tipoOperacao))){
+								return; // pula esta linha se ocupação e operação não forem permitidas
+							} else if (ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) {
 								return; // pula esta linha se ocupação não for permitida
+							} else if (operacaoPermitidas.length > 0 && !operacaoPermitidas.includes(row.tipoOperacao)) {
+								return; // pula esta linha se operação não for permitida
 							}
+								
+							console.log(row);
 
 						let totalAtivo = row['Inicio de Jornada']['ativo'] + row['Fim de Jornada']['ativo'] + row['Inicio de Refeição']['ativo']
 						+ row['Fim de Refeição']['ativo'] + row['Inicio de Espera']['ativo'] + row['Fim de Espera']['ativo'] + row['Inicio de Descanso']['ativo']
@@ -830,6 +839,7 @@ function index() {
 			2,
 			["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]
 		),
+		combo_bd("!Operação", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
 	];
 
 	$botao_volta = "";
@@ -1133,6 +1143,7 @@ function index() {
 
 				$rowTotal = "<td></td>
 					<td></td>
+					<td></td>
 					<td><b>Total</b></td>
 					<td class='total'><b>" . $totais["Inicio de Jornada"]["ativo"] . "</b></td>
 					<td class='total'><b>" . $totais["Inicio de Jornada"]["inativo"] . "</b></td> 
@@ -1164,7 +1175,7 @@ function index() {
 				";
 
 				$rowTotais .=
-					"<th colspan='3'>" . $arquivoGeral["empr_tx_nome"] . "
+					"<th colspan='4'>" . $arquivoGeral["empr_tx_nome"] . "
 					 <i class='fa fa-question-circle' data-toggle='tooltip' data-trigger='click' data-placement='top' title='Mostra o total da empresa ao filtrar por ocupação.' style='color: blue; font-size: 15px;'></i></th>"
 					. "<th colspan='2'>" . $arquivoGeral["Inicio de Jornada"] . "</th>"
 					. "<th colspan='2'>" . $arquivoGeral["Fim de Jornada"] . "</th>"
@@ -1186,6 +1197,7 @@ function index() {
 					"<th data-column='matricula' data-order='asc'>Matrícula</th>"
 					. "<th data-column='nome' data-order='asc'>Nome do Funcionário</th>"
 					. "<th data-column='qtdMotoristas' data-order='asc'>Ocupação</th>"
+					. "<th data-column='qtdMotoristas' data-order='asc'>Operação</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Jornada</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Fim de Jornada</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Refeição</th>"
@@ -1203,6 +1215,7 @@ function index() {
 
 				$rowTitulos2 .=
 					"<th></th>"
+					. "<th></th>"
 					. "<th></th>"
 					. "<th></th>"
 					. "<th>Inserido</th>"
@@ -1236,6 +1249,7 @@ function index() {
 				$rowTotais .=
 					"<th colspan='1'></th>"
 					. "<th colspan='2'></th>"
+					. "<th colspan='2'></th>"
 					. "<th colspan='2'>" . $arquivoGeral["Inicio de Jornada"] . "</th>"
 					. "<th colspan='2'>" . $arquivoGeral["Fim de Jornada"] . "</th>"
 					. "<th colspan='2'>" . $arquivoGeral["Inicio de Refeição"] . "</th>"
@@ -1268,6 +1282,7 @@ function index() {
 					"<th data-column='matricula' data-order='asc'>Matrícula</th>"
 					. "<th data-column='nome' data-order='asc'>Nome do Funcionário</th>"
 					. "<th data-column='qtdMotoristas' data-order='asc'>Ocupação</th>"
+					. "<th data-column='qtdMotoristas' data-order='asc'>Operação</th>"
 					. "<th data-column='percEndossados' data-order='asc'>Inicio de Jornada</th>"
 					. "<th data-column='jornadaPrevista' data-order='asc'>Fim de Jornada</th>"
 					. "<th data-column='JornadaEfetiva' data-order='asc'>Inicio de Refeição</th>"
