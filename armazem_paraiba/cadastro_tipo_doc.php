@@ -151,6 +151,7 @@
 			campo("Código", 		"busca_codigo", 	($_POST["busca_codigo"]?? ""), 	1, "", "maxlength='6'"),
 			campo("Nome", 			"busca_nome_like", 		($_POST["busca_nome_like"]?? ""), 	3, "", "maxlength='65'"),
 			combo_bd("!Setor", 		"busca_setor",		(!empty($_POST["busca_setor"])? $_POST["busca_setor"]: ""), 4, "grupos_documentos"),
+			combo_bd("!Subsetor", "busca_subsetor", ($_POST["busca_subsetor"]?? ""), 2, "sbgrupos_documentos", "", "ORDER BY sbgr_tx_nome ASC"),
             combo("Status", 		"busca_status", 	($_POST["busca_status"]?? ""), 	2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
 		];
 
@@ -170,6 +171,7 @@
             "CÓDIGO" 		=> "tipo_nb_id",
             "NOME" 			=> "tipo_tx_nome",
             "SETOR" 		=> "grup_tx_nome",
+			"SUBSETOR" 		=> "sbgr_tx_nome",
             "STATUS" 	    => "tipo_tx_status",
         ];
 
@@ -178,11 +180,13 @@
             "busca_nome_like" 	=> "tipo_tx_nome",
             "busca_status" 		=> "tipo_tx_status",
             "busca_setor" 		=> "tipo_nb_grupo",
+            "busca_subsetor" 	=> "sbgr_nb_id",
         ];
 
         $queryBase = 
             "SELECT ".implode(", ", array_values($gridFields))." FROM tipos_documentos"
             ." LEFT JOIN grupos_documentos ON grupos_documentos.grup_nb_id = tipos_documentos.tipo_nb_grupo"
+            ." LEFT JOIN sbgrupos_documentos ON grup_nb_id = sbgr_nb_idgrup"
         ;
 
         $actions = criarIconesGrid(

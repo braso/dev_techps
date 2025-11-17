@@ -251,6 +251,7 @@
             "CÓDIGO" 		=> "grup_nb_id",
             "NOME" 			=> "grup_tx_nome",
             "STATUS" 	    => "grup_tx_status",
+			"SUBSETORES"    	=> "subgrupos",
         ];
 
         $camposBusca = [
@@ -260,7 +261,20 @@
         ];
 
         $queryBase = 
-            "SELECT ".implode(", ", array_values($gridFields))." FROM grupos_documentos"
+            "SELECT ".implode(", ", array_values($gridFields))." FROM ( "
+			."SELECT 
+				g.grup_nb_id,
+				g.grup_tx_nome,
+				g.grup_tx_status,
+				GROUP_CONCAT(s.sbgr_tx_nome SEPARATOR ', ') AS subgrupos
+			FROM grupos_documentos g"
+			." LEFT JOIN sbgrupos_documentos s 
+				ON g.grup_nb_id = s.sbgr_nb_idgrup
+						GROUP BY 
+							g.grup_nb_id,
+							g.grup_tx_nome,
+							g.grup_tx_status
+					) AS final "
         ;
 
         $actions = criarIconesGrid(
