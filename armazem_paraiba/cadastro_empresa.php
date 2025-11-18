@@ -18,56 +18,150 @@
 		exit;
 	}
 
+	function normalizar($texto) {
+		$texto = preg_replace('/[áàãâä]/ui', 'a', $texto);
+		$texto = preg_replace('/[éèêë]/ui', 'e', $texto);
+		$texto = preg_replace('/[íìîï]/ui', 'i', $texto);
+		$texto = preg_replace('/[óòõôö]/ui', 'o', $texto);
+		$texto = preg_replace('/[úùûü]/ui', 'u', $texto);
+		$texto = preg_replace('/[ç]/ui', 'c', $texto);
+		return strtolower(trim(preg_replace('/\s+/', ' ', $texto)));
+	}	
+
 	function enviarDocumento() {
-		// global $a_mod;
+		global $a_mod;
 
-		$idEmpresa = $_POST["idEmpresa"];
-		$arquivos =  $_FILES["file"];
-		$novo_nome = str_replace(["/", "."], ["_", "_"], $_POST["file-name"]);
-		$descricao = $_POST["description-text"];
-		$mimeType = mime_content_type($arquivos["tmp_name"]);
+		$errorMsg = "";
+		if(empty($_POST['data_vencimento'])){
+			$obgVencimento = mysqli_fetch_all(query("SELECT tipo_tx_vencimento FROM `tipos_documentos` 
+			WHERE tipo_nb_id = {$_POST["tipo_documento"]}"), MYSQLI_ASSOC);
 
-		$allowed = array(
-			"image/jpeg",
-			"image/png",
-			"application/msword",
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-			"application/pdf",
-			"application/vnd.android.package-archive",
-			"application/zip",
-			"application/octet-stream",
-			"application/x-zip-compressed"
-		);
+			if($obgVencimento[0]['tipo_tx_vencimento'] == 'sim' && (empty($_POST["data_vencimento"]) || $_POST["data_vencimento"] == "0000-00-00")){
+				$errorMsg = "Campo obrigatório não preenchidos: Data de Vencimento";
+			}
+		}
 
-		if ($arquivos["error"] !== UPLOAD_ERR_OK) {
-			echo "Erro no upload: ".$arquivos["error"];
+		if(!empty($_POST["tipo_documento"]) && !empty($_POST["sub-setor"])) {
+
+			$nomes_documentos_subsetor = mysqli_fetch_all(query(
+				"SELECT docu_tx_nome
+				FROM documento_empresa
+				WHERE docu_tx_tipo = {$_POST["tipo_documento"]} AND docu_nb_sbgrupo = {$_POST["sub-setor"]}" 
+			), MYSQLI_ASSOC);
+
+			$buscaNormalizada = normalizar($_POST["file-name"]);
+
+			$encontrado = array_filter(
+				array_column($nomes_documentos_subsetor, 'docu_tx_nome'),
+				fn($nome) => normalizar($nome) === $buscaNormalizada
+			);
+
+			if (!empty($encontrado)) {
+				$errorMsg = "Já existe um documento com esse nome para o tipo selecionado.";
+			} 
+
+		} else if(!empty($_POST["tipo_documento"])){
+
+			$nomes_documentos_setor = mysqli_fetch_all(query(
+				"SELECT docu_tx_nome
+				FROM documento_empresa
+				WHERE docu_tx_tipo = {$_POST["tipo_documento"]}
+				AND (docu_nb_sbgrupo IS NULL OR docu_nb_sbgrupo = 0)"
+			), MYSQLI_ASSOC);
+
+			$buscaNormalizada = normalizar($_POST["file-name"]);
+
+			$encontrado = array_filter(
+				array_column($nomes_documentos_setor, 'docu_tx_nome'),
+				fn($nome) => normalizar($nome) === $buscaNormalizada
+			);
+
+			if (!empty($encontrado)) {
+				$errorMsg = "Já existe um documento com esse nome para o tipo selecionado.";
+			} 
+
+		}
+
+		if(!empty($errorMsg)){
+			set_status("ERRO: ".$errorMsg);
+			$_POST["id"] = $_POST["idRelacionado"];
+			modificarEmpresa();
 			exit;
 		}
 
-		if (in_array($mimeType, $allowed) && $arquivos["name"] != "") {
-				$pasta_empresa = "arquivos/docu_empresa/{$idEmpresa}/";
+		$novoParametro = [
+			"empr_nb_id" => (int) $_POST["idRelacionado"],
+			"docu_tx_nome" => $_POST["file-name"] ?? '',
+			"docu_tx_descricao" => $_POST["description-text"] ?? '',
+			"docu_tx_dataCadastro" => date("Y-m-d H:i:s"),
+			"docu_tx_datavencimento" => $_POST["data_vencimento"] ?? null,
+			"docu_tx_tipo" => $_POST["tipo_documento"] ?? '',
+			"docu_nb_sbgrupo" => (int) $_POST["sub-setor"] ?? null,
+			"docu_tx_usuarioCadastro" => (int) $_POST["idUserCadastro"],
+			"docu_tx_assinado" => "nao",
+			"docu_tx_visivel" => $_POST["visibilidade"] ?? 'nao'
+		];
 		
-				if (!is_dir($pasta_empresa)) {
-					mkdir($pasta_empresa, 0755, true);
-				}
-
-				$arquivo_temporario = $arquivos["tmp_name"];
-				$extensao = pathinfo($arquivos["name"], PATHINFO_EXTENSION); 
-				
-				$novoDocumentoEmpresa = [
-					"empr_nb_id" => $idEmpresa,
-					"docu_tx_nome" => "{$novo_nome}.{$extensao}",
-					"docu_tx_descricao" => $descricao,
-					"docu_tx_caminho" => "{$pasta_empresa}{$novo_nome}.{$extensao}",
-					"docu_tx_dataCadastro" =>date("Y-m-d H:i:s")
-				];
-		
-				if (move_uploaded_file($arquivo_temporario, $novoDocumentoEmpresa["docu_tx_caminho"])) {
-					inserir("documento_empresa", array_keys($novoDocumentoEmpresa), array_values($novoDocumentoEmpresa));
-				}
+		$arquivo = $_FILES["file"] ?? null;
+		if (!$arquivo || $arquivo["error"] !== UPLOAD_ERR_OK) {
+			set_status("Erro no upload do arquivo.");
+			exit;
 		}
 
-		$_POST["id"] = $idEmpresa;
+		// Tipos de arquivo permitidos
+		$formatos = [
+			"image/jpeg" => "jpg",
+			"image/png" => "png",
+			"application/msword" => "doc",
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "docx",
+			"application/pdf" => "pdf"
+		];
+
+		// Valida tipo real do arquivo (mais seguro que apenas $_FILES["type"])
+		$tipo = mime_content_type($arquivo["tmp_name"]);
+		if (!array_key_exists($tipo, $formatos)) {
+			set_status("Tipo de arquivo não permitido.");
+			visualizarCadastro();
+			exit;
+		}
+
+		// Usa o nome original do arquivo (mas sanitiza para evitar caracteres perigosos)
+		$nomeOriginal = basename($arquivo["name"]); // remove possíveis caminhos
+		$nomeSeguro = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', $nomeOriginal); // mantém letras, números, espaço, ponto, traço e underscore
+
+		$pasta_funcionario = "arquivos/docu_empresa/" . $novoParametro["empr_nb_id"] . "/";
+		if (!is_dir($pasta_funcionario)) {
+			mkdir($pasta_funcionario, 0777, true);
+		}
+
+		// Caminho físico usa o nome original (sanitizado)
+		$novoParametro["docu_tx_caminho"] = $pasta_funcionario . $nomeSeguro;
+
+		// Se for PDF, verifica assinatura
+		if ($tipo === "application/pdf" && function_exists("temAssinaturaRapido")) {
+			if (temAssinaturaRapido($arquivo["tmp_name"])) {
+				$novoParametro["docu_tx_assinado"] = "sim";
+			}
+		}
+
+		// Evita sobrescrever arquivos já existentes
+		if (file_exists($novoParametro["docu_tx_caminho"])) {
+			$info = pathinfo($nomeSeguro);
+			$base = $info["filename"];
+			$ext = isset($info["extension"]) ? '.' . $info["extension"] : '';
+			$nomeSeguro = $base . '_' . time() . $ext;
+			$novoParametro["docu_tx_caminho"] = $pasta_funcionario . $nomeSeguro;
+		}
+
+		// Move o arquivo e salva no banco
+		if (move_uploaded_file($arquivo["tmp_name"], $novoParametro["docu_tx_caminho"])) {
+			inserir("documento_empresa", array_keys($novoParametro), array_values($novoParametro));
+			set_status("Registro inserido com sucesso.");
+		} else {
+			set_status("Falha ao mover o arquivo para o diretório de destino.");
+		}
+
+		$_POST["id"] = $_POST["idRelacionado"];
 		modificarEmpresa();
 		exit;
 	}
@@ -76,7 +170,7 @@
 
 		query("DELETE FROM documento_empresa WHERE docu_nb_id = $_POST[idArq]");
 		
-		$_POST["id"] = $_POST["idEmpresa"];
+		$_POST["id"] = $_POST["idRelacionado"];
 		modificarEmpresa();
 		exit;
 	}
@@ -495,7 +589,27 @@
 		$file = explode(".", $file);
 
 		if (!empty($a_mod["empr_nb_id"])) {
-			$sqlArquivos= query("SELECT * FROM documento_empresa WHERE empr_nb_id = ".$a_mod["empr_nb_id"]);
+			$sqlArquivos= query("SELECT 
+			documento_empresa.docu_nb_id,
+			documento_empresa.empr_nb_id,
+			documento_empresa.docu_tx_dataCadastro,
+			documento_empresa.docu_tx_dataVencimento,
+			documento_empresa.docu_tx_caminho,
+			documento_empresa.docu_tx_descricao,
+			documento_empresa.docu_tx_nome,
+			documento_empresa.docu_tx_visivel,
+			documento_empresa.docu_tx_assinado,
+			t.tipo_tx_nome,
+			gd.grup_tx_nome,
+			subg.sbgr_tx_nome
+			FROM documento_empresa
+			LEFT JOIN tipos_documentos t 
+			ON documento_empresa.docu_tx_tipo = t.tipo_nb_id
+			LEFT JOIN grupos_documentos gd 
+			ON t.tipo_nb_grupo = gd.grup_nb_id
+			LEFT JOIN sbgrupos_documentos subg
+			ON subg.sbgr_nb_id = documento_empresa.docu_nb_sbgrupo
+			WHERE documento_empresa.empr_nb_id = ".$a_mod["empr_nb_id"]);
 			$arquivos = mysqli_fetch_all($sqlArquivos, MYSQLI_ASSOC);
 		}
 

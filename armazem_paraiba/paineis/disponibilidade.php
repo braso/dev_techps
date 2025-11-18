@@ -17,6 +17,7 @@
         $linha = "linha = '<tr>'";
         if (!empty($_POST["empresa"])) {
             $linha .= " +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
+                        +'<td style=\'text-align: center;\'>'+item.tipoOperacaoNome+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.Nome+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ultimaJornada+'</td>'
@@ -354,6 +355,7 @@
             2),
             combo("Status", "busca_Dispobilidade", ($_POST["busca_Dispobilidade"] ?? ""), 2, 
             ["" => "Todos", "disponivel" => "Disponives", "naoPermitido" => "Indisponives", "parcial" => "Parcialmente disponível"]),
+            combo_bd("!Operação", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
         ];
 
         $botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados()'>Imprimir</button>
@@ -563,6 +565,7 @@
                 $rowTitulos = "<tr id='titulos3' class='titulos3'>";
                 $rowTitulos .= "
                 <th class='ocupacao'>Ocupação</th>
+                <th class='operacao'>Operação</th>
                 <th class='matricula'>Matrícula</th>
                 <th class='nome'>Nome</th>
                 <th class='jornada'>Fim de jornada</th>

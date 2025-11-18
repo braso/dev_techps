@@ -14,13 +14,21 @@
 
     function modificarSetor(){
 		$a_mod = carregar("grupos_documentos", $_POST["id"]);
-		[$_POST["id"], $_POST["nome"], $_POST["status"]] = [$a_mod["grup_nb_id"], $a_mod["grup_tx_nome"], $a_mod["grup_tx_status"]];
+		$subSetor = mysqli_fetch_all(query(
+			"SELECT sbgr_nb_id, sbgr_tx_nome
+			FROM `sbgrupos_documentos`
+			WHERE `sbgr_nb_idgrup` = {$a_mod["grup_nb_id"]}
+			ORDER BY sbgr_tx_nome ASC"
+		), MYSQLI_ASSOC);
+
+		[$_POST["id"], $_POST["nome"], $_POST["status"], $_POST["subsetores"]] = [$a_mod["grup_nb_id"], $a_mod["grup_tx_nome"], $a_mod["grup_tx_status"], $subSetor];
 		
 		layout_Setor();
 		exit;
 	}
 
     function cadastra_setor() {
+		// dd($_POST);
 		$novoSetor = [
 			"grup_tx_nome" => $_POST["nome"],
 			"grup_tx_status" => "ativo"
@@ -28,15 +36,164 @@
 
 		if(!empty($_POST["id"])){
 			atualizar("grupos_documentos", array_keys($novoSetor), array_values($novoSetor), $_POST["id"]);
-		}else{
-			// $novoSetor["oper_nb_userCadastro"] = $_SESSION["user_nb_id"];
-			// $novoSetor["oper_tx_dataCadastro"] = date("Y-m-d H:i:s");
 
-			inserir("grupos_documentos", array_keys($novoSetor), array_values($novoSetor));
+			if(!empty($_POST['subsetores_excluir'])){
+				// transforma a string em array
+				$idsExcluir = explode(',', $_POST['subsetores_excluir']);
+				
+				// percorre cada ID
+				foreach ($idsExcluir as $id) {
+					$id = trim($id); // remove espaços extras, se houver
+					if (!empty($id)) {
+						// executa a exclusão no banco
+						query("DELETE FROM sbgrupos_documentos WHERE sbgr_nb_id = $id");
+					}
+				}
+			}
+
+			if(!empty($_POST["subsetores"])){
+				foreach($_POST["subsetores"] as $id => $nome){
+					$novoSubSetor = [
+						"sbgr_tx_nome" => $nome,
+						"sbgr_nb_idgrup" => $_POST["id"],
+						"sbgr_tx_status" => "ativo"
+					];
+					atualizar("sbgrupos_documentos", array_keys($novoSubSetor), array_values($novoSubSetor), $id);
+				}
+			}
+		}else{
+
+			$id = inserir("grupos_documentos", array_keys($novoSetor), array_values($novoSetor));
+			
+			if(!empty($_POST["subsetores"])){
+				foreach($_POST["subsetores"] as $subsetor){
+					if(!empty($subsetor)){
+						$novoSubSetor = [
+							"sbgr_tx_nome" => $subsetor,
+							"sbgr_nb_idgrup" => $id[0],
+							"sbgr_tx_status" => "ativo"
+						];
+
+						inserir("sbgrupos_documentos", array_keys($novoSubSetor), array_values($novoSubSetor));
+					}
+				}
+			}
 		}
 
 		index();
 		exit;
+	}
+
+	function campoSubSetor($nome, $variavel, $valores = [], $tamanho = 2) {
+		static $contador = 0;
+		$contador++;
+
+		$idLista = "listaSubsetores_$contador";
+		$campoExcluir = "{$variavel}_excluir";
+
+		if (!is_array($valores)) {
+			$valores = array_filter([$valores]);
+		}
+
+		$camposExistentes = '';
+
+		if (!empty($valores)) {
+			foreach ($valores as $index => $valor) {
+				$id = isset($valor['sbgr_nb_id']) ? htmlspecialchars($valor['sbgr_nb_id'], ENT_QUOTES) : '';
+				$nomeSubsetor = isset($valor['sbgr_tx_nome']) ? htmlspecialchars($valor['sbgr_tx_nome'], ENT_QUOTES) : '';
+
+				$botao = $index === 0
+					? "<button class='btn btn-success btn-sm adicionar-novo' type='button' title='Adicionar novo subsetor'
+							style='height:40px; margin-top: -10px; margin-left:-1px; border-top-left-radius:0; border-bottom-left-radius:0;'>
+							<span class='glyphicon glyphicon-plus'></span>
+						</button>"
+					: "<button class='btn btn-danger btn-sm remover' type='button' title='Remover subsetor'
+							style='height:40px; margin-top: -10px; margin-left:-1px; border-top-left-radius:0; border-bottom-left-radius:0;'>
+							<span class='glyphicon glyphicon-minus'></span>
+						</button>";
+
+				$camposExistentes .= "
+				<div class='col-sm-{$tamanho} margin-bottom-5 subsetor-item' data-id='{$id}'>
+					<label class='control-label'>{$nome}</label>
+					<div style='display:flex; align-items:center;'>
+						<input
+							type='text'
+							name='{$variavel}[{$id}]'
+							class='form-control input-sm campo-fit-content'
+							placeholder='Nome do subsetor'
+							style='width:120px;'
+							value='{$nomeSubsetor}'
+						>
+						{$botao}
+					</div>
+				</div>";
+			}
+		} else {
+			// Campo inicial (novo subsetor)
+			$camposExistentes = "
+			<div class='col-sm-{$tamanho} margin-bottom-5 subsetor-item'>
+				<label class='control-label'>{$nome}</label>
+				<div style='display:flex; align-items:center;'>
+					<input
+						type='text'
+						name='{$variavel}[]'
+						class='form-control input-sm campo-fit-content'
+						placeholder='Nome do subsetor'
+						style='width:120px;'
+					>
+					<button class='btn btn-success btn-sm adicionar-novo' type='button' title='Adicionar novo subsetor'
+						style='height:40px; margin-top: -10px; margin-left:-1px; border-top-left-radius:0; border-bottom-left-radius:0;'>
+						<span class='glyphicon glyphicon-plus'></span>
+					</button>
+				</div>
+			</div>";
+		}
+
+		$campo = "
+		<div class='form-group row' id='{$idLista}'>
+			{$camposExistentes}
+			<input type='hidden' name='{$campoExcluir}' id='{$campoExcluir}' value=''>
+		</div>";
+
+		$js = "
+		<script>
+		(function($){
+			$(function(){
+				var lista = $('#{$idLista}');
+				var campoExcluir = $('#{$campoExcluir}');
+
+				// Adicionar novo subsetor
+				lista.on('click', '.adicionar-novo', function(){
+					var novo = `
+					<div class='col-sm-{$tamanho} margin-bottom-5 subsetor-item'>
+						<label class='control-label'>$nome</label>
+						<div style='display:flex; align-items:center;'>
+							<input type='text' name='{$variavel}[]' class='form-control input-sm campo-fit-content' placeholder='Nome do subsetor' style='width:120px;'>
+							<button class='btn btn-danger btn-sm remover' type='button' title='Remover subsetor' style='height:40px; margin-top: -10px; margin-left:-1px; border-top-left-radius:0; border-bottom-left-radius:0;'>
+								<span class='glyphicon glyphicon-minus'></span>
+							</button>
+						</div>
+					</div>`;
+					lista.append(novo);
+				});
+
+				// Excluir subsetor
+				lista.on('click', '.remover', function(){
+					var item = $(this).closest('.subsetor-item');
+					var id = item.data('id');
+
+					if (id) {
+						var existentes = campoExcluir.val();
+						campoExcluir.val(existentes ? existentes + ',' + id : id);
+					}
+
+					item.remove();
+				});
+			});
+		})(jQuery);
+		</script>";
+
+		return $campo . $js;
 	}
 
     function layout_setor() {
@@ -44,8 +201,14 @@
 
 		cabecalho("Cadastro de Setor");
 
+		if (!empty($_POST["id"])) {
+			$campoStatus = combo("Status", "busca_banco", $_POST["busca_banco"]?? "", 2, [ "ativo" => "Ativo", "inativo" => "Inativo"]);
+		}
+
 		$campos = [
-			campo("Nome*", "nome", $_POST["nome"], 4),
+			campo("Nome*", "nome", $_POST["nome"], 2),
+			$campoStatus,
+			campoSubSetor('Subsetores', 'subsetores', $_POST["subsetores"] ?? []),
 		];
 
 		$botoes = [
@@ -88,6 +251,7 @@
             "CÓDIGO" 		=> "grup_nb_id",
             "NOME" 			=> "grup_tx_nome",
             "STATUS" 	    => "grup_tx_status",
+			"SUBSETORES"    	=> "subgrupos",
         ];
 
         $camposBusca = [
@@ -97,7 +261,20 @@
         ];
 
         $queryBase = 
-            "SELECT ".implode(", ", array_values($gridFields))." FROM grupos_documentos"
+            "SELECT ".implode(", ", array_values($gridFields))." FROM ( "
+			."SELECT 
+				g.grup_nb_id,
+				g.grup_tx_nome,
+				g.grup_tx_status,
+				GROUP_CONCAT(s.sbgr_tx_nome SEPARATOR ', ') AS subgrupos
+			FROM grupos_documentos g"
+			." LEFT JOIN sbgrupos_documentos s 
+				ON g.grup_nb_id = s.sbgr_nb_idgrup
+						GROUP BY 
+							g.grup_nb_id,
+							g.grup_tx_nome,
+							g.grup_tx_status
+					) AS final "
         ;
 
         $actions = criarIconesGrid(

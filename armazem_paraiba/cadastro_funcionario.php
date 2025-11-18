@@ -721,17 +721,78 @@
 	function enviarDocumento() {
 		global $a_mod;
 
-		if (empty($a_mod) && isset($_POST["id"])) {
-			$a_mod = carregar("entidade", $_POST["id"]);
+		// dd($_POST);
+
+		if (empty($a_mod) && isset($_POST["idRelacionado"])) {
+			$a_mod = carregar("entidade", $_POST["idRelacionado"]);
+		}
+
+		$errorMsg = "";
+		if(isset($_POST["tipo_documento"]) && !empty($_POST["tipo_documento"])){
+			$obgVencimento = mysqli_fetch_all(query("SELECT tipo_tx_vencimento FROM `tipos_documentos` 
+			WHERE tipo_nb_id = {$_POST["tipo_documento"]}"), MYSQLI_ASSOC);
+
+			if($obgVencimento[0]['tipo_tx_vencimento'] == 'sim' && (empty($_POST["data_vencimento"]) || $_POST["data_vencimento"] == "0000-00-00")){
+				$errorMsg = "Campo obrigatório não preenchidos: Data de Vencimento";
+			}
+		}
+
+		if(!empty($_POST["tipo_documento"]) && !empty($_POST["sub-setor"])) {
+
+			$nomes_documentos_subsetor = mysqli_fetch_all(query(
+				"SELECT docu_tx_nome
+				FROM documento_funcionario
+				WHERE docu_tx_tipo = {$_POST["tipo_documento"]} AND docu_nb_sbgrupo = {$_POST["sub-setor"]}" 
+			), MYSQLI_ASSOC);
+
+			$buscaNormalizada = normalizar($_POST["file-name"]);
+
+			$encontrado = array_filter(
+				array_column($nomes_documentos_subsetor, 'docu_tx_nome'),
+				fn($nome) => normalizar($nome) === $buscaNormalizada
+			);
+
+			if (!empty($encontrado)) {
+				$errorMsg = "Já existe um documento com esse nome para o tipo selecionado.";
+			} 
+
+		} else if(!empty($_POST["tipo_documento"])){
+
+			$nomes_documentos_setor = mysqli_fetch_all(query(
+				"SELECT docu_tx_nome
+				FROM documento_funcionario
+				WHERE docu_tx_tipo = {$_POST["tipo_documento"]}
+				AND (docu_nb_sbgrupo IS NULL OR docu_nb_sbgrupo = 0)"
+			), MYSQLI_ASSOC);
+
+			$buscaNormalizada = normalizar($_POST["file-name"]);
+
+			$encontrado = array_filter(
+				array_column($nomes_documentos_setor, 'docu_tx_nome'),
+				fn($nome) => normalizar($nome) === $buscaNormalizada
+			);
+
+			if (!empty($encontrado)) {
+				$errorMsg = "Já existe um documento com esse nome para o tipo selecionado.";
+			} 
+
+		}
+
+		if(!empty($errorMsg)){
+			set_status("ERRO: ".$errorMsg);
+			$_POST["id"] = $_POST["idRelacionado"];
+			visualizarCadastro();
+			exit;
 		}
 
 		$novoArquivo = [
-			"docu_nb_entidade" => (int) $_POST["idFuncionario"],
+			"docu_nb_entidade" => (int) $_POST["idRelacionado"],
 			"docu_tx_nome" => $_POST["file-name"] ?? '',
 			"docu_tx_descricao" => $_POST["description-text"] ?? '',
 			"docu_tx_dataCadastro" => date("Y-m-d H:i:s"),
 			"docu_tx_dataVencimento" => $_POST["data_vencimento"] ?? null,
 			"docu_tx_tipo" => $_POST["tipo_documento"] ?? '',
+			"docu_nb_sbgrupo" => (int) $_POST["sub-setor"] ?? null,
 			"docu_tx_usuarioCadastro" => (int) $_POST["idUserCadastro"],
 			"docu_tx_assinado" => "nao",
 			"docu_tx_visivel" => $_POST["visibilidade"] ?? 'nao'
@@ -1067,7 +1128,7 @@
 			campo(	  	"Filiação Pai", 		"pai", 				($a_mod["enti_tx_pai"]?? ""),			3, "", 					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"Filiação Mãe", 		"mae", 				($a_mod["enti_tx_mae"]?? ""),			3, "", 					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"Nome do Cônjuge",	 	"conjugue", 		($a_mod["enti_tx_conjugue"]?? ""),		3, "", 					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
-			combo_bd( "!Tipo de Operação", 	"tipoOperacao",		(isset($_POST["enti_tx_tipoOperacao"])? $_POST["enti_tx_tipoOperacao"]: ""), 3, "operacao"),
+			combo_bd( "!Tipo de Operação", 	"tipoOperacao",		(isset($a_mod["enti_tx_tipoOperacao"])? $a_mod["enti_tx_tipoOperacao"]: ""), 3, "operacao"),
 
 			textarea(	"Observações:", "obs", ($a_mod["enti_tx_obs"]?? ""), 12, "tabindex=".sprintf("%02d", $tabIndex++))
 		]);
@@ -1222,8 +1283,27 @@
 
 		if (!empty($a_mod["enti_nb_id"])) {
 			$arquivos = mysqli_fetch_all(query(
-				"SELECT * FROM documento_funcionario"
-					." WHERE docu_nb_entidade = ".$a_mod["enti_nb_id"]
+				"SELECT 
+				documento_funcionario.docu_nb_id,
+				documento_funcionario.docu_nb_entidade,
+				documento_funcionario.docu_tx_dataCadastro,
+				documento_funcionario.docu_tx_dataVencimento,
+				documento_funcionario.docu_tx_caminho,
+				documento_funcionario.docu_tx_descricao,
+				documento_funcionario.docu_tx_nome,
+				documento_funcionario.docu_tx_visivel,
+				documento_funcionario.docu_tx_assinado,
+				t.tipo_tx_nome,
+				gd.grup_tx_nome,
+				subg.sbgr_tx_nome
+				FROM documento_funcionario
+				LEFT JOIN tipos_documentos t 
+				ON documento_funcionario.docu_tx_tipo = t.tipo_nb_id
+				LEFT JOIN grupos_documentos gd 
+				ON t.tipo_nb_grupo = gd.grup_nb_id
+				LEFT JOIN sbgrupos_documentos subg
+				ON subg.sbgr_nb_id = documento_funcionario.docu_nb_sbgrupo
+				WHERE documento_funcionario.docu_nb_entidade = ".$a_mod["enti_nb_id"]
 			),MYSQLI_ASSOC);
 			echo "</div><div class='col-md-12'><div class='col-md-12 col-sm-12'>".arquivosFuncionario("Documentos", $a_mod["enti_nb_id"], $arquivos);
 		}

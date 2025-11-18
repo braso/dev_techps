@@ -19,10 +19,11 @@
         "OPAFRUTAS"				=> "opafrutas",
         "PKFMEDEIROS"			=> "pkf_medeiros",
         "QUALY"		            => "qualy_transportes",
+        "SÃO LUCAS"             => "sao_lucas",       
         "TECHPS"				=> "techps",
         "DEMO"			        => "techps_demo",
         "TRAMPOLIMGAS"			=> "trampolim_gas",
-        "TRANSCOPEL"			=> "transcopel"
+        "TRANSCOPEL"			=> "transcopel",
     ];
 
     $empresasNomes = [
@@ -42,10 +43,11 @@
         "opafrutas" 		=> "Opafrutas",
         "pkf_medeiros" 		=> "PKF Medeiros",
         "qualy_transportes" => "Qualy Transportes",
+        "sao_lucas" 	    => "São Lucas",
         "techps" 			=> "TechPS",
         "techps_demo" 		=> "TechPS (Demo)",
         "trampolim_gas" 	=> "Trampolim Gás",
-        "transcopel" 	    => "Transcopel"
+        "transcopel" 	    => "Transcopel",
     ];
 
     $empresa_array = array_values($empresas); //Utilizado nos arquivos que importam este.

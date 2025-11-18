@@ -67,6 +67,7 @@
 			$linha .= "+'<td>'+row.matricula+'</td>'
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
+						+'<td>'+row.tipoOperacaoNome+'</td>'
 						+'<td style=\"vertical-align: middle;\" class='+class1+'>'+(row.espera === 0 ? '' : row.espera )+'</td>'
 						+'<td style=\"vertical-align: middle;\" class='+class1+'>'+(row.descanso === 0 ? '' : row.descanso )+'</td>'
 						+'<td style=\"vertical-align: middle;\" class='+class1+'>'+(row.repouso === 0 ? '' : row.repouso )+'</td>'
@@ -129,6 +130,7 @@
 			$linha .= "+'<td>'+row.matricula+'</td>'
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
+						+'<td>'+row.tipoOperacaoNome+'</td>'
 						+'<td class='+class1+'>'+(row.falta === 0 ? '' : row.falta )+'</td>'
 						+'<td class='+class2+'>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
 						+'<td class='+class2+'>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
@@ -183,6 +185,7 @@
 				$(document).ready(function(){
 					var tabela = $('#tabela-empresas tbody');
 					var ocupacoesPermitidas = '".$_POST["busca_ocupacao"]."';
+					var operacaoPermitidas = '".$_POST["operacao"]."';
 
 					function carregarDados(urlArquivo){
 						$.ajax({
@@ -202,9 +205,13 @@
 									row[index] = item;
 								});
 
-								if (ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) {
-									return; // pula esta linha se ocupação não for permitida
-								}
+								if((ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) && (operacaoPermitidas.length > 0 && !operacaoPermitidas.includes(row.tipoOperacao))){
+                                    return; // pula esta linha se ocupação e operação não forem permitidas
+                                } else if (ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) {
+                                    return; // pula esta linha se ocupação não for permitida
+                                } else if (operacaoPermitidas.length > 0 && !operacaoPermitidas.includes(row.tipoOperacao)) {
+                                    return; // pula esta linha se operação não for permitida
+                                }
 
 								var totalNaEndossado = (row.falta || 0) + (row.jornadaEfetiva || 0) + (row.refeicao || 0) 
 								+ (row.espera || 0) + (row.descanso || 0) + (row.repouso || 0) + (row.jornada || 0) 
@@ -417,6 +424,7 @@
 			campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
 			combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
             ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
+			combo_bd("!Operação", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
 			combo("Tipo",	"busca_endossado", (!empty($_POST["busca_endossado"]) ? $_POST["busca_endossado"] : ""), 2, ["naoEndossado" => "Atualizado","endossado" => "Pós-fechamento", "semAjustes"=>"Sem ajuste"])
 		];
 
@@ -789,6 +797,7 @@
 			$totalMediaPerformance = $mediaPerfTotal;
 			$rowTotal = "<td></td>
 					<td></td>
+					<td></td>
 					<td>Total</td>
 					$totalRow 
 					<td class='total'>".$totalempre["falta"]."</td>
@@ -904,6 +913,7 @@
 					"<th class='matricula'>Matricula</th>"
 					."<th class='funcionario'>Funcionário</th>"
 					."<th class='ocupacao'>Ocupação</th>"
+					."<th class='operacao'>Operação</th>"
 					."<th class='tituloBaixaGravidade'>Espera</th>"
 					."<th class='tituloBaixaGravidade'>Descanso</th>"
 					."<th class='tituloBaixaGravidade'>Repouso</th>"
@@ -927,6 +937,7 @@
 					"<th class='matricula'>Matricula</th>"
 					."<th class='funcionario'>Funcionário</th>"
 					."<th class='ocupacao'>Ocupação</th>"
+					."<th class='operacao'>Operação</th>"
 					."<th class='tituloBaixaGravidade'>Jornada Prevista</th>"
 					."<th class='tituloMediaGravidade'>Jornada Efetiva</th>"
 					."<th class='tituloMediaGravidade'>MDC</th>"
