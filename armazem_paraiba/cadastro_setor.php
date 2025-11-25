@@ -28,7 +28,7 @@
 	}
 
     function cadastra_setor() {
-		// dd($_POST);
+
 		$novoSetor = [
 			"grup_tx_nome" => $_POST["nome"],
 			"grup_tx_status" => "ativo"
@@ -52,33 +52,62 @@
 			}
 
 			if(!empty($_POST["subsetores"])){
-				foreach($_POST["subsetores"] as $id => $nome){
+				$subSetorExistente = mysqli_fetch_all(query(
+					"SELECT sbgr_nb_id, sbgr_tx_nome
+					FROM `sbgrupos_documentos`
+					WHERE `sbgr_nb_idgrup` = {$_POST["id"]}
+					ORDER BY sbgr_tx_nome ASC"
+				), MYSQLI_ASSOC);
+
+				$existemRegistros = !empty($subSetorExistente);
+    
+				foreach ($_POST["subsetores"] as $id => $nome) {
+					if (empty($nome)) {
+						continue; // Pula itens vazios
+					}
+					
 					$novoSubSetor = [
 						"sbgr_tx_nome" => $nome,
 						"sbgr_nb_idgrup" => $_POST["id"],
 						"sbgr_tx_status" => "ativo"
 					];
-					atualizar("sbgrupos_documentos", array_keys($novoSubSetor), array_values($novoSubSetor), $id);
+					
+					if ($existemRegistros && isset($subSetorExistente[$id])) {
+						// Atualiza registro existente
+						atualizar(
+							"sbgrupos_documentos", 
+							array_keys($novoSubSetor), 
+							array_values($novoSubSetor), 
+							$id
+						);
+					} else {
+						// Insere novo registro
+						inserir(
+							"sbgrupos_documentos", 
+							array_keys($novoSubSetor), 
+							array_values($novoSubSetor)
+						);
+					}
 				}
-			}
-		}else{
+			} 
+			}else{
 
-			$id = inserir("grupos_documentos", array_keys($novoSetor), array_values($novoSetor));
-			
-			if(!empty($_POST["subsetores"])){
-				foreach($_POST["subsetores"] as $subsetor){
-					if(!empty($subsetor)){
-						$novoSubSetor = [
-							"sbgr_tx_nome" => $subsetor,
-							"sbgr_nb_idgrup" => $id[0],
-							"sbgr_tx_status" => "ativo"
-						];
+				$id = inserir("grupos_documentos", array_keys($novoSetor), array_values($novoSetor));
+				
+				if(!empty($_POST["subsetores"])){
+					foreach($_POST["subsetores"] as $subsetor){
+						if(!empty($subsetor)){
+							$novoSubSetor = [
+								"sbgr_tx_nome" => $subsetor,
+								"sbgr_nb_idgrup" => $id[0],
+								"sbgr_tx_status" => "ativo"
+							];
 
-						inserir("sbgrupos_documentos", array_keys($novoSubSetor), array_values($novoSubSetor));
+							inserir("sbgrupos_documentos", array_keys($novoSubSetor), array_values($novoSubSetor));
+						}
 					}
 				}
 			}
-		}
 
 		index();
 		exit;
