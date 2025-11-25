@@ -14,7 +14,7 @@
 
     function modificarTipoDoc(){
 		$a_mod = carregar("tipos_documentos", $_POST["id"]);
-		[$_POST["id"], $_POST["nome"], $_POST["setor"], $_POST["vencimento"], $_POST["sub-setor"]] = [$a_mod["tipo_nb_id"], $a_mod["tipo_tx_nome"], $a_mod["tipo_nb_grupo"],$a_mod["tipo_tx_vencimento"], $a_mod["tipo_nb_sbgrupo"], $a_mod["tipo_tx_status"]];
+		[$_POST["id"], $_POST["nome"], $_POST["setor"], $_POST["vencimento"], $_POST["assinatura"], $_POST["sub-setor"]] = [$a_mod["tipo_nb_id"], $a_mod["tipo_tx_nome"], $a_mod["tipo_nb_grupo"],$a_mod["tipo_tx_vencimento"], $a_mod["tipo_tx_assinatura"], $a_mod["tipo_nb_sbgrupo"], $a_mod["tipo_tx_status"]];
 		layout_tipo_doc();
 		exit;
 	}
@@ -25,6 +25,7 @@
 			"tipo_nb_grupo" => $_POST["setor"],
 			"tipo_nb_sbgrupo" => $_POST["sub-setor"],
 			"tipo_tx_vencimento" => $_POST["vencimento"],
+			"tipo_tx_assinatura" => $_POST["assinatura"],
 			"tipo_tx_status" => "ativo"
 		];
 
@@ -117,6 +118,10 @@
 			$_POST["vencimento"] = "nao";
 		}
 
+		if (empty($_POST["assinatura"])) {
+			$_POST["assinatura"] = "nao";
+		}
+
 		$sbsetor_documento = mysqli_fetch_all(query(
 			"SELECT sbgr_nb_id,sbgr_nb_idgrup, sbgr_tx_nome, sbgr_tx_status FROM sbgrupos_documentos ORDER BY sbgr_tx_nome ASC"
 		), MYSQLI_ASSOC);
@@ -126,7 +131,8 @@
             combo_bd("!Setor*", "setor", $_POST["setor"], 2, "grupos_documentos"),
 			criaSectionSubSetor($sbsetor_documento, $_POST["sub-setor"], 2),
 			$campoStatus,
-            combo_radio("Passivel de vencimento", "vencimento", $_POST["vencimento"],3,["sim" => "Sim", "nao" => "Não"]),
+            combo_radio("Passivel de vencimento", "vencimento", $_POST["vencimento"],2,["sim" => "Sim", "nao" => "Não"]),
+            combo_radio("Passivel de assinatura", "assinatura", $_POST["assinatura"],2,["sim" => "Sim", "nao" => "Não"]),
 		];
 
 		$botoes = [
