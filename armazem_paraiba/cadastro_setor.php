@@ -37,60 +37,64 @@
 		if(!empty($_POST["id"])){
 			atualizar("grupos_documentos", array_keys($novoSetor), array_values($novoSetor), $_POST["id"]);
 
-			if(!empty($_POST['subsetores_excluir'])){
-				// transforma a string em array
+			if (!empty($_POST['subsetores_excluir'])) {
 				$idsExcluir = explode(',', $_POST['subsetores_excluir']);
-				
-				// percorre cada ID
+
 				foreach ($idsExcluir as $id) {
-					$id = trim($id); // remove espaços extras, se houver
+					$id = trim($id);
 					if (!empty($id)) {
-						// executa a exclusão no banco
 						query("DELETE FROM sbgrupos_documentos WHERE sbgr_nb_id = $id");
 					}
 				}
 			}
 
-			if(!empty($_POST["subsetores"])){
-				$subSetorExistente = mysqli_fetch_all(query(
-					"SELECT sbgr_nb_id, sbgr_tx_nome
-					FROM `sbgrupos_documentos`
-					WHERE `sbgr_nb_idgrup` = {$_POST["id"]}
-					ORDER BY sbgr_tx_nome ASC"
-				), MYSQLI_ASSOC);
+			if (!empty($_POST["subsetores"])) {
 
-				$existemRegistros = !empty($subSetorExistente);
-    
+				// Busca registros existentes
+				$result = query("
+					SELECT sbgr_nb_id, sbgr_tx_nome
+					FROM sbgrupos_documentos
+					WHERE sbgr_nb_idgrup = {$_POST['id']}
+					ORDER BY sbgr_tx_nome ASC
+				");
+
+				// Converte em array associativo com a chave = ID
+				$subSetorExistente = [];
+				while ($row = mysqli_fetch_assoc($result)) {
+					$subSetorExistente[$row['sbgr_nb_id']] = $row;
+				}
+
 				foreach ($_POST["subsetores"] as $id => $nome) {
 					if (empty($nome)) {
-						continue; // Pula itens vazios
+						continue;
 					}
-					
+
 					$novoSubSetor = [
-						"sbgr_tx_nome" => $nome,
+						"sbgr_tx_nome"   => $nome,
 						"sbgr_nb_idgrup" => $_POST["id"],
 						"sbgr_tx_status" => "ativo"
 					];
-					
-					if ($existemRegistros && isset($subSetorExistente[$id])) {
+
+					if (!empty($id) && isset($subSetorExistente[$id])) {
 						// Atualiza registro existente
 						atualizar(
-							"sbgrupos_documentos", 
-							array_keys($novoSubSetor), 
-							array_values($novoSubSetor), 
+							"sbgrupos_documentos",
+							array_keys($novoSubSetor),
+							array_values($novoSubSetor),
 							$id
 						);
+
 					} else {
 						// Insere novo registro
 						inserir(
-							"sbgrupos_documentos", 
-							array_keys($novoSubSetor), 
+							"sbgrupos_documentos",
+							array_keys($novoSubSetor),
 							array_values($novoSubSetor)
 						);
 					}
 				}
-			} 
-			}else{
+			}
+		}else{
 
 				$id = inserir("grupos_documentos", array_keys($novoSetor), array_values($novoSetor));
 				
