@@ -133,25 +133,17 @@
 			var remembered=(localStorage.getItem('remember_me')==='1' || getCookie('remember_me')==='1');
 			if(remembered){
 				if(rem) rem.checked=true;
-				var lu=localStorage.getItem('remember_user');
-				var lp=localStorage.getItem('remember_password');
 				var le=localStorage.getItem('remember_empresa');
-				if(user && lu) user.value=lu;
-				if(pass && lp) pass.value=lp;
 				if(emp && le) { try { emp.value=le; } catch(e){} }
 			}
 
 			form.addEventListener('submit',function(){
 				var checked=rem && rem.checked;
 				if(checked){
-					if(user) localStorage.setItem('remember_user', user.value||'');
-					if(pass) localStorage.setItem('remember_password', pass.value||'');
 					if(emp) localStorage.setItem('remember_empresa', emp.value||'');
 					localStorage.setItem('remember_me','1');
 					setCookie('remember_me','1',180);
 				}else{
-					localStorage.removeItem('remember_user');
-					localStorage.removeItem('remember_password');
 					localStorage.removeItem('remember_empresa');
 					localStorage.removeItem('remember_me');
 					setCookie('remember_me','',-1);
