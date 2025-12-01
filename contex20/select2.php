@@ -16,7 +16,7 @@
 	$ordem 		= !empty($_GET["ordem"])? "ORDER BY ".urldecode($_GET["ordem"]): "";
 	$limite 	= !empty($_GET["limite"])? "LIMIT ".urldecode($_GET["limite"]): "";
 
-	if(strpos($condicoes, "AND") < 6){
+	if(strpos($condicoes, "AND") < 6 && strpos($condicoes, "AND") !== false){
 		$condicoes = substr($condicoes, strpos($condicoes, "AND")+3);
 	}
 
@@ -28,7 +28,9 @@
 			." WHERE 1".(!empty($condicoes)? " AND {$condicoes}": "")
 				.(!empty($_GET["q"])? " AND {$tab}_tx_nome LIKE '%{$_GET["q"]}%'": "")
 			." {$ordem}"
-			." {$limite}";
+			." {$limite}"
+	;
+	
 
 	$result = mysqli_fetch_all(
 		query($sql),
