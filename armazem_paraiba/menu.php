@@ -91,20 +91,19 @@
 			unset($menus["suporte"]);
 		}
 	
-		$menuMotorista = 
+		$menuFuncionario = 
 			"<li class=''><a href='".$CONTEX["path"]."/batida_ponto.php'		class='nav-link'>Registrar Ponto</a></li>
 			 <li class=''><a href='".$CONTEX["path"]."/cadastro_usuario.php'	class='nav-link'>Usuário</a></li>
 			 <li class=''><a href='".$CONTEX["path"]."/espelho_ponto.php'		class='nav-link'>Espelhos de Ponto</a></li>"
 		;
 
+		
 		if (is_int(strpos($nivel, "Administrador")) || is_int(strpos($nivel, "Super Administrador"))) {
 			return $menus["cadastros"].$menus["ponto"].$menus["painel"].($menus["suporte"]?? "").($menus["relatórios"] ?? "");
-		}
-		if (is_int(strpos($nivel, "Supervisão"))) {
+		}elseif (is_int(strpos($nivel, "Supervisão"))) {
 			return $menus["cadastros"].$menus["ponto"];
-		}
-		if(in_array($nivel, ["Motorista", "Ajudante", "Funcionário"])){
-			return $menuMotorista;
+		}elseif(in_array($nivel, ["Motorista", "Ajudante", "Funcionário"])){
+			return $menuFuncionario;
 		}
 
 		return "";
