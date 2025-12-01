@@ -54,10 +54,8 @@
 	function selecionaMotorista(idEmpresa) {
 		let condicoes = '&condicoes='+encodeURI('enti_tx_status = \"ativo\"');
 		if(idEmpresa > 0){
-			condicoes += encodeURI(' AND enti_tx_ocupacao IN ("Motorista", "Ajudante", "Funcionário") AND enti_nb_empresa = "'+idEmpresa+'"');
+			condicoes += encodeURI(' AND enti_nb_empresa = "'+idEmpresa+'"');
 			$('.busca_motorista')[0].innerHTML = null;
-		}else{
-			condicoes += '&condicoes='+encodeURI(' AND enti_tx_ocupacao IN ("Motorista", "Ajudante", "Funcionário")');
 		}
 
 		// Verifique se o elemento está usando Select2 antes de destruí-lo
