@@ -255,6 +255,29 @@
 				campoFoco.focus();
 			}
 		}
+
+		function verPerfil(id){
+			var form = document.createElement("form");
+			form.method = "POST";
+			form.action = ""; // Submissão para o mesmo arquivo
+
+			// Cria um campo oculto para armazenar os ajustes
+			var input = document.createElement("input");
+			input.type = "hidden";
+			input.name = "user_nb_id";
+			input.value = id;
+			form.appendChild(input);
+
+			var input = document.createElement("input");
+			input.type = "hidden";
+			input.name = "acao";
+			input.value = "modificarFuncionario()";
+			form.appendChild(input);
+
+			// Adiciona o formulário ao corpo do documento
+			document.body.appendChild(form);
+			form.submit();
+		}
 	</script>
 
 </head>
@@ -291,7 +314,7 @@
 								</a>
 								<ul class="dropdown-menu dropdown-menu-default">
 									<li>
-										<a href="<?=$CONTEX["path"]?>/cadastro_usuario.php?id=<?=$_SESSION["user_nb_id"]?>">
+										<a onclick="verPerfil(<?= $_SESSION['user_nb_id'] ?>)">
 											<i class="icon-user"></i> Perfil </a>
 									</li>
 									<li class="divider"> </li>
