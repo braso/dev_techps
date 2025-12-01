@@ -24,8 +24,7 @@
 	function index(){
 		global $turnoAtual;
 
-		
-		if(array_values(array_intersect(array_keys($_SESSION), ["user_tx_nome", "user_tx_login", "user_tx_nivel", "horaEntrada"])) != ["user_tx_login", "user_tx_nome", "user_tx_nivel", "horaEntrada"]){
+		if(array_diff(["user_tx_nome", "user_tx_login", "user_tx_nivel", "horaEntrada"], array_keys($_SESSION)) != []){
 			logar();
 		}
 
@@ -174,7 +173,7 @@
 			include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
 			
 			$usuario = mysqli_fetch_assoc(query(
-				"SELECT * FROM user"
+				"SELECT * FROM user LEFT JOIN entidade ON user_nb_entidade = enti_nb_id"
 					." WHERE user_tx_status = 'ativo'"
 						." AND user_tx_login = '".$_POST["user"]."'"
 						." AND user_tx_senha = '".$_POST["password"]."';"
@@ -206,6 +205,7 @@
 					echo json_encode($_SESSION);
 					exit;
 				}
+
 				if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 					echo "<meta http-equiv='refresh' content='0; url=./batida_ponto.php'/>";
 					exit;
@@ -218,10 +218,7 @@
 					;
 				}
 	
-				cabecalho("");
-				showWelcome($usuario["user_tx_nome"], $turnoAtual, $_SESSION["horaEntrada"]);
-				rodape();
-				exit;
+				return;
 			}
 		}
         
@@ -234,8 +231,13 @@
 			"password" => $_POST["password"]
 		]);
 
+		include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
 		voltar();
 		exit;
 	}
 
 	logar();
+
+	cabecalho("");
+	showWelcome($_SESSION["user_tx_nome"], $turnoAtual, $_SESSION["horaEntrada"]);
+	rodape();
