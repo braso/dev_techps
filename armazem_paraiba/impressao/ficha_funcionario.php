@@ -50,7 +50,7 @@ if (!$funcionarioId) {
 
 // 2. Carregar dados principais do funcionário
 
-$motorista = carregar("entidade", $funcionarioId);
+$motorista = "SELECT *, user.user_tx_email FROM entidade JOIN user ON enti_nb_id = user_nb_entidade WHERE enti_nb_id = {$funcionarioId} LIMIT 1;";
 
 if (!$motorista) {
 
@@ -75,6 +75,10 @@ $login = mysqli_fetch_all(
 $empresa = [];
 
 if ($idEmpresa = obterDado($motorista, 'enti_nb_empresa')) {
+    $empresa = carregar("empresa", $idEmpresa);
+}
+
+if ($idEmpresa = ($motorista['enti_nb_empresa']?? '')) {
     $empresa = carregar("empresa", $idEmpresa);
 }
 
@@ -352,7 +356,7 @@ desenharLinhaDeCamposFlex($pdf, [
     ['label' => 'Nome completo:', 'value' => $motorista['enti_tx_nome'] ?? '', 'larguraLabel' => 28, 'larguraValor' => 106]
 ]);
 desenharLinhaDeCamposFlex($pdf, [
-    ['label' => 'E-MAIL:', 'value' => $motorista["enti_tx_email"] ?? '', 'larguraLabel' => 15, 'larguraValor' => 75],
+    ['label' => 'E-MAIL:', 'value' => $motorista["user_tx_email"] ?? '', 'larguraLabel' => 15, 'larguraValor' => 75],
     ['label' => 'Nascimento:', 'value' => formatarData($motorista["enti_tx_nascimento"] ?? ''), 'larguraLabel' => 22, 'larguraValor' => 30],
     ['label' => 'RG:', 'value' => $motorista["enti_tx_rg"] ?? '', 'larguraLabel' => 9, 'larguraValor' => 24],
 ]);
