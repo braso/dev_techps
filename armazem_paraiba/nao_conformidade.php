@@ -124,7 +124,7 @@
 			//Pegando e formatando registros dos dias{
 				$rows = [];
 
-				$dataAdmissao = new DateTime($motorista["enti_tx_admissao"]);
+				$dataAdmissao = new DateTime($motorista["enti_tx_admissao"]?? "");
 
 				if(empty($motorista["enti_nb_parametro"])){
 					$motorista["enti_nb_parametro"] = $motorista["empr_nb_parametro"];
@@ -345,10 +345,10 @@
 
 		cabecalho("Não Conformidade");
 
-		$extraEmpresa = "";
+		$extraEmpresa = "empr_tx_status = 'ativo'";
 		$extraEmpresaMotorista = "";
 		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
-			$extraEmpresa = " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
+			$extraEmpresa .= " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
 			$extraEmpresaMotorista = " AND enti_nb_empresa = '".$_SESSION["user_nb_empresa"]."'";
 		}
 
@@ -375,14 +375,16 @@
 		//CAMPOS DE CONSULTA{
 			$c = [
 				combo_net(
-					"Funcionário:", "busca_motorista", $_POST["busca_motorista"], 3, 
+					"Funcionário:", "busca_motorista", $_POST["busca_motorista"], 3,
 					"entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') {$extraMotorista}{$extraEmpresaMotorista}", "enti_tx_matricula"
 				),
 				campo_mes("Data*:", "busca_data", $_POST["busca_data"], 2)
 			];
 
 			if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-				array_unshift($c, combo_net("Empresa*:", "busca_empresa",   (!empty($_POST["busca_empresa"])?   $_POST["busca_empresa"]  : ""), 3, "empresa", "onchange=selecionaMotorista(this.value)", $extraEmpresa));
+				array_unshift($c, 
+					combo_net("Empresa*:", "busca_empresa",   (!empty($_POST["busca_empresa"])?   $_POST["busca_empresa"]  : ""), 3, "empresa", "onchange=selecionaMotorista(this.value)", $extraEmpresa)
+				);
 			}
 		//}
 		$botao_imprimir ="<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
