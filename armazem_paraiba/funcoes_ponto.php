@@ -17,12 +17,7 @@
 			$jornadaPrevista = $jornadaPrevistaOriginal;
 		}
 
-		// $feriasExistente = mysqli_fetch_assoc(query(
-		// 	"SELECT * FROM ferias 
-		// 		WHERE feri_tx_status = 'ativo'
-		// 			"
-		// ));
-
+		
 		if(!empty($abono)){
 		    $abono = explode(":", $abono);
 			$abono = "{$abono[0]}:{$abono[1]}";
@@ -210,6 +205,9 @@
 		}
 		
 		$excedente = operarHorarios([$saldoBruto, $he100], "-");
+		if($excedente[0] == "-"){
+		    $excedente = "00:00";
+		}
 		if(operarHorarios([$max50APagar, $excedente], "-")[0] != "-"){			//$max50APagar > $excedente
 			return [$excedente, $he100];
 		}
@@ -1784,7 +1782,8 @@
 
 		for($f = 0; $f < count($intervalos); $f++){
 			$date = date_add(new DateTime("1970-01-01 00:00:00"), $intervalos[$f][1]);
-			$intervalos[$f][1] = sprintf("%02d:%02d", abs(intval((dateTimeToSecs($date)/60)/60)), abs(intval((dateTimeToSecs($date)/60)%60)));
+			$dateMinutes = intval(dateTimeToSecs($date)/60);
+			$intervalos[$f][1] = sprintf("%02d:%02d", $dateMinutes/60, $dateMinutes%60);
 			if($intervalos[$f][0] == true && $intervalos[$f][1] > $mdc){ //Se o intervalo é de um horário ativo de trabalho E for maior que o MDC atual.
 				$mdc = $intervalos[$f][1];
 			}
