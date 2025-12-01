@@ -4,6 +4,10 @@
 		error_reporting(E_ALL);
 	//*/
 
+	
+	header("Location: ./cadastro_funcionario.php");
+	exit;
+	
 	include "conecta.php";
 
 	// function combo_empresa($nome,$variavel,$modificador,$tamanho,$opcao, $opcao2,$extra=""){
@@ -506,22 +510,24 @@
 						}
 			}
 
-			function imprimir() {
-				const form = document.createElement('form');
-				form.method = 'POST';
-				form.action = './impressao/ficha_usuario.php';
-				form.target = '_blank';
+			".(!empty($_POST["id"])? 
+				"function imprimir() {
+					const form = document.createElement('form');
+					form.method = 'POST';
+					form.action = './impressao/ficha_usuario.php';
+					form.target = '_blank';
 
-				const inputID = document.createElement('input');
-				inputID.type = 'hidden';
-				inputID.name = 'id_usuario';
-				inputID.value = ".$_POST["id"].";
-				form.appendChild(inputID);
-				
-				document.body.appendChild(form);
-				form.submit();
-				document.body.removeChild(form);
-			}
+					const inputID = document.createElement('input');
+					inputID.type = 'hidden';
+					inputID.name = 'id_usuario';
+					inputID.value = {$_POST["id"]};
+					form.appendChild(inputID);
+					
+					document.body.appendChild(form);
+					form.submit();
+					document.body.removeChild(form);
+				}": ""
+			)."
 			</script>";
 
 			if (!empty($_POST["entidade"])) {
@@ -537,12 +543,12 @@
 
 
 	function index() {
-		global $CONTEX;
 		
+
 		if (!empty($_GET["id"])){
 			if ($_GET["id"] != $_SESSION["user_nb_id"]) {
 				echo "ERRO: Usuário não autorizado!";
-				echo "<script>window.location.replace('".$CONTEX["path"]."/index.php');</script>";
+				echo "<script>window.location.replace('./index.php');</script>";
 				exit;
 			}
 			$_POST["id"] = $_GET["id"];
@@ -720,7 +726,7 @@
 					".implode(" ", $actions["functions"])."
 				}"
 			;
-			echo gridDinamico("tabelaMotoristas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+			echo gridDinamico("tabelaUsuarios", $gridFields, $camposBusca, $queryBase, $jsFunctions);
 		//}
 
 
