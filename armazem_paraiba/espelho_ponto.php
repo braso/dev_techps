@@ -348,14 +348,17 @@
 				$saldoBruto = $totalResumo["diffSaldo"];
 				$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
 
+				$aPagar = calcularHorasAPagar(strip_tags($totalResumo["diffSaldo"]), $saldoBruto, $totalResumo["he50"], $totalResumo["he100"], "00:00", $motorista["para_tx_pagarHEExComPerNeg"]);
+
 				$saldosMotorista = "SALDOS: <br>
 					<div class='table-responsive' style='display: flex; justify-content: space-between; align-items: center;'>
 						<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact' id='saldo'>
 							<thead>
 								<tr>
-									<th>Anterior:</th>
-									<th>Período:</th>
-									<th>Bruto:</th>
+									<th>Anterior</th>
+									<th>Período</th>
+									<th>Bruto</th>
+									<th>H.E. Ex. a pagar</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -363,6 +366,7 @@
 									<td>".($saldoAnterior?? "--:--")."</td>
 									<td>".($totalResumo["diffSaldo"]?? "--:--")."</td>
 									<td>".($saldoBruto?? "--:--")."</td>
+									<td>".($aPagar[1]?? "--:--")."</td>
 								</tr>
 							</tbody>
 						</table>
