@@ -1,15 +1,9 @@
 <IfModule mod_rewrite.c>
 
-  RewriteEngine on
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_FILENAME}.php -f
-    RewriteRule ^(.*)$ $1.php
-
-    RewriteCond %{REQUEST_FILENAME} -d
-    RewriteRule ^(.*)$ %{REQUEST_FILENAME}/index.php
-  
+    RewriteEngine on
+        RewriteRule ^(.*)$ permissionCheck.php
+    
 </IfModule>
-
 # php -- BEGIN cPanel-generated handler, do not edit
 # Set the “ea-php81” package as the default “PHP” programming language.
 # <IfModule mime_module>
