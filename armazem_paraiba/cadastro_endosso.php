@@ -20,7 +20,7 @@
 				$baseErrMsg = "Há campos obrigatórios incorretos: ";
 				$errorMsg = $baseErrMsg;
 				if(!isset($_POST["empresa"])){
-					if(!isset($_POST["busca_motorista"])){
+					if(!isset($_POST["funcionario"])){
 						if($_SESSION["user_tx_nivel"] == "Super Administrador"){
 							$_POST["errorFields"][] = "empresa";
 							$errorMsg .= "Empresa, ";
@@ -29,16 +29,20 @@
 						}
 					}else{
 						$empresa = mysqli_fetch_assoc(query(
-							"SELECT empresa.empr_nb_id FROM empresa JOIN entidade ON empr_nb_id = enti_nb_empresa WHERE enti_nb_id = ".$_POST["busca_motorista"]." LIMIT 1;"
+							"SELECT empresa.empr_nb_id FROM empresa JOIN entidade ON empr_nb_id = enti_nb_empresa WHERE enti_nb_id = ".$_POST["funcionario"]." LIMIT 1;"
 						));
 						$_POST["empresa"] = $empresa["empr_nb_id"];
 					}
 				}
-				if(empty($_POST["data_de"]) || empty($_POST["data_ate"]) || !preg_match("/^\d{4}-\d{2}-\d{2}$/", $_POST["data_de"]) || !preg_match("/^\d{4}-\d{2}-\d{2}$/", $_POST["data_ate"])){
-					$errorMsg .= "Data, ";
-					$_POST["errorFields"][] = "data_de";
-					$_POST["errorFields"][] = "data_ate";
+				if(empty($_POST["periodo"]) || !preg_match("/^\d{4}-\d{2}-\d{2}$/", $_POST["periodo"])){
+					$errorMsg .= "Período, ";
+					$_POST["errorFields"][] = "periodo";
 				}
+
+				if(is_string($_POST["periodo"])){
+					$_POST["periodo"] = explode(" - ", $_POST["periodo"]);
+				}
+
 				if($errorMsg != $baseErrMsg){
 					return "ERRO: ".substr($errorMsg, 0, strlen($errorMsg)-2);
 				}
@@ -57,8 +61,8 @@
 			//}
 	
 			//Conferir se o endosso tem mais de um mês{
-				$difference = strtotime($_POST["data_ate"]) - strtotime($_POST["data_de"]);
-				$dateDiff = date_diff(DateTime::createFromFormat("Y-m-d", $_POST["data_ate"]), DateTime::createFromFormat("Y-m-d", $_POST["data_de"]));
+				$difference = strtotime($_POST["periodo"][1]) - strtotime($_POST["periodo"][0]);
+				$dateDiff = date_diff(DateTime::createFromFormat("Y-m-d", $_POST["periodo"][1]), DateTime::createFromFormat("Y-m-d", $_POST["periodo"][0]));
 				if($dateDiff->m > 0){
 					$errorMsg = "Não é possível cadastrar um endosso com mais de um mês.";
 				}
@@ -66,10 +70,9 @@
 			//}
 
 			//Conferir se o endosso passa da data atual{
-				if($_POST["data_de"] >= date("Y-m-d") || $_POST["data_ate"] >= date("Y-m-d")){
+				if($_POST["periodo"][1] >= date("Y-m-d")){
 					$errorMsg = "Não é possível cadastrar um endosso que inclua a data atual ou datas futuras.";
-					$_POST["errorFields"][] = "data_de";
-					$_POST["errorFields"][] = "data_ate";
+					$_POST["errorFields"][] = "periodo";
 				}
 			//}
 
@@ -91,9 +94,9 @@
 
 			//Conferir se está tentando endossar meses anteriores ao cadastro do motorista{
 				$dataCadastro = new DateTime($motorista["enti_tx_admissao"]." 00:00:00");
-				if($_POST["data_de"] < $dataCadastro->format("Y-m-01")){
+				if($_POST["periodo"][0] < $dataCadastro->format("Y-m-01")){
 					$motErrMsg = "Não é possível cadastrar um endosso antes do mês de admissão (".$dataCadastro->format("m/Y")."). ";
-					$_POST["errorFields"][] = "data_de";
+					$_POST["errorFields"][] = "periodo";
 				}
 			//}
 
@@ -103,8 +106,8 @@
 						"SELECT endo_tx_de, endo_tx_ate FROM endosso"
 							." WHERE endo_nb_entidade = ".$motorista["enti_nb_id"].""
 								." AND ("
-									." (endo_tx_ate >= '".$_POST["data_de"]."')"
-									." AND ('".$_POST["data_ate"]."' >= endo_tx_de)"
+									." (endo_tx_ate >= '{$_POST["periodo"][0]}')"
+									." AND ('".$_POST["periodo"][1]."' >= endo_tx_de)"
 								." )"
 								." AND endo_tx_status = 'ativo'"
 							." LIMIT 1;"
@@ -113,8 +116,7 @@
 						$endossosMotorista["endo_tx_de"]  = vsprintf("%02d/%02d/%04d", array_reverse(explode("-", $endossosMotorista["endo_tx_de"])));
 						$endossosMotorista["endo_tx_ate"] = vsprintf("%02d/%02d/%04d", array_reverse(explode("-", $endossosMotorista["endo_tx_ate"])));
 						$motErrMsg = "Já endossado de ".$endossosMotorista["endo_tx_de"]." até ".$endossosMotorista["endo_tx_ate"].".  ";
-						$_POST["errorFields"][] = "data_de";
-						$_POST["errorFields"][] = "data_ate";
+						$_POST["errorFields"][] = "periodo";
 					}
 					unset($endossosMotorista);
 				//}
@@ -131,9 +133,9 @@
 					),MYSQLI_ASSOC);
 					if((count($possuiEndoPosterior) > 0)){
 						//Conferir se o endosso que está sendo feito vem antes do primeiro{
-							if($_POST["data_ate"] < $possuiEndoPosterior[0]["endo_tx_de"]){
-								$motErrMsg = "Já existe um endosso depois de ".vsprintf("%02d/%02d/%04d", array_reverse(explode("-", $_POST["data_ate"]))).".  ";
-								$_POST["errorFields"][] = "data_ate";
+							if($_POST["periodo"][1] < $possuiEndoPosterior[0]["endo_tx_de"]){
+								$motErrMsg = "Já existe um endosso depois de ".vsprintf("%02d/%02d/%04d", array_reverse(explode("-", $_POST["periodo"][1]))).".  ";
+								$_POST["errorFields"][] = "periodo";
 							}
 						//}
 					}
@@ -149,7 +151,7 @@
 						query(
 							"SELECT * FROM endosso
 								WHERE endo_nb_entidade = '".$motorista["enti_nb_id"]."'
-									AND endo_tx_ate < '".$_POST["data_de"]."'
+									AND endo_tx_ate < '".$_POST["periodo"][0]."'
 									AND endo_tx_status = 'ativo'
 								ORDER BY endo_tx_ate DESC
 								LIMIT 1;"
@@ -160,11 +162,11 @@
 					if(is_array($ultimoEndosso) && count($ultimoEndosso) > 0 && !$possuiEndoPosterior){ //Se possui um último Endosso
 						$ultimoEndosso = $ultimoEndosso[0];
 						$ultimoEndosso["endo_tx_ate"] = DateTime::createFromFormat("Y-m-d", $ultimoEndosso["endo_tx_ate"]);
-						$dataDe = DateTime::createFromFormat("Y-m-d", $_POST["data_de"]);
+						$dataDe = DateTime::createFromFormat("Y-m-d", $_POST["periodo"][0]);
 						$qtdDias = date_diff($ultimoEndosso["endo_tx_ate"], $dataDe);
 						if($qtdDias->days > 1){
 							$motErrMsg = "Há um tempo não endossado entre ".$ultimoEndosso["endo_tx_ate"]->format("d/m/Y")." e ".$dataDe->format("d/m/Y").".  ";
-							$_POST["errorFields"][] = "data_de";
+							$_POST["errorFields"][] = "periodo";
 						}
 					}else{ //Se é o primeiro endosso sendo feito para este motorista
 						if(isset($motorista["enti_tx_banco"])){
@@ -195,13 +197,13 @@
 			exit;	
 		}
 
-		if(empty($_POST["busca_motorista"])){
+		if(empty($_POST["funcionario"])){
 			set_status("ERRO: Insira o motorista para consultar seu saldo.");
 			index();
 			exit;
 		}
 
-		$err = conferirErros(1, $_POST["busca_motorista"]);
+		$err = conferirErros(1, $_POST["funcionario"]);
 		if(!empty($err)){
 			set_status("ERRO: ".$err);
 			index();
@@ -214,7 +216,7 @@
 			 LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
 			 LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
 			 WHERE enti_tx_status = 'ativo'
-				 AND enti_nb_id = '{$_POST["busca_motorista"]}'
+				 AND enti_nb_id = '{$_POST["funcionario"]}'
 			 LIMIT 1;"
 		));
 
@@ -246,13 +248,13 @@
 	function pegarSaldoTotal(){
 
 		
-		if(empty($_POST["busca_motorista"])){
+		if(empty($_POST["funcionario"])){
 			set_status("ERRO: Insira o motorista para consultar seu saldo.");
 			index();
 			exit;
 		}
 
-		$err = conferirErros(1, $_POST["busca_motorista"]);
+		$err = conferirErros(1, $_POST["funcionario"]);
 
 		if(!empty($err)){
 			set_status("ERRO: ".$err);
@@ -262,7 +264,7 @@
 
 		$_POST["extraPago"] = "00:00";
 
-		if(empty($_POST["busca_motorista"]) || empty($_POST["data_de"]) || empty($_POST["data_ate"])){
+		if(empty($_POST["funcionario"]) || empty($_POST["data_de"]) || empty($_POST["data_ate"])){
 			set_status("ERRO: Insira funcionário e datas para inserir o saldo possível.");
 			index();
 			exit;
@@ -275,7 +277,7 @@
 			 LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
 			 LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
 			 WHERE enti_tx_status = 'ativo'
-				 AND enti_nb_id = '{$_POST["busca_motorista"]}'
+				 AND enti_nb_id = '{$_POST["funcionario"]}'
 			 LIMIT 1;"
 		));
 
@@ -284,7 +286,7 @@
 			"SELECT enti_tx_matricula, endo_tx_filename FROM endosso "
 				." JOIN entidade ON enti_nb_id = endo_nb_entidade"
 				." WHERE endo_tx_status = 'ativo'"
-					." AND endo_nb_entidade = ".$_POST["busca_motorista"]
+					." AND endo_nb_entidade = ".$_POST["funcionario"]
 				." ORDER BY endo_tx_ate DESC, endo_nb_id DESC"
 				." LIMIT 1;"
 		));
@@ -408,7 +410,7 @@
 				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
 				WHERE enti_tx_status = 'ativo'
 					AND enti_nb_empresa = {$_POST["empresa"]}
-					".((!empty($_POST["busca_motorista"]))? " AND enti_nb_id = {$_POST["busca_motorista"]}": "")."
+					".((!empty($_POST["funcionario"]))? " AND enti_nb_id = {$_POST["funcionario"]}": "")."
 				ORDER BY enti_tx_nome ASC;"
 		), MYSQLI_ASSOC);
 
@@ -712,9 +714,13 @@
 		;
 
 		$fields = [
-			combo_net("Funcionário", "busca_motorista", $_POST["busca_motorista"]?? "", 4, "entidade", "", $condicoes_motorista, "enti_tx_matricula"),
-			campo_data("De*", "data_de", ($_POST["data_de"]?? ""), 2),
-			campo_data("Ate*", "data_ate", ($_POST["data_ate"]?? ""), 2),
+			combo_net("Funcionário", "funcionario", $_POST["funcionario"]?? "", 4, "entidade", "", $condicoes_motorista, "enti_tx_matricula"),
+			campo(
+				"Período", "periodo",
+				(!empty($_POST["periodo"])? $_POST["periodo"]: [date("Y-m-01"), date("Y-m-d")]),
+				2,
+				"MASCARA_PERIODO"
+			),
 			$camposHE,
 			$camposDesconto
 
