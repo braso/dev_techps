@@ -1,8 +1,9 @@
 <?php
-	/* Modo debug
+	//* Modo debug
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
+	
     if(empty(session_id())){
         $lifetime = 30*60;
         ini_set('session.gc_maxlifetime', $lifetime);
