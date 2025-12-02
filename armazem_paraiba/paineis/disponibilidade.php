@@ -17,7 +17,7 @@
         $linha = "linha = '<tr>'";
         if (!empty($_POST["empresa"])) {
             $linha .= " +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
-                        +'<td style=\'text-align: center;\'>'+item.tipoOperacaoNome+'</td>'
+                        +'<td style=\'text-align: center;\'>'+ (item.tipoOperacaoNome || '-') +'</td>'
                         +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.Nome+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ultimaJornada+'</td>'

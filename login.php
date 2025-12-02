@@ -84,8 +84,14 @@
 						name="password"
 					/>
 				</div>
-				<a href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
-				<?=(!empty($_POST["sourcePage"])? "<input type='hidden' name='sourcePage' value= '".$_POST["sourcePage"]."'/>": "")?>
+				<div class="" style="display:flex; align-items:center; width:100%; justify-content:space-between; margin-top:10px">
+					<label style="display:flex; align-items:center; gap:12px; margin:0; white-space:nowrap; flex-shrink:0">
+						<input type="checkbox" name="remember" />
+						<span>Lembre-me</span>
+					</label>
+					<a href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
+				</div>
+				<?=(!empty($_POST["sourcePage"]) ? "<input type='hidden' name='sourcePage' value= '".$_POST["sourcePage"]."'/>" : "")?>
 				<?= $msg ?>
 				<div class="form-actions">
 					<input type="submit" class="btn green uppercase" name="botao" value="Entrar"></input>
@@ -113,6 +119,38 @@
 		<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/uniform/jquery.uniform.min.js" type="text/javascript"></script>
 
 		<?=$dataScript?>
+		<script>
+		(function(){
+			function setCookie(n,v,d){var t=new Date();t.setTime(t.getTime()+(d*24*60*60*1000));document.cookie=n+"="+encodeURIComponent(v)+";expires="+t.toUTCString()+";path=/"}
+			function getCookie(n){var m=("; "+document.cookie).split("; "+n+"=");if(m.length===2) return decodeURIComponent(m.pop().split(";").shift());return ""}
+			var form=document.querySelector('.login-form');
+			if(!form) return;
+			var user=form.querySelector('input[name="user"]');
+			var pass=form.querySelector('input[name="password"]');
+			var emp=form.querySelector('[name="empresa"]');
+			var rem=form.querySelector('input[name="remember"]');
+
+			var remembered=(localStorage.getItem('remember_me')==='1' || getCookie('remember_me')==='1');
+			if(remembered){
+				if(rem) rem.checked=true;
+				var le=localStorage.getItem('remember_empresa');
+				if(emp && le) { try { emp.value=le; } catch(e){} }
+			}
+
+			form.addEventListener('submit',function(){
+				var checked=rem && rem.checked;
+				if(checked){
+					if(emp) localStorage.setItem('remember_empresa', emp.value||'');
+					localStorage.setItem('remember_me','1');
+					setCookie('remember_me','1',180);
+				}else{
+					localStorage.removeItem('remember_empresa');
+					localStorage.removeItem('remember_me');
+					setCookie('remember_me','',-1);
+				}
+			});
+		})();
+		</script>
 		<!-- FIM PLUGINS PRINCIPAL -->
 		<!-- COMECO PLUGINS DE PAGINA -->
 		<!-- FIM PLUGINS DE PAGINA -->

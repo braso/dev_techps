@@ -4,7 +4,8 @@
 		error_reporting(E_ALL);
 	//*/
 
-	include "load_env.php";
+    include "load_env.php";
+    include_once "conecta.php";
 
 	function verificarAtividade($paginasAtivas) {
 		foreach ($paginasAtivas as $pagina){
@@ -41,6 +42,9 @@
 				"/cadastro_setor.php" 		=> "Setor",
 				"/cadastro_tipo_doc.php" 	=> "Tipo de Documento",
 				"/cadastro_usuario.php" 	=> "Usuário",
+				"/cadastro_habilidade_tecnica.php" 	=> "Habilidades Técnicas",
+				"/cadastro_habilidade_comportamental.php" 	=> "Habilidades Comportamentais",
+
 			],
 			"ponto" => [
 				"/endosso.php" 			=> "Consultar Endossos",
@@ -65,6 +69,16 @@
 			// 	"/doc.php" 	=> "Ver Documentação"
 			// ]
 		];
+
+$fullUrl = strtolower($_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"]);
+
+$showComunicado = (strpos($fullUrl, "techps") !== false);
+
+if ($showComunicado) {
+    $paginas["cadastros"]["/cadastro_comunicado.php"] = "Comunicado";
+}
+
+
 
 		$menus = [
 			"cadastros" => "",
@@ -118,21 +132,34 @@
 		</style>"
 	;
 
-	echo 
-		"<!-- INICIO HEADER MENU -->"
-			."<div class='page-header-menu'>"
-				."<div class='container-fluid'>"
-				."<!-- INICIO MEGA MENU -->"
-					."<!-- DOC: Apply 'hor-menu-light' class after the 'hor-menu' class below to have a horizontal menu with white background -->"
-					."<!-- DOC: Remove data-hover='dropdown' and data-close-others='true' attributes below to disable the dropdown opening on mouse hover -->"
-					."<div class='hor-menu'>"
-						."<ul class='nav navbar-nav'>"
-							.mostrarMenuDoNivel($_SESSION["user_tx_nivel"])
-						."</ul>"
-					."</div>"
-				."<!-- FIM MEGA MENU -->"
-				."</div>"
-			."</div>"
-		."<!-- FIM HEADER MENU -->"
-	;
+    echo 
+        "<!-- INICIO HEADER MENU -->"
+            ."<div class='page-header-menu'>"
+                ."<div class='container-fluid'>"
+                ."<!-- INICIO MEGA MENU -->"
+                    ."<!-- DOC: Apply 'hor-menu-light' class after the 'hor-menu' class below to have a horizontal menu with white background -->"
+                    ."<!-- DOC: Remove data-hover='dropdown' and data-close-others='true' attributes below to disable the dropdown opening on mouse hover -->"
+                    ."<div class='hor-menu'>"
+                        ."<ul class='nav navbar-nav'>"
+                            .mostrarMenuDoNivel($_SESSION["user_tx_nivel"])
+                        ."</ul>"
+                    ."</div>"
+                ."<!-- FIM MEGA MENU -->"
+                ."</div>"
+            ."</div>"
+        ."<!-- FIM HEADER MENU -->"
+    ;
+
+    $hasTable = false;
+    if(isset($conn)){
+        $chk = mysqli_query($conn, "SHOW TABLES LIKE 'comunicados'");
+        if($chk){ $hasTable = mysqli_num_rows($chk) > 0; }
+    }
+    if($hasTable && !empty($_SESSION["user_tx_nivel"])){
+        $destino = (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")) || is_int(strpos($_SESSION["user_tx_nivel"], "Super Administrador")))? "Administrador": "Funcionário";
+        $comu = mysqli_fetch_assoc(query("SELECT comu_tx_texto FROM comunicados WHERE comu_tx_destino = ? ORDER BY comu_nb_id DESC LIMIT 1", "s", [$destino]));
+        if(!empty($comu["comu_tx_texto"])){
+            echo "<div class='container-fluid' style='margin-top:10px'><div class='alert alert-info' role='alert' style='display:flex; align-items:flex-start; gap:10px'><i class='fa fa-info-circle' style='font-size:18px'></i><div style='flex:1'>".nl2br(htmlspecialchars($comu["comu_tx_texto"])) ."</div></div></div>";
+        }
+    }
 	
