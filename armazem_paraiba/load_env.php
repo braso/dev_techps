@@ -2,6 +2,7 @@
     $rootDir = __DIR__.'/';
     $envFilePath = $rootDir.'.env';
 
+    
     if(file_exists($envFilePath)){
         $env = parse_ini_file($envFilePath, false, INI_SCANNER_RAW);
         foreach($env as $attr=>$val){
