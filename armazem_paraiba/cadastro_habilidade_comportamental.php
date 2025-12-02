@@ -245,7 +245,7 @@
         }
 
         echo "<button id='geminiChatBtn' 
-style='position:fixed; display:block; right:20px; bottom:20px; z-index:9999;
+style='position:fixed; display:none; right:20px; bottom:20px; z-index:9999;
 border:none; border-radius:50%; width:56px; height:56px;
 background:#4c6ef5; color:#fff; font-size:22px;
 box-shadow:0 4px 12px rgba(0,0,0,.25); cursor:pointer'>
