@@ -69,17 +69,12 @@
 			// 	"/doc.php" 	=> "Ver Documentação"
 			// ]
 		];
-
-$fullUrl = strtolower($_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"]);
-
-$showComunicado = (strpos($fullUrl, "techps") !== false);
+$path = strtolower($_SERVER['REQUEST_URI']);  
+$showComunicado = (strpos($path, "/techps") !== false);
 
 if ($showComunicado) {
     $paginas["cadastros"]["/cadastro_comunicado.php"] = "Comunicado";
 }
-
-
-
 		$menus = [
 			"cadastros" => "",
 			"ponto" => "",
