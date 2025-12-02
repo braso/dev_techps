@@ -197,18 +197,38 @@
 
 				// Adicionar novo subsetor
 				lista.on('click', '.adicionar-novo', function(){
-					var novo = `
-					<div class='col-sm-{$tamanho} margin-bottom-5 subsetor-item'>
-						<label class='control-label'>$nome</label>
-						<div style='display:flex; align-items:center;'>
-							<input type='text' name='{$variavel}[]' class='form-control input-sm campo-fit-content' placeholder='Nome do subsetor' style='width:120px;'>
-							<button class='btn btn-danger btn-sm remover' type='button' title='Remover subsetor' style='height:40px; margin-top: -10px; margin-left:-1px; border-top-left-radius:0; border-bottom-left-radius:0;'>
-								<span class='glyphicon glyphicon-minus'></span>
-							</button>
-						</div>
-					</div>`;
-					lista.append(novo);
-				});
+
+				// Campo onde o usuário digitou
+				var inputOrigem = $(this).closest('.subsetor-item').find('input');
+				var texto = inputOrigem.val().trim();
+
+				if (texto === '') {
+					alert('Digite algo antes de adicionar.');
+					return;
+				}
+
+				// Criar novo item já com o texto digitado
+				var novo = `
+				<div class='col-sm-{$tamanho} margin-bottom-5 subsetor-item'>
+					<label class='control-label'>$nome</label>
+					<div style='display:flex; align-items:center;'>
+						<input type='text' name='{$variavel}[]' 
+							class='form-control input-sm campo-fit-content'
+							style='width:120px;' 
+							value='\${texto}'>
+						<button class='btn btn-danger btn-sm remover' type='button'
+								title='Remover subsetor'
+								style='height:40px; margin-top:-10px; margin-left:-1px; border-top-left-radius:0; border-bottom-left-radius:0;'>
+							<span class='glyphicon glyphicon-minus'></span>
+						</button>
+					</div>
+				</div>`;
+
+				lista.append(novo);
+
+				// Limpar o campo original para adicionar outro
+				inputOrigem.val('');
+			});
 
 				// Excluir subsetor
 				lista.on('click', '.remover', function(){
