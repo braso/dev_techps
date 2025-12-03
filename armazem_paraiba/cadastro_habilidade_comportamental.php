@@ -28,6 +28,7 @@
         }
 
         $_POST["habilidade"] = trim($_POST["habilidade"]);
+        $_POST["descricao"] = isset($_POST["descricao"]) ? trim($_POST["descricao"]) : null;
         $importancia = in_array($_POST["importancia"], ["alta", "media", "baixa"]) ? $_POST["importancia"] : "media";
 
         $habilidadeExistente = mysqli_fetch_assoc(query(
@@ -47,6 +48,7 @@
         $novaHab = [
             "habi_tx_nome" => $_POST["habilidade"],
             "habi_tx_importancia" => $importancia,
+            "habi_tx_descricao" => $_POST["descricao"] ?? null,
             "habi_tx_dataAtualiza" => date("Y-m-d H:i:s")
         ];
 
@@ -92,7 +94,8 @@
         $campos = [
             campo_hidden("id", (!empty($_POST["id"]) ? $_POST["id"] : "")),
             campo("Habilidade Comportamental*", "habilidade", !empty($habilidade["habi_tx_nome"]) ? $habilidade["habi_tx_nome"] : "", 6, "", "required"),
-            combo("Importância*", "importancia", !empty($habilidade["habi_tx_importancia"]) ? $habilidade["habi_tx_importancia"] : "media", 3, ["alta" => "Alta", "media" => "Média", "baixa" => "Baixa"], "required")
+            combo("Importância*", "importancia", !empty($habilidade["habi_tx_importancia"]) ? $habilidade["habi_tx_importancia"] : "media", 3, ["alta" => "Alta", "media" => "Média", "baixa" => "Baixa"], "required"),
+            textarea("Descrição", "descricao", !empty($habilidade["habi_tx_descricao"]) ? $habilidade["habi_tx_descricao"] : "", 12)
         ];
 
        $instrucoes =
@@ -184,6 +187,7 @@
             "ID" => "habi_nb_id",
             "HABILIDADE COMPORTAMENTAL" => "habi_tx_nome",
             "IMPORTÂNCIA" => "CASE habi_tx_importancia WHEN 'alta' THEN CONCAT('<span style\\=\"color:#d9534f\"><i class\\=\'fa fa-circle\\'></i> Alta</span>') WHEN 'media' THEN CONCAT('<span style\\=\"color:#f0ad4e\"><i class\\=\'fa fa-circle\\'></i> Média</span>') ELSE CONCAT('<span style\\=\"color:#5cb85c\"><i class\\=\'fa fa-circle\\'></i> Baixa</span>') END AS habi_tx_importancia",
+            "DESCRIÇÃO" => "habi_tx_descricao",
             "DATA DE CADASTRO" => "habi_tx_dataCadastro",
             "DATA DE ALTERAÇÃO" => "habi_tx_dataAtualiza"
         ];

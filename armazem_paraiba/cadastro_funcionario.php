@@ -105,6 +105,43 @@
 					});
 				}
 
+				function fillSelectAjax(selectName, tabela, condicoes, selected) {
+					var el = document.getElementsByName(selectName)[0];
+					if (!el) return;
+					el.innerHTML = '<option value=\'\' disabled selected>Selecione</option>';
+					var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=' + encodeURIComponent(tabela) + '&limite=200&condicoes=' + encodeURI(condicoes || '');
+					$.ajax({ url: url, dataType: 'json' }).done(function(data){
+						if (Array.isArray(data)) {
+							data.forEach(function(item){
+								var o = new Option(item.text, item.id, false, false);
+								el.appendChild(o);
+							});
+							if (selected) { el.value = String(selected); }
+						}
+					});
+				}
+
+				function fillBuscaSubsetor() {
+					var setorBusca = document.getElementsByName('busca_setor')[0];
+					var el = document.getElementsByName('busca_subsetor')[0];
+					if (!setorBusca || !el) return;
+					el.innerHTML = '<option value=\'\' disabled selected>Selecione</option>';
+					var id = setorBusca.value;
+					if (!id) { el.disabled = true; return; }
+					var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=sbgrupos_documentos&limite=200&condicoes=' + encodeURI('AND sbgr_nb_idgrup = '+id);
+					$.ajax({ url: url, dataType: 'json' }).done(function(data){
+						if (Array.isArray(data)) {
+							data.forEach(function(item){
+								var o = new Option(item.text, item.id, false, false);
+								el.appendChild(o);
+							});
+							var sel = '".(isset($_POST["busca_subsetor"]) ? $_POST["busca_subsetor"] : "")."';
+							if (sel) { el.value = sel; }
+							el.disabled = false;
+						}
+					});
+				}
+
 				var parametroPadrao = ".json_encode($parametroPadrao).";
 				function padronizarParametro() {
 					var padraoDisplayJornada = (parametroPadrao.para_tx_tipo == 'escala')? 'none': 'block';
