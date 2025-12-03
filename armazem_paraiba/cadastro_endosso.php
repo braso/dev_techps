@@ -660,6 +660,22 @@
 			$condicoes_motorista .= " AND enti_nb_empresa = ".$_POST["empresa"];
 		}
 
+		$condSubSetor = " ORDER BY sbgr_tx_nome ASC";
+		if (!empty($_POST["busca_setor"])) {
+			$condSubSetor = " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC";
+		}
+		$subsetorExtra = empty($_POST["busca_setor"]) ? "disabled" : "";
+
+		if (!empty($_POST["busca_setor"])) {
+			$condicoes_motorista .= " AND enti_setor_id = ".intval($_POST["busca_setor"]);
+		}
+		if (!empty($_POST["busca_subsetor"])) {
+			$condicoes_motorista .= " AND enti_subSetor_id = ".intval($_POST["busca_subsetor"]);
+		}
+		if (!empty($_POST["busca_operacao"])) {
+			$condicoes_motorista .= " AND enti_tx_tipoOperacao = ".intval($_POST["busca_operacao"]);
+		}
+
 		$camposHE = 
 			"<div class='col-sm-3 margin-bottom-5' style='min-width:200px; width:100%;'>
 				<label>"."Pagar Horas Extras"."</label><br>
@@ -712,6 +728,9 @@
 		;
 
 		$fields = [
+			combo_bd("!Setor", "busca_setor", (!empty($_POST["busca_setor"]) ? $_POST["busca_setor"] : ""), 2, "grupos_documentos"),
+			combo_bd("!Subsetor", "busca_subsetor", (!empty($_POST["busca_subsetor"]) ? $_POST["busca_subsetor"] : ""), 2, "sbgrupos_documentos", $subsetorExtra, $condSubSetor),
+			combo_bd("!Cargo", "busca_operacao", (!empty($_POST["busca_operacao"]) ? $_POST["busca_operacao"] : ""), 2, "operacao"),
 			combo_net("Funcionário", "busca_motorista", $_POST["busca_motorista"]?? "", 4, "entidade", "", $condicoes_motorista, "enti_tx_matricula"),
 			campo_data("De*", "data_de", ($_POST["data_de"]?? ""), 2),
 			campo_data("Ate*", "data_ate", ($_POST["data_ate"]?? ""), 2),
@@ -731,6 +750,25 @@
 		echo abre_form();
 		echo linha_form($fields);
 		echo fecha_form($buttons);
+
+		// Toggle Subsetor visibilidade vinculado ao Setor
+		echo "<script>
+			$(document).ready(function(){
+				function toggleSubsetor(){
+					var setor = $('select[name=\"busca_setor\"]').val();
+					var el = $('#busca_subsetor').closest('.campo-fit-content');
+					if(setor){
+						el.show();
+						$('#busca_subsetor').prop('disabled', false);
+					}else{
+						el.hide();
+						$('#busca_subsetor').prop('disabled', true).val('');
+					}
+				}
+				toggleSubsetor();
+				$('select[name=\"busca_setor\"]').on('change', toggleSubsetor);
+			});
+		</script>";
 		
 		rodape();
 

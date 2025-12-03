@@ -9,7 +9,7 @@ queryBase;
 
 pageNumber = 1;
 total = -1;
-limit = 10;
+limit = 999999;
 if(typeof orderCol === 'undefined'){
     orderCol = '';
 }
@@ -155,9 +155,10 @@ const consultarRegistros = function(){
         }
     });
 
-    limit = parseInt($('input[name=\"limit\"')[0].value);
-    if(limit < 1){
-        limit = 1;
+    let limitVal = $('input[name="limit"]').first().val();
+    limit = parseInt(limitVal, 10);
+    if(isNaN(limit) || limit <= 0){
+        limit = 999999;
     }
 
     keys = Object.values(searchFields);
@@ -307,8 +308,9 @@ const consultarRegistros = function(){
 };
 
 $(document).ready(function(){
-    $('form[name=\"contex_form\"]').on('change', consultarRegistros);
-    $('#limit').on('change', function(){
+    $('form[name="contex_form"]').on('change', consultarRegistros);
+    $('input[name="limit"]').on('change', function(){
+        $('input[name="limit"]').val($(this).val());
         consultarRegistros();
     });
     consultarRegistros();
@@ -323,11 +325,11 @@ $('.grid-footer .tab-pagination').click(function(event) {
 
 function imprimirTabelaCompleta() {
     // Salva valores atuais
-    const limitOriginal = parseInt($('input[name="limit"]')[0].value);
+    const limitOriginal = parseInt($('input[name="limit"]').first().val());
     const paginaOriginal = pageNumber;
 
     // Altera o limit para um número bem alto
-    $('input[name="limit"]')[0].value = 999999;
+    $('input[name="limit"]').val(999999);
     pageNumber = 1;
 
     // Monta condições de filtro com base no formulário
@@ -466,7 +468,7 @@ function imprimirTabelaCompleta() {
             document.body.removeChild(form);
 
             // Restaura os valores originais da paginação após a requisição
-            $('input[name="limit"]')[0].value = limitOriginal;
+            $('input[name="limit"]').val(limitOriginal);
             pageNumber = paginaOriginal;
             consultarRegistros();
         },

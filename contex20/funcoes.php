@@ -446,6 +446,16 @@
 		return "";
 	}
 
+	function normalizar($texto){
+		$texto = preg_replace('/[áàãâä]/ui', 'a', $texto);
+		$texto = preg_replace('/[éèêë]/ui', 'e', $texto);
+		$texto = preg_replace('/[íìîï]/ui', 'i', $texto);
+		$texto = preg_replace('/[óòõôö]/ui', 'o', $texto);
+		$texto = preg_replace('/[úùûü]/ui', 'u', $texto);
+		$texto = preg_replace('/[ç]/ui', 'c', $texto);
+		return strtolower(trim(preg_replace('/\s+/', ' ', $texto)));
+	}
+
 	function data($data, $hora = 0): string{
 
 		if(in_array($data, ["0000-00-00", "00/00/0000"]) || empty($data)){
