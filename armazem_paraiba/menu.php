@@ -36,7 +36,7 @@
 				"/cadastro_funcionario.php"	=> "Funcionário",
 				"/cadastro_macro.php" 		=> "Macro",
 				"/cadastro_motivo.php" 		=> "Motivo",
-				"/cadastro_operacao.php" 	=> "Operação",
+				"/cadastro_operacao.php" 	=> "Cargo",
 				"/cadastro_parametro.php" 	=> "Parâmetro",
 				"/cadastro_placa.php" 		=> "Placas",
 				"/cadastro_setor.php" 		=> "Setor",

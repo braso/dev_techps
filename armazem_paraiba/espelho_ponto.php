@@ -173,19 +173,56 @@
 				];
 			}else{
 				$_POST["busca_empresa"] = $_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"];
-				$searchFields = [
-					combo_net("Empresa*", "busca_empresa", $_POST["busca_empresa"], 3, "empresa", "onchange=selecionaMotorista(this.value) ", $condBuscaEmpresa),
-					combo_net(
-						"Funcionário*",
-						"busca_motorista",
-						(!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""),
-						4, 
-						"entidade JOIN empresa ON enti_nb_empresa = empr_nb_id", 
-						"", 
-						(!empty($_POST["busca_empresa"])?" AND enti_nb_empresa = {$_POST["busca_empresa"]}":"")." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') {$condBuscaEmpresa} {$condBuscaMotorista}",
-						"enti_tx_matricula"
-					)
-				];
+				
+				// Filtros adicionais: Cargo e Setor
+				// Ambos influenciam a lista de Funcionários
+
+                // Condições para filtrar funcionários por Cargo/Setor/Subsetor
+                $condCargoSetor = "";
+				
+				// Se tiver Cargo selecionado, adiciona ao filtro
+				if (!empty($_POST["busca_operacao"])) {
+					$condCargoSetor .= " AND enti_tx_tipoOperacao = ".intval($_POST["busca_operacao"]);
+				}
+				
+				// Se tiver Setor selecionado, adiciona ao filtro
+                if (!empty($_POST["busca_setor"])) {
+                    $condCargoSetor .= " AND enti_setor_id = ".intval($_POST["busca_setor"]);
+                }
+                if (!empty($_POST["busca_subsetor"])) {
+                    $condCargoSetor .= " AND enti_subSetor_id = ".intval($_POST["busca_subsetor"]);
+                }
+
+                $hasSubsetor = 0;
+                if (!empty($_POST["busca_setor"])) {
+                    $row = mysqli_fetch_assoc(query(
+                        "SELECT COUNT(*) AS c FROM sbgrupos_documentos WHERE sbgr_tx_status = 'ativo' AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." LIMIT 1;"
+                    ));
+                    $hasSubsetor = (int)($row["c"]??0);
+                }
+
+                $searchFields = [
+                    combo_net("Empresa*", "busca_empresa", $_POST["busca_empresa"], 3, "empresa", "onchange=selecionaMotorista(this.value) ", $condBuscaEmpresa),
+                    combo_bd("!Cargo", "busca_operacao", (!empty($_POST["busca_operacao"]) ? $_POST["busca_operacao"] : ""), 2, "operacao", "onchange='this.form.submit()'"),
+                    combo_bd("!Setor", "busca_setor", (!empty($_POST["busca_setor"]) ? $_POST["busca_setor"] : ""), 2, "grupos_documentos", "onchange='this.form.submit()'"),
+                ];
+                if ($hasSubsetor > 0) {
+                    $searchFields[] = combo_bd("!Subsetor", "busca_subsetor", (!empty($_POST["busca_subsetor"]) ? $_POST["busca_subsetor"] : ""), 2, "sbgrupos_documentos", "onchange='this.form.submit()'", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " AND 1 = 0 ORDER BY sbgr_tx_nome ASC"));
+                }
+                $searchFields[] = combo_net(
+                        "Funcionário*",
+                        "busca_motorista",
+                        (!empty($_POST["busca_motorista"]) ? $_POST["busca_motorista"] : ""),
+                        4,
+                        "entidade JOIN empresa ON enti_nb_empresa = empr_nb_id",
+                        "",
+                        (!empty($_POST["busca_empresa"]) ? " AND enti_nb_empresa = {$_POST["busca_empresa"]}" : "").
+                            " {$condBuscaEmpresa} {$condBuscaMotorista}".
+                            $condCargoSetor,
+                        "enti_tx_matricula"
+                    );
+                
+                
 			}
 
 			$searchFields[] = campo(
@@ -493,7 +530,11 @@
 					}
 					$.fn.select2.defaults.set('theme', 'bootstrap');
 					$('.busca_motorista').select2({
-						language: 'pt-BR',
+						language: {
+							noResults: function(){
+								return 'Nenhum Funcionário encontrado para a combinação do filtro';
+							}
+						},
 						placeholder: 'Selecione um item',
 						allowClear: true,
 						ajax: {
