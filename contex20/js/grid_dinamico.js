@@ -15,6 +15,98 @@ if(typeof orderCol === 'undefined'){
 }
 
 const camposBd = Object.values(fields);
+// FUNÇÃO PARA EXPORTAR O ESTADO ATUAL DA TABELA
+function exportAllToCSV() {
+    const btn = $('#btnExportCSV');
+    const loading = $('#csvLoading');
+    
+    // Desabilita o botão e mostra loading
+    btn.prop('disabled', true);
+    loading.show();
+    
+    // Faz uma nova requisição para buscar TODOS os dados
+    $.ajax({
+        url: urlTableInfo,
+        method: 'POST',
+        data: {
+            'query': [
+                window.tableConfig.queryBase, 
+                btoa(encodeURI(window.tableConfig.conditions)), 
+                btoa(1000000), // 'all' para buscar todos os registros
+                btoa(0) // offset 0
+            ]
+        },
+        dataType: 'json',
+        success: function(response) {
+            // Prepara os dados para CSV
+            let csvContent = "";
+            
+            // Cabeçalhos
+            const headers = Object.keys(window.tableConfig.fields);
+            csvContent += headers.map(header => 
+                `"${header.replace(/"/g, '""')}"`
+            ).join(',') + '\n';
+            
+            // Dados
+            response.rows.forEach(row => {
+                const rowData = [];
+                Object.keys(row).forEach(key => {
+                    if (window.tableConfig.camposBd.indexOf(key) >= 0) {
+                        let value = row[key] != null ? row[key].toString() : '';
+                        // Remove todas as tags HTML
+                        value = value.replace(/<[^>]*>/g, '');
+
+                        console.log('Processando campo:', key, 'Valor original:', row[key], 'Valor limpo:', value);
+                        const campo = key.toLowerCase();
+                        const isDoc = (
+                            campo.includes("cpf") ||
+                            campo.includes("cnpj") ||
+                            /^[0-9]{11}$/.test(value.replace(/\D/g, '')) ||      // CPF sem máscara
+                            /^[0-9]{14}$/.test(value.replace(/\D/g, ''))         // CNPJ sem máscara
+                        );
+
+                        if (isDoc) {
+                            // Excel: mantém como texto
+                            rowData.push(`="${value}"`);
+                        } else {
+                            value = value.replace(/"/g, '""');
+                            rowData.push(`"${value}"`);
+                        }
+                    }
+                });
+                csvContent += rowData.join(',') + '\n';
+
+                console.log('Processado registro para CSV:', csvContent );
+            });
+            
+            // Cria e faz download do arquivo
+            const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            
+            const timestamp = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+            link.setAttribute("href", url);
+            link.setAttribute("download", `dados_completos_${timestamp}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log('CSV exportado com todos os dados:', response.rows.length, 'registros');
+        },
+        error: function(errMsg) {
+            console.error('Erro ao exportar CSV:', errMsg);
+            alert('Erro ao exportar dados. Tente novamente.');
+        },
+        complete: function() {
+            // Reabilita o botão e esconde loading
+            btn.prop('disabled', false);
+            loading.hide();
+        }
+    });
+}
+
 
 let definirFuncoesInternas = function(){
     //Ordenações{
@@ -178,14 +270,34 @@ const consultarRegistros = function(){
                 if(qtdPaginas > 3 && pageNumber < qtdPaginas-1){
                     footer += '<div value=\"'+(qtdPaginas)+'\">>></div>'
                 }
-            //}
 
+                //}
+                
+                btn = '<div class=\"export-csv-container\">' +
+                        '<button id=\"btnExportCSV\" class=\"btn btn-success btn-sm\" title=\"Exportar TODOS os dados para CSV\">' +
+                            '<i class=\"glyphicon glyphicon-download-alt\"></i> CSV (' + total + ' registros)' +
+                        '</button>' +
+                        '<div id=\"csvLoading\" class=\"csv-loading\" style=\"display: none;\">Gerando CSV...</div>' +
+                      '</div>';
             $('#result thead')[0].innerHTML = header.join('');
             $('#result tbody')[0].innerHTML = response.rows;
             $('.grid-footer .total-registros')[0].innerHTML = '<div>Total: '+total+'</div>';
             $('.grid-footer .tab-pagination')[0].innerHTML = footer;
             $('.table-loading-icon')[0].innerHTML = '';
+            $('.botao-csv')[0].innerHTML = btn;
 
+
+            window.tableConfig = {
+                queryBase: queryBase,
+                conditions: conditions,
+                fields: fields,
+                camposBd: camposBd,
+                totalRecords: total
+            };
+
+            $('#btnExportCSV').off('click').on('click', function() {
+                exportAllToCSV();
+            });
 
             definirFuncoesInternas();
         },
