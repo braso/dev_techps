@@ -337,6 +337,8 @@
 			set_status("O arquivo não foi encontrado.");
 		}
 
+
+		
 		index();
 		exit;
 	}

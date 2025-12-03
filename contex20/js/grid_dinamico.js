@@ -472,6 +472,8 @@ function imprimirTabelaCompleta() {
         },
         error: function(err) {
             console.error('Erro ao carregar todos os dados:', err);
+
+            
         }
     });
 }
