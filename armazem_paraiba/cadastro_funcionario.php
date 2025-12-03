@@ -1,12 +1,12 @@
 <?php
-    /* Modo debug
+  
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
-	//*/
+
 	include "conecta.php";
 
 	function carregarJS(){
@@ -77,6 +77,69 @@
 					id = document.getElementsByName('parametro')[0].value;
 					document.getElementById('frame_parametro').src = 'cadastro_funcionario.php?acao=carregarParametro&parametro='+id;
 					conferirParametroPadrao();
+				}
+
+				function filtrarSubSetor(id) {
+					var el = document.getElementsByName('subSetor')[0];
+					if (!el) return;
+					el.innerHTML = '<option value=\'\' disabled selected>Selecione</option>';
+					el.disabled = true;
+					if (!id) { el.parentElement.style.display = 'none'; return; }
+					var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=sbgrupos_documentos&limite=200&condicoes=' + encodeURI('AND sbgr_nb_idgrup = '+id);
+					$.ajax({ url: url, dataType: 'json' }).done(function(data){
+						if (Array.isArray(data)) {
+							if (data.length > 0) {
+								data.forEach(function(item){
+									var o = new Option(item.text, item.id, false, false);
+									el.appendChild(o);
+								});
+								el.disabled = false;
+								el.parentElement.style.display = '';
+								var sel = '".((!empty($a_mod["enti_subSetor_id"]))? $a_mod["enti_subSetor_id"]: "")."';
+								if (sel) { el.value = sel; }
+							} else {
+								el.disabled = true;
+								el.parentElement.style.display = 'none';
+							}
+						}
+					});
+				}
+
+				function fillSelectAjax(selectName, tabela, condicoes, selected) {
+					var el = document.getElementsByName(selectName)[0];
+					if (!el) return;
+					el.innerHTML = '<option value=\'\' disabled selected>Selecione</option>';
+					var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=' + encodeURIComponent(tabela) + '&limite=200&condicoes=' + encodeURI(condicoes || '');
+					$.ajax({ url: url, dataType: 'json' }).done(function(data){
+						if (Array.isArray(data)) {
+							data.forEach(function(item){
+								var o = new Option(item.text, item.id, false, false);
+								el.appendChild(o);
+							});
+							if (selected) { el.value = String(selected); }
+						}
+					});
+				}
+
+				function fillBuscaSubsetor() {
+					var setorBusca = document.getElementsByName('busca_setor')[0];
+					var el = document.getElementsByName('busca_subsetor')[0];
+					if (!setorBusca || !el) return;
+					el.innerHTML = '<option value=\'\' disabled selected>Selecione</option>';
+					var id = setorBusca.value;
+					if (!id) { el.disabled = true; return; }
+					var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=sbgrupos_documentos&limite=200&condicoes=' + encodeURI('AND sbgr_nb_idgrup = '+id);
+					$.ajax({ url: url, dataType: 'json' }).done(function(data){
+						if (Array.isArray(data)) {
+							data.forEach(function(item){
+								var o = new Option(item.text, item.id, false, false);
+								el.appendChild(o);
+							});
+							var sel = '".(isset($_POST["busca_subsetor"]) ? $_POST["busca_subsetor"] : "")."';
+							if (sel) { el.value = sel; }
+							el.disabled = false;
+						}
+					});
 				}
 
 				var parametroPadrao = ".json_encode($parametroPadrao).";
@@ -184,6 +247,8 @@
 					}
 					}
 				});
+				var setorEl = document.getElementsByName('setor')[0];
+				if (setorEl && setorEl.value) { filtrarSubSetor(setorEl.value); }
 				});
 			</script>"
 		;
@@ -313,14 +378,14 @@
 
 		$enti_campos = [
 			"enti_tx_matricula" 				=> "postMatricula", 
-			"enti_tx_nome" 						=> "nome", 
+			"enti_tx_nome" 					=> "nome", 
 			"enti_tx_nascimento" 				=> "nascimento", 
 			"enti_tx_status" 					=> "status", 
 			"enti_tx_cpf" 						=> "cpf",
 			"enti_tx_rg" 						=> "rg",
 			"enti_tx_civil" 					=> "civil",
-			"enti_tx_sexo" 						=> "sexo",
-			"enti_tx_endereco" 					=> "endereco",
+			"enti_tx_sexo" 					=> "sexo",
+			"enti_tx_endereco" 				=> "endereco",
 			"enti_tx_numero" 					=> "numero",
 			"enti_tx_complemento" 				=> "complemento",
 			"enti_tx_bairro" 					=> "bairro",
@@ -329,34 +394,36 @@
 			"enti_tx_fone1" 					=> "fone1",
 			"enti_tx_fone2" 					=> "fone2",
 			"enti_tx_email" 					=> "email",
-			"enti_tx_ocupacao" 					=> "ocupacao",
-			"enti_nb_salario" 					=> "salario",
+			"enti_tx_ocupacao" 				=> "ocupacao",
+			"enti_nb_salario" 				=> "salario",
 			"enti_nb_parametro" 				=> "parametro", 
-			"enti_tx_obs" 						=> "obs", 
-			"enti_nb_empresa" 					=> "empresa",
-			"enti_tx_jornadaSemanal" 			=> "jornadaSemanal",
+			"enti_tx_obs" 					=> "obs", 
+			"enti_nb_empresa" 				=> "empresa",
+			"enti_setor_id" 					=> "setor",
+			"enti_subSetor_id" 				=> "subSetor",
+			"enti_tx_jornadaSemanal" 		=> "jornadaSemanal",
 			"enti_tx_jornadaSabado" 			=> "jornadaSabado",
 			"enti_tx_percHESemanal" 			=> "percHESemanal",
-			"enti_tx_percHEEx" 					=> "percHEEx",
-			"enti_tx_rgOrgao" 					=> "rgOrgao", 
+			"enti_tx_percHEEx" 				=> "percHEEx",
+			"enti_tx_rgOrgao" 				=> "rgOrgao", 
 			"enti_tx_rgDataEmissao" 			=> "rgDataEmissao", 
-			"enti_tx_rgUf" 						=> "rgUf",
-			"enti_tx_pai" 						=> "pai", 
-			"enti_tx_mae" 						=> "mae", 
-			"enti_tx_conjugue" 					=> "conjugue", 
-			"enti_tx_tipoOperacao" 				=> "tipoOperacao",
+			"enti_tx_rgUf" 					=> "rgUf",
+			"enti_tx_pai" 					=> "pai", 
+			"enti_tx_mae" 					=> "mae", 
+			"enti_tx_conjugue" 				=> "conjugue", 
+			"enti_tx_tipoOperacao" 			=> "tipoOperacao",
 			"enti_tx_subcontratado" 			=> "subcontratado", 
-			"enti_tx_admissao" 					=> "admissao", 
-			"enti_tx_desligamento" 				=> "desligamento",
-			"enti_tx_cnhRegistro" 				=> "cnhRegistro", 
-			"enti_tx_cnhValidade" 				=> "cnhValidade", 
+			"enti_tx_admissao" 				=> "admissao", 
+			"enti_tx_desligamento" 			=> "desligamento",
+			"enti_tx_cnhRegistro" 			=> "cnhRegistro", 
+			"enti_tx_cnhValidade" 			=> "cnhValidade", 
 			"enti_tx_cnhPrimeiraHabilitacao" 	=> "cnhPrimeiraHabilitacao", 
-			"enti_tx_cnhCategoria" 				=> "cnhCategoria", 
-			"enti_tx_cnhPermissao" 				=> "cnhPermissao",
+			"enti_tx_cnhCategoria" 			=> "cnhCategoria", 
+			"enti_tx_cnhPermissao" 			=> "cnhPermissao",
 			"enti_tx_cnhObs" 					=> "cnhObs", 
-			"enti_nb_cnhCidade"			 		=> "cnhCidade", 
+			"enti_nb_cnhCidade" 				=> "cnhCidade", 
 			"enti_tx_cnhEmissao" 				=> "cnhEmissao", 
-			"enti_tx_cnhPontuacao" 				=> "cnhPontuacao", 
+			"enti_tx_cnhPontuacao" 			=> "cnhPontuacao", 
 			"enti_tx_cnhAtividadeRemunerada" 	=> "cnhAtividadeRemunerada",
 			"enti_tx_banco" 					=> "setBanco"
 		];
@@ -1128,8 +1195,7 @@
 			campo(	  	"Filiação Pai", 		"pai", 				($a_mod["enti_tx_pai"]?? ""),			3, "", 					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"Filiação Mãe", 		"mae", 				($a_mod["enti_tx_mae"]?? ""),			3, "", 					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"Nome do Cônjuge",	 	"conjugue", 		($a_mod["enti_tx_conjugue"]?? ""),		3, "", 					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
-			combo_bd( "!Tipo de Operação", 	"tipoOperacao",		(isset($a_mod["enti_tx_tipoOperacao"])? $a_mod["enti_tx_tipoOperacao"]: ""), 3, "operacao"),
-
+			
 			textarea(	"Observações:", "obs", ($a_mod["enti_tx_obs"]?? ""), 12, "tabindex=".sprintf("%02d", $tabIndex++))
 		]);
 
@@ -1143,8 +1209,18 @@
 			$campoSalario = campo("Salário*", "salario", $a_mod["enti_nb_salario"], 1, "MASCARA_DINHEIRO", "tabindex=".sprintf("%02d", $tabIndex+2));
 		}
 
+        $condSubSetor = " ORDER BY sbgr_tx_nome ASC";
+        if (!empty($a_mod["enti_setor_id"]) || !empty($_POST["setor"])) {
+            $idSetorRef = (!empty($_POST["setor"]) ? intval($_POST["setor"]) : intval($a_mod["enti_setor_id"]));
+            $condSubSetor = " AND sbgr_nb_idgrup = ".$idSetorRef." ORDER BY sbgr_tx_nome ASC";
+        }
+
 		$cContratual = [
 			combo_bd("Empresa*", "empresa", ($a_mod["enti_nb_empresa"]?? $_SESSION["user_nb_empresa"]), 3, "empresa", "onchange='carregarEmpresa(this.value)' tabindex=".sprintf("%02d", $tabIndex++), $extraEmpresa),
+			combo_bd("Setor", "setor", ($a_mod["enti_setor_id"]?? ""), 3, "grupos_documentos", "onchange='filtrarSubSetor(this.value)' tabindex=".sprintf("%02d", $tabIndex++)),
+			combo_bd("Subsetor", "subSetor", ($a_mod["enti_subSetor_id"]?? ""), 3, "sbgrupos_documentos", "tabindex=".sprintf("%02d", $tabIndex++), $condSubSetor),
+			combo_bd( "!Cargo", 	"tipoOperacao",		(isset($a_mod["enti_tx_tipoOperacao"])? $a_mod["enti_tx_tipoOperacao"]: ""), 3, "operacao"),
+
 			$campoSalario
 		];
 		$tabIndex++;
@@ -1339,9 +1415,11 @@
 			combo_bd("!Empresa",				"busca_empresa",		(!empty($_POST["busca_empresa"])? $_POST["busca_empresa"]: ""), 2, "empresa", "", $extraEmpresa),
 			combo("Ocupação",					"busca_ocupacao",		(!empty($_POST["busca_ocupacao"])? $_POST["busca_ocupacao"]: ""), 2, ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
 			combo("Convenção Padrão",			"busca_padrao",			(!empty($_POST["busca_padrao"])? $_POST["busca_padrao"]: ""), 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
-			combo_bd("!Parâmetros da Jornada", 	"busca_parametro",		(!empty($_POST["busca_parametro"])? $_POST["busca_parametro"]: ""), 4, "parametro"),
-			combo("Status",						"busca_status",			(!empty($_POST["busca_status"])? $_POST["busca_status"]: "Todos"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
-			combo_bd("!Tipo de Operação", 		"busca_operacao",		(!empty($_POST["busca_operacao"])? $_POST["busca_operacao"]: ""), 2, "operacao")
+			combo_bd("!Parâmetros da Jornada", 	"busca_parametro", 		(!empty($_POST["busca_parametro"])? $_POST["busca_parametro"]: ""), 4, "parametro"),
+			combo("Status", 					"busca_status", 			(!empty($_POST["busca_status"])? $_POST["busca_status"]: "Todos"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
+			combo_bd("!Setor", 				"busca_setor", 			(!empty($_POST["busca_setor"])? $_POST["busca_setor"]: ""), 2, "grupos_documentos"),
+            combo_bd("!Subsetor",            "busca_subsetor",        (!empty($_POST["busca_subsetor"]) ? $_POST["busca_subsetor"] : ""), 2, "sbgrupos_documentos", "", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " ORDER BY sbgr_tx_nome ASC")),
+			combo_bd("!Cargo", 				"busca_operacao", 		(!empty($_POST["busca_operacao"])? $_POST["busca_operacao"]: ""), 2, "operacao")
 		];
 
 		$botoesBusca = [
@@ -1370,20 +1448,22 @@
 		
 
 		//Configuração da tabela dinâmica{
-			$gridFields = [
-				"CÓDIGO" 				=> "enti_nb_id",
-				"NOME" 					=> "enti_tx_nome",
-				"MATRÍCULA" 			=> "enti_tx_matricula",
-				"CPF" 					=> "enti_tx_cpf",
-				"EMPRESA" 				=> "empr_tx_nome",
-				"FONE 1" 				=> "enti_tx_fone1",
-				"OCUPAÇÃO" 				=> "enti_tx_ocupacao",
-				"TIPO DE OPERAÇÃO" 		=> "oper_tx_nome",
-				"DATA CADASTRO" 		=> "CONCAT('data(\"', enti_tx_dataCadastro, '\")') AS enti_tx_dataCadastro",
-				"PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
-				"CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
-				"STATUS" 				=> "enti_tx_status"
-			];
+            $gridFields = [
+                "CÓDIGO" 				=> "enti_nb_id",
+                "NOME" 					=> "enti_tx_nome",
+                "MATRÍCULA" 				=> "enti_tx_matricula",
+                "CPF" 					=> "enti_tx_cpf",
+                "EMPRESA" 				=> "empr_tx_nome",
+                "CARGO" 					=> "oper_tx_nome",
+                "SETOR" 				=> "grup_tx_nome",
+                "SUBSETOR" 			=> "sbgr_tx_nome",
+                "FONE 1" 				=> "enti_tx_fone1",
+                "OCUPAÇÃO" 				=> "enti_tx_ocupacao",
+                "DATA CADASTRO" 		=> "CONCAT('data(\"', enti_tx_dataCadastro, '\")') AS enti_tx_dataCadastro",
+                "PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
+                "CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
+                "STATUS" 				=> "enti_tx_status"
+            ];
 	
 			$camposBusca = [
 				"busca_codigo" 			=> "enti_nb_id",
@@ -1391,6 +1471,8 @@
 				"busca_matricula_like" 	=> "enti_tx_matricula",
 				"busca_cpf" 			=> "enti_tx_cpf",
 				"busca_empresa" 		=> "enti_nb_empresa",
+				"busca_setor" 			=> "enti_setor_id",
+				"busca_subsetor" 		=> "enti_subSetor_id",
 				"busca_ocupacao" 		=> "enti_tx_ocupacao",
 				"busca_padrao" 			=> "enti_tx_ehPadrao",
 				"busca_parametro" 		=> "enti_nb_parametro",
@@ -1398,13 +1480,15 @@
 				"busca_operacao" 		=> "enti_tx_tipoOperacao"
 			];
 	
-			$queryBase = (
-				"SELECT ".implode(", ", array_values($gridFields))." FROM entidade"
-					." LEFT JOIN user ON enti_nb_id = user_nb_entidade"
-					." JOIN empresa ON enti_nb_empresa = empr_nb_id"
-					." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
-					." LEFT JOIN operacao ON enti_tx_tipoOperacao = oper_nb_id"
-			);
+            $queryBase = (
+                "SELECT ".implode(", ", array_values($gridFields))." FROM entidade"
+                    ." LEFT JOIN user ON enti_nb_id = user_nb_entidade"
+                    ." JOIN empresa ON enti_nb_empresa = empr_nb_id"
+                    ." LEFT JOIN grupos_documentos ON enti_setor_id = grup_nb_id"
+                    ." LEFT JOIN sbgrupos_documentos subg ON enti_subSetor_id = subg.sbgr_nb_id"
+                    ." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
+                    ." LEFT JOIN operacao ON enti_tx_tipoOperacao = oper_nb_id"
+            );
 	
 			$actions = criarIconesGrid(
 				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],

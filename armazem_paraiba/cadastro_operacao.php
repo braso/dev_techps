@@ -67,7 +67,7 @@
     function index() {
 		global $CONTEX;
 
-		cabecalho("Cadastro de Tipos de Operação");
+		cabecalho("Cadastro de Cargos");
 
 		if(!isset($_POST["busca_status"])){
 			$_POST["busca_status"] = "ativo";

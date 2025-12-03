@@ -508,22 +508,48 @@
 					"AND empr_tx_status = 'ativo' ".($extraEmpresa?? "")
 				);
 			}
-			$fields = array_merge($fields, [
-				combo_net(
-					"Funcionário", 
-					"busca_motorista", 
-					(!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 
-					3, 
-					"entidade", 
-					"", 
-					(!empty($_POST["busca_empresa"])?" AND enti_nb_empresa = {$_POST["busca_empresa"]}":"")
-					." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
-					.($_POST["extraMotorista"]?? "").($extraEmpresaMotorista?? ""), 
-					"enti_tx_matricula"
-				),
-				campo_mes("Data*",      "busca_data",      	(!empty($_POST["busca_data"])?      $_POST["busca_data"]     : ""), 2),
-				combo(	  "Endossado",	"busca_endossado", 	(!empty($_POST["busca_endossado"])? $_POST["busca_endossado"]: ""), 2, ["endossado" => "Sim", "naoEndossado" => "Não"])
-			]);
+
+			// Filtros adicionais: Cargo, Setor e Subsetor (Subsetor condicionado ao Setor)
+			$condCargoSetor = "";
+			if (!empty($_POST["busca_operacao"])) {
+				$condCargoSetor .= " AND enti_tx_tipoOperacao = ".intval($_POST["busca_operacao"]);
+			}
+			if (!empty($_POST["busca_setor"])) {
+				$condCargoSetor .= " AND enti_setor_id = ".intval($_POST["busca_setor"]);
+			}
+			if (!empty($_POST["busca_subsetor"])) {
+				$condCargoSetor .= " AND enti_subSetor_id = ".intval($_POST["busca_subsetor"]);
+			}
+
+			$fields[] = combo_bd("!Cargo", "busca_operacao", (!empty($_POST["busca_operacao"]) ? $_POST["busca_operacao"] : ""), 2, "operacao", "onchange='this.form.submit()'");
+			$fields[] = combo_bd("!Setor", "busca_setor", (!empty($_POST["busca_setor"]) ? $_POST["busca_setor"] : ""), 2, "grupos_documentos", "onchange='this.form.submit()'");
+
+			$hasSubsetor = 0;
+			if (!empty($_POST["busca_setor"])) {
+				$row = mysqli_fetch_assoc(query(
+					"SELECT COUNT(*) AS c FROM sbgrupos_documentos WHERE sbgr_tx_status = 'ativo' AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." LIMIT 1;"
+				));
+				$hasSubsetor = (int)($row["c"]??0);
+			}
+			if ($hasSubsetor > 0) {
+				$fields[] = combo_bd("!Subsetor", "busca_subsetor", (!empty($_POST["busca_subsetor"]) ? $_POST["busca_subsetor"] : ""), 2, "sbgrupos_documentos", "onchange='this.form.submit()'", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " AND 1 = 0 ORDER BY sbgr_tx_nome ASC"));
+			}
+
+			$fields[] = combo_net(
+				"Funcionário", 
+				"busca_motorista", 
+				(!empty($_POST["busca_motorista"])? $_POST["busca_motorista"]: ""), 
+				3, 
+				"entidade", 
+				"", 
+				(!empty($_POST["busca_empresa"]) ? " AND enti_nb_empresa = {$_POST["busca_empresa"]}" : "")
+				." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
+				.$condCargoSetor
+				.($_POST["extraMotorista"]?? "").($extraEmpresaMotorista?? ""), 
+				"enti_tx_matricula"
+			);
+			$fields[] = campo_mes("Data*", "busca_data", (!empty($_POST["busca_data"]) ? $_POST["busca_data"] : ""), 2);
+			$fields[] = combo("Endossado", "busca_endossado", (!empty($_POST["busca_endossado"]) ? $_POST["busca_endossado"] : ""), 2, ["endossado" => "Sim", "naoEndossado" => "Não"]);
 		//}
 
 		//BOTOES{

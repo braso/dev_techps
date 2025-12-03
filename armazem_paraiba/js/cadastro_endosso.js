@@ -58,9 +58,16 @@ function carregarMotorista() {
 	alert('carregarMotorista()');
 }
 function selecionaMotorista(idEmpresa) {
-	let buscaExtra = encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")' +
-		(idEmpresa > 0 ? ' AND enti_nb_empresa = \"' + idEmpresa + '\"' : '')
-	);
+    const setor = $('select[name="busca_setor"]').val();
+    const subsetor = $('select[name="busca_subsetor"]').val();
+    const cargo = $('select[name="busca_operacao"]').val();
+
+    let buscaExtra = encodeURI('AND enti_tx_ocupacao IN ("Motorista", "Ajudante", "Funcionário")'
+        + (idEmpresa > 0 ? ' AND enti_nb_empresa = "' + idEmpresa + '"' : '')
+        + (setor ? ' AND enti_setor_id = "' + setor + '"' : '')
+        + (subsetor ? ' AND enti_subSetor_id = "' + subsetor + '"' : '')
+        + (cargo ? ' AND enti_tx_tipoOperacao = "' + cargo + '"' : '')
+    );
 
 	if ($('.busca_motorista').data('select2')) {// Verifica se o elemento está usando Select2 antes de destruí-lo
 		$('.busca_motorista').select2('destroy');
@@ -69,17 +76,17 @@ function selecionaMotorista(idEmpresa) {
 	}
 
 	$.fn.select2.defaults.set('theme', 'bootstrap');
-	$('.busca_motorista').select2({
-		language: 'pt-BR',
-		placeholder: 'Selecione um item',
-		allowClear: true,
-		ajax: {
-			url: appPath + '/contex20/select2.php?path=' + contexPath + '&tabela=entidade&extra_ordem=&extra_limite=15&extra_bd=' + buscaExtra + '&extra_busca=enti_tx_matricula',
-			dataType: 'json',
-			delay: 250,
-			processResults: function (data) {
-				return { results: data };
-			},
+    $('.busca_motorista').select2({
+        language: 'pt-BR',
+        placeholder: 'Selecione um item',
+        allowClear: true,
+        ajax: {
+            url: appPath + '/contex20/select2.php?path=' + contexPath + '&tabela=entidade&colunas=enti_tx_matricula&condicoes=' + buscaExtra + '&ordem=&limite=15',
+            dataType: 'json',
+            delay: 250,
+            processResults: function (data) {
+                return { results: data };
+            },
 			cache: true,
 			success: function (result) {
 			},
@@ -109,3 +116,13 @@ function pegarSaldoPeriodoNegativo() {
 	button.value = 'pegarSaldoPeriodoNegativo';
 	button.click();
 }
+
+$(document).ready(function(){
+    const getEmpresa = function(){
+        const el = document.getElementsByName('empresa')[0];
+        return el ? el.value : '';
+    };
+    $('select[name="busca_setor"], select[name="busca_subsetor"], select[name="busca_operacao"]').on('change', function(){
+        selecionaMotorista(getEmpresa());
+    });
+});

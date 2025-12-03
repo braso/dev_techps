@@ -216,7 +216,14 @@
 		$result = 
 			"<link href='{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/css/grid_dinamico.css' rel='stylesheet' type='text/css' />
 			<div class='col-md-{$width}'>
-				<div class='portlet light'>
+                <div class='portlet light'>
+                    <div class='grid-header' style='width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>
+                        <div class='botao-csv'></div>
+                        <div class='margin-bottom-5' style='width: min-content;'>
+                            <label>Regs. por página</label>
+                            <input name='limit' id='limitTop' value='' placeholder='Todos' autocomplete='off' type='number' class='form-control input-sm' min='1' max='999' ".($tabIndex>0? "tabindex='".$tabIndex."'": "").">
+                        </div>
+                    </div>
 					<div class='table-div' style='margin-top: 8px;overflow-x: auto; border-radius: 10px; max-height: 87vh;'>
 						<div class='table-loading-icon' style='place-items: center;position: absolute;width: 89vw;z-index: 2;top: 50px;'>
 						</div>
@@ -231,7 +238,7 @@
 					<div class='grid-footer'>
 						<div class='col-sm-1 margin-bottom-5' style='width: min-content;'>
 							<label>Regs. por página</label>
-							<input name='limit' id='limit' value='10' autocomplete='off' type='number' class='form-control input-sm' min='1' max='99' ".($tabIndex>0? "tabindex='".$tabIndex."'": "").">
+							<input name='limit' id='limitBottom' value='' placeholder='Todos' autocomplete='off' type='number' class='form-control input-sm' min='1' max='999' ".($tabIndex>0? "tabindex='".$tabIndex."'": "").">
 						</div>
 						<div class='total-registros'>
 						</div>
@@ -335,6 +342,8 @@
 			set_status("O arquivo não foi encontrado.");
 		}
 
+
+		
 		index();
 		exit;
 	}

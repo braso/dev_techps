@@ -146,3 +146,12 @@ td { font-size: 10px !important; }
         size: landscape;
     }
 }
+
+
+
+.botao-csv {
+    width: min-content;
+    display: flex;
+    height: auto;
+    align-items: center;
+}

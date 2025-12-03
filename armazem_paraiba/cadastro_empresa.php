@@ -18,15 +18,17 @@
 		exit;
 	}
 
-	function normalizar($texto) {
-		$texto = preg_replace('/[áàãâä]/ui', 'a', $texto);
-		$texto = preg_replace('/[éèêë]/ui', 'e', $texto);
-		$texto = preg_replace('/[íìîï]/ui', 'i', $texto);
-		$texto = preg_replace('/[óòõôö]/ui', 'o', $texto);
-		$texto = preg_replace('/[úùûü]/ui', 'u', $texto);
-		$texto = preg_replace('/[ç]/ui', 'c', $texto);
-		return strtolower(trim(preg_replace('/\s+/', ' ', $texto)));
-	}	
+	if(!function_exists('normalizar')){
+		function normalizar($texto){
+			$texto = preg_replace('/[áàãâä]/ui', 'a', $texto);
+			$texto = preg_replace('/[éèêë]/ui', 'e', $texto);
+			$texto = preg_replace('/[íìîï]/ui', 'i', $texto);
+			$texto = preg_replace('/[óòõôö]/ui', 'o', $texto);
+			$texto = preg_replace('/[úùûü]/ui', 'u', $texto);
+			$texto = preg_replace('/[ç]/ui', 'c', $texto);
+			return strtolower(trim(preg_replace('/\s+/', ' ', $texto)));
+		}
+	}
 
 	function enviarDocumento() {
 		global $a_mod;
@@ -713,16 +715,30 @@
 		}
 	}
 
-	function index(){
-		if(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-			$_POST["returnValues"] = json_encode([
-				"HTTP_REFERER" => $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php"
-			]);
-			voltar();
-		}
+    function index(){
+        $permitido = false;
+        $perfilId = 0;
+        if(!empty($_SESSION["user_nb_id"])){
+            $rowPerfil = mysqli_fetch_assoc(query("SELECT perfil_nb_id FROM usuario_perfil WHERE ativo = 1 AND user_nb_id = ? LIMIT 1", "i", [$_SESSION["user_nb_id"]]));
+            if(!empty($rowPerfil["perfil_nb_id"])) $perfilId = (int)$rowPerfil["perfil_nb_id"];
+        }
+        if($perfilId > 0){
+            $rowPerm = mysqli_fetch_assoc(query(
+                "SELECT 1 FROM perfil_menu_item p JOIN menu_item m ON m.menu_nb_id = p.menu_nb_id WHERE p.perfil_nb_id = ? AND p.perm_ver = 1 AND m.menu_tx_ativo = 1 AND m.menu_tx_path = '/cadastro_empresa.php' LIMIT 1",
+                "i",
+                [$perfilId]
+            ));
+            $permitido = !empty($rowPerm);
+        }
+        if(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador")) && !$permitido){
+            $_POST["returnValues"] = json_encode([
+                "HTTP_REFERER" => $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php"
+            ]);
+            voltar();
+        }
 
 		
-		cabecalho("Cadastro Empresa/Filial");
+        cabecalho("Cadastro Empresa/Filial");
 
 		$extra = 
 			((!empty($_POST["busca_codigo"]))? 			" AND empr_nb_id = {$_POST["busca_codigo"]}'": "").

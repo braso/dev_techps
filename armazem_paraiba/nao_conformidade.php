@@ -101,17 +101,29 @@
 		}
 		$monthDate = new DateTime($_POST["busca_data"]);
 
-		$motoristas = mysqli_fetch_all(query(
-			"SELECT * FROM entidade
-				LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
-				LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
-				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
-				WHERE enti_tx_status = 'ativo'
-					".((!empty($_POST["busca_motorista"]))? " AND enti_nb_id = {$_POST["busca_motorista"]}": "")."
-					AND enti_nb_empresa = {$_POST["busca_empresa"]}
-					AND (enti_tx_admissao < '".$monthDate->format("Y-m-t")."' OR enti_tx_admissao IS NULL)
-				ORDER BY enti_tx_nome ASC;"
-		), MYSQLI_ASSOC);
+        $condCargoSetor = "";
+        if (!empty($_POST["busca_operacao"])) {
+            $condCargoSetor .= " AND enti_tx_tipoOperacao = ".intval($_POST["busca_operacao"]);
+        }
+        if (!empty($_POST["busca_setor"])) {
+            $condCargoSetor .= " AND enti_setor_id = ".intval($_POST["busca_setor"]);
+        }
+        if (!empty($_POST["busca_subsetor"])) {
+            $condCargoSetor .= " AND enti_subSetor_id = ".intval($_POST["busca_subsetor"]);
+        }
+
+        $motoristas = mysqli_fetch_all(query(
+            "SELECT * FROM entidade
+                LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
+                LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
+                LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
+                WHERE enti_tx_status = 'ativo'
+                    ".((!empty($_POST["busca_motorista"]))? " AND enti_nb_id = {$_POST["busca_motorista"]}": "")."
+                    AND enti_nb_empresa = {$_POST["busca_empresa"]}
+                    ".$condCargoSetor.
+                    " AND (enti_tx_admissao < '".$monthDate->format("Y-m-t")."' OR enti_tx_admissao IS NULL)
+                ORDER BY enti_tx_nome ASC;"
+        ), MYSQLI_ASSOC);
 
 
 		foreach($motoristas as $motorista){
@@ -373,13 +385,36 @@
 		}
 
 		//CAMPOS DE CONSULTA{
-			$c = [
-				combo_net(
-					"Funcionário:", "busca_motorista", $_POST["busca_motorista"], 3, 
-					"entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') {$extraMotorista}{$extraEmpresaMotorista}", "enti_tx_matricula"
-				),
-				campo_mes("Data*:", "busca_data", $_POST["busca_data"], 2)
-			];
+        $condCargoSetor = "";
+        if (!empty($_POST["busca_operacao"])) {
+            $condCargoSetor .= " AND enti_tx_tipoOperacao = ".intval($_POST["busca_operacao"]);
+        }
+        if (!empty($_POST["busca_setor"])) {
+            $condCargoSetor .= " AND enti_setor_id = ".intval($_POST["busca_setor"]);
+        }
+
+        $c = [
+            combo_bd("!Cargo:", "busca_operacao", (!empty($_POST["busca_operacao"]) ? $_POST["busca_operacao"] : ""), 2, "operacao", "onchange='this.form.submit()'"),
+            combo_bd("!Setor:", "busca_setor", (!empty($_POST["busca_setor"]) ? $_POST["busca_setor"] : ""), 2, "grupos_documentos", "onchange='this.form.submit()'"),
+        ];
+
+        $hasSubsetor = 0;
+        if (!empty($_POST["busca_setor"])) {
+            $row = mysqli_fetch_assoc(query(
+                "SELECT COUNT(*) AS c FROM sbgrupos_documentos WHERE sbgr_tx_status = 'ativo' AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." LIMIT 1;"
+            ));
+            $hasSubsetor = (int)($row["c"]??0);
+        }
+        if ($hasSubsetor > 0) {
+            $c[] = combo_bd("!Subsetor:", "busca_subsetor", (!empty($_POST["busca_subsetor"]) ? $_POST["busca_subsetor"] : ""), 2, "sbgrupos_documentos", "onchange='this.form.submit()'", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " AND 1 = 0 ORDER BY sbgr_tx_nome ASC"));
+        }
+
+        $c[] = combo_net(
+            "Funcionário:", "busca_motorista", $_POST["busca_motorista"], 3,
+            "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') {$extraMotorista}{$extraEmpresaMotorista} ".
+            $condCargoSetor, "enti_tx_matricula"
+        );
+        $c[] = campo_mes("Data*:", "busca_data", $_POST["busca_data"], 2);
 
 			if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
 				array_unshift($c, combo_net("Empresa*:", "busca_empresa",   (!empty($_POST["busca_empresa"])?   $_POST["busca_empresa"]  : ""), 3, "empresa", "onchange=selecionaMotorista(this.value)", $extraEmpresa));

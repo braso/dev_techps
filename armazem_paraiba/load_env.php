@@ -1,9 +1,9 @@
 <?php
-    $rootDir = __DIR__.'/';
+    $rootDir = __DIR__.'/'; // Assuming the script is in the root directory
     $envFilePath = $rootDir.'.env';
 
     if(file_exists($envFilePath)){
-        $env = parse_ini_file($envFilePath, false, INI_SCANNER_RAW);
+        $env = parse_ini_file($envFilePath);
         foreach($env as $attr=>$val){
             $v = is_string($val) ? trim($val) : $val;
             if(is_string($v) && strlen($v) >= 2){
@@ -16,6 +16,6 @@
             putenv("{$attr}={$v}");
             $_ENV[$attr] = $v;
         }
-        $_ENV["URL_BASE"] = ($_SERVER["REQUEST_SCHEME"]?? "http")."://".$_SERVER["HTTP_HOST"];
+        $_ENV["URL_BASE"] = ($_SERVER["REQUEST_SCHEME"]?? "http")."://{$_SERVER["HTTP_HOST"]}";
     }
 ?>

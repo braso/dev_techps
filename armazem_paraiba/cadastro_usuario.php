@@ -593,15 +593,18 @@
 			break;
 		}
 
-		$fields = [
-			campo("Código", 		"busca_codigo", 	($_POST["busca_codigo"]?? ""), 	1, "", "maxlength='6'"),
-			campo("Nome", 			"busca_nome_like", 		($_POST["busca_nome_like"]?? ""), 	3, "", "maxlength='65'"),
-			campo("CPF", 			"busca_cpf", 		($_POST["busca_cpf"]?? ""), 	2, "MASCARA_CPF"),
-			campo("Login", 			"busca_login_like", 		($_POST["busca_login_like"]?? ""), 	3, "", "maxlength='30'"),
-			combo("Nível", 			"busca_nivel", 		($_POST["busca_nivel"]?? ""), 	2, $niveis),
-			combo("Status", 		"busca_status", 	($_POST["busca_status"]?? ""), 	2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
-			combo_bd("!Empresa", 	"busca_empresa", 	($_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"]), 3, "empresa", "onchange='carrega_empresa(this.value)'", $extraEmpresa)
-		];
+        $fields = [
+            campo("Código", 		"busca_codigo", 		($_POST["busca_codigo"]?? ""), 	1, "", "maxlength='6'"),
+            campo("Nome", 			"busca_nome_like", 		($_POST["busca_nome_like"]?? ""), 	3, "", "maxlength='65'"),
+            campo("CPF", 			"busca_cpf", 		($_POST["busca_cpf"]?? ""), 	2, "MASCARA_CPF"),
+            campo("Login", 			"busca_login_like", 		($_POST["busca_login_like"]?? ""), 	3, "", "maxlength='30'"),
+            combo("Nível", 			"busca_nivel", 		($_POST["busca_nivel"]?? ""), 	2, $niveis),
+            combo("Status", 		"busca_status", 	($_POST["busca_status"]?? ""), 	2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
+            combo_bd("!Empresa", 	"busca_empresa", 	($_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"]), 	3, "empresa", "onchange='carrega_empresa(this.value)'", $extraEmpresa),
+            combo_bd("!Cargo", 		"busca_operacao", 	($_POST["busca_operacao"]?? ""), 	2, "operacao"),
+            combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos"),
+            combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " ORDER BY sbgr_tx_nome ASC"))
+        ];
 
 		$buttons[] = botao("Buscar", "index");
 
@@ -674,34 +677,43 @@
 		//}*/
 
 		//Grid dinâmico{
-			$gridFields = [
-				"CÓDIGO" 		=> "user_nb_id",
-				"NOME" 			=> "user_tx_nome",
-				"MATRICULA" 	=> "enti_tx_matricula",
-				"CPF" 			=> "user_tx_cpf",
-				"LOGIN" 		=> "user_tx_login",
-				"NÍVEL" 		=> "user_tx_nivel",
-				"E-MAIL" 		=> "user_tx_email",
-				"TELEFONE" 		=> "user_tx_fone",
-				"EMPRESA" 		=> "empr_tx_nome",
-				"STATUS" 		=> "user_tx_status"
-			];
+            $gridFields = [
+                "CÓDIGO" 		=> "user_nb_id",
+                "NOME" 			=> "user_tx_nome",
+                "MATRICULA" 	=> "enti_tx_matricula",
+                "CPF" 			=> "user_tx_cpf",
+                "LOGIN" 		=> "user_tx_login",
+                "NÍVEL" 		=> "user_tx_nivel",
+                "CARGO" 		=> "oper_tx_nome",
+                "SETOR" 		=> "grup_tx_nome",
+                "SUBSETOR" 	=> "sbgr_tx_nome",
+                "E-MAIL" 		=> "user_tx_email",
+                "TELEFONE" 		=> "user_tx_fone",
+                "EMPRESA" 		=> "empr_tx_nome",
+                "STATUS" 		=> "user_tx_status"
+            ];
 
-			$camposBusca = [
-				"busca_codigo" 		=> "user_nb_id",
-				"busca_nome_like" 	=> "user_tx_nome",
-				"busca_cpf" 		=> "user_tx_cpf",
-				"busca_login_like" 	=> "user_tx_login",
-				"busca_nivel" 		=> "user_tx_nivel",
-				"busca_status" 		=> "user_tx_status",
-				"busca_empresa" 	=> "empr_nb_id"
-			];
+            $camposBusca = [
+                "busca_codigo" 		=> "user_nb_id",
+                "busca_nome_like" 	=> "user_tx_nome",
+                "busca_cpf" 		=> "user_tx_cpf",
+                "busca_login_like" 	=> "user_tx_login",
+                "busca_nivel" 		=> "user_tx_nivel",
+                "busca_status" 		=> "user_tx_status",
+                "busca_empresa" 	=> "empr_nb_id",
+                "busca_operacao" 	=> "enti_tx_tipoOperacao",
+                "busca_setor" 		=> "enti_setor_id",
+                "busca_subsetor" 	=> "enti_subSetor_id"
+            ];
 
-			$queryBase = 
-				"SELECT ".implode(", ", array_values($gridFields))." FROM user"
-				." LEFT JOIN empresa ON empresa.empr_nb_id = user.user_nb_empresa"
-				." LEFT JOIN entidade ON user_nb_entidade = enti_nb_id"
-			;
+            $queryBase = 
+                "SELECT ".implode(", ", array_values($gridFields))." FROM user"
+                ." LEFT JOIN empresa ON empresa.empr_nb_id = user.user_nb_empresa"
+                ." LEFT JOIN entidade ON user_nb_entidade = enti_nb_id"
+                ." LEFT JOIN operacao ON enti_tx_tipoOperacao = oper_nb_id"
+                ." LEFT JOIN grupos_documentos ON enti_setor_id = grup_nb_id"
+                ." LEFT JOIN sbgrupos_documentos subg ON enti_subSetor_id = subg.sbgr_nb_id"
+            ;
 
 			$actions = criarIconesGrid(
 				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
