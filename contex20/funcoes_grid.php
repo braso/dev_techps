@@ -221,6 +221,12 @@
 						<div class='table-loading-icon' style='place-items: center;position: absolute;width: 89vw;z-index: 2;top: 50px;'>
 						</div>
 						<div class='table-loading-icon' style='place-items: center'></div>
+						<div class='grid-header'>
+							<div class='col-sm-1 margin-bottom-5' style='width: min-content;'>
+								<label>Regs. por página</label>
+								<input name='limit' id='limitTop' value='' placeholder='Todos' autocomplete='off' type='number' class='form-control input-sm' min='1' max='999' ".($tabIndex>0? "tabindex='".$tabIndex."'": "").">
+							</div>
+						</div>
 						<table name='{$nomeTabela}' id='result' class='table table-bordered grid-dinamico' id='sample_2'>
 							<thead class='table-head'>
 							</thead>
@@ -231,7 +237,7 @@
 					<div class='grid-footer'>
 						<div class='col-sm-1 margin-bottom-5' style='width: min-content;'>
 							<label>Regs. por página</label>
-							<input name='limit' id='limit' value='10' autocomplete='off' type='number' class='form-control input-sm' min='1' max='99' ".($tabIndex>0? "tabindex='".$tabIndex."'": "").">
+							<input name='limit' id='limitBottom' value='' placeholder='Todos' autocomplete='off' type='number' class='form-control input-sm' min='1' max='999' ".($tabIndex>0? "tabindex='".$tabIndex."'": "").">
 						</div>
 						<div class='total-registros'>
 						</div>
