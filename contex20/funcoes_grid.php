@@ -217,6 +217,8 @@
 			"<link href='{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/css/grid_dinamico.css' rel='stylesheet' type='text/css' />
 			<div class='col-md-{$width}'>
 				<div class='portlet light'>
+									<div class='botao-csv'>
+					</div>
 					<div class='table-div' style='margin-top: 8px;overflow-x: auto; border-radius: 10px; max-height: 87vh;'>
 						<div class='table-loading-icon' style='place-items: center;position: absolute;width: 89vw;z-index: 2;top: 50px;'>
 						</div>
@@ -238,7 +240,7 @@
 						<div class='tab-pagination'>
 						</div>
 					</div>
-				</div>
+					</div>
 			</div>"
 		;
 		
