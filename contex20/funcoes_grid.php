@@ -217,12 +217,10 @@
 			"<link href='{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/css/grid_dinamico.css' rel='stylesheet' type='text/css' />
 			<div class='col-md-{$width}'>
 				<div class='portlet light'>
-									<div class='botao-csv'>
-					</div>
 					<div class='table-div' style='margin-top: 8px;overflow-x: auto; border-radius: 10px; max-height: 87vh;'>
 						<div class='table-loading-icon' style='place-items: center;position: absolute;width: 89vw;z-index: 2;top: 50px;'>
-							</div>
 						</div>
+						<div class='table-loading-icon' style='place-items: center'></div>
 						<table name='{$nomeTabela}' id='result' class='table table-bordered grid-dinamico' id='sample_2'>
 							<thead class='table-head'>
 							</thead>
@@ -231,16 +229,16 @@
 						</table>
 					</div>
 					<div class='grid-footer'>
-							<input name='limit' id='limit' value='10' autocomplete='off' type='number' class='form-control input-sm' min='1' max='99' ".($tabIndex>0? "tabindex='".$tabIndex."'": "").">
+						<div class='col-sm-1 margin-bottom-5' style='width: min-content;'>
 							<label>Regs. por página</label>
-							<input name='limit' id='limitBottom' value='' placeholder='Todos' autocomplete='off' type='number' class='form-control input-sm' min='1' max='999' ".($tabIndex>0? "tabindex='".$tabIndex."'": "").">
+							<input name='limit' id='limit' value='10' autocomplete='off' type='number' class='form-control input-sm' min='1' max='99' ".($tabIndex>0? "tabindex='".$tabIndex."'": "").">
 						</div>
 						<div class='total-registros'>
 						</div>
 						<div class='tab-pagination'>
 						</div>
 					</div>
-					</div>
+				</div>
 			</div>"
 		;
 		
@@ -338,4 +336,5 @@
 		}
 
 		index();
+		exit;
 	}
