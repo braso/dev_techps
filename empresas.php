@@ -22,6 +22,7 @@
         "TECHPS"				=> "techps",
         "DEMO"			        => "techps_demo",
         "TRAMPOLIMGAS"			=> "trampolim_gas",
+        "SÃO LUCAS"			    => "sao_lucas",
         "TRANSCOPEL"			=> "transcopel"
     ];
 
@@ -45,6 +46,7 @@
         "techps" 			=> "TechPS",
         "techps_demo" 		=> "TechPS (Demo)",
         "trampolim_gas" 	=> "Trampolim Gás",
+        "sao_lucas"         => "São Lucas",
         "transcopel" 	    => "Transcopel"
     ];
 
