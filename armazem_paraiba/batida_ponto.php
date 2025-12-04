@@ -119,33 +119,114 @@
 			<script>
 				triedLocation = false;
 				document.addEventListener('DOMContentLoaded', function() {
+					if (window.__geoInitDone) { return; }
+					window.__geoInitDone = true;
+					setLocationState(false);
 					if(!triedLocation){
-						if (navigator.geolocation){
-							navigator.geolocation.getCurrentPosition(locationAllowed, locationDenied, {
-								enableHighAccuracy: true // Ativa alta precisão
+						if (navigator.permissions && navigator.permissions.query){
+							navigator.permissions.query({ name: 'geolocation' }).then(function(res){
+								if(res.state === 'granted'){
+									if (navigator.geolocation){
+										navigator.geolocation.getCurrentPosition(locationAllowed, locationDenied, { enableHighAccuracy: true });
+									}
+								}else{
+									showGeoPopup();
+								}
 							});
-						} else {
-							console.log('Geolocalização não é suportada pelo navegador.');
+						}else{
+							showGeoPopup();
 						}
 					}
 					triedLocation = true;
 				});
-				
-				function locationAllowed(pos) {
-					var latitude = pos.coords.latitude;
-					var longitude = pos.coords.longitude;
-				
-					console.log('Latitude: ' + latitude);
-					console.log('Longitude: ' + longitude);
-				
-					// Atribuir os valores aos campos do formulário
-					document.getElementById('latitude').value = latitude;
-					document.getElementById('longitude').value = longitude;
-		
+				function ensureSweetAlert(cb){
+					if (window.Swal){ cb(); return; }
+					var s = document.createElement('script');
+					s.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+					s.onload = cb;
+					document.head.appendChild(s);
 				}
-				
+				function ensurePermissionHint(){
+					if (document.getElementById('geo-permission-hint')) return;
+					var hint = document.createElement('div');
+					hint.id = 'geo-permission-hint';
+					hint.setAttribute('style','position:fixed;top:8px;left:8px;max-width:340px;padding:10px 12px;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:9999;font: 600 12px/1.5 sans-serif;display:none;');
+					hint.innerHTML = '<div style=\"display:flex;align-items:flex-start;gap:8px\"><i class=\"fa fa-lock\" style=\"color:#e67e22;font-size:16px\"></i><div>Para ativar a localização: clique no ícone de cadeado ou (!) no inicio da URL, abra Permissões e defina Localização ou Local como Permitir ou simplismente ative o local.</div></div><div style=\"margin-top:8px;text-align:right\"><button type=\"button\" id=\"geo-permission-hint-close\" class=\"btn btn-xs btn-default\">Entendi</button></div>';
+					document.body.appendChild(hint);
+					var closeBtn = document.getElementById('geo-permission-hint-close');
+					if (closeBtn){ closeBtn.onclick = function(){ hint.style.display = 'none'; }; }
+				}
+				function showPermissionHint(show){
+					ensurePermissionHint();
+					var h = document.getElementById('geo-permission-hint');
+					if (h){ h.style.display = show ? 'block' : 'none'; }
+				}
+				function showGeoPopup(){
+					ensureSweetAlert(function(){
+						showPermissionHint(true);
+						function requestGeo(){
+							return new Promise(function(resolve, reject){
+								if (!navigator.geolocation){ reject(new Error('Geolocalização não suportada')); return; }
+								navigator.geolocation.getCurrentPosition(function(pos){ resolve(pos); }, function(err){ reject(err); }, { enableHighAccuracy: true });
+							});
+						}
+						var opts = {
+							title: 'É necessário permitir a localização para bater o ponto',
+							icon: 'warning',
+							confirmButtonText: 'Siga as instruções em sua tela',
+							allowOutsideClick: false,
+							allowEscapeKey: false,
+							preConfirm: function(){
+                            return requestGeo().then(function(pos){
+                                locationAllowed(pos);
+                            }).catch(function(err){
+                                Swal.showValidationMessage('Permita a localização no navegador para continuar');
+                                locationDenied(err);
+                                showPermissionHint(true);
+                            });
+							}
+						};
+						if (location.protocol !== 'https:' && location.hostname !== 'localhost'){
+							opts.title = 'Conexão insegura impede solicitar localização';
+							opts.html = 'Acesse por HTTPS ou localhost para o navegador permitir a localização.';
+							opts.confirmButtonText = 'Entendi';
+							opts.preConfirm = function(){};
+						}
+						if (navigator.permissions && navigator.permissions.query){
+							navigator.permissions.query({ name: 'geolocation' }).then(function(res){
+								if (res.state === 'denied'){
+									opts.html = 'Clique no cadeado ao lado da URL, abra Permissões e defina Localização como Permitir.';
+								}
+								Swal.fire(opts);
+							});
+						}else{
+							Swal.fire(opts);
+						}
+					});
+				}
+                
+                function setLocationState(allowed){
+                    var warn = document.getElementById('location-warning');
+                    if(warn){ warn.style.display = allowed ? 'none' : 'block'; }
+                    document.querySelectorAll('.btn.green, .btn.red').forEach(function(b){ b.disabled = !allowed; });
+                }
+                function locationAllowed(pos) {
+                    var latitude = pos.coords.latitude;
+                    var longitude = pos.coords.longitude;
+                
+                    console.log('Latitude: ' + latitude);
+                    console.log('Longitude: ' + longitude);
+                
+                    // Atribuir os valores aos campos do formulário
+                    document.getElementById('latitude').value = latitude;
+                    document.getElementById('longitude').value = longitude;
+                    setLocationState(true);
+                }
+                
 				function locationDenied(err) {
 					console.log('Erro ao obter localização: ', err);
+					setLocationState(false);
+					showPermissionHint(true);
 				}
 			</script>
 			";
@@ -325,13 +406,13 @@
             // "inicioRepouso"             => criaBotaoRegistro("btn green", 9,  "REPOUSO", "fa fa-bed fa-6"),
             // "inicioRepousoEmbarcado"    => criaBotaoRegistro("btn green", 11, "Iniciar Repouso Embarcado", "fa fa-bed fa-6"),
 
-			"fimJornada" 				=> criaBotaoRegistro("btn red", 2,  "FIM JORNADA", "fa fa-car fa-6"),
-			"fimRefeicao" 				=> criaBotaoRegistro("btn red", 4,  "FIM REFEIÇÃO", "fa fa-cutlery fa-6"),
-			// "fimEspera" 				=> criaBotaoRegistro("btn red", 6,  "FIM ESPERA", "fa fa-clock-o fa-6"),
-			"fimDescanso" 				=> criaBotaoRegistro("btn red", 8,  "FIM DESCANSO", "fa fa-hourglass-end fa-6"),
-			// "fimRepouso" 				=> criaBotaoRegistro("btn red", 10, "FIM REPOUSO", "fa fa-bed fa-6"),
-			// "fimRepousoEmbarcado" 	=> criaBotaoRegistro("btn red", 12, "Encerrar Repouso Embarcado", "fa fa-bed fa-6"),
-		];
+            "fimJornada"                 => criaBotaoRegistro("btn red", 2,  "FIM JORNADA", ($_SESSION["user_tx_nivel"] == "Funcionário" ? "fa fa-flag-checkered fa-6" : "fa fa-car fa-6")),
+            "fimRefeicao" 				=> criaBotaoRegistro("btn red", 4,  "FIM REFEIÇÃO", "fa fa-cutlery fa-6"),
+            // "fimEspera" 				=> criaBotaoRegistro("btn red", 6,  "FIM ESPERA", "fa fa-clock-o fa-6"),
+            "fimDescanso" 				=> criaBotaoRegistro("btn red", 8,  "FIM DESCANSO", "fa fa-hourglass-end fa-6"),
+            // "fimRepouso" 				=> criaBotaoRegistro("btn red", 10, "FIM REPOUSO", "fa fa-bed fa-6"),
+            // "fimRepousoEmbarcado" 	=> criaBotaoRegistro("btn red", 12, "Encerrar Repouso Embarcado", "fa fa-bed fa-6"),
+        ];
 
 		if($_SESSION["user_tx_nivel"] != "Funcionário"){
 			$botoes["inicioEspera"] = criaBotaoRegistro("btn green", 5,  "ESPERA", "fa fa-clock-o fa-6");
@@ -371,19 +452,20 @@
 		$motorista["user_tx_cpf"] = str_split($motorista["user_tx_cpf"], 3);
 		$motorista["user_tx_cpf"] = $motorista["user_tx_cpf"][0].".".$motorista["user_tx_cpf"][1].".".$motorista["user_tx_cpf"][2]."-".$motorista["user_tx_cpf"][3];
 
-		$fields = [
-			"<div id='clockParent' class='col-sm-5 margin-bottom-5' >
-				<label>Hora</label><br>
-				<p class='text-left' id='clock'>Carregando...</p>
-				<div id='timeout' value='15'>Inatividade: --:--</div>
-			</div>",
-			"<div class='col-sm-5 margin-bottom-5 info-grid'>"
-				."<div class='margin-bottom-5'><b>Data:</b> ".date("d/m")."</div>"
-				."<div class='margin-bottom-5'><b>Matrícula:</b> ".$motorista["enti_tx_matricula"]."</div>"
-				."<div class='margin-bottom-5'><b>CPF:</b> ".$motorista["user_tx_cpf"]."</div>"
-				."<div class='margin-bottom-10'><b>Nome:</b> ".$motorista["user_tx_nome"]."</div>"
-			."</div>",
-		];
+        $fields = [
+            "<div id='clockParent' class='col-sm-5 margin-bottom-5' >
+                <label>Hora</label><br>
+                <p class='text-left' id='clock'>Carregando...</p>
+                <div id='timeout' value='15'>Inatividade: --:--</div>
+            </div>",
+            "<div id='location-warning' class='col-sm-12' style='color:red; display:none;'></div>",
+            "<div class='col-sm-5 margin-bottom-5 info-grid'>"
+                ."<div class='margin-bottom-5'><b>Data:</b> ".date("d/m")."</div>"
+                ."<div class='margin-bottom-5'><b>Matrícula:</b> ".$motorista["enti_tx_matricula"]."</div>"
+                ."<div class='margin-bottom-5'><b>CPF:</b> ".$motorista["user_tx_cpf"]."</div>"
+                ."<div class='margin-bottom-10'><b>Nome:</b> ".$motorista["user_tx_nome"]."</div>"
+            ."</div>",
+        ];
 
 		$logoutTime = 30; //Utilizado em batida_ponto_html.php
 
