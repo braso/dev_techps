@@ -262,7 +262,7 @@
 
 <!-- <body style="zoom:100%;" class="page-container-bg-solid page-boxed"> -->
 
-<body onload="contex_foco()" onclick="updateTimer()" style="zoom:100%; margin-bottom:45px;" class="page-container-bg-solid page-boxed">
+<body onload="contex_foco()" onclick="updateTimer()" onkeydown="updateTimer()" style="zoom:100%; margin-bottom:45px;" class="page-container-bg-solid page-boxed">
 	
 	<!-- INICIO HEADER -->
 	<div class="page-header">

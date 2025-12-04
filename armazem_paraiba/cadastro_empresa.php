@@ -715,16 +715,13 @@
 		}
 	}
 
-	function index(){
-		if(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-			$_POST["returnValues"] = json_encode([
-				"HTTP_REFERER" => $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php"
-			]);
-			voltar();
-		}
-
+    function index(){
+        	//ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
+		include "check_permission.php";
+		// APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
+		verificaPermissao('/cadastro_empresa.php');
 		
-		cabecalho("Cadastro Empresa/Filial");
+        cabecalho("Cadastro Empresa/Filial");
 
 		$extra = 
 			((!empty($_POST["busca_codigo"]))? 			" AND empr_nb_id = {$_POST["busca_codigo"]}'": "").

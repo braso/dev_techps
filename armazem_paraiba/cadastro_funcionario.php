@@ -1,12 +1,12 @@
 <?php
-  
+  /*
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
-
+*/
 	include "conecta.php";
 
 	function carregarJS(){
@@ -85,7 +85,7 @@
 					el.innerHTML = '<option value=\'\' disabled selected>Selecione</option>';
 					el.disabled = true;
 					if (!id) { el.parentElement.style.display = 'none'; return; }
-					var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=sbgrupos_documentos&limite=200&condicoes=' + encodeURI('AND sbgr_nb_idgrup = '+id);
+                    var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=sbgrupos_documentos&limite=1000000&condicoes=' + encodeURI('AND sbgr_nb_idgrup = '+id);
 					$.ajax({ url: url, dataType: 'json' }).done(function(data){
 						if (Array.isArray(data)) {
 							if (data.length > 0) {
@@ -109,7 +109,7 @@
 					var el = document.getElementsByName(selectName)[0];
 					if (!el) return;
 					el.innerHTML = '<option value=\'\' disabled selected>Selecione</option>';
-					var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=' + encodeURIComponent(tabela) + '&limite=200&condicoes=' + encodeURI(condicoes || '');
+                    var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=' + encodeURIComponent(tabela) + '&limite=1000000&condicoes=' + encodeURI(condicoes || '');
 					$.ajax({ url: url, dataType: 'json' }).done(function(data){
 						if (Array.isArray(data)) {
 							data.forEach(function(item){
@@ -128,7 +128,7 @@
 					el.innerHTML = '<option value=\'\' disabled selected>Selecione</option>';
 					var id = setorBusca.value;
 					if (!id) { el.disabled = true; return; }
-					var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=sbgrupos_documentos&limite=200&condicoes=' + encodeURI('AND sbgr_nb_idgrup = '+id);
+                    var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=sbgrupos_documentos&limite=1000000&condicoes=' + encodeURI('AND sbgr_nb_idgrup = '+id);
 					$.ajax({ url: url, dataType: 'json' }).done(function(data){
 						if (Array.isArray(data)) {
 							data.forEach(function(item){
@@ -375,6 +375,11 @@
 
 		$_POST["cpf"] = preg_replace("/[^0-9]/is", "", $_POST["cpf"]);
 		$_POST["rg"] = preg_replace("/[^0-9]/is", "", $_POST["rg"]);
+		// Normalização de campos numéricos adicionais
+		foreach(["pis","ctpsNumero","ctpsSerie","tituloNumero","tituloZona","tituloSecao","reservista","registroFuncional"] as $numField){
+			if(isset($_POST[$numField])){ $_POST[$numField] = preg_replace('/[^0-9]/', '', $_POST[$numField]); }
+		}
+		if(isset($_POST["ctpsUf"])) { $_POST["ctpsUf"] = strtoupper($_POST["ctpsUf"]); }
 
 		$enti_campos = [
 			"enti_tx_matricula" 				=> "postMatricula", 
@@ -385,6 +390,8 @@
 			"enti_tx_rg" 						=> "rg",
 			"enti_tx_civil" 					=> "civil",
 			"enti_tx_sexo" 					=> "sexo",
+			"enti_tx_racaCor" 				=> "racaCor",
+			"enti_tx_tipoSanguineo" 			=> "tipoSanguineo",
 			"enti_tx_endereco" 				=> "endereco",
 			"enti_tx_numero" 					=> "numero",
 			"enti_tx_complemento" 				=> "complemento",
@@ -415,8 +422,18 @@
 			"enti_tx_subcontratado" 			=> "subcontratado", 
 			"enti_tx_admissao" 				=> "admissao", 
 			"enti_tx_desligamento" 			=> "desligamento",
-			"enti_tx_cnhRegistro" 			=> "cnhRegistro", 
-			"enti_tx_cnhValidade" 			=> "cnhValidade", 
+			"enti_tx_pis" 					=> "pis",
+			"enti_tx_ctpsNumero" 				=> "ctpsNumero",
+			"enti_tx_ctpsSerie" 				=> "ctpsSerie",
+			"enti_tx_ctpsUf" 					=> "ctpsUf",
+			"enti_tx_tituloNumero" 			=> "tituloNumero",
+			"enti_tx_tituloZona" 				=> "tituloZona",
+			"enti_tx_tituloSecao" 			=> "tituloSecao",
+			"enti_tx_reservista" 				=> "reservista",
+			"enti_tx_registroFuncional" 		=> "registroFuncional",
+			"enti_tx_vencimentoRegistro" 		=> "vencimentoRegistro",
+			"enti_tx_cnhRegistro" 				=> "cnhRegistro", 
+			"enti_tx_cnhValidade" 				=> "cnhValidade", 
 			"enti_tx_cnhPrimeiraHabilitacao" 	=> "cnhPrimeiraHabilitacao", 
 			"enti_tx_cnhCategoria" 			=> "cnhCategoria", 
 			"enti_tx_cnhPermissao" 			=> "cnhPermissao",
@@ -1175,12 +1192,14 @@
 			campo(	  	"Nome*", 				"nome", 			($a_mod["enti_tx_nome"]?? ""),			4, "",					"maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data(	"Nascido em*",	 		"nascimento", 		($a_mod["enti_tx_nascimento"]?? ""),	2, 						"tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"CPF*", 				"cpf", 				($a_mod["enti_tx_cpf"]?? ""),			2, "MASCARA_CPF", 		"tabindex=".sprintf("%02d", $tabIndex++)),
-			campo(	  	"RG*", 					"rg", 				($a_mod["enti_tx_rg"]?? ""),			2, "MASCARA_RG", 		"tabindex=".+sprintf("%02d", $tabIndex++).", maxlength=11"),
+			campo(	  	"RG*", 					"rg", 				($a_mod["enti_tx_rg"]?? ""),			2, "MASCARA_RG", 		"maxlength='11' tabindex=".sprintf("%02d", $tabIndex++)),
 			combo(		"Estado Civil", 		"civil", 			($a_mod["enti_tx_civil"]?? ""),			2, $estadoCivilOpt, 	"tabindex=".sprintf("%02d", $tabIndex++)),
-			combo(		"Sexo", 				"sexo", 			($a_mod["enti_tx_sexo"]?? ""),			2, $sexoOpt, 			"tabindex=".sprintf("%02d", $tabIndex++)),
+			combo(		"Sexo", 				"sexo", 				($a_mod["enti_tx_sexo"]?? ""),			2, $sexoOpt, 			"tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(	  	"Emissor RG", 			"rgOrgao", 			($a_mod["enti_tx_rgOrgao"]?? ""),		3, "",					"maxlength='6' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data(	"Data Emissão RG", 		"rgDataEmissao", 	($a_mod["enti_tx_rgDataEmissao"]?? ""),	2, 						"tabindex=".sprintf("%02d", $tabIndex++)),
-			combo(		"UF RG", 				"rgUf", 			($a_mod["enti_tx_rgUf"]?? ""),			2, getUFs(), 			"tabindex=".sprintf("%02d", $tabIndex++)),
+			combo(		"UF RG", 				"rgUf", 				($a_mod["enti_tx_rgUf"]?? ""),			2, getUFs(), 			"tabindex=".sprintf("%02d", $tabIndex++)),
+            combo(		"Raça/Cor", 			"racaCor", 			($a_mod["enti_tx_racaCor"]?? ""),		2, [""=>"Selecione","B"=>"Branco","N"=>"Negro","P"=>"Pardo","I"=>"Indígena","A"=>"Amarelo"], "tabindex=".sprintf("%02d", $tabIndex++)),
+            combo(		"Tipo Sanguíneo", 		"tipoSanguineo", 	($a_mod["enti_tx_tipoSanguineo"]?? ""), 2, [""=>"Selecione","A+"=>"A+","A-"=>"A-","B+"=>"B+","B-"=>"B-","AB+"=>"AB+","AB-"=>"AB-","O+"=>"O+","O-"=>"O-"], "tabindex=".sprintf("%02d", $tabIndex++)),
 			"<div class='col-sm-2 margin-bottom-5' style='width:100%; height:25px'></div>",
 
 			campo(	  	"CEP*", 				"cep", 				($a_mod["enti_tx_cep"]?? ""),			2, "MASCARA_CEP", 		"onfocusout='buscarCEP(this.value);' tabindex=".sprintf("%02d", $tabIndex++)),
@@ -1227,11 +1246,24 @@
 
 		$cContratual = array_merge($cContratual, [
 			combo(		"Ocupação*", 		"ocupacao", 		(!empty($a_mod["enti_tx_ocupacao"])? $a_mod["enti_tx_ocupacao"]	:""), 		2, ["" => "Selecione", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
-			campo_data(	"Dt Admissão*", 	"admissao", 		(!empty($a_mod["enti_tx_admissao"])? $a_mod["enti_tx_admissao"]		 		:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
+			campo_data(	"Dt Admissão*", 	"admissao", 		(!empty($a_mod["enti_tx_admissao"])? $a_mod["enti_tx_admissao"]		 	:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data(	"Dt. Desligamento", "desligamento", 	(!empty($a_mod["enti_tx_desligamento"])? $a_mod["enti_tx_desligamento"] 	:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
-			campo(		"Saldo de Horas", 	"setBanco", 		(!empty($a_mod["enti_tx_banco"])? $a_mod["enti_tx_banco"] 					:"00:00"), 	1, "MASCARA_HORAS", "placeholder='HH:mm' tabindex=".sprintf("%02d", $tabIndex++)),
+			campo(		"Saldo de Horas", 	"setBanco", 		(!empty($a_mod["enti_tx_banco"])? $a_mod["enti_tx_banco"] 				:"00:00"), 	1, "MASCARA_HORAS", "placeholder='HH:mm' tabindex=".sprintf("%02d", $tabIndex++)),
 			combo(		"Subcontratado", 	"subcontratado", 	(!empty($a_mod["enti_tx_subcontratado"])? $a_mod["enti_tx_subcontratado"] 	:""), 		2, ["" => "Selecione", "sim" => "Sim", "nao" => "Não"], "tabindex=".sprintf("%02d", $tabIndex++)),
 		]);
+
+        $cContratual = array_merge($cContratual, [
+            campo(		"PIS", 				  "pis", 				($a_mod["enti_tx_pis"]?? ""), 				2, "MASCARA_NUMERO", "maxlength='11' tabindex=".sprintf("%02d", $tabIndex++)),
+            campo(		"CTPS Número", 		  "ctpsNumero", 		($a_mod["enti_tx_ctpsNumero"]?? ""), 		2, "MASCARA_NUMERO", "maxlength='8' tabindex=".sprintf("%02d", $tabIndex++)),
+            campo(		"CTPS Série", 		  "ctpsSerie", 		($a_mod["enti_tx_ctpsSerie"]?? ""), 		2, "MASCARA_NUMERO", "maxlength='4' tabindex=".sprintf("%02d", $tabIndex++)),
+            combo(		"CTPS UF", 			  "ctpsUf", 			($a_mod["enti_tx_ctpsUf"]?? ""), 			2, getUFs(),          "tabindex=".sprintf("%02d", $tabIndex++)),
+            campo(		"Título de Eleitor Número", "tituloNumero",   ($a_mod["enti_tx_tituloNumero"]?? ""), 	2, "MASCARA_NUMERO", "maxlength='12' tabindex=".sprintf("%02d", $tabIndex++)),
+            campo(		"Título Zona", 		  "tituloZona", 		($a_mod["enti_tx_tituloZona"]?? ""), 		2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)),
+            campo(		"Título Seção", 		  "tituloSecao", 		($a_mod["enti_tx_tituloSecao"]?? ""), 		2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)),
+            campo(		"Reservista", 		  "reservista", 		($a_mod["enti_tx_reservista"]?? ""), 		2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)),
+            campo(		"Registro Funcional",   "registroFuncional",  ($a_mod["enti_tx_registroFuncional"]?? ""),  2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)),
+            campo_data(	"Vencimento Registro",  "vencimentoRegistro", ($a_mod["enti_tx_vencimentoRegistro"]?? ""), 2,                     "tabindex=".sprintf("%02d", $tabIndex++))
+        ]);
 
 		$conferirPadraoJS = "";
 		if (!empty($a_mod["enti_nb_empresa"])){
@@ -1318,45 +1350,46 @@
 
 		echo abre_form();
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		fieldset("Dados de Usuário");
+		echo "<ul class='nav nav-tabs' role='tablist'>".
+			"<li class='active'><a href='#tab_usuario' role='tab' data-toggle='tab'>Dados de Usuário</a></li>".
+			"<li><a href='#tab_pessoais' role='tab' data-toggle='tab'>Dados Pessoais</a></li>".
+			"<li><a href='#tab_foto' role='tab' data-toggle='tab'>Foto</a></li>".
+			"<li><a href='#tab_contratual' role='tab' data-toggle='tab'>Dados Contratuais</a></li>".
+			"<li><a href='#tab_jornada' role='tab' data-toggle='tab'>Jornada</a></li>".
+			"<li><a href='#tab_cnh' role='tab' data-toggle='tab'>CNH</a></li>".
+			"<li><a href='#tab_docs' role='tab' data-toggle='tab'>Documentos</a></li>".
+		"</ul>";
+
+		echo "<div class='tab-content' style='margin-top:15px'>";
+		echo "<div class='tab-pane active' id='tab_usuario'>";
 		echo linha_form($camposUsuario);
-		echo "<br>";
-		fieldset("Dados Pessoais");
+		echo "</div>";
+
+		echo "<div class='tab-pane' id='tab_pessoais'>";
 		echo linha_form($camposPessoais);
-		echo "<br>";
-		fieldset("Foto");
+		echo "</div>";
+
+		echo "<div class='tab-pane' id='tab_foto'>";
 		echo "<div class='imageForm'>";
 		echo linha_form($camposImg);
 		echo "</div>";
-		echo "<br>";
-		fieldset("Dados Contratuais");
-		echo linha_form($cContratual);
-		echo "<br>";
-		fieldset("CONVENÇÃO SINDICAL - JORNADA PADRÃO DO FUNCIONÁRIO");
-		echo linha_form($cJornada);
-		echo "<br>";
-		echo "<div class='cnh-row'>";
-			fieldset("CARTEIRA NACIONAL DE HABILITAÇÃO");
-			echo linha_form($camposCNH);
 		echo "</div>";
 
-		if (!empty($a_mod["enti_nb_userCadastro"])) {
-			$a_userCadastro = carregar("user", $a_mod["enti_nb_userCadastro"]);
-			$txtCadastro = "Registro inserido por $a_userCadastro[user_tx_login] às ".data($a_mod["enti_tx_dataCadastro"]).".";
-			$cAtualiza[] = texto("Data de Cadastro", "$txtCadastro", 5);
-			if ($a_mod["enti_nb_userAtualiza"] > 0) {
-				$a_userAtualiza = carregar("user", $a_mod["enti_nb_userAtualiza"]);
-				$txtAtualiza = "Registro atualizado por $a_userAtualiza[user_tx_login] às ".data($a_mod["enti_tx_dataAtualiza"], 1).".";
-				$cAtualiza[] = texto("Última Atualização", strval($txtAtualiza), 5);
-			}
-			echo "<br>";
-			echo linha_form($cAtualiza);
-		}
+		echo "<div class='tab-pane' id='tab_contratual'>";
+		echo linha_form($cContratual);
+		echo "</div>";
 
-		echo "<iframe id=frame_parametro style='display: none;'></iframe>";
+		echo "<div class='tab-pane' id='tab_jornada'>";
+		echo linha_form($cJornada);
+		echo "</div>";
 
-		echo fecha_form($botoesCadastro);
+		echo "<div class='tab-pane' id='tab_cnh'>";
+		echo "<div class='cnh-row'>";
+		echo linha_form($camposCNH);
+		echo "</div>";
+		echo "</div>";
 
+		echo "<div class='tab-pane' id='tab_docs'>";
 		if (!empty($a_mod["enti_nb_id"])) {
 			$arquivos = mysqli_fetch_all(query(
 				"SELECT 
@@ -1381,8 +1414,14 @@
 				ON subg.sbgr_nb_id = documento_funcionario.docu_nb_sbgrupo
 				WHERE documento_funcionario.docu_nb_entidade = ".$a_mod["enti_nb_id"]
 			),MYSQLI_ASSOC);
-			echo "</div><div class='col-md-12'><div class='col-md-12 col-sm-12'>".arquivosFuncionario("Documentos", $a_mod["enti_nb_id"], $arquivos);
+			echo arquivosFuncionario("Documentos", $a_mod["enti_nb_id"], $arquivos);
 		}
+		echo "</div>";
+
+		echo "<iframe id=frame_parametro"." style='display: none;'></iframe>";
+		echo "</div>";
+
+		echo fecha_form($botoesCadastro);
 		rodape();
 		
 		echo 
@@ -1395,8 +1434,14 @@
 		carregarJS();
 	}
 
-	function index(){
-		cabecalho("Cadastro de Funcionário");
+function index(){
+		
+		//ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
+        include "check_permission.php";
+        // APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
+        verificaPermissao('/cadastro_funcionario.php');
+		
+        cabecalho("Cadastro de Funcionário");
 
 		$extraEmpresa = "";
 		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
@@ -1431,6 +1476,31 @@
 		echo abre_form();
 		echo linha_form($camposBusca);
 		echo fecha_form([], "<hr><form>".implode(" ", $botoesBusca)."</form>");
+
+		echo "<script>
+		document.addEventListener('DOMContentLoaded', function(){
+			if (window.jQuery && jQuery.fn && jQuery.fn.select2) {
+				var $ = jQuery;
+				$('select[name^=\"busca_\"]').each(function(){
+					var first = this.options[0];
+					var placeholder = '';
+					if (first) {
+						var isPlaceholder = (first.value === '' || /selecion(e|e um item)/i.test(first.textContent.trim()));
+						if (isPlaceholder) {
+							first.disabled = true;
+							placeholder = first.textContent.trim();
+						}
+					}
+					$(this).select2({
+						width: 'resolve',
+						minimumResultsForSearch: 0,
+						allowClear: true,
+						placeholder: placeholder || 'Selecione'
+					});
+				});
+			}
+		});
+		</script>";
 
 		$logoEmpresa = mysqli_fetch_assoc(query(
             "SELECT empr_tx_logo FROM empresa

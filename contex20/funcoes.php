@@ -274,13 +274,8 @@
 			set_status("ERRO ao registrar.");
 			return [$e];
 		}
-
-		$tabIdName = substr($tabela, 0, 4)."_nb_id";
-		$result = mysqli_fetch_assoc(query(
-			"SELECT {$tabIdName} FROM {$tabela} ORDER BY {$tabIdName} DESC LIMIT 1;"
-		));
-
-		return (is_array($result)? [$result[$tabIdName]]: []);
+        
+        return [mysqli_insert_id($conn)];
 	}
 
 	//Insere um valor no meio de um array. Somente para arrays com chaves numéricas.
@@ -308,8 +303,10 @@
 			exit;
 		}
 
-		$tab = substr($tabela,0,4);
-		$camposString = "";
+        $tab = substr($tabela,0,4);
+        if($tabela === 'usuario_perfil'){ $tab = 'uperf'; }
+        if($tabela === 'perfil_acesso'){ $tab = 'perfil'; }
+        $camposString = "";
 		for($i=0;$i<count($campos);$i++){
 			$camposString .= ", ".$campos[$i]." = ";
 
@@ -336,11 +333,13 @@
 	function remover(string $tabela, string $id): int{
 		return inactivateById($tabela, $id);
 	}
-	function inactivateById(string $tabela, string $id): int{
-		$tab = substr($tabela,0,4);
-		query("UPDATE {$tabela} SET {$tab}_tx_status = 'inativo' WHERE {$tab}_nb_id = {$id} LIMIT 1;");
-		return $id;
-	}
+    function inactivateById(string $tabela, string $id): int{
+        $tab = substr($tabela,0,4);
+        if($tabela === 'usuario_perfil'){ $tab = 'uperf'; }
+        if($tabela === 'perfil_acesso'){ $tab = 'perfil'; }
+        query("UPDATE {$tabela} SET {$tab}_tx_status = 'inativo' WHERE {$tab}_nb_id = {$id} LIMIT 1;");
+        return $id;
+    }
 
 	// function remover_ponto(int $id,$just,$atualizar = null){
 	// 	$tab = substr("ponto", 0, 4);
@@ -362,16 +361,20 @@
 	// 	return mysqli_fetch_array($sql, $mode);
 	// }
 
-	function ultimo_reg($tabela){
-		$tabIdName = substr($tabela,0,4)."_nb_id";
+    function ultimo_reg($tabela){
+        $tabIdName = substr($tabela,0,4)."_nb_id";
+        if($tabela === 'usuario_perfil'){ $tabIdName = 'uperf_nb_id'; }
+        if($tabela === 'perfil_acesso'){ $tabIdName = 'perfil_nb_id'; }
+        $sql=query("SELECT {$tabIdName} FROM {$tabela} ORDER BY {$tabIdName} DESC LIMIT 1;");
+        return mysqli_fetch_array($sql, MYSQLI_BOTH)[0];
+    }
 
-		$sql=query("SELECT {$tabIdName} FROM {$tabela} ORDER BY {$tabIdName} DESC LIMIT 1;");
-		return mysqli_fetch_array($sql, MYSQLI_BOTH)[0];
-	}
-
-	function carregar($tabela, string $id="", $campo="", $valor="", $extra="", $exibe=0){
-		$extraCondicoes = "";
-		$extra_id = (!empty($id))? " AND ".substr($tabela,0,4)."_nb_id"." = ".$id: "";
+    function carregar($tabela, string $id="", $campo="", $valor="", $extra="", $exibe=0){
+        $extraCondicoes = "";
+        $prefixId = substr($tabela,0,4);
+        if($tabela === 'usuario_perfil'){ $prefixId = 'uperf'; }
+        if($tabela === 'perfil_acesso'){ $prefixId = 'perfil'; }
+        $extra_id = (!empty($id))? " AND ".$prefixId."_nb_id = ".$id: "";
 
 		if(!empty($campo[0])) {
 			$a_campo = explode(",", $campo);
@@ -1001,13 +1004,15 @@
 
 		$opt = "";
 
-		if(!empty($modificador)){
-			$tab = substr($tabela,0,4);
-			if($colunas != ''){
-				$extra_campo = ",$colunas";
-			}else{
-				$extra_campo = '';
-			}
+        if(!empty($modificador)){
+            $tab = substr($tabela,0,4);
+            if($tabela === 'usuario_perfil'){ $tab = 'uperf'; }
+            if($tabela === 'perfil_acesso'){ $tab = 'perfil'; }
+            if($colunas != ''){
+                $extra_campo = ",$colunas";
+            }else{
+                $extra_campo = '';
+            }
 
 			$queryResult = mysqli_fetch_array(
 				query(
@@ -1087,8 +1092,10 @@
 
 	function combo_bd($nome,$variavel,$modificador,$tamanho,$tabela,$extra="",$condicoes=""){
 
-		$tab=substr($tabela,0,4);
-		$htmlOpcoes = "";
+        $tab=substr($tabela,0,4);
+        if($tabela === 'usuario_perfil'){ $tab = 'uperf'; }
+        if($tabela === 'perfil_acesso'){ $tab = 'perfil'; }
+        $htmlOpcoes = "";
 		if($nome[0] == "!"){
 			$nome=substr($nome, 1);
 			$htmlOpcoes.="<option value=''></option>";

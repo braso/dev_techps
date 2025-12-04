@@ -56,7 +56,7 @@
 			criarBotaoVoltar()
 		];
 		
-		echo abre_form("Dados do Operação");
+		echo abre_form("Dados do Cargo");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		echo linha_form($campos);
 		echo fecha_form($botoes);
@@ -66,7 +66,11 @@
 
     function index() {
 		global $CONTEX;
-
+		
+		//ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
+        include "check_permission.php";
+        // APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
+        verificaPermissao('/cadastro_operacao.php');
 		cabecalho("Cadastro de Cargos");
 
 		if(!isset($_POST["busca_status"])){
