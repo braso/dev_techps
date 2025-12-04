@@ -506,6 +506,10 @@
             if($max50Auto[0] == "-"){ $max50Auto = "00:00"; }
             $_POST["extraPago"] = $max50Auto;
             $aPagar = calcularHorasAPagar(strip_tags($totalResumo["diffSaldo"]), $saldoBruto, $totalResumo["he50"], $totalResumo["he100"], $max50Auto, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+            $correcaoHE50 = operarHorarios([$max50Auto, $aPagar[1]], "-");
+            if($correcaoHE50[0] != "-"){
+                $aPagar[0] = $correcaoHE50;
+            }
             $saldoFinal = operarHorarios([$saldoBruto, "-".$aPagar[0], "-".$aPagar[1]], "+");
 			
 			if($totalResumo["diffSaldo"][0] == "-"){
@@ -527,7 +531,8 @@
 			}
 
 			$saldoFinal = operarHorarios([$saldoFinal, $totalResumo["desconto_manual"]], "+");
-			if($_POST["zerarSaldoNegativo"] == "sim" && $saldoFinal[0] == "-"){
+			if($_POST["zerarSaldoNegativo"] == "sim"){
+				$totalResumo["desconto_manual"] = operarHorarios([$totalResumo["desconto_manual"], $saldoFinal], "+");
 				$saldoFinal = "00:00";
 			}
 
