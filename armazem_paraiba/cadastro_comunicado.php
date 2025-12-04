@@ -154,13 +154,13 @@ function salvarNoDb2($data){
 	}
 
 	function index(){
-		if(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador")) && is_bool(strpos($_SESSION["user_tx_nivel"], "Super Administrador"))){
-			$_POST["returnValues"] = json_encode([
-				"HTTP_REFERER" => $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php"
-			]);
-			voltar();
-		}
 
+			//ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
+		include "check_permission.php";
+		// APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
+		verificaPermissao('/cadastro_comunicado.php');
+
+	
 		cabecalho("Cadastro de Comunicado");
 
 		$destinos = [

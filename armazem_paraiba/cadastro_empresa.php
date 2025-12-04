@@ -716,27 +716,10 @@
 	}
 
     function index(){
-        $permitido = false;
-        $perfilId = 0;
-        if(!empty($_SESSION["user_nb_id"])){
-            $rowPerfil = mysqli_fetch_assoc(query("SELECT perfil_nb_id FROM usuario_perfil WHERE ativo = 1 AND user_nb_id = ? LIMIT 1", "i", [$_SESSION["user_nb_id"]]));
-            if(!empty($rowPerfil["perfil_nb_id"])) $perfilId = (int)$rowPerfil["perfil_nb_id"];
-        }
-        if($perfilId > 0){
-            $rowPerm = mysqli_fetch_assoc(query(
-                "SELECT 1 FROM perfil_menu_item p JOIN menu_item m ON m.menu_nb_id = p.menu_nb_id WHERE p.perfil_nb_id = ? AND p.perm_ver = 1 AND m.menu_tx_ativo = 1 AND m.menu_tx_path = '/cadastro_empresa.php' LIMIT 1",
-                "i",
-                [$perfilId]
-            ));
-            $permitido = !empty($rowPerm);
-        }
-        if(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador")) && !$permitido){
-            $_POST["returnValues"] = json_encode([
-                "HTTP_REFERER" => $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php"
-            ]);
-            voltar();
-        }
-
+        	//ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
+		include "check_permission.php";
+		// APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
+		verificaPermissao('/cadastro_empresa.php');
 		
         cabecalho("Cadastro Empresa/Filial");
 

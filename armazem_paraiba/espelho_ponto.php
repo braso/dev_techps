@@ -146,6 +146,12 @@
 	}
 
 	function index(){
+		
+		//ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
+        include "check_permission.php";
+        // APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
+        verificaPermissao('/espelho_ponto.php');
+		
 		cabecalho(empty($_POST["title"])? "Buscar Espelho de Ponto": $_POST["title"]);
 
 		echo "<style>";

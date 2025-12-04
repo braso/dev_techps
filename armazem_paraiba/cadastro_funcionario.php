@@ -1,12 +1,12 @@
 <?php
-  
+  /*
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
-
+*/
 	include "conecta.php";
 
 	function carregarJS(){
@@ -1395,8 +1395,14 @@
 		carregarJS();
 	}
 
-	function index(){
-		cabecalho("Cadastro de Funcionário");
+function index(){
+		
+		//ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
+        include "check_permission.php";
+        // APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
+        verificaPermissao('/cadastro_funcionario.php');
+		
+        cabecalho("Cadastro de Funcionário");
 
 		$extraEmpresa = "";
 		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {

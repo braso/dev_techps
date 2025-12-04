@@ -353,6 +353,12 @@
 	}
 
 	function index(){
+		
+		//ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
+        include "check_permission.php";
+        // APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
+        verificaPermissao('/nao_conformidade.php');
+		
 		global $CONTEX, $tabelasPonto;
 
 		cabecalho("Não Conformidade");

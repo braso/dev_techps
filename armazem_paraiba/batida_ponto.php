@@ -152,6 +152,7 @@
 	}
 
 	function index() {
+		
 		global $CONTEX;
 		$hoje = date("Y-m-d");
 		cabecalho("Registrar Ponto");

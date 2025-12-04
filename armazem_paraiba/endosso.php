@@ -480,7 +480,12 @@
 	}
 
 	function index($counts = null, $endossoHTML = ""){
-
+		
+		//ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
+        include "check_permission.php";
+        // APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
+        verificaPermissao('/endosso.php');
+		
 		cabecalho("Buscar Endosso");
 
 		if(empty($_POST["busca_data"])){

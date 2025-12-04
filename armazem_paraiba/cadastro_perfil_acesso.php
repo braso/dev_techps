@@ -1,14 +1,11 @@
 <?php
 
+        ini_set("display_errors", 1);
+        error_reporting(E_ALL);
 
-		ini_set("display_errors", 1);
-		error_reporting(E_ALL);
-
-		header("Expires: 01 Jan 2001 00:00:00 GMT");
-		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
-		header("Pragma: no-cache"); // HTTP 1.0.
-
-
+        header("Expires: 01 Jan 2001 00:00:00 GMT");
+        header("Cache-Control: no-cache, no-store, must-revalidate");
+        header("Pragma: no-cache");
 
 include_once "load_env.php";
 include_once "conecta.php";
@@ -25,7 +22,6 @@ function cadastrar(){
         index();
         exit;
     }
-
 
     $_POST["titulo"] = trim($_POST["titulo"]);
     $_POST["descricao"] = isset($_POST["descricao"]) ? trim($_POST["descricao"]) : "";
@@ -179,10 +175,12 @@ function formPerfil(){
         }
     }
 
+    
+
     $selecionados = [];
     if($perfilId > 0){
-        $rs = query("SELECT menu_nb_id FROM perfil_menu_item WHERE perfil_nb_id = ? AND perm_ver = 1", "i", [$perfilId]);
-        while($rs && ($r = mysqli_fetch_assoc($rs))){ $selecionados[(int)$r["menu_nb_id"]] = true; }
+        $rsSel = query("SELECT menu_nb_id FROM perfil_menu_item WHERE perfil_nb_id = ? AND perm_ver = 1", "i", [$perfilId]);
+        while($rsSel && ($r = mysqli_fetch_assoc($rsSel))){ $selecionados[(int)$r["menu_nb_id"]] = true; }
     }
 
     $items = [];
@@ -192,29 +190,28 @@ function formPerfil(){
     $grupo = [];
     foreach($items as $it){ $grupo[$it["menu_tx_secao"]][] = $it; }
 
+    
+
     $checksSection = "<div class='row' style='margin-top:10px'>"
-        ."<div class='col-sm-12' style='font-weight:bold; font-size:16px; margin-bottom:10px'>Permissões de visualização</div>";
+        ."<div class='col-sm-12' style='font-weight:bold; font-size:16px; margin-bottom:10px'>Itens de menu</div>";
     foreach($grupo as $secao => $lista){
         $secSlug = strtolower(preg_replace('/[^a-z0-9_]+/i','_', $secao));
         $checksSection .= "<div class='row' style='margin-bottom:10px' data-sec='".$secSlug."'>"
-    ."<div class='col-sm-12' style='display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; border-left:4px solid #4c6ef5; padding-left:8px'>"
-        ."<span>".ucfirst($secao)."</span>"
-    ."</div>"
-    ."<div class='col-sm-12' style='display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:8px'>";
+            ."<div class='col-sm-12' style='display:flex; align-items:center; margin-bottom:6px; border-left:4px solid #4c6ef5; padding-left:8px'>".ucfirst($secao)."</div>"
+            ."<div class='col-sm-12' style='display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:10px'>";
 
         foreach($lista as $it){
-            $isChecked = isset($selecionados[(int)$it["menu_nb_id"]]);
-            $checked = $isChecked ? "checked" : "";
-            $bgStyle = $isChecked ? "background:#eaffea; border:1px solid #b7e1b7;" : "background:#f9f9f9; border:1px solid #eee;";
-            $checksSection .= "<label class='perm-item' style='display:flex; align-items:center; gap:8px; margin:2px 0; ".$bgStyle." border-radius:8px; padding:8px'>"
-                ."<input type='checkbox' name='routes_ver[]' value='".$it["menu_nb_id"]."' ".$checked.">"
-                ."<span>".$it["menu_tx_label"]."</span>"
-            ."</label>";
+            $mid = (int)$it["menu_nb_id"];
+            $isChecked = isset($selecionados[$mid]);
+            $bgStyle = $isChecked ? "background:#eaffea; border-color:#b7e1b7;" : "background:#f9fafb; border-color:#e5e7eb;";
+            $checksSection .= "<label style='border-radius:10px; padding:10px; border:1px solid; display:flex; align-items:center; gap:10px; " . $bgStyle . "'>";
+            $checksSection .= "<input type='checkbox' name='routes_ver[]' value='".$mid."' ".($isChecked?"checked":"").">";
+            $checksSection .= "<span style='font-weight:600'>".$it["menu_tx_label"]."</span>";
+            $checksSection .= "</label>";
         }
         $checksSection .= "</div></div>";
     }
-    $checksSection .= "</div><script>(function(){var xs=document.querySelectorAll(\"input[name='routes_ver[]']\");for(var i=0;i<xs.length;i++){xs[i].addEventListener('change',function(e){var t=e.target;var l=t.closest('label');if(l){if(t.checked){l.style.background='#eaffea';l.style.borderColor='#b7e1b7';}else{l.style.background='#f9f9f9';l.style.borderColor='#eee';}}});}})();</script>";
-    
+    $checksSection .= "</div>";
 
     $campos = [
         campo_hidden("id", ($perfilId > 0 ? $perfilId : "")),
@@ -268,6 +265,9 @@ function listarPerfis(){
 }
 
 function index(){
+        include "check_permission.php";
+        verificaPermissao('/cadastro_perfil_acesso.php');
+
     cabecalho("Cadastro de Perfil de Acesso");
     formPerfil();
     if(empty($_POST["id"])){

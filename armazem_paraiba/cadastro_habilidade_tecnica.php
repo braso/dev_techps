@@ -240,6 +240,11 @@
     }
 
     function index(){
+        //ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
+        include "check_permission.php";
+        // APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
+        verificaPermissao('/cadastro_habilidade_tecnica.php');
+
         cabecalho("Cadastro de Habilidades Técnicas");
         formHabilidade();
         if(empty($_POST["id"])){
