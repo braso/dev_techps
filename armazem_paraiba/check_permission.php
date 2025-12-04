@@ -1,5 +1,4 @@
 <?php
-
 function verificaPermissao($pathMenu)
 {
     global $conn;
@@ -38,7 +37,7 @@ function verificaPermissao($pathMenu)
         $permitido = !empty($rowPerm);
     }
 
-    // 3. Regras por nível de acesso
+    // 3. Regras por nível de acesso para funcionário
     $nivel = trim($_SESSION["user_tx_nivel"] ?? "");
     $isAdmin = (
         preg_match('/administrador/i', $nivel) ||
@@ -46,31 +45,25 @@ function verificaPermissao($pathMenu)
         preg_match('/adminsitrador/i', $nivel)
     );
 
-    // 3.1 Funcionário vai sempre para batida_ponto
-    if (preg_match('/funcionário/i', $nivel) && $pathMenu !== '/batida_ponto.php') {
-        $_POST["returnValues"] = json_encode([
-            "HTTP_REFERER" => $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] . "/batida_ponto.php"
-        ]);
-        voltar();
-        exit;
-    }
+    $pathsPermitidosFuncionario = ['/batida_ponto.php', '/espelho_ponto.php'];
 
-    // 3.2 Se não for admin e não tiver permissão, direciona para batida_ponto
     if (!$isAdmin && !$permitido) {
+        // Se for funcionário, deixa livre apenas batida/espelho
+        if (preg_match('/funcionário/i', $nivel) && in_array($pathMenu, $pathsPermitidosFuncionario)) {
+            return true; // permitido por regra especial
+        }
 
-        // Retorno padrão
+        // Se não tiver permissão, redireciona
         $_POST["returnValues"] = json_encode([
             "HTTP_REFERER" => $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] . "/batida_ponto.php"
         ]);
-
-        // Função já existente no seu sistema
         voltar();
         exit;
     }
 
-    // Se chegou aqui, é permitido
-    return true;
+    return true; // Se for admin ou tiver permissão marcada
 }
+
 
 function camposOcultosPerfil($pathMenu)
 {

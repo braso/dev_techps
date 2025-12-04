@@ -184,20 +184,84 @@
 		confirmButton.innerHTML = confirmButtonText;
 		confirmButton.className = 'btn '+confirmButtonClass;
 
-		$('#modal-confirm').on('click', function() {
-			$('#myModal').modal('hide');
-
-			document.form_submit.acao.value = 'cadastraPonto';
-			document.form_submit.id.value = idEntidade;
-			document.form_submit.data.value = hoje;
-			document.form_submit.placa.value = placa;
-			document.form_submit.idMacro.value = idMacro;
-			document.form_submit.justificativa.value = document.getElementById("justificativa").value;
-			if(idMotivo != ""){
-				document.form_submit.motivo.value = idMotivo;
-			}
-			document.form_submit.submit();
-		});
+        $('#modal-confirm').off('click').on('click', function() {
+            function attemptSubmit(){
+                document.form_submit.acao.value = 'cadastraPonto';
+                document.form_submit.id.value = idEntidade;
+                document.form_submit.data.value = hoje;
+                document.form_submit.placa.value = placa;
+                document.form_submit.idMacro.value = idMacro;
+                document.form_submit.justificativa.value = document.getElementById('justificativa').value;
+                if(idMotivo != ''){
+                    document.form_submit.motivo.value = idMotivo;
+                }
+                document.form_submit.submit();
+            }
+            function ensureSweetAlert(cb){
+                if (window.Swal){ cb(); return; }
+                var s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+                s.onload = cb;
+                document.head.appendChild(s);
+            }
+            function showGeoPopupAndRetry(onSuccess){
+                ensureSweetAlert(function(){
+                    function requestGeo(){
+                        return new Promise(function(resolve, reject){
+                            if (!navigator.geolocation){ reject(new Error('Geolocalização não suportada')); return; }
+                            navigator.geolocation.getCurrentPosition(function(pos){ resolve(pos); }, function(err){ reject(err); }, { enableHighAccuracy: true });
+                        });
+                    }
+                    Swal.fire({
+                        title: 'É necessário permitir a localização para bater o ponto',
+                        icon: 'warning',
+                        confirmButtonText: 'Permitir',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        preConfirm: function(){
+                            return requestGeo().then(function(pos){
+                                document.getElementById('latitude').value = pos.coords.latitude;
+                                document.getElementById('longitude').value = pos.coords.longitude;
+                                if (typeof setLocationState === 'function'){ setLocationState(true); }
+                            }).catch(function(err){
+                                if (typeof setLocationState === 'function'){ setLocationState(false); }
+                                Swal.showValidationMessage('Permita a localização no navegador para continuar');
+                                throw err;
+                            });
+                        }
+                    }).then(function(result){
+                        if (result.isConfirmed){
+                            onSuccess();
+                        }
+                    });
+                });
+            }
+            function checkAndSubmit(){
+                if (navigator.geolocation){
+                    navigator.geolocation.getCurrentPosition(function(pos){
+                        document.getElementById('latitude').value = pos.coords.latitude;
+                        document.getElementById('longitude').value = pos.coords.longitude;
+                        if (typeof setLocationState === 'function'){ setLocationState(true); }
+                        $('#myModal').modal('hide');
+                        attemptSubmit();
+                    }, function(err){
+                        if (typeof setLocationState === 'function'){ setLocationState(false); }
+                        if (typeof showPermissionHint === 'function'){ showPermissionHint(true); }
+                        showGeoPopupAndRetry(function(){
+                            $('#myModal').modal('hide');
+                            attemptSubmit();
+                        });
+                    }, { enableHighAccuracy: true });
+                } else {
+                    if (typeof showPermissionHint === 'function'){ showPermissionHint(true); }
+                    showGeoPopupAndRetry(function(){
+                        $('#myModal').modal('hide');
+                        attemptSubmit();
+                    });
+                }
+            }
+            checkAndSubmit();
+        });
 
 		$('#modal-cancel').on('click', function() {
 			$('#myModal').modal('hide');
