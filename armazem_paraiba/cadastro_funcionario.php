@@ -85,7 +85,7 @@
 					el.innerHTML = '<option value=\'\' disabled selected>Selecione</option>';
 					el.disabled = true;
 					if (!id) { el.parentElement.style.display = 'none'; return; }
-                    var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=sbgrupos_documentos&limite=1000000&condicoes=' + encodeURI('AND sbgr_nb_idgrup = '+id);
+					var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=sbgrupos_documentos&limite=200&condicoes=' + encodeURI('AND sbgr_nb_idgrup = '+id);
 					$.ajax({ url: url, dataType: 'json' }).done(function(data){
 						if (Array.isArray(data)) {
 							if (data.length > 0) {
@@ -109,7 +109,7 @@
 					var el = document.getElementsByName(selectName)[0];
 					if (!el) return;
 					el.innerHTML = '<option value=\'\' disabled selected>Selecione</option>';
-                    var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=' + encodeURIComponent(tabela) + '&limite=1000000&condicoes=' + encodeURI(condicoes || '');
+					var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=' + encodeURIComponent(tabela) + '&limite=200&condicoes=' + encodeURI(condicoes || '');
 					$.ajax({ url: url, dataType: 'json' }).done(function(data){
 						if (Array.isArray(data)) {
 							data.forEach(function(item){
@@ -128,7 +128,7 @@
 					el.innerHTML = '<option value=\'\' disabled selected>Selecione</option>';
 					var id = setorBusca.value;
 					if (!id) { el.disabled = true; return; }
-                    var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=sbgrupos_documentos&limite=1000000&condicoes=' + encodeURI('AND sbgr_nb_idgrup = '+id);
+					var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=sbgrupos_documentos&limite=200&condicoes=' + encodeURI('AND sbgr_nb_idgrup = '+id);
 					$.ajax({ url: url, dataType: 'json' }).done(function(data){
 						if (Array.isArray(data)) {
 							data.forEach(function(item){
@@ -1350,46 +1350,45 @@
 
 		echo abre_form();
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-		echo "<ul class='nav nav-tabs' role='tablist'>".
-			"<li class='active'><a href='#tab_usuario' role='tab' data-toggle='tab'>Dados de Usuário</a></li>".
-			"<li><a href='#tab_pessoais' role='tab' data-toggle='tab'>Dados Pessoais</a></li>".
-			"<li><a href='#tab_foto' role='tab' data-toggle='tab'>Foto</a></li>".
-			"<li><a href='#tab_contratual' role='tab' data-toggle='tab'>Dados Contratuais</a></li>".
-			"<li><a href='#tab_jornada' role='tab' data-toggle='tab'>Jornada</a></li>".
-			"<li><a href='#tab_cnh' role='tab' data-toggle='tab'>CNH</a></li>".
-			"<li><a href='#tab_docs' role='tab' data-toggle='tab'>Documentos</a></li>".
-		"</ul>";
-
-		echo "<div class='tab-content' style='margin-top:15px'>";
-		echo "<div class='tab-pane active' id='tab_usuario'>";
+		fieldset("Dados de Usuário");
 		echo linha_form($camposUsuario);
-		echo "</div>";
-
-		echo "<div class='tab-pane' id='tab_pessoais'>";
+		echo "<br>";
+		fieldset("Dados Pessoais");
 		echo linha_form($camposPessoais);
-		echo "</div>";
-
-		echo "<div class='tab-pane' id='tab_foto'>";
+		echo "<br>";
+		fieldset("Foto");
 		echo "<div class='imageForm'>";
 		echo linha_form($camposImg);
 		echo "</div>";
-		echo "</div>";
-
-		echo "<div class='tab-pane' id='tab_contratual'>";
+		echo "<br>";
+		fieldset("Dados Contratuais");
 		echo linha_form($cContratual);
-		echo "</div>";
-
-		echo "<div class='tab-pane' id='tab_jornada'>";
+		echo "<br>";
+		fieldset("CONVENÇÃO SINDICAL - JORNADA PADRÃO DO FUNCIONÁRIO");
 		echo linha_form($cJornada);
-		echo "</div>";
-
-		echo "<div class='tab-pane' id='tab_cnh'>";
+		echo "<br>";
 		echo "<div class='cnh-row'>";
-		echo linha_form($camposCNH);
-		echo "</div>";
+			fieldset("CARTEIRA NACIONAL DE HABILITAÇÃO");
+			echo linha_form($camposCNH);
 		echo "</div>";
 
-		echo "<div class='tab-pane' id='tab_docs'>";
+		if (!empty($a_mod["enti_nb_userCadastro"])) {
+			$a_userCadastro = carregar("user", $a_mod["enti_nb_userCadastro"]);
+			$txtCadastro = "Registro inserido por $a_userCadastro[user_tx_login] às ".data($a_mod["enti_tx_dataCadastro"]).".";
+			$cAtualiza[] = texto("Data de Cadastro", "$txtCadastro", 5);
+			if ($a_mod["enti_nb_userAtualiza"] > 0) {
+				$a_userAtualiza = carregar("user", $a_mod["enti_nb_userAtualiza"]);
+				$txtAtualiza = "Registro atualizado por $a_userAtualiza[user_tx_login] às ".data($a_mod["enti_tx_dataAtualiza"], 1).".";
+				$cAtualiza[] = texto("Última Atualização", strval($txtAtualiza), 5);
+			}
+			echo "<br>";
+			echo linha_form($cAtualiza);
+		}
+
+		echo "<iframe id=frame_parametro style='display: none;'></iframe>";
+
+		echo fecha_form($botoesCadastro);
+
 		if (!empty($a_mod["enti_nb_id"])) {
 			$arquivos = mysqli_fetch_all(query(
 				"SELECT 
@@ -1414,14 +1413,8 @@
 				ON subg.sbgr_nb_id = documento_funcionario.docu_nb_sbgrupo
 				WHERE documento_funcionario.docu_nb_entidade = ".$a_mod["enti_nb_id"]
 			),MYSQLI_ASSOC);
-			echo arquivosFuncionario("Documentos", $a_mod["enti_nb_id"], $arquivos);
+			echo "</div><div class='col-md-12'><div class='col-md-12 col-sm-12'>".arquivosFuncionario("Documentos", $a_mod["enti_nb_id"], $arquivos);
 		}
-		echo "</div>";
-
-		echo "<iframe id=frame_parametro"." style='display: none;'></iframe>";
-		echo "</div>";
-
-		echo fecha_form($botoesCadastro);
 		rodape();
 		
 		echo 
@@ -1476,31 +1469,6 @@ function index(){
 		echo abre_form();
 		echo linha_form($camposBusca);
 		echo fecha_form([], "<hr><form>".implode(" ", $botoesBusca)."</form>");
-
-		echo "<script>
-		document.addEventListener('DOMContentLoaded', function(){
-			if (window.jQuery && jQuery.fn && jQuery.fn.select2) {
-				var $ = jQuery;
-				$('select[name^=\"busca_\"]').each(function(){
-					var first = this.options[0];
-					var placeholder = '';
-					if (first) {
-						var isPlaceholder = (first.value === '' || /selecion(e|e um item)/i.test(first.textContent.trim()));
-						if (isPlaceholder) {
-							first.disabled = true;
-							placeholder = first.textContent.trim();
-						}
-					}
-					$(this).select2({
-						width: 'resolve',
-						minimumResultsForSearch: 0,
-						allowClear: true,
-						placeholder: placeholder || 'Selecione'
-					});
-				});
-			}
-		});
-		</script>";
 
 		$logoEmpresa = mysqli_fetch_assoc(query(
             "SELECT empr_tx_logo FROM empresa
