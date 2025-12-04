@@ -386,14 +386,15 @@ function formUsuarioPerfil(){
         }
     })();</script>";
 
-        $campos = [
-            campo_hidden("id", (!empty($_POST["id"]) ? $_POST["id"] : "")),
-            campo_hidden("usuarios_csv", ""),
-            combo_net("Empresa*", "empresa", ($empresa>0? $empresa: ""), 3, 'empresa', "required onchange='document.contex_form.submit()'"),
-            combo("Operação*", "modo", (isset($_POST["modo"]) ? $_POST["modo"] : "individual"), 3, ["individual"=>"Individual","grupo"=>"Grupo"], "required"),
-            "<div id='indBox'>".combo_net(
-                "Usuário*",
-                "usuario",
+    $campos = [
+        campo_hidden("id", (!empty($_POST["id"]) ? $_POST["id"] : "")),
+        campo_hidden("usuarios_csv", ""),
+        (!empty($_POST["_novo"]) ? campo_hidden("_novo", "1") : ""),
+        combo_net("Empresa*", "empresa", ($empresa>0? $empresa: ""), 3, 'empresa', "required onchange='document.contex_form.submit()'"),
+        combo("Operação*", "modo", (isset($_POST["modo"]) ? $_POST["modo"] : "individual"), 3, ["individual"=>"Individual","grupo"=>"Grupo"], "required"),
+        "<div id='indBox'>".combo_net(
+            "Usuário*",
+            "usuario",
             (!empty($dados["user_nb_id"]) ? $dados["user_nb_id"] : ""),
             4,
             'user',
