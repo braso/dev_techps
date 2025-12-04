@@ -327,6 +327,8 @@
     }
 
     function index(){
+        include __DIR__.'/../check_permission.php';
+        verificaPermissao('/paineis/endosso.php');
         require_once __DIR__."/funcoes_paineis.php";
         // $_POST['busca_ocupacao'] = 'foi';
         

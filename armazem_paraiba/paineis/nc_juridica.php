@@ -350,7 +350,9 @@
 		;
 	}
 
-	function index() {
+    function index() {
+        include __DIR__.'/../check_permission.php';
+        verificaPermissao('/paineis/nc_juridica.php');
 		$encontrado = '';
 		$totaisFuncionario= [];
 		$totaisFuncionario2 = [];

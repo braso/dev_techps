@@ -786,6 +786,8 @@ function carregarJS(array $arquivos) {
 }
 
 function index() {
+    include __DIR__.'/../check_permission.php';
+    verificaPermissao('/paineis/ajustes.php');
 	$dominiosAutotrac = ["/comav"];
 	if (!empty($_POST["acao"])) {
 		if ($_POST["busca_dataMes"] > date("Y-m")) {

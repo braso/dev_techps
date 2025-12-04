@@ -253,6 +253,19 @@ function voltarUsuarioPerfil(){
     exit;
 }
 
+function novoUsuarioPerfil(){
+    $_POST["_novo"] = 1;
+    index();
+    exit;
+}
+
+function limparFiltrosUsuarioPerfil(){
+    unset($_POST["busca_usuario_like"], $_POST["busca_perfil_like"], $_POST["busca_usuario"], $_POST["busca_perfil"], $_POST["busca_status"]);
+    $_POST["busca_status"] = 1;
+    index();
+    exit;
+}
+
 function formUsuarioPerfil(){
     $dados = [];
     if(!empty($_POST["id"])){
@@ -418,9 +431,9 @@ function listarUsuarioPerfis(){
     ];
 
     $camposBusca = [
-        "busca_usuario_like" => "user_tx_login",
-        "busca_perfil_like" => "perfil_tx_nome",
-        "busca_status" => "ativo"
+        "busca_usuario" => "u.user_nb_id",
+        "busca_perfil" => "p.perfil_nb_id",
+        "busca_status" => "uperf.ativo"
     ];
 
     $queryBase =
@@ -453,9 +466,41 @@ function index(){
         // APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
         verificaPermissao('/cadastro_usuario_perfil.php');
         
-        cabecalho("Permisoes de usuarios");
-    formUsuarioPerfil();
-    if(empty($_POST["id"])){
+        $tituloCabecalho = !empty($_POST["_novo"]) ? "Vincular perfil ao usuário" : "Permisoes de usuarios";
+        cabecalho($tituloCabecalho);
+
+    if(!empty($_POST["id"]) || !empty($_POST["_novo"])){
+        formUsuarioPerfil();
+    } else {
+        if(!isset($_POST["busca_status"])){
+            $_POST["busca_status"] = 1;
+        }
+
+        $optsUsers = [""=>"Todos"];
+        $rsU = query("SELECT DISTINCT u.user_nb_id, u.user_tx_login FROM usuario_perfil up JOIN user u ON u.user_nb_id = up.user_nb_id ORDER BY u.user_tx_login");
+        while($rsU && ($r = mysqli_fetch_assoc($rsU))){ $optsUsers[(int)$r["user_nb_id"]] = $r["user_tx_login"]; }
+
+        $optsPerfis = [""=>"Todos"];
+        $rsP = query("SELECT perfil_nb_id, perfil_tx_nome FROM perfil_acesso WHERE perfil_tx_status='ativo' ORDER BY perfil_tx_nome");
+        while($rsP && ($r = mysqli_fetch_assoc($rsP))){ $optsPerfis[(int)$r["perfil_nb_id"]] = $r["perfil_tx_nome"]; }
+
+        $campos = [
+            combo("Usuário", "busca_usuario", (isset($_POST["busca_usuario"]) ? $_POST["busca_usuario"] : ""), 4, $optsUsers, "class='select2 filtro-select'"),
+            combo("Perfil", "busca_perfil", (isset($_POST["busca_perfil"]) ? $_POST["busca_perfil"] : ""), 4, $optsPerfis, "class='select2 filtro-select'"),
+            combo("Status", "busca_status", (isset($_POST["busca_status"]) ? $_POST["busca_status"] : 1), 2, [1=>"Ativo",0=>"Inativo"], "class='filtro-select'")
+        ];
+
+        $botoes = [
+            botao("Buscar", "index"),
+            botao("Limpar Filtro", "limparFiltrosUsuarioPerfil"),
+            botao("Inserir", "novoUsuarioPerfil", "", "", "", "", "btn btn-success")
+        ];
+
+        echo abre_form();
+        echo linha_form($campos);
+        echo fecha_form($botoes);
+        echo "<script>$(function(){ if($.fn.select2){ $.fn.select2.defaults.set('theme','bootstrap'); $('[name=busca_usuario],[name=busca_perfil]').select2({placeholder:'Selecione',allowClear:true}); $('[name=busca_usuario],[name=busca_perfil],[name=busca_status]').on('change', function(){ document.contex_form.submit(); }); } });</script>";
+
         listarUsuarioPerfis();
     }
     rodape();

@@ -330,6 +330,8 @@
     }
 
     function index(){
+        include __DIR__.'/../check_permission.php';
+        verificaPermissao('/paineis/saldo.php');
 
         if(empty($_POST["busca_dataMes"])){
             $_POST["busca_dataMes"] = date("Y-m"); 

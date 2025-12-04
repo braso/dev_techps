@@ -56,7 +56,7 @@
 			criarBotaoVoltar()
 		];
 		
-		echo abre_form("Dados do Operação");
+		echo abre_form("Dados do Cargo");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		echo linha_form($campos);
 		echo fecha_form($botoes);

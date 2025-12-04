@@ -38,14 +38,24 @@ function verificaPermissao($pathMenu)
         $permitido = !empty($rowPerm);
     }
 
-    // 3. Administrador sempre passa
+    // 3. Regras por nível de acesso
     $nivel = trim($_SESSION["user_tx_nivel"] ?? "");
     $isAdmin = (
         preg_match('/administrador/i', $nivel) ||
         preg_match('/super\s+admin/i', $nivel) ||
-        preg_match('/adminsitrador/i', $nivel) // cobre erro de digitação
+        preg_match('/adminsitrador/i', $nivel)
     );
 
+    // 3.1 Funcionário vai sempre para batida_ponto
+    if (preg_match('/funcionário/i', $nivel) && $pathMenu !== '/batida_ponto.php') {
+        $_POST["returnValues"] = json_encode([
+            "HTTP_REFERER" => $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] . "/batida_ponto.php"
+        ]);
+        voltar();
+        exit;
+    }
+
+    // 3.2 Se não for admin e não tiver permissão, direciona para batida_ponto
     if (!$isAdmin && !$permitido) {
 
         // Retorno padrão

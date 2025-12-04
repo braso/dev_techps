@@ -342,6 +342,8 @@
     }
     
     function index() {
+        include __DIR__.'/../check_permission.php';
+        verificaPermissao('/paineis/disponibilidade.php');
         cabecalho("Painel de Disponibilidade de Jornada");
 
         // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";

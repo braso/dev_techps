@@ -104,6 +104,19 @@ function voltarPerfil(){
     exit;
 }
 
+function novoPerfil(){
+    $_POST["_novo"] = 1;
+    index();
+    exit;
+}
+
+function limparFiltrosPerfil(){
+    unset($_POST["busca_nome_like"], $_POST["busca_status"]);
+    $_POST["busca_status"] = "ativo";
+    index();
+    exit;
+}
+
 function formPerfil(){
     $perfilId = (!empty($_POST["id"])) ? (int)$_POST["id"] : 0;
     if($perfilId > 0){
@@ -175,8 +188,6 @@ function formPerfil(){
         }
     }
 
-    
-
     $selecionados = [];
     if($perfilId > 0){
         $rsSel = query("SELECT menu_nb_id FROM perfil_menu_item WHERE perfil_nb_id = ? AND perm_ver = 1", "i", [$perfilId]);
@@ -190,21 +201,23 @@ function formPerfil(){
     $grupo = [];
     foreach($items as $it){ $grupo[$it["menu_tx_secao"]][] = $it; }
 
-    
-
     $checksSection = "<div class='row' style='margin-top:10px'>"
-        ."<div class='col-sm-12' style='font-weight:bold; font-size:16px; margin-bottom:10px'>Itens de menu</div>";
+        
+        ."</div>";
     foreach($grupo as $secao => $lista){
         $secSlug = strtolower(preg_replace('/[^a-z0-9_]+/i','_', $secao));
         $checksSection .= "<div class='row' style='margin-bottom:10px' data-sec='".$secSlug."'>"
-            ."<div class='col-sm-12' style='display:flex; align-items:center; margin-bottom:6px; border-left:4px solid #4c6ef5; padding-left:8px'>".ucfirst($secao)."</div>"
+            ."<div class='col-sm-12' style='display:flex; align-items:center; margin-bottom:6px; border-left:4px solid #4c6ef5; padding-left:8px'>".ucfirst($secao)
+            ."<button type='button' style='margin-left:10px; display:inline-flex; align-items:center; gap:8px; font-size:12px; padding:4px 8px; border:1px solid #e5e7eb; border-radius:6px; background:#eaffea; cursor:pointer'>Marcar todos</button>"
+            ."<button type='button' style='margin-left:6px; display:inline-flex; align-items:center; gap:8px; font-size:12px; padding:4px 8px; border:1px solid #e5e7eb; border-radius:6px; background:#ffeaeb; cursor:pointer'>Desmarcar todos</button>"
+            ."</div>"
             ."<div class='col-sm-12' style='display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:10px'>";
 
         foreach($lista as $it){
             $mid = (int)$it["menu_nb_id"];
             $isChecked = isset($selecionados[$mid]);
             $bgStyle = $isChecked ? "background:#eaffea; border-color:#b7e1b7;" : "background:#f9fafb; border-color:#e5e7eb;";
-            $checksSection .= "<label style='border-radius:10px; padding:10px; border:1px solid; display:flex; align-items:center; gap:10px; " . $bgStyle . "'>";
+            $checksSection .= "<label class='menu-check-item' style='border-radius:10px; padding:10px; border:1px solid; display:flex; align-items:center; gap:10px; " . $bgStyle . "'>";
             $checksSection .= "<input type='checkbox' name='routes_ver[]' value='".$mid."' ".($isChecked?"checked":"").">";
             $checksSection .= "<span style='font-weight:600'>".$it["menu_tx_label"]."</span>";
             $checksSection .= "</label>";
@@ -212,6 +225,7 @@ function formPerfil(){
         $checksSection .= "</div></div>";
     }
     $checksSection .= "</div>";
+    $checksSection .= "<script>(function(){var sync=function(){document.querySelectorAll('.menu-check-item input[type=checkbox]').forEach(function(c){var l=c.closest('.menu-check-item');if(l){if(c.checked){l.style.background='#eaffea';l.style.borderColor='#b7e1b7';}else{l.style.background='#f9fafb';l.style.borderColor='#e5e7eb';}}})};sync();document.addEventListener('change',function(e){var c=e.target;if(c && c.matches('.menu-check-item input[type=checkbox]')){var l=c.closest('.menu-check-item');if(l){if(c.checked){l.style.background='#eaffea';l.style.borderColor='#b7e1b7';}else{l.style.background='#f9fafb';l.style.borderColor='#e5e7eb';}}}});document.addEventListener('click',function(e){var btn=e.target.closest('button');if(btn){var label=btn.textContent.trim();if(label==='Marcar todos'||label==='Desmarcar todos'){e.preventDefault();var sec=btn.getAttribute('data-sec');var scope;if(sec==='__global'){scope=document}else{scope=btn.closest('[data-sec]')||document} Array.prototype.forEach.call(scope.querySelectorAll('.menu-check-item input[type=checkbox]'),function(c){if(label==='Marcar todos' && !c.checked){c.click();} if(label==='Desmarcar todos' && c.checked){c.click();}});}}});})();</script>";
 
     $campos = [
         campo_hidden("id", ($perfilId > 0 ? $perfilId : "")),
@@ -222,7 +236,10 @@ function formPerfil(){
 
     $botoes =
         empty($_POST["id"]) ?
-            [botao("Cadastrar", "cadastrar", "cadastrar_perfil", "", "class='btn btn-success'")] :
+            [
+                botao("Cadastrar", "cadastrar", "cadastrar_perfil", "", "class='btn btn-success'"),
+                criarBotaoVoltar("cadastro_perfil_acesso.php", "voltarPerfil")
+            ] :
             [
                 botao("Atualizar", "cadastrar", "atualizar_perfil", "", "class='btn btn-success'"),
                 criarBotaoVoltar("cadastro_perfil_acesso.php", "voltarPerfil")
@@ -268,11 +285,34 @@ function index(){
         include "check_permission.php";
         verificaPermissao('/cadastro_perfil_acesso.php');
 
-    cabecalho("Cadastro de Perfil de Acesso");
-    formPerfil();
-    if(empty($_POST["id"])){
+    $tituloCabecalho = !empty($_POST["_novo"]) ? "Cadastro novo perfil" : "Cadastro de Perfil de Acesso";
+    cabecalho($tituloCabecalho);
+
+    if(!empty($_POST["id"]) || !empty($_POST["_novo"])){
+        formPerfil();
+    } else {
+        if(!isset($_POST["busca_status"])){
+            $_POST["busca_status"] = "ativo";
+        }
+
+        $campos = [
+            campo("Título", "busca_nome_like", (empty($_POST["busca_nome_like"]) ? "" : $_POST["busca_nome_like"]), 4, "", "maxlength='100'"),
+            combo("Status", "busca_status", (empty($_POST["busca_status"]) ? "" : $_POST["busca_status"]), 2, ["ativo"=>"Ativo","inativo"=>"Inativo"])
+        ];
+
+        $botoes = [
+            botao("Buscar", "index"),
+            botao("Limpar Filtro", "limparFiltrosPerfil"),
+            botao("Inserir", "novoPerfil", "", "", "", "", "btn btn-success")
+        ];
+
+        echo abre_form();
+        echo linha_form($campos);
+        echo fecha_form($botoes);
+
         listarPerfis();
     }
+
     rodape();
 }
 
