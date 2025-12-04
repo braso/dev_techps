@@ -1,12 +1,12 @@
 <?php
-	/* Modo debug
+/*
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
-	//*/
+*/
 	date_default_timezone_set('America/Sao_Paulo');
 
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
@@ -501,9 +501,12 @@
 				}
 			//}
 
-			$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
-			$aPagar = calcularHorasAPagar(strip_tags($totalResumo["diffSaldo"]), $saldoBruto, $totalResumo["he50"], $totalResumo["he100"], (!empty($_POST["extraPago"])? $_POST["extraPago"]: "00:00"), ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
-			$saldoFinal = operarHorarios([$saldoBruto, "-".$aPagar[0], "-".$aPagar[1]], "+");
+            $saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
+            $max50Auto = operarHorarios([$saldoBruto, $descFaltasNaoJustificadas], "-");
+            if($max50Auto[0] == "-"){ $max50Auto = "00:00"; }
+            $_POST["extraPago"] = $max50Auto;
+            $aPagar = calcularHorasAPagar(strip_tags($totalResumo["diffSaldo"]), $saldoBruto, $totalResumo["he50"], $totalResumo["he100"], $max50Auto, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+            $saldoFinal = operarHorarios([$saldoBruto, "-".$aPagar[0], "-".$aPagar[1]], "+");
 			
 			if($totalResumo["diffSaldo"][0] == "-"){
 				$saldoPossivelDescontar = operarHorarios([$totalResumo["diffSaldo"], $descFaltasNaoJustificadas], "+");
@@ -639,12 +642,7 @@
 	}
 
 	function index(){
-		if(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-			$_POST["returnValues"] = json_encode([
-				"HTTP_REFERER" => $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/index.php"
-			]);
-			voltar();
-		}
+		
 		
 		global $CONTEX;
 
@@ -658,6 +656,22 @@
 		$_POST["empresa"] = $_POST["empresa"]?? $_SESSION["user_nb_empresa"];
 		if(!empty($_POST["empresa"])){
 			$condicoes_motorista .= " AND enti_nb_empresa = ".$_POST["empresa"];
+		}
+
+		$condSubSetor = " ORDER BY sbgr_tx_nome ASC";
+		if (!empty($_POST["busca_setor"])) {
+			$condSubSetor = " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC";
+		}
+		$subsetorExtra = empty($_POST["busca_setor"]) ? "disabled" : "";
+
+		if (!empty($_POST["busca_setor"])) {
+			$condicoes_motorista .= " AND enti_setor_id = ".intval($_POST["busca_setor"]);
+		}
+		if (!empty($_POST["busca_subsetor"])) {
+			$condicoes_motorista .= " AND enti_subSetor_id = ".intval($_POST["busca_subsetor"]);
+		}
+		if (!empty($_POST["busca_operacao"])) {
+			$condicoes_motorista .= " AND enti_tx_tipoOperacao = ".intval($_POST["busca_operacao"]);
 		}
 
 		$camposHE = 
@@ -712,6 +726,9 @@
 		;
 
 		$fields = [
+			combo_bd("!Setor", "busca_setor", (!empty($_POST["busca_setor"]) ? $_POST["busca_setor"] : ""), 2, "grupos_documentos"),
+			combo_bd("!Subsetor", "busca_subsetor", (!empty($_POST["busca_subsetor"]) ? $_POST["busca_subsetor"] : ""), 2, "sbgrupos_documentos", $subsetorExtra, $condSubSetor),
+			combo_bd("!Cargo", "busca_operacao", (!empty($_POST["busca_operacao"]) ? $_POST["busca_operacao"] : ""), 2, "operacao"),
 			combo_net("Funcionário", "busca_motorista", $_POST["busca_motorista"]?? "", 4, "entidade", "", $condicoes_motorista, "enti_tx_matricula"),
 			campo_data("De*", "data_de", ($_POST["data_de"]?? ""), 2),
 			campo_data("Ate*", "data_ate", ($_POST["data_ate"]?? ""), 2),
@@ -731,6 +748,25 @@
 		echo abre_form();
 		echo linha_form($fields);
 		echo fecha_form($buttons);
+
+		// Toggle Subsetor visibilidade vinculado ao Setor
+		echo "<script>
+			$(document).ready(function(){
+				function toggleSubsetor(){
+					var setor = $('select[name=\"busca_setor\"]').val();
+					var el = $('#busca_subsetor').closest('.campo-fit-content');
+					if(setor){
+						el.show();
+						$('#busca_subsetor').prop('disabled', false);
+					}else{
+						el.hide();
+						$('#busca_subsetor').prop('disabled', true).val('');
+					}
+				}
+				toggleSubsetor();
+				$('select[name=\"busca_setor\"]').on('change', toggleSubsetor);
+			});
+		</script>";
 		
 		rodape();
 

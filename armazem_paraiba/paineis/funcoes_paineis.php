@@ -159,8 +159,8 @@ function criar_relatorio_saldo() {
 		$motoristas = mysqli_fetch_all(query(
 			"SELECT * FROM entidade
 						LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
-						LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
 						LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
+						LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
 						WHERE enti_tx_status = 'ativo'
 							AND DATE_FORMAT(enti_tx_dataCadastro, '%Y-%m') <= '{$dataMes->format("Y-m")}'
 							AND enti_nb_empresa = '{$empresa["empr_nb_id"]}'
@@ -266,14 +266,28 @@ function criar_relatorio_saldo() {
 				$totaisMot["HESabado"]         = somarHorarios([$totaisMot["HESabado"],         $diaPonto["he100"]]);
 				$totaisMot["adicionalNoturno"] = somarHorarios([$totaisMot["adicionalNoturno"], $diaPonto["adicionalNoturno"]]);
 				$totaisMot["esperaIndenizada"] = somarHorarios([$totaisMot["esperaIndenizada"], $diaPonto["esperaIndenizada"]]);
-				$totaisMot["saldoPeriodo"]     = somarHorarios([$totaisMot["saldoPeriodo"],     $diaPonto["diffSaldo"]]);
-				$totaisMot["saldoFinal"]       = somarHorarios([$saldoAnterior,                 $totaisMot["saldoPeriodo"]]);
+                $totaisMot["saldoPeriodo"]     = somarHorarios([$totaisMot["saldoPeriodo"],     $diaPonto["diffSaldo"]]);
+                // saldoFinal deve refletir o resultado do último endosso do período, se existir
+                if (count($endossos) >= 1) {
+                    $ultimoDoPeriodo = $endossos[count($endossos) - 1];
+                    $csvPath = $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$ultimoDoPeriodo["endo_tx_filename"].".csv";
+                    if (!empty($ultimoDoPeriodo["endo_tx_filename"]) && file_exists($csvPath)) {
+                        $endossoPeriodo = lerEndossoCSV($ultimoDoPeriodo["endo_tx_filename"]);
+                        $totaisMot["saldoFinal"] = $endossoPeriodo["totalResumo"]["saldoFinal"];
+                    } else {
+                        $totaisMot["saldoFinal"] = somarHorarios([$saldoAnterior, $totaisMot["saldoPeriodo"]]);
+                    }
+                } else {
+                    $totaisMot["saldoFinal"]       = somarHorarios([$saldoAnterior,                 $totaisMot["saldoPeriodo"]]);
+                }
 			}
 
 			$row = [
 				"idMotorista" 		=> $motorista["enti_nb_id"],
 				"matricula" 		=> $motorista["enti_tx_matricula"],
 				"ocupacao" 			=> $motorista["enti_tx_ocupacao"],
+				"tipoOperacao" 		=> $motorista["enti_tx_tipoOperacao"],
+                "tipoOperacaoNome" 	=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem operação"),
 				"nome" 				=> $motorista["enti_tx_nome"],
 				"statusEndosso" 	=> $statusEndosso,
 				"jornadaPrevista" 	=> $totaisMot["jornadaPrevista"],
@@ -394,8 +408,10 @@ function criar_relatorio_endosso() {
 		$filtroOcupacao = " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')";
 
 		$motoristas = mysqli_fetch_all(query(
-			"SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg, parametro.para_tx_inicioAcordo, parametro.para_nb_qDias, parametro.para_nb_qDias FROM entidade"
+			"SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg, parametro.para_tx_inicioAcordo, parametro.para_nb_qDias, parametro.para_nb_qDias,
+			operacao.oper_tx_nome FROM entidade"
 				. " LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
+				. " LEFT JOIN operacao ON oper_nb_id = enti_tx_tipoOperacao"
 				. " WHERE enti_tx_status = 'ativo'"
 				. " AND DATE_FORMAT(enti_tx_dataCadastro, '%Y-%m') <= '{$mes->format("Y-m")}'"
 				. " AND enti_nb_empresa = ".$empresa["empr_nb_id"]
@@ -475,6 +491,8 @@ function criar_relatorio_endosso() {
 					"matricula" => $motorista["enti_tx_matricula"],
 					"nome" => $motorista["enti_tx_nome"],
 					"ocupacao" => $motorista["enti_tx_ocupacao"],
+					"tipoOperacao" => $motorista["enti_tx_tipoOperacao"],
+                    "tipoOperacaoNome" => (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem operação"),
 					"statusEndosso" => $statusEndosso,
 					"jornadaPrevista" => $totaisMot["jornadaPrevista"],
 					"jornadaEfetiva" => $totaisMot["jornadaEfetiva"],
@@ -568,12 +586,18 @@ function criar_relatorio_jornada() {
 		$filtroOcupacao = "AND enti_tx_ocupacao IN ('{$_POST["busca_ocupacao"]}')";
 	}
 
+	if (!empty($_POST["operacao"])) {
+		$filtroOperacao = "AND oper_nb_id IN ('{$_POST["operacao"]}')";
+	}
+
 	$motoristas = mysqli_fetch_all(query(
 		"SELECT * FROM entidade
-					WHERE enti_tx_status = 'ativo'
-						AND enti_nb_empresa = {$_POST["empresa"]}
-						{$filtroOcupacao}
-					ORDER BY enti_tx_nome ASC;"
+		LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
+		WHERE enti_tx_status = 'ativo'
+			AND enti_nb_empresa = {$_POST["empresa"]}
+			{$filtroOcupacao}
+			{$filtroOperacao}
+		ORDER BY enti_tx_nome ASC;"
 	), MYSQLI_ASSOC);
 
 	$pasta = dir($path);
@@ -742,6 +766,7 @@ function criar_relatorio_jornada() {
 					"matricula" => $motorista["enti_tx_matricula"],
 					"nome" => $motorista["enti_tx_nome"],
 					"ocupacao" => $motorista["enti_tx_ocupacao"],
+                    "tipoOperacaoNome"=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem operação"),
 					"jornada" => strip_tags($jornada),
 					"jornadaEfetiva" => strip_tags($jornadaEfetiva),
 					"refeicao" => strip_tags($refeicao),
@@ -802,6 +827,7 @@ function relatorio_nao_conformidade_juridica(int $idEmpresa) {
 			LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
 			LEFT JOIN cidade ON empresa.empr_nb_cidade = cidade.cida_nb_id
 			LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
+			LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
 			WHERE enti_nb_empresa = {$idEmpresa}
 				AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-t")}'
 				AND (
@@ -839,6 +865,8 @@ function relatorio_nao_conformidade_juridica(int $idEmpresa) {
 			"matricula" 				=> $motorista["enti_tx_matricula"],
 			"nome" 						=> $motorista["enti_tx_nome"],
 			"ocupacao" 					=> $motorista["enti_tx_ocupacao"],
+			"tipoOperacao" 				=> $motorista["enti_tx_tipoOperacao"],
+            "tipoOperacaoNome" 			=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem operação"),
 			"dataInicio"				=> $periodoInicio2->format("d/m/Y"),
 			"dataFim"					=> $periodoFim2->format("d/m/Y")
 		];
@@ -1246,7 +1274,8 @@ function criar_relatorio_ajustes() {
 
 		$motoristas = mysqli_fetch_all(
 			query(
-				"SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula, enti_tx_ocupacao FROM entidade
+				"SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula, enti_tx_ocupacao, oper_tx_nome, enti_tx_tipoOperacao FROM entidade
+					 LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
 					 WHERE enti_tx_status = 'ativo'
 					 AND enti_nb_empresa = {$empresa["empr_nb_id"]}
 					 AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')
@@ -1254,6 +1283,7 @@ function criar_relatorio_ajustes() {
 			),
 			MYSQLI_ASSOC
 		);
+		// dd($motoristas);
 
 		$pasta = dir($path);
 		if (is_dir($path)) {
@@ -1285,6 +1315,8 @@ function criar_relatorio_ajustes() {
 				"matricula" 				=> $motorista["enti_tx_matricula"],
 				"nome" 						=> $motorista["enti_tx_nome"],
 				"ocupacao" 					=> $motorista["enti_tx_ocupacao"],
+				"tipoOperacao" 				=> $motorista["enti_tx_tipoOperacao"],
+            "tipoOperacaoNome" 			=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem operação"),
 
 
 				// "dataInicio"				=> $periodoInicio->format("d/m/Y"),
@@ -1366,7 +1398,7 @@ function criar_relatorio_ajustes() {
 			$totalMotorista["pontos"] = array_merge($pontosAtivos, $pontosInativos);
 			// Filtrar apenas os campos numéricos que precisam ser verificados
 			$verificaValores = array_filter($totalMotorista, function ($key) {
-				return !in_array($key, ["id", "matricula", "nome", "ocupacao", "pontos"]);
+				return !in_array($key, ["id", "matricula", "nome", "ocupacao", "pontos","tipoOperacaoNome","tipoOperacao"]);
 			}, ARRAY_FILTER_USE_KEY);
 
 			$rows[] = $ocorrencias;
@@ -1451,144 +1483,95 @@ function logisticas() {
 		$periodoFim = DateTime::createFromFormat("d/m/Y H:i", $_POST["busca_periodo"]);
 	}
 
+	$filtroOcupacao = "";
+	$filtroOperacao = "";
 	if (!empty($_POST["busca_ocupacao"])) {
 		$filtroOcupacao = "AND enti_tx_ocupacao IN ('{$_POST["busca_ocupacao"]}')";
+	}
+	if (!empty($_POST["operacao"])) {
+		$filtroOperacao = "AND oper_nb_id IN ('{$_POST["operacao"]}')";
 	}
 
 	$motoristas = mysqli_fetch_all(query(
 		"SELECT * FROM entidade
 				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
+				LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
 				WHERE enti_tx_status = 'ativo'
 					AND enti_nb_empresa = {$_POST["empresa"]}
 					AND enti_tx_dataCadastro <= '{$periodoInicio}'
 					{$filtroOcupacao}
+					{$filtroOperacao}
 				ORDER BY enti_tx_nome ASC;"
 	), MYSQLI_ASSOC);
 
+	$dataReferenciaStr = !empty($_POST["busca_periodo"]) ? $_POST["busca_periodo"] : $hoje->format("d/m/Y H:i");
 	foreach ($motoristas as $motorista) {
-		if (empty($_POST["busca_periodo"])) {
-			$periodoFim = $hoje;
-		} else {
-			$periodoFim = DateTime::createFromFormat("d/m/Y H:i", $_POST["busca_periodo"]);
-		}
-
 		$parametro = mysqli_fetch_all(query(
 			"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_maxHESemanalDiario, para_tx_adi5322"
 				. " FROM `parametro`"
 				. " WHERE para_nb_id = ".$motorista["enti_nb_parametro"]
 		), MYSQLI_ASSOC);
 
-		$diaPonto = [];
-		$maxTentativas = 30; // Define um limite de 30 dias
-		$tentativas = 0;
+		$lastFim = mysqli_fetch_assoc(query(
+			"SELECT pont_tx_data FROM ponto 
+				WHERE pont_tx_status = 'ativo' 
+					AND pont_tx_matricula = '{$motorista["enti_tx_matricula"]}' 
+					AND pont_tx_tipo = '2' 
+				ORDER BY pont_tx_data DESC 
+				LIMIT 1;"
+		));
 
-		for ($date = $periodoFim;; $date->modify("-1 day"), $tentativas++) {
-			$diaPonto = diaDetalhePonto($motorista, $date->format("Y-m-d"));
-			if (
-				!empty($diaPonto["inicioJornada"]) && strpos($diaPonto["inicioJornada"], "fa-warning") === false
-			) {
-				break;
-			}
+		if (empty($lastFim) || empty($lastFim["pont_tx_data"])) {
+			continue;
 		}
 
-		if (empty($_POST["busca_periodo"])) {
-			$periodoFim = $hoje;
+		$dataFormatada = DateTime::createFromFormat("Y-m-d H:i:s", $lastFim["pont_tx_data"]);
+		$dataMais8Horas = clone $dataFormatada;
+		$dataMais8Horas->modify("+8 hours");
+		$dataMais11Horas = clone $dataFormatada;
+		$dataMais11Horas->modify("+11 hours");
+
+		$dataReferencia = DateTime::createFromFormat("d/m/Y H:i", $dataReferenciaStr);
+
+		$considerarADI = isset($parametro[0]["para_tx_adi5322"]) && $parametro[0]["para_tx_adi5322"] === "sim";
+		$infoADI = $considerarADI ? "Sim" : "Não";
+
+		$minimoAbsoluto = 8 * 60;
+		$minimoCompleto = 11 * 60;
+
+		$diferenca = $dataFormatada->diff($dataReferencia);
+		$totalMinutos = ($diferenca->days * 24 * 60) + ($diferenca->h * 60) + $diferenca->i;
+
+		$difRepouso = $totalMinutos - $minimoCompleto;
+		$sinal = ($difRepouso < 0) ? "-" : "";
+		$horas = abs($difRepouso) % (24 * 60);
+		$horasFormatado = floor($horas / 60);
+		$minutos = $horas % 60;
+		$avisoRepouso = $sinal.str_pad($horasFormatado, 2, "0", STR_PAD_LEFT).":".str_pad($minutos, 2, "0", STR_PAD_LEFT);
+
+		$exibirApos8 = (!$considerarADI && $totalMinutos < $minimoCompleto) ? $dataMais8Horas->format("d/m/Y H:i") : "";
+		$exibirApos11 = $dataMais11Horas->format("d/m/Y H:i");
+
+		$dadosMotorista = [
+			"matricula"       => $motorista["enti_tx_matricula"],
+			"Nome"            => $motorista["enti_tx_nome"],
+			"ocupacao"        => $motorista["enti_tx_ocupacao"],
+            "tipoOperacaoNome"=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem operação"),
+			"ultimaJornada"   => $dataFormatada->format("d/m/Y H:i"),
+			"repouso"         => $avisoRepouso,
+			"Apos8"           => $exibirApos8,
+			"Apos11"          => $exibirApos11,
+			"consulta"        => $dataReferenciaStr,
+			"ADI_5322"        => $infoADI
+		];
+
+		if ($totalMinutos < $minimoAbsoluto) {
+			$motoristasLivres["naoPermitido"][] = $dadosMotorista;
+		} elseif ($totalMinutos >= $minimoAbsoluto && $totalMinutos < $minimoCompleto) {
+			$motoristasLivres["parcial"][] = $dadosMotorista;
 		} else {
-			$periodoFim = DateTime::createFromFormat("d/m/Y H:i", $_POST["busca_periodo"]);
-		}
-
-		if (!empty($diaPonto["fimJornada"]) && strpos($diaPonto["fimJornada"], "fa-warning") === false) {
+			$motoristasLivres["disponivel"][] = $dadosMotorista;
 			$totalMotoristasLivres += 1;
-
-			if (strpos($diaPonto["fimJornada"], "D+") !==  false) {
-				if (preg_match("/D\+(\d+)/", $diaPonto["fimJornada"], $matches) === 1) {
-					$dias = $matches[1]; // Captura o número após "D+"
-					$dataFim = DateTime::createFromFormat("d/m/Y", $diaPonto["data"]);
-					$dataFim->modify("+{$dias} days");
-					$dataPonto = $dataFim->format("d/m/Y");
-				}
-			} else {
-				$dataPonto = $diaPonto["data"];
-			}
-			// Extrai a hora da string "fimJornada" (ex: "04:25 <strong>I</strong>" → "04:25")
-			$horaString = preg_replace("/^(\d{2}:\d{2}).*/", "$1", $diaPonto["fimJornada"]);
-			$dataString = $dataPonto." ".$horaString;
-
-			// Cria um objeto DateTime com a data e hora da última jornada
-			$dataFormatada = DateTime::createFromFormat("d/m/Y H:i", $dataString);
-
-			// Adiciona 8h e 11h para referência de repouso
-			$dataMais8Horas = clone $dataFormatada;
-			$dataMais8Horas->modify("+8 hours");
-
-			$dataMais11Horas = clone $dataFormatada;
-			$dataMais11Horas->modify("+11 hours");
-
-			// Data e hora real de referência enviada via POST
-			$dataReferenciaStr = $_POST["busca_periodo"] ?? null;
-			$dataReferencia = DateTime::createFromFormat("d/m/Y H:i", $dataReferenciaStr);
-
-			// Verifica se a ADI 5322 (repouso de 11h) está ativa
-			$considerarADI = isset($parametro[0]["para_tx_adi5322"]) && $parametro[0]["para_tx_adi5322"] === "sim";
-			$infoADI = $considerarADI ? "Sim" : "Não";
-
-			// Define repousos mínimos em minutos
-			$minimoAbsoluto = 8 * 60;
-			$minimoCompleto = 11 * 60;
-
-			// Calcula diferença total em minutos
-			$diferenca = $dataFormatada->diff($dataReferencia);
-			$totalMinutos = ($diferenca->days * 24 * 60) + ($diferenca->h * 60) + $diferenca->i;
-
-			// Calcula a diferença entre repouso realizado e o mínimo de 11h
-			$difRepouso = $totalMinutos - $minimoCompleto;
-			$sinal = ($difRepouso < 0) ? "-" : "";
-
-			// Exibe apenas HH:MM (máximo 23:59, depois disso vira um novo D+X)
-			$horas = abs($difRepouso) % (24 * 60); // minutos restantes no dia
-			$horasFormatado = floor($horas / 60);
-			$minutos = $horas % 60;
-
-			$avisoRepouso = $sinal.str_pad($horasFormatado, 2, "0", STR_PAD_LEFT).":".str_pad($minutos, 2, "0", STR_PAD_LEFT);
-
-			// Adiciona informação do dia extra (D+)
-			if ($totalMinutos >= 24 * 60) {
-				$diasExtras = floor($totalMinutos / (24 * 60));
-				$avisoRepouso .= " (D+".$diasExtras.")";
-			}
-			
-			// Mostra Apos8 apenas se a ADI não estiver ativa e o repouso não tiver alcançado 11h
-			$exibirApos8 = (!$considerarADI && $totalMinutos < $minimoCompleto)
-				? $dataMais8Horas->format("d/m/Y H:i") : "";
-
-			// Sempre mostra Apos11
-			$exibirApos11 = $dataMais11Horas->format("d/m/Y H:i");
-
-			// Dados do motorista
-			$dadosMotorista = [
-				"matricula"       => $motorista["enti_tx_matricula"],
-				"Nome"            => $motorista["enti_tx_nome"],
-				"ocupacao"        => $motorista["enti_tx_ocupacao"],
-				"ultimaJornada"   => $dataFormatada->format("d/m/Y H:i"),
-				"repouso"         => $avisoRepouso,
-				"Apos8"           => $exibirApos8,   // Exibe +8h, conforme condição
-				"Apos11"          => $exibirApos11,  // Exibe +11h sempre
-				"consulta"        => $dataReferenciaStr,
-				"ADI_5322"        => $infoADI
-			];
-
-			// Categorização:
-			// Para ambos os casos (ADI ativa ou não), usamos os dois limites:
-			// - "naoPermitido": repouso < 8h
-			// - "parcial": repouso entre 8h e 11h (por exemplo, -03:00 indica repouso parcial se faltar 3h para completar 11h)
-			// - "disponivel": repouso >= 11h
-			if ($totalMinutos < $minimoAbsoluto) {
-				$motoristasLivres["naoPermitido"][] = $dadosMotorista;
-			} elseif ($totalMinutos >= $minimoAbsoluto && $totalMinutos < $minimoCompleto) {
-				$motoristasLivres["parcial"][] = $dadosMotorista;
-			} else {
-				$motoristasLivres["disponivel"][] = $dadosMotorista;
-			}
 		}
 	}
 
