@@ -266,8 +266,20 @@ function criar_relatorio_saldo() {
 				$totaisMot["HESabado"]         = somarHorarios([$totaisMot["HESabado"],         $diaPonto["he100"]]);
 				$totaisMot["adicionalNoturno"] = somarHorarios([$totaisMot["adicionalNoturno"], $diaPonto["adicionalNoturno"]]);
 				$totaisMot["esperaIndenizada"] = somarHorarios([$totaisMot["esperaIndenizada"], $diaPonto["esperaIndenizada"]]);
-				$totaisMot["saldoPeriodo"]     = somarHorarios([$totaisMot["saldoPeriodo"],     $diaPonto["diffSaldo"]]);
-				$totaisMot["saldoFinal"]       = somarHorarios([$saldoAnterior,                 $totaisMot["saldoPeriodo"]]);
+                $totaisMot["saldoPeriodo"]     = somarHorarios([$totaisMot["saldoPeriodo"],     $diaPonto["diffSaldo"]]);
+                // saldoFinal deve refletir o resultado do último endosso do período, se existir
+                if (count($endossos) >= 1) {
+                    $ultimoDoPeriodo = $endossos[count($endossos) - 1];
+                    $csvPath = $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$ultimoDoPeriodo["endo_tx_filename"].".csv";
+                    if (!empty($ultimoDoPeriodo["endo_tx_filename"]) && file_exists($csvPath)) {
+                        $endossoPeriodo = lerEndossoCSV($ultimoDoPeriodo["endo_tx_filename"]);
+                        $totaisMot["saldoFinal"] = $endossoPeriodo["totalResumo"]["saldoFinal"];
+                    } else {
+                        $totaisMot["saldoFinal"] = somarHorarios([$saldoAnterior, $totaisMot["saldoPeriodo"]]);
+                    }
+                } else {
+                    $totaisMot["saldoFinal"]       = somarHorarios([$saldoAnterior,                 $totaisMot["saldoPeriodo"]]);
+                }
 			}
 
 			$row = [
