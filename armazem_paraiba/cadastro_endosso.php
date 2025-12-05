@@ -328,14 +328,14 @@
 		$diffSaldo = strip_tags($totalResumo["diffSaldo"]);
 		$he50      = strip_tags($totalResumo["he50"]);
 		$he100     = strip_tags($totalResumo["he100"]);
-		$saldoBrutoParam = operarHorarios([$saldoAnterior, $diffSaldo], "+");
+        $saldoBrutoParam = operarHorarios([$saldoAnterior, $diffSaldo], "+");
 
 		[$totalResumo["he50APagar"], $totalResumo["he100APagar"]] = calcularHorasAPagar($diffSaldo, $saldoBrutoParam, $he50, $he100, "999:59", ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
 
-		$saldoBruto = operarHorarios([$diffSaldo, "-".$totalResumo["he100APagar"]], "+");
+        $saldoBruto = $saldoBrutoParam;
 
 		$totalResumo["saldoAnterior"] = $saldoAnterior;
-		$totalResumo["saldoBruto"] = $saldoBruto;
+        $totalResumo["saldoBruto"] = $saldoBruto;
 		
 		$_POST["extraPago"] = operarHorarios([$totalResumo["saldoBruto"], $descFaltasNaoJustificadas], "-");
 		if($_POST["extraPago"][0] == "-"){
