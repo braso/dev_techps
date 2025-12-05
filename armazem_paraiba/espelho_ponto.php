@@ -151,6 +151,7 @@
         include "check_permission.php";
         // APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
         verificaPermissao('/espelho_ponto.php');
+        $temPermissao = temPermissaoMenu('/espelho_ponto.php');
 		
 		cabecalho(empty($_POST["title"])? "Buscar Espelho de Ponto": $_POST["title"]);
 
@@ -162,26 +163,26 @@
 			$condBuscaMotorista = "AND enti_tx_status = 'ativo'";
 			$condBuscaEmpresa = "AND empr_tx_status = 'ativo'";
 
-			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
-				[$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], $_SESSION["user_nb_empresa"]];
-				$condBuscaMotorista .= " AND enti_nb_id = '".$_SESSION["user_nb_entidade"]."'";
-			}
+            if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"]) && !$temPermissao){
+                [$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], $_SESSION["user_nb_empresa"]];
+                $condBuscaMotorista .= " AND enti_nb_id = '".$_SESSION["user_nb_entidade"]."'";
+            }
 
-			if(!empty($_SESSION["user_nb_empresa"]) && $_SESSION["user_tx_nivel"] != "Administrador" && $_SESSION["user_tx_nivel"] != "Super Administrador"){
-				$condBuscaEmpresa .= " AND enti_nb_empresa = ".$_SESSION["user_nb_empresa"];
-			}
+            if(!empty($_SESSION["user_nb_empresa"]) && $_SESSION["user_tx_nivel"] != "Administrador" && $_SESSION["user_tx_nivel"] != "Super Administrador" && !$temPermissao){
+                $condBuscaEmpresa .= " AND enti_nb_empresa = ".$_SESSION["user_nb_empresa"];
+            }
 
-			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
-				$nomeEmpresa = mysqli_fetch_assoc(query("SELECT empr_tx_nome FROM empresa WHERE empr_nb_id = ".$_SESSION["user_nb_empresa"]));
-				$searchFields = [
-					texto("Empresa*", $nomeEmpresa["empr_tx_nome"], 3),
-					texto("Funcionário*", $_SESSION["user_tx_nome"], 3),
-				];
-			}else{
-				$_POST["busca_empresa"] = $_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"];
-				
-				// Filtros adicionais: Cargo e Setor
-				// Ambos influenciam a lista de Funcionários
+            if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"]) && !$temPermissao){
+                $nomeEmpresa = mysqli_fetch_assoc(query("SELECT empr_tx_nome FROM empresa WHERE empr_nb_id = ".$_SESSION["user_nb_empresa"]));
+                $searchFields = [
+                    texto("Empresa*", $nomeEmpresa["empr_tx_nome"], 3),
+                    texto("Funcionário*", $_SESSION["user_tx_nome"], 3),
+                ];
+            }else{
+                $_POST["busca_empresa"] = $_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"];
+                
+                // Filtros adicionais: Cargo e Setor
+                // Ambos influenciam a lista de Funcionários
 
                 // Condições para filtrar funcionários por Cargo/Setor/Subsetor
                 $condCargoSetor = "";
@@ -229,7 +230,7 @@
                     );
                 
                 
-			}
+            }
 
 			$searchFields[] = campo(
 				"Período", "busca_periodo",

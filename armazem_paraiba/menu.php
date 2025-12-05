@@ -217,6 +217,9 @@ if ($showComunicado) {
             return $menusConcat;
         }
         if ($perfilId > 0) {
+            if(in_array($nivel, ["Motorista", "Ajudante", "Funcionário"]) && strpos($menusConcat, "/espelho_ponto.php") === false){
+                $menusConcat .= "<li class=''><a href='".$CONTEX["path"]."/espelho_ponto.php' class='nav-link'> Espelhos de Ponto</a></li>";
+            }
             return $menusConcat;
         }
         if ($isAdmin) {
