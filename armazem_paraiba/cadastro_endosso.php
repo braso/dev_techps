@@ -1,12 +1,12 @@
 <?php
-/*
+
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
-*/
+
 	date_default_timezone_set('America/Sao_Paulo');
 
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
@@ -325,9 +325,14 @@
 		$totalResumo = setTotalResumo(array_slice(array_keys($rows[0]), 7));
 		somarTotais($totalResumo, $rows);
 
-		
-		$saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
-		[$totalResumo["he50APagar"], $totalResumo["he100APagar"]] = calcularHorasAPagar(strip_tags($totalResumo["diffSaldo"]), $saldoBruto, $totalResumo["he50"], $totalResumo["he100"], "999:59", ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+		$diffSaldo = strip_tags($totalResumo["diffSaldo"]);
+		$he50      = strip_tags($totalResumo["he50"]);
+		$he100     = strip_tags($totalResumo["he100"]);
+		$saldoBrutoParam = operarHorarios([$saldoAnterior, $diffSaldo], "+");
+
+		[$totalResumo["he50APagar"], $totalResumo["he100APagar"]] = calcularHorasAPagar($diffSaldo, $saldoBrutoParam, $he50, $he100, "999:59", ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+
+		$saldoBruto = operarHorarios([$diffSaldo, "-".$totalResumo["he100APagar"]], "+");
 
 		$totalResumo["saldoAnterior"] = $saldoAnterior;
 		$totalResumo["saldoBruto"] = $saldoBruto;
@@ -501,19 +506,20 @@
 				}
 			//}
 
-            $saldoBruto = operarHorarios([$saldoAnterior, $totalResumo["diffSaldo"]], "+");
-            $max50Auto = operarHorarios([$saldoBruto, $descFaltasNaoJustificadas], "-");
-            if($max50Auto[0] == "-"){ $max50Auto = "00:00"; }
-            $_POST["extraPago"] = $max50Auto;
-            $aPagar = calcularHorasAPagar(strip_tags($totalResumo["diffSaldo"]), $saldoBruto, $totalResumo["he50"], $totalResumo["he100"], $max50Auto, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
-            $correcaoHE50 = operarHorarios([$max50Auto, $aPagar[1]], "-");
-            if($correcaoHE50[0] != "-"){
-                $aPagar[0] = $correcaoHE50;
-            }
-            $saldoFinal = operarHorarios([$saldoBruto, "-".$aPagar[0], "-".$aPagar[1]], "+");
+	$diffSaldo = strip_tags($totalResumo["diffSaldo"]);
+	$he50      = strip_tags($totalResumo["he50"]);
+	$he100     = strip_tags($totalResumo["he100"]);
+	$saldoBrutoParam = operarHorarios([$saldoAnterior, $diffSaldo], "+");
+	$aPagar = calcularHorasAPagar($diffSaldo, $saldoBrutoParam, $he50, $he100, $max50Auto = "999:59", ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+	$saldoBruto = operarHorarios([$diffSaldo, "-".$aPagar[1]], "+");
+		$max50Auto = operarHorarios([$saldoBruto, $descFaltasNaoJustificadas], "-");
+		if($max50Auto[0] == "-"){ $max50Auto = "00:00"; }
+		$_POST["extraPago"] = $max50Auto;
+	$aPagar = calcularHorasAPagar($diffSaldo, $saldoBrutoParam, $he50, $he100, $max50Auto, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+		$saldoFinal = operarHorarios([$saldoAnterior, $saldoBruto, "-".$aPagar[0]], "+");
 			
-			if($totalResumo["diffSaldo"][0] == "-"){
-				$saldoPossivelDescontar = operarHorarios([$totalResumo["diffSaldo"], $descFaltasNaoJustificadas], "+");
+		if($diffSaldo[0] == "-"){
+			$saldoPossivelDescontar = operarHorarios([$diffSaldo, $descFaltasNaoJustificadas], "+");
 				$saldoPossivelDescontar = operarHorarios([$saldoPossivelDescontar, "-00:01"], "*");
 			}else{
 				$saldoPossivelDescontar = "00:00";
@@ -531,8 +537,7 @@
 			}
 
 			$saldoFinal = operarHorarios([$saldoFinal, $totalResumo["desconto_manual"]], "+");
-			if($_POST["zerarSaldoNegativo"] == "sim"){
-				$totalResumo["desconto_manual"] = operarHorarios([$totalResumo["desconto_manual"], $saldoFinal], "+");
+			if($_POST["zerarSaldoNegativo"] == "sim" && $saldoFinal[0] == "-"){
 				$saldoFinal = "00:00";
 			}
 
