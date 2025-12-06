@@ -347,7 +347,7 @@
 		exit;
 	}
 
-	function cadastrar(){
+function cadastrar(){
 
 		global $CONTEX;
 		
@@ -655,9 +655,44 @@
 
 		index();
 		exit;
-	}
+}
 
-	function index(){
+function excluirEndosso(){
+    atualizar("endosso", ["endo_tx_status"], ["inativo"], $_POST["id"]);
+    index();
+    exit;
+}
+
+function modificarEndosso(){
+    global $a_mod;
+    $a_mod = carregar("endosso", $_POST["id"]);
+    visualizarEndosso();
+    exit;
+}
+
+function visualizarEndosso(){
+    global $a_mod;
+    cabecalho("Visualizar Endosso");
+    $ent = mysqli_fetch_assoc(query(
+        "SELECT enti_tx_matricula, enti_tx_nome FROM entidade WHERE enti_nb_id = ".$a_mod["endo_nb_entidade"]." LIMIT 1;"
+    ));
+    $c = [
+        texto("Matrícula", $ent["enti_tx_matricula"]?? "", 2),
+        texto("Funcionário", $ent["enti_tx_nome"]?? "", 4),
+        texto("Período", vsprintf("%02d/%02d/%04d", array_reverse(explode("-", $a_mod["endo_tx_de"])))." a ".vsprintf("%02d/%02d/%04d", array_reverse(explode("-", $a_mod["endo_tx_ate"]))), 3),
+        texto("Data de Endosso", date("d/m/Y H:i", strtotime($a_mod["endo_tx_dataCadastro"])), 3),
+        texto("Status", ucfirst($a_mod["endo_tx_status"]), 2)
+    ];
+    $botao = [
+        criarBotaoVoltar("cadastro_endosso.php")
+    ];
+    echo abre_form("Detalhes do Endosso");
+    echo linha_form($c);
+    echo fecha_form($botao);
+    rodape();
+}
+
+function index(){
 		
 		
 		global $CONTEX;
@@ -749,7 +784,8 @@
 			campo_data("De*", "data_de", ($_POST["data_de"]?? ""), 2),
 			campo_data("Ate*", "data_ate", ($_POST["data_ate"]?? ""), 2),
 			$camposHE,
-			$camposDesconto
+			$camposDesconto,
+			campo_hidden("busca_status", "ativo")
 
 		];
 		if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
@@ -764,6 +800,36 @@
 		echo abre_form();
 		echo linha_form($fields);
 		echo fecha_form($buttons);
+
+        $gridFields = [
+            "CÓDIGO" => "endosso.endo_nb_id AS id",
+            "MATRÍCULA" => "entidade.enti_tx_matricula AS matricula",
+            "NOME" => "entidade.enti_tx_nome AS nome",
+            "PERÍODO" => "CONCAT(DATE_FORMAT(endo_tx_de, '%d/%m/%Y'), ' a ', DATE_FORMAT(endo_tx_ate, '%d/%m/%Y')) AS periodo",
+            "DATA DE ENDOSSO" => "DATE_FORMAT(endo_tx_dataCadastro, '%d/%m/%Y %H:%i') AS data_endosso",
+            "STATUS" => "endo_tx_status AS status"
+        ];
+		$camposBusca = [
+			"empresa" => "entidade.enti_nb_empresa",
+			"busca_motorista" => "entidade.enti_nb_id",
+			"busca_setor" => "entidade.enti_setor_id",
+			"busca_subsetor" => "entidade.enti_subSetor_id",
+			"busca_operacao" => "entidade.enti_tx_tipoOperacao",
+			"busca_status" => "endosso.endo_tx_status"
+		];
+		$queryBase = (
+			"SELECT ".implode(", ", array_values($gridFields))." FROM endosso JOIN entidade ON endosso.endo_nb_entidade = entidade.enti_nb_id"
+		);
+
+		$actions = criarIconesGrid(
+			["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
+			["cadastro_endosso.php", "cadastro_endosso.php"],
+			["modificarEndosso()", "excluirEndosso()"]
+		);
+        $actions["functions"][1] .= "esconderInativar('glyphicon glyphicon-remove search-remove', 5);";
+		$gridFields["actions"] = $actions["tags"];
+		$jsFunctions = "const funcoesInternas = function(){".implode(" ", $actions["functions"])."}";
+		echo gridDinamico("tabelaEndossos", $gridFields, $camposBusca, $queryBase, $jsFunctions);
 
 		// Toggle Subsetor visibilidade vinculado ao Setor
 		echo "<script>
@@ -784,7 +850,7 @@
 			});
 		</script>";
 		
-		rodape();
+        rodape();
 
 		echo 
 			"<script>"
