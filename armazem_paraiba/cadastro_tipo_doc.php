@@ -20,25 +20,76 @@
 	}
 
     function cadastra_tipo_doc() {
-		$novoTipo= [
-			"tipo_tx_nome" => $_POST["nome"],
-			"tipo_nb_grupo" => $_POST["setor"],
-			"tipo_nb_sbgrupo" => $_POST["sub-setor"],
-			"tipo_tx_vencimento" => $_POST["vencimento"],
-			"tipo_tx_assinatura" => $_POST["assinatura"],
-			"tipo_tx_status" => "ativo"
-		];
+        $_POST["nome"] = trim($_POST["nome"] ?? "");
+        $_POST["vencimento"] = in_array($_POST["vencimento"] ?? "nao", ["sim","nao"]) ? $_POST["vencimento"] : "nao";
+        $_POST["assinatura"] = in_array($_POST["assinatura"] ?? "nao", ["sim","nao"]) ? $_POST["assinatura"] : "nao";
 
-		if(!empty($_POST["id"])){
-			atualizar("tipos_documentos", array_keys($novoTipo), array_values($novoTipo), $_POST["id"]);
-		}else{
+        $errorMsg = conferirCamposObrig(["nome" => "Nome", "setor" => "Setor"], $_POST);
+        if(!empty($errorMsg)){
+            set_status("ERRO: ".$errorMsg);
+            layout_tipo_doc();
+            exit;
+        }
 
-			inserir("tipos_documentos", array_keys($novoTipo), array_values($novoTipo));
-		}
+        $setorId = !empty($_POST["setor"]) ? (int)$_POST["setor"] : null;
+        $subSetorId = !empty($_POST["sub-setor"]) ? (int)$_POST["sub-setor"] : null;
 
-		index();
-		exit;
-	}
+        if(!empty($subSetorId)){
+            $row = mysqli_fetch_assoc(query(
+                "SELECT sbgr_nb_idgrup FROM sbgrupos_documentos WHERE sbgr_nb_id = ? LIMIT 1",
+                "i",
+                [$subSetorId]
+            ));
+            if(empty($row) || (int)$row["sbgr_nb_idgrup"] !== $setorId){
+                set_status("ERRO: Subsetor não pertence ao setor selecionado.");
+                layout_tipo_doc();
+                exit;
+            }
+        }
+
+        $dupSql = !empty($_POST["id"]) ?
+            [
+                "SELECT tipo_nb_id FROM tipos_documentos WHERE tipo_tx_nome = ? AND tipo_nb_id != ? LIMIT 1;",
+                "si",
+                [$_POST["nome"], (int)$_POST["id"]]
+            ] :
+            [
+                "SELECT tipo_nb_id FROM tipos_documentos WHERE tipo_tx_nome = ? LIMIT 1;",
+                "s",
+                [$_POST["nome"]]
+            ];
+        $jaExiste = mysqli_fetch_assoc(query($dupSql[0], $dupSql[1], $dupSql[2]));
+        if(!empty($jaExiste)){
+            set_status("ERRO: Já existe um tipo de documento com este nome.");
+            layout_tipo_doc();
+            exit;
+        }
+
+        $novoTipo= [
+            "tipo_tx_nome" => $_POST["nome"],
+            "tipo_nb_grupo" => $setorId,
+            "tipo_nb_sbgrupo" => $subSetorId,
+            "tipo_tx_vencimento" => $_POST["vencimento"],
+            "tipo_tx_status" => "ativo"
+        ];
+
+        if(!empty($_POST["id"])){
+            error_log("cadastro_tipo_doc atualizar: ".json_encode($novoTipo));
+            atualizar("tipos_documentos", array_keys($novoTipo), array_values($novoTipo), $_POST["id"]);
+        }else{
+            error_log("cadastro_tipo_doc inserir: ".json_encode($novoTipo));
+            $res = inserir("tipos_documentos", array_keys($novoTipo), array_values($novoTipo));
+            error_log("cadastro_tipo_doc inserir res: ".json_encode($res));
+            if(gettype($res[0]) == "object"){
+                set_status("ERRO: ".$res[0]->getMessage());
+                layout_tipo_doc();
+                exit;
+            }
+        }
+
+        index();
+        exit;
+    }
 
 	function criaSectionSubSetor($subSetores, $subSetorSelecionado = null, $tamanho) {
 		$js = "
@@ -168,7 +219,15 @@
 
 		$buttons[] = botao("Buscar", "index");
 
-		if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
+		$canInsert = false;
+		include_once "check_permission.php";
+		if(function_exists('temPermissaoMenu')){
+			$canInsert = temPermissaoMenu('/cadastro_tipo_doc.php');
+		}
+		if(is_int(stripos($_SESSION['user_tx_nivel'] ?? '', 'administrador')) || is_int(stripos($_SESSION['user_tx_nivel'] ?? '', 'super'))){
+			$canInsert = true;
+		}
+		if($canInsert){
 			$buttons[] = botao("Inserir", "layout_tipo_doc()","","","","","btn btn-success");
 		}
 

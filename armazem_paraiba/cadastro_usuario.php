@@ -1,8 +1,8 @@
 <?php
-	/* Modo debug
+
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
-	//*/
+	
 
 	include "conecta.php";
 
@@ -292,6 +292,22 @@
 		$editingDriver = in_array(($_POST["nivel"]?? ""), ["Motorista", "Ajudante", "Funcionário"]);
 		$loggedUserIsAdmin = is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"));
 
+		$hasMenuPermission = false;
+		$perfilId = 0;
+		if(!empty($_SESSION["user_nb_id"])){
+			$rowPerfil = mysqli_fetch_assoc(query("SELECT perfil_nb_id FROM usuario_perfil WHERE ativo = 1 AND user_nb_id = ? LIMIT 1", "i", [$_SESSION["user_nb_id"]]));
+			if(!empty($rowPerfil["perfil_nb_id"])) $perfilId = (int)$rowPerfil["perfil_nb_id"];
+		}
+		if($perfilId > 0){
+			$rowPerm = mysqli_fetch_assoc(query(
+				"SELECT 1 FROM perfil_menu_item p JOIN menu_item m ON m.menu_nb_id = p.menu_nb_id WHERE p.perfil_nb_id = ? AND p.perm_ver = 1 AND m.menu_tx_ativo = 1 AND m.menu_tx_path = '/cadastro_usuario.php' LIMIT 1",
+				"i",
+				[$perfilId]
+			));
+			$hasMenuPermission = !empty($rowPerm);
+		}
+		$loggedUserIsAdmin = ($loggedUserIsAdmin || $hasMenuPermission);
+
 
 		if(!empty($_POST["foto"])){
 			$img = texto(
@@ -314,13 +330,10 @@
 		$campo_login = campo("Login*", "login", ($_POST["login"]?? ($_POST["login"]?? "")), 2,"","maxlength='30'");
 		$campo_expiracao = campo_data("Expira em", "expiracao", ($_POST["expiracao"]?? ""), 2);
 
-		$editPermission = (!empty($_POST["id"]) &&			//Se está editando um usuário existente e
-			// $_SESSION["user_nb_id"] == $_POST["id"] || //Editando o próprio usuário
-			(
-				!$editingDriver &&						//O usuário não é motorista e
-				$loggedUserIsAdmin						//O usuário logado é administrador ou
-			))
-		;
+		$editPermission = (!empty($_POST["id"]) && (
+			$loggedUserIsAdmin ||
+			(($_SESSION["user_nb_id"] ?? null) == ($_POST["id"] ?? null))
+		));
 
 		$niveis = ["" => ""];
 		switch($_SESSION["user_tx_nivel"]){
@@ -410,7 +423,7 @@
 				$campo_confirma = campo_senha("Confirmar Senha*", "senha2", "", 2,"maxlength='50'");
 			}
 			if($editingDriver){
-				$entidade = carregar("entidade", $_POST["entidade"]);
+				$entidade = carregar("entidade", (string)($_POST["entidade"] ?? ""));
 				$campo_matricula = texto("Matricula", ($entidade["enti_tx_matricula"]?? "-"), 2, "");
 			}else{
 				$campo_matricula = "";
@@ -539,6 +552,7 @@
 function index() {
         global $CONTEX;
         $permitido = false;
+        $hasMenuPermission = false;
         if(in_array($_SESSION["user_tx_nivel"], ["Motorista","Ajudante","Funcionário"])){
             $permitido = true;
         }else{
@@ -554,6 +568,7 @@ function index() {
                     [$perfilId]
                 ));
                 $permitido = !empty($rowPerm);
+                $hasMenuPermission = !empty($rowPerm);
             }
         }
         if(is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador")) && !$permitido){
@@ -574,16 +589,16 @@ function index() {
 			exit;
 		}
 
-		if (in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])) {
-			$_POST["id"] = $_SESSION["user_nb_id"];
-			modificarUsuario();
-			exit;
-		}
+        if (in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"]) && !$permitido) {
+            $_POST["id"] = $_SESSION["user_nb_id"];
+            modificarUsuario();
+            exit;
+        }
 		$extraEmpresa = " AND empr_tx_situacao = 'ativo' ORDER BY empr_tx_nome";
 
-		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
-			$extraEmpresa .= " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
-		}
+        if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador")) && !$permitido) {
+            $extraEmpresa .= " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
+        }
 
 		cabecalho("Cadastro de Usuário");
 
@@ -630,11 +645,12 @@ function index() {
             combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " ORDER BY sbgr_tx_nome ASC"))
         ];
 
-		$buttons[] = botao("Buscar", "index");
+        $buttons[] = botao("Buscar", "index");
 
-		if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-			$buttons[] = botao("Inserir", "modificarUsuario","","","","","btn btn-success");
-		}
+        $canInsert = is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")) || $hasMenuPermission;
+        if($canInsert){
+            $buttons[] = botao("Inserir", "modificarUsuario","","","","","btn btn-success");
+        }
 
 		$buttons[] = '<button class="btn default" type="button" onclick="imprimirTabelaCompleta()">Imprimir</button>';
 
