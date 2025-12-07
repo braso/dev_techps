@@ -431,6 +431,7 @@
 			"enti_tx_tituloSecao" 			=> "tituloSecao",
 			"enti_tx_reservista" 				=> "reservista",
 			"enti_tx_registroFuncional" 		=> "registroFuncional",
+			"enti_tx_OrgaoRegimeFuncional" 	=> "orgaoRegimeFuncional",
 			"enti_tx_vencimentoRegistro" 		=> "vencimentoRegistro",
 			"enti_tx_cnhRegistro" 				=> "cnhRegistro", 
 			"enti_tx_cnhValidade" 				=> "cnhValidade", 
@@ -1253,16 +1254,17 @@
 		]);
 
         $cContratual = array_merge($cContratual, [
-            campo(		"PIS", 				  "pis", 				($a_mod["enti_tx_pis"]?? ""), 				2, "MASCARA_NUMERO", "maxlength='11' tabindex=".sprintf("%02d", $tabIndex++)),
-            campo(		"CTPS Número", 		  "ctpsNumero", 		($a_mod["enti_tx_ctpsNumero"]?? ""), 		2, "MASCARA_NUMERO", "maxlength='8' tabindex=".sprintf("%02d", $tabIndex++)),
-            campo(		"CTPS Série", 		  "ctpsSerie", 		($a_mod["enti_tx_ctpsSerie"]?? ""), 		2, "MASCARA_NUMERO", "maxlength='4' tabindex=".sprintf("%02d", $tabIndex++)),
-            combo(		"CTPS UF", 			  "ctpsUf", 			($a_mod["enti_tx_ctpsUf"]?? ""), 			2, getUFs(),          "tabindex=".sprintf("%02d", $tabIndex++)),
-            campo(		"Título de Eleitor Número", "tituloNumero",   ($a_mod["enti_tx_tituloNumero"]?? ""), 	2, "MASCARA_NUMERO", "maxlength='12' tabindex=".sprintf("%02d", $tabIndex++)),
-            campo(		"Título Zona", 		  "tituloZona", 		($a_mod["enti_tx_tituloZona"]?? ""), 		2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)),
-            campo(		"Título Seção", 		  "tituloSecao", 		($a_mod["enti_tx_tituloSecao"]?? ""), 		2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)),
-            campo(		"Reservista", 		  "reservista", 		($a_mod["enti_tx_reservista"]?? ""), 		2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)),
-            campo(		"Registro Funcional",   "registroFuncional",  ($a_mod["enti_tx_registroFuncional"]?? ""),  2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)),
-            campo_data(	"Vencimento Registro",  "vencimentoRegistro", ($a_mod["enti_tx_vencimentoRegistro"]?? ""), 2,                     "tabindex=".sprintf("%02d", $tabIndex++))
+            campo(        "PIS",                   "pis",                 ($a_mod["enti_tx_pis"]?? ""),                 2, "MASCARA_NUMERO", "maxlength='11' tabindex=".sprintf("%02d", $tabIndex++)),
+            campo(        "CTPS Número",           "ctpsNumero",         ($a_mod["enti_tx_ctpsNumero"]?? ""),         2, "MASCARA_NUMERO", "maxlength='8' tabindex=".sprintf("%02d", $tabIndex++)),
+            campo(        "CTPS Série",           "ctpsSerie",         ($a_mod["enti_tx_ctpsSerie"]?? ""),         2, "MASCARA_NUMERO", "maxlength='4' tabindex=".sprintf("%02d", $tabIndex++)),
+            combo(        "CTPS UF",               "ctpsUf",             ($a_mod["enti_tx_ctpsUf"]?? ""),             2, getUFs(),          "tabindex=".sprintf("%02d", $tabIndex++)),
+            campo(        "Título de Eleitor Número", "tituloNumero",   ($a_mod["enti_tx_tituloNumero"]?? ""),     2, "MASCARA_NUMERO", "maxlength='12' tabindex=".sprintf("%02d", $tabIndex++)),
+            campo(        "Título Zona",           "tituloZona",         ($a_mod["enti_tx_tituloZona"]?? ""),         2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)),
+            campo(        "Título Seção",           "tituloSecao",         ($a_mod["enti_tx_tituloSecao"]?? ""),         2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)),
+            campo(        "Reservista",           "reservista",         ($a_mod["enti_tx_reservista"]?? ""),         2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)),
+            campo(        "Registro Funcional",   "registroFuncional",  ($a_mod["enti_tx_registroFuncional"]?? ""),  2, "MASCARA_NUMERO", "tabindex=".sprintf("%02d", $tabIndex++)),
+            campo(        "Orgão Registro Funcional",   "orgaoRegimeFuncional",  ($a_mod["enti_tx_OrgaoRegimeFuncional"]?? ""),  2, "", "maxlength='150' tabindex=".sprintf("%02d", $tabIndex++)),
+            campo_data(   "Vencimento Registro",  "vencimentoRegistro", ($a_mod["enti_tx_vencimentoRegistro"]?? ""), 2,                     "tabindex=".sprintf("%02d", $tabIndex++))
         ]);
 
 		$conferirPadraoJS = "";

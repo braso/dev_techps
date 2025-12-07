@@ -83,10 +83,18 @@
 			combo("Status", 		"busca_status", 	($_POST["busca_status"]?? ""), 	2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
 			//combo_net("Funcionário", "busca_usuario", $_POST["busca_usuario"]?? "", 4, "entidade", "", "", "enti_tx_matricula"),
 		];
-
+		
 		$buttons[] = botao("Buscar", "index");
 
-		if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
+		$canInsert = false;
+		include_once "check_permission.php";
+		if(function_exists('temPermissaoMenu')){
+			$canInsert = temPermissaoMenu('/cadastro_operacao.php');
+		}
+		if(is_int(stripos($_SESSION['user_tx_nivel'] ?? '', 'administrador')) || is_int(stripos($_SESSION['user_tx_nivel'] ?? '', 'super'))){
+			$canInsert = true;
+		}
+		if($canInsert){
 			$buttons[] = botao("Inserir", "layout_operacao","","","","","btn btn-success");
 		}
 

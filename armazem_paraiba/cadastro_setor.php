@@ -1,9 +1,9 @@
 <?php
-	/* Modo debug
+/*
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
-	//*/
 
+*/
 	include "conecta.php";
 
     function excluirSetor(){
@@ -29,34 +29,40 @@
 
     function cadastra_setor() {
 
-		$novoSetor = [
-			"grup_tx_nome" => $_POST["nome"],
-			"grup_tx_status" => "ativo"
-		];
+        $_POST["nome"] = trim($_POST["nome"] ?? "");
+        $errorMsg = conferirCamposObrig(["nome" => "Nome"], $_POST);
+        if(!empty($errorMsg)){
+            set_status("ERRO: ".$errorMsg);
+            error_log("cadastro_setor obrigatorios: ".$errorMsg);
+            layout_setor();
+            exit;
+        }
+
+        $novoSetor = [
+            "grup_tx_nome" => $_POST["nome"],
+            "grup_tx_status" => "ativo"
+        ];
+        error_log("cadastro_setor novoSetor: ".json_encode($novoSetor));
 
 		if(!empty($_POST["id"])){
 			atualizar("grupos_documentos", array_keys($novoSetor), array_values($novoSetor), $_POST["id"]);
 
-			if (!empty($_POST['subsetores_excluir'])) {
-				$idsExcluir = explode(',', $_POST['subsetores_excluir']);
+            if (!empty($_POST['subsetores_excluir'])) {
+                error_log("cadastro_setor subsetores_excluir: ".json_encode($_POST['subsetores_excluir']));
+                $idsExcluir = array_filter(array_map(function($v){ return trim($v); }, explode(',', $_POST['subsetores_excluir'])));
+                error_log("cadastro_setor idsExcluir: ".json_encode($idsExcluir));
+                global $conn;
 
-				foreach ($idsExcluir as $id) {
-					$id = trim($id);
-					if (!empty($id)) {
-						query("DELETE FROM sbgrupos_documentos WHERE sbgr_nb_id = $id");
-					}
-				}
-			}
+                foreach ($idsExcluir as $id) {
+                    query("DELETE FROM sbgrupos_documentos WHERE sbgr_nb_id = ?", "i", [(int)$id]);
+                    error_log("cadastro_setor excluir subsetor: id=".$id." affected=".mysqli_affected_rows($conn));
+                }
+            }
 
 			if (!empty($_POST["subsetores"])) {
 
 				// Busca registros existentes
-				$result = query("
-					SELECT sbgr_nb_id, sbgr_tx_nome
-					FROM sbgrupos_documentos
-					WHERE sbgr_nb_idgrup = {$_POST['id']}
-					ORDER BY sbgr_tx_nome ASC
-				");
+				$result = query("SELECT sbgr_nb_id, sbgr_tx_nome FROM sbgrupos_documentos WHERE sbgr_nb_idgrup = ? ORDER BY sbgr_tx_nome ASC", "i", [(int)$_POST['id']]);
 
 				// Converte em array associativo com a chave = ID
 				$subSetorExistente = [];
@@ -64,10 +70,10 @@
 					$subSetorExistente[$row['sbgr_nb_id']] = $row;
 				}
 
-				foreach ($_POST["subsetores"] as $id => $nome) {
-					if (empty($nome)) {
-						continue;
-					}
+                foreach ($_POST["subsetores"] as $id => $nome) {
+                    if (empty($nome)) {
+                        continue;
+                    }
 
 					$novoSubSetor = [
 						"sbgr_tx_nome"   => $nome,
@@ -75,42 +81,65 @@
 						"sbgr_tx_status" => "ativo"
 					];
 
-					if (!empty($id) && isset($subSetorExistente[$id])) {
-						// Atualiza registro existente
-						atualizar(
-							"sbgrupos_documentos",
-							array_keys($novoSubSetor),
-							array_values($novoSubSetor),
-							$id
-						);
+                    if (!empty($id) && isset($subSetorExistente[$id])) {
+                        // Atualiza registro existente
+                        atualizar(
+                            "sbgrupos_documentos",
+                            array_keys($novoSubSetor),
+                            array_values($novoSubSetor),
+                            $id
+                        );
+                        error_log("cadastro_setor atualizar subsetor: id=".$id);
 
 					} else {
-						// Insere novo registro
-						inserir(
-							"sbgrupos_documentos",
-							array_keys($novoSubSetor),
-							array_values($novoSubSetor)
-						);
+                        // Insere novo registro
+                        $res = inserir(
+                            "sbgrupos_documentos",
+                            array_keys($novoSubSetor),
+                            array_values($novoSubSetor)
+                        );
+                        error_log("cadastro_setor inserir subsetor res: ".json_encode($res));
+                        if(gettype($res[0]) == "object"){
+                            set_status("ERRO: ".$res[0]->getMessage());
+                            error_log("cadastro_setor inserir subsetor erro: ".$res[0]->getMessage());
+                            layout_setor();
+                            exit;
+                        }
 					}
 				}
 			}
 		}else{
 
-				$id = inserir("grupos_documentos", array_keys($novoSetor), array_values($novoSetor));
+                $id = inserir("grupos_documentos", array_keys($novoSetor), array_values($novoSetor));
+                error_log("cadastro_setor inserir grupo res: ".json_encode($id));
+                if(gettype($id[0]) == "object"){
+                    set_status("ERRO: ".$id[0]->getMessage());
+                    error_log("cadastro_setor inserir grupo erro: ".$id[0]->getMessage());
+                    layout_setor();
+                    exit;
+                }
 				
 				if(!empty($_POST["subsetores"])){
-					foreach($_POST["subsetores"] as $subsetor){
-						if(!empty($subsetor)){
-							$novoSubSetor = [
-								"sbgr_tx_nome" => $subsetor,
-								"sbgr_nb_idgrup" => $id[0],
-								"sbgr_tx_status" => "ativo"
-							];
+                    error_log("cadastro_setor subsetores inserir: ".json_encode($_POST["subsetores"]));
+                    foreach($_POST["subsetores"] as $subsetor){
+                        if(!empty($subsetor)){
+                            $novoSubSetor = [
+                                "sbgr_tx_nome" => $subsetor,
+                                "sbgr_nb_idgrup" => $id[0],
+                                "sbgr_tx_status" => "ativo"
+                            ];
 
-							inserir("sbgrupos_documentos", array_keys($novoSubSetor), array_values($novoSubSetor));
-						}
-					}
-				}
+                            $res = inserir("sbgrupos_documentos", array_keys($novoSubSetor), array_values($novoSubSetor));
+                            error_log("cadastro_setor inserir subsetor res: ".json_encode($res));
+                            if(gettype($res[0]) == "object"){
+                                set_status("ERRO: ".$res[0]->getMessage());
+                                error_log("cadastro_setor inserir subsetor erro: ".$res[0]->getMessage());
+                                layout_setor();
+                                exit;
+                            }
+                        }
+                    }
+                }
 			}
 
 		index();
@@ -135,15 +164,16 @@
 				$id = isset($valor['sbgr_nb_id']) ? htmlspecialchars($valor['sbgr_nb_id'], ENT_QUOTES) : '';
 				$nomeSubsetor = isset($valor['sbgr_tx_nome']) ? htmlspecialchars($valor['sbgr_tx_nome'], ENT_QUOTES) : '';
 
-				$botao = $index === 0
-					? "<button class='btn btn-success btn-sm adicionar-novo' type='button' title='Adicionar novo subsetor'
-							style='height:40px; margin-top: -10px; margin-left:-1px; border-top-left-radius:0; border-bottom-left-radius:0;'>
-							<span class='glyphicon glyphicon-plus'></span>
-						</button>"
-					: "<button class='btn btn-danger btn-sm remover' type='button' title='Remover subsetor'
-							style='height:40px; margin-top: -10px; margin-left:-1px; border-top-left-radius:0; border-bottom-left-radius:0;'>
-							<span class='glyphicon glyphicon-minus'></span>
-						</button>";
+                $addBtn = $index === 0
+                    ? "<button class='btn btn-success btn-sm adicionar-novo' type='button' title='Adicionar novo subsetor'
+                            style='height:40px; margin-top: -10px; margin-left:-1px; border-top-left-radius:0; border-bottom-left-radius:0;'>
+                            <span class='glyphicon glyphicon-plus'></span>
+                        </button>"
+                    : "";
+                $remBtn = "<button class='btn btn-danger btn-sm remover' type='button' title='Remover subsetor'
+                            style='height:40px; margin-top: -10px; margin-left:-1px; border-top-left-radius:0; border-bottom-left-radius:0;'>
+                            <span class='glyphicon glyphicon-remove'></span>
+                        </button>";
 
 				$camposExistentes .= "
 				<div class='col-sm-{$tamanho} margin-bottom-5 subsetor-item' data-id='{$id}'>
@@ -156,10 +186,11 @@
 							placeholder='Nome do subsetor'
 							style='width:120px;'
 							value='{$nomeSubsetor}'
-						>
-						{$botao}
-					</div>
-				</div>";
+                        >
+                        {$remBtn}
+                        {$addBtn}
+                        </div>
+                    </div>";
 			}
 		} else {
 			// Campo inicial (novo subsetor)
@@ -174,12 +205,12 @@
 						placeholder='Nome do subsetor'
 						style='width:120px;'
 					>
-					<button class='btn btn-success btn-sm adicionar-novo' type='button' title='Adicionar novo subsetor'
-						style='height:40px; margin-top: -10px; margin-left:-1px; border-top-left-radius:0; border-bottom-left-radius:0;'>
-						<span class='glyphicon glyphicon-plus'></span>
-					</button>
-				</div>
-			</div>";
+                    <button class='btn btn-success btn-sm adicionar-novo' type='button' title='Adicionar novo subsetor'
+                        style='height:40px; margin-top: -10px; margin-left:-1px; border-top-left-radius:0; border-bottom-left-radius:0;'>
+                        <span class='glyphicon glyphicon-plus'></span>
+                    </button>
+                </div>
+            </div>";
 		}
 
 		$campo = "
@@ -216,13 +247,13 @@
 							class='form-control input-sm campo-fit-content'
 							style='width:120px;' 
 							value='\${texto}'>
-						<button class='btn btn-danger btn-sm remover' type='button'
-								title='Remover subsetor'
-								style='height:40px; margin-top:-10px; margin-left:-1px; border-top-left-radius:0; border-bottom-left-radius:0;'>
-							<span class='glyphicon glyphicon-minus'></span>
-						</button>
-					</div>
-				</div>`;
+                        <button class='btn btn-danger btn-sm remover' type='button'
+                                title='Remover subsetor'
+                                style='height:40px; margin-top:-10px; margin-left:-1px; border-top-left-radius:0; border-bottom-left-radius:0;'>
+                            <span class='glyphicon glyphicon-remove'></span>
+                        </button>
+                    </div>
+                </div>`;
 
 				lista.append(novo);
 
@@ -254,9 +285,10 @@
 
 		cabecalho("Cadastro de Setor");
 
-		if (!empty($_POST["id"])) {
-			$campoStatus = combo("Status", "busca_banco", $_POST["busca_banco"]?? "", 2, [ "ativo" => "Ativo", "inativo" => "Inativo"]);
-		}
+        $campoStatus = "";
+        if (!empty($_POST["id"])) {
+            $campoStatus = combo("Status", "busca_banco", $_POST["busca_banco"]?? "", 2, [ "ativo" => "Ativo", "inativo" => "Inativo"]);
+        }
 
 		$campos = [
 			campo("Nome*", "nome", $_POST["nome"], 2),
@@ -295,7 +327,15 @@
 
 		$buttons[] = botao("Buscar", "index");
 
-		if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
+		$canInsert = false;
+		include_once "check_permission.php";
+		if(function_exists('temPermissaoMenu')){
+			$canInsert = temPermissaoMenu('/cadastro_setor.php');
+		}
+		if(is_int(stripos($_SESSION['user_tx_nivel'] ?? '', 'administrador')) || is_int(stripos($_SESSION['user_tx_nivel'] ?? '', 'super'))){
+			$canInsert = true;
+		}
+		if($canInsert){
 			$buttons[] = botao("Inserir", "layout_setor()","","","","","btn btn-success");
 		}
 
