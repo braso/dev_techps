@@ -141,41 +141,41 @@
 		return botao("Voltar", "voltar", "", "", $extra)."<input type='hidden' name='returnValues' value='{$_POST["returnValues"]}' />";
 	}
 
-	function voltar(){
+    function voltar(){
 
-		$returnValues = json_decode($_POST["returnValues"]);
+        $returnValues = json_decode($_POST["returnValues"], true);
 
-		if(empty($returnValues->HTTP_REFERER)){
-			set_status("Tela de origem indefinida.");
-			index();
-			exit;
-		}
+        if(empty($returnValues["HTTP_REFERER"])){
+            set_status("Tela de origem indefinida.");
+            index();
+            exit;
+        }
 
-		if(!empty($returnValues->acaoPrevia)){
-			$returnValues->acao = $returnValues->acaoPrevia;
-			unset($returnValues->acaoPrevia);
-		}
-		
-		if(empty($returnValues->acao) || $returnValues->acao == "voltar()"){
-			$returnValues->acao = "index";
-		}
-		
-		$formVoltar = "<form action='".str_replace($_ENV["URL_BASE"], "", $returnValues->HTTP_REFERER)."' name='form_voltar' method='post'>";
-		foreach($returnValues as $key => $value){
-			if(is_array($value)){
-				foreach($value as $val){
-					$formVoltar .= "<input type='hidden' name='".$key."[]' value='".$val."'>";
-				}
-			}else{
-				$formVoltar .= "<input type='hidden' name='".$key."' value='".$value."'>";
-			}
-		}
-		$formVoltar .= "</form>";
-		$formVoltar .= "<script>document.form_voltar.submit();</script>";
-		
-		echo $formVoltar;
-		exit;
-	}
+        if(!empty($returnValues["acaoPrevia"])){
+            $returnValues["acao"] = $returnValues["acaoPrevia"];
+            unset($returnValues["acaoPrevia"]);
+        }
+        
+        if(empty($returnValues["acao"]) || $returnValues["acao"] == "voltar()"){
+            $returnValues["acao"] = "index";
+        }
+        
+        $formVoltar = "<form action='".str_replace($_ENV["URL_BASE"], "", $returnValues["HTTP_REFERER"])."' name='form_voltar' method='post'>";
+        foreach($returnValues as $key => $value){
+            if(is_array($value)){
+                foreach($value as $val){
+                    $formVoltar .= "<input type='hidden' name='".$key."[]' value='".htmlspecialchars((string)$val, ENT_QUOTES)."'>";
+                }
+            }else{
+                $formVoltar .= "<input type='hidden' name='".$key."' value='".htmlspecialchars((string)$value, ENT_QUOTES)."'>";
+            }
+        }
+        $formVoltar .= "</form>";
+        $formVoltar .= "<script>document.form_voltar.submit();</script>";
+        
+        echo $formVoltar;
+        exit;
+    }
 
 	function fecha_form(array $botoes = [], string $extra = ""): string{
 		$result = "";
