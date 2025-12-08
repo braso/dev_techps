@@ -68,6 +68,8 @@
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
 						+'<td>'+row.tipoOperacaoNome+'</td>'
+						+'<td>'+(row.setorNome?? '')+'</td>'
+                   		+'<td>'+(row.subsetorNome?? '')+'</td>'
 						+'<td style=\"vertical-align: middle;\" class='+class1+'>'+(row.espera === 0 ? '' : row.espera )+'</td>'
 						+'<td style=\"vertical-align: middle;\" class='+class1+'>'+(row.descanso === 0 ? '' : row.descanso )+'</td>'
 						+'<td style=\"vertical-align: middle;\" class='+class1+'>'+(row.repouso === 0 ? '' : row.repouso )+'</td>'
@@ -131,6 +133,8 @@
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
 						+'<td>'+row.tipoOperacaoNome+'</td>'
+						+'<td>'+(row.setorNome?? '')+'</td>'
+                    	+'<td>'+(row.subsetorNome?? '')+'</td>'
 						+'<td class='+class1+'>'+(row.falta === 0 ? '' : row.falta )+'</td>'
 						+'<td class='+class2+'>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
 						+'<td class='+class2+'>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
@@ -186,6 +190,8 @@
 					var tabela = $('#tabela-empresas tbody');
 					var ocupacoesPermitidas = '".$_POST["busca_ocupacao"]."';
 					var operacaoPermitidas = '".$_POST["operacao"]."';
+					var setorPermitidas = '".$_POST["busca_setor"]."';
+				    var subSetorPermitidas = '".$_POST["busca_subsetor"]."';
 
 					function carregarDados(urlArquivo){
 						$.ajax({
@@ -205,12 +211,13 @@
 									row[index] = item;
 								});
 
-								if((ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) && (operacaoPermitidas.length > 0 && !operacaoPermitidas.includes(row.tipoOperacao))){
-                                    return; // pula esta linha se ocupação e operação não forem permitidas
-                                } else if (ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) {
-                                    return; // pula esta linha se ocupação não for permitida
-                                } else if (operacaoPermitidas.length > 0 && !operacaoPermitidas.includes(row.tipoOperacao)) {
-                                    return; // pula esta linha se operação não for permitida
+								if (
+                                    (ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) ||
+                                    (operacaoPermitidas.length > 0 && !operacaoPermitidas.includes(row.tipoOperacao)) ||
+                                    (setorPermitidas.length > 0 && !setorPermitidas.includes(row.setor)) ||
+                                    (subSetorPermitidas.length > 0 && !subSetorPermitidas.includes(row.subsetor))
+                                ) {
+                                    return; // pula esta linha se qualquer filtro não permitir
                                 }
 
 								var totalNaEndossado = (row.falta || 0) + (row.jornadaEfetiva || 0) + (row.refeicao || 0) 
@@ -426,7 +433,9 @@
 			campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
 			combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
             ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
-			combo_bd("!Operação", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
+			combo_bd("!Cargo", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
+            combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos"),
+            combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " ORDER BY sbgr_tx_nome ASC")),
 			combo("Tipo",	"busca_endossado", (!empty($_POST["busca_endossado"]) ? $_POST["busca_endossado"] : ""), 2, ["naoEndossado" => "Atualizado","endossado" => "Pós-fechamento", "semAjustes"=>"Sem ajuste"])
 		];
 
@@ -800,6 +809,8 @@
 			$rowTotal = "<td></td>
 					<td></td>
 					<td></td>
+					<td></td>
+					<td></td>
 					<td>Total</td>
 					$totalRow 
 					<td class='total'>".$totalempre["falta"]."</td>
@@ -915,7 +926,9 @@
 					"<th class='matricula'>Matricula</th>"
 					."<th class='funcionario'>Funcionário</th>"
 					."<th class='ocupacao'>Ocupação</th>"
-					."<th class='operacao'>Operação</th>"
+					."<th class='operacao'>Cargo</th>"
+					."<th class='setor'>Setor</th>"
+					."<th class='subSetor'>SubSetor</th>"
 					."<th class='tituloBaixaGravidade'>Espera</th>"
 					."<th class='tituloBaixaGravidade'>Descanso</th>"
 					."<th class='tituloBaixaGravidade'>Repouso</th>"

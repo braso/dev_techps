@@ -22,6 +22,8 @@
                         +'<td style=\'text-align: center;\'>'+item.nome+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.tipoOperacaoNome+'</td>'
+                        +'<td>'+(row.setorNome?? '')+'</td>'
+                        +'<td>'+(row.subsetorNome?? '')+'</td>'
                         +'<td class ='+css+'>'+jornada+'</td>'
                         +'<td class ='+jornadaEfetivaCor+'>'+jornadaEfetiva+'</td>'
                         +'<td class = \'jornada\'>'+(item.refeicao? item.refeicao: '<strong>----</strong>')+'</td>'
@@ -291,7 +293,9 @@
             combo_net("Empresa", "empresa", $_POST["empresa"]?? $_SESSION["user_nb_empresa"], 4, "empresa", ""),
             combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
             ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
-            combo_bd("!Operação", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
+            combo_bd("!Cargo", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
+            combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos"),
+            combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " ORDER BY sbgr_tx_nome ASC")),
         ];
 
         $botao_imprimir = "<button class='btn default' type='button' onclick='imprimir()'>Imprimir</button>";
@@ -377,7 +381,9 @@
                 <th class='matricula'>Matrícula</th>
                 <th class='nome'>Nome</th>
                 <th class='ocupacao'>Ocupação</th>
-                <th class='operacao'>Operação</th>
+                <th class='operacao'>Cargo</th>
+                <th class='setor'>Setor</th>
+                <th class='subsetor'>SubSetor</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornada'>Jornada</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornadaEfetiva'>Jornada Efetiva</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='refeicao'>Refeicao</th>

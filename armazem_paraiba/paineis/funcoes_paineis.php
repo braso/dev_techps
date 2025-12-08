@@ -161,6 +161,8 @@ function criar_relatorio_saldo() {
 						LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
 						LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
 						LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
+						LEFT JOIN grupos_documentos ON  grup_nb_id = enti_setor_id
+						LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id
 						WHERE enti_tx_status = 'ativo'
 							AND DATE_FORMAT(enti_tx_dataCadastro, '%Y-%m') <= '{$dataMes->format("Y-m")}'
 							AND enti_nb_empresa = '{$empresa["empr_nb_id"]}'
@@ -299,7 +301,12 @@ function criar_relatorio_saldo() {
 
 				"saldoAnterior" 	=> $saldoAnterior,
 				"saldoPeriodo" 		=> $totaisMot["saldoPeriodo"],
-				"saldoFinal" 		=> $totaisMot["saldoFinal"]
+				"saldoFinal" 		=> $totaisMot["saldoFinal"],
+
+				"setor" 			=> $motorista["enti_setor_id"],
+				"setorNome" 		=> $motorista["grup_tx_nome"],
+				"subsetor" 			=> $motorista["enti_subSetor_id"],
+				"subsetorNome" 		=> $motorista["sbgr_tx_nome"]
 			];
 			$nomeArquivo = $motorista["enti_nb_id"].".json";
 			file_put_contents($path."/".$nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE));
@@ -409,9 +416,11 @@ function criar_relatorio_endosso() {
 
 		$motoristas = mysqli_fetch_all(query(
 			"SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg, parametro.para_tx_inicioAcordo, parametro.para_nb_qDias, parametro.para_nb_qDias,
-			operacao.oper_tx_nome FROM entidade"
+			operacao.oper_tx_nome, sbgrupos_documentos.sbgr_tx_nome , grupos_documentos.grup_tx_nome FROM entidade"
 				. " LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
 				. " LEFT JOIN operacao ON oper_nb_id = enti_tx_tipoOperacao"
+				. " LEFT JOIN grupos_documentos ON  grup_nb_id = enti_setor_id"
+				. " LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id"
 				. " WHERE enti_tx_status = 'ativo'"
 				. " AND DATE_FORMAT(enti_tx_dataCadastro, '%Y-%m') <= '{$mes->format("Y-m")}'"
 				. " AND enti_nb_empresa = ".$empresa["empr_nb_id"]
@@ -502,7 +511,12 @@ function criar_relatorio_endosso() {
 					"esperaIndenizada" => $totaisMot["esperaIndenizada"],
 					"saldoAnterior" => $saldoAnterior,
 					"saldoPeriodo" => $totaisMot["saldoPeriodo"],
-					"saldoFinal" => $totaisMot["saldoFinal"]
+					"saldoFinal" => $totaisMot["saldoFinal"],
+
+					"setor" 			=> $motorista["enti_setor_id"],
+					"setorNome" 		=> $motorista["grup_tx_nome"],
+					"subsetor" 			=> $motorista["enti_subSetor_id"],
+					"subsetorNome" 		=> $motorista["sbgr_tx_nome"]
 				];
 
 				$nomeArquivo = $motorista["enti_nb_id"].".json";
@@ -590,13 +604,24 @@ function criar_relatorio_jornada() {
 		$filtroOperacao = "AND oper_nb_id IN ('{$_POST["operacao"]}')";
 	}
 
+	if (!empty($_POST["busca_setor"])) {
+		$filtroSetor= "AND enti_setor_id IN ('{$_POST["busca_setor"]}')";
+	}
+	if (!empty($_POST["busca_subsetor"])) {
+		$filtroSubSetor = "AND enti_subSetor_id IN ('{$_POST["busca_subsetor"]}')";
+	}
+
 	$motoristas = mysqli_fetch_all(query(
 		"SELECT * FROM entidade
 		LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
+		LEFT JOIN grupos_documentos ON  grup_nb_id = enti_setor_id
+		LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id
 		WHERE enti_tx_status = 'ativo'
 			AND enti_nb_empresa = {$_POST["empresa"]}
 			{$filtroOcupacao}
 			{$filtroOperacao}
+			{$filtroSetor}
+			{$filtroSubSetor}
 		ORDER BY enti_tx_nome ASC;"
 	), MYSQLI_ASSOC);
 
@@ -772,7 +797,12 @@ function criar_relatorio_jornada() {
 					"refeicao" => strip_tags($refeicao),
 					"espera" => strip_tags($espera),
 					"descanso" => strip_tags($descanso),
-					"repouso" => strip_tags($repouso)
+					"repouso" => strip_tags($repouso),
+
+					"setor" 			=> $motorista["enti_setor_id"],
+					"setorNome" 		=> $motorista["grup_tx_nome"],
+					"subsetor" 			=> $motorista["enti_subSetor_id"],
+					"subsetorNome" 		=> $motorista["sbgr_tx_nome"]
 				];
 			}
 		}
@@ -828,6 +858,8 @@ function relatorio_nao_conformidade_juridica(int $idEmpresa) {
 			LEFT JOIN cidade ON empresa.empr_nb_cidade = cidade.cida_nb_id
 			LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
 			LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
+			LEFT JOIN grupos_documentos ON  grup_nb_id = enti_setor_id
+			LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id
 			WHERE enti_nb_empresa = {$idEmpresa}
 				AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-t")}'
 				AND (
@@ -868,7 +900,12 @@ function relatorio_nao_conformidade_juridica(int $idEmpresa) {
 			"tipoOperacao" 				=> $motorista["enti_tx_tipoOperacao"],
             "tipoOperacaoNome" 			=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem operação"),
 			"dataInicio"				=> $periodoInicio2->format("d/m/Y"),
-			"dataFim"					=> $periodoFim2->format("d/m/Y")
+			"dataFim"					=> $periodoFim2->format("d/m/Y"),
+
+			"setor" 			=> $motorista["enti_setor_id"],
+			"setorNome" 		=> $motorista["grup_tx_nome"],
+			"subsetor" 			=> $motorista["enti_subSetor_id"],
+			"subsetorNome" 		=> $motorista["sbgr_tx_nome"]
 		];
 
 		foreach([
@@ -1276,6 +1313,8 @@ function criar_relatorio_ajustes() {
 			query(
 				"SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula, enti_tx_ocupacao, oper_tx_nome, enti_tx_tipoOperacao FROM entidade
 					 LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
+					 LEFT JOIN grupos_documentos ON  grup_nb_id = enti_setor_id
+					 LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id
 					 WHERE enti_tx_status = 'ativo'
 					 AND enti_nb_empresa = {$empresa["empr_nb_id"]}
 					 AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')
@@ -1316,7 +1355,12 @@ function criar_relatorio_ajustes() {
 				"nome" 						=> $motorista["enti_tx_nome"],
 				"ocupacao" 					=> $motorista["enti_tx_ocupacao"],
 				"tipoOperacao" 				=> $motorista["enti_tx_tipoOperacao"],
-            "tipoOperacaoNome" 			=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem operação"),
+            	"tipoOperacaoNome" 			=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem operação"),
+
+				"setor" 			=> $motorista["enti_setor_id"],
+				"setorNome" 		=> $motorista["grup_tx_nome"],
+				"subsetor" 			=> $motorista["enti_subSetor_id"],
+				"subsetorNome" 		=> $motorista["sbgr_tx_nome"]
 
 
 				// "dataInicio"				=> $periodoInicio->format("d/m/Y"),
@@ -1398,7 +1442,7 @@ function criar_relatorio_ajustes() {
 			$totalMotorista["pontos"] = array_merge($pontosAtivos, $pontosInativos);
 			// Filtrar apenas os campos numéricos que precisam ser verificados
 			$verificaValores = array_filter($totalMotorista, function ($key) {
-				return !in_array($key, ["id", "matricula", "nome", "ocupacao", "pontos","tipoOperacaoNome","tipoOperacao"]);
+				return !in_array($key, ["id", "matricula", "nome", "ocupacao", "pontos","tipoOperacaoNome","tipoOperacao", "setor","setorNome","subsetor","subsetorNome"]);
 			}, ARRAY_FILTER_USE_KEY);
 
 			$rows[] = $ocorrencias;
@@ -1491,16 +1535,26 @@ function logisticas() {
 	if (!empty($_POST["operacao"])) {
 		$filtroOperacao = "AND oper_nb_id IN ('{$_POST["operacao"]}')";
 	}
+	if (!empty($_POST["busca_setor"])) {
+		$filtroSetor= "AND enti_setor_id IN ('{$_POST["busca_setor"]}')";
+	}
+	if (!empty($_POST["busca_subsetor"])) {
+		$filtroSubSetor = "AND enti_subSetor_id IN ('{$_POST["busca_subsetor"]}')";
+	}
 
 	$motoristas = mysqli_fetch_all(query(
 		"SELECT * FROM entidade
 				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
 				LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
+				LEFT JOIN grupos_documentos ON  grup_nb_id = enti_setor_id
+				LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id
 				WHERE enti_tx_status = 'ativo'
 					AND enti_nb_empresa = {$_POST["empresa"]}
 					AND enti_tx_dataCadastro <= '{$periodoInicio}'
 					{$filtroOcupacao}
 					{$filtroOperacao}
+					{$filtroSetor}
+					{$filtroSubSetor}
 				ORDER BY enti_tx_nome ASC;"
 	), MYSQLI_ASSOC);
 
@@ -1573,7 +1627,11 @@ function logisticas() {
 			"Apos8"           => $exibirApos8,
 			"Apos11"          => $exibirApos11,
 			"consulta"        => $dataReferenciaStr,
-			"ADI_5322"        => $infoADI
+			"ADI_5322"        => $infoADI,
+			"setor" 			=> $motorista["enti_setor_id"],
+			"setorNome" 		=> $motorista["grup_tx_nome"],
+			"subsetor" 			=> $motorista["enti_subSetor_id"],
+			"subsetorNome" 		=> $motorista["sbgr_tx_nome"]
 		];
 
 		if ($totalMinutos < $minimoAbsoluto) {

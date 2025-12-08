@@ -224,6 +224,8 @@ function carregarJS(array $arquivos) {
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
 						+'<td>'+row.tipoOperacaoNome+'</td>'
+						+'<td>'+(row.setorNome?? '')+'</td>'
+                    	+'<td>'+(row.subsetorNome?? '')+'</td>'
 						+'<td>' +(row['Inicio de Jornada']?.['ativo'] === 0 ? '' : row['Inicio de Jornada']?.['ativo']) +'</td>'
 						+'<td>'+(row['Inicio de Jornada']?.['inativo'] === 0 ? '' : row['Inicio de Jornada']?.['inativo'])+'</td>'
 						+'<td>'+(row['Fim de Jornada']?.['ativo'] === 0 ? '' : row['Fim de Jornada']?.['ativo'])+'</td>'
@@ -286,6 +288,8 @@ function carregarJS(array $arquivos) {
 			$linha .= "+'<td class=\"nomeEmpresa\" style=\"cursor: pointer;\" onclick=\"setAndSubmit(' + row.empr_nb_id + ')\">'+row.empr_tx_nome+'</td>'
 						+'<td>'+row.qtdMotoristas+'</td>'
 						+'<td>'+row.tipoOperacaoNome+'</td>'
+						+'<td>'+(row.setorNome?? '')+'</td>'
+                    	+'<td>'+(row.subsetorNome?? '')+'</td>'
 						+'<td>'+row['Inicio de Jornada']+'</td>'
 						+'<td>'+row['Fim de Jornada']+'</td>'
 						+'<td>'+row['Inicio de Refeição']+'</td>'
@@ -370,6 +374,8 @@ function carregarJS(array $arquivos) {
 				var tabela = $('#tabela-empresas tbody');
 				var ocupacoesPermitidas = '" . $_POST["busca_ocupacao"] . "';
 				var operacaoPermitidas = '".$_POST["operacao"]."';
+				var setorPermitidas = '".$_POST["busca_setor"]."';
+				var subSetorPermitidas = '".$_POST["busca_subsetor"]."';
 
 				function carregarDados(urlArquivo){
 					$.ajax({
@@ -381,12 +387,13 @@ function carregarJS(array $arquivos) {
 								row[index] = item;
 							});
 
-							if((ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) && (operacaoPermitidas.length > 0 && !operacaoPermitidas.includes(row.tipoOperacao))){
-								return; // pula esta linha se ocupação e operação não forem permitidas
-							} else if (ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) {
-								return; // pula esta linha se ocupação não for permitida
-							} else if (operacaoPermitidas.length > 0 && !operacaoPermitidas.includes(row.tipoOperacao)) {
-								return; // pula esta linha se operação não for permitida
+							if (
+								(ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) ||
+								(operacaoPermitidas.length > 0 && !operacaoPermitidas.includes(row.tipoOperacao)) ||
+								(setorPermitidas.length > 0 && !setorPermitidas.includes(row.setor)) ||
+								(subSetorPermitidas.length > 0 && !subSetorPermitidas.includes(row.subsetor))
+							) {
+								return; // pula esta linha se qualquer filtro não permitir
 							}
 								
 							console.log(row);
@@ -841,7 +848,9 @@ function index() {
 			2,
 			["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]
 		),
-		combo_bd("!Operação", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
+		combo_bd("!Cargo", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
+        combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos"),
+        combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " ORDER BY sbgr_tx_nome ASC"))
 	];
 
 	$botao_volta = "";
@@ -1146,6 +1155,8 @@ function index() {
 				$rowTotal = "<td></td>
 					<td></td>
 					<td></td>
+					<td></td>
+					<td></td>
 					<td><b>Total</b></td>
 					<td class='total'><b>" . $totais["Inicio de Jornada"]["ativo"] . "</b></td>
 					<td class='total'><b>" . $totais["Inicio de Jornada"]["inativo"] . "</b></td> 
@@ -1177,7 +1188,7 @@ function index() {
 				";
 
 				$rowTotais .=
-					"<th colspan='4'>" . $arquivoGeral["empr_tx_nome"] . "
+					"<th colspan='6'>" . $arquivoGeral["empr_tx_nome"] . "
 					 <i class='fa fa-question-circle' data-toggle='tooltip' data-trigger='click' data-placement='top' title='Mostra o total da empresa ao filtrar por ocupação.' style='color: blue; font-size: 15px;'></i></th>"
 					. "<th colspan='2'>" . $arquivoGeral["Inicio de Jornada"] . "</th>"
 					. "<th colspan='2'>" . $arquivoGeral["Fim de Jornada"] . "</th>"
@@ -1200,6 +1211,8 @@ function index() {
 					. "<th data-column='nome' data-order='asc'>Nome do Funcionário</th>"
 					. "<th data-column='qtdMotoristas' data-order='asc'>Ocupação</th>"
 					. "<th data-column='qtdMotoristas' data-order='asc'>Operação</th>"
+					. "<th data-column='qtdMotoristas' data-order='asc'>Setor</th>"
+					. "<th data-column='qtdMotoristas' data-order='asc'>SubSetor</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Jornada</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Fim de Jornada</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Refeição</th>"
@@ -1217,6 +1230,8 @@ function index() {
 
 				$rowTitulos2 .=
 					"<th></th>"
+					. "<th></th>"
+					. "<th></th>"
 					. "<th></th>"
 					. "<th></th>"
 					. "<th></th>"

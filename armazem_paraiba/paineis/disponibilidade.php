@@ -18,6 +18,8 @@
         if (!empty($_POST["empresa"])) {
             $linha .= " +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
                         +'<td style=\'text-align: center;\'>'+ (item.tipoOperacaoNome || '-') +'</td>'
+                        +'<td>'+(row.setorNome?? '')+'</td>'
+                        +'<td>'+(row.subsetorNome?? '')+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.Nome+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ultimaJornada+'</td>'
@@ -357,7 +359,9 @@
             2),
             combo("Status", "busca_Dispobilidade", ($_POST["busca_Dispobilidade"] ?? ""), 2, 
             ["" => "Todos", "disponivel" => "Disponives", "naoPermitido" => "Indisponives", "parcial" => "Parcialmente disponível"]),
-            combo_bd("!Operação", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
+            combo_bd("!Cargo", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
+            combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos"),
+            combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " ORDER BY sbgr_tx_nome ASC"))
         ];
 
         $botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados()'>Imprimir</button>
@@ -567,7 +571,9 @@
                 $rowTitulos = "<tr id='titulos3' class='titulos3'>";
                 $rowTitulos .= "
                 <th class='ocupacao'>Ocupação</th>
-                <th class='operacao'>Operação</th>
+                <th class='operacao'>Cargo</th>
+                <th class='setor'>Setor</th>
+                <th class='subsetor'>SubSetor</th>
                 <th class='matricula'>Matrícula</th>
                 <th class='nome'>Nome</th>
                 <th class='jornada'>Fim de jornada</th>
