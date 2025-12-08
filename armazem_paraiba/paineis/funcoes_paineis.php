@@ -1547,11 +1547,22 @@ function logisticas() {
 		$horas = abs($difRepouso) % (24 * 60);
 		$horasFormatado = floor($horas / 60);
 		$minutos = $horas % 60;
-		$avisoRepouso = $sinal.str_pad($horasFormatado, 2, "0", STR_PAD_LEFT).":".str_pad($minutos, 2, "0", STR_PAD_LEFT);
+		$dias = floor(abs($difRepouso) / (24 * 60));
+		if ($dias > 0) {
+			$avisoRepouso = 
+				$sinal .
+				str_pad($horasFormatado, 2, "0", STR_PAD_LEFT) . ":" .
+				str_pad($minutos, 2, "0", STR_PAD_LEFT)
+				." (D+".$dias ." )";
+		} else {
+			$avisoRepouso = 
+				$sinal .
+				str_pad($horasFormatado, 2, "0", STR_PAD_LEFT) . ":" .
+				str_pad($minutos, 2, "0", STR_PAD_LEFT);
+		}
 
 		$exibirApos8 = (!$considerarADI && $totalMinutos < $minimoCompleto) ? $dataMais8Horas->format("d/m/Y H:i") : "";
 		$exibirApos11 = $dataMais11Horas->format("d/m/Y H:i");
-
 		$dadosMotorista = [
 			"matricula"       => $motorista["enti_tx_matricula"],
 			"Nome"            => $motorista["enti_tx_nome"],
