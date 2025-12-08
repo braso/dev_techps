@@ -347,7 +347,7 @@
 		exit;
 	}
 
-	function cadastrar(){
+function cadastrar(){
 
 		global $CONTEX;
 		
@@ -655,9 +655,62 @@
 
 		index();
 		exit;
-	}
+}
 
-	function index(){
+function excluirEndosso(){
+    $just = trim($_POST["justificativaExclusao"] ?? "");
+    if($just === ""){
+        set_status("ERRO: Justificativa de exclusão é obrigatória.");
+        index();
+        exit;
+    }
+    $campos = [
+        "endo_tx_status",
+        "endo_tx_dataExclusao",
+        "endo_tx_justificativaExclusao",
+        "endo_nb_userExclusao"
+    ];
+    $valores = [
+        "inativo",
+        date("Y-m-d H:i:s"),
+        $just,
+        $_SESSION["user_nb_id"] ?? null
+    ];
+    atualizar("endosso", $campos, $valores, $_POST["id"]);
+    index();
+    exit;
+}
+
+function modificarEndosso(){
+    global $a_mod;
+    $a_mod = carregar("endosso", $_POST["id"]);
+    visualizarEndosso();
+    exit;
+}
+
+function visualizarEndosso(){
+    global $a_mod;
+    cabecalho("Visualizar Endosso");
+    $ent = mysqli_fetch_assoc(query(
+        "SELECT enti_tx_matricula, enti_tx_nome FROM entidade WHERE enti_nb_id = ".$a_mod["endo_nb_entidade"]." LIMIT 1;"
+    ));
+    $c = [
+        texto("Matrícula", $ent["enti_tx_matricula"]?? "", 2),
+        texto("Funcionário", $ent["enti_tx_nome"]?? "", 4),
+        texto("Período", vsprintf("%02d/%02d/%04d", array_reverse(explode("-", $a_mod["endo_tx_de"])))." a ".vsprintf("%02d/%02d/%04d", array_reverse(explode("-", $a_mod["endo_tx_ate"]))), 3),
+        texto("Data de Endosso", date("d/m/Y H:i", strtotime($a_mod["endo_tx_dataCadastro"])), 3),
+        texto("Status", ucfirst($a_mod["endo_tx_status"]), 2)
+    ];
+    $botao = [
+        criarBotaoVoltar("cadastro_endosso.php")
+    ];
+    echo abre_form("Detalhes do Endosso");
+    echo linha_form($c);
+    echo fecha_form($botao);
+    rodape();
+}
+
+function index(){
 		
 		
 		global $CONTEX;
@@ -679,6 +732,14 @@
 			$condSubSetor = " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC";
 		}
 		$subsetorExtra = empty($_POST["busca_setor"]) ? "disabled" : "";
+
+		$hasSubsetor = 0;
+		if (!empty($_POST["busca_setor"])) {
+			$row = mysqli_fetch_assoc(query(
+				"SELECT COUNT(*) AS c FROM sbgrupos_documentos WHERE sbgr_tx_status = 'ativo' AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." LIMIT 1;"
+			));
+			$hasSubsetor = (int)($row["c"]??0);
+		}
 
 		if (!empty($_POST["busca_setor"])) {
 			$condicoes_motorista .= " AND enti_setor_id = ".intval($_POST["busca_setor"]);
@@ -741,17 +802,19 @@
 			</div>"
 		;
 
-		$fields = [
-			combo_bd("!Setor", "busca_setor", (!empty($_POST["busca_setor"]) ? $_POST["busca_setor"] : ""), 2, "grupos_documentos"),
-			combo_bd("!Subsetor", "busca_subsetor", (!empty($_POST["busca_subsetor"]) ? $_POST["busca_subsetor"] : ""), 2, "sbgrupos_documentos", $subsetorExtra, $condSubSetor),
-			combo_bd("!Cargo", "busca_operacao", (!empty($_POST["busca_operacao"]) ? $_POST["busca_operacao"] : ""), 2, "operacao"),
-			combo_net("Funcionário", "busca_motorista", $_POST["busca_motorista"]?? "", 4, "entidade", "", $condicoes_motorista, "enti_tx_matricula"),
-			campo_data("De*", "data_de", ($_POST["data_de"]?? ""), 2),
-			campo_data("Ate*", "data_ate", ($_POST["data_ate"]?? ""), 2),
-			$camposHE,
-			$camposDesconto
-
-		];
+		$fields = [];
+		$fields[] = combo_bd("!Setor", "busca_setor", (!empty($_POST["busca_setor"]) ? $_POST["busca_setor"] : ""), 2, "grupos_documentos", "onchange='this.form.submit()'");
+		if ($hasSubsetor > 0) {
+			$fields[] = combo_bd("!Subsetor", "busca_subsetor", (!empty($_POST["busca_subsetor"]) ? $_POST["busca_subsetor"] : ""), 2, "sbgrupos_documentos", $subsetorExtra." onchange='this.form.submit()'", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " AND 1 = 0 ORDER BY sbgr_tx_nome ASC"));
+		}
+		$fields[] = combo_bd("!Cargo", "busca_operacao", (!empty($_POST["busca_operacao"]) ? $_POST["busca_operacao"] : ""), 2, "operacao", "onchange='this.form.submit()'");
+		$fields[] = combo_net("Funcionário", "busca_motorista", $_POST["busca_motorista"]?? "", 4, "entidade", "", $condicoes_motorista, "enti_tx_matricula");
+		$fields[] = campo_data("De*", "data_de", ($_POST["data_de"]?? ""), 2);
+		$fields[] = campo_data("Ate*", "data_ate", ($_POST["data_ate"]?? ""), 2);
+		 $fields[] = combo("Status", "busca_status", ($_POST["busca_status"] ?? "ativo"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"], "onchange='this.form.submit()'");
+        $fields[] = $camposHE;
+        $fields[] = $camposDesconto;
+       
 		if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
 			array_unshift($fields, combo_net("Empresa*","empresa", !empty($_POST["empresa"])? $_POST["empresa"]: $_SESSION["user_nb_empresa"],4,"empresa", "onchange='selecionaMotorista(this.value)'"));
 		}else{
@@ -765,18 +828,91 @@
 		echo linha_form($fields);
 		echo fecha_form($buttons);
 
-		// Toggle Subsetor visibilidade vinculado ao Setor
+        $gridFields = [
+            "CÓDIGO" => "endosso.endo_nb_id AS id",
+            "MATRÍCULA" => "entidade.enti_tx_matricula AS matricula",
+            "NOME" => "entidade.enti_tx_nome AS nome",
+            "PERÍODO" => "CONCAT(DATE_FORMAT(endo_tx_de, '%d/%m/%Y'), ' a ', DATE_FORMAT(endo_tx_ate, '%d/%m/%Y')) AS periodo",
+            "DATA DE ENDOSSO" => "DATE_FORMAT(endo_tx_dataCadastro, '%d/%m/%Y %H:%i') AS data_endosso",
+            "STATUS" => "endo_tx_status AS status"
+        ];
+        if (!empty($_POST["busca_status"]) && $_POST["busca_status"] === "inativo") {
+            $gridFields["JUSTIFICATIVA EXCLUSÃO"] = "endosso.endo_tx_justificativaExclusao AS justificativa_exclusao";
+            $gridFields["EXCLUÍDO POR"] = "COALESCE((SELECT user_tx_nome FROM user WHERE user_nb_id = endosso.endo_nb_userExclusao LIMIT 1), '') AS user_exclusao";
+            $gridFields["DATA EXCLUSÃO"] = "IF(endo_tx_dataExclusao IS NULL,'', DATE_FORMAT(endo_tx_dataExclusao, '%d/%m/%Y %H:%i')) AS data_exclusao";
+        }
+		$camposBusca = [
+			"empresa" => "entidade.enti_nb_empresa",
+			"busca_motorista" => "entidade.enti_nb_id",
+			"busca_setor" => "entidade.enti_setor_id",
+			"busca_subsetor" => "entidade.enti_subSetor_id",
+			"busca_operacao" => "entidade.enti_tx_tipoOperacao",
+			"busca_status" => "endosso.endo_tx_status"
+		];
+        $queryBase = (
+            "SELECT ".implode(", ", array_values($gridFields)).
+            " FROM endosso JOIN entidade ON endosso.endo_nb_entidade = entidade.enti_nb_id"
+        );
+
+        $actions = criarIconesGrid(
+            ["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
+            ["cadastro_endosso.php", "cadastro_endosso.php"],
+            ["modificarEndosso()", "excluirEndosso()"]
+        );
+        // Substitui o handler de exclusão por SweetAlert com justificativa obrigatória
+        $actions["functions"][1] =
+            "$(document).off('click', '[class=\"glyphicon glyphicon-remove search-remove\"]');\n"
+            . "$('[class=\"glyphicon glyphicon-remove search-remove\"]').on('click', async function(event){\n"
+            . "  const id = $(event.target).parent().parent().children()[0].innerHTML;\n"
+            . "  const { value: justificativa } = await Swal.fire({\n"
+            . "    icon: 'warning',\n"
+            . "    title: 'Excluir endosso',\n"
+            . "    html: '<p>Ao excluir o endosso, a recuperação do arquivo torna-se irreversível.<br>Será obrigatório realizar um novo cadastro do endosso.</p>' +\n"
+            . "          '<label style=\"display:block;text-align:left;margin-top:10px;\">Justificativa</label>' +\n"
+            . "          '<textarea id=\"swal-justificativa\" class=\"swal2-textarea\" placeholder=\"Descreva o motivo\"></textarea>',\n"
+            . "    showCancelButton: true,\n"
+            . "    confirmButtonText: 'Excluir',\n"
+            . "    cancelButtonText: 'Cancelar',\n"
+            . "    focusConfirm: false,\n"
+            . "    preConfirm: () => {\n"
+            . "      const v = document.getElementById('swal-justificativa').value.trim();\n"
+            . "      if(!v){ Swal.showValidationMessage('Informe a justificativa'); }\n"
+            . "      return v;\n"
+            . "    }\n"
+            . "  });\n"
+            . "  if(!justificativa){ return; }\n"
+            . "  const form = document.createElement('form');\n"
+            . "  form.setAttribute('method', 'post');\n"
+            . "  form.setAttribute('action', 'cadastro_endosso.php');\n"
+            . "  const idInput = document.createElement('input'); idInput.name='id'; idInput.value=id; form.appendChild(idInput);\n"
+            . "  const acaoInput = document.createElement('input'); acaoInput.name='acao'; acaoInput.value='excluirEndosso()'; form.appendChild(acaoInput);\n"
+            . "  const justInput = document.createElement('input'); justInput.name='justificativaExclusao'; justInput.value=justificativa; form.appendChild(justInput);\n"
+            . "  const inputs = document.contex_form.getElementsByTagName('input');\n"
+            . "  const selects = document.contex_form.getElementsByTagName('select');\n"
+            . "  if(inputs != undefined){ for(key in inputs){ if(inputs[key].value != undefined && inputs[key].value != ''){ form.appendChild(inputs[key].cloneNode(true)); } } }\n"
+            . "  if(selects != undefined){ for(key in selects){ if(selects[key].value != undefined && selects[key].value != ''){ form.appendChild(selects[key].cloneNode(true)); } } }\n"
+            . "  document.getElementsByTagName('body')[0].appendChild(form);\n"
+            . "  form.submit();\n"
+            . "});\n"
+            . "esconderInativar('glyphicon glyphicon-remove search-remove', 5);";
+        $gridFields["actions"] = $actions["tags"];
+        $jsFunctions = "const funcoesInternas = function(){".implode(" ", $actions["functions"])."}";
+        echo gridDinamico("tabelaEndossos", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+
+		// Toggle Subsetor: só manipula se o campo existir
 		echo "<script>
 			$(document).ready(function(){
 				function toggleSubsetor(){
+					var elSub = $('#busca_subsetor');
+					if(elSub.length === 0){ return; }
 					var setor = $('select[name=\"busca_setor\"]').val();
-					var el = $('#busca_subsetor').closest('.campo-fit-content');
+					var elWrap = elSub.closest('.campo-fit-content');
 					if(setor){
-						el.show();
-						$('#busca_subsetor').prop('disabled', false);
+						elWrap.show();
+						elSub.prop('disabled', false);
 					}else{
-						el.hide();
-						$('#busca_subsetor').prop('disabled', true).val('');
+						elWrap.hide();
+						elSub.prop('disabled', true).val('');
 					}
 				}
 				toggleSubsetor();
@@ -784,7 +920,7 @@
 			});
 		</script>";
 		
-		rodape();
+        rodape();
 
 		echo 
 			"<script>"

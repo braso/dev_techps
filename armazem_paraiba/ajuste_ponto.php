@@ -47,41 +47,50 @@
 		exit;
 	}
 
-	function excluirPonto(){
+    function excluirPonto(){
 
-		if(empty($_POST["idPonto"]) || empty($_POST["justificativa"])){
-			set_status("ERRO: Não foi possível inativar o ponto.");
-			index();
-			exit;
-		}
+        $ids = [];
+        if(!empty($_POST["idPonto"])){
+            $ids = is_array($_POST["idPonto"]) ? $_POST["idPonto"] : [$_POST["idPonto"]];
+        }
 
-		if(empty($_POST["dataAtualiza"])){
-			$_POST["dataAtualiza"] = date("Y-m-d H:i:s");
-			$_POST["userAtualiza"] = $_SESSION["user_nb_id"];
-		}
-		
-		$ponto = mysqli_fetch_assoc(query(
-			"SELECT * FROM ponto 
-				WHERE pont_nb_id = {$_POST["idPonto"]} 
-				LIMIT 1;"
-		));
-		if($ponto["pont_tx_status"] == "inativo"){
-			set_status("ERRO: Ponto já inativado.");
-			index();
-			exit;
-		}
-		$ponto["pont_tx_status"] = "inativo";
-		$ponto["pont_tx_justificativa"] = $_POST["justificativa"];
-		$ponto["pont_tx_dataAtualiza"] = $_POST["dataAtualiza"];
-		$ponto["pont_nb_userAtualiza"] = $_POST["userAtualiza"];
-		
-		atualizar("ponto", array_keys($ponto), array_values($ponto), $ponto["pont_nb_id"]);
-		
-		$_POST["data"] = explode(" ", $ponto["pont_tx_data"])[0];
+        if(empty($ids) || empty($_POST["justificativa"])){
+            set_status("ERRO: Não foi possível inativar o ponto.");
+            index();
+            exit;
+        }
 
-		index();
-		exit;
-	}
+        if(empty($_POST["dataAtualiza"])){
+            $_POST["dataAtualiza"] = date("Y-m-d H:i:s");
+            $_POST["userAtualiza"] = $_SESSION["user_nb_id"];
+        }
+
+        $dataRef = null;
+        foreach($ids as $id){
+            $ponto = mysqli_fetch_assoc(query(
+                "SELECT * FROM ponto 
+                    WHERE pont_nb_id = {$id} 
+                    LIMIT 1;"
+            ));
+            if(empty($ponto)){ continue; }
+            if($ponto["pont_tx_status"] == "inativo"){ continue; }
+            $ponto["pont_tx_status"] = "inativo";
+            $ponto["pont_tx_justificativa"] = $_POST["justificativa"];
+            $ponto["pont_tx_dataAtualiza"] = $_POST["dataAtualiza"];
+            $ponto["pont_nb_userAtualiza"] = $_POST["userAtualiza"];
+            atualizar("ponto", array_keys($ponto), array_values($ponto), $ponto["pont_nb_id"]);
+            if(empty($dataRef)){
+                $dataRef = explode(" ", $ponto["pont_tx_data"])[0];
+            }
+        }
+
+        if(!empty($dataRef)){
+            $_POST["data"] = $dataRef;
+        }
+
+        index();
+        exit;
+    }
 
 	function status() {
 		return  
@@ -187,24 +196,50 @@
 					}
 				}
 
-				function excluirPontoJS(idPonto){
-					var form = document.form_ajuste_status;
+                function excluirPontoJS(idPonto){
+                    var selecionados = [];
+                    var checks = document.querySelectorAll('input.bulk-excluir:checked');
+                    for(var i=0;i<checks.length;i++){ selecionados.push(checks[i].getAttribute('data-id')); }
+                    if(selecionados.length === 0 && idPonto){ selecionados.push(String(idPonto)); }
+                    if(selecionados.length === 0){ return; }
 
-					addPostValuesToForm(form, {$postValues});
-
-					form.idPonto.value = idPonto;
-					form.acao.value = 'excluirPonto';
-					var justificativa = document.createElement('input');
-					justificativa.type = 'hidden';
-					justificativa.name = 'justificativa';
-					justificativa.value = prompt('Qual a justificativa da exclusão do ponto?');
-					form.append(justificativa);
-					
-					console.log(form);
-					form.submit();
-				}
-			</script>"
-		;
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Excluir ponto(s)',
+                        html: '<p>Ao excluir o ponto, a recuperação torna-se irreversível.</p>'+
+                              '<label style=\'display:block;text-align:left;margin-top:10px;\'>Justificativa</label>'+
+                              '<textarea id=\'swal-justificativa\' class=\'swal2-textarea\' placeholder=\'Descreva o motivo\'></textarea>',
+                        showCancelButton: true,
+                        confirmButtonText: 'Excluir',
+                        cancelButtonText: 'Cancelar',
+                        focusConfirm: false,
+                        preConfirm: function(){
+                            var v = document.getElementById('swal-justificativa').value.trim();
+                            if(!v){ Swal.showValidationMessage('Informe a justificativa'); }
+                            return v;
+                        }
+                    }).then(function(res){
+                        if(!res.isConfirmed || !res.value){ return; }
+                        var form = document.form_ajuste_status;
+                        addPostValuesToForm(form, {$postValues});
+                        form.acao.value = 'excluirPonto';
+                        for(var j=0;j<selecionados.length;j++){
+                            var inp = document.createElement('input');
+                            inp.type = 'hidden';
+                            inp.name = 'idPonto[]';
+                            inp.value = selecionados[j];
+                            form.append(inp);
+                        }
+                        var justificativa = document.createElement('input');
+                        justificativa.type = 'hidden';
+                        justificativa.name = 'justificativa';
+                        justificativa.value = res.value;
+                        form.append(justificativa);
+                        form.submit();
+                    });
+                }
+            </script>"
+        ;
 	}
 
 
@@ -379,6 +414,7 @@
 		echo fecha_form($botoes);
 
 		$iconeExcluir = criarSQLIconeTabela("pont_nb_id", "excluirPonto", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?", "excluirPontoJS(',pont_nb_id,')");
+		$checkboxBulk = "CONCAT('<input type=\"checkbox\" class=\"bulk-excluir\" data-id=\"', pont_nb_id, '\"/>')";
 
 
 		$sql = pegarSqlDia(
@@ -398,24 +434,26 @@
 				"pont_tx_latitude", 
 				"pont_tx_longitude",
 				"pont_tx_dataAtualiza",
+				"IF(pont_tx_status = 'ativo' AND endo_tx_status IS NULL, {$checkboxBulk}, NULL) as bulkExcluir",
 				"IF(pont_tx_status = 'ativo' AND endo_tx_status IS NULL, {$iconeExcluir}, NULL) as iconeExcluir"
 			]
 		);
 
 		$gridFields = [
-			"CÓD"												=> "pont_nb_id",
-			"DATA"												=> "data(pont_tx_data,1)",
-			"PLACA"                                             => "pont_tx_placa",
-			"TIPO"												=> "destacarJornadas(macr_tx_nome)",
-			"MOTIVO"											=> "moti_tx_nome",
-			"LEGENDA"											=> "moti_tx_legenda",
-			"JUSTIFICATIVA"										=> "pont_tx_justificativa",
-			"USUÁRIO CADASTRO"									=> "userCadastro(pont_nb_userCadastro)",
-			"DATA CADASTRO"										=> "data(pont_tx_dataCadastro,1)",
-			"DATA EXCLUSÃO"                                     => "data(pont_tx_dataAtualiza,1)",
-			"LOCALIZAÇÃO"                                       => "map(pont_nb_id)",
-			"<spam class='glyphicon glyphicon-remove'></spam>"	=> "iconeExcluir"
-		];
+            "CÓD"										=> "pont_nb_id",
+			"DATA"										=> "data(pont_tx_data,1)",
+			"PLACA"									=> "pont_tx_placa",
+			"TIPO"										=> "destacarJornadas(macr_tx_nome)",
+			"MOTIVO"									=> "moti_tx_nome",
+			"LEGENDA"									=> "moti_tx_legenda",
+			"JUSTIFICATIVA"								=> "pont_tx_justificativa",
+			"USUÁRIO CADASTRO"							=> "userCadastro(pont_nb_userCadastro)",
+			"DATA CADASTRO"								=> "data(pont_tx_dataCadastro,1)",
+			"DATA EXCLUSÃO"								=> "data(pont_tx_dataAtualiza,1)",
+            "LOCALIZAÇÃO"								=> "map(pont_nb_id)",
+            "Excluir Vários"								=> "bulkExcluir",
+            "<spam class='glyphicon glyphicon-remove'></spam>"	=> "iconeExcluir"
+        ];
 
 		grid($sql, array_keys($gridFields), array_values($gridFields), "", "12", 1, "desc", -1);
 
@@ -504,11 +542,13 @@
 						margin: 0px 0px 0px 0px !important;
 					}
 					
-					[id^=\"contex-grid-\"] > thead > tr > th:nth-child(12),
-					[id^=\"contex-grid-\"] > tbody > tr > td:nth-child(12),
-					.scroll-to-top {
-						display: none !important;
-					}
+                    [id^=\"contex-grid-\"] > thead > tr > th:nth-child(12),
+                    [id^=\"contex-grid-\"] > tbody > tr > td:nth-child(12),
+                    [id^=\"contex-grid-\"] > thead > tr > th:nth-child(13),
+                    [id^=\"contex-grid-\"] > tbody > tr > td:nth-child(13),
+                    .scroll-to-top {
+                        display: none !important;
+                    }
 
 					.portlet>.portlet-body p {
 						margin-top: 0 !important;
