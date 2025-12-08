@@ -233,7 +233,20 @@ function editarUsuarioPerfil(){
         echo "</div></div></div>";
     }
 
-    echo fecha_form([botao("Voltar", "voltarUsuarioPerfil", "", "", "class='btn btn-default'")]);
+    $optsPerfis = [];
+    $rsPerf = query("SELECT perfil_nb_id, perfil_tx_nome FROM perfil_acesso WHERE perfil_tx_status='ativo' ORDER BY perfil_tx_nome");
+    while($rsPerf && ($pr = mysqli_fetch_assoc($rsPerf))){ $optsPerfis[$pr["perfil_nb_id"]] = $pr["perfil_tx_nome"]; }
+
+    $fieldsTroca = [
+        campo_hidden("usuario", $registro["user_nb_id"]),
+        combo("Perfil*", "perfil", (isset($perfilIds[0]) ? $perfilIds[0] : ""), 4, $optsPerfis, "required"),
+        combo("Status*", "status", "ativo", 2, ["ativo"=>"Ativo","inativo"=>"Inativo"], "required")
+    ];
+    echo linha_form($fieldsTroca);
+    echo fecha_form([
+        botao("Atualizar Perfil", "cadastrar", "atualizar_usuario_perfil", "", "class='btn btn-success'"),
+        botao("Voltar", "voltarUsuarioPerfil", "", "", "class='btn btn-default'")
+    ]);
 
     rodape();
     exit;
