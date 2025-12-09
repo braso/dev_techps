@@ -18,10 +18,10 @@
         if (!empty($_POST["empresa"])) {
             $linha .= " +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
                         +'<td style=\'text-align: center;\'>'+ (item.tipoOperacaoNome || '-') +'</td>'
-                        +'<td>'+(row.setorNome?? '')+'</td>'
-                        +'<td>'+(row.subsetorNome?? '')+'</td>'
+                        +'<td>'+(item.setorNome?? '')+'</td>'
+                        +'<td>'+(item.subsetorNome?? '')+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
-                        +'<td style=\'text-align: center;\'>'+item.Nome+'</td>'
+                        +'<td style=\'text-align: center;\'>'+item.nome+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ultimaJornada+'</td>'
                         +'<td style=\'text-align: center;'+ css +'\'><strong>'+item.repouso+'</strong></td>'
                         +'<td style=\'text-align: center;\'>'+item.Apos8+'</td>'
@@ -360,8 +360,8 @@
             combo("Status", "busca_Dispobilidade", ($_POST["busca_Dispobilidade"] ?? ""), 2, 
             ["" => "Todos", "disponivel" => "Disponives", "naoPermitido" => "Indisponives", "parcial" => "Parcialmente disponível"]),
             combo_bd("!Cargo", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
-            combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos"),
-            combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " ORDER BY sbgr_tx_nome ASC"))
+            combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos", "onchange=\"document.contex_form.busca_subsetor.value=''; document.contex_form.reloadOnly.value='1'; this.form.submit();\""),
+            combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " AND 1 = 0 ORDER BY sbgr_tx_nome ASC"))
         ];
 
         $botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados()'>Imprimir</button>
@@ -533,10 +533,11 @@
         ];
 
         echo abre_form();
+        echo campo_hidden("reloadOnly", "");
         echo linha_form($campos);
         echo fecha_form($buttons);
 
-        if (!empty($_POST["empresa"])) {
+        if (!empty($_POST["empresa"]) && empty($_POST["reloadOnly"])) {
             $path = "./arquivos/nc_logistica/".$_POST["empresa"];
             $encontrado = false;
             logisticas();

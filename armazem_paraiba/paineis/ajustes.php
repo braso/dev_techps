@@ -621,7 +621,7 @@ function carregarJS(array $arquivos) {
 									<th>Matrícula</th>
 									<th>Ocupação</th>
 									<th>Funcionário</th>
-									<th>Tipos/th>
+									<th>Tipos</th>
 									<th>Quantidade</th>
 								</tr>
 							</thead>
@@ -831,6 +831,12 @@ function index() {
 				</label>
 			</div>";
 
+	$temSubsetorVinculado = false;
+	if (!empty($_POST["busca_setor"])) {
+		$rowCount = mysqli_fetch_array(query("SELECT COUNT(*) FROM sbgrupos_documentos WHERE sbgr_tx_status = 'ativo' AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"]).";"));
+		$temSubsetorVinculado = ($rowCount[0] > 0);
+	}
+
 	$campos = [
 		combo_net("Empresa", "empresa", $_POST["empresa"]?? $_SESSION["user_nb_empresa"], 4, "empresa", ""),
 		$campoAcao,
@@ -849,9 +855,11 @@ function index() {
 			["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]
 		),
 		combo_bd("!Cargo", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
-        combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos"),
-        combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " ORDER BY sbgr_tx_nome ASC"))
+		combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos", "onchange=\"(function(f){ if(f.busca_subsetor){ f.busca_subsetor.value=''; } f.reloadOnly.value='1'; f.submit(); })(document.contex_form);\"")
 	];
+	if ($temSubsetorVinculado) {
+		$campos[] = combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC");
+	}
 
 	$botao_volta = "";
 	if (!empty($_POST["empresa"])) {
@@ -949,6 +957,7 @@ function index() {
 	];
 
 	echo abre_form();
+	echo campo_hidden("reloadOnly", "");
 	echo linha_form($campos);
 	echo fecha_form($buttons);
 
@@ -961,7 +970,7 @@ function index() {
 	$path = "./arquivos/ajustes";
 	$periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
-	if (!empty($_POST["empresa"]) && !empty($_POST["busca_periodo"])) {
+	if (!empty($_POST["empresa"]) && !empty($_POST["busca_periodo"]) && empty($_POST["reloadOnly"])) {
 		$periodoInicio = new DateTime($_POST["busca_periodo"][0]);
 		$path .= "/" . $periodoInicio->format("Y-m") . "/" . $_POST["empresa"];
 		if (is_dir($path) && file_exists($path . "/empresa_" . $_POST["empresa"] . ".json")) {
@@ -1210,7 +1219,7 @@ function index() {
 					"<th data-column='matricula' data-order='asc'>Matrícula</th>"
 					. "<th data-column='nome' data-order='asc'>Nome do Funcionário</th>"
 					. "<th data-column='qtdMotoristas' data-order='asc'>Ocupação</th>"
-					. "<th data-column='qtdMotoristas' data-order='asc'>Operação</th>"
+                    . "<th data-column='qtdMotoristas' data-order='asc'>Cargo</th>"
 					. "<th data-column='qtdMotoristas' data-order='asc'>Setor</th>"
 					. "<th data-column='qtdMotoristas' data-order='asc'>SubSetor</th>"
 					. "<th data-column='' data-order='asc' colspan='2'>Inicio de Jornada</th>"
@@ -1299,7 +1308,7 @@ function index() {
 					"<th data-column='matricula' data-order='asc'>Matrícula</th>"
 					. "<th data-column='nome' data-order='asc'>Nome do Funcionário</th>"
 					. "<th data-column='qtdMotoristas' data-order='asc'>Ocupação</th>"
-					. "<th data-column='qtdMotoristas' data-order='asc'>Operação</th>"
+                    . "<th data-column='qtdMotoristas' data-order='asc'>Cargo</th>"
 					. "<th data-column='percEndossados' data-order='asc'>Inicio de Jornada</th>"
 					. "<th data-column='jornadaPrevista' data-order='asc'>Fim de Jornada</th>"
 					. "<th data-column='JornadaEfetiva' data-order='asc'>Inicio de Refeição</th>"

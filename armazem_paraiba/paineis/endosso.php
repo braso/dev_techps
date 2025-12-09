@@ -354,15 +354,23 @@
 
         // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
+        $temSubsetorVinculado = false;
+        if (!empty($_POST["busca_setor"])) {
+            $rowCount = mysqli_fetch_array(query("SELECT COUNT(*) FROM sbgrupos_documentos WHERE sbgr_tx_status = 'ativo' AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"]).";"));
+            $temSubsetorVinculado = ($rowCount[0] > 0);
+        }
+
         $fields = [
             combo_net("Empresa:", "empresa", $_POST["empresa"]?? "", 4, "empresa", ""),
             combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
             ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
             combo_bd("!Cargo", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
-            combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos"),
-            combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " ORDER BY sbgr_tx_nome ASC")),
+            combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos", "onchange=\"(function(f){ if(f.busca_subsetor){ f.busca_subsetor.value=''; } f.reloadOnly.value='1'; f.submit(); })(document.contex_form);\""),
             campo_mes("Data", "busca_data", ($_POST["busca_data"]?? ""), 2, $extraCampoData),
         ];
+        if ($temSubsetorVinculado) {
+            $fields[] = combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC");
+        }
         
         $botao_volta = "";
         if(!empty($_POST["empresa"])){
@@ -514,6 +522,7 @@
 
 
         echo abre_form();
+        echo campo_hidden("reloadOnly", "");
         echo linha_form($fields);
         echo fecha_form($buttons);
 
@@ -551,7 +560,7 @@
             "dataFim" => "1900-01-01"
         ];
 
-        if(!empty($_POST["empresa"]) && !empty($_POST["busca_data"])){
+        if(!empty($_POST["empresa"]) && !empty($_POST["busca_data"]) && empty($_POST["reloadOnly"])){
             //Painel dos endossos dos motoristas de uma empresa específica
             $empresa = mysqli_fetch_assoc(query(
                 "SELECT * FROM empresa
@@ -667,7 +676,7 @@
             }else{
                 $encontrado = false;
             }
-        }elseif(!empty($_POST["busca_data"])){
+        }elseif(!empty($_POST["busca_data"]) && empty($_POST["reloadOnly"])){
             //Painel geral das empresas
             $empresas = [];
             $logoEmpresa = mysqli_fetch_assoc(query(
