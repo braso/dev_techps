@@ -1,6 +1,7 @@
 <?php
     $interno = true; //Utilizado no conecta.php para reconhecer se quem está tentando acessar é uma tela ou uma query interna.
     include_once __DIR__."/conecta.php";
+    header('Content-Type: application/json; charset=utf-8');
 
     
     $query = base64_decode($_POST["query"][0]).urldecode(base64_decode($_POST["query"][1]));
@@ -31,9 +32,13 @@
 
     try {
         $res = query($query);
-        $queryResult = ($res instanceof mysqli_result) ? mysqli_fetch_all($res, MYSQLI_ASSOC) : [];
+        if(is_string($res) || !$res){
+            echo json_encode(["error" => (is_string($res)? $res: "Erro na consulta"), "sql" => $query]);
+            exit;
+        }
+        $queryResult = mysqli_fetch_all($res, MYSQLI_ASSOC);
     } catch (Exception $e) {
-        echo json_encode(["error" => $e->getMessage()]);
+        echo json_encode(["error" => $e->getMessage(), "sql" => $query]);
         exit;
     }
 
