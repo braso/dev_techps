@@ -1,13 +1,13 @@
 <?php
-	/* Modo debug{
+
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
-	//}*/
-	include "funcoes_ponto.php";
-	include_once "check_permission.php";
+
+    include "funcoes_ponto.php";
+    include_once __DIR__."/check_permission.php";
 
 function cadastraPonto(){
-	verificaPermissao('/batida_ponto.php');
+    if(function_exists('verificaPermissao')){ verificaPermissao('/batida_ponto.php'); }
 		$hoje = date("Y-m-d");
 		try {
 			$motorista = mysqli_fetch_assoc(query(
@@ -235,7 +235,7 @@ function cadastraPonto(){
 	}
 
 function index() {
-	verificaPermissao('/batida_ponto.php');
+    if(function_exists('verificaPermissao')){ verificaPermissao('/batida_ponto.php'); }
 		
 		global $CONTEX;
 		$hoje = date("Y-m-d");
