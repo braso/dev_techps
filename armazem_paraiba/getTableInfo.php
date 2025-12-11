@@ -1,70 +1,85 @@
 <?php
-
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-    $interno = true; //Utilizado no conecta.php para reconhecer se quem está tentando acessar é uma tela ou uma query interna.
-    include_once __DIR__."/conecta.php";
-    header('Content-Type: application/json; charset=utf-8');
+$interno = true; // utilizado em conecta.php
+include_once __DIR__ . "/conecta.php";
+header('Content-Type: application/json; charset=utf-8');
 
-    
-    $query = base64_decode($_POST["query"][0]).urldecode(base64_decode($_POST["query"][1]));
-    $total = 0;
-    $stmt = mysqli_prepare($conn, $query);
-    if($stmt){
-        mysqli_stmt_execute($stmt);
-        $result = function_exists('mysqli_stmt_get_result') ? mysqli_stmt_get_result($stmt) : false;
-        if($result && ($result instanceof mysqli_result)){
-            $total = $result->num_rows;
-        }
-    }
-    if($total === 0){
-        $res2 = query($query);
-        if($res2 && ($res2 instanceof mysqli_result)){
-            $total = mysqli_num_rows($res2);
-        }
-    }
+// Receber query e parâmetros
+$queryBase = base64_decode($_POST["query"][0]) . urldecode(base64_decode($_POST["query"][1]));
+$limit = min(intval(base64_decode($_POST["query"][2])), 1000); // Limite máximo de 1000
+$offset = max(0, intval(base64_decode($_POST["query"][3])));
 
+// Contar total de registros
+$countQuery = "SELECT COUNT(*) AS total FROM (" . $queryBase . ") AS sub";
+$resCount = mysqli_query($conn, $countQuery);
 
-    $limit = intval(base64_decode($_POST["query"][2]));
-    $offset = intval(base64_decode($_POST["query"][3]));
-    if($offset > $total){
-        $offset = $offset-$limit;
-    }
+if (!$resCount) {
+    echo json_encode([
+        "error" => "Erro ao contar registros: " . mysqli_error($conn),
+        "sql" => $countQuery
+    ]);
+    exit;
+}
 
-    $query .= " LIMIT {$limit} OFFSET {$offset};";
+$total = mysqli_fetch_assoc($resCount)['total'];
 
-    try {
-        $res = query($query);
-        if(is_string($res) || !$res){
-            echo json_encode(["error" => (is_string($res)? $res: "Erro na consulta"), "sql" => $query]);
-            exit;
-        }
-        $queryResult = mysqli_fetch_all($res, MYSQLI_ASSOC);
-    } catch (Exception $e) {
-        echo json_encode(["error" => $e->getMessage(), "sql" => $query]);
-        exit;
-    }
+// Ajustar offset se ultrapassar total
+if ($offset > $total) {
+    $offset = max(0, $total - $limit);
+}
 
+// Adicionar LIMIT e OFFSET
+$query = $queryBase . " LIMIT {$limit} OFFSET {$offset}";
 
-    $tabela = [
-        "header" => [],
-        "rows" => [],
-        "total" => $total
-    ];
+$res = mysqli_query($conn, $query);
 
-    if(!empty($queryResult)){
-        $headers = array_keys($queryResult[0]);
-        $tabela["header"] = $headers;
-        
-        foreach ($queryResult as $row) {
-            $tabelaRow = [];
-            foreach ($row as $key => $data){
-                $tabelaRow[$key] = $data;
+if (!$res) {
+    echo json_encode([
+        "error" => "Erro na consulta: " . mysqli_error($conn),
+        "sql" => $query
+    ]);
+    exit;
+}
+
+// Montar tabela
+$tabela = [
+    "header" => [],
+    "rows" => [],
+    "total" => $total
+];
+
+$queryResult = mysqli_fetch_all($res, MYSQLI_ASSOC);
+
+if (!empty($queryResult)) {
+    $tabela["header"] = array_keys($queryResult[0]);
+
+    foreach ($queryResult as $row) {
+        $tabelaRow = [];
+        foreach ($row as $key => $data) {
+            // Aqui você pode adicionar lógica para converter valores em HTML, se quiser
+            // Exemplo: colorir importância
+            if ($key === 'habi_tx_importancia') {
+                switch (strtolower($data)) {
+                    case 'alta':
+                        $data = '<span style="color:#d9534f"><i class="fa fa-circle"></i> Alta</span>';
+                        break;
+                    case 'media':
+                        $data = '<span style="color:#f0ad4e"><i class="fa fa-circle"></i> Média</span>';
+                        break;
+                    case 'baixa':
+                        $data = '<span style="color:#5cb85c"><i class="fa fa-circle"></i> Baixa</span>';
+                        break;
+                }
             }
-            
-            $tabela["rows"][] = $tabelaRow;
-        }
-    }
 
-    echo json_encode($tabela);
+            $tabelaRow[$key] = $data;
+        }
+
+        $tabela["rows"][] = $tabelaRow;
+    }
+}
+
+// Retornar JSON
+echo json_encode($tabela, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
