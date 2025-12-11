@@ -341,8 +341,7 @@
 			
 			$interno = true; //Utilizado em conecta.php;
 			include_once "conecta.php";
-            include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
-            include_once "check_permission.php";
+			include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
 			
 			$usuario = mysqli_fetch_assoc(query(
 				"SELECT * FROM user"
@@ -378,17 +377,10 @@
 					echo json_encode($_SESSION);
 					exit;
 				}
-                if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
-                    $bateRow = mysqli_fetch_assoc(query(
-                        "SELECT enti_tx_batePonto FROM entidade WHERE enti_nb_id = ".intval($_SESSION["user_nb_entidade"])." LIMIT 1;"
-                    ));
-                    $deveBater = strtolower($bateRow["enti_tx_batePonto"] ?? "sim");
-                    $temPerm = function_exists('temPermissaoMenu') ? temPermissaoMenu('/batida_ponto.php') : true;
-                    if($deveBater === 'sim' && $temPerm){
-                        echo "<meta http-equiv='refresh' content='0; url=./batida_ponto.php'/>";
-                        exit;
-                    }
-                }
+				if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
+					echo "<meta http-equiv='refresh' content='0; url=./batida_ponto.php'/>";
+					exit;
+				}
 	
 				if(!empty($_POST["sourcePage"]) && is_int(strpos($_POST["sourcePage"], $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]))){
 					echo 
