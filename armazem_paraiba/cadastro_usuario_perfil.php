@@ -314,6 +314,8 @@ function formUsuarioPerfil(){
                 ."<div class='col-sm-2' style='display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px'>"
                     ."<button type='button' id='toSelected' class='btn btn-default'><i class='glyphicon glyphicon-arrow-right'></i></button>"
                     ."<button type='button' id='toPool' class='btn btn-default'><i class='glyphicon glyphicon-arrow-left'></i></button>"
+                    ."<button type='button' id='toSelectedAll' class='btn btn-default'>Enviar todos</button>"
+                    ."<button type='button' id='toPoolAll' class='btn btn-default'>Voltar todos</button>"
                 ."</div>"
                 ."<div class='col-sm-5'>"
                     ."<label>Selecionados</label>"
@@ -337,10 +339,25 @@ function formUsuarioPerfil(){
                 }
             }
         }
+        function moveAll(from,to){
+            while(from.options && from.options.length>0){
+                var opt = from.options[0];
+                opt.selected = false;
+                to.appendChild(opt);
+            }
+            var optsTo = to.options;
+            for(var j=0;j<optsTo.length;j++){
+                if(to===sel){optsTo[j].selected=true;} else {optsTo[j].selected=false;}
+            }
+        }
         var btnToSel=document.getElementById('toSelected');
         var btnToPool=document.getElementById('toPool');
-        if(btnToSel){btnToSel.onclick=function(){move(pool,sel);} }
-        if(btnToPool){btnToPool.onclick=function(){move(sel,pool);} }
+        var btnToSelAll=document.getElementById('toSelectedAll');
+        var btnToPoolAll=document.getElementById('toPoolAll');
+        if(btnToSel){btnToSel.onclick=function(){move(pool,sel); fillCsv();} }
+        if(btnToPool){btnToPool.onclick=function(){move(sel,pool); fillCsv();} }
+        if(btnToSelAll){btnToSelAll.onclick=function(){moveAll(pool,sel); fillCsv();} }
+        if(btnToPoolAll){btnToPoolAll.onclick=function(){moveAll(sel,pool); fillCsv();} }
         function toggle(){
             var grp=document.getElementById('grpBox');
             if(!grp) return;
@@ -424,7 +441,10 @@ function formUsuarioPerfil(){
 
     $botoes =
         empty($_POST["id"]) ?
-            [botao("Cadastrar", "cadastrar", "cadastrar_usuario_perfil", "", "class='btn btn-success'")] :
+            [
+                botao("Cadastrar", "cadastrar", "cadastrar_usuario_perfil", "", "class='btn btn-success'"),
+                botao("Voltar", "voltarUsuarioPerfil", "", "", "class='btn btn-default'")
+            ] :
             [
                 botao("Atualizar", "cadastrar", "atualizar_usuario_perfil", "", "class='btn btn-success'"),
                 botao("Voltar", "voltarUsuarioPerfil", "", "", "class='btn btn-default'")
