@@ -378,7 +378,15 @@
 					exit;
 				}
 				if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
-					echo "<meta http-equiv='refresh' content='0; url=./batida_ponto.php'/>";
+					include_once __DIR__."/check_permission.php";
+					if (function_exists('temPermissaoMenu') && temPermissaoMenu('/batida_ponto.php')){
+						echo "<meta http-equiv='refresh' content='0; url=./batida_ponto.php'/>";
+						exit;
+					}
+					cabecalho("");
+					showWelcome($usuario["user_tx_nome"], $turnoAtual, $_SESSION["horaEntrada"]);
+					mostrarComunicadoPopup();
+					rodape();
 					exit;
 				}
 	
@@ -397,17 +405,18 @@
 		}
 		}
         
-		$error = "notfound";
-		$_POST["HTTP_REFERER"] = $_ENV["APP_PATH"]."/index.php?error=".$error;
-		$_POST["returnValues"] = json_encode([
-			"HTTP_REFERER" => $_POST["HTTP_REFERER"],
-			"empresa" => $_POST["empresa"],
-			"user" => $_POST["user"],
-			"password" => $_POST["password"]
-		]);
+        include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
+        $error = (empty($_POST["user"]) || empty($_POST["password"])) ? "emptyfields" : "notfound";
+        $_POST["HTTP_REFERER"] = $_ENV["APP_PATH"]."/index.php?error=".$error;
+        $_POST["returnValues"] = json_encode([
+            "HTTP_REFERER" => $_POST["HTTP_REFERER"],
+            "empresa" => $_POST["empresa"],
+            "user" => $_POST["user"],
+            "password" => $_POST["password"]
+        ]);
 
-		voltar();
-		exit;
-	}
+        voltar();
+        exit;
+    }
 
 	logar();
