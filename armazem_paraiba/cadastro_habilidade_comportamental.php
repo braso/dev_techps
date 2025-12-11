@@ -28,6 +28,7 @@
         }
 
         $_POST["habilidade"] = trim($_POST["habilidade"]);
+        $_POST["descricao"] = isset($_POST["descricao"]) ? trim($_POST["descricao"]) : null;
         $importancia = in_array($_POST["importancia"], ["alta", "media", "baixa"]) ? $_POST["importancia"] : "media";
 
         $habilidadeExistente = mysqli_fetch_assoc(query(
@@ -47,6 +48,7 @@
         $novaHab = [
             "habi_tx_nome" => $_POST["habilidade"],
             "habi_tx_importancia" => $importancia,
+            "habi_tx_descricao" => $_POST["descricao"] ?? null,
             "habi_tx_dataAtualiza" => date("Y-m-d H:i:s")
         ];
 
@@ -92,7 +94,8 @@
         $campos = [
             campo_hidden("id", (!empty($_POST["id"]) ? $_POST["id"] : "")),
             campo("Habilidade Comportamental*", "habilidade", !empty($habilidade["habi_tx_nome"]) ? $habilidade["habi_tx_nome"] : "", 6, "", "required"),
-            combo("Importância*", "importancia", !empty($habilidade["habi_tx_importancia"]) ? $habilidade["habi_tx_importancia"] : "media", 3, ["alta" => "Alta", "media" => "Média", "baixa" => "Baixa"], "required")
+            combo("Importância*", "importancia", !empty($habilidade["habi_tx_importancia"]) ? $habilidade["habi_tx_importancia"] : "media", 3, ["alta" => "Alta", "media" => "Média", "baixa" => "Baixa"], "required"),
+            textarea("Descrição", "descricao", !empty($habilidade["habi_tx_descricao"]) ? $habilidade["habi_tx_descricao"] : "", 12)
         ];
 
        $instrucoes =
@@ -183,7 +186,8 @@
         $gridFields = [
             "ID" => "habi_nb_id",
             "HABILIDADE COMPORTAMENTAL" => "habi_tx_nome",
-            "IMPORTÂNCIA" => "CASE habi_tx_importancia WHEN 'alta' THEN 'Alta' WHEN 'media' THEN 'Média' ELSE 'Baixa' END AS habi_tx_importancia",
+            "IMPORTÂNCIA" => "CASE habi_tx_importancia WHEN 'alta' THEN CONCAT('<span style\\=\"color:#d9534f\"><i class\\=\'fa fa-circle\\'></i> Alta</span>') WHEN 'media' THEN CONCAT('<span style\\=\"color:#f0ad4e\"><i class\\=\'fa fa-circle\\'></i> Média</span>') ELSE CONCAT('<span style\\=\"color:#5cb85c\"><i class\\=\'fa fa-circle\\'></i> Baixa</span>') END AS habi_tx_importancia",
+            "DESCRIÇÃO" => "habi_tx_descricao",
             "DATA DE CADASTRO" => "habi_tx_dataCadastro",
             "DATA DE ALTERAÇÃO" => "habi_tx_dataAtualiza"
         ];
@@ -196,7 +200,29 @@
             "SELECT ".implode(", ", array_values($gridFields))." FROM habilidade_comportamental"
         ;
 
-        // Overview removido para simplificação
+        $total = mysqli_fetch_assoc(query("SELECT COUNT(*) AS qtd FROM habilidade_comportamental;"));
+        $alta = mysqli_fetch_assoc(query("SELECT COUNT(*) AS qtd FROM habilidade_comportamental WHERE habi_tx_importancia = 'alta';"));
+        $media = mysqli_fetch_assoc(query("SELECT COUNT(*) AS qtd FROM habilidade_comportamental WHERE habi_tx_importancia = 'media';"));
+        $baixa = mysqli_fetch_assoc(query("SELECT COUNT(*) AS qtd FROM habilidade_comportamental WHERE habi_tx_importancia = 'baixa';"));
+
+        $overview =
+            "<div class='row' style='margin-top:50px; margin-bottom:10px;'>"
+            ."<div class='col-sm-3'><div class='portlet light' style='padding:10px; border-left:4px solid #777'>"
+                ."<div style='font-weight:bold'>Total</div><div>".intval($total["qtd"])."</div>"
+            ."</div></div>"
+            ."<div class='col-sm-3'><div class='portlet light' style='padding:10px; border-left:4px solid #d9534f'>"
+                ."<div style='font-weight:bold'><span style='color:#d9534f'><i class='fa fa-circle'></i></span> Alta</div><div>".intval($alta["qtd"])."</div>"
+            ."</div></div>"
+            ."<div class='col-sm-3'><div class='portlet light' style='padding:10px; border-left:4px solid #f0ad4e'>"
+                ."<div style='font-weight:bold'><span style='color:#f0ad4e'><i class='fa fa-circle'></i></span> Média</div><div>".intval($media["qtd"])."</div>"
+            ."</div></div>"
+            ."<div class='col-sm-3'><div class='portlet light' style='padding:10px; border-left:4px solid #5cb85c'>"
+                ."<div style='font-weight:bold'><span style='color:#5cb85c'><i class='fa fa-circle'></i></span> Baixa</div><div>".intval($baixa["qtd"])."</div>"
+            ."</div></div>"
+            ."</div>";
+
+        echo "<div style='height:50px'></div>";
+        echo $overview;
 
         $actions = criarIconesGrid(
             ["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
@@ -227,7 +253,135 @@
             listarHabilidades();
         }
 
-        // UI Gemini removida
+        echo "<button id='geminiChatBtn' 
+style='position:fixed; display:none; right:20px; bottom:20px; z-index:9999;
+border:none; border-radius:50%; width:56px; height:56px;
+background:#4c6ef5; color:#fff; font-size:22px;
+box-shadow:0 4px 12px rgba(0,0,0,.25); cursor:pointer'>
+<i class='fa fa-comments'></i>
+</button>";
+
+        echo "<div id='geminiChatPanel' 
+style='position:fixed; right:20px; bottom:90px; z-index:9999; 
+width:380px; height:75vh; background:#fff; border:1px solid #ccc; 
+border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.25); 
+display:none; overflow:hidden'>
+
+    <div style='padding:12px; background:#4c6ef5; color:white; 
+        font-weight:bold; display:flex; justify-content:space-between; 
+        align-items:center'>
+        Assistente HT & Comportamento
+        <button id='geminiChatClose' 
+            style='border:none; background:transparent; color:white; 
+            font-size:20px; cursor:pointer'>×</button>
+    </div>
+
+    <div id='geminiChatMessages' 
+        style='padding:12px; height:calc(75vh - 110px); overflow-y:auto;
+        background:#f7f7f7'></div>
+
+    <div style='padding:10px; border-top:1px solid #ddd; 
+        display:flex; gap:8px; background:white'>
+        <input id='geminiChatInput' type='text' 
+            class='form-control' placeholder='Digite sua pergunta'
+            style='border-radius:6px'>
+        <button id='geminiChatSend' class='btn btn-primary'>Enviar</button>
+    </div>
+
+</div>";
+
+        echo "<script>
+(function(){
+
+var btn   = document.getElementById('geminiChatBtn');
+var panel = document.getElementById('geminiChatPanel');
+var close = document.getElementById('geminiChatClose');
+var input = document.getElementById('geminiChatInput');
+var send  = document.getElementById('geminiChatSend');
+var msgs  = document.getElementById('geminiChatMessages');
+
+function md(text){
+    return text
+        .replace(/^### (.*)/gm, '<h3 style=\"margin:6px 0\">$1</h3>')
+        .replace(/^## (.*)/gm, '<h2 style=\"margin:6px 0\">$1</h2>')
+        .replace(/^# (.*)/gm, '<h1 style=\"margin:6px 0\">$1</h1>')
+        .replace(/\\*\\*(.*?)\\*\\*/g, '<b>$1</b>')
+        .replace(/\\*(.*?)\\*/g, '<i>$1</i>')
+        .replace(/\\n/g, '<br>');
+}
+
+function bubble(text, who){
+    var wrap = document.createElement('div');
+    wrap.style.margin = '10px 0';
+    wrap.style.maxWidth = '85%';
+    wrap.style.padding = '10px 14px';
+    wrap.style.borderRadius = '12px';
+    wrap.style.lineHeight = '1.4';
+    wrap.style.fontSize = '14px';
+    wrap.style.whiteSpace = 'normal';
+
+    if(who === 'me'){
+        wrap.style.background = '#4c6ef5';
+        wrap.style.color = 'white';
+        wrap.style.marginLeft = 'auto';
+    } else {
+        wrap.style.background = 'white';
+        wrap.style.color = '#222';
+        wrap.style.border = '1px solid #ddd';
+    }
+
+    wrap.innerHTML = md(text);
+    msgs.appendChild(wrap);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+function typing(){
+    var d = document.createElement('div');
+    d.id = 'typingBubble';
+    d.style.padding = '10px 14px';
+    d.style.background = 'white';
+    d.style.border = '1px solid #ddd';
+    d.style.borderRadius = '12px';
+    d.style.maxWidth = '85%';
+    d.style.margin = '10px 0';
+    d.innerHTML = '<span style=\"font-size:20px\">...</span>';
+    msgs.appendChild(d);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+send.onclick = function(){
+    var v = input.value.trim();
+    if(!v) return;
+
+    bubble(v, 'me');
+    input.value = '';
+
+    typing();
+
+    fetch('gemini_proxy.php', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({message:v})
+    })
+    .then(r=>r.json())
+    .then(j=>{
+        var t = document.getElementById('typingBubble');
+        if(t) t.remove();
+
+        bubble(j.error ? 'Erro: '+j.error : j.text, 'bot');
+    })
+    .catch(()=>{
+        var t = document.getElementById('typingBubble');
+        if(t) t.remove();
+        bubble('Erro ao consultar.', 'bot');
+    });
+};
+
+btn.onclick = ()=> panel.style.display='block';
+close.onclick = ()=> panel.style.display='none';
+
+})();
+</script>";
 
         rodape();
     }
