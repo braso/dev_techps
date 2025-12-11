@@ -24,7 +24,7 @@ deployment:
     - export TRAMPGAS=/home/tech1694/public_html/gestaodeponto/trampolim_gas
     - export TRANSCOPEL=/home/tech1694/public_html/gestaodeponto/transcopel
     - export SAO_LUCAS=/home/tech1694/public_html/gestaodeponto/sao_lucas
-    
+    - export PB_TRANSPORTES=/home/tech1694/public_html/gestaodeponto/pb_transportes
 
 
     - /bin/cp -R $GENERAL $GENERALDEPLOY
@@ -49,3 +49,4 @@ deployment:
     - /bin/cp -R $DOMAIN $TRANSCOPEL
     - /bin/cp -R $DOMAIN $BLUEROAD
     - /bin/cp -R $DOMAIN $SAO_LUCAS
+    - /bin/cp -R $DOMAIN $PB_TRANSPORTES

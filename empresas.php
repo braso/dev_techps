@@ -24,6 +24,8 @@
         "DEMO"			        => "techps_demo",
         "TRAMPOLIMGAS"			=> "trampolim_gas",
         "TRANSCOPEL"			=> "transcopel",
+        "PB TRANSPORTES"		=> "pb_transportes",
+
     ];
 
     $empresasNomes = [
@@ -48,6 +50,7 @@
         "techps_demo" 		=> "TechPS (Demo)",
         "trampolim_gas" 	=> "Trampolim Gás",
         "transcopel" 	    => "Transcopel",
+        "pb_transportes" 	=> "PB Transportes",
     ];
 
     $empresa_array = array_values($empresas); //Utilizado nos arquivos que importam este.
