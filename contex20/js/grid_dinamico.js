@@ -193,7 +193,10 @@ const consultarRegistros = function(){
         pageNumber = 1;
     }
 
-    try{ console.log('Grid request', { url: urlTableInfo, queryBase: queryBase, conditions: conditions, limit: limit, page: pageNumber, offset: (pageNumber-1)*limit }); }catch(e){}
+    try{
+        console.log('Grid request', { url: urlTableInfo, queryBase: queryBase, conditions: conditions, limit: limit, page: pageNumber, offset: (pageNumber-1)*limit });
+        console.log('Grid SQL', atob(queryBase) + conditions + ' LIMIT ' + limit + ' OFFSET ' + ((pageNumber-1)*limit));
+    }catch(e){}
     $.ajax({
         url: urlTableInfo,
         method: 'POST',

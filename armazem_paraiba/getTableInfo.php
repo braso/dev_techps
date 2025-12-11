@@ -30,9 +30,10 @@
     $query .= " LIMIT {$limit} OFFSET {$offset};";
 
     try {
-        $queryResult = mysqli_fetch_all(query($query), MYSQLI_ASSOC);
+        $res = query($query);
+        $queryResult = ($res instanceof mysqli_result) ? mysqli_fetch_all($res, MYSQLI_ASSOC) : [];
     } catch (Exception $e) {
-        echo json_encode($e->getMessage());
+        echo json_encode(["error" => $e->getMessage()]);
         exit;
     }
 
@@ -50,16 +51,6 @@
         foreach ($queryResult as $row) {
             $tabelaRow = [];
             foreach ($row as $key => $data){
-                try{
-                    if(!empty($data)){
-                        preg_match('/^((.[^ ])*)\((.*)\)$/', $data, $match);
-                        if(isset($match[1])){
-                            $data = eval("return {$match[0]};");
-                        }
-                    }
-                }catch(Exception $e){
-                    $data = "return '".__LINE__." error'";
-                }
                 $tabelaRow[$key] = $data;
             }
             
