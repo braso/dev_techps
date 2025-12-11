@@ -245,7 +245,7 @@ function editarUsuarioPerfil(){
     echo linha_form($fieldsTroca);
     echo fecha_form([
         botao("Atualizar Perfil", "cadastrar", "atualizar_usuario_perfil", "", "class='btn btn-success'"),
-        botao("Voltar", "voltarUsuarioPerfil", "", "", "class='btn btn-default'")
+        botao("Voltar", "voltarUsuarioPerfil", "", "", "class='btn btn-default' formnovalidate")
     ]);
 
     rodape();
@@ -381,7 +381,9 @@ function formUsuarioPerfil(){
             var submitting=false;
             document.contex_form.addEventListener('submit',function(e){
                 if(submitting) return;
-                if(modo&&modo.value==='grupo'){
+                var acao=document.querySelector('[name=acao]');
+                var acaoVal=(acao&&acao.value)?acao.value:'';
+                if(modo&&modo.value==='grupo' && acaoVal!=='voltarUsuarioPerfil'){
                     fillCsv();
                     var perfil=document.querySelector('[name=perfil]');
                     var count=sel?sel.options.length:0;
@@ -443,11 +445,11 @@ function formUsuarioPerfil(){
         empty($_POST["id"]) ?
             [
                 botao("Cadastrar", "cadastrar", "cadastrar_usuario_perfil", "", "class='btn btn-success'"),
-                botao("Voltar", "voltarUsuarioPerfil", "", "", "class='btn btn-default'")
+                botao("Voltar", "voltarUsuarioPerfil", "", "", "class='btn btn-default' formnovalidate")
             ] :
             [
                 botao("Atualizar", "cadastrar", "atualizar_usuario_perfil", "", "class='btn btn-success'"),
-                botao("Voltar", "voltarUsuarioPerfil", "", "", "class='btn btn-default'")
+                botao("Voltar", "voltarUsuarioPerfil", "", "", "class='btn btn-default' formnovalidate")
             ]
     ;
 
