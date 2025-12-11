@@ -515,12 +515,15 @@
 			"cida_tx_uf" => "",
 			"cida_tx_nome" => ""
 		];
-		if(!empty($input_values["cidade"])){
-			$cidade_query = query("SELECT * FROM cidade WHERE cida_tx_status = 'ativo' AND cida_nb_id = ".$input_values["cidade"]);
-			$cidade = mysqli_fetch_array($cidade_query);
-		}
+        if(!empty($input_values["cidade"])){
+            $cidade_query = query("SELECT * FROM cidade WHERE cida_tx_status = 'ativo' AND cida_nb_id = ".$input_values["cidade"]);
+            $cidade = mysqli_fetch_array($cidade_query, MYSQLI_ASSOC);
+        }
+        if(empty($cidade) || !is_array($cidade)){
+            $cidade = ["cida_tx_uf" => "", "cida_tx_nome" => ""];
+        }
 
-		$campo_cidade = texto("Cidade/UF", "[".$cidade["cida_tx_uf"]."] ".$cidade["cida_tx_nome"], 2);
+        $campo_cidade = texto("Cidade/UF", "[".$cidade["cida_tx_uf"]."] ".$cidade["cida_tx_nome"], 2);
     	if (is_bool(strpos($_SESSION["user_tx_nivel"], "Super Administrador")) && (!empty($input_values["Ehmatriz"]) && $input_values["Ehmatriz"] == "sim")) {
 			$c = [
 				texto("CPF/CNPJ*",				$input_values["cnpj"],2),
