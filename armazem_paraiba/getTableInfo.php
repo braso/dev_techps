@@ -4,10 +4,21 @@
 
     
     $query = base64_decode($_POST["query"][0]).urldecode(base64_decode($_POST["query"][1]));
+    $total = 0;
     $stmt = mysqli_prepare($conn, $query);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $total = $result->num_rows;
+    if($stmt){
+        mysqli_stmt_execute($stmt);
+        $result = function_exists('mysqli_stmt_get_result') ? mysqli_stmt_get_result($stmt) : false;
+        if($result && ($result instanceof mysqli_result)){
+            $total = $result->num_rows;
+        }
+    }
+    if($total === 0){
+        $res2 = query($query);
+        if($res2 && ($res2 instanceof mysqli_result)){
+            $total = mysqli_num_rows($res2);
+        }
+    }
 
 
     $limit = intval(base64_decode($_POST["query"][2]));
