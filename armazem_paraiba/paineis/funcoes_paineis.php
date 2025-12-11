@@ -1614,7 +1614,6 @@ function logisticas() {
 				str_pad($horasFormatado, 2, "0", STR_PAD_LEFT) . ":" .
 				str_pad($minutos, 2, "0", STR_PAD_LEFT);
 		}
-
 		$exibirApos8 = (!$considerarADI && $totalMinutos < $minimoCompleto) ? $dataMais8Horas->format("d/m/Y H:i") : "";
 		$exibirApos11 = $dataMais11Horas->format("d/m/Y H:i");
 		$dadosMotorista = [
