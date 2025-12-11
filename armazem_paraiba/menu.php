@@ -6,6 +6,7 @@
 
     include "load_env.php";
     include_once "conecta.php";
+    include_once "check_permission.php";
 
 	function verificarAtividade($paginasAtivas) {
 		foreach ($paginasAtivas as $pagina){
@@ -176,10 +177,14 @@ if ($showComunicado) {
                 if(!file_exists($full)){
                     continue;
                 }
-                // Se houver perfil vinculado e o PAI NÃO estiver permitido, filtra filhos por permissões
-                if($perfilId > 0 && !$parentAllowed){
-                    if(empty($allowedBySecao[$secKey]) || !in_array($value, $allowedBySecao[$secKey])){
-                        continue;
+                // Filtra filhos por permissões diretas do menu
+                if($perfilId > 0){
+                    $nivelUser = $_SESSION["user_tx_nivel"] ?? "";
+                    $isAdminUser = (is_int(strpos($nivelUser, "Administrador")) || is_int(strpos($nivelUser, "Super Administrador")));
+                    if(function_exists('temPermissaoMenu') && !$isAdminUser){
+                        if(!temPermissaoMenu($key)){
+                            continue;
+                        }
                     }
                 }
                 $children .= "<li class=''><a href='".$CONTEX["path"].$key."' class='nav-link'> ".$value."</a></li>";
@@ -206,9 +211,8 @@ if ($showComunicado) {
 	
         $menuMotorista = 
             "<li class=''><a href='".$CONTEX["path"]."/batida_ponto.php'		class='nav-link'> Registrar Ponto</a></li>
-             <li class=''><a href='".$CONTEX["path"]."/cadastro_usuario.php'	class='nav-link'> Usuário</a></li>
              <li class=''><a href='".$CONTEX["path"]."/espelho_ponto.php'		class='nav-link'> Espelhos de Ponto</a></li>"
-		;
+        ;
 
         $isAdmin = is_int(strpos($nivel, "Administrador"));
         $isSuperAdmin = is_int(strpos($nivel, "Super Administrador"));
