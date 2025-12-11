@@ -254,14 +254,14 @@
 		}
 
 		$result .=
-			"<script>urlTableInfo = '{$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}/getTableInfo.php';</script>
+			"<script>urlTableInfo = '{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}/getTableInfo.php';</script>
 			<script>
 				const searchFields = ".json_encode($camposBusca).";
 				const fields = ".json_encode($campos).";
 				const queryBase = '".base64_encode($queryBase." WHERE 1")."';
 				{$jsFunctions}
 			</script>
-			<script src='{$_ENV["APP_PATH"]}/contex20/js/grid_dinamico.js'></script>"
+			<script src='{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/js/grid_dinamico.js'></script>"
 		;
 
 		return $result;
