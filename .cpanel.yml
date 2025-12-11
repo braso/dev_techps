@@ -48,4 +48,4 @@ deployment:
     - /bin/cp -R $DOMAIN $TRAMPGAS
     - /bin/cp -R $DOMAIN $TRANSCOPEL
     - /bin/cp -R $DOMAIN $BLUEROAD
-    - /bin/cp -R $DOMAIN $SAO_LUCAS
+    - /bin/cp -R $DOMAIN $SAOLUCAS
