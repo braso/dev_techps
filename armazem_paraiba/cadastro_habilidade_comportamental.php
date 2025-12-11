@@ -196,7 +196,7 @@
             "SELECT ".implode(", ", array_values($gridFields))." FROM habilidade_comportamental"
         ;
 
-        
+        // Overview removido para simplificação
 
         $actions = criarIconesGrid(
             ["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
@@ -227,7 +227,7 @@
             listarHabilidades();
         }
 
-        
+        // UI Gemini removida
 
         rodape();
     }
