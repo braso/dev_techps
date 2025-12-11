@@ -7,7 +7,12 @@
     include_once __DIR__."/check_permission.php";
 
 function cadastraPonto(){
-    if(function_exists('verificaPermissao')){ verificaPermissao('/batida_ponto.php'); }
+	//se nao tiver permisao na batida_ponto.php manda par ao index
+    if(function_exists('verificaPermissao')){ verificaPermissao('/batida_ponto.php');
+
+		
+
+	}
 		$hoje = date("Y-m-d");
 		try {
 			$motorista = mysqli_fetch_assoc(query(
