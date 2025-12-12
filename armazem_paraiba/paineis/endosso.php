@@ -153,6 +153,9 @@
                                             'matricula': row.matricula,
                                             'nome': row.nome,
                                             'ocupacao': row.ocupacao,
+                                            'tipoOperacaoNome': row.tipoOperacaoNome,
+                                            'setorNome': row.setorNome,
+                                            'subsetorNome': row.subsetorNome,
                                             'statusEndosso': row.statusEndosso,
                                             'saldoAnterior': row.saldoAnterior
                                         };
@@ -661,12 +664,46 @@
                     // agora $conteudo tem os dados do arquivo
                 }
 
-                foreach($motoristas as $saldosMotorista){
+                // Aplica filtros aos motoristas para refletir na contagem e nos totais
+                $motoristasFiltrados = array_filter($motoristas, function($m){
+                    if (!empty($_POST["busca_ocupacao"]) && $m["ocupacao"] !== $_POST["busca_ocupacao"]) return false;
+                    if (!empty($_POST["operacao"]) && $m["tipoOperacao"] != $_POST["operacao"]) return false;
+                    if (!empty($_POST["busca_setor"]) && $m["setor"] != $_POST["busca_setor"]) return false;
+                    if (!empty($_POST["busca_subsetor"]) && $m["subsetor"] != $_POST["busca_subsetor"]) return false;
+                    return true;
+                });
+
+                // Recalcula os totais com base no filtro aplicado
+                $totais = [
+                    "jornadaPrevista" => "00:00",
+                    "jornadaEfetiva" => "00:00",
+                    "he50APagar" => "00:00",
+                    "he100APagar" => "00:00",
+                    "adicionalNoturno" => "00:00",
+                    "esperaIndenizada" => "00:00",
+                    "saldoAnterior" => "00:00",
+                    "saldoPeriodo" => "00:00",
+                    "saldoFinal" => "00:00"
+                ];
+
+                foreach ($motoristasFiltrados as $m) {
+                    $totais["jornadaPrevista"]  = operarHorarios([$totais["jornadaPrevista"],  (!empty($m["jornadaPrevista"])  ? $m["jornadaPrevista"]  : "00:00")], "+");
+                    $totais["jornadaEfetiva"]   = operarHorarios([$totais["jornadaEfetiva"],   (!empty($m["jornadaEfetiva"])   ? $m["jornadaEfetiva"]   : "00:00")], "+");
+                    $totais["he50APagar"]       = operarHorarios([$totais["he50APagar"],       (!empty($m["he50APagar"])       ? $m["he50APagar"]       : "00:00")], "+");
+                    $totais["he100APagar"]      = operarHorarios([$totais["he100APagar"],      (!empty($m["he100APagar"])      ? $m["he100APagar"]      : "00:00")], "+");
+                    $totais["adicionalNoturno"] = operarHorarios([$totais["adicionalNoturno"], (!empty($m["adicionalNoturno"]) ? $m["adicionalNoturno"] : "00:00")], "+");
+                    $totais["esperaIndenizada"] = operarHorarios([$totais["esperaIndenizada"], (!empty($m["esperaIndenizada"]) ? $m["esperaIndenizada"] : "00:00")], "+");
+                    $totais["saldoAnterior"]    = operarHorarios([$totais["saldoAnterior"],    (!empty($m["saldoAnterior"])    ? $m["saldoAnterior"]    : "00:00")], "+");
+                    $totais["saldoPeriodo"]     = operarHorarios([$totais["saldoPeriodo"],     (!empty($m["saldoPeriodo"])     ? $m["saldoPeriodo"]     : "00:00")], "+");
+                    $totais["saldoFinal"]       = operarHorarios([$totais["saldoFinal"],       (!empty($m["saldoFinal"])       ? $m["saldoFinal"]       : "00:00")], "+");
+                }
+
+                foreach($motoristasFiltrados as $saldosMotorista){
                     $contagemEndossos[$saldosMotorista["statusEndosso"]]++;
                     if($saldosMotorista["statusEndosso"] == "E"){
                         if($saldosMotorista["saldoFinal"] === "00:00"){
                             $contagemSaldos["meta"]++;
-                        }elseif($saldosMotorista["saldoFinal"][0] == "-"){
+                        }elseif(!empty($saldosMotorista["saldoFinal"]) && $saldosMotorista["saldoFinal"][0] == "-"){
                             $contagemSaldos["negativos"]++;
                         }else{
                             $contagemSaldos["positivos"]++;
@@ -805,15 +842,15 @@
                     <th colspan='1'></th>
                     <th colspan='1'></th>
                     <th colspan='1'></th>
-                    <th colspan='1'>{$TotaisJson["totais"]["jornadaPrevista"]}</th>
-                    <th colspan='1'>{$TotaisJson["totais"]["jornadaEfetiva"]}</th>
-                    <th colspan='1'>{$TotaisJson["totais"]["he50APagar"]}</th>
-                    <th colspan='1'>{$TotaisJson["totais"]["he100APagar"]}</th>
-                    <th colspan='1'>{$TotaisJson["totais"]["adicionalNoturno"]}</th>
-                    <th colspan='1'>{$TotaisJson["totais"]["esperaIndenizada"]}</th>
-                    <th colspan='1'>{$TotaisJson["totais"]["saldoAnterior"]}</th>
-                    <th colspan='1'>{$TotaisJson["totais"]["saldoPeriodo"]}</th>
-                    <th colspan='1'>{$TotaisJson["totais"]["saldoFinal"]}</th>
+                    <th colspan='1'>{$totais["jornadaPrevista"]}</th>
+                    <th colspan='1'>{$totais["jornadaEfetiva"]}</th>
+                    <th colspan='1'>{$totais["he50APagar"]}</th>
+                    <th colspan='1'>{$totais["he100APagar"]}</th>
+                    <th colspan='1'>{$totais["adicionalNoturno"]}</th>
+                    <th colspan='1'>{$totais["esperaIndenizada"]}</th>
+                    <th colspan='1'>{$totais["saldoAnterior"]}</th>
+                    <th colspan='1'>{$totais["saldoPeriodo"]}</th>
+                    <th colspan='1'>{$totais["saldoFinal"]}</th>
                 EOD;
 
                 $rowTitulos .= <<<EOD

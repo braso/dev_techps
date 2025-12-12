@@ -18,10 +18,10 @@
         if (!empty($_POST["empresa"])) {
             $linha .= " +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
                         +'<td style=\'text-align: center;\'>'+ (item.tipoOperacaoNome || '-') +'</td>'
-                        +'<td>'+(item.setorNome?? '')+'</td>'
-                        +'<td>'+(item.subsetorNome?? '')+'</td>'
+                        +'<td>'+(item.setorNome || '')+'</td>'
+                        +'<td>'+(item.subsetorNome || '')+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
-                        +'<td style=\'text-align: center;\'>'+item.nome+'</td>'
+                        +'<td style=\'text-align: center;\'>'+(item.nome || item.Nome || '-')+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ultimaJornada+'</td>'
                         +'<td style=\'text-align: center;'+ css +'\'><strong>'+item.repouso+'</strong></td>'
                         +'<td style=\'text-align: center;\'>'+item.Apos8+'</td>'
@@ -114,7 +114,7 @@
                                     });
                                     
                                     var consultas = `<i style='color:red; margin-right: 5px;' title='Aqui apresenta a data da projeção de jornada consultada' class='fa fa-warning'></i>`;
-                                    consultas += `<span style=\"color: red;\"><b>Projeção de Disponibilidade de Jornada para:&nbsp;</b></span><spam> \${data.total.consulta}</span>`;
+                                    consultas += `<span style=\"color: red;\"><b>Projeção de Disponibilidade de Jornada para:&nbsp;</b></span><span> \${data.total.consulta}</span>`;
 
                                     consulta.append(consultas);
 

@@ -1,8 +1,9 @@
 <?php
-	/* Modo debug
+/*
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
-	//*/
+*/
+
 	require_once __DIR__."/funcoes_paineis.php";
 	require __DIR__."/../funcoes_ponto.php";
 
@@ -211,13 +212,17 @@
 									row[index] = item;
 								});
 
-								if (
-                                    (ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) ||
-                                    (operacaoPermitidas.length > 0 && !operacaoPermitidas.includes(row.tipoOperacao)) ||
-                                    (setorPermitidas.length > 0 && !setorPermitidas.includes(row.setor)) ||
-                                    (subSetorPermitidas.length > 0 && !subSetorPermitidas.includes(row.subsetor))
+                                var ocSel = ocupacoesPermitidas;
+                                var opSel = operacaoPermitidas;
+                                var setSel = setorPermitidas;
+                                var subSel = subSetorPermitidas;
+                                if (
+                                    (ocSel.length > 0 && String(row.ocupacao) !== String(ocSel)) ||
+                                    (opSel.length > 0 && String(row.tipoOperacao) !== String(opSel)) ||
+                                    (setSel.length > 0 && String(row.setor) !== String(setSel)) ||
+                                    (subSel.length > 0 && String(row.subsetor) !== String(subSel))
                                 ) {
-                                    return; // pula esta linha se qualquer filtro não permitir
+                                    return;
                                 }
 
 								var totalNaEndossado = (row.falta || 0) + (row.jornadaEfetiva || 0) + (row.refeicao || 0) 
@@ -379,7 +384,7 @@
 			cabecalho("Relatório de Não Conformidade Jurídica Atualizado");
 		} elseif (!empty($_POST["acao"]) && $_POST["acao"] == "atualizarPainel") {
 			echo "<script>alert('Atualizando os painéis, aguarde um pouco.')</script>";
-			ob_flush();
+			if (function_exists('ob_get_level') && ob_get_level() > 0) { @ob_flush(); }
 			flush();
 
 			cabecalho("Relatório de Não Conformidade Jurídica Atualizado");
@@ -433,15 +438,34 @@
 			$temSubsetorVinculado = ($rowCount[0] > 0);
 		}
 
-		$campos = [
-			combo_net("Empresa", "empresa", $_POST["empresa"]?? $_SESSION["user_nb_empresa"], 4, "empresa", ""),
-			$campoAcao,
-			campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
-			combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
-			["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
-			combo_bd("!Cargo", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
-			combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos", "onchange=\"(function(f){ if(f.busca_subsetor){ f.busca_subsetor.value=''; } f.reloadOnly.value='1'; f.submit(); })(document.contex_form);\"")
-		];
+        $ocupacoesOptions = ["" => "Todos"];
+        $resOcup = query("SELECT DISTINCT enti_tx_ocupacao FROM entidade WHERE enti_tx_ocupacao IS NOT NULL AND enti_tx_ocupacao <> '' ORDER BY enti_tx_ocupacao ASC");
+        while($rowO = mysqli_fetch_assoc($resOcup)){
+            $v = $rowO["enti_tx_ocupacao"];
+            $ocupacoesOptions[$v] = $v;
+        }
+
+        $cargoOptions = ["" => "Todos"];
+        $extraEmp = (!empty($_POST["empresa"]) ? " AND e.enti_nb_empresa = ".intval($_POST["empresa"]) : "");
+        $resCargo = query(
+            "SELECT DISTINCT oper.oper_nb_id AS id, oper.oper_tx_nome AS nome
+             FROM operacao oper
+             JOIN entidade e ON e.enti_tx_tipoOperacao = oper.oper_nb_id
+             WHERE oper.oper_tx_status = 'ativo' AND e.enti_tx_status = 'ativo'".$extraEmp.
+             " ORDER BY oper.oper_tx_nome ASC"
+        );
+        while($rowC = mysqli_fetch_assoc($resCargo)){
+            $cargoOptions[$rowC["id"]] = $rowC["nome"];
+        }
+
+        $campos = [
+            combo_net("Empresa", "empresa", $_POST["empresa"]?? $_SESSION["user_nb_empresa"], 4, "empresa", ""),
+            $campoAcao,
+            campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
+            combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, $ocupacoesOptions),
+            combo("Cargo", "operacao", ($_POST["operacao"]?? ""), 2, $cargoOptions),
+            combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos", "onchange=\"(function(f){ if(f.busca_subsetor){ f.busca_subsetor.value=''; } f.reloadOnly.value='1'; f.submit(); })(document.contex_form);\"")
+        ];
 		if ($temSubsetorVinculado) {
 			$campos[] = combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC");
 		}
@@ -546,18 +570,33 @@
 				$totalDiasNaoCFuncionario = 0;
 				$totaisFuncionario = [];
 				$totaisFuncionario2 = [];
-				$totaisMediaFuncionario = [];
-				$ocupacoesPermitidas = $_POST['busca_ocupacao'];
-				$mediaPerfTotal = 0;
+                $totaisMediaFuncionario = [];
+                $ocupacoesPermitidas = $_POST['busca_ocupacao'];
+                $operacaoSel = (string)($_POST['operacao'] ?? '');
+                $setorSel = (string)($_POST['busca_setor'] ?? '');
+                $subsetorSel = (string)($_POST['busca_subsetor'] ?? '');
+                $arquivosConsiderados = 0;
+                $mediaPerfTotal = 0;
 				foreach ($arquivos as &$arquivo) {
 					$todosZeros = true;
 					$arquivo = $path."/".$arquivo;
 					$json = json_decode(file_get_contents($arquivo), true);
 
-					$ocupacaoJson = $json['ocupacao'] ?? '';
-					if (!empty($ocupacoesPermitidas) && $ocupacaoJson !== $ocupacoesPermitidas) {
-						continue;
-					}
+                    $ocupacaoJson = $json['ocupacao'] ?? '';
+                    if (!empty($ocupacoesPermitidas) && $ocupacaoJson !== $ocupacoesPermitidas) {
+                        continue;
+                    }
+                    if ($operacaoSel !== '' && (string)($json['tipoOperacao'] ?? '') !== $operacaoSel) {
+                        continue;
+                    }
+                    if ($setorSel !== '' && (string)($json['setor'] ?? '') !== $setorSel) {
+                        continue;
+                    }
+                    if ($subsetorSel !== '' && (string)($json['subsetor'] ?? '') !== $subsetorSel) {
+                        continue;
+                    }
+
+                    $arquivosConsiderados++;
 
 					$totalMotorista = $json["espera"]+$json["descanso"]+$json["repouso"]+$json["jornada"]+$json["falta"]+$json["jornadaEfetiva"]+$json["mdc"]
 					+$json["refeicao"]+$json["intersticioInferior"]+$json["intersticioSuperior"];
@@ -569,7 +608,8 @@
 					
 					$mediaPerfFuncionario = round(($json["diasConformidade"]/ $dias) * 100, 2);
 					
-					$mediaPerfTotal = round(($totalDiasNaoCFuncionario/ ($dias * sizeof($arquivos)) * 100), 2);
+                    $denDias = ($dias * max($arquivosConsiderados, 1));
+                    $mediaPerfTotal = round(($totalDiasNaoCFuncionario/ $denDias * 100), 2);
 
 					$mediaPerfTotal= 100 - $mediaPerfTotal;
 
@@ -577,7 +617,8 @@
 
 					$totalNConformMax = 4 * $dias;
 					// Baixar performance total
-					$porcentagemFunNCon = round(($totalMotorista *100) / ($totalNConformMax * sizeof($arquivos)), 2);
+                    $denNCon = ($totalNConformMax * max($arquivosConsiderados, 1));
+                    $porcentagemFunNCon = round(($totalMotorista *100) / $denNCon, 2);
 					// Baixar performance funcionario
 					$porcentagemFunNCon2 = round(($totalMotorista *100) / $totalNConformMax, 2);
 
@@ -608,11 +649,12 @@
 						$funcionario++;
 					}
 
-					unset($total);
-				}
+				unset($total);
+			}
 
-				$porcentagemTotalBaixa= array_sum((array) $totaisFuncionario);
-				$totalFun = sizeof($arquivos) - $totalJsonComTudoZero;
+			$porcentagemTotalBaixa= array_sum((array) $totaisFuncionario);
+			if ($arquivosConsiderados === 0) { $mediaPerfTotal = 0; }
+                $totalFun = max($arquivosConsiderados - $totalJsonComTudoZero, 0);
 				$porcentagemTotalBaixaG = 100 - $porcentagemTotalBaixa;
 				$porcentagemTotalBaixa2= (array) $totaisFuncionario2;
 
@@ -656,7 +698,8 @@
 					$totalizadores["repouso"] + $totalizadores["jornada"];
 				}
 
-				$porcentagemFun = ($totalJsonComTudoZero / ($motoristas + $ajudante + $funcionario)) * 100;
+				$denAtivos = ($motoristas + $ajudante + $funcionario);
+				$porcentagemFun = ($denAtivos > 0) ? (($totalJsonComTudoZero / $denAtivos) * 100) : 0;
 
 				$totalGeral = $gravidadeAlta + $gravidadeMedia + $gravidadeBaixa;
 				$graficoSintetico = [$gravidadeAlta, $gravidadeMedia, $gravidadeBaixa];
@@ -793,7 +836,10 @@
                 }
                 $pasta->close();
 
-				$percentual = ($totalempre ["diasConformidade"] / ($dias * sizeof($arquivos))) * 100;
+				$diasMesRef = (int)date('t', strtotime((!empty($_POST['busca_dataMes']) ? $_POST['busca_dataMes'] : date('Y-m')).'-01'));
+				$denEmpresa = ($diasMesRef * max(sizeof($arquivos), 1));
+				$baseDiasConf = (float)($totalempre["diasConformidade"] ?? 0);
+				$percentual = ($denEmpresa > 0) ? (($baseDiasConf / $denEmpresa) * 100) : 0;
 				$percentualConformidade = 100 - $percentual;
 				$porcentagemTotalMedia = round($percentualConformidade, 2);
 
@@ -806,11 +852,12 @@
 		} 
 
 		if ($encontrado) {
+			$hasDetailFilter = (!empty($_POST["busca_ocupacao"]) || !empty($_POST["operacao"]) || !empty($_POST["busca_setor"]) || !empty($_POST["busca_subsetor"]));
 			if ( $_POST["busca_endossado"] !== "endossado") {
-				$totalRow = "<td>".$totalempre["espera"]."</td>
-					<td class='total'>".$totalempre["descanso"]."</td>
-					<td class='total'>".$totalempre["repouso"]."</td>
-					<td class='total'>".$totalempre["jornada"]."</td>";
+				$totalRow = "<td>".($hasDetailFilter ? $totalizadores["espera"] : $totalempre["espera"])."</td>
+					<td class='total'>".($hasDetailFilter ? $totalizadores["descanso"] : $totalempre["descanso"])."</td>
+					<td class='total'>".($hasDetailFilter ? $totalizadores["repouso"] : $totalempre["repouso"])."</td>
+					<td class='total'>".($hasDetailFilter ? $totalizadores["jornada"] : $totalempre["jornada"])."</td>";
 			}
 			
 			$totalBaixaPerformance = 100 - array_sum($totaisFuncionario);
@@ -822,12 +869,12 @@
 					<td></td>
 					<td>Total</td>
 					$totalRow 
-					<td class='total'>".$totalempre["falta"]."</td>
-					<td class='total'>".$totalempre["jornadaEfetiva"]."</td>
-					<td class='total'>".$totalempre["mdc"]."</td>
-					<td class='total'>".$totalempre["refeicao"]."</td>
-					<td class='total'>".$totalempre["intersticioInferior"]."</td>
-					<td class='total'>".$totalempre["intersticioSuperior"]."</td>
+					<td class='total'>".($hasDetailFilter ? $totalizadores["falta"] : $totalempre["falta"])."</td>
+					<td class='total'>".($hasDetailFilter ? $totalizadores["jornadaEfetiva"] : $totalempre["jornadaEfetiva"])."</td>
+					<td class='total'>".($hasDetailFilter ? $totalizadores["mdc"] : $totalempre["mdc"])."</td>
+					<td class='total'>".($hasDetailFilter ? $totalizadores["refeicao"] : $totalempre["refeicao"])."</td>
+					<td class='total'>".($hasDetailFilter ? $totalizadores["intersticioInferior"] : $totalempre["intersticioInferior"])."</td>
+					<td class='total'>".($hasDetailFilter ? $totalizadores["intersticioSuperior"] : $totalempre["intersticioSuperior"])."</td>
 					<td class='total'>$totalGeral</td>
 					<td class='total'>$totalMediaPerformance%</td>
 					<td class='total'>$totalBaixaPerformance%</td>
@@ -975,9 +1022,46 @@
 
 					$endossado = true;
 			}
-			$rowTitulos .= "</tr>";
-			$mostra = true;
-			include_once "painel_html2.php";
+            $rowTitulos .= "</tr>";
+            $filtros = [];
+            if(!empty($_POST["empresa"])){
+                $re = mysqli_fetch_assoc(query("SELECT empr_tx_nome FROM empresa WHERE empr_nb_id = ".intval($_POST["empresa"])." LIMIT 1;"));
+                if(!empty($re["empr_tx_nome"])) { $filtros[] = "<b>Empresa:</b> ".htmlspecialchars($re["empr_tx_nome"], ENT_QUOTES, 'UTF-8'); }
+            }
+            $oc = trim((string)($_POST["busca_ocupacao"] ?? ""));
+            $filtros[] = "<b>Ocupação:</b> ".($oc !== "" ? htmlspecialchars($oc, ENT_QUOTES, 'UTF-8') : "Todos");
+            if(!empty($_POST["operacao"])){
+                $r = mysqli_fetch_assoc(query("SELECT oper_tx_nome FROM operacao WHERE oper_nb_id = ".intval($_POST["operacao"])." LIMIT 1;"));
+                $filtros[] = "<b>Cargo:</b> ".(!empty($r["oper_tx_nome"]) ? htmlspecialchars($r["oper_tx_nome"], ENT_QUOTES, 'UTF-8') : "Todos");
+            } else {
+                $filtros[] = "<b>Cargo:</b> Todos";
+            }
+            if(!empty($_POST["busca_setor"])){
+                $r = mysqli_fetch_assoc(query("SELECT grup_tx_nome FROM grupos_documentos WHERE grup_nb_id = ".intval($_POST["busca_setor"])." LIMIT 1;"));
+                $filtros[] = "<b>Setor:</b> ".(!empty($r["grup_tx_nome"]) ? htmlspecialchars($r["grup_tx_nome"], ENT_QUOTES, 'UTF-8') : "Todos");
+            } else {
+                $filtros[] = "<b>Setor:</b> Todos";
+            }
+            if(!empty($_POST["busca_subsetor"])){
+                $r = mysqli_fetch_assoc(query("SELECT sbgr_tx_nome FROM sbgrupos_documentos WHERE sbgr_nb_id = ".intval($_POST["busca_subsetor"])." LIMIT 1;"));
+                $filtros[] = "<b>Subsetor:</b> ".(!empty($r["sbgr_tx_nome"]) ? htmlspecialchars($r["sbgr_tx_nome"], ENT_QUOTES, 'UTF-8') : "Todos");
+            } else {
+                $filtros[] = "<b>Subsetor:</b> Todos";
+            }
+            if(isset($_POST["busca_endossado"])){
+                $map = ["naoEndossado"=>"Atualizado", "endossado"=>"Pós-fechamento", "semAjustes"=>"Sem ajuste", ""=>"Todos"];
+                $label = isset($map[$_POST["busca_endossado"]]) ? $map[$_POST["busca_endossado"]] : ($_POST["busca_endossado"] === "" ? "Todos" : $_POST["busca_endossado"]);
+                $filtros[] = "<b>Tipo:</b> ".htmlspecialchars($label, ENT_QUOTES, 'UTF-8');
+            }
+            if(!empty($_POST["busca_dataMes"])){
+                $mesRaw = trim((string)$_POST["busca_dataMes"]);
+                $mesFmt = $mesRaw;
+                if (preg_match('/^\d{4}-\d{2}$/', $mesRaw)) { $mesFmt = substr($mesRaw, 5, 2)."-".substr($mesRaw, 0, 4); }
+                $filtros[] = "<b>Mês:</b> ".htmlspecialchars($mesFmt, ENT_QUOTES, 'UTF-8');
+            }
+            $filtrosConsultaHtml = "<div><b>Filtros da consulta:</b> ".(!empty($filtros) ? implode(" | ", $filtros) : "Todos")."</div>";
+            $mostra = true;
+            include_once "painel_html2.php";
 
 			// if (!empty($_POST["acao"]) && $_POST["acao"] == "buscar") {
 			// 	set_status("Não Possui dados desse mês");

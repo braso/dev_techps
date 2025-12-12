@@ -16,8 +16,9 @@
 				<span></span>
 				<?= $dataEmissao ?>
 				<br>
-				<div id="consulta">
-				</div>
+                <div id="consulta" style=" display: flex; align-items: center; justify-content: center; width: 100%; padding: 5px; margin-top: 10px;">
+                    <?= isset($filtrosConsultaHtml) ? $filtrosConsultaHtml : "" ?>
+                </div>
 				<br>
 				<?php if(!empty($periodoRelatorio["dataInicio"])) { ?>
 				<?="<br> <b>Período do relatório:</b> ".(!empty($periodoRelatorio["dataInicio"])? "{$periodoRelatorio["dataInicio"]} a {$periodoRelatorio["dataFim"]}": "--/--/----")?>

@@ -9,6 +9,7 @@ require_once __DIR__ . "/funcoes_paineis.php";
     //*/
 
     define('TCPDF_LOGS', true);
+    ob_start();
 
 class CustomPDF extends TCPDF {
     public $tituloPersonalizado = 'Relatório Sem titulo';
@@ -430,6 +431,7 @@ function gerarPainelEndosso() {
 
     // Gera o PDF
     $nomeArquivo = 'relatorio_endossos.pdf';
+    if (ob_get_length()) { ob_end_clean(); }
     $pdf->Output($nomeArquivo, 'I');
 }
 
@@ -783,6 +785,7 @@ function gerarPainelSaldo() {
 
     // Gera o PDF
     $nomeArquivo = 'Relatorio_Saldo.pdf';
+    if (ob_get_length()) { ob_end_clean(); }
     $pdf->Output($nomeArquivo, 'I');
 }
 
@@ -1353,6 +1356,7 @@ function gerarPainelNc() {
 
     // Gera o PDF
     $nomeArquivo = 'relatorio_nc_juridica.pdf';
+    if (ob_get_length()) { ob_end_clean(); }
     $pdf->Output($nomeArquivo, 'I');
 }
 
@@ -1856,6 +1860,7 @@ function gerarPainelAjustes() {
     $pdf->Cell(17, 7, $totalInativo + $totalAtivo, 1, 1, 'C');
     // Gera o PDF
     $nomeArquivo = 'relatorio_ajustes.pdf';
+    if (ob_get_length()) { ob_end_clean(); }
     $pdf->Output($nomeArquivo, 'I');
 }
 
@@ -2005,6 +2010,7 @@ function gerarPainelDisponibilidade() {
 
     // Gera o PDF
     $nomeArquivo = 'projeção_de_disponibilidade.pdf';
+    if (ob_get_length()) { ob_end_clean(); }
     $pdf->Output($nomeArquivo, 'I');
 }
 
