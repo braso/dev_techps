@@ -206,23 +206,21 @@
 			exit;
 		}
 
-		$cnpjMatriz = mysqli_fetch_assoc(query(
-			"SELECT empr_tx_cnpj FROM empresa
-				WHERE empr_tx_status = 'ativo'
-					AND empr_tx_Ehmatriz = 'sim'
-				LIMIT 1;"
-		));
+        $cnpjMatriz = mysqli_fetch_assoc(query(
+            "SELECT empr_tx_cnpj FROM empresa
+                WHERE empr_tx_status = 'ativo'
+                    AND empr_tx_Ehmatriz = 'sim'
+                LIMIT 1;"
+        ));
 
-		if(empty($cnpjMatriz)){
-			$errorMsg = "Empresa matriz não encontrada.";
-		}elseif($_ENV["CONTEX_PATH"] != "/techps"){
-			$cnpjMatriz = preg_replace('/[^0-9]/', '', $cnpjMatriz["empr_tx_cnpj"]);
-			$_POST["cnpj"] = preg_replace('/[^0-9]/', '', $_POST["cnpj"]);
-			if(substr($cnpjMatriz, 0, 8) != substr($_POST["cnpj"], 0, 8)){
-				$errorMsg = "Os primeiros 8 dígitos do CNPJ devem ser os mesmos da empresa matriz.";
-				$_POST["errorFields"][] = "cnpj";
-			}
-		}
+        if(!empty($cnpjMatriz) && $_ENV["CONTEX_PATH"] != "/techps"){
+            $cnpjMatriz = preg_replace('/[^0-9]/', '', $cnpjMatriz["empr_tx_cnpj"]);
+            $_POST["cnpj"] = preg_replace('/[^0-9]/', '', $_POST["cnpj"]);
+            if(substr($cnpjMatriz, 0, 8) != substr($_POST["cnpj"], 0, 8)){
+                $errorMsg = "Os primeiros 8 dígitos do CNPJ devem ser os mesmos da empresa matriz.";
+                $_POST["errorFields"][] = "cnpj";
+            }
+        }
 
 		if(!empty($errorMsg)){
 			set_status("ERRO: ".$errorMsg);
@@ -504,25 +502,28 @@
 
 		$iconeExcluirLogo = (!empty($input_values["logo"]))? gerarLogoExcluir($a_mod["empr_nb_id"], "excluirLogo"): "";
 
-		if(is_int(strpos($_SESSION["user_tx_nivel"], "Super Administrador"))){
-			$campo_dominio = campo_domain("Nome","nomeDominio",$input_values["domain"]?? "",2,"domain");
-			// $campo_Ehmatriz = combo("É matriz?","matriz",$input_values["Ehmatriz"]?? "",2,["sim" => "Sim", "nao" => "Não"]);
-		}else{
-			$campo_dominio = texto("Nome",$input_values["domain"]?? "",3);
-			// $campo_Ehmatriz = texto("É matriz?",$input_values["Ehmatriz"]?? "",2);
-		}
-		$campo_Ehmatriz = campo_hidden("matriz", (!empty($input_values["Ehmatriz"])? $input_values["Ehmatriz"]: "nao")).texto("É matriz?", ucfirst((!empty($input_values["Ehmatriz"])? $input_values["Ehmatriz"]: "Não")),2);
+        if(is_int(strpos($_SESSION["user_tx_nivel"], "Super Administrador"))){
+            $campo_dominio = campo_domain("Nome","nomeDominio",$input_values["domain"]?? "",2,"domain");
+        }else{
+            $campo_dominio = texto("Nome",$input_values["domain"]?? "",3);
+        }
+        $existeMatrizQtd = mysqli_fetch_assoc(query("SELECT COUNT(*) AS qtd FROM empresa WHERE empr_tx_Ehmatriz = 'sim';"));
+        $ehMatrizDefault = !empty($input_values["Ehmatriz"]) ? $input_values["Ehmatriz"] : ((intval($existeMatrizQtd["qtd"]?? 0) > 0) ? "nao" : "sim");
+        $campo_Ehmatriz = combo("É matriz?","matriz", $ehMatrizDefault, 2, ["sim" => "Sim", "nao" => "Não"]);
 
 		$cidade = [
 			"cida_tx_uf" => "",
 			"cida_tx_nome" => ""
 		];
-		if(!empty($input_values["cidade"])){
-			$cidade_query = query("SELECT * FROM cidade WHERE cida_tx_status = 'ativo' AND cida_nb_id = ".$input_values["cidade"]);
-			$cidade = mysqli_fetch_array($cidade_query);
-		}
+        if(!empty($input_values["cidade"])){
+            $cidade_query = query("SELECT * FROM cidade WHERE cida_tx_status = 'ativo' AND cida_nb_id = ".$input_values["cidade"]);
+            $cidade = mysqli_fetch_array($cidade_query, MYSQLI_ASSOC);
+        }
+        if(empty($cidade) || !is_array($cidade)){
+            $cidade = ["cida_tx_uf" => "", "cida_tx_nome" => ""];
+        }
 
-		$campo_cidade = texto("Cidade/UF", "[".$cidade["cida_tx_uf"]."] ".$cidade["cida_tx_nome"], 2);
+        $campo_cidade = texto("Cidade/UF", "[".$cidade["cida_tx_uf"]."] ".$cidade["cida_tx_nome"], 2);
     	if (is_bool(strpos($_SESSION["user_tx_nivel"], "Super Administrador")) && (!empty($input_values["Ehmatriz"]) && $input_values["Ehmatriz"] == "sim")) {
 			$c = [
 				texto("CPF/CNPJ*",				$input_values["cnpj"],2),

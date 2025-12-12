@@ -1014,20 +1014,20 @@
                 $extra_campo = '';
             }
 
-			$queryResult = mysqli_fetch_array(
-				query(
-					"SELECT {$tab}_tx_nome {$extra_campo} FROM {$tabela}
-						WHERE {$tab}_tx_status = 'ativo'
-							AND {$tab}_nb_id = {$modificador};"
-				)
-			);
-			
-			if($colunas != ''){
-				$queryResult[0] = "[{$queryResult[1]}] {$queryResult[0]}";
-			}
-			if(!empty($queryResult)){
-				$opt = "<option value='{$modificador}'>{$queryResult[0]}</option>";
-			}
+            $queryResult = mysqli_fetch_array(
+                query(
+                    "SELECT {$tab}_tx_nome {$extra_campo} FROM {$tabela}
+                        WHERE {$tab}_tx_status = 'ativo'
+                            AND {$tab}_nb_id = {$modificador};"
+                )
+            );
+            
+            if(!empty($queryResult)){
+                if($colunas != ''){
+                    $queryResult[0] = "[{$queryResult[1]}] {$queryResult[0]}";
+                }
+                $opt = "<option value='{$modificador}'>{$queryResult[0]}</option>";
+            }
 		}
 		
 		$classe = "col-sm-{$tamanho} margin-bottom-5 campo-fit-content";

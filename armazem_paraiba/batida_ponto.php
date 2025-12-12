@@ -1,11 +1,18 @@
 <?php
-    /* Modo debug{
+
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
-	//}*/
-	include "funcoes_ponto.php";
 
-	function cadastraPonto(){
+    include "funcoes_ponto.php";
+    include_once __DIR__."/check_permission.php";
+
+function cadastraPonto(){
+	//se nao tiver permisao na batida_ponto.php manda par ao index
+    if(function_exists('verificaPermissao')){ verificaPermissao('/batida_ponto.php');
+
+		
+
+	}
 		$hoje = date("Y-m-d");
 		try {
 			$motorista = mysqli_fetch_assoc(query(
@@ -121,7 +128,7 @@
 				document.addEventListener('DOMContentLoaded', function() {
 					if (window.__geoInitDone) { return; }
 					window.__geoInitDone = true;
-					setLocationState(false);
+					// setLocationState(false);
 					if(!triedLocation){
 						if (navigator.permissions && navigator.permissions.query){
 							navigator.permissions.query({ name: 'geolocation' }).then(function(res){
@@ -130,15 +137,16 @@
 										navigator.geolocation.getCurrentPosition(locationAllowed, locationDenied, { enableHighAccuracy: true });
 									}
 								}else{
-									showGeoPopup();
+									// showGeoPopup();
 								}
 							});
 						}else{
-							showGeoPopup();
+							// showGeoPopup();
 						}
 					}
 					triedLocation = true;
 				});
+				/*
 				function ensureSweetAlert(cb){
 					if (window.Swal){ cb(); return; }
 					var s = document.createElement('script');
@@ -177,13 +185,13 @@
 							allowOutsideClick: false,
 							allowEscapeKey: false,
 							preConfirm: function(){
-                            return requestGeo().then(function(pos){
-                                locationAllowed(pos);
-                            }).catch(function(err){
-                                Swal.showValidationMessage('Permita a localização no navegador para continuar');
-                                locationDenied(err);
-                                showPermissionHint(true);
-                            });
+							return requestGeo().then(function(pos){
+								locationAllowed(pos);
+							}).catch(function(err){
+								Swal.showValidationMessage('Permita a localização no navegador para continuar');
+								locationDenied(err);
+								showPermissionHint(true);
+							});
 							}
 						};
 						if (location.protocol !== 'https:' && location.hostname !== 'localhost'){
@@ -204,6 +212,7 @@
 						}
 					});
 				}
+				*/
                 
                 function setLocationState(allowed){
                     var warn = document.getElementById('location-warning');
@@ -226,13 +235,14 @@
 				function locationDenied(err) {
 					console.log('Erro ao obter localização: ', err);
 					setLocationState(false);
-					showPermissionHint(true);
+					// showPermissionHint(true);
 				}
 			</script>
 			";
 	}
 
-	function index() {
+function index() {
+    if(function_exists('verificaPermissao')){ verificaPermissao('/batida_ponto.php'); }
 		
 		global $CONTEX;
 		$hoje = date("Y-m-d");
