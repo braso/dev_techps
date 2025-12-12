@@ -128,7 +128,7 @@ function cadastraPonto(){
 				document.addEventListener('DOMContentLoaded', function() {
 					if (window.__geoInitDone) { return; }
 					window.__geoInitDone = true;
-					setLocationState(false);
+					// setLocationState(false);
 					if(!triedLocation){
 						if (navigator.permissions && navigator.permissions.query){
 							navigator.permissions.query({ name: 'geolocation' }).then(function(res){
@@ -137,15 +137,16 @@ function cadastraPonto(){
 										navigator.geolocation.getCurrentPosition(locationAllowed, locationDenied, { enableHighAccuracy: true });
 									}
 								}else{
-									showGeoPopup();
+									// showGeoPopup();
 								}
 							});
 						}else{
-							showGeoPopup();
+							// showGeoPopup();
 						}
 					}
 					triedLocation = true;
 				});
+				/*
 				function ensureSweetAlert(cb){
 					if (window.Swal){ cb(); return; }
 					var s = document.createElement('script');
@@ -184,13 +185,13 @@ function cadastraPonto(){
 							allowOutsideClick: false,
 							allowEscapeKey: false,
 							preConfirm: function(){
-                            return requestGeo().then(function(pos){
-                                locationAllowed(pos);
-                            }).catch(function(err){
-                                Swal.showValidationMessage('Permita a localização no navegador para continuar');
-                                locationDenied(err);
-                                showPermissionHint(true);
-                            });
+							return requestGeo().then(function(pos){
+								locationAllowed(pos);
+							}).catch(function(err){
+								Swal.showValidationMessage('Permita a localização no navegador para continuar');
+								locationDenied(err);
+								showPermissionHint(true);
+							});
 							}
 						};
 						if (location.protocol !== 'https:' && location.hostname !== 'localhost'){
@@ -211,6 +212,7 @@ function cadastraPonto(){
 						}
 					});
 				}
+				*/
                 
                 function setLocationState(allowed){
                     var warn = document.getElementById('location-warning');
@@ -233,7 +235,7 @@ function cadastraPonto(){
 				function locationDenied(err) {
 					console.log('Erro ao obter localização: ', err);
 					setLocationState(false);
-					showPermissionHint(true);
+					// showPermissionHint(true);
 				}
 			</script>
 			";
