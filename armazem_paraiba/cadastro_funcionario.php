@@ -1522,7 +1522,6 @@ function index(){
 	
             $queryBase = (
                 "SELECT ".implode(", ", array_values($gridFields))." FROM entidade"
-                    ." LEFT JOIN user ON enti_nb_id = user_nb_entidade"
                     ." JOIN empresa ON enti_nb_empresa = empr_nb_id"
                     ." LEFT JOIN grupos_documentos ON enti_setor_id = grup_nb_id"
                     ." LEFT JOIN sbgrupos_documentos subg ON enti_subSetor_id = subg.sbgr_nb_id"
