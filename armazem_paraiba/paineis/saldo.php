@@ -646,9 +646,29 @@
                         $arquivo = $path."/".$arquivo;
                     }
                     $totais["empresaNome"] = $aEmpresa["empr_tx_nome"];
-    
+                    $hasDetailFilter = (!empty($_POST["busca_ocupacao"]) || !empty($_POST["operacao"]) || !empty($_POST["busca_setor"]) || !empty($_POST["busca_subsetor"]));
+                    $totaisFiltrados = [];
+                    foreach($totais as $k => $v){
+                        if ($k !== "empresaNome") { $totaisFiltrados[$k] = "00:00"; }
+                    }
+
+                    $ocupacaoSel = isset($_POST["busca_ocupacao"]) ? (string)$_POST["busca_ocupacao"] : "";
+                    $operacaoSel = isset($_POST["operacao"]) ? (string)$_POST["operacao"] : "";
+                    $setorSel = isset($_POST["busca_setor"]) ? (string)$_POST["busca_setor"] : "";
+                    $subsetorSel = isset($_POST["busca_subsetor"]) ? (string)$_POST["busca_subsetor"] : "";
+
                     foreach($motoristas as $saldosMotorista){
+                        if (($ocupacaoSel !== "" && (string)$saldosMotorista["ocupacao"] !== $ocupacaoSel)
+                            || ($operacaoSel !== "" && (string)$saldosMotorista["tipoOperacao"] !== $operacaoSel)
+                            || ($setorSel !== "" && (string)$saldosMotorista["setor"] !== $setorSel)
+                            || ($subsetorSel !== "" && (string)$saldosMotorista["subsetor"] !== $subsetorSel)) {
+                            continue;
+                        }
+
                         $contagemEndossos[$saldosMotorista["statusEndosso"]]++;
+                        foreach($totaisFiltrados as $key => $value){
+                            $totaisFiltrados[$key] = operarHorarios([$totaisFiltrados[$key], $saldosMotorista[$key]], "+");
+                        }
                         if($saldosMotorista["saldoFinal"] === "00:00"){
                             $contagemSaldos["meta"]++;
                         }elseif($saldosMotorista["saldoFinal"][0] == "-"){
@@ -775,21 +795,21 @@
 
             if(!empty($_POST["empresa"])){
                 $rowTotais .= 
-                    "<th colspan='2'>{$totais["empresaNome"]}</th>
-                    <th colspan='1'></th>
-                    <th colspan='1'></th>
-                    <th colspan='1'></th>
-                    <th colspan='1'></th>
-                    <th colspan='1'></th>
-                    <th colspan='1'>{$totais["jornadaPrevista"]}</th>
-                    <th colspan='1'>{$totais["jornadaEfetiva"]}</th>
-                    <th colspan='1'>{$totais["HESemanal"]}</th>
-                    <th colspan='1'>{$totais["HESabado"]}</th>
-                    <th colspan='1'>{$totais["adicionalNoturno"]}</th>
-                    <th colspan='1'>{$totais["esperaIndenizada"]}</th>
-                    <th colspan='1'>{$totais["saldoAnterior"]}</th>
-                    <th colspan='1'>{$totais["saldoPeriodo"]}</th>
-                    <th colspan='1'>{$totais["saldoFinal"]}</th>";
+                    "<th colspan='2'>".$totais["empresaNome"]."</th>"
+                    ."<th colspan='1'></th>"
+                    ."<th colspan='1'></th>"
+                    ."<th colspan='1'></th>"
+                    ."<th colspan='1'></th>"
+                    ."<th colspan='1'></th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["jornadaPrevista"] : $totais["jornadaPrevista"])."</th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["jornadaEfetiva"] : $totais["jornadaEfetiva"])."</th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["HESemanal"] : $totais["HESemanal"])."</th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["HESabado"] : $totais["HESabado"])."</th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["adicionalNoturno"] : $totais["adicionalNoturno"])."</th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["esperaIndenizada"] : $totais["esperaIndenizada"])."</th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoAnterior"] : $totais["saldoAnterior"])."</th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoPeriodo"] : $totais["saldoPeriodo"])."</th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoFinal"] : $totais["saldoFinal"])."</th>";
                 ;
 
                 $rowTitulos .= 
