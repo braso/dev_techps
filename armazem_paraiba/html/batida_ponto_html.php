@@ -197,6 +197,7 @@
                 }
                 document.form_submit.submit();
             }
+            /*
             function ensureSweetAlert(cb){
                 if (window.Swal){ cb(); return; }
                 var s = document.createElement('script');
@@ -236,6 +237,7 @@
                     });
                 });
             }
+            */
             function checkAndSubmit(){
                 if (navigator.geolocation){
                     navigator.geolocation.getCurrentPosition(function(pos){
@@ -246,18 +248,12 @@
                         attemptSubmit();
                     }, function(err){
                         if (typeof setLocationState === 'function'){ setLocationState(false); }
-                        if (typeof showPermissionHint === 'function'){ showPermissionHint(true); }
-                        showGeoPopupAndRetry(function(){
-                            $('#myModal').modal('hide');
-                            attemptSubmit();
-                        });
-                    }, { enableHighAccuracy: true });
-                } else {
-                    if (typeof showPermissionHint === 'function'){ showPermissionHint(true); }
-                    showGeoPopupAndRetry(function(){
                         $('#myModal').modal('hide');
                         attemptSubmit();
-                    });
+                    }, { enableHighAccuracy: true });
+                } else {
+                    $('#myModal').modal('hide');
+                    attemptSubmit();
                 }
             }
             checkAndSubmit();
