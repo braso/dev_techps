@@ -1202,6 +1202,7 @@ function relatorio_nao_conformidade_juridica(int $idEmpresa) {
 	}
 
 	$totaisEmpr = [
+		"jornadaPrevista"        => 0,
 		"falta"                 => 0,
 		"jornadaEfetiva"        => 0,
 		"refeicao"              => 0,
@@ -1252,6 +1253,72 @@ function relatorio_nao_conformidade_juridica(int $idEmpresa) {
 	}
 
 	// sleep(1);
+	return;
+}
+
+function relatorio_nao_conformidade_juridica_todas() {
+	$periodoInicio = new DateTime($_POST["busca_dataMes"]."-01");
+	$hoje = new DateTime();
+	if ($periodoInicio->format("Y-m") === $hoje->format("Y-m")) {
+		$hoje->modify("-1 day");
+		$periodoFim = $hoje;
+	} else {
+		$periodoFim = new DateTime($periodoInicio->format("Y-m-t"));
+	}
+	$dir = ($_POST["busca_endossado"] == "endossado") ? "endossado" : "nao_endossado";
+	$empresas = mysqli_fetch_all(query(
+		"SELECT empr_nb_id FROM empresa WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome ASC;"
+	), MYSQLI_ASSOC);
+	foreach ($empresas as $empresa) {
+		relatorio_nao_conformidade_juridica((int)$empresa["empr_nb_id"]);
+	}
+	$totais = [
+		"falta"                 => 0,
+		"jornadaEfetiva"        => 0,
+		"refeicao"              => 0,
+		"espera"                => 0,
+		"descanso"              => 0,
+		"repouso"               => 0,
+		"jornada"               => 0,
+		"mdc"                   => 0,
+		"intersticioInferior"   => 0,
+		"intersticioSuperior"   => 0,
+		"diasConformidade"      => 0,
+		"refeicaoSemRegistro"   => 0,
+		"refeicao1h"            => 0,
+		"refeicao2h"            => 0,
+		"jornadaExcedido10h"    => 0,
+		"jornadaExcedido12h"    => 0,
+		"mdcDescanso30m"        => 0,
+		"mdcDescanso15m"        => 0,
+		"mdcDescanso30m5h"      => 0,
+		"dataInicio"            => $periodoInicio->format("d/m/Y"),
+		"dataFim"               => $periodoFim->format("d/m/Y")
+	];
+	foreach ($empresas as $empresa) {
+		$empresaId = (int)$empresa["empr_nb_id"];
+		$arquivo = "./arquivos/nao_conformidade_juridica/".$periodoInicio->format("Y-m")."/".$empresaId."/".$dir."/empresa_".$empresaId.".json";
+		if (!file_exists($arquivo)) {
+			continue;
+		}
+		$json = json_decode(file_get_contents($arquivo), true);
+		if (!is_array($json)) {
+			continue;
+		}
+		foreach ($totais as $key => $val) {
+			if (in_array($key, ["dataInicio", "dataFim"])) {
+				continue;
+			}
+			if (isset($json[$key]) && is_numeric($json[$key])) {
+				$totais[$key] += $json[$key];
+			}
+		}
+	}
+	$pathOut = "./arquivos/nao_conformidade_juridica/".$periodoInicio->format("Y-m")."/".$dir;
+	if (!is_dir($pathOut)) {
+		mkdir($pathOut, 0755, true);
+	}
+	file_put_contents($pathOut."/empresas.json", json_encode($totais, JSON_UNESCAPED_UNICODE));
 	return;
 }
 

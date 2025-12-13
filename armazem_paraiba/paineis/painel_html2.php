@@ -139,6 +139,104 @@
 						</div>
 					</div>
 				</div>
+				<div class="panel-group group1" id="accordionRanking">
+					<div class="panel panel-default">
+						<div class="panel-heading">
+							<h3 class="panel-title">
+								<a
+									data-toggle="collapse"
+									href="#collapseRanking"
+									aria-expanded="false"
+									aria-controls="collapseRanking"
+									class="collapsed">
+									<b>
+										Rankeamento
+									</b>
+								</a>
+							</h3>
+						</div>
+						<div id="collapseRanking" class="panel-collapse collapse">
+							<div class="panel-body">
+								<?php if (!empty($rankingCategorias) && array_sum($rankingValores) > 0) { ?>
+								<div class="row">
+									<div class="col-md-8">
+										<div id="graficoRanking" style="width:100%; height:400px;"></div>
+									</div>
+									<?php if (!empty($donutSubsetorLabels) && array_sum($donutSubsetorValues) > 0) { ?>
+									<div class="col-md-4">
+										<div id="graficoDonutSubsetor" style="width:100%; height:400px;"></div>
+									</div>
+									<?php } ?>
+								</div>
+								<div id="popup-ranking-info" class="popup" style="width:auto; max-width:min(90vw, 1100px); max-height:80vh; overflow:auto; padding:16px;">
+									<button class="popup-close">Fechar</button>
+									<h3>Como funciona o Rankeamento</h3>
+									<span>
+										O rankeamento vem das não conformidades, ordenado das menores para as maiores. O 1º lugar tem a melhor performance; os seguintes têm performances menores.
+									</span>
+									<br>
+									<h4>Base de cálculo</h4>
+									<span>
+										<?php
+											$tipoRank = ($_POST["ranking_type"] ?? "nao");
+											if ($tipoRank === "setor") {
+												echo "Performance por setor = 100 - ((Não conformidades do setor / Dias computados do setor) × 100).";
+											} elseif ($tipoRank === "funcionario") {
+												echo "Performance por funcionário = 100 - (média de percentuais de não conformidade do funcionário).";
+											} else {
+												echo "Selecione um tipo de rankeamento para ver o cálculo.";
+											}
+										?>
+									</span>
+									<br>
+									<h4>Top atual</h4>
+									<ol style="padding-left:16px; display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:10px; align-items:start; word-wrap:break-word;">
+										<?php
+											if (!empty($rankingCategorias) && !empty($rankingValores)) {
+												for($i=0; $i<count($rankingCategorias); $i++){
+													$pos = "º lugar";
+													$cat = htmlspecialchars((string)$rankingCategorias[$i], ENT_QUOTES, 'UTF-8');
+													$val = number_format((float)$rankingValores[$i], 2, '.', '');
+													echo "<li><b>{$pos}</b>: {$cat} — {$val}%</li>";
+												}
+											}
+										?>
+									</ol>
+								</div>
+								<?php if (!empty($donutSubsetorLabels) && array_sum($donutSubsetorValues) > 0) { ?>
+								<div id="popup-donut-info" class="popup" style="width:auto; max-width:min(90vw, 1100px); max-height:80vh; overflow:auto; padding:16px;">
+									<button class="popup-close">Fechar</button>
+									<h3>Subsetores</h3>
+									<span>Distribuição por subsetor considera total de não conformidades por subsetor.</span>
+									<br>
+									<span>Ordenado do menor para o maior (menor NC é melhor desempenho).</span>
+									<ol style="padding-left:16px; display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:10px; align-items:start; word-wrap:break-word;">
+										<?php
+											$subsetorPairs = [];
+											for($i=0; $i<count($donutSubsetorLabels); $i++){
+												$subsetorPairs[] = [
+													"label" => (string)$donutSubsetorLabels[$i],
+													"value" => (float)$donutSubsetorValues[$i]
+												];
+											}
+											usort($subsetorPairs, function($a, $b){ return $a["value"] <=> $b["value"]; });
+											for($i=0; $i<count($subsetorPairs); $i++){
+												$pos = ($i+1)."º lugar";
+												$cat = htmlspecialchars($subsetorPairs[$i]["label"], ENT_QUOTES, 'UTF-8');
+												$val = number_format((float)$subsetorPairs[$i]["value"], 0, '.', '');
+												echo "<li><b>{$pos}</b>: {$cat} — {$val} NC</li>";
+											}
+										?>
+									</ol>
+								</div>
+								<?php } ?>
+								<?php } else { ?>
+									<div id="rankingSemDados" class="text-muted" style="padding:8px;">Sem dados filtrados</div>
+								<?php } ?>
+							</div>
+						</div>
+					</div>
+				</div>
 				<div class="panel-group group2" id="accordion2">
 					<!-- Accordion Item -->
 					<div class="panel panel-default">
@@ -157,7 +255,7 @@
 							</h3>
 						</div>
 						<div id="collapse1" class="panel-collapse collapse">
-							<div class="panel-body">
+							<div class="panel-body" style="overflow: hidden;">
 								<table id="tabela-empresas" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
 									<thead>
 										<?= $rowTotais ?>
@@ -170,13 +268,34 @@
 										<?= $rowTotal ?>
 									</thead>
 								</table>
+                                <script>
+                                (function(){
+                                    var table = document.querySelector('#tabela-empresas');
+                                    if (!table) return;
+                                    table.querySelectorAll('select, [name="empresa"], #empresa').forEach(function(s){
+                                        var next = s.nextElementSibling;
+                                        if (next && (next.classList.contains('select2') || next.classList.contains('select2-container'))) {
+                                            next.remove();
+                                        }
+                                        s.remove();
+                                    });
+                                    table.querySelectorAll('.select2, .select2-container').forEach(function(el){
+                                        el.remove();
+                                    });
+                                    table.querySelectorAll('.select2-hidden-accessible').forEach(function(el){
+                                        el.classList.remove('select2-hidden-accessible');
+                                        el.removeAttribute('tabindex');
+                                        el.removeAttribute('aria-hidden');
+                                    });
+                                })();
+                                </script>
 							</div>
 						</div>
 					</div>
 				</div>
 			<?php } ?>
 			<?php if ($mostra === false || empty($mostra)) { ?>
-				<div class="table-responsive">
+				<div class="table-responsive" style="overflow: hidden;">
 					<table id="tabela-empresas" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
 						<thead>
 							<?= $rowTotais ?>
@@ -192,6 +311,34 @@
 					</table>
 				</div>
 			<?php } ?>
+            <script>
+            (function(){
+                var table = document.querySelector('#tabela-empresas');
+                if (!table) return;
+                var rect = table.getBoundingClientRect();
+                table.querySelectorAll('select').forEach(function(s){
+                    var next = s.nextElementSibling;
+                    if (next && (next.classList.contains('select2') || next.classList.contains('select2-container'))) {
+                        next.remove();
+                    }
+                    s.remove();
+                });
+                table.querySelectorAll('.select2, .select2-container').forEach(function(el){
+                    el.remove();
+                });
+                document.querySelectorAll('.select2-container').forEach(function(el){
+                    var r = el.getBoundingClientRect();
+                    if (r.right >= rect.left && r.left <= rect.right && r.bottom >= rect.top && r.top <= rect.bottom) {
+                        el.remove();
+                    }
+                });
+                table.querySelectorAll('.select2-hidden-accessible').forEach(function(el){
+                    el.classList.remove('select2-hidden-accessible');
+                    el.removeAttribute('tabindex');
+                    el.removeAttribute('aria-hidden');
+                });
+            })();
+            </script>
 
 		<?php if ($mostra === true) { ?>
 				<div class="panel-group group3" id="accordion3">
@@ -222,6 +369,7 @@
 			</div>
 		</div>
 				<?php } ?>
+		
 
 	<!-- <div id="impressao">
 		<b>Impressão Doc.:</b> <?= date("d/m/Y \T H:i:s")." (UTC-3)" ?>
@@ -520,6 +668,101 @@
 				}]
 			});
 
+			const rankingCategorias = <?= json_encode($rankingCategorias) ?>;
+			const rankingValores = <?= json_encode($rankingValores) ?>;
+			function renderRanking() {
+				if (!(Array.isArray(rankingCategorias) && rankingCategorias.length > 0 && document.getElementById('graficoRanking'))) return;
+				Highcharts.chart('graficoRanking', {
+					chart: { type: 'bar', backgroundColor: '#f9f9f9' },
+					title: {
+						useHTML: true,
+						text: '<?= $rankingTitulo ?> <span class="popup-title-icon" id="popup-icon-ranking">&#9432;</span>',
+						style: { fontSize: '20px' }
+					},
+					xAxis: {
+						categories: rankingCategorias,
+						title: { text: null },
+						labels: { style: { fontSize: '12px' } }
+					},
+					yAxis: {
+						min: 0,
+						max: 100,
+						title: { text: 'Porcentagem', style: { fontSize: '16px' } },
+						labels: { format: '{value}%', style: { fontSize: '11px' } },
+						tickInterval: 5,
+						gridLineWidth: 0
+					},
+					tooltip: {
+						pointFormatter: function () { return `<b>${this.y.toFixed(2)}%</b>`; },
+						style: { fontSize: '16px' }
+					},
+					plotOptions: {
+						bar: { dataLabels: { enabled: true, format: '{point.y:.2f}%', style: { fontSize: '14px' } } }
+					},
+					series: [{ name: 'Performance', data: rankingValores }]
+				});
+			}
+			const donutLabels = <?= json_encode($donutSubsetorLabels) ?>;
+			const donutValues = <?= json_encode($donutSubsetorValues) ?>;
+			function renderDonut() {
+				if (!(Array.isArray(donutLabels) && donutLabels.length > 0 && document.getElementById('graficoDonutSubsetor'))) return;
+				const donutData = donutLabels.map(function(name, idx){
+					return { name: name, y: Number(donutValues[idx] || 0) };
+				});
+				Highcharts.chart('graficoDonutSubsetor', {
+					chart: { type: 'pie', backgroundColor: '#f9f9f9' },
+					title: {
+						useHTML: true,
+						text: 'Distribuição por Subsetor <span class="popup-title-icon" id="popup-icon-donut">&#9432;</span>',
+						style: { fontSize: '20px' }
+					},
+					tooltip: { pointFormat: '<b>{point.name}</b>: {point.percentage:.1f}%' },
+					plotOptions: {
+						pie: {
+							innerSize: '55%',
+							allowPointSelect: true,
+							dataLabels: {
+								enabled: true,
+								format: '{point.name}: {point.percentage:.1f}%',
+								style: { fontSize: '12px' }
+							}
+						}
+					},
+					series: [{ name: 'Não Conformidades', data: donutData }]
+				});
+			}
+			$(function(){
+				var cr = $('#collapseRanking');
+				if (cr.length) {
+					cr.on('shown.bs.collapse', function(){
+						renderRanking();
+						renderDonut();
+					});
+				}
+				$(document).on('click', '#popup-icon-ranking', function(){
+					var $pop = $('#popup-ranking-info');
+					$pop.css({
+						position: 'fixed',
+						left: '50%',
+						top: '50%',
+						transform: 'translate(-50%, -50%)',
+						zIndex: 2000
+					}).fadeToggle(150);
+				});
+				$(document).on('click', '#popup-icon-donut', function(){
+					var $pop = $('#popup-donut-info');
+					$pop.css({
+						position: 'fixed',
+						left: '50%',
+						top: '50%',
+						transform: 'translate(-50%, -50%)',
+						zIndex: 2000
+					}).fadeToggle(150);
+				});
+				$(document).on('click', '.popup-close', function(){
+					$(this).closest('.popup').fadeOut(150);
+				});
+			});
 
 			var tabelaMotorista = $('#tabela-motorista tbody');
 			var tabelaMotoristaTotal = $('#tabela-motorista thead tr');

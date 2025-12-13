@@ -64,7 +64,7 @@
 								
 			";
 
-			$linha .= " linha = '<tr>'";
+			$linha .= " linha = '<tr style=\"'+(totalNaEndossado === 0 ? 'background-color: lightgreen;' : '')+'\">'";
 			$linha .= "+'<td>'+row.matricula+'</td>'
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
@@ -75,7 +75,7 @@
 						+'<td style=\"vertical-align: middle;\" class='+class1+'>'+(row.descanso === 0 ? '' : row.descanso )+'</td>'
 						+'<td style=\"vertical-align: middle;\" class='+class1+'>'+(row.repouso === 0 ? '' : row.repouso )+'</td>'
 						+'<td style=\"vertical-align: middle;\" class='+class1+'>'+(row.jornada === 0 ? '' : row.jornada )+'</td>'
-						+'<td style=\"vertical-align: middle;\" class='+class1+'>'+(row.falta === 0 ? '' : row.falta )+'</td>'
+						+'<td style=\"vertical-align: middle;\" class='+class1+'>'+(row.jornadaPrevista === 0 ? '' : row.jornadaPrevista )+'</td>'
 						+'<td style=\"vertical-align: middle;\" class='+class2+'>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
 						+'<td style=\"vertical-align: middle;\" class='+class2+'>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
 						+'<td style=\"vertical-align: middle;\" class='+class3+'>'+ (row.refeicao === 0 ? '' : row.refeicao) +'</td>'
@@ -129,14 +129,14 @@
 								
 			";
 			
-			$linha .= "linha = '<tr>'";
+			$linha .= "linha = '<tr style=\"'+(totalNaEndossado === 0 ? 'background-color: lightgreen;' : '')+'\">'";
 			$linha .= "+'<td>'+row.matricula+'</td>'
 						+'<td>'+row.nome+'</td>'
 						+'<td>'+row.ocupacao+'</td>'
 						+'<td>'+row.tipoOperacaoNome+'</td>'
 						+'<td>'+(row.setorNome?? '')+'</td>'
                     	+'<td>'+(row.subsetorNome?? '')+'</td>'
-						+'<td class='+class1+'>'+(row.falta === 0 ? '' : row.falta )+'</td>'
+						+'<td class='+class1+'>'+(row.jornadaPrevista === 0 ? '' : row.jornadaPrevista )+'</td>'
 						+'<td class='+class2+'>'+(row.jornadaEfetiva	=== 0 ? '' : row.jornadaEfetiva )+'</td>'
 						+'<td class='+class2+'>'+(row.mdc === 0 ? '' : row.mdc )+'</td>'
 						+'<td class='+class3+'>'+ (row.refeicao === 0 ? '' : row.refeicao) +'</td>'
@@ -146,6 +146,27 @@
 						+'<td class='+classeImpressao2+' style=\"'+corDeFundo2+'\">'+(100 - arrayPerformanceMedia[row.matricula]).toFixed(2)+' %</td>'
 						+'<td class='+classeImpressao+' style=\"'+corDeFundo+'\">'+(100 - arrayPerformanceBaixa[row.matricula]).toFixed(2)+' %</td>'
 					+'</tr>';";
+		} else {
+			
+			$linha = "
+				var empresaId = (urlArquivo.match(/\\/(\\d+)\\//) || [null,null])[1];
+				var nomeEmpresa = (window.EMPRESA_NOMES && empresaId) ? window.EMPRESA_NOMES[empresaId] : (empresaId || 'Empresa');
+				var rowStyle = (totalNaEndossado === 0 ? 'background-color: lightgreen;' : '');
+				linha = '<tr style=\"'+rowStyle+'\">'
+					+ '<td><a href=\"#\" style=\"text-decoration: none; color: black;\" onclick=\"setAndSubmit(' + empresaId + '); return false;\">' + nomeEmpresa + '</a></td>'
+					+ '<td class='+class1+'>' + (row.espera === 0 ? '' : row.espera) + '</td>'
+					+ '<td class='+class1+'>' + (row.descanso === 0 ? '' : row.descanso) + '</td>'
+					+ '<td class='+class1+'>' + (row.repouso === 0 ? '' : row.repouso) + '</td>'
+					+ '<td class='+class1+'>' + (row.jornada === 0 ? '' : row.jornada) + '</td>'
+					+ '<td class='+class1+'>' + (row.jornadaPrevista === 0 ? '' : (row.jornadaPrevista || 0)) + '</td>'
+					+ '<td class='+class2+'>' + (row.jornadaEfetiva === 0 ? '' : row.jornadaEfetiva) + '</td>'
+					+ '<td class='+class2+'>' + (row.mdc === 0 ? '' : row.mdc) + '</td>'
+					+ '<td class='+class3+'>' + (row.refeicao === 0 ? '' : row.refeicao) + '</td>'
+					+ '<td class='+class3+'>' + (row.intersticioInferior === 0 ? '' : row.intersticioInferior) + '</td>'
+					+ '<td class='+class3+'>' + (row.intersticioSuperior === 0 ? '' : row.intersticioSuperior) + '</td>'
+					+ '<td class='+class4+'>' + (totalNaEndossado) + '</td>'
+				+ '</tr>';
+			";
 		}
 
 		$carregarDados = "";
@@ -153,26 +174,40 @@
 			$carregarDados .= "carregarDados('".$arquivo. "');";
 			}
 
-		echo
-			"<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"]). "'>
-				<input type='hidden' name='acao'>
-				<input type='hidden' name='campoAcao'>
-				<input type='hidden' name='empresa'>
-				<input type='hidden' name='busca_dataMes'>
-				<input type='hidden' name='busca_dataInicio'>
-				<input type='hidden' name='busca_dataFim'>
-				<input type='hidden' name='busca_ocupacao'>
-				<input type='hidden' name='busca_data'>
-			</form>
-			<script>
-				function setAndSubmit(empresa){
-					document.myForm.acao.value = 'enviarForm()';
-					document.myForm.campoAcao.value = 'buscar';
-					document.myForm.empresa.value = empresa;
-					document.myForm.busca_dataMes.value = document.getElementById('busca_dataMes').value;
-					document.myForm.busca_ocupacao.value = document.querySelector('[name=\"busca_ocupacao\"]').value;
-					document.myForm.submit();
-				}
+			echo
+				"<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"]). "'>
+					<input type='hidden' name='acao'>
+					<input type='hidden' name='campoAcao'>
+					<input type='hidden' name='empresa'>
+					<input type='hidden' name='busca_dataMes'>
+					<input type='hidden' name='busca_dataInicio'>
+					<input type='hidden' name='busca_dataFim'>
+					<input type='hidden' name='busca_ocupacao'>
+					<input type='hidden' name='operacao'>
+					<input type='hidden' name='busca_setor'>
+					<input type='hidden' name='busca_subsetor'>
+					<input type='hidden' name='busca_endossado'>
+					<input type='hidden' name='reloadOnly'>
+					<input type='hidden' name='busca_data'>
+				</form>
+				<script>
+					function setAndSubmit(empresa){
+						document.myForm.acao.value = 'enviarForm';
+						document.myForm.campoAcao.value = 'buscar';
+						document.myForm.empresa.value = empresa;
+						document.myForm.busca_dataMes.value = document.getElementById('busca_dataMes').value;
+						document.myForm.busca_ocupacao.value = document.querySelector('[name=\"busca_ocupacao\"]').value;
+						var opEl = document.querySelector('[name=\"operacao\"]');
+						var setEl = document.querySelector('[name=\"busca_setor\"]');
+						var subEl = document.querySelector('[name=\"busca_subsetor\"]');
+						var endEl = document.querySelector('[name=\"busca_endossado\"]');
+						document.myForm.operacao.value = opEl ? opEl.value : '';
+						document.myForm.busca_setor.value = setEl ? setEl.value : '';
+						document.myForm.busca_subsetor.value = subEl ? subEl.value : '';
+						document.myForm.busca_endossado.value = endEl ? endEl.value : '';
+						document.myForm.reloadOnly.value = '';
+						document.myForm.submit();
+					}
 
 				function atualizarPainel(){
 					console.info(document.getElementById('busca_data').value);
@@ -237,7 +272,7 @@
 									class2 = 'highlighted';
 									class3 = 'highlighted';
 									class4 = 'highlighted';
-								} else{
+								} else {
 									class1 = 'baixaGravidade';
 									class2 = 'mediaGravidade';
 									class3 = 'altaGravidade';
@@ -334,33 +369,43 @@
                     });
                 //}
 
-				$(document).ready(function() {
-					// Obtém o botão
-					const button = document.getElementById('botaoContexBuscar');
+                $(document).ready(function() {
+                    // Obtém o botão
+                    const button = document.getElementById('botaoContexBuscar');
 
-					// Inicializa o select2 no campo 'empresa'
-					$('#empresa').select2();
+                    // Inicializa o select2 no campo 'empresa'
+                    $('#empresa').select2();
 
-					// Verifica se já há uma opção selecionada ao carregar a página
-					if ($('#empresa').val()) {
-						button.removeAttribute('disabled'); // Habilita o botão se houver um valor selecionado
-					} else {
-						button.setAttribute('disabled', true); // Desabilita se não houver
-					}
+                    function isAtualizar() {
+                        var campos = document.getElementsByName('campoAcao');
+                        return campos.length > 1 && campos[1].checked;
+                    }
 
-					// Escuta o evento 'select2:select' para capturar quando uma nova opção é selecionada
-					$('#empresa').on('select2:select', function(e) {
-						button.removeAttribute('disabled'); // Habilita o botão ao selecionar
-					});
+                    function toggleButtonState() {
+                        button.removeAttribute('disabled');
+                    }
 
-					// Escuta o evento 'select2:unselect' para capturar quando uma opção é desmarcada (se múltiplo)
-					$('#empresa').on('select2:unselect', function(e) {
-						button.setAttribute('disabled', true); // Desabilita o botão ao desmarcar
-					});
-				});
-			</script>"
-		;
-	}
+                    toggleButtonState();
+
+                    // Escuta o evento 'select2:select' para capturar quando uma nova opção é selecionada
+                    $('#empresa').on('select2:select', function(e) {
+                        toggleButtonState();
+                    });
+
+                    // Escuta o evento 'select2:unselect' para capturar quando uma opção é desmarcada (se múltiplo)
+                    $('#empresa').on('select2:unselect', function(e) {
+                        toggleButtonState();
+                    });
+
+                    var camposAcao = document.getElementsByName('campoAcao');
+                    if (camposAcao && camposAcao.length > 1) {
+                        camposAcao[0].addEventListener('change', toggleButtonState);
+                        camposAcao[1].addEventListener('change', toggleButtonState);
+                    }
+                });
+            </script>"
+        ;
+    }
 
     function index() {
         include __DIR__.'/../check_permission.php';
@@ -406,17 +451,16 @@
 				unset($_POST["acao"]);
 				set_status("ERRO: Não é possível atualizar após a data atual.");
 			} else {
-				require_once "funcoes_paineis.php";
-				// $tempoInicio = microtime(true);
-				relatorio_nao_conformidade_juridica($_POST["empresa"]);
-				// $tempoFim = microtime(true);
-				// $tempoExecucao = $tempoFim - $tempoInicio;
-				// $tempoExecucaoMinutos = $tempoExecucao / 60;
-				// echo "Tempo de execução: " . number_format($tempoExecucaoMinutos, 4) . " minutos";
-			}
-		} else {
-			cabecalho("Relatório de Não Conformidade Jurídica Atualizado");
-		}
+                require_once "funcoes_paineis.php";
+                if (empty($_POST["empresa"])) {
+                    relatorio_nao_conformidade_juridica_todas();
+                } else {
+                    relatorio_nao_conformidade_juridica(intval($_POST["empresa"]));
+                }
+            }
+        } else {
+            cabecalho("Relatório de Não Conformidade Jurídica Atualizado");
+        }
 
 	// $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
 	//position: absolute; top: 101px; left: 420px;
@@ -470,6 +514,8 @@
 			$campos[] = combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC");
 		}
 		$campos[] = combo("Tipo",	"busca_endossado", (!empty($_POST["busca_endossado"]) ? $_POST["busca_endossado"] : ""), 2, ["naoEndossado" => "Atualizado","endossado" => "Pós-fechamento", "semAjustes"=>"Sem ajuste"]);
+		$campos[] = combo("Rankeamento", "ranking_type", ($_POST["ranking_type"] ?? "nao"), 2, ["nao" => "Não", "setor" => "Por Setor", "funcionario" => "Por Funcionário"]);
+		$campos[] = combo("Limite Rank TOP", "ranking_limit", (string)($_POST["ranking_limit"] ?? "20"), 2, ["10" => "10", "20" => "20", "50" => "50", "100" => "100", "todos" => "Todos"]);
 
 		$botao_volta = "";
 		if (!empty($_POST["empresa"])) {
@@ -479,7 +525,7 @@
 		$botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados()'>Imprimir</button>";
 
 		$buttons = [
-			botao("Buscar", "enviarForm()", "", "", "", "", "btn btn-info"),
+			botao("Buscar", "enviarForm", "", "", "", "", "btn btn-info"),
 			$botao_imprimir,
 			$botao_volta
 		];
@@ -495,6 +541,11 @@
 		$dataEmissao = ""; //Utilizado no HTML
 		$path = "./arquivos/nao_conformidade_juridica";
 		$periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
+		$rankingCategorias = [];
+		$rankingValores = [];
+		$rankingTitulo = "";
+		$donutSubsetorLabels = [];
+		$donutSubsetorValues = [];
 
 		$totais = [
 			"jornadaSemRegistro" => 0,
@@ -510,10 +561,25 @@
 			"intersticio" => 0
 		];
 
-		$periodoRelatorio = [
-			"dataInicio" => "1900-01-01",
-			"dataFim" => "1900-01-01"
-		];
+        $periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
+        if (!empty($_POST["busca_dataMes"])) {
+            try {
+                $periodoInicio = new DateTime($_POST["busca_dataMes"]."-01");
+                $hoje = new DateTime();
+                if ($periodoInicio->format("Y-m") === $hoje->format("Y-m")) {
+                    $hoje->modify("-1 day");
+                    $periodoFim = $hoje;
+                } else {
+                    $periodoFim = new DateTime($periodoInicio->format("Y-m-t"));
+                }
+                $periodoRelatorio = [
+                    "dataInicio" => $periodoInicio->format("d/m/Y"),
+                    "dataFim" => $periodoFim->format("d/m/Y")
+                ];
+            } catch (Exception $e) {
+                $periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
+            }
+        }
 
 		if (!empty($_POST["empresa"]) && !empty($_POST["busca_dataMes"]) && empty($_POST["reloadOnly"])) {
 			//Painel dos endossos dos motoristas de uma empresa específica
@@ -571,12 +637,19 @@
 				$totaisFuncionario = [];
 				$totaisFuncionario2 = [];
                 $totaisMediaFuncionario = [];
-                $ocupacoesPermitidas = $_POST['busca_ocupacao'];
-                $operacaoSel = (string)($_POST['operacao'] ?? '');
-                $setorSel = (string)($_POST['busca_setor'] ?? '');
-                $subsetorSel = (string)($_POST['busca_subsetor'] ?? '');
-                $arquivosConsiderados = 0;
-                $mediaPerfTotal = 0;
+				$totalizadores["jornadaPrevista"] = 0;
+				$ocupacoesPermitidas = $_POST['busca_ocupacao'];
+				$operacaoSel = (string)($_POST['operacao'] ?? '');
+				$setorSel = (string)($_POST['busca_setor'] ?? '');
+				$subsetorSel = (string)($_POST['busca_subsetor'] ?? '');
+				$arquivosConsiderados = 0;
+				$mediaPerfTotal = 0;
+				$funcionarioNomes = [];
+				$rankingSetorDias = [];
+				$rankingSetorNC = [];
+				$rankingSetorNome = [];
+				$donutSubsetorAgg = [];
+				$donutSubsetorNome = [];
 				foreach ($arquivos as &$arquivo) {
 					$todosZeros = true;
 					$arquivo = $path."/".$arquivo;
@@ -614,6 +687,14 @@
 					$mediaPerfTotal= 100 - $mediaPerfTotal;
 
 					$totaisMediaFuncionario[$json["matricula"]] = $mediaPerfFuncionario;
+					$funcionarioNomes[$json["matricula"]] = $json["nome"] ?? (string)$json["matricula"];
+					$sid = (string)($json["setor"] ?? "");
+					$rankingSetorDias[$sid] = ($rankingSetorDias[$sid] ?? 0) + (int)$dias;
+					$rankingSetorNC[$sid] = ($rankingSetorNC[$sid] ?? 0) + (int)($json["diasConformidade"] ?? 0);
+					$rankingSetorNome[$sid] = (!empty($json["setorNome"]) ? $json["setorNome"] : ($sid !== "" ? $sid : "Sem Setor"));
+					$suid = (string)($json["subsetor"] ?? "");
+					$donutSubsetorAgg[$suid] = ($donutSubsetorAgg[$suid] ?? 0) + (int)$totalMotorista;
+					$donutSubsetorNome[$suid] = (!empty($json["subsetorNome"]) ? $json["subsetorNome"] : ($suid !== "" ? $suid : "Sem Subsetor"));
 
 					$totalNConformMax = 4 * $dias;
 					// Baixar performance total
@@ -657,6 +738,49 @@
                 $totalFun = max($arquivosConsiderados - $totalJsonComTudoZero, 0);
 				$porcentagemTotalBaixaG = 100 - $porcentagemTotalBaixa;
 				$porcentagemTotalBaixa2= (array) $totaisFuncionario2;
+				if (!empty($_POST["ranking_type"]) && $_POST["ranking_type"] !== "nao") {
+					if ($_POST["ranking_type"] === "funcionario") {
+						$pairs = [];
+						foreach ($totaisMediaFuncionario as $mat => $val) {
+							$perf = max(0, min(100, 100 - (float)$val));
+							$label = $funcionarioNomes[$mat] ?? (string)$mat;
+							$pairs[] = ["label" => $label, "value" => round($perf, 2)];
+						}
+						usort($pairs, function($a, $b){ return $b["value"] <=> $a["value"]; });
+						$rankingLimit = (string)($_POST["ranking_limit"] ?? "20");
+						if ($rankingLimit !== "todos") {
+							$pairs = array_slice($pairs, 0, max(intval($rankingLimit), 1));
+						}
+						foreach ($pairs as $p) {
+							$rankingCategorias[] = $p["label"];
+							$rankingValores[] = $p["value"];
+						}
+						$rankingTitulo = "Ranking de Performance por Funcionário";
+					} elseif ($_POST["ranking_type"] === "setor") {
+						$pairs = [];
+						foreach ($rankingSetorDias as $sid => $diasTot) {
+							$ncTot = $rankingSetorNC[$sid] ?? 0;
+							$perf = ($diasTot > 0) ? (100 - (($ncTot / $diasTot) * 100)) : 0;
+							$perf = max(0, min(100, round($perf, 2)));
+							$label = $rankingSetorNome[$sid] ?? ($sid !== "" ? $sid : "Sem Setor");
+							$pairs[] = ["label" => $label, "value" => $perf];
+						}
+						usort($pairs, function($a, $b){ return $b["value"] <=> $a["value"]; });
+						$rankingLimit = (string)($_POST["ranking_limit"] ?? "20");
+						if ($rankingLimit !== "todos") {
+							$pairs = array_slice($pairs, 0, max(intval($rankingLimit), 1));
+						}
+						foreach ($pairs as $p) {
+							$rankingCategorias[] = $p["label"];
+							$rankingValores[] = $p["value"];
+						}
+						$rankingTitulo = "Ranking de Performance por Setor";
+						foreach ($donutSubsetorAgg as $suid => $val) {
+							$donutSubsetorLabels[] = $donutSubsetorNome[$suid] ?? ($suid !== "" ? $suid : "Sem Subsetor");
+							$donutSubsetorValues[] = (int)$val;
+						}
+					}
+				}
 
 				if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado"){
 					$totalNaoconformidade = array_sum([
@@ -850,35 +974,283 @@
 				$encontrado = false;
 			}
 		} 
+		elseif (empty($_POST["empresa"]) && !empty($_POST["busca_dataMes"]) && empty($_POST["reloadOnly"])) {
+			$dirTipo = ($_POST["busca_endossado"] === "naoEndossado") ? "nao_endossado" : "endossado";
+			$baseMes = $path."/".$_POST["busca_dataMes"];
+			$aggFile = $baseMes."/".$dirTipo."/empresas.json";
+			$empresaNomes = [];
+			if (is_dir($baseMes)) {
+				$dh = dir($baseMes);
+				while (($ent = $dh->read()) !== false) {
+					if ($ent === "." || $ent === "..") { continue; }
+					if (!ctype_digit($ent)) { continue; }
+					$empresaId = intval($ent);
+					$empFile = $baseMes."/".$empresaId."/".$dirTipo."/empresa_".$empresaId.".json";
+					if (file_exists($empFile)) {
+						$arquivos[] = $empFile;
+						$re = mysqli_fetch_assoc(query("SELECT empr_tx_nome FROM empresa WHERE empr_nb_id = ".$empresaId." LIMIT 1;"));
+						$empresaNomes[$empresaId] = (!empty($re["empr_tx_nome"]) ? $re["empr_tx_nome"] : ("Empresa ".$empresaId));
+					}
+				}
+				$dh->close();
+			}
+			if (file_exists($aggFile)) {
+				$arquivoGeral = json_decode(file_get_contents($aggFile), true);
+				$dataEmissao = " Atualizado em: ".date("d/m/Y H:i", filemtime($aggFile));
+				$periodoRelatorio = [
+					"dataInicio" => $arquivoGeral["dataInicio"] ?? "",
+					"dataFim" => $arquivoGeral["dataFim"] ?? ""
+				];
+				$totalizadores = [
+					"espera" => (int)($arquivoGeral["espera"] ?? 0),
+					"descanso" => (int)($arquivoGeral["descanso"] ?? 0),
+					"repouso" => (int)($arquivoGeral["repouso"] ?? 0),
+					"jornada" => (int)($arquivoGeral["jornada"] ?? 0),
+					"falta" => (int)($arquivoGeral["falta"] ?? 0),
+					"jornadaEfetiva" => (int)($arquivoGeral["jornadaEfetiva"] ?? 0),
+					"mdc" => (int)($arquivoGeral["mdc"] ?? 0),
+					"refeicao" => (int)($arquivoGeral["refeicao"] ?? 0),
+					"intersticioInferior" => (int)($arquivoGeral["intersticioInferior"] ?? 0),
+					"intersticioSuperior" => (int)($arquivoGeral["intersticioSuperior"] ?? 0),
+				];
+				$totalGeral = array_sum($totalizadores);
+                $gravidadeAlta = $totalizadores["refeicao"] + $totalizadores["intersticioInferior"] + $totalizadores["intersticioSuperior"];
+                $gravidadeMedia = $totalizadores["jornadaEfetiva"] + $totalizadores["mdc"];
+                $gravidadeBaixa = $totalizadores["falta"] + $totalizadores["espera"] + $totalizadores["descanso"] + $totalizadores["repouso"] + $totalizadores["jornada"];
+                $percentuais = [
+                    "alta" => $totalGeral > 0 ? round(($gravidadeAlta / $totalGeral) * 100, 2) : 0,
+                    "media" => $totalGeral > 0 ? round(($gravidadeMedia / $totalGeral) * 100, 2) : 0,
+                    "baixa" => $totalGeral > 0 ? round(($gravidadeBaixa / $totalGeral) * 100, 2) : 0,
+                ];
+                $totalizadores["faltaJustificada"] = (int)($totalizadores["faltaJustificada"] ?? 0);
+                $totalizadores["jornadaExcedido10h"] = (int)($totalizadores["jornadaExcedido10h"] ?? 0);
+                $totalizadores["jornadaExcedido12h"] = (int)($totalizadores["jornadaExcedido12h"] ?? 0);
+                $totalizadores["mdcDescanso30m5h"] = (int)($totalizadores["mdcDescanso30m5h"] ?? 0);
+                $totalizadores["refeicaoSemRegistro"] = (int)($totalizadores["refeicaoSemRegistro"] ?? 0);
+                $totalizadores["refeicao1h"] = (int)($totalizadores["refeicao1h"] ?? 0);
+                $totalizadores["refeicao2h"] = (int)($totalizadores["refeicao2h"] ?? 0);
+                $arrayTitulos = ['Espera', 'Descanso', 'Repouso', 'Jornada', 'Jornada Prevista', 'Jornada Efetiva', 'MDC', 'Refeição', 'Interstício Inferior', 'Interstício Superior'];
+                $arrayTitulos2 = [
+                    'Início ou Fim de espera sem registro',
+                    'Início ou Fim de repouso sem registro',
+                    'Inicio ou Fim de repouso sem registro',
+                    'Início ou fim de jornada sem registro',
+                    'Faltas justificadas',
+                    'Faltas não justificadas',
+                    'Tempo excedido de 10:00h de jornada efetiva',
+                    'Tempo excedido de 12:00h de jornada efetiva',
+                    'Descanso de 30 minutos a cada 05:30 de direção não respeitado.',
+                    'Batida de início ou fim de refeição não registrada',
+                    'Refeição ininterrupta maior que 1 hora não respeitada',
+                    'Tempo máximo de 2 horas para a refeição não respeitado',
+                    'O mínimo de 11 horas de interstício não foi respeitado',
+                    'Interstício total de 11 horas não respeitado'
+                ];
+                $coresGrafico = ['#FFE800' ,'#FFE800' ,'#FFE800','#FFE800','#FFE800', '#FF8B00', '#FF8B00', '#a30000', '#a30000', '#a30000'];
+                $coresGrafico2 = [
+                    '#FFE000', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FF8B00', '#FF8B00',
+                    '#FF8B00', '#ff0404', '#ff0404', '#ff0404', '#ff0404', '#ff0404', '#ff0404'
+                ];
+                $keys = ["espera", "descanso", "repouso", "jornada", "falta", "jornadaEfetiva", "mdc", "refeicao", "intersticioInferior", "intersticioSuperior"];
+                $keys2 = ["espera", "descanso", "repouso", "jornada", "faltaJustificada", "falta","jornadaExcedido10h", "jornadaExcedido12h",
+                    "mdcDescanso30m5h", "refeicaoSemRegistro", "refeicao1h", "refeicao2h", "intersticioInferior", "intersticioSuperior"];
+                $graficoAnalitico = array_map(function($k) use ($totalizadores){ return (int)($totalizadores[$k] ?? 0); }, $keys);
+                $graficoDetalhado = array_map(function($k) use ($totalizadores){ return (int)($totalizadores[$k] ?? 0); }, $keys2);
+                $graficoSintetico = [$gravidadeAlta, $gravidadeMedia, $gravidadeBaixa];
+                if (!isset($motoristas)) { $motoristas = 0; }
+                if (!isset($ajudante)) { $ajudante = 0; }
+                if (!isset($funcionario)) { $funcionario = 0; }
+                if (!isset($totalJsonComTudoZero)) { $totalJsonComTudoZero = 0; }
+                if (!isset($porcentagemFun)) { $porcentagemFun = 0; }
+                if (!isset($mediaPerfTotal)) { $mediaPerfTotal = 0; }
+                if (!isset($porcentagemTotalMedia)) { $porcentagemTotalMedia = 0; }
+                $totalFun = 0;
+				$rowTotais = "<tr class='totais'>"
+					. "<th colspan='1'></th>"
+					. "<th colspan='1'>".$totalizadores["espera"]."</th>"
+					. "<th colspan='1'>".$totalizadores["descanso"]."</th>"
+					. "<th colspan='1'>".$totalizadores["repouso"]."</th>"
+					. "<th colspan='1'>".$totalizadores["jornada"]."</th>"
+					. "<th colspan='1'>".$totalizadores["falta"]."</th>"
+					. "<th colspan='1'>".$totalizadores["jornadaEfetiva"]."</th>"
+					. "<th colspan='1'>".$totalizadores["mdc"]."</th>"
+					. "<th colspan='1'>".$totalizadores["refeicao"]."</th>"
+					. "<th colspan='1'>".$totalizadores["intersticioInferior"]."</th>"
+					. "<th colspan='1'>".$totalizadores["intersticioSuperior"]."</th>"
+					. "<th colspan='1'>".$totalGeral."</th>";
+				$encontrado = true;
+			} else {
+				$totalizadores = [
+					"espera" => 0,
+					"descanso" => 0,
+					"repouso" => 0,
+					"jornada" => 0,
+					"falta" => 0,
+					"jornadaEfetiva" => 0,
+					"mdc" => 0,
+					"refeicao" => 0,
+					"intersticioInferior" => 0,
+					"intersticioSuperior" => 0,
+				];
+				$diasConformidadeTotal = 0;
+				$totalJsonComTudoZero = 0;
+				foreach ($arquivos as $file) {
+					$j = json_decode(@file_get_contents($file), true);
+					if (!is_array($j)) { continue; }
+					$totalizadores["espera"] += (int)($j["espera"] ?? 0);
+					$totalizadores["descanso"] += (int)($j["descanso"] ?? 0);
+					$totalizadores["repouso"] += (int)($j["repouso"] ?? 0);
+					$totalizadores["jornada"] += (int)($j["jornada"] ?? 0);
+					$totalizadores["falta"] += (int)($j["falta"] ?? 0);
+					$totalizadores["jornadaEfetiva"] += (int)($j["jornadaEfetiva"] ?? 0);
+					$totalizadores["mdc"] += (int)($j["mdc"] ?? 0);
+					$totalizadores["refeicao"] += (int)($j["refeicao"] ?? 0);
+					$totalizadores["intersticioInferior"] += (int)($j["intersticioInferior"] ?? 0);
+					$totalizadores["intersticioSuperior"] += (int)($j["intersticioSuperior"] ?? 0);
+					$diasConformidadeTotal += (int)($j["diasConformidade"] ?? 0);
+					$sumNC = 
+						(int)($j["espera"] ?? 0) + (int)($j["descanso"] ?? 0) + (int)($j["repouso"] ?? 0) + (int)($j["jornada"] ?? 0)
+						+ (int)($j["falta"] ?? 0) + (int)($j["jornadaEfetiva"] ?? 0) + (int)($j["mdc"] ?? 0) + (int)($j["refeicao"] ?? 0)
+						+ (int)($j["intersticioInferior"] ?? 0) + (int)($j["intersticioSuperior"] ?? 0);
+					if ($sumNC === 0) { $totalJsonComTudoZero++; }
+				}
+				$totalizadores["faltaJustificada"] = (int)($totalizadores["faltaJustificada"] ?? 0);
+				$totalizadores["jornadaExcedido10h"] = (int)($totalizadores["jornadaExcedido10h"] ?? 0);
+				$totalizadores["jornadaExcedido12h"] = (int)($totalizadores["jornadaExcedido12h"] ?? 0);
+				$totalizadores["mdcDescanso30m5h"] = (int)($totalizadores["mdcDescanso30m5h"] ?? 0);
+				$totalizadores["refeicaoSemRegistro"] = (int)($totalizadores["refeicaoSemRegistro"] ?? 0);
+				$totalizadores["refeicao1h"] = (int)($totalizadores["refeicao1h"] ?? 0);
+				$totalizadores["refeicao2h"] = (int)($totalizadores["refeicao2h"] ?? 0);
+				$arrayTitulos = ['Espera', 'Descanso', 'Repouso', 'Jornada', 'Jornada Prevista', 'Jornada Efetiva', 'MDC', 'Refeição', 'Interstício Inferior', 'Interstício Superior'];
+				$arrayTitulos2 = [
+					'Início ou Fim de espera sem registro',
+					'Início ou Fim de repouso sem registro',
+					'Inicio ou Fim de repouso sem registro',
+					'Início ou fim de jornada sem registro',
+					'Faltas justificadas',
+					'Faltas não justificadas',
+					'Tempo excedido de 10:00h de jornada efetiva',
+					'Tempo excedido de 12:00h de jornada efetiva',
+					'Descanso de 30 minutos a cada 05:30 de direção não respeitado.',
+					'Batida de início ou fim de refeição não registrada',
+					'Refeição ininterrupta maior que 1 hora não respeitada',
+					'Tempo máximo de 2 horas para a refeição não respeitado',
+					'O mínimo de 11 horas de interstício não foi respeitado',
+					'Interstício total de 11 horas não respeitado'
+				];
+				$coresGrafico = ['#FFE800' ,'#FFE800' ,'#FFE800','#FFE800','#FFE800', '#FF8B00', '#FF8B00', '#a30000', '#a30000', '#a30000'];
+				$coresGrafico2 = [
+					'#FFE000', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FFE800', '#FF8B00', '#FF8B00',
+					'#FF8B00', '#ff0404', '#ff0404', '#ff0404', '#ff0404', '#ff0404', '#ff0404'
+				];
+				$keys = ["espera", "descanso", "repouso", "jornada", "falta", "jornadaEfetiva", "mdc", "refeicao", "intersticioInferior", "intersticioSuperior"];
+				$keys2 = ["espera", "descanso", "repouso", "jornada", "faltaJustificada", "falta","jornadaExcedido10h", "jornadaExcedido12h",
+					"mdcDescanso30m5h", "refeicaoSemRegistro", "refeicao1h", "refeicao2h", "intersticioInferior", "intersticioSuperior"];
+				$totalGeral = array_sum($totalizadores);
+				$gravidadeAlta = $totalizadores["refeicao"] + $totalizadores["intersticioInferior"] + $totalizadores["intersticioSuperior"];
+				$gravidadeMedia = $totalizadores["jornadaEfetiva"] + $totalizadores["mdc"];
+				$gravidadeBaixa = $totalizadores["falta"] + $totalizadores["espera"] + $totalizadores["descanso"] + $totalizadores["repouso"] + $totalizadores["jornada"];
+				$percentuais = [
+					"alta" => $totalGeral > 0 ? round(($gravidadeAlta / $totalGeral) * 100, 2) : 0,
+					"media" => $totalGeral > 0 ? round(($gravidadeMedia / $totalGeral) * 100, 2) : 0,
+					"baixa" => $totalGeral > 0 ? round(($gravidadeBaixa / $totalGeral) * 100, 2) : 0,
+				];
+				$graficoAnalitico = array_map(function($k) use ($totalizadores){ return (int)($totalizadores[$k] ?? 0); }, $keys);
+				$graficoDetalhado = array_map(function($k) use ($totalizadores){ return (int)($totalizadores[$k] ?? 0); }, $keys2);
+				$graficoSintetico = [$gravidadeAlta, $gravidadeMedia, $gravidadeBaixa];
+				if (!isset($motoristas)) { $motoristas = 0; }
+				if (!isset($ajudante)) { $ajudante = 0; }
+				if (!isset($funcionario)) { $funcionario = 0; }
+				$diasMesRef = (int)date('t', strtotime((!empty($_POST['busca_dataMes']) ? $_POST['busca_dataMes'] : date('Y-m')).'-01'));
+				$denEmpresas = max(count($arquivos), 1);
+				$denAtivos = $denEmpresas;
+				$porcentagemFun = ($denAtivos > 0) ? (($totalJsonComTudoZero / $denAtivos) * 100) : 0;
+				$porcentagemTotalBaixa = $percentuais["baixa"];
+				$porcentagemTotalBaixaG = 100 - $porcentagemTotalBaixa;
+				$totalFun = 0;
+				if (empty($_POST["busca_ocupacao"])) {
+					$r = mysqli_fetch_all(query("SELECT enti_tx_ocupacao AS o, COUNT(*) AS c FROM entidade WHERE enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista','Ajudante','Funcionário') GROUP BY enti_tx_ocupacao;"), MYSQLI_ASSOC);
+					foreach ($r as $row) {
+						if ($row["o"] === "Motorista") { $motoristas = (int)$row["c"]; }
+						if ($row["o"] === "Ajudante") { $ajudante = (int)$row["c"]; }
+						if ($row["o"] === "Funcionário") { $funcionario = (int)$row["c"]; }
+					}
+				} else {
+					$o = mysqli_fetch_array(query("SELECT COUNT(*) FROM entidade WHERE enti_tx_status = 'ativo' AND enti_tx_ocupacao = '".mysqli_real_escape_string($GLOBALS["con"], $_POST["busca_ocupacao"])."';"));
+					if ($_POST["busca_ocupacao"] === "Motorista") { $motoristas = (int)$o[0]; }
+					if ($_POST["busca_ocupacao"] === "Ajudante") { $ajudante = (int)$o[0]; }
+					if ($_POST["busca_ocupacao"] === "Funcionário") { $funcionario = (int)$o[0]; }
+				}
+				$totalFun = $motoristas + $ajudante + $funcionario;
+				$denEmpresa = ($diasMesRef * max($totalFun, 1));
+				$percentual = ($denEmpresa > 0) ? (($diasConformidadeTotal / $denEmpresa) * 100) : 0;
+				$percentualConformidade = 100 - $percentual;
+				$porcentagemTotalMedia = round($percentualConformidade, 2);
+				if ($porcentagemTotalMedia < 0) { $porcentagemTotalMedia = 0; }
+				if ($porcentagemTotalMedia > 100) { $porcentagemTotalMedia = 100; }
+				$mediaPerfTotal = $porcentagemTotalMedia;
+				$rowTotais = "<tr class='totais'>"
+					. "<th colspan='1'></th>"
+					. "<th colspan='1'>".$totalizadores["espera"]."</th>"
+					. "<th colspan='1'>".$totalizadores["descanso"]."</th>"
+					. "<th colspan='1'>".$totalizadores["repouso"]."</th>"
+					. "<th colspan='1'>".$totalizadores["jornada"]."</th>"
+					. "<th colspan='1'>".$totalizadores["falta"]."</th>"
+					. "<th colspan='1'>".$totalizadores["jornadaEfetiva"]."</th>"
+					. "<th colspan='1'>".$totalizadores["mdc"]."</th>"
+					. "<th colspan='1'>".$totalizadores["refeicao"]."</th>"
+					. "<th colspan='1'>".$totalizadores["intersticioInferior"]."</th>"
+					. "<th colspan='1'>".$totalizadores["intersticioSuperior"]."</th>"
+					. "<th colspan='1'>".$totalGeral."</th>";
+				$encontrado = (count($arquivos) > 0);
+			}
+			echo "<script>window.EMPRESA_NOMES = ".json_encode($empresaNomes, JSON_UNESCAPED_UNICODE).";</script>";
+           
+		}
 
 		if ($encontrado) {
 			$hasDetailFilter = (!empty($_POST["busca_ocupacao"]) || !empty($_POST["operacao"]) || !empty($_POST["busca_setor"]) || !empty($_POST["busca_subsetor"]));
-			if ( $_POST["busca_endossado"] !== "endossado") {
-				$totalRow = "<td>".($hasDetailFilter ? $totalizadores["espera"] : $totalempre["espera"])."</td>
-					<td class='total'>".($hasDetailFilter ? $totalizadores["descanso"] : $totalempre["descanso"])."</td>
-					<td class='total'>".($hasDetailFilter ? $totalizadores["repouso"] : $totalempre["repouso"])."</td>
-					<td class='total'>".($hasDetailFilter ? $totalizadores["jornada"] : $totalempre["jornada"])."</td>";
+			if (!empty($_POST["empresa"])) {
+				if ( $_POST["busca_endossado"] !== "endossado") {
+					$totalRow = "<td>".($hasDetailFilter ? $totalizadores["espera"] : $totalempre["espera"])."</td>
+						<td class='total'>".($hasDetailFilter ? $totalizadores["descanso"] : $totalempre["descanso"])."</td>
+						<td class='total'>".($hasDetailFilter ? $totalizadores["repouso"] : $totalempre["repouso"])."</td>
+						<td class='total'>".($hasDetailFilter ? $totalizadores["jornada"] : $totalempre["jornada"])."</td>
+						<td class='total'>".($hasDetailFilter ? ($totalizadores["jornadaPrevista"] ?? 0) : ($totalempre["jornadaPrevista"] ?? 0))."</td>";
+				}
+				
+				$totalBaixaPerformance = 100 - array_sum($totaisFuncionario);
+				$totalMediaPerformance = $mediaPerfTotal;
+				$rowTotal = "<td></td>
+						<td></td>
+						<td></td>
+						<td></td>
+						<td></td>
+						<td>Total</td>
+						$totalRow 
+						<td class='total'>".($hasDetailFilter ? $totalizadores["jornadaEfetiva"] : $totalempre["jornadaEfetiva"])."</td>
+						<td class='total'>".($hasDetailFilter ? $totalizadores["mdc"] : $totalempre["mdc"])."</td>
+						<td class='total'>".($hasDetailFilter ? $totalizadores["refeicao"] : $totalempre["refeicao"])."</td>
+						<td class='total'>".($hasDetailFilter ? $totalizadores["intersticioInferior"] : $totalempre["intersticioInferior"])."</td>
+						<td class='total'>".($hasDetailFilter ? $totalizadores["intersticioSuperior"] : $totalempre["intersticioSuperior"])."</td>
+						<td class='total'>$totalGeral</td>
+						<td class='total'>$totalMediaPerformance%</td>
+						<td class='total'>$totalBaixaPerformance%</td>
+				";
+			} else {
+				$rowTotal = "<td></td>
+					<td class='total'>".$totalizadores["espera"]."</td>
+					<td class='total'>".$totalizadores["descanso"]."</td>
+					<td class='total'>".$totalizadores["repouso"]."</td>
+					<td class='total'>".$totalizadores["jornada"]."</td>
+					<td class='total'>".$totalizadores["falta"]."</td>
+					<td class='total'>".$totalizadores["jornadaEfetiva"]."</td>
+					<td class='total'>".$totalizadores["mdc"]."</td>
+					<td class='total'>".$totalizadores["refeicao"]."</td>
+					<td class='total'>".$totalizadores["intersticioInferior"]."</td>
+					<td class='total'>".$totalizadores["intersticioSuperior"]."</td>
+					<td class='total'>".$totalGeral."</td>";
 			}
-			
-			$totalBaixaPerformance = 100 - array_sum($totaisFuncionario);
-			$totalMediaPerformance = $mediaPerfTotal;
-			$rowTotal = "<td></td>
-					<td></td>
-					<td></td>
-					<td></td>
-					<td></td>
-					<td>Total</td>
-					$totalRow 
-					<td class='total'>".($hasDetailFilter ? $totalizadores["falta"] : $totalempre["falta"])."</td>
-					<td class='total'>".($hasDetailFilter ? $totalizadores["jornadaEfetiva"] : $totalempre["jornadaEfetiva"])."</td>
-					<td class='total'>".($hasDetailFilter ? $totalizadores["mdc"] : $totalempre["mdc"])."</td>
-					<td class='total'>".($hasDetailFilter ? $totalizadores["refeicao"] : $totalempre["refeicao"])."</td>
-					<td class='total'>".($hasDetailFilter ? $totalizadores["intersticioInferior"] : $totalempre["intersticioInferior"])."</td>
-					<td class='total'>".($hasDetailFilter ? $totalizadores["intersticioSuperior"] : $totalempre["intersticioSuperior"])."</td>
-					<td class='total'>$totalGeral</td>
-					<td class='total'>$totalMediaPerformance%</td>
-					<td class='total'>$totalBaixaPerformance%</td>
-			";
 
 			$rowGravidade = "
 			<div class='row' id='resumo'>
@@ -918,6 +1290,7 @@
 					</div>
 				</div>
 			</div>
+			
 
 			<div class='row' id='resumo2'>
 				<div class='col-md-3'>
@@ -972,7 +1345,8 @@
 					</div>	
 				</div>
 				</div>
-			</div>";
+				"
+			."</div>";
 			
 			$rowTitulos = "<tr id='titulos'>";
 
@@ -1021,15 +1395,24 @@
 
 
 					$endossado = true;
+			} else {
+				$titulo = ($_POST["busca_endossado"] === "naoEndossado") ? "Não Conformidade por Empresa" : "Pós-fechamento por Empresa";
+                $rowTitulos .=
+                    "<th class='Titulo'>Nomes Empresas</th>"
+                    ."<th class='tituloBaixaGravidade'>Espera</th>"
+                    ."<th class='tituloBaixaGravidade'>Descanso</th>"
+                    ."<th class='tituloBaixaGravidade'>Repouso</th>"
+                    ."<th class='tituloBaixaGravidade'>Jornada</th>"
+                    ."<th class='tituloBaixaGravidade'>Jornada Prevista</th>"
+					."<th class='tituloMediaGravidade'>Jornada Efetiva</th>"
+					."<th class='tituloMediaGravidade'>MDC</th>"
+					."<th class='tituloAltaGravidade'>Refeição</th>"
+					."<th class='tituloAltaGravidade'>Interstício Inferior</th>"
+					."<th class='tituloAltaGravidade'>Interstício Superior</th>"
+					."<th class='tituloTotal'>TOTAL</th>";
 			}
             $rowTitulos .= "</tr>";
             $filtros = [];
-            if(!empty($_POST["empresa"])){
-                $re = mysqli_fetch_assoc(query("SELECT empr_tx_nome FROM empresa WHERE empr_nb_id = ".intval($_POST["empresa"])." LIMIT 1;"));
-                if(!empty($re["empr_tx_nome"])) { $filtros[] = "<b>Empresa:</b> ".htmlspecialchars($re["empr_tx_nome"], ENT_QUOTES, 'UTF-8'); }
-            }
-            $oc = trim((string)($_POST["busca_ocupacao"] ?? ""));
-            $filtros[] = "<b>Ocupação:</b> ".($oc !== "" ? htmlspecialchars($oc, ENT_QUOTES, 'UTF-8') : "Todos");
             if(!empty($_POST["operacao"])){
                 $r = mysqli_fetch_assoc(query("SELECT oper_tx_nome FROM operacao WHERE oper_nb_id = ".intval($_POST["operacao"])." LIMIT 1;"));
                 $filtros[] = "<b>Cargo:</b> ".(!empty($r["oper_tx_nome"]) ? htmlspecialchars($r["oper_tx_nome"], ENT_QUOTES, 'UTF-8') : "Todos");
@@ -1047,17 +1430,6 @@
                 $filtros[] = "<b>Subsetor:</b> ".(!empty($r["sbgr_tx_nome"]) ? htmlspecialchars($r["sbgr_tx_nome"], ENT_QUOTES, 'UTF-8') : "Todos");
             } else {
                 $filtros[] = "<b>Subsetor:</b> Todos";
-            }
-            if(isset($_POST["busca_endossado"])){
-                $map = ["naoEndossado"=>"Atualizado", "endossado"=>"Pós-fechamento", "semAjustes"=>"Sem ajuste", ""=>"Todos"];
-                $label = isset($map[$_POST["busca_endossado"]]) ? $map[$_POST["busca_endossado"]] : ($_POST["busca_endossado"] === "" ? "Todos" : $_POST["busca_endossado"]);
-                $filtros[] = "<b>Tipo:</b> ".htmlspecialchars($label, ENT_QUOTES, 'UTF-8');
-            }
-            if(!empty($_POST["busca_dataMes"])){
-                $mesRaw = trim((string)$_POST["busca_dataMes"]);
-                $mesFmt = $mesRaw;
-                if (preg_match('/^\d{4}-\d{2}$/', $mesRaw)) { $mesFmt = substr($mesRaw, 5, 2)."-".substr($mesRaw, 0, 4); }
-                $filtros[] = "<b>Mês:</b> ".htmlspecialchars($mesFmt, ENT_QUOTES, 'UTF-8');
             }
             $filtrosConsultaHtml = "<div><b>Filtros da consulta:</b> ".(!empty($filtros) ? implode(" | ", $filtros) : "Todos")."</div>";
             $mostra = true;

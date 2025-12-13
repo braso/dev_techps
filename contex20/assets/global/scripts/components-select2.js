@@ -10,7 +10,8 @@ var ComponentsSelect2 = function() {
 
         var placeholder = "Selecione um item";
         $(".select2").select2({
-            width: '100%'
+            width: '100%',
+            dropdownParent: $('body')
         });
 
         $(".cidade2").select2({
