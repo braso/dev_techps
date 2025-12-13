@@ -1,13 +1,13 @@
 <?php
   
-  
+  /*
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
-
+*/
 	include "conecta.php";
 
 	function carregarJS(){
@@ -464,6 +464,17 @@
 
 		if(isset($novoMotorista["enti_nb_salario"])){
 			$novoMotorista["enti_nb_salario"] = str_replace([".", ","], ["", "."], $novoMotorista["enti_nb_salario"]);
+		}
+
+		$invalidDates = ["0000-00-00","0001-01-01"];
+		$dateKeys = ["enti_tx_nascimento","enti_tx_rgDataEmissao","enti_tx_admissao","enti_tx_desligamento","enti_tx_vencimentoRegistro","enti_tx_cnhValidade","enti_tx_cnhPrimeiraHabilitacao","enti_tx_cnhEmissao"];
+		foreach($dateKeys as $dk){
+			if(array_key_exists($dk, $novoMotorista)){
+				$v = $novoMotorista[$dk];
+				if($v === "" || in_array($v, $invalidDates, true)){
+					$novoMotorista[$dk] = null;
+				}
+			}
 		}
 
 
