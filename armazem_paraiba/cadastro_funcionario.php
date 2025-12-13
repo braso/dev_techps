@@ -1,12 +1,13 @@
 <?php
-  /*
+  
+  
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
-*/
+
 	include "conecta.php";
 
 	function carregarJS(){
@@ -401,6 +402,7 @@
 			"enti_tx_fone1" 					=> "fone1",
 			"enti_tx_fone2" 					=> "fone2",
 			"enti_tx_email" 					=> "email",
+			"enti_tx_referencia" 				=> "referencia",
 			"enti_tx_ocupacao" 				=> "ocupacao",
 			"enti_nb_salario" 				=> "salario",
 			"enti_nb_parametro" 				=> "parametro", 
@@ -450,7 +452,7 @@
 		$postKeys = array_values($enti_campos);
 
 		foreach($enti_campos as $bdKey => $postKey){
-			if(!empty($_POST[$postKey])){
+			if(isset($_POST[$postKey])){
 				$a_mod[$bdKey] = $_POST[$postKey];
 				$novoMotorista[$bdKey] = $_POST[$postKey];
 			}
@@ -586,6 +588,18 @@
 		//}
 
 		if (empty($_POST["id"])) {//Se está criando um motorista novo
+			$loginEfetivoPre = (!empty($_POST["login"])? $_POST["login"]: $_POST["postMatricula"]);
+			if(!empty($loginEfetivoPre)){
+				$existsUserPre = mysqli_fetch_assoc(query(
+					"SELECT user_nb_id FROM user WHERE user_tx_status = 'ativo' AND user_tx_login = ? LIMIT 1;",
+					"s",
+					[$loginEfetivoPre]
+				));
+				if(!empty($existsUserPre)){
+					showError("Já existe usuário com o login/matrícula informados.", [(!empty($_POST["login"]) ? "login" : "postMatricula")]);
+				}
+			}
+			query("START TRANSACTION;");
 			$aEmpresa = carregar("empresa", $_POST["empresa"]);
 			if($aEmpresa["empr_nb_parametro"] > 0){
 				$aParametro = carregar("parametro", $aEmpresa["empr_nb_parametro"]);
@@ -601,13 +615,15 @@
 			$novoMotorista["enti_nb_userCadastro"] = $_SESSION["user_nb_id"];
 			$novoMotorista["enti_tx_dataCadastro"] = date("Y-m-d H:i:s");
 			$novoMotorista["enti_tx_ehPadrao"] = $ehPadrao;
-			$id = inserir("entidade", array_keys($novoMotorista), array_values($novoMotorista))[0];
-
-			if(empty($id) || (is_array($id) && get_class($id[0]) == Exception::class)){
+			$insertEnt = inserir("entidade", array_keys($novoMotorista), array_values($novoMotorista));
+			if(empty($insertEnt) || ($insertEnt[0] instanceof Exception)){
+				query("ROLLBACK;");
+				dd($insertEnt);
 				set_status("ERRO ao cadastrar motorista.");
 				index();
 				exit;
 			}
+			$id = $insertEnt[0];
 			
 			$newUser = [
 				"user_tx_nome" 			=> $_POST["nome"],
@@ -627,12 +643,20 @@
 				"user_tx_dataCadastro" 	=> date("Y-m-d H:i:s")
 			];
 			foreach($newUser as $key => $value){
-				if(empty($value)){
+				if($value === "" || $value === null){
 					unset($newUser[$key]);
 				}
 			}
 
-			inserir("user", array_keys($newUser), array_values($newUser));
+			$insertUser = inserir("user", array_keys($newUser), array_values($newUser));
+			if(empty($insertUser) || ($insertUser[0] instanceof Exception)){
+				query("ROLLBACK;");
+				dd($insertUser);
+				set_status("ERRO ao cadastrar usuário.");
+				index();
+				exit;
+			}
+			query("COMMIT;");
 		}else{ // Se está editando um motorista existente
 
 			$a_user = mysqli_fetch_array(query(
@@ -732,6 +756,7 @@
 		global $a_mod;
 
 		$a_mod = carregar("entidade", $_POST["id"]);
+		//dd($a_mod, false);
 		visualizarCadastro();
 		exit;
 	}
