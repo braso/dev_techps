@@ -289,7 +289,7 @@ function criar_relatorio_saldo() {
 				"matricula" 		=> $motorista["enti_tx_matricula"],
 				"ocupacao" 			=> $motorista["enti_tx_ocupacao"],
 				"tipoOperacao" 		=> $motorista["enti_tx_tipoOperacao"],
-                "tipoOperacaoNome" 	=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem operação"),
+                "tipoOperacaoNome" 	=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem Cargo"),
 				"nome" 				=> $motorista["enti_tx_nome"],
 				"statusEndosso" 	=> $statusEndosso,
 				"jornadaPrevista" 	=> $totaisMot["jornadaPrevista"],
@@ -501,7 +501,7 @@ function criar_relatorio_endosso() {
 					"nome" => $motorista["enti_tx_nome"],
 					"ocupacao" => $motorista["enti_tx_ocupacao"],
 					"tipoOperacao" => $motorista["enti_tx_tipoOperacao"],
-                    "tipoOperacaoNome" => (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem operação"),
+                    "tipoOperacaoNome" => (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem Cargo"),
 					"statusEndosso" => $statusEndosso,
 					"jornadaPrevista" => $totaisMot["jornadaPrevista"],
 					"jornadaEfetiva" => $totaisMot["jornadaEfetiva"],
@@ -791,7 +791,7 @@ function criar_relatorio_jornada() {
 					"matricula" => $motorista["enti_tx_matricula"],
 					"nome" => $motorista["enti_tx_nome"],
 					"ocupacao" => $motorista["enti_tx_ocupacao"],
-                    "tipoOperacaoNome"=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem operação"),
+                    "tipoOperacaoNome"=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem Cargo"),
 					"jornada" => strip_tags($jornada),
 					"jornadaEfetiva" => strip_tags($jornadaEfetiva),
 					"refeicao" => strip_tags($refeicao),
@@ -898,7 +898,7 @@ function relatorio_nao_conformidade_juridica(int $idEmpresa) {
 			"nome" 						=> $motorista["enti_tx_nome"],
 			"ocupacao" 					=> $motorista["enti_tx_ocupacao"],
 			"tipoOperacao" 				=> $motorista["enti_tx_tipoOperacao"],
-            "tipoOperacaoNome" 			=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem operação"),
+            "tipoOperacaoNome" 			=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem Cargo"),
 			"dataInicio"				=> $periodoInicio2->format("d/m/Y"),
 			"dataFim"					=> $periodoFim2->format("d/m/Y"),
 
@@ -1378,14 +1378,25 @@ function criar_relatorio_ajustes() {
 
 		$motoristas = mysqli_fetch_all(
 			query(
-				"SELECT enti_nb_id, enti_tx_nome,enti_tx_matricula, enti_tx_ocupacao, oper_tx_nome, enti_tx_tipoOperacao FROM entidade
-					 LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
-					 LEFT JOIN grupos_documentos ON  grup_nb_id = enti_setor_id
-					 LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id
-					 WHERE enti_tx_status = 'ativo'
-					 AND enti_nb_empresa = {$empresa["empr_nb_id"]}
-					 AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')
-					 ORDER BY enti_tx_nome ASC;"
+				"SELECT 
+						enti_nb_id, 
+						enti_tx_nome,
+						enti_tx_matricula, 
+						enti_tx_ocupacao, 
+						oper_tx_nome, 
+						enti_tx_tipoOperacao,
+						enti_setor_id,
+						enti_subSetor_id,
+						grup_tx_nome,
+						sbgr_tx_nome
+					FROM entidade
+						LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
+						LEFT JOIN grupos_documentos ON  grup_nb_id = enti_setor_id
+						LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id
+					WHERE enti_tx_status = 'ativo'
+						AND enti_nb_empresa = {$empresa["empr_nb_id"]}
+						AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')
+					ORDER BY enti_tx_nome ASC;"
 			),
 			MYSQLI_ASSOC
 		);
@@ -1422,7 +1433,7 @@ function criar_relatorio_ajustes() {
 				"nome" 						=> $motorista["enti_tx_nome"],
 				"ocupacao" 					=> $motorista["enti_tx_ocupacao"],
 				"tipoOperacao" 				=> $motorista["enti_tx_tipoOperacao"],
-            	"tipoOperacaoNome" 			=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem operação"),
+            	"tipoOperacaoNome" 			=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem Cargo"),
 
 				"setor" 			=> $motorista["enti_setor_id"],
 				"setorNome" 		=> $motorista["grup_tx_nome"],
@@ -1687,7 +1698,7 @@ function logisticas() {
 			"matricula"       => $motorista["enti_tx_matricula"],
 			"Nome"            => $motorista["enti_tx_nome"],
 			"ocupacao"        => $motorista["enti_tx_ocupacao"],
-            "tipoOperacaoNome"=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem operação"),
+            "tipoOperacaoNome"=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem Cargo"),
 			"ultimaJornada"   => $dataFormatada->format("d/m/Y H:i"),
 			"repouso"         => $avisoRepouso,
 			"Apos8"           => $exibirApos8,

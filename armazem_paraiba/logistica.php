@@ -46,22 +46,8 @@
     $cnpjList = isset($_GET["cnpj"]) ? $_GET["cnpj"] : "";
 
     $plates = [];
-    $plateCount = 0;
-
-    if ($cnpjList) {
-        // Codifica os CNPJs para garantir que estejam no formato correto para a URL
-        $cnpj_encoded = urlencode($cnpjList);
-        
-        // URL da API
-        $url = "https://logistica.logsyncwebservice.techps.com.br/plates?cnpj={$cnpj_encoded}";
-        
-        // Faz a requisição à API
-        $response = file_get_contents($url);
-        
-        // Decodifica a resposta JSON
-        $plates = json_decode($response, true);
-        $plateCount = count($plates);
-    }
+    $rsPlacas = query("SELECT plac_tx_placa FROM placa ORDER BY plac_tx_placa ASC");
+    while($rsPlacas && ($r = mysqli_fetch_assoc($rsPlacas))){ $plates[] = $r["plac_tx_placa"]; }
 
     
 

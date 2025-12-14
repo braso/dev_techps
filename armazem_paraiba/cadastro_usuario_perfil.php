@@ -1,9 +1,9 @@
 <?php
 
-
+/*
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
-
+*/
 		header("Expires: 01 Jan 2001 00:00:00 GMT");
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Pragma: no-cache"); // HTTP 1.0.
@@ -295,9 +295,17 @@ function formUsuarioPerfil(){
 
     $allUsers = [];
     $rsUsers = query(
-        "SELECT user_nb_id, user_tx_nome, user_tx_login FROM user WHERE user_tx_status='ativo'"
-        .($empresa>0? " AND user_nb_empresa = {$empresa}": "")
-        ." ORDER BY user_tx_nome, user_tx_login"
+        "SELECT 
+            u.user_nb_id AS uid,
+            e.enti_nb_id AS eid,
+            COALESCE(NULLIF(u.user_tx_nome,''), e.enti_tx_nome, u.user_tx_login) AS nome_label
+         FROM entidade e
+         LEFT JOIN user u 
+            ON u.user_nb_entidade = e.enti_nb_id
+           AND u.user_tx_status = 'ativo'
+         WHERE e.enti_tx_status = 'ativo'"
+         .($empresa>0? " AND e.enti_nb_empresa = {$empresa}": "")
+         ." ORDER BY nome_label ASC"
     );
     while($rsUsers && ($r = mysqli_fetch_assoc($rsUsers))){ $allUsers[] = $r; }
 
@@ -308,7 +316,15 @@ function formUsuarioPerfil(){
                 ."<div class='col-sm-5'>"
                     ."<label>Todos os usuários</label>"
                     ."<select id='usersPool' multiple size='12' class='form-control' style='height:auto'>";
-    foreach($allUsers as $u){ $duallist .= "<option value='".$u["user_nb_id"]."'>".htmlspecialchars(!empty($u["user_tx_nome"]) ? $u["user_tx_nome"] : $u["user_tx_login"])."</option>"; }
+    foreach($allUsers as $u){ 
+        $val = intval($u["uid"]);
+        $label = htmlspecialchars($u["nome_label"]);
+        if($val > 0){
+            $duallist .= "<option value='".$val."'>".$label."</option>";
+        }else{
+            $duallist .= "<option value='' disabled>".$label." (sem usuário)</option>";
+        }
+    }
     $duallist .= "</select>"
                 ."</div>"
                 ."<div class='col-sm-2' style='display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px'>"
@@ -381,35 +397,29 @@ function formUsuarioPerfil(){
             var submitting=false;
             document.contex_form.addEventListener('submit',function(e){
                 if(submitting) return;
-                var acao=document.querySelector('[name=acao]');
-                var acaoVal=(acao&&acao.value)?acao.value:'';
-                if(modo&&modo.value==='grupo' && acaoVal!=='voltarUsuarioPerfil'){
+                var submitter = e.submitter || document.activeElement;
+                var isVoltar = false;
+                if(submitter){
+                    var n = submitter.getAttribute('name');
+                    var v = submitter.getAttribute('value');
+                    isVoltar = (n === 'acao' && v === 'voltarUsuarioPerfil');
+                }
+                if(modo && modo.value === 'grupo' && !isVoltar){
                     fillCsv();
-                    var perfil=document.querySelector('[name=perfil]');
-                    var count=sel?sel.options.length:0;
-                    var name=(perfil&&perfil.selectedIndex>=0)?perfil.options[perfil.selectedIndex].text:'';
-                    if(typeof Swal!=='undefined'){
+                    var perfil = document.querySelector('[name=perfil]');
+                    var count = sel ? sel.options.length : 0;
+                    var name = (perfil && perfil.selectedIndex >= 0) ? perfil.options[perfil.selectedIndex].text : '';
+                    if(typeof Swal !== 'undefined'){
                         e.preventDefault();
                         Swal.fire({title:'Confirmar',text:'Aplicar \"'+name+'\" para '+count+' usuário(s)?',icon:'question',showCancelButton:true,confirmButtonText:'Aplicar',cancelButtonText:'Cancelar'}).then(function(r){
                           if(r && r.isConfirmed){
-    // Seleciona todos os itens da lista para garantir o envio
-    for(var i=0; i<(sel?sel.options.length:0); i++){ sel.options[i].selected=true; }
-    
-    fillCsv(); // Preenche o CSV oculto
-    submitting = true;
-
-    // --- CORREÇÃO: Adiciona o input 'acao' manualmente ---
-    var inputAcao = document.createElement('input');
-    inputAcao.type = 'hidden';
-    inputAcao.name = 'acao';
-    inputAcao.value = 'cadastrar'; // Valor que aciona a função PHP
-    document.contex_form.appendChild(inputAcao);
-    // ----------------------------------------------------
-
-    document.contex_form.submit();
-}
+                            for(var i=0; i<(sel?sel.options.length:0); i++){ sel.options[i].selected=true; }
+                            fillCsv();
+                            submitting = true;
+                            document.contex_form.submit();
+                          }
                         });
-                    } else {
+                    }else{
                         for(var i=0;i<(sel?sel.options.length:0);i++){ sel.options[i].selected=true; }
                         fillCsv();
                     }
@@ -424,18 +434,24 @@ function formUsuarioPerfil(){
         (!empty($_POST["_novo"]) ? campo_hidden("_novo", "1") : ""),
         combo_net("Empresa*", "empresa", ($empresa>0? $empresa: ""), 3, 'empresa', "required onchange='document.contex_form.submit()'"),
         combo("Operação*", "modo", (isset($_POST["modo"]) ? $_POST["modo"] : "individual"), 3, ["individual"=>"Individual","grupo"=>"Grupo"], "required"),
-        "<div id='indBox'>".combo_net(
-            "Usuário*",
-            "usuario",
-            (!empty($dados["user_nb_id"]) ? $dados["user_nb_id"] : ""),
-            4,
-            'user',
-            "required",
-            ($empresa>0? " AND user_nb_empresa = {$empresa} AND user_tx_status = 'ativo'": " AND user_tx_status = 'ativo'"),
-            "",
-            "user_tx_nome ASC, user_tx_login ASC",
-            "100"
-        )."</div>",
+        (function(){
+            $sel = "<div id='indBox'><div class='col-sm-4 margin-bottom-5 campo-fit-content'>"
+                 ."<label><b>Usuário*</b></label>"
+                 ."<select name='usuario' class='form-control input-sm campo-fit-content' required>";
+            $sel .= "<option value='' ".(empty($dados["user_nb_id"]) ? "selected" : "")." disabled>Selecione</option>";
+            global $allUsers;
+            foreach($allUsers as $u){
+                $uid = intval($u["uid"]);
+                $selected = (!empty($dados["user_nb_id"]) && intval($dados["user_nb_id"]) === $uid) ? "selected" : "";
+                if($uid > 0){
+                    $sel .= "<option value='".$uid."' ".$selected.">".htmlspecialchars($u["nome_label"])."</option>";
+                }else{
+                    $sel .= "<option value='' disabled>".htmlspecialchars($u["nome_label"])." (sem usuário)</option>";
+                }
+            }
+            $sel .= "</select></div></div>";
+            return $sel;
+        })(),
         combo("Perfil*", "perfil", (!empty($dados["perfil_nb_id"]) ? $dados["perfil_nb_id"] : ""), 4, $optsPerfis, "required"),
         combo("Status*", "status", ((!empty($dados) && intval($dados["ativo"])===1)? "ativo" : "ativo"), 2, ["ativo"=>"Ativo","inativo"=>"Inativo"], "required"),
         "<div id='grpBox' style='display:none'>".$duallist."</div>"
@@ -513,8 +529,16 @@ function index(){
         }
 
         $optsUsers = [""=>"Todos"];
-        $rsU = query("SELECT DISTINCT u.user_nb_id, u.user_tx_login FROM usuario_perfil up JOIN user u ON u.user_nb_id = up.user_nb_id ORDER BY u.user_tx_login");
-        while($rsU && ($r = mysqli_fetch_assoc($rsU))){ $optsUsers[(int)$r["user_nb_id"]] = $r["user_tx_login"]; }
+        $rsU = query(
+            "SELECT DISTINCT u.user_nb_id, COALESCE(NULLIF(u.user_tx_nome,''), e.enti_tx_nome, u.user_tx_login) AS nome_label"
+            ." FROM entidade e"
+            ." LEFT JOIN user u ON u.user_nb_entidade = e.enti_nb_id AND u.user_tx_status = 'ativo'"
+            ." WHERE e.enti_tx_status = 'ativo'"
+            ." ORDER BY nome_label"
+        );
+        while($rsU && ($r = mysqli_fetch_assoc($rsU))){
+            if(!empty($r["user_nb_id"])) $optsUsers[(int)$r["user_nb_id"]] = $r["nome_label"];
+        }
 
         $optsPerfis = [""=>"Todos"];
         $rsP = query("SELECT perfil_nb_id, perfil_tx_nome FROM perfil_acesso WHERE perfil_tx_status='ativo' ORDER BY perfil_tx_nome");

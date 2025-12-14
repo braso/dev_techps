@@ -735,16 +735,23 @@
 
 			$porcentagemTotalBaixa= array_sum((array) $totaisFuncionario);
 			if ($arquivosConsiderados === 0) { $mediaPerfTotal = 0; }
-                $totalFun = max($arquivosConsiderados - $totalJsonComTudoZero, 0);
-				$porcentagemTotalBaixaG = 100 - $porcentagemTotalBaixa;
+            $totalFun = max($arquivosConsiderados - $totalJsonComTudoZero, 0);
+			$porcentagemTotalBaixaG = 100 - $porcentagemTotalBaixa;
+            if ($arquivosConsiderados > 0 && count($totaisMediaFuncionario) > 0) {
+                $invertidos = array_map(function($v){ return max(0, min(100, 100 - (float)$v)); }, $totaisMediaFuncionario);
+                $porcentagemTotalMedia = round(array_sum($invertidos) / max(count($invertidos), 1), 2);
+                $mediaPerfTotal = $porcentagemTotalMedia;
+            }
 				$porcentagemTotalBaixa2= (array) $totaisFuncionario2;
 				if (!empty($_POST["ranking_type"]) && $_POST["ranking_type"] !== "nao") {
 					if ($_POST["ranking_type"] === "funcionario") {
 						$pairs = [];
+						$rankingMatriculas = [];
+						$rankingFotos = [];
 						foreach ($totaisMediaFuncionario as $mat => $val) {
 							$perf = max(0, min(100, 100 - (float)$val));
 							$label = $funcionarioNomes[$mat] ?? (string)$mat;
-							$pairs[] = ["label" => $label, "value" => round($perf, 2)];
+							$pairs[] = ["label" => $label, "value" => round($perf, 2), "matricula" => (string)$mat];
 						}
 						usort($pairs, function($a, $b){ return $b["value"] <=> $a["value"]; });
 						$rankingLimit = (string)($_POST["ranking_limit"] ?? "20");
@@ -754,6 +761,39 @@
 						foreach ($pairs as $p) {
 							$rankingCategorias[] = $p["label"];
 							$rankingValores[] = $p["value"];
+							$rankingMatriculas[] = $p["matricula"];
+							$fotoUrl = "";
+							$rowEnt = mysqli_fetch_assoc(query(
+								"SELECT enti_tx_foto FROM entidade WHERE enti_tx_matricula = ? LIMIT 1",
+								"s",
+								[$p["matricula"]]
+							));
+							if (!empty($rowEnt["enti_tx_foto"])) {
+								$fotoUrl = $rowEnt["enti_tx_foto"];
+							} else {
+								$rowUser = mysqli_fetch_assoc(query(
+									"SELECT u.user_tx_foto FROM user u INNER JOIN entidade e ON u.user_nb_entidade = e.enti_nb_id WHERE e.enti_tx_matricula = ? LIMIT 1",
+									"s",
+									[$p["matricula"]]
+								));
+								if (!empty($rowUser["user_tx_foto"])) {
+									$fotoUrl = $rowUser["user_tx_foto"];
+								}
+							}
+							if ($fotoUrl === "") {
+ 								$fotoUrl = "../../contex20/img/user.png";
+							} else {
+								if (strpos($fotoUrl, 'arquivos/') === 0 && strpos($fotoUrl, '../') !== 0) {
+									$fotoUrl = "../".$fotoUrl;
+								}
+								if (strpos($fotoUrl, '../arquivos/') === 0) {
+									$pathCheck = dirname(__DIR__) . '/' . substr($fotoUrl, 3);
+									if (!file_exists($pathCheck)) {
+										$fotoUrl = "../../contex20/img/user.png";
+									}
+								}
+							}
+							$rankingFotos[] = $fotoUrl;
 						}
 						$rankingTitulo = "Ranking de Performance por Funcionário";
 					} elseif ($_POST["ranking_type"] === "setor") {
@@ -965,7 +1005,9 @@
 				$baseDiasConf = (float)($totalempre["diasConformidade"] ?? 0);
 				$percentual = ($denEmpresa > 0) ? (($baseDiasConf / $denEmpresa) * 100) : 0;
 				$percentualConformidade = 100 - $percentual;
-				$porcentagemTotalMedia = round($percentualConformidade, 2);
+				if (empty($_POST["busca_ocupacao"]) && empty($_POST["operacao"]) && empty($_POST["busca_setor"]) && empty($_POST["busca_subsetor"])) {
+					$porcentagemTotalMedia = round($percentualConformidade, 2);
+				}
 
 				// $data = DateTime::createFromFormat('d/m/Y', $json["dataInicio"]);
 				// $dias = $data->format('t');
@@ -1094,9 +1136,20 @@
 				];
 				$diasConformidadeTotal = 0;
 				$totalJsonComTudoZero = 0;
+				$arquivosConsiderados = 0;
+				$ocupacoesPermitidas = $_POST['busca_ocupacao'];
+				$operacaoSel = (string)($_POST['operacao'] ?? '');
+				$setorSel = (string)($_POST['busca_setor'] ?? '');
+				$subsetorSel = (string)($_POST['busca_subsetor'] ?? '');
 				foreach ($arquivos as $file) {
 					$j = json_decode(@file_get_contents($file), true);
 					if (!is_array($j)) { continue; }
+					$ocupacaoJson = $j['ocupacao'] ?? '';
+					if (!empty($ocupacoesPermitidas) && $ocupacaoJson !== $ocupacoesPermitidas) { continue; }
+					if ($operacaoSel !== '' && (string)($j['tipoOperacao'] ?? '') !== $operacaoSel) { continue; }
+					if ($setorSel !== '' && (string)($j['setor'] ?? '') !== $setorSel) { continue; }
+					if ($subsetorSel !== '' && (string)($j['subsetor'] ?? '') !== $subsetorSel) { continue; }
+					$arquivosConsiderados++;
 					$totalizadores["espera"] += (int)($j["espera"] ?? 0);
 					$totalizadores["descanso"] += (int)($j["descanso"] ?? 0);
 					$totalizadores["repouso"] += (int)($j["repouso"] ?? 0);
@@ -1168,20 +1221,18 @@
 				$porcentagemTotalBaixa = $percentuais["baixa"];
 				$porcentagemTotalBaixaG = 100 - $porcentagemTotalBaixa;
 				$totalFun = 0;
-				if (empty($_POST["busca_ocupacao"])) {
-					$r = mysqli_fetch_all(query("SELECT enti_tx_ocupacao AS o, COUNT(*) AS c FROM entidade WHERE enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista','Ajudante','Funcionário') GROUP BY enti_tx_ocupacao;"), MYSQLI_ASSOC);
-					foreach ($r as $row) {
-						if ($row["o"] === "Motorista") { $motoristas = (int)$row["c"]; }
-						if ($row["o"] === "Ajudante") { $ajudante = (int)$row["c"]; }
-						if ($row["o"] === "Funcionário") { $funcionario = (int)$row["c"]; }
-					}
+				if ($arquivosConsiderados > 0) {
+					$totalFun = max($arquivosConsiderados - $totalJsonComTudoZero, 0);
 				} else {
-					$o = mysqli_fetch_array(query("SELECT COUNT(*) FROM entidade WHERE enti_tx_status = 'ativo' AND enti_tx_ocupacao = '".mysqli_real_escape_string($GLOBALS["con"], $_POST["busca_ocupacao"])."';"));
-					if ($_POST["busca_ocupacao"] === "Motorista") { $motoristas = (int)$o[0]; }
-					if ($_POST["busca_ocupacao"] === "Ajudante") { $ajudante = (int)$o[0]; }
-					if ($_POST["busca_ocupacao"] === "Funcionário") { $funcionario = (int)$o[0]; }
+					$where = "enti_tx_status = 'ativo'";
+					if (!empty($_POST["empresa"])) { $where .= " AND enti_nb_empresa = ".intval($_POST["empresa"]); }
+					if (!empty($_POST["busca_ocupacao"])) { $where .= " AND enti_tx_ocupacao = '".mysqli_real_escape_string($GLOBALS["con"], $_POST["busca_ocupacao"])."'"; }
+					if (!empty($_POST["operacao"])) { $where .= " AND enti_tx_tipoOperacao = ".intval($_POST["operacao"]); }
+					if (!empty($_POST["busca_setor"])) { $where .= " AND enti_setor_id = ".intval($_POST["busca_setor"]); }
+					if (!empty($_POST["busca_subsetor"])) { $where .= " AND enti_subSetor_id = ".intval($_POST["busca_subsetor"]); }
+					$o = mysqli_fetch_array(query("SELECT COUNT(*) FROM entidade WHERE ".$where." ;"));
+					$totalFun = (int)$o[0];
 				}
-				$totalFun = $motoristas + $ajudante + $funcionario;
 				$denEmpresa = ($diasMesRef * max($totalFun, 1));
 				$percentual = ($denEmpresa > 0) ? (($diasConformidadeTotal / $denEmpresa) * 100) : 0;
 				$percentualConformidade = 100 - $percentual;

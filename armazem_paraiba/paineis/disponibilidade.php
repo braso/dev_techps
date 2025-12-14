@@ -16,13 +16,14 @@
 
         $linha = "linha = '<tr>'";
         if (!empty($_POST["empresa"])) {
-            $linha .= " +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
+            $linha .= " 
+                        +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
+                         +'<td style=\'text-align: center;\'>'+(item.nome || item.Nome || '-')+'</td>'
+                         +'<td style=\'text-align: center;\'>'+item.ultimaJornada+'</td>'
+                        +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
                         +'<td style=\'text-align: center;\'>'+ (item.tipoOperacaoNome || '-') +'</td>'
                         +'<td>'+(item.setorNome || '')+'</td>'
                         +'<td>'+(item.subsetorNome || '')+'</td>'
-                        +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
-                        +'<td style=\'text-align: center;\'>'+(item.nome || item.Nome || '-')+'</td>'
-                        +'<td style=\'text-align: center;\'>'+item.ultimaJornada+'</td>'
                         +'<td style=\'text-align: center;'+ css +'\'><strong>'+item.repouso+'</strong></td>'
                         +'<td style=\'text-align: center;\'>'+item.Apos8+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.Apos11+'</td>'
@@ -571,13 +572,14 @@
                 // $mostra = false;
                 $rowTitulos = "<tr id='titulos3' class='titulos3'>";
                 $rowTitulos .= "
+                      <th class='matricula'>Matrícula</th>
+                <th class='nome'>Nome</th>
+                <th class='jornada'>Fim de jornada</th>
                 <th class='ocupacao'>Ocupação</th>
                 <th class='operacao'>Cargo</th>
                 <th class='setor'>Setor</th>
                 <th class='subsetor'>SubSetor</th>
-                <th class='matricula'>Matrícula</th>
-                <th class='nome'>Nome</th>
-                <th class='jornada'>Fim de jornada</th>
+          
                 <th class='repouso'>Tempo de Disponibilidade</th>
                 <th class='disponível8'>Disponibilidade Parcial (8h)</th>
                 <th class='disponível11'>Disponibilidade Total (11h)</th>

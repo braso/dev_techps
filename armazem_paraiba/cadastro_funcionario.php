@@ -36,6 +36,7 @@
 			<form name='form_excluir_arquivo' method='post' action='cadastro_funcionario.php'>
 				<input type='hidden' name='idEntidade' value=''>
 				<input type='hidden' name='idArq' value=''>
+				<input type='hidden' name='nome_arquivo' value=''>
 				<input type='hidden' name='acao' value=''>
 			</form>
 
@@ -811,7 +812,13 @@
 	}
 
 	function excluirFoto(){
+		$caminho = $_POST["nome_arquivo"] ?? "";
+		if (!empty($caminho) && file_exists($caminho)) { @unlink($caminho); }
 		atualizar("entidade", ["enti_tx_foto"], [""], $_POST["idEntidade"]);
+		$rowU = mysqli_fetch_assoc(query("SELECT user_nb_id FROM user WHERE user_nb_entidade = ? LIMIT 1", "i", [$_POST["idEntidade"]]));
+		if (!empty($rowU["user_nb_id"])) {
+			atualizar("user", ["user_tx_foto"], [""], $rowU["user_nb_id"]);
+		}
 		$_POST["id"] = $_POST["idEntidade"];
 		modificarMotorista();
 		exit;
@@ -821,6 +828,107 @@
 		atualizar("entidade", ["enti_tx_cnhAnexo"], [""], $_POST["idEntidade"]);
 		$_POST["id"] = $_POST["idEntidade"];
 		modificarMotorista();
+		exit;
+	}
+
+	function atualizarDocumento() {
+		$idDoc = intval($_POST["idDoc"] ?? 0);
+		$nome = $_POST["file-name-edit"] ?? '';
+		$descricao = $_POST["description-text-edit"] ?? '';
+		$visibilidade = $_POST["visibilidade-edit"] ?? 'nao';
+		$dataVenc = $_POST["data_vencimento_edit"] ?? null;
+		$doc = mysqli_fetch_assoc(query("SELECT * FROM documento_funcionario WHERE docu_nb_id = {$idDoc} LIMIT 1;"));
+		if (empty($doc)) {
+			set_status("Registro não encontrado.");
+			$_POST["id"] = $_POST["idRelacionado"];
+			visualizarCadastro();
+			exit;
+		}
+		$errorMsg = "";
+		$novoTipo = isset($_POST["tipo_documento_edit"]) ? intval($_POST["tipo_documento_edit"]) : 0;
+		$novoSetor = isset($_POST["setor-edit"]) ? intval($_POST["setor-edit"]) : 0;
+		$novoSubSetor = isset($_POST["sub-setor-edit"]) ? intval($_POST["sub-setor-edit"]) : 0;
+		$tipoUsado = $novoTipo > 0 ? $novoTipo : intval($doc["docu_tx_tipo"]);
+		$subgrupoUsado = $novoSubSetor > 0 ? $novoSubSetor : 0;
+		$obg = mysqli_fetch_assoc(query("SELECT tipo_tx_vencimento FROM tipos_documentos WHERE tipo_nb_id = {$tipoUsado} LIMIT 1;"));
+		if (($obg["tipo_tx_vencimento"] ?? 'nao') === 'sim' && (empty($dataVenc) || $dataVenc === "0000-00-00")) {
+			$errorMsg = "Campo obrigatório não preenchidos: Data de Vencimento";
+		}
+		if ($subgrupoUsado > 0) {
+			$rows = mysqli_fetch_all(query(
+				"SELECT docu_tx_nome FROM documento_funcionario WHERE docu_tx_tipo = {$tipoUsado}
+				AND docu_nb_sbgrupo = {$subgrupoUsado} AND docu_nb_entidade = {$doc["docu_nb_entidade"]}
+				AND docu_nb_id <> {$idDoc}"), MYSQLI_ASSOC);
+		} else {
+			$rows = mysqli_fetch_all(query(
+				"SELECT docu_tx_nome FROM documento_funcionario WHERE docu_tx_tipo = {$tipoUsado}
+				AND (docu_nb_sbgrupo IS NULL OR docu_nb_sbgrupo = 0) AND docu_nb_entidade = {$doc["docu_nb_entidade"]}
+				AND docu_nb_id <> {$idDoc}"), MYSQLI_ASSOC);
+		}
+		$buscaNormalizada = normalizar($nome);
+		$encontrado = array_filter(array_column($rows, 'docu_tx_nome'), fn($n) => normalizar($n) === $buscaNormalizada);
+		if (!empty($encontrado)) {
+			$errorMsg = "Já existe um documento com esse nome para o tipo selecionado.";
+		}
+		$novoCaminho = null;
+		$novoAssinado = $doc["docu_tx_assinado"] ?? "nao";
+		$arquivoEdit = $_FILES["file-edit"] ?? null;
+		if (!$errorMsg && $arquivoEdit && $arquivoEdit["error"] === UPLOAD_ERR_OK) {
+			$formatos = [
+				"image/jpeg" => "jpg",
+				"image/png" => "png",
+				"application/msword" => "doc",
+				"application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "docx",
+				"application/pdf" => "pdf"
+			];
+			$tipo = mime_content_type($arquivoEdit["tmp_name"]);
+			if (!array_key_exists($tipo, $formatos)) {
+				$errorMsg = "Tipo de arquivo não permitido.";
+			} else {
+				$nomeOriginal = basename($arquivoEdit["name"]);
+				$nomeSeguro = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', $nomeOriginal);
+				$pasta = "arquivos/Funcionarios/" . intval($doc["docu_nb_entidade"]) . "/";
+				if (!is_dir($pasta)) { mkdir($pasta, 0777, true); }
+				$novoCaminho = $pasta . $nomeSeguro;
+				if (file_exists($novoCaminho)) {
+					$info = pathinfo($nomeSeguro);
+					$base = $info["filename"];
+					$ext = isset($info["extension"]) ? '.' . $info["extension"] : '';
+					$nomeSeguro = $base . '_' . time() . $ext;
+					$novoCaminho = $pasta . $nomeSeguro;
+				}
+				if ($tipo === "application/pdf" && function_exists("temAssinaturaRapido")) {
+					$novoAssinado = temAssinaturaRapido($arquivoEdit["tmp_name"]) ? "sim" : "nao";
+				} else {
+					$novoAssinado = "nao";
+				}
+				if (!move_uploaded_file($arquivoEdit["tmp_name"], $novoCaminho)) {
+					$errorMsg = "Falha ao mover o arquivo para o diretório de destino.";
+					$novoCaminho = null;
+				}
+			}
+		}
+		if (!empty($errorMsg)) {
+			set_status("ERRO: ".$errorMsg);
+			$_POST["id"] = $doc["docu_nb_entidade"];
+			visualizarCadastro();
+			exit;
+		}
+		$campos = ["docu_tx_nome","docu_tx_descricao","docu_tx_dataVencimento","docu_tx_visivel","docu_tx_tipo","docu_nb_sbgrupo"];
+		$valores = [$nome,$descricao,$dataVenc,$visibilidade,$tipoUsado,($subgrupoUsado > 0 ? $subgrupoUsado : null)];
+		if ($novoCaminho) {
+			$campos[] = "docu_tx_caminho";
+			$campos[] = "docu_tx_assinado";
+			$valores[] = $novoCaminho;
+			$valores[] = $novoAssinado;
+			if (!empty($doc["docu_tx_caminho"]) && $doc["docu_tx_caminho"] !== $novoCaminho && file_exists($doc["docu_tx_caminho"])) {
+				@unlink($doc["docu_tx_caminho"]);
+			}
+		}
+		atualizar("documento_funcionario", $campos, $valores, $idDoc);
+		set_status("Registro atualizado com sucesso.");
+		$_POST["id"] = $doc["docu_nb_entidade"];
+		visualizarCadastro();
 		exit;
 	}
 
@@ -863,7 +971,7 @@
 			$nomes_documentos_subsetor = mysqli_fetch_all(query(
 				"SELECT docu_tx_nome
 				FROM documento_funcionario
-				WHERE docu_tx_tipo = {$_POST["tipo_documento"]} AND docu_nb_sbgrupo = {$_POST["sub-setor"]}" 
+				WHERE docu_tx_tipo = {$_POST["tipo_documento"]} AND docu_nb_sbgrupo = {$_POST["sub-setor"]} AND docu_nb_entidade = {$_POST["idRelacionado"]}" 
 			), MYSQLI_ASSOC);
 
 			$buscaNormalizada = normalizar($_POST["file-name"]);
@@ -883,7 +991,7 @@
 				"SELECT docu_tx_nome
 				FROM documento_funcionario
 				WHERE docu_tx_tipo = {$_POST["tipo_documento"]}
-				AND (docu_nb_sbgrupo IS NULL OR docu_nb_sbgrupo = 0)"
+				AND (docu_nb_sbgrupo IS NULL OR docu_nb_sbgrupo = 0) AND docu_nb_entidade = {$_POST["idRelacionado"]}"
 			), MYSQLI_ASSOC);
 
 			$buscaNormalizada = normalizar($_POST["file-name"]);
@@ -1168,7 +1276,7 @@
 		
 		if(!empty($a_mod["enti_tx_foto"])){
 			$img = texto(
-				"<a style='color:gray' onclick='javascript:remover_foto(\"".($a_mod["enti_nb_id"]?? "")."\",\"excluirFoto\",\"\",\"\",\"\",\"\");' >
+				"<a style='color:gray' onclick='javascript:remover_foto(\"".($a_mod["enti_nb_id"]?? "")."\",\"excluirFoto\",\"".($a_mod["enti_tx_foto"]?? "")."\");' >
 					<spam class='glyphicon glyphicon-remove'></spam>
 					Excluir
 				</a>", 
@@ -1439,8 +1547,13 @@
 				documento_funcionario.docu_tx_nome,
 				documento_funcionario.docu_tx_visivel,
 				documento_funcionario.docu_tx_assinado,
+				documento_funcionario.docu_tx_tipo,
+				documento_funcionario.docu_nb_sbgrupo,
+				t.tipo_nb_id,
 				t.tipo_tx_nome,
+				gd.grup_nb_id,
 				gd.grup_tx_nome,
+				subg.sbgr_nb_id,
 				subg.sbgr_tx_nome
 				FROM documento_funcionario
 				LEFT JOIN tipos_documentos t 

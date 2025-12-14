@@ -117,39 +117,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 </select>
             </div>
 
-            <div class="form-group">
-                <label for="plate-search">Placa:</label>
-                <input type="text" id="plate" name="plate" class="form-control field-form"
-                       placeholder="Digite a placa" maxlength="7">
-                <ul id="plate-suggestions" class="list-group"></ul>
+            <div class="form-group plate-group">
+                <label for="plate">Placa:</label>
+                <select id="plate" name="plate" class="form-control field-form">
+                    <?php if (!empty($plates)) { ?>
+                        <option value="" disabled selected>Selecione</option>
+                        <?php foreach ($plates as $placa) { ?>
+                            <option value="<?=htmlspecialchars($placa)?>"><?=htmlspecialchars($placa)?></option>
+                        <?php } ?>
+                    <?php } else { ?>
+                        <option value="" disabled selected>Nenhuma placa cadastrada</option>
+                    <?php } ?>
+                </select>
+                <ul id="plate-suggestions" class="list-group" style="display:none"></ul>
             </div>
             <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    const searchInput = document.getElementById('plate');
-                    const suggestionsList = document.getElementById('plate-suggestions');
-
-                    const plates = <?=json_encode($plates);?>;
-
-                    searchInput.addEventListener('input', function() {
-                        const filter = searchInput.value.toUpperCase();
-                        suggestionsList.innerHTML = '';
-
-                        if (filter === '') return;
-
-                        const filteredPlates = plates.filter(plate => plate.toUpperCase().includes(filter));
-
-                        filteredPlates.forEach(plate => {
-                            const li = document.createElement('li');
-                            li.textContent = plate;
-                            li.classList.add('list-group-item');
-                            suggestionsList.appendChild(li);
-
-                            li.addEventListener('click', function() {
-                                searchInput.value = plate;
-                                suggestionsList.innerHTML = '';
-                            });
-                        });
-                    });
+                $(function(){
+                    if($.fn.select2){
+                        $.fn.select2.defaults.set('theme','bootstrap');
+                        $('#plate').select2({placeholder:'Selecione', allowClear:true, width:'250px'});
+                    }
                 });
             </script>
 
@@ -407,7 +394,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <style>
 
 #plate {
-        width: 150px; /* Ajuste este valor conforme necessário */
+        width: 250px;
     }
         #adjustmentTable {
             display: none;
@@ -419,6 +406,26 @@ document.addEventListener('DOMContentLoaded', function() {
             padding: 1rem;
             width: 250px;
             height: 40px;
+        }
+        .select2-container .select2-selection--single{
+            border: 1px solid #35A3BC;
+            border-radius: 10px;
+            height: 40px;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered{
+            height: 40px;
+            line-height: 40px;
+            padding-left: 8px;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow{
+            height: 40px;
+        }
+        .select2-container{
+            width: 250px !important;
+        }
+        .plate-group .select2-container .select2-selection--single{
+            margin-top:0px;
+            border: 1px solid #35A3BC;
         }
 
         #plate-suggestions {

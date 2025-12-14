@@ -162,6 +162,34 @@
 									<div class="col-md-8">
 										<div id="graficoRanking" style="width:100%; height:400px;"></div>
 									</div>
+									<?php if (($_POST["ranking_type"] ?? "nao") === "funcionario") { ?>
+									<div class="col-md-4">
+										<div id="top3-funcionarios" style="width:100%; height:auto; display:flex; flex-direction:column; align-items:center; justify-content:center; margin-top:40px;">
+											<?php
+												$maxTop = min(3, count($rankingCategorias));
+												$medals = ["🏆", "🥈", "🥉"];
+												for ($i = 0; $i < $maxTop; $i++) {
+													$nome = htmlspecialchars((string)($rankingCategorias[$i] ?? ""), ENT_QUOTES, 'UTF-8');
+													$valor = number_format((float)($rankingValores[$i] ?? 0), 2, '.', '');
+													$foto = (!empty($rankingFotos[$i]) ? $rankingFotos[$i] : "../../contex20/img/user.png");
+													$medal = $medals[$i] ?? "";
+													echo "
+														<div class='top3-item' style='display:flex; align-items:center; gap:12px; background:#f9f9f9; border-radius:8px; padding:8px; margin-bottom:10px; width:100%; max-width:380px;'>
+															<div class='photo-wrap' style='position:relative; width:64px; height:64px;'>
+																<img src='{$foto}' alt='Foto de {$nome}' style='width:100%; height:100%; object-fit:cover; border-radius:50%; border:2px solid #ddd;' />
+																<div class='medal' style='position:absolute; right:-6px; bottom:-6px; font-size:24px;'>{$medal}</div>
+															</div>
+															<div class='info' style='flex:1;'>
+																<div style='font-weight:600;'>".($i+1)."º — {$nome}</div>
+																<div style='font-size:12px; color:#555;'>Performance {$valor}%</div>
+															</div>
+														</div>
+													";
+												}
+											?>
+										</div>
+									</div>
+									<?php } ?>
 									<?php if (!empty($donutSubsetorLabels) && array_sum($donutSubsetorValues) > 0) { ?>
 									<div class="col-md-4">
 										<div id="graficoDonutSubsetor" style="width:100%; height:400px;"></div>

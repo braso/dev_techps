@@ -1173,6 +1173,7 @@
 	}
 
 	function gerarHTMLArquivos($nome, $destino, $idRelacionado, $arquivos, $nivelUsuario = 'Admin') {
+			global $CONTEX;
 			// --- 1. Lógica de Geração da Lista de Arquivos (Tabela) ---
 			$arquivo_list = '';
 
@@ -1192,8 +1193,9 @@
 					$dataHoraFormatada = $dataHora->format('d/m/Y H:i:s');
 
 					$dataHoraFormatadaVencimento = '';
-					if (!empty($arquivo['docu_tx_datavencimento']) && $arquivo['docu_tx_datavencimento'] !== "0000-00-00 00:00:00") {
-						$dataHoraVencimento = new DateTime($arquivo['docu_tx_datavencimento']);
+					$rawVenc = $arquivo['docu_tx_datavencimento'] ?? ($arquivo['docu_tx_dataVencimento'] ?? '');
+					if (!empty($rawVenc) && $rawVenc !== "0000-00-00 00:00:00" && $rawVenc !== "0000-00-00") {
+						$dataHoraVencimento = new DateTime($rawVenc);
 						$dataHoraFormatadaVencimento = $dataHoraVencimento->format('d/m/Y');
 					}
 
@@ -1207,8 +1209,20 @@
 							$mime_type_arquivo = finfo_file($finfo, $arquivo["docu_tx_caminho"]);
 							finfo_close($finfo);
 						} else {
-							// Fallback caso finfo não esteja disponível
-							$mime_type_arquivo = 'application/octet-stream';
+							$path = $arquivo["docu_tx_caminho"];
+							$ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+							$map = [
+								'pdf'  => 'application/pdf',
+								'jpg'  => 'image/jpeg',
+								'jpeg' => 'image/jpeg',
+								'png'  => 'image/png',
+								'gif'  => 'image/gif',
+								'webp' => 'image/webp',
+								'txt'  => 'text/plain',
+								'htm'  => 'text/html',
+								'html' => 'text/html'
+							];
+							$mime_type_arquivo = $map[$ext] ?? 'application/octet-stream';
 						}
 					}
 
@@ -1234,7 +1248,9 @@
 
 						// Ícone de Preview (Depende da existência E do tipo MIME suportado)
 						if (in_array($mime_type_arquivo, $formatosSuportados)) {
-							$urlPreview = htmlspecialchars($arquivo['docu_tx_caminho'], ENT_QUOTES, 'UTF-8');
+							$urlRel = $arquivo['docu_tx_caminho'];
+							$urlRel = str_replace('\\', '/', $urlRel);
+							$urlPreview = htmlspecialchars(rtrim($CONTEX['path'], '/').'/'.$urlRel, ENT_QUOTES, 'UTF-8');
 							$nomeArquivo = htmlspecialchars($arquivo['docu_tx_nome'], ENT_QUOTES, 'UTF-8');
 							$iconePreview = "
 								<a class='text-info' style='cursor:pointer;'
@@ -1263,6 +1279,21 @@
 							onclick=\"remover_arquivo($idRelacionado, {$arquivo['docu_nb_id']}, '$nomeArquivoExcluir', 'excluir_documento');\">
 								<i class='glyphicon glyphicon-trash' title='Excluir'></i>
 							</a>";
+						$editNome = htmlspecialchars($arquivo['docu_tx_nome'] ?? '', ENT_QUOTES, 'UTF-8');
+						$editDesc = htmlspecialchars($arquivo['docu_tx_descricao'] ?? '', ENT_QUOTES, 'UTF-8');
+						$editVis = htmlspecialchars($arquivo['docu_tx_visivel'] ?? 'nao', ENT_QUOTES, 'UTF-8');
+						$rawVencEdit = $arquivo['docu_tx_datavencimento'] ?? ($arquivo['docu_tx_dataVencimento'] ?? '');
+						$editVenc = htmlspecialchars(substr($rawVencEdit, 0, 10), ENT_QUOTES, 'UTF-8');
+						$tipoIdEdit = isset($arquivo['tipo_nb_id']) ? intval($arquivo['tipo_nb_id']) : 0;
+						$setorIdEdit = isset($arquivo['grup_nb_id']) ? intval($arquivo['grup_nb_id']) : 0;
+						$subSetorIdEdit = isset($arquivo['sbgr_nb_id']) ? intval($arquivo['sbgr_nb_id']) : 0;
+						$iconeEditar = "
+							&nbsp;<a class='text-primary' style='cursor:pointer;'
+							onclick=\"abrirEdicao_" . $idRelacionado . "({$arquivo['docu_nb_id']}, '$editNome', '$editDesc', '$editVis', '$editVenc', {$tipoIdEdit}, {$setorIdEdit}, {$subSetorIdEdit});\">
+								<i class='glyphicon glyphicon-pencil' title='Editar'></i>
+							</a>";
+					} else {
+						$iconeEditar = '';
 					}
 
 					// Linha da tabela
@@ -1279,6 +1310,7 @@
 							$iconeDownload
 							$IconeAssinatura
 							$iconePreview
+							$iconeEditar
 							$iconeExcluir
 						</td>
 					</tr>";
@@ -1296,11 +1328,16 @@
 
 			$setor_documento = mysqli_fetch_all(query(
 				"SELECT grup_nb_id, grup_tx_nome
-					FROM grupos_documentos ORDER BY grup_tx_nome ASC"
+					FROM grupos_documentos
+					WHERE grup_tx_status = 'ativo'
+					ORDER BY grup_tx_nome ASC"
 			), MYSQLI_ASSOC);
 
 			$sbsetor_documento = mysqli_fetch_all(query(
-				"SELECT sbgr_nb_id, sbgr_nb_idgrup, sbgr_tx_nome, sbgr_tx_status FROM sbgrupos_documentos ORDER BY sbgr_tx_nome ASC"
+				"SELECT sbgr_nb_id, sbgr_nb_idgrup, sbgr_tx_nome, sbgr_tx_status
+				 FROM sbgrupos_documentos
+				 WHERE sbgr_tx_status = 'ativo'
+				 ORDER BY sbgr_tx_nome ASC"
 			), MYSQLI_ASSOC);
 
 
@@ -1950,7 +1987,189 @@
 			</script>
 			";
 
-		return $tabela . $modal_preview . $modal_upload . $scripts_e_estilos;
+		$modal_edit = "";
+		if (!$isFuncionario) {
+			$modal_edit = "
+			<div class='modal fade' id='editModal_" . $idRelacionado . "' tabindex='-1' role='dialog' aria-labelledby='editModalLabel'>
+				<div class='modal-dialog' role='document'>
+					<div class='modal-content'>
+						<div class='modal-header'>
+							<button type='button' class='close' data-dismiss='modal'>&times;</button>
+							<h4 class='modal-title' id='editModalLabel'>Editar Documento</h4>
+						</div>
+						<div class='modal-body'>
+							<form name='form_editar_arquivo_" . $idRelacionado . "' method='post' action='" . $action_file . "' enctype='multipart/form-data'>
+								<div class='form-group'>
+									<label>Nome do arquivo:</label>
+									<input type='text' class='form-control' name='file-name-edit' id='edit_nome_" . $idRelacionado . "'>
+								</div>
+								<div class='form-group'>
+									<label>Descrição:</label>
+									<textarea class='form-control' name='description-text-edit' id='edit_desc_" . $idRelacionado . "'></textarea>
+								</div>
+								<div class='form-group' id='campo_setor_edit'>
+									<label>Setor (Obrigatório):</label>
+									<select class='form-control' name='setor-edit' id='setor_edit_" . $idRelacionado . "'>{$list_setor_modal}</select>
+								</div>
+								<div class='form-group' id='campo_sub_setor_edit'>
+									<label>Sub-setor (Opcional):</label>
+									<select name='sub-setor-edit' id='sub-setor_edit_" . $idRelacionado . "' class='form-control' disabled>
+										<option value=''>Selecione um setor primeiro</option>
+									</select>
+								</div>
+								<div class='form-group'>
+									<label>Tipo de Documento (Obrigatório):</label>
+									<select class='form-control' name='tipo_documento_edit' id='tipo_documento_edit_" . $idRelacionado . "' disabled>
+										{$list_tipos_modal_default}
+									</select>
+								</div>
+								<div class='form-group'>
+									<label>Trocar arquivo:</label>
+									<div class='dropzone-upload' id='dropzone_edit_" . $idRelacionado . "'>
+										<p>Arraste o arquivo aqui ou clique para selecionar</p>
+										<input type='file' name='file-edit' id='fileEditInput_" . $idRelacionado . "'>
+									</div>
+									<p class='help-block'>Formatos permitidos: PDF, JPG, PNG, DOC, DOCX.</p>
+								</div>
+								<div class='form-group'>
+									<label>Visível ao funcionário:</label>
+									<select class='form-control' name='visibilidade-edit' id='edit_vis_" . $idRelacionado . "'>
+										<option value='sim'>Sim</option>
+										<option value='nao'>Não</option>
+									</select>
+								</div>
+								<div class='form-group' id='campo_vencimento_edit_" . $idRelacionado . "' style='display:none;'>
+									<label>Data de Vencimento:</label>
+									<input type='date' class='form-control' name='data_vencimento_edit' id='edit_venc_" . $idRelacionado . "'>
+								</div>
+								<input type='hidden' name='acao' value='atualizarDocumento'>
+								<input type='hidden' name='idRelacionado' value='{$idRelacionado}'>
+								<input type='hidden' name='idDoc' id='edit_id_" . $idRelacionado . "' value=''>
+							</form>
+						</div>
+						<div class='modal-footer'>
+							<button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
+							<button type='button' class='btn btn-primary' onclick='salvarEdicao_" . $idRelacionado . "()'>Salvar alterações</button>
+						</div>
+					</div>
+				</div>
+			</div>";
+		}
+
+		$script_edit = "";
+		if (!$isFuncionario) {
+			$script_edit = "
+			<script>
+			function abrirEdicao_" . $idRelacionado . "(id, nome, desc, vis, venc, tipoId, setorId, subSetorId) {
+				document.getElementById('edit_id_" . $idRelacionado . "').value = id;
+				document.getElementById('edit_nome_" . $idRelacionado . "').value = nome;
+				document.getElementById('edit_desc_" . $idRelacionado . "').value = desc;
+				document.getElementById('edit_vis_" . $idRelacionado . "').value = vis || 'nao';
+				document.getElementById('edit_venc_" . $idRelacionado . "').value = venc || '';
+				(function(){
+					var idRel = '{$idRelacionado}';
+					var setorSelect = $('#setor_edit_' + idRel);
+					var subSetorSelect = $('#sub-setor_edit_' + idRel);
+					var tipoDocumentoSelect = $('#tipo_documento_edit_' + idRel);
+					var campoVencimento = $('#campo_vencimento_edit_' + idRel);
+					var dataVencimentoInput = $('#edit_venc_' + idRel);
+					var todosSubSetores = " . json_encode($sbsetor_documento) . ";
+					var todosTipos = " . json_encode($tipo_documento) . ";
+					function carregarSubSetoresEdit(setorId, subInicial) {
+						subSetorSelect.html('<option value=\"\">Selecione um sub-setor (Opcional)</option>').prop('disabled', true);
+						tipoDocumentoSelect.html('<option value=\"\">Selecione um setor</option>').prop('disabled', true).trigger('change');
+						if (!setorId) return;
+						var subFiltrados = todosSubSetores.filter(function(s){ return String(s.sbgr_nb_idgrup) === String(setorId); });
+						if (subFiltrados.length > 0) {
+							subSetorSelect.prop('disabled', false);
+							subFiltrados.forEach(function(s){
+								subSetorSelect.append(new Option(s.sbgr_tx_nome, s.sbgr_nb_id));
+							});
+							if (subInicial) { subSetorSelect.val(String(subInicial)); }
+						} else {
+							subSetorSelect.html('<option value=\"\">Nenhum sub-setor disponível</option>');
+						}
+						carregarTiposDocumentoEdit(setorId, subInicial, tipoId);
+					}
+					function carregarTiposDocumentoEdit(setorId, subSetorId, tipoInicial) {
+						tipoDocumentoSelect.html('<option value=\"\">Selecione um tipo</option>').prop('disabled', true);
+						if (!setorId) return;
+						var tiposFiltrados = [];
+						if (subSetorId) {
+							tiposFiltrados = todosTipos.filter(function(t){ return t.tipo_nb_sbgrupo && String(t.tipo_nb_sbgrupo) === String(subSetorId); });
+						} else {
+							tiposFiltrados = todosTipos.filter(function(t){ return t.tipo_nb_grupo && String(t.tipo_nb_grupo) === String(setorId); });
+						}
+						if (tiposFiltrados.length > 0) {
+							tiposFiltrados.forEach(function(t){
+								tipoDocumentoSelect.append($('<option>', {
+									value: t.tipo_nb_id,
+									text: t.tipo_tx_nome,
+									'data-vencimento': t.tipo_tx_vencimento || 'nao',
+									'data-grupo': t.tipo_nb_grupo || '',
+									'data-subgrupo': t.tipo_nb_sbgrupo || ''
+								}));
+							});
+							tipoDocumentoSelect.prop('disabled', false);
+							if (tipoInicial) { tipoDocumentoSelect.val(String(tipoInicial)).trigger('change'); }
+						} else {
+							tipoDocumentoSelect.html('<option value=\"\">Nenhum tipo disponível</option>');
+						}
+					}
+					tipoDocumentoSelect.off('change').on('change', function(){
+						var selecionado = $(this).find(':selected');
+						var vencimento = selecionado.data('vencimento');
+						var isSelected = !!selecionado.val();
+						if (isSelected && vencimento === 'sim') {
+							campoVencimento.slideDown();
+							dataVencimentoInput.prop('required', true);
+						} else {
+							campoVencimento.slideUp();
+							dataVencimentoInput.prop('required', false);
+						}
+					});
+					setorSelect.off('change').on('change', function(){
+						carregarSubSetoresEdit($(this).val(), '');
+					});
+					subSetorSelect.off('change').on('change', function(){
+						var sId = setorSelect.val();
+						var subId = $(this).val();
+						carregarTiposDocumentoEdit(sId, subId, '');
+					});
+					if (setorId) { setorSelect.val(String(setorId)); }
+					carregarSubSetoresEdit(setorId || '', subSetorId || '');
+				})();
+				$('#editModal_" . $idRelacionado . "').modal('show');
+			}
+			function salvarEdicao_" . $idRelacionado . "() {
+				document.forms['form_editar_arquivo_" . $idRelacionado . "'].submit();
+			}
+			$(document).ready(function(){
+				var idRel = '{$idRelacionado}';
+				var dropzone = document.getElementById('dropzone_edit_' + idRel);
+				var fileInput = document.getElementById('fileEditInput_' + idRel);
+				if (dropzone && fileInput) {
+					var message = dropzone.querySelector('p');
+					dropzone.addEventListener('click', function(){ fileInput.click(); });
+					fileInput.addEventListener('change', function(){
+						message.textContent = fileInput.files.length > 0 ? fileInput.files[0].name : 'Arraste o arquivo aqui ou clique para selecionar';
+					});
+					dropzone.addEventListener('dragover', function(e){ e.preventDefault(); dropzone.classList.add('dragover'); });
+					dropzone.addEventListener('dragleave', function(){ dropzone.classList.remove('dragover'); });
+					dropzone.addEventListener('drop', function(e){
+						e.preventDefault();
+						dropzone.classList.remove('dragover');
+						if (e.dataTransfer.files.length > 0) {
+							fileInput.files = e.dataTransfer.files;
+							message.textContent = e.dataTransfer.files[0].name;
+						}
+					});
+				}
+			});
+			</script>";
+		}
+
+		return $tabela . $modal_preview . $modal_upload . $modal_edit . $scripts_e_estilos . $script_edit;
 	}
 
 	// --- Funções de Interface (API) ---

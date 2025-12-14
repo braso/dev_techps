@@ -337,6 +337,239 @@
 			}
 			</script>"
 		;
+		$botaoLocEventos = 
+			"<button class='btn default' type='button' onclick='abrirLocalizacoesEventos()'>Localização Eventos</button>
+			<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'>
+			<link rel='stylesheet' href='https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css'>
+			<link rel='stylesheet' href='https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css'>
+			<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+			<script src='https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js'></script>
+			<div id='mapModal' style='display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center;'>
+				<div style='background:#fff; width:90%; height:80%; border-radius:8px; position:relative; padding:8px; display:flex; flex-direction:column;'>
+					<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:6px'>
+						<div style='font-weight:bold'>Localização de eventos</div>
+						<button type='button' id='closeMap' class='btn btn-default'>Fechar</button>
+					</div>
+					<div id='leafletMap' style='width:100%; height:100%; border:1px solid #eee; border-radius:6px'></div>
+				</div>
+			</div>
+			<script>
+			var __ajusteMap=null;
+			var __ajusteCluster=null;
+			var __ajusteMarkers=[];
+			var __ajusteLinkLayer=null;
+			var __ajusteLegendDiv=null;
+			var __ajusteSelectedIdx=-1;
+			function __ajusteHighlightLegendItem(idx){
+				try{
+					if(!__ajusteLegendDiv) return;
+					var items=__ajusteLegendDiv.querySelectorAll('[data-idx]');
+					for(var i=0;i<items.length;i++){
+						items[i].style.background='';
+						items[i].style.border='';
+					}
+					var el=__ajusteLegendDiv.querySelector('[data-idx=\"'+idx+'\"]');
+					if(el){
+						el.style.background='#d4edda';
+						el.style.border='1px solid #28a745';
+						__ajusteSelectedIdx=idx;
+					}
+				}catch(e){}
+			}
+			function __ajusteComputeDistanceMeters(lat1,lng1,lat2,lng2){
+				var R=6371000;
+				var toRad=function(v){ return v*Math.PI/180; };
+				var dLat=toRad(lat2-lat1);
+				var dLng=toRad(lng2-lng1);
+				var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)*Math.sin(dLng/2);
+				var c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+				return R*c;
+			}
+			function __ajusteIsStart(tipoUpper){
+				return (tipoUpper.indexOf('INICIO')>=0);
+			}
+			function __ajusteBaseKey(tipoUpper){
+				var key=tipoUpper.replace('INICIO DE ','').replace('FIM DE ','').trim();
+				return key;
+			}
+			function __ajusteFindPairIndex(coords, idx){
+				var c=coords[idx];
+				var tUpper=(c.tipo||'').toUpperCase();
+				var base=__ajusteBaseKey(tUpper);
+				var isStart=__ajusteIsStart(tUpper);
+				if(!base) return -1;
+				if(isStart){
+					for(var i=idx+1;i<coords.length;i++){
+						var ti=(coords[i].tipo||'').toUpperCase();
+						if(ti.indexOf('FIM')>=0 && __ajusteBaseKey(ti)===base){ return i; }
+					}
+				}else{
+					for(var j=idx-1;j>=0;j--){
+						var tj=(coords[j].tipo||'').toUpperCase();
+						if(tj.indexOf('INICIO')>=0 && __ajusteBaseKey(tj)===base){ return j; }
+					}
+				}
+				return -1;
+			}
+			function __ajusteShowPair(coords, idx){
+				if(!__ajusteMap) return;
+				var pairIdx=__ajusteFindPairIndex(coords, idx);
+				if(pairIdx<0) return;
+				var a=coords[idx];
+				var b=coords[pairIdx];
+				var start=a, end=b;
+				var aIsStart=__ajusteIsStart((a.tipo||'').toUpperCase());
+				if(!aIsStart){ start=b; end=a; }
+				if(__ajusteLinkLayer){ __ajusteMap.removeLayer(__ajusteLinkLayer); __ajusteLinkLayer=null; }
+				var dist=__ajusteComputeDistanceMeters(start.lat,start.lng,end.lat,end.lng);
+				var severityColor='#FFA500';
+				var base=__ajusteBaseKey((a.tipo||'').toUpperCase());
+				if(dist>500){
+					var bUpper=base.toUpperCase();
+					if(bUpper.indexOf('ESPERA')>=0 || bUpper.indexOf('DESCANSO')>=0){ severityColor='#FF0000'; }
+					else if(bUpper.indexOf('REFEI')>=0){ severityColor='#FF7F00'; }
+				}
+				__ajusteLinkLayer=L.polyline([[start.lat,start.lng],[end.lat,end.lng]],{color:severityColor,weight:4,dashArray:'6 6'}).addTo(__ajusteMap);
+				var midLat=(start.lat+end.lat)/2;
+				var midLng=(start.lng+end.lng)/2;
+				var warnText='';
+				if(dist>500){
+					var bUpper2=base.toUpperCase();
+					var nivel=(bUpper2.indexOf('ESPERA')>=0 || bUpper2.indexOf('DESCANSO')>=0)? 'Warning Grave' : 'Warning';
+					warnText='<div style=\"color:'+severityColor+'; font-weight:bold\">'+nivel+' - Houve deslocamento maior que o esperado</div>';
+				}
+				var html='<div style=\"font-size:16px; line-height:1.5\">'
+					+'<div style=\"font-weight:bold; font-size:17px\">'+(a.tipo||'')+'</div>'
+					+'<div>Início: '+(start.data||'')+(start.hora? ' '+start.hora : '')+'</div>'
+					+'<div>Fim: '+(end.data||'')+(end.hora? ' '+end.hora : '')+'</div>'
+					+'<div>Distância aprox.: '+(dist/1000).toFixed(2)+' km</div>'
+					+warnText
+					+'</div>';
+				L.popup({maxWidth:480}).setLatLng([midLat,midLng]).setContent(html).openOn(__ajusteMap);
+				__ajusteMap.fitBounds([[start.lat,start.lng],[end.lat,end.lng]],{padding:[40,40]});
+			}
+			function __ajusteZoomToEvent(i){
+				if(!__ajusteMap || !__ajusteCluster) return;
+				var m=__ajusteMarkers[i];
+				if(!m) return;
+				__ajusteCluster.zoomToShowLayer(m,function(){
+					m.openPopup();
+					__ajusteHighlightLegendItem(i);
+					__ajusteShowPair(window.__ajusteCoordsRef||[], i);
+				});
+			}
+			function abrirLocalizacoesEventos(){
+				var t=document.querySelector('[id^=\"contex-grid-\"]');
+				if(!t) return;
+				var ths=t.querySelectorAll('thead tr th');
+				var idxTipo=-1, idxLoc=-1, idxLeg=-1, idxData=-1, idxHora=-1;
+				for(var i=0;i<ths.length;i++){
+					var txt=(ths[i].textContent||'').trim().toUpperCase();
+					if(txt==='TIPO') idxTipo=i;
+					if(txt.indexOf('LOCALIZA')>=0) idxLoc=i;
+					if(txt==='LEGENDA') idxLeg=i;
+					if(idxData<0 && txt==='DATA') idxData=i;
+					if(idxHora<0 && txt==='HORA') idxHora=i;
+				}
+				if(idxLoc<0) return;
+				var rows=t.querySelectorAll('tbody tr');
+				var coords=[];
+				for(var r=0;r<rows.length;r++){
+					var tds=rows[r].children;
+					if(!tds || tds.length===0) continue;
+					var tipo=(idxTipo>=0 && tds[idxTipo])? (tds[idxTipo].textContent||'').trim() : '';
+					var legenda=(idxLeg>=0 && tds[idxLeg])? (tds[idxLeg].textContent||'').trim() : '';
+					var dataRaw=(idxData>=0 && tds[idxData])? (tds[idxData].textContent||'').trim() : '';
+					var mDate=dataRaw? dataRaw.match(/(\d{2}\/\d{2}\/\d{4})/) : null;
+					var mTime=dataRaw? dataRaw.match(/(\d{2}:\d{2}:\d{2})/) : null;
+					var dataVal=mDate? mDate[1] : '';
+					var horaVal=mTime? mTime[1] : '';
+					if(!horaVal && idxHora>=0 && tds[idxHora]){ horaVal=(tds[idxHora].textContent||'').trim(); }
+					var a=tds[idxLoc]? tds[idxLoc].querySelector('a[href*=\"google.com/maps?q\"]') : null;
+					if(!a) continue;
+					var href=a.getAttribute('href')||'';
+					var qIndex=href.indexOf('q=');
+					if(qIndex<0) continue;
+					var qStr=href.substring(qIndex+2);
+					var parts=qStr.split(',');
+					if(parts.length<2) continue;
+					var lat=parseFloat(parts[0]);
+					var lng=parseFloat(parts[1]);
+					if(isNaN(lat)||isNaN(lng)) continue;
+					coords.push({lat:lat,lng:lng,tipo:tipo,legenda:legenda,data:dataVal,hora:horaVal});
+				}
+				var modal=document.getElementById('mapModal');
+				modal.style.display='flex';
+				var mapDiv=document.getElementById('leafletMap');
+				if(__ajusteMap){ __ajusteMap.remove(); __ajusteMap=null; }
+				__ajusteMap=L.map(mapDiv).setView(coords.length? [coords[0].lat, coords[0].lng] : [-14.235,-51.925], 5);
+				var baseMapa=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19});
+				var googleHybrid=L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{maxZoom:20, subdomains:['mt0','mt1','mt2','mt3']});
+				baseMapa.addTo(__ajusteMap);
+				L.control.layers({'Mapa':baseMapa,'Satélite (Híbrido)':googleHybrid},null,{position:'topright'}).addTo(__ajusteMap);
+				var greenIcon=new L.Icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],shadowSize:[41,41]});
+				var redIcon=new L.Icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],shadowSize:[41,41]});
+				var yellowIcon=new L.Icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png',shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],shadowSize:[41,41]});
+				var cluster=L.markerClusterGroup({spiderfyOnEveryZoom:true, disableClusteringAtZoom:18});
+				__ajusteCluster=cluster;
+				__ajusteMarkers=[];
+				cluster.addTo(__ajusteMap);
+				var bounds=[];
+				for(var k=0;k<coords.length;k++){
+					var c=coords[k];
+					var icon=yellowIcon;
+					var tUpper=(c.tipo||'').toUpperCase();
+					if(tUpper.indexOf('INICIO DE JORNADA')>=0) icon=greenIcon;
+					else if(tUpper.indexOf('FIM DE JORNADA')>=0) icon=redIcon;
+					var popupHtml='<div style=\"font-size:16px; line-height:1.5\">'
+						+(c.tipo? ('<div style=\"font-weight:bold; font-size:17px\">'+c.tipo+'</div>') : '')
+						+(c.legenda? ('<div>'+c.legenda+'</div>') : '')
+						+(c.data? ('<div>'+c.data+(c.hora? ' '+c.hora : '')+'</div>') : '')
+						+'</div>';
+					var m=L.marker([c.lat,c.lng],{icon:icon}).bindPopup(popupHtml,{maxWidth:420});
+					(function(idx){
+						m.on('click', function(){ __ajusteHighlightLegendItem(idx); __ajusteShowPair(coords, idx); });
+					})(k);
+					__ajusteMarkers.push(m);
+					cluster.addLayer(m);
+					bounds.push([c.lat,c.lng]);
+				}
+				if(bounds.length>0){ __ajusteMap.fitBounds(cluster.getBounds()); }
+				var Legend=L.Control.extend({
+					onAdd:function(){
+						var div=L.DomUtil.create('div','info legend');
+						window.__ajusteLegendDiv=div;
+						div.style.background='#fff'; div.style.padding='8px'; div.style.border='1px solid #ddd'; div.style.borderRadius='6px'; div.style.fontSize='15px';
+						var html='<div style=\"font-weight:bold; margin-bottom:6px; font-size:18px\">Legenda</div>'
+							+'<div style=\"display:flex; align-items:center; gap:6px; font-size:15px\"><img src=\"https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png\" style=\"width:16px;height:26px\"> <span>Inicio de Jornada</span></div>'
+							+'<div style=\"display:flex; align-items:center; gap:6px; font-size:15px\"><img src=\"https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png\" style=\"width:16px;height:26px\"> <span>Fim de Jornada</span></div>'
+							+'<div style=\"display:flex; align-items:center; gap:6px; font-size:15px\"><img src=\"https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png\" style=\"width:16px;height:26px\"> <span>Eventos</span></div>'
+							+'<div style=\"margin-top:6px; font-weight:bold; font-size:16px\">Eventos plotados</div>';
+						html+= '<div style=\"max-height:160px; overflow:auto; margin-top:4px\">';
+						for(var i=0;i<coords.length;i++){
+
+							var c=coords[i];
+							var tUpper=(c.tipo||'').toUpperCase();
+							var iconSrc='https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png';
+							if(tUpper.indexOf('INICIO DE JORNADA')>=0) iconSrc='https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png';
+							else if(tUpper.indexOf('FIM DE JORNADA')>=0) iconSrc='https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png';
+							var dtTxt=(c.data? c.data : '');
+							if(c.hora){ dtTxt = dtTxt? (dtTxt+' '+c.hora) : c.hora; }
+							var line='<div data-idx=\"'+i+'\" id=\"ajuste-legend-item-'+i+'\" style=\"display:flex; align-items:center; gap:6px; font-size:15px; cursor:pointer; border-radius:4px; padding:4px\" onclick=\"__ajusteZoomToEvent('+i+')\"><img src=\"'+iconSrc+'\" style=\"width:12px;height:20px\"> <span>'+ (dtTxt? (dtTxt+' - ') : '') + (c.tipo||'') +'</span></div>';
+							html+= line;
+						}
+						html+='</div>';
+						div.innerHTML=html;
+						return div;
+					}
+				});
+				__ajusteMap.addControl(new Legend({position:'bottomright'}));
+				window.__ajusteCoordsRef=coords;
+				var btn=document.getElementById('closeMap');
+				btn.onclick=function(){ modal.style.display='none'; if(__ajusteMap){ __ajusteMap.remove(); __ajusteMap=null; } __ajusteLegendDiv=null; __ajusteSelectedIdx=-1; };
+			}
+			</script>"
+		;
 
 		$textFields[] = texto("Matrícula", $motorista["enti_tx_matricula"], 2);
 		$textFields[] = texto($motorista["enti_tx_ocupacao"], $motorista["enti_tx_nome"], 5);
@@ -394,6 +627,7 @@
 		$botoes[] = $botao_imprimir;
 		$botoes[] = criarBotaoVoltar("espelho_ponto.php");
 		$botoes[] = $botaoConsLog; //BOTÃO CONSULTAR LOGISTICA
+		$botoes[] = $botaoLocEventos;
 		$botoes[] = status();
 
 		

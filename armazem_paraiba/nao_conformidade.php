@@ -117,6 +117,10 @@
                 LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
                 LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
                 LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
+                JOIN user u ON u.user_nb_entidade = entidade.enti_nb_id AND u.user_tx_status = 'ativo'
+                JOIN usuario_perfil up ON up.user_nb_id = u.user_nb_id AND up.ativo = 1
+                JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id AND pmi.perm_ver = 1
+                JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id AND mi.menu_tx_ativo = 1 AND mi.menu_tx_path = '/batida_ponto.php'
                 WHERE enti_tx_status = 'ativo'
                     ".((!empty($_POST["busca_motorista"]))? " AND enti_nb_id = {$_POST["busca_motorista"]}": "")."
                     AND enti_nb_empresa = {$_POST["busca_empresa"]}
@@ -208,7 +212,7 @@
 						LIMIT 1;"
 				), MYSQLI_BOTH);
 				if (is_array($aEndosso) && count($aEndosso) > 0) {
-					$_POST["counts"]["endossados"]++;
+					$_POST["counts"]["endossados"]["sim"]++;
 					$infoEndosso = " - Endossado por ".$aEndosso["user_tx_login"]." em ".data($aEndosso["endo_tx_dataCadastro"], 1);
 					$aIdMotoristaEndossado[] = $motorista["enti_nb_id"];
 					$aMatriculaMotoristaEndossado[] = $motorista["enti_tx_matricula"];

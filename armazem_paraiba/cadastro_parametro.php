@@ -106,14 +106,116 @@
 					}
 				}
 
-				function downloadArquivo(id, caminho, acao){
-					document.form_download_arquivo.idParametro.value = id;
-					document.form_download_arquivo.caminho.value = caminho;
-					document.form_download_arquivo.acao.value = acao;
-					document.form_download_arquivo.submit();
-				}
-			</script>"
+	function downloadArquivo(id, caminho, acao){
+		document.form_download_arquivo.idParametro.value = id;
+		document.form_download_arquivo.caminho.value = caminho;
+		document.form_download_arquivo.acao.value = acao;
+		document.form_download_arquivo.submit();
+	}
+	</script>"
 		;
+
+	}
+
+	function atualizarDocumento() {
+		$idDoc = intval($_POST["idDoc"] ?? 0);
+		$nome = $_POST["file-name-edit"] ?? '';
+		$descricao = $_POST["description-text-edit"] ?? '';
+		$visibilidade = $_POST["visibilidade-edit"] ?? 'nao';
+		$dataVenc = $_POST["data_vencimento_edit"] ?? null;
+		$doc = mysqli_fetch_assoc(query("SELECT * FROM documento_parametro WHERE docu_nb_id = {$idDoc} LIMIT 1;"));
+		if (empty($doc)) {
+			set_status("Registro não encontrado.");
+			$_POST["id"] = $_POST["idParametro"];
+			modificarParametro();
+			exit;
+		}
+		$errorMsg = "";
+		$novoTipo = isset($_POST["tipo_documento_edit"]) ? intval($_POST["tipo_documento_edit"]) : 0;
+		$novoSetor = isset($_POST["setor-edit"]) ? intval($_POST["setor-edit"]) : 0;
+		$novoSubSetor = isset($_POST["sub-setor-edit"]) ? intval($_POST["sub-setor-edit"]) : 0;
+		$tipoUsado = $novoTipo > 0 ? $novoTipo : intval($doc["docu_tx_tipo"]);
+		$subgrupoUsado = $novoSubSetor > 0 ? $novoSubSetor : 0;
+		$obg = mysqli_fetch_assoc(query("SELECT tipo_tx_vencimento FROM tipos_documentos WHERE tipo_nb_id = {$tipoUsado} LIMIT 1;"));
+		if (($obg["tipo_tx_vencimento"] ?? 'nao') === 'sim' && (empty($dataVenc) || $dataVenc === "0000-00-00")) {
+			$errorMsg = "Campo obrigatório não preenchidos: Data de Vencimento";
+		}
+		if ($subgrupoUsado > 0) {
+			$rows = mysqli_fetch_all(query(
+				"SELECT docu_tx_nome FROM documento_parametro WHERE docu_tx_tipo = {$tipoUsado}
+				AND docu_nb_sbgrupo = {$subgrupoUsado} AND para_nb_id = {$doc["para_nb_id"]}
+				AND docu_nb_id <> {$idDoc}"), MYSQLI_ASSOC);
+		} else {
+			$rows = mysqli_fetch_all(query(
+				"SELECT docu_tx_nome FROM documento_parametro WHERE docu_tx_tipo = {$tipoUsado}
+				AND (docu_nb_sbgrupo IS NULL OR docu_nb_sbgrupo = 0) AND para_nb_id = {$doc["para_nb_id"]}
+				AND docu_nb_id <> {$idDoc}"), MYSQLI_ASSOC);
+		}
+		$buscaNormalizada = normalizar($nome);
+		$encontrado = array_filter(array_column($rows, 'docu_tx_nome'), fn($n) => normalizar($n) === $buscaNormalizada);
+		if (!empty($encontrado)) {
+			$errorMsg = "Já existe um documento com esse nome para o tipo selecionado.";
+		}
+		$novoCaminho = null;
+		$novoAssinado = $doc["docu_tx_assinado"] ?? "nao";
+		$arquivoEdit = $_FILES["file-edit"] ?? null;
+		if (!$errorMsg && $arquivoEdit && $arquivoEdit["error"] === UPLOAD_ERR_OK) {
+			$formatos = [
+				"image/jpeg" => "jpg",
+				"image/png" => "png",
+				"application/msword" => "doc",
+				"application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "docx",
+				"application/pdf" => "pdf"
+			];
+			$tipo = mime_content_type($arquivoEdit["tmp_name"]);
+			if (!array_key_exists($tipo, $formatos)) {
+				$errorMsg = "Tipo de arquivo não permitido.";
+			} else {
+				$nomeOriginal = basename($arquivoEdit["name"]);
+				$nomeSeguro = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', $nomeOriginal);
+				$pasta = "arquivos/parametro/" . intval($doc["para_nb_id"]) . "/";
+				if (!is_dir($pasta)) { mkdir($pasta, 0777, true); }
+				$novoCaminho = $pasta . $nomeSeguro;
+				if (file_exists($novoCaminho)) {
+					$info = pathinfo($nomeSeguro);
+					$base = $info["filename"];
+					$ext = isset($info["extension"]) ? '.' . $info["extension"] : '';
+					$nomeSeguro = $base . '_' . time() . $ext;
+					$novoCaminho = $pasta . $nomeSeguro;
+				}
+				if ($tipo === "application/pdf" && function_exists("temAssinaturaRapido")) {
+					$novoAssinado = temAssinaturaRapido($arquivoEdit["tmp_name"]) ? "sim" : "nao";
+				} else {
+					$novoAssinado = "nao";
+				}
+				if (!move_uploaded_file($arquivoEdit["tmp_name"], $novoCaminho)) {
+					$errorMsg = "Falha ao mover o arquivo para o diretório de destino.";
+					$novoCaminho = null;
+				}
+			}
+		}
+		if (!empty($errorMsg)) {
+			set_status("ERRO: ".$errorMsg);
+			$_POST["id"] = $_POST["idParametro"];
+			modificarParametro();
+			exit;
+		}
+		$campos = ["docu_tx_nome","docu_tx_descricao","docu_tx_datavencimento","docu_tx_visivel","docu_tx_tipo","docu_nb_sbgrupo"];
+		$valores = [$nome,$descricao,$dataVenc,$visibilidade,$tipoUsado,($subgrupoUsado > 0 ? $subgrupoUsado : null)];
+		if ($novoCaminho) {
+			$campos[] = "docu_tx_caminho";
+			$campos[] = "docu_tx_assinado";
+			$valores[] = $novoCaminho;
+			$valores[] = $novoAssinado;
+			if (!empty($doc["docu_tx_caminho"]) && $doc["docu_tx_caminho"] !== $novoCaminho && file_exists($doc["docu_tx_caminho"])) {
+				@unlink($doc["docu_tx_caminho"]);
+			}
+		}
+		atualizar("documento_parametro", $campos, $valores, $idDoc);
+		set_status("Registro atualizado com sucesso.");
+		$_POST["id"] = $doc["para_nb_id"];
+		modificarParametro();
+		exit;
 	}
 	
 	function excluirParametro(){
@@ -164,7 +266,7 @@
 			$nomes_documentos_subsetor = mysqli_fetch_all(query(
 				"SELECT docu_tx_nome
 				FROM documento_parametro
-				WHERE docu_tx_tipo = {$_POST["tipo_documento"]} AND docu_nb_sbgrupo = {$_POST["sub-setor"]}" 
+				WHERE docu_tx_tipo = {$_POST["tipo_documento"]} AND docu_nb_sbgrupo = {$_POST["sub-setor"]} AND para_nb_id = {$_POST["idRelacionado"]}" 
 			), MYSQLI_ASSOC);
 
 			$buscaNormalizada = normalizar($_POST["file-name"]);
@@ -184,7 +286,7 @@
 				"SELECT docu_tx_nome
 				FROM documento_parametro
 				WHERE docu_tx_tipo = {$_POST["tipo_documento"]}
-				AND (docu_nb_sbgrupo IS NULL OR docu_nb_sbgrupo = 0)"
+				AND (docu_nb_sbgrupo IS NULL OR docu_nb_sbgrupo = 0) AND para_nb_id = {$_POST["idRelacionado"]}"
 			), MYSQLI_ASSOC);
 
 			$buscaNormalizada = normalizar($_POST["file-name"]);
@@ -784,7 +886,10 @@
 				documento_parametro.docu_tx_assinado,
 				t.tipo_tx_nome,
 				gd.grup_tx_nome,
-				subg.sbgr_tx_nome
+				subg.sbgr_tx_nome,
+				t.tipo_nb_id,
+				gd.grup_nb_id,
+				subg.sbgr_nb_id
 				FROM documento_parametro
 				LEFT JOIN tipos_documentos t 
 				ON documento_parametro.docu_tx_tipo = t.tipo_nb_id
