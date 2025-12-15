@@ -434,12 +434,11 @@ function formUsuarioPerfil(){
         (!empty($_POST["_novo"]) ? campo_hidden("_novo", "1") : ""),
         combo_net("Empresa*", "empresa", ($empresa>0? $empresa: ""), 3, 'empresa', "required onchange='document.contex_form.submit()'"),
         combo("Operação*", "modo", (isset($_POST["modo"]) ? $_POST["modo"] : "individual"), 3, ["individual"=>"Individual","grupo"=>"Grupo"], "required"),
-        (function(){
+        (function() use ($allUsers, $dados){
             $sel = "<div id='indBox'><div class='col-sm-4 margin-bottom-5 campo-fit-content'>"
-                 ."<label><b>Usuário*</b></label>"
+                 ."<label>Usuário*</label>"
                  ."<select name='usuario' class='form-control input-sm campo-fit-content' required>";
             $sel .= "<option value='' ".(empty($dados["user_nb_id"]) ? "selected" : "")." disabled>Selecione</option>";
-            global $allUsers;
             foreach($allUsers as $u){
                 $uid = intval($u["uid"]);
                 $selected = (!empty($dados["user_nb_id"]) && intval($dados["user_nb_id"]) === $uid) ? "selected" : "";
