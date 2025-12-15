@@ -416,7 +416,16 @@ function formUsuarioPerfil(){
                             for(var i=0; i<(sel?sel.options.length:0); i++){ sel.options[i].selected=true; }
                             fillCsv();
                             submitting = true;
-                            document.contex_form.submit();
+                            if(submitter && typeof submitter.click === 'function'){
+                                submitter.click();
+                            }else{
+                                var hiddenAcao = document.createElement('input');
+                                hiddenAcao.type = 'hidden';
+                                hiddenAcao.name = 'acao';
+                                hiddenAcao.value = 'cadastrar';
+                                document.contex_form.appendChild(hiddenAcao);
+                                document.contex_form.submit();
+                            }
                           }
                         });
                     }else{
