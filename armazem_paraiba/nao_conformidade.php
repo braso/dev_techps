@@ -297,8 +297,12 @@
 						LIMIT 1;"
 				));
 
-				if(!empty($ultimoEndosso)){
-					$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]);
+				if(!empty($ultimoEndosso["endo_tx_filename"]) 
+					&& file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$ultimoEndosso["endo_tx_filename"].".csv") 
+				){ 
+					$ultimoEndosso = lerEndossoCSV($ultimoEndosso["endo_tx_filename"]); 
+				}else{ 
+					$ultimoEndosso = null; 
 				}
 
 				$cabecalho = [
