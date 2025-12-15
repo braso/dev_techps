@@ -41,15 +41,12 @@ function carregarGraficos($periodoInicio) {
 			$inativo = 0;
 		}
 
-		// Só adiciona o mês se tiver valores ou se for anterior ao mês atual
-		if ($ativo > 0 || $inativo > 0 || $mes < $mesAtual) {
-			$totaisPorMes[$mesKey] = [
-				'ativo' => $ativo,
-				'inativo' => $inativo
-			];
-			$mesesJS[] = $mesKey;
-			$mesesFormatadosJS[] = $mesPadded;
-		}
+		$totaisPorMes[$mesKey] = [
+			'ativo' => $ativo,
+			'inativo' => $inativo
+		];
+		$mesesJS[] = $mesKey;
+		$mesesFormatadosJS[] = $mesPadded;
 	}
 
 	$totaisPorMesJS = json_encode($totaisPorMes);

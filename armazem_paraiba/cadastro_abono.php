@@ -1,8 +1,8 @@
 <?php
-
+/*
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
-
+*/
 
 	include "funcoes_ponto.php";
 
@@ -30,12 +30,14 @@
 				"application/pdf" => "pdf"
 			];
 
-			// Valida tipo real do arquivo (mais seguro que apenas $_FILES["type"])
-			$tipo = mime_content_type($_FILES["file"]["tmp_name"]);
-			if (!array_key_exists($tipo, $formatos)) {
-				set_status("ERRO: Tipo de arquivo não permitido.");
-				layout_abono();
-				exit;
+			$arquivoEnviado = !empty($_FILES["file"]) && !empty($_FILES["file"]["tmp_name"]);
+			if ($arquivoEnviado) {
+				$tipo = mime_content_type($_FILES["file"]["tmp_name"]);
+				if (!array_key_exists($tipo, $formatos)) {
+					set_status("ERRO: Tipo de arquivo não permitido.");
+					layout_abono();
+					exit;
+				}
 			}
 
 			$camposObrig = [
@@ -129,43 +131,40 @@
 		}
 		$begin2 = new DateTime($aData[0]);
 
-		$novoArquivo = [
-			"docu_nb_entidade" => (int) $motorista["enti_nb_id"],
-			"docu_tx_nome" => $motivo_anexo[0]["moti_tx_nome"]."_".$begin2->format('d/m/Y') ."_".$end->format('d/m/Y'),
-			"docu_tx_descricao" => $_POST["descricao"],
-			"docu_tx_dataCadastro" => date("Y-m-d H:i:s"),
-			"docu_tx_usuarioCadastro" => (int) $_SESSION["user_nb_id"],
-			"docu_tx_assinado" => "nao",
-			"docu_tx_visivel" => 'sim'
-		];
+		if ($arquivoEnviado) {
+			$novoArquivo = [
+				"docu_nb_entidade" => (int) $motorista["enti_nb_id"],
+				"docu_tx_nome" => $motivo_anexo[0]["moti_tx_nome"]."_".$begin2->format('d/m/Y') ."_".$end->format('d/m/Y'),
+				"docu_tx_descricao" => $_POST["descricao"],
+				"docu_tx_dataCadastro" => date("Y-m-d H:i:s"),
+				"docu_tx_usuarioCadastro" => (int) $_SESSION["user_nb_id"],
+				"docu_tx_assinado" => "nao",
+				"docu_tx_visivel" => 'sim'
+			];
 
-		// Usa o nome original do arquivo (mas sanitiza para evitar caracteres perigosos)
-		$nomeOriginal = basename($_FILES["file"]["name"]); // remove possíveis caminhos
-		$nomeSeguro = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', $nomeOriginal); // mantém letras, números, espaço, ponto, traço e underscore
+			$nomeOriginal = basename($_FILES["file"]["name"]);
+			$nomeSeguro = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', $nomeOriginal);
 
-		$pasta_funcionario = "arquivos/Funcionarios/" . $novoArquivo["docu_nb_entidade"] . "/";
-		if (!is_dir($pasta_funcionario)) {
-			mkdir($pasta_funcionario, 0777, true);
-		}
+			$pasta_funcionario = "arquivos/Funcionarios/" . $novoArquivo["docu_nb_entidade"] . "/";
+			if (!is_dir($pasta_funcionario)) {
+				mkdir($pasta_funcionario, 0777, true);
+			}
 
-		// Caminho físico usa o nome original (sanitizado)
-		$novoArquivo["docu_tx_caminho"] = $pasta_funcionario . $nomeSeguro;
-
-		// Evita sobrescrever arquivos já existentes
-		if (file_exists($novoArquivo["docu_tx_caminho"])) {
-			$info = pathinfo($nomeSeguro);
-			$base = $info["filename"];
-			$ext = isset($info["extension"]) ? '.' . $info["extension"] : '';
-			$nomeSeguro = $base . '_' . time() . $ext;
 			$novoArquivo["docu_tx_caminho"] = $pasta_funcionario . $nomeSeguro;
-		}
 
-		// Move o arquivo e salva no banco
-		if (move_uploaded_file($_FILES["file"]["tmp_name"], $novoArquivo["docu_tx_caminho"])) {
-			inserir("documento_funcionario", array_keys($novoArquivo), array_values($novoArquivo));
-			set_status("Registro inserido com sucesso.");
-		} else {
-			set_status("Falha ao mover o arquivo para o diretório de destino.");
+			if (file_exists($novoArquivo["docu_tx_caminho"])) {
+				$info = pathinfo($nomeSeguro);
+				$base = $info["filename"];
+				$ext = isset($info["extension"]) ? '.' . $info["extension"] : '';
+				$nomeSeguro = $base . '_' . time() . $ext;
+				$novoArquivo["docu_tx_caminho"] = $pasta_funcionario . $nomeSeguro;
+			}
+
+			if (move_uploaded_file($_FILES["file"]["tmp_name"], $novoArquivo["docu_tx_caminho"])) {
+				inserir("documento_funcionario", array_keys($novoArquivo), array_values($novoArquivo));
+			} else {
+				set_status("Falha ao mover o arquivo para o diretório de destino.");
+			}
 		}
 
 
