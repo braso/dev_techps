@@ -61,8 +61,8 @@
             "S.O."				=> "celu_tx_sistemaOperacional",
             "MARCA/MODELO"		=> "celu_tx_marcaModelo",
             "RESPONSÁVEL"		=> "enti_tx_nome",
-            "CADASTRADO EM"		=> "CONCAT('data(\"', celu_tx_dataCadastro, '\", 1)') AS celu_tx_dataCadastro",
-            "ATUALIZADO EM"		=> "CONCAT('data(\"', celu_tx_dataAtualiza, '\", 1)') AS celu_tx_dataAtualiza",
+            "CADASTRADO EM"		=> "celu_tx_dataCadastro",
+            "ATUALIZADO EM"     => "celu_tx_dataAtualiza",
         ];
 
         $camposBusca = [
