@@ -151,6 +151,7 @@
 		
 		//ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
         // APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
+		include_once "check_permission.php";
         verificaPermissao('/espelho_ponto.php');
         $temPermissao = temPermissaoMenu('/espelho_ponto.php');
 		
