@@ -151,3 +151,62 @@ form .row{
         display: none;
     }
 }
+
+/* ============================================================
+   CORES PERSONALIZADAS DOS BOTÕES DE PONTO
+   Requer que os botões tenham IDs: #btn-registro-1, #btn-registro-2, etc.
+   ============================================================ */
+
+/* TIPO 1: INÍCIO JORNADA*/
+#btn-registro-1 {
+    background-color: #32d155 !important; 
+    border-color: #32d155 !important;
+    color: #ffffff;
+}
+#btn-registro-1:hover {
+    background-color: #32d001 !important; 
+}
+
+/*TIPO 2: FIM JORNADA */
+#btn-registro-2 {
+    background-color: #d95155 !important; 
+    border-color: #d95155 !important;
+    color: #ffffff;
+}
+#btn-registro-2:hover {
+    background-color: #d95001 !important;
+}
+
+/* TIPO 3: INÍCIO REFEIÇÃO*/
+#btn-registro-3 {
+    background-color: #ff9800 !important; 
+    border-color: #eea236 !important;
+    color: #ffffff;
+}
+#btn-registro-3:hover {
+    background-color: #f57c00 !important;
+}
+
+/* TIPO 4: FIM REFEIÇÃO */
+#btn-registro-4 {
+    background-color: #d9534f !important;
+    border-color: #d43f3a !important;
+    color: #ffffff;
+}
+
+/* TIPO 7: INÍCIO DESCANSO*/
+#btn-registro-7 {
+    background-color: #3483c8 !important; 
+    border-color: #3483c8 !important;
+    color: #ffffff;
+}
+#btn-registro-7:hover {
+    background-color: #2b6ca4 !important;
+}
+
+/* TIPO 8: FIM DESCANSO */
+#btn-registro-8 {
+    background-color: #d9534f !important;
+    border-color: #d43f3a !important;
+    color: #ffffff;
+}
