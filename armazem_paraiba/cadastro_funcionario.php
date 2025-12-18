@@ -1648,7 +1648,7 @@ function index(){
                 "SUBSETOR" 			=> "sbgr_tx_nome",
                 "FONE 1" 				=> "enti_tx_fone1",
                 "OCUPAÇÃO" 				=> "enti_tx_ocupacao",
-                "DATA CADASTRO" 		=> "CONCAT('data(\"', enti_tx_dataCadastro, '\")') AS enti_tx_dataCadastro",
+                "DATA CADASTRO" 		=> "DATE_FORMAT(enti_tx_dataCadastro, '%d/%m/%Y') AS enti_tx_dataCadastro",
                 "PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
                 "CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
                 "STATUS" 				=> "enti_tx_status"

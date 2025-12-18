@@ -1,8 +1,8 @@
 <?php
-/*
+
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
-*/
+
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
@@ -625,7 +625,10 @@ function cadastrar(){
 				$novoEndosso["totalResumo"] = str_replace("<\/", "</", $novoEndosso["totalResumo"]);
 				$path = $_SERVER["DOCUMENT_ROOT"].$CONTEX["path"]."/arquivos/endosso";
 				if(!is_dir($path)){
-					mkdir($path);
+					if (!mkdir($path, 0777, true)) {
+						$errorMsg .= "Erro ao criar diretório: $path<br>";
+						continue; // Pula para o próximo se não conseguir criar a pasta
+					}
 				}
 
 				if(file_exists($path."/".$filename.".csv")){
@@ -638,16 +641,22 @@ function cadastrar(){
 
 				$novoEndosso["endo_tx_filename"] = $filename;
 				$file = fopen($path."/".$filename.".csv", "w");
-				fputcsv($file, array_keys($novoEndosso));
-				fputcsv($file, array_values($novoEndosso));
-				fclose($file);
+
+				if($file){
+					fputcsv($file, array_keys($novoEndosso));
+					fputcsv($file, array_values($novoEndosso));
+					fclose($file);
+
+					// Só insere no banco se o arquivo foi criado com sucesso
+					unset($novoEndosso["endo_tx_pontos"]);
+					unset($novoEndosso["totalResumo"]);
+					unset($novoEndosso["endo_tx_nome"]);
+					
+					inserir("endosso", array_keys($novoEndosso), array_values($novoEndosso));
+				}else{
+					$errorMsg .= "Erro ao abrir o arquivo para escrita: $filename<br>";
+				};
 				
-				unset($novoEndosso["endo_tx_pontos"]);
-				unset($novoEndosso["totalResumo"]);
-				unset($novoEndosso["endo_tx_nome"]);
-				
-				inserir("endosso", array_keys($novoEndosso), array_values($novoEndosso));
-			//*/
 		}
 
 		$statusMsg = ($successMsg != $baseSucMsg? implode("", $successMsg): "").($errorMsg != $baseErrMsg? $errorMsg: "");
