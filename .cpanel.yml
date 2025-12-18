@@ -1,55 +1,48 @@
 deployment:
   tasks:
-    - export GENERAL=/home/tech1694/repositories/dev_techps/*
-    - export DOMAIN=/home/tech1694/repositories/dev_techps/armazem_paraiba/*
+    # Diretórios gerais
+    - export GENERAL=/home/devtechpsgj/repositories/dev_techps/*
+    - export DOMAIN=/home/devtechpsgj/repositories/dev_techps/armazem_paraiba/*
+    - export GENERALDEPLOY=/home/devtechpsgj/public_html/dev
 
-
-
-
-    - export GENERALDEPLOY=/home/tech1694/public_html/gestaodeponto
-    - export BLUEROAD=/home/tech1694/public_html/gestaodeponto/blueroad
-    - export BRASO=/home/tech1694/public_html/gestaodeponto/braso
-    - export CARAU=/home/tech1694/public_html/gestaodeponto/carau_transporte
-    - export COMAV=/home/tech1694/public_html/gestaodeponto/comav
-    - export FEIJAO=/home/tech1694/public_html/gestaodeponto/feijao_turqueza
-    - export FS_LOG=/home/tech1694/public_html/gestaodeponto/fs_log_transportes
-    - export HN_TRANSP=/home/tech1694/public_html/gestaodeponto/hn_transportes
-    - export IFRN=/home/tech1694/public_html/gestaodeponto/ifrn
-    - export JRJ_ORG=/home/tech1694/public_html/gestaodeponto/jrj_organizacao
-    - export LOGSYNC=/home/tech1694/public_html/gestaodeponto/logsync_techps
-    - export LEMON=/home/tech1694/public_html/gestaodeponto/lemon
-    - export NH_TRANSP=/home/tech1694/public_html/gestaodeponto/nh_transportes
-    - export OPAFRUTAS=/home/tech1694/public_html/gestaodeponto/opafrutas
-    - export PKF=/home/tech1694/public_html/gestaodeponto/pkf_medeiros
-    - export QUALY=/home/tech1694/public_html/gestaodeponto/qualy_transportes
-    - export TECHPS=/home/tech1694/public_html/gestaodeponto/techps
-    - export TECHPSDEMO=/home/tech1694/public_html/gestaodeponto/techps_demo
-    - export TRAMPGAS=/home/tech1694/public_html/gestaodeponto/trampolim_gas
-    - export TRANSCOPEL=/home/tech1694/public_html/gestaodeponto/transcopel
-    - export SAO_LUCAS=/home/tech1694/public_html/gestaodeponto/sao_lucas
-    - export PB_TRANSPORTES=/home/tech1694/public_html/gestaodeponto/pb_transportes
-
-
-    - /bin/cp -R $GENERAL $GENERALDEPLOY
+    # Diretórios específicos de cada projeto
     
+    - export IFRN=/home/devtechpsgj/public_html/dev/ifrn
+    - export LEMON=/home/devtechpsgj/public_html/dev/lemon
+    - export NH_TRANSPORTES=/home/devtechpsgj/public_html/dev/nh_transportes
+    - export OPAFRUTAS=/home/devtechpsgj/public_html/dev/opafrutas
+    - export TRANSCOPEL=/home/devtechpsgj/public_html/dev/transcopel
+    - export DEMO=/home/devtechpsgj/public_html/dev/techps_demo
+    - export TECHPS=/home/devtechpsgj/public_html/dev/techps
+    - export ARMAZEMPARAIBA=/home/devtechpsgj/public_html/dev/armazem_paraiba
+    - export BLUEROAD=/home/devtechpsgj/public_html/dev/blueroad
+    - export BRASO=/home/devtechpsgj/public_html/dev/braso
+    - export CARAU=/home/devtechpsgj/public_html/dev/carau_transporte
+    - export COMAV=/home/devtechpsgj/public_html/dev/comav
+    - export FEIJAOTURQUEZA=/home/devtechpsgj/public_html/dev/feijao_turqueza
+    - export FSLOG=/home/devtechpsgj/public_html/dev/fs_log_transportes
+    - export SAOLUCAS=/home/devtechpsgj/public_html/dev/sao_lucas
+    - export JRJ=/home/devtechpsgj/public_html/dev/jrj_organizacao
+    - export LOGSYNC=/home/devtechpsgj/public_html/dev/logsync_techps
+
+    # Copiando diretórios
+    - /bin/cp -R $GENERAL $GENERALDEPLOY
+
+
+    - /bin/cp -R $DOMAIN $IFRN
+    - /bin/cp -R $DOMAIN $LEMON
+    - /bin/cp -R $DOMAIN $NH_TRANSPORTES
+    - /bin/cp -R $DOMAIN $OPAFRUTAS
+    - /bin/cp -R $DOMAIN $TRANSCOPEL
+    - /bin/cp -R $DOMAIN $DEMO
+    - /bin/cp -R $DOMAIN $TECHPS
+    - /bin/cp -R $DOMAIN $ARMAZEMPARAIBA
+    - /bin/cp -R $DOMAIN $BLUEROAD
     - /bin/cp -R $DOMAIN $BRASO
     - /bin/cp -R $DOMAIN $CARAU
     - /bin/cp -R $DOMAIN $COMAV
-    - /bin/cp -R $DOMAIN $FEIJAO
-    - /bin/cp -R $DOMAIN $FS_LOG
-    - /bin/cp -R $DOMAIN $HN_TRANSP
-    - /bin/cp -R $DOMAIN $IFRN
-    - /bin/cp -R $DOMAIN $JRJ_ORG
-    - /bin/cp -R $DOMAIN $LEMON
+    - /bin/cp -R $DOMAIN $FEIJAOTURQUEZA
+    - /bin/cp -R $DOMAIN $FSLOG
+    - /bin/cp -R $DOMAIN $SAOLUCAS
+    - /bin/cp -R $DOMAIN $JRJ
     - /bin/cp -R $DOMAIN $LOGSYNC
-    - /bin/cp -R $DOMAIN $NH_TRANSP
-    - /bin/cp -R $DOMAIN $OPAFRUTAS
-    - /bin/cp -R $DOMAIN $PKF
-    - /bin/cp -R $DOMAIN $QUALY
-    - /bin/cp -R $DOMAIN $TECHPS
-    - /bin/cp -R $DOMAIN $TECHPSDEMO
-    - /bin/cp -R $DOMAIN $TRAMPGAS
-    - /bin/cp -R $DOMAIN $TRANSCOPEL
-    - /bin/cp -R $DOMAIN $BLUEROAD
-    - /bin/cp -R $DOMAIN $SAO_LUCAS
-    - /bin/cp -R $DOMAIN $PB_TRANSPORTES
