@@ -171,6 +171,11 @@
                 [$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], $_SESSION["user_nb_empresa"]];
                 $condBuscaMotorista .= " AND enti_nb_id = '".$_SESSION["user_nb_entidade"]."'";
 				
+				$motoristaLogado = mysqli_fetch_assoc(query("SELECT enti_tx_nome FROM entidade WHERE enti_nb_id = ".$_SESSION["user_nb_entidade"]." LIMIT 1"));
+				
+				$searchFields = [
+					campo("Funcionário", "nome_motorista_view", $motoristaLogado["enti_tx_nome"], 4, "", "readonly")
+				];
 
             }else{
                 $_POST["busca_empresa"] = $_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"];

@@ -240,7 +240,7 @@
 				// }
 
 				$tolerancia = intval($motorista["para_tx_tolerancia"]);
-
+				
 				$totalResumo = setTotalResumo(array_slice(array_keys($rows[0]), 7));
 
 				for($f = 0; $f < count($rows); $f++){
@@ -366,6 +366,9 @@
         include "check_permission.php";
         // APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
         verificaPermissao('/nao_conformidade.php');
+		$temPermissao = temPermissaoMenu('/nao_conformidade.php');
+		$nivel = strtolower($_SESSION["user_tx_nivel"] ?? "");
+		$isAdmin = (strpos($nivel, 'administrador') !== false || strpos($nivel, 'super admin') !== false);
 		
 		global $CONTEX, $tabelasPonto;
 
@@ -373,7 +376,7 @@
 
 		$extraEmpresa = "";
 		$extraEmpresaMotorista = "";
-		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
+		if ($_SESSION["user_nb_empresa"] > 0 && !$temPermissao && !$isAdmin) {
 			$extraEmpresa = " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
 			$extraEmpresaMotorista = " AND enti_nb_empresa = '".$_SESSION["user_nb_empresa"]."'";
 		}
@@ -425,12 +428,12 @@
 
         $c[] = combo_net(
             "Funcionário:", "busca_motorista", $_POST["busca_motorista"], 3,
-            "entidade", "", " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') {$extraMotorista}{$extraEmpresaMotorista} ".
+            "entidade", "", " {$extraMotorista}{$extraEmpresaMotorista} ".
             $condCargoSetor, "enti_tx_matricula"
         );
         $c[] = campo_mes("Data*:", "busca_data", $_POST["busca_data"], 2);
 
-			if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
+			if($temPermissao || $isAdmin){
 				array_unshift($c, combo_net("Empresa*:", "busca_empresa",   (!empty($_POST["busca_empresa"])?   $_POST["busca_empresa"]  : ""), 3, "empresa", "onchange=selecionaMotorista(this.value)", $extraEmpresa));
 			}
 		//}

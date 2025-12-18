@@ -485,6 +485,9 @@
         include "check_permission.php";
         // APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
         verificaPermissao('/endosso.php');
+		$temPermissao = temPermissaoMenu('/endosso.php');
+		$nivel = strtolower($_SESSION["user_tx_nivel"] ?? "");
+		$isAdmin = (strpos($nivel, 'administrador') !== false || strpos($nivel, 'super admin') !== false);
 		
 		cabecalho("Buscar Endosso");
 
@@ -495,14 +498,14 @@
 		//CAMPOS DE CONSULTA{
 			$extraEmpresa = "";
 			$extraEmpresaMotorista = "";
-			if(!empty($_SESSION["user_nb_empresa"]) && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
-				$extraEmpresa = " AND empr_nb_id = '{$_SESSION["user_nb_empresa"]}'";
-				$extraEmpresaMotorista = " AND enti_nb_empresa = '{$_SESSION["user_nb_empresa"]}'";
+			if(!empty($_SESSION["user_nb_empresa"]) && !$temPermissao && !$isAdmin) {
+				$extraEmpresa = " AND empr_nb_id = '{$_SESSION['user_nb_empresa']}'";
+				$extraEmpresaMotorista = " AND enti_nb_empresa = '{$_SESSION['user_nb_empresa']}'";
 			}
 
 			$fields = [];
 			$_POST["busca_empresa"] = $_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"];
-			if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
+			if($temPermissao || $isAdmin){
 				$fields[] = combo_net(
 					"Empresa*", 
 					"busca_empresa", 
