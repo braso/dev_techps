@@ -28,6 +28,7 @@ deployment:
     # Copiando diretórios
     - /bin/cp -R $GENERAL $GENERALDEPLOY
 
+
     - /bin/cp -R $DOMAIN $IFRN
     - /bin/cp -R $DOMAIN $LEMON
     - /bin/cp -R $DOMAIN $NH_TRANSPORTES

@@ -49,7 +49,7 @@ function verificaPermissao($pathMenu)
 
     if (!$isAdmin && !$permitido) {
         // Se for funcionário, deixa livre apenas batida/espelho
-        if (preg_match('/funcionário/i', $nivel) && in_array($pathMenu, $pathsPermitidosFuncionario)) {
+        if (preg_match('/(funcionário|motorista|ajudante)/i', $nivel) && in_array($pathMenu, $pathsPermitidosFuncionario)) {
             return true; // permitido por regra especial
         }
 
