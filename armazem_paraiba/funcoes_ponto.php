@@ -201,7 +201,14 @@
 
 		if($saldoPeriodo[0] == "-"){
 			if($pagarHEExComPerNeg == "sim"){
-				return ["00:00", $he100];
+		        $excedente = operarHorarios([$saldoBruto, $he100], "-");
+        if($excedente == "00:00" || $excedente[0] == "-"){
+            return ["00:00", $he100];
+        }
+        if(operarHorarios([$max50APagar, $excedente], "-")[0] != "-"){
+            return [$excedente, $he100];
+        }
+        return [$max50APagar, $he100];
 			}
 			return ["00:00", "00:00"];
 
