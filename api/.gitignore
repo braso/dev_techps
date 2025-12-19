@@ -1,0 +1,7 @@
+.env
+# Logs
+/storage/logs/*.log
+
+# Opcional: ignora qualquer arquivo dentro de logs
+/storage/logs/*
+!/storage/logs/.gitkeep
