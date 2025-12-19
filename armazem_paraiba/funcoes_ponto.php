@@ -213,6 +213,9 @@
 			return ["00:00", "00:00"];
 
 		}elseif(operarHorarios([$he100, $saldoPeriodo], "-")[0] != "-"){		//$he100 > $saldoPeriodo
+			if($pagarHEExComPerNeg == "sim"){
+				return ["00:00", $he100];
+			}
 			return ["00:00", $saldoPeriodo];
 		}
 		
