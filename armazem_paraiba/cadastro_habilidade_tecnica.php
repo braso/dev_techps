@@ -184,8 +184,8 @@
             "HABILIDADE TÉCNICA" => "habi_tx_nome",
             "IMPORTÂNCIA" => "CASE habi_tx_importancia WHEN 'alta' THEN CONCAT('<span style\\=\"color:#d9534f\"><i class\\=\'fa fa-circle\\'></i> Alta</span>') WHEN 'media' THEN CONCAT('<span style\\=\"color:#f0ad4e\"><i class\\=\'fa fa-circle\\'></i> Média</span>') ELSE CONCAT('<span style\\=\"color:#5cb85c\"><i class\\=\'fa fa-circle\\'></i> Baixa</span>') END AS habi_tx_importancia",
             "DESCRIÇÃO" => "habi_tx_descricao",
-            "DATA DE CADASTRO" => "habi_tx_dataCadastro",
-            "DATA DE ALTERAÇÃO" => "habi_tx_dataAtualiza"
+            "DATA DE CADASTRO" => "DATE_FORMAT(habi_tx_dataCadastro, '%d/%m/%Y %H:%i:%s')",
+            "DATA DE ALTERAÇÃO" => "DATE_FORMAT(habi_tx_dataAtualiza, '%d/%m/%Y %H:%i:%s')"
         ];
 
         $camposBusca = [

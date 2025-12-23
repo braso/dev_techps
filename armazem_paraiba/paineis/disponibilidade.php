@@ -287,7 +287,7 @@
                             });
                         }
 
-                        var colunasPermitidas = ['ocupacao', 'matricula', 'nome', 'jornada', 'consulta', 'repouso', 'disponível8', 'disponível11'];
+                        var colunasPermitidas = ['matricula', 'nome', 'jornada', 'ocupacao', 'operacao', 'setor', 'subsetor', 'repouso', 'disponível8', 'disponível11'];
                         var colunasPermitidas2 = ['ocupacao2', 'matricula2', 'nome2', 'jornada2', 'consulta2', 'repouso2', 'disponível82', 'disponível112'];
 
                         // Evento de clique para ordenar a tabela ao clicar no cabeçalho

@@ -485,7 +485,7 @@ function formUsuarioPerfil(){
 function listarUsuarioPerfis(){
     $gridFields = [
         "ID" => "uperf_nb_id",
-        "USUÁRIO" => "user_tx_login",
+        "USUÁRIO" => "user_tx_nome",
         "PERFIL" => "perfil_tx_nome",
         "STATUS" => "statusTxt"
     ];
@@ -500,6 +500,7 @@ function listarUsuarioPerfis(){
         "SELECT 
             uperf.uperf_nb_id, 
             u.user_tx_login, 
+            u.user_tx_nome, 
             p.perfil_tx_nome, 
             IF(uperf.ativo = 1, 'Ativo', 'Inativo') AS statusTxt
          FROM usuario_perfil uperf

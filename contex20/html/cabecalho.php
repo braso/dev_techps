@@ -268,21 +268,34 @@
 	<div class="page-header">
 		<!-- INICIO HEADER TOP -->
 		<div class="page-header-top">
-			<div class="container-fluid">
+			<div class="container-fluid" style="position: relative;">
 				<!-- INICIO LOGO -->
 				<div class="page-logo">
 					<a href="<?=$CONTEX["path"]?>/index.php">
 						<div class="logo-default"></div>
 					</a>
+	
 				</div>
 				<!-- FIM LOGO -->
-				<div class="menu-options">
+				<div class="company-name" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 18px; font-weight: bold; color: #53575aff; white-space: nowrap; z-index: 999;">
+					    <?php
+        // Verifica se a variável de sessão empr_tx_nome está vazia e busca no banco se necessário
+        
+            $empresa_cabecalho = mysqli_fetch_assoc(query("SELECT empr_tx_nome FROM empresa WHERE empr_nb_id  LIMIT 1"));
+            $_SESSION['empr_tx_nome'] = $empresa_cabecalho['empr_tx_nome'];
+        
+        echo $_SESSION['empr_tx_nome'] ?? "TechPS";
+    ?>
+				</div>
+				<div class="menu-options"  >
 					<!-- INICIO TOP NAVIGATION MENU -->
 					<div class="top-menu">
 						<ul class="nav navbar-nav pull-right">
 							<li class="droddown dropdown-separator">
-								<span class="separator"></span>
+								
 							</li>
+							
+							
 							<!-- INICIO USER LOGIN DROPDOWN -->
 							<li class="dropdown dropdown-user dropdown-dark">
 								<a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
@@ -299,7 +312,13 @@
 										<a href="<?=$CONTEX["path"]?>/logout.php">
 											<i class="icon-key"></i> Sair </a>
 									</li>
+									
 								</ul>
+								<li class="dropdown dropdown-separator ">
+								<a href="<?=$CONTEX["path"]?>/logout.php" style="color: #F3565D; text-decoration: none; margin: 0px 5px; display: flex; align-items: center; justify-content: center;" title="Sair">
+									<i class="icon-logout" style="font-size: 20px;"></i>
+								</a>
+							</li>
 							</li>
 							<!-- FIM USER LOGIN DROPDOWN -->
 							<!-- INICIO QUICK SIDEBAR TOGGLER -->

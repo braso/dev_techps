@@ -1365,9 +1365,7 @@
 		
 		//Se tiver permissão, esquece isso de administrador ou super
 		$extraEmpresa = "";
-		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(stripos($_SESSION["user_tx_nivel"], "Administrador")) && is_bool(stripos($_SESSION["user_tx_nivel"], "Super"))) {
-			$extraEmpresa = " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
-		}
+		
 		
 		$a_mod["enti_nb_salario"] = str_replace(".", ",", (!empty($a_mod["enti_nb_salario"])? $a_mod["enti_nb_salario"] : ""));
 		$campoSalario = campo("Salário*", "salario", $a_mod["enti_nb_salario"], 1, "MASCARA_DINHEIRO", "tabindex=".sprintf("%02d", $tabIndex+2));
@@ -1648,7 +1646,7 @@ function index(){
                 "SUBSETOR" 			=> "sbgr_tx_nome",
                 "FONE 1" 				=> "enti_tx_fone1",
                 "OCUPAÇÃO" 				=> "enti_tx_ocupacao",
-                "DATA CADASTRO" 		=> "DATE_FORMAT(enti_tx_dataCadastro, '%d/%m/%Y') AS enti_tx_dataCadastro",
+                "DATA CADASTRO" 		=> "DATE_FORMAT(enti_tx_dataCadastro, '%d/%m/%Y %H:%i:%s')",
                 "PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
                 "CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
                 "STATUS" 				=> "enti_tx_status"
