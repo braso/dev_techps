@@ -1,12 +1,13 @@
 <?php
-
+	/* Modo debug{
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 		
         header("Expires: 01 Jan 2001 00:00:00 GMT");
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
         header("Pragma: no-cache"); // HTTP 1.0.
-	
+	//}*/
+
 	global $path;
 	$path = "arquivos/pontos";
 
@@ -64,17 +65,6 @@
 		$arquivo = $_FILES["arquivo"];
 
 		if(isset($arquivo["error"]) && $arquivo["error"] === 0){
-			
-			// Verifica se o diretório de destino existe
-			if (!is_dir($path)) {
-				// Tenta criar se não existir
-				if (!mkdir($path, 0777, true)) {
-					set_status("ERRO: Não foi possível criar o diretório de destino: " . $path);
-					index();
-					exit;
-				}
-			}
-
 			$local_file = $path."/".$arquivo["name"];
 
 			$ext = substr($arquivo["name"], strrpos($arquivo["name"], "."));
@@ -88,12 +78,6 @@
 				}
 				$arquivo["name"] = $baseNomeArquivo;
 				$local_file = $path."/".$arquivo["name"].$ext;
-			}
-
-			if (!move_uploaded_file($arquivo["tmp_name"], $local_file)) {
-				set_status("ERRO: Falha ao mover o arquivo para a pasta de destino.<br>Temp: " . $arquivo["tmp_name"] . "<br>Destino: " . $local_file);
-				index();
-				exit;
 			}
 
 			salvarArquivoPonto($arquivo, $local_file);
@@ -172,39 +156,8 @@
 		];
 
 		
-		// ini_set("auto_detect_line_endings", true); // Deprecated no PHP 8.1+
-		
-		// Verifica se o arquivo existe antes de tentar ler
-		if (!file_exists($caminhoCompleto)) {
-			// Tenta caminho absoluto se relativo falhar
-			if (file_exists(__DIR__ . "/" . $caminhoCompleto)) {
-				$caminhoCompleto = __DIR__ . "/" . $caminhoCompleto;
-			} elseif (file_exists($_SERVER['DOCUMENT_ROOT'] . "/" . $caminhoCompleto)) {
-                // Tenta a partir da raiz do servidor
-                $caminhoCompleto = $_SERVER['DOCUMENT_ROOT'] . "/" . $caminhoCompleto;
-            } else {
-				// Debug detalhado do caminho
-				$debugInfo = "Caminho Original: " . $caminhoCompleto . "<br>";
-				$debugInfo .= "Caminho Absoluto (__DIR__): " . __DIR__ . "/" . $caminhoCompleto . "<br>";
-				$debugInfo .= "Caminho Raiz ($_SERVER[DOCUMENT_ROOT]): " . $_SERVER['DOCUMENT_ROOT'] . "/" . $caminhoCompleto . "<br>";
-				$debugInfo .= "Diretório Atual (getcwd): " . getcwd() . "<br>";
-				
-				// Verifica se o diretório existe, para saber se é só o arquivo ou a pasta
-				$dir = dirname($caminhoCompleto);
-				$debugInfo .= "Diretório do arquivo existe? " . (is_dir($dir) ? "SIM" : "NÃO") . "<br>";
-				
-				set_status("ERRO: O arquivo não foi encontrado no servidor.<br>" . $debugInfo);
-				return;
-			}
-		}
 
-		$lines = file($caminhoCompleto, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-		if ($lines === false || empty($lines)) {
-			set_status("ERRO: Arquivo vazio ou não pôde ser lido.");
-			return;
-		}
-
-		foreach($lines as $lineIndex => $line){
+		foreach(file($caminhoCompleto) as $line){
 			
 			//matricula dmYhi 999 macroponto.codigoExterno
 			//Obs.: A matrícula deve ter 10 dígitos, então se tiver menos, adicione zeros à esquerda.
@@ -213,17 +166,6 @@
 			if(empty($line)){
 				continue; // Pula para a próxima linha
 			}
-			
-			// Validação básica de tamanho da linha
-			if (strlen($line) < 26) { // 10+8+4+3+2 (aprox)
-				// Tenta ser resiliente, mas loga erro se muito curto
-				if(empty($errorMsg["notRecognized"])){
-					$errorMsg["notRecognized"][] = "Linhas com formato inválido (muito curtas):";
-				}
-				$errorMsg["notRecognized"][] = "Linha " . ($lineIndex+1) . ": " . htmlspecialchars($line);
-				continue;
-			}
-
 			[$matricula, $data, $hora, $codigoExterno] = [substr($line, 0, 10), substr($line, 10, 8), substr($line, 18, 4), substr($line,25, 2)];
 
 			//CONFERIR MATRÍCULA{
@@ -247,30 +189,13 @@
 			$data = substr($data, 4, 4)."-".substr($data, 2, 2)."-".substr($data, 0, 2);
 			$hora = substr($hora, 0, 2).":".substr($hora, 2, 2).":00";
 
-			// Mapeamento manual de códigos externos para internos, já que o banco não tem esses códigos exatos
-			$mapaCodigos = [
-				'01' => ['interno' => 1, 'nome' => 'Inicio de Jornada'],
-				'02' => ['interno' => 2, 'nome' => 'Fim de Jornada'],
-				'03' => ['interno' => 3, 'nome' => 'Inicio de Refeição'],
-				'04' => ['interno' => 4, 'nome' => 'Fim de Refeição']
-			];
-
-			if (isset($mapaCodigos[$codigoExterno])) {
-				// Usa o mapeamento manual
-				$macroPonto = [
-					"macr_tx_codigoInterno" => $mapaCodigos[$codigoExterno]['interno'],
-					"macr_tx_nome" => $mapaCodigos[$codigoExterno]['nome']
-				];
-			} else {
-				// Tenta buscar no banco
-				$macroPonto = mysqli_fetch_assoc(query(
-					"SELECT macr_tx_codigoInterno, macr_tx_codigoExterno FROM macroponto"
-					." WHERE macr_tx_status = 'ativo'"
-						// ." AND macr_tx_fonte = 'positron'" // Removido filtro de fonte para ser mais abrangente
-						." AND (macr_tx_codigoExterno = '".$codigoExterno."' OR macr_tx_codigoInterno = '".intval($codigoExterno)."')"
-					." LIMIT 1;"
-				));
-			}
+			$macroPonto = mysqli_fetch_assoc(query(
+				"SELECT macr_tx_codigoInterno, macr_tx_codigoExterno FROM macroponto"
+				." WHERE macr_tx_status = 'ativo'"
+					." AND macr_tx_fonte = 'positron'"
+					." AND macr_tx_codigoExterno = '".$codigoExterno."'"
+				." LIMIT 1;"
+			));
 
 			$userId = mysqli_fetch_assoc(query(
 				"SELECT user_nb_id FROM user 
@@ -322,64 +247,17 @@
 		}
 
 		//*Salvar registros e arquivo{
-			if (empty($newPontos)) {
-				// Se não há pontos para inserir, não faz sentido inserir o arquivo vazio, a menos que todos sejam duplicados e queiramos registrar o arquivo.
-				// Mas o usuário relatou que não insere.
-				// Vamos forçar um erro se não houver pontos e não houver duplicados detectados.
-				
-				if (empty($errorMsg["existingPoints"]) && empty($errorMsg["notRecognized"]) && empty($errorMsg["registerNotFound"])) {
-					// Situação crítica: arquivo lido, mas nenhum ponto gerado e nenhum erro padrão.
-					// Provavelmente layout errado que passou despercebido?
-					set_status("ERRO CRÍTICO: O arquivo foi lido mas nenhum ponto foi identificado para importação. Verifique o formato do arquivo.");
-					// Debug visual para o usuário
-					echo "<h1>Debug de Importação</h1>";
-					echo "<p>Total linhas lidas: " . count($lines) . "</p>";
-					echo "<pre>";
-					foreach($lines as $i => $l){
-						if($i > 10) break;
-						echo "Linha $i: " . htmlspecialchars($l) . "\n";
-					}
-					echo "</pre>";
-					exit;
-				} elseif (!empty($errorMsg["existingPoints"]) && count($newPontos) == 0) {
-					// Apenas duplicatas
-					set_status("Todos os pontos do arquivo já existem no sistema.");
-					// Opcional: Ainda assim inserir o arquivo como histórico? O código original inseria.
-					// Mas se não há novos pontos, $newPontos está vazio.
-					// Vamos permitir continuar para mostrar o relatório de erros (duplicatas).
-				}
-			}
-
-			// Log pré-transação
-			file_put_contents($path."/debug_importacao.log", date("Y-m-d H:i:s") . " - Iniciando transação. Pontos a inserir: " . count($newPontos) . "\n", FILE_APPEND);
-
 			query("START TRANSACTION;");
 			try {
 				$arquivoPontoId = inserir("arquivoponto", array_keys($newArquivoPonto), array_values($newArquivoPonto));
-				
-				if(empty($arquivoPontoId) || !isset($arquivoPontoId[0]) || ($arquivoPontoId[0] instanceof Exception)){
-					throw new Exception("Falha ao inserir arquivo de ponto.");
-				}
-
-				$idArquivo = intval($arquivoPontoId[0]);
-
 				foreach($newPontos as $newPonto){
-					$newPonto["pont_nb_arquivoponto"] = $idArquivo;
-					$resultPonto = inserir("ponto", array_keys($newPonto), array_values($newPonto));
-					
-					if(empty($resultPonto) || !isset($resultPonto[0]) || ($resultPonto[0] instanceof Exception)){
-						// Se falhar um ponto, lançamos exceção para reverter tudo
-						$erroMsg = ($resultPonto[0] instanceof Exception) ? $resultPonto[0]->getMessage() : "Erro desconhecido ao inserir ponto.";
-						throw new Exception("Falha ao inserir ponto para matrícula " . $newPonto['pont_tx_matricula'] . ": " . $erroMsg);
-					}
+					$newPonto["pont_nb_arquivoponto"] = intval($arquivoPontoId[0]);
+					inserir("ponto", array_keys($newPonto), array_values($newPonto));
 				}
 				query("COMMIT;");
 			} catch (Exception $e) {
 				query("ROLLBACK;");
-				$msgErro = "Erro ao salvar pontos: " . $e->getMessage();
-				set_status($msgErro);
-				// Log para debug
-				file_put_contents($path."/debug_importacao.log", date("Y-m-d H:i:s") . " - " . $msgErro . "\n", FILE_APPEND);
+				set_status("Erro ao salvar pontos.");
 				return;
 			}
 
