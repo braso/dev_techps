@@ -37,6 +37,7 @@
                 "/cadastro_feriado.php" 	=> "Feriado",
                 "/cadastro_ferias.php" 		=> "Férias",
                 "/cadastro_funcionario.php"	=> "Funcionário",
+                "/cadastro_abono.php"       => "Abono",
                 "/cadastro_macro.php" 		=> "Macro",
                 "/cadastro_motivo.php" 		=> "Motivo",
                 "/cadastro_operacao.php" 	=> "Cargo",
@@ -49,7 +50,7 @@
                 "/cadastro_habilidade_comportamental.php" 	=> "Habilidades Comportamentais",
                 "/cadastro_perfil_acesso.php" 	=> "Perfil de Acesso",
                 "/cadastro_usuario_perfil.php" 	=> "Permisoes de usuarios",
-
+                
 
             ],
 			"ponto" => [
