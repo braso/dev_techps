@@ -61,8 +61,8 @@
             "S.O."				=> "celu_tx_sistemaOperacional",
             "MARCA/MODELO"		=> "celu_tx_marcaModelo",
             "RESPONSÁVEL"		=> "enti_tx_nome",
-            "CADASTRADO EM"		=> "CONCAT('data(\"', celu_tx_dataCadastro, '\", 1)') AS celu_tx_dataCadastro",
-            "ATUALIZADO EM"		=> "CONCAT('data(\"', celu_tx_dataAtualiza, '\", 1)') AS celu_tx_dataAtualiza",
+            "CADASTRADO EM"		=> "DATE_FORMAT(celu_tx_dataCadastro, '%d/%m/%Y %H:%i:%s')",
+            "ATUALIZADO EM"		=> "DATE_FORMAT(celu_tx_dataAtualiza, '%d/%m/%Y %H:%i:%s')",
         ];
 
         $camposBusca = [

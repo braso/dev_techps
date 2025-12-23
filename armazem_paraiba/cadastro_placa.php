@@ -124,8 +124,8 @@
             "VEÍCULO" => "plac_tx_modelo",
             "MOTORISTA" => "enti_tx_nome",
             "EMPRESA" => "empr_tx_nome",
-            "DATA DE CADASTRO" => "plac_tx_dataCadastro",
-            "DATA DE ALTERAÇÃO" => "plac_tx_dataAtualiza"
+            "DATA DE CADASTRO" => "DATE_FORMAT(plac_tx_dataCadastro, '%d/%m/%Y %H:%i:%s')",
+            "DATA DE ALTERAÇÃO" => "DATE_FORMAT(plac_tx_dataAtualiza, '%d/%m/%Y %H:%i:%s')"
         ];
 
         $camposBusca = [

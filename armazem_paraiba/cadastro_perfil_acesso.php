@@ -258,8 +258,8 @@ function listarPerfis(){
         "ID" => "perfil_nb_id",
         "NOME" => "perfil_tx_nome",
         "STATUS" => "perfil_tx_status",
-        "DATA DE CADASTRO" => "perfil_tx_dataCadastro",
-        "DATA DE ALTERAÇÃO" => "perfil_tx_dataAtualiza"
+        "DATA DE CADASTRO" => "DATE_FORMAT(perfil_tx_dataCadastro, '%d/%m/%Y %H:%i:%s')",
+        "DATA DE ALTERAÇÃO" => "DATE_FORMAT(perfil_tx_dataAtualiza, '%d/%m/%Y %H:%i:%s')"
     ];
 
     $camposBusca = [

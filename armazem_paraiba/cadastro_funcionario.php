@@ -1364,14 +1364,10 @@
 		]);
 
 		$extraEmpresa = "";
-		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
-			$extraEmpresa = " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
-		}
-		$campoSalario = "";
-		if (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
-			$a_mod["enti_nb_salario"] = str_replace(".", ",", (!empty($a_mod["enti_nb_salario"])? $a_mod["enti_nb_salario"] : ""));
-			$campoSalario = campo("Salário*", "salario", $a_mod["enti_nb_salario"], 1, "MASCARA_DINHEIRO", "tabindex=".sprintf("%02d", $tabIndex+2));
-		}
+		
+		
+		$a_mod["enti_nb_salario"] = str_replace(".", ",", (!empty($a_mod["enti_nb_salario"])? $a_mod["enti_nb_salario"] : ""));
+		$campoSalario = campo("Salário*", "salario", $a_mod["enti_nb_salario"], 1, "MASCARA_DINHEIRO", "tabindex=".sprintf("%02d", $tabIndex+2));
 
         $condSubSetor = " ORDER BY sbgr_tx_nome ASC";
         if (!empty($a_mod["enti_setor_id"]) || !empty($_POST["setor"])) {
@@ -1648,7 +1644,7 @@ function index(){
                 "SUBSETOR" 			=> "sbgr_tx_nome",
                 "FONE 1" 				=> "enti_tx_fone1",
                 "OCUPAÇÃO" 				=> "enti_tx_ocupacao",
-                "DATA CADASTRO" 		=> "CONCAT('data(\"', enti_tx_dataCadastro, '\")') AS enti_tx_dataCadastro",
+                "DATA CADASTRO" 		=> "DATE_FORMAT(enti_tx_dataCadastro, '%d/%m/%Y %H:%i:%s')",
                 "PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
                 "CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
                 "STATUS" 				=> "enti_tx_status"

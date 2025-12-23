@@ -991,12 +991,12 @@
 			$gridFields = [
 				"CÓDIGO" 				=> "para_nb_id",
 				"NOME" 					=> "para_tx_nome",
-				"TIPO" 					=> "CONCAT('formatarTipo(\"', para_tx_tipo, '\")') AS para_tx_tipo",
+				"TIPO" 					=> "para_tx_tipo",
 				"H.E. SEMANAL" 			=> "CONCAT(para_tx_percHESemanal, '%') AS para_tx_percHESemanal",
 				"H.E. EX." 				=> "CONCAT(para_tx_percHEEx, '%') AS para_tx_percHEEx",
 				"ACORDO" 				=> "para_tx_acordo",
-				"INÍCIO" 				=> "CONCAT('data(\"', para_tx_inicioAcordo, '\")') AS para_tx_inicioAcordo",
-				"FIM" 					=> "CONCAT('data(\"', para_tx_fimAcordo, '\")') AS para_tx_fimAcordo",
+				"INÍCIO" 				=> "DATE_FORMAT(para_tx_inicioAcordo, '%d/%m/%Y %H:%i:%s')",
+				"FIM" 					=> "DATE_FORMAT(para_tx_fimAcordo, '%d/%m/%Y %H:%i:%s')",
 				"STATUS" 				=> "para_tx_status"
 			];
 

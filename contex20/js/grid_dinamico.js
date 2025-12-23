@@ -260,9 +260,18 @@ const consultarRegistros = function(){
                     pageNumber = qtdPaginas;
                 }
                 footer = '';
-                if(pageNumber > 2 && qtdPaginas > 3){
-                    footer += '<div value=\"1\"><<</div>'
+
+                // Botão Primeira Página (<<)
+                if(pageNumber > 1){
+                    footer += '<div value="1" title="Primeira Página"><<</div>';
                 }
+
+                // Botão Página Anterior (<)
+                if(pageNumber > 1){
+                    footer += '<div value="'+(pageNumber-1)+'" title="Página Anterior"><</div>';
+                }
+
+                // Botões Numéricos
                 for(f = ((pageNumber-1)<=1? 1: (pageNumber-1)-(pageNumber==qtdPaginas)); f < qtdPaginas+1 && f < pageNumber+2+(pageNumber == 1); f++){
                     if(f == pageNumber){
                         footer += '<div class=\"page-selected\" value=\"'+f+'\">'+f+'</div>'
@@ -270,9 +279,17 @@ const consultarRegistros = function(){
                         footer += '<div value=\"'+f+'\">'+f+'</div>'
                     }
                 }
-                if(qtdPaginas > 3 && pageNumber < qtdPaginas-1){
-                    footer += '<div value=\"'+(qtdPaginas)+'\">>></div>'
+
+                // Botão Próxima Página (>)
+                if(pageNumber < qtdPaginas){
+                    footer += '<div value="'+(pageNumber+1)+'" title="Próxima Página">></div>';
                 }
+
+                // Botão Última Página (>>)
+                if(pageNumber < qtdPaginas){
+                    footer += '<div value=\"'+(qtdPaginas)+'\" title="Última Página">>></div>'
+                }
+
 
                 //}
                 
@@ -284,8 +301,8 @@ const consultarRegistros = function(){
                       '</div>';
             $('#result thead')[0].innerHTML = header.join('');
             $('#result tbody')[0].innerHTML = response.rows;
-            $('.grid-footer .total-registros')[0].innerHTML = '<div>Total: '+total+'</div>';
-            $('.grid-footer .tab-pagination')[0].innerHTML = footer;
+            $('.total-registros').html('<div>Total: '+total+' &nbsp;|&nbsp; Página '+pageNumber+' de '+qtdPaginas+'</div>');
+            $('.tab-pagination').html(footer);
             $('.table-loading-icon')[0].innerHTML = '';
             $('.botao-csv')[0].innerHTML = btn;
 
@@ -322,7 +339,7 @@ $(document).ready(function(){
     consultarRegistros();
 });
 
-$('.grid-footer .tab-pagination').click(function(event) {
+$('.tab-pagination').click(function(event) {
     if($(event.target)[0].className != 'tab-pagination'){
         pageNumber = parseInt($(event.target)[0].attributes.value.value);
         consultarRegistros();

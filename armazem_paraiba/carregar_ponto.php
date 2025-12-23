@@ -306,7 +306,7 @@
 				"CÓD" 				=> "arqu_nb_id",
 				"ARQUIVO" 			=> "arqu_tx_nome",
 				"USUÁRIO" 			=> "user_tx_nome",
-				"CARREGADO EM" 		=> "CONCAT('data(\"', arqu_tx_data, '\")') AS arqu_tx_data",
+				"CARREGADO EM" 		=> "DATE_FORMAT(arqu_tx_data, '%d/%m/%Y %H:%i:%s') AS arqu_tx_data",
 				"STATUS" 			=> "arqu_tx_status"
 			];
 

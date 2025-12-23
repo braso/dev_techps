@@ -153,6 +153,10 @@
 	}
 
 	function index(){
+
+		function formataData($data){
+			return date("d/m/Y", strtotime($data));
+		}
 		//ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
 		include "check_permission.php";
 		// APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
@@ -209,11 +213,15 @@
 		echo linha_form($campos);
 		echo fecha_form($botoes);
 
+	
+
+
+
 		//Grid dinâmica{
 			$gridFields = [
 				"CÓDIGO" 	=> "feri_nb_id",
 				"NOME" 		=> "feri_tx_nome",
-				"DATA" 		=> "CONCAT('data(\"', feri_tx_data, '\")') AS feri_tx_data",
+				"DATA" 		=> "DATE_FORMAT(feri_tx_data, '%d/%m/%Y %H:%i:%s')",
 				"ESTADUAL" 	=> "feri_tx_uf",
 				"MUNICIPAL" => "cida_tx_nome",
 				// "STATUS" 	=> "feri_tx_status"

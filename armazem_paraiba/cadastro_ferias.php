@@ -231,8 +231,8 @@
 			$gridFields = [
 				"CÓDIGO" 				=> "feri_nb_id",
 				"Funcionário" 			=> "enti_tx_nome",
-				"Início" 				=> "CONCAT('data(\"', feri_tx_dataInicio, '\")') AS feri_tx_dataInicio",
-				"Fim" 					=> "CONCAT('data(\"', feri_tx_dataFim, '\")') AS feri_tx_dataFim",
+				"Início" 				=> "DATE_FORMAT(feri_tx_dataInicio, '%d/%m/%Y %H:%i:%s')",
+				"Fim" 					=> "DATE_FORMAT(feri_tx_dataFim, '%d/%m/%Y %H:%i:%s')",
 				"Qtd. Dias" 			=> "DATEDIFF(feri_tx_dataFim, feri_tx_dataInicio) AS qtdDias",
 				"STATUS" 				=> "feri_tx_status",
 			];

@@ -219,9 +219,13 @@
                 <div class='portlet light'>
                     <div class='grid-header' style='width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>
                         <div class='botao-csv'></div>
-                        <div class='margin-bottom-5' style='width: min-content;'>
-                            <label>Regs. por página</label>
-                            <input name='limit' id='limitTop' value='' placeholder='Todos' autocomplete='off' type='number' class='form-control input-sm' min='1' max='999' ".($tabIndex>0? "tabindex='".$tabIndex."'": "").">
+                        <div style='display: flex; align-items: flex-end;'>
+                            <div class='total-registros' style='margin-right: 15px; margin-bottom: 5px; white-space: nowrap;'></div>
+                            <div class='tab-pagination' style='margin-right: 15px; margin-bottom: 5px;'></div>
+                            <div class='margin-bottom-5' style='width: min-content;'>
+                                <label>Regs. por página</label>
+                                <input name='limit' id='limitTop' value='' placeholder='Todos' autocomplete='off' type='number' class='form-control input-sm' min='1' max='999' ".($tabIndex>0? "tabindex='".$tabIndex."'": "").">
+                            </div>
                         </div>
                     </div>
 					<div class='table-div' style='margin-top: 8px;overflow-x: auto; border-radius: 10px; max-height: 87vh;'>
