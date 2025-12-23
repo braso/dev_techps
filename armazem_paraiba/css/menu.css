@@ -1,5 +1,10 @@
+.menu-dropdown > a:hover,
+.menu-dropdown.open > a {
+    background-color: #002855 !important;
+}
+/* Evita ficar marcado quando apenas ativo (sem hover/aberto) */
 .menu-dropdown.active > a {
-    background-color: #8c98a6 !important;
+    background-color: transparent !important;
 }
 .classic-menu-dropdown ul.dropdown-menu li a i {
     color: var(--sec-icon-color, inherit);
