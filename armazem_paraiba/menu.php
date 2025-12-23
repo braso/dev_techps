@@ -172,6 +172,7 @@ if ($showComunicado) {
             if($perfilId > 0){
                 $parentAllowed = !empty($allowedBySecao[$secKey]) && in_array(ucfirst($title), $allowedBySecao[$secKey]);
             }
+            $countItems = 0;
             foreach($secao as $key => $value){
                 $full = __DIR__.$key;
                 if(!file_exists($full)){
@@ -188,6 +189,7 @@ if ($showComunicado) {
                     }
                 }
                 $children .= "<li class=''><a href='".$CONTEX["path"].$key."' class='nav-link'> ".$value."</a></li>";
+                $countItems++;
             }
             // Se houver perfil vinculado, mostra a seção se houver filhos OU se o PAI estiver permitido
             $showSection = true;
@@ -195,10 +197,15 @@ if ($showComunicado) {
                 $showSection = ($children !== "" || $parentAllowed);
             }
             if($showSection){
+                $styleUl = "";
+                if($countItems > 10){
+                    $styleUl = "style='column-count: 2; column-gap: 10px; min-width: 400px;'";
+                }
+
                 $menus[$title] = "
                     <li class='menu-dropdown classic-menu-dropdown ".verificarAtividade(array_keys($secao))."'>
                         <a href='javascript:;'> ".ucfirst($title)."<span class='arrow'></span></a>
-                        <ul class='dropdown-menu pull-left'>".$children."</ul></li>";
+                        <ul class='dropdown-menu pull-left' $styleUl>".$children."</ul></li>";
             } else {
                 $menus[$title] = "";
             }
@@ -246,6 +253,11 @@ echo
 			}
 			.classic-menu-dropdown ul.dropdown-menu li a i {
 				color: var(--sec-icon-color, inherit);
+			}
+			/* Garante que os itens nao quebrem entre colunas */
+			.dropdown-menu > li {
+				break-inside: avoid;
+				page-break-inside: avoid;
 			}
 		</style>"
 	;
