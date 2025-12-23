@@ -7,6 +7,7 @@
     include "load_env.php";
     include_once "conecta.php";
     include_once "check_permission.php";
+    echo '<link rel="stylesheet" href="css/menu.css">';
 
 	function verificarAtividade($paginasAtivas) {
 		foreach ($paginasAtivas as $pagina){
@@ -239,24 +240,11 @@ if ($showComunicado) {
 		return "";
 	}
 
-echo 
-		"<style>
-			.menu-dropdown.active > a {
-				background-color: #8c98a6 !important;
-			}
-			.classic-menu-dropdown ul.dropdown-menu li a i {
-				color: var(--sec-icon-color, inherit);
-			}
-		</style>"
-	;
-
     echo 
         "<!-- INICIO HEADER MENU -->"
             ."<div class='page-header-menu'>"
                 ."<div class='container-fluid'>"
                 ."<!-- INICIO MEGA MENU -->"
-                    ."<!-- DOC: Apply 'hor-menu-light' class after the 'hor-menu' class below to have a horizontal menu with white background -->"
-                    ."<!-- DOC: Remove data-hover='dropdown' and data-close-others='true' attributes below to disable the dropdown opening on mouse hover -->"
                     ."<div class='hor-menu'>"
                         ."<ul class='nav navbar-nav'>"
                             .mostrarMenuDoNivel($_SESSION["user_tx_nivel"])

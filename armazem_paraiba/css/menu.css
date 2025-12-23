@@ -1,0 +1,9 @@
+.menu-dropdown.active > a {
+    background-color: #8c98a6 !important;
+}
+.classic-menu-dropdown ul.dropdown-menu li a i {
+    color: var(--sec-icon-color, inherit);
+}
+.testa{
+    background-color: black;
+}
