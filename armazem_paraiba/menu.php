@@ -36,6 +36,7 @@
                 "/cadastro_feriado.php" 	=> "Feriado",
                 "/cadastro_ferias.php" 		=> "Férias",
                 "/cadastro_funcionario.php"	=> "Funcionário",
+                "/cadastro_abono.php"		=> "Abono",
                 "/cadastro_macro.php" 		=> "Macro",
                 "/cadastro_motivo.php" 		=> "Motivo",
                 "/cadastro_operacao.php" 	=> "Cargo",

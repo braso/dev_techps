@@ -243,9 +243,9 @@
 			$b = [
 				botao("Buscar", "buscarEspelho()", "", "", "", "", "btn btn-success"),
 			];
-			if(!in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
+			
 				$b[] = botao("Cadastrar Abono", "redirParaAbono", "acaoPrevia", $_POST["acao"]??"", "btn btn-secondary");
-			}
+			
 			if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
 				$b[] = "<button class='btn default' type='button' onclick='imprimir(this)'>Imprimir</button>";
 			}
