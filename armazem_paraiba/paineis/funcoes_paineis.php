@@ -635,12 +635,6 @@ function criar_relatorio_jornada() {
 	}
 	$pasta->close();
 
-	$totalEscalados = 0;
-	$totalTrabalhando = 0;
-	$totalPendentes = 0;
-	$totalAtrasados = 0;
-	$totalExtras = 0;
-
 	foreach ($motoristas as $motorista) {
 		$row = [];
 		$arrayDias = [];
@@ -667,143 +661,8 @@ function criar_relatorio_jornada() {
 			}
 		}
 
-		$hasToday = false;
-		foreach ($arrayDias as $d) {
-			if ($d == date("Y-m-d")) {
-				$hasToday = true;
-				break;
-			}
-		}
-		if (!$hasToday) {
-			$arrayDias[] = date("Y-m-d");
-		}
-
-		foreach ($arrayDias as $diaString) {
-			$dia = diaDetalhePonto($motorista, $diaString);
-
-			$inicioEscala = "";
-			$fimEscala = "";
-			$atraso = "";
-
-			$parametro = mysqli_fetch_assoc(query(
-				"SELECT para_tx_tipo, para_tx_tolerancia, esca_nb_id, esca_tx_dataInicio, esca_nb_periodicidade 
-				 FROM parametro 
-				 LEFT JOIN escala ON esca_nb_parametro = para_nb_id
-				 WHERE para_nb_id = " . $motorista['enti_nb_parametro']
-			));
-
-			if ($parametro && $parametro['para_tx_tipo'] == 'escala' && !empty($parametro['esca_nb_id']) && !empty($parametro['esca_tx_dataInicio'])) {
-				$dataInicioEscala = new DateTime($parametro['esca_tx_dataInicio']);
-				$dataReferencia = new DateTime($diaString);
-
-				$diffDays = $dataInicioEscala->diff($dataReferencia)->days;
-				$numeroDia = ($diffDays % $parametro['esca_nb_periodicidade']) + 1;
-
-				$diaEscala = mysqli_fetch_assoc(query(
-					"SELECT esca_tx_horaInicio, esca_tx_horaFim 
-					 FROM escala_dia 
-					 WHERE esca_nb_escala = {$parametro['esca_nb_id']} 
-					 AND esca_nb_numeroDia = $numeroDia"
-				));
-
-				if ($diaEscala) {
-					$inicioEscala = $diaEscala['esca_tx_horaInicio'];
-					$fimEscala = $diaEscala['esca_tx_horaFim'];
-
-					if (!empty($inicioEscala)) {
-						$tolerancia = !empty($parametro['para_tx_tolerancia']) ? intval($parametro['para_tx_tolerancia']) : 0;
-
-						// Extract Start Time from dia
-						$horaInicioReal = "";
-						if (isset($dia["inicioJornada"]) && strlen($dia["inicioJornada"]) > 0 && strpos($dia["inicioJornada"], "00:00") === false) {
-							$horaLimpaTemp = preg_replace("/<strong>.*?<\/strong>/", "",  $dia["inicioJornada"]);
-							$horaLimpaTemp = preg_replace("/[^0-9:]/", " ", $horaLimpaTemp);
-							$horaInicioReal = trim($horaLimpaTemp);
-						}
-
-						$datetimeInicioEscala = DateTime::createFromFormat('Y-m-d H:i', $diaString . ' ' . $inicioEscala);
-						$datetimeAgora = new DateTime();
-
-						if (!empty($horaInicioReal)) {
-							$datetimeInicioReal = DateTime::createFromFormat('Y-m-d H:i', $diaString . ' ' . $horaInicioReal);
-							if ($datetimeInicioReal && $datetimeInicioEscala) {
-								if ($datetimeInicioReal > $datetimeInicioEscala) {
-									$diffSeconds = $datetimeInicioReal->getTimestamp() - $datetimeInicioEscala->getTimestamp();
-									$diffMinutes = $diffSeconds / 60;
-									if ($diffMinutes > $tolerancia) {
-										$atraso = gmdate("H:i", $diffSeconds);
-									}
-								}
-							}
-						} else {
-							// Not started. Check if late.
-							if ($diaString == date("Y-m-d")) {
-								if ($datetimeAgora > $datetimeInicioEscala) {
-									$diffSeconds = $datetimeAgora->getTimestamp() - $datetimeInicioEscala->getTimestamp();
-									$diffMinutes = $diffSeconds / 60;
-									if ($diffMinutes > $tolerancia) {
-										$atraso = gmdate("H:i", $diffSeconds);
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-
-			// Contadores
-			// if ($diaString == date("Y-m-d")) {
-			// 	if (!empty($inicioEscala)) {
-			// 		$totalEscalados++;
-					
-			// 		$started = false;
-			// 		if (isset($dia["inicioJornada"]) && strlen($dia["inicioJornada"]) > 0 && strpos($dia["inicioJornada"], "00:00") === false) {
-			// 			// Verifica se é apenas HTML vazio ou hora inválida
-			// 			$horaCheck = strip_tags($dia["inicioJornada"]);
-			// 			$horaCheck = preg_replace("/[^0-9:]/", "", $horaCheck);
-			// 			if (strlen($horaCheck) >= 4) { // Pelo menos HH:MM
-			// 				$started = true;
-			// 			}
-			// 		}
-
-			// 		// Recalculate fimJornada locally if needed or use the logic below
-			// 		// The logic for fimJornada is below (lines 775+), but I need it here.
-			// 		// Let's look ahead to how fimJornada is calculated.
-			// 		// It depends on $dia["fimJornada"].
-					
-			// 		$fimJornadaLocal = false;
-			// 		if (strpos($dia["fimJornada"], "fa fa-warning") !== false) {
-			// 			$fimJornadaLocal = true;
-			// 		} else {
-			// 			$horaInicio = preg_replace("/<strong>.*?<\/strong>/", "", $dia["inicioJornada"]);
-			// 			$horaFim = preg_replace("/<strong>.*?<\/strong>/", "", $dia["fimJornada"]);
-			// 			$horaRemoverExtraI = preg_replace("/[^0-9:]/", " ", $horaInicio);
-			// 			$horaRemoverExtraF = preg_replace("/\s*D\+\d+/", "", $horaFim);
-			// 			$horaRemoverHtmlF = str_replace(["<br>", "<br/>", "<br />"], " ", $horaRemoverExtraF);
-			// 			$inicio = explode(" ", $horaRemoverExtraI);
-			// 			$fim = explode(" ", $horaRemoverHtmlF);
-			// 			$filtraInicio = array_filter($inicio);
-			// 			$filtraFim = array_filter($fim);
-			// 			if (sizeof($filtraInicio) == sizeof($filtraFim) || sizeof($filtraInicio) < sizeof($filtraFim)) {
-			// 				$fimJornadaLocal = false;
-			// 			} else {
-			// 				$fimJornadaLocal = true;
-			// 			}
-			// 		}
-
-
-			// 		if ($started) {
-			// 			if ($fimJornadaLocal) {
-			// 				$totalTrabalhando++;
-			// 			}
-			// 		} else {
-			// 			// $totalPendentes++; // Logic moved to end
-			// 			if (!empty($atraso)) {
-			// 				$totalAtrasados++;
-			// 			}
-			// 		}
-			// 	}
-			// }
+		foreach ($arrayDias as $dia) {
+			$dia = diaDetalhePonto($motorista, $dia);
 
 			$descanso = "";
 			$espera = "";
@@ -932,16 +791,13 @@ function criar_relatorio_jornada() {
 					"matricula" => $motorista["enti_tx_matricula"],
 					"nome" => $motorista["enti_tx_nome"],
 					"ocupacao" => $motorista["enti_tx_ocupacao"],
-					"tipoOperacaoNome"=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem Cargo"),
+                    "tipoOperacaoNome"=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem Cargo"),
 					"jornada" => strip_tags($jornada),
 					"jornadaEfetiva" => strip_tags($jornadaEfetiva),
 					"refeicao" => strip_tags($refeicao),
 					"espera" => strip_tags($espera),
 					"descanso" => strip_tags($descanso),
 					"repouso" => strip_tags($repouso),
-					"inicioEscala" => $inicioEscala,
-					"fimEscala" => $fimEscala,
-					"atraso" => $atraso,
 
 					"setor" 			=> $motorista["enti_setor_id"],
 					"setorNome" 		=> $motorista["grup_tx_nome"],
@@ -956,28 +812,16 @@ function criar_relatorio_jornada() {
 			$arquivosMantidos[] = $nomeArquivo;
 			file_put_contents($path."/".$nomeArquivo, json_encode($row, JSON_UNESCAPED_UNICODE));
 		}
-	}
 
-	// Salvar resumo
-	// $totalPendentes = $totalEscalados - $totalTrabalhando;
-	// $resumo = [
-	// 	"totalEscalados" => $totalEscalados,
-	// 	"totalTrabalhando" => $totalTrabalhando,
-	// 	"totalPendentes" => $totalPendentes,
-	// 	"totalAtrasados" => $totalAtrasados
-	// ];
-	// $nomeArquivoResumo = "resumo.json";
-	// file_put_contents($path."/".$nomeArquivoResumo, json_encode($resumo));
-	// $arquivosMantidos[] = $nomeArquivoResumo;
-
-	$pasta = dir($path);
-	if ($arquivosMantidos != null) {
-		while ($arquivo = $pasta->read()) {
-			if ($arquivo != "." && $arquivo != ".." && !in_array($arquivo, $arquivosMantidos)) {
-				unlink($path."/".$arquivo); // Apaga o arquivo
+		$pasta = dir($path);
+		if ($arquivosMantidos != null) {
+			while ($arquivo = $pasta->read()) {
+				if (!in_array($arquivo, $arquivosMantidos)) {
+					unlink($arquivo); // Apaga o arquivo
+				}
 			}
+			$pasta->close();
 		}
-		$pasta->close();
 	}
 	// sleep(1);
 	return;
@@ -1017,7 +861,11 @@ function relatorio_nao_conformidade_juridica(int $idEmpresa) {
 			LEFT JOIN grupos_documentos ON  grup_nb_id = enti_setor_id
 			LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id
 			WHERE enti_nb_empresa = {$idEmpresa}
-				AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-t")}'
+				AND (
+					enti_tx_admissao <= '{$periodoInicio->format("Y-m-t")}'
+					OR (enti_tx_admissao = '' AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-t")}')
+					OR (enti_tx_admissao IS NULL AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-t")}')
+				)
 				AND (
 					enti_tx_status = 'ativo'
 					OR enti_tx_desligamento > '{$periodoInicio->format("Y-m-t")}'
@@ -1046,6 +894,7 @@ function relatorio_nao_conformidade_juridica(int $idEmpresa) {
 	}
 
 	$totalEmpresa = 0;
+	$motoristaTotais = [];
 	foreach ($motoristas as $motorista) {
 		$diasComProblema = [];
 
@@ -1782,7 +1631,6 @@ function logisticas() {
 				LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
 				LEFT JOIN grupos_documentos ON  grup_nb_id = enti_setor_id
 				LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id
-				LEFT JOIN escala ON esca_nb_parametro = para_nb_id
 				WHERE enti_tx_status = 'ativo'
 					AND enti_nb_empresa = {$_POST["empresa"]}
 					AND enti_tx_dataCadastro <= '{$periodoInicio}'
@@ -1794,87 +1642,7 @@ function logisticas() {
 	), MYSQLI_ASSOC);
 
 	$dataReferenciaStr = !empty($_POST["busca_periodo"]) ? $_POST["busca_periodo"] : $hoje->format("d/m/Y H:i");
-	$dataReferenciaDate = DateTime::createFromFormat("d/m/Y H:i", $dataReferenciaStr);
-
 	foreach ($motoristas as $motorista) {
-		// INICIO MODIFICACAO ESCALA
-		$inicioEscala = "";
-		$fimEscala = "";
-		$atraso = "";
-		$statusEscala = "Fora da Escala"; // Default
-
-		if (!empty($motorista["para_tx_tipo"]) && $motorista["para_tx_tipo"] == "escala" && !empty($motorista["esca_nb_id"])) {
-			$dataInicioEscala = new DateTime($motorista["esca_tx_dataInicio"]);
-			$diferencaDias = $dataInicioEscala->diff($dataReferenciaDate);
-			$diasDiff = $diferencaDias->days * ($diferencaDias->invert ? -1 : 1);
-			$cicloDias = intval($motorista["esca_nb_periodicidade"]);
-
-			if ($cicloDias > 0) {
-				// Logica do ciclo igual ao funcoes_ponto.php
-				// $diaDoCiclo = round($cicloDias * (($diasDiff / $cicloDias) - floor($diasDiff / $cicloDias)) + 1);
-				// Usando modulo simples para inteiros:
-				$diaDoCiclo = ($diasDiff % $cicloDias) + 1;
-				if ($diaDoCiclo <= 0) $diaDoCiclo += $cicloDias;
-
-				$diaEscala = mysqli_fetch_assoc(query(
-					"SELECT * FROM escala_dia 
-					 WHERE esca_nb_escala = " . $motorista['esca_nb_id'] . " 
-					 AND esca_nb_numeroDia = " . $diaDoCiclo
-				));
-
-				if ($diaEscala) {
-					$inicioEscala = $diaEscala['esca_tx_horaInicio'];
-					$fimEscala = $diaEscala['esca_tx_horaFim'];
-					if (!empty($inicioEscala)) {
-						$statusEscala = "Escalado";
-					}
-				}
-			}
-		}
-
-		// Buscar batida de ponto de hoje (Inicio)
-		$pontoInicio = mysqli_fetch_assoc(query(
-			"SELECT pont_tx_data FROM ponto 
-			 WHERE pont_tx_matricula = '{$motorista["enti_tx_matricula"]}' 
-			 AND pont_tx_tipo = '1' 
-			 AND pont_tx_status = 'ativo'
-			 AND pont_tx_data LIKE '" . $dataReferenciaDate->format('Y-m-d') . "%'
-			 ORDER BY pont_tx_data ASC LIMIT 1"
-		));
-
-		$horaInicioReal = "";
-		if ($pontoInicio) {
-			$horaInicioReal = date("H:i", strtotime($pontoInicio['pont_tx_data']));
-		}
-
-		// Calcular Atraso
-		if ($statusEscala == "Escalado" && !empty($inicioEscala)) {
-			$horaEscalaDt = DateTime::createFromFormat('H:i', $inicioEscala);
-			
-			if ($horaInicioReal) {
-				// Já bateu o ponto
-				$horaRealDt = DateTime::createFromFormat('H:i', $horaInicioReal);
-				if ($horaRealDt > $horaEscalaDt) {
-					$diff = $horaRealDt->diff($horaEscalaDt);
-					$atraso = $diff->format('%H:%I');
-				}
-			} else {
-				// Não bateu o ponto ainda
-				$agora = new DateTime();
-				// Se a data referencia for hoje, compara com agora. Se for passado, considera atraso total? 
-				// Assumindo painel em tempo real (hoje):
-				if ($dataReferenciaDate->format('Y-m-d') == $agora->format('Y-m-d')) {
-					$horaAgoraDt = DateTime::createFromFormat('H:i', $agora->format('H:i')); // Apenas hora
-					if ($horaAgoraDt > $horaEscalaDt) {
-						$diff = $horaAgoraDt->diff($horaEscalaDt);
-						$atraso = $diff->format('%H:%I');
-					}
-				}
-			}
-		}
-		// FIM MODIFICACAO ESCALA
-
-		// CODIGO EXISTENTE CONTINUA...
 		$parametro = mysqli_fetch_all(query(
 			"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_maxHESemanalDiario, para_tx_adi5322"
 				. " FROM `parametro`"
