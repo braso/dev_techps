@@ -1,0 +1,41 @@
+.menu-dropdown > a:hover,
+.menu-dropdown.open > a {
+    background-color: #002855 !important;
+}
+/* Evita ficar marcado quando apenas ativo (sem hover/aberto) */
+.menu-dropdown.active > a {
+    background-color: transparent !important;
+}
+.classic-menu-dropdown ul.dropdown-menu li a i {
+    color: var(--sec-icon-color, inherit);
+}
+/* Garante que os itens nao quebrem entre colunas */
+.dropdown-menu > li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+/* Dropdown em duas colunas quando há muitos itens */
+.dropdown-2cols {
+    column-count: 2;
+    column-gap: 16px;
+    min-width: 500px !important; /* forçando sobre bootstrap defaults */
+    width: max-content;
+    padding: 12px 14px;
+}
+
+/* Alerta de comunicado no topo */
+.menu-alert-container {
+    margin-top: 10px;
+}
+.menu-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+.menu-alert__icon {
+    font-size: 18px;
+}
+.menu-alert__text {
+    flex: 1;
+}

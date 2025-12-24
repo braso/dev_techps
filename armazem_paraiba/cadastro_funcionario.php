@@ -1362,7 +1362,8 @@
 			
 			textarea(	"Observações:", "obs", ($a_mod["enti_tx_obs"]?? ""), 12, "tabindex=".sprintf("%02d", $tabIndex++))
 		]);
-
+		
+		//Se tiver permissão, esquece isso de administrador ou super
 		$extraEmpresa = "";
 		
 		
@@ -1583,8 +1584,9 @@ function index(){
 		
         cabecalho("Cadastro de Funcionário");
 
+		//Se tiver permissão, esquece isso de administrador ou super
 		$extraEmpresa = "";
-		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador"))) {
+		if ($_SESSION["user_nb_empresa"] > 0 && is_bool(stripos($_SESSION["user_tx_nivel"], "Administrador")) && is_bool(stripos($_SESSION["user_tx_nivel"], "Super"))) {
 			$extraEmpresa = " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
 		}
 		

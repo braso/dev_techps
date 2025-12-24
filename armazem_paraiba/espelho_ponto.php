@@ -353,6 +353,13 @@
 					}
 					
 					$row = array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado);
+					
+					// Substituir "00:00" por vazio em todos os campos da linha final, exceto colunas protegidas se necessário
+					foreach($row as $key => &$val){
+						if(is_string($val) && trim($val) === "00:00"){
+							$val = "";
+						}
+					}
 					if(strpos($row["inicioJornada"], "Batida início de jornada não registrada!") !== false){
 						$descFaltasNaoJustificadas = operarHorarios([$descFaltasNaoJustificadas, $row["jornadaPrevista"]], "+");
 						$qtdDiasNaoJustificados++;
@@ -448,7 +455,13 @@
 					$totalResumo["desconto_manual"],
 					$totalResumo["desconto_faltas_nao_justificadas"]
 				);
-				$rows[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumo));
+				$rowTotal = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumo));
+				foreach($rowTotal as &$valTotal){
+					if(is_string($valTotal) && trim($valTotal) === "00:00"){
+						$valTotal = "";
+					}
+				}
+				$rows[] = $rowTotal;
 
 				echo abre_form(
 					"<table class='table w-auto text-xsmall bold table-bordered table-striped table-condensed flip-content table-hover compact espelho-cabecalho-info'>

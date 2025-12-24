@@ -60,7 +60,7 @@
 		<div class="content">
 			<!-- COMECO LOGIN FORM -->
 			<form class="login-form" method="post">
-				<h3 class="form-title font-green">Login <?=(is_int(strpos($_SERVER["REQUEST_URI"], "dev"))? "(Dev)": "")?></h3>
+				<h3 class="form-title font-blue">Login <?=(is_int(strpos($_SERVER["REQUEST_URI"], "dev"))? "(Dev)": "")?></h3>
 				<!--Vem do arquivo empresas.php -->
 				<?=$empresasInput?>
 
@@ -94,7 +94,7 @@
 				<?=(!empty($_POST["sourcePage"]) ? "<input type='hidden' name='sourcePage' value= '".$_POST["sourcePage"]."'/>" : "")?>
 				<?= $msg ?>
 				<div class="form-actions">
-					<input type="submit" class="btn green uppercase" name="botao" value="Entrar"></input>
+					<input type="submit" class="btn blue uppercase" name="botao" value="Entrar"></input>
 				</div>
 				<p style="font-size: small; margin: 10px 0px">Versão:
 					<?= $version; ?><br>

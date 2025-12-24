@@ -7,6 +7,7 @@
     include "load_env.php";
     include_once "conecta.php";
     include_once "check_permission.php";
+    echo '<link rel="stylesheet" href="css/menu.css">';
 
 	function verificarAtividade($paginasAtivas) {
 		foreach ($paginasAtivas as $pagina){
@@ -197,15 +198,15 @@ if ($showComunicado) {
                 $showSection = ($children !== "" || $parentAllowed);
             }
             if($showSection){
-                $styleUl = "";
+                $ulClass = "dropdown-menu pull-left";
                 if($countItems > 10){
-                    $styleUl = "style='column-count: 2; column-gap: 10px; min-width: 400px;'";
+                    $ulClass .= " dropdown-2cols";
                 }
 
                 $menus[$title] = "
                     <li class='menu-dropdown classic-menu-dropdown ".verificarAtividade(array_keys($secao))."'>
                         <a href='javascript:;'> ".ucfirst($title)."<span class='arrow'></span></a>
-                        <ul class='dropdown-menu pull-left' $styleUl>".$children."</ul></li>";
+                        <ul class='".$ulClass."'>".$children."</ul></li>";
             } else {
                 $menus[$title] = "";
             }
@@ -246,29 +247,11 @@ if ($showComunicado) {
 		return "";
 	}
 
-echo 
-		"<style>
-			.menu-dropdown.active > a {
-				background-color: #8c98a6 !important;
-			}
-			.classic-menu-dropdown ul.dropdown-menu li a i {
-				color: var(--sec-icon-color, inherit);
-			}
-			/* Garante que os itens nao quebrem entre colunas */
-			.dropdown-menu > li {
-				break-inside: avoid;
-				page-break-inside: avoid;
-			}
-		</style>"
-	;
-
     echo 
         "<!-- INICIO HEADER MENU -->"
             ."<div class='page-header-menu'>"
                 ."<div class='container-fluid'>"
                 ."<!-- INICIO MEGA MENU -->"
-                    ."<!-- DOC: Apply 'hor-menu-light' class after the 'hor-menu' class below to have a horizontal menu with white background -->"
-                    ."<!-- DOC: Remove data-hover='dropdown' and data-close-others='true' attributes below to disable the dropdown opening on mouse hover -->"
                     ."<div class='hor-menu'>"
                         ."<ul class='nav navbar-nav'>"
                             .mostrarMenuDoNivel($_SESSION["user_tx_nivel"])
@@ -280,8 +263,6 @@ echo
         ."<!-- FIM HEADER MENU -->"
     ;
 
-    echo "<script>(function(){var items=document.querySelectorAll('.classic-menu-dropdown');for(var i=0;i<items.length;i++){var li=items[i];var ai=li.querySelector(':scope > a i');if(ai){var c=window.getComputedStyle(ai).color;li.style.setProperty('--sec-icon-color',c);}}})();</script>";
-
     $hasTable = false;
     if(isset($conn)){
         $chk = mysqli_query($conn, "SHOW TABLES LIKE 'comunicados'");
@@ -291,7 +272,7 @@ echo
         $destino = (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")) || is_int(strpos($_SESSION["user_tx_nivel"], "Super Administrador")))? "Administrador": "Funcionário";
         $comu = mysqli_fetch_assoc(query("SELECT comu_tx_texto FROM comunicados WHERE comu_tx_destino = ? ORDER BY comu_nb_id DESC LIMIT 1", "s", [$destino]));
         if(!empty($comu["comu_tx_texto"])){
-            echo "<div class='container-fluid' style='margin-top:10px'><div class='alert alert-info' role='alert' style='display:flex; align-items:flex-start; gap:10px'><i class='fa fa-info-circle' style='font-size:18px'></i><div style='flex:1'>".nl2br(htmlspecialchars($comu["comu_tx_texto"])) ."</div></div></div>";
+            echo "<div class='container-fluid menu-alert-container'><div class='alert alert-info menu-alert' role='alert'><i class='fa fa-info-circle menu-alert__icon'></i><div class='menu-alert__text'>".nl2br(htmlspecialchars($comu["comu_tx_texto"])) ."</div></div></div>";
         }
     }
 	
