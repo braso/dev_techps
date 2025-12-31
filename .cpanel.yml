@@ -28,6 +28,8 @@ deployment:
     - export TRANSCOPEL=/home/tech1694/public_html/gestaodeponto/transcopel
     - export SAO_LUCAS=/home/tech1694/public_html/gestaodeponto/sao_lucas
     - export PB_TRANSPORTES=/home/tech1694/public_html/gestaodeponto/pb_transportes
+    - export ODONTOTANGARA=/home/tech1694/public_html/gestaodeponto/odontotangara
+
 
 
     - /bin/cp -R $GENERAL $GENERALDEPLOY
@@ -53,3 +55,4 @@ deployment:
     - /bin/cp -R $DOMAIN $BLUEROAD
     - /bin/cp -R $DOMAIN $SAO_LUCAS
     - /bin/cp -R $DOMAIN $PB_TRANSPORTES
+    - /bin/cp -R $DOMAIN $ODONTOTANGARA
