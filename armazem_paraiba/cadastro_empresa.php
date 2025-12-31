@@ -317,7 +317,7 @@
         if(!empty($cnpjMatriz) && $_ENV["CONTEX_PATH"] != "/techps"){
             $cnpjMatriz = preg_replace('/[^0-9]/', '', $cnpjMatriz["empr_tx_cnpj"]);
             $_POST["cnpj"] = preg_replace('/[^0-9]/', '', $_POST["cnpj"]);
-            if(substr($cnpjMatriz, 0, 8) != substr($_POST["cnpj"], 0, 8)){
+            if($_SESSION['user_tx_nivel'] != 'Super Administrador' && substr($cnpjMatriz, 0, 8) != substr($_POST["cnpj"], 0, 8)){
                 $errorMsg = "Os primeiros 8 dígitos do CNPJ devem ser os mesmos da empresa matriz.";
                 $_POST["errorFields"][] = "cnpj";
             }
