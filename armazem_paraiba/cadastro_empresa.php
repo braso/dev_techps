@@ -314,7 +314,7 @@
                 LIMIT 1;"
         ));
 
-        if(!empty($cnpjMatriz) && $_ENV["CONTEX_PATH"] != "/techps"){
+        if(!empty($cnpjMatriz)){
             $cnpjMatriz = preg_replace('/[^0-9]/', '', $cnpjMatriz["empr_tx_cnpj"]);
             $_POST["cnpj"] = preg_replace('/[^0-9]/', '', $_POST["cnpj"]);
             if($_SESSION['user_tx_nivel'] != 'Super Administrador' && substr($cnpjMatriz, 0, 8) != substr($_POST["cnpj"], 0, 8)){
