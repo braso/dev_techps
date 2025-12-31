@@ -414,7 +414,7 @@
 		}
 
 
-		visualizarCadastro();
+		index();
 		exit;
 	}
 
