@@ -16,8 +16,8 @@
     function carregarJS(array $arquivos) {
 
         $linha = "
-        var inicioEsc = (item.inicioEscala && item.inicioEscala.trim() !== '00:00' && item.inicioEscala.trim() !== '0:00') ? item.inicioEscala : '--:--';
-        var fimEsc = (item.fimEscala && item.fimEscala.trim() !== '00:00' && item.fimEscala.trim() !== '0:00') ? item.fimEscala : '--:--';
+        var inicioEsc = (item.inicioEscala && item.inicioEscala !== '00:00' && item.inicioEscala !== '00:00:00') ? item.inicioEscala : '--:--';
+        var fimEsc = (item.fimEscala && item.fimEscala !== '00:00' && item.fimEscala !== '00:00:00') ? item.fimEscala : '--:--';
         var escalaShow = (inicioEsc === '--:--' && fimEsc === '--:--') ? '<strong>----</strong>' : inicioEsc + ' - ' + fimEsc;
         
         linha = '<tr>'";
@@ -196,6 +196,10 @@
 
                                         if (jornadaEfetiva === '0:00' || jornadaEfetiva === '00:00') {
                                             jornadaEfetiva = '<strong>----</strong>';
+                                        }
+
+                                        if (jornada === '0:00' || jornada === '00:00') {
+                                            jornada = '<strong>----</strong>';
                                         }
 
                                         var css = 'jornada';

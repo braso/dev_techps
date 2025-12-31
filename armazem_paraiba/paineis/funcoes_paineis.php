@@ -781,9 +781,27 @@ function criar_relatorio_jornada() {
 				$horaLimpa = preg_replace("/<strong>.*?<\/strong>/", "",  $dia["inicioJornada"]);
 				$horaLimpa = preg_replace("/[^0-9:]/", " ", $horaLimpa);
 				$horaLimpa = trim($horaLimpa);
+
+				$atraso = "00:00";
+				if (!empty($dia["inicioEscala"]) && $dia["inicioEscala"] != "00:00" && $dia["inicioEscala"] != "00:00:00" && !empty($horaLimpa)) {
+					$primeiraBatida = explode(" ", $horaLimpa)[0];
+					if(strlen($primeiraBatida) == 5){
+						$timeEscala = DateTime::createFromFormat('H:i', substr($dia["inicioEscala"], 0, 5));
+						$timeJornada = DateTime::createFromFormat('H:i', $primeiraBatida);
+						
+						if ($timeJornada && $timeEscala && $timeJornada > $timeEscala) {
+							$diff = $timeJornada->diff($timeEscala);
+							$atraso = $diff->format("%H:%I");
+						}
+					}
+				}
+
 				$row[] = [
 					"data" => $dia["data"],
 					"jornadaDia" => $jornadaDia,
+					"inicioEscala" => $dia["inicioEscala"],
+					"fimEscala" => $dia["fimEscala"],
+					"atraso" => $atraso,
 					"limiteExtras" => $parametro[0]["para_tx_maxHESemanalDiario"] == 0 ? "00:00" : $parametro[0]["para_tx_maxHESemanalDiario"],
 					"adi5322" => $parametro[0]["para_tx_adi5322"],
 					"inicioJornada" => $horaLimpa,

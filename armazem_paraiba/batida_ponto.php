@@ -541,6 +541,10 @@ function index() {
 		];
 
 		grid($sql, array_keys($gridFields), array_values($gridFields), "", "", 0, "desc");
+
+		include_once "comunicado_popup.php";
+		mostrarComunicadoPopup();
+
 		rodape();
 
 		include "html/batida_ponto_html.php";

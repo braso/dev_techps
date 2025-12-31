@@ -301,6 +301,11 @@
 		echo linha_form($fields);
 		echo fecha_form($buttons);
 
+		echo '<div  style="margin: 10px 10px;">
+			<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+			<b>Atenção:</b> Para garantir o funcionamento correto da importação, verifique se os <b>Macros</b> do arquivo estão cadastrados em <b>Cadastro -> Macro</b>.
+		</div>';
+
 		// Grid dinâmico{
 			$gridFields = [
 				"CÓD" 				=> "arqu_nb_id",
