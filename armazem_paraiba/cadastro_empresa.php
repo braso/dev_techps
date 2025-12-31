@@ -375,13 +375,19 @@
 			$allowed = array("image/jpeg", "image/gif", "image/png");
 			if (in_array($file_type, $allowed) && $_FILES["logo"]["name"] != "") {
 
-				if (!is_dir("arquivos/empresa/{$id_empresa}/")) {
-					mkdir("arquivos/empresa/{$id_empresa}/");
+				$dir_destino = __DIR__ . "/arquivos/empresa/{$id_empresa}/";
+				$caminho_relativo = "arquivos/empresa/{$id_empresa}/";
+
+				if (!is_dir($dir_destino)) {
+					mkdir($dir_destino, 0777, true);
 				}
 
-				$arq = enviar("logo", "arquivos/empresa/{$id_empresa}/", $id_empresa);
+				$arq = enviar("logo", $dir_destino, $id_empresa);
 				if ($arq) {
-					atualizar("empresa", ["empr_tx_logo"], [$arq], $id_empresa);
+					$nome_arquivo = basename($arq);
+					$caminho_para_banco = $caminho_relativo . $nome_arquivo;
+
+					atualizar("empresa", ["empr_tx_logo"], [$caminho_para_banco], $id_empresa);
 				}
 			}
 		} else {
@@ -400,15 +406,20 @@
 
 			$allowed = array("image/jpeg", "image/gif", "image/png");
 			if (in_array($file_type, $allowed) && $_FILES["logo"]["name"] != "") {
+				
+				$dir_destino = __DIR__ . "/arquivos/empresa/{$id_empresa}/";
+				$caminho_relativo = "arquivos/empresa/{$id_empresa}/";
 
-				if (!is_dir("arquivos/empresa/{$id_empresa}")) {
-					mkdir("arquivos/empresa/{$id_empresa}");
+				if (!is_dir($dir_destino)) {
+					mkdir($dir_destino, 0777, true);
 				}
 
-
-				$arq = enviar("logo", "arquivos/empresa/{$id_empresa}/", $id_empresa);
+				$arq = enviar("logo", $dir_destino, $id_empresa);
 				if ($arq) {
-					atualizar("empresa", ["empr_tx_logo"], [$arq], $id_empresa);
+					$nome_arquivo = basename($arq);
+					$caminho_para_banco = $caminho_relativo . $nome_arquivo;
+					
+					atualizar("empresa", ["empr_tx_logo"], [$caminho_para_banco], $id_empresa);
 				}
 			}
 		}
