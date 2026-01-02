@@ -1,8 +1,8 @@
 <?php
-/*
+
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
-*/
+
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
@@ -10,6 +10,7 @@
 	date_default_timezone_set('America/Sao_Paulo');
 
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
+	include_once "check_permission.php";
 
 	function conferirErros($modo = 0, $idMotorista = null): string{
 		//Modo = 0: Conferência geral dos parâmetros do formulário.
@@ -624,7 +625,10 @@ function cadastrar(){
 				$novoEndosso["totalResumo"] = str_replace("<\/", "</", $novoEndosso["totalResumo"]);
 				$path = $_SERVER["DOCUMENT_ROOT"].$CONTEX["path"]."/arquivos/endosso";
 				if(!is_dir($path)){
-					mkdir($path);
+					if (!mkdir($path, 0777, true)) {
+						$errorMsg .= "Erro ao criar diretório: $path<br>";
+						continue; // Pula para o próximo se não conseguir criar a pasta
+					}
 				}
 
 				if(file_exists($path."/".$filename.".csv")){
@@ -637,16 +641,22 @@ function cadastrar(){
 
 				$novoEndosso["endo_tx_filename"] = $filename;
 				$file = fopen($path."/".$filename.".csv", "w");
-				fputcsv($file, array_keys($novoEndosso));
-				fputcsv($file, array_values($novoEndosso));
-				fclose($file);
+
+				if($file){
+					fputcsv($file, array_keys($novoEndosso));
+					fputcsv($file, array_values($novoEndosso));
+					fclose($file);
+
+					// Só insere no banco se o arquivo foi criado com sucesso
+					unset($novoEndosso["endo_tx_pontos"]);
+					unset($novoEndosso["totalResumo"]);
+					unset($novoEndosso["endo_tx_nome"]);
+					
+					inserir("endosso", array_keys($novoEndosso), array_values($novoEndosso));
+				}else{
+					$errorMsg .= "Erro ao abrir o arquivo para escrita: $filename<br>";
+				};
 				
-				unset($novoEndosso["endo_tx_pontos"]);
-				unset($novoEndosso["totalResumo"]);
-				unset($novoEndosso["endo_tx_nome"]);
-				
-				inserir("endosso", array_keys($novoEndosso), array_values($novoEndosso));
-			//*/
 		}
 
 		$statusMsg = ($successMsg != $baseSucMsg? implode("", $successMsg): "").($errorMsg != $baseErrMsg? $errorMsg: "");
@@ -717,8 +727,8 @@ function index(){
 		cabecalho("Cadastro de Endosso");
 
 		$condicoes_motorista = "AND enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')";
-		if($_SESSION["user_tx_nivel"] != "Super Administrador"){
-			$condicoes_motorista .= " AND enti_nb_empresa = ".$_SESSION["user_tx_emprCnpj"];
+		if($_SESSION["user_tx_nivel"] != "Super Administrador" && !temPermissaoMenu('/cadastro_empresa.php')){
+			$condicoes_motorista .= " AND enti_nb_empresa = ".$_SESSION["user_nb_empresa"];
 		}
 
 		$_POST["empresa"] = $_POST["empresa"]?? $_SESSION["user_nb_empresa"];
@@ -814,7 +824,7 @@ function index(){
         $fields[] = $camposHE;
         $fields[] = $camposDesconto;
        
-		if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
+		if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")) || temPermissaoMenu('/cadastro_empresa.php')){
 			array_unshift($fields, combo_net("Empresa*","empresa", !empty($_POST["empresa"])? $_POST["empresa"]: $_SESSION["user_nb_empresa"],4,"empresa", "onchange='selecionaMotorista(this.value)'"));
 		}else{
 			array_unshift($fields, campo_hidden("empresa", $_SESSION["user_nb_empresa"]));
