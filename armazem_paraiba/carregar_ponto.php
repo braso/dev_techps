@@ -1,12 +1,12 @@
 <?php
-	/* Modo debug{
+
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 		
         header("Expires: 01 Jan 2001 00:00:00 GMT");
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
         header("Pragma: no-cache"); // HTTP 1.0.
-	//}*/
+
 
 	global $path;
 	$path = "arquivos/pontos";
@@ -80,7 +80,15 @@
 				$local_file = $path."/".$arquivo["name"].$ext;
 			}
 
-			salvarArquivoPonto($arquivo, $local_file);
+			if(!is_dir($path)){
+				mkdir($path, 0777, true);
+			}
+
+			if(move_uploaded_file($arquivo["tmp_name"], $local_file)){
+				salvarArquivoPonto($arquivo, $local_file);
+			}else{
+				set_status("ERRO: Falha ao mover o arquivo para o diretório de destino.");
+			}
 
 		}else{
 			set_status("ERRO: Ocorreu um problema ao gravar o arquivo.");
