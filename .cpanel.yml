@@ -29,6 +29,7 @@ deployment:
     - export SAO_LUCAS=/home/tech1694/public_html/gestaodeponto/sao_lucas
     - export PB_TRANSPORTES=/home/tech1694/public_html/gestaodeponto/pb_transportes
     - export ODONTOTANGARA=/home/tech1694/public_html/gestaodeponto/odontotangara
+    - export CLINICA_GERLANE=/home/tech1694/public_html/gestaodeponto/clinica_gerlane
 
 
 
@@ -56,3 +57,4 @@ deployment:
     - /bin/cp -R $DOMAIN $SAO_LUCAS
     - /bin/cp -R $DOMAIN $PB_TRANSPORTES
     - /bin/cp -R $DOMAIN $ODONTOTANGARA
+    - /bin/cp -R $DOMAIN $CLINICA_GERLANE
