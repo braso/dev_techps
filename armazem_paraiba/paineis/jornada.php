@@ -15,21 +15,28 @@
  
     function carregarJS(array $arquivos) {
 
-        $linha = "linha = '<tr>'";
+        $linha = "
+        var inicioEsc = (item.inicioEscala && item.inicioEscala !== '00:00' && item.inicioEscala !== '00:00:00') ? item.inicioEscala : '--:--';
+        var fimEsc = (item.fimEscala && item.fimEscala !== '00:00' && item.fimEscala !== '00:00:00') ? item.fimEscala : '--:--';
+        var escalaShow = (inicioEsc === '--:--' && fimEsc === '--:--') ? '<strong>----</strong>' : inicioEsc + ' - ' + fimEsc;
+        
+        linha = '<tr>'";
         if (!empty($_POST["empresa"])) {
-            $linha .= "+'<td style=\'text-align: center;\'>'+item.data+' '+ultimoValor+'</td>'
-                        +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
+            $linha .= "+'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.nome+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.tipoOperacaoNome+'</td>'
                         +'<td style=\'text-align: center;\'>'+(item.setorNome || item.grup_tx_nome || item.setor || item.enti_setor_id || '')+'</td>'
                         +'<td style=\'text-align: center;\'>'+(item.subsetorNome || item.sbgr_tx_nome || item.subsetor || item.enti_subSetor_id || '')+'</td>'
+                        +'<td class = \'jornada\'>'+item.data.substring(0, 5)+' '+ultimoValor+'</td>'
+                        +'<td class = \'jornada\'>'+escalaShow+'</td>'
+                        +'<td class = \'jornada\'>'+(item.atraso && item.atraso.trim() !== '00:00' && item.atraso.trim() !== '0:00' ? item.atraso : '<strong>----</strong>')+'</td>'
                         +'<td class ='+css+'>'+jornada+'</td>'
                         +'<td class ='+jornadaEfetivaCor+'>'+jornadaEfetiva+'</td>'
-                        +'<td class = \'jornada\'>'+(item.refeicao? item.refeicao: '<strong>----</strong>')+'</td>'
-                        +'<td class = \'jornada\'>'+(item.espera ? item.espera : '<strong>----</strong>')+'</td>'
-                        +'<td class = \'jornada\'>'+(item.descanso ? item.descanso : '<strong>----</strong>')+'</td>'
-                        +'<td class = \'jornada\'>'+(item.repouso ? item.repouso : '<strong>----</strong>')+'</td>'
+                        +'<td class = \'jornada\'>'+(item.refeicao && item.refeicao.trim() !== '00:00' && item.refeicao.trim() !== '0:00'? item.refeicao: '<strong>----</strong>')+'</td>'
+                        +'<td class = \'jornada\'>'+(item.espera && item.espera.trim() !== '00:00' && item.espera.trim() !== '0:00' ? item.espera : '<strong>----</strong>')+'</td>'
+                        +'<td class = \'jornada\'>'+(item.descanso && item.descanso.trim() !== '00:00' && item.descanso.trim() !== '0:00' ? item.descanso : '<strong>----</strong>')+'</td>'
+                        +'<td class = \'jornada\'>'+(item.repouso && item.repouso.trim() !== '00:00' && item.repouso.trim() !== '0:00' ? item.repouso : '<strong>----</strong>')+'</td>'
                     +'</tr>';";
         }
 
@@ -187,6 +194,14 @@
                                             jornadaEfetivaCor = calcularJornadaElimite(jornadaEfetiva , item.jornadaDia, item.limiteExtras)
                                         }
 
+                                        if (jornadaEfetiva === '0:00' || jornadaEfetiva === '00:00') {
+                                            jornadaEfetiva = '<strong>----</strong>';
+                                        }
+
+                                        if (jornada === '0:00' || jornada === '00:00') {
+                                            jornada = '<strong>----</strong>';
+                                        }
+
                                         var css = 'jornada';
                                         const limite = converterParaMinutos('10:00');
                                         if(jornadaMinutos > limite){
@@ -225,7 +240,7 @@
                                 tabela.append(row);
                             });
                         }
-                        var colunasPermitidas = ['data', 'nome', 'matricula', 'ocupacao']; 
+                        var colunasPermitidas = ['matricula', 'nome', 'ocupacao', 'operacao', 'setor', 'subsetor', 'inicioJornada', 'escala', 'atraso', 'jornada', 'jornadaEfetiva', 'refeicao', 'espera', 'descanso', 'repouso']; 
                         // Evento de clique para ordenar a tabela ao clicar no cabeçalho
                         $('#titulos th').click(function(){
                             var colunaClicada = $(this).attr('class');
@@ -253,6 +268,16 @@
                         });
 
                         ".$carregarDados."
+                        
+                        // Evento para selecionar a linha ao clicar
+                        $('#tabela-empresas tbody').on('click', 'tr', function() {
+                            if ($(this).hasClass('selected-row')) {
+                                $(this).removeClass('selected-row');
+                            } else {
+                                $('#tabela-empresas tbody tr').removeClass('selected-row');
+                                $(this).addClass('selected-row');
+                            }
+                        });
                     });
 
                        $(document).ready(function() {
@@ -386,13 +411,15 @@
             // $rowTotais = "<tr class='totais'>";
             $rowTitulos = "<tr id='titulos' class='titulos'>";
             $rowTitulos .=
-                "<th class='data'>Data</th>
-                <th class='matricula'>Matrícula</th>
+                "<th class='matricula'>Matrícula</th>
                 <th class='nome'>Nome</th>
                 <th class='ocupacao'>Ocupação</th>
                 <th class='operacao'>Cargo</th>
                 <th class='setor'>Setor</th>
                 <th class='subsetor'>SubSetor</th>
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='inicioJornada'>Início Jornada</th>
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='escala'>Inicio / Fim de Escala</th>
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='atraso'>Atraso</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornada'>Jornada</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornadaEfetiva'>Jornada Efetiva</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='refeicao'>Refeicao</th>
@@ -405,6 +432,9 @@
             include_once "painel_html2.php";
             echo "
             <style>
+            .selected-row, .selected-row td {
+                background-color: #d1e7dd !important;
+            }
             @media print{
                 .container, .container-fluid {
                     margin-right: unset;
