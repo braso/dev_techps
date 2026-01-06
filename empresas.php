@@ -26,7 +26,7 @@
         "TRANSCOPEL"			=> "transcopel",
         "PB TRANSPORTES"		=> "pb_transportes",
         "ODONTO TANGARA"		=> "odontotangara",
-       
+        "CLINICA GERLANE"		=> "clinica_gerlane",
 
     ];
 
@@ -54,7 +54,7 @@
         "transcopel" 	    => "Transcopel",
         "pb_transportes" 	=> "PB Transportes",
         "odontotangara" 	=> "Odonto Tangara",
-      
+        "clinica_gerlane" 	=> "Clínica Gerlane",
     ];
 
     $empresa_array = array_values($empresas); //Utilizado nos arquivos que importam este.
