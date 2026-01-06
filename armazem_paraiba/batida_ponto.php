@@ -410,11 +410,11 @@ function index() {
 
         $botoes = [
             "inicioJornada"             => criaBotaoRegistro("btn green", 1,  "JORNADA", ($_SESSION["user_tx_nivel"] == "Funcionário" ? "fa fa-flag-checkered fa-6" : "fa fa-car fa-6")),
-            "inicioRefeicao"             => criaBotaoRegistro("btn green", 3,  "REFEIÇÃO", "fa fa-cutlery fa-6"),
-            // "inicioEspera"             => criaBotaoRegistro("btn green", 5,  "ESPERA", "fa fa-clock-o fa-6"),
-            "inicioDescanso"             => criaBotaoRegistro("btn green", 7,  "DESCANSO", "fa fa-hourglass-start fa-6"),
-            // "inicioRepouso"             => criaBotaoRegistro("btn green", 9,  "REPOUSO", "fa fa-bed fa-6"),
-            // "inicioRepousoEmbarcado"    => criaBotaoRegistro("btn green", 11, "Iniciar Repouso Embarcado", "fa fa-bed fa-6"),
+            "inicioRefeicao"             => criaBotaoRegistro("btn blue", 3,  "REFEIÇÃO", "fa fa-cutlery fa-6"),
+            // "inicioEspera"             => criaBotaoRegistro("btn purple", 5,  "ESPERA", "fa fa-clock-o fa-6"),
+            "inicioDescanso"             => criaBotaoRegistro("btn orange", 7,  "DESCANSO", "fa fa-hourglass-start fa-6"),
+            // "inicioRepouso"             => criaBotaoRegistro("btn dark", 9,  "REPOUSO", "fa fa-bed fa-6"),
+            // "inicioRepousoEmbarcado"    => criaBotaoRegistro("btn cyan", 11, "Iniciar Repouso Embarcado", "fa fa-bed fa-6"),
 
             "fimJornada"                 => criaBotaoRegistro("btn red", 2,  "FIM JORNADA", ($_SESSION["user_tx_nivel"] == "Funcionário" ? "fa fa-flag-checkered fa-6" : "fa fa-car fa-6")),
             "fimRefeicao" 				=> criaBotaoRegistro("btn red", 4,  "FIM REFEIÇÃO", "fa fa-cutlery fa-6"),
@@ -425,10 +425,10 @@ function index() {
         ];
 
 		if($_SESSION["user_tx_nivel"] != "Funcionário"){
-			$botoes["inicioEspera"] = criaBotaoRegistro("btn green", 5,  "ESPERA", "fa fa-clock-o fa-6");
+			$botoes["inicioEspera"] = criaBotaoRegistro("btn purple", 5,  "ESPERA", "fa fa-clock-o fa-6");
 			$botoes["fimEspera"] = criaBotaoRegistro("btn red", 6,  "FIM ESPERA", "fa fa-clock-o fa-6");
 			
-			$botoes["inicioRepouso"] = criaBotaoRegistro("btn green", 9,  "REPOUSO", "fa fa-bed fa-6");
+			$botoes["inicioRepouso"] = criaBotaoRegistro("btn dark", 9,  "REPOUSO", "fa fa-bed fa-6");
 			$botoes["fimRepouso"] = criaBotaoRegistro("btn red", 10, "FIM REPOUSO", "fa fa-bed fa-6");
 		}
 

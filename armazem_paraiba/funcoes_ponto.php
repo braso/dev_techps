@@ -766,11 +766,15 @@
 				$diferenca = $diferenca->days*($diferenca->invert? -1: 1);
 				$diaDoCiclo = round($motorista["esca_nb_periodicidade"]*(($diferenca)/($motorista["esca_nb_periodicidade"])-floor($diferenca/$motorista["esca_nb_periodicidade"]))+1);
 				
-				$jornadaPrevistaOriginal = operarHorarios([
-					!empty($motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaFim"])? $motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaFim"]: "00:00",
-					!empty($motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaInicio"])? $motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaInicio"]: "00:00",
-					!empty($motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_intervaloInterno"])? $motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_intervaloInterno"]: "00:00"
-				], "-");
+				$horaInicio = !empty($motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaInicio"])? $motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaInicio"]: "00:00";
+				$horaFim = !empty($motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaFim"])? $motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaFim"]: "00:00";
+				$intervalo = !empty($motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_intervaloInterno"])? $motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_intervaloInterno"]: "00:00";
+
+				$jornadaPrevistaOriginal = operarHorarios([$horaFim, $horaInicio], "-");
+				if($jornadaPrevistaOriginal[0] == "-"){
+					$jornadaPrevistaOriginal = operarHorarios([$jornadaPrevistaOriginal, "24:00"], "+");
+				}
+				$jornadaPrevistaOriginal = operarHorarios([$jornadaPrevistaOriginal, $intervalo], "-");
 			}
 
 			$jornadaPrevista = calcularJornadaPrevista($jornadaPrevistaOriginal, !empty($stringFeriado), ($abonos["abon_tx_abono"]?? null));
