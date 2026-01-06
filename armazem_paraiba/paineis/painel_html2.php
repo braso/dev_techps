@@ -1471,13 +1471,30 @@
 				form.target = 'janelaExportacao';
 
 				// Adiciona campos básicos
-				['empresa', 'busca_data', 'relatorio'].forEach(function(name) {
+				var campos = [
+					{name: 'empresa', value: "<?= !empty($_POST['empresa']) ? $_POST['empresa'] : 'null' ?>"},
+					{name: 'busca_data', value: data},
+					{name: 'relatorio', value: 'nc_juridica'},
+					{name: 'busca_endossado', value: "<?= $_POST['busca_endossado'] ?? '' ?>"},
+					{name: 'operacao', value: "<?= $_POST['operacao'] ?? '' ?>"},
+					{name: 'busca_setor', value: "<?= $_POST['busca_setor'] ?? '' ?>"},
+					{name: 'busca_subsetor', value: "<?= $_POST['busca_subsetor'] ?? '' ?>"},
+					{name: 'ranking_type', value: "<?= $_POST['ranking_type'] ?? '' ?>"},
+					{name: 'ranking_limit', value: "<?= $_POST['ranking_limit'] ?? '' ?>"},
+					{name: 'busca_ocupacao', value: "<?= !empty($_POST['busca_ocupacao']) && !is_array($_POST['busca_ocupacao']) ? $_POST['busca_ocupacao'] : '' ?>"}
+				];
+
+				<?php if(!empty($_POST['busca_ocupacao']) && is_array($_POST['busca_ocupacao'])): ?>
+					<?php foreach($_POST['busca_ocupacao'] as $ocup): ?>
+						campos.push({name: 'busca_ocupacao[]', value: "<?= $ocup ?>"});
+					<?php endforeach; ?>
+				<?php endif; ?>
+
+				campos.forEach(function(campo) {
 					var input = document.createElement('input');
 					input.type = 'hidden';
-					input.name = name;
-					input.value = name === 'empresa' 
-						? "<?= !empty($_POST['empresa']) ? $_POST['empresa'] : 'null' ?>" 
-						: (name === 'busca_data' ? data : 'nc_juridica');
+					input.name = campo.name;
+					input.value = campo.value;
 					form.appendChild(input);
 				});
 
