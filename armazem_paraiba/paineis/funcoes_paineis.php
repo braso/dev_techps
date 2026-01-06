@@ -516,7 +516,9 @@ function criar_relatorio_endosso() {
 					"setor" 			=> $motorista["enti_setor_id"],
 					"setorNome" 		=> $motorista["grup_tx_nome"],
 					"subsetor" 			=> $motorista["enti_subSetor_id"],
-					"subsetorNome" 		=> $motorista["sbgr_tx_nome"]
+					"subsetorNome" 		=> $motorista["sbgr_tx_nome"],
+					"inicioEscala" 		=> $dia["inicioEscala"] ?? "",
+					"fimEscala" 		=> $dia["fimEscala"] ?? ""
 				];
 
 				$nomeArquivo = $motorista["enti_nb_id"].".json";
@@ -820,7 +822,9 @@ function criar_relatorio_jornada() {
 					"setor" 			=> $motorista["enti_setor_id"],
 					"setorNome" 		=> $motorista["grup_tx_nome"],
 					"subsetor" 			=> $motorista["enti_subSetor_id"],
-					"subsetorNome" 		=> $motorista["sbgr_tx_nome"]
+					"subsetorNome" 		=> $motorista["sbgr_tx_nome"],
+					"inicioEscala" 		=> $dia["inicioEscala"] ?? "",
+					"fimEscala" 		=> $dia["fimEscala"] ?? ""
 				];
 			}
 		}
