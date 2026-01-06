@@ -3,9 +3,6 @@ deployment:
     - export GENERAL=/home/tech1694/repositories/dev_techps/*
     - export DOMAIN=/home/tech1694/repositories/dev_techps/armazem_paraiba/*
 
-
-
-
     - export GENERALDEPLOY=/home/tech1694/public_html/gestaodeponto
     - export BLUEROAD=/home/tech1694/public_html/gestaodeponto/blueroad
     - export BRASO=/home/tech1694/public_html/gestaodeponto/braso
@@ -27,10 +24,9 @@ deployment:
     - export TRAMPGAS=/home/tech1694/public_html/gestaodeponto/trampolim_gas
     - export TRANSCOPEL=/home/tech1694/public_html/gestaodeponto/transcopel
     - export SAO_LUCAS=/home/tech1694/public_html/gestaodeponto/sao_lucas
-    - export PB_TRANSPORTES=/home/tech1694/public_html/gestaodeponto/pb_transportes
     - export ODONTOTANGARA=/home/tech1694/public_html/gestaodeponto/odontotangara
     - export CLINICA_GERLANE=/home/tech1694/public_html/gestaodeponto/clinica_gerlane
-
+    
 
 
     - /bin/cp -R $GENERAL $GENERALDEPLOY
@@ -55,6 +51,5 @@ deployment:
     - /bin/cp -R $DOMAIN $TRANSCOPEL
     - /bin/cp -R $DOMAIN $BLUEROAD
     - /bin/cp -R $DOMAIN $SAO_LUCAS
-    - /bin/cp -R $DOMAIN $PB_TRANSPORTES
     - /bin/cp -R $DOMAIN $ODONTOTANGARA
     - /bin/cp -R $DOMAIN $CLINICA_GERLANE
