@@ -1,7 +1,7 @@
 deployment:
   tasks:
-    - export GENERAL=/home/tech1694/repositories/dev_techps/*
-    - export DOMAIN=/home/tech1694/repositories/dev_techps/armazem_paraiba/*
+    - export GENERAL=/home/tech1694/repositories/producao/*
+    - export DOMAIN=/home/tech1694/repositories/producao/armazem_paraiba/*
 
 
 
