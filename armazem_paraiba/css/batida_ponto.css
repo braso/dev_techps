@@ -152,6 +152,7 @@ form .row{
     }
 }
 
+<<<<<<< HEAD
 /* ============================================================
    CORES PERSONALIZADAS DOS BOTÕES DE PONTO
    ============================================================ */
@@ -239,3 +240,44 @@ form .row{
     background-color: #e12330 !important;
     border-color: #e12330 !important;
 }
+=======
+.btn.blue {
+    background-color: #3598dc;
+    color: white;
+}
+.btn.blue:hover {
+    background-color: #217ebd;
+}
+
+.btn.orange {
+    background-color: #e87e04;
+    color: white;
+}
+.btn.orange:hover {
+    background-color: #d07103;
+}
+
+.btn.purple {
+    background-color: #8E44AD;
+    color: white;
+}
+.btn.purple:hover {
+    background-color: #703688;
+}
+
+.btn.dark {
+    background-color: #2f353b;
+    color: white;
+}
+.btn.dark:hover {
+    background-color: #1f2327;
+}
+
+.btn.cyan {
+    background-color: #1BA39C;
+    color: white;
+}
+.btn.cyan:hover {
+    background-color: #147b75;
+}
+>>>>>>> ProducaoCpanel

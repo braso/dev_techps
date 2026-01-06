@@ -1,8 +1,8 @@
 <?php
-	/* Modo debug
+
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
-    /*/    
+ 
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
@@ -160,21 +160,78 @@ function index() {
     $condBuscaMotorista = "";
     $condBuscaEmpresa = "";
 
+	$temSubsetorVinculado = false;
+	if (!empty($_POST["busca_setor"])) {
+		$rowCount = mysqli_fetch_array(query("SELECT COUNT(*) FROM sbgrupos_documentos WHERE sbgr_tx_status = 'ativo' AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"]).";"));
+		$temSubsetorVinculado = ($rowCount[0] > 0);
+	}
+
     //CAMPOS DE CONSULTA{
     $_POST["busca_empresa"] = $_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"];
+
+    $ocupacoesOptions = ["" => "Todas"];
+    $resOcup = query("SELECT DISTINCT enti_tx_ocupacao FROM entidade WHERE enti_tx_ocupacao IS NOT NULL AND enti_tx_ocupacao <> '' ORDER BY enti_tx_ocupacao ASC");
+    while($rowO = mysqli_fetch_assoc($resOcup)){
+        $v = $rowO["enti_tx_ocupacao"];
+        $ocupacoesOptions[$v] = $v;
+    }
+
+    $cargoOptions = ["" => "Todos"];
+    $resCargo = query(
+        "SELECT oper_nb_id AS id, oper_tx_nome AS nome
+         FROM operacao
+         WHERE oper_tx_status = 'ativo'
+         ORDER BY oper_tx_nome ASC"
+    );
+    while($rowC = mysqli_fetch_assoc($resCargo)){
+        $cargoOptions[$rowC["id"]] = $rowC["nome"];
+    }
+
+    $extraBuscaMotorista = (!empty($_POST["busca_empresa"]) ? " AND enti_nb_empresa = {$_POST["busca_empresa"]}": "") . " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')";
+    if(!empty($_POST["busca_ocupacao"])){
+        $extraBuscaMotorista .= " AND enti_tx_ocupacao = '" . $_POST["busca_ocupacao"] . "'";
+    }
+    if(!empty($_POST["busca_cargo"])){
+        $extraBuscaMotorista .= " AND enti_tx_tipoOperacao = " . intval($_POST["busca_cargo"]);
+    }
+    if(!empty($_POST["busca_setor"])){
+        $extraBuscaMotorista .= " AND enti_setor_id = " . intval($_POST["busca_setor"]);
+    }
+    if(!empty($_POST["busca_subsetor"])){
+        $extraBuscaMotorista .= " AND enti_subSetor_id = " . intval($_POST["busca_subsetor"]);
+    }
+
+    if(!empty($_POST["busca_motorista"])){
+        $check = mysqli_fetch_assoc(query(
+            "SELECT enti_nb_id FROM entidade WHERE enti_nb_id = " . intval($_POST["busca_motorista"]) . $extraBuscaMotorista . " LIMIT 1"
+        ));
+        if(empty($check)){
+            unset($_POST["busca_motorista"]);
+        }
+    }
+
     $searchFields = [
         combo_net("Empresa*", "busca_empresa", $_POST["busca_empresa"], 3, "empresa", "onchange=selecionaMotorista(this.value) ", $condBuscaEmpresa),
+        combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, $ocupacoesOptions, "onchange=\"this.form.submit();\""),
+        combo("Cargo", "busca_cargo", ($_POST["busca_cargo"]?? ""), 2, $cargoOptions, "onchange=\"this.form.submit();\""),
+		combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos", "onchange=\"if(this.form.busca_subsetor){this.form.busca_subsetor.value='';} this.form.submit();\""),
         combo_net(
             "Funcionário*",
             "busca_motorista",
             (!empty($_POST["busca_motorista"]) ? $_POST["busca_motorista"] : ""),
-            4,
+            3,
             "entidade",
             "",
-            (!empty($_POST["busca_empresa"]) ? " AND enti_nb_empresa = {$_POST["busca_empresa"]}": "") . " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') {$condBuscaEmpresa} {$condBuscaMotorista}",
+            $extraBuscaMotorista . " {$condBuscaEmpresa} {$condBuscaMotorista}",
             "enti_tx_matricula"
         )
     ];
+
+	if ($temSubsetorVinculado) {
+		$searchFields = array_merge(array_slice($searchFields, 0, 4), [
+            combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "onchange=\"this.form.submit();\"", " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC")
+        ], array_slice($searchFields, 4));
+	}
 
     $searchFields[] = campo(
         "Período",
@@ -412,18 +469,35 @@ function carregarJS($opt): string {
         "<script>
 
 				function selecionaMotorista(idEmpresa){
-					let condicoes = '&condicoes='+encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")');
+                    let idSetor = $('[name=busca_setor]').val();
+                    let idSubsetor = $('[name=busca_subsetor]').val();
+                    let ocupacao = $('[name=busca_ocupacao]').val();
+                    let cargo = $('[name=busca_cargo]').val();
+
+					let condicoes = '&condicoes='+encodeURI(' AND enti_tx_ocupacao IN (\'Motorista\', \'Ajudante\', \'Funcionário\')');
 					if(idEmpresa > 0){
 						condicoes += encodeURI(' AND enti_nb_empresa = '+idEmpresa);
-						$('.busca_motorista')[0].innerHTML = null;
 					}
+                    if(idSetor > 0){
+                        condicoes += encodeURI(' AND enti_setor_id = ' + idSetor);
+                    }
+                    if(idSubsetor > 0){
+                        condicoes += encodeURI(' AND enti_subSetor_id = ' + idSubsetor);
+                    }
+                    if(ocupacao){
+                        condicoes += encodeURI(' AND enti_tx_ocupacao = \'' + ocupacao + '\'');
+                    }
+                    if(cargo > 0){
+                        condicoes += encodeURI(' AND enti_tx_tipoOperacao = ' + cargo);
+                    }
 
-					// Verifique se o elemento está usando Select2 antes de destruí-lo
-					if($('.busca_motorista').data('select2')){
-						$('.busca_motorista').select2('destroy');
+					$('select[name=busca_motorista]')[0].innerHTML = null;
+
+					if($('select[name=busca_motorista]').data('select2')){
+						$('select[name=busca_motorista]').select2('destroy');
 					}
 					$.fn.select2.defaults.set('theme', 'bootstrap');
-					$('.busca_motorista').select2({
+					$('select[name=busca_motorista]').select2({
 						language: 'pt-BR',
 						placeholder: 'Selecione um item',
 						allowClear: true,

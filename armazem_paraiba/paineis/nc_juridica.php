@@ -636,6 +636,8 @@
 				$totalDiasNaoCFuncionario = 0;
 				$totaisFuncionario = [];
 				$totaisFuncionario2 = [];
+				$sumTotalMotorista = 0;
+				$sumTotalNConformMax = 0;
                 $totaisMediaFuncionario = [];
 				$totalizadores["jornadaPrevista"] = 0;
 				$ocupacoesPermitidas = $_POST['busca_ocupacao'];
@@ -697,13 +699,13 @@
 					$donutSubsetorNome[$suid] = (!empty($json["subsetorNome"]) ? $json["subsetorNome"] : ($suid !== "" ? $suid : "Sem Subsetor"));
 
 					$totalNConformMax = 4 * $dias;
-					// Baixar performance total
-                    $denNCon = ($totalNConformMax * max($arquivosConsiderados, 1));
-                    $porcentagemFunNCon = round(($totalMotorista *100) / $denNCon, 2);
-					// Baixar performance funcionario
-					$porcentagemFunNCon2 = round(($totalMotorista *100) / $totalNConformMax, 2);
 
-					$totaisFuncionario[$json["matricula"]] = $porcentagemFunNCon;
+					$sumTotalMotorista += $totalMotorista;
+					$sumTotalNConformMax += $totalNConformMax;
+
+					// Baixar performance funcionario
+					$porcentagemFunNCon2 = min(100, round(($totalMotorista *100) / $totalNConformMax, 2));
+
 					$totaisFuncionario2[$json["matricula"]] = $porcentagemFunNCon2;
 
 					foreach ($totalizadores as $key => &$total) {
@@ -733,7 +735,11 @@
 				unset($total);
 			}
 
-			$porcentagemTotalBaixa= array_sum((array) $totaisFuncionario);
+			if ($sumTotalNConformMax > 0) {
+				$porcentagemTotalBaixa = min(100, round(($sumTotalMotorista * 100) / $sumTotalNConformMax, 2));
+			} else {
+				$porcentagemTotalBaixa = 0;
+			}
 			if ($arquivosConsiderados === 0) { $mediaPerfTotal = 0; }
             $totalFun = max($arquivosConsiderados - $totalJsonComTudoZero, 0);
 			$porcentagemTotalBaixaG = 100 - $porcentagemTotalBaixa;
@@ -1270,7 +1276,7 @@
 						<td class='total'>".($hasDetailFilter ? ($totalizadores["jornadaPrevista"] ?? 0) : ($totalempre["jornadaPrevista"] ?? 0))."</td>";
 				}
 				
-				$totalBaixaPerformance = 100 - array_sum($totaisFuncionario);
+				$totalBaixaPerformance = 100 - $porcentagemTotalBaixa;
 				$totalMediaPerformance = $mediaPerfTotal;
 				$rowTotal = "<td></td>
 						<td></td>
