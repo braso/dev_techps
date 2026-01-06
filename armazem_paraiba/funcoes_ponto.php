@@ -779,9 +779,9 @@
 				}
 			}
 
-			$horaInicio = !empty($diaEscala["esca_tx_horaInicio"]) ? $diaEscala["esca_tx_horaInicio"] : "00:00";
-			$horaFim = !empty($diaEscala["esca_tx_horaFim"]) ? $diaEscala["esca_tx_horaFim"] : "00:00";
-			$intervalo = !empty($diaEscala["esca_tx_intervaloInterno"]) ? $diaEscala["esca_tx_intervaloInterno"] : "00:00";
+			$horaInicio = ($diaEscala && !empty($diaEscala["esca_tx_horaInicio"])) ? $diaEscala["esca_tx_horaInicio"] : "00:00";
+			$horaFim = ($diaEscala && !empty($diaEscala["esca_tx_horaFim"])) ? $diaEscala["esca_tx_horaFim"] : "00:00";
+			$intervalo = ($diaEscala && !empty($diaEscala["esca_tx_intervaloInterno"])) ? $diaEscala["esca_tx_intervaloInterno"] : "00:00";
 
 			$aRetorno["inicioEscala"] = $horaInicio;
 			$aRetorno["fimEscala"] = $horaFim;
@@ -795,8 +795,6 @@
 
 			$jornadaPrevista = calcularJornadaPrevista($jornadaPrevistaOriginal, !empty($stringFeriado), ($abonos["abon_tx_abono"]?? null));
 			$aRetorno["jornadaPrevista"] = $jornadaPrevista;
-			$aRetorno["inicioEscala"] = $inicioEscala;
-			$aRetorno["fimEscala"] = $fimEscala;
 			if(!empty($abonos)){
 				$warning = 
 					"<a><i style='color:green;' title="
