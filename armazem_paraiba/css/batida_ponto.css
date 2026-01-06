@@ -154,59 +154,88 @@ form .row{
 
 /* ============================================================
    CORES PERSONALIZADAS DOS BOTÕES DE PONTO
-   Requer que os botões tenham IDs: #btn-registro-1, #btn-registro-2, etc.
    ============================================================ */
 
-/* TIPO 1: INÍCIO JORNADA*/
-#btn-registro-1 {
-    background-color: #32d155 !important; 
-    border-color: #32d155 !important;
-    color: #ffffff;
-}
-#btn-registro-1:hover {
-    background-color: #32d001 !important; 
+/* Helper para limpar estilos conflitantes */
+.btn.blue, .btn.orange, .btn.purple, .btn.dark, .btn.cyan, .btn.green, .btn.red {
+    background-image: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
 }
 
-/*TIPO 2: FIM JORNADA */
-#btn-registro-2 {
-    background-color: #d95155 !important; 
-    border-color: #d95155 !important;
-    color: #ffffff;
+/* BLUE */
+#btn-registro-3, .btn.blue {
+    background-color: #3598dc !important;
+    color: white !important;
+    border-color: #3598dc !important;
 }
-#btn-registro-2:hover {
-    background-color: #d95001 !important;
-}
-
-/* TIPO 3: INÍCIO REFEIÇÃO*/
-#btn-registro-3 {
-    background-color: #ff9800 !important; 
-    border-color: #eea236 !important;
-    color: #ffffff;
-}
-#btn-registro-3:hover {
-    background-color: #f57c00 !important;
+#btn-registro-3:hover, .btn.blue:hover {
+    background-color: #217ebd !important;
+    border-color: #217ebd !important;
 }
 
-/* TIPO 4: FIM REFEIÇÃO */
-#btn-registro-4 {
-    background-color: #d9534f !important;
-    border-color: #d43f3a !important;
-    color: #ffffff;
+/* ORANGE */
+#btn-registro-7, .btn.orange {
+    background-color: #e87e04 !important;
+    color: white !important;
+    border-color: #e87e04 !important;
+}
+#btn-registro-7:hover, .btn.orange:hover {
+    background-color: #d07103 !important;
+    border-color: #d07103 !important;
 }
 
-/* TIPO 7: INÍCIO DESCANSO*/
-#btn-registro-7 {
-    background-color: #3483c8 !important; 
-    border-color: #3483c8 !important;
-    color: #ffffff;
+/* PURPLE */
+#btn-registro-5, .btn.purple {
+    background-color: #8E44AD !important;
+    color: white !important;
+    border-color: #8E44AD !important;
 }
-#btn-registro-7:hover {
-    background-color: #2b6ca4 !important;
+#btn-registro-5:hover, .btn.purple:hover {
+    background-color: #703688 !important;
+    border-color: #703688 !important;
 }
 
-/* TIPO 8: FIM DESCANSO */
-#btn-registro-8 {
-    background-color: #d9534f !important;
-    border-color: #d43f3a !important;
-    color: #ffffff;
+/* DARK */
+#btn-registro-9, .btn.dark {
+    background-color: #2f353b !important;
+    color: white !important;
+    border-color: #2f353b !important;
+}
+#btn-registro-9:hover, .btn.dark:hover {
+    background-color: #1f2327 !important;
+    border-color: #1f2327 !important;
+}
+
+/* CYAN */
+#btn-registro-11, .btn.cyan {
+    background-color: #1BA39C !important;
+    color: white !important;
+    border-color: #1BA39C !important;
+}
+#btn-registro-11:hover, .btn.cyan:hover {
+    background-color: #147b75 !important;
+    border-color: #147b75 !important;
+}
+
+/* GREEN (Inicio Jornada) */
+#btn-registro-1, .btn.green {
+    background-color: #32c5d2 !important;
+    color: white !important;
+    border-color: #32c5d2 !important;
+}
+#btn-registro-1:hover, .btn.green:hover {
+    background-color: #26a1ab !important;
+    border-color: #26a1ab !important;
+}
+
+/* RED (Todos os fins) */
+#btn-registro-2, #btn-registro-4, #btn-registro-6, #btn-registro-8, #btn-registro-10, #btn-registro-12, .btn.red {
+    background-color: #e7505a !important;
+    color: white !important;
+    border-color: #e7505a !important;
+}
+#btn-registro-2:hover, #btn-registro-4:hover, #btn-registro-6:hover, #btn-registro-8:hover, #btn-registro-10:hover, #btn-registro-12:hover, .btn.red:hover {
+    background-color: #e12330 !important;
+    border-color: #e12330 !important;
 }
