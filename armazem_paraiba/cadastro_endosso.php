@@ -10,6 +10,7 @@
 	date_default_timezone_set('America/Sao_Paulo');
 
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
+	include_once "check_permission.php";
 
 	function conferirErros($modo = 0, $idMotorista = null): string{
 		//Modo = 0: Conferência geral dos parâmetros do formulário.
@@ -726,8 +727,8 @@ function index(){
 		cabecalho("Cadastro de Endosso");
 
 		$condicoes_motorista = "AND enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')";
-		if($_SESSION["user_tx_nivel"] != "Super Administrador"){
-			$condicoes_motorista .= " AND enti_nb_empresa = ".$_SESSION["user_tx_emprCnpj"];
+		if($_SESSION["user_tx_nivel"] != "Super Administrador" && !temPermissaoMenu('/cadastro_empresa.php')){
+			$condicoes_motorista .= " AND enti_nb_empresa = ".$_SESSION["user_nb_empresa"];
 		}
 
 		$_POST["empresa"] = $_POST["empresa"]?? $_SESSION["user_nb_empresa"];
@@ -823,7 +824,7 @@ function index(){
         $fields[] = $camposHE;
         $fields[] = $camposDesconto;
        
-		if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
+		if(is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")) || temPermissaoMenu('/cadastro_empresa.php')){
 			array_unshift($fields, combo_net("Empresa*","empresa", !empty($_POST["empresa"])? $_POST["empresa"]: $_SESSION["user_nb_empresa"],4,"empresa", "onchange='selecionaMotorista(this.value)'"));
 		}else{
 			array_unshift($fields, campo_hidden("empresa", $_SESSION["user_nb_empresa"]));

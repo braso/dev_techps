@@ -243,7 +243,8 @@
 			$b = [
 				botao("Buscar", "buscarEspelho()", "", "", "", "", "btn btn-success"),
 			];
-			$b[] = botao("Cadastrar Abono", "redirParaAbono", "acaoPrevia", $_POST["acao"]??"", "btn btn-secondary");
+			
+				$b[] = botao("Cadastrar Abono", "redirParaAbono", "acaoPrevia", $_POST["acao"]??"", "btn btn-secondary");
 			
 			if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
 				$b[] = "<button class='btn default' type='button' onclick='imprimir(this)'>Imprimir</button>";

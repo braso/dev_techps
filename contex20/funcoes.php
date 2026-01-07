@@ -2206,7 +2206,7 @@
 
 		$target_path = "$diretorio";
 		
-		$extensao = pathinfo($target_path.basename($_FILES[$arquivo]['name'], PATHINFO_EXTENSION));
+		$extensao = pathinfo($_FILES[$arquivo]['name']);
 		// if('.php', '.php3', '.php4', '.phtml', '.pl', '.py', '.jsp', '.asp', '.htm', '.shtml', '.sh', '.cgi')
 
 		if($nome!='') {
@@ -2219,7 +2219,8 @@
 			set_status("O arquivo ".  basename( $_FILES[$arquivo]['name']). " foi enviado");
 			return $target_path;
 		} else{
-			echo("Ocorreu um erro ao tentar enviar o arquivo!");
+			$error = error_get_last();
+			echo("Ocorreu um erro ao tentar enviar o arquivo! " . ($error['message'] ?? ''));
 			exit;
 
 		}

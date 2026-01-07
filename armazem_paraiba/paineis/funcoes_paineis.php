@@ -516,7 +516,9 @@ function criar_relatorio_endosso() {
 					"setor" 			=> $motorista["enti_setor_id"],
 					"setorNome" 		=> $motorista["grup_tx_nome"],
 					"subsetor" 			=> $motorista["enti_subSetor_id"],
-					"subsetorNome" 		=> $motorista["sbgr_tx_nome"]
+					"subsetorNome" 		=> $motorista["sbgr_tx_nome"],
+					"inicioEscala" 		=> $dia["inicioEscala"] ?? "",
+					"fimEscala" 		=> $dia["fimEscala"] ?? ""
 				];
 
 				$nomeArquivo = $motorista["enti_nb_id"].".json";
@@ -946,7 +948,9 @@ function criar_relatorio_jornada() {
 					"setor" 			=> $motorista["enti_setor_id"],
 					"setorNome" 		=> $motorista["grup_tx_nome"],
 					"subsetor" 			=> $motorista["enti_subSetor_id"],
-					"subsetorNome" 		=> $motorista["sbgr_tx_nome"]
+					"subsetorNome" 		=> $motorista["sbgr_tx_nome"],
+					"inicioEscala" 		=> $dia["inicioEscala"] ?? "",
+					"fimEscala" 		=> $dia["fimEscala"] ?? ""
 				];
 			}
 		}
@@ -1017,7 +1021,11 @@ function relatorio_nao_conformidade_juridica(int $idEmpresa) {
 			LEFT JOIN grupos_documentos ON  grup_nb_id = enti_setor_id
 			LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id
 			WHERE enti_nb_empresa = {$idEmpresa}
-				AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-t")}'
+				AND (
+					enti_tx_admissao <= '{$periodoInicio->format("Y-m-t")}'
+					OR (enti_tx_admissao = '' AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-t")}')
+					OR (enti_tx_admissao IS NULL AND enti_tx_dataCadastro <= '{$periodoInicio->format("Y-m-t")}')
+				)
 				AND (
 					enti_tx_status = 'ativo'
 					OR enti_tx_desligamento > '{$periodoInicio->format("Y-m-t")}'
@@ -1046,6 +1054,7 @@ function relatorio_nao_conformidade_juridica(int $idEmpresa) {
 	}
 
 	$totalEmpresa = 0;
+	$motoristaTotais = [];
 	foreach ($motoristas as $motorista) {
 		$diasComProblema = [];
 

@@ -868,11 +868,42 @@ function gerarPainelNc() {
             $totalDiasNaoCFuncionario = 0;
             $totaisFuncionario = [];
             $totaisFuncionario2 = [];
+            $sumTotalMotorista = 0;
+            $sumTotalNConformMax = 0;
             $totaisMediaFuncionario = [];
+            $funcionarioNomes = [];
+            $rankingSetorDias = [];
+            $rankingSetorNC = [];
+            $rankingSetorNome = [];
+            $donutSubsetorAgg = [];
+            $donutSubsetorNome = [];
             foreach ($arquivos as &$arquivo) {
                 $todosZeros = true;
                 $arquivo = $path . "/" . $arquivo;
                 $json = json_decode(file_get_contents($arquivo), true);
+
+                // Filtros
+                $ocupacaoPermitida = $_POST['busca_ocupacao'] ?? '';
+                $operacaoPermitida = $_POST['operacao'] ?? '';
+                $setorPermitido = $_POST['busca_setor'] ?? '';
+                $subsetorPermitido = $_POST['busca_subsetor'] ?? '';
+
+                if (!empty($ocupacaoPermitida)) {
+                    if (is_array($ocupacaoPermitida)) {
+                         if (!in_array((string)($json['ocupacao'] ?? ''), $ocupacaoPermitida)) continue;
+                    } else {
+                         if ((string)($json['ocupacao'] ?? '') !== (string)$ocupacaoPermitida) continue;
+                    }
+                }
+                if (!empty($operacaoPermitida) && (string)($json['tipoOperacao'] ?? '') !== (string)$operacaoPermitida) {
+                    continue;
+                }
+                if (!empty($setorPermitido) && (string)($json['setor'] ?? '') !== (string)$setorPermitido) {
+                    continue;
+                }
+                if (!empty($subsetorPermitido) && (string)($json['subsetor'] ?? '') !== (string)$subsetorPermitido) {
+                    continue;
+                }
 
                 $totalMotorista = $json["espera"] + $json["descanso"] + $json["repouso"] + $json["jornada"] + $json["falta"] + $json["jornadaEfetiva"] + $json["mdc"]
                     + $json["refeicao"] + $json["intersticioInferior"] + $json["intersticioSuperior"];
@@ -887,14 +918,25 @@ function gerarPainelNc() {
                 $mediaPerfFuncionario = round(($json["diasConformidade"] / $dias) * 100, 2);
 
                 $totaisMediaFuncionario[$json["matricula"]] = $mediaPerfFuncionario;
+                $funcionarioNomes[$json["matricula"]] = $json["nome"] ?? (string)$json["matricula"];
+
+                $sid = (string)($json["setor"] ?? "");
+                $rankingSetorDias[$sid] = ($rankingSetorDias[$sid] ?? 0) + (int)$dias;
+                $rankingSetorNC[$sid] = ($rankingSetorNC[$sid] ?? 0) + (int)($json["diasConformidade"] ?? 0);
+                $rankingSetorNome[$sid] = (!empty($json["setorNome"]) ? $json["setorNome"] : ($sid !== "" ? $sid : "Sem Setor"));
+
+                $suid = (string)($json["subsetor"] ?? "");
+                $donutSubsetorAgg[$suid] = ($donutSubsetorAgg[$suid] ?? 0) + (int)$totalMotorista;
+                $donutSubsetorNome[$suid] = (!empty($json["subsetorNome"]) ? $json["subsetorNome"] : ($suid !== "" ? $suid : "Sem Subsetor"));
 
                 $totalNConformMax = 4 * $dias;
-                // Baixar performance total
-                $porcentagemFunNCon = round(($totalMotorista * 100) / ($totalNConformMax * sizeof($arquivos)), 2);
-                // Baixar performance funcionario
-                $porcentagemFunNCon2 = round(($totalMotorista * 100) / $totalNConformMax, 2);
+                
+                $sumTotalMotorista += $totalMotorista;
+                $sumTotalNConformMax += $totalNConformMax;
 
-                $totaisFuncionario[$json["matricula"]] = $porcentagemFunNCon;
+                // Baixar performance funcionario
+                $porcentagemFunNCon2 = min(100, round(($totalMotorista * 100) / $totalNConformMax, 2));
+
                 $totaisFuncionario2[$json["matricula"]] = $porcentagemFunNCon2;
 
                 foreach ($totalizadores as $key => &$total) {
@@ -918,8 +960,56 @@ function gerarPainelNc() {
                 unset($total);
             }
             $totalOcupacoes = array_sum($ocupacoes);
+            
+            $rankingCategorias = [];
+            $rankingValores = [];
+            $rankingTitulo = "";
 
-            $porcentagemTotalBaixa = array_sum((array) $totaisFuncionario);
+            if (!empty($_POST["ranking_type"]) && $_POST["ranking_type"] !== "nao") {
+                if ($_POST["ranking_type"] === "funcionario") {
+                    $pairs = [];
+                    foreach ($totaisMediaFuncionario as $mat => $val) {
+                        $perf = max(0, min(100, 100 - (float)$val));
+                        $label = $funcionarioNomes[$mat] ?? (string)$mat;
+                        $pairs[] = ["label" => $label, "value" => round($perf, 2)];
+                    }
+                    usort($pairs, function($a, $b){ return $b["value"] <=> $a["value"]; });
+                    $rankingLimit = !empty($_POST["ranking_limit"]) ? (string)$_POST["ranking_limit"] : "20";
+                    if ($rankingLimit !== "todos") {
+                        $pairs = array_slice($pairs, 0, max(intval($rankingLimit), 1));
+                    }
+                    foreach ($pairs as $p) {
+                        $rankingCategorias[] = $p["label"];
+                        $rankingValores[] = $p["value"];
+                    }
+                    $rankingTitulo = "Ranking de Performance por Funcionário";
+                } elseif ($_POST["ranking_type"] === "setor") {
+                    $pairs = [];
+                    foreach ($rankingSetorDias as $sid => $diasTot) {
+                        $ncTot = $rankingSetorNC[$sid] ?? 0;
+                        $perf = ($diasTot > 0) ? (100 - (($ncTot / $diasTot) * 100)) : 0;
+                        $perf = max(0, min(100, round($perf, 2)));
+                        $label = $rankingSetorNome[$sid] ?? ($sid !== "" ? $sid : "Sem Setor");
+                        $pairs[] = ["label" => $label, "value" => $perf];
+                    }
+                    usort($pairs, function($a, $b){ return $b["value"] <=> $a["value"]; });
+                    $rankingLimit = !empty($_POST["ranking_limit"]) ? (string)$_POST["ranking_limit"] : "20";
+                    if ($rankingLimit !== "todos") {
+                        $pairs = array_slice($pairs, 0, max(intval($rankingLimit), 1));
+                    }
+                    foreach ($pairs as $p) {
+                        $rankingCategorias[] = $p["label"];
+                        $rankingValores[] = $p["value"];
+                    }
+                    $rankingTitulo = "Ranking de Performance por Setor";
+                }
+            }
+
+            if ($sumTotalNConformMax > 0) {
+                $porcentagemTotalBaixa = min(100, round(($sumTotalMotorista * 100) / $sumTotalNConformMax, 2));
+            } else {
+                $porcentagemTotalBaixa = 0;
+            }
             $totalFun = sizeof($arquivos) - $totalJsonComTudoZero;
             $porcentagemTotalBaixaG = 100 - $porcentagemTotalBaixa;
             $porcentagemTotalMedia = 100 - $mediaPerfTotal;
@@ -1337,6 +1427,26 @@ function gerarPainelNc() {
     $pdf->Cell(10, 7, $totalizadores["intersticioSuperior"], 1, 0, 'C', true);
     $pdf->Cell(20, 7, $percentuais["Geral_intersticioSuperior"] . '%', 1, 1, 'C', true);
     $pdf->SetTextColor(0, 0, 0); // branco
+
+    if (!empty($rankingCategorias) && array_sum($rankingValores) > 0) {
+        $pdf->Ln(10);
+        $pdf->SetFont('helvetica', 'B', 12);
+        $pdf->Cell(0, 7, $rankingTitulo, 0, 1, 'L');
+        $pdf->Ln(2);
+
+        $pdf->SetFont('helvetica', 'B', 10);
+        $pdf->Cell(15, 7, 'Pos.', 1, 0, 'C');
+        $pdf->Cell(145, 7, 'Nome/Setor', 1, 0, 'L');
+        $pdf->Cell(30, 7, 'Performance', 1, 1, 'C');
+
+        $pdf->SetFont('helvetica', '', 10);
+        foreach ($rankingCategorias as $i => $cat) {
+            $val = number_format($rankingValores[$i], 2, ',', '.') . '%';
+            $pdf->Cell(15, 7, ($i + 1) . 'º', 1, 0, 'C');
+            $pdf->Cell(145, 7, $cat, 1, 0, 'L');
+            $pdf->Cell(30, 7, $val, 1, 1, 'C');
+        }
+    }
 
     $pdf->addPage();
 

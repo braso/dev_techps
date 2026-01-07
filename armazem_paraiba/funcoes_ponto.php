@@ -645,7 +645,9 @@
 			"he50" 					=> "00:00",
 			"he100" 				=> "00:00",
 			"adicionalNoturno" 		=> "00:00",
-			"diffSaldo" 			=> "00:00"
+			"diffSaldo" 			=> "00:00",
+			"inicioEscala" 			=> "00:00",
+			"fimEscala" 			=> "00:00"
 		];
 
 		if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
@@ -676,7 +678,9 @@
 				"he100",
 				"adicionalNoturno",
 				"esperaIndenizada",
-				"diffSaldo"
+				"diffSaldo",
+				"inicioEscala",
+				"fimEscala"
 			]);
 		}
 		if(empty($motorista["enti_nb_parametro"])){
@@ -703,7 +707,8 @@
 		if($parametro["para_tx_tipo"] == "escala"){
 			$parametro["diasEscala"] = mysqli_fetch_all(query(
 				"SELECT * FROM escala_dia 
-					WHERE esca_nb_escala = '{$parametro["esca_nb_id"]}';"
+					WHERE esca_nb_escala = '{$parametro["esca_nb_id"]}'
+					ORDER BY esca_nb_numeroDia ASC;"
 			), MYSQLI_ASSOC);
 		}
 		$motorista = array_merge($motorista, $parametro);
@@ -763,14 +768,29 @@
 				}
 			}elseif($motorista["para_tx_tipo"] == "escala"){
 				$diferenca = (new DateTime($motorista["esca_tx_dataInicio"]))->diff(new DateTime($data));
-				$diferenca = $diferenca->days*($diferenca->invert? -1: 1);
-				$diaDoCiclo = round($motorista["esca_nb_periodicidade"]*(($diferenca)/($motorista["esca_nb_periodicidade"])-floor($diferenca/$motorista["esca_nb_periodicidade"]))+1);
-				
-				$jornadaPrevistaOriginal = operarHorarios([
-					!empty($motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaFim"])? $motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaFim"]: "00:00",
-					!empty($motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaInicio"])? $motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_horaInicio"]: "00:00",
-					!empty($motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_intervaloInterno"])? $motorista["diasEscala"][$diaDoCiclo-1]["esca_tx_intervaloInterno"]: "00:00"
-				], "-");
+			$diferenca = $diferenca->days*($diferenca->invert? -1: 1);
+			$diaDoCiclo = round($motorista["esca_nb_periodicidade"]*(($diferenca)/($motorista["esca_nb_periodicidade"])-floor($diferenca/$motorista["esca_nb_periodicidade"]))+1);
+			
+			$diaEscala = null;
+			foreach ($motorista["diasEscala"] as $d) {
+				if ($d["esca_nb_numeroDia"] == $diaDoCiclo) {
+					$diaEscala = $d;
+					break;
+				}
+			}
+
+			$horaInicio = !empty($diaEscala["esca_tx_horaInicio"]) ? $diaEscala["esca_tx_horaInicio"] : "00:00";
+			$horaFim = !empty($diaEscala["esca_tx_horaFim"]) ? $diaEscala["esca_tx_horaFim"] : "00:00";
+			$intervalo = !empty($diaEscala["esca_tx_intervaloInterno"]) ? $diaEscala["esca_tx_intervaloInterno"] : "00:00";
+
+			$aRetorno["inicioEscala"] = $horaInicio;
+			$aRetorno["fimEscala"] = $horaFim;
+
+			$jornadaPrevistaOriginal = operarHorarios([$horaFim, $horaInicio], "-");
+				if($jornadaPrevistaOriginal[0] == "-"){
+					$jornadaPrevistaOriginal = operarHorarios([$jornadaPrevistaOriginal, "24:00"], "+");
+				}
+				$jornadaPrevistaOriginal = operarHorarios([$jornadaPrevistaOriginal, $intervalo], "-");
 			}
 
 			$jornadaPrevista = calcularJornadaPrevista($jornadaPrevistaOriginal, !empty($stringFeriado), ($abonos["abon_tx_abono"]?? null));

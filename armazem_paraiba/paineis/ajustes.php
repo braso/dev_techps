@@ -20,25 +20,61 @@ function carregarGraficos($periodoInicio) {
 	$path = "./arquivos/ajustes";
 	$empresaId = $_POST["empresa"];
 
-	$anoAtual = (int) date('Y');
-	$mesAtual = (int) date('m');
+	$anoBusca = (int) $periodoInicio->format('Y');
+	$anoAtualSistema = (int) date('Y');
+	$mesAtualSistema = (int) date('m');
+
+	// Se o ano da busca for anterior ao atual, mostra o ano completo (12 meses).
+	// Caso contrário, mostra até o mês atual.
+	$mesFinal = ($anoBusca < $anoAtualSistema) ? 12 : $mesAtualSistema;
 
 	$totaisPorMes = [];
 	$mesesJS = [];
 	$mesesFormatadosJS = [];
 
-	for ($mes = 1; $mes <= $mesAtual; $mes++) {
-		$mesPadded = str_pad($mes, 2, '0', STR_PAD_LEFT);
-		$mesKey = "$anoAtual-$mesPadded";
-		$caminho = "$path/$mesKey/$empresaId/empresa_$empresaId.json";
+	// Filtros
+	$ocupacaoPermitida = $_POST['busca_ocupacao'] ?? '';
+	$operacaoPermitida = $_POST['operacao'] ?? '';
+	$setorPermitido = $_POST['busca_setor'] ?? '';
+	$subsetorPermitido = $_POST['busca_subsetor'] ?? '';
 
-		if (file_exists($caminho)) {
-			$json = json_decode(file_get_contents($caminho), true);
-			$ativo = $json['totais']['ativo'] ?? 0;
-			$inativo = $json['totais']['inativo'] ?? 0;
-		} else {
-			$ativo = 0;
-			$inativo = 0;
+	for ($mes = 1; $mes <= $mesFinal; $mes++) {
+		$mesPadded = str_pad($mes, 2, '0', STR_PAD_LEFT);
+		$mesKey = "$anoBusca-$mesPadded";
+		$dirPath = "$path/$mesKey/$empresaId";
+
+		$ativo = 0;
+		$inativo = 0;
+
+		if (is_dir($dirPath)) {
+			$dir = dir($dirPath);
+			while ($file = $dir->read()) {
+				if ($file == '.' || $file == '..' || strpos($file, 'empresa_') !== false) continue;
+
+				$filePath = "$dirPath/$file";
+				$json = json_decode(file_get_contents($filePath), true);
+
+				// Filtros
+				if (!empty($ocupacaoPermitida)) {
+					if (is_array($ocupacaoPermitida)) {
+						if (!in_array($json['ocupacao'] ?? '', $ocupacaoPermitida)) continue;
+					} else {
+						if (($json['ocupacao'] ?? '') != $ocupacaoPermitida) continue;
+					}
+				}
+				if (!empty($operacaoPermitida) && ($json['tipoOperacao'] ?? '') != $operacaoPermitida) continue;
+				if (!empty($setorPermitido) && ($json['setor'] ?? '') != $setorPermitido) continue;
+				if (!empty($subsetorPermitido) && ($json['subsetor'] ?? '') != $subsetorPermitido) continue;
+
+				// Soma totais
+				foreach ($json as $key => $val) {
+					if (is_array($val) && isset($val['ativo']) && isset($val['inativo'])) {
+						$ativo += (int)$val['ativo'];
+						$inativo += (int)$val['inativo'];
+					}
+				}
+			}
+			$dir->close();
 		}
 
 		$totaisPorMes[$mesKey] = [
@@ -160,7 +196,7 @@ function carregarGraficos($periodoInicio) {
 			},
 			title: { 
 			useHTML: true,
-			text: 'Ajustes Inserido e Excluído - Ano Corrente <i class=\"fa fa-question-circle\" data-toggle=\"tooltip\" data-trigger=\"click\" data-placement=\"top\" title=\"Mostra o total da empresa ao filtrar por ocupação.\" style=\"color: blue; t-size: 15px;\"></i>',
+			text: 'Ajustes Inserido e Excluído - $anoBusca <i class=\"fa fa-question-circle\" data-toggle=\"tooltip\" data-trigger=\"click\" data-placement=\"top\" title=\"Mostra o total da empresa ao filtrar por ocupação.\" style=\"color: blue; t-size: 15px;\"></i>',
 			},
 			xAxis: {
 				categories: mesesFormatados,
@@ -999,7 +1035,11 @@ function index() {
 			$pastaAjuste = dir($path);
 			$totais = []; // Inicializa vazio, será preenchido dinamicamente
 
-			$ocupacoesPermitidas = $_POST['busca_ocupacao'];
+			$ocupacoesPermitidas = $_POST['busca_ocupacao'] ?? '';
+			$operacaoPermitida = $_POST['operacao'] ?? '';
+			$setorPermitido = $_POST['busca_setor'] ?? '';
+			$subsetorPermitido = $_POST['busca_subsetor'] ?? '';
+
 			// Chaves que devem ser ignoradas
 			$chavesIgnorar = ["matricula", "nome", "ocupacao", "pontos"];
 			while ($arquivo = $pastaAjuste->read()) {
@@ -1012,6 +1052,9 @@ function index() {
 					if (!empty($ocupacoesPermitidas) && $ocupacaoJson !== $ocupacoesPermitidas) {
 						continue;
 					}
+					if (!empty($operacaoPermitida) && ($json['tipoOperacao'] ?? '') != $operacaoPermitida) continue;
+					if (!empty($setorPermitido) && ($json['setor'] ?? '') != $setorPermitido) continue;
+					if (!empty($subsetorPermitido) && ($json['subsetor'] ?? '') != $subsetorPermitido) continue;
 
 					// Processa cada chave do JSON
 					foreach ($json as $chave => $valor) {
