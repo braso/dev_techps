@@ -1677,23 +1677,70 @@ function index(){
             );
 	
 			$actions = criarIconesGrid(
-				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-				["cadastro_funcionario.php", "cadastro_funcionario.php"],
+				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-button"],
+				["cadastro_funcionario.php", "javascript:void(0)"],
 				["modificarMotorista()", "excluirMotorista()"]
 			);
 	
-			$actions["functions"][1] .= 
-				"esconderInativar('glyphicon glyphicon-remove search-remove', 10);"
-			;
+
+			// 2. Anula o JS automático
+			$actions["functions"][1] = ""; 
+
+			// 3. Força o HTML da lixeira (mantendo o ícone 'remove' original)
+			$actions["tags"][1] = '<span class="glyphicon glyphicon-remove search-button" onclick="confirmarExclusao(this)" title="Excluir" style="color:#d9534f; cursor:pointer;"></span>';
 	
 			$gridFields["actions"] = $actions["tags"];
+			$jsDoEditar = $actions["functions"][0];
 	
-			$jsFunctions =
-				"orderCol = 'enti_tx_nome ASC'
+			// 4. JavaScript Ajustado
+			$jsFunctions = '
 				const funcoesInternas = function(){
-					".implode(" ", $actions["functions"])."
-				}"
-			;
+					try {
+						' . $jsDoEditar . '
+					} catch(e) { console.error(e); }
+				};
+	
+				window.confirmarExclusao = function(elemento){
+					var linha = $(elemento).closest("tr");
+					var id = linha.find("td:eq(0)").text(); 
+	
+					Swal.fire({
+						title: "Tem certeza?",
+						text: "Excluir funcionário código: " + id,
+						icon: "warning",
+						showCancelButton: true,
+						confirmButtonColor: "#d33",    // Vermelho para Ação Perigosa
+						cancelButtonColor: "#6c757d",  // Cinza para Cancelar (Neutro)
+						confirmButtonText: "Sim, excluir!",
+						cancelButtonText: "Cancelar"
+					}).then((result) => {
+						if (result.isConfirmed) {
+							enviarExclusao(id);
+						}
+					});
+				};
+	
+				window.enviarExclusao = function(id){
+					var form = document.createElement("form");
+					form.method = "POST";
+					form.action = ""; 
+					
+					var fieldAcao = document.createElement("input");
+					fieldAcao.type = "hidden";
+					fieldAcao.name = "acao";
+					fieldAcao.value = "excluirMotorista";
+					form.appendChild(fieldAcao);
+	
+					var fieldId = document.createElement("input");
+					fieldId.type = "hidden";
+					fieldId.name = "id";
+					fieldId.value = id; 
+					form.appendChild(fieldId);
+	
+					document.body.appendChild(form);
+					form.submit();
+				};
+			';
 	
 			echo gridDinamico("tabelaMotoristas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
 		//}

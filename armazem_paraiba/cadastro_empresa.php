@@ -900,16 +900,64 @@
 				["cadastro_empresa.php", "cadastro_empresa.php"],
 				["modificarEmpresa()", "excluirEmpresa()"]
 			);
-			$actions["functions"][1] .= "esconderInativar('glyphicon glyphicon-remove search-remove', 5);";
+			// 2. Anula o JS automático
+			$actions["functions"][1] = ""; 
 
+			// 3. Força o HTML da lixeira (mantendo o ícone 'remove' original)
+			$actions["tags"][1] = '<span class="glyphicon glyphicon-remove search-button" onclick="confirmarExclusao(this)" title="Excluir" style="color:#d9534f; cursor:pointer;"></span>';
+	
 			$gridFields["actions"] = $actions["tags"];
-
-			$jsFunctions =
-				"const funcoesInternas = function(){
-					".implode(" ", $actions["functions"])."
-				}"
-			;
-
+			$jsDoEditar = $actions["functions"][0];
+	
+			// 4. JavaScript Ajustado
+			$jsFunctions = '
+				const funcoesInternas = function(){
+					try {
+						' . $jsDoEditar . '
+					} catch(e) { console.error(e); }
+				};
+	
+				window.confirmarExclusao = function(elemento){
+					var linha = $(elemento).closest("tr");
+					var id = linha.find("td:eq(0)").text(); 
+	
+					Swal.fire({
+						title: "Tem certeza?",
+						text: "Excluir empresa código: " + id,
+						icon: "warning",
+						showCancelButton: true,
+						confirmButtonColor: "#d33",    // Vermelho para Ação Perigosa
+						cancelButtonColor: "#6c757d",  // Cinza para Cancelar (Neutro)
+						confirmButtonText: "Sim, excluir!",
+						cancelButtonText: "Cancelar"
+					}).then((result) => {
+						if (result.isConfirmed) {
+							enviarExclusao(id);
+						}
+					});
+				};
+	
+				window.enviarExclusao = function(id){
+					var form = document.createElement("form");
+					form.method = "POST";
+					form.action = ""; 
+					
+					var fieldAcao = document.createElement("input");
+					fieldAcao.type = "hidden";
+					fieldAcao.name = "acao";
+					fieldAcao.value = "excluirEmpresa";
+					form.appendChild(fieldAcao);
+	
+					var fieldId = document.createElement("input");
+					fieldId.type = "hidden";
+					fieldId.name = "id";
+					fieldId.value = id; 
+					form.appendChild(fieldId);
+	
+					document.body.appendChild(form);
+					form.submit();
+				};
+			';
 			echo gridDinamico("tabelaEmpresas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
 		//}
 
