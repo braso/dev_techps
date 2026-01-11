@@ -50,7 +50,7 @@
                 "/cadastro_habilidade_comportamental.php" 	=> "Habilidades Comportamentais",
                 "/cadastro_perfil_acesso.php" 	=> "Perfil de Acesso",
                 "/cadastro_usuario_perfil.php" 	=> "Permisoes de usuarios",
-                "/cadastro_comunicado_interno.php" 	=> "Comunicado Interno",
+               // "/cadastro_comunicado_interno.php" 	=> "Comunicado Interno",
 
 
 
