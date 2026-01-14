@@ -520,7 +520,20 @@ function cadastrar(){
     }else{
         $_POST["extraPago"] = $max50Auto;
     }
-    $aPagar = calcularHorasAPagar($diffSaldo, $saldoBruto, $he50, $he100, $max50Auto, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+
+    $saldoPeriodoParaCalculo = $diffSaldo;
+    // Ensure diffSaldo is treated as 00:00 if it is equivalent
+    $diffSaldoClean = operarHorarios([$diffSaldo], "+");
+    if($diffSaldoClean == "00:00" && $saldoBruto[0] != "-"){
+        $saldoPeriodoParaCalculo = $saldoBruto;
+    }
+
+    if($pagarExtras){
+        $aPagar = calcularHorasAPagar($saldoPeriodoParaCalculo, $saldoBruto, $he50, $he100, $max50Auto, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+    }else{
+        $aPagar = ["00:00", "00:00"];
+    }
+    
     $saldoFinal = operarHorarios([$saldoBruto, "-".$aPagar[0], "-".$aPagar[1]], "+");
 			
 		if($diffSaldo[0] == "-"){
