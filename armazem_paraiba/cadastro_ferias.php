@@ -3,8 +3,10 @@
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
-
-	include "funcoes_ponto.php";
+	include_once "utils/utils.php";
+	include "check_permission.php";
+    include_once "load_env.php";
+    include_once "conecta.php";
 
 	function carregarJS(){
 		echo 
@@ -135,7 +137,7 @@
 		exit;
 	}
 
-	function modificarFerias(){
+	function editarFerias(){
 		$ferias = mysqli_fetch_assoc(query(
 			"SELECT * from ferias 
 				WHERE feri_tx_status = 'ativo'
@@ -164,6 +166,7 @@
 		}
 
 		atualizar("ferias", ["feri_tx_status"], ["inativo"], $_POST["id"]);
+		set_status("<script>Swal.fire('Sucesso!', 'registro de féria excluído com sucesso.', 'info');</script>");
 		index();
 		exit;
 	}
@@ -202,73 +205,91 @@
 		rodape();
 		exit;
 	}
+
+	function listarFerias() {
+        $extra = 
+             (!empty($_POST["busca_codigo"])?       " AND feri_nb_id = {$_POST["busca_codigo"]}" : "")
+            .(!empty($_POST["busca_nome_like"])?    " AND enti_tx_nome LIKE '%{$_POST["busca_nome_like"]}%'" : "") // Busca na tabela entidade
+            .(!empty($_POST["busca_status"])?       " AND feri_tx_status = '{$_POST["busca_status"]}'" : "")
+        ;
+        $gridFields = [
+            "CÓDIGO"        => "feri_nb_id",
+            "Funcionário"   => "enti_tx_nome",
+            "Início"        => "DATE_FORMAT(feri_tx_dataInicio, '%d/%m/%Y %H:%i:%s')",
+            "Fim"           => "DATE_FORMAT(feri_tx_dataFim, '%d/%m/%Y %H:%i:%s')",
+            "Qtd. Dias"     => "DATEDIFF(feri_tx_dataFim, feri_tx_dataInicio) AS qtdDias",
+            "STATUS"        => "feri_tx_status",
+        ];
+
+        $camposBusca = [
+            "busca_codigo"      => "feri_nb_id",
+            "busca_nome_like"   => "enti_tx_nome",
+            "busca_status"      => "feri_tx_status"
+        ];
+
+        // --- 3. MONTAGEM DA QUERY ---
+        $queryBase = "SELECT ".implode(", ", array_values($gridFields))." FROM ferias 
+            JOIN entidade ON feri_nb_entidade = enti_nb_id";
+        
+        $queryBase .= $extra;
+
+        $configuracao = gerarAcoesComConfirmacao(
+            "cadastro_ferias.php", 
+            "editarFerias()", 
+            "excluirFerias" 
+        );
+
+        $gridFields["actions"] = $configuracao["tags"];
+
+        // JAVASCRIPT ESPECÍFICO ---
+        // Precisamos calcular o índice da coluna STATUS para a função esconderInativar
+        $indiceStatus = array_search("STATUS", array_keys($gridFields));
+        
+        // Concatenamos:
+        // 1. A ordenação padrão (orderCol)
+        // 2. O JS do SweetAlert
+        // 3. A função legada esconderInativar (que remove o botão X se já estiver inativo)
+        
+        $jsFunctions = "
+            orderCol = 'feri_tx_dataInicio DESC';
+            
+            " . $configuracao["js"] . "
+
+            // Recriando a lógica antiga de esconder o botão de excluir
+            // Adicionamos dentro de funcoesInternas para rodar a cada carregamento do grid
+            const funcoesInternasOriginal = funcoesInternas;
+            funcoesInternas = function() {
+                try {
+                    funcoesInternasOriginal();
+                    esconderInativar('glyphicon-remove', $indiceStatus);
+                } catch(e) { console.log('Erro no esconderInativar:', e); }
+            };
+        ";
+
+        echo gridDinamico("tabelaFerias", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+    }
 	
 	function index(){
-		
-		//ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
-		include "check_permission.php";
-		// APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
 		verificaPermissao('/cadastro_ferias.php');
 		
 		cabecalho("Férias");
 
 		$camposBusca = [
-			campo("Código",	"busca_codigo",	(!empty($_POST["busca_codigo"])? $_POST["busca_codigo"]: ""), 1,"","maxlength='6'"),
-			campo("Nome do Funcionário", "busca_nome_like", ($a_mod["enti_tx_nome"]?? ""), 4, "", "maxlength='65'"),
-			combo("Status",	"busca_status",	(isset($_POST["busca_status"])? $_POST["busca_status"]: "ativo"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
-		];
-
-		$botoesBusca = [
-			botao("Inserir", "layout_ferias","","","","","btn btn-success"),
-			botao("Limpar Filtros", "limparFiltros")
-		];
+            campo("Código",             "busca_codigo",     (!empty($_POST["busca_codigo"])? $_POST["busca_codigo"]: ""), 1,"","maxlength='6'"),
+            campo("Nome do Funcionário","busca_nome_like",  (!empty($_POST["busca_nome_like"])? $_POST["busca_nome_like"]: ""), 4, "", "maxlength='65'"),
+            combo("Status",             "busca_status",     (isset($_POST["busca_status"])? $_POST["busca_status"]: "ativo"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
+        ];
+        $botoesBusca = [
+            botao("Buscar", "index"),
+            botao("Limpar Filtros", "limparFiltros"),
+            botao("Inserir", "layout_ferias","","","","","btn btn-success")
+        ];
 
 		echo abre_form();
 		echo linha_form($camposBusca);
 		echo fecha_form([], "<hr><form>".implode(" ", $botoesBusca)."</form>");
-
-		//Configuração da tabela dinâmica{
-			$gridFields = [
-				"CÓDIGO" 				=> "feri_nb_id",
-				"Funcionário" 			=> "enti_tx_nome",
-				"Início" 				=> "DATE_FORMAT(feri_tx_dataInicio, '%d/%m/%Y %H:%i:%s')",
-				"Fim" 					=> "DATE_FORMAT(feri_tx_dataFim, '%d/%m/%Y %H:%i:%s')",
-				"Qtd. Dias" 			=> "DATEDIFF(feri_tx_dataFim, feri_tx_dataInicio) AS qtdDias",
-				"STATUS" 				=> "feri_tx_status",
-			];
-	
-			$camposBusca = [
-				"busca_codigo" => "feri_nb_id",
-				"busca_nome_like" => "enti_tx_nome",
-				"busca_status" => "feri_tx_status"
-			];
-	
-			$queryBase = ("SELECT ".implode(", ", array_values($gridFields))." FROM ferias JOIN entidade ON feri_nb_entidade = enti_nb_id");
-	
-			$actions = criarIconesGrid(
-				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-				["cadastro_ferias.php", "cadastro_ferias.php"],
-				["modificarFerias()", "excluirFerias()"]
-			);
-	
-			$actions["functions"][1] .= 
-				"esconderInativar('glyphicon glyphicon-remove search-remove', ".array_search("STATUS", array_keys($gridFields)).");"
-			;
-	
-			$gridFields["actions"] = $actions["tags"];
-	
-			$jsFunctions =
-				"orderCol = 'feri_tx_dataInicio DESC';
-				const funcoesInternas = function(){
-					".implode(" ", $actions["functions"])."
-				}"
-			;
-	
-			echo gridDinamico("tabelaFerias", $gridFields, $camposBusca, $queryBase, $jsFunctions);
-		//}
-
 		
-		rodape();
+        listarFerias();
 
-		carregarJS();
+        rodape();
 	}

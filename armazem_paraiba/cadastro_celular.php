@@ -6,6 +6,7 @@
     // header("Cache-Control: no-cache, no-store, must-revalidate");
     // header("Cache-Control: post-check=0, pre-check=0", FALSE);
 
+    include_once "utils/utils.php";
     include_once "load_env.php";
     include_once "conecta.php";
     mysqli_query($conn, "SET time_zone = '-3:00'");
@@ -95,70 +96,18 @@
         $queryBase = "SELECT ".implode(", ", array_values($gridFields))." FROM celular
             JOIN entidade ON celu_nb_entidade = enti_nb_id";
 
-        $actions = criarIconesGrid(
-            ["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-button"], 
-            ["cadastro_celular.php", "javascript:void(0)"],
-            ["editarCelular()", "excluirCelular()"]
+        // --- AQUI ACONTECE A MÁGICA ---
+        // Você chama a função auxiliar passando apenas:
+        // 1. Arquivo de edição
+        // 2. Nome da função de Editar
+        // 3. Nome da função de Excluir
+        $configuracao = gerarAcoesComConfirmacao(
+            "cadastro_celular.php", 
+            "editarCelular()", 
+            "excluirCelular" //aqui sem () porque a função já está definida no PHP
         );
-
-        // 2. Anula o JS automático
-        $actions["functions"][1] = ""; 
-
-        // 3. Força o HTML da lixeira (mantendo o ícone 'remove' original)
-        $actions["tags"][1] = '<span class="glyphicon glyphicon-remove search-button" onclick="confirmarExclusao(this)" title="Excluir" style="color:#d9534f; cursor:pointer;"></span>';
-
-        $gridFields["actions"] = $actions["tags"];
-        $jsDoEditar = $actions["functions"][0];
-
-        // 4. JavaScript Ajustado
-        $jsFunctions = '
-            const funcoesInternas = function(){
-                try {
-                    ' . $jsDoEditar . '
-                } catch(e) { console.error(e); }
-            };
-
-            window.confirmarExclusao = function(elemento){
-                var linha = $(elemento).closest("tr");
-                var id = linha.find("td:eq(0)").text(); 
-
-                Swal.fire({
-                    title: "Tem certeza?",
-                    text: "Excluir celular código: " + id,
-                    icon: "warning",
-                    showCancelButton: true,
-                    confirmButtonColor: "#d33",    // Vermelho para Ação Perigosa
-                    cancelButtonColor: "#6c757d",  // Cinza para Cancelar (Neutro)
-                    confirmButtonText: "Sim, excluir!",
-                    cancelButtonText: "Cancelar"
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        enviarExclusao(id);
-                    }
-                });
-            };
-
-            window.enviarExclusao = function(id){
-                var form = document.createElement("form");
-                form.method = "POST";
-                form.action = ""; 
-                
-                var fieldAcao = document.createElement("input");
-                fieldAcao.type = "hidden";
-                fieldAcao.name = "acao";
-                fieldAcao.value = "excluirCelular";
-                form.appendChild(fieldAcao);
-
-                var fieldId = document.createElement("input");
-                fieldId.type = "hidden";
-                fieldId.name = "id";
-                fieldId.value = id; 
-                form.appendChild(fieldId);
-
-                document.body.appendChild(form);
-                form.submit();
-            };
-        ';
+        $gridFields["actions"] = $configuracao["tags"];
+        $jsFunctions = $configuracao["js"];
 
         echo gridDinamico("celular", $gridFields, $camposBusca, $queryBase, $jsFunctions);
     };
