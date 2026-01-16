@@ -421,10 +421,25 @@ function criar_relatorio_endosso() {
 				. " LEFT JOIN operacao ON oper_nb_id = enti_tx_tipoOperacao"
 				. " LEFT JOIN grupos_documentos ON  grup_nb_id = enti_setor_id"
 				. " LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id"
+				. " JOIN user ON user.user_nb_entidade = entidade.enti_nb_id"
 				. " WHERE enti_tx_status = 'ativo'"
 				. " AND DATE_FORMAT(enti_tx_dataCadastro, '%Y-%m') <= '{$mes->format("Y-m")}'"
 				. " AND enti_nb_empresa = ".$empresa["empr_nb_id"]
 				. " ".$filtroOcupacao
+				. " AND user.user_tx_status = 'ativo'"
+				. " AND ("
+					. " user.user_tx_nivel IN ('Funcionário', 'Motorista', 'Ajudante')"
+					. " AND EXISTS ("
+						. " SELECT 1 FROM usuario_perfil up"
+						. " JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id"
+						. " JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id"
+						. " WHERE up.user_nb_id = user.user_nb_id"
+						. " AND up.ativo = 1"
+						. " AND pmi.perm_ver = 1"
+						. " AND mi.menu_tx_ativo = 1"
+						. " AND mi.menu_tx_path = '/batida_ponto.php'"
+					. " )"
+				. " )"
 				. " ORDER BY enti_tx_nome ASC;"
 		), MYSQLI_ASSOC);
 
@@ -615,15 +630,31 @@ function criar_relatorio_jornada() {
 
 	$motoristas = mysqli_fetch_all(query(
 		"SELECT * FROM entidade
-		LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
-		LEFT JOIN grupos_documentos ON  grup_nb_id = enti_setor_id
-		LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id
+		LEFT JOIN operacao ON oper_nb_id = enti_tx_tipoOperacao
+		LEFT JOIN grupos_documentos ON grup_nb_id = enti_setor_id
+		LEFT JOIN sbgrupos_documentos ON sbgr_nb_id = enti_subSetor_id
+		LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
+		JOIN user ON user.user_nb_entidade = entidade.enti_nb_id
 		WHERE enti_tx_status = 'ativo'
+			AND user.user_tx_status = 'ativo'
 			AND enti_nb_empresa = {$_POST["empresa"]}
 			{$filtroOcupacao}
 			{$filtroOperacao}
 			{$filtroSetor}
 			{$filtroSubSetor}
+			AND (
+				user.user_tx_nivel IN ('Funcionário', 'Motorista', 'Ajudante')
+				AND EXISTS (
+					SELECT 1 FROM usuario_perfil up
+					JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id
+					JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id
+					WHERE up.user_nb_id = user.user_nb_id
+						AND up.ativo = 1
+						AND pmi.perm_ver = 1
+						AND mi.menu_tx_ativo = 1
+						AND mi.menu_tx_path = '/batida_ponto.php'
+				)
+			)
 		ORDER BY enti_tx_nome ASC;"
 	), MYSQLI_ASSOC);
 
@@ -896,7 +927,7 @@ function relatorio_nao_conformidade_juridica(int $idEmpresa) {
 				)
 				AND (
 					user.user_tx_nivel IN ('Funcionário', 'Motorista', 'Ajudante')
-					OR EXISTS (
+					AND EXISTS (
 						SELECT 1 FROM usuario_perfil up
 						JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id
 						JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id
@@ -1435,10 +1466,25 @@ function criar_relatorio_ajustes() {
 						LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
 						LEFT JOIN grupos_documentos ON  grup_nb_id = enti_setor_id
 						LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id
+						JOIN user ON user.user_nb_entidade = entidade.enti_nb_id
 					WHERE enti_tx_status = 'ativo'
 						AND enti_nb_empresa = {$empresa["empr_nb_id"]}
 						AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')
-					ORDER BY enti_tx_nome ASC;"
+						AND user.user_tx_status = 'ativo'
+						AND ("
+							. " user.user_tx_nivel IN ('Funcionário', 'Motorista', 'Ajudante')"
+							. " AND EXISTS ("
+								. " SELECT 1 FROM usuario_perfil up"
+								. " JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id"
+								. " JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id"
+								. " WHERE up.user_nb_id = user.user_nb_id"
+								. " AND up.ativo = 1"
+								. " AND pmi.perm_ver = 1"
+								. " AND mi.menu_tx_ativo = 1"
+								. " AND mi.menu_tx_path = '/batida_ponto.php'"
+							. " )"
+						. " )"
+					. " ORDER BY enti_tx_nome ASC;"
 			),
 			MYSQLI_ASSOC
 		);
@@ -1668,6 +1714,7 @@ function logisticas() {
 				LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
 				LEFT JOIN grupos_documentos ON  grup_nb_id = enti_setor_id
 				LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id
+				JOIN user ON user.user_nb_entidade = entidade.enti_nb_id
 				WHERE enti_tx_status = 'ativo'
 					AND enti_nb_empresa = {$_POST["empresa"]}
 					AND enti_tx_dataCadastro <= '{$periodoInicio}'
@@ -1675,7 +1722,21 @@ function logisticas() {
 					{$filtroOperacao}
 					{$filtroSetor}
 					{$filtroSubSetor}
-				ORDER BY enti_tx_nome ASC;"
+					AND user.user_tx_status = 'ativo'
+					AND ("
+						. " user.user_tx_nivel IN ('Funcionário', 'Motorista', 'Ajudante')"
+						. " AND EXISTS ("
+							. " SELECT 1 FROM usuario_perfil up"
+							. " JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id"
+							. " JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id"
+							. " WHERE up.user_nb_id = user.user_nb_id"
+							. " AND up.ativo = 1"
+							. " AND pmi.perm_ver = 1"
+							. " AND mi.menu_tx_ativo = 1"
+							. " AND mi.menu_tx_path = '/batida_ponto.php'"
+						. " )"
+					. " )"
+				. " ORDER BY enti_tx_nome ASC;"
 	), MYSQLI_ASSOC);
 
 	$dataReferenciaStr = !empty($_POST["busca_periodo"]) ? $_POST["busca_periodo"] : $hoje->format("d/m/Y H:i");

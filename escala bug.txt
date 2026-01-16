@@ -1,0 +1,78 @@
+
+Matrícula	Nome	Ocupação	Cargo	Setor	SubSetor	Início Jornada	Inicio / Fim de Escala	Atraso	Jornada	Jornada Efetiva	Refeicao	Espera	Descanso	Repouso
+52077	NAYANA TANIA DE LIMA GALVAO	Funcionário	Enfermeiro (a)			12/01 07:10	----	----	86:08 (D+2)	86:08	*	----	----	----
+61877	VITOR TOSCANO BARBOSA	Funcionário	Sem Cargo			09/01 07:45	----	----	157:33 (D+5)	157:33	----	----	----	----
+61499	CAMILA GABRIELE DO NASCIMENTO	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2020 , UTI I	11/01 18:47	----	----	98:31 (D+3)	98:31	----	----	----	----
+63133	LEONARA DA SILVA ALVES	Funcionário	Técnico Enfermagem	PADRE JOÃO MARIA		31/12 19:01	----	----	362:17 (D+14)	362:17	----	----	----	----
+38633	AUCILENE MACIA DE ARAUJO	Funcionário	Técnico Enfermagem	SANTA TEREZINHA		01/01 19:09	----	----	338:09 (D+13)	338:09	----	----	----	----
+40244	EMANUELLE SUELEN ALVES BEZERRA	Funcionário	Técnico Enfermagem	SANTA TEREZINHA		07/01 19:06	----	----	194:12 (D+7)	194:12	----	----	----	----
+39433	KELLY JANAINA NASCIMENTO GOMES	Funcionário	Técnico Enfermagem	SANTA TEREZINHA		29/12 19:22	----	----	409:56 (D+16)	409:56	----	----	----	----
+32833	ALYDIANE PATRICIA MARTINS DO NASCIMENTO	Funcionário	Técnico Enfermagem	SÃO JOSÉ		28/12 08:22	----	----	444:56 (D+17)	444:56	----	----	----	----
+33677	JANICLEIA TEIXEIRA DA SILVA	Funcionário	Técnico Enfermagem	SÃO JOSÉ		08/01 19:27	----	----	169:51 (D+6)	169:51	----	----	----	----
+44599	EDNALDO RIBEIRO DA SILVA	Funcionário	Técnico Enfermagem	NOSSA SENHORA DE FÁTIMA		11/01 07:21	----	----	109:57 (D+3)	109:57	----	----	----	----
+38333	FRANCISCO MACHADO DE SOUZA	Funcionário	Técnico Enfermagem	NOSSA SENHORA DE FÁTIMA		04/01 07:35	----	----	277:43 (D+10)	277:43	----	----	----	----
+35244	LANA GASPHARELLE SILVESTRE DA COSTA	Funcionário	Técnico Enfermagem	PADRE JOÃO MARIA		11/01 13:07	----	----	104:11 (D+3)	101:28	02:43	----	----	----
+49177	MARIA EDUARDA MELO NASCIMENTO DOS SANTOS	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	4556 , UTI III	11/01 07:39	----	----	109:39 (D+3)	109:39	----	----	----	----
+61566	MARLUCE VICENTE DE SOUZA	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	4556 , UTI III	10/01 19:19	----	----	121:59 (D+4)	121:59	----	----	----	----
+39566	NILBERTO DA SILVA PEREIRA	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	4556 , UTI III	14/12 19:42	----	----	769:36 (D+31)	769:36	----	----	----	----
+55999	WILTON LIMA DO NASCIMENTO	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	4556 , UTI III	11/01 13:14	----	----	104:04 (D+3)	103:47	00:17	----	----	----
+61488	MAIARA RAKEL SILVA GUIMARAES	Funcionário	Técnico Enfermagem	SANTO EXPEDITO		24/12 19:18	----	----	530:00 (D+21)	530:00	----	----	----	----
+60000	ANA MARIA DE SOUZA DANTAS	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2020 , UTI I	03/01 19:05	----	----	290:13 (D+11)	290:13	----	----	----	----
+41611	MARCIA MARIA ANGELO SILVA DO ROSARIO	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2020 , UTI I	03/01 19:05	----	----	290:13 (D+11)	290:13	----	----	----	----
+33699	MARCILENE CRISTINA VIEIRA DE LIMA	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2020 , UTI I	11/01 07:05	----	----	110:13 (D+3)	110:13	----	----	----	----
+26530	SANSÃO JOSE DOS SANTOS	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2020 , UTI I	10/01 18:03	----	----	123:15 (D+4)	123:15	----	----	----	----
+21415	FERNANDO LUIZ DE SOUZA	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2020 , UTI I	11/01 13:02	----	----	104:16 (D+3)	104:16	----	----	----	----
+39477	ZILMARA SOUZA DA SILVA	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2040 , UTI II	03/01 18:58	----	----	290:20 (D+11)	290:20	----	----	----	----
+62122	ALAN CAMPELO PONTES	Funcionário	Enfermeiro (a)			12/01 07:05	----	----	86:13 (D+2)	85:57	----	----	00:16	----
+30408	JULIANA PAULA CAMPOS	Funcionário	Enfermeiro (a)			31/12 08:09	----	----	373:09 (D+14)	373:09	----	----	----	----
+47644	LORENA SANTOS PEGADO E SILVA GOMES	Funcionário	Enfermeiro (a)			30/12 07:49	----	----	397:29 (D+15)	397:29	----	----	----	----
+52599	MARCOS VINICIUS DE ARAUJO CAVALCANTI	Funcionário	Enfermeiro (a)			12/01 07:45	----	----	85:33 (D+2)	85:33	----	----	----	----
+46988	MARICLEIDE LOPES DE CARVALHO COELHO	Funcionário	Enfermeiro (a)			12/01 07:45	----	----	85:33 (D+2)	85:33	----	----	----	----
+32021	DANIELLE VIDAL DE AZEVEDO	Funcionário	Técnico Enfermagem	PRONTO SOCORRO		10/01 07:09	06:45 - 13:00	00:24	134:09 (D+4)	133:54	00:15	----	----	----
+39799	KEILIANE VIERA DA SILVA	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	4556 , UTI III	08/01 06:56	06:45 - 13:00	00:11	182:22 (D+6)	182:22	----	----	----	----
+27413	JAKELINE MACEDO DOS SANTOS	Funcionário	Técnico Enfermagem	C.C.I.HOSPITALAR		12/01 09:05	06:45 - 13:00	02:20	84:13 (D+2)	83:58	----	----	00:15	----
+56000	FRANCISCO LAZARO RODRIGUES DE MELO	Funcionário	Técnico Enfermagem	PRONTO SOCORRO		29/12 07:16	07:00 - 13:15	00:16	422:02 (D+16)	418:31	----	----	03:31	----
+61733	JOANNA ROSY DE SOUSA FRANCA	Funcionário	Técnico Enfermagem	PADRE JOÃO MARIA		23/12 07:35	07:00 - 13:15	00:35	565:43 (D+22)	565:43	----	----	----	----
+61455	MARIANE DE SOUZA SILVA	Funcionário	Técnico Enfermagem	PADRE JOÃO MARIA		08/01 06:56	07:00 - 13:15	----	182:22 (D+6)	182:22	----	----	----	----
+63155	RAFAELA SOARES DE BRITO	Funcionário	Técnico Enfermagem	PADRE JOÃO MARIA		08/01 07:04	07:00 - 13:15	00:04	182:14 (D+6)	182:14	----	----	----	----
+28975	IEDA MARCIA DE ARAUJO GOMES	Funcionário	Técnico Enfermagem	SANTA TEREZINHA		12/01 07:08	07:00 - 13:15	00:08	86:10 (D+2)	85:52	----	----	00:18	----
+42855	FRANCISCA VERONICE DA TRINDADE	Funcionário	Técnico Enfermagem	SÃO JOSÉ		12/01 07:29	07:00 - 13:15	00:29	85:49 (D+2)	85:49	----	----	----	----
+55777	JANICE SILVA DE OLIVEIRA	Funcionário	Técnico Enfermagem	CENTRO CIRURGICO		08/01 08:13	07:00 - 13:15	01:13	181:05 (D+6)	181:05	----	----	----	----
+61866	VANDERLUCIA FERREIRA DE MEDEIROS MARTINS	Funcionário	Técnico Enfermagem	CENTRO CIRURGICO		02/01 09:19	07:00 - 13:15	02:19	323:59 (D+12)	323:44	00:15	----	----	----
+32977	JULIANA DE FARIAS SANTOS	Funcionário	Técnico Enfermagem	CENTRAL ESTERELIZAÇÃO - CME		12/01 07:08	07:00 - 13:15	00:08	86:10 (D+2)	85:46	00:24	----	----	----
+45699	ISMA DAYANE BORGES DA SILVA	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2020 , UTI I	06/01 07:23	07:00 - 13:15	00:23	229:55 (D+8)	229:55	----	----	----	----
+23876	FRANCINEIDE JUSTINO DE ANDRADE SILVA	Funcionário	Técnico Enfermagem	SANTA ISABEL		12/01 07:07	07:00 - 13:15	00:07	86:11 (D+2)	85:55	----	----	00:16	----
+50977	ANNA PAULA BARBOSA DA SILVA	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	4556 , UTI III	07/01 07:31	07:00 - 13:15	00:31	205:47 (D+7)	202:59	02:48	----	----	----
+49444	GLEICIENE DA SILVA LUCAS	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	4556 , UTI III	08/01 07:24	07:00 - 13:15	00:24	181:54 (D+6)	181:54	*	----	----	----
+42877	FRANCISCA DE FREITAS VIANA	Funcionário	Técnico de Gesso	PRONTO SOCORRO (ORTOPEDIA)		08/01 07:03	07:00 - 13:15	00:03	182:15 (D+6)	182:15	----	----	----	----
+63211	FRANCISCA ROSILANE DE ALMEIDA	Funcionário	Técnico Enfermagem	SANTO EXPEDITO		12/01 07:12	07:00 - 13:15	00:12	86:06 (D+2)	85:50	----	----	00:16	----
+61677	MARIA LUISA TRINDADE OLIVEIRA	Funcionário	Técnico Enfermagem	SANTO EXPEDITO		12/01 09:19	07:00 - 13:15	02:19	83:59 (D+2)	83:59	----	----	----	----
+61477	JOSIANE SILVA DE SOUZA	Funcionário	Técnico Enfermagem	TRANSPLANTE DE MEDULA OSSEA - TMO		12/01 07:05	07:00 - 13:15	00:05	86:13 (D+2)	86:13	----	----	*	----
+25097	MANOEL ALVES DA CUNHA	Funcionário	Técnico de Gesso	PRONTO SOCORRO (ORTOPEDIA)		22/12 07:24	07:00 - 13:15	00:24	589:54 (D+23)	589:54	----	----	----	----
+49500	JERDANE NUNES DE SOUSA	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2040 , UTI II	12/01 07:23	07:00 - 13:15	00:23	85:55 (D+2)	85:55	*	----	----	----
+52311	RAQUEL CRISTINA DA SILVA	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2020 , UTI I	10/01 07:15	07:00 - 13:15	00:15	134:03 (D+4)	134:03	----	----	----	----
+38111	ANDREIA MARIA SILVA DE MEDEIROS	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2020 , UTI I	10/01 07:16	07:00 - 13:15	00:16	134:02 (D+4)	134:02	----	----	----	----
+63222	LUZIANE PEREIRA COSTA	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2040 , UTI II	12/01 07:23	07:00 - 13:15	00:23	85:55 (D+2)	85:55	*	----	----	----
+32010	RENATA DOS SANTOS PAULO	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2040 , UTI II	12/01 07:08	07:00 - 13:15	00:08	86:10 (D+2)	86:10	----	----	----	----
+56444	RICARDO OLIVEIRA ALVES	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2040 , UTI II	12/01 07:23	07:00 - 13:15	00:23	85:55 (D+2)	85:55	----	----	----	----
+61888	AIUDA ADELITA ZHANDRA SANTOS E PAIVA	Funcionário	Enfermeiro (a)	CENTRO CIRURGICO		12/01 07:05	07:00 - 13:15	00:05	86:13 (D+2)	86:13	----	----	----	----
+61277	ANA LUIZA DONIDA FERREIRA	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2020 , UTI I	12/01 07:10	07:00 - 13:15	00:10	86:08 (D+2)	86:08	----	----	----	----
+61544	DAIHANE DOS SANTOS RIBEIRO	Funcionário	Enfermeiro (a)	Enfermagem		12/01 07:09	07:00 - 13:15	00:09	86:09 (D+2)	85:54	00:15	----	----	----
+51211	Andrielle Salustino da silva	Funcionário	Auxiliar Administrativo de Enfermagem	Enfermagem		12/01 07:10	07:00 - 17:00	00:10	86:08 (D+2)	86:08	----	----	----	----
+54944	BARBARA KELLY MARTINS	Funcionário	Secretario de Centro Cirúrgico	Administração (ADM)		12/01 07:06	07:00 - 17:00	00:06	86:12 (D+2)	86:12	----	----	----	----
+25755	REGINALDO DOS SANTOS TAVARES	Funcionário	Técnico Enfermagem	CENTRAL ESTERELIZAÇÃO - CME		12/01 07:12	07:00 - 19:00	00:12	86:06 (D+2)	86:06	----	----	----	----
+61600	CAMILA ANDRADE DE LIMA	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2040 , UTI II	25/12 19:22	07:00 - 19:00	12:22	505:56 (D+20)	505:56	----	----	----	----
+55611	Maria Eduarda Santos Rocha	Funcionário	Aprendiz	Enfermagem		12/01 08:16	08:00 - 12:00	00:16	85:02 (D+2)	85:02	----	----	----	----
+52488	JOSENILDA LOURENCO DA SILVA	Funcionário	Técnico Enfermagem	CENTRAL ESTERELIZAÇÃO - CME	ENDOSCOPIA	31/12 13:39	12:30 - 18:45	01:09	367:39 (D+14)	367:24	00:15	----	----	----
+61555	JOABE SA DOS SANTOS	Funcionário	Técnico Enfermagem	CENTRO CIRURGICO		06/01 14:16	13:00 - 19:15	01:16	223:02 (D+8)	223:02	----	----	----	----
+61311	EMANUEL DA SILVA SOUZA	Funcionário	Técnico Enfermagem	CENTRAL ESTERELIZAÇÃO - CME		10/01 13:09	13:00 - 19:15	00:09	128:09 (D+4)	127:54	----	----	00:15	----
+36233	JESSICA PIRES DE LIMA SILVA	Funcionário	Técnico Enfermagem	SANTA TEREZINHA		23/12 10:15	13:00 - 19:15	----	563:03 (D+22)	562:43	----	----	00:20	----
+47355	ISABEL CRISTINA DA SILVA TAVARES	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	4556 , UTI III	06/01 13:10	13:00 - 19:15	00:10	224:08 (D+8)	224:08	----	----	----	----
+52300	JULIANA PEREIRA DA ROCHA	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	4556 , UTI III	07/01 13:26	13:00 - 19:15	00:26	199:52 (D+7)	199:52	----	----	----	----
+38433	CARLA FLORENCIO DA SILVA	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2040 , UTI II	31/12 13:17	13:00 - 19:15	00:17	368:01 (D+14)	368:01	----	----	----	----
+50333	CLARISSA DE SOUZA AMORIM PINTO	Funcionário	Técnico Enfermagem	C.C.I.HOSPITALAR		12/01 07:19	13:00 - 19:15	----	85:59 (D+2)	85:41	----	----	00:18	----
+48244	ALEXSANDRO DE OLIVEIRA CAMPELO	Funcionário	Técnico Enfermagem	CENTRO CIRURGICO		03/01 00:04	19:00 - 07:00	----	309:14 (D+11)	307:11	----	----	02:03	----
+56222	GABRIELA SILVA DO NASCIMENTO	Funcionário	Técnico Enfermagem	TRANSPLANTE DE MEDULA OSSEA - TMO		04/01 00:03	19:00 - 07:00	----	285:15 (D+10)	285:15	----	----	----	----
+35011	JOAO BATISTA PAULINO CORDEIRO	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2020 , UTI I	10/01 19:45	19:00 - 07:00	00:45	121:33 (D+4)	121:33	----	----	----	----
+32144	ELIZANGELA ALEXANDRA DA SILVA	Funcionário	Técnico Enfermagem	SÃO JOSÉ		06/01 19:27	19:30 - 07:30	----	217:51 (D+8)	217:51	----	----	----	----
+59999	EDSON FELIPE MARTINS DA SILVA	Funcionário	Técnico Enfermagem	UTI - Unidade de Tratamento Intensivo	2040 , UTI II	11/01 19:40	19:30 - 07:30	00:10	97:38 (D+3)	97:38	----	----	----	----

@@ -70,7 +70,8 @@
 				"/paineis/endosso.php"			=> "Endosso",
 				"/paineis/jornada.php"			=> "Jornada Aberta",
 				"/paineis/nc_juridica.php"		=> "Não Conformidades Jurídicas",
-				"/paineis/saldo.php"			=> "Saldo"
+				"/paineis/saldo.php"			=> "Saldo",
+                "/paineis/escala_parametro.php"	=> "Escalas"
 			] + $camposOcultosProdução,
 			"relatórios" => [
 					"/relatorio_pontos.php" => "Pontos"
