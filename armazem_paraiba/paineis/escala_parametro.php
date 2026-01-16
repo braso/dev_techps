@@ -52,6 +52,10 @@ function index() {
         if (!empty($_POST["busca_nome"])) {
             $filtroNome = " AND entidade.enti_tx_nome LIKE '%".$_POST["busca_nome"]."%'";
         }
+        $filtroMatricula = "";
+        if (!empty($_POST["busca_matricula"])) {
+            $filtroMatricula = " AND entidade.enti_tx_matricula = '".$_POST["busca_matricula"]."'";
+        }
         $filtroOcupacao = "";
         if (!empty($_POST["busca_ocupacao"])) {
             $filtroOcupacao = " AND entidade.enti_tx_ocupacao = '".$_POST["busca_ocupacao"]."'";
@@ -87,6 +91,7 @@ function index() {
              WHERE entidade.enti_tx_status = 'ativo'
                AND entidade.enti_nb_empresa = " . intval($_POST["empresa"]) . "
                ".$filtroNome."
+               ".$filtroMatricula."
                ".$filtroOcupacao."
                ".$filtroOperacao."
                ".$filtroParametro."

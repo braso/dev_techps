@@ -629,11 +629,21 @@ function criar_relatorio_jornada() {
 	}
 
 	$motoristas = mysqli_fetch_all(query(
-		"SELECT * FROM entidade
+		"SELECT entidade.*, 
+				empresa.empr_nb_parametro AS param_empresa, 
+				user.user_tx_nivel, 
+				user.user_nb_id,
+				operacao.oper_tx_nome,
+				grupos_documentos.grup_tx_nome,
+				sbgrupos_documentos.sbgr_tx_nome,
+				COALESCE(p_entidade.para_tx_nome, p_empresa.para_tx_nome) AS parametro_nome
+		FROM entidade
 		LEFT JOIN operacao ON oper_nb_id = enti_tx_tipoOperacao
 		LEFT JOIN grupos_documentos ON grup_nb_id = enti_setor_id
 		LEFT JOIN sbgrupos_documentos ON sbgr_nb_id = enti_subSetor_id
 		LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
+		LEFT JOIN parametro AS p_entidade ON p_entidade.para_nb_id = entidade.enti_nb_parametro
+		LEFT JOIN parametro AS p_empresa ON p_empresa.para_nb_id = empresa.empr_nb_parametro
 		JOIN user ON user.user_nb_entidade = entidade.enti_nb_id
 		WHERE enti_tx_status = 'ativo'
 			AND user.user_tx_status = 'ativo'
@@ -669,6 +679,10 @@ function criar_relatorio_jornada() {
 	$pasta->close();
 
 	foreach ($motoristas as $motorista) {
+		if (empty($motorista['enti_nb_parametro']) && !empty($motorista['param_empresa'])) {
+			$motorista['enti_nb_parametro'] = $motorista['param_empresa'];
+		}
+		
 		$row = [];
 		$arrayDias = [];
 		$datasPontosAbertos = mysqli_fetch_all(query(
@@ -829,8 +843,12 @@ function criar_relatorio_jornada() {
 					}
 				}
 
+				$semana = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
+				$diaSemana = $semana[$dataItem->format("w")];
+
 				$row[] = [
 					"data" => $dia["data"],
+					"diaSemana" => $diaSemana,
 					"jornadaDia" => $jornadaDia,
 					"inicioEscala" => $dia["inicioEscala"],
 					"fimEscala" => $dia["fimEscala"],
@@ -842,6 +860,7 @@ function criar_relatorio_jornada() {
 					"matricula" => $motorista["enti_tx_matricula"],
 					"nome" => $motorista["enti_tx_nome"],
 					"ocupacao" => $motorista["enti_tx_ocupacao"],
+					"parametro" => $motorista["parametro_nome"],
                     "tipoOperacaoNome"=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem Cargo"),
 					"jornada" => strip_tags($jornada),
 					"jornadaEfetiva" => strip_tags($jornadaEfetiva),

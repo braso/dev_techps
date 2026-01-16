@@ -12,23 +12,24 @@
     require "../funcoes_ponto.php";
     require_once __DIR__."/funcoes_paineis.php";
     // criar_relatorio_jornada();
- 
+
     function carregarJS(array $arquivos) {
 
         $linha = "
         var inicioEsc = (item.inicioEscala && item.inicioEscala !== '00:00' && item.inicioEscala !== '00:00:00') ? item.inicioEscala : '--:--';
         var fimEsc = (item.fimEscala && item.fimEscala !== '00:00' && item.fimEscala !== '00:00:00') ? item.fimEscala : '--:--';
-        var escalaShow = (inicioEsc === '--:--' && fimEsc === '--:--') ? '<strong>----</strong>' : inicioEsc + ' - ' + fimEsc;
+        var escalaShow = (inicioEsc === '--:--' && fimEsc === '--:--') ? '<span class=\"sem-escala-indicador\"></span><strong>----</strong>' : inicioEsc + ' - ' + fimEsc;
         
         linha = '<tr>'";
         if (!empty($_POST["empresa"])) {
             $linha .= "+'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.nome+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
+                        +'<td style=\'text-align: center;\'>'+(item.parametro || '')+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.tipoOperacaoNome+'</td>'
                         +'<td style=\'text-align: center;\'>'+(item.setorNome || item.grup_tx_nome || item.setor || item.enti_setor_id || '')+'</td>'
                         +'<td style=\'text-align: center;\'>'+(item.subsetorNome || item.sbgr_tx_nome || item.subsetor || item.enti_subSetor_id || '')+'</td>'
-                        +'<td class = \'jornada\'>'+item.data.substring(0, 5)+' '+ultimoValor+'</td>'
+                        +'<td class = \'jornada inicio-jornada-click\' data-matricula=\"'+item.matricula+'\" data-data=\"'+item.data+'\">'+item.data.substring(0, 5)+' '+item.diaSemana+' '+ultimoValor+'</td>'
                         +'<td class = \'jornada\'>'+escalaShow+'</td>'
                         +'<td class = \'jornada\'>'+(item.atraso && item.atraso.trim() !== '00:00' && item.atraso.trim() !== '0:00' ? item.atraso : '<strong>----</strong>')+'</td>'
                         +'<td class ='+css+'>'+jornada+'</td>'
@@ -112,6 +113,41 @@
                         }
 
                         return corTexto;
+                    }
+
+                    function abrirEscalaParametro(matricula, data){
+                        var empresa = $('#empresa').val() || document.myForm.empresa.value;
+                        if(!empresa) return;
+                        $.ajax({
+                            url: 'jornada_escala.php',
+                            data: {
+                                empresa: empresa,
+                                matricula: matricula,
+                                data: data
+                            },
+                            dataType: 'json',
+                            success: function(res){
+                                if(!res || !res.length){
+                                    alert('Nenhuma escala encontrada para esta matrícula no mês da data selecionada.');
+                                    return;
+                                }
+                                var titulo = 'Escala da matrícula ' + matricula + ' - ' + data.substring(3);
+                                $('#escala-popup-titulo').text(titulo);
+                                var html = '<table class=\"table table-condensed table-bordered\"><thead><tr><th>Data</th><th>Dia</th><th>Escala</th></tr></thead><tbody>';
+                                for(var i=0;i<res.length;i++){
+                                    var linha = res[i];
+                                    var destaque = linha.data === data ? ' style=\"background-color:#d4edda;\"' : '';
+                                    html += '<tr'+destaque+'><td>'+linha.data+'</td><td>'+linha.diaSemana+'</td><td>'+linha.escala+'</td></tr>';
+                                }
+                                html += '</tbody></table>';
+                                $('#escala-popup-conteudo').html(html);
+                                $('#escala-popup-overlay').fadeIn(150);
+                            },
+                            error: function(xhr, status, err){
+                                console.error('Erro ao buscar escala:', status, err);
+                                alert('Erro ao carregar a escala deste funcionário.');
+                            }
+                        });
                     }
 
                     $(document).ready(function(){
@@ -240,7 +276,7 @@
                                 tabela.append(row);
                             });
                         }
-                        var colunasPermitidas = ['matricula', 'nome', 'ocupacao', 'operacao', 'setor', 'subsetor', 'inicioJornada', 'escala', 'atraso', 'jornada', 'jornadaEfetiva', 'refeicao', 'espera', 'descanso', 'repouso']; 
+                        var colunasPermitidas = ['matricula', 'nome', 'ocupacao', 'parametro', 'operacao', 'setor', 'subsetor', 'inicioJornada', 'escala', 'atraso', 'jornada', 'jornadaEfetiva', 'refeicao', 'espera', 'descanso', 'repouso']; 
                         // Evento de clique para ordenar a tabela ao clicar no cabeçalho
                         $('#titulos th').click(function(){
                             var colunaClicada = $(this).attr('class');
@@ -269,6 +305,15 @@
 
                         ".$carregarDados."
                         
+                        $('#tabela-empresas tbody').on('click', 'td.inicio-jornada-click', function(e) {
+                            e.stopPropagation();
+                            var matricula = $(this).data('matricula');
+                            var data = $(this).data('data');
+                            if(matricula && data){
+                                abrirEscalaParametro(String(matricula), String(data));
+                            }
+                        });
+
                         // Evento para selecionar a linha ao clicar
                         $('#tabela-empresas tbody').on('click', 'tr', function() {
                             if ($(this).hasClass('selected-row')) {
@@ -276,6 +321,15 @@
                             } else {
                                 $('#tabela-empresas tbody tr').removeClass('selected-row');
                                 $(this).addClass('selected-row');
+                            }
+                        });
+
+                        $('#escala-popup-fechar').on('click', function() {
+                            $('#escala-popup-overlay').fadeOut(150);
+                        });
+                        $('#escala-popup-overlay').on('click', function(e) {
+                            if(e.target.id === 'escala-popup-overlay'){
+                                $('#escala-popup-overlay').fadeOut(150);
                             }
                         });
                     });
@@ -414,6 +468,7 @@
                 "<th class='matricula'>Matrícula</th>
                 <th class='nome'>Nome</th>
                 <th class='ocupacao'>Ocupação</th>
+                <th class='parametro'>Parâmetro</th>
                 <th class='operacao'>Cargo</th>
                 <th class='setor'>Setor</th>
                 <th class='subsetor'>SubSetor</th>
@@ -435,6 +490,33 @@
             .selected-row, .selected-row td {
                 background-color: #d1e7dd !important;
             }
+            .sem-escala-indicador {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                background-color: red;
+                border-radius: 50%;
+                margin-right: 4px;
+            }
+            #escala-popup-overlay{
+                display:none;
+                position:fixed;
+                z-index:9999;
+                top:0;
+                left:0;
+                right:0;
+                bottom:0;
+                background:rgba(0,0,0,0.4);
+            }
+            #escala-popup{
+                background:#fff;
+                max-width:900px;
+                max-height:80vh;
+                margin:40px auto;
+                padding:10px;
+                overflow:auto;
+                border-radius:4px;
+            }
             @media print{
                 .container, .container-fluid {
                     margin-right: unset;
@@ -452,7 +534,16 @@
                     page-break-inside: avoid;
                 }
             }   
-            </style>";
+            </style>
+            <div id='escala-popup-overlay'>
+                <div id='escala-popup'>
+                    <div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;'>
+                        <span id='escala-popup-titulo' style='font-weight:bold;font-size:12px;'></span>
+                        <button type='button' id='escala-popup-fechar' class='btn btn-xs btn-default'>Fechar</button>
+                    </div>
+                    <div id='escala-popup-conteudo'></div>
+                </div>
+            </div>";
         }
 
         carregarJS($arquivos);
