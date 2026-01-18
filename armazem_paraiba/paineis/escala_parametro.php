@@ -5,9 +5,7 @@ require "../funcoes_ponto.php";
 function index() {
     cabecalho("Relatório Escala por Parâmetro");
 
-    if (empty($_POST["busca_dataMes"])) {
-        $_POST["busca_dataMes"] = date("Y-m");
-    }
+    $buscaDataMes = $_POST["busca_dataMes"] ?? date("Y-m");
 
     $temSubsetorVinculado = false;
     if (!empty($_POST["busca_setor"])) {
@@ -15,19 +13,60 @@ function index() {
         $temSubsetorVinculado = ($rowCount[0] > 0);
     }
 
-    $campos = [
-        combo_net("Empresa", "empresa", $_POST["empresa"] ?? $_SESSION["user_nb_empresa"], 3, "empresa", ""),
-        campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"] ?? date("Y-m")), 2),
+        $campos = [
+        combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 3, "empresa", ""),
+        campo_mes("Mês*", "busca_dataMes", $buscaDataMes, 2),
         campo("Nome", "busca_nome", ($_POST["busca_nome"] ?? ""), 3),
         combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
             ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
-        combo_bd("!Parâmetros da Jornada", "busca_parametro", ($_POST["busca_parametro"] ?? ""), 2, "parametro"),
+        combo_bd2(
+            "!Parâmetros da Jornada",
+            "busca_parametro",
+            ($_POST["busca_parametro"] ?? ""),
+            "SELECT DISTINCT 
+                parametro.para_nb_id AS value,
+                parametro.para_tx_nome AS text,
+                '' AS props
+            FROM parametro
+            JOIN entidade ON entidade.enti_nb_parametro = parametro.para_nb_id
+            WHERE parametro.para_tx_status = 'ativo'
+              AND entidade.enti_tx_status = 'ativo'
+              ".(!empty($_POST["empresa"])? " AND entidade.enti_nb_empresa = ".intval($_POST["empresa"]): "")."
+            ORDER BY parametro.para_tx_nome ASC",
+            "col-sm-2 margin-bottom-5 campo-fit-content",
+            "form-control input-sm campo-fit-content",
+            "",
+            [
+                ["value" => "", "text" => "", "props" => ""]
+            ]
+        ),
         combo_bd("!Cargo", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
         combo_bd("!Setor", "busca_setor", ($_POST["busca_setor"]?? ""), 2, "grupos_documentos", "onchange=\"(function(f){ if(f.busca_subsetor){ f.busca_subsetor.value=''; } f.reloadOnly.value='1'; f.submit(); })(document.contex_form);\"")
     ];
     if ($temSubsetorVinculado) {
         $campos[] = combo_bd("!Subsetor", "busca_subsetor", ($_POST["busca_subsetor"]?? ""), 2, "sbgrupos_documentos", "", " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC");
     }
+
+    $exibicao_valores = [];
+    if (!empty($_POST["exibicao_todo_mes"])) $exibicao_valores[] = "todo_mes";
+    if (!empty($_POST["exibicao_hoje"])) $exibicao_valores[] = "hoje";
+    // Se nenhum for enviado (primeiro load), marca 'todo_mes' como padrão? Ou deixa vazio?
+    // O usuário pediu "deve ter a escolha". Vou deixar vazio se não houver post, ou padrão todo mês.
+    // Mas para manter compatibilidade com o comportamento padrão (todo mês), se nenhum estiver marcado, assume todo mês logicamente.
+    // Visualmente, vou marcar 'todo_mes' se for GET ou se estiver explicitamente marcado.
+    if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+        $exibicao_valores[] = "todo_mes";
+    }
+
+    $campos[] = checkbox(
+        "Exibição", 
+        "exibicao", 
+        ["todo_mes" => "Todo o Mês", "hoje" => "A partir de hoje"], 
+        3, // Tamanho aumentado para caber os textos
+        "checkbox", 
+        "", 
+        json_encode($exibicao_valores)
+    );
 
     $buttons = [
         botao("Buscar", "", "", "", "", "", "btn btn-info")
@@ -38,14 +77,113 @@ function index() {
     echo linha_form($campos);
     echo fecha_form($buttons);
 
-    if (!empty($_POST["empresa"]) && !empty($_POST["busca_dataMes"]) && empty($_POST["reloadOnly"])) {
+    if ($_SERVER["REQUEST_METHOD"] === "POST" && empty($_POST["reloadOnly"])) {
+        $filtrosUsados = [];
+
+        if (!empty($_POST["empresa"])) {
+            $empresaNome = mysqli_fetch_assoc(query(
+                "SELECT empr_tx_nome FROM empresa WHERE empr_nb_id = ".intval($_POST["empresa"])." LIMIT 1;"
+            ));
+            $filtrosUsados[] = "Empresa: ".htmlspecialchars($empresaNome["empr_tx_nome"] ?? $_POST["empresa"]);
+        } else {
+            $filtrosUsados[] = "Empresa: Todas";
+        }
+
+        if (!empty($_POST["busca_dataMes"])) {
+            $mesBusca = DateTime::createFromFormat("Y-m", $_POST["busca_dataMes"]);
+            if ($mesBusca) {
+                $filtrosUsados[] = "Mês: ".$mesBusca->format("m/Y");
+            }
+        }
+
+        if (!empty($_POST["busca_nome"])) {
+            $filtrosUsados[] = "Nome contém: ".htmlspecialchars($_POST["busca_nome"]);
+        }
+
+        if (!empty($_POST["busca_ocupacao"])) {
+            $filtrosUsados[] = "Ocupação: ".htmlspecialchars($_POST["busca_ocupacao"]);
+        }
+
+        if (!empty($_POST["busca_parametro"])) {
+            $parametroNome = mysqli_fetch_assoc(query(
+                "SELECT para_tx_nome FROM parametro WHERE para_nb_id = ".intval($_POST["busca_parametro"])." LIMIT 1;"
+            ));
+            if (!empty($parametroNome)) {
+                $filtrosUsados[] = "Parâmetro da Jornada: ".htmlspecialchars($parametroNome["para_tx_nome"]);
+            }
+        }
+
+        if (!empty($_POST["operacao"])) {
+            $operacaoNome = mysqli_fetch_assoc(query(
+                "SELECT oper_tx_nome FROM operacao WHERE oper_nb_id = ".intval($_POST["operacao"])." LIMIT 1;"
+            ));
+            if (!empty($operacaoNome)) {
+                $filtrosUsados[] = "Cargo: ".htmlspecialchars($operacaoNome["oper_tx_nome"]);
+            }
+        }
+
+        if (!empty($_POST["busca_setor"])) {
+            $setorNome = mysqli_fetch_assoc(query(
+                "SELECT grup_tx_nome FROM grupos_documentos WHERE grup_nb_id = ".intval($_POST["busca_setor"])." LIMIT 1;"
+            ));
+            if (!empty($setorNome)) {
+                $filtrosUsados[] = "Setor: ".htmlspecialchars($setorNome["grup_tx_nome"]);
+            }
+        }
+
+        if (!empty($_POST["busca_subsetor"])) {
+            $subSetorNome = mysqli_fetch_assoc(query(
+                "SELECT sbgr_tx_nome FROM sbgrupos_documentos WHERE sbgr_nb_id = ".intval($_POST["busca_subsetor"])." LIMIT 1;"
+            ));
+            if (!empty($subSetorNome)) {
+                $filtrosUsados[] = "Subsetor: ".htmlspecialchars($subSetorNome["sbgr_tx_nome"]);
+            }
+        }
+
+        if (!empty($filtrosUsados)) {
+            $dataGeracao = date("d/m/Y H:i:s");
+            echo "<div class='row'>"
+                ."<div class='col-sm-12 margin-bottom-5 campo-fit-content'>"
+                ."<div style='padding:5px 10px; margin-bottom:10px; text-align:center; color:#000;'>"
+                ."Filtros aplicados: ".implode(" | ", $filtrosUsados)
+                ."<br><span style='font-size:11px;'>Gerado em: {$dataGeracao}</span>"
+                ."</div>"
+                ."</div>"
+                ."</div>";
+        }
+    }
+
+        if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST["busca_dataMes"]) && empty($_POST["reloadOnly"])) {
         try {
             $periodoInicio = new DateTime($_POST["busca_dataMes"] . "-01");
             $periodoFim = new DateTime($periodoInicio->format("Y-m-t"));
+            
+            $hoje = new DateTime();
+            $hoje->setTime(0, 0, 0);
+            
+            // Prioriza "A partir de hoje" APENAS se "Todo o Mês" NÃO estiver marcado
+            // Ou seja: Se marcou "Hoje" e NÃO marcou "Todo mês", aplica o filtro de hoje.
+            // Se marcou ambos, ou apenas "Todo mês", ou nenhum, exibe o mês completo.
+            
+            $exibirHoje = !empty($_POST["exibicao_hoje"]);
+            $exibirTodoMes = !empty($_POST["exibicao_todo_mes"]);
+
+            if (
+                $exibirHoje && 
+                !$exibirTodoMes &&
+                $periodoInicio->format("Y-m") === $hoje->format("Y-m")
+            ) {
+                $periodoInicio = clone $hoje;
+            }
         } catch (Exception $e) {
             set_status("Mês inválido.");
             rodape();
             return;
+        }
+
+        $filtroEmpresa = "";
+        if (!empty($_POST["empresa"])) {
+            $filtroEmpresa = " AND entidade.enti_nb_empresa = " . intval($_POST["empresa"]);
         }
 
         $filtroNome = "";
@@ -80,6 +218,7 @@ function index() {
         $motoristas = mysqli_fetch_all(query(
             "SELECT entidade.*, 
                     empresa.empr_nb_parametro,
+                    empresa.empr_tx_nome,
                     operacao.oper_tx_nome,
                     grupos_documentos.grup_tx_nome,
                     sbgrupos_documentos.sbgr_tx_nome
@@ -89,7 +228,7 @@ function index() {
              LEFT JOIN grupos_documentos ON grup_nb_id = entidade.enti_setor_id
              LEFT JOIN sbgrupos_documentos ON sbgr_nb_id = entidade.enti_subSetor_id
              WHERE entidade.enti_tx_status = 'ativo'
-               AND entidade.enti_nb_empresa = " . intval($_POST["empresa"]) . "
+               " . $filtroEmpresa . "
                ".$filtroNome."
                ".$filtroMatricula."
                ".$filtroOcupacao."
@@ -106,14 +245,19 @@ function index() {
             return;
         }
 
-        $cabecalho = ["Matrícula", "Nome", "Ocupação", "Cargo", "Setor", "SubSetor"];
+        $exibirEmpresa = empty($_POST["empresa"]);
+
+        $cabecalho = ["Matrícula", "Nome"];
+        if ($exibirEmpresa) {
+            $cabecalho[] = "Empresa";
+        }
+        array_push($cabecalho, "Ocupação", "Cargo", "Setor", "SubSetor");
+        
         $diasMes = (int)$periodoFim->format("d");
         $diasSemana = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
-        for ($dia = 1; $dia <= $diasMes; $dia++) {
-            $dataHeader = clone $periodoInicio;
-            $dataHeader->modify("+" . ($dia - 1) . " day");
-            $sigla = $diasSemana[(int)$dataHeader->format("w")];
-            $cabecalho[] = $dataHeader->format("d") . " " . $sigla;
+        for ($data = clone $periodoInicio; $data <= $periodoFim; $data->modify("+1 day")) {
+            $sigla = $diasSemana[(int)$data->format("w")];
+            $cabecalho[] = $data->format("d") . " " . $sigla;
         }
 
         $valores = [];
@@ -121,12 +265,17 @@ function index() {
         foreach ($motoristas as $motorista) {
             $row = [
                 "matricula" => $motorista["enti_tx_matricula"],
-                "nome" => $motorista["enti_tx_nome"],
-                "ocupacao" => $motorista["enti_tx_ocupacao"],
-                "cargo" => $motorista["oper_tx_nome"] ?? "",
-                "setor" => $motorista["grup_tx_nome"] ?? "",
-                "subsetor" => $motorista["sbgr_tx_nome"] ?? ""
+                "nome" => $motorista["enti_tx_nome"]
             ];
+
+            if ($exibirEmpresa) {
+                $row["empresa_nome"] = $motorista["empr_tx_nome"];
+            }
+
+            $row["ocupacao"] = $motorista["enti_tx_ocupacao"];
+            $row["cargo"] = $motorista["oper_tx_nome"] ?? "";
+            $row["setor"] = $motorista["grup_tx_nome"] ?? "";
+            $row["subsetor"] = $motorista["sbgr_tx_nome"] ?? "";
 
             for ($data = clone $periodoInicio; $data <= $periodoFim; $data->modify("+1 day")) {
                 $dataStr = $data->format("Y-m-d");
@@ -169,6 +318,10 @@ function index() {
     background-color:#c3e6cb !important;
 }
 </style>";
+        echo "<div style='margin-bottom:8px; text-align:left;'>";
+        echo "<button type='button' class='btn btn-success btn-sm' onclick='exportarEscalaCSV()'>Exportar CSV</button> ";
+        echo "<button type='button' class='btn btn-primary btn-sm' onclick='exportarEscalaExcel()'>Exportar Excel</button>";
+        echo "</div>";
         echo "<div id='escala-scroll-top' style='overflow-x:auto; overflow-y:hidden; margin-bottom:5px;'><div style='height:1px;'></div></div>";
         echo "<div id='escala-grid-wrapper'>";
         $gridHtml = montarTabelaPonto($cabecalho, $valores);
@@ -177,37 +330,128 @@ function index() {
         echo $gridHtml;
         echo "</div>";
         echo "</div></div>";
-        echo "<script>
-        (function(){
+        ?>
+        <script>
+        window.exportarEscalaCSV = function() {
+            try {
+                var wrapper = document.getElementById('escala-grid-wrapper');
+                if (!wrapper) { alert('Erro: Container da tabela não encontrado.'); return; }
+
+                var tabela = wrapper.querySelector('table');
+                if (!tabela) { alert('Erro: Tabela não encontrada.'); return; }
+
+                var linhas = tabela.querySelectorAll('tr');
+                if (linhas.length === 0) { alert('Erro: Tabela vazia.'); return; }
+
+                var csv = [];
+                for (var i = 0; i < linhas.length; i++) {
+                    var cols = linhas[i].querySelectorAll('th,td');
+                    var row = [];
+                    if (cols.length === 0) continue;
+
+                    for (var j = 0; j < cols.length; j++) {
+                        var texto = cols[j].innerText || cols[j].textContent || '';
+                        texto = texto.replace(/\s+/g, ' ').trim();
+                        texto = texto.replace(/"/g, '""');
+                        row.push('"' + texto + '"');
+                    }
+                    csv.push(row.join(';'));
+                }
+
+                if (csv.length === 0) { alert('Erro: Nenhum dado para exportar.'); return; }
+
+                var csvContent = '\uFEFF' + csv.join('\r\n');
+                var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                var link = document.createElement('a');
+                var url = URL.createObjectURL(blob);
+
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'escala_parametro.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (e) {
+                console.error(e);
+                alert('Erro ao exportar CSV: ' + e.message);
+            }
+        };
+
+        window.exportarEscalaExcel = function() {
+            try {
+                var wrapper = document.getElementById('escala-grid-wrapper');
+                if (!wrapper) { alert('Erro: Container da tabela não encontrado.'); return; }
+
+                var tabela = wrapper.querySelector('table');
+                if (!tabela) { alert('Erro: Tabela não encontrada.'); return; }
+
+                var linhas = tabela.querySelectorAll('tr');
+                if (linhas.length === 0) { alert('Erro: Tabela vazia.'); return; }
+
+                var csv = [];
+                for (var i = 0; i < linhas.length; i++) {
+                    var cols = linhas[i].querySelectorAll('th,td');
+                    var row = [];
+                    if (cols.length === 0) continue;
+
+                    for (var j = 0; j < cols.length; j++) {
+                        var texto = cols[j].innerText || cols[j].textContent || '';
+                        texto = texto.replace(/\s+/g, ' ').trim();
+                        texto = texto.replace(/"/g, '""');
+                        row.push('"' + texto + '"');
+                    }
+                    csv.push(row.join(';'));
+                }
+
+                if (csv.length === 0) { alert('Erro: Nenhum dado para exportar.'); return; }
+
+                var csvContent = '\uFEFF' + csv.join('\r\n');
+                var blob = new Blob([csvContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+                var link = document.createElement('a');
+                var url = URL.createObjectURL(blob);
+
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'escala_parametro.xls');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (e) {
+                console.error(e);
+                alert('Erro ao exportar Excel: ' + e.message);
+            }
+        };
+
+        (function() {
             var wrapper = document.getElementById('escala-grid-wrapper');
-            if(!wrapper) return;
+            if (!wrapper) return;
             var tableResp = wrapper.querySelector('.table-responsive');
-            if(!tableResp) return;
+            if (!tableResp) return;
             var tabela = tableResp.querySelector('table');
             var topScroll = document.getElementById('escala-scroll-top');
-            if(!tabela || !topScroll) return;
+            if (!tabela || !topScroll) return;
             var inner = topScroll.firstElementChild;
             inner.style.width = tabela.scrollWidth + 'px';
-            topScroll.onscroll = function(){ tableResp.scrollLeft = topScroll.scrollLeft; };
-            tableResp.onscroll = function(){ topScroll.scrollLeft = tableResp.scrollLeft; };
-            window.addEventListener('resize', function(){
+            topScroll.onscroll = function() { tableResp.scrollLeft = topScroll.scrollLeft; };
+            tableResp.onscroll = function() { topScroll.scrollLeft = tableResp.scrollLeft; };
+            window.addEventListener('resize', function() {
                 inner.style.width = tabela.scrollWidth + 'px';
             });
 
             var hoje = new Date();
-            var mesSelecionado = '".($_POST["busca_dataMes"] ?? date("Y-m"))."';
+            var mesSelecionado = '<?=$buscaDataMes?>';
             var mesHoje = hoje.getFullYear() + '-' + ('0' + (hoje.getMonth() + 1)).slice(-2);
-            if(mesSelecionado === mesHoje){
+            if (mesSelecionado === mesHoje) {
                 var diaAtual = hoje.getDate();
-                var colunasFixas = 6;
+                var colunasFixas = <?= $exibirEmpresa ? 7 : 6 ?>;
                 var indiceColuna = colunasFixas + diaAtual - 1;
                 var thsHoje = tabela.querySelectorAll('thead tr th');
-                if(thsHoje.length > indiceColuna){
+                if (thsHoje.length > indiceColuna) {
                     thsHoje[indiceColuna].classList.add('current-day');
                     var linhasHoje = tabela.querySelectorAll('tbody tr');
-                    for(var i = 0; i < linhasHoje.length; i++){
+                    for (var i = 0; i < linhasHoje.length; i++) {
                         var cellsHoje = linhasHoje[i].querySelectorAll('td');
-                        if(cellsHoje.length > indiceColuna){
+                        if (cellsHoje.length > indiceColuna) {
                             cellsHoje[indiceColuna].classList.add('current-day');
                         }
                     }
@@ -215,9 +459,9 @@ function index() {
             }
 
             var linhasBody = tabela.querySelectorAll('tbody tr');
-            for(var j = 0; j < linhasBody.length; j++){
-                linhasBody[j].addEventListener('click', function(){
-                    for(var k = 0; k < linhasBody.length; k++){
+            for (var j = 0; j < linhasBody.length; j++) {
+                linhasBody[j].addEventListener('click', function() {
+                    for (var k = 0; k < linhasBody.length; k++) {
                         linhasBody[k].classList.remove('selected-row');
                     }
                     this.classList.add('selected-row');
@@ -226,47 +470,47 @@ function index() {
 
             var ths = tabela.querySelectorAll('thead tr th');
             var tbody = tabela.querySelector('tbody');
-            if(ths.length && tbody){
-                function getCellValue(row, index){
+            if (ths.length && tbody) {
+                function getCellValue(row, index) {
                     var cell = row.cells[index];
                     return cell ? cell.textContent.trim() : '';
                 }
 
-                function parseHora(valor){
+                function parseHora(valor) {
                     var match = valor.match(/^(\d{2}):(\d{2})/);
-                    if(!match){ return null; }
-                    return parseInt(match[1],10)*60 + parseInt(match[2],10);
+                    if (!match) { return null; }
+                    return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
                 }
 
-                function comparar(index, asc){
-                    return function(a, b){
+                function comparar(index, asc) {
+                    return function(a, b) {
                         var v1 = getCellValue(asc ? a : b, index);
                         var v2 = getCellValue(asc ? b : a, index);
 
                         var t1 = parseHora(v1);
                         var t2 = parseHora(v2);
-                        if(t1 !== null && t2 !== null){
+                        if (t1 !== null && t2 !== null) {
                             return t1 - t2;
                         }
 
-                        return v1.localeCompare(v2, 'pt-BR', {numeric:true, sensitivity:'base'});
+                        return v1.localeCompare(v2, 'pt-BR', { numeric: true, sensitivity: 'base' });
                     };
                 }
 
-                for(var h = 0; h < ths.length; h++){
-                    (function(idx){
+                for (var h = 0; h < ths.length; h++) {
+                    (function(idx) {
                         ths[idx].style.cursor = 'pointer';
-                        ths[idx].addEventListener('click', function(){
+                        ths[idx].addEventListener('click', function() {
                             var atual = this.getAttribute('data-order') || 'desc';
                             var novo = (atual === 'asc') ? 'desc' : 'asc';
-                            for(var x = 0; x < ths.length; x++){
+                            for (var x = 0; x < ths.length; x++) {
                                 ths[x].removeAttribute('data-order');
                             }
                             this.setAttribute('data-order', novo);
 
                             var linhas = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
                             linhas.sort(comparar(idx, novo === 'asc'));
-                            for(var y = 0; y < linhas.length; y++){
+                            for (var y = 0; y < linhas.length; y++) {
                                 tbody.appendChild(linhas[y]);
                             }
                         });
@@ -274,7 +518,8 @@ function index() {
                 }
             }
         })();
-        </script>";
+        </script>
+<?php
     }
 
     rodape();

@@ -37,7 +37,7 @@
 				<span style="font-size: 8px;">Marcações com <b>(*)</b> indicam intervalos em aberto</span><br>
 				<span style=" font-size: 8px;"><i id="iconLegenda" class="glyphicon glyphicon-pencil" aria-hidden="true" style="line-height: 7px !important; color: yellow; border: 1px solid black; border-radius: 50%;"></i> A cor indica que o tempo total de jornada excedeu o previsto.</span>
 				<br>
-				<span style="font-size: 8px;"> 🔴 Marcações com bolinha vermelha e <b>(----)</b> na coluna Inicio /Fim de Escala  indicam jornada aberta sem escala prevista (batida em dia sem jornada ou escala sem parâmetros para o dia).</span><br>
+				<span style="font-size: 8px;"> 🔴 Marcações com bolinha vermelha e <b>(----)</b> na coluna Inicio /Fim de Escala  indicam jornada aberta sem escala prevista (batida em dia sem jornada ou  parâmetros para o dia).</span><br>
 				<span style=" font-size: 8px;"><i id="iconLegenda1" class="glyphicon glyphicon-pencil" aria-hidden="true" style="line-height: 7px !important; color: red;"></i> A cor indica que o limite máximo de horas extras permitido foi ultrapassado.  </span>
 			<?php } ?>
 		</div>

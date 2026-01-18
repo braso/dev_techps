@@ -20,7 +20,12 @@
         var fimEsc = (item.fimEscala && item.fimEscala !== '00:00' && item.fimEscala !== '00:00:00') ? item.fimEscala : '--:--';
         var escalaShow = (inicioEsc === '--:--' && fimEsc === '--:--') ? '<span class=\"sem-escala-indicador\"></span><strong>----</strong>' : inicioEsc + ' - ' + fimEsc;
         
-        linha = '<tr>'";
+        var classeLinha = '';
+        if(jornadaMinutos > 24 * 60){
+            classeLinha = 'row-jornada-critica';
+        }
+
+        linha = '<tr class=\"'+classeLinha+'\">'";
         if (!empty($_POST["empresa"])) {
             $linha .= "+'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.nome+'</td>'
@@ -29,15 +34,19 @@
                         +'<td style=\'text-align: center;\'>'+item.tipoOperacaoNome+'</td>'
                         +'<td style=\'text-align: center;\'>'+(item.setorNome || item.grup_tx_nome || item.setor || item.enti_setor_id || '')+'</td>'
                         +'<td style=\'text-align: center;\'>'+(item.subsetorNome || item.sbgr_tx_nome || item.subsetor || item.enti_subSetor_id || '')+'</td>'
-                        +'<td class = \'jornada inicio-jornada-click\' data-matricula=\"'+item.matricula+'\" data-data=\"'+item.data+'\">'+item.data.substring(0, 5)+' '+item.diaSemana+' '+ultimoValor+'</td>'
+                        +'<td class = \'jornada inicio-jornada-click\' data-matricula=\"'+item.matricula+'\" data-data=\"'+item.data+'\">'+item.data+' '+item.diaSemana+' '+ultimoValor+'</td>'
                         +'<td class = \'jornada\'>'+escalaShow+'</td>'
                         +'<td class = \'jornada\'>'+(item.atraso && item.atraso.trim() !== '00:00' && item.atraso.trim() !== '0:00' ? item.atraso : '<strong>----</strong>')+'</td>'
                         +'<td class ='+css+'>'+jornada+'</td>'
+                        +'<td class = \'jornada\'>'+jornadaPrevista+'</td>'
                         +'<td class ='+jornadaEfetivaCor+'>'+jornadaEfetiva+'</td>'
                         +'<td class = \'jornada\'>'+(item.refeicao && item.refeicao.trim() !== '00:00' && item.refeicao.trim() !== '0:00'? item.refeicao: '<strong>----</strong>')+'</td>'
                         +'<td class = \'jornada\'>'+(item.espera && item.espera.trim() !== '00:00' && item.espera.trim() !== '0:00' ? item.espera : '<strong>----</strong>')+'</td>'
                         +'<td class = \'jornada\'>'+(item.descanso && item.descanso.trim() !== '00:00' && item.descanso.trim() !== '0:00' ? item.descanso : '<strong>----</strong>')+'</td>'
                         +'<td class = \'jornada\'>'+(item.repouso && item.repouso.trim() !== '00:00' && item.repouso.trim() !== '0:00' ? item.repouso : '<strong>----</strong>')+'</td>'
+                        +'<td class = \'jornada acao-ajuste\' style=\"text-align: center;\" data-idmotorista=\"'+idMotorista+'\" data-dataiso=\"'+dataISO+'\">'
+                            +(jornadaMinutos > 24 * 60 && idMotorista && dataISO ? '<span class=\"glyphicon glyphicon-pencil\" title=\"Encerrar Jornada Manualmente\"></span>' : '')
+                        +'</td>'
                     +'</tr>';";
         }
 
@@ -70,6 +79,22 @@
 
                     console.log(new Date());
 
+                    var colaboradoresJornadaCritica = {};
+                    function atualizarKpiJornadaCritica(){
+                        var el = document.getElementById('kpi-jornada-critica-valor');
+                        if(!el) return;
+                        var total = Object.keys(colaboradoresJornadaCritica).length;
+                        el.textContent = total;
+                    }
+
+                    var colaboradoresHoraExtra = {};
+                    function atualizarKpiHoraExtra(){
+                        var el = document.getElementById('kpi-hora-extra-valor');
+                        if(!el) return;
+                        var total = Object.keys(colaboradoresHoraExtra).length;
+                        el.textContent = total;
+                    }
+
                     function converterParaMinutos(hora) {
                         if (!hora) return 0;  // Se o valor for vazio ou nulo, retorna 0
                         const [horas, minutos] = hora.split(':').map(Number);
@@ -79,7 +104,15 @@
                     function converterMinutosParaHHHMM(minutos) {
                         const horas = Math.floor(minutos / 60);
                         const minutosRestantes = minutos % 60;
-                        return `\${horas}:\${String(minutosRestantes) . padStart(2, '0')}`;
+                        return `\${horas}:\${String(minutosRestantes).padStart(2, '0')}`;
+                    }
+
+                    function ajustarPonto(idMotorista, data){
+                        if(document.form_ajuste_ponto){
+                            document.form_ajuste_ponto.idMotorista.value = idMotorista;
+                            document.form_ajuste_ponto.data.value = data;
+                            document.form_ajuste_ponto.submit();
+                        }
                     }
 
                     function calcularJornadaElimite(horasTrabalhadas, jornadaPadrao, limiteExtra) {
@@ -209,11 +242,52 @@
 
                                         var diferencaDias = item.diaDiferenca;
 
+                                        var jornadaPrevistaMinutos = 0;
+                                        var jornadaPrevista = '<strong>----</strong>';
+                                        var inicioEscLocal = (item.inicioEscala && item.inicioEscala !== '00:00' && item.inicioEscala !== '00:00:00') ? item.inicioEscala : '--:--';
+                                        var fimEscLocal = (item.fimEscala && item.fimEscala !== '00:00' && item.fimEscala !== '00:00:00') ? item.fimEscala : '--:--';
+                                        if(inicioEscLocal !== '--:--' && fimEscLocal !== '--:--'){
+                                            var inicioEscMin = converterParaMinutos(inicioEscLocal);
+                                            var fimEscMin = converterParaMinutos(fimEscLocal);
+                                            if(!isNaN(inicioEscMin) && !isNaN(fimEscMin)){
+                                                if(fimEscMin <= inicioEscMin){
+                                                    fimEscMin += 24 * 60;
+                                                }
+                                                jornadaPrevistaMinutos = fimEscMin - inicioEscMin;
+                                                if(jornadaPrevistaMinutos > 0){
+                                                    jornadaPrevista = converterMinutosParaHHHMM(jornadaPrevistaMinutos);
+                                                }
+                                            }
+                                        }
+
                                         const refeicaoMinutos = converterParaMinutos(item.refeicao === '*' ? '00:00' : item.refeicao);
                                         const esperaMinutos = converterParaMinutos(item.espera === '*' ? '00:00' : item.espera);
                                         const descansoMinutos = converterParaMinutos(item.descanso === '*' ? '00:00' : item.descanso);
                                         const repousoMinutos = converterParaMinutos(item.repouso === '*' ? '00:00' : item.repouso);
                                         const jornadaMinutos = converterParaMinutos(jornada);
+
+                                        var idMotorista = null;
+                                        var dataISO = '';
+                                        if (typeof urlArquivo === 'string') {
+                                            var partesUrl = urlArquivo.split('/');
+                                            var nomeArquivo = partesUrl[partesUrl.length - 1] || '';
+                                            idMotorista = nomeArquivo.replace('.json','');
+                                        }
+                                        if (item.data) {
+                                            var partesData = item.data.split('/');
+                                            if (partesData.length === 3) {
+                                                dataISO = partesData[2] + '-' + partesData[1] + '-' + partesData[0];
+                                            }
+                                        }
+
+                                        if(!isNaN(jornadaMinutos)){
+                                            var chaveMatricula = String(item.matricula || '');
+                                            if(jornadaMinutos > 24 * 60 && chaveMatricula){
+                                                colaboradoresJornadaCritica[chaveMatricula] = true;
+                                            } else if(chaveMatricula && colaboradoresJornadaCritica[chaveMatricula]){
+                                                delete colaboradoresJornadaCritica[chaveMatricula];
+                                            }
+                                        }
 
                                         if(item.adi5322 === 'sim'){
                                             let jornadaSemIntervalo = jornadaMinutos - (refeicaoMinutos + descansoMinutos + repousoMinutos);
@@ -225,9 +299,27 @@
 
                                         console.log();
 
+                                        const jornadaEfetivaMinutosCalc = converterParaMinutos(jornadaEfetiva);
+                                        if(jornadaPrevistaMinutos > 0 && !isNaN(jornadaEfetivaMinutosCalc)){
+                                            var chaveMatricula = String(item.matricula || '');
+                                            if(chaveMatricula){
+                                                if(jornadaEfetivaMinutosCalc > jornadaPrevistaMinutos){
+                                                    colaboradoresHoraExtra[chaveMatricula] = true;
+                                                } else if(colaboradoresHoraExtra[chaveMatricula]){
+                                                    delete colaboradoresHoraExtra[chaveMatricula];
+                                                }
+                                            }
+                                        }
+
                                         let jornadaEfetivaCor = 'jornada';
                                         if(item.jornadaDia != undefined && item.jornadaDia != null){
                                             jornadaEfetivaCor = calcularJornadaElimite(jornadaEfetiva , item.jornadaDia, item.limiteExtras)
+                                        }
+
+                                        if(jornadaPrevistaMinutos > 0 && !isNaN(jornadaEfetivaMinutosCalc)){
+                                            if(jornadaEfetivaMinutosCalc > jornadaPrevistaMinutos){
+                                                jornadaEfetivaCor = 'jornadaRed';
+                                            }
                                         }
 
                                         if (jornadaEfetiva === '0:00' || jornadaEfetiva === '00:00') {
@@ -251,6 +343,8 @@
                                     ". $linha."
                                     tabela.append(linha);
                                     });
+                                    atualizarKpiJornadaCritica();
+                                    atualizarKpiHoraExtra();
                                 },
                                 error: function(){
                                     console.error('Erro ao carregar os dados.');
@@ -276,7 +370,7 @@
                                 tabela.append(row);
                             });
                         }
-                        var colunasPermitidas = ['matricula', 'nome', 'ocupacao', 'parametro', 'operacao', 'setor', 'subsetor', 'inicioJornada', 'escala', 'atraso', 'jornada', 'jornadaEfetiva', 'refeicao', 'espera', 'descanso', 'repouso']; 
+                        var colunasPermitidas = ['matricula', 'nome', 'ocupacao', 'parametro', 'operacao', 'setor', 'subsetor', 'inicioJornada', 'escala', 'atraso', 'jornada', 'jornadaPrevista', 'jornadaEfetiva', 'refeicao', 'espera', 'descanso', 'repouso']; 
                         // Evento de clique para ordenar a tabela ao clicar no cabeçalho
                         $('#titulos th').click(function(){
                             var colunaClicada = $(this).attr('class');
@@ -314,13 +408,55 @@
                             }
                         });
 
-                        // Evento para selecionar a linha ao clicar
+                        // Evento para selecionar a linha ao clicar (apenas a última clicada fica destacada)
                         $('#tabela-empresas tbody').on('click', 'tr', function() {
-                            if ($(this).hasClass('selected-row')) {
-                                $(this).removeClass('selected-row');
+                            $('#tabela-empresas tbody tr').removeClass('selected-row');
+                            $(this).addClass('selected-row');
+                        });
+
+                        $('#tabela-empresas tbody').on('click', 'td.acao-ajuste span.glyphicon-pencil', function(e) {
+                            e.stopPropagation();
+                            var td = $(this).closest('td');
+                            var idMotorista = td.data('idmotorista');
+                            var dataISO = td.data('dataiso');
+                            if (idMotorista && dataISO) {
+                                if (typeof Swal !== 'undefined' && Swal.fire) {
+                                    Swal.fire({
+                                        icon: 'question',
+                                        title: 'Encerrar jornada',
+                                        text: 'Gostaria de encerrar essa jornada manualmente?',
+                                        showCancelButton: true,
+                                        confirmButtonText: 'Sim',
+                                        cancelButtonText: 'Não'
+                                    }).then(function(result){
+                                        if (result.isConfirmed) {
+                                            ajustarPonto(idMotorista, dataISO);
+                                        }
+                                    });
+                                } else {
+                                    if (confirm('Gostaria de encerrar essa jornada manualmente?')) {
+                                        ajustarPonto(idMotorista, dataISO);
+                                    }
+                                }
+                            }
+                        });
+
+                        // Evento do filtro de jornada crítica
+                        $('#filtro-jornada-critica').on('change', function() {
+                            var checked = $(this).is(':checked');
+                            var linhas = $('#tabela-empresas tbody tr');
+                            
+                            if (checked) {
+                                linhas.each(function() {
+                                    var linha = $(this);
+                                    if (linha.hasClass('row-jornada-critica')) {
+                                        linha.show();
+                                    } else {
+                                        linha.hide();
+                                    }
+                                });
                             } else {
-                                $('#tabela-empresas tbody tr').removeClass('selected-row');
-                                $(this).addClass('selected-row');
+                                linhas.show();
                             }
                         });
 
@@ -462,6 +598,29 @@
                     AND empr_tx_Ehmatriz = 'sim'
                 LIMIT 1;"
             ))["empr_tx_logo"];
+            $rowGravidade = "
+            <div id='kpis-resumo-jornada' style='display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;'>
+                <div style='background-color: var(--var-lightred); border-left: 4px solid var(--var-red); padding: 8px 12px; border-radius: 4px; min-width: 230px; display:flex; flex-direction: column; justify-content: center;'>
+                    <div style='display:flex;align-items:center;justify-content:space-between; margin-bottom: 5px;'>
+                        <div>
+                            <div style='font-size:11px;font-weight:bold;color:var(--var-darkred);'>Alerta Crítico</div>
+                            <div style='font-size:10px;'>Colaboradores com jornada &gt; 24h</div>
+                        </div>
+                        <div id='kpi-jornada-critica-valor' style='font-size:22px;font-weight:bold;color:var(--var-darkred);'>0</div>
+                    </div>
+                    <div style='display: flex; align-items: center; gap: 5px;'>
+                        <input type='checkbox' id='filtro-jornada-critica' style='cursor: pointer;'>
+                        <label for='filtro-jornada-critica' style='font-size: 10px; color: var(--var-darkred); margin: 0; cursor: pointer; font-weight: bold;'>Mostrar apenas jornadas > 24h</label>
+                    </div>
+                </div>
+                <div style='background-color: var(--var-lightorange); border-left: 4px solid var(--var-orange); padding: 8px 12px; border-radius: 4px; min-width: 230px; display:flex;align-items:center;justify-content:space-between;'>
+                    <div>
+                        <div style='font-size:11px;font-weight:bold;color:var(--var-orange);'>Alerta Operacional</div>
+                        <div style='font-size:10px;'>Colaboradores em hora extra</div>
+                    </div>
+                    <div id='kpi-hora-extra-valor' style='font-size:22px;font-weight:bold;color:var(--var-orange);'>0</div>
+                </div>
+            </div>";
             // $rowTotais = "<tr class='totais'>";
             $rowTitulos = "<tr id='titulos' class='titulos'>";
             $rowTitulos .=
@@ -476,12 +635,29 @@
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='escala'>Inicio / Fim de Escala</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='atraso'>Atraso</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornada'>Jornada</th>
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornadaPrevista'>Jornada Prevista</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornadaEfetiva'>Jornada Efetiva</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='refeicao'>Refeicao</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='espera'>Espera</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='descanso'>Descanso</th>
-                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='repouso'>Repouso</th>";
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='repouso'>Repouso</th>
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='acoes'>Ações</th>";
             $rowTitulos .= "</tr>";
+
+            $params = array_merge($_POST, [
+                "acao" => "index",
+                "acaoPrevia" => $_POST["acao"] ?? "",
+                "idMotorista" => null,
+                "data" => null,
+                "HTTP_REFERER" => (!empty($_POST["HTTP_REFERER"]) ? $_POST["HTTP_REFERER"] : $_SERVER["REQUEST_URI"])
+            ]);
+
+            echo criarHiddenForm(
+                "form_ajuste_ponto",
+                array_keys($params),
+                array_values($params),
+                "../ajuste_ponto.php"
+            );
             $titulo = "Relatório de Jornada Aberta";
             $mostra = false;
             include_once "painel_html2.php";
