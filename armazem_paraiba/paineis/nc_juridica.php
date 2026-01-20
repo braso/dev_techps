@@ -224,74 +224,114 @@
 							
 				$(document).ready(function(){
 					var tabela = $('#tabela-empresas tbody');
-					var ocupacoesPermitidas = '".$_POST["busca_ocupacao"]."';
-					var operacaoPermitidas = '".$_POST["operacao"]."';
-					var setorPermitidas = '".$_POST["busca_setor"]."';
-				    var subSetorPermitidas = '".$_POST["busca_subsetor"]."';
+                    var arrayPerformanceMedia = $jsonPerfomanceMedia;
+                    var arrayPerformanceBaixa = $jsonPerfomanceBaixa;
+                    var ocupacoesPermitidas = '".$_POST["busca_ocupacao"]."';
+                    var operacaoPermitidas = '".$_POST["operacao"]."';
+                    var setorPermitidas = '".$_POST["busca_setor"]."';
+                    var subSetorPermitidas = '".$_POST["busca_subsetor"]."';
+                    var arquivos = ".json_encode($arquivos).";
+                    var todosDados = [];
+                    var arquivosCarregados = 0;
 
-					function carregarDados(urlArquivo){
-						$.ajax({
-							url: urlArquivo + '?v=' + new Date().getTime(),
-							dataType: 'json',
-							success: function(data){
-								var row = {};
-								var motoristas = 0;
-								var ajudante = 0;
-								var funcionario = 0;
+                    function finalizarProcessamento() {
+                        // Ordenação personalizada: Perf Média (Desc) -> Perf Baixa (Desc) -> Gravidade Baixa (Asc) -> Gravidade Média (Asc) -> Gravidade Alta (Asc)
+                        todosDados.sort(function(a, b) {
+                            // 1. Performance Média (Desc) - Maior é melhor
+                            var pmA = 100 - (arrayPerformanceMedia[a.matricula] || 0);
+                            var pmB = 100 - (arrayPerformanceMedia[b.matricula] || 0);
+                            if (Math.abs(pmA - pmB) > 0.001) return pmB - pmA;
 
-								let class1 = '';
-								let class2 = '';
-								let class3 = '';
-								let class4 = '';
-								$.each(data, function(index, item){
-									row[index] = item;
-								});
+                            // 2. Performance Baixa (Desc) - Maior é melhor (menos NCs no total)
+                            var pbA = 100 - (arrayPerformanceBaixa[a.matricula] || 0);
+                            var pbB = 100 - (arrayPerformanceBaixa[b.matricula] || 0);
+                            if (Math.abs(pbA - pbB) > 0.001) return pbB - pbA;
 
-                                var ocSel = ocupacoesPermitidas;
-                                var opSel = operacaoPermitidas;
-                                var setSel = setorPermitidas;
-                                var subSel = subSetorPermitidas;
-                                if (
-                                    (ocSel.length > 0 && String(row.ocupacao) !== String(ocSel)) ||
-                                    (opSel.length > 0 && String(row.tipoOperacao) !== String(opSel)) ||
-                                    (setSel.length > 0 && String(row.setor) !== String(setSel)) ||
-                                    (subSel.length > 0 && String(row.subsetor) !== String(subSel))
-                                ) {
-                                    return;
+                            // 3. Gravidade Alta (Asc) - Menos é melhor (Critério principal de gravidade)
+                            var altaA = Number(a.refeicao || 0) + Number(a.intersticioInferior || 0) + Number(a.intersticioSuperior || 0);
+                            var altaB = Number(b.refeicao || 0) + Number(b.intersticioInferior || 0) + Number(b.intersticioSuperior || 0);
+                            if (altaA !== altaB) return altaA - altaB;
+
+                            // 4. Gravidade Média (Asc) - Menos é melhor
+                            var mediaA = Number(a.jornadaEfetiva || 0) + Number(a.mdc || 0);
+                            var mediaB = Number(b.jornadaEfetiva || 0) + Number(b.mdc || 0);
+                            if (mediaA !== mediaB) return mediaA - mediaB;
+
+                            // 5. Gravidade Baixa (Asc) - Menos é melhor
+                            var baixaA = Number(a.falta || 0) + Number(a.espera || 0) + Number(a.descanso || 0) + Number(a.repouso || 0) + Number(a.jornada || 0) + Number(a.jornadaPrevista || 0);
+                            var baixaB = Number(b.falta || 0) + Number(b.espera || 0) + Number(b.descanso || 0) + Number(b.repouso || 0) + Number(b.jornada || 0) + Number(b.jornadaPrevista || 0);
+                            return baixaA - baixaB;
+                        });
+
+                        // Renderização
+                        $.each(todosDados, function(index, row) {
+                            var totalNaEndossado = Number(row.falta || 0) + Number(row.jornadaEfetiva || 0) + Number(row.refeicao || 0) 
+                            + Number(row.espera || 0) + Number(row.descanso || 0) + Number(row.repouso || 0) + Number(row.jornada || 0) 
+                            + Number(row.mdc || 0) + Number(row.intersticioInferior || 0) + Number(row.intersticioSuperior || 0);
+                            var totalEndossado = Number(row.refeicao || 0) + Number(row.falta || 0) + Number(row.jornadaEfetiva || 0) 
+                            + Number(row.mdc || 0) + Number(row.intersticioInferior || 0) + Number(row.intersticioSuperior || 0);
+
+                            let class1 = '';
+                            let class2 = '';
+                            let class3 = '';
+                            let class4 = '';
+
+                            if (totalNaEndossado === 0) {
+                                class1 = 'highlighted';
+                                class2 = 'highlighted';
+                                class3 = 'highlighted';
+                                class4 = 'highlighted';
+                            } else {
+                                class1 = 'baixaGravidade';
+                                class2 = 'mediaGravidade';
+                                class3 = 'altaGravidade';
+                                class4 = 'total';
+                            }
+                            
+                            let linha = '';
+                            " . $linha . "
+
+                            tabela.append(linha);
+                        });
+                    }
+
+                    if (arquivos.length > 0) {
+                        $.each(arquivos, function(i, url) {
+                            $.ajax({
+                                url: url + '?v=' + new Date().getTime(),
+                                dataType: 'json',
+                                success: function(data) {
+                                    var row = data;
+                                    // Filtros
+                                    var ocSel = ocupacoesPermitidas;
+                                    var opSel = operacaoPermitidas;
+                                    var setSel = setorPermitidas;
+                                    var subSel = subSetorPermitidas;
+                                    if (
+                                        (ocSel.length > 0 && String(row.ocupacao) !== String(ocSel)) ||
+                                        (opSel.length > 0 && String(row.tipoOperacao) !== String(opSel)) ||
+                                        (setSel.length > 0 && String(row.setor) !== String(setSel)) ||
+                                        (subSel.length > 0 && String(row.subsetor) !== String(subSel))
+                                    ) {
+                                        return;
+                                    }
+                                    todosDados.push(row);
+                                },
+                                error: function() {
+                                    console.log('Erro ao carregar ' + url);
+                                },
+                                complete: function() {
+                                    arquivosCarregados++;
+                                    if (arquivosCarregados === arquivos.length) {
+                                        finalizarProcessamento();
+                                    }
                                 }
+                            });
+                        });
+                    } else {
+                        // Nada a carregar
+                    }
 
-								var totalNaEndossado = (row.falta || 0) + (row.jornadaEfetiva || 0) + (row.refeicao || 0) 
-								+ (row.espera || 0) + (row.descanso || 0) + (row.repouso || 0) + (row.jornada || 0) 
-								+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
-								var totalEndossado = (row.refeicao || 0) + (row.falta || 0) + (row.jornadaEfetiva || 0) 
-								+ (row.mdc || 0) + (row.intersticioInferior || 0) + (row.intersticioSuperior || 0);
-
-								// console.log(totalEndossado);
-								if (totalNaEndossado === 0) {
-									class1 = 'highlighted';
-									class2 = 'highlighted';
-									class3 = 'highlighted';
-									class4 = 'highlighted';
-								} else {
-									class1 = 'baixaGravidade';
-									class2 = 'mediaGravidade';
-									class3 = 'altaGravidade';
-									class4 = 'total';
-								}
-								
-								console.log(row);"
-								.$linha
-								. "
-								var novaLinha = $(linha);
-								tabela.append(linha);
-							},
-							error: function(){
-								console.log('Erro ao carregar os dados.');
-							}
-						});
-						}
-
-						
 					function ordenarTabela(coluna, ordem) {
 					var linhas = tabela.find('tr').get();
 
@@ -345,7 +385,7 @@
 				});
 
 
-					".$carregarDados. "
+					
 				});
 
 
@@ -639,6 +679,9 @@
 				$sumTotalMotorista = 0;
 				$sumTotalNConformMax = 0;
                 $totaisMediaFuncionario = [];
+                $totaisGravidadeBaixa = [];
+                $totaisGravidadeMedia = [];
+                $totaisGravidadeAlta = [];
 				$totalizadores["jornadaPrevista"] = 0;
 				$ocupacoesPermitidas = $_POST['busca_ocupacao'];
 				$operacaoSel = (string)($_POST['operacao'] ?? '');
@@ -681,7 +724,15 @@
 					$data = DateTime::createFromFormat('d/m/Y', $json["dataInicio"]);
 					$dias = $data->format('t');
 					
-					$mediaPerfFuncionario = round(($json["diasConformidade"]/ $dias) * 100, 2);
+                    // Calcular totais de gravidade para o funcionário atual
+                    $gBaixa = (int)($json["falta"] ?? 0) + (int)($json["espera"] ?? 0) + (int)($json["descanso"] ?? 0) + (int)($json["repouso"] ?? 0) + (int)($json["jornada"] ?? 0) + (int)($json["jornadaPrevista"] ?? 0);
+                    $gMedia = (int)($json["jornadaEfetiva"] ?? 0) + (int)($json["mdc"] ?? 0);
+                    $gAlta = (int)($json["refeicao"] ?? 0) + (int)($json["intersticioInferior"] ?? 0) + (int)($json["intersticioSuperior"] ?? 0);
+
+                    // Penalidades para ajuste fino da % (High=0.1, Med=0.05, Low=0.01)
+                    $penalty = ($gAlta * 0.1) + ($gMedia * 0.05) + ($gBaixa * 0.01);
+
+					$mediaPerfFuncionario = round((($json["diasConformidade"]/ $dias) * 100) + $penalty, 2);
 					
                     $denDias = ($dias * max($arquivosConsiderados, 1));
                     $mediaPerfTotal = round(($totalDiasNaoCFuncionario/ $denDias * 100), 2);
@@ -689,6 +740,9 @@
 					$mediaPerfTotal= 100 - $mediaPerfTotal;
 
 					$totaisMediaFuncionario[$json["matricula"]] = $mediaPerfFuncionario;
+                    $totaisGravidadeBaixa[$json["matricula"]] = $gBaixa;
+                    $totaisGravidadeMedia[$json["matricula"]] = $gMedia;
+                    $totaisGravidadeAlta[$json["matricula"]] = $gAlta;
 					$funcionarioNomes[$json["matricula"]] = $json["nome"] ?? (string)$json["matricula"];
 					$sid = (string)($json["setor"] ?? "");
 					$rankingSetorDias[$sid] = ($rankingSetorDias[$sid] ?? 0) + (int)$dias;
@@ -759,7 +813,38 @@
 							$label = $funcionarioNomes[$mat] ?? (string)$mat;
 							$pairs[] = ["label" => $label, "value" => round($perf, 2), "matricula" => (string)$mat];
 						}
-						usort($pairs, function($a, $b){ return $b["value"] <=> $a["value"]; });
+						usort($pairs, function($a, $b) use ($totaisFuncionario2, $totaisGravidadeBaixa, $totaisGravidadeMedia, $totaisGravidadeAlta) {
+                            // 1. Performance Média (Desc)
+                            if (abs($b["value"] - $a["value"]) > 0.001) {
+                                return $b["value"] <=> $a["value"];
+                            }
+                            
+                            // 2. Performance Baixa (Desc)
+                            $perfBaixaA = $totaisFuncionario2[$a["matricula"]] ?? 0;
+                            $perfBaixaB = $totaisFuncionario2[$b["matricula"]] ?? 0;
+                            if (abs($perfBaixaB - $perfBaixaA) > 0.001) {
+                                return $perfBaixaB <=> $perfBaixaA;
+                            }
+
+                            // 3. Gravidade Alta (Asc) - Menos é melhor
+                            $gAltaA = $totaisGravidadeAlta[$a["matricula"]] ?? 0;
+                            $gAltaB = $totaisGravidadeAlta[$b["matricula"]] ?? 0;
+                            if ($gAltaA != $gAltaB) {
+                                return $gAltaA <=> $gAltaB;
+                            }
+
+                            // 4. Gravidade Media (Asc)
+                            $gMediaA = $totaisGravidadeMedia[$a["matricula"]] ?? 0;
+                            $gMediaB = $totaisGravidadeMedia[$b["matricula"]] ?? 0;
+                            if ($gMediaA != $gMediaB) {
+                                return $gMediaA <=> $gMediaB;
+                            }
+
+                            // 5. Gravidade Baixa (Asc)
+                            $gBaixaA = $totaisGravidadeBaixa[$a["matricula"]] ?? 0;
+                            $gBaixaB = $totaisGravidadeBaixa[$b["matricula"]] ?? 0;
+                            return $gBaixaA <=> $gBaixaB;
+                        });
 						$rankingLimit = (string)($_POST["ranking_limit"] ?? "20");
 						if ($rankingLimit !== "todos") {
 							$pairs = array_slice($pairs, 0, max(intval($rankingLimit), 1));

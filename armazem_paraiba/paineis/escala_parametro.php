@@ -1,8 +1,13 @@
 <?php
-
+	
 require "../funcoes_ponto.php";
 
 function index() {
+    // Verificação e criação da coluna turno se não existir
+    if(mysqli_num_rows(query("SHOW COLUMNS FROM parametro LIKE 'para_tx_turno'")) == 0){
+        query("ALTER TABLE parametro ADD COLUMN para_tx_turno CHAR(1) COMMENT 'M-Manhã, T-Tarde, V-Vespertino, N-Noite, D-Diurno'");
+    }
+
     cabecalho("Relatório Escala por Parâmetro");
 
     $buscaDataMes = $_POST["busca_dataMes"] ?? date("Y-m");
@@ -20,7 +25,7 @@ function index() {
         combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
             ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
         combo_bd2(
-            "!Parâmetros da Jornada",
+            "Parâmetros da Jornada",
             "busca_parametro",
             ($_POST["busca_parametro"] ?? ""),
             "SELECT DISTINCT 
@@ -62,10 +67,18 @@ function index() {
         "Exibição", 
         "exibicao", 
         ["todo_mes" => "Todo o Mês", "hoje" => "A partir de hoje"], 
-        3, // Tamanho aumentado para caber os textos
+        3, 
         "checkbox", 
-        "", 
+        "onchange=\"handleCheckboxExibicao(event)\"", 
         json_encode($exibicao_valores)
+    );
+
+    $campos[] = combo(
+        "Visualização",
+        "visualizacao",
+        $_POST["visualizacao"] ?? "analitica",
+        2,
+        ["analitica" => "Analítica", "sintetica" => "Sintética"]
     );
 
     $buttons = [
@@ -76,6 +89,37 @@ function index() {
     echo campo_hidden("reloadOnly", "");
     echo linha_form($campos);
     echo fecha_form($buttons);
+    ?>
+    <script>
+    function handleCheckboxExibicao(event) {
+        if (event.target.type !== 'checkbox') return;
+        
+        const checkboxId = event.target.id;
+        const isChecked = event.target.checked;
+        
+        if (isChecked) {
+            // Se marcou 'todo_mes', desmarca 'hoje'
+            if (checkboxId === 'todo_mes') {
+                const hojeCheckbox = document.getElementById('hoje');
+                if (hojeCheckbox) {
+                    hojeCheckbox.checked = false;
+                    // Atualiza o Uniform se estiver sendo usado
+                    if ($.uniform) $.uniform.update(hojeCheckbox);
+                }
+            }
+            // Se marcou 'hoje', desmarca 'todo_mes'
+            else if (checkboxId === 'hoje') {
+                const todoMesCheckbox = document.getElementById('todo_mes');
+                if (todoMesCheckbox) {
+                    todoMesCheckbox.checked = false;
+                    // Atualiza o Uniform se estiver sendo usado
+                    if ($.uniform) $.uniform.update(todoMesCheckbox);
+                }
+            }
+        }
+    }
+    </script>
+    <?php
 
     if ($_SERVER["REQUEST_METHOD"] === "POST" && empty($_POST["reloadOnly"])) {
         $filtrosUsados = [];
@@ -144,7 +188,7 @@ function index() {
             $dataGeracao = date("d/m/Y H:i:s");
             echo "<div class='row'>"
                 ."<div class='col-sm-12 margin-bottom-5 campo-fit-content'>"
-                ."<div style='padding:5px 10px; margin-bottom:10px; text-align:center; color:#000;'>"
+                ."<div id='filtros-aplicados' style='padding:5px 10px; margin-bottom:10px; text-align:center; color:#000;'>"
                 ."Filtros aplicados: ".implode(" | ", $filtrosUsados)
                 ."<br><span style='font-size:11px;'>Gerado em: {$dataGeracao}</span>"
                 ."</div>"
@@ -221,13 +265,33 @@ function index() {
                     empresa.empr_tx_nome,
                     operacao.oper_tx_nome,
                     grupos_documentos.grup_tx_nome,
-                    sbgrupos_documentos.sbgr_tx_nome
+                    sbgrupos_documentos.sbgr_tx_nome,
+                    parametro.para_tx_nome,
+                    parametro.para_tx_turno
              FROM entidade
              LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
              LEFT JOIN operacao ON oper_nb_id = entidade.enti_tx_tipoOperacao
              LEFT JOIN grupos_documentos ON grup_nb_id = entidade.enti_setor_id
              LEFT JOIN sbgrupos_documentos ON sbgr_nb_id = entidade.enti_subSetor_id
+             LEFT JOIN parametro ON parametro.para_nb_id = entidade.enti_nb_parametro
+             JOIN user ON user.user_nb_entidade = entidade.enti_nb_id
              WHERE entidade.enti_tx_status = 'ativo'
+               AND user.user_tx_status = 'ativo'
+               AND (
+                    user.user_tx_nivel IN ('Funcionário', 'Motorista', 'Ajudante')
+                    OR user.user_tx_nivel LIKE '%administrador%'
+                    OR user.user_tx_nivel LIKE '%super admin%'
+                    OR EXISTS (
+                        SELECT 1 FROM usuario_perfil up
+                        JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id
+                        JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id
+                        WHERE up.user_nb_id = user.user_nb_id
+                          AND up.ativo = 1
+                          AND pmi.perm_ver = 1
+                          AND mi.menu_tx_ativo = 1
+                          AND mi.menu_tx_path = '/batida_ponto.php'
+                    )
+               )
                " . $filtroEmpresa . "
                ".$filtroNome."
                ".$filtroMatricula."
@@ -246,19 +310,86 @@ function index() {
         }
 
         $exibirEmpresa = empty($_POST["empresa"]);
+        $exibirOcupacao = empty($_POST["busca_ocupacao"]);
+        $exibirCargo = empty($_POST["operacao"]);
+        $exibirSetor = empty($_POST["busca_setor"]);
+        $exibirSubSetor = empty($_POST["busca_subsetor"]);
+
+        // Busca feriados ativos no período
+        $feriados = mysqli_fetch_all(query(
+            "SELECT feri_tx_data, feri_tx_nome FROM feriado 
+             WHERE feri_tx_status = 'ativo' 
+               AND feri_tx_data BETWEEN '{$periodoInicio->format('Y-m-d')}' AND '{$periodoFim->format('Y-m-d')}'"
+        ), MYSQLI_ASSOC);
+        
+        $feriadosMap = [];
+        foreach ($feriados as $f) {
+            $feriadosMap[$f['feri_tx_data']] = $f['feri_tx_nome'];
+        }
 
         $cabecalho = ["Matrícula", "Nome"];
+        $numColunasFixas = 2;
+
+        $visualizacao = $_POST["visualizacao"] ?? "analitica";
+
         if ($exibirEmpresa) {
             $cabecalho[] = "Empresa";
+            $numColunasFixas++;
         }
-        array_push($cabecalho, "Ocupação", "Cargo", "Setor", "SubSetor");
+        if ($exibirOcupacao) {
+            $cabecalho[] = "Ocupação";
+            $numColunasFixas++;
+        }
+        if ($exibirCargo) {
+            $cabecalho[] = "Cargo";
+            $numColunasFixas++;
+        }
+        if ($exibirSetor) {
+            $cabecalho[] = "Setor";
+            $numColunasFixas++;
+        }
+        if ($exibirSubSetor) {
+            $cabecalho[] = "SubSetor";
+            $numColunasFixas++;
+        }
+
+        if ($visualizacao == "sintetica") {
+            $cabecalho[] = "Escala";
+            $numColunasFixas++;
+        }
         
         $diasMes = (int)$periodoFim->format("d");
         $diasSemana = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
+        
+        $diasDestacar = [];
+
         for ($data = clone $periodoInicio; $data <= $periodoFim; $data->modify("+1 day")) {
             $sigla = $diasSemana[(int)$data->format("w")];
-            $cabecalho[] = $data->format("d") . " " . $sigla;
+            $dataStr = $data->format("Y-m-d");
+            
+            $tituloColuna = $data->format("d") . " " . $sigla;
+            $ehDomingo = ($data->format('w') == 0);
+            $ehFeriado = isset($feriadosMap[$dataStr]);
+
+            // Verifica se é domingo ou feriado para destaque posterior via JS
+            if ($ehDomingo || $ehFeriado) {
+                $diasDestacar[] = (int)$data->format("d");
+                
+                $legenda = [];
+                if ($ehDomingo) {
+                    $legenda[] = "Domingo";
+                }
+                if ($ehFeriado) {
+                    $legenda[] = $feriadosMap[$dataStr];
+                }
+                $textoLegenda = implode(" - ", $legenda);
+                
+                $tituloColuna .= " <i class='fa fa-question-circle' title='$textoLegenda' style='cursor:help; font-size: 11px; color: #333;'></i>";
+            }
+            
+            $cabecalho[] = $tituloColuna;
         }
+        $cabecalho[] = "Total Previsto";
 
         $valores = [];
 
@@ -268,14 +399,31 @@ function index() {
                 "nome" => $motorista["enti_tx_nome"]
             ];
 
+            $horarioEscala = "";
+
             if ($exibirEmpresa) {
                 $row["empresa_nome"] = $motorista["empr_tx_nome"];
             }
 
-            $row["ocupacao"] = $motorista["enti_tx_ocupacao"];
-            $row["cargo"] = $motorista["oper_tx_nome"] ?? "";
-            $row["setor"] = $motorista["grup_tx_nome"] ?? "";
-            $row["subsetor"] = $motorista["sbgr_tx_nome"] ?? "";
+            if ($exibirOcupacao) {
+                $row["ocupacao"] = $motorista["enti_tx_ocupacao"];
+            }
+            if ($exibirCargo) {
+                $row["cargo"] = $motorista["oper_tx_nome"] ?? "";
+            }
+            if ($exibirSetor) {
+                $row["setor"] = $motorista["grup_tx_nome"] ?? "";
+            }
+            if ($exibirSubSetor) {
+                $row["subsetor"] = $motorista["sbgr_tx_nome"] ?? "";
+            }
+
+            // Se for sintética, adiciona o placeholder da escala
+            if ($visualizacao == "sintetica") {
+                $row["escala"] = "";
+            }
+
+            $totalPrevistoMinutos = 0;
 
             for ($data = clone $periodoInicio; $data <= $periodoFim; $data->modify("+1 day")) {
                 $dataStr = $data->format("Y-m-d");
@@ -285,11 +433,54 @@ function index() {
 
                 $inicio = (!empty($inicioEscala) && $inicioEscala !== "00:00" && $inicioEscala !== "00:00:00") ? substr($inicioEscala, 0, 5) : "--:--";
                 $fim = (!empty($fimEscala) && $fimEscala !== "00:00" && $fimEscala !== "00:00:00") ? substr($fimEscala, 0, 5) : "--:--";
+                
                 $valor = ($inicio === "--:--" && $fim === "--:--") ? "----" : $inicio . " - " . $fim;
+
+                if ($visualizacao == "sintetica") {
+                    // Se for sintética, exibe a sigla do turno ou "----" se não tiver horário
+                    if ($valor !== "----") {
+                        $valor = !empty($motorista["para_tx_turno"]) ? $motorista["para_tx_turno"] : "----";
+                        
+                        // Captura o primeiro horário válido para exibir na coluna Escala
+                        if (empty($horarioEscala)) {
+                            $horarioEscala = $inicio . " " . $fim;
+                        }
+                    } else {
+                        $valor = "----";
+                    }
+                }
+
+                // Lógica de destaque movida para JS/CSS para preencher a célula inteira
+
+                if ($inicio !== "--:--" && $fim !== "--:--") {
+                    $hInicio = DateTime::createFromFormat('H:i', $inicio);
+                    $hFim = DateTime::createFromFormat('H:i', $fim);
+                    
+                    if ($hInicio && $hFim) {
+                        if ($hFim < $hInicio) {
+                            $hFim->modify('+1 day');
+                        }
+                        $diff = $hInicio->diff($hFim);
+                        $minutos = ($diff->h * 60) + $diff->i;
+                        $totalPrevistoMinutos += $minutos;
+                    }
+                }
 
                 $key = "dia_" . $data->format("d");
                 $row[$key] = $valor;
             }
+
+            if ($visualizacao == "sintetica") {
+                // Se não encontrou horário em nenhum dia, define como vazio
+                if (empty($horarioEscala)) {
+                    $horarioEscala = "--:-- --:--";
+                }
+                $row["escala"] = $horarioEscala;
+            }
+
+            $horasTotal = floor($totalPrevistoMinutos / 60);
+            $minutosTotal = $totalPrevistoMinutos % 60;
+            $row["totalPrevisto"] = sprintf("%02d:%02d", $horasTotal, $minutosTotal);
 
             $valores[] = $row;
         }
@@ -317,10 +508,18 @@ function index() {
 .tabela-espelho-ponto tr.selected-row td.current-day{
     background-color:#c3e6cb !important;
 }
+.tabela-espelho-ponto td.holiday-sunday{
+    background-color:orange !important;
+    color: black !important;
+}
 </style>";
         echo "<div style='margin-bottom:8px; text-align:left;'>";
         echo "<button type='button' class='btn btn-success btn-sm' onclick='exportarEscalaCSV()'>Exportar CSV</button> ";
         echo "<button type='button' class='btn btn-primary btn-sm' onclick='exportarEscalaExcel()'>Exportar Excel</button>";
+        
+        $qtdeFuncionarios = count($valores);
+        echo "<span style='margin-left: 20px; font-weight: bold; font-size: 14px;'>Total de Funcionários: $qtdeFuncionarios</span>";
+
         echo "</div>";
         echo "<div id='escala-scroll-top' style='overflow-x:auto; overflow-y:hidden; margin-bottom:5px;'><div style='height:1px;'></div></div>";
         echo "<div id='escala-grid-wrapper'>";
@@ -344,6 +543,19 @@ function index() {
                 if (linhas.length === 0) { alert('Erro: Tabela vazia.'); return; }
 
                 var csv = [];
+
+                var filtrosDiv = document.getElementById('filtros-aplicados');
+                if (filtrosDiv) {
+                    var filtrosTexto = filtrosDiv.innerText || filtrosDiv.textContent;
+                    var linhasFiltro = filtrosTexto.split('\n');
+                    linhasFiltro.forEach(function(linha) {
+                         if (linha.trim()) {
+                             csv.push('"' + linha.trim().replace(/"/g, '""') + '"');
+                         }
+                    });
+                    csv.push('');
+                }
+
                 for (var i = 0; i < linhas.length; i++) {
                     var cols = linhas[i].querySelectorAll('th,td');
                     var row = [];
@@ -389,6 +601,19 @@ function index() {
                 if (linhas.length === 0) { alert('Erro: Tabela vazia.'); return; }
 
                 var csv = [];
+
+                var filtrosDiv = document.getElementById('filtros-aplicados');
+                if (filtrosDiv) {
+                    var filtrosTexto = filtrosDiv.innerText || filtrosDiv.textContent;
+                    var linhasFiltro = filtrosTexto.split('\n');
+                    linhasFiltro.forEach(function(linha) {
+                         if (linha.trim()) {
+                             csv.push('"' + linha.trim().replace(/"/g, '""') + '"');
+                         }
+                    });
+                    csv.push('');
+                }
+
                 for (var i = 0; i < linhas.length; i++) {
                     var cols = linhas[i].querySelectorAll('th,td');
                     var row = [];
@@ -443,7 +668,7 @@ function index() {
             var mesHoje = hoje.getFullYear() + '-' + ('0' + (hoje.getMonth() + 1)).slice(-2);
             if (mesSelecionado === mesHoje) {
                 var diaAtual = hoje.getDate();
-                var colunasFixas = <?= $exibirEmpresa ? 7 : 6 ?>;
+                var colunasFixas = <?= $numColunasFixas ?>;
                 var indiceColuna = colunasFixas + diaAtual - 1;
                 var thsHoje = tabela.querySelectorAll('thead tr th');
                 if (thsHoje.length > indiceColuna) {
@@ -456,6 +681,33 @@ function index() {
                         }
                     }
                 }
+            }
+
+            // Destaque para Domingos e Feriados
+            var diasDestacar = <?= json_encode($diasDestacar) ?>;
+            var numColunasFixas = <?= $numColunasFixas ?>;
+            
+            if (diasDestacar && diasDestacar.length > 0) {
+                var ths = tabela.querySelectorAll('thead tr th');
+                var linhas = tabela.querySelectorAll('tbody tr');
+                
+                diasDestacar.forEach(function(dia) {
+                    var indiceColuna = numColunasFixas + dia - 1;
+                    
+                    // Removido destaque do cabeçalho conforme solicitado
+                    /*
+                    if (ths.length > indiceColuna) {
+                        ths[indiceColuna].classList.add('holiday-sunday');
+                    }
+                    */
+                    
+                    for (var i = 0; i < linhas.length; i++) {
+                        var cells = linhas[i].querySelectorAll('td');
+                        if (cells.length > indiceColuna) {
+                            cells[indiceColuna].classList.add('holiday-sunday');
+                        }
+                    }
+                });
             }
 
             var linhasBody = tabela.querySelectorAll('tbody tr');

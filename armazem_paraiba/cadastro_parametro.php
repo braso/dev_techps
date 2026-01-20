@@ -11,6 +11,21 @@
 	
 	include "conecta.php";
 
+	// Verificação e criação da coluna turno
+	if(mysqli_num_rows(query("SHOW COLUMNS FROM parametro LIKE 'para_tx_turno'")) == 0){
+		query("ALTER TABLE parametro ADD COLUMN para_tx_turno CHAR(1) COMMENT 'M-Manhã, T-Tarde, V-Vespertino, N-Noite, D-Diurno'");
+	}
+
+	// Verificação e criação da coluna Categoria
+	if(mysqli_num_rows(query("SHOW COLUMNS FROM parametro LIKE 'para_tx_categoria'")) == 0){
+		query("ALTER TABLE parametro ADD COLUMN para_tx_categoria VARCHAR(100) COMMENT 'Categoria Sindical'");
+	}
+
+	// Verificação e criação da coluna Sindicato
+	if(mysqli_num_rows(query("SHOW COLUMNS FROM parametro LIKE 'para_tx_sindicato'")) == 0){
+		query("ALTER TABLE parametro ADD COLUMN para_tx_sindicato VARCHAR(100) COMMENT 'Sindicato'");
+	}
+
 
 	function carregarJSFormParametro(){
 		global $a_mod;
@@ -92,6 +107,9 @@
 
 					document.getElementById('periodicidade').parentElement.hidden 	= !(tipo == 1);
 					document.getElementById('dataInicio').parentElement.hidden 		= !(tipo == 1);
+					if(document.getElementById('turno_wrapper')){
+						document.getElementById('turno_wrapper').hidden = !(tipo == 1);
+					}
 					document.getElementsByName('divJornada')[0].hidden 	= !(tipo == 2);
 				}
 
@@ -582,6 +600,8 @@
 			"para_tx_acordo" 					=> $_POST["acordo"],
 			"para_tx_inicioAcordo" 				=> $_POST["inicioAcordo"],
 			"para_tx_fimAcordo" 				=> $_POST["fimAcordo"],
+			"para_tx_categoria" 				=> $_POST["categoria"],
+			"para_tx_sindicato" 				=> $_POST["sindicato"],
 			"para_tx_diariasCafe" 				=> $_POST["diariasCafe"],
 			"para_tx_diariasAlmoco" 			=> $_POST["diariasAlmoco"],
 			"para_tx_diariasJanta" 				=> $_POST["diariasJanta"],
@@ -591,6 +611,7 @@
 			"para_tx_Obs" 						=> $_POST["Obs"],
 			"para_tx_adi5322" 					=> $_POST["adi5322"],
 			"para_tx_status" 					=> "ativo",
+			"para_tx_turno" 					=> $_POST["turno"] ?? null,
 		];
 
 		if(!empty($_POST["ignorarCampos"]) || $_POST["ignorarCampos"] == null){
@@ -679,7 +700,8 @@
 				"tipo", 
 				"nome", "tolerancia", "jornadaSemanal", "jornadaSabado",
 				"percHESemanal", "percHEEx", "maxHESemanalDiario", "diariasCafe", "diariasAlmoco", "diariasJanta",
-				"acordo", "inicioAcordo", "fimAcordo", "banco", "adi5322", "Obs"
+				"acordo", "inicioAcordo", "fimAcordo", "banco", "adi5322", "Obs", "turno",
+				"categoria", "sindicato"
 			];
 			foreach($campos as $campo){
 				if(!empty($_POST[$campo])){
@@ -770,6 +792,17 @@
 					<input name='periodicidade' id='periodicidade' value='".($a_mod["esca_nb_periodicidade"]?? "1")."' autocomplete='off' type='number' class='form-control input-sm campo-fit-content ".((!empty($_POST["errorFields"]) && in_array("periodicidade", $_POST["errorFields"]))? "error-field": "")."' max='31' min='1' onchange='atualizarLinhasEscala(this.value)'>
 				</div>",
 				campo_data("Dia 1*", "dataInicio", ($a_mod["esca_tx_dataInicio"]?? ""), 2, "onchange='atualizarDiaSemana()'"),
+				"<div class='col-sm-2 margin-bottom-5 campo-fit-content' id='turno_wrapper'>
+					<label>Turno</label>
+					<select name='turno' class='form-control input-sm'>
+						<option value=''>Selecione...</option>
+						<option value='M' ".((isset($a_mod['para_tx_turno']) && $a_mod['para_tx_turno'] == 'M') ? 'selected' : '').">Manhã - M</option>
+						<option value='T' ".((isset($a_mod['para_tx_turno']) && $a_mod['para_tx_turno'] == 'T') ? 'selected' : '').">Tarde - T</option>
+						<option value='V' ".((isset($a_mod['para_tx_turno']) && $a_mod['para_tx_turno'] == 'V') ? 'selected' : '').">Vespertino - V</option>
+						<option value='N' ".((isset($a_mod['para_tx_turno']) && $a_mod['para_tx_turno'] == 'N') ? 'selected' : '').">Noite - N</option>
+						<option value='D' ".((isset($a_mod['para_tx_turno']) && $a_mod['para_tx_turno'] == 'D') ? 'selected' : '').">Diurno - D</option>
+					</select>
+				</div>",
 				"<div id='divHorasEscala' class='col-sm-2 margin-bottom-5 campo-fit-content'></div>"
 			],
 			[
@@ -795,7 +828,9 @@
 			[
 				combo("Acordo Sindical", "acordo", ($a_mod["para_tx_acordo"]?? ""), 1, ["sim" => "Sim", "nao" => "Não"]),
 				campo_data("Início do Acordo*", "inicioAcordo", ($a_mod["para_tx_inicioAcordo"]?? ""), 1),
-				campo_data("Fim do Acordo*", "fimAcordo", ($a_mod["para_tx_fimAcordo"]?? ""), 1)
+				campo_data("Fim do Acordo*", "fimAcordo", ($a_mod["para_tx_fimAcordo"]?? ""), 1),
+				campo("Categoria", "categoria", ($a_mod["para_tx_categoria"]?? ""), 3),
+				campo("Sindicato", "sindicato", ($a_mod["para_tx_sindicato"]?? ""), 3)
 			],
 			[
 				checkbox_banco("Utilizar regime de banco de horas?", "banco", ($a_mod["para_tx_banco"]?? ""), ($a_mod["para_nb_qDias"]?? ""), ($a_mod["para_tx_horasLimite"]?? ""),2),

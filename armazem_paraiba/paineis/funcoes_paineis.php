@@ -814,7 +814,7 @@ function criar_relatorio_jornada() {
 			$campos = !empty(array_filter([$jornada, $descanso, $espera, $refeicao, $repouso]));
 			if ($campos) {
 				$parametro = mysqli_fetch_all(query(
-					"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_maxHESemanalDiario, para_tx_adi5322"
+					"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_maxHESemanalDiario, para_tx_adi5322, para_tx_tolerancia"
 						. " FROM `parametro`"
 						. " WHERE para_nb_id = ".$motorista["enti_nb_parametro"]
 				), MYSQLI_ASSOC);
@@ -838,7 +838,12 @@ function criar_relatorio_jornada() {
 						
 						if ($timeJornada && $timeEscala && $timeJornada > $timeEscala) {
 							$diff = $timeJornada->diff($timeEscala);
-							$atraso = $diff->format("%H:%I");
+							$minutosAtraso = ($diff->h * 60) + $diff->i;
+							$tolerancia = isset($parametro[0]["para_tx_tolerancia"]) ? intval($parametro[0]["para_tx_tolerancia"]) : 0;
+
+							if ($minutosAtraso > $tolerancia) {
+								$atraso = $diff->format("%H:%I");
+							}
 						}
 					}
 				}
