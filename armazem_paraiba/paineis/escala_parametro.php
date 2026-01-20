@@ -509,7 +509,7 @@ function index() {
     background-color:#c3e6cb !important;
 }
 .tabela-espelho-ponto td.holiday-sunday{
-    background-color:orange !important;
+    background-color:#ffe0b2 !important;
     color: black !important;
 }
 </style>";
