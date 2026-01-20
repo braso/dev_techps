@@ -13,7 +13,7 @@
     require_once __DIR__."/funcoes_paineis.php";
     // criar_relatorio_jornada();
 
-    function carregarJS(array $arquivos) {
+    function carregarJS(array $arquivos, $exibirEmpresa, $exibirOcupacao, $exibirCargo, $exibirSetor, $exibirSubSetor) {
 
         $linha = "
         var inicioEsc = (item.inicioEscala && item.inicioEscala !== '00:00' && item.inicioEscala !== '00:00:00') ? item.inicioEscala : '--:--';
@@ -25,16 +25,34 @@
             classeLinha = 'row-jornada-critica';
         }
 
-        linha = '<tr class=\"'+classeLinha+'\">'";
-        if (!empty($_POST["empresa"])) {
-            $linha .= "+'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
-                        +'<td style=\'text-align: center;\'>'+item.nome+'</td>'
-                        +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
-                        +'<td style=\'text-align: center;\'>'+(item.parametro || '')+'</td>'
-                        +'<td style=\'text-align: center;\'>'+item.tipoOperacaoNome+'</td>'
-                        +'<td style=\'text-align: center;\'>'+(item.setorNome || item.grup_tx_nome || item.setor || item.enti_setor_id || '')+'</td>'
-                        +'<td style=\'text-align: center;\'>'+(item.subsetorNome || item.sbgr_tx_nome || item.subsetor || item.enti_subSetor_id || '')+'</td>'
-                        +'<td class = \'jornada inicio-jornada-click\' data-matricula=\"'+item.matricula+'\" data-data=\"'+item.data+'\">'+item.data+' '+item.diaSemana+' '+ultimoValor+'</td>'
+        if (jornadaPrevistaMinutos === 0 && !isNaN(jornadaEfetivaMinutosCalc) && jornadaEfetivaMinutosCalc > 0) {
+            classeLinha += ' row-sem-jornada-prevista';
+        }
+
+        if(jornadaPrevistaMinutos > 0 && !isNaN(jornadaEfetivaMinutosCalc) && jornadaEfetivaMinutosCalc > jornadaPrevistaMinutos){
+             classeLinha += ' row-hora-extra';
+        }
+
+        linha = '<tr class=\"'+classeLinha+'\">'
+                    +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
+                    +'<td style=\'text-align: center;\'>'+item.nome+'</td>'";
+        if ($exibirEmpresa) {
+            $linha .= "+'<td style=\'text-align: center;\'>'+(item.empresaNome || '')+'</td>'";
+        }
+        if ($exibirOcupacao) {
+            $linha .= "+'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'";
+        }
+        $linha .= "+'<td style=\'text-align: center;\'>'+(item.parametro || '')+'</td>'";
+        if ($exibirCargo) {
+            $linha .= "+'<td style=\'text-align: center;\'>'+item.tipoOperacaoNome+'</td>'";
+        }
+        if ($exibirSetor) {
+            $linha .= "+'<td style=\'text-align: center;\'>'+(item.setorNome || item.grup_tx_nome || item.setor || item.enti_setor_id || '')+'</td>'";
+        }
+        if ($exibirSubSetor) {
+            $linha .= "+'<td style=\'text-align: center;\'>'+(item.subsetorNome || item.sbgr_tx_nome || item.subsetor || item.enti_subSetor_id || '')+'</td>'";
+        }
+        $linha .= "+'<td class = \'jornada inicio-jornada-click\' data-matricula=\"'+item.matricula+'\" data-data=\"'+item.data+'\">'+item.data+' '+item.diaSemana+' '+ultimoValor+'</td>'
                         +'<td class = \'jornada\'>'+escalaShow+'</td>'
                         +'<td class = \'jornada\'>'+(item.atraso && item.atraso.trim() !== '00:00' && item.atraso.trim() !== '0:00' ? item.atraso : '<strong>----</strong>')+'</td>'
                         +'<td class ='+css+'>'+jornada+'</td>'
@@ -48,7 +66,6 @@
                             +(jornadaMinutos > 24 * 60 && idMotorista && dataISO ? '<span class=\"glyphicon glyphicon-pencil\" title=\"Encerrar Jornada Manualmente\"></span>' : '')
                         +'</td>'
                     +'</tr>';";
-        }
 
         $carregarDados = "";
         foreach ($arquivos as $arquivo) {
@@ -92,6 +109,14 @@
                         var el = document.getElementById('kpi-hora-extra-valor');
                         if(!el) return;
                         var total = Object.keys(colaboradoresHoraExtra).length;
+                        el.textContent = total;
+                    }
+
+                    var colaboradoresSemJornadaPrevista = {};
+                    function atualizarKpiSemJornadaPrevista(){
+                        var el = document.getElementById('kpi-sem-jornada-prevista-valor');
+                        if(!el) return;
+                        var total = Object.keys(colaboradoresSemJornadaPrevista).length;
                         el.textContent = total;
                     }
 
@@ -322,6 +347,14 @@
                                             }
                                         }
 
+                                        if (jornadaPrevistaMinutos === 0 && !isNaN(jornadaEfetivaMinutosCalc) && jornadaEfetivaMinutosCalc > 0) {
+                                            jornadaEfetivaCor = 'jornadaRed';
+                                            var chaveMatricula = String(item.matricula || '');
+                                            if(chaveMatricula){
+                                                colaboradoresSemJornadaPrevista[chaveMatricula] = true;
+                                            }
+                                        }
+
                                         if (jornadaEfetiva === '0:00' || jornadaEfetiva === '00:00') {
                                             jornadaEfetiva = '<strong>----</strong>';
                                         }
@@ -345,6 +378,7 @@
                                     });
                                     atualizarKpiJornadaCritica();
                                     atualizarKpiHoraExtra();
+                                    atualizarKpiSemJornadaPrevista();
                                 },
                                 error: function(){
                                     console.error('Erro ao carregar os dados.');
@@ -447,9 +481,56 @@
                             var linhas = $('#tabela-empresas tbody tr');
                             
                             if (checked) {
+                                // Desmarca outros filtros para evitar conflito visual
+                                $('#filtro-sem-jornada-prevista').prop('checked', false);
+                                $('#filtro-hora-extra').prop('checked', false);
                                 linhas.each(function() {
                                     var linha = $(this);
                                     if (linha.hasClass('row-jornada-critica')) {
+                                        linha.show();
+                                    } else {
+                                        linha.hide();
+                                    }
+                                });
+                            } else {
+                                linhas.show();
+                            }
+                        });
+
+                        // Evento do filtro de hora extra
+                        $('#filtro-hora-extra').on('change', function() {
+                            var checked = $(this).is(':checked');
+                            var linhas = $('#tabela-empresas tbody tr');
+                            
+                            if (checked) {
+                                // Desmarca outros filtros para evitar conflito visual
+                                $('#filtro-jornada-critica').prop('checked', false);
+                                $('#filtro-sem-jornada-prevista').prop('checked', false);
+                                linhas.each(function() {
+                                    var linha = $(this);
+                                    if (linha.hasClass('row-hora-extra')) {
+                                        linha.show();
+                                    } else {
+                                        linha.hide();
+                                    }
+                                });
+                            } else {
+                                linhas.show();
+                            }
+                        });
+
+                        // Evento do filtro de sem jornada prevista
+                        $('#filtro-sem-jornada-prevista').on('change', function() {
+                            var checked = $(this).is(':checked');
+                            var linhas = $('#tabela-empresas tbody tr');
+                            
+                            if (checked) {
+                                // Desmarca outros filtros para evitar conflito visual
+                                $('#filtro-jornada-critica').prop('checked', false);
+                                $('#filtro-hora-extra').prop('checked', false);
+                                linhas.each(function() {
+                                    var linha = $(this);
+                                    if (linha.hasClass('row-sem-jornada-prevista')) {
                                         linha.show();
                                     } else {
                                         linha.hide();
@@ -471,28 +552,8 @@
                     });
 
                        $(document).ready(function() {
-                            // Obtém o botão
-                            const button = document.getElementById('botaoContexBuscar');
-
                             // Inicializa o select2 no campo 'empresa'
                             $('#empresa').select2();
-
-                            // Verifica se já há uma opção selecionada ao carregar a página
-                            if ($('#empresa').val()) {
-                                button.removeAttribute('disabled'); // Habilita o botão se houver um valor selecionado
-                            } else {
-                                button.setAttribute('disabled', true); // Desabilita se não houver
-                            }
-
-                            // Escuta o evento 'select2:select' para capturar quando uma nova opção é selecionada
-                            $('#empresa').on('select2:select', function(e) {
-                                button.removeAttribute('disabled'); // Habilita o botão ao selecionar
-                            });
-
-                            // Escuta o evento 'select2:unselect' para capturar quando uma opção é desmarcada (se múltiplo)
-                            $('#empresa').on('select2:unselect', function(e) {
-                                button.setAttribute('disabled', true); // Desabilita o botão ao desmarcar
-                            });
                         });
                     //}
                 </script>";
@@ -539,55 +600,79 @@
         $path = "./arquivos/jornada";
         $periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
-        if (!empty($_POST["empresa"]) && empty($_POST["reloadOnly"])) {
+        if ( (isset($_POST["empresa"]) || !empty($_POST['busca_data'])) && empty($_POST["reloadOnly"]) ) {
              require_once "funcoes_paineis.php";
-            //  $tempoInicio = microtime(true);
              criar_relatorio_jornada();
-            //  $tempoFim = microtime(true);
-            //  $tempoExecucao = $tempoFim - $tempoInicio;
-            //  $tempoExecucaoMinutos = $tempoExecucao / 60;
-            //  echo "Tempo de execução: " . number_format($tempoExecucaoMinutos, 4) . " minutos";
 
-            $empresa = mysqli_fetch_assoc(query(
-                "SELECT * FROM empresa
-                    WHERE empr_tx_status = 'ativo'
-                        AND empr_nb_id = {$_POST["empresa"]}
-                    LIMIT 1;"
-            ));
-
-            $path .= "/".$empresa["empr_nb_id"];
+            $pathsToCheck = [];
+            if (!empty($_POST["empresa"])) {
+                $empresa = mysqli_fetch_assoc(query(
+                    "SELECT * FROM empresa
+                        WHERE empr_tx_status = 'ativo'
+                            AND empr_nb_id = {$_POST["empresa"]}
+                        LIMIT 1;"
+                ));
+                $pathsToCheck[] = $path . "/" . $empresa["empr_nb_id"];
+            } else {
+                $sqlEmpresas = query("SELECT empr_nb_id FROM empresa WHERE empr_tx_status = 'ativo'");
+                while ($row = mysqli_fetch_assoc($sqlEmpresas)) {
+                    $pathsToCheck[] = $path . "/" . $row['empr_nb_id'];
+                }
+            }
 
             $quantFun = ""; //Utilizado em painel_html2.php
-            if (is_dir($path)) {
-                $pasta = dir($path);
-                while ($arquivo = $pasta->read()) {
-                    if (!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
-                        $arquivos[] = $arquivo;
+            
+            $arquivos = [];
+            $missingData = false;
+            foreach ($pathsToCheck as $checkPath) {
+                if (is_dir($checkPath)) {
+                    $pasta = dir($checkPath);
+                    while ($arquivo = $pasta->read()) {
+                        if (!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
+                            $arquivos[] = $checkPath . "/" . $arquivo;
+                        }
                     }
-                    $quantFun = " - <b>Total de funcionários com jornada:</b> ".count($arquivos);
-                }
-                $pasta->close();
-
-
-                foreach ($arquivos as &$arquivo) {
-                    $arquivo = $path."/".$arquivo;
-                }
-
-                if (!empty($arquivo)) {
-                    $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
-                        <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
-                    $dataEmissao = $alertaEmissao." Atualizado em: " . date("d/m/Y H:i", filemtime($arquivo)). "</span>"; //Utilizado no HTML.
-                    $arquivoGeral = json_decode(file_get_contents($arquivo), true);
-
-                    $encontrado = true;
+                    $pasta->close();
                 } else {
-                    require_once "funcoes_paineis.php";
-                    criar_relatorio_jornada();
-                    $encontrado = true;
-                    // echo "<script>alert('Não tem jornadas abertas.')</script>";
+                    $missingData = true;
                 }
+            }
+            
+            $quantFun = " - <b>Total de funcionários com jornada:</b> ".count($arquivos);
+
+            if (!empty($arquivos) && !$missingData) {
+                $ultimoArquivo = end($arquivos);
+                $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
+                    <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                $dataEmissao = $alertaEmissao." Atualizado em: " . date("d/m/Y H:i", filemtime($ultimoArquivo)). "</span>"; //Utilizado no HTML.
+                
+                $encontrado = true;
             } else {
-                $encontrado = false;
+                require_once "funcoes_paineis.php";
+                criar_relatorio_jornada();
+                
+                if (empty($_POST["empresa"])) {
+                    $pathsToCheck = [];
+                    $sqlEmpresas = query("SELECT empr_nb_id FROM empresa WHERE empr_tx_status = 'ativo'");
+                    while ($row = mysqli_fetch_assoc($sqlEmpresas)) {
+                        $pathsToCheck[] = $path . "/" . $row['empr_nb_id'];
+                    }
+                }
+
+                $arquivos = [];
+                foreach ($pathsToCheck as $checkPath) {
+                    if (is_dir($checkPath)) {
+                        $pasta = dir($checkPath);
+                        while ($arquivo = $pasta->read()) {
+                            if (!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
+                                $arquivos[] = $checkPath . "/" . $arquivo;
+                            }
+                        }
+                        $pasta->close();
+                    }
+                }
+                
+                $encontrado = true;
             }
         }
 
@@ -598,6 +683,12 @@
                     AND empr_tx_Ehmatriz = 'sim'
                 LIMIT 1;"
             ))["empr_tx_logo"];
+
+            $exibirEmpresa = empty($_POST["empresa"]);
+            $exibirOcupacao = empty($_POST["busca_ocupacao"]);
+            $exibirCargo = empty($_POST["operacao"]);
+            $exibirSetor = empty($_POST["busca_setor"]);
+            $exibirSubSetor = empty($_POST["busca_subsetor"]);
             $rowGravidade = "
             <div id='kpis-resumo-jornada' style='display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;'>
                 <div style='background-color: var(--var-lightred); border-left: 4px solid var(--var-red); padding: 8px 12px; border-radius: 4px; min-width: 230px; display:flex; flex-direction: column; justify-content: center;'>
@@ -613,25 +704,44 @@
                         <label for='filtro-jornada-critica' style='font-size: 10px; color: var(--var-darkred); margin: 0; cursor: pointer; font-weight: bold;'>Mostrar apenas jornadas > 24h</label>
                     </div>
                 </div>
-                <div style='background-color: var(--var-lightorange); border-left: 4px solid var(--var-orange); padding: 8px 12px; border-radius: 4px; min-width: 230px; display:flex;align-items:center;justify-content:space-between;'>
-                    <div>
-                        <div style='font-size:11px;font-weight:bold;color:var(--var-orange);'>Alerta Operacional</div>
-                        <div style='font-size:10px;'>Colaboradores em hora extra</div>
+                <div style='background-color: var(--var-lightorange); border-left: 4px solid var(--var-orange); padding: 8px 12px; border-radius: 4px; min-width: 230px; display:flex; flex-direction: column; justify-content: center;'>
+                    <div style='display:flex;align-items:center;justify-content:space-between; margin-bottom: 5px;'>
+                        <div>
+                            <div style='font-size:11px;font-weight:bold;color:var(--var-orange);'>Alerta Operacional</div>
+                            <div style='font-size:10px;'>Colaboradores em hora extra</div>
+                        </div>
+                        <div id='kpi-hora-extra-valor' style='font-size:22px;font-weight:bold;color:var(--var-orange);'>0</div>
                     </div>
-                    <div id='kpi-hora-extra-valor' style='font-size:22px;font-weight:bold;color:var(--var-orange);'>0</div>
+                    <div style='display: flex; align-items: center; gap: 5px;'>
+                        <input type='checkbox' id='filtro-hora-extra' style='cursor: pointer;'>
+                        <label for='filtro-hora-extra' style='font-size: 10px; color: var(--var-orange); margin: 0; cursor: pointer; font-weight: bold;'>Mostrar apenas hora extra</label>
+                    </div>
+                </div>
+                <div style='background-color: var(--var-lightyellow); border-left: 4px solid var(--var-yellow); padding: 8px 12px; border-radius: 4px; min-width: 230px; display:flex; flex-direction: column; justify-content: center;'>
+                    <div style='display:flex;align-items:center;justify-content:space-between; margin-bottom: 5px;'>
+                        <div>
+                            <div style='font-size:11px;font-weight:bold;color:var(--var-darkyellow);'>Alerta Escala</div>
+                            <div style='font-size:10px;'>Jornada em dia sem previsão</div>
+                        </div>
+                        <div id='kpi-sem-jornada-prevista-valor' style='font-size:22px;font-weight:bold;color:var(--var-darkyellow);'>0</div>
+                    </div>
+                    <div style='display: flex; align-items: center; gap: 5px;'>
+                        <input type='checkbox' id='filtro-sem-jornada-prevista' style='cursor: pointer;'>
+                        <label for='filtro-sem-jornada-prevista' style='font-size: 10px; color: var(--var-darkyellow); margin: 0; cursor: pointer; font-weight: bold;'>Mostrar apenas sem previsão</label>
+                    </div>
                 </div>
             </div>";
             // $rowTotais = "<tr class='totais'>";
             $rowTitulos = "<tr id='titulos' class='titulos'>";
-            $rowTitulos .=
-                "<th class='matricula'>Matrícula</th>
-                <th class='nome'>Nome</th>
-                <th class='ocupacao'>Ocupação</th>
-                <th class='parametro'>Parâmetro</th>
-                <th class='operacao'>Cargo</th>
-                <th class='setor'>Setor</th>
-                <th class='subsetor'>SubSetor</th>
-                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='inicioJornada'>Início Jornada</th>
+            $rowTitulos .= "<th class='matricula'>Matrícula</th>
+                <th class='nome'>Nome</th>";
+            if ($exibirEmpresa) $rowTitulos .= "<th class='empresa'>Empresa</th>";
+            if ($exibirOcupacao) $rowTitulos .= "<th class='ocupacao'>Ocupação</th>";
+            $rowTitulos .= "<th class='parametro'>Parâmetro</th>";
+            if ($exibirCargo) $rowTitulos .= "<th class='operacao'>Cargo</th>";
+            if ($exibirSetor) $rowTitulos .= "<th class='setor'>Setor</th>";
+            if ($exibirSubSetor) $rowTitulos .= "<th class='subsetor'>SubSetor</th>";
+            $rowTitulos .= "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='inicioJornada'>Início Jornada</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='escala'>Inicio / Fim de Escala</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='atraso'>Atraso</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornada'>Jornada</th>
@@ -658,6 +768,39 @@
                 array_values($params),
                 "../ajuste_ponto.php"
             );
+            $filtros = [];
+
+            if (!empty($_POST['busca_ocupacao'])) {
+                $filtros[] = "<b>Ocupação:</b> " . $_POST['busca_ocupacao'];
+            }
+
+            if (!empty($_POST['operacao'])) {
+                $sql = query("SELECT oper_tx_nome FROM operacao WHERE oper_nb_id IN ({$_POST['operacao']})");
+                $nomes = [];
+                while($row = mysqli_fetch_assoc($sql)) $nomes[] = $row['oper_tx_nome'];
+                $filtros[] = "<b>Cargo:</b> " . implode(", ", $nomes);
+            }
+
+            if (!empty($_POST['busca_setor'])) {
+                $sql = query("SELECT grup_tx_nome FROM grupos_documentos WHERE grup_nb_id IN ({$_POST['busca_setor']})");
+                $nomes = [];
+                while($row = mysqli_fetch_assoc($sql)) $nomes[] = $row['grup_tx_nome'];
+                $filtros[] = "<b>Setor:</b> " . implode(", ", $nomes);
+            }
+
+            if (!empty($_POST['busca_subsetor'])) {
+                $sql = query("SELECT sbgr_tx_nome FROM sbgrupos_documentos WHERE sbgr_nb_id IN ({$_POST['busca_subsetor']})");
+                $nomes = [];
+                while($row = mysqli_fetch_assoc($sql)) $nomes[] = $row['sbgr_tx_nome'];
+                $filtros[] = "<b>SubSetor:</b> " . implode(", ", $nomes);
+            }
+
+            if (empty($empresa)) {
+                $empresa = ["empr_tx_nome" => "Todas"];
+            }
+
+            $filtrosConsultaHtml = implode(" | ", $filtros);
+
             $titulo = "Relatório de Jornada Aberta";
             $mostra = false;
             include_once "painel_html2.php";
@@ -722,7 +865,7 @@
             </div>";
         }
 
-        carregarJS($arquivos);
+        carregarJS($arquivos, $exibirEmpresa, $exibirOcupacao, $exibirCargo, $exibirSetor, $exibirSubSetor);
 
         rodape();
     }
