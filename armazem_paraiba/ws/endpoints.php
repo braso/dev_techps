@@ -21,8 +21,8 @@
                 echo $msg;
                 exit;
             }
-        //}
-
+            //}
+            
         //Check if user exists{
             $data = get_data(
                 "SELECT user_tx_senha, user_nb_id, user_tx_nome FROM user 
@@ -50,6 +50,41 @@
         echo "{ \"id\": ".$data['user_nb_id'].", \"token\": \"".$token."\"}";
         exit;
     }
+
+    function make_login_rfid(){
+
+
+        if(empty($_POST["rfid"])){
+            $msg = 'rfid is missing';
+            echo $msg;
+            exit;
+        }
+
+        $data = get_data(
+                "SELECT user_nb_id id, user_tx_nome nome, user_tx_login login,
+                user_tx_senha senha, user_tx_rfid rfid FROM user 
+                WHERE user_tx_status = 'ativo'
+                AND user_tx_rfid = ?;",
+                [$_POST["rfid"]]
+            );
+
+        if(empty($data)){
+            $msg = 'RFID tag not found';
+            
+            echo $msg;
+            die();
+        }
+
+        $data = $data[0];
+
+        $token = makeToken((object)$data,$_ENV["APP_KEY"]);
+        
+        $data['token'] = $token;
+
+        header('Content-Type: application/json');
+        echo json_encode($data);
+    }
+
 
     function get_user($userid = null){
 
@@ -86,7 +121,7 @@
                 WHERE u.user_tx_status = 'ativo'
                 	AND u.user_nb_id = {$userid}"
         ;
-
+        
         $data = get_data($query);
         if(empty($data)){
             // header('HTTP/1.0 400 Bad Request');
