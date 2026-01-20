@@ -12,33 +12,60 @@
     require "../funcoes_ponto.php";
     require_once __DIR__."/funcoes_paineis.php";
     // criar_relatorio_jornada();
- 
-    function carregarJS(array $arquivos) {
+
+    function carregarJS(array $arquivos, $exibirEmpresa, $exibirOcupacao, $exibirCargo, $exibirSetor, $exibirSubSetor) {
 
         $linha = "
         var inicioEsc = (item.inicioEscala && item.inicioEscala !== '00:00' && item.inicioEscala !== '00:00:00') ? item.inicioEscala : '--:--';
         var fimEsc = (item.fimEscala && item.fimEscala !== '00:00' && item.fimEscala !== '00:00:00') ? item.fimEscala : '--:--';
-        var escalaShow = (inicioEsc === '--:--' && fimEsc === '--:--') ? '<strong>----</strong>' : inicioEsc + ' - ' + fimEsc;
+        var escalaShow = (inicioEsc === '--:--' && fimEsc === '--:--') ? '<span class=\"sem-escala-indicador\"></span><strong>----</strong>' : inicioEsc + ' - ' + fimEsc;
         
-        linha = '<tr>'";
-        if (!empty($_POST["empresa"])) {
-            $linha .= "+'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
-                        +'<td style=\'text-align: center;\'>'+item.nome+'</td>'
-                        +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
-                        +'<td style=\'text-align: center;\'>'+item.tipoOperacaoNome+'</td>'
-                        +'<td style=\'text-align: center;\'>'+(item.setorNome || item.grup_tx_nome || item.setor || item.enti_setor_id || '')+'</td>'
-                        +'<td style=\'text-align: center;\'>'+(item.subsetorNome || item.sbgr_tx_nome || item.subsetor || item.enti_subSetor_id || '')+'</td>'
-                        +'<td class = \'jornada\'>'+item.data.substring(0, 5)+' '+ultimoValor+'</td>'
+        var classeLinha = '';
+        if(jornadaMinutos > 24 * 60){
+            classeLinha = 'row-jornada-critica';
+        }
+
+        if (jornadaPrevistaMinutos === 0 && !isNaN(jornadaEfetivaMinutosCalc) && jornadaEfetivaMinutosCalc > 0) {
+            classeLinha += ' row-sem-jornada-prevista';
+        }
+
+        if(jornadaPrevistaMinutos > 0 && !isNaN(jornadaEfetivaMinutosCalc) && jornadaEfetivaMinutosCalc > jornadaPrevistaMinutos){
+             classeLinha += ' row-hora-extra';
+        }
+
+        linha = '<tr class=\"'+classeLinha+'\">'
+                    +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
+                    +'<td style=\'text-align: center;\'>'+item.nome+'</td>'";
+        if ($exibirEmpresa) {
+            $linha .= "+'<td style=\'text-align: center;\'>'+(item.empresaNome || '')+'</td>'";
+        }
+        if ($exibirOcupacao) {
+            $linha .= "+'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'";
+        }
+        $linha .= "+'<td style=\'text-align: center;\'>'+(item.parametro || '')+'</td>'";
+        if ($exibirCargo) {
+            $linha .= "+'<td style=\'text-align: center;\'>'+item.tipoOperacaoNome+'</td>'";
+        }
+        if ($exibirSetor) {
+            $linha .= "+'<td style=\'text-align: center;\'>'+(item.setorNome || item.grup_tx_nome || item.setor || item.enti_setor_id || '')+'</td>'";
+        }
+        if ($exibirSubSetor) {
+            $linha .= "+'<td style=\'text-align: center;\'>'+(item.subsetorNome || item.sbgr_tx_nome || item.subsetor || item.enti_subSetor_id || '')+'</td>'";
+        }
+        $linha .= "+'<td class = \'jornada inicio-jornada-click\' data-matricula=\"'+item.matricula+'\" data-data=\"'+item.data+'\">'+item.data+' '+item.diaSemana+' '+ultimoValor+'</td>'
                         +'<td class = \'jornada\'>'+escalaShow+'</td>'
                         +'<td class = \'jornada\'>'+(item.atraso && item.atraso.trim() !== '00:00' && item.atraso.trim() !== '0:00' ? item.atraso : '<strong>----</strong>')+'</td>'
                         +'<td class ='+css+'>'+jornada+'</td>'
+                        +'<td class = \'jornada\'>'+jornadaPrevista+'</td>'
                         +'<td class ='+jornadaEfetivaCor+'>'+jornadaEfetiva+'</td>'
                         +'<td class = \'jornada\'>'+(item.refeicao && item.refeicao.trim() !== '00:00' && item.refeicao.trim() !== '0:00'? item.refeicao: '<strong>----</strong>')+'</td>'
                         +'<td class = \'jornada\'>'+(item.espera && item.espera.trim() !== '00:00' && item.espera.trim() !== '0:00' ? item.espera : '<strong>----</strong>')+'</td>'
                         +'<td class = \'jornada\'>'+(item.descanso && item.descanso.trim() !== '00:00' && item.descanso.trim() !== '0:00' ? item.descanso : '<strong>----</strong>')+'</td>'
                         +'<td class = \'jornada\'>'+(item.repouso && item.repouso.trim() !== '00:00' && item.repouso.trim() !== '0:00' ? item.repouso : '<strong>----</strong>')+'</td>'
+                        +'<td class = \'jornada acao-ajuste\' style=\"text-align: center;\" data-idmotorista=\"'+idMotorista+'\" data-dataiso=\"'+dataISO+'\">'
+                            +(jornadaMinutos > 24 * 60 && idMotorista && dataISO ? '<span class=\"glyphicon glyphicon-pencil\" title=\"Encerrar Jornada Manualmente\"></span>' : '')
+                        +'</td>'
                     +'</tr>';";
-        }
 
         $carregarDados = "";
         foreach ($arquivos as $arquivo) {
@@ -69,6 +96,30 @@
 
                     console.log(new Date());
 
+                    var colaboradoresJornadaCritica = {};
+                    function atualizarKpiJornadaCritica(){
+                        var el = document.getElementById('kpi-jornada-critica-valor');
+                        if(!el) return;
+                        var total = Object.keys(colaboradoresJornadaCritica).length;
+                        el.textContent = total;
+                    }
+
+                    var colaboradoresHoraExtra = {};
+                    function atualizarKpiHoraExtra(){
+                        var el = document.getElementById('kpi-hora-extra-valor');
+                        if(!el) return;
+                        var total = Object.keys(colaboradoresHoraExtra).length;
+                        el.textContent = total;
+                    }
+
+                    var colaboradoresSemJornadaPrevista = {};
+                    function atualizarKpiSemJornadaPrevista(){
+                        var el = document.getElementById('kpi-sem-jornada-prevista-valor');
+                        if(!el) return;
+                        var total = Object.keys(colaboradoresSemJornadaPrevista).length;
+                        el.textContent = total;
+                    }
+
                     function converterParaMinutos(hora) {
                         if (!hora) return 0;  // Se o valor for vazio ou nulo, retorna 0
                         const [horas, minutos] = hora.split(':').map(Number);
@@ -78,7 +129,15 @@
                     function converterMinutosParaHHHMM(minutos) {
                         const horas = Math.floor(minutos / 60);
                         const minutosRestantes = minutos % 60;
-                        return `\${horas}:\${String(minutosRestantes) . padStart(2, '0')}`;
+                        return `\${horas}:\${String(minutosRestantes).padStart(2, '0')}`;
+                    }
+
+                    function ajustarPonto(idMotorista, data){
+                        if(document.form_ajuste_ponto){
+                            document.form_ajuste_ponto.idMotorista.value = idMotorista;
+                            document.form_ajuste_ponto.data.value = data;
+                            document.form_ajuste_ponto.submit();
+                        }
                     }
 
                     function calcularJornadaElimite(horasTrabalhadas, jornadaPadrao, limiteExtra) {
@@ -112,6 +171,41 @@
                         }
 
                         return corTexto;
+                    }
+
+                    function abrirEscalaParametro(matricula, data){
+                        var empresa = $('#empresa').val() || document.myForm.empresa.value;
+                        if(!empresa) return;
+                        $.ajax({
+                            url: 'jornada_escala.php',
+                            data: {
+                                empresa: empresa,
+                                matricula: matricula,
+                                data: data
+                            },
+                            dataType: 'json',
+                            success: function(res){
+                                if(!res || !res.length){
+                                    alert('Nenhuma escala encontrada para esta matrícula no mês da data selecionada.');
+                                    return;
+                                }
+                                var titulo = 'Escala da matrícula ' + matricula + ' - ' + data.substring(3);
+                                $('#escala-popup-titulo').text(titulo);
+                                var html = '<table class=\"table table-condensed table-bordered\"><thead><tr><th>Data</th><th>Dia</th><th>Escala</th></tr></thead><tbody>';
+                                for(var i=0;i<res.length;i++){
+                                    var linha = res[i];
+                                    var destaque = linha.data === data ? ' style=\"background-color:#d4edda;\"' : '';
+                                    html += '<tr'+destaque+'><td>'+linha.data+'</td><td>'+linha.diaSemana+'</td><td>'+linha.escala+'</td></tr>';
+                                }
+                                html += '</tbody></table>';
+                                $('#escala-popup-conteudo').html(html);
+                                $('#escala-popup-overlay').fadeIn(150);
+                            },
+                            error: function(xhr, status, err){
+                                console.error('Erro ao buscar escala:', status, err);
+                                alert('Erro ao carregar a escala deste funcionário.');
+                            }
+                        });
                     }
 
                     $(document).ready(function(){
@@ -173,11 +267,52 @@
 
                                         var diferencaDias = item.diaDiferenca;
 
+                                        var jornadaPrevistaMinutos = 0;
+                                        var jornadaPrevista = '<strong>----</strong>';
+                                        var inicioEscLocal = (item.inicioEscala && item.inicioEscala !== '00:00' && item.inicioEscala !== '00:00:00') ? item.inicioEscala : '--:--';
+                                        var fimEscLocal = (item.fimEscala && item.fimEscala !== '00:00' && item.fimEscala !== '00:00:00') ? item.fimEscala : '--:--';
+                                        if(inicioEscLocal !== '--:--' && fimEscLocal !== '--:--'){
+                                            var inicioEscMin = converterParaMinutos(inicioEscLocal);
+                                            var fimEscMin = converterParaMinutos(fimEscLocal);
+                                            if(!isNaN(inicioEscMin) && !isNaN(fimEscMin)){
+                                                if(fimEscMin <= inicioEscMin){
+                                                    fimEscMin += 24 * 60;
+                                                }
+                                                jornadaPrevistaMinutos = fimEscMin - inicioEscMin;
+                                                if(jornadaPrevistaMinutos > 0){
+                                                    jornadaPrevista = converterMinutosParaHHHMM(jornadaPrevistaMinutos);
+                                                }
+                                            }
+                                        }
+
                                         const refeicaoMinutos = converterParaMinutos(item.refeicao === '*' ? '00:00' : item.refeicao);
                                         const esperaMinutos = converterParaMinutos(item.espera === '*' ? '00:00' : item.espera);
                                         const descansoMinutos = converterParaMinutos(item.descanso === '*' ? '00:00' : item.descanso);
                                         const repousoMinutos = converterParaMinutos(item.repouso === '*' ? '00:00' : item.repouso);
                                         const jornadaMinutos = converterParaMinutos(jornada);
+
+                                        var idMotorista = null;
+                                        var dataISO = '';
+                                        if (typeof urlArquivo === 'string') {
+                                            var partesUrl = urlArquivo.split('/');
+                                            var nomeArquivo = partesUrl[partesUrl.length - 1] || '';
+                                            idMotorista = nomeArquivo.replace('.json','');
+                                        }
+                                        if (item.data) {
+                                            var partesData = item.data.split('/');
+                                            if (partesData.length === 3) {
+                                                dataISO = partesData[2] + '-' + partesData[1] + '-' + partesData[0];
+                                            }
+                                        }
+
+                                        if(!isNaN(jornadaMinutos)){
+                                            var chaveMatricula = String(item.matricula || '');
+                                            if(jornadaMinutos > 24 * 60 && chaveMatricula){
+                                                colaboradoresJornadaCritica[chaveMatricula] = true;
+                                            } else if(chaveMatricula && colaboradoresJornadaCritica[chaveMatricula]){
+                                                delete colaboradoresJornadaCritica[chaveMatricula];
+                                            }
+                                        }
 
                                         if(item.adi5322 === 'sim'){
                                             let jornadaSemIntervalo = jornadaMinutos - (refeicaoMinutos + descansoMinutos + repousoMinutos);
@@ -189,9 +324,35 @@
 
                                         console.log();
 
+                                        const jornadaEfetivaMinutosCalc = converterParaMinutos(jornadaEfetiva);
+                                        if(jornadaPrevistaMinutos > 0 && !isNaN(jornadaEfetivaMinutosCalc)){
+                                            var chaveMatricula = String(item.matricula || '');
+                                            if(chaveMatricula){
+                                                if(jornadaEfetivaMinutosCalc > jornadaPrevistaMinutos){
+                                                    colaboradoresHoraExtra[chaveMatricula] = true;
+                                                } else if(colaboradoresHoraExtra[chaveMatricula]){
+                                                    delete colaboradoresHoraExtra[chaveMatricula];
+                                                }
+                                            }
+                                        }
+
                                         let jornadaEfetivaCor = 'jornada';
                                         if(item.jornadaDia != undefined && item.jornadaDia != null){
                                             jornadaEfetivaCor = calcularJornadaElimite(jornadaEfetiva , item.jornadaDia, item.limiteExtras)
+                                        }
+
+                                        if(jornadaPrevistaMinutos > 0 && !isNaN(jornadaEfetivaMinutosCalc)){
+                                            if(jornadaEfetivaMinutosCalc > jornadaPrevistaMinutos){
+                                                jornadaEfetivaCor = 'jornadaRed';
+                                            }
+                                        }
+
+                                        if (jornadaPrevistaMinutos === 0 && !isNaN(jornadaEfetivaMinutosCalc) && jornadaEfetivaMinutosCalc > 0) {
+                                            jornadaEfetivaCor = 'jornadaRed';
+                                            var chaveMatricula = String(item.matricula || '');
+                                            if(chaveMatricula){
+                                                colaboradoresSemJornadaPrevista[chaveMatricula] = true;
+                                            }
                                         }
 
                                         if (jornadaEfetiva === '0:00' || jornadaEfetiva === '00:00') {
@@ -215,6 +376,9 @@
                                     ". $linha."
                                     tabela.append(linha);
                                     });
+                                    atualizarKpiJornadaCritica();
+                                    atualizarKpiHoraExtra();
+                                    atualizarKpiSemJornadaPrevista();
                                 },
                                 error: function(){
                                     console.error('Erro ao carregar os dados.');
@@ -240,7 +404,7 @@
                                 tabela.append(row);
                             });
                         }
-                        var colunasPermitidas = ['matricula', 'nome', 'ocupacao', 'operacao', 'setor', 'subsetor', 'inicioJornada', 'escala', 'atraso', 'jornada', 'jornadaEfetiva', 'refeicao', 'espera', 'descanso', 'repouso']; 
+                        var colunasPermitidas = ['matricula', 'nome', 'ocupacao', 'parametro', 'operacao', 'setor', 'subsetor', 'inicioJornada', 'escala', 'atraso', 'jornada', 'jornadaPrevista', 'jornadaEfetiva', 'refeicao', 'espera', 'descanso', 'repouso']; 
                         // Evento de clique para ordenar a tabela ao clicar no cabeçalho
                         $('#titulos th').click(function(){
                             var colunaClicada = $(this).attr('class');
@@ -269,40 +433,127 @@
 
                         ".$carregarDados."
                         
-                        // Evento para selecionar a linha ao clicar
+                        $('#tabela-empresas tbody').on('click', 'td.inicio-jornada-click', function(e) {
+                            e.stopPropagation();
+                            var matricula = $(this).data('matricula');
+                            var data = $(this).data('data');
+                            if(matricula && data){
+                                abrirEscalaParametro(String(matricula), String(data));
+                            }
+                        });
+
+                        // Evento para selecionar a linha ao clicar (apenas a última clicada fica destacada)
                         $('#tabela-empresas tbody').on('click', 'tr', function() {
-                            if ($(this).hasClass('selected-row')) {
-                                $(this).removeClass('selected-row');
+                            $('#tabela-empresas tbody tr').removeClass('selected-row');
+                            $(this).addClass('selected-row');
+                        });
+
+                        $('#tabela-empresas tbody').on('click', 'td.acao-ajuste span.glyphicon-pencil', function(e) {
+                            e.stopPropagation();
+                            var td = $(this).closest('td');
+                            var idMotorista = td.data('idmotorista');
+                            var dataISO = td.data('dataiso');
+                            if (idMotorista && dataISO) {
+                                if (typeof Swal !== 'undefined' && Swal.fire) {
+                                    Swal.fire({
+                                        icon: 'question',
+                                        title: 'Encerrar jornada',
+                                        text: 'Gostaria de encerrar essa jornada manualmente?',
+                                        showCancelButton: true,
+                                        confirmButtonText: 'Sim',
+                                        cancelButtonText: 'Não'
+                                    }).then(function(result){
+                                        if (result.isConfirmed) {
+                                            ajustarPonto(idMotorista, dataISO);
+                                        }
+                                    });
+                                } else {
+                                    if (confirm('Gostaria de encerrar essa jornada manualmente?')) {
+                                        ajustarPonto(idMotorista, dataISO);
+                                    }
+                                }
+                            }
+                        });
+
+                        // Evento do filtro de jornada crítica
+                        $('#filtro-jornada-critica').on('change', function() {
+                            var checked = $(this).is(':checked');
+                            var linhas = $('#tabela-empresas tbody tr');
+                            
+                            if (checked) {
+                                // Desmarca outros filtros para evitar conflito visual
+                                $('#filtro-sem-jornada-prevista').prop('checked', false);
+                                $('#filtro-hora-extra').prop('checked', false);
+                                linhas.each(function() {
+                                    var linha = $(this);
+                                    if (linha.hasClass('row-jornada-critica')) {
+                                        linha.show();
+                                    } else {
+                                        linha.hide();
+                                    }
+                                });
                             } else {
-                                $('#tabela-empresas tbody tr').removeClass('selected-row');
-                                $(this).addClass('selected-row');
+                                linhas.show();
+                            }
+                        });
+
+                        // Evento do filtro de hora extra
+                        $('#filtro-hora-extra').on('change', function() {
+                            var checked = $(this).is(':checked');
+                            var linhas = $('#tabela-empresas tbody tr');
+                            
+                            if (checked) {
+                                // Desmarca outros filtros para evitar conflito visual
+                                $('#filtro-jornada-critica').prop('checked', false);
+                                $('#filtro-sem-jornada-prevista').prop('checked', false);
+                                linhas.each(function() {
+                                    var linha = $(this);
+                                    if (linha.hasClass('row-hora-extra')) {
+                                        linha.show();
+                                    } else {
+                                        linha.hide();
+                                    }
+                                });
+                            } else {
+                                linhas.show();
+                            }
+                        });
+
+                        // Evento do filtro de sem jornada prevista
+                        $('#filtro-sem-jornada-prevista').on('change', function() {
+                            var checked = $(this).is(':checked');
+                            var linhas = $('#tabela-empresas tbody tr');
+                            
+                            if (checked) {
+                                // Desmarca outros filtros para evitar conflito visual
+                                $('#filtro-jornada-critica').prop('checked', false);
+                                $('#filtro-hora-extra').prop('checked', false);
+                                linhas.each(function() {
+                                    var linha = $(this);
+                                    if (linha.hasClass('row-sem-jornada-prevista')) {
+                                        linha.show();
+                                    } else {
+                                        linha.hide();
+                                    }
+                                });
+                            } else {
+                                linhas.show();
+                            }
+                        });
+
+                        $('#escala-popup-fechar').on('click', function() {
+                            $('#escala-popup-overlay').fadeOut(150);
+                        });
+                        $('#escala-popup-overlay').on('click', function(e) {
+                            if(e.target.id === 'escala-popup-overlay'){
+                                $('#escala-popup-overlay').fadeOut(150);
                             }
                         });
                     });
 
                        $(document).ready(function() {
-                            // Obtém o botão
-                            const button = document.getElementById('botaoContexBuscar');
-
                             // Inicializa o select2 no campo 'empresa'
                             $('#empresa').select2();
-
-                            // Verifica se já há uma opção selecionada ao carregar a página
-                            if ($('#empresa').val()) {
-                                button.removeAttribute('disabled'); // Habilita o botão se houver um valor selecionado
-                            } else {
-                                button.setAttribute('disabled', true); // Desabilita se não houver
-                            }
-
-                            // Escuta o evento 'select2:select' para capturar quando uma nova opção é selecionada
-                            $('#empresa').on('select2:select', function(e) {
-                                button.removeAttribute('disabled'); // Habilita o botão ao selecionar
-                            });
-
-                            // Escuta o evento 'select2:unselect' para capturar quando uma opção é desmarcada (se múltiplo)
-                            $('#empresa').on('select2:unselect', function(e) {
-                                button.setAttribute('disabled', true); // Desabilita o botão ao desmarcar
-                            });
                         });
                     //}
                 </script>";
@@ -349,55 +600,79 @@
         $path = "./arquivos/jornada";
         $periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
-        if (!empty($_POST["empresa"]) && empty($_POST["reloadOnly"])) {
+        if ( (isset($_POST["empresa"]) || !empty($_POST['busca_data'])) && empty($_POST["reloadOnly"]) ) {
              require_once "funcoes_paineis.php";
-            //  $tempoInicio = microtime(true);
              criar_relatorio_jornada();
-            //  $tempoFim = microtime(true);
-            //  $tempoExecucao = $tempoFim - $tempoInicio;
-            //  $tempoExecucaoMinutos = $tempoExecucao / 60;
-            //  echo "Tempo de execução: " . number_format($tempoExecucaoMinutos, 4) . " minutos";
 
-            $empresa = mysqli_fetch_assoc(query(
-                "SELECT * FROM empresa
-                    WHERE empr_tx_status = 'ativo'
-                        AND empr_nb_id = {$_POST["empresa"]}
-                    LIMIT 1;"
-            ));
-
-            $path .= "/".$empresa["empr_nb_id"];
+            $pathsToCheck = [];
+            if (!empty($_POST["empresa"])) {
+                $empresa = mysqli_fetch_assoc(query(
+                    "SELECT * FROM empresa
+                        WHERE empr_tx_status = 'ativo'
+                            AND empr_nb_id = {$_POST["empresa"]}
+                        LIMIT 1;"
+                ));
+                $pathsToCheck[] = $path . "/" . $empresa["empr_nb_id"];
+            } else {
+                $sqlEmpresas = query("SELECT empr_nb_id FROM empresa WHERE empr_tx_status = 'ativo'");
+                while ($row = mysqli_fetch_assoc($sqlEmpresas)) {
+                    $pathsToCheck[] = $path . "/" . $row['empr_nb_id'];
+                }
+            }
 
             $quantFun = ""; //Utilizado em painel_html2.php
-            if (is_dir($path)) {
-                $pasta = dir($path);
-                while ($arquivo = $pasta->read()) {
-                    if (!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
-                        $arquivos[] = $arquivo;
+            
+            $arquivos = [];
+            $missingData = false;
+            foreach ($pathsToCheck as $checkPath) {
+                if (is_dir($checkPath)) {
+                    $pasta = dir($checkPath);
+                    while ($arquivo = $pasta->read()) {
+                        if (!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
+                            $arquivos[] = $checkPath . "/" . $arquivo;
+                        }
                     }
-                    $quantFun = " - <b>Total de funcionários com jornada:</b> ".count($arquivos);
-                }
-                $pasta->close();
-
-
-                foreach ($arquivos as &$arquivo) {
-                    $arquivo = $path."/".$arquivo;
-                }
-
-                if (!empty($arquivo)) {
-                    $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
-                        <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
-                    $dataEmissao = $alertaEmissao." Atualizado em: " . date("d/m/Y H:i", filemtime($arquivo)). "</span>"; //Utilizado no HTML.
-                    $arquivoGeral = json_decode(file_get_contents($arquivo), true);
-
-                    $encontrado = true;
+                    $pasta->close();
                 } else {
-                    require_once "funcoes_paineis.php";
-                    criar_relatorio_jornada();
-                    $encontrado = true;
-                    // echo "<script>alert('Não tem jornadas abertas.')</script>";
+                    $missingData = true;
                 }
+            }
+            
+            $quantFun = " - <b>Total de funcionários com jornada:</b> ".count($arquivos);
+
+            if (!empty($arquivos) && !$missingData) {
+                $ultimoArquivo = end($arquivos);
+                $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
+                    <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
+                $dataEmissao = $alertaEmissao." Atualizado em: " . date("d/m/Y H:i", filemtime($ultimoArquivo)). "</span>"; //Utilizado no HTML.
+                
+                $encontrado = true;
             } else {
-                $encontrado = false;
+                require_once "funcoes_paineis.php";
+                criar_relatorio_jornada();
+                
+                if (empty($_POST["empresa"])) {
+                    $pathsToCheck = [];
+                    $sqlEmpresas = query("SELECT empr_nb_id FROM empresa WHERE empr_tx_status = 'ativo'");
+                    while ($row = mysqli_fetch_assoc($sqlEmpresas)) {
+                        $pathsToCheck[] = $path . "/" . $row['empr_nb_id'];
+                    }
+                }
+
+                $arquivos = [];
+                foreach ($pathsToCheck as $checkPath) {
+                    if (is_dir($checkPath)) {
+                        $pasta = dir($checkPath);
+                        while ($arquivo = $pasta->read()) {
+                            if (!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))) {
+                                $arquivos[] = $checkPath . "/" . $arquivo;
+                            }
+                        }
+                        $pasta->close();
+                    }
+                }
+                
+                $encontrado = true;
             }
         }
 
@@ -408,25 +683,124 @@
                     AND empr_tx_Ehmatriz = 'sim'
                 LIMIT 1;"
             ))["empr_tx_logo"];
+
+            $exibirEmpresa = empty($_POST["empresa"]);
+            $exibirOcupacao = empty($_POST["busca_ocupacao"]);
+            $exibirCargo = empty($_POST["operacao"]);
+            $exibirSetor = empty($_POST["busca_setor"]);
+            $exibirSubSetor = empty($_POST["busca_subsetor"]);
+            $rowGravidade = "
+            <div id='kpis-resumo-jornada' style='display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;'>
+                <div style='background-color: var(--var-lightred); border-left: 4px solid var(--var-red); padding: 8px 12px; border-radius: 4px; min-width: 230px; display:flex; flex-direction: column; justify-content: center;'>
+                    <div style='display:flex;align-items:center;justify-content:space-between; margin-bottom: 5px;'>
+                        <div>
+                            <div style='font-size:11px;font-weight:bold;color:var(--var-darkred);'>Alerta Crítico</div>
+                            <div style='font-size:10px;'>Colaboradores com jornada &gt; 24h</div>
+                        </div>
+                        <div id='kpi-jornada-critica-valor' style='font-size:22px;font-weight:bold;color:var(--var-darkred);'>0</div>
+                    </div>
+                    <div style='display: flex; align-items: center; gap: 5px;'>
+                        <input type='checkbox' id='filtro-jornada-critica' style='cursor: pointer;'>
+                        <label for='filtro-jornada-critica' style='font-size: 10px; color: var(--var-darkred); margin: 0; cursor: pointer; font-weight: bold;'>Mostrar apenas jornadas > 24h</label>
+                    </div>
+                </div>
+                <div style='background-color: var(--var-lightorange); border-left: 4px solid var(--var-orange); padding: 8px 12px; border-radius: 4px; min-width: 230px; display:flex; flex-direction: column; justify-content: center;'>
+                    <div style='display:flex;align-items:center;justify-content:space-between; margin-bottom: 5px;'>
+                        <div>
+                            <div style='font-size:11px;font-weight:bold;color:var(--var-orange);'>Alerta Operacional</div>
+                            <div style='font-size:10px;'>Colaboradores em hora extra</div>
+                        </div>
+                        <div id='kpi-hora-extra-valor' style='font-size:22px;font-weight:bold;color:var(--var-orange);'>0</div>
+                    </div>
+                    <div style='display: flex; align-items: center; gap: 5px;'>
+                        <input type='checkbox' id='filtro-hora-extra' style='cursor: pointer;'>
+                        <label for='filtro-hora-extra' style='font-size: 10px; color: var(--var-orange); margin: 0; cursor: pointer; font-weight: bold;'>Mostrar apenas hora extra</label>
+                    </div>
+                </div>
+                <div style='background-color: var(--var-lightyellow); border-left: 4px solid var(--var-yellow); padding: 8px 12px; border-radius: 4px; min-width: 230px; display:flex; flex-direction: column; justify-content: center;'>
+                    <div style='display:flex;align-items:center;justify-content:space-between; margin-bottom: 5px;'>
+                        <div>
+                            <div style='font-size:11px;font-weight:bold;color:var(--var-darkyellow);'>Alerta Escala</div>
+                            <div style='font-size:10px;'>Jornada em dia sem previsão</div>
+                        </div>
+                        <div id='kpi-sem-jornada-prevista-valor' style='font-size:22px;font-weight:bold;color:var(--var-darkyellow);'>0</div>
+                    </div>
+                    <div style='display: flex; align-items: center; gap: 5px;'>
+                        <input type='checkbox' id='filtro-sem-jornada-prevista' style='cursor: pointer;'>
+                        <label for='filtro-sem-jornada-prevista' style='font-size: 10px; color: var(--var-darkyellow); margin: 0; cursor: pointer; font-weight: bold;'>Mostrar apenas sem previsão</label>
+                    </div>
+                </div>
+            </div>";
             // $rowTotais = "<tr class='totais'>";
             $rowTitulos = "<tr id='titulos' class='titulos'>";
-            $rowTitulos .=
-                "<th class='matricula'>Matrícula</th>
-                <th class='nome'>Nome</th>
-                <th class='ocupacao'>Ocupação</th>
-                <th class='operacao'>Cargo</th>
-                <th class='setor'>Setor</th>
-                <th class='subsetor'>SubSetor</th>
-                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='inicioJornada'>Início Jornada</th>
+            $rowTitulos .= "<th class='matricula'>Matrícula</th>
+                <th class='nome'>Nome</th>";
+            if ($exibirEmpresa) $rowTitulos .= "<th class='empresa'>Empresa</th>";
+            if ($exibirOcupacao) $rowTitulos .= "<th class='ocupacao'>Ocupação</th>";
+            $rowTitulos .= "<th class='parametro'>Parâmetro</th>";
+            if ($exibirCargo) $rowTitulos .= "<th class='operacao'>Cargo</th>";
+            if ($exibirSetor) $rowTitulos .= "<th class='setor'>Setor</th>";
+            if ($exibirSubSetor) $rowTitulos .= "<th class='subsetor'>SubSetor</th>";
+            $rowTitulos .= "<th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='inicioJornada'>Início Jornada</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='escala'>Inicio / Fim de Escala</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='atraso'>Atraso</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornada'>Jornada</th>
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornadaPrevista'>Jornada Prevista</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='jornadaEfetiva'>Jornada Efetiva</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='refeicao'>Refeicao</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='espera'>Espera</th>
                 <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='descanso'>Descanso</th>
-                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='repouso'>Repouso</th>";
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='repouso'>Repouso</th>
+                <th style='cursor: default; background-color: var(--var-blue) !important; color: black !important;' class='acoes'>Ações</th>";
             $rowTitulos .= "</tr>";
+
+            $params = array_merge($_POST, [
+                "acao" => "index",
+                "acaoPrevia" => $_POST["acao"] ?? "",
+                "idMotorista" => null,
+                "data" => null,
+                "HTTP_REFERER" => (!empty($_POST["HTTP_REFERER"]) ? $_POST["HTTP_REFERER"] : $_SERVER["REQUEST_URI"])
+            ]);
+
+            echo criarHiddenForm(
+                "form_ajuste_ponto",
+                array_keys($params),
+                array_values($params),
+                "../ajuste_ponto.php"
+            );
+            $filtros = [];
+
+            if (!empty($_POST['busca_ocupacao'])) {
+                $filtros[] = "<b>Ocupação:</b> " . $_POST['busca_ocupacao'];
+            }
+
+            if (!empty($_POST['operacao'])) {
+                $sql = query("SELECT oper_tx_nome FROM operacao WHERE oper_nb_id IN ({$_POST['operacao']})");
+                $nomes = [];
+                while($row = mysqli_fetch_assoc($sql)) $nomes[] = $row['oper_tx_nome'];
+                $filtros[] = "<b>Cargo:</b> " . implode(", ", $nomes);
+            }
+
+            if (!empty($_POST['busca_setor'])) {
+                $sql = query("SELECT grup_tx_nome FROM grupos_documentos WHERE grup_nb_id IN ({$_POST['busca_setor']})");
+                $nomes = [];
+                while($row = mysqli_fetch_assoc($sql)) $nomes[] = $row['grup_tx_nome'];
+                $filtros[] = "<b>Setor:</b> " . implode(", ", $nomes);
+            }
+
+            if (!empty($_POST['busca_subsetor'])) {
+                $sql = query("SELECT sbgr_tx_nome FROM sbgrupos_documentos WHERE sbgr_nb_id IN ({$_POST['busca_subsetor']})");
+                $nomes = [];
+                while($row = mysqli_fetch_assoc($sql)) $nomes[] = $row['sbgr_tx_nome'];
+                $filtros[] = "<b>SubSetor:</b> " . implode(", ", $nomes);
+            }
+
+            if (empty($empresa)) {
+                $empresa = ["empr_tx_nome" => "Todas"];
+            }
+
+            $filtrosConsultaHtml = implode(" | ", $filtros);
+
             $titulo = "Relatório de Jornada Aberta";
             $mostra = false;
             include_once "painel_html2.php";
@@ -434,6 +808,33 @@
             <style>
             .selected-row, .selected-row td {
                 background-color: #d1e7dd !important;
+            }
+            .sem-escala-indicador {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                background-color: red;
+                border-radius: 50%;
+                margin-right: 4px;
+            }
+            #escala-popup-overlay{
+                display:none;
+                position:fixed;
+                z-index:9999;
+                top:0;
+                left:0;
+                right:0;
+                bottom:0;
+                background:rgba(0,0,0,0.4);
+            }
+            #escala-popup{
+                background:#fff;
+                max-width:900px;
+                max-height:80vh;
+                margin:40px auto;
+                padding:10px;
+                overflow:auto;
+                border-radius:4px;
             }
             @media print{
                 .container, .container-fluid {
@@ -452,10 +853,19 @@
                     page-break-inside: avoid;
                 }
             }   
-            </style>";
+            </style>
+            <div id='escala-popup-overlay'>
+                <div id='escala-popup'>
+                    <div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;'>
+                        <span id='escala-popup-titulo' style='font-weight:bold;font-size:12px;'></span>
+                        <button type='button' id='escala-popup-fechar' class='btn btn-xs btn-default'>Fechar</button>
+                    </div>
+                    <div id='escala-popup-conteudo'></div>
+                </div>
+            </div>";
         }
 
-        carregarJS($arquivos);
+        carregarJS($arquivos, $exibirEmpresa, $exibirOcupacao, $exibirCargo, $exibirSetor, $exibirSubSetor);
 
         rodape();
     }

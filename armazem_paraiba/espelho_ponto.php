@@ -310,6 +310,7 @@
 				$qtdDiasNaoJustificados = 0;
 				for ($date = $startDate; $date <= $endDate; $date->modify("+1 day")){
 					$aDetalhado = diaDetalhePonto($motorista, $date->format("Y-m-d"));
+					
 					/* Descomentar ao conseguir adaptar a lógica da página de nao_conformidade para espelho_ponto
 						if(!empty($_POST["naoConformidade"])){
 							$rowString = implode(", ", array_values($aDetalhado));
@@ -341,6 +342,9 @@
 						}
 						$rows[] = $row;
 					//*/
+
+					if(isset($aDetalhado['inicioEscala'])) unset($aDetalhado['inicioEscala']);
+					if(isset($aDetalhado['fimEscala'])) unset($aDetalhado['fimEscala']);
 
 					$colunasAManterZeros = ["inicioJornada", "inicioRefeicao", "fimRefeicao", "fimJornada", "jornadaPrevista", "diffSaldo"];
 					foreach($aDetalhado as $key => &$value){

@@ -1,0 +1,65 @@
+[2025-12-18 20:06:47] ERROR: device_id ausente 
+[2025-12-18 20:07:04] ERROR: device_id ausente 
+[2025-12-18 20:07:11] ERROR: device_id ausente 
+[2025-12-18 20:07:25] ERROR: device_id ausente 
+[2025-12-18 20:08:29] INFO: Iniciando sync {"device_id":"ABC123456"}
+[2025-12-18 20:08:29] ERROR: Erro ao consultar banco {"database_index":0,"error":"SQLSTATE[HY000] [2002] No such file or directory"}
+[2025-12-18 20:08:29] ERROR: Erro ao consultar banco {"database_index":1,"error":"SQLSTATE[HY000] [2002] No such file or directory"}
+[2025-12-18 20:09:20] INFO: Iniciando sync {"device_id":"ABC123456"}
+[2025-12-18 20:09:20] ERROR: Erro ao consultar banco {"database_index":0,"error":"SQLSTATE[HY000] [2002] No such file or directory"}
+[2025-12-18 20:09:20] ERROR: Erro ao consultar banco {"database_index":1,"error":"SQLSTATE[HY000] [2002] No such file or directory"}
+[2025-12-19 12:52:20] INFO: Iniciando sync {"device_id":"ABC123456"}
+[2025-12-19 12:52:20] ERROR: Erro ao consultar banco {"database_index":0,"error":"SQLSTATE[HY000] [2002] No such file or directory"}
+[2025-12-19 12:52:20] ERROR: Erro ao consultar banco {"database_index":1,"error":"SQLSTATE[HY000] [2002] No such file or directory"}
+[2025-12-19 12:53:06] INFO: Iniciando sync {"device_id":"ABC123456"}
+[2025-12-19 12:53:06] ERROR: Erro ao consultar banco {"database_index":0,"error":"SQLSTATE[HY000] [2002] No such file or directory"}
+[2025-12-19 12:53:06] ERROR: Erro ao consultar banco {"database_index":1,"error":"SQLSTATE[HY000] [2002] No such file or directory"}
+[2025-12-19 12:55:06] INFO: Iniciando sync {"device_id":"ABC123456"}
+[2025-12-19 12:55:06] ERROR: Erro ao consultar banco {"database_index":0,"error":"SQLSTATE[HY000] [2002] No such file or directory"}
+[2025-12-19 12:55:06] ERROR: Erro ao consultar banco {"database_index":1,"error":"SQLSTATE[HY000] [2002] No such file or directory"}
+[2025-12-19 12:56:18] INFO: Iniciando sync {"device_id":"ABC123456"}
+[2025-12-19 12:56:18] ERROR: Erro ao consultar banco {"database_index":0,"error":"SQLSTATE[HY000] [2002] No such file or directory"}
+[2025-12-19 12:56:18] ERROR: Erro ao consultar banco {"database_index":1,"error":"SQLSTATE[HY000] [2002] No such file or directory"}
+[2025-12-19 13:00:02] INFO: Iniciando sync {"device_id":"ABC123456"}
+[2025-12-19 13:00:02] DEBUG: Consultando banco {"database_index":0}
+[2025-12-19 13:00:02] ERROR: Erro ao consultar banco {"database_index":0,"error":"SQLSTATE[HY000] [2002] No such file or directory"}
+[2025-12-19 13:00:02] DEBUG: Consultando banco {"database_index":1}
+[2025-12-19 13:00:02] ERROR: Erro ao consultar banco {"database_index":1,"error":"SQLSTATE[HY000] [2002] No such file or directory"}
+[2025-12-19 13:02:12] INFO: Iniciando sync {"device_id":"ABC123456"}
+[2025-12-19 13:02:12] DEBUG: Consultando banco {"database_index":0}
+[2025-12-19 13:02:12] DEBUG: Consultando banco {"database_index":1}
+[2025-12-19 13:02:12] ERROR: Erro ao consultar banco {"database_index":1,"error":"SQLSTATE[HY000] [1049] Unknown database 'techpsjornada_dev2'"}
+[2025-12-19 13:09:11] INFO: Iniciando sync {"device_id":"ABC123456"}
+[2025-12-19 13:09:11] DEBUG: Consultando banco {"database_index":0}
+[2025-12-19 13:09:11] DEBUG: Consultando banco {"database_index":1}
+[2025-12-19 13:09:11] ERROR: Erro ao consultar banco {"database_index":1,"error":"SQLSTATE[HY000] [1049] Unknown database 'techpsjornada_dev2'"}
+[2025-12-19 15:02:20] INFO: Iniciando sync {"empresa":"lemon","device_id":"ABC123456"}
+[2025-12-19 15:02:20] ERROR: Erro no sync {"empresa":"lemon","error":"SQLSTATE[HY000]: General error: 1364 Field 'celu_tx_nome' doesn't have a default value"}
+[2025-12-19 17:23:12] INFO: Iniciando sync {"empresa":"lemon","device_id":"ABC123456"}
+[2025-12-19 17:23:12] ERROR: Erro no sync {"empresa":"lemon","error":"SQLSTATE[HY000]: General error: 1364 Field 'celu_tx_imei' doesn't have a default value"}
+[2025-12-19 17:42:14] INFO: Iniciando sync {"empresa":"acme","device_id":"ABC123456"}
+[2025-12-19 17:42:14] ERROR: Erro na requisição {"error":"Empresa inválida"}
+[2025-12-19 17:42:34] INFO: Iniciando sync {"empresa":"lemon","device_id":"ABC123456"}
+[2025-12-19 17:42:34] ERROR: Erro na requisição {"error":"SQLSTATE[HY000]: General error: 1364 Field 'celu_tx_nome' doesn't have a default value"}
+[2025-12-19 17:48:05] INFO: Iniciando sync {"empresa":"lemon","device_id":"ABC123456"}
+[2025-12-19 17:48:05] ERROR: Erro na requisição {"error":"SQLSTATE[HY000]: General error: 1364 Field 'celu_tx_imei' doesn't have a default value"}
+[2025-12-19 17:48:44] INFO: Iniciando sync {"empresa":"lemon","device_id":"ABC123456"}
+[2025-12-19 17:48:44] ERROR: Erro na requisição {"error":"SQLSTATE[HY000]: General error: 1364 Field 'celu_tx_numero' doesn't have a default value"}
+[2025-12-19 17:49:02] INFO: Iniciando sync {"empresa":"lemon","device_id":"ABC123456"}
+[2025-12-19 17:49:02] ERROR: Erro na requisição {"error":"SQLSTATE[HY000]: General error: 1364 Field 'celu_tx_operadora' doesn't have a default value"}
+[2025-12-19 17:49:18] INFO: Iniciando sync {"empresa":"lemon","device_id":"ABC123456"}
+[2025-12-19 17:49:18] ERROR: Erro na requisição {"error":"SQLSTATE[HY000]: General error: 1364 Field 'celu_tx_cimie' doesn't have a default value"}
+[2025-12-19 17:49:31] INFO: Iniciando sync {"empresa":"lemon","device_id":"ABC123456"}
+[2025-12-19 17:49:31] ERROR: Erro na requisição {"error":"SQLSTATE[HY000]: General error: 1364 Field 'celu_nb_entidade' doesn't have a default value"}
+[2025-12-19 17:49:57] INFO: Iniciando sync {"empresa":"lemon","device_id":"ABC123456"}
+[2025-12-19 17:49:57] ERROR: Erro na requisição {"error":"SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'celu_tx_imei' cannot be null"}
+[2025-12-19 17:53:18] INFO: Iniciando sync {"empresa":"lemon","device_id":"ABC123456"}
+[2025-12-19 17:53:18] ERROR: Erro na requisição {"error":"SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'celu_tx_imei' cannot be null"}
+[2025-12-19 17:53:47] INFO: Iniciando sync {"empresa":"lemon","device_id":"ABC123456"}
+[2025-12-19 17:53:47] INFO: Novo device criado {"empresa":"lemon","device_id":"ABC123456","marca_modelo":"Samsung Galaxy S23","versao_android":"14"}
+[2025-12-19 18:13:44] INFO: Iniciando sync {"empresa":"lemon","device_id":"ABC123456"}
+[2025-12-19 18:13:44] INFO: Novo device criado {"device_id":"ABC123456","nome_dispositivo":"ALEXANDRE ADALGISIO DA SILVA","marca_modelo":"Samsung Galaxy S23","versao_android":"14","entidade_id":1}
+[2025-12-19 18:14:32] INFO: Iniciando sync {"empresa":"lemon","device_id":"ABC123456"}
+[2025-12-19 18:14:32] INFO: Novo device criado {"device_id":"ABC123456","nome_dispositivo":"ALEXANDRE ADALGISIO DA SILVA","marca_modelo":"Samsung Galaxy S23","versao_android":"Android 14","entidade_id":1}
+[2025-12-19 18:14:58] INFO: Iniciando sync {"empresa":"lemon","device_id":"ABC123456"}
+[2025-12-19 18:20:49] ERROR: empresa ausente 

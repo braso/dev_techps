@@ -568,6 +568,61 @@ function index(){
         echo abre_form();
         echo linha_form($campos);
         echo fecha_form($botoes);
+
+        $statusBusca = isset($_POST["busca_status"]) ? (int)$_POST["busca_status"] : 1;
+        if ($statusBusca !== 0 && $statusBusca !== 1) {
+            $statusBusca = 1;
+        }
+
+        $sqlCards =
+            "SELECT 
+                p.perfil_nb_id,
+                p.perfil_tx_nome,
+                COUNT(DISTINCT u.user_nb_id) AS qtde
+             FROM usuario_perfil uperf
+             JOIN user u ON u.user_nb_id = uperf.user_nb_id
+             JOIN perfil_acesso p ON p.perfil_nb_id = uperf.perfil_nb_id
+             WHERE uperf.ativo = ?
+               AND u.user_tx_status = 'ativo'
+               AND p.perfil_tx_status = 'ativo'";
+
+        $paramsCards = [$statusBusca];
+        $typesCards = "i";
+
+        if (!empty($_POST["busca_usuario"])) {
+            $sqlCards .= " AND u.user_nb_id = ?";
+            $typesCards .= "i";
+            $paramsCards[] = (int)$_POST["busca_usuario"];
+        }
+
+        if (!empty($_POST["busca_perfil"])) {
+            $sqlCards .= " AND uperf.perfil_nb_id = ?";
+            $typesCards .= "i";
+            $paramsCards[] = (int)$_POST["busca_perfil"];
+        }
+
+        $sqlCards .= " GROUP BY p.perfil_nb_id, p.perfil_tx_nome ORDER BY p.perfil_tx_nome ASC";
+
+        $permissoesCards = mysqli_fetch_all(
+            query($sqlCards, $typesCards, $paramsCards),
+            MYSQLI_ASSOC
+        );
+
+        if (!empty($permissoesCards)) {
+            echo "<div class='row'>"
+                ."<div class='col-sm-12 margin-bottom-5 campo-fit-content'>"
+                ."<div style='display:flex; flex-wrap:wrap; gap:12px; margin-bottom:10px'>";
+            foreach ($permissoesCards as $pc) {
+                $label = !empty($pc["perfil_tx_nome"]) ? $pc["perfil_tx_nome"] : "Sem nome";
+                $qtde = (int)$pc["qtde"];
+                echo "<div style='min-width:140px; padding:10px 12px; border-radius:6px; background:#f0f4ff; border:1px solid #d0d8ff; display:flex; flex-direction:column;'>"
+                    ."<span style='font-size:18px; font-weight:bold;'>".$qtde."</span>"
+                    ."<span style='font-size:12px;'>".htmlspecialchars($label)."</span>"
+                    ."</div>";
+            }
+            echo "</div></div></div>";
+        }
+
         echo "<script>$(function(){ if($.fn.select2){ $.fn.select2.defaults.set('theme','bootstrap'); $('[name=busca_usuario],[name=busca_perfil]').select2({placeholder:'Selecione',allowClear:true}); $('[name=busca_usuario],[name=busca_perfil],[name=busca_status]').on('change', function(){ document.contex_form.submit(); }); } });</script>";
 
         listarUsuarioPerfis();

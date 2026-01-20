@@ -7,7 +7,9 @@
         header("Pragma: no-cache"); // HTTP 1.0.
         header("Expires: 0");
 	//*/
-	include_once __DIR__."/conecta.php";
+	if(!defined('NO_CONNECTION')){
+		include_once __DIR__."/conecta.php";
+	}
 
 	function calcularJornadaPrevista(string $jornadaPrevistaOriginal, bool $ehFeriado, $abono = null): string{
 
@@ -650,7 +652,7 @@
 			"fimEscala" 			=> "00:00"
 		];
 
-		if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
+		if(!empty($motorista["enti_tx_ocupacao"]) && in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
 			$aRetorno = array_merge($aRetorno, [
 				"diffEspera" 			=> "00:00",
 				"diffRepouso" 			=> "00:00",
@@ -683,7 +685,7 @@
 				"fimEscala"
 			]);
 		}
-		if(empty($motorista["enti_nb_parametro"])){
+		if(empty($motorista["enti_nb_parametro"]) && !empty($motorista["empr_nb_parametro"])){
 			$motorista["enti_nb_parametro"] = $motorista["empr_nb_parametro"];
 			$parametroEmpresa = mysqli_fetch_assoc(query(
 				"SELECT * FROM parametro
@@ -691,27 +693,34 @@
 					WHERE para_nb_id = {$motorista["empr_nb_parametro"]}
 					LIMIT 1;"
 			));
-			$motorista = array_merge($motorista, $parametroEmpresa);
-			$motorista["enti_tx_jornadaSabado"] = $motorista["para_tx_jornadaSabado"];
-			$motorista["enti_tx_jornadaSemanal"] = $motorista["para_tx_jornadaSemanal"];
-			$motorista["enti_tx_percHESemanal"] = $motorista["para_tx_percHESemanal"];
-			$motorista["enti_tx_percHEEx"] = $motorista["para_tx_percHEEx"];
+			if(!empty($parametroEmpresa)){
+				$motorista = array_merge($motorista, $parametroEmpresa);
+				$motorista["enti_tx_jornadaSabado"] = $motorista["para_tx_jornadaSabado"];
+				$motorista["enti_tx_jornadaSemanal"] = $motorista["para_tx_jornadaSemanal"];
+				$motorista["enti_tx_percHESemanal"] = $motorista["para_tx_percHESemanal"];
+				$motorista["enti_tx_percHEEx"] = $motorista["para_tx_percHEEx"];
+			}
 		}
 
-		$parametro = mysqli_fetch_assoc(query(
-			"SELECT * FROM parametro
-				LEFT JOIN escala ON para_nb_id = esca_nb_parametro
-				WHERE para_nb_id = {$motorista["enti_nb_parametro"]}
-				LIMIT 1;"
-		));
-		if($parametro["para_tx_tipo"] == "escala"){
-			$parametro["diasEscala"] = mysqli_fetch_all(query(
-				"SELECT * FROM escala_dia 
-					WHERE esca_nb_escala = '{$parametro["esca_nb_id"]}'
-					ORDER BY esca_nb_numeroDia ASC;"
-			), MYSQLI_ASSOC);
+		$parametro = null;
+		if(!empty($motorista["enti_nb_parametro"])){
+			$parametro = mysqli_fetch_assoc(query(
+				"SELECT * FROM parametro
+					LEFT JOIN escala ON para_nb_id = esca_nb_parametro
+					WHERE para_nb_id = {$motorista["enti_nb_parametro"]}
+					LIMIT 1;"
+			));
+			if(!empty($parametro) && $parametro["para_tx_tipo"] == "escala"){
+				$parametro["diasEscala"] = mysqli_fetch_all(query(
+					"SELECT * FROM escala_dia 
+						WHERE esca_nb_escala = '{$parametro["esca_nb_id"]}'
+						ORDER BY esca_nb_numeroDia ASC;"
+				), MYSQLI_ASSOC);
+			}
 		}
-		$motorista = array_merge($motorista, $parametro);
+		if(!empty($parametro)){
+			$motorista = array_merge($motorista, $parametro);
+		}
 		
 		//Organizar array com tipos de ponto{
 			$registros = [
@@ -779,9 +788,9 @@
 				}
 			}
 
-			$horaInicio = !empty($diaEscala["esca_tx_horaInicio"]) ? $diaEscala["esca_tx_horaInicio"] : "00:00";
-			$horaFim = !empty($diaEscala["esca_tx_horaFim"]) ? $diaEscala["esca_tx_horaFim"] : "00:00";
-			$intervalo = !empty($diaEscala["esca_tx_intervaloInterno"]) ? $diaEscala["esca_tx_intervaloInterno"] : "00:00";
+			$horaInicio = ($diaEscala && !empty($diaEscala["esca_tx_horaInicio"])) ? $diaEscala["esca_tx_horaInicio"] : "00:00";
+			$horaFim = ($diaEscala && !empty($diaEscala["esca_tx_horaFim"])) ? $diaEscala["esca_tx_horaFim"] : "00:00";
+			$intervalo = ($diaEscala && !empty($diaEscala["esca_tx_intervaloInterno"])) ? $diaEscala["esca_tx_intervaloInterno"] : "00:00";
 
 			$aRetorno["inicioEscala"] = $horaInicio;
 			$aRetorno["fimEscala"] = $horaFim;

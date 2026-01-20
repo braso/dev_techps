@@ -45,38 +45,38 @@ function exportAllToCSV() {
             const headers = Object.keys(window.tableConfig.fields);
             csvContent += headers.map(header => 
                 `"${header.replace(/"/g, '""')}"`
-            ).join(',') + '\n';
+            ).join(';') + '\n';
             
             // Dados
             response.rows.forEach(row => {
                 const rowData = [];
-                Object.keys(row).forEach(key => {
-                    if (window.tableConfig.camposBd.indexOf(key) >= 0) {
-                        let value = row[key] != null ? row[key].toString() : '';
-                        // Remove todas as tags HTML
-                        value = value.replace(/<[^>]*>/g, '');
+                
+                // Itera sobre os headers para garantir a ordem correta das colunas
+                headers.forEach(headerLabel => {
+                    const dbField = window.tableConfig.fields[headerLabel];
+                    let value = row[dbField] != null ? row[dbField].toString() : '';
+                    
+                    // Remove todas as tags HTML
+                    value = value.replace(/<[^>]*>/g, '');
 
-                        console.log('Processando campo:', key, 'Valor original:', row[key], 'Valor limpo:', value);
-                        const campo = key.toLowerCase();
-                        const isDoc = (
-                            campo.includes("cpf") ||
-                            campo.includes("cnpj") ||
-                            /^[0-9]{11}$/.test(value.replace(/\D/g, '')) ||      // CPF sem máscara
-                            /^[0-9]{14}$/.test(value.replace(/\D/g, ''))         // CNPJ sem máscara
-                        );
+                    const campo = dbField.toLowerCase();
+                    const isDoc = (
+                        campo.includes("cpf") ||
+                        campo.includes("cnpj") ||
+                        /^[0-9]{11}$/.test(value.replace(/\D/g, '')) ||      // CPF sem máscara
+                        /^[0-9]{14}$/.test(value.replace(/\D/g, ''))         // CNPJ sem máscara
+                    );
 
-                        if (isDoc) {
-                            // Excel: mantém como texto
-                            rowData.push(`="${value}"`);
-                        } else {
-                            value = value.replace(/"/g, '""');
-                            rowData.push(`"${value}"`);
-                        }
+                    if (isDoc) {
+                        // Excel: mantém como texto
+                        rowData.push(`="${value}"`);
+                    } else {
+                        value = value.replace(/"/g, '""');
+                        rowData.push(`"${value}"`);
                     }
                 });
-                csvContent += rowData.join(',') + '\n';
 
-                console.log('Processado registro para CSV:', csvContent );
+                csvContent += rowData.join(';') + '\n';
             });
             
             // Cria e faz download do arquivo

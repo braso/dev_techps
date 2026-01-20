@@ -152,6 +152,94 @@ form .row{
     }
 }
 
+/* ============================================================
+   CORES PERSONALIZADAS DOS BOTÕES DE PONTO
+   ============================================================ */
+
+/* Helper para limpar estilos conflitantes */
+.btn.blue, .btn.orange, .btn.purple, .btn.dark, .btn.cyan, .btn.green, .btn.red {
+    background-image: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+/* BLUE */
+#btn-registro-3, .btn.blue {
+    background-color: #3598dc !important;
+    color: white !important;
+    border-color: #3598dc !important;
+}
+#btn-registro-3:hover, .btn.blue:hover {
+    background-color: #217ebd !important;
+    border-color: #217ebd !important;
+}
+
+/* ORANGE */
+#btn-registro-7, .btn.orange {
+    background-color: #e87e04 !important;
+    color: white !important;
+    border-color: #e87e04 !important;
+}
+#btn-registro-7:hover, .btn.orange:hover {
+    background-color: #d07103 !important;
+    border-color: #d07103 !important;
+}
+
+/* PURPLE */
+#btn-registro-5, .btn.purple {
+    background-color: #8E44AD !important;
+    color: white !important;
+    border-color: #8E44AD !important;
+}
+#btn-registro-5:hover, .btn.purple:hover {
+    background-color: #703688 !important;
+    border-color: #703688 !important;
+}
+
+/* DARK */
+#btn-registro-9, .btn.dark {
+    background-color: #2f353b !important;
+    color: white !important;
+    border-color: #2f353b !important;
+}
+#btn-registro-9:hover, .btn.dark:hover {
+    background-color: #1f2327 !important;
+    border-color: #1f2327 !important;
+}
+
+/* CYAN */
+#btn-registro-11, .btn.cyan {
+    background-color: #1BA39C !important;
+    color: white !important;
+    border-color: #1BA39C !important;
+}
+#btn-registro-11:hover, .btn.cyan:hover {
+    background-color: #147b75 !important;
+    border-color: #147b75 !important;
+}
+
+/* GREEN (Inicio Jornada) */
+#btn-registro-1, .btn.green {
+    background-color: #32c5d2 !important;
+    color: white !important;
+    border-color: #32c5d2 !important;
+}
+#btn-registro-1:hover, .btn.green:hover {
+    background-color: #26a1ab !important;
+    border-color: #26a1ab !important;
+}
+
+/* RED (Todos os fins) */
+#btn-registro-2, #btn-registro-4, #btn-registro-6, #btn-registro-8, #btn-registro-10, #btn-registro-12, .btn.red {
+    background-color: #e7505a !important;
+    color: white !important;
+    border-color: #e7505a !important;
+}
+#btn-registro-2:hover, #btn-registro-4:hover, #btn-registro-6:hover, #btn-registro-8:hover, #btn-registro-10:hover, #btn-registro-12:hover, .btn.red:hover {
+    background-color: #e12330 !important;
+    border-color: #e12330 !important;
+}
+
 .btn.blue {
     background-color: #3598dc;
     color: white;

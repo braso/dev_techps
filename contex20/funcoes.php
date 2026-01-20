@@ -521,7 +521,7 @@
 		if(empty($msg)){
 			global $msg;
 		}
-		if(is_int(strrpos($msg, 'ERRO'))){
+		if(!empty($msg) && is_int(strrpos($msg, 'ERRO'))){
 			$msg = substr($msg, 0, strpos($msg, 'ERRO')).'<b style="color: red">'.substr($msg, strpos($msg, 'ERRO')).'</b>';
 		}
 		$_POST['msg_status'] = $msg;

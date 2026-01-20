@@ -4,15 +4,7 @@
 		error_reporting(E_ALL);
 	*/
 
-$rawUri = isset($_SERVER["REQUEST_URI"]) ? $_SERVER["REQUEST_URI"] : "/";
-if(function_exists('session_status') && session_status() !== PHP_SESSION_ACTIVE){ session_start(); }
-$nivel = isset($_SESSION["user_tx_nivel"]) ? $_SESSION["user_tx_nivel"] : "";
-if($nivel !== "Super Administrador"){
-    $dir = rtrim(dirname($rawUri), '/\\');
-    $target = ($dir ? ($dir."/index.php") : "/index.php");
-    header("Location: ".$target);
-    exit;
-}
+
 
 include "conecta.php";
 

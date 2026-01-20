@@ -20,28 +20,34 @@ function carregarGraficos($periodoInicio) {
 	$path = "./arquivos/ajustes";
 	$empresaId = $_POST["empresa"];
 
-	$anoBusca = (int) $periodoInicio->format('Y');
 	$anoAtualSistema = (int) date('Y');
 	$mesAtualSistema = (int) date('m');
-
-	// Se o ano da busca for anterior ao atual, mostra o ano completo (12 meses).
-	// Caso contrário, mostra até o mês atual.
-	$mesFinal = ($anoBusca < $anoAtualSistema) ? 12 : $mesAtualSistema;
 
 	$totaisPorMes = [];
 	$mesesJS = [];
 	$mesesFormatadosJS = [];
 
 	// Filtros
-	$ocupacaoPermitida = $_POST['busca_ocupacao'] ?? '';
-	$operacaoPermitida = $_POST['operacao'] ?? '';
-	$setorPermitido = $_POST['busca_setor'] ?? '';
-	$subsetorPermitido = $_POST['busca_subsetor'] ?? '';
+	$ocupacaoPermitida  = $_POST['busca_ocupacao'] ?? '';
+	$operacaoPermitida  = $_POST['operacao'] ?? '';
+	$setorPermitido     = $_POST['busca_setor'] ?? '';
+	$subsetorPermitido  = $_POST['busca_subsetor'] ?? '';
 
-	for ($mes = 1; $mes <= $mesFinal; $mes++) {
-		$mesPadded = str_pad($mes, 2, '0', STR_PAD_LEFT);
-		$mesKey = "$anoBusca-$mesPadded";
-		$dirPath = "$path/$mesKey/$empresaId";
+	// 📅 Período móvel de 12 meses (último = mês atual)
+	$dataFim = new DateTime(date('Y-m-01'));
+	$dataInicio = (clone $dataFim)->modify('-11 months');
+
+	$periodo = new DatePeriod(
+		$dataInicio,
+		new DateInterval('P1M'),
+		(clone $dataFim)->modify('+1 month')
+	);
+
+	foreach ($periodo as $data) {
+		$anoMes = $data->format('Y-m');
+		$mesPadded = $data->format('m');
+
+		$dirPath = "$path/$anoMes/$empresaId";
 
 		$ativo = 0;
 		$inativo = 0;
@@ -66,22 +72,22 @@ function carregarGraficos($periodoInicio) {
 				if (!empty($setorPermitido) && ($json['setor'] ?? '') != $setorPermitido) continue;
 				if (!empty($subsetorPermitido) && ($json['subsetor'] ?? '') != $subsetorPermitido) continue;
 
-				// Soma totais
-				foreach ($json as $key => $val) {
-					if (is_array($val) && isset($val['ativo']) && isset($val['inativo'])) {
-						$ativo += (int)$val['ativo'];
-						$inativo += (int)$val['inativo'];
+				foreach ($json as $val) {
+					if (is_array($val) && isset($val['ativo'], $val['inativo'])) {
+						$ativo   += (int) $val['ativo'];
+						$inativo += (int) $val['inativo'];
 					}
 				}
 			}
 			$dir->close();
 		}
 
-		$totaisPorMes[$mesKey] = [
+		$totaisPorMes[$anoMes] = [
 			'ativo' => $ativo,
 			'inativo' => $inativo
 		];
-		$mesesJS[] = $mesKey;
+
+		$mesesJS[] = $anoMes;
 		$mesesFormatadosJS[] = $mesPadded;
 	}
 
@@ -89,18 +95,10 @@ function carregarGraficos($periodoInicio) {
 	$mesesJS = json_encode($mesesJS);
 	$mesesFormatadosJS = json_encode(array_map(function ($mes) {
 		return [
-			'01' => 'Jan',
-			'02' => 'Fev',
-			'03' => 'Mar',
-			'04' => 'Abr',
-			'05' => 'Mai',
-			'06' => 'Jun',
-			'07' => 'Jul',
-			'08' => 'Ago',
-			'09' => 'Set',
-			'10' => 'Out',
-			'11' => 'Nov',
-			'12' => 'Dez'
+			'01' => 'Jan', '02' => 'Fev', '03' => 'Mar',
+			'04' => 'Abr', '05' => 'Mai', '06' => 'Jun',
+			'07' => 'Jul', '08' => 'Ago', '09' => 'Set',
+			'10' => 'Out', '11' => 'Nov', '12' => 'Dez'
 		][$mes];
 	}, $mesesFormatadosJS));
 
@@ -109,143 +107,50 @@ function carregarGraficos($periodoInicio) {
 	$data = $date->format('Y-m');
 
 	echo "
-		<script>
-
-		async function enviarGraficoServidor(chart) {
-			const elementId = chart.renderTo.id;
-			const userEntrada = '$session';
-			const dataGrafc = '$data';
-
-			const el = document.getElementById(elementId);
-			if (!el) {
-				console.error('Elemento não encontrado para o ID:', elementId);
-				return;
-			}
-
-			const width = el.offsetWidth;
-			const height = el.offsetHeight;
-
-			console.log(`📏 Dimensões do elemento antes da captura: \${width}x\${height}`);
-			if (width === 0 || height === 0) {
-				console.error('❌ Elemento não tem tamanho válido para captura');
-				return;
-			}
-
-			try {
-				console.log('Iniciando captura do gráfico com html2canvas...');
-
-				const canvas = await html2canvas(el, {
-					scale: 2,
-					useCORS: true,
-					allowTaint: false,
-					backgroundColor: '#ffffff' // ⚠️ Cor de fundo obrigatória!
-				});
-
-				const imageData = canvas.toDataURL('image/png');
-
-				// Debug
-				console.log('imageData (início):', imageData.substring(0, 100));
-
-				if (!imageData.startsWith('data:image/png;base64,')) {
-					throw new Error('Imagem gerada não é válida');
-				}
-
-				const response = await fetch('salvar_grafico_painel.php', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/x-www-form-urlencoded',
-					},
-					body: new URLSearchParams({
-						grafico: imageData,
-						elementId,
-						userEntrada,
-						dataGrafc
-					}).toString()
-				});
-
-				const data = await response.json();
-
-				if (data.status === 'success') {
-					console.log('✅ Gráfico salvo com sucesso:', data.fileName);
-				} else {
-					console.error('❌ Erro ao salvar gráfico:', data.message);
-				}
-
-			} catch (error) {
-				console.error('❌ Erro ao processar o gráfico:', error);
-			}
-		}
-
+	<script>
 		const meses = $mesesJS;
 		const mesesFormatados = $mesesFormatadosJS;
 		const totaisPorMes = $totaisPorMesJS;
 
-		const chart_unificado = Highcharts.chart('chart-unificado', {
-			chart: {
-				type: 'line',
-				style: {
-					fontFamily: 'Arial',
-					fontSize: '12px'
-				},
-				// events: {
-				// 	load: function () {
-				// 		const chart = this; // <-- o gráfico instanciado
-				// 		setTimeout(() => enviarGraficoServidor(chart), 2000); // <-- passa o gráfico como parâmetro
-				// 	}
-				// }
-			},
-			title: { 
-			useHTML: true,
-			text: 'Ajustes Inserido e Excluído - $anoBusca <i class=\"fa fa-question-circle\" data-toggle=\"tooltip\" data-trigger=\"click\" data-placement=\"top\" title=\"Mostra o total da empresa ao filtrar por ocupação.\" style=\"color: blue; t-size: 15px;\"></i>',
+		Highcharts.chart('chart-unificado', {
+			chart: { type: 'line' },
+			title: {
+				text: 'Ajustes Inseridos e Excluídos (Últimos 12 meses)'
 			},
 			xAxis: {
 				categories: mesesFormatados,
 				title: { text: 'Mês' }
 			},
 			yAxis: {
-				title: { text: 'Quantidade' },
-				min: 0
+				min: 0,
+				title: { text: 'Quantidade' }
 			},
 			tooltip: {
-				formatter: function() {
-					const mesOriginal = meses[this.point.index];
-					const [ano, mesNum] = mesOriginal.split('-');
-					const mesExtenso = [
-						'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-						'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-					][parseInt(mesNum) - 1];
-					return `<b>\${mesExtenso}</b><br/>\${this.series.name}: <b>\${this.y}</b> ajustes`;
-				}
-			},
-			plotOptions: {
-				line: {
-					dataLabels: { enabled: true },
-					marker: { enabled: true }
+				formatter: function () {
+					const [ano, mes] = meses[this.point.index].split('-');
+					const mesesExt = [
+						'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+						'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
+					];
+					return `<b>\${mesesExt[mes - 1]} / \${ano}</b><br/>
+					\${this.series.name}: <b>\${this.y}</b>`;
 				}
 			},
 			series: [
 				{
 					name: 'Inserido',
-					data: meses.map(mes => totaisPorMes[mes].ativo),
-					color: '#4CAF50',
-					marker: { symbol: 'circle' }
+					data: meses.map(m => totaisPorMes[m].ativo)
 				},
 				{
 					name: 'Excluído',
-					data: meses.map(mes => totaisPorMes[mes].inativo),
-					color: '#FF4D4D',
-					marker: { symbol: 'diamond' }
+					data: meses.map(m => totaisPorMes[m].inativo)
 				}
-			],
-			legend: { enabled: true }
+			]
 		});
-
-		$(function () {
-			$('[data-toggle=\"tooltip\"]').tooltip({ trigger: 'click' });
-		});
-		</script>
+	</script>
 	";
 }
+
 
 function carregarJS(array $arquivos) {
 	// $periodoInicio = new DateTime($_POST["busca_periodo"][0]);

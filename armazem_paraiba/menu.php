@@ -7,7 +7,7 @@
     include "load_env.php";
     include_once "conecta.php";
     include_once "check_permission.php";
-    echo '<link rel="stylesheet" href="css/menu.css">';
+    echo '<link rel="stylesheet" href="'.$CONTEX['path'].'/css/menu.css">';
 
 	function verificarAtividade($paginasAtivas) {
 		foreach ($paginasAtivas as $pagina){
@@ -50,7 +50,10 @@
                 "/cadastro_habilidade_comportamental.php" 	=> "Habilidades Comportamentais",
                 "/cadastro_perfil_acesso.php" 	=> "Perfil de Acesso",
                 "/cadastro_usuario_perfil.php" 	=> "Permisoes de usuarios",
-                
+               // "/cadastro_comunicado_interno.php" 	=> "Comunicado Interno",
+
+
+
 
             ],
 			"ponto" => [
@@ -67,7 +70,8 @@
 				"/paineis/endosso.php"			=> "Endosso",
 				"/paineis/jornada.php"			=> "Jornada Aberta",
 				"/paineis/nc_juridica.php"		=> "Não Conformidades Jurídicas",
-				"/paineis/saldo.php"			=> "Saldo"
+				"/paineis/saldo.php"			=> "Saldo",
+                "/paineis/escala_parametro.php"	=> "Escalas"
 			] + $camposOcultosProdução,
 			"relatórios" => [
 					"/relatorio_pontos.php" => "Pontos"
@@ -263,16 +267,27 @@ if ($showComunicado) {
         ."<!-- FIM HEADER MENU -->"
     ;
 
+    /*
     $hasTable = false;
+    global $conn;
     if(isset($conn)){
-        $chk = mysqli_query($conn, "SHOW TABLES LIKE 'comunicados'");
+        $chk = mysqli_query($conn, "SHOW TABLES LIKE 'comunicado_interno'");
         if($chk){ $hasTable = mysqli_num_rows($chk) > 0; }
     }
     if($hasTable && !empty($_SESSION["user_tx_nivel"])){
-        $destino = (is_int(strpos($_SESSION["user_tx_nivel"], "Administrador")) || is_int(strpos($_SESSION["user_tx_nivel"], "Super Administrador")))? "Administrador": "Funcionário";
-        $comu = mysqli_fetch_assoc(query("SELECT comu_tx_texto FROM comunicados WHERE comu_tx_destino = ? ORDER BY comu_nb_id DESC LIMIT 1", "s", [$destino]));
-        if(!empty($comu["comu_tx_texto"])){
-            echo "<div class='container-fluid menu-alert-container'><div class='alert alert-info menu-alert' role='alert'><i class='fa fa-info-circle menu-alert__icon'></i><div class='menu-alert__text'>".nl2br(htmlspecialchars($comu["comu_tx_texto"])) ."</div></div></div>";
+        $nivel = trim($_SESSION["user_tx_nivel"]);
+        $comu = mysqli_fetch_assoc(query("SELECT coin_tx_titulo, coin_tx_texto, coin_tx_tipo_conteudo, coin_tx_imagem FROM comunicado_interno WHERE coin_tx_status = 'ativo' AND (FIND_IN_SET('todos', coin_tx_dest_perfis) > 0 OR FIND_IN_SET(?, coin_tx_dest_perfis) > 0) ORDER BY coin_nb_id DESC LIMIT 1", "s", [$nivel]));
+        
+        if(!empty($comu)){
+            echo "<div class='container-fluid menu-alert-container'><div class='alert alert-info menu-alert' role='alert'><i class='fa fa-info-circle menu-alert__icon'></i><div class='menu-alert__text'>";
+            echo "<strong>".htmlspecialchars($comu["coin_tx_titulo"])."</strong><br>";
+            if($comu["coin_tx_tipo_conteudo"] == "imagem" && !empty($comu["coin_tx_imagem"])){
+                 echo "<a href='".$comu["coin_tx_imagem"]."' target='_blank' class='alert-link'>Visualizar Imagem do Comunicado</a>";
+            } else {
+                 echo $comu["coin_tx_texto"];
+            }
+            echo "</div></div></div>";
         }
     }
+    */
 	

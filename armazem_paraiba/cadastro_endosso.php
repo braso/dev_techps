@@ -520,7 +520,20 @@ function cadastrar(){
     }else{
         $_POST["extraPago"] = $max50Auto;
     }
-    $aPagar = calcularHorasAPagar($diffSaldo, $saldoBruto, $he50, $he100, $max50Auto, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+
+    $saldoPeriodoParaCalculo = $diffSaldo;
+    // Ensure diffSaldo is treated as 00:00 if it is equivalent
+    $diffSaldoClean = operarHorarios([$diffSaldo], "+");
+    if($diffSaldoClean == "00:00" && $saldoBruto[0] != "-"){
+        $saldoPeriodoParaCalculo = $saldoBruto;
+    }
+
+    if($pagarExtras){
+        $aPagar = calcularHorasAPagar($saldoPeriodoParaCalculo, $saldoBruto, $he50, $he100, $max50Auto, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+    }else{
+        $aPagar = ["00:00", "00:00"];
+    }
+    
     $saldoFinal = operarHorarios([$saldoBruto, "-".$aPagar[0], "-".$aPagar[1]], "+");
 			
 		if($diffSaldo[0] == "-"){
@@ -726,7 +739,20 @@ function index(){
 
 		cabecalho("Cadastro de Endosso");
 
-		$condicoes_motorista = "AND enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')";
+        $sqlPermission = " AND EXISTS (
+            SELECT 1 FROM user 
+            JOIN usuario_perfil up ON up.user_nb_id = user.user_nb_id 
+            JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id 
+            JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id 
+            WHERE user.user_nb_entidade = entidade.enti_nb_id
+              AND user.user_tx_status = 'ativo'
+              AND up.ativo = 1
+              AND pmi.perm_ver = 1
+              AND mi.menu_tx_ativo = 1
+              AND mi.menu_tx_path = '/batida_ponto.php'
+        )";
+
+		$condicoes_motorista = "AND enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') $sqlPermission";
 		if($_SESSION["user_tx_nivel"] != "Super Administrador" && !temPermissaoMenu('/cadastro_empresa.php')){
 			$condicoes_motorista .= " AND enti_nb_empresa = ".$_SESSION["user_nb_empresa"];
 		}
@@ -860,7 +886,8 @@ function index(){
 		];
         $queryBase = (
             "SELECT ".implode(", ", array_values($gridFields)).
-            " FROM endosso JOIN entidade ON endosso.endo_nb_entidade = entidade.enti_nb_id"
+            " FROM endosso JOIN entidade ON endosso.endo_nb_entidade = entidade.enti_nb_id" .
+            " WHERE 1=1 $sqlPermission"
         );
 
         $actions = criarIconesGrid(
