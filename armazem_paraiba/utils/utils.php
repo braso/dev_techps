@@ -3,7 +3,11 @@
  * Configura os botões de Editar (Lupa) e Excluir (Lixeira/SweetAlert)
  * Retorna um array com as tags HTML e o JavaScript necessário.
  */
-function gerarAcoesComConfirmacao($arquivoFuncaoEditarExcluir, $funcaoEditar, $funcaoExcluir) {
+function gerarAcoesComConfirmacao(
+    $arquivoFuncaoEditarExcluir, 
+    $funcaoEditar, 
+    $funcaoExcluir, 
+    $mensagemExcluir="Excluir registro código:") {
     
     //Cria a estrutura padrão usando a função do sistema legado
     $actions = criarIconesGrid(
@@ -35,7 +39,7 @@ function gerarAcoesComConfirmacao($arquivoFuncaoEditarExcluir, $funcaoEditar, $f
 
             Swal.fire({
                 title: "Tem certeza?",
-                text: "Excluir registro código: " + id,
+                text: "' . $mensagemExcluir . ' " + id,
                 icon: "warning",
                 showCancelButton: true,
                 confirmButtonColor: "#d33",

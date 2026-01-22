@@ -8,6 +8,7 @@
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
 */
+	include_once "check_permission.php";
 	include "conecta.php";
 	
 
@@ -1575,10 +1576,9 @@
 
 		carregarJS();
 	}
-
+	
 function index(){
 		
-		include "check_permission.php";
         // APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
         verificaPermissao('/cadastro_funcionario.php');
 		
