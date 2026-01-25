@@ -294,6 +294,21 @@
 						foreach($endossoMes["endo_tx_pontos"] as $row){
 							$day = DateTime::createFromFormat("d/m/Y", $row["data"]);
 							if($day >= $startDate && $day <= $endDate){
+								// INICIO Lógica de Tolerância
+								if(!empty($motorista["para_tx_tolerancia"]) && isset($row["diffSaldo"])){
+									$tolerancia = intval($motorista["para_tx_tolerancia"]);
+									$saldoDiarioStr = strip_tags($row["diffSaldo"]);
+									$parts = explode(":", $saldoDiarioStr);
+									
+									if(count($parts) == 2){
+										$minutos = intval($parts[0]) * 60 + ($parts[0][0] == '-' ? -1 : 1) * intval($parts[1]);
+										if(abs($minutos) <= $tolerancia){
+											$row["diffSaldo"] = "00:00";
+										}
+									}
+								}
+								// FIM Lógica de Tolerância
+
 								$diasEndossados++;
 								$rows[] = $row;
 							}
@@ -310,6 +325,21 @@
 				$qtdDiasNaoJustificados = 0;
 				for ($date = $startDate; $date <= $endDate; $date->modify("+1 day")){
 					$aDetalhado = diaDetalhePonto($motorista, $date->format("Y-m-d"));
+
+					// INICIO Lógica de Tolerância
+					if(!empty($motorista["para_tx_tolerancia"]) && isset($aDetalhado["diffSaldo"])){
+						$tolerancia = intval($motorista["para_tx_tolerancia"]);
+						$saldoDiarioStr = strip_tags($aDetalhado["diffSaldo"]);
+						$parts = explode(":", $saldoDiarioStr);
+						
+						if(count($parts) == 2){
+							$minutos = intval($parts[0]) * 60 + ($parts[0][0] == '-' ? -1 : 1) * intval($parts[1]);
+							if(abs($minutos) <= $tolerancia){
+								$aDetalhado["diffSaldo"] = "00:00";
+							}
+						}
+					}
+					// FIM Lógica de Tolerância
 					
 					/* Descomentar ao conseguir adaptar a lógica da página de nao_conformidade para espelho_ponto
 						if(!empty($_POST["naoConformidade"])){

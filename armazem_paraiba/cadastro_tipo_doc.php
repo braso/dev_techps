@@ -14,12 +14,15 @@
 
     function modificarTipoDoc(){
 		$a_mod = carregar("tipos_documentos", $_POST["id"]);
-		[$_POST["id"], $_POST["nome"], $_POST["setor"], $_POST["vencimento"], $_POST["assinatura"], $_POST["sub-setor"]] = [$a_mod["tipo_nb_id"], $a_mod["tipo_tx_nome"], $a_mod["tipo_nb_grupo"],$a_mod["tipo_tx_vencimento"], $a_mod["tipo_tx_assinatura"], $a_mod["tipo_nb_sbgrupo"], $a_mod["tipo_tx_status"]];
+		[$_POST["id"], $_POST["nome"], $_POST["setor"], $_POST["vencimento"], $_POST["assinatura"], $_POST["sub-setor"], $_POST["status"]] = [$a_mod["tipo_nb_id"], $a_mod["tipo_tx_nome"], $a_mod["tipo_nb_grupo"],$a_mod["tipo_tx_vencimento"], $a_mod["tipo_tx_assinatura"], $a_mod["tipo_nb_sbgrupo"], $a_mod["tipo_tx_status"]];
 		layout_tipo_doc();
 		exit;
 	}
 
     function cadastra_tipo_doc() {
+        $logEntry = date("Y-m-d H:i:s") . " POST: " . print_r($_POST, true) . "\n";
+        file_put_contents(__DIR__ . "/debug_log.txt", $logEntry, FILE_APPEND);
+
         $_POST["nome"] = trim($_POST["nome"] ?? "");
         $_POST["vencimento"] = in_array($_POST["vencimento"] ?? "nao", ["sim","nao"]) ? $_POST["vencimento"] : "nao";
         $_POST["assinatura"] = in_array($_POST["assinatura"] ?? "nao", ["sim","nao"]) ? $_POST["assinatura"] : "nao";
@@ -70,16 +73,14 @@
             "tipo_nb_grupo" => $setorId,
             "tipo_nb_sbgrupo" => $subSetorId,
             "tipo_tx_vencimento" => $_POST["vencimento"],
+            "tipo_tx_assinatura" => $_POST["assinatura"],
             "tipo_tx_status" => "ativo"
         ];
 
         if(!empty($_POST["id"])){
-            error_log("cadastro_tipo_doc atualizar: ".json_encode($novoTipo));
             atualizar("tipos_documentos", array_keys($novoTipo), array_values($novoTipo), $_POST["id"]);
         }else{
-            error_log("cadastro_tipo_doc inserir: ".json_encode($novoTipo));
             $res = inserir("tipos_documentos", array_keys($novoTipo), array_values($novoTipo));
-            error_log("cadastro_tipo_doc inserir res: ".json_encode($res));
             if(gettype($res[0]) == "object"){
                 set_status("ERRO: ".$res[0]->getMessage());
                 layout_tipo_doc();
@@ -161,14 +162,18 @@
 
 		cabecalho("Cadastro de Tipo de Documento");
 
-		if (!empty($_POST["id"])) {
+		if (empty($_POST["id"])) {
 			$campoStatus = combo("Status", "busca_banco", $_POST["busca_banco"]?? "", 2, [ "ativo" => "Ativo", "inativo" => "Inativo"]);
 		}
 		
+        if($_POST["vencimento"] == '1') $_POST["vencimento"] = 'sim';
+        if($_POST["vencimento"] == '0') $_POST["vencimento"] = 'nao';
 		if (empty($_POST["vencimento"])) {
 			$_POST["vencimento"] = "nao";
 		}
 
+        if($_POST["assinatura"] == '1') $_POST["assinatura"] = 'sim';
+        if($_POST["assinatura"] == '0') $_POST["assinatura"] = 'nao';
 		if (empty($_POST["assinatura"])) {
 			$_POST["assinatura"] = "nao";
 		}
@@ -256,7 +261,7 @@
         $queryBase = 
             "SELECT ".implode(", ", array_values($gridFields))." FROM tipos_documentos"
             ." LEFT JOIN grupos_documentos ON grupos_documentos.grup_nb_id = tipos_documentos.tipo_nb_grupo"
-            ." LEFT JOIN sbgrupos_documentos ON grup_nb_id = sbgr_nb_idgrup"
+            ." LEFT JOIN sbgrupos_documentos ON tipos_documentos.tipo_nb_sbgrupo = sbgrupos_documentos.sbgr_nb_id"
         ;
 
         $actions = criarIconesGrid(

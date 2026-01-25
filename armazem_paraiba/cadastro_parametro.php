@@ -1010,7 +1010,9 @@
 			campo("Nome", 	"busca_nome_like", $_POST["busca_nome_like"]?? "", 4, "", "maxlength='65'"),
       		combo("Acordo", "busca_acordo", $_POST["busca_acordo"]?? "", 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
 			combo("Banco de Horas", "busca_banco", $_POST["busca_banco"]?? "", 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
-			// combo("Vencidos", "busca_vencidos", $_POST["busca_vencidos"]?? "", 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"])
+			campo("Categoria", "busca_categoria", $_POST["busca_categoria"]?? "", 2),
+			campo("Sindicato", "busca_sindicato", $_POST["busca_sindicato"]?? "", 2),
+			combo("Turno", "busca_turno", $_POST["busca_turno"]?? "", 2, ["" => "Todos", "M" => "Manhã", "T" => "Tarde", "V" => "Vespertino", "N" => "Noite", "D" => "Diurno"])
 		];
 
 		$botoes = [
@@ -1032,6 +1034,9 @@
 				"ACORDO" 				=> "para_tx_acordo",
 				"INÍCIO" 				=> "DATE_FORMAT(para_tx_inicioAcordo, '%d/%m/%Y %H:%i:%s')",
 				"FIM" 					=> "DATE_FORMAT(para_tx_fimAcordo, '%d/%m/%Y %H:%i:%s')",
+				"CATEGORIA" 			=> "para_tx_categoria",
+				"SINDICATO" 			=> "para_tx_sindicato",
+				"TURNO" 				=> "para_tx_turno",
 				"STATUS" 				=> "para_tx_status"
 			];
 
@@ -1039,7 +1044,10 @@
 				"busca_codigo"		=> "para_nb_id",
 				"busca_nome_like"	=> "para_tx_nome",
 				"busca_acordo"		=> "para_tx_acordo",
-				"busca_banco"		=> "para_tx_banco"
+				"busca_banco"		=> "para_tx_banco",
+				"busca_categoria"	=> "para_tx_categoria",
+				"busca_sindicato"	=> "para_tx_sindicato",
+				"busca_turno"		=> "para_tx_turno"
 			];
 
 			$queryBase = 

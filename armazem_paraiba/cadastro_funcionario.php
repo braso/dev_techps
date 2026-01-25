@@ -84,7 +84,7 @@
 				function filtrarSubSetor(id) {
 					var el = document.getElementsByName('subSetor')[0];
 					if (!el) return;
-					el.innerHTML = '<option value=\'\' disabled selected>Selecione</option>';
+					el.innerHTML = '<option value=\'\' selected>Selecione</option>';
 					el.disabled = true;
 					if (!id) { el.parentElement.style.display = 'none'; return; }
 					var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=sbgrupos_documentos&limite=200&condicoes=' + encodeURI('AND sbgr_nb_idgrup = '+id);
@@ -127,7 +127,7 @@
 					var setorBusca = document.getElementsByName('busca_setor')[0];
 					var el = document.getElementsByName('busca_subsetor')[0];
 					if (!setorBusca || !el) return;
-					el.innerHTML = '<option value=\'\' disabled selected>Selecione</option>';
+					el.innerHTML = '<option value=\'\' selected>Selecione</option>';
 					var id = setorBusca.value;
 					if (!id) { el.disabled = true; return; }
 					var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=sbgrupos_documentos&limite=200&condicoes=' + encodeURI('AND sbgr_nb_idgrup = '+id);

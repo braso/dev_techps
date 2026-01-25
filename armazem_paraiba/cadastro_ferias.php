@@ -10,18 +10,18 @@
 		echo 
 			"<script>
 					function selecionaMotorista(idEmpresa) {
-					let condicoes = encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")' +
+					let condicoes = encodeURI('AND enti_tx_status = \"ativo\" AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")' +
 						(idEmpresa > 0 ? ' AND enti_nb_empresa = \"' + idEmpresa + '\"' : '')
 					);
 
-					if ($('.busca_motorista').data('select2')) {// Verifica se o elemento está usando Select2 antes de destruí-lo
-						$('.busca_motorista').select2('destroy');
-						$('.busca_motorista').html('');
-						$('.busca_motorista').val('');
+					if ($('.motorista').data('select2')) {// Verifica se o elemento está usando Select2 antes de destruí-lo
+						$('.motorista').select2('destroy');
+						$('.motorista').html('');
+						$('.motorista').val('');
 					}
 
 					$.fn.select2.defaults.set('theme', 'bootstrap');
-					$('.busca_motorista').select2({
+					$('.motorista').select2({
 						language: 'pt-BR',
 						placeholder: 'Selecione um item',
 						allowClear: true,
@@ -180,7 +180,7 @@
 				4,
 				"entidade",
 				"",
-				" AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')",
+				" AND enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')",
 				"enti_tx_matricula"
 			),
 			campo("Período*", "periodo_ferias", ($_POST["periodo_ferias"]?? ""),3, "MASCARA_PERIODO_SEM_LIMITE"),

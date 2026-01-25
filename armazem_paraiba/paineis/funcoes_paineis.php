@@ -196,6 +196,11 @@ function criar_relatorio_saldo() {
 					. ");"
 			), MYSQLI_ASSOC);
 
+            // Ordenar endossos por data 'ate' para garantir ordem cronológica
+            usort($endossos, function($a, $b) {
+                return strtotime($a['endo_tx_ate']) - strtotime($b['endo_tx_ate']);
+            });
+
 			$statusEndosso = "N";
 			if (count($endossos) >= 1) {
 				$statusEndosso = "E";
@@ -240,8 +245,12 @@ function criar_relatorio_saldo() {
 				"saldoFinal" 		=> "00:00"
 			];
 
+			// Inicializar saldoFinal
+			$totaisMot["saldoFinal"] = $saldoAnterior;
+
 			for ($dia = new DateTime($dataMes->format("Y-m-d")); $dia <= $dataFim; $dia->modify("+1 day")) {
 				$diaPonto = diaDetalhePonto($motorista, $dia->format("Y-m-d"));
+				
 				//Formatando informações{
 				foreach (array_keys($diaPonto) as $f) {
 					if (in_array($f, ["data", "diaSemana"])) {
@@ -268,20 +277,10 @@ function criar_relatorio_saldo() {
 				$totaisMot["HESabado"]         = somarHorarios([$totaisMot["HESabado"],         $diaPonto["he100"]]);
 				$totaisMot["adicionalNoturno"] = somarHorarios([$totaisMot["adicionalNoturno"], $diaPonto["adicionalNoturno"]]);
 				$totaisMot["esperaIndenizada"] = somarHorarios([$totaisMot["esperaIndenizada"], $diaPonto["esperaIndenizada"]]);
-                $totaisMot["saldoPeriodo"]     = somarHorarios([$totaisMot["saldoPeriodo"],     $diaPonto["diffSaldo"]]);
-                // saldoFinal deve refletir o resultado do último endosso do período, se existir
-                if (count($endossos) >= 1) {
-                    $ultimoDoPeriodo = $endossos[count($endossos) - 1];
-                    $csvPath = $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$ultimoDoPeriodo["endo_tx_filename"].".csv";
-                    if (!empty($ultimoDoPeriodo["endo_tx_filename"]) && file_exists($csvPath)) {
-                        $endossoPeriodo = lerEndossoCSV($ultimoDoPeriodo["endo_tx_filename"]);
-                        $totaisMot["saldoFinal"] = $endossoPeriodo["totalResumo"]["saldoFinal"];
-                    } else {
-                        $totaisMot["saldoFinal"] = somarHorarios([$saldoAnterior, $totaisMot["saldoPeriodo"]]);
-                    }
-                } else {
-                    $totaisMot["saldoFinal"]       = somarHorarios([$saldoAnterior,                 $totaisMot["saldoPeriodo"]]);
-                }
+                
+				$totaisMot["saldoPeriodo"]     = somarHorarios([$totaisMot["saldoPeriodo"],     $diaPonto["diffSaldo"]]);
+                
+                $totaisMot["saldoFinal"] = somarHorarios([$totaisMot["saldoFinal"], $diaPonto["diffSaldo"]]);
 			}
 
 			$row = [
@@ -503,11 +502,11 @@ function criar_relatorio_endosso() {
 							$endossoCompleto["endo_tx_max50APagar"] = "00:00";
 						}
 
-						$aPagar2 = calcularHorasAPagar(strip_tags($endossoCompleto["totalResumo"]["diffSaldo"]), $endossoCompleto["totalResumo"]["saldoBruto"] ?? "00:00", $endossoCompleto["totalResumo"]["he50"] ?? "00:00", 
-						$endossoCompleto["totalResumo"]["he100"]?? "00:00", $endossoCompleto["endo_tx_max50APagar"]?? "00:00", 
-						($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
-						$aPagar2 = operarHorarios($aPagar2, "+");
-						$totaisMot["saldoFinal"]        = operarHorarios([$endossoCompleto["totalResumo"]["saldoBruto"], $aPagar2], "-");
+						// $aPagar2 = calcularHorasAPagar(strip_tags($endossoCompleto["totalResumo"]["diffSaldo"]), $endossoCompleto["totalResumo"]["saldoBruto"] ?? "00:00", $endossoCompleto["totalResumo"]["he50"] ?? "00:00", 
+						// $endossoCompleto["totalResumo"]["he100"]?? "00:00", $endossoCompleto["endo_tx_max50APagar"]?? "00:00", 
+						// ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+						// $aPagar2 = operarHorarios($aPagar2, "+");
+						// $totaisMot["saldoFinal"]        = operarHorarios([$endossoCompleto["totalResumo"]["saldoBruto"], $aPagar2], "-");
 					}
 
 				$row = [

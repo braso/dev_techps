@@ -32,23 +32,34 @@
 		//}
 
 
+		$condCargoSetor = "";
+		if (!empty($_POST["busca_operacao"])) {
+			$condCargoSetor .= " AND enti_tx_tipoOperacao = ".intval($_POST["busca_operacao"]);
+		}
+		if (!empty($_POST["busca_setor"])) {
+			$condCargoSetor .= " AND enti_setor_id = ".intval($_POST["busca_setor"]);
+		}
+		if (!empty($_POST["busca_subsetor"])) {
+			$condCargoSetor .= " AND enti_subSetor_id = ".intval($_POST["busca_subsetor"]);
+		}
+
 		$motoristas = mysqli_fetch_all(query(
-			"SELECT DISTINCT enti_nb_id, entidade.*, parametro.para_tx_pagarHEExComPerNeg FROM entidade
+			"SELECT DISTINCT enti_nb_id, entidade.*, parametro.para_tx_pagarHEExComPerNeg, parametro.para_tx_tolerancia FROM entidade
 				JOIN endosso ON enti_nb_id = endo_nb_entidade
 				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
 				WHERE enti_tx_status = 'ativo' AND endo_tx_status = 'ativo'
 					".(!empty($_POST["busca_motorista"])? "AND enti_nb_id = {$_POST["busca_motorista"]}": "")."
 					AND enti_nb_empresa = {$_POST["busca_empresa"]}
 					AND enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário')
+					{$condCargoSetor}
 					AND endo_tx_mes = '{$_POST["busca_data"]}-01'
 				ORDER BY enti_tx_nome;"
 		), MYSQLI_ASSOC);
 
-		$qtdDiasEndossados = 0;
-
 		$date = new DateTime($_POST["busca_data"]);
 
 		for($f = 0; $f < count($motoristas); $f++){
+			$qtdDiasEndossados = 0;
 			$rows = [];
 
 			//Pegando e formatando registros dos dias{
@@ -65,6 +76,22 @@
 				for ($f2 = 0; $f2 < count($endossoCompleto["endo_tx_pontos"]); $f2++) {
 					$qtdDiasEndossados++;
 					$aDetalhado = $endossoCompleto["endo_tx_pontos"][$f2];
+
+					// INICIO Lógica de Tolerância
+					if(!empty($motoristas[$f]["para_tx_tolerancia"]) && isset($aDetalhado["diffSaldo"])){
+						$tolerancia = intval($motoristas[$f]["para_tx_tolerancia"]);
+						$saldoDiarioStr = strip_tags($aDetalhado["diffSaldo"]);
+						$parts = explode(":", $saldoDiarioStr);
+						
+						if(count($parts) == 2){
+							$minutos = intval($parts[0]) * 60 + ($parts[0][0] == '-' ? -1 : 1) * intval($parts[1]);
+							if(abs($minutos) <= $tolerancia){
+								$aDetalhado["diffSaldo"] = "00:00";
+							}
+						}
+					}
+					// FIM Lógica de Tolerância
+
 					array_shift($aDetalhado);
 					array_splice($aDetalhado, 10, 1); //Retira a coluna de "Jornada" que está entre "Repouso" e "Jornada Prevista"
 					$rows[] = $aDetalhado;
@@ -245,11 +272,22 @@
 
 		$motNaoEndossados = "FUNCIONÁRIO(S) NÃO ENDOSSADO(S): <br><br>";
 		
-		$sqlMotorista = "SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg, parametro.para_tx_inicioAcordo, parametro.para_nb_qDias, parametro.para_nb_qDias FROM entidade"
+		$condCargoSetor = "";
+		if (!empty($_POST["busca_operacao"])) {
+			$condCargoSetor .= " AND enti_tx_tipoOperacao = ".intval($_POST["busca_operacao"]);
+		}
+		if (!empty($_POST["busca_setor"])) {
+			$condCargoSetor .= " AND enti_setor_id = ".intval($_POST["busca_setor"]);
+		}
+		if (!empty($_POST["busca_subsetor"])) {
+			$condCargoSetor .= " AND enti_subSetor_id = ".intval($_POST["busca_subsetor"]);
+		}
+
+		$sqlMotorista = "SELECT entidade.*, parametro.para_tx_pagarHEExComPerNeg, parametro.para_tx_inicioAcordo, parametro.para_nb_qDias, parametro.para_tx_tolerancia FROM entidade"
 				." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
 				." WHERE enti_tx_status = 'ativo'"
 					." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
-					." AND enti_nb_empresa = ".$_POST["busca_empresa"]." ".$extra
+					." AND enti_nb_empresa = ".$_POST["busca_empresa"]." ".$extra.$condCargoSetor
 				." ORDER BY enti_tx_nome;";
 
 		$motoristas = mysqli_fetch_all(query($sqlMotorista), MYSQLI_ASSOC);
@@ -278,6 +316,22 @@
 
 				for ($i = 0; $i < count($endossoCompleto["endo_tx_pontos"]); $i++) {
 					$aDetalhado = $endossoCompleto["endo_tx_pontos"][$i];
+
+					// INICIO Lógica de Tolerância
+					if(!empty($motorista["para_tx_tolerancia"]) && isset($aDetalhado["diffSaldo"])){
+						$tolerancia = intval($motorista["para_tx_tolerancia"]);
+						$saldoDiarioStr = strip_tags($aDetalhado["diffSaldo"]);
+						$parts = explode(":", $saldoDiarioStr);
+						
+						if(count($parts) == 2){
+							$minutos = intval($parts[0]) * 60 + ($parts[0][0] == '-' ? -1 : 1) * intval($parts[1]);
+							if(abs($minutos) <= $tolerancia){
+								$aDetalhado["diffSaldo"] = "00:00";
+							}
+						}
+					}
+					// FIM Lógica de Tolerância
+
 					$rows[] = $aDetalhado;
 				}
 				$totalResumoGrid = $totalResumo;
@@ -551,7 +605,7 @@
 				"entidade", 
 				"", 
 				(!empty($_POST["busca_empresa"]) ? " AND enti_nb_empresa = {$_POST["busca_empresa"]}" : "")
-				." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
+				." AND enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
 				.$condCargoSetor
 				.($_POST["extraMotorista"]?? "").($extraEmpresaMotorista?? ""), 
 				"enti_tx_matricula"
