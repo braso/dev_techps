@@ -1590,20 +1590,20 @@ function index(){
 			$extraEmpresa = " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
 		}
 		
-		if(!empty($_POST["busca_cpf"])){
-			$_POST["busca_cpf"] = preg_replace( "/[^0-9]/is", "", $_POST["busca_cpf"]);
+		if(!empty($_POST["busca_cpf_like"])){
+			$_POST["busca_cpf_like"] = preg_replace( "/[^0-9]/is", "", $_POST["busca_cpf_like"]);
 		}
 
 		$camposBusca = [
 			campo("Código",						"busca_codigo",			(!empty($_POST["busca_codigo"])? $_POST["busca_codigo"]: ""), 1,"","maxlength='6'"),
 			campo("Nome",						"busca_nome_like",		(!empty($_POST["busca_nome_like"])? $_POST["busca_nome_like"]: ""), 2,"","maxlength='65'"),
 			campo("Matrícula",					"busca_matricula_like",	(!empty($_POST["busca_matricula_like"])? $_POST["busca_matricula_like"]: ""), 1,"","maxlength='20'"),
-			campo("CPF",						"busca_cpf",			(!empty($_POST["busca_cpf"])? $_POST["busca_cpf"]: ""), 2, "MASCARA_CPF"),
+			campo("CPF",						"busca_cpf_like",			(!empty($_POST["busca_cpf_like"])? $_POST["busca_cpf_like"]: ""), 2, "MASCARA_CPF"),
 			combo_bd("!Empresa",				"busca_empresa",		(!empty($_POST["busca_empresa"])? $_POST["busca_empresa"]: ""), 2, "empresa", "", $extraEmpresa),
 			combo("Ocupação",					"busca_ocupacao",		(!empty($_POST["busca_ocupacao"])? $_POST["busca_ocupacao"]: ""), 2, ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
 			combo("Convenção Padrão",			"busca_padrao",			(!empty($_POST["busca_padrao"])? $_POST["busca_padrao"]: ""), 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
 			combo_bd("!Parâmetros da Jornada", 	"busca_parametro", 		(!empty($_POST["busca_parametro"])? $_POST["busca_parametro"]: ""), 4, "parametro"),
-			combo("Status", 					"busca_status", 			(!empty($_POST["busca_status"])? $_POST["busca_status"]: "Todos"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
+			combo("Status", 					"busca_status", 			(isset($_POST["busca_status"])? $_POST["busca_status"]: "ativo"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
 			combo_bd("!Setor", 				"busca_setor", 			(!empty($_POST["busca_setor"])? $_POST["busca_setor"]: ""), 2, "grupos_documentos"),
             combo_bd("!Subsetor",            "busca_subsetor",        (!empty($_POST["busca_subsetor"]) ? $_POST["busca_subsetor"] : ""), 2, "sbgrupos_documentos", "", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " ORDER BY sbgr_tx_nome ASC")),
 			combo_bd("!Cargo", 				"busca_operacao", 		(!empty($_POST["busca_operacao"])? $_POST["busca_operacao"]: ""), 2, "operacao")
