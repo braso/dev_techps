@@ -487,6 +487,35 @@
 		}
 	}
 
+	function duplicarParametro(){
+		global $a_mod;
+		$a_mod = carregar("parametro", $_POST["id"]);
+
+		if($a_mod["para_tx_tipo"] == "escala"){
+			$escalaExistente = mysqli_fetch_assoc(query(
+				"SELECT * FROM escala WHERE esca_nb_parametro = {$_POST["id"]};"
+			));
+
+			if($escalaExistente){
+				$escalaExistente["diasEscala"] = mysqli_fetch_all(query(
+					"SELECT * FROM escala_dia WHERE esca_nb_escala = {$escalaExistente["esca_nb_id"]};"
+				), MYSQLI_ASSOC);
+
+				$diasEscala = [];
+				foreach($escalaExistente["diasEscala"] as $diaEscala){
+					$diasEscala[] = [$diaEscala["esca_tx_horaInicio"], $diaEscala["esca_tx_horaFim"], $diaEscala["esca_tx_intervaloInterno"]];
+				}
+				$a_mod = array_merge($a_mod, $escalaExistente);
+				$a_mod["diasEscala"] = $diasEscala;	
+			}
+		}
+
+		unset($a_mod['para_nb_id']);
+		unset($_POST['id']);
+		mostrarFormParametro();
+		exit;
+	}
+
 	function modificarParametro(){
 		global $a_mod;
 		$a_mod = carregar("parametro", $_POST["id"]);
@@ -1056,12 +1085,12 @@
 			;
 
 			$actions = criarIconesGrid(
-				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-				["cadastro_parametro.php", "cadastro_parametro.php"],
-				["modificarParametro()", "excluirParametro()"]
+				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-duplicate search-button", "glyphicon glyphicon-remove search-remove"],
+				["cadastro_parametro.php", "cadastro_parametro.php", "cadastro_parametro.php"],
+				["modificarParametro()", "duplicarParametro()", "excluirParametro()"]
 			);
 	
-			$actions["functions"][1] .= 
+			$actions["functions"][2] .= 
 				"esconderInativar('glyphicon glyphicon-remove search-remove', 8);"
 			;
 	

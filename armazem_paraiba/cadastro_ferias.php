@@ -40,6 +40,20 @@
 							}
 						}
 					});
+
+					// Live Search para o campo busca_nome_like
+					const buscaNome = document.getElementById('busca_nome_like');
+					if(buscaNome){
+						let timeout = null;
+						buscaNome.addEventListener('keyup', function() {
+							clearTimeout(timeout);
+							timeout = setTimeout(() => {
+								// Dispara o evento change que o gridDinamico escuta
+								const event = new Event('change');
+								this.dispatchEvent(event);
+							}, 500);
+						});
+					}
 				}
 			</script>"
 		;
@@ -233,7 +247,7 @@
 				"Funcionário" 			=> "enti_tx_nome",
 				"Início" 				=> "DATE_FORMAT(feri_tx_dataInicio, '%d/%m/%Y %H:%i:%s')",
 				"Fim" 					=> "DATE_FORMAT(feri_tx_dataFim, '%d/%m/%Y %H:%i:%s')",
-				"Qtd. Dias" 			=> "DATEDIFF(feri_tx_dataFim, feri_tx_dataInicio) AS qtdDias",
+				"Qtd. Dias" 			=> "(DATEDIFF(feri_tx_dataFim, feri_tx_dataInicio) + 1) AS qtdDias",
 				"STATUS" 				=> "feri_tx_status",
 			];
 	

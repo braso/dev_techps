@@ -149,7 +149,7 @@
 		} else {
 			
 			$linha = "
-				var empresaId = (urlArquivo.match(/\\/(\\d+)\\//) || [null,null])[1];
+				var empresaId = (row.urlArquivo.match(/\/(\d+)\//) || [null,null])[1];
 				var nomeEmpresa = (window.EMPRESA_NOMES && empresaId) ? window.EMPRESA_NOMES[empresaId] : (empresaId || 'Empresa');
 				var rowStyle = (totalNaEndossado === 0 ? 'background-color: lightgreen;' : '');
 				linha = '<tr style=\"'+rowStyle+'\">'
@@ -302,6 +302,7 @@
                                 dataType: 'json',
                                 success: function(data) {
                                     var row = data;
+									row.urlArquivo = url;
                                     // Filtros
                                     var ocSel = ocupacoesPermitidas;
                                     var opSel = operacaoPermitidas;
