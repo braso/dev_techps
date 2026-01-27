@@ -9,6 +9,8 @@
 .well-known
 ehthumbs.db
 Thumbs.db
+.agent
+.docs
 
 .env
 
