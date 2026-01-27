@@ -1,18 +1,40 @@
-.menu-dropdown > a:hover,
-.menu-dropdown.open > a {
-    background-color: #002855 !important;
+:root{
+    --cor-texto: #e2e2e2;
+    --cor-texto-hover: #ffffff;
 }
-/* Evita ficar marcado quando apenas ativo (sem hover/aberto) */
-.menu-dropdown.active > a {
+.menu-dropdown > a {
+    color: var(--cor-texto) !important;
     background-color: transparent !important;
+    transition: all 0.3s ease;
 }
-.classic-menu-dropdown ul.dropdown-menu li a i {
-    color: var(--sec-icon-color, inherit);
+
+.menu-dropdown.active > a {
+    background-color: bisque;
+    color: var(--cor-texto) !important;
 }
+
+.menu-dropdown > a:hover,  /* Mouse em cima de qualquer item */
+.menu-dropdown.open > a,   /* Menu aberto */
+.menu-dropdown.active > a:hover { /* Mouse em cima do item que já está ativo */
+    color: var(--cor-texto-hover) !important; 
+}
+
 /* Garante que os itens nao quebrem entre colunas */
 .dropdown-menu > li {
     break-inside: avoid;
     page-break-inside: avoid;
+    color: #ffffff;
+}
+
+.dd > a {
+    color: var(--cor-texto) !important;
+    text-decoration: none;
+    display: block;
+}
+
+.dd > a:hover {
+    color: var(--cor-texto-hover, #efefef) !important;
+    background-color: rgba(255, 255, 255, 0.1); 
 }
 
 /* Dropdown em duas colunas quando há muitos itens */
