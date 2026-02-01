@@ -30,6 +30,7 @@ deployment:
     - export PB_TRANSPORTES=/home/tech1694/public_html/gestaodeponto/pb_transportes
     - export ODONTOTANGARA=/home/tech1694/public_html/gestaodeponto/odontotangara
     - export CLINICA_GERLANE=/home/tech1694/public_html/gestaodeponto/clinica_gerlane
+    - export IRANEIDE_OLIVEIRA=/home/tech1694/public_html/gestaodeponto/iraneide_oliveira
 
 
 
@@ -58,3 +59,4 @@ deployment:
     - /bin/cp -R $DOMAIN $PB_TRANSPORTES
     - /bin/cp -R $DOMAIN $ODONTOTANGARA
     - /bin/cp -R $DOMAIN $CLINICA_GERLANE
+    - /bin/cp -R $DOMAIN $IRANEIDE_OLIVEIRA
