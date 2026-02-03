@@ -3,7 +3,10 @@
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	*/
-	include "conecta.php";
+	include_once "utils/utils.php";
+	include "check_permission.php";
+    include_once "load_env.php";
+    include_once "conecta.php";
 
 	function excluirEmpresa(){
 		remover("empresa",$_POST["id"]);
@@ -14,7 +17,7 @@
 	function excluirLogo(){
 		atualizar("empresa",array("empr_tx_logo"),[""],$_POST["idEntidade"]);
 		$_POST["id"]=$_POST["idEntidade"];
-		modificarEmpresa();
+		editarEmpresa();
 		exit;
 	}
 
@@ -87,7 +90,7 @@
 		if(!empty($errorMsg)){
 			set_status("ERRO: ".$errorMsg);
 			$_POST["id"] = $_POST["idRelacionado"];
-			modificarEmpresa();
+			editarEmpresa();
 			exit;
 		}
 
@@ -164,11 +167,12 @@
 		}
 
 		$_POST["id"] = $_POST["idRelacionado"];
-		modificarEmpresa();
+		editarEmpresa();
 		exit;
 	}
 
 	function excluir_documento() {
+<<<<<<< HEAD
 		$idArq = (int)$_POST['idArq'];
 		
 		if($idArq > 0) {
@@ -182,6 +186,14 @@
 		}
 		
 		modificarEmpresa();
+=======
+
+		$idArq = intval($_POST["idArq"] ?? 0);
+		query("DELETE FROM documento_empresa WHERE docu_nb_id = {$idArq}");
+		$empresaId = $_POST["idRelacionado"] ?? $_POST["idEmpresa"] ?? null;
+		$_POST["id"] = $empresaId;
+		editarEmpresa();
+>>>>>>> b4f3c426c0a502eb41030f587eda231e90f6c5ee
 		exit;
 	}
 	
@@ -195,7 +207,7 @@
 		if (empty($doc)) {
 			set_status("Registro não encontrado.");
 			$_POST["id"] = $_POST["idRelacionado"];
-			modificarEmpresa();
+			editarEmpresa();
 			exit;
 		}
 		$errorMsg = "";
@@ -265,7 +277,7 @@
 		if (!empty($errorMsg)) {
 			set_status("ERRO: ".$errorMsg);
 			$_POST["id"] = $doc["empr_nb_id"];
-			modificarEmpresa();
+			editarEmpresa();
 			exit;
 		}
 		$campos = ["docu_tx_nome","docu_tx_descricao","docu_tx_datavencimento","docu_tx_visivel","docu_tx_tipo","docu_nb_sbgrupo"];
@@ -282,11 +294,11 @@
 		atualizar("documento_empresa", $campos, $valores, $idDoc);
 		set_status("Registro atualizado com sucesso.");
 		$_POST["id"] = $doc["empr_nb_id"];
-		modificarEmpresa();
+		editarEmpresa();
 		exit;
 	}
 
-	function modificarEmpresa(){
+	function editarEmpresa(){
 		global $a_mod;
 
 		$a_mod=carregar("empresa", $_POST["id"]);
@@ -816,7 +828,7 @@
 			<iframe id=frame_cep style='display: none;'></iframe>
 			<form method='post' name='form_modifica' id='form_modifica'>
 				<input type='hidden' name='id' value=''>
-				<input type='hidden' name='acao' value='modificarEmpresa'>
+				<input type='hidden' name='acao' value='editarEmpresa'>
 			</form>
 			<form name='form_excluir_arquivo' method='post' action='cadastro_empresa.php'>
 				<input type='hidden' name='idEntidade' value=''>
@@ -839,27 +851,60 @@
 		}
 	}
 
+	function listarEmpresa() {
+        $extra = 
+            ((!empty($_POST["busca_codigo"]))?          " AND empr_nb_id = {$_POST["busca_codigo"]}" : "").
+            ((!empty($_POST["busca_nome_like"]))?       " AND empr_tx_nome LIKE '%{$_POST["busca_nome_like"]}%'" : "").
+            ((!empty($_POST["busca_fantasia_like"]))?   " AND empr_tx_fantasia LIKE '%{$_POST["busca_fantasia_like"]}%'" : ""). // Corrigi faltando % no final
+            ((!empty($_POST["busca_cnpj"]))?            " AND empr_tx_cnpj = '{$_POST["busca_cnpj"]}'" : "").
+            ((!empty($_POST["busca_uf"]))?              " AND cida_tx_uf = '{$_POST["busca_uf"]}'" : "")
+        ;
+
+        if(empty($_POST["busca_status"])){
+            $extra .= " AND empr_tx_status = 'ativo'";
+        }elseif(!empty($_POST["busca_status"])){
+            $extra .= " AND empr_tx_status = '{$_POST["busca_status"]}'";
+        }
+
+        $gridFields = [
+            "CÓDIGO"        => "empr_nb_id",
+            "NOME"          => "IF(empr_tx_Ehmatriz = 'sim', CONCAT('<i class=\"fa fa-star\" aria-hidden=\"true\"></i> ', empr_tx_nome), empr_tx_nome) AS empr_tx_nome",
+            "FANTASIA"      => "empr_tx_fantasia",
+            "CPF/CNPJ"      => "empr_tx_cnpj",
+            "CIDADE/UF"     => "CONCAT('[', cida_tx_uf, '] ', cida_tx_nome) AS ufCidade",
+            "STATUS"        => "empr_tx_status"
+        ];
+
+        $camposBusca = [
+            "busca_codigo"          => "empr_nb_id",
+            "busca_nome_like"       => "empr_tx_nome",
+            "busca_fantasia_like"   => "empr_tx_fantasia",
+            "busca_cnpj"            => "empr_tx_cnpj",
+            "busca_uf"              => "cida_tx_uf",
+            "busca_status"          => "empr_tx_status"
+        ];
+
+        $queryBase = "SELECT ".implode(", ", array_values($gridFields))." FROM empresa
+            JOIN cidade ON empr_nb_cidade = cida_nb_id";
+        
+        $queryBase .= $extra;
+
+        $configuracao = gerarAcoesComConfirmacao(
+            "cadastro_empresa.php", 
+            "editarEmpresa()", 
+            "excluirEmpresa" 
+        );
+    
+        $gridFields["actions"] = $configuracao["tags"];
+        $jsFunctions = $configuracao["js"];
+
+        echo gridDinamico("tabelaEmpresas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+    };
+
     function index(){
-        	//ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
-		include "check_permission.php";
-		// APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
-		verificaPermissao('/cadastro_empresa.php');
 		
+		verificaPermissao('/cadastro_empresa.php');
         cabecalho("Cadastro Empresa/Filial");
-
-		$extra = 
-			((!empty($_POST["busca_codigo"]))? 			" AND empr_nb_id = {$_POST["busca_codigo"]}'": "").
-			((!empty($_POST["busca_nome_like"]))? 		" AND empr_tx_nome LIKE '%{$_POST["busca_nome_like"]}%'": "").
-			((!empty($_POST["busca_fantasia_like"]))? 	" AND empr_tx_fantasia LIKE '%{$_POST["busca_fantasia_like"]}'": "").
-			((!empty($_POST["busca_cnpj"]))? 			" AND empr_tx_cnpj = '{$_POST["busca_cnpj"]}'": "").
-			((!empty($_POST["busca_uf"]))? 				" AND cida_tx_uf = '{$_POST["busca_uf"]}'": "")
-		;
-
-		if(empty($_POST["busca_status"])){
-			$extra .= " AND empr_tx_status = 'ativo'";
-		}elseif(!empty($_POST["busca_status"])){
-			$extra .= " AND empr_tx_status = '{$_POST["busca_status"]}'";
-		}
 
 		$c = [
 			campo("Código",			"busca_codigo",			($_POST["busca_codigo"]?? ""),			2, "MASCARA_NUMERO",	"maxlength='6' min='0'"),
@@ -880,46 +925,7 @@
 		echo linha_form($c);
 		echo fecha_form($botao);
 
-		//Configuração da tabela dinâmica{
-			$gridFields = [
-				"CÓDIGO" 		=> "empr_nb_id",
-				"NOME" 			=> "IF(empr_tx_Ehmatriz = 'sim', CONCAT('<i class=\"fa fa-star\" aria-hidden=\"true\"></i> ', empr_tx_nome), empr_tx_nome) AS empr_tx_nome",
-				"FANTASIA" 		=> "empr_tx_fantasia",
-				"CPF/CNPJ" 		=> "empr_tx_cnpj",
-				"CIDADE/UF" 	=> "CONCAT('[', cida_tx_uf, '] ', cida_tx_nome) AS ufCidade",
-				"STATUS" 		=> "empr_tx_status"
-			];
-			$camposBusca = [
-				"busca_codigo" 			=> "empr_nb_id",
-				"busca_nome_like"		=> "empr_tx_nome",
-				"busca_fantasia_like" 	=> "empr_tx_fantasia",
-				"busca_cnpj" 			=> "empr_tx_cnpj",
-				"busca_uf" 				=> "cida_tx_uf",
-				"busca_status" 			=> "empr_tx_status"
-			];
-			$queryBase = (
-				"SELECT ".implode(", ", array_values($gridFields))." FROM empresa
-					JOIN cidade ON empr_nb_cidade = cida_nb_id"
-			);
+        listarEmpresa();
 
-
-			$actions = criarIconesGrid(
-				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-				["cadastro_empresa.php", "cadastro_empresa.php"],
-				["modificarEmpresa()", "excluirEmpresa()"]
-			);
-			$actions["functions"][1] .= "esconderInativar('glyphicon glyphicon-remove search-remove', 5);";
-
-			$gridFields["actions"] = $actions["tags"];
-
-			$jsFunctions =
-				"const funcoesInternas = function(){
-					".implode(" ", $actions["functions"])."
-				}"
-			;
-
-			echo gridDinamico("tabelaEmpresas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
-		//}
-
-		rodape();
-	}
+        rodape();
+	};

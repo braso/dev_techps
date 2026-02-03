@@ -152,7 +152,6 @@ form .row{
     }
 }
 
-<<<<<<< HEAD
 /* ============================================================
    CORES PERSONALIZADAS DOS BOTÕES DE PONTO
    ============================================================ */
@@ -240,7 +239,7 @@ form .row{
     background-color: #e12330 !important;
     border-color: #e12330 !important;
 }
-=======
+
 .btn.blue {
     background-color: #3598dc;
     color: white;
@@ -280,4 +279,3 @@ form .row{
 .btn.cyan:hover {
     background-color: #147b75;
 }
->>>>>>> ProducaoCpanel

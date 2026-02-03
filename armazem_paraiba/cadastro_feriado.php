@@ -3,7 +3,10 @@
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	//*/
-	include "conecta.php";
+	include_once "check_permission.php";
+    include_once "load_env.php";
+	include_once "utils/utils.php";
+    include_once "conecta.php";
 
 
 	function carregaJS(){
@@ -58,7 +61,7 @@
 		exit;
 	}
 
-	function modificarFeriado(){
+	function editarFeriado(){
 		$a_mod = carregar("feriado", $_POST["id"]);
 		
 		[$_POST["id"], $_POST["nome"], $_POST["data"], $_POST["uf"], $_POST["cidade"]] = [$a_mod["feri_nb_id"], $a_mod["feri_tx_nome"], $a_mod["feri_tx_data"], $a_mod["feri_tx_uf"], $a_mod["feri_nb_cidade"]];
@@ -152,113 +155,91 @@
 		carregaJS();
 	}
 
+	function listarFeriados() {
+        $extra = 
+             (!empty($_POST["busca_codigo"])?       " AND feri_nb_id LIKE '%{$_POST["busca_codigo"]}%'": "")
+            .(!empty($_POST["busca_nome_like"])?    " AND feri_tx_nome LIKE '%{$_POST["busca_nome_like"]}%'": "")
+            .(!empty($_POST["busca_uf"])?           " AND feri_tx_uf = '{$_POST["busca_uf"]}'": "")
+            .(!empty($_POST["busca_cidade"])?       " AND feri_nb_cidade = '{$_POST["busca_cidade"]}'": "")
+        ;
+
+        $gridFields = [
+            "CÓDIGO"    => "feri_nb_id",
+            "NOME"      => "feri_tx_nome",
+            "DATA"      => "DATE_FORMAT(feri_tx_data, '%d/%m/%Y %H:%i:%s')",
+            "ESTADUAL"  => "feri_tx_uf",
+            "MUNICIPAL" => "cida_tx_nome",
+        ];
+
+        $camposBusca = [
+            "busca_codigo"      => "feri_nb_id",
+            "busca_nome_like"   => "feri_tx_nome",
+            "busca_uf"          => "feri_tx_uf",
+            "busca_cidade"      => "cida_nb_id",
+            "busca_status"      => "feri_tx_status",
+        ];
+
+        $queryBase = "SELECT ".implode(", ", array_values($gridFields))." FROM feriado
+                LEFT JOIN cidade ON cida_nb_id = feri_nb_cidade";
+        
+        $queryBase .= $extra;
+
+        $configuracao = gerarAcoesComConfirmacao(
+            "cadastro_feriado.php", 
+            "editarFeriado()", 
+            "excluirFeriado" 
+        );
+
+        $gridFields["actions"] = $configuracao["tags"];
+
+        $jsFunctions = "
+            orderCol = 'feri_tx_data DESC';
+            " . $configuracao["js"];
+
+        echo gridDinamico("tabelaFeriados", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+    }
+
 	function index(){
 
-		function formataData($data){
-			return date("d/m/Y", strtotime($data));
-		}
-		//ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
-		include "check_permission.php";
-		// APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
 		verificaPermissao('/cadastro_feriado.php');
-		
 		cabecalho("Cadastro de Feriado");
 
-		echo "<style>
-		form > div.row > div:nth-child(9){
-		    display: none;
-		}
-		</style>";
+        // CSS Específico desta tela
+        echo "<style>
+            form > div.row > div:nth-child(9){ display: none; }
+        </style>";
 
-		if(!isset($_POST["busca_status"])){
-			$_POST["busca_status"] = "ativo";
-		}
+        // --- FORMULÁRIO DE BUSCA ---
+        if(!isset($_POST["busca_status"])){
+            $_POST["busca_status"] = "ativo";
+        }
 
-		$extra = "";
+        $estados = getUFs();
+        $estados[""] = "Todos";
 
-		$extra .= 
-			 (!empty($_POST["busca_codigo"])? 		" AND feri_nb_id LIKE '%{$_POST["busca_codigo"]}%'": "")
-			.(!empty($_POST["busca_nome_like"])?	" AND feri_tx_nome LIKE '%{$_POST["busca_nome_like"]}%'": "")
-			.(!empty($_POST["busca_uf"])? 			" AND feri_tx_uf = '{$_POST["busca_uf"]}'": "")
-			.(!empty($_POST["busca_cidade"])? 		" AND feri_nb_cidade = '{$_POST["busca_cidade"]}'": "")
-		;
+        $campos = [ 
+            campo("Código",     "busca_codigo",     (empty($_POST["busca_codigo"])? "": $_POST["busca_codigo"]), 2, "MASCARA_NUMERO", "maxlength='6' min='0'"),
+            campo("Nome",       "busca_nome_like",  (empty($_POST["busca_nome_like"])? "": $_POST["busca_nome_like"]), 4, "", "maxlength='45'"),
+            combo("Estado",     "busca_uf",         (empty($_POST["busca_uf"])? "": $_POST["busca_uf"]), 2, $estados, "onchange=selecionaMunicipio(this.value)"),
+            combo_net("Município", "busca_cidade",  (empty($_POST["busca_cidade"])? "": $_POST["busca_cidade"]), 4, "cidade"),
+            combo("Status",     "busca_status",     (empty($_POST["busca_status"])? "": $_POST["busca_status"]),    2, ["ativo" => "Ativo"])
+        ];
 
-		$estados = getUFs();
-		$estados[""] = "Todos";
+        $botoes = [ 
+            botao("Buscar", "index"),
+            botao("Limpar Filtro", "limparFiltros"),
+            botao("Inserir", "layout_feriado", "", "", "", "", "btn btn-success")
+        ];
+        
+        echo abre_form();
+        echo linha_form($campos);
+        echo fecha_form($botoes);
 
-		// $cidades = mysqli_fetch_all(query(
-		// 	"SELECT cida_nb_id, cida_tx_nome FROM cidade ORDER BY cida_tx_nome ASC;"
-		// ), MYSQLI_ASSOC);
-		// $aux = ["" => "Todos"];
-		// foreach($cidades as $cidade){
-		// 	$aux[$cidade["cida_nb_id"]] = $cidade["cida_tx_nome"];
-		// }
-		// $cidades = $aux;
+        // --- CHAMA A GRID SEPARADA ---
+        listarFeriados();
 
-		$campos = [ 
-			campo("Código", "busca_codigo", (empty($_POST["busca_codigo"])? "": $_POST["busca_codigo"]), 2, "MASCARA_NUMERO", "maxlength='6' min='0'"),
-			campo("Nome", "busca_nome_like", (empty($_POST["busca_nome_like"])? "": $_POST["busca_nome_like"]), 4, "", "maxlength='45'"),
-			combo("Estado", "busca_uf", (empty($_POST["busca_uf"])? "": $_POST["busca_uf"]), 2, $estados, "onchange=selecionaMunicipio(this.value)"),
-			combo_net("Município", "busca_cidade", (empty($_POST["busca_cidade"])? "": $_POST["busca_cidade"]), 4, "cidade"),
-			combo("Status", "busca_status", (empty($_POST["busca_status"])? "": $_POST["busca_status"]), 	2, ["ativo" => "Ativo"])
-		];
+        // Carrega Scripts específicos (como o selecionaMunicipio)
+        echo carregaJS();
 
-		$botoes = [ 
-			botao("Buscar", "index"),
-			botao("Limpar Filtro", "limparFiltros"),
-			botao("Inserir", "layout_feriado", "", "", "", "", "btn btn-success")
-		];
-		
-		echo abre_form();
-		echo linha_form($campos);
-		echo fecha_form($botoes);
-
-	
-
-
-
-		//Grid dinâmica{
-			$gridFields = [
-				"CÓDIGO" 	=> "feri_nb_id",
-				"NOME" 		=> "feri_tx_nome",
-				"DATA" 		=> "DATE_FORMAT(feri_tx_data, '%d/%m/%Y %H:%i:%s')",
-				"ESTADUAL" 	=> "feri_tx_uf",
-				"MUNICIPAL" => "cida_tx_nome",
-				// "STATUS" 	=> "feri_tx_status"
-			];
-
-			$camposBusca = [
-				"busca_codigo" 		=> "feri_nb_id",
-				"busca_nome_like" 	=> "feri_tx_nome",
-				"busca_uf" 			=> "feri_tx_uf",
-				"busca_cidade" 		=> "cida_nb_id",
-				"busca_status" 		=> "feri_tx_status",
-			];
-
-			$queryBase = (
-				"SELECT ".implode(", ", array_values($gridFields))." FROM feriado
-					LEFT JOIN cidade ON cida_nb_id = feri_nb_cidade"
-			);
-
-			$actions = criarIconesGrid(
-				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-				["cadastro_feriado.php", "cadastro_feriado.php"],
-				["modificarFeriado()", "excluirFeriado()"]
-			);
-			$gridFields["actions"] = $actions["tags"];
-
-			$jsFunctions =
-				"orderCol = 'feri_tx_data DESC';
-				const funcoesInternas = function(){
-					".implode(" ", $actions["functions"])."
-				}"
-			;
-
-			echo gridDinamico("tabelaFeriados", $gridFields, $camposBusca, $queryBase, $jsFunctions);
-		//}
-
-
-		echo carregaJS();
-
-		rodape();
+        rodape();
 	}

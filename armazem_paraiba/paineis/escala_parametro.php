@@ -279,14 +279,14 @@ function index() {
                AND user.user_tx_status = 'ativo'
                AND (
                     user.user_tx_nivel IN ('Funcionário', 'Motorista', 'Ajudante')
-                    OR user.user_tx_nivel LIKE '%administrador%'
-                    OR user.user_tx_nivel LIKE '%super admin%'
-                    OR EXISTS (
+                    AND EXISTS (
                         SELECT 1 FROM usuario_perfil up
+                        JOIN perfil_acesso pa ON pa.perfil_nb_id = up.perfil_nb_id
                         JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id
                         JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id
                         WHERE up.user_nb_id = user.user_nb_id
                           AND up.ativo = 1
+                          AND pa.perfil_tx_status = 'ativo'
                           AND pmi.perm_ver = 1
                           AND mi.menu_tx_ativo = 1
                           AND mi.menu_tx_path = '/batida_ponto.php'
