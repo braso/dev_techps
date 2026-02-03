@@ -1,7 +1,9 @@
 deployment:
   tasks:
-    - export GENERAL=/home/tech1694/repositories/producao/*
-    - export DOMAIN=/home/tech1694/repositories/producao/armazem_paraiba/*
+    # Diret贸rios gerais
+    - export GENERAL=/home/devtechpsgj/repositories/dev_techps/*
+    - export DOMAIN=/home/devtechpsgj/repositories/dev_techps/armazem_paraiba/*
+    - export GENERALDEPLOY=/home/devtechpsgj/public_html/dev
 
 
 
@@ -36,15 +38,44 @@ deployment:
 
     - /bin/cp -R $GENERAL $GENERALDEPLOY
     
+    - export IFRN=/home/devtechpsgj/public_html/dev/ifrn
+    - export LEMON=/home/devtechpsgj/public_html/dev/lemon
+    - export NH_TRANSPORTES=/home/devtechpsgj/public_html/dev/nh_transportes
+    - export OPAFRUTAS=/home/devtechpsgj/public_html/dev/opafrutas
+    - export TRANSCOPEL=/home/devtechpsgj/public_html/dev/transcopel
+    - export DEMO=/home/devtechpsgj/public_html/dev/techps_demo
+    - export TECHPS=/home/devtechpsgj/public_html/dev/techps
+    - export ARMAZEMPARAIBA=/home/devtechpsgj/public_html/dev/armazem_paraiba
+    - export BLUEROAD=/home/devtechpsgj/public_html/dev/blueroad
+    - export BRASO=/home/devtechpsgj/public_html/dev/braso
+    - export CARAU=/home/devtechpsgj/public_html/dev/carau_transporte
+    - export COMAV=/home/devtechpsgj/public_html/dev/comav
+    - export FEIJAOTURQUEZA=/home/devtechpsgj/public_html/dev/feijao_turqueza
+    - export FSLOG=/home/devtechpsgj/public_html/dev/fs_log_transportes
+    - export SAOLUCAS=/home/devtechpsgj/public_html/dev/sao_lucas
+    - export JRJ=/home/devtechpsgj/public_html/dev/jrj_organizacao
+    - export LOGSYNC=/home/devtechpsgj/public_html/dev/logsync_techps
+
+    # Copiando diret贸rios
+    - /bin/cp -R $GENERAL $GENERALDEPLOY
+
+
+    - /bin/cp -R $DOMAIN $IFRN
+    - /bin/cp -R $DOMAIN $LEMON
+    - /bin/cp -R $DOMAIN $NH_TRANSPORTES
+    - /bin/cp -R $DOMAIN $OPAFRUTAS
+    - /bin/cp -R $DOMAIN $TRANSCOPEL
+    - /bin/cp -R $DOMAIN $DEMO
+    - /bin/cp -R $DOMAIN $TECHPS
+    - /bin/cp -R $DOMAIN $ARMAZEMPARAIBA
+    - /bin/cp -R $DOMAIN $BLUEROAD
     - /bin/cp -R $DOMAIN $BRASO
     - /bin/cp -R $DOMAIN $CARAU
     - /bin/cp -R $DOMAIN $COMAV
-    - /bin/cp -R $DOMAIN $FEIJAO
-    - /bin/cp -R $DOMAIN $FS_LOG
-    - /bin/cp -R $DOMAIN $HN_TRANSP
-    - /bin/cp -R $DOMAIN $IFRN
-    - /bin/cp -R $DOMAIN $JRJ_ORG
-    - /bin/cp -R $DOMAIN $LEMON
+    - /bin/cp -R $DOMAIN $FEIJAOTURQUEZA
+    - /bin/cp -R $DOMAIN $FSLOG
+    - /bin/cp -R $DOMAIN $SAOLUCAS
+    - /bin/cp -R $DOMAIN $JRJ
     - /bin/cp -R $DOMAIN $LOGSYNC
     - /bin/cp -R $DOMAIN $NH_TRANSP
     - /bin/cp -R $DOMAIN $OPAFRUTAS

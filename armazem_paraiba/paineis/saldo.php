@@ -45,7 +45,7 @@
         }else{
             $linha .= "+'<td style=\"cursor: pointer;\" onclick=\"setAndSubmit(' + row.empr_nb_id + ')\">'+row.empr_tx_nome+'</td>'
                     +'<td>'+Math.round(row.percEndossado*10000)/100+'%</td>'
-                    +'<td>'+row.qtdMotoristas+'</td>'
+                    +'<td>'+row.qtdFuncionarios+'</td>'
                     +'<td>'+(row.totais.jornadaPrevista == '00:00' ? '' : row.totais.jornadaPrevista)+'</td>'
                     +'<td>'+(row.totais.jornadaEfetiva == '00:00' ? '' : row.totais.jornadaEfetiva)+'</td>'
                     +'<td>'+(row.totais.HESemanal == '00:00' ? '' : row.totais.HESemanal)+'</td>'
