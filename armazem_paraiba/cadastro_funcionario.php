@@ -1651,6 +1651,75 @@ function index(){
                 "CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
                 "STATUS" 				=> "enti_tx_status"
             ];
+
+			$allGridFields = [
+                "CÓDIGO" 				=> "enti_nb_id",
+                "NOME" 					=> "enti_tx_nome",
+                "MATRÍCULA" 			=> "enti_tx_matricula",
+                "CPF" 					=> "enti_tx_cpf",
+                "EMPRESA" 				=> "empr_tx_nome",
+                "CARGO" 				=> "oper_tx_nome",
+                "SETOR" 				=> "grup_tx_nome",
+                "SUBSETOR" 				=> "sbgr_tx_nome",
+                "FONE 1" 				=> "enti_tx_fone1",
+                "OCUPAÇÃO" 				=> "enti_tx_ocupacao",
+                "DATA CADASTRO" 		=> "DATE_FORMAT(enti_tx_dataCadastro, '%d/%m/%Y %H:%i:%s')",
+                "PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
+                "CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
+                "STATUS" 				=> "enti_tx_status",
+				"E-MAIL" => "enti_tx_email",
+                "TELEFONE 2" => "enti_tx_fone2",
+                "NASCIMENTO" => "DATE_FORMAT(enti_tx_nascimento, '%d/%m/%Y')",
+                "RG" => "enti_tx_rg",
+                "ESTADO CIVIL" => "enti_tx_civil",
+                "SEXO" => "enti_tx_sexo",
+                "RG ÓRGÃO" => "enti_tx_rgOrgao",
+                "RG DATA EMISSÃO" => "DATE_FORMAT(enti_tx_rgDataEmissao, '%d/%m/%Y')",
+                "RG UF" => "enti_tx_rgUf",
+                "RAÇA/COR" => "enti_tx_racaCor",
+                "TIPO SANGUÍNEO" => "enti_tx_tipoSanguineo",
+                "CEP" => "enti_tx_cep",
+                "CIDADE" => "CONCAT(cid_residencia.cida_tx_nome, '/', cid_residencia.cida_tx_uf)",
+                "BAIRRO" => "enti_tx_bairro",
+                "ENDEREÇO" => "enti_tx_endereco",
+                "NÚMERO" => "enti_tx_numero",
+                "COMPLEMENTO" => "enti_tx_complemento",
+                "REFERÊNCIA" => "enti_tx_referencia",
+                "PAI" => "enti_tx_pai",
+                "MÃE" => "enti_tx_mae",
+                "CÔNJUGE" => "enti_tx_conjugue",
+                "OBSERVAÇÕES" => "enti_tx_obs",
+                "SALÁRIO" => "enti_nb_salario",
+                "ADMISSÃO" => "DATE_FORMAT(enti_tx_admissao, '%d/%m/%Y')",
+                "DESLIGAMENTO" => "DATE_FORMAT(enti_tx_desligamento, '%d/%m/%Y')",
+                "BANCO HORAS" => "enti_tx_banco",
+                "SUBCONTRATADO" => "enti_tx_subcontratado",
+                "PIS" => "enti_tx_pis",
+                "CTPS NÚMERO" => "enti_tx_ctpsNumero",
+                "CTPS SÉRIE" => "enti_tx_ctpsSerie",
+                "CTPS UF" => "enti_tx_ctpsUf",
+                "TÍTULO NÚMERO" => "enti_tx_tituloNumero",
+                "TÍTULO ZONA" => "enti_tx_tituloZona",
+                "TÍTULO SEÇÃO" => "enti_tx_tituloSecao",
+                "RESERVISTA" => "enti_tx_reservista",
+                "REGISTRO FUNCIONAL" => "enti_tx_registroFuncional",
+                "ORGÃO REG. FUNC." => "enti_tx_OrgaoRegimeFuncional",
+                "VENCIMENTO REGISTRO" => "DATE_FORMAT(enti_tx_vencimentoRegistro, '%d/%m/%Y')",
+                "JORNADA SEMANAL" => "enti_tx_jornadaSemanal",
+                "JORNADA SÁBADO" => "enti_tx_jornadaSabado",
+                "HE SEMANAL %" => "enti_tx_percHESemanal",
+                "HE EXTRA %" => "enti_tx_percHEEx",
+                "CNH REGISTRO" => "enti_tx_cnhRegistro",
+                "CNH CATEGORIA" => "enti_tx_cnhCategoria",
+                "CNH CIDADE" => "CONCAT(cid_cnh.cida_tx_nome, '/', cid_cnh.cida_tx_uf)",
+                "CNH EMISSÃO" => "DATE_FORMAT(enti_tx_cnhEmissao, '%d/%m/%Y')",
+                "CNH VALIDADE" => "DATE_FORMAT(enti_tx_cnhValidade, '%d/%m/%Y')",
+                "CNH 1ª HABILITAÇÃO" => "DATE_FORMAT(enti_tx_cnhPrimeiraHabilitacao, '%d/%m/%Y')",
+                "CNH PERMISSÃO" => "enti_tx_cnhPermissao",
+                "CNH PONTUAÇÃO" => "enti_tx_cnhPontuacao",
+                "CNH ATIV. REMUNERADA" => "enti_tx_cnhAtividadeRemunerada",
+                "CNH OBS" => "enti_tx_cnhObs"
+			];
 	
 			$camposBusca = [
 				"busca_codigo" 			=> "enti_nb_id",
@@ -1668,12 +1737,14 @@ function index(){
 			];
 	
             $queryBase = (
-                "SELECT ".implode(", ", array_values($gridFields))." FROM entidade"
+                "SELECT ".implode(", ", array_values($allGridFields))." FROM entidade"
                     ." JOIN empresa ON enti_nb_empresa = empr_nb_id"
                     ." LEFT JOIN grupos_documentos ON enti_setor_id = grup_nb_id"
                     ." LEFT JOIN sbgrupos_documentos subg ON enti_subSetor_id = subg.sbgr_nb_id"
                     ." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
                     ." LEFT JOIN operacao ON enti_tx_tipoOperacao = oper_nb_id"
+					." LEFT JOIN cidade cid_residencia ON enti_nb_cidade = cid_residencia.cida_nb_id"
+                    ." LEFT JOIN cidade cid_cnh ON enti_nb_cnhCidade = cid_cnh.cida_nb_id"
             );
 	
 			$actions = criarIconesGrid(
@@ -1742,7 +1813,7 @@ function index(){
 				};
 			';
 	
-			echo gridDinamico("tabelaMotoristas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+			echo gridDinamico("tabelaMotoristas", $gridFields, $camposBusca, $queryBase, $jsFunctions, 12, -1, $allGridFields);
 		//}
 
 		rodape();
