@@ -212,7 +212,60 @@
 		;
 	}
 
-	function gridDinamico(string $nomeTabela, array $campos, array $camposBusca, string $queryBase, string $jsFunctions = "", int $width = 12, $tabIndex = -1){
+	function gridDinamico(string $nomeTabela, array $campos, array $camposBusca, string $queryBase, string $jsFunctions = "", int $width = 12, $tabIndex = -1, array $allFields = null){
+		global $conn;
+		
+		// Backup original fields for the modal
+ 		if ($allFields === null) {
+ 			$allFields = $campos;
+ 		} else {
+			if(isset($campos['actions'])){
+				$allFields['actions'] = $campos['actions'];
+			}
+		}
+
+		// Load User Config
+		if(isset($_SESSION['user_nb_id']) && !empty($nomeTabela)){
+			$userId = $_SESSION['user_nb_id'];
+			// Check if table exists to avoid errors on first run (or just suppress)
+			// We assume the controller creates it, but here we just query.
+			$checkTable = mysqli_query($conn, "SHOW TABLES LIKE 'grid_user_config'");
+			if(mysqli_num_rows($checkTable) > 0){
+				$sqlConfig = "SELECT guc_tx_columns FROM grid_user_config WHERE guc_nb_user = '$userId' AND guc_tx_grid = '$nomeTabela'";
+				$resConfig = mysqli_query($conn, $sqlConfig);
+				if($resConfig && $rowConfig = mysqli_fetch_assoc($resConfig)){
+					$savedConfig = json_decode($rowConfig['guc_tx_columns'], true);
+					
+					if(is_array($savedConfig) && count($savedConfig) > 0){
+						$newCampos = [];
+						$processedKeys = [];
+						
+						// Add fields from config
+						foreach($savedConfig as $col){
+							$key = $col['key'];
+							$visible = isset($col['visible']) ? $col['visible'] : true;
+							
+							if(isset($allFields[$key])){
+								if($visible){
+									$newCampos[$key] = $allFields[$key];
+								}
+								$processedKeys[] = $key;
+							}
+						}
+						
+						// Add any new fields from code that are not in config
+						foreach($allFields as $key => $val){
+							if(!in_array($key, $processedKeys)){
+								$newCampos[$key] = $val;
+							}
+						}
+						
+						$campos = $newCampos;
+					}
+				}
+			}
+		}
+
 		$result = 
 			"<link href='{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/css/grid_dinamico.css' rel='stylesheet' type='text/css' />
 			<div class='col-md-{$width}'>
@@ -220,6 +273,9 @@
                     <div class='grid-header' style='width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>
                         <div class='botao-csv'></div>
                         <div style='display: flex; align-items: flex-end;'>
+							<div class='gear-icon' onclick='openColumnConfig()' title='Configurar Colunas' style='margin-right:15px; margin-bottom: 5px; cursor:pointer; font-size: 16px; color: #666;'>
+								<span class='glyphicon glyphicon-cog'></span>
+							</div>
                             <div class='total-registros' style='margin-right: 15px; margin-bottom: 5px; white-space: nowrap;'></div>
                             <div class='tab-pagination' style='margin-right: 15px; margin-bottom: 5px;'></div>
                             <div class='margin-bottom-5' style='width: min-content;'>
@@ -227,6 +283,9 @@
                                 <input name='limit' id='limitTop' value='' placeholder='Todos' autocomplete='off' type='number' class='form-control input-sm' min='1' max='999' ".($tabIndex>0? "tabindex='".$tabIndex."'": "").">
                             </div>
                         </div>
+                    </div>
+                    <div class='top-scroll-container' style='overflow-x: auto; overflow-y: hidden; height: 20px; display: none; margin-bottom: 5px;'>
+                        <div class='top-scroll-content' style='height: 20px;'></div>
                     </div>
 					<div class='table-div' style='margin-top: 8px;overflow-x: auto; border-radius: 10px; max-height: 87vh;'>
 						<div class='table-loading-icon' style='place-items: center;position: absolute;width: 89vw;z-index: 2;top: 50px;'>
@@ -262,10 +321,32 @@
 			<script>
 				const searchFields = ".json_encode($camposBusca).";
 				const fields = ".json_encode($campos).";
+				const allFields = ".json_encode($allFields).";
+				const gridName = '$nomeTabela';
 				const queryBase = '".base64_encode($queryBase." WHERE 1")."';
 				{$jsFunctions}
 			</script>
-			<script src='{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/js/grid_dinamico.js'></script>"
+			<script src='{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/js/grid_dinamico.js'></script>
+			
+			<!-- Modal Config Grid -->
+			<div id='modalConfigGrid' class='modal fade' role='dialog' style='z-index: 10052;'>
+			  <div class='modal-dialog'>
+				<div class='modal-content'>
+				  <div class='modal-header'>
+					<button type='button' class='close' data-dismiss='modal'>&times;</button>
+					<h4 class='modal-title'>Configurar Colunas</h4>
+				  </div>
+				  <div class='modal-body'>
+					<p class='text-muted small'>Arraste para reordenar (em breve) ou marque para exibir.</p>
+					<div id='listaColunas' style='max-height: 400px; overflow-y: auto;'></div>
+				  </div>
+				  <div class='modal-footer'>
+					<button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
+					<button type='button' class='btn btn-primary' onclick='saveColumnConfig()'>Salvar</button>
+				  </div>
+				</div>
+			  </div>
+			</div>"
 		;
 
 		return $result;
