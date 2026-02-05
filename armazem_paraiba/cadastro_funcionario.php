@@ -1719,6 +1719,7 @@ function index(){
                 "CNH PONTUAÇÃO" => "enti_tx_cnhPontuacao",
                 "CNH ATIV. REMUNERADA" => "enti_tx_cnhAtividadeRemunerada",
                 "CNH OBS" => "enti_tx_cnhObs"
+				
 			];
 	
 			$camposBusca = [
