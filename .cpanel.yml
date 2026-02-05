@@ -36,25 +36,6 @@ deployment:
 
 
 
-    - /bin/cp -R $GENERAL $GENERALDEPLOY
-    
-    - export IFRN=/home/devtechpsgj/public_html/dev/ifrn
-    - export LEMON=/home/devtechpsgj/public_html/dev/lemon
-    - export NH_TRANSPORTES=/home/devtechpsgj/public_html/dev/nh_transportes
-    - export OPAFRUTAS=/home/devtechpsgj/public_html/dev/opafrutas
-    - export TRANSCOPEL=/home/devtechpsgj/public_html/dev/transcopel
-    - export DEMO=/home/devtechpsgj/public_html/dev/techps_demo
-    - export TECHPS=/home/devtechpsgj/public_html/dev/techps
-    - export ARMAZEMPARAIBA=/home/devtechpsgj/public_html/dev/armazem_paraiba
-    - export BLUEROAD=/home/devtechpsgj/public_html/dev/blueroad
-    - export BRASO=/home/devtechpsgj/public_html/dev/braso
-    - export CARAU=/home/devtechpsgj/public_html/dev/carau_transporte
-    - export COMAV=/home/devtechpsgj/public_html/dev/comav
-    - export FEIJAOTURQUEZA=/home/devtechpsgj/public_html/dev/feijao_turqueza
-    - export FSLOG=/home/devtechpsgj/public_html/dev/fs_log_transportes
-    - export SAOLUCAS=/home/devtechpsgj/public_html/dev/sao_lucas
-    - export JRJ=/home/devtechpsgj/public_html/dev/jrj_organizacao
-    - export LOGSYNC=/home/devtechpsgj/public_html/dev/logsync_techps
 
     # Copiando diret贸rios
     - /bin/cp -R $GENERAL $GENERALDEPLOY
@@ -90,8 +71,4 @@ deployment:
     - /bin/cp -R $DOMAIN $PB_TRANSPORTES
     - /bin/cp -R $DOMAIN $ODONTOTANGARA
     - /bin/cp -R $DOMAIN $CLINICA_GERLANE
-<<<<<<< HEAD
     - /bin/cp -R $DOMAIN $IRANEIDE_OLIVEIRA
-=======
-    - /bin/cp -R $DOMAIN $IRANEIDE_OLIVEIRA
->>>>>>> b4f3c426c0a502eb41030f587eda231e90f6c5ee
