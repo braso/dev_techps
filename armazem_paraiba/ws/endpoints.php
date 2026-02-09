@@ -62,9 +62,9 @@
 
         $data = get_data(
                 "SELECT user_nb_id id, user_tx_nome nome, user_tx_login login,
-                user_tx_senha senha, user_tx_rfid rfid FROM user 
+                user_tx_senha senha, user_nb_rfid rfid, user_bb_digital digital FROM user 
                 WHERE user_tx_status = 'ativo'
-                AND user_tx_rfid = ?;",
+                AND user_nb_rfid = ?;",
                 [$_POST["rfid"]]
             );
 
