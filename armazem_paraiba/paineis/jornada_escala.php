@@ -38,9 +38,23 @@
          LEFT JOIN operacao ON oper_nb_id = entidade.enti_tx_tipoOperacao
          LEFT JOIN grupos_documentos ON grup_nb_id = entidade.enti_setor_id
          LEFT JOIN sbgrupos_documentos ON sbgr_nb_id = entidade.enti_subSetor_id
+         JOIN user ON user.user_nb_entidade = entidade.enti_nb_id
          WHERE entidade.enti_tx_status = 'ativo'
            AND entidade.enti_nb_empresa = ".$empresa."
            AND entidade.enti_tx_matricula = '".$matricula."'
+           AND user.user_tx_status = 'ativo'
+           AND EXISTS (
+             SELECT 1 FROM usuario_perfil up
+             JOIN perfil_acesso pa ON pa.perfil_nb_id = up.perfil_nb_id
+             JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id
+             JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id
+             WHERE up.user_nb_id = user.user_nb_id
+             AND up.ativo = 1
+             AND pa.perfil_tx_status = 'ativo'
+             AND pmi.perm_ver = 1
+             AND mi.menu_tx_ativo = 1
+             AND mi.menu_tx_path = '/batida_ponto.php'
+           )
          LIMIT 1;"
     ), MYSQLI_ASSOC);
 
