@@ -166,7 +166,7 @@
         $gridFields = [
             "CÓDIGO"    => "feri_nb_id",
             "NOME"      => "feri_tx_nome",
-            "DATA"      => "DATE_FORMAT(feri_tx_data, '%d/%m/%Y %H:%i:%s')",
+            "DATA"      => "DATE_FORMAT(feri_tx_data, '%d/%m/%Y ')",
             "ESTADUAL"  => "feri_tx_uf",
             "MUNICIPAL" => "cida_tx_nome",
         ];

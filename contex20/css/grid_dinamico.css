@@ -25,7 +25,7 @@ th.table-col-head:hover{
 th.table-col-head, .page-selected{
     background-color: #444d58;
     color: white;
-    /* text-wrap-mode: nowrap; */
+    white-space: nowrap;
 }
 
 .grid-dinamico tbody tr{
@@ -35,7 +35,8 @@ th.table-col-head, .page-selected{
 .grid-dinamico tbody tr td{
     align-content: center;
     width: min-content;
-    max-width:300px;
+    white-space: nowrap;
+    /* max-width:300px; */
     /* overflow: hidden; */
     /* text-wrap-mode: nowrap; */
     /* vertical-align: middle; */
@@ -53,8 +54,9 @@ tbody tr:nth-child(even){
 .table>tbody>tr>td.tab-action{
     align-content: center;
     text-align: center;
-    padding: 0;
+    padding: 0 10px;
     height: inherit;
+    min-width: 50px;
 }
 
 .table>tbody>tr>td.tab-action>*{
