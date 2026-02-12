@@ -172,28 +172,12 @@
 	}
 
 	function excluir_documento() {
-<<<<<<< HEAD
-		$idArq = (int)$_POST['idArq'];
-		
-		if($idArq > 0) {
-			query("DELETE FROM documento_empresa WHERE docu_nb_id = $idArq");
-		}
-
-		if(isset($_POST["idRelacionado"]) && !empty($_POST["idRelacionado"])){
-			$_POST["id"] = $_POST["idRelacionado"];
-		} elseif(isset($_POST["idEmpresa"]) && !empty($_POST["idEmpresa"])){
-			$_POST["id"] = $_POST["idEmpresa"];
-		}
-		
-		modificarEmpresa();
-=======
 
 		$idArq = intval($_POST["idArq"] ?? 0);
 		query("DELETE FROM documento_empresa WHERE docu_nb_id = {$idArq}");
 		$empresaId = $_POST["idRelacionado"] ?? $_POST["idEmpresa"] ?? null;
 		$_POST["id"] = $empresaId;
 		editarEmpresa();
->>>>>>> b4f3c426c0a502eb41030f587eda231e90f6c5ee
 		exit;
 	}
 	
