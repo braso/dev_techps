@@ -229,9 +229,9 @@
         $gridFields = [
             "CÓDIGO"        => "feri_nb_id",
             "Funcionário"   => "enti_tx_nome",
-            "Início"        => "DATE_FORMAT(feri_tx_dataInicio, '%d/%m/%Y %H:%i:%s')",
-            "Fim"           => "DATE_FORMAT(feri_tx_dataFim, '%d/%m/%Y %H:%i:%s')",
-            "Qtd. Dias"     => "DATEDIFF(feri_tx_dataFim, feri_tx_dataInicio) AS qtdDias",
+            "Início"        => "DATE_FORMAT(feri_tx_dataInicio, '%d/%m/%Y ')",
+            "Fim"           => "DATE_FORMAT(feri_tx_dataFim, '%d/%m/%Y ')",
+            "Qtd. Dias"     => "(DATEDIFF(feri_tx_dataFim, feri_tx_dataInicio) + 1) AS qtdDias",
             "STATUS"        => "feri_tx_status",
         ];
 
@@ -303,45 +303,7 @@
 		echo linha_form($camposBusca);
 		echo fecha_form([], "<hr><form>".implode(" ", $botoesBusca)."</form>");
 
-		//Configuração da tabela dinâmica{
-			$gridFields = [
-				"CÓDIGO" 				=> "feri_nb_id",
-				"Funcionário" 			=> "enti_tx_nome",
-				"Início" 				=> "DATE_FORMAT(feri_tx_dataInicio, '%d/%m/%Y %H:%i:%s')",
-				"Fim" 					=> "DATE_FORMAT(feri_tx_dataFim, '%d/%m/%Y %H:%i:%s')",
-				"Qtd. Dias" 			=> "(DATEDIFF(feri_tx_dataFim, feri_tx_dataInicio) + 1) AS qtdDias",
-				"STATUS" 				=> "feri_tx_status",
-			];
-	
-			$camposBusca = [
-				"busca_codigo" => "feri_nb_id",
-				"busca_nome_like" => "enti_tx_nome",
-				"busca_status" => "feri_tx_status"
-			];
-	
-			$queryBase = ("SELECT ".implode(", ", array_values($gridFields))." FROM ferias JOIN entidade ON feri_nb_entidade = enti_nb_id");
-	
-			$actions = criarIconesGrid(
-				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-				["cadastro_ferias.php", "cadastro_ferias.php"],
-				["modificarFerias()", "excluirFerias()"]
-			);
-	
-			$actions["functions"][1] .= 
-				"esconderInativar('glyphicon glyphicon-remove search-remove', ".array_search("STATUS", array_keys($gridFields)).");"
-			;
-	
-			$gridFields["actions"] = $actions["tags"];
-	
-			$jsFunctions =
-				"orderCol = 'feri_tx_dataInicio DESC';
-				const funcoesInternas = function(){
-					".implode(" ", $actions["functions"])."
-				}"
-			;
-	
-			echo gridDinamico("tabelaFerias", $gridFields, $camposBusca, $queryBase, $jsFunctions);
-		//}
+
 
 		
         listarFerias();
