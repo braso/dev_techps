@@ -1,6 +1,26 @@
 <?php
 $interno = true;
-include_once __DIR__."/../armazem_paraiba/conecta.php";
+
+// Descobre o diretório do cliente (tenant) com base na URL de origem
+$baseDir = dirname(__DIR__); // .../gestaodeponto
+$tenantDir = null;
+
+if (!empty($_SERVER['HTTP_REFERER'])) {
+    $refPath = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_PATH);
+    $parts = explode('/', trim($refPath, '/')); // ex: 'gestaodeponto/braso/cadastro_funcionario.php'
+    // Índice 0 deve ser 'gestaodeponto', índice 1 o tenant (braso, comav, etc.)
+    if (isset($parts[1]) && $parts[1] !== 'contex20') {
+        $tenantDir = $parts[1];
+    }
+}
+
+if (empty($tenantDir)) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Cliente não identificado']);
+    exit;
+}
+
+include_once $baseDir . "/{$tenantDir}/conecta.php";
 
 // Ensure table exists
 $checkTable = mysqli_query($conn, "SHOW TABLES LIKE 'grid_user_config'");
@@ -18,16 +38,32 @@ if(mysqli_num_rows($checkTable) == 0){
 
 if($_SERVER['REQUEST_METHOD'] === 'POST'){
     $user_id = $_SESSION['user_nb_id'] ?? null;
-    $grid_name = $_POST['grid_name'];
-    $columns = $_POST['columns']; // JSON string
+    $grid_name = $_POST['grid_name'] ?? '';
+    $columns = $_POST['columns'] ?? ''; // JSON string
 
-    if(empty($user_id) || empty($grid_name) || empty($columns)){
+    if(empty($user_id) && !empty($_SESSION['user_tx_login'] ?? '')){
+        $stmtUser = $conn->prepare("SELECT user_nb_id FROM user WHERE user_tx_login = ? AND user_tx_status = 'ativo' LIMIT 1");
+        $login = $_SESSION['user_tx_login'];
+        $stmtUser->bind_param("s", $login);
+        if($stmtUser->execute()){
+            $resUser = $stmtUser->get_result();
+            if($resUser && $rowUser = $resUser->fetch_assoc()){
+                $user_id = (int)$rowUser['user_nb_id'];
+                $_SESSION['user_nb_id'] = $user_id;
+            }
+        }
+    }
+
+    if($grid_name === '' || $columns === ''){
         http_response_code(400);
         echo json_encode(['error' => 'Missing parameters']);
         exit;
     }
 
-    // Use Prepared Statement
+    if(empty($user_id)){
+        $user_id = 0;
+    }
+
     $stmt = $conn->prepare("INSERT INTO grid_user_config (guc_nb_user, guc_tx_grid, guc_tx_columns) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE guc_tx_columns = VALUES(guc_tx_columns)");
     $stmt->bind_param("iss", $user_id, $grid_name, $columns);
     
