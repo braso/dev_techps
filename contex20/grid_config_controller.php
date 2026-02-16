@@ -1,4 +1,5 @@
 <?php
+$interno = true;
 include_once __DIR__."/../armazem_paraiba/conecta.php";
 
 // Ensure table exists
@@ -16,7 +17,7 @@ if(mysqli_num_rows($checkTable) == 0){
 }
 
 if($_SERVER['REQUEST_METHOD'] === 'POST'){
-    $user_id = $_SESSION['user_nb_id'];
+    $user_id = $_SESSION['user_nb_id'] ?? null;
     $grid_name = $_POST['grid_name'];
     $columns = $_POST['columns']; // JSON string
 

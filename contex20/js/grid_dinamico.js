@@ -93,7 +93,7 @@ function exportAllToCSV() {
             link.click();
             document.body.removeChild(link);
             
-            console.log('CSV exportado com todos os dados:', response.rows.length, 'registros');
+           // console.log('CSV exportado com todos os dados:', response.rows.length, 'registros');
         },
         error: function(errMsg) {
             console.error('Erro ao exportar CSV:', errMsg);
@@ -194,8 +194,6 @@ const consultarRegistros = function(){
     }
 
     try{
-        console.log('Grid request', { url: urlTableInfo, queryBase: queryBase, conditions: conditions, limit: limit, page: pageNumber, offset: (pageNumber-1)*limit });
-        console.log('Grid SQL', atob(queryBase) + conditions + ' LIMIT ' + limit + ' OFFSET ' + ((pageNumber-1)*limit));
     }catch(e){}
     $.ajax({
         url: urlTableInfo,
@@ -309,7 +307,7 @@ const consultarRegistros = function(){
             $('.table-loading-icon')[0].innerHTML = '';
             $('.botao-csv')[0].innerHTML = btn;
 
-            try{ console.log('Grid response summary', { total: total, rows: (Array.isArray(response.rows)? response.rows.length: 0), fields: Object.keys(fields) }); }catch(e){}
+            try{ }catch(e){}
 
 
             window.tableConfig = {
@@ -367,7 +365,7 @@ const consultarRegistros = function(){
 };
 
 $(document).ready(function(){
-    try{ console.log('Grid init', { searchFields: searchFields, fields: fields }); }catch(e){}
+    try{ }catch(e){}
     $('form[name="contex_form"]').on('change', consultarRegistros);
     $('input[name="limit"]').on('change', function(){
         $('input[name="limit"]').val($(this).val());
