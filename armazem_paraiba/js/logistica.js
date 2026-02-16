@@ -20,6 +20,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const formattedDateStart = formatDate(dateStart);
       const formattedDateEnd = formatDate(dateEnd);
   
+      console.log("Enviando requisição para API de logística", {
+        url: "https://logistica.integracao.techpsgj.com.br/data1",
+        plate,
+        date_start: formattedDateStart.includes(" ") ? formattedDateStart : formattedDateStart + " 00:00:00",
+        date_end: formattedDateEnd.includes(" ") ? formattedDateEnd : formattedDateEnd + " 23:59:59",
+        speed,
+      });
+
       axios
         .post("https://logistica.integracao.techpsgj.com.br/data1", {
           plate,
