@@ -31,6 +31,7 @@ deployment:
     - export ODONTOTANGARA=/home/tech1694/public_html/gestaodeponto/odontotangara
     - export CLINICA_GERLANE=/home/tech1694/public_html/gestaodeponto/clinica_gerlane
     - export IRANEIDE_OLIVEIRA=/home/tech1694/public_html/gestaodeponto/iraneide_oliveira
+    - export MIDIA_DIGITAL=/home/tech1694/public_html/gestaodeponto/midia_digital
 
 
 
@@ -60,3 +61,4 @@ deployment:
     - /bin/cp -R $DOMAIN $ODONTOTANGARA
     - /bin/cp -R $DOMAIN $CLINICA_GERLANE
     - /bin/cp -R $DOMAIN $IRANEIDE_OLIVEIRA
+    - /bin/cp -R $DOMAIN $MIDIA_DIGITAL
