@@ -668,6 +668,14 @@
 				index();
 				exit;
 			}
+
+			// Atribui RFID selecionado (se houver) antes do commit
+			if(!empty($_POST["rfid_id"])){
+				$rfidId = (int)$_POST["rfid_id"];
+				// garante que nenhum outro registro esteja vinculado a este RFID
+				query("UPDATE rfids SET user_id = ? WHERE id = ?;", "ii", [$id, $rfidId]);
+			}
+
 			query("COMMIT;");
 		}else{ // Se está editando um motorista existente
 
@@ -724,6 +732,18 @@
 
 			atualizar("entidade", array_keys($novoMotorista), array_values($novoMotorista), $_POST["id"]);
 			$id = $_POST["id"];
+
+			// Atualiza vínculo de RFID ao editar
+			if(isset($_POST["rfid_id"]) && $_POST["rfid_id"] !== ""){
+				$rfidId = (int)$_POST["rfid_id"];
+				// Remove vínculo de outros RFIDs já associados a este usuário, exceto o selecionado
+				query("UPDATE rfids SET user_id = NULL WHERE user_id = ? AND id != ?;", "ii", [$id, $rfidId]);
+				// Associa o RFID selecionado ao usuário
+				query("UPDATE rfids SET user_id = ? WHERE id = ?;", "ii", [$id, $rfidId]);
+			} else {
+				// Se nenhum RFID selecionado, remove vínculos existentes
+				query("UPDATE rfids SET user_id = NULL WHERE user_id = ?;", "i", [$id]);
+			}
 		}
 
 		$file_type = $_FILES["cnhAnexo"]["type"]; //returns the mimetype
@@ -1293,6 +1313,22 @@
 		
 		$tabIndex = 1;
 
+		// Carrega opções de RFID (somente não atribuídos ou o atribuído ao registro atual)
+		$rfidOptions = ["" => ""];
+		$entityIdForRfid = !empty($a_mod["enti_nb_id"]) ? (int)$a_mod["enti_nb_id"] : 0;
+		$condRfid = "WHERE user_id IS NULL" . ($entityIdForRfid ? " OR user_id = {$entityIdForRfid}" : "");
+		$rsRfids = query("SELECT id, rfid_uid, descricao FROM rfids {$condRfid} ORDER BY rfid_uid ASC");
+		while($r = mysqli_fetch_assoc($rsRfids)){
+			$label = $r["rfid_uid"];
+			if(!empty($r["descricao"])) $label .= " - " . $r["descricao"];
+			$rfidOptions[$r["id"]] = $label;
+		}
+		$selectedRfid = "";
+		if($entityIdForRfid){
+			$rowAssigned = mysqli_fetch_assoc(query("SELECT id FROM rfids WHERE user_id = {$entityIdForRfid} LIMIT 1"));
+			if(!empty($rowAssigned)) $selectedRfid = $rowAssigned["id"];
+		}
+
 		$camposImg = [
 			$img,
 			arquivo("Arquivo (.png, .jpg)", "foto", ($a_mod["enti_tx_foto"]?? ""), 4, "tabindex=".sprintf("%02d", $tabIndex++))
@@ -1314,7 +1350,8 @@
 			campo("Telefone 1*", 			"fone1", 			($a_mod["enti_tx_fone1"]?? ""),			2, "MASCARA_CEL", 		"tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Telefone 2",  			"fone2", 			($a_mod["enti_tx_fone2"]?? ""),			2, "MASCARA_CEL", 		"tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Login",					"login", 			($a_mod["user_tx_login"]?? ""),			2, "", 					"tabindex=".sprintf("%02d", $tabIndex++)),
-			combo("Status", 				"status", 			($a_mod["enti_tx_status"]?? ""),		1, $statusOpt, 			"tabindex=".sprintf("%02d", $tabIndex++))
+			combo("Status", 			"status", 			($a_mod["enti_tx_status"]?? ""),			1, $statusOpt, 			"tabindex=".sprintf("%02d", $tabIndex++)),
+			combo("RFID", 				"rfid_id", 			($selectedRfid ?? ""),			2, $rfidOptions, 		"tabindex=".sprintf("%02d", $tabIndex++))
 		];
 
 		$camposPessoais = [
