@@ -7,47 +7,166 @@
     require_once "../load_env.php";
     require_once "lib.php";
 
+    // 1. Login padrão com usuário e senha
     function make_login(){
         $msg = "";
-
-        //Check mandatory fields{
-            if(empty($_POST["username"])){
-                $msg = 'Please Enter Login Details';
-            }elseif(empty($_POST["password"])){
-                $msg = 'Please Enter Password Details';
-            }
-            if(!empty($msg)){
-                // header('HTTP/1.0 400 Bad Request');
-                echo $msg;
-                exit;
-            }
-        //}
-
-        //Check if user exists{
+    
+        if(empty($_POST["username"]) || empty($_POST["password"])){
+            $msg = 'Please Enter Login Details';
+        } else {
             $data = get_data(
                 "SELECT user_tx_senha, user_nb_id, user_tx_nome FROM user 
-                    WHERE user_tx_status = 'ativo'
-                        AND user_tx_login = ?;",
+                 WHERE user_tx_status = 'ativo' AND user_tx_login = ?;",
+                [$_POST["username"]]
+            );
+    
+            if(empty($data)){
+                $msg = 'Wrong Username Address';
+            } elseif($data[0]['user_tx_senha'] !== md5($_POST['password'])){
+                $msg = 'Wrong Password';
+            }
+        }
+    
+        if(!empty($msg)){
+            header("HTTP/1.1 204 No Content");
+            echo $msg;
+            die();
+        }
+    
+        $token = makeToken((object)$data[0], $_ENV["APP_KEY"]);
+        echo "{ \"id\": ".$data[0]['user_nb_id'].", \"token\": \"".$token."\"}";
+        exit;
+    }
+
+    // 2. LOGIN 2FA - ETAPA 1 (Valida Senha e devolve exigências biométricas)
+    function make_login_step1(){
+        $msg = "";
+        if(empty($_POST["username"]) || empty($_POST["password"])){
+            $msg = 'Please Enter Login Details';
+        } else {
+            $data = get_data(
+                "SELECT user_tx_senha, user_nb_id, user_tx_nome, user_nb_rfid, user_nb_digital 
+                FROM user 
+                WHERE user_tx_status = 'ativo' AND user_tx_login = ?;",
                 [$_POST["username"]]
             );
 
             if(empty($data)){
                 $msg = 'Wrong Username Address';
-            }elseif($data[0]['user_tx_senha'] !== md5($_POST['password'])){
+            } elseif($data[0]['user_tx_senha'] !== md5($_POST['password'])){
                 $msg = 'Wrong Password';
             }
-            if(!empty($msg)){
-                header("HTTP/1.1 204 No Content");
-                echo $msg;
-                die();
-            }
-        //}
+        }
 
-        $data = $data[0];
+        if(!empty($msg)){
+            header("HTTP/1.1 204 No Content");
+            echo $msg;
+            die();
+        }
 
-        $token = makeToken((object)$data,$_ENV["APP_KEY"]);
+        // Não gera token aqui. Apenas devolve os dados para o Front-end pedir a biometria
+        echo json_encode([
+            "status" => "pending_2fa",
+            "user_id" => $data[0]['user_nb_id'],
+            "nome" => $data[0]['user_tx_nome'],
+            "tem_rfid" => !empty($data[0]['user_nb_rfid']) ? true : false,
+            "tem_digital" => !empty($data[0]['user_nb_digital']) ? true : false
+        ]);
+        exit;
+    }
+
+    // 3. LOGIN 2FA - ETAPA 2 (Recebe Hardware + ID da Etapa 1 e libera Token)
+    function make_login_step2(){
+        $msg = "";
+        if(empty($_POST["user_id"])){
+            $msg = 'Missing User ID from Step 1';
+            header("HTTP/1.1 204 No Content");
+            echo $msg;
+            die();
+        }
+
+        $userId = $_POST["user_id"];
+        $data = [];
+
+        // Se mandou RFID
+        if(!empty($_POST["rfid"])){
+            $data = get_data(
+                "SELECT u.user_nb_id, u.user_tx_nome 
+                FROM user u JOIN rfid r ON u.user_nb_rfid = r.rfid_nb_id
+                WHERE u.user_tx_status = 'ativo' AND u.user_nb_id = ? 
+                AND r.rfid_tx_status = 'ativo' AND r.rfid_tx_codigo = ?;",
+                [$userId, $_POST["rfid"]]
+            );
+            if(empty($data)) $msg = 'RFID invalido para este usuario';
+
+        // Se mandou Digital
+        } elseif(!empty($_POST["digital_id"])){
+            $data = get_data(
+                "SELECT u.user_nb_id, u.user_tx_nome 
+                FROM user u JOIN digital d ON u.user_nb_digital = d.digital_nb_id
+                WHERE u.user_tx_status = 'ativo' AND u.user_nb_id = ? 
+                AND d.digital_nb_id = ?;",
+                [$userId, $_POST["digital_id"]]
+            );
+            if(empty($data)) $msg = 'Digital invalida para este usuario';
+
+        } else {
+            $msg = 'Please provide RFID or Digital ID';
+        }
+
+        if(!empty($msg)){
+            header("HTTP/1.1 204 No Content");
+            echo $msg;
+            die();
+        }
+
+        // Sucesso! Gera o Token
+        $token = makeToken((object)$data[0], $_ENV["APP_KEY"]);
+        echo json_encode(["status" => "success", "id" => $data[0]['user_nb_id'], "token" => $token]);
+        exit;
+    }
+
+    // 4. ACESSO RÁPIDO: Apenas RFID (Raspberry/Catraca)
+    function login_direto_rfid(){
+        $msg = "";
+        if(empty($_POST["rfid"])) {
+            $msg = 'Forneca o RFID';
+        } else {
+            $data = get_data(
+                "SELECT u.user_nb_id, u.user_tx_nome 
+                FROM user u JOIN rfid r ON u.user_nb_rfid = r.rfid_nb_id
+                WHERE u.user_tx_status = 'ativo' AND r.rfid_tx_status = 'ativo' AND r.rfid_tx_codigo = ?;",
+                [$_POST["rfid"]]
+            );
+            if(empty($data)) $msg = 'RFID invalido ou inativo';
+        }
+
+        if(!empty($msg)) { header("HTTP/1.1 204 No Content"); echo $msg; die(); }
         
-        echo "{ \"id\": ".$data['user_nb_id'].", \"token\": \"".$token."\"}";
+        $token = makeToken((object)$data[0], $_ENV["APP_KEY"]);
+        echo json_encode(["status" => "success", "id" => $data[0]['user_nb_id'], "token" => $token]);
+        exit;
+    }
+
+    // 5. ACESSO RÁPIDO: Apenas Digital (Raspberry/Catraca)
+    function login_direto_digital(){
+        $msg = "";
+        if(empty($_POST["digital_id"])) {
+            $msg = 'Forneca a Digital';
+        } else {
+            $data = get_data(
+                "SELECT u.user_nb_id, u.user_tx_nome 
+                FROM user u JOIN digital d ON u.user_nb_digital = d.digital_nb_id
+                WHERE u.user_tx_status = 'ativo' AND d.digital_nb_id = ?;",
+                [$_POST["digital_id"]]
+            );
+            if(empty($data)) $msg = 'Digital invalida';
+        }
+
+        if(!empty($msg)) { header("HTTP/1.1 204 No Content"); echo $msg; die(); }
+        
+        $token = makeToken((object)$data[0], $_ENV["APP_KEY"]);
+        echo json_encode(["status" => "success", "id" => $data[0]['user_nb_id'], "token" => $token]);
         exit;
     }
 
