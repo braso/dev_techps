@@ -5,32 +5,35 @@
 
     // Garante que a tabela exista
     mysqli_query($conn, "CREATE TABLE IF NOT EXISTS rfids (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        rfid_uid VARCHAR(255) NOT NULL UNIQUE,
-        user_id INT DEFAULT NULL,
-        status ENUM('ativo','inativo','bloqueado') DEFAULT 'ativo',
-        descricao TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        rfids_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        rfids_tx_uid VARCHAR(255) NOT NULL UNIQUE,
+        rfids_nb_user_id INT DEFAULT NULL,
+        rfids_tx_status VARCHAR(20) DEFAULT 'ativo',
+        rfids_tx_descricao TEXT,
+        rfids_dt_created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );");
 
     function formRfid(){
         if(!empty($_POST["id"])){
-            $rfid = mysqli_fetch_assoc(query("SELECT * FROM rfids WHERE id = {$_POST['id']};"));
-            $_POST["rfid_uid"] = !empty($_POST["rfid_uid"])? $_POST["rfid_uid"]: $rfid["rfid_uid"];
-            $_POST["status"] = !empty($_POST["status"])? $_POST["status"]: $rfid["status"];
-            $_POST["descricao"] = !empty($_POST["descricao"])? $_POST["descricao"]: $rfid["descricao"];
+            // Busca os dados atuais para preencher o formulário na edição
+            $rfid = mysqli_fetch_assoc(query("SELECT * FROM rfids WHERE rfids_nb_id = {$_POST['id']};"));
+            
+            $_POST["rfids_tx_uid"]       = !empty($_POST["rfids_tx_uid"]) ? $_POST["rfids_tx_uid"] : $rfid["rfids_tx_uid"];
+            $_POST["rfids_tx_status"]    = !empty($_POST["rfids_tx_status"]) ? $_POST["rfids_tx_status"] : $rfid["rfids_tx_status"];
+            $_POST["rfids_tx_descricao"] = !empty($_POST["rfids_tx_descricao"]) ? $_POST["rfids_tx_descricao"] : $rfid["rfids_tx_descricao"];
         }
 
         echo abre_form();
         echo linha_form([
-            campo_hidden("id", (!empty($_POST["id"])? $_POST["id"]: "")),
-            campo("UID", "rfid_uid", (!empty($_POST["rfid_uid"])? $_POST["rfid_uid"]: ""), 4, "", "required"),
-            combo_radio("Status", "status", (!empty($_POST["status"])? $_POST["status"]: 'ativo'), 2, [
+            // Padronizado para "id" como no cadastro_celular
+            campo_hidden("id", (!empty($_POST["id"]) ? $_POST["id"] : "")),
+            campo("UID", "rfids_tx_uid", (!empty($_POST["rfids_tx_uid"]) ? $_POST["rfids_tx_uid"] : ""), 4, "", "required"),
+            combo_radio("Status", "rfids_tx_status", (!empty($_POST["rfids_tx_status"]) ? $_POST["rfids_tx_status"] : 'ativo'), 2, [
                 'ativo' => 'Ativo',
                 'inativo' => 'Inativo',
                 'bloqueado' => 'Bloqueado'
             ]),
-            campo("Descrição", "descricao", (!empty($_POST["descricao"])? $_POST["descricao"]: ""), 6)
+            campo("Descrição", "rfids_tx_descricao", (!empty($_POST["rfids_tx_descricao"]) ? $_POST["rfids_tx_descricao"] : ""), 6)
         ]);
 
         $botoes = !empty($_POST["id"]) ?
@@ -45,21 +48,20 @@
 
     function listarRfids(){
         $gridFields = [
-            "CÓDIGO" => "id",
-            "UID" => "rfid_uid",
-            "USER_ID" => "user_id",
-            "STATUS" => "status",
-            "DESCRIÇÃO" => "descricao",
-            "CADASTRADO EM" => "DATE_FORMAT(created_at, '%d/%m/%Y %H:%i:%s')",
+            "CÓDIGO"        => "rfids_nb_id",
+            "UID"           => "rfids_tx_uid",
+            "STATUS"        => "rfids_tx_status",
+            "DESCRIÇÃO"     => "rfids_tx_descricao",
+            "CADASTRADO EM" => "DATE_FORMAT(rfid_dt_created_at, '%d/%m/%Y %H:%i:%s')",
         ];
 
         $camposBusca = [
-            "rfid_uid" => "rfid_uid",
-            "status" => "status",
-            "descricao" => "descricao"
+            "uid"       => "rfids_tx_uid",
+            "status"    => "rfids_tx_status",
+            "descricao" => "rfids_tx_descricao"
         ];
 
-        $queryBase = "SELECT ".implode(", ", array_values($gridFields))." FROM rfids";
+        $queryBase = "SELECT " . implode(", ", array_values($gridFields)) . " FROM rfids";
 
         $actions = criarIconesGrid(
             ["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
@@ -68,39 +70,36 @@
         );
 
         $gridFields["actions"] = $actions["tags"];
-
-        $jsFunctions =
-            "const funcoesInternas = function(){"
-                .implode(" ", $actions["functions"])."
-            }";
+        $jsFunctions = "const funcoesInternas = function(){ " . implode(" ", $actions["functions"]) . " }";
 
         echo gridDinamico("rfids", $gridFields, $camposBusca, $queryBase, $jsFunctions);
     }
 
     function cadastrarRfid(){
-        $fields = ["rfid_uid", "status", "descricao"];
+        $fields = ["rfids_tx_uid", "rfids_tx_status", "rfids_tx_descricao"];
         foreach($fields as $field){
             $_POST[$field] = trim($_POST[$field]);
         }
 
-        $errorMsg = conferirCamposObrig(["rfid_uid" => "UID"], $_POST);
+        $errorMsg = conferirCamposObrig(["rfids_tx_uid" => "UID"], $_POST);
         if(!empty($errorMsg)){
-            set_status("ERRO: ". $errorMsg);
+            set_status("ERRO: " . $errorMsg);
             unset($_POST["cadastrarRfid"]);
             index();
             exit;
         }
 
+        // Validação de Duplicidade de UID
         $uidQuery = !empty($_POST["id"]) ?
             [
-                "SELECT id FROM rfids WHERE rfid_uid = ? AND id != ?;",
+                "SELECT rfids_nb_id FROM rfids WHERE rfids_tx_uid = ? AND rfids_nb_id != ?;",
                 "si",
-                [$_POST["rfid_uid"], (int)$_POST["id"]]
+                [$_POST["rfids_tx_uid"], (int)$_POST["id"]]
             ] :
             [
-                "SELECT id FROM rfids WHERE rfid_uid = ?;",
+                "SELECT rfids_nb_id FROM rfids WHERE rfids_tx_uid = ?;",
                 "s",
-                [$_POST["rfid_uid"]]
+                [$_POST["rfids_tx_uid"]]
             ];
 
         $uidExists = !empty(mysqli_fetch_assoc(query($uidQuery[0], $uidQuery[1], $uidQuery[2])));
@@ -110,17 +109,17 @@
             exit;
         }
 
-        $novo = [
-            "rfid_uid" => $_POST["rfid_uid"],
-            "status" => (!empty($_POST["status"]) ? $_POST["status"] : 'ativo'),
-            "descricao" => $_POST["descricao"],
+        $dados = [
+            "rfids_tx_uid"       => $_POST["rfids_tx_uid"],
+            "rfids_tx_status"    => (!empty($_POST["rfids_tx_status"]) ? $_POST["rfids_tx_status"] : 'ativo'),
+            "rfids_tx_descricao" => $_POST["rfids_tx_descricao"],
         ];
-
         if(!empty($_POST["id"])){
-            atualizar("rfids", array_keys($novo), array_values($novo), $_POST["id"]);
+            
+            atualizar("rfids", array_keys($dados), array_values($dados), $_POST["id"], "rfids_nb_id");
             set_status("<script>Swal.fire('Sucesso!', 'RFID atualizado com sucesso.', 'success');</script>");
         } else {
-            inserir("rfids", array_keys($novo), array_values($novo));
+            inserir("rfids", array_keys($dados), array_values($dados));
             set_status("<script>Swal.fire('Sucesso!', 'RFID inserido com sucesso.', 'success');</script>");
         }
 
@@ -135,7 +134,7 @@
     }
 
     function excluirRfid(){
-        query("DELETE FROM rfids WHERE id = {$_POST['id']};");
+        query("DELETE FROM rfids WHERE rfids_nb_id = {$_POST['id']};");
         set_status("<script>Swal.fire('Sucesso!', 'RFID excluído com sucesso.', 'info');</script>");
         unset($_POST['id']);
         index();

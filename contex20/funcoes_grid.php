@@ -213,6 +213,7 @@
 	}
 
 	function gridDinamico(string $nomeTabela, array $campos, array $camposBusca, string $queryBase, string $jsFunctions = "", int $width = 12, $tabIndex = -1){
+		
 		$result = 
 			"<link href='{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/css/grid_dinamico.css' rel='stylesheet' type='text/css' />
 			<div class='col-md-{$width}'>

@@ -53,6 +53,7 @@ $tabela = [
 $queryResult = mysqli_fetch_all($res, MYSQLI_ASSOC);
 
 if (!empty($queryResult)) {
+    
     $tabela["header"] = array_keys($queryResult[0]);
 
     foreach ($queryResult as $row) {

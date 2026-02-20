@@ -235,6 +235,7 @@
 	}
 
 	function inserir(string $tabela, array $campos, array $valores): array{
+		
 		return insertInto($tabela, $campos, $valores);
 	}
 	function insertInto(string $tabela, array $campos, array $valores): array{
@@ -257,11 +258,13 @@
 		}
 
 		try{
+			
 			$statement = mysqli_prepare(
 				$conn,
 				"INSERT INTO $tabela (".implode(", ", array_keys($novoRegistro)).")"
 				." VALUES (".implode(", ", array_pad([], count($novoRegistro), "?")).");"
 			);
+			
 			mysqli_stmt_bind_param($statement, $types, ...array_values($novoRegistro));
 			$registered = mysqli_stmt_execute($statement);
 			
@@ -290,6 +293,9 @@
 	}
 
 	function atualizar(string $tabela, array $campos, array $valores, string $id): void{
+		// var_dump('--------');
+		// var_dump($tabela);
+        // die();
 		updateById($tabela, $campos, $valores, $id);
 	}
 	function updateById(string $tabela, array $campos, array $valores, string $id): void{
@@ -306,6 +312,7 @@
         $tab = substr($tabela,0,4);
         if($tabela === 'usuario_perfil'){ $tab = 'uperf'; }
         if($tabela === 'perfil_acesso'){ $tab = 'perfil'; }
+        if($tabela === 'rfids'){ $tab = 'rfids'; }
         $camposString = "";
 		for($i=0;$i<count($campos);$i++){
 			$camposString .= ", ".$campos[$i]." = ";
@@ -321,7 +328,7 @@
 		if(strlen($camposString) > 2){
 			$camposString = substr($camposString, 2);
 		}
-
+		
 		try{
 			query("UPDATE ".$tabela." SET ".$camposString." WHERE ".$tab."_nb_id = ".$id);
 			set_status("Registro atualizado com sucesso!");
@@ -2293,6 +2300,10 @@
 	}
 
 	function query($query, $types = '', array $vars = []){
+		
+		var_dump($query);
+		var_dump('-----------------');
+        // die();
 		global $conn;
 		if(empty($types) || empty($vars)){
 			$result = mysqli_query($conn,$query) or mysqli_error($conn);
