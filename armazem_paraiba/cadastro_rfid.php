@@ -15,14 +15,17 @@
 
     function formRfid(){
         if(!empty($_POST["id"])){
-
-            $rfid = mysqli_fetch_assoc(query("SELECT * FROM rfids WHERE rfids_nb_id = {$_POST['id']};"));
+            $rfid = mysqli_fetch_assoc(query("SELECT * FROM rfids WHERE rfids_nb_id = ".(int)$_POST['id']));
             
-            $_POST["rfids_tx_uid"]       = !empty($_POST["rfids_tx_uid"]) ? $_POST["rfids_tx_uid"] : $rfid["rfids_tx_uid"];
-            $_POST["rfids_tx_status"]    = !empty($_POST["rfids_tx_status"]) ? $_POST["rfids_tx_status"] : $rfid["rfids_tx_status"];
-            $_POST["rfids_tx_descricao"] = !empty($_POST["rfids_tx_descricao"]) ? $_POST["rfids_tx_descricao"] : $rfid["rfids_tx_descricao"];
+            if($_POST["acao"] != "cadastrarRfid"){
+                $_POST["rfids_tx_uid"]       = $rfid["rfids_tx_uid"];
+                $_POST["rfids_tx_status"]    = $rfid["rfids_tx_status"];
+                $_POST["rfids_tx_descricao"] = $rfid["rfids_tx_descricao"];
+            }
         }
 
+        var_dump($_POST["rfids_tx_status"]);
+    
         echo abre_form();
         echo linha_form([
 

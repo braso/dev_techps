@@ -672,8 +672,7 @@
 			// Atribui RFID selecionado (se houver) antes do commit
 			if(!empty($_POST["rfid_id"])){
 				$rfidId = (int)$_POST["rfid_id"];
-				// garante que nenhum outro registro esteja vinculado a este RFID
-				query("UPDATE rfids SET user_id = ? WHERE id = ?;", "ii", [$id, $rfidId]);
+				query("UPDATE rfids SET rfids_nb_user_id = ? WHERE rfids_nb_id = ?;", "ii", [$id, $rfidId]);
 			}
 
 			query("COMMIT;");
@@ -737,12 +736,12 @@
 			if(isset($_POST["rfid_id"]) && $_POST["rfid_id"] !== ""){
 				$rfidId = (int)$_POST["rfid_id"];
 				// Remove vínculo de outros RFIDs já associados a este usuário, exceto o selecionado
-				query("UPDATE rfids SET user_id = NULL WHERE user_id = ? AND id != ?;", "ii", [$id, $rfidId]);
+				query("UPDATE rfids SET rfids_nb_user_id = NULL WHERE rfids_nb_user_id = ? AND rfids_nb_id != ?;", "ii", [$id, $rfidId]);
 				// Associa o RFID selecionado ao usuário
-				query("UPDATE rfids SET user_id = ? WHERE id = ?;", "ii", [$id, $rfidId]);
+				query("UPDATE rfids SET rfids_nb_user_id = ? WHERE rfids_nb_id = ?;", "ii", [$id, $rfidId]);
 			} else {
 				// Se nenhum RFID selecionado, remove vínculos existentes
-				query("UPDATE rfids SET user_id = NULL WHERE user_id = ?;", "i", [$id]);
+				query("UPDATE rfids SET rfids_nb_user_id = NULL WHERE rfids_nb_user_id = ?;", "i", [$id]);
 			}
 		}
 
@@ -1314,19 +1313,30 @@
 		$tabIndex = 1;
 
 		// Carrega opções de RFID (somente não atribuídos ou o atribuído ao registro atual)
-		$rfidOptions = ["" => ""];
+		$rfidOptions = [" " => "-"];
 		$entityIdForRfid = !empty($a_mod["enti_nb_id"]) ? (int)$a_mod["enti_nb_id"] : 0;
-		$condRfid = "WHERE user_id IS NULL" . ($entityIdForRfid ? " OR user_id = {$entityIdForRfid}" : "");
-		$rsRfids = query("SELECT id, rfid_uid, descricao FROM rfids {$condRfid} ORDER BY rfid_uid ASC");
+
+		// Filtro: (Deve estar ativo OU ser o RFID que já pertence a este usuário) 
+		// E (Deve estar disponível [NULL] OU ser o RFID que já pertence a este usuário)
+		$condRfid = "WHERE (rfids_tx_status = 'ativo'" . ($entityIdForRfid ? " OR rfids_nb_user_id = {$entityIdForRfid}" : "") . ") ";
+		$condRfid .= "AND (rfids_nb_user_id IS NULL" . ($entityIdForRfid ? " OR rfids_nb_user_id = {$entityIdForRfid}" : "") . ")";
+
+		$rsRfids = query("SELECT rfids_nb_id, rfids_tx_uid, rfids_tx_descricao, rfids_tx_status FROM rfids {$condRfid} ORDER BY rfids_tx_uid ASC");
+
 		while($r = mysqli_fetch_assoc($rsRfids)){
-			$label = $r["rfid_uid"];
-			if(!empty($r["descricao"])) $label .= " - " . $r["descricao"];
-			$rfidOptions[$r["id"]] = $label;
+			$label = $r["rfids_tx_uid"];
+			if(!empty($r["rfids_tx_descricao"])) $label .= " - " . $r["rfids_tx_descricao"];
+			
+			// Opcional: Avisar se o RFID atual está inativo
+			if($r["rfids_tx_status"] == 'inativo') $label .= " (INATIVO)";
+			
+			$rfidOptions[$r["rfids_nb_id"]] = $label;
 		}
+
 		$selectedRfid = "";
 		if($entityIdForRfid){
-			$rowAssigned = mysqli_fetch_assoc(query("SELECT id FROM rfids WHERE user_id = {$entityIdForRfid} LIMIT 1"));
-			if(!empty($rowAssigned)) $selectedRfid = $rowAssigned["id"];
+			$rowAssigned = mysqli_fetch_assoc(query("SELECT rfids_nb_id FROM rfids WHERE rfids_nb_user_id = {$entityIdForRfid} LIMIT 1"));
+			if(!empty($rowAssigned)) $selectedRfid = $rowAssigned["rfids_nb_id"];
 		}
 
 		$camposImg = [
