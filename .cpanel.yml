@@ -21,4 +21,3 @@ deployment:
     - /bin/cp -R $DOMAIN $ARMAZEMPARAIBA
     - /bin/cp -R $DOMAIN $BLUEROAD
     - /bin/cp -R $DOMAIN $SAOLUCAS
-

@@ -306,6 +306,7 @@
         $tab = substr($tabela,0,4);
         if($tabela === 'usuario_perfil'){ $tab = 'uperf'; }
         if($tabela === 'perfil_acesso'){ $tab = 'perfil'; }
+        if($tabela === 'rfids'){ $tab = 'rfids'; }
         $camposString = "";
 		for($i=0;$i<count($campos);$i++){
 			$camposString .= ", ".$campos[$i]." = ";
@@ -321,7 +322,7 @@
 		if(strlen($camposString) > 2){
 			$camposString = substr($camposString, 2);
 		}
-
+		
 		try{
 			query("UPDATE ".$tabela." SET ".$camposString." WHERE ".$tab."_nb_id = ".$id);
 			set_status("Registro atualizado com sucesso!");
