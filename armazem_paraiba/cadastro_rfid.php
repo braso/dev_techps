@@ -15,7 +15,7 @@
 
     function formRfid(){
         if(!empty($_POST["id"])){
-            // Busca os dados atuais para preencher o formulário na edição
+
             $rfid = mysqli_fetch_assoc(query("SELECT * FROM rfids WHERE rfids_nb_id = {$_POST['id']};"));
             
             $_POST["rfids_tx_uid"]       = !empty($_POST["rfids_tx_uid"]) ? $_POST["rfids_tx_uid"] : $rfid["rfids_tx_uid"];
@@ -25,13 +25,12 @@
 
         echo abre_form();
         echo linha_form([
-            // Padronizado para "id" como no cadastro_celular
+
             campo_hidden("id", (!empty($_POST["id"]) ? $_POST["id"] : "")),
             campo("UID", "rfids_tx_uid", (!empty($_POST["rfids_tx_uid"]) ? $_POST["rfids_tx_uid"] : ""), 4, "", "required"),
             combo_radio("Status", "rfids_tx_status", (!empty($_POST["rfids_tx_status"]) ? $_POST["rfids_tx_status"] : 'ativo'), 2, [
                 'ativo' => 'Ativo',
-                'inativo' => 'Inativo',
-                'bloqueado' => 'Bloqueado'
+                'inativo' => 'Inativo'
             ]),
             campo("Descrição", "rfids_tx_descricao", (!empty($_POST["rfids_tx_descricao"]) ? $_POST["rfids_tx_descricao"] : ""), 6)
         ]);
