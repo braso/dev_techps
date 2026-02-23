@@ -1,34 +1,51 @@
 <?php
-    /* Modo debug
-		ini_set("display_errors", 1);
-		error_reporting(E_ALL);
+    // ini_set("display_errors", 1);
+    // error_reporting(E_ALL);
 
-		header("Expires: 01 Jan 2001 00:00:00 GMT");
-		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
-		header("Cache-Control: post-check=0, pre-check=0", FALSE);
-	//*/
+    // header("Expires: 01 Jan 2001 00:00:00 GMT");
+    // header("Cache-Control: no-cache, no-store, must-revalidate");
+    // header("Cache-Control: post-check=0, pre-check=0", FALSE);
 
+    include_once "utils/utils.php";
     include_once "load_env.php";
     include_once "conecta.php";
     mysqli_query($conn, "SET time_zone = '-3:00'");
 
+    // --- ROTEADOR DE AÇÕES ---
+    // Verifica se chegou alguma ação via POST
+    if(!empty($_POST['acao'])){
+        $acao = $_POST['acao'];
+        if(function_exists($acao)){
+            $acao();
+            exit;
+        } else {
+            echo "Erro: Função '$acao' não existe no PHP.";
+            exit;
+        }
+    }
+
     function formCelular() {
         if(!empty($_POST["id"])){
             $celular = mysqli_fetch_assoc(query(
-                "SELECT * FROM celular WHERE celu_nb_id = {$_POST["id"]};"
+                "SELECT * FROM celular WHERE celu_nb_id = " . (int)$_POST["id"]
             ));
-            $_POST["nome_like"] 			= !empty($_POST["nome_like"])? 			$_POST["nome_like"]:  			$celular["celu_tx_nome"];
-            $_POST["imei"] 					= !empty($_POST["imei"])? 				$_POST["imei"]:  				$celular["celu_tx_imei"];
-            $_POST["numero"] 				= !empty($_POST["numero"])? 			$_POST["numero"]:  				$celular["celu_tx_numero"];
-            $_POST["operadora"] 			= !empty($_POST["operadora"])? 			$_POST["operadora"]:  			$celular["celu_tx_operadora"];
-            $_POST["cimie"] 				= !empty($_POST["cimie"])? 				$_POST["cimie"]:  				$celular["celu_tx_cimie"];
-            $_POST["sistemaOperacional"] 	= !empty($_POST["sistemaOperacional"])? $_POST["sistemaOperacional"]:  	$celular["celu_tx_sistemaOperacional"];
-            $_POST["marcaModelo_like"] 		= !empty($_POST["marcaModelo_like"])? 	$_POST["marcaModelo_like"]:  	$celular["celu_tx_marcaModelo"];
-            $_POST["entidade"] 				= !empty($_POST["entidade"])? 			$_POST["entidade"]:  			$celular["celu_nb_entidade"];
+            // Preenche os POSTs caso não existam
+            if($celular) {
+                $_POST["nome_like"]             = $_POST["nome_like"] ?? $celular["celu_tx_nome"];
+                $_POST["imei"]                  = $_POST["imei"] ?? $celular["celu_tx_imei"];
+                $_POST["numero"]                = $_POST["numero"] ?? $celular["celu_tx_numero"];
+                $_POST["operadora"]             = $_POST["operadora"] ?? $celular["celu_tx_operadora"];
+                $_POST["cimie"]                 = $_POST["cimie"] ?? $celular["celu_tx_cimie"];
+                $_POST["sistemaOperacional"]    = $_POST["sistemaOperacional"] ?? $celular["celu_tx_sistemaOperacional"];
+                $_POST["marcaModelo_like"]      = $_POST["marcaModelo_like"] ?? $celular["celu_tx_marcaModelo"];
+                $_POST["entidade"]              = $_POST["entidade"] ?? $celular["celu_nb_entidade"];
+            }
         }
 
         echo abre_form();
         echo linha_form([
+            // --- CORREÇÃO IMPORTANTE: Campo 'acao' para o Cadastrar/Atualizar funcionar ---
+            campo_hidden("acao", ""), 
             campo_hidden("id", (!empty($_POST["id"])? $_POST["id"]: "")),
             campo("Nome", "nome_like", (!empty($_POST["nome_like"])? $_POST["nome_like"]: ""), 4, "", "required"),
             campo("IMEI", "imei", (!empty($_POST["imei"])? $_POST["imei"]: ""), 2, "", "required"),
@@ -39,30 +56,31 @@
             campo("Marca e Modelo", "marcaModelo_like", (!empty($_POST["marcaModelo_like"])? $_POST["marcaModelo_like"]: ""), 2),
             combo_net("Responsável", "entidade", (!empty($_POST["entidade"])? $_POST["entidade"]: ""), 3, "entidade")
         ]);
-        $botoes = 
-            !empty($_POST["id"])?
-                [
-                    botao("Atualizar", "cadastrarCelular", "id", $_POST["id"], "", "", "btn btn-success"),
-                    criarBotaoVoltar("cadastro_celular.php", "voltarCelular")
-                ]:
-                [botao("Cadastrar", "cadastrarCelular", "", "", "", "", "btn btn-success")]
-        ;
+        
+        $botoes = !empty($_POST["id"])?
+            [
+                botao("Atualizar", "cadastrarCelular", "id", $_POST["id"], "", "", "btn btn-success"),
+                criarBotaoVoltar("cadastro_celular.php", "voltarCelular")
+            ]:
+            [botao("Cadastrar", "cadastrarCelular", "", "", "", "", "btn btn-success")];
+            
         echo fecha_form($botoes);
     }
 
     function listarCelulares() {
+        // ... (Definição dos campos continua igual) ...
         $gridFields = [
-            "CÓDIGO"			=> "celu_nb_id",
-            "NOME"				=> "celu_tx_nome",
-            "IMEI"				=> "celu_tx_imei",
-            "NÚMERO"			=> "celu_tx_numero",
-            "OPERADORA"			=> "celu_tx_operadora",
-            "CIMIE"				=> "celu_tx_cimie",
-            "S.O."				=> "celu_tx_sistemaOperacional",
-            "MARCA/MODELO"		=> "celu_tx_marcaModelo",
-            "RESPONSÁVEL"		=> "enti_tx_nome",
-            "CADASTRADO EM"		=> "DATE_FORMAT(celu_tx_dataCadastro, '%d/%m/%Y %H:%i:%s')",
-            "ATUALIZADO EM"		=> "DATE_FORMAT(celu_tx_dataAtualiza, '%d/%m/%Y %H:%i:%s')",
+            "CÓDIGO"            => "celu_nb_id",
+            "NOME"              => "celu_tx_nome",
+            "IMEI"              => "celu_tx_imei",
+            "NÚMERO"            => "celu_tx_numero",
+            "OPERADORA"         => "celu_tx_operadora",
+            "CIMIE"             => "celu_tx_cimie",
+            "S.O."              => "celu_tx_sistemaOperacional",
+            "MARCA/MODELO"      => "celu_tx_marcaModelo",
+            "RESPONSÁVEL"       => "enti_tx_nome",
+            "CADASTRADO EM"     => "DATE_FORMAT(celu_tx_dataCadastro, '%d/%m/%Y %H:%i:%s')",
+            "ATUALIZADO EM"     => "DATE_FORMAT(celu_tx_dataAtualiza, '%d/%m/%Y %H:%i:%s')",
         ];
 
         $camposBusca = [
@@ -78,27 +96,26 @@
         $queryBase = "SELECT ".implode(", ", array_values($gridFields))." FROM celular
             JOIN entidade ON celu_nb_entidade = enti_nb_id";
 
-        $actions = criarIconesGrid(
-            ["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-            ["cadastro_celular.php", "cadastro_celular.php"],
-            ["editarCelular()", "excluirCelular()"]
+        // --- AQUI ACONTECE A MÁGICA ---
+        // Você chama a função auxiliar passando apenas:
+        // 1. Arquivo de edição
+        // 2. Nome da função de Editar
+        // 3. Nome da função de Excluir
+        $configuracao = gerarAcoesComConfirmacao(
+            "cadastro_celular.php", 
+            "editarCelular()", 
+            "excluirCelular" //aqui sem () porque a função já está definida no PHP
         );
-
-        $gridFields["actions"] = $actions["tags"];
-
-        $jsFunctions =
-            "const funcoesInternas = function(){
-                ".implode(" ", $actions["functions"])."
-            }"
-        ;
+        $gridFields["actions"] = $configuracao["tags"];
+        $jsFunctions = $configuracao["js"];
 
         echo gridDinamico("celular", $gridFields, $camposBusca, $queryBase, $jsFunctions);
-    }
+    };
 
     function cadastrarCelular(){
         $fields = ["nome_like", "imei", "numero", "operadora", "cimie", "sistemaOperacional", "marcaModelo_like"];
         foreach($fields as $field){
-            $_POST[$field] = trim($_POST[$field]);
+            $_POST[$field] = isset($_POST[$field]) ? trim($_POST[$field]) : '';
         }
 
         $errorMsg = conferirCamposObrig(["nome_like" => "Nome", "imei" => "IMEI", "numero" => "Número"], $_POST);
@@ -109,17 +126,11 @@
             exit;
         }
 
+        // Verifica duplicidade de IMEI
         $imeiQuery = !empty($_POST["id"]) ?
-            [
-                "SELECT celu_nb_id FROM celular WHERE celu_tx_imei = ? AND celu_nb_id != ?;",
-                "si",
-                [$_POST["imei"], (int)$_POST["id"]]
-            ] :
-            [
-                "SELECT celu_nb_id FROM celular WHERE celu_tx_imei = ?;",
-                "s",
-                [$_POST["imei"]]
-            ];
+            ["SELECT celu_nb_id FROM celular WHERE celu_tx_imei = ? AND celu_nb_id != ?;", "si", [$_POST["imei"], (int)$_POST["id"]]] :
+            ["SELECT celu_nb_id FROM celular WHERE celu_tx_imei = ?;", "s", [$_POST["imei"]]];
+            
         $imeiJaCadastrado = !empty(mysqli_fetch_assoc(query($imeiQuery[0], $imeiQuery[1], $imeiQuery[2])));
         if($imeiJaCadastrado){
             set_status("<script>Swal.fire('Opa!', 'Este IMEI já está vinculado à outro celular.', 'error');</script>");
@@ -147,8 +158,7 @@
             inserir("celular", array_keys($novoCelular), array_values($novoCelular));
             set_status("<script>Swal.fire('Sucesso!', 'Celular inserido com sucesso.', 'success');</script>");
         }
-		unset($_POST);
-
+        unset($_POST);
         index();
         exit;
     }
@@ -159,7 +169,12 @@
     }
 
     function excluirCelular(){
-        query("DELETE FROM celular WHERE celu_nb_id = {$_POST["id"]};");
+        if(empty($_POST["id"])){
+            set_status("Erro: ID não informado.");
+            index();
+            exit;
+        }
+        query("DELETE FROM celular WHERE celu_nb_id = " . (int)$_POST["id"]);
         set_status("<script>Swal.fire('Sucesso!', 'Celular excluído com sucesso.', 'info');</script>");
         unset($_POST["id"]);
         index();
@@ -172,18 +187,19 @@
         exit;
     }
 
-
     function index(){
         echo "<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css'>";
-
         cabecalho("Cadastro de Celulares");
-
-        // Renderiza formulário e lista
         formCelular();
-
         if(empty($_POST["id"])){
             listarCelulares();
         }
         rodape();
+    }
+
+    // --- FALLBACK ---
+    // Se não houver ação, carrega a tela inicial
+    if(empty($_POST['acao'])){
+        index();
     }
 ?>

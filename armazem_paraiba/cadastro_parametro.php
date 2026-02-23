@@ -26,6 +26,11 @@
 		query("ALTER TABLE parametro ADD COLUMN para_tx_sindicato VARCHAR(100) COMMENT 'Sindicato'");
 	}
 
+	// Verificação e criação da coluna Pagar Adicional Noturno
+	if(mysqli_num_rows(query("SHOW COLUMNS FROM parametro LIKE 'para_tx_pagarAdicNoturno'")) == 0){
+		query("ALTER TABLE parametro ADD COLUMN para_tx_pagarAdicNoturno VARCHAR(3) DEFAULT 'sim' COMMENT 'Pagar Adicional Noturno (sim/nao)'");
+	}
+
 
 	function carregarJSFormParametro(){
 		global $a_mod;
@@ -641,6 +646,7 @@
 			"para_tx_adi5322" 					=> $_POST["adi5322"],
 			"para_tx_status" 					=> "ativo",
 			"para_tx_turno" 					=> $_POST["turno"] ?? null,
+			"para_tx_pagarAdicNoturno" 			=> $_POST["pagarAdicNoturno"] ?? 'sim',
 		];
 
 		if(!empty($_POST["ignorarCampos"]) || $_POST["ignorarCampos"] == null){
@@ -730,7 +736,7 @@
 				"nome", "tolerancia", "jornadaSemanal", "jornadaSabado",
 				"percHESemanal", "percHEEx", "maxHESemanalDiario", "diariasCafe", "diariasAlmoco", "diariasJanta",
 				"acordo", "inicioAcordo", "fimAcordo", "banco", "adi5322", "Obs", "turno",
-				"categoria", "sindicato"
+				"categoria", "sindicato", "pagarAdicNoturno"
 			];
 			foreach($campos as $campo){
 				if(!empty($_POST[$campo])){
@@ -839,6 +845,7 @@
 				campo("Hora Extra Extraordinária (%)*", "percHEEx", ($a_mod["para_tx_percHEEx"]?? ""), 3, "MASCARA_NUMERO"),
 				campo_hora("Máx. de \"H.E. Semanal\" por dia*", "maxHESemanalDiario", ($a_mod["para_tx_maxHESemanalDiario"]?? "02:00"), 3),
 				combo("Pagar H.E. Ex. mesmo com Período Neg.*", "pagarHEExComPerNeg", ($a_mod["para_tx_pagarHEExComPerNeg"]?? "sim"), 3, ["sim" => "Sim", "nao" => "Não"]),
+				combo("Pagar Adicional Noturno*", "pagarAdicNoturno", ($a_mod["para_tx_pagarAdicNoturno"]?? "sim"), 3, ["sim" => "Sim", "nao" => "Não"]),
 				"<div class='col-sm-3 margin-bottom-5 campo-fit-content ".(!empty($_POST["errorFields"]) && in_array("descFaltas", $_POST["errorFields"]))."' style='min-width:fit-content; min-height: 50px;'>
 					<label>Descontar horas por faltas não justificadas?</label><br>
 					<label class='radio-inline'>

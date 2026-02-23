@@ -802,7 +802,14 @@
 				$jornadaPrevistaOriginal = operarHorarios([$jornadaPrevistaOriginal, $intervalo], "-");
 			}
 
-			$jornadaPrevista = calcularJornadaPrevista($jornadaPrevistaOriginal, !empty($stringFeriado), ($abonos["abon_tx_abono"]?? null));
+			//MODIFICACAO: Escala em dia de feriado deve considerar jornada normal
+			$ignorarFeriadoEscala = ($motorista["para_tx_tipo"] == "escala" && $jornadaPrevistaOriginal != "00:00");
+
+			if($ignorarFeriadoEscala){
+				$ehDomingoFeriadoFacultativo = false;
+			}
+
+			$jornadaPrevista = calcularJornadaPrevista($jornadaPrevistaOriginal, (!empty($stringFeriado) && !$ignorarFeriadoEscala), ($abonos["abon_tx_abono"]?? null));
 			$aRetorno["jornadaPrevista"] = $jornadaPrevista;
 			if(!empty($abonos)){
 				$warning = 
@@ -1128,6 +1135,19 @@
 			// }else{
 			// }
 			$aRetorno["adicionalNoturno"] = calcularAdicNot($registros);
+
+			// Failsafe: se a chave não existir, buscar diretamente no banco para garantir
+			if(!isset($motorista['para_tx_pagarAdicNoturno']) && !empty($motorista['enti_nb_parametro'])){
+				$paramCheck = mysqli_fetch_assoc(query("SELECT para_tx_pagarAdicNoturno FROM parametro WHERE para_nb_id = {$motorista['enti_nb_parametro']} LIMIT 1"));
+				if($paramCheck){
+					$motorista['para_tx_pagarAdicNoturno'] = $paramCheck['para_tx_pagarAdicNoturno'];
+				}
+			}
+
+			// Se o parâmetro definir que não deve pagar adicional noturno (ex: regra de CCT para troca de turno), zera o valor.
+			if(isset($motorista['para_tx_pagarAdicNoturno']) && trim($motorista['para_tx_pagarAdicNoturno']) == 'nao'){
+				$aRetorno["adicionalNoturno"] = "00:00";
+			}
 		//}
 		
 		//TOLERÂNCIA{
@@ -1147,6 +1167,77 @@
 				if(($aRetorno["jornadaPrevista"] == "00:00" || $ehDomingoFeriadoFacultativo)){
 					$aRetorno["he100"] = $aRetorno["diffSaldo"];
 					$aRetorno["he50"] = "00:00";
+
+					// Verifica se a jornada cruza para o dia seguinte e se o dia seguinte é escalado
+					$fimJornadaReal = $registros["fimJornada"][0] ?? null;
+					if(!empty($fimJornadaReal)){
+						$dataFimJornada = date("Y-m-d", strtotime($fimJornadaReal));
+						$dataProximoDia = date("Y-m-d", strtotime($data . " +1 day"));
+						
+						if($dataFimJornada == $dataProximoDia){
+							$proximoDiaEscalado = false;
+							
+							if($motorista["para_tx_tipo"] == "horas_por_dia"){
+								$diaSemanaProx = date("w", strtotime($dataProximoDia));
+								if($diaSemanaProx == "6"){
+									$proximoDiaJornada = $motorista["enti_tx_jornadaSabado"];
+								}elseif($diaSemanaProx == "0"){
+									$proximoDiaJornada = "00:00";
+									if(!empty($motorista["para_tx_jornadaDomingoFacultativo"])){
+										$proximoDiaJornada = $motorista["para_tx_jornadaDomingoFacultativo"];
+									}
+								}else{
+									$proximoDiaJornada = $motorista["enti_tx_jornadaSemanal"];
+								}
+								
+								if($proximoDiaJornada != "00:00") $proximoDiaEscalado = true;
+								
+							}elseif($motorista["para_tx_tipo"] == "escala"){
+								$diferenca = (new DateTime($motorista["esca_tx_dataInicio"]))->diff(new DateTime($dataProximoDia));
+								$diferenca = $diferenca->days*($diferenca->invert? -1: 1);
+								$diaDoCiclo = round($motorista["esca_nb_periodicidade"]*(($diferenca)/($motorista["esca_nb_periodicidade"])-floor($diferenca/$motorista["esca_nb_periodicidade"]))+1);
+								
+								foreach ($motorista["diasEscala"] as $d) {
+									if ($d["esca_nb_numeroDia"] == $diaDoCiclo) {
+										if(!empty($d["esca_tx_horaInicio"]) && $d["esca_tx_horaInicio"] != "00:00"){
+											$proximoDiaEscalado = true;
+										}
+										break;
+									}
+								}
+							}
+
+							if($proximoDiaEscalado){
+								$horasPosMeiaNoite = "00:00";
+								$meiaNoite = strtotime($dataProximoDia . " 00:00:00");
+								
+								if(!empty($registros["jornadaCompleto"]["pares"])){
+									foreach($registros["jornadaCompleto"]["pares"] as $par){
+										if(empty($par["inicio"]) || empty($par["fim"])) continue;
+										
+										$inicioTs = strtotime($par["inicio"]);
+										$fimTs = strtotime($par["fim"]);
+										
+										if($fimTs > $meiaNoite){
+											$inicioEfetivo = max($inicioTs, $meiaNoite);
+											$diffSegundos = $fimTs - $inicioEfetivo;
+											
+											if($diffSegundos > 0){
+												$horas = floor($diffSegundos / 3600);
+												$minutos = floor(($diffSegundos % 3600) / 60);
+												$tempoPar = sprintf("%02d:%02d", $horas, $minutos);
+												$horasPosMeiaNoite = operarHorarios([$horasPosMeiaNoite, $tempoPar], "+");
+											}
+										}
+									}
+								}
+								
+								// Ajusta HE100 e HE50
+								$aRetorno["he100"] = operarHorarios([$aRetorno["diffSaldo"], $horasPosMeiaNoite], "-");
+								$aRetorno["he50"] = $horasPosMeiaNoite;
+							}
+						}
+					}
 					if($ehDomingoFeriadoFacultativo){
 						$aRetorno["diffSaldo"] = "00:00";
 						$he100 = operarHorarios([$aRetorno["he100"], $aRetorno["jornadaPrevista"]], "-");

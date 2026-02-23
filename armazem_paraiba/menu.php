@@ -88,9 +88,6 @@ $showComunicado = (strpos($path, "/techps") !== false);
 if ($showComunicado) {
     $paginas["cadastros"]["/cadastro_comunicado.php"] = "Comunicado";
 }
-
-
-
         $menus = [
             "cadastros" => "",
             "ponto" => "",
@@ -196,7 +193,7 @@ if ($showComunicado) {
                         }
                     }
                 }
-                $children .= "<li class=''><a href='".$CONTEX["path"].$key."' class='nav-link'> ".$value."</a></li>";
+                $children .= "<li class='dd'><a href='".$CONTEX["path"].$key."' class='nav-link'> ".$value."</a></li>";
                 $countItems++;
             }
             // Se houver perfil vinculado, mostra a seção se houver filhos OU se o PAI estiver permitido
@@ -204,6 +201,7 @@ if ($showComunicado) {
             if($perfilId > 0){
                 $showSection = ($children !== "" || $parentAllowed);
             }
+            //Decide se a seção é simples ou 2 colunas
             if($showSection){
                 $ulClass = "dropdown-menu pull-left";
                 if($countItems > 10){
@@ -212,8 +210,9 @@ if ($showComunicado) {
 
                 $menus[$title] = "
                     <li class='menu-dropdown classic-menu-dropdown ".verificarAtividade(array_keys($secao))."'>
-                        <a href='javascript:;'> ".ucfirst($title)."<span class='arrow'></span></a>
-                        <ul class='".$ulClass."'>".$children."</ul></li>";
+                        <a>".ucfirst($title)."</a>
+                        <ul class='".$ulClass."'>".$children."</ul>
+                    </li>";
             } else {
                 $menus[$title] = "";
             }

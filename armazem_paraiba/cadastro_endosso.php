@@ -529,6 +529,7 @@ function cadastrar(){
     }
 
     if($pagarExtras){
+        $saldoPeriodoParaCalculo = $saldoBruto;
         $aPagar = calcularHorasAPagar($saldoPeriodoParaCalculo, $saldoBruto, $he50, $he100, $max50Auto, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
     }else{
         $aPagar = ["00:00", "00:00"];
