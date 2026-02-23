@@ -44,16 +44,20 @@
         //}
 
         $data = $data[0];
-
+        
         $token = makeToken((object)$data,$_ENV["APP_KEY"]);
         
         echo "{ \"id\": ".$data['user_nb_id'].", \"token\": \"".$token."\"}";
         exit;
     }
-
+    
     function make_login_rfid(){
+        
+        $json_recebido = file_get_contents('php://input');
 
-
+        // Transforma o JSON em um array associativo do PHP
+        $_POST = json_decode($json_recebido, true);
+        
         if(empty($_POST["rfid"])){
             $msg = 'rfid is missing';
             echo $msg;
@@ -62,9 +66,11 @@
 
         $data = get_data(
                 "SELECT user_nb_id id, user_tx_nome nome, user_tx_login login,
-                user_tx_senha senha, user_nb_rfid rfid, user_bb_digital digital FROM user 
+                user_tx_senha senha, rfids_tx_uid rfid, rfids_tx_status status_rfid 
+                FROM user 
+                INNER JOIN rfids ON user_nb_entidade = rfids_nb_user_id
                 WHERE user_tx_status = 'ativo'
-                AND user_nb_rfid = ?;",
+                AND rfids_tx_uid = ?;",
                 [$_POST["rfid"]]
             );
 
