@@ -23,8 +23,6 @@
                 $_POST["rfids_tx_descricao"] = $rfid["rfids_tx_descricao"];
             }
         }
-
-        var_dump($_POST["rfids_tx_status"]);
     
         echo abre_form();
         echo linha_form([
