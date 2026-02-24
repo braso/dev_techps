@@ -1,6 +1,6 @@
 <?php
-ini_set("display_errors", 1);
-error_reporting(E_ALL);
+// ini_set("display_errors", 1);
+// error_reporting(E_ALL);
 
 require_once __DIR__."/conecta.php";
 
@@ -10,12 +10,87 @@ date_default_timezone_set('America/Fortaleza');
    FUNÇÕES
 ========================= */
 
+class SimpleZip {
+    private $files = [];
+    
+    public function addFile($content, $filename) {
+        $this->files[] = ['name' => $filename, 'data' => $content];
+    }
+    
+    public function save($filepath) {
+        $fp = fopen($filepath, 'wb');
+        if (!$fp) return false;
+
+        $centralDir = '';
+        $offset = 0;
+        
+        foreach ($this->files as $file) {
+            $data = $file['data'];
+            $name = $file['name'];
+            $len = strlen($data);
+            $crc = crc32($data);
+            $namelen = strlen($name);
+            
+            // Local File Header
+            $header = "\x50\x4b\x03\x04"; // Signature
+            $header .= "\x0a\x00";       // Version needed
+            $header .= "\x00\x00";       // Flags
+            $header .= "\x00\x00";       // Compression (0 = Store)
+            $header .= "\x00\x00\x00\x00"; // Time/Date
+            $header .= pack('V', $crc);    // CRC32
+            $header .= pack('V', $len);    // Compressed size
+            $header .= pack('V', $len);    // Uncompressed size
+            $header .= pack('v', $namelen); // Filename length
+            $header .= "\x00\x00";       // Extra field length
+            $header .= $name;
+            
+            fwrite($fp, $header . $data);
+            
+            // Central Directory Record
+            $cd = "\x50\x4b\x01\x02";   // Signature
+            $cd .= "\x00\x00";          // Version made by
+            $cd .= "\x0a\x00";          // Version needed
+            $cd .= "\x00\x00";          // Flags
+            $cd .= "\x00\x00";          // Compression (0 = Store)
+            $cd .= "\x00\x00\x00\x00";  // Time/Date
+            $cd .= pack('V', $crc);     // CRC32
+            $cd .= pack('V', $len);     // Compressed size
+            $cd .= pack('V', $len);     // Uncompressed size
+            $cd .= pack('v', $namelen); // Filename length
+            $cd .= "\x00\x00";          // Extra field length
+            $cd .= "\x00\x00";          // Comment length
+            $cd .= "\x00\x00";          // Disk number start
+            $cd .= "\x00\x00";          // Internal attrs
+            $cd .= "\x00\x00\x00\x00";  // External attrs
+            $cd .= pack('V', $offset);  // Offset of local header
+            $cd .= $name;
+            
+            $centralDir .= $cd;
+            $offset += strlen($header) + $len;
+        }
+        
+        // End of Central Directory Record
+        $eocd = "\x50\x4b\x05\x06";     // Signature
+        $eocd .= "\x00\x00";            // Disk number
+        $eocd .= "\x00\x00";            // Disk number with CD
+        $eocd .= pack('v', count($this->files)); // Disk entries
+        $eocd .= pack('v', count($this->files)); // Total entries
+        $eocd .= pack('V', strlen($centralDir)); // CD size
+        $eocd .= pack('V', $offset);    // CD offset
+        $eocd .= "\x00\x00";            // Comment length
+        
+        fwrite($fp, $centralDir . $eocd);
+        fclose($fp);
+        return true;
+    }
+}
+
 function pad($valor, $tamanho, $tipo='A'){
     if($tipo === 'N'){
-        $valor = preg_replace('/\D/','',$valor);
+        $valor = preg_replace('/\D/','',$valor ?? '');
         return str_pad(substr($valor, -$tamanho), $tamanho, '0', STR_PAD_LEFT);
     }
-    return str_pad(substr($valor,0,$tamanho), $tamanho, ' ', STR_PAD_RIGHT);
+    return str_pad(substr($valor ?? '',0,$tamanho), $tamanho, ' ', STR_PAD_RIGHT);
 }
 
 function formatDH($datetime){
@@ -58,9 +133,9 @@ function gerarHashTipo7($dados){
    PARÂMETROS
 ========================= */
 
-$empresaId = intval($_GET['empresa'] ?? 0);
-$dataInicio = $_GET['data_inicio'] ?? date('Y-m-01');
-$dataFim = $_GET['data_fim'] ?? date('Y-m-d');
+$empresaId = intval($_REQUEST['empresa'] ?? 0);
+$dataInicio = $_REQUEST['data_inicio'] ?? date('Y-m-01');
+$dataFim = $_REQUEST['data_fim'] ?? date('Y-m-d');
 
 if(!$empresaId){
     exit("Empresa não informada.");
@@ -229,16 +304,99 @@ $trailer =
 $linhas[] = $trailer . crc16_kermit($trailer);
 
 /* =========================
-   ASSINATURA P7S (MARCADOR)
+   ASSINATURA P7S
 ========================= */
 
-$linhas[] = str_pad("ASSINATURA_DIGITAL_EM_ARQUIVO_P7S", 100, ' ', STR_PAD_RIGHT);
+$conteudo = implode("\r\n",$linhas)."\r\n";
+
+// Verifica se foi enviado certificado PFX para assinatura
+if (isset($_FILES['certificado_pfx']) && $_FILES['certificado_pfx']['error'] == UPLOAD_ERR_OK && !empty($_POST['certificado_senha'])) {
+    
+    $pfxContent = file_get_contents($_FILES['certificado_pfx']['tmp_name']);
+    $pfxPassword = $_POST['certificado_senha'];
+    
+    $certInfo = [];
+    if (openssl_pkcs12_read($pfxContent, $certInfo, $pfxPassword)) {
+        $publicKey = $certInfo['cert'];
+        $privateKey = $certInfo['pkey'];
+        
+        // Arquivos temporários
+        $tempAfd = tempnam(sys_get_temp_dir(), 'AFD');
+        $signedAfd = tempnam(sys_get_temp_dir(), 'AFD_SIGNED');
+        
+        file_put_contents($tempAfd, $conteudo);
+        
+        // Assinatura PKCS#7 (Attached)
+        if (openssl_pkcs7_sign($tempAfd, $signedAfd, $publicKey, $privateKey, [], PKCS7_BINARY | PKCS7_NOATTR)) {
+            $conteudoSigned = file_get_contents($signedAfd);
+
+            // Tenta criar ZIP com ambos os arquivos usando implementação PHP Pura (Fallback Garantido)
+            $nomeBase = "AFD{$emprInpi}{$emprCnpj}_REP_P";
+            $zipFilename = tempnam(sys_get_temp_dir(), 'AFD_ZIP');
+            
+            $zipCreated = false;
+
+            // 1. Tenta usar ZipArchive (Extensão PHP)
+            if (class_exists('ZipArchive')) {
+                $zip = new ZipArchive();
+                if ($zip->open($zipFilename, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
+                    $zip->addFromString($nomeBase.".txt", $conteudo);
+                    $zip->addFromString($nomeBase.".p7s", $conteudoSigned);
+                    $zip->close();
+                    if(file_exists($zipFilename) && filesize($zipFilename) > 0) {
+                        $zipCreated = true;
+                    }
+                }
+            }
+            
+            // 2. Se falhar, usa implementação SimpleZip (PHP Puro)
+            if (!$zipCreated) {
+                $simpleZip = new SimpleZip();
+                $simpleZip->addFile($conteudo, $nomeBase.".txt");
+                $simpleZip->addFile($conteudoSigned, $nomeBase.".p7s");
+                if ($simpleZip->save($zipFilename)) {
+                    $zipCreated = true;
+                }
+            }
+
+            if ($zipCreated) {
+                // Download ZIP
+                header("Content-Type: application/zip");
+                header("Content-Disposition: attachment; filename=\"{$nomeBase}.zip\"");
+                header("Content-Length: " . filesize($zipFilename));
+                readfile($zipFilename);
+                unlink($zipFilename);
+            } else {
+                // Fallback final: Baixa apenas o P7S
+                header("Content-Type: application/pkcs7-signature");
+                header("Content-Disposition: attachment; filename=\"{$nomeBase}.p7s\"");
+                echo $conteudoSigned;
+            }
+            
+            // Limpeza
+            if(file_exists($tempAfd)) unlink($tempAfd);
+            if(file_exists($signedAfd)) unlink($signedAfd);
+            exit;
+
+        } else {
+            $conteudo .= "\r\nERRO AO ASSINAR: " . openssl_error_string();
+        }
+        
+        unlink($tempAfd);
+        if(file_exists($signedAfd)) unlink($signedAfd);
+        
+    } else {
+        $conteudo .= "\r\nERRO AO LER CERTIFICADO: Senha incorreta ou arquivo inválido.";
+    }
+
+} else {
+    // Sem assinatura, adiciona marcador conforme exemplo do usuário
+    $conteudo .= str_pad("ASSINATURA_DIGITAL_EM_ARQUIVO_P7S", 100, ' ', STR_PAD_RIGHT)."\r\n";
+}
 
 /* =========================
    DOWNLOAD
 ========================= */
-
-$conteudo = implode("\r\n",$linhas)."\r\n";
 
 header("Content-Type: text/plain; charset=ISO-8859-1");
 header("Content-Disposition: attachment; filename=\"AFD{$emprInpi}{$emprCnpj}_REP_P.txt\"");

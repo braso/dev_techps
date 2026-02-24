@@ -30,7 +30,7 @@ function index(){
                         <h3 class="panel-title">Exportar Arquivo Fonte de Dados (AFD)</h3>
                     </div>
                     <div class="panel-body">
-                        <form action="export_afd.php" method="GET" target="_blank" class="form-horizontal">
+                        <form action="export_afd.php" method="POST" target="_blank" class="form-horizontal" enctype="multipart/form-data">
                             
                             <div class="form-group">
                                 <label for="empresa" class="col-sm-2 control-label">Empresa</label>
@@ -62,9 +62,37 @@ function index(){
                                 </div>
                             </div>
 
+                            <hr>
+
+                            <div class="text-center">
+                                <h4>Assinatura Digital (Opcional)</h4>
+                                <p class="text-muted">Selecione seu certificado A1 (arquivo .pfx) e informe a senha para gerar o arquivo assinado (.p7s).</p>
+                            </div>
+                            <br>
+
+                            <div class="row">
+                                <div class="col-sm-8 col-sm-offset-2">
+                                    <div class="form-group">
+                                        <label for="certificado_pfx" class="col-sm-4 control-label">Certificado ICP (.pfx)</label>
+                                        <div class="col-sm-6">
+                                            <input type="file" class="form-control" id="certificado_pfx" name="certificado_pfx" accept=".pfx">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="certificado_senha" class="col-sm-4 control-label">Senha do Certificado</label>
+                                        <div class="col-sm-6">
+                                            <input type="password" class="form-control" id="certificado_senha" name="certificado_senha">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr>
+
                             <div class="form-group">
-                                <div class="col-sm-offset-2 col-sm-10">
-                                    <button type="submit" class="btn btn-primary">
+                                <div class="col-sm-12 text-center">
+                                    <button type="submit" class="btn btn-primary btn-lg">
                                         <i class="glyphicon glyphicon-download-alt"></i> Exportar AFD
                                     </button>
                                 </div>
