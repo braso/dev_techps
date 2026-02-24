@@ -63,7 +63,8 @@
 				"/espelho_ponto.php" 	=> "Espelhos de Ponto",
 				"/carregar_ponto.php" 	=> "Integrações de Ponto",
 				"/nao_cadastrados.php" 	=> "Não Cadastrados",
-				"/nao_conformidade.php" => "Não Conformidades"
+				"/nao_conformidade.php" => "Não Conformidades",
+				"/ponto_auditoria.php" => "Auditoria"
 			],
 			"painel" => [
 				"/paineis/ajustes.php"			=> "Ajustes",

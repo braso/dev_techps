@@ -763,7 +763,17 @@
 					LIMIT 1;"
 			));
 
-			if($motorista["para_tx_tipo"] == "horas_por_dia"){
+			$ferias = mysqli_fetch_assoc(query(
+				"SELECT feri_tx_dataInicio, feri_tx_dataFim FROM ferias
+					WHERE feri_tx_status = 'ativo'
+						AND feri_nb_entidade = '{$motorista["enti_nb_id"]}'
+						AND '{$data}' BETWEEN feri_tx_dataInicio AND feri_tx_dataFim
+					LIMIT 1;"
+			));
+
+			if(!empty($ferias)){
+				$jornadaPrevistaOriginal = "00:00";
+			}elseif($motorista["para_tx_tipo"] == "horas_por_dia"){
 				if(date("w", strtotime($data)) == "6"){
 					$jornadaPrevistaOriginal = $motorista["enti_tx_jornadaSabado"];
 				}elseif(date("w", strtotime($data)) == "0"){
