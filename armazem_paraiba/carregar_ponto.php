@@ -1,8 +1,8 @@
 <?php
-
+/*
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
-		
+		*/
         header("Expires: 01 Jan 2001 00:00:00 GMT");
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
         header("Pragma: no-cache"); // HTTP 1.0.

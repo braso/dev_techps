@@ -31,6 +31,7 @@
 
         $paginas = [
             "cadastros" => [
+                "/cadastro_rfid.php" 		=> "RFID",
                 "/cadastro_celular.php" 	=> "Celular",
                 "/cadastro_empresa.php" 	=> "Empresa/Filial",
                 "/cadastro_endosso.php" 	=> "Endosso",
@@ -62,7 +63,8 @@
 				"/espelho_ponto.php" 	=> "Espelhos de Ponto",
 				"/carregar_ponto.php" 	=> "Integrações de Ponto",
 				"/nao_cadastrados.php" 	=> "Não Cadastrados",
-				"/nao_conformidade.php" => "Não Conformidades"
+				"/nao_conformidade.php" => "Não Conformidades",
+				"/ponto_auditoria.php" => "Auditoria"
 			],
 			"painel" => [
 				"/paineis/ajustes.php"			=> "Ajustes",
@@ -147,6 +149,7 @@ if ($showComunicado) {
             "Operação" => "fa fa-cogs",
             "Parâmetro" => "fa fa-sliders-h",
             "Placas" => "fa fa-id-badge",
+            "RFID" => "fa fa-id-badge",
             "Setor" => "fa fa-layer-group",
             "Tipo de Documento" => "fa fa-file",
             "Usuário" => "fa fa-user-cog",

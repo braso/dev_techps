@@ -32,6 +32,7 @@ deployment:
     - export CLINICA_GERLANE=/home/tech1694/public_html/gestaodeponto/clinica_gerlane
     - export IRANEIDE_OLIVEIRA=/home/tech1694/public_html/gestaodeponto/iraneide_oliveira
     - export MIDIA_DIGITAL=/home/tech1694/public_html/gestaodeponto/midia_digital
+    - export ENOVE=/home/tech1694/public_html/gestaodeponto/enove
 
 
 
@@ -62,3 +63,4 @@ deployment:
     - /bin/cp -R $DOMAIN $CLINICA_GERLANE
     - /bin/cp -R $DOMAIN $IRANEIDE_OLIVEIRA
     - /bin/cp -R $DOMAIN $MIDIA_DIGITAL
+    - /bin/cp -R $DOMAIN $ENOVE

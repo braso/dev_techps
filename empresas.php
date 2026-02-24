@@ -29,6 +29,7 @@
         "CLINICA GERLANE"		=> "clinica_gerlane",
         "IRANEIDE OLIVEIRA"		=> "iraneide_oliveira",
         "MIDIA DIGITAL"		    => "midia_digital",
+        "ENOVE"                 => "enove",
 
     ];
 
@@ -59,6 +60,7 @@
         "clinica_gerlane" 	=> "Clínica Gerlane",
         "iraneide_oliveira" => "Iraneide Oliveira",
         "midia_digital"     => "Midia Digital",
+        "enove"             => "Enove",
     ];
 
     $empresa_array = array_values($empresas); //Utilizado nos arquivos que importam este.

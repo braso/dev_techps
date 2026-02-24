@@ -20,7 +20,12 @@ function pad($valor, $tamanho, $tipo='A'){
 
 function formatDH($datetime){
     $dt = new DateTime($datetime);
-    return $dt->format('Y-m-d\TH:i:00O');
+    return $dt->format('YmdHis');
+}
+
+function formatDate($date){
+    $dt = new DateTime($date);
+    return $dt->format('dmY');
 }
 
 /* =========================
@@ -102,8 +107,8 @@ $headerBase =
     pad('',14,'N').
     pad($emprNome,150).
     pad($emprInpi,17,'N').
-    $dataInicio.
-    $dataFim.
+    pad(formatDate($dataInicio),10,'N').
+    pad(formatDate($dataFim),10,'N').
     formatDH(date('Y-m-d H:i:s')).
     '003'.
     '1'.
@@ -150,19 +155,18 @@ while($stmt->fetch()){
     $baseTipo5 =
         pad($nsr,9,'N').
         '5'.
-        formatDH($dataGravacao).
+        formatDate($dataGravacao).
+        date('Hi', strtotime($dataGravacao)).
         $operacao.
-        pad($cpfEmp,12,'N').
-        pad($nomeEmp,52).
-        pad('',4).
-        pad($cpfEmp,11,'N');
+        pad($cpfEmp,11,'N').
+        pad($nomeEmp,52);
 
     $linhas[] = $baseTipo5 . crc16_kermit($baseTipo5);
 }
 $stmt->close();
 
 /* =========================
-   REGISTRO TIPO 7
+   REGISTRO TIPO 3
 ========================= */
 
 $dataInicioFull = $dataInicio." 00:00:00";
@@ -184,28 +188,22 @@ $stmt->bind_result($pontData,$entiCpf);
 while($stmt->fetch()){
 
     $nsr++;
-    $totalTipo7++;
+    $totalTipo7++; // Mantendo a contagem para o trailer (embora seja tipo 3 agora, o trailer pode precisar ajustar o nome da variavel ou campo)
 
     $baseHash =
         pad($nsr,9,'N').
-        '7'.
+        '3'.
+        pad($entiCpf,11,'N').
         formatDH($pontData).
-        pad($entiCpf,12,'N').
-        formatDH($pontData).
-        '02'.
-        '0'.
         $hashAnterior;
 
-    $hashAtual = gerarHashTipo7($baseHash);
+    $hashAtual = gerarHashTipo7($baseHash); // SHA256
 
     $linha =
         pad($nsr,9,'N').
-        '7'.
+        '3'.
+        pad($entiCpf,11,'N').
         formatDH($pontData).
-        pad($entiCpf,12,'N').
-        formatDH($pontData).
-        '02'.
-        '0'.
         $hashAtual;
 
     $linhas[] = $linha;
@@ -219,15 +217,16 @@ $stmt->close();
 
 $trailer =
     '999999999'.
+    '9'.
     pad('0',9,'N').
-    pad('0',9,'N').
+    pad($totalTipo7,9,'N').
     pad('0',9,'N').
     pad($totalTipo5,9,'N').
     pad('0',9,'N').
-    pad($totalTipo7,9,'N').
+    pad('0',9,'N').
     '9';
 
-$linhas[] = $trailer;
+$linhas[] = $trailer . crc16_kermit($trailer);
 
 /* =========================
    ASSINATURA P7S (MARCADOR)
