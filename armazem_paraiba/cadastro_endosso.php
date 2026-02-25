@@ -514,11 +514,22 @@ function cadastrar(){
     $max50Auto = operarHorarios([$saldoBruto, $descFaltasNaoJustificadas], "-");
     if($max50Auto[0] == "-"){ $max50Auto = "00:00"; }
     $pagarExtras = (!empty($_POST["pagar_horas"]) && $_POST["pagar_horas"] == "sim");
+    $limitToApply = "00:00";
+
     if(!$pagarExtras){
         $max50Auto = "00:00";
-        $_POST["extraPago"] = "00:00";
     }else{
-        $_POST["extraPago"] = $max50Auto;
+        $limiteUsuario = $_POST["extraPago"] ?? "";
+        if(!empty($limiteUsuario) && $limiteUsuario != "00:00"){
+            $diff = operarHorarios([$max50Auto, $limiteUsuario], "-");
+            if($diff[0] == "-"){
+                $limitToApply = $max50Auto;
+            }else{
+                $limitToApply = $limiteUsuario;
+            }
+        }else{
+            $limitToApply = $max50Auto;
+        }
     }
 
     $saldoPeriodoParaCalculo = $diffSaldo;
@@ -530,7 +541,7 @@ function cadastrar(){
 
     if($pagarExtras){
         $saldoPeriodoParaCalculo = $saldoBruto;
-        $aPagar = calcularHorasAPagar($saldoPeriodoParaCalculo, $saldoBruto, $he50, $he100, $max50Auto, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+        $aPagar = calcularHorasAPagar($saldoPeriodoParaCalculo, $saldoBruto, $he50, $he100, $limitToApply, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
     }else{
         $aPagar = ["00:00", "00:00"];
     }
@@ -579,7 +590,7 @@ function cadastrar(){
 				"endo_tx_dataCadastro" 	  => date("Y-m-d H:i:s"),
 				"endo_nb_userCadastro" 	  => $_SESSION["user_nb_id"],
 				"endo_tx_status" 		  => "ativo",
-				"endo_tx_max50APagar" 	  => $_POST["extraPago"],
+				"endo_tx_max50APagar" 	  => $limitToApply,
 				"endo_tx_pontos"		  => $rows,
 				"totalResumo"			  => $totalResumo
 			];
