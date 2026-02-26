@@ -539,34 +539,61 @@ function cadastrar(){
         $saldoPeriodoParaCalculo = $saldoBruto;
     }
 
-    if($pagarExtras){
+    $pagarHEExComPerNeg = ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao") == "sim";
+    $extraManualDiscount = "00:00";
+
+    if($pagarExtras || ($pagarHEExComPerNeg && $he100 != "00:00")){
         $saldoPeriodoParaCalculo = $saldoBruto;
-        $aPagar = calcularHorasAPagar($saldoPeriodoParaCalculo, $saldoBruto, $he50, $he100, $limitToApply, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+		$limitParaCalculo = $limitToApply;
+		
+		// If paying HE with negative period is active:
+		if($pagarHEExComPerNeg && $he100 != "00:00"){
+            // Case 1: No user input (or 00:00) -> Pay HE100 exactly.
+            if(!$pagarExtras || $limitToApply == "00:00"){
+                $limitParaCalculo = $he100;
+            }
+            // Case 2: User input provided.
+            else{
+                // Check if User Input covers the HE100 requirement.
+                // If User Input < HE100, we assume it's an ADDITIONAL manual discount on top of HE100.
+                if(operarHorarios([$limitToApply, $he100], "-")[0] == "-"){
+                    $limitParaCalculo = $he100;
+                    $extraManualDiscount = $limitToApply;
+                }
+                // If User Input >= HE100, we treat it as the Total Payment Limit (covering HE100 + HE50).
+                else{
+                    $limitParaCalculo = $limitToApply;
+                }
+            }
+		}
+
+        $aPagar = calcularHorasAPagar($saldoPeriodoParaCalculo, $saldoBruto, $he50, $he100, $limitParaCalculo, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
     }else{
         $aPagar = ["00:00", "00:00"];
     }
     
-    $saldoFinal = operarHorarios([$saldoBruto, "-".$aPagar[0], "-".$aPagar[1]], "+");
-			
-		if($diffSaldo[0] == "-"){
-			$saldoPossivelDescontar = operarHorarios([$diffSaldo, $descFaltasNaoJustificadas], "+");
-				$saldoPossivelDescontar = operarHorarios([$saldoPossivelDescontar, "-00:01"], "*");
-			}else{
-				$saldoPossivelDescontar = "00:00";
-			}
-			
-			if($saldoPossivelDescontar != "00:00" && $_POST["descontar_horas"] == "sim"){
-				$totalResumo["desconto_manual"] = (operarHorarios([$_POST["horas_a_descontar"], $saldoPossivelDescontar], "-")[0] == "-")?
-					$_POST["horas_a_descontar"]:
-					$saldoPossivelDescontar
-				;
+	$opHE100 = "-";
+	if($saldoBruto[0] == "-"){
+		$opHE100 = "+";
+	}
 
-				$saldoFinal = operarHorarios([$saldoFinal, $aPagar[1]], "+");
-			}else{
-				$totalResumo["desconto_manual"] = "00:00";
-			}
+    $saldoFinal = operarHorarios([$saldoBruto, "-".$aPagar[0], $opHE100.$aPagar[1]], "+");
+			
+			$totalResumo["desconto_manual"] = "00:00";
+            
+            // Apply the extra manual discount if detected (Case 2 above)
+            if($extraManualDiscount != "00:00"){
+                $totalResumo["desconto_manual"] = operarHorarios([$totalResumo["desconto_manual"], $extraManualDiscount], "+");
+                $op = ($saldoFinal[0] == "-") ? "+" : "-";
+                $saldoFinal = operarHorarios([$saldoFinal, $op.$extraManualDiscount], "+");
+            }
 
-            $saldoFinal = operarHorarios([$saldoFinal, $totalResumo["desconto_manual"]], "+");
+			if(!empty($_POST["descontar_horas"]) && $_POST["descontar_horas"] == "sim"){
+				$valorDesc = $_POST["horas_a_descontar"];
+				$totalResumo["desconto_manual"] = operarHorarios([$totalResumo["desconto_manual"], $valorDesc], "+");
+				$op = ($saldoFinal[0] == "-") ? "+" : "-";
+				$saldoFinal = operarHorarios([$saldoFinal, $op.$valorDesc], "+");
+			}
             if($_POST["zerarSaldoNegativo"] == "sim" && $saldoFinal[0] == "-"){
                 $totalResumo["desconto_manual"] = operarHorarios([$totalResumo["desconto_manual"], $saldoFinal], "+");
                 $saldoFinal = "00:00";
@@ -579,6 +606,8 @@ function cadastrar(){
 			$totalResumo["saldoFinal"] 		= $saldoFinal;
 			$totalResumo["he50APagar"] 		= $aPagar[0];
 			$totalResumo["he100APagar"] 	= $aPagar[1];
+			$totalResumo["HESemanalAPagar"] = $aPagar[0];
+			$totalResumo["HEExAPagar"] 		= $aPagar[1];
 
 			$novoEndosso = [
 				"endo_nb_entidade" 		  => $motorista["enti_nb_id"],
