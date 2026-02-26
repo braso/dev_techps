@@ -25,6 +25,7 @@
 		// 			"
 		// ));
 
+		
 		if(!empty($abono)){
 		    $abono = explode(":", $abono);
 			$abono = "{$abono[0]}:{$abono[1]}";
