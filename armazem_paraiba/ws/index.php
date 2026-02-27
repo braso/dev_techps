@@ -6,7 +6,7 @@
     $path = str_replace($_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/", "", $_SERVER['REQUEST_URI']);
     $elements = explode('/', $path);
     
-    if(empty($elements[0]) || empty($elements[1]) || !in_array($elements[1], ['login', 'refresh', 'users', 'journeys', 'delLastRegister', 'loginRfid'])){
+    if(empty($elements[0]) || empty($elements[1]) || !in_array($elements[1], ['login', 'refresh', 'users', 'journeys', 'delLastRegister', 'loginRfid', 'loginSE'])){
         echo "not found";
         exit;
     }
@@ -50,5 +50,11 @@
             if($_SERVER['REQUEST_METHOD'] == "POST"){
                 make_login_rfid();
             }
+        break;
+        case 'loginSE':
+            if($_SERVER['REQUEST_METHOD'] == "POST"){
+                make_login_se();
+            }
+        break;
 
     }

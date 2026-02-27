@@ -50,6 +50,47 @@
         echo "{ \"id\": ".$data['user_nb_id'].", \"token\": \"".$token."\"}";
         exit;
     }
+
+    function make_login_se(){
+        $json_recebido = file_get_contents('php://input');
+        $_POST = json_decode($json_recebido, true);
+        
+        header('Content-Type: application/json');
+
+        $msg = "";
+
+        if(empty($_POST["username"]) || empty($_POST["password"])){
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing credentials']);
+            exit;
+        }
+            
+        $data = get_data(
+            "SELECT 
+                user_nb_id id, user_tx_nome nome, user_tx_login login, 
+                user_tx_senha senha, rfids_tx_uid rfid, rfids_tx_status status_rfid 
+            FROM user 
+            LEFT JOIN rfids ON user_nb_id = rfids_nb_user_id
+            WHERE user_tx_status = 'ativo'
+            AND user_tx_login = ?;",
+            [$_POST["username"]]
+        );
+
+        if(empty($data) || $data[0]['senha'] !== md5($_POST['password'])){
+            http_response_code(401);
+            echo json_encode(['error' => 'Invalid username or password']);
+            exit;
+        }
+
+        $data = $data[0];
+        
+        $token = makeToken((object)$data,$_ENV["APP_KEY"]);
+        
+        $data['token'] = $token;
+
+        header('Content-Type: application/json');
+        echo json_encode($data);
+    }
     
     function make_login_rfid(){
         
