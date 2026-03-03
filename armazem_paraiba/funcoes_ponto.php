@@ -213,13 +213,16 @@
 
         if($saldoPeriodo[0] == "-"){
             if($pagarHEExComPerNeg == "sim"){
-                // Pay up to max50APagar, prioritized by HE100
-                if(operarHorarios([$he100, $totalPagar], "-")[0] != "-"){
-                    // HE100 >= TotalPagar
-                    return ["00:00", $totalPagar];
-                }
-                $he50Pagar = operarHorarios([$totalPagar, $he100], "-");
-                return [$he50Pagar, $he100];
+                // Regra: Só paga 100% se saldo for positivo.
+                // Aqui (Saldo Negativo), paga APENAS HE50.
+                
+                // Se o usuário solicitou pagar TUDO (ou um valor alto), e o saldo negativo do período
+                // fez com que HE100 fosse "desconsiderada", podemos somá-la ao HE50 disponível para pagamento como 50%.
+                // Se estamos pagando com saldo negativo do período, estamos pagando do BANCO ACUMULADO.
+                // Portanto, não devemos nos limitar ao HE do mês ($he50 + $he100), mas sim ao valor solicitado ($totalPagar),
+                // que já deve ter sido limitado pelo Saldo Bruto externamente.
+                
+                return [$totalPagar, "00:00"];
             }
             return ["00:00", "00:00"];
         }
