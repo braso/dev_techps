@@ -161,6 +161,26 @@
 
 			$id = inserir("user", array_keys($usuario), array_values($usuario));
 			$_POST["id"] = $id;
+
+			// =========================================================================
+			// ATUALIZAÇÃO DO CICLO DE VIDA DO RFID (Gestão de Ativos)
+			// =========================================================================
+			$rfid_selecionado = !empty($_POST["rfid_id"]) ? trim($_POST["rfid_id"]) : "";
+			$id_usuario_rfid = (int)$_POST["id"]; // Pega o ID que acabou de ser gerado ou atualizado
+			
+			// 1. DEVOLVER PARA A GAVETA: Limpa cartões ativos do usuário
+			$sql_limpeza = "UPDATE rfids SET rfids_tx_status = 'disponivel', rfids_nb_user_id = NULL WHERE rfids_nb_user_id = {$id_usuario_rfid} AND rfids_tx_status = 'ativo'";
+			if ($rfid_selecionado != "") {
+				$sql_limpeza .= " AND rfids_nb_id != " . (int)$rfid_selecionado;
+			}
+			query($sql_limpeza);
+
+			// 2. VINCULAR NOVO CARTÃO: Ativa o selecionado
+			if ($rfid_selecionado != "") {
+				query("UPDATE rfids SET rfids_tx_status = 'ativo', rfids_nb_user_id = {$id_usuario_rfid} WHERE rfids_nb_id = " . (int)$rfid_selecionado);
+			}
+			// =========================================================================
+
 			set_status("Cadastro inserido com sucesso!");
 			modificarUsuario();
 			exit;
@@ -170,6 +190,20 @@
 		atualizarUsuario($usuario);
 		$id = $_POST["id"];
 		
+		if(empty($_POST["id"])){//Criando novo usuário
+            $usuario["user_nb_userCadastro"] = $_SESSION["user_nb_id"];
+            $usuario["user_tx_dataCadastro"] = date("Y-m-d H:i:s");
+
+            $id = inserir("user", array_keys($usuario), array_values($usuario));
+            $_POST["id"] = $id;
+            
+            // ---> COLE O BLOCO DO RFID AQUI <---
+
+            set_status("Cadastro inserido com sucesso!");
+            modificarUsuario();
+            exit;
+        }
+
 		$idUserFoto = mysqli_fetch_assoc(query(
 			"SELECT user_nb_id FROM user WHERE user_nb_id = {$id} LIMIT 1;"
 		));
@@ -259,7 +293,6 @@
 	}
 
 	function modificarUsuario(){
-
 		echo '<style>
 		@media print{
 			div.col-sm-4.margin-bottom-5.campo-fit-content > input,
@@ -329,6 +362,60 @@
 		$campo_login = campo("Login*", "login", ($_POST["login"]?? ($_POST["login"]?? "")), 2,"","maxlength='30'");
 		$campo_expiracao = campo_data("Expira em", "expiracao", ($_POST["expiracao"]?? ""), 2);
 
+		// =========================================================================
+        // BUSCA DE CARTÕES RFID (Gestão de Ativos) - VERSÃO BLINDADA
+        // =========================================================================
+        $rfidOptions = [" " => "Sem Crachá"];
+        $userIdForRfid = !empty($_POST["id"]) ? (int)$_POST["id"] : 0;
+        
+        // Deixei na mesma linha para evitar quebras de string no seu framework
+        if ($userIdForRfid > 0) {
+            $condRfid = "WHERE (rfids_tx_status = 'disponivel' AND rfids_nb_user_id IS NULL) OR (rfids_nb_user_id = {$userIdForRfid})";
+        } else {
+            $condRfid = "WHERE rfids_tx_status = 'disponivel' AND rfids_nb_user_id IS NULL";
+        }
+
+        $sqlBuscaRfids = "SELECT rfids_nb_id, rfids_tx_uid, rfids_tx_descricao, rfids_tx_status FROM rfids {$condRfid} ORDER BY rfids_tx_uid ASC";
+        
+        // 1. BLINDAGEM: Executa a query
+        $rsRfids = query($sqlBuscaRfids);
+        
+        // 2. Só tenta ler se a query NÃO deu erro (se não for false)
+        if ($rsRfids) {
+            while($r = mysqli_fetch_assoc($rsRfids)){
+                $label = $r["rfids_tx_uid"];
+                if(!empty($r["rfids_tx_descricao"])) {
+                    $label .= " - " . $r["rfids_tx_descricao"];
+                }
+                
+                if($r["rfids_tx_status"] != 'disponivel' && $r["rfids_tx_status"] != 'ativo') {
+                    $label .= " (STATUS: " . strtoupper($r["rfids_tx_status"]) . ")";
+                }
+                $rfidOptions[$r["rfids_nb_id"]] = $label;
+            }
+        } else {
+            // Se falhar, avisa na tela em vez de derrubar o sistema inteiro
+            global $conn; // Puxa a conexão caso ela esteja no escopo global
+            echo "<div style='background:#ffcccc; color:red; padding:10px; margin:10px 0; border:1px solid red;'>
+                    <b>Erro no SQL do RFID:</b> " . mysqli_error($conn) . "<br>
+                    <b>Query:</b> " . $sqlBuscaRfids . "
+                  </div>";
+        }
+
+        $selectedRfid = "";
+        if($userIdForRfid > 0){
+            $sqlAssigned = "SELECT rfids_nb_id FROM rfids WHERE rfids_nb_user_id = {$userIdForRfid} LIMIT 1";
+            $rsAssigned = query($sqlAssigned);
+            
+            // BLINDAGEM: Verifica também a segunda query
+            if ($rsAssigned) {
+                $rowAssigned = mysqli_fetch_assoc($rsAssigned);
+                if(!empty($rowAssigned)) {
+                    $selectedRfid = $rowAssigned["rfids_nb_id"];
+                }
+            }
+        }
+        // =========================================================================
 		$editPermission = (!empty($_POST["id"]) && (
 			$loggedUserIsAdmin ||
 			(($_SESSION["user_nb_id"] ?? null) == ($_POST["id"] ?? null))
@@ -357,7 +444,7 @@
 
 			$campo_nivel = combo("Nível*", "nivel", $_POST["nivel"], 2, $niveis, "");
 			$campo_status = combo("Status", "status", $_POST["status"], 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
-
+            $campo_rfid = combo("Crachá (RFID)", "rfid_id", $selectedRfid, 2, $rfidOptions, "");
 			$campo_nascimento = campo_data("Nascido em*", "nascimento", ($_POST["nascimento"]?? ($_POST["nascimento"]?? "")), 2);
 			$campo_cpf = campo("CPF", "cpf", $_POST["cpf"], 2, "MASCARA_CPF");
 			$campo_rg = campo("RG", "rg", $_POST["rg"], 2, "MASCARA_RG", "maxlength='15'");
@@ -377,7 +464,7 @@
 			
 			$campo_nivel = combo("Nível*", "nivel", ($_POST["nivel"]?? $niveis), 2, $niveis, "");
 			$campo_status = combo("Status", "status", ($_POST["status"]?? "ativo"), 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
-
+			$campo_rfid = combo("Crachá (RFID)", "rfid_id", $selectedRfid, 2, $rfidOptions, "");
 			$campo_nascimento = campo_data("Nascido em*", "nascimento", ($_POST["nascimento"]?? ""), 2);
 			$campo_cpf = campo("CPF", "cpf", ($_POST["cpf"]?? ""), 2, "MASCARA_CPF");
 			$campo_rg = campo("RG", "rg", ($_POST["rg"]?? ""), 2, "MASCARA_RG", "maxlength='15'");
@@ -447,6 +534,7 @@
 			$campo_senha,
 			$campo_confirma,
 			$campo_nivel,
+			$campo_rfid,
 			$campo_matricula,
 			$campo_nascimento,
 
@@ -730,7 +818,8 @@ function index() {
                 "E-MAIL" 		=> "user_tx_email",
                 "TELEFONE" 		=> "user_tx_fone",
                 "EMPRESA" 		=> "empr_tx_nome",
-                "STATUS" 		=> "user_tx_status"
+                "STATUS" 		=> "user_tx_status",
+				"RFID ATIVO"    => "rfids_tx_uid" 
             ];
 
             $camposBusca = [
@@ -753,6 +842,7 @@ function index() {
                 ." LEFT JOIN operacao ON enti_tx_tipoOperacao = oper_nb_id"
                 ." LEFT JOIN grupos_documentos ON enti_setor_id = grup_nb_id"
                 ." LEFT JOIN sbgrupos_documentos subg ON enti_subSetor_id = subg.sbgr_nb_id"
+				." LEFT JOIN rfids ON rfids.rfids_nb_user_id = user.user_nb_id AND rfids.rfids_tx_status = 'ativo'"
             ;
 
 			$actions = criarIconesGrid(

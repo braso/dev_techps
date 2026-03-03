@@ -8,9 +8,9 @@
         rfids_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         rfids_tx_uid VARCHAR(255) NOT NULL UNIQUE,
         rfids_nb_user_id INT DEFAULT NULL,
-        rfids_tx_status VARCHAR(20) DEFAULT 'ativo',
+        rfids_tx_status ENUM('ativo', 'disponivel', 'bloqueado', 'perdido', 'quebrado') DEFAULT 'disponivel',
         rfids_tx_descricao TEXT,
-        rfids_dt_created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        rfid_dt_created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );");
 
     function formRfid(){
@@ -29,9 +29,12 @@
 
             campo_hidden("id", (!empty($_POST["id"]) ? $_POST["id"] : "")),
             campo("UID", "rfids_tx_uid", (!empty($_POST["rfids_tx_uid"]) ? $_POST["rfids_tx_uid"] : ""), 4, "", "required"),
-            combo_radio("Status", "rfids_tx_status", (!empty($_POST["rfids_tx_status"]) ? $_POST["rfids_tx_status"] : 'ativo'), 2, [
-                'ativo' => 'Ativo',
-                'inativo' => 'Inativo'
+            combo_radio("Status do cartão", "rfids_tx_status", (!empty($_POST["rfids_tx_status"]) ? $_POST["rfids_tx_status"] : 'disponivel'), 3, [
+                'disponivel' => 'Em estoque (Disponível)',
+                'ativo'      => 'Em Uso (Ativo)',
+                'bloqueado'  => 'Bloqueado (Suspenso)',
+                'perdido'    => 'Perdido',
+                'quebrado'   => 'Danificado/Quebrado'
             ]),
             campo("Descrição", "rfids_tx_descricao", (!empty($_POST["rfids_tx_descricao"]) ? $_POST["rfids_tx_descricao"] : ""), 6)
         ]);
@@ -69,8 +72,64 @@
             ["editarRfid()", "excluirRfid()"]
         );
 
+        // 1. Anula o JS automático da lixeira gerado pelo framework
+        $actions["functions"][1] = ""; 
+
+        // 2. Força o HTML da lixeira chamando a nossa função do SweetAlert
+        $actions["tags"][1] = '<span class="glyphicon glyphicon-remove search-remove" onclick="confirmarExclusaoRfid(this)" title="Excluir" style="color:#d9534f; cursor:pointer;"></span>';
+
         $gridFields["actions"] = $actions["tags"];
-        $jsFunctions = "const funcoesInternas = function(){ " . implode(" ", $actions["functions"]) . " }";
+        $jsDoEditar = $actions["functions"][0];
+
+        // 3. O JavaScript Ajustado para disparar o Alerta
+        $jsFunctions = '
+            const funcoesInternas = function(){
+                try {
+                    ' . $jsDoEditar . '
+                } catch(e) { console.error(e); }
+            };
+
+            window.confirmarExclusaoRfid = function(elemento){
+                var linha = $(elemento).closest("tr");
+                var id = linha.find("td:eq(0)").text(); // Pega o ID na primeira coluna
+
+                Swal.fire({
+                    title: "Tem certeza?",
+                    text: "Excluir o RFID código: " + id + "?",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#d33",    // Vermelho (Perigo)
+                    cancelButtonColor: "#6c757d",  // Cinza (Neutro)
+                    confirmButtonText: "Sim, excluir!",
+                    cancelButtonText: "Cancelar"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        enviarExclusaoRfid(id);
+                    }
+                });
+            };
+
+            window.enviarExclusaoRfid = function(id){
+                var form = document.createElement("form");
+                form.method = "POST";
+                form.action = ""; 
+                
+                var fieldAcao = document.createElement("input");
+                fieldAcao.type = "hidden";
+                fieldAcao.name = "acao";
+                fieldAcao.value = "excluirRfid"; // Manda executar a função excluirRfid() do PHP
+                form.appendChild(fieldAcao);
+
+                var fieldId = document.createElement("input");
+                fieldId.type = "hidden";
+                fieldId.name = "id";
+                fieldId.value = id; 
+                form.appendChild(fieldId);
+
+                document.body.appendChild(form);
+                form.submit();
+            };
+        ';
 
         echo gridDinamico("rfids", $gridFields, $camposBusca, $queryBase, $jsFunctions);
     }
@@ -111,9 +170,11 @@
 
         $dados = [
             "rfids_tx_uid"       => $_POST["rfids_tx_uid"],
-            "rfids_tx_status"    => (!empty($_POST["rfids_tx_status"]) ? $_POST["rfids_tx_status"] : 'ativo'),
+            "rfids_tx_status"    => (!empty($_POST["rfids_tx_status"]) ? $_POST["rfids_tx_status"] : 'disponivel'),
             "rfids_tx_descricao" => $_POST["rfids_tx_descricao"],
         ];
+
+        //Edição de fato, como o ID existe ele chama a função atualizar
         if(!empty($_POST["id"])){
             
             atualizar("rfids", array_keys($dados), array_values($dados), $_POST["id"], "rfids_nb_id");
