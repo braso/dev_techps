@@ -215,13 +215,12 @@
             if($pagarHEExComPerNeg == "sim"){
                 // Regra: Só paga 100% se saldo for positivo.
                 // Aqui (Saldo Negativo), paga APENAS HE50.
-
-                if(operarHorarios([$he50, $totalPagar], "-")[0] != "-"){
-                    // HE50 >= TotalPagar
-                    return [$totalPagar, "00:00"];
-                }
-                // HE50 < TotalPagar. Paga tudo de HE50 e nada de HE100.
-                return [$he50, "00:00"];
+                
+                // Se estamos pagando com saldo negativo do período, estamos pagando do BANCO ACUMULADO.
+                // Portanto, não devemos nos limitar ao HE do mês ($he50), mas sim ao valor solicitado ($totalPagar).
+                // O chamador (cadastro_endosso.php) já garante que $totalPagar <= Saldo Bruto.
+                
+                return [$totalPagar, "00:00"];
             }
             return ["00:00", "00:00"];
         }
