@@ -543,11 +543,12 @@ function cadastrar(){
     $extraManualDiscount = "00:00";
 
     if($pagarExtras || ($pagarHEExComPerNeg && $he100 != "00:00")){
-        $saldoPeriodoParaCalculo = $saldoBruto;
+        // $saldoPeriodoParaCalculo = $saldoBruto; // REMOVIDO: Devemos manter o saldo do período original para que a função saiba se é negativo ou positivo.
 		$limitParaCalculo = $limitToApply;
 		
 		// If paying HE with negative period is active:
-		if($pagarHEExComPerNeg && $he100 != "00:00"){
+		// AND current period balance is NOT negative (User requirement: only pay 100% if period is positive)
+		if($pagarHEExComPerNeg && $he100 != "00:00" && $diffSaldoClean[0] != "-"){
             // Case 1: No user input (or 00:00) -> Pay HE100 exactly.
             if(!$pagarExtras || $limitToApply == "00:00"){
                 $limitParaCalculo = $he100;
@@ -567,7 +568,7 @@ function cadastrar(){
             }
 		}
 
-        $aPagar = calcularHorasAPagar($saldoPeriodoParaCalculo, $saldoBruto, $he50, $he100, $limitParaCalculo, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+        $aPagar = calcularHorasAPagar($saldoPeriodoParaCalculo, $saldoBruto, $he50, $he100, $limitParaCalculo, ($pagarExtras ? "sim" : ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao")));
     }else{
         $aPagar = ["00:00", "00:00"];
     }
@@ -643,7 +644,8 @@ function cadastrar(){
 						<th>Anterior</th>
 						<th>Período</th>
 						<th>Bruto</th>
-						<th>Pago</th>
+						<th>Pago 50%</th>
+						<th>Pago 100%</th>
 						<th>Descontado</th>
 						<th>Final</th>
 					</tr>
@@ -666,7 +668,8 @@ function cadastrar(){
 					<td>{$novoEndosso["totalResumo"]["saldoAnterior"]}</td>
 					<td>{$novoEndosso["totalResumo"]["diffSaldo"]}</td>
 					<td>{$novoEndosso["totalResumo"]["saldoBruto"]}</td>
-					<td>".operarHorarios([$novoEndosso["totalResumo"]["he50APagar"], $novoEndosso["totalResumo"]["he100APagar"]], "+")."</td>
+					<td>{$novoEndosso["totalResumo"]["he50APagar"]}</td>
+					<td>{$novoEndosso["totalResumo"]["he100APagar"]}</td>
 					<td>".operarHorarios([$novoEndosso["totalResumo"]["desconto_manual"], $novoEndosso["totalResumo"]["desconto_faltas_nao_justificadas"]], "+")."</td>
 					<td>{$novoEndosso["totalResumo"]["saldoFinal"]}</td>
 				</tr>"
