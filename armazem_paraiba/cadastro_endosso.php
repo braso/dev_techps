@@ -568,7 +568,7 @@ function cadastrar(){
             }
 		}
 
-        $aPagar = calcularHorasAPagar($saldoPeriodoParaCalculo, $saldoBruto, $he50, $he100, $limitParaCalculo, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+        $aPagar = calcularHorasAPagar($saldoPeriodoParaCalculo, $saldoBruto, $he50, $he100, $limitParaCalculo, ($pagarExtras ? "sim" : ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao")));
     }else{
         $aPagar = ["00:00", "00:00"];
     }
