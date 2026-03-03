@@ -25,7 +25,6 @@
 		// 			"
 		// ));
 
-		
 		if(!empty($abono)){
 		    $abono = explode(":", $abono);
 			$abono = "{$abono[0]}:{$abono[1]}";
@@ -216,14 +215,13 @@
             if($pagarHEExComPerNeg == "sim"){
                 // Regra: Só paga 100% se saldo for positivo.
                 // Aqui (Saldo Negativo), paga APENAS HE50.
-                
-                // Se o usuário solicitou pagar TUDO (ou um valor alto), e o saldo negativo do período
-                // fez com que HE100 fosse "desconsiderada", podemos somá-la ao HE50 disponível para pagamento como 50%.
-                // Se estamos pagando com saldo negativo do período, estamos pagando do BANCO ACUMULADO.
-                // Portanto, não devemos nos limitar ao HE do mês ($he50 + $he100), mas sim ao valor solicitado ($totalPagar),
-                // que já deve ter sido limitado pelo Saldo Bruto externamente.
-                
-                return [$totalPagar, "00:00"];
+
+                if(operarHorarios([$he50, $totalPagar], "-")[0] != "-"){
+                    // HE50 >= TotalPagar
+                    return [$totalPagar, "00:00"];
+                }
+                // HE50 < TotalPagar. Paga tudo de HE50 e nada de HE100.
+                return [$he50, "00:00"];
             }
             return ["00:00", "00:00"];
         }
