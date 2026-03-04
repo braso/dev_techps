@@ -674,7 +674,7 @@
 			// Atribui RFID selecionado (se houver) antes do commit
 			if(!empty($_POST["rfid_id"])){
 				$rfidId = (int)$_POST["rfid_id"];
-				query("UPDATE rfids SET rfids_nb_user_id = ? WHERE rfids_nb_id = ?;", "ii", [$id, $rfidId]);
+				query("UPDATE rfids SET rfids_nb_entidade_id = ? WHERE rfids_nb_id = ?;", "ii", [$id, $rfidId]);
 			}
 
 			query("COMMIT;");
@@ -738,12 +738,12 @@
 			if(isset($_POST["rfid_id"]) && $_POST["rfid_id"] !== ""){
 				$rfidId = (int)$_POST["rfid_id"];
 				// Remove vínculo de outros RFIDs já associados a este usuário, exceto o selecionado
-				query("UPDATE rfids SET rfids_nb_user_id = NULL WHERE rfids_nb_user_id = ? AND rfids_nb_id != ?;", "ii", [$id, $rfidId]);
+				query("UPDATE rfids SET rfids_nb_entidade_id = NULL WHERE rfids_nb_entidade_id = ? AND rfids_nb_id != ?;", "ii", [$id, $rfidId]);
 				// Associa o RFID selecionado ao usuário
-				query("UPDATE rfids SET rfids_nb_user_id = ? WHERE rfids_nb_id = ?;", "ii", [$id, $rfidId]);
+				query("UPDATE rfids SET rfids_nb_entidade_id = ? WHERE rfids_nb_id = ?;", "ii", [$id, $rfidId]);
 			} else {
 				// Se nenhum RFID selecionado, remove vínculos existentes
-				query("UPDATE rfids SET rfids_nb_user_id = NULL WHERE rfids_nb_user_id = ?;", "i", [$id]);
+				query("UPDATE rfids SET rfids_nb_entidade_id = NULL WHERE rfids_nb_entidade_id = ?;", "i", [$id]);
 			}
 		}
 
@@ -1321,8 +1321,8 @@
 		// Filtro Inteligente: 
         // Traz cartões da gaveta (disponivel E sem dono) OU o cartão que já é deste funcionário
         if ($entityIdForRfid) {
-            $condRfid = "WHERE (rfids_tx_status = 'disponivel' AND rfids_nb_user_id IS NULL)
-							OR (rfids_nb_user_id = {$entityIdForRfid})";
+            $condRfid = "WHERE (rfids_tx_status = 'disponivel' AND rfids_nb_entidade_id IS NULL)
+							OR (rfids_nb_entidade_id = {$entityIdForRfid})";
         };
 
         $rsRfids = query("SELECT rfids_nb_id, rfids_tx_uid, rfids_tx_descricao, rfids_tx_status FROM rfids {$condRfid} ORDER BY rfids_tx_uid ASC");
@@ -1343,7 +1343,7 @@
 
 		$selectedRfid = "";
 		if($entityIdForRfid){
-			$rowAssigned = mysqli_fetch_assoc(query("SELECT rfids_nb_id FROM rfids WHERE rfids_nb_user_id = {$entityIdForRfid} LIMIT 1"));
+			$rowAssigned = mysqli_fetch_assoc(query("SELECT rfids_nb_id FROM rfids WHERE rfids_nb_entidade_id = {$entityIdForRfid} LIMIT 1"));
 			if(!empty($rowAssigned)) $selectedRfid = $rowAssigned["rfids_nb_id"];
 		}
 

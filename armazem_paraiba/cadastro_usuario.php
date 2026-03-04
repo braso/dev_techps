@@ -169,7 +169,7 @@
 			$id_usuario_rfid = (int)$_POST["id"]; // Pega o ID que acabou de ser gerado ou atualizado
 			
 			// 1. DEVOLVER PARA A GAVETA: Limpa cartões ativos do usuário
-			$sql_limpeza = "UPDATE rfids SET rfids_tx_status = 'disponivel', rfids_nb_user_id = NULL WHERE rfids_nb_user_id = {$id_usuario_rfid} AND rfids_tx_status = 'ativo'";
+			$sql_limpeza = "UPDATE rfids SET rfids_tx_status = 'disponivel', rfids_nb_entidade_id = NULL WHERE rfids_nb_entidade_id = {$id_usuario_rfid} AND rfids_tx_status = 'ativo'";
 			if ($rfid_selecionado != "") {
 				$sql_limpeza .= " AND rfids_nb_id != " . (int)$rfid_selecionado;
 			}
@@ -177,7 +177,7 @@
 
 			// 2. VINCULAR NOVO CARTÃO: Ativa o selecionado
 			if ($rfid_selecionado != "") {
-				query("UPDATE rfids SET rfids_tx_status = 'ativo', rfids_nb_user_id = {$id_usuario_rfid} WHERE rfids_nb_id = " . (int)$rfid_selecionado);
+				query("UPDATE rfids SET rfids_tx_status = 'ativo', rfids_nb_entidade_id = {$id_usuario_rfid} WHERE rfids_nb_id = " . (int)$rfid_selecionado);
 			}
 			// =========================================================================
 
@@ -370,9 +370,9 @@
         
         // Deixei na mesma linha para evitar quebras de string no seu framework
         if ($userIdForRfid > 0) {
-            $condRfid = "WHERE (rfids_tx_status = 'disponivel' AND rfids_nb_user_id IS NULL) OR (rfids_nb_user_id = {$userIdForRfid})";
+            $condRfid = "WHERE (rfids_tx_status = 'disponivel' AND rfids_nb_entidade_id IS NULL) OR (rfids_nb_entidade_id = {$userIdForRfid})";
         } else {
-            $condRfid = "WHERE rfids_tx_status = 'disponivel' AND rfids_nb_user_id IS NULL";
+            $condRfid = "WHERE rfids_tx_status = 'disponivel' AND rfids_nb_entidade_id IS NULL";
         }
 
         $sqlBuscaRfids = "SELECT rfids_nb_id, rfids_tx_uid, rfids_tx_descricao, rfids_tx_status FROM rfids {$condRfid} ORDER BY rfids_tx_uid ASC";
@@ -404,7 +404,7 @@
 
         $selectedRfid = "";
         if($userIdForRfid > 0){
-            $sqlAssigned = "SELECT rfids_nb_id FROM rfids WHERE rfids_nb_user_id = {$userIdForRfid} LIMIT 1";
+            $sqlAssigned = "SELECT rfids_nb_id FROM rfids WHERE rfids_nb_entidade_id = {$userIdForRfid} LIMIT 1";
             $rsAssigned = query($sqlAssigned);
             
             // BLINDAGEM: Verifica também a segunda query
@@ -842,7 +842,7 @@ function index() {
                 ." LEFT JOIN operacao ON enti_tx_tipoOperacao = oper_nb_id"
                 ." LEFT JOIN grupos_documentos ON enti_setor_id = grup_nb_id"
                 ." LEFT JOIN sbgrupos_documentos subg ON enti_subSetor_id = subg.sbgr_nb_id"
-				." LEFT JOIN rfids ON rfids.rfids_nb_user_id = user.user_nb_id AND rfids.rfids_tx_status = 'ativo'"
+				." LEFT JOIN rfids ON rfids.rfids_nb_entidade_id = user.user_nb_id AND rfids.rfids_tx_status = 'ativo'"
             ;
 
 			$actions = criarIconesGrid(

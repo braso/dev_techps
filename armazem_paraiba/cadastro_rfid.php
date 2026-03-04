@@ -7,7 +7,7 @@
     mysqli_query($conn, "CREATE TABLE IF NOT EXISTS rfids (
         rfids_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         rfids_tx_uid VARCHAR(255) NOT NULL UNIQUE,
-        rfids_nb_user_id INT DEFAULT NULL,
+        rfids_nb_entidade_id INT DEFAULT NULL,
         rfids_tx_status ENUM('ativo', 'disponivel', 'bloqueado', 'perdido', 'quebrado') DEFAULT 'disponivel',
         rfids_tx_descricao TEXT,
         rfid_dt_created_at DATETIME DEFAULT CURRENT_TIMESTAMP
