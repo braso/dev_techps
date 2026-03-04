@@ -232,6 +232,22 @@
 			}
 		}
 
+		// =========================================================================
+        // ATUALIZAÇÃO DO CRÁCHA (RFID) NO BANCO DE DADOS
+        // =========================================================================
+        $rfid_selecionado = !empty($_POST["rfid_id"]) ? trim($_POST["rfid_id"]) : "";
+        $id_do_usuario = (int)$_POST["id"]; // O ID do usuário que acabou de ser salvo/atualizado
+
+        // 1. DEVOLVER PARA A GAVETA: Tira da mão deste usuário qualquer cartão ativo que ele tinha
+        // (Isso garante que se ele trocar de crachá, o antigo volta a ficar disponível)
+        query("UPDATE rfids SET rfids_tx_status = 'disponivel', rfids_nb_entidade_id = NULL WHERE rfids_nb_entidade_id = {$id_do_usuario} AND rfids_tx_status = 'ativo'");
+
+        // 2. VINCULAR O NOVO: Se o chefe selecionou um cartão na tela, ativa ele para este usuário
+        if ($rfid_selecionado != "") {
+            query("UPDATE rfids SET rfids_tx_status = 'ativo', rfids_nb_entidade_id = {$id_do_usuario} WHERE rfids_nb_id = " . (int)$rfid_selecionado);
+        }
+        // =========================================================================
+
 		modificarUsuario();
 		exit;
 	}
@@ -444,7 +460,9 @@
 
 			$campo_nivel = combo("Nível*", "nivel", $_POST["nivel"], 2, $niveis, "");
 			$campo_status = combo("Status", "status", $_POST["status"], 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
-            $campo_rfid = combo("Crachá (RFID)", "rfid_id", $selectedRfid, 2, $rfidOptions, "");
+            //ícone com a cor laranja (warning) típica de edição
+            $icone_editar_rfid = "&nbsp;&nbsp;<a href='javascript:void(0);' onclick='editarRfidNaTela()' title='Editar status deste crachá' style='color: #f0ad4e;'><span class='glyphicon glyphicon-pencil'></span></a>";
+            $campo_rfid = combo("Crachá (RFID)" . $icone_editar_rfid, "rfid_id", $selectedRfid, 2, $rfidOptions, "id='select_rfid_id'");
 			$campo_nascimento = campo_data("Nascido em*", "nascimento", ($_POST["nascimento"]?? ($_POST["nascimento"]?? "")), 2);
 			$campo_cpf = campo("CPF", "cpf", $_POST["cpf"], 2, "MASCARA_CPF");
 			$campo_rg = campo("RG", "rg", $_POST["rg"], 2, "MASCARA_RG", "maxlength='15'");
@@ -464,7 +482,9 @@
 			
 			$campo_nivel = combo("Nível*", "nivel", ($_POST["nivel"]?? $niveis), 2, $niveis, "");
 			$campo_status = combo("Status", "status", ($_POST["status"]?? "ativo"), 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
-			$campo_rfid = combo("Crachá (RFID)", "rfid_id", $selectedRfid, 2, $rfidOptions, "");
+			//ícone com a cor laranja (warning) típica de edição
+            $icone_editar_rfid = "&nbsp;&nbsp;<a href='javascript:void(0);' onclick='editarRfidNaTela()' title='Editar status deste crachá' style='color: #f0ad4e;'><span class='glyphicon glyphicon-pencil'></span></a>";
+            $campo_rfid = combo("Crachá (RFID)" . $icone_editar_rfid, "rfid_id", $selectedRfid, 2, $rfidOptions, "id='select_rfid_id'");
 			$campo_nascimento = campo_data("Nascido em*", "nascimento", ($_POST["nascimento"]?? ""), 2);
 			$campo_cpf = campo("CPF", "cpf", ($_POST["cpf"]?? ""), 2, "MASCARA_CPF");
 			$campo_rg = campo("RG", "rg", ($_POST["rg"]?? ""), 2, "MASCARA_RG", "maxlength='15'");
@@ -593,37 +613,83 @@
 
 		echo fecha_form($buttons);
 		echo "<form name='form_excluir_arquivo' method='post' action='cadastro_usuario.php'>
-				<input type='hidden' name='id' value=''>
-				<input type='hidden' name='nome_arquivo' value=''>
-				<input type='hidden' name='acao' value=''>
-			</form>
-			<script>
-			function remover_foto(id, acao, arquivo) {
-						if (confirm('Deseja realmente excluir o arquivo ' + arquivo + '?')) {
-							document.form_excluir_arquivo.id.value = id;
-							document.form_excluir_arquivo.nome_arquivo.value = arquivo;
-							document.form_excluir_arquivo.acao.value = acao;
-							document.form_excluir_arquivo.submit();
-						}
-			}
+                <input type='hidden' name='id' value=''>
+                <input type='hidden' name='nome_arquivo' value=''>
+                <input type='hidden' name='acao' value=''>
+            </form>
+            <script>
+            function remover_foto(id, acao, arquivo) {
+                if (confirm('Deseja realmente excluir o arquivo ' + arquivo + '?')) {
+                    document.form_excluir_arquivo.id.value = id;
+                    document.form_excluir_arquivo.nome_arquivo.value = arquivo;
+                    document.form_excluir_arquivo.acao.value = acao;
+                    document.form_excluir_arquivo.submit();
+                }
+            }
 
-			function imprimir() {
-				const form = document.createElement('form');
-				form.method = 'POST';
-				form.action = './impressao/ficha_usuario.php';
-				form.target = '_blank';
+            function imprimir() {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = './impressao/ficha_usuario.php';
+                form.target = '_blank';
 
-				const inputID = document.createElement('input');
-				inputID.type = 'hidden';
-				inputID.name = 'id_usuario';
-				inputID.value = ".$_POST["id"].";
-				form.appendChild(inputID);
-				
-				document.body.appendChild(form);
-				form.submit();
-				document.body.removeChild(form);
-			}
-			</script>";
+                const inputID = document.createElement('input');
+                inputID.type = 'hidden';
+                inputID.name = 'id_usuario';
+                inputID.value = ".$_POST["id"].";
+                form.appendChild(inputID);
+                
+                document.body.appendChild(form);
+                form.submit();
+                document.body.removeChild(form);
+            }
+
+            function editarRfidNaTela() {
+                // Pega o valor que está selecionado na caixinha agora
+                var selectRfid = document.getElementById('select_rfid_id') || document.getElementsByName('rfid_id')[0];
+                var idRfidSelecionado = selectRfid.value;
+
+                // Validação: Vê se tem algo selecionado
+                if (!idRfidSelecionado || idRfidSelecionado.trim() === '') {
+                    Swal.fire('Atenção', 'Selecione um crachá válido na lista antes de clicar em editar.', 'warning');
+                    return;
+                }
+
+                // Cria um formulário dinâmico e envia via POST para a tela de RFID
+                var formRfid = document.createElement('form');
+                formRfid.method = 'POST';
+                formRfid.action = 'cadastro_rfid.php'; 
+
+                var fieldId = document.createElement('input');
+                fieldId.type = 'hidden';
+                fieldId.name = 'id';
+                fieldId.value = idRfidSelecionado;
+                formRfid.appendChild(fieldId);
+
+                var fieldAcao = document.createElement('input');
+                fieldAcao.type = 'hidden';
+                fieldAcao.name = 'acao';
+                fieldAcao.value = 'editarRfid'; // Dispara o form de edição do seu framework
+                formRfid.appendChild(fieldAcao);
+
+                // ==========================================================
+                // O PULO DO GATO: O PHP imprime o ID diretamente aqui dentro!
+                // ==========================================================
+                var idUsuarioAtual = '" . (!empty($_POST["id"]) ? $_POST["id"] : "") . "';
+                
+                if (idUsuarioAtual !== '') {
+                    var fieldRetorno = document.createElement('input');
+                    fieldRetorno.type = 'hidden';
+                    fieldRetorno.name = 'id_usuario_retorno';
+                    fieldRetorno.value = idUsuarioAtual;
+                    formRfid.appendChild(fieldRetorno);
+                }
+
+                document.body.appendChild(formRfid);
+                formRfid.submit();
+            }
+
+            </script>";
 
 			if (!empty($_POST["entidade"])) {
 				$arquivos = mysqli_fetch_all(query(
