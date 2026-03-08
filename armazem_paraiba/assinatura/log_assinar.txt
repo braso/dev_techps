@@ -1,0 +1,56 @@
+[2026-03-07 18:33:25] Iniciando script assinar.php
+[2026-03-07 18:33:25] Incluindo conecta.php
+[2026-03-07 15:33:25] Conecta.php incluído com sucesso
+[2026-03-07 15:33:25] Incluindo email_config.php
+[2026-03-07 15:33:25] email_config.php incluído com sucesso
+[2026-03-07 15:33:25] Carregando PHPMailer
+[2026-03-07 15:33:25] PHPMailer carregado
+[2026-03-07 15:33:25] Verificando tabela assinatura_eletronica
+[2026-03-07 15:33:25] Verificando tabela solicitacoes_assinatura...
+[2026-03-07 15:33:25] Coluna status da tabela solicitacoes_assinatura é do tipo: VARCHAR(50)
+[2026-03-07 15:33:25] Tabela solicitacoes_assinatura já está correta.
+[2026-03-07 15:33:25] Verificando tabela assinantes...
+[2026-03-07 15:33:25] Coluna status da tabela assinantes é do tipo: VARCHAR(50)
+[2026-03-07 15:33:25] Tabela assinantes já está correta.
+[2026-03-07 15:33:25] Processando POST
+[2026-03-07 15:33:25] Processando upload de arquivo
+[2026-03-07 15:33:25] Arquivo salvo em: docAssinado/assinado_1772908405_4284b7dd7fb141b30000000000000000.pdf
+[2026-03-07 15:33:25] Verificando token solicitacao: 282dbb270e976947dac4e26d1f22d8869c9a88bb5a5cbc7fcac804ed82557635
+[2026-03-07 15:33:25] Assinante encontrado: PABLO HENRIQUE 
+[2026-03-07 15:33:25] Inserindo auditoria
+[2026-03-07 15:33:25] Auditoria inserida com ID: 26
+[2026-03-07 15:33:25] Iniciando fluxo multi-signatário
+[2026-03-07 15:33:25] Encontrado próximo signatário: Eider Sena
+[2026-03-07 15:33:25] Enviando email para próximo: contato.pablodantasdev@gmail.com
+[2026-03-07 15:33:28] Email enviado com sucesso para contato.pablodantasdev@gmail.com
+[2026-03-07 15:33:28] Sucesso. Retornando JSON.
+[2026-03-07 18:33:42] Iniciando script assinar.php
+[2026-03-07 18:33:42] Incluindo conecta.php
+[2026-03-07 15:33:42] Conecta.php incluído com sucesso
+[2026-03-07 15:33:42] Incluindo email_config.php
+[2026-03-07 15:33:42] email_config.php incluído com sucesso
+[2026-03-07 15:33:42] Carregando PHPMailer
+[2026-03-07 15:33:42] PHPMailer carregado
+[2026-03-07 15:33:42] Verificando tabela assinatura_eletronica
+[2026-03-07 15:33:42] Verificando tabela solicitacoes_assinatura...
+[2026-03-07 15:33:42] Coluna status da tabela solicitacoes_assinatura é do tipo: VARCHAR(50)
+[2026-03-07 15:33:42] Tabela solicitacoes_assinatura já está correta.
+[2026-03-07 15:33:42] Verificando tabela assinantes...
+[2026-03-07 15:33:42] Coluna status da tabela assinantes é do tipo: VARCHAR(50)
+[2026-03-07 15:33:42] Tabela assinantes já está correta.
+[2026-03-07 15:33:42] Processando POST
+[2026-03-07 15:33:42] Processando upload de arquivo
+[2026-03-07 15:33:42] Arquivo salvo em: docAssinado/assinado_1772908422_2f1c5a1f3749f2f50000000000000000.pdf
+[2026-03-07 15:33:42] Verificando token solicitacao: 3dee6fafe263c4e7baa6458f5ab36678ae629b9183a2662f8cc2841ecc42e658
+[2026-03-07 15:33:42] Assinante encontrado: Eider Sena
+[2026-03-07 15:33:42] Inserindo auditoria
+[2026-03-07 15:33:42] Auditoria inserida com ID: 27
+[2026-03-07 15:33:42] Iniciando fluxo multi-signatário
+[2026-03-07 15:33:42] Último signatário. Finalizando processo.
+[2026-03-07 15:33:42] Enviando e-mail de finalização.
+[2026-03-07 15:33:42] Preparando email de finalização para solicitacao 19
+[2026-03-07 15:33:42] Enviando email final para: pabloj72017@gmail.com
+[2026-03-07 15:33:44] Email final enviado para pabloj72017@gmail.com
+[2026-03-07 15:33:44] Enviando email final para: contato.pablodantasdev@gmail.com
+[2026-03-07 15:33:47] Email final enviado para contato.pablodantasdev@gmail.com
+[2026-03-07 15:33:47] Sucesso. Retornando JSON.
