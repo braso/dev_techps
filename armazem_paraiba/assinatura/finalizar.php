@@ -1,6 +1,6 @@
 <?php
 include_once "../conecta.php";
-include_once "layout_header.php";
+include_once "componentes/layout_header.php";
 
 // Busca documentos que já foram assinados por todos (ou que estão 'concluidos' se houver status geral)
 $sql = "
@@ -303,5 +303,5 @@ $result = mysqli_query($conn, $sql);
     </script>
 </div>
 <?php
-include_once "layout_footer.php";
+include_once "componentes/layout_footer.php";
 ?>

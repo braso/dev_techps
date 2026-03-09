@@ -1,6 +1,6 @@
 <?php
 include_once "../conecta.php";
-include_once "layout_header.php";
+include_once "componentes/layout_header.php";
 ?>
 <!-- Tailwind CSS (Included in header) -->
 <!-- FontAwesome (Included in header) -->
@@ -286,5 +286,5 @@ include_once "layout_header.php";
     </script>
 </div>
 <?php
-include_once "layout_footer.php";
+include_once "componentes/layout_footer.php";
 ?>

@@ -1,6 +1,6 @@
 <?php
 include_once "../../conecta.php";
-include_once "../layout_header.php";
+include_once "../componentes/layout_header.php";
 
 // Função para listar funcionários ativos
 function listarFuncionarios($conn) {
@@ -107,4 +107,4 @@ $result = listarFuncionarios($conn);
     </div>
 <?php endif; ?>
 
-<?php include_once "../layout_footer.php"; ?>
+<?php include_once "../componentes/layout_footer.php"; ?>

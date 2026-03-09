@@ -1,6 +1,6 @@
 <?php
 include_once "../conecta.php";
-include_once "layout_header.php";
+include_once "componentes/layout_header.php";
 
 // Parâmetros de filtro
 $filtro_status = isset($_GET['status']) ? $_GET['status'] : '';
@@ -229,4 +229,4 @@ $result = mysqli_query($conn, $sql);
 
 </div>
 
-<?php include_once "layout_footer.php"; ?>
+<?php include_once "componentes/layout_footer.php"; ?>

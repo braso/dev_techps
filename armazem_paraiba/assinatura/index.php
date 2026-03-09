@@ -1,6 +1,6 @@
 <?php
 include_once "../conecta.php";
-include_once "layout_header.php";
+include_once "componentes/layout_header.php";
 ?>
 <style>
     /* Estilos Gerais do Módulo */
@@ -253,5 +253,5 @@ include_once "layout_header.php";
 </div>
 
 <?php
-include_once "layout_footer.php";
+include_once "componentes/layout_footer.php";
 ?>

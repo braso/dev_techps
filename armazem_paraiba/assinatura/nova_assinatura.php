@@ -7,7 +7,7 @@ $nome_funcionario = isset($_GET['nome']) ? $_GET['nome'] : 'Funcionário Exemplo
 // Se não tiver documento selecionado, permitir upload
 $modo_upload = empty($id_documento);
 
-include_once "layout_header.php";
+include_once "componentes/layout_header.php";
 ?>
 
 <div class="font-sans">
@@ -176,5 +176,5 @@ include_once "layout_header.php";
 </script>
 
 <?php
-include_once "layout_footer.php";
+include_once "componentes/layout_footer.php";
 ?>
