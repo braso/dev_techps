@@ -20,9 +20,12 @@ use PHPMailer\PHPMailer\Exception;
 
 // Verifica se é POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header("Location: enviar_documento.php?status=error&message=Método inválido");
+    $redirect = $_POST['redirect_to'] ?? 'enviar_documento.php';
+    header("Location: $redirect?status=error&message=Método inválido");
     exit;
 }
+
+$redirect_to = $_POST['redirect_to'] ?? 'enviar_documento.php';
 
 // Captura signatários do formulário (Array)
 $signatarios = $_POST['signatarios'] ?? [];
@@ -43,14 +46,14 @@ if (empty($signatarios) || !is_array($signatarios)) {
             ]
         ];
     } else {
-        header("Location: enviar_documento.php?status=error&message=Nenhum signatário informado");
+        header("Location: $redirect_to?status=error&message=Nenhum signatário informado");
         exit;
     }
 }
 
 // Verifica upload do arquivo
 if (!isset($_FILES['arquivo']) || $_FILES['arquivo']['error'] !== UPLOAD_ERR_OK) {
-    header("Location: enviar_documento.php?status=error&message=Erro no upload do arquivo");
+    header("Location: $redirect_to?status=error&message=Erro no upload do arquivo");
     exit;
 }
 
@@ -63,7 +66,7 @@ $fileExtension = strtolower(end($fileNameCmps));
 
 // Apenas PDF
 if ($fileExtension !== 'pdf') {
-    header("Location: enviar_documento.php?status=error&message=Apenas arquivos PDF são permitidos");
+    header("Location: $redirect_to?status=error&message=Apenas arquivos PDF são permitidos");
     exit;
 }
 
@@ -164,16 +167,16 @@ if(move_uploaded_file($fileTmpPath, $dest_path)) {
             }
         }
         
-        header("Location: enviar_documento.php?status=success");
+        header("Location: $redirect_to?status=success");
         exit;
         
     } else {
-        header("Location: enviar_documento.php?status=error&message=Erro ao criar solicitação: " . mysqli_error($conn));
+        header("Location: $redirect_to?status=error&message=Erro ao criar solicitação: " . mysqli_error($conn));
         exit;
     }
 
 } else {
-    header("Location: enviar_documento.php?status=error&message=Erro ao salvar arquivo");
+    header("Location: $redirect_to?status=error&message=Erro ao salvar arquivo");
     exit;
 }
 
@@ -210,22 +213,61 @@ function enviarEmailAssinatura($email, $nome, $token, $nomeArquivo, $idDoc, $fun
         $mail->Subject = "Assinatura Pendente ($funcao): Documento #$idDoc";
         
         $corpo = "
-        <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px;'>
-            <div style='text-align: center; margin-bottom: 20px;'>
-                " . ($cidLogo ? "<img src='$cidLogo' alt='TechPS' style='max-width: 150px;'>" : "<h2>TechPS</h2>") . "
+        <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #ffffff;'>
+            <div style='text-align: center; padding: 30px; background-color: #f8f9fa; border-bottom: 1px solid #e0e0e0; border-radius: 8px 8px 0 0;'>
+                " . ($cidLogo ? "<img src='$cidLogo' alt='TechPS' style='max-width: 150px;'>" : "<h2 style='color: #333; margin: 0;'>TechPS</h2>") . "
             </div>
-            <h3>Olá, $nome.</h3>
-            <p>Você foi indicado como <strong>$funcao</strong> para assinar o documento abaixo:</p>
-            <div style='background: #f8f9fa; padding: 15px; margin: 15px 0;'>
-                <strong>Documento:</strong> $nomeArquivo<br>
-                <strong>ID:</strong> $idDoc
+            
+            <div style='padding: 40px 30px;'>
+                <h2 style='color: #333; font-size: 24px; margin-top: 0;'>Olá, " . strtoupper($nome) . ".</h2>
+                
+                <p style='color: #555; font-size: 16px; line-height: 1.5;'>
+                    Você foi indicado como <strong style='color: #0056b3;'>$funcao</strong> para assinar o documento abaixo:
+                </p>
+                
+                <div style='background-color: #f8f9fa; border-left: 4px solid #0056b3; padding: 20px; margin: 25px 0; border-radius: 4px;'>
+                    <p style='margin: 0 0 10px 0; color: #555;'>
+                        <strong style='color: #333;'>Documento:</strong> <br>
+                        <span style='font-size: 18px; color: #0056b3;'>$nomeArquivo</span>
+                    </p>
+                    <p style='margin: 0; color: #555;'>
+                        <strong style='color: #333;'>ID:</strong> <br>
+                        <span style='font-family: monospace; font-size: 14px; background: #e9ecef; padding: 2px 6px; rounded: 3px;'>$idDoc</span>
+                    </p>
+                </div>
+                
+                <div style='text-align: center; margin: 35px 0;'>
+                    <a href='$linkAssinatura' style='background-color: #0056b3; color: white; padding: 16px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1);'>
+                        Revisar e Assinar Agora
+                    </a>
+                </div>
+                
+                <div style='border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px;'>
+                    <p style='font-size: 13px; color: #777; margin-bottom: 10px;'>
+                        Se o botão não funcionar, copie e cole o link abaixo no seu navegador:
+                    </p>
+                    <p style='font-size: 12px; color: #555; background: #f8f9fa; padding: 10px; border-radius: 4px; word-break: break-all; font-family: monospace; border: 1px solid #eee;'>
+                        $linkAssinatura
+                    </p>
+                </div>
+
+                <div style='margin-top: 30px; font-size: 12px; color: #777; text-align: justify; line-height: 1.5; border-top: 1px solid #eee; padding-top: 20px;'>
+                    <p style='margin-bottom: 10px;'>
+                        <strong>Informações Legais:</strong>
+                    </p>
+                    <p>
+                        Este procedimento de assinatura eletrônica é realizado em conformidade com a <strong>Medida Provisória nº 2.200-2/2001</strong>, que institui a Infraestrutura de Chaves Públicas Brasileira (ICP-Brasil) e garante a autenticidade, a integridade e a validade jurídica de documentos em forma eletrônica, bem como das aplicações que utilizem certificados digitais, e dá outras providências. A validade jurídica desta assinatura é assegurada pela concordância expressa das partes envolvidas.
+                    </p>
+                    <p style='margin-top: 10px;'>
+                        <strong>Data de Envio:</strong> " . date('d/m/Y H:i:s') . "
+                    </p>
+                </div>
             </div>
-            <p style='text-align: center;'>
-                <a href='$linkAssinatura' style='background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;'>Revisar e Assinar Agora</a>
-            </p>
-            <p style='font-size: 12px; color: #999; margin-top: 30px;'>
-                Se o botão não funcionar, copie e cole: $linkAssinatura
-            </p>
+            
+            <div style='background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #e0e0e0; border-radius: 0 0 8px 8px;'>
+                <p style='margin: 0;'>Mensagem automática enviada pelo sistema de Assinatura Digital TechPS.</p>
+                <p style='margin: 5px 0 0 0;'>&copy; " . date('Y') . " Armazém Paraíba - Todos os direitos reservados.</p>
+            </div>
         </div>";
 
         $mail->Body = $corpo;

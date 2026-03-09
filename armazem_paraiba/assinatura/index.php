@@ -1,123 +1,257 @@
 <?php
-// Simulação de recebimento de dados via GET (em produção viria do banco ou link criptografado)
-$id_documento = isset($_GET['doc']) ? $_GET['doc'] : '';
-$nome_funcionario = isset($_GET['nome']) ? $_GET['nome'] : 'Funcionário Exemplo';
-
-// Se não tiver documento selecionado, permitir upload
-$modo_upload = empty($id_documento);
+include_once "../conecta.php";
+include_once "layout_header.php";
 ?>
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Assinatura Eletrônica de Documentos</title>
-    <link rel="stylesheet" href="style.css">
-    <!-- Adicionando pdf-lib para manipulação de PDF no cliente -->
-    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <style>
-        .upload-area {
-            border: 2px dashed #ccc;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 20px;
-            cursor: pointer;
-            background-color: #fafafa;
-        }
-        .upload-area:hover {
-            background-color: #eee;
-        }
-        iframe {
-            width: 100%;
-            height: 400px;
-            border: 1px solid #ccc;
-            margin-bottom: 20px;
-        }
-    </style>
-</head>
-<body>
+<style>
+    /* Estilos Gerais do Módulo */
+    .assinatura-dashboard {
+        font-family: 'Open Sans', sans-serif;
+        padding: 20px 0;
+    }
 
-<div class="container">
-    <div class="nav-bar" style="margin-bottom: 20px; text-align: right;">
-        <a href="../index.php" class="btn-nav" style="background-color: #6c757d;">Voltar ao Sistema</a>
-        <a href="index.php" class="btn-nav">Nova Assinatura (Upload)</a>
-        <a href="enviar_documento.php" class="btn-nav">Enviar Documento (Multi)</a>
-        <a href="finalizar.php" class="btn-nav" style="background-color: #198754;">Finalizar (ICP-Brasil)</a>
-    </div>
+    /* Cabeçalho do Módulo - Compacto e Elegante */
+    .modulo-header {
+        background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
 
-    <h2>Assinatura Eletrônica</h2>
+    .header-content h2 {
+        margin: 0 0 5px 0;
+        font-size: 24px;
+        font-weight: 700;
+        color: #fff;
+    }
+
+    .header-content p {
+        margin: 0;
+        font-size: 14px;
+        opacity: 0.9;
+        max-width: 600px;
+    }
+
+    .header-icon {
+        font-size: 40px;
+        opacity: 0.8;
+    }
+
+    /* Grid de Cards */
+    .cards-grid {
+        display: flex;
+        flex-wrap: wrap;
+        margin: -10px;
+    }
+
+    .card-wrapper {
+        padding: 10px;
+        width: 100%;
+    }
     
-    <?php if ($modo_upload): ?>
-        <!-- Tela de Upload -->
-        <div id="uploadStep">
-            <p>Selecione um arquivo PDF para assinar:</p>
-            <form id="formUpload" enctype="multipart/form-data">
-                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-                    <p>Clique aqui ou arraste o arquivo PDF</p>
-                    <input type="file" id="fileInput" name="arquivo" accept="application/pdf" style="display: none;" onchange="handleFileSelect(this)">
-                    <span id="fileName"></span>
-                </div>
-                <button type="submit" class="btn-assinar" id="btnUpload" disabled>Carregar Documento</button>
-            </form>
+    @media (min-width: 576px) { .card-wrapper { width: 50%; } }
+    @media (min-width: 992px) { .card-wrapper { width: 25%; } } /* 4 colunas em telas grandes */
+
+    /* Design do Card */
+    .card-modulo {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #e0e0e0;
+        display: flex;
+        flex-direction: column;
+        text-decoration: none !important; /* Remove sublinhado do link */
+    }
+
+    .card-modulo:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        border-color: transparent;
+    }
+
+    /* Faixa colorida lateral ou superior */
+    .card-border-top {
+        height: 4px;
+        width: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .card-body-content {
+        padding: 25px 20px;
+        text-align: center;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    /* Ícone com círculo de fundo */
+    .icon-circle {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 15px;
+        font-size: 24px;
+        transition: transform 0.3s;
+    }
+
+    .card-modulo:hover .icon-circle {
+        transform: scale(1.1);
+    }
+
+    .card-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .card-desc {
+        font-size: 12px;
+        color: #777;
+        line-height: 1.4;
+    }
+
+    /* Cores Específicas - Padronizado com o Header */
+    .card-border-top { background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%); }
+    .icon-circle { 
+        background: rgba(75, 108, 183, 0.1); 
+        color: #4b6cb7; /* Cor base do gradiente */
+    }
+
+    /* Hover effect: Gradient icon background */
+    .card-modulo:hover .icon-circle {
+        background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+        color: #fff;
+    }
+
+    /* Estilos específicos removidos em favor do padrão único */
+    /* .style-blue, .style-green, etc... removidos */
+
+</style>
+
+<div class="assinatura-dashboard">
+
+    <!-- Cabeçalho -->
+    <div class="modulo-header">
+        <div class="header-content">
+            <h2>Módulo de Assinatura Digital</h2>
+            <p>
+                Gerencie todo o ciclo de vida dos documentos: envio individual, em lote, 
+                assinatura eletrônica e finalização com carimbo do tempo ICP-Brasil.
+            </p>
         </div>
-    <?php endif; ?>
+        <div class="header-icon">
+            <i class="fa fa-file-text-o"></i>
+        </div>
+    </div>
 
-    <!-- Tela de Visualização e Assinatura (inicialmente oculta se for upload) -->
-    <div id="assinaturaStep" style="<?php echo $modo_upload ? 'display:none;' : ''; ?>">
+    <!-- Grid de Opções -->
+    <div class="cards-grid">
         
-        <?php if (!$modo_upload): ?>
-             <div class="documento-preview">
-                <p><strong>Documento ID:</strong> <?php echo htmlspecialchars($id_documento); ?></p>
-                <p><strong>Para:</strong> <?php echo htmlspecialchars($nome_funcionario); ?></p>
-                <hr>
-                <p>Visualização do documento pré-cadastrado...</p>
-            </div>
-        <?php else: ?>
-            <div id="pdfPreviewContainer">
-                <iframe id="pdfPreview" src=""></iframe>
-            </div>
-        <?php endif; ?>
+        <!-- Nova Assinatura -->
+        <div class="card-wrapper">
+            <a href="nova_assinatura.php" class="card-modulo">
+                <div class="card-border-top"></div>
+                <div class="card-body-content">
+                    <div class="icon-circle">
+                        <i class="fa fa-pencil"></i>
+                    </div>
+                    <div class="card-title">Nova Assinatura</div>
+                    <div class="card-desc">Envio de arquivo único para assinatura de um signatário.</div>
+                </div>
+            </a>
+        </div>
 
-        <form id="formAssinatura">
-            <input type="hidden" id="id_documento" name="id_documento" value="<?php echo htmlspecialchars($id_documento); ?>">
-            <input type="hidden" id="caminho_pdf_original" name="caminho_pdf_original">
-            
-            <div class="form-group">
-                <label for="nome">Nome Completo:</label>
-                <input type="text" id="nome" name="nome" placeholder="Seu Nome Completo" required value="<?php echo htmlspecialchars($nome_funcionario !== 'Funcionário Exemplo' ? $nome_funcionario : ''); ?>">
-            </div>
+        <!-- Envio Múltiplo -->
+        <div class="card-wrapper">
+            <a href="enviar_documento.php" class="card-modulo">
+                <div class="card-border-top"></div>
+                <div class="card-body-content">
+                    <div class="icon-circle">
+                        <i class="fa fa-users"></i>
+                    </div>
+                    <div class="card-title">Envio em Massa</div>
+                    <div class="card-desc">Envie um documento para múltiplos signatários de uma vez.</div>
+                </div>
+            </a>
+        </div>
 
-            <div class="form-group">
-                <label for="cpf">CPF (apenas números):</label>
-                <input type="text" id="cpf" name="cpf" placeholder="000.000.000-00" required>
-            </div>
+        <!-- Finalizar ICP-Brasil -->
+        <div class="card-wrapper">
+            <a href="finalizar.php" class="card-modulo">
+                <div class="card-border-top"></div>
+                <div class="card-body-content">
+                    <div class="icon-circle">
+                        <i class="fa fa-certificate"></i>
+                    </div>
+                    <div class="card-title">Finalizar (ICP)</div>
+                    <div class="card-desc">Aplique o carimbo do tempo e valide juridicamente.</div>
+                </div>
+            </a>
+        </div>
 
-            <div class="form-group">
-                <label for="rg">RG:</label>
-                <input type="text" id="rg" name="rg" placeholder="Digite seu RG" required>
-            </div>
+        <!-- Consultar -->
+        <div class="card-wrapper">
+            <a href="consultar.php" class="card-modulo">
+                <div class="card-border-top"></div>
+                <div class="card-body-content">
+                    <div class="icon-circle">
+                        <i class="fa fa-search"></i>
+                    </div>
+                    <div class="card-title">Consultar</div>
+                    <div class="card-desc">Histórico e status de documentos enviados.</div>
+                </div>
+            </a>
+        </div>
 
-            <div class="termo-aceite">
-                <input type="checkbox" id="aceite" name="aceite" required>
-                <label for="aceite">
-                    Declaro que li e estou de acordo com o teor deste documento, assinando-o eletronicamente conforme a Medida Provisória nº 2.200-2/2001.
-                </label>
-            </div>
+        <!-- Relatórios -->
+        <div class="card-wrapper">
+            <a href="#" class="card-modulo">
+                <div class="card-border-top"></div>
+                <div class="card-body-content">
+                    <div class="icon-circle">
+                        <i class="fa fa-pie-chart"></i>
+                    </div>
+                    <div class="card-title">Relatórios</div>
+                    <div class="card-desc">Métricas de desempenho e assinaturas pendentes. (Em Breve)</div>
+                </div>
+            </a>
+        </div>
 
-            <!-- Campos ocultos para auditoria -->
-            <input type="hidden" id="latitude" name="latitude">
-            <input type="hidden" id="longitude" name="longitude">
-            <input type="hidden" id="device_info" name="device_info">
+        <!-- Configurações -->
+        <div class="card-wrapper">
+            <a href="#" class="card-modulo">
+                <div class="card-border-top"></div>
+                <div class="card-body-content">
+                    <div class="icon-circle">
+                        <i class="fa fa-cog"></i>
+                    </div>
+                    <div class="card-title">Configurações</div>
+                    <div class="card-desc">Gerenciar certificados e permissões de acesso. (Em Breve)</div>
+                </div>
+            </a>
+        </div>
 
-            <button type="submit" class="btn-assinar" id="btnAssinar">Assinar Documento</button>
-        </form>
     </div>
 
-    <div class="info-auditoria">
-        <p>Seu IP, localização e dados do dispositivo serão registrados para fins de auditoria.</p>
-    </div>
 </div>
 
-<script src="script.js"></script>
-</body>
-</html>
+<?php
+include_once "layout_footer.php";
+?>

@@ -1,36 +1,28 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enviar Documento - TechPS Assinaturas</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .drag-active {
-            border-color: #3b82f6;
-            background-color: #eff6ff;
-        }
-    </style>
-</head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center py-10 px-4 font-sans">
+<?php
+include_once "../conecta.php";
+include_once "layout_header.php";
+?>
+<!-- Tailwind CSS (Included in header) -->
+<!-- FontAwesome (Included in header) -->
+<style>
+    .drag-active {
+        border-color: #3b82f6;
+        background-color: #eff6ff;
+    }
+</style>
 
-    <div class="max-w-4xl w-full bg-white shadow-xl rounded-2xl overflow-hidden">
+<div class="bg-gray-50 py-10 px-4 font-sans">
+
+    <div class="max-w-4xl w-full mx-auto bg-white shadow-xl rounded-2xl overflow-hidden">
         
-        <!-- Header -->
-        <div class="bg-white px-8 py-6 border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-4">
-                <img src="assets/logo.png" alt="TechPS Logo" class="h-12 object-contain">
-                <div class="border-l border-gray-300 h-10 mx-2"></div>
-                <div>
-                    <h2 class="text-xl font-bold text-gray-800">Nova Solicitação</h2>
-                    <p class="text-gray-500 text-sm">Envio de documentos para múltiplas assinaturas</p>
-                </div>
+        <!-- Header simplified -->
+        <div class="bg-white px-8 py-6 border-b border-gray-100 flex justify-between items-center">
+            <div>
+                <h2 class="text-xl font-bold text-gray-800">Nova Solicitação</h2>
+                <p class="text-gray-500 text-sm">Envio de documentos para múltiplas assinaturas</p>
             </div>
             <a href="index.php" class="text-gray-500 hover:text-blue-600 text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50">
-                <i class="fas fa-arrow-left"></i> Voltar ao Início
+                <i class="fas fa-arrow-left"></i> Voltar
             </a>
         </div>
 
@@ -292,5 +284,7 @@
         addSignatario('', '', 'Gerente');
 
     </script>
-</body>
-</html>
+</div>
+<?php
+include_once "layout_footer.php";
+?>

@@ -27,6 +27,7 @@
 </head>
 
 <body>    
+    <?php if(isset($extraHeader)) echo $extraHeader; ?>
     <script>
     function downloadCSV(idMotorista, nomeMotorista) {
         // Caminho do arquivo CSV no servidor

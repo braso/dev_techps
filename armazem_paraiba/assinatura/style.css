@@ -1,10 +1,6 @@
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #f4f4f9;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
     margin: 0;
 }
 
@@ -14,7 +10,8 @@ body {
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     width: 100%;
-    max-width: 600px;
+    /* max-width: 600px; Remove max-width restriction for dashboard */ 
+    margin: 0 auto;
 }
 
 h2 {

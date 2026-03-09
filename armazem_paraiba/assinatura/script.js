@@ -46,7 +46,7 @@ window.loadPdfFromUrl = async function(url) {
         const assinaturaStep = document.getElementById('assinaturaStep');
         if (uploadStep && assinaturaStep) {
             uploadStep.style.display = 'none';
-            assinaturaStep.style.display = 'block';
+            assinaturaStep.style.display = 'flex';
         }
         currentFileName = "documento_solicitado.pdf";
 
@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             if (currentPdfBytes) {
                 uploadStep.style.display = 'none';
-                assinaturaStep.style.display = 'block';
+                assinaturaStep.style.display = 'flex';
             } else {
                 alert("Selecione um arquivo PDF primeiro.");
             }
@@ -304,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 y -= 20;
 
                 // Texto Legal
-                const legalText = 'O signatário declarou ter lido e concordado com o teor do documento original referenciado acima. Esta assinatura foi realizada eletronicamente através do sistema TechPS, com validade jurídica assegurada pela Medida Provisória nº 2.200-2/2001.';
+                const legalText = `Eu, ${nome}, inscrito(a) no CPF sob o nº ${cpf}, declaro que li e concordo com o teor do documento original referenciado acima. Esta assinatura foi realizada eletronicamente através do sistema TechPS, com validade jurídica assegurada pela Medida Provisória nº 2.200-2/2001.`;
                 
                 // Função simples de wrap para o texto legal
                 const words = legalText.split(' ');

@@ -1,21 +1,8 @@
 <?php
-// Define interno como true para evitar redirecionamento de login/logout no conecta.php
-$interno = true;
-
-// Inclui a conexão com o banco de dados
-// Tenta primeiro no diretório atual (caso tenha sido copiado) ou no diretório pai
-if (file_exists("conecta.php")) {
-    include "conecta.php";
-} elseif (file_exists("../conecta.php")) {
-    include "../conecta.php";
-} else {
-    die("Erro: Arquivo conecta.php não encontrado.");
-}
+include_once "../conecta.php";
+include_once "layout_header.php";
 
 // Busca documentos que já foram assinados por todos (ou que estão 'concluidos' se houver status geral)
-// Como não temos um status geral confiável ainda, vamos buscar todos e filtrar ou mostrar status.
-// Melhor: Buscar documentos onde não há assinantes pendentes.
-
 $sql = "
     SELECT s.*, 
     (SELECT COUNT(*) FROM assinantes a WHERE a.id_solicitacao = s.id) as total_assinantes,
@@ -25,16 +12,10 @@ $sql = "
 ";
 $result = mysqli_query($conn, $sql);
 ?>
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finalizar Documento - TechPS</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="bg-gray-50 min-h-screen font-sans">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<div class="bg-gray-50 min-h-screen font-sans">
 
     <div class="max-w-6xl mx-auto px-4 py-8">
         
@@ -320,5 +301,7 @@ $result = mysqli_query($conn, $sql);
             }
         });
     </script>
-</body>
-</html>
+</div>
+<?php
+include_once "layout_footer.php";
+?>
