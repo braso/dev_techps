@@ -74,6 +74,50 @@
 		exit;
 	}
 
+	function redirParaAjustePonto(){
+		unset($_POST["acao"]);
+		if(empty($_POST['busca_motorista'])){
+			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
+				$_POST['busca_motorista'] = $_SESSION["user_nb_entidade"];
+			}else{
+				set_status("ERRO: Selecione um funcionário para ajustar o ponto.");
+				index();
+				exit;
+			}
+		}
+
+		$_POST["acao"] = "index";
+		$_POST["idMotorista"] = $_POST["busca_motorista"];
+		$_POST["data"] = $_POST["busca_periodo"][0] ?? date("Y-m-d");
+		echo criarHiddenForm(
+			"form_ajuste",
+			array_keys($_POST),
+			array_values($_POST),
+			"ajuste_pontofuncionario.php"
+		);
+		echo "<script>document.form_ajuste.submit();</script>";
+		exit;
+	}
+	/*// funcao paa chamar a pagina de ajuste de ponto do funcionario
+	function redirParaAjustePonto(){
+		unset($_POST["acao"]);
+		if(empty($_POST['busca_motorista'])){
+			header("Location: {$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}/ajuste_pontofuncionario.php");
+			exit;
+		}
+
+		$_POST["acao"] = "index";
+		echo criarHiddenForm(
+			"form_ajuste_ponto",
+			array_keys($_POST),
+			array_values($_POST),
+			"ajuste_pontofuncionario.php"
+		);
+		echo "<script>document.form_ajuste_ponto.submit();</script>";
+		exit;
+	}*/
+
+
 	function buscarEspelho(){
 		include_once "check_permission.php";
 		$temPermissao = temPermissaoMenu('/espelho_ponto.php');
@@ -245,6 +289,8 @@
 			];
 			
 				$b[] = botao("Cadastrar Abono", "redirParaAbono", "acaoPrevia", $_POST["acao"]??"", "btn btn-secondary");
+				$b[] = botao("Solicitar Ajuste", "redirParaAjustePonto()", "acaoPrevia", $_POST["acao"]??"", "btn btn-secondary");
+
 			
 			if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
 				$b[] = "<button class='btn default' type='button' onclick='imprimir(this)'>Imprimir</button>";
@@ -533,7 +579,7 @@
 					"form_ajuste_ponto",
 					array_keys($params),
 					array_values($params),
-					"ajuste_ponto.php"
+					"ajuste_pontofuncionario.php"
 				);
 				unset($params);
 			}
