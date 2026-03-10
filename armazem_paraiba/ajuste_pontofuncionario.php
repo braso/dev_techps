@@ -49,6 +49,84 @@
 	// Criar tabela ao carregar a página
 	criarTabelaSolicitacoes();
 
+	function gerarTabelaSolicitacoes($idMotorista) {
+		// Buscar todas as solicitações do motorista
+		$sql = "
+			SELECT 
+				sa.id,
+				sa.data_ajuste,
+				sa.hora_ajuste,
+				sa.id_macro,
+				sa.id_motivo,
+				sa.justificativa,
+				sa.status,
+				sa.data_solicitacao
+			FROM solicitacoes_ajuste sa
+			WHERE sa.id_motorista = {$idMotorista}
+			ORDER BY sa.data_solicitacao DESC
+		";
+
+		$result = query($sql);
+		$linhas = [];
+
+		if (!$result || mysqli_num_rows($result) == 0) {
+			return "<p style='color:#999;'>Nenhuma solicitação de ajuste registrada.</p>";
+		}
+
+		while ($row = mysqli_fetch_assoc($result)) {
+			// Mapear status para cores e textos
+			$statusBadge = '';
+			switch ($row['status']) {
+				case 'enviada':
+					$statusBadge = "<span class='badge badge-warning' style='font-size:12px; padding:5px 10px;'>Enviada</span>";
+					break;
+				case 'visualizada':
+					$statusBadge = "<span class='badge badge-info' style='font-size:12px; padding:5px 10px;'>Visualizada</span>";
+					break;
+				case 'aceita':
+					$statusBadge = "<span class='badge badge-success' style='font-size:12px; padding:5px 10px;'>Aceita</span>";
+					break;
+				case 'nao_aceita':
+					$statusBadge = "<span class='badge badge-danger' style='font-size:12px; padding:5px 10px;'>Rejeitada</span>";
+					break;
+			}
+
+			// Botão de ação (excluir) - só disponível se status = 'enviada'
+			$acoes = '';
+			if ($row['status'] == 'enviada') {
+				$acoes = "<button type='button' class='btn btn-xs btn-danger' onclick=\"if(confirm('Tem certeza que deseja excluir esta solicitação?')) { document.getElementById('formDeleta').idSolicitacao.value = '{$row['id']}'; document.getElementById('formDeleta').submit(); }\">
+					<i class='fa fa-trash'></i> Excluir
+				</button>";
+			} else {
+				$acoes = "<span style='color:#999; font-size:12px;'>-</span>";
+			}
+
+			$linhas[] = [
+				date('d/m/Y', strtotime($row['data_ajuste'])),
+				$row['hora_ajuste'],
+				$row['id_macro'] ? mysqli_fetch_assoc(query("SELECT macr_tx_nome FROM macroponto WHERE macr_nb_id = {$row['id_macro']} LIMIT 1"))['macr_tx_nome'] : 'N/A',
+				$row['id_motivo'] ? mysqli_fetch_assoc(query("SELECT moti_tx_nome FROM motivo WHERE moti_nb_id = {$row['id_motivo']} LIMIT 1"))['moti_tx_nome'] : 'N/A',
+				substr($row['justificativa'] ?? '', 0, 50) . (strlen($row['justificativa'] ?? '') > 50 ? '...' : ''),
+				$statusBadge,
+				date('d/m/Y H:i', strtotime($row['data_solicitacao'])),
+				$acoes
+			];
+		}
+
+		$cabecalho = [
+			"DATA DO AJUSTE",
+			"HORA",
+			"Tipo de Registro",
+			"Motivo",
+			"JUSTIFICATIVA",
+			"STATUS",
+			"DATA DA SOLICITAÇÃO",
+			"AÇÕES"
+		];
+
+		return montarTabelaPonto($cabecalho, $linhas);
+	}
+
 	function gerarTabelaNaoConformidade($motorista, $dataMes) {
 
 		$monthDate = new DateTime($dataMes . "-01");
@@ -175,6 +253,29 @@
 
 	function index() {
 
+		// Handler para deletar solicitação
+		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['deletar_solicitacao'])) {
+			$idSolicitacao = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idSolicitacao"] ?? '');
+			
+			if (!empty($idSolicitacao)) {
+				// Verificar se a solicitação existe e pertence ao usuário logado
+				$verificacao = mysqli_fetch_assoc(query("
+					SELECT sa.id, sa.status, sa.id_motorista 
+					FROM solicitacoes_ajuste sa
+					WHERE sa.id = {$idSolicitacao} 
+					AND sa.id_motorista = (SELECT enti_nb_id FROM entidade WHERE enti_nb_id = (SELECT user_nb_entidade FROM user WHERE user_nb_id = {$_SESSION['user_nb_id']}) LIMIT 1)
+					LIMIT 1
+				"));
+				
+				if ($verificacao && $verificacao['status'] == 'enviada') {
+					// Deletar apenas se status for 'enviada'
+					@mysqli_query($GLOBALS['conn'], "DELETE FROM solicitacoes_ajuste WHERE id = {$idSolicitacao}");
+					header("Location: " . basename($_SERVER['PHP_SELF']) . "?msg=deletado&idMotorista=" . $verificacao['id_motorista']);
+					exit;
+				}
+			}
+		}
+
 		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['enviar_solicitacao'])) {
 			try {
 				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMotorista"] ?? '');
@@ -285,6 +386,9 @@
 		if (isset($_GET['msg']) && $_GET['msg'] === 'sucesso') {
 			echo "<script>alert('Solicitação de ajuste enviada com sucesso!');</script>";
 		}
+		if (isset($_GET['msg']) && $_GET['msg'] === 'deletado') {
+			echo "<script>alert('Solicitação de ajuste excluída com sucesso!');</script>";
+		}
 
 		$idMotorista = $_GET["idMotorista"] ?? $_POST["idMotorista"] ?? 0;
 
@@ -330,6 +434,12 @@
 		echo linha_form($campoJust);
 		echo fecha_form($botoes);
 
+		// Formulário hidden para delete
+		echo "<form id='formDeleta' method='POST' style='display:none;'>
+			<input type='hidden' name='deletar_solicitacao' value='true'>
+			<input type='hidden' name='idSolicitacao' value=''>
+		</form>";
+
 		$dataMes = date("Y-m");
 
 		echo "<h3>Não Conformidades </h3>";//.date("m/Y",strtotime($dataMes."-01"))."</h3>";
@@ -341,6 +451,13 @@
 		echo "<div id='mensagemSemDados' style='display:none'>
 		<p style='color:green;'>✓ Nenhuma não conformidade encontrada para o dia selecionado.</p>
 		</div>";
+
+		// Nova tabela de solicitações
+		echo "<hr style='margin-top:40px;'>";
+		echo "<h3>Solicitações de Ajuste</h3>";
+		echo "<div id='tabelaSolicitacoesContainer'>";
+		echo gerarTabelaSolicitacoes($motorista['enti_nb_id']);
+		echo "</div>";
 
 		rodape();
 
