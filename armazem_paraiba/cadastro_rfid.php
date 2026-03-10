@@ -86,8 +86,8 @@
             "FUNCIONÁRIO"   => "IFNULL(user.user_tx_nome, '---')",
             "STATUS"        => "rfids_tx_status",
             "DESCRIÇÃO"     => "rfids_tx_descricao",
-            "CADASTRADO EM" => "DATE_FORMAT(rfids_dt_created_at, '%d/%m/%Y %H:%i:%s')",
-            "ID USUÁRIO"    => "rfids_nb_user_id"
+            "CADASTRADO EM" => "DATE_FORMAT(rfid_dt_created_at, '%d/%m/%Y %H:%i:%s')",
+            "ID USUÁRIO"    => "rfids_nb_entidade_id"
         ];
 
         $camposBusca = [
