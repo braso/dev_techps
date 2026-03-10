@@ -49,6 +49,54 @@
 	// Criar tabela ao carregar a página
 	criarTabelaSolicitacoes();
 
+	function verificarDiaComErro($motorista, $data) {
+		$aDetalhado = diaDetalhePonto($motorista, $data);
+		$row = [verificaTolerancia($aDetalhado["diffSaldo"], $data, $motorista['enti_nb_id'])] + $aDetalhado;
+
+		$qtdErros = 0;
+		foreach ($row as $value) {
+			preg_match_all("/(?<=<)([^<|>])+(?=>)/", $value, $tags);
+			if (!empty($tags[0])) {
+				foreach ($tags[0] as $tag) {
+					$qtdErros += substr_count($tag, "fa-warning") * (substr_count($tag, "color:red;") || substr_count($tag, "color:orange;"))
+					+ ((is_int(strpos($tag, "fa-info-circle"))) * (substr_count($tag, "color:red;") || substr_count($tag, "color:orange;")));
+				}
+			}
+		}
+
+		if (is_int(strpos($row["inicioJornada"] ?? "", "Batida início de jornada não registrada!")) 
+		&& is_int(strpos($row["jornadaPrevista"] ?? "", "Abono: "))) {
+			$qtdErros = 0;
+		}
+
+		return ($qtdErros > 0);
+	}
+
+	function obterDatasNaoConformidade($motorista, $dataMes) {
+		// Retorna um array com as datas que têm não conformidades
+		$monthDate = new DateTime($dataMes . "-01");
+		$dataAdmissao = new DateTime($motorista["enti_tx_admissao"] ?? date("Y-m-d"));
+		
+		$datasComErro = [];
+
+		for ($date = new DateTime($monthDate->format("Y-m-1")); $date->format("Y-m-d") <= $monthDate->format("Y-m-t"); $date->modify("+1 day")) {
+
+			if ($monthDate->format("Y-m") < $dataAdmissao->format("Y-m")) {
+				continue;
+			}
+
+			if ($date->format("Y-m-d") > date("Y-m-d")) {
+				break;
+			}
+
+			if (verificarDiaComErro($motorista, $date->format("Y-m-d"))) {
+				$datasComErro[] = $date->format("Y-m-d");
+			}
+		}
+
+		return $datasComErro;
+	}
+
 	function gerarTabelaSolicitacoes($idMotorista) {
 		// Buscar todas as solicitações do motorista
 		$sql = "
@@ -299,6 +347,28 @@
 					exit;
 				}
 
+				// Buscar dados do motorista para validação
+				$motorista_validacao = mysqli_fetch_assoc(query("
+					SELECT enti_nb_id, enti_tx_matricula, enti_tx_nome, enti_tx_ocupacao,
+					enti_tx_cpf, enti_tx_admissao, enti_tx_jornadaSemanal,
+					enti_tx_jornadaSabado, enti_tx_percHESemanal,
+					enti_tx_percHEEx, enti_nb_parametro, enti_nb_empresa
+					FROM entidade
+					WHERE enti_nb_id = {$idMotorista}
+					LIMIT 1
+				"));
+
+				if (!$motorista_validacao) {
+					echo "<script>alert('Erro: Motorista não encontrado.'); window.location.href = '" . basename($_SERVER['PHP_SELF']) . "?idMotorista={$idMotorista}';</script>";
+					exit;
+				}
+
+				// Verificar se a data possui não conformidades (apenas o dia solicitado)
+				if (!verificarDiaComErro($motorista_validacao, $data)) {
+					echo "<script>alert('Erro: Apenas são permitidas solicitações para dias que possuem não conformidades.'); window.location.href = '" . basename($_SERVER['PHP_SELF']) . "?idMotorista={$idMotorista}';</script>";
+					exit;
+				}
+
 				// Obter dados do usuário solicitante
 				$sql_usuario = "SELECT user_nb_id, user_tx_nome FROM user WHERE user_nb_id = {$_SESSION['user_nb_id']} LIMIT 1";
 				$usuario_base = mysqli_fetch_assoc(query($sql_usuario));
@@ -477,13 +547,18 @@ document.addEventListener("DOMContentLoaded",function(){
 	campoData.addEventListener("change",filtrar);
 	campoData.addEventListener("input",filtrar);
 
+	let diaComNaoConformidade = true;
+
 	function filtrar(){
 
 		const dataSelecionada = campoData.value;
 
 		const tabela = document.querySelector("#tabelaNaoConformidadeContainer table");
 
-		if(!tabela) return;
+		if(!tabela){
+			diaComNaoConformidade = false;
+			return;
+		}
 
 		const linhas = tabela.querySelectorAll("tbody tr");
 
@@ -492,12 +567,12 @@ document.addEventListener("DOMContentLoaded",function(){
 			linhas.forEach(l=>l.style.display="");
 
 			document.getElementById("mensagemSemDados").style.display="none";
-
+			diaComNaoConformidade = true;
 			return;
 
 		}
 
-		const dataFormatada = new Date(dataSelecionada).toLocaleDateString("pt-BR");
+		const dataFormatada = new Date(dataSelecionada).toLocaleDateString("pt-BR", {timeZone: 'UTC'});
 
 		let encontrou=false;
 
@@ -526,7 +601,23 @@ document.addEventListener("DOMContentLoaded",function(){
 		});
 
 		document.getElementById("mensagemSemDados").style.display = encontrou ? "none" : "block";
+		diaComNaoConformidade = encontrou;
 
+	}
+
+	// Adicionar validação no envio do formulário
+	const btnEnviar = document.querySelector("button[name='enviar_solicitacao']");
+	if(btnEnviar){
+		const form = btnEnviar.closest("form");
+		if(form){
+			form.addEventListener("submit", function(e){
+				if(!diaComNaoConformidade){
+					alert("Erro: Apenas são permitidas solicitações para dias que possuem não conformidades.");
+					e.preventDefault();
+					return false;
+				}
+			});
+		}
 	}
 
 });
