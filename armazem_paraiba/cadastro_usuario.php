@@ -378,13 +378,10 @@
 		$campo_login = campo("Login*", "login", ($_POST["login"]?? ($_POST["login"]?? "")), 2,"","maxlength='30'");
 		$campo_expiracao = campo_data("Expira em", "expiracao", ($_POST["expiracao"]?? ""), 2);
 
-		// =========================================================================
-        // BUSCA DE CARTÕES RFID (Gestão de Ativos) - VERSÃO BLINDADA
-        // =========================================================================
-        $rfidOptions = [" " => "Sem Crachá"];
+        // BUSCA DE CARTÕES RFID (Gestão de Ativos)
+        $rfidOptions = [" " => "Sem RFID"];
         $userIdForRfid = !empty($_POST["id"]) ? (int)$_POST["id"] : 0;
         
-        // Deixei na mesma linha para evitar quebras de string no seu framework
         if ($userIdForRfid > 0) {
             $condRfid = "WHERE (rfids_tx_status = 'disponivel' AND rfids_nb_entidade_id IS NULL) OR (rfids_nb_entidade_id = {$userIdForRfid})";
         } else {
@@ -569,19 +566,23 @@
 
 		$buttons = [];
 		$buttons[] = botao((!empty($_POST["id"])? "Atualizar": "Gravar"), "cadastrarUsuario", "id,editPermission", ($_POST["id"]?? "").",".strval($editPermission),"","","btn btn-success");
+		// Capturamos o referer atual se ele ainda não existir no POST
 		if(empty($_POST["HTTP_REFERER"])){
 			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
-			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_usuario.php"))){
-				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_usuario.php";
-			}
-		}
+		};
+
+		// Se o usuário veio da tela de RFID, o "Voltar" dele deve ser a lista de usuários, 
+		if(is_int(strpos($_POST["HTTP_REFERER"], "cadastro_rfid.php"))){
+			$_POST["HTTP_REFERER"] = "cadastro_usuario.php"; 
+		};
+
 		if(!empty($_POST["HTTP_REFERER"])){
 			$buttons[] = criarBotaoVoltar();
-		}
+		};
 
 		if (!empty($_POST["id"])) {
 			$buttons[] = '<button class="btn default" type="button" onclick="imprimir()">Imprimir</button>';
-		}
+		};
 
 		echo abre_form("Dados do Usuário");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
@@ -754,6 +755,8 @@ function index() {
             $extraEmpresa .= " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
         }
 
+		echo "<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css'>";
+
 		cabecalho("Cadastro de Usuário");
 
 		if(!isset($_POST["busca_status"])){
@@ -825,80 +828,37 @@ function index() {
                     <img style='width: 180px; height: 80px;' src='./$logoEmpresa' alt='Logo Empresa Direita'>
             </div>";
 
-		/*/Grid{
-			$iconeModificar = 	criarSQLIconeTabela("user_nb_id","modificarUsuario","Modificar","glyphicon glyphicon-search");
-			$iconeExcluir = 	criarSQLIconeTabela("user_nb_id","excluirUsuario","Excluir","glyphicon glyphicon-remove","Deseja inativar o registro?");
-
-			$sqlFields = [
-				"user_nb_id",
-				"user_tx_nome",
-				"enti_tx_matricula",
-				"user_tx_cpf",
-				"user_tx_login",
-				"user_tx_nivel",
-				"user_tx_email",
-				"user_tx_fone",
-				"empr_tx_nome",
-				"user_tx_status"
-			];
-
-			$sql = 
-				"SELECT ".implode(", ", $sqlFields).",
-					{$iconeModificar} as iconeModificar,
-					IF(user_tx_status = 'ativo', {$iconeExcluir}, NULL) as iconeExcluir
-				FROM user
-					LEFT JOIN empresa ON empresa.empr_nb_id = user.user_nb_empresa
-					LEFT JOIN entidade ON user_nb_entidade = enti_nb_id
-					WHERE 1 {$extra};"
-			;
-
-			$gridFields = [
-				"CÓDIGO" => "user_nb_id",
-				"NOME" => "user_tx_nome",
-				"MATRICULA" => "enti_tx_matricula",
-				"CPF" => "user_tx_cpf",
-				"LOGIN" => "user_tx_login",
-				"NÍVEL" => "user_tx_nivel",
-				"E-MAIL" => "user_tx_email",
-				"TELEFONE" => "user_tx_fone",
-				"EMPRESA" => "empr_tx_nome",
-				"STATUS" => "user_tx_status",
-				"<spam class='glyphicon glyphicon-search'></spam>" => "iconeModificar",
-				"<spam class='glyphicon glyphicon-remove'></spam>" => "iconeExcluir"
-			];
-			
-			grid($sql, array_keys($gridFields), array_values($gridFields));
-		//}*/
-
 		//Grid dinâmico{
             $gridFields = [
-                "CÓDIGO" 		=> "user_nb_id",
-                "NOME" 			=> "user_tx_nome",
-                "MATRICULA" 	=> "enti_tx_matricula",
-                "CPF" 			=> "user_tx_cpf",
-                "LOGIN" 		=> "user_tx_login",
-                "NÍVEL" 		=> "user_tx_nivel",
-                "CARGO" 		=> "oper_tx_nome",
-                "SETOR" 		=> "grup_tx_nome",
-                "SUBSETOR" 	=> "sbgr_tx_nome",
-                "E-MAIL" 		=> "user_tx_email",
-                "TELEFONE" 		=> "user_tx_fone",
-                "EMPRESA" 		=> "empr_tx_nome",
-                "STATUS" 		=> "user_tx_status",
-				"RFID ATIVO"    => "rfids_tx_uid" 
+                "CÓDIGO"        => "user_nb_id",
+                "NOME"          => "user_tx_nome",
+                "MATRICULA"     => "enti_tx_matricula",
+                "CPF"           => "user_tx_cpf",
+                "LOGIN"         => "user_tx_login",
+                "NÍVEL"         => "user_tx_nivel",
+                "CARGO"         => "oper_tx_nome",
+                "SETOR"         => "grup_tx_nome",
+                "SUBSETOR"      => "sbgr_tx_nome",
+                "E-MAIL"        => "user_tx_email",
+                "TELEFONE"      => "user_tx_fone",
+                "EMPRESA"       => "empr_tx_nome",
+                "STATUS"        => "user_tx_status",
+                
+                // O SEGREDO: Coluna pura! O framework não vai mais travar.
+                "AUTENTICAÇÃO"  => "rfids_nb_id" 
             ];
 
             $camposBusca = [
-                "busca_codigo" 		=> "user_nb_id",
-                "busca_nome_like" 	=> "user_tx_nome",
-                "busca_cpf" 		=> "user_tx_cpf",
-                "busca_login_like" 	=> "user_tx_login",
-                "busca_nivel" 		=> "user_tx_nivel",
-                "busca_status" 		=> "user_tx_status",
-                "busca_empresa" 	=> "empr_nb_id",
-                "busca_operacao" 	=> "enti_tx_tipoOperacao",
-                "busca_setor" 		=> "enti_setor_id",
-                "busca_subsetor" 	=> "enti_subSetor_id"
+                "busca_codigo"      => "user_nb_id",
+                "busca_nome_like"   => "user_tx_nome",
+                "busca_cpf"         => "user_tx_cpf",
+                "busca_login_like"  => "user_tx_login",
+                "busca_nivel"       => "user_tx_nivel",
+                "busca_status"      => "user_tx_status",
+                "busca_empresa"     => "empr_nb_id",
+                "busca_operacao"    => "enti_tx_tipoOperacao",
+                "busca_setor"       => "enti_setor_id",
+                "busca_subsetor"    => "enti_subSetor_id"
             ];
 
             $queryBase = 
@@ -908,29 +868,85 @@ function index() {
                 ." LEFT JOIN operacao ON enti_tx_tipoOperacao = oper_nb_id"
                 ." LEFT JOIN grupos_documentos ON enti_setor_id = grup_nb_id"
                 ." LEFT JOIN sbgrupos_documentos subg ON enti_subSetor_id = subg.sbgr_nb_id"
-				." LEFT JOIN rfids ON rfids.rfids_nb_entidade_id = user.user_nb_id AND rfids.rfids_tx_status = 'ativo'"
+                // O banco agora só traz o ID se o crachá estiver ATIVO
+                ." LEFT JOIN rfids ON rfids.rfids_nb_entidade_id = user.user_nb_id AND rfids.rfids_tx_status = 'ativo'"
             ;
 
-			$actions = criarIconesGrid(
-				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-				["cadastro_usuario.php", "cadastro_usuario.php"],
-				["modificarUsuario()", "excluirUsuario()"]
-			);
-	
-			$actions["functions"][1] .= 
-				"esconderInativar('glyphicon glyphicon-remove search-remove', 9);"
-			;
-	
-			$gridFields["actions"] = $actions["tags"];
-	
-			$jsFunctions =
-				"const funcoesInternas = function(){
-					".implode(" ", $actions["functions"])."
-				}"
-			;
-			echo gridDinamico("tabelaMotoristas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
-		//}
+            $actions = criarIconesGrid(
+                ["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
+                ["cadastro_usuario.php", "cadastro_usuario.php"],
+                ["modificarUsuario()", "excluirUsuario()"]
+            );
+    
+            // A lixeira ajustada para olhar para a coluna 12 (que é o Status)
+            $actions["functions"][1] .= "esconderInativar('glyphicon glyphicon-remove search-remove', 12);";
+    
+            $gridFields["actions"] = $actions["tags"];
+    
+            $jsFunctions = "
+                // FUNÇÃO: Varre a tabela, pega o ID da coluna 13 e desenha os ícones HTML!
+                const formatarBiometria = function() {
+                    $('table tbody tr').each(function() {
+                        var colIdUser = $(this).find('td:eq(0)').text().trim();
+                        var tdAutenticacao = $(this).find('td:eq(13)'); 
+                        var idRfid = tdAutenticacao.text().trim(); 
+                        
+                        if (!colIdUser) return;
+                        
+                        var htmlIcones = '';
+                        
+                        // Desenha Crachá (Se tiver ID, fica verde e clicável)
+                        if (idRfid !== '') {
+                            htmlIcones += '<span onclick=\"abrirRfidDireto(' + idRfid + ', ' + colIdUser + ')\" class=\"glyphicon glyphicon-credit-card\" style=\"color: #28a745; font-size: 14px; margin-right: 12px; cursor: pointer;\" title=\"Editar Crachá Ativo\"></span>';
+                        } else {
+                            htmlIcones += '<span class=\"glyphicon glyphicon-credit-card\" style=\"color: #d6d6d6; font-size: 14px; margin-right: 12px;\" title=\"Sem Crachá Ativo\"></span>';
+                        }
+                        
+                        // Desenha Digital e Facial (Cinzas fixos)
+                        htmlIcones += '<span class=\"glyphicon glyphicon-hand-up\" style=\"color: #d6d6d6; font-size: 14px; margin-right: 12px;\" title=\"Sem Digital\"></span>';
+                        htmlIcones += '<span class=\"glyphicon glyphicon-user\" style=\"color: #d6d6d6; font-size: 14px;\" title=\"Sem Facial\"></span>';
+                        
+                        tdAutenticacao.html(htmlIcones);
+                    });
+                };
 
+                const funcoesInternas = function(){
+                    ".implode(" ", $actions["functions"])."
+                    formatarBiometria();
+                };
+
+                window.abrirRfidDireto = function(idRfid, idUsuario) {
+                    var form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = 'cadastro_rfid.php';
+                    
+                    var inputId = document.createElement('input');
+                    inputId.type = 'hidden';
+                    inputId.name = 'id';
+                    inputId.value = idRfid;
+                    form.appendChild(inputId);
+                    
+                    var inputAcao = document.createElement('input');
+                    inputAcao.type = 'hidden';
+                    inputAcao.name = 'acao';
+                    inputAcao.value = 'editarRfid';
+                    form.appendChild(inputAcao);
+
+                    if (idUsuario) {
+                        var fieldRetorno = document.createElement('input');
+                        fieldRetorno.type = 'hidden';
+                        fieldRetorno.name = 'id_usuario_retorno';
+                        fieldRetorno.value = idUsuario;
+                        form.appendChild(fieldRetorno);
+                    }
+                    
+                    document.body.appendChild(form);
+                    form.submit();
+                };
+            ";
+            
+            echo gridDinamico("tabelaMotoristas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+        //}
 
 		rodape();
 	}

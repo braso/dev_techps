@@ -30,19 +30,28 @@
         echo abre_form();
         echo linha_form([
             campo_hidden("id", (!empty($_POST["id"]) ? $_POST["id"] : "")),
-            
-            // Recria o bilhete de retorno escondido no formulário para não perder a viagem
             campo_hidden("id_usuario_retorno", ($idRetorno > 0 ? $idRetorno : "")),
-            
             campo("UID", "rfids_tx_uid", (!empty($_POST["rfids_tx_uid"]) ? $_POST["rfids_tx_uid"] : ""), 4, "", "required"),
-            combo_radio("Status do cartão", "rfids_tx_status", (!empty($_POST["rfids_tx_status"]) ? $_POST["rfids_tx_status"] : 'disponivel'), 3, [
-                'disponivel' => 'Em estoque (Disponível)',
-                'ativo'      => 'Em Uso (Ativo)',
-                'bloqueado'  => 'Bloqueado (Suspenso)',
-                'perdido'    => 'Perdido',
-                'quebrado'   => 'Danificado/Quebrado'
-            ]),
-            campo("Descrição", "rfids_tx_descricao", (!empty($_POST["rfids_tx_descricao"]) ? $_POST["rfids_tx_descricao"] : ""), 6)
+            
+            call_user_func(function() {
+                $statusAtual = !empty($_POST["rfids_tx_status"]) ? $_POST["rfids_tx_status"] : 'disponivel';
+                $opcoes_status = [
+                    'disponivel' => 'Em estoque (Disponível)',
+                    'bloqueado'  => 'Bloqueado (Suspenso)',
+                    'perdido'    => 'Perdido',
+                    'quebrado'   => 'Danificado/Quebrado'
+                ];
+                
+                // O status 'ativo' SÓ aparece se o crachá já estiver ativo.
+                if ($statusAtual == 'ativo') {
+                    $opcoes_status['ativo'] = 'Em Uso (Ativo) - Ficha do Funcionário';
+                }
+                
+                return combo_radio("Status do cartão", "rfids_tx_status", $statusAtual, 4, $opcoes_status);
+            }),
+            
+            // DESCRIÇÃO AJUSTADA (Tamanho 4 - para fechar as 12 colunas perfeitas)
+            campo("Descrição", "rfids_tx_descricao", (!empty($_POST["rfids_tx_descricao"]) ? $_POST["rfids_tx_descricao"] : ""), 4)
         ]);
 
         $botoes = [];
@@ -61,11 +70,8 @@
                 $botoes[] = botao("Cadastrar", "cadastrarRfid", "", "", "", "", "btn btn-success");
             }
         }
-
-        // BOTÃO VOLTAR CORRIGIDO: Redirecionamento limpo via JavaScript
-        $botoes[] = "<button type='button' class='btn default' onclick='window.location.href=\"cadastro_rfid.php\"'>Voltar</button>";
-
-        // O famoso Botão Laranja
+        
+        // botão voltar que aparece quando se sai da tela de usuarios para a a tela de cadastro RFID
         if ($idRetorno > 0) {
             $botoes[] = "<button type='button' class='btn btn-warning' onclick=\"var f=document.createElement('form');f.method='POST';f.action='cadastro_usuario.php';var i=document.createElement('input');i.type='hidden';i.name='id';i.value='{$idRetorno}';f.appendChild(i);var a=document.createElement('input');a.type='hidden';a.name='acao';a.value='modificarUsuario';f.appendChild(a);document.body.appendChild(f);f.submit();\">Voltar para Funcionário</button>";
         }
@@ -199,6 +205,11 @@
 
         if(!empty($_POST["id"])){
             atualizar("rfids", array_keys($dados), array_values($dados), $_POST["id"], "rfids_nb_id");
+            // REGRA EIDER Desvincula da pessoa se o crachá saiu de circulação
+            if (in_array($dados["rfids_tx_status"], ['disponivel', 'perdido', 'quebrado', 'bloqueado'])) {
+                query("UPDATE rfids SET rfids_nb_entidade_id = NULL WHERE rfids_nb_id = " . (int)$_POST["id"]);
+            }
+            
             set_status("<script>Swal.fire('Sucesso!', 'RFID atualizado com sucesso.', 'success');</script>");
         } else {
             inserir("rfids", array_keys($dados), array_values($dados));
