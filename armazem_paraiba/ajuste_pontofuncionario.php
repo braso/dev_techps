@@ -1,10 +1,65 @@
 <?php
 	include_once "funcoes_ponto.php";
 
+	// Definir a função updateTimer ANTES de qualquer output
+	ob_start();
+	?><script>
+		var timeoutId;
+		window.updateTimer = function() { 
+			if(typeof timeoutId !== 'undefined' && timeoutId) {
+				clearTimeout(timeoutId);
+			}
+			timeoutId = setTimeout(function(){
+				let form = document.getElementById('loginTimeoutForm');
+				if(form) form.submit();
+			}, 15*60*1000);
+		}
+	</script><?php
+	$scriptContent = ob_get_clean();
+	$GLOBALS['updateTimerScript'] = $scriptContent;
+
+	// Função para criar tabela se não existir
+	function criarTabelaSolicitacoes() {
+		$tabela_existe = mysqli_fetch_assoc(query("SHOW TABLES LIKE 'solicitacoes_ajuste'"));
+		if (!$tabela_existe) {
+			$sql = "CREATE TABLE solicitacoes_ajuste (
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				id_motorista INT NOT NULL,
+				data_ajuste DATE NOT NULL,
+				hora_ajuste TIME NOT NULL,
+				id_macro INT,
+				id_motivo INT,
+				justificativa TEXT,
+				status ENUM('enviada', 'visualizada', 'aceita', 'nao_aceita') DEFAULT 'enviada',
+				data_solicitacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				id_usuario_solicitante INT,
+				cargo_usuario VARCHAR(255),
+				setor_usuario VARCHAR(255),
+				subsetor_usuario VARCHAR(255),
+				id_superior INT NULL,
+				data_visualizacao TIMESTAMP NULL,
+				data_decisao TIMESTAMP NULL,
+				INDEX idx_motorista_data (id_motorista, data_ajuste),
+				INDEX idx_status (status)
+			)";
+			query($sql);
+		}
+	}
+
+	// Criar tabela ao carregar a página
+	criarTabelaSolicitacoes();
+
 	function gerarTabelaNaoConformidade($motorista, $dataMes) {
 
 		$monthDate = new DateTime($dataMes . "-01");
 		$rows = [];
+
+		// Buscar solicitações para o mês
+		$solicitacoes = [];
+		$result = query("SELECT data_ajuste, status FROM solicitacoes_ajuste WHERE id_motorista = {$motorista['enti_nb_id']} AND DATE_FORMAT(data_ajuste, '%Y-%m') = '$dataMes'");
+		while ($s = mysqli_fetch_assoc($result)) {
+			$solicitacoes[$s['data_ajuste']] = $s['status'];
+		}
 
 		$dataAdmissao = new DateTime($motorista["enti_tx_admissao"]);
 
@@ -19,6 +74,8 @@
 			}
 
 			$aDetalhado = diaDetalhePonto($motorista, $date->format("Y-m-d"));
+
+			$statusSolicitacao = $solicitacoes[$date->format("Y-m-d")] ?? '';
 
 			$colunasAManterZeros = ["inicioJornada","inicioRefeicao","fimRefeicao","fimJornada","jornadaPrevista","diffSaldo"];
 
@@ -37,7 +94,8 @@
 
 			$row = array_merge(
 				[verificaTolerancia($aDetalhado["diffSaldo"],$date->format("Y-m-d"),$motorista["enti_nb_id"])],
-				$aDetalhado
+				$aDetalhado,
+				[$statusSolicitacao]
 			);
 
 			$qtdErros = 0;
@@ -89,7 +147,7 @@
 			"REFEIÇÃO","DESCANSO","JORNADA",
 			"JORNADA PREVISTA","JORNADA EFETIVA","INTERSTÍCIO",
 			"H.E. {$motorista["enti_tx_percHESemanal"]}%","H.E. {$motorista["enti_tx_percHEEx"]}%",
-			"ADICIONAL NOT.","SALDO DIÁRIO(**)"
+			"ADICIONAL NOT.","SALDO DIÁRIO(**)","STATUS SOLICITAÇÃO"
 		];
 
 		if (in_array($motorista["enti_tx_ocupacao"],["Ajudante","Motorista"])) {
@@ -117,9 +175,118 @@
 
 	function index() {
 
-		cabecalho("Ajuste de Ponto");
+		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['enviar_solicitacao'])) {
+			try {
+				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMotorista"] ?? '');
+				$data = mysqli_real_escape_string($GLOBALS['conn'], $_POST["data"] ?? '');
+				$hora = mysqli_real_escape_string($GLOBALS['conn'], $_POST["hora"] ?? '');
+				$idMacro = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMacro"] ?? '');
+				$motivo = mysqli_real_escape_string($GLOBALS['conn'], $_POST["motivo"] ?? '');
+				$justificativa = mysqli_real_escape_string($GLOBALS['conn'], $_POST["justificativa"] ?? '');
 
-		$idMotorista = $_POST["idMotorista"] ?? 0;
+				// Verificar se usuário está logado
+				if (!isset($_SESSION['user_nb_id'])) {
+					echo "<script>alert('Erro: Usuário não logado.');</script>";
+					error_log("Ajuste Ponto: Usuário não logado");
+					exit;
+				}
+
+				// Validar dados obrigatórios
+				if (empty($idMotorista) || empty($data) || empty($hora) || empty($idMacro) || empty($motivo)) {
+					echo "<script>alert('Erro: Todos os campos obrigatórios devem ser preenchidos.');</script>";
+					error_log("Ajuste Ponto: Campos obrigatórios não preenchidos");
+					exit;
+				}
+
+				// Obter dados do usuário solicitante
+				$sql_usuario = "SELECT user_nb_id, user_tx_nome FROM user WHERE user_nb_id = {$_SESSION['user_nb_id']} LIMIT 1";
+				$usuario_base = mysqli_fetch_assoc(query($sql_usuario));
+
+				if (!$usuario_base) {
+					echo "<script>alert('Erro: Usuário não encontrado no sistema.');</script>";
+					error_log("Ajuste Ponto: Usuário não encontrado");
+					exit;
+				}
+
+				// Tentar buscar entidade do usuário para pegar cargo, setor, subsetor
+				$cargo = 'N/A';
+				$setor = 'N/A';
+				$subsetor = 'N/A';
+
+				$sql_entidade = "SELECT enti_tx_tipoOperacao, enti_setor_id, enti_subSetor_id FROM entidade WHERE enti_nb_id = (SELECT user_nb_entidade FROM user WHERE user_nb_id = {$_SESSION['user_nb_id']}) LIMIT 1";
+				$entidade = mysqli_fetch_assoc(query($sql_entidade));
+
+				if ($entidade && $entidade['enti_tx_tipoOperacao']) {
+					$op = mysqli_fetch_assoc(query("SELECT oper_tx_nome FROM operacao WHERE oper_nb_id = {$entidade['enti_tx_tipoOperacao']} LIMIT 1"));
+					if ($op) $cargo = $op['oper_tx_nome'];
+				}
+
+				if ($entidade && $entidade['enti_setor_id']) {
+					$gr = mysqli_fetch_assoc(query("SELECT grup_tx_nome FROM grupos_documentos WHERE grup_nb_id = {$entidade['enti_setor_id']} LIMIT 1"));
+					if ($gr) $setor = $gr['grup_tx_nome'];
+				}
+
+				if ($entidade && $entidade['enti_subSetor_id']) {
+					$sb = mysqli_fetch_assoc(query("SELECT sbgr_tx_nome FROM sbgrupos_documentos WHERE sbgr_nb_id = {$entidade['enti_subSetor_id']} LIMIT 1"));
+					if ($sb) $subsetor = $sb['sbgr_tx_nome'];
+				}
+
+				// Escapar valores finais
+				$cargo = mysqli_real_escape_string($GLOBALS['conn'], $cargo);
+				$setor = mysqli_real_escape_string($GLOBALS['conn'], $setor);
+				$subsetor = mysqli_real_escape_string($GLOBALS['conn'], $subsetor);
+
+				// Inserir solicitação
+				$sql = "INSERT INTO solicitacoes_ajuste (id_motorista, data_ajuste, hora_ajuste, id_macro, id_motivo, justificativa, status, data_solicitacao, id_usuario_solicitante, cargo_usuario, setor_usuario, subsetor_usuario) 
+						VALUES ('$idMotorista', '$data', '$hora', '$idMacro', '$motivo', '$justificativa', 'enviada', NOW(), '{$_SESSION['user_nb_id']}', '$cargo', '$setor', '$subsetor')";
+				
+				$resultado = @mysqli_query($GLOBALS['conn'], $sql);
+				
+				if ($resultado) {
+					// Redirecionar de volta para a mesma página (GET, não POST)
+					header("Location: " . basename($_SERVER['PHP_SELF']) . "?msg=sucesso&idMotorista={$idMotorista}");
+					exit;
+				} else {
+					$erro = mysqli_error($GLOBALS['conn']);
+					echo "<script>alert('Erro ao enviar: " . addslashes($erro) . "');</script>";
+				}
+				exit;
+			} catch (Exception $e) {
+				echo "<script>alert('Erro inesperado: " . addslashes($e->getMessage()) . "');</script>";
+				exit;
+			}
+		}
+
+		// Buffer the output to inject script in head
+		ob_start();
+		cabecalho("Ajuste de Ponto");
+		$cabecalho_html = ob_get_clean();
+
+		// Injetar script no head antes de fechar
+		$script_updateTimer = "
+		<script>
+			var timeoutId;
+			window.updateTimer = function() { 
+				if(typeof timeoutId !== 'undefined' && timeoutId) {
+					clearTimeout(timeoutId);
+				}
+				timeoutId = setTimeout(function(){
+					let form = document.getElementById('loginTimeoutForm');
+					if(form) form.submit();
+				}, 15*60*1000);
+			}
+		</script>";
+		
+		// Injetar o script antes de </head>
+		$cabecalho_html = str_replace("</head>", $script_updateTimer . "\n</head>", $cabecalho_html);
+		echo $cabecalho_html;
+
+		// Mensagem de sucesso se houver
+		if (isset($_GET['msg']) && $_GET['msg'] === 'sucesso') {
+			echo "<script>alert('Solicitação de ajuste enviada com sucesso!');</script>";
+		}
+
+		$idMotorista = $_GET["idMotorista"] ?? $_POST["idMotorista"] ?? 0;
 
 		$motorista = mysqli_fetch_assoc(query("
 			SELECT enti_nb_id, enti_tx_matricula, enti_tx_nome, enti_tx_ocupacao,
@@ -153,10 +320,11 @@
 
 		$campoJust[] = textarea("Justificativa","justificativa",($_POST["justificativa"] ?? ""),12,'maxlength=680');
 
-		$botoes[] = "<button class='btn default' type='button' onclick='window.print()'>Imprimir</button>";
+		$botoes[] = "<button type='submit' name='enviar_solicitacao' class='btn btn-success'>Enviar Solicitação</button>";
 		$botoes[] = criarBotaoVoltar("espelho_ponto.php");
 
 		echo abre_form("Dados do Ajuste de Ponto");
+		echo "<input type='hidden' name='idMotorista' value='{$idMotorista}'>";
 		echo linha_form($textFields);
 		echo linha_form($variableFields);
 		echo linha_form($campoJust);
@@ -247,3 +415,9 @@ document.addEventListener("DOMContentLoaded",function(){
 });
 
 </script>
+
+<?php
+	rodape();
+?>
+</body>
+</html>
