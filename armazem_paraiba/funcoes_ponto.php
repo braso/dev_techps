@@ -201,34 +201,40 @@
 			}
 		}
 
-		if($saldoPeriodo[0] == "-"){
-			if($pagarHEExComPerNeg == "sim"){
-		        $excedente = operarHorarios([$saldoBruto, $he100], "-");
-        if($excedente == "00:00" || $excedente[0] == "-"){
-            return ["00:00", $he100];
-        }
-        if(operarHorarios([$max50APagar, $excedente], "-")[0] != "-"){
-            return [$excedente, $he100];
-        }
-        return [$max50APagar, $he100];
-			}
-			return ["00:00", "00:00"];
+        // Logic adjusted to treat $max50APagar as a TOTAL LIMIT (User Input)
+        // Priority: Pay HE100 first, then HE50.
 
-		}elseif(operarHorarios([$he100, $saldoPeriodo], "-")[0] != "-"){		//$he100 > $saldoPeriodo
-			if($pagarHEExComPerNeg == "sim"){
-				return ["00:00", $he100];
-			}
-			return ["00:00", $saldoPeriodo];
-		}
-		
-        $excedente = operarHorarios([$saldoBruto, $he100], "-");
-        if($excedente == "00:00" || $excedente[0] == "-"){
-            return ["00:00", $he100];
+        $totalPagar = $max50APagar;
+
+        // If explicitly requested to pay HE Excedente with Negative Period, we might pay more than balance?
+        // But usually max50APagar is already capped by the caller (cadastro_endosso.php) to be <= Balance.
+        // However, if called from other places, we might need to be careful.
+        // Assuming $max50APagar is the "Amount to Pay".
+
+        if($saldoPeriodo[0] == "-"){
+            if($pagarHEExComPerNeg == "sim"){
+                // Regra: Só paga 100% se saldo for positivo.
+                // Aqui (Saldo Negativo), paga APENAS HE50.
+                
+                // Se estamos pagando com saldo negativo do período, estamos pagando do BANCO ACUMULADO.
+                // Portanto, não devemos nos limitar ao HE do mês ($he50), mas sim ao valor solicitado ($totalPagar).
+                // O chamador (cadastro_endosso.php) já garante que $totalPagar <= Saldo Bruto.
+                
+                return [$totalPagar, "00:00"];
+            }
+            return ["00:00", "00:00"];
         }
-        if(operarHorarios([$max50APagar, $excedente], "-")[0] != "-"){
-            return [$excedente, $he100];
+
+        // Positive Balance
+        // Check if HE100 fits in TotalPagar
+        if(operarHorarios([$he100, $totalPagar], "-")[0] != "-"){
+            // HE100 >= TotalPagar. Pay only HE100 up to limit.
+            return ["00:00", $totalPagar];
+        } else {
+            // HE100 < TotalPagar. Pay all HE100. Rest is HE50.
+            $he50Pagar = operarHorarios([$totalPagar, $he100], "-");
+            return [$he50Pagar, $he100];
         }
-        return [$max50APagar, $he100];
 	}
 
 	function criar_relatorio($anoMes){
@@ -763,7 +769,17 @@
 					LIMIT 1;"
 			));
 
-			if($motorista["para_tx_tipo"] == "horas_por_dia"){
+			$ferias = mysqli_fetch_assoc(query(
+				"SELECT feri_tx_dataInicio, feri_tx_dataFim FROM ferias
+					WHERE feri_tx_status = 'ativo'
+						AND feri_nb_entidade = '{$motorista["enti_nb_id"]}'
+						AND '{$data}' BETWEEN feri_tx_dataInicio AND feri_tx_dataFim
+					LIMIT 1;"
+			));
+
+			if(!empty($ferias)){
+				$jornadaPrevistaOriginal = "00:00";
+			}elseif($motorista["para_tx_tipo"] == "horas_por_dia"){
 				if(date("w", strtotime($data)) == "6"){
 					$jornadaPrevistaOriginal = $motorista["enti_tx_jornadaSabado"];
 				}elseif(date("w", strtotime($data)) == "0"){

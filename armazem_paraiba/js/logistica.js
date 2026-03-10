@@ -72,8 +72,39 @@ document.addEventListener("DOMContentLoaded", () => {
       return `${hours}h ${minutes}min ${sec}s`;
     };
   
+    const buscarEnderecosFaltantes = () => {
+        const regexNaoInformado = /endere[cç]o\s+n[aã]o\s+informado/i;
+        const tds = document.querySelectorAll("td[data-lat][data-lon]");
+        
+        let count = 0;
+        tds.forEach(td => {
+            const text = td.textContent.trim();
+            // Verifica se o texto é vazio, null ou "Endereço nao informado"
+            // E também verifica se JÁ NÃO ESTÁ buscando (para evitar duplicação)
+            if ((!text || text === "null" || regexNaoInformado.test(text)) && !text.includes("Buscando")) {
+                const lat = parseFloat(td.getAttribute("data-lat"));
+                const lon = parseFloat(td.getAttribute("data-lon"));
+                const uniqueClass = `addr-${Date.now()}-${Math.floor(Math.random() * 10000)}-${count++}`;
+                
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    td.innerHTML = `<span class="${uniqueClass}">Buscando endereço...</span>`;
+                    queueAddressLookup(lat, lon, uniqueClass);
+                }
+            }
+        });
+    };
+
     const displayResults = (data, plate, dateStart, dateEnd, speed, motoristaNome) => {
       resultsDiv.innerHTML = "";
+
+      // Botão de Busca Manual
+      const btnBuscar = document.createElement("button");
+      btnBuscar.id = "btnBuscarEnderecos";
+      btnBuscar.textContent = "Buscar Endereços Faltantes";
+      btnBuscar.className = "btn btn-info";
+      btnBuscar.style.marginBottom = "10px";
+      btnBuscar.onclick = buscarEnderecosFaltantes;
+      resultsDiv.appendChild(btnBuscar);
   
       const extrairCoordenadasParaArray = (data) => {
         const coordenadas = [];
@@ -765,14 +796,16 @@ document.addEventListener("DOMContentLoaded", () => {
       let hodometroDifference = currentHodometro - previousHodometro;
     
       let formattedCurrentHodometro = formatKilometers(currentHodometro);
-      let formattedHodometroDifference = formatKilometers(hodometroDifference);
-    
-      tr.innerHTML = `<td><img src="imagens/LGS.png" alt="Ícone"  class="row-img" /></td>
-              <td>${moduleDate}</td>
-              <td>${moduleTime}</td>
-              <td>${row.endereco}</td>
-              <td>${row.latitude}</td>
-              <td>${row.longitude}</td>
+  let formattedHodometroDifference = formatKilometers(hodometroDifference);
+
+  let enderecoDisplay = row.endereco || "Endereço não informado";
+
+  tr.innerHTML = `<td><img src="imagens/LGS.png" alt="Ícone"  class="row-img" /></td>
+          <td>${moduleDate}</td>
+          <td>${moduleTime}</td>
+          <td data-lat="${row.latitude}" data-lon="${row.longitude}">${enderecoDisplay}</td>
+          <td>${row.latitude}</td>
+          <td>${row.longitude}</td>
               <td>${row.ignition}</td>
               <td></td>
               <td><a href="https://www.google.com/maps/place/${row.latitude},${row.longitude}" target="_blank"><ion-icon name="map-outline"></ion-icon></a></td>
@@ -795,6 +828,60 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     let previousHodometro = null;
+
+    // Script de Logística
+    console.log("Logistica JS carregado v4");
+
+    const addressQueue = [];
+    let isProcessingQueue = false;
+
+    function queueAddressLookup(lat, lon, elementId) {
+        if (isNaN(lat) || isNaN(lon) || lat === 0 || lon === 0) {
+            const elements = document.querySelectorAll("." + elementId);
+            elements.forEach(element => {
+                element.innerText = "Coord. inválidas";
+            });
+            return;
+        }
+        addressQueue.push({ lat, lon, elementId });
+        processAddressQueue();
+    }
+
+    function processAddressQueue() {
+        if (isProcessingQueue || addressQueue.length === 0) return;
+
+        isProcessingQueue = true;
+        const { lat, lon, elementId } = addressQueue.shift();
+
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`, {
+            headers: {
+                'User-Agent': 'TechPS-Logistica/1.0'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Usa querySelectorAll para pegar todos os elementos (original e clones)
+            const elements = document.querySelectorAll("." + elementId);
+            elements.forEach(element => {
+                element.innerText = data.display_name || "Endereço não encontrado";
+                // Remove a classe para não processar novamente se for o caso
+                element.classList.remove(elementId);
+            });
+        })
+        .catch(err => {
+            console.error("Erro ao buscar endereço:", err);
+            const elements = document.querySelectorAll("." + elementId);
+            elements.forEach(element => {
+                element.innerText = "Erro na busca";
+            });
+        })
+        .finally(() => {
+            setTimeout(() => {
+                isProcessingQueue = false;
+                processAddressQueue();
+            }, 1200); // 1.2s delay
+        });
+    }
     
     function appendStopRow(tbody, row, stopStart, stopEnd, ignition, totalTime) {
       const totalTimeSeconds = (stopEnd - stopStart) / 1000;
@@ -819,11 +906,13 @@ document.addEventListener("DOMContentLoaded", () => {
           // Calcula a diferença de hodômetro
     let hodometroDifference = previousHodometro !== null ? formatDistance((row.hodometro - previousHodometro).toFixed(2)) : "<--"; // Se previousHodometro for null, a diferença não é aplicável
 
+    let enderecoDisplay = row.endereco || "Endereço não informado";
+
     tr.innerHTML = 
         `<td><img src="imagens/LGS.png" alt="Ícone"  class="row-img" /></td>
         <td>${stopStart.toLocaleTimeString()}</td>
         <td>${stopEnd.toLocaleTimeString()}</td>
-        <td>${row.endereco}</td>
+        <td data-lat="${row.latitude}" data-lon="${row.longitude}">${enderecoDisplay}</td>
         <td>${row.latitude}</td>
         <td>${row.longitude}</td>
         <td>${ `<i class="fas fa-power-off" style="color: ` + (ignition === "true" ? `green` : `red`) + `;"></i>` }</td>
