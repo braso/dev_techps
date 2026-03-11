@@ -15,6 +15,15 @@ if(typeof orderCol === 'undefined'){
 }
 
 const camposBd = Object.values(fields);
+const escapeHtmlAttr = (value) => {
+    const s = String(value ?? '');
+    return s
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/'/g, '&#39;');
+};
 // FUNÇÃO PARA EXPORTAR O ESTADO ATUAL DA TABELA
 function exportAllToCSV() {
     const btn = $('#btnExportCSV');
@@ -251,7 +260,14 @@ const consultarRegistros = function(){
                     }catch(error){
                         console.log('actions not defined');
                     }
-                    response.rows[rowKey] = '<tr>'+row+'</tr>';
+                    let rowId = '';
+                    try{
+                        const firstKey = Object.keys(dataArray)[0];
+                        rowId = (firstKey != null ? dataArray[firstKey] : '');
+                    }catch(e){
+                        rowId = '';
+                    }
+                    response.rows[rowKey] = '<tr data-row-id="'+escapeHtmlAttr(rowId)+'">'+row+'</tr>';
                 });
                 response.rows = response.rows.join('');
             //}
