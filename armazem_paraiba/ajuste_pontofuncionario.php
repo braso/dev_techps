@@ -363,12 +363,6 @@
 					exit;
 				}
 
-				// Verificar se a data possui não conformidades (apenas o dia solicitado)
-				if (!verificarDiaComErro($motorista_validacao, $data)) {
-					echo "<script>alert('Erro: Apenas são permitidas solicitações para dias que possuem não conformidades.'); window.location.href = '" . basename($_SERVER['PHP_SELF']) . "?idMotorista={$idMotorista}';</script>";
-					exit;
-				}
-
 				// Obter dados do usuário solicitante
 				$sql_usuario = "SELECT user_nb_id, user_tx_nome FROM user WHERE user_nb_id = {$_SESSION['user_nb_id']} LIMIT 1";
 				$usuario_base = mysqli_fetch_assoc(query($sql_usuario));
@@ -547,8 +541,6 @@ document.addEventListener("DOMContentLoaded",function(){
 	campoData.addEventListener("change",filtrar);
 	campoData.addEventListener("input",filtrar);
 
-	let diaComNaoConformidade = true;
-
 	function filtrar(){
 
 		const dataSelecionada = campoData.value;
@@ -556,7 +548,6 @@ document.addEventListener("DOMContentLoaded",function(){
 		const tabela = document.querySelector("#tabelaNaoConformidadeContainer table");
 
 		if(!tabela){
-			diaComNaoConformidade = false;
 			return;
 		}
 
@@ -567,7 +558,6 @@ document.addEventListener("DOMContentLoaded",function(){
 			linhas.forEach(l=>l.style.display="");
 
 			document.getElementById("mensagemSemDados").style.display="none";
-			diaComNaoConformidade = true;
 			return;
 
 		}
@@ -601,23 +591,7 @@ document.addEventListener("DOMContentLoaded",function(){
 		});
 
 		document.getElementById("mensagemSemDados").style.display = encontrou ? "none" : "block";
-		diaComNaoConformidade = encontrou;
 
-	}
-
-	// Adicionar validação no envio do formulário
-	const btnEnviar = document.querySelector("button[name='enviar_solicitacao']");
-	if(btnEnviar){
-		const form = btnEnviar.closest("form");
-		if(form){
-			form.addEventListener("submit", function(e){
-				if(!diaComNaoConformidade){
-					alert("Erro: Apenas são permitidas solicitações para dias que possuem não conformidades.");
-					e.preventDefault();
-					return false;
-				}
-			});
-		}
 	}
 
 });
