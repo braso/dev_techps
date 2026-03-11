@@ -109,7 +109,7 @@
                 "SELECT user_nb_id id, user_tx_nome nome, user_tx_login login,
                 user_tx_senha senha, rfids_tx_uid rfid, rfids_tx_status status_rfid 
                 FROM user 
-                INNER JOIN rfids ON user_nb_entidade = rfids_nb_user_id
+                INNER JOIN rfids ON user_nb_entidade = rfids_nb_entidade_id
                 WHERE user_tx_status = 'ativo'
                 AND rfids_tx_uid = ?;",
                 [$_POST["rfid"]]
