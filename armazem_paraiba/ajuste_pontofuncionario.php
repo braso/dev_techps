@@ -49,6 +49,11 @@
 	// Criar tabela ao carregar a página
 	criarTabelaSolicitacoes();
 
+	$acao = $_POST['acao'] ?? $_GET['acao'] ?? '';
+	if ($acao == 'buscarUltimaJustificativa') {
+		buscarUltimaJustificativa();
+	}
+
 	function verificarDiaComErro($motorista, $data) {
 		$aDetalhado = diaDetalhePonto($motorista, $data);
 		$row = [verificaTolerancia($aDetalhado["diffSaldo"], $data, $motorista['enti_nb_id'])] + $aDetalhado;
@@ -299,6 +304,23 @@
 	}
 
 
+	function buscarUltimaJustificativa(){
+		$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], $_POST['idMotorista']);
+		$data = mysqli_real_escape_string($GLOBALS['conn'], $_POST['data']);
+		
+		$res = mysqli_fetch_assoc(query("
+			SELECT justificativa 
+			FROM solicitacoes_ajuste 
+			WHERE id_motorista = '$idMotorista' 
+			AND data_ajuste = '$data' 
+			ORDER BY data_solicitacao DESC 
+			LIMIT 1
+		"));
+		
+		echo json_encode(['justificativa' => $res['justificativa'] ?? '']);
+		exit;
+	}
+
 	function index() {
 
 		// Handler para deletar solicitação
@@ -408,8 +430,9 @@
 				$resultado = @mysqli_query($GLOBALS['conn'], $sql);
 				
 				if ($resultado) {
-					// Redirecionar de volta para a mesma página (GET, não POST)
-					header("Location: " . basename($_SERVER['PHP_SELF']) . "?msg=sucesso&idMotorista={$idMotorista}");
+					// Redirecionar de volta para a mesma página, mantendo data e justificativa na URL
+					$justEncoded = urlencode($justificativa);
+					header("Location: " . basename($_SERVER['PHP_SELF']) . "?msg=sucesso&idMotorista={$idMotorista}&data_p={$data}&just_p={$justEncoded}");
 					exit;
 				} else {
 					$erro = mysqli_error($GLOBALS['conn']);
@@ -475,9 +498,13 @@
 		$textFields[] = texto($motorista["enti_tx_ocupacao"] ?? "Motorista",$motorista["enti_tx_nome"] ?? "",5);
 		$textFields[] = texto("CPF",$motorista["enti_tx_cpf"] ?? "",3);
 
+		// Pegar valores da URL se existirem para manter após redirecionamento
+		$valData = $_GET['data_p'] ?? ($_POST["data"] ?? "");
+		$valJust = $_GET['just_p'] ?? ($_POST["justificativa"] ?? "");
+
 		$variableFields = [
 
-			campo_data("Data*","data",($_POST["data"] ?? ""),2,"id='dataFiltro'"),
+			campo_data("Data*","data",$valData,2,"id='dataFiltro'"),
 			campo_hora("Hora*","hora",($_POST["hora"] ?? ""),2),
 
 			combo_bd("Tipo de Registro*","idMacro",($_POST["idMacro"] ?? ""),4,"macroponto","","ORDER BY macr_nb_id"),
@@ -486,9 +513,10 @@
 
 		];
 
-		$campoJust[] = textarea("Justificativa","justificativa",($_POST["justificativa"] ?? ""),12,'maxlength=680');
+		$campoJust[] = textarea("Justificativa","justificativa",$valJust,12,'maxlength=680 id="campoJustificativa"');
 
 		$botoes[] = "<button type='submit' name='enviar_solicitacao' class='btn btn-success'>Enviar Solicitação</button>";
+		$botoes[] = "<button type='button' id='btnUsarUltima' class='btn btn-info' style='display:none;' title='Uma solicitação já foi enviada para este dia. Clique para aplicar a mesma justificativa.'>Repetir Justificativa do Dia</button>";
 		$botoes[] = criarBotaoVoltar("espelho_ponto.php");
 
 		echo abre_form("Dados do Ajuste de Ponto");
@@ -535,11 +563,51 @@
 document.addEventListener("DOMContentLoaded",function(){
 
 	const campoData = document.getElementById("dataFiltro");
+	const campoJustificativa = document.getElementById("campoJustificativa");
+	const idMotorista = document.querySelector('input[name="idMotorista"]').value;
+	const btnUsarUltima = document.getElementById("btnUsarUltima");
 
 	if(!campoData) return;
 
-	campoData.addEventListener("change",filtrar);
-	campoData.addEventListener("input",filtrar);
+	// Função para verificar se já existe justificativa para o dia selecionado
+	function checarJustificativaExistente() {
+		const data = campoData.value;
+		if (!data) {
+			btnUsarUltima.style.display = 'none';
+			return;
+		}
+
+		fetch(window.location.pathname, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+			body: 'acao=buscarUltimaJustificativa&idMotorista=' + idMotorista + '&data=' + data
+		})
+		.then(response => response.json())
+		.then(data => {
+			if (data.justificativa) {
+				btnUsarUltima.style.display = 'inline-block';
+				btnUsarUltima.onclick = function() {
+					campoJustificativa.value = data.justificativa;
+				};
+			} else {
+				btnUsarUltima.style.display = 'none';
+			}
+		});
+	}
+
+	campoData.addEventListener("change", function() {
+		filtrar();
+		checarJustificativaExistente();
+	});
+	campoData.addEventListener("input", function() {
+		filtrar();
+		checarJustificativaExistente();
+	});
+
+	// Executar ao carregar caso já tenha data
+	if (campoData.value) {
+		checarJustificativaExistente();
+	}
 
 	function filtrar(){
 
