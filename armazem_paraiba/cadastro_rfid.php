@@ -1,6 +1,8 @@
 <?php
+    include_once "utils/utils.php";
     include_once "load_env.php";
     include_once "conecta.php";
+    
     mysqli_query($conn, "SET time_zone = '-3:00'");
 
     // Garante que a tabela exista
@@ -101,67 +103,20 @@
                       FROM rfids 
                       LEFT JOIN user ON rfids.rfids_nb_entidade_id = user.user_nb_id";
 
-        $actions = criarIconesGrid(
-            ["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-            ["cadastro_rfid.php", "cadastro_rfid.php"],
-            ["editarRfid()", "excluirRfid()"]
+        // 1. Chamamos a nossa função mágica da pasta utils
+        $acoesGrid = gerarAcoesComConfirmacao(
+            "cadastro_rfid.php", 
+            "editarRfid", 
+            "excluirRfid", 
+            "Excluir o RFID código: ", 
+            "CÓDIGO"
         );
 
-        $actions["functions"][1] = ""; 
-        $actions["tags"][1] = '<span class="glyphicon glyphicon-remove search-remove" onclick="confirmarExclusaoRfid(this)" title="Excluir" style="color:#d9534f; cursor:pointer;"></span>';
+        // 2. Injetamos as tags HTML e o JS no grid
+        $gridFields["actions"] = $acoesGrid["tags"];
+        $jsFunctions = $acoesGrid["js"];
 
-        $gridFields["actions"] = $actions["tags"];
-        $jsDoEditar = $actions["functions"][0];
-
-        $jsFunctions = '
-            const funcoesInternas = function(){
-                try {
-                    ' . $jsDoEditar . '
-                } catch(e) { console.error(e); }
-            };
-
-            window.confirmarExclusaoRfid = function(elemento){
-                var linha = $(elemento).closest("tr");
-                var id = linha.find("td:eq(0)").text();
-
-                Swal.fire({
-                    title: "Tem certeza?",
-                    text: "Excluir o RFID código: " + id + "?",
-                    icon: "warning",
-                    showCancelButton: true,
-                    confirmButtonColor: "#d33",
-                    cancelButtonColor: "#6c757d",
-                    confirmButtonText: "Sim, excluir!",
-                    cancelButtonText: "Cancelar"
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        enviarExclusaoRfid(id);
-                    }
-                });
-            };
-
-            window.enviarExclusaoRfid = function(id){
-                var form = document.createElement("form");
-                form.method = "POST";
-                form.action = ""; 
-                
-                var fieldAcao = document.createElement("input");
-                fieldAcao.type = "hidden";
-                fieldAcao.name = "acao";
-                fieldAcao.value = "excluirRfid"; 
-                form.appendChild(fieldAcao);
-
-                var fieldId = document.createElement("input");
-                fieldId.type = "hidden";
-                fieldId.name = "id";
-                fieldId.value = id; 
-                form.appendChild(fieldId);
-
-                document.body.appendChild(form);
-                form.submit();
-            };
-        ';
-
+        // 3. Renderiza o grid normalmente
         echo gridDinamico("rfids", $gridFields, $camposBusca, $queryBase, $jsFunctions);
     }
 

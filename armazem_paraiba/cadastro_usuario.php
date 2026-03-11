@@ -3,6 +3,7 @@
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	*/
+	include_once "utils/utils.php";
 	include "conecta.php";
 
 	// function combo_empresa($nome,$variavel,$modificador,$tamanho,$opcao, $opcao2,$extra=""){
@@ -843,8 +844,6 @@ function index() {
                 "TELEFONE"      => "user_tx_fone",
                 "EMPRESA"       => "empr_tx_nome",
                 "STATUS"        => "user_tx_status",
-                
-                // O SEGREDO: Coluna pura! O framework não vai mais travar.
                 "AUTENTICAÇÃO"  => "rfids_nb_id" 
             ];
 
@@ -868,51 +867,64 @@ function index() {
                 ." LEFT JOIN operacao ON enti_tx_tipoOperacao = oper_nb_id"
                 ." LEFT JOIN grupos_documentos ON enti_setor_id = grup_nb_id"
                 ." LEFT JOIN sbgrupos_documentos subg ON enti_subSetor_id = subg.sbgr_nb_id"
-                // O banco agora só traz o ID se o crachá estiver ATIVO
                 ." LEFT JOIN rfids ON rfids.rfids_nb_entidade_id = user.user_nb_id AND rfids.rfids_tx_status = 'ativo'"
             ;
 
-            $actions = criarIconesGrid(
-                ["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-                ["cadastro_usuario.php", "cadastro_usuario.php"],
-                ["modificarUsuario()", "excluirUsuario()"]
+            // 1. Chamamos a utilitária para gerar os botões padrão
+            $acoesGrid = gerarAcoesComConfirmacao(
+                "cadastro_usuario.php", 
+                "modificarUsuario", 
+                "excluirUsuario", 
+                "Deseja excluir o usuário código: ", 
+                "CÓDIGO"
             );
-    
-            // A lixeira ajustada para olhar para a coluna 12 (que é o Status)
-            $actions["functions"][1] .= "esconderInativar('glyphicon glyphicon-remove search-remove', 12);";
-    
-            $gridFields["actions"] = $actions["tags"];
-    
-            $jsFunctions = "
-                // FUNÇÃO: Varre a tabela, pega o ID da coluna 13 e desenha os ícones HTML!
+
+            $gridFields["actions"] = $acoesGrid["tags"];
+
+            // 2. Mesclamos o JS da utilitária com as regras dinâmicas da tela de Usuários
+            $jsFunctions = $acoesGrid["js"] . "
+                
+                // FUNÇÃO RADAR: Descobre em qual índice numérico uma coluna está baseada no nome
+                const pegarIndiceColuna = function(nomeColuna) {
+                    var index = -1;
+                    $('table thead th').each(function(i) {
+                        if ($(this).text().trim().toUpperCase() === nomeColuna.toUpperCase()) {
+                            index = i;
+                            return false; // Interrompe o loop ao encontrar
+                        }
+                    });
+                    return index;
+                };
+
+                // FUNÇÃO: Varre a tabela e desenha os ícones HTML de biometria/crachá
                 const formatarBiometria = function() {
+                    // Descobre onde as colunas estão agora
+                    var idxCodigo = pegarIndiceColuna('CÓDIGO');
+                    var idxAutenticacao = pegarIndiceColuna('AUTENTICAÇÃO');
+
+                    // Se não achar as colunas, aborta para não quebrar a tela
+                    if (idxCodigo === -1 || idxAutenticacao === -1) return;
+
                     $('table tbody tr').each(function() {
-                        var colIdUser = $(this).find('td:eq(0)').text().trim();
-                        var tdAutenticacao = $(this).find('td:eq(13)'); 
+                        var colIdUser = $(this).find('td').eq(idxCodigo).text().trim();
+                        var tdAutenticacao = $(this).find('td').eq(idxAutenticacao); 
                         var idRfid = tdAutenticacao.text().trim(); 
                         
                         if (!colIdUser) return;
                         
                         var htmlIcones = '';
                         
-                        // Desenha Crachá (Se tiver ID, fica verde e clicável)
                         if (idRfid !== '') {
                             htmlIcones += '<span onclick=\"abrirRfidDireto(' + idRfid + ', ' + colIdUser + ')\" class=\"glyphicon glyphicon-credit-card\" style=\"color: #28a745; font-size: 14px; margin-right: 12px; cursor: pointer;\" title=\"Editar Crachá Ativo\"></span>';
                         } else {
                             htmlIcones += '<span class=\"glyphicon glyphicon-credit-card\" style=\"color: #d6d6d6; font-size: 14px; margin-right: 12px;\" title=\"Sem Crachá Ativo\"></span>';
                         }
                         
-                        // Desenha Digital e Facial (Cinzas fixos)
                         htmlIcones += '<span class=\"glyphicon glyphicon-hand-up\" style=\"color: #d6d6d6; font-size: 14px; margin-right: 12px;\" title=\"Sem Digital\"></span>';
                         htmlIcones += '<span class=\"glyphicon glyphicon-user\" style=\"color: #d6d6d6; font-size: 14px;\" title=\"Sem Facial\"></span>';
                         
                         tdAutenticacao.html(htmlIcones);
                     });
-                };
-
-                const funcoesInternas = function(){
-                    ".implode(" ", $actions["functions"])."
-                    formatarBiometria();
                 };
 
                 window.abrirRfidDireto = function(idRfid, idUsuario) {
@@ -943,8 +955,24 @@ function index() {
                     document.body.appendChild(form);
                     form.submit();
                 };
+
+                // Executa as funções no ciclo de vida do grid
+                var funcoesInternasAntiga = funcoesInternas; 
+                funcoesInternas = function(){
+                    // Roda o JS da lupa e do SweetAlert
+                    if(typeof funcoesInternasAntiga === 'function') funcoesInternasAntiga(); 
+                    
+                    // Roda a sua formatação de crachás
+                    formatarBiometria(); 
+                    
+                    // Esconde a lixeira baseando-se na posição atualizada da coluna STATUS
+                    var idxStatus = pegarIndiceColuna('STATUS');
+                    if (idxStatus !== -1) {
+                        esconderInativar('glyphicon glyphicon-remove search-button', idxStatus);
+                    }
+                };
             ";
-            
+
             echo gridDinamico("tabelaMotoristas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
         //}
 

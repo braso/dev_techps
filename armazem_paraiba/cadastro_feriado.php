@@ -186,8 +186,9 @@
 
         $configuracao = gerarAcoesComConfirmacao(
             "cadastro_feriado.php", 
-            "editarFeriado()", 
-            "excluirFeriado" 
+            "editarFeriado", 
+            "excluirFeriado",
+			"tem certeza que deseja excluir o feriado código: " 
         );
 
         $gridFields["actions"] = $configuracao["tags"];
