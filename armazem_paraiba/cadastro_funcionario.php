@@ -1827,7 +1827,7 @@ function index(){
 	
 				window.confirmarExclusao = function(elemento){
 					var linha = $(elemento).closest("tr");
-					var id = linha.find("td:eq(0)").text(); 
+					var id = linha.attr("data-row-id") || linha.find("td:eq(0)").text(); 
 	
 					Swal.fire({
 						title: "Tem certeza?",

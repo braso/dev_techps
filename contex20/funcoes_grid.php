@@ -374,7 +374,12 @@
 					
 					idInput = document.createElement('input');
 					idInput.setAttribute('name', 'id');
-					idInput.setAttribute('value', $(event.target).parent().parent().children()[0].innerHTML);
+					var row = $(event.target).closest('tr');
+					var rowId = row.attr('data-row-id');
+					if(rowId == undefined || rowId === ''){
+						rowId = row.children().first().text();
+					}
+					idInput.setAttribute('value', rowId);
 					form.appendChild(idInput);
 					
 					actionInput = document.createElement('input');
