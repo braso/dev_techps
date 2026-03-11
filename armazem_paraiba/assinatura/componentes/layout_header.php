@@ -2,10 +2,8 @@
 if(!isset($_SESSION)) {
     session_start();
 }
-// Determine path prefix for assets and links
-// If style.css exists in current directory, we are in root.
-// Otherwise we assume we are one level deep (e.g. dadosbases/).
-$path_prefix = file_exists('style.css') ? '' : '../';
+$baseContex = rtrim($_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"], "/");
+$baseAssinatura = $baseContex."/assinatura";
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -18,7 +16,7 @@ $path_prefix = file_exists('style.css') ? '' : '../';
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Custom Style -->
-    <link rel="stylesheet" href="<?php echo $path_prefix; ?>style.css">
+    <link rel="stylesheet" href="<?php echo $baseAssinatura; ?>/style.css">
     <style>
         /* Navbar custom overrides */
         .navbar-techps {
@@ -55,8 +53,8 @@ $path_prefix = file_exists('style.css') ? '' : '../';
             <div class="flex justify-between h-16 items-center">
                 <!-- Logo & Brand -->
                 <div class="flex items-center gap-4">
-                    <a href="<?php echo $path_prefix; ?>index.php" class="flex-shrink-0 flex items-center gap-3">
-                        <img class="h-8 w-auto object-contain" src="<?php echo $path_prefix; ?>assets/logo.png" alt="TechPS Logo">
+                    <a href="<?php echo $baseAssinatura; ?>/index.php" class="flex-shrink-0 flex items-center gap-3">
+                        <img class="h-8 w-auto object-contain" src="<?php echo $baseAssinatura; ?>/assets/logo.png" alt="TechPS Logo">
                         <div class="hidden md:block h-6 w-px bg-gray-300"></div>
                         <span class="text-lg font-bold text-gray-800 tracking-tight">Assinatura Digital</span>
                     </a>
@@ -68,55 +66,56 @@ $path_prefix = file_exists('style.css') ? '' : '../';
                     // Definição dos Menus do Sistema (Baseado em menu.php)
                     $menu_sistema = [
                         "Cadastros" => [
-                            "RFID" => "../cadastro_rfid.php",
-                            "Celular" => "../cadastro_celular.php",
-                            "Empresa/Filial" => "../cadastro_empresa.php",
-                            "Endosso" => "../cadastro_endosso.php",
-                            "Feriado" => "../cadastro_feriado.php",
-                            "Férias" => "../cadastro_ferias.php",
-                            "Funcionário" => "../cadastro_funcionario.php",
-                            "Abono" => "../cadastro_abono.php",
-                            "Macro" => "../cadastro_macro.php",
-                            "Motivo" => "../cadastro_motivo.php",
-                            "Cargo" => "../cadastro_operacao.php",
-                            "Parâmetro" => "../cadastro_parametro.php",
-                            "Placas" => "../cadastro_placa.php",
-                            "Setor" => "../cadastro_setor.php",
-                            "Tipo de Documento" => "../cadastro_tipo_doc.php",
-                            "Usuário" => "../cadastro_usuario.php",
-                            "Habilidades Técnicas" => "../cadastro_habilidade_tecnica.php",
-                            "Habilidades Comportamentais" => "../cadastro_habilidade_comportamental.php",
-                            "Perfil de Acesso" => "../cadastro_perfil_acesso.php",
-                            "Permissões de Usuários" => "../cadastro_usuario_perfil.php"
+                            "RFID" => $baseContex."/cadastro_rfid.php",
+                            "Celular" => $baseContex."/cadastro_celular.php",
+                            "Empresa/Filial" => $baseContex."/cadastro_empresa.php",
+                            "Endosso" => $baseContex."/cadastro_endosso.php",
+                            "Feriado" => $baseContex."/cadastro_feriado.php",
+                            "Férias" => $baseContex."/cadastro_ferias.php",
+                            "Funcionário" => $baseContex."/cadastro_funcionario.php",
+                            "Abono" => $baseContex."/cadastro_abono.php",
+                            "Macro" => $baseContex."/cadastro_macro.php",
+                            "Motivo" => $baseContex."/cadastro_motivo.php",
+                            "Cargo" => $baseContex."/cadastro_operacao.php",
+                            "Parâmetro" => $baseContex."/cadastro_parametro.php",
+                            "Placas" => $baseContex."/cadastro_placa.php",
+                            "Setor" => $baseContex."/cadastro_setor.php",
+                            "Tipo de Documento" => $baseContex."/cadastro_tipo_doc.php",
+                            "Usuário" => $baseContex."/cadastro_usuario.php",
+                            "Habilidades Técnicas" => $baseContex."/cadastro_habilidade_tecnica.php",
+                            "Habilidades Comportamentais" => $baseContex."/cadastro_habilidade_comportamental.php",
+                            "Perfil de Acesso" => $baseContex."/cadastro_perfil_acesso.php",
+                            "Permissões de Usuários" => $baseContex."/cadastro_usuario_perfil.php"
                         ],
                         "Ponto" => [
-                            "Registrar Ponto" => "../batida_ponto.php",
-                            "Consultar Endossos" => "../endosso.php",
-                            "Espelhos de Ponto" => "../espelho_ponto.php",
-                            "Integrações de Ponto" => "../carregar_ponto.php",
-                            "Não Cadastrados" => "../nao_cadastrados.php",
-                            "Não Conformidades" => "../nao_conformidade.php",
-                            "Auditoria" => "../ponto_auditoria.php"
+                            "Registrar Ponto" => $baseContex."/batida_ponto.php",
+                            "Consultar Endossos" => $baseContex."/endosso.php",
+                            "Espelhos de Ponto" => $baseContex."/espelho_ponto.php",
+                            "Integrações de Ponto" => $baseContex."/carregar_ponto.php",
+                            "Não Cadastrados" => $baseContex."/nao_cadastrados.php",
+                            "Não Conformidades" => $baseContex."/nao_conformidade.php",
+                            "Auditoria" => $baseContex."/ponto_auditoria.php"
                         ],
                         "Painel" => [
-                            "Ajustes" => "../paineis/ajustes.php",
-                            "Disponibilidade" => "../paineis/disponibilidade.php",
-                            "Endosso" => "../paineis/endosso.php",
-                            "Jornada Aberta" => "../paineis/jornada.php",
-                            "Não Conformidades Jurídicas" => "../paineis/nc_juridica.php",
-                            "Saldo" => "../paineis/saldo.php",
-                            "Escalas" => "../paineis/escala_parametro.php"
+                            "Ajustes" => $baseContex."/paineis/ajustes.php",
+                            "Disponibilidade" => $baseContex."/paineis/disponibilidade.php",
+                            "Endosso" => $baseContex."/paineis/endosso.php",
+                            "Jornada Aberta" => $baseContex."/paineis/jornada.php",
+                            "Não Conformidades Jurídicas" => $baseContex."/paineis/nc_juridica.php",
+                            "Saldo" => $baseContex."/paineis/saldo.php",
+                            "Escalas" => $baseContex."/paineis/escala_parametro.php"
                         ],
                         "Relatórios" => [
-                            "Pontos" => "../relatorio_pontos.php"
+                            "Pontos" => $baseContex."/relatorio_pontos.php"
                         ],
                         "Assinatura Digital" => [
-                            "Dashboard" => "index.php",
-                            "Nova Assinatura" => "nova_assinatura.php",
-                            "Envio em Massa" => "enviar_documento.php",
-                            "Consultar" => "consultar.php",
-                            "Funcionários" => "dadosbases/funcionarios.php",
-                            "Finalizar (ICP)" => "finalizar.php"
+                            "Dashboard" => $baseAssinatura."/index.php",
+                            "Nova Assinatura" => $baseAssinatura."/nova_assinatura.php",
+                            "Envio em Massa" => $baseAssinatura."/enviar_documento.php",
+                            "Documentos em Lote" => $baseAssinatura."/documentos_em_lote.php",
+                            "Consultar" => $baseAssinatura."/consultar.php",
+                            "Funcionários" => $baseAssinatura."/dadosbases/funcionarios.php",
+                            "Finalizar (ICP)" => $baseAssinatura."/finalizar.php"
                         ]
                     ];
 
@@ -130,7 +129,7 @@ $path_prefix = file_exists('style.css') ? '' : '../';
                             <div class="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg hidden group-hover:block z-50 max-h-[80vh] overflow-y-auto">
                                 <div class="py-1">';
                                     foreach($itens as $nome => $link) {
-                                        echo '<a href="'.$path_prefix.$link.'" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">'.$nome.'</a>';
+                                        echo '<a href="'.$link.'" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">'.$nome.'</a>';
                                     }
                         echo '  </div>
                             </div>
@@ -155,7 +154,7 @@ $path_prefix = file_exists('style.css') ? '' : '../';
                     </div>
 
                     <!-- Logout Button -->
-                    <a href="<?php echo $path_prefix; ?>../logout.php" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Sair do Sistema">
+                    <a href="<?php echo $baseContex; ?>/logout.php" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Sair do Sistema">
                         <i class="fas fa-sign-out-alt text-xl"></i>
                     </a>
                     
@@ -171,12 +170,13 @@ $path_prefix = file_exists('style.css') ? '' : '../';
         <!-- Mobile Navigation (Hidden by default) -->
         <div class="md:hidden hidden border-t border-gray-200 bg-gray-50" id="mobile-menu">
             <div class="px-2 pt-2 pb-3 space-y-1">
-                <a href="<?php echo $path_prefix; ?>index.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Dashboard</a>
-                <a href="<?php echo $path_prefix; ?>nova_assinatura.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Nova Assinatura</a>
-                <a href="<?php echo $path_prefix; ?>enviar_documento.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Envio em Massa</a>
-                <a href="<?php echo $path_prefix; ?>consultar.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Consultar</a>
-                <a href="<?php echo $path_prefix; ?>dadosbases/funcionarios.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Funcionários</a>
-                <a href="<?php echo $path_prefix; ?>finalizar.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Finalizar (ICP)</a>
+                <a href="<?php echo $baseAssinatura; ?>/index.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Dashboard</a>
+                <a href="<?php echo $baseAssinatura; ?>/nova_assinatura.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Nova Assinatura</a>
+                <a href="<?php echo $baseAssinatura; ?>/enviar_documento.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Envio em Massa</a>
+                <a href="<?php echo $baseAssinatura; ?>/documentos_em_lote.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Documentos em Lote</a>
+                <a href="<?php echo $baseAssinatura; ?>/consultar.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Consultar</a>
+                <a href="<?php echo $baseAssinatura; ?>/dadosbases/funcionarios.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Funcionários</a>
+                <a href="<?php echo $baseAssinatura; ?>/finalizar.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Finalizar (ICP)</a>
             </div>
         </div>
     </header>

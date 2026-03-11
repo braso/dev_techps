@@ -166,7 +166,7 @@ include_once "componentes/layout_header.php";
         
         <!-- Nova Assinatura -->
         <div class="card-wrapper">
-            <a href="nova_assinatura.php" class="card-modulo">
+            <a href="<?php echo $baseAssinatura; ?>/nova_assinatura.php" class="card-modulo">
                 <div class="card-border-top"></div>
                 <div class="card-body-content">
                     <div class="icon-circle">
@@ -180,7 +180,7 @@ include_once "componentes/layout_header.php";
 
         <!-- Envio Múltiplo -->
         <div class="card-wrapper">
-            <a href="enviar_documento.php" class="card-modulo">
+            <a href="<?php echo $baseAssinatura; ?>/enviar_documento.php" class="card-modulo">
                 <div class="card-border-top"></div>
                 <div class="card-body-content">
                     <div class="icon-circle">
@@ -194,7 +194,7 @@ include_once "componentes/layout_header.php";
 
         <!-- Finalizar ICP-Brasil -->
         <div class="card-wrapper">
-            <a href="finalizar.php" class="card-modulo">
+            <a href="<?php echo $baseAssinatura; ?>/finalizar.php" class="card-modulo">
                 <div class="card-border-top"></div>
                 <div class="card-body-content">
                     <div class="icon-circle">
@@ -208,7 +208,7 @@ include_once "componentes/layout_header.php";
 
         <!-- Consultar -->
         <div class="card-wrapper">
-            <a href="consultar.php" class="card-modulo">
+            <a href="<?php echo $baseAssinatura; ?>/consultar.php" class="card-modulo">
                 <div class="card-border-top"></div>
                 <div class="card-body-content">
                     <div class="icon-circle">
