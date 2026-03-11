@@ -14,8 +14,8 @@
 		exit;
 	}
 
-	function aceitarSolicitacao(){
-		$idSolicitacao = mysqli_real_escape_string($GLOBALS['conn'], $_POST['id_solicitacao']);
+	function aceitarSolicitacao($id = null){
+		$idSolicitacao = $id ?: mysqli_real_escape_string($GLOBALS['conn'], $_POST['id_solicitacao']);
 		
 		// Buscar detalhes da solicitação
 		$sol = mysqli_fetch_assoc(query("
@@ -27,15 +27,13 @@
 		"));
 
 		if (!$sol) {
-			set_status("ERRO: Solicitação não encontrada.");
-			index();
-			exit;
+			if(!$id) set_status("ERRO: Solicitação não encontrada.");
+			return false;
 		}
 
 		if ($sol['status'] === 'aceita' || $sol['status'] === 'nao_aceita') {
-			set_status("ERRO: Esta solicitação já foi processada.");
-			index();
-			exit;
+			if(!$id) set_status("ERRO: Esta solicitação já foi processada.");
+			return false;
 		}
 
 		try {
@@ -55,9 +53,11 @@
 			"));
 
 			if (!empty($temPonto["pont_tx_data"])) {
-				$seg = explode(":", $temPonto["pont_tx_data"])[2];
-				$seg = intval($seg) + 1;
-				$newPonto["pont_tx_data"] = "{$sol['data_ajuste']} {$sol['hora_ajuste']}:" . str_pad(strval($seg), 2, "0", STR_PAD_LEFT);
+				// Inativar o ponto antigo antes de inserir o novo (substituição)
+				query("UPDATE ponto SET pont_tx_status = 'inativo' 
+					   WHERE pont_tx_status = 'ativo'
+					   AND pont_tx_matricula = '{$sol['enti_tx_matricula']}'
+					   AND STR_TO_DATE(pont_tx_data, '%Y-%m-%d %H:%i') = STR_TO_DATE('{$sol['data_ajuste']} {$sol['hora_ajuste']}', '%Y-%m-%d %H:%i')");
 			}
 
 			// Inserir na tabela ponto
@@ -66,21 +66,47 @@
 			// Atualizar status da solicitação
 			query("UPDATE solicitacoes_ajuste SET status = 'aceita', data_decisao = NOW(), id_superior = {$_SESSION['user_nb_id']} WHERE id = '$idSolicitacao'");
 
-			set_status("Solicitação aprovada e ponto registrado com sucesso!");
+			if(!$id) set_status("Solicitação aprovada e ponto registrado com sucesso!");
+			return true;
 		} catch (Exception $e) {
-			set_status("ERRO: " . $e->getMessage());
+			if(!$id) set_status("ERRO: " . $e->getMessage());
+			return false;
 		}
-
-		index();
-		exit;
 	}
 
-	function rejeitarSolicitacao(){
-		$idSolicitacao = mysqli_real_escape_string($GLOBALS['conn'], $_POST['id_solicitacao']);
-		
+	function rejeitarSolicitacao($id = null){
+		$idSolicitacao = $id ?: mysqli_real_escape_string($GLOBALS['conn'], $_POST['id_solicitacao']);
 		query("UPDATE solicitacoes_ajuste SET status = 'nao_aceita', data_decisao = NOW(), id_superior = {$_SESSION['user_nb_id']} WHERE id = '$idSolicitacao'");
+		if(!$id) set_status("Solicitação rejeitada com sucesso.");
+		return true;
+	}
+
+	function processarEmLote(){
+		$ids = $_POST['ids_selecionados'] ?? '';
+		$acaoLote = $_POST['acao_lote'] ?? '';
 		
-		set_status("Solicitação rejeitada com sucesso.");
+		if (empty($ids)) {
+			set_status("ERRO: Nenhuma solicitação selecionada.");
+			index();
+			exit;
+		}
+
+		$arrIds = explode(',', $ids);
+		$sucesso = 0;
+		$erro = 0;
+
+		foreach ($arrIds as $id) {
+			if ($acaoLote == 'aceitarLote') {
+				if (aceitarSolicitacao($id)) $sucesso++; else $erro++;
+			} elseif ($acaoLote == 'rejeitarLote') {
+				if (rejeitarSolicitacao($id)) $sucesso++; else $erro++;
+			}
+		}
+
+		$msg = "$sucesso solicitações processadas com sucesso.";
+		if ($erro > 0) $msg .= " $erro falhas encontradas.";
+		set_status($msg);
+		
 		index();
 		exit;
 	}
@@ -142,9 +168,17 @@
 		";
 
 		$result = query($sql);
-		$linhas = [];
+		$dados = mysqli_fetch_all($result, MYSQLI_ASSOC);
+		
+		// Identificar duplicidades (mesmo funcionário no mesmo dia)
+		$contagemDuplicados = [];
+		foreach ($dados as $d) {
+			$chave = $d['id_motorista'] . '_' . $d['data_ajuste'];
+			$contagemDuplicados[$chave] = ($contagemDuplicados[$chave] ?? 0) + 1;
+		}
 
-		while ($row = mysqli_fetch_assoc($result)) {
+		$linhas = [];
+		foreach ($dados as $row) {
 			$statusBadge = '';
 			switch ($row['status']) {
 				case 'enviada': $statusBadge = "<span class='badge badge-warning'>Enviada</span>"; break;
@@ -153,40 +187,54 @@
 				case 'nao_aceita': $statusBadge = "<span class='badge badge-danger'>Rejeitada</span>"; break;
 			}
 
+			// Alerta de duplicidade
+			$alertaDuplicidade = "";
+			$estiloCelulaDuplicada = "";
+			$chave = $row['id_motorista'] . '_' . $row['data_ajuste'];
+			if ($contagemDuplicados[$chave] > 1) {
+				$alertaDuplicidade = "<i class='fa fa-exclamation-triangle text-danger' title='Existem {$contagemDuplicados[$chave]} solicitações para este funcionário neste mesmo dia.' style='cursor:help; margin-left:5px;'></i>";
+				$estiloCelulaDuplicada = "style='background-color: #fff1f0;'";
+			}
+
+			$checkbox = "";
+			if ($row['status'] == 'enviada' || $row['status'] == 'visualizada') {
+				$checkbox = "<input type='checkbox' class='sel-lote' value='{$row['id']}'>";
+			}
+
 			$acoes = "";
 			if ($row['status'] == 'enviada' || $row['status'] == 'visualizada') {
 				$acoes = "
 					<div class='btn-group'>
-						<button type='button' class='btn btn-xs btn-success' onclick=\"if(confirm('Aprovar este ajuste?')) { document.form_acao.id_solicitacao.value='{$row['id']}'; document.form_acao.acao.value='aceitarSolicitacao'; document.form_acao.submit(); }\"><i class='fa fa-check'></i> Aprovar</button>
-						<button type='button' class='btn btn-xs btn-danger' onclick=\"if(confirm('Rejeitar este ajuste?')) { document.form_acao.id_solicitacao.value='{$row['id']}'; document.form_acao.acao.value='rejeitarSolicitacao'; document.form_acao.submit(); }\"><i class='fa fa-times'></i> Rejeitar</button>
+						<button type='button' class='btn btn-xs btn-success' title='Aprovar' onclick=\"if(confirm('Aprovar este ajuste?')) { document.form_acao.id_solicitacao.value='{$row['id']}'; document.form_acao.acao.value='aceitarSolicitacao'; document.form_acao.submit(); }\"><i class='fa fa-check'></i></button>
+						<button type='button' class='btn btn-xs btn-danger' title='Rejeitar' onclick=\"if(confirm('Rejeitar este ajuste?')) { document.form_acao.id_solicitacao.value='{$row['id']}'; document.form_acao.acao.value='rejeitarSolicitacao'; document.form_acao.submit(); }\"><i class='fa fa-times'></i></button>
 					</div>
 				";
 			} else {
 				$cor = ($row['status'] == 'aceita' ? 'green' : 'red');
-				$acoes = "<small style='color:$cor'><b>" . ($row['status'] == 'aceita' ? 'Aprovado' : 'Rejeitado') . "</b></small><br>";
-				$acoes .= "<small>Por: <b>" . ($row['superior_nome'] ?? 'Sistema') . "</b> em " . date('d/m/Y H:i', strtotime($row['data_decisao'])) . "</small>";
+				$acoes = "<small style='color:$cor'><b>" . ($row['status'] == 'aceita' ? 'Aprovado' : 'Rejeitado') . "</b></small>";
 			}
 
 			$cargoDisp = ($row['cargo_usuario'] == 'N/A') ? '' : $row['cargo_usuario'];
 			$setorDisp = ($row['setor_usuario'] == 'N/A') ? '' : $row['setor_usuario'];
 			$subSetorDisp = ($row['subsetor_usuario'] == 'N/A') ? '' : $row['subsetor_usuario'];
 
-			$solicitanteInfo = "<b>Cargo:</b> $cargoDisp<br><b>Setor:</b> $setorDisp<br><b>Sub:</b> $subSetorDisp";
+			$solicitanteInfo = "<small><b>C:</b> $cargoDisp<br><b>S:</b> $setorDisp</small>";
 
 			$linhas[] = [
+				$checkbox,
 				date('d/m/Y H:i', strtotime($row['data_solicitacao'])),
-				"<b>{$row['enti_tx_nome']}</b><br><small>{$row['enti_tx_matricula']}</small>",
+				"<div $estiloCelulaDuplicada><b>{$row['enti_tx_nome']}</b> $alertaDuplicidade<br><small>{$row['enti_tx_matricula']}</small></div>",
 				"<b>" . date('d/m/Y', strtotime($row['data_ajuste'])) . "</b><br>" . $row['hora_ajuste'],
 				$row['macr_tx_nome'],
 				$row['moti_tx_nome'],
-				"<span title='{$row['justificativa']}' style='cursor:help;'>" . (strlen($row['justificativa']) > 30 ? substr($row['justificativa'], 0, 30) . "..." : $row['justificativa']) . "</span>",
+				"<span title='{$row['justificativa']}' style='cursor:help;'>" . (strlen($row['justificativa']) > 20 ? substr($row['justificativa'], 0, 20) . "..." : $row['justificativa']) . "</span>",
 				$solicitanteInfo,
 				$statusBadge,
 				$acoes
 			];
 		}
 
-		$cabecalho_tabela = ["Solicitado em", "Funcionário", "Data/Hora Ajuste", "Tipo", "Motivo", "Justificativa", "Solicitante", "Status", "Ações"];
+		$cabecalho_tabela = ["<input type='checkbox' id='sel-tudo'>", "Solicitado", "Funcionário", "Data/Hora Ajuste", "Tipo", "Motivo", "Justificativa", "Solicitante", "Status", "Ações"];
 
 		// Buscar opções para os combos de filtro
 		$cargos = mysqli_fetch_all(query("SELECT DISTINCT cargo_usuario FROM solicitacoes_ajuste WHERE cargo_usuario IS NOT NULL AND cargo_usuario != '' AND cargo_usuario != 'N/A' ORDER BY cargo_usuario"), MYSQLI_ASSOC);
@@ -234,10 +282,55 @@
 		echo linha_form($campos_filtro);
 		echo fecha_form([botao("Pesquisar", "index", "", "", "", "", "btn btn-primary")]);
 
-		// Script para dependência Setor -> Subsetor
+		// Botões de Ação em Lote
+		echo "
+		<div class='row margin-bottom-10'>
+			<div class='col-sm-12'>
+				<button type='button' class='btn btn-sm btn-success' id='btn-aprovar-lote' style='display:none;' onclick=\"processarLote('aceitarLote')\"><i class='fa fa-check'></i> Aprovar Selecionados</button>
+				<button type='button' class='btn btn-sm btn-danger' id='btn-rejeitar-lote' style='display:none;' onclick=\"processarLote('rejeitarLote')\"><i class='fa fa-times'></i> Rejeitar Selecionados</button>
+			</div>
+		</div>
+		";
+
+		// Script para dependência Setor -> Subsetor e Ações em Lote
 		echo "
 		<script>
+		function processarLote(acao) {
+			const selecionados = Array.from(document.querySelectorAll('.sel-lote:checked')).map(cb => cb.value);
+			if (selecionados.length === 0) return;
+			
+			const confirmMsg = acao === 'aceitarLote' ? 'Aprovar todos os selecionados?' : 'Rejeitar todos os selecionados?';
+			if (confirm(confirmMsg)) {
+				document.form_lote.ids_selecionados.value = selecionados.join(',');
+				document.form_lote.acao_lote.value = acao;
+				document.form_lote.submit();
+			}
+		}
+
 		document.addEventListener('DOMContentLoaded', function() {
+			// Lógica do Checkbox 'Selecionar Tudo'
+			const selTudo = document.getElementById('sel-tudo');
+			const checks = document.querySelectorAll('.sel-lote');
+			const btnAprovar = document.getElementById('btn-aprovar-lote');
+			const btnRejeitar = document.getElementById('btn-rejeitar-lote');
+
+			function toggleBotoesLote() {
+				const temSelecionado = document.querySelectorAll('.sel-lote:checked').length > 0;
+				btnAprovar.style.display = temSelecionado ? 'inline-block' : 'none';
+				btnRejeitar.style.display = temSelecionado ? 'inline-block' : 'none';
+			}
+
+			if (selTudo) {
+				selTudo.addEventListener('change', function() {
+					checks.forEach(cb => cb.checked = selTudo.checked);
+					toggleBotoesLote();
+				});
+			}
+
+			checks.forEach(cb => {
+				cb.addEventListener('change', toggleBotoesLote);
+			});
+
 			const comboSetor = document.getElementById('combo_setor');
 			const comboSubsetor = document.getElementById('combo_subsetor');
 
@@ -294,6 +387,13 @@
 			<input type='hidden' name='cargo_filtro' value='$cargoFiltro'>
 			<input type='hidden' name='setor_filtro' value='$setorFiltro'>
 			<input type='hidden' name='subsetor_filtro' value='$subsetorFiltro'>
+		</form>";
+
+		// Formulário oculto para ações em lote
+		echo "<form name='form_lote' method='POST' style='display:none;'>
+			<input type='hidden' name='acao' value='processarEmLote'>
+			<input type='hidden' name='acao_lote' value=''>
+			<input type='hidden' name='ids_selecionados' value=''>
 		</form>";
 
 		// Marcar as 'enviada' como 'visualizada' para o usuário logado
