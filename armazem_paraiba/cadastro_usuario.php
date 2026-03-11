@@ -590,30 +590,36 @@
 		echo linha_form($fields);
 		
 
-		if (!empty($_POST["userCadastro"]) && !empty($_POST["userAtualiza"]) && ($_POST["userCadastro"] > 0 || $_POST["userAtualiza"] > 0)) {
-			$a_userCadastro = carregar("user", $_POST["userCadastro"]);
-			$txtCadastro = "Registro inserido por ".($a_userCadastro["user_tx_login"]?? "admin").(!empty($_POST["dataCadastro"])?" às ".data($_POST["dataCadastro"], 1): "").".";
-			$cAtualiza[] = 
-					"<div class='col-sm-4 margin-bottom-5'>
-						<label>Última Atualização:</label>
-						<p class='text-left' style=''>".$txtCadastro."</p>
-					</div>"
-				;
-			if ($_POST["userAtualiza"] > 0) {
-				$a_userAtualiza = carregar("user", $_POST["userAtualiza"]);
-				$txtAtualiza = "Registro atualizado por $a_userAtualiza[user_tx_login] às ".data($_POST["dataAtualiza"], 1).".";
-				$cAtualiza[] = 
-					"<div class='col-sm-4 margin-bottom-5'>
-						<label>Última Atualização:</label>
-						<p class='text-left' style=''>".$txtAtualiza."</p>
-					</div>"
-				;
-			}
-			echo "<br>";
-			echo linha_form($cAtualiza);
-		}
+		$cAtualiza = [];
 
-		echo fecha_form($buttons);
+        if (!empty($_POST["userCadastro"]) && $_POST["userCadastro"] > 0) {
+            $a_userCadastro = carregar("user", $_POST["userCadastro"]);
+            $txtCadastro = "Registro inserido por ".($a_userCadastro["user_tx_login"]?? "admin").(!empty($_POST["dataCadastro"])?" às ".data($_POST["dataCadastro"], 1): "").".";
+            $cAtualiza[] = 
+                "<div class='col-sm-4 margin-bottom-5'>
+                    <label>Dados de Criação:</label>
+                    <p class='text-left' style=''>".$txtCadastro."</p>
+                </div>";
+        }
+
+        if (!empty($_POST["userAtualiza"]) && $_POST["userAtualiza"] > 0) {
+            $a_userAtualiza = carregar("user", $_POST["userAtualiza"]);
+            $txtAtualiza = "Registro atualizado por ".($a_userAtualiza["user_tx_login"]?? "admin").(!empty($_POST["dataAtualiza"])?" às ".data($_POST["dataAtualiza"], 1): "").".";
+            $cAtualiza[] = 
+                "<div class='col-sm-4 margin-bottom-5'>
+                    <label>Última Atualização:</label>
+                    <p class='text-left' style=''>".$txtAtualiza."</p>
+                </div>";
+        }
+
+        // 3. Só imprime a linha se houver alguma informação para mostrar
+        if (!empty($cAtualiza)) {
+            echo "<br>";
+            echo linha_form($cAtualiza);
+        }
+
+        echo fecha_form($buttons);
+
 		echo "<form name='form_excluir_arquivo' method='post' action='cadastro_usuario.php'>
                 <input type='hidden' name='id' value=''>
                 <input type='hidden' name='nome_arquivo' value=''>
