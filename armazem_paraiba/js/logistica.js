@@ -7,7 +7,6 @@ document.addEventListener("DOMContentLoaded", () => {
       event.preventDefault();
   
 
-      
       const plate = document.getElementById("plate").value;
       const dateStart = document.getElementById("date_start").value;
       const dateEnd = document.getElementById("date_end").value;
