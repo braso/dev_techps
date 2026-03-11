@@ -190,20 +190,6 @@
 		//Atualizando usuário existente
 		atualizarUsuario($usuario);
 		$id = $_POST["id"];
-		
-		if(empty($_POST["id"])){//Criando novo usuário
-            $usuario["user_nb_userCadastro"] = $_SESSION["user_nb_id"];
-            $usuario["user_tx_dataCadastro"] = date("Y-m-d H:i:s");
-
-            $id = inserir("user", array_keys($usuario), array_values($usuario));
-            $_POST["id"] = $id;
-            
-            // ---> COLE O BLOCO DO RFID AQUI <---
-
-            set_status("Cadastro inserido com sucesso!");
-            modificarUsuario();
-            exit;
-        }
 
 		$idUserFoto = mysqli_fetch_assoc(query(
 			"SELECT user_nb_id FROM user WHERE user_nb_id = {$id} LIMIT 1;"
@@ -237,20 +223,25 @@
         // ATUALIZAÇÃO DO CRÁCHA (RFID) NO BANCO DE DADOS
         // =========================================================================
         $rfid_selecionado = !empty($_POST["rfid_id"]) ? trim($_POST["rfid_id"]) : "";
-        $id_do_usuario = (int)$_POST["id"]; // O ID do usuário que acabou de ser salvo/atualizado
+        $id_do_usuario = (int)$_POST["id"]; // O ID do user que acabou de ser salvo/atualizado
+        $status_do_usuario = !empty($_POST["status"]) ? $_POST["status"] : "ativo";
 
-        // 1. DEVOLVER PARA A GAVETA: Tira da mão deste usuário qualquer cartão ativo que ele tinha
-        // (Isso garante que se ele trocar de crachá, o antigo volta a ficar disponível)
+        // REGRA DE SEGURANÇA: Se inativou o usuário, arranca o crachá dele à força
+        if ($status_do_usuario == "inativo") {
+            $rfid_selecionado = ""; // Ignora o que veio no select e manda desvincular
+        }
+
+        // 1. DEVOLVER PARA A GAVETA: Tira da mão deste usuário qualquer cartão ativo que ele tenha
         query("UPDATE rfids SET rfids_tx_status = 'disponivel', rfids_nb_entidade_id = NULL WHERE rfids_nb_entidade_id = {$id_do_usuario} AND rfids_tx_status = 'ativo'");
 
-        // 2. VINCULAR O NOVO: Se o chefe selecionou um cartão na tela, ativa ele para este usuário
+        // 2. VINCULAR O NOVO: Se tem um cartão válido e o usuário está ativo
         if ($rfid_selecionado != "") {
             query("UPDATE rfids SET rfids_tx_status = 'ativo', rfids_nb_entidade_id = {$id_do_usuario} WHERE rfids_nb_id = " . (int)$rfid_selecionado);
         }
         // =========================================================================
 
-		modificarUsuario();
-		exit;
+        modificarUsuario();
+        exit;
 	}
 
 	function excluirUsuario(){
@@ -397,16 +388,26 @@
         // 2. Só tenta ler se a query NÃO deu erro (se não for false)
         if ($rsRfids) {
             while($r = mysqli_fetch_assoc($rsRfids)){
-                $label = $r["rfids_tx_uid"];
-                if(!empty($r["rfids_tx_descricao"])) {
-                    $label .= " - " . $r["rfids_tx_descricao"];
-                }
-                
-                if($r["rfids_tx_status"] != 'disponivel' && $r["rfids_tx_status"] != 'ativo') {
-                    $label .= " (STATUS: " . strtoupper($r["rfids_tx_status"]) . ")";
-                }
-                $rfidOptions[$r["rfids_nb_id"]] = $label;
-            }
+				$label = $r["rfids_tx_uid"];
+				
+				if(!empty($r["rfids_tx_descricao"])) {
+					// Pega a descrição
+					$descricao = $r["rfids_tx_descricao"];
+					
+					// Se for maior que 35 caracteres, corta e adiciona "..."
+					if (mb_strlen($descricao) > 35) {
+						$descricao = mb_substr($descricao, 0, 35) . "...";
+					}
+					
+					$label .= " - " . $descricao;
+				}
+				
+				if($r["rfids_tx_status"] != 'disponivel' && $r["rfids_tx_status"] != 'ativo') {
+					$label .= " (STATUS: " . strtoupper($r["rfids_tx_status"]) . ")";
+				}
+				
+				$rfidOptions[$r["rfids_nb_id"]] = $label;
+			}
         } else {
             // Se falhar, avisa na tela em vez de derrubar o sistema inteiro
             global $conn; // Puxa a conexão caso ela esteja no escopo global
