@@ -173,9 +173,10 @@
 
 	function excluir_documento() {
 
-		query("DELETE FROM documento_empresa WHERE docu_nb_id = $_POST[idArq]");
-		
-		$_POST["id"] = $_POST["idRelacionado"];
+		$idArq = intval($_POST["idArq"] ?? 0);
+		query("DELETE FROM documento_empresa WHERE docu_nb_id = {$idArq}");
+		$empresaId = $_POST["idRelacionado"] ?? $_POST["idEmpresa"] ?? null;
+		$_POST["id"] = $empresaId;
 		editarEmpresa();
 		exit;
 	}
@@ -874,8 +875,9 @@
 
         $configuracao = gerarAcoesComConfirmacao(
             "cadastro_empresa.php", 
-            "editarEmpresa()", 
-            "excluirEmpresa" 
+            "editarEmpresa", 
+            "excluirEmpresa",
+			"Tem certeza que deseja excluir a empresa código: " 
         );
     
         $gridFields["actions"] = $configuracao["tags"];

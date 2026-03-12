@@ -306,6 +306,7 @@
         $tab = substr($tabela,0,4);
         if($tabela === 'usuario_perfil'){ $tab = 'uperf'; }
         if($tabela === 'perfil_acesso'){ $tab = 'perfil'; }
+        if($tabela === 'rfids'){ $tab = 'rfids'; }
         $camposString = "";
 		for($i=0;$i<count($campos);$i++){
 			$camposString .= ", ".$campos[$i]." = ";
@@ -321,7 +322,7 @@
 		if(strlen($camposString) > 2){
 			$camposString = substr($camposString, 2);
 		}
-
+		
 		try{
 			query("UPDATE ".$tabela." SET ".$camposString." WHERE ".$tab."_nb_id = ".$id);
 			set_status("Registro atualizado com sucesso!");
@@ -370,18 +371,35 @@
     }
 
     function carregar($tabela, string $id="", $campo="", $valor="", $extra="", $exibe=0){
+		if(!is_string($tabela) || !preg_match('/^[A-Za-z0-9_]+$/', $tabela)){
+			return [];
+		}
+
         $extraCondicoes = "";
+		$types = "";
+		$vars = [];
         $prefixId = substr($tabela,0,4);
         if($tabela === 'usuario_perfil'){ $prefixId = 'uperf'; }
         if($tabela === 'perfil_acesso'){ $prefixId = 'perfil'; }
-        $extra_id = (!empty($id))? " AND ".$prefixId."_nb_id = ".$id: "";
+        $extra_id = "";
+		if($id !== "" && is_numeric($id) && intval($id) > 0){
+			$extra_id = " AND ".$prefixId."_nb_id = ? ";
+			$types .= "i";
+			$vars[] = intval($id);
+		}
 
 		if(!empty($campo[0])) {
 			$a_campo = explode(",", $campo);
 			$a_valor = explode(",", $valor);
 
 			for($i = 0; $i < count($a_campo); $i++) {
-				$extraCondicoes .= " AND ".str_replace(",", "", $a_campo[$i])." = '".str_replace(",", "", $a_valor[$i])."' ";
+				$col = trim(str_replace(",", "", $a_campo[$i]));
+				if($col === "" || !preg_match('/^[A-Za-z0-9_]+$/', $col)){
+					continue;
+				}
+				$extraCondicoes .= " AND {$col} = ? ";
+				$types .= "s";
+				$vars[] = str_replace(",", "", $a_valor[$i]);
 			}
 		}
 
@@ -394,6 +412,9 @@
 		if(empty($extra_id) && empty($extraCondicoes) && empty($extra)){
 			return [];
 		}else{
+			if(!empty($types) && !empty($vars)){
+				return mysqli_fetch_array(query($query, $types, $vars));
+			}
 			return mysqli_fetch_array(query($query));
 		}
 	}

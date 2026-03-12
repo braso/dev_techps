@@ -1,6 +1,6 @@
 <?php
   
-  /*
+/*
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
@@ -8,6 +8,7 @@
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
 */
+	include_once "utils/utils.php";
 	include_once "check_permission.php";
 	include "conecta.php";
 	
@@ -86,7 +87,7 @@
 				function filtrarSubSetor(id) {
 					var el = document.getElementsByName('subSetor')[0];
 					if (!el) return;
-					el.innerHTML = '<option value=\'\' disabled selected>Selecione</option>';
+					el.innerHTML = '<option value=\'\' selected>Selecione</option>';
 					el.disabled = true;
 					if (!id) { el.parentElement.style.display = 'none'; return; }
 					var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=sbgrupos_documentos&limite=200&condicoes=' + encodeURI('AND sbgr_nb_idgrup = '+id);
@@ -129,7 +130,7 @@
 					var setorBusca = document.getElementsByName('busca_setor')[0];
 					var el = document.getElementsByName('busca_subsetor')[0];
 					if (!setorBusca || !el) return;
-					el.innerHTML = '<option value=\'\' disabled selected>Selecione</option>';
+					el.innerHTML = '<option value=\'\' selected>Selecione</option>';
 					var id = setorBusca.value;
 					if (!id) { el.disabled = true; return; }
 					var url = '".$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/contex20/select2.php?path=".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."&tabela=sbgrupos_documentos&limite=200&condicoes=' + encodeURI('AND sbgr_nb_idgrup = '+id);
@@ -204,7 +205,34 @@
 
 				parent.document.getElementsByName('divJornada')[0].style.display = '{$displayCamposJornada}';
 
-				
+				function irParaUsuario(idUser) {
+					var form = document.createElement('form');
+					form.method = 'POST';
+					form.action = 'cadastro_usuario.php';
+
+					var inputAcao = document.createElement('input');
+					inputAcao.type = 'hidden';
+					inputAcao.name = 'acao';
+					inputAcao.value = 'modificarUsuario';
+					form.appendChild(inputAcao);
+
+					var inputId = document.createElement('input');
+					inputId.type = 'hidden';
+					inputId.name = 'id';
+					inputId.value = idUser;
+					form.appendChild(inputId);
+
+                    // Avisa para o usuário que viemos da tela de funcionário (opcional, para controle futuro)
+                    var fieldOrigem = document.createElement('input');
+                    fieldOrigem.type = 'hidden';
+                    fieldOrigem.name = 'tela_origem';
+                    fieldOrigem.value = 'ficha_funcionario';
+                    form.appendChild(fieldOrigem);
+
+					document.body.appendChild(form);
+					form.submit();
+				}
+
 				function imprimir() {
 					// Abrir a caixa de diálogo de impressão
 					// window.print();
@@ -670,6 +698,8 @@
 				index();
 				exit;
 			}
+
+			
 			query("COMMIT;");
 		}else{ // Se está editando um motorista existente
 
@@ -726,6 +756,7 @@
 
 			atualizar("entidade", array_keys($novoMotorista), array_values($novoMotorista), $_POST["id"]);
 			$id = $_POST["id"];
+
 		}
 
 		$file_type = $_FILES["cnhAnexo"]["type"]; //returns the mimetype
@@ -769,18 +800,37 @@
 	function modificarMotorista(){
 		global $a_mod;
 
-		$a_mod = carregar("entidade", $_POST["id"]);
+		$id = intval($_POST["id"] ?? 0);
+		if($id <= 0){
+			set_status("ERRO: Código do funcionário inválido.");
+			index();
+			exit;
+		}
+
+		$a_mod = carregar("entidade", $id);
+		if(empty($a_mod)){
+			set_status("ERRO: Funcionário não encontrado.");
+			index();
+			exit;
+		}
 		//dd($a_mod, false);
 		visualizarCadastro();
 		exit;
 	}
 
 	function excluirMotorista(){
+		$id = intval($_POST["id"] ?? 0);
+		if($id <= 0){
+			set_status("ERRO: Código do funcionário inválido.");
+			index();
+			exit;
+		}
+
 		$motorista = mysqli_fetch_assoc(query(
 			"SELECT enti_tx_desligamento, user_nb_id FROM entidade 
 				LEFT JOIN user ON enti_nb_id = user_nb_entidade
 				WHERE enti_tx_status = 'ativo'
-					AND enti_nb_id = ".$_POST["id"]."
+					AND enti_nb_id = ".$id."
 				LIMIT 1;"
 		));
 
@@ -794,7 +844,7 @@
 			$motorista["enti_tx_desligamento"] = date("Y-m-d");
 		}
 		
-		atualizar("entidade", ["enti_tx_status", "enti_tx_desligamento"], ["inativo", $motorista["enti_tx_desligamento"]], $_POST["id"]);
+		atualizar("entidade", ["enti_tx_status", "enti_tx_desligamento"], ["inativo", $motorista["enti_tx_desligamento"]], $id);
 		if(!empty($motorista["user_nb_id"])){
 			atualizar("user", ["user_tx_status"], ["inativo"], $motorista["user_nb_id"]);
 		}
@@ -1295,6 +1345,44 @@
 		
 		$tabIndex = 1;
 
+		// Busca o Usuário (1:1) vinculado a este funcionário para checar o RFID
+		$entityIdForRfid = !empty($a_mod["enti_nb_id"]) ? (int)$a_mod["enti_nb_id"] : 0;
+		$userIdForRedirect = "";
+		$rfidTexto = "Sem RFID vinculado";
+
+		if ($entityIdForRfid > 0) {
+            // Descobre o ID do usuário (tabela user)
+			$rowUser = mysqli_fetch_assoc(query("SELECT user_nb_id FROM user WHERE user_nb_entidade = {$entityIdForRfid} AND user_tx_status = 'ativo' LIMIT 1"));
+			
+			if (!empty($rowUser)) {
+				$userIdForRedirect = $rowUser["user_nb_id"];
+				
+				// Busca o RFID pelo ID do usuário
+				$rowAssigned = mysqli_fetch_assoc(query("SELECT rfids_tx_uid, rfids_tx_descricao FROM rfids WHERE rfids_nb_entidade_id = {$userIdForRedirect} AND rfids_tx_status = 'ativo' LIMIT 1"));
+				
+				if (!empty($rowAssigned)) {
+					$rfidTexto = "<b>" . $rowAssigned["rfids_tx_uid"] . "</b>";
+					if (!empty($rowAssigned["rfids_tx_descricao"])) {
+                        // Trunca a descrição se for muito longa
+                        $descricao = $rowAssigned["rfids_tx_descricao"];
+                        if (mb_strlen($descricao) > 35) {
+                            $descricao = mb_substr($descricao, 0, 35) . "...";
+                        }
+						$rfidTexto .= " - " . $descricao;
+					}
+				}
+			}
+		}
+
+		$btnAlterarRfid = "";
+		if (!empty($userIdForRedirect)) {
+			// Tem usuário, mostra o botão de lápis que leva pra tela de usuários
+			$btnAlterarRfid = "&nbsp;&nbsp;<a href=\"javascript:void(0);\" onclick=\"irParaUsuario({$userIdForRedirect})\" title=\"Editar vínculo no Cadastro de Usuário\" style=\"color: #f0ad4e;\"><span class=\"glyphicon glyphicon-pencil\"></span></a>";
+		} elseif ($entityIdForRfid > 0) {
+			// Tem funcionário mas não tem usuário ativo
+			$btnAlterarRfid = "&nbsp;&nbsp;<small style='color:red;'>(Ative o usuário para vincular crachá)</small>";
+		}
+
 		$camposImg = [
 			$img,
 			arquivo("Arquivo (.png, .jpg)", "foto", ($a_mod["enti_tx_foto"]?? ""), 4, "tabindex=".sprintf("%02d", $tabIndex++))
@@ -1316,7 +1404,8 @@
 			campo("Telefone 1*", 			"fone1", 			($a_mod["enti_tx_fone1"]?? ""),			2, "MASCARA_CEL", 		"tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Telefone 2",  			"fone2", 			($a_mod["enti_tx_fone2"]?? ""),			2, "MASCARA_CEL", 		"tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Login",					"login", 			($a_mod["user_tx_login"]?? ""),			2, "", 					"tabindex=".sprintf("%02d", $tabIndex++)),
-			combo("Status", 				"status", 			($a_mod["enti_tx_status"]?? ""),		1, $statusOpt, 			"tabindex=".sprintf("%02d", $tabIndex++))
+			combo("Status", 			"status", 			($a_mod["enti_tx_status"]?? ""),			1, $statusOpt, 			"tabindex=".sprintf("%02d", $tabIndex++)),
+			texto("Crachá (RFID)".$btnAlterarRfid, $rfidTexto, 2, "")
 		];
 
 		$camposPessoais = [
@@ -1590,20 +1679,20 @@ function index(){
 			$extraEmpresa = " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
 		}
 		
-		if(!empty($_POST["busca_cpf"])){
-			$_POST["busca_cpf"] = preg_replace( "/[^0-9]/is", "", $_POST["busca_cpf"]);
+		if(!empty($_POST["busca_cpf_like"])){
+			$_POST["busca_cpf_like"] = preg_replace( "/[^0-9]/is", "", $_POST["busca_cpf_like"]);
 		}
 
 		$camposBusca = [
 			campo("Código",						"busca_codigo",			(!empty($_POST["busca_codigo"])? $_POST["busca_codigo"]: ""), 1,"","maxlength='6'"),
 			campo("Nome",						"busca_nome_like",		(!empty($_POST["busca_nome_like"])? $_POST["busca_nome_like"]: ""), 2,"","maxlength='65'"),
 			campo("Matrícula",					"busca_matricula_like",	(!empty($_POST["busca_matricula_like"])? $_POST["busca_matricula_like"]: ""), 1,"","maxlength='20'"),
-			campo("CPF",						"busca_cpf",			(!empty($_POST["busca_cpf"])? $_POST["busca_cpf"]: ""), 2, "MASCARA_CPF"),
+			campo("CPF",						"busca_cpf_like",			(!empty($_POST["busca_cpf_like"])? $_POST["busca_cpf_like"]: ""), 2, "MASCARA_CPF"),
 			combo_bd("!Empresa",				"busca_empresa",		(!empty($_POST["busca_empresa"])? $_POST["busca_empresa"]: ""), 2, "empresa", "", $extraEmpresa),
 			combo("Ocupação",					"busca_ocupacao",		(!empty($_POST["busca_ocupacao"])? $_POST["busca_ocupacao"]: ""), 2, ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
 			combo("Convenção Padrão",			"busca_padrao",			(!empty($_POST["busca_padrao"])? $_POST["busca_padrao"]: ""), 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
 			combo_bd("!Parâmetros da Jornada", 	"busca_parametro", 		(!empty($_POST["busca_parametro"])? $_POST["busca_parametro"]: ""), 4, "parametro"),
-			combo("Status", 					"busca_status", 			(!empty($_POST["busca_status"])? $_POST["busca_status"]: "Todos"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
+			combo("Status", 					"busca_status", 			(isset($_POST["busca_status"])? $_POST["busca_status"]: "ativo"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
 			combo_bd("!Setor", 				"busca_setor", 			(!empty($_POST["busca_setor"])? $_POST["busca_setor"]: ""), 2, "grupos_documentos"),
             combo_bd("!Subsetor",            "busca_subsetor",        (!empty($_POST["busca_subsetor"]) ? $_POST["busca_subsetor"] : ""), 2, "sbgrupos_documentos", "", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " ORDER BY sbgr_tx_nome ASC")),
 			combo_bd("!Cargo", 				"busca_operacao", 		(!empty($_POST["busca_operacao"])? $_POST["busca_operacao"]: ""), 2, "operacao")
@@ -1634,23 +1723,94 @@ function index(){
             </div>";
 		
 
-		//Configuração da tabela dinâmica{
-            $gridFields = [
+			$gridFields = [
                 "CÓDIGO" 				=> "enti_nb_id",
                 "NOME" 					=> "enti_tx_nome",
-                "MATRÍCULA" 				=> "enti_tx_matricula",
+                "MATRÍCULA" 			=> "enti_tx_matricula",
                 "CPF" 					=> "enti_tx_cpf",
                 "EMPRESA" 				=> "empr_tx_nome",
-                "CARGO" 					=> "oper_tx_nome",
+                "CARGO" 				=> "oper_tx_nome",
                 "SETOR" 				=> "grup_tx_nome",
-                "SUBSETOR" 			=> "sbgr_tx_nome",
+                "SUBSETOR" 			    => "sbgr_tx_nome",
                 "FONE 1" 				=> "enti_tx_fone1",
                 "OCUPAÇÃO" 				=> "enti_tx_ocupacao",
-                "DATA CADASTRO" 		=> "DATE_FORMAT(enti_tx_dataCadastro, '%d/%m/%Y %H:%i:%s')",
+                "DATA CADASTRO" 		=> "DATE_FORMAT(enti_tx_dataCadastro, '%d/%m/%Y')",
                 "PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
                 "CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
-                "STATUS" 				=> "enti_tx_status"
+                "STATUS" 				=> "enti_tx_status",
+                "AUTENTICAÇÃO"          => "rfids_nb_id" 
             ];
+
+			$allGridFields = [
+                "CÓDIGO" 				=> "enti_nb_id",
+                "NOME" 					=> "enti_tx_nome",
+                "MATRÍCULA" 			=> "enti_tx_matricula",
+                "CPF" 					=> "enti_tx_cpf",
+                "EMPRESA" 				=> "empr_tx_nome",
+                "CARGO" 				=> "oper_tx_nome",
+                "SETOR" 				=> "grup_tx_nome",
+                "SUBSETOR" 				=> "sbgr_tx_nome",
+                "FONE 1" 				=> "enti_tx_fone1",
+                "OCUPAÇÃO" 				=> "enti_tx_ocupacao",
+                "DATA CADASTRO" 		=> "DATE_FORMAT(enti_tx_dataCadastro, '%d/%m/%Y')",
+                "PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
+                "CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
+                "STATUS" 				=> "enti_tx_status",
+                "AUTENTICAÇÃO"          => "rfids_nb_id",
+				"E-MAIL"                => "enti_tx_email",
+                "TELEFONE 2"            => "enti_tx_fone2",
+                "NASCIMENTO"            => "DATE_FORMAT(enti_tx_nascimento, '%d/%m/%Y')",
+                "RG"                    => "enti_tx_rg",
+                "ESTADO CIVIL"          => "enti_tx_civil",
+                "SEXO"                  => "enti_tx_sexo",
+                "RG ÓRGÃO"              => "enti_tx_rgOrgao",
+                "RG DATA EMISSÃO"       => "DATE_FORMAT(enti_tx_rgDataEmissao, '%d/%m/%Y')",
+                "RG UF"                 => "enti_tx_rgUf",
+                "RAÇA/COR"              => "enti_tx_racaCor",
+                "TIPO SANGUÍNEO"        => "enti_tx_tipoSanguineo",
+                "CEP"                   => "enti_tx_cep",
+                "CIDADE"                => "CONCAT(cid_residencia.cida_tx_nome, '/', cid_residencia.cida_tx_uf)",
+                "BAIRRO"                => "enti_tx_bairro",
+                "ENDEREÇO"              => "enti_tx_endereco",
+                "NÚMERO"                => "enti_tx_numero",
+                "COMPLEMENTO"           => "enti_tx_complemento",
+                "REFERÊNCIA"            => "enti_tx_referencia",
+                "PAI"                   => "enti_tx_pai",
+                "MÃE"                   => "enti_tx_mae",
+                "CÔNJUGE"               => "enti_tx_conjugue",
+                "OBSERVAÇÕES"           => "enti_tx_obs",
+                "SALÁRIO"               => "enti_nb_salario",
+                "ADMISSÃO"              => "DATE_FORMAT(enti_tx_admissao, '%d/%m/%Y')",
+                "DESLIGAMENTO"          => "DATE_FORMAT(enti_tx_desligamento, '%d/%m/%Y')",
+                "BANCO HORAS"           => "enti_tx_banco",
+                "SUBCONTRATADO"         => "enti_tx_subcontratado",
+                "PIS"                   => "enti_tx_pis",
+                "CTPS NÚMERO"           => "enti_tx_ctpsNumero",
+                "CTPS SÉRIE"            => "enti_tx_ctpsSerie",
+                "CTPS UF"               => "enti_tx_ctpsUf",
+                "TÍTULO NÚMERO"         => "enti_tx_tituloNumero",
+                "TÍTULO ZONA"           => "enti_tx_tituloZona",
+                "TÍTULO SEÇÃO"          => "enti_tx_tituloSecao",
+                "RESERVISTA"            => "enti_tx_reservista",
+                "REGISTRO FUNCIONAL"    => "enti_tx_registroFuncional",
+                "ORGÃO REG. FUNC."      => "enti_tx_OrgaoRegimeFuncional",
+                "VENCIMENTO REGISTRO"   => "DATE_FORMAT(enti_tx_vencimentoRegistro, '%d/%m/%Y')",
+                "JORNADA SEMANAL"       => "enti_tx_jornadaSemanal",
+                "JORNADA SÁBADO"        => "enti_tx_jornadaSabado",
+                "HE SEMANAL %"          => "enti_tx_percHESemanal",
+                "HE EXTRA %"            => "enti_tx_percHEEx",
+                "CNH REGISTRO"          => "enti_tx_cnhRegistro",
+                "CNH CATEGORIA"         => "enti_tx_cnhCategoria",
+                "CNH CIDADE"            => "CONCAT(cid_cnh.cida_tx_nome, '/', cid_cnh.cida_tx_uf)",
+                "CNH EMISSÃO"           => "DATE_FORMAT(enti_tx_cnhEmissao, '%d/%m/%Y')",
+                "CNH VALIDADE"          => "DATE_FORMAT(enti_tx_cnhValidade, '%d/%m/%Y')",
+                "CNH 1ª HABILITAÇÃO"    => "DATE_FORMAT(enti_tx_cnhPrimeiraHabilitacao, '%d/%m/%Y')",
+                "CNH PERMISSÃO"         => "enti_tx_cnhPermissao",
+                "CNH PONTUAÇÃO"         => "enti_tx_cnhPontuacao",
+                "CNH ATIV. REMUNERADA"  => "enti_tx_cnhAtividadeRemunerada",
+                "CNH OBS"               => "enti_tx_cnhObs"
+				
+			];
 	
 			$camposBusca = [
 				"busca_codigo" 			=> "enti_nb_id",
@@ -1668,81 +1828,115 @@ function index(){
 			];
 	
             $queryBase = (
-                "SELECT ".implode(", ", array_values($gridFields))." FROM entidade"
+                "SELECT ".implode(", ", array_values($allGridFields))." FROM entidade"
                     ." JOIN empresa ON enti_nb_empresa = empr_nb_id"
                     ." LEFT JOIN grupos_documentos ON enti_setor_id = grup_nb_id"
                     ." LEFT JOIN sbgrupos_documentos subg ON enti_subSetor_id = subg.sbgr_nb_id"
                     ." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
                     ." LEFT JOIN operacao ON enti_tx_tipoOperacao = oper_nb_id"
+                    ." LEFT JOIN cidade cid_residencia ON enti_nb_cidade = cid_residencia.cida_nb_id"
+                    ." LEFT JOIN cidade cid_cnh ON enti_nb_cnhCidade = cid_cnh.cida_nb_id"
+                    // <-- JOIN ADICIONADO AQUI PARA BUSCAR O RFID:
+                    ." LEFT JOIN rfids ON rfids.rfids_nb_entidade_id = enti_nb_id AND rfids.rfids_tx_status = 'ativo'"
             );
 	
-			$actions = criarIconesGrid(
-				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-button"],
-				["cadastro_funcionario.php", "javascript:void(0)"],
-				["modificarMotorista()", "excluirMotorista()"]
-			);
-	
+			// 1. Chamamos a utilitária para gerar os botões padrão (limpando aquele seu JS antigo manual!)
+            $acoesGrid = gerarAcoesComConfirmacao(
+                "cadastro_funcionario.php", 
+                "modificarMotorista", 
+                "excluirMotorista", 
+                "Deseja excluir o funcionário código: ", 
+                "CÓDIGO"
+            );
 
-			// 2. Anula o JS automático
-			$actions["functions"][1] = ""; 
+            $gridFields["actions"] = $acoesGrid["tags"];
 
-			// 3. Força o HTML da lixeira (mantendo o ícone 'remove' original)
-			$actions["tags"][1] = '<span class="glyphicon glyphicon-remove search-button" onclick="confirmarExclusao(this)" title="Excluir" style="color:#d9534f; cursor:pointer;"></span>';
+            // 2. Mesclamos o JS da utilitária com as regras dinâmicas
+            $jsFunctions = $acoesGrid["js"] . "
+                
+                // FUNÇÃO RADAR: Descobre em qual índice numérico uma coluna está baseada no nome
+                const pegarIndiceColuna = function(nomeColuna) {
+                    var index = -1;
+                    $('table thead th').each(function(i) {
+                        if ($(this).text().trim().toUpperCase() === nomeColuna.toUpperCase()) {
+                            index = i;
+                            return false; // Interrompe o loop ao encontrar
+                        }
+                    });
+                    return index;
+                };
+
+                // FUNÇÃO: Varre a tabela e desenha os ícones HTML de biometria/crachá
+                const formatarBiometria = function() {
+                    // Descobre onde as colunas estão agora
+                    var idxCodigo = pegarIndiceColuna('CÓDIGO');
+                    var idxAutenticacao = pegarIndiceColuna('AUTENTICAÇÃO');
+
+                    // Se não achar as colunas, aborta para não quebrar a tela
+                    if (idxCodigo === -1 || idxAutenticacao === -1) return;
+
+                    $('table tbody tr').each(function() {
+                        var colIdUser = $(this).find('td').eq(idxCodigo).text().trim();
+                        var tdAutenticacao = $(this).find('td').eq(idxAutenticacao); 
+                        var idRfid = tdAutenticacao.text().trim(); 
+                        
+                        if (!colIdUser) return;
+                        
+                        var htmlIcones = '';
+                        
+                        if (idRfid !== '') {
+                            htmlIcones += '<span onclick=\"abrirRfidDireto(' + idRfid + ', ' + colIdUser + ')\" class=\"glyphicon glyphicon-credit-card\" style=\"color: #28a745; font-size: 14px; margin-right: 12px; cursor: pointer;\" title=\"Editar Crachá Ativo\"></span>';
+                        } else {
+                            htmlIcones += '<span class=\"glyphicon glyphicon-credit-card\" style=\"color: #d6d6d6; font-size: 14px; margin-right: 12px;\" title=\"Sem Crachá Ativo\"></span>';
+                        }
+                        
+                        htmlIcones += '<span class=\"glyphicon glyphicon-hand-up\" style=\"color: #d6d6d6; font-size: 14px; margin-right: 12px;\" title=\"Sem Digital\"></span>';
+                        htmlIcones += '<span class=\"glyphicon glyphicon-user\" style=\"color: #d6d6d6; font-size: 14px;\" title=\"Sem Facial\"></span>';
+                        
+                        tdAutenticacao.html(htmlIcones);
+                    });
+                };
+
+                window.abrirRfidDireto = function(idRfid, idUsuario) {
+                    var form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = 'cadastro_rfid.php';
+                    
+                    var inputId = document.createElement('input');
+                    inputId.type = 'hidden';
+                    inputId.name = 'id';
+                    inputId.value = idRfid;
+                    form.appendChild(inputId);
+                    
+                    var inputAcao = document.createElement('input');
+                    inputAcao.type = 'hidden';
+                    inputAcao.name = 'acao';
+                    inputAcao.value = 'editarRfid';
+                    form.appendChild(inputAcao);
+
+                    // bilhete dizendo que viemos do Grid de Funcionário
+                    var fieldOrigem = document.createElement('input');
+                    fieldOrigem.type = 'hidden';
+                    fieldOrigem.name = 'tela_origem';
+                    fieldOrigem.value = 'grid_funcionario';
+                    form.appendChild(fieldOrigem);
+                    
+                    document.body.appendChild(form);
+                    form.submit();
+                };
+
+                // Executa as funções no ciclo de vida do grid
+                var funcoesInternasAntiga = funcoesInternas; 
+                funcoesInternas = function(){
+                    // Roda o JS da lupa e do SweetAlert
+                    if(typeof funcoesInternasAntiga === 'function') funcoesInternasAntiga(); 
+                    
+                    // Roda a formatação de crachás
+                    formatarBiometria(); 
+                };
+            ";
 	
-			$gridFields["actions"] = $actions["tags"];
-			$jsDoEditar = $actions["functions"][0];
-	
-			// 4. JavaScript Ajustado
-			$jsFunctions = '
-				const funcoesInternas = function(){
-					try {
-						' . $jsDoEditar . '
-					} catch(e) { console.error(e); }
-				};
-	
-				window.confirmarExclusao = function(elemento){
-					var linha = $(elemento).closest("tr");
-					var id = linha.find("td:eq(0)").text(); 
-	
-					Swal.fire({
-						title: "Tem certeza?",
-						text: "Excluir funcionário código: " + id,
-						icon: "warning",
-						showCancelButton: true,
-						confirmButtonColor: "#d33",    // Vermelho para Ação Perigosa
-						cancelButtonColor: "#6c757d",  // Cinza para Cancelar (Neutro)
-						confirmButtonText: "Sim, excluir!",
-						cancelButtonText: "Cancelar"
-					}).then((result) => {
-						if (result.isConfirmed) {
-							enviarExclusao(id);
-						}
-					});
-				};
-	
-				window.enviarExclusao = function(id){
-					var form = document.createElement("form");
-					form.method = "POST";
-					form.action = ""; 
-					
-					var fieldAcao = document.createElement("input");
-					fieldAcao.type = "hidden";
-					fieldAcao.name = "acao";
-					fieldAcao.value = "excluirMotorista";
-					form.appendChild(fieldAcao);
-	
-					var fieldId = document.createElement("input");
-					fieldId.type = "hidden";
-					fieldId.name = "id";
-					fieldId.value = id; 
-					form.appendChild(fieldId);
-	
-					document.body.appendChild(form);
-					form.submit();
-				};
-			';
-	
-			echo gridDinamico("tabelaMotoristas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+			echo gridDinamico("tabelaMotoristas", $gridFields, $camposBusca, $queryBase, $jsFunctions, 12, -1, $allGridFields);
 		//}
 
 		rodape();

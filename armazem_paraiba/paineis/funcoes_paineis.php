@@ -163,9 +163,26 @@ function criar_relatorio_saldo() {
 						LEFT JOIN operacao ON  oper_nb_id = enti_tx_tipoOperacao
 						LEFT JOIN grupos_documentos ON  grup_nb_id = enti_setor_id
 						LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id
+						JOIN user ON user.user_nb_entidade = entidade.enti_nb_id
 						WHERE enti_tx_status = 'ativo'
 							AND DATE_FORMAT(enti_tx_dataCadastro, '%Y-%m') <= '{$dataMes->format("Y-m")}'
 							AND enti_nb_empresa = '{$empresa["empr_nb_id"]}'
+							AND user.user_tx_status = 'ativo'
+							AND (
+								user.user_tx_nivel IN ('Funcionário', 'Motorista', 'Ajudante')
+								AND EXISTS (
+									SELECT 1 FROM usuario_perfil up
+									JOIN perfil_acesso pa ON pa.perfil_nb_id = up.perfil_nb_id
+									JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id
+									JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id
+									WHERE up.user_nb_id = user.user_nb_id
+									AND up.ativo = 1
+									AND pa.perfil_tx_status = 'ativo'
+									AND pmi.perm_ver = 1
+									AND mi.menu_tx_ativo = 1
+									AND mi.menu_tx_path = '/batida_ponto.php'
+								)
+							)
 							".(!empty($_POST["motorista"]) ? "AND enti_nb_id = '{$_POST["motorista"]}'" : "")."
 						ORDER BY enti_tx_nome ASC;"
 		), MYSQLI_ASSOC);
@@ -195,6 +212,11 @@ function criar_relatorio_saldo() {
 					. "OR (endo_tx_de  <= '".$dataMes->format("Y-m-d")."' AND endo_tx_ate >= '".$dataFim->format("Y-m-d")."')"
 					. ");"
 			), MYSQLI_ASSOC);
+
+            // Ordenar endossos por data 'ate' para garantir ordem cronológica
+            usort($endossos, function($a, $b) {
+                return strtotime($a['endo_tx_ate']) - strtotime($b['endo_tx_ate']);
+            });
 
 			$statusEndosso = "N";
 			if (count($endossos) >= 1) {
@@ -240,8 +262,12 @@ function criar_relatorio_saldo() {
 				"saldoFinal" 		=> "00:00"
 			];
 
+			// Inicializar saldoFinal
+			$totaisMot["saldoFinal"] = $saldoAnterior;
+
 			for ($dia = new DateTime($dataMes->format("Y-m-d")); $dia <= $dataFim; $dia->modify("+1 day")) {
 				$diaPonto = diaDetalhePonto($motorista, $dia->format("Y-m-d"));
+				
 				//Formatando informações{
 				foreach (array_keys($diaPonto) as $f) {
 					if (in_array($f, ["data", "diaSemana"])) {
@@ -268,20 +294,10 @@ function criar_relatorio_saldo() {
 				$totaisMot["HESabado"]         = somarHorarios([$totaisMot["HESabado"],         $diaPonto["he100"]]);
 				$totaisMot["adicionalNoturno"] = somarHorarios([$totaisMot["adicionalNoturno"], $diaPonto["adicionalNoturno"]]);
 				$totaisMot["esperaIndenizada"] = somarHorarios([$totaisMot["esperaIndenizada"], $diaPonto["esperaIndenizada"]]);
-                $totaisMot["saldoPeriodo"]     = somarHorarios([$totaisMot["saldoPeriodo"],     $diaPonto["diffSaldo"]]);
-                // saldoFinal deve refletir o resultado do último endosso do período, se existir
-                if (count($endossos) >= 1) {
-                    $ultimoDoPeriodo = $endossos[count($endossos) - 1];
-                    $csvPath = $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/arquivos/endosso/".$ultimoDoPeriodo["endo_tx_filename"].".csv";
-                    if (!empty($ultimoDoPeriodo["endo_tx_filename"]) && file_exists($csvPath)) {
-                        $endossoPeriodo = lerEndossoCSV($ultimoDoPeriodo["endo_tx_filename"]);
-                        $totaisMot["saldoFinal"] = $endossoPeriodo["totalResumo"]["saldoFinal"];
-                    } else {
-                        $totaisMot["saldoFinal"] = somarHorarios([$saldoAnterior, $totaisMot["saldoPeriodo"]]);
-                    }
-                } else {
-                    $totaisMot["saldoFinal"]       = somarHorarios([$saldoAnterior,                 $totaisMot["saldoPeriodo"]]);
-                }
+                
+				$totaisMot["saldoPeriodo"]     = somarHorarios([$totaisMot["saldoPeriodo"],     $diaPonto["diffSaldo"]]);
+                
+                $totaisMot["saldoFinal"] = somarHorarios([$totaisMot["saldoFinal"], $diaPonto["diffSaldo"]]);
 			}
 
 			$row = [
@@ -431,10 +447,12 @@ function criar_relatorio_endosso() {
 					. " user.user_tx_nivel IN ('Funcionário', 'Motorista', 'Ajudante')"
 					. " AND EXISTS ("
 						. " SELECT 1 FROM usuario_perfil up"
+						. " JOIN perfil_acesso pa ON pa.perfil_nb_id = up.perfil_nb_id"
 						. " JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id"
 						. " JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id"
 						. " WHERE up.user_nb_id = user.user_nb_id"
 						. " AND up.ativo = 1"
+						. " AND pa.perfil_tx_status = 'ativo'"
 						. " AND pmi.perm_ver = 1"
 						. " AND mi.menu_tx_ativo = 1"
 						. " AND mi.menu_tx_path = '/batida_ponto.php'"
@@ -503,11 +521,11 @@ function criar_relatorio_endosso() {
 							$endossoCompleto["endo_tx_max50APagar"] = "00:00";
 						}
 
-						$aPagar2 = calcularHorasAPagar(strip_tags($endossoCompleto["totalResumo"]["diffSaldo"]), $endossoCompleto["totalResumo"]["saldoBruto"] ?? "00:00", $endossoCompleto["totalResumo"]["he50"] ?? "00:00", 
-						$endossoCompleto["totalResumo"]["he100"]?? "00:00", $endossoCompleto["endo_tx_max50APagar"]?? "00:00", 
-						($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
-						$aPagar2 = operarHorarios($aPagar2, "+");
-						$totaisMot["saldoFinal"]        = operarHorarios([$endossoCompleto["totalResumo"]["saldoBruto"], $aPagar2], "-");
+						// $aPagar2 = calcularHorasAPagar(strip_tags($endossoCompleto["totalResumo"]["diffSaldo"]), $endossoCompleto["totalResumo"]["saldoBruto"] ?? "00:00", $endossoCompleto["totalResumo"]["he50"] ?? "00:00", 
+						// $endossoCompleto["totalResumo"]["he100"]?? "00:00", $endossoCompleto["endo_tx_max50APagar"]?? "00:00", 
+						// ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+						// $aPagar2 = operarHorarios($aPagar2, "+");
+						// $totaisMot["saldoFinal"]        = operarHorarios([$endossoCompleto["totalResumo"]["saldoBruto"], $aPagar2], "-");
 					}
 
 				$row = [
@@ -656,10 +674,12 @@ function criar_relatorio_jornada() {
 				user.user_tx_nivel IN ('Funcionário', 'Motorista', 'Ajudante')
 				AND EXISTS (
 					SELECT 1 FROM usuario_perfil up
+					JOIN perfil_acesso pa ON pa.perfil_nb_id = up.perfil_nb_id
 					JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id
 					JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id
 					WHERE up.user_nb_id = user.user_nb_id
 						AND up.ativo = 1
+						AND pa.perfil_tx_status = 'ativo'
 						AND pmi.perm_ver = 1
 						AND mi.menu_tx_ativo = 1
 						AND mi.menu_tx_path = '/batida_ponto.php'
@@ -953,10 +973,12 @@ function relatorio_nao_conformidade_juridica(int $idEmpresa) {
 					user.user_tx_nivel IN ('Funcionário', 'Motorista', 'Ajudante')
 					AND EXISTS (
 						SELECT 1 FROM usuario_perfil up
+						JOIN perfil_acesso pa ON pa.perfil_nb_id = up.perfil_nb_id
 						JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id
 						JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id
 						WHERE up.user_nb_id = user.user_nb_id
 						AND up.ativo = 1
+						AND pa.perfil_tx_status = 'ativo'
 						AND pmi.perm_ver = 1
 						AND mi.menu_tx_ativo = 1
 						AND mi.menu_tx_path = '/batida_ponto.php'
@@ -1498,15 +1520,17 @@ function criar_relatorio_ajustes() {
 						AND ("
 							. " user.user_tx_nivel IN ('Funcionário', 'Motorista', 'Ajudante')"
 							. " AND EXISTS ("
-								. " SELECT 1 FROM usuario_perfil up"
-								. " JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id"
-								. " JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id"
-								. " WHERE up.user_nb_id = user.user_nb_id"
-								. " AND up.ativo = 1"
-								. " AND pmi.perm_ver = 1"
-								. " AND mi.menu_tx_ativo = 1"
-								. " AND mi.menu_tx_path = '/batida_ponto.php'"
-							. " )"
+						. " SELECT 1 FROM usuario_perfil up"
+						. " JOIN perfil_acesso pa ON pa.perfil_nb_id = up.perfil_nb_id"
+						. " JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id"
+						. " JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id"
+						. " WHERE up.user_nb_id = user.user_nb_id"
+						. " AND up.ativo = 1"
+						. " AND pa.perfil_tx_status = 'ativo'"
+						. " AND pmi.perm_ver = 1"
+						. " AND mi.menu_tx_ativo = 1"
+						. " AND mi.menu_tx_path = '/batida_ponto.php'"
+					. " )"
 						. " )"
 					. " ORDER BY enti_tx_nome ASC;"
 			),
@@ -1751,10 +1775,12 @@ function logisticas() {
 						. " user.user_tx_nivel IN ('Funcionário', 'Motorista', 'Ajudante')"
 						. " AND EXISTS ("
 							. " SELECT 1 FROM usuario_perfil up"
+							. " JOIN perfil_acesso pa ON pa.perfil_nb_id = up.perfil_nb_id"
 							. " JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id"
 							. " JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id"
 							. " WHERE up.user_nb_id = user.user_nb_id"
 							. " AND up.ativo = 1"
+							. " AND pa.perfil_tx_status = 'ativo'"
 							. " AND pmi.perm_ver = 1"
 							. " AND mi.menu_tx_ativo = 1"
 							. " AND mi.menu_tx_path = '/batida_ponto.php'"
@@ -1764,6 +1790,9 @@ function logisticas() {
 	), MYSQLI_ASSOC);
 
 	$dataReferenciaStr = !empty($_POST["busca_periodo"]) ? $_POST["busca_periodo"] : $hoje->format("d/m/Y H:i");
+	$skippedDrivers = [];
+	$totalMotoristasLivres = 0;
+	$motoristasIgnorados = 0;
 	foreach ($motoristas as $motorista) {
 		$parametro = mysqli_fetch_all(query(
 			"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_maxHESemanalDiario, para_tx_adi5322"
@@ -1781,6 +1810,19 @@ function logisticas() {
 		));
 
 		if (empty($lastFim) || empty($lastFim["pont_tx_data"])) {
+			// Check if has ANY start of journey (Type 1)
+			$hasStart = mysqli_fetch_assoc(query(
+				"SELECT pont_nb_id FROM ponto 
+					WHERE pont_tx_status = 'ativo' 
+						AND pont_tx_matricula = '{$motorista["enti_tx_matricula"]}' 
+						AND pont_tx_tipo = '1' 
+					LIMIT 1;"
+			));
+			
+			if (empty($hasStart)) {
+				$motoristasIgnorados++;
+			}
+			
 			continue;
 		}
 
@@ -1844,12 +1886,12 @@ function logisticas() {
 			$motoristasLivres["parcial"][] = $dadosMotorista;
 		} else {
 			$motoristasLivres["disponivel"][] = $dadosMotorista;
-			$totalMotoristasLivres += 1;
 		}
+		$totalMotoristasLivres += 1;
 	}
 
 	$motoristasLivres["total"] = [
-		"totalMotoristasJornada" => count($motoristas) - $totalMotoristasLivres,
+		"totalMotoristasJornada" => count($motoristas) - $totalMotoristasLivres - $motoristasIgnorados,
 		"totalMotoristasLivres" => $totalMotoristasLivres,
 		"consulta"        => $dataReferenciaStr,
 	];

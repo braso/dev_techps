@@ -190,6 +190,7 @@
 					$prevEndossoMes = $endossoMes;
 				
 					$colunasAManterZeros = ["inicioJornada", "inicioRefeicao", "fimRefeicao", "fimJornada", "jornadaPrevista", "diffSaldo"];
+					unset($aDetalhado['inicioEscala'], $aDetalhado['fimEscala']);
 					foreach($aDetalhado as $key => $value){
 						if(in_array($key, $colunasAManterZeros)){//Se for das colunas de início de jornada, refeição ou "Jornada Prevista", mantém os valores zerados.
 							continue;

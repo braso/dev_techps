@@ -12,18 +12,18 @@
 		echo 
 			"<script>
 					function selecionaMotorista(idEmpresa) {
-					let condicoes = encodeURI('AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")' +
+					let condicoes = encodeURI('AND enti_tx_status = \"ativo\" AND enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")' +
 						(idEmpresa > 0 ? ' AND enti_nb_empresa = \"' + idEmpresa + '\"' : '')
 					);
 
-					if ($('.busca_motorista').data('select2')) {// Verifica se o elemento está usando Select2 antes de destruí-lo
-						$('.busca_motorista').select2('destroy');
-						$('.busca_motorista').html('');
-						$('.busca_motorista').val('');
+					if ($('.motorista').data('select2')) {// Verifica se o elemento está usando Select2 antes de destruí-lo
+						$('.motorista').select2('destroy');
+						$('.motorista').html('');
+						$('.motorista').val('');
 					}
 
 					$.fn.select2.defaults.set('theme', 'bootstrap');
-					$('.busca_motorista').select2({
+					$('.motorista').select2({
 						language: 'pt-BR',
 						placeholder: 'Selecione um item',
 						allowClear: true,
@@ -42,6 +42,20 @@
 							}
 						}
 					});
+
+					// Live Search para o campo busca_nome_like
+					const buscaNome = document.getElementById('busca_nome_like');
+					if(buscaNome){
+						let timeout = null;
+						buscaNome.addEventListener('keyup', function() {
+							clearTimeout(timeout);
+							timeout = setTimeout(() => {
+								// Dispara o evento change que o gridDinamico escuta
+								const event = new Event('change');
+								this.dispatchEvent(event);
+							}, 500);
+						});
+					}
 				}
 			</script>"
 		;
@@ -183,7 +197,7 @@
 				4,
 				"entidade",
 				"",
-				" AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')",
+				" AND enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')",
 				"enti_tx_matricula"
 			),
 			campo("Período*", "periodo_ferias", ($_POST["periodo_ferias"]?? ""),3, "MASCARA_PERIODO_SEM_LIMITE"),
@@ -215,9 +229,9 @@
         $gridFields = [
             "CÓDIGO"        => "feri_nb_id",
             "Funcionário"   => "enti_tx_nome",
-            "Início"        => "DATE_FORMAT(feri_tx_dataInicio, '%d/%m/%Y %H:%i:%s')",
-            "Fim"           => "DATE_FORMAT(feri_tx_dataFim, '%d/%m/%Y %H:%i:%s')",
-            "Qtd. Dias"     => "DATEDIFF(feri_tx_dataFim, feri_tx_dataInicio) AS qtdDias",
+            "Início"        => "DATE_FORMAT(feri_tx_dataInicio, '%d/%m/%Y ')",
+            "Fim"           => "DATE_FORMAT(feri_tx_dataFim, '%d/%m/%Y ')",
+            "Qtd. Dias"     => "(DATEDIFF(feri_tx_dataFim, feri_tx_dataInicio) + 1) AS qtdDias",
             "STATUS"        => "feri_tx_status",
         ];
 
@@ -235,8 +249,9 @@
 
         $configuracao = gerarAcoesComConfirmacao(
             "cadastro_ferias.php", 
-            "editarFerias()", 
-            "excluirFerias" 
+            "editarFerias", 
+            "excluirFerias",
+			"tem certeza que deseja excluir o registro de férias código: " 
         );
 
         $gridFields["actions"] = $configuracao["tags"];
@@ -288,6 +303,9 @@
 		echo abre_form();
 		echo linha_form($camposBusca);
 		echo fecha_form([], "<hr><form>".implode(" ", $botoesBusca)."</form>");
+
+
+
 		
         listarFerias();
 

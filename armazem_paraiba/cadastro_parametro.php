@@ -26,6 +26,11 @@
 		query("ALTER TABLE parametro ADD COLUMN para_tx_sindicato VARCHAR(100) COMMENT 'Sindicato'");
 	}
 
+	// Verificação e criação da coluna Pagar Adicional Noturno
+	if(mysqli_num_rows(query("SHOW COLUMNS FROM parametro LIKE 'para_tx_pagarAdicNoturno'")) == 0){
+		query("ALTER TABLE parametro ADD COLUMN para_tx_pagarAdicNoturno VARCHAR(3) DEFAULT 'sim' COMMENT 'Pagar Adicional Noturno (sim/nao)'");
+	}
+
 
 	function carregarJSFormParametro(){
 		global $a_mod;
@@ -487,6 +492,35 @@
 		}
 	}
 
+	function duplicarParametro(){
+		global $a_mod;
+		$a_mod = carregar("parametro", $_POST["id"]);
+
+		if($a_mod["para_tx_tipo"] == "escala"){
+			$escalaExistente = mysqli_fetch_assoc(query(
+				"SELECT * FROM escala WHERE esca_nb_parametro = {$_POST["id"]};"
+			));
+
+			if($escalaExistente){
+				$escalaExistente["diasEscala"] = mysqli_fetch_all(query(
+					"SELECT * FROM escala_dia WHERE esca_nb_escala = {$escalaExistente["esca_nb_id"]};"
+				), MYSQLI_ASSOC);
+
+				$diasEscala = [];
+				foreach($escalaExistente["diasEscala"] as $diaEscala){
+					$diasEscala[] = [$diaEscala["esca_tx_horaInicio"], $diaEscala["esca_tx_horaFim"], $diaEscala["esca_tx_intervaloInterno"]];
+				}
+				$a_mod = array_merge($a_mod, $escalaExistente);
+				$a_mod["diasEscala"] = $diasEscala;	
+			}
+		}
+
+		unset($a_mod['para_nb_id']);
+		unset($_POST['id']);
+		mostrarFormParametro();
+		exit;
+	}
+
 	function modificarParametro(){
 		global $a_mod;
 		$a_mod = carregar("parametro", $_POST["id"]);
@@ -612,6 +646,7 @@
 			"para_tx_adi5322" 					=> $_POST["adi5322"],
 			"para_tx_status" 					=> "ativo",
 			"para_tx_turno" 					=> $_POST["turno"] ?? null,
+			"para_tx_pagarAdicNoturno" 			=> $_POST["pagarAdicNoturno"] ?? 'sim',
 		];
 
 		if(!empty($_POST["ignorarCampos"]) || $_POST["ignorarCampos"] == null){
@@ -701,7 +736,7 @@
 				"nome", "tolerancia", "jornadaSemanal", "jornadaSabado",
 				"percHESemanal", "percHEEx", "maxHESemanalDiario", "diariasCafe", "diariasAlmoco", "diariasJanta",
 				"acordo", "inicioAcordo", "fimAcordo", "banco", "adi5322", "Obs", "turno",
-				"categoria", "sindicato"
+				"categoria", "sindicato", "pagarAdicNoturno"
 			];
 			foreach($campos as $campo){
 				if(!empty($_POST[$campo])){
@@ -810,6 +845,7 @@
 				campo("Hora Extra Extraordinária (%)*", "percHEEx", ($a_mod["para_tx_percHEEx"]?? ""), 3, "MASCARA_NUMERO"),
 				campo_hora("Máx. de \"H.E. Semanal\" por dia*", "maxHESemanalDiario", ($a_mod["para_tx_maxHESemanalDiario"]?? "02:00"), 3),
 				combo("Pagar H.E. Ex. mesmo com Período Neg.*", "pagarHEExComPerNeg", ($a_mod["para_tx_pagarHEExComPerNeg"]?? "sim"), 3, ["sim" => "Sim", "nao" => "Não"]),
+				combo("Pagar Adicional Noturno*", "pagarAdicNoturno", ($a_mod["para_tx_pagarAdicNoturno"]?? "sim"), 3, ["sim" => "Sim", "nao" => "Não"]),
 				"<div class='col-sm-3 margin-bottom-5 campo-fit-content ".(!empty($_POST["errorFields"]) && in_array("descFaltas", $_POST["errorFields"]))."' style='min-width:fit-content; min-height: 50px;'>
 					<label>Descontar horas por faltas não justificadas?</label><br>
 					<label class='radio-inline'>
@@ -1010,7 +1046,9 @@
 			campo("Nome", 	"busca_nome_like", $_POST["busca_nome_like"]?? "", 4, "", "maxlength='65'"),
       		combo("Acordo", "busca_acordo", $_POST["busca_acordo"]?? "", 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
 			combo("Banco de Horas", "busca_banco", $_POST["busca_banco"]?? "", 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
-			// combo("Vencidos", "busca_vencidos", $_POST["busca_vencidos"]?? "", 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"])
+			campo("Categoria", "busca_categoria", $_POST["busca_categoria"]?? "", 2),
+			campo("Sindicato", "busca_sindicato", $_POST["busca_sindicato"]?? "", 2),
+			combo("Turno", "busca_turno", $_POST["busca_turno"]?? "", 2, ["" => "Todos", "M" => "Manhã", "T" => "Tarde", "V" => "Vespertino", "N" => "Noite", "D" => "Diurno"])
 		];
 
 		$botoes = [
@@ -1032,6 +1070,9 @@
 				"ACORDO" 				=> "para_tx_acordo",
 				"INÍCIO" 				=> "DATE_FORMAT(para_tx_inicioAcordo, '%d/%m/%Y %H:%i:%s')",
 				"FIM" 					=> "DATE_FORMAT(para_tx_fimAcordo, '%d/%m/%Y %H:%i:%s')",
+				"CATEGORIA" 			=> "para_tx_categoria",
+				"SINDICATO" 			=> "para_tx_sindicato",
+				"TURNO" 				=> "para_tx_turno",
 				"STATUS" 				=> "para_tx_status"
 			];
 
@@ -1039,7 +1080,10 @@
 				"busca_codigo"		=> "para_nb_id",
 				"busca_nome_like"	=> "para_tx_nome",
 				"busca_acordo"		=> "para_tx_acordo",
-				"busca_banco"		=> "para_tx_banco"
+				"busca_banco"		=> "para_tx_banco",
+				"busca_categoria"	=> "para_tx_categoria",
+				"busca_sindicato"	=> "para_tx_sindicato",
+				"busca_turno"		=> "para_tx_turno"
 			];
 
 			$queryBase = 
@@ -1048,12 +1092,12 @@
 			;
 
 			$actions = criarIconesGrid(
-				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-				["cadastro_parametro.php", "cadastro_parametro.php"],
-				["modificarParametro()", "excluirParametro()"]
+				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-duplicate search-button", "glyphicon glyphicon-remove search-remove"],
+				["cadastro_parametro.php", "cadastro_parametro.php", "cadastro_parametro.php"],
+				["modificarParametro()", "duplicarParametro()", "excluirParametro()"]
 			);
 	
-			$actions["functions"][1] .= 
+			$actions["functions"][2] .= 
 				"esconderInativar('glyphicon glyphicon-remove search-remove', 8);"
 			;
 	

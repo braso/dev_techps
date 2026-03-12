@@ -15,6 +15,15 @@ if(typeof orderCol === 'undefined'){
 }
 
 const camposBd = Object.values(fields);
+const escapeHtmlAttr = (value) => {
+    const s = String(value ?? '');
+    return s
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/'/g, '&#39;');
+};
 // FUNÇÃO PARA EXPORTAR O ESTADO ATUAL DA TABELA
 function exportAllToCSV() {
     const btn = $('#btnExportCSV');
@@ -93,7 +102,7 @@ function exportAllToCSV() {
             link.click();
             document.body.removeChild(link);
             
-            console.log('CSV exportado com todos os dados:', response.rows.length, 'registros');
+           // console.log('CSV exportado com todos os dados:', response.rows.length, 'registros');
         },
         error: function(errMsg) {
             console.error('Erro ao exportar CSV:', errMsg);
@@ -194,8 +203,6 @@ const consultarRegistros = function(){
     }
 
     try{
-        console.log('Grid request', { url: urlTableInfo, queryBase: queryBase, conditions: conditions, limit: limit, page: pageNumber, offset: (pageNumber-1)*limit });
-        console.log('Grid SQL', atob(queryBase) + conditions + ' LIMIT ' + limit + ' OFFSET ' + ((pageNumber-1)*limit));
     }catch(e){}
     $.ajax({
         url: urlTableInfo,
@@ -215,7 +222,8 @@ const consultarRegistros = function(){
             }
 
             //Formatando informações do header{
-                header = [...Object.keys(fields)];
+                const colKeys = Object.keys(fields);
+                header = [...colKeys];
                 header.forEach(function(value, key){
                     if(camposBd[key] != null && camposBd[key].indexOf('status') >= 0){
                         statusCol = key;
@@ -226,8 +234,8 @@ const consultarRegistros = function(){
                     ;
                     
                     header[key] =
-                        '<th colspan=\"1\" rowspan=\"1\" class=\"table-col-head\" value=\"'+key+'\">'
-                            +(orderCol.indexOf(camposBd[key]) >= 0? (orderCol.indexOf(' ASC') >= 0? '<spam class=\"glyphicon glyphicon-menu-down\"></spam>&emsp;': '<spam class=\"glyphicon glyphicon-menu-up\"></spam>&emsp;'): '')
+                        '<th colspan="1" rowspan="1" class="table-col-head" value="'+key+'">'
+                            +(orderCol.indexOf(camposBd[key]) >= 0? (orderCol.indexOf(' ASC') >= 0? '<spam class="glyphicon glyphicon-menu-down"></spam>&emsp;': '<spam class="glyphicon glyphicon-menu-up"></spam>&emsp;'): '')
                             +value
                         +'</th>'
                 });
@@ -237,10 +245,12 @@ const consultarRegistros = function(){
                 response.rows.forEach(function(dataArray, rowKey){
                     // row = '<td>'+dataArray.join('</td><td>')+'</td>';
                     row = '';
-                    Object.keys(dataArray).forEach(function(key){
-                        if(camposBd.indexOf(key) >= 0){
-                            row += '<td>'+(dataArray[key] != null? dataArray[key]: '')+'</td>';
+                    colKeys.forEach(function(colLabel){
+                        let dbKey = fields[colLabel];
+                        if(dbKey.indexOf(' AS ') >= 0){
+                            dbKey = dbKey.substring(dbKey.indexOf(' AS ')+4);
                         }
+                        row += '<td>'+(dataArray[dbKey] != null? dataArray[dbKey]: '')+'</td>';
                     });
                     
                     try {
@@ -250,7 +260,14 @@ const consultarRegistros = function(){
                     }catch(error){
                         console.log('actions not defined');
                     }
-                    response.rows[rowKey] = '<tr>'+row+'</tr>';
+                    let rowId = '';
+                    try{
+                        const firstKey = Object.keys(dataArray)[0];
+                        rowId = (firstKey != null ? dataArray[firstKey] : '');
+                    }catch(e){
+                        rowId = '';
+                    }
+                    response.rows[rowKey] = '<tr data-row-id="'+escapeHtmlAttr(rowId)+'">'+row+'</tr>';
                 });
                 response.rows = response.rows.join('');
             //}
@@ -306,7 +323,7 @@ const consultarRegistros = function(){
             $('.table-loading-icon')[0].innerHTML = '';
             $('.botao-csv')[0].innerHTML = btn;
 
-            try{ console.log('Grid response summary', { total: total, rows: (Array.isArray(response.rows)? response.rows.length: 0), fields: Object.keys(fields) }); }catch(e){}
+            try{ }catch(e){}
 
 
             window.tableConfig = {
@@ -322,6 +339,40 @@ const consultarRegistros = function(){
             });
 
             definirFuncoesInternas();
+
+            // Sincronização do scroll superior
+            setTimeout(function() {
+                const tableDiv = $('.table-div');
+                const topScrollContainer = $('.top-scroll-container');
+                const topScrollContent = $('.top-scroll-content');
+                const tableElement = $('#result');
+
+                // Ajusta a largura do conteúdo do scroll superior para igualar a tabela
+                if (tableElement.width() > tableDiv.width()) {
+                    topScrollContent.width(tableElement.width());
+                    topScrollContainer.show();
+                    
+                    // Remove eventos anteriores para evitar duplicação
+                    topScrollContainer.off('scroll');
+                    tableDiv.off('scroll');
+
+                    // Sincroniza os scrolls
+                    topScrollContainer.on('scroll', function(){
+                        if(tableDiv.scrollLeft() !== $(this).scrollLeft()){
+                            tableDiv.scrollLeft($(this).scrollLeft());
+                        }
+                    });
+
+                    tableDiv.on('scroll', function(){
+                        if(topScrollContainer.scrollLeft() !== $(this).scrollLeft()){
+                            topScrollContainer.scrollLeft($(this).scrollLeft());
+                        }
+                    });
+                } else {
+                    topScrollContainer.hide();
+                }
+            }, 100);
+
         },
         error: function(errMsg) {
             try{ console.error('Grid error', errMsg); }catch(e){}
@@ -330,7 +381,7 @@ const consultarRegistros = function(){
 };
 
 $(document).ready(function(){
-    try{ console.log('Grid init', { searchFields: searchFields, fields: fields }); }catch(e){}
+    try{ }catch(e){}
     $('form[name="contex_form"]').on('change', consultarRegistros);
     $('input[name="limit"]').on('change', function(){
         $('input[name="limit"]').val($(this).val());
@@ -499,6 +550,142 @@ function imprimirTabelaCompleta() {
             console.error('Erro ao carregar todos os dados:', err);
 
             
+        }
+    });
+}
+
+/* Configuração de Colunas */
+function openColumnConfig(){
+    const container = document.getElementById('listaColunas');
+    container.innerHTML = '';
+    
+    let displayOrder = [];
+    let hiddenFields = [];
+    
+    // Get visible fields from current 'fields' (which respects order)
+    const currentKeys = Object.keys(fields);
+    
+    currentKeys.forEach(key => {
+        displayOrder.push({key: key, label: key, visible: true});
+    });
+    
+    // Get hidden fields from 'allFields'
+    if(typeof allFields !== 'undefined'){
+        Object.keys(allFields).forEach(key => {
+            if(!fields[key]){
+                hiddenFields.push({key: key, label: key, visible: false});
+            }
+        });
+    }
+    
+    const fullList = displayOrder.concat(hiddenFields);
+    
+    fullList.forEach((item, index) => {
+        const div = document.createElement('div');
+        // div.className = 'checkbox'; // Removido para evitar conflito com Bootstrap
+        div.style.padding = '10px';
+        div.style.borderBottom = '1px solid #eee';
+        div.style.display = 'flex';
+        div.style.justifyContent = 'space-between';
+        div.style.alignItems = 'center';
+        div.style.width = '100%';
+        
+        const label = document.createElement('label');
+        label.style.cursor = 'pointer';
+        label.style.flexGrow = '1';
+        label.style.margin = '0';
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
+        label.style.fontWeight = 'normal';
+        
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.value = item.key;
+        input.checked = item.visible;
+        input.className = 'column-config-check';
+        input.style.margin = '0 10px 0 0';
+        input.style.minWidth = '18px';
+        input.style.height = '18px';
+        input.style.position = 'relative'; // Garante visibilidade
+        
+        const spanText = document.createElement('span');
+        spanText.innerText = item.label;
+        spanText.style.wordBreak = 'break-word'; // Quebra texto longo
+        spanText.style.lineHeight = '1.2';
+
+        label.appendChild(input);
+        label.appendChild(spanText);
+        
+        div.appendChild(label);
+        
+        // Add Up/Down buttons
+        const btnGroup = document.createElement('div');
+        
+        const btnUp = document.createElement('button');
+        btnUp.className = 'btn btn-xs btn-default';
+        btnUp.innerHTML = '<span class="glyphicon glyphicon-chevron-up"></span>';
+        btnUp.style.marginRight = '5px';
+        btnUp.onclick = function(e){ e.preventDefault(); moveItem(div, -1); };
+        
+        const btnDown = document.createElement('button');
+        btnDown.className = 'btn btn-xs btn-default';
+        btnDown.innerHTML = '<span class="glyphicon glyphicon-chevron-down"></span>';
+        btnDown.onclick = function(e){ e.preventDefault(); moveItem(div, 1); };
+        
+        btnGroup.appendChild(btnUp);
+        btnGroup.appendChild(btnDown);
+        
+        div.appendChild(btnGroup);
+        
+        container.appendChild(div);
+    });
+    
+    $('#modalConfigGrid').modal('show');
+}
+
+function moveItem(element, direction){
+    const parent = element.parentNode;
+    if(direction === -1 && element.previousElementSibling){
+        parent.insertBefore(element, element.previousElementSibling);
+    } else if(direction === 1 && element.nextElementSibling){
+        parent.insertBefore(element.nextElementSibling, element);
+    }
+}
+
+function saveColumnConfig(){
+    const checks = document.getElementsByClassName('column-config-check');
+    const config = [];
+    
+    for(let i=0; i<checks.length; i++){
+        config.push({
+            key: checks[i].value,
+            visible: checks[i].checked
+        });
+    }
+    
+    if(typeof gridName === 'undefined'){
+        alert('Erro: gridName não definido.');
+        return;
+    }
+
+    $.ajax({
+        url: '../contex20/grid_config_controller.php',
+        method: 'POST',
+        data: {
+            grid_name: gridName,
+            columns: JSON.stringify(config)
+        },
+        dataType: 'json',
+        success: function(response){
+            if(response.success){
+                location.reload();
+            } else {
+                alert('Erro ao salvar configuração: ' + (response.error || 'Erro desconhecido'));
+            }
+        },
+        error: function(xhr, status, error){
+            console.error(xhr.responseText);
+            alert('Erro ao conectar com o servidor.');
         }
     });
 }

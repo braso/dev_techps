@@ -1,8 +1,8 @@
 <?php
-
+/*
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
-
+*/
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
@@ -514,11 +514,22 @@ function cadastrar(){
     $max50Auto = operarHorarios([$saldoBruto, $descFaltasNaoJustificadas], "-");
     if($max50Auto[0] == "-"){ $max50Auto = "00:00"; }
     $pagarExtras = (!empty($_POST["pagar_horas"]) && $_POST["pagar_horas"] == "sim");
+    $limitToApply = "00:00";
+
     if(!$pagarExtras){
         $max50Auto = "00:00";
-        $_POST["extraPago"] = "00:00";
     }else{
-        $_POST["extraPago"] = $max50Auto;
+        $limiteUsuario = $_POST["extraPago"] ?? "";
+        if(!empty($limiteUsuario) && $limiteUsuario != "00:00"){
+            $diff = operarHorarios([$max50Auto, $limiteUsuario], "-");
+            if($diff[0] == "-"){
+                $limitToApply = $max50Auto;
+            }else{
+                $limitToApply = $limiteUsuario;
+            }
+        }else{
+            $limitToApply = $max50Auto;
+        }
     }
 
     $saldoPeriodoParaCalculo = $diffSaldo;
@@ -528,33 +539,62 @@ function cadastrar(){
         $saldoPeriodoParaCalculo = $saldoBruto;
     }
 
-    if($pagarExtras){
-        $aPagar = calcularHorasAPagar($saldoPeriodoParaCalculo, $saldoBruto, $he50, $he100, $max50Auto, ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao"));
+    $pagarHEExComPerNeg = ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao") == "sim";
+    $extraManualDiscount = "00:00";
+
+    if($pagarExtras || ($pagarHEExComPerNeg && $he100 != "00:00")){
+        // $saldoPeriodoParaCalculo = $saldoBruto; // REMOVIDO: Devemos manter o saldo do período original para que a função saiba se é negativo ou positivo.
+		$limitParaCalculo = $limitToApply;
+		
+		// If paying HE with negative period is active:
+		// AND current period balance is NOT negative (User requirement: only pay 100% if period is positive)
+		if($pagarHEExComPerNeg && $he100 != "00:00" && $diffSaldoClean[0] != "-"){
+            // Case 1: No user input (or 00:00) -> Pay HE100 exactly.
+            if(!$pagarExtras || $limitToApply == "00:00"){
+                $limitParaCalculo = $he100;
+            }
+            // Case 2: User input provided.
+            else{
+                // Check if User Input covers the HE100 requirement.
+                // If User Input < HE100, we assume it's an ADDITIONAL manual discount on top of HE100.
+                if(operarHorarios([$limitToApply, $he100], "-")[0] == "-"){
+                    $limitParaCalculo = $he100;
+                    $extraManualDiscount = $limitToApply;
+                }
+                // If User Input >= HE100, we treat it as the Total Payment Limit (covering HE100 + HE50).
+                else{
+                    $limitParaCalculo = $limitToApply;
+                }
+            }
+		}
+
+        $aPagar = calcularHorasAPagar($saldoPeriodoParaCalculo, $saldoBruto, $he50, $he100, $limitParaCalculo, ($pagarExtras ? "sim" : ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao")));
     }else{
         $aPagar = ["00:00", "00:00"];
     }
     
-    $saldoFinal = operarHorarios([$saldoBruto, "-".$aPagar[0], "-".$aPagar[1]], "+");
-			
-		if($diffSaldo[0] == "-"){
-			$saldoPossivelDescontar = operarHorarios([$diffSaldo, $descFaltasNaoJustificadas], "+");
-				$saldoPossivelDescontar = operarHorarios([$saldoPossivelDescontar, "-00:01"], "*");
-			}else{
-				$saldoPossivelDescontar = "00:00";
-			}
-			
-			if($saldoPossivelDescontar != "00:00" && $_POST["descontar_horas"] == "sim"){
-				$totalResumo["desconto_manual"] = (operarHorarios([$_POST["horas_a_descontar"], $saldoPossivelDescontar], "-")[0] == "-")?
-					$_POST["horas_a_descontar"]:
-					$saldoPossivelDescontar
-				;
+	$opHE100 = "-";
+	if($saldoBruto[0] == "-"){
+		$opHE100 = "+";
+	}
 
-				$saldoFinal = operarHorarios([$saldoFinal, $aPagar[1]], "+");
-			}else{
-				$totalResumo["desconto_manual"] = "00:00";
-			}
+    $saldoFinal = operarHorarios([$saldoBruto, "-".$aPagar[0], $opHE100.$aPagar[1]], "+");
+			
+			$totalResumo["desconto_manual"] = "00:00";
+            
+            // Apply the extra manual discount if detected (Case 2 above)
+            if($extraManualDiscount != "00:00"){
+                $totalResumo["desconto_manual"] = operarHorarios([$totalResumo["desconto_manual"], $extraManualDiscount], "+");
+                $op = ($saldoFinal[0] == "-") ? "+" : "-";
+                $saldoFinal = operarHorarios([$saldoFinal, $op.$extraManualDiscount], "+");
+            }
 
-            $saldoFinal = operarHorarios([$saldoFinal, $totalResumo["desconto_manual"]], "+");
+			if(!empty($_POST["descontar_horas"]) && $_POST["descontar_horas"] == "sim"){
+				$valorDesc = $_POST["horas_a_descontar"];
+				$totalResumo["desconto_manual"] = operarHorarios([$totalResumo["desconto_manual"], $valorDesc], "+");
+				$op = ($saldoFinal[0] == "-") ? "+" : "-";
+				$saldoFinal = operarHorarios([$saldoFinal, $op.$valorDesc], "+");
+			}
             if($_POST["zerarSaldoNegativo"] == "sim" && $saldoFinal[0] == "-"){
                 $totalResumo["desconto_manual"] = operarHorarios([$totalResumo["desconto_manual"], $saldoFinal], "+");
                 $saldoFinal = "00:00";
@@ -567,6 +607,8 @@ function cadastrar(){
 			$totalResumo["saldoFinal"] 		= $saldoFinal;
 			$totalResumo["he50APagar"] 		= $aPagar[0];
 			$totalResumo["he100APagar"] 	= $aPagar[1];
+			$totalResumo["HESemanalAPagar"] = $aPagar[0];
+			$totalResumo["HEExAPagar"] 		= $aPagar[1];
 
 			$novoEndosso = [
 				"endo_nb_entidade" 		  => $motorista["enti_nb_id"],
@@ -578,7 +620,7 @@ function cadastrar(){
 				"endo_tx_dataCadastro" 	  => date("Y-m-d H:i:s"),
 				"endo_nb_userCadastro" 	  => $_SESSION["user_nb_id"],
 				"endo_tx_status" 		  => "ativo",
-				"endo_tx_max50APagar" 	  => $_POST["extraPago"],
+				"endo_tx_max50APagar" 	  => $limitToApply,
 				"endo_tx_pontos"		  => $rows,
 				"totalResumo"			  => $totalResumo
 			];
@@ -602,7 +644,8 @@ function cadastrar(){
 						<th>Anterior</th>
 						<th>Período</th>
 						<th>Bruto</th>
-						<th>Pago</th>
+						<th>Pago 50%</th>
+						<th>Pago 100%</th>
 						<th>Descontado</th>
 						<th>Final</th>
 					</tr>
@@ -625,7 +668,8 @@ function cadastrar(){
 					<td>{$novoEndosso["totalResumo"]["saldoAnterior"]}</td>
 					<td>{$novoEndosso["totalResumo"]["diffSaldo"]}</td>
 					<td>{$novoEndosso["totalResumo"]["saldoBruto"]}</td>
-					<td>".operarHorarios([$novoEndosso["totalResumo"]["he50APagar"], $novoEndosso["totalResumo"]["he100APagar"]], "+")."</td>
+					<td>{$novoEndosso["totalResumo"]["he50APagar"]}</td>
+					<td>{$novoEndosso["totalResumo"]["he100APagar"]}</td>
 					<td>".operarHorarios([$novoEndosso["totalResumo"]["desconto_manual"], $novoEndosso["totalResumo"]["desconto_faltas_nao_justificadas"]], "+")."</td>
 					<td>{$novoEndosso["totalResumo"]["saldoFinal"]}</td>
 				</tr>"
@@ -739,20 +783,7 @@ function index(){
 
 		cabecalho("Cadastro de Endosso");
 
-        $sqlPermission = " AND EXISTS (
-            SELECT 1 FROM user 
-            JOIN usuario_perfil up ON up.user_nb_id = user.user_nb_id 
-            JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id 
-            JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id 
-            WHERE user.user_nb_entidade = entidade.enti_nb_id
-              AND user.user_tx_status = 'ativo'
-              AND up.ativo = 1
-              AND pmi.perm_ver = 1
-              AND mi.menu_tx_ativo = 1
-              AND mi.menu_tx_path = '/batida_ponto.php'
-        )";
-
-		$condicoes_motorista = "AND enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') $sqlPermission";
+		$condicoes_motorista = "AND enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')";
 		if($_SESSION["user_tx_nivel"] != "Super Administrador" && !temPermissaoMenu('/cadastro_empresa.php')){
 			$condicoes_motorista .= " AND enti_nb_empresa = ".$_SESSION["user_nb_empresa"];
 		}
@@ -886,8 +917,7 @@ function index(){
 		];
         $queryBase = (
             "SELECT ".implode(", ", array_values($gridFields)).
-            " FROM endosso JOIN entidade ON endosso.endo_nb_entidade = entidade.enti_nb_id" .
-            " WHERE 1=1 $sqlPermission"
+            " FROM endosso JOIN entidade ON endosso.endo_nb_entidade = entidade.enti_nb_id"
         );
 
         $actions = criarIconesGrid(
