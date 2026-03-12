@@ -1,13 +1,13 @@
 <?php
   
-  /*
+
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
-*/
+
 	include_once "check_permission.php";
 	include "conecta.php";
 	
@@ -788,18 +788,37 @@
 	function modificarMotorista(){
 		global $a_mod;
 
-		$a_mod = carregar("entidade", $_POST["id"]);
+		$id = intval($_POST["id"] ?? 0);
+		if($id <= 0){
+			set_status("ERRO: Código do funcionário inválido.");
+			index();
+			exit;
+		}
+
+		$a_mod = carregar("entidade", $id);
+		if(empty($a_mod)){
+			set_status("ERRO: Funcionário não encontrado.");
+			index();
+			exit;
+		}
 		//dd($a_mod, false);
 		visualizarCadastro();
 		exit;
 	}
 
 	function excluirMotorista(){
+		$id = intval($_POST["id"] ?? 0);
+		if($id <= 0){
+			set_status("ERRO: Código do funcionário inválido.");
+			index();
+			exit;
+		}
+
 		$motorista = mysqli_fetch_assoc(query(
 			"SELECT enti_tx_desligamento, user_nb_id FROM entidade 
 				LEFT JOIN user ON enti_nb_id = user_nb_entidade
 				WHERE enti_tx_status = 'ativo'
-					AND enti_nb_id = ".$_POST["id"]."
+					AND enti_nb_id = ".$id."
 				LIMIT 1;"
 		));
 
@@ -813,7 +832,7 @@
 			$motorista["enti_tx_desligamento"] = date("Y-m-d");
 		}
 		
-		atualizar("entidade", ["enti_tx_status", "enti_tx_desligamento"], ["inativo", $motorista["enti_tx_desligamento"]], $_POST["id"]);
+		atualizar("entidade", ["enti_tx_status", "enti_tx_desligamento"], ["inativo", $motorista["enti_tx_desligamento"]], $id);
 		if(!empty($motorista["user_nb_id"])){
 			atualizar("user", ["user_tx_status"], ["inativo"], $motorista["user_nb_id"]);
 		}
@@ -1827,7 +1846,7 @@ function index(){
 	
 				window.confirmarExclusao = function(elemento){
 					var linha = $(elemento).closest("tr");
-					var id = linha.find("td:eq(0)").text(); 
+					var id = linha.attr("data-row-id") || linha.find("td:eq(0)").text(); 
 	
 					Swal.fire({
 						title: "Tem certeza?",

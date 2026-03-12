@@ -266,6 +266,30 @@
 			}
 		}
 
+		$primaryKey = null;
+		foreach(array_keys($allFields) as $k){
+			if($k !== "actions"){
+				$primaryKey = $k;
+				break;
+			}
+		}
+		if(!empty($primaryKey)){
+			if(!isset($campos[$primaryKey])){
+				$campos = [$primaryKey => $allFields[$primaryKey]] + $campos;
+			}else{
+				$firstKey = null;
+				foreach(array_keys($campos) as $k){
+					$firstKey = $k;
+					break;
+				}
+				if($firstKey !== $primaryKey){
+					$primaryVal = $campos[$primaryKey];
+					unset($campos[$primaryKey]);
+					$campos = [$primaryKey => $primaryVal] + $campos;
+				}
+			}
+		}
+
 		$result = 
 			"<link href='{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/css/grid_dinamico.css' rel='stylesheet' type='text/css' />
 			<div class='col-md-{$width}'>
@@ -374,7 +398,12 @@
 					
 					idInput = document.createElement('input');
 					idInput.setAttribute('name', 'id');
-					idInput.setAttribute('value', $(event.target).parent().parent().children()[0].innerHTML);
+					var row = $(event.target).closest('tr');
+					var rowId = row.attr('data-row-id');
+					if(rowId == undefined || rowId === ''){
+						rowId = row.children().first().text();
+					}
+					idInput.setAttribute('value', rowId);
 					form.appendChild(idInput);
 					
 					actionInput = document.createElement('input');
