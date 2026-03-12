@@ -52,6 +52,8 @@
 	$acao = $_POST['acao'] ?? $_GET['acao'] ?? '';
 	if ($acao == 'buscarUltimaJustificativa') {
 		buscarUltimaJustificativa();
+	} elseif ($acao == 'verificarPontoExistentePorMacro') {
+		verificarPontoExistentePorMacro();
 	}
 
 	function verificarDiaComErro($motorista, $data) {
@@ -317,7 +319,78 @@
 			LIMIT 1
 		"));
 		
+		header('Content-Type: application/json; charset=utf-8');
 		echo json_encode(['justificativa' => $res['justificativa'] ?? '']);
+		exit;
+	}
+
+	function verificarPontoExistentePorMacro(){
+		$idMotorista = intval($_POST['idMotorista'] ?? 0);
+		$idMacro = intval($_POST['idMacro'] ?? 0);
+		$dataRaw = strval($_POST['data'] ?? '');
+		$data = '';
+		if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataRaw)) {
+			$data = $dataRaw;
+		} elseif (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $dataRaw)) {
+			$partes = explode('/', $dataRaw);
+			$data = $partes[2] . '-' . $partes[1] . '-' . $partes[0];
+		}
+
+		header('Content-Type: application/json; charset=utf-8');
+
+		if ($idMotorista <= 0 || empty($data) || $idMacro <= 0) {
+			echo json_encode(['existe' => false]);
+			exit;
+		}
+
+		$motorista = mysqli_fetch_assoc(query("
+			SELECT enti_tx_matricula
+			FROM entidade
+			WHERE enti_nb_id = {$idMotorista}
+			LIMIT 1
+		"));
+		if (empty($motorista['enti_tx_matricula'])) {
+			echo json_encode(['existe' => false]);
+			exit;
+		}
+
+		$macro = mysqli_fetch_assoc(query("
+			SELECT macr_tx_nome, macr_tx_codigoInterno
+			FROM macroponto
+			WHERE macr_tx_status = 'ativo'
+				AND macr_nb_id = {$idMacro}
+			LIMIT 1
+		"));
+		if (empty($macro['macr_tx_codigoInterno'])) {
+			echo json_encode(['existe' => false]);
+			exit;
+		}
+
+		$matricula = mysqli_real_escape_string($GLOBALS['conn'], $motorista['enti_tx_matricula']);
+
+		$ponto = mysqli_fetch_assoc(query("
+			SELECT p.pont_tx_data
+			FROM ponto p
+			JOIN macroponto m ON (p.pont_tx_tipo = m.macr_tx_codigoInterno OR p.pont_tx_tipo = m.macr_nb_id)
+			WHERE p.pont_tx_status = 'ativo'
+				AND m.macr_tx_status = 'ativo'
+				AND p.pont_tx_matricula = '{$matricula}'
+				AND p.pont_tx_data LIKE '{$data}%'
+				AND m.macr_nb_id = {$idMacro}
+			ORDER BY p.pont_tx_data DESC
+			LIMIT 1
+		"));
+
+		if (!empty($ponto['pont_tx_data'])) {
+			echo json_encode([
+				'existe' => true,
+				'tipo' => $macro['macr_tx_nome'],
+				'hora' => date('H:i', strtotime($ponto['pont_tx_data']))
+			]);
+			exit;
+		}
+
+		echo json_encode(['existe' => false]);
 		exit;
 	}
 
@@ -515,12 +588,14 @@
 
 		$campoJust[] = textarea("Justificativa","justificativa",$valJust,12,'maxlength=680 id="campoJustificativa"');
 
-		$botoes[] = "<button type='submit' name='enviar_solicitacao' class='btn btn-success'>Enviar Solicitação</button>";
+		$botoes[] = "<button type='submit' class='btn btn-success'>Enviar Solicitação</button>";
 		$botoes[] = "<button type='button' id='btnUsarUltima' class='btn btn-info' style='display:none;' title='Uma solicitação já foi enviada para este dia. Clique para aplicar a mesma justificativa.'>Repetir Justificativa do Dia</button>";
 		$botoes[] = criarBotaoVoltar("espelho_ponto.php");
 
 		echo abre_form("Dados do Ajuste de Ponto");
 		echo "<input type='hidden' name='idMotorista' value='{$idMotorista}'>";
+		echo "<input type='hidden' name='enviar_solicitacao' value='1'>";
+		echo "<input type='hidden' name='confirmado_existente' id='confirmado_existente' value='0'>";
 		echo linha_form($textFields);
 		echo linha_form($variableFields);
 		echo linha_form($campoJust);
@@ -551,123 +626,136 @@
 		echo gerarTabelaSolicitacoes($motorista['enti_nb_id']);
 		echo "</div>";
 
+		echo "
+		<script>
+		document.addEventListener('DOMContentLoaded', function () {
+			const form = document.querySelector('form[name=\"contex_form\"]');
+			const campoData = (form && form.elements && form.elements['data']) ? form.elements['data'] : document.querySelector('[name=\"data\"]');
+			const campoMacro = (form && form.elements && form.elements['idMacro']) ? form.elements['idMacro'] : document.querySelector('[name=\"idMacro\"]');
+			const campoJustificativa = (form && form.elements && form.elements['justificativa']) ? form.elements['justificativa'] : document.querySelector('[name=\"justificativa\"]');
+			const idMotoristaEl = document.querySelector('input[name=\"idMotorista\"]');
+			const confirmadoEl = document.getElementById('confirmado_existente');
+			const btnUsarUltima = document.getElementById('btnUsarUltima');
+
+			const idMotorista = idMotoristaEl ? idMotoristaEl.value : '';
+
+			function checarJustificativaExistente() {
+				if (!campoData || !btnUsarUltima || !campoJustificativa || !idMotorista) return;
+
+				const data = campoData.value;
+				if (!data) {
+					btnUsarUltima.style.display = 'none';
+					return;
+				}
+
+				fetch(window.location.pathname, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: 'acao=buscarUltimaJustificativa&idMotorista=' + encodeURIComponent(idMotorista) + '&data=' + encodeURIComponent(data)
+				})
+				.then(function (response) { return response.json(); })
+				.then(function (payload) {
+					if (payload && payload.justificativa) {
+						btnUsarUltima.style.display = 'inline-block';
+						btnUsarUltima.onclick = function () {
+							campoJustificativa.value = payload.justificativa;
+						};
+					} else {
+						btnUsarUltima.style.display = 'none';
+					}
+				})
+				.catch(function () {
+					btnUsarUltima.style.display = 'none';
+				});
+			}
+
+			function filtrar() {
+				if (!campoData) return;
+
+				const dataSelecionada = campoData.value;
+				const tabela = document.querySelector('#tabelaNaoConformidadeContainer table');
+				if (!tabela) return;
+
+				const linhas = tabela.querySelectorAll('tbody tr');
+				if (!dataSelecionada) {
+					linhas.forEach(function (l) { l.style.display = ''; });
+					const msg = document.getElementById('mensagemSemDados');
+					if (msg) msg.style.display = 'none';
+					return;
+				}
+
+				const dataFormatada = new Date(dataSelecionada).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+				let encontrou = false;
+
+				linhas.forEach(function (linha) {
+					const celulaData = linha.querySelector('td:nth-child(2)');
+					if (!celulaData) return;
+
+					if (linha.innerText.includes('TOTAL')) {
+						linha.style.display = 'none';
+						return;
+					}
+
+					if (celulaData.textContent.trim() === dataFormatada) {
+						linha.style.display = '';
+						encontrou = true;
+					} else {
+						linha.style.display = 'none';
+					}
+				});
+
+				const msg = document.getElementById('mensagemSemDados');
+				if (msg) msg.style.display = encontrou ? 'none' : 'block';
+			}
+
+			if (campoData) {
+				campoData.addEventListener('change', function () { filtrar(); checarJustificativaExistente(); });
+				campoData.addEventListener('input', function () { filtrar(); checarJustificativaExistente(); });
+				if (campoData.value) checarJustificativaExistente();
+			}
+
+			if (form) {
+				form.addEventListener('submit', function (event) {
+					if (!confirmadoEl || confirmadoEl.value === '1') return;
+
+					const data = campoData ? campoData.value : '';
+					const idMacro = campoMacro ? campoMacro.value : '';
+					if (!data || !idMotorista || !idMacro) return;
+
+					event.preventDefault();
+
+					fetch(window.location.pathname, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+						body: 'acao=verificarPontoExistentePorMacro&idMotorista=' + encodeURIComponent(idMotorista) + '&data=' + encodeURIComponent(data) + '&idMacro=' + encodeURIComponent(idMacro)
+					})
+					.then(function (response) { return response.json(); })
+					.then(function (payload) {
+						if (payload && payload.existe) {
+							const tipo = payload.tipo ? payload.tipo : 'este tipo de registro';
+							const hora = payload.hora ? payload.hora : '';
+							const msg = 'Já existe ' + tipo + (hora ? (' às ' + hora) : '') + ' registrado neste dia.\\n\\nDeseja prosseguir com a solicitação para substituir?';
+							if (!confirm(msg)) return;
+						}
+
+						confirmadoEl.value = '1';
+						form.submit();
+					})
+					.catch(function () {
+						const msg = 'Não foi possível validar se já existe ponto para este dia.\\n\\nDeseja enviar a solicitação mesmo assim?';
+						if (!confirm(msg)) return;
+						confirmadoEl.value = '1';
+						form.submit();
+					});
+				});
+			}
+		});
+		</script>
+		";
+
 		rodape();
 
 	}
 
 	index();
 ?>
-
-<script>
-
-document.addEventListener("DOMContentLoaded",function(){
-
-	const campoData = document.getElementById("dataFiltro");
-	const campoJustificativa = document.getElementById("campoJustificativa");
-	const idMotorista = document.querySelector('input[name="idMotorista"]').value;
-	const btnUsarUltima = document.getElementById("btnUsarUltima");
-
-	if(!campoData) return;
-
-	// Função para verificar se já existe justificativa para o dia selecionado
-	function checarJustificativaExistente() {
-		const data = campoData.value;
-		if (!data) {
-			btnUsarUltima.style.display = 'none';
-			return;
-		}
-
-		fetch(window.location.pathname, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-			body: 'acao=buscarUltimaJustificativa&idMotorista=' + idMotorista + '&data=' + data
-		})
-		.then(response => response.json())
-		.then(data => {
-			if (data.justificativa) {
-				btnUsarUltima.style.display = 'inline-block';
-				btnUsarUltima.onclick = function() {
-					campoJustificativa.value = data.justificativa;
-				};
-			} else {
-				btnUsarUltima.style.display = 'none';
-			}
-		});
-	}
-
-	campoData.addEventListener("change", function() {
-		filtrar();
-		checarJustificativaExistente();
-	});
-	campoData.addEventListener("input", function() {
-		filtrar();
-		checarJustificativaExistente();
-	});
-
-	// Executar ao carregar caso já tenha data
-	if (campoData.value) {
-		checarJustificativaExistente();
-	}
-
-	function filtrar(){
-
-		const dataSelecionada = campoData.value;
-
-		const tabela = document.querySelector("#tabelaNaoConformidadeContainer table");
-
-		if(!tabela){
-			return;
-		}
-
-		const linhas = tabela.querySelectorAll("tbody tr");
-
-		if(!dataSelecionada){
-
-			linhas.forEach(l=>l.style.display="");
-
-			document.getElementById("mensagemSemDados").style.display="none";
-			return;
-
-		}
-
-		const dataFormatada = new Date(dataSelecionada).toLocaleDateString("pt-BR", {timeZone: 'UTC'});
-
-		let encontrou=false;
-
-		linhas.forEach(linha=>{
-
-			const celulaData = linha.querySelector("td:nth-child(2)");
-
-			if(!celulaData) return;
-
-			if(linha.innerText.includes("TOTAL")){
-				linha.style.display="none";
-				return;
-			}
-
-			if(celulaData.textContent.trim() === dataFormatada){
-
-				linha.style.display="";
-				encontrou=true;
-
-			}else{
-
-				linha.style.display="none";
-
-			}
-
-		});
-
-		document.getElementById("mensagemSemDados").style.display = encontrou ? "none" : "block";
-
-	}
-
-});
-
-</script>
-
-<?php
-	rodape();
-?>
-</body>
-</html>

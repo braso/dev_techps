@@ -28,11 +28,13 @@
 
 		if (!$sol) {
 			if(!$id) set_status("ERRO: Solicitação não encontrada.");
+			if(!$id){ index(); exit; }
 			return false;
 		}
 
 		if ($sol['status'] === 'aceita' || $sol['status'] === 'nao_aceita') {
 			if(!$id) set_status("ERRO: Esta solicitação já foi processada.");
+			if(!$id){ index(); exit; }
 			return false;
 		}
 
@@ -67,9 +69,11 @@
 			query("UPDATE solicitacoes_ajuste SET status = 'aceita', data_decisao = NOW(), id_superior = {$_SESSION['user_nb_id']} WHERE id = '$idSolicitacao'");
 
 			if(!$id) set_status("Solicitação aprovada e ponto registrado com sucesso!");
+			if(!$id){ index(); exit; }
 			return true;
 		} catch (Exception $e) {
 			if(!$id) set_status("ERRO: " . $e->getMessage());
+			if(!$id){ index(); exit; }
 			return false;
 		}
 	}
@@ -78,6 +82,7 @@
 		$idSolicitacao = $id ?: mysqli_real_escape_string($GLOBALS['conn'], $_POST['id_solicitacao']);
 		query("UPDATE solicitacoes_ajuste SET status = 'nao_aceita', data_decisao = NOW(), id_superior = {$_SESSION['user_nb_id']} WHERE id = '$idSolicitacao'");
 		if(!$id) set_status("Solicitação rejeitada com sucesso.");
+		if(!$id){ index(); exit; }
 		return true;
 	}
 
