@@ -147,7 +147,7 @@
 	}
 
 	function aceitarSolicitacao($id = null){
-		include "../check_permission.php";
+		include_once "../check_permission.php";
 		verificaPermissao('/telas/gerenciar_ajustes.php');
 
 		$emLote = ($id !== null);
@@ -327,7 +327,7 @@
 	}
 
 	function rejeitarSolicitacao($id = null){
-		include "../check_permission.php";
+		include_once "../check_permission.php";
 		verificaPermissao('/telas/gerenciar_ajustes.php');
 
 		$emLote = ($id !== null);
@@ -354,7 +354,7 @@
 	}
 
 	function processarEmLote(){
-		include "../check_permission.php";
+		include_once "../check_permission.php";
 		verificaPermissao('/telas/gerenciar_ajustes.php');
 
 		$ids = $_POST['ids_selecionados'] ?? '';
@@ -403,7 +403,7 @@
 	}
 
 	function index(){
-		include "../check_permission.php";
+		include_once "../check_permission.php";
 		// Como o arquivo está em uma pasta, a permissão deve considerar o caminho relativo ou absoluto
 		// No banco de dados, geralmente salvamos o caminho relativo à raiz.
 		verificaPermissao('/telas/gerenciar_ajustes.php');
