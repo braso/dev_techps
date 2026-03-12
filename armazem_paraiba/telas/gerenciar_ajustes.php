@@ -3,7 +3,8 @@
 
 	function buscarSubsetores(){
 		$setor = mysqli_real_escape_string($GLOBALS['conn'], $_POST['setor']);
-		$subsetores = mysqli_fetch_all(query("SELECT DISTINCT subsetor_usuario FROM solicitacoes_ajuste WHERE setor_usuario = '$setor' AND subsetor_usuario IS NOT NULL AND subsetor_usuario != '' AND subsetor_usuario != 'N/A' ORDER BY subsetor_usuario"), MYSQLI_ASSOC);
+		$res = query("SELECT DISTINCT subsetor_usuario FROM solicitacoes_ajuste WHERE setor_usuario = '$setor' AND subsetor_usuario IS NOT NULL AND subsetor_usuario != '' AND subsetor_usuario != 'N/A' ORDER BY subsetor_usuario");
+		$subsetores = ($res instanceof mysqli_result) ? mysqli_fetch_all($res, MYSQLI_ASSOC) : [];
 		
 		$retorno = [];
 		foreach($subsetores as $sub){
@@ -24,34 +25,41 @@
 				exit;
 			}
 
-			$sol = mysqli_fetch_assoc(query("
+			$resSol = query("
 				SELECT s.*, e.enti_tx_matricula
 				FROM solicitacoes_ajuste s
 				JOIN entidade e ON s.id_motorista = e.enti_nb_id
 				WHERE s.id = {$idSolicitacao}
 				LIMIT 1
-			"));
+			");
+			$sol = ($resSol instanceof mysqli_result) ? mysqli_fetch_assoc($resSol) : null;
 			if (empty($sol['enti_tx_matricula']) || empty($sol['data_ajuste']) || empty($sol['id_macro'])) {
 				echo json_encode(['existe' => false]);
 				exit;
 			}
 
 			$idMacro = intval($sol['id_macro']);
-			$macro = mysqli_fetch_assoc(query("
+			$resMacro = query("
 				SELECT macr_tx_nome
 				FROM macroponto
 				WHERE macr_tx_status = 'ativo'
 					AND macr_nb_id = {$idMacro}
 				LIMIT 1
-			"));
+			");
+			$macro = ($resMacro instanceof mysqli_result) ? mysqli_fetch_assoc($resMacro) : [];
 
 			$matricula = mysqli_real_escape_string($GLOBALS['conn'], $sol['enti_tx_matricula']);
 			$data = mysqli_real_escape_string($GLOBALS['conn'], $sol['data_ajuste']);
 
-			$ponto = mysqli_fetch_assoc(query("
+			$resPonto = query("
 				SELECT p.pont_tx_data
 				FROM ponto p
-				JOIN macroponto m ON (p.pont_tx_tipo = m.macr_tx_codigoInterno OR p.pont_tx_tipo = m.macr_nb_id)
+				JOIN macroponto m ON (
+					p.pont_tx_tipo = m.macr_tx_codigoInterno
+					OR p.pont_tx_tipo = m.macr_nb_id
+					OR p.pont_tx_tipo = m.macr_tx_codigoExterno
+					OR p.pont_tx_tipoOriginal = m.macr_tx_codigoExterno
+				)
 				WHERE p.pont_tx_status = 'ativo'
 					AND m.macr_tx_status = 'ativo'
 					AND p.pont_tx_matricula = '{$matricula}'
@@ -59,7 +67,8 @@
 					AND m.macr_nb_id = {$idMacro}
 				ORDER BY p.pont_tx_data DESC
 				LIMIT 1
-			"));
+			");
+			$ponto = ($resPonto instanceof mysqli_result) ? mysqli_fetch_assoc($resPonto) : [];
 
 			if (!empty($ponto['pont_tx_data'])) {
 				echo json_encode([
@@ -90,13 +99,14 @@
 
 			$qtd = 0;
 			foreach ($ids as $idSolicitacao) {
-				$sol = mysqli_fetch_assoc(query("
+				$resSol = query("
 					SELECT s.*, e.enti_tx_matricula
 					FROM solicitacoes_ajuste s
 					JOIN entidade e ON s.id_motorista = e.enti_nb_id
 					WHERE s.id = {$idSolicitacao}
 					LIMIT 1
-				"));
+				");
+				$sol = ($resSol instanceof mysqli_result) ? mysqli_fetch_assoc($resSol) : null;
 				if (empty($sol['enti_tx_matricula']) || empty($sol['data_ajuste']) || empty($sol['id_macro'])) {
 					continue;
 				}
@@ -105,10 +115,15 @@
 				$matricula = mysqli_real_escape_string($GLOBALS['conn'], $sol['enti_tx_matricula']);
 				$data = mysqli_real_escape_string($GLOBALS['conn'], $sol['data_ajuste']);
 
-				$ponto = mysqli_fetch_assoc(query("
+				$resPonto = query("
 					SELECT p.pont_tx_data
 					FROM ponto p
-					JOIN macroponto m ON (p.pont_tx_tipo = m.macr_tx_codigoInterno OR p.pont_tx_tipo = m.macr_nb_id)
+					JOIN macroponto m ON (
+						p.pont_tx_tipo = m.macr_tx_codigoInterno
+						OR p.pont_tx_tipo = m.macr_nb_id
+						OR p.pont_tx_tipo = m.macr_tx_codigoExterno
+						OR p.pont_tx_tipoOriginal = m.macr_tx_codigoExterno
+					)
 					WHERE p.pont_tx_status = 'ativo'
 						AND m.macr_tx_status = 'ativo'
 						AND p.pont_tx_matricula = '{$matricula}'
@@ -116,7 +131,8 @@
 						AND m.macr_nb_id = {$idMacro}
 					ORDER BY p.pont_tx_data DESC
 					LIMIT 1
-				"));
+				");
+				$ponto = ($resPonto instanceof mysqli_result) ? mysqli_fetch_assoc($resPonto) : [];
 				if (!empty($ponto['pont_tx_data'])) {
 					$qtd++;
 				}
@@ -134,26 +150,33 @@
 		include "../check_permission.php";
 		verificaPermissao('/telas/gerenciar_ajustes.php');
 
-		$idSolicitacao = $id ?: mysqli_real_escape_string($GLOBALS['conn'], $_POST['id_solicitacao']);
+		$emLote = ($id !== null);
+		$idSolicitacao = $emLote ? intval($id) : intval($_POST['id_solicitacao'] ?? 0);
+		if ($idSolicitacao <= 0) {
+			if(!$emLote) set_status("ERRO: Solicitação inválida.");
+			if(!$emLote){ index(); exit; }
+			return false;
+		}
 		
 		// Buscar detalhes da solicitação
-		$sol = mysqli_fetch_assoc(query("
+		$resSol = query("
 			SELECT s.*, e.enti_tx_matricula 
 			FROM solicitacoes_ajuste s 
 			JOIN entidade e ON s.id_motorista = e.enti_nb_id 
 			WHERE s.id = '$idSolicitacao' 
 			LIMIT 1
-		"));
+		");
+		$sol = ($resSol instanceof mysqli_result) ? mysqli_fetch_assoc($resSol) : null;
 
 		if (!$sol) {
-			if(!$id) set_status("ERRO: Solicitação não encontrada.");
-			if(!$id){ index(); exit; }
+			if(!$emLote) set_status("ERRO: Solicitação não encontrada.");
+			if(!$emLote){ index(); exit; }
 			return false;
 		}
 
 		if ($sol['status'] === 'aceita' || $sol['status'] === 'nao_aceita') {
-			if(!$id) set_status("ERRO: Esta solicitação já foi processada.");
-			if(!$id){ index(); exit; }
+			if(!$emLote) set_status("ERRO: Esta solicitação já foi processada.");
+			if(!$emLote){ index(); exit; }
 			return false;
 		}
 
@@ -164,10 +187,15 @@
 			$dataDia = mysqli_real_escape_string($GLOBALS['conn'], $sol['data_ajuste']);
 			$matricula = mysqli_real_escape_string($GLOBALS['conn'], $sol['enti_tx_matricula']);
 
-			$pontoExistente = mysqli_fetch_assoc(query("
+			$resExistente = query("
 				SELECT p.pont_tx_data
 				FROM ponto p
-				JOIN macroponto m ON (p.pont_tx_tipo = m.macr_tx_codigoInterno OR p.pont_tx_tipo = m.macr_nb_id)
+				JOIN macroponto m ON (
+					p.pont_tx_tipo = m.macr_tx_codigoInterno
+					OR p.pont_tx_tipo = m.macr_nb_id
+					OR p.pont_tx_tipo = m.macr_tx_codigoExterno
+					OR p.pont_tx_tipoOriginal = m.macr_tx_codigoExterno
+				)
 				WHERE p.pont_tx_status = 'ativo'
 					AND m.macr_tx_status = 'ativo'
 					AND p.pont_tx_matricula = '{$matricula}'
@@ -175,12 +203,37 @@
 					AND m.macr_nb_id = {$idMacro}
 				ORDER BY p.pont_tx_data DESC
 				LIMIT 1
-			"));
+			");
+			$pontoExistente = ($resExistente instanceof mysqli_result) ? mysqli_fetch_assoc($resExistente) : [];
 
 			if (!empty($pontoExistente['pont_tx_data']) && !$permitirSubstituir) {
 				if(!$id) set_status("ERRO: Já existe registro lançado. Confirme para substituir.");
 				if(!$id){ index(); exit; }
 				return false;
+			}
+
+			if (!empty($pontoExistente['pont_tx_data']) && $permitirSubstituir) {
+				$resMacro = query("
+					SELECT macr_tx_codigoInterno, macr_tx_codigoExterno
+					FROM macroponto
+					WHERE macr_tx_status = 'ativo'
+						AND macr_nb_id = {$idMacro}
+					LIMIT 1
+				");
+				$macro = ($resMacro instanceof mysqli_result) ? mysqli_fetch_assoc($resMacro) : [];
+				$codigoInterno = mysqli_real_escape_string($GLOBALS['conn'], $macro['macr_tx_codigoInterno'] ?? '');
+				$codigoExterno = mysqli_real_escape_string($GLOBALS['conn'], $macro['macr_tx_codigoExterno'] ?? '');
+
+				query("UPDATE ponto SET pont_tx_status = 'inativo'
+					WHERE pont_tx_status = 'ativo'
+						AND pont_tx_matricula = '{$matricula}'
+						AND pont_tx_data LIKE '{$dataDia}%'
+						AND (
+							pont_tx_tipo = '{$codigoInterno}'
+							OR pont_tx_tipo = '{$idMacro}'
+							OR pont_tx_tipo = '{$codigoExterno}'
+							OR pont_tx_tipoOriginal = '{$codigoExterno}'
+						)");
 			}
 
 			// Preparar os dados para inserir na tabela ponto
@@ -192,7 +245,7 @@
 				$msg = $eConferir->getMessage();
 				if ($permitirSubstituir && is_int(stripos($msg, "Jornada aberta já existente"))) {
 					$dataRetry = mysqli_real_escape_string($GLOBALS['conn'], $dataPonto->format("Y-m-d H:i:s"));
-					$ultimaJornada = mysqli_fetch_assoc(query("
+					$resJornada = query("
 						SELECT pont_nb_id, pont_tx_tipo
 						FROM ponto
 						WHERE pont_tx_status = 'ativo'
@@ -201,7 +254,8 @@
 							AND pont_tx_data <= STR_TO_DATE('{$dataRetry}', '%Y-%m-%d %H:%i:%s')
 						ORDER BY pont_tx_data DESC, pont_nb_id DESC
 						LIMIT 1
-					"));
+					");
+					$ultimaJornada = ($resJornada instanceof mysqli_result) ? mysqli_fetch_assoc($resJornada) : [];
 
 					if (!empty($ultimaJornada['pont_nb_id']) && strval($ultimaJornada['pont_tx_tipo']) === '1') {
 						$idPontoInativar = intval($ultimaJornada['pont_nb_id']);
@@ -216,33 +270,17 @@
 					throw $eConferir;
 				}
 			}
-
-			if (!empty($pontoExistente['pont_tx_data'])) {
-				$macro = mysqli_fetch_assoc(query("
-					SELECT macr_tx_codigoInterno
-					FROM macroponto
-					WHERE macr_tx_status = 'ativo'
-						AND macr_nb_id = {$idMacro}
-					LIMIT 1
-				"));
-				$codigoInterno = mysqli_real_escape_string($GLOBALS['conn'], $macro['macr_tx_codigoInterno'] ?? '');
-
-				query("UPDATE ponto SET pont_tx_status = 'inativo'
-					WHERE pont_tx_status = 'ativo'
-						AND pont_tx_matricula = '{$matricula}'
-						AND pont_tx_data LIKE '{$dataDia}%'
-						AND (pont_tx_tipo = '{$codigoInterno}' OR pont_tx_tipo = '{$idMacro}')");
-			}
 			
 			// Conferir se já existe um ponto no mesmo segundo (lógica de ajuste_ponto.php)
-			$temPonto = mysqli_fetch_assoc(query("
+			$resTemPonto = query("
 				SELECT pont_tx_data FROM ponto
 				WHERE pont_tx_status = 'ativo'
 					AND pont_tx_matricula = '{$sol['enti_tx_matricula']}'
 					AND STR_TO_DATE(pont_tx_data, '%Y-%m-%d %H:%i') = STR_TO_DATE('{$sol['data_ajuste']} {$sol['hora_ajuste']}', '%Y-%m-%d %H:%i')
 				ORDER BY pont_tx_data DESC
 				LIMIT 1
-			"));
+			");
+			$temPonto = ($resTemPonto instanceof mysqli_result) ? mysqli_fetch_assoc($resTemPonto) : [];
 
 			if (!empty($temPonto["pont_tx_data"])) {
 				// Inativar o ponto antigo antes de inserir o novo (substituição)
@@ -258,9 +296,8 @@
 			// Atualizar status da solicitação
 			query("UPDATE solicitacoes_ajuste SET status = 'aceita', data_decisao = NOW(), id_superior = {$_SESSION['user_nb_id']} WHERE id = '$idSolicitacao'");
 
-			if(!$id){
+			if(!$emLote){
 				$params = [
-					"acao" => "index",
 					"msg_status" => "Solicitação aprovada e ponto registrado com sucesso!",
 					"motorista" => ($_POST["motorista"] ?? ""),
 					"status_filtro" => ($_POST["status_filtro"] ?? "pendentes"),
@@ -273,9 +310,8 @@
 			}
 			return true;
 		} catch (Throwable $e) {
-			if(!$id){
+			if(!$emLote){
 				$params = [
-					"acao" => "index",
 					"msg_status" => "ERRO: " . $e->getMessage(),
 					"motorista" => ($_POST["motorista"] ?? ""),
 					"status_filtro" => ($_POST["status_filtro"] ?? "pendentes"),
@@ -294,11 +330,16 @@
 		include "../check_permission.php";
 		verificaPermissao('/telas/gerenciar_ajustes.php');
 
-		$idSolicitacao = $id ?: mysqli_real_escape_string($GLOBALS['conn'], $_POST['id_solicitacao']);
+		$emLote = ($id !== null);
+		$idSolicitacao = $emLote ? intval($id) : intval($_POST['id_solicitacao'] ?? 0);
+		if ($idSolicitacao <= 0) {
+			if(!$emLote) set_status("ERRO: Solicitação inválida.");
+			if(!$emLote){ index(); exit; }
+			return false;
+		}
 		query("UPDATE solicitacoes_ajuste SET status = 'nao_aceita', data_decisao = NOW(), id_superior = {$_SESSION['user_nb_id']} WHERE id = '$idSolicitacao'");
-		if(!$id){
+		if(!$emLote){
 			$params = [
-				"acao" => "index",
 				"msg_status" => "Solicitação rejeitada com sucesso.",
 				"motorista" => ($_POST["motorista"] ?? ""),
 				"status_filtro" => ($_POST["status_filtro"] ?? "pendentes"),
@@ -330,18 +371,26 @@
 		$erro = 0;
 
 		foreach ($arrIds as $id) {
+			$id = intval(trim($id));
+			if ($id <= 0) {
+				$erro++;
+				continue;
+			}
 			$_POST['permitir_substituir'] = ($_POST['permitir_substituir'] ?? '0');
-			if ($acaoLote == 'aceitarLote') {
-				if (aceitarSolicitacao($id)) $sucesso++; else $erro++;
-			} elseif ($acaoLote == 'rejeitarLote') {
-				if (rejeitarSolicitacao($id)) $sucesso++; else $erro++;
+			try {
+				if ($acaoLote == 'aceitarLote') {
+					if (aceitarSolicitacao($id)) $sucesso++; else $erro++;
+				} elseif ($acaoLote == 'rejeitarLote') {
+					if (rejeitarSolicitacao($id)) $sucesso++; else $erro++;
+				}
+			} catch (Throwable $e) {
+				$erro++;
 			}
 		}
 
 		$msg = "$sucesso solicitações processadas com sucesso.";
 		if ($erro > 0) $msg .= " $erro falhas encontradas.";
 		$params = [
-			"acao" => "index",
 			"msg_status" => $msg,
 			"motorista" => ($_POST["motorista"] ?? ""),
 			"status_filtro" => ($_POST["status_filtro"] ?? "pendentes"),
@@ -358,6 +407,25 @@
 		// Como o arquivo está em uma pasta, a permissão deve considerar o caminho relativo ou absoluto
 		// No banco de dados, geralmente salvamos o caminho relativo à raiz.
 		verificaPermissao('/telas/gerenciar_ajustes.php');
+
+		if (empty($_POST['msg_status']) && isset($_GET['msg_status']) && $_GET['msg_status'] !== '') {
+			$_POST['msg_status'] = $_GET['msg_status'];
+		}
+		if (empty($_POST['motorista']) && isset($_GET['motorista']) && $_GET['motorista'] !== '') {
+			$_POST['motorista'] = $_GET['motorista'];
+		}
+		if (empty($_POST['status_filtro']) && isset($_GET['status_filtro']) && $_GET['status_filtro'] !== '') {
+			$_POST['status_filtro'] = $_GET['status_filtro'];
+		}
+		if (empty($_POST['cargo_filtro']) && isset($_GET['cargo_filtro']) && $_GET['cargo_filtro'] !== '') {
+			$_POST['cargo_filtro'] = $_GET['cargo_filtro'];
+		}
+		if (empty($_POST['setor_filtro']) && isset($_GET['setor_filtro']) && $_GET['setor_filtro'] !== '') {
+			$_POST['setor_filtro'] = $_GET['setor_filtro'];
+		}
+		if (empty($_POST['subsetor_filtro']) && isset($_GET['subsetor_filtro']) && $_GET['subsetor_filtro'] !== '') {
+			$_POST['subsetor_filtro'] = $_GET['subsetor_filtro'];
+		}
 
 		cabecalho("Gerenciar Ajustes de Ponto");
 
@@ -410,7 +478,10 @@
 		";
 
 		$result = query($sql);
-		$dados = mysqli_fetch_all($result, MYSQLI_ASSOC);
+		$dados = ($result instanceof mysqli_result) ? mysqli_fetch_all($result, MYSQLI_ASSOC) : [];
+		if (!($result instanceof mysqli_result)) {
+			set_status("ERRO: Falha ao buscar solicitações.");
+		}
 		
 		// Identificar duplicidades (mesmo funcionário no mesmo dia)
 		$contagemDuplicados = [];
@@ -479,12 +550,15 @@
 		$cabecalho_tabela = ["<input type='checkbox' id='sel-tudo'>", "Solicitado", "Funcionário", "Data/Hora Ajuste", "Tipo", "Motivo", "Justificativa", "Solicitante", "Status", "Ações"];
 
 		// Buscar opções para os combos de filtro
-		$cargos = mysqli_fetch_all(query("SELECT DISTINCT cargo_usuario FROM solicitacoes_ajuste WHERE cargo_usuario IS NOT NULL AND cargo_usuario != '' AND cargo_usuario != 'N/A' ORDER BY cargo_usuario"), MYSQLI_ASSOC);
-		$setores = mysqli_fetch_all(query("SELECT DISTINCT setor_usuario FROM solicitacoes_ajuste WHERE setor_usuario IS NOT NULL AND setor_usuario != '' AND setor_usuario != 'N/A' ORDER BY setor_usuario"), MYSQLI_ASSOC);
+		$resCargos = query("SELECT DISTINCT cargo_usuario FROM solicitacoes_ajuste WHERE cargo_usuario IS NOT NULL AND cargo_usuario != '' AND cargo_usuario != 'N/A' ORDER BY cargo_usuario");
+		$cargos = ($resCargos instanceof mysqli_result) ? mysqli_fetch_all($resCargos, MYSQLI_ASSOC) : [];
+		$resSetores = query("SELECT DISTINCT setor_usuario FROM solicitacoes_ajuste WHERE setor_usuario IS NOT NULL AND setor_usuario != '' AND setor_usuario != 'N/A' ORDER BY setor_usuario");
+		$setores = ($resSetores instanceof mysqli_result) ? mysqli_fetch_all($resSetores, MYSQLI_ASSOC) : [];
 		
 		$subsetores = [];
 		if (!empty($setorFiltro)) {
-			$subsetores = mysqli_fetch_all(query("SELECT DISTINCT subsetor_usuario FROM solicitacoes_ajuste WHERE setor_usuario = '$setorFiltro' AND subsetor_usuario IS NOT NULL AND subsetor_usuario != '' AND subsetor_usuario != 'N/A' ORDER BY subsetor_usuario"), MYSQLI_ASSOC);
+			$resSub = query("SELECT DISTINCT subsetor_usuario FROM solicitacoes_ajuste WHERE setor_usuario = '$setorFiltro' AND subsetor_usuario IS NOT NULL AND subsetor_usuario != '' AND subsetor_usuario != 'N/A' ORDER BY subsetor_usuario");
+			$subsetores = ($resSub instanceof mysqli_result) ? mysqli_fetch_all($resSub, MYSQLI_ASSOC) : [];
 		}
 
 		function montarComboFiltro($label, $nome, $valorAtual, $opcoes, $campoBanco, $tamanho = 2, $id = "", $disabled = false) {

@@ -136,7 +136,7 @@
 					$statusBadge = "<span class='badge badge-warning' style='font-size:12px; padding:5px 10px;'>Enviada</span>";
 					break;
 				case 'visualizada':
-					$statusBadge = "<span class='badge badge-info' style='font-size:12px; padding:5px 10px;'>Visualizada</span>";
+					$statusBadge = "<span class='badge badge-info' style='font-size:12px; padding:5px 10px;'>Em Análise</span>";
 					break;
 				case 'aceita':
 					$statusBadge = "<span class='badge badge-success' style='font-size:12px; padding:5px 10px;'>Aceita</span>";
