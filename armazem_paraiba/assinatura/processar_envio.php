@@ -18,14 +18,189 @@ require __DIR__ . '/../../PHPMailer/src/SMTP.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-// Verifica se é POST
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    $redirect = $_POST['redirect_to'] ?? 'enviar_documento.php';
-    header("Location: $redirect?status=error&message=Método inválido");
+function redirectTo(string $redirectTo, string $status, ?string $message = null): void {
+    $sep = (strpos($redirectTo, "?") === false) ? "?" : "&";
+    $url = $redirectTo . $sep . "status=" . urlencode($status);
+    if($message !== null && $message !== ""){
+        $url .= "&message=" . urlencode($message);
+    }
+    header("Location: {$url}");
     exit;
 }
 
+function ensureAssinaturaTables($conn): void {
+    $checkTable = "SHOW TABLES LIKE 'solicitacoes_assinatura'";
+    $resultTable = mysqli_query($conn, $checkTable);
+    if (mysqli_num_rows($resultTable) == 0) {
+        $sqlCreateTable = "CREATE TABLE IF NOT EXISTS solicitacoes_assinatura (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            token VARCHAR(64) NOT NULL UNIQUE,
+            email VARCHAR(255) NOT NULL,
+            nome VARCHAR(255),
+            caminho_arquivo VARCHAR(255) NOT NULL,
+            nome_arquivo_original VARCHAR(255),
+            data_solicitacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+            status ENUM('pendente', 'em_progresso', 'concluido', 'assinado') DEFAULT 'pendente',
+            id_documento VARCHAR(100),
+            data_assinatura DATETIME NULL
+        )";
+        mysqli_query($conn, $sqlCreateTable);
+    } else {
+        $cols = ['nome', 'nome_arquivo_original'];
+        foreach ($cols as $col) {
+            $check = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE '$col'");
+            if (mysqli_num_rows($check) == 0) {
+                mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN $col VARCHAR(255)");
+            }
+        }
+    }
+
+    $checkTableAssinantes = "SHOW TABLES LIKE 'assinantes'";
+    $resultTableAssinantes = mysqli_query($conn, $checkTableAssinantes);
+    if (mysqli_num_rows($resultTableAssinantes) == 0) {
+        $sqlCreateTableAssinantes = "CREATE TABLE IF NOT EXISTS assinantes (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            id_solicitacao INT NOT NULL,
+            nome VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NOT NULL,
+            cpf VARCHAR(20),
+            funcao VARCHAR(100),
+            ordem INT NOT NULL DEFAULT 1,
+            token VARCHAR(64) NOT NULL UNIQUE,
+            status ENUM('pendente', 'assinado') DEFAULT 'pendente',
+            data_assinatura DATETIME NULL,
+            ip VARCHAR(45),
+            metadados TEXT,
+            INDEX (id_solicitacao),
+            INDEX (token)
+        )";
+        mysqli_query($conn, $sqlCreateTableAssinantes);
+    }
+}
+
+function contarPaginasPdf(string $path): int {
+    if(extension_loaded("imagick")){
+        try {
+            $im = new Imagick();
+            if(method_exists($im, "pingImage")){
+                $im->pingImage($path);
+            } else {
+                $im->readImage($path);
+            }
+            $n = intval($im->getNumberImages());
+            $im->clear();
+            $im->destroy();
+            return $n > 0 ? $n : 0;
+        } catch (Throwable $e) {
+        }
+    }
+
+    $content = @file_get_contents($path);
+    if($content === false){
+        return 0;
+    }
+    if(preg_match_all("/\\/Type\\s*\\/Page(?!s)/", $content, $m) === false){
+        return 0;
+    }
+    return max(0, count($m[0] ?? []));
+}
+
+function isFunctionDisabled(string $fn): bool {
+    $disabled = ini_get("disable_functions");
+    if(!$disabled){
+        return false;
+    }
+    $list = array_filter(array_map("trim", explode(",", $disabled)));
+    return in_array($fn, $list, true);
+}
+
+function canExec(): bool {
+    return function_exists("exec") && !isFunctionDisabled("exec");
+}
+
+function findCommand(array $candidates): ?string {
+    if(!canExec()){
+        return null;
+    }
+
+    $isWindows = (PHP_OS_FAMILY ?? "") === "Windows" || DIRECTORY_SEPARATOR === "\\";
+    foreach($candidates as $cmd){
+        $out = [];
+        $code = 1;
+        if($isWindows){
+            @exec("where " . escapeshellarg($cmd), $out, $code);
+        } else {
+            @exec("command -v " . escapeshellarg($cmd) . " 2>/dev/null", $out, $code);
+            if($code !== 0 || empty($out)){
+                $out = [];
+                $code = 1;
+                @exec("which " . escapeshellarg($cmd) . " 2>/dev/null", $out, $code);
+            }
+        }
+        if($code === 0 && !empty($out)){
+            $path = trim(strval($out[0]));
+            if($path !== ""){
+                return $path;
+            }
+        }
+    }
+    return null;
+}
+
+function separarPaginaPdf(string $input, int $page, string $output): bool {
+    if($page <= 0){
+        return false;
+    }
+
+    if(extension_loaded("imagick")){
+        try {
+            $im = new Imagick();
+            $im->setResolution(150, 150);
+            $im->readImage($input . "[" . ($page - 1) . "]");
+            $im->setImageFormat("pdf");
+            $im->writeImage($output);
+            $im->clear();
+            $im->destroy();
+            return file_exists($output);
+        } catch (Throwable $e) {
+        }
+    }
+
+    $qpdf = findCommand(["qpdf"]);
+    if($qpdf){
+        $cmd = escapeshellarg($qpdf) . " --empty --pages " . escapeshellarg($input) . " " . intval($page) . " -- " . escapeshellarg($output);
+        $out = [];
+        $code = 1;
+        @exec($cmd, $out, $code);
+        return $code === 0 && file_exists($output);
+    }
+
+    $gs = findCommand(["gswin64c", "gswin32c", "gs"]);
+    if($gs){
+        $cmd =
+            escapeshellarg($gs)
+            . " -sDEVICE=pdfwrite -dNOPAUSE -dBATCH"
+            . " -dFirstPage=" . intval($page)
+            . " -dLastPage=" . intval($page)
+            . " -sOutputFile=" . escapeshellarg($output)
+            . " " . escapeshellarg($input);
+        $out = [];
+        $code = 1;
+        @exec($cmd, $out, $code);
+        return $code === 0 && file_exists($output);
+    }
+
+    return false;
+}
+
+// Verifica se é POST
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    $redirect = 'enviar_documento.php';
+    redirectTo($redirect, "error", "Método inválido");
+}
+
 $redirect_to = $_POST['redirect_to'] ?? 'enviar_documento.php';
+$modo_envio = $_POST["modo_envio"] ?? "avulso";
 
 // Captura signatários do formulário (Array)
 $signatarios = $_POST['signatarios'] ?? [];
@@ -46,15 +221,281 @@ if (empty($signatarios) || !is_array($signatarios)) {
             ]
         ];
     } else {
-        header("Location: $redirect_to?status=error&message=Nenhum signatário informado");
-        exit;
+        $signatarios = [];
     }
+}
+
+if(!in_array($modo_envio, ["funcionarios", "separar_paginas"], true) && empty($signatarios)){
+    redirectTo($redirect_to, "error", "Nenhum signatário informado");
+}
+
+if($modo_envio === "funcionarios"){
+    ensureAssinaturaTables($conn);
+
+    $arquivos = $_FILES["arquivos"] ?? null;
+    if(!$arquivos || !isset($arquivos["name"]) || !is_array($arquivos["name"])){
+        redirectTo($redirect_to, "error", "Nenhum arquivo enviado.");
+    }
+
+    $ids = $_POST["funcionarios"] ?? [];
+    $ids = is_array($ids) ? $ids : [];
+    $ids = array_values(array_unique(array_filter(array_map("intval", $ids), fn($v) => $v > 0)));
+    if(empty($ids)){
+        $keys = array_keys($arquivos["name"] ?? []);
+        $ids = array_values(array_unique(array_filter(array_map("intval", $keys), fn($v) => $v > 0)));
+    }
+    if(empty($ids)){
+        redirectTo($redirect_to, "error", "Nenhum funcionário selecionado.");
+    }
+
+    $uploadFileDir = './uploads/';
+    if (!is_dir($uploadFileDir)) {
+        mkdir($uploadFileDir, 0777, true);
+    }
+
+    $enviados = 0;
+    $erros = 0;
+    $ignorados = 0;
+
+    foreach($ids as $idEntidade){
+        $err = $arquivos["error"][$idEntidade] ?? UPLOAD_ERR_NO_FILE;
+        if($err !== UPLOAD_ERR_OK){
+            continue;
+        }
+
+        $tmp = $arquivos["tmp_name"][$idEntidade] ?? "";
+        $original = $arquivos["name"][$idEntidade] ?? "";
+        if($tmp === "" || $original === ""){
+            $erros++;
+            continue;
+        }
+
+        $ext = strtolower(pathinfo($original, PATHINFO_EXTENSION));
+        if($ext !== "pdf"){
+            $erros++;
+            continue;
+        }
+
+        $funcionario = mysqli_fetch_assoc(query(
+            "SELECT
+                enti_nb_id,
+                enti_tx_nome,
+                enti_tx_email
+            FROM entidade
+            WHERE enti_nb_id = ?
+            LIMIT 1",
+            "i",
+            [$idEntidade]
+        ));
+
+        if(empty($funcionario)){
+            $erros++;
+            continue;
+        }
+
+        $email = filter_var(trim(strval($funcionario["enti_tx_email"] ?? "")), FILTER_VALIDATE_EMAIL);
+        $nome = trim(strval($funcionario["enti_tx_nome"] ?? ""));
+        if(!$email || $nome === ""){
+            $ignorados++;
+            continue;
+        }
+
+        $newFileName = md5($idEntidade . "-" . microtime(true) . "-" . $original . "-" . bin2hex(random_bytes(8))) . ".pdf";
+        $dest_path = $uploadFileDir . $newFileName;
+
+        if(!move_uploaded_file($tmp, $dest_path)){
+            $erros++;
+            continue;
+        }
+
+        $tokenMestre = bin2hex(random_bytes(32));
+        $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
+
+        $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, status) VALUES (?, ?, ?, ?, ?, ?, 'pendente')";
+        $stmt = mysqli_prepare($conn, $sql);
+        if(!$stmt){
+            @unlink($dest_path);
+            $erros++;
+            continue;
+        }
+        mysqli_stmt_bind_param($stmt, "ssssss", $tokenMestre, $email, $nome, $dest_path, $original, $id_documento);
+        if(!mysqli_stmt_execute($stmt)){
+            @unlink($dest_path);
+            $erros++;
+            continue;
+        }
+
+        $id_solicitacao = mysqli_insert_id($conn);
+        $tokenAssinante = bin2hex(random_bytes(32));
+        $funcao = "Funcionário";
+
+        $sqlAssinante = "INSERT INTO assinantes (id_solicitacao, nome, email, funcao, ordem, token, status) VALUES (?, ?, ?, ?, 1, ?, 'pendente')";
+        $stmtAssinante = mysqli_prepare($conn, $sqlAssinante);
+        if(!$stmtAssinante){
+            $erros++;
+            continue;
+        }
+        mysqli_stmt_bind_param($stmtAssinante, "issss", $id_solicitacao, $nome, $email, $funcao, $tokenAssinante);
+        if(!mysqli_stmt_execute($stmtAssinante)){
+            $erros++;
+            continue;
+        }
+
+        enviarEmailAssinatura($email, $nome, $tokenAssinante, $original, $id_documento, $funcao);
+        $enviados++;
+    }
+
+    if($enviados <= 0){
+        redirectTo($redirect_to, "error", "Nenhum documento foi enviado. Verifique os PDFs anexados e os e-mails dos funcionários.");
+    }
+
+    $msg = "Enviados: {$enviados}. Erros: {$erros}. Ignorados (sem e-mail): {$ignorados}.";
+    redirectTo($redirect_to, "success", $msg);
+}
+
+if($modo_envio === "separar_paginas"){
+    if(session_status() === PHP_SESSION_NONE){
+        session_start();
+    }
+    ensureAssinaturaTables($conn);
+
+    $token = trim(strval($_POST["pdf_token"] ?? ""));
+    if($token === ""){
+        redirectTo($redirect_to, "error", "PDF não encontrado.");
+    }
+    $tokens = $_SESSION["pdf_split_tokens"] ?? [];
+    if(!is_array($tokens) || empty($tokens[$token]) || !is_array($tokens[$token])){
+        redirectTo($redirect_to, "error", "Sessão do PDF expirou. Refaça o upload.");
+    }
+
+    $path = strval($tokens[$token]["path"] ?? "");
+    $original = strval($tokens[$token]["name"] ?? "documento.pdf");
+    $pagesStored = intval($tokens[$token]["pages"] ?? 0);
+
+    $dirTmp = realpath(__DIR__ . "/uploads/tmp/");
+    $real = $path !== "" ? realpath($path) : false;
+    if(!$dirTmp || !$real || strpos($real, $dirTmp) !== 0 || !file_exists($real)){
+        unset($_SESSION["pdf_split_tokens"][$token]);
+        redirectTo($redirect_to, "error", "Arquivo temporário inválido.");
+    }
+
+    $pages = $pagesStored > 0 ? $pagesStored : contarPaginasPdf($real);
+    if($pages <= 0){
+        unset($_SESSION["pdf_split_tokens"][$token]);
+        @unlink($real);
+        redirectTo($redirect_to, "error", "Não foi possível identificar as páginas do PDF.");
+    }
+
+    $map = $_POST["page_funcionario"] ?? [];
+    $map = is_array($map) ? $map : [];
+
+    $uploadFileDir = './uploads/';
+    if (!is_dir($uploadFileDir)) {
+        mkdir($uploadFileDir, 0777, true);
+    }
+
+    $enviados = 0;
+    $erros = 0;
+    $ignorados = 0;
+
+    for($p = 1; $p <= $pages; $p++){
+        $idEntidade = intval($map[$p] ?? 0);
+        if($idEntidade <= 0){
+            continue;
+        }
+
+        $funcionario = mysqli_fetch_assoc(query(
+            "SELECT enti_nb_id, enti_tx_nome, enti_tx_email FROM entidade WHERE enti_nb_id = ? LIMIT 1",
+            "i",
+            [$idEntidade]
+        ));
+        if(empty($funcionario)){
+            $erros++;
+            continue;
+        }
+
+        $email = filter_var(trim(strval($funcionario["enti_tx_email"] ?? "")), FILTER_VALIDATE_EMAIL);
+        $nome = trim(strval($funcionario["enti_tx_nome"] ?? ""));
+        if(!$email || $nome === ""){
+            $ignorados++;
+            continue;
+        }
+
+        $base = pathinfo($original, PATHINFO_FILENAME);
+        $safeBase = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', strval($base));
+        $nomeArquivo = ($safeBase !== "" ? $safeBase : "documento") . "_p" . str_pad((string)$p, 3, "0", STR_PAD_LEFT) . ".pdf";
+
+        $newFileName = md5($token . "-" . $idEntidade . "-" . $p . "-" . microtime(true) . "-" . bin2hex(random_bytes(8))) . ".pdf";
+        $dest_path = $uploadFileDir . $newFileName;
+
+        if(!separarPaginaPdf($real, $p, $dest_path)){
+            $erros++;
+            continue;
+        }
+
+        $tokenMestre = bin2hex(random_bytes(32));
+        $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
+
+        $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, status)
+            VALUES (?, ?, ?, ?, ?, ?, 'pendente')";
+        $stmt = mysqli_prepare($conn, $sql);
+        if(!$stmt){
+            @unlink($dest_path);
+            $erros++;
+            continue;
+        }
+        mysqli_stmt_bind_param($stmt, "ssssss", $tokenMestre, $email, $nome, $dest_path, $nomeArquivo, $id_documento);
+        if(!mysqli_stmt_execute($stmt)){
+            @unlink($dest_path);
+            $erros++;
+            continue;
+        }
+
+        $id_solicitacao = mysqli_insert_id($conn);
+        $tokenAssinante = bin2hex(random_bytes(32));
+        $funcao = "Funcionário";
+
+        $sqlAssinante = "INSERT INTO assinantes (id_solicitacao, nome, email, funcao, ordem, token, status)
+            VALUES (?, ?, ?, ?, 1, ?, 'pendente')";
+        $stmtAssinante = mysqli_prepare($conn, $sqlAssinante);
+        if(!$stmtAssinante){
+            $erros++;
+            continue;
+        }
+        mysqli_stmt_bind_param($stmtAssinante, "issss", $id_solicitacao, $nome, $email, $funcao, $tokenAssinante);
+        if(!mysqli_stmt_execute($stmtAssinante)){
+            $erros++;
+            continue;
+        }
+
+        enviarEmailAssinatura($email, $nome, $tokenAssinante, $nomeArquivo, $id_documento, $funcao);
+        $enviados++;
+    }
+
+    unset($_SESSION["pdf_split_tokens"][$token]);
+    @unlink($real);
+    $dirTmpClean = realpath(__DIR__ . "/uploads/tmp/");
+    if($dirTmpClean){
+        for($p = 1; $p <= $pages; $p++){
+            $thumb = rtrim($dirTmpClean, "/\\") . DIRECTORY_SEPARATOR . $token . "_p" . $p . ".jpg";
+            if(file_exists($thumb)){
+                @unlink($thumb);
+            }
+        }
+    }
+
+    if($enviados <= 0){
+        $msg = "Nenhuma página foi enviada. Verifique se você selecionou os funcionários e se o servidor tem suporte para separar PDF (Imagick, qpdf ou Ghostscript).";
+        redirectTo($redirect_to, "error", $msg);
+    }
+
+    $msg = "Enviados: {$enviados}. Erros: {$erros}. Ignorados (sem e-mail): {$ignorados}.";
+    redirectTo($redirect_to, "success", $msg);
 }
 
 // Verifica upload do arquivo
 if (!isset($_FILES['arquivo']) || $_FILES['arquivo']['error'] !== UPLOAD_ERR_OK) {
-    header("Location: $redirect_to?status=error&message=Erro no upload do arquivo");
-    exit;
+    redirectTo($redirect_to, "error", "Erro no upload do arquivo");
 }
 
 $fileTmpPath = $_FILES['arquivo']['tmp_name'];
@@ -66,8 +507,7 @@ $fileExtension = strtolower(end($fileNameCmps));
 
 // Apenas PDF
 if ($fileExtension !== 'pdf') {
-    header("Location: $redirect_to?status=error&message=Apenas arquivos PDF são permitidos");
-    exit;
+    redirectTo($redirect_to, "error", "Apenas arquivos PDF são permitidos");
 }
 
 // Cria diretório de uploads se não existir
@@ -76,58 +516,7 @@ if (!is_dir($uploadFileDir)) {
     mkdir($uploadFileDir, 0777, true);
 }
 
-// Verifica tabelas (Self-Healing)
-// 1. Tabela Principal (Processo)
-$checkTable = "SHOW TABLES LIKE 'solicitacoes_assinatura'";
-$resultTable = mysqli_query($conn, $checkTable);
-if (mysqli_num_rows($resultTable) == 0) {
-    $sqlCreateTable = "CREATE TABLE IF NOT EXISTS solicitacoes_assinatura (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        token VARCHAR(64) NOT NULL UNIQUE,
-        email VARCHAR(255) NOT NULL,
-        nome VARCHAR(255),
-        caminho_arquivo VARCHAR(255) NOT NULL,
-        nome_arquivo_original VARCHAR(255),
-        data_solicitacao DATETIME DEFAULT CURRENT_TIMESTAMP,
-        status ENUM('pendente', 'em_progresso', 'concluido', 'assinado') DEFAULT 'pendente',
-        id_documento VARCHAR(100),
-        data_assinatura DATETIME NULL
-    )";
-    mysqli_query($conn, $sqlCreateTable);
-} else {
-    // Garante colunas novas
-    $cols = ['nome', 'nome_arquivo_original'];
-    foreach ($cols as $col) {
-        $check = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE '$col'");
-        if (mysqli_num_rows($check) == 0) {
-            mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN $col VARCHAR(255)");
-        }
-    }
-    // Atualiza ENUM de status se necessário (difícil via SQL puro sem procedure, vamos assumir compatibilidade)
-}
-
-// 2. Tabela de Assinantes (Múltiplos)
-$checkTableAssinantes = "SHOW TABLES LIKE 'assinantes'";
-$resultTableAssinantes = mysqli_query($conn, $checkTableAssinantes);
-if (mysqli_num_rows($resultTableAssinantes) == 0) {
-    $sqlCreateTableAssinantes = "CREATE TABLE IF NOT EXISTS assinantes (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        id_solicitacao INT NOT NULL,
-        nome VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL,
-        cpf VARCHAR(20),
-        funcao VARCHAR(100),
-        ordem INT NOT NULL DEFAULT 1,
-        token VARCHAR(64) NOT NULL UNIQUE,
-        status ENUM('pendente', 'assinado') DEFAULT 'pendente',
-        data_assinatura DATETIME NULL,
-        ip VARCHAR(45),
-        metadados TEXT,
-        INDEX (id_solicitacao),
-        INDEX (token)
-    )";
-    mysqli_query($conn, $sqlCreateTableAssinantes);
-}
+ensureAssinaturaTables($conn);
 
 // Gera nome único para o arquivo físico
 $newFileName = md5(time() . $fileName) . '.' . $fileExtension;
@@ -167,17 +556,14 @@ if(move_uploaded_file($fileTmpPath, $dest_path)) {
             }
         }
         
-        header("Location: $redirect_to?status=success");
-        exit;
+        redirectTo($redirect_to, "success");
         
     } else {
-        header("Location: $redirect_to?status=error&message=Erro ao criar solicitação: " . mysqli_error($conn));
-        exit;
+        redirectTo($redirect_to, "error", "Erro ao criar solicitação: " . mysqli_error($conn));
     }
 
 } else {
-    header("Location: $redirect_to?status=error&message=Erro ao salvar arquivo");
-    exit;
+    redirectTo($redirect_to, "error", "Erro ao salvar arquivo");
 }
 
 // Função Auxiliar de Envio de E-mail

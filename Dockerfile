@@ -63,6 +63,13 @@ RUN apk add --no-cache --virtual .build-deps \
       | awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }' \
  )" \
  && apk add --virtual .phpexts-rundeps $runDeps \
+ && apk add --no-cache ghostscript poppler-utils \
+ && if [ -f /etc/ImageMagick-7/policy.xml ]; then \
+      sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/g' /etc/ImageMagick-7/policy.xml; \
+    fi \
+ && if [ -f /etc/ImageMagick-6/policy.xml ]; then \
+      sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/g' /etc/ImageMagick-6/policy.xml; \
+    fi \
  && apk del --no-network .build-deps \
  && rm -rf /tmp/pear
 

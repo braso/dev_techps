@@ -2,8 +2,20 @@
 if(!isset($_SESSION)) {
     session_start();
 }
-$baseContex = rtrim($_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"], "/");
-$baseAssinatura = $baseContex."/assinatura";
+$urlBase = $_ENV["URL_BASE"] ?? (($_SERVER["REQUEST_SCHEME"] ?? "http") . "://" . ($_SERVER["HTTP_HOST"] ?? "localhost"));
+$hasEnvPaths = isset($_ENV["APP_PATH"], $_ENV["CONTEX_PATH"]);
+if($hasEnvPaths){
+    $baseContex = rtrim(($urlBase ?? "") . ($_ENV["APP_PATH"] ?? "") . ($_ENV["CONTEX_PATH"] ?? ""), "/");
+    $baseAssinatura = $baseContex . "/assinatura";
+} else {
+    $scriptName = strval($_SERVER["SCRIPT_NAME"] ?? "");
+    $assinaturaDir = rtrim(str_replace("\\", "/", dirname($scriptName)), "/");
+    if($assinaturaDir === "" || $assinaturaDir === "."){
+        $assinaturaDir = "/assinatura";
+    }
+    $baseAssinatura = rtrim($urlBase, "/") . $assinaturaDir;
+    $baseContex = rtrim($urlBase, "/") . rtrim(dirname($assinaturaDir), "/");
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
