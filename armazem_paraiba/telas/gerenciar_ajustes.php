@@ -2,8 +2,18 @@
 	include "../funcoes_ponto.php";
 
 	function buscarSubsetores(){
-		$setor = mysqli_real_escape_string($GLOBALS['conn'], $_POST['setor']);
-		$res = query("SELECT DISTINCT subsetor_usuario FROM solicitacoes_ajuste WHERE setor_usuario = '$setor' AND subsetor_usuario IS NOT NULL AND subsetor_usuario != '' AND subsetor_usuario != 'N/A' ORDER BY subsetor_usuario");
+		$setorRaw = strval($_POST['setor'] ?? '');
+		$setores = array_values(array_filter(array_map('trim', explode(',', $setorRaw)), function($v){ return $v !== ''; }));
+		$setoresSql = array_map(function($v){
+			return "'" . mysqli_real_escape_string($GLOBALS['conn'], $v) . "'";
+		}, $setores);
+
+		$where = "subsetor_usuario IS NOT NULL AND subsetor_usuario != '' AND subsetor_usuario != 'N/A'";
+		if (!empty($setoresSql)) {
+			$where .= " AND setor_usuario IN (" . implode(',', $setoresSql) . ")";
+		}
+
+		$res = query("SELECT DISTINCT subsetor_usuario FROM solicitacoes_ajuste WHERE {$where} ORDER BY subsetor_usuario");
 		$subsetores = ($res instanceof mysqli_result) ? mysqli_fetch_all($res, MYSQLI_ASSOC) : [];
 		
 		$retorno = [];
@@ -429,6 +439,17 @@
 
 		cabecalho("Gerenciar Ajustes de Ponto");
 
+		$listaTexto = function($valor){
+			$valor = strval($valor ?? '');
+			$partes = array_map('trim', explode(',', $valor));
+			return array_values(array_filter($partes, function($v){ return $v !== ''; }));
+		};
+		$listaInt = function($valor){
+			$lista = array_map('intval', array_map('trim', explode(',', strval($valor ?? ''))));
+			$lista = array_values(array_filter($lista, function($v){ return $v > 0; }));
+			return array_values(array_unique($lista));
+		};
+
 		// Filtros
 		$idMotorista = $_POST['motorista'] ?? '';
 		$statusFiltro = $_POST['status_filtro'] ?? 'pendentes'; // pendentes, aceitas, rejeitadas, todas
@@ -437,8 +458,9 @@
 		$subsetorFiltro = $_POST['subsetor_filtro'] ?? '';
 
 		$extra_sql = "";
-		if (!empty($idMotorista)) {
-			$extra_sql .= " AND s.id_motorista = '$idMotorista'";
+		$motoristasSelecionados = $listaInt($idMotorista);
+		if (!empty($motoristasSelecionados)) {
+			$extra_sql .= " AND s.id_motorista IN (" . implode(',', $motoristasSelecionados) . ")";
 		}
 
 		if ($statusFiltro == 'pendentes') {
@@ -449,14 +471,26 @@
 			$extra_sql .= " AND s.status = 'nao_aceita'";
 		}
 
-		if (!empty($cargoFiltro)) {
-			$extra_sql .= " AND s.cargo_usuario = '$cargoFiltro'";
+		$cargosSelecionados = $listaTexto($cargoFiltro);
+		if (!empty($cargosSelecionados)) {
+			$cargosSql = array_map(function($v){
+				return "'" . mysqli_real_escape_string($GLOBALS['conn'], $v) . "'";
+			}, $cargosSelecionados);
+			$extra_sql .= " AND s.cargo_usuario IN (" . implode(',', $cargosSql) . ")";
 		}
-		if (!empty($setorFiltro)) {
-			$extra_sql .= " AND s.setor_usuario = '$setorFiltro'";
+		$setoresSelecionados = $listaTexto($setorFiltro);
+		if (!empty($setoresSelecionados)) {
+			$setoresSql = array_map(function($v){
+				return "'" . mysqli_real_escape_string($GLOBALS['conn'], $v) . "'";
+			}, $setoresSelecionados);
+			$extra_sql .= " AND s.setor_usuario IN (" . implode(',', $setoresSql) . ")";
 		}
-		if (!empty($subsetorFiltro)) {
-			$extra_sql .= " AND s.subsetor_usuario = '$subsetorFiltro'";
+		$subsetoresSelecionados = $listaTexto($subsetorFiltro);
+		if (!empty($subsetoresSelecionados)) {
+			$subsetoresSql = array_map(function($v){
+				return "'" . mysqli_real_escape_string($GLOBALS['conn'], $v) . "'";
+			}, $subsetoresSelecionados);
+			$extra_sql .= " AND s.subsetor_usuario IN (" . implode(',', $subsetoresSql) . ")";
 		}
 
 		// Buscar solicitações
@@ -556,8 +590,11 @@
 		$setores = ($resSetores instanceof mysqli_result) ? mysqli_fetch_all($resSetores, MYSQLI_ASSOC) : [];
 		
 		$subsetores = [];
-		if (!empty($setorFiltro)) {
-			$resSub = query("SELECT DISTINCT subsetor_usuario FROM solicitacoes_ajuste WHERE setor_usuario = '$setorFiltro' AND subsetor_usuario IS NOT NULL AND subsetor_usuario != '' AND subsetor_usuario != 'N/A' ORDER BY subsetor_usuario");
+		if (!empty($setoresSelecionados)) {
+			$setoresSql = array_map(function($v){
+				return "'" . mysqli_real_escape_string($GLOBALS['conn'], $v) . "'";
+			}, $setoresSelecionados);
+			$resSub = query("SELECT DISTINCT subsetor_usuario FROM solicitacoes_ajuste WHERE setor_usuario IN (" . implode(',', $setoresSql) . ") AND subsetor_usuario IS NOT NULL AND subsetor_usuario != '' AND subsetor_usuario != 'N/A' ORDER BY subsetor_usuario");
 			$subsetores = ($resSub instanceof mysqli_result) ? mysqli_fetch_all($resSub, MYSQLI_ASSOC) : [];
 		}
 
@@ -577,9 +614,79 @@
 			return $html;
 		}
 
+		function montarMultiSelectFiltro($label, $nome, array $selecionados, array $opcoes, int $tamanho, string $id, bool $disabled = false){
+			$idEsc = htmlspecialchars($id, ENT_QUOTES, 'UTF-8');
+			$nomeEsc = htmlspecialchars($nome, ENT_QUOTES, 'UTF-8');
+			$labelEsc = htmlspecialchars($label, ENT_QUOTES, 'UTF-8');
+
+			$selecionadosMap = [];
+			foreach($selecionados as $v){
+				$selecionadosMap[strval($v)] = true;
+			}
+
+			$hiddenVal = htmlspecialchars(implode(',', $selecionados), ENT_QUOTES, 'UTF-8');
+			$countTxt = empty($selecionados) ? "Todos" : (count($selecionados) . " selecionados");
+			$btnDisabled = $disabled ? "disabled" : "";
+
+			$html = "<div class='col-sm-$tamanho margin-bottom-5'>
+				<label>{$labelEsc}</label>
+				<div class='ms' id='{$idEsc}' style='position:relative;'>
+					<input type='hidden' class='ms-hidden' name='{$nomeEsc}' value='{$hiddenVal}'>
+					<button type='button' class='form-control input-sm ms-btn' {$btnDisabled} style='width:100%; text-align:left; padding-right:26px; cursor:pointer; position:relative;'>
+						<span class='ms-count'>{$countTxt}</span>
+						<span class='ms-caret' style='position:absolute; right:10px; top:50%; transform:translateY(-50%); border-top:4px solid #555; border-left:4px solid transparent; border-right:4px solid transparent; height:0; width:0;'></span>
+					</button>
+					<ul class='ms-menu' style='display:none; position:absolute; left:0; right:0; top:100%; z-index:9999; width:100%; max-height:260px; overflow:auto; padding:6px 10px; margin:2px 0 0 0; background:#fff; border:1px solid #ccc; border-radius:3px; list-style:none;'>
+			";
+
+			$temOpcao = false;
+			foreach($opcoes as $i => $opt){
+				$val = strval($opt['value'] ?? '');
+				$lab = strval($opt['label'] ?? $val);
+				if($val === '') continue;
+				$temOpcao = true;
+				$valEsc = htmlspecialchars($val, ENT_QUOTES, 'UTF-8');
+				$labEsc = htmlspecialchars($lab, ENT_QUOTES, 'UTF-8');
+				$checked = !empty($selecionadosMap[$val]) ? "checked" : "";
+				$cbId = $idEsc . "_opt_" . $i;
+				$html .= "<li style='margin:2px 0;'>
+					<label for='{$cbId}' style='display:flex; align-items:center; gap:6px; font-weight:normal; margin:0; cursor:pointer;'>
+						<input id='{$cbId}' type='checkbox' value='{$valEsc}' {$checked} style='width:14px; height:14px; margin:0;'>
+						<span>{$labEsc}</span>
+					</label>
+				</li>";
+			}
+
+			if(!$temOpcao){
+				$html .= "<li style='margin:2px 0; color:#777;'>Nenhum item</li>";
+			}
+
+			$html .= "</ul></div></div>";
+			return $html;
+		}
+
+		$resMotoristas = query("SELECT enti_nb_id, enti_tx_matricula, enti_tx_nome FROM entidade WHERE enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário') ORDER BY enti_tx_matricula");
+		$motoristasRows = ($resMotoristas instanceof mysqli_result) ? mysqli_fetch_all($resMotoristas, MYSQLI_ASSOC) : [];
+		$motoristasOpcoes = array_map(function($row){
+			return [
+				"value" => strval($row["enti_nb_id"]),
+				"label" => trim(($row["enti_tx_matricula"] ?? '') . " - " . ($row["enti_tx_nome"] ?? ''))
+			];
+		}, $motoristasRows);
+
+		$cargosOpcoes = array_map(function($row){
+			return ["value" => strval($row["cargo_usuario"]), "label" => strval($row["cargo_usuario"])];
+		}, $cargos);
+		$setoresOpcoes = array_map(function($row){
+			return ["value" => strval($row["setor_usuario"]), "label" => strval($row["setor_usuario"])];
+		}, $setores);
+		$subsetoresOpcoes = array_map(function($row){
+			return ["value" => strval($row["subsetor_usuario"]), "label" => strval($row["subsetor_usuario"])];
+		}, $subsetores);
+
 		// Formulário de Filtros
 		$campos_filtro = [
-			combo_net("Funcionário", "motorista", $idMotorista, 3, "entidade", "", " AND enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')", "enti_tx_matricula"),
+			montarMultiSelectFiltro("Funcionário", "motorista", array_map('strval', $motoristasSelecionados), $motoristasOpcoes, 3, "combo_motorista"),
 			"<div class='col-sm-2 margin-bottom-5'>
 				<label>Status</label>
 				<select name='status_filtro' class='form-control input-sm'>
@@ -589,9 +696,9 @@
 					<option value='todas' " . ($statusFiltro == 'todas' ? 'selected' : '') . ">Todas</option>
 				</select>
 			</div>",
-			montarComboFiltro("Cargo", "cargo_filtro", $cargoFiltro, $cargos, 'cargo_usuario', 2),
-			montarComboFiltro("Setor", "setor_filtro", $setorFiltro, $setores, 'setor_usuario', 2, "combo_setor"),
-			montarComboFiltro("Subsetor", "subsetor_filtro", $subsetorFiltro, $subsetores, 'subsetor_usuario', 3, "combo_subsetor", empty($setorFiltro) || empty($subsetores))
+			montarMultiSelectFiltro("Cargo", "cargo_filtro", $cargosSelecionados, $cargosOpcoes, 2, "combo_cargo"),
+			montarMultiSelectFiltro("Setor", "setor_filtro", $setoresSelecionados, $setoresOpcoes, 2, "combo_setor"),
+			montarMultiSelectFiltro("Subsetor", "subsetor_filtro", $subsetoresSelecionados, $subsetoresOpcoes, 3, "combo_subsetor", empty($setoresSelecionados))
 		];
 
 		echo abre_form("Filtros de Pesquisa");
@@ -611,6 +718,20 @@
 		// Script para dependência Setor -> Subsetor e Ações em Lote
 		echo "
 		<script>
+		(function(){
+			function closeAllMultiSelect(){
+				document.querySelectorAll('.ms-menu').forEach(function(menu){
+					menu.style.display = 'none';
+				});
+			}
+
+			document.addEventListener('click', function(){
+				closeAllMultiSelect();
+			});
+
+			window.__msCloseAll = closeAllMultiSelect;
+		})();
+
 		function aprovarSolicitacao(idSolicitacao){
 			if(!confirm('Aprovar este ajuste?')) return;
 
@@ -707,46 +828,123 @@
 				cb.addEventListener('change', toggleBotoesLote);
 			});
 
-			const comboSetor = document.getElementById('combo_setor');
-			const comboSubsetor = document.getElementById('combo_subsetor');
+			function initMultiSelect(rootId){
+				const root = document.getElementById(rootId);
+				if(!root) return null;
+				const hidden = root.querySelector('.ms-hidden');
+				const btn = root.querySelector('.ms-btn');
+				const countEl = root.querySelector('.ms-count');
+				const menu = root.querySelector('.ms-menu');
 
-			if (comboSetor && comboSubsetor) {
-				comboSetor.addEventListener('change', function() {
-					const setorSelecionado = this.value;
-					
-					// Limpar e desabilitar enquanto carrega ou se estiver vazio
-					comboSubsetor.innerHTML = '<option value=\"\">Carregando...</option>';
-					comboSubsetor.disabled = true;
+				if(!hidden || !btn || !countEl || !menu) return null;
 
-					if (setorSelecionado === '') {
-						comboSubsetor.innerHTML = '<option value=\"\">Todos</option>';
-						return;
+				function sync(){
+					const checked = Array.from(menu.querySelectorAll('input[type=\"checkbox\"]:checked')).map(cb => cb.value);
+					hidden.value = checked.join(',');
+					countEl.textContent = checked.length ? (checked.length + ' selecionados') : 'Todos';
+				}
+
+				btn.addEventListener('click', function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					if(btn.disabled) return;
+					const isOpen = menu.style.display === 'block';
+					if(window.__msCloseAll) window.__msCloseAll();
+					menu.style.display = isOpen ? 'none' : 'block';
+				});
+
+				menu.addEventListener('click', function(e){ e.stopPropagation(); });
+				menu.addEventListener('change', function(e){
+					if(e.target && e.target.matches('input[type=\"checkbox\"]')) sync();
+				});
+
+				sync();
+				return { root, hidden, btn, countEl, menu, sync };
+			}
+
+			const msMotorista = initMultiSelect('combo_motorista');
+			const msCargo = initMultiSelect('combo_cargo');
+			const msSetor = initMultiSelect('combo_setor');
+			const msSubsetor = initMultiSelect('combo_subsetor');
+
+			function carregarSubsetores(){
+				if(!msSetor || !msSubsetor) return;
+				const setoresSelecionados = msSetor.hidden.value || '';
+
+				if(!setoresSelecionados){
+					msSubsetor.menu.innerHTML = '';
+					msSubsetor.hidden.value = '';
+					msSubsetor.btn.disabled = true;
+					msSubsetor.menu.style.display = 'none';
+					msSubsetor.sync();
+					return;
+				}
+
+				msSubsetor.btn.disabled = true;
+				msSubsetor.menu.innerHTML = '<li style=\"margin:2px 0; color:#777;\">Carregando...</li>';
+
+				fetch('" . basename($_SERVER['PHP_SELF']) . "', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: 'acao=buscarSubsetores&setor=' + encodeURIComponent(setoresSelecionados)
+				})
+				.then(function(r){ return r.json(); })
+				.then(function(data){
+					const selecionadosAtuais = new Set((msSubsetor.hidden.value || '').split(',').filter(Boolean));
+					msSubsetor.menu.innerHTML = '';
+
+					if(Array.isArray(data) && data.length){
+						data.forEach(function(sub){
+							const li = document.createElement('li');
+							li.style.margin = '2px 0';
+							const label = document.createElement('label');
+							label.style.display = 'flex';
+							label.style.alignItems = 'center';
+							label.style.gap = '6px';
+							label.style.fontWeight = 'normal';
+							label.style.margin = '0';
+							label.style.cursor = 'pointer';
+
+							const input = document.createElement('input');
+							input.type = 'checkbox';
+							input.value = sub;
+							if(selecionadosAtuais.has(sub)) input.checked = true;
+							input.style.width = '14px';
+							input.style.height = '14px';
+							input.style.margin = '0';
+
+							const span = document.createElement('span');
+							span.textContent = sub;
+
+							label.appendChild(input);
+							label.appendChild(span);
+							li.appendChild(label);
+							msSubsetor.menu.appendChild(li);
+						});
+						msSubsetor.btn.disabled = false;
+					} else {
+						const li = document.createElement('li');
+						li.style.margin = '2px 0';
+						li.style.color = '#777';
+						li.textContent = 'Nenhum item';
+						msSubsetor.menu.appendChild(li);
+						msSubsetor.btn.disabled = true;
 					}
 
-					// Buscar subsetores via AJAX (usando o próprio arquivo com uma ação específica)
-					fetch('" . basename($_SERVER['PHP_SELF']) . "', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-						body: 'acao=buscarSubsetores&setor=' + encodeURIComponent(setorSelecionado)
-					})
-					.then(response => response.json())
-					.then(data => {
-						comboSubsetor.innerHTML = '<option value=\"\">Todos</option>';
-						if (data.length > 0) {
-							data.forEach(sub => {
-								comboSubsetor.innerHTML += `<option value=\"\${sub}\">\${sub}</option>`;
-							});
-							comboSubsetor.disabled = false;
-						} else {
-							comboSubsetor.disabled = true;
-						}
-					})
-					.catch(error => {
-						console.error('Erro ao buscar subsetores:', error);
-						comboSubsetor.innerHTML = '<option value=\"\">Todos</option>';
-						comboSubsetor.disabled = true;
-					});
+					msSubsetor.sync();
+				})
+				.catch(function(){
+					msSubsetor.menu.innerHTML = '';
+					msSubsetor.btn.disabled = false;
+					msSubsetor.sync();
 				});
+			}
+
+			if(msSetor && msSubsetor){
+				msSetor.menu.addEventListener('change', function(e){
+					if(e.target && e.target.matches('input[type=\"checkbox\"]')) carregarSubsetores();
+				});
+				carregarSubsetores();
 			}
 		});
 		</script>";
@@ -754,16 +952,22 @@
 		echo "<h3>Solicitações de Ajuste</h3>";
 		echo montarTabelaPonto($cabecalho_tabela, $linhas);
 
+		$idMotoristaEsc = htmlspecialchars(strval($idMotorista), ENT_QUOTES, 'UTF-8');
+		$statusFiltroEsc = htmlspecialchars(strval($statusFiltro), ENT_QUOTES, 'UTF-8');
+		$cargoFiltroEsc = htmlspecialchars(strval($cargoFiltro), ENT_QUOTES, 'UTF-8');
+		$setorFiltroEsc = htmlspecialchars(strval($setorFiltro), ENT_QUOTES, 'UTF-8');
+		$subsetorFiltroEsc = htmlspecialchars(strval($subsetorFiltro), ENT_QUOTES, 'UTF-8');
+
 		// Formulário oculto para ações
 		echo "<form name='form_acao' method='POST' style='display:none;'>
 			<input type='hidden' name='acao' value=''>
 			<input type='hidden' name='id_solicitacao' value=''>
 			<input type='hidden' name='permitir_substituir' value='0'>
-			<input type='hidden' name='motorista' value='$idMotorista'>
-			<input type='hidden' name='status_filtro' value='$statusFiltro'>
-			<input type='hidden' name='cargo_filtro' value='$cargoFiltro'>
-			<input type='hidden' name='setor_filtro' value='$setorFiltro'>
-			<input type='hidden' name='subsetor_filtro' value='$subsetorFiltro'>
+			<input type='hidden' name='motorista' value='{$idMotoristaEsc}'>
+			<input type='hidden' name='status_filtro' value='{$statusFiltroEsc}'>
+			<input type='hidden' name='cargo_filtro' value='{$cargoFiltroEsc}'>
+			<input type='hidden' name='setor_filtro' value='{$setorFiltroEsc}'>
+			<input type='hidden' name='subsetor_filtro' value='{$subsetorFiltroEsc}'>
 		</form>";
 
 		// Formulário oculto para ações em lote
