@@ -8,7 +8,7 @@
     $elements = explode('/', $path);
     //após a linha acima temos elements[0]=api e o elements[1]=login
     
-    if(empty($elements[0]) || empty($elements[1]) || !in_array($elements[1], ['login', 'refresh', 'users', 'journeys', 'delLastRegister', 'loginRfid', 'loginSE'])){
+    if(empty($elements[0]) || empty($elements[1]) || !in_array($elements[1], ['login', 'login_step1', 'login_step2', 'login_rfid', 'login_digital', 'refresh', 'users', 'journeys', 'delLastRegister', 'loginRfid', 'loginSE'])){
         echo "not found";
         exit;
     }
@@ -29,7 +29,7 @@
         break;
         
         case 'login_rfid':
-            login_direto_rfid(); // O Embarcado vai chamar: /api/login_rfid
+            make_login_rfid(); // O Embarcado vai chamar: /api/login_rfid
         break;
 
         case 'login_digital':

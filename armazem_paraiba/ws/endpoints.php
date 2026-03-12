@@ -11,41 +11,46 @@
     function make_login(){
         $msg = "";
 
-        //Check mandatory fields{
-            if(empty($_POST["username"])){
-                $msg = 'Please Enter Login Details';
-            }elseif(empty($_POST["password"])){
-                $msg = 'Please Enter Password Details';
-            }
-            if(!empty($msg)){
-                // header('HTTP/1.0 400 Bad Request');
-                echo $msg;
-                exit;
-            }
-            //}
+        if(empty($_POST["username"])){
+            $msg = 'Please Enter Login Details';
+        }elseif(empty($_POST["password"])){
+            $msg = 'Please Enter Password Details';
+        }
+
+        if(!empty($msg)){
+            http_response_code(400);
+            header('Content-Type: application/json');
+            echo json_encode(["status" => "error", "message" => $msg]);
+            exit;
+        }
             
-        //Check if user exists{
-            $data = get_data(
-                "SELECT user_tx_senha, user_nb_id, user_tx_nome FROM user 
-                 WHERE user_tx_status = 'ativo' AND user_tx_login = ?;",
-                [$_POST["username"]]
-            );
+        $data = get_data(
+            "SELECT user_tx_senha, user_nb_id, user_tx_nome FROM user 
+            WHERE user_tx_status = 'ativo' AND user_tx_login = ?;",
+            [trim($_POST["username"])]
+        );
     
-            if(empty($data)){
-                $msg = 'Wrong Username Address';
-            } elseif($data[0]['user_tx_senha'] !== md5($_POST['password'])){
-                $msg = 'Wrong Password';
-            }
+        if(empty($data)){
+            $msg = 'Wrong Username Address';
+        } elseif($data[0]['user_tx_senha'] !== md5($_POST['password'])){
+            $msg = 'Wrong Password';
         }
     
         if(!empty($msg)){
-            header("HTTP/1.1 204 No Content");
-            echo $msg;
-            die();
+            http_response_code(401);
+            header('Content-Type: application/json');
+            echo json_encode(["status" => "error", "message" => $msg]);
+            exit;
         }
     
-        $token = makeToken((object)$data[0], $_ENV["APP_KEY"]);
-        echo "{ \"id\": ".$data[0]['user_nb_id'].", \"token\": \"".$token."\"}";
+        $userData = $data[0];
+        unset($userData['user_tx_senha']);
+
+        $token = makeToken((object)$userData, $_ENV["APP_KEY"]);
+
+        http_response_code(200);
+        header('Content-Type: application/json');
+        echo json_encode(["status" => "success", "id" => $userData['user_nb_id'], "token" => $token]);
         exit;
     }
 
@@ -59,7 +64,7 @@
                 "SELECT user_tx_senha, user_nb_id, user_tx_nome, user_nb_rfid, user_nb_digital 
                 FROM user 
                 WHERE user_tx_status = 'ativo' AND user_tx_login = ?;",
-                [$_POST["username"]]
+                [trim($_POST["username"])]
             );
 
             if(empty($data)){
@@ -69,12 +74,21 @@
             }
         }
 
-        $data = $data[0];
+        if(!empty($msg)){
+            http_response_code(401);
+            header('Content-Type: application/json');
+            echo json_encode(["status" => "error", "message" => $msg]);
+            exit;
+        }
+
+        $userData = $data[0];
+        unset($userData['user_tx_senha']); // PROTEÇÃO
         
-        $token = makeToken((object)$data,$_ENV["APP_KEY"]);
+        $token = makeToken((object)$userData, $_ENV["APP_KEY"]);
         
-        $token = makeToken((object)$data[0], $_ENV["APP_KEY"]);
-        echo json_encode(["status" => "success", "id" => $data[0]['user_nb_id'], "token" => $token]);
+        http_response_code(200);
+        header('Content-Type: application/json');
+        echo json_encode(["status" => "success", "id" => $userData['user_nb_id'], "token" => $token]);
         exit;
     }
 
@@ -96,9 +110,11 @@
         if(!empty($msg)) { header("HTTP/1.1 204 No Content"); echo $msg; die(); }
         
         $token = makeToken((object)$data[0], $_ENV["APP_KEY"]);
+        http_response_code(200);
+        header('Content-Type: application/json');
         echo json_encode(["status" => "success", "id" => $data[0]['user_nb_id'], "token" => $token]);
         exit;
-    }
+    };
 
     function make_login_se(){
         $json_recebido = file_get_contents('php://input');
@@ -155,14 +171,15 @@
         }
 
         $data = get_data(
-                "SELECT user_nb_id id, user_tx_nome nome, user_tx_login login,
-                user_tx_senha senha, rfids_tx_uid rfid, rfids_tx_status status_rfid 
-                FROM user 
-                INNER JOIN rfids ON user_nb_entidade = rfids_nb_entidade_id
-                WHERE user_tx_status = 'ativo'
-                AND rfids_tx_uid = ?;",
-                [$_POST["rfid"]]
-            );
+            "SELECT user_nb_id id, user_tx_nome nome, user_tx_login login,
+            user_tx_senha senha, rfids_tx_uid rfid, rfids_tx_status status_rfid 
+            FROM user 
+            INNER JOIN rfids ON user_nb_id = rfids_nb_entidade_id
+            WHERE user_tx_status = 'ativo'
+            AND rfids_tx_status = 'ativo'
+            AND rfids_tx_uid = ?;",
+            [trim($_POST["rfid"])]
+        );
 
         if(empty($data)){
             $msg = 'RFID tag not found';
@@ -172,13 +189,16 @@
         }
 
         $data = $data[0];
+        unset($userData['senha']); //proteção
 
         $token = makeToken((object)$data,$_ENV["APP_KEY"]);
         
         $data['token'] = $token;
 
+        http_response_code(200);
         header('Content-Type: application/json');
         echo json_encode($data);
+        exit;
     }
 
 
