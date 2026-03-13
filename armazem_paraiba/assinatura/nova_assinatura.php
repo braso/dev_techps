@@ -644,6 +644,26 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                 </div>
                             </div>
 
+                            <div class="mt-4">
+                                <div class="block text-xs font-semibold text-gray-700 mb-1">Validade ICP-Brasil (opcional)</div>
+                                <label class="flex items-start gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white cursor-pointer" id="validar_icp_lote_wrap">
+                                    <input type="checkbox" id="validar_icp_lote" name="validar_icp" value="sim" class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <div>
+                                        <div class="text-sm font-semibold text-gray-800">Validar com ICP-Brasil</div>
+                                        <div class="text-xs text-gray-500">Ative para aplicar validação/carimbo do tempo ICP-Brasil, elevando o nível de confiança jurídica do documento final.</div>
+                                    </div>
+                                </label>
+                                <div id="icp_info_lote" class="hidden mt-3 bg-emerald-50 border border-emerald-100 text-emerald-900 rounded-lg p-4">
+                                    <div class="text-sm font-semibold flex items-center gap-2">
+                                        <i class="fas fa-shield-alt"></i>
+                                        Validação com ICP-Brasil
+                                    </div>
+                                    <div class="text-xs mt-1 leading-relaxed">
+                                        Seu documento será assinado com ICP-BRASI dando válidade a o processo pela TECHPS após a assinatura do Signatário automaticamente. 
+                                    </div>
+                                </div>
+                            </div>
+
                             <?php if(empty($funcionarios)): ?>
                                 <div class="bg-yellow-50 border border-yellow-100 text-yellow-800 text-sm rounded-lg p-4">
                                     Nenhum funcionário ativo encontrado.
@@ -925,6 +945,7 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
 
                         <div class="space-y-5">
                             <input type="hidden" id="id_documento" name="id_documento" value="<?php echo htmlspecialchars($id_documento); ?>">
+                            <input type="hidden" id="enti_nb_id" name="enti_nb_id" value="">
 
                             <div>
                                 <label for="funcionario_select" class="block text-sm font-medium text-gray-700 mb-1">Funcionário</label>
@@ -969,6 +990,25 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                             <?php endif; ?>
                                         <?php endforeach; ?>
                                     </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1" for="validar_icp_avulso">Validade ICP-Brasil (opcional)</label>
+                                <label class="flex items-start gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white cursor-pointer">
+                                    <input type="checkbox" id="validar_icp_avulso" name="validar_icp" value="sim" class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <div>
+                                        <div class="text-sm font-semibold text-gray-800">Validar com ICP-Brasil</div>
+                                        <div class="text-xs text-gray-500">Ative para aplicar validação/carimbo do tempo ICP-Brasil, elevando o nível de confiança jurídica do documento final.</div>
+                                    </div>
+                                </label>
+                                <div id="icp_info_avulso" class="hidden mt-3 bg-emerald-50 border border-emerald-100 text-emerald-900 rounded-lg p-4">
+                                    <div class="text-sm font-semibold flex items-center gap-2">
+                                        <i class="fas fa-shield-alt"></i>
+                                        Validação com ICP-Brasil
+                                    </div>
+                                    <div class="text-xs mt-1 leading-relaxed">
+                                       Seu documento será assinado com ICP-BRASI dando válidade a o processo pela TECHPS após a assinatura do Signatário automaticamente. 
                                 </div>
                             </div>
                             
@@ -1067,6 +1107,7 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
         const sel = document.getElementById("funcionario_select");
         const nome = document.getElementById("nome");
         const email = document.getElementById("email");
+        const enti = document.getElementById("enti_nb_id");
         if(!sel || !nome || !email) return;
         const selectedValue = (sel.value || "").toString();
         let opt = null;
@@ -1086,12 +1127,14 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
         if(!opt){
             nome.value = "";
             email.value = "";
+            if(enti) enti.value = "";
             return;
         }
         const n = opt.getAttribute("data-nome") || "";
         const e = opt.getAttribute("data-email") || "";
         nome.value = n || "";
         email.value = e || "";
+        if(enti) enti.value = selectedValue;
     }
 
     const funcionarioSelect = document.getElementById("funcionario_select");
@@ -1136,6 +1179,52 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
         }
     });
     atualizarLabelSepararEnviar();
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const icpAvulso = document.getElementById("validar_icp_avulso");
+        const icpInfoAvulso = document.getElementById("icp_info_avulso");
+        const atualizarAvulso = () => {
+            if(!icpAvulso || !icpInfoAvulso) return;
+            icpInfoAvulso.classList.toggle("hidden", !icpAvulso.checked);
+        };
+        if(icpAvulso){
+            icpAvulso.addEventListener("change", atualizarAvulso);
+            atualizarAvulso();
+        }
+
+        const icpLote = document.getElementById("validar_icp_lote");
+        const icpInfoLote = document.getElementById("icp_info_lote");
+        const icpWrapLote = document.getElementById("validar_icp_lote_wrap");
+        const radiosAssinar = Array.from(document.querySelectorAll('input[name="documento_assinar"]'));
+        const obterAssinar = () => {
+            const el = document.querySelector('input[name="documento_assinar"]:checked');
+            return el ? String(el.value || "sim") : "sim";
+        };
+        const atualizarLote = () => {
+            if(!icpLote || !icpInfoLote) return;
+            const assinar = obterAssinar();
+            if(assinar !== "sim"){
+                icpLote.checked = false;
+                icpLote.disabled = true;
+                if(icpWrapLote){
+                    icpWrapLote.classList.add("opacity-50", "cursor-not-allowed");
+                }
+                icpInfoLote.classList.add("hidden");
+                return;
+            }
+            icpLote.disabled = false;
+            if(icpWrapLote){
+                icpWrapLote.classList.remove("opacity-50", "cursor-not-allowed");
+            }
+            icpInfoLote.classList.toggle("hidden", !icpLote.checked);
+        };
+
+        if(icpLote){
+            icpLote.addEventListener("change", atualizarLote);
+            radiosAssinar.forEach(r => r.addEventListener("change", atualizarLote));
+            atualizarLote();
+        }
+    });
 </script>
 
 <?php

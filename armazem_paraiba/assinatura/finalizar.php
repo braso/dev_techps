@@ -195,7 +195,7 @@ $result = mysqli_query($conn, $sql);
                             }
                         ?>
                         <div class="p-4 hover:bg-gray-50 transition-colors cursor-pointer group doc-item" 
-                             onclick="<?php echo $ja_finalizado ? "window.open('{$row['caminho_arquivo']}', '_blank')" : "selectDocument(this, '{$row['id']}', " . ($completo ? 'true' : 'false') . ")"; ?>">
+                             onclick="<?php echo "selectDocument(this, '{$row['id']}', " . (($completo || $ja_finalizado) ? 'true' : 'false') . ", " . ($ja_finalizado ? 'true' : 'false') . ")"; ?>">
                             
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-4">
@@ -233,14 +233,11 @@ $result = mysqli_query($conn, $sql);
                                 </div>
                             </div>
                             
-                            <!-- Indicador de Seleção (Apenas se não finalizado) -->
-                            <?php if (!$ja_finalizado): ?>
                             <div class="selection-indicator hidden mt-3 pt-3 border-t border-gray-100 text-right">
                                 <span class="text-sm text-green-600 font-semibold">
                                     <i class="fas fa-check-circle"></i> Selecionado
                                 </span>
                             </div>
-                            <?php endif; ?>
                         </div>
                         <?php endwhile; ?>
 
@@ -257,7 +254,7 @@ $result = mysqli_query($conn, $sql);
     </div>
 
     <script>
-        function selectDocument(element, id, isReady) {
+        function selectDocument(element, id, isReady, isFinalizado) {
             // Remove seleção anterior
             document.querySelectorAll('.doc-item').forEach(el => {
                 el.classList.remove('bg-blue-50', 'border-l-4', 'border-blue-500');
@@ -283,7 +280,9 @@ $result = mysqli_query($conn, $sql);
                 btn.disabled = false;
                 btn.classList.remove('bg-gray-400', 'cursor-not-allowed');
                 btn.classList.add('bg-green-600', 'hover:bg-green-700', 'shadow-lg', 'transform', 'hover:-translate-y-0.5');
-                btn.innerHTML = '<i class="fas fa-check-circle"></i> Finalizar Documento';
+                btn.innerHTML = isFinalizado
+                    ? '<i class="fas fa-folder-open"></i> Reenviar para pasta do funcionário'
+                    : '<i class="fas fa-check-circle"></i> Finalizar Documento';
             } else {
                 btn.disabled = true;
                 btn.classList.add('bg-gray-400', 'cursor-not-allowed');

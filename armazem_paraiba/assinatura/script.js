@@ -373,7 +373,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     body: formData
                 });
 
-                const data = await response.json();
+                const text = await response.text();
+                let data = null;
+                try {
+                    data = text ? JSON.parse(text) : null;
+                } catch (e) {
+                    throw new Error(`Resposta inválida do servidor (${response.status}). ${text.substring(0, 200)}`);
+                }
+                if (!data) {
+                    throw new Error(`Resposta vazia do servidor (${response.status}).`);
+                }
+
+                if (!response.ok) {
+                    const msg = (data && data.message) ? data.message : `Erro ${response.status}`;
+                    const det = (data && data.detail) ? `\n\nDetalhe: ${data.detail}` : '';
+                    throw new Error(msg + det);
+                }
 
 
                 if (data.status === 'success') {
@@ -389,9 +404,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Gera URL para download direto do Blob local (mais rápido e garantido)
                     const blobUrl = URL.createObjectURL(pdfBlob);
                     
-                    // Link para o PDF salvo no servidor (backup)
                     // Usa o caminho retornado pelo servidor se disponível, senão tenta adivinhar (fallback)
                     const linkArquivoServidor = data.caminho_arquivo ? data.caminho_arquivo : `docAssinado/assinado_${data.protocolo}.pdf`;
+                    const isIcpFinal = (linkArquivoServidor || '').includes('docFinalizado/');
+                    const primaryHref = isIcpFinal ? linkArquivoServidor : blobUrl;
+                    const primaryText = isIcpFinal ? 'Baixar Documento (ICP-Brasil)' : 'Baixar Documento (Agora)';
+                    const secondaryHref = isIcpFinal ? blobUrl : linkArquivoServidor;
+                    const secondaryText = isIcpFinal ? 'Baixar Comprovante (Visual)' : 'Baixar do Servidor (Backup)';
+                    const secondaryIcon = isIcpFinal ? 'fa-file-pdf' : 'fa-cloud-download-alt';
 
                     container.innerHTML = `
                         <div class="p-8 text-center">
@@ -415,15 +435,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             <div class="flex flex-col gap-3 max-w-sm mx-auto">
                                 <!-- Botão Principal: Download do Blob Local -->
-                                <a href="${blobUrl}" download="${nomeFinalArquivo}" 
+                                <a href="${primaryHref}" download="${nomeFinalArquivo}" target="_blank"
                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2">
-                                    <i class="fas fa-download"></i> Baixar Documento (Agora)
+                                    <i class="fas fa-download"></i> ${primaryText}
                                 </a>
                                 
                                 <!-- Link Backup: Download do Servidor -->
-                                <a href="${linkArquivoServidor}" download="${nomeFinalArquivo}" target="_blank"
+                                <a href="${secondaryHref}" download="${nomeFinalArquivo}" target="_blank"
                                    class="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-6 rounded-lg border border-gray-200 shadow-sm transition-all flex items-center justify-center gap-2">
-                                    <i class="fas fa-cloud-download-alt"></i> Baixar do Servidor (Backup)
+                                    <i class="fas ${secondaryIcon}"></i> ${secondaryText}
                                 </a>
                             </div>
                             
@@ -450,7 +470,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             } catch (error) {
                 console.error('Erro:', error);
-                alert('Ocorreu um erro ao processar o documento.');
+                alert(error && error.message ? error.message : 'Ocorreu um erro ao processar o documento.');
                 btnAssinar.disabled = false;
                 btnAssinar.textContent = "Assinar Documento";
             }

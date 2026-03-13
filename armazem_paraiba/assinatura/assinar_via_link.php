@@ -211,6 +211,9 @@ if ($assinante) {
                     </div>
                     <div class="bg-gray-50 px-5 py-3 text-center border-t border-gray-200">
                          <p class="text-[10px] text-gray-400">Validade jurídica conforme MP 2.200-2/2001</p>
+                         <a href="<?php echo htmlspecialchars($caminho_arquivo); ?>" download class="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors mt-2 inline-block">
+                             <i class="fas fa-download mr-1"></i> Baixar Documento Assinado
+                         </a>
                     </div>
                 </div>
 

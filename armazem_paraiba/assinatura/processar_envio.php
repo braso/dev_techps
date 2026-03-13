@@ -40,6 +40,7 @@ function ensureAssinaturaTables($conn): void {
             caminho_arquivo VARCHAR(255) NOT NULL,
             nome_arquivo_original VARCHAR(255),
             tipo_documento_id INT NULL,
+            validar_icp ENUM('sim','nao') NOT NULL DEFAULT 'nao',
             data_solicitacao DATETIME DEFAULT CURRENT_TIMESTAMP,
             status ENUM('pendente', 'em_progresso', 'concluido', 'assinado') DEFAULT 'pendente',
             id_documento VARCHAR(100),
@@ -58,6 +59,11 @@ function ensureAssinaturaTables($conn): void {
         if(mysqli_num_rows($checkTipo) == 0){
             mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN tipo_documento_id INT NULL");
         }
+
+        $checkIcp = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'validar_icp'");
+        if(mysqli_num_rows($checkIcp) == 0){
+            mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN validar_icp ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
+        }
     }
 
     $checkTableAssinantes = "SHOW TABLES LIKE 'assinantes'";
@@ -66,6 +72,7 @@ function ensureAssinaturaTables($conn): void {
         $sqlCreateTableAssinantes = "CREATE TABLE IF NOT EXISTS assinantes (
             id INT AUTO_INCREMENT PRIMARY KEY,
             id_solicitacao INT NOT NULL,
+            enti_nb_id INT NULL,
             nome VARCHAR(255) NOT NULL,
             email VARCHAR(255) NOT NULL,
             cpf VARCHAR(20),
@@ -80,6 +87,11 @@ function ensureAssinaturaTables($conn): void {
             INDEX (token)
         )";
         mysqli_query($conn, $sqlCreateTableAssinantes);
+    } else {
+        $checkEnti = mysqli_query($conn, "SHOW COLUMNS FROM assinantes LIKE 'enti_nb_id'");
+        if ($checkEnti && mysqli_num_rows($checkEnti) == 0) {
+            mysqli_query($conn, "ALTER TABLE assinantes ADD COLUMN enti_nb_id INT NULL AFTER id_solicitacao");
+        }
     }
 }
 
@@ -205,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $redirect_to = $_POST['redirect_to'] ?? 'enviar_documento.php';
-$modo_envio = $_POST["modo_envio"] ?? "avulso";
+$modo_envio = $_POST["modo_envio"] ?? "governanca";
 
 // Captura signatários do formulário (Array)
 $signatarios = $_POST['signatarios'] ?? [];
@@ -217,12 +229,14 @@ if (empty($signatarios) || !is_array($signatarios)) {
     $nome = filter_input(INPUT_POST, 'nome', FILTER_SANITIZE_SPECIAL_CHARS);
     
     if ($email && $nome) {
+        $entiNbId = intval($_POST["enti_nb_id"] ?? 0);
         $signatarios = [
             [
                 'nome' => $nome,
                 'email' => $email,
                 'funcao' => 'Signatário',
-                'ordem' => 1
+                'ordem' => 1,
+                'enti_nb_id' => $entiNbId > 0 ? $entiNbId : null
             ]
         ];
     } else {
@@ -334,13 +348,13 @@ if($modo_envio === "funcionarios"){
         $tokenAssinante = bin2hex(random_bytes(32));
         $funcao = "Funcionário";
 
-        $sqlAssinante = "INSERT INTO assinantes (id_solicitacao, nome, email, funcao, ordem, token, status) VALUES (?, ?, ?, ?, 1, ?, 'pendente')";
+        $sqlAssinante = "INSERT INTO assinantes (id_solicitacao, enti_nb_id, nome, email, funcao, ordem, token, status) VALUES (?, NULLIF(?,0), ?, ?, ?, 1, ?, 'pendente')";
         $stmtAssinante = mysqli_prepare($conn, $sqlAssinante);
         if(!$stmtAssinante){
             $erros++;
             continue;
         }
-        mysqli_stmt_bind_param($stmtAssinante, "issss", $id_solicitacao, $nome, $email, $funcao, $tokenAssinante);
+        mysqli_stmt_bind_param($stmtAssinante, "iissss", $id_solicitacao, $idEntidade, $nome, $email, $funcao, $tokenAssinante);
         if(!mysqli_stmt_execute($stmtAssinante)){
             $erros++;
             continue;
@@ -396,6 +410,12 @@ if($modo_envio === "separar_paginas"){
 
     $documentoAssinar = strtolower(trim(strval($_POST["documento_assinar"] ?? "sim")));
     $documentoAssinar = in_array($documentoAssinar, ["sim", "nao"], true) ? $documentoAssinar : "sim";
+
+    $validarIcp = strtolower(trim(strval($_POST["validar_icp"] ?? "nao")));
+    $validarIcp = $validarIcp === "sim" ? "sim" : "nao";
+    if($documentoAssinar !== "sim"){
+        $validarIcp = "nao";
+    }
 
     $tipoDocumentoId = intval($_POST["tipo_documento"] ?? 0);
     if($tipoDocumentoId <= 0){
@@ -472,15 +492,15 @@ if($modo_envio === "separar_paginas"){
             $tokenMestre = bin2hex(random_bytes(32));
             $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
 
-            $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'pendente')";
+            $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pendente')";
             $stmt = mysqli_prepare($conn, $sql);
             if(!$stmt){
                 @unlink($dest_path);
                 $erros++;
                 continue;
             }
-            mysqli_stmt_bind_param($stmt, "ssssssi", $tokenMestre, $email, $nome, $dest_path, $nomeArquivo, $id_documento, $tipoDocumentoId);
+            mysqli_stmt_bind_param($stmt, "ssssssis", $tokenMestre, $email, $nome, $dest_path, $nomeArquivo, $id_documento, $tipoDocumentoId, $validarIcp);
             if(!mysqli_stmt_execute($stmt)){
                 @unlink($dest_path);
                 $erros++;
@@ -618,19 +638,24 @@ if (!is_dir($uploadFileDir)) {
 ensureAssinaturaTables($conn);
 
 $tipoDocumentoId = intval($_POST["tipo_documento"] ?? 0);
-if($tipoDocumentoId <= 0){
+$validarIcp = strtolower(trim(strval($_POST["validar_icp"] ?? "nao")));
+$validarIcp = $validarIcp === "sim" ? "sim" : "nao";
+
+if($modo_envio === "avulso" && $tipoDocumentoId <= 0){
     redirectTo($redirect_to, "error", "Selecione o tipo de documento.");
 }
-$tipoDocumento = mysqli_fetch_assoc(query(
-    "SELECT tipo_nb_id, tipo_tx_status FROM tipos_documentos WHERE tipo_nb_id = ? LIMIT 1",
-    "i",
-    [$tipoDocumentoId]
-));
-if(empty($tipoDocumento)){
-    redirectTo($redirect_to, "error", "Tipo de documento não encontrado.");
-}
-if(strtolower(trim(strval($tipoDocumento["tipo_tx_status"] ?? ""))) !== "ativo"){
-    redirectTo($redirect_to, "error", "Tipo de documento inativo.");
+if($tipoDocumentoId > 0){
+    $tipoDocumento = mysqli_fetch_assoc(query(
+        "SELECT tipo_nb_id, tipo_tx_status FROM tipos_documentos WHERE tipo_nb_id = ? LIMIT 1",
+        "i",
+        [$tipoDocumentoId]
+    ));
+    if(empty($tipoDocumento)){
+        redirectTo($redirect_to, "error", "Tipo de documento não encontrado.");
+    }
+    if(strtolower(trim(strval($tipoDocumento["tipo_tx_status"] ?? ""))) !== "ativo"){
+        redirectTo($redirect_to, "error", "Tipo de documento inativo.");
+    }
 }
 
 // Gera nome único para o arquivo físico
@@ -647,9 +672,10 @@ if(move_uploaded_file($fileTmpPath, $dest_path)) {
     $tokenMestre = bin2hex(random_bytes(32)); 
     $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
     
-    $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendente')";
+    $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, status)
+        VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, 'pendente')";
     $stmt = mysqli_prepare($conn, $sql);
-    mysqli_stmt_bind_param($stmt, "ssssssi", $tokenMestre, $primeiroSignatario['email'], $primeiroSignatario['nome'], $dest_path, $fileName, $id_documento, $tipoDocumentoId);
+    mysqli_stmt_bind_param($stmt, "ssssssis", $tokenMestre, $primeiroSignatario['email'], $primeiroSignatario['nome'], $dest_path, $fileName, $id_documento, $tipoDocumentoId, $validarIcp);
     
     if (mysqli_stmt_execute($stmt)) {
         $id_solicitacao = mysqli_insert_id($conn);
@@ -659,10 +685,11 @@ if(move_uploaded_file($fileTmpPath, $dest_path)) {
             $tokenAssinante = bin2hex(random_bytes(32));
             $ordem = $sig['ordem'] ?? ($index + 1);
             $funcao = $sig['funcao'] ?? 'Signatário';
+            $entiNbId = intval($sig["enti_nb_id"] ?? 0);
             
-            $sqlAssinante = "INSERT INTO assinantes (id_solicitacao, nome, email, funcao, ordem, token, status) VALUES (?, ?, ?, ?, ?, ?, 'pendente')";
+            $sqlAssinante = "INSERT INTO assinantes (id_solicitacao, enti_nb_id, nome, email, funcao, ordem, token, status) VALUES (?, NULLIF(?,0), ?, ?, ?, ?, ?, 'pendente')";
             $stmtAssinante = mysqli_prepare($conn, $sqlAssinante);
-            mysqli_stmt_bind_param($stmtAssinante, "isssis", $id_solicitacao, $sig['nome'], $sig['email'], $funcao, $ordem, $tokenAssinante);
+            mysqli_stmt_bind_param($stmtAssinante, "iisssis", $id_solicitacao, $entiNbId, $sig['nome'], $sig['email'], $funcao, $ordem, $tokenAssinante);
             mysqli_stmt_execute($stmtAssinante);
             
             // Se for o primeiro (ordem 1), enviamos o e-mail agora
