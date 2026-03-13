@@ -96,15 +96,11 @@
         $queryBase = "SELECT ".implode(", ", array_values($gridFields))." FROM celular
             JOIN entidade ON celu_nb_entidade = enti_nb_id";
 
-        // --- AQUI ACONTECE A MÁGICA ---
-        // Você chama a função auxiliar passando apenas:
-        // 1. Arquivo de edição
-        // 2. Nome da função de Editar
-        // 3. Nome da função de Excluir
         $configuracao = gerarAcoesComConfirmacao(
             "cadastro_celular.php", 
-            "editarCelular()", 
-            "excluirCelular" //aqui sem () porque a função já está definida no PHP
+            "editarCelular", 
+            "excluirCelular",
+            "Tem certeza que deseja excluir o celular código: "
         );
         $gridFields["actions"] = $configuracao["tags"];
         $jsFunctions = $configuracao["js"];

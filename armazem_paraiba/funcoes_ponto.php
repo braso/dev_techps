@@ -776,6 +776,8 @@
 						AND '{$data}' BETWEEN feri_tx_dataInicio AND feri_tx_dataFim
 					LIMIT 1;"
 			));
+			$infoFerias = "";
+		
 
 			if(!empty($ferias)){
 				$jornadaPrevistaOriginal = "00:00";
@@ -827,6 +829,9 @@
 
 			$jornadaPrevista = calcularJornadaPrevista($jornadaPrevistaOriginal, (!empty($stringFeriado) && !$ignorarFeriadoEscala), ($abonos["abon_tx_abono"]?? null));
 			$aRetorno["jornadaPrevista"] = $jornadaPrevista;
+			if(!empty($ferias)){
+				$aRetorno["jornadaPrevista"] = "00:00".$infoFerias;
+			}
 			if(!empty($abonos)){
 				$warning = 
 					"<a><i style='color:green;' title="
