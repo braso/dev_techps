@@ -118,6 +118,66 @@ function extrairTextoPdfPagina(string $pdfPath, int $page): array {
 	return ["ok" => true, "engine" => "pdftotext", "text" => $text, "error" => null];
 }
 
+function getPdfExtractorUrlFromRequest(): string {
+	$url = "";
+	if(($_SERVER["REQUEST_METHOD"] ?? "") === "POST"){
+		$url = trim(strval($_POST["extractor_url"] ?? ""));
+	}
+	if($url === ""){
+		$url = trim(strval($_ENV["PDF_EXTRACTOR_URL"] ?? getenv("PDF_EXTRACTOR_URL") ?? ""));
+	}
+	if($url === ""){
+		$url = "http://assinatura.techpsgj.com.br";
+	}
+	return rtrim($url, "/");
+}
+
+function extrairPaginasPdfRemoto(string $pdfPath, string $baseUrl): array {
+	if(!function_exists("curl_init")){
+		return ["ok" => false, "error" => "Extensão cURL não disponível no PHP.", "http_code" => 0, "raw" => ""];
+	}
+	if(!file_exists($pdfPath)){
+		return ["ok" => false, "error" => "PDF não encontrado para envio ao serviço externo.", "http_code" => 0, "raw" => ""];
+	}
+
+	$endpoint = rtrim($baseUrl, "/") . "/extract";
+	$ch = curl_init($endpoint);
+	$file = new CURLFile($pdfPath, "application/pdf", basename($pdfPath));
+	$post = ["pdf" => $file];
+
+	curl_setopt($ch, CURLOPT_POST, true);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+	curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+	curl_setopt($ch, CURLOPT_HTTPHEADER, ["Accept: application/json"]);
+
+	$resp = curl_exec($ch);
+	$err = curl_error($ch);
+	$code = intval(curl_getinfo($ch, CURLINFO_HTTP_CODE));
+	curl_close($ch);
+
+	if($resp === false){
+		return ["ok" => false, "error" => $err !== "" ? $err : "Falha ao chamar serviço externo.", "http_code" => $code, "raw" => ""];
+	}
+	$raw = strval($resp);
+	if($code < 200 || $code >= 300){
+		return ["ok" => false, "error" => "Serviço externo retornou HTTP {$code}.", "http_code" => $code, "raw" => substr($raw, 0, 800)];
+	}
+
+	$data = json_decode($raw, true);
+	if(!is_array($data)){
+		return ["ok" => false, "error" => "Resposta não é JSON (verifique se a rota /extract existe).", "http_code" => $code, "raw" => substr($raw, 0, 800)];
+	}
+	if(empty($data["ok"])){
+		$msg = trim(strval($data["error"] ?? "Falha no serviço externo."));
+		return ["ok" => false, "error" => $msg !== "" ? $msg : "Falha no serviço externo.", "http_code" => $code, "raw" => substr($raw, 0, 800)];
+	}
+	$data["http_code"] = $code;
+	$data["raw"] = substr($raw, 0, 800);
+	return $data;
+}
+
 function apenasDigitos(string $s): string {
 	return preg_replace('/\D+/', '', $s) ?? "";
 }
@@ -197,15 +257,22 @@ $status = null;
 $message = "";
 $resultado = null;
 $installHint = "";
+$debugRemote = null;
+$usarRemotoUI = true;
+if(($_SERVER["REQUEST_METHOD"] ?? "") === "POST" && ($_POST["acao_teste"] ?? "") === "extrair_cpf"){
+	$usarRemotoUI = isset($_POST["usar_remoto"]) && strval($_POST["usar_remoto"]) === "1";
+}
 
 if(($_SERVER["REQUEST_METHOD"] ?? "") === "POST" && ($_POST["acao_teste"] ?? "") === "extrair_cpf"){
+	$usarRemoto = $usarRemotoUI;
+	$extractorUrl = getPdfExtractorUrlFromRequest();
 	$arquivo = $_FILES["pdf"] ?? null;
 	if(!$arquivo || ($arquivo["error"] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK){
 		$status = "error";
 		$message = "Selecione um PDF válido.";
-	} else if(!canExec()){
+	} else if(!$usarRemoto && !canExec()){
 		$status = "error";
-		$message = "Este servidor não permite exec(), então não dá para usar pdftotext.";
+		$message = "Este servidor não permite exec(), então não dá para usar pdftotext. Ative o extrator remoto.";
 	} else {
 		$original = strval($arquivo["name"] ?? "");
 		$ext = strtolower(pathinfo($original, PATHINFO_EXTENSION));
@@ -222,58 +289,117 @@ if(($_SERVER["REQUEST_METHOD"] ?? "") === "POST" && ($_POST["acao_teste"] ?? "")
 				$message = "Falha ao salvar o PDF.";
 			} else {
 				$pages = contarPaginasPdf($dest);
-				$pdftotext = findCommand(["pdftotext"]);
-				if(!$pdftotext){
-					$status = "error";
-					$message = "pdftotext não encontrado no servidor. Sem isso não dá para ler o texto do PDF.";
-					$isWindows = (PHP_OS_FAMILY ?? "") === "Windows" || DIRECTORY_SEPARATOR === "\\";
-					if($isWindows){
-						$installHint = "Windows: instale o Poppler e garanta que o executável 'pdftotext' esteja no PATH do servidor/PHP.";
-					} else {
-						$installHint =
-							"Debian/Ubuntu: sudo apt-get update && sudo apt-get install -y poppler-utils\n"
-							. "RHEL/CentOS: sudo yum install -y poppler-utils (ou dnf)\n"
-							. "Alpine: sudo apk add poppler-utils";
-					}
-				} else if($pages <= 0){
+				if($pages <= 0){
 					$status = "error";
 					$message = "Não foi possível identificar as páginas do PDF.";
-				} else {
-					$items = [];
-					for($p = 1; $p <= $pages; $p++){
-						$resText = extrairTextoPdfPagina($dest, $p);
-						$text = strval($resText["text"] ?? "");
-						$cpfs = extrairCpfsDoTexto($text);
-						$best = null;
-						foreach($cpfs as $c){
-							if(!empty($c["valid"])){
-								$best = $c;
-								break;
+				} else if($usarRemoto){
+					$remote = extrairPaginasPdfRemoto($dest, $extractorUrl);
+					$debugRemote = [
+						"url" => $extractorUrl,
+						"http_code" => intval($remote["http_code"] ?? 0),
+						"raw" => strval($remote["raw"] ?? "")
+					];
+					if(empty($remote["ok"])){
+						$status = "error";
+						$message = "Falha no extrator remoto: " . trim(strval($remote["error"] ?? "Erro desconhecido."));
+					} else {
+						$remoteItems = is_array($remote["items"] ?? null) ? $remote["items"] : [];
+						$items = [];
+						for($p = 1; $p <= $pages; $p++){
+							$itemRemote = $remoteItems[$p - 1] ?? null;
+							$text = "";
+							$itemOk = false;
+							$itemErr = null;
+							$engine = "remoto";
+							if(is_array($itemRemote) && intval($itemRemote["page"] ?? 0) === $p){
+								$text = strval($itemRemote["text"] ?? "");
+								$itemOk = (bool)($itemRemote["ok"] ?? false);
+								$itemErr = $itemRemote["error"] ?? null;
+								$engine = strval($itemRemote["engine"] ?? "remoto");
+							}
+							$cpfs = extrairCpfsDoTexto($text);
+							$best = null;
+							foreach($cpfs as $c){
+								if(!empty($c["valid"])){
+									$best = $c;
+									break;
+								}
+							}
+							$items[] = [
+								"page" => $p,
+								"engine" => $engine,
+								"ok" => $itemOk,
+								"error" => $itemErr,
+								"text_len" => strlen($text),
+								"cpfs" => $cpfs,
+								"best" => $best
+							];
+						}
+						$validCount = 0;
+						foreach($items as $it){
+							if(is_array($it["best"] ?? null)){
+								$validCount++;
 							}
 						}
-						$items[] = [
-							"page" => $p,
-							"engine" => $resText["engine"] ?? null,
-							"ok" => (bool)($resText["ok"] ?? false),
-							"error" => $resText["error"] ?? null,
-							"text_len" => strlen($text),
-							"cpfs" => $cpfs,
-							"best" => $best
+						$status = "success";
+						$message = "Remoto OK. Páginas: {$pages}. Páginas com CPF válido: {$validCount}.";
+						$resultado = [
+							"name" => $original,
+							"pages" => $pages,
+							"items" => $items
 						];
 					}
-					$validCount = 0;
-					foreach($items as $it){
-						if(is_array($it["best"] ?? null)){
-							$validCount++;
+				} else {
+					$pdftotext = findCommand(["pdftotext"]);
+					if(!$pdftotext){
+						$status = "error";
+						$message = "pdftotext não encontrado no servidor. Sem isso não dá para ler o texto do PDF.";
+						$isWindows = (PHP_OS_FAMILY ?? "") === "Windows" || DIRECTORY_SEPARATOR === "\\";
+						if($isWindows){
+							$installHint = "Windows: instale o Poppler e garanta que o executável 'pdftotext' esteja no PATH do servidor/PHP.";
+						} else {
+							$installHint =
+								"Debian/Ubuntu: sudo apt-get update && sudo apt-get install -y poppler-utils\n"
+								. "RHEL/CentOS: sudo yum install -y poppler-utils (ou dnf)\n"
+								. "Alpine: sudo apk add poppler-utils";
 						}
+					} else {
+						$items = [];
+						for($p = 1; $p <= $pages; $p++){
+							$resText = extrairTextoPdfPagina($dest, $p);
+							$text = strval($resText["text"] ?? "");
+							$cpfs = extrairCpfsDoTexto($text);
+							$best = null;
+							foreach($cpfs as $c){
+								if(!empty($c["valid"])){
+									$best = $c;
+									break;
+								}
+							}
+							$items[] = [
+								"page" => $p,
+								"engine" => $resText["engine"] ?? null,
+								"ok" => (bool)($resText["ok"] ?? false),
+								"error" => $resText["error"] ?? null,
+								"text_len" => strlen($text),
+								"cpfs" => $cpfs,
+								"best" => $best
+							];
+						}
+						$validCount = 0;
+						foreach($items as $it){
+							if(is_array($it["best"] ?? null)){
+								$validCount++;
+							}
+						}
+						$status = "success";
+						$message = "Local OK. Páginas: {$pages}. Páginas com CPF válido: {$validCount}.";
+						$resultado = [
+							"name" => $original,
+							"pages" => $pages,
+							"items" => $items
+						];
 					}
-					$status = "success";
-					$message = "Páginas: {$pages}. Páginas com CPF válido: {$validCount}.";
-					$resultado = [
-						"name" => $original,
-						"pages" => $pages,
-						"items" => $items
-					];
 				}
 			}
 		}
@@ -313,8 +439,16 @@ if(($_SERVER["REQUEST_METHOD"] ?? "") === "POST" && ($_POST["acao_teste"] ?? "")
 					<div class="text-gray-600"><?php echo canExec() ? "Disponível" : "Indisponível (desabilitado)"; ?></div>
 				</div>
 				<div class="bg-gray-50 border border-gray-100 rounded-lg p-3">
+					<div class="font-semibold text-gray-700">cURL (PHP)</div>
+					<div class="text-gray-600"><?php echo function_exists("curl_init") ? "Disponível" : "Indisponível"; ?></div>
+				</div>
+				<div class="bg-gray-50 border border-gray-100 rounded-lg p-3">
 					<div class="font-semibold text-gray-700">pdftotext</div>
 					<div class="text-gray-600"><?php echo htmlspecialchars(findCommand(["pdftotext"]) ?? "-"); ?></div>
+				</div>
+				<div class="bg-gray-50 border border-gray-100 rounded-lg p-3">
+					<div class="font-semibold text-gray-700">Extrator remoto</div>
+					<div class="text-gray-600"><?php echo htmlspecialchars(getPdfExtractorUrlFromRequest()); ?></div>
 				</div>
 			</div>
 		</div>
@@ -322,6 +456,19 @@ if(($_SERVER["REQUEST_METHOD"] ?? "") === "POST" && ($_POST["acao_teste"] ?? "")
 		<div class="p-6">
 			<form method="POST" enctype="multipart/form-data" class="space-y-4">
 				<input type="hidden" name="acao_teste" value="extrair_cpf">
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<label class="flex items-start gap-3 px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 cursor-pointer">
+						<input type="checkbox" name="usar_remoto" value="1" class="mt-1 h-4 w-4" <?php echo $usarRemotoUI ? "checked" : ""; ?>>
+						<div>
+							<div class="text-sm font-semibold text-gray-800">Usar extrator remoto</div>
+							<div class="text-xs text-gray-500">Faz POST em /extract e usa o texto retornado.</div>
+						</div>
+					</label>
+					<div>
+						<label class="block text-sm font-semibold text-gray-700 mb-2">URL do extrator</label>
+						<input type="text" name="extractor_url" value="<?php echo htmlspecialchars(getPdfExtractorUrlFromRequest()); ?>" class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+					</div>
+				</div>
 				<div>
 					<label class="block text-sm font-semibold text-gray-700 mb-2">PDF</label>
 					<input type="file" name="pdf" accept="application/pdf" required class="block w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
@@ -338,6 +485,15 @@ if(($_SERVER["REQUEST_METHOD"] ?? "") === "POST" && ($_POST["acao_teste"] ?? "")
 		<div class="<?php echo $status === "success" ? "bg-green-50 border-green-100 text-green-800" : "bg-red-50 border-red-100 text-red-800"; ?> border rounded-lg p-4 mb-6 text-sm">
 			<div class="font-bold"><?php echo $status === "success" ? "Sucesso" : "Erro"; ?></div>
 			<div class="mt-1"><?php echo htmlspecialchars($message); ?></div>
+			<?php if(is_array($debugRemote)): ?>
+				<div class="mt-3 text-xs">
+					<div><span class="font-semibold">URL:</span> <?php echo htmlspecialchars(strval($debugRemote["url"] ?? "")); ?></div>
+					<div><span class="font-semibold">HTTP:</span> <?php echo intval($debugRemote["http_code"] ?? 0); ?></div>
+				</div>
+				<?php if(trim(strval($debugRemote["raw"] ?? "")) !== ""): ?>
+					<pre class="mt-3 whitespace-pre-wrap text-xs bg-white/70 border border-gray-200 rounded p-3 text-gray-800"><?php echo htmlspecialchars(strval($debugRemote["raw"] ?? "")); ?></pre>
+				<?php endif; ?>
+			<?php endif; ?>
 			<?php if($installHint !== ""): ?>
 				<pre class="mt-3 whitespace-pre-wrap text-xs bg-white/70 border border-red-100 rounded p-3 text-red-900"><?php echo htmlspecialchars($installHint); ?></pre>
 			<?php endif; ?>

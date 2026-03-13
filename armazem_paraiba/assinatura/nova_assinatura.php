@@ -267,8 +267,7 @@ function assinatura_getPdfExtractorUrl(): string {
     $url = $_ENV["PDF_EXTRACTOR_URL"] ?? getenv("PDF_EXTRACTOR_URL") ?? "";
     $url = trim((string)$url);
     if($url === ""){
-        $isDocker = file_exists("/.dockerenv");
-        $url = $isDocker ? "http://host.docker.internal:5055" : "http://127.0.0.1:5055";
+        $url = "http://assinatura.techpsgj.com.br";
     }
     return rtrim($url, "/");
 }
