@@ -1,8 +1,0 @@
-vendor/
-uploads/
-docAssinado/
-docFinalizado/
-pfx/
-temp/
-*.log
-log_assinar.txt
