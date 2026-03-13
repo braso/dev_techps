@@ -927,10 +927,37 @@ if(move_uploaded_file($fileTmpPath, $dest_path)) {
 }
 
 // Função Auxiliar de Envio de E-mail
+function assinatura_getBaseUrl(): string {
+    $fallback = defined("BASE_URL_ASSINATURA") ? rtrim((string)BASE_URL_ASSINATURA, "/") : "";
+
+    $proto = trim(strval($_SERVER["HTTP_X_FORWARDED_PROTO"] ?? ""));
+    if($proto === ""){
+        $https = strtolower(trim(strval($_SERVER["HTTPS"] ?? "")));
+        $proto = ($https !== "" && $https !== "off") ? "https" : "http";
+    }
+
+    $host = trim(strval($_SERVER["HTTP_X_FORWARDED_HOST"] ?? ""));
+    if($host === ""){
+        $host = trim(strval($_SERVER["HTTP_HOST"] ?? ""));
+    }
+    if($host === ""){
+        return $fallback;
+    }
+
+    $scriptName = str_replace("\\", "/", strval($_SERVER["SCRIPT_NAME"] ?? ""));
+    $dir = rtrim(str_replace("\\", "/", dirname($scriptName)), "/");
+    if($dir === "."){
+        $dir = "";
+    }
+
+    return rtrim($proto . "://" . $host . $dir, "/");
+}
+
 function enviarEmailAssinatura($email, $nome, $token, $nomeArquivo, $idDoc, $funcao) {
     global $mail; // Usa a instância global ou cria nova se necessário (melhor criar nova)
     
-    $linkAssinatura = BASE_URL_ASSINATURA . "/assinar_via_link.php?token=" . $token;
+    $base = assinatura_getBaseUrl();
+    $linkAssinatura = rtrim($base !== "" ? $base : (defined("BASE_URL_ASSINATURA") ? (string)BASE_URL_ASSINATURA : ""), "/") . "/assinar_via_link.php?token=" . $token;
     
     $mail = new PHPMailer(true);
     try {
