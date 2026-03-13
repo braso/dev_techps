@@ -875,8 +875,9 @@
 
         $configuracao = gerarAcoesComConfirmacao(
             "cadastro_empresa.php", 
-            "editarEmpresa()", 
-            "excluirEmpresa" 
+            "editarEmpresa", 
+            "excluirEmpresa",
+			"Tem certeza que deseja excluir a empresa código: " 
         );
     
         $gridFields["actions"] = $configuracao["tags"];

@@ -3,6 +3,7 @@
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	*/
+	include_once "utils/utils.php";
 	include "conecta.php";
 
 	// function combo_empresa($nome,$variavel,$modificador,$tamanho,$opcao, $opcao2,$extra=""){
@@ -189,20 +190,6 @@
 		//Atualizando usuário existente
 		atualizarUsuario($usuario);
 		$id = $_POST["id"];
-		
-		if(empty($_POST["id"])){//Criando novo usuário
-            $usuario["user_nb_userCadastro"] = $_SESSION["user_nb_id"];
-            $usuario["user_tx_dataCadastro"] = date("Y-m-d H:i:s");
-
-            $id = inserir("user", array_keys($usuario), array_values($usuario));
-            $_POST["id"] = $id;
-            
-            // ---> COLE O BLOCO DO RFID AQUI <---
-
-            set_status("Cadastro inserido com sucesso!");
-            modificarUsuario();
-            exit;
-        }
 
 		$idUserFoto = mysqli_fetch_assoc(query(
 			"SELECT user_nb_id FROM user WHERE user_nb_id = {$id} LIMIT 1;"
@@ -236,20 +223,25 @@
         // ATUALIZAÇÃO DO CRÁCHA (RFID) NO BANCO DE DADOS
         // =========================================================================
         $rfid_selecionado = !empty($_POST["rfid_id"]) ? trim($_POST["rfid_id"]) : "";
-        $id_do_usuario = (int)$_POST["id"]; // O ID do usuário que acabou de ser salvo/atualizado
+        $id_do_usuario = (int)$_POST["id"]; // O ID do user que acabou de ser salvo/atualizado
+        $status_do_usuario = !empty($_POST["status"]) ? $_POST["status"] : "ativo";
 
-        // 1. DEVOLVER PARA A GAVETA: Tira da mão deste usuário qualquer cartão ativo que ele tinha
-        // (Isso garante que se ele trocar de crachá, o antigo volta a ficar disponível)
+        // REGRA DE SEGURANÇA: Se inativou o usuário, arranca o crachá dele à força
+        if ($status_do_usuario == "inativo") {
+            $rfid_selecionado = ""; // Ignora o que veio no select e manda desvincular
+        }
+
+        // 1. DEVOLVER PARA A GAVETA: Tira da mão deste usuário qualquer cartão ativo que ele tenha
         query("UPDATE rfids SET rfids_tx_status = 'disponivel', rfids_nb_entidade_id = NULL WHERE rfids_nb_entidade_id = {$id_do_usuario} AND rfids_tx_status = 'ativo'");
 
-        // 2. VINCULAR O NOVO: Se o chefe selecionou um cartão na tela, ativa ele para este usuário
+        // 2. VINCULAR O NOVO: Se tem um cartão válido e o usuário está ativo
         if ($rfid_selecionado != "") {
             query("UPDATE rfids SET rfids_tx_status = 'ativo', rfids_nb_entidade_id = {$id_do_usuario} WHERE rfids_nb_id = " . (int)$rfid_selecionado);
         }
         // =========================================================================
 
-		modificarUsuario();
-		exit;
+        modificarUsuario();
+        exit;
 	}
 
 	function excluirUsuario(){
@@ -396,16 +388,26 @@
         // 2. Só tenta ler se a query NÃO deu erro (se não for false)
         if ($rsRfids) {
             while($r = mysqli_fetch_assoc($rsRfids)){
-                $label = $r["rfids_tx_uid"];
-                if(!empty($r["rfids_tx_descricao"])) {
-                    $label .= " - " . $r["rfids_tx_descricao"];
-                }
-                
-                if($r["rfids_tx_status"] != 'disponivel' && $r["rfids_tx_status"] != 'ativo') {
-                    $label .= " (STATUS: " . strtoupper($r["rfids_tx_status"]) . ")";
-                }
-                $rfidOptions[$r["rfids_nb_id"]] = $label;
-            }
+				$label = $r["rfids_tx_uid"];
+				
+				if(!empty($r["rfids_tx_descricao"])) {
+					// Pega a descrição
+					$descricao = $r["rfids_tx_descricao"];
+					
+					// Se for maior que 35 caracteres, corta e adiciona "..."
+					if (mb_strlen($descricao) > 35) {
+						$descricao = mb_substr($descricao, 0, 35) . "...";
+					}
+					
+					$label .= " - " . $descricao;
+				}
+				
+				if($r["rfids_tx_status"] != 'disponivel' && $r["rfids_tx_status"] != 'ativo') {
+					$label .= " (STATUS: " . strtoupper($r["rfids_tx_status"]) . ")";
+				}
+				
+				$rfidOptions[$r["rfids_nb_id"]] = $label;
+			}
         } else {
             // Se falhar, avisa na tela em vez de derrubar o sistema inteiro
             global $conn; // Puxa a conexão caso ela esteja no escopo global
@@ -589,30 +591,36 @@
 		echo linha_form($fields);
 		
 
-		if (!empty($_POST["userCadastro"]) && !empty($_POST["userAtualiza"]) && ($_POST["userCadastro"] > 0 || $_POST["userAtualiza"] > 0)) {
-			$a_userCadastro = carregar("user", $_POST["userCadastro"]);
-			$txtCadastro = "Registro inserido por ".($a_userCadastro["user_tx_login"]?? "admin").(!empty($_POST["dataCadastro"])?" às ".data($_POST["dataCadastro"], 1): "").".";
-			$cAtualiza[] = 
-					"<div class='col-sm-4 margin-bottom-5'>
-						<label>Última Atualização:</label>
-						<p class='text-left' style=''>".$txtCadastro."</p>
-					</div>"
-				;
-			if ($_POST["userAtualiza"] > 0) {
-				$a_userAtualiza = carregar("user", $_POST["userAtualiza"]);
-				$txtAtualiza = "Registro atualizado por $a_userAtualiza[user_tx_login] às ".data($_POST["dataAtualiza"], 1).".";
-				$cAtualiza[] = 
-					"<div class='col-sm-4 margin-bottom-5'>
-						<label>Última Atualização:</label>
-						<p class='text-left' style=''>".$txtAtualiza."</p>
-					</div>"
-				;
-			}
-			echo "<br>";
-			echo linha_form($cAtualiza);
-		}
+		$cAtualiza = [];
 
-		echo fecha_form($buttons);
+        if (!empty($_POST["userCadastro"]) && $_POST["userCadastro"] > 0) {
+            $a_userCadastro = carregar("user", $_POST["userCadastro"]);
+            $txtCadastro = "Registro inserido por ".($a_userCadastro["user_tx_login"]?? "admin").(!empty($_POST["dataCadastro"])?" às ".data($_POST["dataCadastro"], 1): "").".";
+            $cAtualiza[] = 
+                "<div class='col-sm-4 margin-bottom-5'>
+                    <label>Dados de Criação:</label>
+                    <p class='text-left' style=''>".$txtCadastro."</p>
+                </div>";
+        }
+
+        if (!empty($_POST["userAtualiza"]) && $_POST["userAtualiza"] > 0) {
+            $a_userAtualiza = carregar("user", $_POST["userAtualiza"]);
+            $txtAtualiza = "Registro atualizado por ".($a_userAtualiza["user_tx_login"]?? "admin").(!empty($_POST["dataAtualiza"])?" às ".data($_POST["dataAtualiza"], 1): "").".";
+            $cAtualiza[] = 
+                "<div class='col-sm-4 margin-bottom-5'>
+                    <label>Última Atualização:</label>
+                    <p class='text-left' style=''>".$txtAtualiza."</p>
+                </div>";
+        }
+
+        // 3. Só imprime a linha se houver alguma informação para mostrar
+        if (!empty($cAtualiza)) {
+            echo "<br>";
+            echo linha_form($cAtualiza);
+        }
+
+        echo fecha_form($buttons);
+
 		echo "<form name='form_excluir_arquivo' method='post' action='cadastro_usuario.php'>
                 <input type='hidden' name='id' value=''>
                 <input type='hidden' name='nome_arquivo' value=''>
@@ -843,8 +851,6 @@ function index() {
                 "TELEFONE"      => "user_tx_fone",
                 "EMPRESA"       => "empr_tx_nome",
                 "STATUS"        => "user_tx_status",
-                
-                // O SEGREDO: Coluna pura! O framework não vai mais travar.
                 "AUTENTICAÇÃO"  => "rfids_nb_id" 
             ];
 
@@ -868,51 +874,64 @@ function index() {
                 ." LEFT JOIN operacao ON enti_tx_tipoOperacao = oper_nb_id"
                 ." LEFT JOIN grupos_documentos ON enti_setor_id = grup_nb_id"
                 ." LEFT JOIN sbgrupos_documentos subg ON enti_subSetor_id = subg.sbgr_nb_id"
-                // O banco agora só traz o ID se o crachá estiver ATIVO
                 ." LEFT JOIN rfids ON rfids.rfids_nb_entidade_id = user.user_nb_id AND rfids.rfids_tx_status = 'ativo'"
             ;
 
-            $actions = criarIconesGrid(
-                ["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-                ["cadastro_usuario.php", "cadastro_usuario.php"],
-                ["modificarUsuario()", "excluirUsuario()"]
+            // 1. Chamamos a utilitária para gerar os botões padrão
+            $acoesGrid = gerarAcoesComConfirmacao(
+                "cadastro_usuario.php", 
+                "modificarUsuario", 
+                "excluirUsuario", 
+                "Deseja excluir o usuário código: ", 
+                "CÓDIGO"
             );
-    
-            // A lixeira ajustada para olhar para a coluna 12 (que é o Status)
-            $actions["functions"][1] .= "esconderInativar('glyphicon glyphicon-remove search-remove', 12);";
-    
-            $gridFields["actions"] = $actions["tags"];
-    
-            $jsFunctions = "
-                // FUNÇÃO: Varre a tabela, pega o ID da coluna 13 e desenha os ícones HTML!
+
+            $gridFields["actions"] = $acoesGrid["tags"];
+
+            // 2. Mesclamos o JS da utilitária com as regras dinâmicas da tela de Usuários
+            $jsFunctions = $acoesGrid["js"] . "
+                
+                // FUNÇÃO RADAR: Descobre em qual índice numérico uma coluna está baseada no nome
+                const pegarIndiceColuna = function(nomeColuna) {
+                    var index = -1;
+                    $('table thead th').each(function(i) {
+                        if ($(this).text().trim().toUpperCase() === nomeColuna.toUpperCase()) {
+                            index = i;
+                            return false; // Interrompe o loop ao encontrar
+                        }
+                    });
+                    return index;
+                };
+
+                // FUNÇÃO: Varre a tabela e desenha os ícones HTML de biometria/crachá
                 const formatarBiometria = function() {
+                    // Descobre onde as colunas estão agora
+                    var idxCodigo = pegarIndiceColuna('CÓDIGO');
+                    var idxAutenticacao = pegarIndiceColuna('AUTENTICAÇÃO');
+
+                    // Se não achar as colunas, aborta para não quebrar a tela
+                    if (idxCodigo === -1 || idxAutenticacao === -1) return;
+
                     $('table tbody tr').each(function() {
-                        var colIdUser = $(this).find('td:eq(0)').text().trim();
-                        var tdAutenticacao = $(this).find('td:eq(13)'); 
+                        var colIdUser = $(this).find('td').eq(idxCodigo).text().trim();
+                        var tdAutenticacao = $(this).find('td').eq(idxAutenticacao); 
                         var idRfid = tdAutenticacao.text().trim(); 
                         
                         if (!colIdUser) return;
                         
                         var htmlIcones = '';
                         
-                        // Desenha Crachá (Se tiver ID, fica verde e clicável)
                         if (idRfid !== '') {
                             htmlIcones += '<span onclick=\"abrirRfidDireto(' + idRfid + ', ' + colIdUser + ')\" class=\"glyphicon glyphicon-credit-card\" style=\"color: #28a745; font-size: 14px; margin-right: 12px; cursor: pointer;\" title=\"Editar Crachá Ativo\"></span>';
                         } else {
                             htmlIcones += '<span class=\"glyphicon glyphicon-credit-card\" style=\"color: #d6d6d6; font-size: 14px; margin-right: 12px;\" title=\"Sem Crachá Ativo\"></span>';
                         }
                         
-                        // Desenha Digital e Facial (Cinzas fixos)
                         htmlIcones += '<span class=\"glyphicon glyphicon-hand-up\" style=\"color: #d6d6d6; font-size: 14px; margin-right: 12px;\" title=\"Sem Digital\"></span>';
                         htmlIcones += '<span class=\"glyphicon glyphicon-user\" style=\"color: #d6d6d6; font-size: 14px;\" title=\"Sem Facial\"></span>';
                         
                         tdAutenticacao.html(htmlIcones);
                     });
-                };
-
-                const funcoesInternas = function(){
-                    ".implode(" ", $actions["functions"])."
-                    formatarBiometria();
                 };
 
                 window.abrirRfidDireto = function(idRfid, idUsuario) {
@@ -943,8 +962,24 @@ function index() {
                     document.body.appendChild(form);
                     form.submit();
                 };
+
+                // Executa as funções no ciclo de vida do grid
+                var funcoesInternasAntiga = funcoesInternas; 
+                funcoesInternas = function(){
+                    // Roda o JS da lupa e do SweetAlert
+                    if(typeof funcoesInternasAntiga === 'function') funcoesInternasAntiga(); 
+                    
+                    // Roda a sua formatação de crachás
+                    formatarBiometria(); 
+                    
+                    // Esconde a lixeira baseando-se na posição atualizada da coluna STATUS
+                    var idxStatus = pegarIndiceColuna('STATUS');
+                    if (idxStatus !== -1) {
+                        esconderInativar('glyphicon glyphicon-remove search-button', idxStatus);
+                    }
+                };
             ";
-            
+
             echo gridDinamico("tabelaMotoristas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
         //}
 
