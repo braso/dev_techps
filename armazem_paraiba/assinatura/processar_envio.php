@@ -164,50 +164,6 @@ function findCommand(array $candidates): ?string {
     return null;
 }
 
-function assinatura_requireFpdi(): bool {
-    static $loaded = null;
-    if($loaded !== null){
-        return $loaded;
-    }
-
-    $baseDir = realpath(__DIR__ . "/..");
-    if(!$baseDir){
-        $baseDir = dirname(__DIR__);
-    }
-
-    $tcpdfCandidates = [
-        $baseDir . "/vendor/tecnickcom/tcpdf/tcpdf.php",
-        $baseDir . "/../tcpdf/tcpdf.php",
-        $baseDir . "/tcpdf/tcpdf.php"
-    ];
-    $tcpdfPath = "";
-    foreach($tcpdfCandidates as $cand){
-        if(file_exists($cand)){
-            $tcpdfPath = $cand;
-            break;
-        }
-    }
-    if($tcpdfPath === ""){
-        $loaded = false;
-        return $loaded;
-    }
-
-    require_once $tcpdfPath;
-
-    spl_autoload_register(function ($class) use ($baseDir) {
-        if (strpos($class, "setasign\\Fpdi\\") === 0) {
-            $filename = str_replace("\\", "/", substr($class, 14)) . ".php";
-            $fullpath = $baseDir . "/vendor/setasign/fpdi/src/" . $filename;
-            if (file_exists($fullpath)) {
-                require_once $fullpath;
-            }
-        }
-    });
-
-    $loaded = class_exists("setasign\\Fpdi\\Tcpdf\\Fpdi");
-    return $loaded;
-}
-
 function separarPaginaPdf(string $input, int $page, string $output): bool {
     if($page <= 0){
         return false;
@@ -249,29 +205,6 @@ function separarPaginaPdf(string $input, int $page, string $output): bool {
         $code = 1;
         @exec($cmd, $out, $code);
         return $code === 0 && file_exists($output);
-    }
-
-    if(assinatura_requireFpdi()){
-        try {
-            $pdf = new setasign\Fpdi\Tcpdf\Fpdi();
-            $pdf->setPrintHeader(false);
-            $pdf->setPrintFooter(false);
-            $pdf->SetAutoPageBreak(false);
-
-            $pageCount = $pdf->setSourceFile($input);
-            if($page > $pageCount){
-                return false;
-            }
-
-            $tplIdx = $pdf->importPage($page);
-            $size = $pdf->getTemplateSize($tplIdx);
-            $orientation = ($size["width"] > $size["height"]) ? "L" : "P";
-            $pdf->AddPage($orientation, [$size["width"], $size["height"]]);
-            $pdf->useTemplate($tplIdx);
-            $pdf->Output($output, "F");
-            return file_exists($output);
-        } catch (Throwable $e) {
-        }
     }
 
     return false;
@@ -518,8 +451,6 @@ if($modo_envio === "separar_paginas"){
     $enviados = 0;
     $erros = 0;
     $ignorados = 0;
-    $selecionadas = 0;
-    $falhasSeparacao = 0;
     $agora = date("Y-m-d H:i:s");
 
     for($p = 1; $p <= $pages; $p++){
@@ -527,7 +458,6 @@ if($modo_envio === "separar_paginas"){
         if($idEntidade <= 0){
             continue;
         }
-        $selecionadas++;
 
         $funcionario = mysqli_fetch_assoc(query(
             "SELECT enti_nb_id, enti_tx_nome, enti_tx_email FROM entidade WHERE enti_nb_id = ? LIMIT 1",
@@ -560,7 +490,6 @@ if($modo_envio === "separar_paginas"){
 
             if(!separarPaginaPdf($real, $p, $dest_path)){
                 $erros++;
-                $falhasSeparacao++;
                 continue;
             }
 
@@ -628,7 +557,6 @@ if($modo_envio === "separar_paginas"){
 
         if(!separarPaginaPdf($real, $p, $destAbs)){
             $erros++;
-            $falhasSeparacao++;
             continue;
         }
 
@@ -674,24 +602,6 @@ if($modo_envio === "separar_paginas"){
     }
 
     if($enviados <= 0){
-        if($selecionadas <= 0){
-            $msg = "Nenhuma página foi selecionada para envio. Selecione um funcionário em pelo menos uma página.";
-            redirectTo($redirect_to, "error", $msg);
-        }
-
-        if($documentoAssinar === "sim" && $ignorados > 0 && $ignorados >= $selecionadas){
-            $msg = "Nenhuma página foi enviada: todas as páginas selecionadas foram ignoradas porque os funcionários estão sem e-mail cadastrado.";
-            redirectTo($redirect_to, "error", $msg);
-        }
-
-        if($falhasSeparacao > 0){
-            $msg =
-                $documentoAssinar === "nao"
-                    ? "Não foi possível separar o PDF para envio. O servidor precisa ter suporte para separar PDF (Imagick, qpdf, Ghostscript ou FPDI/TCPDF)."
-                    : "Não foi possível separar o PDF para envio. Verifique o e-mail dos funcionários e o suporte do servidor para separar PDF (Imagick, qpdf, Ghostscript ou FPDI/TCPDF).";
-            redirectTo($redirect_to, "error", $msg);
-        }
-
         $msg =
             $documentoAssinar === "nao"
                 ? "Nenhuma página foi enviada. Verifique se você selecionou os funcionários e se o servidor tem suporte para separar PDF (Imagick, qpdf ou Ghostscript)."
