@@ -688,9 +688,24 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                                             >
                                                         </a>
                                                     <?php else: ?>
-                                                        <div class="w-20 h-28 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-md text-[10px] text-gray-500 text-center px-2">
-                                                            Sem preview
-                                                        </div>
+                                                        <?php
+                                                            $pdfRel = "uploads/tmp/" . $tokenPdf . ".pdf";
+                                                            $pdfAbs = __DIR__ . "/uploads/tmp/" . $tokenPdf . ".pdf";
+                                                            $pdfExists = file_exists($pdfAbs);
+                                                        ?>
+                                                        <?php if($pdfExists): ?>
+                                                            <a href="<?php echo htmlspecialchars($pdfRel . "?v=" . @filemtime($pdfAbs) . "#page=" . $p); ?>" target="_blank" rel="noopener" class="block w-20 h-28 bg-white border border-gray-200 rounded-md overflow-hidden">
+                                                                <iframe
+                                                                    src="<?php echo htmlspecialchars($pdfRel . "?v=" . @filemtime($pdfAbs) . "#page=" . $p); ?>"
+                                                                    class="w-full h-full border-0"
+                                                                    loading="lazy"
+                                                                ></iframe>
+                                                            </a>
+                                                        <?php else: ?>
+                                                            <div class="w-20 h-28 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-md text-[10px] text-gray-500 text-center px-2">
+                                                                Sem preview
+                                                            </div>
+                                                        <?php endif; ?>
                                                     <?php endif; ?>
                                                 </div>
                                                 <div class="text-sm font-bold text-gray-800 mt-1">Página <?php echo $p; ?></div>

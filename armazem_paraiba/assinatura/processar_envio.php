@@ -451,6 +451,8 @@ if($modo_envio === "separar_paginas"){
     $enviados = 0;
     $erros = 0;
     $ignorados = 0;
+    $selecionadas = 0;
+    $falhasSeparacao = 0;
     $agora = date("Y-m-d H:i:s");
 
     for($p = 1; $p <= $pages; $p++){
@@ -458,6 +460,7 @@ if($modo_envio === "separar_paginas"){
         if($idEntidade <= 0){
             continue;
         }
+        $selecionadas++;
 
         $funcionario = mysqli_fetch_assoc(query(
             "SELECT enti_nb_id, enti_tx_nome, enti_tx_email FROM entidade WHERE enti_nb_id = ? LIMIT 1",
@@ -490,6 +493,7 @@ if($modo_envio === "separar_paginas"){
 
             if(!separarPaginaPdf($real, $p, $dest_path)){
                 $erros++;
+                $falhasSeparacao++;
                 continue;
             }
 
@@ -557,6 +561,7 @@ if($modo_envio === "separar_paginas"){
 
         if(!separarPaginaPdf($real, $p, $destAbs)){
             $erros++;
+            $falhasSeparacao++;
             continue;
         }
 
@@ -602,6 +607,24 @@ if($modo_envio === "separar_paginas"){
     }
 
     if($enviados <= 0){
+        if($selecionadas <= 0){
+            $msg = "Nenhuma página foi selecionada para envio. Selecione um funcionário em pelo menos uma página.";
+            redirectTo($redirect_to, "error", $msg);
+        }
+
+        if($documentoAssinar === "sim" && $ignorados > 0 && $ignorados >= $selecionadas){
+            $msg = "Nenhuma página foi enviada: todas as páginas selecionadas foram ignoradas porque os funcionários estão sem e-mail cadastrado.";
+            redirectTo($redirect_to, "error", $msg);
+        }
+
+        if($falhasSeparacao > 0){
+            $msg =
+                $documentoAssinar === "nao"
+                    ? "Não foi possível separar o PDF para envio. O servidor precisa ter suporte para separar PDF (Imagick, qpdf ou Ghostscript)."
+                    : "Não foi possível separar o PDF para envio. Verifique o e-mail dos funcionários e o suporte do servidor para separar PDF (Imagick, qpdf ou Ghostscript).";
+            redirectTo($redirect_to, "error", $msg);
+        }
+
         $msg =
             $documentoAssinar === "nao"
                 ? "Nenhuma página foi enviada. Verifique se você selecionou os funcionários e se o servidor tem suporte para separar PDF (Imagick, qpdf ou Ghostscript)."
