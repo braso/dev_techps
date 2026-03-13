@@ -249,8 +249,9 @@
 
         $configuracao = gerarAcoesComConfirmacao(
             "cadastro_ferias.php", 
-            "editarFerias()", 
-            "excluirFerias" 
+            "editarFerias", 
+            "excluirFerias",
+			"tem certeza que deseja excluir o registro de férias código: " 
         );
 
         $gridFields["actions"] = $configuracao["tags"];

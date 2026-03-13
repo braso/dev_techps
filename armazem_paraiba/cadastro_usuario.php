@@ -3,6 +3,7 @@
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
 	*/
+	include_once "utils/utils.php";
 	include "conecta.php";
 
 	// function combo_empresa($nome,$variavel,$modificador,$tamanho,$opcao, $opcao2,$extra=""){
@@ -161,6 +162,26 @@
 
 			$id = inserir("user", array_keys($usuario), array_values($usuario));
 			$_POST["id"] = $id;
+
+			// =========================================================================
+			// ATUALIZAÇÃO DO CICLO DE VIDA DO RFID (Gestão de Ativos)
+			// =========================================================================
+			$rfid_selecionado = !empty($_POST["rfid_id"]) ? trim($_POST["rfid_id"]) : "";
+			$id_usuario_rfid = (int)$_POST["id"]; // Pega o ID que acabou de ser gerado ou atualizado
+			
+			// 1. DEVOLVER PARA A GAVETA: Limpa cartões ativos do usuário
+			$sql_limpeza = "UPDATE rfids SET rfids_tx_status = 'disponivel', rfids_nb_entidade_id = NULL WHERE rfids_nb_entidade_id = {$id_usuario_rfid} AND rfids_tx_status = 'ativo'";
+			if ($rfid_selecionado != "") {
+				$sql_limpeza .= " AND rfids_nb_id != " . (int)$rfid_selecionado;
+			}
+			query($sql_limpeza);
+
+			// 2. VINCULAR NOVO CARTÃO: Ativa o selecionado
+			if ($rfid_selecionado != "") {
+				query("UPDATE rfids SET rfids_tx_status = 'ativo', rfids_nb_entidade_id = {$id_usuario_rfid} WHERE rfids_nb_id = " . (int)$rfid_selecionado);
+			}
+			// =========================================================================
+
 			set_status("Cadastro inserido com sucesso!");
 			modificarUsuario();
 			exit;
@@ -169,7 +190,7 @@
 		//Atualizando usuário existente
 		atualizarUsuario($usuario);
 		$id = $_POST["id"];
-		
+
 		$idUserFoto = mysqli_fetch_assoc(query(
 			"SELECT user_nb_id FROM user WHERE user_nb_id = {$id} LIMIT 1;"
 		));
@@ -198,8 +219,29 @@
 			}
 		}
 
-		modificarUsuario();
-		exit;
+		// =========================================================================
+        // ATUALIZAÇÃO DO CRÁCHA (RFID) NO BANCO DE DADOS
+        // =========================================================================
+        $rfid_selecionado = !empty($_POST["rfid_id"]) ? trim($_POST["rfid_id"]) : "";
+        $id_do_usuario = (int)$_POST["id"]; // O ID do user que acabou de ser salvo/atualizado
+        $status_do_usuario = !empty($_POST["status"]) ? $_POST["status"] : "ativo";
+
+        // REGRA DE SEGURANÇA: Se inativou o usuário, arranca o crachá dele à força
+        if ($status_do_usuario == "inativo") {
+            $rfid_selecionado = ""; // Ignora o que veio no select e manda desvincular
+        }
+
+        // 1. DEVOLVER PARA A GAVETA: Tira da mão deste usuário qualquer cartão ativo que ele tenha
+        query("UPDATE rfids SET rfids_tx_status = 'disponivel', rfids_nb_entidade_id = NULL WHERE rfids_nb_entidade_id = {$id_do_usuario} AND rfids_tx_status = 'ativo'");
+
+        // 2. VINCULAR O NOVO: Se tem um cartão válido e o usuário está ativo
+        if ($rfid_selecionado != "") {
+            query("UPDATE rfids SET rfids_tx_status = 'ativo', rfids_nb_entidade_id = {$id_do_usuario} WHERE rfids_nb_id = " . (int)$rfid_selecionado);
+        }
+        // =========================================================================
+
+        modificarUsuario();
+        exit;
 	}
 
 	function excluirUsuario(){
@@ -259,7 +301,6 @@
 	}
 
 	function modificarUsuario(){
-
 		echo '<style>
 		@media print{
 			div.col-sm-4.margin-bottom-5.campo-fit-content > input,
@@ -329,6 +370,67 @@
 		$campo_login = campo("Login*", "login", ($_POST["login"]?? ($_POST["login"]?? "")), 2,"","maxlength='30'");
 		$campo_expiracao = campo_data("Expira em", "expiracao", ($_POST["expiracao"]?? ""), 2);
 
+        // BUSCA DE CARTÕES RFID (Gestão de Ativos)
+        $rfidOptions = [" " => "Sem RFID"];
+        $userIdForRfid = !empty($_POST["id"]) ? (int)$_POST["id"] : 0;
+        
+        if ($userIdForRfid > 0) {
+            $condRfid = "WHERE (rfids_tx_status = 'disponivel' AND rfids_nb_entidade_id IS NULL) OR (rfids_nb_entidade_id = {$userIdForRfid})";
+        } else {
+            $condRfid = "WHERE rfids_tx_status = 'disponivel' AND rfids_nb_entidade_id IS NULL";
+        }
+
+        $sqlBuscaRfids = "SELECT rfids_nb_id, rfids_tx_uid, rfids_tx_descricao, rfids_tx_status FROM rfids {$condRfid} ORDER BY rfids_tx_uid ASC";
+        
+        // 1. BLINDAGEM: Executa a query
+        $rsRfids = query($sqlBuscaRfids);
+        
+        // 2. Só tenta ler se a query NÃO deu erro (se não for false)
+        if ($rsRfids) {
+            while($r = mysqli_fetch_assoc($rsRfids)){
+				$label = $r["rfids_tx_uid"];
+				
+				if(!empty($r["rfids_tx_descricao"])) {
+					// Pega a descrição
+					$descricao = $r["rfids_tx_descricao"];
+					
+					// Se for maior que 35 caracteres, corta e adiciona "..."
+					if (mb_strlen($descricao) > 35) {
+						$descricao = mb_substr($descricao, 0, 35) . "...";
+					}
+					
+					$label .= " - " . $descricao;
+				}
+				
+				if($r["rfids_tx_status"] != 'disponivel' && $r["rfids_tx_status"] != 'ativo') {
+					$label .= " (STATUS: " . strtoupper($r["rfids_tx_status"]) . ")";
+				}
+				
+				$rfidOptions[$r["rfids_nb_id"]] = $label;
+			}
+        } else {
+            // Se falhar, avisa na tela em vez de derrubar o sistema inteiro
+            global $conn; // Puxa a conexão caso ela esteja no escopo global
+            echo "<div style='background:#ffcccc; color:red; padding:10px; margin:10px 0; border:1px solid red;'>
+                    <b>Erro no SQL do RFID:</b> " . mysqli_error($conn) . "<br>
+                    <b>Query:</b> " . $sqlBuscaRfids . "
+                  </div>";
+        }
+
+        $selectedRfid = "";
+        if($userIdForRfid > 0){
+            $sqlAssigned = "SELECT rfids_nb_id FROM rfids WHERE rfids_nb_entidade_id = {$userIdForRfid} LIMIT 1";
+            $rsAssigned = query($sqlAssigned);
+            
+            // BLINDAGEM: Verifica também a segunda query
+            if ($rsAssigned) {
+                $rowAssigned = mysqli_fetch_assoc($rsAssigned);
+                if(!empty($rowAssigned)) {
+                    $selectedRfid = $rowAssigned["rfids_nb_id"];
+                }
+            }
+        }
+        // =========================================================================
 		$editPermission = (!empty($_POST["id"]) && (
 			$loggedUserIsAdmin ||
 			(($_SESSION["user_nb_id"] ?? null) == ($_POST["id"] ?? null))
@@ -357,7 +459,9 @@
 
 			$campo_nivel = combo("Nível*", "nivel", $_POST["nivel"], 2, $niveis, "");
 			$campo_status = combo("Status", "status", $_POST["status"], 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
-
+            //ícone com a cor laranja (warning) típica de edição
+            $icone_editar_rfid = "&nbsp;&nbsp;<a href='javascript:void(0);' onclick='editarRfidNaTela()' title='Editar status deste crachá' style='color: #f0ad4e;'><span class='glyphicon glyphicon-pencil'></span></a>";
+            $campo_rfid = combo("Crachá (RFID)" . $icone_editar_rfid, "rfid_id", $selectedRfid, 2, $rfidOptions, "id='select_rfid_id'");
 			$campo_nascimento = campo_data("Nascido em*", "nascimento", ($_POST["nascimento"]?? ($_POST["nascimento"]?? "")), 2);
 			$campo_cpf = campo("CPF", "cpf", $_POST["cpf"], 2, "MASCARA_CPF");
 			$campo_rg = campo("RG", "rg", $_POST["rg"], 2, "MASCARA_RG", "maxlength='15'");
@@ -377,7 +481,9 @@
 			
 			$campo_nivel = combo("Nível*", "nivel", ($_POST["nivel"]?? $niveis), 2, $niveis, "");
 			$campo_status = combo("Status", "status", ($_POST["status"]?? "ativo"), 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
-
+			//ícone com a cor laranja (warning) típica de edição
+            $icone_editar_rfid = "&nbsp;&nbsp;<a href='javascript:void(0);' onclick='editarRfidNaTela()' title='Editar status deste crachá' style='color: #f0ad4e;'><span class='glyphicon glyphicon-pencil'></span></a>";
+            $campo_rfid = combo("Crachá (RFID)" . $icone_editar_rfid, "rfid_id", $selectedRfid, 2, $rfidOptions, "id='select_rfid_id'");
 			$campo_nascimento = campo_data("Nascido em*", "nascimento", ($_POST["nascimento"]?? ""), 2);
 			$campo_cpf = campo("CPF", "cpf", ($_POST["cpf"]?? ""), 2, "MASCARA_CPF");
 			$campo_rg = campo("RG", "rg", ($_POST["rg"]?? ""), 2, "MASCARA_RG", "maxlength='15'");
@@ -447,6 +553,7 @@
 			$campo_senha,
 			$campo_confirma,
 			$campo_nivel,
+			$campo_rfid,
 			$campo_matricula,
 			$campo_nascimento,
 
@@ -461,81 +568,137 @@
 
 		$buttons = [];
 		$buttons[] = botao((!empty($_POST["id"])? "Atualizar": "Gravar"), "cadastrarUsuario", "id,editPermission", ($_POST["id"]?? "").",".strval($editPermission),"","","btn btn-success");
+		// Capturamos o referer atual se ele ainda não existir no POST
 		if(empty($_POST["HTTP_REFERER"])){
 			$_POST["HTTP_REFERER"] = $_SERVER["HTTP_REFERER"];
-			if(is_int(strpos($_SERVER["HTTP_REFERER"], "cadastro_usuario.php"))){
-				$_POST["HTTP_REFERER"] = $_ENV["URL_BASE"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/cadastro_usuario.php";
-			}
-		}
+		};
+
+		// Se o usuário veio da tela de RFID, o "Voltar" dele deve ser a lista de usuários, 
+		if(is_int(strpos($_POST["HTTP_REFERER"], "cadastro_rfid.php"))){
+			$_POST["HTTP_REFERER"] = "cadastro_usuario.php"; 
+		};
+
 		if(!empty($_POST["HTTP_REFERER"])){
 			$buttons[] = criarBotaoVoltar();
-		}
+		};
 
 		if (!empty($_POST["id"])) {
 			$buttons[] = '<button class="btn default" type="button" onclick="imprimir()">Imprimir</button>';
-		}
+		};
 
 		echo abre_form("Dados do Usuário");
 		echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
 		echo linha_form($fields);
 		
 
-		if (!empty($_POST["userCadastro"]) && !empty($_POST["userAtualiza"]) && ($_POST["userCadastro"] > 0 || $_POST["userAtualiza"] > 0)) {
-			$a_userCadastro = carregar("user", $_POST["userCadastro"]);
-			$txtCadastro = "Registro inserido por ".($a_userCadastro["user_tx_login"]?? "admin").(!empty($_POST["dataCadastro"])?" às ".data($_POST["dataCadastro"], 1): "").".";
-			$cAtualiza[] = 
-					"<div class='col-sm-4 margin-bottom-5'>
-						<label>Última Atualização:</label>
-						<p class='text-left' style=''>".$txtCadastro."</p>
-					</div>"
-				;
-			if ($_POST["userAtualiza"] > 0) {
-				$a_userAtualiza = carregar("user", $_POST["userAtualiza"]);
-				$txtAtualiza = "Registro atualizado por $a_userAtualiza[user_tx_login] às ".data($_POST["dataAtualiza"], 1).".";
-				$cAtualiza[] = 
-					"<div class='col-sm-4 margin-bottom-5'>
-						<label>Última Atualização:</label>
-						<p class='text-left' style=''>".$txtAtualiza."</p>
-					</div>"
-				;
-			}
-			echo "<br>";
-			echo linha_form($cAtualiza);
-		}
+		$cAtualiza = [];
 
-		echo fecha_form($buttons);
+        if (!empty($_POST["userCadastro"]) && $_POST["userCadastro"] > 0) {
+            $a_userCadastro = carregar("user", $_POST["userCadastro"]);
+            $txtCadastro = "Registro inserido por ".($a_userCadastro["user_tx_login"]?? "admin").(!empty($_POST["dataCadastro"])?" às ".data($_POST["dataCadastro"], 1): "").".";
+            $cAtualiza[] = 
+                "<div class='col-sm-4 margin-bottom-5'>
+                    <label>Dados de Criação:</label>
+                    <p class='text-left' style=''>".$txtCadastro."</p>
+                </div>";
+        }
+
+        if (!empty($_POST["userAtualiza"]) && $_POST["userAtualiza"] > 0) {
+            $a_userAtualiza = carregar("user", $_POST["userAtualiza"]);
+            $txtAtualiza = "Registro atualizado por ".($a_userAtualiza["user_tx_login"]?? "admin").(!empty($_POST["dataAtualiza"])?" às ".data($_POST["dataAtualiza"], 1): "").".";
+            $cAtualiza[] = 
+                "<div class='col-sm-4 margin-bottom-5'>
+                    <label>Última Atualização:</label>
+                    <p class='text-left' style=''>".$txtAtualiza."</p>
+                </div>";
+        }
+
+        // 3. Só imprime a linha se houver alguma informação para mostrar
+        if (!empty($cAtualiza)) {
+            echo "<br>";
+            echo linha_form($cAtualiza);
+        }
+
+        echo fecha_form($buttons);
+
 		echo "<form name='form_excluir_arquivo' method='post' action='cadastro_usuario.php'>
-				<input type='hidden' name='id' value=''>
-				<input type='hidden' name='nome_arquivo' value=''>
-				<input type='hidden' name='acao' value=''>
-			</form>
-			<script>
-			function remover_foto(id, acao, arquivo) {
-						if (confirm('Deseja realmente excluir o arquivo ' + arquivo + '?')) {
-							document.form_excluir_arquivo.id.value = id;
-							document.form_excluir_arquivo.nome_arquivo.value = arquivo;
-							document.form_excluir_arquivo.acao.value = acao;
-							document.form_excluir_arquivo.submit();
-						}
-			}
+                <input type='hidden' name='id' value=''>
+                <input type='hidden' name='nome_arquivo' value=''>
+                <input type='hidden' name='acao' value=''>
+            </form>
+            <script>
+            function remover_foto(id, acao, arquivo) {
+                if (confirm('Deseja realmente excluir o arquivo ' + arquivo + '?')) {
+                    document.form_excluir_arquivo.id.value = id;
+                    document.form_excluir_arquivo.nome_arquivo.value = arquivo;
+                    document.form_excluir_arquivo.acao.value = acao;
+                    document.form_excluir_arquivo.submit();
+                }
+            }
 
-			function imprimir() {
-				const form = document.createElement('form');
-				form.method = 'POST';
-				form.action = './impressao/ficha_usuario.php';
-				form.target = '_blank';
+            function imprimir() {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = './impressao/ficha_usuario.php';
+                form.target = '_blank';
 
-				const inputID = document.createElement('input');
-				inputID.type = 'hidden';
-				inputID.name = 'id_usuario';
-				inputID.value = ".$_POST["id"].";
-				form.appendChild(inputID);
-				
-				document.body.appendChild(form);
-				form.submit();
-				document.body.removeChild(form);
-			}
-			</script>";
+                const inputID = document.createElement('input');
+                inputID.type = 'hidden';
+                inputID.name = 'id_usuario';
+                inputID.value = ".$_POST["id"].";
+                form.appendChild(inputID);
+                
+                document.body.appendChild(form);
+                form.submit();
+                document.body.removeChild(form);
+            }
+
+            function editarRfidNaTela() {
+                // Pega o valor que está selecionado na caixinha agora
+                var selectRfid = document.getElementById('select_rfid_id') || document.getElementsByName('rfid_id')[0];
+                var idRfidSelecionado = selectRfid.value;
+
+                // Validação: Vê se tem algo selecionado
+                if (!idRfidSelecionado || idRfidSelecionado.trim() === '') {
+                    Swal.fire('Atenção', 'Selecione um crachá válido na lista antes de clicar em editar.', 'warning');
+                    return;
+                }
+
+                // Cria um formulário dinâmico e envia via POST para a tela de RFID
+                var formRfid = document.createElement('form');
+                formRfid.method = 'POST';
+                formRfid.action = 'cadastro_rfid.php'; 
+
+                var fieldId = document.createElement('input');
+                fieldId.type = 'hidden';
+                fieldId.name = 'id';
+                fieldId.value = idRfidSelecionado;
+                formRfid.appendChild(fieldId);
+
+                var fieldAcao = document.createElement('input');
+                fieldAcao.type = 'hidden';
+                fieldAcao.name = 'acao';
+                fieldAcao.value = 'editarRfid'; // Dispara o form de edição do seu framework
+                formRfid.appendChild(fieldAcao);
+
+                // ==========================================================
+                // O PULO DO GATO: O PHP imprime o ID diretamente aqui dentro!
+                // ==========================================================
+                var idUsuarioAtual = '" . (!empty($_POST["id"]) ? $_POST["id"] : "") . "';
+                
+                if (idUsuarioAtual !== '') {
+                    var fieldRetorno = document.createElement('input');
+                    fieldRetorno.type = 'hidden';
+                    fieldRetorno.name = 'id_usuario_retorno';
+                    fieldRetorno.value = idUsuarioAtual;
+                    formRfid.appendChild(fieldRetorno);
+                }
+
+                document.body.appendChild(formRfid);
+                formRfid.submit();
+            }
+
+            </script>";
 
 			if (!empty($_POST["entidade"])) {
 				$arquivos = mysqli_fetch_all(query(
@@ -599,6 +762,8 @@ function index() {
         if ($_SESSION["user_nb_empresa"] > 0 && is_bool(strpos($_SESSION["user_tx_nivel"], "Administrador")) && !$permitido) {
             $extraEmpresa .= " AND empr_nb_id = '".$_SESSION["user_nb_empresa"]."'";
         }
+
+		echo "<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css'>";
 
 		cabecalho("Cadastro de Usuário");
 
@@ -671,79 +836,35 @@ function index() {
                     <img style='width: 180px; height: 80px;' src='./$logoEmpresa' alt='Logo Empresa Direita'>
             </div>";
 
-		/*/Grid{
-			$iconeModificar = 	criarSQLIconeTabela("user_nb_id","modificarUsuario","Modificar","glyphicon glyphicon-search");
-			$iconeExcluir = 	criarSQLIconeTabela("user_nb_id","excluirUsuario","Excluir","glyphicon glyphicon-remove","Deseja inativar o registro?");
-
-			$sqlFields = [
-				"user_nb_id",
-				"user_tx_nome",
-				"enti_tx_matricula",
-				"user_tx_cpf",
-				"user_tx_login",
-				"user_tx_nivel",
-				"user_tx_email",
-				"user_tx_fone",
-				"empr_tx_nome",
-				"user_tx_status"
-			];
-
-			$sql = 
-				"SELECT ".implode(", ", $sqlFields).",
-					{$iconeModificar} as iconeModificar,
-					IF(user_tx_status = 'ativo', {$iconeExcluir}, NULL) as iconeExcluir
-				FROM user
-					LEFT JOIN empresa ON empresa.empr_nb_id = user.user_nb_empresa
-					LEFT JOIN entidade ON user_nb_entidade = enti_nb_id
-					WHERE 1 {$extra};"
-			;
-
-			$gridFields = [
-				"CÓDIGO" => "user_nb_id",
-				"NOME" => "user_tx_nome",
-				"MATRICULA" => "enti_tx_matricula",
-				"CPF" => "user_tx_cpf",
-				"LOGIN" => "user_tx_login",
-				"NÍVEL" => "user_tx_nivel",
-				"E-MAIL" => "user_tx_email",
-				"TELEFONE" => "user_tx_fone",
-				"EMPRESA" => "empr_tx_nome",
-				"STATUS" => "user_tx_status",
-				"<spam class='glyphicon glyphicon-search'></spam>" => "iconeModificar",
-				"<spam class='glyphicon glyphicon-remove'></spam>" => "iconeExcluir"
-			];
-			
-			grid($sql, array_keys($gridFields), array_values($gridFields));
-		//}*/
-
 		//Grid dinâmico{
             $gridFields = [
-                "CÓDIGO" 		=> "user_nb_id",
-                "NOME" 			=> "user_tx_nome",
-                "MATRICULA" 	=> "enti_tx_matricula",
-                "CPF" 			=> "user_tx_cpf",
-                "LOGIN" 		=> "user_tx_login",
-                "NÍVEL" 		=> "user_tx_nivel",
-                "CARGO" 		=> "oper_tx_nome",
-                "SETOR" 		=> "grup_tx_nome",
-                "SUBSETOR" 	=> "sbgr_tx_nome",
-                "E-MAIL" 		=> "user_tx_email",
-                "TELEFONE" 		=> "user_tx_fone",
-                "EMPRESA" 		=> "empr_tx_nome",
-                "STATUS" 		=> "user_tx_status"
+                "CÓDIGO"        => "user_nb_id",
+                "NOME"          => "user_tx_nome",
+                "MATRICULA"     => "enti_tx_matricula",
+                "CPF"           => "user_tx_cpf",
+                "LOGIN"         => "user_tx_login",
+                "NÍVEL"         => "user_tx_nivel",
+                "CARGO"         => "oper_tx_nome",
+                "SETOR"         => "grup_tx_nome",
+                "SUBSETOR"      => "sbgr_tx_nome",
+                "E-MAIL"        => "user_tx_email",
+                "TELEFONE"      => "user_tx_fone",
+                "EMPRESA"       => "empr_tx_nome",
+                "STATUS"        => "user_tx_status",
+                "AUTENTICAÇÃO"  => "rfids_nb_id" 
             ];
 
             $camposBusca = [
-                "busca_codigo" 		=> "user_nb_id",
-                "busca_nome_like" 	=> "user_tx_nome",
-                "busca_cpf" 		=> "user_tx_cpf",
-                "busca_login_like" 	=> "user_tx_login",
-                "busca_nivel" 		=> "user_tx_nivel",
-                "busca_status" 		=> "user_tx_status",
-                "busca_empresa" 	=> "empr_nb_id",
-                "busca_operacao" 	=> "enti_tx_tipoOperacao",
-                "busca_setor" 		=> "enti_setor_id",
-                "busca_subsetor" 	=> "enti_subSetor_id"
+                "busca_codigo"      => "user_nb_id",
+                "busca_nome_like"   => "user_tx_nome",
+                "busca_cpf"         => "user_tx_cpf",
+                "busca_login_like"  => "user_tx_login",
+                "busca_nivel"       => "user_tx_nivel",
+                "busca_status"      => "user_tx_status",
+                "busca_empresa"     => "empr_nb_id",
+                "busca_operacao"    => "enti_tx_tipoOperacao",
+                "busca_setor"       => "enti_setor_id",
+                "busca_subsetor"    => "enti_subSetor_id"
             ];
 
             $queryBase = 
@@ -753,28 +874,114 @@ function index() {
                 ." LEFT JOIN operacao ON enti_tx_tipoOperacao = oper_nb_id"
                 ." LEFT JOIN grupos_documentos ON enti_setor_id = grup_nb_id"
                 ." LEFT JOIN sbgrupos_documentos subg ON enti_subSetor_id = subg.sbgr_nb_id"
+                ." LEFT JOIN rfids ON rfids.rfids_nb_entidade_id = user.user_nb_id AND rfids.rfids_tx_status = 'ativo'"
             ;
 
-			$actions = criarIconesGrid(
-				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-				["cadastro_usuario.php", "cadastro_usuario.php"],
-				["modificarUsuario()", "excluirUsuario()"]
-			);
-	
-			$actions["functions"][1] .= 
-				"esconderInativar('glyphicon glyphicon-remove search-remove', 9);"
-			;
-	
-			$gridFields["actions"] = $actions["tags"];
-	
-			$jsFunctions =
-				"const funcoesInternas = function(){
-					".implode(" ", $actions["functions"])."
-				}"
-			;
-			echo gridDinamico("tabelaMotoristas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
-		//}
+            // 1. Chamamos a utilitária para gerar os botões padrão
+            $acoesGrid = gerarAcoesComConfirmacao(
+                "cadastro_usuario.php", 
+                "modificarUsuario", 
+                "excluirUsuario", 
+                "Deseja excluir o usuário código: ", 
+                "CÓDIGO"
+            );
 
+            $gridFields["actions"] = $acoesGrid["tags"];
+
+            // 2. Mesclamos o JS da utilitária com as regras dinâmicas da tela de Usuários
+            $jsFunctions = $acoesGrid["js"] . "
+                
+                // FUNÇÃO RADAR: Descobre em qual índice numérico uma coluna está baseada no nome
+                const pegarIndiceColuna = function(nomeColuna) {
+                    var index = -1;
+                    $('table thead th').each(function(i) {
+                        if ($(this).text().trim().toUpperCase() === nomeColuna.toUpperCase()) {
+                            index = i;
+                            return false; // Interrompe o loop ao encontrar
+                        }
+                    });
+                    return index;
+                };
+
+                // FUNÇÃO: Varre a tabela e desenha os ícones HTML de biometria/crachá
+                const formatarBiometria = function() {
+                    // Descobre onde as colunas estão agora
+                    var idxCodigo = pegarIndiceColuna('CÓDIGO');
+                    var idxAutenticacao = pegarIndiceColuna('AUTENTICAÇÃO');
+
+                    // Se não achar as colunas, aborta para não quebrar a tela
+                    if (idxCodigo === -1 || idxAutenticacao === -1) return;
+
+                    $('table tbody tr').each(function() {
+                        var colIdUser = $(this).find('td').eq(idxCodigo).text().trim();
+                        var tdAutenticacao = $(this).find('td').eq(idxAutenticacao); 
+                        var idRfid = tdAutenticacao.text().trim(); 
+                        
+                        if (!colIdUser) return;
+                        
+                        var htmlIcones = '';
+                        
+                        if (idRfid !== '') {
+                            htmlIcones += '<span onclick=\"abrirRfidDireto(' + idRfid + ', ' + colIdUser + ')\" class=\"glyphicon glyphicon-credit-card\" style=\"color: #28a745; font-size: 14px; margin-right: 12px; cursor: pointer;\" title=\"Editar Crachá Ativo\"></span>';
+                        } else {
+                            htmlIcones += '<span class=\"glyphicon glyphicon-credit-card\" style=\"color: #d6d6d6; font-size: 14px; margin-right: 12px;\" title=\"Sem Crachá Ativo\"></span>';
+                        }
+                        
+                        htmlIcones += '<span class=\"glyphicon glyphicon-hand-up\" style=\"color: #d6d6d6; font-size: 14px; margin-right: 12px;\" title=\"Sem Digital\"></span>';
+                        htmlIcones += '<span class=\"glyphicon glyphicon-user\" style=\"color: #d6d6d6; font-size: 14px;\" title=\"Sem Facial\"></span>';
+                        
+                        tdAutenticacao.html(htmlIcones);
+                    });
+                };
+
+                window.abrirRfidDireto = function(idRfid, idUsuario) {
+                    var form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = 'cadastro_rfid.php';
+                    
+                    var inputId = document.createElement('input');
+                    inputId.type = 'hidden';
+                    inputId.name = 'id';
+                    inputId.value = idRfid;
+                    form.appendChild(inputId);
+                    
+                    var inputAcao = document.createElement('input');
+                    inputAcao.type = 'hidden';
+                    inputAcao.name = 'acao';
+                    inputAcao.value = 'editarRfid';
+                    form.appendChild(inputAcao);
+
+                    if (idUsuario) {
+                        var fieldRetorno = document.createElement('input');
+                        fieldRetorno.type = 'hidden';
+                        fieldRetorno.name = 'id_usuario_retorno';
+                        fieldRetorno.value = idUsuario;
+                        form.appendChild(fieldRetorno);
+                    }
+                    
+                    document.body.appendChild(form);
+                    form.submit();
+                };
+
+                // Executa as funções no ciclo de vida do grid
+                var funcoesInternasAntiga = funcoesInternas; 
+                funcoesInternas = function(){
+                    // Roda o JS da lupa e do SweetAlert
+                    if(typeof funcoesInternasAntiga === 'function') funcoesInternasAntiga(); 
+                    
+                    // Roda a sua formatação de crachás
+                    formatarBiometria(); 
+                    
+                    // Esconde a lixeira baseando-se na posição atualizada da coluna STATUS
+                    var idxStatus = pegarIndiceColuna('STATUS');
+                    if (idxStatus !== -1) {
+                        esconderInativar('glyphicon glyphicon-remove search-button', idxStatus);
+                    }
+                };
+            ";
+
+            echo gridDinamico("tabelaMotoristas", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+        //}
 
 		rodape();
 	}
