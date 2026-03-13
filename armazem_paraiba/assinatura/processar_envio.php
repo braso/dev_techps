@@ -164,6 +164,50 @@ function findCommand(array $candidates): ?string {
     return null;
 }
 
+function assinatura_requireFpdi(): bool {
+    static $loaded = null;
+    if($loaded !== null){
+        return $loaded;
+    }
+
+    $baseDir = realpath(__DIR__ . "/..");
+    if(!$baseDir){
+        $baseDir = dirname(__DIR__);
+    }
+
+    $tcpdfCandidates = [
+        $baseDir . "/vendor/tecnickcom/tcpdf/tcpdf.php",
+        $baseDir . "/../tcpdf/tcpdf.php",
+        $baseDir . "/tcpdf/tcpdf.php"
+    ];
+    $tcpdfPath = "";
+    foreach($tcpdfCandidates as $cand){
+        if(file_exists($cand)){
+            $tcpdfPath = $cand;
+            break;
+        }
+    }
+    if($tcpdfPath === ""){
+        $loaded = false;
+        return $loaded;
+    }
+
+    require_once $tcpdfPath;
+
+    spl_autoload_register(function ($class) use ($baseDir) {
+        if (strpos($class, "setasign\\Fpdi\\") === 0) {
+            $filename = str_replace("\\", "/", substr($class, 14)) . ".php";
+            $fullpath = $baseDir . "/vendor/setasign/fpdi/src/" . $filename;
+            if (file_exists($fullpath)) {
+                require_once $fullpath;
+            }
+        }
+    });
+
+    $loaded = class_exists("setasign\\Fpdi\\Tcpdf\\Fpdi");
+    return $loaded;
+}
+
 function separarPaginaPdf(string $input, int $page, string $output): bool {
     if($page <= 0){
         return false;
@@ -205,6 +249,29 @@ function separarPaginaPdf(string $input, int $page, string $output): bool {
         $code = 1;
         @exec($cmd, $out, $code);
         return $code === 0 && file_exists($output);
+    }
+
+    if(assinatura_requireFpdi()){
+        try {
+            $pdf = new setasign\Fpdi\Tcpdf\Fpdi();
+            $pdf->setPrintHeader(false);
+            $pdf->setPrintFooter(false);
+            $pdf->SetAutoPageBreak(false);
+
+            $pageCount = $pdf->setSourceFile($input);
+            if($page > $pageCount){
+                return false;
+            }
+
+            $tplIdx = $pdf->importPage($page);
+            $size = $pdf->getTemplateSize($tplIdx);
+            $orientation = ($size["width"] > $size["height"]) ? "L" : "P";
+            $pdf->AddPage($orientation, [$size["width"], $size["height"]]);
+            $pdf->useTemplate($tplIdx);
+            $pdf->Output($output, "F");
+            return file_exists($output);
+        } catch (Throwable $e) {
+        }
     }
 
     return false;
@@ -620,8 +687,8 @@ if($modo_envio === "separar_paginas"){
         if($falhasSeparacao > 0){
             $msg =
                 $documentoAssinar === "nao"
-                    ? "Não foi possível separar o PDF para envio. O servidor precisa ter suporte para separar PDF (Imagick, qpdf ou Ghostscript)."
-                    : "Não foi possível separar o PDF para envio. Verifique o e-mail dos funcionários e o suporte do servidor para separar PDF (Imagick, qpdf ou Ghostscript).";
+                    ? "Não foi possível separar o PDF para envio. O servidor precisa ter suporte para separar PDF (Imagick, qpdf, Ghostscript ou FPDI/TCPDF)."
+                    : "Não foi possível separar o PDF para envio. Verifique o e-mail dos funcionários e o suporte do servidor para separar PDF (Imagick, qpdf, Ghostscript ou FPDI/TCPDF).";
             redirectTo($redirect_to, "error", $msg);
         }
 
