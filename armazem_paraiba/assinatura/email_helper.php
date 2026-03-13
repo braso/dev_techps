@@ -19,6 +19,32 @@ function configurarSMTP($mail) {
     $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
 }
 
+function assinatura_getBaseUrl(): string {
+    $fallback = defined("BASE_URL_ASSINATURA") ? rtrim((string)BASE_URL_ASSINATURA, "/") : "";
+
+    $proto = trim(strval($_SERVER["HTTP_X_FORWARDED_PROTO"] ?? ""));
+    if($proto === ""){
+        $https = strtolower(trim(strval($_SERVER["HTTPS"] ?? "")));
+        $proto = ($https !== "" && $https !== "off") ? "https" : "http";
+    }
+
+    $host = trim(strval($_SERVER["HTTP_X_FORWARDED_HOST"] ?? ""));
+    if($host === ""){
+        $host = trim(strval($_SERVER["HTTP_HOST"] ?? ""));
+    }
+    if($host === ""){
+        return $fallback;
+    }
+
+    $scriptName = str_replace("\\", "/", strval($_SERVER["SCRIPT_NAME"] ?? ""));
+    $dir = rtrim(str_replace("\\", "/", dirname($scriptName)), "/");
+    if($dir === "."){
+        $dir = "";
+    }
+
+    return rtrim($proto . "://" . $host . $dir, "/");
+}
+
 function enviarEmailProximo($email, $nome, $token, $nomeArquivo, $idDoc, $funcao, $caminhoArquivo = null) {
     // Função de log deve estar disponível ou removemos o logDebug
     if (function_exists('logDebug')) {
@@ -42,7 +68,8 @@ function enviarEmailProximo($email, $nome, $token, $nomeArquivo, $idDoc, $funcao
              $mail->addAttachment(__DIR__ . '/' . $caminhoArquivo, 'Documento_Assinado_Parcialmente.pdf');
         }
         
-        $linkAssinatura = BASE_URL_ASSINATURA . "/assinar_via_link.php?token=" . $token;
+        $base = assinatura_getBaseUrl();
+        $linkAssinatura = rtrim($base !== "" ? $base : (defined("BASE_URL_ASSINATURA") ? (string)BASE_URL_ASSINATURA : ""), "/") . "/assinar_via_link.php?token=" . $token;
         
         $mail->isHTML(true);
         $mail->Subject = "Sua vez de assinar ($funcao): Documento #$idDoc";
