@@ -575,11 +575,17 @@
 					"HTTP_REFERER" => (!empty($_POST["HTTP_REFERER"])? $_POST["HTTP_REFERER"]: $_SERVER["REQUEST_URI"])
 				]);
 
+				
+				if(in_array($_SESSION["user_tx_nivel"],["Administrador", "Super Administrador"])){
+					$paginaDestino = "ajuste_ponto.php";
+				}else{
+					$paginaDestino = "ajuste_pontofuncionario.php";
+				}
 				echo criarHiddenForm(
 					"form_ajuste_ponto",
 					array_keys($params),
 					array_values($params),
-					"ajuste_pontofuncionario.php"
+					$paginaDestino
 				);
 				unset($params);
 			}
