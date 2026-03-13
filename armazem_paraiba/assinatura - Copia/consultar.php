@@ -111,7 +111,7 @@ $result = mysqli_query($conn, $sql);
     <!-- Cabeçalho da Página -->
     <div class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800">Consulta de documentos com assinatura obrigatória.</h1>
+            <h1 class="text-2xl font-bold text-gray-800">Consulta de Documentos</h1>
             <p class="text-gray-500">Histórico e rastreamento de assinaturas</p>
         </div>
         <div class="flex gap-2">

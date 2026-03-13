@@ -81,10 +81,10 @@
             "assinatura" => [
                 "/assinatura/index.php"             => "Dashboard",
                 "/assinatura/nova_assinatura.php"   => "Nova Assinatura",
-                "/assinatura/enviar_documento.php"  => "Envio em Massa",
-                "/assinatura/consultar.php"         => "Consultar",
-                "/assinatura/dadosbases/funcionarios.php"      => "Funcionários",
-                "/assinatura/finalizar.php"         => "Finalizar (ICP)"
+                "/assinatura/governanca.php"        => "Assinatura com Governança",
+                "/assinatura/documentos.php"        => "Documentos",
+                 "/assinatura/consultar.php"        => "Consultar",
+                
             ],
 			// "suporte" => [
 			// 	"/#" 		=> "Perguntas Frequentes", 

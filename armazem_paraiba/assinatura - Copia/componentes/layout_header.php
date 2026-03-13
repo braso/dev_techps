@@ -126,7 +126,7 @@ if($hasEnvPaths){
                             "Assinatura com Governança" => $baseAssinatura."/governanca.php",
                             "Documentos" => $baseAssinatura."/documentos.php",
                             "Consultar" => $baseAssinatura."/consultar.php",
-                           
+                            "Funcionários" => $baseAssinatura."/dadosbases/funcionarios.php",
                            // "Finalizar (ICP)" => $baseAssinatura."/finalizar.php"
                         ]
                     ];
