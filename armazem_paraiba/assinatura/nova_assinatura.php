@@ -1058,6 +1058,28 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
 </div>
 <?php endif; ?>
 
+<?php
+$baseAssets = rtrim(strval($baseContex ?? ""), "/");
+if (isset($hasEnvPaths) && $hasEnvPaths) {
+    $baseAssets = rtrim(strval($urlBase ?? "") . strval($_ENV["APP_PATH"] ?? ""), "/");
+} else {
+    $pos = strrpos($baseAssets, "/");
+    $baseAssets = $pos !== false ? substr($baseAssets, 0, $pos) : $baseAssets;
+}
+?>
+
+<link rel="stylesheet" href="<?php echo $baseAssets; ?>/contex20/assets/global/plugins/select2/css/select2.css">
+<style>
+    .select2-container{width:100%!important}
+    .select2-container--default .select2-selection--single{height:42px;border-color:#d1d5db;border-radius:.5rem;background-color:#f9fafb}
+    .select2-container--default .select2-selection--single .select2-selection__rendered{line-height:42px;padding-left:2.5rem;padding-right:2.5rem;color:#111827}
+    .select2-container--default .select2-selection--single .select2-selection__arrow{height:42px;right:.5rem}
+    .select2-container--default .select2-selection--single .select2-selection__placeholder{color:#9ca3af}
+</style>
+<script src="<?php echo $baseAssets; ?>/contex20/assets/global/plugins/jquery.min.js"></script>
+<script src="<?php echo $baseAssets; ?>/contex20/assets/global/plugins/select2/js/select2.min.js"></script>
+<script src="<?php echo $baseAssets; ?>/contex20/assets/global/plugins/select2/js/i18n/pt-BR.js"></script>
+
 <script>
     function handleFileSelectMultipage(input) {
         if (input.files && input.files[0]) {
@@ -1148,7 +1170,10 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
             $func.select2({
                 placeholder: "Selecionar funcionário",
                 allowClear: true,
-                width: "100%"
+                width: "100%",
+                language: "pt-BR",
+                minimumResultsForSearch: 0,
+                dropdownParent: jQuery("body")
             });
             $func.on("change select2:select select2:clear", preencherDadosFuncionarioSelecionado);
         }
@@ -1158,7 +1183,10 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
             $tipo.select2({
                 placeholder: "Selecione",
                 allowClear: true,
-                width: "100%"
+                width: "100%",
+                language: "pt-BR",
+                minimumResultsForSearch: 0,
+                dropdownParent: jQuery("body")
             });
         }
     }
