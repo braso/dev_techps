@@ -8,16 +8,7 @@
                     <img src="<?php echo isset($path_prefix) ? $path_prefix : ''; ?>assets/logo.png" alt="TechPS" class="h-6 grayscale opacity-50">
                     <span class="text-sm text-gray-500">&copy; <?php echo date('Y'); ?> TechPS. Todos os direitos reservados.</span>
                 </div>
-                <div class="flex space-x-6">
-                    <a href="#" class="text-gray-400 hover:text-gray-500">
-                        <span class="sr-only">Suporte</span>
-                        <i class="fas fa-headset"></i> Suporte
-                    </a>
-                    <a href="#" class="text-gray-400 hover:text-gray-500">
-                        <span class="sr-only">Privacidade</span>
-                        <i class="fas fa-shield-alt"></i> Privacidade
-                    </a>
-                </div>
+            
             </div>
         </div>
     </footer>

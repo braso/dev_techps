@@ -88,11 +88,11 @@ include_once "componentes/layout_header.php";
 
     .card-body-content {
         padding: 25px 20px;
-        text-align: center;
+        text-align: left;
         flex-grow: 1;
         display: flex;
         flex-direction: column;
-        align-items: center;
+        align-items: flex-start;
     }
 
     /* Ícone com círculo de fundo */
@@ -186,8 +186,8 @@ include_once "componentes/layout_header.php";
                     <div class="icon-circle">
                         <i class="fa fa-users"></i>
                     </div>
-                    <div class="card-title">Envio em Massa</div>
-                    <div class="card-desc">Envie um documento para múltiplos signatários de uma vez.</div>
+                    <div class="card-title">Assinatura com Governança</div>
+                    <div class="card-desc">Envie um documento com mais de 1 signatário para validar e acompanhar o processo de assinatura (etapas, ordem e auditoria).</div>
                 </div>
             </a>
         </div>

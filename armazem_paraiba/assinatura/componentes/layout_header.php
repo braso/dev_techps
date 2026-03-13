@@ -123,8 +123,7 @@ if($hasEnvPaths){
                         "Assinatura Digital" => [
                             "Dashboard" => $baseAssinatura."/index.php",
                             "Nova Assinatura" => $baseAssinatura."/nova_assinatura.php",
-                            "Envio em Massa" => $baseAssinatura."/enviar_documento.php",
-                            "Documentos em Lote" => $baseAssinatura."/documentos_em_lote.php",
+                            "Assinatura com Governança" => $baseAssinatura."/enviar_documento.php",
                             "Consultar" => $baseAssinatura."/consultar.php",
                             "Funcionários" => $baseAssinatura."/dadosbases/funcionarios.php",
                             "Finalizar (ICP)" => $baseAssinatura."/finalizar.php"
@@ -184,8 +183,7 @@ if($hasEnvPaths){
             <div class="px-2 pt-2 pb-3 space-y-1">
                 <a href="<?php echo $baseAssinatura; ?>/index.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Dashboard</a>
                 <a href="<?php echo $baseAssinatura; ?>/nova_assinatura.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Nova Assinatura</a>
-                <a href="<?php echo $baseAssinatura; ?>/enviar_documento.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Envio em Massa</a>
-                <a href="<?php echo $baseAssinatura; ?>/documentos_em_lote.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Documentos em Lote</a>
+                <a href="<?php echo $baseAssinatura; ?>/enviar_documento.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Assinatura com Governança</a>
                 <a href="<?php echo $baseAssinatura; ?>/consultar.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Consultar</a>
                 <a href="<?php echo $baseAssinatura; ?>/dadosbases/funcionarios.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Funcionários</a>
                 <a href="<?php echo $baseAssinatura; ?>/finalizar.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Finalizar (ICP)</a>

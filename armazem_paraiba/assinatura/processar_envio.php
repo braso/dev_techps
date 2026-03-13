@@ -39,6 +39,7 @@ function ensureAssinaturaTables($conn): void {
             nome VARCHAR(255),
             caminho_arquivo VARCHAR(255) NOT NULL,
             nome_arquivo_original VARCHAR(255),
+            tipo_documento_id INT NULL,
             data_solicitacao DATETIME DEFAULT CURRENT_TIMESTAMP,
             status ENUM('pendente', 'em_progresso', 'concluido', 'assinado') DEFAULT 'pendente',
             id_documento VARCHAR(100),
@@ -52,6 +53,10 @@ function ensureAssinaturaTables($conn): void {
             if (mysqli_num_rows($check) == 0) {
                 mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN $col VARCHAR(255)");
             }
+        }
+        $checkTipo = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'tipo_documento_id'");
+        if(mysqli_num_rows($checkTipo) == 0){
+            mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN tipo_documento_id INT NULL");
         }
     }
 
@@ -357,7 +362,7 @@ if($modo_envio === "separar_paginas"){
     if(session_status() === PHP_SESSION_NONE){
         session_start();
     }
-    ensureAssinaturaTables($conn);
+    $usuarioCadastro = intval($_SESSION["user_nb_id"] ?? 0);
 
     $token = trim(strval($_POST["pdf_token"] ?? ""));
     if($token === ""){
@@ -389,14 +394,40 @@ if($modo_envio === "separar_paginas"){
     $map = $_POST["page_funcionario"] ?? [];
     $map = is_array($map) ? $map : [];
 
+    $documentoAssinar = strtolower(trim(strval($_POST["documento_assinar"] ?? "sim")));
+    $documentoAssinar = in_array($documentoAssinar, ["sim", "nao"], true) ? $documentoAssinar : "sim";
+
+    $tipoDocumentoId = intval($_POST["tipo_documento"] ?? 0);
+    if($tipoDocumentoId <= 0){
+        redirectTo($redirect_to, "error", "Selecione o tipo de documento.");
+    }
+
+    $tipoDocumento = mysqli_fetch_assoc(query(
+        "SELECT tipo_nb_id, tipo_tx_nome, tipo_tx_status FROM tipos_documentos WHERE tipo_nb_id = ? LIMIT 1",
+        "i",
+        [$tipoDocumentoId]
+    ));
+    if(empty($tipoDocumento)){
+        redirectTo($redirect_to, "error", "Tipo de documento não encontrado.");
+    }
+    $tipoStatus = strtolower(trim(strval($tipoDocumento["tipo_tx_status"] ?? "")));
+    if($tipoStatus !== "ativo"){
+        redirectTo($redirect_to, "error", "Tipo de documento inativo.");
+    }
+    $tipoNome = trim(strval($tipoDocumento["tipo_tx_nome"] ?? ""));
+
     $uploadFileDir = './uploads/';
-    if (!is_dir($uploadFileDir)) {
-        mkdir($uploadFileDir, 0777, true);
+    if($documentoAssinar === "sim"){
+        ensureAssinaturaTables($conn);
+        if (!is_dir($uploadFileDir)) {
+            mkdir($uploadFileDir, 0777, true);
+        }
     }
 
     $enviados = 0;
     $erros = 0;
     $ignorados = 0;
+    $agora = date("Y-m-d H:i:s");
 
     for($p = 1; $p <= $pages; $p++){
         $idEntidade = intval($map[$p] ?? 0);
@@ -416,7 +447,11 @@ if($modo_envio === "separar_paginas"){
 
         $email = filter_var(trim(strval($funcionario["enti_tx_email"] ?? "")), FILTER_VALIDATE_EMAIL);
         $nome = trim(strval($funcionario["enti_tx_nome"] ?? ""));
-        if(!$email || $nome === ""){
+        if($nome === ""){
+            $erros++;
+            continue;
+        }
+        if($documentoAssinar === "sim" && !$email){
             $ignorados++;
             continue;
         }
@@ -425,50 +460,108 @@ if($modo_envio === "separar_paginas"){
         $safeBase = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', strval($base));
         $nomeArquivo = ($safeBase !== "" ? $safeBase : "documento") . "_p" . str_pad((string)$p, 3, "0", STR_PAD_LEFT) . ".pdf";
 
-        $newFileName = md5($token . "-" . $idEntidade . "-" . $p . "-" . microtime(true) . "-" . bin2hex(random_bytes(8))) . ".pdf";
-        $dest_path = $uploadFileDir . $newFileName;
+        if($documentoAssinar === "sim"){
+            $newFileName = md5($token . "-" . $idEntidade . "-" . $p . "-" . microtime(true) . "-" . bin2hex(random_bytes(8))) . ".pdf";
+            $dest_path = $uploadFileDir . $newFileName;
 
-        if(!separarPaginaPdf($real, $p, $dest_path)){
+            if(!separarPaginaPdf($real, $p, $dest_path)){
+                $erros++;
+                continue;
+            }
+
+            $tokenMestre = bin2hex(random_bytes(32));
+            $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
+
+            $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'pendente')";
+            $stmt = mysqli_prepare($conn, $sql);
+            if(!$stmt){
+                @unlink($dest_path);
+                $erros++;
+                continue;
+            }
+            mysqli_stmt_bind_param($stmt, "ssssssi", $tokenMestre, $email, $nome, $dest_path, $nomeArquivo, $id_documento, $tipoDocumentoId);
+            if(!mysqli_stmt_execute($stmt)){
+                @unlink($dest_path);
+                $erros++;
+                continue;
+            }
+
+            $id_solicitacao = mysqli_insert_id($conn);
+            $tokenAssinante = bin2hex(random_bytes(32));
+            $funcao = "Funcionário";
+
+            $sqlAssinante = "INSERT INTO assinantes (id_solicitacao, nome, email, funcao, ordem, token, status)
+                VALUES (?, ?, ?, ?, 1, ?, 'pendente')";
+            $stmtAssinante = mysqli_prepare($conn, $sqlAssinante);
+            if(!$stmtAssinante){
+                $erros++;
+                continue;
+            }
+            mysqli_stmt_bind_param($stmtAssinante, "issss", $id_solicitacao, $nome, $email, $funcao, $tokenAssinante);
+            if(!mysqli_stmt_execute($stmtAssinante)){
+                $erros++;
+                continue;
+            }
+
+            enviarEmailAssinatura($email, $nome, $tokenAssinante, $nomeArquivo, $id_documento, $funcao);
+            $enviados++;
+            continue;
+        }
+
+        $root = realpath(__DIR__ . "/..");
+        if(!$root){
+            $root = dirname(__DIR__);
+        }
+
+        $nomeSeguro = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', $nomeArquivo);
+        $pastaRel = "arquivos/Funcionarios/" . $idEntidade . "/";
+        $pastaAbs = rtrim($root, "/\\") . DIRECTORY_SEPARATOR . "arquivos" . DIRECTORY_SEPARATOR . "Funcionarios" . DIRECTORY_SEPARATOR . $idEntidade . DIRECTORY_SEPARATOR;
+        if(!is_dir($pastaAbs)){
+            mkdir($pastaAbs, 0777, true);
+        }
+        $destRel = $pastaRel . $nomeSeguro;
+        $destAbs = $pastaAbs . $nomeSeguro;
+        if(file_exists($destAbs)){
+            $info = pathinfo($nomeSeguro);
+            $baseName = $info["filename"] ?? "documento";
+            $ext = isset($info["extension"]) ? "." . $info["extension"] : "";
+            $nomeSeguro = $baseName . "_" . time() . $ext;
+            $destRel = $pastaRel . $nomeSeguro;
+            $destAbs = $pastaAbs . $nomeSeguro;
+        }
+
+        if(!separarPaginaPdf($real, $p, $destAbs)){
             $erros++;
             continue;
         }
 
-        $tokenMestre = bin2hex(random_bytes(32));
-        $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
+        $docNome = $tipoNome !== "" ? ($tipoNome . " - " . ($safeBase !== "" ? $safeBase : "documento") . " p" . str_pad((string)$p, 3, "0", STR_PAD_LEFT)) : pathinfo($nomeSeguro, PATHINFO_FILENAME);
 
-        $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, status)
-            VALUES (?, ?, ?, ?, ?, ?, 'pendente')";
-        $stmt = mysqli_prepare($conn, $sql);
-        if(!$stmt){
-            @unlink($dest_path);
+        $okInsert = query(
+            "INSERT INTO documento_funcionario
+                (docu_nb_entidade, docu_tx_nome, docu_tx_descricao, docu_tx_dataCadastro, docu_tx_dataVencimento, docu_tx_tipo, docu_nb_sbgrupo, docu_tx_usuarioCadastro, docu_tx_assinado, docu_tx_visivel, docu_tx_caminho)
+            VALUES
+                (?, ?, ?, ?, ?, ?, ?, ?, 'nao', ?, ?)",
+            "issssiiiss",
+            [
+                $idEntidade,
+                $docNome,
+                "",
+                $agora,
+                null,
+                $tipoDocumentoId,
+                0,
+                $usuarioCadastro,
+                "sim",
+                $destRel
+            ]
+        );
+        if(!$okInsert){
+            @unlink($destAbs);
             $erros++;
             continue;
         }
-        mysqli_stmt_bind_param($stmt, "ssssss", $tokenMestre, $email, $nome, $dest_path, $nomeArquivo, $id_documento);
-        if(!mysqli_stmt_execute($stmt)){
-            @unlink($dest_path);
-            $erros++;
-            continue;
-        }
-
-        $id_solicitacao = mysqli_insert_id($conn);
-        $tokenAssinante = bin2hex(random_bytes(32));
-        $funcao = "Funcionário";
-
-        $sqlAssinante = "INSERT INTO assinantes (id_solicitacao, nome, email, funcao, ordem, token, status)
-            VALUES (?, ?, ?, ?, 1, ?, 'pendente')";
-        $stmtAssinante = mysqli_prepare($conn, $sqlAssinante);
-        if(!$stmtAssinante){
-            $erros++;
-            continue;
-        }
-        mysqli_stmt_bind_param($stmtAssinante, "issss", $id_solicitacao, $nome, $email, $funcao, $tokenAssinante);
-        if(!mysqli_stmt_execute($stmtAssinante)){
-            $erros++;
-            continue;
-        }
-
-        enviarEmailAssinatura($email, $nome, $tokenAssinante, $nomeArquivo, $id_documento, $funcao);
         $enviados++;
     }
 
@@ -485,11 +578,17 @@ if($modo_envio === "separar_paginas"){
     }
 
     if($enviados <= 0){
-        $msg = "Nenhuma página foi enviada. Verifique se você selecionou os funcionários e se o servidor tem suporte para separar PDF (Imagick, qpdf ou Ghostscript).";
+        $msg =
+            $documentoAssinar === "nao"
+                ? "Nenhuma página foi enviada. Verifique se você selecionou os funcionários e se o servidor tem suporte para separar PDF (Imagick, qpdf ou Ghostscript)."
+                : "Nenhuma página foi enviada. Verifique se você selecionou os funcionários, se eles têm e-mail e se o servidor tem suporte para separar PDF (Imagick, qpdf ou Ghostscript).";
         redirectTo($redirect_to, "error", $msg);
     }
 
-    $msg = "Enviados: {$enviados}. Erros: {$erros}. Ignorados (sem e-mail): {$ignorados}.";
+    $msg =
+        $documentoAssinar === "nao"
+            ? "Enviados: {$enviados}. Erros: {$erros}."
+            : "Enviados: {$enviados}. Erros: {$erros}. Ignorados (sem e-mail): {$ignorados}.";
     redirectTo($redirect_to, "success", $msg);
 }
 
@@ -518,6 +617,22 @@ if (!is_dir($uploadFileDir)) {
 
 ensureAssinaturaTables($conn);
 
+$tipoDocumentoId = intval($_POST["tipo_documento"] ?? 0);
+if($tipoDocumentoId <= 0){
+    redirectTo($redirect_to, "error", "Selecione o tipo de documento.");
+}
+$tipoDocumento = mysqli_fetch_assoc(query(
+    "SELECT tipo_nb_id, tipo_tx_status FROM tipos_documentos WHERE tipo_nb_id = ? LIMIT 1",
+    "i",
+    [$tipoDocumentoId]
+));
+if(empty($tipoDocumento)){
+    redirectTo($redirect_to, "error", "Tipo de documento não encontrado.");
+}
+if(strtolower(trim(strval($tipoDocumento["tipo_tx_status"] ?? ""))) !== "ativo"){
+    redirectTo($redirect_to, "error", "Tipo de documento inativo.");
+}
+
 // Gera nome único para o arquivo físico
 $newFileName = md5(time() . $fileName) . '.' . $fileExtension;
 $dest_path = $uploadFileDir . $newFileName;
@@ -532,9 +647,9 @@ if(move_uploaded_file($fileTmpPath, $dest_path)) {
     $tokenMestre = bin2hex(random_bytes(32)); 
     $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
     
-    $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, status) VALUES (?, ?, ?, ?, ?, ?, 'pendente')";
+    $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendente')";
     $stmt = mysqli_prepare($conn, $sql);
-    mysqli_stmt_bind_param($stmt, "ssssss", $tokenMestre, $primeiroSignatario['email'], $primeiroSignatario['nome'], $dest_path, $fileName, $id_documento);
+    mysqli_stmt_bind_param($stmt, "ssssssi", $tokenMestre, $primeiroSignatario['email'], $primeiroSignatario['nome'], $dest_path, $fileName, $id_documento, $tipoDocumentoId);
     
     if (mysqli_stmt_execute($stmt)) {
         $id_solicitacao = mysqli_insert_id($conn);

@@ -16,10 +16,10 @@ include_once "componentes/layout_header.php";
     <div class="max-w-4xl w-full mx-auto bg-white shadow-xl rounded-2xl overflow-hidden">
         
         <!-- Header simplified -->
-        <div class="bg-white px-8 py-6 border-b border-gray-100 flex justify-between items-center">
+        <div class="bg-white px-8 py-6 border-b border-gray-100 flex justify-between items-center text-left">
             <div>
-                <h2 class="text-xl font-bold text-gray-800">Nova Solicitação</h2>
-                <p class="text-gray-500 text-sm">Envio de documentos para múltiplas assinaturas</p>
+                <h2 class="text-xl font-bold text-gray-800">Assinatura com Governança</h2>
+                <p class="text-gray-500 text-sm">Envie um documento com mais de 1 signatário para validar e acompanhar o processo de assinatura (etapas, ordem e auditoria).</p>
             </div>
             <a href="index.php" class="text-gray-500 hover:text-blue-600 text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50">
                 <i class="fas fa-arrow-left"></i> Voltar
