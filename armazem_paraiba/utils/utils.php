@@ -99,4 +99,22 @@ function gerarAcoesComConfirmacao(
         "js"   => $jsFunctions 
     ];
 }
+
+    // ==========================================================
+    // FUNÇÃO AUXILIAR DE AUDITORIA DO RFID
+    // ==========================================================
+    function registrarLogRfid($id_rfid, $acao, $status_anterior, $status_novo, $entidade_anterior, $entidade_nova, $motivo = "") {
+        $id_usuario_logado = isset($_SESSION["user_nb_id"]) ? (int)$_SESSION["user_nb_id"] : 0;
+        
+        // Proteção contra valores nulos para o banco não dar erro
+        $entidade_anterior = $entidade_anterior ? (int)$entidade_anterior : "NULL";
+        $entidade_nova = $entidade_nova ? (int)$entidade_nova : "NULL";
+
+        $sql_log = "INSERT INTO rfids_log 
+            (rlog_nb_rfid_id, rlog_tx_acao, rlog_tx_status_anterior, rlog_tx_status_novo, rlog_nb_entidade_anterior, rlog_nb_entidade_nova, rlog_tx_motivo, rlog_nb_user_atualiza) 
+            VALUES 
+            ({$id_rfid}, '{$acao}', '{$status_anterior}', '{$status_novo}', {$entidade_anterior}, {$entidade_nova}, '{$motivo}', {$id_usuario_logado})";
+            
+        query($sql_log);
+    }
 ?>
