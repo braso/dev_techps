@@ -332,7 +332,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     color: rgb(0.8, 0.8, 0.8),
                 });
 
-                page.drawText('TechPS - Tecnologia e Sistemas | Armazém Paraíba', {
+                page.drawText('TechPS - Tecnologia e Solução', {
                     x: margin,
                     y: y,
                     size: 8,
