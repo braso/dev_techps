@@ -1039,7 +1039,7 @@ function enviarEmailAssinatura($email, $nome, $token, $nomeArquivo, $idDoc, $fun
             
             <div style='background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #e0e0e0; border-radius: 0 0 8px 8px;'>
                 <p style='margin: 0;'>Mensagem automática enviada pelo sistema de Assinatura Digital TechPS.</p>
-                <p style='margin: 5px 0 0 0;'>&copy; " . date('Y') . " Armazém Paraíba - Todos os direitos reservados.</p>
+                <p style='margin: 5px 0 0 0;'>&copy; " . date('Y') . " Tech PS - Tecnologia e Solução - Todos os direitos reservados.</p>
             </div>
         </div>";
 
@@ -1109,7 +1109,7 @@ function enviarEmailDocumento(string $email, string $nome, string $filePath, str
             </div>
             <div style='background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #e0e0e0; border-radius: 0 0 8px 8px;'>
                 <p style='margin: 0;'>Mensagem automática enviada pelo sistema TechPS.</p>
-                <p style='margin: 5px 0 0 0;'>&copy; " . date('Y') . " Armazém Paraíba - Todos os direitos reservados.</p>
+                <p style='margin: 5px 0 0 0;'>&copy; " . date('Y') . " Tech PS - Tecnologia e Solução - Todos os direitos reservados.</p>
             </div>
         </div>";
 
