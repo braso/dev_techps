@@ -41,7 +41,7 @@ $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8',
 
 // Define informações do documento
 $pdf->SetCreator(PDF_CREATOR);
-$pdf->SetAuthor('TechPS - Armazém Paraíba');
+$pdf->SetAuthor('Tech PS - Tecnologia e Solução');
 $pdf->SetTitle('Comprovante de Assinatura Eletrônica');
 $pdf->SetSubject('Comprovante de Assinatura');
 
@@ -102,7 +102,7 @@ $html = <<<EOF
 </p>
 
 <div class="footer-legal">
-    TechPS - Tecnologia e Sistemas | Armazém Paraíba<br>
+    Tech PS - Tecnologia e Solução<br>
     Gerado em: {$data_assinatura}
 </div>
 EOF;
