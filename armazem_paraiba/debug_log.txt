@@ -26,3 +26,17 @@
     [id] => 
 )
 
+2026-03-15 15:21:32 POST: Array
+(
+    [HTTP_REFERER] => http://localhost/braso/armazem_paraiba/cadastro_tipo_doc.php
+    [nome] => comunicado
+    [setor] => 1
+    [sub-setor] => 
+    [busca_banco] => ativo
+    [vencimento] => nao
+    [assinatura] => sim
+    [acao] => cadastra_tipo_doc()
+    [returnValues] => {"busca_codigo":"","busca_nome_like":"","busca_setor":"","busca_subsetor":"","busca_status":"","acao":"layout_tipo_doc()","vencimento":"nao","assinatura":"nao","HTTP_REFERER":"http:\/\/localhost\/braso\/armazem_paraiba\/cadastro_tipo_doc.php","acaoPrevia":"index"}
+    [id] => 
+)
+

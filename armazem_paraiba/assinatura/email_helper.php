@@ -45,6 +45,27 @@ function assinatura_getBaseUrl(): string {
     return rtrim($proto . "://" . $host . $dir, "/");
 }
 
+function assinatura_normalizarCpfDigits(string $cpf): string {
+    return preg_replace('/\D+/', '', $cpf) ?? '';
+}
+
+function assinatura_formatarCpf(string $cpf): string {
+    $d = assinatura_normalizarCpfDigits($cpf);
+    if (strlen($d) !== 11) {
+        return trim($cpf);
+    }
+    return substr($d, 0, 3) . "." . substr($d, 3, 3) . "." . substr($d, 6, 3) . "-" . substr($d, 9, 2);
+}
+
+function assinatura_normalizarRg(string $rg): string {
+    $rg = strtoupper(trim($rg));
+    return preg_replace('/[^0-9A-Z]+/', '', $rg) ?? '';
+}
+
+function assinatura_h(string $v): string {
+    return htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
+}
+
 function enviarEmailProximo($email, $nome, $token, $nomeArquivo, $idDoc, $funcao, $caminhoArquivo = null) {
     // Função de log deve estar disponível ou removemos o logDebug
     if (function_exists('logDebug')) {
@@ -129,17 +150,40 @@ function enviarEmailFinalizacao($conn, $idSolicitacao, $idDoc, $caminhoArquivo) 
         <tr style='background: #f8f9fa;'>
             <th style='border: 1px solid #ddd; padding: 8px;'>Ordem</th>
             <th style='border: 1px solid #ddd; padding: 8px;'>Nome</th>
+            <th style='border: 1px solid #ddd; padding: 8px;'>E-mail</th>
+            <th style='border: 1px solid #ddd; padding: 8px;'>CPF</th>
+            <th style='border: 1px solid #ddd; padding: 8px;'>RG</th>
             <th style='border: 1px solid #ddd; padding: 8px;'>Função</th>
             <th style='border: 1px solid #ddd; padding: 8px;'>Data Assinatura</th>
         </tr>";
     
     foreach ($listaAssinantes as $a) {
         $dataFmt = $a['data_assinatura'] ? date('d/m/Y H:i', strtotime($a['data_assinatura'])) : 'Pendente';
+        $nomeA = assinatura_h(strval($a['nome'] ?? ''));
+        $emailA = assinatura_h(strval($a['email'] ?? ''));
+        $cpfA = trim(strval($a['cpf'] ?? ''));
+        $cpfFmt = $cpfA !== '' ? assinatura_h(assinatura_formatarCpf($cpfA)) : '—';
+        $rgA = '—';
+        $metaRaw = strval($a['metadados'] ?? '');
+        if ($metaRaw !== '') {
+            $meta = json_decode($metaRaw, true);
+            if (is_array($meta)) {
+                $rgTmp = trim(strval($meta['rg'] ?? ''));
+                if ($rgTmp !== '') {
+                    $rgA = assinatura_h($rgTmp);
+                }
+            }
+        }
+        $funcaoA = assinatura_h(strval($a['funcao'] ?? ''));
+        $dataA = assinatura_h($dataFmt);
         $tabelaAudit .= "<tr>
-            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{$a['ordem']}</td>
-            <td style='border: 1px solid #ddd; padding: 8px;'>{$a['nome']}</td>
-            <td style='border: 1px solid #ddd; padding: 8px;'>{$a['funcao']}</td>
-            <td style='border: 1px solid #ddd; padding: 8px;'>{$dataFmt}</td>
+            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>" . intval($a['ordem'] ?? 0) . "</td>
+            <td style='border: 1px solid #ddd; padding: 8px;'>{$nomeA}</td>
+            <td style='border: 1px solid #ddd; padding: 8px;'>{$emailA}</td>
+            <td style='border: 1px solid #ddd; padding: 8px;'>{$cpfFmt}</td>
+            <td style='border: 1px solid #ddd; padding: 8px;'>{$rgA}</td>
+            <td style='border: 1px solid #ddd; padding: 8px;'>{$funcaoA}</td>
+            <td style='border: 1px solid #ddd; padding: 8px;'>{$dataA}</td>
         </tr>";
     }
     $tabelaAudit .= "</table>";

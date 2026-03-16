@@ -1,13 +1,118 @@
 <?php
 include_once "../conecta.php";
+
+function assinatura_ensureSetorResponsavelSchema(): void{
+    $sql = "CREATE TABLE IF NOT EXISTS setor_responsavel (
+        sres_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        sres_nb_setor_id INT NOT NULL,
+        sres_nb_entidade_id INT NOT NULL,
+        sres_tx_assinar_governanca ENUM('sim','nao') NOT NULL DEFAULT 'nao',
+        sres_tx_status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo',
+        sres_tx_dataCadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_setor_entidade (sres_nb_setor_id, sres_nb_entidade_id),
+        INDEX ix_setor (sres_nb_setor_id),
+        INDEX ix_entidade (sres_nb_entidade_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+    query($sql);
+}
+
+if(($_GET["ajax"] ?? "") === "funcionario_info"){
+    header("Content-Type: application/json; charset=utf-8");
+    assinatura_ensureSetorResponsavelSchema();
+
+    $id = intval($_GET["id"] ?? 0);
+    if($id <= 0){
+        echo json_encode(["ok" => false]);
+        exit;
+    }
+
+    $row = mysqli_fetch_assoc(query(
+        "SELECT
+            e.enti_nb_id,
+            e.enti_tx_nome,
+            e.enti_tx_email,
+            e.enti_setor_id,
+            g.grup_tx_nome AS setor_nome
+        FROM entidade e
+        LEFT JOIN grupos_documentos g ON g.grup_nb_id = e.enti_setor_id
+        WHERE e.enti_nb_id = ?
+        LIMIT 1",
+        "i",
+        [$id]
+    ));
+
+    if(empty($row)){
+        echo json_encode(["ok" => false]);
+        exit;
+    }
+
+    $setorId = intval($row["enti_setor_id"] ?? 0);
+    $responsaveis = [];
+    if($setorId > 0){
+        $responsaveis = mysqli_fetch_all(query(
+            "SELECT
+                e.enti_nb_id AS id,
+                e.enti_tx_nome AS nome,
+                e.enti_tx_email AS email
+            FROM setor_responsavel sr
+            INNER JOIN entidade e ON e.enti_nb_id = sr.sres_nb_entidade_id
+            WHERE sr.sres_nb_setor_id = ?
+            AND sr.sres_tx_status = 'ativo'
+            AND sr.sres_tx_assinar_governanca = 'sim'
+            AND e.enti_tx_status = 'ativo'
+            ORDER BY e.enti_tx_nome ASC",
+            "i",
+            [$setorId]
+        ), MYSQLI_ASSOC);
+    }
+
+    echo json_encode([
+        "ok" => true,
+        "funcionario" => [
+            "id" => intval($row["enti_nb_id"] ?? 0),
+            "nome" => strval($row["enti_tx_nome"] ?? ""),
+            "email" => strval($row["enti_tx_email"] ?? "")
+        ],
+        "setor" => [
+            "id" => $setorId,
+            "nome" => strval($row["setor_nome"] ?? "")
+        ],
+        "responsaveis" => $responsaveis
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 include_once "componentes/layout_header.php";
 ?>
 <!-- Tailwind CSS (Included in header) -->
 <!-- FontAwesome (Included in header) -->
+<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/select2/css/select2.min.css" rel="stylesheet" />
+<link href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/select2/css/select2-bootstrap.min.css" rel="stylesheet" />
+<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/jquery.min.js" type="text/javascript"></script>
+<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/select2/js/select2.min.js" type="text/javascript"></script>
+<script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/select2/js/i18n/pt-BR.js" type="text/javascript"></script>
 <style>
     .drag-active {
         border-color: #3b82f6;
         background-color: #eff6ff;
+    }
+
+    .select2-container--default .select2-selection--single {
+        height: 42px;
+        border-radius: 0.5rem;
+        border-color: #e5e7eb;
+        background-color: #f9fafb;
+        padding-top: 6px;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        padding-left: 36px;
+        color: #111827;
+        line-height: 28px;
+        font-size: 0.875rem;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 40px;
+        right: 10px;
     }
 </style>
 
@@ -49,6 +154,8 @@ include_once "componentes/layout_header.php";
             <?php endif; ?>
 
             <form action="processar_envio.php" method="POST" enctype="multipart/form-data" id="formEnvio">
+                <input type="hidden" name="redirect_to" value="governanca.php">
+                <input type="hidden" name="modo_envio" value="governanca">
                 
                 <!-- Upload Section -->
                 <div class="mb-10">
@@ -126,13 +233,15 @@ include_once "componentes/layout_header.php";
 
             <div class="grid md:grid-cols-2 gap-5 ml-4">
                 <div>
-                    <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Nome Completo</label>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Funcionário</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i class="fas fa-user text-gray-400 text-xs"></i>
                         </div>
-                        <input type="text" name="nome" required placeholder="Ex: João Silva"
-                            class="input-nome w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all">
+                        <select class="select-funcionario w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all"></select>
+                        <input type="hidden" class="input-entidade" value="">
+                        <input type="hidden" class="input-setor-id" value="">
+                        <input type="hidden" class="input-nome" value="">
                     </div>
                 </div>
 
@@ -143,8 +252,23 @@ include_once "componentes/layout_header.php";
                             <i class="fas fa-envelope text-gray-400 text-xs"></i>
                         </div>
                         <input type="email" name="email" required placeholder="joao@empresa.com"
-                            class="input-email w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all">
+                            class="input-email w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all" readonly>
                     </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Setor</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-sitemap text-gray-400 text-xs"></i>
+                        </div>
+                        <input type="text" placeholder="—" class="input-setor w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all" readonly>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Responsáveis do Setor (Assina Governança)</label>
+                    <div class="box-responsaveis min-h-[42px] w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 flex flex-wrap gap-2 items-center"></div>
                 </div>
 
                 <div class="md:col-span-2">
@@ -156,6 +280,7 @@ include_once "componentes/layout_header.php";
                         <select name="funcao" required
                             class="select-funcao w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all appearance-none">
                             <option value="Funcionário">Funcionário</option>
+                            <option value="Responsável do Setor">Responsável do Setor</option>
                             <option value="Gerente">Gerente</option>
                             <option value="Diretor">Diretor</option>
                             <option value="Testemunha">Testemunha</option>
@@ -181,6 +306,12 @@ include_once "componentes/layout_header.php";
         const fileInput = document.getElementById('arquivo');
         const dropZone = document.getElementById('drop-zone');
         const fileNameDisplay = document.getElementById('file-name');
+        const formEnvio = document.getElementById('formEnvio');
+
+        const baseUrl = <?=json_encode($_ENV["URL_BASE"].$_ENV["APP_PATH"], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)?>;
+        const contexPath = <?=json_encode($_ENV["APP_PATH"].$_ENV["CONTEX_PATH"], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)?>;
+        const condAtivo = encodeURIComponent("AND enti_tx_status = 'ativo'");
+        let cardUidSeq = 0;
 
         // Drag and Drop Effects
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -231,6 +362,7 @@ include_once "componentes/layout_header.php";
         function addSignatario(nome = '', email = '', funcao = 'Funcionário') {
             const clone = template.content.cloneNode(true);
             const card = clone.querySelector('.signatario-card');
+            card.dataset.uid = String(++cardUidSeq);
             
             // Set values if provided (for edit/preload)
             if(nome) card.querySelector('.input-nome').value = nome;
@@ -249,7 +381,239 @@ include_once "componentes/layout_header.php";
             });
 
             container.appendChild(card);
+            initCard(card);
             reordenar();
+        }
+
+        function escapeHtml(str){
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function renderResponsaveis(card, responsaveis) {
+            const box = card.querySelector('.box-responsaveis');
+            if (!box) return;
+            if (!responsaveis || !Array.isArray(responsaveis) || responsaveis.length === 0) {
+                box.innerHTML = '<span class="text-gray-400 text-xs">Nenhum responsável configurado para assinar governança.</span>';
+                return;
+            }
+            box.innerHTML = responsaveis.map(r => {
+                const nome = (r && r.nome) ? String(r.nome) : '';
+                const email = (r && r.email) ? String(r.email) : '';
+                const label = email ? (nome + ' | ' + email) : nome;
+                return '<span class="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs border border-blue-100">' + escapeHtml(label) + '</span>';
+            }).join('');
+        }
+
+        function parseSources(str){
+            const raw = String(str || '').split(',').map(s => s.trim()).filter(Boolean);
+            return Array.from(new Set(raw));
+        }
+
+        function setSources(card, sources){
+            card.dataset.autoSources = Array.from(new Set((sources || []).map(s => String(s)))).join(',');
+        }
+
+        function removeSourceFromAutoCards(sourceUid){
+            const uid = String(sourceUid || '');
+            if(uid === '') return;
+            const autos = container.querySelectorAll('.signatario-card[data-auto-responsavel="1"]');
+            autos.forEach(c => {
+                const sources = parseSources(c.dataset.autoSources || '');
+                const next = sources.filter(s => s !== uid);
+                if(next.length === 0){
+                    c.remove();
+                } else {
+                    setSources(c, next);
+                }
+            });
+        }
+
+        function findCardByEntidadeId(entidadeId){
+            const id = String(entidadeId || '');
+            if(id === '') return null;
+            const cards = container.querySelectorAll('.signatario-card');
+            for(const c of cards){
+                const inp = c.querySelector('.input-entidade');
+                if(inp && String(inp.value || '') === id){
+                    return c;
+                }
+            }
+            return null;
+        }
+
+        function preselectFuncionarioNoCard(card, entidadeId, label){
+            const sel = card.querySelector('.select-funcionario');
+            if(!sel) return;
+            const id = String(entidadeId || '');
+            if(id === '') return;
+            const text = String(label || ('ID ' + id));
+
+            const opt = new Option(text, id, true, true);
+            sel.appendChild(opt);
+
+            if(window.jQuery && jQuery.fn && typeof jQuery.fn.select2 === 'function'){
+                const $sel = jQuery(sel);
+                $sel.val(id).trigger('change.select2');
+            } else {
+                sel.value = id;
+            }
+        }
+
+        function syncAutoResponsaveis(card, responsaveis, setorId, setorNome){
+            const sourceUid = String(card.dataset.uid || '');
+            if(sourceUid === '') return;
+
+            removeSourceFromAutoCards(sourceUid);
+
+            const selectedEnti = (card.querySelector('.input-entidade')?.value || '').toString();
+            const list = Array.isArray(responsaveis) ? responsaveis : [];
+            let insertAfter = card;
+
+            for(const r of list){
+                const respId = r && r.id != null ? String(r.id) : '';
+                if(respId === '' || respId === selectedEnti) continue;
+
+                const existing = findCardByEntidadeId(respId);
+                if(existing){
+                    if(existing.dataset.autoResponsavel === '1'){
+                        const sources = parseSources(existing.dataset.autoSources || '');
+                        if(!sources.includes(sourceUid)){
+                            sources.push(sourceUid);
+                            setSources(existing, sources);
+                        }
+                    }
+                    continue;
+                }
+
+                const clone = template.content.cloneNode(true);
+                const respCard = clone.querySelector('.signatario-card');
+                respCard.dataset.uid = String(++cardUidSeq);
+                respCard.dataset.autoResponsavel = '1';
+                respCard.dataset.autoSources = sourceUid;
+
+                const btnRemove = respCard.querySelector('.btn-remove');
+                if(btnRemove) btnRemove.style.display = 'none';
+
+                const nome = (r && r.nome) ? String(r.nome) : '';
+                const email = (r && r.email) ? String(r.email) : '';
+                respCard.querySelector('.input-nome').value = nome;
+                respCard.querySelector('.input-email').value = email;
+                respCard.querySelector('.input-email').readOnly = true;
+                respCard.querySelector('.input-entidade').value = respId;
+                respCard.querySelector('.input-setor-id').value = setorId ? String(setorId) : '';
+                const inpSetor = respCard.querySelector('.input-setor');
+                if(inpSetor) inpSetor.value = setorNome ? String(setorNome) : '';
+                const funcSel = respCard.querySelector('.select-funcao');
+                if(funcSel) funcSel.value = 'Responsável do Setor';
+
+                const label = email ? (nome + ' | ' + email) : nome;
+                preselectFuncionarioNoCard(respCard, respId, label);
+
+                insertAfter.insertAdjacentElement('afterend', respCard);
+                insertAfter = respCard;
+                initCard(respCard, { disableSelect: true, skipFetch: true });
+            }
+        }
+
+        async function carregarInfoFuncionario(card, entidadeId) {
+            const inputNome = card.querySelector('.input-nome');
+            const inputEmail = card.querySelector('.input-email');
+            const inputSetor = card.querySelector('.input-setor');
+            const inputEnti = card.querySelector('.input-entidade');
+            const inputSetorId = card.querySelector('.input-setor-id');
+            const sourceUid = String(card.dataset.uid || '');
+
+            if (inputEnti) inputEnti.value = entidadeId ? String(entidadeId) : '';
+            if (!entidadeId) {
+                if (inputNome) inputNome.value = '';
+                if (inputEmail) inputEmail.value = '';
+                if (inputSetor) inputSetor.value = '';
+                if (inputSetorId) inputSetorId.value = '';
+                renderResponsaveis(card, []);
+                removeSourceFromAutoCards(sourceUid);
+                reordenar();
+                return;
+            }
+
+            try {
+                const res = await fetch('governanca.php?ajax=funcionario_info&id=' + encodeURIComponent(String(entidadeId)), {
+                    credentials: 'same-origin'
+                });
+                const data = await res.json();
+                if (!data || !data.ok) {
+                    renderResponsaveis(card, []);
+                    removeSourceFromAutoCards(sourceUid);
+                    reordenar();
+                    return;
+                }
+                if (inputNome) inputNome.value = (data.funcionario && data.funcionario.nome) ? String(data.funcionario.nome) : '';
+                if (inputEmail) inputEmail.value = (data.funcionario && data.funcionario.email) ? String(data.funcionario.email) : '';
+                if (inputSetor) inputSetor.value = (data.setor && data.setor.nome) ? String(data.setor.nome) : '';
+                if (inputSetorId) inputSetorId.value = (data.setor && data.setor.id) ? String(data.setor.id) : '';
+                renderResponsaveis(card, data.responsaveis || []);
+                syncAutoResponsaveis(card, data.responsaveis || [], (data.setor && data.setor.id) ? data.setor.id : '', (data.setor && data.setor.nome) ? data.setor.nome : '');
+                reordenar();
+            } catch (e) {
+                renderResponsaveis(card, []);
+                removeSourceFromAutoCards(sourceUid);
+                reordenar();
+            }
+        }
+
+        function initCard(card, opts){
+            const options = opts || {};
+            const box = card.querySelector('.box-responsaveis');
+            if (box && box.innerHTML.trim() === '') {
+                renderResponsaveis(card, []);
+            }
+
+            const sel = card.querySelector('.select-funcionario');
+            if(!sel) return;
+
+            if(window.jQuery && jQuery.fn && typeof jQuery.fn.select2 === 'function'){
+                const $sel = jQuery(sel);
+                $sel.select2({
+                    language: 'pt-BR',
+                    placeholder: 'Selecione',
+                    allowClear: true,
+                    width: '100%',
+                    ajax: {
+                        url: baseUrl + '/contex20/select2.php?path=' + encodeURIComponent(contexPath) + '&tabela=entidade&ordem=&limite=15&condicoes=' + condAtivo,
+                        dataType: 'json',
+                        delay: 250,
+                        processResults: function (data) { return { results: data }; },
+                        cache: true
+                    }
+                });
+
+                if(!options.skipFetch){
+                    $sel.on('select2:select', function(e){
+                        const d = e && e.params ? e.params.data : null;
+                        const id = d && d.id ? d.id : '';
+                        carregarInfoFuncionario(card, id);
+                    });
+
+                    $sel.on('select2:clear', function(){
+                        carregarInfoFuncionario(card, '');
+                    });
+
+                    $sel.on('change', function(){
+                        const id = $sel.val();
+                        if(!id){
+                            carregarInfoFuncionario(card, '');
+                        }
+                    });
+                }
+
+                if(options.disableSelect){
+                    $sel.prop('disabled', true);
+                }
+            }
         }
 
         function reordenar() {
@@ -263,12 +627,22 @@ include_once "componentes/layout_header.php";
                 
                 // Update Remove Button Visibility (hide for first if only one)
                 const btnRemove = card.querySelector('.btn-remove');
-                btnRemove.style.display = cards.length === 1 ? 'none' : 'block';
+                if(btnRemove){
+                    if(card.dataset.autoResponsavel === '1'){
+                        btnRemove.style.display = 'none';
+                    } else {
+                        btnRemove.style.display = cards.length === 1 ? 'none' : 'block';
+                    }
+                }
 
                 // Update input names for PHP array
                 card.querySelector('.input-nome').name = `signatarios[${index}][nome]`;
                 card.querySelector('.input-email').name = `signatarios[${index}][email]`;
                 card.querySelector('.select-funcao').name = `signatarios[${index}][funcao]`;
+                const enti = card.querySelector('.input-entidade');
+                if(enti) enti.name = `signatarios[${index}][enti_nb_id]`;
+                const setorId = card.querySelector('.input-setor-id');
+                if(setorId) setorId.name = `signatarios[${index}][setor_id]`;
                 
                 // Update hidden order input
                 const ordemInput = card.querySelector('.input-ordem');
@@ -282,6 +656,27 @@ include_once "componentes/layout_header.php";
         // Initialize with 2 empty slots or default
         addSignatario('', '', 'Funcionário');
         addSignatario('', '', 'Gerente');
+
+        if(formEnvio){
+            formEnvio.addEventListener('submit', function(e){
+                const cards = container.querySelectorAll('.signatario-card');
+                for(const card of cards){
+                    const enti = card.querySelector('.input-entidade');
+                    const nome = card.querySelector('.input-nome');
+                    const email = card.querySelector('.input-email');
+                    if(!enti || String(enti.value || '').trim() === ''){
+                        e.preventDefault();
+                        alert('Selecione um funcionário em todos os signatários.');
+                        return;
+                    }
+                    if(!nome || String(nome.value || '').trim() === '' || !email || String(email.value || '').trim() === ''){
+                        e.preventDefault();
+                        alert('Os dados do funcionário (nome/e-mail) precisam estar preenchidos em todos os signatários.');
+                        return;
+                    }
+                }
+            });
+        }
 
     </script>
 </div>

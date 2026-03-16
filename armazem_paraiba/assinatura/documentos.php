@@ -10,13 +10,16 @@ $resFunc = mysqli_query(
 	"SELECT
 		e.enti_nb_id,
 		e.enti_tx_nome,
-		e.enti_tx_email,
-		e.enti_tx_cpf,
-		e.enti_tx_matricula,
-		COUNT(df.docu_nb_id) as total_docs
+		e.enti_setor_id,
+		g.grup_tx_nome as setor_nome
 	FROM documento_funcionario df
 	JOIN entidade e ON e.enti_nb_id = df.docu_nb_entidade
-	GROUP BY e.enti_nb_id, e.enti_tx_nome, e.enti_tx_email, e.enti_tx_cpf, e.enti_tx_matricula
+	LEFT JOIN grupos_documentos g ON g.grup_nb_id = e.enti_setor_id
+	WHERE
+		(COALESCE(df.docu_tx_usuarioCadastro, 0) = 0)
+		AND (LOWER(COALESCE(df.docu_tx_assinado, 'nao')) = 'sim')
+		AND (LOWER(COALESCE(df.docu_tx_descricao, '')) LIKE '%assinado eletronicamente%')
+	GROUP BY e.enti_nb_id, e.enti_tx_nome, e.enti_setor_id, g.grup_tx_nome
 	ORDER BY e.enti_tx_nome ASC"
 );
 if($resFunc){
@@ -26,15 +29,9 @@ if($resFunc){
 		if($id <= 0 || $nome === ""){
 			continue;
 		}
-		$email = trim(strval($r["enti_tx_email"] ?? ""));
-		$cpf = trim(strval($r["enti_tx_cpf"] ?? ""));
-		$mat = trim(strval($r["enti_tx_matricula"] ?? ""));
-		$total = intval($r["total_docs"] ?? 0);
+		$setor = trim(strval($r["setor_nome"] ?? ""));
 		$label = $nome;
-		if($cpf !== ""){ $label .= " | CPF: " . $cpf; }
-		if($mat !== ""){ $label .= " | Mat: " . $mat; }
-		if($email !== ""){ $label .= " | " . $email; }
-		$label .= " (" . $total . ")";
+		$label .= " | " . ($setor !== "" ? $setor : "—");
 		$funcionarios[] = ["id" => $id, "label" => $label];
 	}
 }
@@ -56,6 +53,9 @@ if($funcionarioId > 0){
 		LEFT JOIN tipos_documentos t ON t.tipo_nb_id = df.docu_tx_tipo
 		LEFT JOIN user u ON u.user_nb_id = df.docu_tx_usuarioCadastro
 		WHERE df.docu_nb_entidade = ?
+			AND (COALESCE(df.docu_tx_usuarioCadastro, 0) = 0)
+			AND (LOWER(COALESCE(df.docu_tx_assinado, 'nao')) = 'sim')
+			AND (LOWER(COALESCE(df.docu_tx_descricao, '')) LIKE '%assinado eletronicamente%')
 		ORDER BY df.docu_tx_dataCadastro DESC, df.docu_nb_id DESC"
 	);
 	if($stmt){
@@ -109,8 +109,8 @@ if($funcionarioId > 0){
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 	<div class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
 		<div>
-			<h1 class="text-2xl font-bold text-gray-800">Documentos do Funcionário</h1>
-			<p class="text-gray-500">Arquivos da pasta do funcionário e registros do cadastro</p>
+			<h1 class="text-2xl font-bold text-gray-800">Documentos assinados (Origem: Assinatura)</h1>
+			<p class="text-gray-500">Lista apenas documentos assinados eletronicamente</p>
 		</div>
 		<div class="flex gap-2">
 			<a href="index.php" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">
@@ -293,6 +293,8 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
 	.select2-container--default .select2-selection--single{height:42px;border-color:#d1d5db;border-radius:.5rem;background-color:#fff}
 	.select2-container--default .select2-selection--single .select2-selection__rendered{line-height:42px;padding-left:.75rem;padding-right:2.5rem;color:#111827}
 	.select2-container--default .select2-selection--single .select2-selection__arrow{height:42px;right:.5rem}
+	.select2-container{max-width:100%}
+	.select2-dropdown{max-width:100%;box-sizing:border-box}
 </style>
 <script src="<?php echo $baseAssets; ?>/contex20/assets/global/plugins/jquery.min.js"></script>
 <script src="<?php echo $baseAssets; ?>/contex20/assets/global/plugins/select2/js/select2.min.js"></script>
@@ -307,7 +309,17 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
 				width: "100%",
 				language: "pt-BR",
 				minimumResultsForSearch: 0,
-				dropdownParent: jQuery("body")
+				dropdownAutoWidth: false,
+				dropdownParent: $func.closest("form")
+			});
+
+			$func.on("select2:open", function(){
+				const $container = $func.next(".select2");
+				const w = $container.length ? $container.outerWidth() : null;
+				const $dropdown = jQuery(".select2-container--open .select2-dropdown");
+				if(w && $dropdown.length){
+					$dropdown.css({ width: w + "px", minWidth: w + "px" });
+				}
 			});
 		}
 	}
