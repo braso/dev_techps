@@ -98,5 +98,53 @@ function gerarAcoesComConfirmacao(
         "tags" => $actions["tags"],
         "js"   => $jsFunctions 
     ];
+};
+
+// Função para gerar o alerta de sucesso duplo (Cadastrar Mais / Voltar para o Grid)
+function alertaSucessoCadastro($titulo, $mensagem, $acaoCadastrarMais, $urlVoltar) {
+    return "<script>
+        Swal.fire({
+            title: '{$titulo}',
+            text: '{$mensagem}',
+            icon: 'success',
+            showCancelButton: true,
+            confirmButtonColor: '#5cb85c',
+            cancelButtonColor: '#f0ad4e',
+            confirmButtonText: '<i class=\"fa fa-plus\"></i> Cadastrar mais',
+            cancelButtonText: '<i class=\"fa fa-list\"></i> Voltar para o grid',
+            allowOutsideClick: false
+        }).then((result) => {
+            if (result.isConfirmed) {
+                var f = document.createElement('form');
+                f.method = 'POST';
+                f.action = ''; // Recarrega a própria página
+                var a = document.createElement('input');
+                a.type = 'hidden'; a.name = 'acao'; a.value = '{$acaoCadastrarMais}';
+                f.appendChild(a);
+                document.body.appendChild(f);
+                f.submit();
+            } else {
+                window.location.href = '{$urlVoltar}';
+            }
+        });
+    </script>";
 }
+
+// FUNÇÃO AUXILIAR DE AUDITORIA DO RFID
+function registrarLogRfid($id_rfid, $acao, $status_anterior, $status_novo, $entidade_anterior, $entidade_nova, $motivo = "") {
+    $id_usuario_logado = isset($_SESSION["user_nb_id"]) ? (int)$_SESSION["user_nb_id"] : 0;
+    
+    // Proteção contra valores nulos para o banco não dar erro
+    $entidade_anterior = $entidade_anterior ? (int)$entidade_anterior : "NULL";
+    $entidade_nova = $entidade_nova ? (int)$entidade_nova : "NULL";
+
+    $sql_log = "INSERT INTO rfids_log 
+        (rlog_nb_rfid_id, rlog_tx_acao, rlog_tx_status_anterior, rlog_tx_status_novo, 
+        rlog_nb_entidade_anterior, rlog_nb_entidade_nova, rlog_tx_motivo, rlog_nb_user_atualiza) 
+        VALUES 
+        ({$id_rfid}, '{$acao}', '{$status_anterior}', '{$status_novo}', 
+        {$entidade_anterior}, {$entidade_nova}, '{$motivo}', {$id_usuario_logado})";
+        
+    query($sql_log);
+};
 ?>
