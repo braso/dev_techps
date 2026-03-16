@@ -529,11 +529,18 @@
 		$codigosJornada = ["inicio" => 1, "fim" => 2];
 
 		$ultimoPonto = mysqli_fetch_assoc(query(
-			"SELECT * FROM ponto
-				WHERE pont_tx_status = 'ativo'
-					AND pont_tx_matricula = '{$matricula}'
-					AND pont_tx_data <= STR_TO_DATE('{$dataPonto->format("Y-m-d H:i:59")}', '%Y-%m-%d %H:%i:%s')
-				ORDER BY pont_tx_data DESC, pont_nb_id DESC
+			"SELECT p.*, m.macr_tx_codigoInterno as tipo_interno
+				FROM ponto p
+				LEFT JOIN macroponto m ON (
+					p.pont_tx_tipo = m.macr_tx_codigoInterno
+					OR p.pont_tx_tipo = m.macr_nb_id
+					OR p.pont_tx_tipo = m.macr_tx_codigoExterno
+					OR p.pont_tx_tipoOriginal = m.macr_tx_codigoExterno
+				)
+				WHERE p.pont_tx_status = 'ativo'
+					AND p.pont_tx_matricula = '{$matricula}'
+					AND p.pont_tx_data <= STR_TO_DATE('{$dataPonto->format("Y-m-d H:i:59")}', '%Y-%m-%d %H:%i:%s')
+				ORDER BY p.pont_tx_data DESC, p.pont_nb_id DESC
 				LIMIT 1;"
 		));
 
@@ -547,47 +554,60 @@
 			}
 		//}
 
+		$novoTipo = intval($newPonto["pont_tx_tipo"]);
+		$ultimoTipo = !empty($ultimoPonto) ? intval($ultimoPonto["tipo_interno"] ?? $ultimoPonto["pont_tx_tipo"]) : null;
+
 		$ultPontoJornada = null;
-		if(!empty($ultimoPonto["pont_tx_tipo"])){
-			if(in_array(intval($ultimoPonto["pont_tx_tipo"]), $codigosJornada)){
-				$ultPontoJornada = $ultimoPonto;
+		if($ultimoTipo !== null){
+			if(in_array($ultimoTipo, $codigosJornada)){
+				$ultPontoJornada = ["pont_tx_tipo" => $ultimoTipo];
 			}else{
-				$ultPontoJornada = mysqli_fetch_assoc(query(
-					"SELECT pont_tx_tipo FROM ponto 
-						WHERE pont_tx_tipo IN ('{$codigosJornada["inicio"]}', '{$codigosJornada["fim"]}')
-							AND pont_tx_status = 'ativo'
-							AND pont_tx_matricula = '{$matricula}'
-							AND pont_tx_data <= STR_TO_DATE('{$dataPonto->format("Y-m-d H:i:59")}', '%Y-%m-%d %H:%i:%s')
-						ORDER BY pont_tx_data DESC
+				$ultPontoJornadaRow = mysqli_fetch_assoc(query(
+					"SELECT p.pont_tx_tipo, m.macr_tx_codigoInterno as tipo_interno
+						FROM ponto p
+						LEFT JOIN macroponto m ON (
+							p.pont_tx_tipo = m.macr_tx_codigoInterno
+							OR p.pont_tx_tipo = m.macr_nb_id
+							OR p.pont_tx_tipo = m.macr_tx_codigoExterno
+							OR p.pont_tx_tipoOriginal = m.macr_tx_codigoExterno
+						)
+						WHERE p.pont_tx_status = 'ativo'
+							AND p.pont_tx_matricula = '{$matricula}'
+							AND p.pont_tx_data <= STR_TO_DATE('{$dataPonto->format("Y-m-d H:i:59")}', '%Y-%m-%d %H:%i:%s')
+							AND m.macr_tx_codigoInterno IN ('{$codigosJornada["inicio"]}', '{$codigosJornada["fim"]}')
+						ORDER BY p.pont_tx_data DESC, p.pont_nb_id DESC
 						LIMIT 1;"
 				));
+				if(!empty($ultPontoJornadaRow)){
+					$ultPontoJornada = ["pont_tx_tipo" => intval($ultPontoJornadaRow["tipo_interno"] ?? $ultPontoJornadaRow["pont_tx_tipo"])];
+				}
 			}
 		}
 
 
-		if(empty($ultPontoJornada) || (!empty($ultimoPonto) && $ultimoPonto["pont_tx_tipo"] == $codigosJornada["fim"])){
-			if($newPonto["pont_tx_tipo"] != $codigosJornada["inicio"]){
+		if(empty($ultPontoJornada) || ($ultimoTipo !== null && $ultimoTipo == $codigosJornada["fim"])){
+			if($novoTipo != $codigosJornada["inicio"]){
 				throw new Exception("Jornada aberta não encontrada.");
 			}
 		}else{
-			if($ultimoPonto["pont_tx_tipo"] == $codigosJornada["inicio"]){
-				if($newPonto["pont_tx_tipo"] == $codigosJornada["inicio"]){
+			if($ultimoTipo == $codigosJornada["inicio"]){
+				if($novoTipo == $codigosJornada["inicio"]){
 					throw new Exception("Jornada aberta já existente.");
 				}
-				if($newPonto["pont_tx_tipo"]%2 == 0 && ($newPonto["pont_tx_tipo"] != $codigosJornada["fim"])){
+				if($novoTipo%2 == 0 && ($novoTipo != $codigosJornada["fim"])){
 					throw new Exception("Intervalo aberto não encontrado.");
 				}
-			}elseif($ultimoPonto["pont_tx_tipo"]%2 == 1){
-				if($newPonto["pont_tx_tipo"] == $codigosJornada["fim"]){
+			}elseif($ultimoTipo%2 == 1){
+				if($novoTipo == $codigosJornada["fim"]){
 					throw new Exception("Não é possível fechar com um intervalo aberto.");
 				}
-				if($newPonto["pont_tx_tipo"]%2 == 1){
+				if($novoTipo%2 == 1){
 					throw new Exception("Não é possível abrir com outro intervalo aberto.");
 				}
-				if($newPonto["pont_tx_tipo"] != intval($ultimoPonto["pont_tx_tipo"])+1){
+				if($novoTipo != intval($ultimoTipo)+1){
 					throw new Exception("Não é possível fechar com outro intervalo aberto.");
 				}
-			}elseif($newPonto["pont_tx_tipo"]%2 == 0 && $newPonto["pont_tx_tipo"] != $codigosJornada["fim"]){
+			}elseif($novoTipo%2 == 0 && $novoTipo != $codigosJornada["fim"]){
 				throw new Exception("Intervalo aberto não encontrado.");
 			}
 		}
