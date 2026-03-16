@@ -1738,6 +1738,7 @@ function index(){
                 "PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
                 "CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
                 "STATUS" 				=> "enti_tx_status",
+				"UID"                   => "rfids_tx_uid",
                 "AUTENTICAÇÃO"          => "rfids_nb_id" 
             ];
 
@@ -1756,6 +1757,7 @@ function index(){
                 "PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
                 "CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
                 "STATUS" 				=> "enti_tx_status",
+				"UID"                   => "rfids_tx_uid",
                 "AUTENTICAÇÃO"          => "rfids_nb_id",
 				"E-MAIL"                => "enti_tx_email",
                 "TELEFONE 2"            => "enti_tx_fone2",
@@ -1836,8 +1838,8 @@ function index(){
                     ." LEFT JOIN operacao ON enti_tx_tipoOperacao = oper_nb_id"
                     ." LEFT JOIN cidade cid_residencia ON enti_nb_cidade = cid_residencia.cida_nb_id"
                     ." LEFT JOIN cidade cid_cnh ON enti_nb_cnhCidade = cid_cnh.cida_nb_id"
-                    // <-- JOIN ADICIONADO AQUI PARA BUSCAR O RFID:
-                    ." LEFT JOIN rfids ON rfids.rfids_nb_entidade_id = enti_nb_id AND rfids.rfids_tx_status = 'ativo'"
+                    ." LEFT JOIN user ON user.user_nb_entidade = entidade.enti_nb_id AND user.user_tx_status = 'ativo'"
+                    ." LEFT JOIN rfids ON rfids.rfids_nb_entidade_id = user.user_nb_id AND rfids.rfids_tx_status = 'ativo'"
             );
 	
 			// 1. Chamamos a utilitária para gerar os botões padrão (limpando aquele seu JS antigo manual!)
@@ -1911,7 +1913,7 @@ function index(){
                     var inputAcao = document.createElement('input');
                     inputAcao.type = 'hidden';
                     inputAcao.name = 'acao';
-                    inputAcao.value = 'editarRfid';
+                    inputAcao.value = 'modificarRfid';
                     form.appendChild(inputAcao);
 
                     // bilhete dizendo que viemos do Grid de Funcionário

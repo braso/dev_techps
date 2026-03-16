@@ -4,9 +4,6 @@ include_once "check_permission.php";
 include_once "load_env.php";
 include_once "conecta.php";
 
-mysqli_query($conn, "SET time_zone = '-3:00'");
-
-
 function index(){
     echo "<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css'>";
     cabecalho("Cadastro de RFID");
@@ -104,21 +101,21 @@ function visualizarCadastro(){
     } else {
         // Se for edição, libera o combo com as opções
         $campo_status = call_user_func(function() {
-            $statusAtual = !empty($_POST["rfids_tx_status"]) ? $_POST["rfids_tx_status"] : 'disponivel';
-            $opcoes_status = [
-                'disponivel' => 'Em estoque (Disponível)',
-                'bloqueado'  => 'Bloqueado (Suspenso)',
-                'perdido'    => 'Perdido',
-                'quebrado'   => 'Danificado/Quebrado'
-            ];
-            
-            if ($statusAtual == 'ativo') {
-                $opcoes_status['ativo'] = 'Em Uso (Ativo) - Ficha do Funcionário';
-            } elseif ($statusAtual == 'excluido') {
-                $opcoes_status['excluido'] = 'Excluído (Lixeira)';
-            };
-            
-            return combo_radio("Status do cartão", "rfids_tx_status", $statusAtual, 4, $opcoes_status);
+        $statusAtual = !empty($_POST["rfids_tx_status"]) ? $_POST["rfids_tx_status"] : 'disponivel';
+        $opcoes_status = [
+            'disponivel' => 'Em estoque (Disponível)',
+            'bloqueado'  => 'Bloqueado (Suspenso)',
+            'perdido'    => 'Perdido',
+            'quebrado'   => 'Danificado/Quebrado'
+        ];
+        
+        if ($statusAtual == 'ativo') {
+            $opcoes_status['ativo'] = 'Em Uso (Ativo) - Ficha do Funcionário';
+        } elseif ($statusAtual == 'excluido') {
+            $opcoes_status['excluido'] = 'Excluído (Lixeira)';
+        };
+        
+        return combo_radio("Status do cartão", "rfids_tx_status", $statusAtual, 4, $opcoes_status);
         });
     };
 
@@ -134,9 +131,18 @@ function visualizarCadastro(){
 
     $botoes = [];
     $chaves = []; $valores = [];
-    if(!empty($_POST["id"])) { $chaves[] = "id"; $valores[] = $_POST["id"]; }
-    if($idRetorno > 0) { $chaves[] = "id_usuario_retorno"; $valores[] = $idRetorno; }
-    if(!empty($telaOrigem)) { $chaves[] = "tela_origem"; $valores[] = $telaOrigem; }
+    if(!empty($_POST["id"])) { 
+        $chaves[] = "id"; 
+        $valores[] = $_POST["id"]; 
+    };
+    if($idRetorno > 0) { 
+        $chaves[] = "id_usuario_retorno"; 
+        $valores[] = $idRetorno; 
+    };
+    if(!empty($telaOrigem)) {
+         $chaves[] = "tela_origem"; 
+         $valores[] = $telaOrigem; 
+    };
 
     $strChaves = implode(",", $chaves);
     $strValores = implode(",", $valores);
@@ -151,6 +157,79 @@ function visualizarCadastro(){
     } else {
         // O botão voltar padrão leva de volta para a tela de Busca (index) sem travar no "required"
         $botoes[] = "<button type='button' class='btn btn-warning' onclick=\"window.location.href='cadastro_rfid.php';\">Voltar</button>";
+    }
+
+    // =========================================================================
+    // GRID DE AUDITORIA: Histórico completo de atualizações do RFID
+    // =========================================================================
+    if (!empty($_POST["id"])) {
+        $id_rfid = (int)$_POST["id"];
+        
+        // Busca todo o histórico desse crachá
+        $sqlLog = "SELECT l.*, u.user_tx_login, 
+                          e_ant.enti_tx_nome AS nome_anterior, 
+                          e_nov.enti_tx_nome AS nome_novo 
+                   FROM rfids_log l 
+                   LEFT JOIN user u ON l.rlog_nb_user_atualiza = u.user_nb_id 
+                   LEFT JOIN entidade e_ant ON l.rlog_nb_entidade_anterior = e_ant.enti_nb_id 
+                   LEFT JOIN entidade e_nov ON l.rlog_nb_entidade_nova = e_nov.enti_nb_id 
+                   WHERE l.rlog_nb_rfid_id = {$id_rfid} 
+                   ORDER BY l.rlog_dt_data DESC";
+                   
+        $rsLog = query($sqlLog);
+        
+        echo "<br>";
+        fieldset("Histórico de Atualizações");
+        echo "<div class='col-md-12' style='margin-bottom: 20px; padding: 0;'>";
+        
+        if ($rsLog && mysqli_num_rows($rsLog) > 0) {
+            echo "<div class='table-responsive'>";
+            echo "<table class='table table-striped table-bordered table-hover' style='font-size: 13px;'>";
+            echo "<thead>
+                    <tr style='background-color: #f5f5f5;'>
+                        <th style='width: 15%;'>Data / Hora</th>
+                        <th style='width: 15%;'>Quem Atualizou</th>
+                        <th style='width: 15%;'>Ação</th>
+                        <th style='width: 12%;'>Status Anterior</th>
+                        <th style='width: 12%;'>Status Atual</th>
+                        <th>Detalhes da Mudança</th>
+                    </tr>
+                  </thead>
+                  <tbody>";
+            
+            while ($log = mysqli_fetch_assoc($rsLog)) {
+                $dataF = date("d/m/Y H:i:s", strtotime($log['rlog_dt_data']));
+                $usuario = !empty($log['user_tx_login']) ? $log['user_tx_login'] : 'Sistema';
+                $acao = $log['rlog_tx_acao'];
+                $statusAnt = strtoupper($log['rlog_tx_status_anterior']);
+                $statusNov = strtoupper($log['rlog_tx_status_novo']);
+                
+                $detalhe = $log['rlog_tx_motivo'];
+                if (!empty($log['rlog_nb_entidade_anterior']) || !empty($log['rlog_nb_entidade_nova'])) {
+                    $ant = !empty($log['nome_anterior']) ? $log['nome_anterior'] : 'Gaveta (Sem vínculo)';
+                    $nov = !empty($log['nome_novo']) ? $log['nome_novo'] : 'Gaveta (Sem vínculo)';
+                    
+                    if ($ant != $nov) {
+                        $detalhe .= "<br><small style='color: #666;'>Movido de: <b>{$ant}</b> &rarr; Para: <b>{$nov}</b></small>";
+                    }
+                }
+                
+                echo "<tr>
+                        <td>{$dataF}</td>
+                        <td><b>{$usuario}</b></td>
+                        <td>{$acao}</td>
+                        <td><span class='label label-default'>{$statusAnt}</span></td>
+                        <td><span class='label label-info'>{$statusNov}</span></td>
+                        <td>{$detalhe}</td>
+                      </tr>";
+            }
+            
+            echo "</tbody></table></div>";
+        } else {
+            // Se o crachá for antigo e não tiver log ainda, mostra esse aviso bonitinho
+            echo "<div class='alert alert-warning' style='margin-top: 10px;'><i class='fa fa-warning'></i> Nenhum histórico de atualizações encontrado para este crachá no banco de dados.</div>";
+        }
+        echo "</div><div class='clearfix'></div>";
     }
 
     echo fecha_form($botoes);
