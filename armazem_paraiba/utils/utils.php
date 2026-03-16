@@ -130,6 +130,29 @@ function alertaSucessoCadastro($titulo, $mensagem, $acaoCadastrarMais, $urlVolta
     </script>";
 }
 
+// Função genérica para alerta de sucesso na Atualização (OK / Editar Novamente)
+function alertaSucessoAtualizacao($titulo, $mensagem, $jsVoltar, $jsEditarNovamente) {
+    return "<script>
+        Swal.fire({
+            title: '{$titulo}',
+            text: '{$mensagem}',
+            icon: 'success',
+            showCancelButton: true,
+            confirmButtonColor: '#5cb85c',
+            cancelButtonColor: '#f0ad4e',
+            confirmButtonText: '<i class=\"fa fa-check\"></i> concluir edição',
+            cancelButtonText: '<i class=\"fa fa-pencil\"></i> Continuar editando',
+            allowOutsideClick: false
+        }).then((result) => {
+            if (result.isConfirmed) {
+                {$jsVoltar}
+            } else {
+                {$jsEditarNovamente}
+            }
+        });
+    </script>";
+}
+
 // FUNÇÃO AUXILIAR DE AUDITORIA DO RFID
 function registrarLogRfid($id_rfid, $acao, $status_anterior, $status_novo, $entidade_anterior, $entidade_nova, $motivo = "") {
     $id_usuario_logado = isset($_SESSION["user_nb_id"]) ? (int)$_SESSION["user_nb_id"] : 0;
