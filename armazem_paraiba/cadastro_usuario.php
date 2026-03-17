@@ -851,6 +851,7 @@ function index() {
                 "TELEFONE"      => "user_tx_fone",
                 "EMPRESA"       => "empr_tx_nome",
                 "STATUS"        => "user_tx_status",
+				"RFID"          => "rfids_tx_uid",
                 "AUTENTICAÇÃO"  => "rfids_nb_id" 
             ];
 

@@ -153,6 +153,40 @@ function alertaSucessoAtualizacao($titulo, $mensagem, $jsVoltar, $jsEditarNovame
     </script>";
 }
 
+// Função genérica para criar um Botão solto na tela que exige confirmação via SweetAlert antes de dar o POST
+function botaoAcaoComConfirmacao($idRegistro, $acaoPHP, $textoBotao, $iconeBotao, $classeBotao, $swalTitulo, $swalTexto, $swalIcone = 'question', $corConfirmar = '#5bc0de') {
+    // Gera um ID único pro script não dar conflito se você usar 2 botões na mesma tela
+    $idFuncao = "confirma_" . uniqid(); 
+    
+    return "<button type='button' class='{$classeBotao}' onclick=\"{$idFuncao}('{$idRegistro}', '{$acaoPHP}')\"><i class='{$iconeBotao}'></i> {$textoBotao}</button>
+    <script>
+    function {$idFuncao}(id, acao) {
+        Swal.fire({
+            title: '{$swalTitulo}',
+            text: '{$swalTexto}',
+            icon: '{$swalIcone}',
+            showCancelButton: true,
+            confirmButtonColor: '{$corConfirmar}',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class=\"fa fa-check\"></i> Sim, confirmar!',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                var f = document.createElement('form');
+                f.method = 'POST';
+                f.action = ''; // Envia para a própria página
+                
+                var a = document.createElement('input'); a.type = 'hidden'; a.name = 'acao'; a.value = acao; f.appendChild(a);
+                var i = document.createElement('input'); i.type = 'hidden'; i.name = 'id'; i.value = id; f.appendChild(i);
+                
+                document.body.appendChild(f);
+                f.submit();
+            }
+        });
+    }
+    </script>";
+}
+
 // FUNÇÃO AUXILIAR DE AUDITORIA DO RFID
 function registrarLogRfid($id_rfid, $acao, $status_anterior, $status_novo, $entidade_anterior, $entidade_nova, $motivo = "") {
     $id_usuario_logado = isset($_SESSION["user_nb_id"]) ? (int)$_SESSION["user_nb_id"] : 0;
@@ -161,13 +195,17 @@ function registrarLogRfid($id_rfid, $acao, $status_anterior, $status_novo, $enti
     $entidade_anterior = $entidade_anterior ? (int)$entidade_anterior : "NULL";
     $entidade_nova = $entidade_nova ? (int)$entidade_nova : "NULL";
 
+    $data_hora_atual = date("Y-m-d H:i:s");
+
     $sql_log = "INSERT INTO rfids_log 
         (rlog_nb_rfid_id, rlog_tx_acao, rlog_tx_status_anterior, rlog_tx_status_novo, 
-        rlog_nb_entidade_anterior, rlog_nb_entidade_nova, rlog_tx_motivo, rlog_nb_user_atualiza) 
+        rlog_nb_entidade_anterior, rlog_nb_entidade_nova, rlog_tx_motivo, rlog_nb_user_atualiza, rlog_dt_data) 
         VALUES 
         ({$id_rfid}, '{$acao}', '{$status_anterior}', '{$status_novo}', 
-        {$entidade_anterior}, {$entidade_nova}, '{$motivo}', {$id_usuario_logado})";
+        {$entidade_anterior}, {$entidade_nova}, '{$motivo}', {$id_usuario_logado}, '{$data_hora_atual}')";
         
     query($sql_log);
 };
+
+
 ?>

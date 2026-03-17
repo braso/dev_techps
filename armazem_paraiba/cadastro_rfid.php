@@ -4,6 +4,9 @@ include_once "check_permission.php";
 include_once "load_env.php";
 include_once "conecta.php";
 
+// TRAVA O RELÓGIO DO PHP NO FUSO correto
+date_default_timezone_set('America/Fortaleza');
+
 function index(){
     echo "<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css'>";
     cabecalho("Cadastro de RFID");
@@ -93,7 +96,7 @@ function visualizarCadastro(){
     $idRetorno = !empty($_POST["id_usuario_retorno"]) ? (int)$_POST["id_usuario_retorno"] : 0;
     $telaOrigem = !empty($_POST["tela_origem"]) ? $_POST["tela_origem"] : "";
 
-    // REGRA DE NEGÓCIO: Novo crachá nasce travado como "Disponível"
+    // REGRA DE NEGÓCIO: Novo RFID nasce travado como "Disponível"
     $campo_status = "";
     if (empty($_POST["id"])) {
         $campo_status = texto("Status do cartão", "<span class='label label-success'>Em estoque (Disponível)</span>", 4) . 
@@ -150,6 +153,32 @@ function visualizarCadastro(){
 
     $botoes[] = botao($textoBotao, "cadastrarRfid", $strChaves, $strValores, "", "", "btn btn-success");
     
+    if (!empty($_POST["id"]) && ($_POST["rfids_tx_status"] ?? '') == 'excluido') {
+        //Botão restaurar
+        $botoes[] = botaoAcaoComConfirmacao(
+            $_POST['id'], 
+            'restaurarRfid', 
+            'Restaurar RFID', 
+            'fa fa-recycle', 
+            'btn btn-info', 
+            'Restaurar RFID?', 
+            'Este RFID sairá da lixeira e voltará para o Estoque (Disponível).'
+        );
+
+        //botao excluir definitivamente (hard delete)
+        $botoes[] = botaoAcaoComConfirmacao(
+            $_POST['id'], 
+            'excluirDefinitivoRfid', 
+            'Excluir Definitivamente', 
+            'fa fa-trash', 
+            'btn btn-danger', 
+            'ATENÇÃO: Exclusão Permanente!', 
+            'Isso vai apagar o RFID E TODO O HISTÓRICO DE AUDITORIA dele do banco de dados. Essa ação não pode ser desfeita. Tem certeza?',
+            'warning',
+            '#d9534f'
+        );
+    };
+
     if ($telaOrigem == 'grid_funcionario') {
         $botoes[] = "<button type='button' class='btn btn-warning' onclick=\"window.location.href='cadastro_funcionario.php';\">Voltar para Funcionários</button>";
     } elseif ($idRetorno > 0) {
@@ -158,82 +187,81 @@ function visualizarCadastro(){
         // O botão voltar padrão leva de volta para a tela de Busca (index) sem travar no "required"
         $botoes[] = "<button type='button' class='btn btn-warning' onclick=\"window.location.href='cadastro_rfid.php';\">Voltar</button>";
     }
-
+    echo fecha_form($botoes);
     // =========================================================================
-    // GRID DE AUDITORIA: Histórico completo de atualizações do RFID
+    // GRID DE AUDITORIA PADRÃO (Contex20) - Fora do form principal
     // =========================================================================
     if (!empty($_POST["id"])) {
         $id_rfid = (int)$_POST["id"];
-        
-        // Busca todo o histórico desse crachá
-        $sqlLog = "SELECT l.*, u.user_tx_login, 
-                          e_ant.enti_tx_nome AS nome_anterior, 
-                          e_nov.enti_tx_nome AS nome_novo 
-                   FROM rfids_log l 
-                   LEFT JOIN user u ON l.rlog_nb_user_atualiza = u.user_nb_id 
-                   LEFT JOIN entidade e_ant ON l.rlog_nb_entidade_anterior = e_ant.enti_nb_id 
-                   LEFT JOIN entidade e_nov ON l.rlog_nb_entidade_nova = e_nov.enti_nb_id 
-                   WHERE l.rlog_nb_rfid_id = {$id_rfid} 
-                   ORDER BY l.rlog_dt_data DESC";
-                   
-        $rsLog = query($sqlLog);
-        
-        echo "<br>";
-        fieldset("Histórico de Atualizações");
-        echo "<div class='col-md-12' style='margin-bottom: 20px; padding: 0;'>";
-        
-        if ($rsLog && mysqli_num_rows($rsLog) > 0) {
-            echo "<div class='table-responsive'>";
-            echo "<table class='table table-striped table-bordered table-hover' style='font-size: 13px;'>";
-            echo "<thead>
-                    <tr style='background-color: #f5f5f5;'>
-                        <th style='width: 15%;'>Data / Hora</th>
-                        <th style='width: 15%;'>Quem Atualizou</th>
-                        <th style='width: 15%;'>Ação</th>
-                        <th style='width: 12%;'>Status Anterior</th>
-                        <th style='width: 12%;'>Status Atual</th>
-                        <th>Detalhes da Mudança</th>
-                    </tr>
-                  </thead>
-                  <tbody>";
-            
-            while ($log = mysqli_fetch_assoc($rsLog)) {
-                $dataF = date("d/m/Y H:i:s", strtotime($log['rlog_dt_data']));
-                $usuario = !empty($log['user_tx_login']) ? $log['user_tx_login'] : 'Sistema';
-                $acao = $log['rlog_tx_acao'];
-                $statusAnt = strtoupper($log['rlog_tx_status_anterior']);
-                $statusNov = strtoupper($log['rlog_tx_status_novo']);
-                
-                $detalhe = $log['rlog_tx_motivo'];
-                if (!empty($log['rlog_nb_entidade_anterior']) || !empty($log['rlog_nb_entidade_nova'])) {
-                    $ant = !empty($log['nome_anterior']) ? $log['nome_anterior'] : 'Gaveta (Sem vínculo)';
-                    $nov = !empty($log['nome_novo']) ? $log['nome_novo'] : 'Gaveta (Sem vínculo)';
-                    
-                    if ($ant != $nov) {
-                        $detalhe .= "<br><small style='color: #666;'>Movido de: <b>{$ant}</b> &rarr; Para: <b>{$nov}</b></small>";
-                    }
-                }
-                
-                echo "<tr>
-                        <td>{$dataF}</td>
-                        <td><b>{$usuario}</b></td>
-                        <td>{$acao}</td>
-                        <td><span class='label label-default'>{$statusAnt}</span></td>
-                        <td><span class='label label-info'>{$statusNov}</span></td>
-                        <td>{$detalhe}</td>
-                      </tr>";
-            }
-            
-            echo "</tbody></table></div>";
-        } else {
-            // Se o crachá for antigo e não tiver log ainda, mostra esse aviso bonitinho
-            echo "<div class='alert alert-warning' style='margin-top: 10px;'><i class='fa fa-warning'></i> Nenhum histórico de atualizações encontrado para este crachá no banco de dados.</div>";
-        }
-        echo "</div><div class='clearfix'></div>";
-    }
 
-    echo fecha_form($botoes);
+        echo "<br><div class='row'><div class='col-md-12'>";
+        fieldset("Histórico de Atualizações");
+
+        $gridFieldsLog = [
+            "ID"                  => "rlog_nb_id",
+            "DATA / HORA"         => "data_formatada",
+            "QUEM ATUALIZOU"      => "usuario_nome",
+            "AÇÃO"                => "rlog_tx_acao",
+            "STATUS ANTERIOR"     => "status_ant",
+            "STATUS ATUAL"        => "status_nov",
+            "DETALHES DA MUDANÇA" => "detalhe_mudanca"
+        ];
+
+        $queryBaseLog = "SELECT * FROM (
+            SELECT 
+                l.rlog_nb_id,
+                DATE_FORMAT(l.rlog_dt_data, '%d/%m/%Y %H:%i:%s') AS data_formatada,
+                IFNULL(u.user_tx_login, 'Sistema') AS usuario_nome,
+                
+                /* A MÁGICA DA TRADUÇÃO AQUI */
+                CASE l.rlog_tx_acao
+                    WHEN 'CADASTRO' THEN 'Cadastro Inicial'
+                    WHEN 'STATUS_ALTERADO' THEN 'Alteração de Status'
+                    WHEN 'EXCLUSAO' THEN 'Enviado para Lixeira'
+                    WHEN 'RESTAURACAO' THEN 'Restaurado para Estoque'
+                    ELSE l.rlog_tx_acao
+                END AS rlog_tx_acao,
+                
+                UPPER(l.rlog_tx_status_anterior) AS status_ant,
+                UPPER(l.rlog_tx_status_novo) AS status_nov,
+                CONCAT(
+                    l.rlog_tx_motivo,
+                    IF(l.rlog_nb_entidade_anterior IS NOT NULL OR l.rlog_nb_entidade_nova IS NOT NULL,
+                       CONCAT('<br><small style=\"color: #666;\">Movido de: <b>', IFNULL(e_ant.enti_tx_nome, 'Gaveta (Sem vínculo)'), '</b> &rarr; Para: <b>', IFNULL(e_nov.enti_tx_nome, 'Gaveta (Sem vínculo)'), '</b></small>'),
+                       ''
+                    )
+                ) AS detalhe_mudanca
+            FROM rfids_log l
+            LEFT JOIN user u ON l.rlog_nb_user_atualiza = u.user_nb_id
+            LEFT JOIN entidade e_ant ON l.rlog_nb_entidade_anterior = e_ant.enti_nb_id
+            LEFT JOIN entidade e_nov ON l.rlog_nb_entidade_nova = e_nov.enti_nb_id
+            WHERE l.rlog_nb_rfid_id = {$id_rfid}
+        ) AS base_log";
+
+        $jsOrdenacaoGrid = "
+            var orderCol = 'rlog_nb_id DESC';
+        ";
+
+        echo gridDinamico("gridAuditoriaRfid", $gridFieldsLog, [], $queryBaseLog, $jsOrdenacaoGrid);
+        
+        echo "</div></div><div class='clearfix'></div>";
+    };
     rodape();
+};
+
+// Função para tirar o RFID da lixeira e devolver ao estoque
+function restaurarRfid(){
+    $id_rfid = (int)$_POST['id'];
+    
+    $cracha_antigo = mysqli_fetch_assoc(query("SELECT rfids_tx_status, rfids_nb_entidade_id FROM rfids WHERE rfids_nb_id = {$id_rfid}"));
+
+    query("UPDATE rfids SET rfids_tx_status = 'disponivel', rfids_nb_entidade_id = NULL WHERE rfids_nb_id = {$id_rfid}");
+    
+    registrarLogRfid($id_rfid, "RESTAURACAO", $cracha_antigo["rfids_tx_status"], "disponivel", $cracha_antigo["rfids_nb_entidade_id"], null, "RFID restaurado da lixeira para o estoque.");
+    
+    set_status("<script>Swal.fire('Restaurado!', 'O RFID voltou para o estoque e está disponível para uso.', 'success');</script>");
+    index();
+    exit;
 };
 
 // AÇÕES DE BANCO DE DADOS (COM AUDITORIA / LOG)
@@ -312,10 +340,13 @@ function cadastrarRfid(){
         exit;
 
     } else {
-        $id_novo_rfid = inserir("rfids", array_keys($dados), array_values($dados))[0];
-        registrarLogRfid($id_novo_rfid, "CADASTRO", "inexistente", $dados["rfids_tx_status"], null, null, "Crachá novo inserido no estoque.");
+        // FORÇA O BANCO DE DADOS A USAR O HORÁRIO DO BRASIL NESTA SESSÃO
+        query("SET time_zone = '-03:00'");
         
-        set_status(alertaSucessoCadastro('Sucesso!', 'Crachá cadastrado com sucesso!', 'visualizarCadastro', 'cadastro_rfid.php'));
+        $id_novo_rfid = inserir("rfids", array_keys($dados), array_values($dados))[0];
+        registrarLogRfid($id_novo_rfid, "CADASTRO", "inexistente", $dados["rfids_tx_status"], null, null, "RFID novo inserido no estoque.");
+        
+        set_status(alertaSucessoCadastro('Sucesso!', 'RFID cadastrado com sucesso!', 'visualizarCadastro', 'cadastro_rfid.php'));
         
         unset($_POST["rfids_tx_uid"], $_POST["rfids_tx_status"], $_POST["rfids_tx_descricao"], $_POST["acao"]);
         visualizarCadastro();
@@ -331,7 +362,7 @@ function excluirRfid(){
     
     // Exclusão Lógica (Soft Delete)
     query("UPDATE rfids SET rfids_tx_status = 'excluido', rfids_nb_entidade_id = NULL WHERE rfids_nb_id = {$id_rfid}");
-    registrarLogRfid($id_rfid, "EXCLUSAO", $cracha_antigo["rfids_tx_status"], "excluido", $cracha_antigo["rfids_nb_entidade_id"], null, "Crachá movido para a lixeira.");
+    registrarLogRfid($id_rfid, "EXCLUSAO", $cracha_antigo["rfids_tx_status"], "excluido", $cracha_antigo["rfids_nb_entidade_id"], null, "RFID movido para a lixeira.");
     
     set_status("<script>Swal.fire('Sucesso!', 'RFID movido para a lixeira.', 'info');</script>");
     index();
