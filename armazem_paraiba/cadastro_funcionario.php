@@ -1848,7 +1848,7 @@ function index(){
                 "modificarMotorista", 
                 "excluirMotorista", 
                 "CÓDIGO",
-            	"Deseja excluir o funcionário: <br><h3 style='color:#337ab7;'>{NOME}</h3>"
+            	"Deseja excluir o funcionário: <br><h3 style='color:#337ab7;'>{NOME}<br><small>CPF: {CPF}</small></h3>"
             );
 
             $gridFields["actions"] = $acoesGrid["tags"];
