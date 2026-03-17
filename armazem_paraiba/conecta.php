@@ -82,6 +82,9 @@
         rlog_dt_data DATETIME DEFAULT CURRENT_TIMESTAMP
     );");
 
+	// Força a atualização do ENUM da tabela rfids para incluir o 'excluido'
+    mysqli_query($conn, "ALTER TABLE rfids MODIFY COLUMN rfids_tx_status ENUM('ativo', 'disponivel', 'bloqueado', 'perdido', 'quebrado', 'excluido') DEFAULT 'disponivel';");
+
 
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_grid.php";
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
