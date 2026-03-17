@@ -61,12 +61,20 @@ function listarRfids(){
                     LEFT JOIN user ON rfids.rfids_nb_entidade_id = user.user_nb_id
                     ) AS base_query";
 
+    $msgPadrao = "Deseja mover para a lixeira o crachá UID: <br><h3 style='color:#337ab7;'>{UID}</h3>";
+    $msgAviso = "<b>ATENÇÃO!</b><br>
+                    O crachá <b>{UID}</b> está em uso por:<br>
+                    <h3 style='color:#d9534f;'>{FUNCIONÁRIO}</h3><br>
+                    Deseja mover para a lixeira e desvincular o usuário?";                
+    
     $acoesGrid = gerarAcoesComConfirmacao(
         "cadastro_rfid.php", 
         "modificarRfid", 
         "excluirRfid", 
-        "Excluir o RFID código: ", 
-        "CÓDIGO"
+        "CÓDIGO", 
+        $msgPadrao,
+        "FUNCIONÁRIO",
+        $msgAviso
     );
 
     $gridFields["actions"] = $acoesGrid["tags"];

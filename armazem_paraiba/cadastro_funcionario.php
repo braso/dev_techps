@@ -1847,8 +1847,8 @@ function index(){
                 "cadastro_funcionario.php", 
                 "modificarMotorista", 
                 "excluirMotorista", 
-                "Deseja excluir o funcionário código: ", 
-                "CÓDIGO"
+                "CÓDIGO",
+            	"Deseja excluir o funcionário: <br><h3 style='color:#337ab7;'>{NOME}</h3>"
             );
 
             $gridFields["actions"] = $acoesGrid["tags"];

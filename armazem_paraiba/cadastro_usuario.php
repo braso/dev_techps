@@ -522,6 +522,14 @@
 
 			$campo_empresa = texto("Empresa*", (!empty($empresa["empr_tx_nome"])? $empresa["empr_tx_nome"]: "-"), 3, "style=''");
 			$campo_login = texto("Login", ($_POST["login"]?? ($_POST["login"]?? "-")), 2);
+			$uid_view = "Sem Crachá";
+            if (!empty($selectedRfid)) {
+                $rs_uid = query("SELECT rfids_tx_uid FROM rfids WHERE rfids_nb_id = " . (int)$selectedRfid);
+                if ($rs_uid && $row_uid = mysqli_fetch_assoc($rs_uid)) {
+                    $uid_view = $row_uid['rfids_tx_uid'];
+                }
+            }
+            $campo_rfid = texto("Crachá (UID)", $uid_view, 2);
 			$campo_senha = "";
 			$campo_confirma = "";
 			if($loggedUserIsAdmin){

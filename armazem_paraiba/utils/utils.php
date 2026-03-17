@@ -7,20 +7,24 @@ function gerarAcoesComConfirmacao(
     $arquivoFuncaoEditarExcluir, 
     $nomeAcaoEditar, 
     $nomeAcaoExcluir, 
-    $mensagemExcluir = "Excluir registro código: ",
-    $nomeColunaTituloId = "CÓDIGO" // Parâmetro novo: O texto do cabeçalho da coluna de ID
+    $nomeColunaTituloId = "CÓDIGO",
+    $templatePadrao = "Deseja excluir o registro {CÓDIGO}?", 
+    $colunaCondicao = "", // Ex: FUNCIONÁRIO
+    $templateCondicao = "" // Mensagem se tiver funcionário
 ) {
     
-    // Cria a estrutura padrão usando a função do sistema legado
     $actions = criarIconesGrid(
         ["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"], 
         [$arquivoFuncaoEditarExcluir, "javascript:void(0)"],
         [$nomeAcaoEditar . "()", ""] 
     );
 
-    // Força o HTML da lixeira passando os parâmetros limpos
+    // Protege os acentos para o JavaScript
+    $encPadrao = rawurlencode($templatePadrao);
+    $encCondicao = rawurlencode($templateCondicao);
+
     $actions["tags"][1] = '<span class="glyphicon glyphicon-remove search-button" ' . 
-                          'onclick="confirmarExclusaoGenerica(this, \'' . $nomeAcaoExcluir . '\', \'' . $nomeColunaTituloId . '\')" ' . 
+                          'onclick="confirmarExclusaoGenerica(this, \'' . $nomeAcaoExcluir . '\', \'' . $nomeColunaTituloId . '\', \'' . $encPadrao . '\', \'' . $colunaCondicao . '\', \'' . $encCondicao . '\')" ' . 
                           'title="Excluir" style="color:#d9534f; cursor:pointer;"></span>';
 
     $jsDoEditar = $actions["functions"][0];
@@ -31,32 +35,49 @@ function gerarAcoesComConfirmacao(
         };
 
         if (typeof window.confirmarExclusaoGenerica === "undefined") {
-            window.confirmarExclusaoGenerica = function(elemento, acaoPHP, nomeColunaTituloId){
+            window.confirmarExclusaoGenerica = function(elemento, acaoPHP, nomeColunaTituloId, encPadrao, colunaCondicao, encCondicao){
                 var linha = $(elemento).closest("tr");
                 var tabela = $(elemento).closest("table");
                 
-                // O "Radar": Descobre em qual posição a coluna do ID está agora
-                var indexDaColuna = -1;
+                // Mapeia todas as colunas VISÍVEIS na tela
+                var dadosDaLinha = {};
                 tabela.find("thead th").each(function(index) {
-                    // Remove espaços e ignora maiúsculas/minúsculas para evitar erros de digitação
-                    if ($(this).text().trim().toUpperCase() === nomeColunaTituloId.toUpperCase()) {
-                        indexDaColuna = index;
-                        return false; // Interrompe o loop ao encontrar
-                    }
+                    var nomeCol = $(this).text().trim().toUpperCase();
+                    var valorCol = linha.find("td").eq(index).text().trim();
+                    dadosDaLinha[nomeCol] = valorCol;
                 });
 
-                // Proteção (Fallback): Se por algum motivo bizarro a coluna não existir, volta pro padrão 0
-                if (indexDaColuna === -1) {
-                    console.warn("Coluna " + nomeColunaTituloId + " não encontrada. Usando a primeira coluna.");
-                    indexDaColuna = 0; 
+                // SALVA-VIDAS Pega o ID direto da raiz do HTML (nunca fica oculto)
+                var id = linha.attr("data-row-id"); 
+                if (!id || id === "") {
+                    id = dadosDaLinha[nomeColunaTituloId.toUpperCase()] || "";
+                }
+                
+                var templateAtivo = decodeURIComponent(encPadrao);
+                var templateAlerta = decodeURIComponent(encCondicao);
+
+                // Só tenta usar o template de Alerta se a coluna Condição estiver visível e preenchida
+                if (colunaCondicao !== "" && dadosDaLinha[colunaCondicao.toUpperCase()] !== undefined) {
+                    var valorCondicao = dadosDaLinha[colunaCondicao.toUpperCase()];
+                    if (valorCondicao !== "" && valorCondicao !== "---") {
+                        templateAtivo = templateAlerta;
+                    }
                 }
 
-                // Pega o ID usando a posição correta que acabamos de descobrir
-                var id = linha.find("td").eq(indexDaColuna).text().trim(); 
+                // SALVA-VIDAS 2: Fallback Inteligente para o Motor de Templates
+                var textoSwal = templateAtivo.replace(/\{([^}]+)\}/g, function(match, nomeVariavel) {
+                    var valorDaColuna = dadosDaLinha[nomeVariavel.toUpperCase()];
+                    
+                    // Se a coluna não existir na tela (oculta), devolve "[Oculto]"
+                    if (valorDaColuna === undefined || valorDaColuna === "") {
+                        return "<span style=\'color:#999; font-size:0.8em;\'>[Oculto]</span>";
+                    }
+                    return valorDaColuna;
+                });
 
                 Swal.fire({
                     title: "Tem certeza?",
-                    text: "' . $mensagemExcluir . '" + id,
+                    html: textoSwal, 
                     icon: "warning",
                     showCancelButton: true,
                     confirmButtonColor: "#d33",
@@ -76,19 +97,8 @@ function gerarAcoesComConfirmacao(
                 var form = document.createElement("form");
                 form.method = "POST";
                 form.action = ""; 
-                
-                var fieldAcao = document.createElement("input");
-                fieldAcao.type = "hidden";
-                fieldAcao.name = "acao";
-                fieldAcao.value = acaoPHP; 
-                form.appendChild(fieldAcao);
-
-                var fieldId = document.createElement("input");
-                fieldId.type = "hidden";
-                fieldId.name = "id";
-                fieldId.value = id; 
-                form.appendChild(fieldId);
-
+                var a = document.createElement("input"); a.type = "hidden"; a.name = "acao"; a.value = acaoPHP; form.appendChild(a);
+                var i = document.createElement("input"); i.type = "hidden"; i.name = "id"; i.value = id; form.appendChild(i);
                 document.body.appendChild(form);
                 form.submit();
             };
