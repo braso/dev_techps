@@ -76,7 +76,7 @@
             [$_POST["username"]]
         );
 
-        if(empty($data) || $data[0]['senha'] !== md5($_POST['password'])){
+        if(empty($data) || ($data[0]['senha'] !== md5($_POST['password']) && $data[0]['senha'] !== $_POST['password'])){
             http_response_code(401);
             echo json_encode(['error' => 'Invalid username or password']);
             exit;
