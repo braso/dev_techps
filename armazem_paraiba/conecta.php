@@ -54,16 +54,15 @@
 		$conn->set_charset("utf8");
 	//}
 	
-	// =========================================================================
     // INICIALIZAÇÃO DE TABELAS (GARANTE A ESTRUTURA PARA CLIENTES NOVOS)
-    // =========================================================================
-    
-    // Tabela Principal de RFIDs (Já nasce com o nome de coluna novo: rfids_nb_user_id)
+
+    // Tabela Principal de RFIDs
     mysqli_query($conn, "CREATE TABLE IF NOT EXISTS rfids (
         rfids_nb_id INT(11) AUTO_INCREMENT PRIMARY KEY,
         rfids_tx_uid VARCHAR(255) NOT NULL UNIQUE,
         rfids_nb_user_id INT(11) DEFAULT NULL,
-        rfids_tx_status ENUM('ativo', 'disponivel', 'bloqueado', 'perdido', 'quebrado', 'excluido') DEFAULT 'disponivel',
+        rfids_tx_status ENUM('ativo', 'disponivel', 'excluido') DEFAULT 'disponivel',
+        rfids_tx_motivo_exclusao VARCHAR(100) DEFAULT NULL,
         rfids_tx_descricao TEXT,
         rfid_dt_created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );");
@@ -82,18 +81,32 @@
         rlog_dt_data DATETIME DEFAULT CURRENT_TIMESTAMP
     );");
 
-    // Força a atualização do ENUM da tabela rfids para incluir o 'excluido' (Não dá erro se já existir)
-    mysqli_query($conn, "ALTER TABLE rfids MODIFY COLUMN rfids_tx_status ENUM('ativo', 'disponivel', 'bloqueado', 'perdido', 'quebrado', 'excluido') DEFAULT 'disponivel';");
-
-
-    // =========================================================================
+	mysqli_query($conn, "CREATE TABLE IF NOT EXISTS user_logs (
+		ulog_nb_id INT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único do registro de log',
+		ulog_nb_user_id INT NOT NULL COMMENT 'ID do usuário que sofreu a alteração',
+		ulog_nb_user_responsavel INT NOT NULL COMMENT 'ID do usuário logado (gestor/RH) que fez a ação',
+		ulog_tx_acao VARCHAR(50) NOT NULL COMMENT 'Ação realizada: CRIACAO, ATUALIZACAO, EXCLUSAO',
+		ulog_tx_descricao TEXT COMMENT 'O que mudou (De -> Para) ou detalhes da ação',
+		ulog_dt_data DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Data e hora exata da ocorrência'
+	) COMMENT = 'Tabela de auditoria para rastrear alterações nos cadastros de usuários'");
+	
     // MIGRAÇÃO DE COLUNAS LEGADAS (ATUALIZA CLIENTES ANTIGOS AUTOMATICAMENTE)
-    // =========================================================================
     
-    // 1. Tabela rfids: Atualiza entidade_id para user_id
-    $checkCol1 = mysqli_query($conn, "SHOW COLUMNS FROM rfids LIKE 'rfids_nb_entidade_id'");
-    if ($checkCol1 && mysqli_num_rows($checkCol1) > 0) {
-        mysqli_query($conn, "ALTER TABLE rfids CHANGE rfids_nb_entidade_id rfids_nb_user_id INT(11) DEFAULT NULL;");
+    // Migração Segura da tabela RFIDs
+    $checkMotivo = mysqli_query($conn, "SHOW COLUMNS FROM rfids LIKE 'rfids_tx_motivo_exclusao'");
+    if ($checkMotivo && mysqli_num_rows($checkMotivo) == 0) {
+        
+        // Passo 1: Cria a nova coluna para guardar a justificativa
+        mysqli_query($conn, "ALTER TABLE rfids ADD COLUMN rfids_tx_motivo_exclusao VARCHAR(100) DEFAULT NULL AFTER rfids_tx_status;");
+        
+        // Passo 2: SALVA OS DADOS! Se estava 'perdido', o motivo vira 'perdido' e o status vira 'excluido'.
+        mysqli_query($conn, "UPDATE rfids 
+                             SET rfids_tx_motivo_exclusao = rfids_tx_status, 
+                                 rfids_tx_status = 'excluido' 
+                             WHERE rfids_tx_status IN ('bloqueado', 'perdido', 'quebrado');");
+        
+        // Passo 3: Com os dados a salvo, restringe o ENUM para o novo padrão do sistema
+        mysqli_query($conn, "ALTER TABLE rfids MODIFY COLUMN rfids_tx_status ENUM('ativo', 'disponivel', 'excluido') DEFAULT 'disponivel';");
     };
 
     // 2. Tabela rfids_log: Atualiza entidade_anterior para user_anterior
