@@ -80,17 +80,6 @@
         rlog_nb_user_atualiza INT(11) NOT NULL,
         rlog_dt_data DATETIME DEFAULT CURRENT_TIMESTAMP
     );");
-
-	mysqli_query($conn, "CREATE TABLE IF NOT EXISTS user_logs (
-		ulog_nb_id INT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID único do registro de log',
-		ulog_nb_user_id INT NOT NULL COMMENT 'ID do usuário que sofreu a alteração',
-		ulog_nb_user_responsavel INT NOT NULL COMMENT 'ID do usuário logado (gestor/RH) que fez a ação',
-		ulog_tx_acao VARCHAR(50) NOT NULL COMMENT 'Ação realizada: CRIACAO, ATUALIZACAO, EXCLUSAO',
-		ulog_tx_descricao TEXT COMMENT 'O que mudou (De -> Para) ou detalhes da ação',
-		ulog_dt_data DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Data e hora exata da ocorrência'
-	) COMMENT = 'Tabela de auditoria para rastrear alterações nos cadastros de usuários'");
-	
-    // MIGRAÇÃO DE COLUNAS LEGADAS (ATUALIZA CLIENTES ANTIGOS AUTOMATICAMENTE)
     
     // Migração Segura da tabela RFIDs
     $checkMotivo = mysqli_query($conn, "SHOW COLUMNS FROM rfids LIKE 'rfids_tx_motivo_exclusao'");
