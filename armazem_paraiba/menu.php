@@ -64,7 +64,8 @@
 				"/carregar_ponto.php" 	=> "Integrações de Ponto",
 				"/nao_cadastrados.php" 	=> "Não Cadastrados",
 				"/nao_conformidade.php" => "Não Conformidades",
-				"/ponto_auditoria.php" => "Auditoria"
+				"/ponto_auditoria.php" => "Auditoria",
+                "/telas/gerenciar_ajustes.php" => "Gerenciar Ajustes"
 			],
 			"painel" => [
 				"/paineis/ajustes.php"			=> "Ajustes",
