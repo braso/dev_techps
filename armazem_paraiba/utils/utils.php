@@ -209,7 +209,7 @@ function registrarLogRfid($id_rfid, $acao, $status_anterior, $status_novo, $enti
 
     $sql_log = "INSERT INTO rfids_log 
         (rlog_nb_rfid_id, rlog_tx_acao, rlog_tx_status_anterior, rlog_tx_status_novo, 
-        rlog_nb_entidade_anterior, rlog_nb_entidade_nova, rlog_tx_motivo, rlog_nb_user_atualiza, rlog_dt_data) 
+        rlog_nb_user_anterior, rlog_nb_user_novo, rlog_tx_motivo, rlog_nb_user_atualiza, rlog_dt_data) 
         VALUES 
         ({$id_rfid}, '{$acao}', '{$status_anterior}', '{$status_novo}', 
         {$entidade_anterior}, {$entidade_nova}, '{$motivo}', {$id_usuario_logado}, '{$data_hora_atual}')";

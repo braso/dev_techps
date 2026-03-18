@@ -1358,7 +1358,7 @@
 				$userIdForRedirect = $rowUser["user_nb_id"];
 				
 				// Busca o RFID pelo ID do usuário
-				$rowAssigned = mysqli_fetch_assoc(query("SELECT rfids_tx_uid, rfids_tx_descricao FROM rfids WHERE rfids_nb_entidade_id = {$userIdForRedirect} AND rfids_tx_status = 'ativo' LIMIT 1"));
+				$rowAssigned = mysqli_fetch_assoc(query("SELECT rfids_tx_uid, rfids_tx_descricao FROM rfids WHERE rfids_nb_user_id = {$userIdForRedirect} AND rfids_tx_status = 'ativo' LIMIT 1"));
 				
 				if (!empty($rowAssigned)) {
 					$rfidTexto = "<b>" . $rowAssigned["rfids_tx_uid"] . "</b>";
@@ -1839,7 +1839,7 @@ function index(){
                     ." LEFT JOIN cidade cid_residencia ON enti_nb_cidade = cid_residencia.cida_nb_id"
                     ." LEFT JOIN cidade cid_cnh ON enti_nb_cnhCidade = cid_cnh.cida_nb_id"
                     ." LEFT JOIN user ON user.user_nb_entidade = entidade.enti_nb_id AND user.user_tx_status = 'ativo'"
-                    ." LEFT JOIN rfids ON rfids.rfids_nb_entidade_id = user.user_nb_id AND rfids.rfids_tx_status = 'ativo'"
+                    ." LEFT JOIN rfids ON rfids.rfids_nb_user_id = user.user_nb_id AND rfids.rfids_tx_status = 'ativo'"
             );
 	
 			// 1. Chamamos a utilitária para gerar os botões padrão (limpando aquele seu JS antigo manual!)

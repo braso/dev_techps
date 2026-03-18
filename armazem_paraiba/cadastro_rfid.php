@@ -42,8 +42,8 @@ function listarRfids(){
     $gridFields = [
         "CÓDIGO"        => "rfids_nb_id",
         "UID"           => "rfids_tx_uid",
-        "ID USUÁRIO"    => "rfids_nb_entidade_id",
-        "FUNCIONÁRIO"   => "IFNULL(user.user_tx_nome, '---') AS funcionario_nome",
+        "ID USUÁRIO"    => "rfids_nb_user_id",
+        "USUÁRIO"       => "IFNULL(user.user_tx_nome, '---') AS usuario_nome", // 1. MUDOU AQUI PARA "USUÁRIO"
         "STATUS"        => "rfids_tx_status",
         "DESCRIÇÃO"     => "IF(CHAR_LENGTH(rfids_tx_descricao) > 40, CONCAT(LEFT(rfids_tx_descricao, 40), '...'), rfids_tx_descricao) AS descricao_curta",
         "CADASTRADO EM" => "DATE_FORMAT(rfid_dt_created_at, '%d/%m/%Y %H:%i:%s') AS data_formatada",
@@ -58,13 +58,15 @@ function listarRfids(){
                     SELECT " . implode(", ", array_values($gridFields)) . ",
                             CONCAT(rfids_tx_status, IF(rfids_tx_status != 'excluido', ' visivel', '')) AS status_pesquisa
                     FROM rfids 
-                    LEFT JOIN user ON rfids.rfids_nb_entidade_id = user.user_nb_id
+                    LEFT JOIN user ON rfids.rfids_nb_user_id = user.user_nb_id
                     ) AS base_query";
 
     $msgPadrao = "Deseja mover para a lixeira o crachá UID: <br><h3 style='color:#337ab7;'>{UID}</h3>";
+    
+    // 2. MUDOU AQUI PARA A TAG {USUÁRIO}
     $msgAviso = "<b>ATENÇÃO!</b><br>
                     O crachá <b>{UID}</b> está em uso por:<br>
-                    <h3 style='color:#d9534f;'>{FUNCIONÁRIO}</h3><br>
+                    <h3 style='color:#d9534f;'>{USUÁRIO}</h3><br>
                     Deseja mover para a lixeira e desvincular o usuário?";                
     
     $acoesGrid = gerarAcoesComConfirmacao(
@@ -73,7 +75,7 @@ function listarRfids(){
         "excluirRfid", 
         "CÓDIGO", 
         $msgPadrao,
-        "FUNCIONÁRIO",
+        "USUÁRIO", // 3. MUDOU AQUI (É o radar do JS que procura a coluna)
         $msgAviso
     );
 
@@ -196,9 +198,8 @@ function visualizarCadastro(){
         $botoes[] = "<button type='button' class='btn btn-warning' onclick=\"window.location.href='cadastro_rfid.php';\">Voltar</button>";
     }
     echo fecha_form($botoes);
-    // =========================================================================
-    // GRID DE AUDITORIA PADRÃO (Contex20) - Fora do form principal
-    // =========================================================================
+
+    // GRID DE AUDITORIA PADRÃO
     if (!empty($_POST["id"])) {
         $id_rfid = (int)$_POST["id"];
 
@@ -221,7 +222,6 @@ function visualizarCadastro(){
                 DATE_FORMAT(l.rlog_dt_data, '%d/%m/%Y %H:%i:%s') AS data_formatada,
                 IFNULL(u.user_tx_login, 'Sistema') AS usuario_nome,
                 
-                /* A MÁGICA DA TRADUÇÃO AQUI */
                 CASE l.rlog_tx_acao
                     WHEN 'CADASTRO' THEN 'Cadastro Inicial'
                     WHEN 'STATUS_ALTERADO' THEN 'Alteração de Status'
@@ -232,17 +232,21 @@ function visualizarCadastro(){
                 
                 UPPER(l.rlog_tx_status_anterior) AS status_ant,
                 UPPER(l.rlog_tx_status_novo) AS status_nov,
+                
                 CONCAT(
                     l.rlog_tx_motivo,
-                    IF(l.rlog_nb_entidade_anterior IS NOT NULL OR l.rlog_nb_entidade_nova IS NOT NULL,
-                       CONCAT('<br><small style=\"color: #666;\">Movido de: <b>', IFNULL(e_ant.enti_tx_nome, 'Gaveta (Sem vínculo)'), '</b> &rarr; Para: <b>', IFNULL(e_nov.enti_tx_nome, 'Gaveta (Sem vínculo)'), '</b></small>'),
+                    IF(l.rlog_nb_user_anterior IS NOT NULL OR l.rlog_nb_user_novo IS NOT NULL,
+                       CONCAT('<br><small style=\"color: #666;\">Movido de: <b>', IFNULL(u_ant.user_tx_nome, 'Gaveta (Sem vínculo)'), '</b> &rarr; Para: <b>', IFNULL(u_nov.user_tx_nome, 'Gaveta (Sem vínculo)'), '</b></small>'),
                        ''
                     )
                 ) AS detalhe_mudanca
             FROM rfids_log l
             LEFT JOIN user u ON l.rlog_nb_user_atualiza = u.user_nb_id
-            LEFT JOIN entidade e_ant ON l.rlog_nb_entidade_anterior = e_ant.enti_nb_id
-            LEFT JOIN entidade e_nov ON l.rlog_nb_entidade_nova = e_nov.enti_nb_id
+            
+            /* O FIM DO MISTÉRIO: Trocamos os JOINS para a tabela 'user' (u_ant e u_nov) */
+            LEFT JOIN user u_ant ON l.rlog_nb_user_anterior = u_ant.user_nb_id
+            LEFT JOIN user u_nov ON l.rlog_nb_user_novo = u_nov.user_nb_id
+            
             WHERE l.rlog_nb_rfid_id = {$id_rfid}
         ) AS base_log";
 
@@ -261,11 +265,11 @@ function visualizarCadastro(){
 function restaurarRfid(){
     $id_rfid = (int)$_POST['id'];
     
-    $cracha_antigo = mysqli_fetch_assoc(query("SELECT rfids_tx_status, rfids_nb_entidade_id FROM rfids WHERE rfids_nb_id = {$id_rfid}"));
+    $cracha_antigo = mysqli_fetch_assoc(query("SELECT rfids_tx_status, rfids_nb_user_id FROM rfids WHERE rfids_nb_id = {$id_rfid}"));
 
-    query("UPDATE rfids SET rfids_tx_status = 'disponivel', rfids_nb_entidade_id = NULL WHERE rfids_nb_id = {$id_rfid}");
+    query("UPDATE rfids SET rfids_tx_status = 'disponivel', rfids_nb_user_id = NULL WHERE rfids_nb_id = {$id_rfid}");
     
-    registrarLogRfid($id_rfid, "RESTAURACAO", $cracha_antigo["rfids_tx_status"], "disponivel", $cracha_antigo["rfids_nb_entidade_id"], null, "RFID restaurado da lixeira para o estoque.");
+    registrarLogRfid($id_rfid, "RESTAURACAO", $cracha_antigo["rfids_tx_status"], "disponivel", $cracha_antigo["rfids_nb_user_id"], null, "RFID restaurado da lixeira para o estoque.");
     
     set_status("<script>Swal.fire('Restaurado!', 'O RFID voltou para o estoque e está disponível para uso.', 'success');</script>");
     index();
@@ -319,16 +323,16 @@ function cadastrarRfid(){
     if(!empty($_POST["id"])){
         $id_rfid = (int)$_POST["id"];
         
-        $cracha_antigo = mysqli_fetch_assoc(query("SELECT rfids_tx_status, rfids_nb_entidade_id FROM rfids WHERE rfids_nb_id = {$id_rfid}"));
+        $cracha_antigo = mysqli_fetch_assoc(query("SELECT rfids_tx_status, rfids_nb_user_id FROM rfids WHERE rfids_nb_id = {$id_rfid}"));
         atualizar("rfids", array_keys($dados), array_values($dados), $id_rfid, "rfids_nb_id");
         
-        $entidade_nova = $cracha_antigo["rfids_nb_entidade_id"];
+        $entidade_nova = $cracha_antigo["rfids_nb_user_id"];
         if (in_array($dados["rfids_tx_status"], ['disponivel', 'perdido', 'quebrado', 'bloqueado', 'excluido'])) {
-            query("UPDATE rfids SET rfids_nb_entidade_id = NULL WHERE rfids_nb_id = {$id_rfid}");
+            query("UPDATE rfids SET rfids_nb_user_id = NULL WHERE rfids_nb_id = {$id_rfid}");
             $entidade_nova = null;
         };
         
-        registrarLogRfid($id_rfid, "STATUS_ALTERADO", $cracha_antigo["rfids_tx_status"], $dados["rfids_tx_status"], $cracha_antigo["rfids_nb_entidade_id"], $entidade_nova, "Alterado via ficha do RFID.");
+        registrarLogRfid($id_rfid, "STATUS_ALTERADO", $cracha_antigo["rfids_tx_status"], $dados["rfids_tx_status"], $cracha_antigo["rfids_nb_user_id"], $entidade_nova, "Alterado via ficha do RFID.");
         
         $jsEditarNovamente = "
             var f = document.createElement('form');
@@ -366,11 +370,11 @@ function cadastrarRfid(){
 
 function excluirRfid(){
     $id_rfid = (int)$_POST['id'];
-    $cracha_antigo = mysqli_fetch_assoc(query("SELECT rfids_tx_status, rfids_nb_entidade_id FROM rfids WHERE rfids_nb_id = {$id_rfid}"));
+    $cracha_antigo = mysqli_fetch_assoc(query("SELECT rfids_tx_status, rfids_nb_user_id FROM rfids WHERE rfids_nb_id = {$id_rfid}"));
     
     // Exclusão Lógica (Soft Delete)
-    query("UPDATE rfids SET rfids_tx_status = 'excluido', rfids_nb_entidade_id = NULL WHERE rfids_nb_id = {$id_rfid}");
-    registrarLogRfid($id_rfid, "EXCLUSAO", $cracha_antigo["rfids_tx_status"], "excluido", $cracha_antigo["rfids_nb_entidade_id"], null, "RFID movido para a lixeira.");
+    query("UPDATE rfids SET rfids_tx_status = 'excluido', rfids_nb_user_id = NULL WHERE rfids_nb_id = {$id_rfid}");
+    registrarLogRfid($id_rfid, "EXCLUSAO", $cracha_antigo["rfids_tx_status"], "excluido", $cracha_antigo["rfids_nb_user_id"], null, "RFID movido para a lixeira.");
     
     set_status("<script>Swal.fire('Sucesso!', 'RFID movido para a lixeira.', 'info');</script>");
     index();
