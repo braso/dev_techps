@@ -481,7 +481,9 @@
 		$regras_path = '../gestores/fluxo_aprovacao.php';
 		$regras = file_exists($regras_path) ? include $regras_path : [];
 		
-		$condicoes_hierarquia = [];
+	
+		$condicoes_subsetor = [];
+		$condicoes_setor = [];
 		if (is_array($regras) && !empty($regras) && $perfilUsuarioLogado) {
 			foreach ($regras as $regra) {
 				$aprovadorDaRegra = $regra['aprovador'];
@@ -490,18 +492,68 @@
 				$perfilSetor = trim($perfilUsuarioLogado['setor'] ?? '');
 				$regraCargo = trim($aprovadorDaRegra['cargo'] ?? '');
 				$regraSetor = isset($aprovadorDaRegra['setor']) ? trim($aprovadorDaRegra['setor']) : null;
+			
 				
 				if (($regraCargo == $perfilCargo) && ($regraSetor === null || $regraSetor == $perfilSetor)) {
-					$condicao = ["TRIM(s.cargo_usuario) = '" . mysqli_real_escape_string($GLOBALS['conn'], trim($solicitanteDaRegra['cargo'])) . "'"];
+					$condicao = [
+						"TRIM(s.cargo_usuario) = '" . mysqli_real_escape_string($GLOBALS['conn'], trim($solicitanteDaRegra['cargo'])) . "'"
+					];
+
 					if (isset($solicitanteDaRegra['setor'])) {
 						$condicao[] = "TRIM(s.setor_usuario) = '" . mysqli_real_escape_string($GLOBALS['conn'], trim($solicitanteDaRegra['setor'])) . "'";
 					}
-					$condicoes_hierarquia[] = "(" . implode(' AND ', $condicao) . ")";
+
+					if (isset($solicitanteDaRegra['subsetor'])) {
+
+						$condicao[] = "TRIM(s.subsetor_usuario) = '" . mysqli_real_escape_string($GLOBALS['conn'], trim($solicitanteDaRegra['subsetor'])) . "'";
+
+						$condicoes_subsetor[] = "(" . implode(' AND ', $condicao) . ")";
+
+					} else {
+
+						$condicoes_setor[] = "(" . implode(' AND ', $condicao) . ")";
+
+					}
 				}
 			}
 		}
-		$extra_sql_hierarquia = !empty($condicoes_hierarquia) ? " AND (" . implode(' OR ', $condicoes_hierarquia) . ")" : " AND 1=0";
+		
+		//$extra_sql_hierarquia = !empty($condicoes_hierarquia) ? " AND (" . implode(' OR ', $condicoes_hierarquia) . ")" : " AND 1=0";
+		$subsetoresComRegra = [];
 
+		foreach ($regras as $r) {
+			if (!empty($r['solicitante']['subsetor'])) {
+				$subsetoresComRegra[] = "'" . mysqli_real_escape_string(
+					$GLOBALS['conn'],
+					trim($r['solicitante']['subsetor'])
+				) . "'";
+			}
+		}
+
+		$condicoes = [];
+
+		if (!empty($condicoes_subsetor)) {
+			$condicoes[] = "(" . implode(" OR ", $condicoes_subsetor) . ")";
+		}
+
+		if (!empty($condicoes_setor)) {
+
+			$bloqueioSubsetor = "";
+
+			if (!empty($subsetoresComRegra)) {
+				$bloqueioSubsetor =
+					" AND TRIM(s.subsetor_usuario) NOT IN (" . implode(",", $subsetoresComRegra) . ")";
+			}
+
+			$condicoes[] =
+				"(" . implode(" OR ", $condicoes_setor) . $bloqueioSubsetor . ")";
+		}
+
+		if (!empty($condicoes)) {
+			$extra_sql_hierarquia = " AND (" . implode(" OR ", $condicoes) . ")";
+		} else {
+			$extra_sql_hierarquia = " AND 1=0";
+		}
 		// LÓGICA DE FILTROS DO USUÁRIO
 		$statusFiltro = $filtros['status_filtro'] ?? 'pendentes';
 		$extra_sql_filtros = "";
