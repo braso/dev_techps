@@ -574,6 +574,10 @@
 
 		if ($statusFiltro == 'pendentes') {
 			$extra_sql_filtros .= " AND s.status IN ('enviada', 'visualizada')";
+		} elseif ($statusFiltro == 'aceitas') {
+			$extra_sql_filtros .= " AND s.status = 'aceita'";
+		} elseif ($statusFiltro == 'rejeitadas') {
+			$extra_sql_filtros .= " AND s.status = 'nao_aceita'";
 		} elseif ($statusFiltro != 'todas') {
 			$extra_sql_filtros .= " AND s.status = '" . mysqli_real_escape_string($GLOBALS['conn'], $statusFiltro) . "'";
 		}
@@ -594,6 +598,8 @@
 			$extra_sql_filtros .= " AND s.subsetor_usuario IN (" . implode(',', $subsetoresSql) . ")";
 		}
 
+		$ordem = $filtros['ordem'] ?? 'ASC';
+		$ordem = strtoupper($ordem) === 'DESC' ? 'DESC' : 'ASC';
 		$sql = "
 			SELECT 
 				s.*, 
@@ -608,13 +614,23 @@
 			LEFT JOIN motivo mo ON s.id_motivo = mo.moti_nb_id
 			LEFT JOIN user u ON s.id_superior = u.user_nb_id
 			WHERE 1 {$extra_sql_hierarquia} {$extra_sql_filtros}
-			ORDER BY s.data_solicitacao DESC
+			ORDER BY
+				DATE(s.data_solicitacao) = CURDATE() DESC,
+				s.id_motorista,
+				s.data_solicitacao {$ordem}
 		";
 
 		$result = query($sql);
 		$dados = ($result instanceof mysqli_result) ? mysqli_fetch_all($result, MYSQLI_ASSOC) : [];
 		
-		$ids_para_visualizar = array_column(array_filter($dados, fn($s) => $s['status'] == 'enviada'), 'id');
+		$ids_para_visualizar = [];
+
+		if ($statusFiltro == 'pendentes') {
+			$ids_para_visualizar = array_column(
+				array_filter($dados, fn($s) => $s['status'] == 'enviada'),
+				'id'
+			);
+		}
 		if (!empty($ids_para_visualizar)) {
 			query("UPDATE solicitacoes_ajuste SET status = 'visualizada', data_visualizacao = NOW(), id_superior = {$_SESSION['user_nb_id']} WHERE id IN (" . implode(',', $ids_para_visualizar) . ")");
 			foreach ($dados as &$dado) {
@@ -673,9 +689,17 @@
 			</div>
 		</div>
 		";
-
+		$linhas = [];
+		$ultimoMotorista = null;
 		$linhas = [];
 		foreach ($dados as $row) {
+			if ($ultimoMotorista !== $row['id_motorista']) {
+				$linhas[] = [
+					"<b style='color:#333;'>👤 {$row['enti_tx_nome']}</b>",
+					"", "", "", "", "", "", "", "", ""
+				];
+				$ultimoMotorista = $row['id_motorista'];
+			}
 			$statusBadge = match ($row['status']) {
 				'enviada' => "<span class='badge badge-warning'>Enviada</span>",
 				'visualizada' => "<span class='badge badge-info'>Visualizada</span>",
@@ -726,6 +750,28 @@
 
 		$cabecalho_tabela = ["<input type='checkbox' id='sel-tudo'>", "Solicitado", "Funcionário", "Data/Hora Ajuste", "Tipo", "Motivo", "Justificativa", "Solicitante", "Status", "Ações"];
 		echo "<h3>Solicitações de Ajuste</h3>";
+		$novaOrdem = ($ordem === 'ASC') ? 'DESC' : 'ASC';
+		$icone = ($ordem === 'ASC') ? '↑' : '↓';
+
+		echo "
+		<div class='row margin-bottom-10'>
+			<div class='col-sm-12'>
+				<form method='GET' style='display:inline;'>
+		";
+		foreach ($filtros as $k => $v) {
+			if ($k === 'ordem') continue;
+			echo "<input type='hidden' name='{$k}' value='" . htmlspecialchars($v) . "'>";
+		}
+
+		echo "
+					<input type='hidden' name='ordem' value='{$novaOrdem}'>
+					<button class='btn btn-sm btn-default'>
+						Ordenar por data {$icone}
+					</button>
+				</form>
+			</div>
+		</div>
+		";
 		echo montarTabelaPonto($cabecalho_tabela, $linhas);
 
 		?>

@@ -38,6 +38,7 @@ RUN apk add --no-cache --virtual .build-deps \
     freetype-dev \
     libjpeg-turbo-dev \
     libwebp-dev \
+    mariadb-dev \
  && docker-php-ext-configure gd \
     --with-freetype=/usr/include/ \
     --with-jpeg=/usr/include/ \
