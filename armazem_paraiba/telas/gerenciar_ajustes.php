@@ -548,11 +548,21 @@
 			$condicoes[] =
 				"(" . implode(" OR ", $condicoes_setor) . $bloqueioSubsetor . ")";
 		}
+		// informa os usuario s que terao acesso total, independente das regras de hierarquia
+		$nivesLiberados = ['Super Administrador'];
+		$isSuperAdmin = in_array($_SESSION['user_tx_nivel'] ?? '', $nivesLiberados);
 
-		if (!empty($condicoes)) {
-			$extra_sql_hierarquia = " AND (" . implode(" OR ", $condicoes) . ")";
-		} else {
-			$extra_sql_hierarquia = " AND 1=0";
+		if ($isSuperAdmin){
+			// Super Admin vê tudo
+			$extra_sql_hierarquia = "";
+		}else{
+			// Usuário comum vê apenas o que as regras permitem
+			if (!empty($condicoes)) {
+				$extra_sql_hierarquia = " AND (" . implode(" OR ", $condicoes) . ")";
+			} else {
+				// Se não houver regras, não mostrar nada
+				$extra_sql_hierarquia = " AND 1=0";
+			}
 		}
 		// LÓGICA DE FILTROS DO USUÁRIO
 		$statusFiltro = $filtros['status_filtro'] ?? 'pendentes';
