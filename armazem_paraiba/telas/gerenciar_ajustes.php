@@ -712,7 +712,7 @@
 			$estiloCelulaDuplicada = "";
 			$chave = $row['id_motorista'] . '_' . $row['data_ajuste'];
 			if ($contagemDuplicados[$chave] > 1) {
-				$alertaDuplicidade = "<i class='fa fa-exclamation-triangle text-danger' title='Existem {$contagemDuplicados[$chave]} solicitações para este funcionário neste mesmo dia.' style='cursor:help; margin-left:5px;'></i>";
+				//$alertaDuplicidade = "<i class='fa fa-exclamation-triangle text-danger' title='Existem {$contagemDuplicados[$chave]} solicitações para este funcionário neste mesmo dia.' style='cursor:help; margin-left:5px;'></i>";
 				$estiloCelulaDuplicada = "style='background-color: #fff1f0;'";
 			}
 
