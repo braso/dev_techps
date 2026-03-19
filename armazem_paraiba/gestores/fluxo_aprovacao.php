@@ -166,5 +166,10 @@ return [
         'solicitante' => ['cargo' => 'Técnico Enfermagem', 'setor' => 'NOSSA SENHORA DE FÁTIMA'],
         'aprovador'   => ['cargo' => 'Enfermeiro (a)', 'setor' => 'NOSSA SENHORA DE FÁTIMA']
     ],
+    //regra 27
+    [
+        'solicitante' => ['cargo' => 'Técnico Enfermagem', 'setor' => 'SANTA TEREZINHA'],
+        'aprovador'   => ['cargo' => 'Enfermeiro (a)', 'setor' => 'SANTA TEREZINHA']
+    ],
 ];
 ?>

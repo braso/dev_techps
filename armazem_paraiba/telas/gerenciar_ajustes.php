@@ -615,8 +615,6 @@
 			LEFT JOIN user u ON s.id_superior = u.user_nb_id
 			WHERE 1 {$extra_sql_hierarquia} {$extra_sql_filtros}
 			ORDER BY
-				DATE(s.data_solicitacao) = CURDATE() DESC,
-				s.id_motorista,
 				s.data_solicitacao {$ordem}
 		";
 
