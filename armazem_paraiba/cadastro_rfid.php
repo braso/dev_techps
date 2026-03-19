@@ -36,14 +36,30 @@ function index(){
 };
 
 function listarRfids(){
+    // 1. Array dedicado apenas para montar o SELECT do banco de dados (COM OS 'AS')
+    $sqlSelectFields = [
+        "rfids_nb_id",
+        "rfids_tx_uid",
+        "rfids_nb_user_id",
+        "IFNULL(user.user_tx_nome, '---') AS usuario_nome", 
+        "UPPER(IF(rfids_tx_status = 'excluido', CONCAT('EXCLUÍDO (', IFNULL(rfids_tx_motivo_exclusao, 'S/ Motivo'), ')'), rfids_tx_status)) AS status_view",
+        "IF(CHAR_LENGTH(rfids_tx_descricao) > 40, CONCAT(LEFT(rfids_tx_descricao, 40), '...'), rfids_tx_descricao) AS descricao_curta",
+        "DATE_FORMAT(rfid_dt_created_at, '%d/%m/%Y %H:%i:%s') AS data_formatada",
+        "IFNULL(DATE_FORMAT(log_recente.rlog_dt_data, '%d/%m/%Y %H:%i:%s'), '---') AS ultima_atualizacao",
+        "IFNULL(user_log.user_tx_login, 'Sistema') AS quem_atualizou"
+    ];
+
+    // 2. O gridFields fica limpo, com as chaves exatas que o JS vai ler no JSON (SEM OS 'AS')
     $gridFields = [
-        "CÓDIGO"        => "rfids_nb_id",
-        "UID"           => "rfids_tx_uid",
-        "ID USUÁRIO"    => "rfids_nb_user_id",
-        "USUÁRIO"       => "IFNULL(user.user_tx_nome, '---') AS usuario_nome", 
-        "STATUS"        => "UPPER(IF(rfids_tx_status = 'excluido', CONCAT('EXCLUÍDO (', IFNULL(rfids_tx_motivo_exclusao, 'S/ Motivo'), ')'), rfids_tx_status)) AS status_view",
-        "DESCRIÇÃO"     => "IF(CHAR_LENGTH(rfids_tx_descricao) > 40, CONCAT(LEFT(rfids_tx_descricao, 40), '...'), rfids_tx_descricao) AS descricao_curta",
-        "CADASTRADO EM" => "DATE_FORMAT(rfid_dt_created_at, '%d/%m/%Y %H:%i:%s') AS data_formatada",
+        "CÓDIGO"           => "rfids_nb_id",
+        "UID"              => "rfids_tx_uid",
+        "ID USUÁRIO"       => "rfids_nb_user_id",
+        "USUÁRIO"          => "usuario_nome", 
+        "STATUS"           => "status_view",
+        "DESCRIÇÃO"        => "descricao_curta",
+        "CADASTRADO EM"    => "data_formatada",
+        "ÚLT. ATUALIZAÇÃO" => "ultima_atualizacao",
+        "QUEM ATUALIZOU"   => "quem_atualizou"
     ];
 
     $camposBuscaGrid = [
@@ -51,11 +67,26 @@ function listarRfids(){
         "busca_status_like" => "status_pesquisa"
     ];
 
+    // Query Base com as subconsultas de auditoria acopladas no final
+    // Note que agora usamos o $sqlSelectFields no implode
     $queryBase = "SELECT * FROM (
-                    SELECT " . implode(", ", array_values($gridFields)) . ",
+                    SELECT " . implode(", ", $sqlSelectFields) . ",
                            CONCAT(rfids_tx_status, IF(rfids_tx_status != 'excluido', ' visivel', '')) AS status_pesquisa
                     FROM rfids 
                     LEFT JOIN user ON rfids.rfids_nb_user_id = user.user_nb_id
+                    
+                    /* Busca apenas o ID do log mais recente de cada crachá */
+                    LEFT JOIN (
+                        SELECT rlog_nb_rfid_id, MAX(rlog_nb_id) AS max_id 
+                        FROM rfids_log 
+                        GROUP BY rlog_nb_rfid_id
+                    ) AS ult_log ON rfids_nb_id = ult_log.rlog_nb_rfid_id
+                    
+                    /* Cruza esse ID máximo com a tabela de logs para puxar a data */
+                    LEFT JOIN rfids_log AS log_recente ON ult_log.max_id = log_recente.rlog_nb_id
+                    
+                    /* Cruza com a tabela de usuário para puxar o login de quem fez */
+                    LEFT JOIN user AS user_log ON log_recente.rlog_nb_user_atualiza = user_log.user_nb_id
                     ) AS base_query";
 
     $acoesGrid = gerarAcoesComConfirmacao(
@@ -68,7 +99,7 @@ function listarRfids(){
         ""
     );
 
-    // O PULO DO GATO: Intercepta a exclusão genérica da utils.php e troca pela nossa customizada
+    // Intercepta a exclusão genérica da utils.php e troca pela nossa customizada
     $acoesGrid["tags"][1] = str_replace(
         'confirmarExclusaoGenerica(this,', 
         'confirmarExclusaoRfidGrid(this,', 
@@ -82,7 +113,7 @@ function listarRfids(){
     
     // Imprime a estrutura do SweetAlert customizado
     imprimirScriptModalExclusao();
-}
+};
 
 function modificarRfid(){
     $id = intval($_POST["id"] ?? 0);
@@ -149,9 +180,7 @@ function visualizarCadastro(){
     // O botão verde padrão de Salvar
     $botoes[] = botao($textoBotao, "cadastrarRfid", $strChaves, $strValores, "", "", "btn btn-success");
     
-    // ==========================================================
     // GESTÃO DOS BOTÕES EXTRAS DE EXCLUSÃO/RESTAURAÇÃO
-    // ==========================================================
     if ($id > 0) {
         if ($statusAtual == 'excluido') {
             // Se já está excluído, mostra Restaurar e Apagar do Banco
@@ -164,8 +193,8 @@ function visualizarCadastro(){
             $usuario_tela = $rfid_info['usuario_nome'];
             
             $botoes[] = "<button type='button' class='btn btn-danger' onclick=\"dispararSweetAlertExclusao('{$id}', '{$uid_tela}', '{$usuario_tela}')\"><i class='fa fa-trash'></i> Excluir</button>";
-        }
-    }
+        };
+    };
     // ==========================================================
 
     if ($telaOrigem == 'grid_funcionario') {
@@ -174,7 +203,7 @@ function visualizarCadastro(){
         $botoes[] = "<button type='button' class='btn btn-warning' onclick=\"var f=document.createElement('form');f.method='POST';f.action='cadastro_usuario.php';var i=document.createElement('input');i.type='hidden';i.name='id';i.value='{$idRetorno}';f.appendChild(i);var a=document.createElement('input');a.type='hidden';a.name='acao';a.value='modificarUsuario';f.appendChild(a);document.body.appendChild(f);f.submit();\">Voltar para Usuário</button>";
     } else {
         $botoes[] = "<button type='button' class='btn btn-warning' onclick=\"window.location.href='cadastro_rfid.php';\">Voltar</button>";
-    }
+    };
     echo fecha_form($botoes);
 
     if ($id > 0) {
@@ -308,7 +337,7 @@ function cadastrarRfid(){
     exit;
 };
 
-// LÓGICA UNIFICADA DE EXCLUSÃO (Recebe o motivo do SweetAlert)
+// exclusão lógica do rfid (NÂO APAGA O REGISTRO DO BANCO)
 function excluirRfid(){
     $id_rfid = (int)$_POST['id'];
     $combo = $_POST['motivo_combo'] ?? '';
@@ -414,31 +443,28 @@ function imprimirScriptModalExclusao() {
     }
     </script>
     ";
-}
+};
 
 // EXCLUSÃO DEFINITIVA (Hard Delete) com Trava de Segurança
 function excluirDefinitivoRfid(){
     $id_rfid = (int)$_POST['id'];
     
     if ($id_rfid > 0) {
-        // 1. TRAVA DE SEGURANÇA: Verifica se o crachá realmente está na lixeira
+        // Verifica se o crachá realmente está na lixeira
         $cracha = mysqli_fetch_assoc(query("SELECT rfids_tx_status FROM rfids WHERE rfids_nb_id = {$id_rfid} LIMIT 1"));
         
         if ($cracha && $cracha['rfids_tx_status'] === 'excluido') {
-            
-            // 2. Apaga primeiro o histórico de logs desse crachá
+            // Apaga primeiro o histórico de logs desse crachá
             query("DELETE FROM rfids_log WHERE rlog_nb_rfid_id = {$id_rfid}");
-            
-            // 3. Apaga o crachá definitivamente da tabela principal
+            // Apaga o crachá definitivamente da tabela principal
             query("DELETE FROM rfids WHERE rfids_nb_id = {$id_rfid} AND rfids_tx_status = 'excluido'");
-            
             set_status("<script>Swal.fire('Excluído!', 'O crachá e todo o seu histórico foram apagados permanentemente do sistema.', 'success');</script>");
             
         } else {
             // Se alguém tentar burlar o sistema enviando um ID de um crachá ativo
             set_status("<script>Swal.fire('Acesso Negado!', 'Tentativa de exclusão bloqueada. Apenas crachás na lixeira podem ser apagados definitivamente.', 'error');</script>");
-        }
-    }
+        };
+    };
     
     index();
     exit;
