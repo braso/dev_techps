@@ -428,7 +428,16 @@
 					<span class='ms-caret' style='position:absolute; right:10px; top:50%; transform:translateY(-50%); border-top:4px solid #555; border-left:4px solid transparent; border-right:4px solid transparent; height:0; width:0;'></span>
 				</button>
 				<ul class='ms-menu' style='display:none; position:absolute; left:0; right:0; top:100%; z-index:9999; width:100%; max-height:260px; overflow:auto; padding:6px 10px; margin:2px 0 0 0; background:#fff; border:1px solid #ccc; border-radius:3px; list-style:none;'>
-		";
+				";
+
+				$html .= "
+					<li style='margin-bottom:6px; border-bottom:1px solid #eee; padding-bottom:4px;'>
+						<button type='button' class='ms-clear'
+							style='background:none; border:none; color:#d9534f; cursor:pointer; font-size:12px; padding:0;'>
+							Limpar seleção
+						</button>
+					</li>
+				";
 
 		$temOpcao = false;
 		foreach($opcoes as $i => $opt){
@@ -897,11 +906,39 @@
 				function initMultiSelect(rootId){
 					const root = document.getElementById(rootId);
 					if(!root) return null;
+
 					const hidden = root.querySelector('.ms-hidden');
 					const btn = root.querySelector('.ms-btn');
 					const countEl = root.querySelector('.ms-count');
 					const menu = root.querySelector('.ms-menu');
 					if(!hidden || !btn || !countEl || !menu) return null;
+
+					const btnClear = root.querySelector('.ms-clear');
+
+						if(btnClear){
+							btnClear.addEventListener('click', function(e){
+								e.preventDefault();
+								e.stopPropagation();
+
+								// 1. Desmarca todos os checkboxes
+								const checkboxes = menu.querySelectorAll('input[type="checkbox"]');
+								checkboxes.forEach(cb => {
+									cb.checked = false;
+								});
+
+								// 2. Limpa valor
+								hidden.value = '';
+
+								// 3. Sincroniza (ESSENCIAL)
+								sync();
+
+								// 4. Fecha o dropdown (opcional, mas melhor UX)
+								menu.style.display = 'none';
+
+								// 5. Se quiser aplicar automaticamente:
+								root.closest('form').submit();
+							});
+						}
 
 					function sync(){
 						const checked = Array.from(menu.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
@@ -913,17 +950,20 @@
 						e.preventDefault();
 						e.stopPropagation();
 						if(btn.disabled) return;
+
 						const isOpen = menu.style.display === 'block';
 						if(window.__msCloseAll) window.__msCloseAll();
 						menu.style.display = isOpen ? 'none' : 'block';
 					});
 
 					menu.addEventListener('click', function(e){ e.stopPropagation(); });
+
 					menu.addEventListener('change', function(e){
 						if(e.target && e.target.matches('input[type="checkbox"]')) sync();
 					});
 
 					sync();
+
 					return { root, hidden, btn, countEl, menu, sync };
 				}
 
