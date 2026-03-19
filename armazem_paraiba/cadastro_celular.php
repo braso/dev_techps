@@ -94,13 +94,23 @@
         ];
 
         $queryBase = "SELECT ".implode(", ", array_values($gridFields))." FROM celular
-            JOIN entidade ON celu_nb_entidade = enti_nb_id";
+        JOIN entidade ON celu_nb_entidade = enti_nb_id";
+
+        $msgPadrao = "Tem certeza que deseja excluir o celular <br><h3 style='color:#337ab7;'>{NOME} <br><small>(IMEI: {IMEI})</small></h3>?";
+    
+        $msgAviso = "<b>ATENÇÃO!</b><br>
+                        O celular <b>{NOME}</b> está sob responsabilidade de:<br>
+                        <h3 style='color:#d9534f;'>{RESPONSÁVEL}</h3><br>
+                        Deseja excluir o aparelho e remover o vínculo deste usuário mesmo assim?";
 
         $configuracao = gerarAcoesComConfirmacao(
             "cadastro_celular.php", 
             "editarCelular", 
             "excluirCelular",
-            "Tem certeza que deseja excluir o celular código: "
+            "CÓDIGO",
+            $msgPadrao, 
+            "RESPONSÁVEL", 
+            $msgAviso 
         );
         $gridFields["actions"] = $configuracao["tags"];
         $jsFunctions = $configuracao["js"];

@@ -1358,7 +1358,7 @@
 				$userIdForRedirect = $rowUser["user_nb_id"];
 				
 				// Busca o RFID pelo ID do usuário
-				$rowAssigned = mysqli_fetch_assoc(query("SELECT rfids_tx_uid, rfids_tx_descricao FROM rfids WHERE rfids_nb_entidade_id = {$userIdForRedirect} AND rfids_tx_status = 'ativo' LIMIT 1"));
+				$rowAssigned = mysqli_fetch_assoc(query("SELECT rfids_tx_uid, rfids_tx_descricao FROM rfids WHERE rfids_nb_user_id = {$userIdForRedirect} AND rfids_tx_status = 'ativo' LIMIT 1"));
 				
 				if (!empty($rowAssigned)) {
 					$rfidTexto = "<b>" . $rowAssigned["rfids_tx_uid"] . "</b>";
@@ -1738,6 +1738,7 @@ function index(){
                 "PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
                 "CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
                 "STATUS" 				=> "enti_tx_status",
+				"UID"                   => "rfids_tx_uid",
                 "AUTENTICAÇÃO"          => "rfids_nb_id" 
             ];
 
@@ -1756,6 +1757,7 @@ function index(){
                 "PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
                 "CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
                 "STATUS" 				=> "enti_tx_status",
+				"UID"                   => "rfids_tx_uid",
                 "AUTENTICAÇÃO"          => "rfids_nb_id",
 				"E-MAIL"                => "enti_tx_email",
                 "TELEFONE 2"            => "enti_tx_fone2",
@@ -1836,8 +1838,8 @@ function index(){
                     ." LEFT JOIN operacao ON enti_tx_tipoOperacao = oper_nb_id"
                     ." LEFT JOIN cidade cid_residencia ON enti_nb_cidade = cid_residencia.cida_nb_id"
                     ." LEFT JOIN cidade cid_cnh ON enti_nb_cnhCidade = cid_cnh.cida_nb_id"
-                    // <-- JOIN ADICIONADO AQUI PARA BUSCAR O RFID:
-                    ." LEFT JOIN rfids ON rfids.rfids_nb_entidade_id = enti_nb_id AND rfids.rfids_tx_status = 'ativo'"
+                    ." LEFT JOIN user ON user.user_nb_entidade = entidade.enti_nb_id AND user.user_tx_status = 'ativo'"
+                    ." LEFT JOIN rfids ON rfids.rfids_nb_user_id = user.user_nb_id AND rfids.rfids_tx_status = 'ativo'"
             );
 	
 			// 1. Chamamos a utilitária para gerar os botões padrão (limpando aquele seu JS antigo manual!)
@@ -1845,8 +1847,8 @@ function index(){
                 "cadastro_funcionario.php", 
                 "modificarMotorista", 
                 "excluirMotorista", 
-                "Deseja excluir o funcionário código: ", 
-                "CÓDIGO"
+                "CÓDIGO",
+            	"Deseja excluir o funcionário: <br><h3 style='color:#337ab7;'>{NOME}<br><small>CPF: {CPF}</small></h3>"
             );
 
             $gridFields["actions"] = $acoesGrid["tags"];
@@ -1887,12 +1889,12 @@ function index(){
                         if (idRfid !== '') {
                             htmlIcones += '<span onclick=\"abrirRfidDireto(' + idRfid + ', ' + colIdUser + ')\" class=\"glyphicon glyphicon-credit-card\" style=\"color: #28a745; font-size: 14px; margin-right: 12px; cursor: pointer;\" title=\"Editar Crachá Ativo\"></span>';
                         } else {
-                            htmlIcones += '<span class=\"glyphicon glyphicon-credit-card\" style=\"color: #d6d6d6; font-size: 14px; margin-right: 12px;\" title=\"Sem Crachá Ativo\"></span>';
-                        }
-                        
-                        htmlIcones += '<span class=\"glyphicon glyphicon-hand-up\" style=\"color: #d6d6d6; font-size: 14px; margin-right: 12px;\" title=\"Sem Digital\"></span>';
-                        htmlIcones += '<span class=\"glyphicon glyphicon-user\" style=\"color: #d6d6d6; font-size: 14px;\" title=\"Sem Facial\"></span>';
-                        
+							htmlIcones += '<span class=\"glyphicon glyphicon-credit-card\" style=\"color: #808080; font-size: 14px; margin-right: 12px;\" title=\"Sem Crachá Ativo\"></span>';
+						}
+						
+						htmlIcones += '<span class=\"glyphicon glyphicon-hand-up\" style=\"color: #808080; font-size: 14px; margin-right: 12px;\" title=\"Sem Digital\"></span>';
+						htmlIcones += '<span class=\"glyphicon glyphicon-user\" style=\"color: #808080; font-size: 14px;\" title=\"Sem Facial\"></span>';
+						
                         tdAutenticacao.html(htmlIcones);
                     });
                 };
@@ -1911,7 +1913,7 @@ function index(){
                     var inputAcao = document.createElement('input');
                     inputAcao.type = 'hidden';
                     inputAcao.name = 'acao';
-                    inputAcao.value = 'editarRfid';
+                    inputAcao.value = 'modificarRfid';
                     form.appendChild(inputAcao);
 
                     // bilhete dizendo que viemos do Grid de Funcionário

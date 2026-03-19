@@ -873,11 +873,14 @@
         
         $queryBase .= $extra;
 
+        $msgPadrao = "Tem certeza que deseja excluir a empresa <br><h3 style='color:#337ab7;'>{NOME} <br><small>({CPF/CNPJ})</small></h3>";
+
         $configuracao = gerarAcoesComConfirmacao(
             "cadastro_empresa.php", 
             "editarEmpresa", 
             "excluirEmpresa",
-			"Tem certeza que deseja excluir a empresa código: " 
+            "CÓDIGO",      
+            $msgPadrao    
         );
     
         $gridFields["actions"] = $configuracao["tags"];

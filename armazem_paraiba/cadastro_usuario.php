@@ -156,33 +156,92 @@
 			exit;
 		}
 		
-		if(empty($_POST["id"])){//Criando novo usuário
-			$usuario["user_nb_userCadastro"] = $_SESSION["user_nb_id"];
-			$usuario["user_tx_dataCadastro"] = date("Y-m-d H:i:s");
+		// =========================================================================
+        // SALVAMENTO UNIFICADO (Usuário Novo x Atualização)
+        // =========================================================================
+        if(empty($_POST["id"])){
+            // Criando novo usuário
+            $usuario["user_nb_userCadastro"] = $_SESSION["user_nb_id"];
+            $usuario["user_tx_dataCadastro"] = date("Y-m-d H:i:s");
 
-			$id = inserir("user", array_keys($usuario), array_values($usuario));
-			$_POST["id"] = $id;
+            $resultado_insert = inserir("user", array_keys($usuario), array_values($usuario));
+            
+            // CORREÇÃO CRÍTICA: Pegando apenas o número do ID do array gerado
+            $_POST["id"] = $resultado_insert[0]; 
 
-			// =========================================================================
-			// ATUALIZAÇÃO DO CICLO DE VIDA DO RFID (Gestão de Ativos)
-			// =========================================================================
-			$rfid_selecionado = !empty($_POST["rfid_id"]) ? trim($_POST["rfid_id"]) : "";
-			$id_usuario_rfid = (int)$_POST["id"]; // Pega o ID que acabou de ser gerado ou atualizado
-			
-			// 1. DEVOLVER PARA A GAVETA: Limpa cartões ativos do usuário
-			$sql_limpeza = "UPDATE rfids SET rfids_tx_status = 'disponivel', rfids_nb_entidade_id = NULL WHERE rfids_nb_entidade_id = {$id_usuario_rfid} AND rfids_tx_status = 'ativo'";
-			if ($rfid_selecionado != "") {
-				$sql_limpeza .= " AND rfids_nb_id != " . (int)$rfid_selecionado;
-			}
-			query($sql_limpeza);
+            set_status("Cadastro inserido com sucesso!");
+        } else {
+            // Atualizando usuário existente
+            atualizarUsuario($usuario);
+        }
 
-			// 2. VINCULAR NOVO CARTÃO: Ativa o selecionado
-			if ($rfid_selecionado != "") {
-				query("UPDATE rfids SET rfids_tx_status = 'ativo', rfids_nb_entidade_id = {$id_usuario_rfid} WHERE rfids_nb_id = " . (int)$rfid_selecionado);
-			}
-			// =========================================================================
+        // Variável blindada que extrai o ID corretamente, mesmo se vier como array ["5"]
+        $id_do_usuario = is_array($_POST["id"]) ? (int)$_POST["id"][0] : (int)$_POST["id"];
+        $_POST["id"] = $id_do_usuario; // Atualiza o POST para não bugar o resto do sistema!
 
-			set_status("Cadastro inserido com sucesso!");
+        // FOTO
+        $idUserFoto = mysqli_fetch_assoc(query(
+            "SELECT user_nb_id FROM user WHERE user_nb_id = {$id_do_usuario} LIMIT 1;"
+        ));
+        $file_type = $_FILES["foto"]["type"] ?? ""; 
+
+        $allowed = array("image/jpeg", "image/png", "image/jpg");
+        if (in_array($file_type, $allowed) && $_FILES["foto"]["name"] != "") {
+
+            if (!is_dir("arquivos/user/{$id_do_usuario}/")) {
+                mkdir("arquivos/user/{$id_do_usuario}/", 0777, true);
+            }
+
+            $arq = enviar("foto", "arquivos/user/{$id_do_usuario}/", "FOTO_{$id_do_usuario}");
+            if($arq){
+                atualizar("user", array("user_tx_foto"), array($arq), $idUserFoto["user_nb_id"]);
+                set_status("Cadastro atualizado com sucesso!");
+            }
+            $usuario["user_tx_foto"] = $arq;
+        }
+
+        if($_POST["id"] == $_SESSION["user_nb_id"]){
+            foreach($usuario as $key => $value){
+                $_SESSION[$key] = $usuario[$key];
+            }
+        }
+
+        // ATUALIZAÇÃO DO CRACHÁ (RFID) NO BANCO DE DADOS COM AUDITORIA
+        $rfid_selecionado = !empty($_POST["rfid_id"]) ? (int)trim($_POST["rfid_id"]) : 0;
+        $status_do_usuario = !empty($_POST["status"]) ? $_POST["status"] : "ativo";
+
+        // Se inativou o usuário, arranca o crachá dele à força
+        if ($status_do_usuario == "inativo") {
+            $rfid_selecionado = 0; 
+        }
+
+        // Descobrir qual crachá o usuário tem ANTES da mudança
+        $rs_cracha_antigo = query("SELECT rfids_nb_id, rfids_tx_status FROM rfids WHERE rfids_nb_user_id = {$id_do_usuario} AND rfids_tx_status = 'ativo'");
+        $id_cracha_antigo = 0;
+        if ($rs_cracha_antigo && $row_antigo = mysqli_fetch_assoc($rs_cracha_antigo)) {
+            $id_cracha_antigo = (int)$row_antigo['rfids_nb_id'];
+        }
+
+        // 2. Só fazemos alguma coisa se houver mudança de crachá real
+        if ($id_cracha_antigo !== $rfid_selecionado) {
+            
+            // A. Tira o crachá antigo do usuário e devolve pra gaveta
+            if ($id_cracha_antigo > 0) {
+                query("UPDATE rfids SET rfids_tx_status = 'disponivel', rfids_nb_user_id = NULL WHERE rfids_nb_id = {$id_cracha_antigo}");
+                registrarLogRfid($id_cracha_antigo, "STATUS_ALTERADO", "ativo", "disponivel", $id_do_usuario, null, "Desvinculado via Ficha de Usuário.");
+            }
+
+            // B. Vincula o novo crachá ao usuário
+            if ($rfid_selecionado > 0) {
+                $rs_novo = query("SELECT rfids_tx_status, rfids_nb_user_id FROM rfids WHERE rfids_nb_id = {$rfid_selecionado}");
+                if ($rs_novo && $row_novo = mysqli_fetch_assoc($rs_novo)) {
+                    $status_ant_novo = $row_novo['rfids_tx_status'];
+                    $entidade_ant_novo = $row_novo['rfids_nb_user_id'];
+                    
+                    query("UPDATE rfids SET rfids_tx_status = 'ativo', rfids_nb_user_id = {$id_do_usuario} WHERE rfids_nb_id = {$rfid_selecionado}");
+                    registrarLogRfid($rfid_selecionado, "STATUS_ALTERADO", $status_ant_novo, "ativo", $entidade_ant_novo, $id_do_usuario, "Vinculado via Ficha de Usuário.");
+                }
+            }
 			modificarUsuario();
 			exit;
 		}
@@ -220,23 +279,43 @@
 		}
 
 		// =========================================================================
-        // ATUALIZAÇÃO DO CRÁCHA (RFID) NO BANCO DE DADOS
+        // ATUALIZAÇÃO DO CRACHÁ (RFID) NO BANCO DE DADOS COM AUDITORIA
         // =========================================================================
-        $rfid_selecionado = !empty($_POST["rfid_id"]) ? trim($_POST["rfid_id"]) : "";
-        $id_do_usuario = (int)$_POST["id"]; // O ID do user que acabou de ser salvo/atualizado
+        $rfid_selecionado = !empty($_POST["rfid_id"]) ? (int)trim($_POST["rfid_id"]) : 0;
         $status_do_usuario = !empty($_POST["status"]) ? $_POST["status"] : "ativo";
 
         // REGRA DE SEGURANÇA: Se inativou o usuário, arranca o crachá dele à força
         if ($status_do_usuario == "inativo") {
-            $rfid_selecionado = ""; // Ignora o que veio no select e manda desvincular
+            $rfid_selecionado = 0; 
         }
 
-        // 1. DEVOLVER PARA A GAVETA: Tira da mão deste usuário qualquer cartão ativo que ele tenha
-        query("UPDATE rfids SET rfids_tx_status = 'disponivel', rfids_nb_entidade_id = NULL WHERE rfids_nb_entidade_id = {$id_do_usuario} AND rfids_tx_status = 'ativo'");
+        // 1. Descobrir qual crachá o usuário tem ANTES da mudança
+        $rs_cracha_antigo = query("SELECT rfids_nb_id, rfids_tx_status FROM rfids WHERE rfids_nb_user_id = {$id_do_usuario} AND rfids_tx_status = 'ativo'");
+        $id_cracha_antigo = 0;
+        if ($rs_cracha_antigo && $row_antigo = mysqli_fetch_assoc($rs_cracha_antigo)) {
+            $id_cracha_antigo = (int)$row_antigo['rfids_nb_id'];
+        }
 
-        // 2. VINCULAR O NOVO: Se tem um cartão válido e o usuário está ativo
-        if ($rfid_selecionado != "") {
-            query("UPDATE rfids SET rfids_tx_status = 'ativo', rfids_nb_entidade_id = {$id_do_usuario} WHERE rfids_nb_id = " . (int)$rfid_selecionado);
+        // 2. Só fazemos alguma coisa se houver mudança de crachá real
+        if ($id_cracha_antigo !== $rfid_selecionado) {
+            
+            // A. Tira o crachá antigo do usuário e devolve pra gaveta
+            if ($id_cracha_antigo > 0) {
+                query("UPDATE rfids SET rfids_tx_status = 'disponivel', rfids_nb_user_id = NULL WHERE rfids_nb_id = {$id_cracha_antigo}");
+                registrarLogRfid($id_cracha_antigo, "STATUS_ALTERADO", "ativo", "disponivel", $id_do_usuario, null, "Desvinculado via Ficha de Usuário.");
+            }
+
+            // B. Vincula o novo crachá ao usuário
+            if ($rfid_selecionado > 0) {
+                $rs_novo = query("SELECT rfids_tx_status, rfids_nb_user_id FROM rfids WHERE rfids_nb_id = {$rfid_selecionado}");
+                if ($rs_novo && $row_novo = mysqli_fetch_assoc($rs_novo)) {
+                    $status_ant_novo = $row_novo['rfids_tx_status'];
+                    $entidade_ant_novo = $row_novo['rfids_nb_user_id'];
+                    
+                    query("UPDATE rfids SET rfids_tx_status = 'ativo', rfids_nb_user_id = {$id_do_usuario} WHERE rfids_nb_id = {$rfid_selecionado}");
+                    registrarLogRfid($rfid_selecionado, "STATUS_ALTERADO", $status_ant_novo, "ativo", $entidade_ant_novo, $id_do_usuario, "Vinculado via Ficha de Usuário.");
+                }
+            }
         }
         // =========================================================================
 
@@ -375,9 +454,9 @@
         $userIdForRfid = !empty($_POST["id"]) ? (int)$_POST["id"] : 0;
         
         if ($userIdForRfid > 0) {
-            $condRfid = "WHERE (rfids_tx_status = 'disponivel' AND rfids_nb_entidade_id IS NULL) OR (rfids_nb_entidade_id = {$userIdForRfid})";
+            $condRfid = "WHERE (rfids_tx_status = 'disponivel' AND rfids_nb_user_id IS NULL) OR (rfids_nb_user_id = {$userIdForRfid})";
         } else {
-            $condRfid = "WHERE rfids_tx_status = 'disponivel' AND rfids_nb_entidade_id IS NULL";
+            $condRfid = "WHERE rfids_tx_status = 'disponivel' AND rfids_nb_user_id IS NULL";
         }
 
         $sqlBuscaRfids = "SELECT rfids_nb_id, rfids_tx_uid, rfids_tx_descricao, rfids_tx_status FROM rfids {$condRfid} ORDER BY rfids_tx_uid ASC";
@@ -419,7 +498,7 @@
 
         $selectedRfid = "";
         if($userIdForRfid > 0){
-            $sqlAssigned = "SELECT rfids_nb_id FROM rfids WHERE rfids_nb_entidade_id = {$userIdForRfid} LIMIT 1";
+            $sqlAssigned = "SELECT rfids_nb_id FROM rfids WHERE rfids_nb_user_id = {$userIdForRfid} LIMIT 1";
             $rsAssigned = query($sqlAssigned);
             
             // BLINDAGEM: Verifica também a segunda query
@@ -522,6 +601,14 @@
 
 			$campo_empresa = texto("Empresa*", (!empty($empresa["empr_tx_nome"])? $empresa["empr_tx_nome"]: "-"), 3, "style=''");
 			$campo_login = texto("Login", ($_POST["login"]?? ($_POST["login"]?? "-")), 2);
+			$uid_view = "Sem Crachá";
+            if (!empty($selectedRfid)) {
+                $rs_uid = query("SELECT rfids_tx_uid FROM rfids WHERE rfids_nb_id = " . (int)$selectedRfid);
+                if ($rs_uid && $row_uid = mysqli_fetch_assoc($rs_uid)) {
+                    $uid_view = $row_uid['rfids_tx_uid'];
+                }
+            }
+            $campo_rfid = texto("Crachá (UID)", $uid_view, 2);
 			$campo_senha = "";
 			$campo_confirma = "";
 			if($loggedUserIsAdmin){
@@ -678,7 +765,7 @@
                 var fieldAcao = document.createElement('input');
                 fieldAcao.type = 'hidden';
                 fieldAcao.name = 'acao';
-                fieldAcao.value = 'editarRfid'; // Dispara o form de edição do seu framework
+                fieldAcao.value = 'modificarRfid'; // Dispara o form de edição do seu framework
                 formRfid.appendChild(fieldAcao);
 
                 // ==========================================================
@@ -851,6 +938,7 @@ function index() {
                 "TELEFONE"      => "user_tx_fone",
                 "EMPRESA"       => "empr_tx_nome",
                 "STATUS"        => "user_tx_status",
+				"RFID"          => "rfids_tx_uid",
                 "AUTENTICAÇÃO"  => "rfids_nb_id" 
             ];
 
@@ -874,7 +962,7 @@ function index() {
                 ." LEFT JOIN operacao ON enti_tx_tipoOperacao = oper_nb_id"
                 ." LEFT JOIN grupos_documentos ON enti_setor_id = grup_nb_id"
                 ." LEFT JOIN sbgrupos_documentos subg ON enti_subSetor_id = subg.sbgr_nb_id"
-                ." LEFT JOIN rfids ON rfids.rfids_nb_entidade_id = user.user_nb_id AND rfids.rfids_tx_status = 'ativo'"
+                ." LEFT JOIN rfids ON rfids.rfids_nb_user_id = user.user_nb_id AND rfids.rfids_tx_status = 'ativo'"
             ;
 
             // 1. Chamamos a utilitária para gerar os botões padrão
@@ -924,12 +1012,12 @@ function index() {
                         if (idRfid !== '') {
                             htmlIcones += '<span onclick=\"abrirRfidDireto(' + idRfid + ', ' + colIdUser + ')\" class=\"glyphicon glyphicon-credit-card\" style=\"color: #28a745; font-size: 14px; margin-right: 12px; cursor: pointer;\" title=\"Editar Crachá Ativo\"></span>';
                         } else {
-                            htmlIcones += '<span class=\"glyphicon glyphicon-credit-card\" style=\"color: #d6d6d6; font-size: 14px; margin-right: 12px;\" title=\"Sem Crachá Ativo\"></span>';
-                        }
-                        
-                        htmlIcones += '<span class=\"glyphicon glyphicon-hand-up\" style=\"color: #d6d6d6; font-size: 14px; margin-right: 12px;\" title=\"Sem Digital\"></span>';
-                        htmlIcones += '<span class=\"glyphicon glyphicon-user\" style=\"color: #d6d6d6; font-size: 14px;\" title=\"Sem Facial\"></span>';
-                        
+							htmlIcones += '<span class=\"glyphicon glyphicon-credit-card\" style=\"color: #808080; font-size: 14px; margin-right: 12px;\" title=\"Sem Crachá Ativo\"></span>';
+						}
+						
+						htmlIcones += '<span class=\"glyphicon glyphicon-hand-up\" style=\"color: #808080; font-size: 14px; margin-right: 12px;\" title=\"Sem Digital\"></span>';
+						htmlIcones += '<span class=\"glyphicon glyphicon-user\" style=\"color: #808080; font-size: 14px;\" title=\"Sem Facial\"></span>';
+						
                         tdAutenticacao.html(htmlIcones);
                     });
                 };
@@ -948,7 +1036,7 @@ function index() {
                     var inputAcao = document.createElement('input');
                     inputAcao.type = 'hidden';
                     inputAcao.name = 'acao';
-                    inputAcao.value = 'editarRfid';
+                    inputAcao.value = 'modificarRfid';
                     form.appendChild(inputAcao);
 
                     if (idUsuario) {
