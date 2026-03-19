@@ -32,6 +32,7 @@
         $paginas = [
             "cadastros" => [
                 "/cadastro_rfid.php" 		=> "RFID",
+                "/cadastro_digital.php"     => "Digital",
                 "/cadastro_celular.php" 	=> "Celular",
                 "/cadastro_empresa.php" 	=> "Empresa/Filial",
                 "/cadastro_endosso.php" 	=> "Endosso",
@@ -161,6 +162,7 @@ if ($showComunicado) {
             "Parâmetro" => "fa fa-sliders-h",
             "Placas" => "fa fa-id-badge",
             "RFID" => "fa fa-id-badge",
+            "Digital" => "fa fa-id-badge",
             "Setor" => "fa fa-layer-group",
             "Tipo de Documento" => "fa fa-file",
             "Usuário" => "fa fa-user-cog",
