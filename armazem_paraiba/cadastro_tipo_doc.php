@@ -265,9 +265,10 @@
         ;
 
         $actions = criarIconesGrid(
-            ["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
-            ["cadastro_tipo_doc.php", "cadastro_tipo_doc.php"],
-            ["modificarTipoDoc()", "excluirTipoDoc()"]
+            ["glyphicon glyphicon-search search-button", "glyphicon glyphicon-th-list", "glyphicon glyphicon-remove search-remove"],
+            ["cadastro_tipo_doc.php", "documentos/configurar_layout.php", "cadastro_tipo_doc.php"],
+            ["modificarTipoDoc()", "index", "excluirTipoDoc()"],
+            ["", "id", ""]
         );
 
         $actions["functions"][1] .= 

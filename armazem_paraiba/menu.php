@@ -46,6 +46,7 @@
                 "/cadastro_placa.php" 		=> "Placas",
                 "/cadastro_setor.php" 		=> "Setor",
                 "/cadastro_tipo_doc.php" 	=> "Tipo de Documento",
+                "/documentos/cadastro_documento.php" => "Gestão de Documentos",
                 "/cadastro_usuario.php" 	=> "Usuário",            
                 "/cadastro_habilidade_tecnica.php" 	=> "Habilidades Técnicas",
                 "/cadastro_habilidade_comportamental.php" 	=> "Habilidades Comportamentais",
