@@ -69,6 +69,7 @@
 		// 1. Identificar o tipo de documento de ajuste
 		// Priorizar busca exata conforme exibido na interface do usuário
 		$tipoDoc = mysqli_fetch_assoc(query("SELECT tipo_nb_id FROM tipos_documentos WHERE tipo_tx_status = 'ativo' AND (tipo_tx_nome = 'Ajuste Ponto' OR tipo_tx_nome = 'Solicitação de Ajuste') LIMIT 1"));
+		// Nome do documento criado em tipo de documento
 		if (!$tipoDoc) {
 			$tipoDoc = mysqli_fetch_assoc(query("SELECT tipo_nb_id FROM tipos_documentos WHERE tipo_tx_status = 'ativo' AND (tipo_tx_nome LIKE '%Ajuste Ponto%' OR tipo_tx_nome LIKE '%Solicitação de Ajuste%') LIMIT 1"));
 		}
@@ -143,14 +144,28 @@
 		// 7. Vincular TODAS as solicitações do dia a esta instância
 		query("UPDATE solicitacoes_ajuste SET id_instancia_documento = $idInstancia WHERE id_motorista = $idMotorista AND data_ajuste = '$data' AND status = 'enviada'");
 
-		// 8. Montar o conteúdo textual consolidado
-		$resumoAjustes = "Solicitações de Ajuste para o dia " . date('d/m/Y', strtotime($data)) . ":\n\n";
+		// 8. Montar o conteúdo textual consolidado (Formato HTML Profissional para PDF)
+		$resumoAjustes = '<h3 style="text-align:center;">Solicitações de Ajuste - Data: ' . date('d/m/Y', strtotime($data)) . '</h3>';
+		$resumoAjustes .= '<table border="1" cellpadding="5" cellspacing="0" style="width:100%;">';
+		$resumoAjustes .= '<tr style="background-color:#eeeeee; font-weight:bold; text-align:center;">
+							<th width="15%">Horário</th>
+							<th width="20%">Tipo</th>
+							<th width="20%">Motivo</th>
+							<th width="25%">Justificativa</th>
+							<th width="20%">Status no Banco</th>
+						   </tr>';
+		
 		foreach ($solicitacoes as $s) {
 			$existente = verificarPontoExistente($matricula, $data, $s['hora_ajuste']);
-			$resumoAjustes .= "- Horário: {$s['hora_ajuste']} | Tipo: {$s['macr_tx_nome']} | Motivo: {$s['moti_tx_nome']}\n";
-			$resumoAjustes .= "  Justificativa: {$s['justificativa']}\n";
-			$resumoAjustes .= "  Status no Banco: $existente\n\n";
+			$resumoAjustes .= '<tr>
+								<td style="text-align:center;">' . $s['hora_ajuste'] . '</td>
+								<td>' . $s['macr_tx_nome'] . '</td>
+								<td>' . $s['moti_tx_nome'] . '</td>
+								<td>' . nl2br($s['justificativa']) . '</td>
+								<td style="font-size:9px;">' . $existente . '</td>
+							   </tr>';
 		}
+		$resumoAjustes .= '</table>';
 
 		// 9. Preencher/Atualizar os campos do documento
 		$campos = mysqli_fetch_all(query("SELECT * FROM camp_documento_modulo WHERE camp_nb_tipo_doc = $idTipo AND camp_tx_status = 'ativo'"), MYSQLI_ASSOC);

@@ -90,19 +90,28 @@ $pdf->SetAutoPageBreak(TRUE, 15);
 $pdf->AddPage();
 $pdf->SetFont('helvetica', '', 11);
 
-$html = "<p><b>Data de Geração:</b> " . date("d/m/Y H:i", strtotime($dados['inst_dt_criacao'])) . "<br>";
-$html .= "<b>Emitido por:</b> " . $dados['criador'] . "</p>";
-$html .= "<hr><br>";
+$html = '<table cellpadding="3" border="0" style="width:100%;">';
+$html .= '<tr><td style="border-bottom:0.1pt solid #ddd;"><b>Data de Geração:</b> ' . date("d/m/Y H:i", strtotime($dados['inst_dt_criacao'])) . '</td></tr>';
+$html .= '<tr><td style="border-bottom:0.1pt solid #ddd;"><b>Emitido por:</b> ' . $dados['criador'] . '</td></tr>';
+$html .= '</table>';
+$html .= '<br><br>';
 
-$html .= "<table cellpadding='5' border='0.1'>";
 foreach ($valores as $v) {
     if (empty($v['valo_tx_valor'])) continue;
-    $html .= "<tr>";
-    $html .= "<td width='30%'><b>{$v['camp_tx_label']}:</b></td>";
-    $html .= "<td width='70%'>{$v['valo_tx_valor']}</td>";
-    $html .= "</tr>";
+    
+    // Se o valor contiver uma tabela (HTML), renderiza em largura total
+    if (strpos($v['valo_tx_valor'], '<table') !== false) {
+        $html .= '<br><b>' . $v['camp_tx_label'] . ':</b><br>';
+        $html .= $v['valo_tx_valor'] . '<br>';
+    } else {
+        $html .= '<table cellpadding="4" border="0" style="width:100%;">';
+        $html .= '<tr>';
+        $html .= '<td width="30%" style="border-bottom: 0.1pt solid #eee;"><b>' . $v['camp_tx_label'] . ':</b></td>';
+        $html .= '<td width="70%" style="border-bottom: 0.1pt solid #eee;">' . $v['valo_tx_valor'] . '</td>';
+        $html .= '</tr>';
+        $html .= '</table>';
+    }
 }
-$html .= "</table>";
 
 $pdf->writeHTML($html, true, false, true, false, '');
 
