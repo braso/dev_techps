@@ -18,36 +18,176 @@
 	$scriptContent = ob_get_clean();
 	$GLOBALS['updateTimerScript'] = $scriptContent;
 
-	// Função para criar tabela se não existir
+	// Função para criar/atualizar tabelas se não existir
 	function criarTabelaSolicitacoes() {
-		$tabela_existe = mysqli_fetch_assoc(query("SHOW TABLES LIKE 'solicitacoes_ajuste'"));
-		if (!$tabela_existe) {
-			$sql = "CREATE TABLE solicitacoes_ajuste (
-				id INT AUTO_INCREMENT PRIMARY KEY,
-				id_motorista INT NOT NULL,
-				data_ajuste DATE NOT NULL,
-				hora_ajuste TIME NOT NULL,
-				id_macro INT,
-				id_motivo INT,
-				justificativa TEXT,
-				status ENUM('enviada', 'visualizada', 'aceita', 'nao_aceita') DEFAULT 'enviada',
-				data_solicitacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-				id_usuario_solicitante INT,
-				cargo_usuario VARCHAR(255),
-				setor_usuario VARCHAR(255),
-				subsetor_usuario VARCHAR(255),
-				id_superior INT NULL,
-				data_visualizacao TIMESTAMP NULL,
-				data_decisao TIMESTAMP NULL,
-				INDEX idx_motorista_data (id_motorista, data_ajuste),
-				INDEX idx_status (status)
-			)";
-			query($sql);
+		// Adicionar colunas em solicitacoes_ajuste se necessário
+		$check = query("SHOW COLUMNS FROM solicitacoes_ajuste LIKE 'id_instancia_documento'");
+		if ($check instanceof mysqli_result && mysqli_num_rows($check) == 0) {
+			query("ALTER TABLE solicitacoes_ajuste ADD COLUMN id_instancia_documento INT NULL AFTER data_decisao");
+		}
+
+		// Atualizar inst_documento_modulo
+		$check = query("SHOW COLUMNS FROM inst_documento_modulo LIKE 'inst_nb_entidade'");
+		if ($check instanceof mysqli_result && mysqli_num_rows($check) == 0) {
+			query("ALTER TABLE inst_documento_modulo ADD COLUMN inst_nb_entidade INT NULL AFTER inst_nb_user");
+		}
+		
+		$check = query("SHOW COLUMNS FROM inst_documento_modulo LIKE 'inst_tx_data_referencia'");
+		if ($check instanceof mysqli_result && mysqli_num_rows($check) == 0) {
+			query("ALTER TABLE inst_documento_modulo ADD COLUMN inst_tx_data_referencia DATE NULL AFTER inst_nb_entidade");
+		}
+	}
+	
+	criarTabelaSolicitacoes();
+
+	function verificarPontoExistente($matricula, $data, $hora) {
+		$ponto = mysqli_fetch_assoc(query("
+			SELECT p.pont_tx_data, m.macr_tx_nome
+			FROM ponto p
+			JOIN macroponto m ON (p.pont_tx_tipo = m.macr_tx_codigoInterno OR p.pont_tx_tipo = m.macr_nb_id)
+			WHERE p.pont_tx_status = 'ativo'
+				AND p.pont_tx_matricula = '{$matricula}'
+				AND p.pont_tx_data LIKE '{$data}%'
+			ORDER BY ABS(TIMESTAMPDIFF(MINUTE, p.pont_tx_data, '{$data} {$hora}')) ASC
+			LIMIT 1
+		"));
+
+		if ($ponto) {
+			$horaExistente = date('H:i', strtotime($ponto['pont_tx_data']));
+			// Se a diferença for menor que 2 horas, consideramos que o ponto existe para esse "turno"
+			$diff = abs(strtotime($ponto['pont_tx_data']) - strtotime("$data $hora")) / 60;
+			if ($diff < 120) {
+				return "Já existe registro de {$ponto['macr_tx_nome']} às {$horaExistente}.";
+			}
+		}
+		return "Nenhum registro próximo encontrado.";
+	}
+
+	function processarDocumentoAgrupado($idMotorista, $data) {
+		global $conn;
+
+		// 1. Identificar o tipo de documento de ajuste
+		// Priorizar busca exata conforme exibido na interface do usuário
+		$tipoDoc = mysqli_fetch_assoc(query("SELECT tipo_nb_id FROM tipos_documentos WHERE tipo_tx_status = 'ativo' AND (tipo_tx_nome = 'Ajuste Ponto' OR tipo_tx_nome = 'Solicitação de Ajuste') LIMIT 1"));
+		if (!$tipoDoc) {
+			$tipoDoc = mysqli_fetch_assoc(query("SELECT tipo_nb_id FROM tipos_documentos WHERE tipo_tx_status = 'ativo' AND (tipo_tx_nome LIKE '%Ajuste Ponto%' OR tipo_tx_nome LIKE '%Solicitação de Ajuste%') LIMIT 1"));
+		}
+		$idTipo = $tipoDoc['tipo_nb_id'] ?? 0;
+
+		if (!$idTipo) return; // Não há modelo de documento configurado
+
+		// 2. Buscar todas as solicitações do dia para este motorista que estão em estado editável ('enviada')
+		$solicitacoes = mysqli_fetch_all(query("
+			SELECT sa.*, m.macr_tx_nome, mot.moti_tx_nome
+			FROM solicitacoes_ajuste sa
+			LEFT JOIN macroponto m ON sa.id_macro = m.macr_nb_id
+			LEFT JOIN motivo mot ON sa.id_motivo = mot.moti_nb_id
+			WHERE sa.id_motorista = $idMotorista 
+			  AND sa.data_ajuste = '$data'
+			  AND sa.status = 'enviada'
+			ORDER BY sa.hora_ajuste ASC
+		"), MYSQLI_ASSOC);
+
+		if (empty($solicitacoes)) return;
+
+		// 3. Tentar encontrar uma instância existente vinculada a estas solicitações
+		$idInstancia = 0;
+		foreach ($solicitacoes as $s) {
+			if (!empty($s['id_instancia_documento'])) {
+				$idInstancia = $s['id_instancia_documento'];
+				break;
+			}
+		}
+
+		// 4. Se não achou por vínculo direto, busca na tabela de instâncias por data/motorista
+		if (!$idInstancia) {
+			// Garantir que a coluna de vínculo existe
+			$checkCol = query("SHOW COLUMNS FROM inst_documento_modulo LIKE 'inst_nb_entidade'");
+			if (!($checkCol instanceof mysqli_result) || mysqli_num_rows($checkCol) == 0) {
+				criarTabelaSolicitacoes();
+			}
+
+			$instancia = mysqli_fetch_assoc(query("
+				SELECT inst_nb_id 
+				FROM inst_documento_modulo 
+				WHERE inst_nb_tipo_doc = $idTipo 
+				  AND inst_nb_entidade = $idMotorista 
+				  AND inst_tx_data_referencia = '$data'
+				  AND inst_tx_status = 'ativo'
+				LIMIT 1
+			"));
+			
+			if ($instancia) {
+				$idInstancia = $instancia['inst_nb_id'];
+			}
+		}
+
+		// 5. Validar a instância encontrada (Trava de segurança: se houver solicitações não-enviadas nela, criar nova)
+		if ($idInstancia) {
+			$travado = mysqli_fetch_assoc(query("SELECT id FROM solicitacoes_ajuste WHERE id_instancia_documento = $idInstancia AND status != 'enviada' LIMIT 1"));
+			if ($travado) {
+				$idInstancia = 0;
+			}
+		}
+
+		// 6. Persistir a instância (Criar se não existir)
+		$motorista = mysqli_fetch_assoc(query("SELECT * FROM entidade WHERE enti_nb_id = $idMotorista"));
+		$matricula = $motorista['enti_tx_matricula'];
+
+		if (!$idInstancia) {
+			query("INSERT INTO inst_documento_modulo (inst_nb_tipo_doc, inst_nb_user, inst_nb_entidade, inst_tx_data_referencia, inst_dt_criacao, inst_tx_status) 
+				   VALUES ($idTipo, {$_SESSION['user_nb_id']}, $idMotorista, '$data', '".date('Y-m-d H:i:s')."', 'ativo')");
+			$idInstancia = mysqli_insert_id($GLOBALS['conn']);
+		}
+
+		// 7. Vincular TODAS as solicitações do dia a esta instância
+		query("UPDATE solicitacoes_ajuste SET id_instancia_documento = $idInstancia WHERE id_motorista = $idMotorista AND data_ajuste = '$data' AND status = 'enviada'");
+
+		// 8. Montar o conteúdo textual consolidado
+		$resumoAjustes = "Solicitações de Ajuste para o dia " . date('d/m/Y', strtotime($data)) . ":\n\n";
+		foreach ($solicitacoes as $s) {
+			$existente = verificarPontoExistente($matricula, $data, $s['hora_ajuste']);
+			$resumoAjustes .= "- Horário: {$s['hora_ajuste']} | Tipo: {$s['macr_tx_nome']} | Motivo: {$s['moti_tx_nome']}\n";
+			$resumoAjustes .= "  Justificativa: {$s['justificativa']}\n";
+			$resumoAjustes .= "  Status no Banco: $existente\n\n";
+		}
+
+		// 9. Preencher/Atualizar os campos do documento
+		$campos = mysqli_fetch_all(query("SELECT * FROM camp_documento_modulo WHERE camp_nb_tipo_doc = $idTipo AND camp_tx_status = 'ativo'"), MYSQLI_ASSOC);
+		foreach ($campos as $c) {
+			$label = mb_strtoupper($c['camp_tx_label'], 'UTF-8');
+			$valor = '';
+
+			if (strpos($label, 'DATA') !== false) {
+				$valor = date('d/m/Y', strtotime($data));
+			} elseif (strpos($label, 'NOME') !== false || strpos($label, 'FUNCIONÁRIO') !== false) {
+				$valor = $motorista['enti_tx_nome'];
+			} elseif (strpos($label, 'MATRÍCULA') !== false) {
+				$valor = $matricula;
+			} elseif (strpos($label, 'CPF') !== false) {
+				$valor = $motorista['enti_tx_cpf'];
+			} elseif (strpos($label, 'JUSTIFICATIVA') !== false || strpos($label, 'DESCRIÇÃO') !== false || strpos($label, 'DETALHE') !== false || strpos($label, 'RESUMO') !== false) {
+				$valor = $resumoAjustes;
+			}
+
+			if ($valor !== '') {
+				$val_existe = mysqli_fetch_assoc(query("SELECT valo_nb_id FROM valo_documento_modulo WHERE valo_nb_instancia = $idInstancia AND valo_nb_campo = {$c['camp_nb_id']} LIMIT 1"));
+				if ($val_existe) {
+					query("UPDATE valo_documento_modulo SET valo_tx_valor = '" . mysqli_real_escape_string($GLOBALS['conn'], $valor) . "' WHERE valo_nb_id = {$val_existe['valo_nb_id']}");
+				} else {
+					$dados_valor = [
+						'valo_nb_instancia' => $idInstancia,
+						'valo_nb_campo' => $c['camp_nb_id'],
+						'valo_tx_valor' => $valor,
+						'valo_tx_status' => 'ativo'
+					];
+					inserir('valo_documento_modulo', array_keys($dados_valor), array_values($dados_valor));
+				}
+			}
 		}
 	}
 
-	// Criar tabela ao carregar a página
-	criarTabelaSolicitacoes();
+	// criarTabelaSolicitacoes() foi movida para o topo
 
 	$acao = $_POST['acao'] ?? $_GET['acao'] ?? '';
 	if ($acao == 'buscarUltimaJustificativa') {
@@ -413,6 +553,10 @@
 				if ($verificacao && $verificacao['status'] == 'enviada') {
 					// Deletar apenas se status for 'enviada'
 					@mysqli_query($GLOBALS['conn'], "DELETE FROM solicitacoes_ajuste WHERE id = {$idSolicitacao}");
+					
+					// Sincronizar documento após exclusão
+					processarDocumentoAgrupado($verificacao['id_motorista'], $verificacao['data_ajuste']);
+					
 					header("Location: " . basename($_SERVER['PHP_SELF']) . "?msg=deletado&idMotorista=" . $verificacao['id_motorista']);
 					exit;
 				}
@@ -503,6 +647,9 @@
 				$resultado = @mysqli_query($GLOBALS['conn'], $sql);
 				
 				if ($resultado) {
+					// Sincronizar documento após inserção
+					processarDocumentoAgrupado($idMotorista, $data);
+					
 					// Redirecionar de volta para a mesma página, mantendo data e justificativa na URL
 					$justEncoded = urlencode($justificativa);
 					header("Location: " . basename($_SERVER['PHP_SELF']) . "?msg=sucesso&idMotorista={$idMotorista}&data_p={$data}&just_p={$justEncoded}");
@@ -582,7 +729,13 @@
 
 			combo_bd("Tipo de Registro*","idMacro",($_POST["idMacro"] ?? ""),4,"macroponto","","ORDER BY macr_nb_id"),
 
-			combo_bd("Motivo*","motivo",($_POST["motivo"] ?? ""),4,"motivo",""," AND moti_tx_tipo = 'Ajuste' ORDER BY moti_tx_nome")
+			combo_bd("Motivo*","motivo",($_POST["motivo"] ?? ""),4,"motivo",""," AND moti_tx_tipo = 'Ajuste' ORDER BY moti_tx_nome"),
+
+			"<div class='col-sm-12' style='margin-bottom:10px;'>
+				<div class='alert alert-info' style='margin-bottom:0; padding:10px;'>
+					<i class='fa fa-info-circle'></i> <b>Nota:</b> Solicitações para o mesmo dia serão agrupadas em um único documento de 'Solicitação de Ajuste'.
+				</div>
+			</div>"
 
 		];
 
