@@ -299,11 +299,14 @@
 				case 'nao_aceita':
 					$statusBadge = "<span class='badge badge-danger' style='font-size:12px; padding:5px 10px;'>Rejeitada</span>";
 					break;
+				case 'rascunho':
+					$statusBadge = "<span class='badge badge-secondary'>Rascunho</span>";
+					break;
 			}
 
 			// Botão de ação (excluir) - só disponível se status = 'enviada'
 			$acoes = '';
-			if ($row['status'] == 'enviada') {
+			if ($row['status'] == 'enviada' || $row['status'] == 'rascunho') {
 				$acoes = "<button type='button' class='btn btn-xs btn-danger' onclick=\"if(confirm('Tem certeza que deseja excluir esta solicitação?')) { document.getElementById('formDeleta').idSolicitacao.value = '{$row['id']}'; document.getElementById('formDeleta').submit(); }\">
 					<i class='fa fa-trash'></i> Excluir
 				</button>";
@@ -549,6 +552,66 @@
 		exit;
 	}
 
+	function gerarTabelaRascunhos($idMotorista) {
+
+		$sql = "
+			SELECT 
+				sa.id,
+				sa.data_ajuste,
+				sa.hora_ajuste,
+				sa.id_macro,
+				sa.id_motivo,
+				sa.justificativa,
+				sa.data_solicitacao
+			FROM solicitacoes_ajuste sa
+			WHERE sa.id_motorista = {$idMotorista}
+			AND sa.status = 'rascunho'
+			ORDER BY sa.data_solicitacao DESC
+		";
+
+		$result = query($sql);
+		$linhas = [];
+
+		if (!$result || mysqli_num_rows($result) == 0) {
+			return "<p style='color:#999;'>Nenhum item na lista.</p>";
+		}
+
+		while ($row = mysqli_fetch_assoc($result)) {
+
+			$acoes = "
+				<button type='button' class='btn btn-xs btn-danger'
+				onclick=\"if(confirm('Remover da lista?')) {
+					document.getElementById('formDeleta').idSolicitacao.value = '{$row['id']}';
+					document.getElementById('formDeleta').submit();
+				}\">
+				<i class='fa fa-trash'></i>
+				</button>
+			";
+
+			$linhas[] = [
+				date('d/m/Y', strtotime($row['data_ajuste'])),
+				$row['hora_ajuste'],
+				mysqli_fetch_assoc(query("SELECT macr_tx_nome FROM macroponto WHERE macr_nb_id = {$row['id_macro']}"))['macr_tx_nome'] ?? '',
+				mysqli_fetch_assoc(query("SELECT moti_tx_nome FROM motivo WHERE moti_nb_id = {$row['id_motivo']}"))['moti_tx_nome'] ?? '',
+				substr($row['justificativa'], 0, 40),
+				date('d/m/Y H:i', strtotime($row['data_solicitacao'])),
+				$acoes
+			];
+		}
+
+		$cabecalho = [
+			"DATA",
+			"HORA",
+			"TIPO",
+			"MOTIVO",
+			"JUSTIFICATIVA",
+			"CRIADO EM",
+			"AÇÃO"
+		];
+
+		return montarTabelaPonto($cabecalho, $linhas);
+	}
+
 	function index() {
 
 		// Handler para deletar solicitação
@@ -556,25 +619,95 @@
 			$idSolicitacao = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idSolicitacao"] ?? '');
 			
 			if (!empty($idSolicitacao)) {
-				// Verificar se a solicitação existe e pertence ao usuário logado
 				$verificacao = mysqli_fetch_assoc(query("
-					SELECT sa.id, sa.status, sa.id_motorista 
+					SELECT sa.id, sa.status, sa.id_motorista, sa.data_ajuste
 					FROM solicitacoes_ajuste sa
 					WHERE sa.id = {$idSolicitacao} 
-					AND sa.id_motorista = (SELECT enti_nb_id FROM entidade WHERE enti_nb_id = (SELECT user_nb_entidade FROM user WHERE user_nb_id = {$_SESSION['user_nb_id']}) LIMIT 1)
+					AND sa.id_motorista = (
+						SELECT enti_nb_id 
+						FROM entidade 
+						WHERE enti_nb_id = (
+							SELECT user_nb_entidade 
+							FROM user 
+							WHERE user_nb_id = {$_SESSION['user_nb_id']}
+						) LIMIT 1
+					)
 					LIMIT 1
 				"));
 				
-				if ($verificacao && $verificacao['status'] == 'enviada') {
-					// Deletar apenas se status for 'enviada'
+				if ($verificacao && in_array($verificacao['status'], ['enviada','rascunho'])) {
+					
 					@mysqli_query($GLOBALS['conn'], "DELETE FROM solicitacoes_ajuste WHERE id = {$idSolicitacao}");
-					
-					// Sincronizar documento após exclusão
-					processarDocumentoAgrupado($verificacao['id_motorista'], $verificacao['data_ajuste']);
-					
+
+					// 🔥 Só atualiza documento se for enviada
+					if ($verificacao['status'] == 'enviada') {
+						processarDocumentoAgrupado($verificacao['id_motorista'], $verificacao['data_ajuste']);
+					}
+
 					header("Location: " . basename($_SERVER['PHP_SELF']) . "?msg=deletado&idMotorista=" . $verificacao['id_motorista']);
 					exit;
 				}
+			}
+		}
+
+		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['enviar_lote'])) {
+			try {
+				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMotorista"] ?? '');
+				$data = mysqli_real_escape_string($GLOBALS['conn'], $_POST["data"] ?? '');
+
+				if (empty($idMotorista) || empty($data)) {
+					echo "<script>alert('Selecione a data para enviar o lote');</script>";
+					exit;
+				}
+
+				// Atualiza rascunhos para enviados
+				mysqli_query($GLOBALS['conn'], "
+					UPDATE solicitacoes_ajuste 
+					SET status = 'enviada' 
+					WHERE id_motorista = '$idMotorista' 
+					AND data_ajuste = '$data'
+					AND status = 'rascunho'
+				");
+
+				// Gera documento consolidado
+				processarDocumentoAgrupado($idMotorista, $data);
+
+				header("Location: " . basename($_SERVER['PHP_SELF']) . "?msg=enviado&idMotorista={$idMotorista}");
+				exit;
+
+			} catch (Exception $e) {
+				echo "<script>alert('Erro: " . addslashes($e->getMessage()) . "');</script>";
+				exit;
+			}
+		}
+
+		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['salvar_rascunho'])) {
+			try {
+				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMotorista"] ?? '');
+				$data = mysqli_real_escape_string($GLOBALS['conn'], $_POST["data"] ?? '');
+				$hora = mysqli_real_escape_string($GLOBALS['conn'], $_POST["hora"] ?? '');
+				$idMacro = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMacro"] ?? '');
+				$motivo = mysqli_real_escape_string($GLOBALS['conn'], $_POST["motivo"] ?? '');
+				$justificativa = mysqli_real_escape_string($GLOBALS['conn'], $_POST["justificativa"] ?? '');
+
+				if (empty($idMotorista) || empty($data) || empty($hora) || empty($idMacro) || empty($motivo)) {
+					echo "<script>alert('Preencha todos os campos obrigatórios');</script>";
+					exit;
+				}
+
+				$sql = "INSERT INTO solicitacoes_ajuste 
+				(id_motorista, data_ajuste, hora_ajuste, id_macro, id_motivo, justificativa, status, data_solicitacao, id_usuario_solicitante) 
+				VALUES 
+				('$idMotorista', '$data', '$hora', '$idMacro', '$motivo', '$justificativa', 'rascunho', NOW(), '{$_SESSION['user_nb_id']}')";
+
+				mysqli_query($GLOBALS['conn'], $sql);
+
+				header("Location: " . basename($_SERVER['PHP_SELF']) . "?msg=rascunho&idMotorista={$idMotorista}&data_p={$data}");
+				exit;
+
+			} catch (Exception $e) {
+				echo "<script>alert('Erro: " . addslashes($e->getMessage()) . "');</script>";
+				exit;
 			}
 		}
 
@@ -711,6 +844,13 @@
 		if (isset($_GET['msg']) && $_GET['msg'] === 'deletado') {
 			echo "<script>alert('Solicitação de ajuste excluída com sucesso!');</script>";
 		}
+		if (isset($_GET['msg']) && $_GET['msg'] === 'rascunho') {
+			echo "<script>alert('Adicionado à lista!');</script>";
+		}
+
+		if (isset($_GET['msg']) && $_GET['msg'] === 'enviado') {
+			echo "<script>alert('Todas as solicitações foram enviadas!');</script>";
+		}
 
 		$idMotorista = $_GET["idMotorista"] ?? $_POST["idMotorista"] ?? 0;
 
@@ -756,13 +896,14 @@
 
 		$campoJust[] = textarea("Justificativa","justificativa",$valJust,12,'maxlength=680 id="campoJustificativa"');
 
-		$botoes[] = "<button type='submit' class='btn btn-success'>Enviar Solicitação</button>";
+		$botoes[] = "<button type='submit' name='salvar_rascunho' id='btnRascunho' class='btn btn-primary'>Adicionar à Lista</button>";
+		$botoes[] = "<button type='submit' name='enviar_lote' class='btn btn-success'>Enviar Todas</button>";
 		$botoes[] = "<button type='button' id='btnUsarUltima' class='btn btn-info' style='display:none;' title='Uma solicitação já foi enviada para este dia. Clique para aplicar a mesma justificativa.'>Repetir Justificativa do Dia</button>";
 		$botoes[] = criarBotaoVoltar("espelho_ponto.php");
 
 		echo abre_form("Dados do Ajuste de Ponto");
 		echo "<input type='hidden' name='idMotorista' value='{$idMotorista}'>";
-		echo "<input type='hidden' name='enviar_solicitacao' value='1'>";
+		//echo "<input type='hidden' name='enviar_solicitacao' value='1'>";
 		echo "<input type='hidden' name='confirmado_existente' id='confirmado_existente' value='0'>";
 		echo linha_form($textFields);
 		echo linha_form($variableFields);
@@ -789,7 +930,13 @@
 
 		// Nova tabela de solicitações
 		echo "<hr style='margin-top:40px;'>";
-		echo "<h3>Solicitações de Ajuste</h3>";
+		echo "<hr style='margin-top:40px;'>";
+		echo "<h3>🟡 Lista de Envio (Pendentes)</h3>";
+		echo "<div>";
+		$idMotoristaAtual = $motorista['enti_nb_id'] ?? $idMotorista ?? 0;
+		echo gerarTabelaRascunhos($idMotoristaAtual);
+		echo "</div>";
+		echo "<h3 style='margin-top:30px;'>📄 Histórico de Solicitações</h3>";
 		echo "<div id='tabelaSolicitacoesContainer'>";
 		echo gerarTabelaSolicitacoes($motorista['enti_nb_id']);
 		echo "</div>";
@@ -884,19 +1031,26 @@
 
 			if (form) {
 				form.addEventListener('submit', function (event) {
-					if (!confirmadoEl || confirmadoEl.value === '1') return;
 
-					const data = campoData ? campoData.value : '';
-					const idMacro = campoMacro ? campoMacro.value : '';
-					if (!data || !idMotorista || !idMacro) return;
+						const btnName = document.activeElement ? document.activeElement.name : '';
 
-					event.preventDefault();
+						if (btnName === 'salvar_rascunho' || btnName === 'enviar_lote') {
+							return; // 🔥 deixa seguir direto pro PHP
+						}
 
-					fetch(window.location.pathname, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-						body: 'acao=verificarPontoExistentePorMacro&idMotorista=' + encodeURIComponent(idMotorista) + '&data=' + encodeURIComponent(data) + '&idMacro=' + encodeURIComponent(idMacro)
-					})
+						if (!confirmadoEl || confirmadoEl.value === '1') return;
+
+						const data = campoData ? campoData.value : '';
+						const idMacro = campoMacro ? campoMacro.value : '';
+						if (!data || !idMotorista || !idMacro) return;
+
+						event.preventDefault();
+
+						fetch(window.location.pathname, {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+							body: 'acao=verificarPontoExistentePorMacro&idMotorista=' + encodeURIComponent(idMotorista) + '&data=' + encodeURIComponent(data) + '&idMacro=' + encodeURIComponent(idMacro)
+						})
 					.then(function (response) { return response.json(); })
 					.then(function (payload) {
 						if (payload && payload.existe) {
