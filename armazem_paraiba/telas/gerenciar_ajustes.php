@@ -703,7 +703,7 @@
 			if ($ultimoMotorista !== $row['id_motorista']) {
 				$linhas[] = [
 					"<b style='color:#333;'>👤 {$row['enti_tx_nome']}</b>",
-					"", "", "", "", "", "", "", "", ""
+					"", "", "", "", "", "", "", "", "", ""
 				];
 				$ultimoMotorista = $row['id_motorista'];
 			}
@@ -741,6 +741,11 @@
 				$acoes = "<small style='color:$cor'><b>" . ($row['status'] == 'aceita' ? 'Aprovado' : 'Rejeitado') . " por {$row['superior_nome']}</b></small>";
 			}
 
+			$idInst = $row['id_instancia_documento'] ?? null;
+			$docBtn = !empty($idInst)
+				? "<a href='../documentos/processar_pdf.php?id={$idInst}' target='_blank' class='btn btn-xs btn-info' title='Visualizar / Baixar PDF'><span class='glyphicon glyphicon-print'></span> PDF</a>"
+				: "<span style='color:#999;'>-</span>";
+
 			$linhas[] = [
 				$checkbox,
 				date('d/m/Y H:i', strtotime($row['data_solicitacao'])),
@@ -751,11 +756,12 @@
 				"<span title='{$row['justificativa']}' style='cursor:help;'>" . (strlen($row['justificativa']) > 20 ? substr($row['justificativa'], 0, 20) . "..." : $row['justificativa']) . "</span>",
 				"<small><b>C:</b> {$row['cargo_usuario']}<br><b>S:</b> {$row['setor_usuario']}</small>",
 				$statusBadge,
-				$acoes
+				$acoes,
+				$docBtn
 			];
 		}
 
-		$cabecalho_tabela = ["<input type='checkbox' id='sel-tudo'>", "Solicitado", "Funcionário", "Data/Hora Ajuste", "Tipo", "Motivo", "Justificativa", "Solicitante", "Status", "Ações"];
+		$cabecalho_tabela = ["<input type='checkbox' id='sel-tudo'>", "Solicitado", "Funcionário", "Data/Hora Ajuste", "Tipo", "Motivo", "Justificativa", "Solicitante", "Status", "Ações", "Documento"];
 		echo "<h3>Solicitações de Ajuste</h3>";
 		$novaOrdem = ($ordem === 'ASC') ? 'DESC' : 'ASC';
 		$icone = ($ordem === 'ASC') ? '↑' : '↓';
