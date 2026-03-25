@@ -694,12 +694,37 @@
 					echo "<script>alert('Preencha todos os campos obrigatórios');</script>";
 					exit;
 				}
+				
+				$cargo = 'N/A';
+				$setor = 'N/A';
+				$subsetor = 'N/A';
 
+				$sql_entidade = "SELECT enti_tx_tipoOperacao, enti_setor_id, enti_subSetor_id 
+				FROM entidade 
+				WHERE enti_nb_id = (SELECT user_nb_entidade FROM user WHERE user_nb_id = {$_SESSION['user_nb_id']}) 
+				LIMIT 1";
+
+				$entidade = mysqli_fetch_assoc(query($sql_entidade));
+
+				if ($entidade && $entidade['enti_tx_tipoOperacao']) {
+					$op = mysqli_fetch_assoc(query("SELECT oper_tx_nome FROM operacao WHERE oper_nb_id = {$entidade['enti_tx_tipoOperacao']} LIMIT 1"));
+					if ($op) $cargo = $op['oper_tx_nome'];
+				}
+
+				if ($entidade && $entidade['enti_setor_id']) {
+					$gr = mysqli_fetch_assoc(query("SELECT grup_tx_nome FROM grupos_documentos WHERE grup_nb_id = {$entidade['enti_setor_id']} LIMIT 1"));
+					if ($gr) $setor = $gr['grup_tx_nome'];
+				}
+
+				if ($entidade && $entidade['enti_subSetor_id']) {
+					$sb = mysqli_fetch_assoc(query("SELECT sbgr_tx_nome FROM sbgrupos_documentos WHERE sbgr_nb_id = {$entidade['enti_subSetor_id']} LIMIT 1"));
+					if ($sb) $subsetor = $sb['sbgr_tx_nome'];
+				}
 				$sql = "INSERT INTO solicitacoes_ajuste 
-				(id_motorista, data_ajuste, hora_ajuste, id_macro, id_motivo, justificativa, status, data_solicitacao, id_usuario_solicitante) 
+				(id_motorista, data_ajuste, hora_ajuste, id_macro, id_motivo, justificativa, status, data_solicitacao, id_usuario_solicitante, cargo_usuario, setor_usuario, subsetor_usuario) 
 				VALUES 
-				('$idMotorista', '$data', '$hora', '$idMacro', '$motivo', '$justificativa', 'rascunho', NOW(), '{$_SESSION['user_nb_id']}')";
-
+				('$idMotorista', '$data', '$hora', '$idMacro', '$motivo', '$justificativa', 'rascunho', NOW(), '{$_SESSION['user_nb_id']}', '$cargo', '$setor', '$subsetor')";
+				
 				mysqli_query($GLOBALS['conn'], $sql);
 
 				header("Location: " . basename($_SERVER['PHP_SELF']) . "?msg=rascunho&idMotorista={$idMotorista}&data_p={$data}");

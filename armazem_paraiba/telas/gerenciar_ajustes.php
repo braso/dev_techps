@@ -611,7 +611,9 @@
 		$ordem = strtoupper($ordem) === 'DESC' ? 'DESC' : 'ASC';
 		$sql = "
 			SELECT 
-				s.*, 
+				s.*,
+				s.cargo_usuario,
+				s.setor_usuario, 
 				e.enti_tx_nome, 
 				e.enti_tx_matricula,
 				m.macr_tx_nome,
