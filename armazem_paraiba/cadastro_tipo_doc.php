@@ -148,7 +148,7 @@
 
 		$html = '
 		<div class="col-sm-'.$tamanho.' margin-bottom-5 campo-fit-content">
-			<label for="sub-setor">Sub-setor:</label>
+			<label>Sub-setor</label>
 			<select name="sub-setor" id="sub-setor" class="form-control input-sm campo-fit-content">
 				<option value="">Selecione um setor primeiro</option>
 			</select>
@@ -187,8 +187,8 @@
             combo_bd("!Setor*", "setor", $_POST["setor"], 2, "grupos_documentos"),
 			criaSectionSubSetor($sbsetor_documento, $_POST["sub-setor"], 2),
 			$campoStatus,
-            combo_radio("Passivel de vencimento", "vencimento", $_POST["vencimento"],2,["sim" => "Sim", "nao" => "Não"]),
-            combo_radio("Passivel de assinatura", "assinatura", $_POST["assinatura"],2,["sim" => "Sim", "nao" => "Não"]),
+            combo("Vencimento", "vencimento", $_POST["vencimento"], 2, ["" => "", "sim" => "Sim", "nao" => "Não"]),
+            combo("Assinatura", "assinatura", $_POST["assinatura"], 2, ["" => "", "sim" => "Sim", "nao" => "Não"]),
 		];
 
 		$botoes = [
@@ -248,6 +248,7 @@
             "SETOR" 		=> "grup_tx_nome",
 			"SUBSETOR" 		=> "sbgr_tx_nome",
             "STATUS" 	    => "tipo_tx_status",
+            "CAMPOS"        => "qtd_campos",
         ];
 
         $camposBusca = [
@@ -259,9 +260,11 @@
         ];
 
         $queryBase = 
-            "SELECT ".implode(", ", array_values($gridFields))." FROM tipos_documentos"
-            ." LEFT JOIN grupos_documentos ON grupos_documentos.grup_nb_id = tipos_documentos.tipo_nb_grupo"
-            ." LEFT JOIN sbgrupos_documentos ON tipos_documentos.tipo_nb_sbgrupo = sbgrupos_documentos.sbgr_nb_id"
+            "SELECT t.tipo_nb_id, t.tipo_tx_nome, g.grup_tx_nome, s.sbgr_tx_nome, t.tipo_tx_status,
+                   (SELECT COUNT(*) FROM camp_documento_modulo WHERE camp_nb_tipo_doc = t.tipo_nb_id AND camp_tx_status = 'ativo') as qtd_campos
+             FROM tipos_documentos t
+             LEFT JOIN grupos_documentos g ON g.grup_nb_id = t.tipo_nb_grupo
+             LEFT JOIN sbgrupos_documentos s ON t.tipo_nb_sbgrupo = s.sbgr_nb_id"
         ;
 
         $actions = criarIconesGrid(
@@ -272,13 +275,42 @@
         );
 
         $actions["functions"][1] .= 
-            "esconderInativar('glyphicon glyphicon-remove search-remove', 9);"
+            "esconderInativar('glyphicon glyphicon-remove search-remove', 4);"
         ;
 
         $gridFields["actions"] = $actions["tags"];
 
         $jsFunctions =
             "const funcoesInternas = function(){
+                // Identificar a coluna QTD (penúltima antes das ações) e a tabela
+                $('#result tbody tr').each(function(){
+                    var row = $(this);
+                    var cellQtd = row.find('td').eq(5); // Índice 5 é o QTD (0-indexed)
+                    var qtd = parseInt(cellQtd.text()) || 0;
+                    
+                    if(qtd > 0){
+                        // Se houver campos, destaca o ícone de Doc Layout (segundo ícone)
+                        var iconLayout = row.find('.glyphicon-th-list');
+                        iconLayout.css('color', '#337ab7').attr('title', 'Layout Configurado (' + qtd + ' campos)');
+                        
+                        // Badge padrão Bootstrap para o contador de campos
+                        if(iconLayout.parent().find('.badge-qtd').length == 0){
+                            iconLayout.after('<span class=\"badge badge-qtd\" style=\"background-color:#337ab7; font-size:9px; padding: 1px 4px; margin-left:-8px; vertical-align:top; border:1px solid white;\">' + qtd + '</span>');
+                        }
+                    }
+                    
+                    // Esconde a coluna CAMPOS que usamos apenas para a lógica
+                    cellQtd.hide();
+                });
+                // Esconde o cabeçalho da coluna CAMPOS
+                $('#result thead th').eq(5).hide();
+                // Adiciona cabeçalhos para as colunas de ação (remove antes pra evitar duplicata)
+                var headerRow = $('#result thead tr');
+                headerRow.find('.th-action-col').remove();
+                headerRow.append('<th class=\"th-action-col table-col-head\" style=\"text-align:center;\">VISUALIZAR</th>');
+                headerRow.append('<th class=\"th-action-col table-col-head\" style=\"text-align:center;\">DOC.LAYOUT</th>');
+                headerRow.append('<th class=\"th-action-col table-col-head\" style=\"text-align:center;\">EXCLUIR</th>');
+
                 ".implode(" ", $actions["functions"])."
             }"
         ;
