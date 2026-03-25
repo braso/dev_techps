@@ -699,6 +699,7 @@
 		$linhas = [];
 		$ultimoMotorista = null;
 		$linhas = [];
+		$pdfjaExibido = [];
 		foreach ($dados as $row) {
 			if ($ultimoMotorista !== $row['id_motorista']) {
 				$linhas[] = [
@@ -741,10 +742,22 @@
 				$acoes = "<small style='color:$cor'><b>" . ($row['status'] == 'aceita' ? 'Aprovado' : 'Rejeitado') . " por {$row['superior_nome']}</b></small>";
 			}
 
+			$chavepdf = $row['id_motorista']. '-'. $row['data_ajuste'];
+			if (!isset($pdfjaExibido[$chavepdf])) {
+				$pdfjaExibido[$chavepdf] = true;
+		
 			$idInst = $row['id_instancia_documento'] ?? null;
 			$docBtn = !empty($idInst)
 				? "<a href='../documentos/processar_pdf.php?id={$idInst}' target='_blank' class='btn btn-xs btn-info' title='Visualizar / Baixar PDF'><span class='glyphicon glyphicon-print'></span> PDF</a>"
 				: "<span style='color:#999;'>-</span>";
+			} else {
+				$docBtn = "-"; 
+			}
+
+			//$idInst = $row['id_instancia_documento'] ?? null;
+			//$docBtn = !empty($idInst)
+			//	? "<a href='../documentos/processar_pdf.php?id={$idInst}' target='_blank' class='btn btn-xs btn-info' title='Visualizar / Baixar PDF'><span class='glyphicon glyphicon-print'></span> PDF</a>"
+			//	: "<span style='color:#999;'>-</span>";
 
 			$linhas[] = [
 				$checkbox,
