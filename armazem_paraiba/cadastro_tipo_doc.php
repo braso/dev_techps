@@ -289,14 +289,31 @@
                     var qtd = parseInt(cellQtd.text()) || 0;
                     
                     if(qtd > 0){
-                        // Se houver campos, destaca o ícone de Doc Layout (segundo ícone)
+                        // Se houver campos, muda o ícone e destaca em azul
                         var iconLayout = row.find('.glyphicon-th-list');
-                        iconLayout.css('color', '#337ab7').attr('title', 'Layout Configurado (' + qtd + ' campos)');
-                        
-                        // Badge padrão Bootstrap para o contador de campos
-                        if(iconLayout.parent().find('.badge-qtd').length == 0){
-                            iconLayout.after('<span class=\"badge badge-qtd\" style=\"background-color:#337ab7; font-size:9px; padding: 1px 4px; margin-left:-8px; vertical-align:top; border:1px solid white;\">' + qtd + '</span>');
-                        }
+                        iconLayout
+                            .removeClass('glyphicon-th-list')
+                            .addClass('glyphicon-ok-circle')
+                            .css('color', '#337ab7')
+                            .attr('title', 'Layout configurado (' + qtd + ' campos)');
+                        // Rebinda o clique pois a classe mudou
+                        iconLayout.off('click').on('click', function(event){
+                            var f = document.createElement('form');
+                            f.setAttribute('method', 'post');
+                            f.setAttribute('action', 'documentos/configurar_layout.php');
+                            var inp = document.createElement('input');
+                            inp.setAttribute('name', 'id');
+                            var r = $(event.target).closest('tr');
+                            var rid = r.attr('data-row-id') || r.children().first().text();
+                            inp.setAttribute('value', rid);
+                            f.appendChild(inp);
+                            var acaoInp = document.createElement('input');
+                            acaoInp.setAttribute('name', 'acao');
+                            acaoInp.setAttribute('value', 'index');
+                            f.appendChild(acaoInp);
+                            document.body.appendChild(f);
+                            f.submit();
+                        });
                     }
                     
                     // Esconde a coluna CAMPOS que usamos apenas para a lógica
