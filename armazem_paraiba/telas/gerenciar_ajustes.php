@@ -1,5 +1,6 @@
 <?php
 	include "../funcoes_ponto.php";
+	@mysqli_query($GLOBALS['conn'], "ALTER TABLE solicitacoes_ajuste ADD COLUMN justificativa_gestor TEXT DEFAULT NULL");
 
 	function buscarSubsetores(){
 		$setorRaw = strval($_POST['setor'] ?? '');
@@ -297,7 +298,8 @@
 
 			inserir("ponto", array_keys($newPonto), array_values($newPonto));
 
-			query("UPDATE solicitacoes_ajuste SET status = 'aceita', data_decisao = NOW(), id_superior = {$_SESSION['user_nb_id']} WHERE id = '$idSolicitacao'");
+			$justificativaGestor = mysqli_real_escape_string($GLOBALS['conn'], $_POST['justificativa_gestor'] ?? '');
+			query("UPDATE solicitacoes_ajuste SET status = 'aceita', data_decisao = NOW(), id_superior = {$_SESSION['user_nb_id']}, justificativa_gestor = '{$justificativaGestor}' WHERE id = '$idSolicitacao'");
 
 			if(!$emLote){
 				$params = [
@@ -340,7 +342,8 @@
 			if(!$emLote){ index(); exit; }
 			return false;
 		}
-		query("UPDATE solicitacoes_ajuste SET status = 'nao_aceita', data_decisao = NOW(), id_superior = {$_SESSION['user_nb_id']} WHERE id = '$idSolicitacao'");
+		$justificativaGestor = mysqli_real_escape_string($GLOBALS['conn'], $_POST['justificativa_gestor'] ?? '');
+		query("UPDATE solicitacoes_ajuste SET status = 'nao_aceita', data_decisao = NOW(), id_superior = {$_SESSION['user_nb_id']}, justificativa_gestor = '{$justificativaGestor}' WHERE id = '$idSolicitacao'");
 		if(!$emLote){
 			$params = [
 				"msg_status" => "Solicitação rejeitada com sucesso.",
@@ -706,7 +709,7 @@
 			if ($ultimoMotorista !== $row['id_motorista']) {
 				$linhas[] = [
 					"<b style='color:#333;'>👤 {$row['enti_tx_nome']}</b>",
-					"", "", "", "", "", "", "", "", "", ""
+					"", "", "", "", "", "", "", "", "", "", ""
 				];
 				$ultimoMotorista = $row['id_motorista'];
 			}
@@ -735,13 +738,14 @@
 			if ($row['status'] == 'enviada' || $row['status'] == 'visualizada') {
 				$acoes = "
 					<div class='btn-group'>
-						<button type='button' class='btn btn-xs btn-success' title='Aprovar' onclick=\"aprovarSolicitacao('{$row['id']}')\"><i class='fa fa-check'></i></button>
-						<button type='button' class='btn btn-xs btn-danger' title='Rejeitar' onclick=\"if(confirm('Rejeitar este ajuste?')) { document.form_acao.id_solicitacao.value='{$row['id']}'; document.form_acao.acao.value='rejeitarSolicitacao'; document.form_acao.submit(); }\"><i class='fa fa-times'></i></button>
+						<button type='button' class='btn btn-xs btn-success' title='Aprovar' onclick=\"abrirModalJustificativa('aprovar', '{$row['id']}')\"><i class='fa fa-check'></i></button>
+						<button type='button' class='btn btn-xs btn-danger' title='Rejeitar' onclick=\"abrirModalJustificativa('rejeitar', '{$row['id']}')\"><i class='fa fa-times'></i></button>
 					</div>
 				";
 			} else {
 				$cor = ($row['status'] == 'aceita' ? 'green' : 'red');
-				$acoes = "<small style='color:$cor'><b>" . ($row['status'] == 'aceita' ? 'Aprovado' : 'Rejeitado') . " por {$row['superior_nome']}</b></small>";
+				$titleObs = !empty($row['justificativa_gestor']) ? "title='Justificativa Gestor: " . htmlspecialchars($row['justificativa_gestor'], ENT_QUOTES) . "' style='cursor:help;'" : "";
+				$acoes = "<small style='color:$cor' {$titleObs}><b>" . ($row['status'] == 'aceita' ? 'Aprovado' : 'Rejeitado') . " por {$row['superior_nome']}</b></small>";
 			}
 
 			$chavepdf = $row['id_motorista']. '-'. $row['data_ajuste'];
@@ -772,11 +776,12 @@
 				"<small><b>C:</b> {$row['cargo_usuario']}<br><b>S:</b> {$row['setor_usuario']}</small>",
 				$statusBadge,
 				$acoes,
-				$docBtn
+				$docBtn,
+				$row['justificativa_gestor']?? '-'
 			];
 		}
 
-		$cabecalho_tabela = ["<input type='checkbox' id='sel-tudo'>", "Solicitado", "Funcionário", "Data/Hora Ajuste", "Tipo", "Motivo", "Justificativa", "Solicitante", "Status", "Ações", "Documento"];
+		$cabecalho_tabela = ["<input type='checkbox' id='sel-tudo'>", "Solicitado", "Funcionário", "Data/Hora Ajuste", "Tipo", "Motivo", "Justificativa", "Solicitante", "Status", "Ações", "Documento","Justificativa"];
 		echo "<h3>Solicitações de Ajuste</h3>";
 		$novaOrdem = ($ordem === 'ASC') ? 'DESC' : 'ASC';
 		$icone = ($ordem === 'ASC') ? '↑' : '↓';
@@ -807,13 +812,34 @@
 			<input type="hidden" name="acao" value="">
 			<input type="hidden" name="id_solicitacao" value="">
 			<input type="hidden" name="permitir_substituir" value="0">
+			<input type="hidden" name="justificativa_gestor" value="">
 		</form>
 		<form name="form_lote" method="POST" style="display:none;">
 			<input type="hidden" name="acao" value="processarEmLote">
 			<input type="hidden" name="acao_lote" value="">
 			<input type="hidden" name="ids_selecionados" value="">
 			<input type="hidden" name="permitir_substituir" value="0">
+			<input type="hidden" name="justificativa_gestor" value="">
 		</form>
+
+		<div id="modalJustificativa" class="modal fade" tabindex="-1" role="dialog">
+			<div class="modal-dialog" role="document">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+						<h4 class="modal-title" id="modalTitJustificativa">Justificativa do Gestor</h4>
+					</div>
+					<div class="modal-body">
+						<p id="modalMsgJustificativa"></p>
+						<textarea id="textoJustificativa" class="form-control" rows="3" placeholder="Insira uma justificativa (opcional)"></textarea>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+						<button type="button" class="btn btn-primary" onclick="confirmarAcaoModal()">Confirmar</button>
+					</div>
+				</div>
+			</div>
+		</div>
 
 		<script>
 			(function(){
@@ -827,76 +853,124 @@
 				window.__msCloseAll = closeAllMultiSelect;
 			})();
 
-			function aprovarSolicitacao(idSolicitacao){
-				if(!confirm('Aprovar este ajuste?')) return;
+			let acaoAtualModal = null;
 
-				fetch('<?= basename($_SERVER['PHP_SELF']) ?>', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-					body: 'acao=verificarPontoExistenteSolicitacao&id_solicitacao=' + encodeURIComponent(idSolicitacao)
-				})
-				.then(r => r.json())
-				.then(payload => {
-					let permitir = '0';
-					if(payload && payload.existe){
-						const tipo = payload.tipo ? payload.tipo : 'este tipo de registro';
-						const hora = payload.hora ? payload.hora : '';
-						const msg = 'Já existe ' + tipo + (hora ? (' às ' + hora) : '') + ' registrado neste dia.\n\nDeseja substituir?';
-						if(!confirm(msg)) return;
-						permitir = '1';
+			function abrirModalJustificativa(tipo, idOuAcaoLote) {
+				document.getElementById('textoJustificativa').value = '';
+				acaoAtualModal = { tipo: tipo };
+				
+				if (tipo === 'aprovar') {
+					acaoAtualModal.id = idOuAcaoLote;
+					document.getElementById('modalTitJustificativa').innerText = 'Aprovar Solicitação';
+					document.getElementById('modalMsgJustificativa').innerText = 'Deseja aprovar este ajuste?';
+				} else if (tipo === 'rejeitar') {
+					acaoAtualModal.id = idOuAcaoLote;
+					document.getElementById('modalTitJustificativa').innerText = 'Rejeitar Solicitação';
+					document.getElementById('modalMsgJustificativa').innerText = 'Deseja rejeitar este ajuste?';
+				} else if (tipo === 'lote') {
+					acaoAtualModal.acaoLote = idOuAcaoLote;
+					const msg = idOuAcaoLote === 'aceitarLote' ? 'Aprovar todos os selecionados?' : 'Rejeitar todos os selecionados?';
+					document.getElementById('modalTitJustificativa').innerText = 'Processar em Lote';
+					document.getElementById('modalMsgJustificativa').innerText = msg;
+				}
+				
+				$('#modalJustificativa').modal('show');
+			}
+
+			function confirmarAcaoModal() {
+				const justificativa = document.getElementById('textoJustificativa').value;
+				
+				if (acaoAtualModal.tipo === 'aprovar') {
+					const idSolicitacao = acaoAtualModal.id;
+					$('#modalJustificativa').modal('hide');
+					
+					fetch('<?= basename($_SERVER['PHP_SELF']) ?>', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+						body: 'acao=verificarPontoExistenteSolicitacao&id_solicitacao=' + encodeURIComponent(idSolicitacao)
+					})
+					.then(r => r.json())
+					.then(payload => {
+						let permitir = '0';
+						if(payload && payload.existe){
+							const tipo = payload.tipo ? payload.tipo : 'este tipo de registro';
+							const hora = payload.hora ? payload.hora : '';
+							const msg = 'Já existe ' + tipo + (hora ? (' às ' + hora) : '') + ' registrado neste dia.\n\nDeseja substituir?';
+							if(!confirm(msg)) return;
+							permitir = '1';
+						}
+						document.form_acao.id_solicitacao.value = idSolicitacao;
+						document.form_acao.acao.value = 'aceitarSolicitacao';
+						document.form_acao.permitir_substituir.value = permitir;
+						document.form_acao.justificativa_gestor.value = justificativa;
+						document.form_acao.submit();
+					})
+					.catch(() => {
+						document.form_acao.id_solicitacao.value = idSolicitacao;
+						document.form_acao.acao.value = 'aceitarSolicitacao';
+						document.form_acao.permitir_substituir.value = '0';
+						document.form_acao.justificativa_gestor.value = justificativa;
+						document.form_acao.submit();
+					});
+
+				} else if (acaoAtualModal.tipo === 'rejeitar') {
+					const idSolicitacao = acaoAtualModal.id;
+					$('#modalJustificativa').modal('hide');
+					
+					document.form_acao.id_solicitacao.value = idSolicitacao;
+					document.form_acao.acao.value = 'rejeitarSolicitacao';
+					document.form_acao.justificativa_gestor.value = justificativa;
+					document.form_acao.submit();
+
+				} else if (acaoAtualModal.tipo === 'lote') {
+					const acaoLote = acaoAtualModal.acaoLote;
+					$('#modalJustificativa').modal('hide');
+					
+					const selecionados = Array.from(document.querySelectorAll('.sel-lote:checked')).map(cb => cb.value);
+					
+					if (acaoLote === 'aceitarLote') {
+						fetch('<?= basename($_SERVER['PHP_SELF']) ?>', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+							body: 'acao=verificarPontoExistenteLote&ids=' + encodeURIComponent(selecionados.join(','))
+						})
+						.then(r => r.json())
+						.then(payload => {
+							let permitir = '0';
+							if(payload && payload.existe){
+								const msg = 'Existem ' + payload.qtd + ' registros que já possuem ponto lançado.\n\nDeseja substituir para todos os selecionados?';
+								if(!confirm(msg)) return;
+								permitir = '1';
+							}
+							document.form_lote.ids_selecionados.value = selecionados.join(',');
+							document.form_lote.acao_lote.value = acaoLote;
+							document.form_lote.permitir_substituir.value = permitir;
+							document.form_lote.justificativa_gestor.value = justificativa;
+							document.form_lote.submit();
+						})
+						.catch(() => {
+							document.form_lote.ids_selecionados.value = selecionados.join(',');
+							document.form_lote.acao_lote.value = acaoLote;
+							document.form_lote.permitir_substituir.value = '0';
+							document.form_lote.justificativa_gestor.value = justificativa;
+							document.form_lote.submit();
+						});
+						return;
 					}
-					document.form_acao.id_solicitacao.value = idSolicitacao;
-					document.form_acao.acao.value = 'aceitarSolicitacao';
-					document.form_acao.permitir_substituir.value = permitir;
-					document.form_acao.submit();
-				})
-				.catch(() => {
-					document.form_acao.id_solicitacao.value = idSolicitacao;
-					document.form_acao.acao.value = 'aceitarSolicitacao';
-					document.form_acao.permitir_substituir.value = '0';
-					document.form_acao.submit();
-				});
+
+					document.form_lote.ids_selecionados.value = selecionados.join(',');
+					document.form_lote.acao_lote.value = acaoLote;
+					document.form_lote.permitir_substituir.value = '0';
+					document.form_lote.justificativa_gestor.value = justificativa;
+					document.form_lote.submit();
+				}
 			}
 
 			function processarLote(acaoLote) {
 				const selecionados = Array.from(document.querySelectorAll('.sel-lote:checked')).map(cb => cb.value);
 				if (selecionados.length === 0) return;
 				
-				const confirmMsg = acaoLote === 'aceitarLote' ? 'Aprovar todos os selecionados?' : 'Rejeitar todos os selecionados?';
-				if (!confirm(confirmMsg)) return;
-
-				if (acaoLote === 'aceitarLote') {
-					fetch('<?= basename($_SERVER['PHP_SELF']) ?>', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-						body: 'acao=verificarPontoExistenteLote&ids=' + encodeURIComponent(selecionados.join(','))
-					})
-					.then(r => r.json())
-					.then(payload => {
-						let permitir = '0';
-						if(payload && payload.existe){
-							const msg = 'Existem ' + payload.qtd + ' registros que já possuem ponto lançado.\n\nDeseja substituir para todos os selecionados?';
-							if(!confirm(msg)) return;
-							permitir = '1';
-						}
-						document.form_lote.ids_selecionados.value = selecionados.join(',');
-						document.form_lote.acao_lote.value = acaoLote;
-						document.form_lote.permitir_substituir.value = permitir;
-						document.form_lote.submit();
-					})
-					.catch(() => {
-						document.form_lote.ids_selecionados.value = selecionados.join(',');
-						document.form_lote.acao_lote.value = acaoLote;
-						document.form_lote.permitir_substituir.value = '0';
-						document.form_lote.submit();
-					});
-					return;
-				}
-
-				document.form_lote.ids_selecionados.value = selecionados.join(',');
-				document.form_lote.acao_lote.value = acaoLote;
-				document.form_lote.permitir_substituir.value = '0';
-				document.form_lote.submit();
+				abrirModalJustificativa('lote', acaoLote);
 			}
 
 			document.addEventListener('DOMContentLoaded', function() {
@@ -941,22 +1015,22 @@
 								e.preventDefault();
 								e.stopPropagation();
 
-								// 1. Desmarca todos os checkboxes
+								//  Desmarca todos os checkboxes
 								const checkboxes = menu.querySelectorAll('input[type="checkbox"]');
 								checkboxes.forEach(cb => {
 									cb.checked = false;
 								});
 
-								// 2. Limpa valor
+								//  Limpa valor
 								hidden.value = '';
 
-								// 3. Sincroniza (ESSENCIAL)
+								//  Sincroniza 
 								sync();
 
-								// 4. Fecha o dropdown (opcional, mas melhor UX)
+								// Fecha o dropdown
 								menu.style.display = 'none';
 
-								// 5. Se quiser aplicar automaticamente:
+								
 								root.closest('form').submit();
 							});
 						}

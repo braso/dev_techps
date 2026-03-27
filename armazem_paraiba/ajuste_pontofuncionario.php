@@ -270,7 +270,8 @@
 				sa.id_motivo,
 				sa.justificativa,
 				sa.status,
-				sa.data_solicitacao
+				sa.data_solicitacao,
+				sa.justificativa_gestor
 			FROM solicitacoes_ajuste sa
 			WHERE sa.id_motorista = {$idMotorista}
 			ORDER BY sa.data_solicitacao DESC
@@ -322,7 +323,7 @@
 				substr($row['justificativa'] ?? '', 0, 50) . (strlen($row['justificativa'] ?? '') > 50 ? '...' : ''),
 				$statusBadge,
 				date('d/m/Y H:i', strtotime($row['data_solicitacao'])),
-				$acoes
+				$row['justificativa_gestor'] ?? '-'
 			];
 		}
 
@@ -334,7 +335,7 @@
 			"JUSTIFICATIVA",
 			"STATUS",
 			"DATA DA SOLICITAÇÃO",
-			"AÇÕES"
+			"JUSTIFICATIVA GESTOR"
 		];
 
 		return montarTabelaPonto($cabecalho, $linhas);
