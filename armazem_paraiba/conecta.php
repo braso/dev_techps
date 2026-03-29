@@ -85,6 +85,49 @@
     // Força a atualização do ENUM da tabela rfids para incluir o 'excluido' (Não dá erro se já existir)
     mysqli_query($conn, "ALTER TABLE rfids MODIFY COLUMN rfids_tx_status ENUM('ativo', 'disponivel', 'bloqueado', 'perdido', 'quebrado', 'excluido') DEFAULT 'disponivel';");
 
+	mysqli_query($conn, "CREATE TABLE IF NOT EXISTS solicitacoes_ajuste (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		id_motorista INT NOT NULL,
+		data_ajuste DATE NOT NULL,
+		hora_ajuste TIME NOT NULL,
+		id_macro INT NOT NULL,
+		id_motivo INT NOT NULL,
+		justificativa TEXT NULL,
+		status VARCHAR(20) DEFAULT 'rascunho',
+		data_solicitacao DATETIME NOT NULL,
+		id_usuario_solicitante INT NOT NULL,
+		cargo_usuario VARCHAR(100) NULL,
+		setor_usuario VARCHAR(100) NULL,
+		subsetor_usuario VARCHAR(100) NULL,
+		data_decisao DATETIME NULL,
+		id_superior INT NULL,
+		id_instancia_documento INT NULL,
+		justificativa_gestor TEXT NULL,
+		data_visualizacao DATETIME NULL
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+
+	$checkSolicIdInst = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_ajuste LIKE 'id_instancia_documento'");
+	if ($checkSolicIdInst && mysqli_num_rows($checkSolicIdInst) == 0) {
+		mysqli_query($conn, "ALTER TABLE solicitacoes_ajuste ADD COLUMN id_instancia_documento INT NULL AFTER data_decisao");
+	}
+
+	$checkSolicJustGest = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_ajuste LIKE 'justificativa_gestor'");
+	if ($checkSolicJustGest && mysqli_num_rows($checkSolicJustGest) == 0) {
+		mysqli_query($conn, "ALTER TABLE solicitacoes_ajuste ADD COLUMN justificativa_gestor TEXT DEFAULT NULL AFTER id_instancia_documento");
+	}
+
+	$checkInstDocTable = mysqli_query($conn, "SHOW TABLES LIKE 'inst_documento_modulo'");
+	if ($checkInstDocTable && mysqli_num_rows($checkInstDocTable) > 0) {
+		$checkInstEnt = mysqli_query($conn, "SHOW COLUMNS FROM inst_documento_modulo LIKE 'inst_nb_entidade'");
+		if ($checkInstEnt && mysqli_num_rows($checkInstEnt) == 0) {
+			mysqli_query($conn, "ALTER TABLE inst_documento_modulo ADD COLUMN inst_nb_entidade INT NULL AFTER inst_nb_user");
+		}
+		$checkInstDataRef = mysqli_query($conn, "SHOW COLUMNS FROM inst_documento_modulo LIKE 'inst_tx_data_referencia'");
+		if ($checkInstDataRef && mysqli_num_rows($checkInstDataRef) == 0) {
+			mysqli_query($conn, "ALTER TABLE inst_documento_modulo ADD COLUMN inst_tx_data_referencia DATE NULL AFTER inst_nb_entidade");
+		}
+	}
+
 
     // =========================================================================
     // MIGRAÇÃO DE COLUNAS LEGADAS (ATUALIZA CLIENTES ANTIGOS AUTOMATICAMENTE)

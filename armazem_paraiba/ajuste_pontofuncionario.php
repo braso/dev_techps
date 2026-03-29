@@ -20,10 +20,36 @@
 
 	// Função para criar/atualizar tabelas se não existir
 	function criarTabelaSolicitacoes() {
+		query("CREATE TABLE IF NOT EXISTS solicitacoes_ajuste (
+			id INT AUTO_INCREMENT PRIMARY KEY,
+			id_motorista INT NOT NULL,
+			data_ajuste DATE NOT NULL,
+			hora_ajuste TIME NOT NULL,
+			id_macro INT NOT NULL,
+			id_motivo INT NOT NULL,
+			justificativa TEXT NULL,
+			status VARCHAR(20) DEFAULT 'rascunho',
+			data_solicitacao DATETIME NOT NULL,
+			id_usuario_solicitante INT NOT NULL,
+			cargo_usuario VARCHAR(100) NULL,
+			setor_usuario VARCHAR(100) NULL,
+			subsetor_usuario VARCHAR(100) NULL,
+			data_decisao DATETIME NULL,
+			id_superior INT NULL,
+			justificativa_gestor TEXT NULL,
+			data_visualizacao DATETIME NULL,
+			id_instancia_documento INT NULL
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
 		// Adicionar colunas em solicitacoes_ajuste se necessário
 		$check = query("SHOW COLUMNS FROM solicitacoes_ajuste LIKE 'id_instancia_documento'");
 		if ($check instanceof mysqli_result && mysqli_num_rows($check) == 0) {
 			query("ALTER TABLE solicitacoes_ajuste ADD COLUMN id_instancia_documento INT NULL AFTER data_decisao");
+		}
+
+		$check = query("SHOW COLUMNS FROM solicitacoes_ajuste LIKE 'justificativa_gestor'");
+		if ($check instanceof mysqli_result && mysqli_num_rows($check) == 0) {
+			query("ALTER TABLE solicitacoes_ajuste ADD COLUMN justificativa_gestor TEXT DEFAULT NULL AFTER id_instancia_documento");
 		}
 
 		// Atualizar inst_documento_modulo
