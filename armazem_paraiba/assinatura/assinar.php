@@ -93,6 +93,7 @@ function ensureAssinaturaTables(mysqli $conn): void {
             tipo_documento_id INT NULL,
             validar_icp ENUM('sim','nao') NOT NULL DEFAULT 'nao',
             data_solicitacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+            expires_at DATETIME NULL,
             status VARCHAR(50) DEFAULT 'pendente',
             id_documento VARCHAR(100),
             data_assinatura DATETIME NULL,
@@ -105,6 +106,7 @@ function ensureAssinaturaTables(mysqli $conn): void {
             "nome_arquivo_original" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN nome_arquivo_original VARCHAR(255)",
             "tipo_documento_id" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN tipo_documento_id INT NULL",
             "validar_icp" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN validar_icp ENUM('sim','nao') NOT NULL DEFAULT 'nao'",
+            "expires_at" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN expires_at DATETIME NULL",
             "data_assinatura" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN data_assinatura DATETIME NULL",
             "status_final" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN status_final VARCHAR(50) DEFAULT 'pendente'"
         ];
@@ -114,6 +116,16 @@ function ensureAssinaturaTables(mysqli $conn): void {
                 mysqli_query($conn, $ddl);
             }
         }
+
+        $hasCreatedAt = false;
+        $chkCreatedAt = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'created_at'");
+        if($chkCreatedAt && mysqli_num_rows($chkCreatedAt) > 0){
+            $hasCreatedAt = true;
+        }
+        $baseExpr = $hasCreatedAt
+            ? "COALESCE(NULLIF(created_at,'0000-00-00 00:00:00'), NULLIF(data_solicitacao,'0000-00-00 00:00:00'))"
+            : "NULLIF(data_solicitacao,'0000-00-00 00:00:00')";
+        @mysqli_query($conn, "UPDATE solicitacoes_assinatura SET expires_at = DATE_ADD({$baseExpr}, INTERVAL 24 HOUR) WHERE (expires_at IS NULL OR expires_at = '0000-00-00 00:00:00') AND {$baseExpr} IS NOT NULL");
     }
 
     $resA = mysqli_query($conn, "SHOW TABLES LIKE 'assinantes'");
@@ -203,6 +215,11 @@ function normalizarCpf(string $cpf): string {
     return preg_replace('/\D+/', '', $cpf) ?? "";
 }
 
+function normalizarRg(string $rg): string {
+    $rg = strtoupper(trim($rg));
+    return preg_replace('/[^0-9A-Z]+/', '', $rg) ?? "";
+}
+
 function parseDataHora(string $value): string {
     $v = trim($value);
     if ($v === "") {
@@ -288,7 +305,7 @@ $dataHora = parseDataHora(strval($_POST["data_hora"] ?? ""));
 
 $arquivo = $_FILES["arquivo_assinado"] ?? null;
 
-$sql = "SELECT a.*, s.id as solicitacao_id, s.email as email_solicitacao, s.nome_arquivo_original, s.tipo_documento_id, s.validar_icp, s.caminho_arquivo, s.id_documento as doc_id_global
+$sql = "SELECT a.*, s.id as solicitacao_id, s.email as email_solicitacao, s.nome_arquivo_original, s.tipo_documento_id, s.validar_icp, s.caminho_arquivo, s.id_documento as doc_id_global, s.expires_at
         FROM assinantes a
         JOIN solicitacoes_assinatura s ON a.id_solicitacao = s.id
         WHERE a.token = ?
@@ -346,6 +363,22 @@ if ($jaAssinado) {
     $caminhoRel = trim(strval($row["caminho_arquivo"] ?? ""));
 }
 
+$expiresRaw = trim(strval($row["expires_at"] ?? ""));
+if (!$jaAssinado && $expiresRaw !== "" && $expiresRaw !== "0000-00-00 00:00:00") {
+    try {
+        $exp = new DateTimeImmutable($expiresRaw, new DateTimeZone("UTC"));
+        $now = new DateTimeImmutable("now", new DateTimeZone("UTC"));
+        if ($now > $exp) {
+            jsonError("Link expirado. Solicite um novo envio.", 410);
+        }
+    } catch (Throwable $e) {
+        $expTs = strtotime($expiresRaw . " UTC");
+        if ($expTs && time() > $expTs) {
+            jsonError("Link expirado. Solicite um novo envio.", 410);
+        }
+    }
+}
+
 $ordem = intval($row["ordem"] ?? 1);
 if ($ordem > 1) {
     $ordemAnterior = $ordem - 1;
@@ -363,6 +396,47 @@ if ($ordem > 1) {
 }
 
 if (!$jaAssinado) {
+    $entiId = intval($row["enti_nb_id"] ?? 0);
+    $cpfCad = "";
+    $rgCad = "";
+    if ($entiId > 0) {
+        $stmtCad = mysqli_prepare($conn, "SELECT enti_tx_cpf, enti_tx_rg FROM entidade WHERE enti_nb_id = ? LIMIT 1");
+        if ($stmtCad) {
+            mysqli_stmt_bind_param($stmtCad, "i", $entiId);
+            mysqli_stmt_execute($stmtCad);
+            $cad = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtCad));
+            mysqli_stmt_close($stmtCad);
+            if (is_array($cad)) {
+                $cpfCad = trim(strval($cad["enti_tx_cpf"] ?? ""));
+                $rgCad = trim(strval($cad["enti_tx_rg"] ?? ""));
+            }
+        }
+    } elseif ($emailSolicitacao !== "" && filter_var($emailSolicitacao, FILTER_VALIDATE_EMAIL)) {
+        $em = strtolower(trim($emailSolicitacao));
+        $stmtCad = mysqli_prepare($conn, "SELECT enti_tx_cpf, enti_tx_rg FROM entidade WHERE LOWER(TRIM(enti_tx_email)) = ? LIMIT 1");
+        if ($stmtCad) {
+            mysqli_stmt_bind_param($stmtCad, "s", $em);
+            mysqli_stmt_execute($stmtCad);
+            $cad = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtCad));
+            mysqli_stmt_close($stmtCad);
+            if (is_array($cad)) {
+                $cpfCad = trim(strval($cad["enti_tx_cpf"] ?? ""));
+                $rgCad = trim(strval($cad["enti_tx_rg"] ?? ""));
+            }
+        }
+    }
+
+    $cpfDigitsCad = normalizarCpf($cpfCad);
+    $rgNormCad = normalizarRg($rgCad);
+    if (strlen($cpfDigitsCad) !== 11 || $rgNormCad === "") {
+        jsonError("Não foi possível validar CPF e RG com o cadastro do funcionário. Solicite ao RH/Administrativo atualizar CPF e RG antes de assinar.", 422);
+    }
+    $cpfDigitsInput = normalizarCpf($cpf);
+    $rgNormInput = normalizarRg($rg);
+    if ($cpfDigitsInput !== $cpfDigitsCad || $rgNormInput !== $rgNormCad) {
+        jsonError("CPF e RG informados não conferem com o cadastro. Revise os dados e tente novamente.", 422);
+    }
+
     if (!$arquivo || !is_array($arquivo) || ($arquivo["error"] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
         jsonError("Arquivo assinado não enviado.");
     }

@@ -35,6 +35,8 @@ function ensureAssinaturaTables($conn): void {
         $sqlCreateTable = "CREATE TABLE IF NOT EXISTS solicitacoes_assinatura (
             id INT AUTO_INCREMENT PRIMARY KEY,
             token VARCHAR(64) NOT NULL UNIQUE,
+            modo_envio VARCHAR(30) NULL,
+            grupo_envio VARCHAR(64) NULL,
             email VARCHAR(255) NOT NULL,
             nome VARCHAR(255),
             caminho_arquivo VARCHAR(255) NOT NULL,
@@ -42,6 +44,7 @@ function ensureAssinaturaTables($conn): void {
             tipo_documento_id INT NULL,
             validar_icp ENUM('sim','nao') NOT NULL DEFAULT 'nao',
             data_solicitacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+            expires_at DATETIME NULL,
             status ENUM('pendente', 'em_progresso', 'concluido', 'assinado') DEFAULT 'pendente',
             id_documento VARCHAR(100),
             data_assinatura DATETIME NULL
@@ -64,6 +67,31 @@ function ensureAssinaturaTables($conn): void {
         if(mysqli_num_rows($checkIcp) == 0){
             mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN validar_icp ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
         }
+
+        $checkModo = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'modo_envio'");
+        if($checkModo && mysqli_num_rows($checkModo) == 0){
+            mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN modo_envio VARCHAR(30) NULL");
+        }
+
+        $checkGrupo = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'grupo_envio'");
+        if($checkGrupo && mysqli_num_rows($checkGrupo) == 0){
+            mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN grupo_envio VARCHAR(64) NULL");
+        }
+
+        $checkExp = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'expires_at'");
+        if($checkExp && mysqli_num_rows($checkExp) == 0){
+            mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN expires_at DATETIME NULL");
+        }
+
+        $hasCreatedAt = false;
+        $chkCreatedAt = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'created_at'");
+        if($chkCreatedAt && mysqli_num_rows($chkCreatedAt) > 0){
+            $hasCreatedAt = true;
+        }
+        $baseExpr = $hasCreatedAt
+            ? "COALESCE(NULLIF(created_at,'0000-00-00 00:00:00'), NULLIF(data_solicitacao,'0000-00-00 00:00:00'))"
+            : "NULLIF(data_solicitacao,'0000-00-00 00:00:00')";
+        @mysqli_query($conn, "UPDATE solicitacoes_assinatura SET expires_at = DATE_ADD({$baseExpr}, INTERVAL 24 HOUR) WHERE (expires_at IS NULL OR expires_at = '0000-00-00 00:00:00') AND {$baseExpr} IS NOT NULL");
     }
 
     $checkTableAssinantes = "SHOW TABLES LIKE 'assinantes'";
@@ -212,16 +240,20 @@ function separarPaginaPdf(string $input, int $page, string $output): bool {
 
 // Verifica se é POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    $redirect = 'enviar_documento.php';
+    $redirect = 'governanca.php';
     redirectTo($redirect, "error", "Método inválido");
 }
 
-$redirect_to = $_POST['redirect_to'] ?? 'enviar_documento.php';
+$redirect_to = $_POST['redirect_to'] ?? 'governanca.php';
 $modo_envio = $_POST["modo_envio"] ?? "governanca";
 $documentoAssinar = strtolower(trim(strval($_POST["documento_assinar"] ?? "sim")));
 $documentoAssinar = in_array($documentoAssinar, ["sim", "nao"], true) ? $documentoAssinar : "sim";
 $salvarPastaFuncionario = strtolower(trim(strval($_POST["salvar_pasta_funcionario"] ?? "nao")));
 $salvarPastaFuncionario = $salvarPastaFuncionario === "sim" ? "sim" : "nao";
+$avulsoDestino = strtolower(trim(strval($_POST["avulso_destino"] ?? "um")));
+$avulsoDestino = in_array($avulsoDestino, ["um", "todos"], true) ? $avulsoDestino : "um";
+$salvarDocumentosEmpresa = strtolower(trim(strval($_POST["salvar_documentos_empresa"] ?? "nao")));
+$salvarDocumentosEmpresa = $salvarDocumentosEmpresa === "sim" ? "sim" : "nao";
 
 // Captura signatários do formulário (Array)
 $signatarios = $_POST['signatarios'] ?? [];
@@ -248,7 +280,11 @@ if (empty($signatarios) || !is_array($signatarios)) {
     }
 }
 
-if(!in_array($modo_envio, ["funcionarios", "separar_paginas"], true) && empty($signatarios)){
+if(
+    !in_array($modo_envio, ["funcionarios", "separar_paginas"], true)
+    && empty($signatarios)
+    && !($modo_envio === "avulso" && $avulsoDestino === "todos")
+){
     redirectTo($redirect_to, "error", "Nenhum signatário informado");
 }
 
@@ -334,14 +370,14 @@ if($modo_envio === "funcionarios"){
         $tokenMestre = bin2hex(random_bytes(32));
         $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
 
-        $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, status) VALUES (?, ?, ?, ?, ?, ?, 'pendente')";
+        $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, modo_envio, expires_at, status) VALUES (?, ?, ?, ?, ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR), 'pendente')";
         $stmt = mysqli_prepare($conn, $sql);
         if(!$stmt){
             @unlink($dest_path);
             $erros++;
             continue;
         }
-        mysqli_stmt_bind_param($stmt, "ssssss", $tokenMestre, $email, $nome, $dest_path, $original, $id_documento);
+        mysqli_stmt_bind_param($stmt, "sssssss", $tokenMestre, $email, $nome, $dest_path, $original, $id_documento, $modo_envio);
         if(!mysqli_stmt_execute($stmt)){
             @unlink($dest_path);
             $erros++;
@@ -496,15 +532,15 @@ if($modo_envio === "separar_paginas"){
             $tokenMestre = bin2hex(random_bytes(32));
             $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
 
-            $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pendente')";
+            $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, expires_at, status)
+            VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR), 'pendente')";
             $stmt = mysqli_prepare($conn, $sql);
             if(!$stmt){
                 @unlink($dest_path);
                 $erros++;
                 continue;
             }
-            mysqli_stmt_bind_param($stmt, "ssssssis", $tokenMestre, $email, $nome, $dest_path, $nomeArquivo, $id_documento, $tipoDocumentoId, $validarIcp);
+            mysqli_stmt_bind_param($stmt, "ssssssiss", $tokenMestre, $email, $nome, $dest_path, $nomeArquivo, $id_documento, $tipoDocumentoId, $validarIcp, $modo_envio);
             if(!mysqli_stmt_execute($stmt)){
                 @unlink($dest_path);
                 $erros++;
@@ -613,6 +649,336 @@ if($modo_envio === "separar_paginas"){
         $documentoAssinar === "nao"
             ? "Enviados: {$enviados}. Erros: {$erros}."
             : "Enviados: {$enviados}. Erros: {$erros}. Ignorados (sem e-mail): {$ignorados}.";
+    redirectTo($redirect_to, "success", $msg);
+}
+
+if($modo_envio === "avulso" && $avulsoDestino === "todos"){
+    ensureAssinaturaTables($conn);
+
+    if (!isset($_FILES['arquivo']) || $_FILES['arquivo']['error'] !== UPLOAD_ERR_OK) {
+        redirectTo($redirect_to, "error", "Erro no upload do arquivo");
+    }
+
+    $fileTmpPath = $_FILES['arquivo']['tmp_name'];
+    $fileName = $_FILES['arquivo']['name'];
+    $fileNameCmps = explode(".", $fileName);
+    $fileExtension = strtolower(end($fileNameCmps));
+    if ($fileExtension !== 'pdf') {
+        redirectTo($redirect_to, "error", "Apenas arquivos PDF são permitidos");
+    }
+
+    $tipoDocumentoId = intval($_POST["tipo_documento"] ?? 0);
+    if($tipoDocumentoId <= 0){
+        redirectTo($redirect_to, "error", "Selecione o tipo de documento.");
+    }
+    $tipoDocumento = mysqli_fetch_assoc(query(
+        "SELECT tipo_nb_id, tipo_tx_nome, tipo_tx_status FROM tipos_documentos WHERE tipo_nb_id = ? LIMIT 1",
+        "i",
+        [$tipoDocumentoId]
+    ));
+    if(empty($tipoDocumento)){
+        redirectTo($redirect_to, "error", "Tipo de documento não encontrado.");
+    }
+    if(strtolower(trim(strval($tipoDocumento["tipo_tx_status"] ?? ""))) !== "ativo"){
+        redirectTo($redirect_to, "error", "Tipo de documento inativo.");
+    }
+    $tipoNome = trim(strval($tipoDocumento["tipo_tx_nome"] ?? ""));
+
+    $validarIcp = strtolower(trim(strval($_POST["validar_icp"] ?? "nao")));
+    $validarIcp = $validarIcp === "sim" ? "sim" : "nao";
+
+    $uploadFileDir = './uploads/';
+    if (!is_dir($uploadFileDir)) {
+        mkdir($uploadFileDir, 0777, true);
+    }
+
+    $base = pathinfo($fileName, PATHINFO_FILENAME);
+    $safeBase = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', strval($base));
+    $nomeSeguro = ($safeBase !== "" ? $safeBase : "documento") . ".pdf";
+    $docNomePadrao =
+        $tipoNome !== ""
+            ? ($tipoNome . " - " . ($safeBase !== "" ? $safeBase : "documento"))
+            : ($safeBase !== "" ? $safeBase : "documento");
+
+    $newFileName = md5(time() . $fileName) . '.' . $fileExtension;
+    $dest_path = $uploadFileDir . $newFileName;
+    if(!move_uploaded_file($fileTmpPath, $dest_path)){
+        redirectTo($redirect_to, "error", "Falha ao salvar o arquivo.");
+    }
+
+    if(session_status() === PHP_SESSION_NONE){
+        session_start();
+    }
+    $usuarioCadastro = intval($_SESSION["user_nb_id"] ?? 0);
+    if($salvarDocumentosEmpresa === "sim"){
+        $empresaId = intval($_SESSION["user_nb_empresa"] ?? 0);
+        if($empresaId <= 0){
+            $empresa = mysqli_fetch_assoc(query(
+                "SELECT empr_nb_id
+                FROM empresa
+                WHERE empr_tx_status = 'ativo'
+                    AND empr_tx_Ehmatriz = 'sim'
+                LIMIT 1"
+            ));
+            $empresaId = intval($empresa["empr_nb_id"] ?? 0);
+        }
+        if($empresaId <= 0){
+            $empresa = mysqli_fetch_assoc(query(
+                "SELECT empr_nb_id
+                FROM empresa
+                WHERE empr_tx_status = 'ativo'
+                ORDER BY empr_nb_id ASC
+                LIMIT 1"
+            ));
+            $empresaId = intval($empresa["empr_nb_id"] ?? 0);
+        }
+        if($empresaId <= 0){
+            @unlink($dest_path);
+            redirectTo($redirect_to, "error", "Empresa não identificada para salvar em Documentos da Empresa.");
+        }
+
+        $root = realpath(__DIR__ . "/..");
+        if(!$root){
+            $root = dirname(__DIR__);
+        }
+        $pastaEmpresaRel = "arquivos/docu_empresa/" . $empresaId . "/";
+        $pastaEmpresaAbs =
+            rtrim($root, "/\\")
+            . DIRECTORY_SEPARATOR . "arquivos"
+            . DIRECTORY_SEPARATOR . "docu_empresa"
+            . DIRECTORY_SEPARATOR . $empresaId
+            . DIRECTORY_SEPARATOR;
+        if(!is_dir($pastaEmpresaAbs)){
+            mkdir($pastaEmpresaAbs, 0777, true);
+        }
+        $nomeOriginalEmpresa = basename($fileName);
+        $nomeSeguroEmpresa = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', $nomeOriginalEmpresa);
+        if(strtolower(pathinfo($nomeSeguroEmpresa, PATHINFO_EXTENSION)) !== "pdf"){
+            $nomeSeguroEmpresa .= ".pdf";
+        }
+        $destEmpresaRel = $pastaEmpresaRel . $nomeSeguroEmpresa;
+        $destEmpresaAbs = $pastaEmpresaAbs . $nomeSeguroEmpresa;
+        if(file_exists($destEmpresaAbs)){
+            $info = pathinfo($nomeSeguroEmpresa);
+            $base = $info["filename"] ?? "documento";
+            $ext = isset($info["extension"]) && $info["extension"] !== "" ? "." . $info["extension"] : "";
+            $nomeSeguroEmpresa = $base . "_" . time() . $ext;
+            $destEmpresaRel = $pastaEmpresaRel . $nomeSeguroEmpresa;
+            $destEmpresaAbs = $pastaEmpresaAbs . $nomeSeguroEmpresa;
+        }
+        if(!@copy($dest_path, $destEmpresaAbs)){
+            @unlink($dest_path);
+            redirectTo($redirect_to, "error", "Falha ao salvar documento em Documentos da Empresa.");
+        }
+        $docNomeEmpresa =
+            $tipoNome !== ""
+                ? ($tipoNome . " - " . ($safeBase !== "" ? $safeBase : "documento"))
+                : ($safeBase !== "" ? $safeBase : "documento");
+        $descricaoEmpresa = "Documento enviado para todos os funcionários.";
+        $dataCadastroEmpresa = date("Y-m-d H:i:s");
+        $visibilidadeEmpresa = "sim";
+        $stmtEmpresa = mysqli_prepare(
+            $conn,
+            "INSERT INTO documento_empresa
+                (empr_nb_id, docu_tx_nome, docu_tx_descricao, docu_tx_dataCadastro, docu_tx_datavencimento, docu_tx_tipo, docu_nb_sbgrupo, docu_tx_usuarioCadastro, docu_tx_assinado, docu_tx_visivel, docu_tx_caminho)
+            VALUES
+                (?, ?, ?, ?, NULL, NULLIF(?,0), NULL, ?, 'nao', ?, ?)"
+        );
+        if(!$stmtEmpresa){
+            @unlink($destEmpresaAbs);
+            @unlink($dest_path);
+            redirectTo($redirect_to, "error", "Falha ao registrar documento em Documentos da Empresa.");
+        }
+        mysqli_stmt_bind_param(
+            $stmtEmpresa,
+            "isssiiss",
+            $empresaId,
+            $docNomeEmpresa,
+            $descricaoEmpresa,
+            $dataCadastroEmpresa,
+            $tipoDocumentoId,
+            $usuarioCadastro,
+            $visibilidadeEmpresa,
+            $destEmpresaRel
+        );
+        if(!mysqli_stmt_execute($stmtEmpresa)){
+            mysqli_stmt_close($stmtEmpresa);
+            @unlink($destEmpresaAbs);
+            @unlink($dest_path);
+            redirectTo($redirect_to, "error", "Falha ao registrar documento em Documentos da Empresa.");
+        }
+        mysqli_stmt_close($stmtEmpresa);
+    }
+
+    $funcionarios = mysqli_fetch_all(query(
+        "SELECT enti_nb_id, enti_tx_nome, enti_tx_email
+        FROM entidade
+        WHERE enti_tx_status = 'ativo'
+        ORDER BY enti_tx_nome ASC"
+    ), MYSQLI_ASSOC);
+
+    $enviados = 0;
+    $erros = 0;
+    $ignorados = 0;
+
+    if($documentoAssinar === "nao"){
+        $rootFunc = "";
+        $stmtDocFunc = null;
+        if($salvarPastaFuncionario === "sim"){
+            $rootFunc = realpath(__DIR__ . "/..");
+            if(!$rootFunc){
+                $rootFunc = dirname(__DIR__);
+            }
+            $stmtDocFunc = mysqli_prepare(
+                $conn,
+                "INSERT INTO documento_funcionario
+                    (docu_nb_entidade, docu_tx_nome, docu_tx_descricao, docu_tx_dataCadastro, docu_tx_dataVencimento, docu_tx_tipo, docu_nb_sbgrupo, docu_tx_usuarioCadastro, docu_tx_assinado, docu_tx_visivel, docu_tx_caminho)
+                VALUES
+                    (?, ?, ?, ?, NULL, NULLIF(?,0), NULL, ?, 'nao', 'sim', ?)"
+            );
+            if(!$stmtDocFunc){
+                @unlink($dest_path);
+                redirectTo($redirect_to, "error", "Falha ao preparar cadastro em Documentos do Funcionário.");
+            }
+        }
+
+        foreach($funcionarios as $f){
+            $idEntidade = intval($f["enti_nb_id"] ?? 0);
+            $email = filter_var(trim(strval($f["enti_tx_email"] ?? "")), FILTER_VALIDATE_EMAIL);
+            $nome = trim(strval($f["enti_tx_nome"] ?? ""));
+            if($idEntidade <= 0 || !$email || $nome === ""){
+                $ignorados++;
+                continue;
+            }
+
+            if($salvarPastaFuncionario === "sim" && $stmtDocFunc){
+                $pastaAbs =
+                    rtrim($rootFunc, "/\\")
+                    . DIRECTORY_SEPARATOR . "arquivos"
+                    . DIRECTORY_SEPARATOR . "Funcionarios"
+                    . DIRECTORY_SEPARATOR . $idEntidade
+                    . DIRECTORY_SEPARATOR;
+                if(!is_dir($pastaAbs)){
+                    @mkdir($pastaAbs, 0777, true);
+                }
+
+                $nomeArquivoFunc = $nomeSeguro;
+                $destAbs = $pastaAbs . $nomeArquivoFunc;
+                if(file_exists($destAbs)){
+                    $info = pathinfo($nomeArquivoFunc);
+                    $baseNome = $info["filename"] ?? "documento";
+                    $ext = isset($info["extension"]) && $info["extension"] !== "" ? "." . $info["extension"] : "";
+                    $nomeArquivoFunc = $baseNome . "_" . time() . $ext;
+                    $destAbs = $pastaAbs . $nomeArquivoFunc;
+                }
+                $destRel = "arquivos/Funcionarios/" . $idEntidade . "/" . $nomeArquivoFunc;
+
+                if(!@copy($dest_path, $destAbs)){
+                    $erros++;
+                }else{
+                    $descricao = "Documento enviado para todos os funcionários.";
+                    $dataCadastro = date("Y-m-d H:i:s");
+                    mysqli_stmt_bind_param(
+                        $stmtDocFunc,
+                        "isssiis",
+                        $idEntidade,
+                        $docNomePadrao,
+                        $descricao,
+                        $dataCadastro,
+                        $tipoDocumentoId,
+                        $usuarioCadastro,
+                        $destRel
+                    );
+                    if(!mysqli_stmt_execute($stmtDocFunc)){
+                        @unlink($destAbs);
+                        $erros++;
+                    }
+                }
+            }
+
+            if(!enviarEmailDocumento($email, $nome, $dest_path, $nomeSeguro, $tipoNome)){
+                $erros++;
+                continue;
+            }
+            $enviados++;
+        }
+
+        if($stmtDocFunc){
+            mysqli_stmt_close($stmtDocFunc);
+        }
+        @unlink($dest_path);
+
+        if($enviados <= 0){
+            redirectTo($redirect_to, "error", "Nenhum e-mail foi enviado. Verifique se os funcionários têm e-mail cadastrado.");
+        }
+
+        $msg = "Enviado para {$enviados} funcionários. Erros: {$erros}. Ignorados (sem e-mail): {$ignorados}.";
+        redirectTo($redirect_to, "success", $msg);
+    }
+
+    $grupoEnvio = "AVT-" . date("YmdHis") . "-" . bin2hex(random_bytes(6));
+
+    foreach($funcionarios as $f){
+        $idEntidade = intval($f["enti_nb_id"] ?? 0);
+        $email = filter_var(trim(strval($f["enti_tx_email"] ?? "")), FILTER_VALIDATE_EMAIL);
+        $nome = trim(strval($f["enti_tx_nome"] ?? ""));
+        if($idEntidade <= 0 || !$email || $nome === ""){
+            $ignorados++;
+            continue;
+        }
+
+        $newFileNameInd = md5($idEntidade . "-" . microtime(true) . "-" . $fileName . "-" . bin2hex(random_bytes(8))) . ".pdf";
+        $destInd = $uploadFileDir . $newFileNameInd;
+        if(!@copy($dest_path, $destInd)){
+            $erros++;
+            continue;
+        }
+
+        $tokenMestre = bin2hex(random_bytes(32));
+        $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
+
+        $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, grupo_envio, expires_at, status)
+            VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR), 'pendente')";
+        $stmt = mysqli_prepare($conn, $sql);
+        if(!$stmt){
+            @unlink($destInd);
+            $erros++;
+            continue;
+        }
+        mysqli_stmt_bind_param($stmt, "ssssssisss", $tokenMestre, $email, $nome, $destInd, $fileName, $id_documento, $tipoDocumentoId, $validarIcp, $modo_envio, $grupoEnvio);
+        if(!mysqli_stmt_execute($stmt)){
+            @unlink($destInd);
+            $erros++;
+            continue;
+        }
+
+        $id_solicitacao = mysqli_insert_id($conn);
+        $tokenAssinante = bin2hex(random_bytes(32));
+        $funcao = "Funcionário";
+
+        $sqlAssinante = "INSERT INTO assinantes (id_solicitacao, enti_nb_id, nome, email, funcao, ordem, token, status) VALUES (?, NULLIF(?,0), ?, ?, ?, 1, ?, 'pendente')";
+        $stmtAssinante = mysqli_prepare($conn, $sqlAssinante);
+        if(!$stmtAssinante){
+            $erros++;
+            continue;
+        }
+        mysqli_stmt_bind_param($stmtAssinante, "iissss", $id_solicitacao, $idEntidade, $nome, $email, $funcao, $tokenAssinante);
+        if(!mysqli_stmt_execute($stmtAssinante)){
+            $erros++;
+            continue;
+        }
+
+        enviarEmailAssinatura($email, $nome, $tokenAssinante, $fileName, $id_documento, $funcao);
+        $enviados++;
+    }
+
+    @unlink($dest_path);
+
+    if($enviados <= 0){
+        redirectTo($redirect_to, "error", "Nenhuma solicitação de assinatura foi enviada. Verifique se os funcionários têm e-mail cadastrado.");
+    }
+
+    $msg = "Solicitações enviadas: {$enviados}. Erros: {$erros}. Ignorados (sem e-mail): {$ignorados}.";
     redirectTo($redirect_to, "success", $msg);
 }
 
@@ -890,10 +1256,10 @@ if(move_uploaded_file($fileTmpPath, $dest_path)) {
     $tokenMestre = bin2hex(random_bytes(32)); 
     $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
     
-    $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, status)
-        VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, 'pendente')";
+    $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, expires_at, status)
+        VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR), 'pendente')";
     $stmt = mysqli_prepare($conn, $sql);
-    mysqli_stmt_bind_param($stmt, "ssssssis", $tokenMestre, $primeiroSignatario['email'], $primeiroSignatario['nome'], $dest_path, $fileName, $id_documento, $tipoDocumentoId, $validarIcp);
+    mysqli_stmt_bind_param($stmt, "ssssssiss", $tokenMestre, $primeiroSignatario['email'], $primeiroSignatario['nome'], $dest_path, $fileName, $id_documento, $tipoDocumentoId, $validarIcp, $modo_envio);
     
     if (mysqli_stmt_execute($stmt)) {
         $id_solicitacao = mysqli_insert_id($conn);

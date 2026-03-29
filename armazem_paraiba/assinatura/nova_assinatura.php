@@ -31,6 +31,16 @@ if(in_array($modoTela, ["avulso", "funcionarios", "separar_paginas"], true)){
         ORDER BY enti_tx_nome ASC"
     ), MYSQLI_ASSOC);
 }
+$totalFuncionariosEnvioTodos = 0;
+if(!empty($funcionarios)){
+    foreach($funcionarios as $f){
+        $email = filter_var(trim(strval($f["enti_tx_email"] ?? "")), FILTER_VALIDATE_EMAIL);
+        $nome = trim(strval($f["enti_tx_nome"] ?? ""));
+        if($email && $nome !== ""){
+            $totalFuncionariosEnvioTodos++;
+        }
+    }
+}
 
 $tiposDocumentos = [];
 if(in_array($modoTela, ["avulso", "separar_paginas"], true)){
@@ -515,7 +525,7 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
 
 <div class="font-sans">
 
-    <div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="max-w-7xl mx-auto px-4 py-8">
 
         <!-- Header simplificado -->
         <div class="flex justify-between items-center mb-6">
@@ -582,7 +592,7 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                         <form action="nova_assinatura.php?modo=separar_paginas" method="POST" enctype="multipart/form-data">
                             <input type="hidden" name="acao_pdf" value="upload_pdf_paginas">
                             <div class="max-w-xl mx-auto">
-                                <div class="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group" onclick="document.getElementById('fileInputMultipage').click()">
+                                <div id="dropZoneMultipage" class="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group" onclick="document.getElementById('fileInputMultipage').click()">
                                     <input type="file" id="fileInputMultipage" name="pdf_multipage" accept="application/pdf" class="hidden" onchange="handleFileSelectMultipage(this)">
                                     <div class="space-y-3 pointer-events-none">
                                         <p class="text-gray-600 group-hover:text-blue-600 transition-colors font-medium">Clique aqui ou arraste o PDF com múltiplas páginas</p>
@@ -888,7 +898,7 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                     </div>
 
                     <div class="max-w-xl mx-auto">
-                        <div class="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group" onclick="document.getElementById('fileInput').click()">
+                        <div id="dropZoneAvulso" class="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group" onclick="document.getElementById('fileInput').click()">
                             <input type="file" id="fileInput" name="arquivo" accept="application/pdf" class="hidden" onchange="handleFileSelect(this)">
                             
                             <div class="space-y-3 pointer-events-none">
@@ -941,12 +951,42 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                             <h3 id="avulso_titulo_dados" class="text-xl font-bold text-gray-800 mb-2">Dados do Signatário</h3>
                             <p id="avulso_subtitulo_dados" class="text-sm text-gray-500">Informe quem deverá assinar este documento.</p>
                         </div>
-
+                                      <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Enviar para</label>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <label class="flex items-start gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white cursor-pointer">
+                                        <input type="radio" name="avulso_destino" value="um" checked class="mt-1 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                                        <div>
+                                            <div class="text-sm font-semibold text-gray-800">Um funcionário</div>
+                                            <div class="text-xs text-gray-500">Documento direcionado a uma pessoa.</div>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-start gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white cursor-pointer">
+                                        <input type="radio" name="avulso_destino" value="todos" class="mt-1 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                                        <div>
+                                            <div class="text-sm font-semibold text-gray-800">Todos</div>
+                                            <div class="text-xs text-gray-500">Envio geral (comunicados/lembretes).</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div id="avulso_aviso_todos" class="hidden mt-3 bg-amber-50 border border-amber-100 text-amber-900 rounded-lg p-4">
+                                    <div class="text-sm font-semibold flex items-center gap-2">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        Aviso
+                                    </div>
+                                    <div class="text-xs mt-1 leading-relaxed">
+                                        O documento não deve conter nome de funcionário, pois não é direcionado para apenas 1 signatário e sim para todos. A melhor forma de usar esse envio é para comunicados e lembretes, onde apenas vai constar que o funcionário recebeu.
+                                    </div>
+                                    <div class="text-xs mt-2 font-semibold">
+                                        Será enviado para <?php echo intval($totalFuncionariosEnvioTodos); ?> funcionário(s) com e-mail cadastrado.
+                                    </div>
+                                </div>
+                            </div>
                         <div class="space-y-5">
                             <input type="hidden" id="id_documento" name="id_documento" value="<?php echo htmlspecialchars($id_documento); ?>">
                             <input type="hidden" id="enti_nb_id" name="enti_nb_id" value="">
 
-                            <div>
+                            <div id="avulso_funcionario_wrap">
                                 <label for="funcionario_select" class="block text-sm font-medium text-gray-700 mb-1">Funcionário</label>
                                 <div class="relative">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -992,6 +1032,8 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                 </div>
                             </div>
 
+                      
+
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Precisa de assinatura?</label>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1012,13 +1054,24 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                 </div>
                             </div>
 
-                            <div>
+                            <div id="avulso_salvar_pasta_wrap">
                                 <label class="block text-sm font-medium text-gray-700 mb-1" for="salvar_pasta_funcionario_avulso">Salvar na pasta do funcionário?</label>
                                 <label class="flex items-start gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white cursor-pointer">
                                     <input type="checkbox" id="salvar_pasta_funcionario_avulso" name="salvar_pasta_funcionario" value="sim" class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
                                     <div>
                                         <div class="text-sm font-semibold text-gray-800">Salvar e cadastrar</div>
                                         <div class="text-xs text-gray-500">Salva em <span class="font-semibold">arquivos/Funcionarios</span> e registra em <span class="font-semibold">Documentos</span> do funcionário.</div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div id="avulso_salvar_empresa_wrap" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-1" for="salvar_documentos_empresa_avulso">Cadastrar em Documentos da Empresa?</label>
+                                <label class="flex items-start gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white cursor-pointer">
+                                    <input type="checkbox" id="salvar_documentos_empresa_avulso" name="salvar_documentos_empresa" value="sim" checked class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <div>
+                                        <div class="text-sm font-semibold text-gray-800">Salvar e cadastrar</div>
+                                        <div class="text-xs text-gray-500">Salva em <span class="font-semibold">arquivos/docu_empresa</span> e registra em <span class="font-semibold">Documentos</span> da empresa.</div>
                                     </div>
                                 </label>
                             </div>
@@ -1105,6 +1158,7 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
     .select2-container--default .select2-selection--single .select2-selection__rendered{line-height:42px;padding-left:2.5rem;padding-right:2.5rem;color:#111827}
     .select2-container--default .select2-selection--single .select2-selection__arrow{height:42px;right:.5rem}
     .select2-container--default .select2-selection--single .select2-selection__placeholder{color:#9ca3af}
+    .drag-active{border-color:#3b82f6!important;background-color:#eff6ff!important}
 </style>
 <script src="<?php echo $baseAssets; ?>/contex20/assets/global/plugins/jquery.min.js"></script>
 <script src="<?php echo $baseAssets; ?>/contex20/assets/global/plugins/select2/js/select2.min.js"></script>
@@ -1145,6 +1199,39 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
             if(pdfPreview) pdfPreview.src = url;
         }
     }
+
+    function initDropZone(zoneId, inputId, onSelect) {
+        const zone = document.getElementById(zoneId);
+        const input = document.getElementById(inputId);
+        if (!zone || !input) return;
+
+        const preventDefaults = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        };
+        const highlight = () => zone.classList.add('drag-active');
+        const unhighlight = () => zone.classList.remove('drag-active');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
+            zone.addEventListener(eventName, preventDefaults, false);
+        });
+        ['dragenter', 'dragover'].forEach((eventName) => {
+            zone.addEventListener(eventName, highlight, false);
+        });
+        ['dragleave', 'drop'].forEach((eventName) => {
+            zone.addEventListener(eventName, unhighlight, false);
+        });
+        zone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt && dt.files ? dt.files : null;
+            if (!files || files.length === 0) return;
+            input.files = files;
+            if (typeof onSelect === 'function') onSelect(input);
+        }, false);
+    }
+
+    initDropZone('dropZoneMultipage', 'fileInputMultipage', handleFileSelectMultipage);
+    initDropZone('dropZoneAvulso', 'fileInput', handleFileSelect);
 
     const btnUpload = document.getElementById('btnUpload');
     if(btnUpload) {
@@ -1247,6 +1334,20 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
         const labelNome = document.getElementById("avulso_label_nome");
         const labelEmail = document.getElementById("avulso_label_email");
         const infoTexto = document.getElementById("avulso_info_texto");
+        const radiosDestinoAvulso = Array.from(document.querySelectorAll('input[name="avulso_destino"]'));
+        const obterDestinoAvulso = () => {
+            const el = document.querySelector('input[name="avulso_destino"]:checked');
+            return el ? String(el.value || "um") : "um";
+        };
+        const avisoTodos = document.getElementById("avulso_aviso_todos");
+        const wrapFuncionario = document.getElementById("avulso_funcionario_wrap");
+        const wrapSalvarPasta = document.getElementById("avulso_salvar_pasta_wrap");
+        const wrapSalvarEmpresa = document.getElementById("avulso_salvar_empresa_wrap");
+        const chkSalvarEmpresa = document.getElementById("salvar_documentos_empresa_avulso");
+        const inputNome = document.getElementById("nome");
+        const inputEmail = document.getElementById("email");
+        const wrapNome = document.getElementById("avulso_signatario_wrap");
+        const wrapEmail = document.getElementById("avulso_signatario_wrap_email");
         const radiosAssinarAvulso = Array.from(document.querySelectorAll('input[name="documento_assinar"]'));
         const obterAssinarAvulso = () => {
             const el = document.querySelector('input[name="documento_assinar"]:checked');
@@ -1254,6 +1355,63 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
         };
         const atualizarAvulso = () => {
             if(!icpAvulso || !icpInfoAvulso) return;
+            const destino = obterDestinoAvulso();
+            if(avisoTodos){
+                avisoTodos.classList.toggle("hidden", destino !== "todos");
+            }
+            if(destino === "todos"){
+                if(wrapSalvarEmpresa){ wrapSalvarEmpresa.classList.remove("hidden"); }
+                if(chkSalvarEmpresa){ chkSalvarEmpresa.disabled = false; }
+                if(wrapFuncionario){ wrapFuncionario.classList.add("hidden"); }
+                if(wrapNome){ wrapNome.classList.add("hidden"); }
+                if(wrapEmail){ wrapEmail.classList.add("hidden"); }
+                if(inputNome){ inputNome.required = false; inputNome.value = ""; }
+                if(inputEmail){ inputEmail.required = false; inputEmail.value = ""; }
+                if(document.getElementById("salvar_pasta_funcionario_avulso")){
+                    const chk = document.getElementById("salvar_pasta_funcionario_avulso");
+                    chk.disabled = false;
+                }
+                if(wrapSalvarPasta){ wrapSalvarPasta.classList.remove("opacity-50"); }
+                const assinar = obterAssinarAvulso();
+                if(assinar !== "sim"){
+                    icpAvulso.checked = false;
+                    icpAvulso.disabled = true;
+                    icpInfoAvulso.classList.add("hidden");
+                    if(tituloDados){ tituloDados.textContent = "Envio para Todos"; }
+                    if(subTituloDados){ subTituloDados.textContent = "O documento será enviado para todos os funcionários com e-mail cadastrado."; }
+                    if(infoTexto){
+                        infoTexto.innerHTML = '<i class="fas fa-info-circle mr-1"></i>Use este envio para comunicados e lembretes. Não é um documento direcionado a uma pessoa específica.';
+                    }
+                    if(btnEnviarLabel){ btnEnviarLabel.textContent = "Enviar para Todos"; }
+                    return;
+                }
+                icpAvulso.disabled = false;
+                icpInfoAvulso.classList.toggle("hidden", !icpAvulso.checked);
+                if(tituloDados){ tituloDados.textContent = "Assinatura para Todos"; }
+                if(subTituloDados){ subTituloDados.textContent = "Cada funcionário receberá um link para assinar eletronicamente o documento."; }
+                if(infoTexto){
+                    infoTexto.innerHTML = '<i class="fas fa-info-circle mr-1"></i>Cada funcionário receberá um e-mail com um link único e seguro para realizar a assinatura eletrônica do documento.';
+                }
+                if(btnEnviarLabel){ btnEnviarLabel.textContent = "Enviar para Assinatura (Todos)"; }
+                return;
+            }
+
+            if(wrapSalvarEmpresa){ wrapSalvarEmpresa.classList.add("hidden"); }
+            if(chkSalvarEmpresa){
+                chkSalvarEmpresa.checked = false;
+                chkSalvarEmpresa.disabled = true;
+            }
+            radiosAssinarAvulso.forEach(r => { r.disabled = false; });
+            if(wrapFuncionario){ wrapFuncionario.classList.remove("hidden"); }
+            if(wrapNome){ wrapNome.classList.remove("hidden"); }
+            if(wrapEmail){ wrapEmail.classList.remove("hidden"); }
+            if(inputNome){ inputNome.required = true; }
+            if(inputEmail){ inputEmail.required = true; }
+            if(document.getElementById("salvar_pasta_funcionario_avulso")){
+                const chk = document.getElementById("salvar_pasta_funcionario_avulso");
+                chk.disabled = false;
+            }
+            if(wrapSalvarPasta){ wrapSalvarPasta.classList.remove("opacity-50"); }
             const assinar = obterAssinarAvulso();
             if(assinar !== "sim"){
                 icpAvulso.checked = false;
@@ -1283,6 +1441,7 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
         if(icpAvulso){
             icpAvulso.addEventListener("change", atualizarAvulso);
             radiosAssinarAvulso.forEach(r => r.addEventListener("change", atualizarAvulso));
+            radiosDestinoAvulso.forEach(r => r.addEventListener("change", atualizarAvulso));
             atualizarAvulso();
         }
 

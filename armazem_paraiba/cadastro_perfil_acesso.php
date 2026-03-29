@@ -131,7 +131,7 @@ function formPerfil(){
     $menuPath = __DIR__."/menu.php";
     if(file_exists($menuPath)){
         $txt = file_get_contents($menuPath);
-        $secs = ["cadastros","ponto","painel","relatórios"];
+        $secs = ["cadastros","ponto","painel","relatórios","assinatura"];
         foreach($secs as $sec){
             if(preg_match('/"'.preg_quote($sec,'/').'"\s*=>\s*\[(.*?)\]/s', $txt, $m)){
                 if(preg_match_all('/"([^"]+)"\s*=>\s*"([^"]+)"/', $m[1], $mm, PREG_SET_ORDER)){

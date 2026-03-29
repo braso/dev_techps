@@ -258,29 +258,107 @@
 			</script>
 				
 			<script>
+				function setOptionsSelected(selectEl, items){
+					if(!selectEl){ return; }
+					selectEl.innerHTML = '';
+					(items || []).forEach(function(it){
+						if(!it || it.id === undefined){ return; }
+						var opt = document.createElement('option');
+						opt.value = String(it.id);
+						opt.textContent = String(it.text || it.id);
+						opt.selected = true;
+						selectEl.appendChild(opt);
+					});
+					if(window.jQuery && jQuery(selectEl).data('select2')){
+						jQuery(selectEl).trigger('change');
+					}
+				}
+
+				function atualizarResponsaveisSetor(){
+					var empresaEl = document.getElementsByName('empresa')[0];
+					var empresaId = parseInt((empresaEl && empresaEl.value) ? empresaEl.value : '0', 10);
+					var setorEl = document.getElementsByName('setor')[0];
+					var selectEl = document.getElementById('respSetor');
+					if(!selectEl){ return; }
+					var setorId = parseInt((setorEl && setorEl.value) ? setorEl.value : '0', 10);
+					if(!setorId || setorId <= 0){
+						setOptionsSelected(selectEl, []);
+						return;
+					}
+					var url = 'cadastro_grupos.php?acao=api_responsaveis_setor&setor_id=' + setorId;
+					if(empresaId && empresaId > 0){ url += '&empresa_id=' + empresaId; }
+					if(window.jQuery && jQuery.getJSON){
+						jQuery.getJSON(url, function(data){ setOptionsSelected(selectEl, data); });
+						return;
+					}
+					fetch(url).then(function(r){ return r.json(); }).then(function(data){ setOptionsSelected(selectEl, data); });
+				}
+
+				function atualizarResponsaveisCargo(){
+					var empresaEl = document.getElementsByName('empresa')[0];
+					var empresaId = parseInt((empresaEl && empresaEl.value) ? empresaEl.value : '0', 10);
+					var cargoEl = document.getElementsByName('tipoOperacao')[0];
+					var selectEl = document.getElementById('respCargo');
+					if(!selectEl){ return; }
+					var cargoId = parseInt((cargoEl && cargoEl.value) ? cargoEl.value : '0', 10);
+					if(!cargoId || cargoId <= 0){
+						setOptionsSelected(selectEl, []);
+						return;
+					}
+					var url = 'cadastro_grupos.php?acao=api_responsaveis_cargo&cargo_id=' + cargoId;
+					if(empresaId && empresaId > 0){ url += '&empresa_id=' + empresaId; }
+					if(window.jQuery && jQuery.getJSON){
+						jQuery.getJSON(url, function(data){ setOptionsSelected(selectEl, data); });
+						return;
+					}
+					fetch(url).then(function(r){ return r.json(); }).then(function(data){ setOptionsSelected(selectEl, data); });
+				}
+
 				document.addEventListener('DOMContentLoaded', function () {
-				document.querySelectorAll('select').forEach(function (select) {
-					const first = select.options[0];
-					if (!first) return;
+					document.querySelectorAll('select').forEach(function (select) {
+						const first = select.options[0];
+						if (!first) return;
 
-				
-					const isPlaceholder = (first.value === '' || /selecion(e|e um item)/i.test(first.textContent.trim()));
+						const isPlaceholder = (first.value === '' || /selecion(e|e um item)/i.test(first.textContent.trim()));
 
-					if (isPlaceholder) {
-					// Torna a primeira opção desabilitada
-					first.disabled = true;
+						if (isPlaceholder) {
+							first.disabled = true;
+							if (window.jQuery && jQuery(select).data('select2')) {
+								jQuery(select).val('').trigger('change');
+							}
+						}
+					});
 
-					// Define a primeira opção como selecionada (placeholder visível)
-					//   select.selectedIndex = 0;
-
-					// Se estiver usando Select2, força a atualização visual
-					if (window.jQuery && jQuery(select).data('select2')) {
-						jQuery(select).val('').trigger('change');
+					if(window.jQuery && jQuery.fn && jQuery.fn.select2){
+						jQuery.fn.select2.defaults.set('theme','bootstrap');
+						jQuery('#respSetor, #respCargo').select2({
+							language: 'pt-BR',
+							placeholder: 'Responsáveis',
+							allowClear: true,
+							width: '100%'
+						});
 					}
+
+					var setorEl = document.getElementsByName('setor')[0];
+					if (setorEl && setorEl.value) { filtrarSubSetor(setorEl.value); }
+
+					atualizarResponsaveisSetor();
+					atualizarResponsaveisCargo();
+
+					if(setorEl){
+						setorEl.addEventListener('change', function(){ atualizarResponsaveisSetor(); });
 					}
-				});
-				var setorEl = document.getElementsByName('setor')[0];
-				if (setorEl && setorEl.value) { filtrarSubSetor(setorEl.value); }
+					var cargoEl = document.getElementsByName('tipoOperacao')[0];
+					if(cargoEl){
+						cargoEl.addEventListener('change', function(){ atualizarResponsaveisCargo(); });
+					}
+					var empresaEl = document.getElementsByName('empresa')[0];
+					if(empresaEl){
+						empresaEl.addEventListener('change', function(){
+							atualizarResponsaveisSetor();
+							atualizarResponsaveisCargo();
+						});
+					}
 				});
 			</script>"
 		;
@@ -393,8 +471,43 @@
 		exit;
 	}
 
+	function ensureEntidadeResponsavelSchema(): void {
+		$dbRow = mysqli_fetch_assoc(query("SELECT DATABASE() AS db"));
+		$db = strval($dbRow["db"] ?? "");
+		if($db === ""){
+			return;
+		}
+
+		$cols = mysqli_fetch_all(query(
+			"SELECT COLUMN_NAME
+			FROM information_schema.COLUMNS
+			WHERE TABLE_SCHEMA = ?
+				AND TABLE_NAME = 'entidade'",
+			"s",
+			[$db]
+		), MYSQLI_ASSOC);
+
+		$colNames = array_map(fn($r) => strval($r["COLUMN_NAME"] ?? ""), $cols ?: []);
+		$has = array_flip($colNames);
+
+		if(!isset($has["enti_respSetor_id"])){
+			query("ALTER TABLE entidade ADD COLUMN enti_respSetor_id INT NULL");
+		}
+		if(!isset($has["enti_respCargo_id"])){
+			query("ALTER TABLE entidade ADD COLUMN enti_respCargo_id INT NULL");
+		}
+		if(!isset($has["enti_respSetor_ids"])){
+			query("ALTER TABLE entidade ADD COLUMN enti_respSetor_ids TEXT NULL");
+		}
+		if(!isset($has["enti_respCargo_ids"])){
+			query("ALTER TABLE entidade ADD COLUMN enti_respCargo_ids TEXT NULL");
+		}
+	}
+
 	function cadastrarMotorista(){
 		global $a_mod;
+
+		ensureEntidadeResponsavelSchema();
 
 		if(!empty($_POST["matricula"])){
 			$_POST["postMatricula"] = $_POST["matricula"];
@@ -488,6 +601,23 @@
 				$novoMotorista[$bdKey] = $_POST[$postKey];
 			}
 		}
+		$respSetorIds = $_POST["respSetor"] ?? [];
+		$respSetorIds = is_array($respSetorIds) ? $respSetorIds : [$respSetorIds];
+		$respSetorIds = array_values(array_unique(array_filter(array_map("intval", $respSetorIds), fn($v) => $v > 0)));
+
+		$respCargoIds = $_POST["respCargo"] ?? [];
+		$respCargoIds = is_array($respCargoIds) ? $respCargoIds : [$respCargoIds];
+		$respCargoIds = array_values(array_unique(array_filter(array_map("intval", $respCargoIds), fn($v) => $v > 0)));
+
+		$a_mod["enti_respSetor_id"] = $respSetorIds[0] ?? null;
+		$a_mod["enti_respCargo_id"] = $respCargoIds[0] ?? null;
+		$a_mod["enti_respSetor_ids"] = !empty($respSetorIds) ? implode(",", $respSetorIds) : null;
+		$a_mod["enti_respCargo_ids"] = !empty($respCargoIds) ? implode(",", $respCargoIds) : null;
+
+		$novoMotorista["enti_respSetor_id"] = $a_mod["enti_respSetor_id"];
+		$novoMotorista["enti_respCargo_id"] = $a_mod["enti_respCargo_id"];
+		$novoMotorista["enti_respSetor_ids"] = $a_mod["enti_respSetor_ids"];
+		$novoMotorista["enti_respCargo_ids"] = $a_mod["enti_respCargo_ids"];
 		if(!empty($_POST["desligamento"])){
 			$novoMotorista["enti_tx_desligamento"] = $_POST["desligamento"];
 		}
@@ -1469,9 +1599,17 @@
 
 		$cContratual = [
 			combo_bd("Empresa*", "empresa", ($a_mod["enti_nb_empresa"]?? $_SESSION["user_nb_empresa"]), 3, "empresa", "onchange='carregarEmpresa(this.value)' tabindex=".sprintf("%02d", $tabIndex++), $extraEmpresa),
-			combo_bd("Setor", "setor", ($a_mod["enti_setor_id"]?? ""), 3, "grupos_documentos", "onchange='filtrarSubSetor(this.value)' tabindex=".sprintf("%02d", $tabIndex++)),
+			combo_bd("Setor", "setor", ($a_mod["enti_setor_id"]?? ""), 3, "grupos_documentos", "id='setor' onchange='filtrarSubSetor(this.value)' tabindex=".sprintf("%02d", $tabIndex++)),
+			"<div class='col-sm-3 margin-bottom-5 campo-fit-content'>
+				<label class='control-label'>Resp. Setor</label>
+				<select id='respSetor' class='form-control input-sm' name='respSetor[]' multiple='multiple' style='width:100%;'></select>
+			</div>",
 			combo_bd("Subsetor", "subSetor", ($a_mod["enti_subSetor_id"]?? ""), 3, "sbgrupos_documentos", "tabindex=".sprintf("%02d", $tabIndex++), $condSubSetor),
-			combo_bd( "!Cargo", 	"tipoOperacao",		(isset($a_mod["enti_tx_tipoOperacao"])? $a_mod["enti_tx_tipoOperacao"]: ""), 3, "operacao"),
+			combo_bd("!Cargo", "tipoOperacao", (isset($a_mod["enti_tx_tipoOperacao"])? $a_mod["enti_tx_tipoOperacao"]: ""), 3, "operacao", "id='tipoOperacao' tabindex=".sprintf("%02d", $tabIndex++)),
+			"<div class='col-sm-3 margin-bottom-5 campo-fit-content'>
+				<label class='control-label'>Resp. Cargo</label>
+				<select id='respCargo' class='form-control input-sm' name='respCargo[]' multiple='multiple' style='width:100%;'></select>
+			</div>",
 
 			$campoSalario
 		];

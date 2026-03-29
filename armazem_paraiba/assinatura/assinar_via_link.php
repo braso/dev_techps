@@ -11,6 +11,72 @@ if (empty($token)) {
     die("Token inválido ou não fornecido.");
 }
 
+function assinaturaRenderMensagemPage(string $titulo, string $mensagem, string $tipo = "erro"): void {
+    $tituloSafe = htmlspecialchars($titulo, ENT_QUOTES, "UTF-8");
+    $mensagemSafe = htmlspecialchars($mensagem, ENT_QUOTES, "UTF-8");
+    $isWarn = ($tipo === "warn");
+    $ring = $isWarn ? "ring-amber-200" : "ring-red-200";
+    $bg = $isWarn ? "bg-amber-50" : "bg-red-50";
+    $iconBg = $isWarn ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700";
+    $btn = $isWarn ? "bg-amber-600 hover:bg-amber-700 focus:ring-amber-500" : "bg-red-600 hover:bg-red-700 focus:ring-red-500";
+
+    echo '<!DOCTYPE html><html lang="pt-br"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">';
+    echo '<title>' . $tituloSafe . '</title>';
+    echo '<script src="https://cdn.tailwindcss.com"></script>';
+    echo '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">';
+    echo '</head><body class="bg-gray-50 min-h-screen font-sans">';
+    echo '<div class="min-h-screen flex items-center justify-center px-4 py-10">';
+    echo '<div class="w-full max-w-lg">';
+    echo '<div class="flex items-center justify-center mb-6">';
+    echo '<div class="bg-white p-3 rounded-xl shadow-sm border border-gray-200">';
+    echo '<img src="assets/logo.png" alt="TechPS" class="h-10" onerror="this.style.display=\'none\'">';
+    echo '</div></div>';
+    echo '<div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden ring-1 ' . $ring . '">';
+    echo '<div class="' . $bg . ' px-6 py-5 flex items-start gap-4">';
+    echo '<div class="h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 ' . $iconBg . '"><i class="fas fa-triangle-exclamation text-xl"></i></div>';
+    echo '<div class="min-w-0">';
+    echo '<div class="text-lg font-bold text-gray-900">' . $tituloSafe . '</div>';
+    echo '<div class="mt-1 text-sm text-gray-700 leading-relaxed">' . $mensagemSafe . '</div>';
+    echo '</div></div>';
+    echo '<div class="px-6 py-5 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">';
+    echo '<div class="text-xs text-gray-500">Se você recebeu este link por e-mail, solicite um novo envio ao responsável.</div>';
+    echo '<button type="button" onclick="history.length > 1 ? history.back() : window.close();" class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-white font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 ' . $btn . '">';
+    echo '<i class="fas fa-arrow-left mr-2"></i>Voltar';
+    echo '</button>';
+    echo '</div></div></div></div></body></html>';
+    exit;
+}
+
+$hasExpiresAt = false;
+$checkExp = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'expires_at'");
+if ($checkExp && mysqli_num_rows($checkExp) > 0) {
+    $hasExpiresAt = true;
+} elseif ($checkExp && mysqli_num_rows($checkExp) == 0) {
+    @mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN expires_at DATETIME NULL");
+    $hasExpiresAt = true;
+}
+if ($hasExpiresAt) {
+    $hasCreatedAt = false;
+    $chkCreatedAt = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'created_at'");
+    if($chkCreatedAt && mysqli_num_rows($chkCreatedAt) > 0){
+        $hasCreatedAt = true;
+    }
+    $hasDataSolicitacao = false;
+    $chkDataSolic = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'data_solicitacao'");
+    if($chkDataSolic && mysqli_num_rows($chkDataSolic) > 0){
+        $hasDataSolicitacao = true;
+    }
+    $parts = [];
+    if ($hasCreatedAt) {
+        $parts[] = "NULLIF(created_at,'0000-00-00 00:00:00')";
+    }
+    if ($hasDataSolicitacao) {
+        $parts[] = "NULLIF(data_solicitacao,'0000-00-00 00:00:00')";
+    }
+    $baseExpr = !empty($parts) ? ("COALESCE(" . implode(", ", $parts) . ")") : "NULL";
+    @mysqli_query($conn, "UPDATE solicitacoes_assinatura SET expires_at = DATE_ADD($baseExpr, INTERVAL 24 HOUR) WHERE (expires_at IS NULL OR expires_at = '0000-00-00 00:00:00') AND $baseExpr IS NOT NULL");
+}
+
 // Inicializa variáveis
 $solicitacao = null;
 $assinante = null;
@@ -21,9 +87,14 @@ $email_usuario = '';
 $nome_usuario = '';
 $already_signed = false;
 $signed_data = [];
+$cpf_cadastro = '';
+$rg_cadastro = '';
+$cpf_cadastro_mask = '';
+$rg_cadastro_mask = '';
+$cadastro_ok = false;
 
 // 1. Tenta buscar na tabela nova de Assinantes
-$sqlAssinante = "SELECT a.*, s.caminho_arquivo, s.nome_arquivo_original, s.id_documento as doc_id_global 
+$sqlAssinante = "SELECT a.*, s.caminho_arquivo, s.nome_arquivo_original, s.id_documento as doc_id_global, s.expires_at 
                  FROM assinantes a 
                  JOIN solicitacoes_assinatura s ON a.id_solicitacao = s.id 
                  WHERE a.token = ?";
@@ -44,6 +115,22 @@ if ($assinante) {
     $email_usuario = $assinante['email'];
     $nome_usuario = $assinante['nome'];
     $papel_usuario = $assinante['funcao'];
+
+    $expiresRaw = trim(strval($assinante["expires_at"] ?? ""));
+    if ($assinante['status'] !== 'assinado' && $expiresRaw !== "" && $expiresRaw !== "0000-00-00 00:00:00") {
+        try {
+            $exp = new DateTimeImmutable($expiresRaw, new DateTimeZone("UTC"));
+            $now = new DateTimeImmutable("now", new DateTimeZone("UTC"));
+            if ($now > $exp) {
+                assinaturaRenderMensagemPage("Link expirado", "O prazo de 24 horas para assinatura foi excedido. Solicite um novo envio.");
+            }
+        } catch (Throwable $e) {
+            $expTs = strtotime($expiresRaw . " UTC");
+            if ($expTs && time() > $expTs) {
+                assinaturaRenderMensagemPage("Link expirado", "O prazo de 24 horas para assinatura foi excedido. Solicite um novo envio.");
+            }
+        }
+    }
     
     // Verifica status do próprio assinante
     if ($assinante['status'] === 'assinado') {
@@ -94,6 +181,22 @@ if ($assinante) {
     $nome_usuario = $solicitacao['nome'];
     $papel_usuario = 'Signatário';
 
+    $expiresRaw = trim(strval($solicitacao["expires_at"] ?? ""));
+    if ($expiresRaw !== "" && $expiresRaw !== "0000-00-00 00:00:00") {
+        try {
+            $exp = new DateTimeImmutable($expiresRaw, new DateTimeZone("UTC"));
+            $now = new DateTimeImmutable("now", new DateTimeZone("UTC"));
+            if ($now > $exp && ($solicitacao['status'] !== 'assinado' && $solicitacao['status'] !== 'concluido')) {
+                assinaturaRenderMensagemPage("Link expirado", "O prazo de 24 horas para assinatura foi excedido. Solicite um novo envio.");
+            }
+        } catch (Throwable $e) {
+            $expTs = strtotime($expiresRaw . " UTC");
+            if ($expTs && time() > $expTs && ($solicitacao['status'] !== 'assinado' && $solicitacao['status'] !== 'concluido')) {
+                assinaturaRenderMensagemPage("Link expirado", "O prazo de 24 horas para assinatura foi excedido. Solicite um novo envio.");
+            }
+        }
+    }
+
     if ($solicitacao['status'] === 'assinado' || $solicitacao['status'] === 'concluido') {
         $already_signed = true;
         $signed_data = [
@@ -106,6 +209,71 @@ if ($assinante) {
         ];
     }
 }
+
+function assinatura_normalizarCpfDigits(string $cpf): string {
+    return preg_replace('/\D+/', '', $cpf) ?? '';
+}
+
+function assinatura_normalizarRg(string $rg): string {
+    $rg = strtoupper(trim($rg));
+    return preg_replace('/[^0-9A-Z]+/', '', $rg) ?? '';
+}
+
+function assinatura_mascararCpf(string $cpfDigits): string {
+    $cpfDigits = assinatura_normalizarCpfDigits($cpfDigits);
+    if (strlen($cpfDigits) !== 11) {
+        return '';
+    }
+    return '***.***.***-' . substr($cpfDigits, -2);
+}
+
+function assinatura_mascararRg(string $rg): string {
+    $n = assinatura_normalizarRg($rg);
+    if ($n === '') {
+        return '';
+    }
+    $tail = substr($n, -3);
+    $maskLen = max(0, strlen($n) - strlen($tail));
+    return str_repeat('*', $maskLen) . $tail;
+}
+
+$entiId = 0;
+if (!empty($assinante) && isset($assinante['enti_nb_id'])) {
+    $entiId = intval($assinante['enti_nb_id']);
+}
+
+if ($entiId > 0) {
+    $stmtCad = mysqli_prepare($conn, "SELECT enti_tx_cpf, enti_tx_rg FROM entidade WHERE enti_nb_id = ? LIMIT 1");
+    if ($stmtCad) {
+        mysqli_stmt_bind_param($stmtCad, "i", $entiId);
+        mysqli_stmt_execute($stmtCad);
+        $cad = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtCad));
+        mysqli_stmt_close($stmtCad);
+        if (is_array($cad)) {
+            $cpf_cadastro = trim(strval($cad["enti_tx_cpf"] ?? ""));
+            $rg_cadastro = trim(strval($cad["enti_tx_rg"] ?? ""));
+        }
+    }
+} elseif ($email_usuario !== '' && filter_var($email_usuario, FILTER_VALIDATE_EMAIL)) {
+    $emailLower = strtolower(trim($email_usuario));
+    $stmtCad = mysqli_prepare($conn, "SELECT enti_tx_cpf, enti_tx_rg FROM entidade WHERE LOWER(TRIM(enti_tx_email)) = ? LIMIT 1");
+    if ($stmtCad) {
+        mysqli_stmt_bind_param($stmtCad, "s", $emailLower);
+        mysqli_stmt_execute($stmtCad);
+        $cad = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtCad));
+        mysqli_stmt_close($stmtCad);
+        if (is_array($cad)) {
+            $cpf_cadastro = trim(strval($cad["enti_tx_cpf"] ?? ""));
+            $rg_cadastro = trim(strval($cad["enti_tx_rg"] ?? ""));
+        }
+    }
+}
+
+$cpfDigitsCad = assinatura_normalizarCpfDigits($cpf_cadastro);
+$rgNormCad = assinatura_normalizarRg($rg_cadastro);
+$cpf_cadastro_mask = assinatura_mascararCpf($cpfDigitsCad);
+$rg_cadastro_mask = assinatura_mascararRg($rgNormCad);
+$cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -233,6 +401,8 @@ if ($assinante) {
                     <div>
                         <span class="block font-medium text-gray-700">Documento ID: <span class="font-mono text-blue-600"><?php echo htmlspecialchars($id_documento); ?></span></span>
                         <span class="block text-xs text-gray-500">Para: <?php echo htmlspecialchars($email_usuario); ?></span>
+                        <span class="block text-xs text-gray-500">CPF cadastrado: <span class="font-mono text-gray-700"><?php echo htmlspecialchars($cpf_cadastro_mask !== '' ? $cpf_cadastro_mask : 'não cadastrado'); ?></span></span>
+                        <span class="block text-xs text-gray-500">RG cadastrado: <span class="font-mono text-gray-700"><?php echo htmlspecialchars($rg_cadastro_mask !== '' ? $rg_cadastro_mask : 'não cadastrado'); ?></span></span>
                     </div>
                 </div>
                 <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded font-medium border border-gray-200">
@@ -259,6 +429,12 @@ if ($assinante) {
                         <input type="hidden" id="token_solicitacao" name="token_solicitacao" value="<?php echo htmlspecialchars($token); ?>">
                         <input type="hidden" id="papel_usuario" name="papel_usuario" value="<?php echo htmlspecialchars($papel_usuario); ?>">
                         
+                        <?php if (!$cadastro_ok): ?>
+                            <div class="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-900 rounded-lg p-3 text-xs leading-relaxed">
+                                Não foi possível validar CPF e RG com o cadastro do funcionário. Verifique se o funcionário possui CPF e RG preenchidos no cadastro antes de assinar.
+                            </div>
+                        <?php endif; ?>
+
                         <div class="space-y-3 mb-4">
                             <div>
                                 <label for="nome" class="block text-xs font-medium text-gray-700 mb-1">Nome Completo</label>
@@ -305,7 +481,7 @@ if ($assinante) {
 
                         <!-- Botão -->
                         <button type="submit" id="btnAssinar" 
-                            class="w-full py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all transform hover:scale-[1.02]">
+                            class="w-full py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white <?php echo $cadastro_ok ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500' : 'bg-gray-400 cursor-not-allowed'; ?> focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all transform hover:scale-[1.02]" <?php echo $cadastro_ok ? '' : 'disabled'; ?>>
                             Assinar Digitalmente
                         </button>
                     </form>

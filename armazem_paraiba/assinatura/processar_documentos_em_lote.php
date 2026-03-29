@@ -149,6 +149,7 @@ function ensureAssinaturaTables($conn): void {
 			caminho_arquivo VARCHAR(255) NOT NULL,
 			nome_arquivo_original VARCHAR(255),
 			data_solicitacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+			expires_at DATETIME NULL,
 			status ENUM('pendente', 'em_progresso', 'concluido', 'assinado') DEFAULT 'pendente',
 			id_documento VARCHAR(100),
 			data_assinatura DATETIME NULL
@@ -162,6 +163,21 @@ function ensureAssinaturaTables($conn): void {
 				mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN $col VARCHAR(255)");
 			}
 		}
+
+		$checkExp = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'expires_at'");
+		if($checkExp && mysqli_num_rows($checkExp) == 0){
+			mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN expires_at DATETIME NULL");
+		}
+
+		$hasCreatedAt = false;
+		$chkCreatedAt = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'created_at'");
+		if($chkCreatedAt && mysqli_num_rows($chkCreatedAt) > 0){
+			$hasCreatedAt = true;
+		}
+		$baseExpr = $hasCreatedAt
+			? "COALESCE(NULLIF(created_at,'0000-00-00 00:00:00'), NULLIF(data_solicitacao,'0000-00-00 00:00:00'))"
+			: "NULLIF(data_solicitacao,'0000-00-00 00:00:00')";
+		@mysqli_query($conn, "UPDATE solicitacoes_assinatura SET expires_at = DATE_ADD({$baseExpr}, INTERVAL 24 HOUR) WHERE (expires_at IS NULL OR expires_at = '0000-00-00 00:00:00') AND {$baseExpr} IS NOT NULL");
 	}
 
 	$checkTableAssinantes = "SHOW TABLES LIKE 'assinantes'";
@@ -198,8 +214,8 @@ function criarSolicitacaoAssinatura($conn, array $entidade, string $caminhoArqui
 	$tokenAssinante = bin2hex(random_bytes(32));
 	$idDocumento = "DOC-" . date("YmdHis") . "-" . uniqid();
 
-	$sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, status)
-		VALUES (?, ?, ?, ?, ?, ?, 'pendente')";
+	$sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, expires_at, status)
+		VALUES (?, ?, ?, ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR), 'pendente')";
 	$stmt = mysqli_prepare($conn, $sql);
 	if(!$stmt){
 		return ["ok" => false, "error" => "Falha ao preparar solicitação."];
