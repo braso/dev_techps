@@ -431,7 +431,7 @@
                 ])[0];
                 if(!empty($lastBreakOpening) && $lastBreakOpening['open_break']){
                     // header('HTTP/1.0 400 Bad Request');
-                    echo "Breakpoint open without closing previous one.";
+                    echo "Breakpoint open without closing previous one.|" . $lastBreakOpening["pont_nb_id"];
                     exit;
                 }
             //}
@@ -454,7 +454,7 @@
                 if(substr($lastJourney[0]['pont_tx_data'], 0, strlen($lastJourney[0]['pont_tx_data'])-3) == $_POST["startDateTime"]){
                     echo intval($lastJourney[0]["pont_nb_id"]);
                 }else{
-                    echo "Journey open without closing previous one.";
+                    echo "Journey open without closing previous one.|" . $lastJourney[0]["pont_nb_id"];
                 }
                 exit;
             }
