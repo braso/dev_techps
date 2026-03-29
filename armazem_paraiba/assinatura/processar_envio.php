@@ -687,6 +687,8 @@ if($modo_envio === "avulso" && $avulsoDestino === "todos"){
     $validarIcp = strtolower(trim(strval($_POST["validar_icp"] ?? "nao")));
     $validarIcp = $validarIcp === "sim" ? "sim" : "nao";
 
+    $empresaFiltroId = intval($_POST["empresa_id"] ?? 0);
+
     $uploadFileDir = './uploads/';
     if (!is_dir($uploadFileDir)) {
         mkdir($uploadFileDir, 0777, true);
@@ -711,30 +713,24 @@ if($modo_envio === "avulso" && $avulsoDestino === "todos"){
     }
     $usuarioCadastro = intval($_SESSION["user_nb_id"] ?? 0);
     if($salvarDocumentosEmpresa === "sim"){
-        $empresaId = intval($_SESSION["user_nb_empresa"] ?? 0);
-        if($empresaId <= 0){
-            $empresa = mysqli_fetch_assoc(query(
-                "SELECT empr_nb_id
-                FROM empresa
-                WHERE empr_tx_status = 'ativo'
-                    AND empr_tx_Ehmatriz = 'sim'
-                LIMIT 1"
-            ));
-            $empresaId = intval($empresa["empr_nb_id"] ?? 0);
-        }
-        if($empresaId <= 0){
-            $empresa = mysqli_fetch_assoc(query(
-                "SELECT empr_nb_id
-                FROM empresa
-                WHERE empr_tx_status = 'ativo'
-                ORDER BY empr_nb_id ASC
-                LIMIT 1"
-            ));
-            $empresaId = intval($empresa["empr_nb_id"] ?? 0);
-        }
+        $empresaId = $empresaFiltroId;
         if($empresaId <= 0){
             @unlink($dest_path);
-            redirectTo($redirect_to, "error", "Empresa não identificada para salvar em Documentos da Empresa.");
+            redirectTo($redirect_to, "error", "Selecione a empresa para cadastrar em Documentos da Empresa.");
+        }
+
+        $empresaOk = mysqli_fetch_assoc(query(
+            "SELECT empr_nb_id
+            FROM empresa
+            WHERE empr_nb_id = ?
+                AND empr_tx_status = 'ativo'
+            LIMIT 1",
+            "i",
+            [$empresaId]
+        ));
+        if(empty($empresaOk)){
+            @unlink($dest_path);
+            redirectTo($redirect_to, "error", "Empresa inválida para cadastrar em Documentos da Empresa.");
         }
 
         $root = realpath(__DIR__ . "/..");
@@ -810,12 +806,25 @@ if($modo_envio === "avulso" && $avulsoDestino === "todos"){
         mysqli_stmt_close($stmtEmpresa);
     }
 
-    $funcionarios = mysqli_fetch_all(query(
+    $sqlFunc =
         "SELECT enti_nb_id, enti_tx_nome, enti_tx_email
         FROM entidade
-        WHERE enti_tx_status = 'ativo'
-        ORDER BY enti_tx_nome ASC"
-    ), MYSQLI_ASSOC);
+        WHERE enti_tx_status = 'ativo'";
+    $typesFunc = "";
+    $paramsFunc = [];
+    if($empresaFiltroId > 0){
+        $sqlFunc .= " AND enti_nb_empresa = ?";
+        $typesFunc = "i";
+        $paramsFunc = [$empresaFiltroId];
+    }
+    $sqlFunc .= " ORDER BY enti_tx_nome ASC";
+
+    $funcionarios = mysqli_fetch_all(
+        $typesFunc !== ""
+            ? query($sqlFunc, $typesFunc, $paramsFunc)
+            : query($sqlFunc),
+        MYSQLI_ASSOC
+    );
 
     $enviados = 0;
     $erros = 0;
@@ -1226,9 +1235,11 @@ if(move_uploaded_file($fileTmpPath, $dest_path)) {
             $destAbs = $pastaAbs . $nomeSeguro;
         }
 
-        if(!@copy($dest_path, $destAbs)){
+        $uploadTemp = $dest_path;
+        if(!@copy($uploadTemp, $destAbs)){
             redirectTo($redirect_to, "error", "Falha ao salvar o documento na pasta do funcionário.");
         }
+        @unlink($uploadTemp);
 
         $agora = date("Y-m-d H:i:s");
         $docNome = ($tipoNome ?? "") !== "" ? (($tipoNome ?? "") . " - " . ($safeBase !== "" ? $safeBase : "documento")) : ($safeBase !== "" ? $safeBase : "documento");
@@ -1251,6 +1262,9 @@ if(move_uploaded_file($fileTmpPath, $dest_path)) {
                 $destRel
             ]
         );
+
+        $dest_path = $destRel;
+        $fileName = $nomeSeguro;
     }
 
     $tokenMestre = bin2hex(random_bytes(32)); 

@@ -106,20 +106,47 @@ function assinatura_inserirDocumentoFuncionario(mysqli $conn, int $entidadeId, i
     $dataCadastro = date("Y-m-d H:i:s");
     $usuarioCadastro = 0;
 
-    $sql =
-        "INSERT INTO documento_funcionario
-            (docu_nb_entidade, docu_tx_nome, docu_tx_descricao, docu_tx_dataCadastro, docu_tx_dataVencimento, docu_tx_tipo, docu_nb_sbgrupo, docu_tx_usuarioCadastro, docu_tx_assinado, docu_tx_visivel, docu_tx_caminho)
-        VALUES
-            (?, ?, ?, ?, NULL, NULLIF(?,0), NULL, ?, 'sim', 'sim', ?)";
+    $docId = 0;
+    $stmtFind = mysqli_prepare($conn, "SELECT docu_nb_id FROM documento_funcionario WHERE docu_nb_entidade = ? AND docu_tx_caminho = ? LIMIT 1");
+    if ($stmtFind) {
+        mysqli_stmt_bind_param($stmtFind, "is", $entidadeId, $caminhoRelativo);
+        mysqli_stmt_execute($stmtFind);
+        $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtFind));
+        mysqli_stmt_close($stmtFind);
+        $docId = intval($row["docu_nb_id"] ?? 0);
+    }
 
-    $stmt = mysqli_prepare($conn, $sql);
-    if (!$stmt) {
+    if ($docId > 0) {
+        $stmtUp = mysqli_prepare(
+            $conn,
+            "UPDATE documento_funcionario
+                SET
+                    docu_tx_assinado = 'sim',
+                    docu_tx_tipo = NULLIF(?,0),
+                    docu_tx_descricao = CASE WHEN docu_tx_descricao IS NULL OR TRIM(docu_tx_descricao) = '' THEN ? ELSE docu_tx_descricao END
+            WHERE docu_nb_id = ?
+            LIMIT 1"
+        );
+        if ($stmtUp) {
+            mysqli_stmt_bind_param($stmtUp, "isi", $tipoDocumentoId, $descricao, $docId);
+            @mysqli_stmt_execute($stmtUp);
+            mysqli_stmt_close($stmtUp);
+        }
         return;
     }
 
-    mysqli_stmt_bind_param($stmt, "isssiis", $entidadeId, $nome, $descricao, $dataCadastro, $tipoDocumentoId, $usuarioCadastro, $caminhoRelativo);
-    @mysqli_stmt_execute($stmt);
-    mysqli_stmt_close($stmt);
+    $stmtIns = mysqli_prepare(
+        $conn,
+        "INSERT INTO documento_funcionario
+            (docu_nb_entidade, docu_tx_nome, docu_tx_descricao, docu_tx_dataCadastro, docu_tx_dataVencimento, docu_tx_tipo, docu_nb_sbgrupo, docu_tx_usuarioCadastro, docu_tx_assinado, docu_tx_visivel, docu_tx_caminho)
+        VALUES
+            (?, ?, ?, ?, NULL, NULLIF(?,0), NULL, ?, 'sim', 'sim', ?)"
+    );
+    if ($stmtIns) {
+        mysqli_stmt_bind_param($stmtIns, "isssiis", $entidadeId, $nome, $descricao, $dataCadastro, $tipoDocumentoId, $usuarioCadastro, $caminhoRelativo);
+        @mysqli_stmt_execute($stmtIns);
+        mysqli_stmt_close($stmtIns);
+    }
 }
 
 function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts = []): array {
@@ -419,14 +446,6 @@ function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts
         }
 
         $destAbs = rtrim(str_replace("\\", "/", $root), "/") . "/" . $nomeArquivoSafe;
-        if (file_exists($destAbs)) {
-            $info = pathinfo($nomeArquivoSafe);
-            $base = $info["filename"] ?? "documento";
-            $ext = isset($info["extension"]) ? "." . $info["extension"] : ".pdf";
-            $destAbs = rtrim(str_replace("\\", "/", $root), "/") . "/" . $base . "_" . time() . $ext;
-            $nomeArquivoSafe = basename($destAbs);
-        }
-
         if (@copy($outputPdfPath, $destAbs)) {
             $rel = "arquivos/Funcionarios/" . $entidadeId . "/" . $nomeArquivoSafe;
             $tipoDocumentoId = intval($doc["tipo_documento_id"] ?? 0);

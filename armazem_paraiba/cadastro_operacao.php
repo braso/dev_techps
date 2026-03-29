@@ -33,6 +33,7 @@
 					opre_nb_operacao_id INT NOT NULL,
 					opre_nb_entidade_id INT NOT NULL,
 					opre_tx_assinar_governanca ENUM('sim','nao') NOT NULL DEFAULT 'nao',
+					opre_nb_ordem INT NOT NULL DEFAULT 0,
 					opre_tx_status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo',
 					opre_tx_dataCadastro DATETIME NOT NULL,
 					UNIQUE KEY uniq_operacao_entidade (opre_nb_operacao_id, opre_nb_entidade_id),
@@ -72,6 +73,9 @@
 		if(!isset($has["opre_tx_dataCadastro"])){
 			query("ALTER TABLE operacao_responsavel ADD COLUMN opre_tx_dataCadastro DATETIME NOT NULL");
 		}
+		if(!isset($has["opre_nb_ordem"])){
+			query("ALTER TABLE operacao_responsavel ADD COLUMN opre_nb_ordem INT NOT NULL DEFAULT 0");
+		}
 
 		$idx = mysqli_fetch_all(query(
 			"SELECT INDEX_NAME
@@ -108,10 +112,15 @@
 			"SELECT
 				orv.opre_nb_entidade_id AS id,
 				orv.opre_tx_assinar_governanca AS assinar_governanca,
+				orv.opre_nb_ordem AS ordem,
 				e.enti_tx_nome AS nome,
-				e.enti_tx_email AS email
+				e.enti_tx_email AS email,
+				g.grup_tx_nome AS setor_nome,
+				o.oper_tx_nome AS cargo_nome
 			FROM operacao_responsavel orv
 			LEFT JOIN entidade e ON e.enti_nb_id = orv.opre_nb_entidade_id
+			LEFT JOIN grupos_documentos g ON g.grup_nb_id = e.enti_setor_id
+			LEFT JOIN operacao o ON o.oper_nb_id = e.enti_tx_tipoOperacao
 			WHERE orv.opre_nb_operacao_id = ?
 				AND orv.opre_tx_status = 'ativo'
 			ORDER BY e.enti_tx_nome ASC",
@@ -121,7 +130,38 @@
 		return is_array($rows) ? $rows : [];
 	}
 
-	function salvarResponsaveisOperacao(int $operacaoId, array $responsaveisIds, array $assinaFlags): void{
+	function api_responsaveis_cargo(){
+		header("Content-Type: application/json; charset=utf-8");
+		$cargoId = intval($_GET["cargo_id"] ?? 0);
+		if($cargoId <= 0){
+			http_response_code(400);
+			echo json_encode(["error" => "cargo_id inválido"]);
+			return;
+		}
+
+		$rows = carregarResponsaveisOperacao($cargoId);
+		$out = [];
+		foreach(($rows ?: []) as $r){
+			$id = intval($r["id"] ?? 0);
+			if($id <= 0){
+				continue;
+			}
+			$nome = trim(strval($r["nome"] ?? ""));
+			$email = trim(strval($r["email"] ?? ""));
+			$setorNome = trim(strval($r["setor_nome"] ?? ""));
+			$cargoNome = trim(strval($r["cargo_nome"] ?? ""));
+			$label = $nome !== "" ? $nome : ("ID " . $id);
+			if($setorNome !== ""){ $label .= " - S: " . $setorNome; }
+			if($cargoNome !== ""){ $label .= " - C: " . $cargoNome; }
+			if($email !== ""){
+				$label .= " | " . $email;
+			}
+			$out[] = ["id" => $id, "text" => $label];
+		}
+		echo json_encode($out);
+	}
+
+	function salvarResponsaveisOperacao(int $operacaoId, array $responsaveisIds, array $assinaFlags, array $ordens): void{
 		if($operacaoId <= 0){
 			return;
 		}
@@ -141,23 +181,61 @@
 		}
 
 		$agora = date("Y-m-d H:i:s");
+		$assinaNorm = [];
 		foreach($ids as $entidadeId){
 			$assinar = "nao";
 			if(isset($assinaFlags[$entidadeId]) && strtolower(trim(strval($assinaFlags[$entidadeId]))) === "sim"){
 				$assinar = "sim";
 			}
+			$assinaNorm[$entidadeId] = $assinar;
+		}
+
+		$ordemNorm = [];
+		$signers = [];
+		foreach($ids as $entidadeId){
+			if(($assinaNorm[$entidadeId] ?? "nao") !== "sim"){
+				continue;
+			}
+			$o = intval($ordens[$entidadeId] ?? 0);
+			$signers[] = [
+				"id" => $entidadeId,
+				"ordem" => $o > 0 ? $o : PHP_INT_MAX
+			];
+		}
+		usort($signers, function($a, $b){
+			$ao = intval($a["ordem"] ?? PHP_INT_MAX);
+			$bo = intval($b["ordem"] ?? PHP_INT_MAX);
+			if($ao === $bo){
+				return intval($a["id"] ?? 0) <=> intval($b["id"] ?? 0);
+			}
+			return $ao <=> $bo;
+		});
+		$pos = 1;
+		foreach($signers as $s){
+			$eid = intval($s["id"] ?? 0);
+			if($eid <= 0){
+				continue;
+			}
+			$ordemNorm[$eid] = $pos;
+			$pos++;
+		}
+
+		foreach($ids as $entidadeId){
+			$assinar = $assinaNorm[$entidadeId] ?? "nao";
+			$ordem = ($assinar === "sim") ? intval($ordemNorm[$entidadeId] ?? 0) : 0;
 
 			query(
 				"INSERT INTO operacao_responsavel
-					(opre_nb_operacao_id, opre_nb_entidade_id, opre_tx_assinar_governanca, opre_tx_status, opre_tx_dataCadastro)
+					(opre_nb_operacao_id, opre_nb_entidade_id, opre_tx_assinar_governanca, opre_nb_ordem, opre_tx_status, opre_tx_dataCadastro)
 				VALUES
-					(?, ?, ?, 'ativo', ?)
+					(?, ?, ?, ?, 'ativo', ?)
 				ON DUPLICATE KEY UPDATE
 					opre_tx_assinar_governanca = VALUES(opre_tx_assinar_governanca),
+					opre_nb_ordem = VALUES(opre_nb_ordem),
 					opre_tx_status = 'ativo',
 					opre_tx_dataCadastro = VALUES(opre_tx_dataCadastro)",
-				"iiss",
-				[$operacaoId, $entidadeId, $assinar, $agora]
+				"iisis",
+				[$operacaoId, $entidadeId, $assinar, $ordem, $agora]
 			);
 		}
 	}
@@ -177,12 +255,14 @@
 		$resps = carregarResponsaveisOperacao(intval($a_mod["oper_nb_id"] ?? 0));
 		$_POST["responsaveis"] = array_values(array_filter(array_map(fn($r) => intval($r["id"] ?? 0), $resps), fn($v) => $v > 0));
 		$_POST["responsavel_assina"] = [];
+		$_POST["responsavel_ordem"] = [];
 		foreach($resps as $r){
 			$id = intval($r["id"] ?? 0);
 			if($id <= 0){
 				continue;
 			}
 			$_POST["responsavel_assina"][$id] = (strtolower(trim(strval($r["assinar_governanca"] ?? "nao"))) === "sim") ? "sim" : "nao";
+			$_POST["responsavel_ordem"][$id] = intval($r["ordem"] ?? 0);
 		}
 		[$_POST["id"], $_POST["nome"], $_POST["status"]] = [$a_mod["oper_nb_id"], $a_mod["oper_tx_nome"], $a_mod["oper_tx_status"]];
 		
@@ -218,8 +298,10 @@
 		$responsaveis = is_array($responsaveis) ? $responsaveis : [];
 		$assinaFlags = $_POST["responsavel_assina"] ?? [];
 		$assinaFlags = is_array($assinaFlags) ? $assinaFlags : [];
+		$ordens = $_POST["responsavel_ordem"] ?? [];
+		$ordens = is_array($ordens) ? $ordens : [];
 		if($operacaoId > 0){
-			salvarResponsaveisOperacao($operacaoId, $responsaveis, $assinaFlags);
+			salvarResponsaveisOperacao($operacaoId, $responsaveis, $assinaFlags, $ordens);
 		}
 
 		index();
@@ -270,6 +352,8 @@
 		$preIds = is_array($preIds) ? array_values(array_unique(array_filter(array_map("intval", $preIds), fn($v) => $v > 0))) : [];
 		$preAssina = $_POST["responsavel_assina"] ?? [];
 		$preAssina = is_array($preAssina) ? $preAssina : [];
+		$preOrdens = $_POST["responsavel_ordem"] ?? [];
+		$preOrdens = is_array($preOrdens) ? $preOrdens : [];
 		$preLabels = [];
 		if(!empty($preIds)){
 			$placeholders = implode(",", array_fill(0, count($preIds), "?"));
@@ -305,6 +389,7 @@
 					var pre = ".json_encode(array_values($preIds), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).";
 					var labels = ".json_encode($preLabels, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).";
 					var assinaMap = ".json_encode($preAssina, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).";
+					var ordemMap = ".json_encode($preOrdens, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).";
 
 					pre.forEach(function(id){
 						var key = String(id);
@@ -367,6 +452,38 @@
 						});
 					}
 
+					function calcularPosicoes(selected){
+						var checked = [];
+						selected.forEach(function(id, idx){
+							var key = String(id);
+							var isChecked = (assinaMap && (assinaMap[key] === 'sim' || assinaMap[id] === 'sim'));
+							if(!isChecked){ return; }
+							var o = parseInt((ordemMap && (ordemMap[key] || ordemMap[id])) || '0', 10);
+							checked.push({
+								id: key,
+								idx: idx,
+								ordem: (isFinite(o) && o > 0) ? o : 999999
+							});
+						});
+						checked.sort(function(a, b){
+							if(a.ordem === b.ordem){
+								return a.idx - b.idx;
+							}
+							return a.ordem - b.ordem;
+						});
+						var pos = {};
+						checked.forEach(function(item, i){
+							pos[item.id] = i + 1;
+						});
+						return pos;
+					}
+
+					function ordinal(n){
+						n = parseInt(n || '0', 10);
+						if(!isFinite(n) || n <= 0){ return ''; }
+						return String(n) + 'ª';
+					}
+
 					function renderAssina(){
 						var box = document.getElementById('lista-resp-assina');
 						if(!box){ return; }
@@ -376,11 +493,15 @@
 							box.innerHTML = '<span class=\"text-muted\">Nenhum responsável selecionado.</span>';
 							return;
 						}
+						var pos = calcularPosicoes(selected);
 						selected.forEach(function(id){
 							var key = String(id);
 							var text = (labels[key] || labels[id] || (\$sel.find('option[value=\"'+key+'\"]:selected').text()) || ('ID ' + key));
 							text = (typeof sanitizeText === 'function') ? sanitizeText(text) : text;
-							var checked = (assinaMap && (assinaMap[key] === 'sim' || assinaMap[id] === 'sim')) ? 'checked' : '';
+							var isChecked = (assinaMap && (assinaMap[key] === 'sim' || assinaMap[id] === 'sim'));
+							var checked = isChecked ? 'checked' : '';
+							var badge = isChecked ? ordinal(pos[key] || 0) : '';
+							var ordemVal = isChecked ? (pos[key] || 0) : 0;
 
 							var row = document.createElement('div');
 							row.style.display = 'flex';
@@ -388,10 +509,12 @@
 							row.style.gap = '10px';
 							row.style.marginBottom = '6px';
 							row.innerHTML =
+								'<span class=\"label label-primary\" style=\"min-width:34px; text-align:center;\">'+(badge || '—')+'</span>'+
 								'<label style=\"font-weight:normal; margin:0; flex:1;\">'+
 									'<input data-resp-id=\"'+key+'\" type=\"checkbox\" name=\"responsavel_assina['+key+']\" value=\"sim\" '+checked+' style=\"margin-right:8px;\">'+
 									'<span>'+text+'</span>'+
-								'</label>';
+								'</label>'+
+								'<input type=\"hidden\" name=\"responsavel_ordem['+key+']\" value=\"'+String(ordemVal)+'\">';
 							box.appendChild(row);
 						});
 					}
@@ -400,6 +523,10 @@
 						var id = this.getAttribute('data-resp-id');
 						if(!id){ return; }
 						assinaMap[id] = this.checked ? 'sim' : 'nao';
+						if(!this.checked){
+							ordemMap[id] = 0;
+						}
+						renderAssina();
 					});
 
 					\$sel.on('change', function(){
@@ -408,6 +535,7 @@
 						Object.keys(assinaMap || {}).forEach(function(k){
 							if(selected.indexOf(String(k)) === -1){
 								delete assinaMap[k];
+								delete ordemMap[k];
 							}
 						});
 						renderAssina();

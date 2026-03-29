@@ -256,110 +256,123 @@
 
 				
 			</script>
-				
+
 			<script>
-				function setOptionsSelected(selectEl, items){
-					if(!selectEl){ return; }
-					selectEl.innerHTML = '';
-					(items || []).forEach(function(it){
-						if(!it || it.id === undefined){ return; }
-						var opt = document.createElement('option');
-						opt.value = String(it.id);
-						opt.textContent = String(it.text || it.id);
-						opt.selected = true;
-						selectEl.appendChild(opt);
-					});
-					if(window.jQuery && jQuery(selectEl).data('select2')){
-						jQuery(selectEl).trigger('change');
-					}
+				function escapeHtml(s){
+					var div = document.createElement('div');
+					div.textContent = (s === undefined || s === null) ? '' : String(s);
+					return div.innerHTML;
 				}
-
-				function atualizarResponsaveisSetor(){
-					var empresaEl = document.getElementsByName('empresa')[0];
-					var empresaId = parseInt((empresaEl && empresaEl.value) ? empresaEl.value : '0', 10);
-					var setorEl = document.getElementsByName('setor')[0];
-					var selectEl = document.getElementById('respSetor');
-					if(!selectEl){ return; }
-					var setorId = parseInt((setorEl && setorEl.value) ? setorEl.value : '0', 10);
-					if(!setorId || setorId <= 0){
-						setOptionsSelected(selectEl, []);
-						return;
-					}
-					var url = 'cadastro_grupos.php?acao=api_responsaveis_setor&setor_id=' + setorId;
-					if(empresaId && empresaId > 0){ url += '&empresa_id=' + empresaId; }
-					if(window.jQuery && jQuery.getJSON){
-						jQuery.getJSON(url, function(data){ setOptionsSelected(selectEl, data); });
-						return;
-					}
-					fetch(url).then(function(r){ return r.json(); }).then(function(data){ setOptionsSelected(selectEl, data); });
-				}
-
-				function atualizarResponsaveisCargo(){
-					var empresaEl = document.getElementsByName('empresa')[0];
-					var empresaId = parseInt((empresaEl && empresaEl.value) ? empresaEl.value : '0', 10);
-					var cargoEl = document.getElementsByName('tipoOperacao')[0];
-					var selectEl = document.getElementById('respCargo');
-					if(!selectEl){ return; }
-					var cargoId = parseInt((cargoEl && cargoEl.value) ? cargoEl.value : '0', 10);
-					if(!cargoId || cargoId <= 0){
-						setOptionsSelected(selectEl, []);
-						return;
-					}
-					var url = 'cadastro_grupos.php?acao=api_responsaveis_cargo&cargo_id=' + cargoId;
-					if(empresaId && empresaId > 0){ url += '&empresa_id=' + empresaId; }
-					if(window.jQuery && jQuery.getJSON){
-						jQuery.getJSON(url, function(data){ setOptionsSelected(selectEl, data); });
-						return;
-					}
-					fetch(url).then(function(r){ return r.json(); }).then(function(data){ setOptionsSelected(selectEl, data); });
-				}
-
-				document.addEventListener('DOMContentLoaded', function () {
-					document.querySelectorAll('select').forEach(function (select) {
-						const first = select.options[0];
-						if (!first) return;
-
-						const isPlaceholder = (first.value === '' || /selecion(e|e um item)/i.test(first.textContent.trim()));
-
-						if (isPlaceholder) {
-							first.disabled = true;
-							if (window.jQuery && jQuery(select).data('select2')) {
-								jQuery(select).val('').trigger('change');
-							}
-						}
-					});
-
+				function selecionarResponsavelFuncionario(){
 					if(window.jQuery && jQuery.fn && jQuery.fn.select2){
-						jQuery.fn.select2.defaults.set('theme','bootstrap');
-						jQuery('#respSetor, #respCargo').select2({
-							language: 'pt-BR',
-							placeholder: 'Responsáveis',
-							allowClear: true,
-							width: '100%'
-						});
+						var $el = jQuery('.resp-funcionario').first();
+						if($el && $el.length){
+							try{
+								$el.select2('open');
+							}catch(e){}
+						}
+					}
+				}
+				function verResponsaveisSetor(){
+					verResponsaveis('setor');
+				}
+				function verResponsaveisCargo(){
+					verResponsaveis('cargo');
+				}
+				function verResponsaveis(tipo){
+					var tituloEl = document.getElementById('modal_responsaveis_titulo');
+					var listaEl = document.getElementById('modal_responsaveis_lista');
+					var linkEl = document.getElementById('modal_responsaveis_link');
+					if(!tituloEl || !listaEl){
+						return;
 					}
 
 					var setorEl = document.getElementsByName('setor')[0];
-					if (setorEl && setorEl.value) { filtrarSubSetor(setorEl.value); }
-
-					atualizarResponsaveisSetor();
-					atualizarResponsaveisCargo();
-
-					if(setorEl){
-						setorEl.addEventListener('change', function(){ atualizarResponsaveisSetor(); });
-					}
 					var cargoEl = document.getElementsByName('tipoOperacao')[0];
-					if(cargoEl){
-						cargoEl.addEventListener('change', function(){ atualizarResponsaveisCargo(); });
+
+					var id = 0;
+					var url = '';
+					if(tipo === 'setor'){
+						id = parseInt((setorEl && setorEl.value) ? setorEl.value : '0', 10);
+						tituloEl.textContent = 'Responsáveis do Setor';
+						url = 'cadastro_setor.php?acao=api_responsaveis_setor&setor_id=' + id;
+						if(linkEl){ linkEl.href = 'cadastro_setor.php'; }
+					}else{
+						id = parseInt((cargoEl && cargoEl.value) ? cargoEl.value : '0', 10);
+						tituloEl.textContent = 'Responsáveis do Cargo';
+						url = 'cadastro_operacao.php?acao=api_responsaveis_cargo&cargo_id=' + id;
+						if(linkEl){ linkEl.href = 'cadastro_operacao.php'; }
 					}
-					var empresaEl = document.getElementsByName('empresa')[0];
-					if(empresaEl){
-						empresaEl.addEventListener('change', function(){
-							atualizarResponsaveisSetor();
-							atualizarResponsaveisCargo();
+
+					if(!id || id <= 0){
+						listaEl.innerHTML = \"<div class='alert alert-warning'>Selecione um \" + (tipo === 'setor' ? 'setor' : 'cargo') + \" para ver os responsáveis.</div>\";
+						if(window.jQuery && jQuery.fn && jQuery.fn.modal){
+							jQuery('#modal_responsaveis').modal('show');
+						}
+						return;
+					}
+
+					listaEl.innerHTML = \"<div class='alert alert-info'>Carregando...</div>\";
+
+					var abrirModal = function(){
+						if(window.jQuery && jQuery.fn && jQuery.fn.modal){
+							jQuery('#modal_responsaveis').modal('show');
+						}
+					};
+
+					var render = function(items){
+						items = items || [];
+						if(!items.length){
+							listaEl.innerHTML = \"<div class='alert alert-warning'>Nenhum responsável vinculado.</div>\";
+							abrirModal();
+							return;
+						}
+						var html = '<ul>';
+						items.forEach(function(it){
+							if(!it){ return; }
+							var txt = (it.text !== undefined && it.text !== null) ? String(it.text) : String(it.id || '');
+							txt = escapeHtml(txt);
+							html += '<li>' + txt + '</li>';
 						});
-					}
-				});
+						html += '</ul>';
+						listaEl.innerHTML = html;
+						abrirModal();
+					};
+
+					fetch(url, { credentials: 'same-origin' })
+						.then(function(r){
+							return r.text().then(function(t){
+								var txt = String(t || '');
+								var data = null;
+								try{
+									data = JSON.parse(txt);
+								}catch(e){
+									data = null;
+								}
+								if(!r.ok){
+									throw { status: r.status, body: txt, json: data };
+								}
+								if(data && data.error){
+									throw { status: r.status, body: txt, json: data };
+								}
+								if(data === null){
+									throw { status: r.status, body: txt, json: null };
+								}
+								return data;
+							});
+						})
+						.then(function(data){ render(data); })
+						.catch(function(err){
+							var body = err && err.body ? String(err.body) : '';
+							body = escapeHtml(body);
+							if(body.length > 800){ body = body.slice(0, 800) + '...'; }
+							var status = (err && err.status) ? String(err.status) : '';
+							listaEl.innerHTML =
+								\"<div class='alert alert-danger'>Não foi possível carregar os responsáveis\" + (status ? ' (HTTP ' + status + ')' : '') + \".</div>\" +
+								(body ? (\"<pre style='white-space:pre-wrap; margin:0;'>\" + body + \"</pre>\") : '');
+							abrirModal();
+						});
+				}
 			</script>"
 		;
 
@@ -502,6 +515,12 @@
 		if(!isset($has["enti_respCargo_ids"])){
 			query("ALTER TABLE entidade ADD COLUMN enti_respCargo_ids TEXT NULL");
 		}
+		if(!isset($has["enti_respFuncionario_id"])){
+			query("ALTER TABLE entidade ADD COLUMN enti_respFuncionario_id INT NULL");
+		}
+		if(!isset($has["enti_respFuncionario_ids"])){
+			query("ALTER TABLE entidade ADD COLUMN enti_respFuncionario_ids TEXT NULL");
+		}
 	}
 
 	function cadastrarMotorista(){
@@ -604,19 +623,17 @@
 		$respSetorIds = $_POST["respSetor"] ?? [];
 		$respSetorIds = is_array($respSetorIds) ? $respSetorIds : [$respSetorIds];
 		$respSetorIds = array_values(array_unique(array_filter(array_map("intval", $respSetorIds), fn($v) => $v > 0)));
+		$a_mod["enti_respSetor_id"] = $respSetorIds[0] ?? null;
+		$a_mod["enti_respSetor_ids"] = !empty($respSetorIds) ? implode(",", $respSetorIds) : null;
+		$novoMotorista["enti_respSetor_id"] = $a_mod["enti_respSetor_id"];
+		$novoMotorista["enti_respSetor_ids"] = $a_mod["enti_respSetor_ids"];
 
 		$respCargoIds = $_POST["respCargo"] ?? [];
 		$respCargoIds = is_array($respCargoIds) ? $respCargoIds : [$respCargoIds];
 		$respCargoIds = array_values(array_unique(array_filter(array_map("intval", $respCargoIds), fn($v) => $v > 0)));
-
-		$a_mod["enti_respSetor_id"] = $respSetorIds[0] ?? null;
 		$a_mod["enti_respCargo_id"] = $respCargoIds[0] ?? null;
-		$a_mod["enti_respSetor_ids"] = !empty($respSetorIds) ? implode(",", $respSetorIds) : null;
 		$a_mod["enti_respCargo_ids"] = !empty($respCargoIds) ? implode(",", $respCargoIds) : null;
-
-		$novoMotorista["enti_respSetor_id"] = $a_mod["enti_respSetor_id"];
 		$novoMotorista["enti_respCargo_id"] = $a_mod["enti_respCargo_id"];
-		$novoMotorista["enti_respSetor_ids"] = $a_mod["enti_respSetor_ids"];
 		$novoMotorista["enti_respCargo_ids"] = $a_mod["enti_respCargo_ids"];
 		if(!empty($_POST["desligamento"])){
 			$novoMotorista["enti_tx_desligamento"] = $_POST["desligamento"];
@@ -1600,20 +1617,226 @@
 		$cContratual = [
 			combo_bd("Empresa*", "empresa", ($a_mod["enti_nb_empresa"]?? $_SESSION["user_nb_empresa"]), 3, "empresa", "onchange='carregarEmpresa(this.value)' tabindex=".sprintf("%02d", $tabIndex++), $extraEmpresa),
 			combo_bd("Setor", "setor", ($a_mod["enti_setor_id"]?? ""), 3, "grupos_documentos", "id='setor' onchange='filtrarSubSetor(this.value)' tabindex=".sprintf("%02d", $tabIndex++)),
-			"<div class='col-sm-3 margin-bottom-5 campo-fit-content'>
-				<label class='control-label'>Resp. Setor</label>
-				<select id='respSetor' class='form-control input-sm' name='respSetor[]' multiple='multiple' style='width:100%;'></select>
-			</div>",
 			combo_bd("Subsetor", "subSetor", ($a_mod["enti_subSetor_id"]?? ""), 3, "sbgrupos_documentos", "tabindex=".sprintf("%02d", $tabIndex++), $condSubSetor),
 			combo_bd("!Cargo", "tipoOperacao", (isset($a_mod["enti_tx_tipoOperacao"])? $a_mod["enti_tx_tipoOperacao"]: ""), 3, "operacao", "id='tipoOperacao' tabindex=".sprintf("%02d", $tabIndex++)),
-			"<div class='col-sm-3 margin-bottom-5 campo-fit-content'>
-				<label class='control-label'>Resp. Cargo</label>
-				<select id='respCargo' class='form-control input-sm' name='respCargo[]' multiple='multiple' style='width:100%;'></select>
-			</div>",
-
 			$campoSalario
 		];
 		$tabIndex++;
+
+		$preRespSetorIds = $_POST["respSetor"] ?? [];
+		$preRespSetorIds = is_array($preRespSetorIds) ? $preRespSetorIds : [$preRespSetorIds];
+		$preRespSetorIds = array_values(array_unique(array_filter(array_map("intval", $preRespSetorIds), fn($v) => $v > 0)));
+		if(empty($preRespSetorIds)){
+			$csv = trim(strval($a_mod["enti_respSetor_ids"] ?? ""));
+			if($csv !== ""){
+				foreach(explode(",", $csv) as $p){
+					$v = intval(trim($p));
+					if($v > 0){ $preRespSetorIds[] = $v; }
+				}
+			}
+			$preRespSetorIds = array_values(array_unique(array_filter(array_map("intval", $preRespSetorIds), fn($v) => $v > 0)));
+		}
+
+		$preRespCargoIds = $_POST["respCargo"] ?? [];
+		$preRespCargoIds = is_array($preRespCargoIds) ? $preRespCargoIds : [$preRespCargoIds];
+		$preRespCargoIds = array_values(array_unique(array_filter(array_map("intval", $preRespCargoIds), fn($v) => $v > 0)));
+		if(empty($preRespCargoIds)){
+			$csv = trim(strval($a_mod["enti_respCargo_ids"] ?? ""));
+			if($csv !== ""){
+				foreach(explode(",", $csv) as $p){
+					$v = intval(trim($p));
+					if($v > 0){ $preRespCargoIds[] = $v; }
+				}
+			}
+			$preRespCargoIds = array_values(array_unique(array_filter(array_map("intval", $preRespCargoIds), fn($v) => $v > 0)));
+		}
+
+		$respSetorOptions = "";
+		if(!empty($preRespSetorIds)){
+			$idsSql = implode(",", $preRespSetorIds);
+			$rows = mysqli_fetch_all(query(
+				"SELECT
+					e.enti_nb_id AS id,
+					e.enti_tx_nome AS nome,
+					e.enti_tx_email AS email,
+					g.grup_tx_nome AS setor_nome,
+					o.oper_tx_nome AS cargo_nome
+				FROM entidade e
+				LEFT JOIN grupos_documentos g ON g.grup_nb_id = e.enti_setor_id
+				LEFT JOIN operacao o ON o.oper_nb_id = e.enti_tx_tipoOperacao
+				WHERE e.enti_nb_id IN ($idsSql)
+				ORDER BY e.enti_tx_nome ASC"
+			), MYSQLI_ASSOC);
+			foreach(($rows ?: []) as $r){
+				$idResp = intval($r["id"] ?? 0);
+				if($idResp <= 0){ continue; }
+				$nome = strval($r["nome"] ?? "");
+				$email = strval($r["email"] ?? "");
+				$setorNome = strval($r["setor_nome"] ?? "");
+				$cargoNome = strval($r["cargo_nome"] ?? "");
+				$label = $nome !== "" ? $nome : ("ID " . $idResp);
+				if($setorNome !== ""){ $label .= " - S: ".$setorNome; }
+				if($cargoNome !== ""){ $label .= " - C: ".$cargoNome; }
+				if($email !== ""){ $label .= " | ".$email; }
+				$respSetorOptions .= "<option value='".$idResp."' selected>".htmlspecialchars($label, ENT_QUOTES, "UTF-8")."</option>";
+			}
+		}
+
+		$respCargoOptions = "";
+		if(!empty($preRespCargoIds)){
+			$idsSql = implode(",", $preRespCargoIds);
+			$rows = mysqli_fetch_all(query(
+				"SELECT
+					e.enti_nb_id AS id,
+					e.enti_tx_nome AS nome,
+					e.enti_tx_email AS email,
+					g.grup_tx_nome AS setor_nome,
+					o.oper_tx_nome AS cargo_nome
+				FROM entidade e
+				LEFT JOIN grupos_documentos g ON g.grup_nb_id = e.enti_setor_id
+				LEFT JOIN operacao o ON o.oper_nb_id = e.enti_tx_tipoOperacao
+				WHERE e.enti_nb_id IN ($idsSql)
+				ORDER BY e.enti_tx_nome ASC"
+			), MYSQLI_ASSOC);
+			foreach(($rows ?: []) as $r){
+				$idResp = intval($r["id"] ?? 0);
+				if($idResp <= 0){ continue; }
+				$nome = strval($r["nome"] ?? "");
+				$email = strval($r["email"] ?? "");
+				$setorNome = strval($r["setor_nome"] ?? "");
+				$cargoNome = strval($r["cargo_nome"] ?? "");
+				$label = $nome !== "" ? $nome : ("ID " . $idResp);
+				if($setorNome !== ""){ $label .= " - S: ".$setorNome; }
+				if($cargoNome !== ""){ $label .= " - C: ".$cargoNome; }
+				if($email !== ""){ $label .= " | ".$email; }
+				$respCargoOptions .= "<option value='".$idResp."' selected>".htmlspecialchars($label, ENT_QUOTES, "UTF-8")."</option>";
+			}
+		}
+
+		$cResponsaveis = [
+			"<div class='col-sm-6 margin-bottom-5 campo-fit-content'>
+				<label class='control-label'>Responsáveis do Setor</label>
+				<select class='form-control input-sm resp-setor' name='respSetor[]' multiple='multiple' style='width: 100%;'>".$respSetorOptions."</select>
+				<div class='help-block'>Lista todos os responsáveis cadastrados no setor selecionado. Marque quais serão responsáveis deste funcionário.</div>
+			</div>",
+			"<div class='col-sm-6 margin-bottom-5 campo-fit-content'>
+				<label class='control-label'>Responsáveis do Cargo</label>
+				<select class='form-control input-sm resp-cargo' name='respCargo[]' multiple='multiple' style='width: 100%;'>".$respCargoOptions."</select>
+				<div class='help-block'>Lista todos os responsáveis cadastrados no cargo selecionado. Marque quais serão responsáveis deste funcionário.</div>
+			</div>",
+			"<script>
+				(function(){
+					function init(){
+						if(!(window.jQuery && jQuery.fn && jQuery.fn.select2)){
+							setTimeout(init, 200);
+							return;
+						}
+						var \$setorSel = jQuery('.resp-setor');
+						var \$cargoSel = jQuery('.resp-cargo');
+						if(\$setorSel.length && !\$setorSel.data('select2')){
+							\$setorSel.select2({ theme: 'bootstrap', width: '100%', placeholder: 'Selecione', allowClear: true });
+						}
+						if(\$cargoSel.length && !\$cargoSel.data('select2')){
+							\$cargoSel.select2({ theme: 'bootstrap', width: '100%', placeholder: 'Selecione', allowClear: true });
+						}
+
+						function optionMap(\$sel){
+							var m = {};
+							\$sel.find('option').each(function(){
+								var v = String(this.value || '');
+								if(v){ m[v] = String(jQuery(this).text() || ''); }
+							});
+							return m;
+						}
+
+						function selectedSet(\$sel){
+							var a = \$sel.val() || [];
+							var set = {};
+							a.forEach(function(v){ set[String(v)] = true; });
+							return set;
+						}
+
+						function repopular(\$sel, items){
+							items = Array.isArray(items) ? items : [];
+							var oldMap = optionMap(\$sel);
+							var selSet = selectedSet(\$sel);
+							\$sel.empty();
+							items.forEach(function(it){
+								if(!it || it.id === undefined || it.id === null){ return; }
+								var id = String(it.id);
+								var text = (it.text !== undefined && it.text !== null) ? String(it.text) : id;
+								var opt = new Option(text, id, false, !!selSet[id]);
+								\$sel.append(opt);
+								delete oldMap[id];
+							});
+							Object.keys(oldMap).forEach(function(id){
+								if(!selSet[id]){ return; }
+								var opt = new Option(oldMap[id] || ('ID ' + id), id, false, true);
+								\$sel.append(opt);
+							});
+							\$sel.trigger('change.select2');
+						}
+
+						function carregar(tipo, id, limpar){
+							var \$sel = (tipo === 'setor') ? \$setorSel : \$cargoSel;
+							if(limpar){
+								try{ \$sel.val(null); }catch(e){}
+							}
+							id = parseInt(String(id || '0'), 10);
+							if(!id || id <= 0){
+								repopular(\$sel, []);
+								return;
+							}
+							var url = (tipo === 'setor')
+								? ('cadastro_setor.php?acao=api_responsaveis_setor&setor_id=' + id)
+								: ('cadastro_operacao.php?acao=api_responsaveis_cargo&cargo_id=' + id);
+							fetch(url, { credentials: 'same-origin' })
+								.then(function(r){ return r.json(); })
+								.then(function(data){
+									repopular(\$sel, data);
+								})
+								.catch(function(){
+									repopular(\$sel, []);
+								});
+						}
+
+						var setorEl = document.getElementsByName('setor')[0];
+						var cargoEl = document.getElementsByName('tipoOperacao')[0];
+						if(setorEl){
+							setorEl.addEventListener('change', function(){ carregar('setor', this.value, true); });
+							if(setorEl.value){ carregar('setor', setorEl.value, false); }
+						}
+						if(cargoEl){
+							cargoEl.addEventListener('change', function(){ carregar('cargo', this.value, true); });
+							if(cargoEl.value){ carregar('cargo', cargoEl.value, false); }
+						}
+					}
+					init();
+				})();
+			</script>"
+		];
+
+		$respModalHtml = "
+			<div class='modal fade' id='modal_responsaveis' tabindex='-1' role='dialog' aria-hidden='true'>
+				<div class='modal-dialog modal-lg'>
+					<div class='modal-content'>
+						<div class='modal-header'>
+							<button type='button' class='close' data-dismiss='modal' aria-hidden='true'></button>
+							<h4 class='modal-title' id='modal_responsaveis_titulo'></h4>
+						</div>
+						<div class='modal-body'>
+							<div id='modal_responsaveis_lista'></div>
+							<div class='help-block'>Para alterar os responsáveis, faça no cadastro de Setor ou no cadastro de Cargo.</div>
+						</div>
+						<div class='modal-footer'>
+							<button type='button' class='btn default' data-dismiss='modal'>Fechar</button>
+							<a class='btn btn-primary' id='modal_responsaveis_link' href='cadastro_setor.php' target='_blank'>Abrir cadastro</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		";
+		$respModalJs = "";
 
 		$cContratual = array_merge($cContratual, [
 			combo(		"Ocupação*", 		"ocupacao", 		(!empty($a_mod["enti_tx_ocupacao"])? $a_mod["enti_tx_ocupacao"]	:""), 		2, ["" => "Selecione", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
@@ -1735,6 +1958,10 @@
 		echo "<br>";
 		fieldset("Dados Contratuais");
 		echo linha_form($cContratual);
+		echo "<br>";
+		fieldset("Responsáveis");
+		echo linha_form($cResponsaveis);
+		echo $respModalHtml.$respModalJs;
 		echo "<br>";
 		fieldset("CONVENÇÃO SINDICAL - JORNADA PADRÃO DO FUNCIONÁRIO");
 		echo linha_form($cJornada);
@@ -1967,7 +2194,7 @@ function index(){
 	
             $queryBase = (
                 "SELECT ".implode(", ", array_values($allGridFields))." FROM entidade"
-                    ." JOIN empresa ON enti_nb_empresa = empr_nb_id"
+                    ." LEFT JOIN empresa ON enti_nb_empresa = empr_nb_id"
                     ." LEFT JOIN grupos_documentos ON enti_setor_id = grup_nb_id"
                     ." LEFT JOIN sbgrupos_documentos subg ON enti_subSetor_id = subg.sbgr_nb_id"
                     ." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
