@@ -2,13 +2,17 @@
 	include "conecta.php";
 
 	function ensureSetorResponsavelSchema(): void{
-		$dbRow = mysqli_fetch_assoc(query("SELECT DATABASE() AS db"));
+		$dbRes = query("SELECT DATABASE() AS db");
+		if(!($dbRes instanceof mysqli_result)){
+			return;
+		}
+		$dbRow = mysqli_fetch_assoc($dbRes) ?: [];
 		$db = strval($dbRow["db"] ?? "");
 		if($db === ""){
 			return;
 		}
 
-		$exists = mysqli_fetch_assoc(query(
+		$existsRes = query(
 			"SELECT 1 AS ok
 			FROM information_schema.TABLES
 			WHERE TABLE_SCHEMA = ?
@@ -16,7 +20,8 @@
 			LIMIT 1",
 			"s",
 			[$db]
-		));
+		);
+		$exists = ($existsRes instanceof mysqli_result) ? (mysqli_fetch_assoc($existsRes) ?: []) : [];
 
 		if(empty($exists)){
 			query(
@@ -34,14 +39,15 @@
 			);
 		}
 
-		$cols = mysqli_fetch_all(query(
+		$colsRes = query(
 			"SELECT COLUMN_NAME
 			FROM information_schema.COLUMNS
 			WHERE TABLE_SCHEMA = ?
 				AND TABLE_NAME = 'setor_responsavel'",
 			"s",
 			[$db]
-		), MYSQLI_ASSOC);
+		);
+		$cols = ($colsRes instanceof mysqli_result) ? mysqli_fetch_all($colsRes, MYSQLI_ASSOC) : [];
 
 		$colNames = array_map(fn($r) => strval($r["COLUMN_NAME"] ?? ""), $cols ?: []);
 		$has = array_flip($colNames);
@@ -64,15 +70,19 @@
 		if(!isset($has["sres_tx_dataCadastro"])){
 			query("ALTER TABLE setor_responsavel ADD COLUMN sres_tx_dataCadastro DATETIME NOT NULL");
 		}
+		if(!isset($has["sres_nb_ordem"])){
+			query("ALTER TABLE setor_responsavel ADD COLUMN sres_nb_ordem INT NOT NULL DEFAULT 0");
+		}
 
-		$idx = mysqli_fetch_all(query(
+		$idxRes = query(
 			"SELECT INDEX_NAME
 			FROM information_schema.STATISTICS
 			WHERE TABLE_SCHEMA = ?
 				AND TABLE_NAME = 'setor_responsavel'",
 			"s",
 			[$db]
-		), MYSQLI_ASSOC);
+		);
+		$idx = ($idxRes instanceof mysqli_result) ? mysqli_fetch_all($idxRes, MYSQLI_ASSOC) : [];
 		$idxNames = array_map(fn($r) => strval($r["INDEX_NAME"] ?? ""), $idx ?: []);
 		$idxHas = array_flip($idxNames);
 
@@ -88,13 +98,17 @@
 	}
 
 	function ensureCargoResponsavelSchema(): void{
-		$dbRow = mysqli_fetch_assoc(query("SELECT DATABASE() AS db"));
+		$dbRes = query("SELECT DATABASE() AS db");
+		if(!($dbRes instanceof mysqli_result)){
+			return;
+		}
+		$dbRow = mysqli_fetch_assoc($dbRes) ?: [];
 		$db = strval($dbRow["db"] ?? "");
 		if($db === ""){
 			return;
 		}
 
-		$exists = mysqli_fetch_assoc(query(
+		$existsRes = query(
 			"SELECT 1 AS ok
 			FROM information_schema.TABLES
 			WHERE TABLE_SCHEMA = ?
@@ -102,7 +116,8 @@
 			LIMIT 1",
 			"s",
 			[$db]
-		));
+		);
+		$exists = ($existsRes instanceof mysqli_result) ? (mysqli_fetch_assoc($existsRes) ?: []) : [];
 
 		if(empty($exists)){
 			query(
@@ -119,14 +134,15 @@
 			);
 		}
 
-		$cols = mysqli_fetch_all(query(
+		$colsRes = query(
 			"SELECT COLUMN_NAME
 			FROM information_schema.COLUMNS
 			WHERE TABLE_SCHEMA = ?
 				AND TABLE_NAME = 'cargo_responsavel'",
 			"s",
 			[$db]
-		), MYSQLI_ASSOC);
+		);
+		$cols = ($colsRes instanceof mysqli_result) ? mysqli_fetch_all($colsRes, MYSQLI_ASSOC) : [];
 
 		$colNames = array_map(fn($r) => strval($r["COLUMN_NAME"] ?? ""), $cols ?: []);
 		$has = array_flip($colNames);
@@ -147,14 +163,15 @@
 			query("ALTER TABLE cargo_responsavel ADD COLUMN cres_tx_dataCadastro DATETIME NOT NULL");
 		}
 
-		$idx = mysqli_fetch_all(query(
+		$idxRes = query(
 			"SELECT INDEX_NAME
 			FROM information_schema.STATISTICS
 			WHERE TABLE_SCHEMA = ?
 				AND TABLE_NAME = 'cargo_responsavel'",
 			"s",
 			[$db]
-		), MYSQLI_ASSOC);
+		);
+		$idx = ($idxRes instanceof mysqli_result) ? mysqli_fetch_all($idxRes, MYSQLI_ASSOC) : [];
 		$idxNames = array_map(fn($r) => strval($r["INDEX_NAME"] ?? ""), $idx ?: []);
 		$idxHas = array_flip($idxNames);
 
@@ -169,14 +186,115 @@
 		}
 	}
 
+	function ensureOperacaoResponsavelSchema(): void{
+		$dbRes = query("SELECT DATABASE() AS db");
+		if(!($dbRes instanceof mysqli_result)){
+			return;
+		}
+		$dbRow = mysqli_fetch_assoc($dbRes) ?: [];
+		$db = strval($dbRow["db"] ?? "");
+		if($db === ""){
+			return;
+		}
+
+		$existsRes = query(
+			"SELECT 1 AS ok
+			FROM information_schema.TABLES
+			WHERE TABLE_SCHEMA = ?
+				AND TABLE_NAME = 'operacao_responsavel'
+			LIMIT 1",
+			"s",
+			[$db]
+		);
+		$exists = ($existsRes instanceof mysqli_result) ? (mysqli_fetch_assoc($existsRes) ?: []) : [];
+
+		if(empty($exists)){
+			query(
+				"CREATE TABLE IF NOT EXISTS operacao_responsavel (
+					opre_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+					opre_nb_operacao_id INT NOT NULL,
+					opre_nb_entidade_id INT NOT NULL,
+					opre_tx_assinar_governanca ENUM('sim','nao') NOT NULL DEFAULT 'nao',
+					opre_nb_ordem INT NOT NULL DEFAULT 0,
+					opre_tx_status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo',
+					opre_tx_dataCadastro DATETIME NOT NULL,
+					UNIQUE KEY uniq_operacao_entidade (opre_nb_operacao_id, opre_nb_entidade_id),
+					KEY idx_operacao (opre_nb_operacao_id),
+					KEY idx_entidade (opre_nb_entidade_id)
+				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+			);
+		}
+
+		$colsRes = query(
+			"SELECT COLUMN_NAME
+			FROM information_schema.COLUMNS
+			WHERE TABLE_SCHEMA = ?
+				AND TABLE_NAME = 'operacao_responsavel'",
+			"s",
+			[$db]
+		);
+		$cols = ($colsRes instanceof mysqli_result) ? mysqli_fetch_all($colsRes, MYSQLI_ASSOC) : [];
+
+		$colNames = array_map(fn($r) => strval($r["COLUMN_NAME"] ?? ""), $cols ?: []);
+		$has = array_flip($colNames);
+
+		if(!isset($has["opre_nb_id"])){
+			query("ALTER TABLE operacao_responsavel ADD COLUMN opre_nb_id INT AUTO_INCREMENT PRIMARY KEY");
+		}
+		if(!isset($has["opre_nb_operacao_id"])){
+			query("ALTER TABLE operacao_responsavel ADD COLUMN opre_nb_operacao_id INT NOT NULL");
+		}
+		if(!isset($has["opre_nb_entidade_id"])){
+			query("ALTER TABLE operacao_responsavel ADD COLUMN opre_nb_entidade_id INT NOT NULL");
+		}
+		if(!isset($has["opre_tx_assinar_governanca"])){
+			query("ALTER TABLE operacao_responsavel ADD COLUMN opre_tx_assinar_governanca ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
+		}
+		if(!isset($has["opre_nb_ordem"])){
+			query("ALTER TABLE operacao_responsavel ADD COLUMN opre_nb_ordem INT NOT NULL DEFAULT 0");
+		}
+		if(!isset($has["opre_tx_status"])){
+			query("ALTER TABLE operacao_responsavel ADD COLUMN opre_tx_status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo'");
+		}
+		if(!isset($has["opre_tx_dataCadastro"])){
+			query("ALTER TABLE operacao_responsavel ADD COLUMN opre_tx_dataCadastro DATETIME NOT NULL");
+		}
+
+		$idxRes = query(
+			"SELECT INDEX_NAME
+			FROM information_schema.STATISTICS
+			WHERE TABLE_SCHEMA = ?
+				AND TABLE_NAME = 'operacao_responsavel'",
+			"s",
+			[$db]
+		);
+		$idx = ($idxRes instanceof mysqli_result) ? mysqli_fetch_all($idxRes, MYSQLI_ASSOC) : [];
+		$idxNames = array_map(fn($r) => strval($r["INDEX_NAME"] ?? ""), $idx ?: []);
+		$idxHas = array_flip($idxNames);
+
+		if(!isset($idxHas["uniq_operacao_entidade"])){
+			@query("ALTER TABLE operacao_responsavel ADD UNIQUE KEY uniq_operacao_entidade (opre_nb_operacao_id, opre_nb_entidade_id)");
+		}
+		if(!isset($idxHas["idx_operacao"])){
+			@query("ALTER TABLE operacao_responsavel ADD KEY idx_operacao (opre_nb_operacao_id)");
+		}
+		if(!isset($idxHas["idx_entidade"])){
+			@query("ALTER TABLE operacao_responsavel ADD KEY idx_entidade (opre_nb_entidade_id)");
+		}
+	}
+
 	function getGruposDocumentosEmpresaColumn(): string{
-		$dbRow = mysqli_fetch_assoc(query("SELECT DATABASE() AS db"));
+		$dbRes = query("SELECT DATABASE() AS db");
+		if(!($dbRes instanceof mysqli_result)){
+			return "";
+		}
+		$dbRow = mysqli_fetch_assoc($dbRes) ?: [];
 		$db = strval($dbRow["db"] ?? "");
 		if($db === ""){
 			return "";
 		}
 
-		$cols = mysqli_fetch_all(query(
+		$colsRes = query(
 			"SELECT COLUMN_NAME
 			FROM information_schema.COLUMNS
 			WHERE TABLE_SCHEMA = ?
@@ -184,7 +302,8 @@
 				AND (COLUMN_NAME LIKE '%empresa%' OR COLUMN_NAME LIKE '%empr%')",
 			"s",
 			[$db]
-		), MYSQLI_ASSOC);
+		);
+		$cols = ($colsRes instanceof mysqli_result) ? mysqli_fetch_all($colsRes, MYSQLI_ASSOC) : [];
 
 		$colNames = array_map(fn($r) => strval($r["COLUMN_NAME"] ?? ""), $cols ?: []);
 		$has = array_flip($colNames);
@@ -204,12 +323,13 @@
 		return "";
 	}
 
-	function carregarResponsaveisSetor(int $setorId, int $empresaId = 0): array{
+	function carregarResponsaveisSetor(int $setorId, int $empresaId = 0, bool $apenasEntidadeAtiva = true): array{
 		if($setorId <= 0){
 			return [];
 		}
-		ensureSetorResponsavelSchema();
 
+		$empresaId = intval($empresaId);
+		$apenasEntidadeAtiva = $apenasEntidadeAtiva ? true : false;
 		$sql =
 			"SELECT
 				sr.sres_nb_entidade_id AS id,
@@ -219,8 +339,10 @@
 			LEFT JOIN entidade e ON e.enti_nb_id = sr.sres_nb_entidade_id
 			WHERE sr.sres_nb_setor_id = ?
 				AND sr.sres_tx_status = 'ativo'
-				AND e.enti_tx_status = 'ativo'
-				AND e.enti_tx_ocupacao IN ('Motorista','Ajudante','Funcionário')";
+		;
+		if($apenasEntidadeAtiva){
+			$sql .= " AND e.enti_tx_status = 'ativo'";
+		}
 		$types = "i";
 		$params = [$setorId];
 		if($empresaId > 0){
@@ -230,21 +352,61 @@
 		}
 		$sql .= " ORDER BY e.enti_tx_nome ASC";
 
-		$rows = mysqli_fetch_all(query(
-			$sql,
-			$types,
-			$params
-		), MYSQLI_ASSOC);
-		return is_array($rows) ? $rows : [];
+		$res = query($sql, $types, $params);
+		$rows = ($res instanceof mysqli_result) ? mysqli_fetch_all($res, MYSQLI_ASSOC) : [];
+		$rows = is_array($rows) ? $rows : [];
+		if($empresaId > 0 && empty($rows)){
+			$sqlFallback =
+				"SELECT
+					sr.sres_nb_entidade_id AS id,
+					e.enti_tx_nome AS nome,
+					e.enti_tx_email AS email
+				FROM setor_responsavel sr
+				LEFT JOIN entidade e ON e.enti_nb_id = sr.sres_nb_entidade_id
+				WHERE sr.sres_nb_setor_id = ?
+					AND sr.sres_tx_status = 'ativo'
+			";
+			if($apenasEntidadeAtiva){
+				$sqlFallback .= " AND e.enti_tx_status = 'ativo'";
+			}
+			$sqlFallback .= " ORDER BY e.enti_tx_nome ASC";
+			$resFallback = query($sqlFallback, "i", [$setorId]);
+			$rows = ($resFallback instanceof mysqli_result) ? mysqli_fetch_all($resFallback, MYSQLI_ASSOC) : [];
+			$rows = is_array($rows) ? $rows : [];
+		}
+		return $rows;
 	}
 
-	function carregarResponsaveisCargo(int $cargoId, int $empresaId = 0): array{
+	function carregarResponsaveisCargo(int $cargoId, int $empresaId = 0, bool $apenasEntidadeAtiva = true): array{
 		if($cargoId <= 0){
 			return [];
 		}
-		ensureCargoResponsavelSchema();
 
-		$sql =
+		$empresaId = intval($empresaId);
+		$apenasEntidadeAtiva = $apenasEntidadeAtiva ? true : false;
+		$sqlOperacao =
+			"SELECT
+				orv.opre_nb_entidade_id AS id,
+				e.enti_tx_nome AS nome,
+				e.enti_tx_email AS email
+			FROM operacao_responsavel orv
+			LEFT JOIN entidade e ON e.enti_nb_id = orv.opre_nb_entidade_id
+			WHERE orv.opre_nb_operacao_id = ?
+				AND orv.opre_tx_status = 'ativo'
+		;
+		if($apenasEntidadeAtiva){
+			$sqlOperacao .= " AND e.enti_tx_status = 'ativo'";
+		}
+		$typesOperacao = "i";
+		$paramsOperacao = [$cargoId];
+		if($empresaId > 0){
+			$sqlOperacao .= " AND e.enti_nb_empresa = ?";
+			$typesOperacao .= "i";
+			$paramsOperacao[] = $empresaId;
+		}
+		$sqlOperacao .= " ORDER BY e.enti_tx_nome ASC";
+
+		$sqlCargoLegado =
 			"SELECT
 				cr.cres_nb_entidade_id AS id,
 				e.enti_tx_nome AS nome,
@@ -253,23 +415,90 @@
 			LEFT JOIN entidade e ON e.enti_nb_id = cr.cres_nb_entidade_id
 			WHERE cr.cres_nb_cargo_id = ?
 				AND cr.cres_tx_status = 'ativo'
-				AND e.enti_tx_status = 'ativo'
-				AND e.enti_tx_ocupacao IN ('Motorista','Ajudante','Funcionário')";
-		$types = "i";
-		$params = [$cargoId];
-		if($empresaId > 0){
-			$sql .= " AND e.enti_nb_empresa = ?";
-			$types .= "i";
-			$params[] = $empresaId;
+		;
+		if($apenasEntidadeAtiva){
+			$sqlCargoLegado .= " AND e.enti_tx_status = 'ativo'";
 		}
-		$sql .= " ORDER BY e.enti_tx_nome ASC";
+		$typesCargoLegado = "i";
+		$paramsCargoLegado = [$cargoId];
+		if($empresaId > 0){
+			$sqlCargoLegado .= " AND e.enti_nb_empresa = ?";
+			$typesCargoLegado .= "i";
+			$paramsCargoLegado[] = $empresaId;
+		}
+		$sqlCargoLegado .= " ORDER BY e.enti_tx_nome ASC";
 
-		$rows = mysqli_fetch_all(query(
-			$sql,
-			$types,
-			$params
-		), MYSQLI_ASSOC);
-		return is_array($rows) ? $rows : [];
+		$resOperacao = query($sqlOperacao, $typesOperacao, $paramsOperacao);
+		$rowsOperacao = ($resOperacao instanceof mysqli_result) ? mysqli_fetch_all($resOperacao, MYSQLI_ASSOC) : [];
+		$rowsOperacao = is_array($rowsOperacao) ? $rowsOperacao : [];
+
+		$resCargoLegado = query($sqlCargoLegado, $typesCargoLegado, $paramsCargoLegado);
+		$rowsCargoLegado = ($resCargoLegado instanceof mysqli_result) ? mysqli_fetch_all($resCargoLegado, MYSQLI_ASSOC) : [];
+		$rowsCargoLegado = is_array($rowsCargoLegado) ? $rowsCargoLegado : [];
+		if($empresaId > 0){
+			if(empty($rowsOperacao)){
+				$sqlOpFallback =
+					"SELECT
+						orv.opre_nb_entidade_id AS id,
+						e.enti_tx_nome AS nome,
+						e.enti_tx_email AS email
+					FROM operacao_responsavel orv
+					LEFT JOIN entidade e ON e.enti_nb_id = orv.opre_nb_entidade_id
+					WHERE orv.opre_nb_operacao_id = ?
+						AND orv.opre_tx_status = 'ativo'
+					";
+				if($apenasEntidadeAtiva){
+					$sqlOpFallback .= " AND e.enti_tx_status = 'ativo'";
+				}
+				$sqlOpFallback .= " ORDER BY e.enti_tx_nome ASC";
+				$resOpFallback = query($sqlOpFallback, "i", [$cargoId]);
+				$rowsOperacao = ($resOpFallback instanceof mysqli_result) ? mysqli_fetch_all($resOpFallback, MYSQLI_ASSOC) : [];
+				$rowsOperacao = is_array($rowsOperacao) ? $rowsOperacao : [];
+			}
+			if(empty($rowsCargoLegado)){
+				$sqlCargoFallback =
+					"SELECT
+						cr.cres_nb_entidade_id AS id,
+						e.enti_tx_nome AS nome,
+						e.enti_tx_email AS email
+					FROM cargo_responsavel cr
+					LEFT JOIN entidade e ON e.enti_nb_id = cr.cres_nb_entidade_id
+					WHERE cr.cres_nb_cargo_id = ?
+						AND cr.cres_tx_status = 'ativo'
+					";
+				if($apenasEntidadeAtiva){
+					$sqlCargoFallback .= " AND e.enti_tx_status = 'ativo'";
+				}
+				$sqlCargoFallback .= " ORDER BY e.enti_tx_nome ASC";
+				$resCargoFallback = query($sqlCargoFallback, "i", [$cargoId]);
+				$rowsCargoLegado = ($resCargoFallback instanceof mysqli_result) ? mysqli_fetch_all($resCargoFallback, MYSQLI_ASSOC) : [];
+				$rowsCargoLegado = is_array($rowsCargoLegado) ? $rowsCargoLegado : [];
+			}
+		}
+
+		$byId = [];
+		foreach($rowsOperacao as $r){
+			$id = intval($r["id"] ?? 0);
+			if($id <= 0){ continue; }
+			$byId[$id] = $r;
+		}
+		foreach($rowsCargoLegado as $r){
+			$id = intval($r["id"] ?? 0);
+			if($id <= 0){ continue; }
+			if(!isset($byId[$id])){
+				$byId[$id] = $r;
+			}
+		}
+
+		$out = array_values($byId);
+		usort($out, function($a, $b){
+			$an = strval($a["nome"] ?? "");
+			$bn = strval($b["nome"] ?? "");
+			$cmp = strcasecmp($an, $bn);
+			if($cmp !== 0){ return $cmp; }
+			return intval($a["id"] ?? 0) <=> intval($b["id"] ?? 0);
+		});
+		return $out;
 	}
 
 	function salvarResponsaveisSetor(int $setorId, array $responsaveisIds): void{
@@ -344,39 +573,51 @@
 
 	function api_responsaveis_setor(): void{
 		header("Content-Type: application/json; charset=utf-8");
-		$setorId = intval($_GET["setor_id"] ?? 0);
-		$empresaId = intval($_GET["empresa_id"] ?? 0);
-		$rows = carregarResponsaveisSetor($setorId, $empresaId);
-		$out = [];
-		foreach($rows as $r){
-			$id = intval($r["id"] ?? 0);
-			if($id <= 0){ continue; }
-			$nome = trim(strval($r["nome"] ?? ""));
-			$email = trim(strval($r["email"] ?? ""));
-			$label = $nome !== "" ? $nome : ("ID " . $id);
-			if($email !== ""){ $label .= " | " . $email; }
-			$out[] = ["id" => $id, "text" => $label];
+		try{
+			$setorId = intval($_GET["setor_id"] ?? 0);
+			$empresaId = intval($_GET["empresa_id"] ?? 0);
+			$todos = intval($_GET["todos"] ?? 0) === 1;
+			$rows = carregarResponsaveisSetor($setorId, $empresaId, !$todos);
+			$out = [];
+			foreach($rows as $r){
+				$id = intval($r["id"] ?? 0);
+				if($id <= 0){ continue; }
+				$nome = trim(strval($r["nome"] ?? ""));
+				$email = trim(strval($r["email"] ?? ""));
+				$label = $nome !== "" ? $nome : ("ID " . $id);
+				if($email !== ""){ $label .= " | " . $email; }
+				$out[] = ["id" => $id, "text" => $label];
+			}
+			echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+		}catch(Throwable $e){
+			http_response_code(500);
+			echo json_encode(["error" => "Falha ao carregar responsáveis."], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 		}
-		echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 		exit;
 	}
 
 	function api_responsaveis_cargo(): void{
 		header("Content-Type: application/json; charset=utf-8");
-		$cargoId = intval($_GET["cargo_id"] ?? 0);
-		$empresaId = intval($_GET["empresa_id"] ?? 0);
-		$rows = carregarResponsaveisCargo($cargoId, $empresaId);
-		$out = [];
-		foreach($rows as $r){
-			$id = intval($r["id"] ?? 0);
-			if($id <= 0){ continue; }
-			$nome = trim(strval($r["nome"] ?? ""));
-			$email = trim(strval($r["email"] ?? ""));
-			$label = $nome !== "" ? $nome : ("ID " . $id);
-			if($email !== ""){ $label .= " | " . $email; }
-			$out[] = ["id" => $id, "text" => $label];
+		try{
+			$cargoId = intval($_GET["cargo_id"] ?? 0);
+			$empresaId = intval($_GET["empresa_id"] ?? 0);
+			$todos = intval($_GET["todos"] ?? 0) === 1;
+			$rows = carregarResponsaveisCargo($cargoId, $empresaId, !$todos);
+			$out = [];
+			foreach($rows as $r){
+				$id = intval($r["id"] ?? 0);
+				if($id <= 0){ continue; }
+				$nome = trim(strval($r["nome"] ?? ""));
+				$email = trim(strval($r["email"] ?? ""));
+				$label = $nome !== "" ? $nome : ("ID " . $id);
+				if($email !== ""){ $label .= " | " . $email; }
+				$out[] = ["id" => $id, "text" => $label];
+			}
+			echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+		}catch(Throwable $e){
+			http_response_code(500);
+			echo json_encode(["error" => "Falha ao carregar responsáveis."], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 		}
-		echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 		exit;
 	}
 
@@ -510,7 +751,7 @@
 
 					function condResponsaveis(){
 						var empresaId = parseInt($('#empresa_id').val() || '0', 10);
-						var cond = \"AND enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista','Ajudante','Funcionário')\";
+						var cond = \"AND enti_tx_status = 'ativo'\";
 						if(empresaId && empresaId > 0){
 							cond += \" AND enti_nb_empresa = \" + empresaId;
 						}

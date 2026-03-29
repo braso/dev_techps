@@ -7,6 +7,7 @@ function assinatura_ensureSetorResponsavelSchema(): void{
         sres_nb_setor_id INT NOT NULL,
         sres_nb_entidade_id INT NOT NULL,
         sres_tx_assinar_governanca ENUM('sim','nao') NOT NULL DEFAULT 'nao',
+        sres_nb_ordem INT NOT NULL DEFAULT 0,
         sres_tx_status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo',
         sres_tx_dataCadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uk_setor_entidade (sres_nb_setor_id, sres_nb_entidade_id),
@@ -14,11 +15,100 @@ function assinatura_ensureSetorResponsavelSchema(): void{
         INDEX ix_entidade (sres_nb_entidade_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
     query($sql);
+
+    $dbRow = mysqli_fetch_assoc(query("SELECT DATABASE() AS db"));
+    $db = strval($dbRow["db"] ?? "");
+    if($db === ""){
+        return;
+    }
+
+    $exists = mysqli_fetch_assoc(query(
+        "SELECT 1 AS ok
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = ?
+            AND TABLE_NAME = 'setor_responsavel'
+            AND COLUMN_NAME = 'sres_nb_ordem'
+        LIMIT 1",
+        "s",
+        [$db]
+    ));
+    if(empty($exists)){
+        query("ALTER TABLE setor_responsavel ADD COLUMN sres_nb_ordem INT NOT NULL DEFAULT 0");
+    }
+}
+
+function assinatura_ensureOperacaoResponsavelSchema(): void{
+    $dbRow = mysqli_fetch_assoc(query("SELECT DATABASE() AS db"));
+    $db = strval($dbRow["db"] ?? "");
+    if($db === ""){
+        return;
+    }
+
+    $exists = mysqli_fetch_assoc(query(
+        "SELECT 1 AS ok
+        FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = ?
+            AND TABLE_NAME = 'operacao_responsavel'
+        LIMIT 1",
+        "s",
+        [$db]
+    ));
+
+    if(empty($exists)){
+        query(
+            "CREATE TABLE IF NOT EXISTS operacao_responsavel (
+                opre_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+                opre_nb_operacao_id INT NOT NULL,
+                opre_nb_entidade_id INT NOT NULL,
+                opre_tx_assinar_governanca ENUM('sim','nao') NOT NULL DEFAULT 'nao',
+                opre_nb_ordem INT NOT NULL DEFAULT 0,
+                opre_tx_status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo',
+                opre_tx_dataCadastro DATETIME NOT NULL,
+                UNIQUE KEY uniq_operacao_entidade (opre_nb_operacao_id, opre_nb_entidade_id),
+                KEY idx_operacao (opre_nb_operacao_id),
+                KEY idx_entidade (opre_nb_entidade_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+        );
+    }
+}
+
+function assinatura_ensureEntidadeResponsavelCols(): void{
+    $dbRow = mysqli_fetch_assoc(query("SELECT DATABASE() AS db"));
+    $db = strval($dbRow["db"] ?? "");
+    if($db === ""){
+        return;
+    }
+
+    $cols = mysqli_fetch_all(query(
+        "SELECT COLUMN_NAME
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = ?
+            AND TABLE_NAME = 'entidade'",
+        "s",
+        [$db]
+    ), MYSQLI_ASSOC);
+    $colNames = array_map(fn($r) => strval($r["COLUMN_NAME"] ?? ""), $cols ?: []);
+    $has = array_flip($colNames);
+
+    if(!isset($has["enti_respFuncionario_id"])){
+        query("ALTER TABLE entidade ADD COLUMN enti_respFuncionario_id INT NULL");
+    }
+    if(!isset($has["enti_respFuncionario_ids"])){
+        query("ALTER TABLE entidade ADD COLUMN enti_respFuncionario_ids TEXT NULL");
+    }
+    if(!isset($has["enti_respSetor_ids"])){
+        query("ALTER TABLE entidade ADD COLUMN enti_respSetor_ids TEXT NULL");
+    }
+    if(!isset($has["enti_respCargo_ids"])){
+        query("ALTER TABLE entidade ADD COLUMN enti_respCargo_ids TEXT NULL");
+    }
 }
 
 if(($_GET["ajax"] ?? "") === "funcionario_info"){
     header("Content-Type: application/json; charset=utf-8");
     assinatura_ensureSetorResponsavelSchema();
+    assinatura_ensureOperacaoResponsavelSchema();
+    assinatura_ensureEntidadeResponsavelCols();
 
     $id = intval($_GET["id"] ?? 0);
     if($id <= 0){
@@ -32,9 +122,16 @@ if(($_GET["ajax"] ?? "") === "funcionario_info"){
             e.enti_tx_nome,
             e.enti_tx_email,
             e.enti_setor_id,
-            g.grup_tx_nome AS setor_nome
+            g.grup_tx_nome AS setor_nome,
+            e.enti_tx_tipoOperacao,
+            o.oper_tx_nome AS cargo_nome,
+            e.enti_respFuncionario_id,
+            e.enti_respFuncionario_ids,
+            e.enti_respSetor_ids,
+            e.enti_respCargo_ids
         FROM entidade e
         LEFT JOIN grupos_documentos g ON g.grup_nb_id = e.enti_setor_id
+        LEFT JOIN operacao o ON o.oper_nb_id = e.enti_tx_tipoOperacao
         WHERE e.enti_nb_id = ?
         LIMIT 1",
         "i",
@@ -47,23 +144,126 @@ if(($_GET["ajax"] ?? "") === "funcionario_info"){
     }
 
     $setorId = intval($row["enti_setor_id"] ?? 0);
+    $cargoId = intval($row["enti_tx_tipoOperacao"] ?? 0);
     $responsaveis = [];
-    if($setorId > 0){
+    $respIds = [];
+    $csvA = trim(strval($row["enti_respSetor_ids"] ?? ""));
+    $csvB = trim(strval($row["enti_respCargo_ids"] ?? ""));
+    foreach([$csvA, $csvB] as $csvX){
+        if($csvX === ""){ continue; }
+        foreach(explode(",", $csvX) as $p){
+            $v = intval(trim($p));
+            if($v > 0){ $respIds[] = $v; }
+        }
+    }
+    $respIds = array_values(array_unique(array_filter(array_map("intval", $respIds), fn($v) => $v > 0)));
+
+    if(!empty($respIds)){
+        $idsSql = implode(",", $respIds);
         $responsaveis = mysqli_fetch_all(query(
             "SELECT
                 e.enti_nb_id AS id,
                 e.enti_tx_nome AS nome,
-                e.enti_tx_email AS email
-            FROM setor_responsavel sr
-            INNER JOIN entidade e ON e.enti_nb_id = sr.sres_nb_entidade_id
-            WHERE sr.sres_nb_setor_id = ?
-            AND sr.sres_tx_status = 'ativo'
-            AND sr.sres_tx_assinar_governanca = 'sim'
+                e.enti_tx_email AS email,
+                g.grup_tx_nome AS setor_nome,
+                o.oper_tx_nome AS cargo_nome
+            FROM entidade e
+            LEFT JOIN grupos_documentos g ON g.grup_nb_id = e.enti_setor_id
+            LEFT JOIN operacao o ON o.oper_nb_id = e.enti_tx_tipoOperacao
+            WHERE e.enti_nb_id IN ($idsSql)
             AND e.enti_tx_status = 'ativo'
-            ORDER BY e.enti_tx_nome ASC",
-            "i",
-            [$setorId]
+            ORDER BY e.enti_tx_nome ASC"
         ), MYSQLI_ASSOC);
+    } else {
+        $map = [];
+        if($setorId > 0){
+            $rowsSet = mysqli_fetch_all(query(
+                "SELECT
+                    e.enti_nb_id AS id,
+                    e.enti_tx_nome AS nome,
+                    e.enti_tx_email AS email,
+                    g.grup_tx_nome AS setor_nome,
+                    o.oper_tx_nome AS cargo_nome,
+                    (CASE WHEN sr.sres_nb_ordem <= 0 THEN 999999 ELSE sr.sres_nb_ordem END) AS ord
+                FROM setor_responsavel sr
+                INNER JOIN entidade e ON e.enti_nb_id = sr.sres_nb_entidade_id
+                LEFT JOIN grupos_documentos g ON g.grup_nb_id = e.enti_setor_id
+                LEFT JOIN operacao o ON o.oper_nb_id = e.enti_tx_tipoOperacao
+                WHERE sr.sres_nb_setor_id = ?
+                AND sr.sres_tx_status = 'ativo'
+                AND sr.sres_tx_assinar_governanca = 'sim'
+                AND e.enti_tx_status = 'ativo'
+                ORDER BY ord ASC, e.enti_tx_nome ASC",
+                "i",
+                [$setorId]
+            ), MYSQLI_ASSOC);
+            foreach(($rowsSet ?: []) as $r){
+                $rid = intval($r["id"] ?? 0);
+                if($rid <= 0){ continue; }
+                $map[$rid] = [
+                    "id" => $rid,
+                    "nome" => $r["nome"] ?? "",
+                    "email" => $r["email"] ?? "",
+                    "setor_nome" => $r["setor_nome"] ?? "",
+                    "cargo_nome" => $r["cargo_nome"] ?? "",
+                    "ord" => intval($r["ord"] ?? 999999)
+                ];
+            }
+        }
+        if($cargoId > 0){
+            $rowsCar = mysqli_fetch_all(query(
+                "SELECT
+                    e.enti_nb_id AS id,
+                    e.enti_tx_nome AS nome,
+                    e.enti_tx_email AS email,
+                    g.grup_tx_nome AS setor_nome,
+                    o.oper_tx_nome AS cargo_nome,
+                    (CASE WHEN orv.opre_nb_ordem <= 0 THEN 999999 ELSE orv.opre_nb_ordem END) AS ord
+                FROM operacao_responsavel orv
+                INNER JOIN entidade e ON e.enti_nb_id = orv.opre_nb_entidade_id
+                LEFT JOIN grupos_documentos g ON g.grup_nb_id = e.enti_setor_id
+                LEFT JOIN operacao o ON o.oper_nb_id = e.enti_tx_tipoOperacao
+                WHERE orv.opre_nb_operacao_id = ?
+                AND orv.opre_tx_status = 'ativo'
+                AND orv.opre_tx_assinar_governanca = 'sim'
+                AND e.enti_tx_status = 'ativo'
+                ORDER BY ord ASC, e.enti_tx_nome ASC",
+                "i",
+                [$cargoId]
+            ), MYSQLI_ASSOC);
+            foreach(($rowsCar ?: []) as $r){
+                $rid = intval($r["id"] ?? 0);
+                if($rid <= 0){ continue; }
+                if(!isset($map[$rid])){
+                    $map[$rid] = [
+                        "id" => $rid,
+                        "nome" => $r["nome"] ?? "",
+                        "email" => $r["email"] ?? "",
+                        "setor_nome" => $r["setor_nome"] ?? "",
+                        "cargo_nome" => $r["cargo_nome"] ?? "",
+                        "ord" => intval($r["ord"] ?? 999999)
+                    ];
+                }
+            }
+        }
+        $responsaveis = array_values($map);
+        usort($responsaveis, function($a, $b){
+            $ao = intval($a["ord"] ?? 999999);
+            $bo = intval($b["ord"] ?? 999999);
+            if($ao === $bo){
+                return strcasecmp(strval($a["nome"] ?? ""), strval($b["nome"] ?? ""));
+            }
+            return $ao <=> $bo;
+        });
+        $responsaveis = array_map(function($r){
+            return [
+                "id" => intval($r["id"] ?? 0),
+                "nome" => strval($r["nome"] ?? ""),
+                "email" => strval($r["email"] ?? ""),
+                "setor_nome" => strval($r["setor_nome"] ?? ""),
+                "cargo_nome" => strval($r["cargo_nome"] ?? "")
+            ];
+        }, $responsaveis);
     }
 
     echo json_encode([
@@ -76,6 +276,10 @@ if(($_GET["ajax"] ?? "") === "funcionario_info"){
         "setor" => [
             "id" => $setorId,
             "nome" => strval($row["setor_nome"] ?? "")
+        ],
+        "cargo" => [
+            "id" => $cargoId,
+            "nome" => strval($row["cargo_nome"] ?? "")
         ],
         "responsaveis" => $responsaveis
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -226,9 +430,17 @@ include_once "componentes/layout_header.php";
                 <h4 class="font-semibold text-gray-700 flex items-center gap-2">
                     <i class="fas fa-user-pen text-gray-400"></i> Dados do Signatário
                 </h4>
-                <button type="button" class="btn-remove text-gray-400 hover:text-red-500 transition-colors p-1" title="Remover">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="btn-move-up text-gray-400 hover:text-gray-700 transition-colors p-1" title="Mover para cima">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                    <button type="button" class="btn-move-down text-gray-400 hover:text-gray-700 transition-colors p-1" title="Mover para baixo">
+                        <i class="fas fa-arrow-down"></i>
+                    </button>
+                    <button type="button" class="btn-remove text-gray-400 hover:text-red-500 transition-colors p-1" title="Remover">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
             </div>
 
             <div class="grid md:grid-cols-2 gap-5 ml-4">
@@ -267,7 +479,7 @@ include_once "componentes/layout_header.php";
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Responsáveis do Setor (Assina Governança)</label>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Responsáveis (Assina Governança)</label>
                     <div class="box-responsaveis min-h-[42px] w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 flex flex-wrap gap-2 items-center"></div>
                 </div>
 
@@ -405,7 +617,8 @@ include_once "componentes/layout_header.php";
                 const nome = (r && r.nome) ? String(r.nome) : '';
                 const email = (r && r.email) ? String(r.email) : '';
                 const label = email ? (nome + ' | ' + email) : nome;
-                return '<span class="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs border border-blue-100">' + escapeHtml(label) + '</span>';
+                const id = (r && r.id != null) ? String(r.id) : '';
+                return '<span class="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs border border-blue-100" data-id="'+id+'"><span>'+escapeHtml(label)+'</span><button type="button" class="resp-remove ml-2 text-red-600 hover:text-red-700 focus:outline-none" title="Remover">×</button></span>';
             }).join('');
         }
 
@@ -472,11 +685,13 @@ include_once "componentes/layout_header.php";
 
             const selectedEnti = (card.querySelector('.input-entidade')?.value || '').toString();
             const list = Array.isArray(responsaveis) ? responsaveis : [];
+            const excluded = String(card.dataset.excludedIds || '').split(',').map(s => s.trim()).filter(Boolean);
             let insertAfter = card;
 
             for(const r of list){
                 const respId = r && r.id != null ? String(r.id) : '';
                 if(respId === '' || respId === selectedEnti) continue;
+                if(excluded.includes(respId)) continue;
 
                 const existing = findCardByEntidadeId(respId);
                 if(existing){
@@ -518,6 +733,23 @@ include_once "componentes/layout_header.php";
                 insertAfter = respCard;
                 initCard(respCard, { disableSelect: true, skipFetch: true });
             }
+        }
+        function getExcluded(card){
+            return String(card.dataset.excludedIds || '').split(',').map(s => s.trim()).filter(Boolean);
+        }
+        function setExcluded(card, ids){
+            const u = Array.from(new Set((ids || []).map(s => String(s).trim()).filter(Boolean)));
+            card.dataset.excludedIds = u.join(',');
+        }
+        function removeAutoCardByEntidade(respId){
+            const c = findCardByEntidadeId(respId);
+            if(c && c.dataset.autoResponsavel === '1'){ c.remove(); reordenar(); }
+        }
+        function excludeResponsavel(card, respId){
+            const ids = getExcluded(card);
+            if(!ids.includes(respId)){ ids.push(respId); }
+            setExcluded(card, ids);
+            removeAutoCardByEntidade(respId);
         }
 
         async function carregarInfoFuncionario(card, entidadeId) {
@@ -571,9 +803,39 @@ include_once "componentes/layout_header.php";
             if (box && box.innerHTML.trim() === '') {
                 renderResponsaveis(card, []);
             }
+            if(box){
+                box.addEventListener('click', function(e){
+                    const btn = e.target.closest('.resp-remove');
+                    if(!btn) return;
+                    const item = btn.parentElement;
+                    const rid = item.getAttribute('data-id') || '';
+                    if(rid){ excludeResponsavel(card, rid); item.remove(); }
+                });
+            }
 
             const sel = card.querySelector('.select-funcionario');
             if(!sel) return;
+
+            const btnUp = card.querySelector('.btn-move-up');
+            if(btnUp){
+                btnUp.addEventListener('click', function(){
+                    const prev = card.previousElementSibling;
+                    if(prev){
+                        container.insertBefore(card, prev);
+                        reordenar();
+                    }
+                });
+            }
+            const btnDown = card.querySelector('.btn-move-down');
+            if(btnDown){
+                btnDown.addEventListener('click', function(){
+                    const next = card.nextElementSibling;
+                    if(next){
+                        container.insertBefore(next, card);
+                        reordenar();
+                    }
+                });
+            }
 
             if(window.jQuery && jQuery.fn && typeof jQuery.fn.select2 === 'function'){
                 const $sel = jQuery(sel);
@@ -624,6 +886,19 @@ include_once "componentes/layout_header.php";
                 
                 // Update badge
                 card.querySelector('.index-badge').textContent = realIndex;
+
+                const btnUp = card.querySelector('.btn-move-up');
+                if(btnUp){
+                    btnUp.disabled = index === 0;
+                    btnUp.classList.toggle('opacity-30', index === 0);
+                    btnUp.classList.toggle('cursor-not-allowed', index === 0);
+                }
+                const btnDown = card.querySelector('.btn-move-down');
+                if(btnDown){
+                    btnDown.disabled = index === cards.length - 1;
+                    btnDown.classList.toggle('opacity-30', index === cards.length - 1);
+                    btnDown.classList.toggle('cursor-not-allowed', index === cards.length - 1);
+                }
                 
                 // Update Remove Button Visibility (hide for first if only one)
                 const btnRemove = card.querySelector('.btn-remove');

@@ -12,14 +12,38 @@ $nome_funcionario = isset($_GET['nome']) ? $_GET['nome'] : 'Funcionário Exemplo
 // Se não tiver documento selecionado, permitir upload
 $modo_upload = empty($id_documento);
 
-include_once "componentes/layout_header.php";
-
 $modoTela = $_GET["modo"] ?? "avulso";
 $modoTela = in_array($modoTela, ["avulso", "funcionarios", "separar_paginas"], true) ? $modoTela : "avulso";
 
-$funcionarios = [];
-if(in_array($modoTela, ["avulso", "funcionarios", "separar_paginas"], true)){
-    $funcionarios = mysqli_fetch_all(query(
+$empresaSelecionadaId = isset($_GET["empresa_id"])
+    ? intval($_GET["empresa_id"])
+    : intval($_SESSION["user_nb_empresa"] ?? 0);
+
+$empresas = mysqli_fetch_all(query(
+    "SELECT empr_nb_id, empr_tx_nome
+    FROM empresa
+    WHERE empr_tx_status = 'ativo'
+    ORDER BY empr_tx_nome ASC"
+), MYSQLI_ASSOC);
+
+if(!is_array($empresas)){
+    $empresas = [];
+}
+
+if($empresaSelecionadaId > 0){
+    $ids = array_map(function($r){
+        return intval($r["empr_nb_id"] ?? 0);
+    }, $empresas);
+    if(!in_array($empresaSelecionadaId, $ids, true)){
+        $empresaSelecionadaId = 0;
+    }
+}
+
+if(($_GET["ajax"] ?? "") === "funcionarios_por_empresa"){
+    header("Content-Type: application/json; charset=utf-8");
+
+    $empresaIdAjax = intval($_GET["empresa_id"] ?? 0);
+    $sql =
         "SELECT
             enti_nb_id,
             enti_tx_nome,
@@ -27,9 +51,72 @@ if(in_array($modoTela, ["avulso", "funcionarios", "separar_paginas"], true)){
             enti_tx_cpf,
             enti_tx_matricula
         FROM entidade
-        WHERE enti_tx_status = 'ativo'
-        ORDER BY enti_tx_nome ASC"
-    ), MYSQLI_ASSOC);
+        WHERE enti_tx_status = 'ativo'";
+    $types = "";
+    $params = [];
+    if($empresaIdAjax > 0){
+        $sql .= " AND enti_nb_empresa = ?";
+        $types = "i";
+        $params = [$empresaIdAjax];
+    }
+    $sql .= " ORDER BY enti_tx_nome ASC";
+
+    $rows = mysqli_fetch_all(
+        $types !== ""
+            ? query($sql, $types, $params)
+            : query($sql),
+        MYSQLI_ASSOC
+    );
+    if(!is_array($rows)){
+        $rows = [];
+    }
+
+    $totalComEmail = 0;
+    foreach($rows as $f){
+        $email = filter_var(trim(strval($f["enti_tx_email"] ?? "")), FILTER_VALIDATE_EMAIL);
+        $nome = trim(strval($f["enti_tx_nome"] ?? ""));
+        if($email && $nome !== ""){
+            $totalComEmail++;
+        }
+    }
+
+    echo json_encode([
+        "ok" => true,
+        "empresa_id" => $empresaIdAjax,
+        "totalComEmail" => $totalComEmail,
+        "rows" => $rows
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+include_once "componentes/layout_header.php";
+
+$funcionarios = [];
+if(in_array($modoTela, ["avulso", "funcionarios", "separar_paginas"], true)){
+    $sql =
+        "SELECT
+            enti_nb_id,
+            enti_tx_nome,
+            enti_tx_email,
+            enti_tx_cpf,
+            enti_tx_matricula
+        FROM entidade
+        WHERE enti_tx_status = 'ativo'";
+    $types = "";
+    $params = [];
+    if($empresaSelecionadaId > 0){
+        $sql .= " AND enti_nb_empresa = ?";
+        $types = "i";
+        $params = [$empresaSelecionadaId];
+    }
+    $sql .= " ORDER BY enti_tx_nome ASC";
+
+    $funcionarios = mysqli_fetch_all(
+        $types !== ""
+            ? query($sql, $types, $params)
+            : query($sql),
+        MYSQLI_ASSOC
+    );
 }
 $totalFuncionariosEnvioTodos = 0;
 if(!empty($funcionarios)){
@@ -545,10 +632,10 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                     <p class="text-xs text-gray-500">Escolha como você deseja enviar os documentos para assinatura.</p>
                 </div>
                 <div class="flex gap-2">
-                    <a href="nova_assinatura.php?modo=avulso" class="<?php echo $modoTela === "avulso" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"; ?> px-4 py-2 rounded-lg text-sm font-semibold">
+                    <a id="linkModoAvulso" href="nova_assinatura.php?modo=avulso<?php echo $empresaSelecionadaId > 0 ? "&empresa_id=" . intval($empresaSelecionadaId) : ""; ?>" class="<?php echo $modoTela === "avulso" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"; ?> px-4 py-2 rounded-lg text-sm font-semibold">
                         Documento avulso
                     </a>
-                    <a href="nova_assinatura.php?modo=separar_paginas" class="<?php echo $modoTela === "separar_paginas" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"; ?> px-4 py-2 rounded-lg text-sm font-semibold">
+                    <a id="linkModoLote" href="nova_assinatura.php?modo=separar_paginas<?php echo $empresaSelecionadaId > 0 ? "&empresa_id=" . intval($empresaSelecionadaId) : ""; ?>" class="<?php echo $modoTela === "separar_paginas" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"; ?> px-4 py-2 rounded-lg text-sm font-semibold">
                         Enviar Documentos em Lote
                     </a>
                 </div>
@@ -883,7 +970,7 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
         <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
             
             <form id="formEnvioIndividual" action="processar_envio.php" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="redirect_to" value="nova_assinatura.php?modo=avulso">
+                <input type="hidden" id="redirect_to_avulso" name="redirect_to" value="nova_assinatura.php?modo=avulso<?php echo $empresaSelecionadaId > 0 ? "&empresa_id=" . intval($empresaSelecionadaId) : ""; ?>">
                 <input type="hidden" name="modo_envio" value="avulso">
                 
                 <?php if ($modo_upload): ?>
@@ -978,13 +1065,38 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                         O documento não deve conter nome de funcionário, pois não é direcionado para apenas 1 signatário e sim para todos. A melhor forma de usar esse envio é para comunicados e lembretes, onde apenas vai constar que o funcionário recebeu.
                                     </div>
                                     <div class="text-xs mt-2 font-semibold">
-                                        Será enviado para <?php echo intval($totalFuncionariosEnvioTodos); ?> funcionário(s) com e-mail cadastrado.
+                                        Será enviado para <span id="avulso_total_funcionarios_todos"><?php echo intval($totalFuncionariosEnvioTodos); ?></span> funcionário(s) com e-mail cadastrado.
                                     </div>
                                 </div>
                             </div>
                         <div class="space-y-5">
                             <input type="hidden" id="id_documento" name="id_documento" value="<?php echo htmlspecialchars($id_documento); ?>">
                             <input type="hidden" id="enti_nb_id" name="enti_nb_id" value="">
+
+                            <div id="avulso_empresa_wrap">
+                                <label for="empresa_id" class="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-building text-gray-400"></i>
+                                    </div>
+                                    <select id="empresa_id" name="empresa_id" class="pl-10 block w-full rounded-lg border-gray-300 bg-gray-50 border focus:bg-white focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 transition-colors">
+                                        <option value="0">Todas as empresas</option>
+                                        <?php foreach($empresas as $e): ?>
+                                            <?php
+                                                $eid = intval($e["empr_nb_id"] ?? 0);
+                                                $enome = trim(strval($e["empr_tx_nome"] ?? ""));
+                                                if($eid <= 0 || $enome === ""){
+                                                    continue;
+                                                }
+                                            ?>
+                                            <option value="<?php echo htmlspecialchars((string)$eid); ?>" <?php echo $eid === intval($empresaSelecionadaId) ? "selected" : ""; ?>>
+                                                <?php echo htmlspecialchars($enome); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1">Ao escolher, os funcionários e o envio para todos ficam limitados a esta empresa.</div>
+                            </div>
 
                             <div id="avulso_funcionario_wrap">
                                 <label for="funcionario_select" class="block text-sm font-medium text-gray-700 mb-1">Funcionário</label>
@@ -1348,6 +1460,12 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
         const inputEmail = document.getElementById("email");
         const wrapNome = document.getElementById("avulso_signatario_wrap");
         const wrapEmail = document.getElementById("avulso_signatario_wrap_email");
+        const empresaSelect = document.getElementById("empresa_id");
+        const totalTodosEl = document.getElementById("avulso_total_funcionarios_todos");
+        const redirectToAvulso = document.getElementById("redirect_to_avulso");
+        const linkModoAvulso = document.getElementById("linkModoAvulso");
+        const linkModoLote = document.getElementById("linkModoLote");
+        const formAvulso = document.getElementById("formEnvioIndividual");
         const radiosAssinarAvulso = Array.from(document.querySelectorAll('input[name="documento_assinar"]'));
         const obterAssinarAvulso = () => {
             const el = document.querySelector('input[name="documento_assinar"]:checked');
@@ -1356,6 +1474,10 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
         const atualizarAvulso = () => {
             if(!icpAvulso || !icpInfoAvulso) return;
             const destino = obterDestinoAvulso();
+            if(empresaSelect){
+                const obrig = destino === "todos" && chkSalvarEmpresa && !!chkSalvarEmpresa.checked;
+                empresaSelect.required = obrig;
+            }
             if(avisoTodos){
                 avisoTodos.classList.toggle("hidden", destino !== "todos");
             }
@@ -1442,7 +1564,135 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
             icpAvulso.addEventListener("change", atualizarAvulso);
             radiosAssinarAvulso.forEach(r => r.addEventListener("change", atualizarAvulso));
             radiosDestinoAvulso.forEach(r => r.addEventListener("change", atualizarAvulso));
+            if(chkSalvarEmpresa){
+                chkSalvarEmpresa.addEventListener("change", atualizarAvulso);
+            }
             atualizarAvulso();
+        }
+
+        if(formAvulso){
+            formAvulso.addEventListener("submit", function(e){
+                const destino = obterDestinoAvulso();
+                const empresaId = empresaSelect ? (parseInt(String(empresaSelect.value || "0"), 10) || 0) : 0;
+                if(destino === "todos" && chkSalvarEmpresa && chkSalvarEmpresa.checked && empresaId <= 0){
+                    e.preventDefault();
+                    alert("Selecione a empresa para cadastrar em Documentos da Empresa.");
+                    if(empresaSelect){
+                        empresaSelect.focus();
+                    }
+                }
+            });
+        }
+
+        const atualizarFuncionariosPorEmpresa = () => {
+            if(!empresaSelect) return;
+            const empresaId = parseInt(String(empresaSelect.value || "0"), 10) || 0;
+            const sel = document.getElementById("funcionario_select");
+
+            try {
+                const url = new URL(window.location.href);
+                if(empresaId > 0){
+                    url.searchParams.set("empresa_id", String(empresaId));
+                } else {
+                    url.searchParams.delete("empresa_id");
+                }
+                window.history.replaceState({}, "", url.toString());
+            } catch (e) {}
+
+            if(redirectToAvulso){
+                redirectToAvulso.value = "nova_assinatura.php?modo=avulso" + (empresaId > 0 ? "&empresa_id=" + String(empresaId) : "");
+            }
+            if(linkModoAvulso){
+                linkModoAvulso.href = "nova_assinatura.php?modo=avulso" + (empresaId > 0 ? "&empresa_id=" + String(empresaId) : "");
+            }
+            if(linkModoLote){
+                linkModoLote.href = "nova_assinatura.php?modo=separar_paginas" + (empresaId > 0 ? "&empresa_id=" + String(empresaId) : "");
+            }
+
+            const qs = new URLSearchParams();
+            qs.set("ajax", "funcionarios_por_empresa");
+            if(empresaId > 0){
+                qs.set("empresa_id", String(empresaId));
+            }
+
+            fetch("nova_assinatura.php?" + qs.toString(), { credentials: "same-origin" })
+                .then(r => r.json())
+                .then(data => {
+                    if(!data || data.ok !== true) return;
+
+                    if(totalTodosEl){
+                        totalTodosEl.textContent = String(parseInt(String(data.totalComEmail || "0"), 10) || 0);
+                    }
+
+                    if(!sel) return;
+
+                    const rows = Array.isArray(data.rows) ? data.rows : [];
+
+                    if(window.jQuery){
+                        const $sel = jQuery(sel);
+                        const usingSelect2 = !!($sel.data("select2") || (window.jQuery.fn && typeof window.jQuery.fn.select2 === "function" && $sel.hasClass("select2-hidden-accessible")));
+                        if(usingSelect2){
+                            $sel.empty();
+                            $sel.append(new Option("Selecionar funcionário", "", true, false));
+                            rows.forEach(f => {
+                                const id = parseInt(String(f.enti_nb_id || "0"), 10) || 0;
+                                const nome = String(f.enti_tx_nome || "");
+                                const email = String(f.enti_tx_email || "");
+                                if(id <= 0 || nome.trim() === "") return;
+                                const opt = new Option(nome, String(id), false, false);
+                                jQuery(opt).attr("data-nome", nome);
+                                jQuery(opt).attr("data-email", email);
+                                $sel.append(opt);
+                            });
+                            $sel.val("").trigger("change");
+                        } else {
+                            sel.innerHTML = "";
+                            const opt0 = document.createElement("option");
+                            opt0.value = "";
+                            opt0.textContent = "Selecionar funcionário";
+                            sel.appendChild(opt0);
+                            rows.forEach(f => {
+                                const id = parseInt(String(f.enti_nb_id || "0"), 10) || 0;
+                                const nome = String(f.enti_tx_nome || "");
+                                const email = String(f.enti_tx_email || "");
+                                if(id <= 0 || nome.trim() === "") return;
+                                const opt = document.createElement("option");
+                                opt.value = String(id);
+                                opt.textContent = nome;
+                                opt.setAttribute("data-nome", nome);
+                                opt.setAttribute("data-email", email);
+                                sel.appendChild(opt);
+                            });
+                            sel.value = "";
+                            preencherDadosFuncionarioSelecionado();
+                        }
+                    } else {
+                        sel.innerHTML = "";
+                        const opt0 = document.createElement("option");
+                        opt0.value = "";
+                        opt0.textContent = "Selecionar funcionário";
+                        sel.appendChild(opt0);
+                        rows.forEach(f => {
+                            const id = parseInt(String(f.enti_nb_id || "0"), 10) || 0;
+                            const nome = String(f.enti_tx_nome || "");
+                            const email = String(f.enti_tx_email || "");
+                            if(id <= 0 || nome.trim() === "") return;
+                            const opt = document.createElement("option");
+                            opt.value = String(id);
+                            opt.textContent = nome;
+                            opt.setAttribute("data-nome", nome);
+                            opt.setAttribute("data-email", email);
+                            sel.appendChild(opt);
+                        });
+                        sel.value = "";
+                        preencherDadosFuncionarioSelecionado();
+                    }
+                })
+                .catch(() => {});
+        };
+
+        if(empresaSelect){
+            empresaSelect.addEventListener("change", atualizarFuncionariosPorEmpresa);
         }
 
         const icpLote = document.getElementById("validar_icp_lote");

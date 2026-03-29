@@ -262,14 +262,6 @@ function assinatura_entregarParaFuncionarioEFinalizarNotificacao(
                 }
 
                 $dest = rtrim(str_replace("\\", "/", $root), "/") . "/" . $nomeSafe;
-                if (file_exists($dest)) {
-                    $info = pathinfo($nomeSafe);
-                    $base = $info["filename"] ?? "documento";
-                    $ext2 = isset($info["extension"]) ? "." . $info["extension"] : ".pdf";
-                    $dest = rtrim(str_replace("\\", "/", $root), "/") . "/" . $base . "_" . time() . $ext2;
-                    $nomeSafe = basename($dest);
-                }
-
                 if (@copy($srcAbs, $dest)) {
                     $rel = "arquivos/Funcionarios/" . $entidadeId . "/" . $nomeSafe;
                     assinatura_inserirDocumentoFuncionario($conn, $entidadeId, $tipoDocumentoId, $nomeSafe, $rel);

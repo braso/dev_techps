@@ -6,6 +6,38 @@ $interno = true; // utilizado em conecta.php
 include_once __DIR__ . "/conecta.php";
 header('Content-Type: application/json; charset=utf-8');
 
+function ensureRfidsNbEntidadeIdColumn(mysqli $conn): void{
+	$dbRow = mysqli_fetch_assoc(mysqli_query($conn, "SELECT DATABASE() AS db"));
+	$db = strval($dbRow["db"] ?? "");
+	if($db === ""){
+		return;
+	}
+
+	$colsRes = mysqli_query(
+		$conn,
+		"SELECT COLUMN_NAME
+		FROM information_schema.COLUMNS
+		WHERE TABLE_SCHEMA = '".mysqli_real_escape_string($conn, $db)."'
+			AND TABLE_NAME = 'rfids'"
+	);
+	if(!$colsRes){
+		return;
+	}
+	$has = [];
+	while($r = mysqli_fetch_assoc($colsRes)){
+		$col = strval($r["COLUMN_NAME"] ?? "");
+		if($col !== ""){
+			$has[$col] = true;
+		}
+	}
+
+	if(!isset($has["rfids_nb_entidade_id"])){
+		mysqli_query($conn, "ALTER TABLE rfids ADD COLUMN rfids_nb_entidade_id INT DEFAULT NULL");
+	}
+}
+
+ensureRfidsNbEntidadeIdColumn($conn);
+
 // Receber query e parâmetros
 $queryBase = base64_decode($_POST["query"][0]) . urldecode(base64_decode($_POST["query"][1]));
 $limit = min(intval(base64_decode($_POST["query"][2])), 1000); // Limite máximo de 1000

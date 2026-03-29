@@ -446,6 +446,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <i class="fas ${secondaryIcon}"></i> ${secondaryText}
                                 </a>
                             </div>
+                            <div id="assinatura-after-actions" class="mt-4 max-w-sm mx-auto"></div>
                             
                             <div class="mt-8 pt-6 border-t border-gray-100">
                                 <a href="gerar_pdf.php?id_assinatura=${data.id_assinatura}" target="_blank" 
@@ -455,6 +456,22 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                         </div>
                     `;
+
+                    try {
+                        const ref = document.referrer || '';
+                        if (ref.indexOf('pendentes') !== -1) {
+                            const slot = document.getElementById('assinatura-after-actions');
+                            if (slot) {
+                                slot.innerHTML = `
+                                    <a href="pendentes.php"
+                                       class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 px-6 rounded-lg border border-gray-200 shadow-sm transition-all flex items-center justify-center gap-2">
+                                        <i class="fas fa-arrow-left"></i> Voltar para Pendências
+                                    </a>
+                                `;
+                            }
+                        }
+                    } catch (e) {
+                    }
                     
                     // Opcional: Forçar download automático
                     // const link = document.createElement('a');
