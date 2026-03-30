@@ -45,8 +45,6 @@ function assinatura_getBaseUrl(): string {
     return rtrim($proto . "://" . $host . $dir, "/");
 }
 
-<<<<<<< HEAD
-=======
 function assinatura_normalizarCpfDigits(string $cpf): string {
     return preg_replace('/\D+/', '', $cpf) ?? '';
 }
@@ -67,8 +65,6 @@ function assinatura_normalizarRg(string $rg): string {
 function assinatura_h(string $v): string {
     return htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
 }
-
->>>>>>> 9f998888dd173ea8ea889e5587da6982be6727db
 function enviarEmailProximo($email, $nome, $token, $nomeArquivo, $idDoc, $funcao, $caminhoArquivo = null) {
     // Função de log deve estar disponível ou removemos o logDebug
     if (function_exists('logDebug')) {
