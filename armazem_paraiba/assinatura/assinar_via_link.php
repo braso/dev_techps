@@ -445,12 +445,12 @@ $cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label for="cpf" class="block text-xs font-medium text-gray-700 mb-1">CPF</label>
-                                    <input type="text" id="cpf" name="cpf" placeholder="000.000.000-00" required
+                                    <input type="text" id="cpf" name="cpf" placeholder="000.000.000-00" required maxlength="14" inputmode="numeric" autocomplete="off"
                                         class="w-full text-sm rounded border-gray-300 focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3 bg-gray-50">
                                 </div>
                                 <div>
                                     <label for="rg" class="block text-xs font-medium text-gray-700 mb-1">RG</label>
-                                    <input type="text" id="rg" name="rg" placeholder="RG" required
+                                    <input type="text" id="rg" name="rg" placeholder="RG" required maxlength="20" autocomplete="off"
                                         class="w-full text-sm rounded border-gray-300 focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3 bg-gray-50">
                                 </div>
                             </div>
