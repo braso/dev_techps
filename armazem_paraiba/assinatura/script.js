@@ -71,6 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Atualiza o texto do termo dinamicamente
     const nomeInput = document.getElementById('nome');
     const cpfInput = document.getElementById('cpf');
+    const rgInput = document.getElementById('rg');
     const nomeTermo = document.getElementById('nome_termo');
     const cpfTermo = document.getElementById('cpf_termo');
 
@@ -84,10 +85,44 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    if (cpfInput && cpfTermo) {
-        cpfInput.addEventListener('input', function() {
-            cpfTermo.textContent = this.value || '[XXX.XXX.XXX-XX]';
-        });
+    const cpfDigits = (v) => String(v || '').replace(/\D/g, '').slice(0, 11);
+    const cpfFormat = (d) => {
+        const s = String(d || '');
+        if (s.length <= 3) return s;
+        if (s.length <= 6) return s.slice(0, 3) + '.' + s.slice(3);
+        if (s.length <= 9) return s.slice(0, 3) + '.' + s.slice(3, 6) + '.' + s.slice(6);
+        return s.slice(0, 3) + '.' + s.slice(3, 6) + '.' + s.slice(6, 9) + '-' + s.slice(9, 11);
+    };
+    const rgNorm = (v) => String(v || '').toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 20);
+
+    if (cpfInput) {
+        cpfInput.maxLength = 14;
+        cpfInput.setAttribute('inputmode', 'numeric');
+        cpfInput.setAttribute('autocomplete', 'off');
+        const syncCpf = () => {
+            const d = cpfDigits(cpfInput.value);
+            const f = cpfFormat(d);
+            cpfInput.value = f;
+            if (cpfTermo) {
+                cpfTermo.textContent = f || '[XXX.XXX.XXX-XX]';
+            }
+        };
+        cpfInput.addEventListener('input', syncCpf);
+        cpfInput.addEventListener('blur', syncCpf);
+        syncCpf();
+    } else if (cpfTermo) {
+        cpfTermo.textContent = '[XXX.XXX.XXX-XX]';
+    }
+
+    if (rgInput) {
+        rgInput.maxLength = 20;
+        rgInput.setAttribute('autocomplete', 'off');
+        const syncRg = () => {
+            rgInput.value = rgNorm(rgInput.value);
+        };
+        rgInput.addEventListener('input', syncRg);
+        rgInput.addEventListener('blur', syncRg);
+        syncRg();
     }
 
     // Configura transição de tela se estiver no modo upload

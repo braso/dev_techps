@@ -683,16 +683,85 @@ function campoSubSetor($nome, $variavel, $valores = [], $tamanho = 2) {
 						});
 					}
 
-					function syncOrdemMapFromDom(){
-						var box = document.getElementById('lista-resp-assina');
-						if(!box){ return; }
-						var inputs = box.querySelectorAll('input[data-ordem-id]');
-						inputs.forEach(function(inp){
-							var id = inp.getAttribute('data-ordem-id');
-							if(!id){ return; }
-							var v = parseInt(inp.value || '0', 10);
-							ordemMap[id] = isFinite(v) && v > 0 ? v : 0;
+					var selectionOrder = (pre || []).map(function(v){ return String(v); });
+					var checkOrder = [];
+
+					function getSelectedOrdered(){
+						var current = (\$sel.val() || []).map(function(v){ return String(v); });
+						var inCurrent = {};
+						current.forEach(function(v){ inCurrent[v] = true; });
+
+						var ordered = [];
+						(selectionOrder || []).forEach(function(v){
+							if(inCurrent[v]){
+								ordered.push(v);
+							}
 						});
+						current.forEach(function(v){
+							if(ordered.indexOf(v) === -1){
+								ordered.push(v);
+							}
+						});
+						return ordered;
+					}
+
+					function initCheckOrder(){
+						var ids = [];
+						Object.keys(assinaMap || {}).forEach(function(k){
+							if(String(assinaMap[k]) === 'sim'){
+								ids.push(String(k));
+							}
+						});
+						ids.sort(function(a, b){
+							var ao = parseInt((ordemMap && ordemMap[a]) || '0', 10);
+							var bo = parseInt((ordemMap && ordemMap[b]) || '0', 10);
+							ao = (isFinite(ao) && ao > 0) ? ao : 999999;
+							bo = (isFinite(bo) && bo > 0) ? bo : 999999;
+							if(ao !== bo){ return ao - bo; }
+							var ia = selectionOrder.indexOf(String(a));
+							var ib = selectionOrder.indexOf(String(b));
+							ia = ia >= 0 ? ia : 999999;
+							ib = ib >= 0 ? ib : 999999;
+							if(ia !== ib){ return ia - ib; }
+							return String(a).localeCompare(String(b));
+						});
+						checkOrder = ids;
+					}
+
+					function normalizeCheckOrder(selectedOrdered){
+						selectedOrdered = (selectedOrdered || []).map(function(v){ return String(v); });
+						var selectedSet = {};
+						selectedOrdered.forEach(function(v){ selectedSet[v] = true; });
+
+						checkOrder = (checkOrder || []).filter(function(v){
+							if(!selectedSet[v]){ return false; }
+							return (assinaMap && String(assinaMap[v]) === 'sim');
+						});
+
+						selectedOrdered.forEach(function(v){
+							if(!(assinaMap && String(assinaMap[v]) === 'sim')){ return; }
+							if(checkOrder.indexOf(v) === -1){
+								checkOrder.push(v);
+							}
+						});
+
+						(checkOrder || []).forEach(function(v, idx){
+							ordemMap[v] = idx + 1;
+						});
+
+						Object.keys(ordemMap || {}).forEach(function(k){
+							if(!(assinaMap && String(assinaMap[k]) === 'sim')){
+								ordemMap[k] = 0;
+							}
+						});
+					}
+
+					function getPosicoes(){
+						var pos = {};
+						(checkOrder || []).forEach(function(v, idx){
+							pos[String(v)] = idx + 1;
+						});
+						return pos;
 					}
 
 					function ordinal(n){
@@ -701,63 +770,17 @@ function campoSubSetor($nome, $variavel, $valores = [], $tamanho = 2) {
 						return String(n) + 'ª';
 					}
 
-					function calcularPosicoes(selected){
-						var checked = [];
-						selected.forEach(function(id, idx){
-							var key = String(id);
-							var isChecked = (assinaMap && (assinaMap[key] === 'sim' || assinaMap[id] === 'sim'));
-							if(!isChecked){ return; }
-							var o = parseInt((ordemMap && (ordemMap[key] || ordemMap[id])) || '0', 10);
-							checked.push({
-								id: key,
-								idx: idx,
-								ordem: (isFinite(o) && o > 0) ? o : 999999
-							});
-						});
-						checked.sort(function(a, b){
-							if(a.ordem === b.ordem){
-								return a.idx - b.idx;
-							}
-							return a.ordem - b.ordem;
-						});
-						var pos = {};
-						checked.forEach(function(item, i){
-							pos[item.id] = i + 1;
-						});
-						return pos;
-					}
-
 					function renderAssina(){
 						var box = document.getElementById('lista-resp-assina');
 						if(!box){ return; }
-						var selected = \$sel.val() || [];
+						var selected = getSelectedOrdered();
+						normalizeCheckOrder(selected);
 						box.innerHTML = '';
 						if(selected.length === 0){
 							box.innerHTML = '<span class=\"text-muted\">Nenhum responsável selecionado.</span>';
 							return;
 						}
-						var defaults = [
-							{ nome: 'ANA MARIA ROSENO DA SILVA', ordem: 1 },
-							{ nome: 'ACILDO CAETANO DA SILVA', ordem: 2 },
-							{ nome: 'ADRIANA CARLA ALVES BENTO', ordem: 3 }
-						];
-						selected.forEach(function(id){
-							var key = String(id);
-							var isChecked = (assinaMap && (assinaMap[key] === 'sim' || assinaMap[id] === 'sim'));
-							if(!isChecked){ return; }
-							var cur = parseInt((ordemMap && (ordemMap[key] || ordemMap[id])) || '0', 10);
-							if(isFinite(cur) && cur > 0){ return; }
-							var text = (labels[key] || labels[id] || (\$sel.find('option[value=\"'+key+'\"]:selected').text()) || ('ID ' + key));
-							text = (typeof sanitizeText === 'function') ? sanitizeText(text) : text;
-							var up = String(text || '').toUpperCase();
-							defaults.forEach(function(d){
-								if(!d || !d.nome){ return; }
-								if(up.indexOf(String(d.nome).toUpperCase()) !== -1){
-									ordemMap[key] = d.ordem;
-								}
-							});
-						});
-						var pos = calcularPosicoes(selected);
+						var pos = getPosicoes();
 						selected.forEach(function(id){
 							var key = String(id);
 							var text = (labels[key] || labels[id] || (\$sel.find('option[value=\"'+key+'\"]:selected').text()) || ('ID ' + key));
@@ -778,34 +801,34 @@ function campoSubSetor($nome, $variavel, $valores = [], $tamanho = 2) {
 									'<input data-resp-id=\"'+key+'\" type=\"checkbox\" name=\"responsavel_assina['+key+']\" value=\"sim\" '+checked+' style=\"margin-right:8px;\">'+
 									'<span>'+text+'</span>'+
 								'</label>'+
-								'<input data-ordem-id=\"'+key+'\" type=\"number\" min=\"1\" step=\"1\" name=\"responsavel_ordem['+key+']\" value=\"'+String(ordemVal)+'\" style=\"width:70px;\" class=\"form-control input-sm\" '+(isChecked ? '' : 'disabled')+'>';
+								'<input type=\"hidden\" name=\"responsavel_ordem['+key+']\" value=\"'+String(ordemVal)+'\">';
 							box.appendChild(row);
 						});
-						syncOrdemMapFromDom();
 					}
 
 					\$('#lista-resp-assina').on('change', 'input[type=\"checkbox\"][data-resp-id]', function(){
 						var id = this.getAttribute('data-resp-id');
 						if(!id){ return; }
-						assinaMap[id] = this.checked ? 'sim' : 'nao';
+						var sid = String(id);
+						assinaMap[sid] = this.checked ? 'sim' : 'nao';
 						if(!this.checked){
-							ordemMap[id] = 0;
+							ordemMap[sid] = 0;
+							var idx = checkOrder.indexOf(sid);
+							if(idx >= 0){
+								checkOrder.splice(idx, 1);
+							}
+						}else{
+							if(checkOrder.indexOf(sid) === -1){
+								checkOrder.push(sid);
+							}
 						}
-						renderAssina();
-					});
-
-					\$('#lista-resp-assina').on('input', 'input[type=\"number\"][data-ordem-id]', function(){
-						var id = this.getAttribute('data-ordem-id');
-						if(!id){ return; }
-						var v = parseInt(this.value || '0', 10);
-						ordemMap[id] = isFinite(v) && v > 0 ? v : 0;
 						renderAssina();
 					});
 
 					\$sel.on('change', function(){
 						syncAssinaMapFromDom();
-						syncOrdemMapFromDom();
-						var selected = \$sel.val() || [];
+						var selected = getSelectedOrdered();
+						normalizeCheckOrder(selected);
 						Object.keys(assinaMap || {}).forEach(function(k){
 							if(selected.indexOf(String(k)) === -1){
 								delete assinaMap[k];
@@ -818,6 +841,10 @@ function campoSubSetor($nome, $variavel, $valores = [], $tamanho = 2) {
 					\$sel.on('select2:select', function(e){
 						var d = e && e.params ? e.params.data : null;
 						if(d && d.id){
+							var sid = String(d.id);
+							if(selectionOrder.indexOf(sid) === -1){
+								selectionOrder.push(sid);
+							}
 							var t = d.text || labels[String(d.id)] || ('ID ' + d.id);
 							t = (typeof sanitizeText === 'function') ? sanitizeText(t) : t;
 							labels[String(d.id)] = t;
@@ -832,10 +859,23 @@ function campoSubSetor($nome, $variavel, $valores = [], $tamanho = 2) {
 					\$sel.on('select2:unselect', function(e){
 						syncAssinaMapFromDom();
 						var d = e && e.params ? e.params.data : null;
-						if(d && d.id && assinaMap){ delete assinaMap[String(d.id)]; }
+						if(d && d.id){
+							var sid = String(d.id);
+							if(assinaMap){ delete assinaMap[sid]; }
+							if(ordemMap){ delete ordemMap[sid]; }
+							var idx2 = checkOrder.indexOf(sid);
+							if(idx2 >= 0){
+								checkOrder.splice(idx2, 1);
+							}
+							var idx = selectionOrder.indexOf(sid);
+							if(idx >= 0){
+								selectionOrder.splice(idx, 1);
+							}
+						}
 						renderAssina();
 					});
 
+					initCheckOrder();
 					renderAssina();
 				});
 			})(window.jQuery);

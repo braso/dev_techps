@@ -93,7 +93,9 @@ function enviarEmailProximo($email, $nome, $token, $nomeArquivo, $idDoc, $funcao
         }
         
         $base = assinatura_getBaseUrl();
-        $linkAssinatura = rtrim($base !== "" ? $base : (defined("BASE_URL_ASSINATURA") ? (string)BASE_URL_ASSINATURA : ""), "/") . "/assinar_via_link.php?token=" . $token;
+        $baseUrl = rtrim($base !== "" ? $base : (defined("BASE_URL_ASSINATURA") ? (string)BASE_URL_ASSINATURA : ""), "/");
+        $linkAssinatura = $baseUrl . "/assinar_via_link.php?token=" . urlencode((string)$token);
+        $linkPlataforma = $baseUrl . "/pendentes.php";
         
         $mail->isHTML(true);
         $mail->Subject = "Sua vez de assinar ($funcao): Documento #$idDoc";
@@ -107,10 +109,15 @@ function enviarEmailProximo($email, $nome, $token, $nomeArquivo, $idDoc, $funcao
             <p style='text-align: center; margin: 30px 0;'>
                 <a href='$linkAssinatura' style='background-color: #007bff; color: white; padding: 15px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Revisar e Assinar</a>
             </p>
-            <p>Ou acesse: $linkAssinatura</p>
+            <p style='text-align: center; margin: 0 0 30px 0;'>
+                <a href='$linkPlataforma' style='background-color: #16a34a; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Assinar pela Plataforma</a>
+            </p>
+            <p>Link direto: $linkAssinatura</p>
+            <p>Plataforma (Assinaturas Pendentes): <a href='$linkPlataforma'>$linkPlataforma</a></p>
         </div>";
         
         $mail->Body = $corpo;
+        $mail->AltBody = "Assine pelo link: $linkAssinatura\nOu acesse a plataforma (Assinaturas Pendentes): $linkPlataforma\nDocumento #$idDoc ($funcao).";
         $mail->send();
         
         if (function_exists('logDebug')) {

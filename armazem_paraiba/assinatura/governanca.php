@@ -149,11 +149,25 @@ if(($_GET["ajax"] ?? "") === "funcionario_info"){
     $respIds = [];
     $csvA = trim(strval($row["enti_respSetor_ids"] ?? ""));
     $csvB = trim(strval($row["enti_respCargo_ids"] ?? ""));
+    $respSetorIds = [];
+    $respCargoIds = [];
     foreach([$csvA, $csvB] as $csvX){
         if($csvX === ""){ continue; }
         foreach(explode(",", $csvX) as $p){
             $v = intval(trim($p));
             if($v > 0){ $respIds[] = $v; }
+        }
+    }
+    if($csvA !== ""){
+        foreach(explode(",", $csvA) as $p){
+            $v = intval(trim($p));
+            if($v > 0){ $respSetorIds[$v] = true; }
+        }
+    }
+    if($csvB !== ""){
+        foreach(explode(",", $csvB) as $p){
+            $v = intval(trim($p));
+            if($v > 0){ $respCargoIds[$v] = true; }
         }
     }
     $respIds = array_values(array_unique(array_filter(array_map("intval", $respIds), fn($v) => $v > 0)));
@@ -174,6 +188,14 @@ if(($_GET["ajax"] ?? "") === "funcionario_info"){
             AND e.enti_tx_status = 'ativo'
             ORDER BY e.enti_tx_nome ASC"
         ), MYSQLI_ASSOC);
+        $responsaveis = array_map(function($r) use ($respSetorIds, $respCargoIds){
+            $id = intval($r["id"] ?? 0);
+            $origens = [];
+            if($id > 0 && isset($respSetorIds[$id])){ $origens[] = "setor"; }
+            if($id > 0 && isset($respCargoIds[$id])){ $origens[] = "cargo"; }
+            $r["origem"] = implode(",", array_values(array_unique($origens)));
+            return $r;
+        }, $responsaveis ?: []);
     } else {
         $map = [];
         if($setorId > 0){
@@ -206,7 +228,8 @@ if(($_GET["ajax"] ?? "") === "funcionario_info"){
                     "email" => $r["email"] ?? "",
                     "setor_nome" => $r["setor_nome"] ?? "",
                     "cargo_nome" => $r["cargo_nome"] ?? "",
-                    "ord" => intval($r["ord"] ?? 999999)
+                    "ord" => intval($r["ord"] ?? 999999),
+                    "origens" => ["setor"]
                 ];
             }
         }
@@ -241,8 +264,11 @@ if(($_GET["ajax"] ?? "") === "funcionario_info"){
                         "email" => $r["email"] ?? "",
                         "setor_nome" => $r["setor_nome"] ?? "",
                         "cargo_nome" => $r["cargo_nome"] ?? "",
-                        "ord" => intval($r["ord"] ?? 999999)
+                        "ord" => intval($r["ord"] ?? 999999),
+                        "origens" => ["cargo"]
                     ];
+                } else {
+                    $map[$rid]["origens"] = array_values(array_unique(array_merge($map[$rid]["origens"] ?? [], ["cargo"])));
                 }
             }
         }
@@ -261,7 +287,8 @@ if(($_GET["ajax"] ?? "") === "funcionario_info"){
                 "nome" => strval($r["nome"] ?? ""),
                 "email" => strval($r["email"] ?? ""),
                 "setor_nome" => strval($r["setor_nome"] ?? ""),
-                "cargo_nome" => strval($r["cargo_nome"] ?? "")
+                "cargo_nome" => strval($r["cargo_nome"] ?? ""),
+                "origem" => implode(",", array_values(array_unique(array_map("strval", $r["origens"] ?? []))))
             ];
         }, $responsaveis);
     }
@@ -616,7 +643,12 @@ include_once "componentes/layout_header.php";
             box.innerHTML = responsaveis.map(r => {
                 const nome = (r && r.nome) ? String(r.nome) : '';
                 const email = (r && r.email) ? String(r.email) : '';
-                const label = email ? (nome + ' | ' + email) : nome;
+                const origem = (r && r.origem) ? String(r.origem) : '';
+                const hasSetor = origem.toLowerCase().indexOf('setor') !== -1;
+                const hasCargo = origem.toLowerCase().indexOf('cargo') !== -1;
+                const tipo = (hasSetor && hasCargo) ? 'SETOR/CARGO' : (hasSetor ? 'SETOR' : (hasCargo ? 'CARGO' : ''));
+                let label = email ? (nome + ' | ' + email) : nome;
+                if(tipo){ label += ' | ' + tipo; }
                 const id = (r && r.id != null) ? String(r.id) : '';
                 return '<span class="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs border border-blue-100" data-id="'+id+'"><span>'+escapeHtml(label)+'</span><button type="button" class="resp-remove ml-2 text-red-600 hover:text-red-700 focus:outline-none" title="Remover">×</button></span>';
             }).join('');
