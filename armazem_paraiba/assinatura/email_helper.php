@@ -65,7 +65,6 @@ function assinatura_normalizarRg(string $rg): string {
 function assinatura_h(string $v): string {
     return htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
 }
-
 function enviarEmailProximo($email, $nome, $token, $nomeArquivo, $idDoc, $funcao, $caminhoArquivo = null) {
     // Função de log deve estar disponível ou removemos o logDebug
     if (function_exists('logDebug')) {
