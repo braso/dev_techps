@@ -29,9 +29,17 @@ window.handleFileSelect = async function(input) {
 
 // Nova função para carregar PDF via URL (para fluxo de assinatura por e-mail)
 window.loadPdfFromUrl = async function(url) {
+    const openPdfInNewTab = document.getElementById('openPdfInNewTab');
+    if (openPdfInNewTab) {
+        openPdfInNewTab.href = url;
+    }
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, { credentials: 'same-origin' });
         if (!response.ok) throw new Error("Erro ao baixar o PDF");
+        const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+        if (contentType.indexOf('application/pdf') === -1) {
+            throw new Error("Resposta não é PDF");
+        }
         
         const blob = await response.blob();
         currentPdfBytes = await blob.arrayBuffer();
@@ -52,7 +60,12 @@ window.loadPdfFromUrl = async function(url) {
 
     } catch (error) {
         console.error("Erro ao carregar PDF da URL:", error);
-        alert("Não foi possível carregar o documento solicitado. Tente recarregar a página.");
+        const pdfPreview = document.getElementById('pdfPreview');
+        if (pdfPreview) {
+            pdfPreview.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now();
+        } else {
+            alert("Não foi possível carregar o documento solicitado. Tente recarregar a página.");
+        }
     }
 };
 
@@ -93,7 +106,20 @@ document.addEventListener('DOMContentLoaded', function() {
         if (s.length <= 9) return s.slice(0, 3) + '.' + s.slice(3, 6) + '.' + s.slice(6);
         return s.slice(0, 3) + '.' + s.slice(3, 6) + '.' + s.slice(6, 9) + '-' + s.slice(9, 11);
     };
-    const rgNorm = (v) => String(v || '').toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 20);
+    const rgDigits = (v) => String(v || '').replace(/\D/g, '').slice(0, 11);
+    const rgFormat = (digits) => {
+        const d = String(digits || '');
+        if (!d) return '';
+        const p1 = d.slice(0, 3);
+        const p2 = d.slice(3, 6);
+        const p3 = d.slice(6, 9);
+        const p4 = d.slice(9, 11);
+        let out = p1;
+        if (p2) out += '.' + p2;
+        if (p3) out += '.' + p3;
+        if (p4) out += '-' + p4;
+        return out;
+    };
 
     if (cpfInput) {
         cpfInput.maxLength = 14;
@@ -115,10 +141,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (rgInput) {
-        rgInput.maxLength = 20;
+        rgInput.maxLength = 14;
         rgInput.setAttribute('autocomplete', 'off');
+        rgInput.setAttribute('inputmode', 'numeric');
         const syncRg = () => {
-            rgInput.value = rgNorm(rgInput.value);
+            rgInput.value = rgFormat(rgDigits(rgInput.value));
         };
         rgInput.addEventListener('input', syncRg);
         rgInput.addEventListener('blur', syncRg);
