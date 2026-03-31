@@ -342,7 +342,15 @@
 			if(!$emLote){ index(); exit; }
 			return false;
 		}
-		$justificativaGestor = mysqli_real_escape_string($GLOBALS['conn'], $_POST['justificativa_gestor'] ?? '');
+		$justificativaGestor = trim($_POST['justificativa_gestor'] ?? '');
+
+if (empty($justificativaGestor)) {
+			if(!$emLote) set_status("ERRO: A justificativa é obrigatória para rejeitar a solicitação.");
+			if(!$emLote){ index(); exit; }
+			return false;
+		}
+
+		$justificativaGestor = mysqli_real_escape_string($GLOBALS['conn'], $justificativaGestor);
 		query("UPDATE solicitacoes_ajuste SET status = 'nao_aceita', data_decisao = NOW(), id_superior = {$_SESSION['user_nb_id']}, justificativa_gestor = '{$justificativaGestor}' WHERE id = '$idSolicitacao'");
 		if(!$emLote){
 			$params = [
@@ -913,8 +921,16 @@
 						document.form_acao.submit();
 					});
 
+				
+
 				} else if (acaoAtualModal.tipo === 'rejeitar') {
 					const idSolicitacao = acaoAtualModal.id;
+
+					if (!justificativa.trim()) {
+						alert('A justificativa é obrigatória para rejeitar.');
+						return;
+					}
+					
 					$('#modalJustificativa').modal('hide');
 					
 					document.form_acao.id_solicitacao.value = idSolicitacao;
@@ -922,8 +938,15 @@
 					document.form_acao.justificativa_gestor.value = justificativa;
 					document.form_acao.submit();
 
+
 				} else if (acaoAtualModal.tipo === 'lote') {
 					const acaoLote = acaoAtualModal.acaoLote;
+
+					if (acaoLote === 'rejeitarLote' && !justificativa.trim()) {
+						alert('A justificativa é obrigatória para rejeitar em lote.');
+						return;
+					}
+					
 					$('#modalJustificativa').modal('hide');
 					
 					const selecionados = Array.from(document.querySelectorAll('.sel-lote:checked')).map(cb => cb.value);

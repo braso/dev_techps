@@ -680,24 +680,38 @@
 		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['enviar_lote'])) {
 			try {
 				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMotorista"] ?? '');
-				$data = mysqli_real_escape_string($GLOBALS['conn'], $_POST["data"] ?? '');
 
-				if (empty($idMotorista) || empty($data)) {
-					echo "<script>alert('Selecione a data para enviar o lote');</script>";
+				if (empty($idMotorista)) {
+					echo "<script>alert('Motorista inválido');</script>";
 					exit;
 				}
 
-				// Atualiza rascunhos para enviados
+				// 🔥 Buscar todas as datas com rascunho
+				$datas = mysqli_fetch_all(query("
+					SELECT DISTINCT data_ajuste 
+					FROM solicitacoes_ajuste
+					WHERE id_motorista = '$idMotorista'
+					AND status = 'rascunho'
+				"), MYSQLI_ASSOC);
+
+				if (empty($datas)) {
+					echo "<script>alert('Nenhuma solicitação pendente para envio');</script>";
+					exit;
+				}
+
+				// 🔥 Atualizar todos os rascunhos
 				mysqli_query($GLOBALS['conn'], "
 					UPDATE solicitacoes_ajuste 
 					SET status = 'enviada' 
-					WHERE id_motorista = '$idMotorista' 
-					AND data_ajuste = '$data'
+					WHERE id_motorista = '$idMotorista'
 					AND status = 'rascunho'
 				");
 
-				// Gera documento consolidado
-				processarDocumentoAgrupado($idMotorista, $data);
+				// 🔥 Gerar documentos por dia
+				foreach ($datas as $d) {
+					$data = $d['data_ajuste'];
+					processarDocumentoAgrupado($idMotorista, $data);
+				}
 
 				header("Location: " . basename($_SERVER['PHP_SELF']) . "?msg=enviado&idMotorista={$idMotorista}");
 				exit;
