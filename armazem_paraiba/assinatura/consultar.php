@@ -16,6 +16,7 @@ $filtro_data_fim = isset($_GET['data_fim']) ? $_GET['data_fim'] : '';
 $busca = isset($_GET['busca']) ? $_GET['busca'] : '';
 $filtro_tipo_documento = intval($_GET['tipo_documento'] ?? 0);
 $filtro_funcionario = intval($_GET['funcionario'] ?? 0);
+$view = strtolower(trim(strval($_GET["view"] ?? "")));
 
 $tiposDocumentos = [];
 $resTipos = mysqli_query($conn, "SELECT tipo_nb_id, tipo_tx_nome FROM tipos_documentos WHERE tipo_tx_status = 'ativo' ORDER BY tipo_tx_nome ASC");
@@ -391,8 +392,13 @@ if (!empty($solicitacoes)) {
     <!-- Cabeçalho da Página -->
     <div class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800">Consulta de documentos com assinatura obrigatória.</h1>
-            <p class="text-gray-500">Histórico e rastreamento de assinaturas</p>
+            <?php if($view === "documentos"): ?>
+                <h1 class="text-2xl font-bold text-gray-800">Documentos (Assinaturas)</h1>
+                <p class="text-gray-500">Todos os documentos enviados para assinatura (assinados e pendentes)</p>
+            <?php else: ?>
+                <h1 class="text-2xl font-bold text-gray-800">Consulta de documentos com assinatura obrigatória.</h1>
+                <p class="text-gray-500">Histórico e rastreamento de assinaturas</p>
+            <?php endif; ?>
         </div>
         <div class="flex gap-2">
             <a href="index.php" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">
@@ -407,6 +413,9 @@ if (!empty($solicitacoes)) {
     <!-- Filtros -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
         <form method="GET" id="formFiltrosConsulta" class="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <?php if($view !== ""): ?>
+                <input type="hidden" name="view" value="<?php echo htmlspecialchars($view); ?>">
+            <?php endif; ?>
             <div class="md:col-span-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
                 <div class="relative">
