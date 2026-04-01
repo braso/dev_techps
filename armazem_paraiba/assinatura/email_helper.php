@@ -65,9 +65,6 @@ function assinatura_normalizarRg(string $rg): string {
 function assinatura_h(string $v): string {
     return htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
 }
-<<<<<<< HEAD
-function enviarEmailProximo($email, $nome, $token, $nomeArquivo, $idDoc, $funcao, $caminhoArquivo = null) {
-=======
 function assinatura_maskEmail(string $email): string {
     $email = strtolower(trim($email));
     if ($email === "" || strpos($email, "@") === false) {
@@ -176,7 +173,6 @@ function assinatura_obterEntiIdPorEmail(string $email): int {
 
 function enviarEmailProximo($email, $nome, $token, $nomeArquivo, $idDoc, $funcao, $caminhoArquivo = null, $entiNbId = 0) {
     global $conn;
->>>>>>> a6192cd1684b6740d21dfbd919cc78a416304661
     // Função de log deve estar disponível ou removemos o logDebug
     if (function_exists('logDebug')) {
         logDebug("Enviando email para próximo: $email");
