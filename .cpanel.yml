@@ -3,10 +3,9 @@ deployment:
     # Diret贸rios gerais
     - export GENERAL=/home/devtechpsgj/repositories/dev_techps/*
     - export DOMAIN=/home/devtechpsgj/repositories/dev_techps/armazem_paraiba/*
-    - export GENERALDEPLOY=/home/devtechpsgj/public_html/dev 
+    - export GENERALDEPLOY=/home/devtechpsgj/public_html/dev
 
-
-    # Diret贸rios espec铆ficos de cada projetoo.
+    # Diret贸rios espec铆ficos de cada projeto
     
     - export IFRN=/home/devtechpsgj/public_html/dev/ifrn
     - export OPAFRUTAS=/home/devtechpsgj/public_html/dev/opafrutas
@@ -14,7 +13,6 @@ deployment:
     - export BLUEROAD=/home/devtechpsgj/public_html/dev/blueroad
     - export SAOLUCAS=/home/devtechpsgj/public_html/dev/sao_lucas
     - export TMILITAO=/home/devtechpsgj/public_html/dev/t_militao
-    
 
 
     # Copiando diret贸rios
