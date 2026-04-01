@@ -392,7 +392,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const drawFooter = () => {
                         const footerY = pageMargin - 18;
                         page.drawLine({ start: { x: pageMargin, y: footerY + 12 }, end: { x: width - pageMargin, y: footerY + 12 }, thickness: 1, color: rgb(0.9, 0.9, 0.9) });
-                        page.drawText('TechPS - Tecnologia e Sistemas | Armazém Paraíba', { x: pageMargin, y: footerY, size: 7.5, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) });
+                        page.drawText('TechPS - Tecnologia e Sistemas', { x: pageMargin, y: footerY, size: 7.5, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) });
                         const gen = `Gerado em: ${dataHora}`;
                         page.drawText(gen, { x: width - pageMargin - helveticaFont.widthOfTextAtSize(gen, 7.5), y: footerY, size: 7.5, font: helveticaFont, color: rgb(0.4, 0.4, 0.4) });
                     };
