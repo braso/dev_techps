@@ -111,6 +111,7 @@ function ensureAssinaturaTables($conn): void {
             data_assinatura DATETIME NULL,
             ip VARCHAR(45),
             metadados TEXT,
+            salvar_documento_funcionario ENUM('sim','nao') NOT NULL DEFAULT 'nao',
             INDEX (id_solicitacao),
             INDEX (token)
         )";
@@ -119,6 +120,10 @@ function ensureAssinaturaTables($conn): void {
         $checkEnti = mysqli_query($conn, "SHOW COLUMNS FROM assinantes LIKE 'enti_nb_id'");
         if ($checkEnti && mysqli_num_rows($checkEnti) == 0) {
             mysqli_query($conn, "ALTER TABLE assinantes ADD COLUMN enti_nb_id INT NULL AFTER id_solicitacao");
+        }
+        $checkSalvarDoc = mysqli_query($conn, "SHOW COLUMNS FROM assinantes LIKE 'salvar_documento_funcionario'");
+        if ($checkSalvarDoc && mysqli_num_rows($checkSalvarDoc) == 0) {
+            mysqli_query($conn, "ALTER TABLE assinantes ADD COLUMN salvar_documento_funcionario ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
         }
     }
 }
@@ -1160,7 +1165,7 @@ $tipoDocumentoId = intval($_POST["tipo_documento"] ?? 0);
 $validarIcp = strtolower(trim(strval($_POST["validar_icp"] ?? "nao")));
 $validarIcp = $validarIcp === "sim" ? "sim" : "nao";
 
-if($modo_envio === "avulso" && $tipoDocumentoId <= 0){
+if(in_array($modo_envio, ["avulso", "governanca"], true) && $tipoDocumentoId <= 0){
     redirectTo($redirect_to, "error", "Selecione o tipo de documento.");
 }
 if($tipoDocumentoId > 0){
@@ -1284,10 +1289,14 @@ if(move_uploaded_file($fileTmpPath, $dest_path)) {
             $ordem = $sig['ordem'] ?? ($index + 1);
             $funcao = $sig['funcao'] ?? 'Signatário';
             $entiNbId = intval($sig["enti_nb_id"] ?? 0);
+            $salvarDoc = strtolower(trim(strval($sig["salvar_documento_funcionario"] ?? "nao"))) === "sim" ? "sim" : "nao";
+            if (intval($ordem) === 1) {
+                $salvarDoc = "sim";
+            }
             
-            $sqlAssinante = "INSERT INTO assinantes (id_solicitacao, enti_nb_id, nome, email, funcao, ordem, token, status) VALUES (?, NULLIF(?,0), ?, ?, ?, ?, ?, 'pendente')";
+            $sqlAssinante = "INSERT INTO assinantes (id_solicitacao, enti_nb_id, nome, email, funcao, ordem, salvar_documento_funcionario, token, status) VALUES (?, NULLIF(?,0), ?, ?, ?, ?, ?, ?, 'pendente')";
             $stmtAssinante = mysqli_prepare($conn, $sqlAssinante);
-            mysqli_stmt_bind_param($stmtAssinante, "iisssis", $id_solicitacao, $entiNbId, $sig['nome'], $sig['email'], $funcao, $ordem, $tokenAssinante);
+            mysqli_stmt_bind_param($stmtAssinante, "iisssiss", $id_solicitacao, $entiNbId, $sig['nome'], $sig['email'], $funcao, $ordem, $salvarDoc, $tokenAssinante);
             mysqli_stmt_execute($stmtAssinante);
             
             // Se for o primeiro (ordem 1), enviamos o e-mail agora

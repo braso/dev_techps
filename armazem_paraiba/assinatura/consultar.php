@@ -406,7 +406,7 @@ if (!empty($solicitacoes)) {
 
     <!-- Filtros -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-        <form method="GET" class="grid grid-cols-1 md:grid-cols-12 gap-4">
+        <form method="GET" id="formFiltrosConsulta" class="grid grid-cols-1 md:grid-cols-12 gap-4">
             <div class="md:col-span-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
                 <div class="relative">
@@ -605,7 +605,6 @@ if (!empty($solicitacoes)) {
                                             <?php else: ?>
                                                 ID: #<?php echo $row['id']; ?>
                                             <?php endif; ?>
-                                            <?php echo $tipoDocNome !== "" ? " • Tipo: " . htmlspecialchars($tipoDocNome) : ""; ?>
                                         </p>
                                         <div class="mt-1 flex flex-wrap gap-1">
                                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold <?php echo $envioBadgeClass; ?>" <?php echo $envioTitle !== "" ? 'title="' . htmlspecialchars($envioTitle) . '"' : ""; ?>>
@@ -786,6 +785,19 @@ if (!empty($solicitacoes)) {
                                 </div>
                             </td>
                         </tr>
+                        <?php if ($tipoDocNome !== ""): ?>
+                        <tr class="bg-gray-50/60">
+                            <td colspan="6" class="px-6 pt-0 pb-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs uppercase tracking-wide text-gray-500 font-semibold">Tipo de Documento</span>
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-semibold text-sm">
+                                        <i class="fas fa-tag mr-1 text-amber-700"></i>
+                                        <?php echo htmlspecialchars($tipoDocNome, ENT_QUOTES, "UTF-8"); ?>
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endif; ?>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
@@ -885,6 +897,50 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
             });
         }
     }
+
+    (function(){
+        const form = document.getElementById("formFiltrosConsulta");
+        if(!form) return;
+
+        const autoFields = form.querySelectorAll(
+            'select[name="status"],' +
+            'select[name="assinatura"],' +
+            'select[name="envio"],' +
+            'select[name="tipo_documento"],' +
+            'select[name="funcionario"],' +
+            'input[name="data_inicio"],' +
+            'input[name="data_fim"]'
+        );
+
+        let submitTimer = 0;
+        function scheduleSubmit(){
+            if(submitTimer){
+                clearTimeout(submitTimer);
+            }
+            submitTimer = window.setTimeout(function(){
+                if(typeof form.requestSubmit === "function"){
+                    form.requestSubmit();
+                } else {
+                    form.submit();
+                }
+            }, 150);
+        }
+
+        autoFields.forEach(function(el){
+            el.addEventListener("change", scheduleSubmit);
+        });
+
+        if(window.jQuery){
+            const $tipo = jQuery("#filtro_tipo_documento");
+            if($tipo.length){
+                $tipo.on("select2:select select2:clear", scheduleSubmit);
+            }
+            const $func = jQuery("#filtro_funcionario");
+            if($func.length){
+                $func.on("select2:select select2:clear", scheduleSubmit);
+            }
+        }
+    })();
 </script>
 
 <?php include_once "componentes/layout_footer.php"; ?>

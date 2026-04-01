@@ -216,7 +216,7 @@ $rg_cadastro_mask = '';
 $cadastro_ok = false;
 
 // 1. Tenta buscar na tabela nova de Assinantes
-$sqlAssinante = "SELECT a.*, s.caminho_arquivo, s.nome_arquivo_original, s.id_documento as doc_id_global, s.expires_at 
+$sqlAssinante = "SELECT a.*, s.caminho_arquivo, s.nome_arquivo_original, s.id_documento as doc_id_global, s.expires_at, s.modo_envio 
                  FROM assinantes a 
                  JOIN solicitacoes_assinatura s ON a.id_solicitacao = s.id 
                  WHERE a.token = ?";
@@ -329,6 +329,44 @@ if ($assinante) {
             'ip' => $solicitacao['ip_address'] ?? 'N/A', // Assuming ip_address column exists or fetch from audit
             'metadados' => []
         ];
+    }
+}
+
+$modo_envio = strtolower(trim(strval($solicitacao["modo_envio"] ?? "")));
+$assinatura_is_final = true;
+$assinatura_pendentes = [];
+if (!empty($assinante) && isset($assinante["id_solicitacao"])) {
+    $idSolicitacao = intval($assinante["id_solicitacao"]);
+    $total = 0;
+    $assinados = 0;
+    $stmtCount = mysqli_prepare($conn, "SELECT COUNT(*) as total, SUM(CASE WHEN LOWER(status) = 'assinado' THEN 1 ELSE 0 END) as assinados FROM assinantes WHERE id_solicitacao = ?");
+    if ($stmtCount) {
+        mysqli_stmt_bind_param($stmtCount, "i", $idSolicitacao);
+        mysqli_stmt_execute($stmtCount);
+        $cnt = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtCount));
+        mysqli_stmt_close($stmtCount);
+        $total = intval($cnt["total"] ?? 0);
+        $assinados = intval($cnt["assinados"] ?? 0);
+    }
+    $assinatura_is_final = ($total > 0 && $assinados >= $total);
+
+    if (!$assinatura_is_final) {
+        $stmtPend = mysqli_prepare($conn, "SELECT ordem, nome, funcao FROM assinantes WHERE id_solicitacao = ? AND LOWER(status) <> 'assinado' ORDER BY ordem ASC, id ASC");
+        if ($stmtPend) {
+            mysqli_stmt_bind_param($stmtPend, "i", $idSolicitacao);
+            mysqli_stmt_execute($stmtPend);
+            $resPend = mysqli_stmt_get_result($stmtPend);
+            if ($resPend) {
+                while ($p = mysqli_fetch_assoc($resPend)) {
+                    $assinatura_pendentes[] = [
+                        "ordem" => intval($p["ordem"] ?? 0),
+                        "nome" => trim(strval($p["nome"] ?? "")),
+                        "funcao" => trim(strval($p["funcao"] ?? "Signatário"))
+                    ];
+                }
+            }
+            mysqli_stmt_close($stmtPend);
+        }
     }
 }
 
@@ -501,15 +539,45 @@ $cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
                     </div>
                     <div class="bg-gray-50 px-5 py-3 text-center border-t border-gray-200">
                          <p class="text-[10px] text-gray-400">Validade jurídica conforme MP 2.200-2/2001</p>
-                         <a href="<?php echo htmlspecialchars("assinar_via_link.php?token=" . urlencode($token) . "&arquivo=1&download=1"); ?>" download class="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors mt-2 inline-block">
-                             <i class="fas fa-download mr-1"></i> Baixar Documento Assinado
-                         </a>
+                         <?php if (!($modo_envio === "governanca" && !$assinatura_is_final)): ?>
+                             <a href="<?php echo htmlspecialchars("assinar_via_link.php?token=" . urlencode($token) . "&arquivo=1&download=1"); ?>" download class="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors mt-2 inline-block">
+                                 <i class="fas fa-download mr-1"></i> Baixar Documento Assinado
+                             </a>
+                         <?php else: ?>
+                             <div class="text-xs text-gray-500 mt-2">O documento final com todas as assinaturas será enviado por e-mail após a conclusão de todas as etapas.</div>
+                         <?php endif; ?>
                     </div>
                 </div>
 
-                <button onclick="window.print(); return false;" class="text-sm text-gray-600 hover:text-blue-600 font-medium transition-colors">
-                    <i class="fas fa-print mr-1"></i> Imprimir Comprovante
-                </button>
+                <?php if (!$assinatura_is_final && !empty($assinatura_pendentes)): ?>
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 max-w-lg mx-auto text-left mb-5">
+                        <?php $qPend = intval(count($assinatura_pendentes)); ?>
+                        <div class="text-sm font-semibold text-amber-900 mb-2">
+                            <?php echo $qPend === 1 ? "Ainda falta 1 assinatura" : ("Ainda faltam " . $qPend . " assinaturas"); ?>
+                        </div>
+                        <ul class="space-y-1 text-sm text-amber-900">
+                            <?php foreach ($assinatura_pendentes as $p): ?>
+                                <li>
+                                    <span class="font-semibold"><?php echo intval($p["ordem"] ?? 0) > 0 ? (intval($p["ordem"]) . ". ") : ""; ?></span><?php echo htmlspecialchars(strval($p["nome"] ?? "Signatário")); ?>
+                                    <span class="text-amber-700">(<?php echo htmlspecialchars(strval($p["funcao"] ?? "Signatário")); ?>)</span>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <?php if ($modo_envio === "governanca"): ?>
+                            <div class="mt-3 text-xs text-amber-800">O documento final com todas as assinaturas será enviado por e-mail quando todas as etapas forem concluídas.</div>
+                        <?php endif; ?>
+                    </div>
+                <?php elseif ($assinatura_is_final && $modo_envio === "governanca"): ?>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 max-w-lg mx-auto text-left mb-5 text-sm text-green-900">
+                        Processo concluído. O documento final com todas as assinaturas será enviado por e-mail.
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($modo_envio !== "governanca"): ?>
+                    <button onclick="window.print(); return false;" class="text-sm text-gray-600 hover:text-blue-600 font-medium transition-colors">
+                        <i class="fas fa-print mr-1"></i> Imprimir Comprovante
+                    </button>
+                <?php endif; ?>
             </div>
 
         <?php else: ?>
@@ -565,8 +633,9 @@ $cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
                         <div class="space-y-3 mb-4">
                             <div>
                                 <label for="nome" class="block text-xs font-medium text-gray-700 mb-1">Nome Completo</label>
-                                <input type="text" id="nome" name="nome" value="<?php echo htmlspecialchars($nome_usuario); ?>" required
-                                    class="w-full text-sm rounded border-gray-300 focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3 bg-gray-50">
+                                <input type="text" id="nome" value="<?php echo htmlspecialchars($nome_usuario); ?>" required disabled
+                                    class="w-full text-sm rounded border-gray-300 py-1.5 px-3 bg-gray-100 text-gray-700">
+                                <input type="hidden" name="nome" value="<?php echo htmlspecialchars($nome_usuario); ?>">
                             </div>
 
                             <div class="grid grid-cols-2 gap-3">
