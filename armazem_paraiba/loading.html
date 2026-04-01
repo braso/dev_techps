@@ -35,3 +35,22 @@
 <div class="loading">
 	<div class="loading-icon"></div>
 </div>
+
+<script>
+	(function () {
+		function hide() {
+			var els = document.getElementsByClassName('loading');
+			for (var i = 0; i < els.length; i++) {
+				els[i].style.display = 'none';
+				els[i].style.visibility = 'hidden';
+			}
+		}
+		if (document.readyState === 'complete' || document.readyState === 'interactive') {
+			setTimeout(hide, 0);
+		} else {
+			document.addEventListener('DOMContentLoaded', hide);
+		}
+		window.addEventListener('load', hide);
+		setTimeout(hide, 3000);
+	})();
+</script>

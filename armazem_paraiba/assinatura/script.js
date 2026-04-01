@@ -29,9 +29,17 @@ window.handleFileSelect = async function(input) {
 
 // Nova função para carregar PDF via URL (para fluxo de assinatura por e-mail)
 window.loadPdfFromUrl = async function(url) {
+    const openPdfInNewTab = document.getElementById('openPdfInNewTab');
+    if (openPdfInNewTab) {
+        openPdfInNewTab.href = url;
+    }
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, { credentials: 'same-origin' });
         if (!response.ok) throw new Error("Erro ao baixar o PDF");
+        const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+        if (contentType.indexOf('application/pdf') === -1) {
+            throw new Error("Resposta não é PDF");
+        }
         
         const blob = await response.blob();
         currentPdfBytes = await blob.arrayBuffer();
@@ -52,7 +60,12 @@ window.loadPdfFromUrl = async function(url) {
 
     } catch (error) {
         console.error("Erro ao carregar PDF da URL:", error);
-        alert("Não foi possível carregar o documento solicitado. Tente recarregar a página.");
+        const pdfPreview = document.getElementById('pdfPreview');
+        if (pdfPreview) {
+            pdfPreview.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now();
+        } else {
+            alert("Não foi possível carregar o documento solicitado. Tente recarregar a página.");
+        }
     }
 };
 
@@ -71,6 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Atualiza o texto do termo dinamicamente
     const nomeInput = document.getElementById('nome');
     const cpfInput = document.getElementById('cpf');
+    const rgInput = document.getElementById('rg');
     const nomeTermo = document.getElementById('nome_termo');
     const cpfTermo = document.getElementById('cpf_termo');
 
@@ -84,10 +98,58 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    if (cpfInput && cpfTermo) {
-        cpfInput.addEventListener('input', function() {
-            cpfTermo.textContent = this.value || '[XXX.XXX.XXX-XX]';
-        });
+    const cpfDigits = (v) => String(v || '').replace(/\D/g, '').slice(0, 11);
+    const cpfFormat = (d) => {
+        const s = String(d || '');
+        if (s.length <= 3) return s;
+        if (s.length <= 6) return s.slice(0, 3) + '.' + s.slice(3);
+        if (s.length <= 9) return s.slice(0, 3) + '.' + s.slice(3, 6) + '.' + s.slice(6);
+        return s.slice(0, 3) + '.' + s.slice(3, 6) + '.' + s.slice(6, 9) + '-' + s.slice(9, 11);
+    };
+    const rgDigits = (v) => String(v || '').replace(/\D/g, '').slice(0, 11);
+    const rgFormat = (digits) => {
+        const d = String(digits || '');
+        if (!d) return '';
+        const p1 = d.slice(0, 3);
+        const p2 = d.slice(3, 6);
+        const p3 = d.slice(6, 9);
+        const p4 = d.slice(9, 11);
+        let out = p1;
+        if (p2) out += '.' + p2;
+        if (p3) out += '.' + p3;
+        if (p4) out += '-' + p4;
+        return out;
+    };
+
+    if (cpfInput) {
+        cpfInput.maxLength = 14;
+        cpfInput.setAttribute('inputmode', 'numeric');
+        cpfInput.setAttribute('autocomplete', 'off');
+        const syncCpf = () => {
+            const d = cpfDigits(cpfInput.value);
+            const f = cpfFormat(d);
+            cpfInput.value = f;
+            if (cpfTermo) {
+                cpfTermo.textContent = f || '[XXX.XXX.XXX-XX]';
+            }
+        };
+        cpfInput.addEventListener('input', syncCpf);
+        cpfInput.addEventListener('blur', syncCpf);
+        syncCpf();
+    } else if (cpfTermo) {
+        cpfTermo.textContent = '[XXX.XXX.XXX-XX]';
+    }
+
+    if (rgInput) {
+        rgInput.maxLength = 14;
+        rgInput.setAttribute('autocomplete', 'off');
+        rgInput.setAttribute('inputmode', 'numeric');
+        const syncRg = () => {
+            rgInput.value = rgFormat(rgDigits(rgInput.value));
+        };
+        rgInput.addEventListener('input', syncRg);
+        rgInput.addEventListener('blur', syncRg);
+        syncRg();
     }
 
     // Configura transição de tela se estiver no modo upload

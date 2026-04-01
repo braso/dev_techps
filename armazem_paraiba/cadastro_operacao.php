@@ -452,28 +452,83 @@
 						});
 					}
 
-					function calcularPosicoes(selected){
-						var checked = [];
-						selected.forEach(function(id, idx){
-							var key = String(id);
-							var isChecked = (assinaMap && (assinaMap[key] === 'sim' || assinaMap[id] === 'sim'));
-							if(!isChecked){ return; }
-							var o = parseInt((ordemMap && (ordemMap[key] || ordemMap[id])) || '0', 10);
-							checked.push({
-								id: key,
-								idx: idx,
-								ordem: (isFinite(o) && o > 0) ? o : 999999
-							});
-						});
-						checked.sort(function(a, b){
-							if(a.ordem === b.ordem){
-								return a.idx - b.idx;
+					var selectionOrder = (pre || []).map(function(v){ return String(v); });
+					var checkOrder = [];
+
+					function getSelectedOrdered(){
+						var current = (\$sel.val() || []).map(function(v){ return String(v); });
+						var inCurrent = {};
+						current.forEach(function(v){ inCurrent[v] = true; });
+
+						var ordered = [];
+						(selectionOrder || []).forEach(function(v){
+							if(inCurrent[v]){
+								ordered.push(v);
 							}
-							return a.ordem - b.ordem;
 						});
+						current.forEach(function(v){
+							if(ordered.indexOf(v) === -1){
+								ordered.push(v);
+							}
+						});
+						return ordered;
+					}
+
+					function initCheckOrder(){
+						var ids = [];
+						Object.keys(assinaMap || {}).forEach(function(k){
+							if(String(assinaMap[k]) === 'sim'){
+								ids.push(String(k));
+							}
+						});
+						ids.sort(function(a, b){
+							var ao = parseInt((ordemMap && ordemMap[a]) || '0', 10);
+							var bo = parseInt((ordemMap && ordemMap[b]) || '0', 10);
+							ao = (isFinite(ao) && ao > 0) ? ao : 999999;
+							bo = (isFinite(bo) && bo > 0) ? bo : 999999;
+							if(ao !== bo){ return ao - bo; }
+							var ia = selectionOrder.indexOf(String(a));
+							var ib = selectionOrder.indexOf(String(b));
+							ia = ia >= 0 ? ia : 999999;
+							ib = ib >= 0 ? ib : 999999;
+							if(ia !== ib){ return ia - ib; }
+							return String(a).localeCompare(String(b));
+						});
+						checkOrder = ids;
+					}
+
+					function normalizeCheckOrder(selectedOrdered){
+						selectedOrdered = (selectedOrdered || []).map(function(v){ return String(v); });
+						var selectedSet = {};
+						selectedOrdered.forEach(function(v){ selectedSet[v] = true; });
+
+						checkOrder = (checkOrder || []).filter(function(v){
+							if(!selectedSet[v]){ return false; }
+							return (assinaMap && String(assinaMap[v]) === 'sim');
+						});
+
+						selectedOrdered.forEach(function(v){
+							if(!(assinaMap && String(assinaMap[v]) === 'sim')){ return; }
+							if(checkOrder.indexOf(v) === -1){
+								checkOrder.push(v);
+							}
+						});
+
+						(checkOrder || []).forEach(function(v, idx){
+							ordemMap[v] = idx + 1;
+						});
+
+						Object.keys(ordemMap || {}).forEach(function(k){
+							if(!(assinaMap && String(assinaMap[k]) === 'sim')){
+								ordemMap[k] = 0;
+							}
+						});
+					}
+
+					function getPosicoes(){
 						var pos = {};
-						checked.forEach(function(item, i){
-							pos[item.id] = i + 1;
+						(checkOrder || []).forEach(function(v, idx){
+							pos[String(v)] = idx + 1;
 						});
 						return pos;
 					}
@@ -487,13 +542,14 @@
 					function renderAssina(){
 						var box = document.getElementById('lista-resp-assina');
 						if(!box){ return; }
-						var selected = \$sel.val() || [];
+						var selected = getSelectedOrdered();
+						normalizeCheckOrder(selected);
 						box.innerHTML = '';
 						if(selected.length === 0){
 							box.innerHTML = '<span class=\"text-muted\">Nenhum responsável selecionado.</span>';
 							return;
 						}
-						var pos = calcularPosicoes(selected);
+						var pos = getPosicoes();
 						selected.forEach(function(id){
 							var key = String(id);
 							var text = (labels[key] || labels[id] || (\$sel.find('option[value=\"'+key+'\"]:selected').text()) || ('ID ' + key));
@@ -522,16 +578,26 @@
 					\$('#lista-resp-assina').on('change', 'input[type=\"checkbox\"][data-resp-id]', function(){
 						var id = this.getAttribute('data-resp-id');
 						if(!id){ return; }
-						assinaMap[id] = this.checked ? 'sim' : 'nao';
+						var sid = String(id);
+						assinaMap[sid] = this.checked ? 'sim' : 'nao';
 						if(!this.checked){
-							ordemMap[id] = 0;
+							ordemMap[sid] = 0;
+							var idx = checkOrder.indexOf(sid);
+							if(idx >= 0){
+								checkOrder.splice(idx, 1);
+							}
+						}else{
+							if(checkOrder.indexOf(sid) === -1){
+								checkOrder.push(sid);
+							}
 						}
 						renderAssina();
 					});
 
 					\$sel.on('change', function(){
 						syncAssinaMapFromDom();
-						var selected = \$sel.val() || [];
+						var selected = getSelectedOrdered();
+						normalizeCheckOrder(selected);
 						Object.keys(assinaMap || {}).forEach(function(k){
 							if(selected.indexOf(String(k)) === -1){
 								delete assinaMap[k];
@@ -544,6 +610,10 @@
 					\$sel.on('select2:select', function(e){
 						var d = e && e.params ? e.params.data : null;
 						if(d && d.id){
+							var sid = String(d.id);
+							if(selectionOrder.indexOf(sid) === -1){
+								selectionOrder.push(sid);
+							}
 							var t = d.text || labels[String(d.id)] || ('ID ' + d.id);
 							t = (typeof sanitizeText === 'function') ? sanitizeText(t) : t;
 							labels[String(d.id)] = t;
@@ -558,10 +628,23 @@
 					\$sel.on('select2:unselect', function(e){
 						syncAssinaMapFromDom();
 						var d = e && e.params ? e.params.data : null;
-						if(d && d.id && assinaMap){ delete assinaMap[String(d.id)]; }
+						if(d && d.id){
+							var sid = String(d.id);
+							if(assinaMap){ delete assinaMap[sid]; }
+							if(ordemMap){ delete ordemMap[sid]; }
+							var idx2 = checkOrder.indexOf(sid);
+							if(idx2 >= 0){
+								checkOrder.splice(idx2, 1);
+							}
+							var idx = selectionOrder.indexOf(sid);
+							if(idx >= 0){
+								selectionOrder.splice(idx, 1);
+							}
+						}
 						renderAssina();
 					});
 
+					initCheckOrder();
 					renderAssina();
 				});
 			})(window.jQuery);

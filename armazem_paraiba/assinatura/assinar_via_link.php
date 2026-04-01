@@ -11,6 +11,128 @@ if (empty($token)) {
     die("Token inválido ou não fornecido.");
 }
 
+// Endpoint seguro para servir o PDF pelo token
+function assinatura_resolverArquivoAbs_pathVariants(string $p): array {
+    $p = str_replace("\\", "/", $p);
+    $p = preg_replace('#^https?://[^/]+/#i', '/', $p);
+    $variants = [];
+    $variants[] = ltrim($p, "/");
+    $variants[] = ltrim(preg_replace('#^/braso/#i', '/', $p), "/");
+    $variants[] = ltrim(preg_replace('#^/armazem_paraiba/assinatura/#i', '/', $p), "/");
+    $variants[] = ltrim(preg_replace('#^/assinatura/#i', '/', $p), "/");
+    $variants[] = ltrim(preg_replace('#^/armazem_paraiba/#i', '/', $p), "/");
+    return array_values(array_unique(array_filter($variants, function($v){ return trim($v) !== ''; })));
+}
+function assinatura_resolverArquivoAbs(string $path): string {
+    $p = trim(strval($path));
+    if ($p === "") {
+        return "";
+    }
+    $baseAssinatura = rtrim(str_replace("\\", "/", __DIR__), "/");
+    $baseArmazem = rtrim(str_replace("\\", "/", dirname(__DIR__)), "/");
+    $docRoot = str_replace("\\", "/", rtrim(strval($_SERVER["DOCUMENT_ROOT"] ?? ""), "/"));
+    $appPath = str_replace("\\", "/", rtrim(strval($_ENV["APP_PATH"] ?? ""), "/"));
+    $baseAppRoot = ($docRoot !== "" ? $docRoot : "") . ($appPath !== "" ? $appPath : "");
+    $variants = assinatura_resolverArquivoAbs_pathVariants($p);
+    $candidates = [];
+    foreach ($variants as $rel) {
+        $candidates[] = $rel;
+        $candidates[] = $baseAssinatura . "/" . $rel;
+        $candidates[] = $baseArmazem . "/" . $rel;
+        if ($docRoot !== "") {
+            $candidates[] = $docRoot . "/" . ltrim($rel, "/");
+        }
+        if ($baseAppRoot !== "") {
+            $candidates[] = $baseAppRoot . "/" . ltrim($rel, "/");
+        }
+    }
+    if (strpos($p, "arquivos/") === 0) {
+        $candidates[] = $baseArmazem . "/" . $p;
+        if ($baseAppRoot !== "") {
+            $candidates[] = $baseAppRoot . "/" . $p;
+        }
+    }
+    $abs = "";
+    foreach ($candidates as $cand) {
+        $cand = strval($cand);
+        if ($cand !== "" && file_exists($cand) && is_file($cand)) {
+            $rp = realpath($cand);
+            if ($rp) {
+                $abs = strval($rp);
+                break;
+            }
+        }
+    }
+    if ($abs === "") {
+        return "";
+    }
+    $absN = str_replace("\\", "/", $abs);
+    $roots = [];
+    foreach ([$baseAssinatura . "/uploads", $baseAssinatura . "/docAssinado", $baseAssinatura . "/docFinalizado", $baseAssinatura . "/arquivos", $baseArmazem . "/arquivos/Funcionarios", $baseArmazem . "/arquivos"] as $dir) {
+        $r = realpath($dir);
+        if ($r) {
+            $roots[] = rtrim(str_replace("\\", "/", strval($r)), "/") . "/";
+        }
+    }
+    $ok = false;
+    foreach ($roots as $root) {
+        if (strpos($absN . "/", $root) === 0 || strpos($absN, $root) === 0) {
+            $ok = true;
+            break;
+        }
+    }
+    return $ok ? $abs : "";
+}
+if (strval($_GET["arquivo"] ?? "") === "1") {
+    $caminhoArquivoRaw = "";
+    $nomeArquivoRaw = "";
+    $stmtFile = mysqli_prepare($conn, "SELECT s.caminho_arquivo, s.nome_arquivo_original FROM assinantes a JOIN solicitacoes_assinatura s ON a.id_solicitacao = s.id WHERE a.token = ? LIMIT 1");
+    if ($stmtFile) {
+        mysqli_stmt_bind_param($stmtFile, "s", $token);
+        mysqli_stmt_execute($stmtFile);
+        $resFile = mysqli_stmt_get_result($stmtFile);
+        $rowFile = mysqli_fetch_assoc($resFile);
+        mysqli_stmt_close($stmtFile);
+        if (is_array($rowFile)) {
+            $caminhoArquivoRaw = strval($rowFile["caminho_arquivo"] ?? "");
+            $nomeArquivoRaw = strval($rowFile["nome_arquivo_original"] ?? "");
+        }
+    }
+    if ($caminhoArquivoRaw === "") {
+        $stmtOld = mysqli_prepare($conn, "SELECT caminho_arquivo, nome_arquivo_original FROM solicitacoes_assinatura WHERE token = ? LIMIT 1");
+        if ($stmtOld) {
+            mysqli_stmt_bind_param($stmtOld, "s", $token);
+            mysqli_stmt_execute($stmtOld);
+            $resOld = mysqli_stmt_get_result($stmtOld);
+            $rowOld = mysqli_fetch_assoc($resOld);
+            mysqli_stmt_close($stmtOld);
+            if (is_array($rowOld)) {
+                $caminhoArquivoRaw = strval($rowOld["caminho_arquivo"] ?? "");
+                $nomeArquivoRaw = strval($rowOld["nome_arquivo_original"] ?? "");
+            }
+        }
+    }
+    $abs = assinatura_resolverArquivoAbs($caminhoArquivoRaw);
+    if ($abs === "") {
+        http_response_code(404);
+        header("Content-Type: text/plain; charset=utf-8");
+        echo "Arquivo não encontrado.";
+        exit;
+    }
+    $download = (strval($_GET["download"] ?? "") === "1");
+    $nome = $nomeArquivoRaw !== "" ? $nomeArquivoRaw : basename($abs);
+    $nome = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', strval($nome));
+    if (strtolower(pathinfo($nome, PATHINFO_EXTENSION)) !== "pdf") {
+        $nome .= ".pdf";
+    }
+    header("Content-Type: application/pdf");
+    header("X-Content-Type-Options: nosniff");
+    header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+    header("Pragma: no-cache");
+    header("Content-Disposition: " . ($download ? "attachment" : "inline") . "; filename=\"" . $nome . "\"");
+    readfile($abs);
+    exit;
+}
 function assinaturaRenderMensagemPage(string $titulo, string $mensagem, string $tipo = "erro"): void {
     $tituloSafe = htmlspecialchars($titulo, ENT_QUOTES, "UTF-8");
     $mensagemSafe = htmlspecialchars($mensagem, ENT_QUOTES, "UTF-8");
@@ -379,7 +501,7 @@ $cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
                     </div>
                     <div class="bg-gray-50 px-5 py-3 text-center border-t border-gray-200">
                          <p class="text-[10px] text-gray-400">Validade jurídica conforme MP 2.200-2/2001</p>
-                         <a href="<?php echo htmlspecialchars($caminho_arquivo); ?>" download class="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors mt-2 inline-block">
+                         <a href="<?php echo htmlspecialchars("assinar_via_link.php?token=" . urlencode($token) . "&arquivo=1&download=1"); ?>" download class="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors mt-2 inline-block">
                              <i class="fas fa-download mr-1"></i> Baixar Documento Assinado
                          </a>
                     </div>
@@ -414,9 +536,14 @@ $cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
                 
                 <!-- Coluna 1: Visualização (Esquerda em Desktop) -->
                 <div class="space-y-2">
-                    <h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Documento</h3>
+                    <div class="flex items-center justify-between gap-2">
+                        <h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Documento</h3>
+                        <a id="openPdfInNewTab" href="#" target="_blank" rel="noopener" class="text-xs font-semibold text-blue-600 hover:text-blue-800">
+                            Abrir Documento em nova aba
+                        </a>
+                    </div>
                     <div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-gray-100 h-[400px]">
-                        <iframe id="pdfPreview" class="w-full h-full border-none" src=""></iframe>
+                        <iframe id="pdfPreview" class="w-full h-full border-none" src="" allowfullscreen></iframe>
                     </div>
                 </div>
 
@@ -445,12 +572,12 @@ $cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label for="cpf" class="block text-xs font-medium text-gray-700 mb-1">CPF</label>
-                                    <input type="text" id="cpf" name="cpf" placeholder="000.000.000-00" required
+                                    <input type="text" id="cpf" name="cpf" placeholder="000.000.000-00" required maxlength="14" inputmode="numeric" autocomplete="off"
                                         class="w-full text-sm rounded border-gray-300 focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3 bg-gray-50">
                                 </div>
                                 <div>
                                     <label for="rg" class="block text-xs font-medium text-gray-700 mb-1">RG</label>
-                                    <input type="text" id="rg" name="rg" placeholder="RG" required
+                                    <input type="text" id="rg" name="rg" placeholder="000.000.000-00" required maxlength="14" inputmode="numeric" autocomplete="off"
                                         class="w-full text-sm rounded border-gray-300 focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3 bg-gray-50">
                                 </div>
                             </div>
@@ -490,8 +617,7 @@ $cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
             
             <script src="script.js"></script>
             <script>
-                // Configura o carregamento automático do PDF
-                window.PDF_URL_TO_LOAD = "<?php echo $caminho_arquivo; ?>";
+                window.PDF_URL_TO_LOAD = <?php echo json_encode("assinar_via_link.php?token=" . urlencode($token) . "&arquivo=1"); ?>;
             </script>
         <?php endif; ?>
     </div>

@@ -1337,7 +1337,9 @@ function enviarEmailAssinatura($email, $nome, $token, $nomeArquivo, $idDoc, $fun
     global $mail; // Usa a instância global ou cria nova se necessário (melhor criar nova)
     
     $base = assinatura_getBaseUrl();
-    $linkAssinatura = rtrim($base !== "" ? $base : (defined("BASE_URL_ASSINATURA") ? (string)BASE_URL_ASSINATURA : ""), "/") . "/assinar_via_link.php?token=" . $token;
+    $baseUrl = rtrim($base !== "" ? $base : (defined("BASE_URL_ASSINATURA") ? (string)BASE_URL_ASSINATURA : ""), "/");
+    $linkAssinatura = $baseUrl . "/assinar_via_link.php?token=" . urlencode((string)$token);
+    $linkPlataforma = $baseUrl . "/pendentes.php";
     
     $mail = new PHPMailer(true);
     try {
@@ -1394,6 +1396,12 @@ function enviarEmailAssinatura($email, $nome, $token, $nomeArquivo, $idDoc, $fun
                         Revisar e Assinar Agora
                     </a>
                 </div>
+
+                <div style='text-align: center; margin: 0 0 35px 0;'>
+                    <a href='$linkPlataforma' style='background-color: #16a34a; color: white; padding: 14px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; display: inline-block;'>
+                        Assinar pela Plataforma
+                    </a>
+                </div>
                 
                 <div style='border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px;'>
                     <p style='font-size: 13px; color: #777; margin-bottom: 10px;'>
@@ -1401,6 +1409,9 @@ function enviarEmailAssinatura($email, $nome, $token, $nomeArquivo, $idDoc, $fun
                     </p>
                     <p style='font-size: 12px; color: #555; background: #f8f9fa; padding: 10px; border-radius: 4px; word-break: break-all; font-family: monospace; border: 1px solid #eee;'>
                         $linkAssinatura
+                    </p>
+                    <p style='font-size: 12px; color: #777; margin: 10px 0 0 0;'>
+                        Alternativa: acesse a plataforma e assine em “Assinaturas Pendentes”: <a href='$linkPlataforma' style='color: #0056b3;'>$linkPlataforma</a>
                     </p>
                 </div>
 
@@ -1424,7 +1435,7 @@ function enviarEmailAssinatura($email, $nome, $token, $nomeArquivo, $idDoc, $fun
         </div>";
 
         $mail->Body = $corpo;
-        $mail->AltBody = "Acesse $linkAssinatura para assinar o documento #$idDoc como $funcao.";
+        $mail->AltBody = "Assine pelo link: $linkAssinatura\nOu acesse a plataforma (Assinaturas Pendentes): $linkPlataforma\nDocumento #$idDoc ($funcao).";
         
         $mail->send();
         return true;
