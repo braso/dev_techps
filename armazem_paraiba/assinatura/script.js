@@ -224,11 +224,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Incorpora fonte
                 const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
                 const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+                const courierFont = await pdfDoc.embedFont(StandardFonts.Courier);
                 
-                // Adiciona uma nova página ao final
-                const page = pdfDoc.addPage();
-                const { width, height } = page.getSize();
-
                 // Gera dados para consistência (Hash e Data)
                 const dataObj = new Date();
                 const dataHora = dataObj.toLocaleString('pt-BR');
@@ -269,146 +266,229 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Gera string de 32 caracteres hexadecimais
                 const protocolHash = (simpleHash(uniqueString) + simpleHash(uniqueString + 'salt') + '00000000000000000000000000000000').substring(0, 32);
 
-                // --- Layout da Página de Assinatura ---
-                
-                const margin = 50;
-                let y = height - margin;
-                const contentWidth = width - (margin * 2);
+                const papelUsuario = document.getElementById('papel_usuario') ? document.getElementById('papel_usuario').value : 'Signatário';
 
-                // Desenha a Logo se carregada
-                if (logoImage) {
-                    const logoDims = logoImage.scale(0.25); // Ajuste de escala
-                    page.drawImage(logoImage, {
-                        x: margin,
-                        y: y - logoDims.height,
-                        width: logoDims.width,
-                        height: logoDims.height,
-                    });
-                    y -= (logoDims.height + 20);
-                } else {
-                    y -= 20;
-                }
-
-                // Título
-                page.drawText('COMPROVANTE DE ASSINATURA ELETRÔNICA', {
-                    x: margin,
-                    y: y,
-                    size: 14,
-                    font: helveticaBold,
-                    color: rgb(0, 0, 0),
-                });
-                y -= 30;
-
-                const fontSize = 10;
-                const lineHeight = 15;
-
-                // Função auxiliar para desenhar linhas de informação
-                const drawInfoLine = (label, value) => {
-                    // Verifica se precisa de quebra de linha no valor
-                    const labelWidth = helveticaBold.widthOfTextAtSize(label, fontSize);
-                    const valueMaxWidth = contentWidth - labelWidth - 10;
-                    
-                    page.drawText(label, { x: margin, y: y, size: fontSize, font: helveticaBold });
-                    
-                    // Tratamento simples para quebra de texto se for muito longo (ex: User Agent)
-                    if (helveticaFont.widthOfTextAtSize(value, fontSize) > valueMaxWidth) {
-                        // Divide em pedaços grosseiramente (melhoria futura: dividir por palavras)
-                        const words = value.split(' ');
-                        let line = '';
-                        let currentY = y;
-                        
-                        // Primeira linha ao lado do label
-                        let firstLine = true;
-                        
-                        for (let word of words) {
-                            const testLine = line + word + ' ';
-                            const testWidth = helveticaFont.widthOfTextAtSize(testLine, fontSize);
-                            
-                            if (testWidth > valueMaxWidth && line !== '') {
-                                if (firstLine) {
-                                    page.drawText(line, { x: margin + labelWidth + 5, y: currentY, size: fontSize, font: helveticaFont });
-                                    firstLine = false;
-                                } else {
-                                    page.drawText(line, { x: margin, y: currentY, size: fontSize, font: helveticaFont });
-                                }
-                                line = word + ' ';
-                                currentY -= lineHeight;
-                            } else {
-                                line = testLine;
-                            }
-                        }
-                        // Última linha
-                        if (firstLine) {
-                             page.drawText(line, { x: margin + labelWidth + 5, y: currentY, size: fontSize, font: helveticaFont });
-                        } else {
-                             page.drawText(line, { x: margin, y: currentY, size: fontSize, font: helveticaFont });
-                        }
-                        y = currentY - lineHeight;
-                    } else {
-                        page.drawText(value, { x: margin + labelWidth + 5, y: y, size: fontSize, font: helveticaFont });
-                        y -= lineHeight;
+                const auditPrefix = 'TECHPS_AUDIT_V1:';
+                const safeB64Encode = (str) => {
+                    try { return btoa(unescape(encodeURIComponent(str))); } catch (e) { return ''; }
+                };
+                const safeB64Decode = (b64) => {
+                    try { return decodeURIComponent(escape(atob(b64))); } catch (e) { return ''; }
+                };
+                const readAuditState = () => {
+                    let rawPacked = '';
+                    try { rawPacked = String(pdfDoc.getSubject() || ''); } catch (e) { rawPacked = ''; }
+                    if (!rawPacked || !rawPacked.startsWith(auditPrefix)) {
+                        try { rawPacked = String(pdfDoc.getTitle() || ''); } catch (e) { rawPacked = ''; }
+                    }
+                    if (!rawPacked || !rawPacked.startsWith(auditPrefix)) return null;
+                    const raw = rawPacked.slice(auditPrefix.length);
+                    const json = safeB64Decode(raw);
+                    if (!json) return null;
+                    try { return JSON.parse(json); } catch (e) { return null; }
+                };
+                const writeAuditState = (state) => {
+                    const payload = safeB64Encode(JSON.stringify(state || {}));
+                    if (!payload) return;
+                    try { pdfDoc.setSubject(auditPrefix + payload); } catch (e) {}
+                    try { pdfDoc.setTitle(auditPrefix + payload); } catch (e) {}
+                };
+                const removePreviousAuditPages = (auditPages) => {
+                    const total = pdfDoc.getPageCount();
+                    const n = Number.isFinite(auditPages) ? Math.max(0, Math.floor(auditPages)) : 0;
+                    if (n <= 0) return;
+                    if (total <= n) return;
+                    for (let i = 0; i < n; i++) {
+                        const idx = pdfDoc.getPageCount() - 1;
+                        if (idx >= 0) pdfDoc.removePage(idx);
                     }
                 };
-
-                drawInfoLine('Documento Original:', nomeArquivoOriginal);
-                
-                // Pega a função/papel do usuário
-                const papelUsuario = document.getElementById('papel_usuario') ? document.getElementById('papel_usuario').value : 'Signatário';
-                
-                drawInfoLine('Assinado por:', `${nome} (${papelUsuario})`);
-                drawInfoLine('CPF:', cpf);
-                if (rg) drawInfoLine('RG:', rg);
-                drawInfoLine('Data e Hora:', dataHora);
-                drawInfoLine('Endereço IP:', clientIp);
-                drawInfoLine('Navegador/Dispositivo:', navigator.userAgent);
-                drawInfoLine('Hash de Integridade (Assinatura Digital):', protocolHash);
-
-                y -= 20;
-
-                // Texto Legal
-                const legalText = `Eu, ${nome}, inscrito(a) no CPF sob o nº ${cpf}, declaro que li e concordo com o teor do documento original referenciado acima. Esta assinatura foi realizada eletronicamente através do sistema TechPS, com validade jurídica assegurada pela Medida Provisória nº 2.200-2/2001.`;
-                
-                // Função simples de wrap para o texto legal
-                const words = legalText.split(' ');
-                let line = '';
-                for (const word of words) {
-                    const testLine = line + word + ' ';
-                    const width = helveticaFont.widthOfTextAtSize(testLine, fontSize);
-                    if (width > contentWidth) {
-                        page.drawText(line, { x: margin, y: y, size: fontSize, font: helveticaFont });
-                        line = word + ' ';
-                        y -= lineHeight;
-                    } else {
-                        line = testLine;
+                const wrapText = (text, font, size, maxWidth, maxLines = 99) => {
+                    const t = String(text || '').replace(/\s+/g, ' ').trim();
+                    if (!t) return [];
+                    const words = t.split(' ');
+                    const lines = [];
+                    let line = '';
+                    for (const w of words) {
+                        const test = line ? (line + ' ' + w) : w;
+                        if (font.widthOfTextAtSize(test, size) <= maxWidth) {
+                            line = test;
+                            continue;
+                        }
+                        if (line) lines.push(line);
+                        line = w;
+                        if (lines.length >= maxLines - 1) break;
                     }
-                }
-                page.drawText(line, { x: margin, y: y, size: fontSize, font: helveticaFont });
-                
-                y -= 40;
+                    if (line && lines.length < maxLines) lines.push(line);
+                    return lines;
+                };
 
-                // Rodapé
-                page.drawLine({
-                    start: { x: margin, y: y + 20 },
-                    end: { x: width - margin, y: y + 20 },
-                    thickness: 1,
-                    color: rgb(0.8, 0.8, 0.8),
-                });
+                const prevState = readAuditState() || {};
+                const prevEntries = Array.isArray(prevState.entries) ? prevState.entries : [];
+                const prevPages = Number.isFinite(prevState.audit_pages) ? prevState.audit_pages : 0;
+                removePreviousAuditPages(prevPages);
 
-                page.drawText('TechPS - Tecnologia e Sistemas | Armazém Paraíba', {
-                    x: margin,
-                    y: y,
-                    size: 8,
-                    font: helveticaBold,
-                    color: rgb(0.4, 0.4, 0.4),
-                });
-                
-                page.drawText(`Gerado em: ${dataHora}`, {
-                    x: width - margin - helveticaFont.widthOfTextAtSize(`Gerado em: ${dataHora}`, 8),
-                    y: y,
-                    size: 8,
-                    font: helveticaFont,
-                    color: rgb(0.4, 0.4, 0.4),
-                });
+                const entries = prevEntries.concat([{
+                    nome: String(nome || ''),
+                    cpf: String(cpf || ''),
+                    rg: String(rg || ''),
+                    data_hora: String(dataHora || ''),
+                    ip: String(clientIp || ''),
+                    user_agent: String(navigator.userAgent || ''),
+                    hash: String(protocolHash || ''),
+                    papel: String(papelUsuario || '')
+                }]);
+
+                const renderAuditPages = () => {
+                    const pageMargin = 36;
+                    const headerH = 46;
+                    const cardPad = 10;
+                    const cardGap = 10;
+                    const baseFontSize = 8.5;
+                    const smallFontSize = 7.5;
+                    const titleSize = 11.5;
+                    const lineH = 11.5;
+
+                    const makePage = () => {
+                        const p = pdfDoc.addPage();
+                        const { width, height } = p.getSize();
+                        return { p, width, height };
+                    };
+
+                    let { p: page, width, height } = makePage();
+                    let y = height - pageMargin;
+                    const contentW = width - (pageMargin * 2);
+
+                    const drawHeader = () => {
+                        const title = 'COMPROVANTES DE ASSINATURA ELETRÔNICA';
+                        const docLine = `Documento: ${nomeArquivoOriginal}`;
+                        const idLine = `ID: ${docId}`;
+
+                        if (logoImage) {
+                            const logoDims = logoImage.scale(0.16);
+                            page.drawImage(logoImage, {
+                                x: pageMargin,
+                                y: y - logoDims.height + 6,
+                                width: logoDims.width,
+                                height: logoDims.height,
+                            });
+                        }
+
+                        page.drawText(title, { x: pageMargin + 70, y: y - 2, size: titleSize, font: helveticaBold, color: rgb(0, 0, 0) });
+                        y -= 18;
+                        const docLines = wrapText(docLine, helveticaFont, baseFontSize, contentW, 2);
+                        for (const ln of docLines) {
+                            page.drawText(ln, { x: pageMargin, y: y, size: baseFontSize, font: helveticaFont, color: rgb(0.1, 0.1, 0.1) });
+                            y -= lineH;
+                        }
+                        page.drawText(idLine, { x: pageMargin, y: y, size: smallFontSize, font: helveticaFont, color: rgb(0.35, 0.35, 0.35) });
+                        y -= 10;
+                        page.drawLine({ start: { x: pageMargin, y: y }, end: { x: width - pageMargin, y: y }, thickness: 1, color: rgb(0.85, 0.85, 0.85) });
+                        y -= 12;
+                    };
+
+                    drawHeader();
+
+                    const drawFooter = () => {
+                        const footerY = pageMargin - 18;
+                        page.drawLine({ start: { x: pageMargin, y: footerY + 12 }, end: { x: width - pageMargin, y: footerY + 12 }, thickness: 1, color: rgb(0.9, 0.9, 0.9) });
+                        page.drawText('TechPS - Tecnologia e Sistemas | Armazém Paraíba', { x: pageMargin, y: footerY, size: 7.5, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) });
+                        const gen = `Gerado em: ${dataHora}`;
+                        page.drawText(gen, { x: width - pageMargin - helveticaFont.widthOfTextAtSize(gen, 7.5), y: footerY, size: 7.5, font: helveticaFont, color: rgb(0.4, 0.4, 0.4) });
+                    };
+
+                    const ensureSpace = (neededH) => {
+                        const minY = pageMargin + 28;
+                        if ((y - neededH) >= minY) return;
+                        drawFooter();
+                        ({ p: page, width, height } = makePage());
+                        y = height - pageMargin;
+                        drawHeader();
+                    };
+
+                    const drawCard = (entry, idx) => {
+                        const headerText = `${idx + 1}. ${entry.nome} (${entry.papel || 'Signatário'})`;
+                        const innerW = contentW - (cardPad * 2);
+                        const linesUA = wrapText(entry.user_agent || '', helveticaFont, smallFontSize, innerW, 2);
+                        const linesHash = wrapText(entry.hash || '', courierFont, smallFontSize, innerW, 2);
+
+                        const rowLines = 6 + linesUA.length + linesHash.length;
+                        const cardH = cardPad * 2 + rowLines * (lineH - 0.5) + 6;
+                        ensureSpace(cardH + cardGap);
+
+                        const x = pageMargin;
+                        const w = contentW;
+                        const topY = y;
+                        const bottomY = y - cardH;
+
+                        page.drawRectangle({ x, y: bottomY, width: w, height: cardH, borderWidth: 1, borderColor: rgb(0.88, 0.88, 0.88), color: rgb(0.98, 0.98, 0.98) });
+
+                        let cy = topY - cardPad - 2;
+                        page.drawText(headerText, { x: x + cardPad, y: cy, size: baseFontSize, font: helveticaBold, color: rgb(0, 0, 0) });
+                        cy -= (lineH - 1);
+
+                        const leftX = x + cardPad;
+                        const cpfText = entry.cpf ? `CPF: ${entry.cpf}` : '';
+                        const rgText = entry.rg ? `RG: ${entry.rg}` : '';
+                        const cpfRg = (cpfText && rgText) ? `${cpfText} • ${rgText}` : (cpfText || rgText || '—');
+                        page.drawText(cpfRg, { x: leftX, y: cy, size: smallFontSize, font: helveticaFont, color: rgb(0.2, 0.2, 0.2) });
+                        cy -= (lineH - 1);
+
+                        const dtLine = `Data/Hora: ${entry.data_hora || '—'}`;
+                        page.drawText(dtLine, { x: leftX, y: cy, size: smallFontSize, font: helveticaFont, color: rgb(0.2, 0.2, 0.2) });
+                        cy -= (lineH - 1);
+                        const ipLine = `IP: ${entry.ip || '—'}`;
+                        page.drawText(ipLine, { x: leftX, y: cy, size: smallFontSize, font: helveticaFont, color: rgb(0.2, 0.2, 0.2) });
+                        cy -= (lineH - 1);
+
+                        page.drawText('Hash:', { x: leftX, y: cy, size: smallFontSize, font: helveticaBold, color: rgb(0.25, 0.25, 0.25) });
+                        let hx = leftX + 28;
+                        let hy = cy;
+                        for (const ln of linesHash.length ? linesHash : ['—']) {
+                            page.drawText(ln, { x: hx, y: hy, size: smallFontSize, font: courierFont, color: rgb(0.15, 0.15, 0.15) });
+                            hy -= (lineH - 1);
+                        }
+                        cy = hy;
+
+                        page.drawText('Navegador:', { x: leftX, y: cy, size: smallFontSize, font: helveticaBold, color: rgb(0.25, 0.25, 0.25) });
+                        let ux = leftX + 54;
+                        let uy = cy;
+                        for (const ln of linesUA.length ? linesUA : ['—']) {
+                            page.drawText(ln, { x: ux, y: uy, size: smallFontSize, font: helveticaFont, color: rgb(0.2, 0.2, 0.2) });
+                            uy -= (lineH - 1);
+                        }
+
+                        y = bottomY - cardGap;
+                    };
+
+                    for (let i = 0; i < entries.length; i++) {
+                        drawCard(entries[i], i);
+                    }
+
+                    const minLegalY = pageMargin + 40;
+                    if (y < minLegalY) {
+                        drawFooter();
+                        ({ p: page, width, height } = makePage());
+                        y = height - pageMargin;
+                        drawHeader();
+                    }
+
+                    const legal = 'Declaração: O(s) signatário(s) declarou(aram) ter lido e concordado com o teor do documento. Validade jurídica assegurada pela MP nº 2.200-2/2001.';
+                    const legalLines = wrapText(legal, helveticaFont, 7.2, contentW, 3);
+                    for (const ln of legalLines) {
+                        page.drawText(ln, { x: pageMargin, y: y, size: 7.2, font: helveticaFont, color: rgb(0.35, 0.35, 0.35) });
+                        y -= 9.5;
+                    }
+
+                    drawFooter();
+
+                    return pdfDoc.getPageCount();
+                };
+
+                const beforePages = pdfDoc.getPageCount();
+                const afterPages = renderAuditPages();
+                const auditPagesCreated = Math.max(0, afterPages - beforePages);
+                writeAuditState({ entries, audit_pages: auditPagesCreated });
 
                 // Salva o PDF modificado
                 // useObjectStreams: false é crucial para compatibilidade com FPDI (evita erro de compressão)
@@ -462,6 +542,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         alert('Sucesso! Documento assinado. Protocolo: ' + data.protocolo);
                         return;
                     }
+
+                    const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#39;'
+                    }[ch] || ch));
                     
                     // Gera URL para download direto do Blob local (mais rápido e garantido)
                     const blobUrl = URL.createObjectURL(pdfBlob);
@@ -474,6 +562,65 @@ document.addEventListener('DOMContentLoaded', function() {
                     const secondaryHref = isIcpFinal ? blobUrl : linkArquivoServidor;
                     const secondaryText = isIcpFinal ? 'Baixar Comprovante (Visual)' : 'Baixar do Servidor (Backup)';
                     const secondaryIcon = isIcpFinal ? 'fa-file-pdf' : 'fa-cloud-download-alt';
+                    const modoEnvio = String(data.modo_envio || '').toLowerCase().trim();
+                    const isGovernanca = modoEnvio === 'governanca';
+                    const isFinal = !!data.is_final;
+                    const pendentesList = Array.isArray(data.pendentes) ? data.pendentes : [];
+                    const pendentesCount = pendentesList.length;
+                    const pendentesTitulo = pendentesCount === 1 ? 'Ainda falta 1 assinatura' : `Ainda faltam ${pendentesCount} assinaturas`;
+                    const pendentesHtml = (!isFinal && pendentesList.length > 0)
+                        ? `
+                            <div class="mt-6 max-w-md mx-auto text-left">
+                                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                                    <div class="text-sm font-semibold text-amber-900 mb-2">
+                                        ${esc(pendentesTitulo)}
+                                    </div>
+                                    <ul class="space-y-1 text-sm text-amber-900">
+                                        ${pendentesList.map((p) => {
+                                            const ordem = (p && p.ordem !== undefined && p.ordem !== null) ? String(p.ordem) : '';
+                                            const nome = (p && p.nome) ? String(p.nome) : 'Signatário';
+                                            const funcao = (p && p.funcao) ? String(p.funcao) : 'Signatário';
+                                            const prefix = ordem !== '' && ordem !== '0' ? `${ordem}. ` : '';
+                                            return `<li><span class="font-semibold">${esc(prefix)}</span>${esc(nome)} <span class="text-amber-700">(${esc(funcao)})</span></li>`;
+                                        }).join('')}
+                                    </ul>
+                                    ${isGovernanca ? `<div class="mt-3 text-xs text-amber-800">O documento final com todas as assinaturas será enviado por e-mail quando todas as etapas forem concluídas.</div>` : ``}
+                                </div>
+                            </div>
+                        `
+                        : (isFinal && isGovernanca)
+                            ? `
+                                <div class="mt-6 max-w-md mx-auto text-left">
+                                    <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-900">
+                                        Processo concluído. O documento final com todas as assinaturas será enviado por e-mail.
+                                    </div>
+                                </div>
+                            `
+                            : '';
+                    const reciboHtml = (!isGovernanca && data.id_assinatura)
+                        ? `
+                            <div class="mt-8 pt-6 border-t border-gray-100">
+                                <a href="gerar_pdf.php?id_assinatura=${data.id_assinatura}" target="_blank" 
+                                   class="text-sm text-gray-500 hover:text-blue-600 transition-colors inline-flex items-center gap-1">
+                                    <i class="fas fa-file-contract"></i> Baixar Recibo de Assinatura
+                                </a>
+                            </div>
+                        `
+                        : '';
+                    const downloadHtml = (isGovernanca && !isFinal)
+                        ? ''
+                        : `
+                            <div class="flex flex-col gap-3 max-w-sm mx-auto">
+                                <a href="${esc(primaryHref)}" download="${esc(nomeFinalArquivo)}" target="_blank"
+                                   class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                                    <i class="fas fa-download"></i> ${primaryText}
+                                </a>
+                                <a href="${esc(secondaryHref)}" download="${esc(nomeFinalArquivo)}" target="_blank"
+                                   class="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-6 rounded-lg border border-gray-200 shadow-sm transition-all flex items-center justify-center gap-2">
+                                    <i class="fas ${secondaryIcon}"></i> ${secondaryText}
+                                </a>
+                            </div>
+                        `;
 
                     container.innerHTML = `
                         <div class="p-8 text-center">
@@ -487,35 +634,18 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="bg-gray-50 rounded-xl p-6 mb-8 max-w-md mx-auto border border-gray-100 text-left">
                                 <div class="flex justify-between py-2 border-b border-gray-200">
                                     <span class="text-gray-500 text-sm">Protocolo</span>
-                                    <span class="font-mono font-medium text-gray-800">${data.protocolo}</span>
+                                    <span class="font-mono font-medium text-gray-800">${esc(data.protocolo)}</span>
                                 </div>
                                 <div class="flex justify-between py-2">
                                     <span class="text-gray-500 text-sm">Data</span>
-                                    <span class="font-medium text-gray-800">${data.data_hora}</span>
+                                    <span class="font-medium text-gray-800">${esc(data.data_hora)}</span>
                                 </div>
                             </div>
 
-                            <div class="flex flex-col gap-3 max-w-sm mx-auto">
-                                <!-- Botão Principal: Download do Blob Local -->
-                                <a href="${primaryHref}" download="${nomeFinalArquivo}" target="_blank"
-                                   class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2">
-                                    <i class="fas fa-download"></i> ${primaryText}
-                                </a>
-                                
-                                <!-- Link Backup: Download do Servidor -->
-                                <a href="${secondaryHref}" download="${nomeFinalArquivo}" target="_blank"
-                                   class="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-6 rounded-lg border border-gray-200 shadow-sm transition-all flex items-center justify-center gap-2">
-                                    <i class="fas ${secondaryIcon}"></i> ${secondaryText}
-                                </a>
-                            </div>
+                            ${downloadHtml}
+                            ${pendentesHtml}
                             <div id="assinatura-after-actions" class="mt-4 max-w-sm mx-auto"></div>
-                            
-                            <div class="mt-8 pt-6 border-t border-gray-100">
-                                <a href="gerar_pdf.php?id_assinatura=${data.id_assinatura}" target="_blank" 
-                                   class="text-sm text-gray-500 hover:text-blue-600 transition-colors inline-flex items-center gap-1">
-                                    <i class="fas fa-file-contract"></i> Baixar Recibo de Assinatura
-                                </a>
-                            </div>
+                            ${reciboHtml}
                         </div>
                     `;
 

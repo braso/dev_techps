@@ -313,6 +313,18 @@ if(($_GET["ajax"] ?? "") === "funcionario_info"){
     exit;
 }
 
+$tiposDocumentos = [];
+$resTipos = query("SELECT tipo_nb_id, tipo_tx_nome FROM tipos_documentos WHERE tipo_tx_status = 'ativo' ORDER BY tipo_tx_nome ASC");
+if($resTipos){
+    while($r = mysqli_fetch_assoc($resTipos)){
+        $id = intval($r["tipo_nb_id"] ?? 0);
+        $nome = trim(strval($r["tipo_tx_nome"] ?? ""));
+        if($id > 0 && $nome !== ""){
+            $tiposDocumentos[] = ["id" => $id, "nome" => $nome];
+        }
+    }
+}
+
 include_once "componentes/layout_header.php";
 ?>
 <!-- Tailwind CSS (Included in header) -->
@@ -413,11 +425,59 @@ include_once "componentes/layout_header.php";
 
                 <hr class="border-gray-100 mb-10">
 
+                <div class="mb-10">
+                    <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">
+                        2. Tipo de Documento
+                    </label>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div>
+                            <label for="tipo_documento" class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Selecione</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-tag text-gray-400 text-xs"></i>
+                                </div>
+                                <select id="tipo_documento" name="tipo_documento" required
+                                    class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all appearance-none">
+                                    <option value="">Selecione</option>
+                                    <?php foreach($tiposDocumentos as $t): ?>
+                                        <option value="<?php echo intval($t["id"]); ?>"><?php echo htmlspecialchars($t["nome"], ENT_QUOTES, "UTF-8"); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase" for="validar_icp_governanca">Validade ICP-Brasil (opcional)</label>
+                            <label class="flex items-start gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white cursor-pointer">
+                                <input type="checkbox" id="validar_icp_governanca" name="validar_icp" value="sim" class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <div>
+                                    <div class="text-sm font-semibold text-gray-800">Validar com ICP-Brasil</div>
+                                    <div class="text-xs text-gray-500">Ative para aplicar validação/carimbo do tempo ICP-Brasil, elevando o nível de confiança jurídica do documento final.</div>
+                                </div>
+                            </label>
+                            <div id="icp_info_governanca" class="hidden mt-3 bg-emerald-50 border border-emerald-100 text-emerald-900 rounded-lg p-4">
+                                <div class="text-sm font-semibold flex items-center gap-2">
+                                    <i class="fas fa-shield-alt"></i>
+                                    Validação com ICP-Brasil
+                                </div>
+                                <div class="text-xs mt-1 leading-relaxed">
+                                    Seu documento será assinado com ICP-Brasil após a assinatura do último signatário.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="border-gray-100 mb-10">
+
                 <!-- Signatários Section -->
                 <div class="mb-8">
                     <div class="flex items-center justify-between mb-4">
                         <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide">
-                            2. Signatários (Ordem Sequencial)
+                            3. Signatários (Ordem Sequencial)
                         </label>
                         <button type="button" id="btnAddSignatario" 
                             class="text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 border border-blue-200">
@@ -532,6 +592,17 @@ include_once "componentes/layout_header.php";
                         </div>
                     </div>
                 </div>
+
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Cadastrar no cadastro do funcionário</label>
+                    <label class="flex items-start gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white cursor-pointer">
+                        <input type="checkbox" class="input-salvar-doc mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" value="sim">
+                        <div>
+                            <div class="text-sm font-semibold text-gray-800">Salvar e cadastrar</div>
+                            <div class="text-xs text-gray-500">Após assinar, salva em <span class="font-semibold">arquivos/Funcionarios</span> e registra em <span class="font-semibold">Documentos</span> do funcionário.</div>
+                        </div>
+                    </label>
+                </div>
             </div>
             
             <input type="hidden" name="ordem" class="input-ordem">
@@ -546,11 +617,22 @@ include_once "componentes/layout_header.php";
         const dropZone = document.getElementById('drop-zone');
         const fileNameDisplay = document.getElementById('file-name');
         const formEnvio = document.getElementById('formEnvio');
+        const icpInput = document.getElementById('validar_icp_governanca');
+        const icpInfo = document.getElementById('icp_info_governanca');
 
         const baseUrl = <?=json_encode($_ENV["URL_BASE"].$_ENV["APP_PATH"], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)?>;
         const contexPath = <?=json_encode($_ENV["APP_PATH"].$_ENV["CONTEX_PATH"], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)?>;
         const condAtivo = encodeURIComponent("AND enti_tx_status = 'ativo'");
         let cardUidSeq = 0;
+
+        function syncIcpInfo(){
+            if(!icpInput || !icpInfo) return;
+            icpInfo.classList.toggle('hidden', !icpInput.checked);
+        }
+        if(icpInput){
+            icpInput.addEventListener('change', syncIcpInfo);
+            syncIcpInfo();
+        }
 
         // Drag and Drop Effects
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -950,6 +1032,17 @@ include_once "componentes/layout_header.php";
                 if(enti) enti.name = `signatarios[${index}][enti_nb_id]`;
                 const setorId = card.querySelector('.input-setor-id');
                 if(setorId) setorId.name = `signatarios[${index}][setor_id]`;
+
+                const salvar = card.querySelector('.input-salvar-doc');
+                if(salvar){
+                    salvar.name = `signatarios[${index}][salvar_documento_funcionario]`;
+                    if(index === 0){
+                        salvar.checked = true;
+                        salvar.disabled = true;
+                    } else {
+                        salvar.disabled = false;
+                    }
+                }
                 
                 // Update hidden order input
                 const ordemInput = card.querySelector('.input-ordem');

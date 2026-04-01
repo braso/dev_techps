@@ -144,6 +144,7 @@ function ensureAssinaturaTables(mysqli $conn): void {
             data_assinatura DATETIME NULL,
             ip VARCHAR(45),
             metadados TEXT,
+            salvar_documento_funcionario ENUM('sim','nao') NOT NULL DEFAULT 'nao',
             INDEX (id_solicitacao),
             INDEX (token)
         )";
@@ -156,7 +157,8 @@ function ensureAssinaturaTables(mysqli $conn): void {
             "ordem" => "ALTER TABLE assinantes ADD COLUMN ordem INT NOT NULL DEFAULT 1",
             "data_assinatura" => "ALTER TABLE assinantes ADD COLUMN data_assinatura DATETIME NULL",
             "ip" => "ALTER TABLE assinantes ADD COLUMN ip VARCHAR(45)",
-            "metadados" => "ALTER TABLE assinantes ADD COLUMN metadados TEXT"
+            "metadados" => "ALTER TABLE assinantes ADD COLUMN metadados TEXT",
+            "salvar_documento_funcionario" => "ALTER TABLE assinantes ADD COLUMN salvar_documento_funcionario ENUM('sim','nao') NOT NULL DEFAULT 'nao'"
         ];
         foreach ($cols as $col => $ddl) {
             $check = mysqli_query($conn, "SHOW COLUMNS FROM assinantes LIKE '{$col}'");
@@ -297,7 +299,7 @@ $dataHora = parseDataHora(strval($_POST["data_hora"] ?? ""));
 
 $arquivo = $_FILES["arquivo_assinado"] ?? null;
 
-$sql = "SELECT a.*, s.id as solicitacao_id, s.email as email_solicitacao, s.nome_arquivo_original, s.tipo_documento_id, s.validar_icp, s.caminho_arquivo, s.id_documento as doc_id_global, s.expires_at
+$sql = "SELECT a.*, s.id as solicitacao_id, s.email as email_solicitacao, s.nome_arquivo_original, s.tipo_documento_id, s.validar_icp, s.caminho_arquivo, s.id_documento as doc_id_global, s.expires_at, s.modo_envio
         FROM assinantes a
         JOIN solicitacoes_assinatura s ON a.id_solicitacao = s.id
         WHERE a.token = ?
@@ -325,6 +327,7 @@ $emailSolicitacao = trim(strval($row["email_solicitacao"] ?? ""));
 $nomeArquivoOriginal = trim(strval($row["nome_arquivo_original"] ?? ""));
 $tipoDocumentoId = intval($row["tipo_documento_id"] ?? 0);
 $validarIcp = strtolower(trim(strval($row["validar_icp"] ?? "nao"))) === "sim" ? "sim" : "nao";
+$modoEnvio = strtolower(trim(strval($row["modo_envio"] ?? "")));
 
 $statusAss = strtolower(trim(strval($row["status"] ?? "")));
 $jaAssinado = ($statusAss === "assinado");
@@ -526,9 +529,28 @@ if ($stmtCount) {
 }
 
 $ultimo = ($total > 0 && $assinados >= $total);
+$pendentes = [];
+if (!$ultimo) {
+    $stmtPend = mysqli_prepare($conn, "SELECT ordem, nome, funcao FROM assinantes WHERE id_solicitacao = ? AND LOWER(status) <> 'assinado' ORDER BY ordem ASC, id ASC");
+    if ($stmtPend) {
+        mysqli_stmt_bind_param($stmtPend, "i", $idSolicitacao);
+        mysqli_stmt_execute($stmtPend);
+        $resPend = mysqli_stmt_get_result($stmtPend);
+        if ($resPend) {
+            while ($p = mysqli_fetch_assoc($resPend)) {
+                $pendentes[] = [
+                    "ordem" => intval($p["ordem"] ?? 0),
+                    "nome" => trim(strval($p["nome"] ?? "")),
+                    "funcao" => trim(strval($p["funcao"] ?? "Signatário"))
+                ];
+            }
+        }
+        mysqli_stmt_close($stmtPend);
+    }
+}
 
 if (!$ultimo) {
-    $stmtNext = mysqli_prepare($conn, "SELECT nome, email, token, funcao FROM assinantes WHERE id_solicitacao = ? AND LOWER(status) <> 'assinado' ORDER BY ordem ASC, id ASC LIMIT 1");
+    $stmtNext = mysqli_prepare($conn, "SELECT nome, email, token, funcao, enti_nb_id FROM assinantes WHERE id_solicitacao = ? AND LOWER(status) <> 'assinado' ORDER BY ordem ASC, id ASC LIMIT 1");
     if ($stmtNext) {
         mysqli_stmt_bind_param($stmtNext, "i", $idSolicitacao);
         mysqli_stmt_execute($stmtNext);
@@ -543,7 +565,8 @@ if (!$ultimo) {
                 $nomeArquivoOriginal !== "" ? $nomeArquivoOriginal : basename($caminhoRel),
                 $docIdGlobal !== "" ? $docIdGlobal : strval($idSolicitacao),
                 trim(strval($next["funcao"] ?? "Signatário")),
-                $caminhoRel
+                $caminhoRel,
+                intval($next["enti_nb_id"] ?? 0)
             );
         }
     }
@@ -584,7 +607,13 @@ echo json_encode(
         "data_hora" => $dataHora,
         "id_assinatura" => $idAssinatura,
         "caminho_arquivo" => $caminhoRel,
-        "warning" => $warning !== "" ? $warning : null
+        "warning" => $warning !== "" ? $warning : null,
+        "is_final" => $ultimo,
+        "assinados" => $assinados,
+        "total" => $total,
+        "pendentes" => $pendentes,
+        "modo_envio" => $modoEnvio,
+        "id_solicitacao" => $idSolicitacao
     ],
     JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
 );
