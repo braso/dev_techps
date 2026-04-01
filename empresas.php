@@ -30,6 +30,7 @@
         "IRANEIDE OLIVEIRA"		=> "iraneide_oliveira",
         "MIDIA DIGITAL"		    => "midia_digital",
         "ENOVE"                 => "enove",
+        "TMILITAO"              => "t_militao"
 
     ];
 
@@ -61,6 +62,7 @@
         "iraneide_oliveira" => "Iraneide Oliveira",
         "midia_digital"     => "Midia Digital",
         "enove"             => "Enove",
+        "t_militao"         => "T Militao"
     ];
 
     $empresa_array = array_values($empresas); //Utilizado nos arquivos que importam este.
