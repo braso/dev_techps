@@ -597,16 +597,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                             `
                             : '';
-                    const reciboHtml = (!isGovernanca && data.id_assinatura)
-                        ? `
-                            <div class="mt-8 pt-6 border-t border-gray-100">
-                                <a href="gerar_pdf.php?id_assinatura=${data.id_assinatura}" target="_blank" 
-                                   class="text-sm text-gray-500 hover:text-blue-600 transition-colors inline-flex items-center gap-1">
-                                    <i class="fas fa-file-contract"></i> Baixar Recibo de Assinatura
-                                </a>
-                            </div>
-                        `
-                        : '';
                     const downloadHtml = (isGovernanca && !isFinal)
                         ? ''
                         : `
@@ -645,7 +635,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             ${downloadHtml}
                             ${pendentesHtml}
                             <div id="assinatura-after-actions" class="mt-4 max-w-sm mx-auto"></div>
-                            ${reciboHtml}
                         </div>
                     `;
 
