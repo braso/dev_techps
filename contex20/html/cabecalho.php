@@ -8,7 +8,24 @@
 
 <head>
 	<meta charset="UTF-8" />
-	<title>TechPS</title>
+	<?php
+		if(!isset($_SESSION)) {
+			session_start();
+		}
+		$empresaTitulo = trim(strval($_SESSION["empr_tx_nome"] ?? ""));
+		if($empresaTitulo === "" && isset($GLOBALS["conn"]) && ($GLOBALS["conn"] instanceof mysqli)){
+			$resEmp = @mysqli_query($GLOBALS["conn"], "SELECT empr_tx_nome FROM empresa LIMIT 1");
+			if($resEmp){
+				$rowEmp = mysqli_fetch_assoc($resEmp);
+				$empresaTitulo = trim(strval($rowEmp["empr_tx_nome"] ?? ""));
+				if($empresaTitulo !== ""){
+					$_SESSION["empr_tx_nome"] = $empresaTitulo;
+				}
+			}
+		}
+		$empresaTituloSafe = htmlspecialchars($empresaTitulo, ENT_QUOTES, "UTF-8");
+	?>
+	<title><?php echo $empresaTituloSafe !== "" ? ("TechPS | " . $empresaTituloSafe) : "TechPS"; ?></title>
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta content="width=device-width, initial-scale=1" name="viewport" />
 	<meta content="" name="description" />
@@ -240,6 +257,12 @@
 
 			.page-footer{
 				display: none;
+			}
+		}
+
+		@media(max-width: 1100px){
+			.company-name{
+				display: none !important;
 			}
 		}
 	</style>

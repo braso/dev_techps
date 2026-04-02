@@ -243,17 +243,54 @@ function assinatura_entregarParaFuncionarioEFinalizarNotificacao(
     int $tipoDocumentoId,
     string $docIdGlobal
 ): void {
-    if (function_exists("assinatura_obterEntidadeIdDaSolicitacao") && function_exists("assinatura_inserirDocumentoFuncionario") && function_exists("assinatura_sanitizarNomeArquivo")) {
+    if (function_exists("assinatura_inserirDocumentoFuncionario") && function_exists("assinatura_sanitizarNomeArquivo") && function_exists("assinatura_obterEntidadeIdPorCpfOuEmail")) {
         $docRow = [
             "email" => $emailSolicitacao,
             "nome_arquivo_original" => $nomeArquivoOriginal,
             "tipo_documento_id" => $tipoDocumentoId
         ];
-        $entidadeId = assinatura_obterEntidadeIdDaSolicitacao($conn, $idSolicitacao, $docRow);
-        if ($entidadeId > 0) {
-            $srcAbs = __DIR__ . "/" . ltrim($caminhoFinal, "/\\");
-            if (file_exists($srcAbs)) {
-                $root = dirname(__DIR__) . "/arquivos/Funcionarios/" . $entidadeId . "/";
+
+        $srcAbs = __DIR__ . "/" . ltrim($caminhoFinal, "/\\");
+        if ($idSolicitacao > 0 && $caminhoFinal !== "" && file_exists($srcAbs)) {
+            $entidadesSalvar = [];
+
+            $stmtList = mysqli_prepare(
+                $conn,
+                "SELECT enti_nb_id, cpf, email, ordem, salvar_documento_funcionario
+                 FROM assinantes
+                 WHERE id_solicitacao = ?
+                 ORDER BY ordem ASC, id ASC"
+            );
+            if ($stmtList) {
+                mysqli_stmt_bind_param($stmtList, "i", $idSolicitacao);
+                mysqli_stmt_execute($stmtList);
+                $resList = mysqli_stmt_get_result($stmtList);
+                if ($resList) {
+                    while ($a = mysqli_fetch_assoc($resList)) {
+                        $ordem = intval($a["ordem"] ?? 0);
+                        $salvarDoc = strtolower(trim(strval($a["salvar_documento_funcionario"] ?? "nao"))) === "sim";
+                        if ($ordem !== 1 && !$salvarDoc) {
+                            continue;
+                        }
+
+                        $entiId = intval($a["enti_nb_id"] ?? 0);
+                        if ($entiId <= 0) {
+                            $cpf = trim(strval($a["cpf"] ?? ""));
+                            $emailAss = trim(strval($a["email"] ?? ""));
+                            $emailSol = trim(strval($docRow["email"] ?? ""));
+                            $entiId = assinatura_obterEntidadeIdPorCpfOuEmail($conn, $cpf, $emailAss, $emailSol);
+                        }
+
+                        if ($entiId > 0) {
+                            $entidadesSalvar[$entiId] = true;
+                        }
+                    }
+                }
+                mysqli_stmt_close($stmtList);
+            }
+
+            foreach (array_keys($entidadesSalvar) as $entidadeId) {
+                $root = dirname(__DIR__) . "/arquivos/Funcionarios/" . intval($entidadeId) . "/";
                 if (!is_dir($root)) {
                     @mkdir($root, 0777, true);
                 }
@@ -263,10 +300,32 @@ function assinatura_entregarParaFuncionarioEFinalizarNotificacao(
                     $nomeSafe .= ".pdf";
                 }
 
-                $dest = rtrim(str_replace("\\", "/", $root), "/") . "/" . $nomeSafe;
+                $destBase = rtrim(str_replace("\\", "/", $root), "/") . "/" . $nomeSafe;
+                $dest = $destBase;
+                $rel = "arquivos/Funcionarios/" . intval($entidadeId) . "/" . $nomeSafe;
+
+                $hasRegistroMesmoCaminho = false;
+                $stmtDoc = @mysqli_prepare($conn, "SELECT docu_nb_id FROM documento_funcionario WHERE docu_nb_entidade = ? AND docu_tx_caminho = ? LIMIT 1");
+                if ($stmtDoc) {
+                    $entTmp = intval($entidadeId);
+                    mysqli_stmt_bind_param($stmtDoc, "is", $entTmp, $rel);
+                    @mysqli_stmt_execute($stmtDoc);
+                    $rowDoc = @mysqli_fetch_assoc(mysqli_stmt_get_result($stmtDoc));
+                    mysqli_stmt_close($stmtDoc);
+                    $hasRegistroMesmoCaminho = !empty($rowDoc["docu_nb_id"]);
+                }
+
+                if (file_exists($dest) && !$hasRegistroMesmoCaminho) {
+                    $info = pathinfo($nomeSafe);
+                    $baseName = strval($info["filename"] ?? "documento");
+                    $ext = isset($info["extension"]) ? ("." . $info["extension"]) : ".pdf";
+                    $dest = rtrim(str_replace("\\", "/", $root), "/") . "/" . $baseName . "_" . $idSolicitacao . "_" . time() . $ext;
+                    $nomeSafe = basename($dest);
+                    $rel = "arquivos/Funcionarios/" . intval($entidadeId) . "/" . $nomeSafe;
+                }
+
                 if (@copy($srcAbs, $dest)) {
-                    $rel = "arquivos/Funcionarios/" . $entidadeId . "/" . $nomeSafe;
-                    assinatura_inserirDocumentoFuncionario($conn, $entidadeId, $tipoDocumentoId, $nomeSafe, $rel);
+                    assinatura_inserirDocumentoFuncionario($conn, intval($entidadeId), $tipoDocumentoId, $nomeSafe, $rel);
                 }
             }
         }
