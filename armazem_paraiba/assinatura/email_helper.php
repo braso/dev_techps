@@ -19,6 +19,35 @@ function configurarSMTP($mail) {
     $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
 }
 
+function assinatura_email_embedLogo($mail, string $cid = "logo_techps"): string {
+    $logoPath = __DIR__ . "/assets/logo.png";
+    if (file_exists($logoPath)) {
+        try {
+            $mail->addEmbeddedImage($logoPath, $cid);
+            return "cid:" . $cid;
+        } catch (Throwable $e) {
+            return "";
+        }
+    }
+    return "";
+}
+
+function assinatura_email_wrap(string $headerHtml, string $contentHtml, string $footerHtml): string {
+    return "
+        <div style='font-family: Arial, sans-serif; width:100%; max-width: 960px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #ffffff;'>
+            <div style='text-align: center; padding: 30px; background-color: #f8f9fa; border-bottom: 1px solid #e0e0e0; border-radius: 8px 8px 0 0;'>
+                {$headerHtml}
+            </div>
+            <div style='padding: 40px 30px;'>
+                {$contentHtml}
+            </div>
+            <div style='background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #e0e0e0; border-radius: 0 0 8px 8px;'>
+                {$footerHtml}
+            </div>
+        </div>
+    ";
+}
+
 function assinatura_getBaseUrl(): string {
     $fallback = defined("BASE_URL_ASSINATURA") ? rtrim((string)BASE_URL_ASSINATURA, "/") : "";
 
@@ -182,6 +211,8 @@ function enviarEmailProximo($email, $nome, $token, $nomeArquivo, $idDoc, $funcao
     try {
         configurarSMTP($mail);
         $mail->addAddress($email, $nome);
+
+        $cidLogo = assinatura_email_embedLogo($mail, "logo_techps_proximo");
         
         // Anexa o arquivo parcialmente assinado, se disponível
         if ($caminhoArquivo && file_exists($caminhoArquivo)) {
@@ -199,44 +230,82 @@ function enviarEmailProximo($email, $nome, $token, $nomeArquivo, $idDoc, $funcao
         $baseUrl = rtrim($base !== "" ? $base : (defined("BASE_URL_ASSINATURA") ? (string)BASE_URL_ASSINATURA : ""), "/");
         $linkAssinatura = $baseUrl . "/assinar_via_link.php?token=" . urlencode((string)$token);
         $linkPlataforma = $baseUrl . "/pendentes.php";
-
-        $entiId = intval($entiNbId);
-        if ($entiId <= 0) {
-            $entiId = assinatura_obterEntiIdPorEmail(strval($email));
-        }
-        $counts = assinatura_getNotificacoesCounts($entiId);
-        $qPend = intval($counts["pendentes"] ?? 0);
-        $qComp = intval($counts["comprovantes"] ?? 0);
-        $sPend = $qPend === 1 ? "1 pendência" : ($qPend . " pendências");
-        $sComp = $qComp === 1 ? "1 comprovante" : ($qComp . " comprovantes");
-        $badgeLine = "<span style='display:inline-block;padding:6px 10px;border-radius:9999px;background:#eff6ff;color:#1d4ed8;font-weight:700;font-size:12px;margin-right:8px;'>Pendentes: {$qPend}</span>"
-            . "<span style='display:inline-block;padding:6px 10px;border-radius:9999px;background:#ecfdf5;color:#065f46;font-weight:700;font-size:12px;'>Comprovantes: {$qComp}</span>";
-        $linkPlataformaComp = $linkPlataforma . "?tab=comprovantes";
         
         $mail->isHTML(true);
-        $mail->Subject = "Sua vez de assinar ($funcao): Documento #$idDoc";
-        
-        $corpo = "
-        <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd;'>
-            <h2>Ação Necessária: Assinatura de Documento</h2>
-            <p>Olá, <strong>$nome</strong>.</p>
-            <p>O documento <strong>$nomeArquivo</strong> requer sua assinatura como <strong>$funcao</strong>.</p>
-            <p>O signatário anterior já concluiu a etapa dele.</p>
-            <p style='text-align: center; margin: 30px 0;'>
-                <a href='$linkAssinatura' style='background-color: #007bff; color: white; padding: 15px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Revisar e Assinar</a>
+        $mail->Subject = "Assinatura Pendente ($funcao): Documento #$idDoc";
+
+        $headerHtml = $cidLogo !== ""
+            ? "<img src='{$cidLogo}' alt='TechPS' style='max-width: 150px;'>"
+            : "<h2 style='color: #333; margin: 0;'>TechPS</h2>";
+
+        $nomeUp = assinatura_h(strtoupper(strval($nome)));
+        $nomeArquivoSafe = assinatura_h(strval($nomeArquivo));
+        $funcaoSafe = assinatura_h(strval($funcao));
+        $idDocSafe = assinatura_h(strval($idDoc));
+
+        $contentHtml = "
+            <h2 style='color: #333; font-size: 24px; margin-top: 0;'>Olá, {$nomeUp}.</h2>
+
+            <p style='color: #555; font-size: 16px; line-height: 1.5;'>
+                Você foi indicado como <strong style='color: #0056b3;'>{$funcaoSafe}</strong> para assinar o documento abaixo:
             </p>
-            <p style='text-align: center; margin: 0 0 30px 0;'>
-                <a href='$linkPlataforma' style='background-color: #16a34a; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Assinar pela Plataforma</a>
+
+            <p style='color:#555; font-size: 14px; line-height:1.5; margin: 10px 0 0 0;'>
+                O signatário anterior já concluiu a etapa dele.
             </p>
-            <p style='text-align:center; margin: 0 0 10px 0;'>$badgeLine</p>
-            <p style='text-align:center; margin: 0 0 18px 0; color:#374151; font-size: 12px;'>Você tem $sPend e $sComp disponíveis na plataforma.</p>
-            <p>Link direto: $linkAssinatura</p>
-            <p>Plataforma (Assinaturas Pendentes): <a href='$linkPlataforma'>$linkPlataforma</a></p>
-            <p>Comprovantes (Documentos Finalizados): <a href='$linkPlataformaComp'>$linkPlataformaComp</a></p>
-        </div>";
-        
-        $mail->Body = $corpo;
-        $mail->AltBody = "Assine pelo link: $linkAssinatura\nPlataforma (Assinaturas Pendentes): $linkPlataforma\nComprovantes (Documentos Finalizados): $linkPlataformaComp\nNotificações: Pendentes {$qPend} | Comprovantes {$qComp}\nDocumento #$idDoc ($funcao).";
+
+            <div style='background-color: #f8f9fa; border-left: 4px solid #0056b3; padding: 20px; margin: 25px 0; border-radius: 4px;'>
+                <p style='margin: 0 0 10px 0; color: #555;'>
+                    <strong style='color: #333;'>Documento:</strong> <br>
+                    <span style='font-size: 18px; color: #0056b3;'>{$nomeArquivoSafe}</span>
+                </p>
+                <p style='margin: 0; color: #555;'>
+                    <strong style='color: #333;'>ID:</strong> <br>
+                    <span style='font-family: monospace; font-size: 14px; background: #e9ecef; padding: 2px 6px; rounded: 3px;'>{$idDocSafe}</span>
+                </p>
+            </div>
+
+            <div style='text-align: center; margin: 35px 0;'>
+                <a href='{$linkAssinatura}' style='background-color: #0056b3; color: white; padding: 16px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1);'>
+                    Revisar e Assinar Agora
+                </a>
+            </div>
+
+            <div style='text-align: center; margin: 0 0 35px 0;'>
+                <a href='{$linkPlataforma}' style='background-color: #16a34a; color: white; padding: 14px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; display: inline-block;'>
+                    Assinar pela Plataforma
+                </a>
+            </div>
+
+            <div style='border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px;'>
+                <p style='font-size: 13px; color: #777; margin-bottom: 10px;'>
+                    Se o botão não funcionar, copie e cole o link abaixo no seu navegador:
+                </p>
+                <p style='font-size: 12px; color: #555; background: #f8f9fa; padding: 10px; border-radius: 4px; word-break: break-all; font-family: monospace; border: 1px solid #eee;'>
+                    {$linkAssinatura}
+                </p>
+            </div>
+
+            <div style='margin-top: 30px; font-size: 12px; color: #777; text-align: justify; line-height: 1.5; border-top: 1px solid #eee; padding-top: 20px;'>
+                <p style='margin-bottom: 10px;'>
+                    <strong>Informações Legais:</strong>
+                </p>
+                <p>
+                    Este procedimento de assinatura eletrônica é realizado em conformidade com a <strong>Medida Provisória nº 2.200-2/2001</strong>, que institui a Infraestrutura de Chaves Públicas Brasileira (ICP-Brasil) e garante a autenticidade, a integridade e a validade jurídica de documentos em forma eletrônica, bem como das aplicações que utilizem certificados digitais, e dá outras providências. A validade jurídica desta assinatura é assegurada pela concordância expressa das partes envolvidas.
+                </p>
+                <p style='margin-top: 10px;'>
+                    <strong>Data de Envio:</strong> " . date('d/m/Y H:i:s') . "
+                </p>
+            </div>
+        ";
+
+        $footerHtml = "
+            <p style='margin: 0;'>Mensagem automática enviada pelo sistema de Assinatura Digital TechPS.</p>
+            <p style='margin: 5px 0 0 0;'>&copy; " . date('Y') . " Armazém Paraíba - Todos os direitos reservados.</p>
+        ";
+
+        $mail->Body = assinatura_email_wrap($headerHtml, $contentHtml, $footerHtml);
+        $mail->AltBody = "Assinatura pendente: Documento #{$idDoc} ({$funcao}).\n\nAssine pelo link: {$linkAssinatura}\n";
         $mail->send();
         
         if (function_exists('logDebug')) {
@@ -289,16 +358,19 @@ function enviarEmailFinalizacao($conn, $idSolicitacao, $idDoc, $caminhoArquivo) 
     }
     
     // Monta Tabela de Auditoria HTML
-    $tabelaAudit = "<table style='width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px;'>
-        <tr style='background: #f3f4f6; color: #111827;'>
-            <th style='border: 1px solid #e5e7eb; padding: 10px; text-align: left;'>Ordem</th>
-            <th style='border: 1px solid #e5e7eb; padding: 10px; text-align: left;'>Nome</th>
-            <th style='border: 1px solid #e5e7eb; padding: 10px; text-align: left;'>E-mail</th>
-            <th style='border: 1px solid #e5e7eb; padding: 10px; text-align: left;'>CPF</th>
-            <th style='border: 1px solid #e5e7eb; padding: 10px; text-align: left;'>RG</th>
-            <th style='border: 1px solid #e5e7eb; padding: 10px; text-align: left;'>Função</th>
-            <th style='border: 1px solid #e5e7eb; padding: 10px; text-align: left;'>Data Assinatura</th>
-        </tr>";
+    $cellCommon = "border:1px solid #e5e7eb;padding:8px;background:#ffffff;vertical-align:top;white-space:nowrap;line-height:1.25;";
+    $thCommon = "border:1px solid #e5e7eb;padding:8px;text-align:left;vertical-align:top;white-space:nowrap;line-height:1.25;";
+    $tabelaAudit = "<div style='width:100%;overflow-x:auto;'>
+        <table style='width:100%; min-width: 980px; border-collapse:collapse; margin-top:16px; font-size:12px; table-layout:auto;'>
+            <tr style='background:#f3f4f6;color:#111827;'>
+                <th style='{$thCommon}text-align:center;'>Ordem</th>
+                <th style='{$thCommon}'>Nome</th>
+                <th style='{$thCommon}'>E-mail</th>
+                <th style='{$thCommon}'>CPF</th>
+                <th style='{$thCommon}'>RG</th>
+                <th style='{$thCommon}'>Função</th>
+                <th style='{$thCommon}'>Data Assinatura</th>
+            </tr>";
     
     foreach ($listaAssinantes as $a) {
         $dataFmt = $a['data_assinatura'] ? date('d/m/Y H:i', strtotime($a['data_assinatura'])) : 'Pendente';
@@ -320,16 +392,16 @@ function enviarEmailFinalizacao($conn, $idSolicitacao, $idDoc, $caminhoArquivo) 
         $funcaoA = assinatura_h(strval($a['funcao'] ?? ''));
         $dataA = assinatura_h($dataFmt);
         $tabelaAudit .= "<tr>
-            <td style='border: 1px solid #e5e7eb; padding: 10px; text-align: center; background: #ffffff;'>" . intval($a['ordem'] ?? 0) . "</td>
-            <td style='border: 1px solid #e5e7eb; padding: 10px; background: #ffffff;'>{$nomeA}</td>
-            <td style='border: 1px solid #e5e7eb; padding: 10px; background: #ffffff;'>{$emailA}</td>
-            <td style='border: 1px solid #e5e7eb; padding: 10px; background: #ffffff;'>{$cpfFmt}</td>
-            <td style='border: 1px solid #e5e7eb; padding: 10px; background: #ffffff;'>{$rgA}</td>
-            <td style='border: 1px solid #e5e7eb; padding: 10px; background: #ffffff;'><span style='display:inline-block; padding:4px 8px; border-radius:9999px; background:#eef2ff; color:#1f2937; font-weight:600;'>{$funcaoA}</span></td>
-            <td style='border: 1px solid #e5e7eb; padding: 10px; background: #ffffff;'>{$dataA}</td>
+            <td style='{$cellCommon}text-align:center;'>" . intval($a['ordem'] ?? 0) . "</td>
+            <td style='{$cellCommon}'>{$nomeA}</td>
+            <td style='{$cellCommon}'>{$emailA}</td>
+            <td style='{$cellCommon}'>{$cpfFmt}</td>
+            <td style='{$cellCommon}'>{$rgA}</td>
+            <td style='{$cellCommon}'><span style='display:inline-block; max-width:100%; padding:4px 8px; border-radius:9999px; background:#eef2ff; color:#1f2937; font-weight:600; font-size:12px; white-space:nowrap; line-height:1.2;'>{$funcaoA}</span></td>
+            <td style='{$cellCommon}'>{$dataA}</td>
         </tr>";
     }
-    $tabelaAudit .= "</table>";
+    $tabelaAudit .= "</table></div>";
     
     // Lista de Destinatários (Todos os assinantes + Dono da solicitação)
     $destinatarios = [];
@@ -351,6 +423,8 @@ function enviarEmailFinalizacao($conn, $idSolicitacao, $idDoc, $caminhoArquivo) 
         try {
             configurarSMTP($mail);
             $mail->addAddress($email, $nome);
+
+            $cidLogo = assinatura_email_embedLogo($mail, "logo_techps_final_" . bin2hex(random_bytes(4)));
             
             // Anexa o arquivo final
             // Verifica caminho absoluto ou relativo
@@ -374,9 +448,13 @@ function enviarEmailFinalizacao($conn, $idSolicitacao, $idDoc, $caminhoArquivo) 
             $badgeTipo = $tipoDocNome !== ""
                 ? "<span style='display:inline-block;padding:6px 10px;border-radius:9999px;background:#ede9fe;color:#4c1d95;font-weight:700;font-size:12px;'><span style=\"margin-right:6px;\">Tipo</span> $tipoDocNome</span>"
                 : "";
-            $corpo = "
-            <div style='font-family: Arial, sans-serif; padding: 24px; border: 1px solid #e5e7eb; border-radius: 14px; background:#ffffff;'>
-                <table role='presentation' cellpadding='0' cellspacing='0' border='0' style='width:100%;margin-bottom:12px;'>
+            $headerHtml = $cidLogo !== ""
+                ? "<img src='{$cidLogo}' alt='TechPS' style='max-width: 150px;'>"
+                : "<h2 style='color: #333; margin: 0;'>TechPS</h2>";
+
+            $nomeSafe = assinatura_h(strtoupper(strval($nome)));
+            $contentHtml = "
+                <table role='presentation' cellpadding='0' cellspacing='0' border='0' style='width:100%;margin-bottom:16px;'>
                     <tr>
                         <td style='width:42px;vertical-align:middle;'>
                             <div style='width:42px;height:42px;border-radius:9999px;background:#dcfce7;text-align:center;line-height:42px;'>
@@ -388,21 +466,30 @@ function enviarEmailFinalizacao($conn, $idSolicitacao, $idDoc, $caminhoArquivo) 
                         </td>
                     </tr>
                 </table>
-                <p style='color:#374151;margin:0 0 8px 0;'>Olá, <strong>$nome</strong>.</p>
+
+                <p style='color:#374151;margin:0 0 10px 0;'>Olá, <strong>{$nomeSafe}</strong>.</p>
                 <p style='color:#374151;margin:0 0 2px 0;'>O documento foi assinado por todas as partes envolvidas.</p>
+
                 <div style='margin:12px 0;padding:12px;border:1px dashed #e5e7eb;border-radius:10px;background:#fafafa;'>
                     <div style='color:#111827;font-weight:600;margin-bottom:6px;'>$nomeArquivoOriginal</div>
                     <div style='display:flex;gap:8px;flex-wrap:wrap;'>$badgeModo $badgeTipo</div>
                 </div>
+
                 <div style='margin-top:16px;margin-bottom:8px;color:#111827;font-weight:700;'>Registro das assinaturas</div>
                 $tabelaAudit
+
                 <div style='margin-top:16px;padding-top:12px;border-top:1px solid #e5e7eb;color:#374151;'>
                     O documento final assinado está em anexo.
                 </div>
-                <div style='margin-top:16px;color:#9ca3af;font-size:12px;'>TechPS Assinaturas Digitais</div>
-            </div>";
-            
-            $mail->Body = $corpo;
+            ";
+
+            $footerHtml = "
+                <p style='margin: 0;'>Mensagem automática enviada pelo sistema de Assinatura Digital TechPS.</p>
+                <p style='margin: 5px 0 0 0;'>&copy; " . date('Y') . " Armazém Paraíba - Todos os direitos reservados.</p>
+            ";
+
+            $mail->Body = assinatura_email_wrap($headerHtml, $contentHtml, $footerHtml);
+            $mail->AltBody = "Processo de Assinatura Concluído.\nDocumento #{$idDoc} foi assinado por todas as partes.\nO documento final assinado está em anexo.";
             $mail->send();
             
             if (function_exists('logDebug')) {
