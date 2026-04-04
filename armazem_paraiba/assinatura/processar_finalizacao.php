@@ -68,7 +68,7 @@ function assinatura_obterEntidadeIdPorCpfOuEmail(mysqli $conn, string $cpf, stri
 }
 
 function assinatura_obterEntidadeIdDaSolicitacao(mysqli $conn, int $idSolicitacao, array $docRow): int {
-    $stmt = mysqli_prepare($conn, "SELECT enti_nb_id, cpf, email FROM assinantes WHERE id_solicitacao = ? ORDER BY ordem DESC, id DESC LIMIT 1");
+    $stmt = mysqli_prepare($conn, "SELECT enti_nb_id, cpf, email FROM assinantes WHERE id_solicitacao = ? ORDER BY ordem ASC, id ASC LIMIT 1");
     if ($stmt) {
         mysqli_stmt_bind_param($stmt, "i", $idSolicitacao);
         mysqli_stmt_execute($stmt);

@@ -241,18 +241,60 @@ function assinatura_entregarParaFuncionarioEFinalizarNotificacao(
     string $emailSolicitacao,
     string $nomeArquivoOriginal,
     int $tipoDocumentoId,
-    string $docIdGlobal
+    string $docIdGlobal,
+    bool $sendEmailFinal = true
 ): void {
-    if (function_exists("assinatura_obterEntidadeIdDaSolicitacao") && function_exists("assinatura_inserirDocumentoFuncionario") && function_exists("assinatura_sanitizarNomeArquivo")) {
-        $docRow = [
-            "email" => $emailSolicitacao,
-            "nome_arquivo_original" => $nomeArquivoOriginal,
-            "tipo_documento_id" => $tipoDocumentoId
-        ];
-        $entidadeId = assinatura_obterEntidadeIdDaSolicitacao($conn, $idSolicitacao, $docRow);
-        if ($entidadeId > 0) {
-            $srcAbs = __DIR__ . "/" . ltrim($caminhoFinal, "/\\");
-            if (file_exists($srcAbs)) {
+    if (function_exists("assinatura_inserirDocumentoFuncionario") && function_exists("assinatura_sanitizarNomeArquivo") && function_exists("assinatura_obterEntidadeIdPorCpfOuEmail")) {
+        $srcAbs = __DIR__ . "/" . ltrim($caminhoFinal, "/\\");
+        if ($idSolicitacao > 0 && $caminhoFinal !== "" && file_exists($srcAbs)) {
+            $docRow = [
+                "email" => $emailSolicitacao,
+                "nome_arquivo_original" => $nomeArquivoOriginal,
+                "tipo_documento_id" => $tipoDocumentoId
+            ];
+
+            $entidadesSalvar = [];
+            $stmtList = mysqli_prepare(
+                $conn,
+                "SELECT enti_nb_id, cpf, email, ordem, salvar_documento_funcionario
+                 FROM assinantes
+                 WHERE id_solicitacao = ?
+                 ORDER BY ordem ASC, id ASC"
+            );
+            if ($stmtList) {
+                mysqli_stmt_bind_param($stmtList, "i", $idSolicitacao);
+                mysqli_stmt_execute($stmtList);
+                $resList = mysqli_stmt_get_result($stmtList);
+                if ($resList) {
+                    while ($a = mysqli_fetch_assoc($resList)) {
+                        $ordem = intval($a["ordem"] ?? 0);
+                        $salvarDoc = strtolower(trim(strval($a["salvar_documento_funcionario"] ?? "nao"))) === "sim";
+                        if ($ordem !== 1 && !$salvarDoc) {
+                            continue;
+                        }
+
+                        $entiId = intval($a["enti_nb_id"] ?? 0);
+                        if ($entiId <= 0) {
+                            $cpf = trim(strval($a["cpf"] ?? ""));
+                            $emailAss = trim(strval($a["email"] ?? ""));
+                            $emailSol = trim(strval($docRow["email"] ?? ""));
+                            $entiId = assinatura_obterEntidadeIdPorCpfOuEmail($conn, $cpf, $emailAss, $emailSol);
+                        }
+
+                        if ($entiId > 0) {
+                            $entidadesSalvar[$entiId] = true;
+                        }
+                    }
+                }
+                mysqli_stmt_close($stmtList);
+            }
+
+            foreach (array_keys($entidadesSalvar) as $entidadeId) {
+                $entidadeId = intval($entidadeId);
+                if ($entidadeId <= 0) {
+                    continue;
+                }
+
                 $root = dirname(__DIR__) . "/arquivos/Funcionarios/" . $entidadeId . "/";
                 if (!is_dir($root)) {
                     @mkdir($root, 0777, true);
@@ -263,16 +305,37 @@ function assinatura_entregarParaFuncionarioEFinalizarNotificacao(
                     $nomeSafe .= ".pdf";
                 }
 
-                $dest = rtrim(str_replace("\\", "/", $root), "/") . "/" . $nomeSafe;
-                if (@copy($srcAbs, $dest)) {
+                $destBase = rtrim(str_replace("\\", "/", $root), "/") . "/" . $nomeSafe;
+                $dest = $destBase;
+                $rel = "arquivos/Funcionarios/" . $entidadeId . "/" . $nomeSafe;
+
+                $hasRegistroMesmoCaminho = false;
+                $stmtDoc = @mysqli_prepare($conn, "SELECT docu_nb_id FROM documento_funcionario WHERE docu_nb_entidade = ? AND docu_tx_caminho = ? LIMIT 1");
+                if ($stmtDoc) {
+                    mysqli_stmt_bind_param($stmtDoc, "is", $entidadeId, $rel);
+                    @mysqli_stmt_execute($stmtDoc);
+                    $rowDoc = @mysqli_fetch_assoc(mysqli_stmt_get_result($stmtDoc));
+                    mysqli_stmt_close($stmtDoc);
+                    $hasRegistroMesmoCaminho = !empty($rowDoc["docu_nb_id"]);
+                }
+
+                if (file_exists($dest) && !$hasRegistroMesmoCaminho) {
+                    $info = pathinfo($nomeSafe);
+                    $baseName = strval($info["filename"] ?? "documento");
+                    $ext = isset($info["extension"]) ? ("." . $info["extension"]) : ".pdf";
+                    $dest = rtrim(str_replace("\\", "/", $root), "/") . "/" . $baseName . "_" . $idSolicitacao . "_" . time() . $ext;
+                    $nomeSafe = basename($dest);
                     $rel = "arquivos/Funcionarios/" . $entidadeId . "/" . $nomeSafe;
+                }
+
+                if (@copy($srcAbs, $dest)) {
                     assinatura_inserirDocumentoFuncionario($conn, $entidadeId, $tipoDocumentoId, $nomeSafe, $rel);
                 }
             }
         }
     }
 
-    if (class_exists("PHPMailer\\PHPMailer\\PHPMailer") && function_exists("enviarEmailFinalizacao")) {
+    if ($sendEmailFinal && class_exists("PHPMailer\\PHPMailer\\PHPMailer") && function_exists("enviarEmailFinalizacao")) {
         enviarEmailFinalizacao($conn, $idSolicitacao, $docIdGlobal !== "" ? $docIdGlobal : strval($idSolicitacao), $caminhoFinal);
     }
 }
@@ -580,17 +643,19 @@ if (!$ultimo) {
 
     $caminhoFinal = $caminhoRel;
     if ($validarIcp === "sim" && function_exists("assinatura_finalizar_documento_icp")) {
-        $res = assinatura_finalizar_documento_icp($conn, $idSolicitacao, ["send_email" => true]);
+        $res = assinatura_finalizar_documento_icp($conn, $idSolicitacao, ["send_email" => false]);
         if (!empty($res["ok"]) && !empty($res["caminho_arquivo"])) {
             $caminhoFinal = strval($res["caminho_arquivo"]);
+            $alreadyFinalized = !empty($res["already_finalized"]);
+            assinatura_entregarParaFuncionarioEFinalizarNotificacao($conn, $idSolicitacao, $caminhoFinal, $emailSolicitacao, $nomeArquivoOriginal, $tipoDocumentoId, $docIdGlobal, !$alreadyFinalized);
         } elseif (!empty($res["error"])) {
             if ($warning === "") {
                 $warning = strval($res["error"]);
             }
-            assinatura_entregarParaFuncionarioEFinalizarNotificacao($conn, $idSolicitacao, $caminhoFinal, $emailSolicitacao, $nomeArquivoOriginal, $tipoDocumentoId, $docIdGlobal);
+            assinatura_entregarParaFuncionarioEFinalizarNotificacao($conn, $idSolicitacao, $caminhoFinal, $emailSolicitacao, $nomeArquivoOriginal, $tipoDocumentoId, $docIdGlobal, true);
         }
     } else {
-        assinatura_entregarParaFuncionarioEFinalizarNotificacao($conn, $idSolicitacao, $caminhoFinal, $emailSolicitacao, $nomeArquivoOriginal, $tipoDocumentoId, $docIdGlobal);
+        assinatura_entregarParaFuncionarioEFinalizarNotificacao($conn, $idSolicitacao, $caminhoFinal, $emailSolicitacao, $nomeArquivoOriginal, $tipoDocumentoId, $docIdGlobal, true);
     }
 
     $caminhoRel = $caminhoFinal;
