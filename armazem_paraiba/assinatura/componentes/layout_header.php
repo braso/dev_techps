@@ -79,7 +79,6 @@ if($hasEnvPaths){
                     $menu_sistema = [
                         "Cadastros" => [
                             "RFID" => $baseContex."/cadastro_rfid.php",
-                            "Digital" => $baseContex."/cadastro_digital.php",
                             "Celular" => $baseContex."/cadastro_celular.php",
                             "Empresa/Filial" => $baseContex."/cadastro_empresa.php",
                             "Endosso" => $baseContex."/cadastro_endosso.php",
