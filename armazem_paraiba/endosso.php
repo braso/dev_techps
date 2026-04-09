@@ -5,6 +5,88 @@
 	//*/
 
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
+	
+	function endosso_mes_sql(string $buscaData): string{
+		$ym = preg_replace('/[^0-9\\-]/', '', $buscaData);
+		if(!preg_match('/^\\d{4}-\\d{2}$/', $ym)){
+			$ym = date("Y-m");
+		}
+		return $ym."-01";
+	}
+	
+	function endosso_has_empresa_col(): bool{
+		$r = query("SHOW COLUMNS FROM endosso LIKE 'endo_nb_empresa';");
+		return (!is_string($r) && $r && mysqli_num_rows($r) > 0);
+	}
+	
+	function ensureEndossoEmpresaColumn(): void{
+		$r = query("SHOW COLUMNS FROM endosso LIKE 'endo_nb_empresa';");
+		if(!is_string($r) && $r && mysqli_num_rows($r) == 0){
+			@query("ALTER TABLE endosso ADD COLUMN endo_nb_empresa INT NULL AFTER endo_nb_entidade;");
+		}
+	}
+	ensureEndossoEmpresaColumn();
+	
+	function endosso_empresa_cond(int $empresaId, string $alias = "endosso"): string{
+		$empresaId = intval($empresaId);
+		if(!endosso_has_empresa_col()){
+			return "";
+		}
+		return " AND ({$alias}.endo_nb_empresa = {$empresaId} OR {$alias}.endo_nb_empresa IS NULL)";
+	}
+	
+	function endosso_ids_mes(int $empresaId, string $buscaData): array{
+		$empresaId = intval($empresaId);
+		$mesSql = endosso_mes_sql($buscaData);
+		$condEmpresa = endosso_empresa_cond($empresaId, "endosso");
+		
+		$ids = [];
+		$res = query(
+			"SELECT DISTINCT endo_nb_entidade FROM endosso
+				WHERE endo_tx_status = 'ativo'
+					AND endo_tx_mes = '{$mesSql}'"
+				.$condEmpresa
+		);
+		if(!is_string($res) && $res){
+			$rows = mysqli_fetch_all($res, MYSQLI_ASSOC);
+			foreach($rows as $r){
+				$ids[] = intval($r["endo_nb_entidade"] ?? 0);
+			}
+		}
+		
+		global $CONTEX;
+		$dir = $_SERVER["DOCUMENT_ROOT"].($CONTEX["path"] ?? "")."/arquivos/endosso";
+		if(is_dir($dir)){
+			$files = glob($dir."/*.csv") ?: [];
+			foreach($files as $file){
+				$fh = @fopen($file, "r");
+				if(!$fh){
+					continue;
+				}
+				$header = fgetcsv($fh);
+				$row = fgetcsv($fh);
+				fclose($fh);
+				if(empty($header) || empty($row)){
+					continue;
+				}
+				$data = @array_combine($header, $row);
+				if(!is_array($data)){
+					continue;
+				}
+				if(strval($data["endo_tx_mes"] ?? "") !== $mesSql){
+					continue;
+				}
+				$emp = ($data["endo_nb_empresa"] ?? null);
+				$emp = ($emp === null || $emp === "") ? null : intval($emp);
+				if($emp !== null && $emp !== 0 && $emp !== $empresaId){
+					continue;
+				}
+				$ids[] = intval($data["endo_nb_entidade"] ?? 0);
+			}
+		}
+		
+		return array_values(array_unique(array_filter($ids, function($v){ return $v > 0; })));
+	}
 
 	function imprimir_relatorio(){
 		if (empty($_POST["busca_data"]) || empty($_POST["busca_empresa"])){
@@ -43,17 +125,24 @@
 			$condCargoSetor .= " AND enti_subSetor_id = ".intval($_POST["busca_subsetor"]);
 		}
 
+		$empresaId = intval($_POST["busca_empresa"]);
+		$mesSql = endosso_mes_sql(strval($_POST["busca_data"]));
+		$condEmpresa = endosso_empresa_cond($empresaId, "endosso");
+		$condMotorista = (!empty($_POST["busca_motorista"])) ? " AND entidade.enti_nb_id = ".intval($_POST["busca_motorista"]) : "";
+		
 		$motoristas = mysqli_fetch_all(query(
-			"SELECT DISTINCT enti_nb_id, entidade.*, parametro.para_tx_pagarHEExComPerNeg, parametro.para_tx_tolerancia FROM entidade
-				JOIN endosso ON enti_nb_id = endo_nb_entidade
-				LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
-				WHERE enti_tx_status = 'ativo' AND endo_tx_status = 'ativo'
-					".(!empty($_POST["busca_motorista"])? "AND enti_nb_id = {$_POST["busca_motorista"]}": "")."
-					AND enti_nb_empresa = {$_POST["busca_empresa"]}
-					AND enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário')
-					{$condCargoSetor}
-					AND endo_tx_mes = '{$_POST["busca_data"]}-01'
-				ORDER BY enti_tx_nome;"
+			"SELECT DISTINCT entidade.enti_nb_id, entidade.*, parametro.para_tx_pagarHEExComPerNeg, parametro.para_tx_tolerancia
+			 FROM entidade
+			 JOIN endosso ON entidade.enti_nb_id = endosso.endo_nb_entidade
+			 LEFT JOIN parametro ON entidade.enti_nb_parametro = parametro.para_nb_id
+			 WHERE entidade.enti_tx_status = 'ativo'
+			   AND endosso.endo_tx_status = 'ativo'
+			   AND endosso.endo_tx_mes = '{$mesSql}'"
+			   .$condEmpresa
+			   .$condMotorista
+			   ." AND entidade.enti_tx_ocupacao IN ('Motorista', 'Ajudante','Funcionário')
+			   {$condCargoSetor}
+			 ORDER BY entidade.enti_tx_nome;"
 		), MYSQLI_ASSOC);
 
 		$date = new DateTime($_POST["busca_data"]);
@@ -260,15 +349,9 @@
 			exit;
 		}
 		
-		$_POST["extraMotorista"] = " AND enti_nb_empresa = {$_POST["busca_empresa"]}";
-		if(!empty($_POST["busca_endossado"]) && !empty($_POST["busca_empresa"])){
-			$extra .= " AND enti_nb_id".(($_POST["busca_endossado"] == "naoEndossado")? " NOT": "")." IN (
-					SELECT endo_nb_entidade FROM endosso
-						WHERE endo_tx_status = 'ativo'
-							AND endo_tx_mes = '{$_POST["busca_data"]}-01'
-				)"
-			;
-		}
+		$empresaId = intval($_POST["busca_empresa"]);
+		$idsEndossados = endosso_ids_mes($empresaId, strval($_POST["busca_data"]));
+		$_POST["extraMotorista"] = "";
 
 		$motNaoEndossados = "FUNCIONÁRIO(S) NÃO ENDOSSADO(S): <br><br>";
 		
@@ -287,8 +370,28 @@
 				." LEFT JOIN parametro ON enti_nb_parametro = para_nb_id"
 				." WHERE enti_tx_status = 'ativo'"
 					." AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
-					." AND enti_nb_empresa = ".$_POST["busca_empresa"]." ".$extra.$condCargoSetor
-				." ORDER BY enti_tx_nome;";
+					.$condCargoSetor;
+		
+		if(!empty($_POST["busca_motorista"])){
+			$sqlMotorista .= " AND enti_nb_id = ".intval($_POST["busca_motorista"]);
+		}else{
+			if(!empty($_POST["busca_endossado"]) && $_POST["busca_endossado"] == "endossado"){
+				if(empty($idsEndossados)){
+					$sqlMotorista .= " AND 1 = 0";
+				}else{
+					$sqlMotorista .= " AND enti_nb_id IN (".implode(",", array_map("intval", $idsEndossados)).")";
+				}
+			}elseif(!empty($_POST["busca_endossado"]) && $_POST["busca_endossado"] == "naoEndossado"){
+				$sqlMotorista .= " AND enti_nb_empresa = {$empresaId}";
+				if(!empty($idsEndossados)){
+					$sqlMotorista .= " AND enti_nb_id NOT IN (".implode(",", array_map("intval", $idsEndossados)).")";
+				}
+			}else{
+				$sqlMotorista .= " AND (enti_nb_empresa = {$empresaId}".(!empty($idsEndossados) ? " OR enti_nb_id IN (".implode(",", array_map("intval", $idsEndossados)).")" : "").")";
+			}
+		}
+		
+		$sqlMotorista .= " ORDER BY enti_tx_nome;";
 
 		$motoristas = mysqli_fetch_all(query($sqlMotorista), MYSQLI_ASSOC);
 
@@ -370,7 +473,7 @@
 				$userCadastro = carregar("user", $endossoCompleto["endo_nb_userCadastro"]);
 				$infoEndosso = " - Endossado por ".$userCadastro["user_tx_login"]." em ".data($endossoCompleto["endo_tx_dataCadastro"], 1);
 
-				$aEmpresa = carregar("empresa", $motorista["enti_nb_empresa"]);
+				$aEmpresa = carregar("empresa", intval($_POST["busca_empresa"]));
 
 				$aPagar = "--:--";
 
@@ -415,7 +518,7 @@
 					</div>"
 				;
 				
-				$aEmpresa = carregar("empresa", $motorista["enti_nb_empresa"]);
+				$aEmpresa = carregar("empresa", intval($_POST["busca_empresa"]));
 				$buttonImprimir = "";
 				if (empty($_POST["busca_motorista"])){
 					$buttonImprimir = 
@@ -604,7 +707,7 @@
 				3, 
 				"entidade", 
 				"", 
-				(!empty($_POST["busca_empresa"]) ? " AND enti_nb_empresa = {$_POST["busca_empresa"]}" : "")
+				(!empty($_POST["busca_empresa"]) ? " AND (enti_nb_empresa = ".intval($_POST["busca_empresa"])." OR enti_nb_id IN (SELECT endo_nb_entidade FROM endosso WHERE endo_tx_status = 'ativo' AND endo_tx_mes = '".endosso_mes_sql(strval($_POST["busca_data"] ?? date('Y-m')))."'".endosso_empresa_cond(intval($_POST["busca_empresa"]))."))" : "")
 				." AND enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
 				.$condCargoSetor
 				.($_POST["extraMotorista"]?? "").($extraEmpresaMotorista?? ""), 
