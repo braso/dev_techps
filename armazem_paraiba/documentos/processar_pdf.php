@@ -91,7 +91,7 @@ $pdf->AddPage();
 $pdf->SetFont('helvetica', '', 11);
 
 $html = '<table cellpadding="3" border="0" style="width:100%;">';
-$html .= '<tr><td style="border-bottom:0.1pt solid #ddd;"><b>Data de Geração:</b> ' . date("d/m/Y H:i", strtotime($dados['inst_dt_criacao'])) . '</td></tr>';
+$html .= '<tr><td style="border-bottom:0.1pt solid #ddd;"><b>Data de Geração:</b> ' . date("d/m/Y H:i") . '</td></tr>';
 $html .= '<tr><td style="border-bottom:0.1pt solid #ddd;"><b>Emitido por:</b> ' . $dados['criador'] . '</td></tr>';
 $html .= '</table>';
 $html .= '<br><br>';

@@ -455,6 +455,25 @@ function tt_buscarSolicitacaoTrocaHorario($idSolicitacao) {
     return tt_fetch_assoc_safe($res);
 }
 
+function tt_buscarUserIdPorEntidade($entidadeId) {
+    $entidadeId = intval($entidadeId);
+    if ($entidadeId <= 0) {
+        return 0;
+    }
+
+    $res = tt_query(
+        "SELECT user_nb_id
+         FROM user
+         WHERE user_nb_entidade = ?
+         ORDER BY user_nb_id ASC
+         LIMIT 1",
+        "i",
+        array($entidadeId)
+    );
+    $r = tt_fetch_assoc_safe($res);
+    return intval(tt_val($r, 'user_nb_id', 0));
+}
+
 function tt_resolverValorCampoTrocaHorario($campo, $solicitacao, $idUsuarioCriador) {
     $label = tt_normalizarTextoDocumento(tt_val($campo, 'camp_tx_label', ''));
     $tipoCampo = tt_normalizarTextoDocumento(tt_val($campo, 'camp_tx_tipo', ''));
@@ -498,6 +517,18 @@ function tt_resolverValorCampoTrocaHorario($campo, $solicitacao, $idUsuarioCriad
 
     if (strpos($label, 'cpf') !== false) {
         return $cpfSolicitante;
+    }
+
+    if (strpos($label, 'emitido') !== false || strpos($label, 'criador') !== false) {
+        return ($criadorNome !== '' ? $criadorNome : $nomeSolicitante);
+    }
+
+    if (strpos($label, 'aprovador') !== false || strpos($label, 'aprovado por') !== false || strpos($label, 'decisor') !== false) {
+        return $decisorNome;
+    }
+
+    if (strpos($label, 'trabalh') !== false && strpos($label, 'turno') === false) {
+        return $nomeDestino;
     }
 
     if (strpos($label, 'matricula') !== false || strpos($label, 'matr cula') !== false) {
@@ -594,6 +625,11 @@ function tt_gerarDocumentoTrocaHorario($idSolicitacao, $idUsuarioCriador) {
     $solicitacao = tt_buscarSolicitacaoTrocaHorario($idSolicitacao);
     if (empty($solicitacao)) {
         return 0;
+    }
+
+    $idUserSolicitante = tt_buscarUserIdPorEntidade(intval(tt_val($solicitacao, 'soli_nb_entidade', 0)));
+    if ($idUserSolicitante > 0) {
+        $idUsuarioCriador = $idUserSolicitante;
     }
 
     $idInstanciaJa = intval(tt_val($solicitacao, 'soli_nb_id_instancia', 0));

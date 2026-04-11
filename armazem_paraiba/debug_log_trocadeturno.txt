@@ -10,3 +10,7 @@
 2026-04-11 14:34:29 | POST retorno inserir recebido
 2026-04-11 14:34:29 | POST aprovadores processados
 2026-04-11 14:34:29 | POST solicitacao enviada com sucesso: 43
+2026-04-11 14:44:05 | POST iniciar envio solicitacao
+2026-04-11 14:44:05 | POST retorno inserir recebido
+2026-04-11 14:44:05 | POST aprovadores processados
+2026-04-11 14:44:05 | POST solicitacao enviada com sucesso: 44
