@@ -392,7 +392,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const drawFooter = () => {
                         const footerY = pageMargin - 18;
                         page.drawLine({ start: { x: pageMargin, y: footerY + 12 }, end: { x: width - pageMargin, y: footerY + 12 }, thickness: 1, color: rgb(0.9, 0.9, 0.9) });
-                        page.drawText('TechPS - Tecnologia e Sistemas | Armazém Paraíba', { x: pageMargin, y: footerY, size: 7.5, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) });
+                        page.drawText('TechPS - Tecnologia e Sistemas', { x: pageMargin, y: footerY, size: 7.5, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) });
                         const gen = `Gerado em: ${dataHora}`;
                         page.drawText(gen, { x: width - pageMargin - helveticaFont.widthOfTextAtSize(gen, 7.5), y: footerY, size: 7.5, font: helveticaFont, color: rgb(0.4, 0.4, 0.4) });
                     };
@@ -597,16 +597,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                             `
                             : '';
-                    const reciboHtml = (!isGovernanca && data.id_assinatura)
-                        ? `
-                            <div class="mt-8 pt-6 border-t border-gray-100">
-                                <a href="gerar_pdf.php?id_assinatura=${data.id_assinatura}" target="_blank" 
-                                   class="text-sm text-gray-500 hover:text-blue-600 transition-colors inline-flex items-center gap-1">
-                                    <i class="fas fa-file-contract"></i> Baixar Recibo de Assinatura
-                                </a>
-                            </div>
-                        `
-                        : '';
                     const downloadHtml = (isGovernanca && !isFinal)
                         ? ''
                         : `
@@ -645,7 +635,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             ${downloadHtml}
                             ${pendentesHtml}
                             <div id="assinatura-after-actions" class="mt-4 max-w-sm mx-auto"></div>
-                            ${reciboHtml}
                         </div>
                     `;
 

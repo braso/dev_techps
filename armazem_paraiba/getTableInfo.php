@@ -34,6 +34,9 @@ function ensureRfidsNbEntidadeIdColumn(mysqli $conn): void{
 	if(!isset($has["rfids_nb_entidade_id"])){
 		mysqli_query($conn, "ALTER TABLE rfids ADD COLUMN rfids_nb_entidade_id INT DEFAULT NULL");
 	}
+	if(!isset($has["rfids_nb_user_id"])){
+		mysqli_query($conn, "ALTER TABLE rfids ADD COLUMN rfids_nb_user_id INT(11) DEFAULT NULL");
+	}
 }
 
 ensureRfidsNbEntidadeIdColumn($conn);
@@ -45,7 +48,16 @@ $offset = max(0, intval(base64_decode($_POST["query"][3])));
 
 // Contar total de registros
 $countQuery = "SELECT COUNT(*) AS total FROM (" . $queryBase . ") AS sub";
-$resCount = mysqli_query($conn, $countQuery);
+$resCount = null;
+try{
+	$resCount = mysqli_query($conn, $countQuery);
+}catch(Throwable $e){
+	echo json_encode([
+		"error" => "Erro ao contar registros: " . $e->getMessage(),
+		"sql" => $countQuery
+	], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	exit;
+}
 
 if (!$resCount) {
     echo json_encode([
@@ -65,7 +77,16 @@ if ($offset > $total) {
 // Adicionar LIMIT e OFFSET
 $query = $queryBase . " LIMIT {$limit} OFFSET {$offset}";
 
-$res = mysqli_query($conn, $query);
+$res = null;
+try{
+	$res = mysqli_query($conn, $query);
+}catch(Throwable $e){
+	echo json_encode([
+		"error" => "Erro na consulta: " . $e->getMessage(),
+		"sql" => $query
+	], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	exit;
+}
 
 if (!$res) {
     echo json_encode([

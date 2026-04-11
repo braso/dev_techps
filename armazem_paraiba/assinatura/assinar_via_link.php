@@ -684,7 +684,8 @@ $cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
                 </div>
             </div>
             
-            <script src="script.js"></script>
+            <?php $scriptV = @filemtime(__DIR__ . "/script.js"); ?>
+            <script src="script.js?v=<?php echo $scriptV ? $scriptV : time(); ?>"></script>
             <script>
                 window.PDF_URL_TO_LOAD = <?php echo json_encode("assinar_via_link.php?token=" . urlencode($token) . "&arquivo=1"); ?>;
             </script>

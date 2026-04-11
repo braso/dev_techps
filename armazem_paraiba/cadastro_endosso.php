@@ -11,6 +11,11 @@
 
 	include "funcoes_ponto.php"; // conecta.php importado dentro de funcoes_ponto
 	include_once "check_permission.php";
+	
+	$chkEndossoEmpresa = query("SHOW COLUMNS FROM endosso LIKE 'endo_nb_empresa';");
+	if(!is_string($chkEndossoEmpresa) && $chkEndossoEmpresa && mysqli_num_rows($chkEndossoEmpresa) == 0){
+		@query("ALTER TABLE endosso ADD COLUMN endo_nb_empresa INT NULL AFTER endo_nb_entidade;");
+	}
 
 	function conferirErros($modo = 0, $idMotorista = null): string{
 		//Modo = 0: Conferência geral dos parâmetros do formulário.
@@ -612,6 +617,7 @@ function cadastrar(){
 
 			$novoEndosso = [
 				"endo_nb_entidade" 		  => $motorista["enti_nb_id"],
+				"endo_nb_empresa" 		  => $motorista["enti_nb_empresa"],
 				"endo_tx_nome" 			  => $motorista["enti_tx_nome"],
 				"endo_tx_matricula" 	  => $motorista["enti_tx_matricula"],
 				"endo_tx_mes" 			  => substr($_POST["data_de"], 0, 8)."01",

@@ -12,6 +12,11 @@
 	include_once "check_permission.php";
 	include "conecta.php";
 	
+	$chkRfidUserCol = query("SHOW COLUMNS FROM rfids LIKE 'rfids_nb_user_id';");
+	if(!is_string($chkRfidUserCol) && $chkRfidUserCol && mysqli_num_rows($chkRfidUserCol) == 0){
+		@query("ALTER TABLE rfids ADD COLUMN rfids_nb_user_id INT(11) DEFAULT NULL AFTER rfids_tx_uid;");
+	}
+	
 
 	function carregarJS(){
 		global $a_mod;

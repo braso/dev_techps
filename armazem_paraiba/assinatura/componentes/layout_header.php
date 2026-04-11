@@ -17,85 +17,16 @@ if($hasEnvPaths){
     $baseContex = rtrim($urlBase, "/") . rtrim(dirname($assinaturaDir), "/");
 }
 
-$notifPend = 0;
-$notifComp = 0;
-$notifCompNew = 0;
-$notifTotal = 0;
-$entiSess = intval($_SESSION["user_nb_entidade"] ?? 0);
-if($entiSess > 0 && isset($conn) && ($conn instanceof mysqli)){
-    $compSeenTs = intval($_COOKIE["assinatura_comp_seen_ts"] ?? 0);
-    $compSeenDt = ($compSeenTs > 0) ? date("Y-m-d H:i:s", $compSeenTs) : "";
-
-    $hasAss = mysqli_query($conn, "SHOW TABLES LIKE 'assinantes'");
-    $hasSol = mysqli_query($conn, "SHOW TABLES LIKE 'solicitacoes_assinatura'");
-    if($hasAss && mysqli_num_rows($hasAss) > 0 && $hasSol && mysqli_num_rows($hasSol) > 0){
-        $stmtP = mysqli_prepare(
-            $conn,
-            "SELECT COUNT(*) AS total
-             FROM assinantes a
-             JOIN solicitacoes_assinatura s ON s.id = a.id_solicitacao
-             WHERE a.enti_nb_id = ?
-               AND LOWER(TRIM(a.status)) <> 'assinado'
-               AND a.ordem = (
-                    SELECT MIN(a2.ordem)
-                    FROM assinantes a2
-                    WHERE a2.id_solicitacao = a.id_solicitacao
-                      AND LOWER(TRIM(a2.status)) <> 'assinado'
-               )
-               AND (s.status = 'pendente' OR s.status = 'em_progresso')"
-        );
-        if($stmtP){
-            mysqli_stmt_bind_param($stmtP, "i", $entiSess);
-            mysqli_stmt_execute($stmtP);
-            $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtP));
-            mysqli_stmt_close($stmtP);
-            $notifPend = intval($row["total"] ?? 0);
-        }
-
-        $stmtC = mysqli_prepare(
-            $conn,
-            "SELECT COUNT(DISTINCT s.id) AS total
-             FROM assinantes a
-             JOIN solicitacoes_assinatura s ON s.id = a.id_solicitacao
-             WHERE a.enti_nb_id = ?
-               AND LOWER(TRIM(a.status)) = 'assinado'
-               AND LOWER(TRIM(s.status)) IN ('assinado','concluido')"
-        );
-        if($stmtC){
-            mysqli_stmt_bind_param($stmtC, "i", $entiSess);
-            mysqli_stmt_execute($stmtC);
-            $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtC));
-            mysqli_stmt_close($stmtC);
-            $notifComp = intval($row["total"] ?? 0);
-        }
-
-        if($compSeenDt === ""){
-            $notifCompNew = $notifComp;
-        } else {
-            $stmtCN = mysqli_prepare(
-                $conn,
-                "SELECT COUNT(DISTINCT s.id) AS total
-                 FROM assinantes a
-                 JOIN solicitacoes_assinatura s ON s.id = a.id_solicitacao
-                 WHERE a.enti_nb_id = ?
-                   AND LOWER(TRIM(a.status)) = 'assinado'
-                   AND LOWER(TRIM(s.status)) IN ('assinado','concluido')
-                   AND s.data_assinatura IS NOT NULL
-                   AND s.data_assinatura <> '0000-00-00 00:00:00'
-                   AND s.data_assinatura > ?"
-            );
-            if($stmtCN){
-                mysqli_stmt_bind_param($stmtCN, "is", $entiSess, $compSeenDt);
-                mysqli_stmt_execute($stmtCN);
-                $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtCN));
-                mysqli_stmt_close($stmtCN);
-                $notifCompNew = intval($row["total"] ?? 0);
-            } else {
-                $notifCompNew = 0;
-            }
+$empresaTitulo = trim(strval($_SESSION["empr_tx_nome"] ?? ""));
+if($empresaTitulo === "" && isset($conn) && ($conn instanceof mysqli)){
+    $resEmp = @mysqli_query($conn, "SELECT empr_tx_nome FROM empresa LIMIT 1");
+    if($resEmp){
+        $rowEmp = mysqli_fetch_assoc($resEmp);
+        $empresaTitulo = trim(strval($rowEmp["empr_tx_nome"] ?? ""));
+        if($empresaTitulo !== ""){
+            $_SESSION["empr_tx_nome"] = $empresaTitulo;
         }
     }
-    $notifTotal = max(0, $notifPend + $notifCompNew);
 }
 ?>
 <!DOCTYPE html>
@@ -103,7 +34,7 @@ if($entiSess > 0 && isset($conn) && ($conn instanceof mysqli)){
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Assinatura Digital - TechPS</title>
+    <title><?php echo $empresaTitulo !== "" ? ("TechPS | " . htmlspecialchars($empresaTitulo, ENT_QUOTES, "UTF-8")) : "TechPS"; ?></title>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Tailwind CSS -->
@@ -236,14 +167,6 @@ if($entiSess > 0 && isset($conn) && ($conn instanceof mysqli)){
 
                 <!-- User Profile -->
                 <div class="flex items-center gap-4">
-                    <?php if($entiSess > 0): ?>
-                        <a href="<?php echo $baseAssinatura; ?>/pendentes.php" class="relative p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Notificações de Assinaturas">
-                            <i class="fas fa-bell text-xl"></i>
-                            <?php if($notifTotal > 0): ?>
-                                <span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] leading-[18px] text-center font-bold"><?php echo $notifTotal; ?></span>
-                            <?php endif; ?>
-                        </a>
-                    <?php endif; ?>
                     <div class="flex items-center gap-3 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200">
                         <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
                             <?php 

@@ -835,6 +835,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const addressQueue = [];
     let isProcessingQueue = false;
+    
+    function formatNominatimAddress(data) {
+        const address = data && data.address ? data.address : null;
+        if (address) {
+            const road = address.road || address.pedestrian || address.path || address.footway || address.highway || address.cycleway;
+            const houseNumber = address.house_number;
+            const bairro = address.neighbourhood || address.suburb || address.city_district || address.quarter;
+            const cidade = address.city || address.town || address.village || address.municipality || address.county;
+            const estado = address.state || address.state_district;
+            const cep = address.postcode;
+            
+            const parts = [];
+            if (road) parts.push(houseNumber ? `${road}, ${houseNumber}` : road);
+            if (bairro) parts.push(bairro);
+            if (cidade) parts.push(cidade);
+            if (estado) parts.push(estado);
+            if (cep) parts.push(cep);
+            
+            const out = parts.filter(Boolean).join(", ").trim();
+            if (out !== "") return out;
+        }
+        
+        const displayName = (data && data.display_name) ? String(data.display_name) : "";
+        if (displayName !== "") {
+            const parts = displayName
+                .split(",")
+                .map(p => p.trim())
+                .filter(p => p !== "")
+                .filter(p => !/^Região Geográfica\b/i.test(p))
+                .filter(p => !/^Região Metropolitana\b/i.test(p))
+                .filter(p => !/^Região Administrativa\b/i.test(p));
+            const out = parts.join(", ").trim();
+            if (out !== "") return out;
+        }
+        
+        return "Endereço não encontrado";
+    }
 
     function queueAddressLookup(lat, lon, elementId) {
         if (isNaN(lat) || isNaN(lon) || lat === 0 || lon === 0) {
@@ -864,7 +901,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Usa querySelectorAll para pegar todos os elementos (original e clones)
             const elements = document.querySelectorAll("." + elementId);
             elements.forEach(element => {
-                element.innerText = data.display_name || "Endereço não encontrado";
+                element.innerText = formatNominatimAddress(data);
                 // Remove a classe para não processar novamente se for o caso
                 element.classList.remove(elementId);
             });
