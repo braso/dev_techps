@@ -1,5 +1,6 @@
 <?php
 
+// Wrapper seguro para query; evita quebrar o fluxo em erro de banco.
 function tt_query($sql, $types = '', $vars = array()) {
     try {
         return query($sql, $types, $vars);
@@ -8,6 +9,7 @@ function tt_query($sql, $types = '', $vars = array()) {
     }
 }
 
+// Faz fetch_assoc somente quando o retorno da query e valido.
 function tt_fetch_assoc_safe($res) {
     if (!($res instanceof mysqli_result)) {
         return array();
@@ -16,10 +18,12 @@ function tt_fetch_assoc_safe($res) {
     return is_array($row) ? $row : array();
 }
 
+// Retorna valor de array com fallback padrao.
 function tt_val($arr, $key, $default = null) {
     return (is_array($arr) && array_key_exists($key, $arr)) ? $arr[$key] : $default;
 }
 
+// Verifica se uma coluna existe em uma tabela.
 function tt_colunaExiste($tabela, $coluna) {
     $tabela = preg_replace('/[^a-zA-Z0-9_]/', '', $tabela);
     $coluna = preg_replace('/[^a-zA-Z0-9_]/', '', $coluna);
@@ -31,6 +35,7 @@ function tt_colunaExiste($tabela, $coluna) {
     return ($res instanceof mysqli_result) && mysqli_num_rows($res) > 0;
 }
 
+// Garante estruturas minimas do modulo (solicitacao, aprovadores e notificacoes).
 function tt_ensureSchema() {
     tt_query("CREATE TABLE IF NOT EXISTS solicitacao_troca_horario (
         soli_nb_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -93,6 +98,7 @@ function tt_ensureSchema() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
 }
 
+// Converte lista CSV de IDs para array de inteiros validos.
 function tt_parseIdsCsv($idsCsv) {
     $idsCsv = trim((string)$idsCsv);
     if ($idsCsv === '') {
@@ -109,6 +115,7 @@ function tt_parseIdsCsv($idsCsv) {
     })));
 }
 
+// Busca nomes de setor/subsetor e retorna tambem seus IDs.
 function tt_buscarSetorSubsetor($entidadeId) {
     $row = tt_fetch_assoc_safe(tt_query(
         "SELECT enti_setor_id, enti_subSetor_id FROM entidade WHERE enti_nb_id = ? LIMIT 1",
@@ -134,6 +141,7 @@ function tt_buscarSetorSubsetor($entidadeId) {
     return array($setor, $subsetor, $setorId, $subsetorId);
 }
 
+// Carrega dados do usuario logado a partir da entidade da sessao.
 function tt_buscarUsuarioAtual() {
     $entidadeId = intval(tt_val($_SESSION, 'user_nb_entidade', 0));
     if ($entidadeId <= 0) {
@@ -152,6 +160,7 @@ function tt_buscarUsuarioAtual() {
     return is_array($r) ? $r : array();
 }
 
+// Busca entidade/usuario ativo pela matricula informada.
 function tt_buscarPorMatricula($matricula) {
     $matricula = preg_replace('/[^A-Za-z0-9\-_]/', '', (string)$matricula);
     if ($matricula === '') {
@@ -170,6 +179,7 @@ function tt_buscarPorMatricula($matricula) {
     return is_array($r) ? $r : array();
 }
 
+// Busca entidades por ID para compor lista de gestores.
 function tt_buscaEntidadesPorIds($ids, $tipo) {
     if (!is_array($ids)) {
         return array();
@@ -201,6 +211,7 @@ function tt_buscaEntidadesPorIds($ids, $tipo) {
     return $out;
 }
 
+// Busca responsaveis de um setor configurado no sistema.
 function tt_buscaResponsaveisSetor($setorId) {
     $setorId = intval($setorId);
     if ($setorId <= 0) {
@@ -219,6 +230,7 @@ function tt_buscaResponsaveisSetor($setorId) {
     return ($res instanceof mysqli_result) ? mysqli_fetch_all($res, MYSQLI_ASSOC) : array();
 }
 
+// Busca responsaveis de uma operacao/cargo configurada no sistema.
 function tt_buscaResponsaveisCargo($cargoId) {
     $cargoId = intval($cargoId);
     if ($cargoId <= 0) {
@@ -237,6 +249,7 @@ function tt_buscaResponsaveisCargo($cargoId) {
     return ($res instanceof mysqli_result) ? mysqli_fetch_all($res, MYSQLI_ASSOC) : array();
 }
 
+// Consolida duas listas de gestores removendo duplicidades por ID.
 function tt_consolidarGestores($a, $b) {
     $a = is_array($a) ? $a : array();
     $b = is_array($b) ? $b : array();
@@ -262,6 +275,7 @@ function tt_consolidarGestores($a, $b) {
     return array_values($map);
 }
 
+// Resolve gestores de uma entidade via responsaveis diretos e por estrutura.
 function tt_obterGestoresPorEntidade($entidadeId) {
     $entidadeId = intval($entidadeId);
     $row = tt_fetch_assoc_safe(tt_query(
@@ -302,6 +316,7 @@ function tt_obterGestoresPorEntidade($entidadeId) {
     return tt_consolidarGestores($gestoresDiretos, $gestoresEstrutura);
 }
 
+// Registra notificacao para usuarios impactados no fluxo de troca de turno.
 function tt_criarNotificacao($idSolicitacao, $idEntidadeDestino, $tipo, $mensagem) {
     $idSolicitacao = intval($idSolicitacao);
     $idEntidadeDestino = intval($idEntidadeDestino);
@@ -321,6 +336,7 @@ function tt_criarNotificacao($idSolicitacao, $idEntidadeDestino, $tipo, $mensage
     );
 }
 
+// Retorna ultimas notificacoes de uma entidade para exibicao na tela.
 function tt_buscarNotificacoes($idEntidade, $limite) {
     $idEntidade = intval($idEntidade);
     $limite = intval($limite);
@@ -349,6 +365,7 @@ function tt_buscarNotificacoes($idEntidade, $limite) {
     return ($res instanceof mysqli_result) ? mysqli_fetch_all($res, MYSQLI_ASSOC) : array();
 }
 
+// Normaliza texto para facilitar comparacao de labels de layout.
 function tt_normalizarTextoDocumento($texto) {
     $texto = trim((string)$texto);
     if ($texto === '') {
@@ -375,6 +392,7 @@ function tt_normalizarTextoDocumento($texto) {
     return trim($texto);
 }
 
+// Formata datas para exibicao em documento dinâmico.
 function tt_formatarDataDocumento($valor) {
     $valor = trim((string)$valor);
     if ($valor === '') {
@@ -394,6 +412,7 @@ function tt_formatarDataDocumento($valor) {
     return $ts ? date('d/m/Y', $ts) : $valor;
 }
 
+// Busca tipo de documento ativo para modelo de Troca de Horario.
 function tt_buscarTipoDocumentoTrocaHorario() {
     $res = tt_query(
         "SELECT tipo_nb_id, tipo_tx_nome, tipo_tx_logo, tipo_tx_cabecalho, tipo_tx_rodape
@@ -413,6 +432,7 @@ function tt_buscarTipoDocumentoTrocaHorario() {
     return tt_fetch_assoc_safe($res);
 }
 
+// Busca campos ativos configurados no layout do tipo de documento.
 function tt_buscarCamposDocumentoTrocaHorario($idTipo) {
     $idTipo = intval($idTipo);
     if ($idTipo <= 0) {
@@ -431,6 +451,7 @@ function tt_buscarCamposDocumentoTrocaHorario($idTipo) {
     return ($res instanceof mysqli_result) ? mysqli_fetch_all($res, MYSQLI_ASSOC) : array();
 }
 
+// Carrega dados completos da solicitacao para preenchimento do documento.
 function tt_buscarSolicitacaoTrocaHorario($idSolicitacao) {
     $idSolicitacao = intval($idSolicitacao);
     if ($idSolicitacao <= 0) {
@@ -455,6 +476,7 @@ function tt_buscarSolicitacaoTrocaHorario($idSolicitacao) {
     return tt_fetch_assoc_safe($res);
 }
 
+// Resolve user ID principal de uma entidade.
 function tt_buscarUserIdPorEntidade($entidadeId) {
     $entidadeId = intval($entidadeId);
     if ($entidadeId <= 0) {
@@ -474,6 +496,7 @@ function tt_buscarUserIdPorEntidade($entidadeId) {
     return intval(tt_val($r, 'user_nb_id', 0));
 }
 
+// Mapeia cada campo do layout para o valor correto da solicitacao aprovada.
 function tt_resolverValorCampoTrocaHorario($campo, $solicitacao, $idUsuarioCriador) {
     $label = tt_normalizarTextoDocumento(tt_val($campo, 'camp_tx_label', ''));
     $tipoCampo = tt_normalizarTextoDocumento(tt_val($campo, 'camp_tx_tipo', ''));
@@ -614,6 +637,7 @@ function tt_resolverValorCampoTrocaHorario($campo, $solicitacao, $idUsuarioCriad
     return $complemento;
 }
 
+// Cria instancia de documento da troca aprovada e grava valores dos campos.
 function tt_gerarDocumentoTrocaHorario($idSolicitacao, $idUsuarioCriador) {
     $idSolicitacao = intval($idSolicitacao);
     $idUsuarioCriador = intval($idUsuarioCriador);

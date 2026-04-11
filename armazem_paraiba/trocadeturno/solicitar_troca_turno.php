@@ -1,4 +1,5 @@
 <?php
+// Escreve trilha tecnica no arquivo de debug do modulo de troca de turno.
 function tt_log_runtime($mensagem) {
     $linha = date('Y-m-d H:i:s')." | ".$mensagem.PHP_EOL;
     @file_put_contents(__DIR__."/../debug_log_trocadeturno.txt", $linha, FILE_APPEND);
@@ -22,10 +23,12 @@ include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form
 
 tt_ensureSchema();
 
+// Acesso seguro a chaves de array sem avisos de indice indefinido.
 function tt_s($arr, $k, $d = '') {
     return (is_array($arr) && isset($arr[$k])) ? $arr[$k] : $d;
 }
 
+// Normaliza datas vindas da tela para formato SQL (Y-m-d).
 function tt_dataParaSql($valor) {
     $valor = trim(strval($valor));
     if ($valor === '') {
@@ -40,6 +43,7 @@ function tt_dataParaSql($valor) {
     return $valor;
 }
 
+// Fluxo principal de gravacao da solicitacao de troca de horario.
 function tt_salvarSolicitacaoTela() {
     if (!function_exists('tt_buscarUsuarioAtual')) {
         include_once __DIR__."/helpers_troca_turno.php";
@@ -184,6 +188,7 @@ function tt_salvarSolicitacaoTela() {
     exit;
 }
 
+// Entry-point do Contex para acao de submit (acao=salvarSolicitacao).
 function salvarSolicitacao() {
     tt_salvarSolicitacaoTela();
 }
@@ -261,16 +266,20 @@ $fieldsSolicitante = array(
     texto('Data da Solicitacao', date('d/m/Y'), 2)
 );
 
+// Data minima d+1
+$dataMinima = date('Y-m-d', strtotime('+1 day'));
+
+
 $fieldsTroca = array(
     "<div class='col-sm-12'><h4 style='border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:12px;margin-top:16px;'><i class='fa fa-exchange'></i> Trabalhara Para</h4></div>",
-    "<div class='col-sm-2 margin-bottom-5'><label>Matricula</label><input type='text' name='matricula_trabalhara' id='matricula_trabalhara' class='form-control input-sm' maxlength='8' placeholder='Digite a matricula...' autocomplete='off'><small id='msg_busca_matricula' style='color:#888;'></small></div>",
+    "<div class='col-sm-1 margin-bottom-5'><label>Matricula</label><input type='text' name='matricula_trabalhara' id='matricula_trabalhara' class='form-control input-sm' maxlength='8' placeholder='Digite a matricula...' autocomplete='off'><small id='msg_busca_matricula' style='color:#888;'></small></div>",
     "<div class='col-sm-1 margin-bottom-5'><label>&nbsp;</label><button type='button' class='btn btn-sm btn-default form-control input-sm' id='btn_buscar_matricula'><i class='fa fa-search'></i></button></div>",
     "<div class='col-sm-3 margin-bottom-5'><label>Nome</label><input type='text' name='nome_trabalhara' id='nome_trabalhara' class='form-control input-sm' readonly></div>",
     "<div class='col-sm-2 margin-bottom-5'><label>Setor</label><input type='text' name='setor_trabalhara' id='setor_trabalhara' class='form-control input-sm' readonly></div>",
     "<div class='col-sm-2 margin-bottom-5'><label>Subsetor</label><input type='text' name='subsetor_trabalhara' id='subsetor_trabalhara' class='form-control input-sm' readonly></div>",
-    campo_data('Data da Troca', 'data_troca', '', 2),
-    combo('Turno da Troca', 'turno_troca', '', 2, $turnos),
-    campo_data('Data que Pagara', 'data_pagara', '', 2),
+    campo_data('Data da Troca', 'data_troca', '', 2, "min='$dataMinima'"),
+    combo('Turno', 'turno_troca', '', 2, $turnos),
+    campo_data('Data que Pagara', 'data_pagara', '', 2, "min='$dataMinima'"),
     combo('Turno que Pagara', 'turno_pagara', '', 2, $turnos),
     textarea('Complemento', 'complemento', '', 12, "rows='3' placeholder='Observacoes ou informacoes adicionais...'")
 );
@@ -286,6 +295,7 @@ echo linha_form($fieldsTroca);
 echo fecha_form($buttons);
 
 echo "<script>
+// Busca dados do colaborador informado e preenche os campos da tela.
 function preencherPorMatricula(){
  var matEl=document.getElementById('matricula_trabalhara');
  var msg=document.getElementById('msg_busca_matricula');
@@ -319,6 +329,7 @@ function preencherPorMatricula(){
  .catch(function(){ if(msg){msg.innerHTML='<span style=\'color:red;\'>Erro ao buscar</span>';}});
 }
 
+// Liga os eventos da UI quando a pagina termina de carregar.
 document.addEventListener('DOMContentLoaded', function(){
  var btn=document.getElementById('btn_buscar_matricula');
  var input=document.getElementById('matricula_trabalhara');

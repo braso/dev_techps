@@ -1,6 +1,7 @@
 <?php
 include_once __DIR__."/helpers_troca_turno.php";
 
+// Acesso seguro a chaves de array sem gerar aviso quando nao existir.
 function tg($arr, $k, $d = '') {
     return (is_array($arr) && isset($arr[$k])) ? $arr[$k] : $d;
 }
@@ -10,6 +11,7 @@ function tt_setFlashGestao($mensagem, $erro) {
     $_SESSION['tt_gestao_erro'] = ($erro ? 1 : 0);
 }
 
+// Le e limpa mensagem temporaria de retorno da acao de gestor.
 function tt_getFlashGestao() {
     $mensagem = strval(tg($_SESSION, 'tt_gestao_msg', ''));
     $erro = intval(tg($_SESSION, 'tt_gestao_erro', 0)) === 1;
@@ -18,6 +20,7 @@ function tt_getFlashGestao() {
     return array($mensagem, $erro);
 }
 
+// Processa aprovacao/reprovacao da solicitacao pelo gestor logado.
 function tt_processarDecisaoGestor() {
     $idUser = intval(tg($_SESSION, 'user_nb_id', 0));
     $idEntidade = intval(tg($_SESSION, 'user_nb_entidade', 0));
@@ -92,6 +95,7 @@ function tt_processarDecisaoGestor() {
     return array('Solicitacao '.($decisao === 'aprovado' ? 'aprovada' : 'rejeitada').' com sucesso.', false);
 }
 
+// Entry-point do Contex para acao do formulario (acao=decidir).
 function decidir() {
     list($mensagem, $erro) = tt_processarDecisaoGestor();
     tt_setFlashGestao($mensagem, $erro);

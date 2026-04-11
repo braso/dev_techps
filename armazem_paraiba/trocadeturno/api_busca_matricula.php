@@ -8,6 +8,7 @@ ini_set('display_errors', '0');
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
+// Retorna sempre JSON limpo e encerra a execucao do endpoint.
 function tt_json_out($arr) {
     if (ob_get_length()) {
         ob_clean();
