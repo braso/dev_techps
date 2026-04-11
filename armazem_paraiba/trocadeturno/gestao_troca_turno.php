@@ -85,6 +85,10 @@ function tt_processarDecisaoGestor() {
         tt_criarNotificacao($idSolicitacao, intval(tg($sol, 'soli_nb_entidade_destino', 0)), 'resultado', $msg);
     }
 
+    if ($decisao === 'aprovado') {
+        tt_gerarDocumentoTrocaHorario($idSolicitacao, $idUser);
+    }
+
     return array('Solicitacao '.($decisao === 'aprovado' ? 'aprovada' : 'rejeitada').' com sucesso.', false);
 }
 

@@ -348,3 +348,308 @@ function tt_buscarNotificacoes($idEntidade, $limite) {
 
     return ($res instanceof mysqli_result) ? mysqli_fetch_all($res, MYSQLI_ASSOC) : array();
 }
+
+function tt_normalizarTextoDocumento($texto) {
+    $texto = trim((string)$texto);
+    if ($texto === '') {
+        return '';
+    }
+
+    $texto = html_entity_decode($texto, ENT_QUOTES, 'UTF-8');
+    $texto = strtr($texto, array(
+        'á' => 'a', 'à' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a',
+        'Á' => 'a', 'À' => 'a', 'Â' => 'a', 'Ã' => 'a', 'Ä' => 'a',
+        'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
+        'É' => 'e', 'È' => 'e', 'Ê' => 'e', 'Ë' => 'e',
+        'í' => 'i', 'ì' => 'i', 'î' => 'i', 'ï' => 'i',
+        'Í' => 'i', 'Ì' => 'i', 'Î' => 'i', 'Ï' => 'i',
+        'ó' => 'o', 'ò' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o',
+        'Ó' => 'o', 'Ò' => 'o', 'Ô' => 'o', 'Õ' => 'o', 'Ö' => 'o',
+        'ú' => 'u', 'ù' => 'u', 'û' => 'u', 'ü' => 'u',
+        'Ú' => 'u', 'Ù' => 'u', 'Û' => 'u', 'Ü' => 'u',
+        'ç' => 'c', 'Ç' => 'c', 'ñ' => 'n', 'Ñ' => 'n'
+    ));
+
+    $texto = strtolower($texto);
+    $texto = preg_replace('/[^a-z0-9]+/', ' ', $texto);
+    return trim($texto);
+}
+
+function tt_formatarDataDocumento($valor) {
+    $valor = trim((string)$valor);
+    if ($valor === '') {
+        return '';
+    }
+
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor)) {
+        $ts = strtotime($valor);
+        return $ts ? date('d/m/Y', $ts) : $valor;
+    }
+
+    if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $valor)) {
+        return $valor;
+    }
+
+    $ts = strtotime($valor);
+    return $ts ? date('d/m/Y', $ts) : $valor;
+}
+
+function tt_buscarTipoDocumentoTrocaHorario() {
+    $res = tt_query(
+        "SELECT tipo_nb_id, tipo_tx_nome, tipo_tx_logo, tipo_tx_cabecalho, tipo_tx_rodape
+         FROM tipos_documentos
+         WHERE tipo_tx_status = 'ativo'
+           AND (
+                tipo_tx_nome = ?
+                OR tipo_tx_nome = ?
+                OR tipo_tx_nome LIKE ?
+           )
+         ORDER BY tipo_nb_id ASC
+         LIMIT 1",
+        "sss",
+        array('Troca de Horário', 'Troca de Horario', 'Troca de Hor%')
+    );
+
+    return tt_fetch_assoc_safe($res);
+}
+
+function tt_buscarCamposDocumentoTrocaHorario($idTipo) {
+    $idTipo = intval($idTipo);
+    if ($idTipo <= 0) {
+        return array();
+    }
+
+    $res = tt_query(
+        "SELECT *
+         FROM camp_documento_modulo
+         WHERE camp_nb_tipo_doc = ? AND camp_tx_status = 'ativo'
+         ORDER BY camp_nb_ordem ASC, camp_nb_id ASC",
+        "i",
+        array($idTipo)
+    );
+
+    return ($res instanceof mysqli_result) ? mysqli_fetch_all($res, MYSQLI_ASSOC) : array();
+}
+
+function tt_buscarSolicitacaoTrocaHorario($idSolicitacao) {
+    $idSolicitacao = intval($idSolicitacao);
+    if ($idSolicitacao <= 0) {
+        return array();
+    }
+
+    $res = tt_query(
+        "SELECT s.*, 
+                us.user_tx_nome AS solicitante_user_nome,
+                ud.user_tx_nome AS destino_user_nome,
+                ug.user_tx_nome AS decisor_user_nome
+         FROM solicitacao_troca_horario s
+         LEFT JOIN user us ON us.user_nb_entidade = s.soli_nb_entidade
+         LEFT JOIN user ud ON ud.user_nb_entidade = s.soli_nb_entidade_destino
+         LEFT JOIN user ug ON ug.user_nb_id = s.soli_nb_user_visto
+         WHERE s.soli_nb_id = ?
+         LIMIT 1",
+        "i",
+        array($idSolicitacao)
+    );
+
+    return tt_fetch_assoc_safe($res);
+}
+
+function tt_resolverValorCampoTrocaHorario($campo, $solicitacao, $idUsuarioCriador) {
+    $label = tt_normalizarTextoDocumento(tt_val($campo, 'camp_tx_label', ''));
+    $tipoCampo = tt_normalizarTextoDocumento(tt_val($campo, 'camp_tx_tipo', ''));
+
+    $nomeSolicitante = trim((string)tt_val($solicitacao, 'soli_tx_nome_solicitante', ''));
+    $matriculaSolicitante = trim((string)tt_val($solicitacao, 'soli_tx_matricula_solicitante', ''));
+    $setorSolicitante = trim((string)tt_val($solicitacao, 'soli_tx_setor_solicitante', ''));
+    $subsetorSolicitante = trim((string)tt_val($solicitacao, 'soli_tx_subsetor_solicitante', ''));
+    $cpfSolicitante = trim((string)tt_val($solicitacao, 'soli_tx_cpf_solicitante', ''));
+    $nomeDestino = trim((string)tt_val($solicitacao, 'soli_tx_nome_trabalhara', ''));
+    $setorDestino = trim((string)tt_val($solicitacao, 'soli_tx_setor_trabalhara', ''));
+    $subsetorDestino = trim((string)tt_val($solicitacao, 'soli_tx_subsetor_trabalhara', ''));
+    $dataSolicitacao = tt_formatarDataDocumento(tt_val($solicitacao, 'soli_tx_data_solicitacao', ''));
+    $dataTroca = tt_formatarDataDocumento(tt_val($solicitacao, 'soli_tx_data_troca', ''));
+    $dataPagara = tt_formatarDataDocumento(tt_val($solicitacao, 'soli_tx_data_pagara', ''));
+    $turnoTroca = trim((string)tt_val($solicitacao, 'soli_tx_turno_troca', ''));
+    $turnoPagara = trim((string)tt_val($solicitacao, 'soli_tx_turno_pagara', ''));
+    $complemento = trim((string)tt_val($solicitacao, 'soli_tx_complemento', ''));
+    $statusGestor = trim((string)tt_val($solicitacao, 'soli_tx_status_gestor', ''));
+    $decisorNome = trim((string)tt_val($solicitacao, 'decisor_user_nome', ''));
+    $criadorNome = '';
+
+    if (intval($idUsuarioCriador) > 0) {
+        $u = tt_fetch_assoc_safe(tt_query(
+            "SELECT user_tx_nome, user_tx_login
+             FROM user
+             WHERE user_nb_id = ?
+             LIMIT 1",
+            "i",
+            array(intval($idUsuarioCriador))
+        ));
+        $criadorNome = trim((string)tt_val($u, 'user_tx_nome', ''));
+        if ($criadorNome === '') {
+            $criadorNome = trim((string)tt_val($u, 'user_tx_login', ''));
+        }
+    }
+
+    if ($label === '') {
+        return '';
+    }
+
+    if (strpos($label, 'cpf') !== false) {
+        return $cpfSolicitante;
+    }
+
+    if (strpos($label, 'matricula') !== false || strpos($label, 'matr cula') !== false) {
+        if (strpos($label, 'dest') !== false || strpos($label, 'trabalh') !== false) {
+            return trim((string)tt_val($solicitacao, 'soli_tx_matricula_trabalhara', ''));
+        }
+        return $matriculaSolicitante;
+    }
+
+    if (strpos($label, 'subsetor') !== false) {
+        if (strpos($label, 'dest') !== false || strpos($label, 'trabalh') !== false) {
+            return $subsetorDestino;
+        }
+        return $subsetorSolicitante;
+    }
+
+    if (strpos($label, 'setor') !== false) {
+        if (strpos($label, 'dest') !== false || strpos($label, 'trabalh') !== false) {
+            return $setorDestino;
+        }
+        return $setorSolicitante;
+    }
+
+    if (strpos($label, 'turno') !== false) {
+        if (strpos($label, 'pag') !== false) {
+            return $turnoPagara;
+        }
+        return $turnoTroca;
+    }
+
+    if (strpos($label, 'data') !== false) {
+        if (strpos($label, 'pag') !== false) {
+            return $dataPagara;
+        }
+        if (strpos($label, 'troca') !== false) {
+            return $dataTroca;
+        }
+        if (strpos($label, 'solicit') !== false || strpos($label, 'geracao') !== false || strpos($label, 'cadastro') !== false) {
+            return $dataSolicitacao;
+        }
+        return $dataSolicitacao;
+    }
+
+    if (strpos($label, 'complement') !== false || strpos($label, 'observ') !== false || strpos($label, 'justific') !== false) {
+        return $complemento;
+    }
+
+    if (strpos($label, 'nome') !== false) {
+        if (strpos($label, 'dest') !== false || strpos($label, 'trabalh') !== false) {
+            return $nomeDestino;
+        }
+        if (strpos($label, 'decisor') !== false || strpos($label, 'gestor') !== false || strpos($label, 'aprov') !== false) {
+            return $decisorNome;
+        }
+        if (strpos($label, 'criador') !== false || strpos($label, 'emit') !== false) {
+            return $criadorNome;
+        }
+        return $nomeSolicitante;
+    }
+
+    if ($tipoCampo === 'usuario') {
+        return $nomeSolicitante;
+    }
+
+    if ($tipoCampo === 'setor') {
+        return $setorSolicitante;
+    }
+
+    if ($tipoCampo === 'data') {
+        return $dataSolicitacao;
+    }
+
+    if ($tipoCampo === 'number') {
+        return '';
+    }
+
+    if ($tipoCampo === 'selecao') {
+        if (strpos($label, 'status') !== false || strpos($label, 'decis') !== false || strpos($label, 'aprov') !== false) {
+            return ucfirst($statusGestor);
+        }
+    }
+
+    return $complemento;
+}
+
+function tt_gerarDocumentoTrocaHorario($idSolicitacao, $idUsuarioCriador) {
+    $idSolicitacao = intval($idSolicitacao);
+    $idUsuarioCriador = intval($idUsuarioCriador);
+
+    if ($idSolicitacao <= 0) {
+        return 0;
+    }
+
+    $solicitacao = tt_buscarSolicitacaoTrocaHorario($idSolicitacao);
+    if (empty($solicitacao)) {
+        return 0;
+    }
+
+    $idInstanciaJa = intval(tt_val($solicitacao, 'soli_nb_id_instancia', 0));
+    if ($idInstanciaJa > 0) {
+        return $idInstanciaJa;
+    }
+
+    $tipo = tt_buscarTipoDocumentoTrocaHorario();
+    if (empty($tipo)) {
+        return 0;
+    }
+
+    $idTipo = intval(tt_val($tipo, 'tipo_nb_id', 0));
+    if ($idTipo <= 0) {
+        return 0;
+    }
+
+    $campos = tt_buscarCamposDocumentoTrocaHorario($idTipo);
+    if (empty($campos)) {
+        return 0;
+    }
+
+    $dadosInst = array(
+        'inst_nb_tipo_doc' => $idTipo,
+        'inst_nb_user' => ($idUsuarioCriador > 0 ? $idUsuarioCriador : intval(tt_val($solicitacao, 'soli_nb_user_visto', 0))),
+        'inst_tx_status' => 'ativo'
+    );
+
+    $resInst = inserir('inst_documento_modulo', array_keys($dadosInst), array_values($dadosInst));
+    $idInstancia = 0;
+    if (is_array($resInst) && isset($resInst[0]) && is_numeric($resInst[0])) {
+        $idInstancia = intval($resInst[0]);
+    }
+
+    if ($idInstancia <= 0) {
+        return 0;
+    }
+
+    foreach ($campos as $campo) {
+        $valor = tt_resolverValorCampoTrocaHorario($campo, $solicitacao, $idUsuarioCriador);
+
+        $dadosValor = array(
+            'valo_nb_instancia' => $idInstancia,
+            'valo_nb_campo' => intval(tt_val($campo, 'camp_nb_id', 0)),
+            'valo_tx_valor' => strval($valor),
+            'valo_tx_status' => 'ativo'
+        );
+
+        inserir('valo_documento_modulo', array_keys($dadosValor), array_values($dadosValor));
+    }
+
+    tt_query(
+        "UPDATE solicitacao_troca_horario SET soli_nb_id_instancia = ? WHERE soli_nb_id = ?",
+        "ii",
+        array($idInstancia, $idSolicitacao)
+    );
+
+    return $idInstancia;
+}
