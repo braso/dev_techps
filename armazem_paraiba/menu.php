@@ -66,7 +66,9 @@
 				"/nao_cadastrados.php" 	=> "Não Cadastrados",
 				"/nao_conformidade.php" => "Não Conformidades",
 				"/ponto_auditoria.php" => "Auditoria",
-                "/telas/gerenciar_ajustes.php" => "Gerenciar Ajustes"
+                "/telas/gerenciar_ajustes.php" => "Gerenciar Ajustes",
+                "/trocadeturno/gestao_troca_turno.php" => "Gestão de Turno",
+                "/trocadeturno/solicitar_troca_turno.php" => "Troca de Turno"
 			],
 			"painel" => [
 				"/paineis/ajustes.php"			=> "Ajustes",
