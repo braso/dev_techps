@@ -89,7 +89,10 @@ function tt_processarDecisaoGestor() {
     }
 
     if ($decisao === 'aprovado') {
-        tt_gerarDocumentoTrocaHorario($idSolicitacao, $idUser);
+        $idInstancia = tt_gerarDocumentoTrocaHorario($idSolicitacao, $idUser);
+        if ($idInstancia > 0) {
+            tt_enviarDocumentoTrocaHorarioParaAssinatura($idSolicitacao, $idInstancia);
+        }
     }
 
     return array('Solicitacao '.($decisao === 'aprovado' ? 'aprovada' : 'rejeitada').' com sucesso.', false);

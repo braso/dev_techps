@@ -40,12 +40,15 @@ while ($v = mysqli_fetch_assoc($res_v)) {
     $valores[] = $v;
 }
 
+
 // 3. Configuração do PDF
+// Classe de renderizacao do PDF com cabecalho/rodape customizados.
 class MYPDF extends TCPDF {
     public $custom_header = "";
     public $custom_footer = "";
     public $logo_path = "";
 
+    // Monta cabecalho da pagina (logo e titulo do tipo de documento).
     public function Header() {
         if (!empty($this->logo_path)) {
             $logo_path = $this->logo_path;
@@ -56,16 +59,30 @@ class MYPDF extends TCPDF {
             }
 
             if ($logo_path && file_exists($logo_path)) {
-                $this->Image($logo_path, 15, 8, 25);
+                $maxWidth  = 30;
+                $maxHeight = 20;
+
+                $this->Image(
+                    $logo_path,
+                    15, // posição X
+                    8,  // posição Y
+                    $maxWidth,
+                    $maxHeight,
+                    '',
+                    '',
+                    '',
+                    true // mantém proporção dentro da "caixa"
+                );
             }
         }
         
         $this->SetY(15);
         $this->SetFont('helvetica', 'B', 14);
-        $this->Cell(0, 15, strtoupper($this->custom_header), 0, false, 'C', 0, '', 0, false, 'M', 'M');
+        $this->Cell(0, 15, mb_strtoupper($this->custom_header, 'UTF-8'), 0, false, 'C', 0, '', 0, false, 'M', 'M');
         $this->Line(15, 28, 195, 28);
     }
 
+    // Monta rodape com data/hora de geracao e numeracao de paginas.
     public function Footer() {
         $this->SetY(-15);
         $this->SetFont('helvetica', 'I', 8);

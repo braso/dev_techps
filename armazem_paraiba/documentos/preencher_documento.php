@@ -1,6 +1,7 @@
 <?php
 include_once "../conecta.php";
 
+// Salva uma nova instancia de documento e seus valores de campos.
 function salvarDocumento() {
     global $conn;
     $id_tipo = $_POST['id_tipo'];
@@ -32,6 +33,7 @@ function salvarDocumento() {
     exit;
 }
 
+// Renderiza formulario dinamico de preenchimento conforme layout configurado.
 function index() {
     global $conn;
     cabecalho("Preencher Documento");

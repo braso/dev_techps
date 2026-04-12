@@ -713,3 +713,288 @@ function tt_gerarDocumentoTrocaHorario($idSolicitacao, $idUsuarioCriador) {
 
     return $idInstancia;
 }
+
+// Busca dados basicos de uma entidade para compor signatarios.
+function tt_buscarEntidadeBasica($idEntidade) {
+    $idEntidade = intval($idEntidade);
+    if ($idEntidade <= 0) {
+        return array();
+    }
+
+    $res = tt_query(
+        "SELECT enti_nb_id, enti_tx_nome, enti_tx_email
+         FROM entidade
+         WHERE enti_nb_id = ?
+         LIMIT 1",
+        "i",
+        array($idEntidade)
+    );
+
+    return tt_fetch_assoc_safe($res);
+}
+
+// Resolve entidade vinculada ao usuario aprovador.
+function tt_buscarEntidadePorUser($idUser) {
+    $idUser = intval($idUser);
+    if ($idUser <= 0) {
+        return 0;
+    }
+
+    $res = tt_query(
+        "SELECT user_nb_entidade
+         FROM user
+         WHERE user_nb_id = ?
+         LIMIT 1",
+        "i",
+        array($idUser)
+    );
+
+    $row = tt_fetch_assoc_safe($res);
+    return intval(tt_val($row, 'user_nb_entidade', 0));
+}
+
+// Monta os 3 signatarios da troca (solicitante, destino e aprovador), sem hierarquia.
+function tt_montarSignatariosTrocaHorario($solicitacao) {
+    $idSolicitante = intval(tt_val($solicitacao, 'soli_nb_entidade', 0));
+    $idDestino = intval(tt_val($solicitacao, 'soli_nb_entidade_destino', 0));
+    $idAprovadorEntidade = tt_buscarEntidadePorUser(intval(tt_val($solicitacao, 'soli_nb_user_visto', 0)));
+
+    $signatarios = array();
+    $map = array();
+
+    $itens = array(
+        array('id' => $idSolicitante, 'funcao' => 'Solicitante'),
+        array('id' => $idDestino, 'funcao' => 'Trabalhara para'),
+        array('id' => $idAprovadorEntidade, 'funcao' => 'Aprovador')
+    );
+
+    foreach ($itens as $item) {
+        $idEnt = intval(tt_val($item, 'id', 0));
+        if ($idEnt <= 0 || isset($map[$idEnt])) {
+            continue;
+        }
+
+        $ent = tt_buscarEntidadeBasica($idEnt);
+        $email = trim((string)tt_val($ent, 'enti_tx_email', ''));
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            continue;
+        }
+
+        $signatarios[] = array(
+            'enti_nb_id' => intval(tt_val($ent, 'enti_nb_id', 0)),
+            'funcao' => strval(tt_val($item, 'funcao', 'Signatario')),
+            // Ordem igual para todos = assinatura sem hierarquia.
+            'ordem' => 1
+        );
+        $map[$idEnt] = true;
+    }
+
+    return $signatarios;
+}
+
+// Gera PDF fisico do documento dinamico para envio ao modulo de assinatura.
+function tt_gerarArquivoPdfInstanciaDocumento($idInstancia) {
+    $idInstancia = intval($idInstancia);
+    if ($idInstancia <= 0) {
+        return '';
+    }
+
+    $inst = tt_fetch_assoc_safe(tt_query(
+        "SELECT i.inst_nb_id, i.inst_nb_tipo_doc, i.inst_nb_user,
+                t.tipo_tx_nome, t.tipo_tx_logo, t.tipo_tx_cabecalho, t.tipo_tx_rodape,
+                u.user_tx_nome AS criador_nome
+         FROM inst_documento_modulo i
+         INNER JOIN tipos_documentos t ON t.tipo_nb_id = i.inst_nb_tipo_doc
+         INNER JOIN user u ON u.user_nb_id = i.inst_nb_user
+         WHERE i.inst_nb_id = ?
+         LIMIT 1",
+        "i",
+        array($idInstancia)
+    ));
+
+    if (empty($inst)) {
+        return '';
+    }
+
+    $campos = array();
+    $resCampos = tt_query(
+        "SELECT c.camp_tx_label, v.valo_tx_valor
+         FROM valo_documento_modulo v
+         INNER JOIN camp_documento_modulo c ON c.camp_nb_id = v.valo_nb_campo
+         WHERE v.valo_nb_instancia = ?
+         ORDER BY c.camp_nb_ordem ASC, c.camp_nb_id ASC",
+        "i",
+        array($idInstancia)
+    );
+    if ($resCampos instanceof mysqli_result) {
+        while ($r = mysqli_fetch_assoc($resCampos)) {
+            $campos[] = $r;
+        }
+    }
+
+    if (empty($campos)) {
+        return '';
+    }
+
+    $tcpdfPath = dirname(__DIR__) . '/tcpdf/tcpdf.php';
+    if (!file_exists($tcpdfPath)) {
+        return '';
+    }
+
+    require_once $tcpdfPath;
+
+    if (!class_exists('TT_MYPDF')) {
+        class TT_MYPDF extends TCPDF {
+            public $custom_header = '';
+            public $logo_path = '';
+
+            public function Header() {
+                if (!empty($this->logo_path)) {
+                    $logo_path = strval($this->logo_path);
+                    if (strpos($logo_path, '../') === 0) {
+                        $logo_path = realpath(dirname(__DIR__) . '/' . $logo_path);
+                    } else {
+                        $logo_path = realpath($logo_path);
+                    }
+
+                    if ($logo_path && file_exists($logo_path)) {
+                        $this->Image($logo_path, 15, 8, 30, 20, '', '', '', true);
+                    }
+                }
+
+                $this->SetY(15);
+                $this->SetFont('helvetica', 'B', 14);
+                $this->Cell(0, 15, mb_strtoupper($this->custom_header, 'UTF-8'), 0, false, 'C', 0, '', 0, false, 'M', 'M');
+                $this->Line(15, 28, 195, 28);
+            }
+
+            public function Footer() {
+                $this->SetY(-15);
+                $this->SetFont('helvetica', 'I', 8);
+                $footer_text = 'Gerado em ' . date('d/m/Y H:i:s');
+                $this->Cell(0, 10, $footer_text . ' | Pagina ' . $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, false, 'C', 0, '', 0, false, 'T', 'M');
+            }
+        }
+    }
+
+    $pdf = new TT_MYPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+    $pdf->custom_header = strval(tt_val($inst, 'tipo_tx_nome', 'Troca de Horario'));
+    $pdf->logo_path = strval(tt_val($inst, 'tipo_tx_logo', ''));
+    $pdf->SetCreator(PDF_CREATOR);
+    $pdf->SetAuthor('Sistema Braso');
+    $pdf->SetTitle(strval(tt_val($inst, 'tipo_tx_nome', 'Troca de Horario')));
+    $pdf->SetMargins(15, 35, 15);
+    $pdf->SetAutoPageBreak(true, 15);
+    $pdf->AddPage();
+    $pdf->SetFont('helvetica', '', 11);
+
+    $html = '<table cellpadding="3" border="0" style="width:100%;">';
+    $html .= '<tr><td style="border-bottom:0.1pt solid #ddd;"><b>Data de Geracao:</b> ' . date('d/m/Y H:i') . '</td></tr>';
+    $html .= '<tr><td style="border-bottom:0.1pt solid #ddd;"><b>Emitido por:</b> ' . htmlspecialchars(strval(tt_val($inst, 'criador_nome', '')), ENT_QUOTES, 'UTF-8') . '</td></tr>';
+    $html .= '</table><br><br>';
+
+    foreach ($campos as $c) {
+        $label = htmlspecialchars(strval(tt_val($c, 'camp_tx_label', '')), ENT_QUOTES, 'UTF-8');
+        $valorBruto = strval(tt_val($c, 'valo_tx_valor', ''));
+        if (trim($valorBruto) === '') {
+            continue;
+        }
+
+        if (strpos($valorBruto, '<table') !== false) {
+            $html .= '<br><b>' . $label . ':</b><br>';
+            $html .= $valorBruto . '<br>';
+        } else {
+            $valor = htmlspecialchars($valorBruto, ENT_QUOTES, 'UTF-8');
+            $html .= '<table cellpadding="4" border="0" style="width:100%;">';
+            $html .= '<tr>';
+            $html .= '<td width="30%" style="border-bottom:0.1pt solid #eee;"><b>' . $label . ':</b></td>';
+            $html .= '<td width="70%" style="border-bottom:0.1pt solid #eee;">' . $valor . '</td>';
+            $html .= '</tr>';
+            $html .= '</table>';
+        }
+    }
+
+    $pdf->writeHTML($html, true, false, true, false, '');
+
+    $dir = dirname(__DIR__) . '/arquivos/trocadeturno_pdf';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0777, true);
+    }
+
+    $nomeArquivo = 'troca_turno_' . $idInstancia . '_' . date('YmdHis') . '.pdf';
+    $caminho = str_replace('\\', '/', rtrim($dir, '/\\')) . '/' . $nomeArquivo;
+    $pdf->Output($caminho, 'F');
+
+    return file_exists($caminho) ? $caminho : '';
+}
+
+// Envia documento da troca aprovada para assinatura ICP-Brasil de 3 partes, sem hierarquia.
+function tt_enviarDocumentoTrocaHorarioParaAssinatura($idSolicitacao, $idInstancia) {
+    $idSolicitacao = intval($idSolicitacao);
+    $idInstancia = intval($idInstancia);
+
+    if ($idSolicitacao <= 0 || $idInstancia <= 0) {
+        return array('ok' => false, 'error' => 'Parametros invalidos para assinatura.');
+    }
+
+    $solicitacao = tt_buscarSolicitacaoTrocaHorario($idSolicitacao);
+    if (empty($solicitacao)) {
+        return array('ok' => false, 'error' => 'Solicitacao nao encontrada para assinatura.');
+    }
+
+    $grupoEnvio = 'troca_turno_' . $idSolicitacao;
+    $jaExiste = tt_fetch_assoc_safe(tt_query(
+        "SELECT id
+         FROM solicitacoes_assinatura
+         WHERE grupo_envio = ?
+           AND status IN ('pendente', 'parcial', 'concluido')
+         ORDER BY id DESC
+         LIMIT 1",
+        "s",
+        array($grupoEnvio)
+    ));
+    if (!empty($jaExiste)) {
+        return array('ok' => true, 'id_solicitacao' => intval(tt_val($jaExiste, 'id', 0)), 'ja_existia' => true);
+    }
+
+    $arquivoPdf = tt_gerarArquivoPdfInstanciaDocumento($idInstancia);
+    if ($arquivoPdf === '') {
+        return array('ok' => false, 'error' => 'Nao foi possivel gerar PDF para assinatura.');
+    }
+
+    $signatarios = tt_montarSignatariosTrocaHorario($solicitacao);
+    if (count($signatarios) < 3) {
+        return array('ok' => false, 'error' => 'Nao foi possivel identificar os 3 signatarios obrigatorios.');
+    }
+
+    $integracaoPath = dirname(__DIR__) . '/assinatura/integracao/assinatura_integracao.php';
+    if (!file_exists($integracaoPath)) {
+        return array('ok' => false, 'error' => 'Modulo de integracao de assinatura nao encontrado.');
+    }
+
+    require_once $integracaoPath;
+
+    if (!function_exists('assinatura_integracao_enviarDocumentoParaMultiplosAssinantes')) {
+        return array('ok' => false, 'error' => 'Funcao de integracao multiassinante indisponivel.');
+    }
+
+    global $conn;
+    if (!($conn instanceof mysqli)) {
+        return array('ok' => false, 'error' => 'Conexao de banco indisponivel para assinatura.');
+    }
+
+    return assinatura_integracao_enviarDocumentoParaMultiplosAssinantes(
+        $conn,
+        $arquivoPdf,
+        $signatarios,
+        array(
+            'nome_arquivo_original' => 'troca_horario_' . $idSolicitacao . '.pdf',
+            'id_documento' => 'INST_' . $idInstancia,
+            'grupo_envio' => $grupoEnvio,
+            'modo_envio' => 'avulso',
+            'validar_icp' => 'sim',
+            'salvar_documento_funcionario' => 'sim',
+            'apagar_origem' => true
+        )
+    );
+}

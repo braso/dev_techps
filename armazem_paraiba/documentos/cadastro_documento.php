@@ -3,6 +3,7 @@ include_once "../conecta.php";
 
 echo "
 <script>
+    // Esconde o loading visual da pagina apos o carregamento inicial.
     function hideLoading() {
         if(document.getElementsByClassName('loading')[0] != undefined){
             document.getElementsByClassName('loading')[0].style.display = 'none';
@@ -12,6 +13,7 @@ echo "
     setTimeout(hideLoading, 3000);
 </script>";
 
+// Tela inicial para escolha do modelo de documento antes do preenchimento.
 function novoDocumento() {
     cabecalho("Novo Documento");
     
@@ -40,6 +42,7 @@ function novoDocumento() {
     rodape();
 }
 
+// Valida o tipo escolhido e redireciona para a tela de preenchimento.
 function irParaPreenchimento() {
     $id_tipo = $_POST['id_tipo'] ?? $_GET['id_tipo'] ?? 0;
     if (empty($id_tipo)) {
@@ -51,6 +54,7 @@ function irParaPreenchimento() {
     exit;
 }
 
+// Lista documentos gerados e disponibiliza acoes de PDF/exclusao.
 function index() {
     global $conn;
     cabecalho("Gestão de Documentos");
@@ -95,11 +99,39 @@ function index() {
         "busca_user" => "user_tx_login"
     ];
 
-    $queryBase = "SELECT i.*, t.tipo_tx_nome, u.user_tx_nome 
-                  FROM inst_documento_modulo i
-                  JOIN tipos_documentos t ON i.inst_nb_tipo_doc = t.tipo_nb_id
-                  JOIN user u ON i.inst_nb_user = u.user_nb_id
-                  WHERE i.inst_tx_status = 'ativo'";
+    $assinaturaExiste = false;
+    $chkAss = @mysqli_query($conn, "SHOW TABLES LIKE 'solicitacoes_assinatura'");
+    if ($chkAss instanceof mysqli_result && mysqli_num_rows($chkAss) > 0) {
+        $assinaturaExiste = true;
+    }
+
+    if ($assinaturaExiste) {
+        $queryBase = "SELECT i.*, t.tipo_tx_nome, u.user_tx_nome,
+                             sa.caminho_arquivo AS assinatura_caminho,
+                             sa.status AS assinatura_status
+                      FROM inst_documento_modulo i
+                      JOIN tipos_documentos t ON i.inst_nb_tipo_doc = t.tipo_nb_id
+                      JOIN user u ON i.inst_nb_user = u.user_nb_id
+                      LEFT JOIN (
+                            SELECT s1.id_documento, s1.caminho_arquivo, s1.status
+                            FROM solicitacoes_assinatura s1
+                            INNER JOIN (
+                                SELECT id_documento, MAX(id) AS max_id
+                                FROM solicitacoes_assinatura
+                                WHERE id_documento <> ''
+                                GROUP BY id_documento
+                            ) ult ON ult.max_id = s1.id
+                      ) sa ON sa.id_documento = CONCAT('INST_', i.inst_nb_id)
+                      WHERE i.inst_tx_status = 'ativo'";
+    } else {
+        $queryBase = "SELECT i.*, t.tipo_tx_nome, u.user_tx_nome,
+                             '' AS assinatura_caminho,
+                             '' AS assinatura_status
+                      FROM inst_documento_modulo i
+                      JOIN tipos_documentos t ON i.inst_nb_tipo_doc = t.tipo_nb_id
+                      JOIN user u ON i.inst_nb_user = u.user_nb_id
+                      WHERE i.inst_tx_status = 'ativo'";
+    }
     
     // Icones para Visualizar/Gerar PDF e Excluir
     $actions = [
@@ -122,6 +154,16 @@ function index() {
     echo "<thead><tr><th>ID</th><th>Tipo</th><th>Usuário</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead>";
     echo "<tbody>";
     while ($row = mysqli_fetch_assoc($res)) {
+        $pdfLink = 'processar_pdf.php?id=' . intval($row['inst_nb_id']);
+        $caminhoAss = trim(strval($row['assinatura_caminho'] ?? ''));
+        if ($caminhoAss !== '') {
+            $candidatoAbs = realpath(__DIR__ . '/../assinatura/' . ltrim($caminhoAss, '/\\'));
+            if ($candidatoAbs && file_exists($candidatoAbs)) {
+                $parts = array_map('rawurlencode', explode('/', str_replace('\\', '/', ltrim($caminhoAss, '/\\'))));
+                $pdfLink = '../assinatura/' . implode('/', $parts);
+            }
+        }
+
         echo "<tr>";
         echo "<td>{$row['inst_nb_id']}</td>";
         echo "<td>{$row['tipo_tx_nome']}</td>";
@@ -129,7 +171,7 @@ function index() {
         echo "<td>" . date("d/m/Y H:i", strtotime($row['inst_dt_criacao'])) . "</td>";
         echo "<td>" . strtoupper($row['inst_tx_status']) . "</td>";
         echo "<td>
-                <a href='processar_pdf.php?id={$row['inst_nb_id']}' target='_blank' class='btn btn-xs btn-info' title='PDF'><span class='glyphicon glyphicon-print'></span></a>
+                <a href='{$pdfLink}' target='_blank' class='btn btn-xs btn-info' title='PDF'><span class='glyphicon glyphicon-print'></span></a>
                 <form method='post' style='display:inline;' onsubmit='return confirm(\"Deseja excluir?\")'>
                     <input type='hidden' name='id_instancia' value='{$row['inst_nb_id']}'>
                     <input type='hidden' name='acao' value='excluirDocumento'>
@@ -143,6 +185,7 @@ function index() {
     rodape();
 }
 
+// Exclui uma instancia de documento da listagem.
 function excluirDocumento() {
     $id = $_POST['id_instancia'];
     remover('inst_documento_modulo', $id);

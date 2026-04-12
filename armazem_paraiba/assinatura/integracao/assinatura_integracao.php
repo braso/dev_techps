@@ -377,3 +377,205 @@ function assinatura_integracao_enviarDocumentoParaAssinatura(
 	return $criada;
 }
 
+function assinatura_integracao_normalizarSignatarios(mysqli $conn, array $signatarios): array {
+	$out = [];
+
+	foreach($signatarios as $s){
+		if(!is_array($s)){
+			continue;
+		}
+
+		$entiNbId = intval($s["enti_nb_id"] ?? 0);
+		if($entiNbId <= 0){
+			continue;
+		}
+
+		$stmt = mysqli_prepare($conn, "SELECT enti_nb_id, enti_tx_nome, enti_tx_email FROM entidade WHERE enti_nb_id = ? LIMIT 1");
+		if(!$stmt){
+			continue;
+		}
+		mysqli_stmt_bind_param($stmt, "i", $entiNbId);
+		mysqli_stmt_execute($stmt);
+		$e = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+		mysqli_stmt_close($stmt);
+
+		if(!is_array($e)){
+			continue;
+		}
+
+		$email = trim(strval($e["enti_tx_email"] ?? ""));
+		if($email === "" || !filter_var($email, FILTER_VALIDATE_EMAIL)){
+			continue;
+		}
+
+		$out[] = [
+			"enti_nb_id" => intval($e["enti_nb_id"] ?? 0),
+			"nome" => trim(strval($e["enti_tx_nome"] ?? "")),
+			"email" => $email,
+			"funcao" => trim(strval($s["funcao"] ?? "Signatário")),
+			"ordem" => max(1, intval($s["ordem"] ?? 1))
+		];
+	}
+
+	return $out;
+}
+
+function assinatura_integracao_enviarDocumentoParaMultiplosAssinantes(
+	mysqli $conn,
+	string $arquivoOrigem,
+	array $signatarios,
+	array $opts = []
+): array {
+	$absOrigem = assinatura_integracao_resolverArquivoAbs($arquivoOrigem);
+	if($absOrigem === "" || !assinatura_integracao_validarArquivoPdfAbs($absOrigem)){
+		return ["ok" => false, "error" => "Arquivo PDF não encontrado."];
+	}
+
+	$signatariosNorm = assinatura_integracao_normalizarSignatarios($conn, $signatarios);
+	if(count($signatariosNorm) < 1){
+		return ["ok" => false, "error" => "Nenhum signatário válido informado."];
+	}
+
+	$baseRoot = assinatura_integracao_baseRoot();
+	$rpOrig = realpath($absOrigem);
+	if($rpOrig){
+		$rpOrig = str_replace("\\", "/", $rpOrig);
+		if(strpos($rpOrig, $baseRoot . "/") !== 0){
+			return ["ok" => false, "error" => "Arquivo fora do diretório permitido."];
+		}
+	}
+
+	$nomeOriginal = trim(strval($opts["nome_arquivo_original"] ?? ""));
+	if($nomeOriginal === ""){
+		$nomeOriginal = basename($absOrigem);
+	}
+	$nomeOriginal = assinatura_integracao_sanitizarNomeArquivo($nomeOriginal);
+
+	$assinaturaDir = assinatura_integracao_baseAssinatura();
+	$destDir = $assinaturaDir . "/uploads/integracao/";
+	if(!is_dir($destDir)){
+		@mkdir($destDir, 0777, true);
+	}
+
+	$prefix = date("YmdHis") . "_" . bin2hex(random_bytes(4)) . "_";
+	$destFileName = $prefix . $nomeOriginal;
+	$destAbs = str_replace("\\", "/", rtrim($destDir, "/")) . "/" . $destFileName;
+	if(!@copy($absOrigem, $destAbs)){
+		return ["ok" => false, "error" => "Falha ao copiar arquivo para assinatura."];
+	}
+	$destRel = "uploads/integracao/" . $destFileName;
+
+	if(!empty($opts["apagar_origem"])){
+		@unlink($absOrigem);
+	}
+
+	assinatura_integracao_ensureTables($conn);
+	assinatura_integracao_carregarEmail();
+
+	$primeiro = $signatariosNorm[0];
+	$tokenMestre = bin2hex(random_bytes(32));
+	$idDocumento = trim(strval($opts["id_documento"] ?? ""));
+	if($idDocumento === ""){
+		$idDocumento = "DOC-" . date("YmdHis") . "-" . uniqid();
+	}
+
+	$tipoDocumentoId = intval($opts["tipo_documento_id"] ?? 0);
+	$validarIcp = strtolower(trim(strval($opts["validar_icp"] ?? "nao"))) === "sim" ? "sim" : "nao";
+	$modoEnvio = strtolower(trim(strval($opts["modo_envio"] ?? "avulso")));
+	$grupoEnvio = trim(strval($opts["grupo_envio"] ?? ""));
+
+	$stmt = mysqli_prepare(
+		$conn,
+		"INSERT INTO solicitacoes_assinatura
+			(token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, grupo_envio, expires_at, status)
+		VALUES
+			(?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR), 'pendente')"
+	);
+	if(!$stmt){
+		@unlink($destAbs);
+		return ["ok" => false, "error" => "Falha ao preparar solicitação."];
+	}
+	$nomePrimeiro = strval($primeiro["nome"] ?? "");
+	$emailPrimeiro = strval($primeiro["email"] ?? "");
+	mysqli_stmt_bind_param($stmt, "ssssssisss", $tokenMestre, $emailPrimeiro, $nomePrimeiro, $destRel, $nomeOriginal, $idDocumento, $tipoDocumentoId, $validarIcp, $modoEnvio, $grupoEnvio);
+	if(!mysqli_stmt_execute($stmt)){
+		mysqli_stmt_close($stmt);
+		@unlink($destAbs);
+		return ["ok" => false, "error" => "Falha ao criar solicitação."];
+	}
+	mysqli_stmt_close($stmt);
+	$idSolicitacao = intval(mysqli_insert_id($conn));
+
+	$tokensCriados = [];
+	$destinatarios = [];
+
+	$stmtA = mysqli_prepare(
+		$conn,
+		"INSERT INTO assinantes
+			(id_solicitacao, enti_nb_id, nome, email, funcao, ordem, salvar_documento_funcionario, token, status)
+		VALUES
+			(?, NULLIF(?,0), ?, ?, ?, ?, ?, ?, 'pendente')"
+	);
+	if(!$stmtA){
+		@unlink($destAbs);
+		return ["ok" => false, "error" => "Falha ao preparar assinantes."];
+	}
+
+	$salvarDoc = strtolower(trim(strval($opts["salvar_documento_funcionario"] ?? "sim"))) === "sim" ? "sim" : "nao";
+
+	foreach($signatariosNorm as $sig){
+		$token = bin2hex(random_bytes(32));
+		$idEnt = intval($sig["enti_nb_id"] ?? 0);
+		$nome = strval($sig["nome"] ?? "");
+		$email = strval($sig["email"] ?? "");
+		$funcao = strval($sig["funcao"] ?? "Signatário");
+		$ordem = max(1, intval($sig["ordem"] ?? 1));
+
+		mysqli_stmt_bind_param($stmtA, "iisssiss", $idSolicitacao, $idEnt, $nome, $email, $funcao, $ordem, $salvarDoc, $token);
+		if(!mysqli_stmt_execute($stmtA)){
+			continue;
+		}
+
+		$tokensCriados[] = $token;
+		$destinatarios[] = [
+			"email" => $email,
+			"nome" => $nome,
+			"token" => $token,
+			"funcao" => $funcao,
+			"enti_nb_id" => $idEnt
+		];
+	}
+
+	mysqli_stmt_close($stmtA);
+
+	if(count($destinatarios) < 1){
+		@unlink($destAbs);
+		return ["ok" => false, "error" => "Falha ao registrar assinantes."];
+	}
+
+	if(function_exists("enviarEmailProximo")){
+		foreach($destinatarios as $d){
+			enviarEmailProximo(
+				strval($d["email"] ?? ""),
+				strval($d["nome"] ?? ""),
+				strval($d["token"] ?? ""),
+				$nomeOriginal,
+				$idDocumento,
+				strval($d["funcao"] ?? "Signatário"),
+				$destAbs,
+				intval($d["enti_nb_id"] ?? 0)
+			);
+		}
+	}
+
+	return [
+		"ok" => true,
+		"id_solicitacao" => $idSolicitacao,
+		"id_documento" => $idDocumento,
+		"qtd_assinantes" => count($destinatarios),
+		"caminho_arquivo" => $destRel,
+		"caminho_arquivo_abs" => $destAbs,
+		"tokens" => $tokensCriados
+	];
+}
+
