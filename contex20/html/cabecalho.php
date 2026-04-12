@@ -302,9 +302,50 @@
 				<div class="menu-options"  >
 					<!-- INICIO TOP NAVIGATION MENU -->
 					<div class="top-menu">
+						<?php
+							$assinPendCount = 0;
+							$entiSess = intval($_SESSION["user_nb_entidade"] ?? 0);
+							$connLocal = $GLOBALS["conn"] ?? null;
+							if($entiSess > 0 && $connLocal){
+								$hasAss = mysqli_query($connLocal, "SHOW TABLES LIKE 'assinantes'");
+								$hasSol = mysqli_query($connLocal, "SHOW TABLES LIKE 'solicitacoes_assinatura'");
+								if($hasAss && mysqli_num_rows($hasAss) > 0 && $hasSol && mysqli_num_rows($hasSol) > 0){
+									$sqlPend = "
+										SELECT COUNT(*) AS total
+										FROM assinantes a
+										JOIN solicitacoes_assinatura s ON s.id = a.id_solicitacao
+										WHERE a.enti_nb_id = ?
+											AND LOWER(TRIM(a.status)) <> 'assinado'
+											AND a.ordem = (
+												SELECT MIN(a2.ordem)
+												FROM assinantes a2
+												WHERE a2.id_solicitacao = a.id_solicitacao
+													AND LOWER(TRIM(a2.status)) <> 'assinado'
+											)
+											AND (s.status = 'pendente' OR s.status = 'em_progresso')
+									";
+									$stmtPend = mysqli_prepare($connLocal, $sqlPend);
+									if($stmtPend){
+										mysqli_stmt_bind_param($stmtPend, "i", $entiSess);
+										mysqli_stmt_execute($stmtPend);
+										$resPend = mysqli_stmt_get_result($stmtPend);
+										$rowPend = $resPend ? mysqli_fetch_assoc($resPend) : null;
+										$assinPendCount = intval($rowPend["total"] ?? 0);
+									}
+								}
+							}
+						?>
 						<ul class="nav navbar-nav pull-right">
 							<li class="droddown dropdown-separator">
 								
+							</li>
+							<li class="dropdown dropdown-separator ">
+								<a href="<?=$CONTEX["path"]?>/assinatura/pendentes.php" style="text-decoration: none; margin: 0px 5px; display: flex; align-items: center; justify-content: center; position: relative;" title="Documentos pendentes de assinatura">
+									<i class="fa fa-bell" style="font-size: 18px; color: <?=($assinPendCount > 0 ? "#F3C200" : "#9aa3ad")?>;"></i>
+									<?php if($assinPendCount > 0): ?>
+										<span class="badge badge-danger" style="position:absolute; top:-2px; right:-4px; font-size:10px; padding:2px 5px; border-radius:10px;"><?=intval($assinPendCount)?></span>
+									<?php endif; ?>
+								</a>
 							</li>
 							
 							

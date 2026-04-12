@@ -1702,19 +1702,36 @@
 	}
 
 	function operarHorarios(array $horarios, string $operacao): string{
-		//Horários com formato de rH:i. Ex.: 00:04, 05:13, -01:12.
-		//$operação
-
 		if(empty($horarios) || !in_array($operacao, ["+", "-", "*", "/"])){
 			echo "<script>console.log('Operação não encontrada (operarHorarios): |{$operacao}|')</script>";
 			return "00:00";
 		}
-		if(preg_match_all("/-?\d{2,10}:\d{2}(?=:\d{2})?/", implode(" ", $horarios)) != count($horarios)){
-			echo "<script>console.log('Format error (operarHorarios): |".implode(", ", $horarios)."|')</script>";
+
+		$limpos = [];
+		foreach($horarios as $h){
+			if($h === null){
+				continue;
+			}
+			$s = strip_tags((string)$h);
+			$s = preg_replace('/\x{00A0}/u', ' ', $s);
+			$s = trim((string)$s);
+			if($s === ""){
+				continue;
+			}
+			$limpos[] = $s;
+		}
+		if(empty($limpos)){
 			return "00:00";
 		}
+		foreach($limpos as $h){
+			if(!preg_match('/^-?\d{2,10}:\d{2}(?::\d{2})?$/', $h)){
+				echo "<script>console.log('Format error (operarHorarios): |".implode(", ", $horarios)."|')</script>";
+				return "00:00";
+			}
+		}
+		$horarios = $limpos;
 		if(count($horarios) == 1){
-			return $horarios[0];
+			return (string)$horarios[0];
 		}
 
 		$horarios = preg_replace("/([^\-^0-:])+/", "", $horarios);

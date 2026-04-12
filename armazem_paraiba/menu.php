@@ -46,6 +46,7 @@
                 "/cadastro_placa.php" 		=> "Placas",
                 "/cadastro_setor.php" 		=> "Setor",
                 "/cadastro_tipo_doc.php" 	=> "Tipo de Documento",
+                "/documentos/cadastro_documento.php" => "Gestão de Documentos",
                 "/cadastro_usuario.php" 	=> "Usuário",            
                 "/cadastro_habilidade_tecnica.php" 	=> "Habilidades Técnicas",
                 "/cadastro_habilidade_comportamental.php" 	=> "Habilidades Comportamentais",
@@ -79,6 +80,14 @@
 			"relatórios" => [
 					"/relatorio_pontos.php" => "Pontos"
 			],
+            "assinatura" => [
+                "/assinatura/index.php"             => "Dashboard",
+                "/assinatura/nova_assinatura.php"   => "Nova Assinatura",
+                "/assinatura/governanca.php"        => "Assinatura com Governança",
+                "/assinatura/documentos.php"        => "Documentos",
+                 "/assinatura/consultar.php"        => "Consultar",
+                
+            ],
 			// "suporte" => [
 			// 	"/#" 		=> "Perguntas Frequentes", 
 			// 	"/doc.php" 	=> "Ver Documentação"
@@ -95,6 +104,7 @@ if ($showComunicado) {
             "ponto" => "",
             "painel" => "",
             "relatórios" => "",
+            "assinatura" => "",
             "suporte" => "",
         ];
         // Perfil vinculado ao usuário (se existir)
@@ -136,6 +146,7 @@ if ($showComunicado) {
             "ponto" => "fa fa-clock",
             "painel" => "fa fa-tachometer",
             "relatórios" => "fa fa-file-alt",
+            "assinatura" => "fa fa-file-contract",
             "suporte" => "fa fa-life-ring",
         ];
         $iconMap = [
@@ -232,7 +243,7 @@ if ($showComunicado) {
 
         $isAdmin = is_int(strpos($nivel, "Administrador"));
         $isSuperAdmin = is_int(strpos($nivel, "Super Administrador"));
-        $menusConcat = $menus["cadastros"].$menus["ponto"].$menus["painel"].($menus["suporte"]?? "").($menus["relatórios"] ?? "");
+        $menusConcat = $menus["cadastros"].$menus["ponto"].$menus["painel"].($menus["assinatura"] ?? "").($menus["suporte"]?? "").($menus["relatórios"] ?? "");
         if ($isSuperAdmin) {
             return $menusConcat;
         }

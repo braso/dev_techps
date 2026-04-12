@@ -6,7 +6,238 @@
 
 	include "conecta.php";
 
+	function ensureSetorResponsavelSchema(){
+		$dbRow = mysqli_fetch_assoc(query("SELECT DATABASE() AS db"));
+		$db = strval($dbRow["db"] ?? "");
+		if($db === ""){
+			return;
+		}
+
+		$exists = mysqli_fetch_assoc(query(
+			"SELECT 1 AS ok
+			FROM information_schema.TABLES
+			WHERE TABLE_SCHEMA = ?
+				AND TABLE_NAME = 'setor_responsavel'
+			LIMIT 1",
+			"s",
+			[$db]
+		));
+
+		if(empty($exists)){
+			query(
+				"CREATE TABLE IF NOT EXISTS setor_responsavel (
+					sres_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+					sres_nb_setor_id INT NOT NULL,
+					sres_nb_entidade_id INT NOT NULL,
+					sres_tx_assinar_governanca ENUM('sim','nao') NOT NULL DEFAULT 'nao',
+					sres_tx_status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo',
+					sres_tx_dataCadastro DATETIME NOT NULL,
+					UNIQUE KEY uniq_setor_entidade (sres_nb_setor_id, sres_nb_entidade_id),
+					KEY idx_setor (sres_nb_setor_id),
+					KEY idx_entidade (sres_nb_entidade_id)
+				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+			);
+		}
+
+		$cols = mysqli_fetch_all(query(
+			"SELECT COLUMN_NAME
+			FROM information_schema.COLUMNS
+			WHERE TABLE_SCHEMA = ?
+				AND TABLE_NAME = 'setor_responsavel'",
+			"s",
+			[$db]
+		), MYSQLI_ASSOC);
+
+		$colNames = array_map(fn($r) => strval($r["COLUMN_NAME"] ?? ""), $cols ?: []);
+		$has = array_flip($colNames);
+
+		if(!isset($has["sres_nb_id"])){
+			query("ALTER TABLE setor_responsavel ADD COLUMN sres_nb_id INT AUTO_INCREMENT PRIMARY KEY");
+		}
+		if(!isset($has["sres_nb_setor_id"])){
+			query("ALTER TABLE setor_responsavel ADD COLUMN sres_nb_setor_id INT NOT NULL");
+		}
+		if(!isset($has["sres_nb_entidade_id"])){
+			query("ALTER TABLE setor_responsavel ADD COLUMN sres_nb_entidade_id INT NOT NULL");
+		}
+		if(!isset($has["sres_tx_assinar_governanca"])){
+			query("ALTER TABLE setor_responsavel ADD COLUMN sres_tx_assinar_governanca ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
+		}
+		if(!isset($has["sres_tx_status"])){
+			query("ALTER TABLE setor_responsavel ADD COLUMN sres_tx_status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo'");
+		}
+		if(!isset($has["sres_tx_dataCadastro"])){
+			query("ALTER TABLE setor_responsavel ADD COLUMN sres_tx_dataCadastro DATETIME NOT NULL");
+		}
+		if(!isset($has["sres_nb_ordem"])){
+			query("ALTER TABLE setor_responsavel ADD COLUMN sres_nb_ordem INT NOT NULL DEFAULT 0");
+		}
+
+		$idx = mysqli_fetch_all(query(
+			"SELECT INDEX_NAME
+			FROM information_schema.STATISTICS
+			WHERE TABLE_SCHEMA = ?
+				AND TABLE_NAME = 'setor_responsavel'",
+			"s",
+			[$db]
+		), MYSQLI_ASSOC);
+		$idxNames = array_map(fn($r) => strval($r["INDEX_NAME"] ?? ""), $idx ?: []);
+		$idxHas = array_flip($idxNames);
+
+		if(!isset($idxHas["uniq_setor_entidade"])){
+			@query("ALTER TABLE setor_responsavel ADD UNIQUE KEY uniq_setor_entidade (sres_nb_setor_id, sres_nb_entidade_id)");
+		}
+		if(!isset($idxHas["idx_setor"])){
+			@query("ALTER TABLE setor_responsavel ADD KEY idx_setor (sres_nb_setor_id)");
+		}
+		if(!isset($idxHas["idx_entidade"])){
+			@query("ALTER TABLE setor_responsavel ADD KEY idx_entidade (sres_nb_entidade_id)");
+		}
+	}
+
+	function carregarResponsaveisSetor(int $setorId): array {
+		if($setorId <= 0){
+			return [];
+		}
+		ensureSetorResponsavelSchema();
+		$rows = mysqli_fetch_all(query(
+			"SELECT
+				sr.sres_nb_entidade_id AS id,
+				sr.sres_tx_assinar_governanca AS assinar_governanca,
+				sr.sres_nb_ordem AS ordem,
+				e.enti_tx_nome AS nome,
+				e.enti_tx_email AS email,
+				g.grup_tx_nome AS setor_nome,
+				o.oper_tx_nome AS cargo_nome
+			FROM setor_responsavel sr
+			LEFT JOIN entidade e ON e.enti_nb_id = sr.sres_nb_entidade_id
+			LEFT JOIN grupos_documentos g ON g.grup_nb_id = e.enti_setor_id
+			LEFT JOIN operacao o ON o.oper_nb_id = e.enti_tx_tipoOperacao
+			WHERE sr.sres_nb_setor_id = ?
+				AND sr.sres_tx_status = 'ativo'
+			ORDER BY e.enti_tx_nome ASC",
+			"i",
+			[$setorId]
+		), MYSQLI_ASSOC);
+		return is_array($rows) ? $rows : [];
+	}
+
+	function api_responsaveis_setor(){
+		header("Content-Type: application/json; charset=utf-8");
+		$setorId = intval($_GET["setor_id"] ?? 0);
+		if($setorId <= 0){
+			http_response_code(400);
+			echo json_encode(["error" => "setor_id inválido"]);
+			return;
+		}
+
+		$rows = carregarResponsaveisSetor($setorId);
+		$out = [];
+		foreach(($rows ?: []) as $r){
+			$id = intval($r["id"] ?? 0);
+			if($id <= 0){
+				continue;
+			}
+			$nome = trim(strval($r["nome"] ?? ""));
+			$email = trim(strval($r["email"] ?? ""));
+			$setorNome = trim(strval($r["setor_nome"] ?? ""));
+			$cargoNome = trim(strval($r["cargo_nome"] ?? ""));
+			$label = $nome !== "" ? $nome : ("ID " . $id);
+			if($setorNome !== ""){ $label .= " - S: " . $setorNome; }
+			if($cargoNome !== ""){ $label .= " - C: " . $cargoNome; }
+			if($email !== ""){
+				$label .= " | " . $email;
+			}
+			$out[] = ["id" => $id, "text" => $label];
+		}
+		echo json_encode($out);
+	}
+
+	function salvarResponsaveisSetor(int $setorId, array $responsaveisIds, array $assinaFlags, array $ordens): void {
+		if($setorId <= 0){
+			return;
+		}
+		ensureSetorResponsavelSchema();
+
+		$ids = array_values(array_unique(array_filter(array_map("intval", $responsaveisIds), fn($v) => $v > 0)));
+		$agora = date("Y-m-d H:i:s");
+
+		query(
+			"UPDATE setor_responsavel
+			SET sres_tx_status = 'inativo'
+			WHERE sres_nb_setor_id = ?",
+			"i",
+			[$setorId]
+		);
+
+		if(empty($ids)){
+			return;
+		}
+
+		$assinaNorm = [];
+		foreach($ids as $entidadeId){
+			$assinar = "nao";
+			if(isset($assinaFlags[$entidadeId]) && strtolower(trim(strval($assinaFlags[$entidadeId]))) === "sim"){
+				$assinar = "sim";
+			}
+			$assinaNorm[$entidadeId] = $assinar;
+		}
+
+		$ordemNorm = [];
+		$signers = [];
+		foreach($ids as $entidadeId){
+			if(($assinaNorm[$entidadeId] ?? "nao") !== "sim"){
+				continue;
+			}
+			$o = intval($ordens[$entidadeId] ?? 0);
+			$signers[] = [
+				"id" => $entidadeId,
+				"ordem" => $o > 0 ? $o : PHP_INT_MAX
+			];
+		}
+		usort($signers, function($a, $b){
+			$ao = intval($a["ordem"] ?? PHP_INT_MAX);
+			$bo = intval($b["ordem"] ?? PHP_INT_MAX);
+			if($ao === $bo){
+				return intval($a["id"] ?? 0) <=> intval($b["id"] ?? 0);
+			}
+			return $ao <=> $bo;
+		});
+		$pos = 1;
+		foreach($signers as $s){
+			$eid = intval($s["id"] ?? 0);
+			if($eid <= 0){
+				continue;
+			}
+			$ordemNorm[$eid] = $pos;
+			$pos++;
+		}
+
+		foreach($ids as $entidadeId){
+			$assinar = $assinaNorm[$entidadeId] ?? "nao";
+			$ordem = ($assinar === "sim") ? intval($ordemNorm[$entidadeId] ?? 0) : 0;
+
+			query(
+				"INSERT INTO setor_responsavel
+					(sres_nb_setor_id, sres_nb_entidade_id, sres_tx_assinar_governanca, sres_nb_ordem, sres_tx_status, sres_tx_dataCadastro)
+				VALUES
+					(?, ?, ?, ?, 'ativo', ?)
+				ON DUPLICATE KEY UPDATE
+					sres_tx_assinar_governanca = VALUES(sres_tx_assinar_governanca),
+					sres_nb_ordem = VALUES(sres_nb_ordem),
+					sres_tx_status = 'ativo',
+					sres_tx_dataCadastro = VALUES(sres_tx_dataCadastro)",
+				"iisis",
+				[$setorId, $entidadeId, $assinar, $ordem, $agora]
+			);
+		}
+	}
+
     function excluirSetor(){
+		ensureSetorResponsavelSchema();
+		if(!empty($_POST["id"])){
+			query("DELETE FROM setor_responsavel WHERE sres_nb_setor_id = ?", "i", [intval($_POST["id"])]);
+		}
 		remover("grupos_documentos",$_POST["id"]);
 		index();
 		exit;
@@ -20,6 +251,19 @@
             WHERE `sbgr_nb_idgrup` = {$a_mod["grup_nb_id"]}
             ORDER BY sbgr_nb_id ASC"
         ), MYSQLI_ASSOC);
+
+		$resps = carregarResponsaveisSetor(intval($a_mod["grup_nb_id"] ?? 0));
+		$_POST["responsaveis"] = array_values(array_filter(array_map(fn($r) => intval($r["id"] ?? 0), $resps), fn($v) => $v > 0));
+		$_POST["responsavel_assina"] = [];
+		$_POST["responsavel_ordem"] = [];
+		foreach($resps as $r){
+			$id = intval($r["id"] ?? 0);
+			if($id <= 0){
+				continue;
+			}
+			$_POST["responsavel_assina"][$id] = (strtolower(trim(strval($r["assinar_governanca"] ?? "nao"))) === "sim") ? "sim" : "nao";
+			$_POST["responsavel_ordem"][$id] = intval($r["ordem"] ?? 0);
+		}
 
 		[$_POST["id"], $_POST["nome"], $_POST["status"], $_POST["subsetores"]] = [$a_mod["grup_nb_id"], $a_mod["grup_tx_nome"], $a_mod["grup_tx_status"], $subSetor];
 		
@@ -44,8 +288,11 @@
         ];
         error_log("cadastro_setor novoSetor: ".json_encode($novoSetor));
 
+		$setorId = 0;
+
 		if(!empty($_POST["id"])){
 			atualizar("grupos_documentos", array_keys($novoSetor), array_values($novoSetor), $_POST["id"]);
+			$setorId = intval($_POST["id"]);
 
             if (!empty($_POST['subsetores_excluir'])) {
                 error_log("cadastro_setor subsetores_excluir: ".json_encode($_POST['subsetores_excluir']));
@@ -118,6 +365,7 @@
                     layout_setor();
                     exit;
                 }
+				$setorId = intval($id[0] ?? 0);
 				
 				if(!empty($_POST["subsetores"])){
                     error_log("cadastro_setor subsetores inserir: ".json_encode($_POST["subsetores"]));
@@ -141,6 +389,16 @@
                     }
                 }
 			}
+
+		$responsaveis = $_POST["responsaveis"] ?? [];
+		$responsaveis = is_array($responsaveis) ? $responsaveis : [];
+		$assinaFlags = $_POST["responsavel_assina"] ?? [];
+		$assinaFlags = is_array($assinaFlags) ? $assinaFlags : [];
+		$ordens = $_POST["responsavel_ordem"] ?? [];
+		$ordens = is_array($ordens) ? $ordens : [];
+		if(!empty($setorId)){
+			salvarResponsaveisSetor($setorId, $responsaveis, $assinaFlags, $ordens);
+		}
 
 		index();
 		exit;
@@ -270,6 +528,8 @@ function campoSubSetor($nome, $variavel, $valores = [], $tamanho = 2) {
 
         cabecalho("Cadastro de Setor");
 
+		ensureSetorResponsavelSchema();
+
         $campoStatus = "";
         if (!empty($_POST["id"])) {
             $campoStatus = combo("Status", "busca_banco", $_POST["busca_banco"]?? "", 2, [ "ativo" => "Ativo", "inativo" => "Inativo"]);
@@ -280,10 +540,38 @@ function campoSubSetor($nome, $variavel, $valores = [], $tamanho = 2) {
             $_POST["HTTP_REFERER"] = $refer;
         }
 
-		$campos = [
-			campo("Nome*", "nome", $_POST["nome"], 2),
+		$hasStatus = !empty($campoStatus);
+		$nomeWidth = $hasStatus ? 3 : 4;
+		$subsetorWidth = $hasStatus ? 7 : 8;
+
+		$camposTopo = [
+			campo("Nome*", "nome", $_POST["nome"], $nomeWidth),
 			$campoStatus,
-			campoSubSetor('Subsetores', 'subsetores', $_POST["subsetores"] ?? []),
+			"<div class='col-sm-{$subsetorWidth} margin-bottom-5 campo-fit-content'>"
+				.campoSubSetor('Subsetores', 'subsetores', $_POST["subsetores"] ?? [])
+			."</div>"
+		];
+
+		$camposAviso = [
+			"<div class='col-sm-12 margin-bottom-5 campo-fit-content'>
+				<div class='alert alert-info' style='margin:0;'>
+					<b>Responsáveis do Setor (Governança)</b><br>
+					Se algum responsável estiver marcado como <b>assina governança</b>, então documentos enviados por governança para funcionários deste setor também deverão ter a assinatura desse responsável na ordem escolhida.
+				</div>
+			</div>"
+		];
+
+		$camposResponsaveis = [
+			"<div class='col-sm-6 margin-bottom-5 campo-fit-content'>
+				<label class='control-label'>Responsáveis do setor</label>
+				<select class='form-control input-sm resp-setor' name='responsaveis[]' multiple='multiple' style='width:100%;'></select>
+				<div class='help-block'>Selecione um ou mais responsáveis.</div>
+			</div>",
+			"<div class='col-sm-6 margin-bottom-5 campo-fit-content'>
+				<label class='control-label'>Assinatura na governança</label>
+				<div id='lista-resp-assina' class='well well-sm' style='min-height:42px; margin-bottom:0;'></div>
+				<div class='help-block'>Marque quem deve assinar documentos por governança na ordem escolhida Ex: o 1ª Marcado ser o primeiro a assinar e assim por diante.</div>
+			</div>"
 		];
 
 		$botoes = [
@@ -293,7 +581,309 @@ function campoSubSetor($nome, $variavel, $valores = [], $tamanho = 2) {
 		
         echo abre_form("Dados do setor");
         echo campo_hidden("HTTP_REFERER", $_POST["HTTP_REFERER"]);
-        echo linha_form($campos);
+		$preIds = $_POST["responsaveis"] ?? [];
+		$preIds = is_array($preIds) ? array_values(array_unique(array_filter(array_map("intval", $preIds), fn($v) => $v > 0))) : [];
+		$preAssina = $_POST["responsavel_assina"] ?? [];
+		$preAssina = is_array($preAssina) ? $preAssina : [];
+		$preOrdens = $_POST["responsavel_ordem"] ?? [];
+		$preOrdens = is_array($preOrdens) ? $preOrdens : [];
+		$preLabels = [];
+		if(!empty($preIds)){
+			$placeholders = implode(",", array_fill(0, count($preIds), "?"));
+			$types = str_repeat("i", count($preIds));
+			$rows = mysqli_fetch_all(query(
+				"SELECT enti_nb_id, enti_tx_nome, enti_tx_email
+				FROM entidade
+				WHERE enti_nb_id IN ({$placeholders})
+				ORDER BY enti_tx_nome ASC",
+				$types,
+				$preIds
+			), MYSQLI_ASSOC);
+			foreach($rows as $r){
+				$id = intval($r["enti_nb_id"] ?? 0);
+				if($id <= 0){ continue; }
+				$nome = trim(strval($r["enti_tx_nome"] ?? ""));
+				$email = trim(strval($r["enti_tx_email"] ?? ""));
+				$label = $nome !== "" ? $nome : ("ID " . $id);
+				if($email !== ""){ $label .= " | " . $email; }
+				$preLabels[$id] = $label;
+			}
+		}
+
+		echo "<script>
+			(function($){
+				if(!$ || !$.fn){ return; }
+				$(function(){
+					var \$sel = $('.resp-setor');
+					if(!\$sel.length){ return; }
+
+					var pre = ".json_encode(array_values($preIds), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).";
+					var labels = ".json_encode($preLabels, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).";
+					var assinaMap = ".json_encode($preAssina, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).";
+					var ordemMap = ".json_encode($preOrdens, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).";
+
+					pre.forEach(function(id){
+						var key = String(id);
+						var text = labels[key] || labels[id] || ('ID ' + key);
+						var opt = new Option(text, key, true, true);
+						\$sel.append(opt);
+					});
+
+					if($.fn.select2){
+						$.fn.select2.defaults.set('theme','bootstrap');
+						var baseUrl = ".json_encode($_ENV["URL_BASE"].$_ENV["APP_PATH"], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).";
+						var contexPath = ".json_encode($_ENV["APP_PATH"].$_ENV["CONTEX_PATH"], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).";
+						var cond = encodeURIComponent(\"AND enti_tx_status = 'ativo'\");
+
+						function sanitizeText(v){
+							v = (v === null || v === undefined) ? '' : String(v);
+							v = v.replace(/^\\s*\\[\\s*\\]\\s*/g, '');
+							v = v.replace(/^\\s*\\[\\s*\\]\\s*/g, '');
+							return v.trim();
+						}
+
+						\$sel.select2({
+							language: 'pt-BR',
+							placeholder: 'Selecione',
+							allowClear: true,
+							width: '100%',
+							ajax: {
+								url: baseUrl + '/contex20/select2.php?path=' + encodeURIComponent(contexPath) + '&tabela=entidade&ordem=&limite=15&condicoes=' + cond,
+								dataType: 'json',
+								delay: 250,
+								processResults: function (data) {
+									(data || []).forEach(function(item){
+										if(item && item.text !== undefined){
+											item.text = sanitizeText(item.text);
+										}
+									});
+									return { results: data };
+								},
+								cache: true
+							},
+							templateResult: function(item){
+								if(!item){ return ''; }
+								return sanitizeText(item.text || item.id || '');
+							},
+							templateSelection: function(item){
+								if(!item){ return ''; }
+								return sanitizeText(item.text || item.id || '');
+							}
+						});
+					}
+
+					function syncAssinaMapFromDom(){
+						var box = document.getElementById('lista-resp-assina');
+						if(!box){ return; }
+						var inputs = box.querySelectorAll('input[type=\"checkbox\"][data-resp-id]');
+						inputs.forEach(function(inp){
+							var id = inp.getAttribute('data-resp-id');
+							if(!id){ return; }
+							assinaMap[id] = inp.checked ? 'sim' : 'nao';
+						});
+					}
+
+					var selectionOrder = (pre || []).map(function(v){ return String(v); });
+					var checkOrder = [];
+
+					function getSelectedOrdered(){
+						var current = (\$sel.val() || []).map(function(v){ return String(v); });
+						var inCurrent = {};
+						current.forEach(function(v){ inCurrent[v] = true; });
+
+						var ordered = [];
+						(selectionOrder || []).forEach(function(v){
+							if(inCurrent[v]){
+								ordered.push(v);
+							}
+						});
+						current.forEach(function(v){
+							if(ordered.indexOf(v) === -1){
+								ordered.push(v);
+							}
+						});
+						return ordered;
+					}
+
+					function initCheckOrder(){
+						var ids = [];
+						Object.keys(assinaMap || {}).forEach(function(k){
+							if(String(assinaMap[k]) === 'sim'){
+								ids.push(String(k));
+							}
+						});
+						ids.sort(function(a, b){
+							var ao = parseInt((ordemMap && ordemMap[a]) || '0', 10);
+							var bo = parseInt((ordemMap && ordemMap[b]) || '0', 10);
+							ao = (isFinite(ao) && ao > 0) ? ao : 999999;
+							bo = (isFinite(bo) && bo > 0) ? bo : 999999;
+							if(ao !== bo){ return ao - bo; }
+							var ia = selectionOrder.indexOf(String(a));
+							var ib = selectionOrder.indexOf(String(b));
+							ia = ia >= 0 ? ia : 999999;
+							ib = ib >= 0 ? ib : 999999;
+							if(ia !== ib){ return ia - ib; }
+							return String(a).localeCompare(String(b));
+						});
+						checkOrder = ids;
+					}
+
+					function normalizeCheckOrder(selectedOrdered){
+						selectedOrdered = (selectedOrdered || []).map(function(v){ return String(v); });
+						var selectedSet = {};
+						selectedOrdered.forEach(function(v){ selectedSet[v] = true; });
+
+						checkOrder = (checkOrder || []).filter(function(v){
+							if(!selectedSet[v]){ return false; }
+							return (assinaMap && String(assinaMap[v]) === 'sim');
+						});
+
+						selectedOrdered.forEach(function(v){
+							if(!(assinaMap && String(assinaMap[v]) === 'sim')){ return; }
+							if(checkOrder.indexOf(v) === -1){
+								checkOrder.push(v);
+							}
+						});
+
+						(checkOrder || []).forEach(function(v, idx){
+							ordemMap[v] = idx + 1;
+						});
+
+						Object.keys(ordemMap || {}).forEach(function(k){
+							if(!(assinaMap && String(assinaMap[k]) === 'sim')){
+								ordemMap[k] = 0;
+							}
+						});
+					}
+
+					function getPosicoes(){
+						var pos = {};
+						(checkOrder || []).forEach(function(v, idx){
+							pos[String(v)] = idx + 1;
+						});
+						return pos;
+					}
+
+					function ordinal(n){
+						n = parseInt(n || '0', 10);
+						if(!isFinite(n) || n <= 0){ return ''; }
+						return String(n) + 'ª';
+					}
+
+					function renderAssina(){
+						var box = document.getElementById('lista-resp-assina');
+						if(!box){ return; }
+						var selected = getSelectedOrdered();
+						normalizeCheckOrder(selected);
+						box.innerHTML = '';
+						if(selected.length === 0){
+							box.innerHTML = '<span class=\"text-muted\">Nenhum responsável selecionado.</span>';
+							return;
+						}
+						var pos = getPosicoes();
+						selected.forEach(function(id){
+							var key = String(id);
+							var text = (labels[key] || labels[id] || (\$sel.find('option[value=\"'+key+'\"]:selected').text()) || ('ID ' + key));
+							text = (typeof sanitizeText === 'function') ? sanitizeText(text) : text;
+							var isChecked = (assinaMap && (assinaMap[key] === 'sim' || assinaMap[id] === 'sim'));
+							var checked = isChecked ? 'checked' : '';
+							var badge = isChecked ? ordinal(pos[key] || 0) : '';
+							var ordemVal = isChecked ? (pos[key] || 0) : 0;
+
+							var row = document.createElement('div');
+							row.style.display = 'flex';
+							row.style.alignItems = 'center';
+							row.style.gap = '10px';
+							row.style.marginBottom = '6px';
+							row.innerHTML =
+								'<span class=\"label label-primary\" style=\"min-width:34px; text-align:center;\">'+(badge || '—')+'</span>'+
+								'<label style=\"font-weight:normal; margin:0; flex:1;\">'+
+									'<input data-resp-id=\"'+key+'\" type=\"checkbox\" name=\"responsavel_assina['+key+']\" value=\"sim\" '+checked+' style=\"margin-right:8px;\">'+
+									'<span>'+text+'</span>'+
+								'</label>'+
+								'<input type=\"hidden\" name=\"responsavel_ordem['+key+']\" value=\"'+String(ordemVal)+'\">';
+							box.appendChild(row);
+						});
+					}
+
+					\$('#lista-resp-assina').on('change', 'input[type=\"checkbox\"][data-resp-id]', function(){
+						var id = this.getAttribute('data-resp-id');
+						if(!id){ return; }
+						var sid = String(id);
+						assinaMap[sid] = this.checked ? 'sim' : 'nao';
+						if(!this.checked){
+							ordemMap[sid] = 0;
+							var idx = checkOrder.indexOf(sid);
+							if(idx >= 0){
+								checkOrder.splice(idx, 1);
+							}
+						}else{
+							if(checkOrder.indexOf(sid) === -1){
+								checkOrder.push(sid);
+							}
+						}
+						renderAssina();
+					});
+
+					\$sel.on('change', function(){
+						syncAssinaMapFromDom();
+						var selected = getSelectedOrdered();
+						normalizeCheckOrder(selected);
+						Object.keys(assinaMap || {}).forEach(function(k){
+							if(selected.indexOf(String(k)) === -1){
+								delete assinaMap[k];
+								delete ordemMap[k];
+							}
+						});
+						renderAssina();
+					});
+
+					\$sel.on('select2:select', function(e){
+						var d = e && e.params ? e.params.data : null;
+						if(d && d.id){
+							var sid = String(d.id);
+							if(selectionOrder.indexOf(sid) === -1){
+								selectionOrder.push(sid);
+							}
+							var t = d.text || labels[String(d.id)] || ('ID ' + d.id);
+							t = (typeof sanitizeText === 'function') ? sanitizeText(t) : t;
+							labels[String(d.id)] = t;
+							var opt = \$sel.find('option[value=\"'+String(d.id)+'\"]');
+							if(opt && opt.length){
+								opt.text(t);
+							}
+						}
+						renderAssina();
+					});
+
+					\$sel.on('select2:unselect', function(e){
+						syncAssinaMapFromDom();
+						var d = e && e.params ? e.params.data : null;
+						if(d && d.id){
+							var sid = String(d.id);
+							if(assinaMap){ delete assinaMap[sid]; }
+							if(ordemMap){ delete ordemMap[sid]; }
+							var idx2 = checkOrder.indexOf(sid);
+							if(idx2 >= 0){
+								checkOrder.splice(idx2, 1);
+							}
+							var idx = selectionOrder.indexOf(sid);
+							if(idx >= 0){
+								selectionOrder.splice(idx, 1);
+							}
+						}
+						renderAssina();
+					});
+
+					initCheckOrder();
+					renderAssina();
+				});
+			})(window.jQuery);
+		</script>";
+
+        echo linha_form($camposTopo);
+		echo linha_form($camposAviso);
+		echo linha_form($camposResponsaveis);
         echo fecha_form($botoes);
 
 		rodape();
@@ -308,6 +898,7 @@ function campoSubSetor($nome, $variavel, $valores = [], $tamanho = 2) {
 		verificaPermissao('/cadastro_setor.php');
 
         cabecalho("Cadastro de Setor");
+		ensureSetorResponsavelSchema();
 
         $fields = [
 			campo("Código", 		"busca_codigo", 	($_POST["busca_codigo"]?? ""), 	1, "", "maxlength='6'"),
@@ -340,6 +931,7 @@ function campoSubSetor($nome, $variavel, $valores = [], $tamanho = 2) {
             "NOME" 			=> "grup_tx_nome",
             "STATUS" 	    => "grup_tx_status",
 			"SUBSETORES"    	=> "subgrupos",
+			"RESPONSÁVEIS"    	=> "responsaveis",
         ];
 
         $camposBusca = [
@@ -354,14 +946,26 @@ function campoSubSetor($nome, $variavel, $valores = [], $tamanho = 2) {
 				g.grup_nb_id,
 				g.grup_tx_nome,
 				g.grup_tx_status,
-				GROUP_CONCAT(s.sbgr_tx_nome SEPARATOR ', ') AS subgrupos
+				GROUP_CONCAT(s.sbgr_tx_nome SEPARATOR ', ') AS subgrupos,
+				COALESCE(r.responsaveis, '') AS responsaveis
 			FROM grupos_documentos g"
+			." LEFT JOIN (
+				SELECT
+					sr.sres_nb_setor_id AS setor_id,
+					GROUP_CONCAT(DISTINCT e.enti_tx_nome ORDER BY e.enti_tx_nome SEPARATOR ', ') AS responsaveis
+				FROM setor_responsavel sr
+				INNER JOIN entidade e ON e.enti_nb_id = sr.sres_nb_entidade_id
+				WHERE sr.sres_tx_status = 'ativo'
+				AND e.enti_tx_status = 'ativo'
+				GROUP BY sr.sres_nb_setor_id
+			) r ON r.setor_id = g.grup_nb_id"
 			." LEFT JOIN sbgrupos_documentos s 
 				ON g.grup_nb_id = s.sbgr_nb_idgrup
 						GROUP BY 
 							g.grup_nb_id,
 							g.grup_tx_nome,
-							g.grup_tx_status
+							g.grup_tx_status,
+							r.responsaveis
 					) AS final "
         ;
 
