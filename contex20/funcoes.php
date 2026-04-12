@@ -2315,15 +2315,35 @@
 
 	function query($query, $types = '', array $vars = []){
 		global $conn;
-		if(empty($types) || empty($vars)){
-			$result = mysqli_query($conn,$query) or mysqli_error($conn);
-		}else{
+		$GLOBALS["last_sql_error"] = null;
+		try{
+			if(empty($types) || empty($vars)){
+				$result = mysqli_query($conn, $query);
+				if($result === false){
+					$GLOBALS["last_sql_error"] = mysqli_error($conn);
+				}
+				return $result;
+			}
+			
 			$stmt = mysqli_prepare($conn, $query);
+			if(!$stmt){
+				$GLOBALS["last_sql_error"] = mysqli_error($conn);
+				return false;
+			}
 			mysqli_stmt_bind_param($stmt, $types, ...$vars);
-			mysqli_stmt_execute($stmt);
-            $result = mysqli_stmt_get_result($stmt);
+			if(!mysqli_stmt_execute($stmt)){
+				$GLOBALS["last_sql_error"] = mysqli_stmt_error($stmt) ?: mysqli_error($conn);
+				return false;
+			}
+			$result = mysqli_stmt_get_result($stmt);
+			if($result === false){
+				$GLOBALS["last_sql_error"] = mysqli_stmt_error($stmt) ?: mysqli_error($conn);
+			}
+			return $result;
+		}catch(Throwable $e){
+			$GLOBALS["last_sql_error"] = $e->getMessage();
+			return false;
 		}
-		return $result;
 	}
 
 	//Essa função retornará um ícone que será utilizado no SQL da tabela para retornar uma coluna com o ícone
