@@ -314,9 +314,21 @@
 			return (char.match(pattern));
 		};
 		function contex_foco(elemento){
-			var campoFoco = document.forms[0].elements[<?=$foco?>];
-			if (campoFoco != null){
-				campoFoco.focus();
+			try{
+				if(!document.forms || document.forms.length === 0){
+					return;
+				}
+				var form0 = document.forms[0];
+				if(!form0 || !form0.elements){
+					return;
+				}
+				var idx = <?=$foco?>;
+				var campoFoco = form0.elements[idx];
+				if (campoFoco && typeof campoFoco.focus === "function"){
+					campoFoco.focus();
+				}
+			}catch(e){
+				return;
 			}
 		}
 	</script>
@@ -326,7 +338,7 @@
 
 <!-- <body style="zoom:100%;" class="page-container-bg-solid page-boxed"> -->
 
-<body onload="contex_foco()" onclick="updateTimer()" onkeydown="updateTimer()" style="zoom:100%; margin-bottom:45px;" class="page-container-bg-solid page-boxed">
+<body onload="try{contex_foco()}catch(e){}" onclick="try{updateTimer()}catch(e){}" onkeydown="try{updateTimer()}catch(e){}" style="zoom:100%; margin-bottom:45px;" class="page-container-bg-solid page-boxed">
 	
 	<!-- INICIO HEADER -->
 	<div class="page-header">
