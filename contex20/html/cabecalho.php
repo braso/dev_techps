@@ -122,6 +122,47 @@
 			.row div {
 				min-width: auto;
 			}
+			
+			.page-header-top .container-fluid{
+				display: flex;
+				align-items: center;
+				flex-wrap: nowrap;
+			}
+			
+			.page-header-top .page-logo{
+				flex: 0 0 auto;
+			}
+			
+			.page-header-top .menu-options{
+				margin-left: auto;
+				display: flex;
+				align-items: center;
+			}
+			
+			.page-header-top .top-menu{
+				display: flex;
+				align-items: center;
+			}
+			
+			.page-header-top .top-menu .navbar-nav{
+				display: flex !important;
+				flex-direction: row !important;
+				flex-wrap: nowrap !important;
+				align-items: center !important;
+				margin: 0 !important;
+			}
+			
+			.page-header-top .top-menu .navbar-nav.pull-right{
+				float: none !important;
+			}
+			
+			.page-header-top .top-menu .navbar-nav > li{
+				float: none !important;
+			}
+			
+			.page-header-top .top-menu .navbar-nav > li > a{
+				padding: 12px 6px !important;
+			}
 		}
 
 		.row div label {
@@ -321,6 +362,10 @@
 								$hasAss = mysqli_query($connLocal, "SHOW TABLES LIKE 'assinantes'");
 								$hasSol = mysqli_query($connLocal, "SHOW TABLES LIKE 'solicitacoes_assinatura'");
 								if($hasAss && mysqli_num_rows($hasAss) > 0 && $hasSol && mysqli_num_rows($hasSol) > 0){
+									$hasExp = mysqli_query($connLocal, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'expires_at'");
+									if($hasExp && mysqli_num_rows($hasExp) == 0){
+										@mysqli_query($connLocal, "ALTER TABLE solicitacoes_assinatura ADD COLUMN expires_at DATETIME NULL");
+									}
 									$sqlPend = "
 										SELECT COUNT(*) AS total
 										FROM assinantes a
@@ -334,6 +379,11 @@
 													AND LOWER(TRIM(a2.status)) <> 'assinado'
 											)
 											AND (s.status = 'pendente' OR s.status = 'em_progresso')
+											AND (
+												s.expires_at IS NULL
+												OR s.expires_at = '0000-00-00 00:00:00'
+												OR UTC_TIMESTAMP() <= s.expires_at
+											)
 									";
 									$stmtPend = mysqli_prepare($connLocal, $sqlPend);
 									if($stmtPend){
