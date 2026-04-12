@@ -654,11 +654,7 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                     }
                                 }
                             ?>
-                            <?php if($thumbError): ?>
-                                <div class="bg-yellow-50 border border-yellow-100 text-yellow-800 text-sm rounded-lg p-4">
-                                    Pré-visualização não disponível neste servidor: <?php echo htmlspecialchars($thumbError); ?>
-                                </div>
-                            <?php endif; ?>
+                        
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
