@@ -110,6 +110,23 @@
         mysqli_query($conn, "ALTER TABLE rfids_log CHANGE rlog_nb_entidade_nova rlog_nb_user_novo INT(11) DEFAULT NULL;");
     };
 
+    // Migração da tabela de ajustes: chave de lote para agrupar um unico PDF por envio.
+    $checkEnvioDoc = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_ajuste LIKE 'data_envio_documento'");
+    if ($checkEnvioDoc && mysqli_num_rows($checkEnvioDoc) == 0) {
+        mysqli_query($conn, "ALTER TABLE solicitacoes_ajuste ADD COLUMN data_envio_documento DATETIME NULL AFTER data_visualizacao;");
+    };
+
+    // Migração da tabela de instancias de documento: suporte ao vinculo por entidade e data de referencia.
+    $checkInstEnt = mysqli_query($conn, "SHOW COLUMNS FROM inst_documento_modulo LIKE 'inst_nb_entidade'");
+    if ($checkInstEnt && mysqli_num_rows($checkInstEnt) == 0) {
+        mysqli_query($conn, "ALTER TABLE inst_documento_modulo ADD COLUMN inst_nb_entidade INT NULL AFTER inst_nb_user;");
+    };
+
+    $checkInstRef = mysqli_query($conn, "SHOW COLUMNS FROM inst_documento_modulo LIKE 'inst_tx_data_referencia'");
+    if ($checkInstRef && mysqli_num_rows($checkInstRef) == 0) {
+        mysqli_query($conn, "ALTER TABLE inst_documento_modulo ADD COLUMN inst_tx_data_referencia DATE NULL AFTER inst_nb_entidade;");
+    };
+
 
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_grid.php";
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";

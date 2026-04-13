@@ -39,6 +39,18 @@ Ele permite:
 4. Preencher campos em preencher_documento.php.
 5. Visualizar PDF por processar_pdf.php?id=ID.
 
+## Integracao com assinatura (PDF unico)
+- Quando existe solicitacao em assinatura com id_documento = INST_ID, a listagem em cadastro_documento.php prioriza esse arquivo.
+- Se nao houver arquivo no modulo assinatura, o sistema usa fallback para processar_pdf.php.
+- Isso mantem um unico PDF de referencia por instancia, sem quebrar o fluxo antigo.
+- Neste modulo, a assinatura e operada somente via sistema (lista de pendentes), sem envio de e-mail.
+
+## Ajustes de ponto (gestao)
+- O modulo de ajustes foi alinhado para usar aprovadores por cadastro de responsaveis (setor_responsavel/operacao_responsavel), no mesmo conceito do troca de turno.
+- Aprovacao de ajuste dispara assinatura ICP-Brasil para 2 partes: solicitante e gestor aprovador.
+- O fluxo existente de aprovacao/rejeicao continua igual; a assinatura foi adicionada como etapa complementar.
+- A geracao do PDF depende de tipo com layout ativo em camp_documento_modulo (prioridade para Comunicacao Interna, com fallback para Solicitacao de Ajuste/Ajuste Ponto).
+
 ## Pergunta comum: quem gera o PDF?
 O PDF e gerado pelo arquivo processar_pdf.php.
 

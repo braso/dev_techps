@@ -359,7 +359,8 @@ function assinatura_integracao_enviarDocumentoParaAssinatura(
 		return $criada;
 	}
 
-	if(function_exists("enviarEmailProximo")){
+	$enviarEmail = strtolower(trim(strval($opts["enviar_email"] ?? "sim"))) !== "nao";
+	if($enviarEmail && function_exists("enviarEmailProximo")){
 		enviarEmailProximo(
 			strval($criada["email"] ?? ""),
 			strval($criada["nome"] ?? ""),
@@ -377,6 +378,7 @@ function assinatura_integracao_enviarDocumentoParaAssinatura(
 	return $criada;
 }
 
+// Valida e normaliza a lista de signatarios por entidade, garantindo nome/e-mail validos.
 function assinatura_integracao_normalizarSignatarios(mysqli $conn, array $signatarios): array {
 	$out = [];
 
@@ -386,31 +388,36 @@ function assinatura_integracao_normalizarSignatarios(mysqli $conn, array $signat
 		}
 
 		$entiNbId = intval($s["enti_nb_id"] ?? 0);
-		if($entiNbId <= 0){
-			continue;
+		$nome = trim(strval($s["nome"] ?? ""));
+		$email = trim(strval($s["email"] ?? ""));
+
+		if(($email === "" || !filter_var($email, FILTER_VALIDATE_EMAIL)) && $entiNbId > 0){
+			$stmt = mysqli_prepare($conn, "SELECT e.enti_nb_id, e.enti_tx_nome, COALESCE(NULLIF(TRIM(e.enti_tx_email), ''), NULLIF(TRIM(u.user_tx_email), '')) AS email FROM entidade e LEFT JOIN user u ON u.user_nb_entidade = e.enti_nb_id WHERE e.enti_nb_id = ? LIMIT 1");
+			if($stmt){
+				mysqli_stmt_bind_param($stmt, "i", $entiNbId);
+				mysqli_stmt_execute($stmt);
+				$e = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+				mysqli_stmt_close($stmt);
+
+				if(is_array($e)){
+					if($nome === ""){
+						$nome = trim(strval($e["enti_tx_nome"] ?? ""));
+					}
+					$email = trim(strval($e["email"] ?? ""));
+				}
+			}
 		}
 
-		$stmt = mysqli_prepare($conn, "SELECT enti_nb_id, enti_tx_nome, enti_tx_email FROM entidade WHERE enti_nb_id = ? LIMIT 1");
-		if(!$stmt){
-			continue;
-		}
-		mysqli_stmt_bind_param($stmt, "i", $entiNbId);
-		mysqli_stmt_execute($stmt);
-		$e = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
-		mysqli_stmt_close($stmt);
-
-		if(!is_array($e)){
-			continue;
-		}
-
-		$email = trim(strval($e["enti_tx_email"] ?? ""));
 		if($email === "" || !filter_var($email, FILTER_VALIDATE_EMAIL)){
 			continue;
 		}
+		if($nome === ""){
+			$nome = "Signatário";
+		}
 
 		$out[] = [
-			"enti_nb_id" => intval($e["enti_nb_id"] ?? 0),
-			"nome" => trim(strval($e["enti_tx_nome"] ?? "")),
+			"enti_nb_id" => $entiNbId,
+			"nome" => $nome,
 			"email" => $email,
 			"funcao" => trim(strval($s["funcao"] ?? "Signatário")),
 			"ordem" => max(1, intval($s["ordem"] ?? 1))
@@ -420,6 +427,8 @@ function assinatura_integracao_normalizarSignatarios(mysqli $conn, array $signat
 	return $out;
 }
 
+// Cria uma solicitacao unica com varios assinantes e envia convites por e-mail.
+// Nao altera o fluxo legado: adiciona suporte multiassinante sem remover assinante unico.
 function assinatura_integracao_enviarDocumentoParaMultiplosAssinantes(
 	mysqli $conn,
 	string $arquivoOrigem,
@@ -553,7 +562,8 @@ function assinatura_integracao_enviarDocumentoParaMultiplosAssinantes(
 		return ["ok" => false, "error" => "Falha ao registrar assinantes."];
 	}
 
-	if(function_exists("enviarEmailProximo")){
+	$enviarEmail = strtolower(trim(strval($opts["enviar_email"] ?? "sim"))) !== "nao";
+	if($enviarEmail && function_exists("enviarEmailProximo")){
 		foreach($destinatarios as $d){
 			enviarEmailProximo(
 				strval($d["email"] ?? ""),

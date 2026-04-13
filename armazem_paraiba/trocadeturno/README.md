@@ -8,6 +8,7 @@ Este modulo implementa o fluxo completo de troca de horario entre colaboradores:
 3. Gestores aprovam ou reprovam na tela de gestao.
 4. Se aprovado, sistema cria documento dinamico do tipo Troca de Horario.
 5. Documento aparece automaticamente em documentos/cadastro_documento.php.
+6. Aprovado tambem envia o PDF para assinatura ICP-Brasil (solicitante, destino e aprovador).
 
 ## Arquivos da pasta
 - api_busca_matricula.php
@@ -35,6 +36,15 @@ Fluxo tecnico:
 - Se nao existir modelo ativo de Troca de Horario, nao gera documento.
 - Se o modelo existir, mas sem campos ativos, nao gera documento.
 - A aprovacao continua funcionando mesmo quando nao ha layout.
+- O PDF usado para assinatura segue padrao visual (logo/cabecalho/rodape).
+- O sistema prioriza um unico PDF por instancia (id_documento = INST_ID).
+
+## Assinatura ICP-Brasil
+- Apos aprovacao, o modulo envia automaticamente para assinatura digital.
+- Signatarios: Solicitante, Trabalhara para, Aprovador.
+- Sem hierarquia: todos com ordem 1.
+- Grupo de envio: troca_turno_ID_SOLICITACAO (evita duplicidade).
+- Operacao de assinatura via sistema (sem envio de e-mail neste fluxo).
 
 ## Onde configurar o layout do PDF
 1. Acesse documentos/configurar_layout.php.

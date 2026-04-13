@@ -993,6 +993,7 @@ function tt_enviarDocumentoTrocaHorarioParaAssinatura($idSolicitacao, $idInstanc
             'grupo_envio' => $grupoEnvio,
             'modo_envio' => 'avulso',
             'validar_icp' => 'sim',
+            'enviar_email' => 'nao',
             'salvar_documento_funcionario' => 'sim',
             'apagar_origem' => true
         )

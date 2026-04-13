@@ -1,0 +1,15 @@
+2026-04-13 09:34:35 | ASSINATURA | inicio solicitacao=67 aprovador=1001
+2026-04-13 09:34:35 | ASSINATURA | criando instancia nova para solicitacao=67
+2026-04-13 09:34:35 | ASSINATURA | falha ao criar instancia para solicitacao=67
+2026-04-13 09:34:35 | APROVACAO | erro ao enviar para assinatura solicitacao=67 msg=Falha ao criar a instância do documento.
+2026-04-13 09:44:45 | ASSINATURA | inicio solicitacao=68 aprovador=1001
+2026-04-13 09:44:45 | ASSINATURA | criando instancia nova para solicitacao=68
+2026-04-13 09:44:45 | ASSINATURA | instancia criada=39 tipo=211
+2026-04-13 09:44:45 | ASSINATURA | instancia vinculada a solicitacao=68 inst=39
+2026-04-13 09:44:45 | PDF | gerado: /var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_39_20260413094445.pdf | existe=sim
+2026-04-13 09:44:45 | ASSINATURA | pdf pronto=/var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_39_20260413094445.pdf
+2026-04-13 09:44:45 | SIGNATARIOS | montando para solicitacao=68 aprovador=1001
+2026-04-13 09:44:45 | SIGNATARIOS | total=2
+2026-04-13 09:44:45 | ASSINATURA | enviando para integracao com 2 signatarios
+2026-04-13 09:44:46 | ASSINATURA | integracao ok solicitacao_assinatura=32
+2026-04-13 09:44:46 | APROVACAO | assinatura encaminhada solicitacao=68 id_instancia=39
