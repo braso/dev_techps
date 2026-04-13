@@ -77,10 +77,10 @@ if($empresaTitulo === "" && isset($conn) && ($conn instanceof mysqli)){
             <div class="flex justify-between h-16 items-center">
                 <!-- Logo & Brand -->
                 <div class="flex items-center gap-4">
-                    <a href="<?php echo $baseAssinatura; ?>/index.php" class="flex-shrink-0 flex items-center gap-3">
+                    <a href="<?php echo $baseContex; ?>/index.php" class="flex-shrink-0 flex items-center gap-3">
                         <img class="h-8 w-auto object-contain" src="<?php echo $baseAssinatura; ?>/assets/logo.png" alt="TechPS Logo">
                         <div class="hidden md:block h-6 w-px bg-gray-300"></div>
-                        <span class="text-lg font-bold text-gray-800 tracking-tight">Assinatura Digital</span>
+                        <span class="hidden md:block text-lg font-bold text-gray-800 tracking-tight">Assinatura Digital</span>
                     </a>
                 </div>
 
@@ -196,13 +196,28 @@ if($empresaTitulo === "" && isset($conn) && ($conn instanceof mysqli)){
         
         <!-- Mobile Navigation (Hidden by default) -->
         <div class="md:hidden hidden border-t border-gray-200 bg-gray-50" id="mobile-menu">
-            <div class="px-2 pt-2 pb-3 space-y-1">
-                <a href="<?php echo $baseAssinatura; ?>/index.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Dashboard</a>
-                <a href="<?php echo $baseAssinatura; ?>/nova_assinatura.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Nova Assinatura</a>
-                <a href="<?php echo $baseAssinatura; ?>/governanca.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Assinatura com Governança</a>
-                <a href="<?php echo $baseAssinatura; ?>/consultar.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Consultar</a>
-                <a href="<?php echo $baseAssinatura; ?>/dadosbases/funcionarios.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Funcionários</a>
-                <a href="<?php echo $baseAssinatura; ?>/finalizar.php" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100">Finalizar (ICP)</a>
+            <div class="px-2 pt-2 pb-3 space-y-2">
+                <?php
+                    $secIndex = 0;
+                    foreach($menu_sistema as $categoria => $itens) {
+                        $secIndex++;
+                        $secId = "mobile-sec-" . $secIndex;
+                        echo '
+                            <div class="bg-white border border-gray-200 rounded-md overflow-hidden">
+                                <button type="button" class="w-full flex items-center justify-between px-3 py-3 text-left text-sm font-semibold text-gray-800" data-mobile-toggle="'.$secId.'">
+                                    <span>'.htmlspecialchars($categoria, ENT_QUOTES, "UTF-8").'</span>
+                                    <i class="fas fa-chevron-down text-xs text-gray-400"></i>
+                                </button>
+                                <div id="'.$secId.'" class="hidden border-t border-gray-200 bg-gray-50">
+                                    <div class="py-1">';
+                                        foreach($itens as $nome => $link) {
+                                            echo '<a href="'.$link.'" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">'.htmlspecialchars($nome, ENT_QUOTES, "UTF-8").'</a>';
+                                        }
+                        echo '      </div>
+                                </div>
+                            </div>';
+                    }
+                ?>
             </div>
         </div>
     </header>
