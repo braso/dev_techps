@@ -309,6 +309,9 @@
 	</style>
 
 	<script type="text/javascript">
+		if(typeof window.updateTimer !== "function"){
+			window.updateTimer = function(){};
+		}
 		function validChar(e, pattern = '[a-zA-z0-9]'){
 			char = String.fromCharCode(e.keyCode);
 			return (char.match(pattern));
