@@ -1,0 +1,89 @@
+[2026-04-02 09:44:40] 🚀 Iniciando updateFTP
+[2026-04-02 09:44:40] 👤 Usuario ID: 138
+[2026-04-02 09:44:40] 📦 Buscando FTP do banco
+[2026-04-02 09:44:40] ⚠️ FTP vazio, usando fallback global
+[2026-04-02 09:44:40] 🌐 FTP: {"empr_tx_ftpServer":"ftp-jornadas.positronrt.com.br","empr_tx_ftpUsername":"09608305000155","empr_tx_ftpUserpass":"09608305000155"}
+[2026-04-02 09:44:40] 📅 Data inicial: 2026-04-03
+[2026-04-02 09:44:40] 📡 Listando arquivos
+[2026-04-02 09:44:42] 📂 Arquivos encontrados: 9
+[2026-04-02 09:44:42] ✅ Finalizado
+[2026-04-02 09:46:07] 🚀 Iniciando updateFTP
+[2026-04-02 09:46:07] 👤 Usuario: 138
+[2026-04-02 09:46:07] ⚠️ FTP não encontrado na empresa, usando fallback global
+[2026-04-02 09:46:07] 🌐 FTP Server: ftp-jornadas.positronrt.com.br
+[2026-04-02 09:46:07] 📅 Data inicial: 2026-04-03
+[2026-04-02 09:46:07] 📡 Listando arquivos FTP...
+[2026-04-02 09:46:10] 📂 Total arquivos: 9
+[2026-04-02 09:46:10] 🏁 Finalizado updateFTP
+[2026-04-02 09:46:12] 🚀 Iniciando updateFTP
+[2026-04-02 09:46:12] 👤 Usuario: 138
+[2026-04-02 09:46:12] ⚠️ FTP não encontrado na empresa, usando fallback global
+[2026-04-02 09:46:12] 🌐 FTP Server: ftp-jornadas.positronrt.com.br
+[2026-04-02 09:46:12] 📅 Data inicial: 2026-04-03
+[2026-04-02 09:46:12] 📡 Listando arquivos FTP...
+[2026-04-02 09:46:17] 📂 Total arquivos: 9
+[2026-04-02 09:46:17] 🏁 Finalizado updateFTP
+[2026-04-02 09:46:25] 🚀 Iniciando updateFTP
+[2026-04-02 09:46:25] 👤 Usuario: 138
+[2026-04-02 09:46:25] ⚠️ FTP não encontrado na empresa, usando fallback global
+[2026-04-02 09:46:25] 🌐 FTP Server: ftp-jornadas.positronrt.com.br
+[2026-04-02 09:46:25] 📅 Data inicial: 2026-04-03
+[2026-04-02 09:46:25] 📡 Listando arquivos FTP...
+[2026-04-02 09:46:28] 📂 Total arquivos: 9
+[2026-04-02 09:46:28] 🏁 Finalizado updateFTP
+[2026-04-02 09:47:37] 🚀 Iniciando updateFTP
+[2026-04-02 09:47:37] 👤 Usuario: 138
+[2026-04-02 09:47:37] ⚠️ FTP não encontrado na empresa, usando fallback global
+[2026-04-02 09:47:37] 🌐 FTP Server: ftp-jornadas.positronrt.com.br
+[2026-04-02 09:49:23] 🚀 Iniciando updateFTP
+[2026-04-02 09:49:23] 👤 Usuario: 138
+[2026-04-02 09:49:23] ⚠️ FTP não encontrado na empresa, usando fallback global
+[2026-04-02 09:49:23] 🌐 FTP Server: ftp-jornadas.positronrt.com.br
+[2026-04-02 09:50:29] 🚀 Iniciando updateFTP
+[2026-04-02 09:50:29] 👤 Usuario: 138
+[2026-04-02 09:50:29] ⚠️ FTP não encontrado na empresa, usando fallback global
+[2026-04-02 09:50:29] 🌐 FTP Server: ftp-jornadas.positronrt.com.br
+[2026-04-02 09:50:29] 📅 Data inicial: 2026-04-03
+[2026-04-02 09:50:29] 📡 Listando arquivos FTP...
+[2026-04-02 09:50:34] 📂 Total arquivos: 9
+[2026-04-02 09:50:34] 🏁 Finalizado updateFTP
+[2026-04-02 09:54:55] 🚀 Iniciando updateFTP
+[2026-04-02 09:54:55] 👤 Usuario: 138
+[2026-04-02 09:54:55] ⚠️ FTP não encontrado na empresa, usando fallback global
+[2026-04-02 09:54:55] 🌐 FTP Server: ftp-jornadas.positronrt.com.br
+[2026-04-02 09:54:55] ⚠️ Data inicial no futuro, ajustando para hoje
+[2026-04-02 09:54:55] 📅 Data inicial: 2026-04-02
+[2026-04-02 09:54:55] 📡 Listando arquivos FTP...
+[2026-04-02 09:54:58] 📂 Total arquivos: 9
+[2026-04-02 09:54:58] 🔍 Verificando: .
+[2026-04-02 09:54:58] 🔍 Verificando: ..
+[2026-04-02 09:54:58] 🔍 Verificando: apontamento01042026010000.txt
+[2026-04-02 09:54:58] 🔍 Verificando: apontamento02042026010000.txt
+[2026-04-02 09:54:58] 📥 Encontrado: apontamento02042026010000.txt
+[2026-04-02 09:54:59] ✅ Download OK: apontamento02042026010000.txt
+[2026-04-02 09:55:00] 🔍 Verificando: apontamento28032026010000.txt
+[2026-04-02 09:55:00] 🔍 Verificando: apontamento29032026010000.txt
+[2026-04-02 09:55:00] 🔍 Verificando: apontamento30032026010000.txt
+[2026-04-02 09:55:00] 🔍 Verificando: apontamento31032026010000.txt
+[2026-04-02 09:55:00] 🔍 Verificando: archive
+[2026-04-02 09:55:00] 🏁 Finalizado updateFTP
+[2026-04-02 09:57:54] 🚀 Iniciando updateFTP
+[2026-04-02 09:57:54] 👤 Usuario: 138
+[2026-04-02 09:57:54] ⚠️ FTP não encontrado na empresa, usando fallback global
+[2026-04-02 09:57:54] 🌐 FTP Server: ftp-jornadas.positronrt.com.br
+[2026-04-02 09:57:54] ⚠️ Data inicial no futuro, ajustando para hoje
+[2026-04-02 09:57:54] 📅 Data inicial: 2026-04-02
+[2026-04-02 09:57:54] 📡 Listando arquivos FTP...
+[2026-04-02 09:57:59] 📂 Total arquivos: 9
+[2026-04-02 09:57:59] 🔍 Verificando: .
+[2026-04-02 09:57:59] 🔍 Verificando: ..
+[2026-04-02 09:57:59] 🔍 Verificando: apontamento01042026010000.txt
+[2026-04-02 09:57:59] 🔍 Verificando: apontamento02042026010000.txt
+[2026-04-02 09:57:59] 📥 Encontrado: apontamento02042026010000.txt
+[2026-04-02 09:58:01] ✅ Download OK: apontamento02042026010000.txt
+[2026-04-02 09:58:01] 🔍 Verificando: apontamento28032026010000.txt
+[2026-04-02 09:58:01] 🔍 Verificando: apontamento29032026010000.txt
+[2026-04-02 09:58:01] 🔍 Verificando: apontamento30032026010000.txt
+[2026-04-02 09:58:01] 🔍 Verificando: apontamento31032026010000.txt
+[2026-04-02 09:58:01] 🔍 Verificando: archive
+[2026-04-02 09:58:01] 🏁 Finalizado updateFTP
