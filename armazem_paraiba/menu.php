@@ -33,6 +33,7 @@
             "cadastros" => [
                 "/cadastro_rfid.php" 		=> "RFID",
                 "/cadastro_digital.php"     => "Digital",
+                "/cadastro_equipamento.php" => "Equipamento",
                 "/cadastro_celular.php" 	=> "Celular",
                 "/cadastro_empresa.php" 	=> "Empresa/Filial",
                 "/cadastro_endosso.php" 	=> "Endosso",
