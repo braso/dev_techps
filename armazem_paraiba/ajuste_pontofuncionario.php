@@ -71,6 +71,26 @@
 	}
 	
 	criarTabelaSolicitacoes();
+	
+	function apf_isAdminNivel(): bool {
+		$nivel = strtolower(trim(strval($_SESSION['user_tx_nivel'] ?? '')));
+		return (strpos($nivel, 'administrador') !== false) || (strpos($nivel, 'super administrador') !== false);
+	}
+
+	function apf_getEntidadeLogadaId(): int {
+		return intval($_SESSION['user_nb_entidade'] ?? 0);
+	}
+
+	function apf_resolverMotoristaAlvo($idMotoristaInformado): int {
+		$idInformado = intval($idMotoristaInformado);
+		$idEntidadeLogada = apf_getEntidadeLogadaId();
+
+		if (!apf_isAdminNivel()) {
+			return $idEntidadeLogada;
+		}
+
+		return $idInformado > 0 ? $idInformado : $idEntidadeLogada;
+	}
 
 	function verificarPontoExistente($matricula, $data, $hora) {
 		$ponto = mysqli_fetch_assoc(query("
@@ -353,6 +373,7 @@
 	}
 
 	function gerarTabelaSolicitacoes($idMotorista) {
+		$idSolicitanteLogado = intval($_SESSION['user_nb_id'] ?? 0);
 		// Buscar todas as solicitações do motorista
 		$sql = "
 			SELECT 
@@ -367,6 +388,7 @@
 				sa.justificativa_gestor
 			FROM solicitacoes_ajuste sa
 			WHERE sa.id_motorista = {$idMotorista}
+			  AND sa.id_usuario_solicitante = {$idSolicitanteLogado}
 			ORDER BY sa.data_solicitacao DESC
 		";
 
@@ -647,6 +669,7 @@
 	}
 
 	function gerarTabelaRascunhos($idMotorista) {
+		$idSolicitanteLogado = intval($_SESSION['user_nb_id'] ?? 0);
 
 		$sql = "
 			SELECT 
@@ -659,6 +682,7 @@
 				sa.data_solicitacao
 			FROM solicitacoes_ajuste sa
 			WHERE sa.id_motorista = {$idMotorista}
+			AND sa.id_usuario_solicitante = {$idSolicitanteLogado}
 			AND sa.status = 'rascunho'
 			ORDER BY sa.data_solicitacao DESC
 		";
@@ -746,9 +770,12 @@
 
 		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['enviar_lote'])) {
 			try {
-				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMotorista"] ?? '');
+				$idMotorista = intval($_POST["idMotorista"] ?? 0);
+				$idMotorista = apf_resolverMotoristaAlvo($idMotorista);
+				$idMotoristaSql = mysqli_real_escape_string($GLOBALS['conn'], strval($idMotorista));
+				$idSolicitanteLogado = intval($_SESSION['user_nb_id'] ?? 0);
 
-				if (empty($idMotorista)) {
+				if ($idMotorista <= 0 || $idSolicitanteLogado <= 0) {
 					echo "<script>alert('Motorista inválido');</script>";
 					exit;
 				}
@@ -757,7 +784,8 @@
 				$datas = mysqli_fetch_all(query("
 					SELECT DISTINCT data_ajuste 
 					FROM solicitacoes_ajuste
-					WHERE id_motorista = '$idMotorista'
+					WHERE id_motorista = '$idMotoristaSql'
+					AND id_usuario_solicitante = {$idSolicitanteLogado}
 					AND status = 'rascunho'
 				"), MYSQLI_ASSOC);
 
@@ -772,7 +800,8 @@
 					UPDATE solicitacoes_ajuste 
 					SET status = 'enviada',
 					    data_envio_documento = '{$loteDocumento}'
-					WHERE id_motorista = '$idMotorista'
+					WHERE id_motorista = '$idMotoristaSql'
+					AND id_usuario_solicitante = {$idSolicitanteLogado}
 					AND status = 'rascunho'
 				");
 
@@ -787,7 +816,9 @@
 
 		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['salvar_rascunho'])) {
 			try {
-				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMotorista"] ?? '');
+				$idMotorista = intval($_POST["idMotorista"] ?? 0);
+				$idMotorista = apf_resolverMotoristaAlvo($idMotorista);
+				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], strval($idMotorista));
 				$data = mysqli_real_escape_string($GLOBALS['conn'], $_POST["data"] ?? '');
 				$hora = mysqli_real_escape_string($GLOBALS['conn'], $_POST["hora"] ?? '');
 				$idMacro = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMacro"] ?? '');
@@ -842,7 +873,9 @@
 
 		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['enviar_solicitacao'])) {
 			try {
-				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMotorista"] ?? '');
+				$idMotorista = intval($_POST["idMotorista"] ?? 0);
+				$idMotorista = apf_resolverMotoristaAlvo($idMotorista);
+				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], strval($idMotorista));
 				$data = mysqli_real_escape_string($GLOBALS['conn'], $_POST["data"] ?? '');
 				$hora = mysqli_real_escape_string($GLOBALS['conn'], $_POST["hora"] ?? '');
 				$idMacro = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMacro"] ?? '');
@@ -980,6 +1013,7 @@
 		}
 
 		$idMotorista = $_GET["idMotorista"] ?? $_POST["idMotorista"] ?? 0;
+		$idMotorista = apf_resolverMotoristaAlvo($idMotorista);
 
 		$motorista = mysqli_fetch_assoc(query("
 			SELECT enti_nb_id, enti_tx_matricula, enti_tx_nome, enti_tx_ocupacao,
