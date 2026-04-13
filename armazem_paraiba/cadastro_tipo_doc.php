@@ -6,6 +6,23 @@
 
 	include "conecta.php";
 
+	function ensureCampDocumentoModuloTable(){
+		@query(
+			"CREATE TABLE IF NOT EXISTS camp_documento_modulo (
+				camp_nb_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+				camp_nb_tipo_doc INT(11) NOT NULL,
+				camp_tx_label VARCHAR(255) NOT NULL,
+				camp_tx_tipo ENUM('texto_curto','texto_longo','data','selecao','usuario','setor','number') NOT NULL,
+				camp_tx_opcoes TEXT NULL,
+				camp_nb_ordem INT(11) DEFAULT 0,
+				camp_tx_obrigatorio ENUM('sim','nao') DEFAULT 'nao',
+				camp_tx_placeholder VARCHAR(255) NULL,
+				camp_tx_status ENUM('ativo','inativo') DEFAULT 'ativo'
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+		);
+	}
+	ensureCampDocumentoModuloTable();
+
     function excluirTipoDoc(){
 		remover("tipos_documentos",$_POST["id"]);
 		index();
@@ -206,6 +223,8 @@
 
     function index() {
         global $CONTEX;
+
+        ensureCampDocumentoModuloTable();
 		
         //ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
         include "check_permission.php";
