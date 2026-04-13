@@ -1,5 +1,6 @@
 <?php
 include_once __DIR__."/helpers_troca_turno.php";
+include_once "../check_permission.php";
 
 // Acesso seguro a chaves de array sem gerar aviso quando nao existir.
 function tg($arr, $k, $d = '') {
@@ -24,9 +25,11 @@ function tt_getFlashGestao() {
 function tt_processarDecisaoGestor() {
     $idUser = intval(tg($_SESSION, 'user_nb_id', 0));
     $idEntidade = intval(tg($_SESSION, 'user_nb_entidade', 0));
+    $isSuperAdmin = intval($_SESSION['user_nb_superadmin'] ?? 0) === 1;
 
-    if ($idUser <= 0 || $idEntidade <= 0) {
-        return array('Sessao invalida para decisao.', true);
+    if ($idUser <= 0 || (!$isSuperAdmin && $idEntidade <= 0)) {
+        header("Location: ../index.php");
+        exit;
     }
 
     $idSolicitacao = intval(tg($_POST, 'id_solicitacao', 0));
@@ -112,8 +115,9 @@ tt_ensureSchema();
 
 $idUser = intval(tg($_SESSION, 'user_nb_id', 0));
 $idEntidade = intval(tg($_SESSION, 'user_nb_entidade', 0));
+$isSuperAdmin = intval($_SESSION['user_nb_superadmin'] ?? 0) === 1;
 
-if ($idUser <= 0 || $idEntidade <= 0) {
+if ($idUser <= 0) {
     header("Location: ../index.php");
     exit;
 }
@@ -125,9 +129,15 @@ if (!in_array($filtro, array('pendente', 'aprovado', 'rejeitado', 'todas'), true
     $filtro = 'pendente';
 }
 
-$where = "WHERE a.apro_nb_entidade = ?";
-$types = "i";
-$vars = array($idEntidade);
+if ($isSuperAdmin) {
+    $where = "WHERE 1=1";
+    $types = "";
+    $vars = array();
+} else {
+    $where = "WHERE a.apro_nb_entidade = ?";
+    $types = "i";
+    $vars = array($idEntidade);
+}
 
 if ($filtro === 'pendente') {
     $where .= " AND a.apro_tx_status = 'pendente'";

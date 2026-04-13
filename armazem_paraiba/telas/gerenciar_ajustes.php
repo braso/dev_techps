@@ -1,6 +1,5 @@
 <?php
 	include "../funcoes_ponto.php";
-<<<<<<< HEAD
 	@mysqli_query($GLOBALS['conn'], "ALTER TABLE solicitacoes_ajuste ADD COLUMN justificativa_gestor TEXT DEFAULT NULL");
 	@mysqli_query($GLOBALS['conn'], "ALTER TABLE solicitacoes_ajuste ADD COLUMN id_instancia_documento INT NULL");
 	@mysqli_query($GLOBALS['conn'], "ALTER TABLE solicitacoes_ajuste ADD COLUMN data_envio_documento DATETIME NULL");
@@ -439,7 +438,6 @@
 
 		return array_merge(array('ok' => true, 'id_instancia_documento' => $idInstancia), $resAprovador);
 	}
-=======
 	
 	function ensureSolicitacoesAjusteTable(){
 		query("CREATE TABLE IF NOT EXISTS solicitacoes_ajuste (
@@ -479,7 +477,6 @@
 		}
 	}
 	ensureSolicitacoesAjusteTable();
->>>>>>> f65657309b95d9075cb21ffd935b6d6c79d7eb4e
 
 	function buscarSubsetores(){
 		$setorRaw = strval($_POST['setor'] ?? '');
