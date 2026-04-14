@@ -60,7 +60,7 @@
 		<div class="content">
 			<!-- COMECO LOGIN FORM -->
 			<form class="login-form" method="post">
-				<h3 class="form-title font-blue">Loginnnnnnn <?=(is_int(strpos($_SERVER["REQUEST_URI"], "dev"))? "(Dev)": "")?></h3>
+				<h3 class="form-title font-blue">Login <?=(is_int(strpos($_SERVER["REQUEST_URI"], "dev"))? "(Dev)": "")?></h3>
 				<!--Vem do arquivo empresas.php -->
 				<?=$empresasInput?>
 
@@ -87,7 +87,7 @@
 				<div class="" style="display:flex; align-items:center; width:100%; justify-content:space-between; margin-top:10px">
 					<label style="display:flex; align-items:center; gap:12px; margin:0; white-space:nowrap; flex-shrink:0">
 						<input type="checkbox" name="remember" />
-						<span>Lembre-memmmm</span>
+						<span>Lembre-me</span>
 					</label>
 					<a href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
 				</div>
