@@ -1223,7 +1223,7 @@ if (empty($justificativaGestor)) {
 
 			$checkbox = "";
 			if ($row['status'] == 'enviada' || $row['status'] == 'visualizada') {
-				$checkbox = "<input type='checkbox' class='sel-lote' value='{$row['id']}'>";
+				$checkbox = "<input type='checkbox' class='sel-lote' name='sel_lote[]' data-lote-id='{$row['id']}' value='{$row['id']}' onclick='window.__gaToggleLote && window.__gaToggleLote()'>";
 			}
 
 			$acoes = "";
@@ -1273,7 +1273,7 @@ if (empty($justificativaGestor)) {
 			];
 		}
 
-		$cabecalho_tabela = ["<input type='checkbox' id='sel-tudo'>", "Solicitado", "Funcionário", "Data/Hora Ajuste", "Tipo", "Motivo", "Justificativa", "Solicitante", "Status", "Ações", "Documento","Justificativa"];
+		$cabecalho_tabela = ["<input type='checkbox' id='sel-tudo' onclick='(function(m){var aplicar=function(){var lista=document.getElementsByName(\"sel_lote[]\");if(!lista||!lista.length){lista=document.querySelectorAll(\".sel-lote, .tabela-espelho-ponto tbody td:first-child input[type=checkbox]\");}for(var i=0;i<lista.length;i++){var cb=lista[i];if(cb&&cb.id!==\"sel-tudo\"){cb.checked=!!m;}}if(window.__gaToggleLote){window.__gaToggleLote();}};aplicar();if(window.setTimeout){window.setTimeout(aplicar,0);window.setTimeout(aplicar,80);}})(this.checked);'>", "Solicitado", "Funcionário", "Data/Hora Ajuste", "Tipo", "Motivo", "Justificativa", "Solicitante", "Status", "Ações", "Documento","Justificativa"];
 		echo "<h3>Solicitações de Ajuste</h3>";
 		$novaOrdem = ($ordem === 'ASC') ? 'DESC' : 'ASC';
 		$icone = ($ordem === 'ASC') ? '↑' : '↓';
@@ -1334,6 +1334,47 @@ if (empty($justificativaGestor)) {
 		</div>
 
 		<script>
+			window.__gaSyncCheckboxUI = function() {
+				if (!window.jQuery) return;
+				var $ = window.jQuery;
+				var $alvos = $('input#sel-tudo, input[name="sel_lote[]"]');
+
+				if ($.uniform && typeof $.uniform.update === 'function') {
+					$.uniform.update($alvos);
+				}
+
+				if (typeof $alvos.iCheck === 'function') {
+					try {
+						$alvos.iCheck('update');
+					} catch (e) {
+						// Ignora quando iCheck nao estiver inicializado para estes elementos.
+					}
+				}
+			};
+
+			window.__gaGetChecksLote = function() {
+				return Array.from(document.getElementsByName('sel_lote[]')).filter(function(el) {
+					return !!el && el.type === 'checkbox';
+				});
+			};
+
+			window.__gaSetHeaderState = function(total, marcados) {
+				Array.from(document.querySelectorAll('#sel-tudo')).forEach(function(ctrl) {
+					ctrl.checked = total > 0 && marcados === total;
+					ctrl.indeterminate = marcados > 0 && marcados < total;
+				});
+			};
+
+			window.__gaSelTudo = function(marcarTodos) {
+				const checks = window.__gaGetChecksLote();
+				checks.forEach(function(cb) {
+					cb.checked = !!marcarTodos;
+				});
+				window.__gaSetHeaderState(checks.length, marcarTodos ? checks.length : 0);
+				if (window.__gaSyncCheckboxUI) window.__gaSyncCheckboxUI();
+				if (window.__gaToggleLote) window.__gaToggleLote();
+			};
+
 			(function(){
 				function closeAllMultiSelect(){
 					document.querySelectorAll('.ms-menu').forEach(function(menu){
@@ -1433,7 +1474,10 @@ if (empty($justificativaGestor)) {
 					
 					$('#modalJustificativa').modal('hide');
 					
-					const selecionados = Array.from(document.querySelectorAll('.sel-lote:checked')).map(cb => cb.value);
+					const selecionados = (window.__gaGetChecksLote ? window.__gaGetChecksLote() : Array.from(document.querySelectorAll('.sel-lote')))
+						.filter(cb => cb.checked)
+						.map(cb => cb.value)
+						.filter(Boolean);
 					
 					if (acaoLote === 'aceitarLote') {
 						fetch('<?= basename($_SERVER['PHP_SELF']) ?>', {
@@ -1474,36 +1518,84 @@ if (empty($justificativaGestor)) {
 			}
 
 			function processarLote(acaoLote) {
-				const selecionados = Array.from(document.querySelectorAll('.sel-lote:checked')).map(cb => cb.value);
+				const selecionados = (window.__gaGetChecksLote ? window.__gaGetChecksLote() : Array.from(document.querySelectorAll('.sel-lote')))
+					.filter(cb => cb.checked)
+					.map(cb => cb.value)
+					.filter(Boolean);
 				if (selecionados.length === 0) return;
 				
 				abrirModalJustificativa('lote', acaoLote);
 			}
 
 			document.addEventListener('DOMContentLoaded', function() {
-				const selTudo = document.getElementById('sel-tudo');
-				const checks = document.querySelectorAll('.sel-lote');
 				const btnAprovar = document.getElementById('btn-aprovar-lote');
 				const btnRejeitar = document.getElementById('btn-rejeitar-lote');
 
+				function getChecksLote() {
+					if (window.__gaGetChecksLote) return window.__gaGetChecksLote();
+					return Array.from(document.getElementsByName('sel_lote[]'));
+				}
+
+				function getSelectAllControles() {
+					return Array.from(document.querySelectorAll('#sel-tudo'));
+				}
+
 				function toggleBotoesLote() {
-					const temSelecionado = document.querySelectorAll('.sel-lote:checked').length > 0;
+					const checks = getChecksLote();
+					const temSelecionado = checks.some(function(cb) { return cb.checked; });
+
+					if (!btnAprovar || !btnRejeitar) {
+						return;
+					}
+
 					btnAprovar.style.display = temSelecionado ? 'inline-block' : 'none';
 					btnRejeitar.style.display = temSelecionado ? 'inline-block' : 'none';
-				}
-				btnAprovar.onclick = () => processarLote('aceitarLote');
-				btnRejeitar.onclick = () => processarLote('rejeitarLote');
 
-				if (selTudo) {
-					selTudo.addEventListener('change', function() {
-						checks.forEach(cb => cb.checked = selTudo.checked);
-						toggleBotoesLote();
+					const total = checks.length;
+					const marcados = checks.filter(cb => cb.checked).length;
+					if (window.__gaSetHeaderState) {
+						window.__gaSetHeaderState(total, marcados);
+					} else {
+						getSelectAllControles().forEach(function(ctrl) {
+							ctrl.checked = total > 0 && marcados === total;
+							ctrl.indeterminate = marcados > 0 && marcados < total;
+						});
+					}
+
+					if (window.__gaSyncCheckboxUI) window.__gaSyncCheckboxUI();
+				}
+				window.__gaToggleLote = toggleBotoesLote;
+
+				function aplicarSelecaoGlobal(marcarTodos) {
+					if (window.__gaSelTudo) {
+						window.__gaSelTudo(!!marcarTodos);
+						return;
+					}
+
+					const checks = getChecksLote();
+					checks.forEach(function(cb) { cb.checked = !!marcarTodos; });
+					getSelectAllControles().forEach(function(ctrl) {
+						ctrl.checked = !!marcarTodos;
+						ctrl.indeterminate = false;
 					});
+					toggleBotoesLote();
 				}
+				if (btnAprovar) btnAprovar.onclick = () => processarLote('aceitarLote');
+				if (btnRejeitar) btnRejeitar.onclick = () => processarLote('rejeitarLote');
 
-				checks.forEach(cb => {
-					cb.addEventListener('change', toggleBotoesLote);
+				document.addEventListener('change', function(e) {
+					if (e.target && e.target.id === 'sel-tudo') {
+						aplicarSelecaoGlobal(e.target.checked);
+						return;
+					}
+
+					if (e.target && e.target.name === 'sel_lote[]') {
+						toggleBotoesLote();
+					}
 				});
+
+				toggleBotoesLote();
+				if (window.__gaSyncCheckboxUI) window.__gaSyncCheckboxUI();
 
 				function initMultiSelect(rootId){
 					const root = document.getElementById(rootId);
