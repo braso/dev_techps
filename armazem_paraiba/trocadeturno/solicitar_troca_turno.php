@@ -249,7 +249,8 @@ if (!empty($notificacoes)) {
     echo "<div class='row'><div class='col-sm-12'><div class='portlet light'>";
     echo "<div class='portlet-title'><div class='caption'><span class='caption-subject font-dark bold'>Notificacoes</span></div></div>";
     echo "<div class='portlet-body'><ul style='margin:0;padding-left:18px;'>";
-    foreach ($notificacoes as $n) {
+    $ultimasNotificaoes = array_slice($notificacoes, -2);
+    foreach ($ultimasNotificaoes as $n) {
         echo "<li>".htmlspecialchars(strval(tt_s($n, 'noti_tx_mensagem', '')))."</li>";
     }
     echo "</ul></div></div></div></div>";
