@@ -179,6 +179,67 @@ function tt_buscarPorMatricula($matricula) {
     return is_array($r) ? $r : array();
 }
 
+// Normaliza o valor de turno para os codigos usados no cadastro de parametro.
+function tt_normalizarTurnoCodigo($turno) {
+    $turno = strtoupper(trim((string)$turno));
+    if ($turno === '') {
+        return '';
+    }
+
+    $map = array(
+        'M' => 'M',
+        'MANHA' => 'M',
+        'MANHÃ' => 'M',
+        'T' => 'T',
+        'TARDE' => 'T',
+        'V' => 'V',
+        'VESPERTINO' => 'V',
+        'N' => 'N',
+        'NOITE' => 'N',
+        'D' => 'D',
+        'DIURNO' => 'D'
+    );
+
+    return isset($map[$turno]) ? $map[$turno] : '';
+}
+
+// Retorna nome amigavel do turno a partir do codigo.
+function tt_turnoLabel($codigo) {
+    $codigo = tt_normalizarTurnoCodigo($codigo);
+    $labels = array(
+        'M' => 'Manha',
+        'T' => 'Tarde',
+        'V' => 'Vespertino',
+        'N' => 'Noite',
+        'D' => 'Diurno'
+    );
+    return isset($labels[$codigo]) ? $labels[$codigo] : '';
+}
+
+// Busca o turno configurado no parametro vinculado a entidade informada.
+function tt_buscarTurnoEntidade($entidadeId) {
+    $entidadeId = intval($entidadeId);
+    if ($entidadeId <= 0) {
+        return array('codigo' => '', 'label' => '');
+    }
+
+    $r = tt_fetch_assoc_safe(tt_query(
+        "SELECT p.para_tx_turno
+         FROM entidade e
+         LEFT JOIN parametro p ON p.para_nb_id = e.enti_nb_parametro
+         WHERE e.enti_nb_id = ?
+         LIMIT 1",
+        "i",
+        array($entidadeId)
+    ));
+
+    $codigo = tt_normalizarTurnoCodigo(tt_val($r, 'para_tx_turno', ''));
+    return array(
+        'codigo' => $codigo,
+        'label' => tt_turnoLabel($codigo)
+    );
+}
+
 // Busca entidades por ID para compor lista de gestores.
 function tt_buscaEntidadesPorIds($ids, $tipo) {
     if (!is_array($ids)) {

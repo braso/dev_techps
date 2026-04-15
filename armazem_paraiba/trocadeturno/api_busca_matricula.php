@@ -28,11 +28,14 @@ if (empty($dados)) {
 }
 
 list($setor, $subsetor) = tt_buscarSetorSubsetor(intval(isset($dados['enti_nb_id']) ? $dados['enti_nb_id'] : 0));
+$turnoInfo = tt_buscarTurnoEntidade(intval(isset($dados['enti_nb_id']) ? $dados['enti_nb_id'] : 0));
 
 tt_json_out(array(
     'sucesso' => true,
     'nome' => strval(isset($dados['user_tx_nome']) ? $dados['user_tx_nome'] : ''),
     'setor' => $setor,
-    'subsetor' => $subsetor
+    'subsetor' => $subsetor,
+    'turno_codigo' => strval(isset($turnoInfo['codigo']) ? $turnoInfo['codigo'] : ''),
+    'turno_label' => strval(isset($turnoInfo['label']) ? $turnoInfo['label'] : '')
 ));
 

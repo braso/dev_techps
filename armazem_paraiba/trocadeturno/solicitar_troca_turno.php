@@ -224,6 +224,7 @@ $cpfFmt = (strlen($cpfRaw) === 11)
     : strval(tt_s($usuario, 'user_tx_cpf', ''));
 
 $notificacoes = tt_buscarNotificacoes($idUsuarioEntidade, 5);
+$turnoSolicitante = tt_buscarTurnoEntidade($idUsuarioEntidade);
 
 $resHistory = tt_query(
     "SELECT s.*,
@@ -254,7 +255,14 @@ if (!empty($notificacoes)) {
     echo "</ul></div></div></div></div>";
 }
 
-$turnos = array("" => "Selecione...", "Turno 1" => "Turno 1", "Turno 2" => "Turno 2", "Turno 3" => "Turno 3", "Manha" => "Manha", "Tarde" => "Tarde", "Noite" => "Noite");
+$turnos = array(
+    "" => "Selecione...",
+    "M" => "Manha - M",
+    "T" => "Tarde - T",
+    "V" => "Vespertino - V",
+    "N" => "Noite - N",
+    "D" => "Diurno - D"
+);
 
 $fieldsSolicitante = array(
     "<div class='col-sm-12'><h4 style='border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:12px;'><i class='fa fa-user'></i> Solicitante</h4></div>",
@@ -278,9 +286,11 @@ $fieldsTroca = array(
     "<div class='col-sm-2 margin-bottom-5'><label>Setor</label><input type='text' name='setor_trabalhara' id='setor_trabalhara' class='form-control input-sm' readonly></div>",
     "<div class='col-sm-2 margin-bottom-5'><label>Subsetor</label><input type='text' name='subsetor_trabalhara' id='subsetor_trabalhara' class='form-control input-sm' readonly></div>",
     campo_data('Data da Troca', 'data_troca', '', 2, "min='$dataMinima'"),
-    combo('Turno', 'turno_troca', '', 2, $turnos),
+    combo('Turno', 'turno_troca', strval(tt_s($turnoSolicitante, 'codigo', '')), 2, $turnos),
+    "<div class='col-sm-2 margin-bottom-5'><small id='msg_turno_troca' style='color:#888;'></small></div>",
     campo_data('Data que Pagara', 'data_pagara', '', 2, "min='$dataMinima'"),
     combo('Turno que Pagara', 'turno_pagara', '', 2, $turnos),
+    "<div class='col-sm-2 margin-bottom-5'><small id='msg_turno_pagara' style='color:#888;'></small></div>",
     textarea('Complemento', 'complemento', '', 12, "rows='3' placeholder='Observacoes ou informacoes adicionais...'")
 );
 
@@ -296,17 +306,35 @@ echo fecha_form($buttons);
 
 echo "<script>
 // Busca dados do colaborador informado e preenche os campos da tela.
+function tentarAbrirSelect(el){
+ if(!el){return;}
+ el.focus();
+ try {
+     if(typeof el.showPicker === 'function'){
+         el.showPicker();
+     } else {
+         el.click();
+     }
+ } catch(e){
+     try { el.click(); } catch(_e){}
+ }
+}
+
 function preencherPorMatricula(){
  var matEl=document.getElementById('matricula_trabalhara');
  var msg=document.getElementById('msg_busca_matricula');
  var nome=document.getElementById('nome_trabalhara');
  var setor=document.getElementById('setor_trabalhara');
  var subsetor=document.getElementById('subsetor_trabalhara');
+ var turnoPagara=document.getElementsByName('turno_pagara')[0];
+ var msgTurnoPagara=document.getElementById('msg_turno_pagara');
  if(!matEl){return;}
  var matricula=(matEl.value||'').trim();
  if(matricula===''){ if(msg){msg.innerHTML='<span style=\'color:red;\'>Informe a matricula.</span>';} return; }
  if(msg){msg.innerHTML='<i class=\'fa fa-spinner fa-spin\'></i> Buscando...';}
  if(nome){nome.value='';} if(setor){setor.value='';} if(subsetor){subsetor.value='';}
+ if(turnoPagara){turnoPagara.value='';}
+ if(msgTurnoPagara){msgTurnoPagara.innerHTML='';}
  fetch('api_busca_matricula.php?matricula='+encodeURIComponent(matricula),{credentials:'same-origin'})
  .then(function(r){return r.text();})
  .then(function(text){
@@ -321,6 +349,17 @@ function preencherPorMatricula(){
          if(nome){nome.value=res.nome||'';}
          if(setor){setor.value=res.setor||'';}
          if(subsetor){subsetor.value=res.subsetor||'';}
+         if(turnoPagara){
+             var turnoCodigo=(res.turno_codigo||'').toString().trim();
+             if(turnoCodigo!==''){
+                 turnoPagara.value=turnoCodigo;
+                 if(msgTurnoPagara){msgTurnoPagara.innerHTML='<span style=\'color:green;\'>Turno preenchido automaticamente.</span>';}
+             } else {
+                 turnoPagara.value='';
+                 tentarAbrirSelect(turnoPagara);
+                 if(msgTurnoPagara){msgTurnoPagara.innerHTML='<span style=\'color:#b35a00;\'>Sem turno cadastrado. Selecione manualmente.</span>';}
+             }
+         }
          if(msg){msg.innerHTML='<span style=\'color:green;\'>Encontrado</span>';}
      } else {
          if(msg){msg.innerHTML='<span style=\'color:red;\'>'+(res.msg||'Nao encontrado')+'</span>';}
@@ -333,8 +372,18 @@ function preencherPorMatricula(){
 document.addEventListener('DOMContentLoaded', function(){
  var btn=document.getElementById('btn_buscar_matricula');
  var input=document.getElementById('matricula_trabalhara');
+ var turnoTroca=document.getElementsByName('turno_troca')[0];
+ var msgTurnoTroca=document.getElementById('msg_turno_troca');
  if(btn){btn.addEventListener('click', preencherPorMatricula);} 
  if(input){ input.addEventListener('keydown', function(ev){ if(ev.key==='Enter'){ev.preventDefault(); preencherPorMatricula();} }); }
+ if(turnoTroca){
+     if((turnoTroca.value||'').trim()!==''){
+         if(msgTurnoTroca){msgTurnoTroca.innerHTML='<span style=\'color:green;\'>Turno do solicitante preenchido automaticamente.</span>';}
+     } else {
+         tentarAbrirSelect(turnoTroca);
+         if(msgTurnoTroca){msgTurnoTroca.innerHTML='<span style=\'color:#b35a00;\'>Solicitante sem turno cadastrado. Selecione manualmente.</span>';}
+     }
+ }
 });
 </script>";
 
