@@ -7,6 +7,16 @@ function tg($arr, $k, $d = '') {
     return (is_array($arr) && isset($arr[$k])) ? $arr[$k] : $d;
 }
 
+// Identifica super admin usando flag dedicada e nivel textual da sessao.
+function tt_isSuperAdmin() {
+    if (intval($_SESSION['user_nb_superadmin'] ?? 0) === 1) {
+        return true;
+    }
+
+    $nivel = trim(strval($_SESSION['user_tx_nivel'] ?? ''));
+    return (bool)preg_match('/super\s+administrador/i', $nivel);
+}
+
 function tt_setFlashGestao($mensagem, $erro) {
     $_SESSION['tt_gestao_msg'] = strval($mensagem);
     $_SESSION['tt_gestao_erro'] = ($erro ? 1 : 0);
@@ -25,7 +35,7 @@ function tt_getFlashGestao() {
 function tt_processarDecisaoGestor() {
     $idUser = intval(tg($_SESSION, 'user_nb_id', 0));
     $idEntidade = intval(tg($_SESSION, 'user_nb_entidade', 0));
-    $isSuperAdmin = intval($_SESSION['user_nb_superadmin'] ?? 0) === 1;
+    $isSuperAdmin = tt_isSuperAdmin();
 
     if ($idUser <= 0 || (!$isSuperAdmin && $idEntidade <= 0)) {
         header("Location: ../index.php");
@@ -41,16 +51,28 @@ function tt_processarDecisaoGestor() {
 
     $statusAprovador = ($decisao === 'aprovado') ? 'aceito' : 'rejeitado';
 
-    $perm = tt_fetch_assoc_safe(tt_query(
-        "SELECT apro_nb_id
-         FROM solicitacao_troca_horario_aprovadores
-         WHERE apro_nb_solicitacao = ?
-           AND apro_nb_entidade = ?
-           AND apro_tx_status = 'pendente'
-         LIMIT 1",
-        "ii",
-        array($idSolicitacao, $idEntidade)
-    ));
+        if ($isSuperAdmin) {
+                $perm = tt_fetch_assoc_safe(tt_query(
+                        "SELECT soli_nb_id
+                         FROM solicitacao_troca_horario
+                         WHERE soli_nb_id = ?
+                             AND soli_tx_status_gestor = 'pendente'
+                         LIMIT 1",
+                        "i",
+                        array($idSolicitacao)
+                ));
+        } else {
+                $perm = tt_fetch_assoc_safe(tt_query(
+                        "SELECT apro_nb_id
+                         FROM solicitacao_troca_horario_aprovadores
+                         WHERE apro_nb_solicitacao = ?
+                             AND apro_nb_entidade = ?
+                             AND apro_tx_status = 'pendente'
+                         LIMIT 1",
+                        "ii",
+                        array($idSolicitacao, $idEntidade)
+                ));
+        }
 
     if (empty($perm)) {
         return array('Voce nao possui solicitacao pendente para este item.', true);
@@ -115,7 +137,7 @@ tt_ensureSchema();
 
 $idUser = intval(tg($_SESSION, 'user_nb_id', 0));
 $idEntidade = intval(tg($_SESSION, 'user_nb_entidade', 0));
-$isSuperAdmin = intval($_SESSION['user_nb_superadmin'] ?? 0) === 1;
+$isSuperAdmin = tt_isSuperAdmin();
 
 if ($idUser <= 0) {
     header("Location: ../index.php");
@@ -124,46 +146,75 @@ if ($idUser <= 0) {
 
 list($mensagem, $erro) = tt_getFlashGestao();
 
-$filtro = strtolower(trim(strval(tg($_GET, 'status', 'pendente'))));
+$filtroPadrao = $isSuperAdmin ? 'todas' : 'pendente';
+$filtro = strtolower(trim(strval(tg($_GET, 'status', $filtroPadrao))));
 if (!in_array($filtro, array('pendente', 'aprovado', 'rejeitado', 'todas'), true)) {
-    $filtro = 'pendente';
+    $filtro = $filtroPadrao;
 }
 
 if ($isSuperAdmin) {
     $where = "WHERE 1=1";
     $types = "";
     $vars = array();
+
+    if ($filtro === 'pendente') {
+        $where .= " AND s.soli_tx_status_gestor = 'pendente'";
+    } elseif ($filtro === 'aprovado') {
+        $where .= " AND s.soli_tx_status_gestor = 'aprovado'";
+    } elseif ($filtro === 'rejeitado') {
+        $where .= " AND s.soli_tx_status_gestor = 'rejeitado'";
+    }
+
+    $res = query(
+        "SELECT s.*, s.soli_tx_status_gestor AS apro_tx_status,
+              COALESCE(sol.enti_tx_nome, s.soli_tx_nome_solicitante) AS solicitante_nome,
+              COALESCE(sol.enti_tx_matricula, s.soli_tx_matricula_solicitante) AS solicitante_matricula,
+              COALESCE(dest.enti_tx_nome, s.soli_tx_nome_trabalhara) AS destino_nome,
+              COALESCE(dest.enti_tx_matricula, s.soli_tx_matricula_trabalhara) AS destino_matricula,
+                u.user_tx_nome AS gestor_decisor
+         FROM solicitacao_troca_horario s
+          LEFT JOIN entidade sol ON sol.enti_nb_id = s.soli_nb_entidade
+         LEFT JOIN entidade dest ON dest.enti_nb_id = s.soli_nb_entidade_destino
+         LEFT JOIN user u ON u.user_nb_id = s.soli_nb_user_visto
+         {$where}
+         ORDER BY s.soli_tx_dataCadastro DESC",
+        $types,
+        $vars
+    );
 } else {
     $where = "WHERE a.apro_nb_entidade = ?";
     $types = "i";
     $vars = array($idEntidade);
-}
 
-if ($filtro === 'pendente') {
-    $where .= " AND a.apro_tx_status = 'pendente'";
-} elseif ($filtro === 'aprovado') {
-    $where .= " AND a.apro_tx_status = 'aceito'";
-} elseif ($filtro === 'rejeitado') {
-    $where .= " AND a.apro_tx_status = 'rejeitado'";
-}
+    if ($filtro === 'pendente') {
+        $where .= " AND a.apro_tx_status = 'pendente'";
+    } elseif ($filtro === 'aprovado') {
+        $where .= " AND a.apro_tx_status = 'aceito'";
+    } elseif ($filtro === 'rejeitado') {
+        $where .= " AND a.apro_tx_status = 'rejeitado'";
+    }
 
-$res = query(
-    "SELECT s.*, a.apro_tx_status,
-            sol.enti_tx_nome AS solicitante_nome, sol.enti_tx_matricula AS solicitante_matricula,
-            dest.enti_tx_nome AS destino_nome, dest.enti_tx_matricula AS destino_matricula,
-            u.user_tx_nome AS gestor_decisor
-     FROM solicitacao_troca_horario_aprovadores a
-     JOIN solicitacao_troca_horario s ON s.soli_nb_id = a.apro_nb_solicitacao
-     JOIN entidade sol ON sol.enti_nb_id = s.soli_nb_entidade
-     LEFT JOIN entidade dest ON dest.enti_nb_id = s.soli_nb_entidade_destino
-     LEFT JOIN user u ON u.user_nb_id = s.soli_nb_user_visto
-     {$where}
-     ORDER BY s.soli_tx_dataCadastro DESC",
-    $types,
-    $vars
-);
+    $res = query(
+        "SELECT s.*, a.apro_tx_status,
+              COALESCE(sol.enti_tx_nome, s.soli_tx_nome_solicitante) AS solicitante_nome,
+              COALESCE(sol.enti_tx_matricula, s.soli_tx_matricula_solicitante) AS solicitante_matricula,
+              COALESCE(dest.enti_tx_nome, s.soli_tx_nome_trabalhara) AS destino_nome,
+              COALESCE(dest.enti_tx_matricula, s.soli_tx_matricula_trabalhara) AS destino_matricula,
+                u.user_tx_nome AS gestor_decisor
+         FROM solicitacao_troca_horario_aprovadores a
+         JOIN solicitacao_troca_horario s ON s.soli_nb_id = a.apro_nb_solicitacao
+          LEFT JOIN entidade sol ON sol.enti_nb_id = s.soli_nb_entidade
+         LEFT JOIN entidade dest ON dest.enti_nb_id = s.soli_nb_entidade_destino
+         LEFT JOIN user u ON u.user_nb_id = s.soli_nb_user_visto
+         {$where}
+         ORDER BY s.soli_tx_dataCadastro DESC",
+        $types,
+        $vars
+    );
+}
 
 $solicitacoes = ($res instanceof mysqli_result) ? mysqli_fetch_all($res, MYSQLI_ASSOC) : array();
+$tituloLista = $isSuperAdmin ? 'Todas as solicitacoes de troca de turno' : 'Solicitacoes sob sua responsabilidade';
 
 cabecalho("Gestao de Troca de Turno");
 ?>
@@ -173,7 +224,7 @@ cabecalho("Gestao de Troca de Turno");
         <div class="portlet light">
             <div class="portlet-title">
                 <div class="caption">
-                    <span class="caption-subject bold font-dark">Solicitacoes sob sua responsabilidade</span>
+                    <span class="caption-subject bold font-dark"><?php echo htmlspecialchars($tituloLista); ?></span>
                 </div>
             </div>
             <div class="portlet-body">
