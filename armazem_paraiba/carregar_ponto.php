@@ -159,7 +159,7 @@
 		$newArquivoPonto = [
 			"arqu_tx_nome" 		=> $arquivo["name"],
 			"arqu_tx_data" 		=> date("Y-m-d H:i:s"),
-			"arqu_nb_user" 		=> $_SESSION["user_nb_id"],
+			"arqu_nb_user" => $arquivo["user_id"] ?? $_SESSION["user_nb_id"],
 			"arqu_tx_status" 	=> "ativo"
 		];
 
