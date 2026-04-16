@@ -68,3 +68,36 @@ O helper tenta resolver por label (normalizado):
 - Se um campo do PDF vier vazio, revise o label configurado no layout.
 - Evite labels muito genericos; prefira nomes claros no modelo.
 - Em erros de fluxo, use o arquivo debug_log_trocadeturno.txt na raiz de armazem_paraiba.
+
+
+## Tabelas que precisam existir para o modulo funcionar
+
+## Tabela solicitacao_turno
+```sql
+CREATE TABLE solicitacao_turno (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    
+    id_entidade_solicitante INT(11) NOT NULL,
+    id_entidade_destino INT(11) NOT NULL,
+    
+    data_turno DATE NOT NULL,
+    turno_atual VARCHAR(50) NULL,
+    turno_desejado VARCHAR(50) NOT NULL,
+    
+    motivo TEXT NULL,
+    
+    status VARCHAR(20) DEFAULT 'pendente',
+    
+    id_gestor INT(11) NULL,
+    justificativa_gestor TEXT NULL,
+    
+    data_solicitacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+    data_decisao DATETIME NULL,
+
+    -- Índices
+    INDEX idx_solicitante (id_entidade_solicitante),
+    INDEX idx_destino (id_entidade_destino),
+    INDEX idx_status (status),
+    INDEX idx_data (data_turno)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+```

@@ -32,6 +32,75 @@ Ele permite:
 - inst_documento_modulo: instancia de documento gerado.
 - valo_documento_modulo: valor preenchido para cada campo da instancia.
 
+## Tabelas que precisam existir para o modulo funcionar
+
+O modulo depende das tabelas abaixo. Se o banco for novo, rode o SQL de criacao. Se a base ja existir, garanta tambem as colunas extras em `tipos_documentos`.
+
+### 1) Ajustes em `tipos_documentos`
+
+```sql
+ALTER TABLE tipos_documentos
+  ADD COLUMN IF NOT EXISTS tipo_tx_logo VARCHAR(255) DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS tipo_tx_cabecalho TEXT DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS tipo_tx_rodape TEXT DEFAULT NULL;
+
+ALTER TABLE inst_documento_modulo
+ADD COLUMN inst_nb_entidade INT(11) NULL AFTER inst_nb_user,
+ADD COLUMN inst_tx_data_referencia DATE NULL AFTER inst_nb_entidade;
+
+ALTER TABLE solicitacoes_ajuste
+ADD COLUMN data_envio_documento DATETIME NULL AFTER data_visualizacao;
+```
+
+### 2) Tabela `camp_documento_modulo`
+
+```sql
+CREATE TABLE IF NOT EXISTS camp_documento_modulo (
+  camp_nb_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  camp_nb_tipo_doc INT(11) NOT NULL,
+  camp_tx_label VARCHAR(255) NOT NULL,
+  camp_tx_tipo ENUM('texto_curto', 'texto_longo', 'data', 'selecao', 'usuario', 'setor', 'number') NOT NULL,
+  camp_tx_opcoes TEXT DEFAULT NULL,
+  camp_nb_ordem INT(11) DEFAULT 0,
+  camp_tx_obrigatorio ENUM('sim', 'nao') DEFAULT 'nao',
+  camp_tx_placeholder VARCHAR(255) DEFAULT NULL,
+  camp_tx_status ENUM('ativo', 'inativo') DEFAULT 'ativo',
+  FOREIGN KEY (camp_nb_tipo_doc) REFERENCES tipos_documentos(tipo_nb_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+```
+
+### 3) Tabela `inst_documento_modulo`
+
+```sql
+CREATE TABLE IF NOT EXISTS inst_documento_modulo (
+  inst_nb_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  inst_nb_tipo_doc INT(11) NOT NULL,
+  inst_nb_user INT(11) NOT NULL,
+  inst_dt_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+  inst_tx_status ENUM('ativo', 'inativo') DEFAULT 'ativo',
+  FOREIGN KEY (inst_nb_tipo_doc) REFERENCES tipos_documentos(tipo_nb_id) ON DELETE CASCADE,
+  FOREIGN KEY (inst_nb_user) REFERENCES user(user_nb_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+```
+
+### 4) Tabela `valo_documento_modulo`
+
+```sql
+CREATE TABLE IF NOT EXISTS valo_documento_modulo (
+  valo_nb_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  valo_nb_instancia INT(11) NOT NULL,
+  valo_nb_campo INT(11) NOT NULL,
+  valo_tx_valor TEXT DEFAULT NULL,
+  valo_tx_status ENUM('ativo', 'inativo') DEFAULT 'ativo',
+  FOREIGN KEY (valo_nb_instancia) REFERENCES inst_documento_modulo(inst_nb_id) ON DELETE CASCADE,
+  FOREIGN KEY (valo_nb_campo) REFERENCES camp_documento_modulo(camp_nb_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+```
+
+### 5) Observacao sobre base antiga
+
+Existe uma checagem legada para `documento_campo` em `configurar_layout.php`, mas o fluxo atual do modulo usa `camp_documento_modulo`. Se sua base antiga ainda tiver `documento_campo`, trate isso como migracao de compatibilidade, nao como tabela principal do modulo.
+
 ## Fluxo operacional
 1. Criar tipo de documento em cadastro de tipo.
 2. Configurar campos em configurar_layout.php.
