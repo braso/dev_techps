@@ -142,8 +142,9 @@ while ($row = mysqli_fetch_assoc($rs)) {
 }
 
 if ($melhorUsuario && $melhorDistancia <= $THRESHOLD) {
-    // Monta a URL direta do index.php da empresa (bypassa o index.php raiz que faria md5 de novo)
-    $loginUrl = ($_ENV["URL_BASE"] ?? "") . ($_ENV["APP_PATH"] ?? "") . "/" . $empresaDir . "/index.php";
+    // URL_BASE dinâmica baseada no host real da requisição (ignora o .env)
+    $urlBase  = ($_SERVER["REQUEST_SCHEME"] ?? "https") . "://" . $_SERVER["HTTP_HOST"];
+    $loginUrl = $urlBase . ($_ENV["APP_PATH"] ?? "") . "/" . $empresaDir . "/index.php";
 
     echo json_encode([
         "ok"        => true,
