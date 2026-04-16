@@ -168,6 +168,7 @@
 			modal.style.display = 'none';
 			pararCamera();
 			autenticando = false;
+			resetarMovimento();
 		};
 
 		async function iniciarCamera() {
@@ -189,8 +190,46 @@
 		}
 
 		let _proc = false;
+
+		// ── Anti-spoofing: detecção de micro-movimento ──────────────────────
+		// Rosto real tem tremor natural (respiração, micro-expressões).
+		// Foto/tela é completamente estática — landmarks não variam.
+		// Acumula variância da posição do nariz entre frames consecutivos.
+		let _ultimoNariz    = null; // {x, y} do frame anterior
+		let _movAcumulado   = 0;    // soma de variações detectadas
+		let _framesAnalisados = 0;
+		const MOV_FRAMES_MIN  = 8;   // mínimo de frames para avaliar
+		const MOV_VARIANCIA_MIN = 0.4; // variância mínima acumulada (pixels médios por frame)
+		// Uma foto tem variância ~0.0, rosto real tem ~0.5–3.0
+
+		function resetarMovimento() {
+			_ultimoNariz = null;
+			_movAcumulado = 0;
+			_framesAnalisados = 0;
+		}
+
+		function registrarMovimento(landmarks) {
+			const pts  = landmarks.positions;
+			const nariz = { x: pts[30].x, y: pts[30].y };
+			if (_ultimoNariz) {
+				const dx = nariz.x - _ultimoNariz.x;
+				const dy = nariz.y - _ultimoNariz.y;
+				_movAcumulado += Math.sqrt(dx*dx + dy*dy);
+			}
+			_ultimoNariz = nariz;
+			_framesAnalisados++;
+		}
+
+		function rostoEhReal() {
+			if (_framesAnalisados < MOV_FRAMES_MIN) return null; // ainda avaliando
+			const media = _movAcumulado / _framesAnalisados;
+			return media >= MOV_VARIANCIA_MIN;
+		}
+		// ────────────────────────────────────────────────────────────────────
+
 		function iniciarLoop() {
 			if (detLoop) clearInterval(detLoop);
+			resetarMovimento();
 			const ctx = canvasEl.getContext('2d');
 			detLoop = setInterval(async () => {
 				if (_proc || autenticando || videoEl.readyState < 2) return;
@@ -207,41 +246,65 @@
 					statusEl.style.color = '#888';
 					statusEl.textContent = 'Posicione seu rosto na câmera...';
 					resultadoEl.innerHTML = '';
+					resetarMovimento();
 					_proc = false;
 					return;
 				}
 
-				// Qualidade do rosto detectado em tempo real
+				// Registra movimento deste frame
+				registrarMovimento(det.landmarks);
+				const ehReal = rostoEhReal();
+
+				// Qualidade do detector
 				const detScore  = det.detection.score;
 				const qualidade = Math.round(detScore * 100);
-				const cor       = detScore >= 0.90 ? '#27ae60' : detScore >= 0.75 ? '#e67e22' : '#e74c3c';
-				const label     = detScore >= 0.90 ? 'Ótima' : detScore >= 0.75 ? 'Boa' : 'Fraca';
+				const corQ      = detScore >= 0.90 ? '#27ae60' : detScore >= 0.75 ? '#e67e22' : '#e74c3c';
+				const labelQ    = detScore >= 0.90 ? 'Ótima' : detScore >= 0.75 ? 'Boa' : 'Fraca';
+
+				// Progresso da verificação de vivacidade
+				const progMov   = Math.min(_framesAnalisados / MOV_FRAMES_MIN * 100, 100);
+				const corMov    = ehReal === null ? '#3c8dbc' : (ehReal ? '#27ae60' : '#e74c3c');
+				const labelMov  = ehReal === null
+					? 'Verificando presença real... ' + Math.round(progMov) + '%'
+					: (ehReal ? '✔ Presença confirmada' : '✗ Foto detectada — use o rosto real');
 
 				resultadoEl.innerHTML =
-					'<div style="font-size:11px;color:#888;margin-bottom:3px">Qualidade do rosto detectado</div>' +
-					'<div style="background:#eee;border-radius:4px;height:8px;overflow:hidden">' +
-						'<div style="height:100%;width:'+qualidade+'%;background:'+cor+';border-radius:4px;transition:width .2s"></div>' +
+					'<div style="font-size:11px;color:#888;margin-bottom:3px">Qualidade do rosto</div>' +
+					'<div style="background:#eee;border-radius:4px;height:6px;overflow:hidden;margin-bottom:6px">' +
+						'<div style="height:100%;width:'+qualidade+'%;background:'+corQ+';border-radius:4px;transition:width .2s"></div>' +
 					'</div>' +
-					'<div style="font-size:12px;color:'+cor+';margin-top:3px;font-weight:600">'+qualidade+'% — '+label+'</div>';
+					'<div style="font-size:11px;color:#888;margin-bottom:3px">Verificação de presença real</div>' +
+					'<div style="background:#eee;border-radius:4px;height:6px;overflow:hidden">' +
+						'<div style="height:100%;width:'+progMov+'%;background:'+corMov+';border-radius:4px;transition:width .3s"></div>' +
+					'</div>' +
+					'<div style="font-size:12px;color:'+corMov+';margin-top:4px;font-weight:600">'+labelMov+'</div>';
 
 				const b = det.detection.box;
-				ctx.strokeStyle = cor;
+				ctx.strokeStyle = ehReal === false ? '#e74c3c' : (ehReal ? '#27ae60' : '#3c8dbc');
 				ctx.lineWidth   = 3;
-				ctx.shadowColor = cor;
+				ctx.shadowColor = ctx.strokeStyle;
 				ctx.shadowBlur  = 8;
 				ctx.strokeRect(b.x, b.y, b.width, b.height);
 				ctx.shadowBlur  = 0;
 
-				// Só autentica com qualidade >= 85%
-				if (detScore < 0.85) {
-					statusEl.style.color = '#e67e22';
-					statusEl.textContent = 'Centralize o rosto e melhore a iluminação...';
+				// Bloqueia se foto detectada
+				if (ehReal === false) {
+					statusEl.style.color = '#e74c3c';
+					statusEl.textContent = '✗ Foto detectada. Use seu rosto real.';
+					_proc = false;
+					return;
+				}
+
+				// Aguarda avaliação completa e qualidade mínima
+				if (ehReal === null || detScore < 0.85) {
+					statusEl.style.color = '#3c8dbc';
+					statusEl.textContent = 'Mantenha o rosto na câmera...';
 					_proc = false;
 					return;
 				}
 
 				statusEl.style.color = '#27ae60';
-				statusEl.textContent = '✔ Qualidade suficiente — identificando...';
+				statusEl.textContent = '✔ Presença real confirmada — identificando...';
 				autenticando = true;
 				clearInterval(detLoop);
 				_proc = false;

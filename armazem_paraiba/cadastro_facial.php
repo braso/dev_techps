@@ -86,6 +86,68 @@ function removerBiometria(){
     facialJsonResponse(["ok"=>true]);
 }
 
+function verificarDuplicata(){
+    ob_start();
+    $interno = true;
+    include "conecta.php";
+
+    $empresaId    = intval($_POST["empresa_id"] ?? 0);
+    $userIdAtual  = intval($_POST["user_id"] ?? 0);  // exclui o próprio usuário da comparação
+    $descritorRaw = $_POST["descritor"] ?? "";
+
+    if ($empresaId <= 0 || empty($descritorRaw)) {
+        facialJsonResponse(["duplicado" => false]);
+    }
+
+    $novo = json_decode($descritorRaw, true);
+    if (!is_array($novo) || count($novo) < 10) {
+        facialJsonResponse(["duplicado" => false]);
+    }
+
+    // Busca todos os usuários da empresa que já têm biometria (exceto o próprio)
+    $cond = $userIdAtual > 0 ? "AND u.user_nb_id != {$userIdAtual}" : "";
+    $rs = query(
+        "SELECT u.user_nb_id, u.user_tx_nome, u.user_tx_face_descriptor
+         FROM user u
+         LEFT JOIN entidade e ON e.enti_nb_id = u.user_nb_entidade
+         WHERE u.user_tx_status = 'ativo'
+           AND u.user_nb_empresa = {$empresaId}
+           AND u.user_tx_face_descriptor IS NOT NULL
+           AND u.user_tx_face_descriptor != ''
+           {$cond}"
+    );
+
+    $THRESHOLD = 0.38;
+    $melhorDist = PHP_FLOAT_MAX;
+    $melhorNome = null;
+
+    if ($rs) {
+        while ($row = mysqli_fetch_assoc($rs)) {
+            $banco = json_decode($row["user_tx_face_descriptor"], true);
+            if (!is_array($banco) || count($banco) !== count($novo)) continue;
+            $soma = 0.0;
+            foreach ($banco as $i => $v) {
+                $d = $v - ($novo[$i] ?? 0);
+                $soma += $d * $d;
+            }
+            $dist = sqrt($soma);
+            if ($dist < $melhorDist) {
+                $melhorDist = $dist;
+                $melhorNome = $row["user_tx_nome"];
+            }
+        }
+    }
+
+    if ($melhorNome && $melhorDist <= $THRESHOLD) {
+        facialJsonResponse([
+            "duplicado"  => true,
+            "nome"       => $melhorNome,
+            "distancia"  => round($melhorDist, 4),
+        ]);
+    }
+    facialJsonResponse(["duplicado" => false]);
+}
+
 if ($acaoAtual === "listarFuncionarios" || $acaoAtual === "listarFuncionarios()") {
     listarFuncionarios();
 }
@@ -94,6 +156,9 @@ if ($acaoAtual === "salvarDescritor" || $acaoAtual === "salvarDescritor()") {
 }
 if ($acaoAtual === "removerBiometria" || $acaoAtual === "removerBiometria()") {
     removerBiometria();
+}
+if ($acaoAtual === "verificarDuplicata" || $acaoAtual === "verificarDuplicata()") {
+    verificarDuplicata();
 }
 
 // ── Página normal ─────────────────────────────────────────────────────────────
@@ -396,32 +461,57 @@ cabecalho("Cadastro de Biometria Facial");
     btnSalvar.addEventListener('click',async()=>{
         if(!usuarioAtual||amostras.length<3) return;
         if(!usuarioAtual.user_nb_id){ msgRes.innerHTML="<div class='alert alert-warning'><i class='fa fa-warning'></i> Este funcionário não possui usuário cadastrado. Cadastre um usuário para ele primeiro.</div>"; return; }
+
         btnSalvar.disabled=true;
-        btnSalvar.innerHTML='<i class="fa fa-spinner fa-spin"></i> Salvando...';
+        btnSalvar.innerHTML='<i class="fa fa-spinner fa-spin"></i> Verificando...';
+        msgRes.innerHTML='';
+
         const len=amostras[0].length, media=new Float32Array(len);
         amostras.forEach(d=>{ for(let i=0;i<len;i++) media[i]+=d[i]; });
         for(let i=0;i<len;i++) media[i]/=amostras.length;
+        const descritorJson = JSON.stringify(Array.from(media));
+        const empresaId = selEmpresa.value;
 
-        var url = 'cadastro_facial.php?acao=salvarDescritor';
+        // 1. Verifica se esse rosto já está cadastrado para outro funcionário
         $.ajax({
-            url: url,
+            url: 'cadastro_facial.php?acao=verificarDuplicata',
             method: 'POST',
-            data: { user_id: usuarioAtual.user_nb_id, descritor: JSON.stringify(Array.from(media)) },
+            data: { empresa_id: empresaId, user_id: usuarioAtual.user_nb_id, descritor: descritorJson },
             dataType: 'json'
-        }).done(function(json){
-            if(json.ok){
-                msgRes.innerHTML="<div class='alert alert-success'><i class='fa fa-check-circle'></i> <b>Biometria salva!</b> O funcionário já pode usar reconhecimento facial no login.</div>";
-                var card=document.querySelector('.user-card[data-id="'+usuarioAtual.enti_nb_id+'"]');
-                if(card){ var bg=card.querySelector('.badge-nobio,.badge-bio'); if(bg){bg.className='badge-bio';bg.textContent='✔ Biometria';} }
-                var bg2=sucCard.querySelector('.badge-nobio,.badge-bio');
-                if(bg2){bg2.className='badge-bio';bg2.textContent='✔ Biometria cadastrada';}
-                limpar(false);
-            }else{
-                msgRes.innerHTML="<div class='alert alert-danger'><i class='fa fa-times-circle'></i> "+json.msg+"</div>";
+        }).done(function(res){
+            if(res.duplicado){
+                msgRes.innerHTML="<div class='alert alert-danger'><i class='fa fa-ban'></i> <b>Rosto já cadastrado!</b> Este rosto pertence a <b>"+res.nome+"</b>. Não é possível cadastrar a mesma biometria para dois funcionários.</div>";
+                btnSalvar.innerHTML='<i class="fa fa-check"></i> Salvar Biometria';
+                btnSalvar.disabled=false;
+                return;
             }
+            // 2. Sem duplicata — salva
+            btnSalvar.innerHTML='<i class="fa fa-spinner fa-spin"></i> Salvando...';
+            $.ajax({
+                url: 'cadastro_facial.php?acao=salvarDescritor',
+                method: 'POST',
+                data: { user_id: usuarioAtual.user_nb_id, descritor: descritorJson },
+                dataType: 'json'
+            }).done(function(json){
+                if(json.ok){
+                    msgRes.innerHTML="<div class='alert alert-success'><i class='fa fa-check-circle'></i> <b>Biometria salva!</b> O funcionário já pode usar reconhecimento facial no login.</div>";
+                    var card=document.querySelector('.user-card[data-id="'+usuarioAtual.enti_nb_id+'"]');
+                    if(card){ var bg=card.querySelector('.badge-nobio,.badge-bio'); if(bg){bg.className='badge-bio';bg.textContent='✔ Biometria';} }
+                    var bg2=sucCard.querySelector('.badge-nobio,.badge-bio');
+                    if(bg2){bg2.className='badge-bio';bg2.textContent='✔ Biometria cadastrada';}
+                    limpar(false);
+                }else{
+                    msgRes.innerHTML="<div class='alert alert-danger'><i class='fa fa-times-circle'></i> "+json.msg+"</div>";
+                }
+            }).fail(function(){
+                msgRes.innerHTML="<div class='alert alert-danger'>Erro de comunicação com o servidor.</div>";
+            }).always(function(){
+                btnSalvar.innerHTML='<i class="fa fa-check"></i> Salvar Biometria';
+                btnSalvar.disabled=false;
+            });
         }).fail(function(){
-            msgRes.innerHTML="<div class='alert alert-danger'>Erro de comunicação com o servidor.</div>";
-        }).always(function(){
+            // Se falhar a verificação, deixa salvar mesmo assim
+            msgRes.innerHTML='';
             btnSalvar.innerHTML='<i class="fa fa-check"></i> Salvar Biometria';
             btnSalvar.disabled=false;
         });
