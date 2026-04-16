@@ -440,7 +440,11 @@
 	}
 	
 	function ensureSolicitacoesAjusteTable(){
+<<<<<<< HEAD
+		$ok = query("CREATE TABLE IF NOT EXISTS solicitacoes_ajuste (
+=======
 		query("CREATE TABLE IF NOT EXISTS solicitacoes_ajuste (
+>>>>>>> ornilio
 			id INT AUTO_INCREMENT PRIMARY KEY,
 			id_motorista INT NOT NULL,
 			data_ajuste DATE NOT NULL,
@@ -460,6 +464,16 @@
 			data_visualizacao DATETIME NULL,
 			id_instancia_documento INT NULL
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+<<<<<<< HEAD
+		if($ok === false){
+			if(function_exists("set_status")){
+				$msg = strval($GLOBALS["last_sql_error"] ?? "Sem detalhe do erro.");
+				set_status("ERRO: Não foi possível criar a tabela solicitacoes_ajuste. ".$msg);
+			}
+			return;
+		}
+=======
+>>>>>>> ornilio
 		
 		$check = query("SHOW COLUMNS FROM solicitacoes_ajuste LIKE 'id_instancia_documento'");
 		if ($check instanceof mysqli_result && mysqli_num_rows($check) == 0) {
