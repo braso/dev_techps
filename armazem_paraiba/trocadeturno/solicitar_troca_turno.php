@@ -166,7 +166,7 @@ function tt_salvarSolicitacaoTela() {
         $idSolicitacao,
         $idDestino,
         'destino',
-        'Voce foi informado em uma solicitacao de troca de turno feita por '.strval(tt_s($usuario, 'user_tx_nome', '')).'.'
+        'Voce foi mencionado(a) em uma solicitacao de troca de turno feita por '.strval(tt_s($usuario, 'user_tx_nome', '')).'.'
     );
 
     foreach ($gestores as $g) {
