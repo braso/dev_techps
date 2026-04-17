@@ -692,7 +692,9 @@
 			if(empty($novoMotorista["enti_tx_matricula"])){
 				$camposObrig["postMatricula"] = "Matrícula";
 			}
-			if(in_array($_POST["ocupacao"], ["Ajudante", "Funcionário"])){
+			// CNH é obrigatória apenas para Motorista. Para Ajudante, Funcionário e
+			// Terceirizado, os campos são removidos da validação obrigatória.
+			if(in_array($_POST["ocupacao"], ["Ajudante", "Funcionário", "Terceirizado"])){
 				unset(
 					$camposObrig["cnhRegistro"],
 					$camposObrig["cnhCategoria"],
@@ -855,10 +857,12 @@
 			query("COMMIT;");
 		}else{ // Se está editando um motorista existente
 
+			// Inclui Terceirizado na busca do usuário vinculado para permitir edição
+			// sem perder o vínculo por filtro restritivo de níveis antigos.
 			$a_user = mysqli_fetch_array(query(
 				"SELECT * FROM user 
 					WHERE user_nb_entidade = ".$_POST["id"]."
-						AND user_tx_nivel IN ('Motorista', 'Ajudante','Funcionário')"
+						AND user_tx_nivel IN ('Motorista', 'Ajudante','Funcionário', 'Terceirizado')"
 			), MYSQLI_BOTH);
 
 			$_POST["nivel"] = $_POST["ocupacao"];
@@ -1844,7 +1848,8 @@
 		$respModalJs = "";
 
 		$cContratual = array_merge($cContratual, [
-			combo(		"Ocupação*", 		"ocupacao", 		(!empty($a_mod["enti_tx_ocupacao"])? $a_mod["enti_tx_ocupacao"]	:""), 		2, ["" => "Selecione", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
+			//dropbox da ocupação 
+			combo(		"Ocupação*", 		"ocupacao", 		(!empty($a_mod["enti_tx_ocupacao"])? $a_mod["enti_tx_ocupacao"]	:""), 		2, ["" => "Selecione", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário", "Terceirizado" => "Terceirizado"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
 			campo_data(	"Dt Admissão*", 	"admissao", 		(!empty($a_mod["enti_tx_admissao"])? $a_mod["enti_tx_admissao"]		 	:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data(	"Dt. Desligamento", "desligamento", 	(!empty($a_mod["enti_tx_desligamento"])? $a_mod["enti_tx_desligamento"] 	:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(		"Saldo de Horas", 	"setBanco", 		(!empty($a_mod["enti_tx_banco"])? $a_mod["enti_tx_banco"] 				:"00:00"), 	1, "MASCARA_HORAS", "placeholder='HH:mm' tabindex=".sprintf("%02d", $tabIndex++)),

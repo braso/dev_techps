@@ -246,7 +246,6 @@ function index() {
 		
 		global $CONTEX;
 		$hoje = date("Y-m-d");
-		cabecalho("Registrar Ponto");
 		
 		if(empty($_SESSION["user_nb_entidade"])){
 			echo 
@@ -264,6 +263,14 @@ function index() {
 			." JOIN user ON enti_nb_id = user_nb_entidade"
 			." WHERE enti_nb_id = ".$_SESSION["user_nb_entidade"].";"
 		));
+		// A ocupação é priorizada de user_tx_nivel (fonte usada no login/perfil),
+		// com fallback para entidade/sessão para evitar quebra em dados legados.
+		$ocupacaoMotorista = mb_strtolower(trim(strval($motorista["user_tx_nivel"] ?? $motorista["enti_tx_ocupacao"] ?? $_SESSION["user_tx_nivel"] ?? "")));
+		$ehTerceirizado = in_array($ocupacaoMotorista, ["terceirizado", "tercerizado"], true);
+		// Troca apenas o rótulo exibido; a lógica de registro de ponto permanece a mesma.
+		$textoRegistro = $ehTerceirizado ? "Produção" : "Ponto";
+		$tituloRegistro = "Registrar {$textoRegistro}";
+		cabecalho($tituloRegistro);
 
 		[$pontosCompleto, $sql] = pegarPontosDia($motorista["enti_tx_matricula"], ["pont_tx_data", "pont_tx_tipo", "pont_tx_dataCadastro", "macr_tx_nome"]);
 

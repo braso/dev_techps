@@ -20,6 +20,25 @@
 
     function mostrarMenuDoNivel($nivel): string{
         global $CONTEX;
+        // Normaliza o nível para comparação estável e sem depender de caixa alta/baixa.
+        $nivelNormalizado = mb_strtolower(trim(strval($nivel ?? "")));
+        // Considera as duas grafias encontradas no sistema para o mesmo perfil.
+        $ehTerceirizado = in_array($nivelNormalizado, ["terceirizado"], true);
+        // Nome da seção principal do menu para este perfil.
+        $rotuloSecaoPonto = $ehTerceirizado ? "Produção" : "Ponto";
+        // Traduz apenas os textos exibidos no menu; caminhos e permissões permanecem inalterados.
+        $rotuloMenuPonto = function(string $label) use ($ehTerceirizado): string {
+            if(!$ehTerceirizado){
+                return $label;
+            }
+            $mapa = [
+                "Registrar Ponto" => "Registrar Produção",
+                "Espelhos de Ponto" => "Espelhos de Produção",
+                "Integrações de Ponto" => "Integrações de Produção",
+                "Pontos" => "Produções"
+            ];
+            return $mapa[$label] ?? $label;
+        };
 		
 		$camposOcultosProdução = [];
 		if(is_int(strpos($_SERVER["REQUEST_URI"], 'dev'))){
@@ -209,7 +228,9 @@ if ($showComunicado) {
                         }
                     }
                 }
-                $children .= "<li class='dd'><a href='".$CONTEX["path"].$key."' class='nav-link'> ".$value."</a></li>";
+                // Só altera a apresentação da seção "ponto" para usuários terceirizados.
+                $labelExibicao = ($secKey === "ponto") ? $rotuloMenuPonto($value) : $value;
+                $children .= "<li class='dd'><a href='".$CONTEX["path"].$key."' class='nav-link'> ".$labelExibicao."</a></li>";
                 $countItems++;
             }
             // Se houver perfil vinculado, mostra a seção se houver filhos OU se o PAI estiver permitido
@@ -224,9 +245,11 @@ if ($showComunicado) {
                     $ulClass .= " dropdown-2cols";
                 }
 
+                // Mantém o título original das demais seções e personaliza apenas a de ponto.
+                $tituloExibicao = ($secKey === "ponto") ? $rotuloSecaoPonto : ucfirst($title);
                 $menus[$title] = "
                     <li class='menu-dropdown classic-menu-dropdown ".verificarAtividade(array_keys($secao))."'>
-                        <a>".ucfirst($title)."</a>
+                        <a>".$tituloExibicao."</a>
                         <ul class='".$ulClass."'>".$children."</ul>
                     </li>";
             } else {
@@ -239,9 +262,10 @@ if ($showComunicado) {
 			unset($menus["suporte"]);
 		}
 	
+        // Menu enxuto para perfis operacionais (inclui terceirizado).
         $menuMotorista = 
-            "<li class=''><a href='".$CONTEX["path"]."/batida_ponto.php'		class='nav-link'> Registrar Ponto</a></li>
-             <li class=''><a href='".$CONTEX["path"]."/espelho_ponto.php'		class='nav-link'> Espelhos de Ponto</a></li>"
+            "<li class=''><a href='".$CONTEX["path"]."/batida_ponto.php'		class='nav-link'> ".$rotuloMenuPonto("Registrar Ponto")."</a></li>
+             <li class=''><a href='".$CONTEX["path"]."/espelho_ponto.php'		class='nav-link'> ".$rotuloMenuPonto("Espelhos de Ponto")."</a></li>"
         ;
 
         $isAdmin = is_int(strpos($nivel, "Administrador"));
@@ -251,8 +275,9 @@ if ($showComunicado) {
             return $menusConcat;
         }
         if ($perfilId > 0) {
-            if(in_array($nivel, ["Motorista", "Ajudante", "Funcionário"]) && strpos($menusConcat, "/espelho_ponto.php") === false){
-                $menusConcat .= "<li class=''><a href='".$CONTEX["path"]."/espelho_ponto.php' class='nav-link'> Espelhos de Ponto</a></li>";
+            // Garante o acesso rápido ao espelho para níveis operacionais quando o perfil não o trouxer explicitamente.
+            if(in_array($nivel, ["Motorista", "Ajudante", "Funcionário", "Terceirizado"]) && strpos($menusConcat, "/espelho_ponto.php") === false){
+                $menusConcat .= "<li class=''><a href='".$CONTEX["path"]."/espelho_ponto.php' class='nav-link'> ".$rotuloMenuPonto("Espelhos de Ponto")."</a></li>";
             }
             return $menusConcat;
         }
@@ -262,7 +287,7 @@ if ($showComunicado) {
         if (is_int(strpos($nivel, "Supervisão"))) {
             return $menus["cadastros"].$menus["ponto"];
         }
-        if(in_array($nivel, ["Motorista", "Ajudante", "Funcionário"])){
+        if(in_array($nivel, ["Motorista", "Ajudante", "Funcionário", "Terceirizado"])){
             return $menuMotorista;
         }
 
