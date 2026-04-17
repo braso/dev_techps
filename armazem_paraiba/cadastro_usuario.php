@@ -540,20 +540,7 @@
 			$campo_status = combo("Status", "status", $_POST["status"], 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
             //ícone com a cor laranja (warning) típica de edição
             $icone_editar_rfid = "&nbsp;&nbsp;<a href='javascript:void(0);' onclick='editarRfidNaTela()' title='Editar status deste crachá' style='color: #f0ad4e;'><span class='glyphicon glyphicon-pencil'></span></a>";
-
-            // Verifica se o usuário tem biometria facial cadastrada
-            $temFacial = false;
-            if ($userIdForRfid > 0) {
-                $rowFacial = mysqli_fetch_assoc(query(
-                    "SELECT 1 FROM user WHERE user_nb_id = {$userIdForRfid} AND user_tx_face_descriptor IS NOT NULL AND user_tx_face_descriptor != '' LIMIT 1"
-                ));
-                $temFacial = !empty($rowFacial);
-            }
-            $icone_facial = $temFacial
-                ? "&nbsp;&nbsp;<a href='cadastro_facial.php?user_id={$userIdForRfid}' title='Biometria Facial ativa — clique para gerenciar' style='color:#28a745'><span class='glyphicon glyphicon-user'></span> <small>Facial ativa</small></a>"
-                : "&nbsp;&nbsp;<a href='cadastro_facial.php?user_id={$userIdForRfid}' title='Sem biometria facial — clique para cadastrar' style='color:#aaa'><span class='glyphicon glyphicon-user'></span> <small>Cadastrar facial</small></a>";
-
-            $campo_rfid = combo("Crachá (RFID)" . $icone_editar_rfid . ($userIdForRfid > 0 ? $icone_facial : ""), "rfid_id", $selectedRfid, 2, $rfidOptions, "id='select_rfid_id'");
+            $campo_rfid = combo("Crachá (RFID)" . $icone_editar_rfid, "rfid_id", $selectedRfid, 2, $rfidOptions, "id='select_rfid_id'");
 			$campo_nascimento = campo_data("Nascido em*", "nascimento", ($_POST["nascimento"]?? ($_POST["nascimento"]?? "")), 2);
 			$campo_cpf = campo("CPF", "cpf", $_POST["cpf"], 2, "MASCARA_CPF");
 			$campo_rg = campo("RG", "rg", $_POST["rg"], 2, "MASCARA_RG", "maxlength='15'");
