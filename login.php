@@ -64,9 +64,9 @@
 					<button onclick="fecharModalFace()" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
 					<h4 style="margin-bottom:4px;"><i class="fa fa-eye"></i> Reconhecimento Facial</h4>
 					<p id="face-login-status" style="color:#888; font-size:13px; min-height:18px;">Carregando modelos de IA...</p>
-					<div style="position:relative; display:inline-block;">
-						<video id="face-login-video" width="420" height="315" autoplay muted playsinline style="border-radius:8px; border:3px solid #ddd; display:block;"></video>
-						<canvas id="face-login-canvas" width="420" height="315" style="position:absolute;top:0;left:0;pointer-events:none;"></canvas>
+					<div style="position:relative; display:inline-block; width:100%; max-width:460px;">
+						<video id="face-login-video" autoplay muted playsinline style="border-radius:8px; border:3px solid #ddd; display:block; width:100%; height:auto;"></video>
+						<canvas id="face-login-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;border-radius:8px;"></canvas>
 					</div>
 					<div id="face-login-resultado" style="margin-top:12px; min-height:36px;"></div>
 				</div>
@@ -234,6 +234,14 @@
 			detLoop = setInterval(async () => {
 				if (_proc || autenticando || videoEl.readyState < 2) return;
 				_proc = true;
+
+				// Sincroniza canvas com dimensões internas reais do vídeo
+				const vW = videoEl.videoWidth  || videoEl.offsetWidth;
+				const vH = videoEl.videoHeight || videoEl.offsetHeight;
+				if (canvasEl.width !== vW || canvasEl.height !== vH) {
+					canvasEl.width  = vW;
+					canvasEl.height = vH;
+				}
 
 				const det = await faceapi
 					.detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 }))

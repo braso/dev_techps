@@ -540,7 +540,20 @@
 			$campo_status = combo("Status", "status", $_POST["status"], 2, ["ativo" => "Ativo", "inativo" => "Inativo"], "tabindex=04");
             //ícone com a cor laranja (warning) típica de edição
             $icone_editar_rfid = "&nbsp;&nbsp;<a href='javascript:void(0);' onclick='editarRfidNaTela()' title='Editar status deste crachá' style='color: #f0ad4e;'><span class='glyphicon glyphicon-pencil'></span></a>";
-            $campo_rfid = combo("Crachá (RFID)" . $icone_editar_rfid, "rfid_id", $selectedRfid, 2, $rfidOptions, "id='select_rfid_id'");
+
+            // Verifica se o usuário tem biometria facial cadastrada
+            $temFacial = false;
+            if ($userIdForRfid > 0) {
+                $rowFacial = mysqli_fetch_assoc(query(
+                    "SELECT 1 FROM user WHERE user_nb_id = {$userIdForRfid} AND user_tx_face_descriptor IS NOT NULL AND user_tx_face_descriptor != '' LIMIT 1"
+                ));
+                $temFacial = !empty($rowFacial);
+            }
+            $icone_facial = $temFacial
+                ? "&nbsp;&nbsp;<a href='cadastro_facial.php?user_id={$userIdForRfid}' title='Biometria Facial ativa — clique para gerenciar' style='color:#28a745'><span class='glyphicon glyphicon-user'></span> <small>Facial ativa</small></a>"
+                : "&nbsp;&nbsp;<a href='cadastro_facial.php?user_id={$userIdForRfid}' title='Sem biometria facial — clique para cadastrar' style='color:#aaa'><span class='glyphicon glyphicon-user'></span> <small>Cadastrar facial</small></a>";
+
+            $campo_rfid = combo("Crachá (RFID)" . $icone_editar_rfid . ($userIdForRfid > 0 ? $icone_facial : ""), "rfid_id", $selectedRfid, 2, $rfidOptions, "id='select_rfid_id'");
 			$campo_nascimento = campo_data("Nascido em*", "nascimento", ($_POST["nascimento"]?? ($_POST["nascimento"]?? "")), 2);
 			$campo_cpf = campo("CPF", "cpf", $_POST["cpf"], 2, "MASCARA_CPF");
 			$campo_rg = campo("RG", "rg", $_POST["rg"], 2, "MASCARA_RG", "maxlength='15'");
@@ -939,7 +952,8 @@ function index() {
                 "EMPRESA"       => "empr_tx_nome",
                 "STATUS"        => "user_tx_status",
 				"RFID"          => "rfids_tx_uid",
-                "AUTENTICAÇÃO"  => "rfids_nb_id" 
+                "AUTENTICAÇÃO"  => "rfids_nb_id",
+                "FACIAL"        => "IF(user.user_tx_face_descriptor IS NOT NULL AND user.user_tx_face_descriptor != '', 1, 0) AS tem_facial"
             ];
 
             $camposBusca = [
@@ -993,60 +1007,61 @@ function index() {
 
                 // FUNÇÃO: Varre a tabela e desenha os ícones HTML de biometria/crachá
                 const formatarBiometria = function() {
-                    // Descobre onde as colunas estão agora
                     var idxCodigo = pegarIndiceColuna('CÓDIGO');
                     var idxAutenticacao = pegarIndiceColuna('AUTENTICAÇÃO');
-
-                    // Se não achar as colunas, aborta para não quebrar a tela
+                    var idxFacial = pegarIndiceColuna('FACIAL');
                     if (idxCodigo === -1 || idxAutenticacao === -1) return;
 
                     $('table tbody tr').each(function() {
-                        var colIdUser = $(this).find('td').eq(idxCodigo).text().trim();
-                        var tdAutenticacao = $(this).find('td').eq(idxAutenticacao); 
-                        var idRfid = tdAutenticacao.text().trim(); 
-                        
-                        if (!colIdUser) return;
-                        
+                        var idUsuario = $(this).find('td').eq(idxCodigo).text().trim();
+                        var tdAutenticacao = $(this).find('td').eq(idxAutenticacao);
+                        var idRfid = tdAutenticacao.text().trim();
+                        var temFacial = idxFacial !== -1 ? $(this).find('td').eq(idxFacial).text().trim() : '0';
+
+                        if (!idUsuario) return;
+
                         var htmlIcones = '';
-                        
+
+                        // RFID
                         if (idRfid !== '') {
-                            htmlIcones += '<span onclick=\"abrirRfidDireto(' + idRfid + ', ' + colIdUser + ')\" class=\"glyphicon glyphicon-credit-card\" style=\"color: #28a745; font-size: 14px; margin-right: 12px; cursor: pointer;\" title=\"Editar Crachá Ativo\"></span>';
+                            htmlIcones += '<span onclick=\"abrirRfidDireto(' + idRfid + ', ' + idUsuario + ')\" class=\"glyphicon glyphicon-credit-card\" style=\"color:#28a745;font-size:14px;margin-right:12px;cursor:pointer;\" title=\"Editar Crachá Ativo\"></span>';
                         } else {
-							htmlIcones += '<span class=\"glyphicon glyphicon-credit-card\" style=\"color: #808080; font-size: 14px; margin-right: 12px;\" title=\"Sem Crachá Ativo\"></span>';
-						}
-						
-						htmlIcones += '<span class=\"glyphicon glyphicon-hand-up\" style=\"color: #808080; font-size: 14px; margin-right: 12px;\" title=\"Sem Digital\"></span>';
-						htmlIcones += '<span class=\"glyphicon glyphicon-user\" style=\"color: #808080; font-size: 14px;\" title=\"Sem Facial\"></span>';
-						
+                            htmlIcones += '<span class=\"glyphicon glyphicon-credit-card\" style=\"color:#808080;font-size:14px;margin-right:12px;\" title=\"Sem Crachá\"></span>';
+                        }
+
+                        // Digital
+                        htmlIcones += '<span class=\"glyphicon glyphicon-hand-up\" style=\"color:#808080;font-size:14px;margin-right:12px;\" title=\"Sem Digital\"></span>';
+
+                        // Facial
+                        if (temFacial === '1') {
+                            htmlIcones += '<span onclick=\"abrirFacialPorUser(' + idUsuario + ')\" class=\"glyphicon glyphicon-user\" style=\"color:#28a745;font-size:14px;cursor:pointer;\" title=\"Biometria Facial Ativa — clique para gerenciar\"></span>';
+                        } else {
+                            htmlIcones += '<span onclick=\"abrirFacialPorUser(' + idUsuario + ')\" class=\"glyphicon glyphicon-user\" style=\"color:#808080;font-size:14px;cursor:pointer;\" title=\"Sem Biometria Facial — clique para cadastrar\"></span>';
+                        }
+
                         tdAutenticacao.html(htmlIcones);
                     });
+                };
+
+                window.abrirFacialPorUser = function(idUsuario) {
+                    window.location.href = 'cadastro_facial.php?user_id=' + idUsuario;
                 };
 
                 window.abrirRfidDireto = function(idRfid, idUsuario) {
                     var form = document.createElement('form');
                     form.method = 'POST';
                     form.action = 'cadastro_rfid.php';
-                    
                     var inputId = document.createElement('input');
-                    inputId.type = 'hidden';
-                    inputId.name = 'id';
-                    inputId.value = idRfid;
+                    inputId.type = 'hidden'; inputId.name = 'id'; inputId.value = idRfid;
                     form.appendChild(inputId);
-                    
                     var inputAcao = document.createElement('input');
-                    inputAcao.type = 'hidden';
-                    inputAcao.name = 'acao';
-                    inputAcao.value = 'modificarRfid';
+                    inputAcao.type = 'hidden'; inputAcao.name = 'acao'; inputAcao.value = 'modificarRfid';
                     form.appendChild(inputAcao);
-
                     if (idUsuario) {
                         var fieldRetorno = document.createElement('input');
-                        fieldRetorno.type = 'hidden';
-                        fieldRetorno.name = 'id_usuario_retorno';
-                        fieldRetorno.value = idUsuario;
+                        fieldRetorno.type = 'hidden'; fieldRetorno.name = 'id_usuario_retorno'; fieldRetorno.value = idUsuario;
                         form.appendChild(fieldRetorno);
                     }
-                    
                     document.body.appendChild(form);
                     form.submit();
                 };
@@ -1058,7 +1073,13 @@ function index() {
                     if(typeof funcoesInternasAntiga === 'function') funcoesInternasAntiga(); 
                     
                     // Roda a sua formatação de crachás
-                    formatarBiometria(); 
+                    formatarBiometria();
+                    // Oculta coluna FACIAL (usada só internamente para o ícone)
+                    var idxFacialHide = pegarIndiceColuna('FACIAL');
+                    if (idxFacialHide !== -1) {
+                        $('table thead th').eq(idxFacialHide).hide();
+                        $('table tbody tr').each(function(){ $(this).find('td').eq(idxFacialHide).hide(); });
+                    }
                     
                     // Esconde a lixeira baseando-se na posição atualizada da coluna STATUS
                     var idxStatus = pegarIndiceColuna('STATUS');

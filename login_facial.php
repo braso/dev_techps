@@ -16,6 +16,12 @@ header("Cache-Control: no-store");
 // Sem sessão necessária aqui — é um endpoint público de autenticação
 include_once "load_env.php";
 
+// Captura APP_PATH e URL_BASE do .env raiz ANTES de sobrescrever com o .env da empresa
+$rootAppPath = $_ENV["APP_PATH"] ?? "";
+$urlBase     = ($_SERVER["HTTPS"] ?? "") === "on"
+    ? "https://" . $_SERVER["HTTP_HOST"]
+    : (strpos($_SERVER["HTTP_HOST"], "localhost") !== false ? "http://" : "https://") . $_SERVER["HTTP_HOST"];
+
 $empresaKey  = trim($_POST["empresa_key"] ?? "");
 $descritorRaw = trim($_POST["descritor"] ?? "");
 
@@ -63,9 +69,8 @@ if (!array_key_exists($empresaKey, $empresas)) {
 }
 
 // Conecta ao banco da empresa correta
-$appPath = $_ENV["APP_PATH"] ?? "";
 $empresaDir = $empresas[$empresaKey];
-$envFile = $_SERVER["DOCUMENT_ROOT"] . $appPath . "/" . $empresaDir . "/.env";
+$envFile = $_SERVER["DOCUMENT_ROOT"] . $rootAppPath . "/" . $empresaDir . "/.env";
 
 if (!file_exists($envFile)) {
     echo json_encode(["ok" => false, "msg" => "Configuração da empresa não encontrada."]);
@@ -142,9 +147,8 @@ while ($row = mysqli_fetch_assoc($rs)) {
 }
 
 if ($melhorUsuario && $melhorDistancia <= $THRESHOLD) {
-    // URL_BASE dinâmica baseada no host real da requisição (ignora o .env)
-    $urlBase  = ($_SERVER["REQUEST_SCHEME"] ?? "https") . "://" . $_SERVER["HTTP_HOST"];
-    $loginUrl = $urlBase . ($_ENV["APP_PATH"] ?? "") . "/" . $empresaDir . "/index.php";
+    // Monta URL usando host real da requisição + APP_PATH do .env raiz
+    $loginUrl = $urlBase . $rootAppPath . "/" . $empresaDir . "/index.php";
 
     echo json_encode([
         "ok"        => true,

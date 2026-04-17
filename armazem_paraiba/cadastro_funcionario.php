@@ -2109,7 +2109,8 @@ function index(){
                 "CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
                 "STATUS" 				=> "enti_tx_status",
 				"UID"                   => "rfids_tx_uid",
-                "AUTENTICAÇÃO"          => "rfids_nb_id" 
+                "AUTENTICAÇÃO"          => "rfids_nb_id",
+                "FACIAL"                => "IF(user.user_tx_face_descriptor IS NOT NULL AND user.user_tx_face_descriptor != '', 1, 0) AS tem_facial"
             ];
 
 			$allGridFields = [
@@ -2129,7 +2130,27 @@ function index(){
                 "STATUS" 				=> "enti_tx_status",
 				"UID"                   => "rfids_tx_uid",
                 "AUTENTICAÇÃO"          => "rfids_nb_id",
-				"E-MAIL"                => "enti_tx_email",
+                "FACIAL"                => "IF(user.user_tx_face_descriptor IS NOT NULL AND user.user_tx_face_descriptor != '', 1, 0) AS tem_facial"
+            ];
+
+			$allGridFields = [
+                "CÓDIGO" 				=> "enti_nb_id",
+                "NOME" 					=> "enti_tx_nome",
+                "MATRÍCULA" 			=> "enti_tx_matricula",
+                "CPF" 					=> "enti_tx_cpf",
+                "EMPRESA" 				=> "empr_tx_nome",
+                "CARGO" 				=> "oper_tx_nome",
+                "SETOR" 				=> "grup_tx_nome",
+                "SUBSETOR" 				=> "sbgr_tx_nome",
+                "FONE 1" 				=> "enti_tx_fone1",
+                "OCUPAÇÃO" 				=> "enti_tx_ocupacao",
+                "DATA CADASTRO" 		=> "DATE_FORMAT(enti_tx_dataCadastro, '%d/%m/%Y')",
+                "PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
+                "CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
+                "STATUS" 				=> "enti_tx_status",
+				"UID"                   => "rfids_tx_uid",
+                "AUTENTICAÇÃO"          => "rfids_nb_id",
+                "FACIAL"                => "IF(user.user_tx_face_descriptor IS NOT NULL AND user.user_tx_face_descriptor != '', 1, 0) AS tem_facial",
                 "TELEFONE 2"            => "enti_tx_fone2",
                 "NASCIMENTO"            => "DATE_FORMAT(enti_tx_nascimento, '%d/%m/%Y')",
                 "RG"                    => "enti_tx_rg",
@@ -2240,33 +2261,44 @@ function index(){
 
                 // FUNÇÃO: Varre a tabela e desenha os ícones HTML de biometria/crachá
                 const formatarBiometria = function() {
-                    // Descobre onde as colunas estão agora
                     var idxCodigo = pegarIndiceColuna('CÓDIGO');
                     var idxAutenticacao = pegarIndiceColuna('AUTENTICAÇÃO');
-
-                    // Se não achar as colunas, aborta para não quebrar a tela
+                    var idxFacial = pegarIndiceColuna('FACIAL');
                     if (idxCodigo === -1 || idxAutenticacao === -1) return;
 
                     $('table tbody tr').each(function() {
-                        var colIdUser = $(this).find('td').eq(idxCodigo).text().trim();
-                        var tdAutenticacao = $(this).find('td').eq(idxAutenticacao); 
-                        var idRfid = tdAutenticacao.text().trim(); 
-                        
-                        if (!colIdUser) return;
-                        
+                        var idEntidade = $(this).find('td').eq(idxCodigo).text().trim();
+                        var tdAutenticacao = $(this).find('td').eq(idxAutenticacao);
+                        var idRfid = tdAutenticacao.text().trim();
+                        var temFacial = idxFacial !== -1 ? $(this).find('td').eq(idxFacial).text().trim() : '0';
+
+                        if (!idEntidade) return;
+
                         var htmlIcones = '';
-                        
+
+                        // RFID
                         if (idRfid !== '') {
-                            htmlIcones += '<span onclick=\"abrirRfidDireto(' + idRfid + ', ' + colIdUser + ')\" class=\"glyphicon glyphicon-credit-card\" style=\"color: #28a745; font-size: 14px; margin-right: 12px; cursor: pointer;\" title=\"Editar Crachá Ativo\"></span>';
+                            htmlIcones += '<span onclick=\"abrirRfidDireto(' + idRfid + ', ' + idEntidade + ')\" class=\"glyphicon glyphicon-credit-card\" style=\"color:#28a745;font-size:14px;margin-right:12px;cursor:pointer;\" title=\"Editar Crachá Ativo\"></span>';
                         } else {
-							htmlIcones += '<span class=\"glyphicon glyphicon-credit-card\" style=\"color: #808080; font-size: 14px; margin-right: 12px;\" title=\"Sem Crachá Ativo\"></span>';
-						}
-						
-						htmlIcones += '<span class=\"glyphicon glyphicon-hand-up\" style=\"color: #808080; font-size: 14px; margin-right: 12px;\" title=\"Sem Digital\"></span>';
-						htmlIcones += '<span class=\"glyphicon glyphicon-user\" style=\"color: #808080; font-size: 14px;\" title=\"Sem Facial\"></span>';
-						
+                            htmlIcones += '<span class=\"glyphicon glyphicon-credit-card\" style=\"color:#808080;font-size:14px;margin-right:12px;\" title=\"Sem Crachá\"></span>';
+                        }
+
+                        // Digital
+                        htmlIcones += '<span class=\"glyphicon glyphicon-hand-up\" style=\"color:#808080;font-size:14px;margin-right:12px;\" title=\"Sem Digital\"></span>';
+
+                        // Facial
+                        if (temFacial === '1') {
+                            htmlIcones += '<span onclick=\"abrirFacialDireto(' + idEntidade + ')\" class=\"glyphicon glyphicon-user\" style=\"color:#28a745;font-size:14px;cursor:pointer;\" title=\"Biometria Facial Ativa — clique para gerenciar\"></span>';
+                        } else {
+                            htmlIcones += '<span onclick=\"abrirFacialDireto(' + idEntidade + ')\" class=\"glyphicon glyphicon-user\" style=\"color:#808080;font-size:14px;cursor:pointer;\" title=\"Sem Biometria Facial — clique para cadastrar\"></span>';
+                        }
+
                         tdAutenticacao.html(htmlIcones);
                     });
+                };
+
+                window.abrirFacialDireto = function(idEntidade) {
+                    window.location.href = 'cadastro_facial.php?enti_id=' + idEntidade;
                 };
 
                 window.abrirRfidDireto = function(idRfid, idUsuario) {
@@ -2304,7 +2336,13 @@ function index(){
                     if(typeof funcoesInternasAntiga === 'function') funcoesInternasAntiga(); 
                     
                     // Roda a formatação de crachás
-                    formatarBiometria(); 
+                    formatarBiometria();
+                    // Oculta coluna FACIAL (usada só internamente para o ícone)
+                    var idxFacialHide = pegarIndiceColuna('FACIAL');
+                    if (idxFacialHide !== -1) {
+                        $('table thead th').eq(idxFacialHide).hide();
+                        $('table tbody tr').each(function(){ $(this).find('td').eq(idxFacialHide).hide(); });
+                    }
                 };
             ";
 	

@@ -262,9 +262,18 @@ cabecalho("Cadastro de Biometria Facial");
                     <select id="sel-empresa" class="form-control" style="border-radius:6px;font-size:13px">
                         <option value="">— Selecione —</option>
                         <?php
+                        // Pré-seleciona empresa via enti_id ou user_id passados por GET
+                        $preEmpresaId = $_SESSION["user_nb_empresa"] ?? 0;
+                        if (!empty($_GET["enti_id"])) {
+                            $rowEmp = mysqli_fetch_assoc(query("SELECT enti_nb_empresa FROM entidade WHERE enti_nb_id = " . intval($_GET["enti_id"]) . " LIMIT 1"));
+                            if ($rowEmp) $preEmpresaId = $rowEmp["enti_nb_empresa"];
+                        } elseif (!empty($_GET["user_id"])) {
+                            $rowEmp = mysqli_fetch_assoc(query("SELECT user_nb_empresa FROM user WHERE user_nb_id = " . intval($_GET["user_id"]) . " LIMIT 1"));
+                            if ($rowEmp) $preEmpresaId = $rowEmp["user_nb_empresa"];
+                        }
                         $rsEmp = query("SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome");
                         while ($e = mysqli_fetch_assoc($rsEmp)) {
-                            $sel = ($_SESSION["user_nb_empresa"] == $e["empr_nb_id"]) ? "selected" : "";
+                            $sel = ($preEmpresaId == $e["empr_nb_id"]) ? "selected" : "";
                             echo "<option value='{$e["empr_nb_id"]}' {$sel}>" . htmlspecialchars($e["empr_tx_nome"]) . "</option>";
                         }
                         ?>
@@ -332,6 +341,9 @@ cabecalho("Cadastro de Biometria Facial");
                                 <button id="btn-salvar" class="btn btn-success" disabled style="display:none">
                                     <i class="fa fa-check"></i> Salvar Biometria
                                 </button>
+                                <button id="btn-excluir" class="btn btn-danger" style="display:none">
+                                    <i class="fa fa-trash"></i> Excluir Biometria
+                                </button>
                                 <button id="btn-limpar" class="btn btn-default">
                                     <i class="fa fa-refresh"></i> Recomeçar
                                 </button>
@@ -372,6 +384,7 @@ cabecalho("Cadastro de Biometria Facial");
     const btnCap       = document.getElementById('btn-cap');
     const btnSalvar    = document.getElementById('btn-salvar');
     const btnLimpar    = document.getElementById('btn-limpar');
+    const btnExcluir   = document.getElementById('btn-excluir');
     const thumbStrip   = document.getElementById('thumb-strip');
     const countCap     = document.getElementById('count-cap');
     const progFill     = document.getElementById('prog-fill');
@@ -587,6 +600,7 @@ cabecalho("Cadastro de Biometria Facial");
                 </div>
                 ${badge}`;
             card.addEventListener('click',()=>selecionarUsuario(u,card));
+            card._dadosUsuario = u; // guarda referência para pré-seleção via GET
             listaEl.appendChild(card);
         });
     }
@@ -612,12 +626,77 @@ cabecalho("Cadastro de Biometria Facial");
                 ${semUser}
             </div>`;
         camPh.style.display='none'; painelCam.style.display='block';
+        // Mostra botão excluir só se já tem biometria cadastrada
+        btnExcluir.style.display = u.tem_biometria ? 'inline-block' : 'none';
         if(!modelsLoaded){ carregarModelos(); }
         else if(!stream){ iniciarCamera(); }
     }
 
+    // ── Excluir biometria ─────────────────────────────────────────────────────
+    btnExcluir.addEventListener('click', function(){
+        if(!usuarioAtual || !usuarioAtual.user_nb_id) return;
+        if(!confirm('Deseja realmente excluir a biometria facial de ' + usuarioAtual.user_tx_nome + '?')) return;
+        btnExcluir.disabled = true;
+        btnExcluir.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Excluindo...';
+        $.ajax({
+            url: 'cadastro_facial.php?acao=removerBiometria',
+            method: 'POST',
+            data: { user_id: usuarioAtual.user_nb_id },
+            dataType: 'json'
+        }).done(function(json){
+            if(json.ok){
+                msgRes.innerHTML = "<div class='alert alert-success'><i class='fa fa-check-circle'></i> Biometria excluída com sucesso.</div>";
+                // Atualiza badge na lista
+                const cardLista = document.querySelector('.user-card[data-id="'+usuarioAtual.enti_nb_id+'"]');
+                if(cardLista){ const bg=cardLista.querySelector('.badge-bio,.badge-nobio'); if(bg){bg.className='badge-nobio';bg.textContent='Sem biometria';} }
+                // Atualiza badge no card selecionado
+                const bg2 = sucCard.querySelector('.badge-bio,.badge-nobio');
+                if(bg2){ bg2.className='badge-nobio'; bg2.textContent='Sem biometria'; }
+                // Atualiza estado local e oculta botão excluir
+                usuarioAtual.tem_biometria = 0;
+                btnExcluir.style.display = 'none';
+            } else {
+                msgRes.innerHTML = "<div class='alert alert-danger'>Erro ao excluir biometria.</div>";
+            }
+        }).fail(function(){
+            msgRes.innerHTML = "<div class='alert alert-danger'>Erro de comunicação.</div>";
+        }).always(function(){
+            btnExcluir.disabled = false;
+            btnExcluir.innerHTML = '<i class="fa fa-trash"></i> Excluir Biometria';
+        });
+    });
+
     // Auto-dispara se empresa já selecionada
     if(selEmpresa.value){ userListWrap.style.display='block'; carregarUsuarios(selEmpresa.value); }
+
+    // ── Pré-seleção via parâmetros GET (?enti_id=X ou ?user_id=X) ────────────
+    // Usado quando vem do grid de funcionários ou de usuários
+    const urlParams  = new URLSearchParams(window.location.search);
+    const preEntiId  = urlParams.get('enti_id');  // vem do cadastro_funcionario
+    const preUserId  = urlParams.get('user_id');  // vem do cadastro_usuario
+
+    if ((preEntiId || preUserId) && selEmpresa.value) {
+        // Aguarda a lista carregar e então seleciona automaticamente
+        const tentarPreSelecionar = function(tentativas) {
+            if (tentativas <= 0) return;
+            const cards = document.querySelectorAll('.user-card');
+            if (!cards.length) {
+                setTimeout(function(){ tentarPreSelecionar(tentativas - 1); }, 300);
+                return;
+            }
+            cards.forEach(function(card) {
+                const u = card._dadosUsuario;
+                if (!u) return;
+                const match = (preEntiId && String(u.enti_nb_id) === String(preEntiId)) ||
+                              (preUserId && String(u.user_nb_id) === String(preUserId));
+                if (match) {
+                    card.click();
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        };
+        setTimeout(function(){ tentarPreSelecionar(10); }, 500);
+    }
 })();
 </script>
 
