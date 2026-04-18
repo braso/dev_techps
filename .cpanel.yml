@@ -69,6 +69,7 @@ deployment:
     - /bin/cp -R $DOMAIN $IRANEIDE_OLIVEIRA
     - /bin/cp -R $DOMAIN $MIDIA_DIGITAL
     - /bin/cp -R $DOMAIN $ENOVE
+    
     - /bin/cp -R $DOMAIN $T_MILITAO
     - /bin/cp -R $DOMAIN $LAUTO
 
