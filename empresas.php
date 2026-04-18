@@ -31,6 +31,7 @@
         "MIDIA DIGITAL"		    => "midia_digital",
         "ENOVE"                 => "enove",
         "TMILITAO"              => "t_militao",
+
         "LAUTO"                 => "lauto"
 
     ];
@@ -64,6 +65,7 @@
         "midia_digital"     => "Midia Digital",
         "enove"             => "Enove",
         "t_militao"         => "T Militao",
+        
         "lauto"             => "L Auto Cargo"
     ];
 
