@@ -34,7 +34,8 @@ deployment:
     - export IRANEIDE_OLIVEIRA=/home/tech1694/public_html/gestaodeponto/iraneide_oliveira
     - export MIDIA_DIGITAL=/home/tech1694/public_html/gestaodeponto/midia_digital
     - export ENOVE=/home/tech1694/public_html/gestaodeponto/enove
-    - export ENOVE=/home/tech1694/public_html/gestaodeponto/t_militao
+    - export T_MILITAO=/home/tech1694/public_html/gestaodeponto/t_militao
+    - export =/home/tech1694/public_html/gestaodeponto/lauto
 
 
 
