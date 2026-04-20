@@ -92,6 +92,46 @@
 		return $idInformado > 0 ? $idInformado : $idEntidadeLogada;
 	}
 
+	function apf_getRotulos(): array {
+		static $rotulos = null;
+		if ($rotulos !== null) {
+			return $rotulos;
+		}
+
+		// Mantem a mesma precedencia aplicada nas paginas de batida/espelho.
+		$ocupacaoUsuario = trim((string)($_SESSION['user_tx_nivel'] ?? ''));
+		if ($ocupacaoUsuario === '' && !empty($_SESSION['user_nb_entidade'])) {
+			$ocupacaoEntidade = mysqli_fetch_assoc(query(
+				"SELECT enti_tx_ocupacao FROM entidade WHERE enti_nb_id = '".$_SESSION['user_nb_entidade']."' LIMIT 1;"
+			));
+			$ocupacaoUsuario = trim((string)($ocupacaoEntidade['enti_tx_ocupacao'] ?? ''));
+		}
+		if ($ocupacaoUsuario === '' && !empty($_SESSION['enti_tx_ocupacao'])) {
+			$ocupacaoUsuario = trim((string)$_SESSION['enti_tx_ocupacao']);
+		}
+
+		$ocupacaoNormalizada = strtolower($ocupacaoUsuario);
+		$ehTerceirizado = in_array($ocupacaoNormalizada, ['terceirizado', 'tercerizado'], true);
+
+		$rotulos = [
+			'ehTerceirizado' => $ehTerceirizado,
+			'modulo' => $ehTerceirizado ? 'Produção' : 'Ponto',
+			'moduloMinusculo' => $ehTerceirizado ? 'produção' : 'ponto',
+			'funcionario' => $ehTerceirizado ? 'Colaborador' : 'Funcionário'
+		];
+
+		return $rotulos;
+	}
+
+	function apf_formatarMotivoExibicao(string $motivo): string {
+		$rotulos = apf_getRotulos();
+		if ($rotulos['ehTerceirizado'] && preg_match('/ajuste\s+de\s+ponto/i', $motivo)) {
+			return preg_replace('/ajuste\s+de\s+ponto/i', 'Ajuste de Jornada', $motivo);
+		}
+
+		return $motivo;
+	}
+
 	function verificarPontoExistente($matricula, $data, $hora) {
 		$ponto = mysqli_fetch_assoc(query("
 			SELECT p.pont_tx_data, m.macr_tx_nome
@@ -430,11 +470,17 @@
 				$acoes = "<span style='color:#999; font-size:12px;'>-</span>";
 			}
 
+			$nomeMotivo = 'N/A';
+			if (!empty($row['id_motivo'])) {
+				$nomeMotivo = mysqli_fetch_assoc(query("SELECT moti_tx_nome FROM motivo WHERE moti_nb_id = {$row['id_motivo']} LIMIT 1"))['moti_tx_nome'] ?? 'N/A';
+				$nomeMotivo = apf_formatarMotivoExibicao(strval($nomeMotivo));
+			}
+
 			$linhas[] = [
 				date('d/m/Y', strtotime($row['data_ajuste'])),
 				$row['hora_ajuste'],
 				$row['id_macro'] ? mysqli_fetch_assoc(query("SELECT macr_tx_nome FROM macroponto WHERE macr_nb_id = {$row['id_macro']} LIMIT 1"))['macr_tx_nome'] : 'N/A',
-				$row['id_motivo'] ? mysqli_fetch_assoc(query("SELECT moti_tx_nome FROM motivo WHERE moti_nb_id = {$row['id_motivo']} LIMIT 1"))['moti_tx_nome'] : 'N/A',
+				$nomeMotivo,
 				substr($row['justificativa'] ?? '', 0, 50) . (strlen($row['justificativa'] ?? '') > 50 ? '...' : ''),
 				$statusBadge,
 				date('d/m/Y H:i', strtotime($row['data_solicitacao'])),
@@ -731,6 +777,7 @@
 	}
 
 	function index() {
+		$rotulos = apf_getRotulos();
 
 		// Handler para deletar solicitação
 		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['deletar_solicitacao'])) {
@@ -975,7 +1022,7 @@
 
 		// Buffer the output to inject script in head
 		ob_start();
-		cabecalho("Ajuste de Ponto");
+		cabecalho("Ajuste de {$rotulos['modulo']}");
 		$cabecalho_html = ob_get_clean();
 
 		// Injetar script no head antes de fechar
@@ -1062,7 +1109,7 @@
 		$botoes[] = "<button type='button' id='btnUsarUltima' class='btn btn-info' style='display:none;' title='Uma solicitação já foi enviada para este dia. Clique para aplicar a mesma justificativa.'>Repetir Justificativa do Dia</button>";
 		$botoes[] = criarBotaoVoltar("espelho_ponto.php");
 
-		echo abre_form("Dados do Ajuste de Ponto");
+		echo abre_form("Dados do Ajuste de {$rotulos['modulo']}");
 		echo "<input type='hidden' name='idMotorista' value='{$idMotorista}'>";
 		//echo "<input type='hidden' name='enviar_solicitacao' value='1'>";
 		echo "<input type='hidden' name='confirmado_existente' id='confirmado_existente' value='0'>";
@@ -1104,16 +1151,29 @@
 
 		echo "
 		<script>
+		const rotuloModulo = " . json_encode($rotulos['moduloMinusculo']) . ";
+		const ehTerceirizado = " . (($rotulos['ehTerceirizado']) ? "true" : "false") . ";
 		document.addEventListener('DOMContentLoaded', function () {
 			const form = document.querySelector('form[name=\"contex_form\"]');
 			const campoData = (form && form.elements && form.elements['data']) ? form.elements['data'] : document.querySelector('[name=\"data\"]');
 			const campoMacro = (form && form.elements && form.elements['idMacro']) ? form.elements['idMacro'] : document.querySelector('[name=\"idMacro\"]');
+			const campoMotivo = (form && form.elements && form.elements['motivo']) ? form.elements['motivo'] : document.querySelector('[name=\"motivo\"]');
 			const campoJustificativa = (form && form.elements && form.elements['justificativa']) ? form.elements['justificativa'] : document.querySelector('[name=\"justificativa\"]');
 			const idMotoristaEl = document.querySelector('input[name=\"idMotorista\"]');
 			const confirmadoEl = document.getElementById('confirmado_existente');
 			const btnUsarUltima = document.getElementById('btnUsarUltima');
 
 			const idMotorista = idMotoristaEl ? idMotoristaEl.value : '';
+
+			function ajustarOpcaoMotivoTerceirizado() {
+				if (!ehTerceirizado || !campoMotivo) return;
+				Array.prototype.forEach.call(campoMotivo.options || [], function (opt) {
+					if (!opt || !opt.text) return;
+					if (/ajuste\s+de\s+ponto/i.test(opt.text)) {
+						opt.text = opt.text.replace(/ajuste\s+de\s+ponto/ig, 'Ajuste de Jornada');
+					}
+				});
+			}
 
 			function checarJustificativaExistente() {
 				if (!campoData || !btnUsarUltima || !campoJustificativa || !idMotorista) return;
@@ -1190,6 +1250,8 @@
 				if (campoData.value) checarJustificativaExistente();
 			}
 
+			ajustarOpcaoMotivoTerceirizado();
+
 			if (form) {
 				form.addEventListener('submit', function (event) {
 
@@ -1225,7 +1287,7 @@
 						form.submit();
 					})
 					.catch(function () {
-						const msg = 'Não foi possível validar se já existe ponto para este dia.\\n\\nDeseja enviar a solicitação mesmo assim?';
+						const msg = 'Não foi possível validar se já existe ' + rotuloModulo + ' para este dia.\\n\\nDeseja enviar a solicitação mesmo assim?';
 						if (!confirm(msg)) return;
 						confirmadoEl.value = '1';
 						form.submit();

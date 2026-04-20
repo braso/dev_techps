@@ -13,6 +13,37 @@
 	include "funcoes_ponto.php"; //Conecta incluso dentro de funcoes_ponto
 	include_once "check_permission.php";
 
+	function getRotulosEspelho(): array{
+		static $rotulos = null;
+		if($rotulos !== null){
+			return $rotulos;
+		}
+
+		// Mantem a mesma precedencia usada na batida: nivel do usuario, ocupacao da entidade e fallback de sessao.
+		$ocupacaoUsuario = trim((string)($_SESSION["user_tx_nivel"] ?? ""));
+		if(empty($ocupacaoUsuario) && !empty($_SESSION["user_nb_entidade"])){
+			$ocupacaoEntidade = mysqli_fetch_assoc(query(
+				"SELECT enti_tx_ocupacao FROM entidade WHERE enti_nb_id = '".$_SESSION["user_nb_entidade"]."' LIMIT 1;"
+			));
+			$ocupacaoUsuario = trim((string)($ocupacaoEntidade["enti_tx_ocupacao"] ?? ""));
+		}
+		if(empty($ocupacaoUsuario) && !empty($_SESSION["enti_tx_ocupacao"])){
+			$ocupacaoUsuario = trim((string)$_SESSION["enti_tx_ocupacao"]);
+		}
+
+		$ocupacaoNormalizada = strtolower($ocupacaoUsuario);
+		$ehTerceirizado = in_array($ocupacaoNormalizada, ["terceirizado",], true);
+
+		$rotulos = [
+			"ehTerceirizado" => $ehTerceirizado,
+			"modulo" => $ehTerceirizado ? "Produção" : "Ponto",
+			"funcionario" => $ehTerceirizado ? "Colaborador" : "Funcionário",
+			"funcionarioPlural" => $ehTerceirizado ? "Colaboradores" : "Funcionários"
+		];
+
+		return $rotulos;
+	}
+
 	function montarMensagemParametro(array &$motorista): string{
 		$mensagemParametro = $motorista["para_tx_nome"];
 		if($motorista["para_tx_tipo"] == "horas_por_dia"){
@@ -75,12 +106,13 @@
 	}
 
 	function redirParaAjustePonto(){
+		$rotulos = getRotulosEspelho();
 		unset($_POST["acao"]);
 		if(empty($_POST['busca_motorista'])){
-			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
+			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário", "Terceirizado",])){
 				$_POST['busca_motorista'] = $_SESSION["user_nb_entidade"];
 			}else{
-				set_status("ERRO: Selecione um funcionário para ajustar o ponto.");
+				set_status("ERRO: Selecione um {$rotulos["funcionario"]} para ajustar a {$rotulos["modulo"]}.");
 				index();
 				exit;
 			}
@@ -119,9 +151,10 @@
 
 
 	function buscarEspelho(){
+		$rotulos = getRotulosEspelho();
 		include_once "check_permission.php";
 		$temPermissao = temPermissaoMenu('/espelho_ponto.php');
-		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"]) && !$temPermissao){
+		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário", "Terceirizado", "Tercerizado"]) && !$temPermissao){
 			[$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], $_SESSION["user_nb_empresa"]];
 		}
 		
@@ -141,7 +174,7 @@
 				//Conferir campos obrigatórios{
 					$camposObrig = [
 						"busca_empresa" => "Empresa",
-						"busca_motorista" => "Funcionário",
+						"busca_motorista" => $rotulos["funcionario"],
 						"busca_periodo" => "Período"
 					];
 					$errorMsg = conferirCamposObrig($camposObrig, $_POST);
@@ -169,7 +202,7 @@
 	
 					if(empty($motorista)){
 						$_POST["errorFields"][] = "busca_motorista";
-						throw new Exception("Este funcionário não pertence a esta empresa.");
+						throw new Exception("Este {$rotulos["funcionario"]} não pertence a esta empresa.");
 					}
 				}
 
@@ -179,7 +212,7 @@
 						$data_cadastro = new DateTime($motorista["enti_tx_admissao"]);
 						if($dataInicio->format("Y-m") < $data_cadastro->format("Y-m")){
 							$_POST["errorFields"][] = "busca_periodo";
-							throw new Exception("O mês inicial deve ser posterior ou igual ao mês de admissão do funcionário (".$data_cadastro->format("m/Y").").");
+							throw new Exception("O mês inicial deve ser posterior ou igual ao mês de admissão do {$rotulos["funcionario"]} (".$data_cadastro->format("m/Y").").");
 						}
 					}
 				//}
@@ -194,6 +227,7 @@
 	}
 
 	function index(){
+		$rotulos = getRotulosEspelho();
 		
 		//ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
         // APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
@@ -201,7 +235,7 @@
         verificaPermissao('/espelho_ponto.php');
         $temPermissao = temPermissaoMenu('/espelho_ponto.php');
 		
-		cabecalho(empty($_POST["title"])? "Buscar Espelho de Ponto": $_POST["title"]);
+		cabecalho(empty($_POST["title"])? "Buscar Espelho de {$rotulos["modulo"]}": $_POST["title"]);
 
 		echo "<style>";
 		include "css/espelho_ponto.css";
@@ -211,23 +245,23 @@
 			$condBuscaMotorista = "AND enti_tx_status = 'ativo'";
 			$condBuscaEmpresa = "AND empr_tx_status = 'ativo'";
 
-            if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"]) && !$temPermissao){
+			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário", "Terceirizado", "Tercerizado"]) && !$temPermissao){
                 [$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], $_SESSION["user_nb_empresa"]];
                 $condBuscaMotorista .= " AND enti_nb_id = '".$_SESSION["user_nb_entidade"]."'";
 				
 				$motoristaLogado = mysqli_fetch_assoc(query("SELECT enti_tx_nome FROM entidade WHERE enti_nb_id = ".$_SESSION["user_nb_entidade"]." LIMIT 1"));
 				
 				$searchFields = [
-					campo("Funcionário", "nome_motorista_view", $motoristaLogado["enti_tx_nome"], 4, "", "readonly")
+					campo($rotulos["funcionario"], "nome_motorista_view", $motoristaLogado["enti_tx_nome"], 4, "", "readonly")
 				];
 
             }else{
                 $_POST["busca_empresa"] = $_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"];
                 
                 // Filtros adicionais: Cargo e Setor
-                // Ambos influenciam a lista de Funcionários
+				// Ambos influenciam a lista de colaboradores/funcionarios.
 
-                // Condições para filtrar funcionários por Cargo/Setor/Subsetor
+				// Condicoes para filtrar colaboradores/funcionarios por Cargo/Setor/Subsetor.
                 $condCargoSetor = "";
 				
 				// Se tiver Cargo selecionado, adiciona ao filtro
@@ -260,7 +294,7 @@
                     $searchFields[] = combo_bd("!Subsetor", "busca_subsetor", (!empty($_POST["busca_subsetor"]) ? $_POST["busca_subsetor"] : ""), 2, "sbgrupos_documentos", "onchange='this.form.submit()'", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " AND 1 = 0 ORDER BY sbgr_tx_nome ASC"));
                 }
                 $searchFields[] = combo_net(
-                        "Funcionário*",
+						$rotulos["funcionario"]."*",
                         "busca_motorista",
                         (!empty($_POST["busca_motorista"]) ? $_POST["busca_motorista"] : ""),
                         4,
@@ -313,7 +347,7 @@
 			if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
 				echo   
 					"<div style='display:none' id='tituloRelatorio'>
-						<h1>Espelho de Ponto</h1>
+						<h1>Espelho de {$rotulos["modulo"]}</h1>
 						<img id='logo' style='width: 150px' src='".$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/imagens/logo_topo_cliente.png' alt='Logo Empresa Direita'>
 					</div>"
 				;
@@ -548,7 +582,7 @@
 						<thead>
 							<tr>
 								<th>Empresa</th>
-								<th>Funcionário</th>
+								<th>{$rotulos["funcionario"]}</th>
 								<th>Parâmetro</th>
 							</tr>
 						<tbody>
@@ -596,6 +630,7 @@
 	}
 
 	function carregarJS($opt): string{
+		$rotulos = getRotulosEspelho();
 
 		
 		$select2URL = 
@@ -623,7 +658,7 @@
 
 				
 				function selecionaMotorista(idEmpresa){
-					let condicoes = '&condicoes='+encodeURI('enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\")');
+					let condicoes = '&condicoes='+encodeURI('enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\", \"Terceirizado\", \"Tercerizado\")');
 					if(idEmpresa > 0){
 						condicoes += encodeURI(' AND enti_nb_empresa = '+idEmpresa);
 						$('.busca_motorista')[0].innerHTML = null;
@@ -637,7 +672,7 @@
 					$('.busca_motorista').select2({
 						language: {
 							noResults: function(){
-								return 'Nenhum Funcionário encontrado para a combinação do filtro';
+								return 'Nenhum {$rotulos["funcionario"]} encontrado para a combinação do filtro';
 							}
 						},
 						placeholder: 'Selecione um item',
@@ -673,7 +708,7 @@
 					const cabecalhoHTML = `
 						<header id='print-header'>
 							<img src='./imagens/logo_topo_cliente.png' alt='Logo Esquerda'>
-							<h1>Espelho de Ponto</h1>
+							<h1>Espelho de {$rotulos["modulo"]}</h1>
 							<img src='./$logoEmpresa' alt='Logo Direita'>
 						</header>`;
 
@@ -689,7 +724,7 @@
 					janela.document.write(`
 						<html>
 						<head>
-							<title>Impressão - Espelho de Ponto</title>
+							<title>Impressão - Espelho de {$rotulos["modulo"]}</title>
 							<meta charset='utf-8'>
 							<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'>
 							<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'>
