@@ -2040,6 +2040,578 @@
 
 		carregarJS();
 	}
+
+	function normalizarTextoCsv(string $txt): string {
+		$txt = trim((string)$txt);
+		if($txt === ""){
+			return "";
+		}
+		$txt = @mb_convert_encoding($txt, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
+		$txt = mb_strtolower($txt, 'UTF-8');
+		$conv = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $txt);
+		if($conv !== false){
+			$txt = $conv;
+		}
+		$txt = preg_replace('/[^a-z0-9]+/', '_', $txt);
+		return trim((string)$txt, '_');
+	}
+
+	function detectarDelimitadorCsv(string $linhaCabecalho): string {
+		$contagens = [
+			';' => substr_count($linhaCabecalho, ';'),
+			',' => substr_count($linhaCabecalho, ','),
+			"\t" => substr_count($linhaCabecalho, "\t")
+		];
+		arsort($contagens);
+		$delim = array_key_first($contagens);
+		return (!empty($delim) ? $delim : ';');
+	}
+
+	function obterCabecalhoModeloCsvFuncionario(): array {
+		return [
+			"Email*",
+			"Telefone 1*",
+			"Telefone 2",
+			"Login",
+			"Status",
+			"Matrícula*",
+			"Nome*",
+			"Nascido em*",
+			"CPF*",
+			"RG*",
+			"Sexo",
+			"Emissor RG",
+			"UF RG",
+			"CEP*",
+			"Cidade/UF*",
+			"UF",
+			"Bairro*",
+			"Endereço*",
+			"Número",
+			"Complemento",
+			"Empresa",
+			"Setor",
+			"Sub Setor",
+			"Cargo",
+			"Salário*",
+			"Ocupação*",
+			"Dt Admissão",
+			"Subcontratado",
+			"Órgão Registro Funcional",
+			"Registro Funcional",
+			"Parametros da Jornada Escala*",
+			"cidade_uf",
+			"estado_civil",
+			"raca_cor",
+			"tipo_sanguineo",
+			"data_emissao_rg",
+			"referencia",
+			"pai",
+			"mae",
+			"conjugue",
+			"obs",
+			"saldo",
+			"dt_admissao*",
+			"dt_desligamento",
+			"parametro_jornada*",
+			"jornada_semanal",
+			"jornada_sabado",
+			"he_semanal_percentual*",
+			"he_extra_percentual*",
+			"pis",
+			"ctps_numero",
+			"ctps_serie",
+			"ctps_uf",
+			"titulo_numero",
+			"titulo_zona",
+			"titulo_secao",
+			"reservista",
+			"registro_funcional",
+			"orgao_regime_funcional",
+			"vencimento_registro",
+			"resp_setor_ids",
+			"resp_cargo_ids",
+			"cnh_registro",
+			"cnh_categoria",
+			"cnh_cidade",
+			"cnh_emissao",
+			"cnh_validade",
+			"cnh_primeira_habilitacao",
+			"cnh_permissao",
+			"cnh_pontuacao",
+			"cnh_atividade_remunerada",
+			"cnh_obs"
+		];
+	}
+
+	function baixarModeloCsvFuncionarios(){
+		$header = obterCabecalhoModeloCsvFuncionario();
+		$nomeArquivo = "modelo_importacao_funcionarios.csv";
+
+		header("Content-Type: text/csv; charset=UTF-8");
+		header("Content-Disposition: attachment; filename=\"{$nomeArquivo}\"");
+		header("Pragma: no-cache");
+		header("Expires: 0");
+
+		$out = fopen("php://output", "w");
+		fwrite($out, "\xEF\xBB\xBF");
+		fputcsv($out, $header, ';');
+		fclose($out);
+		exit;
+	}
+
+	function uploadCsvFuncionarios(){
+		if(empty($_FILES["arquivo_csv_funcionarios"]["tmp_name"])){
+			set_status("ERRO: Selecione um arquivo CSV para upload.");
+			index();
+			exit;
+		}
+
+		$tmp = $_FILES["arquivo_csv_funcionarios"]["tmp_name"];
+		$nome = $_FILES["arquivo_csv_funcionarios"]["name"] ?? "";
+		if(strtolower(pathinfo($nome, PATHINFO_EXTENSION)) !== "csv"){
+			set_status("ERRO: Arquivo inválido. Envie um arquivo .csv.");
+			index();
+			exit;
+		}
+
+		$fpRaw = fopen($tmp, "r");
+		if(!$fpRaw){
+			set_status("ERRO: Não foi possível abrir o CSV enviado.");
+			index();
+			exit;
+		}
+		$linhaCabecalhoRaw = (string)fgets($fpRaw);
+		fclose($fpRaw);
+		if(trim($linhaCabecalhoRaw) === ""){
+			set_status("ERRO: CSV vazio ou sem cabeçalho.");
+			index();
+			exit;
+		}
+
+		$delim = detectarDelimitadorCsv($linhaCabecalhoRaw);
+		$fp = fopen($tmp, "r");
+		$cab = fgetcsv($fp, 0, $delim);
+		if($cab === false || count($cab) <= 1){
+			rewind($fp);
+			$cab = fgetcsv($fp, 0, ';');
+			$delim = ';';
+		}
+		if($cab === false || count($cab) <= 1){
+			rewind($fp);
+			$cab = fgetcsv($fp, 0, ',');
+			$delim = ',';
+		}
+		if(isset($cab[0])){
+			$cab[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string)$cab[0]);
+		}
+		if($cab === false || !is_array($cab)){
+			fclose($fp);
+			set_status("ERRO: Não foi possível ler o cabeçalho do CSV.");
+			index();
+			exit;
+		}
+
+		$idx = [];
+		foreach($cab as $i => $col){
+			$key = normalizarTextoCsv((string)$col);
+			if($key !== '' && !isset($idx[$key])){
+				$idx[$key] = $i;
+			}
+		}
+
+		$findIdx = function(array $aliases) use ($idx): ?int {
+			foreach($aliases as $a){
+				$k = normalizarTextoCsv($a);
+				if(isset($idx[$k])){
+					return $idx[$k];
+				}
+			}
+			return null;
+		};
+
+		$findIdxByTokens = function(array $tokenSets) use ($idx): ?int {
+			foreach($idx as $k => $iCol){
+				$compact = str_replace('_', '', (string)$k);
+				foreach($tokenSets as $tokens){
+					$ok = true;
+					foreach($tokens as $t){
+						if(strpos($compact, $t) === false){
+							$ok = false;
+							break;
+						}
+					}
+					if($ok){
+						return $iCol;
+					}
+				}
+			}
+			return null;
+		};
+
+		$col = [
+			"email" => $findIdx(["email"]),
+			"telefone_1" => $findIdx(["telefone 1", "telefone_1", "fone1"]),
+			"telefone_2" => $findIdx(["telefone 2", "telefone_2", "fone2"]),
+			"matricula" => ($findIdx(["matricula", "matrícula", "matrcula"]) ?? $findIdxByTokens([["matr","cula"],["matric"]])),
+			"nome" => $findIdx(["nome"]),
+			"nascido_em" => $findIdx(["nascido em", "nascido_em"]),
+			"cpf" => $findIdx(["cpf"]),
+			"rg" => $findIdx(["rg"]),
+			"cep" => $findIdx(["cep"]),
+			"cod_ibge" => $findIdx(["cod ibge", "cod_ibge", "ibge"]),
+			"cidade_uf" => $findIdx(["cidade/uf", "cidade_uf", "cidade"]),
+			"uf" => $findIdx(["uf"]),
+			"bairro" => $findIdx(["bairro"]),
+			"endereco" => $findIdx(["endereco"]),
+			"empresa" => $findIdx(["empresa"]),
+			"salario" => ($findIdx(["salario", "salário", "salrio"]) ?? $findIdxByTokens([["sal","rio"],["salar"]])),
+			"ocupacao" => ($findIdx(["ocupacao", "ocupação", "ocupao"]) ?? $findIdxByTokens([["ocup"]])),
+			"parametro_jornada_escala" => $findIdx(["parametros da jornada escala", "parametros_da_jornada_escala"]),
+			"parametro_jornada" => $findIdx(["parametro_jornada"]),
+			"dt_admissao" => $findIdx(["dt admissao", "dt_admissao"]),
+			"status" => $findIdx(["status"]),
+			"jornada_semanal" => $findIdx(["jornada semanal", "jornada_semanal"]),
+			"jornada_sabado" => $findIdx(["jornada sabado", "jornada_sabado"]),
+			"he_semanal" => $findIdx(["he % semanal", "he semanal percentual", "he_semanal_percentual"]),
+			"he_extra" => $findIdx(["he % extra", "he extra percentual", "he_extra_percentual"]),
+			"login" => $findIdx(["login"]),
+			"setor" => $findIdx(["setor"]),
+			"subsetor" => $findIdx(["subsetor", "sub setor"]),
+			"cargo" => $findIdx(["cargo"])
+		];
+
+		$required = ["email","telefone_1","matricula","nome","nascido_em","cpf","rg","cep","bairro","endereco","salario","ocupacao","dt_admissao"];
+		$missingCols = [];
+		foreach($required as $rk){
+			if($col[$rk] === null){
+				$missingCols[] = $rk;
+			}
+		}
+		if($col["parametro_jornada"] === null && $col["parametro_jornada_escala"] === null){
+			$missingCols[] = "parametro_jornada";
+		}
+		if(!empty($missingCols)){
+			fclose($fp);
+			set_status("ERRO: Colunas obrigatórias ausentes no CSV: ".implode(", ", $missingCols).".");
+			index();
+			exit;
+		}
+
+		$get = function(array $row, ?int $i): string {
+			if($i === null){
+				return "";
+			}
+			return trim((string)($row[$i] ?? ""));
+		};
+		$toDate = function(string $v): ?string {
+			$v = trim($v);
+			if($v === "") return null;
+			if(preg_match('/^\d{4}-\d{2}-\d{2}$/', $v)) return $v;
+			if(preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $v)){
+				[$d,$m,$y] = explode('/', $v);
+				if(checkdate((int)$m, (int)$d, (int)$y)) return sprintf('%04d-%02d-%02d', (int)$y, (int)$m, (int)$d);
+			}
+			return null;
+		};
+		$toDecimal = function(string $v): ?string {
+			$v = trim($v);
+			if($v === "") return null;
+			$v = str_replace(["R$"," "], "", $v);
+			$v = str_replace('.', '', $v);
+			$v = str_replace(',', '.', $v);
+			return (is_numeric($v) ? (string)$v : null);
+		};
+
+		$resolveCidade = function(string $codIbge, string $cidadeUf, string $uf) {
+			$codIbge = trim($codIbge);
+			if($codIbge !== "" && ctype_digit($codIbge)){
+				$r = mysqli_fetch_assoc(query("SELECT cida_nb_id FROM cidade WHERE cida_nb_id = ? LIMIT 1", "i", [intval($codIbge)]));
+				if(!empty($r["cida_nb_id"])) return intval($r["cida_nb_id"]);
+			}
+			$cidadeUf = trim($cidadeUf);
+			$uf = strtoupper(trim($uf));
+			if($cidadeUf === "") return null;
+			if(strpos($cidadeUf, '/') !== false){
+				[$cidadeTxt, $ufTxt] = array_map('trim', explode('/', $cidadeUf, 2));
+				$uf = strtoupper($ufTxt);
+			}else{
+				$cidadeTxt = $cidadeUf;
+			}
+			if($cidadeTxt === "") return null;
+
+			if($uf !== ""){
+				$r = mysqli_fetch_assoc(query("SELECT cida_nb_id FROM cidade WHERE cida_tx_status = 'ativo' AND cida_tx_nome = ? AND cida_tx_uf = ? LIMIT 1", "ss", [$cidadeTxt, $uf]));
+				if(!empty($r["cida_nb_id"])) return intval($r["cida_nb_id"]);
+			}
+			$res = query("SELECT cida_nb_id, cida_tx_nome FROM cidade WHERE cida_tx_status = 'ativo'".($uf !== "" ? " AND cida_tx_uf = ?" : ""), ($uf !== "" ? "s" : ""), ($uf !== "" ? [$uf] : []));
+			$alvo = normalizarTextoCsv($cidadeTxt);
+			while($rowCidade = mysqli_fetch_assoc($res)){
+				if(normalizarTextoCsv($rowCidade["cida_tx_nome"] ?? "") === $alvo){
+					return intval($rowCidade["cida_nb_id"] ?? 0) ?: null;
+				}
+			}
+			return null;
+		};
+
+		$resolveParametro = function(string $raw) {
+			$raw = preg_replace('/\s+/u', ' ', trim($raw));
+			if($raw === "") return null;
+			if(ctype_digit($raw)){
+				$r = mysqli_fetch_assoc(query("SELECT para_nb_id FROM parametro WHERE para_nb_id = ? AND para_tx_status = 'ativo' LIMIT 1", "i", [intval($raw)]));
+				if(!empty($r["para_nb_id"])) return intval($r["para_nb_id"]);
+			}
+			$r = mysqli_fetch_assoc(query("SELECT para_nb_id FROM parametro WHERE para_tx_nome = ? LIMIT 1", "s", [$raw]));
+			if(!empty($r["para_nb_id"])) return intval($r["para_nb_id"]);
+
+			$r = mysqli_fetch_assoc(query("SELECT para_nb_id FROM parametro WHERE para_tx_status = 'ativo' AND para_tx_nome = ? LIMIT 1", "s", [$raw]));
+			if(!empty($r["para_nb_id"])) return intval($r["para_nb_id"]);
+
+			$res = query("SELECT para_nb_id, para_tx_nome FROM parametro WHERE para_tx_status = 'ativo'");
+			$alvo = normalizarTextoCsv($raw);
+			while($rowPar = mysqli_fetch_assoc($res)){
+				$nomePar = preg_replace('/\s+/u', ' ', trim((string)($rowPar["para_tx_nome"] ?? "")));
+				if(normalizarTextoCsv($nomePar) === $alvo){
+					return intval($rowPar["para_nb_id"] ?? 0) ?: null;
+				}
+			}
+			return null;
+		};
+
+		$resolveTabela = function(string $raw, string $tabela, string $idCol, string $nomeCol) {
+			$raw = trim($raw);
+			if($raw === "") return null;
+			if(ctype_digit($raw)){
+				$r = mysqli_fetch_assoc(query("SELECT {$idCol} id FROM {$tabela} WHERE {$idCol} = ? LIMIT 1", "i", [intval($raw)]));
+				if(!empty($r["id"])) return intval($r["id"]);
+			}
+			$r = mysqli_fetch_assoc(query("SELECT {$idCol} id FROM {$tabela} WHERE {$nomeCol} = ? LIMIT 1", "s", [$raw]));
+			return (!empty($r["id"]) ? intval($r["id"]) : null);
+		};
+
+		$empresaSessaoId = intval($_SESSION["user_nb_empresa"] ?? 0);
+		$empresaBuscaId = intval($_POST["empresa_padrao_upload"] ?? ($_POST["busca_empresa"] ?? 0));
+		$resolveEmpresa = function(string $raw) use ($empresaSessaoId, $empresaBuscaId) {
+			$raw = trim($raw);
+			if($raw === ""){
+				if($empresaSessaoId > 0) return $empresaSessaoId;
+				if($empresaBuscaId > 0) return $empresaBuscaId;
+				$r = mysqli_fetch_assoc(query("SELECT empr_nb_id FROM empresa WHERE empr_tx_status = 'ativo' LIMIT 1"));
+				return (!empty($r["empr_nb_id"]) ? intval($r["empr_nb_id"]) : null);
+			}
+			if(ctype_digit($raw)){
+				$r = mysqli_fetch_assoc(query("SELECT empr_nb_id FROM empresa WHERE empr_nb_id = ? AND empr_tx_status = 'ativo' LIMIT 1", "i", [intval($raw)]));
+				if(!empty($r["empr_nb_id"])) return intval($r["empr_nb_id"]);
+			}
+			$r = mysqli_fetch_assoc(query("SELECT empr_nb_id FROM empresa WHERE (empr_tx_nome = ? OR empr_tx_fantasia = ?) AND empr_tx_status = 'ativo' LIMIT 1", "ss", [$raw, $raw]));
+			return (!empty($r["empr_nb_id"]) ? intval($r["empr_nb_id"]) : null);
+		};
+
+		$total = 0;
+		$gravados = 0;
+		$erros = [];
+		$lin = 1;
+		while(($row = fgetcsv($fp, 0, $delim)) !== false){
+			$lin++;
+			if(count(array_filter($row, fn($v) => trim((string)$v) !== "")) === 0){
+				continue;
+			}
+			$total++;
+
+			$email = $get($row, $col["email"]);
+			$fone1 = $get($row, $col["telefone_1"]);
+			$fone2 = $get($row, $col["telefone_2"]);
+			$matricula = $get($row, $col["matricula"]);
+			$nomeFunc = $get($row, $col["nome"]);
+			$nasc = $toDate($get($row, $col["nascido_em"]));
+			$cpf = preg_replace('/[^0-9]/', '', $get($row, $col["cpf"]));
+			$rg = preg_replace('/[^0-9]/', '', $get($row, $col["rg"]));
+			$cep = $get($row, $col["cep"]);
+			$bairro = $get($row, $col["bairro"]);
+			$endereco = $get($row, $col["endereco"]);
+			$salario = $toDecimal($get($row, $col["salario"]));
+			$ocupacao = $get($row, $col["ocupacao"]);
+			$paramRawEscala = $get($row, $col["parametro_jornada_escala"]);
+			$paramRawCampo = $get($row, $col["parametro_jornada"]);
+			$paramRaw = ($paramRawCampo !== "" ? $paramRawCampo : $paramRawEscala);
+			$admissao = $toDate($get($row, $col["dt_admissao"]));
+
+			if(in_array($_ENV["CONTEX_PATH"], ["/comav"]) === false){
+				while(strlen($matricula) > 1 && isset($matricula[0]) && $matricula[0] === '0'){
+					$matricula = substr($matricula, 1);
+				}
+			}
+
+			$faltando = [];
+			foreach([
+				"email" => $email,
+				"telefone_1" => $fone1,
+				"matricula" => $matricula,
+				"nome" => $nomeFunc,
+				"nascido_em" => $nasc,
+				"cpf" => $cpf,
+				"rg" => $rg,
+				"cep" => $cep,
+				"bairro" => $bairro,
+				"endereco" => $endereco,
+				"salario" => $salario,
+				"ocupacao" => $ocupacao,
+				"parametro_jornada" => $paramRaw,
+				"dt_admissao" => $admissao
+			] as $k => $v){
+				if($v === null || $v === "") $faltando[] = $k;
+			}
+			if(!empty($faltando)){
+				$erros[] = "Linha {$lin}: campos obrigatórios não preenchidos (".implode(', ', $faltando).").";
+				continue;
+			}
+
+			if(!validarCPF($cpf)){
+				$erros[] = "Linha {$lin}: CPF inválido.";
+				continue;
+			}
+			if(strlen($rg) < 3){
+				$erros[] = "Linha {$lin}: RG inválido.";
+				continue;
+			}
+
+			$cidadeId = $resolveCidade($get($row, $col["cod_ibge"]), $get($row, $col["cidade_uf"]), $get($row, $col["uf"]));
+			if(empty($cidadeId)){
+				$erros[] = "Linha {$lin}: Cód. IBGE/Cidade não encontrado(a).";
+				continue;
+			}
+
+			$empresaId = $resolveEmpresa($get($row, $col["empresa"]));
+			if(empty($empresaId)){
+				$erros[] = "Linha {$lin}: empresa não encontrada e não foi possível usar empresa padrão.";
+				continue;
+			}
+
+			$parametroId = $resolveParametro($paramRaw);
+			if(empty($parametroId)){
+				$erros[] = "Linha {$lin}: parametro_jornada não encontrado.";
+				continue;
+			}
+
+			$setorId = $resolveTabela($get($row, $col["setor"]), "grupos_documentos", "grup_nb_id", "grup_tx_nome");
+			$subsetorId = $resolveTabela($get($row, $col["subsetor"]), "sbgrupos_documentos", "sbgr_nb_id", "sbgr_tx_nome");
+			$cargoId = $resolveTabela($get($row, $col["cargo"]), "operacao", "oper_nb_id", "oper_tx_nome");
+
+			$status = normalizarTextoCsv($get($row, $col["status"])) === "inativo" ? "inativo" : "ativo";
+			$jornadaSemanal = $get($row, $col["jornada_semanal"]);
+			$jornadaSabado = $get($row, $col["jornada_sabado"]);
+			$percSemanal = $get($row, $col["he_semanal"]);
+			$percExtra = $get($row, $col["he_extra"]);
+
+			$paramData = mysqli_fetch_assoc(query("SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percHESemanal, para_tx_percHEEx FROM parametro WHERE para_nb_id = ? LIMIT 1", "i", [$parametroId]));
+			if($jornadaSemanal === "") $jornadaSemanal = (string)($paramData["para_tx_jornadaSemanal"] ?? "");
+			if($jornadaSabado === "") $jornadaSabado = (string)($paramData["para_tx_jornadaSabado"] ?? "");
+			if($percSemanal === "") $percSemanal = (string)($paramData["para_tx_percHESemanal"] ?? "");
+			if($percExtra === "") $percExtra = (string)($paramData["para_tx_percHEEx"] ?? "");
+
+			$exMat = mysqli_fetch_assoc(query("SELECT enti_nb_id FROM entidade WHERE enti_tx_matricula = ? LIMIT 1", "s", [$matricula]));
+			if(!empty($exMat)){
+				$erros[] = "Linha {$lin}: matrícula já cadastrada.";
+				continue;
+			}
+			$login = $get($row, $col["login"]);
+			if($login === "") $login = $matricula;
+			$exLogin = mysqli_fetch_assoc(query("SELECT user_nb_id FROM user WHERE user_tx_status = 'ativo' AND user_tx_login = ? LIMIT 1", "s", [$login]));
+			if(!empty($exLogin)){
+				$erros[] = "Linha {$lin}: login já cadastrado.";
+				continue;
+			}
+
+			$novoMotorista = [
+				"enti_tx_matricula" => $matricula,
+				"enti_tx_nome" => $nomeFunc,
+				"enti_tx_nascimento" => $nasc,
+				"enti_tx_status" => $status,
+				"enti_tx_cpf" => $cpf,
+				"enti_tx_rg" => $rg,
+				"enti_tx_endereco" => $endereco,
+				"enti_tx_bairro" => $bairro,
+				"enti_nb_cidade" => $cidadeId,
+				"enti_tx_cep" => $cep,
+				"enti_tx_fone1" => $fone1,
+				"enti_tx_fone2" => $fone2,
+				"enti_tx_email" => $email,
+				"enti_tx_ocupacao" => $ocupacao,
+				"enti_nb_salario" => $salario,
+				"enti_nb_parametro" => $parametroId,
+				"enti_nb_empresa" => $empresaId,
+				"enti_setor_id" => $setorId,
+				"enti_subSetor_id" => $subsetorId,
+				"enti_tx_tipoOperacao" => $cargoId,
+				"enti_tx_admissao" => $admissao,
+				"enti_tx_jornadaSemanal" => $jornadaSemanal,
+				"enti_tx_jornadaSabado" => $jornadaSabado,
+				"enti_tx_percHESemanal" => $percSemanal,
+				"enti_tx_percHEEx" => $percExtra,
+				"enti_nb_userCadastro" => $_SESSION["user_nb_id"],
+				"enti_tx_dataCadastro" => date('Y-m-d H:i:s'),
+				"enti_tx_ehPadrao" => "nao"
+			];
+			$novoMotorista = array_filter($novoMotorista, function($v){ return !($v === "" || $v === []); });
+
+			query("START TRANSACTION;");
+			$insertEnt = inserir("entidade", array_keys($novoMotorista), array_values($novoMotorista));
+			if(empty($insertEnt) || ($insertEnt[0] instanceof Exception)){
+				query("ROLLBACK;");
+				$erros[] = "Linha {$lin}: erro ao inserir funcionário.";
+				continue;
+			}
+			$idEntidade = intval($insertEnt[0]);
+
+			$newUser = [
+				"user_tx_nome" => $nomeFunc,
+				"user_tx_nivel" => $ocupacao,
+				"user_tx_login" => $login,
+				"user_tx_senha" => md5($cpf),
+				"user_tx_status" => $status,
+				"user_nb_entidade" => $idEntidade,
+				"user_tx_nascimento" => $nasc,
+				"user_tx_cpf" => $cpf,
+				"user_tx_rg" => $rg,
+				"user_nb_cidade" => $cidadeId,
+				"user_tx_email" => $email,
+				"user_tx_fone" => $fone1,
+				"user_nb_empresa" => $empresaId,
+				"user_nb_userCadastro" => $_SESSION["user_nb_id"],
+				"user_tx_dataCadastro" => date('Y-m-d H:i:s')
+			];
+			$newUser = array_filter($newUser, function($v){ return !($v === "" || $v === []); });
+			$insertUser = inserir("user", array_keys($newUser), array_values($newUser));
+			if(empty($insertUser) || ($insertUser[0] instanceof Exception)){
+				query("ROLLBACK;");
+				$erros[] = "Linha {$lin}: erro ao inserir usuário vinculado.";
+				continue;
+			}
+
+			query("COMMIT;");
+			$gravados++;
+		}
+		fclose($fp);
+
+		if($total === 0){
+			set_status("ERRO: O CSV não possui linhas de dados para importação.");
+			index();
+			exit;
+		}
+		if($gravados <= 0){
+			set_status("ERRO: Nenhum funcionário foi importado. Total linhas: {$total}. Erros: ".count($erros).".<br>".implode("<br>", array_slice($erros, 0, 30)).(count($erros) > 30 ? "<br>..." : ""));
+			index();
+			exit;
+		}
+
+		$msg = "OK: Importação concluída. Total linhas: {$total}. Gravados: {$gravados}.";
+		if(!empty($erros)){
+			$msg .= "<br>Ocorreram ".count($erros)." erro(s):<br>".implode("<br>", array_slice($erros, 0, 30)).(count($erros) > 30 ? "<br>..." : "");
+		}
+		set_status($msg);
+		index();
+		exit;
+	}
 	
 function index(){
 		
@@ -2076,12 +2648,22 @@ function index(){
 		$botoesBusca = [
 			botao("Inserir", "visualizarCadastro","","","","","btn btn-success"),
 			'<button class="btn default" type="button" onclick="imprimirTabelaCompleta()">Imprimir</button>',
+			'<a class="btn btn-info" href="cadastro_funcionario.php?acao=baixarModeloCsvFuncionarios">Download Modelo CSV</a>',
 			botao("Limpar Filtros", "limparFiltros")
 		];
 
+		$formUploadCsv = "
+			<form method='post' enctype='multipart/form-data' style='display:inline-block; margin-left:8px;'>
+				<input type='hidden' name='acao' value='uploadCsvFuncionarios'>
+				<input type='hidden' name='empresa_padrao_upload' value='".intval($_POST["busca_empresa"] ?? 0)."'>
+				<input type='file' name='arquivo_csv_funcionarios' accept='.csv,text/csv' required style='display:inline-block; width:240px;'>
+				<button class='btn btn-warning' type='submit'>Upload CSV</button>
+			</form>
+		";
+
 		echo abre_form();
 		echo linha_form($camposBusca);
-		echo fecha_form([], "<hr><form>".implode(" ", $botoesBusca)."</form>");
+		echo fecha_form([], "<hr><form style='display:inline-block;'>".implode(" ", $botoesBusca)."</form>".$formUploadCsv);
 
 		$logoEmpresa = mysqli_fetch_assoc(query(
             "SELECT empr_tx_logo FROM empresa
