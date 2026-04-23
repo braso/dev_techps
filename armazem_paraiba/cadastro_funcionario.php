@@ -2069,78 +2069,92 @@
 
 	function obterCabecalhoModeloCsvFuncionario(): array {
 		return [
+			// Campos Obrigatórios
 			"Email*",
 			"Telefone 1*",
-			"Telefone 2",
-			"Login",
-			"Status",
 			"Matrícula*",
 			"Nome*",
 			"Nascido em*",
 			"CPF*",
 			"RG*",
-			"Sexo",
-			"Emissor RG",
-			"UF RG",
 			"CEP*",
-			"Cidade/UF*",
-			"UF",
 			"Bairro*",
 			"Endereço*",
+			"Salário*",
+			"Ocupação*",
+			"Dt Admissão*",
+			"Parametro_Jornada*",
+			
+			// Campos Opcionais - Básicos
+			"Telefone 2",
+			"Login",
+			"Status",
+			"Desligamento",
+			"Saldo de Horas",
+			"Subcontratado",
+			
+			// Campos Opcionais - Estado Civil e Pessoais
+			"Estado Civil",
+			"Sexo",
+			"Raça/Cor",
+			"Tipo Sanguíneo",
+			"Emissor RG",
+			"Data Emissão RG",
+			"UF RG",
+			
+			// Campos Opcionais - Filiação
+			"Pai",
+			"Mãe",
+			"Cônjuge",
 			"Número",
 			"Complemento",
+			"Referência",
+			
+			// Campos Opcionais - Localização
+			"Cod IBGE",
+			"Cidade/UF",
+			"UF",
+			
+			// Campos Opcionais - Organização
 			"Empresa",
 			"Setor",
 			"Sub Setor",
 			"Cargo",
-			"Salário*",
-			"Ocupação*",
-			"Dt Admissão",
-			"Subcontratado",
-			"Órgão Registro Funcional",
+			
+			// Campos Opcionais - Jornada
+			"Jornada Semanal",
+			"Jornada Sábado",
+			"HE % Semanal",
+			"HE % Extra",
+			"Parametros da Jornada Escala",
+			
+			// Campos Opcionais - Documentos
+			"PIS",
+			"CTPS Número",
+			"CTPS Série",
+			"CTPS UF",
+			"Título Número",
+			"Título Zona",
+			"Título Seção",
+			"Reservista",
 			"Registro Funcional",
-			"Parametros da Jornada Escala*",
-			"cidade_uf",
-			"estado_civil",
-			"raca_cor",
-			"tipo_sanguineo",
-			"data_emissao_rg",
-			"referencia",
-			"pai",
-			"mae",
-			"conjugue",
-			"obs",
-			"saldo",
-			"dt_admissao*",
-			"dt_desligamento",
-			"parametro_jornada*",
-			"jornada_semanal",
-			"jornada_sabado",
-			"he_semanal_percentual*",
-			"he_extra_percentual*",
-			"pis",
-			"ctps_numero",
-			"ctps_serie",
-			"ctps_uf",
-			"titulo_numero",
-			"titulo_zona",
-			"titulo_secao",
-			"reservista",
-			"registro_funcional",
-			"orgao_regime_funcional",
-			"vencimento_registro",
-			"resp_setor_ids",
-			"resp_cargo_ids",
-			"cnh_registro",
-			"cnh_categoria",
-			"cnh_cidade",
-			"cnh_emissao",
-			"cnh_validade",
-			"cnh_primeira_habilitacao",
-			"cnh_permissao",
-			"cnh_pontuacao",
-			"cnh_atividade_remunerada",
-			"cnh_obs"
+			"Órgão Regime Funcional",
+			"Vencimento Registro",
+			
+			// Campos Opcionais - CNH
+			"CNH Número",
+			"CNH Categoria",
+			"CNH Cidade",
+			"CNH Emissão",
+			"CNH Validade",
+			"CNH Primeira Habilitação",
+			"CNH Permissão",
+			"CNH Pontuação",
+			"CNH Atividade Remunerada",
+			"CNH Observações",
+			
+			// Campos Opcionais - Observações
+			"Observações"
 		];
 	}
 
@@ -2250,6 +2264,7 @@
 		};
 
 		$col = [
+			// Campos Obrigatórios
 			"email" => $findIdx(["email"]),
 			"telefone_1" => $findIdx(["telefone 1", "telefone_1", "fone1"]),
 			"telefone_2" => $findIdx(["telefone 2", "telefone_2", "fone2"]),
@@ -2270,6 +2285,8 @@
 			"parametro_jornada_escala" => $findIdx(["parametros da jornada escala", "parametros_da_jornada_escala"]),
 			"parametro_jornada" => $findIdx(["parametro_jornada"]),
 			"dt_admissao" => $findIdx(["dt admissao", "dt_admissao"]),
+			
+			// Campos Opcionais - Básicos
 			"status" => $findIdx(["status"]),
 			"jornada_semanal" => $findIdx(["jornada semanal", "jornada_semanal"]),
 			"jornada_sabado" => $findIdx(["jornada sabado", "jornada_sabado"]),
@@ -2278,7 +2295,55 @@
 			"login" => $findIdx(["login"]),
 			"setor" => $findIdx(["setor"]),
 			"subsetor" => $findIdx(["subsetor", "sub setor"]),
-			"cargo" => $findIdx(["cargo"])
+			"cargo" => $findIdx(["cargo"]),
+			"dt_desligamento" => $findIdx(["desligamento", "dt desligamento", "dt_desligamento"]),
+			
+			// Campos Opcionais - Estado Civil e Pessoais
+			"civil" => $findIdx(["estado civil", "civil", "estadocivil"]),
+			"sexo" => $findIdx(["sexo"]),
+			"rg_orgao" => $findIdx(["emissor rg", "rg orgao", "rg_orgao"]),
+			"rg_data_emissao" => $findIdx(["data emissão rg", "rg data emissao", "rg_data_emissao"]),
+			"rg_uf" => $findIdx(["uf rg", "rg_uf"]),
+			"raca_cor" => $findIdx(["raça/cor", "raca cor", "raca_cor"]),
+			"tipo_sanguineo" => $findIdx(["tipo sanguíneo", "tipo sanguineo", "tipo_sanguineo"]),
+			
+			// Campos Opcionais - Filiação
+			"pai" => $findIdx(["pai", "filiação pai"]),
+			"mae" => $findIdx(["mãe", "mae", "filiação mãe"]),
+			"conjugue" => $findIdx(["cônjuge", "conjugue"]),
+			"numero" => $findIdx(["número", "numero"]),
+			"complemento" => $findIdx(["complemento"]),
+			"referencia" => $findIdx(["referência", "referencia", "ponto de referência"]),
+			
+			// Campos Opcionais - Documentos
+			"pis" => $findIdx(["pis"]),
+			"ctps_numero" => $findIdx(["ctps número", "ctps_numero"]),
+			"ctps_serie" => $findIdx(["ctps série", "ctps_serie"]),
+			"ctps_uf" => $findIdx(["ctps uf", "ctps_uf"]),
+			"titulo_numero" => $findIdx(["título número", "titulo_numero"]),
+			"titulo_zona" => $findIdx(["título zona", "titulo_zona"]),
+			"titulo_secao" => $findIdx(["título seção", "titulo_secao"]),
+			"reservista" => $findIdx(["reservista"]),
+			"registro_funcional" => $findIdx(["registro funcional", "registro_funcional"]),
+			"vencimento_registro" => $findIdx(["vencimento registro", "vencimento_registro"]),
+			"orgao_regime_funcional" => $findIdx(["órgão regime funcional", "orgao regime funcional", "orgao_regime_funcional"]),
+			
+			// Campos Opcionais - CNH
+			"cnh_registro" => $findIdx(["cnh número", "cnh n°", "cnh_registro"]),
+			"cnh_categoria" => $findIdx(["cnh categoria", "cnh_categoria"]),
+			"cnh_emissao" => $findIdx(["cnh data emissão", "cnh emissao", "cnh_emissao"]),
+			"cnh_validade" => $findIdx(["cnh validade", "cnh_validade"]),
+			"cnh_primeira_habilitacao" => $findIdx(["cnh 1ª habilitação", "cnh primeira habilitacao", "cnh_primeira_habilitacao"]),
+			"cnh_permissao" => $findIdx(["cnh permissão", "cnh_permissao"]),
+			"cnh_pontuacao" => $findIdx(["cnh pontuação", "cnh_pontuacao"]),
+			"cnh_atividade_remunerada" => $findIdx(["cnh atividade remunerada", "cnh_atividade_remunerada"]),
+			"cnh_obs" => $findIdx(["cnh observações", "cnh obs", "cnh_obs"]),
+			"cnh_cidade" => $findIdx(["cnh cidade", "cnh_cidade"]),
+			
+			// Campos Opcionais - Outros
+			"banco" => $findIdx(["saldo de horas", "banco", "banco_horas"]),
+			"subcontratado" => $findIdx(["subcontratado"]),
+			"obs" => $findIdx(["observações", "obs"])
 		];
 
 		$required = ["email","telefone_1","matricula","nome","nascido_em","cpf","rg","cep","bairro","endereco","salario","ocupacao","dt_admissao"];
@@ -2410,6 +2475,7 @@
 		$total = 0;
 		$gravados = 0;
 		$erros = [];
+		$avisos = [];
 		$lin = 1;
 		while(($row = fgetcsv($fp, 0, $delim)) !== false){
 			$lin++;
@@ -2435,6 +2501,62 @@
 			$paramRawCampo = $get($row, $col["parametro_jornada"]);
 			$paramRaw = ($paramRawCampo !== "" ? $paramRawCampo : $paramRawEscala);
 			$admissao = $toDate($get($row, $col["dt_admissao"]));
+			
+			// Campos Opcionais - Básicos
+			$status = normalizarTextoCsv($get($row, $col["status"])) === "inativo" ? "inativo" : "ativo";
+			$jornadaSemanal = $get($row, $col["jornada_semanal"]);
+			$jornadaSabado = $get($row, $col["jornada_sabado"]);
+			$percSemanal = $get($row, $col["he_semanal"]);
+			$percExtra = $get($row, $col["he_extra"]);
+			$login = $get($row, $col["login"]);
+			$desligamento = $toDate($get($row, $col["dt_desligamento"]));
+			
+			// Campos Opcionais - Estado Civil e Pessoais
+			$civil = $get($row, $col["civil"]);
+			$sexo = $get($row, $col["sexo"]);
+			$rgOrgao = $get($row, $col["rg_orgao"]);
+			$rgDataEmissao = $toDate($get($row, $col["rg_data_emissao"]));
+			$rgUf = $get($row, $col["rg_uf"]);
+			$racaCor = $get($row, $col["raca_cor"]);
+			$tipoSanguineo = $get($row, $col["tipo_sanguineo"]);
+			
+			// Campos Opcionais - Filiação
+			$pai = $get($row, $col["pai"]);
+			$mae = $get($row, $col["mae"]);
+			$conjugue = $get($row, $col["conjugue"]);
+			$numero = $get($row, $col["numero"]);
+			$complemento = $get($row, $col["complemento"]);
+			$referencia = $get($row, $col["referencia"]);
+			
+			// Campos Opcionais - Documentos
+			$pis = preg_replace('/[^0-9]/', '', $get($row, $col["pis"]));
+			$ctpsNumero = $get($row, $col["ctps_numero"]);
+			$ctpsSerie = $get($row, $col["ctps_serie"]);
+			$ctpsUf = $get($row, $col["ctps_uf"]);
+			$tituloNumero = $get($row, $col["titulo_numero"]);
+			$tituloZona = $get($row, $col["titulo_zona"]);
+			$tituloSecao = $get($row, $col["titulo_secao"]);
+			$reservista = $get($row, $col["reservista"]);
+			$registroFuncional = $get($row, $col["registro_funcional"]);
+			$vencimentoRegistro = $toDate($get($row, $col["vencimento_registro"]));
+			$OrgaoRegimeFuncional = $get($row, $col["orgao_regime_funcional"]);
+			
+			// Campos Opcionais - CNH
+			$cnhRegistro = $get($row, $col["cnh_registro"]);
+			$cnhCategoria = $get($row, $col["cnh_categoria"]);
+			$cnhEmissao = $toDate($get($row, $col["cnh_emissao"]));
+			$cnhValidade = $toDate($get($row, $col["cnh_validade"]));
+			$cnhPrimeiraHabilitacao = $toDate($get($row, $col["cnh_primeira_habilitacao"]));
+			$cnhPermissao = $get($row, $col["cnh_permissao"]);
+			$cnhPontuacao = $get($row, $col["cnh_pontuacao"]);
+			$cnhAtividadeRemunerada = $get($row, $col["cnh_atividade_remunerada"]);
+			$cnhObs = $get($row, $col["cnh_obs"]);
+			$cnhCidade = $resolveCidade($get($row, $col["cnh_cidade"]), "", "") ?? null;
+			
+			// Campos Opcionais - Outros
+			$banco = $get($row, $col["banco"]);
+			$subcontratado = $get($row, $col["subcontratado"]);
+			$obs = $get($row, $col["obs"]);
 
 			if(in_array($_ENV["CONTEX_PATH"], ["/comav"]) === false){
 				while(strlen($matricula) > 1 && isset($matricula[0]) && $matricula[0] === '0'){
@@ -2497,12 +2619,6 @@
 			$subsetorId = $resolveTabela($get($row, $col["subsetor"]), "sbgrupos_documentos", "sbgr_nb_id", "sbgr_tx_nome");
 			$cargoId = $resolveTabela($get($row, $col["cargo"]), "operacao", "oper_nb_id", "oper_tx_nome");
 
-			$status = normalizarTextoCsv($get($row, $col["status"])) === "inativo" ? "inativo" : "ativo";
-			$jornadaSemanal = $get($row, $col["jornada_semanal"]);
-			$jornadaSabado = $get($row, $col["jornada_sabado"]);
-			$percSemanal = $get($row, $col["he_semanal"]);
-			$percExtra = $get($row, $col["he_extra"]);
-
 			$paramData = mysqli_fetch_assoc(query("SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_percHESemanal, para_tx_percHEEx FROM parametro WHERE para_nb_id = ? LIMIT 1", "i", [$parametroId]));
 			if($jornadaSemanal === "") $jornadaSemanal = (string)($paramData["para_tx_jornadaSemanal"] ?? "");
 			if($jornadaSabado === "") $jornadaSabado = (string)($paramData["para_tx_jornadaSabado"] ?? "");
@@ -2511,10 +2627,88 @@
 
 			$exMat = mysqli_fetch_assoc(query("SELECT enti_nb_id FROM entidade WHERE enti_tx_matricula = ? LIMIT 1", "s", [$matricula]));
 			if(!empty($exMat)){
-				$erros[] = "Linha {$lin}: matrícula já cadastrada.";
+				// Funcionário já existe - tentar atualizar com campos vazios
+				$idEntidadeExistente = intval($exMat["enti_nb_id"]);
+				$registroAtual = carregar("entidade", $idEntidadeExistente);
+				
+				// Mapeamento de variáveis para campos do BD
+				$camposOpcionais = [
+					"enti_tx_fone2" => $fone2,
+					"enti_tx_civil" => $civil,
+					"enti_tx_sexo" => $sexo,
+					"enti_tx_rgOrgao" => $rgOrgao,
+					"enti_tx_rgDataEmissao" => $rgDataEmissao,
+					"enti_tx_rgUf" => $rgUf,
+					"enti_tx_racaCor" => $racaCor,
+					"enti_tx_tipoSanguineo" => $tipoSanguineo,
+					"enti_tx_pai" => $pai,
+					"enti_tx_mae" => $mae,
+					"enti_tx_conjugue" => $conjugue,
+					"enti_tx_numero" => $numero,
+					"enti_tx_complemento" => $complemento,
+					"enti_tx_referencia" => $referencia,
+					"enti_tx_pis" => $pis,
+					"enti_tx_ctpsNumero" => $ctpsNumero,
+					"enti_tx_ctpsSerie" => $ctpsSerie,
+					"enti_tx_ctpsUf" => $ctpsUf,
+					"enti_tx_tituloNumero" => $tituloNumero,
+					"enti_tx_tituloZona" => $tituloZona,
+					"enti_tx_tituloSecao" => $tituloSecao,
+					"enti_tx_reservista" => $reservista,
+					"enti_tx_registroFuncional" => $registroFuncional,
+					"enti_tx_vencimentoRegistro" => $vencimentoRegistro,
+					"enti_tx_OrgaoRegimeFuncional" => $OrgaoRegimeFuncional,
+					"enti_tx_cnhRegistro" => $cnhRegistro,
+					"enti_tx_cnhCategoria" => $cnhCategoria,
+					"enti_tx_cnhEmissao" => $cnhEmissao,
+					"enti_tx_cnhValidade" => $cnhValidade,
+					"enti_tx_cnhPrimeiraHabilitacao" => $cnhPrimeiraHabilitacao,
+					"enti_tx_cnhPermissao" => $cnhPermissao,
+					"enti_tx_cnhPontuacao" => $cnhPontuacao,
+					"enti_tx_cnhAtividadeRemunerada" => $cnhAtividadeRemunerada,
+					"enti_tx_cnhObs" => $cnhObs,
+					"enti_nb_cnhCidade" => $cnhCidade,
+					"enti_tx_banco" => $banco,
+					"enti_tx_subcontratado" => $subcontratado,
+					"enti_tx_obs" => $obs,
+					"enti_tx_desligamento" => $desligamento
+				];
+				
+				// Encontrar campos para atualizar (vazio no BD e preenchido na planilha)
+				$camposAtualizar = [];
+				$camposPreenchidos = [];
+				
+				foreach($camposOpcionais as $nomeCampo => $valorNovo){
+					$valorAtual = $registroAtual[$nomeCampo] ?? null;
+					// Se o campo tá vazio no BD e tem valor na planilha, atualizar
+					if((empty($valorAtual) || $valorAtual === null || $valorAtual === "") && !empty($valorNovo) && $valorNovo !== null){
+						$camposAtualizar[$nomeCampo] = $valorNovo;
+						$camposPreenchidos[] = $nomeCampo;
+					}
+				}
+				
+				if(!empty($camposAtualizar)){
+					// Fazer UPDATE seletivo
+					query("START TRANSACTION;");
+					$resultAtualizacao = atualizar("entidade", array_keys($camposAtualizar), array_values($camposAtualizar), $idEntidadeExistente);
+					
+					if($resultAtualizacao){
+						query("COMMIT;");
+						$gravados++;
+						$nomesCampos = [];
+						foreach($camposPreenchidos as $campo){
+							$nomesCampos[] = str_replace(["enti_tx_", "enti_nb_"], "", $campo);
+						}
+						$avisos[] = "Linha {$lin}: Funcionário '{$nomeFunc}' atualizado. Campos preenchidos: " . implode(", ", $nomesCampos) . ".";
+					} else {
+						query("ROLLBACK;");
+						$erros[] = "Linha {$lin}: Erro ao atualizar funcionário existente.";
+					}
+				} else {
+					$avisos[] = "Linha {$lin}: Funcionário '{$nomeFunc}' já existe. Nenhum campo novo para atualizar.";
+				}
 				continue;
 			}
-			$login = $get($row, $col["login"]);
 			if($login === "") $login = $matricula;
 			$exLogin = mysqli_fetch_assoc(query("SELECT user_nb_id FROM user WHERE user_tx_status = 'ativo' AND user_tx_login = ? LIMIT 1", "s", [$login]));
 			if(!empty($exLogin)){
@@ -2550,7 +2744,47 @@
 				"enti_tx_percHEEx" => $percExtra,
 				"enti_nb_userCadastro" => $_SESSION["user_nb_id"],
 				"enti_tx_dataCadastro" => date('Y-m-d H:i:s'),
-				"enti_tx_ehPadrao" => "nao"
+				"enti_tx_ehPadrao" => "nao",
+				
+				// Campos Opcionais
+				"enti_tx_civil" => $civil,
+				"enti_tx_sexo" => $sexo,
+				"enti_tx_rgOrgao" => $rgOrgao,
+				"enti_tx_rgDataEmissao" => $rgDataEmissao,
+				"enti_tx_rgUf" => $rgUf,
+				"enti_tx_racaCor" => $racaCor,
+				"enti_tx_tipoSanguineo" => $tipoSanguineo,
+				"enti_tx_pai" => $pai,
+				"enti_tx_mae" => $mae,
+				"enti_tx_conjugue" => $conjugue,
+				"enti_tx_numero" => $numero,
+				"enti_tx_complemento" => $complemento,
+				"enti_tx_referencia" => $referencia,
+				"enti_tx_pis" => $pis,
+				"enti_tx_ctpsNumero" => $ctpsNumero,
+				"enti_tx_ctpsSerie" => $ctpsSerie,
+				"enti_tx_ctpsUf" => $ctpsUf,
+				"enti_tx_tituloNumero" => $tituloNumero,
+				"enti_tx_tituloZona" => $tituloZona,
+				"enti_tx_tituloSecao" => $tituloSecao,
+				"enti_tx_reservista" => $reservista,
+				"enti_tx_registroFuncional" => $registroFuncional,
+				"enti_tx_vencimentoRegistro" => $vencimentoRegistro,
+				"enti_tx_OrgaoRegimeFuncional" => $OrgaoRegimeFuncional,
+				"enti_tx_cnhRegistro" => $cnhRegistro,
+				"enti_tx_cnhCategoria" => $cnhCategoria,
+				"enti_tx_cnhEmissao" => $cnhEmissao,
+				"enti_tx_cnhValidade" => $cnhValidade,
+				"enti_tx_cnhPrimeiraHabilitacao" => $cnhPrimeiraHabilitacao,
+				"enti_tx_cnhPermissao" => $cnhPermissao,
+				"enti_tx_cnhPontuacao" => $cnhPontuacao,
+				"enti_tx_cnhAtividadeRemunerada" => $cnhAtividadeRemunerada,
+				"enti_tx_cnhObs" => $cnhObs,
+				"enti_nb_cnhCidade" => $cnhCidade,
+				"enti_tx_banco" => $banco,
+				"enti_tx_subcontratado" => $subcontratado,
+				"enti_tx_obs" => $obs,
+				"enti_tx_desligamento" => $desligamento
 			];
 			$novoMotorista = array_filter($novoMotorista, function($v){ return !($v === "" || $v === []); });
 
@@ -2598,15 +2832,22 @@
 			index();
 			exit;
 		}
-		if($gravados <= 0){
-			set_status("ERRO: Nenhum funcionário foi importado. Total linhas: {$total}. Erros: ".count($erros).".<br>".implode("<br>", array_slice($erros, 0, 30)).(count($erros) > 30 ? "<br>..." : ""));
+		if($gravados <= 0 && empty($avisos)){
+			$msgErro = "ERRO: Nenhum funcionário foi importado. Total linhas: {$total}. Erros: ".count($erros).".";
+			if(!empty($erros)){
+				$msgErro .= "<br>".implode("<br>", array_slice($erros, 0, 30)).(count($erros) > 30 ? "<br>..." : "");
+			}
+			set_status($msgErro);
 			index();
 			exit;
 		}
 
 		$msg = "OK: Importação concluída. Total linhas: {$total}. Gravados: {$gravados}.";
+		if(!empty($avisos)){
+			$msg .= "<br><br><strong style='color: #0275d8;'>Avisos/Atualizações (".count($avisos)."):</strong><br>".implode("<br>", array_slice($avisos, 0, 50)).(count($avisos) > 50 ? "<br>..." : "");
+		}
 		if(!empty($erros)){
-			$msg .= "<br>Ocorreram ".count($erros)." erro(s):<br>".implode("<br>", array_slice($erros, 0, 30)).(count($erros) > 30 ? "<br>..." : "");
+			$msg .= "<br><br><strong style='color: #d9534f;'>Erros Encontrados (".count($erros)."):</strong><br>".implode("<br>", array_slice($erros, 0, 30)).(count($erros) > 30 ? "<br>..." : "");
 		}
 		set_status($msg);
 		index();
