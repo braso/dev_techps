@@ -35,7 +35,7 @@ deployment:
     - export MIDIA_DIGITAL=/home/tech1694/public_html/gestaodeponto/midia_digital
     - export ENOVE=/home/tech1694/public_html/gestaodeponto/enove
     - export T_MILITAO=/home/tech1694/public_html/gestaodeponto/t_militao
-    - export =/home/tech1694/public_html/gestaodeponto/lauto
+    - export LAUTO=/home/tech1694/public_html/gestaodeponto/lauto
 
 
 
@@ -70,5 +70,6 @@ deployment:
     - /bin/cp -R $DOMAIN $MIDIA_DIGITAL
     - /bin/cp -R $DOMAIN $ENOVE
     - /bin/cp -R $DOMAIN $T_MILITAO
+    - /bin/cp -R $DOMAIN $LAUTO
 
 
