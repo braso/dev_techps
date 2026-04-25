@@ -51,7 +51,19 @@
             }
         }
 
-        logFTP("🌐 FTP Server: ".($ftpInfos["empr_tx_ftpServer"] ?? "NULL"));
+        logFTP("🌐 FTP Server raw: [".($ftpInfos["empr_tx_ftpServer"] ?? "NULL")."]");
+        logFTP("👤 FTP User raw: [".($ftpInfos["empr_tx_ftpUsername"] ?? "NULL")."]");
+
+        // Sanitiza o servidor: remove espaços, quebras de linha e caracteres invisíveis
+        $ftpInfos["empr_tx_ftpServer"]   = trim($ftpInfos["empr_tx_ftpServer"] ?? "");
+        $ftpInfos["empr_tx_ftpUsername"] = trim($ftpInfos["empr_tx_ftpUsername"] ?? "");
+        $ftpInfos["empr_tx_ftpUserpass"] = trim($ftpInfos["empr_tx_ftpUserpass"] ?? "");
+
+        // Remove prefixos de protocolo caso venham salvos no banco (ftp://, ftps://, ftp:)
+        $ftpInfos["empr_tx_ftpServer"] = preg_replace('#^ftps?://|^ftps?:#i', '', $ftpInfos["empr_tx_ftpServer"]);
+        $ftpInfos["empr_tx_ftpServer"] = trim($ftpInfos["empr_tx_ftpServer"], "/");
+
+        logFTP("🌐 FTP Server sanitizado: [".$ftpInfos["empr_tx_ftpServer"]."]");
 
         if(empty($ftpInfos["empr_tx_ftpServer"]) || empty($ftpInfos["empr_tx_ftpUsername"]) || empty($ftpInfos["empr_tx_ftpUserpass"])){
             logFTP("❌ FTP não configurado");
@@ -91,7 +103,8 @@
         $fileList = [];
 
         // 🔹 LISTAR ARQUIVOS
-        $curlListFiles = function($server, $user, $pass, $sslMode) use (&$fileList){
+        $lastCurlError = "";
+        $curlListFiles = function($server, $user, $pass, $sslMode) use (&$fileList, &$lastCurlError){
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, "ftp://$server/");
             curl_setopt($ch, CURLOPT_USERPWD, "$user:$pass");
@@ -103,7 +116,8 @@
 
             $data = curl_exec($ch);
             if(curl_errno($ch) || $data === false){
-                logFTP("❌ Erro LIST: ".curl_error($ch));
+                $lastCurlError = curl_error($ch)." (código ".curl_errno($ch).")";
+                logFTP("❌ Erro LIST: ".$lastCurlError);
                 curl_close($ch);
                 return false;
             }
@@ -145,7 +159,9 @@
 
             if(!$conectou){
                 logFTP("❌ Falha total ao listar FTP");
-                set_status("ERRO: Não foi possível listar arquivos do FTP/FTPS.");
+                $serverHex = bin2hex($ftpInfos["empr_tx_ftpServer"]);
+                logFTP("🔎 Server hex: ".$serverHex);
+                set_status("ERRO: Não foi possível listar arquivos do FTP/FTPS. Detalhe: ".$lastCurlError." | Server: [".$ftpInfos["empr_tx_ftpServer"]."] | Hex: ".$serverHex);
                 index();
                 exit;
             }

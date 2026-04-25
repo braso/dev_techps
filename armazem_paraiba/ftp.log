@@ -87,3 +87,56 @@
 [2026-04-02 09:58:01] 🔍 Verificando: apontamento31032026010000.txt
 [2026-04-02 09:58:01] 🔍 Verificando: archive
 [2026-04-02 09:58:01] 🏁 Finalizado updateFTP
+[2026-04-25 14:38:21] 🚀 Iniciando updateFTP
+[2026-04-25 14:38:21] 👤 Usuario: 138
+[2026-04-25 14:38:21] 🌐 FTP Server: ftp:ftp-jornadas.positronrt.com.br
+[2026-04-25 14:38:21] 📅 Data inicial: 2026-04-25
+[2026-04-25 14:38:21] 📡 Listando arquivos FTP...
+[2026-04-25 14:38:21] ❌ Erro LIST: URL rejected: Port number was not a decimal number between 0 and 65535
+[2026-04-25 14:38:21] ⚠️ Tentando fallback FTP
+[2026-04-25 14:38:21] ❌ Erro LIST: URL rejected: Port number was not a decimal number between 0 and 65535
+[2026-04-25 14:38:21] ❌ Falha total ao listar FTP
+[2026-04-25 14:44:35] 🚀 Iniciando updateFTP
+[2026-04-25 14:44:35] 👤 Usuario: 138
+[2026-04-25 14:44:35] 🌐 FTP Server: ftp:ftp-jornadas.positronrt.com.br
+[2026-04-25 14:44:35] 📅 Data inicial: 2026-04-25
+[2026-04-25 14:44:35] 📡 Listando arquivos FTP...
+[2026-04-25 14:44:35] ❌ Erro LIST: URL rejected: Port number was not a decimal number between 0 and 65535 (código 3)
+[2026-04-25 14:44:35] ⚠️ Tentando fallback FTP
+[2026-04-25 14:44:35] ❌ Erro LIST: URL rejected: Port number was not a decimal number between 0 and 65535 (código 3)
+[2026-04-25 14:44:35] ❌ Falha total ao listar FTP
+[2026-04-25 14:45:16] 🚀 Iniciando updateFTP
+[2026-04-25 14:45:16] 👤 Usuario: 138
+[2026-04-25 14:45:16] 🌐 FTP Server raw: [ftp:ftp-jornadas.positronrt.com.br]
+[2026-04-25 14:45:16] 👤 FTP User raw: [u:08995631000108]
+[2026-04-25 14:45:16] 🌐 FTP Server sanitizado: [ftp:ftp-jornadas.positronrt.com.br]
+[2026-04-25 14:45:16] 📅 Data inicial: 2026-04-25
+[2026-04-25 14:45:16] 📡 Listando arquivos FTP...
+[2026-04-25 14:45:16] ❌ Erro LIST: URL rejected: Port number was not a decimal number between 0 and 65535 (código 3)
+[2026-04-25 14:45:16] ⚠️ Tentando fallback FTP
+[2026-04-25 14:45:16] ❌ Erro LIST: URL rejected: Port number was not a decimal number between 0 and 65535 (código 3)
+[2026-04-25 14:45:16] ❌ Falha total ao listar FTP
+[2026-04-25 14:45:33] 🚀 Iniciando updateFTP
+[2026-04-25 14:45:33] 👤 Usuario: 138
+[2026-04-25 14:45:33] 🌐 FTP Server raw: [ftp:ftp-jornadas.positronrt.com.br]
+[2026-04-25 14:45:33] 👤 FTP User raw: [u:08995631000108]
+[2026-04-25 14:45:33] 🌐 FTP Server sanitizado: [ftp:ftp-jornadas.positronrt.com.br]
+[2026-04-25 14:45:33] 📅 Data inicial: 2026-04-25
+[2026-04-25 14:45:33] 📡 Listando arquivos FTP...
+[2026-04-25 14:45:33] ❌ Erro LIST: URL rejected: Port number was not a decimal number between 0 and 65535 (código 3)
+[2026-04-25 14:45:33] ⚠️ Tentando fallback FTP
+[2026-04-25 14:45:33] ❌ Erro LIST: URL rejected: Port number was not a decimal number between 0 and 65535 (código 3)
+[2026-04-25 14:45:33] ❌ Falha total ao listar FTP
+[2026-04-25 14:45:33] 🔎 Server hex: 6674703a6674702d6a6f726e616461732e706f736974726f6e72742e636f6d2e6272
+[2026-04-25 14:47:11] 🚀 Iniciando updateFTP
+[2026-04-25 14:47:11] 👤 Usuario: 138
+[2026-04-25 14:47:11] 🌐 FTP Server raw: [ftp:ftp-jornadas.positronrt.com.br]
+[2026-04-25 14:47:11] 👤 FTP User raw: [u:08995631000108]
+[2026-04-25 14:47:11] 🌐 FTP Server sanitizado: [ftp-jornadas.positronrt.com.br]
+[2026-04-25 14:47:11] 📅 Data inicial: 2026-04-25
+[2026-04-25 14:47:11] 📡 Listando arquivos FTP...
+[2026-04-25 14:47:17] ❌ Erro LIST: SSL certificate OpenSSL verify result: unable to get local issuer certificate (20) (código 67)
+[2026-04-25 14:47:17] ⚠️ Tentando fallback FTP
+[2026-04-25 14:47:21] ❌ Erro LIST: Access denied: 530 (código 67)
+[2026-04-25 14:47:21] ❌ Falha total ao listar FTP
+[2026-04-25 14:47:21] 🔎 Server hex: 6674702d6a6f726e616461732e706f736974726f6e72742e636f6d2e6272
