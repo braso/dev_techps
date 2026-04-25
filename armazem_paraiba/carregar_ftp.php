@@ -66,7 +66,11 @@
         $ftpInfos["empr_tx_ftpServer"] = preg_replace('#^ftps?://|^ftps?:#i', '', $ftpInfos["empr_tx_ftpServer"]);
         $ftpInfos["empr_tx_ftpServer"] = trim($ftpInfos["empr_tx_ftpServer"], "/");
 
+        // Remove prefixos indevidos do username (ex: "u:usuario" → "usuario")
+        $ftpInfos["empr_tx_ftpUsername"] = preg_replace('#^\w:#', '', $ftpInfos["empr_tx_ftpUsername"]);
+
         logFTP("🌐 FTP Server sanitizado: [".$ftpInfos["empr_tx_ftpServer"]."]");
+        logFTP("👤 FTP User sanitizado: [".$ftpInfos["empr_tx_ftpUsername"]."]");
 
         if(empty($ftpInfos["empr_tx_ftpServer"]) || empty($ftpInfos["empr_tx_ftpUsername"]) || empty($ftpInfos["empr_tx_ftpUserpass"])){
             logFTP("❌ FTP não configurado");

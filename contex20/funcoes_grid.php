@@ -443,19 +443,24 @@
 		$caminho = $_POST["caminho"] ?? "";
 		$caminho = ltrim($caminho, "./");
 
+		// Descobre o diretório raiz da aplicação a partir do script chamado
+		// Ex: /home/user/public_html/app/armazem_paraiba/carregar_ponto.php → /home/user/public_html/app/armazem_paraiba
+		$dirScript = dirname($_SERVER["SCRIPT_FILENAME"]);
+
 		// Tenta resolver o caminho absoluto de várias formas
 		$tentativas = [
-			$_SERVER["DOCUMENT_ROOT"]."/".$caminho,
-			$_SERVER["DOCUMENT_ROOT"]."/armazem_paraiba/".$caminho,
-			__DIR__."/../armazem_paraiba/".$caminho,
-			__DIR__."/".$caminho,
+			$dirScript."/".$caminho,                                          // relativo ao script atual
+			dirname($dirScript)."/".$caminho,                                 // um nível acima
+			$_SERVER["DOCUMENT_ROOT"]."/".$caminho,                           // raiz do domínio
+			$_SERVER["DOCUMENT_ROOT"]."/armazem_paraiba/".$caminho,           // pasta armazem_paraiba
+			__DIR__."/../armazem_paraiba/".$caminho,                          // relativo a funcoes_grid.php
 		];
 
 		$caminhoAbsoluto = null;
 		foreach($tentativas as $tentativa){
-			$tentativa = realpath($tentativa);
-			if($tentativa && file_exists($tentativa)){
-				$caminhoAbsoluto = $tentativa;
+			$real = realpath($tentativa);
+			if($real && file_exists($real)){
+				$caminhoAbsoluto = $real;
 				break;
 			}
 		}
@@ -474,7 +479,8 @@
 			// Lê o arquivo e o envia para o navegador
 			readfile($caminhoAbsoluto);
 		}else{
-			set_status("O arquivo não foi encontrado. Caminho: [".$caminho."]");
+			$debugPaths = implode(" | ", $tentativas);
+			set_status("O arquivo não foi encontrado. Caminho: [".$caminho."] Tentativas: [".$debugPaths."]");
 		}
 
 
