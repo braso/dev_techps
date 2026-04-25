@@ -301,7 +301,7 @@
 		$buttons = [
 			botao("Buscar", "index"),
 			botao("Inserir novo arquivo", "viewManualInsert", "", "", "", "", "btn btn-success"),
-			botao("Atualizar FTP", "updateFTP('".$path."')", "path", $path, "", "", "btn btn-primary"),
+			botao("Atualizar FTP", "updateFTP()", "path", "", "", "", "btn btn-primary"),
 			// botao("Configuração", "layout_notificacao", "", "", "", "", "btn btn-warning")
 		];
 

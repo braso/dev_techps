@@ -20,7 +20,10 @@
         header("Expires: 0");
 	//}*/
 
-	function updateFTP($path){
+	function updateFTP($path = null){
+        if(empty($path)){
+            $path = __DIR__."/arquivos/pontos";
+        }
 
         logFTP("🚀 Iniciando updateFTP");
 
