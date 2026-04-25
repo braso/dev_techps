@@ -439,19 +439,29 @@
 	}
 
 	function downloadArquivo() {
-		// Normaliza o caminho: remove prefixos relativos e monta caminho absoluto
+		// Normaliza o caminho recebido
 		$caminho = $_POST["caminho"] ?? "";
-		// Remove ./ ou / do início para montar sempre a partir do __DIR__ do projeto
 		$caminho = ltrim($caminho, "./");
-		$caminhoAbsoluto = __DIR__."/../armazem_paraiba/".$caminho;
 
-		// Fallback: tenta o caminho como veio, relativo ao document root
-		if(!file_exists($caminhoAbsoluto)){
-			$caminhoAbsoluto = $_SERVER["DOCUMENT_ROOT"]."/".ltrim($caminho, "/");
+		// Tenta resolver o caminho absoluto de várias formas
+		$tentativas = [
+			$_SERVER["DOCUMENT_ROOT"]."/".$caminho,
+			$_SERVER["DOCUMENT_ROOT"]."/armazem_paraiba/".$caminho,
+			__DIR__."/../armazem_paraiba/".$caminho,
+			__DIR__."/".$caminho,
+		];
+
+		$caminhoAbsoluto = null;
+		foreach($tentativas as $tentativa){
+			$tentativa = realpath($tentativa);
+			if($tentativa && file_exists($tentativa)){
+				$caminhoAbsoluto = $tentativa;
+				break;
+			}
 		}
 
 		// Verificar se o arquivo existe
-		if(file_exists($caminhoAbsoluto)){
+		if($caminhoAbsoluto){
 			// Configurar cabeçalhos para forçar o download
 			header("Content-Description: File Transfer");
 			header("Content-Type: application/octet-stream");
