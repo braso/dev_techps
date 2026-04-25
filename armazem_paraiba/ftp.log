@@ -140,3 +140,15 @@
 [2026-04-25 14:47:21] ❌ Erro LIST: Access denied: 530 (código 67)
 [2026-04-25 14:47:21] ❌ Falha total ao listar FTP
 [2026-04-25 14:47:21] 🔎 Server hex: 6674702d6a6f726e616461732e706f736974726f6e72742e636f6d2e6272
+[2026-04-25 15:02:15] 🚀 Iniciando updateFTP
+[2026-04-25 15:02:15] 👤 Usuario: 138
+[2026-04-25 15:02:15] 🌐 FTP Server raw: [ftp:ftp-jornadas.positronrt.com.br]
+[2026-04-25 15:02:15] 👤 FTP User raw: [u:08995631000108]
+[2026-04-25 15:02:15] 🌐 FTP Server sanitizado: [ftp-jornadas.positronrt.com.br]
+[2026-04-25 15:02:15] 📅 Data inicial: 2026-04-25
+[2026-04-25 15:02:15] 📡 Listando arquivos FTP...
+[2026-04-25 15:02:21] ❌ Erro LIST: SSL certificate OpenSSL verify result: unable to get local issuer certificate (20) (código 67)
+[2026-04-25 15:02:21] ⚠️ Tentando fallback FTP
+[2026-04-25 15:02:24] ❌ Erro LIST: Access denied: 530 (código 67)
+[2026-04-25 15:02:24] ❌ Falha total ao listar FTP
+[2026-04-25 15:02:24] 🔎 Server hex: 6674702d6a6f726e616461732e706f736974726f6e72742e636f6d2e6272

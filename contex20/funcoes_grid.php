@@ -439,21 +439,32 @@
 	}
 
 	function downloadArquivo() {
+		// Normaliza o caminho: remove prefixos relativos e monta caminho absoluto
+		$caminho = $_POST["caminho"] ?? "";
+		// Remove ./ ou / do início para montar sempre a partir do __DIR__ do projeto
+		$caminho = ltrim($caminho, "./");
+		$caminhoAbsoluto = __DIR__."/../armazem_paraiba/".$caminho;
+
+		// Fallback: tenta o caminho como veio, relativo ao document root
+		if(!file_exists($caminhoAbsoluto)){
+			$caminhoAbsoluto = $_SERVER["DOCUMENT_ROOT"]."/".ltrim($caminho, "/");
+		}
+
 		// Verificar se o arquivo existe
-		if(file_exists($_POST["caminho"])){
+		if(file_exists($caminhoAbsoluto)){
 			// Configurar cabeçalhos para forçar o download
 			header("Content-Description: File Transfer");
 			header("Content-Type: application/octet-stream");
-			header("Content-Disposition: attachment; filename=".basename($_POST["caminho"]));
+			header("Content-Disposition: attachment; filename=".basename($caminhoAbsoluto));
 			header("Expires: 0");
 			header("Cache-Control: must-revalidate");
 			header("Pragma: public");
-			header("Content-Length: ".filesize($_POST["caminho"]));
+			header("Content-Length: ".filesize($caminhoAbsoluto));
 
 			// Lê o arquivo e o envia para o navegador
-			readfile($_POST["caminho"]);
+			readfile($caminhoAbsoluto);
 		}else{
-			set_status("O arquivo não foi encontrado.");
+			set_status("O arquivo não foi encontrado. Caminho: [".$caminho."]");
 		}
 
 
