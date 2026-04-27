@@ -415,7 +415,7 @@ function index() {
 		$jornadaEfetiva = operarHorarios([$jornadaCompleta, $jornadaEfetiva], "-");
 
 
-        $botoes = [
+		$botoes = [
             "inicioJornada"             => criaBotaoRegistro("btn green", 1,  "JORNADA", ($_SESSION["user_tx_nivel"] == "Funcionário" ? "fa fa-flag-checkered fa-6" : "fa fa-car fa-6")),
             "inicioRefeicao"             => criaBotaoRegistro("btn green", 3,  "REFEIÇÃO", "fa fa-cutlery fa-6"),
             // "inicioEspera"             => criaBotaoRegistro("btn green", 5,  "ESPERA", "fa fa-clock-o fa-6"),
@@ -431,7 +431,7 @@ function index() {
             // "fimRepousoEmbarcado" 	=> criaBotaoRegistro("btn red", 12, "Encerrar Repouso Embarcado", "fa fa-bed fa-6"),
         ];
 
-		if($_SESSION["user_tx_nivel"] != "Funcionário"){
+		if($_SESSION["user_tx_nivel"] != "Funcionário" && !$ehTerceirizado){
 			$botoes["inicioEspera"] = criaBotaoRegistro("btn green", 5,  "ESPERA", "fa fa-clock-o fa-6");
 			$botoes["fimEspera"] = criaBotaoRegistro("btn red", 6,  "FIM ESPERA", "fa fa-clock-o fa-6");
 			
@@ -442,7 +442,21 @@ function index() {
 		
 		$botoesVisiveis = [];
 
-		if (empty($pontos["ultimo"]["pont_tx_tipo"]) || intval($pontos["ultimo"]["pont_tx_tipo"]) == 2) {
+		if ($ehTerceirizado) {
+			$tipoUltimo = intval($pontos["ultimo"]["pont_tx_tipo"] ?? 0);
+			if ($tipoUltimo === 0 || $tipoUltimo === 2) {
+				$botoesVisiveis = [$botoes["inicioJornada"]];
+			} elseif ($tipoUltimo === 1 || $tipoUltimo === 4 || $tipoUltimo === 6 || $tipoUltimo === 8 || $tipoUltimo === 10 || $tipoUltimo === 12) {
+				$botoesVisiveis = [
+					$botoes["inicioRefeicao"],
+					$botoes["fimJornada"]
+				];
+			} elseif ($tipoUltimo === 3) {
+				$botoesVisiveis = [$botoes["fimRefeicao"]];
+			} else {
+				$botoesVisiveis = [$botoes["inicioJornada"]];
+			}
+		} elseif (empty($pontos["ultimo"]["pont_tx_tipo"]) || intval($pontos["ultimo"]["pont_tx_tipo"]) == 2) {
 			$botoesVisiveis = [$botoes["inicioJornada"]];
 		} elseif ($pontos["ultimo"]["pont_tx_tipo"] == 1 || in_array($pontos["ultimo"]["pont_tx_tipo"], array_keys($fins))){
 			if($_SESSION["user_tx_nivel"] != "Funcionário"){
