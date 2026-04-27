@@ -352,7 +352,7 @@
 			$sqlCheckNivel = mysqli_fetch_assoc(query("SELECT user_tx_nivel FROM user WHERE user_nb_id = '{$_POST["id"]}' LIMIT 1;"));
 		}
 		
-		if (isset($sqlCheckNivel["user_tx_nivel"]) && in_array($sqlCheckNivel["user_tx_nivel"], ["Motorista", "Ajudante","Funcionário"])) {
+		if (isset($sqlCheckNivel["user_tx_nivel"]) && in_array($sqlCheckNivel["user_tx_nivel"], ["Motorista", "Ajudante","Funcionário", "Terceirizado"])) {
 			if (!empty($_POST["senha"]) && !empty($_POST["senha2"])) {
 				$novaSenha = ["user_tx_senha" => md5($_POST["senha"])];
 				atualizar("user", array_keys($novaSenha), array_values($novaSenha), $_POST["id"]);
@@ -408,7 +408,7 @@
 			}
 		}
 
-		$editingDriver = in_array(($_POST["nivel"]?? ""), ["Motorista", "Ajudante", "Funcionário"]);
+		$editingDriver = in_array(($_POST["nivel"]?? ""), ["Motorista", "Ajudante", "Funcionário", "Terceirizado"]);
 		$loggedUserIsAdmin = is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"));
 
 		$hasMenuPermission = false;
@@ -803,7 +803,7 @@ function index() {
         global $CONTEX;
         $permitido = false;
         $hasMenuPermission = false;
-        if(in_array($_SESSION["user_tx_nivel"], ["Motorista","Ajudante","Funcionário"])){
+		if(in_array($_SESSION["user_tx_nivel"], ["Motorista","Ajudante","Funcionário", "Terceirizado"])){
             $permitido = true;
         }else{
             $perfilId = 0;
