@@ -15,10 +15,10 @@ $modo_upload = empty($id_documento);
 include_once "componentes/layout_header.php";
 
 $modoTela = $_GET["modo"] ?? "avulso";
-$modoTela = in_array($modoTela, ["avulso", "funcionarios", "separar_paginas"], true) ? $modoTela : "avulso";
+$modoTela = in_array($modoTela, ["avulso", "funcionarios", "separar_paginas", "signatario_externo"], true) ? $modoTela : "avulso";
 
 $funcionarios = [];
-if(in_array($modoTela, ["avulso", "funcionarios", "separar_paginas"], true)){
+if(in_array($modoTela, ["avulso", "funcionarios", "separar_paginas", "signatario_externo"], true)){
     $funcionarios = mysqli_fetch_all(query(
         "SELECT
             enti_nb_id,
@@ -33,13 +33,24 @@ if(in_array($modoTela, ["avulso", "funcionarios", "separar_paginas"], true)){
 }
 
 $tiposDocumentos = [];
-if(in_array($modoTela, ["avulso", "separar_paginas"], true)){
+if(in_array($modoTela, ["avulso", "separar_paginas", "signatario_externo"], true)){
     $tiposDocumentos = mysqli_fetch_all(query(
         "SELECT tipo_nb_id, tipo_tx_nome
         FROM tipos_documentos
         WHERE tipo_tx_status = 'ativo'
         ORDER BY tipo_tx_nome ASC"
     ), MYSQLI_ASSOC);
+}
+
+// Carrega signatários externos para o modo específico
+$signatariosExternos = [];
+if($modoTela === "signatario_externo"){
+    $resSign = mysqli_query($conn, "SELECT sign_nb_id, sign_tx_nome, sign_tx_email, sign_tx_cpf FROM signatarios_externos WHERE sign_tx_status = 'ativo' ORDER BY sign_tx_nome ASC");
+    if($resSign){
+        while($r = mysqli_fetch_assoc($resSign)){
+            $signatariosExternos[] = $r;
+        }
+    }
 }
 
 function contarPaginasPdf(string $path): int {
@@ -567,11 +578,14 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                     <h3 class="text-sm font-semibold text-gray-800">Modo de envio</h3>
                     <p class="text-xs text-gray-500">Escolha como você deseja enviar os documentos para assinatura.</p>
                 </div>
-                <div class="flex gap-2">
-                    <a href="nova_assinatura.php?modo=avulso" class="<?php echo $modoTela === "avulso" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"; ?> px-4 py-2 rounded-lg text-sm font-semibold">
+                <div class="flex gap-2 flex-nowrap overflow-x-auto">
+                    <a href="nova_assinatura.php?modo=avulso" class="<?php echo $modoTela === "avulso" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"; ?> px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap">
                         Documento avulso
                     </a>
-                    <a href="nova_assinatura.php?modo=separar_paginas" class="<?php echo $modoTela === "separar_paginas" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"; ?> px-4 py-2 rounded-lg text-sm font-semibold">
+                    <a href="nova_assinatura.php?modo=signatario_externo" class="<?php echo $modoTela === "signatario_externo" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"; ?> px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap">
+                        Signatário Externo
+                    </a>
+                    <a href="nova_assinatura.php?modo=separar_paginas" class="<?php echo $modoTela === "separar_paginas" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"; ?> px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap">
                         Enviar Documentos em Lote
                     </a>
                 </div>
@@ -915,6 +929,7 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                 </form>
             </div>
         <?php else: ?>
+        <?php if($modoTela !== "signatario_externo"): ?>
         <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
             
             <form id="formEnvioIndividual" action="processar_envio.php" method="POST" enctype="multipart/form-data">
@@ -1131,6 +1146,283 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
 
     </div>
 </div>
+<?php endif; ?>
+<?php endif; ?>
+
+<?php if($modoTela === "signatario_externo"): ?>
+<div class="font-sans">
+    <div class="max-w-4xl mx-auto px-4 py-8">
+
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+
+            <!-- Toggle Simples / Governança -->
+            <div class="px-6 pt-5 pb-0 flex gap-2 border-b border-gray-100">
+                <button type="button" id="btnModoSimples"
+                    onclick="setModoExterno('simples')"
+                    class="px-4 py-2 rounded-t-lg text-xs font-semibold border-b-2 border-blue-600 text-blue-600 bg-white transition-all">
+                    Envio Simples
+                </button>
+                <button type="button" id="btnModoGov"
+                    onclick="setModoExterno('governanca')"
+                    class="px-4 py-2 rounded-t-lg text-xs font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700 bg-white transition-all">
+                    Com Governança
+                </button>
+            </div>
+
+            <div class="flex flex-col lg:flex-row min-h-[480px]">
+
+                <!-- Coluna esquerda: upload PDF -->
+                <div class="lg:w-1/2 bg-gray-50 p-6 lg:p-8 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-800 mb-1">Documento</h3>
+                    <p class="text-xs text-gray-500 mb-5">Selecione o PDF que será enviado para assinatura.</p>
+
+                    <div class="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group flex-1 flex flex-col items-center justify-center"
+                        onclick="document.getElementById('pdfInputExterno').click()">
+                        <input type="file" id="pdfInputExterno" name="arquivo" accept="application/pdf" class="hidden" form="formSignatarioExterno" onchange="handlePdfExterno(this)">
+                        <i class="fas fa-file-pdf text-4xl text-gray-300 group-hover:text-blue-400 transition-colors mb-3"></i>
+                        <p class="text-sm text-gray-500 group-hover:text-blue-600 transition-colors font-medium">Clique ou arraste o PDF aqui</p>
+                        <p class="text-xs text-gray-400 mt-1">Apenas arquivos .pdf</p>
+                        <span id="pdfNomeExterno" class="block text-sm font-semibold text-blue-600 mt-3"></span>
+                    </div>
+                </div>
+
+                <!-- Coluna direita: formulário -->
+                <div class="lg:w-1/2 p-6 lg:p-8 flex flex-col justify-start bg-white overflow-y-auto">
+                    <form id="formSignatarioExterno" action="processar_envio.php" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="modo_envio" id="ext_modo_envio" value="avulso">
+                        <input type="hidden" name="redirect_to" value="nova_assinatura.php?modo=signatario_externo">
+                        <input type="hidden" name="sign_nb_id" id="sign_nb_id_hidden" value="">
+
+                        <div class="mb-4">
+                            <h3 class="text-lg font-bold text-gray-800 mb-1" id="ext_titulo">Signatário Externo</h3>
+                            <p class="text-sm text-gray-500" id="ext_subtitulo">Selecione o signatário ou preencha manualmente.</p>
+                        </div>
+
+                        <div class="space-y-4">
+
+                            <!-- Tipo de documento -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de documento</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-folder-open text-gray-400"></i>
+                                    </div>
+                                    <select name="tipo_documento" required
+                                        class="pl-10 block w-full rounded-lg border-gray-300 bg-gray-50 border focus:bg-white focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 transition-colors">
+                                        <option value="">Selecione</option>
+                                        <?php foreach($tiposDocumentos as $t): ?>
+                                            <?php $tid = intval($t["tipo_nb_id"]); $tnome = htmlspecialchars(trim($t["tipo_tx_nome"])); ?>
+                                            <?php if($tid > 0 && $tnome !== ""): ?>
+                                                <option value="<?php echo $tid; ?>"><?php echo $tnome; ?></option>
+                                            <?php endif; ?>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- ── BLOCO SIGNATÁRIO EXTERNO ── -->
+                            <div class="border border-blue-100 rounded-xl p-4 bg-blue-50/40">
+                                <p class="text-xs font-semibold text-blue-700 uppercase mb-3 flex items-center gap-1">
+                                    <i class="fas fa-user-tie"></i> Signatário Externo <span class="text-blue-400 font-normal">(1º a assinar)</span>
+                                </p>
+
+                                <!-- Select signatário -->
+                                <div class="mb-3">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Selecionar cadastrado</label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <i class="fas fa-address-card text-gray-400 text-xs"></i>
+                                        </div>
+                                        <select id="signatario_externo_select"
+                                            class="pl-9 block w-full rounded-lg border-gray-300 bg-white border focus:bg-white focus:border-blue-500 focus:ring-blue-500 text-sm py-2 transition-colors">
+                                            <option value="">— Selecionar cadastrado —</option>
+                                            <?php foreach($signatariosExternos as $s): ?>
+                                                <?php
+                                                    $sid   = intval($s["sign_nb_id"]);
+                                                    $snome = htmlspecialchars(trim($s["sign_tx_nome"]), ENT_QUOTES);
+                                                    $semail= htmlspecialchars(trim($s["sign_tx_email"] ?? ""), ENT_QUOTES);
+                                                    $scpf  = htmlspecialchars(trim($s["sign_tx_cpf"]  ?? ""), ENT_QUOTES);
+                                                    $label = $snome;
+                                                    if($scpf !== "") $label .= " — CPF: $scpf";
+                                                ?>
+                                                <option value="<?php echo $sid; ?>"
+                                                    data-nome="<?php echo $snome; ?>"
+                                                    data-email="<?php echo $semail; ?>"
+                                                    data-cpf="<?php echo $scpf; ?>">
+                                                    <?php echo $label; ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Nome</label>
+                                        <input type="text" id="ext_nome" name="signatarios[0][nome]" required placeholder="Nome completo"
+                                            class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">E-mail</label>
+                                        <input type="email" id="ext_email" name="signatarios[0][email]" required placeholder="email@exemplo.com"
+                                            class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors">
+                                    </div>
+                                </div>
+                                <input type="hidden" name="signatarios[0][funcao]" value="Signatário Externo">
+                                <input type="hidden" name="signatarios[0][ordem]" value="1">
+                                <input type="hidden" name="signatarios[0][enti_nb_id]" value="">
+                            </div>
+
+                            <!-- ── BLOCO RESPONSÁVEL INTERNO (só no modo governança) ── -->
+                            <div id="bloco_responsavel" class="hidden border border-gray-200 rounded-xl p-4 bg-gray-50">
+                                <p class="text-xs font-semibold text-gray-600 uppercase mb-3 flex items-center gap-1">
+                                    <i class="fas fa-user-shield"></i> Responsável Interno <span class="text-gray-400 font-normal">(2º a assinar)</span>
+                                </p>
+
+                                <div class="mb-3">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Selecionar funcionário</label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <i class="fas fa-id-badge text-gray-400 text-xs"></i>
+                                        </div>
+                                        <select id="resp_funcionario_select"
+                                            class="pl-9 block w-full rounded-lg border-gray-300 bg-white border focus:bg-white focus:border-blue-500 focus:ring-blue-500 text-sm py-2 transition-colors">
+                                            <option value="">— Selecionar funcionário —</option>
+                                            <?php foreach($funcionarios as $f): ?>
+                                                <?php
+                                                    $fid   = intval($f["enti_nb_id"] ?? 0);
+                                                    $fnome = htmlspecialchars(trim($f["enti_tx_nome"] ?? ""), ENT_QUOTES);
+                                                    $femail= htmlspecialchars(trim($f["enti_tx_email"] ?? ""), ENT_QUOTES);
+                                                    if($fid <= 0 || $fnome === "") continue;
+                                                ?>
+                                                <option value="<?php echo $fid; ?>"
+                                                    data-nome="<?php echo $fnome; ?>"
+                                                    data-email="<?php echo $femail; ?>">
+                                                    <?php echo $fnome; ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Nome</label>
+                                        <input type="text" id="resp_nome" name="signatarios[1][nome]" placeholder="Nome completo"
+                                            class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">E-mail</label>
+                                        <input type="email" id="resp_email" name="signatarios[1][email]" placeholder="email@empresa.com"
+                                            class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors">
+                                    </div>
+                                </div>
+                                <input type="hidden" name="signatarios[1][funcao]" value="Responsável">
+                                <input type="hidden" name="signatarios[1][ordem]" value="2">
+                                <input type="hidden" id="resp_enti_nb_id" name="signatarios[1][enti_nb_id]" value="">
+
+                                <div class="mt-3 bg-yellow-50 border border-yellow-100 rounded-lg p-3">
+                                    <p class="text-yellow-700 text-xs">
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        O responsável só receberá o documento após o signatário externo assinar.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button type="submit" id="btnEnviarExterno"
+                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all transform hover:-translate-y-0.5">
+                                <i class="fas fa-paper-plane mr-2 text-lg"></i>
+                                <span id="ext_btn_label">Enviar para Assinatura</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="mt-6 text-center text-xs text-gray-400">
+            <p><i class="fas fa-shield-alt mr-1"></i> Ambiente seguro. Ações registradas para fins de auditoria.</p>
+        </div>
+
+    </div>
+</div>
+
+<script>
+// ── Modo simples / governança ──────────────────────────────────────────────
+function setModoExterno(modo) {
+    const isGov = modo === 'governanca';
+    document.getElementById('ext_modo_envio').value = isGov ? 'governanca' : 'avulso';
+
+    // Tabs
+    document.getElementById('btnModoSimples').className = 'px-4 py-2 rounded-t-lg text-xs font-semibold border-b-2 transition-all ' +
+        (!isGov ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 bg-white');
+    document.getElementById('btnModoGov').className = 'px-4 py-2 rounded-t-lg text-xs font-semibold border-b-2 transition-all ' +
+        (isGov ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 bg-white');
+
+    // Bloco responsável
+    const blocoResp = document.getElementById('bloco_responsavel');
+    blocoResp.classList.toggle('hidden', !isGov);
+
+    // Campos required do responsável
+    const respNome  = document.getElementById('resp_nome');
+    const respEmail = document.getElementById('resp_email');
+    respNome.required  = isGov;
+    respEmail.required = isGov;
+
+    // Textos
+    document.getElementById('ext_titulo').textContent    = isGov ? 'Envio com Governança' : 'Signatário Externo';
+    document.getElementById('ext_subtitulo').textContent = isGov
+        ? 'O externo assina primeiro, depois o responsável interno.'
+        : 'Selecione o signatário ou preencha manualmente.';
+    document.getElementById('ext_btn_label').textContent = isGov
+        ? 'Iniciar Processo de Assinatura'
+        : 'Enviar para Assinatura';
+}
+
+// ── Preenche signatário externo ao selecionar ──────────────────────────────
+document.getElementById('signatario_externo_select')?.addEventListener('change', function () {
+    const opt = this.options[this.selectedIndex];
+    document.getElementById('ext_nome').value  = opt.dataset.nome  || '';
+    document.getElementById('ext_email').value = opt.dataset.email || '';
+    document.getElementById('sign_nb_id_hidden').value = opt.value || '';
+});
+
+// ── Preenche responsável interno ao selecionar ────────────────────────────
+document.getElementById('resp_funcionario_select')?.addEventListener('change', function () {
+    const opt = this.options[this.selectedIndex];
+    document.getElementById('resp_nome').value  = opt.dataset.nome  || '';
+    document.getElementById('resp_email').value = opt.dataset.email || '';
+    document.getElementById('resp_enti_nb_id').value = opt.value || '';
+});
+
+// ── Mostra nome do PDF selecionado ─────────────────────────────────────────
+function handlePdfExterno(input) {
+    const span = document.getElementById('pdfNomeExterno');
+    if (input.files && input.files[0]) {
+        span.textContent = input.files[0].name;
+    }
+}
+
+// ── Valida antes de enviar ─────────────────────────────────────────────────
+document.getElementById('formSignatarioExterno')?.addEventListener('submit', function (e) {
+    const pdf = document.getElementById('pdfInputExterno');
+    if (!pdf || !pdf.files || pdf.files.length === 0) {
+        e.preventDefault();
+        alert('Selecione um arquivo PDF antes de enviar.');
+        return;
+    }
+    const isGov = document.getElementById('ext_modo_envio').value === 'governanca';
+    if (isGov) {
+        const respNome  = document.getElementById('resp_nome').value.trim();
+        const respEmail = document.getElementById('resp_email').value.trim();
+        if (!respNome || !respEmail) {
+            e.preventDefault();
+            alert('Preencha o nome e e-mail do responsável interno.');
+        }
+    }
+});
+</script>
 <?php endif; ?>
 
 <?php

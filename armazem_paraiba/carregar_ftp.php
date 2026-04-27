@@ -24,6 +24,7 @@
         if(empty($path)){
             $path = __DIR__."/arquivos/pontos";
         }
+        logFTP("📁 Path usado: ".$path);
 
         logFTP("🚀 Iniciando updateFTP");
 

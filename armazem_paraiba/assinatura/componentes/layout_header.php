@@ -138,7 +138,7 @@ if($empresaTitulo === "" && isset($conn) && ($conn instanceof mysqli)){
                             "Assinatura com Governança" => $baseAssinatura."/governanca.php",
                             "Documentos" => $baseAssinatura."/documentos.php",
                             "Consultar" => $baseAssinatura."/consultar.php",
-                           
+                            "Signatários Externos" => $baseAssinatura."/cadastro_signatario.php",
                            // "Finalizar (ICP)" => $baseAssinatura."/finalizar.php"
                         ]
                     ];

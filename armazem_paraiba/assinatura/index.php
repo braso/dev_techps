@@ -234,6 +234,20 @@ include_once "componentes/layout_header.php";
             </a>
         </div>
 
+        <!-- Signatários Externos -->
+        <div class="card-wrapper">
+            <a href="<?php echo $baseAssinatura; ?>/cadastro_signatario.php" class="card-modulo">
+                <div class="card-border-top"></div>
+                <div class="card-body-content">
+                    <div class="icon-circle">
+                        <i class="fa fa-address-card"></i>
+                    </div>
+                    <div class="card-title">Signatários Externos</div>
+                    <div class="card-desc">Cadastro de pessoas externas que podem assinar documentos da empresa.</div>
+                </div>
+            </a>
+        </div>
+
         <!-- Relatórios v
         <div class="card-wrapper">
             <a href="#" class="card-modulo">
