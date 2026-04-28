@@ -186,13 +186,13 @@
 
         $msgPadrao = "Tem certeza que deseja excluir o feriado <br><h3 style='color:#337ab7;'>{NOME}</h3>";
 
-        $configuracao = gerarAcoesComConfirmacao(
-            "cadastro_empresa.php", 
-            "editarEmpresa", 
-            "excluirEmpresa",
-            "CÓDIGO",      
-            $msgPadrao    
-        );
+		$configuracao = gerarAcoesComConfirmacao(
+			"cadastro_feriado.php",
+			"editarFeriado",
+			"excluirFeriado",
+			"CÓDIGO",
+			$msgPadrao
+		);
     
 
         $gridFields["actions"] = $configuracao["tags"];
