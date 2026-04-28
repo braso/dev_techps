@@ -841,7 +841,9 @@
 			}
 
 			//MODIFICACAO: Escala em dia de feriado deve considerar jornada normal
-			$ignorarFeriadoEscala = ($motorista["para_tx_tipo"] == "escala" && $jornadaPrevistaOriginal != "00:00");
+			// Se o parâmetro "abonarFeriadoEscala" estiver ativo, feriado zera a jornada mesmo na escala
+			$abonarFeriadoEscala = (!empty($motorista["para_tx_abonarFeriadoEscala"]) && $motorista["para_tx_abonarFeriadoEscala"] === "sim");
+			$ignorarFeriadoEscala = ($motorista["para_tx_tipo"] == "escala" && $jornadaPrevistaOriginal != "00:00" && !$abonarFeriadoEscala);
 
 			if($ignorarFeriadoEscala){
 				$ehDomingoFeriadoFacultativo = false;

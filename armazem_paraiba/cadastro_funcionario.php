@@ -2938,7 +2938,8 @@ function index(){
                 "STATUS" 				=> "enti_tx_status",
 				"UID"                   => "rfids_tx_uid",
                 "AUTENTICAÇÃO"          => "rfids_nb_id",
-                "FACIAL"                => "IF(user.user_tx_face_descriptor IS NOT NULL AND user.user_tx_face_descriptor != '', 1, 0) AS tem_facial"
+                "FACIAL"                => "IF(user.user_tx_face_descriptor IS NOT NULL AND user.user_tx_face_descriptor != '', 1, 0) AS tem_facial",
+                "ABONO FERIADO ESCALA"  => "IF(para_tx_tipo = 'escala', IF(para_tx_abonarFeriadoEscala = 'sim', 'Sim', 'Não'), '—') AS para_tx_abonarFeriadoEscala"
             ];
 
 			$allGridFields = [
@@ -3029,7 +3030,8 @@ function index(){
                 "CNH PERMISSÃO"         => "enti_tx_cnhPermissao",
                 "CNH PONTUAÇÃO"         => "enti_tx_cnhPontuacao",
                 "CNH ATIV. REMUNERADA"  => "enti_tx_cnhAtividadeRemunerada",
-                "CNH OBS"               => "enti_tx_cnhObs"
+                "CNH OBS"               => "enti_tx_cnhObs",
+                "ABONO FERIADO ESCALA"  => "IF(para_tx_tipo = 'escala', IF(para_tx_abonarFeriadoEscala = 'sim', 'Sim', 'Não'), '—') AS para_tx_abonarFeriadoEscala"
 				
 			];
 	
