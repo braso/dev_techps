@@ -2,6 +2,38 @@
 include_once "../conecta.php";
 require_once "../tcpdf/tcpdf.php";
 
+function resolverCaminhoPdfArquivo(string $caminho): string {
+    $caminho = trim($caminho);
+    if ($caminho === '') {
+        return '';
+    }
+
+    if (preg_match('#^(https?:)?//#i', $caminho)) {
+        return $caminho;
+    }
+
+    $candidatos = array();
+    if ($caminho[0] === '/' || preg_match('/^[A-Za-z]:[\\\/]/', $caminho)) {
+        $candidatos[] = $caminho;
+    } else {
+        $candidatos[] = __DIR__ . '/' . $caminho;
+        $candidatos[] = dirname(__DIR__) . '/' . ltrim($caminho, '/\\');
+        $candidatos[] = $caminho;
+    }
+
+    foreach ($candidatos as $candidato) {
+        $real = realpath($candidato);
+        if ($real && file_exists($real)) {
+            return $real;
+        }
+        if (file_exists($candidato)) {
+            return $candidato;
+        }
+    }
+
+    return '';
+}
+
 $id_instancia = intval($_GET['id'] ?? 0);
 if ($id_instancia <= 0) {
     die("ID do documento não informado.");
@@ -67,7 +99,7 @@ $a_tipo = carregar('tipos_documentos', $id_tipo);
 
 // Para compatibilidade com o restante do código que espera $dados
 // Padrão baseado em gerenciar_ajustes.php que já funciona com logo
-$resDados = query("SELECT i.*, t.tipo_tx_nome, t.tipo_tx_logo, u.user_tx_nome AS criador_nome FROM inst_documento_modulo i JOIN tipos_documentos t ON t.tipo_nb_id = i.inst_nb_tipo_doc LEFT JOIN user u ON u.user_nb_id = i.inst_nb_user WHERE i.inst_nb_id = " . intval($id_instancia) . " LIMIT 1");
+$resDados = query("SELECT i.*, t.tipo_tx_nome, t.tipo_tx_logo, t.tipo_tx_cabecalho, t.tipo_tx_rodape, u.user_tx_nome AS criador_nome FROM inst_documento_modulo i JOIN tipos_documentos t ON t.tipo_nb_id = i.inst_nb_tipo_doc LEFT JOIN user u ON u.user_nb_id = i.inst_nb_user WHERE i.inst_nb_id = " . intval($id_instancia) . " LIMIT 1");
 $dados = ($resDados instanceof mysqli_result) ? mysqli_fetch_assoc($resDados) : [];
 
 if (empty($dados)) {
@@ -90,18 +122,13 @@ if (empty($valores)) {
 // 3. Configuração do PDF - Classe com logo incluída no cabeçalho
 class MYPDF extends TCPDF {
     public $custom_header = '';
+    public $custom_footer = '';
     public $logo_path = '';
 
     public function Header() {
         if (!empty($this->logo_path)) {
-            $logo = strval($this->logo_path);
-            if (strpos($logo, '../') === 0) {
-                $logo = realpath(dirname(__DIR__) . '/' . $logo);
-            } else {
-                $logo = realpath($logo);
-            }
-
-            if ($logo && file_exists($logo)) {
+            $logo = resolverCaminhoPdfArquivo(strval($this->logo_path));
+            if ($logo !== '') {
                 $this->Image($logo, 15, 8, 30, 20, '', '', '', true);
             }
         }
@@ -115,12 +142,20 @@ class MYPDF extends TCPDF {
     public function Footer() {
         $this->SetY(-15);
         $this->SetFont('helvetica', 'I', 8);
-        $this->Cell(0, 10, 'Gerado em ' . date('d/m/Y H:i:s') . ' | Pagina ' . $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, false, 'C', 0, '', 0, false, 'T', 'M');
+        $textoRodape = trim(strval($this->custom_footer));
+        if ($textoRodape !== '') {
+            $textoRodape .= ' | ';
+        }
+        $this->Cell(0, 10, $textoRodape . 'Gerado em ' . date('d/m/Y H:i:s') . ' | Pagina ' . $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, false, 'C', 0, '', 0, false, 'T', 'M');
     }
 }
 
 $pdf = new MYPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
-$pdf->custom_header = strval($dados['tipo_tx_nome'] ?? 'Documento');
+$pdf->custom_header = trim(strip_tags(strval($dados['tipo_tx_cabecalho'] ?? '')));
+if ($pdf->custom_header === '') {
+    $pdf->custom_header = strval($dados['tipo_tx_nome'] ?? 'Documento');
+}
+$pdf->custom_footer = trim(strip_tags(strval($dados['tipo_tx_rodape'] ?? '')));
 $pdf->logo_path = strval($dados['tipo_tx_logo'] ?? '');
 
 $pdf->SetCreator(PDF_CREATOR);

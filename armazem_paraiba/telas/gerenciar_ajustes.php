@@ -33,6 +33,38 @@
 		return $ts ? date('d/m/Y', $ts) : $valor;
 	}
 
+	function ga_resolverCaminhoPdfArquivo(string $caminho): string {
+		$caminho = trim($caminho);
+		if ($caminho === '') {
+			return '';
+		}
+
+		if (preg_match('#^(https?:)?//#i', $caminho)) {
+			return $caminho;
+		}
+
+		$candidatos = array();
+		if ($caminho[0] === '/' || preg_match('/^[A-Za-z]:[\\\/]/', $caminho)) {
+			$candidatos[] = $caminho;
+		} else {
+			$candidatos[] = __DIR__ . '/' . $caminho;
+			$candidatos[] = dirname(__DIR__) . '/' . ltrim($caminho, '/\\');
+			$candidatos[] = $caminho;
+		}
+
+		foreach ($candidatos as $candidato) {
+			$real = realpath($candidato);
+			if ($real && file_exists($real)) {
+				return $real;
+			}
+			if (file_exists($candidato)) {
+				return $candidato;
+			}
+		}
+
+		return '';
+	}
+
 	function ga_buscarTipoDocumentoAjuste() {
 		$res = query("SELECT tipo_nb_id, tipo_tx_nome, tipo_tx_logo FROM tipos_documentos WHERE tipo_tx_status = 'ativo' AND (tipo_tx_nome = 'Comunicação Interna' OR tipo_tx_nome = 'Comunicacao Interna' OR tipo_tx_nome = 'Solicitação de Ajuste' OR tipo_tx_nome = 'Solicitacao de Ajuste' OR tipo_tx_nome = 'Ajuste Ponto' OR tipo_tx_nome LIKE '%Ajuste%Ponto%' OR tipo_tx_nome LIKE '%Solicita%de Ajuste%') ORDER BY CASE WHEN tipo_tx_nome IN ('Comunicação Interna', 'Comunicacao Interna') THEN 1 WHEN tipo_tx_nome LIKE '%Solicita%de Ajuste%' THEN 2 WHEN tipo_tx_nome LIKE '%Ajuste%Ponto%' THEN 3 ELSE 4 END, tipo_nb_id ASC LIMIT 1");
 		return ($res instanceof mysqli_result) ? mysqli_fetch_assoc($res) : [];
@@ -212,14 +244,8 @@
 
 				public function Header() {
 					if (!empty($this->logo_path)) {
-						$logo = strval($this->logo_path);
-						if (strpos($logo, '../') === 0) {
-							$logo = realpath(dirname(__DIR__) . '/' . $logo);
-						} else {
-							$logo = realpath($logo);
-						}
-
-						if ($logo && file_exists($logo)) {
+						$logo = ga_resolverCaminhoPdfArquivo(strval($this->logo_path));
+						if ($logo !== '') {
 							$this->Image($logo, 15, 8, 30, 20, '', '', '', true);
 						}
 					}

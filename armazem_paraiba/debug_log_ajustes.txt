@@ -24,3 +24,102 @@
 2026-04-14 09:56:00 | ASSINATURA | enviando para integracao com 2 signatarios
 2026-04-14 09:56:01 | ASSINATURA | integracao ok solicitacao_assinatura=36
 2026-04-14 09:56:01 | APROVACAO | assinatura encaminhada solicitacao=71 id_instancia=43
+2026-04-28 09:14:13 | ASSINATURA | inicio solicitacao=54 aprovador=1001
+2026-04-28 09:14:13 | ASSINATURA | criando instancia nova para solicitacao=54
+2026-04-28 09:14:13 | ASSINATURA | instancia criada=9 tipo=211
+2026-04-28 09:14:13 | ASSINATURA | instancia vinculada a solicitacao=54 inst=9
+2026-04-28 09:14:14 | PDF | gerado: /var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_9_20260428091414.pdf | existe=sim
+2026-04-28 09:14:14 | ASSINATURA | pdf pronto=/var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_9_20260428091414.pdf
+2026-04-28 09:14:14 | SIGNATARIOS | montando para solicitacao=54 aprovador=1001
+2026-04-28 09:14:14 | SIGNATARIOS | total=2
+2026-04-28 09:14:14 | ASSINATURA | enviando para integracao com 2 signatarios
+2026-04-28 09:14:14 | ASSINATURA | integracao ok solicitacao_assinatura=41
+2026-04-28 09:14:14 | APROVACAO | assinatura encaminhada solicitacao=54 id_instancia=9
+2026-04-28 09:17:49 | ASSINATURA | inicio solicitacao=57 aprovador=1001
+2026-04-28 09:17:49 | ASSINATURA | criando instancia nova para solicitacao=57
+2026-04-28 09:17:49 | ASSINATURA | instancia criada=10 tipo=211
+2026-04-28 09:17:49 | ASSINATURA | instancia vinculada a solicitacao=57 inst=10
+2026-04-28 09:17:49 | PDF | gerado: /var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_10_20260428091749.pdf | existe=sim
+2026-04-28 09:17:49 | ASSINATURA | pdf pronto=/var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_10_20260428091749.pdf
+2026-04-28 09:17:49 | SIGNATARIOS | montando para solicitacao=57 aprovador=1001
+2026-04-28 09:17:49 | SIGNATARIOS | total=2
+2026-04-28 09:17:49 | ASSINATURA | enviando para integracao com 2 signatarios
+2026-04-28 09:17:49 | ASSINATURA | integracao ok solicitacao_assinatura=42
+2026-04-28 09:17:49 | APROVACAO | assinatura encaminhada solicitacao=57 id_instancia=10
+2026-04-28 09:22:21 | ASSINATURA | inicio solicitacao=58 aprovador=1001
+2026-04-28 09:22:21 | ASSINATURA | criando instancia nova para solicitacao=58
+2026-04-28 09:22:21 | ASSINATURA | instancia criada=11 tipo=211
+2026-04-28 09:22:22 | ASSINATURA | instancia vinculada a solicitacao=58 inst=11
+2026-04-28 09:22:22 | PDF | gerado: /var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_11_20260428092222.pdf | existe=sim
+2026-04-28 09:22:22 | ASSINATURA | pdf pronto=/var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_11_20260428092222.pdf
+2026-04-28 09:22:22 | SIGNATARIOS | montando para solicitacao=58 aprovador=1001
+2026-04-28 09:22:22 | SIGNATARIOS | total=2
+2026-04-28 09:22:22 | ASSINATURA | enviando para integracao com 2 signatarios
+2026-04-28 09:22:22 | ASSINATURA | integracao ok solicitacao_assinatura=43
+2026-04-28 09:22:22 | APROVACAO | assinatura encaminhada solicitacao=58 id_instancia=11
+2026-04-28 09:41:59 | ASSINATURA | inicio solicitacao=59 aprovador=1001
+2026-04-28 09:41:59 | ASSINATURA | criando instancia nova para solicitacao=59
+2026-04-28 09:41:59 | ASSINATURA | instancia criada=12 tipo=211
+2026-04-28 09:41:59 | ASSINATURA | instancia vinculada a solicitacao=59 inst=12
+2026-04-28 09:41:59 | PDF | gerado: /var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_12_20260428094159.pdf | existe=sim
+2026-04-28 09:41:59 | ASSINATURA | pdf pronto=/var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_12_20260428094159.pdf
+2026-04-28 09:41:59 | SIGNATARIOS | montando para solicitacao=59 aprovador=1001
+2026-04-28 09:41:59 | SIGNATARIOS | total=2
+2026-04-28 09:41:59 | ASSINATURA | enviando para integracao com 2 signatarios
+2026-04-28 09:41:59 | ASSINATURA | integracao ok solicitacao_assinatura=44
+2026-04-28 09:41:59 | APROVACAO | assinatura encaminhada solicitacao=59 id_instancia=12
+2026-04-28 12:03:37 | ASSINATURA | inicio solicitacao=60 aprovador=1001
+2026-04-28 12:03:37 | ASSINATURA | criando instancia nova para solicitacao=60
+2026-04-28 12:03:37 | ASSINATURA | instancia criada=13 tipo=211
+2026-04-28 12:03:37 | ASSINATURA | instancia vinculada a solicitacao=60 inst=13
+2026-04-28 12:03:37 | PDF | gerado: /var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_13_20260428120337.pdf | existe=sim
+2026-04-28 12:03:37 | ASSINATURA | pdf pronto=/var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_13_20260428120337.pdf
+2026-04-28 12:03:37 | SIGNATARIOS | montando para solicitacao=60 aprovador=1001
+2026-04-28 12:03:37 | SIGNATARIOS | total=2
+2026-04-28 12:03:37 | ASSINATURA | enviando para integracao com 2 signatarios
+2026-04-28 12:03:37 | ASSINATURA | integracao ok solicitacao_assinatura=45
+2026-04-28 12:03:37 | APROVACAO | assinatura encaminhada solicitacao=60 id_instancia=13
+2026-04-28 12:13:09 | ASSINATURA | inicio solicitacao=61 aprovador=1001
+2026-04-28 12:13:09 | ASSINATURA | criando instancia nova para solicitacao=61
+2026-04-28 12:13:09 | ASSINATURA | instancia criada=14 tipo=211
+2026-04-28 12:13:09 | ASSINATURA | instancia vinculada a solicitacao=61 inst=14
+2026-04-28 12:13:09 | PDF | gerado: /var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_14_20260428121309.pdf | existe=sim
+2026-04-28 12:13:09 | ASSINATURA | pdf pronto=/var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_14_20260428121309.pdf
+2026-04-28 12:13:09 | SIGNATARIOS | montando para solicitacao=61 aprovador=1001
+2026-04-28 12:13:09 | SIGNATARIOS | total=2
+2026-04-28 12:13:09 | ASSINATURA | enviando para integracao com 2 signatarios
+2026-04-28 12:13:09 | ASSINATURA | integracao ok solicitacao_assinatura=46
+2026-04-28 12:13:09 | APROVACAO | assinatura encaminhada solicitacao=61 id_instancia=14
+2026-04-28 12:13:56 | ASSINATURA | inicio solicitacao=55 aprovador=1001
+2026-04-28 12:13:56 | ASSINATURA | criando instancia nova para solicitacao=55
+2026-04-28 12:13:56 | ASSINATURA | instancia criada=15 tipo=211
+2026-04-28 12:13:56 | ASSINATURA | instancia vinculada a solicitacao=55 inst=15
+2026-04-28 12:13:56 | PDF | gerado: /var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_15_20260428121356.pdf | existe=sim
+2026-04-28 12:13:56 | ASSINATURA | pdf pronto=/var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_15_20260428121356.pdf
+2026-04-28 12:13:56 | SIGNATARIOS | montando para solicitacao=55 aprovador=1001
+2026-04-28 12:13:56 | SIGNATARIOS | total=2
+2026-04-28 12:13:56 | ASSINATURA | enviando para integracao com 2 signatarios
+2026-04-28 12:13:56 | ASSINATURA | integracao ok solicitacao_assinatura=47
+2026-04-28 12:13:56 | APROVACAO | assinatura encaminhada solicitacao=55 id_instancia=15
+2026-04-28 12:17:29 | ASSINATURA | inicio solicitacao=62 aprovador=1001
+2026-04-28 12:17:29 | ASSINATURA | criando instancia nova para solicitacao=62
+2026-04-28 12:17:29 | ASSINATURA | instancia criada=16 tipo=211
+2026-04-28 12:17:29 | ASSINATURA | instancia vinculada a solicitacao=62 inst=16
+2026-04-28 12:17:29 | PDF | gerado: /var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_16_20260428121729.pdf | existe=sim
+2026-04-28 12:17:29 | ASSINATURA | pdf pronto=/var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_16_20260428121729.pdf
+2026-04-28 12:17:29 | SIGNATARIOS | montando para solicitacao=62 aprovador=1001
+2026-04-28 12:17:29 | SIGNATARIOS | total=2
+2026-04-28 12:17:29 | ASSINATURA | enviando para integracao com 2 signatarios
+2026-04-28 12:17:29 | ASSINATURA | integracao ok solicitacao_assinatura=48
+2026-04-28 12:17:29 | APROVACAO | assinatura encaminhada solicitacao=62 id_instancia=16
+2026-04-28 12:35:16 | ASSINATURA | inicio solicitacao=63 aprovador=1001
+2026-04-28 12:35:16 | ASSINATURA | criando instancia nova para solicitacao=63
+2026-04-28 12:35:16 | ASSINATURA | instancia criada=17 tipo=211
+2026-04-28 12:35:16 | ASSINATURA | instancia vinculada a solicitacao=63 inst=17
+2026-04-28 12:35:16 | PDF | gerado: /var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_17_20260428123516.pdf | existe=sim
+2026-04-28 12:35:16 | ASSINATURA | pdf pronto=/var/www/html/braso/armazem_paraiba/assinatura/uploads/tmp/ajuste_17_20260428123516.pdf
+2026-04-28 12:35:16 | SIGNATARIOS | montando para solicitacao=63 aprovador=1001
+2026-04-28 12:35:16 | SIGNATARIOS | total=2
+2026-04-28 12:35:16 | ASSINATURA | enviando para integracao com 2 signatarios
+2026-04-28 12:35:16 | ASSINATURA | integracao ok solicitacao_assinatura=49
+2026-04-28 12:35:16 | APROVACAO | assinatura encaminhada solicitacao=63 id_instancia=17
