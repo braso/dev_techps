@@ -31,6 +31,11 @@
 		query("ALTER TABLE parametro ADD COLUMN para_tx_pagarAdicNoturno VARCHAR(3) DEFAULT 'sim' COMMENT 'Pagar Adicional Noturno (sim/nao)'");
 	}
 
+	// Verificação e criação da coluna Abonar Feriado Escala
+	if(mysqli_num_rows(query("SHOW COLUMNS FROM parametro LIKE 'para_tx_abonarFeriadoEscala'")) == 0){
+		query("ALTER TABLE parametro ADD COLUMN para_tx_abonarFeriadoEscala ENUM('sim','nao') NOT NULL DEFAULT 'nao' COMMENT 'Abonar automaticamente feriados na escala'");
+	}
+
 
 	function carregarJSFormParametro(){
 		global $a_mod;
@@ -116,6 +121,12 @@
 						document.getElementById('turno_wrapper').hidden = !(tipo == 1);
 					}
 					document.getElementsByName('divJornada')[0].hidden 	= !(tipo == 2);
+
+					// Mostra checkbox de abonar feriado apenas no modo escala
+					var divFeriado = document.getElementById('div_abonar_feriado_escala');
+					if(divFeriado){
+						divFeriado.style.display = (tipo == 1) ? 'block' : 'none';
+					}
 				}
 
 				".(empty($a_mod["para_tx_tipo"])? "camposEscala('horas_por_dia')": "camposEscala('{$a_mod["para_tx_tipo"]}')").";
@@ -647,6 +658,7 @@
 			"para_tx_status" 					=> "ativo",
 			"para_tx_turno" 					=> $_POST["turno"] ?? null,
 			"para_tx_pagarAdicNoturno" 			=> $_POST["pagarAdicNoturno"] ?? 'sim',
+			"para_tx_abonarFeriadoEscala"		=> (($_POST["tipo"] ?? "") === "escala" && ($_POST["abonarFeriadoEscala"] ?? "") === "sim") ? "sim" : "nao",
 		];
 
 		if(!empty($_POST["ignorarCampos"]) || $_POST["ignorarCampos"] == null){
@@ -789,12 +801,8 @@
 
 		cabecalho("Cadastro de Parâmetros");
 
-		$aparecerDomingoFacultativo = (
-			$_ENV["URL_BASE"] == "http://localhost:8000" 
-			|| $_ENV["APP_PATH"] == "/dev"
-			|| ($_ENV["APP_PATH"] == "/gestaodeponto" && $_ENV["CONTEX_PATH"] == "/opafrutas")
-		);
-		$campoDomingoFacultativo = $aparecerDomingoFacultativo? campo_hora("Domingo/Feriado (facultativo)", "jornadaDomingoFacultativo", ($a_mod["para_tx_jornadaDomingoFacultativo"]?? ""), 2): "";
+		$aparecerDomingoFacultativo = true;
+		$campoDomingoFacultativo = campo_hora("Domingo/Feriado (facultativo)", "jornadaDomingoFacultativo", ($a_mod["para_tx_jornadaDomingoFacultativo"]?? ""), 2);
 
 		$campos = [
 			[
@@ -814,6 +822,13 @@
 				"<div style='overflow: hidden;width: 100%;'>"
 					.campo("Nome*", "nome", ($a_mod["para_tx_nome"]?? ""), 5)
 					.campo("Tolerância de atraso (Minutos)*", "tolerancia", ($a_mod["para_tx_tolerancia"]?? ""), 2,"MASCARA_NUMERO", "maxlength='3'")
+					."<div class='col-sm-3 margin-bottom-5 campo-fit-content' id='div_abonar_feriado_escala' style='display:none;'>
+						<label style='font-weight:normal; margin-top:22px; display:flex; align-items:center; gap:6px; cursor:pointer;'>
+							<input type='checkbox' name='abonarFeriadoEscala' value='sim' ".( (!empty($a_mod["para_tx_abonarFeriadoEscala"]) && $a_mod["para_tx_abonarFeriadoEscala"] == 'sim') ? 'checked' : '' ).">
+							Abonar feriados automaticamente na escala
+						</label>
+						<small class='text-muted' style='display:block; margin-top:4px;'>Quando marcado, dias de feriado terão jornada prevista zerada automaticamente.</small>
+					</div>"
 				."</div>",
 				"<div name='divJornada' style='margin-left: 15px; margin-right: 15px; width: fit-content; overflow: hidden;'>"
 					."<div style='font-weight: bold;'>Jornada</div>"
