@@ -19,21 +19,19 @@
         "OPAFRUTAS"				=> "opafrutas",
         "PKFMEDEIROS"			=> "pkf_medeiros",
         "QUALY"		            => "qualy_transportes",
-        "SÃO LUCAS"             => "sao_lucas",       
+        "SAOLUCAS"              => "sao_lucas",
         "TECHPS"				=> "techps",
         "DEMO"			        => "techps_demo",
         "TRAMPOLIMGAS"			=> "trampolim_gas",
         "TRANSCOPEL"			=> "transcopel",
-        "PB TRANSPORTES"		=> "pb_transportes",
-        "ODONTO TANGARA"		=> "odontotangara",
-        "CLINICA GERLANE"		=> "clinica_gerlane",
-        "IRANEIDE OLIVEIRA"		=> "iraneide_oliveira",
-        "MIDIA DIGITAL"		    => "midia_digital",
+        "PBTRANSPORTES"			=> "pb_transportes",
+        "ODONTOTANGARA"			=> "odontotangara",
+        "CLINICAGERLANE"		=> "clinica_gerlane",
+        "IRANEIDEOLIVEIRA"		=> "iraneide_oliveira",
+        "MIDIADIGITAL"		    => "midia_digital",
         "ENOVE"                 => "enove",
         "TMILITAO"              => "t_militao",
-
         "LAUTO"                 => "lauto"
-
     ];
 
     $empresasNomes = [

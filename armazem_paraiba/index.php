@@ -230,6 +230,11 @@
 				$_SESSION[$key] = $value;
 			}
 
+			// Salva a empresa na sessão para uso no logout
+			if(!empty($_POST["empresa"])){
+				$_SESSION["empresa_key"] = strtoupper($_POST["empresa"]);
+			}
+
 
 				if(!isset($_SESSION["horaEntrada"])){
 					$_SESSION["horaEntrada"] = date("H:i");
