@@ -12,32 +12,6 @@
 	
 	include_once "load_env.php";
 
-	// Se não há sessão ativa e não é uma tentativa de login (POST),
-	// redireciona para o login raiz com a empresa pré-selecionada pela URL
-	if(empty($_SESSION["user_nb_id"]) && empty($_POST["user"]) && empty($_POST["password"]) && empty($_POST["getSessionValues"])){
-		// APP_PATH do armazem_paraiba = /braso  (local) ou /gestaodeponto (prod)
-		// O index.php raiz de login fica em APP_PATH/index.php
-		$appPath  = rtrim(trim($_ENV["APP_PATH"] ?? ""), "/");
-		$urlBase  = rtrim($_ENV["URL_BASE"] ?? "", "/");
-
-		// Slug da empresa = basename do APP_PATH
-		// /braso → braso | /gestaodeponto → gestaodeponto
-		// Mas em prod todos os clientes usam o mesmo APP_PATH (/gestaodeponto)
-		// então usamos o CONTEX_PATH para identificar o cliente não é necessário —
-		// o index.php raiz já tem o select de empresa.
-		// Simplesmente redirecionamos para APP_PATH/index.php
-		$loginUrl = $urlBase . $appPath . "/index.php";
-
-		// Preserva a página de origem para redirecionar após login
-		$sourcePage = $_SERVER["REQUEST_URI"] ?? "";
-		if($sourcePage !== ""){
-			$loginUrl .= "?sourcePage=" . urlencode($sourcePage);
-		}
-
-		header("Location: " . $loginUrl);
-		exit;
-	}
-
 	if(empty($_POST["getSessionValues"])){
 		echo "<style>";
 		include "css/index.css";
@@ -228,11 +202,6 @@
 	
 			foreach($usuario as $key => $value){
 				$_SESSION[$key] = $value;
-			}
-
-			// Salva a empresa na sessão para uso no logout
-			if(!empty($_POST["empresa"])){
-				$_SESSION["empresa_key"] = strtoupper($_POST["empresa"]);
 			}
 
 
