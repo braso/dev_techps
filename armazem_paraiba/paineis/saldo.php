@@ -102,12 +102,31 @@
 
                 $(document).ready(function(){
                     var tabela = $('#tabela-empresas tbody');
+                    // Normaliza filtros vindos do PHP: aceita vazio ou valor único
                     var ocupacoesPermitidas = '".$_POST["busca_ocupacao"]."';
                     var operacaoPermitidas = '".$_POST["operacao"]."';
                     var setorPermitidas = '".$_POST["busca_setor"]."';
-				    var subSetorPermitidas = '".$_POST["busca_subsetor"]."';
+                    var subSetorPermitidas = '".$_POST["busca_subsetor"]."';
 
-                    console.log(ocupacoesPermitidas);
+                    function normalizarOcupacao(valor){
+                        var txt = (valor || '').toString().trim().toLowerCase();
+                        if (txt === 'tercerizado') {
+                            return 'terceirizado';
+                        }
+                        return txt;
+                    }
+
+                    function toFilterArray(raw){
+                        if(!raw) return [];
+                        return raw.toString().split(',').map(function(s){ return normalizarOcupacao(s); }).filter(function(s){ return s !== ''; });
+                    }
+
+                    var ocupacoesFilter = toFilterArray(ocupacoesPermitidas);
+                    var operacaoFilter = toFilterArray(operacaoPermitidas);
+                    var setorFilter = toFilterArray(setorPermitidas);
+                    var subSetorFilter = toFilterArray(subSetorPermitidas);
+
+                    console.log('Filtros ocupacao:', ocupacoesFilter);
                     function carregarDados(urlArquivo){
                         $.ajax({
                             url: urlArquivo + '?v=' + new Date().getTime(),
@@ -119,11 +138,17 @@
                                 });
                                 console.log(row.saldoAnterior);
 
+                                // Normaliza valores das linhas para comparação (trim + lowercase)
+                                var rowOcup = normalizarOcupacao(row.ocupacao);
+                                var rowOper = (row.tipoOperacao || '').toString().trim().toLowerCase();
+                                var rowSet = (row.setor || '').toString().trim().toLowerCase();
+                                var rowSub = (row.subsetor || '').toString().trim().toLowerCase();
+
                                 if (
-                                    (ocupacoesPermitidas.length > 0 && !ocupacoesPermitidas.includes(row.ocupacao)) ||
-                                    (operacaoPermitidas.length > 0 && !operacaoPermitidas.includes(row.tipoOperacao)) ||
-                                    (setorPermitidas.length > 0 && !setorPermitidas.includes(row.setor)) ||
-                                    (subSetorPermitidas.length > 0 && !subSetorPermitidas.includes(row.subsetor))
+                                    (ocupacoesFilter.length > 0 && rowOcup !== '' && !ocupacoesFilter.includes(rowOcup)) ||
+                                    (operacaoFilter.length > 0 && rowOper !== '' && !operacaoFilter.includes(rowOper)) ||
+                                    (setorFilter.length > 0 && rowSet !== '' && !setorFilter.includes(rowSet)) ||
+                                    (subSetorFilter.length > 0 && rowSub !== '' && !subSetorFilter.includes(rowSub))
                                 ) {
                                     return; // pula esta linha se qualquer filtro não permitir
                                 }
@@ -389,7 +414,7 @@
             combo_net("Empresa", "empresa", $_POST["empresa"]?? $_SESSION["user_nb_empresa"], 4, "empresa", ""),
             $campoAcao,
             combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
-            ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
+            ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário", "Terceirizado" => "Terceirizado" ]),
             combo_bd("!Cargo", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
             combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos", "onchange=\"(function(f){ if(f.busca_subsetor){ f.busca_subsetor.value=''; } f.reloadOnly.value='1'; f.submit(); })(document.contex_form);\""),
         ];
@@ -652,13 +677,23 @@
                         if ($k !== "empresaNome") { $totaisFiltrados[$k] = "00:00"; }
                     }
 
+                    $normalizarOcupacao = function($ocupacao){
+                        $txt = mb_strtolower(trim((string)$ocupacao));
+                        if($txt === "tercerizado"){
+                            return "terceirizado";
+                        }
+                        return $txt;
+                    };
+
                     $ocupacaoSel = isset($_POST["busca_ocupacao"]) ? (string)$_POST["busca_ocupacao"] : "";
                     $operacaoSel = isset($_POST["operacao"]) ? (string)$_POST["operacao"] : "";
                     $setorSel = isset($_POST["busca_setor"]) ? (string)$_POST["busca_setor"] : "";
                     $subsetorSel = isset($_POST["busca_subsetor"]) ? (string)$_POST["busca_subsetor"] : "";
 
+                    $ocupacaoSelNorm = $normalizarOcupacao($ocupacaoSel);
+
                     foreach($motoristas as $saldosMotorista){
-                        if (($ocupacaoSel !== "" && (string)$saldosMotorista["ocupacao"] !== $ocupacaoSel)
+                        if (($ocupacaoSelNorm !== "" && $normalizarOcupacao($saldosMotorista["ocupacao"] ?? "") !== $ocupacaoSelNorm)
                             || ($operacaoSel !== "" && (string)$saldosMotorista["tipoOperacao"] !== $operacaoSel)
                             || ($setorSel !== "" && (string)$saldosMotorista["setor"] !== $setorSel)
                             || ($subsetorSel !== "" && (string)$saldosMotorista["subsetor"] !== $subsetorSel)) {
