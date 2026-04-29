@@ -147,7 +147,7 @@ ini_set('display_startup_errors', 1);
 				<canvas id="totem-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;border-radius:12px;"></canvas>
 			</div>
 			<div id="totem-resultado" style="margin-top:16px;min-height:40px;text-align:center;"></div>
-			<button onclick="fecharCamTotem()" style="margin-top:20px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer;">
+			<button onclick="fecharCamTotem(); event.stopPropagation();" style="margin-top:20px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer;">
 				<i class="fa fa-times"></i> Cancelar
 			</button>
 		</div>
@@ -404,9 +404,9 @@ ini_set('display_startup_errors', 1);
 
 		async function autenticar(descriptor) {
 			const empresaEl  = loginForm ? loginForm.querySelector('[name="empresa"]') : null;
-			const empresaVal = empresaEl ? empresaEl.value : '';
+			const empresaVal = empresaEl ? empresaEl.value.trim().toUpperCase() : '';
 			if (!empresaVal) {
-				resultadoEl.innerHTML = "<div style='color:#e74c3c;font-size:13px;'>Selecione a empresa antes de usar a biometria.</div>";
+				resultadoEl.innerHTML = "<div style='color:#e74c3c;font-size:13px;'><i class='fa fa-exclamation-circle'></i> Digite o domínio da empresa no campo acima antes de usar a biometria.</div>";
 				autenticando = false;
 				iniciarLoop();
 				return;
@@ -639,14 +639,16 @@ ini_set('display_startup_errors', 1);
 
 		window.fecharCamTotem = function() {
 			camArea.style.display = 'none';
-			// Não para o stream — mantém câmera aquecida para próximo uso
-			if (tLoop) clearInterval(tLoop);
+			if (tLoop) { clearInterval(tLoop); tLoop = null; }
 			tAutenticando = false;
 			_tProc = false;
 			_tUltimoNariz = null; _tMovAcum = 0; _tFrames = 0;
 			// Restaura vídeo/canvas caso tenham sido ocultados no sucesso
 			totemVideo.style.display = 'block';
 			totemCanvas.style.display = 'block';
+			totemRes.innerHTML = '';
+			totemStatus.style.color = '#fff';
+			totemStatus.textContent = 'Posicione seu rosto na câmera...';
 		};
 
 		function abrirCamTotem() {

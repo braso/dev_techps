@@ -34,7 +34,7 @@ error_reporting(E_ALL);
 
 		if(!empty($_POST["empresa"]) 
 				&& array_key_exists($_POST["empresa"], $empresas) 
-				&& file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/".$empresas[$_POST["empresa"]]."/index.php")
+				&& file_exists(__DIR__."/".$empresas[$_POST["empresa"]]."/index.php")
 		){
 			$formAction = $_ENV["URL_BASE"].$_ENV["APP_PATH"]."/".$empresas[$_POST["empresa"]]."/index.php";
 			$formName = "formTelaPrincipal";

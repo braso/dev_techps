@@ -30,37 +30,9 @@ if (empty($empresaKey) || empty($descritorRaw)) {
     exit;
 }
 
-// Mapeia empresa_key → path (mesmo mapa do empresas.php)
-$empresas = [
-    "ARMAZEMPARAIBA"  => "armazem_paraiba",
-    "BLUEROAD"        => "blueroad",
-    "BRASO"           => "braso",
-    "CARAU"           => "carau_transporte",
-    "COMAV"           => "comav",
-    "FEIJAOTURQUEZA"  => "feijao_turqueza",
-    "FSLOG"           => "fs_log_transportes",
-    "HN"              => "hn_transportes",
-    "IFRN"            => "ifrn",
-    "JRJ"             => "jrj_organizacao",
-    "LOGSYNC"         => "logsync_techps",
-    "LEMON"           => "lemon",
-    "NH"              => "nh_transportes",
-    "OPAFRUTAS"       => "opafrutas",
-    "PKFMEDEIROS"     => "pkf_medeiros",
-    "QUALY"           => "qualy_transportes",
-    "SÃO LUCAS"       => "sao_lucas",
-    "TECHPS"          => "techps",
-    "DEMO"            => "techps_demo",
-    "TRAMPOLIMGAS"    => "trampolim_gas",
-    "TRANSCOPEL"      => "transcopel",
-    "PB TRANSPORTES"  => "pb_transportes",
-    "ODONTO TANGARA"  => "odontotangara",
-    "CLINICA GERLANE" => "clinica_gerlane",
-    "IRANEIDE OLIVEIRA"=> "iraneide_oliveira",
-    "MIDIA DIGITAL"   => "midia_digital",
-    "ENOVE"           => "enove",
-    "TMILITAO"        => "t_militao",
-];
+// Mapeia empresa_key → path (carrega do empresas.php para não duplicar)
+include_once __DIR__ . "/empresas.php";
+// $empresas já está disponível via empresas.php
 
 $empresaKey = strtoupper($empresaKey);
 if (!array_key_exists($empresaKey, $empresas)) {

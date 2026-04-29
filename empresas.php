@@ -3,12 +3,12 @@
     include "load_env.php";
 
     $empresas = [
-        "ARMAZEMPARAIBA"		=> "armazem_paraiba",
-        "BLUEROAD"			    => "blueroad",
+        "ARMPB"		            => "armazem_paraiba",
+        "BLRD"			        => "blueroad",
         "BRASO"					=> "braso",
         "CARAU"		            => "carau_transporte",
         "COMAV"					=> "comav",
-        "FEIJAOTURQUEZA"		=> "feijao_turqueza",
+        "FTQZA"		            => "feijao_turqueza",
         "FSLOG"	                => "fs_log_transportes",
         "HN"                    => "hn_transportes",
         "IFRN"                  => "ifrn",
@@ -16,22 +16,21 @@
         "LOGSYNC"	            => "logsync_techps",
         "LEMON"                 => 'lemon',
         "NH"	                => "nh_transportes",
-        "OPAFRUTAS"				=> "opafrutas",
-        "PKFMEDEIROS"			=> "pkf_medeiros",
+        "OPAFTS"				=> "opafrutas",
+        "PKFMS"			        => "pkf_medeiros",
         "QUALY"		            => "qualy_transportes",
-        "SÃO LUCAS"             => "sao_lucas",       
+        "HSLC"                  => "sao_lucas",       
         "TECHPS"				=> "techps",
         "DEMO"			        => "techps_demo",
-        "TRAMPOLIMGAS"			=> "trampolim_gas",
-        "TRANSCOPEL"			=> "transcopel",
-        "PB TRANSPORTES"		=> "pb_transportes",
-        "ODONTO TANGARA"		=> "odontotangara",
-        "CLINICA GERLANE"		=> "clinica_gerlane",
-        "IRANEIDE OLIVEIRA"		=> "iraneide_oliveira",
-        "MIDIA DIGITAL"		    => "midia_digital",
+        "TRGS"			        => "trampolim_gas",
+        "TRSCPL"			    => "transcopel",
+        "PBTRS"		            => "pb_transportes",
+        "ODTGA"		            => "odontotangara",
+        "CLGRL"		            => "clinica_gerlane",
+        "IROL"		            => "iraneide_oliveira",
+        "MDTAL"		            => "midia_digital",
         "ENOVE"                 => "enove",
-        "TMILITAO"              => "t_militao",
-
+        "TMILT"                 => "t_militao",
         "LAUTO"                 => "lauto"
 
     ];
@@ -77,28 +76,16 @@
 
     $empresasInput = 
         "<div class='form-group'>
-            <select name='empresa' class='input-empresas form-control form-control-solid placeholder-no-fix' autofocus>
-                <option value='' hidden>Empresa</option>"
+            <input
+                autofocus
+                class='input-empresas form-control form-control-solid placeholder-no-fix'
+                type='text'
+                autocomplete='off'
+                placeholder='INSIRA SEU DOMÍNIO'
+                name='empresa'
+                style='text-transform:uppercase;'
+                ".(!empty($_POST["empresa"])? "value='".$_POST["empresa"]."'": "")."
+            />
+        </div>"
     ;
-    foreach($empresas as $key => $value){
-        if(file_exists(__DIR__."/".$value)){
-            $empresasInput .= "<option ".((!empty($_POST["empresa"]) && $_POST["empresa"] == $key)? "selected": "")." value='{$key}'>{$empresasNomes[$value]}</option>";
-        }
-    }
-    $empresasInput .= "</select></div>";
-
-    // $empresasInput = 
-    //     "<div class='form-group'>
-    //         <input
-    //             focus
-    //             autofocus
-    //             class='input-empresas form-control form-control-solid placeholder-no-fix'
-    //             type='text'
-    //             autocomplete='off'
-    //             placeholder='Empresa'
-    //             name='empresa'
-    //             ".(!empty($_POST["empresa"])? 'value='.$_POST["empresa"]: "")."
-    //         />
-    //     </div>"
-    // ;
 ?>
