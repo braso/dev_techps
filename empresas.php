@@ -75,6 +75,21 @@
         $_POST["empresa"] = $_GET["empresa"];
     }
 
+    // Auto-detecta a empresa pela URL (APP_PATH do .env)
+    // Ex: APP_PATH = /gestaodeponto/braso → extrai "braso" → mapeia para "BRASO"
+    if(empty($_POST["empresa"])){
+        $appPath = trim($_ENV["APP_PATH"] ?? "");
+        $pathSlug = strtolower(basename($appPath)); // ex: "braso"
+        foreach($empresas as $key => $value){
+            if(strtolower($value) === $pathSlug){
+                $_POST["empresa"] = $key;
+                break;
+            }
+        }
+    }
+
+    $autoDetectada = !empty($_POST["empresa"]);
+
     $empresasInput = 
         "<div class='form-group'>
             <select name='empresa' class='input-empresas form-control form-control-solid placeholder-no-fix' autofocus>
@@ -86,6 +101,11 @@
         }
     }
     $empresasInput .= "</select></div>";
+
+    // Se a empresa foi auto-detectada pela URL, oculta o select e usa hidden
+    if($autoDetectada){
+        $empresasInput = "<input type='hidden' name='empresa' value='".htmlspecialchars($_POST["empresa"])."'>";
+    }
 
     // $empresasInput = 
     //     "<div class='form-group'>
