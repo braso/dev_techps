@@ -86,7 +86,10 @@
         }
     }
 
-    $autoDetectada = !empty($_POST["empresa"]);
+    // Se vier ?modo=admin, força exibição do select independente da auto-detecção
+    $modoAdmin = (($_GET["modo"] ?? "") === "admin");
+
+    $autoDetectada = !empty($_POST["empresa"]) && !$modoAdmin;
 
     $empresasInput = 
         "<div class='form-group'>
