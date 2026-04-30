@@ -2,6 +2,73 @@
 	
 require "../funcoes_ponto.php";
 
+function normalizarFiltroArray($valor) {
+    if (is_array($valor)) {
+        return array_filter(array_map('trim', $valor), function($v) { return $v !== ''; });
+    }
+    if (is_string($valor) && !empty($valor)) {
+        $partes = array_map('trim', explode(',', $valor));
+        return array_filter($partes, function($v) { return $v !== ''; });
+    }
+    return [];
+}
+
+function montarCondicaoListaSql($coluna, $valor, $tipo='s') {
+    $valores = normalizarFiltroArray($valor);
+    if (empty($valores)) {
+        return '';
+    }
+    if (count($valores) === 1) {
+        $v = $valores[0];
+        if ($tipo === 'like') {
+            return " AND $coluna LIKE '%".mysqli_real_escape_string($GLOBALS['conn'], $v)."%'";
+        } else {
+            return " AND $coluna = '".mysqli_real_escape_string($GLOBALS['conn'], $v)."'";
+        }
+    }
+    $condicoes = array_map(function($v) {
+        return "'" . mysqli_real_escape_string($GLOBALS['conn'], $v) . "'";
+    }, $valores);
+    return " AND $coluna IN (" . implode(',', $condicoes) . ")";
+}
+
+function renderFiltroCheckboxGroup($titulo, $name, $opcoes, $selecionados, $width=3) {
+    $selecionados = normalizarFiltroArray($selecionados);
+    $nameAttr = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
+    $groupId = preg_replace('/[^a-zA-Z0-9_]/', '_', $name);
+    $hiddenValue = htmlspecialchars(implode(',', $selecionados), ENT_QUOTES, 'UTF-8');
+    $tituloAttr = htmlspecialchars($titulo, ENT_QUOTES, 'UTF-8');
+
+    $html = "<div class='col-sm-{$width} margin-bottom-5 campo-fit-content'>"
+        ."<div class='filtro-dropdown' data-filter-group='".$groupId."' style='position:relative; overflow:visible;'>"
+        ."<button type='button' class='btn btn-default btn-block filtro-dropdown-toggle js-filtro-toggle' data-target='".$nameAttr."' aria-expanded='false' style='display:flex; justify-content:space-between; align-items:center; gap:10px;'>"
+        ."<span style='text-align:left;'>".$tituloAttr."</span>"
+        ."<span class='caret'></span>"
+        ."</button>"
+        ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:1050; background:#fff; border:1px solid #d9d9d9; border-radius:8px; box-shadow:0 12px 30px rgba(0,0,0,.12); padding:10px; max-height:260px; overflow:auto;'>"
+        ."<input type='hidden' class='js-filtro-hidden' data-filter-name='".$nameAttr."' name='".$nameAttr."' value='".$hiddenValue."'>"
+        ."<div style='display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;'>"
+        ."<button type='button' class='btn btn-xs btn-default js-filtro-todos' data-target='".$nameAttr."' data-action='all'>Marcar todos</button>"
+        ."<button type='button' class='btn btn-xs btn-default js-filtro-todos' data-target='".$nameAttr."' data-action='none'>Desmarcar todos</button>"
+        ."</div>";
+
+    if(empty($opcoes)){
+        $html .= "<div style='color:#777;'>Sem opções</div>";
+    }else{
+        foreach($opcoes as $valor => $rotulo){
+            $valorStr = (string)$valor;
+            $checked = in_array($valorStr, $selecionados, true) ? "checked" : "";
+            $html .= "<label style='display:block; margin-bottom:6px; font-weight:normal; cursor:pointer;'>"
+                ."<input type='checkbox' class='js-filtro-checkbox' data-target='".$nameAttr."' value='".htmlspecialchars($valorStr, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
+                .htmlspecialchars($rotulo)
+                ."</label>";
+        }
+    }
+
+    $html .= "</div></div></div>";
+    return $html;
+}
+
 function index() {
     // Verificação e criação da coluna turno se não existir
     if(mysqli_num_rows(query("SHOW COLUMNS FROM parametro LIKE 'para_tx_turno'")) == 0){
@@ -22,8 +89,12 @@ function index() {
         combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 3, "empresa", ""),
         campo_mes("Mês*", "busca_dataMes", $buscaDataMes, 2),
         campo("Nome", "busca_nome", ($_POST["busca_nome"] ?? ""), 3),
-        combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
-            ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
+        renderFiltroCheckboxGroup("Ocupação", "busca_ocupacao", 
+            ["Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário", "Terceirizado" => "Terceirizado"],
+            $_POST["busca_ocupacao"] ?? "", 2),
+        renderFiltroCheckboxGroup("Terceirizados", "busca_terceirizados", 
+            ["S" => "Sim", "N" => "Não"],
+            $_POST["busca_terceirizados"] ?? "", 2),
         combo_bd2(
             "Parâmetros da Jornada",
             "busca_parametro",
@@ -119,6 +190,88 @@ function index() {
         }
     }
     </script>
+    <script>
+    (function(){
+        function fecharDropdowns(excecao){
+            $('.filtro-dropdown').each(function(){
+                if(excecao && $(this).is(excecao)){
+                    return;
+                }
+                $(this).removeClass('open');
+                $(this).find('.filtro-dropdown-menu').hide();
+                $(this).find('.js-filtro-toggle').attr('aria-expanded', 'false');
+            });
+        }
+
+        function alternarDropdown(botao){
+            var wrapper = $(botao).closest('.filtro-dropdown');
+            var menu = wrapper.find('.filtro-dropdown-menu').first();
+            var isOpen = wrapper.hasClass('open');
+
+            fecharDropdowns(wrapper);
+
+            if(!isOpen){
+                wrapper.addClass('open');
+                menu.show();
+                $(botao).attr('aria-expanded', 'true');
+            }
+        }
+
+        function atualizarHidden(nome){
+            var checked = $('input.js-filtro-checkbox[data-target="' + nome + '"]:checked');
+            var valores = [];
+            checked.each(function(){
+                valores.push($(this).val());
+            });
+            var hiddenInput = $('input.js-filtro-hidden[data-filter-name="' + nome + '"]');
+            hiddenInput.val(valores.join(','));
+            hiddenInput.trigger('change');
+        }
+
+        function sincronizarFiltros(){
+            $('input.js-filtro-hidden').each(function(){
+                atualizarHidden($(this).data('filter-name'));
+            });
+        }
+
+        $(document).on('change', 'input.js-filtro-checkbox', function(){
+            atualizarHidden($(this).data('target'));
+        });
+
+        $(document).on('click', '.js-filtro-toggle', function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            alternarDropdown(this);
+        });
+
+        $(document).on('click', '.js-filtro-todos', function(){
+            var target = $(this).data('target');
+            var action = $(this).data('action');
+            var marcar = action === 'all';
+            
+            var checkboxes = $('input.js-filtro-checkbox[data-target="' + target + '"]');
+            
+            checkboxes.each(function(){
+                var checked = $(this).prop('checked');
+                if(checked !== marcar){
+                    $(this).click();
+                }
+            });
+            
+            atualizarHidden(target);
+        });
+
+        $(document).on('click', function(){
+            fecharDropdowns();
+        });
+
+        $(document).on('click', '.filtro-dropdown-menu', function(e){
+            e.stopPropagation();
+        });
+
+        sincronizarFiltros();
+    })();
+    </script>
     <?php
 
     if ($_SERVER["REQUEST_METHOD"] === "POST" && empty($_POST["reloadOnly"])) {
@@ -145,7 +298,21 @@ function index() {
         }
 
         if (!empty($_POST["busca_ocupacao"])) {
-            $filtrosUsados[] = "Ocupação: ".htmlspecialchars($_POST["busca_ocupacao"]);
+            $ocupacoes = normalizarFiltroArray($_POST["busca_ocupacao"]);
+            if (!empty($ocupacoes)) {
+                $filtrosUsados[] = "Ocupação: ".htmlspecialchars(implode(", ", $ocupacoes));
+            }
+        }
+
+        if (!empty($_POST["busca_terceirizados"])) {
+            $terceirizados = normalizarFiltroArray($_POST["busca_terceirizados"]);
+            $labels = ["S" => "Sim", "N" => "Não"];
+            $terceirizadosTexto = array_map(function($v) use ($labels) {
+                return $labels[$v] ?? $v;
+            }, $terceirizados);
+            if (!empty($terceirizadosTexto)) {
+                $filtrosUsados[] = "Terceirizados: ".htmlspecialchars(implode(", ", $terceirizadosTexto));
+            }
         }
 
         if (!empty($_POST["busca_parametro"])) {
@@ -240,7 +407,22 @@ function index() {
         }
         $filtroOcupacao = "";
         if (!empty($_POST["busca_ocupacao"])) {
-            $filtroOcupacao = " AND entidade.enti_tx_ocupacao = '".$_POST["busca_ocupacao"]."'";
+            $filtroOcupacao = montarCondicaoListaSql("entidade.enti_tx_ocupacao", $_POST["busca_ocupacao"], "s");
+        }
+        $filtroTerceirizados = "";
+        if (!empty($_POST["busca_terceirizados"])) {
+            $valores = normalizarFiltroArray($_POST["busca_terceirizados"]);
+            if (!empty($valores)) {
+                if (count($valores) === 1) {
+                    $v = $valores[0];
+                    $filtroTerceirizados = " AND entidade.enti_tx_subcontratado = '" . mysqli_real_escape_string($GLOBALS['conn'], $v) . "'";
+                } else {
+                    $condicoes = array_map(function($v) {
+                        return "'" . mysqli_real_escape_string($GLOBALS['conn'], $v) . "'";
+                    }, $valores);
+                    $filtroTerceirizados = " AND entidade.enti_tx_subcontratado IN (" . implode(',', $condicoes) . ")";
+                }
+            }
         }
         $filtroOperacao = "";
         if (!empty($_POST["operacao"])) {
@@ -296,6 +478,7 @@ function index() {
                ".$filtroNome."
                ".$filtroMatricula."
                ".$filtroOcupacao."
+               ".$filtroTerceirizados."
                ".$filtroOperacao."
                ".$filtroParametro."
                ".$filtroSetor."
