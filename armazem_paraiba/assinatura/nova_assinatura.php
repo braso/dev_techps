@@ -629,7 +629,7 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                         <form action="nova_assinatura.php?modo=separar_paginas" method="POST" enctype="multipart/form-data">
                             <input type="hidden" name="acao_pdf" value="upload_pdf_paginas">
                             <div class="max-w-xl mx-auto">
-                                <div class="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group" onclick="document.getElementById('fileInputMultipage').click()">
+                                <div id="dropZoneMultipage" class="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group" onclick="document.getElementById('fileInputMultipage').click()" ondragover="event.preventDefault();event.stopPropagation();this.classList.add('border-blue-400','bg-blue-50')" ondragleave="event.preventDefault();event.stopPropagation();this.classList.remove('border-blue-400','bg-blue-50')" ondrop="event.preventDefault();event.stopPropagation();this.classList.remove('border-blue-400','bg-blue-50');var f=event.dataTransfer.files[0];if(f){try{var dt=new DataTransfer();dt.items.add(f);document.getElementById('fileInputMultipage').files=dt.files;}catch(e){}handleFileSelectMultipage(document.getElementById('fileInputMultipage'));}">
                                     <input type="file" id="fileInputMultipage" name="pdf_multipage" accept="application/pdf" class="hidden" onchange="handleFileSelectMultipage(this)">
                                     <div class="space-y-3 pointer-events-none">
                                         <p class="text-gray-600 group-hover:text-blue-600 transition-colors font-medium">Clique aqui ou arraste o PDF com múltiplas páginas</p>
@@ -948,7 +948,7 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                     </div>
 
                     <div class="max-w-xl mx-auto">
-                        <div class="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group" onclick="document.getElementById('fileInput').click()">
+                        <div id="dropZoneAvulso" class="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group" onclick="document.getElementById('fileInput').click()" ondragover="event.preventDefault();event.stopPropagation();this.classList.add('border-blue-400','bg-blue-50')" ondragleave="event.preventDefault();event.stopPropagation();this.classList.remove('border-blue-400','bg-blue-50')" ondrop="event.preventDefault();event.stopPropagation();this.classList.remove('border-blue-400','bg-blue-50');var f=event.dataTransfer.files[0];if(f){try{var dt=new DataTransfer();dt.items.add(f);document.getElementById('fileInput').files=dt.files;}catch(e){}handleFileSelect(document.getElementById('fileInput'));}">
                             <input type="file" id="fileInput" name="arquivo" accept="application/pdf" class="hidden" onchange="handleFileSelect(this)">
                             
                             <div class="space-y-3 pointer-events-none">
@@ -1176,8 +1176,11 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                     <h3 class="text-lg font-bold text-gray-800 mb-1">Documento</h3>
                     <p class="text-xs text-gray-500 mb-5">Selecione o PDF que será enviado para assinatura.</p>
 
-                    <div class="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group flex-1 flex flex-col items-center justify-center"
-                        onclick="document.getElementById('pdfInputExterno').click()">
+                    <div id="dropZoneExterno" class="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer group flex-1 flex flex-col items-center justify-center"
+                        onclick="document.getElementById('pdfInputExterno').click()"
+                        ondragover="event.preventDefault();event.stopPropagation();this.classList.add('border-blue-400','bg-blue-50')"
+                        ondragleave="event.preventDefault();event.stopPropagation();this.classList.remove('border-blue-400','bg-blue-50')"
+                        ondrop="event.preventDefault();event.stopPropagation();this.classList.remove('border-blue-400','bg-blue-50');var f=event.dataTransfer.files[0];if(f){try{var dt=new DataTransfer();dt.items.add(f);document.getElementById('pdfInputExterno').files=dt.files;}catch(e){}handlePdfExterno(document.getElementById('pdfInputExterno'));}">
                         <input type="file" id="pdfInputExterno" name="arquivo" accept="application/pdf" class="hidden" form="formSignatarioExterno" onchange="handlePdfExterno(this)">
                         <i class="fas fa-file-pdf text-4xl text-gray-300 group-hover:text-blue-400 transition-colors mb-3"></i>
                         <p class="text-sm text-gray-500 group-hover:text-blue-600 transition-colors font-medium">Clique ou arraste o PDF aqui</p>
@@ -1404,6 +1407,48 @@ function handlePdfExterno(input) {
     }
 }
 
+// ── Drag and Drop helper ───────────────────────────────────────────────────
+function ativarDragDrop(zonaEl, inputEl, callbackFn) {
+    if (!zonaEl || !inputEl) return;
+
+    zonaEl.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        zonaEl.classList.add('border-blue-400', 'bg-blue-50');
+    });
+
+    zonaEl.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        zonaEl.classList.remove('border-blue-400', 'bg-blue-50');
+    });
+
+    zonaEl.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        zonaEl.classList.remove('border-blue-400', 'bg-blue-50');
+
+        const files = e.dataTransfer && e.dataTransfer.files;
+        if (!files || files.length === 0) return;
+
+        const file = files[0];
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+            alert('Apenas arquivos PDF são permitidos.');
+            return;
+        }
+
+        try {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            inputEl.files = dt.files;
+        } catch(err) {
+            console.warn('DataTransfer não suportado neste browser.');
+        }
+
+        if (typeof callbackFn === 'function') callbackFn(inputEl);
+    });
+}
+
 // ── Valida antes de enviar ─────────────────────────────────────────────────
 document.getElementById('formSignatarioExterno')?.addEventListener('submit', function (e) {
     const pdf = document.getElementById('pdfInputExterno');
@@ -1491,6 +1536,26 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
             document.getElementById('assinaturaStep').style.display = 'flex';
         });
     }
+
+    // ── Ativa drag and drop em todas as zonas de upload ──────────────────
+    // Zona avulso
+    ativarDragDrop(
+        document.getElementById('fileInput')?.closest('.border-dashed'),
+        document.getElementById('fileInput'),
+        handleFileSelect
+    );
+    // Zona lote (multipage)
+    ativarDragDrop(
+        document.getElementById('fileInputMultipage')?.closest('.border-dashed'),
+        document.getElementById('fileInputMultipage'),
+        handleFileSelectMultipage
+    );
+    // Zona signatário externo
+    ativarDragDrop(
+        document.getElementById('pdfInputExterno')?.closest('.border-dashed'),
+        document.getElementById('pdfInputExterno'),
+        handlePdfExterno
+    );
 
     function preencherDadosFuncionarioSelecionado() {
         const sel = document.getElementById("funcionario_select");
