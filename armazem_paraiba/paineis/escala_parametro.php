@@ -18,18 +18,34 @@ function montarCondicaoListaSql($coluna, $valor, $tipo='s') {
     if (empty($valores)) {
         return '';
     }
+
+    // single value
     if (count($valores) === 1) {
         $v = $valores[0];
         if ($tipo === 'like') {
-            return " AND $coluna LIKE '%".mysqli_real_escape_string($GLOBALS['conn'], $v)."%'";
+            // case-insensitive LIKE
+            return " AND LOWER($coluna) LIKE '%".mysqli_real_escape_string($GLOBALS['conn'], mb_strtolower($v, 'UTF-8'))."%'";
+        } elseif ($tipo === 'i') {
+            return " AND $coluna = " . intval($v);
         } else {
-            return " AND $coluna = '".mysqli_real_escape_string($GLOBALS['conn'], $v)."'";
+            // default string, case-insensitive
+            return " AND LOWER($coluna) = '".mysqli_real_escape_string($GLOBALS['conn'], mb_strtolower($v, 'UTF-8'))."'";
         }
     }
+
+    // multiple values
+    if ($tipo === 'i') {
+        $condicoes = array_map(function($v) {
+            return intval($v);
+        }, $valores);
+        return " AND $coluna IN (" . implode(',', $condicoes) . ")";
+    }
+
+    // string values - use LOWER() for case-insensitive comparison
     $condicoes = array_map(function($v) {
-        return "'" . mysqli_real_escape_string($GLOBALS['conn'], $v) . "'";
+        return "'" . mysqli_real_escape_string($GLOBALS['conn'], mb_strtolower($v, 'UTF-8')) . "'";
     }, $valores);
-    return " AND $coluna IN (" . implode(',', $condicoes) . ")";
+    return " AND LOWER($coluna) IN (" . implode(',', $condicoes) . ")";
 }
 
 function renderFiltroCheckboxGroup($titulo, $name, $opcoes, $selecionados, $width=3) {
@@ -85,16 +101,20 @@ function index() {
         $temSubsetorVinculado = ($rowCount[0] > 0);
     }
 
+    // Carrega empresas para o filtro de checkbox
+    $empresasResult = query("SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome ASC");
+    $empresasOpcoes = [];
+    while ($row = mysqli_fetch_assoc($empresasResult)) {
+        $empresasOpcoes[$row['empr_nb_id']] = $row['empr_tx_nome'];
+    }
+
         $campos = [
-        combo_net("Empresa", "empresa", $_POST["empresa"] ?? "", 3, "empresa", ""),
+        renderFiltroCheckboxGroup("Empresa", "empresa", $empresasOpcoes, $_POST["empresa"] ?? "", 4),
         campo_mes("Mês*", "busca_dataMes", $buscaDataMes, 2),
-        campo("Nome", "busca_nome", ($_POST["busca_nome"] ?? ""), 3),
+        campo("Nome", "busca_nome", ($_POST["busca_nome"] ?? ""), 4),
         renderFiltroCheckboxGroup("Ocupação", "busca_ocupacao", 
             ["Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário", "Terceirizado" => "Terceirizado"],
             $_POST["busca_ocupacao"] ?? "", 2),
-        renderFiltroCheckboxGroup("Terceirizados", "busca_terceirizados", 
-            ["S" => "Sim", "N" => "Não"],
-            $_POST["busca_terceirizados"] ?? "", 2),
         combo_bd2(
             "Parâmetros da Jornada",
             "busca_parametro",
@@ -107,20 +127,19 @@ function index() {
             JOIN entidade ON entidade.enti_nb_parametro = parametro.para_nb_id
             WHERE parametro.para_tx_status = 'ativo'
               AND entidade.enti_tx_status = 'ativo'
-              ".(!empty($_POST["empresa"])? " AND entidade.enti_nb_empresa = ".intval($_POST["empresa"]): "")."
-            ORDER BY parametro.para_tx_nome ASC",
-            "col-sm-2 margin-bottom-5 campo-fit-content",
+              ORDER BY parametro.para_tx_nome ASC",
+            "col-sm-3 margin-bottom-5 campo-fit-content",
             "form-control input-sm campo-fit-content",
             "",
             [
                 ["value" => "", "text" => "", "props" => ""]
             ]
         ),
-        combo_bd("!Cargo", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
-        combo_bd("!Setor", "busca_setor", ($_POST["busca_setor"]?? ""), 2, "grupos_documentos", "onchange=\"(function(f){ if(f.busca_subsetor){ f.busca_subsetor.value=''; } f.reloadOnly.value='1'; f.submit(); })(document.contex_form);\"")
+        combo_bd("!Cargo", "operacao", ($_POST["operacao"]?? ""), 3, "operacao", "", "ORDER BY oper_tx_nome ASC"),
+        combo_bd("!Setor", "busca_setor", ($_POST["busca_setor"]?? ""), 3, "grupos_documentos", "onchange=\"(function(f){ if(f.busca_subsetor){ f.busca_subsetor.value=''; } f.reloadOnly.value='1'; f.submit(); })(document.contex_form);\"")
     ];
     if ($temSubsetorVinculado) {
-        $campos[] = combo_bd("!Subsetor", "busca_subsetor", ($_POST["busca_subsetor"]?? ""), 2, "sbgrupos_documentos", "", " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC");
+        $campos[] = combo_bd("!Subsetor", "busca_subsetor", ($_POST["busca_subsetor"]?? ""), 3, "sbgrupos_documentos", "", " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC");
     }
 
     $exibicao_valores = [];
@@ -278,10 +297,19 @@ function index() {
         $filtrosUsados = [];
 
         if (!empty($_POST["empresa"])) {
-            $empresaNome = mysqli_fetch_assoc(query(
-                "SELECT empr_tx_nome FROM empresa WHERE empr_nb_id = ".intval($_POST["empresa"])." LIMIT 1;"
-            ));
-            $filtrosUsados[] = "Empresa: ".htmlspecialchars($empresaNome["empr_tx_nome"] ?? $_POST["empresa"]);
+            $empresasSelecionadas = normalizarFiltroArray($_POST["empresa"]);
+            $empresaNomes = [];
+            foreach ($empresasSelecionadas as $eid) {
+                $row = mysqli_fetch_assoc(query(
+                    "SELECT empr_tx_nome FROM empresa WHERE empr_nb_id = ".intval($eid)." LIMIT 1;"
+                ));
+                if (!empty($row["empr_tx_nome"])) {
+                    $empresaNomes[] = $row["empr_tx_nome"];
+                } else {
+                    $empresaNomes[] = $eid;
+                }
+            }
+            $filtrosUsados[] = "Empresa: ".htmlspecialchars(implode(", ", $empresaNomes));
         } else {
             $filtrosUsados[] = "Empresa: Todas";
         }
@@ -304,16 +332,6 @@ function index() {
             }
         }
 
-        if (!empty($_POST["busca_terceirizados"])) {
-            $terceirizados = normalizarFiltroArray($_POST["busca_terceirizados"]);
-            $labels = ["S" => "Sim", "N" => "Não"];
-            $terceirizadosTexto = array_map(function($v) use ($labels) {
-                return $labels[$v] ?? $v;
-            }, $terceirizados);
-            if (!empty($terceirizadosTexto)) {
-                $filtrosUsados[] = "Terceirizados: ".htmlspecialchars(implode(", ", $terceirizadosTexto));
-            }
-        }
 
         if (!empty($_POST["busca_parametro"])) {
             $parametroNome = mysqli_fetch_assoc(query(
@@ -394,7 +412,7 @@ function index() {
 
         $filtroEmpresa = "";
         if (!empty($_POST["empresa"])) {
-            $filtroEmpresa = " AND entidade.enti_nb_empresa = " . intval($_POST["empresa"]);
+            $filtroEmpresa = montarCondicaoListaSql("entidade.enti_nb_empresa", $_POST["empresa"], "i");
         }
 
         $filtroNome = "";
@@ -408,21 +426,6 @@ function index() {
         $filtroOcupacao = "";
         if (!empty($_POST["busca_ocupacao"])) {
             $filtroOcupacao = montarCondicaoListaSql("entidade.enti_tx_ocupacao", $_POST["busca_ocupacao"], "s");
-        }
-        $filtroTerceirizados = "";
-        if (!empty($_POST["busca_terceirizados"])) {
-            $valores = normalizarFiltroArray($_POST["busca_terceirizados"]);
-            if (!empty($valores)) {
-                if (count($valores) === 1) {
-                    $v = $valores[0];
-                    $filtroTerceirizados = " AND entidade.enti_tx_subcontratado = '" . mysqli_real_escape_string($GLOBALS['conn'], $v) . "'";
-                } else {
-                    $condicoes = array_map(function($v) {
-                        return "'" . mysqli_real_escape_string($GLOBALS['conn'], $v) . "'";
-                    }, $valores);
-                    $filtroTerceirizados = " AND entidade.enti_tx_subcontratado IN (" . implode(',', $condicoes) . ")";
-                }
-            }
         }
         $filtroOperacao = "";
         if (!empty($_POST["operacao"])) {
@@ -439,6 +442,21 @@ function index() {
         $filtroSubSetor = "";
         if (!empty($_POST["busca_subsetor"])) {
             $filtroSubSetor = " AND entidade.enti_subSetor_id = ".intval($_POST["busca_subsetor"]);
+        }
+
+        // Ajusta níveis de usuário para incluir Terceirizado caso esteja sendo filtrado
+        $ocupacoesSelecionadas = normalizarFiltroArray($_POST["busca_ocupacao"] ?? "");
+        $incluiTerceirizado = false;
+        foreach ($ocupacoesSelecionadas as $oc) {
+            $low = mb_strtolower($oc, 'UTF-8');
+            if ($low === 'terceirizado' || $low === 'tercerizado') {
+                $incluiTerceirizado = true;
+                break;
+            }
+        }
+        $userLevels = "('Funcionário', 'Motorista', 'Ajudante')";
+        if ($incluiTerceirizado) {
+            $userLevels = "('Funcionário', 'Motorista', 'Ajudante', 'Terceirizado')";
         }
 
         $motoristas = mysqli_fetch_all(query(
@@ -460,7 +478,7 @@ function index() {
              WHERE entidade.enti_tx_status = 'ativo'
                AND user.user_tx_status = 'ativo'
                AND (
-                    user.user_tx_nivel IN ('Funcionário', 'Motorista', 'Ajudante')
+                    user.user_tx_nivel IN $userLevels
                     AND EXISTS (
                         SELECT 1 FROM usuario_perfil up
                         JOIN perfil_acesso pa ON pa.perfil_nb_id = up.perfil_nb_id
@@ -478,7 +496,6 @@ function index() {
                ".$filtroNome."
                ".$filtroMatricula."
                ".$filtroOcupacao."
-               ".$filtroTerceirizados."
                ".$filtroOperacao."
                ".$filtroParametro."
                ".$filtroSetor."
