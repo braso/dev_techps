@@ -31,7 +31,8 @@
         "MD"		            => "midia_digital",
         "ENOVE"                 => "enove",
         "TMILITAO"                 => "t_militao",
-        "LAUTO"                 => "lauto"
+        "LAUTO"                 => "lauto",
+        "DEMO"                 => "demo"
 
     ];
 
@@ -65,7 +66,8 @@
         "enove"             => "Enove",
         "t_militao"         => "T Militao",
         
-        "lauto"             => "L Auto Cargo"
+        "lauto"             => "L Auto Cargo",
+        "demo"             => "Demo"
     ];
 
     $empresa_array = array_values($empresas); //Utilizado nos arquivos que importam este.

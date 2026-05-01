@@ -14,6 +14,7 @@ deployment:
     - export SAOLUCAS=/home/devtechpsgj/public_html/dev/sao_lucas
     - export TMILITAO=/home/devtechpsgj/public_html/dev/t_militao
     - export MIDIADIGITAL=/home/devtechpsgj/public_html/dev/midia_digital
+    - export DEMO=/home/devtechpsgj/public_html/dev/demo
 
 
     # Copiando diret贸rios
@@ -25,4 +26,5 @@ deployment:
     - /bin/cp -R $DOMAIN $SAOLUCAS
     - /bin/cp -R $DOMAIN $TMILITAO
     - /bin/cp -R $DOMAIN $MIDIADIGITAL
+    - /bin/cp -R $DOMAIN $DEMO
 
