@@ -14,11 +14,26 @@
     </footer>
     
     <script>
-        // Simple mobile menu toggle
-        document.querySelector('button.md\\:hidden').addEventListener('click', function() {
-            const menu = document.getElementById('mobile-menu');
-            menu.classList.toggle('hidden');
-        });
+        (function() {
+            const menuBtn = document.querySelector('button.md\\:hidden');
+            if (menuBtn) {
+                menuBtn.addEventListener('click', function() {
+                    const menu = document.getElementById('mobile-menu');
+                    if (menu) menu.classList.toggle('hidden');
+                });
+            }
+
+            const toggles = document.querySelectorAll('[data-mobile-toggle]');
+            toggles.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = btn.getAttribute('data-mobile-toggle');
+                    if (!id) return;
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.classList.toggle('hidden');
+                });
+            });
+        })();
     </script>
 </body>
 </html>

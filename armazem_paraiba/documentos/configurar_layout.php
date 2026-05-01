@@ -2,7 +2,7 @@
 include_once "../conecta.php";
 include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
 
-// Funções de Ação
+// Cria/atualiza um campo do layout dinamico do tipo de documento.
 function gravarCampo() {
     $id_tipo = $_POST['id_tipo'] ?? $_POST['id'];
     $id_campo = $_POST['id_campo'];
@@ -36,6 +36,7 @@ function gravarCampo() {
     exit;
 }
 
+// Remove um campo do layout dinamico.
 function excluirCampo() {
     $id_tipo = $_POST['id_tipo'];
     $id_campo = $_POST['id_campo'];
@@ -46,6 +47,7 @@ function excluirCampo() {
     exit;
 }
 
+// Tela de cadastro/edicao de um campo especifico do layout.
 function layout_campo() {
     global $conn;
     cabecalho("Configurar Campo");
@@ -121,6 +123,7 @@ function layout_campo() {
     rodape();
 }
 
+// Tela principal de configuracao do layout (logo e campos dinamicos).
 function index() {
     global $conn;
     cabecalho("Layout do Documento");
@@ -268,6 +271,7 @@ function index() {
     rodape();
 }
 
+// Retorna para a lista geral de tipos de documento.
 function voltarLista() {
     header("Location: ../cadastro_tipo_doc.php");
     exit;

@@ -48,8 +48,9 @@ function verificaPermissao($pathMenu)
     $pathsPermitidosFuncionario = ['/batida_ponto.php', '/espelho_ponto.php'];
 
     if (!$isAdmin && !$permitido) {
-        // Se for funcionário, deixa livre apenas batida/espelho
-        if (preg_match('/(funcionário|motorista|ajudante)/i', $nivel) && in_array($pathMenu, $pathsPermitidosFuncionario)) {
+        // Regra especial para operação: esses níveis podem acessar batida/espelho
+        // mesmo sem item explícito no perfil, mantendo admin/super admin na regra própria.
+        if (preg_match('/(funcionário|motorista|ajudante|terceirizado)/i', $nivel) && in_array($pathMenu, $pathsPermitidosFuncionario)) {
             return true; // permitido por regra especial
         }
 

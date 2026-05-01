@@ -38,6 +38,7 @@
 			id_superior INT NULL,
 			justificativa_gestor TEXT NULL,
 			data_visualizacao DATETIME NULL,
+			data_envio_documento DATETIME NULL,
 			id_instancia_documento INT NULL
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
 
@@ -50,6 +51,11 @@
 		$check = query("SHOW COLUMNS FROM solicitacoes_ajuste LIKE 'justificativa_gestor'");
 		if ($check instanceof mysqli_result && mysqli_num_rows($check) == 0) {
 			query("ALTER TABLE solicitacoes_ajuste ADD COLUMN justificativa_gestor TEXT DEFAULT NULL AFTER id_instancia_documento");
+		}
+
+		$check = query("SHOW COLUMNS FROM solicitacoes_ajuste LIKE 'data_envio_documento'");
+		if ($check instanceof mysqli_result && mysqli_num_rows($check) == 0) {
+			query("ALTER TABLE solicitacoes_ajuste ADD COLUMN data_envio_documento DATETIME NULL AFTER data_visualizacao");
 		}
 
 		// Atualizar inst_documento_modulo
@@ -65,6 +71,66 @@
 	}
 	
 	criarTabelaSolicitacoes();
+	
+	function apf_isAdminNivel(): bool {
+		$nivel = strtolower(trim(strval($_SESSION['user_tx_nivel'] ?? '')));
+		return (strpos($nivel, 'administrador') !== false) || (strpos($nivel, 'super administrador') !== false);
+	}
+
+	function apf_getEntidadeLogadaId(): int {
+		return intval($_SESSION['user_nb_entidade'] ?? 0);
+	}
+
+	function apf_resolverMotoristaAlvo($idMotoristaInformado): int {
+		$idInformado = intval($idMotoristaInformado);
+		$idEntidadeLogada = apf_getEntidadeLogadaId();
+
+		if (!apf_isAdminNivel()) {
+			return $idEntidadeLogada;
+		}
+
+		return $idInformado > 0 ? $idInformado : $idEntidadeLogada;
+	}
+
+	function apf_getRotulos(): array {
+		static $rotulos = null;
+		if ($rotulos !== null) {
+			return $rotulos;
+		}
+
+		// Mantem a mesma precedencia aplicada nas paginas de batida/espelho.
+		$ocupacaoUsuario = trim((string)($_SESSION['user_tx_nivel'] ?? ''));
+		if ($ocupacaoUsuario === '' && !empty($_SESSION['user_nb_entidade'])) {
+			$ocupacaoEntidade = mysqli_fetch_assoc(query(
+				"SELECT enti_tx_ocupacao FROM entidade WHERE enti_nb_id = '".$_SESSION['user_nb_entidade']."' LIMIT 1;"
+			));
+			$ocupacaoUsuario = trim((string)($ocupacaoEntidade['enti_tx_ocupacao'] ?? ''));
+		}
+		if ($ocupacaoUsuario === '' && !empty($_SESSION['enti_tx_ocupacao'])) {
+			$ocupacaoUsuario = trim((string)$_SESSION['enti_tx_ocupacao']);
+		}
+
+		$ocupacaoNormalizada = strtolower($ocupacaoUsuario);
+		$ehTerceirizado = in_array($ocupacaoNormalizada, ['terceirizado', 'tercerizado'], true);
+
+		$rotulos = [
+			'ehTerceirizado' => $ehTerceirizado,
+			'modulo' => $ehTerceirizado ? 'Produção' : 'Ponto',
+			'moduloMinusculo' => $ehTerceirizado ? 'produção' : 'ponto',
+			'funcionario' => $ehTerceirizado ? 'Colaborador' : 'Funcionário'
+		];
+
+		return $rotulos;
+	}
+
+	function apf_formatarMotivoExibicao(string $motivo): string {
+		$rotulos = apf_getRotulos();
+		if ($rotulos['ehTerceirizado'] && preg_match('/ajuste\s+de\s+ponto/i', $motivo)) {
+			return preg_replace('/ajuste\s+de\s+ponto/i', 'Ajuste de Jornada', $motivo);
+		}
+
+		return $motivo;
+	}
 
 	function verificarPontoExistente($matricula, $data, $hora) {
 		$ponto = mysqli_fetch_assoc(query("
@@ -89,33 +155,116 @@
 		return "Nenhum registro próximo encontrado.";
 	}
 
-	function processarDocumentoAgrupado($idMotorista, $data) {
+	function obterGestoresSolicitanteTexto($idUsuarioSolicitante) {
+		$idUsuarioSolicitante = intval($idUsuarioSolicitante);
+		if ($idUsuarioSolicitante <= 0) {
+			return 'N/A';
+		}
+
+		$sql = "SELECT e.enti_setor_id, e.enti_tx_tipoOperacao
+				FROM user u
+				LEFT JOIN entidade e ON e.enti_nb_id = u.user_nb_entidade
+				WHERE u.user_nb_id = {$idUsuarioSolicitante}
+				LIMIT 1";
+		$res = query($sql);
+		$ent = ($res instanceof mysqli_result) ? mysqli_fetch_assoc($res) : [];
+		$setorId = intval($ent['enti_setor_id'] ?? 0);
+		$operacaoId = intval($ent['enti_tx_tipoOperacao'] ?? 0);
+
+		$gestores = [];
+		if ($setorId > 0) {
+			$resSetor = query("SELECT e.enti_nb_id, e.enti_tx_nome
+							   FROM setor_responsavel sr
+							   INNER JOIN entidade e ON e.enti_nb_id = sr.sres_nb_entidade_id
+							   WHERE sr.sres_nb_setor_id = {$setorId}
+							     AND sr.sres_tx_status = 'ativo'
+							   ORDER BY COALESCE(sr.sres_nb_ordem,0), e.enti_tx_nome");
+			if ($resSetor instanceof mysqli_result) {
+				while ($r = mysqli_fetch_assoc($resSetor)) {
+					$id = intval($r['enti_nb_id'] ?? 0);
+					$nome = trim(strval($r['enti_tx_nome'] ?? ''));
+					if ($id > 0 && $nome !== '') {
+						$gestores[$id] = $nome;
+					}
+				}
+			}
+		}
+
+		if ($operacaoId > 0) {
+			$resOper = query("SELECT e.enti_nb_id, e.enti_tx_nome
+							  FROM operacao_responsavel orv
+							  INNER JOIN entidade e ON e.enti_nb_id = orv.opre_nb_entidade_id
+							  WHERE orv.opre_nb_operacao_id = {$operacaoId}
+							    AND orv.opre_tx_status = 'ativo'
+							  ORDER BY COALESCE(orv.opre_nb_ordem,0), e.enti_tx_nome");
+			if ($resOper instanceof mysqli_result) {
+				while ($r = mysqli_fetch_assoc($resOper)) {
+					$id = intval($r['enti_nb_id'] ?? 0);
+					$nome = trim(strval($r['enti_tx_nome'] ?? ''));
+					if ($id > 0 && $nome !== '') {
+						$gestores[$id] = $nome;
+					}
+				}
+			}
+		}
+
+		if (empty($gestores)) {
+			return 'N/A';
+		}
+
+		return implode(' / ', array_values($gestores));
+	}
+
+	function normalizarChavePdf(string $txt): string {
+		$txt = trim($txt);
+		$map = [
+			'á'=>'a','à'=>'a','ã'=>'a','â'=>'a','ä'=>'a','Á'=>'a','À'=>'a','Ã'=>'a','Â'=>'a','Ä'=>'a',
+			'é'=>'e','è'=>'e','ê'=>'e','ë'=>'e','É'=>'e','È'=>'e','Ê'=>'e','Ë'=>'e',
+			'í'=>'i','ì'=>'i','î'=>'i','ï'=>'i','Í'=>'i','Ì'=>'i','Î'=>'i','Ï'=>'i',
+			'ó'=>'o','ò'=>'o','ô'=>'o','õ'=>'o','ö'=>'o','Ó'=>'o','Ò'=>'o','Ô'=>'o','Õ'=>'o','Ö'=>'o',
+			'ú'=>'u','ù'=>'u','û'=>'u','ü'=>'u','Ú'=>'u','Ù'=>'u','Û'=>'u','Ü'=>'u',
+			'ç'=>'c','Ç'=>'c'
+		];
+		$txt = strtr($txt, $map);
+		$txt = strtolower($txt);
+		$txt = preg_replace('/[^a-z0-9]+/', ' ', $txt);
+		return trim(strval($txt));
+	}
+
+	function processarDocumentoAgrupado($idMotorista, $loteDocumento) {
 		global $conn;
+		$loteDocumento = trim(strval($loteDocumento));
 
 		// 1. Identificar o tipo de documento de ajuste
 		// Priorizar busca exata conforme exibido na interface do usuário
-		$tipoDoc = mysqli_fetch_assoc(query("SELECT tipo_nb_id FROM tipos_documentos WHERE tipo_tx_status = 'ativo' AND (tipo_tx_nome = 'Ajuste Ponto' OR tipo_tx_nome = 'Solicitação de Ajuste') LIMIT 1"));
+		$tipoDoc = mysqli_fetch_assoc(query("SELECT tipo_nb_id FROM tipos_documentos WHERE tipo_tx_status = 'ativo' AND (tipo_tx_nome = 'Comunicação Interna' OR tipo_tx_nome = 'Comunicacao Interna' OR tipo_tx_nome = 'Ajuste Ponto' OR tipo_tx_nome = 'Solicitação de Ajuste') LIMIT 1"));
 		// Nome do documento criado em tipo de documento
 		if (!$tipoDoc) {
-			$tipoDoc = mysqli_fetch_assoc(query("SELECT tipo_nb_id FROM tipos_documentos WHERE tipo_tx_status = 'ativo' AND (tipo_tx_nome LIKE '%Ajuste Ponto%' OR tipo_tx_nome LIKE '%Solicitação de Ajuste%') LIMIT 1"));
+			$tipoDoc = mysqli_fetch_assoc(query("SELECT tipo_nb_id FROM tipos_documentos WHERE tipo_tx_status = 'ativo' AND (tipo_tx_nome LIKE '%Comunic%Interna%' OR tipo_tx_nome LIKE '%Ajuste Ponto%' OR tipo_tx_nome LIKE '%Solicita%de Ajuste%') LIMIT 1"));
 		}
 		$idTipo = $tipoDoc['tipo_nb_id'] ?? 0;
 
 		if (!$idTipo) return; // Não há modelo de documento configurado
 
-		// 2. Buscar todas as solicitações do dia para este motorista que estão em estado editável ('enviada')
+		if ($loteDocumento === '') {
+			$loteDocumento = date('Y-m-d H:i:s');
+		}
+
+		// 2. Buscar todas as solicitações do lote enviado para este motorista.
 		$solicitacoes = mysqli_fetch_all(query("
 			SELECT sa.*, m.macr_tx_nome, mot.moti_tx_nome
 			FROM solicitacoes_ajuste sa
 			LEFT JOIN macroponto m ON sa.id_macro = m.macr_nb_id
 			LEFT JOIN motivo mot ON sa.id_motivo = mot.moti_nb_id
 			WHERE sa.id_motorista = $idMotorista 
-			  AND sa.data_ajuste = '$data'
+			  AND sa.data_envio_documento = '$loteDocumento'
 			  AND sa.status = 'enviada'
 			ORDER BY sa.hora_ajuste ASC
 		"), MYSQLI_ASSOC);
 
 		if (empty($solicitacoes)) return;
+
+		$idUsuarioSolicitanteDoc = intval($solicitacoes[0]['id_usuario_solicitante'] ?? ($_SESSION['user_nb_id'] ?? 0));
 
 		// 3. Tentar encontrar uma instância existente vinculada a estas solicitações
 		$idInstancia = 0;
@@ -126,64 +275,37 @@
 			}
 		}
 
-		// 4. Se não achou por vínculo direto, busca na tabela de instâncias por data/motorista
-		if (!$idInstancia) {
-			// Garantir que a coluna de vínculo existe
-			$checkCol = query("SHOW COLUMNS FROM inst_documento_modulo LIKE 'inst_nb_entidade'");
-			if (!($checkCol instanceof mysqli_result) || mysqli_num_rows($checkCol) == 0) {
-				criarTabelaSolicitacoes();
-			}
-
-			$instancia = mysqli_fetch_assoc(query("
-				SELECT inst_nb_id 
-				FROM inst_documento_modulo 
-				WHERE inst_nb_tipo_doc = $idTipo 
-				  AND inst_nb_entidade = $idMotorista 
-				  AND inst_tx_data_referencia = '$data'
-				  AND inst_tx_status = 'ativo'
-				LIMIT 1
-			"));
-			
-			if ($instancia) {
-				$idInstancia = $instancia['inst_nb_id'];
-			}
-		}
-
-		// 5. Validar a instância encontrada (Trava de segurança: se houver solicitações não-enviadas nela, criar nova)
-		if ($idInstancia) {
-			$travado = mysqli_fetch_assoc(query("SELECT id FROM solicitacoes_ajuste WHERE id_instancia_documento = $idInstancia AND status != 'enviada' LIMIT 1"));
-			if ($travado) {
-				$idInstancia = 0;
-			}
-		}
-
-		// 6. Persistir a instância (Criar se não existir)
+		// 4. Persistir a instância (Criar se não existir)
 		$motorista = mysqli_fetch_assoc(query("SELECT * FROM entidade WHERE enti_nb_id = $idMotorista"));
 		$matricula = $motorista['enti_tx_matricula'];
 
 		if (!$idInstancia) {
+			$dataReferencia = date('Y-m-d', strtotime($loteDocumento));
 			query("INSERT INTO inst_documento_modulo (inst_nb_tipo_doc, inst_nb_user, inst_nb_entidade, inst_tx_data_referencia, inst_dt_criacao, inst_tx_status) 
-				   VALUES ($idTipo, {$_SESSION['user_nb_id']}, $idMotorista, '$data', '".date('Y-m-d H:i:s')."', 'ativo')");
+				   VALUES ($idTipo, {$_SESSION['user_nb_id']}, $idMotorista, '$dataReferencia', '".date('Y-m-d H:i:s')."', 'ativo')");
 			$idInstancia = mysqli_insert_id($GLOBALS['conn']);
 		}
 
-		// 7. Vincular TODAS as solicitações do dia a esta instância
-		query("UPDATE solicitacoes_ajuste SET id_instancia_documento = $idInstancia WHERE id_motorista = $idMotorista AND data_ajuste = '$data' AND status = 'enviada'");
+		// 5. Vincular TODAS as solicitações do lote a esta instância
+		$queryLote = "UPDATE solicitacoes_ajuste SET id_instancia_documento = $idInstancia WHERE id_motorista = $idMotorista AND status = 'enviada' AND data_envio_documento = '" . mysqli_real_escape_string($GLOBALS['conn'], $loteDocumento) . "'";
+		query($queryLote);
 
-		// 8. Montar o conteúdo textual consolidado (Formato HTML Profissional para PDF)
-		$resumoAjustes = '<h3 style="text-align:center;">Solicitações de Ajuste - Data: ' . date('d/m/Y', strtotime($data)) . '</h3>';
+		// 6. Montar o conteúdo textual consolidado (Formato HTML Profissional para PDF)
+		$resumoAjustes = '<h3 style="text-align:center;">Solicitações de Ajuste - Data: ' . date('d/m/Y', strtotime($loteDocumento)) . '</h3>';
 		$resumoAjustes .= '<table border="1" cellpadding="5" cellspacing="0" style="width:100%;">';
 		$resumoAjustes .= '<tr style="background-color:#eeeeee; font-weight:bold; text-align:center;">
-							<th width="15%">Horário</th>
-							<th width="20%">Tipo</th>
-							<th width="20%">Motivo</th>
-							<th width="25%">Justificativa</th>
-							<th width="20%">Status no Banco</th>
+							<th width="12%">Data</th>
+							<th width="12%">Horário</th>
+							<th width="18%">Tipo</th>
+							<th width="18%">Motivo</th>
+							<th width="28%">Justificativa</th>
+							<th width="12%">Status no Banco</th>
 						   </tr>';
 		
 		foreach ($solicitacoes as $s) {
-			$existente = verificarPontoExistente($matricula, $data, $s['hora_ajuste']);
+			$existente = verificarPontoExistente($matricula, $s['data_ajuste'], $s['hora_ajuste']);
 			$resumoAjustes .= '<tr>
+								<td style="text-align:center;">' . date('d/m/Y', strtotime($s['data_ajuste'])) . '</td>
 								<td style="text-align:center;">' . $s['hora_ajuste'] . '</td>
 								<td>' . $s['macr_tx_nome'] . '</td>
 								<td>' . $s['moti_tx_nome'] . '</td>
@@ -196,18 +318,23 @@
 		// 9. Preencher/Atualizar os campos do documento
 		$campos = mysqli_fetch_all(query("SELECT * FROM camp_documento_modulo WHERE camp_nb_tipo_doc = $idTipo AND camp_tx_status = 'ativo'"), MYSQLI_ASSOC);
 		foreach ($campos as $c) {
-			$label = mb_strtoupper($c['camp_tx_label'], 'UTF-8');
+			$label = normalizarChavePdf(strval($c['camp_tx_label'] ?? ''));
 			$valor = '';
 
-			if (strpos($label, 'DATA') !== false) {
-				$valor = date('d/m/Y', strtotime($data));
-			} elseif (strpos($label, 'NOME') !== false || strpos($label, 'FUNCIONÁRIO') !== false) {
+			if ($label === 'data') {
+				$valor = date('d/m/Y', strtotime($loteDocumento));
+			} elseif ($label === 'nome' || $label === 'funcionario') {
 				$valor = $motorista['enti_tx_nome'];
-			} elseif (strpos($label, 'MATRÍCULA') !== false) {
+			} elseif ($label === 'matricula') {
 				$valor = $matricula;
-			} elseif (strpos($label, 'CPF') !== false) {
+			} elseif ($label === 'cpf') {
 				$valor = $motorista['enti_tx_cpf'];
-			} elseif (strpos($label, 'JUSTIFICATIVA') !== false || strpos($label, 'DESCRIÇÃO') !== false || strpos($label, 'DETALHE') !== false || strpos($label, 'RESUMO') !== false) {
+			} elseif ($label === 'para') {
+				$valor = obterGestoresSolicitanteTexto($idUsuarioSolicitanteDoc);
+			} elseif ($label === 'de') {
+				$solicitante = mysqli_fetch_assoc(query("SELECT user_tx_nome FROM user WHERE user_nb_id = " . $idUsuarioSolicitanteDoc . " LIMIT 1"));
+				$valor = trim(strval($solicitante['user_tx_nome'] ?? ''));
+			} elseif ($label === 'justificativa' || $label === 'descricao' || $label === 'detalhe' || $label === 'resumo' || $label === 'observacoes' || $label === 'observacao' || $label === 'obs') {
 				$valor = $resumoAjustes;
 			}
 
@@ -286,6 +413,7 @@
 	}
 
 	function gerarTabelaSolicitacoes($idMotorista) {
+		$idSolicitanteLogado = intval($_SESSION['user_nb_id'] ?? 0);
 		// Buscar todas as solicitações do motorista
 		$sql = "
 			SELECT 
@@ -300,6 +428,7 @@
 				sa.justificativa_gestor
 			FROM solicitacoes_ajuste sa
 			WHERE sa.id_motorista = {$idMotorista}
+			  AND sa.id_usuario_solicitante = {$idSolicitanteLogado}
 			ORDER BY sa.data_solicitacao DESC
 		";
 
@@ -341,11 +470,17 @@
 				$acoes = "<span style='color:#999; font-size:12px;'>-</span>";
 			}
 
+			$nomeMotivo = 'N/A';
+			if (!empty($row['id_motivo'])) {
+				$nomeMotivo = mysqli_fetch_assoc(query("SELECT moti_tx_nome FROM motivo WHERE moti_nb_id = {$row['id_motivo']} LIMIT 1"))['moti_tx_nome'] ?? 'N/A';
+				$nomeMotivo = apf_formatarMotivoExibicao(strval($nomeMotivo));
+			}
+
 			$linhas[] = [
 				date('d/m/Y', strtotime($row['data_ajuste'])),
 				$row['hora_ajuste'],
 				$row['id_macro'] ? mysqli_fetch_assoc(query("SELECT macr_tx_nome FROM macroponto WHERE macr_nb_id = {$row['id_macro']} LIMIT 1"))['macr_tx_nome'] : 'N/A',
-				$row['id_motivo'] ? mysqli_fetch_assoc(query("SELECT moti_tx_nome FROM motivo WHERE moti_nb_id = {$row['id_motivo']} LIMIT 1"))['moti_tx_nome'] : 'N/A',
+				$nomeMotivo,
 				substr($row['justificativa'] ?? '', 0, 50) . (strlen($row['justificativa'] ?? '') > 50 ? '...' : ''),
 				$statusBadge,
 				date('d/m/Y H:i', strtotime($row['data_solicitacao'])),
@@ -580,6 +715,7 @@
 	}
 
 	function gerarTabelaRascunhos($idMotorista) {
+		$idSolicitanteLogado = intval($_SESSION['user_nb_id'] ?? 0);
 
 		$sql = "
 			SELECT 
@@ -592,6 +728,7 @@
 				sa.data_solicitacao
 			FROM solicitacoes_ajuste sa
 			WHERE sa.id_motorista = {$idMotorista}
+			AND sa.id_usuario_solicitante = {$idSolicitanteLogado}
 			AND sa.status = 'rascunho'
 			ORDER BY sa.data_solicitacao DESC
 		";
@@ -640,6 +777,7 @@
 	}
 
 	function index() {
+		$rotulos = apf_getRotulos();
 
 		// Handler para deletar solicitação
 		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['deletar_solicitacao'])) {
@@ -679,9 +817,12 @@
 
 		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['enviar_lote'])) {
 			try {
-				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMotorista"] ?? '');
+				$idMotorista = intval($_POST["idMotorista"] ?? 0);
+				$idMotorista = apf_resolverMotoristaAlvo($idMotorista);
+				$idMotoristaSql = mysqli_real_escape_string($GLOBALS['conn'], strval($idMotorista));
+				$idSolicitanteLogado = intval($_SESSION['user_nb_id'] ?? 0);
 
-				if (empty($idMotorista)) {
+				if ($idMotorista <= 0 || $idSolicitanteLogado <= 0) {
 					echo "<script>alert('Motorista inválido');</script>";
 					exit;
 				}
@@ -690,7 +831,8 @@
 				$datas = mysqli_fetch_all(query("
 					SELECT DISTINCT data_ajuste 
 					FROM solicitacoes_ajuste
-					WHERE id_motorista = '$idMotorista'
+					WHERE id_motorista = '$idMotoristaSql'
+					AND id_usuario_solicitante = {$idSolicitanteLogado}
 					AND status = 'rascunho'
 				"), MYSQLI_ASSOC);
 
@@ -699,19 +841,16 @@
 					exit;
 				}
 
-				// 🔥 Atualizar todos os rascunhos
+				// Atualizar status para 'enviada' (PDF será gerado apenas na aprovação do gestor)
+				$loteDocumento = date('Y-m-d H:i:s');
 				mysqli_query($GLOBALS['conn'], "
 					UPDATE solicitacoes_ajuste 
-					SET status = 'enviada' 
-					WHERE id_motorista = '$idMotorista'
+					SET status = 'enviada',
+					    data_envio_documento = '{$loteDocumento}'
+					WHERE id_motorista = '$idMotoristaSql'
+					AND id_usuario_solicitante = {$idSolicitanteLogado}
 					AND status = 'rascunho'
 				");
-
-				// 🔥 Gerar documentos por dia
-				foreach ($datas as $d) {
-					$data = $d['data_ajuste'];
-					processarDocumentoAgrupado($idMotorista, $data);
-				}
 
 				header("Location: " . basename($_SERVER['PHP_SELF']) . "?msg=enviado&idMotorista={$idMotorista}");
 				exit;
@@ -724,7 +863,9 @@
 
 		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['salvar_rascunho'])) {
 			try {
-				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMotorista"] ?? '');
+				$idMotorista = intval($_POST["idMotorista"] ?? 0);
+				$idMotorista = apf_resolverMotoristaAlvo($idMotorista);
+				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], strval($idMotorista));
 				$data = mysqli_real_escape_string($GLOBALS['conn'], $_POST["data"] ?? '');
 				$hora = mysqli_real_escape_string($GLOBALS['conn'], $_POST["hora"] ?? '');
 				$idMacro = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMacro"] ?? '');
@@ -779,7 +920,9 @@
 
 		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['enviar_solicitacao'])) {
 			try {
-				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMotorista"] ?? '');
+				$idMotorista = intval($_POST["idMotorista"] ?? 0);
+				$idMotorista = apf_resolverMotoristaAlvo($idMotorista);
+				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], strval($idMotorista));
 				$data = mysqli_real_escape_string($GLOBALS['conn'], $_POST["data"] ?? '');
 				$hora = mysqli_real_escape_string($GLOBALS['conn'], $_POST["hora"] ?? '');
 				$idMacro = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idMacro"] ?? '');
@@ -854,16 +997,14 @@
 				$setor = mysqli_real_escape_string($GLOBALS['conn'], $setor);
 				$subsetor = mysqli_real_escape_string($GLOBALS['conn'], $subsetor);
 
-				// Inserir solicitação
-				$sql = "INSERT INTO solicitacoes_ajuste (id_motorista, data_ajuste, hora_ajuste, id_macro, id_motivo, justificativa, status, data_solicitacao, id_usuario_solicitante, cargo_usuario, setor_usuario, subsetor_usuario) 
-						VALUES ('$idMotorista', '$data', '$hora', '$idMacro', '$motivo', '$justificativa', 'enviada', NOW(), '{$_SESSION['user_nb_id']}', '$cargo', '$setor', '$subsetor')";
+				// Inserir solicitação (PDF será gerado apenas na aprovação do gestor)
+				$loteDocumento = date('Y-m-d H:i:s');
+				$sql = "INSERT INTO solicitacoes_ajuste (id_motorista, data_ajuste, hora_ajuste, id_macro, id_motivo, justificativa, status, data_solicitacao, data_envio_documento, id_usuario_solicitante, cargo_usuario, setor_usuario, subsetor_usuario) 
+						VALUES ('$idMotorista', '$data', '$hora', '$idMacro', '$motivo', '$justificativa', 'enviada', NOW(), '$loteDocumento', '{$_SESSION['user_nb_id']}', '$cargo', '$setor', '$subsetor')";
 				
 				$resultado = @mysqli_query($GLOBALS['conn'], $sql);
 				
 				if ($resultado) {
-					// Sincronizar documento após inserção
-					processarDocumentoAgrupado($idMotorista, $data);
-					
 					// Redirecionar de volta para a mesma página, mantendo data e justificativa na URL
 					$justEncoded = urlencode($justificativa);
 					header("Location: " . basename($_SERVER['PHP_SELF']) . "?msg=sucesso&idMotorista={$idMotorista}&data_p={$data}&just_p={$justEncoded}");
@@ -881,7 +1022,7 @@
 
 		// Buffer the output to inject script in head
 		ob_start();
-		cabecalho("Ajuste de Ponto");
+		cabecalho("Ajuste de {$rotulos['modulo']}");
 		$cabecalho_html = ob_get_clean();
 
 		// Injetar script no head antes de fechar
@@ -919,6 +1060,7 @@
 		}
 
 		$idMotorista = $_GET["idMotorista"] ?? $_POST["idMotorista"] ?? 0;
+		$idMotorista = apf_resolverMotoristaAlvo($idMotorista);
 
 		$motorista = mysqli_fetch_assoc(query("
 			SELECT enti_nb_id, enti_tx_matricula, enti_tx_nome, enti_tx_ocupacao,
@@ -967,7 +1109,7 @@
 		$botoes[] = "<button type='button' id='btnUsarUltima' class='btn btn-info' style='display:none;' title='Uma solicitação já foi enviada para este dia. Clique para aplicar a mesma justificativa.'>Repetir Justificativa do Dia</button>";
 		$botoes[] = criarBotaoVoltar("espelho_ponto.php");
 
-		echo abre_form("Dados do Ajuste de Ponto");
+		echo abre_form("Dados do Ajuste de {$rotulos['modulo']}");
 		echo "<input type='hidden' name='idMotorista' value='{$idMotorista}'>";
 		//echo "<input type='hidden' name='enviar_solicitacao' value='1'>";
 		echo "<input type='hidden' name='confirmado_existente' id='confirmado_existente' value='0'>";
@@ -1009,16 +1151,29 @@
 
 		echo "
 		<script>
+		const rotuloModulo = " . json_encode($rotulos['moduloMinusculo']) . ";
+		const ehTerceirizado = " . (($rotulos['ehTerceirizado']) ? "true" : "false") . ";
 		document.addEventListener('DOMContentLoaded', function () {
 			const form = document.querySelector('form[name=\"contex_form\"]');
 			const campoData = (form && form.elements && form.elements['data']) ? form.elements['data'] : document.querySelector('[name=\"data\"]');
 			const campoMacro = (form && form.elements && form.elements['idMacro']) ? form.elements['idMacro'] : document.querySelector('[name=\"idMacro\"]');
+			const campoMotivo = (form && form.elements && form.elements['motivo']) ? form.elements['motivo'] : document.querySelector('[name=\"motivo\"]');
 			const campoJustificativa = (form && form.elements && form.elements['justificativa']) ? form.elements['justificativa'] : document.querySelector('[name=\"justificativa\"]');
 			const idMotoristaEl = document.querySelector('input[name=\"idMotorista\"]');
 			const confirmadoEl = document.getElementById('confirmado_existente');
 			const btnUsarUltima = document.getElementById('btnUsarUltima');
 
 			const idMotorista = idMotoristaEl ? idMotoristaEl.value : '';
+
+			function ajustarOpcaoMotivoTerceirizado() {
+				if (!ehTerceirizado || !campoMotivo) return;
+				Array.prototype.forEach.call(campoMotivo.options || [], function (opt) {
+					if (!opt || !opt.text) return;
+					if (/ajuste\s+de\s+ponto/i.test(opt.text)) {
+						opt.text = opt.text.replace(/ajuste\s+de\s+ponto/ig, 'Ajuste de Jornada');
+					}
+				});
+			}
 
 			function checarJustificativaExistente() {
 				if (!campoData || !btnUsarUltima || !campoJustificativa || !idMotorista) return;
@@ -1095,6 +1250,8 @@
 				if (campoData.value) checarJustificativaExistente();
 			}
 
+			ajustarOpcaoMotivoTerceirizado();
+
 			if (form) {
 				form.addEventListener('submit', function (event) {
 
@@ -1130,7 +1287,7 @@
 						form.submit();
 					})
 					.catch(function () {
-						const msg = 'Não foi possível validar se já existe ponto para este dia.\\n\\nDeseja enviar a solicitação mesmo assim?';
+						const msg = 'Não foi possível validar se já existe ' + rotuloModulo + ' para este dia.\\n\\nDeseja enviar a solicitação mesmo assim?';
 						if (!confirm(msg)) return;
 						confirmadoEl.value = '1';
 						form.submit();

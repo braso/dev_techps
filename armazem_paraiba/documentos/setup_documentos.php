@@ -3,7 +3,7 @@ include_once "../conecta.php";
 
 echo "<h2>Inicializando Banco de Dados - Módulo de Documentos</h2>";
 
-// Função auxiliar para verificar existência de coluna
+// Verifica se uma coluna existe para aplicacao segura de migracoes.
 function colunaExiste($conn, $tabela, $coluna) {
     $res = mysqli_query($conn, "SHOW COLUMNS FROM `$tabela` LIKE '$coluna'");
     return mysqli_num_rows($res) > 0;

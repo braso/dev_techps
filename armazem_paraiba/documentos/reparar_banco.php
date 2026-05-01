@@ -3,6 +3,7 @@ include_once "../conecta.php";
 
 echo "<h2>Reparando Banco de Dados - Tabelas de Documentos</h2>";
 
+// Verifica se uma coluna existe em tabela local (modo reparo).
 function colunaExisteLocal($conn, $tabela, $coluna) {
     try {
         $res = mysqli_query($conn, "SHOW COLUMNS FROM `$tabela` LIKE '$coluna'");

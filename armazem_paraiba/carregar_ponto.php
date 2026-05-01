@@ -9,7 +9,7 @@
 
 
 	global $path;
-	$path = "arquivos/pontos";
+	$path = __DIR__."/arquivos/pontos";
 
 	if(is_bool(strpos($_SERVER["REQUEST_URI"], "carregar_ftp"))){
 		include_once "carregar_ftp.php";
@@ -301,7 +301,7 @@
 		$buttons = [
 			botao("Buscar", "index"),
 			botao("Inserir novo arquivo", "viewManualInsert", "", "", "", "", "btn btn-success"),
-			botao("Atualizar FTP", "updateFTP('".$path."')", "path", $path, "", "", "btn btn-primary"),
+			botao("Atualizar FTP", "updateFTP()", "path", "", "", "", "btn btn-primary"),
 			// botao("Configuração", "layout_notificacao", "", "", "", "", "btn btn-warning")
 		];
 

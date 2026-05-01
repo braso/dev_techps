@@ -1,6 +1,508 @@
 <?php
 	include "../funcoes_ponto.php";
 	@mysqli_query($GLOBALS['conn'], "ALTER TABLE solicitacoes_ajuste ADD COLUMN justificativa_gestor TEXT DEFAULT NULL");
+	@mysqli_query($GLOBALS['conn'], "ALTER TABLE solicitacoes_ajuste ADD COLUMN id_instancia_documento INT NULL");
+	@mysqli_query($GLOBALS['conn'], "ALTER TABLE solicitacoes_ajuste ADD COLUMN data_envio_documento DATETIME NULL");
+
+	function ga_log_runtime(string $mensagem): void {
+		$linha = date('Y-m-d H:i:s') . ' | ' . $mensagem . PHP_EOL;
+		@file_put_contents(__DIR__ . '/../debug_log_ajustes.txt', $linha, FILE_APPEND);
+	}
+
+	function ga_normalizarTextoDocumento(string $texto): string {
+		$texto = mb_strtolower(trim($texto), 'UTF-8');
+		$mapa = array(
+			'á' => 'a', 'à' => 'a', 'ã' => 'a', 'â' => 'a', 'ä' => 'a',
+			'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
+			'í' => 'i', 'ì' => 'i', 'î' => 'i', 'ï' => 'i',
+			'ó' => 'o', 'ò' => 'o', 'õ' => 'o', 'ô' => 'o', 'ö' => 'o',
+			'ú' => 'u', 'ù' => 'u', 'û' => 'u', 'ü' => 'u',
+			'ç' => 'c'
+		);
+		$texto = strtr($texto, $mapa);
+		$texto = preg_replace('/[^a-z0-9]+/', ' ', $texto);
+		return trim(strval($texto));
+	}
+
+	function ga_formatarDataDocumento(string $valor): string {
+		$valor = trim($valor);
+		if ($valor === '' || $valor === '0000-00-00' || $valor === '0000-00-00 00:00:00') {
+			return '';
+		}
+		$ts = strtotime($valor);
+		return $ts ? date('d/m/Y', $ts) : $valor;
+	}
+
+	function ga_resolverCaminhoPdfArquivo(string $caminho): string {
+		$caminho = trim($caminho);
+		if ($caminho === '') {
+			return '';
+		}
+
+		if (preg_match('#^(https?:)?//#i', $caminho)) {
+			return $caminho;
+		}
+
+		$candidatos = array();
+		if ($caminho[0] === '/' || preg_match('/^[A-Za-z]:[\\\/]/', $caminho)) {
+			$candidatos[] = $caminho;
+		} else {
+			$candidatos[] = __DIR__ . '/' . $caminho;
+			$candidatos[] = dirname(__DIR__) . '/' . ltrim($caminho, '/\\');
+			$candidatos[] = $caminho;
+		}
+
+		foreach ($candidatos as $candidato) {
+			$real = realpath($candidato);
+			if ($real && file_exists($real)) {
+				return $real;
+			}
+			if (file_exists($candidato)) {
+				return $candidato;
+			}
+		}
+
+		return '';
+	}
+
+	function ga_buscarTipoDocumentoAjuste() {
+		$res = query("SELECT tipo_nb_id, tipo_tx_nome, tipo_tx_logo FROM tipos_documentos WHERE tipo_tx_status = 'ativo' AND (tipo_tx_nome = 'Comunicação Interna' OR tipo_tx_nome = 'Comunicacao Interna' OR tipo_tx_nome = 'Solicitação de Ajuste' OR tipo_tx_nome = 'Solicitacao de Ajuste' OR tipo_tx_nome = 'Ajuste Ponto' OR tipo_tx_nome LIKE '%Ajuste%Ponto%' OR tipo_tx_nome LIKE '%Solicita%de Ajuste%') ORDER BY CASE WHEN tipo_tx_nome IN ('Comunicação Interna', 'Comunicacao Interna') THEN 1 WHEN tipo_tx_nome LIKE '%Solicita%de Ajuste%' THEN 2 WHEN tipo_tx_nome LIKE '%Ajuste%Ponto%' THEN 3 ELSE 4 END, tipo_nb_id ASC LIMIT 1");
+		return ($res instanceof mysqli_result) ? mysqli_fetch_assoc($res) : [];
+	}
+
+	function ga_buscarCamposDocumentoAjuste(int $idTipo): array {
+		if ($idTipo <= 0) {
+			return [];
+		}
+		$res = query("SELECT * FROM camp_documento_modulo WHERE camp_nb_tipo_doc = {$idTipo} AND camp_tx_status = 'ativo' ORDER BY camp_nb_ordem ASC, camp_nb_id ASC");
+		return ($res instanceof mysqli_result) ? mysqli_fetch_all($res, MYSQLI_ASSOC) : [];
+	}
+
+	function ga_buscarSolicitacaoAjuste(int $idSolicitacao): array {
+		if ($idSolicitacao <= 0) {
+			return [];
+		}
+		$res = query("SELECT s.*, e.enti_tx_nome AS motorista_nome, e.enti_tx_matricula AS motorista_matricula, e.enti_tx_cpf AS motorista_cpf, e.enti_tx_email AS motorista_email, m.macr_tx_nome, mo.moti_tx_nome, us.user_tx_nome AS solicitante_user_nome, ug.user_tx_nome AS superior_nome FROM solicitacoes_ajuste s JOIN entidade e ON s.id_motorista = e.enti_nb_id LEFT JOIN macroponto m ON s.id_macro = m.macr_nb_id LEFT JOIN motivo mo ON s.id_motivo = mo.moti_nb_id LEFT JOIN user us ON s.id_usuario_solicitante = us.user_nb_id LEFT JOIN user ug ON s.id_superior = ug.user_nb_id WHERE s.id = {$idSolicitacao} LIMIT 1");
+		return ($res instanceof mysqli_result) ? (mysqli_fetch_assoc($res) ?: []) : [];
+	}
+
+	function ga_buscarEntidadePorUsuario(int $idUsuario): int {
+		if ($idUsuario <= 0) {
+			return 0;
+		}
+		$res = query("SELECT user_nb_entidade FROM user WHERE user_nb_id = {$idUsuario} LIMIT 1");
+		$row = ($res instanceof mysqli_result) ? mysqli_fetch_assoc($res) : [];
+		return intval($row['user_nb_entidade'] ?? 0);
+	}
+
+	function ga_colunaExiste(string $tabela, string $coluna): bool {
+		$res = query("SHOW COLUMNS FROM `{$tabela}` LIKE '" . mysqli_real_escape_string($GLOBALS['conn'], $coluna) . "'");
+		return ($res instanceof mysqli_result) ? mysqli_num_rows($res) > 0 : false;
+	}
+
+	function ga_resolverValorCampoAjuste(array $campo, array $solicitacao, string $nomeAprovador = ''): string {
+		$label = ga_normalizarTextoDocumento(strval($campo['camp_tx_label'] ?? ''));
+		$tipoCampo = ga_normalizarTextoDocumento(strval($campo['camp_tx_tipo'] ?? ''));
+		$nomeMotorista = trim(strval($solicitacao['motorista_nome'] ?? ''));
+		$matricula = trim(strval($solicitacao['motorista_matricula'] ?? ''));
+		$cpf = trim(strval($solicitacao['motorista_cpf'] ?? ''));
+		$setor = trim(strval($solicitacao['setor_usuario'] ?? ''));
+		$subsetor = trim(strval($solicitacao['subsetor_usuario'] ?? ''));
+		$cargo = trim(strval($solicitacao['cargo_usuario'] ?? ''));
+		$dataAjuste = ga_formatarDataDocumento(strval($solicitacao['data_ajuste'] ?? ''));
+		$dataSolicitacao = ga_formatarDataDocumento(strval($solicitacao['data_solicitacao'] ?? ''));
+		$dataDecisao = ga_formatarDataDocumento(strval($solicitacao['data_decisao'] ?? ''));
+		$hora = trim(strval($solicitacao['hora_ajuste'] ?? ''));
+		$motivo = trim(strval($solicitacao['moti_tx_nome'] ?? ''));
+		$macro = trim(strval($solicitacao['macr_tx_nome'] ?? ''));
+		$justificativa = trim(strval($solicitacao['justificativa'] ?? ''));
+		$solicitante = trim(strval($solicitacao['solicitante_user_nome'] ?? ''));
+		$status = 'Aprovado';
+
+		if ($label === '') {
+			return '';
+		}
+
+		if (strpos($label, 'cpf') !== false) {
+			return $cpf;
+		}
+
+		if (strpos($label, 'matricula') !== false || strpos($label, 'matr cula') !== false) {
+			return $matricula;
+		}
+
+		if (strpos($label, 'cargo') !== false) {
+			return $cargo;
+		}
+
+		if (strpos($label, 'subsetor') !== false) {
+			return $subsetor;
+		}
+
+		if (strpos($label, 'setor') !== false) {
+			return $setor;
+		}
+
+		if (strpos($label, 'hora') !== false) {
+			return $hora;
+		}
+
+		if (strpos($label, 'motivo') !== false) {
+			return $motivo;
+		}
+
+		if (strpos($label, 'macro') !== false || strpos($label, 'tipo') !== false || strpos($label, 'evento') !== false) {
+			return $macro;
+		}
+
+		if (strpos($label, 'aprov') !== false || strpos($label, 'gestor') !== false || strpos($label, 'decisor') !== false || strpos($label, 'para') !== false) {
+			return $nomeAprovador;
+		}
+
+		if (strpos($label, 'emit') !== false || strpos($label, 'criador') !== false || strpos($label, 'solicit') !== false || $label === 'de') {
+			return $solicitante !== '' ? $solicitante : $nomeMotorista;
+		}
+
+		if (strpos($label, 'nome') !== false || strpos($label, 'funcionario') !== false || strpos($label, 'colaborador') !== false) {
+			return $nomeMotorista;
+		}
+
+		if (strpos($label, 'data') !== false) {
+			if (strpos($label, 'decis') !== false || strpos($label, 'aprov') !== false || strpos($label, 'gestor') !== false) {
+				return $dataDecisao !== '' ? $dataDecisao : date('d/m/Y');
+			}
+			if (strpos($label, 'solicit') !== false || strpos($label, 'envio') !== false || strpos($label, 'cadastro') !== false || strpos($label, 'criacao') !== false) {
+				return $dataSolicitacao;
+			}
+			return $dataAjuste;
+		}
+
+		if (strpos($label, 'justific') !== false || strpos($label, 'observ') !== false || strpos($label, 'descricao') !== false || strpos($label, 'detalhe') !== false || strpos($label, 'resumo') !== false || strpos($label, 'obs') !== false) {
+			$html = '<table border="1" cellpadding="4" cellspacing="0" style="width:100%;">';
+			$html .= '<tr><td width="25%"><b>Funcionário</b></td><td width="75%">' . htmlspecialchars($nomeMotorista, ENT_QUOTES, 'UTF-8') . '</td></tr>';
+			$html .= '<tr><td><b>Matrícula</b></td><td>' . htmlspecialchars($matricula, ENT_QUOTES, 'UTF-8') . '</td></tr>';
+			$html .= '<tr><td><b>Data/Hora</b></td><td>' . htmlspecialchars(trim($dataAjuste . ' ' . $hora), ENT_QUOTES, 'UTF-8') . '</td></tr>';
+			$html .= '<tr><td><b>Tipo</b></td><td>' . htmlspecialchars($macro, ENT_QUOTES, 'UTF-8') . '</td></tr>';
+			$html .= '<tr><td><b>Motivo</b></td><td>' . htmlspecialchars($motivo, ENT_QUOTES, 'UTF-8') . '</td></tr>';
+			$html .= '<tr><td><b>Justificativa</b></td><td>' . nl2br(htmlspecialchars($justificativa, ENT_QUOTES, 'UTF-8')) . '</td></tr>';
+			$html .= '<tr><td><b>Solicitante</b></td><td>' . htmlspecialchars($solicitante, ENT_QUOTES, 'UTF-8') . '</td></tr>';
+			$html .= '<tr><td><b>Gestor</b></td><td>' . htmlspecialchars($nomeAprovador, ENT_QUOTES, 'UTF-8') . '</td></tr>';
+			$html .= '<tr><td><b>Status</b></td><td>' . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . '</td></tr>';
+			$html .= '</table>';
+			return $html;
+		}
+
+		if ($tipoCampo === 'data') {
+			return $dataAjuste;
+		}
+
+		if ($tipoCampo === 'usuario') {
+			return $nomeMotorista;
+		}
+
+		return $justificativa;
+	}
+
+	function ga_gerarArquivoPdfInstanciaDocumento(int $idInstancia): string {
+		$idInstancia = intval($idInstancia);
+		if ($idInstancia <= 0) {
+			ga_log_runtime('PDF | instancia invalida: ' . $idInstancia);
+			return '';
+		}
+
+		$resDados = query("SELECT i.*, t.tipo_tx_nome, t.tipo_tx_logo, u.user_tx_nome AS criador_nome FROM inst_documento_modulo i JOIN tipos_documentos t ON t.tipo_nb_id = i.inst_nb_tipo_doc LEFT JOIN user u ON u.user_nb_id = i.inst_nb_user WHERE i.inst_nb_id = {$idInstancia} LIMIT 1");
+		$dados = ($resDados instanceof mysqli_result) ? mysqli_fetch_assoc($resDados) : [];
+		if (empty($dados)) {
+			ga_log_runtime('PDF | instancia nao encontrada: ' . $idInstancia);
+			return '';
+		}
+
+		$resCampos = query("SELECT v.valo_tx_valor, c.camp_tx_label, c.camp_tx_tipo FROM valo_documento_modulo v JOIN camp_documento_modulo c ON c.camp_nb_id = v.valo_nb_campo WHERE v.valo_nb_instancia = {$idInstancia} ORDER BY c.camp_nb_ordem ASC, c.camp_nb_id ASC");
+		$valores = [];
+		if ($resCampos instanceof mysqli_result) {
+			while ($row = mysqli_fetch_assoc($resCampos)) {
+				$valores[] = $row;
+			}
+		}
+
+		if (empty($valores)) {
+			ga_log_runtime('PDF | sem valores para instancia: ' . $idInstancia);
+			return '';
+		}
+
+		$tcpdfPath = dirname(__DIR__) . '/tcpdf/tcpdf.php';
+		if (!file_exists($tcpdfPath)) {
+			ga_log_runtime('PDF | tcpdf nao encontrado: ' . $tcpdfPath);
+			return '';
+		}
+		require_once $tcpdfPath;
+
+		if (!class_exists('GA_MYPDF')) {
+			class GA_MYPDF extends TCPDF {
+				public $custom_header = '';
+				public $logo_path = '';
+
+				public function Header() {
+					if (!empty($this->logo_path)) {
+						$logo = ga_resolverCaminhoPdfArquivo(strval($this->logo_path));
+						if ($logo !== '') {
+							$this->Image($logo, 15, 8, 30, 20, '', '', '', true);
+						}
+					}
+
+					$this->SetY(15);
+					$this->SetFont('helvetica', 'B', 14);
+					$this->Cell(0, 15, mb_strtoupper($this->custom_header, 'UTF-8'), 0, false, 'C', 0, '', 0, false, 'M', 'M');
+					$this->Line(15, 28, 195, 28);
+				}
+
+				public function Footer() {
+					$this->SetY(-15);
+					$this->SetFont('helvetica', 'I', 8);
+					$this->Cell(0, 10, 'Gerado em ' . date('d/m/Y H:i:s') . ' | Pagina ' . $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, false, 'C', 0, '', 0, false, 'T', 'M');
+				}
+			}
+		}
+
+		$dirPdf = dirname(__DIR__) . '/assinatura/uploads/tmp';
+		if (!is_dir($dirPdf)) {
+			@mkdir($dirPdf, 0777, true);
+		}
+
+		$nomeArquivo = 'ajuste_' . $idInstancia . '_' . date('YmdHis') . '.pdf';
+		$caminhoPdf = rtrim(str_replace('\\', '/', $dirPdf), '/') . '/' . $nomeArquivo;
+
+		$pdf = new GA_MYPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+		$pdf->custom_header = strval($dados['tipo_tx_nome'] ?? 'Ajuste de Ponto');
+		$pdf->logo_path = strval($dados['tipo_tx_logo'] ?? '');
+		$pdf->SetCreator(PDF_CREATOR);
+		$pdf->SetAuthor('Sistema Braso');
+		$pdf->SetTitle(strval($dados['tipo_tx_nome'] ?? 'Ajuste de Ponto'));
+		$pdf->SetMargins(15, 35, 15);
+		$pdf->SetAutoPageBreak(true, 15);
+		$pdf->AddPage();
+		$pdf->SetFont('helvetica', '', 11);
+
+		$html = '<table cellpadding="3" border="0" style="width:100%;">';
+		$html .= '<tr><td style="border-bottom:0.1pt solid #ddd;"><b>Data de Geração:</b> ' . date('d/m/Y H:i') . '</td></tr>';
+		$html .= '<tr><td style="border-bottom:0.1pt solid #ddd;"><b>Emitido por:</b> ' . htmlspecialchars(strval($dados['criador_nome'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td></tr>';
+		$html .= '</table><br><br>';
+
+		foreach ($valores as $valor) {
+			$conteudo = trim(strval($valor['valo_tx_valor'] ?? ''));
+			if ($conteudo === '') {
+				continue;
+			}
+			$label = htmlspecialchars(strval($valor['camp_tx_label'] ?? ''), ENT_QUOTES, 'UTF-8');
+			if (strpos($conteudo, '<table') !== false) {
+				$html .= '<br><b>' . $label . ':</b><br>' . $conteudo . '<br>';
+			} else {
+				$html .= '<table cellpadding="4" border="0" style="width:100%;">';
+				$html .= '<tr>';
+				$html .= '<td width="30%" style="border-bottom:0.1pt solid #eee;"><b>' . $label . ':</b></td>';
+				$html .= '<td width="70%" style="border-bottom:0.1pt solid #eee;">' . htmlspecialchars($conteudo, ENT_QUOTES, 'UTF-8') . '</td>';
+				$html .= '</tr>';
+				$html .= '</table>';
+			}
+		}
+
+		$pdf->writeHTML($html, true, false, true, false, '');
+		$pdf->Output($caminhoPdf, 'F');
+		ga_log_runtime('PDF | gerado: ' . $caminhoPdf . ' | existe=' . (file_exists($caminhoPdf) ? 'sim' : 'nao'));
+
+		return file_exists($caminhoPdf) ? $caminhoPdf : '';
+	}
+
+	function ga_montarSignatariosAjuste(array $solicitacao, int $idUsuarioAprovador): array {
+		$signatarios = [];
+		$map = [];
+		ga_log_runtime('SIGNATARIOS | montando para solicitacao=' . intval($solicitacao['id'] ?? 0) . ' aprovador=' . $idUsuarioAprovador);
+
+		$idMotorista = intval($solicitacao['id_motorista'] ?? 0);
+		$idEntAprovador = ga_buscarEntidadePorUsuario($idUsuarioAprovador);
+
+		$itens = [
+			['id' => $idMotorista, 'funcao' => 'Solicitante', 'user_id' => intval($solicitacao['id_usuario_solicitante'] ?? 0)],
+			['id' => $idEntAprovador, 'funcao' => 'Gestor Aprovador', 'user_id' => $idUsuarioAprovador]
+		];
+
+		foreach ($itens as $item) {
+			$idEnt = intval($item['id'] ?? 0);
+			if ($idEnt <= 0 || isset($map[$idEnt])) {
+				ga_log_runtime('SIGNATARIOS | item ignorado id=' . $idEnt . ' funcao=' . strval($item['funcao'] ?? ''));
+				continue;
+			}
+			$signatarios[] = [
+				'enti_nb_id' => $idEnt,
+				'funcao' => strval($item['funcao'] ?? 'Signatário'),
+				'ordem' => 1
+			];
+			$map[$idEnt] = true;
+		}
+
+		ga_log_runtime('SIGNATARIOS | total=' . count($signatarios));
+		return $signatarios;
+	}
+
+	function ga_enviarAssinaturaAjusteAprovado(int $idSolicitacao, int $idUsuarioAprovador): array {
+		$idSolicitacao = intval($idSolicitacao);
+		$idUsuarioAprovador = intval($idUsuarioAprovador);
+		if ($idSolicitacao <= 0 || $idUsuarioAprovador <= 0) {
+			ga_log_runtime('ASSINATURA | parametros invalidos solicitacao=' . $idSolicitacao . ' aprovador=' . $idUsuarioAprovador);
+			return ['ok' => false, 'error' => 'Solicitação ou aprovador inválido.'];
+		}
+		ga_log_runtime('ASSINATURA | inicio solicitacao=' . $idSolicitacao . ' aprovador=' . $idUsuarioAprovador);
+
+		$solicitacao = ga_buscarSolicitacaoAjuste($idSolicitacao);
+		if (empty($solicitacao)) {
+			ga_log_runtime('ASSINATURA | solicitacao nao encontrada=' . $idSolicitacao);
+			return ['ok' => false, 'error' => 'Solicitação de ajuste não encontrada.'];
+		}
+
+		$grupoEnvio = 'ajuste_ponto_' . $idSolicitacao;
+
+		$idInstancia = intval($solicitacao['id_instancia_documento'] ?? 0);
+		if ($idInstancia <= 0) {
+			ga_log_runtime('ASSINATURA | criando instancia nova para solicitacao=' . $idSolicitacao);
+			$tipo = ga_buscarTipoDocumentoAjuste();
+			$idTipo = intval($tipo['tipo_nb_id'] ?? 0);
+			if ($idTipo <= 0) {
+				ga_log_runtime('ASSINATURA | nenhum tipo de documento ativo encontrado');
+				return ['ok' => false, 'error' => 'Nenhum tipo de documento ativo foi encontrado para o ajuste.'];
+			}
+
+			$campos = ga_buscarCamposDocumentoAjuste($idTipo);
+			if (empty($campos)) {
+				ga_log_runtime('ASSINATURA | nenhum campo ativo encontrado para tipo=' . $idTipo);
+				return ['ok' => false, 'error' => 'Nenhum layout ativo foi encontrado para o documento de ajuste.'];
+			}
+
+			$idUsuarioCriador = intval($solicitacao['id_usuario_solicitante'] ?? $idUsuarioAprovador);
+			$sqlInstancia = "INSERT INTO inst_documento_modulo (inst_nb_tipo_doc, inst_nb_user, inst_dt_criacao, inst_tx_status) VALUES ({$idTipo}, {$idUsuarioCriador}, NOW(), 'ativo')";
+			if (mysqli_query($GLOBALS['conn'], $sqlInstancia)) {
+				$idInstancia = intval(mysqli_insert_id($GLOBALS['conn']));
+				if ($idInstancia > 0 && ga_colunaExiste('inst_documento_modulo', 'inst_nb_entidade') && ga_colunaExiste('inst_documento_modulo', 'inst_tx_data_referencia')) {
+					$dataReferencia = mysqli_real_escape_string($GLOBALS['conn'], strval($solicitacao['data_ajuste'] ?? date('Y-m-d')));
+					$idEntidadeDocumento = intval($solicitacao['id_motorista'] ?? 0);
+					query("UPDATE inst_documento_modulo SET inst_nb_entidade = {$idEntidadeDocumento}, inst_tx_data_referencia = '{$dataReferencia}' WHERE inst_nb_id = {$idInstancia} LIMIT 1");
+				}
+			} else {
+				ga_log_runtime('ASSINATURA | erro insert instancia: ' . mysqli_error($GLOBALS['conn']));
+			}
+
+			if ($idInstancia <= 0) {
+				ga_log_runtime('ASSINATURA | falha ao criar instancia para solicitacao=' . $idSolicitacao);
+				return ['ok' => false, 'error' => 'Falha ao criar a instância do documento.'];
+			}
+			ga_log_runtime('ASSINATURA | instancia criada=' . $idInstancia . ' tipo=' . $idTipo);
+
+			$nomeAprovador = trim(strval($solicitacao['superior_nome'] ?? ''));
+			if ($nomeAprovador === '') {
+				$resAprovador = query("SELECT user_tx_nome FROM user WHERE user_nb_id = {$idUsuarioAprovador} LIMIT 1");
+				$dadosAprovador = ($resAprovador instanceof mysqli_result) ? mysqli_fetch_assoc($resAprovador) : [];
+				$nomeAprovador = trim(strval($dadosAprovador['user_tx_nome'] ?? ''));
+			}
+
+			foreach ($campos as $campo) {
+				$valor = ga_resolverValorCampoAjuste($campo, $solicitacao, $nomeAprovador);
+				if ($valor === '') {
+					continue;
+				}
+				$dadosValor = array(
+					'valo_nb_instancia' => $idInstancia,
+					'valo_nb_campo' => intval($campo['camp_nb_id'] ?? 0),
+					'valo_tx_valor' => strval($valor),
+					'valo_tx_status' => 'ativo'
+				);
+				inserir('valo_documento_modulo', array_keys($dadosValor), array_values($dadosValor));
+			}
+
+			query("UPDATE solicitacoes_ajuste SET id_instancia_documento = {$idInstancia} WHERE id = {$idSolicitacao} LIMIT 1");
+			ga_log_runtime('ASSINATURA | instancia vinculada a solicitacao=' . $idSolicitacao . ' inst=' . $idInstancia);
+		}
+
+		$arquivoPdf = ga_gerarArquivoPdfInstanciaDocumento($idInstancia);
+		if ($arquivoPdf === '') {
+			ga_log_runtime('ASSINATURA | falha ao gerar pdf inst=' . $idInstancia);
+			return ['ok' => false, 'error' => 'Não foi possível gerar o PDF do ajuste.'];
+		}
+		ga_log_runtime('ASSINATURA | pdf pronto=' . $arquivoPdf);
+
+		require_once dirname(__DIR__) . '/assinatura/integracao/assinatura_integracao.php';
+		if (!function_exists('assinatura_integracao_enviarDocumentoParaMultiplosAssinantes')) {
+			return ['ok' => false, 'error' => 'Integração de assinatura indisponível.'];
+		}
+
+		$signatarios = ga_montarSignatariosAjuste($solicitacao, $idUsuarioAprovador);
+		if (count($signatarios) < 2) {
+			ga_log_runtime('ASSINATURA | signatarios insuficientes=' . count($signatarios));
+			return ['ok' => false, 'error' => 'Não foi possível identificar os signatários do ajuste.'];
+		}
+		ga_log_runtime('ASSINATURA | enviando para integracao com ' . count($signatarios) . ' signatarios');
+
+		$resAprovador = assinatura_integracao_enviarDocumentoParaMultiplosAssinantes(
+			$GLOBALS['conn'],
+			$arquivoPdf,
+			$signatarios,
+			array(
+				'nome_arquivo_original' => 'ajuste_ponto_' . $idSolicitacao . '.pdf',
+				'id_documento' => 'INST_' . $idInstancia,
+				'grupo_envio' => $grupoEnvio,
+				'modo_envio' => 'avulso',
+				'validar_icp' => 'sim',
+				'enviar_email' => 'nao',
+				'salvar_documento_funcionario' => 'sim',
+				'apagar_origem' => true
+			)
+		);
+
+		if (empty($resAprovador['ok'])) {
+			ga_log_runtime('ASSINATURA | integracao retornou erro=' . strval($resAprovador['error'] ?? 'sem detalhe'));
+			return array_merge(array('ok' => false), $resAprovador);
+		}
+		ga_log_runtime('ASSINATURA | integracao ok solicitacao_assinatura=' . strval($resAprovador['id_solicitacao'] ?? ''));
+
+		return array_merge(array('ok' => true, 'id_instancia_documento' => $idInstancia), $resAprovador);
+	}
+	
+	function ensureSolicitacoesAjusteTable(){
+		query("CREATE TABLE IF NOT EXISTS solicitacoes_ajuste (
+			id INT AUTO_INCREMENT PRIMARY KEY,
+			id_motorista INT NOT NULL,
+			data_ajuste DATE NOT NULL,
+			hora_ajuste TIME NOT NULL,
+			id_macro INT NOT NULL,
+			id_motivo INT NOT NULL,
+			justificativa TEXT NULL,
+			status VARCHAR(20) DEFAULT 'rascunho',
+			data_solicitacao DATETIME NOT NULL,
+			id_usuario_solicitante INT NOT NULL,
+			cargo_usuario VARCHAR(100) NULL,
+			setor_usuario VARCHAR(100) NULL,
+			subsetor_usuario VARCHAR(100) NULL,
+			data_decisao DATETIME NULL,
+			id_superior INT NULL,
+			justificativa_gestor TEXT NULL,
+			data_visualizacao DATETIME NULL,
+			id_instancia_documento INT NULL
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+		
+		$check = query("SHOW COLUMNS FROM solicitacoes_ajuste LIKE 'id_instancia_documento'");
+		if ($check instanceof mysqli_result && mysqli_num_rows($check) == 0) {
+			@query("ALTER TABLE solicitacoes_ajuste ADD COLUMN id_instancia_documento INT NULL AFTER data_decisao");
+		}
+		
+		$check = query("SHOW COLUMNS FROM solicitacoes_ajuste LIKE 'justificativa_gestor'");
+		if ($check instanceof mysqli_result && mysqli_num_rows($check) == 0) {
+			@query("ALTER TABLE solicitacoes_ajuste ADD COLUMN justificativa_gestor TEXT DEFAULT NULL AFTER id_instancia_documento");
+		}
+		
+		$check = query("SHOW COLUMNS FROM solicitacoes_ajuste LIKE 'data_visualizacao'");
+		if ($check instanceof mysqli_result && mysqli_num_rows($check) == 0) {
+			@query("ALTER TABLE solicitacoes_ajuste ADD COLUMN data_visualizacao DATETIME NULL AFTER justificativa_gestor");
+		}
+	}
+	ensureSolicitacoesAjusteTable();
 
 	function buscarSubsetores(){
 		$setorRaw = strval($_POST['setor'] ?? '');
@@ -300,6 +802,14 @@
 
 			$justificativaGestor = mysqli_real_escape_string($GLOBALS['conn'], $_POST['justificativa_gestor'] ?? '');
 			query("UPDATE solicitacoes_ajuste SET status = 'aceita', data_decisao = NOW(), id_superior = {$_SESSION['user_nb_id']}, justificativa_gestor = '{$justificativaGestor}' WHERE id = '$idSolicitacao'");
+
+			$assinaturaAjuste = ga_enviarAssinaturaAjusteAprovado($idSolicitacao, intval($_SESSION['user_nb_id'] ?? 0));
+			if (empty($assinaturaAjuste['ok'])) {
+				ga_log_runtime('APROVACAO | erro ao enviar para assinatura solicitacao=' . $idSolicitacao . ' msg=' . strval($assinaturaAjuste['error'] ?? 'desconhecido'));
+				error_log('Ajuste Ponto: falha ao enviar solicitacao ' . $idSolicitacao . ' para assinatura: ' . strval($assinaturaAjuste['error'] ?? 'erro desconhecido'));
+			} else {
+				ga_log_runtime('APROVACAO | assinatura encaminhada solicitacao=' . $idSolicitacao . ' id_instancia=' . strval($assinaturaAjuste['id_instancia_documento'] ?? ''));
+			}
 
 			if(!$emLote){
 				$params = [
@@ -739,7 +1249,7 @@ if (empty($justificativaGestor)) {
 
 			$checkbox = "";
 			if ($row['status'] == 'enviada' || $row['status'] == 'visualizada') {
-				$checkbox = "<input type='checkbox' class='sel-lote' value='{$row['id']}'>";
+				$checkbox = "<input type='checkbox' class='sel-lote' name='sel_lote[]' data-lote-id='{$row['id']}' value='{$row['id']}' onclick='window.__gaToggleLote && window.__gaToggleLote()'>";
 			}
 
 			$acoes = "";
@@ -789,7 +1299,7 @@ if (empty($justificativaGestor)) {
 			];
 		}
 
-		$cabecalho_tabela = ["<input type='checkbox' id='sel-tudo'>", "Solicitado", "Funcionário", "Data/Hora Ajuste", "Tipo", "Motivo", "Justificativa", "Solicitante", "Status", "Ações", "Documento","Justificativa"];
+		$cabecalho_tabela = ["<input type='checkbox' id='sel-tudo' onclick='(function(m){var aplicar=function(){var lista=document.getElementsByName(\"sel_lote[]\");if(!lista||!lista.length){lista=document.querySelectorAll(\".sel-lote, .tabela-espelho-ponto tbody td:first-child input[type=checkbox]\");}for(var i=0;i<lista.length;i++){var cb=lista[i];if(cb&&cb.id!==\"sel-tudo\"){cb.checked=!!m;}}if(window.__gaToggleLote){window.__gaToggleLote();}};aplicar();if(window.setTimeout){window.setTimeout(aplicar,0);window.setTimeout(aplicar,80);}})(this.checked);'>", "Solicitado", "Funcionário", "Data/Hora Ajuste", "Tipo", "Motivo", "Justificativa", "Solicitante", "Status", "Ações", "Documento","Justificativa"];
 		echo "<h3>Solicitações de Ajuste</h3>";
 		$novaOrdem = ($ordem === 'ASC') ? 'DESC' : 'ASC';
 		$icone = ($ordem === 'ASC') ? '↑' : '↓';
@@ -850,6 +1360,47 @@ if (empty($justificativaGestor)) {
 		</div>
 
 		<script>
+			window.__gaSyncCheckboxUI = function() {
+				if (!window.jQuery) return;
+				var $ = window.jQuery;
+				var $alvos = $('input#sel-tudo, input[name="sel_lote[]"]');
+
+				if ($.uniform && typeof $.uniform.update === 'function') {
+					$.uniform.update($alvos);
+				}
+
+				if (typeof $alvos.iCheck === 'function') {
+					try {
+						$alvos.iCheck('update');
+					} catch (e) {
+						// Ignora quando iCheck nao estiver inicializado para estes elementos.
+					}
+				}
+			};
+
+			window.__gaGetChecksLote = function() {
+				return Array.from(document.getElementsByName('sel_lote[]')).filter(function(el) {
+					return !!el && el.type === 'checkbox';
+				});
+			};
+
+			window.__gaSetHeaderState = function(total, marcados) {
+				Array.from(document.querySelectorAll('#sel-tudo')).forEach(function(ctrl) {
+					ctrl.checked = total > 0 && marcados === total;
+					ctrl.indeterminate = marcados > 0 && marcados < total;
+				});
+			};
+
+			window.__gaSelTudo = function(marcarTodos) {
+				const checks = window.__gaGetChecksLote();
+				checks.forEach(function(cb) {
+					cb.checked = !!marcarTodos;
+				});
+				window.__gaSetHeaderState(checks.length, marcarTodos ? checks.length : 0);
+				if (window.__gaSyncCheckboxUI) window.__gaSyncCheckboxUI();
+				if (window.__gaToggleLote) window.__gaToggleLote();
+			};
+
 			(function(){
 				function closeAllMultiSelect(){
 					document.querySelectorAll('.ms-menu').forEach(function(menu){
@@ -949,7 +1500,10 @@ if (empty($justificativaGestor)) {
 					
 					$('#modalJustificativa').modal('hide');
 					
-					const selecionados = Array.from(document.querySelectorAll('.sel-lote:checked')).map(cb => cb.value);
+					const selecionados = (window.__gaGetChecksLote ? window.__gaGetChecksLote() : Array.from(document.querySelectorAll('.sel-lote')))
+						.filter(cb => cb.checked)
+						.map(cb => cb.value)
+						.filter(Boolean);
 					
 					if (acaoLote === 'aceitarLote') {
 						fetch('<?= basename($_SERVER['PHP_SELF']) ?>', {
@@ -990,36 +1544,84 @@ if (empty($justificativaGestor)) {
 			}
 
 			function processarLote(acaoLote) {
-				const selecionados = Array.from(document.querySelectorAll('.sel-lote:checked')).map(cb => cb.value);
+				const selecionados = (window.__gaGetChecksLote ? window.__gaGetChecksLote() : Array.from(document.querySelectorAll('.sel-lote')))
+					.filter(cb => cb.checked)
+					.map(cb => cb.value)
+					.filter(Boolean);
 				if (selecionados.length === 0) return;
 				
 				abrirModalJustificativa('lote', acaoLote);
 			}
 
 			document.addEventListener('DOMContentLoaded', function() {
-				const selTudo = document.getElementById('sel-tudo');
-				const checks = document.querySelectorAll('.sel-lote');
 				const btnAprovar = document.getElementById('btn-aprovar-lote');
 				const btnRejeitar = document.getElementById('btn-rejeitar-lote');
 
+				function getChecksLote() {
+					if (window.__gaGetChecksLote) return window.__gaGetChecksLote();
+					return Array.from(document.getElementsByName('sel_lote[]'));
+				}
+
+				function getSelectAllControles() {
+					return Array.from(document.querySelectorAll('#sel-tudo'));
+				}
+
 				function toggleBotoesLote() {
-					const temSelecionado = document.querySelectorAll('.sel-lote:checked').length > 0;
+					const checks = getChecksLote();
+					const temSelecionado = checks.some(function(cb) { return cb.checked; });
+
+					if (!btnAprovar || !btnRejeitar) {
+						return;
+					}
+
 					btnAprovar.style.display = temSelecionado ? 'inline-block' : 'none';
 					btnRejeitar.style.display = temSelecionado ? 'inline-block' : 'none';
-				}
-				btnAprovar.onclick = () => processarLote('aceitarLote');
-				btnRejeitar.onclick = () => processarLote('rejeitarLote');
 
-				if (selTudo) {
-					selTudo.addEventListener('change', function() {
-						checks.forEach(cb => cb.checked = selTudo.checked);
-						toggleBotoesLote();
+					const total = checks.length;
+					const marcados = checks.filter(cb => cb.checked).length;
+					if (window.__gaSetHeaderState) {
+						window.__gaSetHeaderState(total, marcados);
+					} else {
+						getSelectAllControles().forEach(function(ctrl) {
+							ctrl.checked = total > 0 && marcados === total;
+							ctrl.indeterminate = marcados > 0 && marcados < total;
+						});
+					}
+
+					if (window.__gaSyncCheckboxUI) window.__gaSyncCheckboxUI();
+				}
+				window.__gaToggleLote = toggleBotoesLote;
+
+				function aplicarSelecaoGlobal(marcarTodos) {
+					if (window.__gaSelTudo) {
+						window.__gaSelTudo(!!marcarTodos);
+						return;
+					}
+
+					const checks = getChecksLote();
+					checks.forEach(function(cb) { cb.checked = !!marcarTodos; });
+					getSelectAllControles().forEach(function(ctrl) {
+						ctrl.checked = !!marcarTodos;
+						ctrl.indeterminate = false;
 					});
+					toggleBotoesLote();
 				}
+				if (btnAprovar) btnAprovar.onclick = () => processarLote('aceitarLote');
+				if (btnRejeitar) btnRejeitar.onclick = () => processarLote('rejeitarLote');
 
-				checks.forEach(cb => {
-					cb.addEventListener('change', toggleBotoesLote);
+				document.addEventListener('change', function(e) {
+					if (e.target && e.target.id === 'sel-tudo') {
+						aplicarSelecaoGlobal(e.target.checked);
+						return;
+					}
+
+					if (e.target && e.target.name === 'sel_lote[]') {
+						toggleBotoesLote();
+					}
 				});
+
+				toggleBotoesLote();
+				if (window.__gaSyncCheckboxUI) window.__gaSyncCheckboxUI();
 
 				function initMultiSelect(rootId){
 					const root = document.getElementById(rootId);

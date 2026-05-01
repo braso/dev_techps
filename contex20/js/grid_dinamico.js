@@ -47,6 +47,11 @@ function exportAllToCSV() {
         },
         dataType: 'json',
         success: function(response) {
+            if(!response || !Array.isArray(response.rows)){
+                console.error('Resposta inválida ao exportar CSV:', response);
+                alert('Erro: resposta inválida do servidor ao exportar.');
+                return;
+            }
             // Prepara os dados para CSV
             let csvContent = "";
             
@@ -212,6 +217,11 @@ const consultarRegistros = function(){
         },
         dataType: 'json',
         success: function(response) {
+            if(!response || !Array.isArray(response.rows)){
+                console.error('Resposta inválida da API:', response);
+                $('.table-loading-icon')[0].innerHTML = '';
+                return;
+            }
             total = response.total;
             qtdPaginas = Math.ceil((total/limit))
             statusCol = -1;
@@ -456,6 +466,11 @@ function imprimirTabelaCompleta() {
         },
         dataType: 'json',
         success: function(response) {
+            if(!response || !Array.isArray(response.rows)){
+                console.error('Resposta inválida ao imprimir tabela:', response);
+                alert('Erro: resposta inválida do servidor ao imprimir.');
+                return;
+            }
             // Gera o HTML da tabela
             const headerHtml = Object.keys(fields).map((value) => {
                 return `<th class="header-cell">${value}</th>`;

@@ -212,7 +212,9 @@
 					echo json_encode($_SESSION);
 					exit;
 				}
-				if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
+				// Perfis operacionais devem cair direto na batida quando tiverem permissão do menu.
+				// Admin/Super Admin continuam no fluxo padrão abaixo (showWelcome).
+				if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário", "Terceirizado"])){
 					include_once __DIR__."/check_permission.php";
 					if (function_exists('temPermissaoMenu') && temPermissaoMenu('/batida_ponto.php')){
 						echo "<meta http-equiv='refresh' content='0; url=./batida_ponto.php'/>";

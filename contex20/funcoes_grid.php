@@ -439,21 +439,48 @@
 	}
 
 	function downloadArquivo() {
+		// Normaliza o caminho recebido
+		$caminho = $_POST["caminho"] ?? "";
+		$caminho = ltrim($caminho, "./");
+
+		// Descobre o diretório raiz da aplicação a partir do script chamado
+		// Ex: /home/user/public_html/app/armazem_paraiba/carregar_ponto.php → /home/user/public_html/app/armazem_paraiba
+		$dirScript = dirname($_SERVER["SCRIPT_FILENAME"]);
+
+		// Tenta resolver o caminho absoluto de várias formas
+		$tentativas = [
+			$dirScript."/".$caminho,                                          // relativo ao script atual
+			dirname($dirScript)."/".$caminho,                                 // um nível acima
+			$_SERVER["DOCUMENT_ROOT"]."/".$caminho,                           // raiz do domínio
+			$_SERVER["DOCUMENT_ROOT"]."/armazem_paraiba/".$caminho,           // pasta armazem_paraiba
+			__DIR__."/../armazem_paraiba/".$caminho,                          // relativo a funcoes_grid.php
+		];
+
+		$caminhoAbsoluto = null;
+		foreach($tentativas as $tentativa){
+			$real = realpath($tentativa);
+			if($real && file_exists($real)){
+				$caminhoAbsoluto = $real;
+				break;
+			}
+		}
+
 		// Verificar se o arquivo existe
-		if(file_exists($_POST["caminho"])){
+		if($caminhoAbsoluto){
 			// Configurar cabeçalhos para forçar o download
 			header("Content-Description: File Transfer");
 			header("Content-Type: application/octet-stream");
-			header("Content-Disposition: attachment; filename=".basename($_POST["caminho"]));
+			header("Content-Disposition: attachment; filename=".basename($caminhoAbsoluto));
 			header("Expires: 0");
 			header("Cache-Control: must-revalidate");
 			header("Pragma: public");
-			header("Content-Length: ".filesize($_POST["caminho"]));
+			header("Content-Length: ".filesize($caminhoAbsoluto));
 
 			// Lê o arquivo e o envia para o navegador
-			readfile($_POST["caminho"]);
+			readfile($caminhoAbsoluto);
 		}else{
-			set_status("O arquivo não foi encontrado.");
+			$debugPaths = implode(" | ", $tentativas);
+			set_status("O arquivo não foi encontrado. Caminho: [".$caminho."] Tentativas: [".$debugPaths."]");
 		}
 
 

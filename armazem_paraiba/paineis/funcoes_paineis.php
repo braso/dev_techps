@@ -169,19 +169,22 @@ function criar_relatorio_saldo() {
 							AND enti_nb_empresa = '{$empresa["empr_nb_id"]}'
 							AND user.user_tx_status = 'ativo'
 							AND (
-								user.user_tx_nivel IN ('Funcionário', 'Motorista', 'Ajudante')
-								AND EXISTS (
-									SELECT 1 FROM usuario_perfil up
-									JOIN perfil_acesso pa ON pa.perfil_nb_id = up.perfil_nb_id
-									JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id
-									JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id
-									WHERE up.user_nb_id = user.user_nb_id
-									AND up.ativo = 1
-									AND pa.perfil_tx_status = 'ativo'
-									AND pmi.perm_ver = 1
-									AND mi.menu_tx_ativo = 1
-									AND mi.menu_tx_path = '/batida_ponto.php'
+								(
+									user.user_tx_nivel IN ('Funcionário', 'Motorista', 'Ajudante')
+									AND EXISTS (
+										SELECT 1 FROM usuario_perfil up
+										JOIN perfil_acesso pa ON pa.perfil_nb_id = up.perfil_nb_id
+										JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id
+										JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id
+										WHERE up.user_nb_id = user.user_nb_id
+										AND up.ativo = 1
+										AND pa.perfil_tx_status = 'ativo'
+										AND pmi.perm_ver = 1
+										AND mi.menu_tx_ativo = 1
+										AND mi.menu_tx_path = '/batida_ponto.php'
+									)
 								)
+								OR user.user_tx_nivel IN ('Terceirizado', 'Tercerizado')
 							)
 							".(!empty($_POST["motorista"]) ? "AND enti_nb_id = '{$_POST["motorista"]}'" : "")."
 						ORDER BY enti_tx_nome ASC;"

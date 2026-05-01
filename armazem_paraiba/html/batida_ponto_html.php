@@ -16,7 +16,8 @@
 	<div class="modal-dialog modal-dialog-centered" role="document">
 		<div class="modal-content">
 			<div class="modal-header">
-				<h4 class="modal-title" id="exampleModalLabel">Registrar Ponto</h4>
+				<!-- Reaproveita o mesmo título calculado no backend (Ponto ou Produção). -->
+				<h4 class="modal-title" id="exampleModalLabel"><?=$tituloRegistro ?? 'Registrar Ponto'?></h4>
 				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 					<span aria-hidden="true">&times;</span>
 				</button>
@@ -213,8 +214,8 @@
                             navigator.geolocation.getCurrentPosition(function(pos){ resolve(pos); }, function(err){ reject(err); }, { enableHighAccuracy: true });
                         });
                     }
-                    Swal.fire({
-                        title: 'É necessário permitir a localização para bater o ponto',
+					Swal.fire({
+						title: 'É necessário permitir a localização para registrar <?=$textoRegistro ?? "Ponto"?>',
                         icon: 'warning',
                         confirmButtonText: 'Permitir',
                         allowOutsideClick: false,

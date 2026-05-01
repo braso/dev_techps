@@ -352,7 +352,7 @@
 			$sqlCheckNivel = mysqli_fetch_assoc(query("SELECT user_tx_nivel FROM user WHERE user_nb_id = '{$_POST["id"]}' LIMIT 1;"));
 		}
 		
-		if (isset($sqlCheckNivel["user_tx_nivel"]) && in_array($sqlCheckNivel["user_tx_nivel"], ["Motorista", "Ajudante","Funcionário"])) {
+		if (isset($sqlCheckNivel["user_tx_nivel"]) && in_array($sqlCheckNivel["user_tx_nivel"], ["Motorista", "Ajudante","Funcionário", "Terceirizado"])) {
 			if (!empty($_POST["senha"]) && !empty($_POST["senha2"])) {
 				$novaSenha = ["user_tx_senha" => md5($_POST["senha"])];
 				atualizar("user", array_keys($novaSenha), array_values($novaSenha), $_POST["id"]);
@@ -408,7 +408,7 @@
 			}
 		}
 
-		$editingDriver = in_array(($_POST["nivel"]?? ""), ["Motorista", "Ajudante", "Funcionário"]);
+		$editingDriver = in_array(($_POST["nivel"]?? ""), ["Motorista", "Ajudante", "Funcionário", "Terceirizado"]);
 		$loggedUserIsAdmin = is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"));
 
 		$hasMenuPermission = false;
@@ -803,7 +803,7 @@ function index() {
         global $CONTEX;
         $permitido = false;
         $hasMenuPermission = false;
-        if(in_array($_SESSION["user_tx_nivel"], ["Motorista","Ajudante","Funcionário"])){
+		if(in_array($_SESSION["user_tx_nivel"], ["Motorista","Ajudante","Funcionário", "Terceirizado"])){
             $permitido = true;
         }else{
             $perfilId = 0;
@@ -939,7 +939,8 @@ function index() {
                 "EMPRESA"       => "empr_tx_nome",
                 "STATUS"        => "user_tx_status",
 				"RFID"          => "rfids_tx_uid",
-                "AUTENTICAÇÃO"  => "rfids_nb_id" 
+                "AUTENTICAÇÃO"  => "rfids_nb_id",
+                "FACIAL"        => "IF(user.user_tx_face_descriptor IS NOT NULL AND user.user_tx_face_descriptor != '', 1, 0) AS tem_facial"
             ];
 
             $camposBusca = [
@@ -993,60 +994,61 @@ function index() {
 
                 // FUNÇÃO: Varre a tabela e desenha os ícones HTML de biometria/crachá
                 const formatarBiometria = function() {
-                    // Descobre onde as colunas estão agora
                     var idxCodigo = pegarIndiceColuna('CÓDIGO');
                     var idxAutenticacao = pegarIndiceColuna('AUTENTICAÇÃO');
-
-                    // Se não achar as colunas, aborta para não quebrar a tela
+                    var idxFacial = pegarIndiceColuna('FACIAL');
                     if (idxCodigo === -1 || idxAutenticacao === -1) return;
 
                     $('table tbody tr').each(function() {
-                        var colIdUser = $(this).find('td').eq(idxCodigo).text().trim();
-                        var tdAutenticacao = $(this).find('td').eq(idxAutenticacao); 
-                        var idRfid = tdAutenticacao.text().trim(); 
-                        
-                        if (!colIdUser) return;
-                        
+                        var idUsuario = $(this).find('td').eq(idxCodigo).text().trim();
+                        var tdAutenticacao = $(this).find('td').eq(idxAutenticacao);
+                        var idRfid = tdAutenticacao.text().trim();
+                        var temFacial = idxFacial !== -1 ? $(this).find('td').eq(idxFacial).text().trim() : '0';
+
+                        if (!idUsuario) return;
+
                         var htmlIcones = '';
-                        
+
+                        // RFID
                         if (idRfid !== '') {
-                            htmlIcones += '<span onclick=\"abrirRfidDireto(' + idRfid + ', ' + colIdUser + ')\" class=\"glyphicon glyphicon-credit-card\" style=\"color: #28a745; font-size: 14px; margin-right: 12px; cursor: pointer;\" title=\"Editar Crachá Ativo\"></span>';
+                            htmlIcones += '<span onclick=\"abrirRfidDireto(' + idRfid + ', ' + idUsuario + ')\" class=\"glyphicon glyphicon-credit-card\" style=\"color:#28a745;font-size:14px;margin-right:12px;cursor:pointer;\" title=\"Editar Crachá Ativo\"></span>';
                         } else {
-							htmlIcones += '<span class=\"glyphicon glyphicon-credit-card\" style=\"color: #808080; font-size: 14px; margin-right: 12px;\" title=\"Sem Crachá Ativo\"></span>';
-						}
-						
-						htmlIcones += '<span class=\"glyphicon glyphicon-hand-up\" style=\"color: #808080; font-size: 14px; margin-right: 12px;\" title=\"Sem Digital\"></span>';
-						htmlIcones += '<span class=\"glyphicon glyphicon-user\" style=\"color: #808080; font-size: 14px;\" title=\"Sem Facial\"></span>';
-						
+                            htmlIcones += '<span class=\"glyphicon glyphicon-credit-card\" style=\"color:#808080;font-size:14px;margin-right:12px;\" title=\"Sem Crachá\"></span>';
+                        }
+
+                        // Digital
+                        htmlIcones += '<span class=\"glyphicon glyphicon-hand-up\" style=\"color:#808080;font-size:14px;margin-right:12px;\" title=\"Sem Digital\"></span>';
+
+                        // Facial
+                        if (temFacial === '1') {
+                            htmlIcones += '<span onclick=\"abrirFacialPorUser(' + idUsuario + ')\" class=\"glyphicon glyphicon-user\" style=\"color:#28a745;font-size:14px;cursor:pointer;\" title=\"Biometria Facial Ativa — clique para gerenciar\"></span>';
+                        } else {
+                            htmlIcones += '<span onclick=\"abrirFacialPorUser(' + idUsuario + ')\" class=\"glyphicon glyphicon-user\" style=\"color:#808080;font-size:14px;cursor:pointer;\" title=\"Sem Biometria Facial — clique para cadastrar\"></span>';
+                        }
+
                         tdAutenticacao.html(htmlIcones);
                     });
+                };
+
+                window.abrirFacialPorUser = function(idUsuario) {
+                    window.location.href = 'cadastro_facial.php?user_id=' + idUsuario;
                 };
 
                 window.abrirRfidDireto = function(idRfid, idUsuario) {
                     var form = document.createElement('form');
                     form.method = 'POST';
                     form.action = 'cadastro_rfid.php';
-                    
                     var inputId = document.createElement('input');
-                    inputId.type = 'hidden';
-                    inputId.name = 'id';
-                    inputId.value = idRfid;
+                    inputId.type = 'hidden'; inputId.name = 'id'; inputId.value = idRfid;
                     form.appendChild(inputId);
-                    
                     var inputAcao = document.createElement('input');
-                    inputAcao.type = 'hidden';
-                    inputAcao.name = 'acao';
-                    inputAcao.value = 'modificarRfid';
+                    inputAcao.type = 'hidden'; inputAcao.name = 'acao'; inputAcao.value = 'modificarRfid';
                     form.appendChild(inputAcao);
-
                     if (idUsuario) {
                         var fieldRetorno = document.createElement('input');
-                        fieldRetorno.type = 'hidden';
-                        fieldRetorno.name = 'id_usuario_retorno';
-                        fieldRetorno.value = idUsuario;
+                        fieldRetorno.type = 'hidden'; fieldRetorno.name = 'id_usuario_retorno'; fieldRetorno.value = idUsuario;
                         form.appendChild(fieldRetorno);
                     }
-                    
                     document.body.appendChild(form);
                     form.submit();
                 };
@@ -1058,7 +1060,13 @@ function index() {
                     if(typeof funcoesInternasAntiga === 'function') funcoesInternasAntiga(); 
                     
                     // Roda a sua formatação de crachás
-                    formatarBiometria(); 
+                    formatarBiometria();
+                    // Oculta coluna FACIAL (usada só internamente para o ícone)
+                    var idxFacialHide = pegarIndiceColuna('FACIAL');
+                    if (idxFacialHide !== -1) {
+                        $('table thead th').eq(idxFacialHide).hide();
+                        $('table tbody tr').each(function(){ $(this).find('td').eq(idxFacialHide).hide(); });
+                    }
                     
                     // Esconde a lixeira baseando-se na posição atualizada da coluna STATUS
                     var idxStatus = pegarIndiceColuna('STATUS');

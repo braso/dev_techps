@@ -472,6 +472,7 @@ if (!$jaAssinado) {
         }
     } elseif ($emailSolicitacao !== "" && filter_var($emailSolicitacao, FILTER_VALIDATE_EMAIL)) {
         $em = strtolower(trim($emailSolicitacao));
+        // Tenta primeiro na tabela de funcionários
         $stmtCad = mysqli_prepare($conn, "SELECT enti_tx_cpf, enti_tx_rg FROM entidade WHERE LOWER(TRIM(enti_tx_email)) = ? LIMIT 1");
         if ($stmtCad) {
             mysqli_stmt_bind_param($stmtCad, "s", $em);
@@ -483,19 +484,32 @@ if (!$jaAssinado) {
                 $rgCad = trim(strval($cad["enti_tx_rg"] ?? ""));
             }
         }
+        // Se não encontrou na entidade, tenta na tabela de signatários externos
+        if ($cpfCad === "" && $rgCad === "") {
+            $stmtExt = mysqli_prepare($conn, "SELECT sign_tx_cpf, sign_tx_rg FROM signatarios_externos WHERE LOWER(TRIM(sign_tx_email)) = ? AND sign_tx_status = 'ativo' LIMIT 1");
+            if ($stmtExt) {
+                mysqli_stmt_bind_param($stmtExt, "s", $em);
+                mysqli_stmt_execute($stmtExt);
+                $cadExt = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtExt));
+                mysqli_stmt_close($stmtExt);
+                if (is_array($cadExt)) {
+                    $cpfCad = trim(strval($cadExt["sign_tx_cpf"] ?? ""));
+                    $rgCad  = trim(strval($cadExt["sign_tx_rg"]  ?? ""));
+                }
+            }
+        }
     }
 
     $cpfDigitsCad = normalizarCpf($cpfCad);
     $rgNormCad = normalizarRg($rgCad);
     if (strlen($cpfDigitsCad) !== 11 || $rgNormCad === "") {
-        jsonError("Não foi possível validar CPF e RG com o cadastro do funcionário. Solicite ao RH/Administrativo atualizar CPF e RG antes de assinar.", 422);
+        jsonError("Não foi possível validar CPF e RG com o cadastro. Verifique se CPF e RG estão preenchidos no cadastro antes de assinar.", 422);
     }
     $cpfDigitsInput = normalizarCpf($cpf);
     $rgNormInput = normalizarRg($rg);
     if ($cpfDigitsInput !== $cpfDigitsCad || $rgNormInput !== $rgNormCad) {
         jsonError("CPF e RG informados não conferem com o cadastro. Revise os dados e tente novamente.", 422);
     }
-
     if (!$arquivo || !is_array($arquivo) || ($arquivo["error"] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
         jsonError("Arquivo assinado não enviado.");
     }

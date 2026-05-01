@@ -287,7 +287,7 @@
 			"SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula, enti_tx_banco, enti_tx_ocupacao, enti_tx_admissao FROM entidade"
 					. " WHERE enti_tx_status = 'ativo'"
 					. " AND enti_nb_empresa = ".$empresa["empr_nb_id"]
-					. " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')"
+					. " AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário', 'Terceirizado', 'Tercerizado')"
 					. " ORDER BY enti_tx_nome ASC;"
 			), MYSQLI_ASSOC);
 
@@ -841,7 +841,9 @@
 			}
 
 			//MODIFICACAO: Escala em dia de feriado deve considerar jornada normal
-			$ignorarFeriadoEscala = ($motorista["para_tx_tipo"] == "escala" && $jornadaPrevistaOriginal != "00:00");
+			// Se o parâmetro "abonarFeriadoEscala" estiver ativo, feriado zera a jornada mesmo na escala
+			$abonarFeriadoEscala = (!empty($motorista["para_tx_abonarFeriadoEscala"]) && $motorista["para_tx_abonarFeriadoEscala"] === "sim");
+			$ignorarFeriadoEscala = ($motorista["para_tx_tipo"] == "escala" && $jornadaPrevistaOriginal != "00:00" && !$abonarFeriadoEscala);
 
 			if($ignorarFeriadoEscala){
 				$ehDomingoFeriadoFacultativo = false;

@@ -416,6 +416,7 @@ if ($entiId > 0) {
     }
 } elseif ($email_usuario !== '' && filter_var($email_usuario, FILTER_VALIDATE_EMAIL)) {
     $emailLower = strtolower(trim($email_usuario));
+    // Tenta primeiro na tabela de funcionários
     $stmtCad = mysqli_prepare($conn, "SELECT enti_tx_cpf, enti_tx_rg FROM entidade WHERE LOWER(TRIM(enti_tx_email)) = ? LIMIT 1");
     if ($stmtCad) {
         mysqli_stmt_bind_param($stmtCad, "s", $emailLower);
@@ -425,6 +426,20 @@ if ($entiId > 0) {
         if (is_array($cad)) {
             $cpf_cadastro = trim(strval($cad["enti_tx_cpf"] ?? ""));
             $rg_cadastro = trim(strval($cad["enti_tx_rg"] ?? ""));
+        }
+    }
+    // Se não encontrou na entidade, tenta na tabela de signatários externos
+    if (($cpf_cadastro ?? '') === '' && ($rg_cadastro ?? '') === '') {
+        $stmtExt = mysqli_prepare($conn, "SELECT sign_tx_cpf, sign_tx_rg FROM signatarios_externos WHERE LOWER(TRIM(sign_tx_email)) = ? AND sign_tx_status = 'ativo' LIMIT 1");
+        if ($stmtExt) {
+            mysqli_stmt_bind_param($stmtExt, "s", $emailLower);
+            mysqli_stmt_execute($stmtExt);
+            $cadExt = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtExt));
+            mysqli_stmt_close($stmtExt);
+            if (is_array($cadExt)) {
+                $cpf_cadastro = trim(strval($cadExt["sign_tx_cpf"] ?? ""));
+                $rg_cadastro  = trim(strval($cadExt["sign_tx_rg"]  ?? ""));
+            }
         }
     }
 }
@@ -626,7 +641,7 @@ $cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
                         
                         <?php if (!$cadastro_ok): ?>
                             <div class="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-900 rounded-lg p-3 text-xs leading-relaxed">
-                                Não foi possível validar CPF e RG com o cadastro do funcionário. Verifique se o funcionário possui CPF e RG preenchidos no cadastro antes de assinar.
+                                Não foi possível validar CPF e RG com o cadastro. Verifique se CPF e RG estão preenchidos no cadastro antes de assinar.
                             </div>
                         <?php endif; ?>
 

@@ -3,34 +3,35 @@
     include "load_env.php";
 
     $empresas = [
-        "ARMAZEMPARAIBA"		=> "armazem_paraiba",
-        "BLUEROAD"			    => "blueroad",
+        "ARMPB"		            => "armazem_paraiba",
+        "BLRD"			        => "blueroad",
         "BRASO"					=> "braso",
         "CARAU"		            => "carau_transporte",
         "COMAV"					=> "comav",
-        "FEIJAOTURQUEZA"		=> "feijao_turqueza",
+        "FTQZA"		            => "feijao_turqueza",
         "FSLOG"	                => "fs_log_transportes",
-        "HN"                    => "hn_transportes",
+        "HNTP"                    => "hn_transportes",
         "IFRN"                  => "ifrn",
         "JRJ"	                => "jrj_organizacao",
         "LOGSYNC"	            => "logsync_techps",
         "LEMON"                 => 'lemon',
-        "NH"	                => "nh_transportes",
+        "NHO"	                => "nh_transportes",
         "OPAFRUTAS"				=> "opafrutas",
-        "PKFMEDEIROS"			=> "pkf_medeiros",
+        "PKFMS"			        => "pkf_medeiros",
         "QUALY"		            => "qualy_transportes",
-        "SÃO LUCAS"             => "sao_lucas",       
+        "CSSL"                  => "sao_lucas",       
         "TECHPS"				=> "techps",
         "DEMO"			        => "techps_demo",
-        "TRAMPOLIMGAS"			=> "trampolim_gas",
-        "TRANSCOPEL"			=> "transcopel",
-        "PB TRANSPORTES"		=> "pb_transportes",
-        "ODONTO TANGARA"		=> "odontotangara",
-        "CLINICA GERLANE"		=> "clinica_gerlane",
-        "IRANEIDE OLIVEIRA"		=> "iraneide_oliveira",
-        "MIDIA DIGITAL"		    => "midia_digital",
+        "TPGAS"			        => "trampolim_gas",
+        "TRANSCOPEL"			    => "transcopel",
+        "PBTRANSP"		            => "pb_transportes",
+        "ODTGA"		            => "odontotangara",
+        "CLGRL"		            => "clinica_gerlane",
+        "IROL"		            => "iraneide_oliveira",
+        "MD"		            => "midia_digital",
         "ENOVE"                 => "enove",
-        "TMILITAO"              => "t_militao"
+        "TMILITAO"                 => "t_militao",
+        "LAUTO"                 => "lauto"
 
     ];
 
@@ -62,7 +63,9 @@
         "iraneide_oliveira" => "Iraneide Oliveira",
         "midia_digital"     => "Midia Digital",
         "enove"             => "Enove",
-        "t_militao"         => "T Militao"
+        "t_militao"         => "T Militao",
+        
+        "lauto"             => "L Auto Cargo"
     ];
 
     $empresa_array = array_values($empresas); //Utilizado nos arquivos que importam este.
@@ -73,28 +76,16 @@
 
     $empresasInput = 
         "<div class='form-group'>
-            <select name='empresa' class='input-empresas form-control form-control-solid placeholder-no-fix' autofocus>
-                <option value='' hidden>Empresa</option>"
+            <input
+                autofocus
+                class='input-empresas form-control form-control-solid placeholder-no-fix'
+                type='text'
+                autocomplete='off'
+                placeholder='INSIRA SEU DOMÍNIO'
+                name='empresa'
+                style='text-transform:uppercase;'
+                ".(!empty($_POST["empresa"])? "value='".$_POST["empresa"]."'": "")."
+            />
+        </div>"
     ;
-    foreach($empresas as $key => $value){
-        if(file_exists(__DIR__."/".$value)){
-            $empresasInput .= "<option ".((!empty($_POST["empresa"]) && $_POST["empresa"] == $key)? "selected": "")." value='{$key}'>{$empresasNomes[$value]}</option>";
-        }
-    }
-    $empresasInput .= "</select></div>";
-
-    // $empresasInput = 
-    //     "<div class='form-group'>
-    //         <input
-    //             focus
-    //             autofocus
-    //             class='input-empresas form-control form-control-solid placeholder-no-fix'
-    //             type='text'
-    //             autocomplete='off'
-    //             placeholder='Empresa'
-    //             name='empresa'
-    //             ".(!empty($_POST["empresa"])? 'value='.$_POST["empresa"]: "")."
-    //         />
-    //     </div>"
-    // ;
 ?>

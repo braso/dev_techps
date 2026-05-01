@@ -3,6 +3,7 @@ include_once "../conecta.php";
 
 echo "
 <script>
+    // Esconde o loading visual da pagina apos o carregamento inicial.
     function hideLoading() {
         if(document.getElementsByClassName('loading')[0] != undefined){
             document.getElementsByClassName('loading')[0].style.display = 'none';
@@ -12,6 +13,7 @@ echo "
     setTimeout(hideLoading, 3000);
 </script>";
 
+// Tela inicial para escolha do modelo de documento antes do preenchimento.
 function novoDocumento() {
     cabecalho("Novo Documento");
     
@@ -40,6 +42,7 @@ function novoDocumento() {
     rodape();
 }
 
+// Valida o tipo escolhido e redireciona para a tela de preenchimento.
 function irParaPreenchimento() {
     $id_tipo = $_POST['id_tipo'] ?? $_GET['id_tipo'] ?? 0;
     if (empty($id_tipo)) {
@@ -51,6 +54,7 @@ function irParaPreenchimento() {
     exit;
 }
 
+// Lista documentos gerados e disponibiliza acoes de PDF/exclusao.
 function index() {
     global $conn;
     cabecalho("Gestão de Documentos");
@@ -95,11 +99,64 @@ function index() {
         "busca_user" => "user_tx_login"
     ];
 
-    $queryBase = "SELECT i.*, t.tipo_tx_nome, u.user_tx_nome 
-                  FROM inst_documento_modulo i
-                  JOIN tipos_documentos t ON i.inst_nb_tipo_doc = t.tipo_nb_id
-                  JOIN user u ON i.inst_nb_user = u.user_nb_id
-                  WHERE i.inst_tx_status = 'ativo'";
+    $assinaturaExiste = false;
+    $assinantesExiste = false;
+    $chkAss = @mysqli_query($conn, "SHOW TABLES LIKE 'solicitacoes_assinatura'");
+    if ($chkAss instanceof mysqli_result && mysqli_num_rows($chkAss) > 0) {
+        $assinaturaExiste = true;
+    }
+    $chkAssinantes = @mysqli_query($conn, "SHOW TABLES LIKE 'assinantes'");
+    if ($chkAssinantes instanceof mysqli_result && mysqli_num_rows($chkAssinantes) > 0) {
+        $assinantesExiste = true;
+    }
+
+    if ($assinaturaExiste) {
+        $joinAssinantes = "";
+        $selectAssinantes = "0 AS assinatura_total, 0 AS assinatura_assinados";
+        if ($assinantesExiste) {
+            $joinAssinantes = " LEFT JOIN (
+                                    SELECT id_solicitacao,
+                                           COUNT(*) AS total_assinantes,
+                                           SUM(CASE WHEN LOWER(TRIM(status)) = 'assinado' THEN 1 ELSE 0 END) AS total_assinados
+                                    FROM assinantes
+                                    GROUP BY id_solicitacao
+                                ) aa ON aa.id_solicitacao = sa.id";
+            $selectAssinantes = "COALESCE(aa.total_assinantes, 0) AS assinatura_total,
+                                 COALESCE(aa.total_assinados, 0) AS assinatura_assinados";
+        }
+
+        $queryBase = "SELECT i.*, t.tipo_tx_nome, u.user_tx_nome,
+                             sa.id AS assinatura_id,
+                             sa.caminho_arquivo AS assinatura_caminho,
+                             sa.status AS assinatura_status,
+                             " . $selectAssinantes . "
+                      FROM inst_documento_modulo i
+                      JOIN tipos_documentos t ON i.inst_nb_tipo_doc = t.tipo_nb_id
+                      JOIN user u ON i.inst_nb_user = u.user_nb_id
+                      LEFT JOIN (
+                            SELECT s1.id, s1.id_documento, s1.caminho_arquivo, s1.status
+                            FROM solicitacoes_assinatura s1
+                            INNER JOIN (
+                                SELECT id_documento, MAX(id) AS max_id
+                                FROM solicitacoes_assinatura
+                                WHERE id_documento <> ''
+                                GROUP BY id_documento
+                            ) ult ON ult.max_id = s1.id
+                      ) sa ON sa.id_documento = CONCAT('INST_', i.inst_nb_id)
+                      " . $joinAssinantes . "
+                      WHERE i.inst_tx_status = 'ativo'";
+    } else {
+        $queryBase = "SELECT i.*, t.tipo_tx_nome, u.user_tx_nome,
+                             0 AS assinatura_id,
+                             '' AS assinatura_caminho,
+                             '' AS assinatura_status,
+                             0 AS assinatura_total,
+                             0 AS assinatura_assinados
+                      FROM inst_documento_modulo i
+                      JOIN tipos_documentos t ON i.inst_nb_tipo_doc = t.tipo_nb_id
+                      JOIN user u ON i.inst_nb_user = u.user_nb_id
+                      WHERE i.inst_tx_status = 'ativo'";
+    }
     
     // Icones para Visualizar/Gerar PDF e Excluir
     $actions = [
@@ -122,16 +179,47 @@ function index() {
     echo "<thead><tr><th>ID</th><th>Tipo</th><th>Usuário</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead>";
     echo "<tbody>";
     while ($row = mysqli_fetch_assoc($res)) {
+        $pdfLink = 'processar_pdf.php?id=' . intval($row['inst_nb_id']);
+
+        $caminhoAss = trim(strval($row['assinatura_caminho'] ?? ''));
+        $statusAssinatura = strtolower(trim(strval($row['assinatura_status'] ?? '')));
+        $assinaturaId = intval($row['assinatura_id'] ?? 0);
+        $assinaturaTotal = intval($row['assinatura_total'] ?? 0);
+        $assinaturaAssinados = intval($row['assinatura_assinados'] ?? 0);
+
+        $possuiFluxoAssinatura = ($assinaturaId > 0 || $caminhoAss !== '' || $statusAssinatura !== '');
+        $assinaturaConcluida = in_array($statusAssinatura, ['concluido', 'assinado', 'finalizado'], true)
+            || ($assinaturaTotal > 0 && $assinaturaAssinados >= $assinaturaTotal);
+
+        // Regra do fluxo de assinatura: só exibe o documento após todas as assinaturas.
+        if ($possuiFluxoAssinatura && !$assinaturaConcluida) {
+            continue;
+        }
+
+        if ($caminhoAss !== '' && $assinaturaConcluida) {
+            $candidatoAbs = realpath(__DIR__ . '/../assinatura/' . ltrim($caminhoAss, '/\\'));
+            if ($candidatoAbs && file_exists($candidatoAbs)) {
+                $parts = array_map('rawurlencode', explode('/', str_replace('\\', '/', ltrim($caminhoAss, '/\\'))));
+                $pdfLink = '../assinatura/' . implode('/', $parts);
+            }
+        }
+
+        $idInstancia = intval($row['inst_nb_id']);
+        $tipoNome = htmlspecialchars(strval($row['tipo_tx_nome'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $usuarioNome = htmlspecialchars(strval($row['user_tx_nome'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $statusInstancia = htmlspecialchars(strtoupper(strval($row['inst_tx_status'] ?? '')), ENT_QUOTES, 'UTF-8');
+        $pdfLinkSafe = htmlspecialchars($pdfLink, ENT_QUOTES, 'UTF-8');
+
         echo "<tr>";
-        echo "<td>{$row['inst_nb_id']}</td>";
-        echo "<td>{$row['tipo_tx_nome']}</td>";
-        echo "<td>{$row['user_tx_nome']}</td>";
+        echo "<td>{$idInstancia}</td>";
+        echo "<td>{$tipoNome}</td>";
+        echo "<td>{$usuarioNome}</td>";
         echo "<td>" . date("d/m/Y H:i", strtotime($row['inst_dt_criacao'])) . "</td>";
-        echo "<td>" . strtoupper($row['inst_tx_status']) . "</td>";
+        echo "<td>{$statusInstancia}</td>";
         echo "<td>
-                <a href='processar_pdf.php?id={$row['inst_nb_id']}' target='_blank' class='btn btn-xs btn-info' title='PDF'><span class='glyphicon glyphicon-print'></span></a>
+                <a href='{$pdfLinkSafe}' target='_blank' class='btn btn-xs btn-info' title='PDF'><span class='glyphicon glyphicon-print'></span></a>
                 <form method='post' style='display:inline;' onsubmit='return confirm(\"Deseja excluir?\")'>
-                    <input type='hidden' name='id_instancia' value='{$row['inst_nb_id']}'>
+                    <input type='hidden' name='id_instancia' value='{$idInstancia}'>
                     <input type='hidden' name='acao' value='excluirDocumento'>
                     <button type='submit' class='btn btn-xs btn-danger'><span class='glyphicon glyphicon-trash'></span></button>
                 </form>
@@ -143,6 +231,7 @@ function index() {
     rodape();
 }
 
+// Exclui uma instancia de documento da listagem.
 function excluirDocumento() {
     $id = $_POST['id_instancia'];
     remover('inst_documento_modulo', $id);
