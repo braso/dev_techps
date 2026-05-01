@@ -44,6 +44,57 @@
 		return $rotulos;
 	}
 
+	function normalizarFiltroArray($valor): array{
+		if (is_array($valor)) {
+			return array_values(array_filter(array_map('trim', $valor), function($v) { return $v !== ''; }));
+		}
+		if (is_string($valor) && $valor !== '') {
+			$partes = array_map('trim', explode(',', $valor));
+			return array_values(array_filter($partes, function($v) { return $v !== ''; }));
+		}
+		return [];
+	}
+
+	function renderFiltroCheckboxGroup($titulo, $name, $opcoes, $selecionados, $width=3) {
+		$selecionados = normalizarFiltroArray($selecionados);
+		$selecionadosQtd = count($selecionados);
+		$tituloRender = $titulo.($selecionadosQtd > 0 ? " ({$selecionadosQtd})" : "");
+		$nameAttr = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
+		$groupId = preg_replace('/[^a-zA-Z0-9_]/', '_', $name);
+		$hiddenValue = htmlspecialchars(implode(',', $selecionados), ENT_QUOTES, 'UTF-8');
+		$tituloAttr = htmlspecialchars($titulo, ENT_QUOTES, 'UTF-8');
+		$tituloRenderAttr = htmlspecialchars($tituloRender, ENT_QUOTES, 'UTF-8');
+
+		$html = "<div class='col-sm-{$width} margin-bottom-5 campo-fit-content'>"
+			."<div class='filtro-dropdown' data-filter-group='".$groupId."' style='position:relative; overflow:visible;'>"
+			."<button type='button' class='btn btn-default btn-block filtro-dropdown-toggle js-filtro-toggle' data-target='".$nameAttr."' data-base-label='".$tituloAttr."' aria-expanded='false' style='display:flex; justify-content:space-between; align-items:center; gap:10px;'>"
+			."<span class='js-filtro-label' style='text-align:left;'>".$tituloRenderAttr."</span>"
+			."<span class='caret'></span>"
+			."</button>"
+			."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:1050; background:#fff; border:1px solid #d9d9d9; border-radius:8px; box-shadow:0 12px 30px rgba(0,0,0,.12); padding:10px; max-height:260px; overflow:auto;'>"
+			."<input type='hidden' class='js-filtro-hidden' data-filter-name='".$nameAttr."' name='".$nameAttr."' value='".$hiddenValue."'>"
+			."<div style='display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;'>"
+			."<button type='button' class='btn btn-xs btn-default js-filtro-todos' data-target='".$nameAttr."' data-action='all'>Marcar todos</button>"
+			."<button type='button' class='btn btn-xs btn-default js-filtro-todos' data-target='".$nameAttr."' data-action='none'>Desmarcar todos</button>"
+			."</div>";
+
+		if(empty($opcoes)){
+			$html .= "<div style='color:#777;'>Sem opções</div>";
+		}else{
+			foreach($opcoes as $valor => $rotulo){
+				$valorStr = (string)$valor;
+				$checked = in_array($valorStr, $selecionados, true) ? "checked" : "";
+				$html .= "<label style='display:block; margin-bottom:6px; font-weight:normal; cursor:pointer;'>"
+					."<input type='checkbox' class='js-filtro-checkbox' data-target='".$nameAttr."' value='".htmlspecialchars($valorStr, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
+					.htmlspecialchars($rotulo)
+					."</label>";
+			}
+		}
+
+		$html .= "</div></div></div>";
+		return $html;
+	}
+
 	function montarMensagemParametro(array &$motorista): string{
 		$mensagemParametro = $motorista["para_tx_nome"];
 		if($motorista["para_tx_tipo"] == "horas_por_dia"){
@@ -165,10 +216,19 @@
 					$_POST["busca_periodo"] = $_POST["periodo_abono"];
 					unset($_POST["periodo_abono"]);
 				}
-				if(!empty($_POST["busca_motorista"]) && empty($_POST["busca_empresa"])){
-					$_POST["busca_empresa"] = mysqli_fetch_assoc(query(
-						"SELECT enti_nb_empresa FROM entidade WHERE enti_nb_id = {$_POST["busca_motorista"]} LIMIT 1;"
-					))["enti_nb_empresa"];
+				$empresasSelecionadas = normalizarFiltroArray($_POST["busca_empresa"] ?? "");
+				$empresasIds = array_map('intval', $empresasSelecionadas);
+				$empresasIds = array_values(array_filter($empresasIds, function($v){ return $v > 0; }));
+				$condEmpresaBusca = "";
+				if(!empty($empresasIds)){
+					$condEmpresaBusca = " AND enti_nb_empresa IN (".implode(',', $empresasIds).")";
+				}
+				$motoristasSelecionados = normalizarFiltroArray($_POST["busca_motorista"] ?? "");
+				if(empty($motoristasSelecionados) && !empty($_POST["busca_motorista"])){
+					$motoristasSelecionados = [$_POST["busca_motorista"]];
+				}
+				if(count($motoristasSelecionados) > 1 && empty($empresasIds)){
+					throw new Exception("Selecione ao menos uma Empresa para consultar múltiplos {$rotulos["funcionarioPlural"]}.");
 				}
 	
 				//Conferir campos obrigatórios{
@@ -192,30 +252,30 @@
 					$_POST["errorFields"][] = "busca_periodo";
 					throw new Exception("Data de pesquisa não pode ser após hoje (".date("d/m/Y").").");
 				}else{
-					$motorista = mysqli_fetch_assoc(query(
-						"SELECT enti_tx_admissao FROM entidade"
-							." WHERE enti_tx_status = 'ativo'"
-								." AND enti_nb_empresa = {$_POST["busca_empresa"]}"
-								." AND enti_nb_id = {$_POST["busca_motorista"]}"
-							." LIMIT 1;"
-					));
+					if(count($motoristasSelecionados) === 1){
+						$motorista = mysqli_fetch_assoc(query(
+							"SELECT enti_tx_admissao FROM entidade"
+								." WHERE enti_tx_status = 'ativo'"
+									.$condEmpresaBusca
+									." AND enti_nb_id = ".intval($motoristasSelecionados[0])
+								." LIMIT 1;"
+							));
 	
-					if(empty($motorista)){
-						$_POST["errorFields"][] = "busca_motorista";
-						throw new Exception("Este {$rotulos["funcionario"]} não pertence a esta empresa.");
+						if(empty($motorista)){
+							$_POST["errorFields"][] = "busca_motorista";
+							throw new Exception("Este {$rotulos["funcionario"]} não pertence a esta empresa.");
+						}
+
+						//Conferir se a data de início da pesquisa está antes do cadastro do motorista{
+							$dataInicio = new DateTime($_POST["busca_periodo"][0]);
+							$data_cadastro = new DateTime($motorista["enti_tx_admissao"]);
+							if($dataInicio->format("Y-m") < $data_cadastro->format("Y-m")){
+								$_POST["errorFields"][] = "busca_periodo";
+								throw new Exception("O mês inicial deve ser posterior ou igual ao mês de admissão do {$rotulos["funcionario"]} (".$data_cadastro->format("m/Y").").");
+							}
+						//}
 					}
 				}
-
-				//Conferir se a data de início da pesquisa está antes do cadastro do motorista{
-					if(!empty($motorista)){
-						$dataInicio = new DateTime($_POST["busca_periodo"][0]);
-						$data_cadastro = new DateTime($motorista["enti_tx_admissao"]);
-						if($dataInicio->format("Y-m") < $data_cadastro->format("Y-m")){
-							$_POST["errorFields"][] = "busca_periodo";
-							throw new Exception("O mês inicial deve ser posterior ou igual ao mês de admissão do {$rotulos["funcionario"]} (".$data_cadastro->format("m/Y").").");
-						}
-					}
-				//}
 			}catch(Exception $error){
 				set_status("ERRO: ".$error->getMessage());
 				unset($_POST["acao"]);
@@ -255,8 +315,14 @@
 					campo($rotulos["funcionario"], "nome_motorista_view", $motoristaLogado["enti_tx_nome"], 4, "", "readonly")
 				];
 
-            }else{
-                $_POST["busca_empresa"] = $_POST["busca_empresa"]?? $_SESSION["user_nb_empresa"];
+			}else{
+				$empresasSelecionadas = normalizarFiltroArray($_POST["busca_empresa"] ?? "");
+
+				$empresasOpcoes = [];
+				$empresasResult = query("SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome ASC");
+				while($rowEmpresa = mysqli_fetch_assoc($empresasResult)){
+					$empresasOpcoes[$rowEmpresa['empr_nb_id']] = $rowEmpresa['empr_tx_nome'];
+				}
                 
                 // Filtros adicionais: Cargo e Setor
 				// Ambos influenciam a lista de colaboradores/funcionarios.
@@ -276,6 +342,27 @@
                 if (!empty($_POST["busca_subsetor"])) {
                     $condCargoSetor .= " AND enti_subSetor_id = ".intval($_POST["busca_subsetor"]);
                 }
+				$funcionariosOpcoes = [];
+				if (!empty($empresasSelecionadas)) {
+					$idsEmpresa = array_map('intval', $empresasSelecionadas);
+					$idsEmpresa = array_values(array_filter($idsEmpresa, function($v){ return $v > 0; }));
+					if(!empty($idsEmpresa)){
+						$condCargoSetor .= " AND enti_nb_empresa IN (".implode(',', $idsEmpresa).")";
+
+						$funcionariosResult = query(
+							"SELECT DISTINCT enti_nb_id, enti_tx_nome, enti_tx_matricula
+							 FROM entidade
+							 WHERE enti_tx_status = 'ativo'"
+							.$condBuscaMotorista.
+							" AND enti_nb_empresa IN (".implode(',', $idsEmpresa).")"
+							.$condCargoSetor.
+							" ORDER BY enti_tx_nome ASC"
+						);
+						while($rowFuncionario = mysqli_fetch_assoc($funcionariosResult)){
+							$funcionariosOpcoes[$rowFuncionario['enti_nb_id']] = "[".$rowFuncionario['enti_tx_matricula']."] ".$rowFuncionario['enti_tx_nome'];
+						}
+					}
+				}
 
                 $hasSubsetor = 0;
                 if (!empty($_POST["busca_setor"])) {
@@ -286,27 +373,15 @@
                 }
 
                 $searchFields = [
-                    combo_net("Empresa*", "busca_empresa", $_POST["busca_empresa"], 3, "empresa", "onchange=selecionaMotorista(this.value) ", $condBuscaEmpresa),
+					renderFiltroCheckboxGroup("Empresa*", "busca_empresa", $empresasOpcoes, $_POST["busca_empresa"] ?? "", 3),
+					renderFiltroCheckboxGroup("{$rotulos["funcionario"]}*", "busca_motorista", $funcionariosOpcoes, $_POST["busca_motorista"] ?? "", 4),
                     combo_bd("!Cargo", "busca_operacao", (!empty($_POST["busca_operacao"]) ? $_POST["busca_operacao"] : ""), 2, "operacao", "onchange='this.form.submit()'"),
                     combo_bd("!Setor", "busca_setor", (!empty($_POST["busca_setor"]) ? $_POST["busca_setor"] : ""), 2, "grupos_documentos", "onchange='this.form.submit()'"),
                 ];
                 if ($hasSubsetor > 0) {
                     $searchFields[] = combo_bd("!Subsetor", "busca_subsetor", (!empty($_POST["busca_subsetor"]) ? $_POST["busca_subsetor"] : ""), 2, "sbgrupos_documentos", "onchange='this.form.submit()'", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " AND 1 = 0 ORDER BY sbgr_tx_nome ASC"));
                 }
-                $searchFields[] = combo_net(
-						$rotulos["funcionario"]."*",
-                        "busca_motorista",
-                        (!empty($_POST["busca_motorista"]) ? $_POST["busca_motorista"] : ""),
-                        4,
-                        "entidade JOIN empresa ON enti_nb_empresa = empr_nb_id",
-                        "",
-                        (!empty($_POST["busca_empresa"]) ? " AND enti_nb_empresa = {$_POST["busca_empresa"]}" : "").
-                            " {$condBuscaEmpresa} {$condBuscaMotorista}".
-                            $condCargoSetor,
-                        "enti_tx_matricula"
-                    );
-                
-                
+
             }
 
 			$searchFields[] = campo(
@@ -332,8 +407,117 @@
 		//}
 		
 		echo abre_form();
+		echo campo_hidden("isAutoReload", "");
 		echo linha_form($searchFields);
 		echo fecha_form($b);
+		echo <<<'JS'
+		<script>(function(){
+			function fecharDropdowns(excecao){
+				$('.filtro-dropdown').each(function(){
+					if(excecao && $(this).is(excecao)){
+						return;
+					}
+					$(this).removeClass('open');
+					$(this).find('.filtro-dropdown-menu').hide();
+					$(this).find('.js-filtro-toggle').attr('aria-expanded', 'false');
+				});
+			}
+
+			function alternarDropdown(botao){
+				var wrapper = $(botao).closest('.filtro-dropdown');
+				var menu = wrapper.find('.filtro-dropdown-menu').first();
+				var isOpen = wrapper.hasClass('open');
+				fecharDropdowns(wrapper);
+				if(!isOpen){
+					wrapper.addClass('open');
+					menu.show();
+					$(botao).attr('aria-expanded', 'true');
+				}
+			}
+
+			function atualizarTituloFiltro(nome){
+				var wrapper = $('.filtro-dropdown').has('input.js-filtro-hidden[data-filter-name="' + nome + '"]');
+				if(!wrapper.length){
+					return;
+				}
+				var botao = wrapper.find('.js-filtro-toggle').first();
+				var labelBase = botao.data('base-label') || nome;
+				var qtd = wrapper.find('input.js-filtro-checkbox[data-target="' + nome + '"]:checked').length;
+				var texto = qtd > 0 ? (labelBase + ' (' + qtd + ')') : labelBase;
+				botao.find('.js-filtro-label').text(texto);
+			}
+
+			function atualizarHidden(nome){
+				var checked = $('input.js-filtro-checkbox[data-target="' + nome + '"]:checked');
+				var valores = [];
+				checked.each(function(){
+					valores.push($(this).val());
+				});
+				var hiddenInput = $('input.js-filtro-hidden[data-filter-name="' + nome + '"]');
+				hiddenInput.val(valores.join(','));
+				atualizarTituloFiltro(nome);
+			}
+
+			function sincronizarFiltros(){
+				$('input.js-filtro-hidden').each(function(){
+					atualizarHidden($(this).data('filter-name'));
+				});
+			}
+
+			$(document).on('change', 'input.js-filtro-checkbox', function(){
+				var target = $(this).data('target');
+				atualizarHidden(target);
+				if(target === 'busca_empresa'){
+					var form = document.contex_form;
+					if(form){
+						if(form.isAutoReload){
+							form.isAutoReload.value = '1';
+						}
+						$('input.js-filtro-checkbox[data-target="busca_motorista"]').prop('checked', false);
+						atualizarHidden('busca_motorista');
+						form.submit();
+					}
+				}
+			});
+
+			$(document).on('click', '.js-filtro-toggle', function(e){
+				e.preventDefault();
+				e.stopPropagation();
+				alternarDropdown(this);
+			});
+
+			$(document).on('click', '.js-filtro-todos', function(){
+				var target = $(this).data('target');
+				var action = $(this).data('action');
+				var marcar = action === 'all';
+				var checkboxes = $('input.js-filtro-checkbox[data-target="' + target + '"]');
+				checkboxes.each(function(){
+					var checked = $(this).prop('checked');
+					if(checked !== marcar){
+						$(this).click();
+					}
+				});
+				atualizarHidden(target);
+			});
+
+			$(document).on('click', function(){
+				fecharDropdowns();
+			});
+
+			$(document).on('click', '.filtro-dropdown-menu', function(e){
+				e.stopPropagation();
+			});
+
+			$('form[name="contex_form"]').on('submit', function(){
+				var autoReload = this.isAutoReload && this.isAutoReload.value === '1';
+				if(!autoReload && this.isAutoReload){
+					this.isAutoReload.value = '';
+				}
+			});
+
+			sincronizarFiltros();
+		})();</script>
+JS;
 		// if(!in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){
 		// 	echo botao("Cadastrar Abono", "redirParaAbono", "", "", "btn btn-secondary");
 		// }
@@ -353,18 +537,32 @@
 				;
 
 				// Converte as datas para objetos DateTime
-				[$startDate, $endDate] = [new DateTime($_POST["busca_periodo"][0]), new DateTime($_POST["busca_periodo"][1]." 23:59:59")];
-				$rows = [];
-				
-				$motorista = mysqli_fetch_assoc(query(
-					"SELECT * FROM entidade
-					 LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
-					 LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
-					 LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
-					 WHERE enti_tx_status = 'ativo'
-						 AND enti_nb_id = '{$_POST["busca_motorista"]}'
-					 LIMIT 1;"
-				));
+				$motoristasSelecionados = normalizarFiltroArray($_POST["busca_motorista"] ?? "");
+				if(empty($motoristasSelecionados) && !empty($_POST["busca_motorista"])){
+					$motoristasSelecionados = [$_POST["busca_motorista"]];
+				}
+				if(empty($motoristasSelecionados)){
+					throw new Exception("Selecione ao menos um {$rotulos["funcionario"]}.");
+				}
+
+				[$startDateBase, $endDateBase] = [new DateTime($_POST["busca_periodo"][0]), new DateTime($_POST["busca_periodo"][1]." 23:59:59")];
+				$totalMotoristasSelecionados = count($motoristasSelecionados);
+
+				foreach($motoristasSelecionados as $indiceMotorista => $idMotorista){
+					$startDate = clone $startDateBase;
+					$endDate = clone $endDateBase;
+					$rows = [];
+					$_POST["busca_motorista"] = $idMotorista;
+					
+					$motorista = mysqli_fetch_assoc(query(
+						"SELECT * FROM entidade
+						 LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
+						 LEFT JOIN cidade  ON empresa.empr_nb_cidade = cidade.cida_nb_id
+						 LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
+						 WHERE enti_tx_status = 'ativo'
+							 AND enti_nb_id = '".intval($idMotorista)."'
+						 LIMIT 1;"
+					));
 				
 				//Conferir se há dias do mês já endossados{
 					$endossoMes = montarEndossoMes($startDate, $motorista);
@@ -622,6 +820,10 @@
 					$paginaDestino
 				);
 				unset($params);
+					if($indiceMotorista < ($totalMotoristasSelecionados - 1)){
+						echo "<div style='page-break-after:always;'></div>";
+					}
+				}
 			}
 		//}
 		
@@ -641,15 +843,21 @@
 			."&limite=15"
 		;
 
+		$empresaLogoId = $_POST["busca_empresa"] ?? "";
+		$empresaLogoLista = normalizarFiltroArray($empresaLogoId);
+		if(!empty($empresaLogoLista)){
+			$empresaLogoId = intval($empresaLogoLista[0]);
+		}
+
 		$logoEmpresa = mysqli_fetch_assoc(query(
             "SELECT empr_tx_logo FROM empresa
                 WHERE empr_tx_status = 'ativo'
-                    AND empr_nb_id = '{$_POST["busca_empresa"]}'
+					AND empr_nb_id = '".intval($empresaLogoId)."'
 				LIMIT 1;"
 			))["empr_tx_logo"];
 
-		return 
-			"<script>
+		return <<<'JS'
+		<script>
 				function ajustarPonto(idMotorista, data){
 					document.form_ajuste_ponto.idMotorista.value = idMotorista;
 					document.form_ajuste_ponto.data.value = data;
@@ -657,14 +865,46 @@
 				}
 
 				
-				function selecionaMotorista(idEmpresa){
-					let condicoes = '&condicoes='+encodeURI('enti_tx_ocupacao IN (\"Motorista\", \"Ajudante\", \"Funcionário\", \"Terceirizado\", \"Tercerizado\")');
-					if(idEmpresa > 0){
-						condicoes += encodeURI(' AND enti_nb_empresa = '+idEmpresa);
-						$('.busca_motorista')[0].innerHTML = null;
+				function obterFiltroCheckbox(nome){
+					var valor = $('input.js-filtro-hidden[data-filter-name="' + nome + '"]').val() || '';
+					if(!valor){
+						return [];
 					}
+					return valor.split(',').map(function(item){
+						return item.trim();
+					}).filter(function(item){
+						return item !== '';
+					});
+				}
 
-					// Verifique se o elemento está usando Select2 antes de destruí-lo
+				function montarCondicaoLista(coluna, valores, numerico){
+					if(!valores || !valores.length){
+						return '';
+					}
+					if(numerico){
+						valores = valores.map(function(v){
+							return parseInt(v, 10);
+						}).filter(function(v){
+							return !isNaN(v) && v > 0;
+						});
+						if(!valores.length){
+							return '';
+						}
+						return ' AND ' + coluna + ' IN (' + valores.join(',') + ')';
+					}
+					valores = valores.map(function(v){
+						return '"' + String(v).replace(/"/g, '\\"') + '"';
+					});
+					return ' AND ' + coluna + ' IN (' + valores.join(',') + ')';
+				}
+
+				function selecionaMotorista(){
+					var condicoes = '&condicoes=' + encodeURI('enti_tx_ocupacao IN ("Motorista", "Ajudante", "Funcionário", "Terceirizado", "Tercerizado")');
+					var empresas = obterFiltroCheckbox('busca_empresa');
+					var ocupacoes = obterFiltroCheckbox('busca_ocupacao');
+					condicoes += encodeURI(montarCondicaoLista('enti_nb_empresa', empresas, true));
+					condicoes += encodeURI(montarCondicaoLista('enti_tx_ocupacao', ocupacoes, false));
+
 					if($('.busca_motorista').data('select2')){
 						$('.busca_motorista').select2('destroy');
 					}
@@ -690,6 +930,10 @@
 						}
 					});
 				}
+
+				$(function(){
+					selecionaMotorista();
+				});
 
 				function imprimir() {
 					const alvo = document.querySelector('div > div.portlet-title');
@@ -755,6 +999,6 @@
 					`);
 					janela.document.close();
 				}
-			</script>"
-		;
+			</script>
+		JS;
 	}

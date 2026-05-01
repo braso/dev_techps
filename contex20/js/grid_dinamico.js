@@ -24,6 +24,73 @@ const escapeHtmlAttr = (value) => {
         .replace(/>/g, '&gt;')
         .replace(/'/g, '&#39;');
 };
+
+const normalizarFiltroValores = (value) => {
+    if(Array.isArray(value)){
+        return value.map((item) => String(item ?? '').trim()).filter((item) => item.length > 0);
+    }
+
+    const texto = String(value ?? '').trim();
+    if(texto === ''){
+        return [];
+    }
+
+    return texto
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+};
+
+const escapeSqlValue = (value) => {
+    return String(value ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"')
+        .replace(/'/g, "\\'");
+};
+
+const montarCondicaoFiltro = (campo, nomeInput, value) => {
+    const valores = normalizarFiltroValores(value);
+    if(valores.length === 0){
+        return '';
+    }
+
+    const nome = String(nomeInput ?? '');
+    const primeiro = valores[0];
+
+    if(nome.indexOf('_like') > 0){
+        if(valores.length === 1){
+            return ' AND ' + campo + ' LIKE "%'+escapeSqlValue(primeiro)+'%"';
+        }
+        return ' AND (' + valores.map((item) => campo + ' LIKE "%' + escapeSqlValue(item) + '%"').join(' OR ') + ')';
+    }
+
+    if(nome.indexOf('_cpf') > 0){
+        const cpf = primeiro.replace(/[^0-9]/g, '');
+        return ' AND ' + campo + ' = "' + escapeSqlValue(cpf) + '"';
+    }
+
+    if(nome.indexOf('_ge') > 0){
+        return ' AND ' + campo + ' >= "' + escapeSqlValue(primeiro) + '"';
+    }
+
+    if(nome.indexOf('_g') > 0){
+        return ' AND ' + campo + ' > "' + escapeSqlValue(primeiro) + '"';
+    }
+
+    if(nome.indexOf('_le') > 0){
+        return ' AND ' + campo + ' <= "' + escapeSqlValue(primeiro) + '"';
+    }
+
+    if(nome.indexOf('_l') > 0){
+        return ' AND ' + campo + ' < "' + escapeSqlValue(primeiro) + '"';
+    }
+
+    if(valores.length === 1){
+        return ' AND ' + campo + ' = "' + escapeSqlValue(primeiro) + '"';
+    }
+
+    return ' AND ' + campo + ' IN ("' + valores.map((item) => escapeSqlValue(item)).join('","') + '")';
+};
 // FUNÇÃO PARA EXPORTAR O ESTADO ATUAL DA TABELA
 function exportAllToCSV() {
     const btn = $('#btnExportCSV');
@@ -175,28 +242,13 @@ const consultarRegistros = function(){
         limit = 999999;
     }
 
-    keys = Object.values(searchFields);
-    inputs = $('form[name=\"contex_form\"] :input');
+    const inputNames = Object.keys(searchFields);
 
-
-    
-    for(f = 0; f < keys.length; f++){
-        if(data[keys[f]] != '' && data[keys[f]] != undefined){
-            if(inputs[f].name.indexOf('_like') > 0){
-                conditions += ' AND '+keys[f]+' LIKE \"%'+data[keys[f]]+'%\"';
-            }else if((inputs[f].name.indexOf('_g') > 0)){
-                conditions += ' AND '+keys[f]+' > \"'+data[keys[f]]+'\"';
-            }else if((inputs[f].name.indexOf('_ge') > 0)){
-                conditions += ' AND '+keys[f]+' >= \"'+data[keys[f]]+'\"';
-            }else if((inputs[f].name.indexOf('_l') > 0)){
-                conditions += ' AND '+keys[f]+' < \"'+data[keys[f]]+'\"';
-            }else if((inputs[f].name.indexOf('_le') > 0)){
-                conditions += ' AND '+keys[f]+' <= \"'+data[keys[f]]+'\"';
-            }else if((inputs[f].name.indexOf('_cpf') > 0)){
-                conditions += ' AND '+keys[f]+' = \"'+data[keys[f]].replace(/[^0-9]/g, "")+'\"';
-            }else{
-                conditions += ' AND '+keys[f]+' = \"'+data[keys[f]]+'\"';
-            }
+    for(f = 0; f < inputNames.length; f++){
+        const inputName = inputNames[f];
+        const campoBd = searchFields[inputName];
+        if(data[campoBd] !== '' && data[campoBd] !== undefined){
+            conditions += montarCondicaoFiltro(campoBd, inputName, data[campoBd]);
         }
     }
 
@@ -425,26 +477,13 @@ function imprimirTabelaCompleta() {
     });
 
     let condicoesImpressao = '';
-    const keys = Object.values(searchFields);
-    const inputs = $('form[name="contex_form"] :input');
+    const inputNamesImpressao = Object.keys(searchFields);
 
-    for (let f = 0; f < keys.length; f++) {
-        if (data[keys[f]] !== '') {
-            if (inputs[f].name.indexOf('_like') > 0) {
-                condicoesImpressao += ' AND ' + keys[f] + ' LIKE "%' + data[keys[f]] + '%"';
-            } else if (inputs[f].name.indexOf('_g') > 0) {
-                condicoesImpressao += ' AND ' + keys[f] + ' > "' + data[keys[f]] + '"';
-            } else if (inputs[f].name.indexOf('_ge') > 0) {
-                condicoesImpressao += ' AND ' + keys[f] + ' >= "' + data[keys[f]] + '"';
-            } else if (inputs[f].name.indexOf('_l') > 0) {
-                condicoesImpressao += ' AND ' + keys[f] + ' < "' + data[keys[f]] + '"';
-            } else if (inputs[f].name.indexOf('_le') > 0) {
-                condicoesImpressao += ' AND ' + keys[f] + ' <= "' + data[keys[f]] + '"';
-            } else if (inputs[f].name.indexOf('_cpf') > 0) {
-                condicoesImpressao += ' AND ' + keys[f] + ' = "' + data[keys[f]].replace(/[^0-9]/g, '') + '"';
-            } else {
-                condicoesImpressao += ' AND ' + keys[f] + ' = "' + data[keys[f]] + '"';
-            }
+    for (let f = 0; f < inputNamesImpressao.length; f++) {
+        const inputName = inputNamesImpressao[f];
+        const campoBd = searchFields[inputName];
+        if (data[campoBd] !== '') {
+            condicoesImpressao += montarCondicaoFiltro(campoBd, inputName, data[campoBd]);
         }
     }
 

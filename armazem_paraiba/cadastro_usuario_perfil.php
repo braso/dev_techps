@@ -14,6 +14,87 @@ include_once "load_env.php";
 include_once "conecta.php";
 mysqli_query($conn, "SET time_zone = '-3:00'");
 
+function normalizarFiltroArray($valor){
+    if($valor === null){
+        return [];
+    }
+
+    if(!is_array($valor)){
+        $valor = trim((string)$valor);
+        if($valor === ''){
+            return [];
+        }
+        $valor = preg_split('/\s*,\s*/', $valor);
+    }
+
+    $resultado = [];
+    foreach($valor as $item){
+        $item = trim((string)$item);
+        if($item === ''){
+            continue;
+        }
+        $resultado[$item] = $item;
+    }
+
+    return array_values($resultado);
+}
+
+function montarCondicaoListaSql($coluna, $valor, $tipo = 's'){
+    $valores = normalizarFiltroArray($valor);
+    if(empty($valores)){
+        return '';
+    }
+
+    if($tipo === 'i'){
+        $valores = array_map('intval', $valores);
+        return " AND {$coluna} IN (".implode(',', $valores).")";
+    }
+
+    $escapados = [];
+    foreach($valores as $item){
+        $escapados[] = "'".mysqli_real_escape_string($GLOBALS['conn'], $item)."'";
+    }
+
+    return " AND {$coluna} IN (".implode(',', $escapados).")";
+}
+
+function renderFiltroCheckboxGroup($titulo, $name, $opcoes, $selecionados, $width = 3){
+    $selecionados = normalizarFiltroArray($selecionados);
+    $nameAttr = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
+    $groupId = preg_replace('/[^a-zA-Z0-9_]/', '_', $name);
+    $hiddenValue = htmlspecialchars(implode(',', $selecionados), ENT_QUOTES, 'UTF-8');
+    $tituloAttr = htmlspecialchars($titulo, ENT_QUOTES, 'UTF-8');
+
+    $html = "<div class='col-sm-{$width} margin-bottom-5 campo-fit-content'>"
+        ."<div class='filtro-dropdown' data-filter-group='".$groupId."' style='position:relative; overflow:visible;'>"
+        ."<button type='button' class='btn btn-default btn-block filtro-dropdown-toggle js-filtro-toggle' data-target='".$nameAttr."' aria-expanded='false' style='display:flex; justify-content:space-between; align-items:center; gap:10px;'>"
+        ."<span style='text-align:left;'>".$tituloAttr."</span>"
+        ."<span class='caret'></span>"
+        ."</button>"
+        ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:1050; background:#fff; border:1px solid #d9d9d9; border-radius:8px; box-shadow:0 12px 30px rgba(0,0,0,.12); padding:10px; max-height:260px; overflow:auto;'>"
+        ."<input type='hidden' class='js-filtro-hidden' data-filter-name='".$nameAttr."' name='".$nameAttr."' value='".$hiddenValue."'>"
+        ."<div style='display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;'>"
+        ."<button type='button' class='btn btn-xs btn-default js-filtro-todos' data-target='".$nameAttr."' data-action='all'>Marcar todos</button>"
+        ."<button type='button' class='btn btn-xs btn-default js-filtro-todos' data-target='".$nameAttr."' data-action='none'>Desmarcar todos</button>"
+        ."</div>";
+
+    if(empty($opcoes)){
+        $html .= "<div style='color:#777;'>Sem opções</div>";
+    }else{
+        foreach($opcoes as $valor => $rotulo){
+            $valorStr = (string)$valor;
+            $checked = in_array($valorStr, $selecionados, true) ? "checked" : "";
+            $html .= "<label style='display:block; margin-bottom:6px; font-weight:normal; cursor:pointer;'>"
+                ."<input type='checkbox' class='js-filtro-checkbox' data-target='".$nameAttr."' value='".htmlspecialchars($valorStr, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
+                .htmlspecialchars($rotulo)
+                ."</label>";
+        }
+    }
+
+    $html .= "</div></div></div>";
+    return $html;
+}
+
 function cadastrar(){
     $modo = isset($_POST["modo"]) ? $_POST["modo"] : "individual";
     $perfil  = isset($_POST["perfil"]) ? (int)$_POST["perfil"] : 0;
@@ -273,8 +354,16 @@ function novoUsuarioPerfil(){
 }
 
 function limparFiltrosUsuarioPerfil(){
-    unset($_POST["busca_usuario_like"], $_POST["busca_perfil_like"], $_POST["busca_usuario"], $_POST["busca_perfil"], $_POST["busca_status"]);
-    $_POST["busca_status"] = 1;
+    unset(
+        $_POST["busca_usuario"],
+        $_POST["busca_empresa"],
+        $_POST["busca_perfil"],
+        $_POST["busca_cargo"],
+        $_POST["busca_setor"],
+        $_POST["busca_ocupacao"],
+        $_POST["busca_status"]
+    );
+    $_POST["busca_status"] = [1];
     index();
     exit;
 }
@@ -486,13 +575,21 @@ function listarUsuarioPerfis(){
     $gridFields = [
         "ID" => "uperf_nb_id",
         "USUÁRIO" => "user_tx_nome",
+        "EMPRESA" => "empresa_nome",
+        "CARGO" => "cargo_nome",
+        "SETOR" => "setor_nome",
+        "OCUPAÇÃO" => "ocupacao_nome",
         "PERFIL" => "perfil_tx_nome",
         "STATUS" => "statusTxt"
     ];
 
     $camposBusca = [
         "busca_usuario" => "u.user_nb_id",
+        "busca_empresa" => "u.user_nb_empresa",
         "busca_perfil" => "p.perfil_nb_id",
+        "busca_cargo" => "e.enti_tx_tipoOperacao",
+        "busca_setor" => "e.enti_setor_id",
+        "busca_ocupacao" => "e.enti_tx_ocupacao",
         "busca_status" => "uperf.ativo"
     ];
 
@@ -501,10 +598,18 @@ function listarUsuarioPerfis(){
             uperf.uperf_nb_id, 
             u.user_tx_login, 
             u.user_tx_nome, 
+            emp.empr_tx_nome AS empresa_nome,
+            o.oper_tx_nome AS cargo_nome,
+            g.grup_tx_nome AS setor_nome,
+            e.enti_tx_ocupacao AS ocupacao_nome,
             p.perfil_tx_nome, 
             IF(uperf.ativo = 1, 'Ativo', 'Inativo') AS statusTxt
          FROM usuario_perfil uperf
          JOIN user u ON u.user_nb_id = uperf.user_nb_id
+         LEFT JOIN empresa emp ON emp.empr_nb_id = u.user_nb_empresa
+         LEFT JOIN entidade e ON e.enti_nb_id = u.user_nb_entidade
+         LEFT JOIN operacao o ON o.oper_nb_id = e.enti_tx_tipoOperacao
+         LEFT JOIN grupos_documentos g ON g.grup_nb_id = e.enti_setor_id
          JOIN perfil_acesso p ON p.perfil_nb_id = uperf.perfil_nb_id";
 
     $actions = criarIconesGrid(
@@ -534,10 +639,21 @@ function index(){
         formUsuarioPerfil();
     } else {
         if(!isset($_POST["busca_status"])){
-            $_POST["busca_status"] = 1;
+            $_POST["busca_status"] = [1];
         }
 
-        $optsUsers = [""=>"Todos"];
+        $selecionadosUsuario = normalizarFiltroArray(isset($_POST["busca_usuario"]) ? $_POST["busca_usuario"] : []);
+        $selecionadosEmpresa = normalizarFiltroArray(isset($_POST["busca_empresa"]) ? $_POST["busca_empresa"] : []);
+        $selecionadosPerfil = normalizarFiltroArray(isset($_POST["busca_perfil"]) ? $_POST["busca_perfil"] : []);
+        $selecionadosCargo = normalizarFiltroArray(isset($_POST["busca_cargo"]) ? $_POST["busca_cargo"] : []);
+        $selecionadosSetor = normalizarFiltroArray(isset($_POST["busca_setor"]) ? $_POST["busca_setor"] : []);
+        $selecionadosOcupacao = normalizarFiltroArray(isset($_POST["busca_ocupacao"]) ? $_POST["busca_ocupacao"] : []);
+        $selecionadosStatus = normalizarFiltroArray(isset($_POST["busca_status"]) ? $_POST["busca_status"] : []);
+        if(empty($selecionadosStatus) && !isset($_POST["busca_status"])){
+            $selecionadosStatus = [1];
+        }
+
+        $optsUsers = [];
         $rsU = query(
             "SELECT DISTINCT u.user_nb_id, COALESCE(NULLIF(u.user_tx_nome,''), e.enti_tx_nome, u.user_tx_login) AS nome_label"
             ." FROM entidade e"
@@ -549,14 +665,44 @@ function index(){
             if(!empty($r["user_nb_id"])) $optsUsers[(int)$r["user_nb_id"]] = $r["nome_label"];
         }
 
-        $optsPerfis = [""=>"Todos"];
+        $optsEmpresas = [];
+        $rsE = query("SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status='ativo' ORDER BY empr_tx_nome");
+        while($rsE && ($r = mysqli_fetch_assoc($rsE))){ $optsEmpresas[(int)$r["empr_nb_id"]] = $r["empr_tx_nome"]; }
+
+        $optsPerfis = [];
         $rsP = query("SELECT perfil_nb_id, perfil_tx_nome FROM perfil_acesso WHERE perfil_tx_status='ativo' ORDER BY perfil_tx_nome");
         while($rsP && ($r = mysqli_fetch_assoc($rsP))){ $optsPerfis[(int)$r["perfil_nb_id"]] = $r["perfil_tx_nome"]; }
 
+        $optsCargos = [];
+        $rsCargos = query("SELECT oper_nb_id, oper_tx_nome FROM operacao ORDER BY oper_tx_nome");
+        while($rsCargos && ($r = mysqli_fetch_assoc($rsCargos))){ $optsCargos[(int)$r["oper_nb_id"]] = $r["oper_tx_nome"]; }
+
+        $optsSetores = [];
+        $rsSetores = query("SELECT grup_nb_id, grup_tx_nome FROM grupos_documentos ORDER BY grup_tx_nome");
+        while($rsSetores && ($r = mysqli_fetch_assoc($rsSetores))){ $optsSetores[(int)$r["grup_nb_id"]] = $r["grup_tx_nome"]; }
+
+        $optsOcupacoes = [];
+        $rsOcupacoes = query(
+            "SELECT DISTINCT NULLIF(TRIM(enti_tx_ocupacao), '') AS ocupacao
+             FROM entidade
+             WHERE enti_tx_status = 'ativo'
+               AND NULLIF(TRIM(enti_tx_ocupacao), '') IS NOT NULL
+             ORDER BY ocupacao"
+        );
+        while($rsOcupacoes && ($r = mysqli_fetch_assoc($rsOcupacoes))){
+            if(!empty($r["ocupacao"])){
+                $optsOcupacoes[$r["ocupacao"]] = $r["ocupacao"];
+            }
+        }
+
         $campos = [
-            combo("Usuário", "busca_usuario", (isset($_POST["busca_usuario"]) ? $_POST["busca_usuario"] : ""), 4, $optsUsers, "class='select2 filtro-select'"),
-            combo("Perfil", "busca_perfil", (isset($_POST["busca_perfil"]) ? $_POST["busca_perfil"] : ""), 4, $optsPerfis, "class='select2 filtro-select'"),
-            combo("Status", "busca_status", (isset($_POST["busca_status"]) ? $_POST["busca_status"] : 1), 2, [1=>"Ativo",0=>"Inativo"], "class='filtro-select'")
+            renderFiltroCheckboxGroup("Usuário", "busca_usuario", $optsUsers, $selecionadosUsuario, 3),
+            renderFiltroCheckboxGroup("Empresa", "busca_empresa", $optsEmpresas, $selecionadosEmpresa, 3),
+            renderFiltroCheckboxGroup("Perfil", "busca_perfil", $optsPerfis, $selecionadosPerfil, 3),
+            renderFiltroCheckboxGroup("Cargo", "busca_cargo", $optsCargos, $selecionadosCargo, 3),
+            renderFiltroCheckboxGroup("Setor", "busca_setor", $optsSetores, $selecionadosSetor, 3),
+            renderFiltroCheckboxGroup("Ocupação", "busca_ocupacao", $optsOcupacoes, $selecionadosOcupacao, 3),
+            renderFiltroCheckboxGroup("Status", "busca_status", [1=>"Ativo",0=>"Inativo"], $selecionadosStatus, 3)
         ];
 
         $botoes = [
@@ -569,9 +715,9 @@ function index(){
         echo linha_form($campos);
         echo fecha_form($botoes);
 
-        $statusBusca = isset($_POST["busca_status"]) ? (int)$_POST["busca_status"] : 1;
-        if ($statusBusca !== 0 && $statusBusca !== 1) {
-            $statusBusca = 1;
+        $statusBusca = $selecionadosStatus;
+        if(empty($statusBusca) && !isset($_POST["busca_status"])){
+            $statusBusca = [1];
         }
 
         $sqlCards =
@@ -581,30 +727,24 @@ function index(){
                 COUNT(DISTINCT u.user_nb_id) AS qtde
              FROM usuario_perfil uperf
              JOIN user u ON u.user_nb_id = uperf.user_nb_id
+             LEFT JOIN empresa emp ON emp.empr_nb_id = u.user_nb_empresa
+             LEFT JOIN entidade e ON e.enti_nb_id = u.user_nb_entidade
              JOIN perfil_acesso p ON p.perfil_nb_id = uperf.perfil_nb_id
-             WHERE uperf.ativo = ?
-               AND u.user_tx_status = 'ativo'
+             WHERE u.user_tx_status = 'ativo'
                AND p.perfil_tx_status = 'ativo'";
 
-        $paramsCards = [$statusBusca];
-        $typesCards = "i";
-
-        if (!empty($_POST["busca_usuario"])) {
-            $sqlCards .= " AND u.user_nb_id = ?";
-            $typesCards .= "i";
-            $paramsCards[] = (int)$_POST["busca_usuario"];
-        }
-
-        if (!empty($_POST["busca_perfil"])) {
-            $sqlCards .= " AND uperf.perfil_nb_id = ?";
-            $typesCards .= "i";
-            $paramsCards[] = (int)$_POST["busca_perfil"];
-        }
+        $sqlCards .= montarCondicaoListaSql("uperf.ativo", $statusBusca, 'i');
+        $sqlCards .= montarCondicaoListaSql("u.user_nb_id", $selecionadosUsuario, 'i');
+        $sqlCards .= montarCondicaoListaSql("u.user_nb_empresa", $selecionadosEmpresa, 'i');
+        $sqlCards .= montarCondicaoListaSql("uperf.perfil_nb_id", $selecionadosPerfil, 'i');
+        $sqlCards .= montarCondicaoListaSql("e.enti_tx_tipoOperacao", $selecionadosCargo, 'i');
+        $sqlCards .= montarCondicaoListaSql("e.enti_setor_id", $selecionadosSetor, 'i');
+        $sqlCards .= montarCondicaoListaSql("e.enti_tx_ocupacao", $selecionadosOcupacao, 's');
 
         $sqlCards .= " GROUP BY p.perfil_nb_id, p.perfil_tx_nome ORDER BY p.perfil_tx_nome ASC";
 
         $permissoesCards = mysqli_fetch_all(
-            query($sqlCards, $typesCards, $paramsCards),
+            query($sqlCards),
             MYSQLI_ASSOC
         );
 
@@ -623,7 +763,90 @@ function index(){
             echo "</div></div></div>";
         }
 
-        echo "<script>$(function(){ if($.fn.select2){ $.fn.select2.defaults.set('theme','bootstrap'); $('[name=busca_usuario],[name=busca_perfil]').select2({placeholder:'Selecione',allowClear:true}); $('[name=busca_usuario],[name=busca_perfil],[name=busca_status]').on('change', function(){ document.contex_form.submit(); }); } });</script>";
+        echo <<<'JS'
+<script>(function(){
+    function fecharDropdowns(excecao){
+        $('.filtro-dropdown').each(function(){
+            if(excecao && $(this).is(excecao)){
+                return;
+            }
+            $(this).removeClass('open');
+            $(this).find('.filtro-dropdown-menu').hide();
+            $(this).find('.js-filtro-toggle').attr('aria-expanded', 'false');
+        });
+    }
+
+    function alternarDropdown(botao){
+        var wrapper = $(botao).closest('.filtro-dropdown');
+        var menu = wrapper.find('.filtro-dropdown-menu').first();
+        var isOpen = wrapper.hasClass('open');
+
+        fecharDropdowns(wrapper);
+
+        if(!isOpen){
+            wrapper.addClass('open');
+            menu.show();
+            $(botao).attr('aria-expanded', 'true');
+        }
+    }
+
+    function atualizarHidden(nome){
+        var checked = $('input.js-filtro-checkbox[data-target="' + nome + '"]:checked');
+        var valores = [];
+        checked.each(function(){
+            valores.push($(this).val());
+        });
+        var hiddenInput = $('input.js-filtro-hidden[data-filter-name="' + nome + '"]');
+        hiddenInput.val(valores.join(','));
+        hiddenInput.trigger('change');
+    }
+
+    function sincronizarFiltros(){
+        $('input.js-filtro-hidden').each(function(){
+            atualizarHidden($(this).data('filter-name'));
+        });
+    }
+
+    $(document).on('change', 'input.js-filtro-checkbox', function(){
+        atualizarHidden($(this).data('target'));
+    });
+
+    $(document).on('click', '.js-filtro-toggle', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        alternarDropdown(this);
+    });
+
+    $(document).on('click', '.js-filtro-todos', function(){
+        var wrapper = $(this).closest('.filtro-dropdown');
+        var target = $(this).data('target');
+        var action = $(this).data('action');
+        var marcar = action === 'all';
+        
+        var checkboxes = $('input.js-filtro-checkbox[data-target="' + target + '"]');
+        
+        // Clica em cada checkbox que precisa mudar de estado para manter visual sincronizado
+        checkboxes.each(function(){
+            var checked = $(this).prop('checked');
+            if(checked !== marcar){
+                $(this).click();
+            }
+        });
+        
+        atualizarHidden(target);
+    });
+
+    $(document).on('click', function(){
+        fecharDropdowns();
+    });
+
+    $(document).on('click', '.filtro-dropdown-menu', function(e){
+        e.stopPropagation();
+    });
+
+    sincronizarFiltros();
+})();</script>
+JS;
 
         listarUsuarioPerfis();
     }
