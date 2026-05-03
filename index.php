@@ -35,7 +35,8 @@ error_reporting(E_ALL);
 		if(!empty($_POST["empresa"]) 
 				&& array_key_exists($_POST["empresa"], $empresas) 
 				&& file_exists(__DIR__."/".$empresas[$_POST["empresa"]]."/index.php")
-		){.$_ENV["APP_PATH"]."/".$empresas[$_POST["empresa"]]."/index.php";
+		){
+			$formAction = $_ENV["URL_BASE"].$_ENV["APP_PATH"]."/".$empresas[$_POST["empresa"]]."/index.php";
 			$formName = "formTelaPrincipal";
 		}else{
 			$formAction = "index.php?error=nullcompany";
@@ -44,7 +45,10 @@ error_reporting(E_ALL);
 
 		echo 
 			"<form action='{$formAction}' name='{$formName}' method='post'>"
-				."<input type='hidden type='hidden' name='sourcePage' value='".($_POST["sourcePage"]?? "")."'>": "")
+				."<input type='hidden' name='empresa' value='".($_POST["empresa"]?? "")."'>"
+				."<input type='hidden' name='user' value='".($_POST["user"]?? "")."'>"
+				."<input type='hidden' name='password' value='".($_POST["password"]?? "")."'>"
+				.(!empty($_POST["sourcePage"])? "<input type='hidden' name='sourcePage' value='".($_POST["sourcePage"]?? "")."'>": "")
 			."</form>"
 		;
 		echo "<script>document.{$formName}.submit();</script>";
@@ -58,7 +62,8 @@ error_reporting(E_ALL);
 				char = String.fromCharCode(e.keyCode);
 				return (char.match(pattern));
 			};
-			field = documentner !== 'undefined'){
+			field = document.getElementsByName('empresa')[0];
+			if(typeof field.addEventListener !== 'undefined'){
 				field.addEventListener('keypress', function(e){
 					if(!validChar(e, {$regexValidChar})){
 						e.preventDefault();
