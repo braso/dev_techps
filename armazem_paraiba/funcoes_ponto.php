@@ -2144,7 +2144,15 @@
 		foreach($rows as $row){
 			foreach($colunasASomar as $col){
 				if(!empty($row[$col])){
-					$totalResumo[$col] = operarHorarios([$totalResumo[$col], strip_tags($row[$col])], "+");
+					$val = strip_tags($row[$col]);
+					// Remove &nbsp; e outros espaços não-quebráveis antes de somar
+					$val = html_entity_decode($val, ENT_HTML5, 'UTF-8');
+					$val = trim(preg_replace('/\s+/', ' ', $val));
+					// Extrai apenas o horário no formato HH:MM ou -HH:MM
+					if(preg_match('/-?\d{1,10}:\d{2}/', $val, $m)){
+						$val = $m[0];
+					}
+					$totalResumo[$col] = operarHorarios([$totalResumo[$col], $val], "+");
 				}
 			}
 		}
