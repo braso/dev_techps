@@ -1,11 +1,11 @@
 deployment:
   tasks:
-    # Diret贸rios gerais
+    # Diretorios gerais
     - export GENERAL=/home/devtechpsgj/repositories/dev_techps/*
     - export DOMAIN=/home/devtechpsgj/repositories/dev_techps/armazem_paraiba/*
     - export GENERALDEPLOY=/home/devtechpsgj/public_html/dev
 
-    # Diret贸rios espec铆ficos de cada projeto
+    # Diretorios especificos de cada projeto
     
     - export IFRN=/home/devtechpsgj/public_html/dev/ifrn
     - export OPAFRUTAS=/home/devtechpsgj/public_html/dev/opafrutas
@@ -16,7 +16,7 @@ deployment:
     - export MIDIADIGITAL=/home/devtechpsgj/public_html/dev/midia_digital
 
 
-    # Copiando diret贸rios
+    # Copiando diretorios
     - /bin/cp -R $GENERAL $GENERALDEPLOY
     - /bin/cp -R $DOMAIN $IFRN
     - /bin/cp -R $DOMAIN $OPAFRUTAS
