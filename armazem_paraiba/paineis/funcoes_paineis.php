@@ -112,10 +112,18 @@ function criar_relatorio_saldo() {
 	$dataMes = DateTime::createFromFormat("Y-m-d H:i:s", $_POST["busca_dataMes"]."-01 00:00:00");
 	$dataFim = DateTime::createFromFormat("Y-m-d H:i:s", (date("Y-m-d") < $dataMes->format("Y-m-t") ? date("Y-m-d") : $dataMes->format("Y-m-t"))." 00:00:00");
 
+	$empresaIdsFiltro = [];
+	if (!empty($_POST["empresa"])) {
+		$empresaIdsFiltro = array_values(array_unique(array_filter(array_map('intval', explode(',', (string)$_POST["empresa"])))));
+	}
+	$filtroEmpresas = !empty($empresaIdsFiltro)
+		? " AND empr_nb_id IN (".implode(',', $empresaIdsFiltro).")"
+		: "";
+
 	$empresas = mysqli_fetch_all(query(
 		"SELECT empr_nb_id, empr_tx_nome FROM empresa"
 			. " WHERE empr_tx_status = 'ativo'"
-			. (!empty($_POST["empresa"]) ? " AND empr_nb_id = ".$_POST["empresa"] : "")
+			. $filtroEmpresas
 			. " ORDER BY empr_tx_nome ASC;"
 	), MYSQLI_ASSOC);
 
