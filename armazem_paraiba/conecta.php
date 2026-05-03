@@ -133,6 +133,24 @@
         mysqli_query($conn, "ALTER TABLE parametro ADD COLUMN para_tx_abonarFeriadoEscala ENUM('sim','nao') NOT NULL DEFAULT 'nao' COMMENT 'Abonar automaticamente feriados na escala'");
     };
 
+    // Migração da tabela endosso: colunas necessárias para o cadastro atual
+    $checkEndossoNome = mysqli_query($conn, "SHOW COLUMNS FROM endosso LIKE 'endo_tx_nome'");
+    if ($checkEndossoNome && mysqli_num_rows($checkEndossoNome) == 0) {
+        mysqli_query($conn, "ALTER TABLE endosso ADD COLUMN endo_tx_nome VARCHAR(255) NULL AFTER endo_nb_entidade");
+    };
+    $checkEndossoEmpresa = mysqli_query($conn, "SHOW COLUMNS FROM endosso LIKE 'endo_nb_empresa'");
+    if ($checkEndossoEmpresa && mysqli_num_rows($checkEndossoEmpresa) == 0) {
+        mysqli_query($conn, "ALTER TABLE endosso ADD COLUMN endo_nb_empresa INT NULL AFTER endo_tx_nome");
+    };
+    $checkEndossoPontos = mysqli_query($conn, "SHOW COLUMNS FROM endosso LIKE 'endo_tx_pontos'");
+    if ($checkEndossoPontos && mysqli_num_rows($checkEndossoPontos) == 0) {
+        mysqli_query($conn, "ALTER TABLE endosso ADD COLUMN endo_tx_pontos LONGTEXT NULL AFTER endo_tx_max50APagar");
+    };
+    $checkEndossoResumo = mysqli_query($conn, "SHOW COLUMNS FROM endosso LIKE 'totalResumo'");
+    if ($checkEndossoResumo && mysqli_num_rows($checkEndossoResumo) == 0) {
+        mysqli_query($conn, "ALTER TABLE endosso ADD COLUMN totalResumo LONGTEXT NULL AFTER endo_tx_pontos");
+    };
+
 
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_grid.php";
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";

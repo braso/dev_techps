@@ -1,8 +1,8 @@
 <?php
-/*
+
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
-*/
+
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
@@ -583,22 +583,32 @@ function cadastrar(){
 		$opHE100 = "+";
 	}
 
-    $saldoFinal = operarHorarios([$saldoBruto, "-".$aPagar[0], $opHE100.$aPagar[1]], "+");
+    // Calcula saldoFinal: saldoBruto - he50Pago +/- he100Pago
+    // Evita passar "-00:00" ou "+00:00" para operarHorarios (causa bug de retorno 00:00)
+    $saldoFinal = $saldoBruto;
+    if($aPagar[0] !== "00:00"){
+        $saldoFinal = operarHorarios([$saldoFinal, $aPagar[0]], "-");
+    }
+    if($aPagar[1] !== "00:00"){
+        $saldoFinal = operarHorarios([$saldoFinal, $aPagar[1]], $opHE100 === "+" ? "+" : "-");
+    }
+    // DEBUG INLINE
+    $novoEndosso["_dbg_saldoFinal_calc"] = "saldoBruto=[$saldoBruto] aPagar0=[{$aPagar[0]}] aPagar1=[{$aPagar[1]}] opHE100=[$opHE100] saldoFinal_calc=[$saldoFinal]";
 			
 			$totalResumo["desconto_manual"] = "00:00";
             
             // Apply the extra manual discount if detected (Case 2 above)
             if($extraManualDiscount != "00:00"){
                 $totalResumo["desconto_manual"] = operarHorarios([$totalResumo["desconto_manual"], $extraManualDiscount], "+");
-                $op = ($saldoFinal[0] == "-") ? "+" : "-";
-                $saldoFinal = operarHorarios([$saldoFinal, $op.$extraManualDiscount], "+");
+                // Desconto sempre reduz o saldo (subtrai)
+                $saldoFinal = operarHorarios([$saldoFinal, $extraManualDiscount], "-");
             }
 
 			if(!empty($_POST["descontar_horas"]) && $_POST["descontar_horas"] == "sim"){
 				$valorDesc = $_POST["horas_a_descontar"];
 				$totalResumo["desconto_manual"] = operarHorarios([$totalResumo["desconto_manual"], $valorDesc], "+");
-				$op = ($saldoFinal[0] == "-") ? "+" : "-";
-				$saldoFinal = operarHorarios([$saldoFinal, $op.$valorDesc], "+");
+				// Desconto sempre reduz o saldo (subtrai)
+				$saldoFinal = operarHorarios([$saldoFinal, $valorDesc], "-");
 			}
             if($_POST["zerarSaldoNegativo"] == "sim" && $saldoFinal[0] == "-"){
                 $totalResumo["desconto_manual"] = operarHorarios([$totalResumo["desconto_manual"], $saldoFinal], "+");
