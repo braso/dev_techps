@@ -85,11 +85,26 @@
 		$idInformado = intval($idMotoristaInformado);
 		$idEntidadeLogada = apf_getEntidadeLogadaId();
 
+		// 🔒 VALIDAÇÃO DE SEGURANÇA: Ao solicitar ajuste, SEMPRE usar a entidade do usuário logado
+		// Só é permitido solicitar ajuste para si mesmo
 		if (!apf_isAdminNivel()) {
 			return $idEntidadeLogada;
 		}
 
 		return $idInformado > 0 ? $idInformado : $idEntidadeLogada;
+	}
+
+	// 🔒 Validação de segurança para solicitações de ajuste
+	function validarPermissaoSolicitarAjuste($idMotoristaInformado): bool {
+		$idMotoristaInformado = intval($idMotoristaInformado);
+		$idEntidadeLogada = apf_getEntidadeLogadaId();
+
+		// O usuário SÓ pode solicitar ajuste para si mesmo, mesmo que seja admin
+		if ($idMotoristaInformado !== $idEntidadeLogada) {
+			return false;
+		}
+
+		return true;
 	}
 
 	
@@ -629,7 +644,15 @@
 
 
 	function buscarUltimaJustificativa(){
-		$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], $_POST['idMotorista']);
+		$idMotorista = intval(mysqli_real_escape_string($GLOBALS['conn'], $_POST['idMotorista'] ?? '0'));
+		
+		// 🔒 VALIDAÇÃO DE SEGURANÇA: Verificar permissão para este motorista
+		if (!validarPermissaoSolicitarAjuste($idMotorista)) {
+			header('Content-Type: application/json; charset=utf-8');
+			echo json_encode(['erro' => 'ACESSO NEGADO']);
+			exit;
+		}
+
 		$data = mysqli_real_escape_string($GLOBALS['conn'], $_POST['data']);
 		
 		$res = mysqli_fetch_assoc(query("
@@ -648,6 +671,14 @@
 
 	function verificarPontoExistentePorMacro(){
 		$idMotorista = intval($_POST['idMotorista'] ?? 0);
+		
+		// 🔒 VALIDAÇÃO DE SEGURANÇA: Verificar permissão para este motorista
+		if (!validarPermissaoSolicitarAjuste($idMotorista)) {
+			header('Content-Type: application/json; charset=utf-8');
+			echo json_encode(['erro' => 'ACESSO NEGADO']);
+			exit;
+		}
+
 		$idMacro = intval($_POST['idMacro'] ?? 0);
 		$dataRaw = strval($_POST['data'] ?? '');
 		$data = '';
@@ -786,21 +817,20 @@
 			$idSolicitacao = mysqli_real_escape_string($GLOBALS['conn'], $_POST["idSolicitacao"] ?? '');
 			
 			if (!empty($idSolicitacao)) {
-				$verificacao = mysqli_fetch_assoc(query("
+				// 🔒 VALIDAÇÃO DE SEGURANÇA: Buscar a solicitação e verificar permissão
+				$solicitacao = mysqli_fetch_assoc(query("
 					SELECT sa.id, sa.status, sa.id_motorista, sa.data_ajuste
 					FROM solicitacoes_ajuste sa
-					WHERE sa.id = {$idSolicitacao} 
-					AND sa.id_motorista = (
-						SELECT enti_nb_id 
-						FROM entidade 
-						WHERE enti_nb_id = (
-							SELECT user_nb_entidade 
-							FROM user 
-							WHERE user_nb_id = {$_SESSION['user_nb_id']}
-						) LIMIT 1
-					)
+					WHERE sa.id = {$idSolicitacao}
 					LIMIT 1
 				"));
+
+				if ($solicitacao && !validarPermissaoSolicitarAjuste($solicitacao['id_motorista'])) {
+					echo "<script>alert('ACESSO NEGADO: Você não tem permissão para deletar esta solicitação.'); window.location.href = '" . basename($_SERVER['PHP_SELF']) . "';</script>";
+					exit;
+				}
+
+				$verificacao = $solicitacao;
 				
 				if ($verificacao && in_array($verificacao['status'], ['enviada','rascunho'])) {
 					
@@ -820,6 +850,13 @@
 		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['enviar_lote'])) {
 			try {
 				$idMotorista = intval($_POST["idMotorista"] ?? 0);
+				
+				// 🔒 VALIDAÇÃO DE SEGURANÇA: Verificar se o usuário pode solicitar ajuste para este motorista
+				if (!validarPermissaoSolicitarAjuste($idMotorista)) {
+					echo "<script>alert('ACESSO NEGADO: Você só pode solicitar ajuste para si mesmo.'); window.location.href = '" . basename($_SERVER['PHP_SELF']) . "';</script>";
+					exit;
+				}
+
 				$idMotorista = apf_resolverMotoristaAlvo($idMotorista);
 				$idMotoristaSql = mysqli_real_escape_string($GLOBALS['conn'], strval($idMotorista));
 				$idSolicitanteLogado = intval($_SESSION['user_nb_id'] ?? 0);
@@ -866,6 +903,13 @@
 		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['salvar_rascunho'])) {
 			try {
 				$idMotorista = intval($_POST["idMotorista"] ?? 0);
+
+				// 🔒 VALIDAÇÃO DE SEGURANÇA: Verificar se o usuário pode solicitar ajuste para este motorista
+				if (!validarPermissaoSolicitarAjuste($idMotorista)) {
+					echo "<script>alert('ACESSO NEGADO: Você só pode solicitar ajuste para si mesmo.'); window.location.href = '" . basename($_SERVER['PHP_SELF']) . "';</script>";
+					exit;
+				}
+
 				$idMotorista = apf_resolverMotoristaAlvo($idMotorista);
 				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], strval($idMotorista));
 				$data = mysqli_real_escape_string($GLOBALS['conn'], $_POST["data"] ?? '');
@@ -923,6 +967,13 @@
 		if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['enviar_solicitacao'])) {
 			try {
 				$idMotorista = intval($_POST["idMotorista"] ?? 0);
+
+				// 🔒 VALIDAÇÃO DE SEGURANÇA: Verificar se o usuário pode solicitar ajuste para este motorista
+				if (!validarPermissaoSolicitarAjuste($idMotorista)) {
+					echo "<script>alert('ACESSO NEGADO: Você só pode solicitar ajuste para si mesmo.'); window.location.href = '" . basename($_SERVER['PHP_SELF']) . "';</script>";
+					exit;
+				}
+
 				$idMotorista = apf_resolverMotoristaAlvo($idMotorista);
 				$idMotorista = mysqli_real_escape_string($GLOBALS['conn'], strval($idMotorista));
 				$data = mysqli_real_escape_string($GLOBALS['conn'], $_POST["data"] ?? '');
@@ -1062,6 +1113,13 @@
 		}
 
 		$idMotorista = $_GET["idMotorista"] ?? $_POST["idMotorista"] ?? 0;
+		
+		// 🔒 VALIDAÇÃO DE SEGURANÇA: Ao tentar acessar a página de ajuste, validar permissão
+		if (!empty($idMotorista) && !validarPermissaoSolicitarAjuste(intval($idMotorista))) {
+			echo "<script>alert('ACESSO NEGADO: Você só pode solicitar ajuste para si mesmo.'); window.location.href = '" . basename($_SERVER['PHP_SELF']) . "';</script>";
+			exit;
+		}
+
 		$idMotorista = apf_resolverMotoristaAlvo($idMotorista);
 
 		$motorista = mysqli_fetch_assoc(query("
