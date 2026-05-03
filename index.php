@@ -29,29 +29,7 @@ error_reporting(E_ALL);
 			$_POST["empresa"] = strtoupper($_POST["empresa"]);
 		}
 		if(!empty($_POST["password"])){
-			$_POST["password"] = md5($_POST["password"]);
-		}
-
-		if(!empty($_POST["empresa"]) 
-				&& array_key_exists($_POST["empresa"], $empresas) 
-				&& file_exists(__DIR__."/".$empresas[$_POST["empresa"]]."/index.php")
-		){
-			$formAction = $_ENV["URL_BASE"].$_ENV["APP_PATH"]."/".$empresas[$_POST["empresa"]]."/index.php";
-			$formName = "formTelaPrincipal";
-		}else{
-			$formAction = "index.php?error=nullcompany";
-			$formName = "formLogin";
-		}
-
-		echo 
-			"<form action='{$formAction}' name='{$formName}' method='post'>"
-				."<input type='hidden' name='empresa' value='".($_POST["empresa"]?? "")."'>"
-				."<input type='hidden' name='user' value='".($_POST["user"]?? "")."'>"
-				."<input type='hidden' name='password' value='".($_POST["password"]?? "")."'>"
-				.(!empty($_POST["sourcePage"])? "<input type='hidden' name='sourcePage' value='".($_POST["sourcePage"]?? "")."'>": "")
-			."</form>"
-		;
-		echo "<script>document.{$formName}.submit();</script>";
+		;</script>";
 		exit;
 	}
 
