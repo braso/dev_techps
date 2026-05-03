@@ -157,7 +157,9 @@
                                             'setorNome': row.setorNome,
                                             'subsetorNome': row.subsetorNome,
                                             'statusEndosso': row.statusEndosso,
-                                            'saldoAnterior': row.saldoAnterior
+                                            'saldoAnterior': row.saldoAnterior,
+                                            'saldoPeriodo': row.saldoPeriodo,
+                                            'saldoFinal': row.saldoFinal
                                         };
                                     }
                                 }else{
