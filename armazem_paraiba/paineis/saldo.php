@@ -753,9 +753,14 @@
                 var hidden = document.querySelector('.js-filtro-hidden[data-filter-name="' + target + '"]');
                 if(!hidden){ return; }
                 var vals = hidden.value ? hidden.value.split(',') : [];
-                document.querySelectorAll('input.js-filtro-checkbox[data-target="' + target + '"]').forEach(function(chk){
+                var elems = document.querySelectorAll('input.js-filtro-checkbox[data-target="' + target + '"]');
+                elems.forEach(function(chk){
                     chk.checked = vals.indexOf(chk.value) !== -1;
                 });
+                // Atualiza plugin de estilização (Uniform / iCheck) se presente
+                if(window.jQuery && typeof jQuery.uniform !== 'undefined' && typeof jQuery.uniform.update === 'function'){
+                    jQuery.uniform.update(jQuery(elems));
+                }
                 atualizarTitulo(target, vals.filter(function(v){ return v !== ''; }).length);
             }
 
@@ -795,9 +800,13 @@
                     var target = btn.getAttribute('data-target');
                     if(!target){ return; }
                     var marcar = btn.getAttribute('data-action') === 'all';
-                    document.querySelectorAll('input.js-filtro-checkbox[data-target="' + target + '"]').forEach(function(chk){
+                    var boxes = document.querySelectorAll('input.js-filtro-checkbox[data-target="' + target + '"]');
+                    boxes.forEach(function(chk){
                         chk.checked = marcar;
                     });
+                    if(window.jQuery && typeof jQuery.uniform !== 'undefined' && typeof jQuery.uniform.update === 'function'){
+                        jQuery.uniform.update(jQuery(boxes));
+                    }
                     atualizarHidden(target);
                 });
             });
