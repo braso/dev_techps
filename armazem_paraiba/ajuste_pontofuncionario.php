@@ -92,6 +92,8 @@
 		return $idInformado > 0 ? $idInformado : $idEntidadeLogada;
 	}
 
+	
+
 	function apf_getRotulos(): array {
 		static $rotulos = null;
 		if ($rotulos !== null) {
@@ -1107,7 +1109,8 @@
 		$botoes[] = "<button type='submit' name='salvar_rascunho' id='btnRascunho' class='btn btn-primary'>Adicionar à Lista</button>";
 		$botoes[] = "<button type='submit' name='enviar_lote' class='btn btn-success'>Enviar Todas</button>";
 		$botoes[] = "<button type='button' id='btnUsarUltima' class='btn btn-info' style='display:none;' title='Uma solicitação já foi enviada para este dia. Clique para aplicar a mesma justificativa.'>Repetir Justificativa do Dia</button>";
-		$botoes[] = criarBotaoVoltar("espelho_ponto.php");
+		$botoes[] = "<button type='button' class='btn btn-secundary' onclick=\"window.location.href='espelho_ponto.php'\">Voltar</button>";
+		
 
 		echo abre_form("Dados do Ajuste de {$rotulos['modulo']}");
 		echo "<input type='hidden' name='idMotorista' value='{$idMotorista}'>";
@@ -1301,6 +1304,8 @@
 		rodape();
 
 	}
+
+	
 
 	index();
 ?>
