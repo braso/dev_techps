@@ -44,6 +44,20 @@
 		return $rotulos;
 	}
 
+	// 🔧 Gera rótulos dinâmicos baseado na ocupação de um motorista específico
+	function getRotulosPorMotorista(array $motorista): array {
+		$ocupacao = trim((string)($motorista["enti_tx_ocupacao"] ?? ""));
+		$ocupacaoNormalizada = strtolower($ocupacao);
+		$ehTerceirizado = in_array($ocupacaoNormalizada, ["terceirizado"], true);
+
+		return [
+			"ehTerceirizado" => $ehTerceirizado,
+			"modulo" => $ehTerceirizado ? "Produção" : "Ponto",
+			"funcionario" => $ehTerceirizado ? "Colaborador" : "Funcionário",
+			"funcionarioPlural" => $ehTerceirizado ? "Colaboradores" : "Funcionários"
+		];
+	}
+
 	function normalizarFiltroArray($valor): array{
 		if (is_array($valor)) {
 			return array_values(array_filter(array_map('trim', $valor), function($v) { return $v !== ''; }));
@@ -563,9 +577,12 @@ JS;
 							 AND enti_nb_id = '".intval($idMotorista)."'
 						 LIMIT 1;"
 					));
-				
-				//Conferir se há dias do mês já endossados{
-					$endossoMes = montarEndossoMes($startDate, $motorista);
+
+				// 🔧 Gera rótulos dinâmicos baseado na ocupação DESTE motorista
+				$rotulosMotorista = getRotulosPorMotorista($motorista);
+			
+			//Conferir se há dias do mês já endossados{
+				$endossoMes = montarEndossoMes($startDate, $motorista);
 					
 					if(!empty($endossoMes)){
 						$diasEndossados = 0;
@@ -780,7 +797,7 @@ JS;
 						<thead>
 							<tr>
 								<th>Empresa</th>
-								<th>{$rotulos["funcionario"]}</th>
+								<th>{$rotulosMotorista["funcionario"]}</th>
 								<th>Parâmetro</th>
 							</tr>
 						<tbody>
