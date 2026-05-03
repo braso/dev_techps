@@ -88,7 +88,8 @@
                 }
 
                 function atualizarPainel(){
-                    document.myForm.empresa.value = document.getElementById('empresa').value;
+                    var empresaInput = document.querySelector('form[name=\"contex_form\"] input[name=\"empresa\"]') || document.getElementById('empresa');
+                    document.myForm.empresa.value = empresaInput ? empresaInput.value : '';
                     document.myForm.busca_dataInicio.value = document.getElementById('busca_dataInicio').value;
                     document.myForm.busca_dataFim.value = document.getElementById('busca_dataFim').value;
                     document.myForm.busca_ocupacao.value = document.querySelector('[name=\"busca_ocupacao\"]').value;
@@ -404,22 +405,166 @@
 			</div>"
         ;
         
+        $setoresSelecionados = array_values(array_unique(array_filter(array_map('intval', explode(',', (string)($_POST["busca_setor"] ?? ""))))));
         $temSubsetorVinculado = false;
-        if (!empty($_POST["busca_setor"])) {
-            $rowCount = mysqli_fetch_array(query("SELECT COUNT(*) FROM sbgrupos_documentos WHERE sbgr_tx_status = 'ativo' AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"]).";"));
+        if (!empty($setoresSelecionados)) {
+            $condSetores = implode(',', $setoresSelecionados);
+            $rowCount = mysqli_fetch_array(query("SELECT COUNT(*) FROM sbgrupos_documentos WHERE sbgr_tx_status = 'ativo' AND sbgr_nb_idgrup IN (".$condSetores.");"));
             $temSubsetorVinculado = ($rowCount[0] > 0);
         }
 
-        $campos = [
-            combo_net("Empresa", "empresa", $_POST["empresa"]?? $_SESSION["user_nb_empresa"], 4, "empresa", ""),
-            $campoAcao,
-            combo("Ocupação", "busca_ocupacao", ($_POST["busca_ocupacao"] ?? ""), 2, 
-            ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário", "Terceirizado" => "Terceirizado" ]),
-            combo_bd("!Cargo", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
-            combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos", "onchange=\"(function(f){ if(f.busca_subsetor){ f.busca_subsetor.value=''; } f.reloadOnly.value='1'; f.submit(); })(document.contex_form);\""),
+        $empresaSelecionadas = [];
+        $empresaSelecionadasRaw = !empty($_POST["empresa"]) ? (string)$_POST["empresa"] : (!empty($_SESSION["user_nb_empresa"]) ? (string)$_SESSION["user_nb_empresa"] : "");
+        if($empresaSelecionadasRaw !== ""){
+            $empresaSelecionadas = array_values(array_filter(array_map('trim', explode(',', $empresaSelecionadasRaw)), function($v){ return $v !== ''; }));
+        }
+
+        $empresaOpcoes = [];
+        $resEmpresasFiltro = query("SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome ASC");
+        while($empresaRow = mysqli_fetch_assoc($resEmpresasFiltro)){
+            $empresaOpcoes[(string)intval($empresaRow["empr_nb_id"])] = $empresaRow["empr_tx_nome"];
+        }
+
+        $selectEmpresa = "<div class='col-sm-4 margin-bottom-5 campo-fit-content'>"
+            ."<label>Empresa</label>"
+            ."<div class='filtro-compact' data-filter='empresa' data-label='Empresa' style='position:relative;'>"
+            ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' style='display:flex;justify-content:space-between;align-items:center;'>"
+            ."<span class='filtro-label'>Empresa".(count($empresaSelecionadas) > 0 ? " (".count($empresaSelecionadas).")" : "")."</span><span class='caret'></span></button>"
+            ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; z-index:1050; background:#fff; border:1px solid #d9d9d9; padding:8px; max-height:240px; overflow:auto;'>"
+            ."<div style='margin-bottom:8px;'>"
+            ."<button type='button' class='btn btn-xs btn-link js-filtro-todos' data-target='empresa' data-action='all'>Marcar todos</button>"
+            ."<button type='button' class='btn btn-xs btn-link js-filtro-todos' data-target='empresa' data-action='none'>Desmarcar todos</button>"
+            ."</div>"
+            ."<input type='hidden' class='js-filtro-hidden' data-filter-name='empresa' name='empresa' value='".htmlspecialchars(implode(',', $empresaSelecionadas), ENT_QUOTES, 'UTF-8')."'>";
+
+        foreach($empresaOpcoes as $empresaId => $empresaNome){
+            $checked = in_array((string)$empresaId, $empresaSelecionadas, true) ? "checked" : "";
+            $selectEmpresa .= "<label style='display:block;margin-bottom:6px;cursor:pointer;'>"
+                ."<input type='checkbox' class='js-filtro-checkbox' data-target='empresa' value='".htmlspecialchars((string)$empresaId, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
+                .htmlspecialchars($empresaNome, ENT_QUOTES, 'UTF-8')
+                ."</label>";
+        }
+        $selectEmpresa .= "</div></div></div>";
+
+        $ocupacaoSelecionadas = array_values(array_filter(array_map('trim', explode(',', (string)($_POST["busca_ocupacao"] ?? ""))), function($v){ return $v !== ''; }));
+        $ocupacaoOpcoes = [
+            "Motorista" => "Motorista",
+            "Ajudante" => "Ajudante",
+            "Funcionário" => "Funcionário",
+            "Terceirizado" => "Terceirizado"
         ];
-        if ($temSubsetorVinculado) {
-            $campos[] = combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC");
+        $selectOcupacao = "<div class='col-sm-2 margin-bottom-5 campo-fit-content'>"
+            ."<label>Ocupação</label>"
+            ."<div class='filtro-compact' data-filter='busca_ocupacao' data-label='Ocupação' style='position:relative;'>"
+            ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' style='display:flex;justify-content:space-between;align-items:center;'>"
+            ."<span class='filtro-label'>Ocupação".(count($ocupacaoSelecionadas) > 0 ? " (".count($ocupacaoSelecionadas).")" : "")."</span><span class='caret'></span></button>"
+            ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; z-index:1050; background:#fff; border:1px solid #d9d9d9; padding:8px; max-height:240px; overflow:auto;'>"
+            ."<div style='margin-bottom:8px;'>"
+            ."<button type='button' class='btn btn-xs btn-link js-filtro-todos' data-target='busca_ocupacao' data-action='all'>Marcar todos</button>"
+            ."<button type='button' class='btn btn-xs btn-link js-filtro-todos' data-target='busca_ocupacao' data-action='none'>Desmarcar todos</button>"
+            ."</div>"
+            ."<input type='hidden' class='js-filtro-hidden' data-filter-name='busca_ocupacao' name='busca_ocupacao' value='".htmlspecialchars(implode(',', $ocupacaoSelecionadas), ENT_QUOTES, 'UTF-8')."'>";
+        foreach($ocupacaoOpcoes as $ocupVal => $ocupLabel){
+            $checked = in_array((string)$ocupVal, $ocupacaoSelecionadas, true) ? "checked" : "";
+            $selectOcupacao .= "<label style='display:block;margin-bottom:6px;cursor:pointer;'>"
+                ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_ocupacao' value='".htmlspecialchars((string)$ocupVal, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
+                .htmlspecialchars($ocupLabel, ENT_QUOTES, 'UTF-8')
+                ."</label>";
+        }
+        $selectOcupacao .= "</div></div></div>";
+
+        $operacaoSelecionadas = array_values(array_filter(array_map('trim', explode(',', (string)($_POST["operacao"] ?? ""))), function($v){ return $v !== ''; }));
+        $operacaoOpcoes = [];
+        $resOperacaoFiltro = query("SELECT oper_nb_id, oper_tx_nome FROM operacao WHERE oper_tx_status = 'ativo' ORDER BY oper_tx_nome ASC");
+        while($operacaoRow = mysqli_fetch_assoc($resOperacaoFiltro)){
+            $operacaoOpcoes[(string)intval($operacaoRow["oper_nb_id"])] = $operacaoRow["oper_tx_nome"];
+        }
+        $selectOperacao = "<div class='col-sm-2 margin-bottom-5 campo-fit-content'>"
+            ."<label>Cargo</label>"
+            ."<div class='filtro-compact' data-filter='operacao' data-label='Cargo' style='position:relative;'>"
+            ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' style='display:flex;justify-content:space-between;align-items:center;'>"
+            ."<span class='filtro-label'>Cargo".(count($operacaoSelecionadas) > 0 ? " (".count($operacaoSelecionadas).")" : "")."</span><span class='caret'></span></button>"
+            ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; z-index:1050; background:#fff; border:1px solid #d9d9d9; padding:8px; max-height:240px; overflow:auto;'>"
+            ."<div style='margin-bottom:8px;'>"
+            ."<button type='button' class='btn btn-xs btn-link js-filtro-todos' data-target='operacao' data-action='all'>Marcar todos</button>"
+            ."<button type='button' class='btn btn-xs btn-link js-filtro-todos' data-target='operacao' data-action='none'>Desmarcar todos</button>"
+            ."</div>"
+            ."<input type='hidden' class='js-filtro-hidden' data-filter-name='operacao' name='operacao' value='".htmlspecialchars(implode(',', $operacaoSelecionadas), ENT_QUOTES, 'UTF-8')."'>";
+        foreach($operacaoOpcoes as $operVal => $operLabel){
+            $checked = in_array((string)$operVal, $operacaoSelecionadas, true) ? "checked" : "";
+            $selectOperacao .= "<label style='display:block;margin-bottom:6px;cursor:pointer;'>"
+                ."<input type='checkbox' class='js-filtro-checkbox' data-target='operacao' value='".htmlspecialchars((string)$operVal, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
+                .htmlspecialchars($operLabel, ENT_QUOTES, 'UTF-8')
+                ."</label>";
+        }
+        $selectOperacao .= "</div></div></div>";
+
+        $setorSelecionados = array_values(array_filter(array_map('trim', explode(',', (string)($_POST["busca_setor"] ?? ""))), function($v){ return $v !== ''; }));
+        $setorOpcoes = [];
+        $resSetorFiltro = query("SELECT grup_nb_id, grup_tx_nome FROM grupos_documentos WHERE grup_tx_status = 'ativo' ORDER BY grup_tx_nome ASC");
+        while($setorRow = mysqli_fetch_assoc($resSetorFiltro)){
+            $setorOpcoes[(string)intval($setorRow["grup_nb_id"])] = $setorRow["grup_tx_nome"];
+        }
+        $selectSetor = "<div class='col-sm-2 margin-bottom-5 campo-fit-content'>"
+            ."<label>Setor</label>"
+            ."<div class='filtro-compact' data-filter='busca_setor' data-label='Setor' style='position:relative;'>"
+            ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' style='display:flex;justify-content:space-between;align-items:center;'>"
+            ."<span class='filtro-label'>Setor".(count($setorSelecionados) > 0 ? " (".count($setorSelecionados).")" : "")."</span><span class='caret'></span></button>"
+            ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; z-index:1050; background:#fff; border:1px solid #d9d9d9; padding:8px; max-height:240px; overflow:auto;'>"
+            ."<div style='margin-bottom:8px;'>"
+            ."<button type='button' class='btn btn-xs btn-link js-filtro-todos' data-target='busca_setor' data-action='all'>Marcar todos</button>"
+            ."<button type='button' class='btn btn-xs btn-link js-filtro-todos' data-target='busca_setor' data-action='none'>Desmarcar todos</button>"
+            ."</div>"
+            ."<input type='hidden' class='js-filtro-hidden' data-filter-name='busca_setor' name='busca_setor' value='".htmlspecialchars(implode(',', $setorSelecionados), ENT_QUOTES, 'UTF-8')."'>";
+        foreach($setorOpcoes as $setorVal => $setorLabel){
+            $checked = in_array((string)$setorVal, $setorSelecionados, true) ? "checked" : "";
+            $selectSetor .= "<label style='display:block;margin-bottom:6px;cursor:pointer;'>"
+                ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_setor' value='".htmlspecialchars((string)$setorVal, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
+                .htmlspecialchars($setorLabel, ENT_QUOTES, 'UTF-8')
+                ."</label>";
+        }
+        $selectSetor .= "</div></div></div>";
+
+        $subsetorSelecionados = array_values(array_filter(array_map('trim', explode(',', (string)($_POST["busca_subsetor"] ?? ""))), function($v){ return $v !== ''; }));
+        $selectSubsetor = "";
+        if($temSubsetorVinculado){
+            $subsetorOpcoes = [];
+            $condSubsetor = implode(',', $setoresSelecionados);
+            $resSubsetorFiltro = query("SELECT sbgr_nb_id, sbgr_tx_nome FROM sbgrupos_documentos WHERE sbgr_tx_status = 'ativo' AND sbgr_nb_idgrup IN (".$condSubsetor.") ORDER BY sbgr_tx_nome ASC");
+            while($subsetorRow = mysqli_fetch_assoc($resSubsetorFiltro)){
+                $subsetorOpcoes[(string)intval($subsetorRow["sbgr_nb_id"])] = $subsetorRow["sbgr_tx_nome"];
+            }
+
+            $selectSubsetor = "<div class='col-sm-2 margin-bottom-5 campo-fit-content'>"
+                ."<label>Subsetor</label>"
+                ."<div class='filtro-compact' data-filter='busca_subsetor' data-label='Subsetor' style='position:relative;'>"
+                ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' style='display:flex;justify-content:space-between;align-items:center;'>"
+                ."<span class='filtro-label'>Subsetor".(count($subsetorSelecionados) > 0 ? " (".count($subsetorSelecionados).")" : "")."</span><span class='caret'></span></button>"
+                ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; z-index:1050; background:#fff; border:1px solid #d9d9d9; padding:8px; max-height:240px; overflow:auto;'>"
+                ."<div style='margin-bottom:8px;'>"
+                ."<button type='button' class='btn btn-xs btn-link js-filtro-todos' data-target='busca_subsetor' data-action='all'>Marcar todos</button>"
+                ."<button type='button' class='btn btn-xs btn-link js-filtro-todos' data-target='busca_subsetor' data-action='none'>Desmarcar todos</button>"
+                ."</div>"
+                ."<input type='hidden' class='js-filtro-hidden' data-filter-name='busca_subsetor' name='busca_subsetor' value='".htmlspecialchars(implode(',', $subsetorSelecionados), ENT_QUOTES, 'UTF-8')."'>";
+            foreach($subsetorOpcoes as $subsetorVal => $subsetorLabel){
+                $checked = in_array((string)$subsetorVal, $subsetorSelecionados, true) ? "checked" : "";
+                $selectSubsetor .= "<label style='display:block;margin-bottom:6px;cursor:pointer;'>"
+                    ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_subsetor' value='".htmlspecialchars((string)$subsetorVal, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
+                    .htmlspecialchars($subsetorLabel, ENT_QUOTES, 'UTF-8')
+                    ."</label>";
+            }
+            $selectSubsetor .= "</div></div></div>";
+        }
+
+        $campos = [
+            $selectEmpresa,
+            $campoAcao,
+            $selectOcupacao,
+            $selectOperacao,
+            $selectSetor,
+        ];
+        if($temSubsetorVinculado){
+            $campos[] = $selectSubsetor;
         }
         $campos[] = campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"]?? date("Y-m")), 2);
 
@@ -575,6 +720,94 @@
         echo campo_hidden("reloadOnly", "");
         echo linha_form($campos);
         echo fecha_form($buttons);
+        echo <<<'HTML'
+        <script>
+        (function(){
+            function fecharDropdowns(){
+                document.querySelectorAll('.filtro-dropdown-menu').forEach(function(menu){
+                    menu.style.display = 'none';
+                });
+            }
+
+            function atualizarHidden(target){
+                var hidden = document.querySelector('.js-filtro-hidden[data-filter-name="' + target + '"]');
+                if(!hidden){ return; }
+                var values = [];
+                document.querySelectorAll('input.js-filtro-checkbox[data-target="' + target + '"]:checked').forEach(function(chk){
+                    values.push(chk.value);
+                });
+                hidden.value = values.join(',');
+                atualizarTitulo(target, values.length);
+            }
+
+            function atualizarTitulo(target, count){
+                var wrap = document.querySelector('.filtro-compact[data-filter="' + target + '"]');
+                if(!wrap){ return; }
+                var label = wrap.querySelector('.filtro-label');
+                if(!label){ return; }
+                var baseLabel = wrap.getAttribute('data-label') || target;
+                label.textContent = baseLabel + (count > 0 ? ' (' + count + ')' : '');
+            }
+
+            function sincronizarDoHidden(target){
+                var hidden = document.querySelector('.js-filtro-hidden[data-filter-name="' + target + '"]');
+                if(!hidden){ return; }
+                var vals = hidden.value ? hidden.value.split(',') : [];
+                document.querySelectorAll('input.js-filtro-checkbox[data-target="' + target + '"]').forEach(function(chk){
+                    chk.checked = vals.indexOf(chk.value) !== -1;
+                });
+                atualizarTitulo(target, vals.filter(function(v){ return v !== ''; }).length);
+            }
+
+            document.querySelectorAll('.js-filtro-hidden').forEach(function(hidden){
+                var name = hidden.getAttribute('data-filter-name');
+                if(name){
+                    sincronizarDoHidden(name);
+                }
+            });
+
+            document.querySelectorAll('.js-filtro-toggle').forEach(function(btn){
+                btn.addEventListener('click', function(e){
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var menu = btn.parentNode.querySelector('.filtro-dropdown-menu');
+                    var isOpen = menu && menu.style.display === 'block';
+                    fecharDropdowns();
+                    if(menu){ menu.style.display = isOpen ? 'none' : 'block'; }
+                });
+            });
+
+            document.querySelectorAll('.filtro-dropdown-menu').forEach(function(menu){
+                menu.addEventListener('click', function(e){ e.stopPropagation(); });
+            });
+
+            document.querySelectorAll('.js-filtro-checkbox').forEach(function(chk){
+                chk.addEventListener('change', function(){
+                    var target = chk.getAttribute('data-target');
+                    if(target){
+                        atualizarHidden(target);
+                    }
+                });
+            });
+
+            document.querySelectorAll('.js-filtro-todos').forEach(function(btn){
+                btn.addEventListener('click', function(){
+                    var target = btn.getAttribute('data-target');
+                    if(!target){ return; }
+                    var marcar = btn.getAttribute('data-action') === 'all';
+                    document.querySelectorAll('input.js-filtro-checkbox[data-target="' + target + '"]').forEach(function(chk){
+                        chk.checked = marcar;
+                    });
+                    atualizarHidden(target);
+                });
+            });
+
+            document.addEventListener('click', function(){
+                fecharDropdowns();
+            });
+        })();
+        </script>
+HTML;
 
         
         $arquivos = [];
@@ -614,99 +847,142 @@
         if(!empty($_POST["acao"]) && $_POST["acao"] == "buscar" && empty($_POST["reloadOnly"])){
             $path .= "/".$_POST["busca_dataMes"];
             if(!empty($_POST["empresa"])){
-                //Painel dos saldos dos motoristas de uma empresa específica
-                $aEmpresa = mysqli_fetch_assoc(query(
-                    "SELECT * FROM empresa
-                    WHERE empr_tx_status = 'ativo'
-                        AND empr_nb_id = {$_POST["empresa"]}
-                    LIMIT 1;"
-                ));
-                $path .= "/".$aEmpresa["empr_nb_id"];
-                if(is_dir($path)){
+                // Painel dos saldos dos motoristas de uma ou mais empresas (CSV)
+                $empresaIds = array_values(array_unique(array_filter(array_map('intval', explode(',', (string)$_POST["empresa"])) )));
+                if(empty($empresaIds)){
+                    $empresaIds = [intval($_POST["empresa"])];
+                }
+
+                $normalizarTxt = function($valor){
+                    return mb_strtolower(trim((string)$valor));
+                };
+                $normalizarOcupacao = function($ocupacao) use ($normalizarTxt){
+                    $txt = $normalizarTxt($ocupacao);
+                    if($txt === "tercerizado"){
+                        return "terceirizado";
+                    }
+                    return $txt;
+                };
+                $parseFiltroCsv = function($raw, $normalizador = null){
+                    $itens = array_values(array_filter(array_map('trim', explode(',', (string)$raw)), function($v){ return $v !== ''; }));
+                    if($normalizador !== null){
+                        $itens = array_map($normalizador, $itens);
+                    }
+                    return $itens;
+                };
+
+                $ocupacaoFiltro = $parseFiltroCsv($_POST["busca_ocupacao"] ?? "", $normalizarOcupacao);
+                $operacaoFiltro = $parseFiltroCsv($_POST["operacao"] ?? "", $normalizarTxt);
+                $setorFiltro = $parseFiltroCsv($_POST["busca_setor"] ?? "", $normalizarTxt);
+                $subsetorFiltro = $parseFiltroCsv($_POST["busca_subsetor"] ?? "", $normalizarTxt);
+
+                $motoristas = [];
+                $empresaNomes = [];
+                $latestMTime = 0;
+                $periodoRelatorioBruto = null;
+
+                foreach($empresaIds as $empresaId){
+                    $aEmpresa = mysqli_fetch_assoc(query(
+                        "SELECT * FROM empresa
+                        WHERE empr_tx_status = 'ativo'
+                            AND empr_nb_id = {$empresaId}
+                        LIMIT 1;"
+                    ));
+                    if(empty($aEmpresa)){
+                        continue;
+                    }
+
+                    $pathEmpresa = $path . "/" . $aEmpresa["empr_nb_id"];
+                    if(!is_dir($pathEmpresa)){
+                        continue;
+                    }
+
                     $encontrado = true;
-                    $pastaSaldosEmpresa = dir($path);
+                    $empresaNomes[] = $aEmpresa["empr_tx_nome"];
+                    $jsonEmpresaPath = $pathEmpresa . "/empresa_" . $aEmpresa["empr_nb_id"] . ".json";
+                    if(is_file($jsonEmpresaPath)){
+                        $mtime = filemtime($jsonEmpresaPath);
+                        if($mtime > $latestMTime){
+                            $latestMTime = $mtime;
+                        }
+                        if($periodoRelatorioBruto === null){
+                            $periodoTmp = json_decode(file_get_contents($jsonEmpresaPath), true);
+                            if(!empty($periodoTmp["dataInicio"]) && !empty($periodoTmp["dataFim"])){
+                                $periodoRelatorioBruto = [
+                                    "dataInicio" => $periodoTmp["dataInicio"],
+                                    "dataFim" => $periodoTmp["dataFim"]
+                                ];
+                            }
+                        }
+                    }
+
+                    $pastaSaldosEmpresa = dir($pathEmpresa);
                     while($arquivo = $pastaSaldosEmpresa->read()){
                         if(!in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresa_"))){
-                            $arquivos[] = $arquivo;
+                            $arquivos[] = $pathEmpresa . "/" . $arquivo;
                         }
                     }
                     $pastaSaldosEmpresa->close();
-                    
-                    $dataArquivo = date("d/m/Y H:i", filemtime($path . "/" . "empresa_" . $aEmpresa["empr_nb_id"] . ".json"));
-                    $horaArquivo = date("H:i", filemtime($path . "/" . "empresa_" . $aEmpresa["empr_nb_id"] . ".json"));
+                }
 
+                if($encontrado){
+                    $dataArquivoFmt = $latestMTime > 0 ? date("d/m/Y", $latestMTime) : date("d/m/Y");
                     $dataAtual = date("d/m/Y");
-                    $horaAtual = date("H:i");
-                    if($dataArquivo != $dataAtual){
+                    if($dataArquivoFmt != $dataAtual){
                         $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
                         <i style='color:red; margin-right: 5px;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
                     } else {
-                        // Datas iguais: compara as horas
-                        // if ($horaArquivo < $horaAtual) {
-                        //     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
-                        // } else {
-                            $alertaEmissao = "<span>";
-                        // }
+                        $alertaEmissao = "<span>";
                     }
 
-                    $dataEmissao = $alertaEmissao . " Atualizado em: ".date("d/m/Y H:i", filemtime($path."/"."empresa_".$aEmpresa["empr_nb_id"].".json"))."</span>"; //Utilizado no HTML.
-                    $periodoRelatorio = json_decode(file_get_contents($path."/"."empresa_".$aEmpresa["empr_nb_id"].".json"), true);
-                    $periodoRelatorio = [
-                        "dataInicio" => $periodoRelatorio["dataInicio"],
-                        "dataFim" => $periodoRelatorio["dataFim"]
-                    ];
-                    $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataInicio"])->format("d/m");
-                    $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataFim"])->format("d/m");
-    
-                    $motoristas = [];
+                    $dataEmissao = $alertaEmissao . " Atualizado em: ".($latestMTime > 0 ? date("d/m/Y H:i", $latestMTime) : "")."</span>";
+
+                    if($periodoRelatorioBruto !== null){
+                        $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorioBruto["dataInicio"])->format("d/m");
+                        $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorioBruto["dataFim"])->format("d/m");
+                    }
+
                     foreach($arquivos as $arquivo){
-                        $json = json_decode(file_get_contents($path."/".$arquivo), true);
-                        $json["dataAtualizacao"] = date("d/m/Y H:i", filemtime($path."/".$arquivo));
+                        $json = json_decode(file_get_contents($arquivo), true);
+                        $json["dataAtualizacao"] = date("d/m/Y H:i", filemtime($arquivo));
                         foreach($totais as $key => $value){
                             $totais[$key] = operarHorarios([$totais[$key], $json[$key]], "+");
                         }
                         $motoristas[] = $json;
                     }
-                    foreach($arquivos as &$arquivo){
-                        $arquivo = $path."/".$arquivo;
-                    }
-                    $totais["empresaNome"] = $aEmpresa["empr_tx_nome"];
+
+                    $totais["empresaNome"] = count($empresaNomes) > 1 ? "Múltiplas empresas" : ($empresaNomes[0] ?? "");
                     $hasDetailFilter = (!empty($_POST["busca_ocupacao"]) || !empty($_POST["operacao"]) || !empty($_POST["busca_setor"]) || !empty($_POST["busca_subsetor"]));
                     $totaisFiltrados = [];
                     foreach($totais as $k => $v){
-                        if ($k !== "empresaNome") { $totaisFiltrados[$k] = "00:00"; }
+                        if($k !== "empresaNome"){
+                            $totaisFiltrados[$k] = "00:00";
+                        }
                     }
 
-                    $normalizarOcupacao = function($ocupacao){
-                        $txt = mb_strtolower(trim((string)$ocupacao));
-                        if($txt === "tercerizado"){
-                            return "terceirizado";
-                        }
-                        return $txt;
-                    };
-
-                    $ocupacaoSel = isset($_POST["busca_ocupacao"]) ? (string)$_POST["busca_ocupacao"] : "";
-                    $operacaoSel = isset($_POST["operacao"]) ? (string)$_POST["operacao"] : "";
-                    $setorSel = isset($_POST["busca_setor"]) ? (string)$_POST["busca_setor"] : "";
-                    $subsetorSel = isset($_POST["busca_subsetor"]) ? (string)$_POST["busca_subsetor"] : "";
-
-                    $ocupacaoSelNorm = $normalizarOcupacao($ocupacaoSel);
-
                     foreach($motoristas as $saldosMotorista){
-                        if (($ocupacaoSelNorm !== "" && $normalizarOcupacao($saldosMotorista["ocupacao"] ?? "") !== $ocupacaoSelNorm)
-                            || ($operacaoSel !== "" && (string)$saldosMotorista["tipoOperacao"] !== $operacaoSel)
-                            || ($setorSel !== "" && (string)$saldosMotorista["setor"] !== $setorSel)
-                            || ($subsetorSel !== "" && (string)$saldosMotorista["subsetor"] !== $subsetorSel)) {
+                        $rowOcupacao = $normalizarOcupacao($saldosMotorista["ocupacao"] ?? "");
+                        $rowOperacao = $normalizarTxt($saldosMotorista["tipoOperacao"] ?? "");
+                        $rowSetor = $normalizarTxt($saldosMotorista["setor"] ?? "");
+                        $rowSubsetor = $normalizarTxt($saldosMotorista["subsetor"] ?? "");
+
+                        if((!empty($ocupacaoFiltro) && $rowOcupacao !== "" && !in_array($rowOcupacao, $ocupacaoFiltro, true))
+                            || (!empty($operacaoFiltro) && $rowOperacao !== "" && !in_array($rowOperacao, $operacaoFiltro, true))
+                            || (!empty($setorFiltro) && $rowSetor !== "" && !in_array($rowSetor, $setorFiltro, true))
+                            || (!empty($subsetorFiltro) && $rowSubsetor !== "" && !in_array($rowSubsetor, $subsetorFiltro, true))){
                             continue;
                         }
 
-                        $contagemEndossos[$saldosMotorista["statusEndosso"]]++;
+                        $statusEndosso = $saldosMotorista["statusEndosso"] ?? "";
+                        if(isset($contagemEndossos[$statusEndosso])){
+                            $contagemEndossos[$statusEndosso]++;
+                        }
                         foreach($totaisFiltrados as $key => $value){
                             $totaisFiltrados[$key] = operarHorarios([$totaisFiltrados[$key], $saldosMotorista[$key]], "+");
                         }
-                        if($saldosMotorista["saldoFinal"] === "00:00"){
+                        if(($saldosMotorista["saldoFinal"] ?? "") === "00:00"){
                             $contagemSaldos["meta"]++;
-                        }elseif($saldosMotorista["saldoFinal"][0] == "-"){
+                        }elseif(!empty($saldosMotorista["saldoFinal"]) && $saldosMotorista["saldoFinal"][0] == "-"){
                             $contagemSaldos["negativos"]++;
                         }else{
                             $contagemSaldos["positivos"]++;
