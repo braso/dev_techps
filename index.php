@@ -24,6 +24,11 @@ error_reporting(E_ALL);
 		;
 	}
 
+
+
+
+
+	
 	if (!empty($_POST["botao"]) && $_POST["botao"] == "Entrar" && !$error){
 		if(!empty($_POST["empresa"])){
 			$_POST["empresa"] = strtoupper($_POST["empresa"]);
