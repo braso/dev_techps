@@ -749,7 +749,7 @@
                 hidden.value = values.join(',');
                 atualizarTitulo(target, values.length);
             }
-
+            // Atualiza o título do filtro com a contagem de itens selecionados
             function atualizarTitulo(target, count){
                 var wrap = document.querySelector('.filtro-compact[data-filter="' + target + '"]');
                 if(!wrap){ return; }
