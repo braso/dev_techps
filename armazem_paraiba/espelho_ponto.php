@@ -72,7 +72,22 @@
 	function renderFiltroCheckboxGroup($titulo, $name, $opcoes, $selecionados, $width=3) {
 		$selecionados = normalizarFiltroArray($selecionados);
 		$selecionadosQtd = count($selecionados);
-		$tituloRender = $titulo.($selecionadosQtd > 0 ? " ({$selecionadosQtd})" : "");
+		$tituloRender = $titulo;
+		if($selecionadosQtd === 1){
+			$valorSelecionado = (string)$selecionados[0];
+			$labelSelecionado = "";
+			foreach($opcoes as $valor => $rotulo){
+				if((string)$valor === $valorSelecionado){
+					$labelSelecionado = (string)$rotulo;
+					break;
+				}
+			}
+			if($labelSelecionado !== ""){
+				$tituloRender = $labelSelecionado;
+			}
+		}elseif($selecionadosQtd > 1){
+			$tituloRender = $titulo." ({$selecionadosQtd})";
+		}
 		$nameAttr = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
 		$habilitarBusca = in_array($name, ["busca_motorista", "busca_empresa"], true);
 		$placeholderBusca = "Digite para filtrar";
@@ -498,8 +513,14 @@
 				}
 				var botao = wrapper.find('.js-filtro-toggle').first();
 				var labelBase = botao.data('base-label') || nome;
-				var qtd = wrapper.find('input.js-filtro-checkbox[data-target="' + nome + '"]:checked').length;
-				var texto = qtd > 0 ? (labelBase + ' (' + qtd + ')') : labelBase;
+				var selecionados = wrapper.find('input.js-filtro-checkbox[data-target="' + nome + '"]:checked');
+				var qtd = selecionados.length;
+				var texto = labelBase;
+				if(qtd === 1){
+					texto = selecionados.first().closest('label').text().trim();
+				}else if(qtd > 1){
+					texto = labelBase + ' (' + qtd + ')';
+				}
 				botao.find('.js-filtro-label').text(texto);
 			}
 
