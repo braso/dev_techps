@@ -2,6 +2,10 @@
 
     include "load_env.php";
 
+    // true  = exibe SELECT com lista de empresas
+    // false = exibe INPUT para digitar a abreviação do domínio
+    define('LOGIN_EMPRESA_SELECT', true);
+
     $empresas = [
         "ARMPB"		            => "armazem_paraiba",
         "BLRD"			        => "blueroad",
@@ -76,18 +80,31 @@
         $_POST["empresa"] = $_GET["empresa"];
     }
 
-    $empresasInput = 
-        "<div class='form-group'>
-            <input
-                autofocus
-                class='input-empresas form-control form-control-solid placeholder-no-fix'
-                type='text'
-                autocomplete='off'
-                placeholder='INSIRA SEU DOMÍNIO'
-                name='empresa'
-                style='text-transform:uppercase;'
-                ".(!empty($_POST["empresa"])? "value='".$_POST["empresa"]."'": "")."
-            />
-        </div>"
-    ;
+    if (LOGIN_EMPRESA_SELECT) {
+        $empresasInput = "<div class='form-group'>
+            <select name='empresa' class='input-empresas form-control form-control-solid placeholder-no-fix' autofocus>
+                <option value='' hidden>Empresa</option>";
+        foreach ($empresas as $key => $value) {
+            if (file_exists(__DIR__."/".$value)) {
+                $selected = (!empty($_POST["empresa"]) && $_POST["empresa"] == $key) ? "selected" : "";
+                $empresasInput .= "<option {$selected} value='{$key}'>{$empresasNomes[$value]}</option>";
+            }
+        }
+        $empresasInput .= "</select></div>";
+    } else {
+        $empresasInput = 
+            "<div class='form-group'>
+                <input
+                    autofocus
+                    class='input-empresas form-control form-control-solid placeholder-no-fix'
+                    type='text'
+                    autocomplete='off'
+                    placeholder='INSIRA SEU DOMÍNIO'
+                    name='empresa'
+                    style='text-transform:uppercase;'
+                    ".(!empty($_POST["empresa"])? "value='".$_POST["empresa"]."'": "")."
+                />
+            </div>"
+        ;
+    }
 ?>

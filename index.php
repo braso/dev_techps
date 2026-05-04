@@ -55,6 +55,12 @@ error_reporting(E_ALL);
 		exit;
 	}
 
+
+
+
+
+	
+
 	$regexValidChar = "\"[A-Z]|[a-z]\"";
 	$dataScript = 
 		"<script>

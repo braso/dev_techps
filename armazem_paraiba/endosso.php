@@ -183,6 +183,9 @@
 
 					array_shift($aDetalhado);
 					array_splice($aDetalhado, 10, 1); //Retira a coluna de "Jornada" que está entre "Repouso" e "Jornada Prevista"
+					// Remove colunas de escala que não têm cabeçalho na tabela de endosso
+					unset($aDetalhado["inicioEscala"]);
+					unset($aDetalhado["fimEscala"]);
 					$rows[] = $aDetalhado;
 				}
 			//}
@@ -435,6 +438,8 @@
 					}
 					// FIM Lógica de Tolerância
 
+					unset($aDetalhado["inicioEscala"]);
+					unset($aDetalhado["fimEscala"]);
 					$rows[] = $aDetalhado;
 				}
 				$totalResumoGrid = $totalResumo;
@@ -446,7 +451,12 @@
 					"he100APagar",
 					"saldoFinal",
 					"desconto_manual",
-					"desconto_faltas_nao_justificadas"
+					"desconto_faltas_nao_justificadas",
+					"inicioEscala",
+					"fimEscala",
+					"HESemanalAPagar",
+					"HEExAPagar",
+					"diffJornada"
 				];
 				foreach($unsetKeys as $unsetKey){
 					unset($totalResumoGrid[$unsetKey]);
