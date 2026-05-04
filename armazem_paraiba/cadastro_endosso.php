@@ -611,7 +611,7 @@ function cadastrar(){
 				$saldoFinal = operarHorarios([$saldoFinal, $valorDesc], "-");
 			}
             if($_POST["zerarSaldoNegativo"] == "sim" && $saldoFinal[0] == "-"){
-                $totalResumo["desconto_manual"] = operarHorarios([$totalResumo["desconto_manual"], $saldoFinal], "+");
+                // Zerar saldo negativo NÃO é desconto — apenas absorve o débito sem registrar como desconto.
                 $saldoFinal = "00:00";
             }
 
