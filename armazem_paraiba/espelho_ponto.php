@@ -74,6 +74,13 @@
 		$selecionadosQtd = count($selecionados);
 		$tituloRender = $titulo.($selecionadosQtd > 0 ? " ({$selecionadosQtd})" : "");
 		$nameAttr = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
+		$habilitarBusca = in_array($name, ["busca_motorista", "busca_empresa"], true);
+		$placeholderBusca = "Digite para filtrar";
+		if($name === "busca_motorista"){
+			$placeholderBusca = "Digite o nome do funcionário";
+		}elseif($name === "busca_empresa"){
+			$placeholderBusca = "Digite o nome da empresa";
+		}
 		$groupId = preg_replace('/[^a-zA-Z0-9_]/', '_', $name);
 		$hiddenValue = htmlspecialchars(implode(',', $selecionados), ENT_QUOTES, 'UTF-8');
 		$tituloAttr = htmlspecialchars($titulo, ENT_QUOTES, 'UTF-8');
@@ -92,13 +99,19 @@
 			."<button type='button' class='btn btn-xs btn-default js-filtro-todos' data-target='".$nameAttr."' data-action='none'>Desmarcar todos</button>"
 			."</div>";
 
+		if($habilitarBusca){
+			$html .= "<input type='text' class='form-control input-sm js-filtro-search' data-target='".$nameAttr."'"
+				." placeholder='".htmlspecialchars($placeholderBusca, ENT_QUOTES, 'UTF-8')."'"
+				." style='margin-bottom:10px;' autocomplete='off'>";
+		}
+
 		if(empty($opcoes)){
 			$html .= "<div style='color:#777;'>Sem opções</div>";
 		}else{
 			foreach($opcoes as $valor => $rotulo){
 				$valorStr = (string)$valor;
 				$checked = in_array($valorStr, $selecionados, true) ? "checked" : "";
-				$html .= "<label style='display:block; margin-bottom:6px; font-weight:normal; cursor:pointer;'>"
+				$html .= "<label class='js-filtro-item' style='display:block; margin-bottom:6px; font-weight:normal; cursor:pointer;'>"
 					."<input type='checkbox' class='js-filtro-checkbox' data-target='".$nameAttr."' value='".htmlspecialchars($valorStr, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
 					.htmlspecialchars($rotulo)
 					."</label>";
@@ -426,6 +439,30 @@
 		echo fecha_form($b);
 		echo <<<'JS'
 		<script>(function(){
+			function normalizarFiltroTexto(txt){
+				txt = (txt || '').toString().toLowerCase().trim();
+				if(typeof txt.normalize === 'function'){
+					txt = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+				}
+				return txt;
+			}
+
+			function aplicarBuscaDropdown(target){
+				if(!target){
+					return;
+				}
+				var input = $('.js-filtro-search[data-target="' + target + '"]');
+				if(!input.length){
+					return;
+				}
+				var termo = normalizarFiltroTexto(input.val());
+				var itens = $('input.js-filtro-checkbox[data-target="' + target + '"]').closest('label.js-filtro-item');
+				itens.each(function(){
+					var texto = normalizarFiltroTexto($(this).text());
+					$(this).toggle(termo === '' || texto.indexOf(termo) !== -1);
+				});
+			}
+
 			function fecharDropdowns(excecao){
 				$('.filtro-dropdown').each(function(){
 					if(excecao && $(this).is(excecao)){
@@ -446,6 +483,11 @@
 					wrapper.addClass('open');
 					menu.show();
 					$(botao).attr('aria-expanded', 'true');
+					var campoBusca = wrapper.find('.js-filtro-search').first();
+					if(campoBusca.length){
+						campoBusca.focus();
+						aplicarBuscaDropdown(campoBusca.data('target'));
+					}
 				}
 			}
 
@@ -512,6 +554,10 @@
 					}
 				});
 				atualizarHidden(target);
+			});
+
+			$(document).on('input keyup', '.js-filtro-search', function(){
+				aplicarBuscaDropdown($(this).data('target'));
 			});
 
 			$(document).on('click', function(){
