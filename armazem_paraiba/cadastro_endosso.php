@@ -551,9 +551,8 @@ function cadastrar(){
         // $saldoPeriodoParaCalculo = $saldoBruto; // REMOVIDO: Devemos manter o saldo do período original para que a função saiba se é negativo ou positivo.
 		$limitParaCalculo = $limitToApply;
 		
-		// If paying HE with negative period is active:
-		// AND current period balance is NOT negative (User requirement: only pay 100% if period is positive)
-		if($pagarHEExComPerNeg && $he100 != "00:00" && $diffSaldoClean[0] != "-"){
+		// Se pagarHEExComPerNeg está ativo, paga HE100 independente do sinal do período.
+		if($pagarHEExComPerNeg && $he100 != "00:00"){
             // Case 1: No user input (or 00:00) -> Pay HE100 exactly.
             if(!$pagarExtras || $limitToApply == "00:00"){
                 $limitParaCalculo = $he100;
