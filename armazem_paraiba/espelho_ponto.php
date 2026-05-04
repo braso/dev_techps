@@ -114,6 +114,12 @@
 			."<button type='button' class='btn btn-xs btn-default js-filtro-todos' data-target='".$nameAttr."' data-action='none'>Desmarcar todos</button>"
 			."</div>";
 
+		if($name === "busca_empresa"){
+			$html .= "<div style='margin-bottom:10px;'>"
+				."<button type='button' class='btn btn-xs btn-info js-aplicar-empresa'>Aplicar empresas</button>"
+				."</div>";
+		}
+
 		if($habilitarBusca){
 			$html .= "<input type='text' class='form-control input-sm js-filtro-search' data-target='".$nameAttr."'"
 				." placeholder='".htmlspecialchars($placeholderBusca, ENT_QUOTES, 'UTF-8')."'"
@@ -454,6 +460,7 @@
 		echo fecha_form($b);
 		echo <<<'JS'
 		<script>(function(){
+			var empresasPendentesAplicacao = false;
 			function normalizarFiltroTexto(txt){
 				txt = (txt || '').toString().toLowerCase().trim();
 				if(typeof txt.normalize === 'function'){
@@ -545,16 +552,28 @@
 				var target = $(this).data('target');
 				atualizarHidden(target);
 				if(target === 'busca_empresa'){
-					var form = document.contex_form;
-					if(form){
-						if(form.isAutoReload){
-							form.isAutoReload.value = '1';
-						}
-						$('input.js-filtro-checkbox[data-target="busca_motorista"]').prop('checked', false);
-						atualizarHidden('busca_motorista');
-						form.submit();
-					}
+					empresasPendentesAplicacao = true;
 				}
+			});
+
+			$(document).on('click', '.js-aplicar-empresa', function(e){
+				e.preventDefault();
+				e.stopPropagation();
+				var form = document.contex_form;
+				if(!form){
+					return;
+				}
+				if(!empresasPendentesAplicacao){
+					fecharDropdowns();
+					return;
+				}
+				if(form.isAutoReload){
+					form.isAutoReload.value = '1';
+				}
+				$('input.js-filtro-checkbox[data-target="busca_motorista"]').prop('checked', false);
+				atualizarHidden('busca_motorista');
+				empresasPendentesAplicacao = false;
+				form.submit();
 			});
 
 			$(document).on('click', '.js-filtro-toggle', function(e){
