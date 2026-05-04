@@ -1,8 +1,8 @@
 <?php
-
+/*
 		ini_set("display_errors", 1);
 		error_reporting(E_ALL);
-
+*/
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Pragma: no-cache"); // HTTP 1.0.
 		header("Expires: 0");
@@ -578,22 +578,15 @@ function cadastrar(){
         $aPagar = ["00:00", "00:00"];
     }
     
-	$opHE100 = "-";
-	if($saldoBruto[0] == "-"){
-		$opHE100 = "+";
-	}
-
-    // Calcula saldoFinal: saldoBruto - he50Pago +/- he100Pago
-    // Evita passar "-00:00" ou "+00:00" para operarHorarios (causa bug de retorno 00:00)
+    // Calcula saldoFinal: saldoBruto - he50Pago - he100Pago
+    // Pagar horas SEMPRE subtrai do saldo, independente do sinal do saldo bruto.
     $saldoFinal = $saldoBruto;
     if($aPagar[0] !== "00:00"){
         $saldoFinal = operarHorarios([$saldoFinal, $aPagar[0]], "-");
     }
     if($aPagar[1] !== "00:00"){
-        $saldoFinal = operarHorarios([$saldoFinal, $aPagar[1]], $opHE100 === "+" ? "+" : "-");
+        $saldoFinal = operarHorarios([$saldoFinal, $aPagar[1]], "-");
     }
-    // DEBUG INLINE
-    $novoEndosso["_dbg_saldoFinal_calc"] = "saldoBruto=[$saldoBruto] aPagar0=[{$aPagar[0]}] aPagar1=[{$aPagar[1]}] opHE100=[$opHE100] saldoFinal_calc=[$saldoFinal]";
 			
 			$totalResumo["desconto_manual"] = "00:00";
             

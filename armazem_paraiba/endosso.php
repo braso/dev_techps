@@ -455,15 +455,30 @@
 					"inicioEscala",
 					"fimEscala",
 					"HESemanalAPagar",
-					"HEExAPagar",
-					"diffJornada"
+					"HEExAPagar"
+					
 				];
 				foreach($unsetKeys as $unsetKey){
 					unset($totalResumoGrid[$unsetKey]);
 				}
 
 				if(count($rows) > 0){
-					$rows[] = array_values(array_merge(["", "", "", "", "", "", "<b>TOTAL</b>"], $totalResumoGrid));
+					// Monta a linha TOTAL usando as mesmas chaves associativas das linhas de dia,
+					// para garantir alinhamento correto de colunas na tabela.
+					$linhaTotalKeys = array_keys($rows[0]);
+					$linhaTotalValues = [];
+					$colunasPreenchidas = 0;
+					foreach($linhaTotalKeys as $key){
+						if($colunasPreenchidas < 6){
+							$linhaTotalValues[$key] = "";
+						} elseif($colunasPreenchidas == 6){
+							$linhaTotalValues[$key] = "<b>TOTAL</b>";
+						} else {
+							$linhaTotalValues[$key] = $totalResumoGrid[$key] ?? "";
+						}
+						$colunasPreenchidas++;
+					}
+					$rows[] = $linhaTotalValues;
 				}
 				unset($totalResumoGrid);
 			//}
