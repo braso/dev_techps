@@ -425,11 +425,21 @@
             $empresaOpcoes[(string)intval($empresaRow["empr_nb_id"])] = $empresaRow["empr_tx_nome"];
         }
 
+        $empresaLabelBotao = "Empresa";
+        if(count($empresaSelecionadas) === 1){
+            $empresaIdSelecionada = (string)$empresaSelecionadas[0];
+            if(isset($empresaOpcoes[$empresaIdSelecionada])){
+                $empresaLabelBotao = $empresaOpcoes[$empresaIdSelecionada];
+            }
+        }elseif(count($empresaSelecionadas) > 1){
+            $empresaLabelBotao = "Empresa (".count($empresaSelecionadas).")";
+        }
+
         $selectEmpresa = "<div class='col-sm-4 margin-bottom-5 campo-fit-content'>"
             ."<label>Empresa</label>"
             ."<div class='filtro-compact' data-filter='empresa' data-label='Empresa' style='position:relative;'>"
             ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' style='display:flex;justify-content:space-between;align-items:center;'>"
-            ."<span class='filtro-label'>Empresa".(count($empresaSelecionadas) > 0 ? " (".count($empresaSelecionadas).")" : "")."</span><span class='caret'></span></button>"
+            ."<span class='filtro-label'>".htmlspecialchars($empresaLabelBotao, ENT_QUOTES, 'UTF-8')."</span><span class='caret'></span></button>"
             ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; z-index:1050; background:#fff; border:1px solid #d9d9d9; padding:8px; max-height:240px; overflow:auto;'>"
             ."<div style='margin-bottom:8px;'>"
             ."<button type='button' class='btn btn-xs btn-link js-filtro-todos' data-target='empresa' data-action='all'>Marcar todos</button>"
@@ -746,7 +756,16 @@
                 var label = wrap.querySelector('.filtro-label');
                 if(!label){ return; }
                 var baseLabel = wrap.getAttribute('data-label') || target;
-                label.textContent = baseLabel + (count > 0 ? ' (' + count + ')' : '');
+                if(target === 'empresa' && count === 1){
+                    var checkedEmpresa = wrap.querySelector('input.js-filtro-checkbox[data-target="empresa"]:checked');
+                    var empresaTexto = '';
+                    if(checkedEmpresa && checkedEmpresa.parentElement){
+                        empresaTexto = checkedEmpresa.parentElement.textContent.trim();
+                    }
+                    label.textContent = empresaTexto || baseLabel;
+                    return;
+                }
+                label.textContent = baseLabel + (count > 1 ? ' (' + count + ')' : '');
             }
 
             function sincronizarDoHidden(target){
