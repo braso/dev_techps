@@ -213,14 +213,10 @@
 
         if($saldoPeriodo[0] == "-"){
             if($pagarHEExComPerNeg == "sim"){
-                // Regra: Só paga 100% se saldo for positivo.
-                // Aqui (Saldo Negativo), paga APENAS HE50.
-                
-                // Se estamos pagando com saldo negativo do período, estamos pagando do BANCO ACUMULADO.
-                // Portanto, não devemos nos limitar ao HE do mês ($he50), mas sim ao valor solicitado ($totalPagar).
-                // O chamador (cadastro_endosso.php) já garante que $totalPagar <= Saldo Bruto.
-                
-                return [$totalPagar, "00:00"];
+                // Período negativo mas parâmetro "Pagar H.E. Ex. mesmo com Período Neg." ativo:
+                // Paga HE100 (Extraordinária) do valor solicitado.
+                // O chamador já garante que $totalPagar <= he100 disponível.
+                return ["00:00", $totalPagar];
             }
             return ["00:00", "00:00"];
         }

@@ -675,21 +675,7 @@ JS;
 						foreach($endossoMes["endo_tx_pontos"] as $row){
 							$day = DateTime::createFromFormat("d/m/Y", $row["data"]);
 							if($day >= $startDate && $day <= $endDate){
-								// INICIO Lógica de Tolerância
-								if(!empty($motorista["para_tx_tolerancia"]) && isset($row["diffSaldo"])){
-									$tolerancia = intval($motorista["para_tx_tolerancia"]);
-									$saldoDiarioStr = strip_tags($row["diffSaldo"]);
-									$parts = explode(":", $saldoDiarioStr);
-									
-									if(count($parts) == 2){
-										$minutos = intval($parts[0]) * 60 + ($parts[0][0] == '-' ? -1 : 1) * intval($parts[1]);
-										if(abs($minutos) <= $tolerancia){
-											$row["diffSaldo"] = "00:00";
-										}
-									}
-								}
-								// FIM Lógica de Tolerância
-
+								// Não aplicar tolerância aqui - os dados do endosso já foram processados
 								$diasEndossados++;
 								$rows[] = $row;
 							}
@@ -959,7 +945,7 @@ JS;
 				LIMIT 1;"
 			))["empr_tx_logo"];
 
-		return <<<'JS'
+		return <<<JS
 		<script>
 				function ajustarPonto(idMotorista, data){
 					document.form_ajuste_ponto.idMotorista.value = idMotorista;
@@ -969,7 +955,7 @@ JS;
 
 				
 				function obterFiltroCheckbox(nome){
-					var valor = $('input.js-filtro-hidden[data-filter-name="' + nome + '"]').val() || '';
+					var valor = \$('input.js-filtro-hidden[data-filter-name="' + nome + '"]').val() || '';
 					if(!valor){
 						return [];
 					}
@@ -1008,11 +994,11 @@ JS;
 					condicoes += encodeURI(montarCondicaoLista('enti_nb_empresa', empresas, true));
 					condicoes += encodeURI(montarCondicaoLista('enti_tx_ocupacao', ocupacoes, false));
 
-					if($('.busca_motorista').data('select2')){
-						$('.busca_motorista').select2('destroy');
+					if(\$('.busca_motorista').data('select2')){
+						\$('.busca_motorista').select2('destroy');
 					}
-					$.fn.select2.defaults.set('theme', 'bootstrap');
-					$('.busca_motorista').select2({
+					\$.fn.select2.defaults.set('theme', 'bootstrap');
+					\$('.busca_motorista').select2({
 						language: {
 							noResults: function(){
 								return 'Nenhum {$rotulos["funcionario"]} encontrado para a combinação do filtro';
@@ -1034,7 +1020,7 @@ JS;
 					});
 				}
 
-				$(function(){
+				\$(function(){
 					selecionaMotorista();
 				});
 
@@ -1052,23 +1038,23 @@ JS;
 					const dataAtual = new Date().toLocaleString();
 
 					// Cabeçalho para a impressão
-					const cabecalhoHTML = `
+					const cabecalhoHTML = \`
 						<header id='print-header'>
 							<img src='./imagens/logo_topo_cliente.png' alt='Logo Esquerda'>
 							<h1>Espelho de {$rotulos["modulo"]}</h1>
-							<img src='./$logoEmpresa' alt='Logo Direita'>
-						</header>`;
+							<img src='./{$logoEmpresa}' alt='Logo Direita'>
+						</header>\`;
 
 					// Rodapé para a impressão
-					const rodapeHTML = `
+					const rodapeHTML = \`
 						<footer id='print-footer'>
 							<div><strong>TECHPS®</strong></div>
 							<div><em>Gerado em: \${dataAtual}</em></div>
-						</footer>`;
+						</footer>\`;
 
 					// Abre janela de impressão
 					const janela = window.open('', '_blank');
-					janela.document.write(`
+					janela.document.write(\`
 						<html>
 						<head>
 							<title>Impressão - Espelho de {$rotulos["modulo"]}</title>
@@ -1096,10 +1082,10 @@ JS;
 								window.addEventListener('afterprint', () => {
 									window.close();
 								});
-							<\\/script>
+							<\/script>
 						</body>
 						</html>
-					`);
+					\`);
 					janela.document.close();
 				}
 			</script>
