@@ -296,6 +296,19 @@
         $temPermissao = temPermissaoMenu('/espelho_ponto.php');
 		
 		cabecalho(empty($_POST["title"])? "Buscar Espelho de {$rotulos["modulo"]}": $_POST["title"]);
+		
+		// Definir ajustarPonto globalmente logo no início, antes de qualquer tabela
+		echo "<script>
+			function ajustarPonto(idMotorista, data){
+				var form = document.querySelector('form[name=\"form_ajuste_ponto\"]');
+				if(!form){ alert('Formulário de ajuste não encontrado.'); return; }
+				var fieldId = form.querySelector('[name=\"idMotorista\"]');
+				var fieldData = form.querySelector('[name=\"data\"]');
+				if(fieldId) fieldId.value = idMotorista;
+				if(fieldData) fieldData.value = data;
+				form.submit();
+			}
+		</script>";
 
 		echo "<style>";
 		include "css/espelho_ponto.css";
@@ -788,8 +801,8 @@ JS;
 				$params = array_merge($_POST, [
 					"acao" => "index",
 					"acaoPrevia" => $_POST["acao"],
-					"idMotorista" => null,
-					"data" => null,
+					"idMotorista" => "",
+					"data" => "",
 					"HTTP_REFERER" => (!empty($_POST["HTTP_REFERER"])? $_POST["HTTP_REFERER"]: $_SERVER["REQUEST_URI"])
 				]);
 
@@ -840,17 +853,12 @@ JS;
                 WHERE empr_tx_status = 'ativo'
 					AND empr_nb_id = '".intval($empresaLogoId)."'
 				LIMIT 1;"
-			))["empr_tx_logo"];
+			))["empr_tx_logo"] ?? "";
+		$logoEmpresa = addslashes($logoEmpresa);
+		$logoEmpresa = str_replace('`', '\`', $logoEmpresa);
 
 		return <<<JS
 		<script>
-				function ajustarPonto(idMotorista, data){
-					document.form_ajuste_ponto.idMotorista.value = idMotorista;
-					document.form_ajuste_ponto.data.value = data;
-					document.form_ajuste_ponto.submit();
-				}
-
-				
 				function obterFiltroCheckbox(nome){
 					var valor = \$('input.js-filtro-hidden[data-filter-name="' + nome + '"]').val() || '';
 					if(!valor){
@@ -935,12 +943,12 @@ JS;
 					const dataAtual = new Date().toLocaleString();
 
 					// Cabeçalho para a impressão
-					const cabecalhoHTML = \`
-						<header id='print-header'>
-							<img src='./imagens/logo_topo_cliente.png' alt='Logo Esquerda'>
-							<h1>Espelho de {$rotulos["modulo"]}</h1>
-							<img src='./{$logoEmpresa}' alt='Logo Direita'>
-						</header>\`;
+					const logoEmpresa = '{$logoEmpresa}';
+					const cabecalhoHTML = '<header id="print-header">'
+						+ '<img src="./imagens/logo_topo_cliente.png" alt="Logo Esquerda">'
+						+ '<h1>Espelho de {$rotulos["modulo"]}</h1>'
+						+ '<img src="./' + logoEmpresa + '" alt="Logo Direita">'
+						+ '</header>';
 
 					// Rodapé para a impressão
 					const rodapeHTML = \`
