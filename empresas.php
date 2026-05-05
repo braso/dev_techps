@@ -37,6 +37,7 @@
         "TMILITAO"                 => "t_militao",
         "LAUTO"                 => "lauto",
         "DEMO"                 => "demo"
+        "GST"                 => "gst"
 
     ];
 
@@ -72,6 +73,7 @@
         
         "lauto"             => "L Auto Cargo",
         "demo"             => "Demo"
+        "gst"             => "GST"
     ];
 
     $empresa_array = array_values($empresas); //Utilizado nos arquivos que importam este.
