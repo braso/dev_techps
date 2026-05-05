@@ -16,7 +16,7 @@ deployment:
     - export MIDIADIGITAL=/home/devtechpsgj/public_html/dev/midia_digital
     - export PBTRANSPORTES=/home/devtechpsgj/public_html/dev/pb_transportes
     - export LEMON=/home/devtechpsgj/public_html/dev/lemon
-    - export TRANSCOPEL=/home/devtechpsgj/public_html/dev/transcopel
+    - export DEVTRANSCOPEL=/home/devtechpsgj/public_html/dev/devtranscopel
 
 
     # Copiando diret贸rios
@@ -29,6 +29,6 @@ deployment:
     - /bin/cp -R $DOMAIN $TMILITAO
     - /bin/cp -R $DOMAIN $MIDIADIGITAL
     - /bin/cp -R $DOMAIN $PBTRANSPORTES
-    - /bin/cp -R $DOMAIN $TRANSCOPEL
+    - /bin/cp -R $DOMAIN $DEVTRANSCOPEL
     - /bin/cp -R $DOMAIN $LEMON
     
