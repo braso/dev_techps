@@ -44,6 +44,20 @@
 		return $rotulos;
 	}
 
+	// 🔧 Gera rótulos dinâmicos baseado na ocupação de um motorista específico
+	function getRotulosPorMotorista(array $motorista): array {
+		$ocupacao = trim((string)($motorista["enti_tx_ocupacao"] ?? ""));
+		$ocupacaoNormalizada = strtolower($ocupacao);
+		$ehTerceirizado = in_array($ocupacaoNormalizada, ["terceirizado"], true);
+
+		return [
+			"ehTerceirizado" => $ehTerceirizado,
+			"modulo" => $ehTerceirizado ? "Produção" : "Ponto",
+			"funcionario" => $ehTerceirizado ? "Colaborador" : "Funcionário",
+			"funcionarioPlural" => $ehTerceirizado ? "Colaboradores" : "Funcionários"
+		];
+	}
+
 	function normalizarFiltroArray($valor): array{
 		if (is_array($valor)) {
 			return array_values(array_filter(array_map('trim', $valor), function($v) { return $v !== ''; }));
@@ -58,8 +72,30 @@
 	function renderFiltroCheckboxGroup($titulo, $name, $opcoes, $selecionados, $width=3) {
 		$selecionados = normalizarFiltroArray($selecionados);
 		$selecionadosQtd = count($selecionados);
-		$tituloRender = $titulo.($selecionadosQtd > 0 ? " ({$selecionadosQtd})" : "");
+		$tituloRender = $titulo;
+		if($selecionadosQtd === 1){
+			$valorSelecionado = (string)$selecionados[0];
+			$labelSelecionado = "";
+			foreach($opcoes as $valor => $rotulo){
+				if((string)$valor === $valorSelecionado){
+					$labelSelecionado = (string)$rotulo;
+					break;
+				}
+			}
+			if($labelSelecionado !== ""){
+				$tituloRender = $labelSelecionado;
+			}
+		}elseif($selecionadosQtd > 1){
+			$tituloRender = $titulo." ({$selecionadosQtd})";
+		}
 		$nameAttr = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
+		$habilitarBusca = in_array($name, ["busca_motorista", "busca_empresa"], true);
+		$placeholderBusca = "Digite para filtrar";
+		if($name === "busca_motorista"){
+			$placeholderBusca = "Digite o nome do funcionário";
+		}elseif($name === "busca_empresa"){
+			$placeholderBusca = "Digite o nome da empresa";
+		}
 		$groupId = preg_replace('/[^a-zA-Z0-9_]/', '_', $name);
 		$hiddenValue = htmlspecialchars(implode(',', $selecionados), ENT_QUOTES, 'UTF-8');
 		$tituloAttr = htmlspecialchars($titulo, ENT_QUOTES, 'UTF-8');
@@ -78,13 +114,25 @@
 			."<button type='button' class='btn btn-xs btn-default js-filtro-todos' data-target='".$nameAttr."' data-action='none'>Desmarcar todos</button>"
 			."</div>";
 
+		if($name === "busca_empresa"){
+			$html .= "<div style='margin-bottom:10px;'>"
+				."<button type='button' class='btn btn-xs btn-info js-aplicar-empresa'>Aplicar empresas</button>"
+				."</div>";
+		}
+
+		if($habilitarBusca){
+			$html .= "<input type='text' class='form-control input-sm js-filtro-search' data-target='".$nameAttr."'"
+				." placeholder='".htmlspecialchars($placeholderBusca, ENT_QUOTES, 'UTF-8')."'"
+				." style='margin-bottom:10px;' autocomplete='off'>";
+		}
+
 		if(empty($opcoes)){
 			$html .= "<div style='color:#777;'>Sem opções</div>";
 		}else{
 			foreach($opcoes as $valor => $rotulo){
 				$valorStr = (string)$valor;
 				$checked = in_array($valorStr, $selecionados, true) ? "checked" : "";
-				$html .= "<label style='display:block; margin-bottom:6px; font-weight:normal; cursor:pointer;'>"
+				$html .= "<label class='js-filtro-item' style='display:block; margin-bottom:6px; font-weight:normal; cursor:pointer;'>"
 					."<input type='checkbox' class='js-filtro-checkbox' data-target='".$nameAttr."' value='".htmlspecialchars($valorStr, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
 					.htmlspecialchars($rotulo)
 					."</label>";
@@ -425,6 +473,31 @@
 		echo fecha_form($b);
 		echo <<<'JS'
 		<script>(function(){
+			var empresasPendentesAplicacao = false;
+			function normalizarFiltroTexto(txt){
+				txt = (txt || '').toString().toLowerCase().trim();
+				if(typeof txt.normalize === 'function'){
+					txt = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+				}
+				return txt;
+			}
+
+			function aplicarBuscaDropdown(target){
+				if(!target){
+					return;
+				}
+				var input = $('.js-filtro-search[data-target="' + target + '"]');
+				if(!input.length){
+					return;
+				}
+				var termo = normalizarFiltroTexto(input.val());
+				var itens = $('input.js-filtro-checkbox[data-target="' + target + '"]').closest('label.js-filtro-item');
+				itens.each(function(){
+					var texto = normalizarFiltroTexto($(this).text());
+					$(this).toggle(termo === '' || texto.indexOf(termo) !== -1);
+				});
+			}
+
 			function fecharDropdowns(excecao){
 				$('.filtro-dropdown').each(function(){
 					if(excecao && $(this).is(excecao)){
@@ -445,6 +518,11 @@
 					wrapper.addClass('open');
 					menu.show();
 					$(botao).attr('aria-expanded', 'true');
+					var campoBusca = wrapper.find('.js-filtro-search').first();
+					if(campoBusca.length){
+						campoBusca.focus();
+						aplicarBuscaDropdown(campoBusca.data('target'));
+					}
 				}
 			}
 
@@ -455,8 +533,14 @@
 				}
 				var botao = wrapper.find('.js-filtro-toggle').first();
 				var labelBase = botao.data('base-label') || nome;
-				var qtd = wrapper.find('input.js-filtro-checkbox[data-target="' + nome + '"]:checked').length;
-				var texto = qtd > 0 ? (labelBase + ' (' + qtd + ')') : labelBase;
+				var selecionados = wrapper.find('input.js-filtro-checkbox[data-target="' + nome + '"]:checked');
+				var qtd = selecionados.length;
+				var texto = labelBase;
+				if(qtd === 1){
+					texto = selecionados.first().closest('label').text().trim();
+				}else if(qtd > 1){
+					texto = labelBase + ' (' + qtd + ')';
+				}
 				botao.find('.js-filtro-label').text(texto);
 			}
 
@@ -481,16 +565,28 @@
 				var target = $(this).data('target');
 				atualizarHidden(target);
 				if(target === 'busca_empresa'){
-					var form = document.contex_form;
-					if(form){
-						if(form.isAutoReload){
-							form.isAutoReload.value = '1';
-						}
-						$('input.js-filtro-checkbox[data-target="busca_motorista"]').prop('checked', false);
-						atualizarHidden('busca_motorista');
-						form.submit();
-					}
+					empresasPendentesAplicacao = true;
 				}
+			});
+
+			$(document).on('click', '.js-aplicar-empresa', function(e){
+				e.preventDefault();
+				e.stopPropagation();
+				var form = document.contex_form;
+				if(!form){
+					return;
+				}
+				if(!empresasPendentesAplicacao){
+					fecharDropdowns();
+					return;
+				}
+				if(form.isAutoReload){
+					form.isAutoReload.value = '1';
+				}
+				$('input.js-filtro-checkbox[data-target="busca_motorista"]').prop('checked', false);
+				atualizarHidden('busca_motorista');
+				empresasPendentesAplicacao = false;
+				form.submit();
 			});
 
 			$(document).on('click', '.js-filtro-toggle', function(e){
@@ -511,6 +607,10 @@
 					}
 				});
 				atualizarHidden(target);
+			});
+
+			$(document).on('input keyup', '.js-filtro-search', function(){
+				aplicarBuscaDropdown($(this).data('target'));
 			});
 
 			$(document).on('click', function(){
@@ -576,9 +676,12 @@ JS;
 							 AND enti_nb_id = '".intval($idMotorista)."'
 						 LIMIT 1;"
 					));
-				
-				//Conferir se há dias do mês já endossados{
-					$endossoMes = montarEndossoMes($startDate, $motorista);
+
+				// 🔧 Gera rótulos dinâmicos baseado na ocupação DESTE motorista
+				$rotulosMotorista = getRotulosPorMotorista($motorista);
+			
+			//Conferir se há dias do mês já endossados{
+				$endossoMes = montarEndossoMes($startDate, $motorista);
 					
 					if(!empty($endossoMes)){
 						$diasEndossados = 0;
@@ -779,7 +882,7 @@ JS;
 						<thead>
 							<tr>
 								<th>Empresa</th>
-								<th>{$rotulos["funcionario"]}</th>
+								<th>{$rotulosMotorista["funcionario"]}</th>
 								<th>Parâmetro</th>
 							</tr>
 						<tbody>
