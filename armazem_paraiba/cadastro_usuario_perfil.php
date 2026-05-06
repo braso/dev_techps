@@ -66,10 +66,21 @@ function renderFiltroCheckboxGroup($titulo, $name, $opcoes, $selecionados, $widt
     $hiddenValue = htmlspecialchars(implode(',', $selecionados), ENT_QUOTES, 'UTF-8');
     $tituloAttr = htmlspecialchars($titulo, ENT_QUOTES, 'UTF-8');
 
+    // Mostrar o rótulo selecionado quando houver exatamente 1 opção selecionada
+    $displayText = $tituloAttr;
+    if(is_array($selecionados) && count($selecionados) === 1){
+        $selKey = (string)$selecionados[0];
+        if(isset($opcoes[$selKey])){
+            $displayText = htmlspecialchars($opcoes[$selKey], ENT_QUOTES, 'UTF-8');
+        }elseif(isset($opcoes[(int)$selKey])){
+            $displayText = htmlspecialchars($opcoes[(int)$selKey], ENT_QUOTES, 'UTF-8');
+        }
+    }
+
     $html = "<div class='col-sm-{$width} margin-bottom-5 campo-fit-content'>"
         ."<div class='filtro-dropdown' data-filter-group='".$groupId."' style='position:relative; overflow:visible;'>"
         ."<button type='button' class='btn btn-default btn-block filtro-dropdown-toggle js-filtro-toggle' data-target='".$nameAttr."' aria-expanded='false' style='display:flex; justify-content:space-between; align-items:center; gap:10px;'>"
-        ."<span style='text-align:left;'>".$tituloAttr."</span>"
+        ."<span style='text-align:left;'>".$displayText."</span>"
         ."<span class='caret'></span>"
         ."</button>"
         ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:1050; background:#fff; border:1px solid #d9d9d9; border-radius:8px; box-shadow:0 12px 30px rgba(0,0,0,.12); padding:10px; max-height:260px; overflow:auto;'>"
@@ -674,6 +685,14 @@ function index(){
         $optsEmpresas = [];
         $rsE = query("SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status='ativo' ORDER BY empr_tx_nome");
         while($rsE && ($r = mysqli_fetch_assoc($rsE))){ $optsEmpresas[(int)$r["empr_nb_id"]] = $r["empr_tx_nome"]; }
+
+        // Preencher automaticamente o filtro de empresa quando existir apenas 1 opção
+        if(empty($selecionadosEmpresa) && count($optsEmpresas) === 1){
+            $keys = array_keys($optsEmpresas);
+            $single = (string)$keys[0];
+            $selecionadosEmpresa = [$single];
+            $_POST["busca_empresa"] = $selecionadosEmpresa;
+        }
 
         $optsPerfis = [];
         $rsP = query("SELECT perfil_nb_id, perfil_tx_nome FROM perfil_acesso WHERE perfil_tx_status='ativo' ORDER BY perfil_tx_nome");
