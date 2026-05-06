@@ -90,8 +90,8 @@ function renderFiltroCheckboxGroup($titulo, $name, $opcoes, $selecionados, $widt
         foreach($opcoes as $valor => $rotulo){
             $valorStr = (string)$valor;
             $checked = in_array($valorStr, $selecionados, true) ? "checked" : "";
-            $html .= "<label class='js-filtro-item' style='display:block; margin-bottom:6px; font-weight:normal; cursor:pointer;'>"
-                ."<input type='checkbox' class='js-filtro-checkbox' data-target='".$nameAttr."' value='".htmlspecialchars($valorStr, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
+            $html .= "<label class='js-filtro-item' style='display:block; margin-bottom:6px; font-weight:normal; cursor:pointer; line-height:1.2;'>"
+                ."<input type='checkbox' class='js-filtro-checkbox' data-target='".$nameAttr."' value='".htmlspecialchars($valorStr, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px; width:13px; height:13px; min-width:13px; min-height:13px; padding:0; vertical-align:middle; appearance:auto !important; -webkit-appearance:auto !important; -moz-appearance:auto !important;'>"
                 .htmlspecialchars($rotulo)
                 ."</label>";
         }
@@ -836,14 +836,33 @@ function index(){
         hiddenInput.trigger('change');
     }
 
+    function sincronizarCheckboxesComHidden(nome){
+        var hiddenInput = $('input.js-filtro-hidden[data-filter-name="' + nome + '"]');
+        var valoresStr = hiddenInput.val() || '';
+        var valores = valoresStr ? valoresStr.split(',').map(function(v){ return v.trim(); }) : [];
+        var checkboxes = $('input.js-filtro-checkbox[data-target="' + nome + '"]');
+        
+        checkboxes.each(function(){
+            var val = $(this).val();
+            var deveEstarMarcado = valores.indexOf(val) !== -1;
+            $(this).prop('checked', deveEstarMarcado);
+        });
+
+        if(window.jQuery && typeof jQuery.uniform !== 'undefined' && typeof jQuery.uniform.update === 'function'){
+            jQuery.uniform.update(checkboxes);
+        }
+    }
+
     function sincronizarFiltros(){
         $('input.js-filtro-hidden').each(function(){
-            atualizarHidden($(this).data('filter-name'));
+            var filterName = $(this).data('filter-name');
+            sincronizarCheckboxesComHidden(filterName);
         });
     }
 
     $(document).on('change', 'input.js-filtro-checkbox', function(){
-        atualizarHidden($(this).data('target'));
+        var target = $(this).data('target');
+        atualizarHidden(target);
     });
 
     $(document).on('click', '.js-filtro-toggle', function(e){
@@ -853,21 +872,25 @@ function index(){
     });
 
     $(document).on('click', '.js-filtro-todos', function(){
-        var wrapper = $(this).closest('.filtro-dropdown');
         var target = $(this).data('target');
         var action = $(this).data('action');
         var marcar = action === 'all';
         
         var checkboxes = $('input.js-filtro-checkbox[data-target="' + target + '"]');
         
-        // Clica em cada checkbox que precisa mudar de estado para manter visual sincronizado
+        // Atualiza o estado de cada checkbox que precisa mudar
         checkboxes.each(function(){
-            var checked = $(this).prop('checked');
-            if(checked !== marcar){
-                $(this).click();
+            var currentState = $(this).prop('checked');
+            if(currentState !== marcar){
+                $(this).prop('checked', marcar);
             }
         });
+
+        if(window.jQuery && typeof jQuery.uniform !== 'undefined' && typeof jQuery.uniform.update === 'function'){
+            jQuery.uniform.update(checkboxes);
+        }
         
+        // Garante que o campo hidden é atualizado com os valores finais
         atualizarHidden(target);
     });
 
