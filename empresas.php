@@ -36,7 +36,7 @@
         "ENOVE"                 => "enove",
         "TMILITAO"                 => "t_militao",
         "LAUTO"                 => "lauto",
-        "DEMO"                 => "demo"
+        "DEMO"                 => "demo",
         "GST"                 => "gst"
 
     ];
@@ -72,7 +72,7 @@
         "t_militao"         => "T Militao",
         
         "lauto"             => "L Auto Cargo",
-        "demo"             => "Demo"
+        "demo"             => "Demo",
         "gst"             => "GST"
     ];
 
