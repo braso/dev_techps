@@ -46,17 +46,20 @@ table.espelho-cabecalho-info {
     /* --- Estrutura do Corpo do Documento --- */
     body {
         margin: 0;
-        padding-top: 40px;  /* Reduzido para dar mais espaço */
-        padding-bottom: 30px; /* Reduzido para dar mais espaço */
     }
 
-    /* --- Estilos para CABEÇALHO FIXO --- */
-    #print-header {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 50px; /* Altura reduzida */
+    .print-page {
+        break-after: page;
+        page-break-after: always;
+    }
+
+    .print-page:last-child {
+        break-after: auto;
+        page-break-after: auto;
+    }
+
+    /* --- Estilos para CABEÇALHO EM FLUXO --- */
+    .print-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -64,27 +67,23 @@ table.espelho-cabecalho-info {
         padding: 0 0.5cm; /* Alinha com a nova margem da @page */
         background: #fff;
         border-bottom: 1px solid #ccc;
+        margin-bottom: 6px;
     }
 
-    #print-header h1 {
+    .print-header h1 {
         margin: 0;
         font-size: 1em; /* Fonte ligeiramente menor */
         flex-grow: 1;
         text-align: center;
     }
 
-    #print-header img {
+    .print-header img {
         display: block !important;
         max-height: 40px; /* Impede que a imagem transborde */
     }
 
-    /* --- Estilos para RODAPÉ FIXO --- */
-    #print-footer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 25px; /* Altura reduzida */
+    /* --- Estilos para RODAPÉ EM FLUXO --- */
+    .print-footer {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -92,6 +91,7 @@ table.espelho-cabecalho-info {
         background: #fff;
         border-top: 1px solid #ccc;
         font-size: 0.7em; /* Fonte ligeiramente menor */
+        margin-top: 8px;
     }
 
     /* --- AJUSTES PARA TABELA LARGA NA IMPRESSÃO --- */
