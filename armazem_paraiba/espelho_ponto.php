@@ -1055,17 +1055,23 @@ JS;
 
 					if(blocos.length === 0){ alert('Nenhum espelho válido encontrado para impressão.'); return; }
 
-					var conteudoCompleto = blocos.join('<div style="page-break-after: always;"></div>');
 					var dataAtual = new Date().toLocaleString();
-					var cabecalhoHTML = '<header id="print-header">'
+					var cabecalhoHTML = '<header class="print-header">'
 						+ '<img src="./imagens/logo_topo_cliente.png" alt="Logo Esquerda">'
 						+ '<h1>Espelho de {$rotulos["modulo"]}</h1>'
 						+ '</header>';
-					var rodapeHTML = "<footer id='print-footer'><div><strong>TECHPS®</strong></div><div><em>Gerado em: " + dataAtual + "</em></div></footer>";
+					var rodapeHTML = "<footer class='print-footer'><div><strong>TECHPS®</strong></div><div><em>Gerado em: " + dataAtual + "</em></div></footer>";
+					var paginasHTML = blocos.map(function(bloco){
+						return '<section class="print-page">'
+							+ cabecalhoHTML
+							+ '<main class="conteudo-impressao">' + bloco + '</main>'
+							+ rodapeHTML
+							+ '</section>';
+					}).join('');
 
 					var janela = window.open('','_blank');
 					if(!janela){ alert('Popup bloqueado. Permita popups para este site e tente novamente.'); return; }
-					janela.document.write('<html><head><title>Impressão - Espelho de {$rotulos["modulo"]}</title><meta charset="utf-8"><link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"><link rel="stylesheet" href="./css/impressao_espelho.css"></head><body>' + cabecalhoHTML + '<main class="conteudo-impressao">' + conteudoCompleto + '</main>' + rodapeHTML + '<script>window.onload=function(){window.print();}; window.addEventListener("afterprint", function(){ window.close(); });<\/script></body></html>');
+					janela.document.write('<html><head><title>Impressão - Espelho de {$rotulos["modulo"]}</title><meta charset="utf-8"><link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"><link rel="stylesheet" href="./css/impressao_espelho.css"></head><body>' + paginasHTML + '<script>window.onload=function(){window.print();}; window.addEventListener("afterprint", function(){ window.close(); });<\/script></body></html>');
 					janela.document.close();
 				}
 			</script>
