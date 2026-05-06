@@ -1069,9 +1069,16 @@ JS;
 							+ '</section>';
 					}).join('');
 
+					var estilosAtuais = '';
+					var nosEstilo = document.querySelectorAll('link[rel="stylesheet"], style');
+					for(var k=0; k<nosEstilo.length; k++){
+						estilosAtuais += nosEstilo[k].outerHTML;
+					}
+					var ajusteCorImpressao = '<style>@media print{*{-webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important;}}</style>';
+
 					var janela = window.open('','_blank');
 					if(!janela){ alert('Popup bloqueado. Permita popups para este site e tente novamente.'); return; }
-					janela.document.write('<html><head><title>Impressão - Espelho de {$rotulos["modulo"]}</title><meta charset="utf-8"><link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"><link rel="stylesheet" href="./css/impressao_espelho.css"></head><body>' + paginasHTML + '<script>window.onload=function(){window.print();}; window.addEventListener("afterprint", function(){ window.close(); });<\/script></body></html>');
+					janela.document.write('<html><head><title>Impressão - Espelho de {$rotulos["modulo"]}</title><meta charset="utf-8">' + estilosAtuais + '<link rel="stylesheet" href="./css/impressao_espelho.css">' + ajusteCorImpressao + '</head><body>' + paginasHTML + '<script>window.onload=function(){window.print();}; window.addEventListener("afterprint", function(){ window.close(); });<\/script></body></html>');
 					janela.document.close();
 				}
 			</script>
