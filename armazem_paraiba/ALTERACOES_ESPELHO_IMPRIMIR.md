@@ -22,8 +22,14 @@
 - O bloco de impressão foi ajustado para evitar sintaxe moderna que poderia impedir a execução no navegador.
 - Foram mantidas chamadas simples de função e loops compatíveis com o ambiente da tela.
 
+### 5. Impressão igual ao Ctrl+P (ícones e cores)
+- A janela de impressão passou a copiar os mesmos estilos carregados na tela (`link[rel="stylesheet"]` e `style`).
+- Com isso, os ícones do espelho e as classes visuais originais são preservados no preview e no PDF.
+- Foi adicionado ajuste de impressão para manter cores corretas ao salvar em PDF (`print-color-adjust` e `-webkit-print-color-adjust`).
+
 ## Arquivo alterado
 - `armazem_paraiba/espelho_ponto.php`
+- `armazem_paraiba/ALTERACOES_ESPELHO_IMPRIMIR.md`
 
 ## Observação
 - Não foram alteradas outras regras da tela além do necessário para a impressão.
