@@ -1081,6 +1081,68 @@ JS;
 					janela.document.write('<html><head><title>Impressão - Espelho de {$rotulos["modulo"]}</title><meta charset="utf-8">' + estilosAtuais + '<link rel="stylesheet" href="./css/impressao_espelho.css">' + ajusteCorImpressao + '</head><body>' + paginasHTML + '<script>window.onload=function(){window.print();}; window.addEventListener("afterprint", function(){ window.close(); });<\/script></body></html>');
 					janela.document.close();
 				}
+
+				// Adiciona botão de imprimir individual em cada portlet que contenha um espelho
+				(function(){
+					try{
+						var tabelas = document.querySelectorAll('.espelho-cabecalho-info');
+						for(var i=0;i<tabelas.length;i++){
+							var portlet = tabelas[i].closest('.portlet');
+							if(!portlet) continue;
+							// Não duplicar botão
+							if(portlet.querySelector('[data-acao-imprimir]')) continue;
+							var btn = document.createElement('button');
+							btn.type = 'button';
+							btn.className = 'btn btn-sm btn-primary imprimir-individual';
+							btn.setAttribute('data-acao-imprimir','individual');
+							btn.title = 'Imprimir este espelho';
+							btn.innerHTML = '<i class="glyphicon glyphicon-print"></i> Imprimir';
+							btn.style.marginLeft = '8px';
+							btn.style.marginTop = '4px';
+							btn.style.display = 'inline-flex';
+							btn.style.alignItems = 'center';
+							btn.style.gap = '6px';
+							btn.onclick = function(e){ e.stopPropagation(); imprimirIndividual(this); };
+							// Tenta inserir na área de título, se existir
+							var title = portlet.querySelector('.portlet-title');
+							if(title){
+								var tools = title.querySelector('.tools');
+								if(tools){ tools.appendChild(btn); }
+								else { title.appendChild(btn); }
+							}else{
+								portlet.insertBefore(btn, portlet.firstChild);
+							}
+						}
+					}catch(e){ console && console.error && console.error(e); }
+				})();
+
+				function imprimirIndividual(btn){
+					if(!btn) return;
+					var portlet = btn.closest('.portlet');
+					if(!portlet) return;
+					var clone = portlet.cloneNode(true);
+					// remover botões de impressão se existirem
+					var btns = clone.querySelectorAll('[data-acao-imprimir]');
+					for(var j=0;j<btns.length;j++){ if(btns[j] && btns[j].parentNode) btns[j].parentNode.removeChild(btns[j]); }
+					var bloco = clone.outerHTML;
+					var dataAtual = new Date().toLocaleString();
+					var cabecalhoHTML = '<header class="print-header">'
+						+ '<img src="./imagens/logo_topo_cliente.png" alt="Logo Esquerda">'
+						+ '<h1>Espelho de {$rotulos["modulo"]}</h1>'
+						+ '</header>';
+					var rodapeHTML = "<footer class='print-footer'><div><strong>TECHPS®</strong></div><div><em>Gerado em: " + dataAtual + "</em></div></footer>";
+					var estilosAtuais = '';
+					var nosEstilo = document.querySelectorAll('link[rel="stylesheet"], style');
+					for(var k=0; k<nosEstilo.length; k++){
+						estilosAtuais += nosEstilo[k].outerHTML;
+					}
+					var ajusteCorImpressao = '<style>@media print{*{-webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important;}}</style>';
+					var pagina = '<section class="print-page">' + cabecalhoHTML + '<main class="conteudo-impressao">' + bloco + '</main>' + rodapeHTML + '</section>';
+					var janela = window.open('','_blank');
+					if(!janela){ alert('Popup bloqueado. Permita popups para este site e tente novamente.'); return; }
+					janela.document.write('<html><head><title>Impressão - Espelho de {$rotulos["modulo"]}</title><meta charset="utf-8">' + estilosAtuais + '<link rel="stylesheet" href="./css/impressao_espelho.css">' + ajusteCorImpressao + '</head><body>' + pagina + '<script>window.onload=function(){window.print();}; window.addEventListener("afterprint", function(){ window.close(); });<\/script></body></html>');
+					janela.document.close();
+				}
 			</script>
 		JS;
 	}
