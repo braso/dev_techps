@@ -36,6 +36,7 @@ deployment:
     - export ENOVE=/home/tech1694/public_html/gestaodeponto/enove
     - export T_MILITAO=/home/tech1694/public_html/gestaodeponto/t_militao
     - export LAUTO=/home/tech1694/public_html/gestaodeponto/lauto
+    - export GST=/home/tech1694/public_html/gestaodeponto/gst
 
 
 
@@ -71,5 +72,6 @@ deployment:
     - /bin/cp -R $DOMAIN $ENOVE
     - /bin/cp -R $DOMAIN $T_MILITAO
     - /bin/cp -R $DOMAIN $LAUTO
+    - /bin/cp -R $DOMAIN $GST
 
 
